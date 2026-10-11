@@ -3,8 +3,8 @@ import { boardText as D } from '@offside/app-core/i18n/ko/board';
 import { shellText as L } from '@offside/app-core/i18n/ko/shell';
 import { boardLabelText as B } from '@offside/app-core/i18n/ko/boardLabel';
 import { resolveApiBaseUrl } from './api/base-url.js';
+import { NEWS_ID } from './news-id.js';
 
-export const NEWS_ID = /^pst_(?:release_\d{8}|[0-9a-f-]{36})$/;
 export type NewsSummary = {
   id: string;
   board: 'notice' | 'release';
@@ -69,6 +69,15 @@ const bodyHtml = (body: string) =>
     )
     .join('');
 
+/** 검색 설명용 본문 글 — 소제목은 빼고 문단·목록 항목만, 강조 기호 없이 한 줄로. */
+const plainText = (body: string) =>
+  parseBody(body)
+    .flatMap((b) => (b.kind === 'h' ? [] : b.kind === 'ul' ? b.items : b.lines))
+    .join(' ')
+    .replace(/[*_`]+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 export function newsHtml(
   template: string,
   origin: string,
@@ -125,11 +134,7 @@ export async function serveNews(
         if (!post || !isSummary(post) || post.id !== id || typeof post.body !== 'string')
           throw new Error('Invalid news post');
         title = `${post.title} | OFFSIDE`;
-        description =
-          post.body
-            .replace(/[#*\s]+/g, ' ')
-            .trim()
-            .slice(0, 160) || post.title;
+        description = plainText(post.body).slice(0, 160) || post.title;
         content = `<article><header><p class="os-eyebrow">${escape(post.board === 'notice' ? B.noticeLabel : B.releaseLabel)}</p><h1>${escape(post.title)}</h1><time datetime="${escape(post.createdAt)}">${escape(post.createdAt.slice(0, 10))}</time></header><section class="os-panel board-body">${bodyHtml(post.body)}</section></article><p><a href="/?news=${encodeURIComponent(id)}&amp;board=${post.board}">${escape(D.publicNewsDiscuss)}</a></p>`;
       }
     } else {

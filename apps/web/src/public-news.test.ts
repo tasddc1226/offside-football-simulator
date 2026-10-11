@@ -58,6 +58,10 @@ describe('public news responses', () => {
     expect(html).toContain(`href="https://offside-lab.com/news/${id}/"`);
     expect(html).toContain(`/?news=${id}&amp;board=release`);
     expect(html.match(/name="description"/g)).toHaveLength(1);
+    // 소제목·목록 글머리 없이 본문 글만
+    expect(html).toContain(
+      'name="description" content="Safe &lt;script&gt;alert(1)&lt;/script&gt; $&amp;"',
+    );
     expect(fetch).toHaveBeenCalledOnce();
     expect(fetch).toHaveBeenCalledWith(
       expect.stringContaining('/v1/public-news/posts/'),

@@ -22,6 +22,7 @@ import { installPlaySignals } from './sync/playSignals.js';
 import { watchForUpdates } from './ui/update.svelte.js';
 import { watchNews } from './ui/news.svelte.js';
 import { warmGame, openBoard } from './ui/nav.js';
+import { NEWS_ID } from './news-id.js';
 import { initHistory } from './ui/history.svelte.js';
 import { installSheetKey } from './ui/skin.svelte.js';
 import { applyLocale, bootLocale } from './ui/locale.js';
@@ -43,9 +44,11 @@ handleOAuthReturn();
 routeSharedCareer();
 // T-11-098 친구 초대 링크(`/?friend=코드`)로 들어왔으면 친구 화면을 연다.
 routeFriendInvite();
+// 공개 소식 글의 "게임에서 보기" 링크. 형식이 맞는 글 ID만 게시판에 넘긴다.
 const newsLink = new URLSearchParams(location.search);
-if (newsLink.has('news')) {
-  openBoard(newsLink.get('board') === 'release' ? 'release' : 'notice', newsLink.get('news'));
+const newsId = newsLink.get('news');
+if (newsId && NEWS_ID.test(newsId)) {
+  openBoard(newsLink.get('board') === 'release' ? 'release' : 'notice', newsId);
 }
 // T-11-195 메타 광고로 들어왔는지(분석 시작 전에 — 픽셀이 이번 탭의 클릭 ID를 쓴다).
 detectAdLanding();
