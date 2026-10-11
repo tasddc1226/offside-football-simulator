@@ -129,6 +129,11 @@ export function trainingCard(s: GameState, t: TrainingDef): { effect: string[]; 
     tag: tags.filter(Boolean).join(' · '),
   };
 }
+/** Selected attribute's existing positional OVR weight; presentation only. */
+export function trainingOvrNote(s: GameState, t: TrainingDef): string {
+  if (!t.attr) return '';
+  return L.helpWeight({ attr: labelOf(s, t.attr), pct: pct(wOf(s)[t.attr]) });
+}
 /** T-10-074 고른 훈련의 자세한 설명(카드 아래). 숨은 잠재력 값은 드러내지 않는다. */
 export function trainingHelp(s: GameState, t: TrainingDef): string {
   if (t.id === 'rest') return L.helpRest({ low: COND_LOW_INJURY, start: COND_LOW_START });

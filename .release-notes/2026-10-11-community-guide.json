@@ -3,7 +3,7 @@
   "title": "육성과 팀 저장 안내 개선",
   "items": [
     "후보 능력치와 시작 능력치가 달라지는 이유를 안내해요.",
-    "약점 훈련 위치와 포지션별 육성 안내를 추가했어요.",
+    "약점 훈련 위치·포지션 육성 안내와 훈련별 OVR 비중을 보여줘요.",
     "팀을 저장하려면 어떤 이름을 입력해야 하는지 보여줘요.",
     "명예의 벽에 오른 선수의 구단 활약을 은퇴 화면에서 함께 볼 수 있어요."
   ],
@@ -11,7 +11,7 @@
     "title": "Clearer training and team setup",
     "items": [
       "Candidate cards explain why starting attributes may differ.",
-      "Find Weakness Training and explore the position development guide.",
+      "Find training guidance and each attribute’s OVR weight.",
       "Team setup explains which name fields need attention before saving.",
       "Wall of Honour recognition includes the player’s club record."
     ]
@@ -20,7 +20,7 @@
     "title": "育成とチーム保存の案内を改善",
     "items": [
       "候補と開始後の能力値が異なる理由を案内します。",
-      "弱点集中練習の場所とポジション育成ガイドを追加しました。",
+      "育成ガイドと各能力のOVR比重を表示します。",
       "チーム保存に必要な名前の入力条件を表示します。",
       "名誉の壁に選ばれた選手のクラブでの記録を引退画面で確認できます。"
     ]

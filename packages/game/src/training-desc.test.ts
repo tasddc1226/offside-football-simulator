@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { newGame, applyTraining, trainingCard, trainingHelp, TRAININGS } from './engine.js';
+import {
+  newGame,
+  applyTraining,
+  trainingCard,
+  trainingHelp,
+  trainingOvrNote,
+  TRAININGS,
+} from './engine.js';
 import { createRng, setActiveRng } from './rng.js';
 import type { GameState } from './types.js';
 
@@ -23,6 +30,14 @@ const num = (desc: string, name: string) => {
 };
 
 describe('훈련 설명 (T-10-074)', () => {
+  it('OVR 안내는 능력치 선택에만 나타나고 저장 상태를 바꾸지 않는다', () => {
+    const s = fw();
+    const before = JSON.stringify(s);
+    expect(trainingOvrNote(s, tr('sho'))).toMatch(/OVR에서 슈팅 비중은 \d+%/);
+    for (const id of ['rest', 'coach', 'media']) expect(trainingOvrNote(s, tr(id))).toBe('');
+    expect(JSON.stringify(s)).toBe(before);
+  });
+
   it.each(['sho', 'phy', 'rest', 'coach', 'media'])(
     '%s: 카드의 컨디션 변화가 실제와 같다',
     (id) => {

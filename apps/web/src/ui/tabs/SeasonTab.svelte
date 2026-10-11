@@ -16,7 +16,7 @@
   import { coachFeedback } from '@offside/app-core/career-feedback';
   import { visibleCareerLog } from '@offside/app-core/potential-view';
   import { PHASES, LAST_PHASE } from '@offside/game/data';
-  import { roundRange, logLabel, TRAININGS, trainingLabel, trainingCard, INVESTS, investCard, investCost, investName, investNote, investDef, plannedSpend, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
+  import { roundRange, logLabel, TRAININGS, trainingLabel, trainingCard, trainingOvrNote, INVESTS, investCard, investCost, investName, investNote, investDef, plannedSpend, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
   import { eventById } from '@offside/game/events-data';
   import type { GameState } from '@offside/game/types';
   import { save } from '../helpers.js';
@@ -265,6 +265,7 @@
     <div class="train-help" data-train-help aria-live="polite">
       <b>{trainingLabel(s, picked)} <span class="muted">· {c.effect.join(' · ')}</span></b>
       {#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
+      {#if picked.attr}<p data-training-ovr>{trainingOvrNote(s, picked)}</p>{/if}
     </div>
   {/if}
 </section>

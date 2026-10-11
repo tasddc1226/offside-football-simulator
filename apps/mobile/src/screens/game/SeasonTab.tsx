@@ -16,6 +16,7 @@ import {
   TRAININGS,
   trainingLabel,
   trainingCard,
+  trainingOvrNote,
   INVESTS,
   investCard,
   investCost,
@@ -626,6 +627,7 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
               title={trainingLabel(s, picked)}
               effect={trainCards.get(picked.id)!.effect}
               tag={trainCards.get(picked.id)!.tag}
+              body={trainingOvrNote(s, picked)}
             />
           ) : null}
         </Card>

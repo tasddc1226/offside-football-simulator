@@ -105,6 +105,10 @@ for (const width of [320, 390])
     await guide.locator('summary').click();
     await page.locator('[data-train="pac"]').click();
     await expect(page.locator('[data-train="pac"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('[data-training-ovr]')).toContainText('OVR에서 스피드 비중은');
+    await page.locator('[data-train="rest"]').click();
+    await expect(page.locator('[data-training-ovr]')).toHaveCount(0);
+    await page.locator('[data-train="pac"]').click();
     const saved = JSON.parse((await page.evaluate(() => localStorage.getItem('ft_save')))!);
     expect(saved.training).toBe('pac');
     expect(saved.rng).toEqual(JSON.parse(before!).rng);
