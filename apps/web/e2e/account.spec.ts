@@ -146,6 +146,45 @@ test('로그아웃 직후 다시 구글로 로그인하면 새 세션부터 받�
   expect(calls.slice(0, 2)).toEqual(['profile', 'start']);
 });
 
+// T-11-202 웹 Apple 로그인도 주소창으로 갔다가 /settings?apple=...로 돌아온다.
+test('Apple로 로그인하면 세션부터 받고 시작해 연결 안내를 띄운다', async ({ page }) => {
+  const calls: string[] = [];
+  await page.route(PROFILE_URL, (route) => {
+    calls.push('profile');
+    return route.fulfill(
+      ok({
+        id: 'u1',
+        linked: { google: false, apple: calls.includes('start') },
+        googleEmailMasked: null,
+        recoveryCodeIssuedAt: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      }),
+    );
+  });
+  await page.route(`${API}/v1/auth/apple/start`, (route) => {
+    calls.push('start');
+    return route.fulfill({
+      status: 302,
+      headers: { Location: `${new URL(page.url()).origin}/settings?apple=linked` },
+    });
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await expect(page.locator('[data-act="apple-login"]')).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  calls.length = 0;
+  await page.locator('[data-act="apple-login"]').click();
+  await expect(page.locator('#toast')).toContainText('Apple 계정을 연결했어요');
+  // 시작 전에 프로필(익명 세션)부터 받는다.
+  expect(calls.indexOf('profile')).toBeGreaterThanOrEqual(0);
+  expect(calls.indexOf('profile')).toBeLessThan(calls.indexOf('start'));
+});
+
+test('Apple 로그인을 쓸 수 없으면 Apple 안내를 띄운다', async ({ page }) => {
+  await page.goto('/settings?apple=error&reason=unavailable');
+  await expect(page.locator('#toast')).toContainText('Apple 로그인을 사용할 수 없어요');
+});
+
 test('세션 없이 로그인 시작에서 돌아오면 다시 누르라고 알린다', async ({ page }) => {
   await page.goto('/settings?google=error&reason=session');
   await expect(page.locator('#toast')).toContainText('다시 눌러 주세요');

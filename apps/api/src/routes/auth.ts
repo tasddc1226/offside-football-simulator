@@ -31,12 +31,12 @@ import { resolveRequestHostPair } from '../production-hosts.js';
 /** D-21: 시간당 30회. `auth_attempts`의 시간 윈도는 RATE_LIMIT_WINDOW_MS(1시간)를 그대로 쓴다. */
 export const GOOGLE_START_RATE_LIMIT_MAX = 30;
 
-function isLocalEnv(env: { ENVIRONMENT: string }): boolean {
+export function isLocalEnv(env: { ENVIRONMENT: string }): boolean {
   return env.ENVIRONMENT === 'local';
 }
 
 /** 구글 로그인은 주소창으로 오가므로 결과·오류를 JSON 대신 웹 설정 화면의 쿼리로 돌려준다. */
-function settingsUrl(webOrigin: string, query: Record<string, string>): string {
+export function settingsUrl(webOrigin: string, query: Record<string, string>): string {
   const url = new URL('/settings', webOrigin);
   for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value);
   return url.toString();

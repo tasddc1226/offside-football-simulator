@@ -1,5 +1,5 @@
 <script lang="ts">
-  import GoogleLoginButton from './GoogleLoginButton.svelte';
+  import LoginButtons from './LoginButtons.svelte';
   // T-11-145 오프사이드 컵 화면 — 구단주 화면의 컵 배너로 연다. 내 상태(신청·다음 경기), 토너먼트 대진, 조별 순위표와 경기,
   // 일정·보상·규칙. 치른 경기를 누르면 같은 화면에서 상세(득점·승부차기)를 연다. 처음 열 때 불러오는 지연 청크다.
   import { onMount, tick } from 'svelte';
@@ -21,7 +21,6 @@
   import CupBracket from './cup/CupBracket.svelte';
   import { accountCache, refreshAccount } from './account-state.svelte.js';
   import { go } from './nav.js';
-  import { startGoogleLogin } from './login.js';
   import { appState, hofStart } from './state.svelte.js';
   import { bracketRounds, kstParts, phaseLabel, phaseLine, roundLabel, stageLabel, teamMap, whenText, closeShownAt } from './cup/cupView.js';
 
@@ -149,7 +148,7 @@
         {#if accountCache.value && accountCache.value !== 'error' && !linked}
           <section class="card stack cup-login" data-cup-login>
             <h2>{L.predictionLoginTitle}</h2>
-            <GoogleLoginButton act="cup-login-google" onclick={() => startGoogleLogin({cup:true})} />
+            <LoginButtons act="cup-login-google" back={{cup:true}} />
           </section>
         {/if}
         <section class="card stack" style="gap:12px" aria-label={L.secMine} data-cup-hero data-cup-phase={data.phase}>

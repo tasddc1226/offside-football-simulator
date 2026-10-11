@@ -1,0 +1,14 @@
+{
+  "id": "t-11-202-web-apple-login",
+  "title": "웹에서도 Apple로 로그인할 수 있어요",
+  "items": ["웹에서 Apple로 로그인하면 앱과 같은 구단주 계정을 써요"],
+  "en": {
+    "title": "Sign in with Apple on the web",
+    "items": ["Signing in with Apple on the web uses the same owner account as the app."]
+  },
+  "ja": {
+    "title": "WebでもAppleでサインインできます",
+    "items": ["WebでAppleでサインインすると、アプリと同じオーナーアカウントを使えます。"]
+  },
+  "availability": "web"
+}

@@ -108,6 +108,8 @@
         "GOOGLE_REDIRECT_URI": "https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback",
         "GOOGLE_FAKE": "0",
         "APPLE_FAKE": "0",
+        // T-11-202 웹 Sign in with Apple Services ID(개인 팀 WK93KW2348, 돌아올 주소는 api.offside-lab.com · workers.dev 두 곳).
+        "APPLE_WEB_CLIENT_ID": "com.offsidelab.web",
       },
     },
   },

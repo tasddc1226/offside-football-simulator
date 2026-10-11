@@ -252,6 +252,10 @@ export const ownerAvatarUrl = (id: string): string =>
 export function googleStartUrl(): string {
   return `${host.baseUrl}/v1/auth/google/start`;
 }
+/** T-11-202 웹 Sign in with Apple 시작 주소(주소창으로 연다). */
+export function appleStartUrl(): string {
+  return `${host.baseUrl}/v1/auth/apple/start`;
+}
 
 // ───────── T-10-005 공개 명예의 전당 (로그인 불필요) ─────────
 export function getHof(

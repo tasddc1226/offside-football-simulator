@@ -2,6 +2,7 @@ import { CONTENT_TYPE_HEADER, REQUEST_BODY_MAX_BYTES } from '@offside/contracts'
 import { createMiddleware } from 'hono/factory';
 import { AppError } from '../errors.js';
 import type { AppEnv } from '../env.js';
+import { APPLE_WEB_CALLBACK_PATH } from './originGuard.js';
 
 const STATE_CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -15,7 +16,8 @@ function bodyTooLarge(): never {
 
 /** 결정 4: Content-Type·본문 크기 검사. 읽은 본문은 c.set('rawBody')로 라우트에 전달한다. */
 export const bodyGuard = createMiddleware<AppEnv>(async (c, next) => {
-  if (STATE_CHANGING_METHODS.has(c.req.method)) {
+  // T-11-202 Apple form_post 콜백은 폼 본문이다(라우트가 직접 읽는다).
+  if (STATE_CHANGING_METHODS.has(c.req.method) && c.req.path !== APPLE_WEB_CALLBACK_PATH) {
     const contentType = c.req.header(CONTENT_TYPE_HEADER) ?? '';
     if (!contentType.toLowerCase().startsWith('application/json')) {
       throw new AppError({

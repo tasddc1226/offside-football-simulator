@@ -48,6 +48,8 @@ export type Bindings = {
   APPLE_FAKE?: string;
   /** T-11-003 Apple 신원 토큰의 aud(앱 번들 id). 없으면 com.offsidelab.app. */
   APPLE_BUNDLE_ID?: string;
+  /** T-11-202 웹 Sign in with Apple의 Services ID(웹 신원 토큰의 aud). 없으면 웹 애플 로그인을 쓰지 않는다. */
+  APPLE_WEB_CLIENT_ID?: string;
   /** T-11-167 secret. 계정 삭제 때 Sign in with Apple 토큰을 해지한다(가이드라인 5.1.1(v)). 셋 중 하나라도 없으면 해지를 건너뛴다. */
   APPLE_TEAM_ID?: string;
   APPLE_SIGNIN_KEY_ID?: string;

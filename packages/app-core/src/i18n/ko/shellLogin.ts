@@ -11,6 +11,10 @@ const ko = {
   failGeneric: (p: { reason: string }) =>
     `구글 로그인에 실패했어요${p.reason ? ` (${p.reason})` : ''}.`,
   providerGoogle: '구글',
+  // T-11-202 웹 Apple 로그인 실패 안내.
+  failUnavailableApple: '지금은 Apple 로그인을 사용할 수 없어요. 잠시 뒤 다시 시도해 주세요.',
+  failGenericApple: (p: { reason: string }) =>
+    `Apple 로그인에 실패했어요${p.reason ? ` (${p.reason})` : ''}.`,
   linked: (p: { via: string }) => `${p.via} 계정을 연결했어요.`,
   switched: (p: { via: string }) => `다른 ${p.via} 계정으로 바꿨어요.`,
 };

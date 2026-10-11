@@ -402,6 +402,33 @@ p {
 .btn-primary:hover {
   background: var(--pitch-2);
 }
+/* T-11-202 Sign in with Apple — 애플 지침대로 검은 바탕(어두운 테마는 흰 바탕). */
+.btn-apple {
+  gap: 8px;
+  background: #000;
+  border-color: #000;
+  color: #fff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .btn-apple {
+    background: #fff;
+    border-color: #fff;
+    color: #000;
+  }
+}
+:root[data-theme='dark'] .btn-apple {
+  background: #fff;
+  border-color: #fff;
+  color: #000;
+}
+.login-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.login-btns-block {
+  flex-direction: column;
+}
 .btn-accent {
   background: var(--accent);
   border-color: var(--accent);

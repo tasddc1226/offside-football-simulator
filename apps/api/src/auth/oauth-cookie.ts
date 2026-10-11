@@ -7,6 +7,17 @@ import { randomToken } from './base64url.js';
 export const OAUTH_COOKIE_NAME = 'offside_oauth';
 export const OAUTH_COOKIE_PATH = '/v1/auth/google';
 const OAUTH_COOKIE_MAX_AGE_SECONDS = 600;
+
+/** 쿠키 이름·경로 한 벌. 구글과 애플(T-11-202 웹 Sign in with Apple)이 따로 쓴다. */
+export type OauthCookieSlot = { name: string; path: string };
+export const GOOGLE_OAUTH_COOKIE: OauthCookieSlot = {
+  name: OAUTH_COOKIE_NAME,
+  path: OAUTH_COOKIE_PATH,
+};
+export const APPLE_OAUTH_COOKIE: OauthCookieSlot = {
+  name: 'offside_apple',
+  path: '/v1/auth/apple',
+};
 const DELIMITER = '.';
 
 /** `state`·`codeVerifier`는 둘 다 base64url이라 `.`을 구분자로 써도 안전하다. */
@@ -28,28 +39,38 @@ export function decodeOauthCookieValue(
 }
 
 /** 로컬(http)에서는 Secure를 뺀다 — 그 외 환경은 항상 Secure다. */
-export function oauthCookie(value: string, isLocal: boolean): string {
-  return generateCookie(OAUTH_COOKIE_NAME, value, {
+export function oauthCookie(
+  value: string,
+  isLocal: boolean,
+  slot: OauthCookieSlot = GOOGLE_OAUTH_COOKIE,
+): string {
+  return generateCookie(slot.name, value, {
     httpOnly: true,
     secure: !isLocal,
     sameSite: 'Lax',
-    path: OAUTH_COOKIE_PATH,
+    path: slot.path,
     maxAge: OAUTH_COOKIE_MAX_AGE_SECONDS,
   });
 }
 
-export function clearOauthCookie(isLocal: boolean): string {
-  return generateCookie(OAUTH_COOKIE_NAME, '', {
+export function clearOauthCookie(
+  isLocal: boolean,
+  slot: OauthCookieSlot = GOOGLE_OAUTH_COOKIE,
+): string {
+  return generateCookie(slot.name, '', {
     httpOnly: true,
     secure: !isLocal,
     sameSite: 'Lax',
-    path: OAUTH_COOKIE_PATH,
+    path: slot.path,
     maxAge: 0,
   });
 }
 
-export function readOauthCookie(c: Context<AppEnv>): string | undefined {
-  return getCookie(c, OAUTH_COOKIE_NAME);
+export function readOauthCookie(
+  c: Context<AppEnv>,
+  slot: OauthCookieSlot = GOOGLE_OAUTH_COOKIE,
+): string | undefined {
+  return getCookie(c, slot.name);
 }
 
 /** `state`·PKCE `codeVerifier` 생성에 쓴다 — 세션 토큰과 같은 32바이트 base64url. */
