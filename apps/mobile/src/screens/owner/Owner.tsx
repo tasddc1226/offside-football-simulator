@@ -1,5 +1,6 @@
 // My club: shared owner identity and operations, with team-specific play in the team card.
 import { useEffect, useState } from 'react';
+import { shapeOf } from '@offside/contracts/owner-team';
 import { Alert, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { fetchOwnerSummary } from '@offside/app-core/api/ownerSummary';
@@ -277,7 +278,10 @@ export default function Owner() {
                 </Txt>
                 {team ? (
                   <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                    {L.manager({ manager: team.manager, formation: team.formation })}
+                    {L.manager({
+                      manager: team.manager,
+                      formation: shapeOf(team.formation, team.layout),
+                    })}
                   </Txt>
                 ) : null}
               </View>

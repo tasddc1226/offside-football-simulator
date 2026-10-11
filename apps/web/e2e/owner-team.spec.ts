@@ -1301,3 +1301,48 @@ test('구단주 화면을 연 적 없는 브라우저는 받은 친구 신청을
   await expect(page.locator('[data-tab-dot]')).toHaveCount(0);
   expect(pendingGets).toBe(0);
 });
+
+test('T-11-216 시즌 1 팀은 4-2-3-1 같은 배치 프리셋을 고르고, 저장은 옛 포메이션 + 배치로 한다', async ({
+  page,
+}) => {
+  await stubOwner(page, true);
+  let body: { formation: string; layout: TeamLayout | null } | null = null;
+  await page.route(ownerTeamUrl, async (route) => {
+    if (route.request().method() === 'GET')
+      return route.fulfill(ownerTeam({ season: 1, current: 1, seasons: SEASONS }));
+    body = route.request().postDataJSON();
+    return route.fulfill(ok({ team: teamFrom(route.request().postDataJSON()) }));
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await page.locator('[data-team-name]').fill('우리 동네 FC');
+  await page.locator('[data-team-manager]').fill('홍감독');
+  await page.locator('[data-act="team-auto"]').click();
+  await page.locator('[data-formation="4-2-3-1"]').click();
+  await expect(page.locator('[data-formation="4-2-3-1"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-formation="4-3-3"]')).toHaveAttribute('aria-pressed', 'false');
+  await page.locator('[data-formation="5-3-2"]').click();
+  await page.screenshot({
+    fullPage: true,
+  });
+  await page.locator('[data-formation="4-2-3-1"]').click();
+  await page.screenshot({
+    fullPage: true,
+  });
+  await page.locator('[data-act="team-save"]').click();
+  await expect.poll(() => body?.formation).toBe('4-3-3');
+  expect(body!.layout!.map((p) => p.slot)).toEqual([
+    'GK',
+    'LB',
+    'CB',
+    'CB',
+    'RB',
+    'DM',
+    'DM',
+    'LW',
+    'AM',
+    'RW',
+    'ST',
+  ]);
+});

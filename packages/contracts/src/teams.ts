@@ -232,6 +232,8 @@ export const TeamOpponentSchema = z.strictObject({
   /** 감독 이름. */
   owner: z.string(),
   formation: FormationIdSchema,
+  /** T-11-216 배치 프리셋 이름(4-2-3-1 등). 옛 앱은 formation만 읽는다. */
+  shape: z.string().max(16).optional(),
   ovr: z.number().int(),
   rating: z.number().int(),
   record: TeamRecordSchema,
