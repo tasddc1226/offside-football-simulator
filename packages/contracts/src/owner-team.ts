@@ -183,13 +183,22 @@ export type SlotPlayer = {
 };
 
 /**
- * 그 자리에서의 실력. 최고 시점 능력치가 있으면 그 자리 역할의 실력(최고 OVR을 넘지 않는다) — 발 빠른 센터백은
+ * T-11-197 자리 실력이 최고 OVR(주 포지션 실력)을 넘을 수 있는 폭. 주 포지션보다 다른 자리가 더 맞는 선수(예: 수미가
+ * 더 높은 박스 투 박스)가 손해를 보지 않게 하되, 풀백이 센터백 자리에서 센터백보다 크게 앞서지 않게 묶는다. 서버도
+ * 은퇴 기록의 자리별 실력을 이 폭까지만 받는다(apps/api plausibility boundProfile).
+ */
+export const SLOT_OVER_PEAK = 2;
+
+/**
+ * 그 자리에서의 실력. 최고 시점 능력치가 있으면 그 자리 역할의 실력(최고 OVR + SLOT_OVER_PEAK까지) — 발 빠른 센터백은
  * 풀백 자리에서도 잘 뛰고, 슈팅형 스트라이커는 윙어 자리에서 떨어진다. 없으면 최고 OVR × 적합도(반올림).
  */
 export const slotRating = (slot: DetailPos, p: SlotPlayer): number =>
-  p.roles ? Math.min(p.roles[slot], p.peak) : Math.round(p.peak * fit(slot, p.pos, p.dpos));
+  p.roles
+    ? Math.min(p.roles[slot], p.peak + SLOT_OVER_PEAK)
+    : Math.round(p.peak * fit(slot, p.pos, p.dpos));
 
-/** 그 자리 적합도(보여 주기) — 자리별 실력이 있으면 최고 OVR 대비 비율(소수 둘째 자리), 없으면 적합도 규칙. */
+/** 그 자리 적합도(보여 주기) — 자리별 실력이 있으면 최고 OVR 대비 비율(소수 둘째 자리, 주 포지션보다 맞으면 1을 넘는다), 없으면 적합도 규칙. */
 export const slotFit = (slot: DetailPos, p: SlotPlayer, rating = slotRating(slot, p)): number =>
   p.roles && p.peak > 0 ? Math.round((rating / p.peak) * 100) / 100 : fit(slot, p.pos, p.dpos);
 

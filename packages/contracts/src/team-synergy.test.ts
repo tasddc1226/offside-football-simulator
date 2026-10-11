@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { FORMATIONS, lineStrength, presetLayout } from './owner-team.js';
 import {
   DUOS,
-  DUO_LINE_CAP,
-  DUO_TOTAL_CAP,
   HOMEGROWN_MIN,
   NATIONAL_MIN,
   SYNERGY_FROM_SEASON,
@@ -63,8 +61,8 @@ describe('T-11-105 듀오', () => {
     expect(ids(teamSynergy(players))).toEqual([]);
     expect(ids(teamSynergy(Array(11).fill(null)))).toEqual([]);
   });
-  it('줄마다 상한, 듀오 합 상한을 넘지 않는다', () => {
-    // 크로스 공식(공격 2) + 역습 한 방(공격 1.5) + 오버래핑(공격 1) + 킬패스(공격 0.5) → 공격은 상한에서 멈춘다.
+  it('T-11-197 켜진 듀오의 효과를 상한 없이 모두 더한다', () => {
+    // 크로스 공식(공격 2) + 역습 한 방(공격 1.5) + 오버래핑(공격 1 · 중원 0.5) + 중원 엔진(중원 2) + 센터백 짝꿍(수비 1.5 · 중원 0.5).
     const s = teamSynergy(
       lineup({
         1: 'fullback',
@@ -78,9 +76,8 @@ describe('T-11-105 듀오', () => {
         3: 'libero',
       }),
     );
-    expect(s.lines.atk).toBeLessThanOrEqual(DUO_LINE_CAP);
-    expect(synergyPower(s)).toBeLessThanOrEqual(DUO_TOTAL_CAP);
-    expect(synergyPower(s)).toBe(DUO_TOTAL_CAP);
+    expect(s.lines).toEqual({ atk: 4.5, mid: 3, def: 1.5, gk: 0 });
+    expect(synergyPower(s)).toBe(9);
   });
 });
 

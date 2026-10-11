@@ -2,12 +2,7 @@
 // 켜진 시너지는 누르면 그라운드에서 그 선수들을 잇는다. 누르는 것과 상관없이 켜진 것은 모두 적용된다.
 import { useState } from 'react';
 import { View } from 'react-native';
-import {
-  DUO_LINE_CAP,
-  DUO_TOTAL_CAP,
-  synergyPower,
-  type TeamSynergy as Synergy,
-} from '@offside/contracts/owner-team';
+import { synergyPower, type TeamSynergy as Synergy } from '@offside/contracts/owner-team';
 import { synergyRows, synergyNote, type SynergyRow } from '@offside/app-core/teamOwner';
 import { teamSynergyText as L } from '@offside/app-core/i18n/ko/teamSynergy';
 import { useColors } from '../theme/useColors';
@@ -169,7 +164,7 @@ export function TeamSynergy({
         </Press>
       ) : null}
       <Txt v="xs" tone="muted">
-        {L.capNote({ line: DUO_LINE_CAP, total: DUO_TOTAL_CAP })}
+        {L.youthNote}
       </Txt>
     </View>
   );
