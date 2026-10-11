@@ -29,6 +29,9 @@ const card = {
   season: 0,
   nation: null,
   attrs: null,
+  height: 183,
+  weight: 76,
+  foot: '왼발',
 };
 const listing = { id: LISTING, price: 120_000, createdAt: '2026-10-04T00:00:00.000Z', card };
 
@@ -289,6 +292,8 @@ test('자금이 모자라면 영입 버튼이 잠기고, 이미 팔린 선수는
   await expect(page.getByRole('dialog', { name: '선수 영입' })).toContainText(
     '구단 자금이 2억 모자라요',
   );
+  // T-11-211 카드 체격 줄 끝에 주발.
+  await expect(page.locator('[data-card-body]')).toHaveText('183cm · 76kg · 왼발');
   await expect(page.locator('[data-act="buy"]')).toBeDisabled();
   await page.getByRole('dialog').getByRole('button', { name: '닫기' }).click();
 

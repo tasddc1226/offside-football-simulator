@@ -116,6 +116,7 @@ export default function TeamProfile({ id }: { id: string }) {
               attrsEstimated: p.attrsEstimated,
               height: p.height,
               weight: p.weight,
+              foot: p.foot,
               pos: p.pos,
               type: p.type,
             }
