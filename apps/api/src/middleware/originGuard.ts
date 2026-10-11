@@ -15,7 +15,7 @@ export function allowedOriginsFor(requestUrl: string, env: Bindings): string[] {
 
 /** T-11-003 앱이 첫 실행에 익명 세션을 받는 경로 — 아직 Bearer가 없다. */
 const APP_SESSION_PATH = '/v1/app/session';
-/** T-11-202 Apple이 결과를 form_post로 보내는 콜백 — 받기만 하고 같은 주소의 GET으로 넘긴다(상태를 바꾸지 않는다). */
+/** T-11-204 Apple이 결과를 form_post로 보내는 콜백 — 받기만 하고 같은 주소의 GET으로 넘긴다(상태를 바꾸지 않는다). */
 export const APPLE_WEB_CALLBACK_PATH = '/v1/auth/apple/callback';
 
 /**

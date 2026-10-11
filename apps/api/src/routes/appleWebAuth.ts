@@ -1,4 +1,4 @@
-// ───────── 웹 Sign in with Apple (T-11-202) ─────────
+// ───────── 웹 Sign in with Apple (T-11-204) ─────────
 // 구글 웹 로그인과 같은 주소창 흐름이다: start가 state·nonce를 쿠키에 담아 Apple로 보내고, 콜백이 신원 토큰(JWT)을
 // 서명·aud(Services ID)·nonce로 검증한 뒤 로그인 규칙(resolveAppleSignIn — 연결·전환)을 적용해 세션을 돌린다.
 // Apple은 결과를 form_post(교차 사이트 POST)로 보내 Lax 쿠키(세션·state)가 실리지 않는다. 그래서 POST는 받은 값만

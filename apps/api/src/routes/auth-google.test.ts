@@ -556,8 +556,8 @@ describe('POST /v1/auth/google/unlink', () => {
   });
 });
 
-// T-11-202 웹 Sign in with Apple. 로컬(APPLE_FAKE=1, Services ID 없음)은 Apple 대신 가짜 토큰으로 바로 콜백한다.
-describe('웹 Apple 로그인 (T-11-202)', () => {
+// T-11-204 웹 Sign in with Apple. 로컬(APPLE_FAKE=1, Services ID 없음)은 Apple 대신 가짜 토큰으로 바로 콜백한다.
+describe('웹 Apple 로그인 (T-11-204)', () => {
   let ctx: TestD1;
   beforeEach(async () => {
     ctx = await createTestD1();

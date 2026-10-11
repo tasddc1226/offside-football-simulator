@@ -252,7 +252,7 @@ export const ownerAvatarUrl = (id: string): string =>
 export function googleStartUrl(): string {
   return `${host.baseUrl}/v1/auth/google/start`;
 }
-/** T-11-202 웹 Sign in with Apple 시작 주소(주소창으로 연다). */
+/** T-11-204 웹 Sign in with Apple 시작 주소(주소창으로 연다). */
 export function appleStartUrl(): string {
   return `${host.baseUrl}/v1/auth/apple/start`;
 }

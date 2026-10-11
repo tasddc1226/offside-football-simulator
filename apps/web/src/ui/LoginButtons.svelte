@@ -1,5 +1,5 @@
 <script lang="ts">
-  // 로그인 버튼 묶음 — 구글과 Apple(T-11-202). 앱 screens/owner/LoginButtons.tsx와 같은 자리에 쓴다.
+  // 로그인 버튼 묶음 — 구글과 Apple(T-11-204). 앱 screens/owner/LoginButtons.tsx와 같은 자리에 쓴다.
   import GoogleLoginButton from './GoogleLoginButton.svelte';
   import AppleLoginButton from './AppleLoginButton.svelte';
   import { startAppleLogin, startGoogleLogin, type LoginReturn } from './login.js';

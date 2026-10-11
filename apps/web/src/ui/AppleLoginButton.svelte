@@ -1,5 +1,5 @@
 <script lang="ts">
-  // T-11-202 웹 Sign in with Apple 버튼. 애플 디자인 지침대로 검은 바탕(어두운 테마는 흰 바탕)에 애플 로고와 문구.
+  // T-11-204 웹 Sign in with Apple 버튼. 애플 디자인 지침대로 검은 바탕(어두운 테마는 흰 바탕)에 애플 로고와 문구.
   import { accountText as L } from '@offside/app-core/i18n/ko/account';
 
   let { onclick, act = 'apple-login', block = true }: {

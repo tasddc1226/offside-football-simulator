@@ -146,7 +146,7 @@ test('로그아웃 직후 다시 구글로 로그인하면 새 세션부터 받�
   expect(calls.slice(0, 2)).toEqual(['profile', 'start']);
 });
 
-// T-11-202 웹 Apple 로그인도 주소창으로 갔다가 /settings?apple=...로 돌아온다.
+// T-11-204 웹 Apple 로그인도 주소창으로 갔다가 /settings?apple=...로 돌아온다.
 test('Apple로 로그인하면 세션부터 받고 시작해 연결 안내를 띄운다', async ({ page }) => {
   const calls: string[] = [];
   await page.route(PROFILE_URL, (route) => {

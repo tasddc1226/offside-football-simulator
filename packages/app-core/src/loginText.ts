@@ -23,7 +23,7 @@ export const loginOfflineText = (): string => L.offline;
 export const googleFailText = (reason: string | null | undefined): string =>
   (reason && failMsg(reason)) ?? L.failGeneric({ reason: reason ?? '' });
 
-/** T-11-202 웹 Apple 로그인 실패 안내. 공통 사유(세션·한도·취소)는 구글과 같은 문구를 쓴다. */
+/** T-11-204 웹 Apple 로그인 실패 안내. 공통 사유(세션·한도·취소)는 구글과 같은 문구를 쓴다. */
 export const appleFailText = (reason: string | null | undefined): string =>
   reason === 'unavailable'
     ? L.failUnavailableApple

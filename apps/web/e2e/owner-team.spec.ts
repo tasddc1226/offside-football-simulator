@@ -138,7 +138,7 @@ async function stubOwner(page: Page, google: boolean) {
   );
 }
 
-// T-10-102 비로그인 구단주는 안내 카드와 로그인 버튼(구글 · T-11-202 Apple)만 — 로그인해야 쓰는 내 팀은 숨긴다.
+// T-10-102 비로그인 구단주는 안내 카드와 로그인 버튼(구글 · T-11-204 Apple)만 — 로그인해야 쓰는 내 팀은 숨긴다.
 test('익명 구단주는 내 팀 대신 구글 · Apple 로그인 버튼만 본다', async ({ page }) => {
   await stubOwner(page, false);
   await page.goto('/');

@@ -8,7 +8,7 @@ export const OAUTH_COOKIE_NAME = 'offside_oauth';
 export const OAUTH_COOKIE_PATH = '/v1/auth/google';
 const OAUTH_COOKIE_MAX_AGE_SECONDS = 600;
 
-/** 쿠키 이름·경로 한 벌. 구글과 애플(T-11-202 웹 Sign in with Apple)이 따로 쓴다. */
+/** 쿠키 이름·경로 한 벌. 구글과 애플(T-11-204 웹 Sign in with Apple)이 따로 쓴다. */
 export type OauthCookieSlot = { name: string; path: string };
 export const GOOGLE_OAUTH_COOKIE: OauthCookieSlot = {
   name: OAUTH_COOKIE_NAME,

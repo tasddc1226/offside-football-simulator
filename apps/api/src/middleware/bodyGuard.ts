@@ -16,7 +16,7 @@ function bodyTooLarge(): never {
 
 /** 결정 4: Content-Type·본문 크기 검사. 읽은 본문은 c.set('rawBody')로 라우트에 전달한다. */
 export const bodyGuard = createMiddleware<AppEnv>(async (c, next) => {
-  // T-11-202 Apple form_post 콜백은 폼 본문이다(라우트가 직접 읽는다).
+  // T-11-204 Apple form_post 콜백은 폼 본문이다(라우트가 직접 읽는다).
   if (STATE_CHANGING_METHODS.has(c.req.method) && c.req.path !== APPLE_WEB_CALLBACK_PATH) {
     const contentType = c.req.header(CONTENT_TYPE_HEADER) ?? '';
     if (!contentType.toLowerCase().startsWith('application/json')) {

@@ -92,7 +92,7 @@ export async function verifyAppleIdToken(
 
 /**
  * 환경에 맞게 검증한다. 로컬 APPLE_FAKE=1이면 'fake:<sub>'도 받는다(테스트·로컬 앱 개발) — 진짜 토큰은 그대로 검증한다.
- * audience: 앱은 번들 id(기본), 웹(T-11-202)은 Services ID(APPLE_WEB_CLIENT_ID).
+ * audience: 앱은 번들 id(기본), 웹(T-11-204)은 Services ID(APPLE_WEB_CLIENT_ID).
  */
 export async function verifyApple(
   env: Pick<Bindings, 'ENVIRONMENT' | 'APPLE_FAKE' | 'APPLE_BUNDLE_ID'>,

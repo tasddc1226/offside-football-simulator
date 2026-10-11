@@ -52,7 +52,7 @@ export async function startGoogleLogin(back: LoginReturn | null) {
   if (!(await getProfile()).ok) return toast(loginOfflineText());
   window.location.assign(googleStartUrl());
 }
-/** T-11-202 Apple 로그인을 시작한다(주소창으로 Apple에 갔다가 /settings?apple=...로 돌아온다). */
+/** T-11-204 Apple 로그인을 시작한다(주소창으로 Apple에 갔다가 /settings?apple=...로 돌아온다). */
 export async function startAppleLogin(back: LoginReturn | null) {
   rememberLoginReturn(back);
   if (!(await getProfile()).ok) return toast(loginOfflineText());
