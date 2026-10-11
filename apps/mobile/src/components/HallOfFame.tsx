@@ -281,7 +281,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
                     { key: 'all', label: L.all },
                     ...DETAILS_OF[pos].map((key) => ({
                       key,
-                      label: `${key} · ${tn(DETAIL_LABEL[key])}`,
+                      label: key,
                     })),
                   ]}
                 />

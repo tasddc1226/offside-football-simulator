@@ -240,7 +240,7 @@
           <div class="seg hof-pos" role="group" aria-label={L.detailPositionGroup}>
             <button class="hof-sort" aria-pressed={dpos === null} data-hof-dpos="all" onclick={() => pickDetail(null)}>{L.all}</button>
             {#each DETAILS_OF[pos] as k (k)}
-              <button class="hof-sort" aria-pressed={dpos === k} data-hof-dpos={k} onclick={() => pickDetail(k)}>{k} · {tn(DETAIL_LABEL[k])}</button>
+              <button class="hof-sort" aria-pressed={dpos === k} data-hof-dpos={k} aria-label={tn(DETAIL_LABEL[k])} onclick={() => pickDetail(k)}>{k}</button>
             {/each}
           </div>
         {/if}
