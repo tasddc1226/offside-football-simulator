@@ -343,3 +343,18 @@ describe('retention reporting', () => {
     expect(JSON.stringify(payload)).not.toContain(user.profileId);
   });
 });
+
+it('keeps the one-device cohort when legacy return notifications are generated in the same cron tick', async () => {
+  await addAppPushDevice(ctx, user.profileId);
+  await stale(3);
+  const legacy = await issueCookie(ctx);
+  await addAppPushDevice(ctx, legacy.profileId);
+  await ctx.env.DB.prepare('UPDATE push_devices SET updated_at=? WHERE profile_id=?')
+    .bind(iso(NOW - 8 * DAY), legacy.profileId)
+    .run();
+  expect((await queueCareerReminders(ctx.env, NOW)).created).toBe(1);
+  expect((await queueReengagement(ctx.env, NOW)).created).toBe(1);
+  const deliveries = await rows('push_deliveries');
+  expect(deliveries.filter((r) => r.profile_id === user.profileId)).toHaveLength(1);
+  expect(deliveries.filter((r) => r.profile_id === legacy.profileId)).toHaveLength(1);
+});
