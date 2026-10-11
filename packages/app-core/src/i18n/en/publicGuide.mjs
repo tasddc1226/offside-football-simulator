@@ -21,6 +21,8 @@ export default {
   hub: 'My Club',
   retiredNumberContribution:
     'Club contribution comes from appearances, goals, assists, clean sheets, club trophies and individual awards earned at that club. One-club careers, returning to a former club, long service and retiring at the club can add bonuses. School, university, military-service seasons and national-team records do not count.',
+  teamSynergy:
+    'Duo synergies check both player type and lineup position. W/LW/RW is a position: placing a Speedster there does not satisfy a Winger type requirement. Tap a player card to check its type. Overlapping run requires Attacking fullback and Winger types on the same flank. Each duo applies once even with multiple matching pairs; different synergy effects add up. Strong-foot fit depends on position and foot, regardless of type. National team lineup is a badge with no match effect.',
   teamAssembly:
     'After signing in, you can create one owner team per service season. Open team management in My Club to arrange owned retired-player cards in a formation. The basic 4-3-3, 4-4-2 and 3-5-2 are joined from season 1 by 4-2-3-1, 4-1-4-1, 4-3-3 F9, 4-4-1-1, 3-4-3 and 5-3-2, and dragging a player to another spot changes their detailed position to match. Use players you raised or signed from the transfer market. Up to three starters can be wildcards from earlier service seasons. Youth players fill empty positions, so one retired player is enough to play. A player’s service season is determined by the first season record uploaded to the server, not the retirement date.',
   ownerRecords:

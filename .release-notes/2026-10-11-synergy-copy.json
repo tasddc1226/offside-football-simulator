@@ -1,0 +1,14 @@
+{
+  "id": "synergy-requirements-copy-20261011",
+  "title": "시너지 조건 안내",
+  "items": ["시너지의 선수 유형·배치 자리·효과 안내를 명확히 했어요."],
+  "en": {
+    "title": "Team synergy guidance",
+    "items": ["Clarified player types, positions and synergy effects."]
+  },
+  "ja": {
+    "title": "シナジー条件",
+    "items": ["シナジーの選手タイプ・配置位置・効果の説明を明確にしました。"]
+  },
+  "availability": "web-app"
+}
