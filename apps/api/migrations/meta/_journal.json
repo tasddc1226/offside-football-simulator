@@ -614,22 +614,15 @@
     {
       "idx": 87,
       "version": "6",
-      "when": 1791703334348,
-      "tag": "0087_broad_edwin_jarvis",
+      "when": 1791703145527,
+      "tag": "0087_season_telemetry",
       "breakpoints": true
     },
     {
       "idx": 88,
       "version": "6",
-      "when": 1791703489368,
-      "tag": "0088_wooden_magneto",
-      "breakpoints": true
-    },
-    {
-      "idx": 89,
-      "version": "6",
-      "when": 1791703882656,
-      "tag": "0089_amused_revanche",
+      "when": 1791704384064,
+      "tag": "0088_faulty_genesis",
       "breakpoints": true
     }
   ]

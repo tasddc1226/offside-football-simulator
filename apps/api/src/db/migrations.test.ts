@@ -447,6 +447,16 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
   server_firsts: ['season', 'id', 'career_id', 'achieved_at', 'year'],
   app_meta: ['key', 'value'],
   server_records: ['season', 'id', 'career_id', 'value', 'achieved_at', 'year'],
+  season_telemetry: [
+    'id',
+    'career_id',
+    'year',
+    'age',
+    'ovr',
+    'events_json',
+    'growth_json',
+    'created_at',
+  ],
   retired_numbers: [
     'season',
     'club_id',

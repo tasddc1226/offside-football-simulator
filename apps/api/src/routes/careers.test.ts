@@ -14,7 +14,14 @@ import {
 import { gzipToR2 } from '../cron/backup.js';
 import { createApp } from '../app.js';
 import { UPLOAD_LIMIT } from './careers.js';
-import { authAttempts, cards, careers, careerSeasons, profiles } from '../db/schema.js';
+import {
+  authAttempts,
+  cards,
+  careers,
+  careerSeasons,
+  profiles,
+  seasonTelemetry,
+} from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import {
   deleteProfile,
@@ -88,6 +95,12 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
   });
 
   async function compactFixture() {
+    // T-11-207 이전에 쌓인 행처럼 career_seasons에 선택 로그가 남아 있는 상태에서 보관한다.
+    await ctx.env.DB.prepare(
+      `UPDATE career_seasons SET events_json='[{"legacy":1}]' WHERE career_id=?`,
+    )
+      .bind(CAREER_ID)
+      .run();
     const rows = (
       await ctx.env.DB.prepare(
         'SELECT year, events_json, signals_json, growth_json FROM career_seasons WHERE career_id=? ORDER BY year LIMIT 3',
@@ -372,7 +385,7 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect((await put(other.cookie, otherId)).status).toBe(200);
   });
 
-  it('T-11-048: 시즌 성장 기록을 저장하고, 기록 없이 다시 올라온 같은 시즌은 지우지 않는다', async () => {
+  it('T-11-048·T-11-207: 시즌 성장 기록은 측정 기록 테이블에 업로드마다 덧붙고, 시즌 행에는 쓰지 않는다', async () => {
     const owner = await issueCookie(ctx);
     const app = createApp();
     const growth = {
@@ -397,19 +410,31 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
         ctx.env,
       );
     };
-    const row = async () =>
-      (await ctx.db.select().from(careerSeasons).where(eq(careerSeasons.careerId, CAREER_ID)))[0]!;
+    const growths = async () =>
+      (
+        await ctx.db
+          .select()
+          .from(seasonTelemetry)
+          .where(eq(seasonTelemetry.careerId, CAREER_ID))
+          .orderBy(seasonTelemetry.id)
+      ).map((r) => (r.growthJson ? (JSON.parse(r.growthJson) as typeof growth) : null));
 
     expect((await send({ growth })).status).toBe(200);
-    expect(JSON.parse((await row()).growthJson!)).toEqual(growth);
+    expect(await growths()).toEqual([growth]);
 
-    // 옛 시즌 재전송(성장 기록 없음)은 이미 쌓인 기록을 그대로 둔다.
+    // 성장 기록 없는 재전송도 선택 로그가 있으면 한 행 덧붙는다(성장 기록은 NULL). 앞 기록은 그대로다.
     expect((await send({})).status).toBe(200);
-    expect(JSON.parse((await row()).growthJson!)).toEqual(growth);
+    expect(await growths()).toEqual([growth, null]);
 
-    // 새 성장 기록이 오면 덮어쓴다.
+    // 새 성장 기록은 새 행으로 쌓인다.
     expect((await send({ growth: { ...growth, o0: 53 } })).status).toBe(200);
-    expect(JSON.parse((await row()).growthJson!).o0).toBe(53);
+    expect((await growths()).at(-1)!.o0).toBe(53);
+
+    const [season] = await ctx.db
+      .select()
+      .from(careerSeasons)
+      .where(eq(careerSeasons.careerId, CAREER_ID));
+    expect(season).toMatchObject({ growthJson: null, eventsJson: '[]' });
   });
 
   it('T-11-048: 성장 기록 없이 올라온 첫 시즌은 NULL이고, 모양이 틀린 기록은 버리되 시즌은 받는다', async () => {
