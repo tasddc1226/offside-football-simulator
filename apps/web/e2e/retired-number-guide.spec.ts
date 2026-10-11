@@ -29,9 +29,9 @@ const preview = {
   ],
 };
 for (const [lang, open, career] of [
-  ['ko', '도전 현황 보기', '커리어'],
-  ['en', 'View progress', 'Career'],
-  ['ja', '挑戦状況を見る', 'キャリア'],
+  ['ko', '영구결번 도전', '커리어'],
+  ['en', 'Retire your number', 'Career'],
+  ['ja', '永久欠番への挑戦', 'キャリア'],
 ] as const) {
   test(`retirement guide ${lang}: explicit loading, cached revisit and narrow layout`, async ({
     page,
@@ -55,11 +55,11 @@ for (const [lang, open, career] of [
     await page.getByRole('tab', { name: career, exact: true }).click();
     await expect(page.locator('[data-rn-guide]')).toBeVisible();
     expect(calls).toBe(0);
-    await page.getByRole('button', { name: open, exact: true }).click();
+    await page.getByRole('button', { name: open }).click();
     await expect(page.locator('[data-rn-club]')).toHaveCount(2);
     expect(calls).toBe(1);
     await page.locator('[data-rn-guide] button').first().click();
-    await page.getByRole('button', { name: open, exact: true }).click();
+    await page.getByRole('button', { name: open }).click();
     await expect(page.locator('[data-rn-club]')).toHaveCount(2);
     expect(calls).toBe(1);
     const bounds = await page.locator('[data-rn-guide]').evaluate((el) => ({
@@ -89,7 +89,7 @@ test('retirement guide recovers from a failed request without reporting an open 
   await page.goto('/');
   await page.locator('[data-act="continue"]').click();
   await page.getByRole('tab', { name: '커리어', exact: true }).click();
-  await page.getByRole('button', { name: '도전 현황 보기', exact: true }).click();
+  await page.getByRole('button', { name: '영구결번 도전' }).click();
   await expect(page.locator('[data-rn-club]')).toHaveCount(0);
   await page.getByRole('button', { name: '다시 확인', exact: true }).click();
   await expect(page.locator('[data-rn-club]')).toHaveCount(2);

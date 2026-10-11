@@ -33,7 +33,7 @@
 </script>
 
 <section class="card rn-guide" data-rn-guide>
-  <button class="rn-trigger" onclick={() => (open = !open)} aria-expanded={open} aria-label={open ? L.rnClose : L.rnOpen}>
+  <button class="rn-trigger" onclick={() => (open = !open)} aria-expanded={open}>
     <span class="rn-shirt" aria-hidden="true">{s.number}</span>
     <span class="rn-heading"><strong>{L.rnTitle}</strong><span class="muted fs-sm">{L.rnIntro}</span></span>
     <span class="rn-chevron" aria-hidden="true">{open ? '−' : '+'}</span>
@@ -83,6 +83,6 @@
   .rn-club-head strong { min-width: 0; overflow-wrap: anywhere; }
   .rn-status { color: var(--muted); }
   .rn-status.good { color: var(--good); }
-  .rn-bar { height: 6px; border-radius: 3px; overflow: hidden; background: var(--surface2); }
+  .rn-bar { height: 6px; border-radius: 3px; overflow: hidden; background: var(--line); }
   .rn-bar span { display: block; height: 100%; background: var(--accent); }
 </style>

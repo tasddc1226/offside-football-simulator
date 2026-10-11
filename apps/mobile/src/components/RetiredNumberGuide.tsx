@@ -47,7 +47,8 @@ export function RetiredNumberGuide({ s }: { s: GameState }) {
       <Press
         onPress={() => setOpen(!open)}
         accessibilityRole="button"
-        accessibilityLabel={open ? L.rnClose : L.rnOpen}
+        accessibilityLabel={L.rnTitle}
+        accessibilityHint={L.rnIntro}
         accessibilityState={{ expanded: open }}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56 }}
       >
@@ -154,7 +155,7 @@ export function RetiredNumberGuide({ s }: { s: GameState }) {
                       height: 6,
                       borderRadius: 3,
                       overflow: 'hidden',
-                      backgroundColor: c.surface2,
+                      backgroundColor: c.line,
                     }}
                   >
                     <View

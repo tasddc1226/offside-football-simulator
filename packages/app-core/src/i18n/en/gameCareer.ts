@@ -4,8 +4,6 @@ import type { GameCareerMsgs } from '../ko/gameCareer';
 export const gameCareer: Translation<GameCareerMsgs> = {
   rnTitle: 'Retire your number',
   rnIntro: 'Could this number stay with a club you serve for years?',
-  rnOpen: 'View progress',
-  rnClose: 'Hide progress',
   rnLoading: 'Checking saved seasons.',
   rnRetry: 'Check again',
   rnError: 'Could not load your records. Check your connection and record sync.',

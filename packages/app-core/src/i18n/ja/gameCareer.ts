@@ -4,8 +4,6 @@ import type { GameCareerMsgs } from '../ko/gameCareer';
 export const gameCareer: Translation<GameCareerMsgs> = {
   rnTitle: '永久欠番への挑戦',
   rnIntro: '長く活躍したクラブに、この背番号を残せるでしょうか。',
-  rnOpen: '挑戦状況を見る',
-  rnClose: '挑戦状況を閉じる',
   rnLoading: '保存されたシーズン記録を確認しています。',
   rnRetry: '再確認',
   rnError: '記録を読み込めませんでした。接続と記録の同期状況を確認してください。',

@@ -5,8 +5,6 @@ import { ns } from '../core';
 const ko = {
   rnTitle: '영구결번 도전',
   rnIntro: '오래 뛴 구단에 이 번호를 남길 수 있을까요?',
-  rnOpen: '도전 현황 보기',
-  rnClose: '도전 현황 접기',
   rnLoading: '시즌 기록을 확인하고 있어요.',
   rnRetry: '다시 확인',
   rnError: '기록을 불러오지 못했어요. 연결과 기록 동기화 상태를 확인해 주세요.',
