@@ -337,6 +337,7 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async (
   expect(asked.at(-1)).toBe('?limit=10&page=2');
 
   await full.locator('.hof-row').first().click();
+  await expect(page.locator('.film-open h1')).toBeVisible();
   await page.goBack();
   await expect(full.locator('.hof-pager')).toContainText('2 / 2');
   await expect(full.locator('.hof-row').first().locator('.hof-rank')).toHaveText('11');
@@ -546,6 +547,7 @@ test('홈 ↔ 전체 보기 ↔ 상세를 오가도 같은 목록을 다시 요�
   for (let i = 0; i < 2; i++) {
     await page.locator('[data-act="hof-all"]').click();
     await page.locator(`[data-hof="full"] [data-hof-id="${ID}"]`).click();
+    await expect(page.locator('.film-open h1')).toBeVisible();
     await page.goBack();
     await page.locator('[data-act="home"]').click();
     await expect(page.locator('[data-hof="home"] .hof-row')).toHaveCount(1);
