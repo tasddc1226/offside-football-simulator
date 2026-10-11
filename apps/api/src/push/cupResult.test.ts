@@ -9,6 +9,7 @@ import {
   publishCupResults,
   cupResultSource,
 } from './cupResult.js';
+import { getPushPerformance, recordPushInteraction } from '../db/repos/pushPerformance.js';
 import { runPersonalPush } from './personal.js';
 import { cupKo } from '../cupText.js';
 import { pushText } from './text.js';
@@ -254,4 +255,87 @@ it('does not conflate separate accounts participating in the same cup', async ()
   await consumeCupResults(batch(), ctx.env, NOW, send);
   const payload = JSON.parse(String(send.mock.calls[0]?.[1]?.body)) as unknown[];
   expect(payload).toHaveLength(2);
+});
+
+it('reports one cup with deduplicated audience including accounts without push devices', async () => {
+  await entry();
+  await prediction('m1');
+  await prediction('m2');
+  const predictor = await issueCookie(ctx);
+  await addAppPushDevice(ctx, predictor.profileId);
+  await prediction('m1', predictor.profileId);
+  await prediction('m2', predictor.profileId);
+  const noDevice = await issueCookie(ctx);
+  await entry(noDevice.profileId);
+  await complete();
+  const report = await getPushPerformance(ctx.env.DB, { days: '7', page: 0 }, new Date(NOW));
+  expect(report.cups).toHaveLength(1);
+  expect(report.cups![0]).toMatchObject({
+    cupId: cup.id,
+    recipients: 3,
+    participants: 2,
+    predictors: 2,
+    overlap: 1,
+    predictionOnly: 1,
+    predictionEntries: 4,
+    duplicatesRemoved: 3,
+    notQueued: 1,
+    queued: 2,
+    pending: 2,
+    accepted: 0,
+  });
+  expect(report.campaigns).toHaveLength(1);
+  expect(report.campaigns[0]!.recipients).toBe(2);
+  const send = transport();
+  await consumeCupResults(batch(), ctx.env, NOW, send);
+  const id = (await rows('notifications')).find((n) => n.profile_id === user.profileId)!
+    .id as string;
+  await recordPushInteraction(ctx.env.DB, user.profileId, id, 'click', now);
+  await recordPushInteraction(ctx.env.DB, user.profileId, id, 'click', now);
+  const after = await getPushPerformance(ctx.env.DB, { days: '7', page: 0 }, new Date(NOW));
+  expect(after.cups![0]).toMatchObject({
+    recipients: 3,
+    notQueued: 1,
+    acceptedRecipients: 2,
+    clicked: 1,
+  });
+});
+it('shows cups even when nobody has enabled push, and respects the date filter', async () => {
+  await entry();
+  await ctx.env.DB.prepare('DELETE FROM push_devices').run();
+  await complete();
+  const current = await getPushPerformance(ctx.env.DB, { days: '7', page: 0 }, new Date(NOW));
+  expect(current.cups![0]).toMatchObject({ recipients: 1, queued: 0, notQueued: 1, accepted: 0 });
+  expect(current.campaigns).toHaveLength(0);
+  expect(
+    (await getPushPerformance(ctx.env.DB, { days: '7', page: 0 }, new Date(NOW + 8 * 86400_000)))
+      .cups,
+  ).toEqual([]);
+});
+it('paginates cups independently of device registrations and keeps the cohort cutoff', async () => {
+  for (let i = 0; i < 21; i++)
+    await ctx.env.DB.prepare(
+      `INSERT INTO notifications
+    (id,profile_id,source_key,kind,title,body,target_json,created_at,expires_at)
+    VALUES(?,?,?,'team','Cup','Done','{}',?,?)`,
+    )
+      .bind(
+        `cup-report-${i}`,
+        user.profileId,
+        `cup-complete:report-${i}`,
+        now,
+        new Date(NOW + 86400_000).toISOString(),
+      )
+      .run();
+  const first = await getPushPerformance(ctx.env.DB, { days: '7', page: 0 }, new Date(NOW));
+  const second = await getPushPerformance(
+    ctx.env.DB,
+    { days: '7', page: 1, through: first.cohortThrough },
+    new Date(NOW + 1000),
+  );
+  expect(first.cups).toHaveLength(20);
+  expect(first.hasMore).toBe(true);
+  expect(second.cups).toHaveLength(1);
+  expect(second.hasMore).toBe(false);
+  expect(new Set([...first.cups!, ...second.cups!].map((x) => x.cupId)).size).toBe(21);
 });

@@ -45,3 +45,26 @@ export const RETENTION_METRICS = [
   'failed',
   'unknown',
 ] as const;
+
+export { cupPush as cupPushText } from './i18n/ko/cupPush';
+export const CUP_AUDIENCE_METRICS = [
+  'recipients',
+  'participants',
+  'predictors',
+  'overlap',
+  'predictionOnly',
+  'predictionEntries',
+  'duplicatesRemoved',
+  'notQueued',
+] as const;
+export const CUP_DELIVERY_METRICS = [
+  'queued',
+  'acceptedRecipients',
+  'confirmed',
+  'clicked',
+  'targetOpened',
+  'pending',
+  'failed',
+  'unknown',
+  'cancelled',
+] as const;

@@ -19,6 +19,7 @@ import { clubSync } from './clubSync';
 import { create } from './create';
 import { cup } from './cup';
 import { cupApp } from './cupApp';
+import { cupPush } from './cupPush';
 import { dex } from './dex';
 import { fairness } from './fairness';
 import { firsts } from './firsts';
@@ -107,6 +108,7 @@ export const en = {
   create,
   cup,
   cupApp,
+  cupPush,
   dex,
   fairness,
   firsts,
