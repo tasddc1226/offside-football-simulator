@@ -449,7 +449,7 @@ for (const width of [320, 1024]) {
             total: 2,
             clubs: [{ clubId: SLOT.clubId, club: SLOT.club, count: 2 }],
             recent: rows,
-            wall: rows.map(({ seq, ...r }) => r),
+            wall: rows.map(({ seq: _seq, ...r }) => r),
           }),
         );
       clubRequests++;

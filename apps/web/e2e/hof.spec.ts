@@ -290,6 +290,7 @@ test('구단주 내 선수: 계정에 연결되지 않았으면 이 기기 기�
 
 // 홈은 TOP 3만, '전체 보기'는 10명씩 페이지(T-10-101). 상세에서 돌아오면 보던 페이지로 돌아온다.
 test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async ({ page }) => {
+  await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
   const TOTAL = 15;
   const nth = (k: number) => ({
     ...entry,
@@ -337,6 +338,7 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async (
   expect(asked.at(-1)).toBe('?limit=10&page=2');
 
   await full.locator('.hof-row').first().click();
+  await expect(page.locator('.film-open h1')).toBeVisible();
   await page.goBack();
   await expect(full.locator('.hof-pager')).toContainText('2 / 2');
   await expect(full.locator('.hof-row').first().locator('.hof-rank')).toHaveText('11');
