@@ -13,6 +13,7 @@ import {
   lineStrength,
   ratingChange,
   repeatFactor,
+  slotFit,
   slotRating,
   teamOvr,
   achGradeOf,
@@ -59,8 +60,10 @@ describe('fit', () => {
 
 describe('T-10-092 자리별 실력·줄 무게', () => {
   const roles = { GK: 30, CB: 60, FB: 70, DM: 75, CM: 80, AM: 88, W: 85, ST: 83 } as const;
-  it('자리별 실력이 있으면 그 값을 쓰되 최고 OVR을 넘지 않는다', () => {
-    expect(slotRating('AM', { peak: 86, pos: 'MF', dpos: 'AM', roles })).toBe(86);
+  it('자리별 실력이 있으면 그 값을 쓰되 최고 OVR + 2(T-11-197)를 넘지 않는다', () => {
+    expect(slotRating('AM', { peak: 86, pos: 'MF', dpos: 'AM', roles })).toBe(88);
+    expect(slotRating('AM', { peak: 85, pos: 'MF', dpos: 'AM', roles })).toBe(87);
+    expect(slotFit('AM', { peak: 85, pos: 'MF', dpos: 'AM', roles })).toBe(1.02);
     expect(slotRating('W', { peak: 86, pos: 'MF', dpos: 'AM', roles })).toBe(85);
     expect(slotRating('CB', { peak: 86, pos: 'MF', dpos: 'AM', roles })).toBe(60);
     // roles가 null이면 옛 적합도 규칙.

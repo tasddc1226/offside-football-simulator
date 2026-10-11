@@ -835,7 +835,7 @@ describe('조작된 기록 보정', () => {
     ).toBe(400);
   });
 
-  it('T-10-092: 최고 시점 능력치는 자리별 실력을 최고 OVR 아래로 잘라 남기고, 모양이 틀려도 은퇴는 받는다', async () => {
+  it('T-10-092 · T-11-197: 최고 시점 능력치는 자리별 실력을 최고 OVR + 2 아래로 잘라 남기고, 모양이 틀려도 은퇴는 받는다', async () => {
     await putSeasonsFor(ctx.env, cookie, CAREER_ID, { ...retirementBody(), retireAge: 25 });
     const profile = {
       attrs: { pac: 91, sho: 70, pas: 66, dri: 80, def: 40, phy: 72 },
@@ -851,7 +851,7 @@ describe('조작된 기록 보정', () => {
     expect(r.peak).toBe(88);
     expect(JSON.parse(r.peakProfile!)).toEqual({
       attrs: profile.attrs,
-      roles: { ...profile.roles, W: 88 },
+      roles: { ...profile.roles, W: 90 },
     });
 
     const other = '66666666-6666-4666-8666-666666666666';

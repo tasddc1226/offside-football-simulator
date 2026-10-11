@@ -166,8 +166,7 @@ describe('T-11-105 편성 화면 시너지', () => {
   });
   it('효과 표기 · 반영 시즌 안내 · 시너지 표', () => {
     expect(synergyEffectText({ atk: 1, mid: 0.5 })).toBe('공격 +1 · 중원 +0.5');
-    expect(synergyEffectText({}, 'duo')).toBe('상한에 걸려 효과 없음');
-    expect(synergyEffectText({}, 'badge')).toBe('경기 효과 없음');
+    expect(synergyEffectText({})).toBe('경기 효과 없음');
     expect(synergyNote(0)).toBe('프리시즌 경기에는 반영되지 않았어요');
     expect(synergyNote(1)).toBe('켜진 시너지는 모두 경기에 반영돼요');
     // 규칙 전부를 적용 중 → 미적용 순으로. 켜진 것은 실제 효과, 미적용은 규칙 효과.
