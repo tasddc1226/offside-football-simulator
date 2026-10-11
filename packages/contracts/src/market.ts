@@ -42,6 +42,8 @@ export const MarketCardSchema = z.strictObject({
   /** T-11-180 키(cm)·몸무게(kg). 체격이 없는 옛 커리어·옛 응답에는 없다. */
   height: z.number().int().optional(),
   weight: z.number().int().optional(),
+  /** T-11-211 주발(오른발·왼발·양발, 한국어 저장값). 옛 응답에는 없다. */
+  foot: z.string().optional(),
   /** 기준가(만 원). */
   cardValue: man,
   /** 지금까지 팔린 횟수. */
