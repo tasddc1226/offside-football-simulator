@@ -512,7 +512,7 @@ export default function Create() {
                     <TextInput
                       testID="f-name"
                       accessibilityLabel={L.name}
-                      maxLength={10}
+                      maxLength={12}
                       autoCorrect={false}
                       autoCapitalize="none"
                       spellCheck={false}
