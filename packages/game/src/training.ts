@@ -225,7 +225,7 @@ export function applyTraining(s: GameState) {
 
 // ───────── T-11-012 자기 투자 ─────────
 // 훈련과 따로 구간마다 자금을 한 가지에 쓴다. 비용은 연봉 비례(최소 금액이 있어 아마추어·저연봉도 의미가 있다)이고,
-// 특훈 성장은 능력치 훈련과 같은 공식(나이·잠재력까지 남은 여유·사기·치우침)을 타서 돈으로 잠재력을 넘지 못한다.
+// 특훈 성장은 능력치 훈련과 같은 공식(나이·잠재력까지 남은 여유·사기·치우침)을 쓴다. 잠재력은 성장 속도의 기준이며 하드 캡이 아니다.
 // 고르지 않은 커리어(invest 없음)는 RNG를 한 번도 쓰지 않는다 — 기존 시드 결과(golden.test.ts)가 그대로다.
 export type InvestId = 'none' | 'weak' | 'best' | 'medical' | 'mental';
 export interface InvestDef {

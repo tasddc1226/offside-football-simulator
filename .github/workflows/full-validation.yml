@@ -34,8 +34,10 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm --filter @offside/api exec vitest run --config ../mobile/vitest.push.config.mjs
+      # 첫 화면 예산은 운영 빌드 기준으로 잰다(scripts/check-bundle-prod.mjs). e2e는 다음 pnpm build(설정 없음)를 쓴다.
+      - name: Bundle check (production config)
+        run: pnpm --filter @offside/web check:bundle:prod
       - run: pnpm build
-      - run: pnpm --filter @offside/web check:bundle
       - run: pnpm --filter @offside/api db:check
       - name: Fulltime balance regression (N=20000, random, parity vs reference/random.json)
         run: |

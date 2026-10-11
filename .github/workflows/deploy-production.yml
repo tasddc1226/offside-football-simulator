@@ -36,6 +36,7 @@ jobs:
     env:
       PRODUCTION_API_URL: https://api.offside-lab.com
       PRODUCTION_WEB_URL: https://offside-lab.com
+      # 공개 VITE_ 설정을 더하거나 빼면 apps/web/scripts/check-bundle-prod.mjs(PR CI 첫 화면 예산 검사)도 맞춘다.
       VITE_PUBLIC_SITE_URL: https://offside-lab.com
       VITE_ENABLE_SEARCH_INDEXING: 'true'
       # Empty until the consent notice and GA4 console setup are approved for release.
