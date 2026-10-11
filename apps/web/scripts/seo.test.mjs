@@ -2,8 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { brandSvg } from '../brand/build-icons.mjs';
+import guideKo from '../../../packages/app-core/src/i18n/ko/publicGuide.mjs';
+import guideEn from '../../../packages/app-core/src/i18n/en/publicGuide.mjs';
+import guideJa from '../../../packages/app-core/src/i18n/ja/publicGuide.mjs';
 import {
   BRAND_VERSION,
+  STATIC_PAGES,
   stripAppBundle,
   createHeaders,
   createHeadMarkup,
@@ -124,6 +128,26 @@ test('structured data: home is a free web game, FAQ mirrors visible Q&A, no-inde
   assert.deepEqual(graph(createHeadMarkup(config, '/')), ['WebSite', 'VideoGame']);
   assert.deepEqual(graph(createHeadMarkup(config, '/faq/')), ['BreadcrumbList', 'FAQPage']);
   assert.doesNotMatch(createHeadMarkup(config, '/', true), /ld\+json/);
+  const faq = JSON.parse(createHeadMarkup(config, '/faq/').match(/ld\+json">(.*?)<\/script>/)[1])[
+    '@graph'
+  ].find((entry) => entry['@type'] === 'FAQPage');
+  const visible = [...STATIC_PAGES['/faq/'].matchAll(/<h2>(.*?)<\/h2><p>(.*?)<\/p>/g)];
+  assert.equal(faq.mainEntity.length, visible.length);
+  for (const [index, [, question, answer]] of visible.entries()) {
+    assert.equal(faq.mainEntity[index].name, question);
+    assert.equal(faq.mainEntity[index].acceptedAnswer.text, answer.replace(/<[^>]+>/g, ''));
+  }
+});
+
+test('static guide correction dictionaries have complete English and Japanese counterparts', () => {
+  for (const translated of [guideEn, guideJa]) {
+    assert.deepEqual(Object.keys(translated).sort(), Object.keys(guideKo).sort());
+    for (const text of Object.values(translated)) {
+      assert.equal(typeof text, 'string');
+      assert.ok(text.trim());
+      assert.doesNotMatch(text, /[가-힣]/);
+    }
+  }
 });
 
 test('T-10-118 maskable 아이콘은 모서리 없는 배경에 서클·글자만 80%로 줄인다', () => {
