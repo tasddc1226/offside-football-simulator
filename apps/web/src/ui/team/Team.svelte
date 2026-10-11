@@ -30,6 +30,7 @@
     fetchTeamMatches,
     playMatch,
     saveOwnerTeam,
+    saveTeamPresets,
     type ClubAchievementsResponse,
     type OwnerTeam,
     type OwnerTeamResponse,
@@ -58,6 +59,8 @@
   import TeamOpponents from './TeamOpponents.svelte';
   import TeamResult from './TeamResult.svelte';
   import TeamFriends from './TeamFriends.svelte';
+  import TeamPresets from './TeamPresets.svelte';
+  import { loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPresets';
   import { friendsUi } from '../friendInvite.svelte.js';
   import { shellText as S } from '@offside/app-core/i18n/ko/shell';
   import { achNudge } from '../achNudge.js';
@@ -101,6 +104,9 @@
   let loadSequence = 0;
   /** T-11-145 컵에 참가 중이면 편성 화면에 명단 마감 띠(잠겼는지 · 다음 마감 시각). */
   let cupBand = $state<{ locked: boolean; when: string | null } | null>(null);
+  /** T-11-217 팀 프리셋(서버에 있는 목록)과 시트. */
+  let presets = $state<TeamPreset[]>([]);
+  let presetsOpen = $state(false);
 
   let opponents = $state<TeamOpponent[]>([]);
   let oppStatus = $state<LoadStatus>('loading');
@@ -200,6 +206,25 @@
     formation = t?.formation ?? '4-3-3';
     layout = t?.layout?.map((p) => ({ ...p })) ?? null;
     slots = t ? t.slots.map((s) => s.careerId) : Array(LINEUP_SIZE).fill(null);
+    presets = t?.presets ?? [];
+  }
+
+  // ───────── 프리셋 (T-11-217) ─────────
+  const presetDraft = (presetName: string) => presetOf(presetName, formation, slots, season > 0 ? previewLayout : null);
+  async function persistPresets(next: TeamPreset[], saved = false): Promise<boolean> {
+    const r = await saveTeamPresets({ presets: next, ...(isPreseasonLegacy(season, current) ? { season: 0 } : {}) });
+    if (!r.ok) { toast(r.error.message); return false; }
+    presets = r.data.presets;
+    if (team) team = { ...team, presets: r.data.presets };
+    if (saved) toast(L.tpSaved);
+    return true;
+  }
+  function applyPreset(p: TeamPreset) {
+    const r = loadPreset(p, new Set(players.map((x) => x.careerId)));
+    formation = r.formation;
+    layout = r.layout;
+    slots = r.slots;
+    toast(r.missing ? L.tpLoadedMissing({ n: r.missing }) : L.tpLoaded);
   }
 
   /** 컵이 조별·토너먼트 중일 때만 내 참가 상태를 묻는다(그 밖에는 요청 없음). */
@@ -509,7 +534,9 @@
         onauto={autoFill}
         onsave={save}
         onlock={toggleLock}
+        onpresets={() => (presetsOpen = true)}
       />
+      <TeamPresets bind:open={presetsOpen} {presets} hasTeam={!!team} locked={!!cupBand?.locked} draft={presetDraft} persist={persistPresets} onload={applyPreset} />
     {:else if view === 'opponents'}
       <div class="seg two tm-mode" role="group" aria-label={L.matchKindLabel}>
         <button class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && oppStatus !== 'ready') void loadOpponents(); }}>{L.modeRanked}</button>

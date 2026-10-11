@@ -34,6 +34,7 @@ import {
   fetchTeamMatches,
   playMatch,
   saveOwnerTeam,
+  saveTeamPresets,
   type ClubAchievementsResponse,
   type OwnerTeam,
   type OwnerTeamResponse,
@@ -95,6 +96,8 @@ import { readTeamDraft, writeTeamDraft, teamDraftBase, type TeamDraft } from './
 import { RecordsChips as SortChips } from '../hof/RecordsControls';
 import { TeamResult } from './TeamResult';
 import { CupLockNotice, useCup } from './TeamCup';
+import { TeamPresets } from './TeamPresets';
+import { loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPresets';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
 
 const between = (v: string, min: number, max: number) =>
@@ -140,6 +143,8 @@ export default function Team() {
   const [logo, setLogo] = useState<Logo | null>(null);
   const [editingLogo, setEditingLogo] = useState(false);
   const [menu, setMenu] = useState(false);
+  /** T-11-217 팀 프리셋 시트. */
+  const [presetsOpen, setPresetsOpen] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [share, setShare] = useState<TeamShareData | null>(null);
@@ -404,6 +409,27 @@ export default function Team() {
       prev.map((x) => (x.careerId === p.careerId ? { ...x, locked: r.data.locked } : x)),
     );
     toast(r.data.locked ? MARKET_TOAST.locked : MARKET_TOAST.unlocked);
+  }
+
+  // ───────── 프리셋 (T-11-217) ─────────
+  async function persistPresets(next: TeamPreset[], saved = false) {
+    const r = await saveTeamPresets(legacy ? { presets: next, season: 0 } : { presets: next });
+    if (!r.ok) {
+      toast(r.error.message);
+      return false;
+    }
+    setTeam((t) => (t ? { ...t, presets: r.data.presets } : t));
+    if (saved) toast(L.tpSaved);
+    return true;
+  }
+  function applyPreset(p: TeamPreset) {
+    const r = loadPreset(p, new Set(players.map((x) => x.careerId)));
+    setFormation(r.formation);
+    setLayout(r.layout);
+    setSlots(r.slots);
+    setSelected(null);
+    setPresetsOpen(false);
+    toast(r.missing ? L.tpLoadedMissing({ n: r.missing }) : L.tpLoaded);
   }
 
   async function saveAndFind() {
@@ -716,6 +742,13 @@ export default function Team() {
                 </Txt>
               </View>
               {editable ? (
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                  <Btn sm onPress={() => setPresetsOpen(true)} testID="team-presets">
+                    {L.tpButton}
+                  </Btn>
+                </View>
+              ) : null}
+              {editable ? (
                 <SortChips
                   label={L.formationLabelApp}
                   value={layout ? (matchShape(layout) ?? '') : formation}
@@ -969,6 +1002,19 @@ export default function Team() {
           {needLogin ? null : <TabBar label={L.navLabel} items={navItems} sub="team" />}
         </View>
       </BarBelow.Provider>
+      {presetsOpen ? (
+        <TeamPresets
+          close={() => setPresetsOpen(false)}
+          presets={team?.presets ?? []}
+          hasTeam={!!team}
+          locked={!!cupState.me?.locked}
+          draft={(presetName) =>
+            presetOf(presetName, formation, slots, season > 0 ? positions : null)
+          }
+          persist={persistPresets}
+          onLoad={applyPreset}
+        />
+      ) : null}
       {menu ? (
         <TeamDialog title={L.menuTitleApp} close={() => setMenu(false)}>
           <Btn

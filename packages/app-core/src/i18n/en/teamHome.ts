@@ -263,4 +263,26 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   statFriendlyOnly: 'Only',
   retireSyncing:
     "Uploading your retired player's record. They'll join the locker room as soon as it's in.",
+  // T-11-217 Team presets
+  tpButton: 'Presets',
+  tpTitle: 'Team presets',
+  tpIntro:
+    'Save up to 5 sets of formation, starters, and positions. A loaded preset only reaches your team after you save.',
+  tpNeedTeam: 'Save your team once to use presets.',
+  tpEmpty: 'No saved presets yet.',
+  tpSaveCurrent: 'Save current lineup',
+  tpFull: 'You can keep up to 5 presets. Overwrite or delete one first.',
+  tpDefaultName: (p) => `Preset ${p.n}`,
+  tpSummary: (p) => `${p.shape} · ${plural(p.n, 'starter')}`,
+  tpLoad: 'Load',
+  tpOverwrite: 'Overwrite',
+  tpRename: 'Rename',
+  tpDelete: 'Delete',
+  tpNameLabel: 'Preset name',
+  tpNameDone: 'Done',
+  tpSaved: 'Preset saved.',
+  tpLoaded: 'Preset loaded. Save to apply it to your team.',
+  tpLoadedMissing: (p) =>
+    `Preset loaded. ${plural(p.n, 'spot')} left empty for players you no longer have.`,
+  tpLocked: 'Your cup lineup is locked, so presets can’t be loaded right now.',
 };

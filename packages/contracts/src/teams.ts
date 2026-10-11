@@ -12,6 +12,8 @@ import {
   ACH_CATEGORIES,
   FORMATION_IDS,
   LINEUP_SIZE,
+  TEAM_PRESET_MAX,
+  TEAM_PRESET_NAME_MAX,
   MANAGER_NAME_MAX,
   MANAGER_NAME_MIN,
   positionRole,
@@ -163,6 +165,16 @@ export const TeamLinesSchema = z.strictObject({
 });
 export type TeamLines = z.infer<typeof TeamLinesSchema>;
 
+/** T-11-217 팀 프리셋 하나(포메이션 · 선발 · 배치만 — 이름 · 로고 · 감독은 팀 것을 쓴다). 이름은 나만 본다. */
+export const TeamPresetSchema = z.strictObject({
+  name: z.string().trim().min(1).max(TEAM_PRESET_NAME_MAX),
+  formation: FormationIdSchema,
+  slots: z.array(CareerIdParamSchema.nullable()).length(LINEUP_SIZE),
+  layout: TeamLayoutSchema.nullable(),
+});
+export type TeamPreset = z.infer<typeof TeamPresetSchema>;
+export const TeamPresetsSchema = z.array(TeamPresetSchema).max(TEAM_PRESET_MAX);
+
 export const OwnerTeamSchema = z.strictObject({
   id: TeamIdSchema,
   season: TeamSeasonSchema,
@@ -179,6 +191,8 @@ export const OwnerTeamSchema = z.strictObject({
   record: TeamRecordSchema,
   likes: count,
   views: count,
+  /** T-11-217 내 팀 프리셋(최대 5개). 배포 전 응답엔 없다. */
+  presets: TeamPresetsSchema.optional(),
   createdAt: IsoUtcSchema,
   updatedAt: IsoUtcSchema,
 });
@@ -223,6 +237,15 @@ export type PutOwnerTeamBody = z.infer<typeof PutOwnerTeamBodySchema>;
 
 export const PutOwnerTeamResponseSchema = z.strictObject({ team: OwnerTeamSchema });
 export type PutOwnerTeamResponse = z.infer<typeof PutOwnerTeamResponseSchema>;
+
+/** T-11-217 프리셋 목록 통째 교체(저장 · 덮어쓰기 · 이름 바꾸기 · 삭제 모두). 팀을 한 번 저장한 뒤에만. */
+export const PutTeamPresetsBodySchema = z.strictObject({
+  season: TeamSeasonSchema.optional(),
+  presets: TeamPresetsSchema,
+});
+export type PutTeamPresetsBody = z.infer<typeof PutTeamPresetsBodySchema>;
+export const PutTeamPresetsResponseSchema = z.strictObject({ presets: TeamPresetsSchema });
+export type PutTeamPresetsResponse = z.infer<typeof PutTeamPresetsResponseSchema>;
 
 /** 경기 상대로 보이는 다른 구단주의 팀. */
 export const TeamOpponentSchema = z.strictObject({

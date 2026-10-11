@@ -6,6 +6,8 @@ import type {
   PlayTeamMatchResponse,
   PutOwnerTeamBody,
   PutOwnerTeamResponse,
+  PutTeamPresetsBody,
+  PutTeamPresetsResponse,
   TeamLikeResponse,
   TeamMatchesResponse,
   TeamOpponentsResponse,
@@ -27,6 +29,7 @@ export type {
   TeamMatch,
   TeamOpponent,
   TeamPlayer,
+  TeamPreset,
   TeamProfile,
   TeamRankItem,
   TeamRankResponse,
@@ -44,6 +47,12 @@ export const fetchOwnerTeam = (season?: number) =>
   withOwnerHint(cachedGet<OwnerTeamResponse>(`/v1/owner-team${seasonQ(season)}`, 60_000));
 export const saveOwnerTeam = (body: PutOwnerTeamBody) =>
   apiFetch<PutOwnerTeamResponse>('/v1/owner-team', { method: 'PUT', body: JSON.stringify(body) });
+/** T-11-217 팀 프리셋 목록 통째 교체(저장 · 덮어쓰기 · 이름 바꾸기 · 삭제). */
+export const saveTeamPresets = (body: PutTeamPresetsBody) =>
+  apiFetch<PutTeamPresetsResponse>('/v1/owner-team/presets', {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
 /** 상대 후보는 서버가 섞어 준다 — '다른 상대 보기'가 새로 받게 메모하지 않는다. */
 export const fetchOpponents = () => apiFetch<TeamOpponentsResponse>('/v1/owner-team/opponents');
 export const playMatch = (opponentTeamId: string) =>

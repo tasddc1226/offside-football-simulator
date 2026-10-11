@@ -494,6 +494,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'likes',
     'views',
     'friendly_json',
+    'presets_json',
   ],
   team_likes: ['team_id', 'profile_id', 'created_at'],
   owner_achievements: [
