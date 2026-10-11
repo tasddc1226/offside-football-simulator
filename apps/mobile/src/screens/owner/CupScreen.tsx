@@ -248,6 +248,9 @@ function Standings({
       <Txt v="xs" tone="muted">
         {L.standingsScroll}
       </Txt>
+      <Txt v="xs" tone="muted">
+        {L.standingsRule}
+      </Txt>
     </View>
   );
 }

@@ -159,6 +159,7 @@ export const cup: Translation<CupMsgs> = {
   myGroup: '自分の組',
   teamOwnerLabel: 'オーナー',
   standingsScroll: '横にスワイプするとすべての記録を確認できます。',
+  standingsRule: '順位は勝点、得失点差、総得点、直接対決、抽選の順で決まります。',
   thTeam: 'チーム',
   thP: '試合',
   thW: '勝',

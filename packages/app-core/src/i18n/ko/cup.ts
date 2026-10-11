@@ -170,6 +170,7 @@ const ko = {
   myGroup: '내 조',
   teamOwnerLabel: '구단주',
   standingsScroll: '옆으로 밀면 전체 기록을 볼 수 있어요.',
+  standingsRule: '순위는 승점, 골득실, 다득점, 맞대결, 추첨 순서로 정해요.',
   thTeam: '팀',
   thP: '경기',
   thW: '승',

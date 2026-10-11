@@ -49,6 +49,7 @@
     </table>
   </div>
   <p class="cg-scroll-note muted fs-xs">{L.standingsScroll}</p>
+  <p class="cg-rule muted fs-xs" data-cup-rule>{L.standingsRule}</p>
   {#if list.length}
     <div class="cg-matches">
       {#each list as m (m.id)}<CupMatchRow {m} {teams} {mineId} {onopen} {prediction} />{/each}
@@ -89,7 +90,7 @@
   .cg[open] summary {
     border-bottom: 1px solid var(--line);
   }
-  .cg-scroll-note{display:none;margin:6px 0}@media(max-width:480px){.cg-scroll-note{display:block}}
+  .cg-rule{margin:6px 0}.cg-scroll-note{display:none;margin:6px 0}@media(max-width:480px){.cg-scroll-note{display:block}}
   .cg-scroll {
     overflow-x: auto;
   }
