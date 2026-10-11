@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit && tsc --noEmit -p e2e && svelte-check --tsconfig ./tsconfig.json --threshold error",
     "check:bundle": "node scripts/check-bundle.mjs",
+    "check:bundle:prod": "node scripts/check-bundle-prod.mjs",
     "e2e": "playwright test",
     "e2e:install": "playwright install chromium",
     "deploy:staging": "wrangler deploy -c wrangler.og.jsonc --env staging && wrangler deploy --env staging",
