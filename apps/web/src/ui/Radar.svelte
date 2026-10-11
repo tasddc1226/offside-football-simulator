@@ -18,12 +18,8 @@
   const upKeys = $derived(
     s.training === 'coach' ? d.points.map((p) => p.key) : s.training === 'phy' ? ['phy', 'pac'] : [s.training],
   );
-  // 이름표 버튼 자리(viewBox 좌표, 레이더 바깥 둘레). 화면 좌표는 아래 VB로 백분율로 바꾼다.
+  // 이름표 버튼 자리는 d.slot(viewBox 좌표, 레이더 바깥 둘레), 화면 좌표는 아래 VB로 백분율로 바꾼다.
   const VB = { x: -20, y: -10, w: 340, h: 316 };
-  const slot = (x: number, y: number) => {
-    const ang = Math.atan2(y - d.CX, x - d.CX);
-    return [d.CX + Math.cos(ang) * 128, d.CX + Math.sin(ang) * 132] as const;
-  };
   const arrow = (x: number, y: number, len: number) => {
     const dx = x - d.CX,
       dy = y - d.CX,
@@ -57,16 +53,16 @@
       {@const on = upKeys.includes(d.points[i]!.key)}
       <circle class="rd-dot" cx={x.toFixed(1)} cy={y.toFixed(1)} r={on ? 4.5 : 3} />
       {#if on}
-        {@const a = arrow(x, y, s.training === 'coach' ? 8 : 16)}
+        {@const a = arrow(x, y, d.arrowLen(i, s.training === 'coach' ? 8 : 16))}
         <line class="tr-arrow" x1={a.x1.toFixed(1)} y1={a.y1.toFixed(1)} x2={a.x2.toFixed(1)} y2={a.y2.toFixed(1)} marker-end="url(#tr-head)" />
       {:else if d.points[i]!.key === invKey}
-        {@const a = arrow(x, y, 12)}
+        {@const a = arrow(x, y, d.arrowLen(i, 12))}
         <line class="tr-arrow inv" x1={a.x1.toFixed(1)} y1={a.y1.toFixed(1)} x2={a.x2.toFixed(1)} y2={a.y2.toFixed(1)} marker-end="url(#tr-head)" />
       {/if}
     {/each}
   </svg>
   {#each d.points as p (p.key)}
-    {@const [x, y] = slot(p.x, p.y)}
+    {@const [x, y] = d.slot(p.x, p.y)}
     {@const tr = trainOf(p.key)}
     {@const c = trainingCard(s, tr)}
     <button

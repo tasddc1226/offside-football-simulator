@@ -11,6 +11,7 @@ export const gameSeason: Translation<GameSeasonMsgs> = {
   coachMemo: 'Coach notes',
   trainingTitle: 'Training focus',
   trainHint: 'Pick training for this phase to move on',
+  trainPick: 'Tap a stat to train it this phase',
   investTitle: 'Self-investment',
   funds: (p) => `Funds ${p.v}`,
   fundsAfter: (p) => `Funds ${p.v} → ${p.after}`,

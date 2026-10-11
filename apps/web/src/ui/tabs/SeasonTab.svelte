@@ -248,7 +248,7 @@
     {#each coach.notes as note (note)}<p class="muted fs-sm">{note}</p>{/each}
   </div>
   <h3 class="sub-title">{L.trainingTitle}</h3>
-  {#if tourWait === 'train'}<p class="tour-hint" aria-live="polite">{L.trainHint}</p>{/if}
+  {#if tourWait === 'train'}<p class="tour-hint" aria-live="polite">{L.trainHint}</p>{:else}<p class="muted fs-sm" data-train-pick>{L.trainPick}</p>{/if}
   <Radar {s} onpick={setTraining} />
   <p class="muted fs-sm">{CG.trainWeak}</p>
   <PositionGuide pos={s.pos} />

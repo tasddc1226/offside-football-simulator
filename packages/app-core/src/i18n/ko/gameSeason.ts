@@ -10,6 +10,7 @@ const ko = {
   coachMemo: '코치 메모',
   trainingTitle: '훈련 방향',
   trainHint: '이번 구간 훈련을 고르면 다음으로 넘어가요',
+  trainPick: '능력치를 눌러 이번 구간 훈련을 골라요',
   investTitle: '자기 투자',
   funds: (p: { v: string }) => `보유 ${p.v}`,
   fundsAfter: (p: { v: string; after: string }) => `보유 ${p.v} → ${p.after}`,

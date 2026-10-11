@@ -127,6 +127,8 @@ export default function Game() {
     L.amateur ? '' : T.value({ v: fmtValue(marketValue(s)) }),
   ]
     .filter(Boolean)
+    // 항목 안(연봉 1억 5,000만)에서는 줄을 바꾸지 않고 · 사이에서만 바꾼다(웹 Game.svelte와 같이).
+    .map((x) => x.replace(/ /g, '\u00a0'))
     .join(' · ');
   const title = mainTitle(s);
   // T-11-120 도트 선수(웹 Game.svelte와 같다). 크기는 avatarWidth(좁으면 2배, 아니면 3배).
