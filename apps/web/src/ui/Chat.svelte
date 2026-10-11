@@ -1,5 +1,5 @@
 <script lang="ts">
-  import GoogleLoginButton from './GoogleLoginButton.svelte';
+  import LoginButtons from './LoginButtons.svelte';
   // T-11-015 라운지 채팅 — 모두가 보는 실시간 공개 채팅. 누구나 읽고, 구글로 로그인하고 닉네임을 정하면 쓴다.
   // 남의 메시지는 신고하고 작성자를 차단한다(앱스토어 UGC 정책) — 여럿이 신고하면 모두의 화면에서 가려진다.
   // 운영자는 메시지를 가리고 작성자를 정지한다. 게임과 무관해 메인 번들과 떼어 처음 열 때 불러온다.
@@ -33,7 +33,6 @@
   import { createTranslations } from './translations.svelte.js';
   import { canTranslate } from '@offside/app-core/userTranslate';
   import { getLocale } from '@offside/contracts/i18n';
-  import { startGoogleLogin } from './login.js';
   import { goHome } from './nav.js';
   import { trackViewport } from './viewport.js';
   import { chatSession, listenChat, markChatRead } from './chat-state.svelte.js';
@@ -292,7 +291,7 @@
       {:else if view.me?.reason === 'login' || !view.me}
         <div class="comment-gate" data-chat-gate="login">
           <p class="muted">{L.gateLogin}</p>
-          <GoogleLoginButton act="chat-login" onclick={() => startGoogleLogin({ chat: true })} />
+          <LoginButtons act="chat-login" back={{ chat: true }} />
         </div>
       {:else if view.me.reason === 'nickname'}
         <div class="comment-gate" data-chat-gate="nickname">

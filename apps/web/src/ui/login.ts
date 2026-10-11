@@ -1,8 +1,13 @@
-// ───────── 구글 로그인 ─────────
-// 시작(startGoogleLogin), 로그인 뒤 돌아올 곳 기억, OAuth 콜백(/settings?google=linked|switched|error) 처리.
+// ───────── 구글 · Apple 로그인 ─────────
+// 시작(startGoogleLogin · startAppleLogin), 로그인 뒤 돌아올 곳 기억, OAuth 콜백(/settings?google|apple=linked|switched|error) 처리.
 import type { BoardKey } from '@offside/contracts/board-limits';
-import { getProfile, googleStartUrl } from '@offside/app-core/api/client';
-import { loginOfflineText, googleFailText, loginDoneText } from '@offside/app-core/loginText';
+import { appleStartUrl, getProfile, googleStartUrl } from '@offside/app-core/api/client';
+import {
+  appleFailText,
+  loginOfflineText,
+  googleFailText,
+  loginDoneText,
+} from '@offside/app-core/loginText';
 import { loadHOF } from '@offside/game/hof-store';
 import { toast } from './helpers.js';
 import { currentInApp, showInAppLoginNotice } from './inapp-open.js';
@@ -12,7 +17,7 @@ import { openBoard } from './nav.js';
 import { appState } from './state.svelte.js';
 
 /** 로그인을 마치고 돌아와 다시 열 곳. T-10-028 소식 글(댓글), T-10-029 내 은퇴 선수(공유), T-11-015 채팅. */
-type LoginReturn =
+export type LoginReturn =
   | { board: BoardKey; postId: string | null }
   | { career: string }
   | { chat: true }
@@ -47,15 +52,24 @@ export async function startGoogleLogin(back: LoginReturn | null) {
   if (!(await getProfile()).ok) return toast(loginOfflineText());
   window.location.assign(googleStartUrl());
 }
+/** T-11-202 Apple 로그인을 시작한다(주소창으로 Apple에 갔다가 /settings?apple=...로 돌아온다). */
+export async function startAppleLogin(back: LoginReturn | null) {
+  rememberLoginReturn(back);
+  if (!(await getProfile()).ok) return toast(loginOfflineText());
+  window.location.assign(appleStartUrl());
+}
 export function handleOAuthReturn() {
   const url = new URL(window.location.href);
-  const google = url.searchParams.get('google');
+  const apple = url.searchParams.get('apple');
+  const google = url.searchParams.get('google') ?? apple;
   if (!google) return;
   const reason = url.searchParams.get('reason');
   toast(
     google === 'linked' || google === 'switched'
-      ? loginDoneText(google, '구글')
-      : googleFailText(reason),
+      ? loginDoneText(google, apple ? 'Apple' : '구글')
+      : apple
+        ? appleFailText(reason)
+        : googleFailText(reason),
   );
   window.history.replaceState({}, '', '/');
   const back = takeLoginReturn();

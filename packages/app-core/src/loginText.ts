@@ -23,6 +23,12 @@ export const loginOfflineText = (): string => L.offline;
 export const googleFailText = (reason: string | null | undefined): string =>
   (reason && failMsg(reason)) ?? L.failGeneric({ reason: reason ?? '' });
 
+/** T-11-202 웹 Apple 로그인 실패 안내. 공통 사유(세션·한도·취소)는 구글과 같은 문구를 쓴다. */
+export const appleFailText = (reason: string | null | undefined): string =>
+  reason === 'unavailable'
+    ? L.failUnavailableApple
+    : ((reason && failMsg(reason)) ?? L.failGenericApple({ reason: reason ?? '' }));
+
 /** 로그인 성공 안내. via: '구글' | 'Apple'. */
 export const loginDoneText = (result: 'linked' | 'switched', via: string): string => {
   const name = via === '구글' ? L.providerGoogle : via;

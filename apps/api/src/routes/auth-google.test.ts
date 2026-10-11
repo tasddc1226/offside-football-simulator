@@ -555,3 +555,119 @@ describe('POST /v1/auth/google/unlink', () => {
     expect(res.status).toBe(401);
   });
 });
+
+// T-11-202 웹 Sign in with Apple. 로컬(APPLE_FAKE=1, Services ID 없음)은 Apple 대신 가짜 토큰으로 바로 콜백한다.
+describe('웹 Apple 로그인 (T-11-202)', () => {
+  let ctx: TestD1;
+  beforeEach(async () => {
+    ctx = await createTestD1();
+  });
+  afterEach(async () => {
+    await ctx.dispose();
+  });
+
+  async function startApple(cookie: string, env: Bindings = ctx.env) {
+    const res = await createApp().request(
+      '/v1/auth/apple/start',
+      { headers: { Cookie: cookie } },
+      env,
+    );
+    expect(res.status).toBe(302);
+    return {
+      location: new URL(res.headers.get('Location') ?? ''),
+      setCookie: res.headers.get('Set-Cookie') ?? '',
+    };
+  }
+
+  async function callback(query: URLSearchParams, cookie: string) {
+    const res = await createApp().request(
+      `/v1/auth/apple/callback?${query}`,
+      { headers: { Cookie: cookie } },
+      ctx.env,
+    );
+    expect(res.status).toBe(302);
+    return res;
+  }
+
+  it('가짜 토큰으로 연결하고 세션을 돌린다. 같은 Apple ID로 다른 기기에서 로그인하면 전환한다', async () => {
+    const first = await issueCookie(ctx);
+    const { location, setCookie } = await startApple(first.cookie);
+    const oauthCookie = extractCookiePair(setCookie, 'offside_apple');
+    expect(location.pathname).toBe('/v1/auth/apple/callback');
+    const res = await callback(location.searchParams, `${first.cookie}; ${oauthCookie}`);
+    const back = new URL(res.headers.get('Location') ?? '');
+    expect(back.pathname).toBe('/settings');
+    expect(back.searchParams.get('apple')).toBe('linked');
+    expect(res.headers.get('Set-Cookie')).toContain('offside_session=');
+    const [row] = await ctx.db.select().from(profiles).where(eq(profiles.id, first.profileId));
+    expect(row?.appleSub).toBe('web-local');
+
+    const second = await issueCookie(ctx);
+    const s2 = await startApple(second.cookie);
+    const res2 = await callback(
+      s2.location.searchParams,
+      `${second.cookie}; ${extractCookiePair(s2.setCookie, 'offside_apple')}`,
+    );
+    expect(new URL(res2.headers.get('Location') ?? '').searchParams.get('apple')).toBe('switched');
+  });
+
+  it('Services ID가 있으면 form_post·nonce 해시로 Apple에 보낸다', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const { location } = await startApple(cookie, {
+      ...ctx.env,
+      APPLE_WEB_CLIENT_ID: 'com.offsidelab.web',
+    });
+    expect(location.origin).toBe('https://appleid.apple.com');
+    expect(location.searchParams.get('client_id')).toBe('com.offsidelab.web');
+    expect(location.searchParams.get('response_mode')).toBe('form_post');
+    expect(location.searchParams.get('redirect_uri')).toMatch(/\/v1\/auth\/apple\/callback$/);
+    expect(location.searchParams.get('nonce')).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('운영에서 Services ID가 없으면 설정 화면으로 unavailable', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const { location, setCookie } = await startApple(cookie, { ...ctx.env, APPLE_FAKE: '0' });
+    expect(setCookie).not.toContain('offside_apple');
+    expect(location.searchParams.get('apple')).toBe('error');
+    expect(location.searchParams.get('reason')).toBe('unavailable');
+  });
+
+  it('form_post는 Origin 검사 없이 받아 같은 주소의 GET으로 넘긴다', async () => {
+    const res = await createApp().request(
+      '/v1/auth/apple/callback',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Origin: 'https://appleid.apple.com',
+        },
+        body: new URLSearchParams({ state: 's1', id_token: 't1', code: 'c1' }).toString(),
+      },
+      ctx.env,
+    );
+    expect(res.status).toBe(303);
+    const to = new URL(res.headers.get('Location') ?? '', 'http://x');
+    expect(to.pathname).toBe('/v1/auth/apple/callback');
+    expect(to.searchParams.get('state')).toBe('s1');
+    expect(to.searchParams.get('id_token')).toBe('t1');
+    expect(to.searchParams.has('code')).toBe(false);
+  });
+
+  it('state가 다르거나 취소하면 연결하지 않는다', async () => {
+    const { cookie, profileId } = await issueCookie(ctx);
+    const { location, setCookie } = await startApple(cookie);
+    const oauthCookie = extractCookiePair(setCookie, 'offside_apple');
+    const bad = new URLSearchParams(location.searchParams);
+    bad.set('state', 'other');
+    const r1 = await callback(bad, `${cookie}; ${oauthCookie}`);
+    expect(new URL(r1.headers.get('Location') ?? '').searchParams.get('reason')).toBe('state');
+    const cancel = new URLSearchParams({
+      state: location.searchParams.get('state')!,
+      error: 'user_cancelled_authorize',
+    });
+    const r2 = await callback(cancel, `${cookie}; ${oauthCookie}`);
+    expect(new URL(r2.headers.get('Location') ?? '').searchParams.get('reason')).toBe('cancelled');
+    const [row] = await ctx.db.select().from(profiles).where(eq(profiles.id, profileId));
+    expect(row?.appleSub).toBeNull();
+  });
+});

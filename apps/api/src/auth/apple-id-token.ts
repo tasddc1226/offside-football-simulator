@@ -90,17 +90,21 @@ export async function verifyAppleIdToken(
   return { sub: c.sub, email: typeof c.email === 'string' ? c.email : null };
 }
 
-/** 환경에 맞게 검증한다. 로컬 APPLE_FAKE=1이면 'fake:<sub>'도 받는다(테스트·로컬 앱 개발) — 진짜 토큰은 그대로 검증한다. */
+/**
+ * 환경에 맞게 검증한다. 로컬 APPLE_FAKE=1이면 'fake:<sub>'도 받는다(테스트·로컬 앱 개발) — 진짜 토큰은 그대로 검증한다.
+ * audience: 앱은 번들 id(기본), 웹(T-11-202)은 Services ID(APPLE_WEB_CLIENT_ID).
+ */
 export async function verifyApple(
   env: Pick<Bindings, 'ENVIRONMENT' | 'APPLE_FAKE' | 'APPLE_BUNDLE_ID'>,
   token: string,
   nonce: string,
+  audience: string = env.APPLE_BUNDLE_ID ?? DEFAULT_BUNDLE_ID,
 ): Promise<AppleClaims> {
   const fake = env.ENVIRONMENT === 'local' && env.APPLE_FAKE === '1';
   if (fake && token.startsWith(FAKE_PREFIX) && token.length > FAKE_PREFIX.length)
     return { sub: token.slice(FAKE_PREFIX.length), email: null };
   return verifyAppleIdToken(token, {
-    audience: env.APPLE_BUNDLE_ID ?? DEFAULT_BUNDLE_ID,
+    audience,
     now: Date.now(),
     nonce,
   });
