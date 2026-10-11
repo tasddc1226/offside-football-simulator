@@ -32,7 +32,9 @@ const isSummary = (p: NewsSummary) =>
 async function read(path: string, hostname: string) {
   const response = await fetch(`${resolveApiBaseUrl(undefined, hostname)}${path}`, {
     signal: AbortSignal.timeout(3000),
-    redirect: 'error',
+    // Workers 런타임은 redirect: 'error'를 지원하지 않아 fetch가 바로 예외로 끝난다(운영 /news/ 503). manual로 받으면
+    // 3xx는 ok가 아니라 아래에서 실패로 처리된다 — 리디렉션을 따라가지 않는 건 같다.
+    redirect: 'manual',
     credentials: 'omit',
     headers: { Accept: 'application/json' },
   });

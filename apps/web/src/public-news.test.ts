@@ -65,7 +65,7 @@ describe('public news responses', () => {
     expect(fetch).toHaveBeenCalledOnce();
     expect(fetch).toHaveBeenCalledWith(
       expect.stringContaining('/v1/public-news/posts/'),
-      expect.objectContaining({ credentials: 'omit', redirect: 'error' }),
+      expect.objectContaining({ credentials: 'omit', redirect: 'manual' }),
     );
   });
   it('sends malformed game deep links home and keeps valid ones in the app shell', async () => {
@@ -76,6 +76,18 @@ describe('public news responses', () => {
     expect(good.status).toBe(200);
     expect(await good.text()).toBe('game');
     expect(good.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
+  });
+  it('treats an API redirect as unavailable instead of following it', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(null, { status: 301, headers: { Location: 'https://evil.example/' } }),
+      ),
+    );
+    const r = await get('/news/');
+    expect(r.status).toBe(503);
+    expect(r.headers.get('Retry-After')).toBe('60');
   });
   it('links both boards from HTML and sitemap with two bounded index reads, no N+1', async () => {
     mock();
