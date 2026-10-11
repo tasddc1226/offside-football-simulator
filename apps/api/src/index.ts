@@ -18,6 +18,7 @@ import { runNewsPush } from './push/dispatch.js';
 import { runPersonalPush } from './push/personal.js';
 import { queueReengagement } from './push/reengagement.js';
 import { consumeCareerReminders, queueCareerReminders } from './push/careerReminder.js';
+import { consumeCupResults, publishCupResults } from './push/cupResult.js';
 import { consumeCommunityPush } from './push/communityQueue.js';
 import { runCup } from './team/cup.js';
 import { runSeasonClose } from './team/seasonClose.js';
@@ -27,6 +28,7 @@ export { LiveHub } from './live/hub.js';
 export { ChatRoom } from './chat/room.js';
 export default {
   queue(batch: MessageBatch<unknown>, env: Bindings) {
+    if (batch.queue === 'offside-cup-push-production') return consumeCupResults(batch, env);
     return batch.queue === 'offside-career-push-production'
       ? consumeCareerReminders(batch, env)
       : consumeCommunityPush(batch, env);
@@ -74,7 +76,14 @@ export default {
         );
       // T-11-145 오프사이드 컵: 추첨 → 시각이 된 경기 → 진출·보상. 실패하면 다음 5분에 이어서 한다.
       await runCup(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
-        .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'cup', steps: r })))
+        .then(async (r) => {
+          if (!r) return;
+          console.log(JSON.stringify({ level: 'info', job: 'cup', steps: r }));
+          await publishCupResults(
+            env,
+            r.filter((x) => x.step === 'advance' && x.round === 'f').map((x) => String(x.cup)),
+          );
+        })
         .catch((e: unknown) =>
           console.error(
             JSON.stringify({ level: 'error', job: 'cup', error: String(e).slice(0, 500) }),

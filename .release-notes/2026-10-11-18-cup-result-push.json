@@ -1,0 +1,20 @@
+{
+  "id": "t-11-209-cup-result-push",
+  "title": "컵 종료 알림",
+  "items": [
+    "컵이 끝나면 결과와 보상을 확인할 수 있도록 알려드려요. 참가와 승부예측을 함께 하거나 여러 경기를 예측해도 종료 알림은 한 번만 받아요."
+  ],
+  "en": {
+    "title": "Cup completion alerts",
+    "items": [
+      "Get one alert to check the cup results and rewards when the cup ends, even if you both competed and made predictions or predicted several matches."
+    ]
+  },
+  "ja": {
+    "title": "カップ終了のお知らせ",
+    "items": [
+      "カップ終了時に結果と報酬を確認できるようお知らせします。大会参加と勝敗予想の両方に参加した場合や、複数の試合を予想した場合も、終了通知は1回だけ届きます。"
+    ]
+  },
+  "availability": "app"
+}

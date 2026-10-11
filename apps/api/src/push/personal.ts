@@ -307,31 +307,40 @@ export async function runPersonalPush(
   env: Bindings,
   now = Date.now(),
   transport: typeof fetch = fetch,
-  communitySourceKey?: string | { retentionBatch: string },
+  communitySourceKey?: string | { retentionBatch: string } | { cupResult: string },
 ) {
   if (env.ENVIRONMENT !== 'production' || env.PERSONAL_PUSH_ENABLED !== '1')
     return { enabled: false };
   const lease = crypto.randomUUID();
   // Bound source key and kind keep Queue messages away from ordinary user notifications.
   const retentionBatch =
-    typeof communitySourceKey === 'object' ? communitySourceKey.retentionBatch : undefined;
+    typeof communitySourceKey === 'object' && 'retentionBatch' in communitySourceKey
+      ? communitySourceKey.retentionBatch
+      : undefined;
+  const cupResult =
+    typeof communitySourceKey === 'object' && 'cupResult' in communitySourceKey
+      ? communitySourceKey.cupResult
+      : undefined;
   const scope =
     communitySourceKey === undefined
       ? ''
-      : retentionBatch !== undefined
-        ? ` AND EXISTS
+      : cupResult !== undefined
+        ? ` AND EXISTS (SELECT 1 FROM notifications WHERE id=push_deliveries.notification_id AND kind='team' AND source_key=?)`
+        : retentionBatch !== undefined
+          ? ` AND EXISTS
         (SELECT 1 FROM notifications WHERE id=push_deliveries.notification_id
           AND kind='return' AND substr(source_key,1,53) = ?)`
-        : ` AND EXISTS
+          : ` AND EXISTS
     (SELECT 1 FROM notifications WHERE id = push_deliveries.notification_id
       AND (${IS_COMMUNITY}) AND source_key = ?)`;
   const scopeParams =
     communitySourceKey === undefined
       ? []
       : [
-          retentionBatch !== undefined
-            ? `career-reminder:${retentionBatch}:`
-            : (communitySourceKey as string),
+          cupResult ??
+            (retentionBatch !== undefined
+              ? `career-reminder:${retentionBatch}:`
+              : (communitySourceKey as string)),
         ];
   await env.DB.batch([
     env.DB.prepare(
@@ -351,6 +360,7 @@ export async function runPersonalPush(
     // 영수증 조회는 시간 제한 없이 유지하고, 수동 본인 테스트는 별도의 요청 경로를 쓴다.
     const cupOnly = hour >= 20 && hour < CUP_PUSH_UNTIL_HOUR;
     let only = scope || (!checking && (hour < 9 || hour >= 20) ? afterHoursOnly(cupOnly) : '');
+    if (!checking && cupResult !== undefined && (hour < 9 || hour >= CUP_PUSH_UNTIL_HOUR)) continue;
     if (!checking && (hour < 11 || hour >= 19))
       only += ` AND NOT EXISTS
       (SELECT 1 FROM notifications WHERE id=push_deliveries.notification_id AND source_key LIKE 'career-reminder:%')`;
@@ -358,7 +368,7 @@ export async function runPersonalPush(
     if (!checking && communitySourceKey === undefined) {
       // Give Queue first delivery; cron repairs missed publishes after five minutes.
       only += ` AND NOT EXISTS (SELECT 1 FROM notifications WHERE id=push_deliveries.notification_id
-        AND source_key LIKE 'career-reminder:%' AND created_at > ?)`;
+        AND (source_key LIKE 'career-reminder:%' OR source_key LIKE 'cup-complete:%') AND created_at > ?)`;
       onlyParams.push(iso(now - 5 * MINUTE));
     }
     const rows = await claim(env, checking, now, lease, only, onlyParams);
@@ -381,11 +391,13 @@ export async function runPersonalPush(
   console.log(
     JSON.stringify({
       job:
-        retentionBatch !== undefined
-          ? 'career-reminder-send'
-          : communitySourceKey === undefined
-            ? 'personal-push'
-            : 'community-queue-send',
+        cupResult !== undefined
+          ? 'cup-result-send'
+          : retentionBatch !== undefined
+            ? 'career-reminder-send'
+            : communitySourceKey === undefined
+              ? 'personal-push'
+              : 'community-queue-send',
       ts: iso(now),
       states,
     }),

@@ -22,6 +22,7 @@ import { cupKo, cupTitle } from '../cupText.js';
 import { predictionSettlementStatements } from './cupPredictions.js';
 import { grantItemStatement } from '../db/repos/itemShop.js';
 import { cupSchedule } from './cupSchedule.js';
+import { cupResultStatements } from '../push/cupResult.js';
 import { eventNotificationStatements } from '../push/events.js';
 import { lineupsOf, matchDetailOf } from './match.js';
 import { penaltyShootout, simulateMatch } from './sim.js';
@@ -133,7 +134,7 @@ function rewardStatements(
       sql: 'changes() = 1',
     }),
     ...autoTitle(d1, cup, e.profileId, stage),
-    // 최종 성적·보상은 알림함에만 둔다. 같은 cron에 나가는 경기 결과 푸시와 겹치면 예산(60분 간격)에 밀려 사라진다.
+    // 개인 성적·보상은 알림함에 남긴다. 대회 종료 때 참가·예측을 합쳐 종료 푸시 한 건을 보낸다.
     ...notify(
       d1,
       e.profileId,
@@ -396,6 +397,7 @@ export async function playCupMatch(
         cupKo('matchTitle', { round, result }),
         score,
         now,
+        m.round !== 'f',
       ),
     );
   }
@@ -447,6 +449,7 @@ export async function advanceRound(
         d1
           .prepare(`UPDATE cup_state SET done_at = ? WHERE cup_id = ? AND done_at IS NULL`)
           .bind(now, cup.id),
+        ...cupResultStatements(d1, cup, now),
       );
     } else {
       const next = CUP_KO_ROUNDS[CUP_KO_ROUNDS.indexOf(round) + 1]!;

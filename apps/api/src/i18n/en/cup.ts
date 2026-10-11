@@ -2,6 +2,10 @@ import type { CupTextKey } from '../ko/cup.js';
 
 // T-11-145 오프사이드 컵 서버 문구(영어).
 export const CUP_EN: Record<CupTextKey, string> = {
+  completeTitle: '{cup} has ended',
+  completeBody: 'Check the cup results and your reward rerolls.',
+  predictionRewardBody: 'Check the cup results and the rerolls earned from your predictions.',
+  predictionResultBody: 'Check the cup results and how your predictions did.',
   predictionNotFinished: 'Only finished matches can be settled.',
   predictionClosed: 'This match has started or is not available for predictions.',
   title: 'Season {season} OFFSIDE Cup #{edition}',
