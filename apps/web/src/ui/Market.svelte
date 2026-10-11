@@ -65,7 +65,6 @@
   import { POS_LABEL } from '@offside/game/pos-label';
   import { detailPosOf } from '@offside/contracts/positions';
   import Topbar from './Topbar.svelte';
-  import BackBar from './BackBar.svelte';
   import PlayerCard from './team/PlayerCard.svelte';
   import MarketChart from './MarketChart.svelte';
   import { CHART_COPY, marketIndex } from '@offside/app-core/marketChart';
@@ -225,7 +224,6 @@
 
 <div class="wrap market">
   <Topbar />
-  <BackBar inline act="owner" fallback={() => go('owner')} />
 
   <section class="mk-hero" aria-label={L.funds} data-market-funds>
     <div class="mk-hero-head">

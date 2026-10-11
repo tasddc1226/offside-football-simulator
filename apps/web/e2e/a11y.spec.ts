@@ -92,7 +92,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.locator(`[data-hof-id="${HOF_ID}"]`).click();
     await expect(page.locator('.film-open h1')).toBeVisible();
     await expectNoViolations(page, 'legend');
-    await page.locator('[data-act="hof-back"]').click();
+    await page.goBack();
     await page.getByRole('button', { name: /새 커리어 킥오프/ }).click();
     // 처음 열 때 지연 로드되는 생성 화면이 그려진 뒤 접근성을 검사한다.
     await expect(

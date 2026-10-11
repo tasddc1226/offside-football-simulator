@@ -8,6 +8,7 @@
   import { leagueOf, roleOf, fmtMoney, focusOf, labelOf } from '@offside/game/engine';
   import { appState, type Tab } from './state.svelte.js';
   import { goHome } from './nav.js';
+  import { rootHere } from './history.svelte.js';
   import { advance, nextPending } from './actions.js';
   import { loadGameSheets } from './sheets/gameSheets.svelte.js';
   import { buzz, dur } from './motion.js';
@@ -168,7 +169,7 @@
       </button>
     {/each}
   </div>
-  <button class="tab-home" data-act="home" style:--i={2} onclick={goHome}>
+  <button class="tab-home" data-act="home" style:--i={2} onclick={() => (goHome(), rootHere())}>
     <TabIcon name="home" />{T.tabHome}
   </button>
   <NavIntro kind="game" />

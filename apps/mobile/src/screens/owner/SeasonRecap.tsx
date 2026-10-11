@@ -47,12 +47,11 @@ import { HonorEmblem } from '../../components/HonorEmblem';
 import { useMedal } from '../../components/Laurel';
 import { CARD_TONES, PlayerCard } from '../../components/PlayerCard';
 import { GradeEmblem } from '../../ui/GradeEmblem';
-import { go } from '../../game/nav';
 import { appState, prefs } from '../../store';
 import { alpha, mix } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
-import { BackBar, Btn, Card, Press, Screen, Topbar, Txt } from '../../ui';
+import { Btn, Card, Press, Screen, Topbar, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 import { Seg, TabOpt } from '../board/parts';
 import { RECAP_INK, RecapBackdrop, RecapShare } from './RecapShare';
@@ -302,7 +301,6 @@ export default function SeasonRecap({ record }: { record?: SeasonRecapResponse }
         {!embedded ? (
           <>
             <Topbar />
-            <BackBar inline testID="owner" fallback={() => go('owner')} />
             <Card gap={8} testID="recap">
               <View style={{ gap: 2 }}>
                 <Txt v="eyebrow">Season recap</Txt>

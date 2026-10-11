@@ -2,8 +2,6 @@
 import { useEffect, useState } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import { fetchBoardViewer } from '@offside/app-core/api/boards';
-import { appState } from '../../store';
-import { BackBar } from '../../ui/ActionBar';
 import { Card } from '../../ui/Card';
 import { Screen } from '../../ui/Screen';
 import { Topbar } from '../../ui/Topbar';
@@ -57,7 +55,6 @@ export default function Admin() {
   return (
     <Screen>
       <Topbar />
-      <BackBar inline testID="owner" fallback={() => (appState.screen = 'owner')} />
       <Card gap={14}>
         <View>
           <Txt v="eyebrow">Admin</Txt>

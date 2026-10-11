@@ -14,7 +14,6 @@
   import { localCareerNames } from '@offside/game/hof-store';
   import { toast } from '../helpers.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
-  import BackBar from '../BackBar.svelte';
   import NameReport from '../NameReport.svelte';
   import TeamLines from './TeamLines.svelte';
   import TeamPitch from './TeamPitch.svelte';
@@ -28,7 +27,7 @@
   import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
   import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
 
-  let { id, onback }: { id: string; onback: () => void } = $props();
+  let { id }: { id: string } = $props();
 
   let status = $state<LoadStatus>('loading');
   let team = $state<TeamProfile | null>(null);
@@ -168,7 +167,6 @@
   {/if}
 </LoadState>
 <!-- T-10-130 '← 랭킹'은 화면 아래(탭바 위)로. 뒤로 가기로도 랭킹에 돌아간다. -->
-<BackBar act="team-profile-back" fallback={onback} atBottom={false} />
 
 <style>
   .tp-sections {

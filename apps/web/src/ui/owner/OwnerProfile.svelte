@@ -8,7 +8,6 @@
   import { num } from '@offside/app-core/teamText';
   import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
-  import BackBar from '../BackBar.svelte';
   import OwnerAvatar from '../OwnerAvatar.svelte';
   import GradeEmblem from '../team/GradeEmblem.svelte';
   import TeamLogo from '../team/TeamLogo.svelte';
@@ -17,7 +16,7 @@
   import { appState } from '../state.svelte.js';
   import { go } from '../nav.js';
 
-  let { teamId, onback }: { teamId: string; onback: () => void } = $props();
+  let { teamId }: { teamId: string } = $props();
 
   let status = $state<LoadStatus>('loading');
   let owner = $state<OwnerProfile | null>(null);
@@ -112,7 +111,6 @@
     </div>
   {/if}
 </LoadState>
-<BackBar act="owner-profile-back" fallback={onback} atBottom={false} />
 
 <style>
   .op-sections {display:flex; flex-direction:column; gap:14px;}

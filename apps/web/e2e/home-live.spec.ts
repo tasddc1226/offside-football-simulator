@@ -152,7 +152,7 @@ test('은퇴 소식을 누르면 그 선수 상세가 열린다', async ({ page 
     .click();
   // 이름 앞에 국적 국기가 붙는다.
   await expect(page.locator('.film-open h1')).toHaveText('🇰🇷김오프');
-  await page.locator('[data-act="hof-back"]').click();
+  await page.goBack();
   await expect(page.locator('[data-home-live]')).toBeVisible();
 });
 

@@ -11,6 +11,7 @@
   import { appState } from './state.svelte.js';
   import { ownerDotLabel } from '@offside/app-core/ownerDots';
   import { go, goHome, openBoard, openHof } from './nav.js';
+  import { rootHere } from './history.svelte.js';
   import TabIcon from './TabIcon.svelte';
   import { shellText as L } from '@offside/app-core/i18n/ko/shell';
 
@@ -24,11 +25,17 @@
     owner: () => go('owner'),
     settings: () => go('settings'),
   };
+  // T-11-213 탭끼리는 쌓지 않는다 — 누른 탭이 맨 아래 기록이 된다. 소식을 다시 누르면 목록으로 되돌아간다(글 기록을 접는다).
+  function open(k: (typeof MAIN_SCREENS)[number]) {
+    const again = k === 'board' && appState.screen === 'board';
+    OPEN[k]();
+    if (!again) rootHere();
+  }
 </script>
 
 <nav class="tabs main-nav" aria-label={L.navLabel}>
   {#each MAIN_SCREENS as k, i (k)}
-    <button data-act={k} aria-current={(appState.screen === k || (k === 'owner' && (appState.screen === 'honors' || appState.screen === 'recap'))) ? 'page' : undefined} style:--i={i} onclick={OPEN[k]}>
+    <button data-act={k} aria-current={(appState.screen === k || (k === 'owner' && (appState.screen === 'honors' || appState.screen === 'recap'))) ? 'page' : undefined} style:--i={i} onclick={() => open(k)}>
       <TabIcon name={k} />{label(k)}
       {#if k === 'owner' && ownerDot}<span class="tab-dot" data-tab-dot><span class="sr-only">{ownerDot}</span></span>{/if}
     </button>

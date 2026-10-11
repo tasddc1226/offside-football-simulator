@@ -18,7 +18,7 @@ import { seasonAction } from '@offside/app-core/seasonAction';
 import { gameText as T } from '@offside/app-core/i18n/ko/game';
 import { playerNudgeText as PN } from '@offside/app-core/i18n/ko/playerNudge';
 import { CareerTab } from '../../components/CareerTab';
-import { advance, buzz, nextPending } from '../../game/host';
+import { advance, buzz, navStack, nextPending } from '../../game/host';
 import { goHome } from '../../game/nav';
 import { Enter } from '../../sheets/anim';
 import { useTween } from '../../sheets/useTween';
@@ -178,7 +178,13 @@ export default function Game() {
   const items: TabItem[] = [
     tabItem('season', T.tabSeason),
     tabItem('player', T.tabPlayer),
-    { key: 'home', label: T.tabHome, active: false, onPress: goHome },
+    // T-11-213 아래 탭 막대의 홈이라 하단 메뉴처럼 홈을 맨 아래 기록으로 둔다.
+    {
+      key: 'home',
+      label: T.tabHome,
+      active: false,
+      onPress: () => (goHome(), navStack.root()),
+    },
     tabItem('career', T.tabCareer),
     tabItem('trophy', T.tabTrophy),
   ];

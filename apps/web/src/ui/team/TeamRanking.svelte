@@ -74,9 +74,9 @@
 </script>
 
 {#if appState.hof.team && appState.hof.owner}
-  <OwnerProfile teamId={appState.hof.team} onback={() => (appState.hof = { ...appState.hof, owner: false })} />
+  <OwnerProfile teamId={appState.hof.team} />
 {:else if appState.hof.team}
-  <TeamProfile id={appState.hof.team} onback={() => (appState.hof = { ...appState.hof, team: null, owner: false })} />
+  <TeamProfile id={appState.hof.team} />
 {:else}
   <section class="card" data-team-ranking>
     <div class="hof-toolbar team-ranking-toolbar">

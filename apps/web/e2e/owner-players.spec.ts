@@ -129,7 +129,7 @@ test('내 선수: 320px 별도 화면, 시즌 기록과 방출 관리 및 캐시
   await expect(page.locator('[data-my-player]')).toHaveCount(1);
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('.film-open h1')).toContainText('기록선수7');
-  await page.locator('[data-act="hof-back"]').click();
+  await page.goBack();
   await expect(page.locator('[data-my-season-select]')).toHaveValue('0');
   await page.selectOption('[data-my-season-select]', '1');
   await page.locator('[data-act="players-manage"]').click();

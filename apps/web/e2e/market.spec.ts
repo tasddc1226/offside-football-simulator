@@ -201,7 +201,7 @@ test('구단주 화면에서 이적시장을 열고 선수를 영입한다(화�
   await expectNoA11yViolations(page);
 
   // 구단주로 돌아갔다가 다시 와도 자금·목록을 다시 묻지 않는다(메모).
-  await page.locator('[data-back-bar] button').click();
+  await page.goBack();
   await page.locator('[data-act="market"]').click();
   await expect(page.locator(`[data-listing="${LISTING}"]`)).toBeVisible();
   expect(calls).toEqual({ me: 1, list: 1 });
@@ -234,7 +234,7 @@ test('구단주 화면에서 이적시장을 열고 선수를 영입한다(화�
   await expect(page.locator(`[data-listing="${LISTING}"]`)).toHaveCount(0);
 });
 
-test('홈 타일에서 이적시장으로 바로 가고, 이전으로 누르면 홈으로 돌아온다', async ({ page }) => {
+test('홈 타일에서 이적시장으로 바로 가고, 뒤로 가면 홈으로 돌아온다', async ({ page }) => {
   await stub(page);
   await page.route(`${API}/v1/market/me`, (r) => r.fulfill(me(200_000)));
   await page.route(
@@ -247,7 +247,7 @@ test('홈 타일에서 이적시장으로 바로 가고, 이전으로 누르면 
   await expect(page.locator(`[data-listing="${LISTING}"]`)).toBeVisible();
   // 거래가 없으면 시장 지수 줄을 두지 않는다.
   await expect(page.locator('[data-market-index]')).toHaveCount(0);
-  await page.locator('[data-back-bar] button').click();
+  await page.goBack();
   await expect(page.locator('[data-act="home-market"]')).toBeVisible();
 });
 

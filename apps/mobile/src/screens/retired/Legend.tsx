@@ -10,7 +10,6 @@ import { useColors, useIsDark } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { AdSlot } from '../../components/AdSlot';
 import { NameReport } from '../../components/NameReport';
-import { BackBar } from '../../ui/ActionBar';
 import { Press } from '../../ui/Press';
 import { Topbar } from '../../ui/Topbar';
 import { Txt } from '../../ui/Txt';
@@ -26,16 +25,10 @@ export default function Legend() {
   const { motionOK } = useSnapshot(prefs);
   // 화면은 스냅숏으로 그린다 — 쓰기(이름 공개·대표 칭호)는 own.ts가 원본을 찾아 고친다.
   const v = snap.legend as unknown as LegendView | null;
-  /** 이전 화면 기록이 없으면 연 곳(명예의 전당·구단주·홈)으로. */
-  const backTo = () => (appState.screen = appState.legendBack);
   return (
     <CreditScreen overlay={motionOK && v ? <CareerPlay /> : null}>
       <Topbar />
-      {v?.shareId ? (
-        <ShareBar inline id={v.shareId} back={backTo} />
-      ) : (
-        <BackBar inline testID="hof-back" fallback={backTo} />
-      )}
+      {v?.shareId ? <ShareBar inline id={v.shareId} home={false} /> : null}
       {v ? (
         <>
           <LegendReport v={v} />

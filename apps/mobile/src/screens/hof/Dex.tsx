@@ -7,11 +7,10 @@ import { DEX_GROUPS, eventDex, type DexEntry, type DexGroup } from '@offside/gam
 import { dexRules, oddsText } from '@offside/app-core/dexText';
 import { dexSeen } from '@offside/app-core/dex';
 import { dexText as L } from '@offside/app-core/i18n/ko/dex';
-import { goHome, takeFocus } from '../../game/nav';
+import { takeFocus } from '../../game/nav';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
-import { BackBar } from '../../ui/ActionBar';
 import { Card } from '../../ui/Card';
 import { Chip, Pill } from '../../ui/bits';
 import { Press } from '../../ui/Press';
@@ -202,7 +201,6 @@ export default function Dex() {
   return (
     <Screen>
       <Topbar />
-      <BackBar inline testID="home" fallback={goHome} />
       <Card gap={14}>
         <View>
           <Txt v="eyebrow">Odds</Txt>

@@ -3,8 +3,6 @@
   // 관리자 여부는 서버가 요청마다 다시 확인한다 — 여기서는 화면만 가린다.
   import { onMount } from 'svelte';
   import { fetchBoardViewer } from '@offside/app-core/api/boards';
-  import { appState } from './state.svelte.js';
-  import BackBar from './BackBar.svelte';
   import Topbar from './Topbar.svelte';
   import AdminBalance from './admin/AdminBalance.svelte';
   import AdminComments from './admin/AdminComments.svelte';
@@ -42,7 +40,6 @@
 
 <div class="wrap">
   <Topbar />
-  <BackBar inline act="owner" fallback={() => (appState.screen = 'owner')} />
   <section class="card stack" style="gap:14px">
     <div>
       <div class="eyebrow">Admin</div>
