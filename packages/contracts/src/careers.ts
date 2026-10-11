@@ -6,7 +6,14 @@ import { PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
 import { STYLE_COUNTERS, STYLE_COUNT_MAX, type StyleCounter } from './play-style.js';
 import { isDefaultClubId } from './club-names.js';
 import { seasonById } from './service-seasons.js';
-import { DETAIL_POSITIONS, FACE_ATTRS, type DetailPos, type FaceAttr } from './positions.js';
+import {
+  DETAIL_POSITIONS,
+  LEGACY_DETAIL_POSITIONS,
+  FACE_ATTRS,
+  type BaseDetailPos,
+  type DetailPos,
+  type FaceAttr,
+} from './positions.js';
 
 /**
  * T-9-009. 커리어·시즌 요약 + 이벤트 선택 로그 업로드 계약. 세이브 전체(브리프: "클라우드 세이브
@@ -28,12 +35,16 @@ export const PeakProfileSchema = z.strictObject({
       typeof Rating99Schema
     >,
   ),
-  roles: z.strictObject(
-    Object.fromEntries(DETAIL_POSITIONS.map((k) => [k, Rating99Schema])) as Record<
+  roles: z.strictObject({
+    ...(Object.fromEntries(DETAIL_POSITIONS.map((k) => [k, Rating99Schema.optional()])) as Record<
       DetailPos,
+      z.ZodOptional<typeof Rating99Schema>
+    >),
+    ...(Object.fromEntries(LEGACY_DETAIL_POSITIONS.map((k) => [k, Rating99Schema])) as Record<
+      BaseDetailPos,
       typeof Rating99Schema
-    >,
-  ),
+    >),
+  }),
 });
 
 export const CareerFootSchema = z.enum(['오른발', '왼발', '양발']);
@@ -568,6 +579,7 @@ export const SeasonPickQuerySchema = z.coerce
   .optional();
 /** T-11-018 `GET /v1/hof?pos=` 그 포지션 선수만(포지션별 순위). 없으면 모든 포지션. */
 export const HofPosQuerySchema = CareerPosSchema.optional();
+export const HofDetailPosQuerySchema = z.enum(DETAIL_POSITIONS).optional();
 
 // ───────── T-10-027 서버 최초 기록 ─────────
 
@@ -625,6 +637,7 @@ const RetiredNumberItemSchema = RetiredSlotSchema.extend({
   careerId: z.string(),
   name: z.string().nullable(),
   pos: CareerPosSchema,
+  dpos: DetailPosSchema.nullish(),
 });
 /** T-11-121 명예의 벽 한 명 — 칭호를 받을 뻔한 구단·번호(clubId·club·number)와 받은 때. 이름은 공개한 경우에만. */
 const WallOfHonorItemSchema = RetiredNumberItemSchema.omit({ seq: true });

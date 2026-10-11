@@ -5,7 +5,7 @@ import { DEFAULT_NATION } from '@offside/contracts/nations';
 import { CARD_VALUE_FLOOR } from '@offside/contracts/market-value';
 import { teamSeasonClosed } from '@offside/contracts/service-seasons';
 import {
-  DETAIL_POSITIONS,
+  LEGACY_DETAIL_POSITIONS,
   FACE_ATTRS,
   dposFor,
   type PeakProfile,
@@ -58,7 +58,7 @@ export function peakOf(json: string | null): PeakProfile | null {
     const p = JSON.parse(json) as Partial<PeakProfile>;
     return p.roles &&
       p.attrs &&
-      DETAIL_POSITIONS.every((d) => Number.isFinite(p.roles![d])) &&
+      LEGACY_DETAIL_POSITIONS.every((d) => Number.isFinite(p.roles![d])) &&
       FACE_ATTRS.every((k) => Number.isFinite(p.attrs![k]))
       ? (p as PeakProfile)
       : null;

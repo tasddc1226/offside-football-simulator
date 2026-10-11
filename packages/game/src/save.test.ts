@@ -267,3 +267,24 @@ describe('T-11-170 T-11-168 이전 은퇴 기록의 레전드 점수', () => {
     expect(rescoreHofEntry(old)).toBe(old);
   });
 });
+
+it('포지션 확장 후에도 FB/W 저장과 옛 역할별 능력치를 그대로 복원한다', () => {
+  for (const [pos, dpos] of [
+    ['DF', 'FB'],
+    ['FW', 'W'],
+  ] as const) {
+    const G = current();
+    G.pos = pos;
+    G.dpos = dpos;
+    G.peakProfile = {
+      attrs: { ...G.attrs },
+      roles: { GK: 30, CB: 60, FB: 70, DM: 65, CM: 60, AM: 50, W: 55, ST: 40 },
+    };
+    const profile = structuredClone(G.peakProfile);
+    const attrs = structuredClone(G.attrs);
+    const loaded = loadSave(G)!.G;
+    expect(loaded.dpos).toBe(dpos);
+    expect(loaded.peakProfile).toEqual(profile);
+    expect(loaded.attrs).toEqual(attrs);
+  }
+});

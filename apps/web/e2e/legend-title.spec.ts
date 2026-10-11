@@ -239,7 +239,7 @@ test('명예의 벽은 받은 칭호 목록에 추가되고 기존 대표 칭호
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player="0"]').click();
-  await expect(page.locator('[data-wall-of-honor]')).toContainText('영구결번은 아니에요.');
+  await expect(page.locator('[data-wall-of-honor]')).toContainText('‘명예의 벽’ 칭호를 받았어요.');
   await expect(page.locator('[data-legend-title]')).toHaveText('‘유럽파’');
   await page.locator('[data-act="legend-title-open"]').click();
   await expect(page.locator('[data-legend-title-pick="wall_of_honor"]')).toContainText('명예의 벽');
@@ -292,7 +292,7 @@ test('상세가 없는 공개 선수도 대표 칭호와 별도로 명예의 벽
     ),
   );
   await page.goto(`/career/${ID}`);
-  await expect(page.locator('[data-wall-of-honor]')).toContainText('영구결번은 아니에요.');
+  await expect(page.locator('[data-wall-of-honor]')).toContainText('‘명예의 벽’ 칭호를 받았어요.');
   await expect(page.locator('[data-legend-title]')).toHaveText('‘유럽파’');
   await expect(page.locator('[data-legend-rn-pill]')).toHaveCount(0);
 });

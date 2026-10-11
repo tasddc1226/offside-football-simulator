@@ -854,10 +854,23 @@ describe('조작된 기록 보정', () => {
       (
         await put(`/v1/careers/${other}/seasons/2027`, {
           ...seasonBody(),
-          career: { ...TEST_CAREER, dpos: 'LW' },
+          career: { ...TEST_CAREER, dpos: 'UNKNOWN' },
         })
       ).status,
     ).toBe(400);
+    const winger = '77777777-7777-4777-8777-777777777777';
+    expect(
+      (
+        await put(`/v1/careers/${winger}/seasons/2026`, {
+          ...seasonBody(),
+          career: { ...TEST_CAREER, dpos: 'LW' },
+        })
+      ).status,
+    ).toBe(200);
+    expect((await ctx.db.select().from(careers).where(eq(careers.id, winger)))[0]).toMatchObject({
+      pos: 'FW',
+      dpos: 'LW',
+    });
   });
 
   it('T-10-092 · T-11-197: 최고 시점 능력치는 자리별 실력을 최고 OVR + 2 아래로 잘라 남기고, 모양이 틀려도 은퇴는 받는다', async () => {

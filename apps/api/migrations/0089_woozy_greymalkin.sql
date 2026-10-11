@@ -1,0 +1,1 @@
+CREATE INDEX `careers_hof_dpos_idx` ON `careers` (`status`,`hidden`,`dpos`,`service_season`,`legend_score`,`retired_at`,`retire_age`,`pos`);

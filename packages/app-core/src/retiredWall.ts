@@ -19,9 +19,6 @@ export const rnDay = (iso: string) => {
 
 type ClubSum = RetiredNumbersSummary['clubs'][number];
 
-/** T-11-101 벽 첫 화면의 구단 목록 정렬 — 결번 많은 순(서버 순서 그대로) 또는 리그별. */
-export type RnClubOrder = 'count' | 'league';
-
 /** 리그별 — 결번이 많은 리그 먼저, 리그 안에서는 서버 순서(결번 많은 구단 먼저). 리그를 모르는 구단은 '기타'. */
 export function rnByLeague<T extends Pick<ClubSum, 'clubId' | 'count'>>(
   clubs: readonly T[],

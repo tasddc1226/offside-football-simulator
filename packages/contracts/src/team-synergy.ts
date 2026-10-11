@@ -8,7 +8,7 @@
  * T-11-197 듀오 효과 상한(줄마다 +3 · 합 +5)을 없앴다 — 켜진 듀오는 모두 표의 효과를 그대로 더한다.
  */
 import { DEFAULT_NATION } from './nations.js';
-import type { DetailPos } from './positions.js';
+import { BASE_DETAIL, type DetailPos } from './positions.js';
 
 /** 시너지를 경기 계산에 넣기 시작하는 서비스 시즌. */
 export const SYNERGY_FROM_SEASON = 1;
@@ -204,17 +204,17 @@ const side = (x: number): -1 | 0 | 1 => (x < 50 ? -1 : x > 50 ? 1 : 0);
 
 /** 자리의 주발 맞춤 보정. 풀백은 같은 쪽 발, 윙어는 반대쪽 발(안으로 파고드는 인사이드 컷). */
 export function footBonus(p: SynergyPlayer | null): number {
-  if (!p || (p.slot !== 'FB' && p.slot !== 'W')) return 0;
+  if (!p || (BASE_DETAIL[p.slot] !== 'FB' && BASE_DETAIL[p.slot] !== 'W')) return 0;
   const s = side(p.x);
   if (s === 0 || !p.foot) return 0;
   if (p.foot === '양발') return FOOT_BONUS_BOTH;
   const left = p.foot === '왼발';
-  const wantLeft = p.slot === 'FB' ? s < 0 : s > 0;
+  const wantLeft = BASE_DETAIL[p.slot] === 'FB' ? s < 0 : s > 0;
   return left === wantLeft ? FOOT_BONUS : 0;
 }
 
 const fits = (p: SynergyPlayer | null, n: Need): p is SynergyPlayer =>
-  !!p && !!p.type && n.types.includes(p.type) && n.slots.includes(p.slot);
+  !!p && !!p.type && n.types.includes(p.type) && n.slots.includes(BASE_DETAIL[p.slot]);
 
 /** 듀오 조건을 채우는 선수 묶음(자리 번호). 못 채우면 null. */
 function matchDuo(players: readonly (SynergyPlayer | null)[], d: DuoDef): number[] | null {

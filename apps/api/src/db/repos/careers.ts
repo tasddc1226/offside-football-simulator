@@ -10,7 +10,7 @@ import type {
 import { HOF_MIN_RETIRE_AGE, WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { cardValue, releasePayout, retireValue } from '@offside/contracts/market-value';
 import { firstUploadSeasonAt, type ServiceSeason } from '@offside/contracts/service-seasons';
-import { dposFor, type PeakProfile } from '@offside/contracts/positions';
+import { dposFor, type DetailPos, type PeakProfile } from '@offside/contracts/positions';
 import {
   and,
   desc,
@@ -496,6 +496,7 @@ export async function listPublicHof(
   season?: ServiceSeason,
   q?: string,
   pos?: CareerPos,
+  dpos?: DetailPos,
 ): Promise<{ entries: PublicHofEntry[]; total: number }> {
   const by = HOF_SORT[sort];
   const ranked = and(
@@ -503,6 +504,7 @@ export async function listPublicHof(
     sort === 'score' ? undefined : sql`${by} > 0`,
     season && inSeason(season),
     pos && eq(careers.pos, pos),
+    dpos && eq(careers.dpos, dpos),
   );
   const where = q
     ? and(
@@ -523,7 +525,13 @@ export async function listPublicHof(
     .offset((page - 1) * limit);
   const [count] = await db
     .select({ n: sql<number>`count(*)` })
-    .from(q ? careers : sql`${careers} INDEXED BY careers_hof_count_idx`)
+    .from(
+      q
+        ? careers
+        : dpos
+          ? sql`${careers} INDEXED BY careers_hof_dpos_idx`
+          : sql`${careers} INDEXED BY careers_hof_count_idx`,
+    )
     .where(where);
   const entries = rows.map(toPublicEntry);
   if (q && entries.length) {

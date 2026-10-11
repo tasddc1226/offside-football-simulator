@@ -12,6 +12,7 @@
   import type { LegendView } from './state.svelte.js';
   import ClubMark from './ClubMark.svelte';
   import RnFrame from './RnFrame.svelte';
+  import { careerGuideText as CG } from '@offside/app-core/i18n/ko/careerGuide';
   import { legendRnText as L } from '@offside/app-core/i18n/ko/legendRn';
   import { personName } from '@offside/game/i18n/names';
 
@@ -41,7 +42,7 @@
   });
   const rn = $derived(rn0?.kind === 'taken' && v.own?.id && !(v.own.id in rnResults) ? { ...rn0, wallOfHonor: false } : rn0 ?? null);
   const rnSlot = $derived(rnSlotOf(rn, v.own));
-  const rnClub = $derived(rnSlot?.kind === 'granted' ? rnClubStats(rnSlot, v.d) : null);
+  const rnClub = $derived((rnSlot?.kind === 'granted' || (rnSlot?.kind === 'taken' && rnSlot.wallOfHonor)) ? rnClubStats(rnSlot, v.d) : null);
   // T-11-180 자격에 못 미쳤으면 이유(기준의 절반 이상일 때만 서버가 준다).
   const miss = $derived(!rn && v.own?.id ? rnMisses[v.own.id] : undefined);
 </script>
@@ -69,8 +70,13 @@
     {:else if rnSlot?.kind === 'taken'}
       <div class="rn-ceremony rn-honour">
         <div class="eyebrow film-kicker">Wall of Honour</div>
-        {#if rnSlot.wallOfHonor}<p class="rn-stats" role="status" data-wall-of-honor>{L.wallOfHonor}</p>{/if}
-        <p class="rn-line">{L.takenA({ number: rnSlot.number })} <b>{rnSlot.holder != null ? personName(rnSlot.holder) : L.anonLegend}</b>{L.takenB}<br />{L.takenC} <b>{v.name}</b>{L.takenD}</p>
+        {#if rnSlot.wallOfHonor}
+          <p class="rn-line"><b>{v.name}</b><br />{CG.wallTitle}</p>
+          <p class="rn-stats" role="status" data-wall-of-honor>{L.wallOfHonor}</p>
+          {#if rnClub}<p class="rn-stats">{L.stats(rnClub)}</p>{/if}
+          <p class="rn-stats">{CG.wallRule}</p>
+        {/if}
+        {#if rnSlot.wallOfHonor}<p class="rn-stats">{CG.occupied({number: rnSlot.number, holder: rnSlot.holder != null ? personName(rnSlot.holder) : L.anonLegend})}</p>{:else}<p class="rn-line">{L.takenA({ number: rnSlot.number })} <b>{rnSlot.holder != null ? personName(rnSlot.holder) : L.anonLegend}</b>{L.takenB}<br />{L.takenC} <b>{v.name}</b>{L.takenD}</p>{/if}
       </div>
     {:else if rnSlot?.kind === 'anonymous'}
       <div class="rn-ceremony rn-anon">

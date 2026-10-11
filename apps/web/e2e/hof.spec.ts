@@ -290,6 +290,7 @@ test('구단주 내 선수: 계정에 연결되지 않았으면 이 기기 기�
 
 // 홈은 TOP 3만, '전체 보기'는 10명씩 페이지(T-10-101). 상세에서 돌아오면 보던 페이지로 돌아온다.
 test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async ({ page }) => {
+  await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
   const TOTAL = 15;
   const nth = (k: number) => ({
     ...entry,
@@ -669,3 +670,64 @@ test('이 기기 내 선수: 새 로컬 국적을 전달하고 국적 없는 옛
   await expect(page.locator('.film-open h1')).toHaveText('옛 기록');
   await expect(page.getByText('요약만 보여 줘요')).toBeVisible();
 });
+
+for (const width of [320, 1024]) {
+  test(`세부 포지션 필터 ${width}px: 상위 선택·초기화·시즌 전환`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-11T00:00:00+09:00'));
+    await page.setViewportSize({ width, height: 844 });
+    const asked: string[] = [];
+    await page.route(HOF_LIST, (r) => {
+      asked.push(r.request().url());
+      return r.fulfill(ok({ entries: [entry], total: 1 }));
+    });
+    await page.goto('/');
+    await page.locator('[data-act="hof-all"]').click();
+    await page.locator('[data-hof-filters]').click();
+    await page.locator('[data-hof-pos="MF"]').click();
+    await expect(page.locator('[data-hof-dpos="CM"]')).toBeVisible();
+    await page.locator('[data-hof-dpos="CM"]').click();
+    await expect.poll(() => asked.some((u) => u.includes('pos=MF&dpos=CM'))).toBe(true);
+    await expect(page.locator('[data-hof-filters]')).toContainText('중앙 미드필더');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.locator('[data-hof-pos="DF"]').click();
+    await expect(page.locator('[data-hof-dpos="CM"]')).toHaveCount(0);
+    await expect(page.locator('[data-hof-dpos="all"]')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('[data-hof-dpos="CB"]').click();
+    await page.locator('[data-hof-season-select]').selectOption('0');
+    await expect(page.locator('[data-hof-dpos]')).toHaveCount(0);
+    await page.locator('[data-hof-season-select]').selectOption('1');
+    await expect(page.locator('[data-hof-dpos="all"]')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('[data-hof-pos="GK"]').click();
+    await expect(page.locator('[data-hof-dpos]')).toHaveCount(0);
+  });
+}
+
+for (const locale of ['en-US', 'ja-JP']) {
+  test(`세부 포지션 번역 ${locale} 320px`, async ({ browser }) => {
+    const context = await browser.newContext({ locale, viewport: { width: 320, height: 844 } });
+    const page = await context.newPage();
+    try {
+      await page.clock.setFixedTime(new Date('2026-10-11T00:00:00+09:00'));
+      await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [entry], total: 1 })));
+      await page.goto('/');
+      await expect(page.locator('html')).toHaveAttribute('lang', locale.slice(0, 2));
+      const records = page.locator('.main-nav [data-act="hof"]');
+      await expect(records).not.toContainText('기록실');
+      await records.click();
+      await page.locator('[data-hof-filters]').click();
+      await page.locator('[data-hof-pos="MF"]').click();
+      const chip = page.locator('[data-hof-dpos="CM"]');
+      await expect(chip).toBeVisible();
+      await expect(chip).not.toContainText('중앙');
+      await chip.click();
+      await expect(chip).toHaveAttribute('aria-pressed', 'true');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+    } finally {
+      await context.close();
+    }
+  });
+}

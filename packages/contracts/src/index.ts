@@ -120,6 +120,7 @@ export {
   HofSeasonQuerySchema,
   SeasonPickQuerySchema,
   HofPosQuerySchema,
+  HofDetailPosQuerySchema,
   HofSortSchema,
   type LegendSnapshot,
   type PlayStyle,

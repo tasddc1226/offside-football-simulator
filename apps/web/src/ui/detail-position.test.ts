@@ -1,3 +1,8 @@
+import {
+  BASE_DETAIL,
+  DETAIL_GROUP,
+  SELECTABLE_DETAIL_POSITIONS,
+} from '@offside/contracts/positions';
 import { describe, expect, it } from 'vitest';
 import { generateCandidates } from '@offside/game/candidates';
 import { DETAILS_OF, DPOS, scoreRate, type DetailPos, type Pos } from '@offside/game/data';
@@ -46,7 +51,7 @@ const make = (pos: Pos, dpos?: DetailPos, attrs?: Parameters<typeof newGame>[2])
 describe('세부 포지션 (T-10-091)', () => {
   it('세부 포지션이 역할(OVR 가중)을 정하고 저장본에 남는다', () => {
     for (const d of Object.keys(DPOS) as DetailPos[]) {
-      const pos = (Object.keys(DETAILS_OF) as Pos[]).find((p) => DETAILS_OF[p].includes(d))!;
+      const pos = DETAIL_GROUP[d];
       const s = make(pos, d);
       expect(s.dpos).toBe(d);
       expect(mainRole(s)).toBe(DPOS[d].role);
@@ -113,4 +118,17 @@ describe('세부 포지션 (T-10-091)', () => {
     const p = retire(s).profile!;
     expect(p.roles.ST).toBe(s.peak);
   });
+});
+
+// New choices inherit the same seeded attributes and numerical role as their base.
+it('신규 포지션의 육성/OVR은 기존 역할과 같고 저장에는 선택한 위치가 남는다', () => {
+  for (const d of SELECTABLE_DETAIL_POSITIONS) {
+    const actual = make(DETAIL_GROUP[d], d);
+    const base = make(DETAIL_GROUP[d], BASE_DETAIL[d]);
+    expect(actual.attrs).toEqual(base.attrs);
+    expect(actual.sub).toEqual(base.sub);
+    expect(ovr(actual)).toBe(ovr(base));
+    expect(scoreRate(actual)).toEqual(scoreRate(base));
+    expect(actual.dpos).toBe(d);
+  }
 });

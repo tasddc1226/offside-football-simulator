@@ -17,6 +17,7 @@ import { ClubMark } from '../../ui/ClubBadge';
 import { Reveal } from './credit';
 import { FText, Kicker } from './film';
 import { ownOf } from './own';
+import { careerGuideText as CG } from '@offside/app-core/i18n/ko/careerGuide';
 import { legendRnText as L } from '@offside/app-core/i18n/ko/legendRn';
 import { tn } from '@offside/game/i18n/names';
 import { personName } from '@offside/game/i18n/names';
@@ -50,7 +51,10 @@ export function RetiredNumberCredit({
       ? { ...rn0, wallOfHonor: false }
       : (rn0 ?? null);
   const rnSlot = rnSlotOf(rn, v.own);
-  const rnClub = rnSlot?.kind === 'granted' ? rnClubStats(rnSlot, v.d) : null;
+  const rnClub =
+    rnSlot?.kind === 'granted' || (rnSlot?.kind === 'taken' && rnSlot.wallOfHonor)
+      ? rnClubStats(rnSlot, v.d)
+      : null;
   // T-11-180 자격에 못 미쳤으면 이유(기준의 절반 이상일 때만 서버가 준다).
   const misses = useSnapshot(rnMisses);
   const miss = !rn && v.own?.id ? misses[v.own.id] : undefined;
@@ -99,23 +103,50 @@ export function RetiredNumberCredit({
           <View style={{ alignItems: 'center', gap: 10 }}>
             <Kicker>Wall of Honour</Kicker>
             {rnSlot.wallOfHonor ? (
+              <>
+                <FText size={1.1875} bold center>
+                  {v.name}
+                </FText>
+                <FText size={1.1875} center>
+                  {CG.wallTitle}
+                </FText>
+                {rnClub ? (
+                  <FText size={0.875} center>
+                    {L.stats(rnClub)}
+                  </FText>
+                ) : null}
+                <FText tone="muted" size={0.875} center>
+                  {CG.wallRule}
+                </FText>
+              </>
+            ) : null}
+            {rnSlot.wallOfHonor ? (
               <FText tone="muted" size={0.875} lh={1.5} center testID="wall-of-honor">
                 {L.wallOfHonor}
               </FText>
             ) : null}
-            <FText size={1.1875} center>
-              {L.takenA({ number: rnSlot.number })}{' '}
-              <FText tone="gold" bold size={1.1875}>
-                {rnSlot.holder != null ? personName(rnSlot.holder) : L.anonLegend}
+            {rnSlot.wallOfHonor ? (
+              <FText tone="muted" size={0.875} center>
+                {CG.occupied({
+                  number: rnSlot.number,
+                  holder: rnSlot.holder != null ? personName(rnSlot.holder) : L.anonLegend,
+                })}
               </FText>
-              {L.takenB}
-              {'\n'}
-              {L.takenC}{' '}
-              <FText tone="gold" bold size={1.1875}>
-                {v.name}
+            ) : (
+              <FText size={1.1875} center>
+                {L.takenA({ number: rnSlot.number })}{' '}
+                <FText tone="gold" bold size={1.1875}>
+                  {rnSlot.holder != null ? personName(rnSlot.holder) : L.anonLegend}
+                </FText>
+                {L.takenB}
+                {'\n'}
+                {L.takenC}{' '}
+                <FText tone="gold" bold size={1.1875}>
+                  {v.name}
+                </FText>
+                {L.takenD}
               </FText>
-              {L.takenD}
-            </FText>
+            )}
           </View>
         ) : rnSlot?.kind === 'anonymous' ? (
           <View style={{ alignItems: 'center', gap: 10 }}>
