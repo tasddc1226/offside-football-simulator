@@ -16,6 +16,7 @@ import { liveSocket } from './live/socket.js';
 import { runNewsPush } from './push/dispatch.js';
 import { runPersonalPush } from './push/personal.js';
 import { queueReengagement } from './push/reengagement.js';
+import { consumeCommunityPush } from './push/communityQueue.js';
 import { runCup } from './team/cup.js';
 import { runSeasonClose } from './team/seasonClose.js';
 
@@ -23,6 +24,9 @@ export { app };
 export { LiveHub } from './live/hub.js';
 export { ChatRoom } from './chat/room.js';
 export default {
+  queue(batch: MessageBatch<unknown>, env: Bindings) {
+    return consumeCommunityPush(batch, env);
+  },
   fetch(req: Request, env: Bindings, ctx: ExecutionContext) {
     // T-10-072 홈 라이브 소켓은 Hono 앱(미들웨어) 앞에서 받는다(live/socket.ts).
     const { pathname } = new URL(req.url);
