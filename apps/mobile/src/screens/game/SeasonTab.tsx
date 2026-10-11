@@ -31,7 +31,6 @@ import {
 import { eventById } from '@offside/game/events-data';
 import type { GameState } from '@offside/game/types';
 import { seasonLabel } from '@offside/app-core/career';
-import { Radar } from './Radar';
 import { PositionGuide } from './PositionGuide';
 import { careerGuideText as CG } from '@offside/app-core/i18n/ko/careerGuide';
 import {
@@ -386,14 +385,11 @@ function HelpBox({
   title,
   effect,
   body,
-  tag,
 }: {
   testID: string;
   title: string;
   effect: string[];
   body?: string;
-  /** 본문 대신 짧은 태그 한 줄(훈련: 주력 성장·비용 등). */
-  tag?: string;
 }) {
   const c = useColors();
   return (
@@ -416,9 +412,6 @@ function HelpBox({
       </Txt>
       {body ? (
         <Txt style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5 }}>{body}</Txt>
-      ) : null}
-      {tag ? (
-        <Txt style={{ fontSize: rem(0.75), fontWeight: '600', color: c.accentText }}>{tag}</Txt>
       ) : null}
     </View>
   );
@@ -595,14 +588,7 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
             ))}
           </View>
           <SubTitle>{L.trainingTitle}</SubTitle>
-          {wait === 'train' ? (
-            <TourHint>{L.trainHint}</TourHint>
-          ) : (
-            <Txt v="sm" tone="muted" testID="train-pick">
-              {L.trainPick}
-            </Txt>
-          )}
-          <Radar s={s} onPick={setTraining} />
+          {wait === 'train' ? <TourHint>{L.trainHint}</TourHint> : null}
           <Txt v="sm" tone="muted">
             {CG.trainWeak}
           </Txt>
@@ -610,11 +596,12 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
           <ChoiceGrid
             testPrefix="train"
             popped={popped?.g === 'train' ? popped.id : null}
-            items={TRAININGS.filter((tr) => !tr.attr).map((tr) => {
+            items={TRAININGS.map((tr) => {
               const cd = trainCards.get(tr.id)!;
               return {
                 id: tr.id,
                 label: trainingLabel(s, tr),
+                effect: cd.effect,
                 tag: cd.tag,
                 selected: s.training === tr.id,
                 onPress: () => setTraining(tr.id),
@@ -626,7 +613,6 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
               testID="train-help"
               title={trainingLabel(s, picked)}
               effect={trainCards.get(picked.id)!.effect}
-              tag={trainCards.get(picked.id)!.tag}
               body={trainingOvrNote(s, picked)}
             />
           ) : null}

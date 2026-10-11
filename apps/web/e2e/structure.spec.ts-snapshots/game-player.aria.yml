@@ -6,7 +6,10 @@
   - heading "구조테스트" [level=1]
   - text: /\d+세 · 런던 해머스 프리미어리그 · 연봉 \d+억 \d+,\d+만 · 몸값 \d+억 9천만 \d+ OVR 로테이션 부상 4경기 주력 슈팅·드리블 Attributes/
   - heading "능력치" [level=2]
-  - text: /스트라이커 · OVR \d+ 포지션별 OVR ST \d+ CF \d+ RW \d+ PAC스피드 \d+/
+  - text: /스트라이커 · OVR \d+/
+  - img /스피드 \d+, 슈팅 \d+, 패스 \d+, 드리블 \d+, 수비 \d+, 피지컬 \d+/: /PAC 스피드 \d+ SHO 슈팅 \d+ PAS 패스 \d+ DRI 드리블 \d+ DEF 수비 \d+ PHY 피지컬 \d+/
+  - paragraph: 현재 시즌 시작
+  - text: /포지션별 OVR ST \d+ CF \d+ RW \d+ PAC스피드 \d+/
   - list:
     - listitem: /질주 속도 \d+/
     - listitem: /가속력 \d+/

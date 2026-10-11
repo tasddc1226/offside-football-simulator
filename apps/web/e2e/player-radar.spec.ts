@@ -1,16 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { startCareer } from './helpers.js';
 
-// T-11-200 능력치 육각형은 시즌 탭 훈련 방향으로 옮겨 갔다(축 이름표가 곧 훈련 버튼). 선수 탭에는 없다.
-test('시즌 탭 훈련 육각형에서 축을 눌러 훈련을 고르고 선수 탭에는 육각형이 없다', async ({
-  page,
-}) => {
+// T-11-218 능력치 육각형은 선수 탭에, 훈련은 시즌 탭의 버튼 9개로 고른다(T-11-200의 육각형 이동을 되돌림).
+test('선수 탭에 육각형이 있고 시즌 탭은 훈련 버튼으로 고른다', async ({ page }) => {
   await startCareer(page);
 
-  const radar = page.locator('.train-radar svg.radar');
-  await expect(radar).toBeVisible();
-  await expect(radar.locator('polygon.rd-now')).toHaveCount(1);
-  await expect(page.locator('.train-radar [data-train]')).toHaveCount(6);
+  await expect(page.locator('[data-prep] svg.radar')).toHaveCount(0);
+  await expect(page.locator('[data-prep] .train [data-train]')).toHaveCount(9);
   await page.locator('[data-train="pas"]').click();
   await expect(page.locator('[data-train="pas"]')).toHaveAttribute('aria-pressed', 'true');
 
@@ -23,5 +19,7 @@ test('시즌 탭 훈련 육각형에서 축을 눌러 훈련을 고르고 선수
   await expect(invest).toHaveCount(1);
 
   await page.locator('[data-tab="player"]').click();
-  await expect(page.locator('svg.radar')).toHaveCount(0);
+  const radar = page.locator('svg.radar');
+  await expect(radar).toBeVisible();
+  await expect(radar.locator('polygon.rd-now')).toHaveCount(1);
 });
