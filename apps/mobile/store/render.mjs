@@ -1,20 +1,26 @@
-// 스토어 미리보기 이미지 렌더러: node render.mjs [ko|en] [ios|android] [장 번호]
+// 스토어 미리보기 이미지 렌더러: node render.mjs [ko|en|ja] [ios|android|duo-outer|duo-inner] [장 번호]
 // shots/<lang>/0N.png(실제 앱 화면) + frames.json(문구) → out/<platform>/<lang>/0N.png
 import fs from 'node:fs';
 import path from 'node:path';
 import { chromium, here, icon, frames, esc, mark, FONTS, shoot } from './lib.mjs';
 
 const langs = process.argv[2] ? [process.argv[2]] : ['ko', 'en', 'ja'];
-const plats = process.argv[3] ? [process.argv[3]] : ['ios', 'android'];
+const plats = process.argv[3] ? [process.argv[3]] : ['ios', 'android', 'duo-outer', 'duo-inner'];
 const only = process.argv[4] ? +process.argv[4] : 0;
 
-const SIZE = { ios: [1320, 2868], android: [1080, 2160] };
+// iPhone Duo(접는 아이폰, 2026-10): 바깥 화면 1398×2034, 안쪽 화면 2007×2853. 6.9"보다 덜 길어 휴대폰 아래쪽은 잘리고 흐려진다.
+const SIZE = {
+  ios: [1320, 2868],
+  android: [1080, 2160],
+  'duo-outer': [1398, 2034],
+  'duo-inner': [2007, 2853],
+};
 const name = (i) => `${String(i + 1).padStart(2, '0')}.png`;
 
 function html(f, lang, plat, img) {
   const [W, H] = SIZE[plat];
   const u = W / 1320; // 기준 폭 1320
-  const tall = plat === 'ios';
+  const tall = plat !== 'android';
   const phoneW = (tall ? 1010 : 800) * u;
   const phoneH = (phoneW * SIZE.ios[1]) / SIZE.ios[0]; // 화면은 iOS 스크린샷 비율
   const bez = 22 * u;

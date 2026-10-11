@@ -1,0 +1,23 @@
+{
+  "id": "t-11-194-app-1-1-2",
+  "title": "앱 1.1.2가 나왔어요",
+  "items": [
+    "iOS 앱에서도 리롤권과 잠재력 강화권을 살 수 있어요.",
+    "앱 광고가 다시 나와요. 광고를 보고 받는 보상도 다시 받을 수 있어요."
+  ],
+  "en": {
+    "title": "App 1.1.2 is out",
+    "items": [
+      "You can now buy reroll tickets and potential boost tickets in the iOS app too.",
+      "Ads are back in the app, so you can watch them for rewards again."
+    ]
+  },
+  "ja": {
+    "title": "アプリ1.1.2を公開しました",
+    "items": [
+      "iOSアプリでもリロール券と潜在能力強化券を購入できます。",
+      "アプリの広告が戻りました。広告を見て報酬を受け取れます。"
+    ]
+  },
+  "availability": "app"
+}
