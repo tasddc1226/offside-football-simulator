@@ -388,9 +388,13 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
     return ok(c, OwnerItemsResponseSchema, { ...items, iap }, 200, NO_STORE);
   });
 
-  // 아이템 1장 쓰기 — 선수 후보 리롤권(reroll) · 잠재력 강화권(boost, T-11-174). 남은 장수를 돌려준다. 없으면 409.
+  // 아이템 1장 쓰기 — 선수 후보 리롤권(reroll) · 잠재력 강화권(boost, T-11-174) · 프리미엄 스카우트권(scout, T-11-196). 남은 장수를 돌려준다. 없으면 409.
   // 재시도가 두 장을 쓰지 않게 멱등 키를 쓴다. 강화권은 서버가 장수만 빼고, 강화는 응답을 받은 기기가 한다.
-  const EMPTY = { reroll: ['noReroll', 'NO_REROLL'], boost: ['noBoost', 'NO_BOOST'] } as const;
+  const EMPTY = {
+    reroll: ['noReroll', 'NO_REROLL'],
+    boost: ['noBoost', 'NO_BOOST'],
+    scout: ['noScout', 'NO_SCOUT'],
+  } as const;
   for (const item of OWNER_ITEMS)
     app.post(`/v1/items/${item}/use`, requireProfile, idempotency, async (c) => {
       const me = await requireOwner(c);

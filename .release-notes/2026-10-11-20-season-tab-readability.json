@@ -1,0 +1,26 @@
+{
+  "id": "t-11-212-season-tab-readability",
+  "title": "시즌 탭이 더 보기 편해졌어요",
+  "items": [
+    "훈련 방향의 능력치가 버튼 모양으로 보여요. 눌러서 이번 구간 훈련을 골라요",
+    "선수 탭 안내가 웹은 화면 가운데, 앱은 아래에서 올라오는 창으로 떠요",
+    "안드로이드 앱에서 한글이 낱말 단위로 줄을 바꿔요"
+  ],
+  "en": {
+    "title": "The Season tab is easier to read",
+    "items": [
+      "Stats in Training focus now look like buttons. Tap one to pick this phase's training.",
+      "The Player tab tip now opens as a centered window on the web and a bottom sheet in the app.",
+      "The Android app no longer breaks Korean words in the middle of a line."
+    ]
+  },
+  "ja": {
+    "title": "シーズンタブが見やすくなりました",
+    "items": [
+      "トレーニング方針の能力値がボタンの形で表示されます。タップしてこのフェーズのトレーニングを選べます。",
+      "選手タブの案内が、Webでは画面中央、アプリでは下から開くウィンドウで表示されます。",
+      "Androidアプリで韓国語が単語の途中で改行されなくなりました。"
+    ]
+  },
+  "availability": "web-app"
+}

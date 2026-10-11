@@ -1,11 +1,16 @@
-import { PeakProfileSchema, TeamLayoutSchema, TeamLogoSchema } from '@offside/contracts';
-import type { TeamPlayer, TeamRankItem, TeamRankSort } from '@offside/contracts';
+import {
+  PeakProfileSchema,
+  TeamLayoutSchema,
+  TeamLogoSchema,
+  TeamPresetsSchema,
+} from '@offside/contracts';
+import type { TeamPlayer, TeamPreset, TeamRankItem, TeamRankSort } from '@offside/contracts';
 import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import { CARD_VALUE_FLOOR } from '@offside/contracts/market-value';
 import { teamSeasonClosed } from '@offside/contracts/service-seasons';
 import {
-  DETAIL_POSITIONS,
+  LEGACY_DETAIL_POSITIONS,
   FACE_ATTRS,
   dposFor,
   type PeakProfile,
@@ -58,7 +63,7 @@ export function peakOf(json: string | null): PeakProfile | null {
     const p = JSON.parse(json) as Partial<PeakProfile>;
     return p.roles &&
       p.attrs &&
-      DETAIL_POSITIONS.every((d) => Number.isFinite(p.roles![d])) &&
+      LEGACY_DETAIL_POSITIONS.every((d) => Number.isFinite(p.roles![d])) &&
       FACE_ATTRS.every((k) => Number.isFinite(p.attrs![k]))
       ? (p as PeakProfile)
       : null;
@@ -94,6 +99,25 @@ export function layoutOf(row: Pick<OwnerTeamRow, 'layoutJson'>) {
     return null;
   }
 }
+
+/** T-11-217 팀 프리셋. 깨진 값은 빈 목록으로 읽는다. */
+export function presetsOf(row: Pick<OwnerTeamRow, 'presetsJson'>): TeamPreset[] {
+  if (!row.presetsJson) return [];
+  try {
+    const result = TeamPresetsSchema.safeParse(JSON.parse(row.presetsJson));
+    return result.success ? result.data : [];
+  } catch {
+    return [];
+  }
+}
+
+/** T-11-217 그 시즌 내 팀의 프리셋을 통째로 바꾼다. 팀이 없으면 바뀐 행이 없다(빈 배열). */
+export const setTeamPresets = (db: Db, profileId: string, season: number, presets: TeamPreset[]) =>
+  db
+    .update(ownerTeams)
+    .set({ presetsJson: presets.length ? JSON.stringify(presets) : null })
+    .where(and(eq(ownerTeams.profileId, profileId), eq(ownerTeams.season, season)))
+    .returning({ id: ownerTeams.id });
 
 export function logoOf(row: Pick<OwnerTeamRow, 'logoJson'>) {
   if (!row.logoJson) return null;
@@ -161,7 +185,7 @@ export function teamPlayerCard(
   r: LineupRow & { cardAttrsJson: string | null; legendScore: number | null },
   profile: PeakProfile | null = peakOf(r.peakProfile),
   career = toLineupCareer(r, profile),
-): Omit<TeamPlayer, 'cardValue' | 'raised' | 'foot' | 'listing'> {
+): Omit<TeamPlayer, 'cardValue' | 'raised' | 'listing'> {
   const estimated = profile ? null : estimatedAttrsOf(r.cardAttrsJson);
   return {
     careerId: r.id,
@@ -176,6 +200,8 @@ export function teamPlayerCard(
     publicName: career.publicName,
     legendScore: r.legendScore,
     type: career.type,
+    // T-11-211 카드에 주발을 그린다(시너지 '주발 맞춤'도 이 값을 쓴다).
+    ...(career.foot ? { foot: career.foot } : {}),
     season: career.season,
     ...bodyOf(r),
   };
@@ -342,7 +368,12 @@ export function eligibleMap(
 /** 팀 한 개(없으면 빈 배열). 구글 연결이 끊겼거나 삭제된 구단주의 팀은 없는 것으로 본다. batch에 넣을 수 있게 쿼리로 돌려준다. */
 export const liveTeam = (db: Db, teamId: string) =>
   db
-    .select({ team: ownerTeams, ownerNickname: profiles.nickname })
+    .select({
+      team: ownerTeams,
+      ownerNickname: profiles.nickname,
+      title: profiles.title,
+      avatarId: profiles.avatarId,
+    })
     .from(ownerTeams)
     .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
     .where(and(eq(ownerTeams.id, teamId), accountLinkedSql(), isNull(profiles.deletedAt)));
@@ -404,7 +435,7 @@ export async function listOpponentCandidates(
   todayStart: string,
   perSide = 8,
 ) {
-  const cols = { team: ownerTeams };
+  const cols = { team: ownerTeams, title: profiles.title };
   const base = and(
     rankedIn(season),
     ne(ownerTeams.profileId, profileId),
@@ -428,7 +459,7 @@ export async function listOpponentCandidates(
       .orderBy(desc(ownerTeams.rating), ovrGap)
       .limit(perSide),
   ]);
-  return [...up, ...down].map((r) => r.team);
+  return [...up, ...down].map((r) => ({ ...r.team, title: r.title }));
 }
 
 /**
@@ -464,7 +495,7 @@ export async function listTeamRanking(
   const value = lineupValueSql(!teamSeasonClosed(season, now));
   const [rows, [total]] = await db.batch([
     db
-      .select({ team: ownerTeams, value })
+      .select({ team: ownerTeams, value, title: profiles.title })
       .from(ownerTeams)
       .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
       .where(rankedIn(season))
@@ -478,7 +509,7 @@ export async function listTeamRanking(
       .where(rankedIn(season)),
   ]);
   return {
-    rows: rows.map((r) => ({ ...r.team, value: Number(r.value) })),
+    rows: rows.map((r) => ({ ...r.team, value: Number(r.value), title: r.title })),
     total: Number(total?.n ?? 0),
   };
 }

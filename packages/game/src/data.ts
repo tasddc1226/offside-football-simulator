@@ -1,7 +1,13 @@
 // ───────── 정적 데이터: 리그 · 클럽 · 포지션 · 유형 · 특성 ─────────
 import { CLUB_NAMES, clubIdOf, LEAGUE_BASE, type LeagueBase } from '@offside/contracts/club-names';
 import { CLUB_LEAGUE_AVG } from '@offside/contracts/club-strength-spec';
-import { DETAILS_OF, type DetailPos } from '@offside/contracts/positions';
+import {
+  DETAILS_OF,
+  BASE_DETAIL,
+  DETAIL_POSITIONS,
+  type BaseDetailPos,
+  type DetailPos,
+} from '@offside/contracts/positions';
 import { gDataText as L } from './i18n/ko/gData.js';
 import { gAttrLabelText } from './i18n/ko/gAttrLabel.js';
 import { gGkLabelText } from './i18n/ko/gGkLabel.js';
@@ -166,7 +172,7 @@ export interface DetailPosDef {
   goal: number;
   assist: number;
 }
-export const DPOS: Record<DetailPos, DetailPosDef> = {
+const BASE_DPOS: Record<BaseDetailPos, DetailPosDef> = {
   ST: {
     get label() {
       return L.dposST;
@@ -272,6 +278,20 @@ export const DPOS: Record<DetailPos, DetailPosDef> = {
     assist: 1,
   },
 };
+export const DPOS = Object.fromEntries(
+  DETAIL_POSITIONS.map((d) => [
+    d,
+    {
+      ...BASE_DPOS[BASE_DETAIL[d]],
+      get label() {
+        return L[`dpos${d}`];
+      },
+      get blurb() {
+        return L[`dpos${BASE_DETAIL[d]}Blurb`];
+      },
+    },
+  ]),
+) as Record<DetailPos, DetailPosDef>;
 /** 경기 득점·도움 기대값(포지션 기본값 × 세부 포지션 배수). */
 export const scoreRate = (s: {
   pos: Pos;
@@ -285,18 +305,8 @@ export const scoreRate = (s: {
 export const posLabel = (s: { pos: Pos; dpos?: DetailPos | null | undefined }): string =>
   s.dpos ? DPOS[s.dpos].label : POS[s.pos].label;
 /** 포지션 영어 약어(명예의 전당). 언어와 상관없이 같다. 세부 포지션이 없는 프리시즌 선수는 큰 포지션(FW·MF·DF·GK). */
-const DPOS_ABBR: Record<DetailPos, string> = {
-  GK: 'GK',
-  CB: 'CB',
-  FB: 'FB',
-  DM: 'CDM',
-  CM: 'CM',
-  AM: 'CAM',
-  W: 'WG',
-  ST: 'ST',
-};
 export const posAbbr = (s: { pos: Pos; dpos?: DetailPos | null | undefined }): string =>
-  s.dpos ? DPOS_ABBR[s.dpos] : s.pos;
+  s.dpos ?? s.pos;
 
 export interface TypeDef {
   id: string;

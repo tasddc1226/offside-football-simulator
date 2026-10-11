@@ -1,5 +1,5 @@
 <script lang="ts">
-  import GoogleLoginButton from './GoogleLoginButton.svelte';
+  import LoginButtons from './LoginButtons.svelte';
   // T-11-015 라운지 채팅 — 모두가 보는 실시간 공개 채팅. 누구나 읽고, 구글로 로그인하고 닉네임을 정하면 쓴다.
   // 남의 메시지는 신고하고 작성자를 차단한다(앱스토어 UGC 정책) — 여럿이 신고하면 모두의 화면에서 가려진다.
   // 운영자는 메시지를 가리고 작성자를 정지한다. 게임과 무관해 메인 번들과 떼어 처음 열 때 불러온다.
@@ -23,6 +23,7 @@
   import { goBack } from './history.svelte.js';
   import { lastClosedSeason } from '@offside/contracts/service-seasons';
   import TierBadge from './TierBadge.svelte';
+  import TitleBadge from './cup/TitleBadge.svelte';
   import OwnerAvatar from './OwnerAvatar.svelte';
 
   /** 채팅 티어는 보낸 때의 지난 시즌 티어 — 시즌 이름(툴팁)은 지금 기준 지난 시즌으로 보인다. */
@@ -32,7 +33,6 @@
   import { createTranslations } from './translations.svelte.js';
   import { canTranslate } from '@offside/app-core/userTranslate';
   import { getLocale } from '@offside/contracts/i18n';
-  import { startGoogleLogin } from './login.js';
   import { goHome } from './nav.js';
   import { trackViewport } from './viewport.js';
   import { chatSession, listenChat, markChatRead } from './chat-state.svelte.js';
@@ -213,7 +213,7 @@
       {#each view.messages as m (m.id)}
         <li class="chat-msg" class:mine={mine(m)} data-chat-msg={m.id}>
           <div class="chat-meta">
-            {#if m.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<OwnerAvatar name={m.nickname} /><b>{m.nickname}</b>{#if m.tier}<TierBadge tag={{ tier: m.tier, season: tierSeason }} />{/if}{/if}
+            <OwnerAvatar avatarId={m.avatarId} name={m.nickname} />{#if m.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{m.nickname}</b>{#if m.tier}<TierBadge tag={{ tier: m.tier, season: tierSeason }} />{/if}{#if m.title}<TitleBadge title={m.title} size="sm" />{/if}{/if}
             {#if !mine(m) && (!m.admin || view.me?.admin)}
               <button class="chat-more" aria-expanded={selected === m.id} aria-label={L.moreLabel({ nick: m.nickname })} data-act="chat-more" onclick={() => (selected = selected === m.id ? null : m.id)}>
                 <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
@@ -291,7 +291,7 @@
       {:else if view.me?.reason === 'login' || !view.me}
         <div class="comment-gate" data-chat-gate="login">
           <p class="muted">{L.gateLogin}</p>
-          <GoogleLoginButton act="chat-login" onclick={() => startGoogleLogin({ chat: true })} />
+          <LoginButtons act="chat-login" back={{ chat: true }} />
         </div>
       {:else if view.me.reason === 'nickname'}
         <div class="comment-gate" data-chat-gate="nickname">

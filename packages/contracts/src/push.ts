@@ -41,3 +41,13 @@ export const DEFAULT_PUSH_PREFERENCES: PushPreferences = {
   market: true,
   social: true,
 };
+
+/** Only activity metadata; the local save and player name never leave the device here. */
+export const CareerActivitySchema = z
+  .object({
+    careerId: z.uuid().nullable(),
+    state: z.enum(['active', 'retired', 'none']),
+  })
+  .strict()
+  .refine((v) => (v.state === 'none') === (v.careerId === null));
+export type CareerActivityInput = z.infer<typeof CareerActivitySchema>;

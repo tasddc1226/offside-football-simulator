@@ -14,7 +14,14 @@ import {
 import { gzipToR2 } from '../cron/backup.js';
 import { createApp } from '../app.js';
 import { UPLOAD_LIMIT } from './careers.js';
-import { authAttempts, cards, careers, careerSeasons, profiles } from '../db/schema.js';
+import {
+  authAttempts,
+  cards,
+  careers,
+  careerSeasons,
+  profiles,
+  seasonTelemetry,
+} from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import {
   deleteProfile,
@@ -88,6 +95,12 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
   });
 
   async function compactFixture() {
+    // T-11-207 이전에 쌓인 행처럼 career_seasons에 선택 로그가 남아 있는 상태에서 보관한다.
+    await ctx.env.DB.prepare(
+      `UPDATE career_seasons SET events_json='[{"legacy":1}]' WHERE career_id=?`,
+    )
+      .bind(CAREER_ID)
+      .run();
     const rows = (
       await ctx.env.DB.prepare(
         'SELECT year, events_json, signals_json, growth_json FROM career_seasons WHERE career_id=? ORDER BY year LIMIT 3',
@@ -403,7 +416,7 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect((await put(other.cookie, otherId)).status).toBe(200);
   });
 
-  it('T-11-048: 시즌 성장 기록을 저장하고, 기록 없이 다시 올라온 같은 시즌은 지우지 않는다', async () => {
+  it('T-11-048·T-11-207: 시즌 성장 기록은 측정 기록 테이블에 업로드마다 덧붙고, 시즌 행에는 쓰지 않는다', async () => {
     const owner = await issueCookie(ctx);
     const app = createApp();
     const growth = {
@@ -428,19 +441,31 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
         ctx.env,
       );
     };
-    const row = async () =>
-      (await ctx.db.select().from(careerSeasons).where(eq(careerSeasons.careerId, CAREER_ID)))[0]!;
+    const growths = async () =>
+      (
+        await ctx.db
+          .select()
+          .from(seasonTelemetry)
+          .where(eq(seasonTelemetry.careerId, CAREER_ID))
+          .orderBy(seasonTelemetry.id)
+      ).map((r) => (r.growthJson ? (JSON.parse(r.growthJson) as typeof growth) : null));
 
     expect((await send({ growth })).status).toBe(200);
-    expect(JSON.parse((await row()).growthJson!)).toEqual(growth);
+    expect(await growths()).toEqual([growth]);
 
-    // 옛 시즌 재전송(성장 기록 없음)은 이미 쌓인 기록을 그대로 둔다.
+    // 성장 기록 없는 재전송도 선택 로그가 있으면 한 행 덧붙는다(성장 기록은 NULL). 앞 기록은 그대로다.
     expect((await send({})).status).toBe(200);
-    expect(JSON.parse((await row()).growthJson!)).toEqual(growth);
+    expect(await growths()).toEqual([growth, null]);
 
-    // 새 성장 기록이 오면 덮어쓴다.
+    // 새 성장 기록은 새 행으로 쌓인다.
     expect((await send({ growth: { ...growth, o0: 53 } })).status).toBe(200);
-    expect(JSON.parse((await row()).growthJson!).o0).toBe(53);
+    expect((await growths()).at(-1)!.o0).toBe(53);
+
+    const [season] = await ctx.db
+      .select()
+      .from(careerSeasons)
+      .where(eq(careerSeasons.careerId, CAREER_ID));
+    expect(season).toMatchObject({ growthJson: null, eventsJson: '[]' });
   });
 
   it('T-11-048: 성장 기록 없이 올라온 첫 시즌은 NULL이고, 모양이 틀린 기록은 버리되 시즌은 받는다', async () => {
@@ -860,13 +885,26 @@ describe('조작된 기록 보정', () => {
       (
         await put(`/v1/careers/${other}/seasons/2027`, {
           ...seasonBody(),
-          career: { ...TEST_CAREER, dpos: 'LW' },
+          career: { ...TEST_CAREER, dpos: 'UNKNOWN' },
         })
       ).status,
     ).toBe(400);
+    const winger = '77777777-7777-4777-8777-777777777777';
+    expect(
+      (
+        await put(`/v1/careers/${winger}/seasons/2026`, {
+          ...seasonBody(),
+          career: { ...TEST_CAREER, dpos: 'LW' },
+        })
+      ).status,
+    ).toBe(200);
+    expect((await ctx.db.select().from(careers).where(eq(careers.id, winger)))[0]).toMatchObject({
+      pos: 'FW',
+      dpos: 'LW',
+    });
   });
 
-  it('T-10-092: 최고 시점 능력치는 자리별 실력을 최고 OVR 아래로 잘라 남기고, 모양이 틀려도 은퇴는 받는다', async () => {
+  it('T-10-092 · T-11-197: 최고 시점 능력치는 자리별 실력을 최고 OVR + 2 아래로 잘라 남기고, 모양이 틀려도 은퇴는 받는다', async () => {
     await putSeasonsFor(ctx.env, cookie, CAREER_ID, { ...retirementBody(), retireAge: 25 });
     const profile = {
       attrs: { pac: 91, sho: 70, pas: 66, dri: 80, def: 40, phy: 72 },
@@ -882,7 +920,7 @@ describe('조작된 기록 보정', () => {
     expect(r.peak).toBe(88);
     expect(JSON.parse(r.peakProfile!)).toEqual({
       attrs: profile.attrs,
-      roles: { ...profile.roles, W: 88 },
+      roles: { ...profile.roles, W: 90 },
     });
 
     const other = '66666666-6666-4666-8666-666666666666';

@@ -10,7 +10,7 @@ import {
   boardPosts,
   profiles,
 } from '../db/schema.js';
-import { createTestD1, type TestD1 } from '../test/d1.js';
+import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import {
   ADMIN_EMAIL,
   callJson,
@@ -47,6 +47,37 @@ describe('게시판 /v1/boards', () => {
   });
   afterEach(async () => {
     await ctx.dispose();
+  });
+
+  it('public news reads only published admin boards and never reads sessions, authors or comments', async () => {
+    const admin = await makeAdmin();
+    const id = await writePost(admin.cookie);
+    const other = await writePost(admin.cookie, 'release');
+    await ctx.db.update(boardPosts).set({ board: 'private' }).where(eq(boardPosts.id, other));
+    const spy = spyDb(env.DB);
+    env = { ...env, DB: spy.DB };
+    const read = await call('GET', `/v1/public-news/posts/${id}`, { cookie: admin.cookie });
+    expect(read.status).toBe(200);
+    expect(read.headers.get('Cache-Control')).toBe('no-store');
+    const data = (await read.json()) as { data: { post: Record<string, unknown> } };
+    expect(Object.keys(data.data.post).sort()).toEqual(
+      ['id', 'board', 'title', 'body', 'createdAt', 'updatedAt'].sort(),
+    );
+    expect(spy.seen.join(' ')).not.toMatch(/sessions|profiles|board_comments|board_post_likes/i);
+    expect((await call('GET', `/v1/public-news/posts/${other}`)).status).toBe(404);
+    expect((await call('GET', '/v1/public-news/private')).status).toBe(400);
+    expect((await call('GET', '/v1/public-news/posts/pst_release_20000101')).status).toBe(404);
+    const list = await call('GET', '/v1/public-news/notice');
+    const listed = (await list.json()) as { data: { posts: Record<string, unknown>[] } };
+    expect(listed.data.posts.map((p) => p.id)).toEqual([id]);
+    expect(listed.data.posts[0]).not.toHaveProperty('body');
+    await ctx.db
+      .update(boardPosts)
+      .set({ deletedAt: '2026-10-11T00:00:00Z' })
+      .where(eq(boardPosts.id, id));
+    expect((await call('GET', `/v1/public-news/posts/${id}`)).status).toBe(404);
+    const empty = await call('GET', '/v1/public-news/notice');
+    expect((await empty.json()) as unknown).toMatchObject({ data: { posts: [] } });
   });
 
   it('자동 릴리즈 노트의 날짜형 ID로 조회·조회수·댓글·좋아요·관리자 수정이 가능하고 권한을 유지한다', async () => {

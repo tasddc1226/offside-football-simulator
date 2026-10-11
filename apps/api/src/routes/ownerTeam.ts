@@ -1,5 +1,4 @@
 import { checkCupLineup } from './cup.js';
-import { cupHonorsOf } from '../team/cup.js';
 import {
   ClubAchievementsResponseSchema,
   OwnerTeamResponseSchema,
@@ -7,6 +6,8 @@ import {
   PlayTeamMatchResponseSchema,
   PutOwnerTeamBodySchema,
   PutOwnerTeamResponseSchema,
+  PutTeamPresetsBodySchema,
+  PutTeamPresetsResponseSchema,
   TeamMatchesResponseSchema,
   TeamOpponentsResponseSchema,
   type OwnerTeam,
@@ -21,6 +22,7 @@ import {
   isWildcardSeason,
   matchScore,
   ratingChange,
+  shapeOf,
   type FormationId,
 } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
@@ -58,6 +60,8 @@ import {
   slotIdsOf,
   layoutOf,
   logoOf,
+  presetsOf,
+  setTeamPresets,
   teamPlayerCard,
   toLineupCareer,
   type OwnerTeamRow,
@@ -101,6 +105,13 @@ export async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
     });
   }
   return profile;
+}
+
+const PAST_SEASON_TEXT = '지난 시즌 팀은 고칠 수 없어요.';
+
+/** 지금 시즌 팀만 고친다(프리시즌 팀은 친선전용으로). */
+function checkEditableSeason(season: number, current: number | null) {
+  if (season !== current && season !== 0) throw conflictError(PAST_SEASON_TEXT, 'SEASON_CLOSED');
 }
 
 /** 지금 고치고 겨루는 팀 시즌. 시즌 사이 휴식기면 409 SEASON_CLOSED. */
@@ -163,6 +174,7 @@ function toOwnerTeam(
     record: recordOf(row),
     likes: row.likes,
     views: row.views,
+    presets: presetsOf(row),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -175,14 +187,11 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const season = seasonQuery(c, now);
-    const [[teams, players, [played], founder], honors] = await Promise.all([
-      db.batch([
-        listMyTeams(db, me.id),
-        listEligibleCareers(db, me.id, season),
-        countMatchesSince(db, me.id, kstTodayStart(now)),
-        foundersOf(db, [me.id]),
-      ]),
-      cupHonorsOf(db, me.id),
+    const [teams, players, [played], founder] = await db.batch([
+      listMyTeams(db, me.id),
+      listEligibleCareers(db, me.id, season),
+      countMatchesSince(db, me.id, kstTodayStart(now)),
+      foundersOf(db, [me.id]),
     ]);
     // T-11-113 개막 뒤의 프리시즌 팀은 친선전용 편성을 보이고 고친다(지금 가진 선수만).
     const editableSeason = season === teamSeasonAt(now) || season === 0;
@@ -227,7 +236,6 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           cardValue: p.cardValue,
           raised: !!p.raised,
           locked: p.locked,
-          ...(p.foot ? { foot: p.foot } : {}),
           listing: p.listingId ? { id: p.listingId, price: p.listPrice! } : null,
         })),
         lastManager: teams.findLast((t) => t.manager)?.manager ?? null,
@@ -235,7 +243,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         matchesPerDay: TEAM_MATCHES_PER_DAY,
         founder: founder.length > 0,
         // 컵 성적은 최근 대회부터 온다 — 첫 우승이 가장 최근 우승.
-        cupChampion: honors.find((h) => h.stage === 'champion')?.edition ?? null,
+        ownerTitle: me.title,
       },
       200,
       NO_STORE,
@@ -252,9 +260,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const now = nowIso();
     const current = teamSeasonAt(now);
     const season = input.season ?? currentSeasonOrThrow(now);
-    if (season !== current && season !== 0) {
-      throw conflictError('지난 시즌 팀은 고칠 수 없어요.', 'SEASON_CLOSED');
-    }
+    checkEditableSeason(season, current);
     const friendly = season !== current;
     checkName(input.name, '팀 이름');
     checkName(input.manager, '감독 이름');
@@ -367,6 +373,20 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     });
   });
 
+  // T-11-217 팀 프리셋 목록 통째 교체. 팀을 한 번 저장한 뒤에만(시즌 팀 행에 둔다). 프리셋은 편성 초안만 채우고,
+  // 실제 팀 반영은 PUT /v1/owner-team이 선수 · 컵 잠금을 검사한다 — 여기서는 모양만 본다.
+  app.put('/v1/owner-team/presets', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const input = readBody(c, PutTeamPresetsBodySchema);
+    const now = nowIso();
+    const current = teamSeasonAt(now);
+    const season = input.season ?? currentSeasonOrThrow(now);
+    checkEditableSeason(season, current);
+    const [row] = await setTeamPresets(getDb(c), me.id, season, input.presets);
+    if (!row) throw teamNotFound();
+    return ok(c, PutTeamPresetsResponseSchema, { presets: input.presets });
+  });
+
   // 경기 상대 후보: 같은 시즌에서 내 팀 레이팅에 가까운 다른 구단주의 팀 몇 개를 섞어서(레이팅이 같으면 OVR이 가까운 팀부터).
   // OVR로만 고르면 비슷한 전력끼리만 만나 레이팅이 실력만큼 벌어지지 않았다(시즌 1 첫날 OVR 대별 평균 레이팅이 모두 1000 안팎).
   app.get('/v1/owner-team/opponents', requireProfile, async (c) => {
@@ -397,9 +417,11 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         logo: logoOf(team),
         owner: team.manager,
         formation: team.formation as FormationId,
+        shape: shapeOf(team.formation as FormationId, layoutOf(team)),
         ovr: team.ovr,
         rating: team.rating,
         record: recordOf(team),
+        title: team.title,
       }));
     return ok(c, TeamOpponentsResponseSchema, { items }, 200, NO_STORE);
   });

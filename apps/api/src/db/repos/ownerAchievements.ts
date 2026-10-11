@@ -115,6 +115,7 @@ export async function listAchievementRanking(db: Db, season: number, page: numbe
         done: ownerAchievements.done,
         players: ownerAchievements.players,
         nickname: profiles.nickname,
+        title: profiles.title,
         teamId: ownerTeams.id,
         teamName: ownerTeams.name,
         logoJson: ownerTeams.logoJson,

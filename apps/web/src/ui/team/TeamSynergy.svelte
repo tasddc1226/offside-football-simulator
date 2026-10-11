@@ -1,6 +1,6 @@
 <script lang="ts">
   // T-11-105 팀 시너지 — 적용 중 → 효과 없음 순으로 보이고, 미적용은 접어 두었다가 더보기로 연다. 켜진 시너지는 누르면 그라운드에서 그 선수들을 잇는다.
-  import { DUO_LINE_CAP, DUO_TOTAL_CAP, synergyPower, type TeamSynergy } from '@offside/contracts/owner-team';
+  import { synergyPower, type TeamSynergy } from '@offside/contracts/owner-team';
   import { synergyRows, synergyNote } from '@offside/app-core/teamOwner';
   import { teamSynergyText as L } from '@offside/app-core/i18n/ko/teamSynergy';
 
@@ -26,6 +26,7 @@
     <span class="note">{synergyNote(season)}</span>
   </header>
   <p class="muted hint">{anyOn ? L.chipHint : L.empty}</p>
+  <p class="muted hint" data-synergy-requirements>{L.requirementsHint}</p>
   <ul class="rows" id="synergy-rows">
     {#each shown as r (r.id)}
       <li>
@@ -39,7 +40,7 @@
     {/each}
   </ul>
   {#if offCount}<button class="more" aria-expanded={showOff} aria-controls="synergy-rows" data-act="synergy-more" onclick={() => (showOff = !showOff)}>{showOff ? L.lessOff : L.moreOff({ n: offCount })}<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" /></svg></button>{/if}
-  <p class="muted cap">{L.capNote({ line: DUO_LINE_CAP, total: DUO_TOTAL_CAP })}</p>
+  <p class="muted cap">{L.youthNote}</p>
 </section>
 
 <style>
@@ -59,7 +60,7 @@
   .mark svg {width:11px;height:11px;fill:none;stroke:var(--accent-ink);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
   .text {display:grid;gap:1px;min-width:0;}
   .text b {font-size:13px;}
-  .desc {font-size:11px;color:var(--muted);}
+  .desc {font-size:11px;color:var(--muted);overflow-wrap:anywhere;}
   .side {display:grid;justify-items:end;gap:3px;}
   .side small {font-size:11px;color:var(--muted);white-space:nowrap;}
   .state {font-style:normal;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap;}
@@ -75,5 +76,5 @@
   .row[data-state='off'] {background:transparent;}
   .row[data-state='off'] .text b {color:var(--muted);font-weight:600;}
   .row[data-state='off'] .mark {border-style:dashed;}
-  @media(max-width:440px) { .row {grid-template-columns:16px minmax(0,1fr);} .side {grid-column:2;justify-items:start;grid-auto-flow:column;justify-content:start;align-items:center;gap:6px;} }
+  @media(max-width:440px) { .note {flex-basis:100%;} .row {grid-template-columns:16px minmax(0,1fr);} .side {grid-column:2;justify-items:start;grid-auto-flow:column;justify-content:start;align-items:center;gap:6px;} }
 </style>

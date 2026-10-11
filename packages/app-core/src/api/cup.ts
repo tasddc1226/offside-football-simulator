@@ -58,6 +58,13 @@ export const spendBoost = (key: string) =>
     headers: { [IDEMPOTENCY_KEY_HEADER]: key },
   });
 
+/** T-11-196 프리미엄 스카우트권 1장 쓰기. 성공하면 남은 장수 — 그다음 gameActions.premiumScoutCandidates()로 후보를 뽑는다. */
+export const spendScout = (key: string) =>
+  apiFetch<OwnerItemsResponse>('/v1/items/scout/use', {
+    method: 'POST',
+    headers: { [IDEMPOTENCY_KEY_HEADER]: key },
+  });
+
 /** T-11-174 스토어에서 산 소모성 상품을 서버에 알린다. 같은 거래를 다시 보내도 한 번만 받는다. */
 export const claimIap = (body: IapClaimBody) =>
   apiFetch<OwnerItemsResponse>('/v1/items/iap', { method: 'POST', body: JSON.stringify(body) });

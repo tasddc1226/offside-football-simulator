@@ -7,7 +7,7 @@
 - 댓글: 닉네임·본문 미리보기, 해당 글로 이동한다. 글을 열 때 상세 메모를 비워 새 댓글을 읽는다.
 - 채팅: 닉네임·본문 미리보기, 라운지로 이동한다. 특정 메시지로 스크롤하는 기능은 없다.
 - `community` 분류로 알림함과 운영 도구의 푸시 실적에 기록한다. 앱이 열려 있어도 OS 배너에 표시한다.
-- 기존 개인 푸시 소비자(5분 cron)를 재사용한다. 보통 등록 뒤 다음 cron에 발송하며, 지연·제공자 장애 때는 더 걸릴 수 있다.
+- 운영에서는 D1 저장 직후 Cloudflare Queues로 관리자 알림을 처리한다. 기존 개인 푸시 소비자(5분 cron)는 Queue 발행 실패·처리 중단 복구와 영수증 확인을 맡는다. 일반 사용자 알림은 기존 cron 경로를 유지한다.
 - 운영 알림은 야간에도 발송하며 하루 2회·한 시간 간격의 일반 개인 푸시 예산을 쓰지 않는다. 일반 사용자 알림과 컵 알림의 기존 시간·예산 정책은 유지한다.
 - 앱의 이 기기 알림 수신을 끄거나 로그아웃·세션 만료·기기 등록 해제·계정 삭제되면 해당 기기로 보내지 않는다. 친구 알림 수신 여부와는 별개다.
 
@@ -30,3 +30,34 @@
 - 등록된 앱 기기의 프로필 ID를 기준으로 수신자를 조회하고 기존 PK·기기/세션 인덱스를 쓴다. 공개 조회·새 폴링·D1 스키마 변경은 없다. DO 테이블·인덱스는 최초 실행에서 만든다.
 
 운영자 전용 변경이므로 일반 게임 내 릴리즈 노트는 게시하지 않는다(`release-notes: none`).
+
+## Cloudflare Queues 시범 적용 (T-11-205)
+
+```mermaid
+flowchart LR
+  Comment[댓글 저장] --> D1[D1 알림·발송 원장]
+  Chat[라운지 DO SQLite outbox] --> Alarm[DO alarm]
+  Alarm --> D1
+  D1 --> Queue[관리자 전용 Queue]
+  Queue --> Lease[D1 원자적 claim·수신 자격 확인]
+  Cron[기존 5분 cron] --> Lease
+  Lease --> Expo[Expo → APNs / FCM]
+  Queue -. 처리 오류 재시도 소진 .-> DLQ[실패 Queue]
+```
+
+- 운영 Queue: `offside-admin-push-production`, 실패 Queue: `offside-admin-push-production-dlq`. 기존 API Worker가 생산자·소비자다. staging/local에는 운영 Queue를 연결하지 않는다.
+- Queue에는 `{version: 1, sourceKey}`만 넣는다. 본문·이메일·기기 토큰은 싣지 않는다. 생산은 D1 커밋 후 await하며, Queue 발행 실패가 저장된 댓글·채팅의 성공을 뒤집지 않는다.
+- 소비 배치는 최대 10건, 대기 최대 1초, 소비자 동시성 1이다. 메시지별 source key와 `community` 종류로 범위를 한정한다. D1의 기존 due/state 인덱스와 notifications PK를 사용하며 새 스키마·공개 조회·폴링은 없다.
+- Queue 중복 전달과 cron 경합은 같은 D1 claim으로 조정한다. 삭제된 댓글, 해제된 기기, 수신 권한 등은 발송 직전 다시 검사한다.
+- Expo의 명시적 429/5xx는 D1 backoff에 맞춰 Queue에서 재시도한다. Queue 최대 재시도 3회 후 DLQ로 이동한다. D1에 남은 대기 건은 cron이 계속 복구한다. 제공자의 확정 실패는 D1에 기록하고 ack하므로 DLQ에 들어가지 않는다.
+- 응답 유실·타임아웃·Expo 접수 후 DB 기록 실패처럼 발송 여부가 불분명한 건은 기존 `unknown` 정책을 유지하며 맹목적으로 재전송하지 않는다. 영수증 확인은 기존 15분 due/cron 처리다. Expo 접수·영수증 성공이 실제 기기 배너 확인을 대신하지 않는다.
+
+### 배포와 되돌리기
+
+1. 지정 운영 계정에 위 두 Queue를 생성한 뒤 생산자·소비자 binding이 포함된 API를 배포한다. 보존 기간은 각각 24시간으로 설정한다.
+2. `ADMIN_COMMUNITY_QUEUE_ENABLED=1`은 Queue 가속만 켠다. 기존 `PERSONAL_PUSH_ENABLED=1`, 관리자 수신 설정과 `ADMIN_COMMUNITY_PUSH_ENABLED=1`도 필요하다.
+3. 운영 Queue 소비자 연결·오류·잔량, `community-queue-publish`/`community-queue-send` 로그, D1 발송 상태를 확인한다. 자연 발생한 관리자 알림과 실제 앱 수신을 별도로 확인한다. 테스트용 공개 글·댓글·채팅이나 푸시를 임의 생성하지 않는다.
+4. Queue만 되돌릴 때는 `ADMIN_COMMUNITY_QUEUE_ENABLED=0`으로 API를 배포한다. 이미 들어온 메시지는 ack하고 D1 대기 건은 기존 cron으로 처리한다. 관리자 알림 자체 중단은 기존 `ADMIN_COMMUNITY_PUSH_ENABLED=0`을 쓴다.
+5. DLQ는 무조건 재생하지 않는다. 원장 상태·만료·장애 원인을 먼저 확인한다. `sending`/`accepted`/`confirmed`/`unknown`은 강제로 pending으로 바꾸지 않는다.
+
+검증 범위: D1 rollback과 Queue 장애 복구, 라운지 outbox, Queue 재전달·cron 경합, 일반 알림 격리, 삭제 취소·기능 중단, throttling backoff, 불명확 전송의 재발송 차단. 실제 workerd의 Queue 생산·소비와 D1 연결도 로컬에서 확인한다.

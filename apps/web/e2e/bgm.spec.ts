@@ -55,7 +55,7 @@ test('배경음악: 게임 탭과 하단 메뉴를 오가도 이어서 틀고, �
   await page.locator('[data-tab="player"]').click();
   await page.locator('[data-act="home"]').click();
   const nav = page.getByRole('navigation', { name: '메인 메뉴' });
-  for (const menu of ['소식', '구단주', '설정']) {
+  for (const menu of ['소식', '내 구단', '설정']) {
     await nav.getByRole('button', { name: menu }).click();
     await expect(page.locator('[data-act="bgm"]')).toHaveAttribute('aria-checked', 'true');
     expect(await audio(page)).toEqual(playing);

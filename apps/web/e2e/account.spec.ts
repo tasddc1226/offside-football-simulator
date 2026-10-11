@@ -44,7 +44,7 @@ test('/settings?google=linked: 토스트 표시 후 URL 정리', async ({ page }
 
   await expect(page.locator('#toast')).toContainText('구글 계정을 연결했어요');
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator('h1')).toHaveText('구단주');
+  await expect(page.locator('h1')).toHaveText('내 구단');
 
   const account = page.locator('#account-slot');
   await expect(account).toContainText('연동 해제');
@@ -146,6 +146,45 @@ test('로그아웃 직후 다시 구글로 로그인하면 새 세션부터 받�
   expect(calls.slice(0, 2)).toEqual(['profile', 'start']);
 });
 
+// T-11-204 웹 Apple 로그인도 주소창으로 갔다가 /settings?apple=...로 돌아온다.
+test('Apple로 로그인하면 세션부터 받고 시작해 연결 안내를 띄운다', async ({ page }) => {
+  const calls: string[] = [];
+  await page.route(PROFILE_URL, (route) => {
+    calls.push('profile');
+    return route.fulfill(
+      ok({
+        id: 'u1',
+        linked: { google: false, apple: calls.includes('start') },
+        googleEmailMasked: null,
+        recoveryCodeIssuedAt: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      }),
+    );
+  });
+  await page.route(`${API}/v1/auth/apple/start`, (route) => {
+    calls.push('start');
+    return route.fulfill({
+      status: 302,
+      headers: { Location: `${new URL(page.url()).origin}/settings?apple=linked` },
+    });
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await expect(page.locator('[data-act="apple-login"]')).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  calls.length = 0;
+  await page.locator('[data-act="apple-login"]').click();
+  await expect(page.locator('#toast')).toContainText('Apple 계정을 연결했어요');
+  // 시작 전에 프로필(익명 세션)부터 받는다.
+  expect(calls.indexOf('profile')).toBeGreaterThanOrEqual(0);
+  expect(calls.indexOf('profile')).toBeLessThan(calls.indexOf('start'));
+});
+
+test('Apple 로그인을 쓸 수 없으면 Apple 안내를 띄운다', async ({ page }) => {
+  await page.goto('/settings?apple=error&reason=unavailable');
+  await expect(page.locator('#toast')).toContainText('Apple 로그인을 사용할 수 없어요');
+});
+
 test('세션 없이 로그인 시작에서 돌아오면 다시 누르라고 알린다', async ({ page }) => {
   await page.goto('/settings?google=error&reason=session');
   await expect(page.locator('#toast')).toContainText('다시 눌러 주세요');
@@ -176,18 +215,20 @@ test('계정 카드에서 댓글 닉네임을 정하고 바꾼다 (T-10-028)', a
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
   const account = page.locator('#account-slot');
-  await expect(account).toContainText('정하면 소식 게시판에 댓글을 쓸 수 있어요');
-  const input = account.getByLabel('댓글 닉네임');
+  const editor = page.locator('[data-owner-profile-editor]');
+  await editor.locator('[data-owner-profile-edit]').click();
+  await expect(account.locator('[data-act="save-nickname"]')).toHaveCount(0);
+  const input = editor.getByLabel('구단주 이름');
   await input.fill('중복');
-  await account.locator('[data-act="save-nickname"]').click();
+  await editor.locator('[data-act="save-nickname"]').click();
   await expect(page.locator('#toast')).toContainText('이미 쓰고 있는 닉네임이에요');
 
   await input.fill('루키');
-  await account.locator('[data-act="save-nickname"]').click();
+  await editor.locator('[data-act="save-nickname"]').click();
   await expect(page.locator('#toast')).toContainText('닉네임을 정했어요');
-  await expect(account.getByLabel('댓글 닉네임')).toHaveValue('루키');
-  await expect(account.locator('[data-act="save-nickname"]')).toHaveText('바꾸기');
-  await expect(account.locator('[data-act="save-nickname"]')).toBeDisabled();
+  await expect(editor.getByLabel('구단주 이름')).toHaveValue('루키');
+  await expect(editor.locator('[data-act="save-nickname"]')).toHaveText('바꾸기');
+  await expect(editor.locator('[data-act="save-nickname"]')).toBeDisabled();
   expect(puts).toEqual([{ nickname: '중복' }, { nickname: '루키' }]);
 });
 
@@ -257,12 +298,14 @@ test("운영자 계정은 댓글 닉네임이 '운영자'로 고정돼 바꾸는
       }),
     ),
   );
-  await page.route(`${API}/v1/boards/**`, (route) =>
-    route.fulfill(ok({ admin: true, google: true, nickname: '운영자' })),
+  await page.route(`${API}/v1/owner/summary`, (route) =>
+    route.fulfill(ok({ entries: [], admin: true, tier: null, tiers: [] })),
   );
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
   const account = page.locator('#account-slot');
-  await expect(account).toContainText('운영자 · 운영자 계정은 고정이에요');
+  const editor = page.locator('[data-owner-profile-editor]');
+  await editor.locator('[data-owner-profile-edit]').click();
+  await expect(editor).toContainText('운영자 · 운영자 계정은 고정이에요');
   await expect(account.getByLabel('댓글 닉네임')).toHaveCount(0);
 });

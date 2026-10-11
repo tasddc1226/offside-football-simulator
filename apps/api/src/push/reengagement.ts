@@ -24,7 +24,8 @@ export async function queueReengagement(env: Bindings, time = Date.now()) {
         AND s.channel = 'app' AND s.profile_id = d.profile_id AND s.revoked_at IS NULL AND s.expires_at > ? AND p.deleted_at IS NULL
         AND NOT EXISTS (SELECT 1 FROM push_devices active WHERE active.profile_id = d.profile_id AND active.updated_at > ?)
       GROUP BY d.profile_id), candidates AS (
-      SELECT i.* FROM inactive i WHERE NOT EXISTS (
+      SELECT i.* FROM inactive i WHERE NOT EXISTS (SELECT 1 FROM career_activity a WHERE a.profile_id=i.profile_id)
+      AND NOT EXISTS (
         SELECT 1 FROM notifications n WHERE n.profile_id = i.profile_id AND n.kind = 'return'
         AND (n.source_key = 'return:' || i.last_active OR n.created_at > ?)) LIMIT 100)
       INSERT OR IGNORE INTO notifications (id, profile_id, source_key, kind, title, body, target_json, created_at, expires_at)
@@ -37,7 +38,7 @@ export async function queueReengagement(env: Bindings, time = Date.now()) {
       (id, notification_id, installation_hash, session_id, profile_id, token, due_at, expires_at, updated_at)
       SELECT n.id || ':' || d.installation_hash, n.id, d.installation_hash, d.session_id, d.profile_id, d.token, ?, ?, ?
       FROM notifications n JOIN push_devices d ON d.profile_id = n.profile_id JOIN sessions s ON s.id = d.session_id
-      WHERE changes() > 0 AND n.kind = 'return' AND n.created_at = ? AND n.read_at IS NULL
+      WHERE changes() > 0 AND n.kind = 'return' AND n.source_key LIKE 'return:%' AND n.created_at = ? AND n.read_at IS NULL
         AND d.updated_at >= ? AND s.channel = 'app' AND s.profile_id = d.profile_id
         AND s.revoked_at IS NULL AND s.expires_at > ?`,
     ).bind(now, iso(time + 86400_000), now, now, oldest, now),

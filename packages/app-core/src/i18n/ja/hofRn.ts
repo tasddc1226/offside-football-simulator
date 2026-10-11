@@ -41,5 +41,7 @@ export const hofRn: Translation<HofRnMsgs> = {
   wallLead:
     '欠番の資格を満たしたものの、候補クラブの番号がすべて先に欠番になっていたため、称号で名を残した選手です。',
   wallClubTitle: 'このクラブの名誉の壁',
+  wallOpen: '開く',
+  wallClose: '閉じる',
   wallLabel: (p) => `名誉の壁 ${p.name}、${p.club} ${p.number}番、${p.day}`,
 };

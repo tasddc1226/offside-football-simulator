@@ -13,6 +13,7 @@ import { num as n } from '@offside/app-core/teamText';
 import { fmtValue } from '@offside/app-core/format';
 import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
 import { appState } from '../../../store';
+import OwnerProfile from '../owner/OwnerProfile';
 import { rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
 import { Btn } from '../../../ui/Btn';
@@ -24,6 +25,7 @@ import { displaySeasonAt, openTeamSeasons } from '@offside/contracts/service-sea
 import { RecordsSelect, RecordsChips } from '../RecordsControls';
 import TeamProfile from './TeamProfile';
 import { TeamLogo } from '../../../components/TeamLogo';
+import { TitleBadge } from '../../../components/TitleBadge';
 import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
 import { useSeasonNow } from '../../../ui/useSeasonNow';
 import { useRefresh } from '../../../ui/refresh';
@@ -104,12 +106,17 @@ export default function TeamRanking() {
     scrollTo(0);
   }
   function open(id: string) {
-    appState.hof = { ...appState.hof, team: id };
+    appState.hof = { ...appState.hof, team: id, owner: false };
     scrollTo(0);
   }
 
   // '← 이전으로'는 화면(Hof)이 아래 막대로 그린다.
-  if (snap.hof.team) return <TeamProfile id={snap.hof.team} />;
+  if (snap.hof.team)
+    return snap.hof.owner ? (
+      <OwnerProfile teamId={snap.hof.team} />
+    ) : (
+      <TeamProfile id={snap.hof.team} />
+    );
 
   const empty = (text: string) => (
     <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
@@ -235,7 +242,15 @@ export default function TeamRanking() {
                   <Txt num tone="muted" center style={{ width: 22, fontSize: 14 }}>
                     {t.rank}
                   </Txt>
-                  <TeamLogo logo={t.logo} name={t.name} size={24} decorative />
+                  {/* T-11-150 대표 칭호 트로피는 로고 모서리에 얹는다(좁은 줄에서 팀 이름 자리를 먹지 않게). */}
+                  <View>
+                    <TeamLogo logo={t.logo} name={t.name} size={24} decorative />
+                    {t.title ? (
+                      <View style={{ position: 'absolute', right: -7, bottom: -6 }}>
+                        <TitleBadge title={t.title} size="icon" />
+                      </View>
+                    ) : null}
+                  </View>
                   <Txt bold numberOfLines={1} style={{ flex: 1, fontSize: 13 }}>
                     {t.name}
                   </Txt>

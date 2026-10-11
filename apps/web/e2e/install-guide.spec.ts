@@ -67,7 +67,7 @@ test.describe('아이폰 Chrome', () => {
 
   test('홈이 아닌 화면(구글 로그인 복귀 → 구단주)으로 열리면 띄우지 않는다', async ({ page }) => {
     await page.goto('/settings?google=error&reason=state');
-    await expect(page.locator('h1')).toHaveText('구단주');
+    await expect(page.locator('h1')).toHaveText('내 구단');
     await expect(page.locator('#sheet')).toBeHidden();
   });
 });

@@ -3,6 +3,8 @@
  * 가져와도 번들에 zod가 들어가지 않는다 — 서버 목록·상세·공유 링크와 웹 안내가 같은 숫자를 쓴다.
  * 은퇴는 언제든 고를 수 있어서(T-10-029) 이 나이 전에 은퇴한 짧은 커리어는 내 선수에만 남는다.
  */
+import { BASE_DETAIL, type DetailPos } from './positions.js';
+
 export const HOF_MIN_RETIRE_AGE = 30;
 
 /** Server-awarded retirement title; never derived from a client snapshot. */
@@ -93,7 +95,8 @@ export interface LegendTotals {
  */
 export function legendTerms(pos: string, t: LegendTotals, dpos?: string | null) {
   const w: LegendWeight =
-    (dpos && LEGEND_W_DETAIL[dpos]) || (LEGEND_W[pos as keyof typeof LEGEND_W] ?? LEGEND_W.MF);
+    (dpos && LEGEND_W_DETAIL[BASE_DETAIL[dpos as DetailPos] ?? dpos]) ||
+    (LEGEND_W[pos as keyof typeof LEGEND_W] ?? LEGEND_W.MF);
   return {
     goals: t.goals * w.g,
     assists: t.assists * w.a,

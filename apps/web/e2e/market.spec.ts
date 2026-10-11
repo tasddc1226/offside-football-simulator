@@ -29,6 +29,9 @@ const card = {
   season: 0,
   nation: null,
   attrs: null,
+  height: 183,
+  weight: 76,
+  foot: '왼발',
 };
 const listing = { id: LISTING, price: 120_000, createdAt: '2026-10-04T00:00:00.000Z', card };
 
@@ -198,7 +201,7 @@ test('구단주 화면에서 이적시장을 열고 선수를 영입한다(화�
   await expectNoA11yViolations(page);
 
   // 구단주로 돌아갔다가 다시 와도 자금·목록을 다시 묻지 않는다(메모).
-  await page.locator('[data-back-bar] button').click();
+  await page.goBack();
   await page.locator('[data-act="market"]').click();
   await expect(page.locator(`[data-listing="${LISTING}"]`)).toBeVisible();
   expect(calls).toEqual({ me: 1, list: 1 });
@@ -231,7 +234,7 @@ test('구단주 화면에서 이적시장을 열고 선수를 영입한다(화�
   await expect(page.locator(`[data-listing="${LISTING}"]`)).toHaveCount(0);
 });
 
-test('홈 타일에서 이적시장으로 바로 가고, 이전으로 누르면 홈으로 돌아온다', async ({ page }) => {
+test('홈 타일에서 이적시장으로 바로 가고, 뒤로 가면 홈으로 돌아온다', async ({ page }) => {
   await stub(page);
   await page.route(`${API}/v1/market/me`, (r) => r.fulfill(me(200_000)));
   await page.route(
@@ -244,7 +247,7 @@ test('홈 타일에서 이적시장으로 바로 가고, 이전으로 누르면 
   await expect(page.locator(`[data-listing="${LISTING}"]`)).toBeVisible();
   // 거래가 없으면 시장 지수 줄을 두지 않는다.
   await expect(page.locator('[data-market-index]')).toHaveCount(0);
-  await page.locator('[data-back-bar] button').click();
+  await page.goBack();
   await expect(page.locator('[data-act="home-market"]')).toBeVisible();
 });
 
@@ -289,6 +292,8 @@ test('자금이 모자라면 영입 버튼이 잠기고, 이미 팔린 선수는
   await expect(page.getByRole('dialog', { name: '선수 영입' })).toContainText(
     '구단 자금이 2억 모자라요',
   );
+  // T-11-211 카드 체격 줄 끝에 주발.
+  await expect(page.locator('[data-card-body]')).toHaveText('183cm · 76kg · 왼발');
   await expect(page.locator('[data-act="buy"]')).toBeDisabled();
   await page.getByRole('dialog').getByRole('button', { name: '닫기' }).click();
 

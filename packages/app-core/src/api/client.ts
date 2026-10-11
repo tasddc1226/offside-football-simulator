@@ -1,3 +1,4 @@
+import type { DetailPos } from '@offside/contracts/positions';
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
 import { LIVE_POLL_SEC, TICKER_POLL_SEC } from '@offside/contracts/polling';
 import type {
@@ -42,7 +43,13 @@ export const apiAuth = (): ReturnType<ApiHost['auth']> => host.auth();
 
 export type Profile = Pick<
   ContractProfile,
-  'id' | 'linked' | 'googleEmailMasked' | 'recoveryCodeIssuedAt' | 'createdAt' | 'nickname'
+  | 'id'
+  | 'linked'
+  | 'googleEmailMasked'
+  | 'recoveryCodeIssuedAt'
+  | 'createdAt'
+  | 'nickname'
+  | 'avatarId'
 >;
 
 export type ApiErrorCode = string;
@@ -238,8 +245,17 @@ export function confirmProfileDeletion(
 export function putNickname(nickname: string): Promise<ApiResult<Profile>> {
   return apiFetch('/v1/profile/nickname', { method: 'PUT', body: JSON.stringify({ nickname }) });
 }
+export function putAvatar(image: string | null): Promise<ApiResult<Profile>> {
+  return apiFetch('/v1/profile/avatar', { method: 'PUT', body: JSON.stringify({ image }) });
+}
+export const ownerAvatarUrl = (id: string): string =>
+  `${apiBaseUrl()}/v1/avatars/${encodeURIComponent(id)}`;
 export function googleStartUrl(): string {
   return `${host.baseUrl}/v1/auth/google/start`;
+}
+/** T-11-204 웹 Sign in with Apple 시작 주소(주소창으로 연다). */
+export function appleStartUrl(): string {
+  return `${host.baseUrl}/v1/auth/apple/start`;
 }
 
 // ───────── T-10-005 공개 명예의 전당 (로그인 불필요) ─────────
@@ -250,8 +266,9 @@ export function getHof(
   season: number | null = null,
   name = '',
   pos: CareerPos | null = null,
+  dpos: DetailPos | null = null,
 ): Promise<ApiResult<HofListResponse>> {
-  const q = `limit=${limit}${page > 1 ? `&page=${page}` : ''}${sort !== 'score' ? `&sort=${sort}` : ''}${season !== null ? `&season=${season}` : ''}${name ? `&q=${encodeURIComponent(name)}` : ''}${pos ? `&pos=${pos}` : ''}`;
+  const q = `limit=${limit}${page > 1 ? `&page=${page}` : ''}${sort !== 'score' ? `&sort=${sort}` : ''}${season !== null ? `&season=${season}` : ''}${name ? `&q=${encodeURIComponent(name)}` : ''}${pos ? `&pos=${pos}` : ''}${dpos ? `&dpos=${dpos}` : ''}`;
   return cachedGet<HofListResponse>(`/v1/hof?${q}`, 60_000);
 }
 /** T-10-013. 이 계정의 은퇴 선수. 익명 프로필이면 linked=false. */

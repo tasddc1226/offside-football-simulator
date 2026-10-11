@@ -224,6 +224,8 @@ export type PlayerCardData = {
   /** T-11-180 키(cm)·몸무게(kg) — 큰 카드의 LS 아래. 옛 커리어는 없다. */
   height?: number | undefined;
   weight?: number | undefined;
+  /** T-11-211 주발(한국어 저장값) — 체격 줄 끝. 옛 응답에는 없다. */
+  foot?: string | null | undefined;
   /** T-11-188 잠긴 선수 — 오른쪽 위 자물쇠. */
   locked?: boolean | undefined;
   youth: boolean;

@@ -15,6 +15,10 @@ export function allowedOriginsFor(requestUrl: string, env: Bindings): string[] {
 
 /** T-11-003 앱이 첫 실행에 익명 세션을 받는 경로 — 아직 Bearer가 없다. */
 const APP_SESSION_PATH = '/v1/app/session';
+/** T-11-204 Apple이 결과를 form_post로 보내는 콜백 — 받기만 하고 같은 주소의 GET으로 넘긴다(상태를 바꾸지 않는다). */
+export const APPLE_WEB_CALLBACK_PATH = '/v1/auth/apple/callback';
+/** T-11-215 App Store 서버 알림 — Apple 서버가 보낸다(쿠키·세션 없음). 본문의 Apple 서명으로 확인한다. */
+export const APPLE_IAP_NOTIFY_PATH = '/v1/iap/apple/notifications';
 
 /**
  * 결정 4: 상태 변경 요청은 허용된 Origin이어야 한다. GET·HEAD·OPTIONS는 대상이 아니다.
@@ -25,7 +29,9 @@ export const originGuard = createMiddleware<AppEnv>(async (c, next) => {
   if (
     STATE_CHANGING_METHODS.has(c.req.method) &&
     !c.req.header(AUTHORIZATION_HEADER) &&
-    c.req.path !== APP_SESSION_PATH
+    c.req.path !== APP_SESSION_PATH &&
+    c.req.path !== APPLE_WEB_CALLBACK_PATH &&
+    c.req.path !== APPLE_IAP_NOTIFY_PATH
   ) {
     const origin = c.req.header('Origin');
     if (!origin || !allowedOriginsFor(c.req.url, c.env).includes(origin)) {

@@ -44,13 +44,26 @@ async function signedBy(child: Cert, parent: Cert): Promise<boolean> {
   );
 }
 
+/** T-11-215 App Store Server Notifications V2 본문(signedPayload를 푼 것). */
+export interface AppleNotification {
+  notificationType?: string;
+  subtype?: string;
+  notificationUUID?: string;
+  data?: { bundleId?: string; environment?: string; signedTransactionInfo?: string };
+}
+
 /**
  * JWS를 확인하고 거래를 돌려준다. 서명·사슬이 맞지 않으면 null. rootSha256은 테스트가 자기 루트를 쓸 때만 바꾼다.
  */
-export async function verifyAppleTransaction(
-  jws: string,
-  rootSha256 = APPLE_ROOT_G3_SHA256,
-): Promise<AppleTransaction | null> {
+export const verifyAppleTransaction = (jws: string, rootSha256 = APPLE_ROOT_G3_SHA256) =>
+  verifyAppleJws<AppleTransaction>(jws, rootSha256);
+
+/** T-11-215 서버 알림(signedPayload)도 거래와 같은 사슬로 서명된다. */
+export const verifyAppleNotification = (jws: string, rootSha256 = APPLE_ROOT_G3_SHA256) =>
+  verifyAppleJws<AppleNotification>(jws, rootSha256);
+
+/** Apple이 서명한 JWS를 확인하고 본문을 돌려준다. 서명·사슬이 맞지 않으면 null. */
+async function verifyAppleJws<T>(jws: string, rootSha256: string): Promise<T | null> {
   try {
     const [h, p, s] = jws.split('.');
     if (!h || !p || !s) return null;
@@ -81,7 +94,7 @@ export async function verifyAppleTransaction(
       new TextEncoder().encode(`${h}.${p}`),
     );
     if (!ok) return null;
-    return JSON.parse(new TextDecoder().decode(base64UrlToBytes(p))) as AppleTransaction;
+    return JSON.parse(new TextDecoder().decode(base64UrlToBytes(p))) as T;
   } catch {
     return null;
   }

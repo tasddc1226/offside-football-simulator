@@ -93,3 +93,64 @@ export async function grantIapPurchase(
   if (owner?.results[0]?.profileId !== p.profileId) return null;
   return foldItems(items?.results ?? []);
 }
+
+export type IapRevoke =
+  | { found: false }
+  | {
+      found: true;
+      already: boolean;
+      profileId: string;
+      item: string;
+      qty: number;
+      revoked: number;
+    };
+
+/**
+ * T-11-215 스토어가 환불한 거래의 아이템을 회수한다. 거래마다 한 번만 처리하고(refunded_at), 지금 가진 장수 안에서만
+ * 뺀다 — 이미 쓴 만큼은 revoked_qty가 qty보다 작게 남는다. 모르는 거래면 found: false, 이미 처리했으면 already.
+ */
+export async function revokeIapPurchase(
+  db: Db,
+  store: IapStore,
+  transactionId: string,
+  now: string,
+): Promise<IapRevoke> {
+  const d1 = db.$client;
+  const key = `store = ? AND transaction_id = ?`;
+  const [marked, , , row] = await d1.batch<{
+    profileId: string;
+    item: string;
+    qty: number;
+    revoked: number;
+  }>([
+    d1
+      .prepare(`UPDATE iap_purchases SET refunded_at = ? WHERE ${key} AND refunded_at IS NULL`)
+      .bind(now, store, transactionId),
+    // 회수할 장수 = min(받은 장수, 지금 가진 장수). 앞 문장이 표시한 경우에만.
+    d1
+      .prepare(
+        `UPDATE iap_purchases SET revoked_qty = MIN(qty, COALESCE((
+           SELECT o.qty FROM owner_items o
+           WHERE o.profile_id = iap_purchases.profile_id AND o.item = iap_purchases.item), 0))
+         WHERE ${key} AND changes() = 1`,
+      )
+      .bind(store, transactionId),
+    d1
+      .prepare(
+        `UPDATE owner_items SET qty = qty - (SELECT revoked_qty FROM iap_purchases WHERE ${key}),
+           updated_at = ?
+         WHERE changes() = 1
+           AND profile_id = (SELECT profile_id FROM iap_purchases WHERE ${key})
+           AND item = (SELECT item FROM iap_purchases WHERE ${key})`,
+      )
+      .bind(store, transactionId, now, store, transactionId, store, transactionId),
+    d1
+      .prepare(
+        `SELECT profile_id AS profileId, item, qty, revoked_qty AS revoked FROM iap_purchases WHERE ${key}`,
+      )
+      .bind(store, transactionId),
+  ]);
+  const r = row?.results[0];
+  if (!r) return { found: false };
+  return { found: true, already: !marked?.meta.changes, ...r };
+}

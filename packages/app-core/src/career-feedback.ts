@@ -51,8 +51,6 @@ export function coachFeedback(s: GameState): { summary: string; notes: string[] 
     .filter(({ f }) => f < 0.95)
     .sort((a, b) => a.f - b.f)[0];
   if (lopsided) notes.push(L.coachLopsided({ attr: labelOf(s, lopsided.k) }));
-  if (!notes.length) notes.push(L.coachRounded);
-  notes.push(L.coachDisclaimer);
   return { summary, notes };
 }
 
@@ -76,12 +74,6 @@ export function offerFeedback(s: GameState, o: MarketOption): string | undefined
   if (o.kind !== 'offer') return undefined;
   return L.offerAssess({ ovr: ovr(s), str: o.str, role: tn(o.role ?? '') });
 }
-
-/**
- * T-11-078 진행 중인 커리어에서도 영구결번이 있다는 걸 알린다. 심사 기준(시즌 수·점수)은 서버만 알고
- * 수치 힌트도 주지 않는다 — 조건을 말로만 짧게.
- */
-export const retiredNumberHint = (s: GameState): string => L.retiredNumber({ n: s.number });
 
 /** 기존 목표 전부 + 현재 구단의 출전 기록. 보상·칭호·저장 필드는 추가하지 않는다. */
 export function careerGoals(s: GameState): NextMilestone[] {

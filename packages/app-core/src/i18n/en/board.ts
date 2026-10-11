@@ -3,6 +3,10 @@ import type { BoardMsgs } from '../ko/board';
 import { plural } from './_util';
 
 export const board: Translation<BoardMsgs> = {
+  publicNews: 'News and updates',
+  publicNewsDescription: 'Read published announcements and release notes.',
+  publicNewsDiscuss: 'Open this post and comments in the game',
+  publicNewsFailed: 'Could not load news. Please try again shortly.',
   news: 'News',
   tabsLabel: 'Boards',
   pinned: 'Pinned',

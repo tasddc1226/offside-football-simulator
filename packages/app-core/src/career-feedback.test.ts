@@ -3,13 +3,7 @@ import * as g from '@offside/game/index';
 import { createRng, getActiveRng, setActiveRng } from '@offside/game/rng';
 import { spreadAttr } from '@offside/game/attributes';
 import type { GameState, MarketResult, OfferOption } from '@offside/game/types';
-import {
-  careerGoals,
-  coachFeedback,
-  marketFeedback,
-  offerFeedback,
-  retiredNumberHint,
-} from './career-feedback.js';
+import { careerGoals, coachFeedback, marketFeedback, offerFeedback } from './career-feedback.js';
 
 const fresh = (seed = 11): GameState => {
   setActiveRng(createRng(seed));
@@ -38,10 +32,10 @@ describe('코치 메모', () => {
     expect(coachFeedback(s).summary).toContain('슈팅 +0.4');
     expect(coachFeedback(s).summary).toContain('이번 시즌 OVR');
   });
-  it('변화가 없다고 영구 한계를 단정하지 않는다', () => {
+  it('변화가 없으면 요약만 두고 고정 안내 줄은 붙이지 않는다', () => {
     const c = coachFeedback(fresh());
     expect(c.summary).toContain('아직 표시할 능력치 변화가 없어요.');
-    expect(c.notes.join(' ')).toContain('단정할 수는 없어요');
+    expect(c.notes).toEqual([]);
   });
   it('시즌 시작 기록이 없는 옛 세이브를 현재 수치로 추정하지 않는다', () => {
     const s = fresh();
@@ -109,11 +103,6 @@ describe('제의 설명과 기록 목표', () => {
     const uni = { kind: 'uni', name: '대학 진학', desc: '' } as const;
     expect(marketFeedback(s, { ...market, options: [uni] })).toBeUndefined();
     expect(offerFeedback(s, uni)).toBeUndefined();
-  });
-  it('영구결번 안내는 등번호 외에 심사 기준 수치를 드러내지 않는다', () => {
-    const hint = retiredNumberHint(fresh());
-    expect(hint).toContain('9번이 영구결번될 수 있어요');
-    expect(hint.replace('9번', '')).not.toMatch(/\d/);
   });
   it('아마추어 구단에는 단년 시즌으로 달성하기 어려운 구단 장기 목표를 표시하지 않는다', () => {
     expect(careerGoals(fresh()).some((x) => x.key === 'club-apps')).toBe(false);

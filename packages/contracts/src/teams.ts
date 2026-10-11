@@ -7,13 +7,17 @@ import {
 } from './careers.js';
 import { PUBLIC_NAME_CHARS } from './content-filter.js';
 import { CUP_STAGES } from './cup.js';
+import { isOwnerTitle } from './owner-title.js';
 import {
   ACH_CATEGORIES,
   FORMATION_IDS,
   LINEUP_SIZE,
+  TEAM_PRESET_MAX,
+  TEAM_PRESET_NAME_MAX,
   MANAGER_NAME_MAX,
   MANAGER_NAME_MIN,
   positionRole,
+  legacyPositionRole,
   TEAM_NAME_MAX,
   TEAM_NAME_MIN,
 } from './owner-team.js';
@@ -54,7 +58,14 @@ export const TeamLayoutSchema = z
     (layout) =>
       layout[0]?.slot === 'GK' &&
       layout[0].y >= 84 &&
-      layout.slice(1).every((p, i) => p.y <= 82 && p.slot === positionRole(p.x, p.y, i + 1)),
+      layout
+        .slice(1)
+        .every(
+          (p, i) =>
+            p.y <= 82 &&
+            (p.slot === positionRole(p.x, p.y, i + 1) ||
+              p.slot === legacyPositionRole(p.x, p.y, i + 1)),
+        ),
     '골키퍼는 첫 자리 하나이고 필드 선수는 골문 앞까지 배치할 수 있어요.',
   );
 
@@ -81,6 +92,10 @@ export const TeamSeasonQuerySchema = z.coerce.number().int().min(0).max(999).opt
 /** 고를 수 있는 시즌(0 = 프리시즌). */
 export const TeamSeasonOptionSchema = z.strictObject({ id: TeamSeasonSchema, name: z.string() });
 export type TeamSeasonOption = z.infer<typeof TeamSeasonOptionSchema>;
+
+/** T-11-150 구단주 대표 칭호 id('cup-1-champion', owner-title.ts). 칭호가 없으면 null, 배포 전 응답엔 없다. */
+export const OwnerTitleSchema = z.string().refine(isOwnerTitle);
+const titleField = OwnerTitleSchema.nullable().optional();
 
 export const TeamIdSchema = z.string().regex(/^tem_[0-9a-f-]{36}$/, '팀 id 형식이 아닙니다.');
 
@@ -150,6 +165,16 @@ export const TeamLinesSchema = z.strictObject({
 });
 export type TeamLines = z.infer<typeof TeamLinesSchema>;
 
+/** T-11-217 팀 프리셋 하나(포메이션 · 선발 · 배치만 — 이름 · 로고 · 감독은 팀 것을 쓴다). 이름은 나만 본다. */
+export const TeamPresetSchema = z.strictObject({
+  name: z.string().trim().min(1).max(TEAM_PRESET_NAME_MAX),
+  formation: FormationIdSchema,
+  slots: z.array(CareerIdParamSchema.nullable()).length(LINEUP_SIZE),
+  layout: TeamLayoutSchema.nullable(),
+});
+export type TeamPreset = z.infer<typeof TeamPresetSchema>;
+export const TeamPresetsSchema = z.array(TeamPresetSchema).max(TEAM_PRESET_MAX);
+
 export const OwnerTeamSchema = z.strictObject({
   id: TeamIdSchema,
   season: TeamSeasonSchema,
@@ -166,6 +191,8 @@ export const OwnerTeamSchema = z.strictObject({
   record: TeamRecordSchema,
   likes: count,
   views: count,
+  /** T-11-217 내 팀 프리셋(최대 5개). 배포 전 응답엔 없다. */
+  presets: TeamPresetsSchema.optional(),
   createdAt: IsoUtcSchema,
   updatedAt: IsoUtcSchema,
 });
@@ -188,8 +215,8 @@ export const OwnerTeamResponseSchema = z.strictObject({
   matchesPerDay: z.number().int().min(1),
   /** T-11-113 창단 멤버(프리시즌에 은퇴 선수를 남긴 구단주). 배포 전 응답엔 없다. */
   founder: z.boolean().optional(),
-  /** T-11-145 가장 최근에 우승한 컵 회차(구단주 탭 닉네임 옆 '제N회 챔피언'). 없으면 null, 배포 전 응답엔 없다. */
-  cupChampion: z.number().int().nullable().optional(),
+  /** T-11-150 내 대표 칭호(구단주 탭 닉네임 옆). 달지 않았으면 null, 배포 전 응답엔 없다. */
+  ownerTitle: titleField,
 });
 export type OwnerTeamResponse = z.infer<typeof OwnerTeamResponseSchema>;
 
@@ -211,6 +238,15 @@ export type PutOwnerTeamBody = z.infer<typeof PutOwnerTeamBodySchema>;
 export const PutOwnerTeamResponseSchema = z.strictObject({ team: OwnerTeamSchema });
 export type PutOwnerTeamResponse = z.infer<typeof PutOwnerTeamResponseSchema>;
 
+/** T-11-217 프리셋 목록 통째 교체(저장 · 덮어쓰기 · 이름 바꾸기 · 삭제 모두). 팀을 한 번 저장한 뒤에만. */
+export const PutTeamPresetsBodySchema = z.strictObject({
+  season: TeamSeasonSchema.optional(),
+  presets: TeamPresetsSchema,
+});
+export type PutTeamPresetsBody = z.infer<typeof PutTeamPresetsBodySchema>;
+export const PutTeamPresetsResponseSchema = z.strictObject({ presets: TeamPresetsSchema });
+export type PutTeamPresetsResponse = z.infer<typeof PutTeamPresetsResponseSchema>;
+
 /** 경기 상대로 보이는 다른 구단주의 팀. */
 export const TeamOpponentSchema = z.strictObject({
   teamId: TeamIdSchema,
@@ -219,9 +255,13 @@ export const TeamOpponentSchema = z.strictObject({
   /** 감독 이름. */
   owner: z.string(),
   formation: FormationIdSchema,
+  /** T-11-216 배치 프리셋 이름(4-2-3-1 등). 옛 앱은 formation만 읽는다. */
+  shape: z.string().max(16).optional(),
   ovr: z.number().int(),
   rating: z.number().int(),
   record: TeamRecordSchema,
+  /** T-11-150 구단주 대표 칭호. */
+  title: titleField,
 });
 export type TeamOpponent = z.infer<typeof TeamOpponentSchema>;
 
@@ -365,6 +405,8 @@ export const TeamRankItemSchema = z.strictObject({
     .array(z.enum(['W', 'D', 'L']))
     .max(5)
     .default([]),
+  /** T-11-150 구단주 대표 칭호. */
+  title: titleField,
 });
 export type TeamRankItem = z.infer<typeof TeamRankItemSchema>;
 
@@ -401,6 +443,8 @@ export const AchRankItemSchema = z.strictObject({
   done: count,
   /** 그 시즌 은퇴 선수 수. */
   players: count,
+  /** T-11-150 구단주 대표 칭호. */
+  title: titleField,
 });
 export type AchRankItem = z.infer<typeof AchRankItemSchema>;
 
@@ -455,6 +499,8 @@ export const TeamProfileSchema = z.strictObject({
   badges: z.array(TeamBadgeSchema),
   /** T-11-145 이 팀 구단주의 컵 성적(모든 시즌). 배포 전 응답엔 없다. */
   cupHonors: z.array(CupHonorSchema).optional(),
+  /** T-11-150 이 팀 구단주의 대표 칭호. */
+  ownerTitle: titleField,
   /** T-11-167 구단주의 공개 닉네임(업적 랭킹에 보이는 이름, 닉네임 신고 대상). 없으면 null, 배포 전 응답엔 없다. */
   ownerNickname: z.string().nullable().optional(),
   /**

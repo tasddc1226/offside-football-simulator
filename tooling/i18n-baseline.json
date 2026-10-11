@@ -29,7 +29,7 @@
   "apps/api/src/routes/appAuth.ts": 4,
   "apps/api/src/routes/auth.ts": 2,
   "apps/api/src/routes/balance.ts": 3,
-  "apps/api/src/routes/boards.ts": 16,
+  "apps/api/src/routes/boards.ts": 12,
   "apps/api/src/routes/careers.ts": 4,
   "apps/api/src/routes/chat.ts": 6,
   "apps/api/src/routes/friends.ts": 21,

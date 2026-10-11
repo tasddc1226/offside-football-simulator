@@ -39,6 +39,7 @@ const ko = {
   filterA11y: (p: { label: string }) => `필터, ${p.label}`,
   allPositions: '전체 포지션',
   searchLabel: '선수 이름 검색',
+  detailPositionGroup: '세부 포지션',
   positionGroup: '포지션',
   all: '전체',
   rankBasis: '순위 기준',

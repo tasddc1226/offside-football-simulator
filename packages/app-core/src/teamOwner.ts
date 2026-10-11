@@ -191,15 +191,12 @@ export const draftLines = (
 ): LineStrength => lineStrength(slotCodes, ratings, synergyApplies(season) ? synergy : null);
 
 const SYN_LABEL = { atk: 'lineAtk', mid: 'lineMid', def: 'lineDef', gk: 'lineGk' } as const;
-/** 시너지 효과 표기 — '공격 +2 · 중원 +0.5'. 효과가 비면 배지는 '경기 효과 없음', 듀오는 상한에 걸린 것. */
-export const synergyEffectText = (
-  effect: Partial<SynergyLines>,
-  kind?: ActiveSynergy['kind'],
-): string =>
+/** 시너지 효과 표기 — '공격 +2 · 중원 +0.5'. 효과가 비면(배지) '경기 효과 없음'. */
+export const synergyEffectText = (effect: Partial<SynergyLines>): string =>
   (Object.keys(SYN_LABEL) as (keyof SynergyLines)[])
     .filter((k) => effect[k])
     .map((k) => `${TH[SYN_LABEL[k]]} ${signedNum(effect[k]!)}`)
-    .join(' · ') || (kind === 'duo' ? SY.capped : SY.noEffect);
+    .join(' · ') || SY.noEffect;
 /** 시너지가 경기에 들어가는지 알리는 한 줄. */
 export const synergyNote = (season: number): string =>
   synergyApplies(season) ? SY.applies : SY.notApplied;
@@ -215,7 +212,7 @@ export type SynergyChip = {
   desc: string;
   effect: string;
   badge: boolean;
-  /** 경기 효과가 실제로 들어가는 시너지(배지 · 상한에 걸린 듀오는 아니다). 켜진 것은 모두 함께 적용된다. */
+  /** 경기 효과가 실제로 들어가는 시너지(배지는 아니다). 켜진 것은 모두 함께 적용된다. */
   applied: boolean;
 };
 /** 경기 효과가 실제로 들어가는지 — 주발 맞춤은 자리 실력 보정, 나머지는 더한 줄 힘. */
@@ -236,7 +233,7 @@ export const synergyChips = (s: TeamSynergy): SynergyChip[] =>
       effect:
         a.kind === 'foot'
           ? SY.fitEffect({ v: signedNum(s.foot.reduce((t, b) => t + b, 0)) })
-          : synergyEffectText(a.effect, a.kind),
+          : synergyEffectText(a.effect),
       badge: a.kind === 'badge',
       applied: synergyApplied(s, a),
     };

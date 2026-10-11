@@ -1,0 +1,23 @@
+{
+  "id": "t-11-202-guide-parity",
+  "title": "게임 가이드 안내를 바로잡았어요",
+  "items": [
+    "특훈 성장, 프리미엄 스카우트 확률, 리롤 횟수와 시즌 종료 안내를 현재 규칙에 맞췄어요.",
+    "영구결번 도전 현황을 보는 방법과 확정 조건, 지난 시즌 선수 편성 규칙을 보완했어요."
+  ],
+  "en": {
+    "title": "Updated game guide",
+    "items": [
+      "Corrected training growth, Premium Scout odds, reroll limits and season closing rules.",
+      "Clarified retired-number progress and eligibility, and using players from earlier seasons."
+    ]
+  },
+  "ja": {
+    "title": "ゲームガイドの案内を修正しました",
+    "items": [
+      "特訓の成長、プレミアムスカウトの確率、リロール回数、シーズン終了の案内を現在のルールに合わせました。",
+      "永久欠番の進捗確認方法と確定条件、過去シーズンの選手編成ルールを補足しました。"
+    ]
+  },
+  "availability": "web-app"
+}

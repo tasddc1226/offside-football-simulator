@@ -26,8 +26,16 @@ export const EDGE = {
   /** 시즌 진행 게이지(홈). TTL로만 새로 읽는다. */
   seasonGauge: '/v1/season/gauge',
   hofDetail: (careerId: string) => `/v1/hof/${careerId}`,
-  hofList: (limit: number, page: number, sort: string, season?: number, q?: string, pos?: string) =>
-    `/v1/hof?limit=${limit}&page=${page}&sort=${sort}${season !== undefined ? `&season=${season}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}${pos ? `&pos=${pos}` : ''}`,
+  hofList: (
+    limit: number,
+    page: number,
+    sort: string,
+    season?: number,
+    q?: string,
+    pos?: string,
+    dpos?: string,
+  ) =>
+    `/v1/hof?limit=${limit}&page=${page}&sort=${sort}${season !== undefined ? `&season=${season}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}${pos ? `&pos=${pos}` : ''}${dpos ? `&dpos=${dpos}` : ''}`,
   /** T-10-092 라이브 랭킹(팀 랭킹). TTL로만 새로 읽는다(원작처럼 5분마다 갱신). */
   teamRank: (season: number, sort: string, page: number) =>
     `/v1/teams?season=${season}&sort=${sort}&page=${page}&form=5&logo=1`,
@@ -41,6 +49,7 @@ export const EDGE = {
   marketList: (season: number, sort: string, pos?: string) =>
     `/v1/market?season=${season}&sort=${sort}${pos ? `&pos=${pos}` : ''}`,
   /** 게시판 목록은 첫 페이지(웹 기본 limit)만 담는다. */
+  publicNews: (board: string) => `/v1/public-news/${board}`,
   boardFirstPage: (board: string) => `/v1/boards/${board}/posts?limit=${BOARD_PAGE_LIMIT}`,
 } as const;
 
@@ -67,7 +76,7 @@ export const STALE = {
   /** 이름 공개 토글이 바로 보이게(최초 기록의 이름 포함). */
   retirementPut: (careerId: string) => [EDGE.hofDetail(careerId), ...allFirsts()],
   /** 글·댓글 쓰기/지우기 — 목록의 글과 댓글 수가 바뀐다. */
-  boardChanged: (board: string) => [EDGE.boardFirstPage(board)],
+  boardChanged: (board: string) => [EDGE.boardFirstPage(board), EDGE.publicNews(board)],
   commentsPurged: allBoardLists,
   /** 팀 등록·편성 저장 — 새 팀이 라이브 랭킹 첫 페이지에 바로 보이게(경기 결과는 TTL로만). */
   teamSaved: (season: number) => [

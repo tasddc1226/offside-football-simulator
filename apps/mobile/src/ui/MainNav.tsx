@@ -8,6 +8,7 @@ import { MAIN_SCREENS } from '@offside/app-core/mainNavigation';
 export { MAIN_SCREENS, hasMainNav } from '@offside/app-core/mainNavigation';
 import { appState } from '../store';
 import { go, goHome, openBoard, openHof } from '../game/nav';
+import { navStack } from '../game/host';
 import { scrollTo } from './scroll';
 import { TabBar } from './TabBar';
 import { shellText as L } from '@offside/app-core/i18n/ko/shell';
@@ -28,6 +29,12 @@ const OPEN: Record<(typeof MAIN_SCREENS)[number], () => void> = {
   owner: () => go('owner'),
   settings: () => go('settings'),
 };
+// T-11-213 탭끼리는 쌓지 않는다 — 누른 탭이 맨 아래 기록이 된다. 소식을 다시 누르면 목록으로 되돌아간다(글 기록을 접는다).
+function open(k: (typeof MAIN_SCREENS)[number]) {
+  const again = k === 'board' && appState.screen === 'board';
+  OPEN[k]();
+  if (!again) navStack.root();
+}
 
 /** 메뉴는 화면마다 다시 그려진다 — 결산 확인은 앱을 연 뒤 한 번만. */
 let recapChecked = false;
@@ -48,8 +55,8 @@ export function MainNav() {
       items={MAIN_SCREENS.map((k) => ({
         key: k,
         label: label(k),
-        active: screen === k,
-        onPress: OPEN[k],
+        active: screen === k || (k === 'owner' && (screen === 'honors' || screen === 'recap')),
+        onPress: () => open(k),
         ...(k === 'owner'
           ? { dot: ownerDot ? 1 : 0, ...(ownerDot ? { dotLabel: ownerDot } : {}) }
           : {}),

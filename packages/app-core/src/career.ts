@@ -29,6 +29,7 @@ export function saveGame(s: GameState | null): boolean {
   if (s) s.rng = getActiveRng().getState();
   const ok = saveKey('ft_save', s);
   measureOperation('save', ok ? 'success' : 'failed', ok ? 'none' : 'save_risk');
+  if (ok) noteCareerActivity(s);
   return ok;
 }
 
@@ -79,5 +80,19 @@ export function restoreGame(upload: {
   }
   useCareerBalance(G);
   useCareerClubStrength(G);
+  if (G) noteCareerActivity(G);
   return G;
+}
+
+type Activity = { careerId: string | null; state: 'active' | 'retired' | 'none' };
+let activityReporter: (input: Activity) => void = () => {};
+/** Shells enable networking after initialization; engine/save tests remain side-effect free. */
+export function configureCareerActivityReporter(report: (input: Activity) => void) {
+  activityReporter = report;
+}
+export function noteCareerActivity(s: GameState | null) {
+  activityReporter({
+    careerId: s?.cid ?? null,
+    state: s ? (s.retired ? 'retired' : 'active') : 'none',
+  });
 }

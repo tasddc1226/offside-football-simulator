@@ -17,6 +17,7 @@ import {
   ownerTeams,
   profiles,
 } from '../db/schema.js';
+import { addAppPushDevice } from '../test/push.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
 import { checkCupLineup } from '../routes/cup.js';
@@ -274,6 +275,14 @@ describe('T-11-145 컵 진행(cron)', () => {
         stage: 'champion',
         owner: '우승구단주',
       });
+      // T-11-150 칭호를 받는 성적(우승·준우승·4강)은 대표 칭호가 자동으로 붙고, 8강 이하는 붙지 않는다.
+      const titleOf = async (profileId: string) =>
+        (await ctx.db.select().from(profiles).where(eq(profiles.id, profileId)))[0]?.title;
+      expect(await titleOf(champ.profileId)).toBe(`cup-${CUP.edition}-champion`);
+      const sf = entries.find((e) => e.stage === 'sf')!;
+      expect(await titleOf(sf.profileId)).toBe(`cup-${CUP.edition}-sf`);
+      const out = entries.find((e) => e.stage === 'group')!;
+      expect(await titleOf(out.profileId)).toBeNull();
       expect(teams).toHaveLength(n);
       // 알림: 추첨·경기마다 하나, 최종 성적은 한 번(다시 돌려도 늘지 않는다). 탭하면 홈(컵 배너)으로 간다.
       const mine = await ctx.db
@@ -291,11 +300,36 @@ describe('T-11-145 컵 진행(cron)', () => {
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({ title: '시즌 1 제1회 오프사이드 컵 우승!' });
       expect(result[0]!.body).toBe('최종 성적 우승. 선수 후보 리롤권 10장을 받았어요.');
+      expect(mine.filter((x) => x.sourceKey === `cup-complete:${CUP.id}`)).toHaveLength(1);
+      const completions = await ctx.env.DB.prepare(
+        'SELECT COUNT(*) AS n FROM notifications WHERE source_key=?',
+      )
+        .bind(`cup-complete:${CUP.id}`)
+        .first<{ n: number }>();
+      expect(completions?.n).toBe(n);
       expect(mine.every((x) => JSON.parse(x.targetJson).screen === 'home')).toBe(true);
     },
-    // 64팀 대회 전체를 돌려 느린 러너에서 기본 20초를 넘긴다.
     60_000,
   );
+
+  it('결승 개별 푸시는 생략하고 모든 참가자에게 종료 푸시 한 건만 만든다', async () => {
+    const teams = await enter(5);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(CUP.rounds.at(-1)!));
+    for (const t of teams) await addAppPushDevice(ctx, t.profileId);
+    await runAll();
+    await runCup(ctx.db, CUP.rounds.at(-1)!, [CUP]);
+    const deliveries = await ctx.env.DB.prepare(
+      `SELECT n.source_key FROM push_deliveries q JOIN notifications n ON n.id=q.notification_id`,
+    ).all<{ source_key: string }>();
+    expect(
+      deliveries.results.filter((x) => x.source_key === `cup-complete:${CUP.id}`),
+    ).toHaveLength(5);
+    const final = (await cupMatchesOf(ctx.db, CUP.id)).find((m) => m.round === 'f')!;
+    expect(
+      deliveries.results.filter((x) => x.source_key.startsWith(`cup-match:${final.id}:`)),
+    ).toHaveLength(0);
+  });
 
   it('추첨 때 자격이 모자란 팀은 빠지고, 4팀 미만이면 열지 않는다', async () => {
     await enter(2);
@@ -330,31 +364,22 @@ describe('T-11-145 컵 진행(cron)', () => {
     expect(lineupLocked(await cupMatchesOf(ctx.db, CUP.id), a!.teamId, during)).toBe(false);
   });
 
-  it('구단주 탭 응답에 가장 최근 우승 회차가 실린다', async () => {
+  it('구단주 탭 응답에 대표 칭호가 실린다', async () => {
     const who = await issueGoogleCookie(ctx);
     const view = async () =>
       (
         (await (
           await callJson(ctx.env, 'GET', '/v1/owner-team', { cookie: who.cookie })
         ).json()) as {
-          data: { cupChampion: number | null };
+          data: { ownerTitle: string | null };
         }
       ).data;
-    expect((await view()).cupChampion).toBeNull();
-    await ctx.db.insert(cupEntries).values({
-      cupId: CUP.id,
-      teamId: 'tem_champ',
-      profileId: who.profileId,
-      name: '우승팀',
-      manager: '감독',
-      ovr: 80,
-      status: 'champion',
-      stage: 'champion',
-      rewardedAt: CUP.opensAt,
-      createdAt: CUP.opensAt,
-      updatedAt: CUP.opensAt,
-    });
-    expect((await view()).cupChampion).toBe(1);
+    expect((await view()).ownerTitle).toBeNull();
+    await ctx.db
+      .update(profiles)
+      .set({ title: 'cup-1-champion' })
+      .where(eq(profiles.id, who.profileId));
+    expect((await view()).ownerTitle).toBe('cup-1-champion');
   });
 
   it('리롤권은 있는 만큼만 쓴다', async () => {

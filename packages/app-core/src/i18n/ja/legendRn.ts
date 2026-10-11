@@ -30,5 +30,5 @@ export const legendRn: Translation<LegendRnMsgs> = {
   alertOpen: '見る',
   alertClose: '通知を閉じる',
   jerseyLabel: (p) => `${p.name} ${p.number}番 永久欠番のユニフォーム`,
-  wallOfHonor: '「名誉の壁」の称号を受け取りました。永久欠番ではありません。',
+  wallOfHonor: 'クラブでの活躍が認められ、「名誉の壁」の称号を獲得しました。',
 };

@@ -1,9 +1,13 @@
-// 구단주 화면의 '내 선수'(웹 MyPlayers.svelte) — 레전드 점수 순.
+// 내 선수 전용 화면(웹 MyPlayers.svelte) — 시즌별 기록과 보유 선수 관리.
 // T-10-013: 계정에 연결돼 있으면 계정 기록(서버), 아니면 이 기기 기록(ft_hof)이다. 서버에는 선수 이름이
 // 없어(공개를 고른 경우만) 같은 기기의 기록이 있으면 그 이름·공개 설정을 쓴다.
 // 한 줄의 틀(순위 칸·위 구분선·안쪽 여백)은 HofRow의 RowFrame이 그린다 — 여기서는 누르는 자리만 감싼다.
 // T-11-029 시즌 탭(프리시즌 / 시즌 1…)으로 거른다 — 개막한 시즌이 둘 이상일 때만 보이고, 기본은 지금 시즌이다.
 import { useEffect, useMemo, useState } from 'react';
+import { View } from 'react-native';
+import { useSnapshot } from 'valtio';
+import { appState } from '../../store';
+import { PlayerRelease } from './PlayerRelease';
 import type { PublicHofEntry } from '@offside/contracts';
 import type { DetailPos, POS } from '@offside/game/data';
 import { loadHOF } from '@offside/game/hof-store';
@@ -22,7 +26,7 @@ import { playerName } from '@offside/app-core/format';
 import { fillGranted, openLocalLegend, openPublicLegend } from '../../game/host';
 import { HofRow, type RowStats } from '../../components/HofRow';
 import { rem } from '../../theme/type';
-import { Btn, Card, Press, Txt } from '../../ui';
+import { Opt, Card, Press, Txt } from '../../ui';
 import { SelectField } from '../settings/parts';
 import { ownerPlayersText as L } from '@offside/app-core/i18n/ko/ownerPlayers';
 import { useRefresh } from '../../ui/refresh';
@@ -45,8 +49,6 @@ type MineRow = {
   value?: number;
   open: () => void;
 };
-/** 처음엔 이만큼만 보이고 '모두 보기'로 펼친다(T-11-026 구단주 화면 위쪽을 내 팀에 내주려 상위 3명만). */
-const SHOW = 3;
 
 const localRow = (h: HofEntry, i: number, pending: ReadonlySet<string>, now: string): MineRow => ({
   nation: myPlayerNation(h),
@@ -80,28 +82,23 @@ const serverRow = (e: PublicHofEntry): MineRow => ({
   open: () => void openPublicLegend(e),
 });
 
-/** onRows: T-11-026 구단주 화면이 요약(선수 수·점수 합·결번 수)을 세도록 불러온 목록을 알려 준다. */
-export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => void }) {
+/** Season records and owned-card management share a dedicated screen. */
+export function MyPlayers() {
   const local = useMemo(() => loadHOF(), []);
   const [source, setSource] = useState<'loading' | 'account' | 'device' | 'offline'>('loading');
   const [rows, setRows] = useState<MineRow[]>([]);
-  const [expanded, setExpanded] = useState(false);
+  const { playersSeason: picked, playersView } = useSnapshot(appState);
   const now = useMemo(() => new Date().toISOString(), []);
   // T-11-110 목록은 불러온 시각(now)으로, 시즌 탭·기본 시즌은 띄운 채 개막을 넘기면 다시 고른다.
   const clockNow = useSeasonNow();
   const seasons = useMemo(() => mySeasonOptions(clockNow), [clockNow]);
-  const [picked, setPicked] = useState<number | null>(null);
+
   const season = picked ?? myDefaultSeason(clockNow);
   const inSeason = useMemo(
     () => (seasons.length > 1 ? rows.filter((r) => r.season === season) : rows),
     [seasons, rows, season],
   );
-  const shown = expanded ? inSeason : inSeason.slice(0, SHOW);
-  // T-11-026 구단주 요약은 고른 시즌 선수로 센다(T-11-029).
-  useEffect(() => {
-    if (source !== 'loading') onRows?.(inSeason);
-  }, [source, inSeason, onRows]);
-
+  const shown = inSeason;
   // T-11-111 당겨서 새로고침 — 보이던 목록은 두고 응답이 오면 바꾼다(source도 되돌리지 않는다).
   const { tick, track } = useRefresh();
   useEffect(() => {
@@ -165,7 +162,7 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
   return (
     <Card gap={0}>
       <Txt v="eyebrow">My players</Txt>
-      <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 8 }}>
+      <Txt v="h1" accessibilityRole="header" style={{ marginBottom: 8 }}>
         {L.title}
       </Txt>
       {source === 'loading' ? (
@@ -192,52 +189,66 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
               value={season}
               options={seasons.map((s) => ({ value: s.id, label: s.name }))}
               onChange={(v) => {
-                setPicked(v);
-                setExpanded(false);
+                appState.playersSeason = v;
               }}
               style={{ marginBottom: 8 }}
             />
           ) : null}
-          {shown.length ? (
-            shown.map((r, i) => (
-              <Press
-                key={r.key}
-                scale={0.985}
-                testID={`my-player-${i}`}
-                accessibilityLabel={L.openRecord({ name: r.name })}
-                onPress={r.open}
+          {source === 'account' ? (
+            <View style={{ flexDirection: 'row', gap: 8, marginVertical: 12 }}>
+              <Opt
+                style={{ flex: 1 }}
+                selected={playersView === 'records'}
+                onPress={() => (appState.playersView = 'records')}
               >
-                <HofRow
-                  nation={r.nation}
-                  showNation={r.nation !== undefined}
-                  rank={i}
-                  name={r.name}
-                  pos={r.pos}
-                  dpos={r.dpos}
-                  club={r.club}
-                  clubId={r.clubId}
-                  rn={r.rn}
-                  tag={r.tag}
-                  t={r.stats}
-                  titleId={r.title}
-                />
-              </Press>
-            ))
-          ) : (
-            <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
-              {emptySeasonText(season, seasons.length > 1 ? rows.length : 0)}
-            </Txt>
-          )}
-          {!expanded && inSeason.length > SHOW ? (
-            <Btn
-              sm
-              testID="my-players-all"
-              style={{ alignSelf: 'flex-start', marginTop: 8 }}
-              onPress={() => setExpanded(true)}
-            >
-              {L.showAll({ n: inSeason.length })}
-            </Btn>
+                <Txt>{L.records}</Txt>
+              </Opt>
+              <Opt
+                style={{ flex: 1 }}
+                selected={playersView === 'manage'}
+                testID="players-manage"
+                onPress={() => (appState.playersView = 'manage')}
+              >
+                <Txt>{L.manage}</Txt>
+              </Opt>
+            </View>
           ) : null}
+          {source === 'account' && playersView === 'manage' ? (
+            <PlayerRelease season={season} />
+          ) : (
+            <>
+              {shown.length ? (
+                shown.map((r, i) => (
+                  <Press
+                    key={r.key}
+                    scale={0.985}
+                    testID={`my-player-${i}`}
+                    accessibilityLabel={L.openRecord({ name: r.name })}
+                    onPress={r.open}
+                  >
+                    <HofRow
+                      nation={r.nation}
+                      showNation={r.nation !== undefined}
+                      rank={i}
+                      name={r.name}
+                      pos={r.pos}
+                      dpos={r.dpos}
+                      club={r.club}
+                      clubId={r.clubId}
+                      rn={r.rn}
+                      tag={r.tag}
+                      t={r.stats}
+                      titleId={r.title}
+                    />
+                  </Press>
+                ))
+              ) : (
+                <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
+                  {emptySeasonText(season, seasons.length > 1 ? rows.length : 0)}
+                </Txt>
+              )}
+            </>
+          )}
         </>
       )}
     </Card>

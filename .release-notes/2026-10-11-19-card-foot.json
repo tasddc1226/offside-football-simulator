@@ -1,0 +1,16 @@
+{
+  "id": "t-11-211-card-foot",
+  "title": "선수 카드에 주발이 보여요",
+  "items": ["내 팀과 이적시장의 선수 카드에서 키·몸무게 옆에 주발을 볼 수 있어요"],
+  "en": {
+    "title": "Player cards show the preferred foot",
+    "items": [
+      "Player cards in your team and the transfer market now show the preferred foot next to height and weight."
+    ]
+  },
+  "ja": {
+    "title": "選手カードに利き足が表示されます",
+    "items": ["マイチームと移籍市場の選手カードで、身長・体重の横に利き足が表示されます。"]
+  },
+  "availability": "web-app"
+}

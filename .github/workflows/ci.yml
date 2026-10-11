@@ -31,6 +31,8 @@ jobs:
       test_any: ${{ steps.affected.outputs.test_any }}
       api: ${{ steps.affected.outputs.api }}
       web: ${{ steps.affected.outputs.web }}
+      web_e2e_scope: ${{ steps.affected.outputs.web_e2e_scope }}
+      web_e2e_shards: ${{ steps.affected.outputs.web_e2e_shards }}
       mobile: ${{ steps.affected.outputs.mobile }}
       sim: ${{ steps.affected.outputs.sim }}
     steps:
@@ -144,7 +146,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: ${{ fromJSON(needs.pr-plan.outputs.web_e2e_shards || '[1,2,3]') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -165,11 +167,13 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      # e2e · 번들 검사는 웹 dist만 쓴다. 조각마다 빌드한다(몇 초라 artifact로 넘기는 것보다 빠르다).
-      - name: Build and bundle check
-        run: |
-          pnpm --filter @offside/web build
-          pnpm --filter @offside/web check:bundle
+      # 첫 화면 예산은 운영과 같은 설정의 빌드로 잰다(scripts/check-bundle-prod.mjs). 한 조각에서만 한 번 더 빌드한다.
+      - name: Bundle check (production config)
+        if: matrix.shard == 1
+        run: pnpm --filter @offside/web check:bundle:prod
+      # e2e는 웹 dist만 쓴다. 조각마다 빌드한다(몇 초라 artifact로 넘기는 것보다 빠르다).
+      - name: Build for e2e
+        run: pnpm --filter @offside/web build
       - name: e2e
         run: |
           if [ "${{ steps.pw-cache.outputs.cache-hit }}" = 'true' ]; then
@@ -177,12 +181,13 @@ jobs:
           else
             pnpm --filter @offside/web exec playwright install --with-deps chromium
           fi
-          pnpm --filter @offside/web exec playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+          node .github/scripts/run-web-e2e.mjs "$E2E_SCOPE" "${{ matrix.shard }}/${{ strategy.job-total }}"
         env:
           CI: 'true'
           E2E_PREBUILT: '1'
+          E2E_SCOPE: ${{ needs.pr-plan.outputs.web_e2e_scope }}
       - name: Verify consent-gated analytics with a test tag
-        if: matrix.shard == strategy.job-total
+        if: needs.pr-plan.outputs.web_e2e_scope != 'admin' && matrix.shard == strategy.job-total
         run: pnpm --filter @offside/web exec playwright test analytics.spec.ts --workers=1
         env:
           CI: 'true'

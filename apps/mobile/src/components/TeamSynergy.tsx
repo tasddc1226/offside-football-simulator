@@ -2,12 +2,7 @@
 // 켜진 시너지는 누르면 그라운드에서 그 선수들을 잇는다. 누르는 것과 상관없이 켜진 것은 모두 적용된다.
 import { useState } from 'react';
 import { View } from 'react-native';
-import {
-  DUO_LINE_CAP,
-  DUO_TOTAL_CAP,
-  synergyPower,
-  type TeamSynergy as Synergy,
-} from '@offside/contracts/owner-team';
+import { synergyPower, type TeamSynergy as Synergy } from '@offside/contracts/owner-team';
 import { synergyRows, synergyNote, type SynergyRow } from '@offside/app-core/teamOwner';
 import { teamSynergyText as L } from '@offside/app-core/i18n/ko/teamSynergy';
 import { useColors } from '../theme/useColors';
@@ -116,7 +111,7 @@ export function TeamSynergy({
       <Press
         key={r.id}
         testID={`synergy-${r.id}`}
-        accessibilityLabel={`${r.name} · ${r.effect} · ${state}`}
+        accessibilityLabel={`${r.name} · ${r.desc} · ${r.effect} · ${state}`}
         accessibilityState={{ selected: viewing }}
         onPress={() => setFocus(viewing ? null : r.id)}
         style={style}
@@ -147,6 +142,9 @@ export function TeamSynergy({
       <Txt v="xs" tone="muted">
         {anyOn ? L.chipHint : L.empty}
       </Txt>
+      <Txt v="xs" tone="muted" testID="synergy-requirements">
+        {L.requirementsHint}
+      </Txt>
       <View style={{ gap: 6 }}>{shown.map(row)}</View>
       {offCount ? (
         <Press
@@ -169,7 +167,7 @@ export function TeamSynergy({
         </Press>
       ) : null}
       <Txt v="xs" tone="muted">
-        {L.capNote({ line: DUO_LINE_CAP, total: DUO_TOTAL_CAP })}
+        {L.youthNote}
       </Txt>
     </View>
   );

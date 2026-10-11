@@ -8,6 +8,7 @@
   import { leagueOf, roleOf, fmtMoney, focusOf, labelOf } from '@offside/game/engine';
   import { appState, type Tab } from './state.svelte.js';
   import { goHome } from './nav.js';
+  import { rootHere } from './history.svelte.js';
   import { advance, nextPending } from './actions.js';
   import { loadGameSheets } from './sheets/gameSheets.svelte.js';
   import { buzz, dur } from './motion.js';
@@ -51,6 +52,8 @@
   const contract = $derived(
     [s.contract ? T.salary({ v: fmtMoney(s.contract.salary) }) : L.amateur ? T.amateur : '', L.amateur ? '' : T.value({ v: fmtValue(marketValue(s)) })]
       .filter(Boolean)
+      // 항목 안(연봉 1억 5,000만)에서는 줄을 바꾸지 않고 · 사이에서만 바꾼다(앱 Game.tsx와 같이).
+      .map((x) => x.replace(/ /g, '\u00a0'))
       .join(' · '),
   );
   const title = $derived(mainTitle(s));
@@ -169,7 +172,7 @@
       </button>
     {/each}
   </div>
-  <button class="tab-home" data-act="home" style:--i={2} onclick={goHome}>
+  <button class="tab-home" data-act="home" style:--i={2} onclick={() => (goHome(), rootHere())}>
     <TabIcon name="home" />{T.tabHome}
   </button>
   <NavIntro kind="game" />

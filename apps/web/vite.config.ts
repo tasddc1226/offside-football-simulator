@@ -30,7 +30,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [svelte(), appShellPlugin({ define }), seoPlugin(seoConfig), versionJson],
     define,
-    // Keep already eager game modules together so gzip can share their dictionary.
+    // Keep already eager game and contract modules together so gzip can share their dictionary.
     // $initial + no recursive capture preserves all existing lazy game screens/events.
     build: {
       rolldownOptions: {
@@ -39,7 +39,7 @@ export default defineConfig(({ mode }) => {
             groups: [
               {
                 name: 'game-initial',
-                test: /packages[\\/]game[\\/]src[\\/]/,
+                test: /packages[\\/](game|contracts)[\\/]src[\\/]/,
                 tags: ['$initial'],
                 includeDependenciesRecursively: false,
               },

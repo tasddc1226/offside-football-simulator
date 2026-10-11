@@ -7,9 +7,9 @@ export type TourSpot = 'report' | 'prep' | 'invest' | 'status' | 'stories' | 'fe
 
 export const RESULT_TOUR: readonly (readonly [TourSpot, number | TourGate])[] = [
   ['report', 2600],
+  ['status', 1600],
   ['prep', 'train'],
   ['invest', 'invest'],
-  ['status', 1600],
   ['stories', 1000],
   ['feed', 1000],
   ['go', 1400],

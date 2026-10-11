@@ -126,7 +126,7 @@ test('전체 명예의 전당에서 다른 유저의 은퇴 선수 상세를 연
   await page.locator('[data-credit="career"] summary').click();
   await expect(page.getByRole('heading', { name: '레전드 점수 구성' })).toBeVisible();
   await expect(page.locator('table')).toContainText('K리그1');
-  await page.locator('[data-act="hof-back"]').click();
+  await page.goBack();
   await expect(page.locator(`[data-hof-id="${ID}"]`)).toBeVisible();
 });
 
@@ -163,6 +163,7 @@ test('내 선수 탭: 상세 없는 옛 기록은 요약만 보여 준다', asyn
     '불러오지 못했어요',
   );
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('.film-open h1')).toHaveText('옛선수');
   await expect(page.locator('.film-open svg.avatar')).toHaveCount(0); // 커리어 ID 없는 옛 기록엔 도트 선수가 없다
@@ -209,20 +210,18 @@ test('구단주 내 선수: 계정 기록(서버) + 이 기기 이름 덮어쓰�
   }, ID);
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await expect(page.locator('[data-my-source="account"]')).toBeVisible();
   await expect(page.locator('[data-my-player]')).toHaveCount(2);
   await expect(page.locator('[data-my-player="0"]')).toContainText('이기기선수');
   await expect(page.locator('[data-my-player="1"]')).toContainText('익명의 골키퍼');
   await expect(page.locator('[data-my-players]')).not.toContainText('다른계정선수');
-  // 상세에서 돌아오면 구단주 화면이다. 뒤로 가기로도, T-11-180 공유 바 왼쪽 '이전으로'로도 돌아간다.
+  // 상세에서 뒤로 가면 내 선수 화면이다.
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('.film-open h1')).toBeVisible();
   await expect(page.locator('[data-act="share-home"]')).toHaveCount(0);
   await page.goBack();
-  await expect(page.locator('h1')).toHaveText('구단주');
-  await page.locator('[data-my-player="0"]').click();
-  await page.locator('[data-act="hof-back"]').click();
-  await expect(page.locator('h1')).toHaveText('구단주');
+  await expect(page.locator('[data-owner-players-screen]')).toBeVisible();
 });
 
 // T-10-069: 다른 기기에서 은퇴한(이 기기 ft_hof에 없는) 계정의 내 선수도, 어디서 열든 상세 아래에 공유 버튼이 뜬다.
@@ -240,6 +239,7 @@ test('이 기기에 없는 계정의 내 선수도 공유 버튼이 뜬다', asy
   // 공유할 수 있는 선수는 아래 바가 홈으로 · 공유하기(T-10-128) — 뒤로 가기로 돌아간다.
   await page.goBack();
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-act="share-career"]')).toBeInViewport();
 });
@@ -274,8 +274,10 @@ test('구단주 내 선수: 계정에 연결되지 않았으면 이 기기 기�
   });
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await expect(page.locator('[data-my-source="device"]')).toContainText('구글 계정을 연결하면');
   await expect(page.locator('[data-my-player="0"]')).toContainText('기기선수');
+  await page.locator('[data-act="players-back"]').click();
   // 기록실에는 전체/내 선수 전환이 없다(탭은 명예의 전당·영구결번·팀 랭킹).
   await page.locator('[data-act="hof"]').click();
   await expect(page.locator('[data-hof-tab]')).toHaveText([
@@ -288,6 +290,7 @@ test('구단주 내 선수: 계정에 연결되지 않았으면 이 기기 기�
 
 // 홈은 TOP 3만, '전체 보기'는 10명씩 페이지(T-10-101). 상세에서 돌아오면 보던 페이지로 돌아온다.
 test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async ({ page }) => {
+  await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
   const TOTAL = 15;
   const nth = (k: number) => ({
     ...entry,
@@ -335,7 +338,8 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async (
   expect(asked.at(-1)).toBe('?limit=10&page=2');
 
   await full.locator('.hof-row').first().click();
-  await page.locator('[data-act="hof-back"]').click();
+  await expect(page.locator('.film-open h1')).toBeVisible();
+  await page.goBack();
   await expect(full.locator('.hof-pager')).toContainText('2 / 2');
   await expect(full.locator('.hof-row').first().locator('.hof-rank')).toHaveText('11');
 
@@ -343,7 +347,7 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async (
   await expect(page.locator('[data-hof="home"] .hof-row')).toHaveCount(3);
 });
 
-test('구단주 내 선수: 3명까지 보이고 모두 보기로 펼친다', async ({ page }) => {
+test('구단주 내 선수: 별도 화면에서 전체 목록을 본다', async ({ page }) => {
   await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [], total: 0 })));
   await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
   await page.addInitScript(() => {
@@ -375,9 +379,9 @@ test('구단주 내 선수: 3명까지 보이고 모두 보기로 펼친다', as
   });
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('[data-my-player]')).toHaveCount(3);
+  await page.locator('[data-act="open-owner-players"]').click();
+  await expect(page.locator('[data-my-player]')).toHaveCount(12);
   await expect(page.locator('[data-my-player="0"]')).toContainText('기기선수1');
-  await page.locator('[data-act="my-players-all"]').click();
   await expect(page.locator('[data-my-player]')).toHaveCount(12);
   await expect(page.locator('[data-act="my-players-all"]')).toHaveCount(0);
 });
@@ -544,7 +548,8 @@ test('홈 ↔ 전체 보기 ↔ 상세를 오가도 같은 목록을 다시 요�
   for (let i = 0; i < 2; i++) {
     await page.locator('[data-act="hof-all"]').click();
     await page.locator(`[data-hof="full"] [data-hof-id="${ID}"]`).click();
-    await page.locator('[data-act="hof-back"]').click();
+    await expect(page.locator('.film-open h1')).toBeVisible();
+    await page.goBack();
     await page.locator('[data-act="home"]').click();
     await expect(page.locator('[data-hof="home"] .hof-row')).toHaveCount(1);
   }
@@ -610,7 +615,7 @@ test('내 선수 국적: 계정 응답으로 옛 로컬 기록을 보완하고 �
   );
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await page.locator('[data-act="my-players-all"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   const rows = page.locator('[data-my-player]');
   await expect(rows).toHaveCount(4);
   await expect(rows.nth(0)).toContainText('로컬 브라질');
@@ -655,6 +660,7 @@ test('이 기기 내 선수: 새 로컬 국적을 전달하고 국적 없는 옛
   });
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await expect(page.locator('[data-my-player="0"] [data-hof-nation]')).toHaveAttribute(
     'data-hof-nation',
     'BR',
@@ -664,3 +670,64 @@ test('이 기기 내 선수: 새 로컬 국적을 전달하고 국적 없는 옛
   await expect(page.locator('.film-open h1')).toHaveText('옛 기록');
   await expect(page.getByText('요약만 보여 줘요')).toBeVisible();
 });
+
+for (const width of [320, 1024]) {
+  test(`세부 포지션 필터 ${width}px: 상위 선택·초기화·시즌 전환`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-11T00:00:00+09:00'));
+    await page.setViewportSize({ width, height: 844 });
+    const asked: string[] = [];
+    await page.route(HOF_LIST, (r) => {
+      asked.push(r.request().url());
+      return r.fulfill(ok({ entries: [entry], total: 1 }));
+    });
+    await page.goto('/');
+    await page.locator('[data-act="hof-all"]').click();
+    await page.locator('[data-hof-filters]').click();
+    await page.locator('[data-hof-pos="MF"]').click();
+    await expect(page.locator('[data-hof-dpos="CM"]')).toBeVisible();
+    await page.locator('[data-hof-dpos="CM"]').click();
+    await expect.poll(() => asked.some((u) => u.includes('pos=MF&dpos=CM'))).toBe(true);
+    await expect(page.locator('[data-hof-filters]')).toContainText('중앙 미드필더');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.locator('[data-hof-pos="DF"]').click();
+    await expect(page.locator('[data-hof-dpos="CM"]')).toHaveCount(0);
+    await expect(page.locator('[data-hof-dpos="all"]')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('[data-hof-dpos="CB"]').click();
+    await page.locator('[data-hof-season-select]').selectOption('0');
+    await expect(page.locator('[data-hof-dpos]')).toHaveCount(0);
+    await page.locator('[data-hof-season-select]').selectOption('1');
+    await expect(page.locator('[data-hof-dpos="all"]')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('[data-hof-pos="GK"]').click();
+    await expect(page.locator('[data-hof-dpos]')).toHaveCount(0);
+  });
+}
+
+for (const locale of ['en-US', 'ja-JP']) {
+  test(`세부 포지션 번역 ${locale} 320px`, async ({ browser }) => {
+    const context = await browser.newContext({ locale, viewport: { width: 320, height: 844 } });
+    const page = await context.newPage();
+    try {
+      await page.clock.setFixedTime(new Date('2026-10-11T00:00:00+09:00'));
+      await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [entry], total: 1 })));
+      await page.goto('/');
+      await expect(page.locator('html')).toHaveAttribute('lang', locale.slice(0, 2));
+      const records = page.locator('.main-nav [data-act="hof"]');
+      await expect(records).not.toContainText('기록실');
+      await records.click();
+      await page.locator('[data-hof-filters]').click();
+      await page.locator('[data-hof-pos="MF"]').click();
+      const chip = page.locator('[data-hof-dpos="CM"]');
+      await expect(chip).toBeVisible();
+      await expect(chip).not.toContainText('중앙');
+      await chip.click();
+      await expect(chip).toHaveAttribute('aria-pressed', 'true');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+    } finally {
+      await context.close();
+    }
+  });
+}

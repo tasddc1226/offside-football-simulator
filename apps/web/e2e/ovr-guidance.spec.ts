@@ -10,7 +10,7 @@ test('OVR guidance follows selected role and remains visible when comparing cand
   const guide = page.getByTestId('ovr-guide');
   await expect(guide).toContainText('수비(헤딩)');
   await expect(guide).toContainText('헤딩 정확도만');
-  await page.locator('[data-set="dpos"][data-val="W"]').click();
+  await page.locator('[data-set="dpos"][data-val="LW"]').click();
   await expect(guide).not.toContainText('수비(헤딩)');
   await expect(guide).toContainText('크로스');
   await page.locator('[data-set="dpos"][data-val="ST"]').click();

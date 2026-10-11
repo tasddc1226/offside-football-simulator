@@ -23,10 +23,10 @@ const ko = {
   reportNickTitle: (p: { name: string }) => `'${p.name}' 닉네임을 신고할까요?`,
   reportNickBtn: '닉네임 신고',
   reportNickLabel: (p: { name: string }) => `${p.name} 닉네임 신고`,
-  // 댓글 닉네임
+  // 구단주 이름
   nickSaved: '닉네임을 정했어요',
-  nickLabel: '댓글 닉네임',
-  nickPlaceholder: (p: { max: number }) => `댓글 닉네임 (2~${p.max}자)`,
+  nickLabel: '구단주 이름',
+  nickPlaceholder: (p: { max: number }) => `구단주 이름 (2~${p.max}자)`,
   nickChange: '바꾸기',
   nickSet: '정하기',
 };

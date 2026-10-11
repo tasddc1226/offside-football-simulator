@@ -1,3 +1,4 @@
+import { DETAIL_GROUP } from '@offside/contracts/positions';
 import {
   AchRankResponseSchema,
   FriendRemoveResponseSchema,
@@ -22,6 +23,7 @@ import {
   matchScore,
   ratingChange,
   presetLayout,
+  positionedLayout,
   FORMATIONS,
 } from '@offside/contracts/owner-team';
 import { eq } from 'drizzle-orm';
@@ -309,9 +311,34 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     const moved = PutRes.parse(
       await (await putTeam(me.cookie, { slots: slots(null, null, cb) })).json(),
     ).data.team;
-    expect(moved.slots[2]).toMatchObject({ slot: 'CB', rating: 82, fit: 1 });
+    expect(moved.slots[2]).toMatchObject({ slot: 'CB', rating: 83, fit: 1.01 }); // T-11-197 최고 OVR 82 + 2까지
     expect(moved.lines.def).toBeGreaterThan(moved.lines.atk);
     expect(moved.lines.gk).toBe(YOUTH_OVR);
+  });
+
+  it('시즌 1 기존 FB 선수는 팀에서 LB로 저장해도 원본과 옛 역할별 실력이 유지된다', async () => {
+    vi.setSystemTime(new Date('2026-10-11T00:00:00.000Z'));
+    const me = await issueGoogleCookie(ctx);
+    const roles = { GK: 22, CB: 73, FB: 79, DM: 74, CM: 66, AM: 58, W: 55, ST: 52 };
+    const id = await addCareer(me.profileId, {
+      pos: 'DF',
+      dpos: 'FB',
+      peak: 82,
+      roles,
+      serviceSeason: 1,
+    });
+    const layout = positionedLayout(presetLayout('4-3-3'));
+    const res = await putTeam(me.cookie, { slots: slots(null, id), layout });
+    expect(res.status).toBe(200);
+    const team = PutRes.parse(await res.json()).data.team;
+    expect(team.slots[1]).toMatchObject({ slot: 'LB', rating: 79 });
+    const mine = GetRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    ).data;
+    expect(mine.players.find((p) => p.careerId === id)).toMatchObject({ dpos: 'FB', roles });
+    expect(mine.team?.layout).toEqual(layout);
+    const [stored] = await ctx.db.select().from(careers).where(eq(careers.id, id));
+    expect(stored?.dpos).toBe('FB');
   });
 
   it('자유 배치와 로고를 저장하고 공개 프로필·경기에 같은 자리 실력을 쓴다', async () => {
@@ -420,7 +447,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       await (await putTeam(me.cookie, { slots: ids, layout: null, logo: null })).json(),
     ).data.team;
     expect(reset).toMatchObject({ layout: null, logo: null });
-    expect(reset.slots[2]).toMatchObject({ slot: 'CB', rating: 82 });
+    expect(reset.slots[2]).toMatchObject({ slot: 'CB', rating: 83 });
   });
 
   it('유효하지 않은 좌표·자리 및 큰 이미지 로고는 저장하지 않는다', async () => {
@@ -470,16 +497,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     { label: '유스 적합도 1 제외', free: true, cb: 70, dm: 99, youth: true, done: false, fit: 1 },
   ])('$label: 실제 팀 자리와 업적의 적합도 판정을 일치시킨다', async (scenario) => {
     const me = await issueGoogleCookie(ctx);
-    const group = {
-      GK: 'GK',
-      FB: 'DF',
-      CB: 'DF',
-      DM: 'MF',
-      CM: 'MF',
-      AM: 'MF',
-      W: 'FW',
-      ST: 'FW',
-    } as const;
+    const group = DETAIL_GROUP;
     const ids: (string | null)[] = [];
     for (const [i, role] of FORMATIONS['4-3-3'].entries()) {
       const roles = { GK: 70, CB: 70, FB: 70, DM: 70, CM: 70, AM: 70, W: 70, ST: 70, [role]: 99 };
@@ -765,6 +783,40 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(got.data.team!.slots[0]!.careerId).toBeNull();
     expect(got.data.lastManager).toBe('박감독');
     expect(await ctx.db.select().from(ownerTeams)).toHaveLength(1);
+  });
+
+  it('T-11-217 팀 프리셋은 팀을 저장한 뒤에만 통째로 바꾸고, 팀 응답에 같이 온다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const st = await addCareer(me.profileId, { peak: 90 });
+    const preset = {
+      name: '수비 위주',
+      formation: '3-5-2',
+      slots: slots(null, null, null, null, null, null, null, null, null, st),
+      layout: null,
+    };
+    const putPresets = (presets: unknown[]) =>
+      call('PUT', '/v1/owner-team/presets', { cookie: me.cookie, body: { presets } });
+    // 팀이 없으면 404.
+    expect((await putPresets([preset])).status).toBe(404);
+    await putTeam(me.cookie, { slots: slots(...Array(9).fill(null), st) });
+    const saved = await putPresets([preset, { ...preset, name: '  공격  ', formation: '4-4-2' }]);
+    expect(saved.status).toBe(200);
+    const got = GetRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    );
+    expect(got.data.team!.presets!.map((p) => p.name)).toEqual(['수비 위주', '공격']);
+    // 프리셋 저장은 팀 편성을 바꾸지 않고, 팀을 다시 저장해도 프리셋은 남는다.
+    expect(got.data.team!.formation).toBe('4-3-3');
+    const resaved = PutRes.parse(
+      await (await putTeam(me.cookie, { slots: slots(...Array(9).fill(null), st) })).json(),
+    );
+    expect(resaved.data.team.presets).toHaveLength(2);
+    // 6개 · 빈 이름은 거절, 빈 목록은 모두 지운다.
+    expect((await putPresets(Array(6).fill(preset))).status).toBe(400);
+    expect((await putPresets([{ ...preset, name: ' ' }])).status).toBe(400);
+    expect((await putPresets([])).status).toBe(200);
+    const [row] = await ctx.db.select().from(ownerTeams);
+    expect(row!.presetsJson).toBeNull();
   });
 
   it('시즌마다 새 팀 — 앞 시즌 선수는 와일드카드로 넣고(T-11-114), 지난 시즌 팀은 그대로 남는다', async () => {

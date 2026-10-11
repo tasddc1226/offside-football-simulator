@@ -13,6 +13,7 @@ export const gameSeason: Translation<GameSeasonMsgs> = {
   trainHint: 'Pick training for this phase to move on',
   investTitle: 'Self-investment',
   funds: (p) => `Funds ${p.v}`,
+  fundsAfter: (p) => `Funds ${p.v} → ${p.after}`,
   investHint: 'Pick an investment to move on. Choose none to save money',
   phaseFirst: 'First half',
   phaseSecond: 'Second half',
@@ -29,8 +30,6 @@ export const gameSeason: Translation<GameSeasonMsgs> = {
   storySoon: 'Continues soon',
   storyWait: (p) => `In about ${plural(p.n, 'phase')}`,
   feedTitle: 'Latest news',
-  feedLess: 'Show less',
-  feedMore: 'Show more',
   feedLessAria: 'Show less news',
   feedMoreAria: 'Show more news',
 };

@@ -20,6 +20,8 @@ export function loadSave(raw: GameState | null): { G: GameState; newCid: boolean
 /** 저장본을 제자리에서 고치고 활성 RNG를 저장된 시드로 되돌린다. newCid: 커리어 ID를 이번에 새로 만들었는지
  * (부른 쪽이 바로 저장해야 한다 — 안 그러면 다음 부팅 때 또 다른 ID가 생겨 서버 기록과 어긋난다). */
 export function migrateSave(G: GameState): { newCid: boolean } {
+  // Position expansion is additive: preserve legacy FB/W and the original eight-role peakProfile.
+  // New team slots read the corresponding base role; never guess a saved player's left/right side.
   // finalTable은 선택 필드다. 없는 이전 저장은 다음 결산에서 현재 표를 고정한다.
   // 이미 완료한 시즌은 상대 최종 승점 자료가 없으므로 표를 추정하거나 rec/pending.res를 다시 쓰지 않는다.
   // T-11-054: pending.m의 renew.extension은 선택 필드다. 없는 옛 재계약은 만료 뒤의 총기간 그대로,

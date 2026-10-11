@@ -18,11 +18,9 @@ import {
   type FirstsTab,
 } from '@offside/app-core/firsts';
 import { localCareerNames } from '@offside/game/hof-store';
-import { goHome } from '../../game/nav';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
-import { BackBar } from '../../ui/ActionBar';
 import { Card } from '../../ui/Card';
 import { Pill } from '../../ui/bits';
 import { Screen } from '../../ui/Screen';
@@ -163,7 +161,6 @@ export default function Firsts() {
   return (
     <Screen>
       <Topbar />
-      <BackBar inline testID="home" fallback={goHome} />
       <Card gap={0}>
         <View testID="firsts">
           <View

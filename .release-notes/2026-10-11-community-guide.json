@@ -1,0 +1,29 @@
+{
+  "id": "community-guide-2026-10-11",
+  "title": "육성 안내와 포지션 확장",
+  "items": [
+    "후보 능력치·훈련 OVR 비중·팀 이름 조건을 안내해요.",
+    "세부 포지션 17개를 선택하고 기록실·영구결번을 필터링해요.",
+    "팀 배치 위치에 맞춰 포지션을 저장해요.",
+    "명예의 벽에 구단 기록을 함께 보여줘요."
+  ],
+  "en": {
+    "title": "Guidance and more positions",
+    "items": [
+      "See candidate, training OVR and team name guidance.",
+      "Choose 17 positions and filter records and retired numbers.",
+      "Team positions follow pitch placement when saved.",
+      "Wall of Honour includes club records."
+    ]
+  },
+  "ja": {
+    "title": "育成ガイドとポジション拡張",
+    "items": [
+      "候補能力・育成OVR・チーム名の条件を案内します。",
+      "17ポジションを選び、記録・永久欠番を絞り込めます。",
+      "配置した位置に合わせてチームのポジションを保存します。",
+      "名誉の壁にクラブ記録を表示します。"
+    ]
+  },
+  "availability": "web-app"
+}

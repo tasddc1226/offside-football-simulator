@@ -12,6 +12,7 @@ import { achNudge } from '../game/achNudge';
 import { closeSheet, navStack } from '../game/host';
 import { MainNav, hasMainNav } from '../ui/MainNav';
 import { BarBelow } from '../ui/Screen';
+import { EdgeSwipeBack } from '../ui/EdgeSwipeBack';
 import { RefreshRoot } from '../ui/refresh';
 import { Sheet } from '../ui/Sheet';
 import { TABBAR_H } from '../ui/TabBar';
@@ -33,9 +34,10 @@ import Dex from '../screens/hof/Dex';
 import Board from '../screens/board/Board';
 import Chat from '../screens/chat/Chat';
 import Owner from '../screens/owner/Owner';
+import OwnerPlayers from '../screens/owner/OwnerPlayers';
+import OwnerHonors from '../screens/owner/OwnerHonors';
 import Team from '../screens/owner/Team';
 import Market from '../screens/owner/Market';
-import SeasonRecap from '../screens/owner/SeasonRecap';
 import FundsHistory from '../screens/owner/FundsHistory';
 import Cup from '../screens/owner/CupScreen';
 import Settings from '../screens/settings/Settings';
@@ -55,11 +57,13 @@ const SCREENS: Record<Screen, ComponentType> = {
   board: Board,
   chat: Chat,
   owner: Owner,
+  honors: OwnerHonors,
+  players: OwnerPlayers,
   team: Team,
   market: Market,
   funds: FundsHistory,
   // T-11-128 구단주 시즌 결산(구단주 화면의 결산 카드로 연다).
-  recap: SeasonRecap,
+  recap: OwnerHonors,
   // T-11-145 오프사이드 컵(구단주 화면의 컵 배너로 연다).
   cup: Cup,
   settings: Settings,
@@ -106,9 +110,11 @@ export default function App() {
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <BarBelow.Provider value={main}>
         {/* 게시판은 게시판을 바꿀 때 새로 그린다(웹 {#key appState.board}). 새로고침 범위도 화면마다 새로 연다. */}
-        <RefreshRoot key={snap.screen === 'board' ? `board:${snap.board}` : snap.screen}>
-          <Current />
-        </RefreshRoot>
+        <EdgeSwipeBack>
+          <RefreshRoot key={snap.screen === 'board' ? `board:${snap.board}` : snap.screen}>
+            <Current />
+          </RefreshRoot>
+        </EdgeSwipeBack>
       </BarBelow.Provider>
       {main ? <MainNav /> : null}
       <StoreUpdateBanner />

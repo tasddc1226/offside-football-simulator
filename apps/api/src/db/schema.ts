@@ -198,6 +198,13 @@ export const profiles = sqliteTable(
     appleLinkedAt: text('apple_linked_at'),
     /** T-11-098 친구 코드(초대 링크·코드 입력). 처음 친구 화면을 열 때 만든다. */
     friendCode: text('friend_code'),
+    /**
+     * T-11-150 대표 칭호(owner-title.ts id). 굳힌 값이라 랭킹·댓글·채팅이 그대로 읽는다. title_pinned가 0이면 컵 보상 때
+     * 더 좋은 칭호로 자동으로 바뀌고, 1이면 구단주가 고른 그대로(null = 달지 않기)다.
+     */
+    title: text('title'),
+    titlePinned: integer('title_pinned').notNull().default(0),
+    avatarId: text('avatar_id'),
   },
   (table) => [
     uniqueIndex('profiles_google_sub_unique').on(table.googleSub),
@@ -268,6 +275,7 @@ export const authAttempts = sqliteTable(
         'APP_SESSION',
         'APPLE_SIGNIN',
         'PROFILE_CREATE',
+        'PROFILE_AVATAR',
         'CAREER_SEASON',
         'CAREER_RETIRE',
         'PUSH_DEVICE',
@@ -275,6 +283,7 @@ export const authAttempts = sqliteTable(
         'PUSH_TEST',
         'FRIEND_REQUEST',
         'TRANSLATE',
+        'CAREER_ACTIVITY',
       ],
     }).notNull(),
     subject: text('subject').notNull(),
@@ -308,6 +317,7 @@ export const pushDevices = sqliteTable(
     uniqueIndex('push_devices_token_unique').on(t.token),
     index('push_devices_session_idx').on(t.sessionId),
     index('push_devices_profile_idx').on(t.profileId),
+    index('push_devices_profile_updated_idx').on(t.profileId, t.updatedAt, t.installationHash),
     index('push_devices_updated_idx').on(t.updatedAt),
     index('push_devices_engagement_updated_idx').on(t.engagementEnabled, t.updatedAt),
   ],
@@ -420,6 +430,7 @@ export const careers = sqliteTable(
   (table) => [
     index('careers_detail_archive_idx').on(table.detailArchiveKey),
     index('careers_profile_id_idx').on(table.profileId),
+    index('careers_owner_title_updated_idx').on(table.profileId, table.status, table.updatedAt),
     index('careers_automation_updated_idx').on(table.updatedAt, table.id),
     // T-11-064 내 선수·구단주 팀 조회: profile_id로 시작해 status 전체 스캔과 정렬을 피한다.
     index('careers_profile_status_season_idx').on(
@@ -430,6 +441,16 @@ export const careers = sqliteTable(
     ),
     index('careers_profile_status_legend_idx').on(table.profileId, table.status, table.legendScore),
     index('careers_status_legend_idx').on(table.status, table.legendScore),
+    index('careers_hof_dpos_idx').on(
+      table.status,
+      table.hidden,
+      table.dpos,
+      table.serviceSeason,
+      table.legendScore,
+      table.retiredAt,
+      table.retireAge,
+      table.pos,
+    ),
     // Count HOF filters without reading the large snapshot/profile table payloads.
     index('careers_hof_count_idx').on(
       table.status,
@@ -643,6 +664,25 @@ export const careerSeasons = sqliteTable(
       .where(sql`${table.eventsJson} <> '[]'`),
   ],
 );
+
+/**
+ * T-11-207 시즌 업로드의 측정 기록(선택 로그·성장 기록). 게임·기록·부정 판정에서 읽지 않는다.
+ * career_seasons 행 안에서 열만 비우면 빈 자리가 페이지에 남아 D1 파일이 계속 커진다. 여기에 업로드마다 한 행씩
+ * 덧붙이고(id = 올라온 순서), 5분 cron이 7일 지난 행을 R2로 올린 뒤 오래된 순서대로 통째로 지운다 — 빈 페이지는 새 행이
+ * 다시 쓴다. 보조 인덱스를 두지 않아 업로드마다 쓰기는 한 행이다. 커리어가 지워져도 7일 안에 R2로 옮겨진다.
+ */
+export const seasonTelemetry = sqliteTable('season_telemetry', {
+  id: integer('id').primaryKey(),
+  careerId: text('career_id').notNull(),
+  year: integer('year').notNull(),
+  age: integer('age').notNull(),
+  ovr: integer('ovr').notNull(),
+  /** 비어 있으면(`[]`) NULL. */
+  eventsJson: text('events_json'),
+  /** SeasonGrowth JSON(T-11-048). 없으면 NULL. */
+  growthJson: text('growth_json'),
+  createdAt: text('created_at').notNull(),
+});
 
 /** T-1-004, ADR-008. `PROFILE_DELETED`·`RECOVERY_CODE_ISSUED`·`GOOGLE_LINKED`·`GOOGLE_UNLINKED`(T-1-013)·`CAREERS_MERGED`(T-10-013)·`BALANCE_ACTIVATED`·`COMMENTS_PURGED`(T-10-016). */
 export const auditLog = sqliteTable(
@@ -952,6 +992,8 @@ export const ownerTeams = sqliteTable(
      * 그대로 두고 친선전·내 팀 화면만 이 값을 쓴다(friendlyTeamOf).
      */
     friendlyJson: text('friendly_json'),
+    /** T-11-217 팀 프리셋(포메이션 · 선발 · 배치, 최대 5개) JSON 배열. 없으면 null. */
+    presetsJson: text('presets_json'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -1341,6 +1383,10 @@ export const iapPurchases = sqliteTable(
     /** Apple Sandbox · Google 테스트 구매면 1(매출에서 뺀다). */
     test: integer('test', { mode: 'boolean' }).notNull().default(false),
     createdAt: text('created_at').notNull(),
+    /** T-11-215 스토어가 환불(Google은 무효화)한 시각. 한 번만 적는다. */
+    refundedAt: text('refunded_at'),
+    /** T-11-215 환불로 회수한 장수. 이미 쓴 만큼은 회수하지 못해 qty보다 작을 수 있다. */
+    revokedQty: integer('revoked_qty').notNull().default(0),
   },
   (table) => [
     primaryKey({ columns: [table.store, table.transactionId] }),
@@ -1373,6 +1419,40 @@ export const referrals = sqliteTable(
   ],
 );
 
+/** Permanent owner awards are never recomputed away when a card is sold or a season ends. */
+export const ownerTitleAwards = sqliteTable(
+  'owner_title_awards',
+  {
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    titleId: text('title_id').notNull(),
+    criteriaVersion: integer('criteria_version').notNull(),
+    evidence: integer('evidence').notNull(),
+    earnedAt: text('earned_at').notNull(),
+    seenAt: text('seen_at'),
+  },
+  (t) => [primaryKey({ columns: [t.profileId, t.titleId] })],
+);
+export const ownerTitleProgress = sqliteTable('owner_title_progress', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  criteriaVersion: integer('criteria_version').notNull().default(0),
+  preseason: integer('preseason').notNull().default(0),
+  midfield: integer('midfield').notNull().default(0),
+  defense: integer('defense').notNull().default(0),
+  keeper: integer('keeper').notNull().default(0),
+  scorers: integer('scorers').notNull().default(0),
+  creators: integer('creators').notNull().default(0),
+  internationals: integer('internationals').notNull().default(0),
+  retired: integer('retired').notNull(),
+  elite: integer('elite').notNull(),
+  ballon: integer('ballon').notNull(),
+  numbers: integer('numbers').notNull(),
+  firsts: integer('firsts').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
 /** One editable prediction per account and cup match; settlement and grant are atomic. */
 export const cupPredictions = sqliteTable(
   'cup_predictions',
@@ -1398,3 +1478,44 @@ export const cupPredictions = sqliteTable(
     check('cup_predictions_pick_check', sql`${t.pick} IN ('home', 'draw', 'away')`),
   ],
 );
+
+/** Kept outside profiles so session/account reads never load image bytes. */
+export const profileAvatars = sqliteTable('profile_avatars', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  id: text('id').notNull().unique(),
+  image: text('image').notNull(),
+});
+
+/** Minimal activity and lifetime fatigue budget; no player names or save contents. */
+export const careerActivity = sqliteTable(
+  'career_activity',
+  {
+    profileId: text('profile_id')
+      .primaryKey()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    careerId: text('career_id'),
+    lang: text('lang').notNull().default('ko'),
+    state: text('state', { enum: ['active', 'retired', 'none'] }).notNull(),
+    lastActiveAt: text('last_active_at').notNull(),
+    retiredAt: text('retired_at'),
+    reminderStage: integer('reminder_stage').notNull().default(0),
+    lastReminderAt: text('last_reminder_at'),
+    reminderBatch: text('reminder_batch'),
+  },
+  (t) => [
+    index('career_activity_candidate_idx').on(t.state, t.retiredAt, t.lastActiveAt),
+    index('career_activity_batch_idx').on(t.reminderBatch),
+  ],
+);
+
+/** Immutable stage cohort; conversion signals expire with the notification (90 days). */
+export const careerReminderOutcomes = sqliteTable('career_reminder_outcomes', {
+  notificationId: text('notification_id')
+    .primaryKey()
+    .references(() => notifications.id, { onDelete: 'cascade' }),
+  stage: integer('stage').notNull(),
+  returnedAt: text('returned_at'),
+  retiredAt: text('retired_at'),
+});

@@ -19,6 +19,7 @@ export const {
   startCareer,
   rollCandidates,
   rerollCandidates,
+  premiumScoutCandidates,
   revealCandidatePotential,
 } = createGameActions({
   state: appState,

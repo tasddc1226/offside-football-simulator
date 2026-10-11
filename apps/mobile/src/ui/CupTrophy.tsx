@@ -41,6 +41,20 @@ import { prefs } from '../store';
 const CYCLE: Record<TrophyStage, number> = { champion: 8500, runnerup: 8000, sf: 9500 };
 const STAR = 'M8 0L10 6L16 8L10 10L8 16L6 10L0 8L6 6Z';
 
+/** 움직임 없는 컵 그림(받침대 없이) — 닉네임 옆 작은 칭호(TitleBadge)처럼 여러 개가 한꺼번에 그려지는 자리. */
+export function TrophyArt({ stage, size }: { stage: TrophyStage; size: number }) {
+  const { layers, palette } = cupTrophy(stage);
+  return (
+    <Svg width={size} height={size} viewBox={TROPHY_CUP_VIEWBOX}>
+      {layers
+        .filter((layer) => !layer.plinth)
+        .map((layer, index) => (
+          <Path key={index} d={layer.d} fill={palette[layer.tone]} />
+        ))}
+    </Svg>
+  );
+}
+
 /** 받침대에 새긴 이름. 자리보다 길면 2초 쉬고 끝까지 흘렀다가 처음으로 돌아온다(PlayerCard CardName과 같은 리듬). */
 function PlateName({
   name,

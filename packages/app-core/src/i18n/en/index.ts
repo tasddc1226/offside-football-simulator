@@ -12,6 +12,7 @@ import { backup } from './backup';
 import { balanceKeys } from './balanceKeys';
 import { board } from './board';
 import { boardLabel } from './boardLabel';
+import { careerGuide } from './careerGuide';
 import { chat } from './chat';
 import { chatReject } from './chatReject';
 import { club } from './club';
@@ -20,6 +21,7 @@ import { clubSync } from './clubSync';
 import { create } from './create';
 import { cup } from './cup';
 import { cupApp } from './cupApp';
+import { cupPush } from './cupPush';
 import { dex } from './dex';
 import { fairness } from './fairness';
 import { firsts } from './firsts';
@@ -57,9 +59,12 @@ import { marketValueChart } from './marketValueChart';
 import { owner } from './owner';
 import { ownerConflict } from './ownerConflict';
 import { ownerPlayers } from './ownerPlayers';
+import { ownerProfile } from './ownerProfile';
 import { playerNudge } from './playerNudge';
 import { push } from './push';
+import { retention } from './retention';
 import { retired } from './retired';
+import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
 import { seasonRecap } from './seasonRecap';
 import { settings } from './settings';
@@ -98,6 +103,7 @@ export const en = {
   balanceKeys,
   board,
   boardLabel,
+  careerGuide,
   chat,
   chatReject,
   club,
@@ -106,6 +112,7 @@ export const en = {
   create,
   cup,
   cupApp,
+  cupPush,
   dex,
   fairness,
   firsts,
@@ -143,9 +150,12 @@ export const en = {
   owner,
   ownerConflict,
   ownerPlayers,
+  ownerProfile,
   playerNudge,
   push,
+  retention,
   retired,
+  scout,
   seasonGauge,
   seasonRecap,
   settings,

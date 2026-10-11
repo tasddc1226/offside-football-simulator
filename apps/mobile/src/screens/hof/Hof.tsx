@@ -1,11 +1,10 @@
 // 기록실(하단 메뉴, 웹 Hof.svelte) — 명예의 전당 전체 보기(100명씩 페이지 → 앱은 10명씩)와 영구결번(T-10-076), 라이브 랭킹(팀 랭킹,
-// T-10-092), 구단주 랭킹(T-11-028)을 탭으로 오간다. 팀 프로필을 열면 아래 고정 막대에 '← 이전으로'(웹 TeamProfile의 BackBar, 탭바 위)를 둔다.
+// T-10-092), 구단주 랭킹(T-11-028)을 탭으로 오간다. 팀 프로필에서는 뒤로 가기(T-11-213 스와이프·Android 뒤로)로 돌아온다.
 import { useSnapshot } from 'valtio';
 import type { HofTab } from '@offside/app-core/state';
 import { AdSlot } from '../../components/AdSlot';
 import { HallOfFame } from '../../components/HallOfFame';
 import { appState } from '../../store';
-import { BackBar } from '../../ui/ActionBar';
 import { Screen } from '../../ui/Screen';
 import { Topbar } from '../../ui/Topbar';
 import { View } from 'react-native';
@@ -29,18 +28,8 @@ const tabs = (): Record<HofTab, string> => ({
 export default function Hof() {
   const c = useColors();
   const { hof } = useSnapshot(appState);
-  const profile = hof.tab === 'teams' && !!hof.team;
   return (
-    <Screen
-      footer={
-        profile ? (
-          <BackBar
-            testID="team-profile-back"
-            fallback={() => (appState.hof = { ...appState.hof, team: null })}
-          />
-        ) : undefined
-      }
-    >
+    <Screen>
       <Topbar />
       <View
         accessibilityRole="tablist"
@@ -89,7 +78,7 @@ export default function Hof() {
       ) : hof.tab === 'teams' ? (
         <>
           <TeamRanking />
-          {profile ? null : <AdSlot place="records-bottom" />}
+          {hof.team ? null : <AdSlot place="records-bottom" />}
         </>
       ) : hof.tab === 'ach' ? (
         <AchievementRanking />

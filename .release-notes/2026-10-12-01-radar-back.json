@@ -1,0 +1,23 @@
+{
+  "id": "t-11-218-radar-back",
+  "title": "능력치 육각형이 선수 탭으로 돌아왔어요",
+  "items": [
+    "시즌 탭 훈련 방향은 다시 버튼으로 골라요",
+    "능력치 육각형은 선수 탭 능력치 카드에서 볼 수 있어요"
+  ],
+  "en": {
+    "title": "The stat hexagon is back on the Player tab",
+    "items": [
+      "Pick your training focus with buttons again on the Season tab.",
+      "The stat hexagon is back on the Player tab's Attributes card."
+    ]
+  },
+  "ja": {
+    "title": "能力値の六角形が選手タブに戻りました",
+    "items": [
+      "シーズンタブのトレーニング方針は、再びボタンで選べます。",
+      "能力値の六角形は選手タブの能力値カードで見られます。"
+    ]
+  },
+  "availability": "web-app"
+}

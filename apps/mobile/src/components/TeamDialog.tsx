@@ -1,5 +1,13 @@
 import type { ReactNode } from 'react';
-import { Keyboard, Modal, Pressable, ScrollView, View } from 'react-native';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
@@ -10,10 +18,12 @@ export function TeamDialog({
   title,
   children,
   close,
+  avoidKeyboard = false,
 }: {
   title: string;
   children: ReactNode;
   close: () => void;
+  avoidKeyboard?: boolean;
 }) {
   const c = useColors();
   const insets = useSafeAreaInsets();
@@ -27,7 +37,11 @@ export function TeamDialog({
       onShow={Keyboard.dismiss}
       onRequestClose={close}
     >
-      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+      <KeyboardAvoidingView
+        enabled={avoidKeyboard}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1, justifyContent: 'flex-end' }}
+      >
         <Pressable
           accessibilityLabel={L.close}
           onPress={close}
@@ -64,7 +78,7 @@ export function TeamDialog({
             {children}
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

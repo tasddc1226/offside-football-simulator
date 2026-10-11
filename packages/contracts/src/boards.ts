@@ -11,6 +11,7 @@ import {
   POST_VERSION_MAX,
 } from './board-limits.js';
 import { IsoUtcSchema } from './primitives.js';
+import { OwnerTitleSchema } from './teams.js';
 import { OwnerTierTagSchema } from './season-recap.js';
 
 export * from './board-limits.js';
@@ -99,14 +100,32 @@ export type PostSummary = z.infer<typeof PostSummarySchema>;
 export const PostSchema = PostSummarySchema.extend({ body: z.string() });
 export type Post = z.infer<typeof PostSchema>;
 
+/** Searchable admin news only. No author, translation drafts, viewer data or comments. */
+export const PublicNewsSummarySchema = PostSummarySchema.pick({
+  id: true,
+  board: true,
+  title: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const PublicNewsIndexResponseSchema = z.object({
+  posts: z.array(PublicNewsSummarySchema).max(1000),
+});
+export const PublicNewsPostResponseSchema = z.object({
+  post: PublicNewsSummarySchema.extend({ body: z.string() }),
+});
+
 export const CommentSchema = z.object({
   id: z.string(),
   nickname: z.string(),
+  avatarId: z.uuid().nullable().optional(),
   body: z.string(),
   /** 관리자가 쓴 댓글(운영자 표시). */
   admin: z.boolean(),
   /** T-11-128 작성자의 지난 시즌 구단주 티어(없으면 null). 옛 서버 응답엔 없다. */
   tier: OwnerTierTagSchema.nullable().default(null),
+  /** T-11-150 작성자의 대표 칭호(owner-title.ts id). 옛 서버 응답엔 없다. */
+  title: OwnerTitleSchema.nullable().default(null),
   /** 보는 사람이 지울 수 있다(본인 댓글이거나 관리자) — 이런 댓글엔 신고·차단 버튼을 그리지 않는다. */
   deletable: z.boolean(),
   createdAt: IsoUtcSchema,

@@ -7,7 +7,14 @@
  * 한 명만 넣으면 경기할 수 있다.
  */
 
-import { DETAIL_GROUP, type DetailPos, type PeakProfile, type PosGroup } from './positions.js';
+import {
+  BASE_DETAIL,
+  expandDetailRoles,
+  DETAIL_GROUP,
+  type DetailPos,
+  type PeakProfile,
+  type PosGroup,
+} from './positions.js';
 import type { TeamSynergy } from './team-synergy.js';
 
 export * from './team-synergy.js';
@@ -142,7 +149,7 @@ export function presetLayout(formation: FormationId): TeamPosition[] {
             : slot === 'CB'
               ? Math.max(30, Math.min(70, x))
               : x,
-        y: { GK: 91, FB: 75, CB: 75, DM: 62, CM: 49, AM: 37, W: 25, ST: 16 }[slot],
+        y: { GK: 91, FB: 75, CB: 75, DM: 62, CM: 49, AM: 37, W: 25, ST: 16 }[BASE_DETAIL[slot]],
         slot,
       };
     }),
@@ -150,7 +157,7 @@ export function presetLayout(formation: FormationId): TeamPosition[] {
 }
 
 /** 옮긴 필드 위치를 경기 포지션으로 해석한다. 골키퍼는 첫 자리 하나로 유지한다. */
-export function positionRole(x: number, y: number, index: number): DetailPos {
+export function legacyPositionRole(x: number, y: number, index: number): DetailPos {
   if (index === 0) return 'GK';
   const wide = x < 28 || x > 72;
   if (y < 28) return wide ? 'W' : 'ST';
@@ -158,6 +165,122 @@ export function positionRole(x: number, y: number, index: number): DetailPos {
   if (y < 56) return 'CM';
   if (y < 67) return 'DM';
   return wide ? 'FB' : 'CB';
+}
+
+/** Coordinate roles for new edits. Existing saved layouts retain their recorded slots until saved. */
+export function positionRole(x: number, y: number, index: number): DetailPos {
+  if (index === 0) return 'GK';
+  // Keep the preset midfield at x=25/75 central; side lanes sit at x=18/82.
+  const wide = y < 28 || y >= 67 ? x < 28 || x > 72 : x < 24 || x > 76;
+  if (wide) {
+    if (y < 43) return x < 50 ? 'LW' : 'RW';
+    if (y < 56) return x < 50 ? 'LM' : 'RM';
+    if (y < 67) return x < 50 ? 'LWB' : 'RWB';
+    return x < 50 ? 'LB' : 'RB';
+  }
+  if (y < 20) return 'ST';
+  if (y < 28) return 'CF';
+  if (y < 34) return 'SS';
+  if (y < 43) return 'AM';
+  if (y < 56) return 'CM';
+  if (y < 67) return 'DM';
+  return y >= 79 ? 'SW' : 'CB';
+}
+export const positionedLayout = (layout: TeamLayout): TeamPosition[] =>
+  layout.map((p, i) => ({ ...p, slot: positionRole(p.x, p.y, i) }));
+
+/**
+ * T-11-216 시즌 1 배치 프리셋. 저장 · 응답의 formation은 옛 앱도 아는 세 값(base)으로 두고, 모양은 자유 배치(layout)로
+ * 저장한다 — 자리마다의 포지션은 positionRole로 정해져 손으로 끌어 놓은 배치와 같다(경기 규칙은 그대로). 배치가 프리셋과
+ * 꼭 같으면 shapeOf가 그 이름을 돌려준다.
+ */
+/** T-11-217 팀 프리셋 수 · 이름 길이 상한. */
+export const TEAM_PRESET_MAX = 5;
+export const TEAM_PRESET_NAME_MAX = 12;
+
+type ShapePoint = readonly [x: number, y: number];
+// 카드가 덜 겹치게 줄 사이를 넓히고, 위아래로 가까운 자리는 옆으로 비켜 둔다. 첫 점은 골키퍼.
+const GK: ShapePoint = [50, 91];
+const BACK4: readonly ShapePoint[] = [
+  [15, 74],
+  [37, 77],
+  [63, 77],
+  [85, 74],
+];
+const SHAPES = {
+  '4-2-3-1': {
+    base: '4-3-3',
+    points: [GK, ...BACK4, [36, 57], [64, 57], [16, 38], [50, 40], [84, 38], [50, 17]],
+  },
+  '4-1-4-1': {
+    base: '4-3-3',
+    points: [GK, ...BACK4, [50, 59], [15, 46], [35, 44], [65, 44], [85, 46], [50, 18]],
+  },
+  '4-3-3 F9': {
+    base: '4-3-3',
+    points: [GK, ...BACK4, [30, 47], [50, 59], [70, 47], [16, 26], [50, 24], [84, 26]],
+  },
+  '4-4-1-1': {
+    base: '4-4-2',
+    points: [GK, ...BACK4, [15, 50], [37, 52], [63, 52], [85, 50], [50, 32], [50, 13]],
+  },
+  '3-4-3': {
+    base: '3-5-2',
+    points: [
+      GK,
+      [30, 75],
+      [50, 77],
+      [70, 75],
+      [13, 60],
+      [38, 52],
+      [62, 52],
+      [87, 60],
+      [16, 26],
+      [50, 16],
+      [84, 26],
+    ],
+  },
+  '5-3-2': {
+    base: '3-5-2',
+    points: [
+      [50, 93],
+      [12, 62],
+      [30, 73],
+      [50, 80],
+      [70, 73],
+      [88, 62],
+      [28, 46],
+      [50, 52],
+      [72, 46],
+      [38, 18],
+      [62, 18],
+    ],
+  },
+} as const satisfies Record<string, { base: FormationId; points: readonly ShapePoint[] }>;
+export type ShapeId = keyof typeof SHAPES;
+export const SHAPE_IDS = Object.keys(SHAPES) as ShapeId[];
+/** 프리셋이 저장할 formation(옛 앱이 아는 값). */
+export const shapeBase = (id: ShapeId): FormationId => SHAPES[id].base;
+/** 프리셋 배치(골키퍼 + 필드 10명). */
+export const shapeLayout = (id: ShapeId): TeamPosition[] =>
+  SHAPES[id].points.map(([x, y], i) => ({
+    x,
+    y,
+    slot: positionRole(x, y, i),
+  }));
+/** 배치가 프리셋과 꼭 같으면 그 이름, 아니면 저장된 formation(옮긴 배치 · 기본 포메이션). */
+/** 배치가 정확히 맞는 프리셋. 손으로 옮겼으면 null. */
+export function matchShape(layout: TeamLayout | null | undefined): ShapeId | null {
+  if (!layout) return null;
+  return (
+    SHAPE_IDS.find((k) =>
+      shapeLayout(k).every((p, i) => p.x === layout[i]?.x && p.y === layout[i]?.y),
+    ) ?? null
+  );
+}
+
+export function shapeOf(formation: FormationId, layout: TeamLayout | null | undefined): string {
+  return matchShape(layout) ?? formation;
 }
 
 /**
@@ -169,7 +292,7 @@ export function fit(slot: DetailPos, pos: PosGroup, dpos?: DetailPos | null): nu
   const group = DETAIL_GROUP[slot];
   if (group === pos) {
     if (dpos == null) return 0.95;
-    return dpos === slot ? 1 : 0.9;
+    return BASE_DETAIL[dpos] === BASE_DETAIL[slot] ? 1 : 0.9;
   }
   return group === 'GK' || pos === 'GK' ? 0.3 : 0.75;
 }
@@ -183,13 +306,22 @@ export type SlotPlayer = {
 };
 
 /**
- * 그 자리에서의 실력. 최고 시점 능력치가 있으면 그 자리 역할의 실력(최고 OVR을 넘지 않는다) — 발 빠른 센터백은
+ * T-11-197 자리 실력이 최고 OVR(주 포지션 실력)을 넘을 수 있는 폭. 주 포지션보다 다른 자리가 더 맞는 선수(예: 수미가
+ * 더 높은 박스 투 박스)가 손해를 보지 않게 하되, 풀백이 센터백 자리에서 센터백보다 크게 앞서지 않게 묶는다. 서버도
+ * 은퇴 기록의 자리별 실력을 이 폭까지만 받는다(apps/api plausibility boundProfile).
+ */
+export const SLOT_OVER_PEAK = 2;
+
+/**
+ * 그 자리에서의 실력. 최고 시점 능력치가 있으면 그 자리 역할의 실력(최고 OVR + SLOT_OVER_PEAK까지) — 발 빠른 센터백은
  * 풀백 자리에서도 잘 뛰고, 슈팅형 스트라이커는 윙어 자리에서 떨어진다. 없으면 최고 OVR × 적합도(반올림).
  */
 export const slotRating = (slot: DetailPos, p: SlotPlayer): number =>
-  p.roles ? Math.min(p.roles[slot], p.peak) : Math.round(p.peak * fit(slot, p.pos, p.dpos));
+  p.roles
+    ? Math.min(p.roles[slot] ?? p.roles[BASE_DETAIL[slot]], p.peak + SLOT_OVER_PEAK)
+    : Math.round(p.peak * fit(slot, p.pos, p.dpos));
 
-/** 그 자리 적합도(보여 주기) — 자리별 실력이 있으면 최고 OVR 대비 비율(소수 둘째 자리), 없으면 적합도 규칙. */
+/** 그 자리 적합도(보여 주기) — 자리별 실력이 있으면 최고 OVR 대비 비율(소수 둘째 자리, 주 포지션보다 맞으면 1을 넘는다), 없으면 적합도 규칙. */
 export const slotFit = (slot: DetailPos, p: SlotPlayer, rating = slotRating(slot, p)): number =>
   p.roles && p.peak > 0 ? Math.round((rating / p.peak) * 100) / 100 : fit(slot, p.pos, p.dpos);
 
@@ -202,15 +334,18 @@ export type LineStrength = Record<Line, number> & { gk: number };
  * 자리마다 공격·중원·수비에 보태는 몫(합 1, 골키퍼는 골문만). 풀백은 수비 중심에 측면 공격 가담, 수비형
  * 미드필더는 중원과 수비 반반, 윙어는 공격 중심에 중원 가담.
  */
-export const SLOT_LINES: Record<Exclude<DetailPos, 'GK'>, Record<Line, number>> = {
-  ST: { atk: 0.9, mid: 0.1, def: 0 },
-  W: { atk: 0.65, mid: 0.3, def: 0.05 },
-  AM: { atk: 0.4, mid: 0.55, def: 0.05 },
-  CM: { atk: 0.15, mid: 0.65, def: 0.2 },
-  DM: { atk: 0.05, mid: 0.5, def: 0.45 },
-  FB: { atk: 0.2, mid: 0.3, def: 0.5 },
-  CB: { atk: 0, mid: 0.05, def: 0.95 },
-};
+export const SLOT_LINES: Record<Exclude<DetailPos, 'GK'>, Record<Line, number>> = expandDetailRoles(
+  {
+    GK: { atk: 0, mid: 0, def: 0 },
+    ST: { atk: 0.9, mid: 0.1, def: 0 },
+    W: { atk: 0.65, mid: 0.3, def: 0.05 },
+    AM: { atk: 0.4, mid: 0.55, def: 0.05 },
+    CM: { atk: 0.15, mid: 0.65, def: 0.2 },
+    DM: { atk: 0.05, mid: 0.5, def: 0.45 },
+    FB: { atk: 0.2, mid: 0.3, def: 0.5 },
+    CB: { atk: 0, mid: 0.05, def: 0.95 },
+  },
+);
 /**
  * 줄마다 기준 인원(필드 10명의 몫 합과 같은 10). 한 줄에 몫이 기준보다 많으면 그 줄이 LINE_PRESENCE_K점씩 세지고,
  * 합이 늘 10이라 다른 줄은 그만큼 약해진다 — 포메이션을 바꾸면 공격·중원·수비 무게가 옮겨 간다.

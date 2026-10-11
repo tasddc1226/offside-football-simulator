@@ -231,7 +231,7 @@ test('소식: 닉네임을 정하면 바로 그 이름으로 댓글을 쓴다', 
       (v) => v.id,
     ),
   ).toEqual([]);
-  await gate.getByLabel('댓글 닉네임').fill(' 루키 ');
+  await gate.getByLabel('구단주 이름').fill(' 루키 ');
   await gate.locator('[data-act="save-nickname"]').click();
   // 클릭 직후엔 요청이 아직 목에 닿지 않았을 수 있다 — 도착할 때까지 기다린다.
   await expect
@@ -327,8 +327,8 @@ test('홈 하단 메뉴: 소식 → 릴리즈 노트로 바꾸기 → 기록실 
 
   await nav.getByRole('button', { name: '기록실' }).click();
   await expect(page.locator('h1')).toHaveText('명예의 전당');
-  await nav.getByRole('button', { name: '구단주' }).click();
-  await expect(page.locator('h1')).toHaveText('구단주');
+  await nav.getByRole('button', { name: '내 구단' }).click();
+  await expect(page.locator('h1')).toHaveText('내 구단');
   await nav.getByRole('button', { name: '설정' }).click();
   await expect(page.locator('h1')).toHaveText('환경설정');
   await nav.getByRole('button', { name: '홈' }).click();
@@ -439,4 +439,28 @@ test('새 소식 알림: 본 글이 수정되면 다시 알린다', async ({ pag
   await page.reload();
   await expect(page.locator('[data-home-news="release"]')).toContainText(RELEASE.title);
   await expect(banner).toHaveCount(0);
+});
+
+test('comments display the owner profile thumbnail', async ({ page }) => {
+  const avatarId = '11111111-1111-4111-8111-111111111111';
+  await mockBoards(page);
+  await page.route(`${API}/v1/avatars/*`, (r) =>
+    r.fulfill({ path: 'public/brand/offside-icon-v7-64.png' }),
+  );
+  await page.route(`${API}/v1/boards/posts/${NOTICE.id}`, (r) =>
+    r.fulfill(
+      ok({
+        post: { ...NOTICE, body: '본문' },
+        comments: [{ ...COMMENT, admin: false, nickname: '사진구단주', avatarId }],
+      }),
+    ),
+  );
+  await page.goto('/');
+  await page.locator('[data-home-news="notice"] [data-act="news-all"]').click();
+  await page.locator(`[data-post-row="${NOTICE.id}"]`).click();
+  await expect(page.locator(`[data-comment="${COMMENT.id}"] .owner-avatar img`)).toHaveAttribute(
+    'src',
+    `${API}/v1/avatars/${avatarId}`,
+  );
+  await expect(page.locator(`[data-comment="${COMMENT.id}"] .owner-avatar img`)).toBeVisible();
 });

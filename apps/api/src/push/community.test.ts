@@ -7,6 +7,7 @@ import { fakeRoom } from '../test/chatRoom.js';
 import { boardComments, boardPosts, profiles } from '../db/schema.js';
 import { communityOwnerEmail, communityRecipients, communityStatements } from './community.js';
 import { runPersonalPush } from './personal.js';
+import { consumeCommunityPush } from './communityQueue.js';
 import { queueNotification } from '../db/repos/notifications.js';
 
 let ctx: TestD1;
@@ -14,6 +15,9 @@ let owner: Awaited<ReturnType<typeof issueAdminCookie>>;
 let user: Awaited<ReturnType<typeof issueGoogleCookie>>;
 let postId: string;
 beforeEach(async () => {
+  // Queue before the simulated KST 23:00 dispatch, regardless of the real CI clock.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-10T13:59:00.000Z'));
   ctx = await createTestD1();
   ctx.env.ADMIN_EMAILS = ADMIN_EMAIL;
   ctx.env.ADMIN_COMMUNITY_PUSH_ENABLED = '1';
@@ -29,6 +33,7 @@ beforeEach(async () => {
   await addAppPushDevice(ctx, user.profileId);
 });
 afterEach(async () => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   await ctx.dispose();
@@ -36,8 +41,12 @@ afterEach(async () => {
 const rows = async (table: string) =>
   (await ctx.env.DB.prepare(`SELECT * FROM ${table}`).all()).results;
 async function comment(cookie = user.cookie) {
-  const res = await callJson(ctx.env, 'POST', `/v1/boards/posts/${postId}/comments`, {
+  const path = `${ctx.env.ENVIRONMENT === 'production' ? 'https://api.offside-lab.com' : ''}/v1/boards/posts/${postId}/comments`;
+  const res = await callJson(ctx.env, 'POST', path, {
     cookie,
+    ...(ctx.env.ENVIRONMENT === 'production'
+      ? { headers: { Origin: 'https://offside-lab.com' } }
+      : {}),
     body: { body: 'A new comment' },
   });
   expect(res.status).toBe(201);
@@ -69,6 +78,221 @@ function enable() {
   ctx.env.ENVIRONMENT = 'production';
   ctx.env.PERSONAL_PUSH_ENABLED = '1';
 }
+
+function queuePilot() {
+  enable();
+  ctx.env.ADMIN_COMMUNITY_QUEUE_ENABLED = '1';
+  const queue = { send: vi.fn(), sendBatch: vi.fn(), metrics: vi.fn() };
+  ctx.env.ADMIN_PUSH_QUEUE = queue;
+  return queue;
+}
+function queueBatch(sourceKey: string) {
+  const message = {
+    id: crypto.randomUUID(),
+    timestamp: new Date(),
+    attempts: 1,
+    body: { version: 1, sourceKey },
+    ack: vi.fn(),
+    retry: vi.fn(),
+  };
+  return {
+    queue: 'offside-admin-push-production',
+    metadata: { metrics: { backlogCount: 1, backlogBytes: 100 } },
+    messages: [message],
+    ackAll: vi.fn(),
+    retryAll: vi.fn(),
+  };
+}
+
+describe('admin Queue pilot', () => {
+  it('publishes only after a committed comment; payload contains only version and source key', async () => {
+    const queue = queuePilot();
+    queue.sendBatch.mockImplementation(async () => {
+      expect(await rows('board_comments')).toHaveLength(1);
+      expect(await rows('push_deliveries')).toHaveLength(1);
+    });
+    const id = await comment();
+    expect(queue.sendBatch).toHaveBeenCalledWith([
+      { body: { version: 1, sourceKey: `admin-community-comment:${id}` }, contentType: 'json' },
+    ]);
+    await comment(owner.cookie);
+    expect(queue.sendBatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not publish a rolled-back comment; failed Queue publish leaves a cron-recoverable delivery', async () => {
+    const queue = queuePilot();
+    await ctx.env.DB.exec(
+      "CREATE TRIGGER fail_queue BEFORE INSERT ON notifications BEGIN SELECT RAISE(ABORT, 'test'); END;",
+    );
+    const r = await callJson(
+      ctx.env,
+      'POST',
+      `https://api.offside-lab.com/v1/boards/posts/${postId}/comments`,
+      {
+        cookie: user.cookie,
+        body: { body: 'Rollback' },
+        headers: { Origin: 'https://offside-lab.com' },
+      },
+    );
+    expect(r.status).toBe(503);
+    expect(queue.sendBatch).not.toHaveBeenCalled();
+    await ctx.env.DB.exec('DROP TRIGGER fail_queue;');
+    queue.sendBatch.mockRejectedValue(new Error('Queue unavailable'));
+    await comment();
+    expect(await rows('push_deliveries')).toMatchObject([{ state: 'pending' }]);
+    const transport = expo();
+    await runPersonalPush(ctx.env, night(), transport);
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+
+  it('publishes lounge wakeups after D1 persistence and keeps cron fallback on Queue failure', async () => {
+    const queue = queuePilot();
+    const fake = lounge();
+    await sendChat(fake);
+    expect(queue.sendBatch).not.toHaveBeenCalled();
+    queue.sendBatch.mockRejectedValue(new Error('offline'));
+    await fake.room.alarm();
+    expect(queue.sendBatch).toHaveBeenCalledTimes(1);
+    expect(await rows('push_deliveries')).toMatchObject([{ state: 'pending' }]);
+    await fake.room.alarm();
+    expect(queue.sendBatch).toHaveBeenCalledTimes(1);
+    const transport = expo();
+    await runPersonalPush(ctx.env, night(), transport);
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends only the selected admin event and deduplicates Queue redelivery racing cron', async () => {
+    queuePilot();
+    const id = await comment();
+    const other = await comment();
+    const batch = queueBatch(`admin-community-comment:${id}`);
+    const transport = expo();
+    await consumeCommunityPush(batch, ctx.env, night(), transport);
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(await rows('push_deliveries')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ state: 'accepted' }),
+        expect.objectContaining({ state: 'pending' }),
+      ]),
+    );
+    expect(batch.messages[0]!.ack).toHaveBeenCalledOnce();
+    await Promise.all([
+      consumeCommunityPush(batch, ctx.env, night(), transport),
+      consumeCommunityPush(
+        queueBatch(`admin-community-comment:${other}`),
+        ctx.env,
+        night(),
+        transport,
+      ),
+      runPersonalPush(ctx.env, night(), transport),
+    ]);
+    expect(transport).toHaveBeenCalledTimes(2);
+    expect((await rows('push_deliveries')).every((r) => r.state === 'accepted')).toBe(true);
+  });
+
+  it('retains ordinary user events for cron, even with a forged community source key', async () => {
+    queuePilot();
+    const sourceKey = 'admin-community-chat:forged';
+    await queueNotification(ctx.env.DB, {
+      profileId: owner.profileId,
+      sourceKey,
+      now: new Date().toISOString(),
+      push: true,
+      content: {
+        kind: 'team',
+        title: 'Ordinary',
+        body: 'Keep cron',
+        target: { type: 'screen', screen: 'team' },
+      },
+    });
+    const transport = expo();
+    await consumeCommunityPush(queueBatch(sourceKey), ctx.env, night(), transport);
+    expect(transport).not.toHaveBeenCalled();
+    expect(await rows('push_deliveries')).toMatchObject([{ state: 'pending', attempts: 0 }]);
+  });
+
+  it('rechecks deleted comments and the pilot switch before delivery', async () => {
+    queuePilot();
+    const id = await comment();
+    await ctx.db
+      .update(boardComments)
+      .set({ deletedAt: new Date().toISOString() })
+      .where(eq(boardComments.id, id));
+    const transport = expo();
+    await consumeCommunityPush(
+      queueBatch(`admin-community-comment:${id}`),
+      ctx.env,
+      night(),
+      transport,
+    );
+    expect(transport).not.toHaveBeenCalled();
+    expect(await rows('push_deliveries')).toMatchObject([{ state: 'cancelled' }]);
+    const next = await comment();
+    ctx.env.ADMIN_COMMUNITY_QUEUE_ENABLED = '0';
+    const batch = queueBatch(`admin-community-comment:${next}`);
+    await consumeCommunityPush(batch, ctx.env, night(), transport);
+    expect(batch.ackAll).toHaveBeenCalledOnce();
+    expect(transport).not.toHaveBeenCalled();
+    await runPersonalPush(ctx.env, night(), transport);
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not resend after Expo acceptance when recording the result fails', async () => {
+    queuePilot();
+    const id = await comment();
+    const batch = queueBatch(`admin-community-comment:${id}`);
+    const transport = expo();
+    // The claim is persisted, but the post-send finish transaction fails.
+    const flaky = new Proxy(ctx.env.DB, {
+      get(target, key) {
+        if (key === 'batch')
+          return async (statements: D1PreparedStatement[]) => {
+            if (transport.mock.calls.length) throw new Error('DB unavailable after send');
+            return target.batch(statements);
+          };
+        const value = Reflect.get(target, key) as unknown;
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    await consumeCommunityPush(batch, { ...ctx.env, DB: flaky }, night(), transport);
+    expect(batch.messages[0]!.retry).toHaveBeenCalledWith({ delaySeconds: 60 });
+    expect(await rows('push_deliveries')).toMatchObject([{ state: 'sending' }]);
+    await consumeCommunityPush(batch, ctx.env, night() + 180_000, transport);
+    await runPersonalPush(ctx.env, night() + 300_000, transport);
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(await rows('push_deliveries')).toMatchObject([{ state: 'unknown' }]);
+  });
+
+  it('acks invalid payloads without DB work or transport calls', async () => {
+    queuePilot();
+    const batch = queueBatch('ordinary-event');
+    const prepare = vi.spyOn(ctx.env.DB, 'prepare');
+    const transport = expo();
+    await consumeCommunityPush(batch, ctx.env, night(), transport);
+    expect(batch.messages[0]!.ack).toHaveBeenCalledOnce();
+    expect(prepare).not.toHaveBeenCalled();
+    expect(transport).not.toHaveBeenCalled();
+  });
+
+  it('retries explicit throttling at the D1 backoff time, but never blindly retries ambiguous sends', async () => {
+    queuePilot();
+    const id = await comment();
+    const batch = queueBatch(`admin-community-comment:${id}`);
+    const transport = vi.fn(async () => new Response(null, { status: 429 }));
+    await consumeCommunityPush(batch, ctx.env, night(), transport);
+    expect(batch.messages[0]!.retry).toHaveBeenCalledWith({ delaySeconds: 300 });
+    await consumeCommunityPush(batch, ctx.env, night() + 1000, transport);
+    expect(transport).toHaveBeenCalledTimes(1);
+    const lost = vi.fn(async () => {
+      throw new Error('Response lost');
+    });
+    await consumeCommunityPush(batch, ctx.env, night() + 300_000, lost);
+    expect(await rows('push_deliveries')).toMatchObject([{ state: 'unknown' }]);
+    expect(batch.messages[0]!.ack).toHaveBeenCalled();
+    await consumeCommunityPush(batch, ctx.env, night() + 600_000, lost);
+    expect(lost).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe('admin community push', () => {
   it('queues a user comment for the one verified owner, with the exact board destination; skips admin replies', async () => {

@@ -34,6 +34,7 @@ const ko = {
   appleVia: 'Apple 계정으로 로그인했어요.',
   // 로그인 버튼 · auth.ts
   loginGoogle: '구글로 로그인',
+  loginApple: 'Apple로 로그인',
   googleFinishFail: '구글 로그인을 마치지 못했어요. 다시 시도해 주세요.',
   appleStartFail: 'Apple 로그인을 시작하지 못했어요.',
   appleFinishFail: 'Apple 로그인을 마치지 못했어요. 다시 시도해 주세요.',

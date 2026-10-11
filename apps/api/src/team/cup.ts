@@ -1,3 +1,4 @@
+import { isTitleStage, TITLE_STAGES, titleIdOf } from '@offside/contracts/owner-title';
 import {
   CUP_GROUP_ROUNDS,
   CUP_KO_ROUNDS,
@@ -21,6 +22,7 @@ import { cupKo, cupTitle } from '../cupText.js';
 import { predictionSettlementStatements } from './cupPredictions.js';
 import { grantItemStatement } from '../db/repos/itemShop.js';
 import { cupSchedule } from './cupSchedule.js';
+import { cupResultStatements } from '../push/cupResult.js';
 import { eventNotificationStatements } from '../push/events.js';
 import { lineupsOf, matchDetailOf } from './match.js';
 import { penaltyShootout, simulateMatch } from './sim.js';
@@ -94,6 +96,25 @@ export function groupTable(
 /** KST 'HH:MM'(추첨 알림의 첫 경기 시각). */
 const kstHm = (iso: string) => new Date(Date.parse(iso) + 9 * 3600_000).toISOString().slice(11, 16);
 
+/**
+ * T-11-150 칭호를 받는 성적이면 대표 칭호를 자동으로 바꾼다 — 구단주가 직접 고르지 않았고(title_pinned 0) 새 칭호가 지금
+ * 칭호보다 좋거나 같은 단계일 때. owner-title titlesOf 순서(단계, 같으면 최근 회차)와 같다 — 새 대회가 가장 최근 회차다.
+ */
+function autoTitle(d1: D1Database, cup: CupDef, profileId: string, stage: CupStage) {
+  if (!isTitleStage(stage)) return [];
+  const t = stage;
+  // 지금 칭호가 새 칭호보다 아래거나 같은 단계면 바꾼다(우승은 늘, 준우승은 준우승·4강 위로, 4강은 4강 위로).
+  const below = TITLE_STAGES.slice(TITLE_STAGES.indexOf(t));
+  return [
+    d1
+      .prepare(
+        `UPDATE profiles SET title = ? WHERE id = ? AND title_pinned = 0
+         AND (title IS NULL OR ${below.map(() => 'title LIKE ?').join(' OR ')})`,
+      )
+      .bind(titleIdOf(cup.edition, t), profileId, ...below.map((b) => `%-${b}`)),
+  ];
+}
+
 function rewardStatements(
   d1: D1Database,
   cup: CupDef,
@@ -112,7 +133,8 @@ function rewardStatements(
     grantItemStatement(d1, e.profileId, 'reroll', CUP_REWARDS[stage].rerolls, now, {
       sql: 'changes() = 1',
     }),
-    // 최종 성적·보상은 알림함에만 둔다. 같은 cron에 나가는 경기 결과 푸시와 겹치면 예산(60분 간격)에 밀려 사라진다.
+    ...autoTitle(d1, cup, e.profileId, stage),
+    // 개인 성적·보상은 알림함에 남긴다. 대회 종료 때 참가·예측을 합쳐 종료 푸시 한 건을 보낸다.
     ...notify(
       d1,
       e.profileId,
@@ -375,6 +397,7 @@ export async function playCupMatch(
         cupKo('matchTitle', { round, result }),
         score,
         now,
+        m.round !== 'f',
       ),
     );
   }
@@ -426,6 +449,7 @@ export async function advanceRound(
         d1
           .prepare(`UPDATE cup_state SET done_at = ? WHERE cup_id = ? AND done_at IS NULL`)
           .bind(now, cup.id),
+        ...cupResultStatements(d1, cup, now),
       );
     } else {
       const next = CUP_KO_ROUNDS[CUP_KO_ROUNDS.indexOf(round) + 1]!;

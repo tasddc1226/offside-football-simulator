@@ -1,3 +1,4 @@
+import { grantPioneerTitles } from '../db/repos/ownerTitles.js';
 // T-11-128 시즌 결산. 시즌이 끝나면(프리시즌은 첫 시즌 개막, 시즌은 마감) 5분 cron이 한 단계씩 굳힌다 — 한 번 실행의
 // D1 하위 요청 한도(1,000) 안에 들게 단계를 나눈다. 굳힌 결산·휘장은 다시 세지 않는다(계산식이 바뀌어도 그대로).
 //
@@ -327,6 +328,7 @@ export async function runSeasonClose(db: Db, now: string) {
       state.step = 'honors';
     } else {
       await closeHonors(db, season, now);
+      await grantPioneerTitles(db, now);
       state.step = 'done';
       state.closedAt = now;
     }

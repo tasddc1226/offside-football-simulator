@@ -23,13 +23,20 @@ export type Bindings = {
   ADMIN_COMMUNITY_PUSH_EMAIL?: string;
   /** Enable only after the app understands community notifications. */
   ADMIN_COMMUNITY_PUSH_ENABLED?: string;
+  /** Queue pilot: only admin comment/lounge events. Cron remains the recovery path. */
+  ADMIN_COMMUNITY_QUEUE_ENABLED?: string;
+  ADMIN_PUSH_QUEUE?: Queue<{ version: 1; sourceKey: string }>;
   REENGAGEMENT_PUSH_ENABLED?: string;
+  CAREER_REMINDER_ENABLED?: string;
+  CUP_PUSH_QUEUE?: Queue<{ version: 1; cupId: string }>;
+  CAREER_PUSH_QUEUE?: Queue<{ version: 1; batchId: string }>;
   /** Expo enhanced push security용 secret. 클라이언트에는 넣지 않는다. */
   EXPO_PUSH_ACCESS_TOKEN?: string;
   /** Emergency stop for dormant career archival (restores remain enabled). */
   CAREER_RETENTION_DISABLED?: string;
   /** Emergency stops for telemetry offload and public HOF read sessions. */
   SEASON_EVENTS_ARCHIVE_DISABLED?: string;
+  SEASON_TELEMETRY_ARCHIVE_DISABLED?: string;
   D1_READ_SESSIONS_DISABLED?: string;
   DB: D1Database;
   /** local|staging|production. */
@@ -48,6 +55,8 @@ export type Bindings = {
   APPLE_FAKE?: string;
   /** T-11-003 Apple 신원 토큰의 aud(앱 번들 id). 없으면 com.offsidelab.app. */
   APPLE_BUNDLE_ID?: string;
+  /** T-11-204 웹 Sign in with Apple의 Services ID(웹 신원 토큰의 aud). 없으면 웹 애플 로그인을 쓰지 않는다. */
+  APPLE_WEB_CLIENT_ID?: string;
   /** T-11-167 secret. 계정 삭제 때 Sign in with Apple 토큰을 해지한다(가이드라인 5.1.1(v)). 셋 중 하나라도 없으면 해지를 건너뛴다. */
   APPLE_TEAM_ID?: string;
   APPLE_SIGNIN_KEY_ID?: string;

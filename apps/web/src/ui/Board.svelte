@@ -1,6 +1,7 @@
 <script lang="ts">
-  import GoogleLoginButton from './GoogleLoginButton.svelte';
+  import LoginButtons from './LoginButtons.svelte';
   import TierBadge from './TierBadge.svelte';
+  import TitleBadge from './cup/TitleBadge.svelte';
   import OwnerAvatar from './OwnerAvatar.svelte';
   // T-10-011 소식 화면 — 공지사항·릴리즈 노트 게시판. 읽기는 누구나, 글은 관리자만(수정·삭제 포함),
   // 댓글은 구글로 로그인하고 닉네임을 정한 사람만(T-10-028). 게임과 무관해 메인 번들과 떼어 처음 열 때 불러온다.
@@ -21,7 +22,6 @@
   import { POST_LANGS, draftOf, inputOf, postLangLabel, withDraftTranslations, type PostDraft } from '@offside/app-core/boardEditor';
   import { appState } from './state.svelte.js';
   import { openBoard } from './nav.js';
-  import { startGoogleLogin } from './login.js';
   import { toast } from './helpers.js';
   import { createTranslations } from './translations.svelte.js';
   import { canTranslate } from '@offside/app-core/userTranslate';
@@ -200,7 +200,6 @@
     if (detail?.post.id === post.id) detail.comments = [...detail.comments, r.data];
   }
   // 로그인을 마치고 돌아오면 보던 글로 다시 연다.
-  const login = () => startGoogleLogin({ board, postId: detail?.post.id ?? null });
   async function removeComment(c: Comment) {
     if (!confirm(L.deleteCommentConfirm)) return;
     const r = await api.deleteComment(c.id);
@@ -315,6 +314,7 @@
               <span class="muted fs-xs">{postDetailMeta(post)}</span>
             </div>
             <h2 style="margin:0">{post.title}</h2>
+            <a href={`/news/${post.id}/`} class="fs-sm">{L.publicNews}</a>
           </div>
           <div class="board-body">
             {#each parseBody(post.body) as b, i (i)}
@@ -340,7 +340,7 @@
             <div class="board-comment" data-comment={c.id}>
               <div class="row" style="gap:6px;align-items:center">
                 <!-- 관리자 댓글은 닉네임 대신 운영자 배지만(예전에 누구나 '운영자'라고 쓴 댓글과 구분된다). -->
-                {#if c.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<OwnerAvatar name={c.nickname} /><b>{c.nickname}</b>{#if c.tier}<TierBadge tag={c.tier} />{/if}{/if}
+                <OwnerAvatar avatarId={c.avatarId} name={c.nickname} />{#if c.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{c.nickname}</b>{#if c.tier}<TierBadge tag={c.tier} />{/if}{#if c.title}<TitleBadge title={c.title} size="sm" />{/if}{/if}
                 <span class="muted fs-xs">{dateOf(c.createdAt)}</span>
                 {#if c.deletable}<button class="icon-btn board-comment-del" onclick={() => removeComment(c)}>{L.remove}</button>
                 {:else if !c.admin}<button class="icon-btn board-comment-del" aria-expanded={reporting === c.id} data-act="comment-report" onclick={() => (reporting = reporting === c.id ? null : c.id)}>{L.report}</button>{/if}
@@ -385,7 +385,7 @@
           {:else if !viewer.google}
             <div class="comment-gate" data-comment-gate="login">
               <p class="muted">{L.loginGate}</p>
-              <GoogleLoginButton act="comment-login" onclick={login} />
+              <LoginButtons act="comment-login" back={{ board, postId: detail?.post.id ?? null }} />
             </div>
           {:else if !viewer.nickname}
             <div class="comment-gate" data-comment-gate="nickname">

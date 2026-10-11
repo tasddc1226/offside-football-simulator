@@ -8,6 +8,10 @@ import { appState, hofStart, type Screen } from './state.svelte.js';
 
 /** 화면을 바꾸고 맨 위로 올린다. 다른 화면으로 가면 아직 읽히지 않은 focus는 버린다. */
 export function go(screen: Screen) {
+  if (screen === 'recap') {
+    screen = 'honors';
+    appState.honorsView = 'records';
+  }
   pending = null;
   appState.screen = screen;
   window.scrollTo(0, 0);

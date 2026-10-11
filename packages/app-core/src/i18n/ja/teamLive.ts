@@ -31,6 +31,7 @@ export const teamLive: Translation<TeamLiveMsgs> = {
   resultWin: '勝利をつかんだ！',
   resultLoss: '悔しい敗戦だ。',
   resultDraw: '決着はつかなかった。',
+  resultTeamWin: (p) => `${p.t}が勝利をつかんだ！`,
   phase1st: '前半',
   phaseHt: 'ハーフタイム',
   phase2nd: '後半',

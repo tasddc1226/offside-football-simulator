@@ -1,0 +1,20 @@
+{
+  "id": "t-11-196-career-retirement-guide",
+  "title": "커리어에서 영구결번 도전 현황을 확인해요",
+  "items": [
+    "커리어 탭에서 구단별 소속 시즌, 기여도와 내 등번호의 영구결번 여부를 확인할 수 있어요."
+  ],
+  "en": {
+    "title": "Track your number retirement progress",
+    "items": [
+      "The Career tab now shows seasons at each club, contribution progress and whether your number is already retired."
+    ]
+  },
+  "ja": {
+    "title": "キャリアで永久欠番への挑戦状況を確認",
+    "items": [
+      "キャリアタブでクラブ別の在籍シーズン、貢献度、背番号の永久欠番登録状況を確認できます。"
+    ]
+  },
+  "availability": "web-app"
+}

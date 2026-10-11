@@ -2,6 +2,10 @@ import type { CupTextKey } from '../ko/cup.js';
 
 // T-11-145 오프사이드 컵 서버 문구(영어).
 export const CUP_EN: Record<CupTextKey, string> = {
+  completeTitle: '{cup} has ended',
+  completeBody: 'Check the cup results and your reward rerolls.',
+  predictionRewardBody: 'Check the cup results and the rerolls earned from your predictions.',
+  predictionResultBody: 'Check the cup results and how your predictions did.',
   predictionNotFinished: 'Only finished matches can be settled.',
   predictionClosed: 'This match has started or is not available for predictions.',
   title: 'Season {season} OFFSIDE Cup #{edition}',
@@ -26,6 +30,7 @@ export const CUP_EN: Record<CupTextKey, string> = {
   withdrawClosed: "Entries have closed, so you can't withdraw.",
   noReroll: "You don't have any rerolls.",
   noBoost: "You don't have any boost tickets.",
+  noScout: "You don't have any premium scout tickets.",
   iapInvalid: "We couldn't verify this purchase.",
   iapPending: "The payment hasn't finished yet. You'll get it automatically once it does.",
   iapOtherAccount: 'This purchase was made on a different account. Log in with that account.',
@@ -56,6 +61,7 @@ export const CUP_EN: Record<CupTextKey, string> = {
   group: 'Group stage',
   championTitle: '{cup}: Champions!',
   outTitle: '{cup}: your run is over',
+  titleNotOwned: "You haven't earned that title.",
   adminPast: 'Entries must open in the future.',
   adminSeason: 'The whole cup must fall within one season.',
   adminOverlap: 'Overlaps with cup #{edition}.',

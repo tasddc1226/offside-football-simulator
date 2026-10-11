@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  cardBody,
   cardFootNote,
   cardTier,
   fmtValue,
@@ -47,6 +48,15 @@ describe('cardFootNote (T-11-080)', () => {
     );
     expect(cardFootNote({ attrs: {}, cardValue: 543_000 })).toBe('기준가 54억 3천만');
     expect(cardFootNote({ attrs: {}, cardValue: null })).toBeNull();
+  });
+});
+
+describe('cardBody (T-11-211)', () => {
+  it('키·몸무게 뒤에 주발, 체격이 없으면 주발만, 둘 다 없으면 null', () => {
+    expect(cardBody({ height: 183, weight: 76, foot: '왼발' })).toBe('183cm · 76kg · 왼발');
+    expect(cardBody({ foot: '양발' })).toBe('양발');
+    expect(cardBody({ height: 183, weight: 76 })).toBe('183cm · 76kg');
+    expect(cardBody({})).toBeNull();
   });
 });
 

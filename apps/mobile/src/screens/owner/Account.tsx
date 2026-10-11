@@ -15,9 +15,9 @@ import { accountCache, appState } from '../../store';
 import { noteOwner } from '@offside/app-core/api/friendPending';
 import { accountLabel, isMember } from '@offside/app-core/account';
 import { closeSheet, refreshAccount, showSheet } from '../../game/host';
+import { appleReauthCode } from '../../platform/auth';
 import { setSessionToken } from '../../platform/session';
 import { rem } from '../../theme/type';
-import { NicknameForm } from '../../components/NicknameForm';
 import { Btn, Row, Txt } from '../../ui';
 import { LinkBtn } from '../settings/parts';
 import { accountText as L } from '@offside/app-core/i18n/ko/account';
@@ -62,11 +62,15 @@ function askLogout() {
     ],
   );
 }
-/** 계정 삭제(스토어 심사 필수): 확인 → 삭제 시작(확인 토큰) → 삭제 확정. 끝나면 세션 토큰도 지운다. */
+/** 계정 삭제(스토어 심사 필수): 확인 → (Apple 연결이면 Apple 재확인) → 삭제 시작(확인 토큰) → 삭제 확정.
+ *  끝나면 세션 토큰도 지운다. Apple 재확인을 취소하면 지우지 않는다. */
 async function doDeleteFlow() {
+  const linked = accountCache.value;
+  const code = linked && linked !== 'error' && linked.linked.apple ? await appleReauthCode() : null;
+  if (code === 'cancel') return;
   const start = await startProfileDeletion();
   if (!start.ok) return set('error');
-  const done = await confirmProfileDeletion(start.data.confirmToken);
+  const done = await confirmProfileDeletion(start.data.confirmToken, code ?? undefined);
   if (done.ok) await setSessionToken(null);
   set(done.ok ? null : 'error');
 }
@@ -78,7 +82,7 @@ function askDelete() {
 }
 
 /** 관리자 계정(구단주 화면이 확인한다)은 댓글 닉네임이 '운영자'로 고정돼 바꾸는 칸이 없다. */
-export function Account({ admin = false }: { admin?: boolean }) {
+export function Account() {
   const cache = useSnapshot(accountCache);
   const profile = cache.value;
 
@@ -147,18 +151,6 @@ export function Account({ admin = false }: { admin?: boolean }) {
         <Btn kind="primary" sm onPress={askLogout} testID="logout">
           {L.logout}
         </Btn>
-      </View>
-      <View style={{ gap: 6 }}>
-        <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-          {profile.nickname ? L.nickname : L.nicknamePrompt}
-        </Txt>
-        {admin ? (
-          <Txt style={{ fontSize: rem(0.75), fontWeight: '700' }}>
-            {L.nicknameFixed({ nickname: profile.nickname })}
-          </Txt>
-        ) : (
-          <NicknameForm key={profile.nickname ?? ''} current={profile.nickname} />
-        )}
       </View>
       <Row gap={6} wrap={false} style={{ justifyContent: 'flex-end' }}>
         {profile.linked.google ? (

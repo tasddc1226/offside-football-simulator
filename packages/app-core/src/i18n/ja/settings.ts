@@ -49,6 +49,8 @@ export const settings: Translation<SettingsMsgs> = {
   consentOptional: '（任意）',
   consentBody1:
     '同意すると、Google Analyticsが訪問経路、画面の移動、キャリアの開始・シーズン完了・引退・シェアボタンの利用をCookieで分析します。名前とキャリアIDは送信しません。同意しなくても、ゲームは同じように遊べます。',
+  consentMeta:
+    '広告からの訪問を測るため、Meta（Facebook・Instagram）ピクセルも使います。Cookieで訪問とキャリア開始・最初のシーズン完了・App Storeボタンの利用だけをMetaに送ります。',
   consentBody2:
     '分析情報はGoogleの海外サーバーで処理され、ユーザー・イベントデータは2か月間保管されます。設定からいつでも変更できます。',
   consentMore: '詳しく見る',

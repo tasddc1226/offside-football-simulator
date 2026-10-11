@@ -81,6 +81,7 @@ test('은퇴한 내 선수의 공유 이미지를 만들어 저장한다', async
 
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player="0"]').click();
   const card = page.locator('[data-share-image]');
   await card.locator('[data-act="share-image-make"]').click();

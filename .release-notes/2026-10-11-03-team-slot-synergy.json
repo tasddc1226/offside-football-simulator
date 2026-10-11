@@ -1,0 +1,23 @@
+{
+  "id": "t-11-197-team-slot-synergy",
+  "title": "구단주 팀 자리 실력 · 시너지 상한 해제",
+  "items": [
+    "팀 시너지 효과 상한을 없앴어요. 켜진 시너지는 이제 모두 경기에 더해져요.",
+    "주 포지션보다 다른 자리가 더 잘 맞는 선수는 그 자리에서 최고 OVR보다 2까지 더 높게 뛰어요. 앞으로 은퇴하는 선수부터 적용돼요."
+  ],
+  "en": {
+    "title": "Owner team: position ratings and no synergy cap",
+    "items": [
+      "Team synergies no longer have a cap. Every active synergy now adds to your matches.",
+      "Players who suit another position better than their main one can play up to 2 above their peak OVR there. This applies to players who retire from now on."
+    ]
+  },
+  "ja": {
+    "title": "オーナーチームのポジション能力・シナジー上限の撤廃",
+    "items": [
+      "チームシナジーの効果上限をなくしました。有効なシナジーはすべて試合に加わります。",
+      "本来のポジションより別のポジションが合う選手は、そこで最高OVRより最大2高くプレーします。これから引退する選手から適用されます。"
+    ]
+  },
+  "availability": "web-app"
+}

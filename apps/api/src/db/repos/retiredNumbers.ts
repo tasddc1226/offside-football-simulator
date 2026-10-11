@@ -1,17 +1,21 @@
 import {
   RETIRED_PAGE,
   type LiveRetiredNumber,
+  type RetiredNumberProgress,
   type RetiredNumberResult,
   type RetiredNumbersResponse,
   type RetiredNumbersSummary,
   type WallOfHonorItem,
 } from '@offside/contracts';
+import type { DetailPos } from '@offside/contracts/positions';
 import { defaultClubIds } from '@offside/contracts/club-names';
 import {
   clubContributions,
   rnCandidates,
   rnCut,
   rnMissOf,
+  rnQualifies,
+  RN_MIN_SEASONS,
   type RnClub,
   type RnMiss,
 } from '@offside/contracts/retired-numbers';
@@ -362,6 +366,7 @@ const itemColumns = {
   careerId: retiredNumbers.careerId,
   name: careers.publicName,
   pos: careers.pos,
+  dpos: sql<DetailPos | null>`${careers.dpos}`,
 };
 const itemsOf = (db: Db) =>
   db
@@ -439,6 +444,7 @@ export async function summarizeRetiredNumbers(
         careerId: careers.id,
         name: careers.publicName,
         pos: careers.pos,
+        dpos: sql<DetailPos | null>`${careers.dpos}`,
         json: careers.wallOfHonorJson,
       })
       .from(careers)
@@ -461,5 +467,57 @@ export async function summarizeRetiredNumbers(
       const { clubId, club, number, grantedAt } = parseWall(json!);
       return { ...r, clubId, club, number, grantedAt };
     }),
+  };
+}
+
+/** Guidance only: uses the same stored evidence and rules as retirement, without writing. */
+export async function retiredNumberProgress(
+  db: Db,
+  careerId: string,
+  number: number,
+): Promise<RetiredNumberProgress> {
+  const [row] = await db.select(judgeColumns).from(careers).where(eq(careers.id, careerId));
+  if (!row) throw new Error('Career disappeared');
+  const [customs, saved, meta] = await Promise.all([
+    clubsJsonOf(db, [row.profileId]),
+    storedSeasonsOf(db, [careerId]),
+    backfillMeta(db),
+  ]);
+  const seasons = saved.get(careerId) ?? [];
+  // Active careers do not store a shirt number until retirement; the preview number is not persisted.
+  const k = contributionsOf({ ...row, shirtNumber: number }, seasons, customs.get(row.profileId))!;
+  const clubs = k.all.filter((club) => club.clubId !== null);
+  const season = seasonOf(row);
+  const occupied = clubs.length
+    ? await db
+        .select({ clubId: retiredNumbers.clubId })
+        .from(retiredNumbers)
+        .where(
+          and(
+            eq(retiredNumbers.season, season),
+            eq(retiredNumbers.number, number),
+            inArray(
+              retiredNumbers.clubId,
+              clubs.map((club) => club.clubId!),
+            ),
+          ),
+        )
+    : [];
+  const taken = new Set(occupied.map((slot) => slot.clubId));
+  const candidates = new Set(rnCandidates(k.all, k.cut).map((club) => club.clubId));
+  return {
+    season,
+    number,
+    minSeasons: RN_MIN_SEASONS,
+    recordedSeasons: seasons.length,
+    clubs: clubs.map((club) => ({
+      clubId: club.clubId!,
+      club: club.club,
+      seasons: club.seasons,
+      progress: Math.min(100, Math.floor((club.score / k.cut) * 10) * 10),
+      eligible: rnQualifies(club, k.cut),
+      candidate: candidates.has(club.clubId),
+      availability: taken.has(club.clubId!) ? 'taken' : backfilled(meta) ? 'open' : 'unknown',
+    })),
   };
 }

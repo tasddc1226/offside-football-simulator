@@ -2,6 +2,10 @@ import type { CupTextKey } from '../ko/cup.js';
 
 // T-11-145 オフサイドカップのサーバー文言(日本語)。
 export const CUP_JA: Record<CupTextKey, string> = {
+  completeTitle: '{cup}が終了しました',
+  completeBody: 'カップの結果と報酬のリロール券を確認してください。',
+  predictionRewardBody: 'カップの結果と勝敗予想で獲得したリロール券を確認してください。',
+  predictionResultBody: 'カップの結果と自分の勝敗予想の結果を確認してください。',
   predictionNotFinished: '終了した試合のみ集計できます。',
   predictionClosed: '試合が開始されたか、現在は予想できない試合です。',
   title: 'シーズン{season} 第{edition}回オフサイドカップ',
@@ -26,6 +30,7 @@ export const CUP_JA: Record<CupTextKey, string> = {
   withdrawClosed: '受付が終了したため取り消せません。',
   noReroll: 'リロール券がありません。',
   noBoost: 'ポテンシャル強化券がありません。',
+  noScout: 'プレミアムスカウト券がありません。',
   iapInvalid: '購入を確認できませんでした。',
   iapPending: 'お支払いがまだ完了していません。完了すると自動で受け取れます。',
   iapOtherAccount: '別のアカウントで購入されています。購入したアカウントでログインしてください。',
@@ -52,6 +57,7 @@ export const CUP_JA: Record<CupTextKey, string> = {
   group: 'グループステージ',
   championTitle: '{cup} 優勝！',
   outTitle: '{cup}が終わりました',
+  titleNotOwned: 'まだ獲得していない称号です。',
   adminPast: '受付開始は現在より後にしてください。',
   adminSeason: '大会全体が1つのシーズン内に収まる必要があります。',
   adminOverlap: '第{edition}回大会の期間と重なっています。',

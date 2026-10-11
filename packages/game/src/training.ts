@@ -129,6 +129,11 @@ export function trainingCard(s: GameState, t: TrainingDef): { effect: string[]; 
     tag: tags.filter(Boolean).join(' · '),
   };
 }
+/** Selected attribute's existing positional OVR weight; presentation only. */
+export function trainingOvrNote(s: GameState, t: TrainingDef): string {
+  if (!t.attr) return '';
+  return L.helpWeight({ attr: labelOf(s, t.attr), pct: pct(wOf(s)[t.attr]) });
+}
 /** T-10-074 고른 훈련의 자세한 설명(카드 아래). 숨은 잠재력 값은 드러내지 않는다. */
 export function trainingHelp(s: GameState, t: TrainingDef): string {
   if (t.id === 'rest') return L.helpRest({ low: COND_LOW_INJURY, start: COND_LOW_START });
@@ -225,7 +230,7 @@ export function applyTraining(s: GameState) {
 
 // ───────── T-11-012 자기 투자 ─────────
 // 훈련과 따로 구간마다 자금을 한 가지에 쓴다. 비용은 연봉 비례(최소 금액이 있어 아마추어·저연봉도 의미가 있다)이고,
-// 특훈 성장은 능력치 훈련과 같은 공식(나이·잠재력까지 남은 여유·사기·치우침)을 타서 돈으로 잠재력을 넘지 못한다.
+// 특훈 성장은 능력치 훈련과 같은 공식(나이·잠재력까지 남은 여유·사기·치우침)을 쓴다. 잠재력은 성장 속도의 기준이며 하드 캡이 아니다.
 // 고르지 않은 커리어(invest 없음)는 RNG를 한 번도 쓰지 않는다 — 기존 시드 결과(golden.test.ts)가 그대로다.
 export type InvestId = 'none' | 'weak' | 'best' | 'medical' | 'mental';
 export interface InvestDef {
@@ -336,6 +341,18 @@ export function investHelp(s: GameState, d: InvestDef): string {
     .filter(Boolean)
     .join(' ');
 }
+/** T-11-200 화면 이름: 특훈은 대상 능력치를 바로 쓴다('수비 특훈'). 기록(investBroke)은 d.label 그대로. */
+export function investName(s: GameState, d: InvestDef): string {
+  return d.id === 'weak' || d.id === 'best'
+    ? L.investAttr({ attr: labelOf(s, investTarget(s, d.id)) })
+    : d.label;
+}
+/** 특훈 옆 작은 표시(약점·강점). */
+export const investNote = (d: InvestDef): string =>
+  d.id === 'weak' ? L.investWeakNote : d.id === 'best' ? L.investBestNote : '';
+/** 이번 구간에 쓸 돈(개인 코치 + 자기 투자) — 화면의 '보유 → 남는 돈'. */
+export const plannedSpend = (s: GameState): number =>
+  (s.training === 'coach' ? coachCost(s) : 0) + investCost(s, investDef(s));
 /** 훈련 다음, 경기 전에 적용한다(turn.ts playPhase). */
 export function applyInvest(s: GameState) {
   const d = investDef(s);

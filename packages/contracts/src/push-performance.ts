@@ -56,6 +56,35 @@ export const PushPerformanceSchema = z.object({
       }),
     )
     .max(20),
+  retention: z
+    .array(
+      PushMetricsSchema.extend({
+        stage: z.number().int().min(1).max(3),
+        returned: count,
+        retired: count,
+      }),
+    )
+    .max(3)
+    .optional(),
+  cups: z
+    .array(
+      PushMetricsSchema.extend({
+        cupId: z.string(),
+        title: z.string(),
+        createdAt: z.iso.datetime(),
+        season: z.number().int().nullable(),
+        edition: z.number().int().nullable(),
+        participants: count,
+        predictors: count,
+        overlap: count,
+        predictionOnly: count,
+        predictionEntries: count,
+        duplicatesRemoved: count,
+        notQueued: count,
+      }),
+    )
+    .max(20)
+    .optional(),
   hasMore: z.boolean(),
 });
 export type PushMetrics = z.infer<typeof PushMetricsSchema>;

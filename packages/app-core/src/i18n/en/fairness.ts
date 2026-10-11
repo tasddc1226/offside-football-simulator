@@ -4,10 +4,10 @@ import type { FairnessMsgs } from '../ko/fairness';
 export const fairness: Translation<FairnessMsgs> = {
   title: 'Odds and fairness',
   intro:
-    'Every player gets the same rules and the same odds. The numbers below are calculated straight from the game code.',
+    'Under the same conditions, every player gets the same rules and the same odds. The numbers below are calculated straight from the game code.',
   promiseSameTerm: 'Same rules',
   promiseSame:
-    'Watching ads, buying ad removal, linking an account and your language never affect odds. Ads or club funds can give extra potential boost tries in a season when you are short of funds, but the success chance stays the same.',
+    'Watching ads, buying ad removal, linking an account and your language never affect odds. Ads or club funds can give extra potential boost tries in a season when you are short of funds, but the success chance stays the same. The only paid item that changes odds is the premium scout ticket, and its odds are all shown below.',
   promiseDeviceTerm: 'Decided on your device',
   promiseDevice:
     'Every roll in your career happens on this device. The server only receives records and never decides results.',
@@ -25,6 +25,8 @@ export const fairness: Translation<FairnessMsgs> = {
   colPre: 'Preseason start',
   atLeastOne: (p) =>
     `The chance that at least 1 of 3 candidates is grade ${p.grade} is ${p.season} mid-season and ${p.pre} in preseason.`,
+  premium: (p) =>
+    `With a premium scout ticket, 1 of the 3 candidates is guaranteed grade A or higher. Every candidate's chance of S is doubled: ${p.season} mid-season and ${p.pre} in preseason. The other candidates keep the A–D ratios in the table above.`,
   boostTitle: 'Potential boost odds',
   boostLv: (p) => `Step +${p.lv}`,
   boostNote: (p) =>

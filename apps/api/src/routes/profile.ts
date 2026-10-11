@@ -6,6 +6,7 @@ import {
   PatchProfileSettingsBodySchema,
   ProfileSchema,
   PutNicknameBodySchema,
+  PutAvatarBodySchema,
   RecoverProfileBodySchema,
   RecoverProfileResponseSchema,
   type DeleteProfileConfirmBody,
@@ -13,6 +14,12 @@ import {
   type ProfileSettings,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
+import { eq } from 'drizzle-orm';
+import { profiles, profileAvatars } from '../db/schema.js';
+import { reqLang } from '../lang.js';
+import { avatarText } from '../profile/avatarText.js';
+import { validateAvatarImage } from '../profile/avatar.js';
+import { chatRoom } from '../chat/socket.js';
 import { clientIp, ok, readBody, readJson, nowIso, enforceLimit, conflictError } from './shared.js';
 import { commentIdentity } from '../auth/admin.js';
 import { issueSession, readSessionToken, sessionCookie } from '../auth/session.js';
@@ -33,7 +40,7 @@ import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
-import { purgeEdge, waitUntil } from '../edgeCache.js';
+import { edgeCached, purgeEdge, waitUntil } from '../edgeCache.js';
 import { revokeAppleAuthorization } from '../auth/apple-revoke.js';
 import { STALE } from '../edgeKeys.js';
 import { issueRecoveryCode } from '../profile/issue-recovery-code.js';
@@ -57,6 +64,7 @@ function buildProfileResponse(record: ProfileRecord, adminEmails: string | undef
     createdAt: record.createdAt,
     googleEmailMasked: maskEmail(record.email),
     nickname: commentIdentity(record, adminEmails).nickname,
+    avatarId: record.avatarId ?? null,
   };
 }
 
@@ -103,6 +111,57 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     }
 
     return ok(c, ProfileSchema, buildProfileResponse(record, c.env.ADMIN_EMAILS));
+  });
+
+  // Public, opaque/versioned image URL: no session resolution and no profile IDs exposed.
+  app.get('/v1/avatars/:id', async (c) => {
+    const id = c.req.param('id');
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id))
+      return c.notFound();
+    const image = await edgeCached(c, `/v1/avatars/${id}`, 60, async () => {
+      const [row] = await getDb(c)
+        .select({ image: profileAvatars.image })
+        .from(profileAvatars)
+        .where(eq(profileAvatars.id, id));
+      return row?.image;
+    });
+    if (!image) {
+      c.header('Cache-Control', 'no-store');
+      return c.notFound();
+    }
+    const [prefix, encoded] = image.split(',');
+    const bytes = Uint8Array.from(atob(encoded!), (ch) => ch.charCodeAt(0));
+    c.header('Content-Type', prefix!.includes('webp') ? 'image/webp' : 'image/png');
+    c.header('X-Content-Type-Options', 'nosniff');
+    c.header('Cache-Control', 'public, max-age=60');
+    return c.body(bytes);
+  });
+
+  app.put('/v1/profile/avatar', requireProfile, async (c) => {
+    const db = getDb(c);
+    const { profileId } = getSessionOrThrow(c);
+    const profile = await getProfile(db, profileId);
+    if (!profile || !commentIdentity(profile, c.env.ADMIN_EMAILS).google)
+      throw new AppError({
+        code: 'FORBIDDEN',
+        message: avatarText(reqLang(c)).login,
+      });
+    const { image } = readBody(c, PutAvatarBodySchema);
+    if (image) validateAvatarImage(image, reqLang(c));
+    await enforceLimit(db, 'PROFILE_AVATAR', profileId, 20, nowIso(), avatarText(reqLang(c)).rate);
+    const avatarId = image ? crypto.randomUUID() : null;
+    await db.batch([
+      image && avatarId
+        ? db
+            .insert(profileAvatars)
+            .values({ profileId, id: avatarId, image })
+            .onConflictDoUpdate({ target: profileAvatars.profileId, set: { id: avatarId, image } })
+        : db.delete(profileAvatars).where(eq(profileAvatars.profileId, profileId)),
+      db.update(profiles).set({ avatarId }).where(eq(profiles.id, profileId)),
+    ]);
+    if (profile.avatarId) purgeEdge(c, [`/v1/avatars/${profile.avatarId}`]);
+    if (c.env.CHAT) waitUntil(c, chatRoom(c.env.CHAT).updateAvatar(profileId, avatarId));
+    return ok(c, ProfileSchema, buildProfileResponse({ ...profile, avatarId }, c.env.ADMIN_EMAILS));
   });
 
   app.patch('/v1/profile/settings', requireProfile, idempotency, async (c) => {
@@ -212,6 +271,10 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
       return ok(c, DeleteProfileStartResponseSchema, result);
     }
 
+    const [previousAvatar] = await db
+      .select({ id: profiles.avatarId })
+      .from(profiles)
+      .where(eq(profiles.id, session.profileId));
     const { careerIds, heldFirsts, hadComments, predictedCupIds } = await executeProfileDeletion(
       db,
       {
@@ -224,6 +287,10 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     );
     // 지운 커리어가 가진 최초·서버 기록은 삭제 배치가 재계산 표시를 지웠으니, 목록 캐시만 비우면 다음 공개
     // 조회부터 조각씩 다시 훑어 채운다. 나머지는 바뀐 공개 캐시만 비운다(명예의 전당 목록은 TTL 1분).
+    if (previousAvatar?.id) {
+      purgeEdge(c, [`/v1/avatars/${previousAvatar.id}`]);
+      if (c.env.CHAT) waitUntil(c, chatRoom(c.env.CHAT).updateAvatar(session.profileId, null));
+    }
     if (heldFirsts) purgeEdge(c, STALE.firstsChanged());
     purgeEdge(c, [
       ...STALE.profileDeleted(careerIds, hadComments),

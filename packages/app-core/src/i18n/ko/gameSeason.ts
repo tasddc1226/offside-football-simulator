@@ -12,6 +12,7 @@ const ko = {
   trainHint: '이번 구간 훈련을 고르면 다음으로 넘어가요',
   investTitle: '자기 투자',
   funds: (p: { v: string }) => `보유 ${p.v}`,
+  fundsAfter: (p: { v: string; after: string }) => `보유 ${p.v} → ${p.after}`,
   investHint: '투자를 고르면 넘어가요 · 아끼려면 투자 안 함',
   phaseFirst: '전반기',
   phaseSecond: '후반기',
@@ -37,8 +38,6 @@ const ko = {
   storySoon: '곧 이어짐',
   storyWait: (p: { n: number }) => `약 ${p.n}구간 후`,
   feedTitle: '최근 소식',
-  feedLess: '접기',
-  feedMore: '더 보기',
   feedLessAria: '최근 소식 접기',
   feedMoreAria: '최근 소식 더 보기',
 };

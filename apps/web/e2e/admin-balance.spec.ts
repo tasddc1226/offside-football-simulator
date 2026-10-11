@@ -51,6 +51,9 @@ async function mockApi(page: Page, opts: { linked: boolean; admin: boolean }) {
       }),
     ),
   );
+  await page.route(`${API}/v1/owner/summary`, (route) =>
+    route.fulfill(ok({ linked: opts.linked, admin: opts.admin, tier: null, entries: [] })),
+  );
   await page.route(`${API}/v1/boards/**`, (route) => {
     const path = new URL(route.request().url()).pathname;
     sent.push({ method: 'GET', path, body: null });
@@ -203,7 +206,7 @@ test('운영 도구: 구글 연결이 없으면 관리자 여부를 묻지도 �
   const sent = await mockApi(page, { linked: false, admin: false });
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('h1')).toHaveText('구단주');
+  await expect(page.locator('h1')).toHaveText('내 구단');
   await expect(page.locator('[data-act="admin"]')).toHaveCount(0);
   expect(sent.some((s) => s.path === '/v1/boards/viewer')).toBe(false);
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { generateCandidates, candidatePotentialGrades } from './candidates.js';
+import { scoutOdds } from './premiumScout.js';
 import { newGame } from './engine.js';
 import { rnd, createRng, getActiveRng, setActiveRng } from './rng.js';
 import { ATTR_KEYS, focusMod, focusOfType, typeForFocus, TYPES } from './data.js';
@@ -191,5 +192,60 @@ describe('candidate grade range display', () => {
     [90, 96, 'S', 'S'],
   ] as const)('maps %i–%i to grade bounds %s–%s', (min, max, lo, hi) => {
     expect(candidatePotentialGrades({ min, max })).toEqual({ min: lo, max: hi });
+  });
+});
+
+describe('T-11-196 프리미엄 스카우트', () => {
+  const N = 20000;
+  const sRate = (premium: boolean, dpos: 'ST' | null) => {
+    let s = 0,
+      sure = 0,
+      sureOk = 0;
+    for (let seed = 1; seed <= N; seed++)
+      for (const c of generateCandidates('FW', ['sho', 'pac'], dpos, seed * 7919, 3, premium)) {
+        if (c.potential.value >= 90) s++;
+        if (c.guaranteed) {
+          sure++;
+          if (c.potential.value >= 84) sureOk++;
+        }
+      }
+    return { s: s / (N * 3), sure, sureOk };
+  };
+
+  it('확률표: 일반 S 확률은 정규분포 꼬리, 프리미엄은 정확히 2배이고 각 표의 합은 1', () => {
+    for (const dpos of ['ST', null] as const) {
+      const o = scoutOdds(dpos);
+      for (const t of [o.normal, o.sure, o.rest])
+        expect(Object.values(t).reduce((a, b) => a + b, 0)).toBeCloseTo(1, 12);
+      expect(o.sure.S).toBe(2 * o.normal.S);
+      expect(o.rest.S).toBe(2 * o.normal.S);
+      expect(o.rest.A / o.rest.B).toBeCloseTo(o.normal.A / o.normal.B, 12);
+    }
+    // 평균 75, 표준편차 6: P(x ≥ 89.5) = 1 − Φ(2.41667) ≈ 0.00783
+    expect(scoutOdds('ST').normal.S).toBeCloseTo(0.00783, 5);
+  });
+
+  it('보장 후보는 세 명 중 한 명이고 늘 A 이상이다', () => {
+    const r = sRate(true, 'ST');
+    expect(r.sure).toBe(N);
+    expect(r.sureOk).toBe(N);
+    expect(generateCandidates('FW', ['sho', 'pac'], 'ST', 1).some((c) => c.guaranteed)).toBe(false);
+  });
+
+  it('뽑힌 결과의 S 비율이 확률표와 맞는다(일반 대비 2배)', () => {
+    for (const dpos of ['ST', null] as const) {
+      const p = scoutOdds(dpos).normal.S;
+      const normal = sRate(false, dpos).s,
+        premium = sRate(true, dpos).s;
+      const tol = (q: number) => 4 * Math.sqrt((q * (1 - q)) / (N * 3));
+      expect(Math.abs(normal - p)).toBeLessThan(tol(p));
+      expect(Math.abs(premium - 2 * p)).toBeLessThan(tol(2 * p));
+    }
+  });
+
+  it('프리미엄이 아니면 후보가 그대로다(일반 경로 불변)', () => {
+    const a = generateCandidates('MF', ['pas', 'dri'], 'CM', 42);
+    const b = generateCandidates('MF', ['pas', 'dri'], 'CM', 42, 3, false);
+    expect(a).toEqual(b);
   });
 });

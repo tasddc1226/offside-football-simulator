@@ -1,0 +1,23 @@
+{
+  "id": "t-11-198-public-news",
+  "title": "공지와 업데이트를 링크로 읽어요",
+  "items": [
+    "공지와 릴리즈 노트를 각각의 주소로 열고 공유할 수 있어요.",
+    "홈 아래에서 게임 가이드, 자주 묻는 질문, 확률과 공정성 안내를 바로 열 수 있어요."
+  ],
+  "en": {
+    "title": "Read news through direct links",
+    "items": [
+      "Open and share announcements and release notes with their own links.",
+      "Open the game guide, FAQ, and fairness information from the home footer."
+    ]
+  },
+  "ja": {
+    "title": "お知らせをリンクから読めます",
+    "items": [
+      "お知らせとリリースノートを個別のリンクで開いて共有できます。",
+      "ホーム下部からゲームガイド、よくある質問、確率と公平性の案内を開けます。"
+    ]
+  },
+  "availability": "web"
+}

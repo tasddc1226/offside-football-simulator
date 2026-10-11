@@ -18,6 +18,7 @@
         - button /\d+ 리버풀 토피스 몸값 \d+억 9천만/
     - text: /\d+ \d+/
     - paragraph: /최고 몸값 \d+억 9천만 · \d+-\d+ 리버풀 토피스/
+    - button "영구결번 도전 오래 뛴 구단에 이 번호를 남길 수 있을까요?" [expanded=false]
     - text: Next Goals
     - heading "다음 목표" [level=2]
     - paragraph: 출전·골·도움은 마친 시즌 기준이에요. 대표팀 출전과 우승도 커리어에 남아요.
@@ -33,7 +34,6 @@
     - progressbar /A매치 \d+경기 출전/
     - text: /런던 해머스에서 \d+경기 출전 0 \/ \d+ · 남은 \d+/
     - progressbar /런던 해머스에서 \d+경기 출전/
-    - paragraph: /한 구단에서 오래 활약하고 은퇴하면 그 구단의 \d+번이 영구결번될 수 있어요\./
     - table:
         - rowgroup:
             - row "시즌 소속 경기 골 도움 평점 순위 OVR":

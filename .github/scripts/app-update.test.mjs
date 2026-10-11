@@ -10,9 +10,9 @@ const workflow = readFileSync(
   'utf8',
 );
 const step = workflow.split('      - name: Publish production update\n')[1].split('\n  #')[0];
-const script = step.split('        run: |\n')[1].replace(/^          /gm, '');
+const script = step.split('        run: |\n')[1].replace(/^ {10}/gm, '');
 
-function publish(failedPlatform) {
+function publish(platform, failedPlatform) {
   const dir = mkdtempSync(join(tmpdir(), 'offside-ota-'));
   try {
     writeFileSync(
@@ -29,6 +29,8 @@ function publish(failedPlatform) {
         ...process.env,
         PATH: `${dir}:${process.env.PATH}`,
         EXPECTED_SHA: '1234567890abcdef',
+        PLATFORM: platform,
+        OTA_TARGET: '1.1.2',
         GITHUB_STEP_SUMMARY: join(dir, 'summary'),
         OTA_CALLS: join(dir, 'calls'),
         OTA_FAIL_PLATFORM: failedPlatform,
@@ -43,15 +45,15 @@ function publish(failedPlatform) {
   }
 }
 
-test('production OTA uses the fail-fast bash shell and publishes only iOS and Android', () => {
-  assert.match(step, /^        shell: bash$/m);
-  assert.deepEqual(publish(''), { status: 0, calls: ['ios', 'android'] });
+test('each matrix lane publishes only its own native platform', () => {
+  assert.match(step, /^ {8}shell: bash$/m);
+  for (const platform of ['ios', 'android']) {
+    assert.deepEqual(publish(platform, ''), { status: 0, calls: [platform] });
+  }
 });
 
-test('tee cannot hide an iOS export/upload failure or continue to Android', () => {
-  assert.deepEqual(publish('ios'), { status: 1, calls: ['ios'] });
-});
-
-test('an Android export/upload failure makes the OTA step fail', () => {
-  assert.deepEqual(publish('android'), { status: 1, calls: ['ios', 'android'] });
+test('tee cannot hide an export/upload failure in either platform lane', () => {
+  for (const platform of ['ios', 'android']) {
+    assert.deepEqual(publish(platform, platform), { status: 1, calls: [platform] });
+  }
 });

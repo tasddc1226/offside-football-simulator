@@ -16,7 +16,6 @@
   import {
     canFriendly,
     canPreseasonFriendly,
-    founderLabel,
     friendAcceptedText,
     friendCodeLabel,
     friendInviteText,
@@ -227,7 +226,7 @@
         <div class="fr-person" data-friend={p.code}>
           <TeamLogo logo={p.team?.logo ?? null} name={p.team?.name ?? p.name} size={32} decorative />
           <div class="fr-info">
-            <b>{p.name}{#if p.founder}<span class="pill good fr-founder" data-friend-founder>{founderLabel()}</span>{/if}</b>
+            <b>{p.name}</b>
             <span class="muted fs-sm">{teamLine(p)}</span>
             {#if preseasonLine}<span class="muted fs-sm" data-friend-preseason>{preseasonLine}</span>{/if}
             {#if h2h}<span class="fs-sm">{L.h2hLine({ record: h2h })}</span>{/if}
@@ -342,10 +341,7 @@
     margin: 0;
     flex: 1 1 200px;
   }
-  .fr-founder {
-    margin-left: 6px;
-    vertical-align: middle;
-  }
+
   .fr-info {
     display: flex;
     flex-direction: column;

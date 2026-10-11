@@ -1,0 +1,11 @@
+{
+  "id": "t-11-201-name-12",
+  "title": "선수 이름을 더 길게 지을 수 있어요",
+  "items": ["선수 이름을 12자까지 쓸 수 있어요"],
+  "en": {
+    "title": "Longer player names",
+    "items": ["Player names can now be up to 12 characters."]
+  },
+  "ja": { "title": "選手名を長くできます", "items": ["選手名を12文字まで付けられます。"] },
+  "availability": "web-app"
+}

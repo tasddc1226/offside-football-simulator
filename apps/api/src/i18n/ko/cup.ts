@@ -1,5 +1,9 @@
 // T-11-145 오프사이드 컵 서버 문구(한국어 원문). `{이름}` 자리는 cupText.ts의 fill로 채운다. 키는 en/ja와 같다.
 export const CUP_KO = {
+  completeTitle: '{cup}가 끝났어요',
+  completeBody: '컵 결과와 보상으로 받은 리롤권을 확인해 주세요.',
+  predictionRewardBody: '컵 결과와 승부예측으로 받은 리롤권을 확인해 주세요.',
+  predictionResultBody: '컵 결과와 내 승부예측 결과를 확인해 주세요.',
   predictionNotFinished: '아직 종료되지 않은 경기는 정산할 수 없어요.',
   predictionClosed: '경기가 시작됐거나 지금은 예측할 수 없는 경기예요.',
   title: '시즌 {season} 제{edition}회 오프사이드 컵',
@@ -24,6 +28,7 @@ export const CUP_KO = {
   withdrawClosed: '접수가 끝나 취소할 수 없어요.',
   noReroll: '리롤권이 없어요.',
   noBoost: '잠재력 강화권이 없어요.',
+  noScout: '프리미엄 스카우트권이 없어요.',
   // T-11-174 인앱 상품 구매 확인.
   iapInvalid: '구매를 확인하지 못했어요.',
   iapPending: '결제가 아직 끝나지 않았어요. 결제가 끝나면 자동으로 받아요.',
@@ -52,6 +57,7 @@ export const CUP_KO = {
   group: '조별 예선',
   championTitle: '{cup} 우승!',
   outTitle: '{cup}를 마쳤어요',
+  titleNotOwned: '받은 적 없는 칭호예요.',
   adminPast: '접수 시작은 지금보다 뒤여야 해요.',
   adminSeason: '대회 전체가 한 시즌 안에 있어야 해요.',
   adminOverlap: '제{edition}회 대회 기간과 겹쳐요.',

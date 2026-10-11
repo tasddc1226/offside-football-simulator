@@ -1,0 +1,10 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "OFFSIDE",
+    "CFBundleName": "OFFSIDE",
+    "NSPhotoLibraryUsageDescription": "Allow photo access so you can choose a picture for your team logo."
+  },
+  "android": {
+    "app_name": "OFFSIDE"
+  }
+}

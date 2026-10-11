@@ -5,6 +5,7 @@ import { app } from './app.js';
 import { updateClubStrength } from './clubStrength/update.js';
 import { runDaily } from './cron/daily.js';
 import { runSeasonEventsArchive } from './cron/seasonEventsArchive.js';
+import { runSeasonTelemetryArchive } from './cron/seasonTelemetryArchive.js';
 import { runSeasonGauge } from './cron/seasonGauge.js';
 import { loadSeasonSchedule } from './seasonSchedule.js';
 import { runInfraHealth } from './cron/infraHealth.js';
@@ -16,6 +17,9 @@ import { liveSocket } from './live/socket.js';
 import { runNewsPush } from './push/dispatch.js';
 import { runPersonalPush } from './push/personal.js';
 import { queueReengagement } from './push/reengagement.js';
+import { consumeCareerReminders, queueCareerReminders } from './push/careerReminder.js';
+import { consumeCupResults, publishCupResults } from './push/cupResult.js';
+import { consumeCommunityPush } from './push/communityQueue.js';
 import { runCup } from './team/cup.js';
 import { runSeasonClose } from './team/seasonClose.js';
 
@@ -23,6 +27,12 @@ export { app };
 export { LiveHub } from './live/hub.js';
 export { ChatRoom } from './chat/room.js';
 export default {
+  queue(batch: MessageBatch<unknown>, env: Bindings) {
+    if (batch.queue === 'offside-cup-push-production') return consumeCupResults(batch, env);
+    return batch.queue === 'offside-career-push-production'
+      ? consumeCareerReminders(batch, env)
+      : consumeCommunityPush(batch, env);
+  },
   fetch(req: Request, env: Bindings, ctx: ExecutionContext) {
     // T-10-072 홈 라이브 소켓은 Hono 앱(미들웨어) 앞에서 받는다(live/socket.ts).
     const { pathname } = new URL(req.url);
@@ -46,6 +56,8 @@ export default {
     else {
       // 푸시 단계가 실패해도 뒤의 시즌 결산·컵 진행은 돈다(다음 5분에 다시 보낸다).
       await runNewsPush(env).catch(logged('news-push'));
+      if (new Date(controller.scheduledTime).getUTCMinutes() === 0)
+        await queueCareerReminders(env, controller.scheduledTime).catch(logged('career-reminder'));
       await queueReengagement(env, controller.scheduledTime).catch(logged('reengagement'));
       await runPersonalPush(env, controller.scheduledTime).catch(logged('personal-push'));
       // 시즌 진행 게이지: 30분마다 세어 굳히고, 90%에 닿으면 마감 시각을 확정해 시즌 일정에
@@ -64,7 +76,14 @@ export default {
         );
       // T-11-145 오프사이드 컵: 추첨 → 시각이 된 경기 → 진출·보상. 실패하면 다음 5분에 이어서 한다.
       await runCup(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
-        .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'cup', steps: r })))
+        .then(async (r) => {
+          if (!r) return;
+          console.log(JSON.stringify({ level: 'info', job: 'cup', steps: r }));
+          await publishCupResults(
+            env,
+            r.filter((x) => x.step === 'advance' && x.round === 'f').map((x) => String(x.cup)),
+          );
+        })
         .catch((e: unknown) =>
           console.error(
             JSON.stringify({ level: 'error', job: 'cup', error: String(e).slice(0, 500) }),
@@ -76,6 +95,13 @@ export default {
             r && console.log(JSON.stringify({ level: 'info', job: 'season-events-archive', ...r })),
         )
         .catch(logged('season-events-archive'));
+      await runSeasonTelemetryArchive(env, controller.scheduledTime)
+        .then(
+          (r) =>
+            r &&
+            console.log(JSON.stringify({ level: 'info', job: 'season-telemetry-archive', ...r })),
+        )
+        .catch(logged('season-telemetry-archive'));
       if (env.AUTOMATION_HIDE_DISABLED !== '1')
         await sweepAutomation(env.DB, controller.scheduledTime, true).catch(logged('automation'));
       await updateClubStrength(env, controller.scheduledTime).catch(logged('club-strength'));

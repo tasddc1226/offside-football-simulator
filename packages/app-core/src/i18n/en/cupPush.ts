@@ -1,0 +1,32 @@
+export const cupPush = {
+  title: 'Cup completion alerts',
+  policy: 'Once per account per cup · Participant message takes priority · Last 7, 30 or 90 days',
+  empty: 'No cup completion alerts in this period. They appear after a cup ends.',
+  help: 'Grouped by notification creation date. Target accounts include those without a push delivery. Confirmation means acceptance by APNs or FCM, not display or reading.',
+  dedupeHelp:
+    'Merged duplicates count the extra participation and match prediction entries combined into one alert per account. This is not a count of duplicate sends or Queue retries.',
+  notQueuedHelp:
+    'No push delivery means no valid device or team alerts disabled when the cup ended.',
+  cupName: (p: { season: number; edition: number }) =>
+    `Season ${p.season}, OFFSIDE Cup ${p.edition}`,
+  expand: 'Show details',
+  collapse: 'Collapse',
+  recipients: 'Target accounts',
+  participants: 'Cup participants',
+  predictors: 'Predictors',
+  overlap: 'Both participant and predictor',
+  predictionOnly: 'Prediction only',
+  predictionEntries: 'Match prediction entries',
+  duplicatesRemoved: 'Merged duplicates',
+  notQueued: 'No push delivery',
+  queued: 'Target devices',
+  acceptedRecipients: 'Accepted accounts',
+  confirmed: 'Delivery confirmed',
+  clicked: 'Accounts clicked',
+  targetOpened: 'Target screen opened',
+  pending: 'In progress',
+  failed: 'Failed',
+  unknown: 'Unknown',
+  cancelled: 'Cancelled',
+  clickRate: 'Click rate',
+} as const;

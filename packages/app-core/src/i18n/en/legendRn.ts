@@ -31,5 +31,5 @@ export const legendRn: Translation<LegendRnMsgs> = {
   alertOpen: 'View',
   alertClose: 'Dismiss notification',
   jerseyLabel: (p) => `${p.name} retired No. ${p.number} jersey`,
-  wallOfHonor: "You earned the ‘Wall of Honour’ title. It isn't a retired number.",
+  wallOfHonor: 'Your contribution to the club earned the Wall of Honour title.',
 };

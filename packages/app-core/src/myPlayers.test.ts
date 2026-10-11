@@ -31,3 +31,49 @@ describe('이 기기 은퇴 기록의 카드 기준가(T-11-109)', () => {
     expect(localCardValue({ peak: 75 })).toBe(CARD_VALUE_FLOOR);
   });
 });
+
+// Hub totals must remain independent of the season selected on the dedicated page.
+vi.mock('./api/client.js', () => ({ getRetiredNumbersIn: vi.fn() }));
+vi.mock('./api/ownerSummary.js', () => ({ fetchOwnerSummary: vi.fn() }));
+vi.mock('@offside/game/hof-store', () => ({ loadHOF: vi.fn() }));
+vi.mock('./outbox.js', () => ({ pendingRetirementIds: () => new Set(['pending']) }));
+import { vi, afterEach } from 'vitest';
+import { fetchOwnerSummary } from './api/ownerSummary.js';
+import { loadHOF } from '@offside/game/hof-store';
+import { loadMyPlayerSummary } from './myPlayers.js';
+afterEach(() => {
+  vi.useRealTimers();
+  vi.resetAllMocks();
+});
+describe('dedicated player hub summary', () => {
+  it('counts current-season account records and unsynced retirements, preserving local scores and numbers', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-10T00:00:00Z'));
+    vi.mocked(loadHOF).mockReturnValue([
+      { id: 'a', season: 1, score: 90, peak: 80, rn: { kind: 'granted', number: 9 } },
+      { id: 'pending', score: 20, peak: 80 },
+      { id: 'unlinked', season: 1, score: 999, peak: 80 },
+    ] as never);
+    vi.mocked(fetchOwnerSummary).mockResolvedValue({
+      ok: true,
+      data: {
+        linked: true,
+        entries: [
+          { id: 'a', season: 1, legendScore: 80 },
+          { id: 'old', season: 0, legendScore: 999 },
+        ],
+      },
+    } as never);
+    expect(await loadMyPlayerSummary(true)).toMatchObject({ players: 2, score: 110, retired: 1 });
+  });
+  it('uses local current-season records for guests without an account-list request', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-10T00:00:00Z'));
+    vi.mocked(loadHOF).mockReturnValue([
+      { season: 1, score: 30, peak: 80 },
+      { season: 0, score: 999, peak: 80 },
+    ] as never);
+    expect(await loadMyPlayerSummary(false)).toMatchObject({ players: 1, score: 30 });
+    expect(fetchOwnerSummary).not.toHaveBeenCalled();
+  });
+});

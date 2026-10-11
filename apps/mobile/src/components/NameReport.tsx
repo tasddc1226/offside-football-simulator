@@ -15,9 +15,14 @@ export function NameReport({ kind, id, name }: { kind: NameReportKind; id: strin
   const c = useColors();
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** T-11-167 owner는 구단주 닉네임 신고다(id는 그 구단). */
+  const T =
+    kind === 'owner'
+      ? { title: L.reportNickTitle, label: L.reportNickLabel, btn: L.reportNickBtn }
+      : { title: L.reportTitle, label: L.reportLabel, btn: L.reportBtn };
   async function send() {
     if (busy) return;
-    const ok = await confirmAsync(L.reportTitle({ name }), L.reportBody, L.reportConfirm);
+    const ok = await confirmAsync(T.title({ name }), L.reportBody, L.reportConfirm);
     if (!ok) return;
     setBusy(true);
     const r = await reportName({ kind, id });
@@ -28,8 +33,8 @@ export function NameReport({ kind, id, name }: { kind: NameReportKind; id: strin
   }
   return (
     <Press
-      testID="name-report"
-      accessibilityLabel={L.reportLabel({ name })}
+      testID={kind === 'owner' ? 'nick-report' : 'name-report'}
+      accessibilityLabel={T.label({ name })}
       disabled={sent || busy}
       onPress={() => void send()}
       style={{
@@ -40,9 +45,7 @@ export function NameReport({ kind, id, name }: { kind: NameReportKind; id: strin
         marginTop: 12,
       }}
     >
-      <Txt style={{ fontSize: rem(0.8125), color: c.muted }}>
-        {sent ? L.reportDone : L.reportBtn}
-      </Txt>
+      <Txt style={{ fontSize: rem(0.8125), color: c.muted }}>{sent ? L.reportDone : T.btn}</Txt>
     </Press>
   );
 }

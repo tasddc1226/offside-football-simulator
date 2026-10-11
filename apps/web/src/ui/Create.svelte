@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { careerGuideText as CG } from '@offside/app-core/i18n/ko/careerGuide';
   import { tn } from '@offside/game/i18n/names';
   // 선수 생성(T-10-022): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
   // 1단계(프로필 입력) → 2단계(후보 카드 비교·선택). appState.candidates가 있으면 2단계.
@@ -9,16 +10,20 @@
   import { POS, DPOS, DETAILS_OF, TRAITS, ATTR_KEYS, FOCUS_PICK, FOCUS_GROWTH, attrLabels, defaultFocus, focusMod, posLabel } from '@offside/game/data';
   import type { AttrKey, DetailPos, Pos } from '@offside/game/data';
   import { baseline, candidatePotentialGrades } from '@offside/game/candidates';
+  // T-11-196 프리미엄 후보 식을 등록한다(첫 화면 번들에서 떼어 둠).
+  import '@offside/game/premiumScout';
   import { appState, detailOpenNow, draftBody, draftDpos, randomName } from './state.svelte.js';
   import { CONFEDS, flagOf } from '@offside/contracts/nations';
   import { BODY_LIMITS, BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
   import { isKorean, nationOf } from '@offside/game/nation';
-  import { startCareer, rollCandidates, rerollCandidates, revealCandidatePotential } from './actions.js';
+  import { startCareer, rollCandidates, rerollCandidates, premiumScoutCandidates, revealCandidatePotential } from './actions.js';
   import { clubOffer, loadClubShop, payWithClub } from '@offside/app-core/club-reward';
   import { fundsText } from '@offside/app-core/funds';
   import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
   import type { RewardShopResponse } from '@offside/contracts';
-  import { fetchItems, spendReroll } from '@offside/app-core/api/cup';
+  import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
+  import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
+  import ScoutOdds from './cup/ScoutOdds.svelte';
   import { hasSessionHint } from '@offside/app-core/api/client';
   import { toast } from './helpers.js';
   import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
@@ -110,8 +115,29 @@
     void fetchItems().then((r) => {
       owner = r.ok;
       rerolls = r.ok ? r.data.reroll : 0;
+      scouts = r.ok ? (r.data.scout ?? 0) : 0;
     });
   });
+  // T-11-196 프리미엄 스카우트권 — 가진 장수가 있을 때만 버튼을 보인다(웹은 스토어 결제가 없다). 멱등 키는 리롤권과 같다.
+  let scouts = $state(0);
+  let scoutBusy = $state(false);
+  let scoutKey: string | null = null;
+  const premium = $derived(!!appState.candidates?.some((c) => c.guaranteed));
+  async function premiumScout() {
+    if (scoutBusy || scouts < 1 || !confirm(SL.confirm({ n: scouts - 1 }))) return;
+    scoutBusy = true;
+    scoutKey ??= crypto.randomUUID();
+    const r = await spendScout(scoutKey);
+    scoutBusy = false;
+    if (r.ok || !r.error.retryable) scoutKey = null;
+    if (!r.ok) {
+      if (r.error.reason === 'NO_SCOUT') scouts = 0;
+      return toast(r.error.message || SL.fail);
+    }
+    scouts = r.data.scout;
+    premiumScoutCandidates();
+    toast(SL.done({ n: scouts }));
+  }
   async function reroll() {
     if (rerolling || rerolls < 1 || !confirm(CL.rerollConfirm({ n: rerolls - 1 }))) return;
     rerolling = true;
@@ -214,7 +240,7 @@
         <div class="field" style="flex:1">
           <label for="f-name">{L.name}</label>
           <div class="name-input">
-            <input type="text" id="f-name" maxlength="10" autocomplete="off" enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter bind:value={C.name} />
+            <input type="text" id="f-name" maxlength="12" autocomplete="off" enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter bind:value={C.name} />
             <button type="button" class="dice" data-act="random-name" aria-label={L.randomName} onclick={() => (C.name = randomName())}>🎲</button>
           </div>
         </div>
@@ -269,7 +295,7 @@
       {#if detailOpen && DETAILS_OF[C.pos].length > 1}
         <div class="field">
           <span class="lbl">{L.detailPosition}</span>
-          <div class="seg" class:two={DETAILS_OF[C.pos].length === 2} class:three={DETAILS_OF[C.pos].length === 3}>
+          <div class="seg two">
             {#each DETAILS_OF[C.pos] as d (d)}
               <button class="opt pos-opt" data-set="dpos" data-val={d} aria-pressed={C.dpos === d} onclick={() => pickDetail(d)}>
                 <span class="pos-code num">{d}</span><b>{tn(DPOS[d].label)}</b><small>{DPOS[d].blurb}</small>
@@ -331,6 +357,12 @@
         <button class="icon-btn" data-act="open-all" onclick={openAll}>{L.openAll}</button>
       {/if}
     </div>
+    {#if scouts > 0}
+      <button class="btn btn-sm btn-primary self-start" data-act="premium-scout" disabled={scoutBusy || rerolling} onclick={premiumScout}>{scoutBusy ? SL.busy : SL.btn({ n: scouts })}</button>
+      <p class="muted fs-sm">{SL.what}</p>
+      <ScoutOdds />
+    {/if}
+    {#if premium}<p class="muted fs-sm" data-premium-note>{SL.premiumNote}</p>{/if}
     {#if rerolls > 0}
       <button class="btn btn-sm self-start" data-act="reroll-candidates" disabled={rerolling} onclick={reroll}>{rerolling ? CL.rerollBusy : CL.rerollBtn({ n: rerolls })}</button>
     {:else if owner}
@@ -338,7 +370,7 @@
         {CL.createShopHint} <button class="link-btn" data-act="reroll-shop-go" onclick={goRerollShop}>{CL.createShopGo}</button>
       </p>
     {/if}
-    <p class="muted">{appState.candidatePotentialOpen ? L.potentialHelp : L.potentialWeb}</p>
+    <p class="muted">{appState.candidatePotentialOpen ? (premium ? SL.premiumHelp : L.potentialHelp) : L.potentialWeb}</p>
     {#if clubCand}
       <button class="btn btn-sm self-start" data-act="candidate-potential-club" disabled={clubBusy} onclick={revealWithClub}>
         {clubBusy ? B.clubBusy : B.clubCandidates({ price: fundsText(clubCand.price) })}
@@ -347,6 +379,7 @@
     {#if clubMsg}<p class="muted fs-sm" aria-live="polite">{clubMsg}</p>{/if}
     {@render ovrGuide()}
     <p class="muted fs-sm">{L.ovrCore}</p>
+    <p class="muted fs-sm" data-candidate-stats-note>{CG.candidateNote}</p>
     <div class="cand-list">
       {#each appState.candidates as cand, i (i)}
         {#if appState.candidatesOpen[i]}
@@ -354,6 +387,7 @@
             <span class="cc-head">
               <span class="cc-no">{L.candNo({ n: i + 1 })}</span>
               <span class="cc-ovr">OVR <b class="num">{startOvr(C.pos, cand.attrs)}</b></span>
+              {#if cand.guaranteed}<span class="pill" data-cand-sure>{SL.sure}</span>{/if}
               {#if appState.candidatePick === i}<span class="pill good">{L.picked}</span>{/if}
             </span>
             <span class="muted">{appState.candidatePotentialOpen ? L.potentialRange(candidatePotentialGrades(cand.potential)) : L.potentialLocked}</span>

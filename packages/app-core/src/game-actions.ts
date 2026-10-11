@@ -176,6 +176,8 @@ function tourView(x: NatTourResult): TourView {
 // 시작 직후 포기로 다시 와도 같은 조건이면 같은 후보가 나온다(다시 뽑아 고르는 리세 방지).
 const SCOUT_SEED = 'ft_scout_seed';
 const SCOUT_REVEAL = 'ft_scout_reveal';
+// T-11-196 프리미엄 스카우트로 뽑은 시드. 새로 고침해도 같은 시드면 프리미엄 후보가 그대로 나온다.
+const SCOUT_PREMIUM = 'ft_scout_premium';
 function scoutSeed(): number {
   const kept = loadKey<number>(SCOUT_SEED);
   if (typeof kept === 'number') return kept;
@@ -805,6 +807,8 @@ export function createGameActions(host: GameHost) {
       appState.C.focus,
       draftCareerRules(appState.C).dpos,
       scoutSeed(),
+      3,
+      loadKey<number>(SCOUT_PREMIUM) === scoutSeed(),
     );
     appState.candidatesOpen = [false, false, false];
     appState.candidatePick = null;
@@ -814,6 +818,15 @@ export function createGameActions(host: GameHost) {
   function rerollCandidates() {
     releaseScoutSeed();
     saveKey(SCOUT_REVEAL, null);
+    rollCandidates();
+  }
+
+  /** T-11-196 프리미엄 스카우트권을 쓴 뒤(서버가 1장 차감) 새 시드로 프리미엄 후보를 뽑고 잠재력도 바로 공개한다. */
+  function premiumScoutCandidates() {
+    releaseScoutSeed();
+    const seed = scoutSeed();
+    saveKey(SCOUT_PREMIUM, seed);
+    saveKey(SCOUT_REVEAL, seed);
     rollCandidates();
   }
 
@@ -837,5 +850,6 @@ export function createGameActions(host: GameHost) {
     startCareer,
     rollCandidates,
     rerollCandidates,
+    premiumScoutCandidates,
   };
 }

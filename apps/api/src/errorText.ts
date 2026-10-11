@@ -1,3 +1,6 @@
+import { activityErrorText as activityKo } from './i18n/ko/careerReminder.js';
+import { activityErrorText as activityEn } from './i18n/en/careerReminder.js';
+import { activityErrorText as activityJa } from './i18n/ja/careerReminder.js';
 import { EXACT_JA, PATTERNS_JA } from './i18n/ja/errorText.js';
 import { cupText } from './cupText.js';
 import type { Lang } from './lang.js';
@@ -25,6 +28,9 @@ const EXACT: Record<string, string> = {
   // 로그인 · 프로필 · 복구
   '지금은 구글 로그인을 사용할 수 없어요. 잠시 후 다시 시도해 주세요.':
     "Google sign-in isn't available right now. Please try again in a moment.",
+  // i18n-ignore: 응답 문장을 찾는 한국어 원문 키
+  '지금은 Apple 로그인을 사용할 수 없어요. 잠시 후 다시 시도해 주세요.':
+    "Apple sign-in isn't available right now. Please try again in a moment.",
   '잠시 후 다시 시도해 주세요.': 'Please try again in a moment.',
   // T-11-146 번역 보기
   // i18n-ignore: 응답 문장을 찾는 한국어 원문 키
@@ -202,6 +208,7 @@ const TABLES: Record<
 /** 한국어 문장을 요청 언어로. 한국어면 그대로, 표에 없으면 한국어 그대로 돌려준다. */
 export function localizeMessage(message: string, lang: Lang): string {
   if (lang === 'ko') return message;
+  if (message === activityKo) return lang === 'en' ? activityEn : activityJa;
   const T = TABLES[lang];
   const hit = T.exact[message];
   if (hit) return hit;

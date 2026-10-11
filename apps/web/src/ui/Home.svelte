@@ -20,10 +20,14 @@
   import { APP_PROMO } from '@offside/app-core/appPromo';
   import { trackAppStoreClick } from '../analytics/index.js';
   import { appTarget } from './appStore.js';
+  import { adLanded } from './adLanding.js';
   import { homeText as L } from '@offside/app-core/i18n/ko/home';
 
   const live = $derived(!!appState.G && !appState.G.retired);
   const appFor = appTarget();
+  // T-11-195 광고로 온 방문(대부분 해외)에는 아직 비공개 테스트인 안드로이드 테스터 모집을 보이지 않는다.
+  const tester = appFor !== 'ios' && !adLanded();
+  const appTiles = (appFor !== 'android' ? 1 : 0) + (tester ? 1 : 0);
 </script>
 
 <div class="wrap">
@@ -92,13 +96,13 @@
         <span class="eyebrow">{APP_PROMO.tile.eyebrow}</span><b>{APP_PROMO.tile.title}</b><span class="muted fs-sm">{APP_PROMO.tile.sub}</span>
       </a>
     {/if}
-    {#if appFor !== 'ios'}
+    {#if tester}
       <a class="tile tile-link" data-act="android-tester" href={ANDROID_TESTER_FORM_URL} target="_blank" rel="noopener noreferrer">
         <span class="eyebrow">Android</span><b>{L.testerTitle}</b><span class="muted fs-sm">{L.testerSub}</span>
       </a>
     {/if}
     <!-- T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일. 앱 타일이 둘이면 한 줄을 다 쓴다. -->
-    <a class="tile tile-link" class:tile-wide={appFor === 'both'} data-act="dc-gallery" href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">
+    <a class="tile tile-link" class:tile-wide={appTiles % 2 === 0} data-act="dc-gallery" href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">
       <span class="eyebrow">Community</span><b>{L.galleryTitle}</b><span class="muted fs-sm">{L.gallerySub}</span>
     </a>
   </div>

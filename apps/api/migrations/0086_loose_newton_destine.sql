@@ -1,0 +1,1 @@
+ALTER TABLE `owner_title_progress` ADD `preseason` integer DEFAULT 0 NOT NULL;

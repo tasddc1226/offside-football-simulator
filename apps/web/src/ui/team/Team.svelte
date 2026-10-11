@@ -1,5 +1,5 @@
 <script lang="ts">
-  import GoogleLoginButton from '../GoogleLoginButton.svelte';
+  import LoginButtons from '../LoginButtons.svelte';
   import { seasonLabel } from '@offside/app-core/seasonName';
   import { needsOwnerLogin } from '@offside/app-core/market';
   // T-10-092 구단주 팀 — 시즌마다 그 시즌에 뛰고 은퇴한 내 선수로 11명을 꾸려(빈 자리는 유스 선수가 채운다) 같은 시즌
@@ -7,7 +7,6 @@
   // 서버가 정한다(웹은 보여 주기만).
   import { onDestroy, onMount, untrack } from 'svelte';
   import {
-    FORMATIONS,
     LINEUP_SIZE,
     MANAGER_NAME_MAX,
     MANAGER_NAME_MIN,
@@ -17,6 +16,7 @@
     YOUTH_NAME,
     YOUTH_OVR,
     presetLayout,
+    positionedLayout,
     slotRating,
     teamOvr,
     type AchCategory,
@@ -30,6 +30,7 @@
     fetchTeamMatches,
     playMatch,
     saveOwnerTeam,
+    saveTeamPresets,
     type ClubAchievementsResponse,
     type OwnerTeam,
     type OwnerTeamResponse,
@@ -45,7 +46,6 @@
   import { toast } from '../helpers.js';
   import { setCardLock } from '@offside/app-core/api/market';
   import { dur } from '../motion.js';
-  import { startGoogleLogin } from '../login.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import { appState, hofStart, type TeamView } from '../state.svelte.js';
   import Topbar from '../Topbar.svelte';
@@ -59,6 +59,8 @@
   import TeamOpponents from './TeamOpponents.svelte';
   import TeamResult from './TeamResult.svelte';
   import TeamFriends from './TeamFriends.svelte';
+  import TeamPresets from './TeamPresets.svelte';
+  import { loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPresets';
   import { friendsUi } from '../friendInvite.svelte.js';
   import { shellText as S } from '@offside/app-core/i18n/ko/shell';
   import { achNudge } from '../achNudge.js';
@@ -102,6 +104,9 @@
   let loadSequence = 0;
   /** T-11-145 컵에 참가 중이면 편성 화면에 명단 마감 띠(잠겼는지 · 다음 마감 시각). */
   let cupBand = $state<{ locked: boolean; when: string | null } | null>(null);
+  /** T-11-217 팀 프리셋(서버에 있는 목록)과 시트. */
+  let presets = $state<TeamPreset[]>([]);
+  let presetsOpen = $state(false);
 
   let opponents = $state<TeamOpponent[]>([]);
   let oppStatus = $state<LoadStatus>('loading');
@@ -131,7 +136,8 @@
   const nameOf = (p: TeamPlayer) => marketName(p, localNames);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
 
-  const slotCodes = $derived(layout?.map((p) => p.slot) ?? FORMATIONS[formation]);
+  const previewLayout = $derived(editable && season > 0 ? positionedLayout(layout ?? presetLayout(formation)) : layout ?? presetLayout(formation));
+  const slotCodes = $derived(previewLayout.map(p => p.slot));
   const ratings: (number | null)[] = $derived(
     slotCodes.map((slot, i) => {
       const id = slots[i];
@@ -141,7 +147,7 @@
   );
   const ovr = $derived(teamOvr(ratings));
   // T-11-105 선발 시너지 — 늘 보여 주고, 반영 시즌부터 줄 힘에도 더한다.
-  const synergy = $derived(slotsSynergy(layout ?? presetLayout(formation), slots, byId));
+  const synergy = $derived(slotsSynergy(previewLayout, slots, byId));
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
   const lines = $derived(draftLines(slotCodes, ratings, synergy, season));
   const filled = $derived(slots.filter((s) => s !== null).length);
@@ -200,6 +206,25 @@
     formation = t?.formation ?? '4-3-3';
     layout = t?.layout?.map((p) => ({ ...p })) ?? null;
     slots = t ? t.slots.map((s) => s.careerId) : Array(LINEUP_SIZE).fill(null);
+    presets = t?.presets ?? [];
+  }
+
+  // ───────── 프리셋 (T-11-217) ─────────
+  const presetDraft = (presetName: string) => presetOf(presetName, formation, slots, season > 0 ? previewLayout : null);
+  async function persistPresets(next: TeamPreset[], saved = false): Promise<boolean> {
+    const r = await saveTeamPresets({ presets: next, ...(isPreseasonLegacy(season, current) ? { season: 0 } : {}) });
+    if (!r.ok) { toast(r.error.message); return false; }
+    presets = r.data.presets;
+    if (team) team = { ...team, presets: r.data.presets };
+    if (saved) toast(L.tpSaved);
+    return true;
+  }
+  function applyPreset(p: TeamPreset) {
+    const r = loadPreset(p, new Set(players.map((x) => x.careerId)));
+    formation = r.formation;
+    layout = r.layout;
+    slots = r.slots;
+    toast(r.missing ? L.tpLoadedMissing({ n: r.missing }) : L.tpLoaded);
   }
 
   /** 컵이 조별·토너먼트 중일 때만 내 참가 상태를 묻는다(그 밖에는 요청 없음). */
@@ -303,6 +328,7 @@
     saving = true;
     const r = await saveOwnerTeam({
       ...submitted, name: submitted.name.trim(), manager: submitted.manager.trim(),
+      ...(season > 0 ? { layout: previewLayout } : {}),
       ...(isPreseasonLegacy(season, current) ? { season: 0 } : {}),
     });
     saving = false;
@@ -449,7 +475,7 @@
         <div class="eyebrow">My team</div>
         <h1>{L.myTeam}</h1>
         <p class="muted">{L.loginOnly}</p>
-        <GoogleLoginButton onclick={() => startGoogleLogin(null)} />
+        <LoginButtons back={null} />
       </section>
     {:else if view === 'achievements'}
       <TeamAchievements {ach} status={achStatus} newIds={achNewIds} bind:cat={achCat} load={(s) => void loadAchievements(s)} onrank={openAchRanking} />
@@ -508,7 +534,9 @@
         onauto={autoFill}
         onsave={save}
         onlock={toggleLock}
+        onpresets={() => (presetsOpen = true)}
       />
+      <TeamPresets bind:open={presetsOpen} {presets} hasTeam={!!team} locked={!!cupBand?.locked} draft={presetDraft} persist={persistPresets} onload={applyPreset} />
     {:else if view === 'opponents'}
       <div class="seg two tm-mode" role="group" aria-label={L.matchKindLabel}>
         <button class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && oppStatus !== 'ready') void loadOpponents(); }}>{L.modeRanked}</button>

@@ -94,14 +94,14 @@ describe('T-10-092 자리별 실력·포메이션', () => {
     publicName: null,
   };
 
-  it('최고 시점 능력치가 있으면 자리 역할의 실력을 쓰고, 최고 OVR을 넘지 않는다', () => {
+  it('최고 시점 능력치가 있으면 자리 역할의 실력을 쓰고, 최고 OVR + 2를 넘지 않는다(T-11-197)', () => {
     const at = (i: number) =>
       buildLineup(
         '4-3-3',
         Array.from({ length: 11 }, (_, k) => (k === i ? 'c' : null)),
         new Map([['c', cb]]),
       )[i]!;
-    expect(at(2)).toMatchObject({ slot: 'CB', rating: 82, fit: 1 }); // 84 → 최고 OVR 82로 자른다
+    expect(at(2)).toMatchObject({ slot: 'CB', rating: 84, fit: 1.02 }); // 최고 OVR 82 + 2까지
     expect(at(1)).toMatchObject({ slot: 'FB', rating: 78, fit: 0.95 });
     expect(at(5)).toMatchObject({ slot: 'DM', rating: 70 });
     expect(at(9)).toMatchObject({ slot: 'ST', rating: 50 });

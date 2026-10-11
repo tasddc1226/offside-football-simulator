@@ -405,7 +405,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
         legendScore,
         publicName: `선수${legendScore}`,
       });
-      await ctx.db.update(careers).set({ pos }).where(eq(careers.id, id));
+      await ctx.db.update(careers).set({ pos, dpos: null }).where(eq(careers.id, id));
     }
     const read = async (q: string) =>
       successEnvelope(HofListResponseSchema).parse(
@@ -420,7 +420,25 @@ describe('공개 명예의 전당 /v1/hof', () => {
     // 검색 결과의 순위도 고른 포지션 안에서 센다.
     expect((await read('pos=DF&q=선수400')).entries.map((e) => e.rank)).toEqual([2]);
     expect((await createApp().request('/v1/hof?pos=ST', {}, ctx.env)).status).toBe(400);
-  });
+    await ctx.db
+      .update(careers)
+      .set({ dpos: 'CB', serviceSeason: 1 })
+      .where(eq(careers.id, rows[1].id));
+    await ctx.db
+      .update(careers)
+      .set({ dpos: 'FB', serviceSeason: 1 })
+      .where(eq(careers.id, rows[2].id));
+    const cb = await read('season=1&pos=DF&dpos=CB&limit=1');
+    expect(cb.total).toBe(1);
+    expect(cb.entries.map((e) => e.id)).toEqual([rows[1].id]);
+    expect((await read('dpos=FB&q=선수400')).entries.map((e) => e.rank)).toEqual([1]);
+    expect((await read('dpos=FB&page=2&limit=1')).entries).toEqual([]);
+    expect((await read('dpos=FB&page=2&limit=1')).total).toBe(1);
+    expect((await read('pos=FW&dpos=CB')).total).toBe(0);
+    expect((await read('season=0&dpos=CB')).total).toBe(0);
+    expect((await read('dpos=ST')).total).toBe(0); // Legacy FW without dpos is not inferred as ST.
+    expect((await createApp().request('/v1/hof?dpos=FW', {}, ctx.env)).status).toBe(400);
+  }, 60_000);
 
   // Four complete retirement uploads precede search checks; allow slower fixture
   // D1 RPC under parallel runs without relaxing any search/rank assertions.

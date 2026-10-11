@@ -37,6 +37,7 @@ export const hof: Translation<HofMsgs> = {
   filterA11y: (p) => `フィルター、${p.label}`,
   allPositions: '全ポジション',
   searchLabel: '選手名を検索',
+  detailPositionGroup: '詳細ポジション',
   positionGroup: 'ポジション',
   all: 'すべて',
   rankBasis: '順位の基準',

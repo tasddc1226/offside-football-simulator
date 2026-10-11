@@ -110,6 +110,8 @@ export function registerChatRoutes(app: Hono<AppEnv>) {
           admin: viewer.admin,
           tier:
             (await ownerTierOfProfile(db, profileId, new Date(now).toISOString()))?.tier ?? null,
+          title: viewer.title,
+          avatarId: viewer.avatarId ?? null,
         });
     return ok(
       c,

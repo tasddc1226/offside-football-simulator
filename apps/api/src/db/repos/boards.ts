@@ -5,6 +5,7 @@ import {
   type CommunityEvent,
 } from '../../push/community.js';
 import type { Bindings } from '../../env.js';
+import { publishCommunityPush } from '../../push/communityQueue.js';
 import type {
   BoardBlock,
   BoardKey,
@@ -24,6 +25,7 @@ import {
   boardComments,
   boardPostLikes,
   boardPosts,
+  profiles,
 } from '../schema.js';
 import { runBatch } from './batch.js';
 import { newsPushStatements } from '../../push/enqueue.js';
@@ -91,6 +93,43 @@ export function localizeList(
     }),
   };
 }
+/** Public news has no drafts/private flag in this schema: only the two admin boards are published.
+ * Never select translations, author IDs, comments or user-specific fields. */
+const publicColumns = {
+  id: boardPosts.id,
+  board: sql<BoardKey>`${boardPosts.board}`,
+  title: boardPosts.title,
+  createdAt: boardPosts.createdAt,
+  updatedAt: boardPosts.updatedAt,
+};
+export async function publicNewsIndex(db: Db, board: BoardKey) {
+  return db
+    .select(publicColumns)
+    .from(boardPosts)
+    .where(
+      and(
+        eq(boardPosts.board, board),
+        inArray(boardPosts.board, ['notice', 'release']),
+        isNull(boardPosts.deletedAt),
+      ),
+    )
+    .orderBy(desc(boardPosts.createdAt))
+    .limit(1000);
+}
+export async function publicNewsPost(db: Db, id: string) {
+  const [post] = await db
+    .select({ ...publicColumns, body: boardPosts.body })
+    .from(boardPosts)
+    .where(
+      and(
+        eq(boardPosts.id, id),
+        inArray(boardPosts.board, ['notice', 'release']),
+        isNull(boardPosts.deletedAt),
+      ),
+    );
+  return post;
+}
+
 const live = (id: string) => and(eq(boardPosts.id, id), isNull(boardPosts.deletedAt));
 const likeOf = (postId: string, profileId: string) =>
   and(eq(boardPostLikes.postId, postId), eq(boardPostLikes.profileId, profileId));
@@ -275,8 +314,12 @@ export async function listComments(db: Db, postId: string) {
       body: boardComments.body,
       admin: boardComments.admin,
       createdAt: boardComments.createdAt,
+      // T-11-150 작성자의 지금 대표 칭호.
+      title: profiles.title,
+      avatarId: profiles.avatarId,
     })
     .from(boardComments)
+    .leftJoin(profiles, eq(profiles.id, boardComments.profileId))
     .where(and(eq(boardComments.postId, postId), isNull(boardComments.deletedAt)))
     .orderBy(asc(boardComments.createdAt))
     .limit(COMMENTS_MAX);
@@ -294,10 +337,10 @@ export async function createComment(
     const recipients = await communityRecipients(notify.env);
     const { sql, params } = mutation.toSQL();
     const event: CommunityEvent = { ...input, id, now, type: 'comment', board: notify.board };
-    await db.$client.batch([
-      db.$client.prepare(sql).bind(...params),
-      ...communityStatements(notify.env, recipients, event),
-    ]);
+    const notificationStatements = communityStatements(notify.env, recipients, event);
+    await db.$client.batch([db.$client.prepare(sql).bind(...params), ...notificationStatements]);
+    if (notificationStatements.length)
+      await publishCommunityPush(notify.env, [`admin-community-comment:${id}`]);
   } else await mutation;
   return id;
 }

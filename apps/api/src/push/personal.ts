@@ -1,4 +1,5 @@
 import type { Bindings } from '../env.js';
+import { pushText } from './text.js';
 import { postExpo } from './transport.js';
 import { kstDay } from '@offside/contracts/kst';
 import { latePushResult } from './result.js';
@@ -36,6 +37,8 @@ type Row = {
   profile_id: string;
   token: string;
   title: string;
+  retention_stage: number | null;
+  retention_lang: string | null;
   body: string;
   kind: string;
   target_json: string;
@@ -105,6 +108,7 @@ async function claim(
   now: number,
   lease: string,
   only: string = '',
+  params: string[] = [],
 ) {
   const db = env.DB;
   const from = checking ? 'accepted' : 'pending';
@@ -124,11 +128,14 @@ async function claim(
       checking ? 1 : 0,
       from,
       iso(now),
+      ...params,
     )
     .run();
   const rows = await db
     .prepare(
       `SELECT q.*, n.title, n.body, n.kind, n.target_json,
+      (SELECT stage FROM career_reminder_outcomes WHERE notification_id=n.id) AS retention_stage,
+      (SELECT lang FROM career_activity WHERE profile_id=q.profile_id) AS retention_lang,
     CASE WHEN d.token = q.token AND d.session_id = q.session_id AND d.profile_id = q.profile_id
       AND d.updated_at >= ? AND s.channel = 'app' AND s.profile_id = q.profile_id
       AND s.revoked_at IS NULL AND s.expires_at > ? AND p.deleted_at IS NULL AND p.id IS NOT NULL
@@ -141,7 +148,14 @@ async function claim(
         AND (n.source_key NOT LIKE 'admin-community-comment:%' OR EXISTS (
           SELECT 1 FROM board_comments cm JOIN board_posts bp ON bp.id = cm.post_id
           WHERE cm.id = substr(n.source_key, 25) AND cm.deleted_at IS NULL AND bp.deleted_at IS NULL))))
-      AND (n.kind <> 'return' OR NOT EXISTS (SELECT 1 FROM push_devices active WHERE active.profile_id = q.profile_id AND active.updated_at > ?))
+      AND (n.kind <> 'return' OR CASE WHEN n.source_key LIKE 'career-reminder:%' THEN
+        ? = '1' AND EXISTS (SELECT 1 FROM career_activity a WHERE a.profile_id=q.profile_id
+          AND a.state='active' AND a.retired_at IS NULL AND a.last_active_at <= ? AND a.last_active_at <= n.created_at)
+        AND NOT EXISTS (SELECT 1 FROM careers c WHERE c.profile_id=q.profile_id AND (c.status='retired' OR c.updated_at > ?))
+        AND NOT EXISTS (SELECT 1 FROM push_devices active WHERE active.profile_id=q.profile_id AND active.updated_at > ?)
+        AND NOT EXISTS (SELECT 1 FROM notifications other WHERE other.profile_id=q.profile_id AND other.id<>n.id AND other.created_at > ?)
+        ELSE NOT EXISTS (SELECT 1 FROM career_activity a WHERE a.profile_id=q.profile_id)
+          AND NOT EXISTS (SELECT 1 FROM push_devices active WHERE active.profile_id = q.profile_id AND active.updated_at > ?) END)
       THEN 1 ELSE 0 END AS eligible
     FROM push_deliveries q JOIN notifications n ON n.id = q.notification_id
     LEFT JOIN push_devices d ON d.installation_hash = q.installation_hash
@@ -155,6 +169,11 @@ async function claim(
       iso(now),
       iso(now),
       communityOwnerEmail(env),
+      env.CAREER_REMINDER_ENABLED ?? '0',
+      iso(now - 3 * 86400_000),
+      iso(now - 3 * 86400_000),
+      iso(now - 3 * 86400_000),
+      iso(now - 86400_000),
       iso(now - 7 * 86400_000),
       state,
       lease,
@@ -174,8 +193,19 @@ async function send(
       'send',
       rows.map((r) => ({
         to: r.token,
-        title: r.title,
-        body: r.body.slice(0, 160),
+        title: r.retention_stage
+          ? pushText(
+              r.title,
+              r.retention_lang === 'en' ? 'en' : r.retention_lang === 'ja' ? 'ja' : 'ko',
+            )
+          : r.title,
+        body: (r.retention_stage
+          ? pushText(
+              r.body,
+              r.retention_lang === 'en' ? 'en' : r.retention_lang === 'ja' ? 'ja' : 'ko',
+            )
+          : r.body
+        ).slice(0, 160),
         channelId: 'news',
         sound: 'default',
         ttl: 3600,
@@ -184,6 +214,9 @@ async function send(
           type: 'offside-notification',
           notificationId: r.notification_id,
           kind: r.kind,
+          ...(r.retention_stage
+            ? { campaign: 'career_reminder', reminderStage: r.retention_stage }
+            : {}),
           target: targetOf(r.target_json),
         },
       })),
@@ -274,26 +307,71 @@ export async function runPersonalPush(
   env: Bindings,
   now = Date.now(),
   transport: typeof fetch = fetch,
+  communitySourceKey?: string | { retentionBatch: string } | { cupResult: string },
 ) {
   if (env.ENVIRONMENT !== 'production' || env.PERSONAL_PUSH_ENABLED !== '1')
     return { enabled: false };
   const lease = crypto.randomUUID();
+  // Bound source key and kind keep Queue messages away from ordinary user notifications.
+  const retentionBatch =
+    typeof communitySourceKey === 'object' && 'retentionBatch' in communitySourceKey
+      ? communitySourceKey.retentionBatch
+      : undefined;
+  const cupResult =
+    typeof communitySourceKey === 'object' && 'cupResult' in communitySourceKey
+      ? communitySourceKey.cupResult
+      : undefined;
+  const scope =
+    communitySourceKey === undefined
+      ? ''
+      : cupResult !== undefined
+        ? ` AND EXISTS (SELECT 1 FROM notifications WHERE id=push_deliveries.notification_id AND kind='team' AND source_key=?)`
+        : retentionBatch !== undefined
+          ? ` AND EXISTS
+        (SELECT 1 FROM notifications WHERE id=push_deliveries.notification_id
+          AND kind='return' AND substr(source_key,1,53) = ?)`
+          : ` AND EXISTS
+    (SELECT 1 FROM notifications WHERE id = push_deliveries.notification_id
+      AND (${IS_COMMUNITY}) AND source_key = ?)`;
+  const scopeParams =
+    communitySourceKey === undefined
+      ? []
+      : [
+          cupResult ??
+            (retentionBatch !== undefined
+              ? `career-reminder:${retentionBatch}:`
+              : (communitySourceKey as string)),
+        ];
   await env.DB.batch([
     env.DB.prepare(
-      "UPDATE push_deliveries SET state = 'unknown', token = '', lease_id = NULL, updated_at = ? WHERE state = 'sending' AND due_at <= ?",
-    ).bind(iso(now), iso(now)),
+      "UPDATE push_deliveries SET state = 'unknown', token = '', lease_id = NULL, updated_at = ? WHERE state = 'sending' AND due_at <= ?" +
+        scope,
+    ).bind(iso(now), iso(now), ...scopeParams),
     env.DB.prepare(
-      "UPDATE push_deliveries SET state = 'accepted', lease_id = NULL WHERE state = 'checking' AND due_at <= ?",
-    ).bind(iso(now)),
+      "UPDATE push_deliveries SET state = 'accepted', lease_id = NULL WHERE state = 'checking' AND due_at <= ?" +
+        scope,
+    ).bind(iso(now), ...scopeParams),
   ]);
   const states: Partial<Record<Outcome['state'], number>> = {};
   const hour = new Date(now + 9 * 3600_000).getUTCHours();
-  for (const checking of [true, false, false, false]) {
+  // Queue accelerates initial sends; receipt checks retain the existing 15-minute schedule.
+  for (const checking of communitySourceKey === undefined ? [true, false, false, false] : [false]) {
     // 운영 알림은 야간에도 보낸다. 일반 알림은 09~20시, 컵 결과는 22시까지다.
     // 영수증 조회는 시간 제한 없이 유지하고, 수동 본인 테스트는 별도의 요청 경로를 쓴다.
     const cupOnly = hour >= 20 && hour < CUP_PUSH_UNTIL_HOUR;
-    const only = !checking && (hour < 9 || hour >= 20) ? afterHoursOnly(cupOnly) : '';
-    const rows = await claim(env, checking, now, lease, only);
+    let only = scope || (!checking && (hour < 9 || hour >= 20) ? afterHoursOnly(cupOnly) : '');
+    if (!checking && cupResult !== undefined && (hour < 9 || hour >= CUP_PUSH_UNTIL_HOUR)) continue;
+    if (!checking && (hour < 11 || hour >= 19))
+      only += ` AND NOT EXISTS
+      (SELECT 1 FROM notifications WHERE id=push_deliveries.notification_id AND source_key LIKE 'career-reminder:%')`;
+    const onlyParams = [...scopeParams];
+    if (!checking && communitySourceKey === undefined) {
+      // Give Queue first delivery; cron repairs missed publishes after five minutes.
+      only += ` AND NOT EXISTS (SELECT 1 FROM notifications WHERE id=push_deliveries.notification_id
+        AND (source_key LIKE 'career-reminder:%' OR source_key LIKE 'cup-complete:%') AND created_at > ?)`;
+      onlyParams.push(iso(now - 5 * MINUTE));
+    }
+    const rows = await claim(env, checking, now, lease, only, onlyParams);
     const eligible = checking ? rows : rows.filter((r) => r.eligible === 1);
     const reserved = checking ? null : await reserveBudget(env.DB, eligible, now);
     const active = checking ? eligible : eligible.filter((r) => reserved!.has(r.notification_id));
@@ -310,6 +388,19 @@ export async function runPersonalPush(
     });
     if (!checking && rows.length < BATCH) break;
   }
-  console.log(JSON.stringify({ job: 'personal-push', ts: iso(now), states }));
+  console.log(
+    JSON.stringify({
+      job:
+        cupResult !== undefined
+          ? 'cup-result-send'
+          : retentionBatch !== undefined
+            ? 'career-reminder-send'
+            : communitySourceKey === undefined
+              ? 'personal-push'
+              : 'community-queue-send',
+      ts: iso(now),
+      states,
+    }),
+  );
   return { enabled: true, states };
 }

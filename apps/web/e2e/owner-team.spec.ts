@@ -138,14 +138,15 @@ async function stubOwner(page: Page, google: boolean) {
   );
 }
 
-// T-10-102 비로그인 구단주는 안내 카드와 로그인 버튼 하나만 — 로그인해야 쓰는 내 팀은 숨긴다.
-test('익명 구단주는 내 팀 대신 구글 로그인 버튼 하나만 본다', async ({ page }) => {
+// T-10-102 비로그인 구단주는 안내 카드와 로그인 버튼(구글 · T-11-204 Apple)만 — 로그인해야 쓰는 내 팀은 숨긴다.
+test('익명 구단주는 내 팀 대신 구글 · Apple 로그인 버튼만 본다', async ({ page }) => {
   await stubOwner(page, false);
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
   await expect(page.locator('#account-slot')).toContainText('로그인하지 않았어요');
   await expect(page.getByRole('link', { name: '구글로 로그인' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: '구글로 로그인' })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Apple로 로그인' })).toHaveCount(1);
   await expect(page.locator('[data-owner-team]')).toHaveCount(0);
   await expect(page.locator('[data-act="team"]')).toHaveCount(0);
   await expect(page.locator('[data-settings-open="clubs"]')).toHaveCount(0); // 환경설정으로 옮겼다.
@@ -190,10 +191,12 @@ test('익명 구단주도 이 기기에 은퇴한 선수가 있으면 내 선수
   );
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('[data-my-players]')).toContainText('기기왕');
-  await expect(page.locator('[data-my-source]')).toHaveAttribute('data-my-source', 'device');
   await expect(page.locator('[data-owner-value] dt')).toHaveText('구단 가치');
   await expect(page.locator('[data-owner-value] dd')).toContainText('억');
+  await expect(page.locator('[data-my-players]')).toHaveCount(0);
+  await page.locator('[data-act="open-owner-players"]').click();
+  await expect(page.locator('[data-my-players]')).toContainText('기기왕');
+  await expect(page.locator('[data-my-source]')).toHaveAttribute('data-my-source', 'device');
 });
 
 test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async ({ page }) => {
@@ -309,8 +312,9 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   expect(getCount).toBe(1);
 
   await page.locator('[data-team-name]').fill('우리 동네 FC');
-  // 감독 이름이 비면 저장할 수 없다.
+  // 감독 이름이 비면 저장할 수 없고 이유를 보여 준다.
   await expect(page.locator('[data-act="team-save"]')).toBeDisabled();
+  await expect(page.locator('[data-team-save-reason]')).toContainText('감독 이름');
   await page.locator('[data-team-manager]').fill('홍감독');
   await page.locator('[data-act="team-auto"]').click();
   // 스트라이커 자리(9)에 공격수, 골키퍼 자리(0)에 골키퍼가 들어간다.
@@ -771,7 +775,7 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
   await expect(befriend).toHaveText('신청 보냄');
   await expect(befriend).toBeDisabled();
   expect(friendBodies).toEqual([{ teamId: RIVAL }]);
-  await page.locator('[data-act="team-profile-back"]').click();
+  await page.goBack();
   await expect(list).toBeVisible();
 });
 
@@ -1090,7 +1094,7 @@ test('친구 초대 링크로 들어오면 친구 화면에서 그 구단주에�
   await expect(card).toHaveCount(0);
 });
 
-test('T-11-113 개막 뒤 프리시즌 팀을 꾸려 친구와 프리시즌 친선전을 하고 창단 멤버가 보인다', async ({
+test('T-11-113 프리시즌 친선전을 유지하고 자동 창단 멤버 배지는 표시하지 않는다', async ({
   page,
 }) => {
   await stubOwner(page, true);
@@ -1120,12 +1124,12 @@ test('T-11-113 개막 뒤 프리시즌 팀을 꾸려 친구와 프리시즌 친�
 
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('[data-owner-founder]')).toHaveText('창단 멤버');
+  await expect(page.locator('[data-owner-founder]')).toHaveCount(0);
   await page.locator('[data-act="team"]').click();
   await page.locator('[data-team-tab="opponents"]').click();
   await page.locator('[data-match-mode="friends"]').click();
   const row = page.locator('[data-friend="FRND2345"]');
-  await expect(row.locator('[data-friend-founder]')).toHaveText('창단 멤버');
+  await expect(row.locator('[data-friend-founder]')).toHaveCount(0);
   await expect(row.locator('[data-friend-preseason]')).toHaveText('프리시즌 친구 FC · OVR 61');
   // 내 프리시즌 팀이 없으면 프리시즌 친선전은 못 하고, 프리시즌 팀으로 가는 길을 보인다.
   await expect(row.locator('[data-act="friend-play-preseason"]')).toBeDisabled();
@@ -1296,4 +1300,122 @@ test('구단주 화면을 연 적 없는 브라우저는 받은 친구 신청을
   await expect(page.locator('.main-nav [data-act="owner"]')).toBeVisible();
   await expect(page.locator('[data-tab-dot]')).toHaveCount(0);
   expect(pendingGets).toBe(0);
+});
+
+test('T-11-216 시즌 1 팀은 4-2-3-1 같은 배치 프리셋을 고르고, 저장은 옛 포메이션 + 배치로 한다', async ({
+  page,
+}) => {
+  await stubOwner(page, true);
+  let body: { formation: string; layout: TeamLayout | null } | null = null;
+  await page.route(ownerTeamUrl, async (route) => {
+    if (route.request().method() === 'GET')
+      return route.fulfill(ownerTeam({ season: 1, current: 1, seasons: SEASONS }));
+    body = route.request().postDataJSON();
+    return route.fulfill(ok({ team: teamFrom(route.request().postDataJSON()) }));
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await page.locator('[data-team-name]').fill('우리 동네 FC');
+  await page.locator('[data-team-manager]').fill('홍감독');
+  await page.locator('[data-act="team-auto"]').click();
+  await page.locator('[data-formation="4-2-3-1"]').click();
+  await expect(page.locator('[data-formation="4-2-3-1"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-formation="4-3-3"]')).toHaveAttribute('aria-pressed', 'false');
+  await page.locator('[data-formation="5-3-2"]').click();
+  await page.screenshot({
+    fullPage: true,
+  });
+  await page.locator('[data-formation="4-2-3-1"]').click();
+  await page.screenshot({
+    fullPage: true,
+  });
+  await page.locator('[data-act="team-save"]').click();
+  await expect.poll(() => body?.formation).toBe('4-3-3');
+  expect(body!.layout!.map((p) => p.slot)).toEqual([
+    'GK',
+    'LB',
+    'CB',
+    'CB',
+    'RB',
+    'DM',
+    'DM',
+    'LW',
+    'AM',
+    'RW',
+    'ST',
+  ]);
+});
+
+test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없는 선수 자리는 비운 채 초안만 바꾼다', async ({
+  page,
+}) => {
+  await stubOwner(page, true);
+  const ST = '00000000-0000-4000-8000-000000000011';
+  const GONE = '00000000-0000-4000-8000-0000000000ff';
+  const slots = (...ids: (string | null)[]) => [...ids, ...Array(11 - ids.length).fill(null)];
+  const team = {
+    ...teamFrom({
+      name: '우리 동네 FC',
+      formation: '4-3-3',
+      slots: slots(null, ...Array(8).fill(null), ST),
+    }),
+    season: 1,
+    presets: [
+      {
+        name: '옛 편성',
+        formation: '4-4-2',
+        slots: slots(GONE, ...Array(8).fill(null), ST),
+        layout: null,
+      },
+    ],
+  };
+  const puts: { presets: { name: string; formation: string }[] }[] = [];
+  let teamPuts = 0;
+  await page.route(ownerTeamUrl, async (route) => {
+    if (route.request().method() === 'GET')
+      return route.fulfill(ownerTeam({ season: 1, current: 1, seasons: SEASONS, team }));
+    teamPuts++;
+    return route.fulfill(ok({ team: teamFrom(route.request().postDataJSON()) }));
+  });
+  await page.route(`${API}/v1/owner-team/presets`, async (route) => {
+    const body = route.request().postDataJSON();
+    puts.push(body);
+    return route.fulfill(ok({ presets: body.presets }));
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await page.locator('[data-act="team-presets"]').click();
+  const sheet = page.locator('[data-team-presets]');
+  await expect(sheet.locator('[data-preset]')).toHaveCount(1);
+  await expect(sheet.locator('[data-preset="0"]')).toContainText('4-4-2 · 선발 2명');
+
+  // 지금 편성을 저장하면 기본 이름으로 목록 끝에 붙는다.
+  await sheet.locator('[data-act="preset-save"]').click();
+  await expect.poll(() => puts.length).toBe(1);
+  expect(puts[0]!.presets.map((p) => p.name)).toEqual(['옛 편성', '프리셋 2']);
+  await expect(sheet.locator('[data-preset]')).toHaveCount(2);
+
+  // 이름 바꾸기 · 삭제도 목록을 통째로 보낸다.
+  await sheet.locator('[data-preset="1"] [data-act="preset-rename"]').click();
+  await sheet.locator('[data-preset-name-input]').fill('주말 리그');
+  await sheet.locator('[data-act="preset-rename-done"]').click();
+  await expect.poll(() => puts.length).toBe(2);
+  expect(puts[1]!.presets[1]!.name).toBe('주말 리그');
+  await expect(sheet.locator('[data-preset="1"] [data-preset-name]')).toHaveText('주말 리그');
+  await expectNoA11yViolations(page);
+
+  // 불러오기는 초안만 바꾼다 — 팔린 선수 자리는 비우고 알린다. 팀 저장은 저장 버튼을 눌러야.
+  await sheet.locator('[data-preset="0"] [data-act="preset-load"]').click();
+  await expect(sheet).toBeHidden();
+  await expect(page.getByText('지금 없는 선수 1명의 자리는 비웠어요')).toBeVisible();
+  await expect(page.locator('[data-formation="4-4-2"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-act="team-save"]')).toBeVisible();
+  expect(teamPuts).toBe(0);
+
+  await page.locator('[data-act="team-presets"]').click();
+  await sheet.locator('[data-preset="0"] [data-act="preset-delete"]').click();
+  await expect.poll(() => puts.length).toBe(3);
+  expect(puts[2]!.presets.map((p) => p.name)).toEqual(['주말 리그']);
 });

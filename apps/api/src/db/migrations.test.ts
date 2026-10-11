@@ -40,6 +40,44 @@ function firstProfilesCreateStatement(): string {
  * 5개뿐이다. 컬럼 목록은 schema.ts와 같다(snake_case).
  */
 const EXPECTED_COLUMNS: Record<string, string[]> = {
+  career_activity: [
+    'profile_id',
+    'career_id',
+    'lang',
+    'state',
+    'last_active_at',
+    'retired_at',
+    'reminder_stage',
+    'last_reminder_at',
+    'reminder_batch',
+  ],
+  career_reminder_outcomes: ['notification_id', 'stage', 'returned_at', 'retired_at'],
+  profile_avatars: ['profile_id', 'id', 'image'],
+  owner_title_awards: [
+    'profile_id',
+    'title_id',
+    'criteria_version',
+    'evidence',
+    'earned_at',
+    'seen_at',
+  ],
+  owner_title_progress: [
+    'profile_id',
+    'criteria_version',
+    'midfield',
+    'defense',
+    'keeper',
+    'scorers',
+    'creators',
+    'internationals',
+    'preseason',
+    'retired',
+    'elite',
+    'ballon',
+    'numbers',
+    'firsts',
+    'updated_at',
+  ],
   cup_entries: [
     'cup_id',
     'team_id',
@@ -108,6 +146,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'qty',
     'test',
     'created_at',
+    'refunded_at',
+    'revoked_qty',
   ],
   cards: [
     'career_id',
@@ -215,6 +255,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'last_test_sent_at',
   ],
   profiles: [
+    'avatar_id',
     'id',
     'recovery_code_hash',
     'recovery_code_issued_at',
@@ -231,6 +272,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'apple_sub',
     'apple_linked_at',
     'friend_code',
+    'title',
+    'title_pinned',
   ],
   sessions: [
     'id',
@@ -407,6 +450,16 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
   server_firsts: ['season', 'id', 'career_id', 'achieved_at', 'year'],
   app_meta: ['key', 'value'],
   server_records: ['season', 'id', 'career_id', 'value', 'achieved_at', 'year'],
+  season_telemetry: [
+    'id',
+    'career_id',
+    'year',
+    'age',
+    'ovr',
+    'events_json',
+    'growth_json',
+    'created_at',
+  ],
   retired_numbers: [
     'season',
     'club_id',
@@ -444,6 +497,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'likes',
     'views',
     'friendly_json',
+    'presets_json',
   ],
   team_likes: ['team_id', 'profile_id', 'created_at'],
   owner_achievements: [

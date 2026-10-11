@@ -40,7 +40,7 @@ const ko = {
   alertOpen: '보기',
   alertClose: '알림 닫기',
   jerseyLabel: (p: { name: string; number: number }) => `${p.name} ${p.number}번 영구결번 유니폼`,
-  wallOfHonor: '‘명예의 벽’ 칭호를 받았어요. 영구결번은 아니에요.',
+  wallOfHonor: '구단에 남긴 활약으로 ‘명예의 벽’ 칭호를 받았어요.',
 };
 
 export type LegendRnMsgs = typeof ko;

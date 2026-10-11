@@ -3,7 +3,8 @@ import { DAY_MS } from '../time.js';
 import { gzipToR2 } from './backup.js';
 
 /** Events are upload telemetry, never read for gameplay, records or fraud checks.
- * Keep recent telemetry in D1 and immutable older batches in R2. Signals/growth,
+ * Since T-11-207 new uploads go to season_telemetry; this only drains events left in career_seasons
+ * (and logs restored from dormant-career archives) into immutable R2 batches. Signals/growth,
  * season summaries, snapshots and the dormant-career policy are untouched. */
 export const EVENT_KEEP_DAYS = 7;
 export const EVENT_ARCHIVE_META_KEY = 'cron:season-events:last';

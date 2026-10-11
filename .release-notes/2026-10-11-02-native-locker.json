@@ -1,0 +1,23 @@
+{
+  "id": "t-11-150-native-locker",
+  "title": "앱 명예관에 라커룸이 열렸어요",
+  "items": [
+    "앱에서도 도트 라커룸을 좌우로 돌려 시즌 기록, 대표 칭호, 트로피를 볼 수 있어요.",
+    "선택한 공간의 목록이 아래에 표시되고, 스크롤하면 라커룸 위로 올라와요."
+  ],
+  "en": {
+    "title": "The locker room is now in the app",
+    "items": [
+      "Turn the pixel locker room left or right to browse season records, your title, and trophies in the app.",
+      "The selected collection appears below and slides over the room as you scroll."
+    ]
+  },
+  "ja": {
+    "title": "アプリの名誉館にロッカールームが登場",
+    "items": [
+      "アプリでもドット絵のロッカールームを左右に回して、シーズン記録・代表称号・トロフィーを見られます。",
+      "選んだ展示の一覧が下に表示され、スクロールするとロッカールームの上に重なります。"
+    ]
+  },
+  "availability": "app"
+}

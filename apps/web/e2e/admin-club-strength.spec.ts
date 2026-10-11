@@ -46,6 +46,8 @@ for (const width of [320, 390])
             createdAt: at,
           }),
         );
+      if (path === '/v1/owner/summary')
+        return route.fulfill(ok({ linked: true, admin: true, tier: null, entries: [] }));
       if (path === '/v1/boards/viewer')
         return route.fulfill(ok({ admin: true, google: true, nickname: null }));
       if (path === '/v1/admin/club-strength') {

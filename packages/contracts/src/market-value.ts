@@ -3,6 +3,9 @@
  * (명예의 전당 가치 순, 옛 은퇴 기록 소급)가 같은 식을 쓴다. 시즌 몸값은 이적 제안 이적료와 같은 식(리그 연봉 ×
  * 나이 배수)이고, 은퇴 가치는 가장 비쌌던 세 시즌 평균에 레전드 점수만큼 웃돈을 얹는다. 판정·밸런스에는 쓰지 않는다.
  */
+/** Maximum cards in one release request; shared without pulling zod into clients. */
+export const RELEASE_MAX = 50;
+
 import { LEAGUE_BASE, type LeagueBase } from './club-names.js';
 
 /** 레전드 점수 이만큼마다 은퇴 가치가 1배씩 더 붙는다. */

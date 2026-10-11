@@ -1,5 +1,6 @@
 <script lang="ts">
   import { seasonLabel } from '@offside/app-core/seasonName';
+  import { shapeOf } from '@offside/contracts/owner-team';
   // T-10-092 팀 프로필(라이브 랭킹에서 연다) — 시즌 순위 · 감독 · 레이팅 · 선발 그라운드 · 줄 힘 · 좋아요/조회수 · 팀 히스토리
   // 배지. 누구나 본다. 남의 팀을 열면 조회수를 한 번 올린다(내 팀은 세지 않는다).
   import { onMount } from 'svelte';
@@ -14,24 +15,23 @@
   import { localCareerNames } from '@offside/game/hof-store';
   import { toast } from '../helpers.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
-  import BackBar from '../BackBar.svelte';
   import NameReport from '../NameReport.svelte';
   import TeamLines from './TeamLines.svelte';
   import TeamPitch from './TeamPitch.svelte';
   import TeamLogo from './TeamLogo.svelte';
   import CupHonors from '../cup/CupHonors.svelte';
-  import ChampBadge from '../cup/ChampBadge.svelte';
+  import TitleBadge from '../cup/TitleBadge.svelte';
+  import { ownerProfileText as LO } from '@offside/app-core/i18n/ko/ownerProfile';
+  import { appState } from '../state.svelte.js';
   import { num as n, recordText } from '@offside/app-core/teamText';
   import { friendRequestText } from '@offside/app-core/friendText';
   import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
   import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
 
-  let { id, onback }: { id: string; onback: () => void } = $props();
+  let { id }: { id: string } = $props();
 
   let status = $state<LoadStatus>('loading');
   let team = $state<TeamProfile | null>(null);
-  // 가장 최근 우승 — 팀 이름 아래 챔피언 배지.
-  const champ = $derived(team?.cupHonors?.find((h) => h.stage === 'champion'));
   let liked = $state(false);
   let mine = $state(false);
   let liking = $state(false);
@@ -60,6 +60,12 @@
     }
   }
   onMount(() => void load());
+
+  /** T-11-150 이 팀 구단주의 프로필(뒤로 가면 이 팀 프로필로). */
+  function openOwner() {
+    appState.hof = { ...appState.hof, owner: true };
+    window.scrollTo(0, 0);
+  }
 
   async function toggleLike() {
     if (!team || liking) return;
@@ -110,9 +116,10 @@
         <div class="tp-identity"><TeamLogo logo={team.logo} name={team.name} size={56} /><div class="tp-names">
           <small class="muted">{seasonLabel(team.season, team.seasonName)}{team.rank ? ` · RANK #${team.rank}` : ''}</small>
           <h1>{team.name}</h1>
-          {#if champ}<span class="tp-champ"><ChampBadge edition={champ.edition} /></span>{/if}
+          {#if team.ownerTitle}<span class="tp-title-badge"><TitleBadge title={team.ownerTitle} /></span>{/if}
           <p class="muted fs-sm">{L.profManager}<b class="tp-manager">{team.manager}</b>{mine ? L.profMine : ''}</p>
           {#if team.ownerNickname}<p class="muted fs-sm" data-team-owner>{L.profOwner}<b>{team.ownerNickname}</b></p>{/if}
+          <button class="btn btn-sm tp-owner" data-act="owner-profile" onclick={openOwner}>{LO.open}</button>
         </div></div>
         <div class="tp-rating" aria-label={L.profRatingAria({ n: team.rating })}><small>RATING</small><b>{n(team.rating)}</b></div>
       </div>
@@ -133,7 +140,7 @@
         </button>
         <span class="muted">{L.profViews}<b>{n(team.views)}</b></span>
         {#if friend}<button class="btn btn-sm" class:btn-primary={friend === 'none' || friend === 'received'} disabled={befriending || friend === 'sent' || friend === 'accepted'} onclick={befriend} data-act="team-friend" data-friend-state={friend}>{friendButton(friend)}</button>{/if}
-        <span class="muted fs-xs tp-formation">{team.formation}</span>
+        <span class="muted fs-xs tp-formation">{shapeOf(team.formation, team.layout)}</span>
       </div>
     </section>
 
@@ -161,7 +168,6 @@
   {/if}
 </LoadState>
 <!-- T-10-130 '← 랭킹'은 화면 아래(탭바 위)로. 뒤로 가기로도 랭킹에 돌아간다. -->
-<BackBar act="team-profile-back" fallback={onback} atBottom={false} />
 
 <style>
   .tp-sections {
@@ -186,7 +192,8 @@
   }
   .tp-identity {display:flex;align-items:center;gap:10px;min-width:0;}
   .tp-names {min-width:0;}
-  .tp-champ {display:block; margin:2px 0 4px;}
+  .tp-title-badge {display:block; margin:2px 0 4px;}
+  .tp-owner {margin-top:4px; white-space:nowrap;}
   .tp-manager {
     color: var(--ink);
   }

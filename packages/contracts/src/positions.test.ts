@@ -11,7 +11,7 @@ import {
 import {
   anonName,
   DETAIL_GROUP,
-  DETAIL_POSITIONS,
+  SELECTABLE_DETAIL_POSITIONS,
   DETAILS_OF,
   detailPosOpen,
 } from './positions.js';
@@ -32,9 +32,9 @@ const ZERO: LegendTotals = {
 };
 
 describe('세부 포지션 (T-10-091)', () => {
-  it('세부 포지션 8종은 모두 큰 포지션 하나에 속하고, 큰 포지션 목록과 겹치지 않는다', () => {
+  it('신규 세부 포지션 17종은 모두 큰 포지션 하나에 속하고, 큰 포지션 목록과 겹치지 않는다', () => {
     const listed = Object.values(DETAILS_OF).flat();
-    expect([...listed].sort()).toEqual([...DETAIL_POSITIONS].sort());
+    expect([...listed].sort()).toEqual([...SELECTABLE_DETAIL_POSITIONS].sort());
     for (const [g, ds] of Object.entries(DETAILS_OF))
       for (const d of ds) expect(DETAIL_GROUP[d]).toBe(g);
   });

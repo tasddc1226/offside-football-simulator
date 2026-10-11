@@ -1,0 +1,20 @@
+{
+  "id": "t-11-193-wall-of-honor-fold",
+  "title": "명예의 벽을 접어 둘 수 있어요",
+  "items": [
+    "기록실 영구결번 탭의 명예의 벽은 처음에 접혀 있어요. 펼치기를 누르면 명판을 볼 수 있어요."
+  ],
+  "en": {
+    "title": "The Wall of Honour can be folded",
+    "items": [
+      "The Wall of Honour on the Retired Numbers tab starts folded. Tap Show to see the plaques."
+    ]
+  },
+  "ja": {
+    "title": "名誉の壁を折りたためるようになりました",
+    "items": [
+      "記録室の永久欠番タブにある名誉の壁は最初は閉じています。「開く」を押すと銘板が見られます。"
+    ]
+  },
+  "availability": "web-app"
+}

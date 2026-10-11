@@ -1,0 +1,114 @@
+[
+  {
+    "eyebrow": "KICK-OFF",
+    "lineX": 0.8,
+    "ko": {
+      "h": "이번 생은 *축구*다",
+      "s": "고3부터 은퇴까지, 한 선수로 살아요"
+    },
+    "en": {
+      "h": "One player.\n*One whole career.*",
+      "s": "From high school to retirement"
+    },
+    "ja": {
+      "h": "今度の人生は\n*サッカー*だ",
+      "s": "高校3年から引退まで、ひとりの選手として"
+    }
+  },
+  {
+    "eyebrow": "CREATE",
+    "lineX": 0.14,
+    "ko": {
+      "h": "나만의 선수를\n*직접* 만들어요",
+      "s": "국적을 고르면 그 나라 대표로 뛰어요"
+    },
+    "en": {
+      "h": "Build *your*\nown player",
+      "s": "Pick any nation and play for its national team"
+    },
+    "ja": {
+      "h": "自分だけの選手を\n*一から*つくる",
+      "s": "国籍を選べば、その国の代表でプレー"
+    }
+  },
+  {
+    "eyebrow": "BIG MOMENTS",
+    "lineX": 0.84,
+    "ko": {
+      "h": "결정적인 순간은\n*내 손*으로",
+      "s": "1대1·페널티킥은 타이밍 게이지로 판정해요"
+    },
+    "en": {
+      "h": "Big moments,\n*your timing*",
+      "s": "One-on-ones and penalties use a timing gauge"
+    },
+    "ja": {
+      "h": "決定的な瞬間は\n*自分の手*で",
+      "s": "1対1とPKはタイミングゲージで決まる"
+    }
+  },
+  {
+    "eyebrow": "GROWTH",
+    "lineX": 0.12,
+    "ko": {
+      "h": "시즌마다\n*자라는* 내 선수",
+      "s": "훈련과 자기 투자로 능력치를 키워요"
+    },
+    "en": {
+      "h": "*Grow* every\nseason",
+      "s": "Train and invest to build attributes"
+    },
+    "ja": {
+      "h": "シーズンごとに\n*成長する*選手",
+      "s": "トレーニングと自己投資で能力値を伸ばす"
+    }
+  },
+  {
+    "eyebrow": "SEASON REVIEW",
+    "lineX": 0.86,
+    "ko": {
+      "h": "모든 시즌이\n*기록*으로 남아요",
+      "s": "골·도움·평점부터 월드컵까지"
+    },
+    "en": {
+      "h": "Every season\n*on the record*",
+      "s": "Goals, ratings, awards and World Cups"
+    },
+    "ja": {
+      "h": "すべてのシーズンが\n*記録*に残る",
+      "s": "ゴール・アシスト・評価点からW杯まで"
+    }
+  },
+  {
+    "eyebrow": "TRANSFER",
+    "lineX": 0.14,
+    "ko": {
+      "h": "*해외 이적*,\n국가대표까지",
+      "s": "일본·미국·유럽 리그에서 제의가 와요"
+    },
+    "en": {
+      "h": "*Transfers abroad*,\nWorld Cups",
+      "s": "Offers from Japan, the US and Europe"
+    },
+    "ja": {
+      "h": "*海外移籍*、\n代表入りまで",
+      "s": "日本・アメリカ・欧州からオファーが届く"
+    }
+  },
+  {
+    "eyebrow": "FULL TIME",
+    "lineX": 0.82,
+    "ko": {
+      "h": "은퇴하면\n*명예의 전당*에",
+      "s": "레전드 점수와 잠재력이 공개돼요"
+    },
+    "en": {
+      "h": "Retire into the\n*Hall of Fame*",
+      "s": "Legend score and potential revealed"
+    },
+    "ja": {
+      "h": "引退したら\n*殿堂*へ",
+      "s": "レジェンドスコアとポテンシャルが明かされる"
+    }
+  }
+]

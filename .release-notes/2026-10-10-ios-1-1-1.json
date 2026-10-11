@@ -1,0 +1,23 @@
+{
+  "id": "t-11-119-ios-1-1-1",
+  "title": "iOS 앱 1.1.1이 나왔어요",
+  "items": [
+    "앱스토어에서 1.1.1로 업데이트하면 채팅에서 차단한 사용자를 풀 수 있고, 구단주 닉네임을 신고할 수 있어요.",
+    "기기 언어가 영어·일본어면 앱 이름과 권한 안내도 그 언어로 보여요."
+  ],
+  "en": {
+    "title": "iOS app 1.1.1 is out",
+    "items": [
+      "Update to 1.1.1 on the App Store to unblock people in chat and report club owner nicknames.",
+      "If your device is set to English or Japanese, the app name and permission prompts follow that language."
+    ]
+  },
+  "ja": {
+    "title": "iOSアプリ1.1.1を公開しました",
+    "items": [
+      "App Storeで1.1.1にアップデートすると、チャットでブロックした相手の解除やオーナーのニックネームの通報ができます。",
+      "端末の言語が英語・日本語なら、アプリ名や権限の案内もその言語で表示されます。"
+    ]
+  },
+  "availability": "app"
+}
