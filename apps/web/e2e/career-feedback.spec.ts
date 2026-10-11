@@ -94,7 +94,6 @@ for (const width of [320, 390])
   test(`육성 안내 ${width}px는 저장과 RNG를 바꾸지 않고 훈련 선택을 유지한다`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await startCareer(page);
-    await expect(page.locator('[data-training-pick-hint]')).toBeVisible();
     const before = await page.evaluate(() => localStorage.getItem('ft_save'));
     const guide = page.locator('[data-position-guide]');
     await guide.locator('summary').click();

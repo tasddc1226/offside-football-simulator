@@ -11,7 +11,7 @@
   <summary>{L.guideTitle}</summary>
   <div class="stack guide-body">
     <div class="guide-tabs" role="group" aria-label={L.guideTitle}>
-      {#each ['FW', 'MF', 'DF', 'GK'] as p}
+      {#each ['FW', 'MF', 'DF', 'GK'] as p (p)}
         <button class="hof-sort" aria-pressed={current === p} onclick={() => chosen = p as Pos}>{POS[p as Pos].label}</button>
       {/each}
     </div>

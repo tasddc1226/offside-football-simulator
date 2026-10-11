@@ -2560,9 +2560,9 @@ body:has(.main-nav) .wrap {
   flex-direction: column;
   align-items: center;
   gap: 0;
-  border: 1.5px solid var(--line);
+  border: 1.5px solid transparent;
   border-radius: 12px;
-  background: var(--surface-2);
+  background: transparent;
   line-height: 1.15;
   text-align: center;
 }

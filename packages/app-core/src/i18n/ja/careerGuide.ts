@@ -2,7 +2,6 @@ import type { CareerGuideMsgs } from '../ko/careerGuide';
 export const careerGuide: CareerGuideMsgs = {
   candidateNote:
     '候補カードの能力値は基本の配分です。開始時に詳細能力と体格を反映して再計算するため、開始後の能力値は変わる場合があります。',
-  trainPick: '六角形の周りの能力ボタンを押して練習を選べます。',
   trainWeak: '弱点集中練習は下の自己投資で選べます。',
   guideTitle: 'ポジション育成ガイド',
   guideNote:

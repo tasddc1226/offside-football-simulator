@@ -2,7 +2,6 @@ import { ns } from '../core';
 const ko = {
   candidateNote:
     '후보 카드의 능력치는 기본 분포예요. 킥오프 때 세부 능력치와 체격을 반영해 다시 계산하므로, 시작 능력치는 달라질 수 있어요.',
-  trainPick: '육각형의 능력치 버튼을 눌러 훈련을 골라요.',
   trainWeak: '약점 집중훈련은 아래 자기 투자에서 고를 수 있어요.',
   guideTitle: '포지션 육성 안내',
   guideNote:

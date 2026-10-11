@@ -2,7 +2,6 @@ import type { CareerGuideMsgs } from '../ko/careerGuide';
 export const careerGuide: CareerGuideMsgs = {
   candidateNote:
     'Candidate attributes are a starting distribution. At kickoff, detailed attributes and body build are applied and recalculated, so your starting attributes may differ.',
-  trainPick: 'Tap an attribute button around the chart to choose training.',
   trainWeak: 'Choose Weakness Training under Personal Investment below.',
   guideTitle: 'Position development guide',
   guideNote:
