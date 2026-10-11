@@ -3,7 +3,6 @@
 import { ns } from '../core';
 
 const ko = {
-  capped: '상한에 걸려 효과 없음',
   noEffect: '경기 효과 없음',
   applies: '켜진 시너지는 모두 경기에 반영돼요',
   notApplied: '프리시즌 경기에는 반영되지 않았어요',
@@ -26,8 +25,8 @@ const ko = {
   moreOff: (p: { n: number }) => `더보기 · 미적용 ${p.n}개`,
   lessOff: '미적용 접기',
   empty: '아직 켜진 시너지가 없어요. 유형이 맞는 선수를 함께 세워 보세요.',
-  capNote: (p: { line: number; total: number }) =>
-    `듀오 효과는 줄마다 +${p.line}, 합쳐서 +${p.total}까지. 유스 선수는 시너지에 들지 않아요.`,
+  // T-11-197 듀오 효과 상한을 없앴다.
+  youthNote: '켜진 시너지 효과는 모두 더해요. 유스 선수는 시너지에 들지 않아요.',
   /** 시너지 이름·설명 — 한국어는 contracts 정의(ko)를 그대로 쓰고, 다른 언어는 id로 찾는다. */
   synName: (p: { id: string; ko: string }) => p.ko,
   synDesc: (p: { id: string; ko: string }) => p.ko,

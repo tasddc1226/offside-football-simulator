@@ -18,7 +18,6 @@ const NAMES: Record<string, readonly [string, string]> = {
 };
 
 export const teamSynergy: Translation<TeamSynergyMsgs> = {
-  capped: '上限に達して効果なし',
   noEffect: '試合効果なし',
   applies: 'オンのシナジーはすべて試合に反映されます',
   notApplied: 'プレシーズンの試合には反映されませんでした',
@@ -39,8 +38,7 @@ export const teamSynergy: Translation<TeamSynergyMsgs> = {
   moreOff: (p) => `もっと見る · 未適用 ${p.n}件`,
   lessOff: '未適用を閉じる',
   empty: 'まだオンのシナジーはありません。タイプの合う選手を一緒に並べましょう。',
-  capNote: (p) =>
-    `デュオ効果はラインごとに+${p.line}、合計+${p.total}まで。ユース選手はシナジーに含まれません。`,
+  youthNote: '有効なシナジーの効果はすべて加わります。ユース選手はシナジーに含まれません。',
   synName: (p) => NAMES[p.id]?.[0] ?? p.ko,
   synDesc: (p) => NAMES[p.id]?.[1] ?? p.ko,
 };
