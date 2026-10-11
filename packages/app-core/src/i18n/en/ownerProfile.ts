@@ -4,6 +4,7 @@ import type { OwnerProfileMsgs } from '../ko/ownerProfile';
 export const ownerProfile: Translation<OwnerProfileMsgs> = {
   publicSeasonNote: 'Team results by season',
   publicTitleNote: 'Titles earned by this owner',
+  backToTeam: '← Back to team',
   visitHall: 'Visit hall',
   publicEmptyAwards: 'This owner has no badges or cup results to display yet.',
   publicHall: 'Public hall',

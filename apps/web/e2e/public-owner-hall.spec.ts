@@ -121,6 +121,11 @@ for (const locale of ['ko-KR', 'en-US', 'ja-JP']) {
       await hall.locator('[data-room-zone="2"]').click();
       await expect(hall.locator('[data-trophy-gallery]')).toBeVisible();
       await hall.locator('[data-room-zone="1"]').click();
+      await page.locator('[data-act="public-hall-back"]').click();
+      await expect(page.locator('[data-act="owner-profile"]')).toBeVisible();
+      await expect(hall).toHaveCount(0);
+      await page.locator('[data-act="owner-profile"]').click();
+      await expect(hall).toBeVisible();
       expect(profileReads).toBe(1);
       expect(requests.filter((p) => ['/v1/owner/archive', '/v1/owner/title'].includes(p))).toEqual(
         [],

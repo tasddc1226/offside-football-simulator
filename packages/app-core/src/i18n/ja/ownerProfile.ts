@@ -4,6 +4,7 @@ import type { OwnerProfileMsgs } from '../ko/ownerProfile';
 export const ownerProfile: Translation<OwnerProfileMsgs> = {
   publicSeasonNote: 'シーズンごとのチーム成績',
   publicTitleNote: 'このオーナーが獲得した称号',
+  backToTeam: '← チームに戻る',
   visitHall: '名誉館を訪問',
   publicEmptyAwards: 'このオーナーにはまだ展示するバッジやカップ成績がありません。',
   publicHall: '公開名誉館',

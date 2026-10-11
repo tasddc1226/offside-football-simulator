@@ -44,6 +44,8 @@
   const rank = (n: number | null) => (n ? L.rank({ n }) : L.none);
 </script>
 
+<button class="btn op-back" data-act="public-hall-back" onclick={() => openTeam(teamId)}>{L.backToTeam}</button>
+
 <LoadState {status} failText={L.loadFail} retry={load}>
   {#if owner}
     <div class="op-sections" data-owner-profile>
@@ -120,6 +122,7 @@
 </LoadState>
 
 <style>
+  .op-back { margin-bottom:12px; min-height:44px; max-width:100%; }
   .op-sections {display:flex; flex-direction:column; gap:14px;}
   .op-id {display:flex; align-items:center; gap:12px;}
   .op-who {display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-width:0;}

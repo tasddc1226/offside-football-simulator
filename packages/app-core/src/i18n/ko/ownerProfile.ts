@@ -5,6 +5,7 @@ import { ns } from '../core';
 const ko = {
   publicSeasonNote: '시즌별 팀 성적',
   publicTitleNote: '이 구단주가 획득한 칭호',
+  backToTeam: '← 팀으로 돌아가기',
   visitHall: '명예관 방문',
   publicEmptyAwards: '아직 이 구단주가 획득한 배지나 컵 성적이 없어요.',
   publicHall: '공개 명예관',

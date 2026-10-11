@@ -3,20 +3,23 @@
   "title": "구단주 명예관 방문",
   "items": [
     "팀 상세에서 다른 구단주의 명예관을 방문해 시즌 기록과 획득 칭호, 트로피를 볼 수 있어요.",
-    "iOS 명예관에서 천천히 좌우로 드래그할 때 라커 이미지가 잘려 보이던 문제를 수정했어요."
+    "iOS 명예관에서 천천히 좌우로 드래그할 때 라커 이미지가 잘려 보이던 문제를 수정했어요.",
+    "공개 명예관 상단에서 방문했던 팀으로 돌아갈 수 있어요."
   ],
   "en": {
     "title": "Visit owner halls",
     "items": [
       "Visit an owner’s hall from their team profile to view season records, earned titles and trophies.",
-      "Fixed locker artwork appearing clipped while slowly dragging the hall on iOS."
+      "Fixed locker artwork appearing clipped while slowly dragging the hall on iOS.",
+      "Return to the team you visited from the top of the public hall."
     ]
   },
   "ja": {
     "title": "オーナーの名誉館を訪問",
     "items": [
       "チーム詳細から他のオーナーの名誉館を訪れ、シーズン記録や獲得した称号、トロフィーを見られます。",
-      "iOSの名誉館でゆっくり左右にドラッグするとロッカー画像が欠ける問題を修正しました。"
+      "iOSの名誉館でゆっくり左右にドラッグするとロッカー画像が欠ける問題を修正しました。",
+      "公開名誉館の上部から訪問元のチームに戻れます。"
     ]
   },
   "availability": "web-app"
