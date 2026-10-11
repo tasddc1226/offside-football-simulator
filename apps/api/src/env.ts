@@ -23,6 +23,9 @@ export type Bindings = {
   ADMIN_COMMUNITY_PUSH_EMAIL?: string;
   /** Enable only after the app understands community notifications. */
   ADMIN_COMMUNITY_PUSH_ENABLED?: string;
+  /** Queue pilot: only admin comment/lounge events. Cron remains the recovery path. */
+  ADMIN_COMMUNITY_QUEUE_ENABLED?: string;
+  ADMIN_PUSH_QUEUE?: Queue<{ version: 1; sourceKey: string }>;
   REENGAGEMENT_PUSH_ENABLED?: string;
   /** Expo enhanced push security용 secret. 클라이언트에는 넣지 않는다. */
   EXPO_PUSH_ACCESS_TOKEN?: string;

@@ -5,6 +5,7 @@ import {
   type CommunityEvent,
 } from '../../push/community.js';
 import type { Bindings } from '../../env.js';
+import { publishCommunityPush } from '../../push/communityQueue.js';
 import type {
   BoardBlock,
   BoardKey,
@@ -336,10 +337,10 @@ export async function createComment(
     const recipients = await communityRecipients(notify.env);
     const { sql, params } = mutation.toSQL();
     const event: CommunityEvent = { ...input, id, now, type: 'comment', board: notify.board };
-    await db.$client.batch([
-      db.$client.prepare(sql).bind(...params),
-      ...communityStatements(notify.env, recipients, event),
-    ]);
+    const notificationStatements = communityStatements(notify.env, recipients, event);
+    await db.$client.batch([db.$client.prepare(sql).bind(...params), ...notificationStatements]);
+    if (notificationStatements.length)
+      await publishCommunityPush(notify.env, [`admin-community-comment:${id}`]);
   } else await mutation;
   return id;
 }

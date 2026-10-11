@@ -105,6 +105,7 @@ async function claim(
   now: number,
   lease: string,
   only: string = '',
+  params: string[] = [],
 ) {
   const db = env.DB;
   const from = checking ? 'accepted' : 'pending';
@@ -124,6 +125,7 @@ async function claim(
       checking ? 1 : 0,
       from,
       iso(now),
+      ...params,
     )
     .run();
   const rows = await db
@@ -274,26 +276,38 @@ export async function runPersonalPush(
   env: Bindings,
   now = Date.now(),
   transport: typeof fetch = fetch,
+  communitySourceKey?: string,
 ) {
   if (env.ENVIRONMENT !== 'production' || env.PERSONAL_PUSH_ENABLED !== '1')
     return { enabled: false };
   const lease = crypto.randomUUID();
+  // Bound source key and kind keep Queue messages away from ordinary user notifications.
+  const scope =
+    communitySourceKey === undefined
+      ? ''
+      : ` AND EXISTS
+    (SELECT 1 FROM notifications WHERE id = push_deliveries.notification_id
+      AND (${IS_COMMUNITY}) AND source_key = ?)`;
+  const scopeParams = communitySourceKey === undefined ? [] : [communitySourceKey];
   await env.DB.batch([
     env.DB.prepare(
-      "UPDATE push_deliveries SET state = 'unknown', token = '', lease_id = NULL, updated_at = ? WHERE state = 'sending' AND due_at <= ?",
-    ).bind(iso(now), iso(now)),
+      "UPDATE push_deliveries SET state = 'unknown', token = '', lease_id = NULL, updated_at = ? WHERE state = 'sending' AND due_at <= ?" +
+        scope,
+    ).bind(iso(now), iso(now), ...scopeParams),
     env.DB.prepare(
-      "UPDATE push_deliveries SET state = 'accepted', lease_id = NULL WHERE state = 'checking' AND due_at <= ?",
-    ).bind(iso(now)),
+      "UPDATE push_deliveries SET state = 'accepted', lease_id = NULL WHERE state = 'checking' AND due_at <= ?" +
+        scope,
+    ).bind(iso(now), ...scopeParams),
   ]);
   const states: Partial<Record<Outcome['state'], number>> = {};
   const hour = new Date(now + 9 * 3600_000).getUTCHours();
-  for (const checking of [true, false, false, false]) {
+  // Queue accelerates initial sends; receipt checks retain the existing 15-minute schedule.
+  for (const checking of communitySourceKey === undefined ? [true, false, false, false] : [false]) {
     // 운영 알림은 야간에도 보낸다. 일반 알림은 09~20시, 컵 결과는 22시까지다.
     // 영수증 조회는 시간 제한 없이 유지하고, 수동 본인 테스트는 별도의 요청 경로를 쓴다.
     const cupOnly = hour >= 20 && hour < CUP_PUSH_UNTIL_HOUR;
-    const only = !checking && (hour < 9 || hour >= 20) ? afterHoursOnly(cupOnly) : '';
-    const rows = await claim(env, checking, now, lease, only);
+    const only = scope || (!checking && (hour < 9 || hour >= 20) ? afterHoursOnly(cupOnly) : '');
+    const rows = await claim(env, checking, now, lease, only, scopeParams);
     const eligible = checking ? rows : rows.filter((r) => r.eligible === 1);
     const reserved = checking ? null : await reserveBudget(env.DB, eligible, now);
     const active = checking ? eligible : eligible.filter((r) => reserved!.has(r.notification_id));
@@ -310,6 +324,12 @@ export async function runPersonalPush(
     });
     if (!checking && rows.length < BATCH) break;
   }
-  console.log(JSON.stringify({ job: 'personal-push', ts: iso(now), states }));
+  console.log(
+    JSON.stringify({
+      job: communitySourceKey === undefined ? 'personal-push' : 'community-queue-send',
+      ts: iso(now),
+      states,
+    }),
+  );
   return { enabled: true, states };
 }

@@ -18,6 +18,7 @@ import {
   communityStatements,
   type CommunityEvent,
 } from '../push/community.js';
+import { publishCommunityPush } from '../push/communityQueue.js';
 
 // T-11-015 채팅방. 방 하나(이름 CHAT_ROOM)가 소켓을 모두 붙들고, 받은 줄을 SQLite에 적은 뒤 모두에게 보낸다.
 // LiveHub처럼 Hibernation API로 받는다 — 조용하면 잠들어 비용이 없고, 핑에는 깨지 않고 런타임이 pong을 돌려준다.
@@ -256,7 +257,13 @@ export class ChatRoom extends DurableObject<Bindings> {
           const event: CommunityEvent = { ...m, type: 'chat', now: new Date(m.at).toISOString() };
           return communityStatements(this.env, recipients, event);
         });
-      if (stmts.length) await this.env.DB.batch(stmts);
+      if (stmts.length) {
+        await this.env.DB.batch(stmts);
+        await publishCommunityPush(
+          this.env,
+          rows.filter((r) => r.hidden === 0).map((r) => `admin-community-chat:${String(r.id)}`),
+        );
+      }
       this.ctx.storage.transactionSync(() => {
         for (const r of rows)
           this.sql.exec('DELETE FROM community_push_outbox WHERE id = ?', String(r.id));
