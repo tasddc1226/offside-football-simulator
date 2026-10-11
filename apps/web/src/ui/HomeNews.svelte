@@ -2,7 +2,6 @@
   // 홈의 소식 섹션(공지사항 · 릴리즈 노트). 최근 글 몇 개만 보여 주고, 글을 누르면 소식 화면에서 본문·댓글을 연다.
   // '전체 보기'는 글이 없어도 보인다 — 관리자의 새 글 쓰기가 소식 화면에 있어서, 숨기면 첫 글을 쓸 길이 없다.
   import { fetchPosts, type BoardKey, type PostSummary } from '@offside/app-core/api/boards';
-  import { postMeta } from '@offside/app-core/boardText';
   import { openBoard } from './nav.js';
   import MoreLink from './MoreLink.svelte';
   import { homeText as L } from '@offside/app-core/i18n/ko/home';
@@ -39,22 +38,8 @@
   {:else if !posts.length}
     <p class="empty">{L.newsEmpty}</p>
   {:else}
-    <ul class="board-list">
-      {#each posts.slice(0, SHOWN) as p (p.id)}
-        <li>
-          <a class="board-row" href={`/news/${p.id}/`} data-post-row={p.id} onclick={(e) => {
-            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-            e.preventDefault(); openBoard(board, p.id);
-          }}>
-            <span class="row" style="gap:6px;flex-wrap:wrap">
-              {#if p.pinned}<span class="pill warn">{L.pinned}</span>{/if}
-              {#if p.version}<span class="pill">{p.version}</span>{/if}
-              <b>{p.title}</b>
-            </span>
-            <span class="muted fs-xs">{postMeta(p)}</span>
-          </a>
-        </li>
-      {/each}
-    </ul>
+    {#await import('./HomeNewsRows.svelte') then { default: Rows }}
+      <Rows {board} posts={posts.slice(0, SHOWN)} />
+    {/await}
   {/if}
 </section>

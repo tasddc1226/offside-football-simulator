@@ -96,7 +96,7 @@ export function localizeList(
  * Never select translations, author IDs, comments or user-specific fields. */
 const publicColumns = {
   id: boardPosts.id,
-  board: boardPosts.board,
+  board: sql<BoardKey>`${boardPosts.board}`,
   title: boardPosts.title,
   createdAt: boardPosts.createdAt,
   updatedAt: boardPosts.updatedAt,
