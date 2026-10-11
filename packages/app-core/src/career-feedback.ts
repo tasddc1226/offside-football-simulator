@@ -51,8 +51,6 @@ export function coachFeedback(s: GameState): { summary: string; notes: string[] 
     .filter(({ f }) => f < 0.95)
     .sort((a, b) => a.f - b.f)[0];
   if (lopsided) notes.push(L.coachLopsided({ attr: labelOf(s, lopsided.k) }));
-  if (!notes.length) notes.push(L.coachRounded);
-  notes.push(L.coachDisclaimer);
   return { summary, notes };
 }
 

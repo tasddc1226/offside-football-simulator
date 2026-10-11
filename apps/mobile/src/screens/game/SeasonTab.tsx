@@ -16,10 +16,12 @@ import {
   TRAININGS,
   trainingLabel,
   trainingCard,
-  trainingHelp,
   INVESTS,
   investCard,
-  investHelp,
+  investCost,
+  investName,
+  investNote,
+  plannedSpend,
   investDef,
   fmtMoney,
   STORIES,
@@ -28,6 +30,7 @@ import {
 import { eventById } from '@offside/game/events-data';
 import type { GameState } from '@offside/game/types';
 import { seasonLabel } from '@offside/app-core/career';
+import { Radar } from './Radar';
 import {
   RANK_SEEN_RATIO,
   RESULT_TOUR,
@@ -47,9 +50,10 @@ import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Card } from '../../ui/Card';
 import { Opt, Pill } from '../../ui/bits';
-import { Btn } from '../../ui/Btn';
 import { measureShown, onScrolled, scrollTo, scrollY, viewH } from '../../ui/scroll';
+import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
+import { Chevron } from '../../ui/Chevron';
 import { LeagueTable, SubTitle, type RankPlay } from './LeagueTable';
 import { PhaseReport } from './PhaseReport';
 import { tn } from '@offside/game/i18n/names';
@@ -311,7 +315,8 @@ function PickPop({ on, children }: { on: boolean; children: ReactNode }) {
 interface Choice {
   id: string;
   label: string;
-  effect: string[];
+  /** 없으면 이름과 태그만(시즌 탭 훈련 칩 — 효과는 고른 뒤 설명 칸에). */
+  effect?: string[];
   tag: string;
   selected: boolean;
   disabled?: boolean;
@@ -351,9 +356,11 @@ function ChoiceGrid({
                   }}
                 >
                   <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>{it.label}</Txt>
-                  <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 }}>
-                    {it.effect[0]}
-                  </Txt>
+                  {it.effect ? (
+                    <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 }}>
+                      {it.effect[0]}
+                    </Txt>
+                  ) : null}
                   {it.tag ? (
                     <Txt
                       style={{
@@ -385,11 +392,14 @@ function HelpBox({
   title,
   effect,
   body,
+  tag,
 }: {
   testID: string;
   title: string;
   effect: string[];
-  body: string;
+  body?: string;
+  /** 본문 대신 짧은 태그 한 줄(훈련: 주력 성장·비용 등). */
+  tag?: string;
 }) {
   const c = useColors();
   return (
@@ -410,7 +420,12 @@ function HelpBox({
           {` · ${effect.join(' · ')}`}
         </Txt>
       </Txt>
-      <Txt style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5 }}>{body}</Txt>
+      {body ? (
+        <Txt style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5 }}>{body}</Txt>
+      ) : null}
+      {tag ? (
+        <Txt style={{ fontSize: rem(0.75), fontWeight: '600', color: c.accentText }}>{tag}</Txt>
+      ) : null}
     </View>
   );
 }
@@ -436,6 +451,7 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
   const t = turnNo(s);
   const picked = TRAININGS.find((x) => x.id === s.training);
   const invest = investDef(s);
+  const spend = plannedSpend(s);
   // 리포트가 개막 후 첫 구간이면 시즌 누적 = 구간 기록이라 누적 칸을 숨긴다. 개막 전(0경기)에도 숨긴다.
   const showTotals = S.played > 0 && !(report?.block && S.played === report.games.length);
   // 최근 소식: 리포트에 이미 나온 구간 기록은 빼고 5줄만, '더 보기'로 14줄까지.
@@ -450,6 +466,10 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
   );
   const investCards = useMemo(() => new Map(INVESTS.map((d) => [d.id, investCard(s, d)])), [s]);
   const { spot, wait, rankPlay, tour, reg, table } = useResultTour(report);
+  // T-11-200 자기 투자는 드롭다운처럼 고른 한 줄만 보이고, 그 줄을 누르면 펼쳐져 고르면 다시 접힌다. 결과 안내가 투자를 기다릴 때와 고른 투자를 할 돈이 없을 때는 펼친다.
+  const [investOpen, setInvestOpen] = useState(false);
+  const investForced = wait === 'invest' || !investCards.get(invest.id)!.affordable;
+  const investAll = investOpen || investForced;
   const [popped, setPopped] = useState<{ g: TourGate; id: string } | null>(null);
 
   function pick(g: TourGate, id: string) {
@@ -468,6 +488,7 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
 
   function setInvest(id: string) {
     appState.G!.invest = id;
+    setInvestOpen(false);
     save();
     pick('invest', id);
   }
@@ -488,104 +509,6 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
           <PhaseReport key={report.key} r={report} />
         </Spotlight>
       ) : null}
-
-      <Spotlight
-        reg={reg('prep')}
-        on={spot === 'prep'}
-        onLayout={(e) => onPrepY?.(e.nativeEvent.layout.y)}
-      >
-        <Card gap={10}>
-          <View>
-            <Txt v="eyebrow">{`Next · ${label}`}</Txt>
-            <Txt v="h2" accessibilityRole="header">
-              {L.prepTitle}
-            </Txt>
-          </View>
-          <View style={{ gap: 9 }}>
-            <Meter label={L.condition} value={s.cond} tone={meterTone(s.cond, 40, 65)} />
-            <Meter label={L.morale} value={s.morale} tone={meterTone(s.morale, 40, 60)} />
-            <Meter label={L.fame} value={s.fame} tone="acc" />
-          </View>
-          <View style={{ gap: 6 }} testID="coach-feedback">
-            <SubTitle>{L.coachMemo}</SubTitle>
-            <Txt v="sm">{coach.summary}</Txt>
-            {coach.notes.map((note) => (
-              <Txt key={note} v="sm" tone="muted">
-                {note}
-              </Txt>
-            ))}
-          </View>
-          <SubTitle>{L.trainingTitle}</SubTitle>
-          {wait === 'train' ? <TourHint>{L.trainHint}</TourHint> : null}
-          <ChoiceGrid
-            testPrefix="train"
-            popped={popped?.g === 'train' ? popped.id : null}
-            items={TRAININGS.map((tr) => {
-              const cd = trainCards.get(tr.id)!;
-              return {
-                id: tr.id,
-                label: trainingLabel(s, tr),
-                effect: cd.effect,
-                tag: cd.tag,
-                selected: s.training === tr.id,
-                onPress: () => setTraining(tr.id),
-              };
-            })}
-          />
-          {picked ? (
-            <HelpBox
-              testID="train-help"
-              title={trainingLabel(s, picked)}
-              effect={trainCards.get(picked.id)!.effect}
-              body={trainingHelp(s, picked)}
-            />
-          ) : null}
-        </Card>
-      </Spotlight>
-
-      <Spotlight reg={reg('invest')} on={spot === 'invest'}>
-        <Card gap={10}>
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 10,
-            }}
-          >
-            <View style={{ flex: 1 }}>
-              <Txt v="eyebrow">Invest</Txt>
-              <Txt v="h2" accessibilityRole="header">
-                {L.investTitle}
-              </Txt>
-            </View>
-            <Pill>{L.funds({ v: appFormatText.won({ v: fmtMoney(s.money) }) })}</Pill>
-          </View>
-          {wait === 'invest' ? <TourHint>{L.investHint}</TourHint> : null}
-          <ChoiceGrid
-            testPrefix="invest"
-            popped={popped?.g === 'invest' ? popped.id : null}
-            items={INVESTS.map((d) => {
-              const cd = investCards.get(d.id)!;
-              return {
-                id: d.id,
-                label: d.label,
-                effect: cd.effect,
-                tag: cd.tag,
-                selected: invest.id === d.id,
-                disabled: !cd.affordable,
-                onPress: () => setInvest(d.id),
-              };
-            })}
-          />
-          <HelpBox
-            testID="invest-help"
-            title={invest.label}
-            effect={investCards.get(invest.id)!.effect}
-            body={investHelp(s, invest)}
-          />
-        </Card>
-      </Spotlight>
 
       <Spotlight reg={reg('status')} on={spot === 'status'}>
         <Card gap={14}>
@@ -648,6 +571,171 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
               ))}
             </View>
           ) : null}
+        </Card>
+      </Spotlight>
+
+      <Spotlight
+        reg={reg('prep')}
+        on={spot === 'prep'}
+        onLayout={(e) => onPrepY?.(e.nativeEvent.layout.y)}
+      >
+        <Card gap={10}>
+          <View>
+            <Txt v="eyebrow">{`Next · ${label}`}</Txt>
+            <Txt v="h2" accessibilityRole="header">
+              {L.prepTitle}
+            </Txt>
+          </View>
+          <View style={{ gap: 9 }}>
+            <Meter label={L.condition} value={s.cond} tone={meterTone(s.cond, 40, 65)} />
+            <Meter label={L.morale} value={s.morale} tone={meterTone(s.morale, 40, 60)} />
+            <Meter label={L.fame} value={s.fame} tone="acc" />
+          </View>
+          <View style={{ gap: 6 }} testID="coach-feedback">
+            <SubTitle>{L.coachMemo}</SubTitle>
+            <Txt v="sm">{coach.summary}</Txt>
+            {coach.notes.map((note) => (
+              <Txt key={note} v="sm" tone="muted">
+                {note}
+              </Txt>
+            ))}
+          </View>
+          <SubTitle>{L.trainingTitle}</SubTitle>
+          {wait === 'train' ? <TourHint>{L.trainHint}</TourHint> : null}
+          <Radar s={s} onPick={setTraining} />
+          <ChoiceGrid
+            testPrefix="train"
+            popped={popped?.g === 'train' ? popped.id : null}
+            items={TRAININGS.filter((tr) => !tr.attr).map((tr) => {
+              const cd = trainCards.get(tr.id)!;
+              return {
+                id: tr.id,
+                label: trainingLabel(s, tr),
+                tag: cd.tag,
+                selected: s.training === tr.id,
+                onPress: () => setTraining(tr.id),
+              };
+            })}
+          />
+          {picked ? (
+            <HelpBox
+              testID="train-help"
+              title={trainingLabel(s, picked)}
+              effect={trainCards.get(picked.id)!.effect}
+              tag={trainCards.get(picked.id)!.tag}
+            />
+          ) : null}
+        </Card>
+      </Spotlight>
+
+      <Spotlight reg={reg('invest')} on={spot === 'invest'}>
+        <Card gap={10}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 10,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Txt v="eyebrow">Invest</Txt>
+              <Txt v="h2" accessibilityRole="header">
+                {L.investTitle}
+              </Txt>
+            </View>
+            <Pill>
+              {spend
+                ? L.fundsAfter({
+                    v: appFormatText.won({ v: fmtMoney(s.money) }),
+                    after: appFormatText.won({ v: fmtMoney(Math.max(0, s.money - spend)) }),
+                  })
+                : L.funds({ v: appFormatText.won({ v: fmtMoney(s.money) }) })}
+            </Pill>
+          </View>
+          {wait === 'invest' ? <TourHint>{L.investHint}</TourHint> : null}
+          <View style={{ gap: 6 }}>
+            {(investAll ? INVESTS : [invest]).map((d) => {
+              const cd = investCards.get(d.id)!;
+              const cost = investCost(s, d);
+              const tags = cd.tag.split(' · ');
+              const extra = tags.slice(cost ? 1 : 0).join(' · ');
+              const note = investNote(d);
+              const sel = invest.id === d.id;
+              const drop = !investForced && sel;
+              return (
+                <View key={d.id} testID={`invest-${d.id}`}>
+                  <PickPop on={popped?.g === 'invest' && popped.id === d.id}>
+                    <Opt
+                      selected={sel}
+                      disabled={!cd.affordable}
+                      onPress={() => (investAll ? setInvest(d.id) : setInvestOpen(true))}
+                      expanded={drop ? investAll : undefined}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 10,
+                        paddingVertical: sel ? 6.5 : 8,
+                      }}
+                    >
+                      <View style={{ flex: 1, gap: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>
+                            {investName(s, d)}
+                          </Txt>
+                          {note ? (
+                            <Txt
+                              tone="muted"
+                              style={{
+                                fontSize: rem(0.6875),
+                                fontWeight: '600',
+                                paddingHorizontal: 6,
+                                paddingVertical: 1,
+                                borderRadius: 999,
+                                overflow: 'hidden',
+                                backgroundColor: c.surface2,
+                              }}
+                            >
+                              {note}
+                            </Txt>
+                          ) : null}
+                        </View>
+                        <Txt
+                          tone="muted"
+                          style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 }}
+                        >
+                          {cd.effect.join(' · ')}
+                          {extra ? (
+                            <Txt
+                              style={{
+                                fontSize: rem(0.75),
+                                fontWeight: '600',
+                                color: c.accentText,
+                              }}
+                            >
+                              {` · ${extra}`}
+                            </Txt>
+                          ) : null}
+                        </Txt>
+                      </View>
+                      {cost ? (
+                        <Txt
+                          style={{
+                            fontFamily: DISPLAY[700],
+                            fontSize: rem(0.875),
+                            color: c.accentText,
+                          }}
+                        >
+                          {cd.affordable ? appFormatText.won({ v: fmtMoney(cost) }) : tags[0]}
+                        </Txt>
+                      ) : null}
+                      {drop ? <Chevron up={investAll} color={c.muted} /> : null}
+                    </Opt>
+                  </PickPop>
+                </View>
+              );
+            })}
+          </View>
         </Card>
       </Spotlight>
 
@@ -728,15 +816,24 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
               ))}
             </View>
             {feed.length > FEED_SHORT ? (
-              <Btn
-                sm
+              <Press
                 testID="feed-more"
+                accessibilityRole="button"
                 accessibilityLabel={feedAll ? L.feedLessAria : L.feedMoreAria}
+                accessibilityState={{ expanded: feedAll }}
                 onPress={() => setFeedAll(!feedAll)}
-                style={{ alignSelf: 'flex-start', marginTop: 8 }}
+                style={{
+                  minHeight: 44,
+                  marginTop: 6,
+                  marginBottom: -8,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderTopWidth: 1,
+                  borderTopColor: c.line,
+                }}
               >
-                {feedAll ? L.feedLess : L.feedMore}
-              </Btn>
+                <Chevron up={feedAll} color={c.muted} />
+              </Press>
             ) : null}
           </Card>
         </Spotlight>

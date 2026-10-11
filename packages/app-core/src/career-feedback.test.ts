@@ -32,10 +32,10 @@ describe('코치 메모', () => {
     expect(coachFeedback(s).summary).toContain('슈팅 +0.4');
     expect(coachFeedback(s).summary).toContain('이번 시즌 OVR');
   });
-  it('변화가 없다고 영구 한계를 단정하지 않는다', () => {
+  it('변화가 없으면 요약만 두고 고정 안내 줄은 붙이지 않는다', () => {
     const c = coachFeedback(fresh());
     expect(c.summary).toContain('아직 표시할 능력치 변화가 없어요.');
-    expect(c.notes.join(' ')).toContain('단정할 수는 없어요');
+    expect(c.notes).toEqual([]);
   });
   it('시즌 시작 기록이 없는 옛 세이브를 현재 수치로 추정하지 않는다', () => {
     const s = fresh();

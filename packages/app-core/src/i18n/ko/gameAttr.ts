@@ -3,8 +3,6 @@ import { ns } from '../core';
 
 const ko = {
   title: '능력치',
-  legendNow: '현재',
-  legendPrev: '시즌 시작',
   roleOvr: '포지션별 OVR',
   /** 안내 줄 앞쪽 굵은 글씨. */
   noteBold: '굵은 글씨',
