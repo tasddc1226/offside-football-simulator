@@ -239,7 +239,7 @@
         <div class="field" style="flex:1">
           <label for="f-name">{L.name}</label>
           <div class="name-input">
-            <input type="text" id="f-name" maxlength="10" autocomplete="off" enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter bind:value={C.name} />
+            <input type="text" id="f-name" maxlength="12" autocomplete="off" enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter bind:value={C.name} />
             <button type="button" class="dice" data-act="random-name" aria-label={L.randomName} onclick={() => (C.name = randomName())}>🎲</button>
           </div>
         </div>
