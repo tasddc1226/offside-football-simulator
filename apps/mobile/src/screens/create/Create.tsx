@@ -628,11 +628,7 @@ export default function Create() {
               <Field label={L.detailPosition}>
                 <Seg>
                   {DETAILS_OF[C.pos].map((d) => (
-                    <SegCell
-                      key={d}
-                      cols={DETAILS_OF[C.pos].length === 2 ? 2 : 3}
-                      testID={`dpos-${d}`}
-                    >
+                    <SegCell key={d} cols={2} testID={`dpos-${d}`}>
                       <PosOpt
                         code={d}
                         title={DPOS[d].label}

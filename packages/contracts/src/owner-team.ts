@@ -7,7 +7,14 @@
  * 한 명만 넣으면 경기할 수 있다.
  */
 
-import { DETAIL_GROUP, type DetailPos, type PeakProfile, type PosGroup } from './positions.js';
+import {
+  BASE_DETAIL,
+  expandDetailRoles,
+  DETAIL_GROUP,
+  type DetailPos,
+  type PeakProfile,
+  type PosGroup,
+} from './positions.js';
 import type { TeamSynergy } from './team-synergy.js';
 
 export * from './team-synergy.js';
@@ -142,7 +149,7 @@ export function presetLayout(formation: FormationId): TeamPosition[] {
             : slot === 'CB'
               ? Math.max(30, Math.min(70, x))
               : x,
-        y: { GK: 91, FB: 75, CB: 75, DM: 62, CM: 49, AM: 37, W: 25, ST: 16 }[slot],
+        y: { GK: 91, FB: 75, CB: 75, DM: 62, CM: 49, AM: 37, W: 25, ST: 16 }[BASE_DETAIL[slot]],
         slot,
       };
     }),
@@ -150,7 +157,7 @@ export function presetLayout(formation: FormationId): TeamPosition[] {
 }
 
 /** 옮긴 필드 위치를 경기 포지션으로 해석한다. 골키퍼는 첫 자리 하나로 유지한다. */
-export function positionRole(x: number, y: number, index: number): DetailPos {
+export function legacyPositionRole(x: number, y: number, index: number): DetailPos {
   if (index === 0) return 'GK';
   const wide = x < 28 || x > 72;
   if (y < 28) return wide ? 'W' : 'ST';
@@ -159,6 +166,28 @@ export function positionRole(x: number, y: number, index: number): DetailPos {
   if (y < 67) return 'DM';
   return wide ? 'FB' : 'CB';
 }
+
+/** Coordinate roles for new edits. Existing saved layouts retain their recorded slots until saved. */
+export function positionRole(x: number, y: number, index: number): DetailPos {
+  if (index === 0) return 'GK';
+  // Keep the preset midfield at x=25/75 central; side lanes sit at x=18/82.
+  const wide = y < 28 || y >= 67 ? x < 28 || x > 72 : x < 24 || x > 76;
+  if (wide) {
+    if (y < 43) return x < 50 ? 'LW' : 'RW';
+    if (y < 56) return x < 50 ? 'LM' : 'RM';
+    if (y < 67) return x < 50 ? 'LWB' : 'RWB';
+    return x < 50 ? 'LB' : 'RB';
+  }
+  if (y < 20) return 'ST';
+  if (y < 28) return 'CF';
+  if (y < 34) return 'SS';
+  if (y < 43) return 'AM';
+  if (y < 56) return 'CM';
+  if (y < 67) return 'DM';
+  return y >= 79 ? 'SW' : 'CB';
+}
+export const positionedLayout = (layout: TeamLayout): TeamPosition[] =>
+  layout.map((p, i) => ({ ...p, slot: positionRole(p.x, p.y, i) }));
 
 /**
  * 최고 시점 능력치(PeakProfile)가 없는 선수(이 기능 전에 은퇴한 선수)가 그 자리에서 내는 비율. 세부 포지션이
@@ -169,7 +198,7 @@ export function fit(slot: DetailPos, pos: PosGroup, dpos?: DetailPos | null): nu
   const group = DETAIL_GROUP[slot];
   if (group === pos) {
     if (dpos == null) return 0.95;
-    return dpos === slot ? 1 : 0.9;
+    return BASE_DETAIL[dpos] === BASE_DETAIL[slot] ? 1 : 0.9;
   }
   return group === 'GK' || pos === 'GK' ? 0.3 : 0.75;
 }
@@ -195,7 +224,7 @@ export const SLOT_OVER_PEAK = 2;
  */
 export const slotRating = (slot: DetailPos, p: SlotPlayer): number =>
   p.roles
-    ? Math.min(p.roles[slot], p.peak + SLOT_OVER_PEAK)
+    ? Math.min(p.roles[slot] ?? p.roles[BASE_DETAIL[slot]], p.peak + SLOT_OVER_PEAK)
     : Math.round(p.peak * fit(slot, p.pos, p.dpos));
 
 /** 그 자리 적합도(보여 주기) — 자리별 실력이 있으면 최고 OVR 대비 비율(소수 둘째 자리, 주 포지션보다 맞으면 1을 넘는다), 없으면 적합도 규칙. */
@@ -211,15 +240,18 @@ export type LineStrength = Record<Line, number> & { gk: number };
  * 자리마다 공격·중원·수비에 보태는 몫(합 1, 골키퍼는 골문만). 풀백은 수비 중심에 측면 공격 가담, 수비형
  * 미드필더는 중원과 수비 반반, 윙어는 공격 중심에 중원 가담.
  */
-export const SLOT_LINES: Record<Exclude<DetailPos, 'GK'>, Record<Line, number>> = {
-  ST: { atk: 0.9, mid: 0.1, def: 0 },
-  W: { atk: 0.65, mid: 0.3, def: 0.05 },
-  AM: { atk: 0.4, mid: 0.55, def: 0.05 },
-  CM: { atk: 0.15, mid: 0.65, def: 0.2 },
-  DM: { atk: 0.05, mid: 0.5, def: 0.45 },
-  FB: { atk: 0.2, mid: 0.3, def: 0.5 },
-  CB: { atk: 0, mid: 0.05, def: 0.95 },
-};
+export const SLOT_LINES: Record<Exclude<DetailPos, 'GK'>, Record<Line, number>> = expandDetailRoles(
+  {
+    GK: { atk: 0, mid: 0, def: 0 },
+    ST: { atk: 0.9, mid: 0.1, def: 0 },
+    W: { atk: 0.65, mid: 0.3, def: 0.05 },
+    AM: { atk: 0.4, mid: 0.55, def: 0.05 },
+    CM: { atk: 0.15, mid: 0.65, def: 0.2 },
+    DM: { atk: 0.05, mid: 0.5, def: 0.45 },
+    FB: { atk: 0.2, mid: 0.3, def: 0.5 },
+    CB: { atk: 0, mid: 0.05, def: 0.95 },
+  },
+);
 /**
  * 줄마다 기준 인원(필드 10명의 몫 합과 같은 10). 한 줄에 몫이 기준보다 많으면 그 줄이 LINE_PRESENCE_K점씩 세지고,
  * 합이 늘 10이라 다른 줄은 그만큼 약해진다 — 포메이션을 바꾸면 공격·중원·수비 무게가 옮겨 간다.

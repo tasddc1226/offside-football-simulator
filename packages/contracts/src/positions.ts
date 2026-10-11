@@ -1,15 +1,37 @@
 /**
- * T-10-091 세부 포지션. 옛 버전(KICKOFF)의 포지션 8종을 되살렸다 — 선수 생성 때 큰 포지션(FW/MF/DF/GK) 안에서
+ * 세부 포지션. 신규 선택 17종과 기존 저장용 FB/W를 지원한다 — 선수 생성 때 큰 포지션(FW/MF/DF/GK) 안에서
  * 하나를 고르고, 은퇴까지 바뀌지 않는다. zod가 없는 서브패스(`@offside/contracts/positions`)라 웹이 값으로
  * 가져와도 번들에 zod가 들어가지 않는다.
  *
  * 시즌 1 개막부터 연다(프리시즌 선수는 세부 포지션이 없다 — 옛 방식대로 주력 능력치에서 역할을 정한다).
- * 레전드 점수·영구결번 가중은 여전히 큰 포지션 단위다.
+ * 신규 포지션의 수치 규칙은 BASE_DETAIL의 기존 역할을 재사용한다.
  */
 import type { Locale } from './i18n.js';
 import { serviceSeason } from './service-seasons.js';
 
-export const DETAIL_POSITIONS = ['GK', 'CB', 'FB', 'DM', 'CM', 'AM', 'W', 'ST'] as const;
+export const LEGACY_DETAIL_POSITIONS = ['GK', 'CB', 'FB', 'DM', 'CM', 'AM', 'W', 'ST'] as const;
+export type BaseDetailPos = (typeof LEGACY_DETAIL_POSITIONS)[number];
+export const SELECTABLE_DETAIL_POSITIONS = [
+  'GK',
+  'CB',
+  'LB',
+  'RB',
+  'LWB',
+  'RWB',
+  'SW',
+  'DM',
+  'CM',
+  'AM',
+  'LM',
+  'RM',
+  'ST',
+  'CF',
+  'SS',
+  'LW',
+  'RW',
+] as const;
+/** FB/W remain valid for existing players, saves and team layouts. */
+export const DETAIL_POSITIONS = [...SELECTABLE_DETAIL_POSITIONS, 'FB', 'W'] as const;
 export type DetailPos = (typeof DETAIL_POSITIONS)[number];
 export type PosGroup = 'FW' | 'MF' | 'DF' | 'GK';
 
@@ -23,6 +45,17 @@ export const DETAIL_GROUP: Record<DetailPos, PosGroup> = {
   AM: 'MF',
   W: 'FW',
   ST: 'FW',
+  LB: 'DF',
+  RB: 'DF',
+  LWB: 'DF',
+  RWB: 'DF',
+  SW: 'DF',
+  LM: 'MF',
+  RM: 'MF',
+  CF: 'FW',
+  SS: 'FW',
+  LW: 'FW',
+  RW: 'FW',
 };
 
 export const DETAIL_LABEL: Record<DetailPos, string> = {
@@ -34,15 +67,60 @@ export const DETAIL_LABEL: Record<DetailPos, string> = {
   AM: '공격형 미드필더',
   W: '윙어',
   ST: '스트라이커',
+  LB: '왼쪽 풀백', // i18n-ignore tn() name key; ko/en/ja gData and _names dictionaries
+  RB: '오른쪽 풀백', // i18n-ignore tn() name key; ko/en/ja gData and _names dictionaries
+  LWB: '왼쪽 윙백', // i18n-ignore tn() name key; ko/en/ja gData and _names dictionaries
+  RWB: '오른쪽 윙백', // i18n-ignore tn() name key; ko/en/ja gData and _names dictionaries
+  SW: '스위퍼', // i18n-ignore tn() name key; ko/en/ja gData and _names dictionaries
+  LM: '왼쪽 미드필더', // i18n-ignore tn() name key; ko/en/ja gData and _names dictionaries
+  RM: '오른쪽 미드필더', // i18n-ignore tn() name key; ko/en/ja gData and _names dictionaries
+  CF: '중앙 공격수', // i18n-ignore tn() name key; ko/en/ja gData and _names dictionaries
+  SS: '세컨드 스트라이커', // i18n-ignore tn() name key; ko/en/ja gData and _names dictionaries
+  LW: '왼쪽 윙어', // i18n-ignore tn() name key; ko/en/ja gData and _names dictionaries
+  RW: '오른쪽 윙어', // i18n-ignore tn() name key; ko/en/ja gData and _names dictionaries
 };
 
 /** 큰 포지션 안의 세부 포지션(선수 생성 화면 순서). */
 export const DETAILS_OF: Record<PosGroup, readonly DetailPos[]> = {
-  FW: ['ST', 'W'],
-  MF: ['AM', 'CM', 'DM'],
-  DF: ['CB', 'FB'],
+  FW: ['ST', 'CF', 'SS', 'LW', 'RW'],
+  MF: ['DM', 'CM', 'AM', 'LM', 'RM'],
+  DF: ['CB', 'LB', 'RB', 'LWB', 'RWB', 'SW'],
   GK: ['GK'],
 };
+
+/** Historical records still expose the two unsided positions as filters. */
+export const FILTER_DETAILS_OF: Record<PosGroup, readonly DetailPos[]> = {
+  ...DETAILS_OF,
+  FW: [...DETAILS_OF.FW, 'W'],
+  DF: [...DETAILS_OF.DF, 'FB'],
+};
+/** Season 1 expansion reuses existing role mechanics; no retrospective rebalance. */
+export const BASE_DETAIL: Record<DetailPos, BaseDetailPos> = {
+  GK: 'GK',
+  CB: 'CB',
+  FB: 'FB',
+  DM: 'DM',
+  CM: 'CM',
+  AM: 'AM',
+  W: 'W',
+  ST: 'ST',
+  LB: 'FB',
+  RB: 'FB',
+  LWB: 'FB',
+  RWB: 'FB',
+  SW: 'CB',
+  LM: 'CM',
+  RM: 'CM',
+  CF: 'ST',
+  SS: 'ST',
+  LW: 'W',
+  RW: 'W',
+};
+export const expandDetailRoles = <T>(base: Record<BaseDetailPos, T>): Record<DetailPos, T> =>
+  Object.fromEntries(DETAIL_POSITIONS.map((d) => [d, base[BASE_DETAIL[d]]])) as Record<
+    DetailPos,
+    T
+  >;
 
 /** 세부 포지션이 없는 선수(시즌 0 선수 등)를 카드에 그릴 때 쓰는 대표 세부 포지션. */
 const CARD_DETAIL: Record<PosGroup, DetailPos> = { FW: 'ST', MF: 'CM', DF: 'CB', GK: 'GK' };
@@ -107,10 +185,10 @@ export const FACE_ATTRS = ['pac', 'sho', 'pas', 'dri', 'def', 'phy'] as const;
 export type FaceAttr = (typeof FACE_ATTRS)[number];
 
 /**
- * T-10-092 은퇴 선수의 최고 시점 능력치. attrs는 대표 능력치 6개, roles는 세부 포지션 8자리 각각에서의 실력
+ * T-10-092 은퇴 선수의 최고 시점 능력치. attrs는 대표 능력치 6개, roles는 기존 8자리와 선택적인 신규 자리에서의 실력
  * (그 자리 역할의 세부 능력치 가중합 — 주 포지션 자리는 최고 OVR과 같다). 구단주 팀은 자리마다 roles를 쓴다.
  */
 export type PeakProfile = {
   attrs: Record<FaceAttr, number>;
-  roles: Record<DetailPos, number>;
+  roles: Record<BaseDetailPos, number> & Partial<Record<DetailPos, number | undefined>>;
 };

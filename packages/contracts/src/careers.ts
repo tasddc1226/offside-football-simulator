@@ -6,7 +6,14 @@ import { PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
 import { STYLE_COUNTERS, STYLE_COUNT_MAX, type StyleCounter } from './play-style.js';
 import { isDefaultClubId } from './club-names.js';
 import { seasonById } from './service-seasons.js';
-import { DETAIL_POSITIONS, FACE_ATTRS, type DetailPos, type FaceAttr } from './positions.js';
+import {
+  DETAIL_POSITIONS,
+  LEGACY_DETAIL_POSITIONS,
+  FACE_ATTRS,
+  type BaseDetailPos,
+  type DetailPos,
+  type FaceAttr,
+} from './positions.js';
 
 /**
  * T-9-009. 커리어·시즌 요약 + 이벤트 선택 로그 업로드 계약. 세이브 전체(브리프: "클라우드 세이브
@@ -28,12 +35,16 @@ export const PeakProfileSchema = z.strictObject({
       typeof Rating99Schema
     >,
   ),
-  roles: z.strictObject(
-    Object.fromEntries(DETAIL_POSITIONS.map((k) => [k, Rating99Schema])) as Record<
+  roles: z.strictObject({
+    ...(Object.fromEntries(DETAIL_POSITIONS.map((k) => [k, Rating99Schema.optional()])) as Record<
       DetailPos,
+      z.ZodOptional<typeof Rating99Schema>
+    >),
+    ...(Object.fromEntries(LEGACY_DETAIL_POSITIONS.map((k) => [k, Rating99Schema])) as Record<
+      BaseDetailPos,
       typeof Rating99Schema
-    >,
-  ),
+    >),
+  }),
 });
 
 export const CareerFootSchema = z.enum(['오른발', '왼발', '양발']);

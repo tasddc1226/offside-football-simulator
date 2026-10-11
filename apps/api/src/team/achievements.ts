@@ -10,7 +10,12 @@ import { CAREER_FEATS } from '@offside/contracts/owner-title';
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
 import { LINEUP_SIZE, type AchCategory } from '@offside/contracts/owner-team';
 import { LEAGUE_BASE } from '@offside/contracts/club-names';
-import { DETAIL_POSITIONS, type DetailPos, type PosGroup } from '@offside/contracts/positions';
+import {
+  LEGACY_DETAIL_POSITIONS,
+  BASE_DETAIL,
+  type DetailPos,
+  type PosGroup,
+} from '@offside/contracts/positions';
 import { tenureLabels } from '../i18n/ko/achievements.js';
 import { NATIONAL_WINS } from '@offside/contracts/nations';
 
@@ -311,7 +316,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
   const leagues = new Set(careers.flatMap((c) => c.seasons.map((s) => s.league)));
   const has = (names: readonly string[]) => names.filter((n) => honors.has(n)).length;
   const dposOf = (pred: (c: AchievementCareer) => boolean) =>
-    new Set(careers.filter(pred).flatMap((c) => (c.dpos ? [c.dpos] : []))).size;
+    new Set(careers.filter(pred).flatMap((c) => (c.dpos ? [BASE_DETAIL[c.dpos]] : []))).size;
   const sum = (get: (c: AchievementCareer) => number) => careers.reduce((t, c) => t + get(c), 0);
   const anyone = (pred: (c: AchievementCareer) => boolean) => careers.some(pred);
   const anySeason = (pred: (s: AchievementSeason, c: AchievementCareer) => boolean) =>
@@ -372,7 +377,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
             'all-dpos',
             '전 세부 포지션 선수 배출',
             dposOf(() => true),
-            DETAIL_POSITIONS.length,
+            LEGACY_DETAIL_POSITIONS.length,
             PTS.first,
           ),
         ]
@@ -391,7 +396,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
             'all-dpos-ballon',
             '전 세부 포지션 발롱도르',
             dposOf((c) => c.ballon > 0),
-            DETAIL_POSITIONS.length,
+            LEGACY_DETAIL_POSITIONS.length,
           ),
         ]
       : []),

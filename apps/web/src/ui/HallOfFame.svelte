@@ -8,7 +8,7 @@
   // T-11-029 '프리시즌' 탭은 개막 전에 만든 선수만 모은다(개막 뒤에 은퇴해도 포함). 홈 미리보기는 지금 시즌 TOP이다.
   // T-11-018 포지션별 순위 — 레전드 점수 상위권을 공격수가 채우므로 포지션 안에서도 겨루게 한다.
   import type { CareerPos, HofSort, PublicHofEntry } from '@offside/contracts';
-  import { POS_GROUPS, POS_LABEL, DETAILS_OF, DETAIL_LABEL, type DetailPos } from '@offside/contracts/positions';
+  import { POS_GROUPS, POS_LABEL, FILTER_DETAILS_OF, DETAIL_LABEL, type DetailPos } from '@offside/contracts/positions';
   import { PRESEASON, SERVICE_SEASONS, previewSeasonAt, seasonById } from '@offside/contracts/service-seasons';
   import { kstMonthDayHour } from '@offside/app-core/boardText';
   import { loadHOF } from '@offside/game/hof-store';
@@ -235,11 +235,11 @@
             <button class="hof-sort" aria-pressed={pos === k} data-hof-pos={k} onclick={() => pickPos(k)}>{tn(POS_LABEL[k])}</button>
           {/each}
         </div>
-        {#if season !== 0 && pos && DETAILS_OF[pos].length > 1}
+        {#if season !== 0 && pos && FILTER_DETAILS_OF[pos].length > 1}
           <p class="hof-filter-label">{L.detailPositionGroup}</p>
           <div class="seg hof-pos" role="group" aria-label={L.detailPositionGroup}>
             <button class="hof-sort" aria-pressed={dpos === null} data-hof-dpos="all" onclick={() => pickDetail(null)}>{L.all}</button>
-            {#each DETAILS_OF[pos] as k (k)}
+            {#each FILTER_DETAILS_OF[pos] as k (k)}
               <button class="hof-sort" aria-pressed={dpos === k} data-hof-dpos={k} aria-label={tn(DETAIL_LABEL[k])} onclick={() => pickDetail(k)}>{k}</button>
             {/each}
           </div>

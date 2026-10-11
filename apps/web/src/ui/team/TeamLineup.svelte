@@ -2,7 +2,7 @@
   import { teamNameIssues } from '@offside/app-core/careerGuide';
   import { tn } from '@offside/game/i18n/names';
   import { onDestroy } from 'svelte';
-  import { DETAIL_LABEL, FORMATION_IDS, LINEUP_SIZE, presetLayout, positionRole, slotRating, slotFit, type FormationId, type TeamPosition } from '@offside/contracts/owner-team';
+  import { DETAIL_LABEL, FORMATION_IDS, LINEUP_SIZE, presetLayout, positionedLayout, positionRole, slotRating, slotFit, type FormationId, type TeamPosition } from '@offside/contracts/owner-team';
   import { POS_LABEL, detailPosOf, type PosGroup } from '@offside/contracts/positions';
   import type { OwnerTeam, TeamLines as Lines, TeamPlayer } from '@offside/app-core/api/team';
   import { attrLine, synergyFocus } from '@offside/app-core/teamOwner';
@@ -36,7 +36,7 @@
   type Drag = { id: string | null; from: number | null; x: number; y: number; startX: number; startY: number; moving: boolean; pointerId: number; capture: HTMLElement };
   let drag = $state<Drag | null>(null);
   let scrollFrame = 0;
-  const positions = $derived(layout ?? presetLayout(formation));
+  const positions = $derived(editable && season > 0 ? positionedLayout(layout ?? presetLayout(formation)) : layout ?? presetLayout(formation));
   // T-11-105 고른 시너지 칩 — 그라운드에서 그 듀오의 선은 굵게, 선수는 테두리로 보여 준다.
   let synFocus = $state<string | null>(null);
   const syn = $derived(synergyFocus(synergy, synFocus));
@@ -158,7 +158,7 @@
     <div class="hof-sorts ground-presets" role="group" aria-label={L.presetsLabel}>
       {#each FORMATION_IDS as f (f)}<button class="hof-sort" aria-pressed={!layout && formation === f} data-formation={f} disabled={!editable} onclick={() => preset(f)}>{f}</button>{/each}
     </div>
-    <TeamPitch {formation} {cells} {layout} selected={selectedSlot} dragging={drag?.moving ? drag.from : null} links={syn.links} focus={syn.members} applied={syn.applied} caption={synergyApplies(season) ? syn.caption : null} bind:element={pitch}
+    <TeamPitch {formation} {cells} layout={positions} selected={selectedSlot} dragging={drag?.moving ? drag.from : null} links={syn.links} focus={syn.members} applied={syn.applied} caption={synergyApplies(season) ? syn.caption : null} bind:element={pitch}
       onpick={editable ? pickSlot : undefined} onstart={editable ? (e, i) => start(e, slots[i] ?? null, i) : undefined} onkey={editable ? keyMove : undefined} onplace={editable ? place : undefined} />
     <div class="ground-strength"><TeamLines {lines} compact /></div>
     <TeamSynergy {synergy} {season} bind:focus={synFocus} />

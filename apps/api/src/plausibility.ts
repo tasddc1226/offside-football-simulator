@@ -191,7 +191,7 @@ export function boundRetirement(
  */
 export function boundProfile(profile: PeakProfile, peak: number): PeakProfile {
   const roles = Object.fromEntries(
-    Object.entries(profile.roles).map(([k, v]) => [k, Math.min(v, peak + SLOT_OVER_PEAK)]),
+    Object.entries(profile.roles).map(([k, v]) => [k, Math.min(v!, peak + SLOT_OVER_PEAK)]),
   ) as PeakProfile['roles'];
   return { attrs: profile.attrs, roles };
 }

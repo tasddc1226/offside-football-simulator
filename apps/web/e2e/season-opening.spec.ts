@@ -80,7 +80,7 @@ test('개막 때 프로필 입력값과 주력 선택을 유지하며 세부 포
     .locator('input')
     .evaluateAll((inputs) => inputs.map((e) => (e as HTMLInputElement).value));
   await page.clock.fastForward(60_000);
-  await expect(page.locator('[data-set="dpos"]')).toHaveCount(2);
+  await expect(page.locator('[data-set="dpos"]')).toHaveCount(5);
   await expect(page.locator('[data-set="dpos"][data-val="ST"]')).toHaveAttribute(
     'aria-pressed',
     'true',

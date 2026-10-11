@@ -1,31 +1,28 @@
 {
   "id": "community-guide-2026-10-11",
-  "title": "육성과 팀 저장 안내 개선",
+  "title": "육성 안내와 포지션 확장",
   "items": [
-    "후보와 시작 능력치가 다른 이유를 안내해요.",
-    "약점 훈련 위치·포지션 육성 안내와 훈련별 OVR 비중을 보여줘요.",
-    "팀 저장에 필요한 이름 입력 조건을 보여줘요.",
-    "명예의 벽 선수의 구단 기록을 함께 보여줘요.",
-    "기록실·영구결번에서 세부 포지션을 고르고, 결번 구단을 리그별로 볼 수 있어요."
+    "후보 능력치·훈련 OVR 비중·팀 이름 조건을 안내해요.",
+    "세부 포지션 17개를 선택하고 기록실·영구결번을 필터링해요.",
+    "팀 배치 위치에 맞춰 포지션을 저장해요.",
+    "명예의 벽에 구단 기록을 함께 보여줘요."
   ],
   "en": {
-    "title": "Clearer training and team setup",
+    "title": "Guidance and more positions",
     "items": [
-      "See why candidate and starting attributes differ.",
-      "Find training guidance and each attribute’s OVR weight.",
-      "See name requirements before saving your team.",
-      "Wall of Honour entries include club records.",
-      "Filter records and retired numbers by detailed position, with clubs grouped by league."
+      "See candidate, training OVR and team name guidance.",
+      "Choose 17 positions and filter records and retired numbers.",
+      "Team positions follow pitch placement when saved.",
+      "Wall of Honour includes club records."
     ]
   },
   "ja": {
-    "title": "育成とチーム保存の案内を改善",
+    "title": "育成ガイドとポジション拡張",
     "items": [
-      "候補と開始後の能力値の違いを案内します。",
-      "育成ガイドと各能力のOVR比重を表示します。",
-      "チーム保存に必要な名前の条件を表示します。",
-      "名誉の壁で選手のクラブ記録を表示します。",
-      "記録・永久欠番を詳細ポジションで絞り込み、クラブをリーグ別に表示します。"
+      "候補能力・育成OVR・チーム名の条件を案内します。",
+      "17ポジションを選び、記録・永久欠番を絞り込めます。",
+      "配置した位置に合わせてチームのポジションを保存します。",
+      "名誉の壁にクラブ記録を表示します。"
     ]
   },
   "availability": "web-app"

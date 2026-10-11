@@ -295,7 +295,7 @@
       {#if detailOpen && DETAILS_OF[C.pos].length > 1}
         <div class="field">
           <span class="lbl">{L.detailPosition}</span>
-          <div class="seg" class:two={DETAILS_OF[C.pos].length === 2} class:three={DETAILS_OF[C.pos].length === 3}>
+          <div class="seg two">
             {#each DETAILS_OF[C.pos] as d (d)}
               <button class="opt pos-opt" data-set="dpos" data-val={d} aria-pressed={C.dpos === d} onclick={() => pickDetail(d)}>
                 <span class="pos-code num">{d}</span><b>{tn(DPOS[d].label)}</b><small>{DPOS[d].blurb}</small>

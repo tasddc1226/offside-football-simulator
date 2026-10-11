@@ -16,7 +16,7 @@
   import type { RetiredNumbersResponse, RetiredNumbersSummary } from '@offside/contracts';
   import { PRESEASON, SERVICE_SEASONS, displaySeasonAt, seasonById } from '@offside/contracts/service-seasons';
   import { kstMonthDayHour } from '@offside/app-core/boardText';
-  import { POS_GROUPS, DETAILS_OF, DETAIL_LABEL } from '@offside/contracts/positions';
+  import { POS_GROUPS, FILTER_DETAILS_OF, DETAIL_LABEL } from '@offside/contracts/positions';
   import { getRetiredNumbersOfClub, getRetiredNumbersPage, getRetiredNumbersSummary } from '@offside/app-core/api/client';
   import { POS } from '@offside/game/data';
   import { loadHOF } from '@offside/game/hof-store';
@@ -228,11 +228,11 @@
         <button class="hof-sort" aria-pressed={view.pos === null} data-rn-pos="all" onclick={() => { view.pos = null; view.dpos = null; }}>{L.all}</button>
         {#each POS_GROUPS as pos (pos)}<button class="hof-sort" aria-pressed={view.pos === pos} data-rn-pos={pos} onclick={() => { view.pos = pos; view.dpos = null; }}>{POS[pos].label}</button>{/each}
       </div>
-      {#if season > 0 && view.pos && DETAILS_OF[view.pos].length > 1}
+      {#if season > 0 && view.pos && FILTER_DETAILS_OF[view.pos].length > 1}
         <p class="hof-filter-label">{H.detailPositionGroup}</p>
         <div class="seg hof-pos" role="group" aria-label={H.detailPositionGroup}>
           <button class="hof-sort" data-rn-dpos="all" aria-pressed={view.dpos === null} onclick={() => (view.dpos = null)}>{L.all}</button>
-          {#each DETAILS_OF[view.pos] as dp (dp)}
+          {#each FILTER_DETAILS_OF[view.pos] as dp (dp)}
             <button class="hof-sort" data-rn-dpos={dp} aria-label={tn(DETAIL_LABEL[dp])} aria-pressed={view.dpos === dp} onclick={() => (view.dpos = dp)}>{dp}</button>
           {/each}
         </div>

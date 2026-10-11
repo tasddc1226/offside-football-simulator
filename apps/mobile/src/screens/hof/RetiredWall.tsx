@@ -42,7 +42,7 @@ import { Card } from '../../ui/Card';
 import { ClubMark } from '../../ui/ClubBadge';
 import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
-import { POS_GROUPS, DETAILS_OF, type DetailPos } from '@offside/contracts/positions';
+import { POS_GROUPS, FILTER_DETAILS_OF, type DetailPos } from '@offside/contracts/positions';
 import { kstMonthDayHour } from '@offside/app-core/boardText';
 import { RecordsSelect, RecordsChips, RECORDS_TOUCH } from './RecordsControls';
 import { hofRnText as L } from '@offside/app-core/i18n/ko/hofRn';
@@ -615,7 +615,7 @@ function ClubScreen({
           ...POS_GROUPS.map((key) => ({ key, label: POS[key].label })),
         ]}
       />
-      {season > 0 && pos && DETAILS_OF[pos].length > 1 ? (
+      {season > 0 && pos && FILTER_DETAILS_OF[pos].length > 1 ? (
         <RecordsChips
           label={H.detailPositionGroup}
           testIDPrefix="rn-dpos"
@@ -625,7 +625,7 @@ function ClubScreen({
           }}
           items={[
             { key: 'all', label: L.all },
-            ...DETAILS_OF[pos].map((key) => ({ key, label: key })),
+            ...FILTER_DETAILS_OF[pos].map((key) => ({ key, label: key })),
           ]}
         />
       ) : null}

@@ -8,6 +8,7 @@ import { useSnapshot } from 'valtio';
 import {
   FORMATION_IDS,
   presetLayout,
+  positionedLayout,
   type TeamPosition,
   LINEUP_SIZE,
   MANAGER_NAME_MAX,
@@ -196,7 +197,10 @@ export default function Team() {
   const nameOf = (p: TeamPlayer) => marketName(p, localNames);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
 
-  const positions = layout ?? presetLayout(formation);
+  const positions =
+    editable && season > 0
+      ? positionedLayout(layout ?? presetLayout(formation))
+      : (layout ?? presetLayout(formation));
   const slotCodes = positions.map((p) => p.slot);
   const ratings: (number | null)[] = slotCodes.map((slot, i) => {
     const id = slots[i];
@@ -356,7 +360,12 @@ export default function Team() {
     savingRef.current = true;
     setSaving(true);
     const snapshot = JSON.stringify(draftNow.current);
-    const body = { ...draftValue, name: name.trim(), manager: manager.trim() };
+    const body = {
+      ...draftValue,
+      name: name.trim(),
+      manager: manager.trim(),
+      ...(season > 0 ? { layout: positions } : {}),
+    };
     try {
       const r = await saveOwnerTeam(legacy ? { ...body, season: 0 } : body);
       if (!r.ok) {

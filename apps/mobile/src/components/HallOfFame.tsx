@@ -9,7 +9,12 @@ import { View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import type { CareerPos, HofSort, PublicHofEntry } from '@offside/contracts';
-import { POS_GROUPS, DETAILS_OF, DETAIL_LABEL, type DetailPos } from '@offside/contracts/positions';
+import {
+  POS_GROUPS,
+  FILTER_DETAILS_OF,
+  DETAIL_LABEL,
+  type DetailPos,
+} from '@offside/contracts/positions';
 import { tn } from '@offside/game/i18n/names';
 import { POS } from '@offside/game/data';
 import {
@@ -271,7 +276,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
                   ...POS_GROUPS.map((key) => ({ key, label: POS[key].label })),
                 ]}
               />
-              {season !== 0 && pos && DETAILS_OF[pos].length > 1 ? (
+              {season !== 0 && pos && FILTER_DETAILS_OF[pos].length > 1 ? (
                 <RecordsChips
                   label={L.detailPositionGroup}
                   testIDPrefix="hof-dpos"
@@ -279,7 +284,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
                   onPick={(key) => pickDetail(key === 'all' ? null : (key as DetailPos))}
                   items={[
                     { key: 'all', label: L.all },
-                    ...DETAILS_OF[pos].map((key) => ({
+                    ...FILTER_DETAILS_OF[pos].map((key) => ({
                       key,
                       label: key,
                     })),
