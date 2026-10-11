@@ -1631,6 +1631,8 @@ textarea {
   border-bottom: 1px solid var(--line);
   text-align: left;
   color: inherit;
+  /* 홈·공개 소식 목록은 링크(a)다 — 기본 밑줄을 지운다. */
+  text-decoration: none;
   font: inherit;
   cursor: pointer;
 }
