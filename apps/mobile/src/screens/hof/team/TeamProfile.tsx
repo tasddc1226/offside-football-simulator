@@ -179,7 +179,7 @@ export default function TeamProfile({ id }: { id: string }) {
                   style={{ alignSelf: 'flex-start', marginTop: 6 }}
                   onPress={() => (appState.hof = { ...appState.hof, owner: true })}
                 >
-                  {LO.open}
+                  {LO.visitHall}
                 </Btn>
                 {team.ownerNickname ? (
                   <Txt tone="muted" style={{ fontSize: rem(0.8125) }} testID="team-owner">

@@ -2,6 +2,15 @@ import type { Translation } from '../core';
 import type { OwnerProfileMsgs } from '../ko/ownerProfile';
 
 export const ownerProfile: Translation<OwnerProfileMsgs> = {
+  publicSeasonNote: 'シーズンごとのチーム成績',
+  publicTitleNote: 'このオーナーが獲得した称号',
+  visitHall: '名誉館を訪問',
+  publicEmptyAwards: 'このオーナーにはまだ展示するバッジやカップ成績がありません。',
+  publicHall: '公開名誉館',
+  publicTitles: '獲得した称号',
+  publicTitlesEmpty: '獲得した称号はまだありません。',
+  publicPending: 'シーズン記録を集計中です。',
+
   roomTitle: 'オーナーロッカールーム',
   roomHint: '左右に回すと、下の記録が切り替わります。',
   roomSeasons: 'シーズンロッカー',

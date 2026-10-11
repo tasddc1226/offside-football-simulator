@@ -2,6 +2,15 @@ import type { Translation } from '../core';
 import type { OwnerProfileMsgs } from '../ko/ownerProfile';
 
 export const ownerProfile: Translation<OwnerProfileMsgs> = {
+  publicSeasonNote: 'Team results by season',
+  publicTitleNote: 'Titles earned by this owner',
+  visitHall: 'Visit hall',
+  publicEmptyAwards: 'This owner has no badges or cup results to display yet.',
+  publicHall: 'Public hall',
+  publicTitles: 'Earned titles',
+  publicTitlesEmpty: 'No titles earned yet.',
+  publicPending: 'Season results are being finalized.',
+
   roomTitle: 'Owner locker room',
   roomHint: 'Turn left or right to change the records below.',
   roomSeasons: 'Season lockers',

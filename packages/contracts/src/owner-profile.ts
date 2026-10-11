@@ -56,9 +56,19 @@ export const OwnerProfileSchema = z.strictObject({
 });
 export type OwnerProfile = z.infer<typeof OwnerProfileSchema>;
 
+/** Public hall exposes earned records only, never progress, funds or private season recaps. */
+export const PublicOwnerHallSchema = z.strictObject({
+  owner: OwnerProfileSchema,
+  honors: z.array(OwnerHonorSchema),
+  pendingSeasons: z.array(TeamSeasonSchema),
+  titles: z.array(OwnerTitleSchema),
+});
+export type PublicOwnerHall = z.infer<typeof PublicOwnerHallSchema>;
+
 export const OwnerProfileResponseSchema = z.strictObject({
   owner: OwnerProfileSchema,
   mine: z.boolean(),
+  hall: PublicOwnerHallSchema.optional(),
 });
 export type OwnerProfileResponse = z.infer<typeof OwnerProfileResponseSchema>;
 

@@ -3,6 +3,15 @@
 import { ns } from '../core';
 
 const ko = {
+  publicSeasonNote: '시즌별 팀 성적',
+  publicTitleNote: '이 구단주가 획득한 칭호',
+  visitHall: '명예관 방문',
+  publicEmptyAwards: '아직 이 구단주가 획득한 배지나 컵 성적이 없어요.',
+  publicHall: '공개 명예관',
+  publicTitles: '획득한 칭호',
+  publicTitlesEmpty: '아직 획득한 칭호가 없어요.',
+  publicPending: '시즌 기록을 정리하고 있어요.',
+
   roomTitle: '구단주 라커룸',
   roomHint: '좌우로 돌리면 아래 기록이 바뀌어요.',
   roomSeasons: '시즌 라커',

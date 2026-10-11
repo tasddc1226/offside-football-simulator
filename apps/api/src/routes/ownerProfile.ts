@@ -10,7 +10,7 @@ import {
   PutOwnerTitleResponseSchema,
   TeamIdSchema,
 } from '@offside/contracts';
-import { TITLE_NONE, titlesOf } from '@offside/contracts/owner-title';
+import { PERMANENT_TITLES, TITLE_NONE, titlesOf } from '@offside/contracts/owner-title';
 import { desc, eq, inArray } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { cupKo } from '../cupText.js';
@@ -115,10 +115,61 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
       nowIso(),
       reqLang(c),
     );
+    // Reuse the existing profile read: no extra request per hall tab and no private recap read.
+    // This legacy response includes viewer-specific `mine`, so it remains NO_STORE.
+    const closed = openTeamSeasons(nowIso()).filter((s) => teamSeasonClosed(s, nowIso()));
+    const [honors, awards, states] = await Promise.all([
+      honorsOf(db, profileId),
+      db
+        .select({ id: ownerTitleAwards.titleId })
+        .from(ownerTitleAwards)
+        .where(eq(ownerTitleAwards.profileId, profileId)),
+      closed.length
+        ? db
+            .select()
+            .from(appMeta)
+            .where(inArray(appMeta.key, closed.map(closeMetaKey)))
+        : [],
+    ]);
+    const done = new Set(
+      states.flatMap((s) => {
+        try {
+          return JSON.parse(s.value).step === 'done' ? [s.key] : [];
+        } catch {
+          return [];
+        }
+      }),
+    );
+    const pendingSeasons = closed.filter((s) => !done.has(closeMetaKey(s)));
+    const publicOwner = {
+      ...owner,
+      seasons: owner.seasons.map((s) =>
+        pendingSeasons.includes(s.season) ? { ...s, achScore: null, teamRank: null } : s,
+      ),
+    };
+    const publicRanks = publicOwner.seasons.flatMap((s) =>
+      s.teamRank === null ? [] : [s.teamRank],
+    );
+    publicOwner.stats = {
+      ...owner.stats,
+      bestTeamRank: publicRanks.length ? Math.min(...publicRanks) : null,
+    };
+    const earned = new Set(awards.map((a) => a.id));
+    const hall = {
+      owner: publicOwner,
+      honors: honors.filter((h) => done.has(closeMetaKey(h.season))),
+      pendingSeasons,
+      titles: [
+        ...new Set([
+          ...PERMANENT_TITLES.filter((t) => earned.has(t.id)).map((t) => t.id),
+          ...titlesOf(owner.cupHonors),
+        ]),
+      ],
+    };
     return ok(
       c,
       OwnerProfileResponseSchema,
-      { owner, mine: session?.profileId === profileId },
+      { owner: publicOwner, mine: session?.profileId === profileId, hall },
       200,
       NO_STORE,
     );

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { fetchOwnerArchive, type OwnerArchiveResponse } from '@offside/app-core/api/ownerProfile';
+  import { fetchOwnerArchive, type PublicOwnerHall, type OwnerArchiveResponse } from '@offside/app-core/api/ownerProfile';
   import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
   import { honorViews } from '@offside/app-core/seasonRecap';
   import { titleLabel } from '@offside/app-core/ownerTitle';
@@ -13,6 +13,9 @@
   import HonorEmblem from '../HonorEmblem.svelte';
   import CupHonors from '../cup/CupHonors.svelte';
   import TitleBadge from '../cup/TitleBadge.svelte';
+
+  import PublicHallRecords from './PublicHallRecords.svelte';
+  let { publicData }: { publicData?: PublicOwnerHall } = $props();
 
   type Panel = 'records' | 'titles' | 'trophies';
   const panels: Panel[] = ['records', 'titles', 'trophies'];
@@ -29,12 +32,13 @@
   let swiped = false;
   let alive = true;
   const names = $derived([L.roomSeasons, L.roomOwner, L.roomTrophies]);
-  const notes = $derived([L.roomSeasonsNote, L.roomOwnerNote, L.roomTrophiesNote]);
+  const notes = $derived([publicData ? L.publicSeasonNote : L.roomSeasonsNote, publicData ? L.publicTitleNote : L.roomOwnerNote, L.roomTrophiesNote]);
   const badges = $derived(honorViews(data?.honors ?? []));
   const latestSeason = $derived(Math.max(0, ...(data?.owner.seasons.map((s) => s.season) ?? [])));
   const awards = $derived(badges.length + (data?.owner.cupHonors.length ?? 0));
   async function load() {
     failed = false;
+    if (publicData) { data = publicData; return; }
     const r = await fetchOwnerArchive();
     if (!alive) return;
     if (r.ok) data = r.data; else failed = true;
@@ -46,7 +50,7 @@
     drag = 0;
     panel = panels[next]!;
     visited[panel] = true;
-    if (panel !== 'trophies') appState.honorsView = panel;
+    if (!publicData && panel !== 'trophies') appState.honorsView = panel;
   }
   function start(e: PointerEvent) {
     if (e.button !== 0 || pointer !== null) return;
@@ -67,7 +71,7 @@
   }
 </script>
 
-<div class="locker-page" data-owner-honors-screen>
+<div class="locker-page" data-owner-honors-screen class:public-hall={!!publicData}>
   <div class="room-scene">
   <header class="locker-heading"><div><h1>{L.hallTitle}</h1><p>{data?.owner.team?.name ?? L.roomTitle}</p></div><span class="locker-mark" aria-hidden="true">◈</span></header>
   <div class="locker-stage" class:still={!motionOK} class:grabbing role="group" aria-label={L.roomTitle} onpointerdown={start} onpointermove={move} onpointerup={end} onpointercancel={() => { grabbing = false; pointer = null; drag = 0; }}>
@@ -96,12 +100,12 @@
   </div>
   <section class="room-list" aria-label={names[zone]} data-room-list={panel}>
   <div class="detail-body">
-    {#if visited.records}<div hidden={panel !== 'records'}><OwnerArchive /></div>{/if}
-    {#if visited.titles}<div hidden={panel !== 'titles'}><OwnerHall onpick={(title) => { if (data) data = { ...data, owner: { ...data.owner, title } }; }} /></div>{/if}
+    {#if visited.records}<div hidden={panel !== 'records'}>{#if publicData}<PublicHallRecords data={publicData} />{:else}<OwnerArchive />{/if}</div>{/if}
+    {#if visited.titles}<div hidden={panel !== 'titles'}>{#if publicData}<PublicHallRecords data={publicData} titles />{:else}<OwnerHall onpick={(title) => { if (data) data = { ...data, owner: { ...data.owner, title } }; }} />{/if}</div>{/if}
     {#if panel === 'trophies'}
       <div class="trophy-gallery" data-trophy-gallery>
         {#if !data}<p class="muted">{failed ? L.archiveError : L.archiveLoading}</p>{#if failed}<button class="btn" onclick={() => void load()}>{L.retry}</button>{/if}
-        {:else if !awards}<p class="muted">{L.roomEmptyAwards}</p>
+        {:else if !awards}<p class="muted">{publicData ? L.publicEmptyAwards : L.roomEmptyAwards}</p>
         {:else}
           {#if badges.length}<h2>{L.roomBadgeCount} <span>{badges.length}</span></h2><div class="gallery-badges">{#each badges as h (`${h.season}-${h.kind}`)}<div class="gallery-badge medal {h.medal}"><div><HonorEmblem {h} /></div><b>{h.title}</b><small>{teamSeasonLabel(h.season)}</small><p>{h.detail}</p></div>{/each}</div>{/if}
           {#if data.owner.cupHonors.length}<h2>{L.roomCupCount}</h2><CupHonors honors={data.owner.cupHonors} />{/if}
@@ -114,6 +118,7 @@
 
 <style>
   .locker-page{--room-gold:#d5bd7d;width:min(100%,680px);margin:0 auto;display:flex;flex-direction:column;min-width:0;min-height:calc(100svh - 76px);background:#102219;color:#ede9d8;padding-bottom:20px;overflow:clip;isolation:isolate;}
+  .public-hall .room-scene{position:relative;}
   .room-scene{position:sticky;top:0;z-index:0;background:#102219;}
   .locker-heading{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 8px;gap:12px;}.locker-heading h1{font-size:23px;margin:0 0 3px;}.locker-heading p{font-size:12px;color:#aebead;margin:0;}.locker-mark{color:var(--room-gold);font-size:30px;}
   .locker-stage{--wall-width:min(82vw,350px);--radius:calc(var(--wall-width)*.98);position:relative;height:clamp(290px,49svh,480px);perspective:850px;isolation:isolate;overflow:hidden;touch-action:pan-y;user-select:none;background:#14281e;}

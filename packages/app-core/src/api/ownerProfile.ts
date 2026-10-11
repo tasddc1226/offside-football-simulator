@@ -9,6 +9,7 @@ import { apiFetch, cachedGet } from './client.js';
 
 export type {
   OwnerProfile,
+  PublicOwnerHall,
   OwnerArchiveResponse,
   OwnerProfileResponse,
   OwnerSeasonLine,

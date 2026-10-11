@@ -119,7 +119,7 @@
           {#if team.ownerTitle}<span class="tp-title-badge"><TitleBadge title={team.ownerTitle} /></span>{/if}
           <p class="muted fs-sm">{L.profManager}<b class="tp-manager">{team.manager}</b>{mine ? L.profMine : ''}</p>
           {#if team.ownerNickname}<p class="muted fs-sm" data-team-owner>{L.profOwner}<b>{team.ownerNickname}</b></p>{/if}
-          <button class="btn btn-sm tp-owner" data-act="owner-profile" onclick={openOwner}>{LO.open}</button>
+          <button class="btn btn-sm tp-owner" data-act="owner-profile" onclick={openOwner}>{LO.visitHall}</button>
         </div></div>
         <div class="tp-rating" aria-label={L.profRatingAria({ n: team.rating })}><small>RATING</small><b>{n(team.rating)}</b></div>
       </div>

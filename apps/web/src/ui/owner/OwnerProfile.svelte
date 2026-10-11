@@ -2,7 +2,7 @@
   // T-11-150 구단주 프로필 — 팀 프로필의 '구단주 프로필'에서 연다(팀 id로). 시즌을 넘어 쌓이는 기록을 한곳에: 대표 칭호와
   // 지난 시즌 등급, 지금 팀, 영구결번 · 은퇴 선수 · 최고 팀 순위, 컵 트로피 진열장, 시즌별 업적 점수와 팀 순위.
   import { onMount } from 'svelte';
-  import { fetchOwnerProfileByTeam, type OwnerProfile } from '@offside/app-core/api/ownerProfile';
+  import { fetchOwnerProfileByTeam, type OwnerProfile, type PublicOwnerHall } from '@offside/app-core/api/ownerProfile';
   import { tierTitle } from '@offside/app-core/ownerTier';
   import { seasonLabel } from '@offside/app-core/seasonName';
   import { num } from '@offside/app-core/teamText';
@@ -15,6 +15,9 @@
   import TitleBadge from '../cup/TitleBadge.svelte';
   import { appState } from '../state.svelte.js';
   import { go } from '../nav.js';
+
+  import OwnerHonors from './OwnerHonors.svelte';
+  let hall = $state<PublicOwnerHall | undefined>();
 
   let { teamId }: { teamId: string } = $props();
 
@@ -29,7 +32,7 @@
       status = 'error';
       return;
     }
-    ({ owner, mine } = r.data);
+    ({ owner, mine, hall } = r.data);
     status = 'ready';
   }
   onMount(() => void load());
@@ -76,6 +79,9 @@
         {#if mine}<button class="btn btn-sm" data-act="owner-hall" onclick={() => go('honors')}>{L.manage}</button>{/if}
       </section>
 
+      {#if hall}
+        <OwnerHonors publicData={hall} />
+      {:else}
       {#if owner.cupHonors.length}
         <CupHonors honors={owner.cupHonors} />
       {:else}
@@ -108,6 +114,7 @@
           <p class="empty">{L.seasonsEmpty}</p>
         {/if}
       </section>
+      {/if}
     </div>
   {/if}
 </LoadState>

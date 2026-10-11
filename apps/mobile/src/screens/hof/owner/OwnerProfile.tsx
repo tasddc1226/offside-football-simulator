@@ -6,6 +6,7 @@ import { View } from 'react-native';
 import {
   fetchOwnerProfileByTeam,
   type OwnerProfile as Owner,
+  type PublicOwnerHall,
 } from '@offside/app-core/api/ownerProfile';
 import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
 import { tierTitle } from '@offside/app-core/ownerTier';
@@ -28,10 +29,13 @@ import { Txt } from '../../../ui/Txt';
 import { useOnPull } from '../../../ui/refresh';
 import { Stats } from '../../owner/TeamParts';
 
+import OwnerHonors from '../../owner/OwnerHonors';
+
 const rank = (n: number | null) => (n ? L.rank({ n }) : L.none);
 
 export default function OwnerProfile({ teamId }: { teamId: string }) {
   const c = useColors();
+  const [hall, setHall] = useState<PublicOwnerHall>();
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [owner, setOwner] = useState<Owner | null>(null);
   const [mine, setMine] = useState(false);
@@ -45,6 +49,7 @@ export default function OwnerProfile({ teamId }: { teamId: string }) {
         return;
       }
       setOwner(r.data.owner);
+      setHall(r.data.hall);
       setMine(r.data.mine);
       setStatus('ready');
     },
@@ -128,74 +133,86 @@ export default function OwnerProfile({ teamId }: { teamId: string }) {
             ) : null}
           </Card>
 
-          {owner.cupHonors.length ? (
-            <CupHonors honors={owner.cupHonors} />
+          {hall ? (
+            <OwnerHonors publicData={hall} />
           ) : (
-            <Card gap={6}>
-              <Txt v="eyebrow">Offside Cup</Txt>
-              <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                {L.trophiesEmpty}
-              </Txt>
-            </Card>
-          )}
+            <>
+              {owner.cupHonors.length ? (
+                <CupHonors honors={owner.cupHonors} />
+              ) : (
+                <Card gap={6}>
+                  <Txt v="eyebrow">Offside Cup</Txt>
+                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                    {L.trophiesEmpty}
+                  </Txt>
+                </Card>
+              )}
 
-          <Card gap={10} testID="owner-seasons">
-            <View>
-              <Txt v="eyebrow">Seasons</Txt>
-              <Txt v="h2" accessibilityRole="header">
-                {L.seasons}
-              </Txt>
-            </View>
-            {owner.seasons.length ? (
-              <View>
-                <View style={{ flexDirection: 'row', paddingBottom: 6 }}>
-                  <Txt tone="muted" style={{ flex: 1.2, fontSize: rem(0.75) }}>
-                    {L.colSeason}
-                  </Txt>
-                  <Txt tone="muted" style={{ flex: 1.4, fontSize: rem(0.75) }}>
-                    {L.colTeam}
-                  </Txt>
-                  <Txt tone="muted" style={{ flex: 1, fontSize: rem(0.75), textAlign: 'right' }}>
-                    {L.colAch}
-                  </Txt>
-                  <Txt tone="muted" style={{ width: 52, fontSize: rem(0.75), textAlign: 'right' }}>
-                    {L.colRank}
+              <Card gap={10} testID="owner-seasons">
+                <View>
+                  <Txt v="eyebrow">Seasons</Txt>
+                  <Txt v="h2" accessibilityRole="header">
+                    {L.seasons}
                   </Txt>
                 </View>
-                {[...owner.seasons].reverse().map((s) => (
-                  <View
-                    key={s.season}
-                    testID={`owner-season-${s.season}`}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingVertical: 8,
-                      borderTopWidth: 1,
-                      borderTopColor: c.line,
-                    }}
-                  >
-                    <Txt numberOfLines={1} style={{ flex: 1.2, fontSize: rem(0.875) }}>
-                      {seasonLabel(s.season, s.name)}
-                      {s.closed ? '' : ` · ${L.ongoing}`}
-                    </Txt>
-                    <Txt numberOfLines={1} style={{ flex: 1.4, fontSize: rem(0.875) }}>
-                      {s.teamName ?? L.none}
-                    </Txt>
-                    <Txt num style={{ flex: 1, fontSize: rem(0.875), textAlign: 'right' }}>
-                      {s.achScore === null ? L.none : num(s.achScore)}
-                    </Txt>
-                    <Txt num style={{ width: 52, fontSize: rem(0.875), textAlign: 'right' }}>
-                      {rank(s.teamRank)}
-                    </Txt>
+                {owner.seasons.length ? (
+                  <View>
+                    <View style={{ flexDirection: 'row', paddingBottom: 6 }}>
+                      <Txt tone="muted" style={{ flex: 1.2, fontSize: rem(0.75) }}>
+                        {L.colSeason}
+                      </Txt>
+                      <Txt tone="muted" style={{ flex: 1.4, fontSize: rem(0.75) }}>
+                        {L.colTeam}
+                      </Txt>
+                      <Txt
+                        tone="muted"
+                        style={{ flex: 1, fontSize: rem(0.75), textAlign: 'right' }}
+                      >
+                        {L.colAch}
+                      </Txt>
+                      <Txt
+                        tone="muted"
+                        style={{ width: 52, fontSize: rem(0.75), textAlign: 'right' }}
+                      >
+                        {L.colRank}
+                      </Txt>
+                    </View>
+                    {[...owner.seasons].reverse().map((s) => (
+                      <View
+                        key={s.season}
+                        testID={`owner-season-${s.season}`}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          paddingVertical: 8,
+                          borderTopWidth: 1,
+                          borderTopColor: c.line,
+                        }}
+                      >
+                        <Txt numberOfLines={1} style={{ flex: 1.2, fontSize: rem(0.875) }}>
+                          {seasonLabel(s.season, s.name)}
+                          {s.closed ? '' : ` · ${L.ongoing}`}
+                        </Txt>
+                        <Txt numberOfLines={1} style={{ flex: 1.4, fontSize: rem(0.875) }}>
+                          {s.teamName ?? L.none}
+                        </Txt>
+                        <Txt num style={{ flex: 1, fontSize: rem(0.875), textAlign: 'right' }}>
+                          {s.achScore === null ? L.none : num(s.achScore)}
+                        </Txt>
+                        <Txt num style={{ width: 52, fontSize: rem(0.875), textAlign: 'right' }}>
+                          {rank(s.teamRank)}
+                        </Txt>
+                      </View>
+                    ))}
                   </View>
-                ))}
-              </View>
-            ) : (
-              <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                {L.seasonsEmpty}
-              </Txt>
-            )}
-          </Card>
+                ) : (
+                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                    {L.seasonsEmpty}
+                  </Txt>
+                )}
+              </Card>
+            </>
+          )}
         </>
       ) : null}
     </LoadState>
