@@ -624,6 +624,13 @@
       "when": 1791704384064,
       "tag": "0088_faulty_genesis",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "6",
+      "when": 1791718351750,
+      "tag": "0089_woozy_greymalkin",
+      "breakpoints": true
     }
   ]
 }

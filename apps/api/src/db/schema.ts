@@ -439,6 +439,16 @@ export const careers = sqliteTable(
     ),
     index('careers_profile_status_legend_idx').on(table.profileId, table.status, table.legendScore),
     index('careers_status_legend_idx').on(table.status, table.legendScore),
+    index('careers_hof_dpos_idx').on(
+      table.status,
+      table.hidden,
+      table.dpos,
+      table.serviceSeason,
+      table.legendScore,
+      table.retiredAt,
+      table.retireAge,
+      table.pos,
+    ),
     // Count HOF filters without reading the large snapshot/profile table payloads.
     index('careers_hof_count_idx').on(
       table.status,

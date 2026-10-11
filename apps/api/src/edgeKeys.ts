@@ -26,8 +26,16 @@ export const EDGE = {
   /** 시즌 진행 게이지(홈). TTL로만 새로 읽는다. */
   seasonGauge: '/v1/season/gauge',
   hofDetail: (careerId: string) => `/v1/hof/${careerId}`,
-  hofList: (limit: number, page: number, sort: string, season?: number, q?: string, pos?: string) =>
-    `/v1/hof?limit=${limit}&page=${page}&sort=${sort}${season !== undefined ? `&season=${season}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}${pos ? `&pos=${pos}` : ''}`,
+  hofList: (
+    limit: number,
+    page: number,
+    sort: string,
+    season?: number,
+    q?: string,
+    pos?: string,
+    dpos?: string,
+  ) =>
+    `/v1/hof?limit=${limit}&page=${page}&sort=${sort}${season !== undefined ? `&season=${season}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}${pos ? `&pos=${pos}` : ''}${dpos ? `&dpos=${dpos}` : ''}`,
   /** T-10-092 라이브 랭킹(팀 랭킹). TTL로만 새로 읽는다(원작처럼 5분마다 갱신). */
   teamRank: (season: number, sort: string, page: number) =>
     `/v1/teams?season=${season}&sort=${sort}&page=${page}&form=5&logo=1`,

@@ -8,7 +8,7 @@
   // T-11-029 '프리시즌' 탭은 개막 전에 만든 선수만 모은다(개막 뒤에 은퇴해도 포함). 홈 미리보기는 지금 시즌 TOP이다.
   // T-11-018 포지션별 순위 — 레전드 점수 상위권을 공격수가 채우므로 포지션 안에서도 겨루게 한다.
   import type { CareerPos, HofSort, PublicHofEntry } from '@offside/contracts';
-  import { POS_GROUPS, POS_LABEL } from '@offside/contracts/positions';
+  import { POS_GROUPS, POS_LABEL, DETAILS_OF, DETAIL_LABEL, type DetailPos } from '@offside/contracts/positions';
   import { PRESEASON, SERVICE_SEASONS, previewSeasonAt, seasonById } from '@offside/contracts/service-seasons';
   import { kstMonthDayHour } from '@offside/app-core/boardText';
   import { loadHOF } from '@offside/game/hof-store';
@@ -60,11 +60,13 @@
   const season = $derived(full ? appState.hof.season : homeSeason);
   const q = $derived(full ? appState.hof.q : '');
   const pos = $derived(full ? appState.hof.pos : null);
+  const dpos = $derived(full && season !== 0 ? appState.hof.dpos ?? null : null);
+  const posLabel = $derived(dpos ? tn(DETAIL_LABEL[dpos]) : pos ? tn(POS_LABEL[pos]) : '');
   const ss = $derived(season === null ? undefined : seasonById(season));
   /** 고른 시즌이 아직 개막 전이면 그 시즌(목록 대신 개막 안내). */
   const upcoming = $derived(ss && notOpen(ss) ? ss : undefined);
   /** 문구 앞에 붙는 시즌·포지션 이름('시즌 1 수비수 '). 둘 다 전체면 빈 문자열. */
-  const scope = $derived(`${ss ? `${seasonLabel(ss.id, ss.name)} ` : ''}${pos ? `${tn(POS_LABEL[pos])} ` : ''}`);
+  const scope = $derived(`${ss ? `${seasonLabel(ss.id, ss.name)} ` : ''}${posLabel ? `${posLabel} ` : ''}`);
   let all = $state<PublicHofEntry[] | null>(null);
   /** 홈 미리보기의 '전체 보기' — 개막 뒤엔 시즌 은퇴 선수가 아직 없어도 기록실로 가는 길을 남긴다. */
   const hasAll = $derived(!!all?.length || homeSeason !== null);
@@ -73,10 +75,13 @@
   let filtering = $state(false);
 
   function pickSeason(id: number | null) {
-    appState.hof = { ...appState.hof, season: id, page: 1 };
+    appState.hof = { ...appState.hof, season: id, dpos: id === 0 ? null : dpos, page: 1 };
   }
   function pickPos(p: CareerPos | null) {
-    appState.hof = { ...appState.hof, pos: p, page: 1 };
+    appState.hof = { ...appState.hof, pos: p, dpos: null, page: 1 };
+  }
+  function pickDetail(p: DetailPos | null) {
+    appState.hof = { ...appState.hof, dpos: p, page: 1 };
   }
   function pickSort(s: HofSort) {
     appState.hof = { ...appState.hof, sort: s, page: 1 };
@@ -108,12 +113,12 @@
   }
 
   $effect(() => {
-    const [p, s, se, qq, po] = [page, sort, season, q, pos];
+    const [p, s, se, qq, po, dp] = [page, sort, season, q, pos, dpos];
     all = null;
     failed = false;
     if (upcoming) return;
-    void getHof(full ? PER_PAGE : TOP, p, s, se, qq, po).then((r) => {
-      if (p !== page || s !== sort || se !== season || qq !== q || po !== pos) return; // 더 늦게 고른 페이지·유형·시즌·검색어·포지션의 응답만 쓴다.
+    void getHof(full ? PER_PAGE : TOP, p, s, se, qq, po, dp).then((r) => {
+      if (p !== page || s !== sort || se !== season || qq !== q || po !== pos || dp !== dpos) return; // 더 늦게 고른 페이지·유형·시즌·검색어·포지션의 응답만 쓴다.
       if (r.ok) {
         all = r.data.entries;
         total = r.data.total ?? r.data.entries.length;
@@ -208,8 +213,8 @@
       {#if !upcoming}
         <div class="hof-filter-picker">
           <span class="hof-filter-label" aria-hidden="true">{L.filter}</span>
-          <button class="hof-filter-trigger" aria-label={L.filterLabel({ pos: pos ? tn(POS_LABEL[pos]) : L.allPositions, sort: by.label })} aria-expanded={filtering} aria-controls="hof-filter-panel" data-hof-filters onclick={() => (filtering = !filtering)}>
-            <span class="hof-filter-current">{pos ? `${tn(POS_LABEL[pos])} · ` : ''}{by.label}</span>
+          <button class="hof-filter-trigger" aria-label={L.filterLabel({ pos: posLabel || L.allPositions, sort: by.label })} aria-expanded={filtering} aria-controls="hof-filter-panel" data-hof-filters onclick={() => (filtering = !filtering)}>
+            <span class="hof-filter-current">{posLabel ? `${posLabel} · ` : ''}{by.label}</span>
             <svg class="hof-filter-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
           </button>
         </div>
@@ -230,6 +235,15 @@
             <button class="hof-sort" aria-pressed={pos === k} data-hof-pos={k} onclick={() => pickPos(k)}>{tn(POS_LABEL[k])}</button>
           {/each}
         </div>
+        {#if season !== 0 && pos && DETAILS_OF[pos].length > 1}
+          <p class="hof-filter-label">{L.detailPositionGroup}</p>
+          <div class="seg hof-pos" role="group" aria-label={L.detailPositionGroup}>
+            <button class="hof-sort" aria-pressed={dpos === null} data-hof-dpos="all" onclick={() => pickDetail(null)}>{L.all}</button>
+            {#each DETAILS_OF[pos] as k (k)}
+              <button class="hof-sort" aria-pressed={dpos === k} data-hof-dpos={k} onclick={() => pickDetail(k)}>{k} · {tn(DETAIL_LABEL[k])}</button>
+            {/each}
+          </div>
+        {/if}
         <p class="hof-filter-label">{L.rankBasis}</p>
         <div class="hof-sorts" role="group" aria-label={L.sortGroup}>
           {#each SORT_KEYS as k (k)}

@@ -568,6 +568,7 @@ export const SeasonPickQuerySchema = z.coerce
   .optional();
 /** T-11-018 `GET /v1/hof?pos=` 그 포지션 선수만(포지션별 순위). 없으면 모든 포지션. */
 export const HofPosQuerySchema = CareerPosSchema.optional();
+export const HofDetailPosQuerySchema = z.enum(DETAIL_POSITIONS).optional();
 
 // ───────── T-10-027 서버 최초 기록 ─────────
 

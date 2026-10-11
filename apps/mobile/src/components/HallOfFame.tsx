@@ -9,7 +9,8 @@ import { View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import type { CareerPos, HofSort, PublicHofEntry } from '@offside/contracts';
-import { POS_GROUPS } from '@offside/contracts/positions';
+import { POS_GROUPS, DETAILS_OF, DETAIL_LABEL, type DetailPos } from '@offside/contracts/positions';
+import { tn } from '@offside/game/i18n/names';
 import { POS } from '@offside/game/data';
 import {
   PRESEASON,
@@ -107,21 +108,26 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
   const season = full ? snap.hof.season : homeSeason;
   const q = full ? snap.hof.q : '';
   const pos = full ? snap.hof.pos : null;
+  const dpos = full && season !== 0 ? (snap.hof.dpos ?? null) : null;
+  const posLabel = dpos ? tn(DETAIL_LABEL[dpos]) : pos ? POS[pos].label : '';
   const ss = season === null ? undefined : seasonById(season);
   /** 고른 시즌이 아직 개막 전이면 그 시즌(목록 대신 개막 안내). */
   const upcoming = ss && notOpen(ss) ? ss : undefined;
   /** 문구 앞에 붙는 시즌·포지션 이름('시즌 1 수비수 '). 둘 다 전체면 빈 문자열. */
-  const scope = `${ss ? `${seasonLabel(ss.id, ss.name)} ` : ''}${pos ? `${POS[pos].label} ` : ''}`;
+  const scope = `${ss ? `${seasonLabel(ss.id, ss.name)} ` : ''}${posLabel ? `${posLabel} ` : ''}`;
   const [filtering, setFiltering] = useState(false);
   const [all, setAll] = useState<PublicHofEntry[] | null>(null);
   const [total, setTotal] = useState(0);
   const [failed, setFailed] = useState(false);
 
   function pickSeason(id: number | null) {
-    appState.hof = { ...appState.hof, season: id, page: 1 };
+    appState.hof = { ...appState.hof, season: id, dpos: id === 0 ? null : dpos, page: 1 };
   }
   function pickPos(p: CareerPos | null) {
-    appState.hof = { ...appState.hof, pos: p, page: 1 };
+    appState.hof = { ...appState.hof, pos: p, dpos: null, page: 1 };
+  }
+  function pickDetail(p: DetailPos | null) {
+    appState.hof = { ...appState.hof, dpos: p, page: 1 };
   }
   function pickSort(s: HofSort) {
     appState.hof = { ...appState.hof, sort: s, page: 1 };
@@ -160,7 +166,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
     setFailed(false);
     if (upcoming) return;
     let live = true; // 더 늦게 고른 페이지·유형·시즌·검색어·포지션의 응답만 쓴다.
-    void track(getHof(full ? PER_PAGE : TOP, page, sort, season, q, pos)).then((r) => {
+    void track(getHof(full ? PER_PAGE : TOP, page, sort, season, q, pos, dpos)).then((r) => {
       if (!live) return;
       if (r.ok) {
         setAll(r.data.entries);
@@ -170,7 +176,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
     return () => {
       live = false;
     };
-  }, [full, page, sort, season, q, pos, upcoming, tick, track]);
+  }, [full, page, sort, season, q, pos, dpos, upcoming, tick, track]);
 
   const myIds = useMemo(() => new Set(loadHOF().flatMap((h) => (h.id ? [h.id] : []))), []);
   const offset = (page - 1) * PER_PAGE;
@@ -236,7 +242,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
           testID="hof-filters"
           open={filtering}
           onToggle={() => setFiltering(!filtering)}
-          label={`${pos ? POS[pos].label : L.allPositions} · ${by.label}`}
+          label={`${posLabel || L.allPositions} · ${by.label}`}
           season={
             <RecordsSelect
               label={L.season}
@@ -265,6 +271,21 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
                   ...POS_GROUPS.map((key) => ({ key, label: POS[key].label })),
                 ]}
               />
+              {season !== 0 && pos && DETAILS_OF[pos].length > 1 ? (
+                <RecordsChips
+                  label={L.detailPositionGroup}
+                  testIDPrefix="hof-dpos"
+                  value={dpos ?? 'all'}
+                  onPick={(key) => pickDetail(key === 'all' ? null : (key as DetailPos))}
+                  items={[
+                    { key: 'all', label: L.all },
+                    ...DETAILS_OF[pos].map((key) => ({
+                      key,
+                      label: `${key} · ${tn(DETAIL_LABEL[key])}`,
+                    })),
+                  ]}
+                />
+              ) : null}
               <RecordsChips
                 label={L.sortGroup}
                 testIDPrefix="hof-sort"

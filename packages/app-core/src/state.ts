@@ -35,6 +35,7 @@ export type HofView = {
   q: string;
   /** T-11-018 포지션별 순위(null = 모든 포지션). */
   pos: Pos | null;
+  dpos?: DetailPos | null;
   /** T-11-129 팀 랭킹 탭을 열 때의 정렬(홈 구단 가치 TOP 3의 전체 보기). 없으면 레이팅. */
   teamSort?: TeamRankSort;
   /** T-11-150 team 팀의 구단주 프로필을 연다(팀 프로필 대신). */
