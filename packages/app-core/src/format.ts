@@ -127,8 +127,19 @@ export function radarData(s: GameState) {
   // 위해, Radar.svelte가 nowVals(순서대로의 숫자 배열)를 직접 트윈하고 poly()와 같은 방식으로
   // 각 프레임의 좌표 문자열을 다시 계산할 수 있도록 toPoly를 함께 내보낸다.
   const toPoly = (vals: number[]) => poly(vals);
+  // T-11-212 축 이름표 버튼 자리(viewBox 좌표, 웹·앱 같이). 대각선 축은 육각형에서 더 떨어뜨려 고른 축의 화살표가 이름표에 닿지 않게 한다.
+  const slot = (x: number, y: number): [number, number] => {
+    const a = Math.atan2(y - CX, x - CX);
+    const diag = Math.abs(Math.cos(a)) > 0.1;
+    return [CX + Math.cos(a) * (diag ? 139 : 128), CX + Math.sin(a) * (diag ? 156 : 132)];
+  };
+  // 화살표(점에서 6 띄워 시작, 촉 5~6)가 이름표 안쪽 끝(중심에서 약 109)에 닿기 전에 멈추도록 길이를 줄인다 — 능력치가 높을수록 짧다.
+  const arrowLen = (i: number, len: number) =>
+    Math.max(4, Math.min(len, 104 - (R * s.attrs[order[i]!]) / 100 - 12));
   return {
     CX,
+    slot,
+    arrowLen,
     rings,
     spokes,
     prev,

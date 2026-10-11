@@ -85,6 +85,20 @@ export function Screen({
       >
         {children}
       </ScrollView>
+      {/* 안드로이드는 상태 막대가 투명이라 스크롤한 글이 시계 뒤로 비친다 — 그 자리를 배경색으로 덮는다(iOS는 위 패딩이 맡는다). */}
+      {Platform.OS === 'android' && insets.top > 0 ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: insets.top,
+            backgroundColor: c.bg,
+          }}
+        />
+      ) : null}
       {footer}
     </View>
   );

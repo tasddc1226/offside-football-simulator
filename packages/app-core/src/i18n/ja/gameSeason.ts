@@ -10,6 +10,7 @@ export const gameSeason: Translation<GameSeasonMsgs> = {
   coachMemo: 'コーチのメモ',
   trainingTitle: 'トレーニング方針',
   trainHint: 'このフェーズのトレーニングを選ぶと次へ進みます',
+  trainPick: '能力値をタップすると、このフェーズのトレーニングを選べます',
   investTitle: '自己投資',
   funds: (p) => `所持 ${p.v}`,
   fundsAfter: (p) => `所持 ${p.v} → ${p.after}`,

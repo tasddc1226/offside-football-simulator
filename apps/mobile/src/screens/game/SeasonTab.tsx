@@ -601,7 +601,13 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
             ))}
           </View>
           <SubTitle>{L.trainingTitle}</SubTitle>
-          {wait === 'train' ? <TourHint>{L.trainHint}</TourHint> : null}
+          {wait === 'train' ? (
+            <TourHint>{L.trainHint}</TourHint>
+          ) : (
+            <Txt v="sm" tone="muted" testID="train-pick">
+              {L.trainPick}
+            </Txt>
+          )}
           <Radar s={s} onPick={setTraining} />
           <ChoiceGrid
             testPrefix="train"

@@ -92,7 +92,7 @@ export function Radar({ s, onPick }: { s: GameState; onPick: (id: string) => voi
           const inv = !on && d.points[i]!.key === invKey;
           if (!on && !inv)
             return <Circle key={i} cx={x.toFixed(1)} cy={y.toFixed(1)} r={3} fill={c.accent} />;
-          const len = inv ? 12 : s.training === 'coach' ? 8 : 16;
+          const len = d.arrowLen(i, inv ? 12 : s.training === 'coach' ? 8 : 16);
           const [x1, y1] = out(x, y, 6);
           const [x2, y2, ux, uy] = out(x, y, 6 + len);
           // 화살촉: 끝점에서 바깥으로 5, 양옆으로 4.
@@ -123,9 +123,7 @@ export function Radar({ s, onPick }: { s: GameState; onPick: (id: string) => voi
       </Svg>
       {w > 0
         ? d.points.map((p) => {
-            const ang = Math.atan2(p.y - d.CX, p.x - d.CX);
-            const x = d.CX + Math.cos(ang) * 128,
-              y = d.CX + Math.sin(ang) * 132;
+            const [x, y] = d.slot(p.x, p.y);
             const tr = TRAININGS.find((t) => t.id === p.key)!;
             const cd = trainingCard(s, tr);
             const sel = s.training === p.key;
@@ -149,8 +147,9 @@ export function Radar({ s, onPick }: { s: GameState; onPick: (id: string) => voi
                   justifyContent: 'center',
                   borderRadius: 12,
                   borderWidth: 1.5,
-                  borderColor: sel ? c.accent : 'transparent',
-                  backgroundColor: sel ? alpha(c.accent, 0.12) : 'transparent',
+                  // T-11-212 고르지 않은 축도 누를 수 있는 버튼으로 보이게 옅은 테두리·바탕(웹 .tr-axis).
+                  borderColor: sel ? c.accent : c.line,
+                  backgroundColor: sel ? alpha(c.accent, 0.12) : c.surface2,
                 }}
               >
                 <Txt
