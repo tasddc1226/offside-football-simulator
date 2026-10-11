@@ -1,5 +1,5 @@
 <script lang="ts">
-  import GoogleLoginButton from './GoogleLoginButton.svelte';
+  import LoginButtons from './LoginButtons.svelte';
   // My club keeps owner identity and shared operations outside the season team card.
   // Team slots can expand later without duplicating the owner profile, finances or honors.
   import Topbar from './Topbar.svelte';
@@ -26,7 +26,6 @@
   import { ownerPlayersText as P } from '@offside/app-core/i18n/ko/ownerPlayers';
   import TeamLogo from './team/TeamLogo.svelte';
   import { loadHOF } from '@offside/game/hof-store';
-  import { startGoogleLogin } from './login.js';
   import { go, takeFocus } from './nav.js';
   import { openFriends } from './friendInvite.svelte.js';
   import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
@@ -185,7 +184,7 @@
       </div>
       <p class="muted fs-sm">{ownerLockedText(localCount)}</p>
       <!-- 로그아웃·탈퇴 직후엔 세션 쿠키가 없으므로 링크로 바로 가지 않고 startGoogleLogin이 새 익명 세션부터 받는다. -->
-      <GoogleLoginButton onclick={() => startGoogleLogin(null)} />
+      <LoginButtons back={null} />
     </section>
   {/if}
 

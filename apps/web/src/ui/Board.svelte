@@ -1,5 +1,5 @@
 <script lang="ts">
-  import GoogleLoginButton from './GoogleLoginButton.svelte';
+  import LoginButtons from './LoginButtons.svelte';
   import TierBadge from './TierBadge.svelte';
   import TitleBadge from './cup/TitleBadge.svelte';
   import OwnerAvatar from './OwnerAvatar.svelte';
@@ -22,7 +22,6 @@
   import { POST_LANGS, draftOf, inputOf, postLangLabel, withDraftTranslations, type PostDraft } from '@offside/app-core/boardEditor';
   import { appState } from './state.svelte.js';
   import { openBoard } from './nav.js';
-  import { startGoogleLogin } from './login.js';
   import { toast } from './helpers.js';
   import { createTranslations } from './translations.svelte.js';
   import { canTranslate } from '@offside/app-core/userTranslate';
@@ -201,7 +200,6 @@
     if (detail?.post.id === post.id) detail.comments = [...detail.comments, r.data];
   }
   // 로그인을 마치고 돌아오면 보던 글로 다시 연다.
-  const login = () => startGoogleLogin({ board, postId: detail?.post.id ?? null });
   async function removeComment(c: Comment) {
     if (!confirm(L.deleteCommentConfirm)) return;
     const r = await api.deleteComment(c.id);
@@ -387,7 +385,7 @@
           {:else if !viewer.google}
             <div class="comment-gate" data-comment-gate="login">
               <p class="muted">{L.loginGate}</p>
-              <GoogleLoginButton act="comment-login" onclick={login} />
+              <LoginButtons act="comment-login" back={{ board, postId: detail?.post.id ?? null }} />
             </div>
           {:else if !viewer.nickname}
             <div class="comment-gate" data-comment-gate="nickname">
