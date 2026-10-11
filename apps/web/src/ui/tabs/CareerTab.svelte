@@ -3,6 +3,7 @@
   // ui.ts careerTab() 포트 (371~387줄)
   import type { GameState, LegendSource } from '@offside/game/types';
   import { fmtValue, seasonLabelOf, totals } from '@offside/app-core/format';
+  import RetiredNumberGuide from './RetiredNumberGuide.svelte';
   import ClubMark from '../ClubMark.svelte';
   import ValueChart from '../ValueChart.svelte';
   import { careerGoals, goalsNote, retiredNumberHint } from '@offside/app-core/career-feedback';
@@ -38,6 +39,7 @@
     <p class="muted fs-sm" data-peak-value>{L.peakValue} <b>{fmtValue(peakV.value)}</b> · {seasonLabelOf(peakV.row)} {tn(peakV.row.club)}</p>
   {/if}
 </section>
+{#if 'attrs' in s && !s.retired}<RetiredNumberGuide {s} />{/if}
 {#if rnHint}
   <section class="card stack" data-career-goals>
     <div><div class="eyebrow">Next Goals</div><h2>{L.goalsTitle}</h2></div>
@@ -50,7 +52,6 @@
         </div>
       {/each}
     </div>
-    <p class="muted fs-sm" data-rn-hint>{rnHint}</p>
   </section>
 {/if}
 <section class="card stack">

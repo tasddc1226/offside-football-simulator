@@ -2,6 +2,33 @@ import type { Translation } from '../core';
 import type { GameCareerMsgs } from '../ko/gameCareer';
 
 export const gameCareer: Translation<GameCareerMsgs> = {
+  rnTitle: 'Retire your number',
+  rnIntro: 'Could this number stay with a club you serve for years?',
+  rnOpen: 'View progress',
+  rnClose: 'Hide progress',
+  rnLoading: 'Checking saved seasons.',
+  rnRetry: 'Check again',
+  rnError: 'Could not load your records. Check your connection and record sync.',
+  rnEmpty:
+    'Finish a season at a professional club to see your progress. School, university and military seasons do not count.',
+  rnBasis: 'Based on seasons saved to the server. The season in progress is not included.',
+  rnSyncing: 'Some seasons on this device have not synced yet. Check again after syncing.',
+  rnScope: (p) => `${p.season === 0 ? 'Preseason' : `Season ${p.season}`} · No. ${p.number}`,
+  rnAvailable: 'Currently available',
+  rnTaken: 'Already retired',
+  rnUnknown: 'Availability pending',
+  rnSeasons: (p) => `${p.have} / ${p.need} seasons at club`,
+  rnProgress: (p) => `Club contribution ${p.pct === 0 ? 'under 10%' : `${p.pct}%`}`,
+  rnRemain: (p) => `${p.count} more seasons needed at this club.`,
+  rnBuild:
+    'Build contribution with regular appearances, strong positional performances, club trophies and individual awards.',
+  rnReady: 'Your current records meet the criteria. Final review is at retirement.',
+  rnOutside: 'Criteria met, but clubs with greater contributions are reviewed first.',
+  rnTakenHint: 'This club has already retired your number. Check your other candidate clubs.',
+  rnRules:
+    'Each club’s numbers are shared by all users within a service season. You can receive one at one of your top two qualifying clubs.',
+  rnNote:
+    'Contribution is a guide in 10% steps and may change after transfers. Numbers are not reserved. Final awards are decided at retirement with the player’s name made public.',
   totalsTitle: 'Career totals',
   apps: 'Apps',
   goals: 'Goals',
