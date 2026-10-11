@@ -161,7 +161,7 @@ export function teamPlayerCard(
   r: LineupRow & { cardAttrsJson: string | null; legendScore: number | null },
   profile: PeakProfile | null = peakOf(r.peakProfile),
   career = toLineupCareer(r, profile),
-): Omit<TeamPlayer, 'cardValue' | 'raised' | 'foot' | 'listing'> {
+): Omit<TeamPlayer, 'cardValue' | 'raised' | 'listing'> {
   const estimated = profile ? null : estimatedAttrsOf(r.cardAttrsJson);
   return {
     careerId: r.id,
@@ -176,6 +176,8 @@ export function teamPlayerCard(
     publicName: career.publicName,
     legendScore: r.legendScore,
     type: career.type,
+    // T-11-211 카드에 주발을 그린다(시너지 '주발 맞춤'도 이 값을 쓴다).
+    ...(career.foot ? { foot: career.foot } : {}),
     season: career.season,
     ...bodyOf(r),
   };

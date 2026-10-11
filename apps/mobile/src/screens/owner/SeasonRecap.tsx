@@ -684,6 +684,7 @@ function BestFace({ best }: { best: Best }) {
               attrsEstimated: card.attrsEstimated,
               height: card.height,
               weight: card.weight,
+              foot: card.foot,
               cardValue: card.cardValue,
               pos: card.pos,
               youth: false,

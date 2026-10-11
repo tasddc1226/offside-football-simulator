@@ -137,6 +137,7 @@ export function PlayerPeek({
                 attrsEstimated: player.attrsEstimated,
                 height: player.height,
                 weight: player.weight,
+                foot: player.foot,
                 cardValue: player.cardValue,
                 pos: player.pos,
                 type: player.type,

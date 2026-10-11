@@ -93,6 +93,7 @@ export const squadOf = (db: Db, profileId: string, season: number, cutoff: strin
       cardAttrsJson: sql`${careers.cardAttrsJson}`.mapWith(careers.cardAttrsJson),
       height: sql`${careers.height}`.mapWith(careers.height),
       weight: sql`${careers.weight}`.mapWith(careers.weight),
+      foot: sql`${careers.foot}`.mapWith(careers.foot),
       serviceSeason: sql`${careers.serviceSeason}`.mapWith(careers.serviceSeason),
       legendScore: sql`${careers.legendScore}`.mapWith(careers.legendScore),
       lastClub: sql`${careers.lastClub}`.mapWith(careers.lastClub),

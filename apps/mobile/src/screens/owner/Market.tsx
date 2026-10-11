@@ -1416,6 +1416,7 @@ export default function Market() {
                     attrs: buying.card.attrs,
                     height: buying.card.height,
                     weight: buying.card.weight,
+                    foot: buying.card.foot,
                     cardValue: buying.card.cardValue,
                     pos: buying.card.pos,
                     type: buying.card.type ?? null,
