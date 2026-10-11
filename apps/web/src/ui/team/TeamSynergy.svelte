@@ -1,6 +1,6 @@
 <script lang="ts">
   // T-11-105 팀 시너지 — 적용 중 → 효과 없음 순으로 보이고, 미적용은 접어 두었다가 더보기로 연다. 켜진 시너지는 누르면 그라운드에서 그 선수들을 잇는다.
-  import { DUO_LINE_CAP, DUO_TOTAL_CAP, synergyPower, type TeamSynergy } from '@offside/contracts/owner-team';
+  import { synergyPower, type TeamSynergy } from '@offside/contracts/owner-team';
   import { synergyRows, synergyNote } from '@offside/app-core/teamOwner';
   import { teamSynergyText as L } from '@offside/app-core/i18n/ko/teamSynergy';
 
@@ -39,7 +39,7 @@
     {/each}
   </ul>
   {#if offCount}<button class="more" aria-expanded={showOff} aria-controls="synergy-rows" data-act="synergy-more" onclick={() => (showOff = !showOff)}>{showOff ? L.lessOff : L.moreOff({ n: offCount })}<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" /></svg></button>{/if}
-  <p class="muted cap">{L.capNote({ line: DUO_LINE_CAP, total: DUO_TOTAL_CAP })}</p>
+  <p class="muted cap">{L.youthNote}</p>
 </section>
 
 <style>

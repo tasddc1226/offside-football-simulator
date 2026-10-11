@@ -1,6 +1,7 @@
 import type { CareerPos, CareerSeasonPayload, RetirementSummary } from '@offside/contracts';
 import { isDefaultClubId } from '@offside/contracts/club-names';
 import { controlPoints, legendTerms } from '@offside/contracts/hof-rules';
+import { SLOT_OVER_PEAK } from '@offside/contracts/owner-team';
 import type { PeakProfile } from '@offside/contracts/positions';
 import { maxRetireAt } from '@offside/contracts/service-seasons';
 
@@ -184,12 +185,13 @@ export function boundRetirement(
 }
 
 /**
- * T-10-092 최고 시점 능력치. 세부 능력치는 서버에 없어 다시 셀 수 없다 — 자리별 실력을 (보정한) 최고 OVR 아래로
- * 잘라, 보낸 값을 부풀려도 구단주 팀에서 최고 OVR보다 세게 뛰지 못하게 한다. 대표 능력치는 표시용이라 모양만 본다.
+ * T-10-092 최고 시점 능력치. 세부 능력치는 서버에 없어 다시 셀 수 없다 — 자리별 실력을 (보정한) 최고 OVR +
+ * SLOT_OVER_PEAK(T-11-197) 아래로 잘라, 보낸 값을 부풀려도 구단주 팀에서 그보다 세게 뛰지 못하게 한다. 대표 능력치는
+ * 표시용이라 모양만 본다.
  */
 export function boundProfile(profile: PeakProfile, peak: number): PeakProfile {
   const roles = Object.fromEntries(
-    Object.entries(profile.roles).map(([k, v]) => [k, Math.min(v, peak)]),
+    Object.entries(profile.roles).map(([k, v]) => [k, Math.min(v, peak + SLOT_OVER_PEAK)]),
   ) as PeakProfile['roles'];
   return { attrs: profile.attrs, roles };
 }
