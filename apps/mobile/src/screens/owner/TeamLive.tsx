@@ -108,15 +108,18 @@ export function TeamLive({
   match,
   name,
   onend,
+  neutral = false,
 }: {
   match: TeamMatch;
   name: (id: string | null, fallback: string) => string;
   onend: () => void;
+  /** 내 팀이 없는 경기(컵 공개 경기) — 내 팀 강조 없이 그린다. */
+  neutral?: boolean;
 }) {
   const c = useColors();
   const { motionOK } = useSnapshot(prefs);
   // 경기 하나에 한 번 만든다(부모가 경기마다 key로 새로 그린다).
-  const [script] = useState(() => liveScript(match, name));
+  const [script] = useState(() => liveScript(match, name, { neutral }));
   const [plan] = useState(() => playbackPlan(script));
 
   const [shown, setShown] = useState<number[]>([]);
@@ -326,7 +329,7 @@ export function TeamLive({
               style={{
                 fontWeight: '700',
                 lineHeight: 19,
-                color: match.mine === 'home' ? c.pitchAccent : c.onPitch,
+                color: !neutral && match.mine === 'home' ? c.pitchAccent : c.onPitch,
               }}
             >
               {match.home.name}
@@ -394,7 +397,7 @@ export function TeamLive({
                 fontWeight: '700',
                 lineHeight: 19,
                 textAlign: 'right',
-                color: match.mine === 'away' ? c.pitchAccent : c.onPitch,
+                color: !neutral && match.mine === 'away' ? c.pitchAccent : c.onPitch,
               }}
             >
               {match.away.name}

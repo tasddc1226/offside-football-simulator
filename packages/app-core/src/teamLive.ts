@@ -52,6 +52,7 @@ const build = (): readonly Say[] => [L.build1, L.build2, L.build3];
 export function liveScript(
   m: TeamMatch,
   name: (id: string | null, fallback: string) => string,
+  opts: { neutral?: boolean } = {},
 ): LiveLine[] {
   const rnd = rngOf(m.id);
   const team = { home: m.home.name, away: m.away.name };
@@ -148,7 +149,16 @@ export function liveScript(
       away: team.away,
       h,
       a,
-      result: my > their ? L.resultWin : my < their ? L.resultLoss : L.resultDraw,
+      // 남의 경기(컵 공개 경기)는 이긴 팀 이름으로 끝낸다.
+      result: opts.neutral
+        ? h === a
+          ? L.resultDraw
+          : L.resultTeamWin({ t: h > a ? team.home : team.away })
+        : my > their
+          ? L.resultWin
+          : my < their
+            ? L.resultLoss
+            : L.resultDraw,
     }),
   });
 
@@ -168,6 +178,23 @@ export function liveScript(
     .map((l, i) => ({ l, i }))
     .sort((x, y) => x.l.minute - y.l.minute || order[x.l.kind] - order[y.l.kind] || x.i - y.i)
     .map((x) => x.l);
+}
+
+/**
+ * T-11-214 컵 경기 중계. 서버는 공개 경기를 늘 홈 기준(mine: 'home')으로 주므로, 보는 사람의 팀 쪽으로 mine을 맞추고
+ * 내 팀이 없는 경기면 neutral로 그린다(내 팀 강조 없음, 이긴 팀 이름으로 끝).
+ */
+export function cupLiveMatch(m: TeamMatch, mineId: string | null) {
+  const side = m.home.teamId === mineId ? 'home' : m.away.teamId === mineId ? 'away' : null;
+  return { match: { ...m, mine: side ?? 'home' } satisfies TeamMatch, neutral: side === null };
+}
+
+const watched = new Set<string>();
+/** 이번 실행에서 그 경기 중계를 처음 여는지. 처음이면 기억하고 true(다시 열면 결과부터 보여 준다). */
+export function firstLive(id: string): boolean {
+  if (watched.has(id)) return false;
+  watched.add(id);
+  return true;
 }
 
 /** 중계 줄 앞에 붙는 시계 표기(45+2'). */

@@ -5,6 +5,8 @@ import {
   MOMENTUM_START,
   PHASE_LABEL,
   clockText,
+  cupLiveMatch,
+  firstLive,
   goalMinutesOf,
   lineWaitMs,
   liveScript,
@@ -259,5 +261,30 @@ describe('팀 경기 중계 재생 계획', () => {
     expect(goalMinutesOf(script)).toEqual([12, 55, 88]);
     expect(PHASE_LABEL).toEqual({ '1st': '전반', ht: '하프타임', '2nd': '후반', ft: '경기 종료' });
     expect(FLASH_MS).toBe(1800);
+  });
+});
+
+describe('컵 경기 중계 (T-11-214)', () => {
+  it('보는 사람 쪽으로 mine을 맞추고, 내 팀이 없으면 이긴 팀 이름으로 끝낸다', () => {
+    const m = match({
+      away: side('원정', 2),
+      events: [goal(10, 'away', 'A'), goal(70, 'away', 'B')],
+    });
+    expect(cupLiveMatch(m, m.away.teamId)).toMatchObject({
+      match: { mine: 'away' },
+      neutral: false,
+    });
+    const v = cupLiveMatch(m, null);
+    expect(v.neutral).toBe(true);
+    const ft = liveScript(v.match, (_, f) => f, { neutral: true }).at(-1)!;
+    expect(ft.text).toContain('원정의 승리입니다!');
+    // 대본(경기 id 시드)은 neutral이어도 같은 순서다.
+    expect(liveScript(v.match, (_, f) => f, { neutral: true }).length).toBe(
+      liveScript(m, (_, f) => f).length,
+    );
+  });
+  it('같은 경기 중계는 이번 실행에서 처음 열 때만 자동으로 튼다', () => {
+    expect(firstLive('cpm_x')).toBe(true);
+    expect(firstLive('cpm_x')).toBe(false);
   });
 });

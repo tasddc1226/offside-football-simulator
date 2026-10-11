@@ -166,6 +166,7 @@ export const cup: Translation<CupMsgs> = {
   myGroup: 'My group',
   teamOwnerLabel: 'Owner',
   standingsScroll: 'Swipe sideways to see all stats.',
+  standingsRule: 'Ranked by points, then goal difference, goals scored, head-to-head, and a draw.',
   thTeam: 'Team',
   thP: 'P',
   thW: 'W',

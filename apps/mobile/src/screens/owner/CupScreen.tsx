@@ -2,6 +2,8 @@ import { GoogleLoginButton } from '../../ui/GoogleLoginButton';
 import CupBracket from './CupBracket';
 import { scrollToView } from '../../ui/scroll';
 import CupMatchStatus from './CupMatchStatus';
+import { TeamLive } from './TeamLive';
+import { cupLiveMatch, firstLive } from '@offside/app-core/teamLive';
 import { startGoogleLogin } from '../../platform/auth';
 // T-11-145 오프사이드 컵 화면(구단주 화면의 컵 배너로 연다, 웹 Cup.svelte) — 내 상태 · 토너먼트 · 조별 순위 · 일정 · 보상 · 규칙 ·
 // 경기 상세.
@@ -31,7 +33,7 @@ import { hofStart } from '@offside/app-core/state';
 import { alpha } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
-import { Btn, Card, Pill, Press, Screen, Topbar, Txt } from '../../ui';
+import { Btn, Card, Pill, Press, Screen, Topbar, Txt, scrollTo } from '../../ui';
 import { dayTimeText, roundLabel, stageLabel, timeText } from './cupText';
 import { CupCard, useCup, type CupState } from './TeamCup';
 
@@ -248,6 +250,9 @@ function Standings({
       <Txt v="xs" tone="muted">
         {L.standingsScroll}
       </Txt>
+      <Txt v="xs" tone="muted">
+        {L.standingsRule}
+      </Txt>
     </View>
   );
 }
@@ -364,18 +369,25 @@ function MatchLine({
 function CupMatchDetail({
   cupId,
   matchId,
+  mineId,
   back,
 }: {
   cupId: string;
   matchId: string;
+  mineId: string | null;
   back: () => void;
 }) {
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [data, setData] = useState<CupMatchResponse | null>(null);
+  const [live, setLive] = useState(false);
   const load = async () => {
     setStatus('loading');
     const r = await fetchCupMatch(cupId, matchId);
-    if (r.ok) setData(r.data);
+    if (r.ok) {
+      setData(r.data);
+      // T-11-214 이번 실행에서 처음 여는 경기는 친선전처럼 문자중계부터 보여 준다(결과 데이터는 그대로).
+      setLive(firstLive(matchId));
+    }
     setStatus(r.ok ? 'ready' : 'error');
   };
   useEffect(() => {
@@ -403,6 +415,21 @@ function CupMatchDetail({
       verdict = L.penWinner({ team: pens.home > pens.away ? m.home.name : m.away.name });
     else if (m.home.goals === m.away.goals) verdict = L.draw;
     else verdict = L.winner({ team: m.home.goals > m.away.goals ? m.home.name : m.away.name });
+  }
+  if (m && live) {
+    const v = cupLiveMatch(m, mineId);
+    return (
+      <TeamLive
+        key={`${m.id}-live`}
+        match={v.match}
+        neutral={v.neutral}
+        name={(_, fallback) => fallback}
+        onend={() => {
+          setLive(false);
+          scrollTo(0);
+        }}
+      />
+    );
   }
   return (
     <Card gap={14} testID="cup-match-detail">
@@ -482,6 +509,11 @@ function CupMatchDetail({
           </>
         ) : null}
       </LoadState>
+      {m ? (
+        <Btn block onPress={() => setLive(true)} testID="cup-replay">
+          {TM.replay}
+        </Btn>
+      ) : null}
       <Btn block onPress={back} testID="cup-match-back">
         {L.detailBack}
       </Btn>
@@ -599,10 +631,17 @@ function CupBody({
         </LoadState>
       </Card>
     );
-  if (matchId)
-    return <CupMatchDetail cupId={data.cup.id} matchId={matchId} back={() => setMatchId(null)} />;
-
   const mineId = me?.entry && me.entry.status !== 'withdrawn' ? me.entry.teamId : null;
+  if (matchId)
+    return (
+      <CupMatchDetail
+        cupId={data.cup.id}
+        matchId={matchId}
+        mineId={mineId}
+        back={() => setMatchId(null)}
+      />
+    );
+
   const mineGroup = mineId
     ? (data.groups.find((g) => g.standings.some((s) => s.teamId === mineId))?.no ?? null)
     : null;

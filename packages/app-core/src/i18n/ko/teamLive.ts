@@ -36,6 +36,7 @@ const ko = {
   resultWin: '승리를 거둡니다!',
   resultLoss: '아쉬운 패배입니다.',
   resultDraw: '승부를 가리지 못했습니다.',
+  resultTeamWin: (p: { t: string }) => `${p.t}의 승리입니다!`,
   // 단계 이름
   phase1st: '전반',
   phaseHt: '하프타임',

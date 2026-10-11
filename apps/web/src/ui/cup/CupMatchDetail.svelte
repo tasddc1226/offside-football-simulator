@@ -8,11 +8,16 @@
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import TeamLogo from '../team/TeamLogo.svelte';
   import { roundLabel, winnerSide } from './cupView.js';
+  import TeamLive from '../team/TeamLive.svelte';
+  import { cupLiveMatch, firstLive } from '@offside/app-core/teamLive';
+  import { teamMatchText as TM } from '@offside/app-core/i18n/ko/teamMatch';
 
   let { cupId, m, teams, mineId, onback }: { cupId: string; m: CupMatch; teams: ReadonlyMap<string, CupTeam>; mineId: string | null; onback: () => void } = $props();
 
   let status = $state<LoadStatus>('loading');
   let detail = $state<CupMatchResponse | null>(null);
+  let live = $state(false);
+  const keep = (_: string | null, fallback: string) => fallback;
   async function load() {
     status = 'loading';
     const r = await fetchCupMatch(cupId, m.id);
@@ -21,6 +26,8 @@
       return;
     }
     detail = r.data;
+    // T-11-214 이번 실행에서 처음 여는 경기는 친선전처럼 문자중계부터 보여 준다(결과 데이터는 그대로).
+    live = firstLive(m.id);
     status = 'ready';
   }
   onMount(() => void load());
@@ -31,7 +38,10 @@
 
 <button class="btn btn-sm self-start" data-act="cup-detail-back" onclick={onback}>{L.detailBack}</button>
 <LoadState {status} failText={L.detailFail} retry={load}>
-  {#if detail}
+  {#if detail && live}
+    {@const v = cupLiveMatch(detail.match, mineId)}
+    <TeamLive match={v.match} neutral={v.neutral} name={keep} onend={() => ((live = false), window.scrollTo(0, 0))} />
+  {:else if detail}
     {@const d = detail.match}
     <section class="card stack cmd" style="gap:14px" data-cup-detail={m.id}>
       <div>
@@ -77,6 +87,7 @@
         <p class="muted">{L.noGoals}</p>
       {/if}
       <p class="muted fs-sm">{kstMonthDayTime(d.createdAt)}</p>
+      <button class="btn self-start" data-act="cup-replay" onclick={() => (live = true)}>{TM.replay}</button>
     </section>
   {/if}
 </LoadState>

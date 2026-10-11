@@ -548,6 +548,7 @@ test('홈 ↔ 전체 보기 ↔ 상세를 오가도 같은 목록을 다시 요�
   for (let i = 0; i < 2; i++) {
     await page.locator('[data-act="hof-all"]').click();
     await page.locator(`[data-hof="full"] [data-hof-id="${ID}"]`).click();
+    await expect(page.locator('.film-open h1')).toBeVisible();
     await page.goBack();
     await page.locator('[data-act="home"]').click();
     await expect(page.locator('[data-hof="home"] .hof-row')).toHaveCount(1);
