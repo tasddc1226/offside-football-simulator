@@ -24,15 +24,18 @@
     match,
     name,
     onend,
+    neutral = false,
   }: {
     match: TeamMatch;
     name: (id: string | null, fallback: string) => string;
     onend: () => void;
+    /** 내 팀이 없는 경기(컵 공개 경기) — 내 팀 강조 없이 그린다. */
+    neutral?: boolean;
   } = $props();
 
   // 경기 하나에 한 번 만든다(부모가 경기마다 {#key}로 새로 그린다).
   // svelte-ignore state_referenced_locally
-  const script = liveScript(match, name);
+  const script = liveScript(match, name, { neutral });
   const plan = playbackPlan(script);
 
   let shown = $state<number[]>([]);
@@ -103,13 +106,13 @@
       <span class="tl-phase">{phaseLabel}</span>
     </div>
     <div class="tl-score">
-      <div class="tl-team" class:mine={match.mine === 'home'} class:hit={flash === 'home'}>
+      <div class="tl-team" class:mine={!neutral && match.mine === 'home'} class:hit={flash === 'home'}>
         <TeamLogo logo={match.home.logo} name={match.home.name} size={40} decorative /><b>{match.home.name}</b><small>{match.home.owner}</small>
       </div>
       <div class="tl-goals" aria-live="polite" data-live-score>
         <b>{score[0]}</b><span aria-hidden="true">:</span><b>{score[1]}</b>
       </div>
-      <div class="tl-team away" class:mine={match.mine === 'away'} class:hit={flash === 'away'}>
+      <div class="tl-team away" class:mine={!neutral && match.mine === 'away'} class:hit={flash === 'away'}>
         <TeamLogo logo={match.away.logo} name={match.away.name} size={40} decorative /><b>{match.away.name}</b><small>{match.away.owner}</small>
       </div>
     </div>
