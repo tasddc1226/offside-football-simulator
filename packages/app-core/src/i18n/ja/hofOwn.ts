@@ -23,8 +23,8 @@ export const hofOwn: Translation<HofOwnMsgs> = {
   reportNickBtn: 'ニックネームを通報',
   reportNickLabel: (p) => `${p.name}のニックネームを通報`,
   nickSaved: 'ニックネームを決めました',
-  nickLabel: 'コメント用ニックネーム',
-  nickPlaceholder: (p) => `コメント用ニックネーム（2〜${p.max}文字）`,
+  nickLabel: 'オーナー名',
+  nickPlaceholder: (p) => `オーナー名（2〜${p.max}文字）`,
   nickChange: '変更',
   nickSet: '決定',
 };

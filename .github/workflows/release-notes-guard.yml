@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      # 머지 커밋과 그 부모(base.sha)만 있으면 된다.
+      # 실제 체크아웃한 머지 커밋과 첫 번째 부모(main)만 있으면 된다.
       - uses: actions/checkout@v6
         with:
           fetch-depth: 2
@@ -34,9 +34,9 @@ jobs:
           node-version-file: .node-version
           package-manager-cache: false
       - name: Check release notes
-        run: node .github/scripts/release-notes-guard.mjs
+        # 본문·라벨 이벤트의 base.sha가 오래되어도 실제 머지 기준으로 비교한다.
+        run: CI_BASE_SHA="$(git rev-parse HEAD^1)" node .github/scripts/release-notes-guard.mjs
         env:
-          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           CI_HEAD_SHA: ${{ github.sha }}
           PR_BODY: ${{ github.event.pull_request.body }}
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}

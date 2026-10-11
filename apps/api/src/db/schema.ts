@@ -198,6 +198,13 @@ export const profiles = sqliteTable(
     appleLinkedAt: text('apple_linked_at'),
     /** T-11-098 친구 코드(초대 링크·코드 입력). 처음 친구 화면을 열 때 만든다. */
     friendCode: text('friend_code'),
+    /**
+     * T-11-150 대표 칭호(owner-title.ts id). 굳힌 값이라 랭킹·댓글·채팅이 그대로 읽는다. title_pinned가 0이면 컵 보상 때
+     * 더 좋은 칭호로 자동으로 바뀌고, 1이면 구단주가 고른 그대로(null = 달지 않기)다.
+     */
+    title: text('title'),
+    titlePinned: integer('title_pinned').notNull().default(0),
+    avatarId: text('avatar_id'),
   },
   (table) => [
     uniqueIndex('profiles_google_sub_unique').on(table.googleSub),
@@ -268,6 +275,7 @@ export const authAttempts = sqliteTable(
         'APP_SESSION',
         'APPLE_SIGNIN',
         'PROFILE_CREATE',
+        'PROFILE_AVATAR',
         'CAREER_SEASON',
         'CAREER_RETIRE',
         'PUSH_DEVICE',
@@ -418,6 +426,7 @@ export const careers = sqliteTable(
   (table) => [
     index('careers_detail_archive_idx').on(table.detailArchiveKey),
     index('careers_profile_id_idx').on(table.profileId),
+    index('careers_owner_title_updated_idx').on(table.profileId, table.status, table.updatedAt),
     index('careers_automation_updated_idx').on(table.updatedAt, table.id),
     // T-11-064 내 선수·구단주 팀 조회: profile_id로 시작해 status 전체 스캔과 정렬을 피한다.
     index('careers_profile_status_season_idx').on(
@@ -1371,6 +1380,40 @@ export const referrals = sqliteTable(
   ],
 );
 
+/** Permanent owner awards are never recomputed away when a card is sold or a season ends. */
+export const ownerTitleAwards = sqliteTable(
+  'owner_title_awards',
+  {
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    titleId: text('title_id').notNull(),
+    criteriaVersion: integer('criteria_version').notNull(),
+    evidence: integer('evidence').notNull(),
+    earnedAt: text('earned_at').notNull(),
+    seenAt: text('seen_at'),
+  },
+  (t) => [primaryKey({ columns: [t.profileId, t.titleId] })],
+);
+export const ownerTitleProgress = sqliteTable('owner_title_progress', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  criteriaVersion: integer('criteria_version').notNull().default(0),
+  preseason: integer('preseason').notNull().default(0),
+  midfield: integer('midfield').notNull().default(0),
+  defense: integer('defense').notNull().default(0),
+  keeper: integer('keeper').notNull().default(0),
+  scorers: integer('scorers').notNull().default(0),
+  creators: integer('creators').notNull().default(0),
+  internationals: integer('internationals').notNull().default(0),
+  retired: integer('retired').notNull(),
+  elite: integer('elite').notNull(),
+  ballon: integer('ballon').notNull(),
+  numbers: integer('numbers').notNull(),
+  firsts: integer('firsts').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
 /** One editable prediction per account and cup match; settlement and grant are atomic. */
 export const cupPredictions = sqliteTable(
   'cup_predictions',
@@ -1396,3 +1439,12 @@ export const cupPredictions = sqliteTable(
     check('cup_predictions_pick_check', sql`${t.pick} IN ('home', 'draw', 'away')`),
   ],
 );
+
+/** Kept outside profiles so session/account reads never load image bytes. */
+export const profileAvatars = sqliteTable('profile_avatars', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  id: text('id').notNull().unique(),
+  image: text('image').notNull(),
+});

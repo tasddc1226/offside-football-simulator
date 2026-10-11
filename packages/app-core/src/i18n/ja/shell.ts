@@ -8,7 +8,7 @@ export const shell: Translation<ShellMsgs> = {
   navHof: '記録室',
   navBoard: 'お知らせ',
   navHome: 'ホーム',
-  navOwner: 'オーナー',
+  navOwner: 'マイクラブ',
   navSettings: '設定',
   achNew: (p) => `新しい実績 ${p.n}個`,
   recapNew: '新しいシーズン総括',

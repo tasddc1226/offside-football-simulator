@@ -31,12 +31,14 @@ import { registerTickerRoutes } from './routes/ticker.js';
 import { registerSeasonGaugeRoutes } from './routes/seasonGauge.js';
 import { registerFriendRoutes } from './routes/friends.js';
 import { registerOwnerTeamRoutes } from './routes/ownerTeam.js';
+import { registerOwnerSummaryRoutes } from './routes/ownerSummary.js';
 import { registerSeasonRecapRoutes } from './routes/seasonRecap.js';
 import { registerTeamRoutes } from './routes/teams.js';
 import { registerMarketRoutes } from './routes/market.js';
 import { registerCupRoutes } from './routes/cup.js';
 import { registerIapRoutes } from './routes/iap.js';
 import { registerAdminCupRoutes } from './routes/adminCups.js';
+import { registerOwnerProfileRoutes } from './routes/ownerProfile.js';
 import { registerProfileRoutes } from './routes/profile.js';
 import { ok } from './routes/shared.js';
 
@@ -66,6 +68,8 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerClubCustomRoutes(app);
   registerOwnerTeamRoutes(app);
   registerSeasonRecapRoutes(app);
+  registerOwnerSummaryRoutes(app);
+  registerOwnerProfileRoutes(app);
   registerFriendRoutes(app);
   registerTeamRoutes(app);
   registerMarketRoutes(app);

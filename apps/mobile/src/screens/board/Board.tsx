@@ -38,6 +38,7 @@ import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { NicknameForm } from '../../components/NicknameForm';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { TierBadge } from '../../components/TierBadge';
+import { TitleBadge } from '../../components/TitleBadge';
 import { markNewsSeen, toast } from '../../game/host';
 import { openBoard } from '../../game/nav';
 import { startAppleLogin, startGoogleLogin } from '../../platform/auth';
@@ -504,13 +505,14 @@ export default function Board() {
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         {/* 관리자 댓글은 닉네임 대신 운영자 배지만(예전에 누구나 '운영자'라고 쓴 댓글과 구분된다). */}
+                        <OwnerAvatar avatarId={cm.avatarId} name={cm.nickname} />
                         {cm.admin ? (
                           <Pill tone="good">{ADMIN_NICKNAME}</Pill>
                         ) : (
                           <>
-                            <OwnerAvatar name={cm.nickname} />
                             <Txt bold>{cm.nickname}</Txt>
                             {cm.tier ? <TierBadge tag={cm.tier} /> : null}
+                            {cm.title ? <TitleBadge title={cm.title} size="sm" /> : null}
                           </>
                         )}
                         <Txt tone="muted" style={small}>

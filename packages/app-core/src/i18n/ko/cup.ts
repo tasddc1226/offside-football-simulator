@@ -67,7 +67,6 @@ const ko = {
   edition: (p: { n: number }) => `제${p.n}회`,
   fullTitle: (p: { n: number }) => `제${p.n}회 오프사이드 컵`,
   champTitle: (p: { n: number }) => `제${p.n}회 오프사이드 컵 챔피언`,
-  champBadge: (p: { n: number }) => `제${p.n}회 챔피언`,
   open: '대회 보기',
   loadFail: '대회 정보를 불러오지 못했어요.',
   loading: '불러오는 중…',

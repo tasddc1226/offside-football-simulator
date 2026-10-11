@@ -14,6 +14,9 @@ let owner: Awaited<ReturnType<typeof issueAdminCookie>>;
 let user: Awaited<ReturnType<typeof issueGoogleCookie>>;
 let postId: string;
 beforeEach(async () => {
+  // Queue before the simulated KST 23:00 dispatch, regardless of the real CI clock.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-10T13:59:00.000Z'));
   ctx = await createTestD1();
   ctx.env.ADMIN_EMAILS = ADMIN_EMAIL;
   ctx.env.ADMIN_COMMUNITY_PUSH_ENABLED = '1';
@@ -29,6 +32,7 @@ beforeEach(async () => {
   await addAppPushDevice(ctx, user.profileId);
 });
 afterEach(async () => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   await ctx.dispose();

@@ -21,6 +21,7 @@ import { displaySeasonAt, openTeamSeasons } from '@offside/contracts/service-sea
 import { RecordsSelect, RECORDS_TOUCH } from '../RecordsControls';
 import { AchGradeBadge } from '../../owner/TeamParts';
 import { GradeEmblem } from '../../../ui/GradeEmblem';
+import { TitleBadge } from '../../../components/TitleBadge';
 import { TeamLogo } from '../../../components/TeamLogo';
 import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
 import { useSeasonNow } from '../../../ui/useSeasonNow';
@@ -150,9 +151,12 @@ export default function AchievementRanking() {
                 </Txt>
                 {team ? <TeamLogo logo={team.logo} name={team.name} size={24} decorative /> : null}
                 <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-                  <Txt bold numberOfLines={1} style={{ fontSize: 14 }}>
-                    {r.nickname ?? L.anonOwner}
-                  </Txt>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Txt bold numberOfLines={1} style={{ flexShrink: 1, fontSize: 14 }}>
+                      {r.nickname ?? L.anonOwner}
+                    </Txt>
+                    {r.title ? <TitleBadge title={r.title} size="icon" /> : null}
+                  </View>
                   {team ? (
                     <Txt tone="muted" numberOfLines={1} style={{ fontSize: 12 }}>
                       {team.name}

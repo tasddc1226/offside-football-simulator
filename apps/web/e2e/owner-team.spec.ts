@@ -190,10 +190,12 @@ test('익명 구단주도 이 기기에 은퇴한 선수가 있으면 내 선수
   );
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('[data-my-players]')).toContainText('기기왕');
-  await expect(page.locator('[data-my-source]')).toHaveAttribute('data-my-source', 'device');
   await expect(page.locator('[data-owner-value] dt')).toHaveText('구단 가치');
   await expect(page.locator('[data-owner-value] dd')).toContainText('억');
+  await expect(page.locator('[data-my-players]')).toHaveCount(0);
+  await page.locator('[data-act="open-owner-players"]').click();
+  await expect(page.locator('[data-my-players]')).toContainText('기기왕');
+  await expect(page.locator('[data-my-source]')).toHaveAttribute('data-my-source', 'device');
 });
 
 test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async ({ page }) => {
@@ -1090,7 +1092,7 @@ test('친구 초대 링크로 들어오면 친구 화면에서 그 구단주에�
   await expect(card).toHaveCount(0);
 });
 
-test('T-11-113 개막 뒤 프리시즌 팀을 꾸려 친구와 프리시즌 친선전을 하고 창단 멤버가 보인다', async ({
+test('T-11-113 프리시즌 친선전을 유지하고 자동 창단 멤버 배지는 표시하지 않는다', async ({
   page,
 }) => {
   await stubOwner(page, true);
@@ -1120,12 +1122,12 @@ test('T-11-113 개막 뒤 프리시즌 팀을 꾸려 친구와 프리시즌 친�
 
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('[data-owner-founder]')).toHaveText('창단 멤버');
+  await expect(page.locator('[data-owner-founder]')).toHaveCount(0);
   await page.locator('[data-act="team"]').click();
   await page.locator('[data-team-tab="opponents"]').click();
   await page.locator('[data-match-mode="friends"]').click();
   const row = page.locator('[data-friend="FRND2345"]');
-  await expect(row.locator('[data-friend-founder]')).toHaveText('창단 멤버');
+  await expect(row.locator('[data-friend-founder]')).toHaveCount(0);
   await expect(row.locator('[data-friend-preseason]')).toHaveText('프리시즌 친구 FC · OVR 61');
   // 내 프리시즌 팀이 없으면 프리시즌 친선전은 못 하고, 프리시즌 팀으로 가는 길을 보인다.
   await expect(row.locator('[data-act="friend-play-preseason"]')).toBeDisabled();
