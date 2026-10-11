@@ -6,7 +6,6 @@
   import OwnHofCards from './OwnHofCards.svelte';
   import ShareBar from './ShareBar.svelte';
   import NameReport from './NameReport.svelte';
-  import BackBar from './BackBar.svelte';
   import AdSlot from '../ads/AdSlot.svelte';
   import { motionOK } from './motion.js';
   import { rollCredits } from './creditRoll.js';
@@ -14,7 +13,6 @@
 
   const v = $derived(appState.legend);
   /** 이전 화면 기록이 없으면 연 곳(명예의 전당·구단주·홈)으로. */
-  const backTo = () => (appState.screen = appState.legendBack);
   let root: HTMLDivElement;
 
   // T-10-129 커리어 재생: 누르면 크레딧처럼 흘러가고, 다시 누르거나 화면을 만지면 멈춘다. 감속 모션이면 버튼이 없다.
@@ -34,9 +32,7 @@
 <div class="wrap" bind:this={root}>
   <Topbar />
   {#if v?.shareId}
-    <ShareBar inline id={v.shareId} back={backTo} />
-  {:else}
-    <BackBar inline act="hof-back" fallback={backTo} />
+    <ShareBar inline id={v.shareId} home={false} />
   {/if}
   {#if v}
     <LegendReport {v} />

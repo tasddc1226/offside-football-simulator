@@ -6,8 +6,17 @@
 // 이미 시작한 커리어의 생성 화면, 끝난(은퇴한) 커리어의 게임 화면으로는 돌아가지 않고 홈을 연다 — 뒤로 가서 같은
 // 후보로 다시 시작하거나 끝난 게임을 여는 일을 막는다. 게임 중 뒤로 가면 홈(시트는 닫고, 남은 이벤트·결산은
 // '이어하기'가 다시 연다)으로 나간다 — 게임 화면의 홈 버튼과 같다.
+// T-11-213 하단 탭은 각자 맨 아래 기록이다(rootHere) — 탭끼리는 뒤로 가기로 넘어가지 않고, 탭 안에서 들어간 화면만
+// 쌓인다. 이미 지나온 화면으로 가면 브라우저 기록도 거기까지 되돌린다(history.go) — 버린 앞쪽 기록은 앞으로 가기로도
+// 열리지 않는다.
 import { untrack } from 'svelte';
-import { navKey, navRestore, navSnapshot, type NavEntry } from '@offside/app-core/navHistory';
+import {
+  navKey,
+  navRestore,
+  navSnapshot,
+  navStep,
+  type NavEntry,
+} from '@offside/app-core/navHistory';
 import { closeSheet } from './sheetState.svelte.js';
 import { appState } from './state.svelte.js';
 
@@ -17,6 +26,8 @@ type Entry = NavEntry;
 const sid = Math.random().toString(36).slice(2);
 const entries: Entry[] = [];
 let cur = 0;
+/** history.go로 옮겨 가는 기록 번호 — 그 popstate는 화면을 되살리지 않는다(화면은 이미 바뀌었다). */
+let moving: number | null = null;
 
 // T-10-119 뒤로(-1)·앞으로(1) 가서 바뀐 화면인지 — App의 화면 전환 방향. null은 뒤로·앞으로 가기가 아니고,
 // 0은 브라우저가 이미 넘김 효과를 보여 준 경우다(iOS 가장자리 밀기 등) — 앱 효과까지 겹치면 두 번 넘어간다.
@@ -56,6 +67,45 @@ function scrollBack(y: number, tries = 30) {
     window.scrollTo(0, y);
     if (Math.abs(window.scrollY - y) > 2 && tries > 0) scrollBack(y, tries - 1);
   });
+}
+
+/** 브라우저 기록을 i번으로 옮긴다(화면은 그대로). */
+function moveTo(i: number) {
+  if (i === cur) return;
+  const d = i - cur;
+  cur = i;
+  moving = i;
+  history.go(d);
+}
+
+/** 지금 화면을 기록에 맞춘다 — 같으면 그대로, 지나온 화면이면 거기까지 되돌리고, 처음 보는 화면이면 쌓는다. */
+function sync() {
+  if (moving !== null) return; // 옮기는 중 — 도착하면 다시 본다.
+  const step = navStep(
+    entries.map((e) => e.key),
+    cur,
+    keyOf(),
+  );
+  if (step === null) return;
+  if (step === 'push') {
+    entries.length = cur + 1;
+    entries.push(snapshot());
+    cur = entries.length - 1;
+    history.pushState({ sid, i: cur }, '');
+    return;
+  }
+  entries.length = step + 1;
+  entries[step] = snapshot();
+  moveTo(step);
+}
+
+/** T-11-213 하단 탭으로 옮겼다 — 지금 화면을 맨 아래 기록 하나로 둔다. */
+export function rootHere() {
+  if (moving !== null) return;
+  entries.length = 1;
+  entries[0] = snapshot();
+  if (cur === 0) history.replaceState({ sid, i: 0 }, '');
+  else moveTo(0);
 }
 
 /** T-10-130 화면 아래 '← 이전으로'(BackBar): 이 탭에서 쌓은 이전 기록이 있으면 브라우저 뒤로 가기와 똑같이, 없으면 fallback. */
@@ -102,10 +152,32 @@ export function initHistory() {
       (ev as PopStateEvent & { hasUAVisualTransition?: boolean }).hasUAVisualTransition === true ||
       performance.now() - edgeTouchAt < 1500;
     const st = ev.state as { sid?: string; i?: number } | null;
-    if (st?.sid === sid && typeof st.i === 'number' && entries[st.i]) {
+    if (st?.sid === sid && typeof st.i === 'number') {
+      if (moving !== null) {
+        // 우리가 옮긴 기록에 도착했다. 그 사이 바뀐 화면이 있으면 이제 맞춘다.
+        if (st.i === moving) {
+          moving = null;
+          sync();
+        }
+        return;
+      }
+      if (!entries[st.i]) {
+        // 탭 이동·되돌리기로 버린 앞쪽 기록 — 지금 기록으로 돌아간다.
+        moving = cur;
+        history.go(cur - st.i);
+        return;
+      }
       setPopDir(st.i < cur ? -1 : 1, ua);
       cur = st.i;
-      return restore(entries[cur]!);
+      restore(entries[cur]!);
+      // 돌아갈 수 없어 홈으로 바뀌었는데 아래에 홈 기록이 있으면 거기까지 접는다.
+      const at = entries.findIndex((x) => x.key === entries[cur]!.key);
+      if (at < cur) {
+        entries[at] = entries[cur]!;
+        entries.length = at + 1;
+        moveTo(at);
+      }
+      return;
     }
     // 새로 고침 전 기록이나 다른 코드가 지운 기록 — 홈에서 새로 쌓는다.
     setPopDir(-1, ua);
@@ -118,14 +190,8 @@ export function initHistory() {
 
   $effect.root(() => {
     $effect(() => {
-      const key = keyOf();
-      untrack(() => {
-        if (key === entries[cur]?.key) return;
-        entries.length = cur + 1;
-        entries.push(snapshot());
-        cur = entries.length - 1;
-        history.pushState({ sid, i: cur }, '');
-      });
+      keyOf();
+      untrack(sync);
     });
   });
 }

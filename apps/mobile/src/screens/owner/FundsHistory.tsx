@@ -11,10 +11,9 @@ import {
 import { fundsText } from '@offside/app-core/market';
 import { fundsHistoryText as H } from '@offside/app-core/i18n/ko/fundsHistory';
 import { localCareerNames } from '@offside/game/hof-store';
-import { go } from '../../game/nav';
 import { DISPLAY, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
-import { BackBar, Btn, Card, Screen, Topbar, Txt } from '../../ui';
+import { Btn, Card, Screen, Topbar, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 
 type Totals = ReturnType<typeof fundsHistoryTotals>['income'];
@@ -98,7 +97,6 @@ export default function FundsHistory() {
   return (
     <Screen>
       <Topbar />
-      <BackBar inline testID="funds-back" fallback={() => go('owner')} />
       <View style={{ gap: 2, paddingHorizontal: 4 }}>
         <Txt v="eyebrow">{H.eyebrow}</Txt>
         <Txt v="h1" accessibilityRole="header">

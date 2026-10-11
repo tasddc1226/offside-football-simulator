@@ -1,7 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Candidate } from '@offside/game/candidates';
 import type { GameState } from '@offside/game/types';
-import { createNavStack, navKey, navRestore, navSnapshot, type NavEntry } from './navHistory.js';
+import {
+  createNavStack,
+  navKey,
+  navRestore,
+  navSnapshot,
+  navStep,
+  type NavEntry,
+} from './navHistory.js';
 import { initialAppState, type AppState, type LegendView } from './state.js';
 
 const state = (over: Partial<AppState> = {}): AppState => ({ ...initialAppState(), ...over });
@@ -183,5 +190,52 @@ describe('createNavStack', () => {
     stack.back();
     expect(s.screen).toBe('home');
     expect(stack.back()).toBe(false);
+  });
+  it('T-11-213 하단 탭(root)은 기록을 그 화면 하나로 비운다 — 탭끼리는 뒤로 넘어가지 않는다', () => {
+    const s = state({ screen: 'home' });
+    const { stack } = setup(s);
+    s.screen = 'dex';
+    stack.track();
+    s.screen = 'owner';
+    stack.root();
+    stack.track();
+    expect(stack.canGoBack()).toBe(false);
+    s.screen = 'market';
+    stack.track();
+    stack.back();
+    expect(s.screen).toBe('owner');
+    expect(stack.canGoBack()).toBe(false);
+  });
+  it('T-11-213 이미 지나온 화면으로 가면 쌓지 않고 거기까지 되돌아간다', () => {
+    const s = state({ screen: 'home' });
+    const { stack } = setup(s);
+    s.screen = 'game';
+    stack.track();
+    s.screen = 'home';
+    stack.track();
+    expect(stack.canGoBack()).toBe(false);
+  });
+  it('T-11-213 돌아갈 수 없어 홈으로 바뀐 기록은 아래 홈 기록까지 접는다', () => {
+    const s = state({ screen: 'home' });
+    const { stack } = setup(s);
+    s.screen = 'create';
+    s.candidates = cand(1);
+    stack.track();
+    s.G = live;
+    s.candidates = null;
+    s.screen = 'game';
+    stack.track();
+    stack.back();
+    expect(s.screen).toBe('home');
+    expect(stack.canGoBack()).toBe(false);
+  });
+});
+
+describe('navStep', () => {
+  it('같은 화면이면 null, 아래에 있으면 그 번호, 처음이면 push', () => {
+    expect(navStep(['home', 'game'], 1, 'game')).toBeNull();
+    expect(navStep(['home', 'game'], 1, 'home')).toBe(0);
+    expect(navStep(['home', 'game'], 1, 'owner')).toBe('push');
+    expect(navStep(['home'], 0, 'owner')).toBe('push');
   });
 });

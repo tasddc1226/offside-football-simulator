@@ -12,6 +12,7 @@ import { achNudge } from '../game/achNudge';
 import { closeSheet, navStack } from '../game/host';
 import { MainNav, hasMainNav } from '../ui/MainNav';
 import { BarBelow } from '../ui/Screen';
+import { EdgeSwipeBack } from '../ui/EdgeSwipeBack';
 import { RefreshRoot } from '../ui/refresh';
 import { Sheet } from '../ui/Sheet';
 import { TABBAR_H } from '../ui/TabBar';
@@ -109,9 +110,11 @@ export default function App() {
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <BarBelow.Provider value={main}>
         {/* 게시판은 게시판을 바꿀 때 새로 그린다(웹 {#key appState.board}). 새로고침 범위도 화면마다 새로 연다. */}
-        <RefreshRoot key={snap.screen === 'board' ? `board:${snap.board}` : snap.screen}>
-          <Current />
-        </RefreshRoot>
+        <EdgeSwipeBack>
+          <RefreshRoot key={snap.screen === 'board' ? `board:${snap.board}` : snap.screen}>
+            <Current />
+          </RefreshRoot>
+        </EdgeSwipeBack>
       </BarBelow.Provider>
       {main ? <MainNav /> : null}
       <StoreUpdateBanner />

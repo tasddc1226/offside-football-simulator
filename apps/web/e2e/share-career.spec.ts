@@ -114,8 +114,9 @@ test('로그인하지 않아도 공유 버튼이 화면 아래에 고정돼 링�
   await expect(page.locator('.film-open h1')).toBeVisible();
   await expect(page.locator('[data-share="login"]')).toHaveCount(0);
   await expect(page.locator('[data-act="share-career"]')).toBeInViewport();
-  // 공유 바 왼쪽 반은 이전으로(T-11-180) — 로그인 전에 있던 홈으로 돌아간다.
-  await page.locator('[data-act="hof-back"]').click();
+  // T-11-213 선수 상세 공유 바에는 공유 버튼만 있다 — 하단 메뉴로 홈에 간다.
+  await expect(page.locator('[data-act="share-home"]')).toHaveCount(0);
+  await page.locator('nav.main-nav [data-act="home"]').click();
   await expect(page.locator('[data-act="share-career"]')).toHaveCount(0);
   await expect(page.locator('[data-act="continue"], [data-act="new"]').first()).toBeVisible();
 });

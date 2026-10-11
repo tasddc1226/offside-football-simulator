@@ -57,7 +57,7 @@ import {
 import { agoKo, fmtValue } from '@offside/app-core/format';
 import { localCareerNames } from '@offside/game/hof-store';
 import { POS } from '@offside/game/data';
-import { appState, prefs } from '../../store';
+import { prefs } from '../../store';
 import { go } from '../../game/nav';
 import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { notificationDestination } from '../../platform/notificationDestination';
@@ -65,7 +65,7 @@ import { toast } from '../../game/host';
 import { useColors } from '../../theme/useColors';
 import type { Colors } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
-import { ActionBar, BackBar, Btn, Press, Screen, Topbar, Txt } from '../../ui';
+import { ActionBar, Btn, Press, Screen, Topbar, Txt } from '../../ui';
 import { useOnPull } from '../../ui/refresh';
 import { PlayerCard } from '../../components/PlayerCard';
 import { LoginButtons } from './LoginButtons';
@@ -761,7 +761,6 @@ export default function Market() {
         }
       >
         <Topbar />
-        <BackBar inline testID="market-back" fallback={() => (appState.screen = 'owner')} />
 
         {/* 초록 머리 — 구단 자금 · 자금 만들기 · 요약 셋 */}
         <View

@@ -4,14 +4,12 @@
   // 맨 위 시즌 카드(등급 · 한 줄 요약 · 자랑거리) → 선수단(단체사진 · 카드 흐름) → 숫자 → 이 시즌의 얼굴 → 카드 등급 → 팀 → 순위 → 휘장 → 남긴 기록 순.
   // '결산 공유하기'는 같은 값을 4:5 한 장으로 그린다(recapShareCard.ts).
   import Topbar from './Topbar.svelte';
-  import BackBar from './BackBar.svelte';
   import HonorEmblem from './HonorEmblem.svelte';
   import GradeEmblem from './team/GradeEmblem.svelte';
   import PlayerCard from './team/PlayerCard.svelte';
   import RecapTeamPhoto from './recap/RecapTeamPhoto.svelte';
   import RecapCardReel from './recap/RecapCardReel.svelte';
   import ShareSheet from './share/ShareSheet.svelte';
-  import { go } from './nav.js';
   import { motionOK } from './motion.js';
   import { appState } from './state.svelte.js';
   import { fetchOwnerHonors, fetchSeasonRecap, type SeasonRecapResponse } from '@offside/app-core/api/seasonRecap';
@@ -135,7 +133,6 @@
 <div class:wrap={!embedded} class="recap" class:embedded data-recap>
   {#if !embedded}
   <Topbar />
-  <BackBar inline act="owner" fallback={() => go('owner')} />
   <header class="settings-head">
     <div class="eyebrow">Season recap</div>
     <h1>{L.title({ season: name || (season !== null ? teamSeasonLabel(season) : L.cardTitle) })}</h1>

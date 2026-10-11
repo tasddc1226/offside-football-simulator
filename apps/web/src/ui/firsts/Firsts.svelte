@@ -7,8 +7,6 @@
   import { displaySeasonAt, openTeamSeasons } from '@offside/contracts/service-seasons';
   import { getFirsts } from '@offside/app-core/api/client';
   import { localCareerNames } from '@offside/game/hof-store';
-  import { goHome } from '../nav.js';
-  import BackBar from '../BackBar.svelte';
   import { appState } from '../state.svelte.js';
   import Topbar from '../Topbar.svelte';
   import { kstParts } from '@offside/app-core/boardText';
@@ -59,7 +57,6 @@
 
 <div class="wrap">
   <Topbar />
-  <BackBar inline act="home" fallback={goHome} />
   <section class="card" data-firsts>
     <div class="row" style="justify-content:space-between;align-items:baseline">
       <div>

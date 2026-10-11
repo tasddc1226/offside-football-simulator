@@ -1,0 +1,26 @@
+{
+  "id": "t-11-213-back-navigation",
+  "title": "뒤로 가기가 자연스러워졌어요",
+  "items": [
+    "iPhone 앱에서 화면 왼쪽 끝을 밀면 이전 화면으로 돌아가요",
+    "하단 메뉴끼리 옮겨 다닌 기록은 뒤로 가기에 쌓이지 않아요",
+    "뒤로 가기로 돌아올 수 있는 화면에서는 '이전으로' 버튼을 없앴어요"
+  ],
+  "en": {
+    "title": "Going back feels more natural",
+    "items": [
+      "In the iPhone app, swipe from the left edge to return to the previous screen.",
+      "Switching between bottom menu tabs no longer piles up back steps.",
+      "Screens you can leave with Back no longer show a Back button."
+    ]
+  },
+  "ja": {
+    "title": "戻る操作が自然になりました",
+    "items": [
+      "iPhoneアプリで画面の左端からスワイプすると、前の画面に戻ります。",
+      "下部メニューのタブを切り替えても、戻る履歴は増えません。",
+      "戻る操作で戻れる画面では「戻る」ボタンをなくしました。"
+    ]
+  },
+  "availability": "web-app"
+}

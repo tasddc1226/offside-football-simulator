@@ -126,7 +126,7 @@ test('전체 명예의 전당에서 다른 유저의 은퇴 선수 상세를 연
   await page.locator('[data-credit="career"] summary').click();
   await expect(page.getByRole('heading', { name: '레전드 점수 구성' })).toBeVisible();
   await expect(page.locator('table')).toContainText('K리그1');
-  await page.locator('[data-act="hof-back"]').click();
+  await page.goBack();
   await expect(page.locator(`[data-hof-id="${ID}"]`)).toBeVisible();
 });
 
@@ -216,14 +216,11 @@ test('구단주 내 선수: 계정 기록(서버) + 이 기기 이름 덮어쓰�
   await expect(page.locator('[data-my-player="0"]')).toContainText('이기기선수');
   await expect(page.locator('[data-my-player="1"]')).toContainText('익명의 골키퍼');
   await expect(page.locator('[data-my-players]')).not.toContainText('다른계정선수');
-  // 상세에서 돌아오면 내 선수 화면이다. 뒤로 가기로도, T-11-180 공유 바 왼쪽 '이전으로'로도 돌아간다.
+  // 상세에서 뒤로 가면 내 선수 화면이다.
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('.film-open h1')).toBeVisible();
   await expect(page.locator('[data-act="share-home"]')).toHaveCount(0);
   await page.goBack();
-  await expect(page.locator('[data-owner-players-screen]')).toBeVisible();
-  await page.locator('[data-my-player="0"]').click();
-  await page.locator('[data-act="hof-back"]').click();
   await expect(page.locator('[data-owner-players-screen]')).toBeVisible();
 });
 
@@ -340,7 +337,7 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async (
   expect(asked.at(-1)).toBe('?limit=10&page=2');
 
   await full.locator('.hof-row').first().click();
-  await page.locator('[data-act="hof-back"]').click();
+  await page.goBack();
   await expect(full.locator('.hof-pager')).toContainText('2 / 2');
   await expect(full.locator('.hof-row').first().locator('.hof-rank')).toHaveText('11');
 
@@ -549,7 +546,7 @@ test('홈 ↔ 전체 보기 ↔ 상세를 오가도 같은 목록을 다시 요�
   for (let i = 0; i < 2; i++) {
     await page.locator('[data-act="hof-all"]').click();
     await page.locator(`[data-hof="full"] [data-hof-id="${ID}"]`).click();
-    await page.locator('[data-act="hof-back"]').click();
+    await page.goBack();
     await page.locator('[data-act="home"]').click();
     await expect(page.locator('[data-hof="home"] .hof-row')).toHaveCount(1);
   }

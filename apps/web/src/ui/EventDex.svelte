@@ -9,9 +9,8 @@
   import { dexSeen } from '@offside/app-core/dex';
   import { dexText as L } from '@offside/app-core/i18n/ko/dex';
   import { appState } from './state.svelte.js';
-  import { goHome, takeFocus } from './nav.js';
+  import { takeFocus } from './nav.js';
   import Fairness from './Fairness.svelte';
-  import BackBar from './BackBar.svelte';
   import Topbar from './Topbar.svelte';
 
   const RULES = dexRules();
@@ -36,7 +35,6 @@
 
 <div class="wrap">
   <Topbar />
-  <BackBar inline act="home" fallback={goHome} />
   <section class="card stack" style="gap:14px">
     <div>
       <div class="eyebrow">Odds</div>
