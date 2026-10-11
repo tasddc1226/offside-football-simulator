@@ -1,3 +1,4 @@
+import type { DetailPos } from '@offside/contracts/positions';
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
 import { LIVE_POLL_SEC, TICKER_POLL_SEC } from '@offside/contracts/polling';
 import type {
@@ -265,8 +266,9 @@ export function getHof(
   season: number | null = null,
   name = '',
   pos: CareerPos | null = null,
+  dpos: DetailPos | null = null,
 ): Promise<ApiResult<HofListResponse>> {
-  const q = `limit=${limit}${page > 1 ? `&page=${page}` : ''}${sort !== 'score' ? `&sort=${sort}` : ''}${season !== null ? `&season=${season}` : ''}${name ? `&q=${encodeURIComponent(name)}` : ''}${pos ? `&pos=${pos}` : ''}`;
+  const q = `limit=${limit}${page > 1 ? `&page=${page}` : ''}${sort !== 'score' ? `&sort=${sort}` : ''}${season !== null ? `&season=${season}` : ''}${name ? `&q=${encodeURIComponent(name)}` : ''}${pos ? `&pos=${pos}` : ''}${dpos ? `&dpos=${dpos}` : ''}`;
   return cachedGet<HofListResponse>(`/v1/hof?${q}`, 60_000);
 }
 /** T-10-013. 이 계정의 은퇴 선수. 익명 프로필이면 linked=false. */

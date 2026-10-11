@@ -1,3 +1,4 @@
+import { expandDetailRoles } from '@offside/contracts/positions';
 // T-10-092 구단주 팀 경기 시뮬레이션. 서버만 돌리는 순수 함수다 — 같은 경기 id(시드)와 같은 선발이면 결과가 늘 같다.
 import {
   FORMATIONS,
@@ -176,7 +177,7 @@ function poisson(lambda: number, rng: () => number): number {
 }
 
 /** 득점 가중치 — 골키퍼는 넣지 않는다. */
-const SCORE_W: Record<DetailPos, number> = {
+const SCORE_W: Record<DetailPos, number> = expandDetailRoles({
   ST: 5,
   W: 3,
   AM: 2.5,
@@ -185,9 +186,9 @@ const SCORE_W: Record<DetailPos, number> = {
   FB: 0.5,
   CB: 0.4,
   GK: 0,
-};
+});
 /** 도움 가중치. */
-const ASSIST_W: Record<DetailPos, number> = {
+const ASSIST_W: Record<DetailPos, number> = expandDetailRoles({
   AM: 3,
   W: 3,
   CM: 2,
@@ -196,7 +197,7 @@ const ASSIST_W: Record<DetailPos, number> = {
   DM: 1,
   CB: 0.3,
   GK: 0.05,
-};
+});
 
 /** 가중치 × 실력으로 한 명을 고른다(except는 뺀다). 고를 사람이 없으면 -1. */
 function pick(
@@ -284,7 +285,7 @@ export function simulateMatch(
 }
 
 /** 승부차기 키커 순서 가중치(골키퍼는 마지막). */
-const KICK_ORDER: Record<DetailPos, number> = {
+const KICK_ORDER: Record<DetailPos, number> = expandDetailRoles({
   ST: 0,
   W: 1,
   AM: 2,
@@ -293,7 +294,7 @@ const KICK_ORDER: Record<DetailPos, number> = {
   FB: 5,
   CB: 6,
   GK: 7,
-};
+});
 
 /**
  * T-11-145 승부차기(컵 토너먼트 무승부). 키커는 공격적인 자리부터 돌아가며 차고, 성공 확률은 키커 실력 − 상대 골키퍼

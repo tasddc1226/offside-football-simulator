@@ -6,6 +6,7 @@
 </script>
 
 <script lang="ts">
+  import { careerGuideText as CG } from '@offside/app-core/i18n/ko/careerGuide';
   import { appFormatText as W } from '@offside/app-core/i18n/ko/appFormat';
   import { tn } from '@offside/game/i18n/names';
   // ui.ts seasonTab()/compsCard()/storiesCard()/meter() 포트 (224~259줄, 340~345줄, 671~684줄)
@@ -15,7 +16,7 @@
   import { coachFeedback } from '@offside/app-core/career-feedback';
   import { visibleCareerLog } from '@offside/app-core/potential-view';
   import { PHASES, LAST_PHASE } from '@offside/game/data';
-  import { roundRange, logLabel, TRAININGS, trainingLabel, trainingCard, INVESTS, investCard, investCost, investName, investNote, investDef, plannedSpend, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
+  import { roundRange, logLabel, TRAININGS, trainingLabel, trainingCard, trainingOvrNote, INVESTS, investCard, investCost, investName, investNote, investDef, plannedSpend, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
   import { eventById } from '@offside/game/events-data';
   import type { GameState } from '@offside/game/types';
   import { save } from '../helpers.js';
@@ -26,6 +27,7 @@
   import PhaseReport from './PhaseReport.svelte';
   import LeagueTable from './LeagueTable.svelte';
   import Radar from '../Radar.svelte';
+  import PositionGuide from '../PositionGuide.svelte';
   import { gameSeasonText as L } from '@offside/app-core/i18n/ko/gameSeason';
 
   const { s }: { s: GameState } = $props();
@@ -248,6 +250,8 @@
   <h3 class="sub-title">{L.trainingTitle}</h3>
   {#if tourWait === 'train'}<p class="tour-hint" aria-live="polite">{L.trainHint}</p>{:else}<p class="muted fs-sm" data-train-pick>{L.trainPick}</p>{/if}
   <Radar {s} onpick={setTraining} />
+  <p class="muted fs-sm">{CG.trainWeak}</p>
+  <PositionGuide pos={s.pos} />
   <div class="train train-misc">
     {#each TRAININGS.filter((x) => !x.attr) as tr (tr.id)}
       {@const c = trainingCard(s, tr)}
@@ -261,6 +265,7 @@
     <div class="train-help" data-train-help aria-live="polite">
       <b>{trainingLabel(s, picked)} <span class="muted">· {c.effect.join(' · ')}</span></b>
       {#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
+      {#if picked.attr}<p data-training-ovr>{trainingOvrNote(s, picked)}</p>{/if}
     </div>
   {/if}
 </section>

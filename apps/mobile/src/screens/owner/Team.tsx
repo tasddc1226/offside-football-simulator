@@ -1,12 +1,14 @@
 // T-10-092 구단주 팀(웹 team/Team.svelte) — 시즌마다 그 시즌에 뛰고 은퇴한 내 선수로 11명을 꾸려(빈 자리는 유스 선수가
 // 채운다) 같은 시즌 다른 구단주의 팀과 겨룬다. 지난 시즌 팀은 보기만 한다. 경기 결과는 서버가 정한다(앱은 보여 주기만).
 // 편성·후보·업적 표기 같은 순수 계산은 웹과 같은 @offside/app-core/teamOwner.
+import { teamNameIssues } from '@offside/app-core/careerGuide';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import {
   FORMATION_IDS,
   presetLayout,
+  positionedLayout,
   type TeamPosition,
   LINEUP_SIZE,
   MANAGER_NAME_MAX,
@@ -195,7 +197,10 @@ export default function Team() {
   const nameOf = (p: TeamPlayer) => marketName(p, localNames);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
 
-  const positions = layout ?? presetLayout(formation);
+  const positions =
+    editable && season > 0
+      ? positionedLayout(layout ?? presetLayout(formation))
+      : (layout ?? presetLayout(formation));
   const slotCodes = positions.map((p) => p.slot);
   const ratings: (number | null)[] = slotCodes.map((slot, i) => {
     const id = slots[i];
@@ -217,6 +222,7 @@ export default function Team() {
     JSON.stringify(layout) !== JSON.stringify(team.layout ?? null) ||
     formation !== team.formation ||
     slots.some((id, i) => id !== (team.slots[i]?.careerId ?? null));
+  const nameIssues = teamNameIssues(name, manager);
   const nameOk =
     between(name, TEAM_NAME_MIN, TEAM_NAME_MAX) &&
     between(manager, MANAGER_NAME_MIN, MANAGER_NAME_MAX);
@@ -354,7 +360,12 @@ export default function Team() {
     savingRef.current = true;
     setSaving(true);
     const snapshot = JSON.stringify(draftNow.current);
-    const body = { ...draftValue, name: name.trim(), manager: manager.trim() };
+    const body = {
+      ...draftValue,
+      name: name.trim(),
+      manager: manager.trim(),
+      ...(season > 0 ? { layout: positions } : {}),
+    };
     try {
       const r = await saveOwnerTeam(legacy ? { ...body, season: 0 } : body);
       if (!r.ok) {
@@ -621,7 +632,13 @@ export default function Team() {
                   maxLength={TEAM_NAME_MAX}
                   testID="team-name"
                   accessibilityLabel={L.teamNameLabel}
+                  accessibilityHint={nameIssues.name}
                 />
+                {nameIssues.name ? (
+                  <Txt v="sm" tone="muted">
+                    {nameIssues.name}
+                  </Txt>
+                ) : null}
               </Field>
               <Field label={L.managerNameLabel}>
                 <TextField
@@ -630,7 +647,13 @@ export default function Team() {
                   maxLength={MANAGER_NAME_MAX}
                   testID="team-manager"
                   accessibilityLabel={L.managerNameLabel}
+                  accessibilityHint={nameIssues.manager}
                 />
+                {nameIssues.manager ? (
+                  <Txt v="sm" tone="muted">
+                    {nameIssues.manager}
+                  </Txt>
+                ) : null}
               </Field>
             </View>
           ) : null}
@@ -903,6 +926,16 @@ export default function Team() {
                         {L.cancel}
                       </Btn>
                     </View>
+                  ) : null}
+                  {dirty && !nameOk ? (
+                    <Txt
+                      v="sm"
+                      tone="muted"
+                      accessibilityLiveRegion="polite"
+                      testID="team-save-reason"
+                    >
+                      {nameIssues.name || nameIssues.manager}
+                    </Txt>
                   ) : null}
                   {dirty ? (
                     <Btn

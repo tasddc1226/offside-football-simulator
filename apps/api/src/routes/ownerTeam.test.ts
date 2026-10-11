@@ -1,3 +1,4 @@
+import { DETAIL_GROUP } from '@offside/contracts/positions';
 import {
   AchRankResponseSchema,
   FriendRemoveResponseSchema,
@@ -22,6 +23,7 @@ import {
   matchScore,
   ratingChange,
   presetLayout,
+  positionedLayout,
   FORMATIONS,
 } from '@offside/contracts/owner-team';
 import { eq } from 'drizzle-orm';
@@ -314,6 +316,31 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(moved.lines.gk).toBe(YOUTH_OVR);
   });
 
+  it('시즌 1 기존 FB 선수는 팀에서 LB로 저장해도 원본과 옛 역할별 실력이 유지된다', async () => {
+    vi.setSystemTime(new Date('2026-10-11T00:00:00.000Z'));
+    const me = await issueGoogleCookie(ctx);
+    const roles = { GK: 22, CB: 73, FB: 79, DM: 74, CM: 66, AM: 58, W: 55, ST: 52 };
+    const id = await addCareer(me.profileId, {
+      pos: 'DF',
+      dpos: 'FB',
+      peak: 82,
+      roles,
+      serviceSeason: 1,
+    });
+    const layout = positionedLayout(presetLayout('4-3-3'));
+    const res = await putTeam(me.cookie, { slots: slots(null, id), layout });
+    expect(res.status).toBe(200);
+    const team = PutRes.parse(await res.json()).data.team;
+    expect(team.slots[1]).toMatchObject({ slot: 'LB', rating: 79 });
+    const mine = GetRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    ).data;
+    expect(mine.players.find((p) => p.careerId === id)).toMatchObject({ dpos: 'FB', roles });
+    expect(mine.team?.layout).toEqual(layout);
+    const [stored] = await ctx.db.select().from(careers).where(eq(careers.id, id));
+    expect(stored?.dpos).toBe('FB');
+  });
+
   it('자유 배치와 로고를 저장하고 공개 프로필·경기에 같은 자리 실력을 쓴다', async () => {
     const me = await issueGoogleCookie(ctx);
     const roles = { GK: 22, CB: 83, FB: 79, DM: 74, CM: 66, AM: 58, W: 55, ST: 52 };
@@ -470,16 +497,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     { label: '유스 적합도 1 제외', free: true, cb: 70, dm: 99, youth: true, done: false, fit: 1 },
   ])('$label: 실제 팀 자리와 업적의 적합도 판정을 일치시킨다', async (scenario) => {
     const me = await issueGoogleCookie(ctx);
-    const group = {
-      GK: 'GK',
-      FB: 'DF',
-      CB: 'DF',
-      DM: 'MF',
-      CM: 'MF',
-      AM: 'MF',
-      W: 'FW',
-      ST: 'FW',
-    } as const;
+    const group = DETAIL_GROUP;
     const ids: (string | null)[] = [];
     for (const [i, role] of FORMATIONS['4-3-3'].entries()) {
       const roles = { GK: 70, CB: 70, FB: 70, DM: 70, CM: 70, AM: 70, W: 70, ST: 70, [role]: 99 };

@@ -285,7 +285,7 @@ test('다른 유저의 영구결번이 확정되면 플레이 중인 화면 위�
   await expect(page.locator('[data-legend-rn-pill]')).toContainText('영결 8');
 });
 
-test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신순으로 보고, 누르면 상세에 갔다 같은 탭으로 돌아온다', async ({
+test('기록실 영구결번 탭: 리그별 구단·최신순으로 보고, 누르면 상세에 갔다 같은 탭으로 돌아온다', async ({
   page,
 }) => {
   await seedOldLegend(page);
@@ -396,11 +396,12 @@ test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신
   const axe = await new AxeBuilder({ page }).include('[data-rn-wall]').analyze();
   expect(axe.violations.map((v) => v.id)).toEqual([]);
 
-  await wall.locator('[data-rn-club-order="league"]').click();
+  await expect(wall.locator('[data-rn-club-order]')).toHaveCount(0);
   await expect(wall.locator('[data-rn-league]')).toHaveText([/프리미어리그\s*2/, /K리그1\s*1/]);
 
   // 구단을 누르면 그 구단 결번만 받아 번호 순으로.
   await wall.locator('[data-rn-club="pl-0"]').click();
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
   await expect(wall.locator('[data-rn-tile]')).toHaveText([
     /4\s*박결번/,
     /10\s*옛레전드.*내 선수/s,
@@ -423,3 +424,57 @@ test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신
   // 선수 상세에 다녀와도 최신순 화면 그대로.
   await expect(wall).toHaveAttribute('data-rn-screen', 'recent');
 });
+
+for (const width of [320, 1024]) {
+  test(`영구결번 세부 필터 ${width}px는 추가 요청 없이 결번과 명판을 거른다`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-11T00:00:00+09:00'));
+    await page.setViewportSize({ width, height: 844 });
+    const rows = ['CB', 'FB'].map((dpos, i) => ({
+      ...SLOT,
+      seq: i + 1,
+      careerId: `rn-detail-${i}`,
+      name: dpos,
+      number: i + 2,
+      pos: 'DF',
+      dpos,
+      grantedAt: '2026-10-10T00:00:00Z',
+    }));
+    let clubRequests = 0;
+    await page.route('**/v1/retired-numbers**', (route) => {
+      const url = new URL(route.request().url());
+      if (url.pathname.endsWith('/summary'))
+        return route.fulfill(
+          ok({
+            season: 1,
+            total: 2,
+            clubs: [{ clubId: SLOT.clubId, club: SLOT.club, count: 2 }],
+            recent: rows,
+            wall: rows.map(({ seq: _seq, ...r }) => r),
+          }),
+        );
+      clubRequests++;
+      return route.fulfill(ok({ season: 1, items: rows }));
+    });
+    await page.goto('/');
+    await page.locator('.main-nav [data-act="hof"]').click();
+    await page.locator('[data-hof-tab="rn"]').click();
+    await expect(page.locator('[data-rn-club-order]')).toHaveCount(0);
+    await expect(page.locator('[data-rn-league]')).toHaveCount(1);
+    await page.locator('[data-rn-club]').click();
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+    await page.locator('[data-rn-pos="DF"]').click();
+    await page.locator('[data-rn-dpos="CB"]').click();
+    await expect(page.locator('[data-rn-tile]')).toHaveCount(1);
+    await expect(page.locator('[data-rn-wall-of-honor]')).toHaveCount(1);
+    await page.locator('[data-rn-dpos="FB"]').click();
+    await expect(page.locator('[data-rn-tile]')).toContainText('FB');
+    expect(clubRequests).toBe(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.locator('[data-rn-pos="all"]').click();
+    await expect(page.locator('[data-rn-dpos]')).toHaveCount(0);
+    await expect(page.locator('[data-rn-tile]')).toHaveCount(2);
+    await expect(page.locator('[data-rn-wall-of-honor]')).toHaveCount(2);
+  });
+}

@@ -40,7 +40,7 @@ export const rnMissText = (m: RetiredNumberMiss) =>
     : RN.missScore({ club: tn(m.club), pct: m.pct });
 
 /** 결번 구단에서 뛴 시즌(옛 기록은 구단 id가 없어 이름으로 찾는다). */
-export function rnClubStats(rnSlot: Granted, d: LegendView['d']) {
+export function rnClubStats(rnSlot: Pick<Granted, 'clubId' | 'club'>, d: LegendView['d']) {
   if (!d) return null;
   const recs = d.career.filter((r) =>
     r.clubId ? r.clubId === rnSlot.clubId : r.club === rnSlot.club,

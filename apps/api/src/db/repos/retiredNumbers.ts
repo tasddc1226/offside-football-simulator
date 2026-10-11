@@ -7,6 +7,7 @@ import {
   type RetiredNumbersSummary,
   type WallOfHonorItem,
 } from '@offside/contracts';
+import type { DetailPos } from '@offside/contracts/positions';
 import { defaultClubIds } from '@offside/contracts/club-names';
 import {
   clubContributions,
@@ -365,6 +366,7 @@ const itemColumns = {
   careerId: retiredNumbers.careerId,
   name: careers.publicName,
   pos: careers.pos,
+  dpos: sql<DetailPos | null>`${careers.dpos}`,
 };
 const itemsOf = (db: Db) =>
   db
@@ -442,6 +444,7 @@ export async function summarizeRetiredNumbers(
         careerId: careers.id,
         name: careers.publicName,
         pos: careers.pos,
+        dpos: sql<DetailPos | null>`${careers.dpos}`,
         json: careers.wallOfHonorJson,
       })
       .from(careers)

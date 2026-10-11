@@ -545,3 +545,20 @@ describe('업적 영어 문구(T-11-106)', () => {
     expect(item(en, 'age-40')?.label).toBe('Still playing at 40');
   });
 });
+
+it('신규 포지션과 기존 포지션은 8개 기준 역할로 중복 없이 수집한다', () => {
+  const g = clubAchievements({
+    careers: [
+      career({ pos: 'DF', dpos: 'FB' }),
+      career({ pos: 'DF', dpos: 'LB' }),
+      career({ pos: 'DF', dpos: 'RB' }),
+      career({ pos: 'MF', dpos: 'CM' }),
+      career({ pos: 'MF', dpos: 'LM' }),
+    ],
+    team: null,
+    owner: OWNER,
+    detail: true,
+    retireAt: 45,
+  });
+  expect(item(g, 'all-dpos')).toMatchObject({ cur: 2, max: 8, done: false });
+});

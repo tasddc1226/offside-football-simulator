@@ -35,6 +35,7 @@ export const hof: Translation<HofMsgs> = {
   filterA11y: (p) => `Filter, ${p.label}`,
   allPositions: 'All positions',
   searchLabel: 'Search player name',
+  detailPositionGroup: 'Detailed position',
   positionGroup: 'Position',
   all: 'All',
   rankBasis: 'Rank by',

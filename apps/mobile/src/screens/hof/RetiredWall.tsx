@@ -21,12 +21,13 @@ import {
 import { playerName } from '@offside/app-core/format';
 import { RN_DEFAULT, rnColors } from '@offside/app-core/rnStyle';
 import {
-  type RnClubOrder,
   rnByLeague,
   rnClubName as clubName,
   rnDay as day,
   rnLeagueName as leagueOf,
 } from '@offside/app-core/retiredWall';
+import { scrollTo } from '../../ui/scroll';
+import { hofText as H } from '@offside/app-core/i18n/ko/hof';
 import { POS } from '@offside/game/data';
 import { loadHOF } from '@offside/game/hof-store';
 import { Laurel, useMedal } from '../../components/Laurel';
@@ -41,7 +42,7 @@ import { Card } from '../../ui/Card';
 import { ClubMark } from '../../ui/ClubBadge';
 import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
-import { POS_GROUPS } from '@offside/contracts/positions';
+import { POS_GROUPS, FILTER_DETAILS_OF, type DetailPos } from '@offside/contracts/positions';
 import { kstMonthDayHour } from '@offside/app-core/boardText';
 import { RecordsSelect, RecordsChips, RECORDS_TOUCH } from './RecordsControls';
 import { hofRnText as L } from '@offside/app-core/i18n/ko/hofRn';
@@ -59,7 +60,7 @@ const view = proxy<{
   season: number | null;
   screen: 'home' | 'club' | 'recent';
   clubId: string | null;
-  clubOrder: RnClubOrder;
+  dpos: DetailPos | null;
   pos: CareerPos | null;
   /** T-11-193 첫 화면의 명예의 벽 펼침. 명판이 수백 개라 기본은 접어 둔다. */
   wallOpen: boolean;
@@ -67,7 +68,7 @@ const view = proxy<{
   season: null,
   screen: 'home',
   clubId: null,
-  clubOrder: 'count',
+  dpos: null,
   pos: null,
   wallOpen: false,
 });
@@ -372,6 +373,7 @@ function BackButton() {
         view.screen = 'home';
         view.clubId = null;
         view.pos = null;
+        view.dpos = null;
       }}
       style={{ minHeight: RECORDS_TOUCH, justifyContent: 'center', alignSelf: 'flex-start' }}
     >
@@ -393,7 +395,9 @@ function ClubRow({ c, club, showLeague }: { c: Colors; club: ClubSum; showLeague
       onPress={() => {
         view.clubId = club.clubId;
         view.pos = null;
+        view.dpos = null;
         view.screen = 'club';
+        scrollTo(0);
       }}
       style={{
         flexDirection: 'row',
@@ -428,7 +432,7 @@ function ClubRow({ c, club, showLeague }: { c: Colors; club: ClubSum; showLeague
 /** 첫 화면 — 요약(구단별 결번 수 + 최근 8개)만 받는다. */
 function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> }) {
   const c = useColors();
-  const { clubOrder, wallOpen } = useSnapshot(view);
+  const { wallOpen } = useSnapshot(view);
   const [summary, setSummary] = useState<RetiredNumbersSummary | null>(null);
   const [failed, setFailed] = useState(false);
   const { tick, track, pulled } = useRefresh();
@@ -516,36 +520,16 @@ function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> })
         </>
       ) : null}
       <SectionTitle>{L.clubsTitle}</SectionTitle>
-      <RecordsChips
-        label={L.clubOrderLabel}
-        testIDPrefix="rn-club-order"
-        value={clubOrder}
-        onPick={(key) => {
-          view.clubOrder = key as RnClubOrder;
-        }}
-        items={[
-          { key: 'count', label: L.orderCount },
-          { key: 'league', label: L.orderLeague },
-        ]}
-      />
-      {clubOrder === 'count' ? (
-        <View>
-          {summary.clubs.map((club) => (
-            <ClubRow key={club.clubId} c={c} club={club} showLeague />
+      {groups.map((g) => (
+        <View key={g.league}>
+          <Txt tone="muted" style={{ fontSize: rem(0.75), paddingTop: 12, paddingBottom: 4 }}>
+            {`${g.league} · ${g.count}`}
+          </Txt>
+          {g.clubs.map((club) => (
+            <ClubRow key={club.clubId} c={c} club={club} showLeague={false} />
           ))}
         </View>
-      ) : (
-        groups.map((g) => (
-          <View key={g.league}>
-            <Txt tone="muted" style={{ fontSize: rem(0.75), paddingTop: 12, paddingBottom: 4 }}>
-              {`${g.league} · ${g.count}`}
-            </Txt>
-            {g.clubs.map((club) => (
-              <ClubRow key={club.clubId} c={c} club={club} showLeague={false} />
-            ))}
-          </View>
-        ))
-      )}
+      ))}
     </View>
   );
 }
@@ -561,7 +545,7 @@ function ClubScreen({
   myIds: ReadonlySet<string>;
 }) {
   const c = useColors();
-  const { pos } = useSnapshot(view);
+  const { pos, dpos } = useSnapshot(view);
   const [items, setItems] = useState<Item[] | null>(null);
   const [wall, setWall] = useState<Wall[]>([]);
   const [failed, setFailed] = useState(false);
@@ -584,9 +568,10 @@ function ClubScreen({
     };
   }, [season, clubId, tick, track]);
 
+  const filteredWall = wall.filter((w) => (!pos || w.pos === pos) && (!dpos || w.dpos === dpos));
   const filtered = useMemo(
-    () => (items ?? []).filter((it) => !pos || pos === it.pos),
-    [items, pos],
+    () => (items ?? []).filter((it) => (!pos || pos === it.pos) && (!dpos || it.dpos === dpos)),
+    [items, pos, dpos],
   );
   const { ready, onLayout, opts } = useTileOpts(c, !!pos, myIds);
   // 이름·개수는 받은 목록에서(서버가 그 구단 결번을 모두 준다).
@@ -623,12 +608,27 @@ function ClubScreen({
         value={pos ?? 'all'}
         onPick={(key) => {
           view.pos = key === 'all' ? null : (key as CareerPos);
+          view.dpos = null;
         }}
         items={[
           { key: 'all', label: L.all },
           ...POS_GROUPS.map((key) => ({ key, label: POS[key].label })),
         ]}
       />
+      {season > 0 && pos && FILTER_DETAILS_OF[pos].length > 1 ? (
+        <RecordsChips
+          label={H.detailPositionGroup}
+          testIDPrefix="rn-dpos"
+          value={dpos ?? 'all'}
+          onPick={(key) => {
+            view.dpos = key === 'all' ? null : (key as DetailPos);
+          }}
+          items={[
+            { key: 'all', label: L.all },
+            ...FILTER_DETAILS_OF[pos].map((key) => ({ key, label: key })),
+          ]}
+        />
+      ) : null}
       {failed ? (
         <Message text={L.loadFailed} />
       ) : items === null ? (
@@ -640,10 +640,10 @@ function ClubScreen({
       ) : (
         <Message text={pos ? L.noMatchApp : L.empty({ season: teamSeasonLabel(season) })} />
       )}
-      {wall.length ? (
+      {filteredWall.length ? (
         <View testID="rn-club-wall" style={{ marginTop: 6 }}>
           <SectionTitle>{L.wallClubTitle}</SectionTitle>
-          <Plaques list={wall} withClub={false} myIds={myIds} />
+          <Plaques list={filteredWall} withClub={false} myIds={myIds} />
         </View>
       ) : null}
     </View>
@@ -749,6 +749,7 @@ export default function RetiredWall() {
             view.screen = 'home';
             view.clubId = null;
             view.pos = null;
+            view.dpos = null;
           }}
         />
       </View>

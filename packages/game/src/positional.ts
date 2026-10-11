@@ -1,3 +1,4 @@
+import { BASE_DETAIL } from '@offside/contracts/positions';
 // ───────── 포지션 전용 이벤트: 공격수 · 미드필더 · 수비수 · 골키퍼 ─────────
 import { clamp } from './rng.js';
 import { addStat, addAttr, pkWin, leagueOf, roleOf } from './engine.js';
@@ -423,7 +424,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
     cond: (s) =>
       posIs('DF')(s) &&
       inGame(s) &&
-      (s.dpos ? s.dpos === 'FB' : s.type === 'fullback' || s.attrs.pac >= 65),
+      (s.dpos ? BASE_DETAIL[s.dpos] === 'FB' : s.type === 'fullback' || s.attrs.pac >= 65),
     text: () =>
       '측면이 비었습니다. 윙어가 안쪽으로 파고들며 당신에게 오버래핑 공간을 만들어 줬습니다.',
     choices: [

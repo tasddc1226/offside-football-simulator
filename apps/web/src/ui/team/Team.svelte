@@ -7,7 +7,6 @@
   // 서버가 정한다(웹은 보여 주기만).
   import { onDestroy, onMount, untrack } from 'svelte';
   import {
-    FORMATIONS,
     LINEUP_SIZE,
     MANAGER_NAME_MAX,
     MANAGER_NAME_MIN,
@@ -17,6 +16,7 @@
     YOUTH_NAME,
     YOUTH_OVR,
     presetLayout,
+    positionedLayout,
     slotRating,
     teamOvr,
     type AchCategory,
@@ -130,7 +130,8 @@
   const nameOf = (p: TeamPlayer) => marketName(p, localNames);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
 
-  const slotCodes = $derived(layout?.map((p) => p.slot) ?? FORMATIONS[formation]);
+  const previewLayout = $derived(editable && season > 0 ? positionedLayout(layout ?? presetLayout(formation)) : layout ?? presetLayout(formation));
+  const slotCodes = $derived(previewLayout.map(p => p.slot));
   const ratings: (number | null)[] = $derived(
     slotCodes.map((slot, i) => {
       const id = slots[i];
@@ -140,7 +141,7 @@
   );
   const ovr = $derived(teamOvr(ratings));
   // T-11-105 선발 시너지 — 늘 보여 주고, 반영 시즌부터 줄 힘에도 더한다.
-  const synergy = $derived(slotsSynergy(layout ?? presetLayout(formation), slots, byId));
+  const synergy = $derived(slotsSynergy(previewLayout, slots, byId));
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
   const lines = $derived(draftLines(slotCodes, ratings, synergy, season));
   const filled = $derived(slots.filter((s) => s !== null).length);
@@ -302,6 +303,7 @@
     saving = true;
     const r = await saveOwnerTeam({
       ...submitted, name: submitted.name.trim(), manager: submitted.manager.trim(),
+      ...(season > 0 ? { layout: previewLayout } : {}),
       ...(isPreseasonLegacy(season, current) ? { season: 0 } : {}),
     });
     saving = false;

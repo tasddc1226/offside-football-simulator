@@ -15,6 +15,7 @@ import {
   MANAGER_NAME_MAX,
   MANAGER_NAME_MIN,
   positionRole,
+  legacyPositionRole,
   TEAM_NAME_MAX,
   TEAM_NAME_MIN,
 } from './owner-team.js';
@@ -55,7 +56,14 @@ export const TeamLayoutSchema = z
     (layout) =>
       layout[0]?.slot === 'GK' &&
       layout[0].y >= 84 &&
-      layout.slice(1).every((p, i) => p.y <= 82 && p.slot === positionRole(p.x, p.y, i + 1)),
+      layout
+        .slice(1)
+        .every(
+          (p, i) =>
+            p.y <= 82 &&
+            (p.slot === positionRole(p.x, p.y, i + 1) ||
+              p.slot === legacyPositionRole(p.x, p.y, i + 1)),
+        ),
     '골키퍼는 첫 자리 하나이고 필드 선수는 골문 앞까지 배치할 수 있어요.',
   );
 
