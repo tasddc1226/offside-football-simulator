@@ -14,7 +14,10 @@ import { fileURLToPath } from 'node:url';
 // 영어 사전은 지연 청크라 한국어 사용자가 받는 영어는 없다. 엔진을 첫 화면 밖으로 빼는 건 따로 할 일이라 141KB로.
 // T-11-155: 시즌 자동 전환(시즌 일정을 입히는 contracts 코드) · 은퇴 리포트 엠블럼 줄 · 플레이스타일 이름이 엔진과 함께
 // 첫 화면에 실려 +0.7KB(시즌 게이지 화면은 지연 청크로 뺐다). 엔진을 첫 화면 밖으로 빼기 전까지 142KB로.
-const LIMIT_BYTES = 142 * 1024;
+// T-11-198: 검색엔진이 홈에서 찾도록 푸터에 공개 페이지 링크 4개(가이드·FAQ·공정성·소식)와 공개 글의 게임 링크(`/?news=`)
+// 처리가 첫 화면에 실려 +0.12KB — 운영 빌드(GA·픽셀 설정 포함) 142.09KB로 넘었다. 링크는 서버 HTML에 있어야 해서 지연 청크로
+// 못 뺀다. 엔진을 첫 화면 밖으로 빼기 전까지 143KB로.
+const LIMIT_BYTES = 143 * 1024;
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.resolve(scriptDir, '../dist');
