@@ -35,6 +35,7 @@ export function createNativeAnalytics(io: IO) {
   let sdk: NativeAnalyticsSDK | null = null;
   let tracker: ReturnType<typeof createTracker> | undefined;
   let pending = Promise.resolve();
+  const pushSeen = new Set<string>();
   const listeners = new Set<() => void>();
   const allowed = () => io.enabled() && consent === 'granted' && ready;
   // Serialized SDK access; stale sends are dropped when the user withdraws consent.
@@ -140,6 +141,28 @@ export function createNativeAnalytics(io: IO) {
       screen = next;
       if (screen === 'admin') lastPage = '';
       pageView();
+    },
+    /** OS response only; IDs are local dedupe keys and never enter SDK parameters. */
+    async pushOpen(id: string, kind: unknown, campaign: unknown, stage: unknown) {
+      if (!io.enabled() || consent !== 'granted' || screen === 'admin') return false;
+      const epoch = generation;
+      await pending; // A consented cold start may still be initializing the native SDK.
+      if (epoch !== generation || !allowed() || screen === 'admin' || pushSeen.has(id))
+        return false;
+      pushSeen.add(id);
+      if (pushSeen.size > 50) pushSeen.delete(pushSeen.values().next().value!);
+      const category =
+        typeof kind === 'string' &&
+        ['news', 'team', 'market', 'social', 'community', 'return', 'test'].includes(kind)
+          ? kind
+          : 'other';
+      const reminder =
+        campaign === 'career_reminder' && (stage === 1 || stage === 2 || stage === 3);
+      send('offside_push_open', {
+        push_category: category,
+        ...(reminder ? { push_campaign: 'career_reminder', reminder_stage: stage } : {}),
+      });
+      return true;
     },
     analytics: {
       replace: () => tracker?.replace(),

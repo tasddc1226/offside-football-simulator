@@ -1,10 +1,13 @@
+import { careerReminderText as reminderKo } from '../i18n/ko/careerReminder.js';
+import { careerReminderText as reminderEn } from '../i18n/en/careerReminder.js';
+import { careerReminderText as reminderJa } from '../i18n/ja/careerReminder.js';
 import { INVITE_REROLLS } from '@offside/contracts/owner-team';
 import { PUSH_JA, PUSH_TAIL_JA } from '../i18n/ja/push.js';
 import { cupText } from '../cupText.js';
 import type { Lang } from '../lang.js';
 
 // T-11-106 서버가 만든 알림 문구. 푸시는 보낼 때 기기의 언어를 알 수 없어(기기 등록에 언어가 없다) 한국어로 보내고,
-// 알림함은 읽을 때 요청 언어로 바꿔 보여 준다. 공지·릴리즈 노트의 본문(글 제목)은 보낼 때의 한국어 제목이다 — 운영자가 쓴
+// 커리어 독려만 마지막 활동 언어로 발송한다. 알림함은 읽을 때 요청 언어로 바꿔 보여 준다. 공지·릴리즈 노트의 본문(글 제목)은 보낼 때의 한국어 제목이다 — 운영자가 쓴
 // 번역(T-11-146 board_posts.i18n_json)은 게시판에서만 고른다.
 const EN: Record<string, string> = {
   '오프사이드 공지': 'OFFSIDE notice',
@@ -53,6 +56,11 @@ const TABLES: Record<
 
 export function pushText(ko: string, lang: Lang): string {
   if (lang === 'ko') return ko;
+  const reminders = lang === 'en' ? reminderEn : reminderJa;
+  for (let i = 0; i < reminderKo.length; i++) {
+    if (ko === reminderKo[i]!.title) return reminders[i]!.title;
+    if (ko === reminderKo[i]!.body) return reminders[i]!.body;
+  }
   const T = TABLES[lang];
   const hit = T.exact[ko];
   if (hit) return hit;

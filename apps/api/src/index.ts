@@ -17,6 +17,7 @@ import { liveSocket } from './live/socket.js';
 import { runNewsPush } from './push/dispatch.js';
 import { runPersonalPush } from './push/personal.js';
 import { queueReengagement } from './push/reengagement.js';
+import { consumeCareerReminders, queueCareerReminders } from './push/careerReminder.js';
 import { consumeCommunityPush } from './push/communityQueue.js';
 import { runCup } from './team/cup.js';
 import { runSeasonClose } from './team/seasonClose.js';
@@ -26,7 +27,9 @@ export { LiveHub } from './live/hub.js';
 export { ChatRoom } from './chat/room.js';
 export default {
   queue(batch: MessageBatch<unknown>, env: Bindings) {
-    return consumeCommunityPush(batch, env);
+    return batch.queue === 'offside-career-push-production'
+      ? consumeCareerReminders(batch, env)
+      : consumeCommunityPush(batch, env);
   },
   fetch(req: Request, env: Bindings, ctx: ExecutionContext) {
     // T-10-072 홈 라이브 소켓은 Hono 앱(미들웨어) 앞에서 받는다(live/socket.ts).
@@ -51,6 +54,8 @@ export default {
     else {
       // 푸시 단계가 실패해도 뒤의 시즌 결산·컵 진행은 돈다(다음 5분에 다시 보낸다).
       await runNewsPush(env).catch(logged('news-push'));
+      if (new Date(controller.scheduledTime).getUTCMinutes() === 0)
+        await queueCareerReminders(env, controller.scheduledTime).catch(logged('career-reminder'));
       await queueReengagement(env, controller.scheduledTime).catch(logged('reengagement'));
       await runPersonalPush(env, controller.scheduledTime).catch(logged('personal-push'));
       // 시즌 진행 게이지: 30분마다 세어 굳히고, 90%에 닿으면 마감 시각을 확정해 시즌 일정에

@@ -76,6 +76,14 @@ async function setup(page: Page, pending: unknown = null): Promise<string[]> {
     const url = new URL(r.request().url());
     const path = url.pathname;
     requests.push(`${r.request().method()} ${path}${url.search}`);
+    if (path === '/v1/career-activity') {
+      expect(r.request().method()).toBe('PUT');
+      expect(r.request().postDataJSON()).toEqual({
+        careerId: JSON.parse(SAVE).cid,
+        state: 'active',
+      });
+      return r.fulfill({ status: 204 });
+    }
     const data =
       path === '/v1/profile'
         ? profile
@@ -119,6 +127,8 @@ const HOME_REQUESTS = [
   'GET /v1/ticker',
   // 미읽음 알림용 연결을 처음 한 번 열고, 화면을 옮길 때는 그대로 재사용한다.
   'POST /v1/chat/ticket',
+  // One coalesced activity signal for the restored career; tab changes add no requests.
+  'PUT /v1/career-activity',
 ];
 
 async function continueGame(page: Page) {

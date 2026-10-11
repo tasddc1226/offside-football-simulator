@@ -41,7 +41,9 @@ const CTE = `WITH cohort AS (
     CASE WHEN n.kind = 'news' THEN n.source_key ELSE n.id END AS campaign
   FROM notifications n WHERE n.created_at >= ? AND n.created_at <= ? AND (? = 1 OR n.kind <> 'test')
 ), facts AS (
-  SELECT n.id, n.category, n.campaign, n.title, n.created_at,
+  SELECT n.id, n.category, n.campaign, n.title, n.created_at, o.stage,
+    MAX(CASE WHEN r.accepted_at IS NOT NULL AND o.returned_at IS NOT NULL THEN 1 ELSE 0 END) AS returned,
+    MAX(CASE WHEN r.accepted_at IS NOT NULL AND o.retired_at IS NOT NULL THEN 1 ELSE 0 END) AS retired,
     COUNT(r.id) AS queued,
     SUM(CASE WHEN r.state IN ('pending','sending','accepted','checking') THEN 1 ELSE 0 END) AS pending,
     SUM(CASE WHEN r.accepted_at IS NOT NULL THEN 1 ELSE 0 END) AS accepted,
@@ -54,7 +56,8 @@ const CTE = `WITH cohort AS (
     MAX(CASE WHEN r.accepted_at IS NOT NULL AND i.clicked_at IS NOT NULL THEN 1 ELSE 0 END) AS clicked,
     MAX(CASE WHEN r.accepted_at IS NOT NULL AND i.target_opened_at IS NOT NULL THEN 1 ELSE 0 END) AS targetOpened
   FROM cohort n JOIN push_results r ON r.notification_id = n.id
-  LEFT JOIN push_interactions i ON i.notification_id = n.id GROUP BY n.id
+  LEFT JOIN push_interactions i ON i.notification_id = n.id
+  LEFT JOIN career_reminder_outcomes o ON o.notification_id = n.id GROUP BY n.id
 )`;
 const KEYS = [
   'queued',
@@ -83,7 +86,7 @@ export async function getPushPerformance(
   const from = new Date(Date.parse(today) - (Number(query.days) - 1) * 86400_000).toISOString();
   const statement = (sql: string) =>
     db.prepare(`${CTE} ${sql}`).bind(from, through, query.tests === '1' ? 1 : 0);
-  const [totals, categories, daily, campaigns, start] = await db.batch([
+  const [totals, categories, daily, campaigns, start, retention] = await db.batch([
     statement(`SELECT ${COUNTS} FROM facts`),
     statement(`SELECT category, ${COUNTS} FROM facts GROUP BY category ORDER BY category`),
     statement(
@@ -92,6 +95,9 @@ export async function getPushPerformance(
     statement(`SELECT campaign AS id, category, MIN(title) AS title, MAX(created_at) AS createdAt, ${COUNTS}
       FROM facts GROUP BY campaign, category ORDER BY createdAt DESC, id DESC LIMIT 21 OFFSET ${query.page * 20}`),
     db.prepare("SELECT value FROM app_meta WHERE key = 'push_tracking_started_at'"),
+    statement(
+      `SELECT stage, ${COUNTS}, SUM(returned) AS returned, SUM(retired) AS retired FROM facts WHERE stage IS NOT NULL GROUP BY stage ORDER BY stage`,
+    ),
   ]);
   return {
     generatedAt: now,
@@ -102,6 +108,7 @@ export async function getPushPerformance(
     categories: categories!.results as PushPerformance['categories'],
     daily: daily!.results as PushPerformance['daily'],
     campaigns: campaigns!.results.slice(0, 20) as PushPerformance['campaigns'],
+    retention: retention!.results as PushPerformance['retention'],
     hasMore: campaigns!.results.length > 20,
   };
 }

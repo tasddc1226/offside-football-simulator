@@ -31,3 +31,17 @@ export const PUSH_TARGET_HELP =
   '연결 화면 이동은 푸시 클릭 후 24시간 안에 알림의 이동 버튼을 누른 수예요. 실제 플레이·구매 수와는 달라요.';
 export const PUSH_RECEIPT_HELP =
   '전달 확인은 APNs·FCM 접수 결과예요. 기기에 표시됐거나 사용자가 읽었다는 뜻은 아니에요.';
+
+export { retention as retentionText } from './i18n/ko/retention';
+export const RETENTION_METRICS = [
+  'recipients',
+  'acceptedRecipients',
+  'confirmed',
+  'clicked',
+  'returned',
+  'retired',
+  'pending',
+  'cancelled',
+  'failed',
+  'unknown',
+] as const;

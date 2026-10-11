@@ -4,7 +4,11 @@ import { nativeAnalytics } from '../analytics';
 import { AccessibilityInfo, AppState } from 'react-native';
 import { setLatestBalance } from '@offside/game/balance';
 import type { BalanceConfig } from '@offside/contracts';
-import { restoreGame } from '@offside/app-core/career';
+import {
+  restoreGame,
+  configureCareerActivityReporter,
+  noteCareerActivity,
+} from '@offside/app-core/career';
 import { cachedGet, hasSessionHint } from '@offside/app-core/api/client';
 import { flushOutbox } from '@offside/app-core/outbox';
 import { NEWS_GAP_MS } from '@offside/app-core/news';
@@ -28,6 +32,14 @@ export async function boot(): Promise<void> {
   if (booted) return;
   booted = true;
   await loadSession();
+  void import('@offside/app-core/careerActivity')
+    .then((m) => {
+      configureCareerActivityReporter((input) => {
+        void m.reportCareerActivity(input);
+      });
+      if (appState.G) noteCareerActivity(appState.G);
+    })
+    .catch(() => {});
   // 유저 클럽 이름을 먼저 CLUBS에 반영해야 세이브를 읽을 때 현재 소속 이름이 커스텀 이름을 읽는다.
   loadClubCustom();
   appState.G = restoreGame({ uploadRetirement, uploadLegacyRetirement });
@@ -51,6 +63,7 @@ export async function boot(): Promise<void> {
   void checkStoreUpdate();
   AppState.addEventListener('change', (st) => {
     if (st !== 'active') return;
+    if (appState.G) noteCareerActivity(appState.G);
     syncClubStrength();
     void checkNews();
     void flushOutbox();
