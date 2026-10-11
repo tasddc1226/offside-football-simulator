@@ -81,10 +81,19 @@
       "triggers": { "crons": ["0 19 * * *", "*/5 * * * *"] },
       "queues": {
         "producers": [
+          { "binding": "CUP_PUSH_QUEUE", "queue": "offside-cup-push-production" },
           { "binding": "ADMIN_PUSH_QUEUE", "queue": "offside-admin-push-production" },
           { "binding": "CAREER_PUSH_QUEUE", "queue": "offside-career-push-production" },
         ],
         "consumers": [
+          {
+            "queue": "offside-cup-push-production",
+            "max_batch_size": 1,
+            "max_batch_timeout": 1,
+            "max_concurrency": 1,
+            "max_retries": 3,
+            "dead_letter_queue": "offside-cup-push-production-dlq",
+          },
           {
             "queue": "offside-career-push-production",
             "max_batch_size": 1,

@@ -2,6 +2,10 @@ import type { CupTextKey } from '../ko/cup.js';
 
 // T-11-145 オフサイドカップのサーバー文言(日本語)。
 export const CUP_JA: Record<CupTextKey, string> = {
+  completeTitle: '{cup}が終了しました',
+  completeBody: 'カップの結果と報酬のリロール券を確認してください。',
+  predictionRewardBody: 'カップの結果と勝敗予想で獲得したリロール券を確認してください。',
+  predictionResultBody: 'カップの結果と自分の勝敗予想の結果を確認してください。',
   predictionNotFinished: '終了した試合のみ集計できます。',
   predictionClosed: '試合が開始されたか、現在は予想できない試合です。',
   title: 'シーズン{season} 第{edition}回オフサイドカップ',

@@ -28,6 +28,7 @@ export type Bindings = {
   ADMIN_PUSH_QUEUE?: Queue<{ version: 1; sourceKey: string }>;
   REENGAGEMENT_PUSH_ENABLED?: string;
   CAREER_REMINDER_ENABLED?: string;
+  CUP_PUSH_QUEUE?: Queue<{ version: 1; cupId: string }>;
   CAREER_PUSH_QUEUE?: Queue<{ version: 1; batchId: string }>;
   /** Expo enhanced push security용 secret. 클라이언트에는 넣지 않는다. */
   EXPO_PUSH_ACCESS_TOKEN?: string;
