@@ -7,13 +7,15 @@
 App Store Connect · Play Console에 같은 ID로 소모성(Consumable · 일회성 관리 상품)으로 만든다. 정본은
 `packages/contracts/src/cup.ts`의 `IAP_PRODUCTS`다.
 
-| 상품 ID                        | 지급               | 가격(KRW) |
-| ------------------------------ | ------------------ | --------- |
-| `com.offsidelab.app.reroll_5`  | 리롤권 5장         | ₩1,100    |
-| `com.offsidelab.app.reroll_15` | 리롤권 15장        | ₩2,200    |
-| `com.offsidelab.app.reroll_40` | 리롤권 40장        | ₩5,500    |
-| `com.offsidelab.app.boost_3`   | 잠재력 강화권 3장  | ₩1,100    |
-| `com.offsidelab.app.boost_10`  | 잠재력 강화권 10장 | ₩2,200    |
+| 상품 ID                        | 지급                    | 가격(KRW) |
+| ------------------------------ | ----------------------- | --------- |
+| `com.offsidelab.app.reroll_5`  | 리롤권 5장              | ₩1,100    |
+| `com.offsidelab.app.reroll_15` | 리롤권 15장             | ₩2,200    |
+| `com.offsidelab.app.reroll_40` | 리롤권 40장             | ₩5,500    |
+| `com.offsidelab.app.boost_3`   | 잠재력 강화권 3장       | ₩1,100    |
+| `com.offsidelab.app.boost_10`  | 잠재력 강화권 10장      | ₩2,200    |
+| `com.offsidelab.app.scout_1`   | 프리미엄 스카우트권 1장 | ₩1,100    |
+| `com.offsidelab.app.scout_5`   | 프리미엄 스카우트권 5장 | ₩4,400    |
 
 - 로그인한 구단주만 산다(아이템이 구단주 계정에 들어온다). 웹에서는 팔지 않고, 가진 아이템은 웹에서도 쓴다.
 - 스토어가 가격을 알려 준 상품만 보인다. 상품을 등록하기 전에는 아무것도 보이지 않는다.
@@ -60,3 +62,21 @@ App Store Connect · Play Console에 같은 ID로 소모성(Consumable · 일회
 ## 후속
 
 - 환불 알림(App Store Server Notifications · Google RTDN)으로 환불된 구매의 아이템 회수. 지금은 운영 DB에서 `iap_purchases`로 확인한다.
+
+## 프리미엄 스카우트권 규칙 (T-11-196, 2026-10-10 결정)
+
+- 확률을 바꾸는 첫 유료 아이템이다. 사용자 결정: 돈을 쓴 유저가 위로 올라가는 구조를 받아들이고, 확률은 반드시 공개한다.
+- 한 장 = 후보 3명 새로 뽑기(`premiumScoutCandidates`). 새 스카우트 시드를 뽑고 그 시드를 `ft_scout_premium`·`ft_scout_reveal`에
+  남겨, 새로 고침해도 같은 프리미엄 후보와 공개된 잠재력이 그대로 나온다. 서버는 장수만 뺀다(`POST /v1/items/scout/use`, 멱등 키).
+- 확률(`packages/game/src/candidates.ts` `premiumPot`·`scoutOdds`): 일반 후보 한 명의 S 확률을 p(정규분포 꼬리, 밸런스 평균·편차로
+  계산)라 할 때, 프리미엄은 모든 후보의 S 확률이 정확히 2p다. 무작위 한 명(보장 후보)은 S가 아니면 A, 나머지 둘은 S가 아니면 일반
+  분포의 A~D 비율을 그대로 따른다. 등급을 먼저 정한 뒤 그 등급 구간 안에서 같은 정규분포로 값을 뽑는다.
+- 공개: 후보 선택 화면 · 구단주 화면 상점의 '확률 보기'(소수 둘째 자리), 확률 도감 '확률과 공정성', 공개 페이지 `/fairness/`·FAQ.
+- 출시: 상품 등록(ASC·Play) 뒤 서버 배포 + OTA. 1.1.2 심사(첫 소모성 IAP 5종)가 끝난 뒤 상품을 따로 심사 제출한다.
+- 상품 등록(2026-10-11): ASC `scout_1`(₩1,100, Apple ID 6821372591) · `scout_5`(₩4,400, 6821372736) — 한·영·일 이름과 설명,
+  174개국, 심사 메모, 심사 스크린샷(구단주 탭 상점 · 확률표)까지 넣고 '제출 준비 중'. Play `scout_1` · `scout_5`는 구매 옵션 `buy`,
+  174개 국가·지역 환산 가격으로 활성.
+- 1.1.2 사용자에게 내는 순서: 1.1.2 승인 · 출시 → 이 PR 머지 · 운영 배포. 운영 배포는 #563부터 `current` · `1.1.2` 두 런타임으로
+  OTA를 낸다(`docs/operations/ota-1.1.2-compatibility.md`). 이 PR에 1.1.2 overlay를 씌운 트리의 fingerprint가 빌드 커밋 ae10f12f와
+  같다. → ASC에서 스카우트권 2종 '심사에 추가'로 따로 제출 → 승인 뒤 운영 secret `IAP_TESTERS` 삭제로 리롤권 · 강화권 ·
+  스카우트권을 모두에게 연다. #614(1.1.2 소스)는 머지하지 않는다 — main 네이티브가 1.1.2와 같아지면 1.1.1이 OTA를 못 받는다.

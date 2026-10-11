@@ -43,9 +43,23 @@ export interface Candidate {
   total: number;
   /** 가장 높은 능력치 2개 — 열린 후보 카드에서 막대를 강조한다. */
   hintKeys: AttrKey[];
+  /** T-11-196 프리미엄 스카우트의 A 이상 보장 후보. */
+  guaranteed?: boolean;
 }
 
 const CLAMP = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+export type PotDraw = { mean: number; sd: number };
+export const potDraw = (dpos?: DetailPos | null): PotDraw =>
+  dpos ? { mean: BAL.potMean, sd: BAL.potSd } : PRESEASON_POT;
+
+// T-11-196 프리미엄 후보의 잠재력 식은 premiumScout.ts에 있다. 첫 화면 번들에 넣지 않으려고 떼어 두고, 후보 선택 화면이
+// premiumScout.ts를 불러올 때 여기에 등록한다.
+type PremiumPot = (draw: PotDraw, r: () => number, sure: boolean) => number;
+let premiumPot: PremiumPot | null = null;
+export function setPremiumPot(fn: PremiumPot) {
+  premiumPot = fn;
+}
 
 /** pos/주력 능력치에 대한 "기준 분포"(랜덤 없음) — 세 후보 모두 이 총합을 공유한다. */
 export function baseline(
@@ -104,24 +118,35 @@ export function generateCandidates(
   dpos?: DetailPos | null,
   seed: number = Math.floor(Math.random() * 0xffffffff),
   n = 3,
+  premium = false,
 ): Candidate[] {
   const base = baseline(pos, focus, dpos);
   const rand = localRng(candidateSeed(seed, pos, focus, dpos));
+  const draw = potDraw(dpos);
+  if (premium && !premiumPot) throw new Error('premiumScout.ts is not loaded');
+  const sure = premium ? Math.floor(localRng((seed ^ 0x5bd1e995) >>> 0)() * n) : -1;
   const out: Candidate[] = [];
   for (let i = 0; i < n; i++) {
     const attrs = i === 0 ? { ...base } : redistribute(base, focus, rand, 8 + i * 4, 4);
     const sorted = ATTR_KEYS.slice().sort((a, b) => attrs[b] - attrs[a]);
     // Potential ignores position/focus edits, preventing a fresh draw by editing the form.
     const potRng = localRng((seed ^ Math.imul(i + 1, 0x9e3779b1)) >>> 0);
-    const draw = dpos ? { mean: BAL.potMean, sd: BAL.potSd } : PRESEASON_POT;
-    const value = CLAMP(Math.round(draw.mean + gauss(potRng) * draw.sd), 55, 96);
+    const value = CLAMP(
+      Math.round(
+        premium ? premiumPot!(draw, potRng, i === sure) : draw.mean + gauss(potRng) * draw.sd,
+      ),
+      55,
+      96,
+    );
     const scouted = CLAMP(Math.round(value + gauss(potRng) * BAL.potScoutSd), 55, 96);
-    const min = Math.max(55, Math.floor(value / 10) * 10);
+    // 보장 후보는 표시 하한을 A(84)로 올린다 — 10단위 범위(80–89)로 'B–A'가 보이면 보장과 어긋난다. 표시 전용이다.
+    const min = Math.max(55, Math.floor(value / 10) * 10, i === sure ? 84 : 0);
     out.push({
       potential: { value, scouted, min, max: Math.min(96, Math.floor(value / 10) * 10 + 9) },
       attrs,
       total: ATTR_KEYS.reduce((sum, k) => sum + attrs[k], 0),
       hintKeys: sorted.slice(0, 2),
+      ...(i === sure ? { guaranteed: true } : {}),
     });
   }
   return out;

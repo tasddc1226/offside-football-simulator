@@ -309,7 +309,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     const moved = PutRes.parse(
       await (await putTeam(me.cookie, { slots: slots(null, null, cb) })).json(),
     ).data.team;
-    expect(moved.slots[2]).toMatchObject({ slot: 'CB', rating: 82, fit: 1 });
+    expect(moved.slots[2]).toMatchObject({ slot: 'CB', rating: 83, fit: 1.01 }); // T-11-197 최고 OVR 82 + 2까지
     expect(moved.lines.def).toBeGreaterThan(moved.lines.atk);
     expect(moved.lines.gk).toBe(YOUTH_OVR);
   });
@@ -420,7 +420,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       await (await putTeam(me.cookie, { slots: ids, layout: null, logo: null })).json(),
     ).data.team;
     expect(reset).toMatchObject({ layout: null, logo: null });
-    expect(reset.slots[2]).toMatchObject({ slot: 'CB', rating: 82 });
+    expect(reset.slots[2]).toMatchObject({ slot: 'CB', rating: 83 });
   });
 
   it('유효하지 않은 좌표·자리 및 큰 이미지 로고는 저장하지 않는다', async () => {

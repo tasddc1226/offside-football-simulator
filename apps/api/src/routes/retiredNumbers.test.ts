@@ -1,5 +1,6 @@
 import {
   HofDetailResponseSchema,
+  RetiredNumberProgressSchema,
   RetiredNumberCheckResponseSchema,
   RetiredNumbersResponseSchema,
   RetiredNumbersSummarySchema,
@@ -131,6 +132,74 @@ describe('영구결번 (T-10-076)', () => {
     expect(res.status).toBe(200);
     return successEnvelope(RetiredNumbersResponseSchema).parse(await res.json()).data.items;
   };
+
+  it('진행 중 도전 조회는 저장된 시즌과 같은 시즌의 선점만 보여 주고 결번을 부여하지 않는다', async () => {
+    await retire(A, skyBlue(10), '선점');
+    await putSeasons(B, twoClubs(10).career);
+    const read = async (number = 10, who = cookie) =>
+      createApp().request(
+        `/v1/careers/${B}/retired-number-progress?number=${number}`,
+        { headers: { cookie: who } },
+        ctx.env,
+      );
+    const response = await read();
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    const data = successEnvelope(RetiredNumberProgressSchema).parse(await response.json()).data;
+    expect(data).toMatchObject({ season: 0, number: 10, minSeasons: 6, recordedSeasons: 15 });
+    expect(data.clubs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          clubId: 'pl-0',
+          seasons: 8,
+          progress: 100,
+          eligible: true,
+          candidate: true,
+          availability: 'taken',
+        }),
+        expect.objectContaining({
+          clubId: 'pl-1',
+          seasons: 7,
+          progress: 100,
+          eligible: true,
+          candidate: true,
+          availability: 'open',
+        }),
+      ]),
+    );
+    expect(data.clubs[0]).not.toHaveProperty('score');
+    expect(await list()).toHaveLength(1);
+    expect((await read(0)).status).toBe(400);
+    const other = (await issueCookie(ctx)).cookie;
+    expect((await read(10, other)).status).toBe(409);
+    await ctx.env.DB.prepare('UPDATE careers SET service_season = 1 WHERE id = ?').bind(B).run();
+    const current = successEnvelope(RetiredNumberProgressSchema).parse(
+      await (await read()).json(),
+    ).data;
+    expect(current.season).toBe(1);
+    expect(current.clubs.every((club) => club.availability === 'open')).toBe(true);
+    expect(await list()).toHaveLength(1);
+  });
+
+  it('도전 조회는 아마추어·복무 시즌을 제외하고 짧은 구단 경력을 조건 충족으로 표시하지 않는다', async () => {
+    await putSeasons(B, [quietSeason(2030, '맨체스터 스카이블루', 'pl-0')]);
+    const { year: militaryYear, ...military } = quietSeason(2031, '맨체스터 스카이블루', 'pl-0');
+    const saved = await callJson(ctx.env, 'PUT', `/v1/careers/${B}/seasons/${militaryYear}`, {
+      cookie,
+      body: { ...seasonBody(), season: { ...military, mil: true } },
+    });
+    expect(saved.status).toBe(200);
+    const response = await createApp().request(
+      `/v1/careers/${B}/retired-number-progress?number=7`,
+      { headers: { cookie } },
+      ctx.env,
+    );
+    const data = successEnvelope(RetiredNumberProgressSchema).parse(await response.json()).data;
+    expect(data.clubs).toMatchObject([
+      { seasons: 1, progress: 0, eligible: false, candidate: false, availability: 'unknown' },
+    ]);
+    expect(data.recordedSeasons).toBe(2);
+  });
 
   it('이름을 공개한 자격자는 결번을 받고, 명예의 전당 상세·목록에 보인다', async () => {
     expect(await retire(A, skyBlue(10), '김결번')).toMatchObject({

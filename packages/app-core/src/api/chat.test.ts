@@ -12,6 +12,16 @@ const msg = (id: string, author = 'a'): ChatMessage => ({
 });
 
 describe('T-11-015 채팅 상태', () => {
+  it('applies avatar updates and default restoration only to the matching author', () => {
+    const v = { ...EMPTY_CHAT, messages: [msg('1'), msg('2', 'b')] };
+    const changed = applyChat(v, { t: 'avatar', author: 'a', avatarId: 'image' }, () => false);
+    expect(changed.messages[0]?.avatarId).toBe('image');
+    expect(changed.messages[1]?.avatarId).toBeUndefined();
+    expect(
+      applyChat(changed, { t: 'avatar', author: 'a', avatarId: null }, () => false).messages[0]
+        ?.avatarId,
+    ).toBeNull();
+  });
   it('들어오면 최근 줄을 받고, 새 줄은 뒤에 붙이고, 가린 줄은 뺀다. 차단한 작성자는 넣지 않는다', () => {
     const skip = (m: ChatMessage) => m.author === 'x';
     let v = applyChat(

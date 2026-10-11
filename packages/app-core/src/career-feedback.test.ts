@@ -3,13 +3,7 @@ import * as g from '@offside/game/index';
 import { createRng, getActiveRng, setActiveRng } from '@offside/game/rng';
 import { spreadAttr } from '@offside/game/attributes';
 import type { GameState, MarketResult, OfferOption } from '@offside/game/types';
-import {
-  careerGoals,
-  coachFeedback,
-  marketFeedback,
-  offerFeedback,
-  retiredNumberHint,
-} from './career-feedback.js';
+import { careerGoals, coachFeedback, marketFeedback, offerFeedback } from './career-feedback.js';
 
 const fresh = (seed = 11): GameState => {
   setActiveRng(createRng(seed));
@@ -109,11 +103,6 @@ describe('제의 설명과 기록 목표', () => {
     const uni = { kind: 'uni', name: '대학 진학', desc: '' } as const;
     expect(marketFeedback(s, { ...market, options: [uni] })).toBeUndefined();
     expect(offerFeedback(s, uni)).toBeUndefined();
-  });
-  it('영구결번 안내는 등번호 외에 심사 기준 수치를 드러내지 않는다', () => {
-    const hint = retiredNumberHint(fresh());
-    expect(hint).toContain('9번이 영구결번될 수 있어요');
-    expect(hint.replace('9번', '')).not.toMatch(/\d/);
   });
   it('아마추어 구단에는 단년 시즌으로 달성하기 어려운 구단 장기 목표를 표시하지 않는다', () => {
     expect(careerGoals(fresh()).some((x) => x.key === 'club-apps')).toBe(false);

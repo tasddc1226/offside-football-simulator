@@ -9,7 +9,7 @@ const ko = {
   navMatches: '경기',
   navAch: '업적',
   navHistory: '경기 기록',
-  navOwner: '구단주',
+  navOwner: '내 구단',
   navNewAch: (p: { n: number }) => `새 업적 ${p.n}개`,
   loadFail: '팀을 불러오지 못했어요.',
   myTeam: '내 팀',

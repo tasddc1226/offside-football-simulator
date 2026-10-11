@@ -21,6 +21,21 @@ describe('T-11-015 ChatRoom', () => {
     vi.unstubAllGlobals();
   });
 
+  it('avatar changes refresh stored messages and connected writers without exposing profile IDs', async () => {
+    const { room, join } = fakeRoom();
+    const alice = await join(room.issueTicket(ALICE));
+    const reader = await join();
+    say(alice, room, 'first');
+    const avatarId = '11111111-1111-4111-8111-111111111111';
+    await room.updateAvatar(ALICE.profileId, avatarId);
+    expect(last(reader)).toEqual({ t: 'avatar', author: ALICE.author, avatarId });
+    const fresh = await join();
+    expect(fresh.sent[0]).toMatchObject({ t: 'hello', messages: [{ avatarId }] });
+    await room.updateAvatar(ALICE.profileId, null);
+    expect(last(reader)).toEqual({ t: 'avatar', author: ALICE.author, avatarId: null });
+    expect(JSON.stringify(last(reader))).not.toContain(ALICE.profileId);
+  });
+
   it('핑에는 깨지 않고 pong을 돌려주게 한다', () => {
     const { room } = fakeRoom();
     expect(room).toBeDefined();

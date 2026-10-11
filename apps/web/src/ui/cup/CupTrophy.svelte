@@ -58,7 +58,7 @@
     height: var(--t-size);
     pointer-events: none;
   }
-  svg {
+  .cup-trophy :global(svg) {
     position: relative;
     z-index: 2;
     font-family: var(--font-display, inherit);

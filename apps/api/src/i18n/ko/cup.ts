@@ -24,6 +24,7 @@ export const CUP_KO = {
   withdrawClosed: '접수가 끝나 취소할 수 없어요.',
   noReroll: '리롤권이 없어요.',
   noBoost: '잠재력 강화권이 없어요.',
+  noScout: '프리미엄 스카우트권이 없어요.',
   // T-11-174 인앱 상품 구매 확인.
   iapInvalid: '구매를 확인하지 못했어요.',
   iapPending: '결제가 아직 끝나지 않았어요. 결제가 끝나면 자동으로 받아요.',
@@ -52,6 +53,7 @@ export const CUP_KO = {
   group: '조별 예선',
   championTitle: '{cup} 우승!',
   outTitle: '{cup}를 마쳤어요',
+  titleNotOwned: '받은 적 없는 칭호예요.',
   adminPast: '접수 시작은 지금보다 뒤여야 해요.',
   adminSeason: '대회 전체가 한 시즌 안에 있어야 해요.',
   adminOverlap: '제{edition}회 대회 기간과 겹쳐요.',

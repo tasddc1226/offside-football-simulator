@@ -56,9 +56,11 @@ import { marketValueChart } from './marketValueChart';
 import { owner } from './owner';
 import { ownerConflict } from './ownerConflict';
 import { ownerPlayers } from './ownerPlayers';
+import { ownerProfile } from './ownerProfile';
 import { playerNudge } from './playerNudge';
 import { push } from './push';
 import { retired } from './retired';
+import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
 import { seasonRecap } from './seasonRecap';
 import { settings } from './settings';
@@ -141,9 +143,11 @@ export const ja = {
   owner,
   ownerConflict,
   ownerPlayers,
+  ownerProfile,
   playerNudge,
   push,
   retired,
+  scout,
   seasonGauge,
   seasonRecap,
   settings,

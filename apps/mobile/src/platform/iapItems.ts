@@ -20,6 +20,7 @@ import {
 } from '@offside/contracts/cup';
 import { claimIap, fetchItems, type OwnerItemsResponse } from '@offside/app-core/api/cup';
 import { iapText as L } from '@offside/app-core/i18n/ko/iap';
+import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
 import { toast } from '../game/host';
 import { onSessionChanged } from './session';
 import { connectStore, onStoreError, onStorePurchase, STORE_SUPPORTED } from './store';
@@ -35,7 +36,7 @@ export const iapItems = proxy({
   /** 결제 중인 상품. */
   busy: null as IapProductId | null,
   /** 서버가 마지막으로 알려 준 장수. 받은 뒤 화면이 바로 고친다. */
-  items: null as Pick<OwnerItemsResponse, 'reroll' | 'boost'> | null,
+  items: null as Pick<OwnerItemsResponse, 'reroll' | 'boost' | 'scout'> | null,
 });
 
 /** 이 아이템의 묶음 중 지금 살 수 있는(스토어가 가격을 알려 준) 상품. 스토어를 열 수 없으면 빈 목록. */
@@ -55,10 +56,16 @@ async function claim(p: Purchase, quiet: boolean) {
     if (!quiet) toast(r.error.retryable ? L.claimFail : r.error.message || L.claimFail);
     return;
   }
-  iapItems.items = { reroll: r.data.reroll, boost: r.data.boost };
+  iapItems.items = { reroll: r.data.reroll, boost: r.data.boost, scout: r.data.scout };
   await finishTransaction({ purchase: p, isConsumable: true }).catch(() => {});
   const { item } = IAP_PRODUCTS[productId];
-  toast(item === 'boost' ? L.boostDone({ n: r.data.boost }) : L.rerollDone({ n: r.data.reroll }));
+  toast(
+    item === 'boost'
+      ? L.boostDone({ n: r.data.boost })
+      : item === 'scout'
+        ? SL.got({ n: r.data.scout })
+        : L.rerollDone({ n: r.data.reroll }),
+  );
 }
 
 onStorePurchase((p) => {
@@ -89,7 +96,7 @@ export async function syncIapItems() {
     return;
   }
   account = r.data.iap.account;
-  iapItems.items = { reroll: r.data.reroll, boost: r.data.boost };
+  iapItems.items = { reroll: r.data.reroll, boost: r.data.boost, scout: r.data.scout };
   if (!(await connectStore())) return;
   try {
     const [products, pending] = await Promise.all([

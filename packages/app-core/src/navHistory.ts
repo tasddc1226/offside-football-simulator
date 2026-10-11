@@ -21,6 +21,8 @@ export interface NavEntry {
   /** T-10-130 구단주 팀 안의 화면 · 기록실 팀 랭킹에서 연 팀 프로필. */
   teamView: TeamView;
   hofTeam: string | null;
+  /** T-11-150 hofTeam 팀의 구단주 프로필. */
+  hofOwner?: boolean;
 }
 
 // 선수 상세는 LegendView 객체마다 번호를 붙여 구분한다.
@@ -40,7 +42,8 @@ export function navKey(s: AppState): string {
   if (screen === 'legend') return `legend:${legendId(s.legend)}`;
   // 팀·시즌 업적은 같은 화면의 탭이라 한 기록으로 친다.
   if (screen === 'team') return `team:${s.teamView === 'achievements' ? 'team' : s.teamView}`;
-  if (screen === 'hof') return `hof:${s.hof.tab === 'teams' ? (s.hof.team ?? '') : ''}`;
+  if (screen === 'hof')
+    return `hof:${s.hof.tab === 'teams' ? `${s.hof.team ?? ''}${s.hof.owner ? ':owner' : ''}` : ''}`;
   return screen;
 }
 
@@ -58,6 +61,7 @@ export function navSnapshot(s: AppState, y: number): NavEntry {
     legendBack: s.legendBack,
     teamView: s.teamView,
     hofTeam: s.hof.tab === 'teams' ? s.hof.team : null,
+    hofOwner: s.hof.tab === 'teams' && !!s.hof.team && !!s.hof.owner,
   };
 }
 
@@ -85,8 +89,13 @@ export function navRestore(s: AppState, e: NavEntry): Screen {
     s.legendBack = e.legendBack;
   }
   if (screen === 'team') s.teamView = e.teamView;
-  if (screen === 'hof' && s.hof.team !== e.hofTeam)
-    s.hof = { ...s.hof, team: e.hofTeam, ...(e.hofTeam ? { tab: 'teams' as const } : {}) };
+  if (screen === 'hof' && (s.hof.team !== e.hofTeam || !!s.hof.owner !== !!e.hofOwner))
+    s.hof = {
+      ...s.hof,
+      team: e.hofTeam,
+      owner: !!e.hofOwner,
+      ...(e.hofTeam ? { tab: 'teams' as const } : {}),
+    };
   s.screen = screen;
   return screen;
 }

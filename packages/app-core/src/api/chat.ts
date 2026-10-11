@@ -172,6 +172,13 @@ export function applyChat(
     }
     case 'msg':
       return skip(e.m) ? view : { ...view, messages: [...view.messages, e.m].slice(-KEEP) };
+    case 'avatar':
+      return {
+        ...view,
+        messages: view.messages.map((m) =>
+          m.author === e.author ? { ...m, avatarId: e.avatarId } : m,
+        ),
+      };
     case 'online':
       return { ...view, online: e.n };
     case 'hide':

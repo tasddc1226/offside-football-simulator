@@ -32,6 +32,9 @@ export type ChatWriter = {
   admin: boolean;
   /** T-11-128 입장권을 받을 때의 지난 시즌 티어. */
   tier?: OwnerTier | null;
+  /** T-11-150 입장권을 받을 때의 대표 칭호. */
+  title?: string | null;
+  avatarId?: string | null;
 };
 type Attachment = { w: ChatWriter | null; sent: number[] };
 /** 신고·차단할 때 API가 읽는 메시지 한 줄(작성자 프로필 포함). */
@@ -46,6 +49,8 @@ const toMessage = (r: Row): StoredMessage => ({
   body: String(r.body),
   admin: r.admin === 1,
   tier: (r.tier as OwnerTier | null) ?? null,
+  title: (r.title as string | null) ?? null,
+  avatarId: (r.avatar_id as string | null) ?? null,
   profileId: String(r.profile_id),
 });
 const publicOf = ({ profileId: _, ...m }: StoredMessage): ChatMessage => m;
@@ -79,6 +84,12 @@ export class ChatRoom extends DurableObject<Bindings> {
     const cols = this.sql.exec<Row>('PRAGMA table_info(messages)').toArray();
     if (!cols.some((c) => c.name === 'tier'))
       this.sql.exec('ALTER TABLE messages ADD COLUMN tier TEXT');
+    // T-11-150 대표 칭호 칸.
+    if (!cols.some((c) => c.name === 'title'))
+      this.sql.exec('ALTER TABLE messages ADD COLUMN title TEXT');
+    if (!cols.some((c) => c.name === 'avatar_id'))
+      this.sql.exec('ALTER TABLE messages ADD COLUMN avatar_id TEXT');
+    this.sql.exec('CREATE INDEX IF NOT EXISTS messages_profile ON messages (profile_id)');
     this.sql.exec(
       `CREATE TABLE IF NOT EXISTS community_push_outbox (id TEXT PRIMARY KEY REFERENCES messages(id), at INTEGER NOT NULL)`,
     );
@@ -91,6 +102,31 @@ export class ChatRoom extends DurableObject<Bindings> {
   }
 
   /** 입장권을 만든다. 한 번 쓰면 사라지고, CHAT_TICKET_MS 안에 써야 한다. */
+  async updateAvatar(profileId: string, avatarId: string | null): Promise<void> {
+    const rows = this.sql
+      .exec<Row>('SELECT author FROM messages WHERE profile_id = ? LIMIT 1', profileId)
+      .toArray();
+    this.sql.exec('UPDATE messages SET avatar_id = ? WHERE profile_id = ?', avatarId, profileId);
+    let author = rows[0]?.author as string | undefined;
+    for (const ws of this.ctx.getWebSockets()) {
+      const att = ws.deserializeAttachment() as Attachment;
+      if (att.w?.profileId === profileId) {
+        author = att.w.author;
+        ws.serializeAttachment({ ...att, w: { ...att.w, avatarId } });
+      }
+    }
+    for (const row of this.sql.exec<Row>('SELECT id, writer FROM tickets').toArray()) {
+      const writer = JSON.parse(String(row.writer)) as ChatWriter;
+      if (writer.profileId === profileId)
+        this.sql.exec(
+          'UPDATE tickets SET writer = ? WHERE id = ?',
+          JSON.stringify({ ...writer, avatarId }),
+          String(row.id),
+        );
+    }
+    if (author) this.broadcast({ t: 'avatar', author, avatarId });
+  }
+
   issueTicket(writer: ChatWriter): string {
     const now = Date.now();
     const id = crypto.randomUUID();
@@ -150,7 +186,15 @@ export class ChatRoom extends DurableObject<Bindings> {
     if (!check) return;
     if (!check.ok) return this.reject(ws, check.code);
     ws.serializeAttachment({ ...att, sent: check.sent } satisfies Attachment);
-    const { profileId, author, nickname, admin, tier = null } = att.w;
+    const {
+      profileId,
+      author,
+      nickname,
+      admin,
+      tier = null,
+      title = null,
+      avatarId = null,
+    } = att.w;
     const m: ChatMessage = {
       id: crypto.randomUUID(),
       at: now,
@@ -159,11 +203,13 @@ export class ChatRoom extends DurableObject<Bindings> {
       body: check.body,
       admin,
       tier,
+      title,
+      avatarId,
     };
     const notify = !admin && !!communityOwnerEmail(this.env);
     this.ctx.storage.transactionSync(() => {
       this.sql.exec(
-        'INSERT INTO messages (id, at, profile_id, author, nickname, body, admin, tier) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO messages (id, at, profile_id, author, nickname, body, admin, tier, title, avatar_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         m.id,
         m.at,
         profileId,
@@ -172,6 +218,8 @@ export class ChatRoom extends DurableObject<Bindings> {
         m.body,
         admin ? 1 : 0,
         tier,
+        title,
+        avatarId,
       );
       if (notify)
         this.sql.exec('INSERT INTO community_push_outbox (id, at) VALUES (?, ?)', m.id, now);

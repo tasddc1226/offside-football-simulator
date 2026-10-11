@@ -113,11 +113,8 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     const shown = rows.filter(
       (r) => !hidden?.blockedAuthors.has(r.profileId) && !hidden?.reportedComments.has(r.id),
     );
-    const tiers = await ownerTiersOf(
-      db,
-      shown.map((r) => r.profileId),
-      nowIso(),
-    );
+    const ids = shown.map((r) => r.profileId);
+    const tiers = await ownerTiersOf(db, ids, nowIso());
     const comments = shown.map(({ profileId, ...r }) => ({
       ...r,
       tier: tiers.get(profileId) ?? null,
@@ -240,6 +237,8 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       body,
       admin: viewer.admin,
       tier: await ownerTierOfProfile(db, profileId, now),
+      title: viewer.title,
+      avatarId: viewer.avatarId ?? null,
       deletable: true,
       createdAt: now,
     };

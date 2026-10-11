@@ -22,16 +22,15 @@ import { presetLayout } from '@offside/contracts/owner-team';
 import { friendRequestText } from '@offside/app-core/friendText';
 import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
 import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
-import { cupTrophy, plateText, trophyStage } from '@offside/app-core/cupTrophy';
-import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
-import { stageLabel } from '../../owner/cupText';
+import { ownerProfileText as LO } from '@offside/app-core/i18n/ko/ownerProfile';
+import { CupHonors } from '../../../components/CupHonors';
+import { TitleBadge } from '../../../components/TitleBadge';
 import { toast } from '../../../game/host';
+import { appState } from '../../../store';
 import { DISPLAY, rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
 import { Btn } from '../../../ui/Btn';
 import { Card } from '../../../ui/Card';
-import { ChampBadge } from '../../../components/ChampBadge';
-import { CupTrophy } from '../../../ui/CupTrophy';
 import { Press } from '../../../ui/Press';
 import { Txt } from '../../../ui/Txt';
 import { useOnPull } from '../../../ui/refresh';
@@ -97,7 +96,6 @@ export default function TeamProfile({ id }: { id: string }) {
   }
 
   // 가장 최근 우승 — 팀 이름 아래 챔피언 배지.
-  const champ = team?.cupHonors?.find((h) => h.stage === 'champion');
   // T-11-165 선발 선수 카드 — 그라운드 카드를 누르면 내 팀처럼 확대 카드가 열린다(웹 TeamProfile, 배포 전 응답엔 없다).
   const players = useMemo(() => new Map(team?.players?.map((p) => [p.careerId, p]) ?? []), [team]);
   const cells =
@@ -162,9 +160,9 @@ export default function TeamProfile({ id }: { id: string }) {
                 <Txt v="h1" accessibilityRole="header">
                   {team.name}
                 </Txt>
-                {champ ? (
+                {team.ownerTitle ? (
                   <View style={{ marginTop: 2, marginBottom: 4, alignItems: 'flex-start' }}>
-                    <ChampBadge edition={champ.edition} />
+                    <TitleBadge title={team.ownerTitle} />
                   </View>
                 ) : null}
                 <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
@@ -174,6 +172,14 @@ export default function TeamProfile({ id }: { id: string }) {
                   </Txt>
                   {mine ? L.profMine : ''}
                 </Txt>
+                <Btn
+                  sm
+                  testID="owner-profile"
+                  style={{ alignSelf: 'flex-start', marginTop: 6 }}
+                  onPress={() => (appState.hof = { ...appState.hof, owner: true })}
+                >
+                  {LO.open}
+                </Btn>
                 {team.ownerNickname ? (
                   <Txt tone="muted" style={{ fontSize: rem(0.8125) }} testID="team-owner">
                     {L.profOwner}
@@ -364,52 +370,7 @@ export default function TeamProfile({ id }: { id: string }) {
               </Txt>
             )}
           </Card>
-          {team.cupHonors?.length ? (
-            <Card gap={10} testID="team-cup-honors">
-              <View>
-                <Txt v="eyebrow">Offside Cup</Txt>
-                <Txt v="h2" accessibilityRole="header">
-                  {CL.honorsTitle}
-                </Txt>
-              </View>
-              <View style={{ gap: 8 }}>
-                {team.cupHonors.map((h) => {
-                  const trophy = trophyStage(h.stage);
-                  return (
-                    <View
-                      key={`${h.cupId}`}
-                      testID={`cup-honor-${h.cupId}`}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 10,
-                        paddingVertical: trophy ? 8 : 10,
-                        paddingHorizontal: trophy ? 10 : 12,
-                        borderRadius: 12,
-                        backgroundColor: c.surface2,
-                        borderWidth: trophy ? 2 : 0,
-                        borderColor: trophy ? cupTrophy(trophy).palette.base : c.pitchAccent,
-                      }}
-                    >
-                      {trophy ? (
-                        <CupTrophy stage={trophy} name={plateText(h.owner, h.season)} size={56} />
-                      ) : null}
-                      <View style={{ gap: 2, flexShrink: 1 }}>
-                        <Txt bold>
-                          {h.stage === 'champion'
-                            ? CL.champTitle({ n: h.edition })
-                            : CL.honorResult({ edition: h.edition, stage: stageLabel(h.stage) })}
-                        </Txt>
-                        <Txt tone="muted" style={{ fontSize: rem(0.8333) }}>
-                          {CL.honorTeam({ team: h.teamName })}
-                        </Txt>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            </Card>
-          ) : null}
+          <CupHonors honors={team.cupHonors ?? []} />
           {mine ? null : <NameReport kind="team" id={team.id} name={team.name} />}
           {!mine && team.ownerNickname ? (
             <NameReport kind="owner" id={team.id} name={team.ownerNickname} />

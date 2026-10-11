@@ -2,7 +2,16 @@
 // 맨 위 시즌 카드(등급 · 한 줄 요약 · 자랑거리) → 숫자 → 이 시즌의 얼굴 → 카드 등급 → 팀 → 순위 → 기록 배지 → 남긴 선수 순.
 // 끝난 시즌이 둘 이상이면 시즌 칩으로 고른다(기본은 가장 최근). '결산 공유하기'는 같은 값을 4:5 한 장으로 그린다(RecapShare.tsx).
 // 결산을 열면 그 시즌을 '봤다'고 기록해 구단주 허브 카드의 NEW 표시를 끈다. 뒤로 가기는 구단주 허브로 돌아간다.
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  Fragment,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { Animated, Easing, useWindowDimensions, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
@@ -49,6 +58,8 @@ import { Seg, TabOpt } from '../board/parts';
 import { RECAP_INK, RecapBackdrop, RecapShare } from './RecapShare';
 import { RecapCardReel } from './recap/RecapCardReel';
 import { RecapTeamPhoto } from './recap/RecapTeamPhoto';
+
+const StillRecord = createContext(false);
 
 /** 카드 제목 줄(영문 eyebrow 없이 소제목만). */
 const Sec = ({ children }: { children: string }) => (
@@ -112,7 +123,7 @@ function Stat({ label, value, testID }: { label: string; value: string; testID?:
 
 /** 차오르는 숫자 글자. 스크린 리더에는 처음부터 최종 값을 읽어 준다. */
 function CountUp({ value, style, testID }: { value: number; style: object; testID?: string }) {
-  const shown = Math.round(useCountUp(value, { ms: 1100 }));
+  const shown = Math.round(useCountUp(value, { ms: 1100, animate: !useContext(StillRecord) }));
   return (
     <Txt num testID={testID} accessibilityLabel={num(value)} style={style}>
       {num(shown)}
@@ -237,25 +248,31 @@ function HonorBadge({ h }: { h: HonorView }) {
 
 type State = { kind: 'loading' } | { kind: 'error' } | { kind: 'ok'; res: SeasonRecapResponse };
 
-export default function SeasonRecap() {
+export default function SeasonRecap({ record }: { record?: SeasonRecapResponse } = {}) {
+  const embedded = !!record;
+  const Container = embedded ? Fragment : Screen;
   // 끝난 시즌(오래된 순)과 고른 시즌 — 고르지 않았으면 가장 최근.
   const [seasons, setSeasons] = useState<number[] | null>(null);
   const [picked, setPicked] = useState<number | null>(null);
   const [st, setSt] = useState<State>({ kind: 'loading' });
   const [retryN, setRetryN] = useState(0);
   const [sharing, setSharing] = useState(false);
-  const { tick, track, pulled } = useRefresh();
+  // Embedded records are already loaded by the archive. Registering a refresh
+  // control here reparents the Android ScrollView and resets the open archive.
+  const { tick, track, pulled } = useRefresh(!embedded);
   const season = picked ?? seasons?.at(-1) ?? null;
 
   useEffect(() => {
+    if (embedded) return;
     let alive = true;
     void track(fetchOwnerHonors()).then((r) => alive && r.ok && setSeasons(r.data.seasons));
     return () => {
       alive = false;
     };
-  }, [tick, track]);
+  }, [tick, track, embedded]);
 
   useEffect(() => {
+    if (embedded) return;
     // 시즌 목록이 오기 전에는 서버가 정한 가장 최근 시즌을 받는다(season 생략).
     if (!pulled) setSt({ kind: 'loading' });
     let alive = true; // 더 늦게 고른 시즌의 응답만 쓴다.
@@ -271,128 +288,143 @@ export default function SeasonRecap() {
     return () => {
       alive = false;
     };
-  }, [season, tick, retryN, track]);
+  }, [season, tick, retryN, track, embedded]);
 
-  const res = st.kind === 'ok' ? st.res : null;
+  const res = record ?? (st.kind === 'ok' ? st.res : null);
   const recap = res?.recap ?? null;
   const shown = res ? teamSeasonLabel(res.season) : '';
   const honors = res ? honorViews(res.honors) : [];
   const muted = { fontSize: rem(0.875) } as const;
 
   return (
-    <Screen>
-      <Topbar />
-      <BackBar inline testID="owner" fallback={() => go('owner')} />
-      <Card gap={8} testID="recap">
-        <View style={{ gap: 2 }}>
-          <Txt v="eyebrow">Season recap</Txt>
-          <Txt v="h1" accessibilityRole="header">
-            {res ? L.title({ season: shown }) : L.cardTitle}
-          </Txt>
-          {recap ? (
-            <Txt tone="muted" style={muted}>
-              {recapCutoffText(recap)}
-            </Txt>
-          ) : null}
-        </View>
-        {seasons && seasons.length > 1 ? (
-          <Seg cols={Math.min(seasons.length, 3)} label={L.pickSeason} style={{ marginTop: 4 }}>
-            {seasons.map((id) => (
-              <TabOpt
-                key={id}
-                title={teamSeasonLabel(id)}
-                selected={season === id}
-                testID={`recap-season-${id}`}
-                onPress={() => setPicked(id)}
-              />
-            ))}
-          </Seg>
-        ) : null}
-        {st.kind === 'loading' ? (
-          <Txt tone="muted" accessibilityLiveRegion="polite" style={muted}>
-            {'…'}
-          </Txt>
-        ) : st.kind === 'error' ? (
-          <View style={{ gap: 8 }}>
-            <Txt tone="muted" style={muted}>
-              {L.loadFail}
-            </Txt>
-            <Btn
-              sm
-              testID="recap-retry"
-              style={{ alignSelf: 'flex-start' }}
-              onPress={() => setRetryN((n) => n + 1)}
-            >
-              {L.retry}
-            </Btn>
-          </View>
-        ) : res && res.status !== 'ready' ? (
-          <Txt tone="muted" testID={`recap-${res.status}`} style={muted}>
-            {recapStatusText(res)}
-          </Txt>
-        ) : null}
-      </Card>
-
-      {res && recap ? (
-        <>
-          <Hero recap={recap} onShare={() => setSharing(true)} />
-          <Squad recap={recap} season={shown} />
-          <Numbers recap={recap} />
-          <Faces recap={recap} />
-          <Cards recap={recap} />
-          <TeamSection recap={recap} />
-          <Ranks recap={recap} />
-
-          <Card gap={10} testID="recap-honors">
-            <Sec>{L.secBadges}</Sec>
-            {honors.length > 0 ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 14, paddingTop: 4 }}>
-                {honors.map((h) => (
-                  <HonorBadge key={`${h.season}-${h.kind}`} h={h} />
-                ))}
+    <StillRecord.Provider value={embedded}>
+      <Container>
+        {!embedded ? (
+          <>
+            <Topbar />
+            <BackBar inline testID="owner" fallback={() => go('owner')} />
+            <Card gap={8} testID="recap">
+              <View style={{ gap: 2 }}>
+                <Txt v="eyebrow">Season recap</Txt>
+                <Txt v="h1" accessibilityRole="header">
+                  {res ? L.title({ season: shown }) : L.cardTitle}
+                </Txt>
+                {recap ? (
+                  <Txt tone="muted" style={muted}>
+                    {recapCutoffText(recap)}
+                  </Txt>
+                ) : null}
               </View>
-            ) : (
-              <Txt tone="muted" style={muted}>
-                {L.honorsNone}
-              </Txt>
-            )}
-          </Card>
-
-          <Card gap={8} testID="recap-activity">
-            <Sec>{L.secLegacy}</Sec>
-            <Grid cols={2}>
-              <Stat
-                label={L.retiredNumbers}
-                value={num(recap.retiredNumbers)}
-                testID="recap-stat-retired-numbers"
-              />
-              <Stat
-                label={L.wallOfHonor}
-                value={num(recap.wallOfHonor)}
-                testID="recap-stat-wall-of-honor"
-              />
-              <Stat label={L.firsts} value={num(recap.firsts)} testID="recap-stat-firsts" />
-              {recap.stats ? (
-                <Stat
-                  label={L.numAssists}
-                  value={num(recap.stats.assists)}
-                  testID="recap-stat-assists"
-                />
+              {seasons && seasons.length > 1 ? (
+                <Seg
+                  cols={Math.min(seasons.length, 3)}
+                  label={L.pickSeason}
+                  style={{ marginTop: 4 }}
+                >
+                  {seasons.map((id) => (
+                    <TabOpt
+                      key={id}
+                      title={teamSeasonLabel(id)}
+                      selected={season === id}
+                      testID={`recap-season-${id}`}
+                      onPress={() => setPicked(id)}
+                    />
+                  ))}
+                </Seg>
               ) : null}
-            </Grid>
-          </Card>
+              {st.kind === 'loading' ? (
+                <Txt tone="muted" accessibilityLiveRegion="polite" style={muted}>
+                  {'…'}
+                </Txt>
+              ) : st.kind === 'error' ? (
+                <View style={{ gap: 8 }}>
+                  <Txt tone="muted" style={muted}>
+                    {L.loadFail}
+                  </Txt>
+                  <Btn
+                    sm
+                    testID="recap-retry"
+                    style={{ alignSelf: 'flex-start' }}
+                    onPress={() => setRetryN((n) => n + 1)}
+                  >
+                    {L.retry}
+                  </Btn>
+                </View>
+              ) : res && res.status !== 'ready' ? (
+                <Txt tone="muted" testID={`recap-${res.status}`} style={muted}>
+                  {recapStatusText(res)}
+                </Txt>
+              ) : null}
+            </Card>
+          </>
+        ) : null}
 
-          <View style={{ alignItems: 'center', gap: 4, paddingBottom: 4 }}>
-            <ShareButton where="end" onPress={() => setSharing(true)} />
-            <Txt tone="muted" center testID="recap-next" style={muted}>
-              {L.next({ season: teamSeasonLabel(res.season + 1) })}
-            </Txt>
-          </View>
+        {res && recap ? (
+          <>
+            {!embedded ? <Hero recap={recap} onShare={() => setSharing(true)} /> : null}
+            <Squad recap={recap} season={shown} still={embedded} />
+            <Numbers recap={recap} />
+            <Faces recap={recap} />
+            <Cards recap={recap} />
+            <TeamSection recap={recap} />
+            <Ranks recap={recap} />
 
-          {sharing ? <RecapShare recap={recap} close={() => setSharing(false)} /> : null}
-        </>
-      ) : null}
-    </Screen>
+            {!embedded ? (
+              <Card gap={10} testID="recap-honors">
+                <Sec>{L.secBadges}</Sec>
+                {honors.length > 0 ? (
+                  <View
+                    style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 14, paddingTop: 4 }}
+                  >
+                    {honors.map((h) => (
+                      <HonorBadge key={`${h.season}-${h.kind}`} h={h} />
+                    ))}
+                  </View>
+                ) : (
+                  <Txt tone="muted" style={muted}>
+                    {L.honorsNone}
+                  </Txt>
+                )}
+              </Card>
+            ) : null}
+            <Card gap={8} testID="recap-activity">
+              <Sec>{L.secLegacy}</Sec>
+              <Grid cols={2}>
+                <Stat
+                  label={L.retiredNumbers}
+                  value={num(recap.retiredNumbers)}
+                  testID="recap-stat-retired-numbers"
+                />
+                <Stat
+                  label={L.wallOfHonor}
+                  value={num(recap.wallOfHonor)}
+                  testID="recap-stat-wall-of-honor"
+                />
+                <Stat label={L.firsts} value={num(recap.firsts)} testID="recap-stat-firsts" />
+                {recap.stats ? (
+                  <Stat
+                    label={L.numAssists}
+                    value={num(recap.stats.assists)}
+                    testID="recap-stat-assists"
+                  />
+                ) : null}
+              </Grid>
+            </Card>
+
+            <View style={{ alignItems: 'center', gap: 4, paddingBottom: 4 }}>
+              <ShareButton where="end" onPress={() => setSharing(true)} />
+              {!embedded ? (
+                <Txt tone="muted" center testID="recap-next" style={muted}>
+                  {L.next({ season: teamSeasonLabel(res.season + 1) })}
+                </Txt>
+              ) : null}
+            </View>
+
+            {sharing ? <RecapShare recap={recap} close={() => setSharing(false)} /> : null}
+          </>
+        ) : null}
+      </Container>
+    </StillRecord.Provider>
   );
 }
 
@@ -572,7 +604,15 @@ function Numbers({ recap }: { recap: Recap }) {
 }
 
 /** 이 시즌의 선수단 — 단체사진과 끝없이 흐르는 카드(웹 data-recap-section=squad). 선수단이 없으면 그리지 않는다. */
-function Squad({ recap, season }: { recap: Recap; season: string }) {
+function Squad({
+  recap,
+  season,
+  still = false,
+}: {
+  recap: Recap;
+  season: string;
+  still?: boolean;
+}) {
   const { squad } = recap;
   if (!squad || squad.length === 0) return null;
   return (
@@ -580,7 +620,7 @@ function Squad({ recap, season }: { recap: Recap; season: string }) {
       <Sec>{L.secSquad}</Sec>
       <Lead>{L.squadLead({ n: num(recap.retired) })}</Lead>
       <RecapTeamPhoto squad={squad} season={season} />
-      <RecapCardReel squad={squad} />
+      {!still ? <RecapCardReel squad={squad} /> : null}
     </Card>
   );
 }
@@ -883,7 +923,7 @@ function TeamSection({ recap }: { recap: Recap }) {
                 ))}
             </View>
           ) : null}
-          <Grid cols={3}>
+          <Grid cols={2}>
             <Stat
               label={O.statRecord}
               value={recordText({ w: t.wins, d: t.draws, l: t.losses })}
@@ -937,9 +977,9 @@ function Ranks({ recap }: { recap: Recap }) {
           accessibilityLabel={`${r.label} ${rankLine(r.rank, r.total)}`}
           style={{ gap: 6 }}
         >
+          <Txt style={{ fontSize: rem(0.875) }}>{r.label}</Txt>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-            <Txt style={{ fontSize: rem(0.875) }}>{r.label}</Txt>
-            <Txt num style={{ marginLeft: 'auto', fontSize: rem(1.0625) }}>
+            <Txt num style={{ flex: 1, minWidth: 0, fontSize: rem(1.0625) }}>
               {rankText(r.rank, r.total)}
             </Txt>
             {r.pct !== null ? (

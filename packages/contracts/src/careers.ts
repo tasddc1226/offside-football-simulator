@@ -678,3 +678,24 @@ export const RetiredNumberCheckResponseSchema = z.strictObject({
   retiredNumberMiss: RetiredNumberMissSchema.optional(),
 });
 export type RetiredNumberCheckResponse = z.infer<typeof RetiredNumberCheckResponseSchema>;
+
+/** Read-only guidance from uploaded seasons; never reserves or grants a number. */
+export const RetiredNumberProgressSchema = z.strictObject({
+  season: z.number().int().nonnegative(),
+  number: z.number().int().min(1).max(99),
+  minSeasons: z.number().int().positive(),
+  recordedSeasons: z.number().int().nonnegative(),
+  clubs: z.array(
+    z.strictObject({
+      clubId: z.string(),
+      club: z.string(),
+      seasons: z.number().int().nonnegative(),
+      progress: z.number().int().min(0).max(100),
+      eligible: z.boolean(),
+      candidate: z.boolean(),
+      availability: z.enum(['open', 'taken', 'unknown']),
+    }),
+  ),
+});
+export type RetiredNumberProgress = z.infer<typeof RetiredNumberProgressSchema>;
+export const RetiredNumberPreviewQuerySchema = z.coerce.number().int().min(1).max(99);

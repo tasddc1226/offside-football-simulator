@@ -77,12 +77,6 @@ export function offerFeedback(s: GameState, o: MarketOption): string | undefined
   return L.offerAssess({ ovr: ovr(s), str: o.str, role: tn(o.role ?? '') });
 }
 
-/**
- * T-11-078 진행 중인 커리어에서도 영구결번이 있다는 걸 알린다. 심사 기준(시즌 수·점수)은 서버만 알고
- * 수치 힌트도 주지 않는다 — 조건을 말로만 짧게.
- */
-export const retiredNumberHint = (s: GameState): string => L.retiredNumber({ n: s.number });
-
 /** 기존 목표 전부 + 현재 구단의 출전 기록. 보상·칭호·저장 필드는 추가하지 않는다. */
 export function careerGoals(s: GameState): NextMilestone[] {
   if (s.retired) return [];

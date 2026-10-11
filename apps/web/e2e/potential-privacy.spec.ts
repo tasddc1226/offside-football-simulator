@@ -66,6 +66,7 @@ test('은퇴 기록은 재접속 후 기록실에서도 같은 잠재력과 최�
   await page.evaluate(() => localStorage.removeItem('ft_save'));
   await page.reload();
   await page.locator('.main-nav [data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player]').first().click();
   expect(await page.locator('[data-legend-pot]').innerText()).toBe(original);
 });
@@ -81,6 +82,7 @@ test('잠재력이 기록되지 않은 옛 은퇴 선수는 평가 카드를 만
   });
   await page.reload();
   await page.locator('.main-nav [data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player]').first().click();
   await expect(page.locator('[data-credit="player"]')).toBeVisible();
   await expect(page.locator('[data-legend-pot]')).toHaveCount(0);

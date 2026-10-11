@@ -583,6 +583,23 @@ export async function listOwnHof(
   return rows.map(toPublicEntry);
 }
 
+/** Same visibility/order/cap as listOwnHof, without player display fields or JSON decoding. */
+export async function listOwnSummary(db: Db, profileId: string) {
+  const rows = await db
+    .select({
+      id: careers.id,
+      season: careers.serviceSeason,
+      legendScore: careers.legendScore,
+      retiredNumber: retiredNumbers.number,
+    })
+    .from(careers)
+    .leftJoin(retiredNumbers, withRetiredNumber)
+    .where(and(eq(careers.profileId, profileId), isOwnRetired))
+    .orderBy(desc(careers.legendScore), careers.retiredAt)
+    .limit(500);
+  return rows.map((row) => ({ ...row, legendScore: row.legendScore ?? 0 }));
+}
+
 /** T-10-013. 커리어 소유권을 통째로 옮긴다(익명 프로필 → 로그인한 계정). 옮긴 수를 돌려준다. */
 export async function moveCareers(
   db: Db,

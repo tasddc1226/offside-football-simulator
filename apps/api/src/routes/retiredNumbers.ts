@@ -1,5 +1,7 @@
 import {
   CareerIdParamSchema,
+  RetiredNumberProgressSchema,
+  RetiredNumberPreviewQuerySchema,
   RetiredBeforeQuerySchema,
   RetiredClubQuerySchema,
   RetiredNumberCheckResponseSchema,
@@ -19,9 +21,11 @@ import {
   ensureRetiredNumbersBackfilled,
   judgeRetiredNumber,
   listRetiredNumbers,
+  retiredNumberProgress,
   pageRetiredNumbers,
   summarizeRetiredNumbers,
 } from '../db/repos/retiredNumbers.js';
+import { refreshOwnerTitles } from '../db/repos/ownerTitles.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -48,7 +52,11 @@ export async function judgeRetirement(
     if (result?.kind === 'taken' && result.wallOfHonor && season !== undefined) {
       purgeEdge(c, STALE.wallOfHonorChanged(season, careerId));
     }
-    if (claimed) publishRetiredNumber(c, claimed);
+    if (claimed) {
+      publishRetiredNumber(c, claimed);
+      const career = await getCareerHead(getDb(c), careerId);
+      if (career) await refreshOwnerTitles(getDb(c), career.profileId, now);
+    }
     return miss ? { retiredNumber: result, retiredNumberMiss: miss } : { retiredNumber: result };
   } catch (err) {
     c.set('storeFailure', {
@@ -60,6 +68,21 @@ export async function judgeRetirement(
 }
 
 export function registerRetiredNumberRoutes(app: Hono<AppEnv>): void {
+  app.get('/v1/careers/:careerId/retired-number-progress', requireProfile, async (c) => {
+    const careerId = parseWithAppError(CareerIdParamSchema, c.req.param('careerId'));
+    const number = parseWithAppError(RetiredNumberPreviewQuerySchema, c.req.query('number'));
+    const db = getDb(c);
+    const career = await getCareerHead(db, careerId);
+    if (career?.profileId !== getSessionOrThrow(c).profileId) throw careerOwnerMismatch();
+    return ok(
+      c,
+      RetiredNumberProgressSchema,
+      await retiredNumberProgress(db, careerId, number),
+      200,
+      'private, no-store',
+    );
+  });
+
   // 내 선수의 심사 결과. 은퇴 PUT 응답을 받지 못한 기록(배포 전 은퇴를 소급으로 심사한 결번, 이미 찬 자리)을 이 기기가
   // 은퇴 상세를 열 때 한 번 묻는다. 은퇴 PUT과 같은 심사라 이름을 공개했고 자리가 비어 있으면 이때 자리를 잡는다.
   app.get('/v1/careers/:careerId/retired-number', requireProfile, async (c) => {

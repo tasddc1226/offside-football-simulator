@@ -13,11 +13,9 @@
   import { refreshChatIdentity } from './chat-state.svelte.js';
   import { accountLabel, isMember } from '@offside/app-core/account';
   import { closeSheet, showSheet } from './sheetState.svelte.js';
-  import NicknameForm from './NicknameForm.svelte';
   import { accountText as L } from '@offside/app-core/i18n/ko/account';
 
   /** 관리자 계정(설정 화면이 확인한다)은 댓글 닉네임이 '운영자'로 고정돼 바꾸는 칸이 없다. */
-  let { admin = false }: { admin?: boolean } = $props();
 
   // `undefined`는 "아직 한 번도 불러오지 않음"을, `null`은 "확인 결과 로그인 안 됨"을 뜻한다. 설정 화면은
   // 벗어났다 돌아오면 이 컴포넌트가 다시 마운트되므로, 모듈 스코프에 캐시를 둬 재검증
@@ -90,11 +88,6 @@
   <div class="account-card">
     <div class="who"><b>{label.title}</b><span class="muted">{label.via}</span></div>
     <button class="btn btn-primary btn-sm" data-act="logout" onclick={askLogout}>{L.logout}</button>
-  </div>
-  <div class="account-nick">
-    <span class="muted">{profile.nickname ? L.nickname : L.nicknamePrompt}</span>
-    {#if admin}<b>{L.nicknameFixed({ nickname: profile.nickname })}</b>
-    {:else}{#key profile.nickname}<NicknameForm current={profile.nickname} />{/key}{/if}
   </div>
   <div class="account-more">
     {#if profile.linked.google}
