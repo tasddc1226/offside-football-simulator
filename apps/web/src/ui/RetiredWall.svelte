@@ -1,12 +1,14 @@
 <script lang="ts" module>
   import type { CareerPos } from '@offside/contracts';
-  import type { RnClubOrder } from '@offside/app-core/retiredWall';
+  import type { DetailPos } from '@offside/contracts/positions';
   // 시즌·화면·정렬·조건은 선수 상세에 다녀와도 그대로 둔다.
   // season이 null이면 지금 시즌(개막 전이면 프리시즌).
-  const view = $state<{ season: number | null; screen: 'home' | 'club' | 'recent'; clubId: string | null; clubOrder: RnClubOrder; pos: CareerPos | null; wallOpen: boolean }>({ season: null, screen: 'home', clubId: null, clubOrder: 'count', pos: null, wallOpen: false });
+  const view = $state<{ season: number | null; screen: 'home' | 'club' | 'recent'; clubId: string | null; pos: CareerPos | null; dpos: DetailPos | null; wallOpen: boolean }>({ season: null, screen: 'home', clubId: null, pos: null, dpos: null, wallOpen: false });
 </script>
 
 <script lang="ts">
+  import { tick } from 'svelte';
+  import { hofText as H } from '@offside/app-core/i18n/ko/hof';
   import { tn } from '@offside/game/i18n/names';
   // T-10-076 기록실 '영구결번' 탭. 타일은 구단 홈 유니폼 도트 액자(RnFrame), 바탕은 구단 엠블럼 색(rnStyle), 누르면 그 선수의 은퇴 상세.
   // 결번은 시즌마다 따로 — 프리시즌 선수가 찬 번호도 시즌 1에서는 새로 받을 수 있다.
@@ -14,7 +16,7 @@
   import type { RetiredNumbersResponse, RetiredNumbersSummary } from '@offside/contracts';
   import { PRESEASON, SERVICE_SEASONS, displaySeasonAt, seasonById } from '@offside/contracts/service-seasons';
   import { kstMonthDayHour } from '@offside/app-core/boardText';
-  import { POS_GROUPS } from '@offside/contracts/positions';
+  import { POS_GROUPS, DETAILS_OF, DETAIL_LABEL } from '@offside/contracts/positions';
   import { getRetiredNumbersOfClub, getRetiredNumbersPage, getRetiredNumbersSummary } from '@offside/app-core/api/client';
   import { POS } from '@offside/game/data';
   import { loadHOF } from '@offside/game/hof-store';
@@ -89,11 +91,11 @@
   const myIds = new Set(loadHOF().map((h) => h.id).filter(Boolean));
   // 구단 화면 머리(이름·결번 수)는 받은 목록에서 — 서버가 그 구단 결번을 모두 준다.
   const pickedClub = $derived(items?.[0] && view.screen === 'club' ? { clubId: items[0].clubId, club: items[0].club, count: items.length } : undefined);
-  const shown = $derived((items ?? []).filter((it) => !view.pos || it.pos === view.pos));
+  const shown = $derived((items ?? []).filter((it) => (!view.pos || it.pos === view.pos) && (!view.dpos || it.dpos === view.dpos)));
   const leagues = $derived(rnByLeague(summary?.clubs ?? []));
   // T-11-121 명예의 벽은 요약에 다 실려 온다 — 구단 화면은 그중 그 구단 몫만.
   const wall = $derived(summary?.wall ?? []);
-  const clubWall = $derived(wall.filter((w) => w.clubId === view.clubId));
+  const clubWall = $derived(wall.filter((w) => w.clubId === view.clubId && (!view.pos || w.pos === view.pos) && (!view.dpos || w.dpos === view.dpos)));
 
   function pickSeason(id: number) {
     view.season = id;
@@ -103,11 +105,15 @@
     view.screen = 'home';
     view.clubId = null;
     view.pos = null;
+    view.dpos = null;
   }
-  function openClub(clubId: string) {
+  async function openClub(clubId: string) {
     view.screen = 'club';
     view.clubId = clubId;
     view.pos = null;
+    view.dpos = null;
+    await tick();
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }
 </script>
 
@@ -197,23 +203,13 @@
       {/if}
       <div class="rn-sec-head">
         <h2>{L.clubsTitle}</h2>
-        <div class="hof-sorts" role="group" aria-label={L.clubOrderLabel}>
-          <button class="hof-sort" aria-pressed={view.clubOrder === 'count'} data-rn-club-order="count" onclick={() => (view.clubOrder = 'count')}>{L.orderCount}</button>
-          <button class="hof-sort" aria-pressed={view.clubOrder === 'league'} data-rn-club-order="league" onclick={() => (view.clubOrder = 'league')}>{L.orderLeague}</button>
-        </div>
       </div>
-      {#if view.clubOrder === 'count'}
+      {#each leagues as g (g.league)}
+        <p class="rn-league-head" data-rn-league={g.league}><span>{tn(g.league)}</span> <span class="num">{g.count}</span></p>
         <div class="rn-club-list">
-          {#each summary.clubs as c (c.clubId)}{@render clubRow(c, true)}{/each}
+          {#each g.clubs as c (c.clubId)}{@render clubRow(c, false)}{/each}
         </div>
-      {:else}
-        {#each leagues as g (g.league)}
-          <p class="rn-league-head" data-rn-league={g.league}><span>{tn(g.league)}</span> <span class="num">{g.count}</span></p>
-          <div class="rn-club-list">
-            {#each g.clubs as c (c.clubId)}{@render clubRow(c, false)}{/each}
-          </div>
-        {/each}
-      {/if}
+      {/each}
     {:else}
       <p class="empty">{L.empty({ season: teamSeasonLabel(season) })}</p>
     {/if}
@@ -229,9 +225,18 @@
         {/if}
       </div>
       <div class="hof-sorts" role="group" aria-label={L.positionLabel}>
-        <button class="hof-sort" aria-pressed={view.pos === null} data-rn-pos="all" onclick={() => (view.pos = null)}>{L.all}</button>
-        {#each POS_GROUPS as pos (pos)}<button class="hof-sort" aria-pressed={view.pos === pos} data-rn-pos={pos} onclick={() => (view.pos = pos)}>{POS[pos].label}</button>{/each}
+        <button class="hof-sort" aria-pressed={view.pos === null} data-rn-pos="all" onclick={() => { view.pos = null; view.dpos = null; }}>{L.all}</button>
+        {#each POS_GROUPS as pos (pos)}<button class="hof-sort" aria-pressed={view.pos === pos} data-rn-pos={pos} onclick={() => { view.pos = pos; view.dpos = null; }}>{POS[pos].label}</button>{/each}
       </div>
+      {#if season > 0 && view.pos && DETAILS_OF[view.pos].length > 1}
+        <p class="hof-filter-label">{H.detailPositionGroup}</p>
+        <div class="seg hof-pos" role="group" aria-label={H.detailPositionGroup}>
+          <button class="hof-sort" data-rn-dpos="all" aria-pressed={view.dpos === null} onclick={() => (view.dpos = null)}>{L.all}</button>
+          {#each DETAILS_OF[view.pos] as dp (dp)}
+            <button class="hof-sort" data-rn-dpos={dp} aria-label={tn(DETAIL_LABEL[dp])} aria-pressed={view.dpos === dp} onclick={() => (view.dpos = dp)}>{dp}</button>
+          {/each}
+        </div>
+      {/if}
     {:else}
       <h2 class="rn-recent-title">{L.recentAll}</h2>
     {/if}

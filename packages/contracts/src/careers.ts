@@ -626,6 +626,7 @@ const RetiredNumberItemSchema = RetiredSlotSchema.extend({
   careerId: z.string(),
   name: z.string().nullable(),
   pos: CareerPosSchema,
+  dpos: DetailPosSchema.nullish(),
 });
 /** T-11-121 명예의 벽 한 명 — 칭호를 받을 뻔한 구단·번호(clubId·club·number)와 받은 때. 이름은 공개한 경우에만. */
 const WallOfHonorItemSchema = RetiredNumberItemSchema.omit({ seq: true });

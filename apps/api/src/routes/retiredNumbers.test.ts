@@ -429,6 +429,8 @@ describe('영구결번 (T-10-076)', () => {
     await retire(B, twoClubs(10), '두번째'); // pl-1 10번, seq 2
     const D = '0c000000-0000-4000-8000-00000000000d';
     await retire(D, skyBlue(7), '일곱'); // pl-0 7번, seq 3
+    await ctx.env.DB.prepare('UPDATE careers SET dpos = ? WHERE id = ?').bind('W', D).run();
+
     const res = await createApp().request('/v1/retired-numbers/summary?season=0', {}, ctx.env);
     expect(res.status).toBe(200);
     const sum = successEnvelope(RetiredNumbersSummarySchema).parse(await res.json()).data;
@@ -443,7 +445,7 @@ describe('영구결번 (T-10-076)', () => {
     });
     // 한 구단은 등번호 순.
     expect(await list(ctx.env, '?season=0&club=pl-0')).toMatchObject([
-      { careerId: D, number: 7 },
+      { careerId: D, number: 7, dpos: 'W' },
       { careerId: A, number: 10 },
     ]);
     expect(await list(ctx.env, '?season=0&club=pl-9')).toEqual([]);
