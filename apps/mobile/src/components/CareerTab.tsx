@@ -15,6 +15,7 @@ import { DISPLAY, num, rem } from '../theme/type';
 import { Card } from '../ui/Card';
 import { ClubMark } from '../ui/ClubBadge';
 import { Txt } from '../ui/Txt';
+import { RetiredNumberGuide } from './RetiredNumberGuide';
 import { ValueChart } from './ValueChart';
 import { tn } from '@offside/game/i18n/names';
 
@@ -88,6 +89,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
           </>
         ) : null}
       </Card>
+      {'attrs' in s && !s.retired ? <RetiredNumberGuide s={s} /> : null}
       {rnHint ? (
         <Card>
           <View>
@@ -114,9 +116,6 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
               </View>
             ))}
           </View>
-          <Txt v="sm" tone="muted" testID="rn-hint">
-            {rnHint}
-          </Txt>
         </Card>
       ) : null}
       <Card>

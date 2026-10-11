@@ -3,6 +3,31 @@
 import { ns } from '../core';
 
 const ko = {
+  rnTitle: '영구결번 도전',
+  rnIntro: '오래 뛴 구단에 이 번호를 남길 수 있을까요?',
+  rnLoading: '시즌 기록을 확인하고 있어요.',
+  rnRetry: '다시 확인',
+  rnError: '기록을 불러오지 못했어요. 연결과 기록 동기화 상태를 확인해 주세요.',
+  rnEmpty:
+    '프로 구단에서 시즌을 마치면 구단별 도전 현황이 쌓여요. 고교·대학·군 복무 시즌은 제외돼요.',
+  rnBasis: '서버에 저장된 시즌 기록 기준이에요. 진행 중인 시즌은 포함하지 않아요.',
+  rnSyncing: '이 기기의 시즌 기록이 아직 모두 반영되지 않았어요. 동기화 후 다시 확인해 주세요.',
+  rnScope: (p: { season: number; number: number }) =>
+    `${p.season === 0 ? '프리시즌' : `시즌 ${p.season}`} · 등번호 ${p.number}`,
+  rnAvailable: '현재 빈 번호',
+  rnTaken: '이미 영구결번',
+  rnUnknown: '번호 확인 중',
+  rnSeasons: (p: { have: number; need: number }) => `소속 ${p.have} / ${p.need}시즌`,
+  rnProgress: (p: { pct: number }) => `구단 기여도 ${p.pct === 0 ? '10% 미만' : `${p.pct}%`}`,
+  rnRemain: (p: { count: number }) => `이 구단에서 ${p.count}시즌 더 뛰어야 해요.`,
+  rnBuild: '꾸준한 출전과 포지션에 맞는 활약, 구단 우승·개인상으로 기여도를 쌓아요.',
+  rnReady: '현재 기록은 기준을 충족해요. 은퇴 시 최종 심사해요.',
+  rnOutside: '기준은 충족했지만 기여도가 더 높은 구단이 먼저 심사돼요.',
+  rnTakenHint: '이 구단의 번호는 먼저 등록됐어요. 다른 후보 구단이 있는지 확인할 수 있어요.',
+  rnRules:
+    '같은 서비스 시즌의 구단별 번호를 모든 유저가 공유해요. 자격을 갖춘 상위 2개 구단 중 한 곳에서 받을 수 있어요.',
+  rnNote:
+    '기여도는 10% 단위의 참고치이며 이적에 따라 달라질 수 있어요. 번호는 예약되지 않고, 이름을 공개한 선수의 은퇴 심사에서 최종 확정돼요.',
   totalsTitle: '통산 기록',
   apps: '경기',
   goals: '골',
