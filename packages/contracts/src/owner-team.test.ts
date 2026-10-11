@@ -6,6 +6,12 @@ import {
   FORMATION_ROWS,
   FORMATIONS,
   LINEUP_SIZE,
+  SHAPE_IDS,
+  presetLayout,
+  shapeBase,
+  shapeLayout,
+  matchShape,
+  shapeOf,
   LINE_BASE,
   LINES,
   YOUTH_OVR,
@@ -18,7 +24,12 @@ import {
   teamOvr,
   achGradeOf,
 } from './owner-team.js';
-import { ManagerNameSchema, PutOwnerTeamBodySchema, TeamNameSchema } from './teams.js';
+import {
+  ManagerNameSchema,
+  PutOwnerTeamBodySchema,
+  TeamLayoutSchema,
+  TeamNameSchema,
+} from './teams.js';
 
 describe('T-10-092 포메이션', () => {
   it.each(FORMATION_IDS)('%s는 11자리이고 줄 인원 합과 계열 순서가 맞다', (id) => {
@@ -144,5 +155,40 @@ describe('T-11-028 시즌 업적 등급', () => {
     expect(achGradeOf(99999)).toMatchObject({ grade: { id: 'legend' }, next: null });
     // 기준은 오름차순이다.
     expect(ACH_GRADES.every((g, i) => i === 0 || g.min > ACH_GRADES[i - 1]!.min)).toBe(true);
+  });
+});
+
+describe('T-11-216 배치 프리셋', () => {
+  it('프리셋마다 세부 포지션 자리가 나오고 저장 검증을 통과한다', () => {
+    const slots = Object.fromEntries(
+      SHAPE_IDS.map((id) => [
+        id,
+        shapeLayout(id)
+          .map((p) => p.slot)
+          .join(' '),
+      ]),
+    );
+    expect(slots).toEqual({
+      '4-2-3-1': 'GK LB CB CB RB DM DM LW AM RW ST',
+      '4-1-4-1': 'GK LB CB CB RB DM LM CM CM RM ST',
+      '4-3-3 F9': 'GK LB CB CB RB CM DM CM LW CF RW',
+      '4-4-1-1': 'GK LB CB CB RB LM CM CM RM SS ST',
+      '3-4-3': 'GK CB CB CB LWB CM CM RWB LW ST RW',
+      '5-3-2': 'GK LWB CB SW CB RWB CM CM CM ST ST',
+    });
+    for (const id of SHAPE_IDS) {
+      expect(TeamLayoutSchema.safeParse(shapeLayout(id)).success).toBe(true);
+      expect(FORMATION_IDS).toContain(shapeBase(id));
+    }
+  });
+  it('배치가 프리셋과 같을 때만 그 이름이고, 옮기면 저장된 포메이션', () => {
+    expect(shapeOf('4-3-3', shapeLayout('4-2-3-1'))).toBe('4-2-3-1');
+    expect(shapeOf('4-3-3', null)).toBe('4-3-3');
+    expect(shapeOf('4-4-2', presetLayout('4-4-2'))).toBe('4-4-2');
+    const moved = shapeLayout('5-3-2').map((p, i) => (i === 9 ? { ...p, x: 40 } : p));
+    expect(shapeOf('3-5-2', moved)).toBe('3-5-2');
+    // 칩은 정확히 맞는 프리셋만 켠다 — 손으로 옮긴 배치는 아무것도 아니다.
+    expect(matchShape(moved)).toBeNull();
+    expect(matchShape(shapeLayout('5-3-2'))).toBe('5-3-2');
   });
 });

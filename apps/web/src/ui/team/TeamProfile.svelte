@@ -1,5 +1,6 @@
 <script lang="ts">
   import { seasonLabel } from '@offside/app-core/seasonName';
+  import { shapeOf } from '@offside/contracts/owner-team';
   // T-10-092 팀 프로필(라이브 랭킹에서 연다) — 시즌 순위 · 감독 · 레이팅 · 선발 그라운드 · 줄 힘 · 좋아요/조회수 · 팀 히스토리
   // 배지. 누구나 본다. 남의 팀을 열면 조회수를 한 번 올린다(내 팀은 세지 않는다).
   import { onMount } from 'svelte';
@@ -139,7 +140,7 @@
         </button>
         <span class="muted">{L.profViews}<b>{n(team.views)}</b></span>
         {#if friend}<button class="btn btn-sm" class:btn-primary={friend === 'none' || friend === 'received'} disabled={befriending || friend === 'sent' || friend === 'accepted'} onclick={befriend} data-act="team-friend" data-friend-state={friend}>{friendButton(friend)}</button>{/if}
-        <span class="muted fs-xs tp-formation">{team.formation}</span>
+        <span class="muted fs-xs tp-formation">{shapeOf(team.formation, team.layout)}</span>
       </div>
     </section>
 

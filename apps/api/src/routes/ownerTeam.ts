@@ -20,6 +20,7 @@ import {
   isWildcardSeason,
   matchScore,
   ratingChange,
+  shapeOf,
   type FormationId,
 } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
@@ -392,6 +393,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         logo: logoOf(team),
         owner: team.manager,
         formation: team.formation as FormationId,
+        shape: shapeOf(team.formation as FormationId, layoutOf(team)),
         ovr: team.ovr,
         rating: team.rating,
         record: recordOf(team),

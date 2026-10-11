@@ -107,7 +107,7 @@ export function TeamOpponents({
                   <Txt
                     tone="muted"
                     v="sm"
-                  >{`${o.owner} · ${o.formation} · ${recordText(o.record)}`}</Txt>
+                  >{`${o.owner} · ${o.shape ?? o.formation} · ${recordText(o.record)}`}</Txt>
                 </View>
                 <View
                   accessible

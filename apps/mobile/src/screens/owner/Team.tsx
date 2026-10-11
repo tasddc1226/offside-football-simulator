@@ -21,6 +21,10 @@ import {
   slotRating,
   synergyApplies,
   teamOvr,
+  SHAPE_IDS,
+  shapeBase,
+  shapeLayout,
+  matchShape,
   type FormationId,
 } from '@offside/contracts/owner-team';
 import {
@@ -714,11 +718,16 @@ export default function Team() {
               {editable ? (
                 <SortChips
                   label={L.formationLabelApp}
-                  value={layout ? 'custom' : formation}
-                  items={FORMATION_IDS.map((key) => ({ key, label: key }))}
+                  value={layout ? (matchShape(layout) ?? '') : formation}
+                  // T-11-216 시즌 1 배치 프리셋(세부 포지션 자리). 프리시즌 팀은 옛 세 가지만.
+                  items={[...FORMATION_IDS, ...(season > 0 ? SHAPE_IDS : [])].map((key) => ({
+                    key,
+                    label: key,
+                  }))}
                   onPick={(key) => {
-                    setFormation(key as FormationId);
-                    setLayout(null);
+                    const id = SHAPE_IDS.find((s) => s === key);
+                    setFormation(id ? shapeBase(id) : (key as FormationId));
+                    setLayout(id ? shapeLayout(id) : null);
                   }}
                   testIDPrefix="formation"
                 />

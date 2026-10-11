@@ -1,0 +1,26 @@
+{
+  "id": "t-11-216-formations",
+  "title": "팀 배치 프리셋이 여섯 가지 늘었어요",
+  "items": [
+    "시즌 팀 편성에서 4-2-3-1 · 4-1-4-1 · 4-3-3 F9 · 4-4-1-1 · 3-4-3 · 5-3-2를 고를 수 있어요",
+    "프리셋을 고르면 수비형 미드필더 · 윙백 · 스위퍼 같은 세부 포지션 자리에 맞춰 놓여요",
+    "다른 구단 목록과 팀 프로필에도 고른 배치 이름이 보여요"
+  ],
+  "en": {
+    "title": "Six more team shapes",
+    "items": [
+      "Season teams can now pick 4-2-3-1, 4-1-4-1, 4-3-3 F9, 4-4-1-1, 3-4-3, and 5-3-2.",
+      "Each shape puts players in detailed roles such as defensive midfielder, wing-back, and sweeper.",
+      "Opponent lists and team profiles show the shape name too."
+    ]
+  },
+  "ja": {
+    "title": "チーム配置のプリセットが6つ増えました",
+    "items": [
+      "シーズンのチーム編成で4-2-3-1・4-1-4-1・4-3-3 F9・4-4-1-1・3-4-3・5-3-2を選べます。",
+      "プリセットを選ぶと、守備的MF・ウイングバック・スイーパーなど細かいポジションに合わせて並びます。",
+      "他クラブの一覧やチームプロフィールにも配置名が表示されます。"
+    ]
+  },
+  "availability": "web-app"
+}

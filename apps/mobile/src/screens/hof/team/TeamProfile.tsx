@@ -18,7 +18,7 @@ import { NameReport } from '../../../components/NameReport';
 import { TeamLogo } from '../../../components/TeamLogo';
 import { TeamLines, TeamPitch } from '../../../components/TeamPitch';
 import { PlayerPeek, pitchPeekOrigin, type PeekOrigin } from '../../../components/PlayerPeek';
-import { presetLayout } from '@offside/contracts/owner-team';
+import { presetLayout, shapeOf } from '@offside/contracts/owner-team';
 import { friendRequestText } from '@offside/app-core/friendText';
 import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
 import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
@@ -310,7 +310,7 @@ export default function TeamProfile({ id }: { id: string }) {
                 </Txt>
               </Txt>
               <Txt tone="muted" style={{ fontSize: rem(0.75), marginLeft: 'auto' }}>
-                {team.formation}
+                {shapeOf(team.formation, team.layout)}
               </Txt>
             </View>
           </Card>
