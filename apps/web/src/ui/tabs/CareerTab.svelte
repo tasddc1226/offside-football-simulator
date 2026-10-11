@@ -6,7 +6,7 @@
   import RetiredNumberGuide from './RetiredNumberGuide.svelte';
   import ClubMark from '../ClubMark.svelte';
   import ValueChart from '../ValueChart.svelte';
-  import { careerGoals, goalsNote, retiredNumberHint } from '@offside/app-core/career-feedback';
+  import { careerGoals, goalsNote } from '@offside/app-core/career-feedback';
   import { gameCareerText as L } from '@offside/app-core/i18n/ko/gameCareer';
   import { peakValue, seasonValue } from '@offside/contracts/market-value';
 
@@ -17,8 +17,6 @@
   const rows = $derived(s.career.slice().reverse());
   const miles = $derived((s.miles || []).slice().reverse());
   const next = $derived('attrs' in s && !s.retired ? careerGoals(s) : []);
-  // 진행 중인 커리어에만 있다. 다음 목표 카드도 이 값으로 보인다.
-  const rnHint = $derived('attrs' in s && !s.retired ? retiredNumberHint(s) : null);
   const peakV = $derived(chart ? peakValue(s.career) : null);
 </script>
 
@@ -40,7 +38,7 @@
   {/if}
 </section>
 {#if 'attrs' in s && !s.retired}<RetiredNumberGuide {s} />{/if}
-{#if rnHint}
+{#if next.length}
   <section class="card stack" data-career-goals>
     <div><div class="eyebrow">Next Goals</div><h2>{L.goalsTitle}</h2></div>
     <p class="muted fs-sm">{goalsNote()}</p>

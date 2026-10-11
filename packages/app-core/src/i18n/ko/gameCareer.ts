@@ -40,8 +40,6 @@ const ko = {
   goalLine: (p: { have: number; target: number; remaining: number }) =>
     `${p.have} / ${p.target} · 남은 ${p.remaining}`,
   clubApps: (p: { club: string; target: number }) => `${p.club}에서 ${p.target}경기 출전`,
-  retiredNumber: (p: { n: number }) =>
-    `한 구단에서 오래 활약하고 은퇴하면 그 구단의 ${p.n}번이 영구결번될 수 있어요.`,
   // 시즌별 기록 표
   colSeason: '시즌',
   colClub: '소속',
