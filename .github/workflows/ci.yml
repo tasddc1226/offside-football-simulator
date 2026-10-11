@@ -165,11 +165,13 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      # e2e · 번들 검사는 웹 dist만 쓴다. 조각마다 빌드한다(몇 초라 artifact로 넘기는 것보다 빠르다).
-      - name: Build and bundle check
-        run: |
-          pnpm --filter @offside/web build
-          pnpm --filter @offside/web check:bundle
+      # 첫 화면 예산은 운영과 같은 설정의 빌드로 잰다(scripts/check-bundle-prod.mjs). 한 조각에서만 한 번 더 빌드한다.
+      - name: Bundle check (production config)
+        if: matrix.shard == 1
+        run: pnpm --filter @offside/web check:bundle:prod
+      # e2e는 웹 dist만 쓴다. 조각마다 빌드한다(몇 초라 artifact로 넘기는 것보다 빠르다).
+      - name: Build for e2e
+        run: pnpm --filter @offside/web build
       - name: e2e
         run: |
           if [ "${{ steps.pw-cache.outputs.cache-hit }}" = 'true' ]; then
