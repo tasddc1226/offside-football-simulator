@@ -116,6 +116,42 @@ export async function acknowledgeGooglePurchase(
   if (!res.ok) throw new Error(`Google acknowledge ${res.status}`);
 }
 
+/** T-11-215 Google Play가 무효화(환불 · 결제 취소 · 차지백)한 구매 한 건. */
+export interface GoogleVoidedPurchase {
+  purchaseToken: string;
+  orderId?: string;
+  voidedTimeMillis?: string;
+}
+
+const VOIDED = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${ANDROID_PACKAGE}/purchases/voidedpurchases`;
+
+/** sinceMs 뒤에 무효화된 일회성 상품 구매(type=0)를 모두 읽는다(페이지를 따라간다). */
+export async function listVoidedPurchases(
+  saJson: string,
+  sinceMs: number,
+  opts: GoogleOpts,
+): Promise<GoogleVoidedPurchase[]> {
+  const doFetch = opts.fetcher ?? fetch;
+  const out: GoogleVoidedPurchase[] = [];
+  let page: string | undefined;
+  for (let i = 0; i < 20; i++) {
+    const q = new URLSearchParams({ startTime: String(sinceMs), maxResults: '1000', type: '0' });
+    if (page) q.set('token', page);
+    const res = await doFetch(`${VOIDED}?${q}`, {
+      headers: { authorization: `Bearer ${await accessToken(saJson, doFetch, opts.nowS)}` },
+    });
+    if (!res.ok) throw new Error(`Google voided ${res.status}`);
+    const body = (await res.json()) as {
+      voidedPurchases?: GoogleVoidedPurchase[];
+      tokenPagination?: { nextPageToken?: string };
+    };
+    out.push(...(body.voidedPurchases ?? []));
+    page = body.tokenPagination?.nextPageToken;
+    if (!page) break;
+  }
+  return out;
+}
+
 /** 테스트용: 캐시한 액세스 토큰을 비운다. */
 export const resetGoogleTokenCache = () => {
   cached = undefined;

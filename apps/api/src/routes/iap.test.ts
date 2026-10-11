@@ -2,14 +2,19 @@ import { OwnerItemsResponseSchema, successEnvelope } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { iapPurchases, ownerItems } from '../db/schema.js';
 import { resetGoogleTokenCache } from '../iap/google.js';
+import { syncGoogleVoided } from '../iap/refunds.js';
+import { createApp } from '../app.js';
+import { createDb } from '../db/client.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, deleteProfile, issueCookie, issueGoogleCookie } from '../test/http.js';
 
 // Apple 서명 확인 자체는 iap/apple.test.ts가 본다. 여기서는 확인 결과를 정해 두고 라우트 규칙만 본다.
 const appleTx = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
+const appleNote = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
 vi.mock('../iap/apple.js', async (orig) => ({
   ...(await orig<typeof import('../iap/apple.js')>()),
   verifyAppleTransaction: async () => appleTx.current,
+  verifyAppleNotification: async () => appleNote.current,
 }));
 
 const ItemsRes = successEnvelope(OwnerItemsResponseSchema);
@@ -43,6 +48,7 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
   beforeEach(async () => {
     ctx = await createTestD1();
     appleTx.current = null;
+    appleNote.current = null;
     resetGoogleTokenCache();
   });
   afterEach(async () => {
@@ -224,5 +230,96 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     purchase = { purchaseState: 0, obfuscatedExternalAccountId: 'someone-else' };
     res = await claim(me.cookie, { ...body, token: 'tok-3' });
     expect(await res.json()).toMatchObject({ error: { details: { reason: 'IAP_OTHER_ACCOUNT' } } });
+  });
+
+  it('T-11-215 Apple 환불 알림이 오면 가진 장수 안에서 한 번만 회수한다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    appleTx.current = appleFor(me.profileId);
+    await claim(me.cookie, { store: 'apple', productId: REROLL_5, token: 'jws' });
+    // 2장을 이미 썼다.
+    await ctx.env.DB.prepare(`UPDATE owner_items SET qty = 3 WHERE item = 'reroll'`).run();
+    // Apple 서버는 쿠키도 Origin도 없이 보낸다.
+    const notify = () =>
+      createApp().request(
+        '/v1/iap/apple/notifications',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ signedPayload: 'jws' }),
+        },
+        ctx.env,
+      );
+    // 서명이 틀리면 400.
+    expect((await notify()).status).toBe(400);
+    // 환불이 아닌 알림 · 다른 앱은 받기만 한다.
+    appleNote.current = {
+      notificationType: 'CONSUMPTION_REQUEST',
+      data: { bundleId: 'com.offsidelab.app' },
+    };
+    expect((await notify()).status).toBe(200);
+    appleNote.current = {
+      notificationType: 'REFUND',
+      data: { bundleId: 'com.other', signedTransactionInfo: 'tx' },
+    };
+    expect((await notify()).status).toBe(200);
+    expect((await ctx.db.select().from(ownerItems))[0]?.qty).toBe(3);
+
+    appleNote.current = {
+      notificationType: 'REFUND',
+      data: { bundleId: 'com.offsidelab.app', signedTransactionInfo: 'tx' },
+    };
+    expect((await notify()).status).toBe(200);
+    expect((await ctx.db.select().from(ownerItems))[0]?.qty).toBe(0);
+    expect((await ctx.db.select().from(iapPurchases))[0]).toMatchObject({ qty: 5, revokedQty: 3 });
+    expect((await ctx.db.select().from(iapPurchases))[0]?.refundedAt).toBeTruthy();
+    // Apple이 같은 알림을 다시 보내도 그대로다(그사이 새로 받은 장수는 건드리지 않는다).
+    await ctx.env.DB.prepare(`UPDATE owner_items SET qty = 2 WHERE item = 'reroll'`).run();
+    expect((await notify()).status).toBe(200);
+    expect((await ctx.db.select().from(ownerItems))[0]?.qty).toBe(2);
+    // 우리가 모르는 거래도 200.
+    appleTx.current = appleFor(me.profileId, { transactionId: '999' });
+    expect((await notify()).status).toBe(200);
+  });
+
+  it('T-11-215 Google이 무효화한 구매를 매일 읽어 회수한다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    expect(await syncGoogleVoided(ctx.env, createDb(ctx.env.DB), Date.now())).toBe('skipped');
+    ctx.env.GOOGLE_PLAY_SA_JSON = await serviceAccountJson();
+    const purchase = {
+      purchaseState: 0,
+      acknowledgementState: 1,
+      obfuscatedExternalAccountId: accountOf(me.profileId),
+    };
+    const asked: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.startsWith('https://oauth2.googleapis.com/token'))
+          return Response.json({ access_token: 'at', expires_in: 3600 });
+        if (url.includes('/voidedpurchases')) {
+          asked.push(new URL(url).searchParams.get('token') ?? 'first');
+          return url.includes('token=p2')
+            ? Response.json({ voidedPurchases: [{ purchaseToken: 'tok-x' }] })
+            : Response.json({
+                voidedPurchases: [{ purchaseToken: 'tok-1' }],
+                tokenPagination: { nextPageToken: 'p2' },
+              });
+        }
+        return Response.json(purchase);
+      }),
+    );
+    await claim(me.cookie, { store: 'google', productId: REROLL_5, token: 'tok-1' });
+    const now = Date.now();
+    expect(await syncGoogleVoided(ctx.env, createDb(ctx.env.DB), now)).toEqual({
+      seen: 2,
+      revoked: 1,
+      unknown: 1,
+    });
+    expect(asked).toEqual(['first', 'p2']);
+    expect((await ctx.db.select().from(ownerItems))[0]?.qty).toBe(0);
+    // 다음 날 같은 목록을 다시 읽어도 한 번만 회수한다.
+    expect(await syncGoogleVoided(ctx.env, createDb(ctx.env.DB), now)).toMatchObject({
+      revoked: 0,
+    });
   });
 });

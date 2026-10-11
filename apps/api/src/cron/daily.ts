@@ -10,6 +10,7 @@ import { cleanupExpired, type CleanupResult } from './cleanup.js';
 import { createDb } from '../db/client.js';
 import { setMeta } from '../db/repos/firsts.js';
 import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
+import { syncGoogleVoided } from '../iap/refunds.js';
 
 export type DailyResult = {
   automation: Awaited<ReturnType<typeof sweepAutomation>> | { error: string };
@@ -23,6 +24,8 @@ export type DailyResult = {
   growthArchive: GrowthArchiveResult | { error: string } | 'skipped';
   /** T-11-028 놓친 구단주 업적 점수 다시 세기. */
   achievements: Awaited<ReturnType<typeof rebuildStaleAchievements>> | { error: string };
+  /** T-11-215 Google Play가 무효화(환불)한 구매의 아이템 회수. 서비스 계정 키가 없으면 건너뛴다. */
+  iapRefunds: Awaited<ReturnType<typeof syncGoogleVoided>> | { error: string };
 };
 
 /** 요청 로그(middleware/logger.ts)처럼 메시지는 500자까지. */
@@ -54,8 +57,10 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
     createDb(env.DB),
     new Date(now).toISOString(),
   ).catch(errorOf);
+  const iapRefunds = await syncGoogleVoided(env, createDb(env.DB), now).catch(errorOf);
   const failed =
     (automation !== null && 'error' in automation) ||
+    (typeof iapRefunds === 'object' && 'error' in iapRefunds) ||
     'error' in cleanup ||
     'error' in anomalies ||
     (typeof backup === 'object' && 'error' in backup) ||
@@ -73,6 +78,7 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
     growthArchive,
     careerRetention,
     achievements,
+    iapRefunds,
     durationMs: Date.now() - startedAt,
   });
   console.log(log);
@@ -82,5 +88,14 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
   );
   // 단계마다 오류를 잡아 나머지는 끝까지 돌리지만, 하나라도 실패했으면 실행을 실패로 남긴다(호출 기록에서 보이게).
   if (failed) throw new Error(`daily job failed: ${log.slice(0, 300)}`);
-  return { cleanup, anomalies, automation, backup, growthArchive, careerRetention, achievements };
+  return {
+    cleanup,
+    anomalies,
+    automation,
+    backup,
+    growthArchive,
+    careerRetention,
+    achievements,
+    iapRefunds,
+  };
 }
