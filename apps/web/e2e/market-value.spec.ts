@@ -67,7 +67,7 @@ test('커리어 표에 시즌 몸값과 최고 몸값 시즌이 보인다', asyn
 test('선수 카드에 연봉과 함께 몸값이 보인다(아마추어는 없다)', async ({ page }) => {
   await resumeWithSave(page, { leagueId: 'k3', contract: { years: 2, salary: 1230 } });
   await expect(page.locator('section.player .meta')).toContainText(
-    /K3리그 · 연봉 1,230만 · 몸값 \S+/,
+    /K3리그\s·\s연봉\s1,230만\s·\s몸값\s\S+/,
   );
 });
 

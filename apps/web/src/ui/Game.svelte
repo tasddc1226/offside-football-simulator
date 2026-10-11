@@ -50,6 +50,8 @@
   const contract = $derived(
     [s.contract ? T.salary({ v: fmtMoney(s.contract.salary) }) : L.amateur ? T.amateur : '', L.amateur ? '' : T.value({ v: fmtValue(marketValue(s)) })]
       .filter(Boolean)
+      // 항목 안(연봉 1억 5,000만)에서는 줄을 바꾸지 않고 · 사이에서만 바꾼다(앱 Game.tsx와 같이).
+      .map((x) => x.replace(/ /g, '\u00a0'))
       .join(' · '),
   );
   const title = $derived(mainTitle(s));
