@@ -26,7 +26,6 @@
   import { dur } from '../motion.js';
   import PhaseReport from './PhaseReport.svelte';
   import LeagueTable from './LeagueTable.svelte';
-  import Radar from '../Radar.svelte';
   import PositionGuide from '../PositionGuide.svelte';
   import { gameSeasonText as L } from '@offside/app-core/i18n/ko/gameSeason';
 
@@ -248,15 +247,14 @@
     {#each coach.notes as note (note)}<p class="muted fs-sm">{note}</p>{/each}
   </div>
   <h3 class="sub-title">{L.trainingTitle}</h3>
-  {#if tourWait === 'train'}<p class="tour-hint" aria-live="polite">{L.trainHint}</p>{:else}<p class="muted fs-sm" data-train-pick>{L.trainPick}</p>{/if}
-  <Radar {s} onpick={setTraining} />
+  {#if tourWait === 'train'}<p class="tour-hint" aria-live="polite">{L.trainHint}</p>{/if}
   <p class="muted fs-sm">{CG.trainWeak}</p>
   <PositionGuide pos={s.pos} />
-  <div class="train train-misc">
-    {#each TRAININGS.filter((x) => !x.attr) as tr (tr.id)}
+  <div class="train">
+    {#each TRAININGS as tr (tr.id)}
       {@const c = trainingCard(s, tr)}
       <button class="opt" data-train={tr.id} aria-pressed={s.training === tr.id} onclick={(e) => setTraining(tr.id, e.currentTarget)}>
-        <b>{trainingLabel(s, tr)}</b>{#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
+        <b>{trainingLabel(s, tr)}</b><small>{c.effect[0]}</small>{#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
       </button>
     {/each}
   </div>
@@ -264,7 +262,6 @@
     {@const c = trainingCard(s, picked)}
     <div class="train-help" data-train-help aria-live="polite">
       <b>{trainingLabel(s, picked)} <span class="muted">· {c.effect.join(' · ')}</span></b>
-      {#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
       {#if picked.attr}<p data-training-ovr>{trainingOvrNote(s, picked)}</p>{/if}
     </div>
   {/if}

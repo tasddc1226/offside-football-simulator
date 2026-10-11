@@ -2400,10 +2400,6 @@ body:has(.main-nav) .wrap {
   font-weight: 700;
   color: var(--accent-text);
 }
-.tr-arrow.inv {
-  stroke-dasharray: 3 3;
-  opacity: 0.85;
-}
 /* T-10-074 고른 훈련의 자세한 설명 */
 .train-help {
   display: flex;
@@ -2539,87 +2535,6 @@ body:has(.main-nav) .wrap {
 .rd-down {
   fill: var(--bad);
   font-size: 0.8125rem;
-}
-/* T-11-200 훈련 방향 육각형: 축 이름표가 훈련 버튼이다(Radar.svelte). */
-.train-radar {
-  position: relative;
-  width: 100%;
-  max-width: 340px;
-  margin: 0 auto;
-}
-.train-radar .radar {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  margin: 0;
-}
-.tr-axis {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  width: 26%;
-  min-height: 44px;
-  padding: 4px 2px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-  /* T-11-212 고르지 않은 축도 누를 수 있는 버튼으로 보이게 옅은 테두리·바탕을 둔다. */
-  border: 1.5px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface-2);
-  line-height: 1.15;
-  text-align: center;
-}
-.tr-axis .rd-abbr,
-.tr-axis .rd-val {
-  color: var(--muted);
-  font-family: var(--display);
-  font-weight: 700;
-}
-.tr-axis .rd-abbr {
-  font-size: 0.75rem;
-}
-.tr-axis .rd-val {
-  color: var(--ink);
-  font-size: 1.125rem;
-  font-variant-numeric: tabular-nums;
-}
-.tr-axis .rd-up {
-  color: var(--good);
-  font-size: 0.75rem;
-}
-.tr-axis .rd-down {
-  color: var(--bad);
-  font-size: 0.75rem;
-}
-.tr-focus {
-  color: var(--accent-text);
-}
-.tr-axis[aria-pressed='true'] {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-}
-.tr-axis[aria-pressed='true'] .rd-abbr {
-  color: var(--accent-text);
-}
-.tr-axis[data-picked] {
-  animation: opt-pick 0.6s ease;
-}
-.tr-arrow {
-  stroke: var(--good);
-  stroke-width: 2.5;
-  stroke-linecap: round;
-}
-.tr-head {
-  fill: var(--good);
-}
-.train-misc {
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-}
-.train-misc .opt {
-  min-width: 0;
 }
 .radar-legend {
   display: flex;
