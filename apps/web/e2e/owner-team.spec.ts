@@ -775,7 +775,7 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
   await expect(befriend).toHaveText('신청 보냄');
   await expect(befriend).toBeDisabled();
   expect(friendBodies).toEqual([{ teamId: RIVAL }]);
-  await page.locator('[data-act="team-profile-back"]').click();
+  await page.goBack();
   await expect(list).toBeVisible();
 });
 

@@ -419,7 +419,7 @@ test('기록실 영구결번 탭: 리그별 구단·최신순으로 보고, 누�
   await wall.locator('[data-rn-tile="3"]').click();
   // 이름 앞에 국적 국기가 붙는다.
   await expect(page.locator('.film-open h1')).toHaveText('🇰🇷박결번');
-  await page.locator('[data-act="hof-back"]').click();
+  await page.goBack();
   await expect(page.locator('[data-hof-tab="rn"]')).toHaveAttribute('aria-selected', 'true');
   // 선수 상세에 다녀와도 최신순 화면 그대로.
   await expect(wall).toHaveAttribute('data-rn-screen', 'recent');
