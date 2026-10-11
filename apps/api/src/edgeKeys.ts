@@ -41,6 +41,7 @@ export const EDGE = {
   marketList: (season: number, sort: string, pos?: string) =>
     `/v1/market?season=${season}&sort=${sort}${pos ? `&pos=${pos}` : ''}`,
   /** 게시판 목록은 첫 페이지(웹 기본 limit)만 담는다. */
+  publicNews: (board: string) => `/v1/public-news/${board}`,
   boardFirstPage: (board: string) => `/v1/boards/${board}/posts?limit=${BOARD_PAGE_LIMIT}`,
 } as const;
 
@@ -67,7 +68,7 @@ export const STALE = {
   /** 이름 공개 토글이 바로 보이게(최초 기록의 이름 포함). */
   retirementPut: (careerId: string) => [EDGE.hofDetail(careerId), ...allFirsts()],
   /** 글·댓글 쓰기/지우기 — 목록의 글과 댓글 수가 바뀐다. */
-  boardChanged: (board: string) => [EDGE.boardFirstPage(board)],
+  boardChanged: (board: string) => [EDGE.boardFirstPage(board), EDGE.publicNews(board)],
   commentsPurged: allBoardLists,
   /** 팀 등록·편성 저장 — 새 팀이 라이브 랭킹 첫 페이지에 바로 보이게(경기 결과는 TTL로만). */
   teamSaved: (season: number) => [

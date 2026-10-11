@@ -2,6 +2,10 @@ import type { Translation } from '../core';
 import type { BoardMsgs } from '../ko/board';
 
 export const board: Translation<BoardMsgs> = {
+  publicNews: 'お知らせとアップデート',
+  publicNewsDescription: '公開されたお知らせとリリースノートを確認できます。',
+  publicNewsDiscuss: 'ゲームで記事とコメントを見る',
+  publicNewsFailed: 'お知らせを読み込めませんでした。しばらくしてから再度お試しください。',
   news: 'お知らせ',
   tabsLabel: '掲示板',
   pinned: '固定',

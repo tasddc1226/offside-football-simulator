@@ -2,6 +2,10 @@
 import { ns } from '../core';
 
 const ko = {
+  publicNews: '공지와 업데이트',
+  publicNewsDescription: '공개된 공지와 릴리즈 노트를 확인합니다.',
+  publicNewsDiscuss: '게임에서 글과 댓글 보기',
+  publicNewsFailed: '소식을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.',
   news: '소식',
   tabsLabel: '게시판',
   pinned: '고정',

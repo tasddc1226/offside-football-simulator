@@ -9,7 +9,6 @@
   import Topbar from './Topbar.svelte';
   import InAppBanner from './InAppBanner.svelte';
   import HallOfFame from './HallOfFame.svelte';
-  import HomeNews from './HomeNews.svelte';
   import SiteFooter from './SiteFooter.svelte';
   import VoluntarySupport from './VoluntarySupport.svelte';
   import HomeFirsts from './firsts/HomeFirsts.svelte';
@@ -109,8 +108,12 @@
   <HallOfFame />
   <!-- T-11-129 구단 가치 TOP 3. 첫 화면 번들 밖에서 따로 불러온다. -->
   {#await import('./HomeClubValue.svelte') then { default: HomeClubValue }}<HomeClubValue />{/await}
-  <HomeNews board="notice" eyebrow="Notice" title={L.noticeTitle} />
-  <HomeNews board="release" eyebrow="Release notes" title={L.releaseTitle} />
+  {#await import('./HomeNews.svelte') then { default: HomeNews }}
+    <HomeNews board="notice" eyebrow="Notice" title={L.noticeTitle} />
+    <HomeNews board="release" eyebrow="Release notes" title={L.releaseTitle} />
+  {:catch}
+    <p>{L.newsFailed}</p>
+  {/await}
   <VoluntarySupport />
   <SiteFooter />
   <!-- T-11-015 라운지 채팅으로 가는 떠 있는 버튼(하단 메뉴 위). -->

@@ -7220,3 +7220,20 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
   display: inline-flex;
   vertical-align: middle;
 }
+
+.public-news {
+  overflow-wrap: anywhere;
+}
+.public-news-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+.public-news-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.public-news .board-row {
+  min-height: 44px;
+}

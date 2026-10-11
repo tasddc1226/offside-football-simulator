@@ -316,6 +316,7 @@
               <span class="muted fs-xs">{postDetailMeta(post)}</span>
             </div>
             <h2 style="margin:0">{post.title}</h2>
+            <a href={`/news/${post.id}/`} class="fs-sm">{L.publicNews}</a>
           </div>
           <div class="board-body">
             {#each parseBody(post.body) as b, i (i)}

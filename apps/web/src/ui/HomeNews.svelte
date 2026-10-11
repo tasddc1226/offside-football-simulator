@@ -42,14 +42,17 @@
     <ul class="board-list">
       {#each posts.slice(0, SHOWN) as p (p.id)}
         <li>
-          <button class="board-row" data-post-row={p.id} onclick={() => openBoard(board, p.id)}>
+          <a class="board-row" href={`/news/${p.id}/`} data-post-row={p.id} onclick={(e) => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault(); openBoard(board, p.id);
+          }}>
             <span class="row" style="gap:6px;flex-wrap:wrap">
               {#if p.pinned}<span class="pill warn">{L.pinned}</span>{/if}
               {#if p.version}<span class="pill">{p.version}</span>{/if}
               <b>{p.title}</b>
             </span>
             <span class="muted fs-xs">{postMeta(p)}</span>
-          </button>
+          </a>
         </li>
       {/each}
     </ul>

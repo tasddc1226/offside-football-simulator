@@ -100,6 +100,21 @@ export type PostSummary = z.infer<typeof PostSummarySchema>;
 export const PostSchema = PostSummarySchema.extend({ body: z.string() });
 export type Post = z.infer<typeof PostSchema>;
 
+/** Searchable admin news only. No author, translation drafts, viewer data or comments. */
+export const PublicNewsSummarySchema = PostSummarySchema.pick({
+  id: true,
+  board: true,
+  title: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const PublicNewsIndexResponseSchema = z.object({
+  posts: z.array(PublicNewsSummarySchema).max(1000),
+});
+export const PublicNewsPostResponseSchema = z.object({
+  post: PublicNewsSummarySchema.extend({ body: z.string() }),
+});
+
 export const CommentSchema = z.object({
   id: z.string(),
   nickname: z.string(),

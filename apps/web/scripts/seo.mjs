@@ -612,6 +612,10 @@ export function seoPlugin(config) {
         await writeFile(join(directory, 'index.html'), pageHtml(base, config, path, body));
       }
       await writeFile(
+        join(outputDirectory, 'news-shell.html'),
+        pageHtml(base, config, '/', '<!-- public-news-body -->', { forceNoIndex: true }),
+      );
+      await writeFile(
         join(outputDirectory, 'app-shell.html'),
         pageHtml(base, config, '/', '<p>게임을 불러오는 중입니다.</p>', {
           forceNoIndex: true,

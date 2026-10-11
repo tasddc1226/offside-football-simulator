@@ -92,6 +92,43 @@ export function localizeList(
     }),
   };
 }
+/** Public news has no drafts/private flag in this schema: only the two admin boards are published.
+ * Never select translations, author IDs, comments or user-specific fields. */
+const publicColumns = {
+  id: boardPosts.id,
+  board: boardPosts.board,
+  title: boardPosts.title,
+  createdAt: boardPosts.createdAt,
+  updatedAt: boardPosts.updatedAt,
+};
+export async function publicNewsIndex(db: Db, board: BoardKey) {
+  return db
+    .select(publicColumns)
+    .from(boardPosts)
+    .where(
+      and(
+        eq(boardPosts.board, board),
+        inArray(boardPosts.board, ['notice', 'release']),
+        isNull(boardPosts.deletedAt),
+      ),
+    )
+    .orderBy(desc(boardPosts.createdAt))
+    .limit(1000);
+}
+export async function publicNewsPost(db: Db, id: string) {
+  const [post] = await db
+    .select({ ...publicColumns, body: boardPosts.body })
+    .from(boardPosts)
+    .where(
+      and(
+        eq(boardPosts.id, id),
+        inArray(boardPosts.board, ['notice', 'release']),
+        isNull(boardPosts.deletedAt),
+      ),
+    );
+  return post;
+}
+
 const live = (id: string) => and(eq(boardPosts.id, id), isNull(boardPosts.deletedAt));
 const likeOf = (postId: string, profileId: string) =>
   and(eq(boardPostLikes.postId, postId), eq(boardPostLikes.profileId, profileId));
