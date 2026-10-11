@@ -1,4 +1,6 @@
 import {
+  PublicNewsIndexResponseSchema,
+  PublicNewsPostResponseSchema,
   BoardIdParamSchema,
   BoardKeySchema,
   BoardListQuerySchema,
@@ -18,6 +20,8 @@ import {
 import type { Context, Hono } from 'hono';
 import { getViewer, requireAdmin } from '../auth/admin.js';
 import {
+  publicNewsIndex,
+  publicNewsPost,
   addView,
   blockAuthor,
   createComment,
@@ -60,6 +64,7 @@ import { draftTranslations } from '../translate/ai.js';
 // 댓글은 그 사람의 글 화면에서 빠진다(글 상세는 보는 사람마다 달라 엣지에 담지 않는다).
 const COMMENT_LIMIT = 10;
 
+const notFoundPost = () => notFound('글');
 const notFound = (what: string) =>
   notFoundError(`${what} 항목을 찾을 수 없어요.`, 'BOARD_NOT_FOUND');
 
@@ -78,11 +83,29 @@ const purgeList = (c: Context<AppEnv>, board: string) => purgeEdge(c, STALE.boar
 /** 한국어 원문과 번역을 담은 행. 응답에는 `localizePost(row, reqLang(c))`로 고른 것을 쓴다. */
 async function postOr404(c: Context<AppEnv>, id: string) {
   const post = await getPost(getDb(c), id);
-  if (!post) throw notFound('글');
+  if (!post) throw notFoundPost();
   return post;
 }
 
 export function registerBoardRoutes(app: Hono<AppEnv>): void {
+  app.get('/v1/public-news/:board', async (c) => {
+    const board = parseWithAppError(BoardKeySchema, c.req.param('board'));
+    const posts = await edgeCached(c, EDGE.publicNews(board), LIST_TTL, () =>
+      publicNewsIndex(getDb(c), board),
+    );
+    c.header('Cache-Control', 'no-store');
+    return ok(c, PublicNewsIndexResponseSchema, { posts });
+  });
+  app.get('/v1/public-news/posts/:postId', async (c) => {
+    // Uncached by design: deletion must remove the body immediately, across edge locations.
+    // One indexed primary-key read, no session lookup or unbounded per-ID cache population.
+    c.header('Cache-Control', 'no-store');
+    const id = c.req.param('postId');
+    if (!/^pst_(?:release_\d{8}|[0-9a-f-]{36})$/.test(id)) throw notFoundPost();
+    const post = await publicNewsPost(getDb(c), id);
+    if (!post) throw notFoundPost();
+    return ok(c, PublicNewsPostResponseSchema, { post });
+  });
   app.get('/v1/boards/viewer', async (c) => {
     const { admin, google, nickname } = await getViewer(c);
     return ok(c, BoardViewerResponseSchema, { admin, google, nickname });
@@ -133,7 +156,7 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
   });
 
   app.post('/v1/boards/posts/:postId/views', async (c) => {
-    if (!(await addView(getDb(c), idParam(c, 'postId')))) throw notFound('글');
+    if (!(await addView(getDb(c), idParam(c, 'postId')))) throw notFoundPost();
     return c.body(null, 204);
   });
 
@@ -145,7 +168,7 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       const postId = idParam(c, 'postId');
       const { profileId } = getSessionOrThrow(c);
       const likeCount = await setLike(getDb(c), postId, profileId, like, nowIso());
-      if (likeCount === undefined) throw notFound('글');
+      if (likeCount === undefined) throw notFoundPost();
       return ok(c, PostLikeResponseSchema, { liked: like, likeCount });
     });
   }
@@ -171,7 +194,7 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     const id = idParam(c, 'postId');
     await requireAdmin(c);
     const input = readBody(c, PostInputSchema);
-    if (!(await updatePost(getDb(c), id, input, nowIso()))) throw notFound('글');
+    if (!(await updatePost(getDb(c), id, input, nowIso()))) throw notFoundPost();
     const post = await postOr404(c, id);
     purgeList(c, post.board);
     return ok(c, PostSchema, localizePost(post, reqLang(c)));
@@ -181,7 +204,7 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     const id = idParam(c, 'postId');
     await requireAdmin(c);
     const { board } = await postOr404(c, id);
-    if (!(await deletePost(getDb(c), id, nowIso()))) throw notFound('글');
+    if (!(await deletePost(getDb(c), id, nowIso()))) throw notFoundPost();
     purgeList(c, board);
     return c.body(null, 204);
   });

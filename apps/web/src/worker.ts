@@ -1,3 +1,5 @@
+import { serveNews, newsSitemap } from './public-news.js';
+import { NEWS_ID } from './news-id.js';
 import { resolveApiBaseUrl } from './api/base-url.js';
 import { fetchHofEntry } from './hof-entry.js';
 import { careerShareMeta, injectShareMeta } from './share-meta.js';
@@ -108,6 +110,19 @@ export default {
 };
 
 async function route(request: Request, env: Env, url: URL): Promise<Response> {
+  if (url.pathname === '/' && url.searchParams.has('news')) {
+    // 공개 소식의 "게임에서 보기" 링크. 형식이 틀린 글 ID는 게임 게시판에 넘기지 않고 홈으로 보낸다.
+    if (!NEWS_ID.test(url.searchParams.get('news') ?? ''))
+      return new Response(null, {
+        status: 302,
+        headers: { Location: '/', 'Cache-Control': 'no-store' },
+      });
+    return withRobots(
+      await env.ASSETS.fetch(new Request(new URL('/app-shell', url.origin))),
+      'noindex, nofollow',
+    );
+  }
+  const isNews = url.pathname === '/news' || url.pathname.startsWith('/news/');
   const asset = await env.ASSETS.fetch(request);
   const isPublicPage = PUBLIC_PATHS.has(url.pathname);
   const isDiscovery = url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml';
@@ -118,7 +133,7 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   // T-10-023: 새 배포 감지용 — 항상 최신 값을 받아야 한다.
   if (url.pathname === '/version.json' && asset.status === 200)
     return withCacheControl(asset, 'no-store');
-  if (!isPublicPage && !isDiscovery && asset.status !== 404)
+  if (!isNews && !isPublicPage && !isDiscovery && asset.status !== 404)
     return withRobots(asset, 'noindex, nofollow');
   const appShell = () => env.ASSETS.fetch(new Request(new URL('/app-shell', url.origin), request));
   const shareId = asset.status === 404 ? SHARE_PATH.exec(url.pathname)?.[1] : undefined;
@@ -133,6 +148,19 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   } catch {
     /* Fail closed: indexing stays disabled. */
   }
+
+  if (isNews) {
+    if (!['GET', 'HEAD'].includes(request.method)) return new Response(null, { status: 405 });
+    const template = await env.ASSETS.fetch(new Request(new URL('/news-shell', url.origin)));
+    if (!template.ok)
+      return new Response('Service Unavailable', {
+        status: 503,
+        headers: { 'X-Robots-Tag': 'noindex, nofollow' },
+      });
+    return serveNews(request, await template.text(), indexingEnabled);
+  }
+  if (url.pathname === '/sitemap.xml' && indexingEnabled && asset.ok)
+    return newsSitemap(asset, url);
 
   if (url.pathname === '/robots.txt' && !indexingEnabled) {
     return new Response('User-agent: *\nDisallow: /\n', {
