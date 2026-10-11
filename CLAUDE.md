@@ -51,7 +51,7 @@ pnpm --filter @offside/fulltime-sim sim
 pnpm --filter @offside/fulltime-sim analyze
 ```
 
-머지 전 전체 검증 체인: `pnpm install --frozen-lockfile && pnpm lint && pnpm lint:deps && pnpm lint:i18n && pnpm format:check && pnpm typecheck && pnpm test && pnpm build && pnpm --filter @offside/web check:bundle` + e2e.
+머지 전 검증 범위는 [CI 테스트 정책](docs/operations/ci-test-policy.md)을 따른다. 검토된 운영 지표 변경은 관련 웹 E2E만 실행하고, 공통·미분류·CI 변경은 전체 E2E를 실행한다. 전체 검증이 필요한 경우의 체인: `pnpm install --frozen-lockfile && pnpm lint && pnpm lint:deps && pnpm lint:i18n && pnpm format:check && pnpm typecheck && pnpm test && pnpm build && pnpm --filter @offside/web check:bundle` + e2e.
 
 ## 주요 구성 요소
 
