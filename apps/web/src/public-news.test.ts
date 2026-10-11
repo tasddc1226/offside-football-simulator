@@ -68,6 +68,15 @@ describe('public news responses', () => {
       expect.objectContaining({ credentials: 'omit', redirect: 'error' }),
     );
   });
+  it('sends malformed game deep links home and keeps valid ones in the app shell', async () => {
+    const bad = await get('/?news=%3Cscript%3E&board=release');
+    expect(bad.status).toBe(302);
+    expect(bad.headers.get('Location')).toBe('/');
+    const good = await get(`/?news=${id}&board=release`);
+    expect(good.status).toBe(200);
+    expect(await good.text()).toBe('game');
+    expect(good.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
+  });
   it('links both boards from HTML and sitemap with two bounded index reads, no N+1', async () => {
     mock();
     expect(await (await get('/news/')).text()).toContain(`href="/news/${id}/"`);
