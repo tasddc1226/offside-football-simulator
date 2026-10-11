@@ -1,5 +1,10 @@
-import { PeakProfileSchema, TeamLayoutSchema, TeamLogoSchema } from '@offside/contracts';
-import type { TeamPlayer, TeamRankItem, TeamRankSort } from '@offside/contracts';
+import {
+  PeakProfileSchema,
+  TeamLayoutSchema,
+  TeamLogoSchema,
+  TeamPresetsSchema,
+} from '@offside/contracts';
+import type { TeamPlayer, TeamPreset, TeamRankItem, TeamRankSort } from '@offside/contracts';
 import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import { CARD_VALUE_FLOOR } from '@offside/contracts/market-value';
@@ -94,6 +99,25 @@ export function layoutOf(row: Pick<OwnerTeamRow, 'layoutJson'>) {
     return null;
   }
 }
+
+/** T-11-217 팀 프리셋. 깨진 값은 빈 목록으로 읽는다. */
+export function presetsOf(row: Pick<OwnerTeamRow, 'presetsJson'>): TeamPreset[] {
+  if (!row.presetsJson) return [];
+  try {
+    const result = TeamPresetsSchema.safeParse(JSON.parse(row.presetsJson));
+    return result.success ? result.data : [];
+  } catch {
+    return [];
+  }
+}
+
+/** T-11-217 그 시즌 내 팀의 프리셋을 통째로 바꾼다. 팀이 없으면 바뀐 행이 없다(빈 배열). */
+export const setTeamPresets = (db: Db, profileId: string, season: number, presets: TeamPreset[]) =>
+  db
+    .update(ownerTeams)
+    .set({ presetsJson: presets.length ? JSON.stringify(presets) : null })
+    .where(and(eq(ownerTeams.profileId, profileId), eq(ownerTeams.season, season)))
+    .returning({ id: ownerTeams.id });
 
 export function logoOf(row: Pick<OwnerTeamRow, 'logoJson'>) {
   if (!row.logoJson) return null;

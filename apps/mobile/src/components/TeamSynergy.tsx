@@ -111,7 +111,7 @@ export function TeamSynergy({
       <Press
         key={r.id}
         testID={`synergy-${r.id}`}
-        accessibilityLabel={`${r.name} · ${r.effect} · ${state}`}
+        accessibilityLabel={`${r.name} · ${r.desc} · ${r.effect} · ${state}`}
         accessibilityState={{ selected: viewing }}
         onPress={() => setFocus(viewing ? null : r.id)}
         style={style}
@@ -141,6 +141,9 @@ export function TeamSynergy({
       </View>
       <Txt v="xs" tone="muted">
         {anyOn ? L.chipHint : L.empty}
+      </Txt>
+      <Txt v="xs" tone="muted" testID="synergy-requirements">
+        {L.requirementsHint}
       </Txt>
       <View style={{ gap: 6 }}>{shown.map(row)}</View>
       {offCount ? (

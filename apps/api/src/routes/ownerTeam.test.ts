@@ -785,6 +785,40 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(await ctx.db.select().from(ownerTeams)).toHaveLength(1);
   });
 
+  it('T-11-217 팀 프리셋은 팀을 저장한 뒤에만 통째로 바꾸고, 팀 응답에 같이 온다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const st = await addCareer(me.profileId, { peak: 90 });
+    const preset = {
+      name: '수비 위주',
+      formation: '3-5-2',
+      slots: slots(null, null, null, null, null, null, null, null, null, st),
+      layout: null,
+    };
+    const putPresets = (presets: unknown[]) =>
+      call('PUT', '/v1/owner-team/presets', { cookie: me.cookie, body: { presets } });
+    // 팀이 없으면 404.
+    expect((await putPresets([preset])).status).toBe(404);
+    await putTeam(me.cookie, { slots: slots(...Array(9).fill(null), st) });
+    const saved = await putPresets([preset, { ...preset, name: '  공격  ', formation: '4-4-2' }]);
+    expect(saved.status).toBe(200);
+    const got = GetRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    );
+    expect(got.data.team!.presets!.map((p) => p.name)).toEqual(['수비 위주', '공격']);
+    // 프리셋 저장은 팀 편성을 바꾸지 않고, 팀을 다시 저장해도 프리셋은 남는다.
+    expect(got.data.team!.formation).toBe('4-3-3');
+    const resaved = PutRes.parse(
+      await (await putTeam(me.cookie, { slots: slots(...Array(9).fill(null), st) })).json(),
+    );
+    expect(resaved.data.team.presets).toHaveLength(2);
+    // 6개 · 빈 이름은 거절, 빈 목록은 모두 지운다.
+    expect((await putPresets(Array(6).fill(preset))).status).toBe(400);
+    expect((await putPresets([{ ...preset, name: ' ' }])).status).toBe(400);
+    expect((await putPresets([])).status).toBe(200);
+    const [row] = await ctx.db.select().from(ownerTeams);
+    expect(row!.presetsJson).toBeNull();
+  });
+
   it('시즌마다 새 팀 — 앞 시즌 선수는 와일드카드로 넣고(T-11-114), 지난 시즌 팀은 그대로 남는다', async () => {
     const me = await issueGoogleCookie(ctx);
     const pre = await addCareer(me.profileId, { peak: 90 });

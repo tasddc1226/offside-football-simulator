@@ -31,6 +31,7 @@
   import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
   import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
   import { type OwnerTierTag } from '@offside/contracts';
+  import { shapeOf } from '@offside/contracts/owner-team';
   import { tierTitle } from '@offside/app-core/ownerTier';
   import GradeEmblem from './team/GradeEmblem.svelte';
   import { ownerProfileText as H } from '@offside/app-core/i18n/ko/ownerProfile';
@@ -146,7 +147,7 @@
         <div class="owner-who">
           <small class="eyebrow">{L.myTeam}{card?.season ? ` · ${card.season}` : ''}</small>
           <h2>{card?.team?.name ?? L.myTeam}</h2>
-          {#if card?.team}<span class="muted fs-sm">{L.manager({ manager: card.team.manager, formation: card.team.formation })}</span>{/if}
+          {#if card?.team}<span class="muted fs-sm">{L.manager({ manager: card.team.manager, formation: shapeOf(card.team.formation, card.team.layout) })}</span>{/if}
         </div>
         {#if card?.team}
           <div class="owner-ovr" aria-label={L.teamOvr({ ovr: card.team.ovr })}><small>OVR</small><b>{card.team.ovr}</b></div>

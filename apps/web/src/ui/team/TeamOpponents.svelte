@@ -64,7 +64,7 @@
         <TeamLogo logo={o.logo} name={o.name} size={32} decorative />
         <div class="tm-opp-info">
           <b>{o.name}{#if o.title} <TitleBadge title={o.title} size="icon" />{/if}</b>
-          <span class="muted fs-sm">{o.owner} · {o.formation} · {recordText(o.record)}</span>
+          <span class="muted fs-sm">{o.owner} · {o.shape ?? o.formation} · {recordText(o.record)}</span>
         </div>
         <span class="tm-opp-score" data-opponent-rating={o.rating}><small class="muted">{L.oppRating}</small><b>{o.rating}</b><small class="muted">{L.oppOvr({ n: o.ovr })}</small></span>
         <button class="btn btn-primary btn-sm" disabled={playing || matchesLeft === 0} onclick={() => onchallenge(o)} data-act="team-challenge">{L.challenge}</button>

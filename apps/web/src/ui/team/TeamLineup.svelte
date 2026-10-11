@@ -2,7 +2,7 @@
   import { teamNameIssues } from '@offside/app-core/careerGuide';
   import { tn } from '@offside/game/i18n/names';
   import { onDestroy } from 'svelte';
-  import { DETAIL_LABEL, FORMATION_IDS, LINEUP_SIZE, presetLayout, positionedLayout, positionRole, slotRating, slotFit, type FormationId, type TeamPosition } from '@offside/contracts/owner-team';
+  import { DETAIL_LABEL, FORMATION_IDS, LINEUP_SIZE, SHAPE_IDS, presetLayout, positionedLayout, positionRole, shapeBase, matchShape, shapeLayout, slotRating, slotFit, type FormationId, type ShapeId, type TeamPosition } from '@offside/contracts/owner-team';
   import { POS_LABEL, detailPosOf, type PosGroup } from '@offside/contracts/positions';
   import type { OwnerTeam, TeamLines as Lines, TeamPlayer } from '@offside/app-core/api/team';
   import { attrLine, synergyFocus } from '@offside/app-core/teamOwner';
@@ -19,10 +19,10 @@
   import { dur } from '../motion.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
-  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, wildcards, onassign, onauto, onsave, onlock }:
+  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, wildcards, onassign, onauto, onsave, onlock, onpresets }:
     { team: OwnerTeam | null; editable: boolean; formation: FormationId; layout: TeamPosition[] | null; slots: (string | null)[]; lines: Lines; synergy: Synergy; season: number;
       cells: { rating: number; name: string; youth: boolean; player?: TeamPlayer | undefined }[]; players: TeamPlayer[]; nameOf: (p: TeamPlayer) => string;
-      teamName: string; managerName: string; teamLogo: TeamLogo | null; seasonName: string; filled: number; saving: boolean; nameOk: boolean; dirty: boolean; wildcards: string | null; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void; onlock?: ((p: TeamPlayer) => void) | undefined } = $props();
+      teamName: string; managerName: string; teamLogo: TeamLogo | null; seasonName: string; filled: number; saving: boolean; nameOk: boolean; dirty: boolean; wildcards: string | null; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void; onlock?: ((p: TeamPlayer) => void) | undefined; onpresets?: (() => void) | undefined } = $props();
   let shareData = $state<TeamShareData | null>(null);
   let pitch = $state<HTMLElement>();
   let search = $state('');
@@ -52,6 +52,9 @@
   });
 
   function preset(f: FormationId) { formation = f; layout = null; selectedSlot = null; announcement = L.presetAnnounce({ f }); }
+  // T-11-216 시즌 1 배치 프리셋(세부 포지션 자리). 프리시즌 팀은 옛 세 가지만.
+  function shape(id: ShapeId) { formation = shapeBase(id); layout = shapeLayout(id); selectedSlot = null; announcement = L.presetAnnounce({ f: id }); }
+  const shapeOn = $derived(matchShape(layout));
   function openShare() {
     cancelDrag();
     selectedPlayer = null;
@@ -155,8 +158,10 @@
         <button class="ground-share" aria-label={L.shareMakeAria} data-act="team-share-make" onclick={openShare}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 13V2m-4 4 4-4 4 4M5 9H3v8h14V9h-2" /></svg><span>{L.share}</span></button>
       </div>
     </header>
+    {#if editable && onpresets}<div class="preset-bar"><button class="btn btn-sm" aria-haspopup="dialog" onclick={onpresets} data-act="team-presets">{L.tpButton}</button></div>{/if}
     <div class="hof-sorts ground-presets" role="group" aria-label={L.presetsLabel}>
       {#each FORMATION_IDS as f (f)}<button class="hof-sort" aria-pressed={!layout && formation === f} data-formation={f} disabled={!editable} onclick={() => preset(f)}>{f}</button>{/each}
+      {#if season > 0}{#each SHAPE_IDS as id (id)}<button class="hof-sort" aria-pressed={shapeOn === id} data-formation={id} disabled={!editable} onclick={() => shape(id)}>{id}</button>{/each}{/if}
     </div>
     <TeamPitch {formation} {cells} layout={positions} selected={selectedSlot} dragging={drag?.moving ? drag.from : null} links={syn.links} focus={syn.members} applied={syn.applied} caption={synergyApplies(season) ? syn.caption : null} bind:element={pitch}
       onpick={editable ? pickSlot : undefined} onstart={editable ? (e, i) => start(e, slots[i] ?? null, i) : undefined} onkey={editable ? keyMove : undefined} onplace={editable ? place : undefined} />
@@ -255,6 +260,7 @@
   .ground-share svg {width:16px;height:16px;stroke:currentColor;stroke-width:1.5;fill:none;}
   .ground-auto {font-size:12px;white-space:nowrap;}
   .wildcards {white-space:nowrap;}
+  .preset-bar {display:flex;justify-content:flex-end;margin:4px 14px 0;}
   .ground-presets {margin:4px 14px 12px;gap:8px;}
   .ground-presets .hof-sort {min-height:36px;min-width:64px;position:relative;}
   .ground-presets .hof-sort::after {content:'';position:absolute;inset:-4px 0;}

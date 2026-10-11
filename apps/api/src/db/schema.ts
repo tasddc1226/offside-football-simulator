@@ -990,6 +990,8 @@ export const ownerTeams = sqliteTable(
      * 그대로 두고 친선전·내 팀 화면만 이 값을 쓴다(friendlyTeamOf).
      */
     friendlyJson: text('friendly_json'),
+    /** T-11-217 팀 프리셋(포메이션 · 선발 · 배치, 최대 5개) JSON 배열. 없으면 null. */
+    presetsJson: text('presets_json'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

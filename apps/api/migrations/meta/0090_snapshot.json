@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "cfcd02d6-5923-4662-9c54-5b1f5d182357",
+  "id": "7fbace0a-86ab-4e17-aea5-33e7dae4a3d0",
   "prevId": "7b5f5aec-0aba-4a04-a7e0-87b73f2b576b",
   "tables": {
     "app_auth_tickets": {
@@ -2808,21 +2808,6 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "refunded_at": {
-          "name": "refunded_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "revoked_qty": {
-          "name": "revoked_qty",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
         }
       },
       "indexes": {
@@ -4195,6 +4180,13 @@
         },
         "friendly_json": {
           "name": "friendly_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "presets_json": {
+          "name": "presets_json",
           "type": "text",
           "primaryKey": false,
           "notNull": false,

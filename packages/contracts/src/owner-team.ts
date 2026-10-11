@@ -190,6 +190,100 @@ export const positionedLayout = (layout: TeamLayout): TeamPosition[] =>
   layout.map((p, i) => ({ ...p, slot: positionRole(p.x, p.y, i) }));
 
 /**
+ * T-11-216 시즌 1 배치 프리셋. 저장 · 응답의 formation은 옛 앱도 아는 세 값(base)으로 두고, 모양은 자유 배치(layout)로
+ * 저장한다 — 자리마다의 포지션은 positionRole로 정해져 손으로 끌어 놓은 배치와 같다(경기 규칙은 그대로). 배치가 프리셋과
+ * 꼭 같으면 shapeOf가 그 이름을 돌려준다.
+ */
+/** T-11-217 팀 프리셋 수 · 이름 길이 상한. */
+export const TEAM_PRESET_MAX = 5;
+export const TEAM_PRESET_NAME_MAX = 12;
+
+type ShapePoint = readonly [x: number, y: number];
+// 카드가 덜 겹치게 줄 사이를 넓히고, 위아래로 가까운 자리는 옆으로 비켜 둔다. 첫 점은 골키퍼.
+const GK: ShapePoint = [50, 91];
+const BACK4: readonly ShapePoint[] = [
+  [15, 74],
+  [37, 77],
+  [63, 77],
+  [85, 74],
+];
+const SHAPES = {
+  '4-2-3-1': {
+    base: '4-3-3',
+    points: [GK, ...BACK4, [36, 57], [64, 57], [16, 38], [50, 40], [84, 38], [50, 17]],
+  },
+  '4-1-4-1': {
+    base: '4-3-3',
+    points: [GK, ...BACK4, [50, 59], [15, 46], [35, 44], [65, 44], [85, 46], [50, 18]],
+  },
+  '4-3-3 F9': {
+    base: '4-3-3',
+    points: [GK, ...BACK4, [30, 47], [50, 59], [70, 47], [16, 26], [50, 24], [84, 26]],
+  },
+  '4-4-1-1': {
+    base: '4-4-2',
+    points: [GK, ...BACK4, [15, 50], [37, 52], [63, 52], [85, 50], [50, 32], [50, 13]],
+  },
+  '3-4-3': {
+    base: '3-5-2',
+    points: [
+      GK,
+      [30, 75],
+      [50, 77],
+      [70, 75],
+      [13, 60],
+      [38, 52],
+      [62, 52],
+      [87, 60],
+      [16, 26],
+      [50, 16],
+      [84, 26],
+    ],
+  },
+  '5-3-2': {
+    base: '3-5-2',
+    points: [
+      [50, 93],
+      [12, 62],
+      [30, 73],
+      [50, 80],
+      [70, 73],
+      [88, 62],
+      [28, 46],
+      [50, 52],
+      [72, 46],
+      [38, 18],
+      [62, 18],
+    ],
+  },
+} as const satisfies Record<string, { base: FormationId; points: readonly ShapePoint[] }>;
+export type ShapeId = keyof typeof SHAPES;
+export const SHAPE_IDS = Object.keys(SHAPES) as ShapeId[];
+/** 프리셋이 저장할 formation(옛 앱이 아는 값). */
+export const shapeBase = (id: ShapeId): FormationId => SHAPES[id].base;
+/** 프리셋 배치(골키퍼 + 필드 10명). */
+export const shapeLayout = (id: ShapeId): TeamPosition[] =>
+  SHAPES[id].points.map(([x, y], i) => ({
+    x,
+    y,
+    slot: positionRole(x, y, i),
+  }));
+/** 배치가 프리셋과 꼭 같으면 그 이름, 아니면 저장된 formation(옮긴 배치 · 기본 포메이션). */
+/** 배치가 정확히 맞는 프리셋. 손으로 옮겼으면 null. */
+export function matchShape(layout: TeamLayout | null | undefined): ShapeId | null {
+  if (!layout) return null;
+  return (
+    SHAPE_IDS.find((k) =>
+      shapeLayout(k).every((p, i) => p.x === layout[i]?.x && p.y === layout[i]?.y),
+    ) ?? null
+  );
+}
+
+export function shapeOf(formation: FormationId, layout: TeamLayout | null | undefined): string {
+  return matchShape(layout) ?? formation;
+}
+
+/**
  * 최고 시점 능력치(PeakProfile)가 없는 선수(이 기능 전에 은퇴한 선수)가 그 자리에서 내는 비율. 세부 포지션이
  * 같으면 1.0, 세부 포지션을 모르고(null) 같은 계열이면 0.95, 같은 계열의 다른 세부 포지션이면 0.9, 필드
  * 플레이어끼리 다른 계열이면 0.75, 골키퍼 ↔ 필드는 0.3.
