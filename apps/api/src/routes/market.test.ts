@@ -276,6 +276,7 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
       [listingId, 1_200_000, 1_000_000],
     ]);
     expect(market.recent).toEqual([]);
+    expect(market.items[0]!.card.foot).toBe('오른발'); // T-11-211 카드 주발
 
     const buy = (cookie: string, price: number) =>
       call('POST', `/v1/market/listings/${listingId}/buy`, {
@@ -327,7 +328,7 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     const team = TeamRes.parse(
       await (await call('GET', '/v1/owner-team', { cookie: buyer.cookie })).json(),
     ).data;
-    expect(team.players).toMatchObject([{ careerId: card, raised: false }]);
+    expect(team.players).toMatchObject([{ careerId: card, raised: false, foot: '오른발' }]);
     const rel = await call('POST', '/v1/cards/release', {
       cookie: buyer.cookie,
       headers: idem(),

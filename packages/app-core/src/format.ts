@@ -20,7 +20,7 @@ import { homeLiveText as L } from './i18n/ko/homeLive.js';
 import { anonName } from '@offside/game/pos-label';
 import type { PosGroup } from '@offside/contracts/positions';
 import { getLocale } from './i18n/core.js';
-import { personName } from '@offside/game/i18n/names';
+import { personName, tn } from '@offside/game/i18n/names';
 
 /**
  * 다른 유저 선수의 공개 이름(지금 언어로). 서버에는 한국어로 저장돼 있어, 게임 안 선수 이름과 같은 표(personName)로
@@ -46,9 +46,20 @@ const CARD_SEASON_COLORS = ['#1f7a5c', '#b0472f', '#2e5d7a', '#8a5a14'];
 export const cardSeasonColor = (season: number): string =>
   season === 0 ? PRESEASON_COLOR : CARD_SEASON_COLORS[(season - 1) % CARD_SEASON_COLORS.length]!;
 
-/** T-11-180 카드의 키·몸무게 한 줄(웹·앱 같이). 체격이 없는 옛 커리어는 null. */
-export const cardBody = (p: { height?: number | undefined; weight?: number | undefined }) =>
-  p.height && p.weight ? `${p.height}cm · ${p.weight}kg` : null;
+// i18n-ignore: 주발 저장값(한국어) → 카드용 짧은 표기 키
+const CARD_FOOT = { 오른발: 'footRight', 왼발: 'footLeft', 양발: 'footBoth' } as const;
+const cardFoot = (foot: string | null | undefined) =>
+  foot ? (foot in CARD_FOOT ? L[CARD_FOOT[foot as keyof typeof CARD_FOOT]] : tn(foot)) : null;
+
+/** 카드 체격 줄(웹·앱 같이): T-11-180 키·몸무게(둘 다 있을 때)와 주발(T-11-211, 지금 언어의 짧은 표기). 다 없으면 null. */
+export const cardBody = (p: {
+  height?: number | undefined;
+  weight?: number | undefined;
+  foot?: string | null | undefined;
+}) => {
+  const parts = [p.height && p.weight ? `${p.height}cm · ${p.weight}kg` : null, cardFoot(p.foot)];
+  return parts.some(Boolean) ? parts.filter(Boolean).join(' · ') : null;
+};
 
 /** 구단주 팀 선수 카드 아랫줄(웹·앱 같이): 능력치 안내가 먼저, 없으면 T-11-080 카드 기준가. 둘 다 없으면 null. */
 export function cardFootNote(p: {

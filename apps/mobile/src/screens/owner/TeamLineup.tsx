@@ -422,6 +422,7 @@ export function TeamLineup({
                           attrsEstimated: p.attrsEstimated,
                           height: p.height,
                           weight: p.weight,
+                          foot: p.foot,
                           cardValue: p.cardValue,
                           pos: p.pos,
                           type: p.type,
