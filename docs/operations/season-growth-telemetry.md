@@ -33,19 +33,19 @@
 
 ## 보관 (T-11-100)
 
-매일 작업(KST 04:00, `apps/api/src/cron/growthArchive.ts`)이 올라온 지 30일(`KEEP_DAYS`) 지난 시즌의 성장 기록을 R2
+매일 작업(KST 04:00, `apps/api/src/cron/growthArchive.ts`)이 올라온 지 7일(`KEEP_DAYS`, T-11-203에서 30일 → 7일) 지난 시즌의 성장 기록을 R2
 `offside-d1-backup` 버킷 `growth/<env>/<실행일>-<시각>.ndjson.gz`로 옮기고 D1에서는 `growth_json`을 비운다. 시즌 행과 다른
 열은 그대로다. 그날 D1 백업 뒤에 돌아서, 백업이 성공했으면 비우기 전 값은 그날 백업에도 남는다. 백업 정리는 `d1/` 아래만 지우므로 이 파일은
 지워지지 않는다.
 
 - 한 줄이 한 시즌이다: `{"careerId","year","age","ovr","createdAt","growth":{…growth_json 그대로}}`. 포지션·잠재력·숨김 같은
   커리어 정보는 D1 `careers`와 `careerId`로 잇는다.
-- D1에 남은 성장 기록 중 30일 지난 것을 부분 인덱스(`career_seasons_growth_created_idx`)로 찾아 옮기고, 올린 행만 비운다.
+- D1에 남은 성장 기록 중 7일 지난 것을 부분 인덱스(`career_seasons_growth_created_idx`)로 찾아 옮기고, 올린 행만 비운다.
   한 번에 40만 행까지 옮기고 남은 행은 다음 날 옮긴다.
 - 옮긴 뒤 같은 시즌이 성장 기록과 함께 다시 올라오면(진행 중 커리어의 재전송) 그 행은 다음 실행이 다시 옮긴다. 같은
   `(careerId, year)`가 여러 파일에 있으면 나중 파일(파일 이름의 시각) 값을 쓴다.
 
-분석은 최근 30일은 D1, 그 전은 R2 파일을 내려받아 한다:
+분석은 최근 7일은 D1, 그 전은 R2 파일을 내려받아 한다:
 
 ```bash
 wrangler r2 object get offside-d1-backup/growth/production/<파일> --remote --file g.ndjson.gz

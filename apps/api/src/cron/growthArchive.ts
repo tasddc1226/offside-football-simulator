@@ -5,8 +5,9 @@
 import { DAY_MS } from '../time.js';
 import { gzipToR2 } from './backup.js';
 
-/** 이만큼 지난 시즌의 성장 기록을 옮긴다. 조작 판정(growthTampered)은 올라오는 기록만 보므로 D1에 남길 필요가 없다. */
-export const KEEP_DAYS = 30;
+/** 이만큼 지난 시즌의 성장 기록을 옮긴다. 조작 판정(growthTampered)은 올라오는 기록만 보므로 D1에 남길 필요가 없다.
+ * T-11-203 30일 → 7일: 하루 약 19만 시즌이 올라와 30일을 기다리면 D1이 10GB 한도에 먼저 닿는다. */
+export const KEEP_DAYS = 7;
 const PAGE = 2000;
 /** 한 번에 옮기는 최대 행 수. 넘으면 남은 행은 다음 날 옮긴다(매일 작업의 시간·CPU 한도 안에 들게). */
 const MAX_ROWS = 400_000;
