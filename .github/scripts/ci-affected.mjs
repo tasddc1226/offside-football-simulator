@@ -6,6 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { join, resolve } from 'node:path';
 import { isAllowedDocument, readChangedPaths } from './ci-scope.mjs';
+import { isLocaleIndex, onlyAdminLocaleIndex, webE2ePlan } from './ci-web-e2e.mjs';
 
 const WORKSPACE_ROOTS = ['apps', 'packages', 'tooling'];
 const API = '@offside/api';
@@ -63,7 +64,11 @@ function detect(env, exec) {
   try {
     const paths = readChangedPaths(env.CI_BASE_SHA ?? '', env.CI_HEAD_SHA ?? '', exec);
     if (needsFull(paths, packageDirs())) return { full: true, names: [] };
-    return { full: false, names: affectedNames(env, exec) };
+    const safeIndexes = paths.filter(isLocaleIndex).filter((path) => {
+      const read = (sha) => exec('git', ['show', `${sha}:${path}`], { encoding: 'utf8' });
+      return onlyAdminLocaleIndex(read(env.CI_BASE_SHA), read(env.CI_HEAD_SHA));
+    });
+    return { full: false, names: affectedNames(env, exec), paths, safeIndexes };
   } catch {
     return { full: true, names: [] }; // 판정 실패는 전부 검사
   }
@@ -71,8 +76,9 @@ function detect(env, exec) {
 
 export function main(env = process.env, exec = execFileSync, append = appendFileSync) {
   if (!env.GITHUB_OUTPUT) throw new Error('GITHUB_OUTPUT is required');
-  const { full, names } = detect(env, exec);
+  const { full, names, paths, safeIndexes } = detect(env, exec);
   const o = outputs(full, names);
+  Object.assign(o, webE2ePlan({ full, web: o.web === 'true', paths, safeIndexes }));
   append(
     env.GITHUB_OUTPUT,
     Object.entries(o)
@@ -81,6 +87,13 @@ export function main(env = process.env, exec = execFileSync, append = appendFile
     'utf8',
   );
   console.log(full ? 'affected: full run' : `affected: ${names.join(', ') || '(none)'}`);
+  console.log(`web e2e: ${o.web_e2e_scope}; shards: ${o.web_e2e_shards}`);
+  if (env.GITHUB_STEP_SUMMARY)
+    append(
+      env.GITHUB_STEP_SUMMARY,
+      `Web E2E: **${o.web_e2e_scope}**, shards ${o.web_e2e_shards}. Unknown/shared changes use full coverage.\n`,
+      'utf8',
+    );
   return o;
 }
 
