@@ -1,6 +1,6 @@
 // ───────── 세부 능력치 체계 (FIFA / EA SPORTS FC 방식) ─────────
 import { BODY_DEFAULT, bmiOf } from '@offside/contracts/body';
-import { DETAIL_POSITIONS, type PeakProfile } from '@offside/contracts/positions';
+import { LEGACY_DETAIL_POSITIONS, type PeakProfile } from '@offside/contracts/positions';
 import { ATTR_KEYS, DPOS, POS, type AttrKey, type Pos } from './data.js';
 import { clamp, ri } from './rng.js';
 import type { GameState } from './types.js';
@@ -234,7 +234,7 @@ export function peakProfileOf(s: GameState, shift = 0): PeakProfile {
   return {
     attrs: Object.fromEntries(ATTR_KEYS.map((k) => [k, r(s.attrs[k])])) as PeakProfile['attrs'],
     roles: Object.fromEntries(
-      DETAIL_POSITIONS.map((d) => [d, r(ovrRole(s, DPOS[d].role))]),
+      LEGACY_DETAIL_POSITIONS.map((d) => [d, r(ovrRole(s, DPOS[d].role))]),
     ) as PeakProfile['roles'],
   };
 }

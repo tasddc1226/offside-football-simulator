@@ -83,7 +83,7 @@ export const DETAIL_LABEL: Record<DetailPos, string> = {
 /** 큰 포지션 안의 세부 포지션(선수 생성 화면 순서). */
 export const DETAILS_OF: Record<PosGroup, readonly DetailPos[]> = {
   FW: ['ST', 'CF', 'SS', 'LW', 'RW'],
-  MF: ['DM', 'CM', 'AM', 'LM', 'RM'],
+  MF: ['AM', 'CM', 'DM', 'LM', 'RM'],
   DF: ['CB', 'LB', 'RB', 'LWB', 'RWB', 'SW'],
   GK: ['GK'],
 };
