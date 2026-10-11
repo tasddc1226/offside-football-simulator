@@ -9,6 +9,8 @@ export const shellLogin: Translation<ShellLoginMsgs> = {
   offline: "Couldn't reach the server. Please try signing in again shortly.",
   failGeneric: (p) => `Google sign-in failed${p.reason ? ` (${p.reason})` : ''}.`,
   providerGoogle: 'Google',
+  failUnavailableApple: "Apple sign-in isn't available right now. Please try again in a moment.",
+  failGenericApple: (p) => `Apple sign-in failed${p.reason ? ` (${p.reason})` : ''}.`,
   linked: (p) => `${p.via} account linked.`,
   switched: (p) => `Switched to a different ${p.via} account.`,
 };

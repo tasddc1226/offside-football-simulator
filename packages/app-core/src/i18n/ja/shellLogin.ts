@@ -9,6 +9,9 @@ export const shellLogin: Translation<ShellLoginMsgs> = {
   offline: 'サーバーに接続できませんでした。少し時間をおいてもう一度ログインしてください。',
   failGeneric: (p) => `Googleログインに失敗しました${p.reason ? `（${p.reason}）` : ''}。`,
   providerGoogle: 'Google',
+  failUnavailableApple:
+    '現在Appleログインを利用できません。少し時間をおいてもう一度お試しください。',
+  failGenericApple: (p) => `Appleログインに失敗しました${p.reason ? `（${p.reason}）` : ''}。`,
   linked: (p) => `${p.via}アカウントを連携しました。`,
   switched: (p) => `別の${p.via}アカウントに切り替えました。`,
 };
