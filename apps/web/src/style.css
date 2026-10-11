@@ -2301,6 +2301,75 @@ body:has(.main-nav) .wrap {
   color: var(--accent-text) !important;
   font-weight: 600;
 }
+/* T-11-200 자기 투자: 한 줄에 하나, 비용은 오른쪽 끝. */
+.invest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.invest-list .opt {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+}
+.iv-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.iv-main b {
+  font-size: 0.875rem;
+}
+.iv-note {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+.more-chev {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  margin: 6px 0 -8px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.iv-chev,
+.more-chev .chev {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: var(--muted);
+  transition: transform 0.2s;
+}
+.iv-drop[aria-expanded='true'] .iv-chev,
+.more-chev[aria-expanded='true'] .chev {
+  transform: rotate(180deg);
+}
+.iv-cost {
+  flex: none;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--accent-text);
+}
+.tr-arrow.inv {
+  stroke-dasharray: 3 3;
+  opacity: 0.85;
+}
 /* T-10-074 고른 훈련의 자세한 설명 */
 .train-help {
   display: flex;
@@ -2436,6 +2505,83 @@ body:has(.main-nav) .wrap {
 .rd-down {
   fill: var(--bad);
   font-size: 0.8125rem;
+}
+/* T-11-200 훈련 방향 육각형: 축 이름표가 훈련 버튼이다(Radar.svelte). */
+.train-radar {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+}
+.train-radar .radar {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+}
+.tr-axis {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 26%;
+  min-height: 44px;
+  padding: 4px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  line-height: 1.15;
+  text-align: center;
+}
+.tr-axis .rd-abbr,
+.tr-axis .rd-val {
+  color: var(--muted);
+  font-family: var(--display);
+  font-weight: 700;
+}
+.tr-axis .rd-abbr {
+  font-size: 0.75rem;
+}
+.tr-axis .rd-val {
+  color: var(--ink);
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+}
+.tr-axis .rd-up {
+  color: var(--good);
+  font-size: 0.75rem;
+}
+.tr-axis .rd-down {
+  color: var(--bad);
+  font-size: 0.75rem;
+}
+.tr-focus {
+  color: var(--accent-text);
+}
+.tr-axis[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.tr-axis[aria-pressed='true'] .rd-abbr {
+  color: var(--accent-text);
+}
+.tr-axis[data-picked] {
+  animation: opt-pick 0.6s ease;
+}
+.tr-arrow {
+  stroke: var(--good);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.tr-head {
+  fill: var(--good);
+}
+.train-misc .opt {
+  min-width: 0;
 }
 .radar-legend {
   display: flex;

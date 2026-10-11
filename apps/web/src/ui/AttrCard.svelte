@@ -3,7 +3,6 @@
   import { ovr } from '@offside/game/attributes';
   import { attrData } from '@offside/app-core/format';
   import type { GameState } from '@offside/game/types';
-  import Radar from './Radar.svelte';
   import { gameAttrText as L } from '@offside/app-core/i18n/ko/gameAttr';
 
   const { s }: { s: GameState } = $props();
@@ -13,8 +12,6 @@
 <section class="card">
   <div class="eyebrow">Attributes</div>
   <div class="attr-head"><h2>{L.title}</h2><span class="pill">{d.roleName ?? ''} · OVR {ovr(s)}</span></div>
-  <Radar {s} />
-  <p class="radar-legend muted"><i class="lg-now"></i>{L.legendNow} <i class="lg-prev"></i>{L.legendPrev}</p>
   <div class="role-line">
     <span class="muted">{L.roleOvr}</span>
     {#each d.roles as r (r.role)}

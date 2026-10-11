@@ -63,8 +63,6 @@ const ko = {
     '사기가 낮으면 같은 능력치 훈련에서도 성장이 줄어요. 휴식·회복으로 사기를 회복할 수 있어요.',
   coachLopsided: (p: { attr: string }) =>
     `${p.attr}이 다른 핵심 능력치보다 앞서 있어 이 능력치의 훈련 성장이 줄어요. 다른 핵심 능력치를 보완해 주세요.`,
-  coachRounded: 'OVR은 반올림한 종합 수치예요. OVR이 같아도 세부 능력치는 달라질 수 있어요.',
-  coachDisclaimer: '이 메모만으로 성장 정체의 원인이나 한계를 단정할 수는 없어요.',
   // 이적 시장 평가
   marketAssess: (p: { ovr: number; rating: string | null; fame: number; age: number }) =>
     `현재 OVR ${p.ovr} · ${p.rating === null ? '' : `지난 시즌 평점 ${p.rating} · `}인기 ${p.fame} · ${p.age}세. 구단은 기량·지난 시즌 평점·인기·나이를 함께 봐요. 리그 조건과 스카우트·에이전트 이벤트도 제의에 영향을 줘요. 좋은 활약이 특정 구단의 제의를 보장하지는 않아요.`,

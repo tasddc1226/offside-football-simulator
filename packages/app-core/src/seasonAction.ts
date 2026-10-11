@@ -2,7 +2,14 @@
 // 그걸 여는 버튼을, 아니면 구간 진행 버튼과 그 위 한 줄 준비 요약(훈련·자기 투자·컨디션)을 보인다 — 시즌 탭을 맨 아래까지
 // 내리지 않고도 무엇으로 다음 구간을 치르는지 보고 넘기게 한다(T-11-025는 버튼을 탭 맨 아래로 내렸다가 매번 내려야 해 불편했다).
 import { LAST_PHASE } from '@offside/game/data';
-import { blockMatches, investDef, leagueOf, TRAININGS, trainingLabel } from '@offside/game/engine';
+import {
+  blockMatches,
+  investDef,
+  investName,
+  leagueOf,
+  TRAININGS,
+  trainingLabel,
+} from '@offside/game/engine';
 import type { GameState } from '@offside/game/types';
 import { gameText as L } from './i18n/ko/game';
 
@@ -26,7 +33,7 @@ export function seasonAction(s: GameState): SeasonAction {
   const inv = investDef(s);
   const prep = L.prep({
     train: t ? trainingLabel(s, t) : '-',
-    invest: inv.id === 'none' ? L.investNone : inv.label,
+    invest: inv.id === 'none' ? L.investNone : investName(s, inv),
     cond: Math.round(s.cond),
   });
   return { kind: 'advance', label, prep };

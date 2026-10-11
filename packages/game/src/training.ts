@@ -336,6 +336,18 @@ export function investHelp(s: GameState, d: InvestDef): string {
     .filter(Boolean)
     .join(' ');
 }
+/** T-11-200 화면 이름: 특훈은 대상 능력치를 바로 쓴다('수비 특훈'). 기록(investBroke)은 d.label 그대로. */
+export function investName(s: GameState, d: InvestDef): string {
+  return d.id === 'weak' || d.id === 'best'
+    ? L.investAttr({ attr: labelOf(s, investTarget(s, d.id)) })
+    : d.label;
+}
+/** 특훈 옆 작은 표시(약점·강점). */
+export const investNote = (d: InvestDef): string =>
+  d.id === 'weak' ? L.investWeakNote : d.id === 'best' ? L.investBestNote : '';
+/** 이번 구간에 쓸 돈(개인 코치 + 자기 투자) — 화면의 '보유 → 남는 돈'. */
+export const plannedSpend = (s: GameState): number =>
+  (s.training === 'coach' ? coachCost(s) : 0) + investCost(s, investDef(s));
 /** 훈련 다음, 경기 전에 적용한다(turn.ts playPhase). */
 export function applyInvest(s: GameState) {
   const d = investDef(s);

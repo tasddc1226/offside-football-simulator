@@ -105,8 +105,11 @@ export function Opt({
   children,
   testID,
   accessibilityLabel,
+  expanded,
 }: {
   selected?: boolean;
+  /** 드롭다운처럼 펼치는 줄이면 펼침 여부. */
+  expanded?: boolean;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
   disabled?: boolean;
@@ -124,7 +127,7 @@ export function Opt({
       disabled={disabled}
       testID={testID}
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ selected: !!selected, disabled: !!disabled }}
+      accessibilityState={{ selected: !!selected, disabled: !!disabled, expanded }}
       style={[
         {
           borderWidth: selected ? 2 : 1.5,

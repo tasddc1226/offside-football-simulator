@@ -15,7 +15,7 @@
   import { coachFeedback } from '@offside/app-core/career-feedback';
   import { visibleCareerLog } from '@offside/app-core/potential-view';
   import { PHASES, LAST_PHASE } from '@offside/game/data';
-  import { roundRange, logLabel, TRAININGS, trainingLabel, trainingCard, trainingHelp, INVESTS, investCard, investHelp, investDef, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
+  import { roundRange, logLabel, TRAININGS, trainingLabel, trainingCard, INVESTS, investCard, investCost, investName, investNote, investDef, plannedSpend, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
   import { eventById } from '@offside/game/events-data';
   import type { GameState } from '@offside/game/types';
   import { save } from '../helpers.js';
@@ -25,6 +25,7 @@
   import { dur } from '../motion.js';
   import PhaseReport from './PhaseReport.svelte';
   import LeagueTable from './LeagueTable.svelte';
+  import Radar from '../Radar.svelte';
   import { gameSeasonText as L } from '@offside/app-core/i18n/ko/gameSeason';
 
   const { s }: { s: GameState } = $props();
@@ -40,6 +41,7 @@
   const t = $derived(turnNo(s));
   const picked = $derived(TRAININGS.find((x) => x.id === s.training));
   const invest = $derived(investDef(s));
+  const spend = $derived(plannedSpend(s));
   const report = $derived(appState.report && appState.report.year === s.year ? appState.report : null);
   // 리포트가 개막 후 첫 구간이면 시즌 누적 = 구간 기록이라 누적 칸을 숨긴다. 개막 전(0경기)에도 숨긴다.
   const showTotals = $derived(S.played > 0 && !(report?.block && S.played === report.games.length));
@@ -58,6 +60,10 @@
   // 내 팀 순위 변동을 움직여 보여 준다. 기다리는 카드 밖의 단계에서 사용자가 손대면(휠·터치·클릭·키) 바로 그만둔다.
   // 감속 모션·업무 모드에서는 돌지 않는다.
   let tourWait = $state<TourGate | null>(null);
+  // T-11-200 자기 투자는 드롭다운처럼 고른 한 줄만 보이고, 그 줄을 누르면 펼쳐져 고르면 다시 접힌다. 결과 안내가 투자를 기다릴 때와 고른 투자를 할 돈이 없을 때는 펼친다.
+  let investOpen = $state(false);
+  const investForced = $derived(tourWait === 'invest' || !investCard(s, invest).affordable);
+  const investAll = $derived(investOpen || investForced);
   let resume: ((btn: HTMLElement) => void) | null = null;
   let table = $state<ReturnType<typeof LeagueTable>>();
   let touring = $state(false);
@@ -173,6 +179,7 @@
 
   function setInvest(id: string, btn: HTMLElement) {
     s.invest = id;
+    investOpen = false;
     save();
     if (tourWait === 'invest') resume?.(btn);
   }
@@ -192,64 +199,6 @@
     <PhaseReport r={report} />
   {/key}
 {/if}
-
-<!-- 훈련·자기 투자 카드 공통 내용. T-11-025 카드에는 무엇이 오르는지(첫 효과)와 눈여겨볼 한 가지(주력·비용 등)만 두고,
-     컨디션 소모 같은 나머지 효과와 자세한 설명은 고른 카드의 설명 칸에서만 보여 준다. -->
-{#snippet optBody(label: string, c: { effect: string[]; tag: string })}
-  <b>{label}</b><small>{c.effect[0]}</small>{#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
-{/snippet}
-{#snippet helpBody(title: string, c: { effect: string[] }, body: string)}
-  <b>{title} <span class="muted">· {c.effect.join(' · ')}</span></b>
-  <p>{body}</p>
-{/snippet}
-
-<section class="card stack" data-prep data-tour="prep">
-  <div><div class="eyebrow">Next · {label}</div><h2>{L.prepTitle}</h2></div>
-  <div class="meters">
-    <div class="meter"><span>{L.condition}</span><div class="bar"><i class={meterCls(s.cond, 40, 65)} style="width:{Math.round(s.cond)}%"></i></div><span class="v">{Math.round(s.cond)}</span></div>
-    <div class="meter"><span>{L.morale}</span><div class="bar"><i class={meterCls(s.morale, 40, 60)} style="width:{Math.round(s.morale)}%"></i></div><span class="v">{Math.round(s.morale)}</span></div>
-    <div class="meter"><span>{L.fame}</span><div class="bar"><i class="acc" style="width:{Math.min(100, Math.round(s.fame))}%"></i></div><span class="v">{Math.round(s.fame)}</span></div>
-  </div>
-  <div class="stack" style="gap:6px" data-coach-feedback>
-    <h3 class="sub-title">{L.coachMemo}</h3>
-    <p class="fs-sm">{coach.summary}</p>
-    {#each coach.notes as note (note)}<p class="muted fs-sm">{note}</p>{/each}
-  </div>
-  <h3 class="sub-title">{L.trainingTitle}</h3>
-  {#if tourWait === 'train'}<p class="tour-hint" aria-live="polite">{L.trainHint}</p>{/if}
-  <div class="train">
-    {#each TRAININGS as tr (tr.id)}
-      {@const c = trainingCard(s, tr)}
-      <button class="opt" data-train={tr.id} aria-pressed={s.training === tr.id} onclick={(e) => setTraining(tr.id, e.currentTarget)}>
-        {@render optBody(trainingLabel(s, tr), c)}
-      </button>
-    {/each}
-  </div>
-  {#if picked}
-    <div class="train-help" data-train-help aria-live="polite">
-      {@render helpBody(trainingLabel(s, picked), trainingCard(s, picked), trainingHelp(s, picked))}
-    </div>
-  {/if}
-</section>
-
-<section class="card stack" data-invest-card data-tour="invest">
-  <div class="row" style="justify-content:space-between">
-    <div><div class="eyebrow">Invest</div><h2>{L.investTitle}</h2></div>
-    <span class="pill" data-invest-money>{L.funds({ v: W.won({ v: fmtMoney(s.money) }) })}</span>
-  </div>
-  {#if tourWait === 'invest'}<p class="tour-hint" aria-live="polite">{L.investHint}</p>{/if}
-  <div class="train">
-    {#each INVESTS as d (d.id)}
-      {@const c = investCard(s, d)}
-      <button class="opt" data-invest={d.id} aria-pressed={invest.id === d.id} disabled={!c.affordable} onclick={(e) => setInvest(d.id, e.currentTarget)}>
-        {@render optBody(d.label, c)}
-      </button>
-    {/each}
-  </div>
-  <div class="train-help" data-invest-help aria-live="polite">
-    {@render helpBody(invest.label, investCard(s, invest), investHelp(s, invest))}
-  </div>
-</section>
 
 <section class="card stack" data-season-status data-tour="status">
   <div>
@@ -284,6 +233,74 @@
   {/if}
 </section>
 
+<section class="card stack" data-prep data-tour="prep">
+  <div><div class="eyebrow">Next · {label}</div><h2>{L.prepTitle}</h2></div>
+  <div class="meters">
+    <div class="meter"><span>{L.condition}</span><div class="bar"><i class={meterCls(s.cond, 40, 65)} style="width:{Math.round(s.cond)}%"></i></div><span class="v">{Math.round(s.cond)}</span></div>
+    <div class="meter"><span>{L.morale}</span><div class="bar"><i class={meterCls(s.morale, 40, 60)} style="width:{Math.round(s.morale)}%"></i></div><span class="v">{Math.round(s.morale)}</span></div>
+    <div class="meter"><span>{L.fame}</span><div class="bar"><i class="acc" style="width:{Math.min(100, Math.round(s.fame))}%"></i></div><span class="v">{Math.round(s.fame)}</span></div>
+  </div>
+  <div class="stack" style="gap:6px" data-coach-feedback>
+    <h3 class="sub-title">{L.coachMemo}</h3>
+    <p class="fs-sm">{coach.summary}</p>
+    {#each coach.notes as note (note)}<p class="muted fs-sm">{note}</p>{/each}
+  </div>
+  <h3 class="sub-title">{L.trainingTitle}</h3>
+  {#if tourWait === 'train'}<p class="tour-hint" aria-live="polite">{L.trainHint}</p>{/if}
+  <Radar {s} onpick={setTraining} />
+  <div class="train train-misc">
+    {#each TRAININGS.filter((x) => !x.attr) as tr (tr.id)}
+      {@const c = trainingCard(s, tr)}
+      <button class="opt" data-train={tr.id} aria-pressed={s.training === tr.id} onclick={(e) => setTraining(tr.id, e.currentTarget)}>
+        <b>{trainingLabel(s, tr)}</b>{#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
+      </button>
+    {/each}
+  </div>
+  {#if picked}
+    {@const c = trainingCard(s, picked)}
+    <div class="train-help" data-train-help aria-live="polite">
+      <b>{trainingLabel(s, picked)} <span class="muted">· {c.effect.join(' · ')}</span></b>
+      {#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
+    </div>
+  {/if}
+</section>
+
+<section class="card stack" data-invest-card data-tour="invest">
+  <div class="row" style="justify-content:space-between">
+    <div><div class="eyebrow">Invest</div><h2>{L.investTitle}</h2></div>
+    <span class="pill" data-invest-money
+      >{spend ? L.fundsAfter({ v: W.won({ v: fmtMoney(s.money) }), after: W.won({ v: fmtMoney(Math.max(0, s.money - spend)) }) }) : L.funds({ v: W.won({ v: fmtMoney(s.money) }) })}</span
+    >
+  </div>
+  {#if tourWait === 'invest'}<p class="tour-hint" aria-live="polite">{L.investHint}</p>{/if}
+  <div class="invest-list">
+    {#each investAll ? INVESTS : [invest] as d (d.id)}
+      {@const c = investCard(s, d)}
+      {@const cost = investCost(s, d)}
+      {@const note = investNote(d)}
+      {@const tags = c.tag.split(' · ')}
+      {@const extra = tags.slice(cost ? 1 : 0).join(' · ')}
+      {@const drop = !investForced && invest.id === d.id}
+      <button
+        class="opt"
+        class:iv-drop={drop}
+        data-invest={d.id}
+        aria-pressed={invest.id === d.id}
+        aria-expanded={drop ? investAll : undefined}
+        disabled={!c.affordable}
+        onclick={(e) => (investAll ? setInvest(d.id, e.currentTarget) : (investOpen = true))}
+      >
+        <span class="iv-main">
+          <b>{investName(s, d)}{#if note}<small class="iv-note">{note}</small>{/if}</b>
+          <small>{c.effect.join(' · ')}{#if extra}<span class="train-tag"> · {extra}</span>{/if}</small>
+        </span>
+        <span class="iv-cost num">{cost ? (c.affordable ? W.won({ v: fmtMoney(cost) }) : tags[0]) : ''}</span>
+        {#if drop}<svg class="iv-chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>{/if}
+      </button>
+    {/each}
+  </div>
+</section>
+
 {#if activeStories.length}
   <section class="card" data-stories data-tour="stories">
     <div class="eyebrow">Storylines</div>
@@ -312,7 +329,7 @@
       {/each}
     </div>
     {#if feed.length > FEED_SHORT}
-      <button class="icon-btn" style="margin-top:8px" data-act="feed-more" aria-expanded={feedAll} onclick={() => (feedAll = !feedAll)}>{feedAll ? L.feedLess : L.feedMore}</button>
+      <button class="more-chev" data-act="feed-more" aria-expanded={feedAll} aria-label={feedAll ? L.feedLessAria : L.feedMoreAria} onclick={() => (feedAll = !feedAll)}><svg class="chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></button>
     {/if}
   </section>
 {/if}

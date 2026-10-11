@@ -11,7 +11,6 @@ import { DISPLAY, num, rem } from '../../theme/type';
 import { Card } from '../../ui/Card';
 import { Pill } from '../../ui/bits';
 import { Txt } from '../../ui/Txt';
-import { Radar } from './Radar';
 
 type Data = ReturnType<typeof attrData>;
 
@@ -119,29 +118,6 @@ export function AttrCard({ s }: { s: GameState }) {
           {L.title}
         </Txt>
         <Pill>{`${d.roleName} · OVR ${ovr(s)}`}</Pill>
-      </View>
-      <Radar s={s} />
-      <View
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}
-      >
-        <View style={{ width: 16, marginLeft: 8, borderTopWidth: 2, borderTopColor: c.accent }} />
-        <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-          {L.legendNow}
-        </Txt>
-        <View
-          style={{
-            width: 16,
-            marginLeft: 8,
-            borderTopWidth: 2,
-            borderTopColor: c.muted,
-            borderStyle: 'dashed',
-          }}
-        />
-        <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-          {L.legendPrev}
-        </Txt>
       </View>
       <View
         style={{

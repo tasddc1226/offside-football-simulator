@@ -185,7 +185,7 @@ export function PhaseReport({ r }: { r: Report }) {
           {L.changes}
         </Txt>
         {r.chips.length ? (
-          <Chips chips={r.chips} pop delay={after} />
+          <Chips chips={r.chips} pop delay={after} split />
         ) : (
           <Txt tone="muted">{L.noChange}</Txt>
         )}

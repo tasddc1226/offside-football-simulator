@@ -100,7 +100,7 @@
 
   <div class="rp-later">
     <div class="eyebrow" style="margin-bottom:6px">{L.changes}</div>
-    {#if r.chips.length}<Chips chips={r.chips} pop />{:else}<p class="muted">{L.noChange}</p>{/if}
+    {#if r.chips.length}<div class="stack" style="gap:6px"><Chips chips={r.chips} pop split /></div>{:else}<p class="muted">{L.noChange}</p>{/if}
   </div>
 
   {#if r.games.length}

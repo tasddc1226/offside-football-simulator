@@ -12,6 +12,7 @@ export const gameSeason: Translation<GameSeasonMsgs> = {
   trainHint: 'このフェーズのトレーニングを選ぶと次へ進みます',
   investTitle: '自己投資',
   funds: (p) => `所持 ${p.v}`,
+  fundsAfter: (p) => `所持 ${p.v} → ${p.after}`,
   investHint: '投資を選ぶと次へ進みます · 節約するなら投資しない',
   phaseFirst: '前半戦',
   phaseSecond: '後半戦',
@@ -28,8 +29,6 @@ export const gameSeason: Translation<GameSeasonMsgs> = {
   storySoon: 'まもなく続く',
   storyWait: (p) => `約${p.n}フェーズ後`,
   feedTitle: '最近のニュース',
-  feedLess: '閉じる',
-  feedMore: 'もっと見る',
   feedLessAria: '最近のニュースを閉じる',
   feedMoreAria: '最近のニュースをもっと見る',
 };

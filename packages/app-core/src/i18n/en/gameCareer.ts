@@ -62,9 +62,6 @@ export const gameCareer: Translation<GameCareerMsgs> = {
     'With low morale, the same training brings less growth. Rest and recovery can lift your morale.',
   coachLopsided: (p) =>
     `${p.attr} is ahead of your other key attributes, so training it brings less growth. Work on your other key attributes.`,
-  coachRounded:
-    'OVR is a rounded overall figure. Two players with the same OVR can have different detailed attributes.',
-  coachDisclaimer: "This note alone can't pinpoint why growth has stalled or where your limit is.",
   marketAssess: (p) =>
     `Current OVR ${p.ovr} · ${p.rating === null ? '' : `last season's rating ${p.rating} · `}fame ${p.fame} · age ${p.age}. Clubs weigh your ability, last season's rating, fame and age together. League conditions and scout or agent events also affect offers. A strong run doesn't guarantee an offer from a particular club.`,
   offerAssess: (p) =>
