@@ -38,8 +38,6 @@ export const gameCareer: Translation<GameCareerMsgs> = {
     '出場・ゴール・アシストは終えたシーズンが基準です。代表出場と優勝もキャリアに残ります。',
   goalLine: (p) => `${p.have} / ${p.target} · 残り${p.remaining}`,
   clubApps: (p) => `${p.club}で${p.target}試合出場`,
-  retiredNumber: (p) =>
-    `ひとつのクラブで長く活躍して引退すると、そのクラブの${p.n}番が永久欠番になることがあります。`,
   colSeason: 'シーズン',
   colClub: '所属',
   colRating: '評価点',

@@ -39,8 +39,6 @@ export const gameCareer: Translation<GameCareerMsgs> = {
     'Appearances, goals and assists count completed seasons only. National team caps and trophies also go on your career.',
   goalLine: (p) => `${p.have} / ${p.target} · ${p.remaining} to go`,
   clubApps: (p) => `${p.target} appearances for ${p.club}`,
-  retiredNumber: (p) =>
-    `Play for one club for a long time and retire, and that club may retire your No. ${p.n} shirt.`,
   colSeason: 'Season',
   colClub: 'Club',
   colRating: 'Rating',
