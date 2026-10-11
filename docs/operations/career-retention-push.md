@@ -42,10 +42,10 @@
 
 - `offside_push_open`: 실제 OS 푸시 클릭. `push_category` 허용 목록만 전송한다.
 - 독려 푸시에는 `push_campaign=career_reminder`, `reminder_stage=1|2|3`를 추가한다.
-- 기존 `screen_view`, `first_action_complete`, `career_progress_milestone`, `career_retire`로 이후 화면·플레이·은퇴 퍼널을 구성한다. `first_action_complete`는 생애 첫 행동 성격이므로 모든 복귀 플레이를 뜻하지 않는다.
+- 기존 `career_resume`, `screen_view`, `first_action_complete`, `career_progress_milestone`, `career_retire`로 이후 화면·플레이·은퇴 퍼널을 구성한다. `first_action_complete`는 생애 첫 행동 성격이므로 모든 복귀 플레이를 뜻하지 않는다.
 - 알림 ID·프로필 ID·커리어 ID·토큰·제목·본문은 GA로 보내지 않는다. 클릭 중복 키는 기기에 최대 50개만 보관한다. 자동 `notification_open`과 합산하지 않는다.
 
-GA4 관리 → 맞춤 정의에서 이벤트 범위 `push_category`, `push_campaign`, `reminder_stage`를 등록한다. 탐색 → 유입경로에서 `offside_push_open`(campaign 필터) → game 화면 → `career_retire`를 7일 범위로 비교하고 iOS/Android·단계로 분해한다. 은퇴 이벤트의 주요 이벤트 등록 여부는 기존 측정 정책에 맞춘다. 실제 DebugView/실시간 수집과 바이너리 설정을 별도 검증한 뒤 운영 지표로 사용한다. 이 변경만으로 GA 속성 설정/맞춤 보고서를 생성하지 않는다.
+GA4 관리 → 맞춤 정의에서 이벤트 범위 `push_category`, `push_campaign`, `reminder_stage`를 등록한다. 탐색 → 유입경로에서 `offside_push_open`(campaign 필터) → `career_resume` 또는 game 화면 → `career_retire`를 7일 범위로 비교하고 iOS/Android·단계로 분해한다. 은퇴 이벤트의 주요 이벤트 등록 여부는 기존 측정 정책에 맞춘다. 실제 DebugView/실시간 수집과 바이너리 설정을 별도 검증한 뒤 운영 지표로 사용한다. 이 변경만으로 GA 속성 설정/맞춤 보고서를 생성하지 않는다.
 
 운영 도구는 계정/서버 기준, GA4는 동의한 설치/사용자 기준이라 수치가 일치하지 않는다. Expo를 통한 발송은 FCM 자동 캠페인 통계에 모두 잡힌다고 가정하지 않는다. 다른 분석 SDK나 푸시 공급자 추가 없이 현재 연결로 측정한다.
 

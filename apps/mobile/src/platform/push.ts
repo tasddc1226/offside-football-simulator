@@ -151,26 +151,28 @@ function openNotification(response: Notifications.NotificationResponse) {
     const id = data.notificationId as string;
     inbox.invalidate();
     void trackPushInteraction(id, 'click');
-    // Persist bounded dedupe locally across cold starts; never send notification IDs to GA4.
-    const seenKey = 'offside_push_analytics_seen';
-    let seen: string[] = [];
-    try {
-      const value: unknown = JSON.parse(kv.getString(seenKey) ?? '[]');
-      if (Array.isArray(value))
-        seen = value.filter((v): v is string => typeof v === 'string').slice(-50);
-    } catch {
-      /* optional analytics storage */
-    }
-    if (
-      !seen.includes(id) &&
-      nativeAnalytics.pushOpen(id, data.kind, data.campaign, data.reminderStage)
-    ) {
+    void (async () => {
+      // Persist bounded dedupe locally across cold starts; never send notification IDs to GA4.
+      const seenKey = 'offside_push_analytics_seen';
+      let seen: string[] = [];
       try {
-        kv.set(seenKey, JSON.stringify([...seen, id].slice(-50)));
+        const value: unknown = JSON.parse(kv.getString(seenKey) ?? '[]');
+        if (Array.isArray(value))
+          seen = value.filter((v): v is string => typeof v === 'string').slice(-50);
       } catch {
-        /* optional */
+        /* optional analytics storage */
       }
-    }
+      if (
+        !seen.includes(id) &&
+        (await nativeAnalytics.pushOpen(id, data.kind, data.campaign, data.reminderStage))
+      ) {
+        try {
+          kv.set(seenKey, JSON.stringify([...seen, id].slice(-50)));
+        } catch {
+          /* optional */
+        }
+      }
+    })().catch(() => {});
     // T-11-142 친구 알림은 알림함을 거치지 않고 친구 목록으로 바로 연다(읽음 처리도 함께). 옛 서버의 푸시엔 kind가 없다.
     const target = NotificationTargetSchema.safeParse(data.target);
     if ((data.kind === 'social' || data.kind === 'community') && target.success) {

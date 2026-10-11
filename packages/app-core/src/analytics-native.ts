@@ -143,8 +143,12 @@ export function createNativeAnalytics(io: IO) {
       pageView();
     },
     /** OS response only; IDs are local dedupe keys and never enter SDK parameters. */
-    pushOpen(id: string, kind: unknown, campaign: unknown, stage: unknown) {
-      if (!allowed() || screen === 'admin' || pushSeen.has(id)) return false;
+    async pushOpen(id: string, kind: unknown, campaign: unknown, stage: unknown) {
+      if (!io.enabled() || consent !== 'granted' || screen === 'admin') return false;
+      const epoch = generation;
+      await pending; // A consented cold start may still be initializing the native SDK.
+      if (epoch !== generation || !allowed() || screen === 'admin' || pushSeen.has(id))
+        return false;
       pushSeen.add(id);
       if (pushSeen.size > 50) pushSeen.delete(pushSeen.values().next().value!);
       const category =
