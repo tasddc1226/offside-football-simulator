@@ -1,3 +1,6 @@
+import { IAP_PRODUCTS, type IapProductId } from '@offside/contracts';
+import { billing as ko } from '../i18n/ko/billing.js';
+import { billing as en } from '../i18n/en/billing.js';
 import type { Bindings } from '../env.js';
 
 export type BillingAlert = {
@@ -56,10 +59,50 @@ type AlertRow = {
   test: number;
   created_at: string;
 };
-export function billingSlackMessage(row: AlertRow, id: string) {
-  // Plain text blocks prevent product names or other data from becoming mentions/links.
-  const text = `OFFSIDE ${row.test ? '[TEST / Sandbox]' : '[LIVE]'} ${row.store === 'apple' ? 'App Store' : 'Google Play'} · ${row.kind}\nProduct: ${row.product_id}\nReceived: ${row.created_at}\nEvent: ${id.slice(0, 12)}`;
-  return { text, blocks: [{ type: 'section', text: { type: 'plain_text', text, emoji: true } }] };
+export function billingSlackMessage(row: AlertRow, id: string, locale: 'ko' | 'en' = 'ko') {
+  const L = locale === 'ko' ? ko : en;
+  const kind = L.kinds[row.kind as keyof typeof L.kinds] ?? row.kind;
+  const environment = row.test ? L.sandbox : L.live;
+  const store = row.store === 'apple' ? 'App Store' : 'Google Play';
+  const product = Object.hasOwn(IAP_PRODUCTS, row.product_id)
+    ? IAP_PRODUCTS[row.product_id as IapProductId]
+    : null;
+  const productName =
+    row.kind === 'test'
+      ? L.testProduct
+      : product
+        ? L.quantity(L.items[product.item], product.qty)
+        : row.product_id === 'com.offsidelab.app.remove_ads'
+          ? L.removeAds
+          : row.product_id;
+  const date = new Date(row.created_at);
+  const time = Number.isNaN(date.getTime())
+    ? row.created_at
+    : new Intl.DateTimeFormat('sv-SE', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23',
+      }).format(date);
+  const heading = `OFFSIDE · ${kind} · ${environment}`;
+  const detail = `${L.product}: ${productName}\n${L.store}: ${store}\n${L.received}: ${time} (${L.timezone})`;
+  const notice = row.test ? L.testNotice : '';
+  const reference = `${L.productId}: ${row.product_id} · ${L.reference}: ${id.slice(0, 12)}`;
+  const plain = (text: string) => ({ type: 'plain_text', text, emoji: true });
+  // Keep dynamic data in plain_text to prevent mentions and injected Slack markup.
+  return {
+    text: [heading, detail, notice, reference].filter(Boolean).join('\n'),
+    blocks: [
+      { type: 'header', text: plain(heading) },
+      { type: 'section', text: plain(detail) },
+      ...(notice ? [{ type: 'context', elements: [plain(notice)] }] : []),
+      { type: 'context', elements: [plain(reference)] },
+    ],
+  };
 }
 
 export async function consumeBillingAlerts(batch: MessageBatch<unknown>, env: Bindings) {
