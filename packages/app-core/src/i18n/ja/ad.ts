@@ -20,6 +20,8 @@ export const ad: Translation<AdMsgs> = {
   rewardedWatch: '広告を最後まで見ると評価を見られます。',
   adRerollBtn: (p) => `広告を見て引き直す(今日あと${p.n}回)`,
   adRerollFreeBtn: (p) => `候補を引き直す(今日あと${p.n}回)`,
+  adRerollShort: '引き直す',
+  adRerollBadge: (p) => (p.ad ? `広告・残り${p.n}` : `残り${p.n}`),
   adRerollWatch: '広告を最後まで見ると候補を引き直せます。',
   adRerollDone: (p) => `候補を引き直しました。今日はあと${p.n}回引き直せます。`,
 };

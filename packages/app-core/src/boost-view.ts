@@ -27,8 +27,12 @@ export interface BoostView {
   line: string;
   /** 다음 시도 성공 확률(%). T-11-153 구단 자금 버튼에 적는다. */
   chance: number;
-  /** 시도할 수 있을 때만 — 비용과 확률을 버튼에 그대로 적는다. */
+  /** 시도할 수 있을 때만 — 비용과 확률을 버튼에 그대로 적는다(접근성 이름). */
   button?: string;
+  /** T-11-221 화면에는 '강화하기'와 오른쪽 배지(비용 · 광고 · 확률)로 나눠 그린다. button · adButton과 함께 온다. */
+  label?: string;
+  badge?: string;
+  adBadge?: string;
   /** 시도 전에 한 번 더 묻는 문구. */
   confirm?: string;
   /** T-11-116 자금이 모자랄 때 광고(광고 제거 구매자는 바로)로 시도하는 버튼 — 앱에서 광고를 쓸 수 있을 때만. */
@@ -100,13 +104,20 @@ export function boostView(
     line,
     chance,
     ...(status === 'ready'
-      ? { button: L.button({ cost, chance }), confirm: L.confirm({ cost, chance }) }
+      ? {
+          button: L.button({ cost, chance }),
+          confirm: L.confirm({ cost, chance }),
+          label: L.confirmBtn,
+          badge: cost,
+        }
       : {}),
     free,
     ticketOpen,
     ...(free && adOffer
       ? {
           adButton: (adOffer === 'free' ? L.adButtonFree : L.adButton)({ chance }),
+          label: L.confirmBtn,
+          adBadge: adOffer === 'free' ? `${chance}%` : `${L.adCost} · ${chance}%`,
           adNote:
             status === 'short'
               ? adOffer === 'free'

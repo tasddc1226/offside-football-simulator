@@ -172,6 +172,11 @@
       {/each}
     </dl>
   </div>
+  <!-- T-11-221 사인 보조(다시 쓰기 · 이름 사인)는 사인 칸 오른쪽 위 글자 버튼으로. 아래에는 주 버튼 하나만 둔다. -->
+  <div class="sign-tools">
+    <button class="link-btn" data-sign="clear" disabled={sealed} onclick={clear}>{L.clear}</button>
+    <button class="link-btn" data-sign="name" disabled={sealed} onclick={nameSign}>{L.nameSign}</button>
+  </div>
   <div class="sign-pad" class:inked={inked || named}>
     <canvas
       bind:this={canvas}
@@ -188,10 +193,6 @@
     {/if}
   </div>
   <p class="sign-note">{L.signNote}</p>
-  <div class="sign-tools">
-    <button class="btn btn-sm" data-sign="clear" disabled={sealed} onclick={clear}>{L.clear}</button>
-    <button class="btn btn-sm" data-sign="name" disabled={sealed} onclick={nameSign}>{L.nameSign}</button>
-  </div>
   <button class="btn btn-primary btn-block" data-sign="ok" disabled={!ready || sealed} onclick={sign}>
     {v.cta} <span aria-hidden="true">→</span>
   </button>
@@ -347,8 +348,16 @@
     color: var(--muted);
   }
   .sign-tools {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    margin: -4px 0 -10px;
+  }
+  .sign-tools .link-btn {
+    min-height: 40px;
+    font-size: 0.8125rem;
+  }
+  .sign-tools .link-btn:disabled {
+    opacity: 0.45;
   }
 </style>

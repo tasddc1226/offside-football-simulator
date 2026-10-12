@@ -84,15 +84,6 @@
     else void advance();
   }
 
-  // 준비 요약은 시즌 탭에서만 보이니(대기 중엔 버튼만) 탭은 그대로 두고 카드로 스크롤만 한다.
-  function openPrep() {
-    const el = document.querySelector<HTMLElement>('[data-prep]');
-    if (!el) return;
-    const head = document.querySelector<HTMLElement>('.topbar')?.offsetHeight ?? 0;
-    const top = el.getBoundingClientRect().top + scrollY - head - 12;
-    window.scrollTo({ top: Math.max(0, top), behavior: dur(1) ? 'smooth' : 'instant' });
-  }
-
   // T-11-025 지금 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다.
   function switchTab(k: Tab) {
     if (k === 'player') notePlayerVisit(playerNudge(s));
@@ -148,11 +139,9 @@
   <div class="action-bar season-bar" bind:clientHeight={actionHeight} transition:fly={{ y: 20, duration: dur(180) }}>
     <div class="action-bar-inner">
       <PlayerNudge openPlayer={() => switchTab('player')} />
-      {#if act.kind === 'advance'}
-        <button class="season-prep" data-act="prep" aria-label={T.prepOpen({ prep: act.prep })} onclick={openPrep}>{act.prep}</button>
-      {/if}
-      <button class="btn btn-block {act.kind === 'pending' ? 'btn-accent' : 'btn-primary'}" data-act={act.kind === 'pending' ? 'resume' : 'advance'} data-tour="go" onclick={onAct}>
-        {act.label} →
+      <!-- T-11-221 준비 요약(훈련 · 자기 투자 · 컨디션)은 버튼 둘째 줄에 둔다. 전에는 바 위의 작은 글자 링크였다. -->
+      <button class="btn btn-block {act.kind === 'pending' ? 'btn-accent' : 'btn-primary'}" class:btn-two={act.kind === 'advance'} data-act={act.kind === 'pending' ? 'resume' : 'advance'} data-tour="go" onclick={onAct}>
+        {act.label} →{#if act.kind === 'advance'}<small class="btn-sub">{act.prep}</small>{/if}
       </button>
     </div>
   </div>

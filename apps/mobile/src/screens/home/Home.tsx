@@ -75,24 +75,14 @@ export default function Home() {
                   ovr: ovr(appState.G!),
                 })}
               </Txt>
-              {/* 한 줄에 왼쪽 새 커리어, 오른쪽 이어하기(주 버튼이라 더 넓게). */}
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 18 }}>
-                <Btn
-                  testID="new"
-                  onPress={goNew}
-                  style={{
-                    backgroundColor: 'transparent',
-                    borderColor: alpha(c.onPitch, 0.35),
-                    paddingHorizontal: 14,
-                  }}
-                >
-                  <Txt style={btnText(c.onPitch)}>{L.newCareer}</Txt>
-                </Btn>
+              {/* T-11-221 이어하기를 전폭 한 줄로(이름은 위 제목에 있어 버튼에서 뺀다), 새 커리어는 아래 글자 버튼. */}
+              <View style={{ gap: 4, marginTop: 18 }}>
                 <Btn
                   kind="accent"
                   testID="continue"
+                  accessibilityLabel={L.continueCareer({ name: G.name })}
                   onPress={goContinue}
-                  style={{ flex: 1, minWidth: 0, paddingHorizontal: 14 }}
+                  style={{ paddingHorizontal: 14 }}
                 >
                   <Svg width={18} height={18} viewBox="0 0 24 24">
                     <Circle
@@ -106,9 +96,24 @@ export default function Home() {
                     <Path d="m10 7.8 6 4.2-6 4.2Z" fill={c.accentInk} />
                   </Svg>
                   <Txt numberOfLines={1} style={{ ...btnText(c.accentInk), flexShrink: 1 }}>
-                    {L.continueCareer({ name: G.name })}
+                    {L.continueBtn}
                   </Txt>
                 </Btn>
+                <Press
+                  testID="new"
+                  accessibilityRole="button"
+                  onPress={goNew}
+                  style={{
+                    alignSelf: 'center',
+                    minHeight: 44,
+                    justifyContent: 'center',
+                    paddingHorizontal: 12,
+                  }}
+                >
+                  <Txt style={{ ...btnText(c.onPitch), fontSize: rem(0.875), opacity: 0.85 }}>
+                    {L.newCareer}
+                  </Txt>
+                </Press>
               </View>
             </View>
           </PitchCard>
@@ -222,6 +227,8 @@ export default function Home() {
         <HomeNews board="notice" eyebrow="Notice" title={L.noticeTitle} />
         <HomeNews board="release" eyebrow="Release notes" title={L.releaseTitle} />
         <SiteFooter />
+        {/* T-11-221 맨 아래까지 내려도 떠 있는 채팅 버튼이 하단 문구를 가리지 않게 버튼 높이만큼 비워 둔다. */}
+        <View style={{ height: 56 }} />
       </Screen>
       <ChatFab />
     </View>

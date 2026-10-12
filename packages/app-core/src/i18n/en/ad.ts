@@ -20,6 +20,8 @@ export const ad: Translation<AdMsgs> = {
   rewardedWatch: 'Watch the ad to the end to see the assessment.',
   adRerollBtn: (p) => `Watch an ad to redraw (${p.n} left today)`,
   adRerollFreeBtn: (p) => `Redraw candidates (${p.n} left today)`,
+  adRerollShort: 'Redraw',
+  adRerollBadge: (p) => (p.ad ? `Ad · ${p.n} left` : `${p.n} left`),
   adRerollWatch: 'Watch the whole ad to redraw your candidates.',
   adRerollDone: (p) => `Candidates redrawn. ${p.n} more today.`,
 };

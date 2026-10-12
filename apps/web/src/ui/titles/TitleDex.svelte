@@ -48,7 +48,7 @@
           <button class="title-item" data-title={x.d.id} aria-pressed={main?.id === x.d.id} onclick={() => pick(x.d.id)}>
             <TitleTag name={x.d.name} rarity={x.d.rarity} />
             <span class="title-desc">{x.d.desc}</span>
-            <span class="title-year num">{x.year ? x.year : L.earlier}</span>
+            <span class="title-year num">{#if main?.id === x.d.id}<span class="title-main-badge">{L.mainBadge}</span>{' '}{/if}{x.year ? x.year : L.earlier}</span>
           </button>
         </li>
       {/each}
@@ -58,7 +58,7 @@
   {/if}
   {#if locked.length}
     <details class="title-locked">
-      <summary>{L.lockedSummary({ n: pool.length - earned.length })}</summary>
+      <summary class="disc-row" data-act="title-locked-toggle">{L.lockedSummary({ n: pool.length - earned.length })}<span class="disc-chev" aria-hidden="true"></span></summary>
       {#each locked as c (c.id)}
         <div class="eyebrow" style="margin:12px 0 4px">{c.label}</div>
         <ul class="title-list compact">

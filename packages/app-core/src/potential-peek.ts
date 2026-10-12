@@ -8,6 +8,7 @@ import { potLabel, potScouted } from '@offside/game/stats';
 import type { GameState } from '@offside/game/types';
 import { gamePotentialText as L } from './i18n/ko/gamePotential';
 import { appFormatText as W } from './i18n/ko/appFormat';
+import { gameBoostText as B } from './i18n/ko/gameBoost';
 
 /** 이 커리어의 이 시즌에 평가를 열었다는 기록. */
 export type PotentialPeek = { cid: string; year: number };
@@ -16,7 +17,8 @@ export type PeekView =
   /** 첫 시즌 전 — 아직 스카우트 평가가 없다. */
   | { kind: 'locked'; text: string }
   /** 광고(광고 제거 구매자는 바로)나 자금(웹)으로 열 수 있다. */
-  | { kind: 'available'; text: string; button: string }
+  /** T-11-221 button은 접근성 이름(전체 문구), 화면에는 label과 오른쪽 배지(badge — 광고 · 비용)를 나눠 그린다. */
+  | { kind: 'available'; text: string; button: string; label: string; badge?: string }
   /** 웹 — 자금이 모자라다. */
   | { kind: 'short'; text: string }
   | { kind: 'shown'; grade: string; text: string };
@@ -57,11 +59,19 @@ export function peekView(s: GameState, peek: PotentialPeek | null, offer: PeekOf
       kind: 'available',
       text: L.peekAvailable,
       button: offer === 'free' ? L.peekBtnFree : L.peekBtnAd,
+      label: L.peekBtnFree,
+      ...(offer === 'ad' ? { badge: B.adCost } : {}),
     };
   const cost = W.won({ v: fmtMoney(peekCost(s)) });
   return peekShort(s)
     ? { kind: 'short', text: L.peekShort({ cost }) }
-    : { kind: 'available', text: L.peekAvailable, button: L.peekBtnPay({ cost }) };
+    : {
+        kind: 'available',
+        text: L.peekAvailable,
+        button: L.peekBtnPay({ cost }),
+        label: L.peekBtnFree,
+        badge: cost,
+      };
 }
 
 /** 웹: 자금을 내고 이번 시즌 평가를 연다. 열 수 없으면(첫 시즌 전 · 자금 부족) null, 상태를 바꾸지 않는다. */

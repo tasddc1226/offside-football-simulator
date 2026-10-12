@@ -252,6 +252,30 @@ export function Contract({ v }: { v: ContractView }) {
         {s.text}
       </Txt>
       <Terms club={s.club} terms={s.terms} />
+      {/* T-11-221 사인 보조(다시 쓰기 · 이름 사인)는 사인 칸 오른쪽 위 글자 버튼으로(웹 .sign-tools). 아래엔 주 버튼 하나. */}
+      <View
+        style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 16, marginVertical: -8 }}
+      >
+        {(
+          [
+            ['sign-clear', L.clear, clear],
+            ['sign-name', L.nameSign, nameSign],
+          ] as const
+        ).map(([id, label, fn]) => (
+          <Press
+            key={id}
+            testID={id}
+            accessibilityRole="button"
+            disabled={sealed}
+            onPress={fn}
+            style={{ minHeight: 40, justifyContent: 'center', opacity: sealed ? 0.45 : 1 }}
+          >
+            <Txt bold style={{ fontSize: rem(0.8125), color: c.accentText }}>
+              {label}
+            </Txt>
+          </Press>
+        ))}
+      </View>
       <View
         accessibilityLabel={L.padLabel}
         onLayout={(e) => {
@@ -361,14 +385,6 @@ export function Contract({ v }: { v: ContractView }) {
       >
         {L.signNote}
       </Txt>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        <Btn sm testID="sign-clear" disabled={sealed} onPress={clear} style={{ flex: 1 }}>
-          {L.clear}
-        </Btn>
-        <Btn sm testID="sign-name" disabled={sealed} onPress={nameSign} style={{ flex: 1 }}>
-          {L.nameSign}
-        </Btn>
-      </View>
       <Btn kind="primary" block testID="sign-ok" disabled={!ready || sealed} onPress={seal}>
         {`${s.cta} →`}
       </Btn>

@@ -34,8 +34,7 @@ export const gameBoost: Translation<GameBoostMsgs> = {
     `成功確率は${p.chance}%でした。資金は戻らず、次の挑戦の確率が${p.pct}%p上がります。`,
   adButton: (p) => `広告を見て強化する（${p.chance}%）`,
   adButtonFree: (p) => `資金なしで強化する（${p.chance}%）`,
-  adNote:
-    '広告を最後まで見ると、資金なしで1回挑戦できます。成功確率は資金で挑戦するときと同じです。',
+  adNote: '広告を最後まで見ると、資金なしで1回挑戦できます。',
   adNoteFree: '広告削除を購入済みなので、資金なしで1回挑戦できます。',
   adNoteExtra: (p) =>
     `広告を最後まで見ると、資金なしでもう1回挑戦できます。追加挑戦はこの選手にあと${p.left}回です。`,

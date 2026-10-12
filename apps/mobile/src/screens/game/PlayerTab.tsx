@@ -188,8 +188,15 @@ function BoostCard({ s }: { s: GameState }) {
             </Txt>
           ) : null}
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Btn kind="primary" style={{ flex: 1 }} testID="boost-btn" onPress={onBoost}>
-              {arming ? B.confirmBtn : v.button}
+            <Btn
+              kind="tonal"
+              style={{ flex: 1 }}
+              testID="boost-btn"
+              accessibilityLabel={arming ? undefined : v.button}
+              badge={arming ? undefined : v.badge}
+              onPress={onBoost}
+            >
+              {arming ? B.confirmBtn : v.label!}
             </Btn>
             {arming ? (
               <Btn testID="boost-cancel" onPress={() => setArming(false)}>
@@ -210,12 +217,14 @@ function BoostCard({ s }: { s: GameState }) {
           ) : null}
           {v.adButton ? (
             <Btn
-              kind="primary"
+              kind="tonal"
               disabled={adBusy}
               testID="boost-ad-btn"
+              accessibilityLabel={adBusy ? undefined : v.adButton}
+              badge={adBusy ? undefined : v.adBadge}
               onPress={() => void onAdBoost()}
             >
-              {adBusy ? B.adLoading : v.adButton}
+              {adBusy ? B.adLoading : v.label!}
             </Btn>
           ) : null}
           {club.offer ? (
@@ -296,7 +305,16 @@ export function PlayerTab({ s }: { s: GameState }) {
         </Txt>
         <Kv rows={info} />
         {showPeek ? (
-          <View style={{ marginTop: 10, gap: 6 }} testID="pot-peek">
+          <View
+            style={{
+              marginTop: 14,
+              paddingTop: 12,
+              borderTopWidth: 1,
+              borderTopColor: c.line,
+              gap: 8,
+            }}
+            testID="pot-peek"
+          >
             <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
               {peek.message || pot.text}
             </Txt>
@@ -305,10 +323,13 @@ export function PlayerTab({ s }: { s: GameState }) {
                 sm
                 block
                 disabled={peek.busy}
+                kind="tonal"
                 testID="pot-peek-btn"
+                accessibilityLabel={peek.busy ? undefined : pot.button}
+                badge={peek.busy ? undefined : pot.badge}
                 onPress={() => void openPeek(s)}
               >
-                {peek.busy ? B.adLoading : pot.button}
+                {peek.busy ? B.adLoading : pot.label}
               </Btn>
             ) : null}
             {club.offer ? (

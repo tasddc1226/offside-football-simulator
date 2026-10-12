@@ -7,6 +7,7 @@ export const home: Translation<HomeMsgs> = {
   currentMeta: (p) => `${p.year}シーズン ${p.phase} · OVR ${p.ovr}`,
   newCareer: '新しいキャリアを始める',
   continueCareer: (p) => `${p.name}で続ける →`,
+  continueBtn: '続きから →',
   kickoffLine1: '今度の人生はサッカーだ',
   kickoffLine2: '高校3年から引退まで、',
   kickoffLine3: 'ひとりの選手として生きる',

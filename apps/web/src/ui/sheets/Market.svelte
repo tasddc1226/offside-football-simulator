@@ -10,13 +10,15 @@
 <h2>{L.marketTitle}</h2>
 <p class="muted">{v.note}</p>
 {#if v.assessment}<p class="fs-sm" data-market-feedback>{v.assessment}</p>{/if}
+<p class="muted fs-sm">{L.marketHint}</p>
 <div class="stack">
   {#each v.options as o, i (i)}
     <button class="offer" data-opt={i} onclick={() => pickOption(i)}>
       <div class="offer-club">{#if o.clubId}<ClubBadge club={{ id: o.clubId, name: o.name }} size={30} />{/if}<div><b>{o.name}</b><div class="lg">{o.lg}</div></div></div>
-      {#if o.salary !== null}
-        <div class="sal">{o.salary}<div class="lg" style="text-align:right">{L.salary}</div></div>
-      {/if}
+      <div class="offer-end">
+        {#if o.salary !== null}<div class="sal">{o.salary}<div class="lg" style="text-align:right">{L.salary}</div></div>{/if}
+        <span class="offer-chev" aria-hidden="true">›</span>
+      </div>
       {#if o.sub}<div class="sub">{o.sub}</div>{/if}
       {#if o.reason}<div class="sub" data-offer-feedback>{o.reason}</div>{/if}
     </button>

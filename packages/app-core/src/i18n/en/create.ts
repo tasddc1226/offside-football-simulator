@@ -96,6 +96,7 @@ export const create: Translation<CreateMsgs> = {
   potentialLocked: 'Potential grade range hidden',
   potentialAd: 'Watch an ad to scout all 3 candidates',
   potentialFree: 'Scout all 3 candidates',
+  potentialShort: 'See potential',
   potentialBusy: 'Loading an ad…',
   potentialWatch:
     'Finish the ad to reveal the potential grade ranges of all 3 candidates. The ad only shows the range and never changes the potential.',

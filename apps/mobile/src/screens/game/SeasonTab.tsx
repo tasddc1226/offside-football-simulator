@@ -429,10 +429,10 @@ function TrainViewToggle({
             accessibilityRole="tab"
             accessibilityLabel={v === 'buttons' ? L.trainViewButtons : L.trainViewRadar}
             accessibilityState={{ selected: on }}
-            hitSlop={6}
+            hitSlop={{ top: 5, bottom: 5 }}
             style={{
-              width: 36,
-              height: 30,
+              width: 44,
+              height: 34,
               borderRadius: 8,
               alignItems: 'center',
               justifyContent: 'center',
@@ -475,9 +475,12 @@ function HelpBox({
   effect,
   notes = [],
   body,
+  action,
 }: {
   testID: string;
   title: string;
+  /** T-11-221 제목 줄 오른쪽 끝 글자 버튼(투자 '선택 해제'). */
+  action?: ReactNode;
   effect: string[];
   /** T-11-219 훈련 성장 배율 안내(주력·치우침·최고치). */
   notes?: TrainingGrowthNote[];
@@ -496,12 +499,24 @@ function HelpBox({
         backgroundColor: c.surface2,
       }}
     >
-      <Txt style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5, fontWeight: '700' }}>
-        {title}
-        <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '700' }}>
-          {` · ${effect.join(' · ')}`}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Txt
+          style={{
+            flex: 1,
+            fontSize: rem(0.8125),
+            lineHeight: rem(0.8125) * 1.5,
+            fontWeight: '700',
+          }}
+        >
+          {title}
+          {effect.length ? (
+            <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '700' }}>
+              {` · ${effect.join(' · ')}`}
+            </Txt>
+          ) : null}
         </Txt>
-      </Txt>
+        {action}
+      </View>
       {notes.map((n) => (
         <Txt
           key={n.text}
@@ -521,8 +536,7 @@ function HelpBox({
 const FEED_SHORT = 5;
 const FEED_LONG = 14;
 
-/** onPrepY: '다음 구간 준비' 카드가 탭 맨 위에서 떨어진 거리 — 아래 고정 바의 준비 요약을 누르면 Game이 그리로 스크롤한다. */
-export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) => void }) {
+export function SeasonTab({ s }: { s: GameState }) {
   const c = useColors();
   const { report: rep } = useSnapshot(appState);
   const report = rep && rep.year === s.year ? (rep as PhaseReportData) : null;
@@ -663,11 +677,7 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
         </Card>
       </Spotlight>
 
-      <Spotlight
-        reg={reg('prep')}
-        on={spot === 'prep'}
-        onLayout={(e) => onPrepY?.(e.nativeEvent.layout.y)}
-      >
+      <Spotlight reg={reg('prep')} on={spot === 'prep'}>
         <Card gap={10}>
           <View>
             <Txt v="eyebrow">{`Next · ${label}`}</Txt>
@@ -768,9 +778,10 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
             </Pill>
           </View>
           {wait === 'invest' ? <TourHint>{L.investHint}</TourHint> : null}
-          {/* T-11-219 드롭다운 대신 5칸을 늘 보여 주고(한 번 눌러 고른다), 고른 투자의 설명은 아래 HelpBox에. */}
+          {/* T-11-219 드롭다운 대신 칸을 늘 보여 주고(한 번 눌러 고른다), 고른 투자의 설명은 아래 HelpBox에.
+              T-11-221 '투자 안 함' 칸은 없애고 2×2만 둔다. 고른 칸을 다시 누르거나 '선택 해제'로 되돌린다. */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {INVESTS.map((d) => {
+            {INVESTS.filter((d) => d.id !== 'none').map((d) => {
               const cd = investCards.get(d.id)!;
               const cost = investCost(s, d);
               const note = investNote(d);
@@ -779,17 +790,16 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
                 <View
                   key={d.id}
                   testID={`invest-${d.id}`}
-                  // 비용 없는 '투자 안 함'은 한 줄 전체(웹 .iv-none), 나머지는 2열.
-                  style={cost ? { flexGrow: 1, flexBasis: '45%' } : { width: '100%' }}
+                  style={{ flexGrow: 1, flexBasis: '45%' }}
                 >
                   <PickPop on={popped?.g === 'invest' && popped.id === d.id}>
                     <Opt
                       selected={sel}
                       disabled={!cd.affordable}
-                      onPress={() => setInvest(d.id)}
+                      onPress={() => setInvest(sel ? 'none' : d.id)}
                       style={{
                         flex: 1,
-                        minHeight: cost ? 44 : 40,
+                        minHeight: 44,
                         paddingVertical: sel ? 7.5 : 9,
                         paddingHorizontal: sel ? 10.5 : 12,
                       }}
@@ -839,6 +849,21 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
             title={investName(s, invest)}
             effect={investCards.get(invest.id)!.effect}
             body={investHelp(s, invest)}
+            action={
+              invest.id !== 'none' || wait === 'invest' ? (
+                <Press
+                  testID="invest-none"
+                  accessibilityRole="button"
+                  onPress={() => setInvest('none')}
+                  hitSlop={{ top: 6, bottom: 6 }}
+                  style={{ minHeight: 32, justifyContent: 'center', paddingHorizontal: 4 }}
+                >
+                  <Txt bold style={{ fontSize: rem(0.8125), color: c.accentText }}>
+                    {invest.id !== 'none' ? L.investClear : investName(s, invest)}
+                  </Txt>
+                </Press>
+              ) : null
+            }
           />
         </Card>
       </Spotlight>
