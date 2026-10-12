@@ -17,12 +17,15 @@
   - paragraph: 부상으로 4경기 결장이 남았어요. 회복 상태를 먼저 확인해요.
   - paragraph: 슈팅이 다른 핵심 능력치보다 앞서 있어 이 능력치의 훈련 성장이 줄어요. 다른 핵심 능력치를 보완해 주세요.
   - heading "훈련 방향" [level=3]
+  - group "훈련 보기":
+    - button "버튼으로 보기" [pressed]
+    - button "육각형으로 보기"
   - paragraph: 약점 집중훈련은 아래 자기 투자에서 고를 수 있어요.
   - group: 포지션 육성 안내 +
   - button "스피드 훈련 스피드 ▲"
-  - button /슈팅 훈련 슈팅 ▲ 주력 성장 \+\d+% · 너무 앞서 성장 −\d+%/
+  - button "슈팅 훈련 슈팅 ▲"
   - button "패스 훈련 패스 ▲"
-  - button /드리블 훈련 드리블 ▲ 주력 성장 \+\d+%/
+  - button "드리블 훈련 드리블 ▲"
   - button "수비 훈련 수비 ▲"
   - button "피지컬 훈련 피지컬·스피드 ▲"
   - button /휴식·회복 컨디션 \+\d+/ [pressed]
@@ -31,7 +34,13 @@
   - text: /휴식·회복 · 컨디션 \+\d+ · 사기 \+4 Invest/
   - heading "자기 투자" [level=2]
   - text: /보유 \d+억 \d+,\d+만원/
-  - button "투자 안 함 자금을 아낀다" [pressed]
+  - button "투자 안 함" [pressed]
+  - button /\S+ 특훈약점 .+원/
+  - button /\S+ 특훈강점 .+원/
+  - button /메디컬 케어 .+원/
+  - button /멘탈 코칭 .+원/
+  - text: 투자 안 함 · 자금을 아낀다
+  - paragraph: 이번 구간에는 자금을 쓰지 않아요.
   - text: Storylines
   - heading "진행 중인 스토리" [level=2]
   - text: 평생의 라이벌 약 1구간 후 Timeline

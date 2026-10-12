@@ -2335,27 +2335,23 @@ body:has(.main-nav) .wrap {
   color: var(--accent-text) !important;
   font-weight: 600;
 }
-/* T-11-200 자기 투자: 한 줄에 하나, 비용은 오른쪽 끝. */
-.invest-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* T-11-200 자기 투자. T-11-219부터 드롭다운 대신 2열 칸을 늘 보여 주고 비용은 이름 아래에. */
+.invest-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
 }
-.invest-list .opt {
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-}
-.iv-main {
-  flex: 1;
+.invest-grid .opt {
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+  padding: 9px 12px;
 }
-.iv-main b {
+.invest-grid b {
   font-size: 0.875rem;
+}
+/* 비용 없는 '투자 안 함'은 한 줄 전체를 낮게 쓴다. */
+.invest-grid .iv-none {
+  grid-column: 1 / -1;
+  min-height: 40px;
 }
 .iv-note {
   margin-left: 6px;
@@ -2379,7 +2375,6 @@ body:has(.main-nav) .wrap {
   color: var(--muted);
   cursor: pointer;
 }
-.iv-chev,
 .more-chev .chev {
   flex: none;
   fill: none;
@@ -2390,13 +2385,11 @@ body:has(.main-nav) .wrap {
   color: var(--muted);
   transition: transform 0.2s;
 }
-.iv-drop[aria-expanded='true'] .iv-chev,
 .more-chev[aria-expanded='true'] .chev {
   transform: rotate(180deg);
 }
-.iv-cost {
-  flex: none;
-  font-size: 0.875rem;
+.invest-grid .iv-cost {
+  font-size: 0.8125rem;
   font-weight: 700;
   color: var(--accent-text);
 }
@@ -2410,6 +2403,132 @@ body:has(.main-nav) .wrap {
   background: var(--surface-2);
   font-size: 0.8125rem;
   line-height: 1.5;
+}
+/* T-11-200 훈련 방향 육각형: 축 이름표가 훈련 버튼이다(TrainRadar.svelte). T-11-219 시즌 탭 육각형 보기. */
+.train-radar {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+}
+.train-radar .radar {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+}
+.tr-axis {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 26%;
+  min-height: 44px;
+  padding: 4px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  /* T-11-212 고르지 않은 축도 누를 수 있는 버튼으로 보이게 옅은 테두리·바탕을 둔다. */
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  line-height: 1.15;
+  text-align: center;
+}
+.tr-axis .rd-abbr,
+.tr-axis .rd-val {
+  color: var(--muted);
+  font-family: var(--display);
+  font-weight: 700;
+}
+.tr-axis .rd-abbr {
+  font-size: 0.75rem;
+}
+.tr-axis .rd-val {
+  color: var(--ink);
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+}
+.tr-axis .rd-up {
+  color: var(--good);
+  font-size: 0.75rem;
+}
+.tr-axis .rd-down {
+  color: var(--bad);
+  font-size: 0.75rem;
+}
+.tr-focus {
+  color: var(--accent-text);
+}
+.tr-axis[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.tr-axis[aria-pressed='true'] .rd-abbr {
+  color: var(--accent-text);
+}
+.tr-axis[data-picked] {
+  animation: opt-pick 0.6s ease;
+}
+.tr-arrow {
+  stroke: var(--good);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.tr-arrow.inv {
+  stroke-dasharray: 3 3;
+  opacity: 0.85;
+}
+.tr-head {
+  fill: var(--good);
+}
+.train-misc {
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+}
+.train-misc .opt {
+  min-width: 0;
+}
+/* T-11-219 훈련 방향 제목 오른쪽의 보기 전환 아이콘(버튼 · 육각형). */
+.train-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.train-view {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.train-view button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+}
+.train-view button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--accent-text);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.train-view svg {
+  width: 18px;
+  height: 18px;
+}
+/* T-11-219 설명 칸의 성장 배율 안내: 빨라지면 초록, 줄면 주황. */
+.train-note.good {
+  color: var(--good);
+}
+.train-note.warn {
+  color: var(--warn);
 }
 .feed {
   display: flex;

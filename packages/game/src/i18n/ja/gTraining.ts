@@ -14,8 +14,6 @@ export const gTraining: Translation<GTrainingMsgs> = {
   income: (p) => `収入 +${p.money}`,
   attrUp: (p) => `${p.attr} ▲`,
   attrPairUp: (p) => `${p.a}・${p.b} ▲`,
-  focusGrowth: (p) => `主力の成長 +${p.pct}%`,
-  tooFarAhead: (p) => `突出しすぎ 成長 −${p.pct}%`,
   maxed: (p) => `${p.attr} 最大値に到達`,
   nearMax: (p) => `最大値に到達 成長 −${p.pct}%`,
   helpRest: (p) =>
@@ -31,6 +29,8 @@ export const gTraining: Translation<GTrainingMsgs> = {
   helpOffFocus: (p) => `主力の能力値ではないので成長が${p.pct}%遅くなります。`,
   helpLopsided: (p) =>
     `他の主要能力値より突出しすぎているため、成長が${p.pct}%落ちています。他の能力値を伸ばすと制限が解除されます。`,
+  helpBalanceRule: (p) =>
+    `ひとつの能力値だけが他の主要能力値より突出しすぎると、成長が最大${p.pct}%落ちます。`,
   helpMaxed: (p) =>
     `${p.attr}の詳細能力値がすべて最大値(99)のため、このトレーニングではこれ以上上がりません。`,
   helpNearMax: (p) => `最大値(99)に達した詳細能力値があるため、成長の${p.pct}%が反映されません。`,

@@ -86,7 +86,8 @@ function maxNote(s: GameState, k: AttrKey): { maxed: boolean; tag: string; help:
     help: L.helpNearMax({ pct: pct(lost) }),
   };
 }
-/** T-10-074 훈련 카드: 무엇이 오르고 무엇을 치르는지(effect, 항목별)와 눈여겨볼 한 가지(tag — 주력·너무 앞섬·비용·수입). */
+/** T-10-074 훈련 카드: 무엇이 오르고 무엇을 치르는지(effect, 항목별)와 눈여겨볼 한 가지(tag — 최고치 도달·비용·수입).
+ * 능력치 훈련의 성장 배율(주력·치우침·최고치)은 T-11-219부터 버튼 대신 설명 칸(trainingGrowthNotes)에 문장으로 보여 준다. */
 export function trainingCard(s: GameState, t: TrainingDef): { effect: string[]; tag: string } {
   if (t.id === 'rest')
     return {
@@ -110,24 +111,35 @@ export function trainingCard(s: GameState, t: TrainingDef): { effect: string[]; 
     };
   }
   const k = t.attr!;
-  const { focus, bf, lopsided } = attrInfo(s, k);
   const max = maxNote(s, k);
   const up =
     k === 'phy'
       ? L.attrPairUp({ a: labelOf(s, k), b: labelOf(s, 'pac') })
       : L.attrUp({ attr: labelOf(s, k) });
-  // 다 찬 능력치에 성장 보정 태그를 붙이면 오를 것처럼 보인다 — 최고치 태그만 남긴다.
-  const tags = max.maxed
-    ? [max.tag]
-    : [
-        focus ? L.focusGrowth({ pct: pct(FOCUS_GROWTH - 1) }) : '',
-        lopsided ? L.tooFarAhead({ pct: pct(1 - bf) }) : '',
-        max.tag,
-      ];
   return {
     effect: [up, L.condition({ v: signed(trainCond(k)) })],
-    tag: tags.filter(Boolean).join(' · '),
+    // 다 찬 능력치는 골라도 오르지 않으니 버튼에서 바로 알린다.
+    tag: max.maxed ? max.tag : '',
   };
+}
+export type TrainingGrowthNote = { text: string; tone: 'good' | 'warn' | 'muted' };
+/** T-11-219 고른 능력치 훈련의 성장 배율 안내(설명 칸): 주력 여부, 치우침, 최고치. 능력치가 아닌 훈련은 빈 배열. */
+export function trainingGrowthNotes(s: GameState, t: TrainingDef): TrainingGrowthNote[] {
+  if (!t.attr) return [];
+  const k = t.attr;
+  const max = maxNote(s, k);
+  if (max.maxed) return [{ text: max.help, tone: 'warn' }];
+  const { focus, bf, lopsided } = attrInfo(s, k);
+  const notes: TrainingGrowthNote[] = [
+    focus
+      ? { text: L.helpFocus({ pct: pct(FOCUS_GROWTH - 1) }), tone: 'good' }
+      : { text: L.helpOffFocus({ pct: pct(1 - OFF_FOCUS_GROWTH) }), tone: 'warn' },
+    lopsided
+      ? { text: L.helpLopsided({ pct: pct(1 - bf) }), tone: 'warn' }
+      : { text: L.helpBalanceRule({ pct: pct(1 - BALANCE_MIN) }), tone: 'muted' },
+  ];
+  if (max.help) notes.push({ text: max.help, tone: 'warn' });
+  return notes;
 }
 /** Selected attribute's existing positional OVR weight; presentation only. */
 export function trainingOvrNote(s: GameState, t: TrainingDef): string {
