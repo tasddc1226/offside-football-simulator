@@ -270,15 +270,20 @@ export function makeOffers(s: GameState) {
     fameEff(s) * 0.04 -
     (s.age >= 31 ? (s.age - 30) * 1.2 : 0);
   const am = leagueOf(s.leagueId).amateur;
-  const pool = CLUBS.filter(
-    (c) =>
-      !clubLeague(c, s).amateur &&
-      c.id !== s.club.id &&
-      c.str <= value + 2 &&
-      c.str >= value - 14 &&
-      (!am || (clubLeague(c, s).tier <= (value >= 66 ? 4 : 3) && c.leagueId !== 'mls')) &&
-      (clubLeague(c, s).tier < 4 || leagueOf(s.leagueId).tier >= 4 || c.str <= value - 3),
-  );
+  const eligible = (floor: number) =>
+    CLUBS.filter(
+      (c) =>
+        !clubLeague(c, s).amateur &&
+        c.id !== s.club.id &&
+        c.str <= value + 2 &&
+        c.str >= floor &&
+        (!am || (clubLeague(c, s).tier <= (value >= 66 ? 4 : 3) && c.leagueId !== 'mls')) &&
+        (clubLeague(c, s).tier < 4 || leagueOf(s.leagueId).tier >= 4 || c.str <= value - 3),
+    );
+  let pool = eligible(value - 14);
+  // 고교·대학은 갈 수 있는 리그가 정해져 있어 너무 잘 크면 하한에 걸려 후보가 빈다. 그때는 하한 없이
+  // 갈 수 있는 구단 중 센 곳부터 오게 한다(전엔 K3 최약체 입단 테스트로 떨어졌다).
+  if (am && !pool.length) pool = eligible(-Infinity);
   // T-10-016 MLS는 팀이 30개라 그대로 두면 오퍼를 쓸어 간다. 실제처럼 주로 30대 베테랑에게 오게 한다.
   const pull = (c: Club) => (c.leagueId === 'mls' && s.age < 30 ? BAL.mlsYoungPull : 1);
   const wt = (c: (typeof CLUBS)[number]) => pull(c) * Math.exp(-((c.str - (value - 3)) ** 2) / 20);

@@ -38,7 +38,6 @@ export const POSITIONAL_EVENTS: EventDef[] = [
         fail: {
           text: '연습장에선 들어가는데 경기장에선 골대를 맞습니다.',
           fx: (s) => {
-            addAttr(s, 'sho', 1);
             addStat(s, 'cond', -10);
             addStat(s, 'morale', -4);
           },
@@ -220,7 +219,6 @@ export const POSITIONAL_EVENTS: EventDef[] = [
         fail: {
           text: '수비 위치 선정이 어색했습니다. 뒷공간을 연달아 내주며 공격 리듬까지 잃었습니다.',
           fx: (s) => {
-            addAttr(s, 'def', 1);
             addStat(s, 'morale', -6);
             addStat(s, 'trust', -0.5);
           },
@@ -375,14 +373,14 @@ export const POSITIONAL_EVENTS: EventDef[] = [
         p: (s) => clamp(0.4 + (s.attrs.pac - 66) * 0.02, 0.15, 0.9),
         ok: {
           text: '동료가 복귀할 시간을 벌었습니다. 위기 탈출.',
-          fx: (s) => addStat(s, 'trust', 1.5),
+          fx: (s) => {
+            addStat(s, 'trust', 1.5);
+            addAttr(s, 'def', 1);
+          },
         },
         fail: {
           text: '속도에서 밀렸습니다. 골키퍼와 1대1을 내줬습니다.',
-          fx: (s) => {
-            addStat(s, 'morale', -5);
-            addAttr(s, 'pac', 0.5);
-          },
+          fx: (s) => addStat(s, 'morale', -5),
         },
       },
     ],
@@ -525,7 +523,6 @@ export const POSITIONAL_EVENTS: EventDef[] = [
         fail: {
           text: '패스 미스가 잦아 전술 훈련에서 여러 번 실점했습니다.',
           fx: (s) => {
-            addAttr(s, 'pas', 1);
             addStat(s, 'trust', -1);
             addStat(s, 'morale', -4);
           },

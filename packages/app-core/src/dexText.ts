@@ -20,15 +20,7 @@ export function dexRules(): (readonly [string, string])[] {
     [L.ruleMiniTerm, L.ruleMini],
     [L.ruleSafeTerm, L.ruleSafe({ span: span(JITTER_RANGE.safe), twist: pct(R.twist), cost })],
     [L.ruleResultTerm, L.ruleResult({ span: span(JITTER_RANGE.normal) })],
-    [
-      L.ruleTwistTerm,
-      L.ruleTwist({
-        twist: pct(R.twist),
-        ok: pct(R.twistUp.ok),
-        fail: pct(R.twistUp.fail),
-        safe: pct(R.twistUp.safe),
-      }),
-    ],
+    [L.ruleTwistTerm, L.ruleTwist({ chance: pct(R.twist * R.twistGain) })],
   ];
 }
 

@@ -268,6 +268,11 @@ export default function Create() {
       setRerolling(false);
     }
   }
+  const askAdReroll = () =>
+    Alert.alert(CA.rerollAskTitle, adText.adRerollConfirm({ n: Math.max(0, adLeft - 1) }), [
+      { text: CA.cancel, style: 'cancel' },
+      { text: CA.rerollAction, onPress: () => void rerollWithAd() },
+    ]);
   const askReroll = () =>
     Alert.alert(CA.rerollAskTitle, CL.rerollConfirm({ n: Math.max(0, rerolls - 1) }), [
       { text: CA.cancel, style: 'cancel' },
@@ -1002,7 +1007,7 @@ export default function Create() {
                     kind="tonal"
                     testID="candidate-ad-reroll"
                     disabled={rerolling || rewardBusy}
-                    onPress={() => void rerollWithAd()}
+                    onPress={askAdReroll}
                     accessibilityLabel={(offer === 'free'
                       ? adText.adRerollFreeBtn
                       : adText.adRerollBtn)({

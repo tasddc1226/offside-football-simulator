@@ -22,7 +22,6 @@ export const gStats: Translation<GStatsMsgs> = {
   chipPotUp: '上昇',
   twistSafe: (p) => `安全策の代償 · ${p.why}`,
   twistUp: (p) => `思わぬ収穫 · ${p.label} +${p.d}`,
-  twistDown: (p) => `予想外の余波 · ${p.label} ${p.d}`,
   costMoraleLabel: '士気',
   costMoraleWhy: '挑戦しなかった心残り',
   costTrustLabel: '監督の信頼',

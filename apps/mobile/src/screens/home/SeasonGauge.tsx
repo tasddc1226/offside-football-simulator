@@ -93,6 +93,11 @@ export function SeasonGauge() {
           }}
         />
       </View>
+      {lines.endDate ? (
+        <Txt testID="season-gauge-date" style={{ fontSize: rem(0.8125), color: c.muted }}>
+          {lines.endDate}
+        </Txt>
+      ) : null}
     </Card>
   );
 }

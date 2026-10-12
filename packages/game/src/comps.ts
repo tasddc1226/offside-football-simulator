@@ -1,7 +1,7 @@
 // ───────── 실제 대회 구조: 국내 컵 · 슈퍼컵 · 대륙 클럽 대회 · 시상식 · 커리어 여정 ─────────
 import { ovr } from './attributes.js';
 import { clamp, ri, chance, gauss, rnd } from './rng.js';
-import { clubRef, sameClub, type Pos } from './data.js';
+import { clubRef, LEAGUES, sameClub, type Pos } from './data.js';
 import {
   leagueOf,
   clubsIn,
@@ -74,6 +74,9 @@ const YOUNG: Record<string, string> = {
   k2: 'K리그2 영플레이어상',
   j1: 'J리그 베스트 영플레이어상',
 };
+const youngOf = (L: { id: string; name: string }) => YOUNG[L.id] ?? `${L.name} 올해의 영플레이어`;
+const YOUNG_NAMES = new Set(LEAGUES.map(youngOf));
+const wonYoung = (s: GameState) => s.awards.some((a) => YOUNG_NAMES.has(a.t));
 /** ko: 리그 페이즈 없이 전 라운드 녹아웃(전반기 1라운드 · 후반기 16강~결승). */
 export const CONT: Record<
   string,
@@ -419,11 +422,9 @@ export function seasonAwards(
     awards.push(
       L.amateur ? '대회 베스트 11' : L.tier >= 4 ? `${L.name} 올해의 팀` : `${L.name} 베스트 11`,
     );
-  if (!L.amateur && !s.flags.rookieDone) {
-    s.flags.rookieDone = true;
-    if (s.age <= 23 && S.apps >= m * 0.45 && avg >= 6.85)
-      awards.push(YOUNG[L.id] ?? `${L.name} 올해의 영플레이어`);
-  }
+  // 영플레이어는 23세 이하면 어느 프로 시즌에서든 받을 수 있고 커리어에 한 번이다(옛 rookieDone은 첫 프로 시즌만 봤다).
+  if (!L.amateur && s.age <= 23 && !wonYoung(s) && S.apps >= m * 0.45 && avg >= 7.25)
+    awards.push(youngOf(L));
   if (L.amateur) return { awards, gala };
 
   const big = (t: string) => (trophies.includes(t) ? 1 : 0);
@@ -539,9 +540,9 @@ export function checkMilestones(
 }
 export function retireMilestones(s: GameState): string[] {
   const pro = s.career.filter((r) => r.pro && !r.mil && r.club !== SANGMU_NAME);
-  const clubs = new Set(pro.map((r) => r.club));
   const out: (string | null)[] = [];
-  if (pro.length >= 8 && clubs.size === 1)
+  // 구단 이름이 바뀌어도(데이터 갱신) 같은 구단이면 원클럽으로 센다 — clubId가 있으면 그것으로 비교한다.
+  if (pro.length >= 8 && pro.every((r) => sameClub(r, pro[0]!)))
     // 진짜 영구결번은 서버가 심사한다(T-10-076) — 여기서는 원클럽맨 헌정 이정표만 남긴다.
     out.push(mile(s, 'oneclub', `원클럽맨 · ${s.club.name} 헌정 (No.${s.number})`, 0));
   else {
