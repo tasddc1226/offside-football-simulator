@@ -23,7 +23,6 @@ export const gStats: Translation<GStatsMsgs> = {
   chipPotUp: 'Up',
   twistSafe: (p) => `The price of playing safe · ${p.why}`,
   twistUp: (p) => `Unexpected gain · ${p.label} +${p.d}`,
-  twistDown: (p) => `Unexpected fallout · ${p.label} ${p.d}`,
   costMoraleLabel: 'Morale',
   costMoraleWhy: 'Regret at playing it safe',
   costTrustLabel: 'Manager trust',

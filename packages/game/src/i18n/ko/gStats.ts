@@ -26,7 +26,6 @@ const ko = {
   // 이벤트 뒤 반전
   twistSafe: (p: { why: string }) => `안전한 선택의 대가 · ${p.why}`,
   twistUp: (p: { label: string; d: number }) => `뜻밖의 수확 · ${p.label} +${p.d}`,
-  twistDown: (p: { label: string; d: number }) => `예상 못 한 여파 · ${p.label} ${p.d}`,
   // 안전한 선택의 대가(이벤트 도감도 읽는다)
   costMoraleLabel: '사기',
   costMoraleWhy: '도전하지 않은 아쉬움',

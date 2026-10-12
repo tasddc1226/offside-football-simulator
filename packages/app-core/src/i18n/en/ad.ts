@@ -22,6 +22,8 @@ export const ad: Translation<AdMsgs> = {
   adRerollFreeBtn: (p) => `Redraw candidates (${p.n} left today)`,
   adRerollShort: 'Redraw',
   adRerollBadge: (p) => (p.ad ? `Ad · ${p.n} left` : `${p.n} left`),
+  adRerollConfirm: (p) =>
+    `Redraw all 3 candidates? Your current candidates and any revealed potential ranges will be lost. ${p.n} left today after this.`,
   adRerollWatch: 'Watch the whole ad to redraw your candidates.',
   adRerollDone: (p) => `Candidates redrawn. ${p.n} more today.`,
 };

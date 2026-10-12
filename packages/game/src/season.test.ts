@@ -237,3 +237,23 @@ describe('T-11-072 은퇴 선수 국적 저장', () => {
     expect(loadKey('ft_hof')).toEqual(old);
   });
 });
+
+// T-11-224: 고교·대학에서 너무 잘 크면 제의 후보가 비어 K3 최약체 입단 테스트만 남았다.
+describe('아마추어 고OVR 제의', () => {
+  it('하한에 걸려도 갈 수 있는 구단 중 센 곳에서 제의가 온다', async () => {
+    await import('./index.js');
+    const { acceptOption, makeOffers } = await import('./season.js');
+    const { clubsIn } = await import('./engine.js');
+    setActiveRng(createRng(5));
+    const s = newGame(
+      { name: '대학생', number: 9, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
+      5,
+    );
+    acceptOption(s, { kind: 'uni', name: '대학 진학', desc: '' });
+    for (const key of Object.keys(s.sub)) s.sub[key] = 99;
+    const weakestK3 = clubsIn('k3').sort((a, b) => a.str - b.str)[0]!;
+    const offers = makeOffers(s);
+    expect(offers.length).toBeGreaterThan(0);
+    expect(offers.map((o) => o.name)).not.toContain(weakestK3.name);
+  });
+});

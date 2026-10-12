@@ -110,7 +110,7 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   guide1Bold2: 'position OVR',
   guide1After: ' under the card is what counts toward team strength and matches.',
   guide2:
-    "The position changes depending on where you move the player. If the player has a rating for that position, it's used. If not, peak OVR is multiplied by position fit.",
+    "The position changes depending on where you move the player. If the player has a rating for that position, it's used. If not, peak OVR is multiplied by position fit. If their attributes suit a spot better, the rating there can be up to 2 above peak OVR. For example, a wing-back strong in defending and physical can rate higher at centre-back.",
   guide3:
     'Players without detailed position records get 95% of peak OVR, even within the same position group. For example, a peak OVR of 85 gives a position OVR of 81.',
   guide4:

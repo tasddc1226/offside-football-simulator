@@ -63,8 +63,9 @@ export const EVENT_RULES = {
   get twist() {
     return BAL.eventTwist;
   },
-  /** 반전이 능력치 변화일 때 오를 확률(안전 / 도전 성공·확정 / 도전 실패). */
-  twistUp: { safe: 0.3, ok: 0.65, fail: 0.4 },
+  /** T-11-224 도전 성공·확정 뒤 능력치가 +1~2 오를 확률은 twist × 이 값. 실패·안전한 선택에는 능력치 반전이 없다
+   * (전엔 성공에도 −1이 붙어 "성공했는데 깎였다"는 제보가 이어졌다). 기대 성장은 옛 성공 반전과 비슷하게 맞췄다. */
+  twistGain: 0.4,
   /** 안전한 선택의 대가(셋 중 하나, 폭 안에서 무작위). */
   safeCost: [
     {
@@ -188,14 +189,11 @@ export function resolveChoice(
     );
     addStat(s, k, d);
     twist = L.twistSafe({ why });
-  } else if (chance(EVENT_RULES.twist)) {
+  } else if (ok && !safe && chance(EVENT_RULES.twist * EVENT_RULES.twistGain)) {
     const k = pick(ATTR_KEYS.filter((x) => wOf(s)[x] > 0.09));
-    const up = chance(
-      safe ? EVENT_RULES.twistUp.safe : ok ? EVENT_RULES.twistUp.ok : EVENT_RULES.twistUp.fail,
-    );
-    const d = up ? ri(1, 2) : -1;
+    const d = ri(1, 2);
     addAttr(s, k, d);
-    twist = up ? L.twistUp({ label: labelOf(s, k), d }) : L.twistDown({ label: labelOf(s, k), d });
+    twist = L.twistUp({ label: labelOf(s, k), d });
   }
   const key =
     ev.story ||

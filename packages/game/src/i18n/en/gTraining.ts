@@ -31,6 +31,9 @@ export const gTraining: Translation<GTrainingMsgs> = {
     `It is too far ahead of your other key attributes, so growth is down ${p.pct}%. Train the others to lift the cap.`,
   helpBalanceRule: (p) =>
     `If one attribute gets too far ahead of your other key attributes, its growth drops by up to ${p.pct}%.`,
+  helpNearPot: (p) =>
+    `Your OVR is close to your potential, so growth is down ${p.pct}%. Training a low attribute is just as slow.`,
+  helpAge: (p) => `Age has slowed growth by ${p.pct}%.`,
   helpMaxed: (p) =>
     `Every ${p.attr} detail attribute is already at the max (99), so this won't raise it any further.`,
   helpNearMax: (p) =>
