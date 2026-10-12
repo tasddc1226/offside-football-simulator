@@ -1,0 +1,45 @@
+name: Slack Meta ads
+on:
+  schedule:
+    - cron: '37 * * * *'
+    - cron: '5 0 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [monitor, daily]
+        default: monitor
+        required: true
+permissions:
+  contents: read
+jobs:
+  meta:
+    if: github.ref == 'refs/heads/main' && vars.META_ADS_ENABLED == 'true'
+    strategy:
+      matrix:
+        mode: [monitor, daily]
+    concurrency:
+      group: slack-meta-ads-${{ matrix.mode }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SLACK_ALERTS_WEBHOOK: ${{ secrets.SLACK_ALERTS_WEBHOOK }}
+      SLACK_DAILY_WEBHOOK: ${{ secrets.SLACK_DAILY_WEBHOOK }}
+      META_ADS_ACCESS_TOKEN: ${{ secrets.META_ADS_ACCESS_TOKEN }}
+      META_AD_ACCOUNT_ID: ${{ vars.META_AD_ACCOUNT_ID }}
+      META_GRAPH_VERSION: ${{ vars.META_GRAPH_VERSION }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.23.1
+      - name: Read Meta ads and notify Slack
+        if: inputs.mode == matrix.mode || (github.event.schedule == '37 * * * *' && matrix.mode == 'monitor') || (github.event.schedule == '5 0 * * *' && matrix.mode == 'daily')
+        env:
+          MODE: ${{ matrix.mode }}
+        run: node tooling/scripts/slack-meta-ads.mjs "$MODE"
