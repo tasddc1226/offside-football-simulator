@@ -2,36 +2,24 @@
   "id": "t-11-191-avatar-look",
   "title": "도트 선수 꾸미기",
   "items": [
-    "커리어 화면의 도트 선수를 누르면 선수 자금으로 모습을 꾸밀 수 있어요. 피부색 · 머리색 · 머리 모양 · 수염 · 표정 · 헤어밴드 · 손목 밴드 · 고글 · 축구화 · 양말을 고를 수 있어요.",
-    "항목마다 한 번 사면 그 커리어 동안 무료로 몇 번이든 바꿀 수 있어요. 능력치와 경기 결과에는 영향이 없어요.",
-    "은퇴하면 그 모습으로 굳어요. 은퇴 리포트, 명예의 전당 시상대, 구단주 시즌 결산 단체사진에도 꾸민 모습이 나와요.",
-    "선수 그림이 큰 머리와 짧은 팔다리의 미니형으로 바뀌어요. 구단 유니폼과 나이·부상·군 복무·은퇴에 따른 모습은 유지돼요.",
-    "프리시즌 준비 중에는 선수가 뛰고 드리블해요. 동작 줄이기를 켜거나 목발을 짚는 선수는 정지 자세로 보여요.",
-    "득점왕·우승 등 칭호를 얻으면 열리는 기록 아이템도 선수 자금으로 살 수 있어요.",
-    "구단주 선수 카드에 미니형 얼굴이 나와요. 은퇴 때 꾸민 헤어·피부색·표정을 이어받고, 옛 선수도 커리어마다 같은 얼굴로 보여요."
+    "선수가 미니형 도트로 바뀌어요. 선수 자금으로 꾸미기 항목과 칭호 기록 아이템을 한 번 사면 커리어 동안 무료로 바꿀 수 있어요. 능력치에는 영향이 없어요.",
+    "은퇴한 모습은 리포트·시상대·결산 사진과 선수 카드 얼굴에 이어져요. 구단 유니폼과 나이·부상·군 복무 모습도 유지돼요.",
+    "프리시즌 준비 중 뛰기·드리블 모션이 나와요. 동작 줄이기 설정이나 목발 사용 중에는 정지해요."
   ],
   "en": {
     "title": "Customize your pixel player",
     "items": [
-      "Tap the pixel player on the career screen to customize your look with your player's money: skin tone, hair color, hairstyle, beard, expression, headband, wristband, goggles, boots and socks.",
-      "Buy each item once and change it as often as you like for the rest of that career. It never affects attributes or match results.",
-      "Your look is locked in when you retire, and it appears on your retirement report, the Hall of Fame podium and the owner season recap team photo.",
-      "Players now use a mini pixel style with larger heads and shorter limbs. Club kits and age, injury, military service and retirement appearances are preserved.",
-      "During preseason preparation, your player runs and dribbles. Reduced motion and players using crutches keep a standing pose.",
-      "Titles such as top scorer and champion unlock record items you can buy with player funds.",
-      "Owner player cards now show mini pixel portraits, preserving hairstyle, skin tone and expression from retirement. Older players also keep a consistent face for each career."
+      "Players now use mini pixel art. Buy customization options and title record items once with player funds, then change them freely during that career. Attributes are unaffected.",
+      "Your retired look carries over to reports, podiums, recap photos and card portraits. Club kits and age, injury and military appearances remain.",
+      "Players run and dribble during preseason preparation. Reduced motion or crutches keep a standing pose."
     ]
   },
   "ja": {
     "title": "ドット選手のカスタマイズ",
     "items": [
-      "キャリア画面のドット選手をタップすると、選手の資金で見た目をカスタマイズできます。肌の色・髪の色・髪型・ひげ・表情・ヘアバンド・リストバンド・ゴーグル・スパイク・ソックスを選べます。",
-      "項目ごとに一度買えば、そのキャリアの間は何度でも無料で変えられます。能力値や試合結果には影響しません。",
-      "引退するとその姿で固定されます。引退レポート、殿堂の表彰台、オーナーのシーズン総括の集合写真にもカスタマイズした姿が出ます。",
-      "選手が大きな頭と短い手足のミニキャラになります。クラブのユニフォームや年齢・負傷・兵役・引退による姿は引き継ぎます。",
-      "プレシーズンの準備中は選手が走ったりドリブルしたりします。動きを減らす設定や松葉杖を使う選手は静止した姿で表示します。",
-      "得点王や優勝などの称号を獲得すると、選手の資金で買える記録アイテムが解放されます。",
-      "オーナーの選手カードにミニキャラの顔が表示されます。引退時の髪型・肌の色・表情を引き継ぎ、以前の選手もキャリアごとに同じ顔で表示されます。"
+      "選手がミニドットになります。選手資金でカスタマイズ項目や称号の記録アイテムを一度買えば、キャリア中は無料で変更できます。能力値は変わりません。",
+      "引退時の姿はレポート・表彰台・総括写真・選手カードの顔に引き継がれます。ユニフォームや年齢・負傷・兵役の姿も保ちます。",
+      "準備中は走る・ドリブルの動きが出ます。動きを減らす設定や松葉杖の使用中は静止します。"
     ]
   },
   "availability": "web-app"
