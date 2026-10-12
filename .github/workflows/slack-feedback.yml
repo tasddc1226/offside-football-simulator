@@ -1,0 +1,28 @@
+name: Slack feedback status
+on:
+  issues:
+    types: [opened, closed, reopened, labeled, unlabeled]
+permissions:
+  contents: read
+concurrency:
+  group: slack-operations
+  cancel-in-progress: false
+jobs:
+  feedback:
+    if: contains(github.event.issue.labels.*.name, 'feedback')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SLACK_ALERTS_WEBHOOK: ${{ secrets.SLACK_ALERTS_WEBHOOK }}
+      SLACK_FEEDBACK_WEBHOOK: ${{ secrets.SLACK_FEEDBACK_WEBHOOK }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.23.1
+      - run: node tooling/scripts/slack-feedback.mjs issues
