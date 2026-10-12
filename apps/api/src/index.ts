@@ -23,11 +23,14 @@ import { consumeCommunityPush } from './push/communityQueue.js';
 import { runCup } from './team/cup.js';
 import { runSeasonClose } from './team/seasonClose.js';
 
+import { consumeBillingAlerts, recoverBillingAlerts } from './iap/alerts.js';
+
 export { app };
 export { LiveHub } from './live/hub.js';
 export { ChatRoom } from './chat/room.js';
 export default {
   queue(batch: MessageBatch<unknown>, env: Bindings) {
+    if (batch.queue === 'offside-billing-production') return consumeBillingAlerts(batch, env);
     if (batch.queue === 'offside-cup-push-production') return consumeCupResults(batch, env);
     return batch.queue === 'offside-career-push-production'
       ? consumeCareerReminders(batch, env)
@@ -55,6 +58,7 @@ export default {
       );
     else {
       // 푸시 단계가 실패해도 뒤의 시즌 결산·컵 진행은 돈다(다음 5분에 다시 보낸다).
+      await recoverBillingAlerts(env, controller.scheduledTime).catch(logged('billing-recovery'));
       await runNewsPush(env).catch(logged('news-push'));
       if (new Date(controller.scheduledTime).getUTCMinutes() === 0)
         await queueCareerReminders(env, controller.scheduledTime).catch(logged('career-reminder'));

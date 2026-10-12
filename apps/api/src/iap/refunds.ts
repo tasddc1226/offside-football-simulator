@@ -2,6 +2,7 @@
 // 소모성 상품을 환불받고도 아이템을 계속 쓰지 못하게, 스토어가 알려 준 환불 거래의 아이템을 회수한다(이용약관 1항).
 // Apple은 App Store 서버 알림(REFUND)을 바로 받고, Google은 매일 cron이 무효화된 구매 목록을 읽는다. 회수는 거래마다 한 번이고
 // 지금 가진 장수 안에서만 뺀다(repos/iap.ts revokeIapPurchase).
+import { recordBillingAlert } from './alerts.js';
 import { DEFAULT_BUNDLE_ID } from '../auth/apple-id-token.js';
 import type { Db } from '../db/client.js';
 import { revokeIapPurchase, type IapRevoke } from '../db/repos/iap.js';
@@ -32,6 +33,53 @@ export async function handleAppleNotification(
   const note = await verifyAppleNotification(signedPayload, appleRoot);
   if (!note) return 'invalid';
   if (note.data?.bundleId !== (env.APPLE_BUNDLE_ID ?? DEFAULT_BUNDLE_ID)) return 'ignored';
+  if (env.BILLING_ALERTS_ENABLED === '1') {
+    if (note.notificationType === 'TEST' && note.notificationUUID) {
+      await recordBillingAlert(
+        env,
+        {
+          store: 'apple',
+          transactionId: note.notificationUUID,
+          kind: 'test',
+          productId: 'Store notification test',
+          test: true,
+        },
+        now,
+      );
+    } else if (
+      ['ONE_TIME_CHARGE', 'SUBSCRIBED', 'DID_RENEW', 'REFUND'].includes(
+        note.notificationType ?? '',
+      ) &&
+      note.data?.signedTransactionInfo
+    ) {
+      const tx = await verifyAppleTransaction(note.data.signedTransactionInfo, appleRoot);
+      if (
+        !tx ||
+        tx.bundleId !== (env.APPLE_BUNDLE_ID ?? DEFAULT_BUNDLE_ID) ||
+        !tx.transactionId ||
+        !tx.productId ||
+        !['Production', 'Sandbox'].includes(tx.environment ?? '') ||
+        tx.environment !== note.data.environment
+      )
+        return 'invalid';
+      await recordBillingAlert(
+        env,
+        {
+          store: 'apple',
+          transactionId: String(tx.transactionId),
+          kind:
+            note.notificationType === 'REFUND'
+              ? 'refund'
+              : note.notificationType === 'DID_RENEW'
+                ? 'renewal'
+                : 'purchase',
+          productId: tx.productId,
+          test: tx.environment === 'Sandbox',
+        },
+        now,
+      );
+    }
+  }
   if (note.notificationType !== 'REFUND' || !note.data.signedTransactionInfo) {
     log('iap-apple-notify', { type: note.notificationType ?? null, handled: false });
     return 'ignored';
@@ -64,6 +112,25 @@ export async function syncGoogleVoided(
   let unknown = 0;
   for (const v of list) {
     const r = await revokeIapPurchase(db, 'google', v.purchaseToken, now);
+    if (env.BILLING_ALERTS_ENABLED === '1' && r.found) {
+      const row = await env.DB.prepare(
+        'SELECT product_id, test FROM iap_purchases WHERE store = ? AND transaction_id = ?',
+      )
+        .bind('google', v.purchaseToken)
+        .first<{ product_id: string; test: number }>();
+      if (row)
+        await recordBillingAlert(
+          env,
+          {
+            store: 'google',
+            transactionId: v.purchaseToken,
+            kind: 'refund',
+            productId: row.product_id,
+            test: !!row.test,
+          },
+          now,
+        );
+    }
     if (!r.found) unknown++;
     else if (!r.already) {
       revoked++;

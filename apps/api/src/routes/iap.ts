@@ -5,6 +5,9 @@ import { grantIapPurchase, iapOwnerOf, ownerItemsOf } from '../db/repos/iap.js';
 import { waitUntil } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError } from '../errors.js';
+import { verifyPubsubToken } from '../iap/pubsub.js';
+import { handleGoogleRtdn } from '../iap/rtdn.js';
+import { billingAlertId } from '../iap/alerts.js';
 import { handleAppleNotification } from '../iap/refunds.js';
 import { iapAccount, iapStores, verifyIapClaim, type IapRejection } from '../iap/verify.js';
 import { APPLE_IAP_NOTIFY_PATH } from '../middleware/originGuard.js';
@@ -27,6 +30,12 @@ const REJECT = {
 const reject = (r: IapRejection) => conflictError(cupKo(REJECT[r][0]), REJECT[r][1]);
 
 export function registerIapRoutes(app: Hono<AppEnv>) {
+  app.post('/v1/iap/google/notifications', async (c) => {
+    if (c.env.BILLING_ALERTS_ENABLED !== '1') return c.body(null, 503);
+    if (!(await verifyPubsubToken(c.env, c.req.header('Authorization')))) return c.body(null, 401);
+    const status = await handleGoogleRtdn(c.env, await c.req.json().catch(() => null), nowIso());
+    return c.body(null, status as 204 | 400 | 503);
+  });
   // T-11-215 App Store 서버 알림(V2). Apple 서버가 보낸다 — 세션 없이 본문의 Apple 서명으로 확인하고, 환불이면 아이템을 회수한다.
   // 처리했거나 다룰 일이 없으면 200(Apple이 다시 보내지 않는다), 서명이 틀리면 400.
   app.post(APPLE_IAP_NOTIFY_PATH, async (c) => {
@@ -67,8 +76,34 @@ export function registerIapRoutes(app: Hono<AppEnv>) {
       qty: product.qty * verdict.quantity,
       test: verdict.test,
       now: nowIso(),
+      ...(c.env.BILLING_ALERTS_ENABLED === '1'
+        ? {
+            alertId: await billingAlertId({
+              store: input.store,
+              transactionId: verdict.transactionId,
+              kind: 'purchase',
+              productId: input.productId,
+              test: verdict.test,
+            }),
+          }
+        : {}),
     });
     if (!items) throw reject('OTHER_ACCOUNT');
+    if (c.env.BILLING_ALERTS_ENABLED === '1' && c.env.BILLING_QUEUE) {
+      const id = await billingAlertId({
+        store: input.store,
+        transactionId: verdict.transactionId,
+        kind: 'purchase',
+        productId: input.productId,
+        test: verdict.test,
+      });
+      waitUntil(
+        c,
+        c.env.BILLING_QUEUE.send({ version: 1, id }).catch(() => {
+          console.error(JSON.stringify({ job: 'billing-enqueue', id }));
+        }),
+      );
+    }
     if (verdict.after)
       waitUntil(
         c,

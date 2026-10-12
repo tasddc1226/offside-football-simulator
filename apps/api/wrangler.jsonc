@@ -81,11 +81,20 @@
       "triggers": { "crons": ["0 19 * * *", "*/5 * * * *"] },
       "queues": {
         "producers": [
+          { "binding": "BILLING_QUEUE", "queue": "offside-billing-production" },
           { "binding": "CUP_PUSH_QUEUE", "queue": "offside-cup-push-production" },
           { "binding": "ADMIN_PUSH_QUEUE", "queue": "offside-admin-push-production" },
           { "binding": "CAREER_PUSH_QUEUE", "queue": "offside-career-push-production" },
         ],
         "consumers": [
+          {
+            "queue": "offside-billing-production",
+            "max_batch_size": 1,
+            "max_batch_timeout": 1,
+            "max_concurrency": 1,
+            "max_retries": 5,
+            "dead_letter_queue": "offside-billing-production-dlq",
+          },
           {
             "queue": "offside-cup-push-production",
             "max_batch_size": 1,
@@ -133,6 +142,8 @@
       "vars": {
         "ENVIRONMENT": "production",
         "NEWS_PUSH_ENABLED": "1",
+        "BILLING_ALERTS_ENABLED": "1",
+        "GOOGLE_RTDN_AUDIENCE": "https://api.offside-lab.com/v1/iap/google/notifications",
         "PUSH_TEST_ENABLED": "1",
         "PERSONAL_PUSH_ENABLED": "1",
         "ADMIN_COMMUNITY_QUEUE_ENABLED": "1",
