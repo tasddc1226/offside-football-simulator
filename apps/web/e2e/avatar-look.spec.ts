@@ -72,3 +72,28 @@ test('기록 아이템은 칭호를 얻어야 사고, 산 뒤에는 입고 벗�
   await expect(dialog.locator('[data-look-rec="scorer-boots"]')).toContainText('입기');
   await expect(dialog).toContainText('선수 자금 95억');
 });
+
+for (const width of [320, 390]) {
+  test(`미니형 꾸미기와 준비 모션이 ${width}px 화면 안에 표시된다`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await resumeWithSave(page, { money: 1_000_000, age: 26 });
+    const avatar = page.locator('.player .avatar');
+    await expect(avatar).toHaveAttribute('viewBox', '0 0 24 32');
+    expect(await avatar.locator('rect').first().getAttribute('height')).toBe('0.5');
+    await page.locator('[data-act="avatar-look"]').click();
+    const dialog = page.getByRole('dialog', { name: '선수 꾸미기' });
+    await dialog.locator('[data-look-item="style"] [data-look-opt="2"]').click();
+    await expect(dialog.locator('svg.avatar')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.keyboard.press('Escape');
+    await page.locator('[data-act="advance"]').click();
+    const stage = page.locator('.avatar-stage svg');
+    await expect(stage).toHaveAttribute('viewBox', '0 0 32 36');
+    await expect(stage.locator('rect').first()).toHaveAttribute('height', '0.5');
+    const box = await stage.boundingBox();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+  });
+}
