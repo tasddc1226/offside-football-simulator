@@ -11,6 +11,7 @@ import {
   creOf,
   FW_ATTACK_ASSIST,
   trainingHelp,
+  trainingGrowthNotes,
   investCard,
   INVESTS,
   addAttr,
@@ -34,12 +35,20 @@ describe('훈련 치우침 억제 (T-10-042)', () => {
   it('고르게 키운 선수는 그대로, 한 능력치만 앞서면 성장이 줄고 화면에 알린다', () => {
     const s = fw();
     expect(balanceFactor(s, 'sho')).toBe(1);
-    expect(trainingCard(s, sho).tag).not.toContain('너무 앞서');
+    expect(
+      trainingGrowthNotes(s, sho)
+        .map((n) => n.text)
+        .join(' '),
+    ).toContain('최대 75%까지 줄어요');
     s.attrs.sho = 95;
     expect(balanceFactor(s, 'sho')).toBe(BALANCE_MIN);
-    expect(trainingCard(s, sho).tag).toContain(
-      `너무 앞서 성장 −${Math.round((1 - BALANCE_MIN) * 100)}%`,
-    );
+    // T-11-219 치우침은 버튼 태그가 아니라 설명 칸에 알린다.
+    expect(trainingCard(s, sho).tag).toBe('');
+    expect(
+      trainingGrowthNotes(s, sho)
+        .map((n) => n.text)
+        .join(' '),
+    ).toContain(`너무 앞서 있어 성장이 ${Math.round((1 - BALANCE_MIN) * 100)}% 줄었어요`);
     // 뒤처진 능력치(패스)를 키우는 건 줄지 않는다.
     expect(balanceFactor(s, 'pas')).toBe(1);
   });
@@ -73,7 +82,9 @@ describe('최고치 도달·소수 성장 칩 (T-11-183)', () => {
     maxSho(s);
     const tag = trainingCard(s, sho).tag;
     expect(tag).toMatch(/^\S+ 최고치 도달$/);
-    expect(tag).not.toContain('주력 성장');
+    expect(trainingGrowthNotes(s, sho)).toEqual([
+      { text: expect.stringContaining('최고치(99)'), tone: 'warn' },
+    ]);
     expect(trainingHelp(s, sho)).toContain('최고치(99)');
     const before = s.attrs.sho;
     addAttr(s, 'sho', 3);
@@ -85,7 +96,12 @@ describe('최고치 도달·소수 성장 칩 (T-11-183)', () => {
     const subs = Object.keys(FACE.sho);
     s.sub[subs[0]!] = 99;
     syncFace(s);
-    expect(trainingCard(s, sho).tag).toMatch(/최고치에 닿아 성장 −\d+%/);
+    expect(trainingCard(s, sho).tag).toBe('');
+    expect(
+      trainingGrowthNotes(s, sho)
+        .map((n) => n.text)
+        .join(' '),
+    ).toMatch(/성장의 \d+%가 반영되지 않아요/);
   });
 
   it('강점 특화 특훈이 다 찬 능력치를 고르면 카드에 알린다', () => {

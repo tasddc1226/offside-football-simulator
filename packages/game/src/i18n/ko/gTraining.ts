@@ -16,8 +16,6 @@ const ko = {
   income: (p: { money: string }) => `수입 +${p.money}`,
   attrUp: (p: { attr: string }) => `${p.attr} ▲`,
   attrPairUp: (p: { a: string; b: string }) => `${p.a}·${p.b} ▲`,
-  focusGrowth: (p: { pct: number }) => `주력 성장 +${p.pct}%`,
-  tooFarAhead: (p: { pct: number }) => `너무 앞서 성장 −${p.pct}%`,
   // T-11-183 세부 능력치가 99에 닿으면 그 몫의 성장은 버려진다.
   maxed: (p: { attr: string }) => `${p.attr} 최고치 도달`,
   nearMax: (p: { pct: number }) => `최고치에 닿아 성장 −${p.pct}%`,
@@ -35,6 +33,8 @@ const ko = {
   helpOffFocus: (p: { pct: number }) => `주력 능력치가 아니라 성장이 ${p.pct}% 느려요.`,
   helpLopsided: (p: { pct: number }) =>
     `다른 핵심 능력치보다 너무 앞서 있어 성장이 ${p.pct}% 줄었어요. 다른 능력치를 키우면 제한이 풀려요.`,
+  helpBalanceRule: (p: { pct: number }) =>
+    `한 능력치만 다른 핵심 능력치보다 너무 앞서면 성장이 최대 ${p.pct}%까지 줄어요.`,
   helpMaxed: (p: { attr: string }) =>
     `${p.attr} 세부 능력치가 모두 최고치(99)라 이 훈련으로는 더 오르지 않아요.`,
   helpNearMax: (p: { pct: number }) =>

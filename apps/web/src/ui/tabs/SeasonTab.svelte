@@ -3,6 +3,8 @@
   let touredKey = 0;
   /** 순위 변동 연출을 이미 튼 리포트 — 안내든 직접 스크롤이든 한 리포트에 한 번만. */
   let rankedKey = 0;
+  /** T-11-219 훈련 방향 보기(버튼 · 육각형) — 탭을 오가도 이번 방문 동안 유지한다. */
+  let trainView = $state<'buttons' | 'radar'>('buttons');
 </script>
 
 <script lang="ts">
@@ -16,7 +18,7 @@
   import { coachFeedback } from '@offside/app-core/career-feedback';
   import { visibleCareerLog } from '@offside/app-core/potential-view';
   import { PHASES, LAST_PHASE } from '@offside/game/data';
-  import { roundRange, logLabel, TRAININGS, trainingLabel, trainingCard, trainingOvrNote, INVESTS, investCard, investCost, investName, investNote, investDef, plannedSpend, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
+  import { roundRange, logLabel, TRAININGS, trainingLabel, trainingCard, trainingGrowthNotes, trainingOvrNote, INVESTS, investCard, investCost, investHelp, investName, investNote, investDef, plannedSpend, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
   import { eventById } from '@offside/game/events-data';
   import type { GameState } from '@offside/game/types';
   import { save } from '../helpers.js';
@@ -27,6 +29,7 @@
   import PhaseReport from './PhaseReport.svelte';
   import LeagueTable from './LeagueTable.svelte';
   import PositionGuide from '../PositionGuide.svelte';
+  import TrainRadar from '../TrainRadar.svelte';
   import { gameSeasonText as L } from '@offside/app-core/i18n/ko/gameSeason';
 
   const { s }: { s: GameState } = $props();
@@ -62,9 +65,8 @@
   // 감속 모션·업무 모드에서는 돌지 않는다.
   let tourWait = $state<TourGate | null>(null);
   // T-11-200 자기 투자는 드롭다운처럼 고른 한 줄만 보이고, 그 줄을 누르면 펼쳐져 고르면 다시 접힌다. 결과 안내가 투자를 기다릴 때와 고른 투자를 할 돈이 없을 때는 펼친다.
-  let investOpen = $state(false);
-  const investForced = $derived(tourWait === 'invest' || !investCard(s, invest).affordable);
-  const investAll = $derived(investOpen || investForced);
+  // T-11-219 자기 투자는 5칸을 늘 보여 주고(한 번 눌러 고른다), 고른 투자의 자세한 설명은 아래 칸에.
+  const investPicked = $derived(investCard(s, invest));
   let resume: ((btn: HTMLElement) => void) | null = null;
   let table = $state<ReturnType<typeof LeagueTable>>();
   let touring = $state(false);
@@ -180,7 +182,6 @@
 
   function setInvest(id: string, btn: HTMLElement) {
     s.invest = id;
-    investOpen = false;
     save();
     if (tourWait === 'invest') resume?.(btn);
   }
@@ -246,12 +247,23 @@
     <p class="fs-sm">{coach.summary}</p>
     {#each coach.notes as note (note)}<p class="muted fs-sm">{note}</p>{/each}
   </div>
-  <h3 class="sub-title">{L.trainingTitle}</h3>
-  {#if tourWait === 'train'}<p class="tour-hint" aria-live="polite">{L.trainHint}</p>{/if}
+  <div class="train-head">
+    <h3 class="sub-title">{L.trainingTitle}</h3>
+    <div class="train-view" role="group" aria-label={L.trainViewGroup}>
+      <button aria-pressed={trainView === 'buttons'} aria-label={L.trainViewButtons} title={L.trainViewButtons} data-train-view="buttons" onclick={() => (trainView = 'buttons')}>
+        <svg viewBox="0 0 18 18" aria-hidden="true"><g fill="currentColor"><rect x="1" y="1" width="7" height="7" rx="2" /><rect x="10" y="1" width="7" height="7" rx="2" /><rect x="1" y="10" width="7" height="7" rx="2" /><rect x="10" y="10" width="7" height="7" rx="2" /></g></svg>
+      </button>
+      <button aria-pressed={trainView === 'radar'} aria-label={L.trainViewRadar} title={L.trainViewRadar} data-train-view="radar" onclick={() => (trainView = 'radar')}>
+        <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M9 1.5 15.5 5.25v7.5L9 16.5 2.5 12.75v-7.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /><path d="M9 5.5 12 8.5 9 12.5 6.5 9Z" fill="currentColor" /></svg>
+      </button>
+    </div>
+  </div>
+  {#if tourWait === 'train'}<p class="tour-hint" aria-live="polite">{L.trainHint}</p>{:else if trainView === 'radar'}<p class="muted fs-sm" data-train-pick>{L.trainPick}</p>{/if}
+  {#if trainView === 'radar'}<TrainRadar {s} onpick={setTraining} />{/if}
   <p class="muted fs-sm">{CG.trainWeak}</p>
   <PositionGuide pos={s.pos} />
-  <div class="train">
-    {#each TRAININGS as tr (tr.id)}
+  <div class="train" class:train-misc={trainView === 'radar'}>
+    {#each trainView === 'radar' ? TRAININGS.filter((x) => !x.attr) : TRAININGS as tr (tr.id)}
       {@const c = trainingCard(s, tr)}
       <button class="opt" data-train={tr.id} aria-pressed={s.training === tr.id} onclick={(e) => setTraining(tr.id, e.currentTarget)}>
         <b>{trainingLabel(s, tr)}</b><small>{c.effect[0]}</small>{#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
@@ -262,6 +274,7 @@
     {@const c = trainingCard(s, picked)}
     <div class="train-help" data-train-help aria-live="polite">
       <b>{trainingLabel(s, picked)} <span class="muted">· {c.effect.join(' · ')}</span></b>
+      {#each trainingGrowthNotes(s, picked) as n (n.text)}<p class="train-note {n.tone}" data-training-growth>{n.text}</p>{/each}
       {#if picked.attr}<p data-training-ovr>{trainingOvrNote(s, picked)}</p>{/if}
     </div>
   {/if}
@@ -275,31 +288,20 @@
     >
   </div>
   {#if tourWait === 'invest'}<p class="tour-hint" aria-live="polite">{L.investHint}</p>{/if}
-  <div class="invest-list">
-    {#each investAll ? INVESTS : [invest] as d (d.id)}
+  <div class="invest-grid">
+    {#each INVESTS as d (d.id)}
       {@const c = investCard(s, d)}
       {@const cost = investCost(s, d)}
       {@const note = investNote(d)}
-      {@const tags = c.tag.split(' · ')}
-      {@const extra = tags.slice(cost ? 1 : 0).join(' · ')}
-      {@const drop = !investForced && invest.id === d.id}
-      <button
-        class="opt"
-        class:iv-drop={drop}
-        data-invest={d.id}
-        aria-pressed={invest.id === d.id}
-        aria-expanded={drop ? investAll : undefined}
-        disabled={!c.affordable}
-        onclick={(e) => (investAll ? setInvest(d.id, e.currentTarget) : (investOpen = true))}
-      >
-        <span class="iv-main">
-          <b>{investName(s, d)}{#if note}<small class="iv-note">{note}</small>{/if}</b>
-          <small>{c.effect.join(' · ')}{#if extra}<span class="train-tag"> · {extra}</span>{/if}</small>
-        </span>
-        <span class="iv-cost num">{cost ? (c.affordable ? W.won({ v: fmtMoney(cost) }) : tags[0]) : ''}</span>
-        {#if drop}<svg class="iv-chev" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>{/if}
+      <button class="opt" class:iv-none={!cost} data-invest={d.id} aria-pressed={invest.id === d.id} disabled={!c.affordable} onclick={(e) => setInvest(d.id, e.currentTarget)}>
+        <b>{investName(s, d)}{#if note}<small class="iv-note">{note}</small>{/if}</b>
+        {#if cost}<small class="iv-cost num">{c.affordable ? W.won({ v: fmtMoney(cost) }) : c.tag.split(' · ')[0]}</small>{/if}
       </button>
     {/each}
+  </div>
+  <div class="train-help" data-invest-help aria-live="polite">
+    <b>{investName(s, invest)} {#if investPicked.effect.length}<span class="muted">· {investPicked.effect.join(' · ')}</span>{/if}</b>
+    <p>{investHelp(s, invest)}</p>
   </div>
 </section>
 

@@ -5,6 +5,7 @@ import { coachFeedback } from '@offside/app-core/career-feedback';
 // 새 리포트가 뜨면 아래 카드들을 차례로 비추며 내려가는 결과 안내가 돈다(useResultTour).
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Animated, View, type LayoutChangeEvent } from 'react-native';
+import Svg, { G, Path, Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { visibleCareerLog } from '@offside/app-core/potential-view';
@@ -16,10 +17,13 @@ import {
   TRAININGS,
   trainingLabel,
   trainingCard,
+  trainingGrowthNotes,
   trainingOvrNote,
+  type TrainingGrowthNote,
   INVESTS,
   investCard,
   investCost,
+  investHelp,
   investName,
   investNote,
   plannedSpend,
@@ -32,6 +36,7 @@ import { eventById } from '@offside/game/events-data';
 import type { GameState } from '@offside/game/types';
 import { seasonLabel } from '@offside/app-core/career';
 import { PositionGuide } from './PositionGuide';
+import { TrainRadar } from './TrainRadar';
 import { careerGuideText as CG } from '@offside/app-core/i18n/ko/careerGuide';
 import {
   RANK_SEEN_RATIO,
@@ -380,15 +385,96 @@ function ChoiceGrid({
 }
 
 /** 고른 선택지의 자세한 설명(웹 .train-help) — 제목 옆에 효과 전체를 붙인다. */
+type TrainView = 'buttons' | 'radar';
+/** T-11-219 훈련 방향 보기(버튼 · 육각형) — 탭을 오가도 앱을 켜 둔 동안 유지한다(웹 SeasonTab의 module 상태). */
+let lastTrainView: TrainView = 'buttons';
+
+/** 훈련 방향 제목 오른쪽의 보기 전환 아이콘(웹 .train-view). */
+function TrainViewToggle({
+  view,
+  onChange,
+}: {
+  view: TrainView;
+  onChange: (v: TrainView) => void;
+}) {
+  const c = useColors();
+  return (
+    <View
+      accessibilityRole="tablist"
+      accessibilityLabel={L.trainViewGroup}
+      style={{
+        flexDirection: 'row',
+        gap: 2,
+        padding: 2,
+        borderWidth: 1,
+        borderColor: c.line,
+        borderRadius: 10,
+        backgroundColor: c.surface2,
+      }}
+    >
+      {(['buttons', 'radar'] as const).map((v) => {
+        const on = view === v;
+        const color = on ? c.accentText : c.muted;
+        return (
+          <Press
+            key={v}
+            onPress={() => onChange(v)}
+            testID={`train-view-${v}`}
+            accessibilityRole="tab"
+            accessibilityLabel={v === 'buttons' ? L.trainViewButtons : L.trainViewRadar}
+            accessibilityState={{ selected: on }}
+            hitSlop={6}
+            style={{
+              width: 36,
+              height: 30,
+              borderRadius: 8,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: on ? c.surface : 'transparent',
+              borderWidth: on ? 1 : 0,
+              borderColor: c.accent,
+            }}
+          >
+            <Svg width={18} height={18} viewBox="0 0 18 18">
+              {v === 'buttons' ? (
+                <G fill={color}>
+                  <Rect x={1} y={1} width={7} height={7} rx={2} />
+                  <Rect x={10} y={1} width={7} height={7} rx={2} />
+                  <Rect x={1} y={10} width={7} height={7} rx={2} />
+                  <Rect x={10} y={10} width={7} height={7} rx={2} />
+                </G>
+              ) : (
+                <G>
+                  <Path
+                    d="M9 1.5 15.5 5.25v7.5L9 16.5 2.5 12.75v-7.5Z"
+                    fill="none"
+                    stroke={color}
+                    strokeWidth={1.8}
+                    strokeLinejoin="round"
+                  />
+                  <Path d="M9 5.5 12 8.5 9 12.5 6.5 9Z" fill={color} />
+                </G>
+              )}
+            </Svg>
+          </Press>
+        );
+      })}
+    </View>
+  );
+}
+
 function HelpBox({
   testID,
   title,
   effect,
+  notes = [],
   body,
 }: {
   testID: string;
   title: string;
   effect: string[];
+  /** T-11-219 훈련 성장 배율 안내(주력·치우침·최고치). */
+  notes?: TrainingGrowthNote[];
   body?: string;
 }) {
   const c = useColors();
@@ -410,6 +496,15 @@ function HelpBox({
           {` · ${effect.join(' · ')}`}
         </Txt>
       </Txt>
+      {notes.map((n) => (
+        <Txt
+          key={n.text}
+          tone={n.tone}
+          style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5 }}
+        >
+          {n.text}
+        </Txt>
+      ))}
       {body ? (
         <Txt style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5 }}>{body}</Txt>
       ) : null}
@@ -447,16 +542,17 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
     .filter((l) => l.t !== hide)
     .slice(0, FEED_LONG);
   // 안내가 단계마다 탭을 다시 그리므로 선택지 카드 계산은 게임 상태가 바뀔 때만 한다(설명 칸도 같은 값을 쓴다).
+  const [trainView, setTrainViewState] = useState<TrainView>(lastTrainView);
+  const setTrainView = (v: TrainView) => {
+    lastTrainView = v;
+    setTrainViewState(v);
+  };
   const trainCards = useMemo(
     () => new Map(TRAININGS.map((tr) => [tr.id, trainingCard(s, tr)])),
     [s],
   );
   const investCards = useMemo(() => new Map(INVESTS.map((d) => [d.id, investCard(s, d)])), [s]);
   const { spot, wait, rankPlay, tour, reg, table } = useResultTour(report);
-  // T-11-200 자기 투자는 드롭다운처럼 고른 한 줄만 보이고, 그 줄을 누르면 펼쳐져 고르면 다시 접힌다. 결과 안내가 투자를 기다릴 때와 고른 투자를 할 돈이 없을 때는 펼친다.
-  const [investOpen, setInvestOpen] = useState(false);
-  const investForced = wait === 'invest' || !investCards.get(invest.id)!.affordable;
-  const investAll = investOpen || investForced;
   const [popped, setPopped] = useState<{ g: TourGate; id: string } | null>(null);
 
   function pick(g: TourGate, id: string) {
@@ -475,7 +571,6 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
 
   function setInvest(id: string) {
     appState.G!.invest = id;
-    setInvestOpen(false);
     save();
     pick('invest', id);
   }
@@ -587,8 +682,25 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
               </Txt>
             ))}
           </View>
-          <SubTitle>{L.trainingTitle}</SubTitle>
-          {wait === 'train' ? <TourHint>{L.trainHint}</TourHint> : null}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+            }}
+          >
+            <SubTitle>{L.trainingTitle}</SubTitle>
+            <TrainViewToggle view={trainView} onChange={setTrainView} />
+          </View>
+          {wait === 'train' ? (
+            <TourHint>{L.trainHint}</TourHint>
+          ) : trainView === 'radar' ? (
+            <Txt v="sm" tone="muted" testID="train-pick">
+              {L.trainPick}
+            </Txt>
+          ) : null}
+          {trainView === 'radar' ? <TrainRadar s={s} onPick={setTraining} /> : null}
           <Txt v="sm" tone="muted">
             {CG.trainWeak}
           </Txt>
@@ -596,23 +708,26 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
           <ChoiceGrid
             testPrefix="train"
             popped={popped?.g === 'train' ? popped.id : null}
-            items={TRAININGS.map((tr) => {
-              const cd = trainCards.get(tr.id)!;
-              return {
-                id: tr.id,
-                label: trainingLabel(s, tr),
-                effect: cd.effect,
-                tag: cd.tag,
-                selected: s.training === tr.id,
-                onPress: () => setTraining(tr.id),
-              };
-            })}
+            items={(trainView === 'radar' ? TRAININGS.filter((tr) => !tr.attr) : TRAININGS).map(
+              (tr) => {
+                const cd = trainCards.get(tr.id)!;
+                return {
+                  id: tr.id,
+                  label: trainingLabel(s, tr),
+                  effect: cd.effect,
+                  tag: cd.tag,
+                  selected: s.training === tr.id,
+                  onPress: () => setTraining(tr.id),
+                };
+              },
+            )}
           />
           {picked ? (
             <HelpBox
               testID="train-help"
               title={trainingLabel(s, picked)}
               effect={trainCards.get(picked.id)!.effect}
+              notes={trainingGrowthNotes(s, picked)}
               body={trainingOvrNote(s, picked)}
             />
           ) : null}
@@ -645,88 +760,78 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
             </Pill>
           </View>
           {wait === 'invest' ? <TourHint>{L.investHint}</TourHint> : null}
-          <View style={{ gap: 6 }}>
-            {(investAll ? INVESTS : [invest]).map((d) => {
+          {/* T-11-219 드롭다운 대신 5칸을 늘 보여 주고(한 번 눌러 고른다), 고른 투자의 설명은 아래 HelpBox에. */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {INVESTS.map((d) => {
               const cd = investCards.get(d.id)!;
               const cost = investCost(s, d);
-              const tags = cd.tag.split(' · ');
-              const extra = tags.slice(cost ? 1 : 0).join(' · ');
               const note = investNote(d);
               const sel = invest.id === d.id;
-              const drop = !investForced && sel;
               return (
-                <View key={d.id} testID={`invest-${d.id}`}>
+                <View
+                  key={d.id}
+                  testID={`invest-${d.id}`}
+                  // 비용 없는 '투자 안 함'은 한 줄 전체(웹 .iv-none), 나머지는 2열.
+                  style={cost ? { flexGrow: 1, flexBasis: '45%' } : { width: '100%' }}
+                >
                   <PickPop on={popped?.g === 'invest' && popped.id === d.id}>
                     <Opt
                       selected={sel}
                       disabled={!cd.affordable}
-                      onPress={() => (investAll ? setInvest(d.id) : setInvestOpen(true))}
-                      expanded={drop ? investAll : undefined}
+                      onPress={() => setInvest(d.id)}
                       style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 10,
-                        paddingVertical: sel ? 6.5 : 8,
+                        flex: 1,
+                        minHeight: cost ? 44 : 40,
+                        paddingVertical: sel ? 7.5 : 9,
+                        paddingHorizontal: sel ? 10.5 : 12,
                       }}
                     >
-                      <View style={{ flex: 1, gap: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>
-                            {investName(s, d)}
-                          </Txt>
-                          {note ? (
-                            <Txt
-                              tone="muted"
-                              style={{
-                                fontSize: rem(0.6875),
-                                fontWeight: '600',
-                                paddingHorizontal: 6,
-                                paddingVertical: 1,
-                                borderRadius: 999,
-                                overflow: 'hidden',
-                                backgroundColor: c.surface2,
-                              }}
-                            >
-                              {note}
-                            </Txt>
-                          ) : null}
-                        </View>
-                        <Txt
-                          tone="muted"
-                          style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 }}
-                        >
-                          {cd.effect.join(' · ')}
-                          {extra ? (
-                            <Txt
-                              style={{
-                                fontSize: rem(0.75),
-                                fontWeight: '600',
-                                color: c.accentText,
-                              }}
-                            >
-                              {` · ${extra}`}
-                            </Txt>
-                          ) : null}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Txt style={{ flexShrink: 1, fontSize: rem(0.875), fontWeight: '700' }}>
+                          {investName(s, d)}
                         </Txt>
+                        {note ? (
+                          <Txt
+                            tone="muted"
+                            style={{
+                              fontSize: rem(0.6875),
+                              fontWeight: '600',
+                              paddingHorizontal: 6,
+                              paddingVertical: 1,
+                              borderRadius: 999,
+                              overflow: 'hidden',
+                              backgroundColor: c.surface2,
+                            }}
+                          >
+                            {note}
+                          </Txt>
+                        ) : null}
                       </View>
                       {cost ? (
                         <Txt
                           style={{
                             fontFamily: DISPLAY[700],
-                            fontSize: rem(0.875),
+                            fontSize: rem(0.8125),
                             color: c.accentText,
                           }}
                         >
-                          {cd.affordable ? appFormatText.won({ v: fmtMoney(cost) }) : tags[0]}
+                          {cd.affordable
+                            ? appFormatText.won({ v: fmtMoney(cost) })
+                            : cd.tag.split(' · ')[0]}
                         </Txt>
                       ) : null}
-                      {drop ? <Chevron up={investAll} color={c.muted} /> : null}
                     </Opt>
                   </PickPop>
                 </View>
               );
             })}
           </View>
+          <HelpBox
+            testID="invest-help"
+            title={investName(s, invest)}
+            effect={investCards.get(invest.id)!.effect}
+            body={investHelp(s, invest)}
+          />
         </Card>
       </Spotlight>
 
