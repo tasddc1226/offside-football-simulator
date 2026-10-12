@@ -14,12 +14,12 @@
   let busy = $state(false);
   let error = $state('');
   let dialog: HTMLDivElement;
-  let root: HTMLDivElement;
   let cancel: HTMLButtonElement;
   const rows = $derived(retiredLookRows(v, draft));
   const dirty = $derived(draft !== (v.avatarLook ?? null));
   onMount(() => {
     // Retirement credits have transform/overflow; keep the modal in the viewport, like PlayerPeek.
+    const root = dialog.closest<HTMLElement>('[data-retired-look]')!;
     document.body.append(root);
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -49,7 +49,7 @@
 </script>
 
 <svelte:window onkeydown={key} />
-<div bind:this={root} class="retired-look" data-retired-look>
+<div class="retired-look" data-retired-look>
   <button class="backdrop" tabindex="-1" aria-hidden="true" onclick={close}></button>
   <div bind:this={dialog} class="body" role="dialog" aria-modal="true" aria-label={L.title} aria-busy={busy}>
     <header><h2>{L.title}</h2><p>{L.intro}</p></header>
