@@ -215,15 +215,16 @@ export const POS_ROLES: Record<Pos, string[]> = {
   GK: ['GK'],
 };
 /**
- * T-11-229 타겟맨 유형 스트라이커는 스트라이커·타겟맨 역할 중 OVR이 높은 쪽으로 평가한다(같으면 타겟맨). 몸싸움·헤딩으로
- * 키워도 OVR이 오르고, 스트라이커처럼 키운 기존 선수도 OVR이 내려가지 않는다. 세부 능력치가 없는 생성 화면은 타겟맨.
+ * T-11-229 타겟맨 유형 스트라이커는 스트라이커·타겟맨 역할 중 OVR이 높은 쪽으로 평가한다. 몸싸움·헤딩으로 키워도 OVR이
+ * 오르고, 스트라이커처럼 키운 선수도 OVR이 내려가지 않는다. 같거나 세부 능력치가 없으면(생성 화면·첫 분배) 스트라이커라
+ * 새 선수는 예전과 똑같이 시작한다.
  */
 export function mainRole(
   s: Pick<GameState, 'pos' | 'type' | 'dpos'> & { sub?: GameState['sub'] },
 ): string {
   const role = s.dpos ? DPOS[s.dpos].role : (TYPE_ROLE[s.type] ?? POS_ROLES[s.pos][0]!);
   if (role !== 'ST' || s.type !== 'target' || !BAL.targetManRole) return role;
-  return s.sub && ovrRole({ sub: s.sub }, 'ST') > ovrRole({ sub: s.sub }, 'TM') ? 'ST' : 'TM';
+  return s.sub && ovrRole({ sub: s.sub }, 'TM') > ovrRole({ sub: s.sub }, 'ST') ? 'TM' : 'ST';
 }
 
 function groupOfSub(face: Face, k: string): AttrKey | null {

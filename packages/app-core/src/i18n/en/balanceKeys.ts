@@ -6,6 +6,8 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   eventRateSeason: 'Half-season event chance',
   eventTwist: 'Twist chance after a choice',
   growthScale: 'Growth multiplier',
+  potGrowthFloor: 'Minimum growth near potential',
+  targetManRole: 'Target man OVR',
   investGain: 'Special training growth share',
   investCost: 'Self-investment cost multiplier',
   boostCost: 'Potential boost cost multiplier',
