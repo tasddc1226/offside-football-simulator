@@ -1,3 +1,4 @@
+import { validAppearance } from './avatar-look.js';
 import { z } from 'zod';
 import { bodyError } from './body.js';
 import type { RnMiss } from './retired-numbers.js';
@@ -266,6 +267,16 @@ export const TitleIdSchema = z.string().regex(/^[a-z0-9_]{1,32}$/);
 
 /** T-11-191 도트 선수 꾸미기 코드(항목 글자 + 선택지 번호, 최대 16항목). */
 export const LookCodeSchema = z.string().regex(/^(?:[a-z]\d{1,2}){1,16}$/);
+
+/** Only appearance is writable after retirement; extra fields are rejected. */
+export const PutRetiredLookBodySchema = z.strictObject({
+  look: z.string().max(40).nullable().refine(validAppearance),
+});
+export const RetiredLookResponseSchema = z.strictObject({
+  careerId: z.string().uuid(),
+  look: z.string().nullable(),
+});
+export type RetiredLookResponse = z.infer<typeof RetiredLookResponseSchema>;
 
 /** season.ts `retire()`가 만드는 `HofEntry` + `legendScore()`에서 뽑아낸 은퇴 요약. */
 export const RetirementSummarySchema = z.strictObject({

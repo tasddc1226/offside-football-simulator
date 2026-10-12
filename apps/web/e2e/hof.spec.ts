@@ -3,6 +3,8 @@ import { test, expect, type Page } from '@playwright/test';
 // 기본 선수 기록은 프리시즌이다. 개막을 확인하는 테스트는 자기 시각을 따로 지정한다.
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-30T00:00:00.000Z'));
+  // Anonymous/local records unless a test supplies its own account fixture.
+  await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
 });
 import AxeBuilder from '@axe-core/playwright';
 import { ok, API, usePreseason } from './helpers.js';
@@ -166,7 +168,7 @@ test('내 선수 탭: 상세 없는 옛 기록은 요약만 보여 준다', asyn
   await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('.film-open h1')).toHaveText('옛선수');
-  await expect(page.locator('.film-open svg.avatar')).toHaveCount(0); // 커리어 ID 없는 옛 기록엔 도트 선수가 없다
+  await expect(page.locator('.film-open svg.avatar')).toHaveCount(1); // ID 없는 옛 로컬 선수도 외형 편집 가능
   await expect(page.getByText('요약만 보여 줘요')).toBeVisible();
 });
 

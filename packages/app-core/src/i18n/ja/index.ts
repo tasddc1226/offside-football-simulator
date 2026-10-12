@@ -65,6 +65,7 @@ import { playerNudge } from './playerNudge';
 import { push } from './push';
 import { retention } from './retention';
 import { retired } from './retired';
+import { retiredLook } from './retiredLook';
 import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
 import { seasonRecap } from './seasonRecap';
@@ -157,6 +158,7 @@ export const ja = {
   push,
   retention,
   retired,
+  retiredLook,
   scout,
   seasonGauge,
   seasonRecap,

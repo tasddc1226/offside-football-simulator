@@ -269,7 +269,7 @@ export type Pending =
 /** T-11-191 도트 선수 꾸미기 항목(look.ts LOOK_ITEMS). */
 export type LookItem =
   'skin' | 'hair' | 'beard' | 'style' | 'expr' | 'band' | 'wrist' | 'glasses' | 'boots' | 'socks';
-/** T-11-191 산 꾸미기 항목과 고른 값(선택지 번호). 은퇴하면 굳는다. */
+/** T-11-191 산 꾸미기 항목과 고른 값(선택지 번호). 은퇴 후에는 전용 외형 편집 화면을 쓴다. */
 export interface LookState {
   owned: LookItem[];
   pick: Partial<Record<LookItem, number>>;
@@ -374,7 +374,7 @@ export interface GameState {
 }
 
 export interface HofEntry {
-  /** T-11-191 은퇴 때 굳은 도트 선수 꾸미기 코드(look.ts lookCode). 꾸미지 않았거나 옛 기록엔 없다. */
+  /** T-11-191 은퇴 선수의 도트 꾸미기 코드(외형 편집으로 갱신 가능)(look.ts lookCode). 꾸미지 않았거나 옛 기록엔 없다. */
   look?: string | undefined;
   /** T-11-072 은퇴 때 남긴 국적. 옛 로컬 기록에는 없어 국적을 추측하지 않는다. */
   nation?: string | undefined;

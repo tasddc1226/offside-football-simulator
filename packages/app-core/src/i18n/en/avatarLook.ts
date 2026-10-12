@@ -6,8 +6,8 @@ export const avatarLook: Translation<AvatarLookMsgs> = {
   chip: 'Style',
   title: 'Customize player',
   intro:
-    'Buy an item once with your player’s money and you can change it any time this career. When you retire, your current look stays.',
-  locked: 'Retired players can’t change their look.',
+    'Buy an item once with your player’s money and you can change it any time this career. After retirement, customize from your retirement report.',
+  locked: 'Use the customization button in your retirement report.',
   money: (p) => `Player money ${p.money}`,
   owned: 'Owned',
   buy: (p) => `Buy ${p.item} for ${p.cost}`,

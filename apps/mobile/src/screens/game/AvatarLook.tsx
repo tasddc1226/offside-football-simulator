@@ -1,5 +1,5 @@
 // T-11-191 도트 선수 꾸미기(웹 AvatarLook.svelte와 같다). 커리어 화면의 도트 선수를 누르면 열린다. 항목을 선수 자금으로
-// 한 번 사면 이 커리어 동안 언제든 바꿀 수 있고(무료), 은퇴하면 굳는다. 사기 전에는 고른 모양을 미리보기로만 보여 준다.
+// 한 번 사면 이 커리어 동안 언제든 바꿀 수 있고(무료), 은퇴 뒤에는 전용 외형 편집 화면을 쓴다. 사기 전에는 고른 모양을 미리보기로만 보여 준다.
 import { useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';

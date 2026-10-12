@@ -766,3 +766,24 @@ export async function getCareer(db: Db, careerId: string): Promise<CareerRow | u
   const [row] = await db.select().from(careers).where(eq(careers.id, careerId));
   return row;
 }
+
+/** Appearance-only update. Retirement dates, snapshots, rankings and financial values stay untouched. */
+export async function updateRetiredLook(
+  db: Db,
+  careerId: string,
+  profileId: string,
+  look: string | null,
+) {
+  const [row] = await db
+    .update(careers)
+    .set({ look })
+    .where(
+      and(
+        eq(careers.id, careerId),
+        eq(careers.profileId, profileId),
+        eq(careers.status, 'retired'),
+      ),
+    )
+    .returning({ careerId: careers.id, look: careers.look });
+  return row;
+}

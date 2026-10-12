@@ -3,14 +3,14 @@
   "title": "도트 선수 꾸미기",
   "items": [
     "선수가 미니형 도트로 바뀌어요. 선수 자금으로 꾸미기 항목과 칭호 기록 아이템을 한 번 사면 커리어 동안 무료로 바꿀 수 있어요. 능력치에는 영향이 없어요.",
-    "은퇴한 모습은 리포트·시상대·결산 사진과 선수 카드 얼굴에 이어져요. 구단 유니폼과 나이·부상·군 복무 모습도 유지돼요.",
+    "기존 은퇴 선수도 리포트에서 외형을 무료로 바꿔요. 기록·능력치·자금은 그대로이며 선수 카드 얼굴에도 반영돼요.",
     "프리시즌 준비 중 뛰기·드리블 모션이 나와요. 동작 줄이기 설정이나 목발 사용 중에는 정지해요."
   ],
   "en": {
     "title": "Customize your pixel player",
     "items": [
       "Players now use mini pixel art. Buy customization options and title record items once with player funds, then change them freely during that career. Attributes are unaffected.",
-      "Your retired look carries over to reports, podiums, recap photos and card portraits. Club kits and age, injury and military appearances remain.",
+      "Existing retired players can change their look for free in reports. Records, attributes and funds stay unchanged; card portraits update too.",
       "Players run and dribble during preseason preparation. Reduced motion or crutches keep a standing pose."
     ]
   },
@@ -18,7 +18,7 @@
     "title": "ドット選手のカスタマイズ",
     "items": [
       "選手がミニドットになります。選手資金でカスタマイズ項目や称号の記録アイテムを一度買えば、キャリア中は無料で変更できます。能力値は変わりません。",
-      "引退時の姿はレポート・表彰台・総括写真・選手カードの顔に引き継がれます。ユニフォームや年齢・負傷・兵役の姿も保ちます。",
+      "以前に引退した選手もレポートから無料で外見を変えられます。記録・能力値・資金は変わらず、カードの顔にも反映されます。",
       "準備中は走る・ドリブルの動きが出ます。動きを減らす設定や松葉杖の使用中は静止します。"
     ]
   },

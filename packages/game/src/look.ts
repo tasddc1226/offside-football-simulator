@@ -1,5 +1,5 @@
 // ───────── T-11-191 도트 선수 꾸미기 ─────────
-// 사는 규칙(가격 · 구매 · 기록 아이템)은 look-shop.ts. 커리어 중 선수 자금으로 꾸미기 항목을 한 번 사면, 그 커리어 동안 그 항목의 모양을 언제든 바꿀 수 있다. 은퇴하면 굳는다.
+// 사는 규칙(가격 · 구매 · 기록 아이템)은 look-shop.ts. 커리어 중 선수 자금으로 꾸미기 항목을 한 번 사면, 그 커리어 동안 그 항목의 모양을 언제든 바꿀 수 있다. 은퇴 후에는 별도 외형 편집 화면에서 기록을 유지하며 바꾼다.
 // 산 항목과 고른 값은 세이브(GameState.look)에 남고, 은퇴 업로드 때 lookCode로 줄여 서버에 올린다(명예의 전당 · 결산 사진).
 // 그림(avatar.ts)은 이 파일의 선택지 순서를 그대로 쓴다. 게임 RNG는 쓰지 않고 성장 · 결과에 영향이 없다.
 import type { GameState, LookItem, LookState } from './types.js';
@@ -41,7 +41,7 @@ export const LOOK_ITEMS = {
 } as const satisfies Record<LookItem, { options: number; rate: number; min: number }>;
 export const lookOwned = (s: GameState, item: LookItem): boolean => !!s.look?.owned.includes(item);
 
-/** 꾸밀 수 있나: 은퇴하면 굳는다. */
+/** 현역 상점 진입 가능 여부. 은퇴 후에는 별도 외형 편집 화면을 쓴다. */
 export const lookEditable = (s: GameState): boolean => !s.retired;
 
 export const validValue = (item: LookItem, v: number) =>

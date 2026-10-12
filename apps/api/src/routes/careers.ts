@@ -1,3 +1,6 @@
+import { reqLang } from '../lang.js';
+import { retiredLookErrors } from '../retiredLookText.js';
+import { appearanceUnlocked } from '@offside/contracts/avatar-look';
 import {
   CareerIdParamSchema,
   CareerUpsertResponseSchema,
@@ -5,10 +8,20 @@ import {
   MyCareersResponseSchema,
   PutCareerSeasonBodySchema,
   PutRetirementBodySchema,
+  PutRetiredLookBodySchema,
+  RetiredLookResponseSchema,
   RetirementResponseSchema,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
-import { careerOwnerMismatch, ok, readBody, nowIso, rateLimited } from './shared.js';
+import {
+  conflictError,
+  notFoundError,
+  careerOwnerMismatch,
+  ok,
+  readBody,
+  nowIso,
+  rateLimited,
+} from './shared.js';
 import {
   getCareer,
   getCareerHead,
@@ -18,6 +31,7 @@ import {
   storedSeasonOvr,
   storedSeasonsOf,
   updateRetired,
+  updateRetiredLook,
   verifiedRetiredTitle,
 } from '../db/repos/careers.js';
 import { boundProfile, boundRetirement, sanitizeSeason } from '../plausibility.js';
@@ -32,7 +46,7 @@ import { refreshAfterChange } from '../team/ownerAchievements.js';
 import { recordFirsts } from './firsts.js';
 import { exceedsOvrCap, growthTampered } from '../db/repos/anomalies.js';
 import { judgeRetirement } from './retiredNumbers.js';
-import { STALE } from '../edgeKeys.js';
+import { EDGE, STALE } from '../edgeKeys.js';
 import { publishLive } from '../live/publish.js';
 import { isHeadless } from '../db/repos/automation.js';
 import { isAcceptablePublicName, toPublicName } from '@offside/contracts/content-filter';
@@ -45,7 +59,7 @@ import { completeInvite } from '../db/repos/referrals.js';
 
 /** 프로필당 시간당 업로드 한도. 정상 플레이는 시즌당 PUT 1회, 오프라인 큐 상한은 100이다.
  * T-11-182 시즌 한도 120은 빠르게 여러 커리어를 도는 이용자가 넘겨(한 커리어 최대 약 28시즌) 은퇴 기록이 한 시간까지 밀렸다. */
-export const UPLOAD_LIMIT = { CAREER_SEASON: 300, CAREER_RETIRE: 30 } as const;
+export const UPLOAD_LIMIT = { CAREER_SEASON: 300, CAREER_RETIRE: 30, CAREER_LOOK: 60 } as const;
 
 /** 검증을 통과한 업로드만 센다 — 잘못된 요청이 쿼터를 쓰지 않게, D1 쓰기 직전에 부른다. */
 async function limitUpload(
@@ -81,6 +95,32 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     const linked = !!profile && isLinked(profile);
     const entries = linked ? await listOwnHof(db, session.profileId) : [];
     return ok(c, MyCareersResponseSchema, { linked, entries }, 200, 'private, no-store');
+  });
+
+  // Separate from retirement upload: no score recalculation, rewards, titles or live notices.
+  app.put('/v1/careers/:careerId/look', requireProfile, async (c) => {
+    const db = getDb(c);
+    const { profileId } = getSessionOrThrow(c);
+    const careerId = parseWithAppError(CareerIdParamSchema, c.req.param('careerId'));
+    const { look } = readBody(c, PutRetiredLookBodySchema);
+    const text = retiredLookErrors(reqLang(c));
+    const row = await getCareer(db, careerId);
+    if (!row) throw notFoundError(text.missing, 'CAREER_NOT_FOUND');
+    if (row.profileId !== profileId) throw careerOwnerMismatch();
+    if (row.status !== 'retired') throw conflictError(text.active, 'CAREER_NOT_RETIRED');
+    const titles = row.snapshotJson
+      ? ((JSON.parse(row.snapshotJson) as { titles?: { id: string }[] }).titles ?? []).map(
+          (t) => t.id,
+        )
+      : [];
+    if (!appearanceUnlocked(look, row.look, titles)) {
+      throw conflictError(text.locked, 'LOOK_RECORD_LOCKED');
+    }
+    await limitUpload(db, 'CAREER_LOOK', profileId);
+    const saved = await updateRetiredLook(db, careerId, profileId, look);
+    if (!saved) throw careerOwnerMismatch();
+    purgeEdge(c, [EDGE.hofDetail(careerId)]);
+    return ok(c, RetiredLookResponseSchema, saved, 200, 'private, no-store');
   });
 
   // 두 라우트 모두 URL 키(career_id+year, career_id)로 이미 자연스럽게 멱등이라 Idempotency-Key

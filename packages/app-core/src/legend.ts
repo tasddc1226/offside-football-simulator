@@ -81,7 +81,8 @@ export function createLegends(host: LegendHost) {
       age: h.age,
       lastClub: h.lastClub,
       lastClubId: h.lastClubId,
-      avatarId: h.id ?? null,
+      avatarId: h.id ?? `local:${h.date}:${h.name}:${h.age}:${h.number}`,
+      canEditLook: true,
       avatarLook: h.look ?? null,
       score: h.score,
       peak: h.peak,
@@ -119,7 +120,8 @@ export function createLegends(host: LegendHost) {
       lastClub: s.club.name,
       lastClubId: s.club.id,
       avatarId: s.cid,
-      avatarLook: lookCode(s.look) ?? null,
+      avatarLook: own ? (own.look ?? null) : (lookCode(s.look) ?? null),
+      canEditLook: s.retired,
       score: legendScore(s),
       peak: s.peak,
       d: s,
@@ -150,6 +152,7 @@ export function createLegends(host: LegendHost) {
     if (own) {
       if (d) own.detail = d;
       own.title = e.title ?? undefined;
+      own.look = e.look ?? undefined;
       if (!e.wallOfHonor && own.rn?.kind === 'taken') own.rn = { ...own.rn, wallOfHonor: false };
       saveKey(
         'ft_hof',
@@ -159,7 +162,7 @@ export function createLegends(host: LegendHost) {
       return { ...local, pot: local.pot ?? retirementPotential(e.potReal) };
     }
     const v = publicView(e, d);
-    return mine ? { ...v, shareId: e.id, reportId: null } : v;
+    return mine ? { ...v, shareId: e.id, reportId: null, canEditLook: true } : v;
   }
 
   /** T-10-069 계정에 기록된 내 선수인가 — 어디서 열든(명예의 전당·홈 라이브·구단주) 같게. 목록은 1분 메모라

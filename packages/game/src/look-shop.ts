@@ -1,3 +1,4 @@
+import { LOOK_RECORDS } from '@offside/contracts/avatar-look';
 // T-11-191 꾸미기 가게: 항목 · 기록 아이템을 사고 고르는 규칙. 꾸미기 화면에서만 쓰므로, 그림(avatar.ts)이 읽어
 // 첫 화면 청크에 실리는 look.ts와 따로 둔다.
 import { LOOK_ITEMS, lookEditable, lookOwned, validValue } from './look.js';
@@ -13,19 +14,7 @@ export const lookCost = (s: GameState, item: LookItem): number =>
  * 순서가 화면 순서다. id는 세이브(LookState.rec)에 남으니 바꾸지 않는다. titles 중 하나만 얻으면 열린다
  * (국가대표 데뷔는 한국 선수 '태극전사' · 외국 선수 '국가대표'로 나뉜다).
  */
-export const LOOK_RECORDS = [
-  { id: 'scorer-boots', item: 'boots', value: 10, titles: ['topscorer'] },
-  { id: 'champ-band', item: 'band', value: 8, titles: ['champion'] },
-  { id: 'nation-wrist', item: 'wrist', value: 6, titles: ['ntdebut', 'ntdebutx'] },
-  { id: 'bigear-goggle', item: 'glasses', value: 6, titles: ['bigear'] },
-  { id: 'ballon-hair', item: 'hair', value: 12, titles: ['ballon'] },
-  { id: 'worldcup-socks', item: 'socks', value: 7, titles: ['worldchamp'] },
-] as const satisfies readonly {
-  id: string;
-  item: LookItem;
-  value: number;
-  titles: readonly string[];
-}[];
+export { LOOK_RECORDS } from '@offside/contracts/avatar-look';
 export type LookRecord = (typeof LOOK_RECORDS)[number];
 export type LookRecordId = LookRecord['id'];
 /** 이 값이 기록 아이템이면 그 정의. */

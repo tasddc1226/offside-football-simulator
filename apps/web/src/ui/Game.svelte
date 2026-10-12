@@ -60,7 +60,7 @@
   const title = $derived(mainTitle(s));
   // T-11-120 도트 선수: 나이·소속·부상·은퇴에 따라 모습이 바뀐다(커리어 ID로 외형을 정하고 RNG는 쓰지 않는다).
   const avatar = $derived(avatarSpec(s));
-  // T-11-191 도트 선수를 누르면 꾸미기(선수 자금으로 산다, 은퇴하면 굳는다). 시트는 따로 불러온다.
+  // T-11-191 도트 선수를 누르면 꾸미기(선수 자금으로 산다, 은퇴 후 외형 편집은 별도 경로). 시트는 따로 불러온다.
   let lookOpen = $state(false);
   // 꾸미기를 한 번도 안 열었으면 도트 선수 둘레 고리를 깜빡여 누를 수 있다고 알린다.
   let lookSeenNow = $state(lookSeen());

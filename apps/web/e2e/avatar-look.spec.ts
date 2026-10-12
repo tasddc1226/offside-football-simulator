@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { resumeWithSave } from './helpers.js';
 
-// T-11-191 도트 선수 꾸미기 — 선수 자금으로 항목을 한 번 사면 그 뒤로는 무료로 바꾸고, 은퇴하면 굳는다.
+// T-11-191 도트 선수 꾸미기 — 선수 자금으로 항목을 한 번 사면 그 뒤로는 무료로 바꾸고, 은퇴 후에는 전용 외형 편집 화면을 쓴다.
 
 test('도트 선수를 눌러 꾸미기를 열고, 미리보기 뒤 사서 모양을 바꾼다', async ({ page }) => {
   await resumeWithSave(page, {
@@ -35,7 +35,7 @@ test('도트 선수를 눌러 꾸미기를 열고, 미리보기 뒤 사서 모�
   await expect(dialog).toBeHidden();
 });
 
-test('자금이 모자라면 살 수 없다(은퇴 뒤 잠금은 game look.test.ts)', async ({ page }) => {
+test('자금이 모자라면 살 수 없다(은퇴 편집은 retired-look.spec.ts)', async ({ page }) => {
   await resumeWithSave(page, { money: 100, contract: { years: 2, salary: 100_000 } });
   await page.locator('[data-act="avatar-look"]').click();
   const dialog = page.getByRole('dialog', { name: '선수 꾸미기' });

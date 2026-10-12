@@ -1,5 +1,5 @@
 // T-11-191 도트 선수 꾸미기 화면 값(웹 AvatarLook.svelte · 앱 screens/game/AvatarLook.tsx 공용).
-// 규칙(가격 · 구매 · 은퇴 뒤 잠금)은 game look.ts, 그림 색은 game avatar.ts에 있다.
+// 진행 중 가게 규칙(가격 · 구매)은 game look.ts, 그림 색은 game avatar.ts에 있다.
 import { LOOK_SWATCHES, avatarSpec } from '@offside/game/avatar';
 import { LOOK_BEARDS, LOOK_ITEMS, LOOK_ORDER, LOOK_STYLES, lookOwned } from '@offside/game/look';
 import {
@@ -66,7 +66,7 @@ const STYLE_LABEL = () => [
 const BEARD_LABEL = () => [L.none, L.beardStubble, L.beardFull];
 const EXPR_LABEL = () => [L.exprBase, L.exprHappy, L.exprWink];
 
-function optionsOf(item: LookItem): LookOption[] {
+export function optionsOf(item: LookItem): LookOption[] {
   const n = LOOK_ITEMS[item].options;
   // 기록 아이템 값은 아래 기록 아이템 칸에서 따로 산다.
   return Array.from({ length: n }, (_, value) => value)
@@ -122,7 +122,7 @@ export function lookPreview(s: GameState, item: LookItem, value: number): GameSt
   return { ...s, look };
 }
 
-const RECORD_NAME = (): Record<LookRecordId, string> => ({
+export const RECORD_NAME = (): Record<LookRecordId, string> => ({
   'scorer-boots': R.recScorerBoots,
   'champ-band': R.recChampBand,
   'nation-wrist': R.recNationWrist,

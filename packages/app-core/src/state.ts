@@ -156,6 +156,8 @@ export interface LegendView {
   avatarId?: string | null | undefined;
   /** T-11-191 도트 선수 꾸미기 코드(game look.ts lookCode). 꾸미지 않았으면 없다. */
   avatarLook?: string | null | undefined;
+  /** Local archive or server-confirmed owner; shared/public views remain read-only. */
+  canEditLook?: boolean;
   score: number;
   peak: number;
   /** 시즌별 상세. 옛 기록(스냅샷 없음)은 null — 요약만 보여 준다. */
