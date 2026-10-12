@@ -1,8 +1,10 @@
 <script lang="ts">
+  import { membershipText as M } from '@offside/app-core/i18n/ko/membership';
   import LoginButtons from './LoginButtons.svelte';
   // My club keeps owner identity and shared operations outside the season team card.
   // Team slots can expand later without duplicating the owner profile, finances or honors.
   import Topbar from './Topbar.svelte';
+  import { fetchMembership, type MemberAppearance } from '@offside/app-core/api/membership';
   import OwnerAvatar from './OwnerAvatar.svelte';
   import AdSlot from '../ads/AdSlot.svelte';
   import { fetchOwnerSummary } from '@offside/app-core/api/ownerSummary';
@@ -42,6 +44,8 @@
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
   // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다). 계정 패널이 로그인 상태를 불러오거나
   // 바꾸면 다시 판단한다.
+  let memberFrame = $state<MemberAppearance['frame']>('none');
+  $effect(() => { let alive=true; if(linked) void fetchMembership().then(r=>{if(alive)memberFrame=r.ok&&r.data.membership.active?r.data.membership.appearance.frame:'none';}); else memberFrame='none'; return ()=>{alive=false;}; });
   let admin = $state(false);
   const linked = $derived.by(() => {
     const acct = accountCache.value;
@@ -127,7 +131,7 @@
   {#if linked || guest}
     <section class="card owner-hub" data-owner-summary aria-label={L.summaryLabel}>
       <div class="owner-id">
-        <OwnerAvatar avatarId={accountCache.value && accountCache.value !== 'error' ? accountCache.value.avatarId : null} name={nickname ?? L.avatarInitial} size={48} />
+        <OwnerAvatar frame={memberFrame} avatarId={accountCache.value && accountCache.value !== 'error' ? accountCache.value.avatarId : null} name={nickname ?? L.avatarInitial} size={48} />
         <div class="owner-who">
           <b>{#if tierTag}<span class="owner-last-tier" title={tierTitle(tierTag)} data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={24} /></span>{/if}{guest ? L.guestName : (nickname ?? L.title)}{#if card?.title}<span class="owner-founder"><TitleBadge title={card.title} size="sm" /></span>{/if}</b>
           <span class="muted fs-sm">{guest ? L.guestSub : L.title}</span>
@@ -230,6 +234,7 @@
   {/if}
 
   {#if linked}
+    <button class="card owner-tap btn" data-act="open-membership" onclick={()=>go('membership')}>{M.title} ›</button>
     <section class="card owner-hall-entry owner-tap" data-owner-hall-entry aria-label={H.hallTitle}>
       <div class="owner-who">
         <h2>{H.hallTitle}<span class="pill good owner-founder" data-owner-hall-new>{H.hallNew}</span></h2>

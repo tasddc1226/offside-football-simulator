@@ -1,3 +1,5 @@
+import { currentTeamSlot, selectTeamSlot } from '@offside/app-core/teamSlots';
+import { membershipText as M } from '@offside/app-core/i18n/ko/membership';
 // T-10-092 구단주 팀(웹 team/Team.svelte) — 시즌마다 그 시즌에 뛰고 은퇴한 내 선수로 11명을 꾸려(빈 자리는 유스 선수가
 // 채운다) 같은 시즌 다른 구단주의 팀과 겨룬다. 지난 시즌 팀은 보기만 한다. 경기 결과는 서버가 정한다(앱은 보여 주기만).
 // 편성·후보·업적 표기 같은 순수 계산은 웹과 같은 @offside/app-core/teamOwner.
@@ -128,7 +130,11 @@ export default function Team() {
   const [lastManager, setLastManager] = useState<string | null>(null);
   // T-11-113 개막 뒤 프리시즌 팀은 친선전 전용으로 고칠 수 있다(랭크 경기는 지금 시즌 팀만).
   const legacy = isPreseasonLegacy(season, current);
-  const editable = teamEditableIn(season, current);
+  const [selectedSlot, setSelectedSlot] = useState(currentTeamSlot());
+  const [slotLimit, setSlotLimit] = useState(1);
+  const [slotEditable, setSlotEditable] = useState(true);
+  const [teamSlots, setTeamSlots] = useState<NonNullable<OwnerTeamResponse['teamSlots']>>([]);
+  const editable = slotEditable && teamEditableIn(season, current);
   const seasonName = seasons.find((o) => o.id === season) ? teamSeasonLabel(season) : '';
 
   // 편집 초안 — 저장하기 전까지 이 기기에만 있다.
@@ -313,6 +319,11 @@ export default function Team() {
       return;
     }
     const d = r.data;
+    setSelectedSlot(d.selectedSlot ?? 0);
+    setSlotLimit(d.slotLimit ?? 1);
+    setSlotEditable(d.slotEditable ?? true);
+    setTeamSlots(d.teamSlots ?? []);
+    if ((d.selectedSlot ?? 0) > 0) setOppTab('friends');
     setSeason(d.season);
     setCurrent(d.current);
     setSeasons(d.seasons);
@@ -332,8 +343,10 @@ export default function Team() {
     const profile = accountCache.value;
     const key =
       d.team?.id ??
-      (profile && typeof profile === 'object' ? `new:${profile.id}:${d.season}` : null);
-    if (teamEditableIn(d.season, d.current) && key) {
+      (profile && typeof profile === 'object'
+        ? `new:${profile.id}:${d.season}${d.selectedSlot ? `:slot${d.selectedSlot}` : ''}`
+        : null);
+    if (d.slotEditable !== false && teamEditableIn(d.season, d.current) && key) {
       const draft = readTeamDraft(key);
       setDraftKey(key);
       if (draft) {
@@ -365,7 +378,7 @@ export default function Team() {
 
   // ───────── 편성 ─────────
   async function save(): Promise<boolean> {
-    if (savingRef.current || !nameOk) return false;
+    if (savingRef.current || !nameOk || !editable || pendingDraft) return false;
     savingRef.current = true;
     setSaving(true);
     const snapshot = JSON.stringify(draftNow.current);
@@ -382,6 +395,10 @@ export default function Team() {
         return false;
       }
       const unchanged = JSON.stringify(draftNow.current) === snapshot;
+      setTeamSlots((items) => [
+        ...items.filter((t) => t.slot !== selectedSlot),
+        { slot: selectedSlot, id: r.data.team.id, name: r.data.team.name },
+      ]);
       const created = !team;
       if (unchanged) {
         applyTeam(r.data.team);
@@ -594,6 +611,34 @@ export default function Team() {
   } else if (view === 'team') {
     body = (
       <>
+        <Card gap={12}>
+          <Txt v="h2">{M.teamSlots}</Txt>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {[0, 1, 2].map((slot) => (
+              <Btn
+                key={slot}
+                disabled={saving || !!playing}
+                selected={selectedSlot === slot}
+                style={{ maxWidth: '100%' }}
+                kind={selectedSlot === slot ? 'primary' : 'default'}
+                onPress={() => {
+                  if (selectedSlot === slot) return;
+                  if (slot >= slotLimit && !teamSlots.some((t) => t.slot === slot)) {
+                    go('membership');
+                    return;
+                  }
+                  selectTeamSlot(slot);
+                  void load(season);
+                }}
+              >
+                {teamSlots.find((t) => t.slot === slot)?.name ??
+                  (slot === 0 ? M.primary : `${M.extra} ${slot + 1}`)}
+              </Btn>
+            ))}
+          </View>
+          <Txt tone="muted">{M.primaryNote}</Txt>
+          {!slotEditable ? <Txt>{M.slotLocked}</Txt> : null}
+        </Card>
         <Card gap={10}>
           {seasons.length > 1 ? (
             <SelectField
@@ -727,7 +772,7 @@ export default function Team() {
         ) : null}
         {editable || team ? (
           <>
-            {editable && !legacy ? <CupLockNotice state={cupState} /> : null}
+            {selectedSlot === 0 && editable && !legacy ? <CupLockNotice state={cupState} /> : null}
             <Card gap={8}>
               <View
                 style={{
@@ -853,7 +898,9 @@ export default function Team() {
   } else if (view === 'opponents') {
     body = (
       <>
-        <OppSwitch value={oppTab} onPick={pickOppTab} pending={friendReq} />
+        {selectedSlot === 0 ? (
+          <OppSwitch value={oppTab} onPick={pickOppTab} pending={friendReq} />
+        ) : null}
         {oppTab === 'friends' ? (
           <TeamFriends
             friends={friends}
@@ -1007,7 +1054,7 @@ export default function Team() {
           close={() => setPresetsOpen(false)}
           presets={team?.presets ?? []}
           hasTeam={!!team}
-          locked={!!cupState.me?.locked}
+          locked={!slotEditable || (selectedSlot === 0 && !!cupState.me?.locked)}
           draft={(presetName) =>
             presetOf(presetName, formation, slots, season > 0 ? positions : null)
           }

@@ -35,18 +35,12 @@ import { CupHonors } from '../../components/CupHonors';
 import { OwnerHall } from './OwnerHall';
 import { OwnerArchive } from './OwnerArchive';
 import { PublicHallRecords } from './PublicHallRecords';
+import { MEMBER_PALETTES } from '@offside/contracts/membership-rules';
 import { LockerArt } from './LockerArt';
 
+const room = MEMBER_PALETTES.classic;
 const panels = ['records', 'titles', 'trophies'] as const;
 // Same material palette as the web room; the record sheet follows the user's theme.
-const room = {
-  bg: '#102219',
-  wall: '#14281e',
-  gold: '#d5bd7d',
-  ink: '#ede9d8',
-  muted: '#b6c3b2',
-  line: '#52674e',
-};
 
 function Wall({
   index,
@@ -65,6 +59,7 @@ function Wall({
   awards: number;
   active: boolean;
 }) {
+  const room = MEMBER_PALETTES[data?.owner.appearance?.theme ?? 'classic'];
   // Keep depth ordering on a flat wrapper. A rotated iOS layer can otherwise
   // intersect the untransformed floor and clip a rectangular hole into the art.
   const depth = useAnimatedStyle(() => ({
@@ -100,12 +95,22 @@ function Wall({
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
-          <LockerArt zone={index} season={season} title={title} awards={awards} />
+          <LockerArt
+            theme={data?.owner.appearance?.theme ?? 'classic'}
+            zone={index}
+            season={season}
+            title={title}
+            awards={awards}
+          />
         </View>
         {index === 0 ? (
           <View style={styles.seasons}>
             {[0, season].map((s, i) => (
-              <Txt key={i} style={styles.plate} numberOfLines={1}>
+              <Txt
+                key={i}
+                style={[styles.plate, { backgroundColor: room.bg, color: room.gold }]}
+                numberOfLines={1}
+              >
                 {teamSeasonLabel(s)}
               </Txt>
             ))}
@@ -118,7 +123,7 @@ function Wall({
                 {data?.owner.nickname ?? L.noNickname}
               </Txt>
             </View>
-            <View style={styles.tag}>
+            <View style={[styles.tag, { backgroundColor: room.bg, borderColor: room.gold }]}>
               {title ? (
                 <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
                   <Svg width={16} height={16} viewBox="0 0 16 16">
@@ -151,6 +156,7 @@ export default function OwnerHonors({ publicData }: { publicData?: PublicOwnerHa
   const [zone, setZone] = useState(1);
   const [visited, setVisited] = useState({ records: false, titles: true });
   const [data, setData] = useState<OwnerArchiveResponse | null>(publicData ?? null);
+  const room = MEMBER_PALETTES[data?.owner.appearance?.theme ?? 'classic'];
   const [failed, setFailed] = useState(false);
   const alive = useRef(false);
   const position = useSharedValue(1);
@@ -247,12 +253,18 @@ export default function OwnerHonors({ publicData }: { publicData?: PublicOwnerHa
             collapsable={false}
             style={{ height: wallHeight + 70, overflow: 'hidden', backgroundColor: room.wall }}
           >
-            <View style={styles.ceiling} pointerEvents="none">
+            <View
+              style={[styles.ceiling, { backgroundColor: room.line, borderBottomColor: room.gold }]}
+              pointerEvents="none"
+            >
               {[0, 1, 2].map((i) => (
                 <View key={i} style={styles.light} />
               ))}
             </View>
-            <View style={styles.floor} pointerEvents="none">
+            <View
+              style={[styles.floor, { backgroundColor: room.wall, borderTopColor: room.gold }]}
+              pointerEvents="none"
+            >
               <Txt center style={{ color: '#74816a', fontSize: 64 }}>
                 ◈
               </Txt>
@@ -269,7 +281,7 @@ export default function OwnerHonors({ publicData }: { publicData?: PublicOwnerHa
                 active={zone === i}
               />
             ))}
-            <Txt center style={styles.hint}>
+            <Txt center style={[styles.hint, { color: room.muted }]}>
               {L.roomHint}
             </Txt>
           </View>
@@ -283,7 +295,7 @@ export default function OwnerHonors({ publicData }: { publicData?: PublicOwnerHa
             onPress={() => turn(zone - 1)}
             style={[styles.arrow, { opacity: zone === 0 ? 0.25 : 1 }]}
           >
-            <Txt style={styles.arrowText}>‹</Txt>
+            <Txt style={[styles.arrowText, { color: room.gold }]}>‹</Txt>
           </Press>
           <View accessibilityLiveRegion="polite" style={{ flex: 1, gap: 4 }}>
             <Txt bold center style={{ color: room.ink, fontSize: 19 }}>
@@ -301,7 +313,7 @@ export default function OwnerHonors({ publicData }: { publicData?: PublicOwnerHa
             onPress={() => turn(zone + 1)}
             style={[styles.arrow, { opacity: zone === 2 ? 0.25 : 1 }]}
           >
-            <Txt style={styles.arrowText}>›</Txt>
+            <Txt style={[styles.arrowText, { color: room.gold }]}>›</Txt>
           </Press>
         </View>
         <View style={styles.dots}>

@@ -21,6 +21,7 @@ import { consumeCareerReminders, queueCareerReminders } from './push/careerRemin
 import { consumeCupResults, publishCupResults } from './push/cupResult.js';
 import { consumeCommunityPush } from './push/communityQueue.js';
 import { runCup } from './team/cup.js';
+import { reconcileMemberships } from './membership/reconcile.js';
 import { runSeasonClose } from './team/seasonClose.js';
 
 export { app };
@@ -108,6 +109,9 @@ export default {
       await runInfraHealth(env, controller.scheduledTime).catch(logged('infra-health'));
       // T-11-156 서버 최초 기록 전체 재계산을 몰아서 훑는다 — 공개 목록 조회가 조각을 기다리지 않게. 시간 한도까지
       // 돌 수 있어 앞 단계를 밀지 않게 맨 끝에 둔다.
+      await reconcileMemberships(env, controller.scheduledTime).catch(() =>
+        console.error(JSON.stringify({ job: 'membership-reconcile', code: 'INTERNAL' })),
+      );
       await runFirstsRescan(createDb(env.DB))
         .then(
           (n) =>

@@ -14,6 +14,7 @@ import {
   retiredNumbers,
 } from '../schema.js';
 import { ownerTierOfProfile } from './ownerTiers.js';
+import { publicMemberAppearance } from './membership.js';
 import { logoOf, ratingRankOf } from './ownerTeams.js';
 
 export async function ownerProfileOf(
@@ -24,13 +25,14 @@ export async function ownerProfileOf(
 ): Promise<OwnerProfile> {
   const id = profile.id;
   const current = teamSeasonAt(now);
-  const [tier, cupHonors, teams, records, [live], [rn], [retired]] = await Promise.all([
+  const [appearance, tier, cupHonors, teams, records, [live], [rn], [retired]] = await Promise.all([
+    publicMemberAppearance(db, id, now),
     ownerTierOfProfile(db, id, now),
     cupHonorsOf(db, id),
     db
       .select()
       .from(ownerTeams)
-      .where(eq(ownerTeams.profileId, id))
+      .where(and(eq(ownerTeams.profileId, id), eq(ownerTeams.slot, 0)))
       .orderBy(desc(ownerTeams.season))
       .limit(2), // 가장 최근 팀과 지금 시즌 팀이면 된다
     db
@@ -84,6 +86,7 @@ export async function ownerProfileOf(
     });
   const ranks = seasons.flatMap((s) => (s.teamRank ? [s.teamRank] : []));
   return {
+    appearance,
     nickname: profile.nickname,
     avatarId: profile.avatarId ?? null,
     title: profile.title,

@@ -1,3 +1,4 @@
+import { parseMemberTitle } from '@offside/contracts/membership-rules';
 import { DurableObject } from 'cloudflare:workers';
 import type { OwnerTier } from '@offside/contracts/owner-tier';
 import {
@@ -35,6 +36,7 @@ export type ChatWriter = {
   tier?: OwnerTier | null;
   /** T-11-150 입장권을 받을 때의 대표 칭호. */
   title?: string | null;
+  memberTitleUntil?: string | null;
   avatarId?: string | null;
 };
 type Attachment = { w: ChatWriter | null; sent: number[] };
@@ -42,6 +44,8 @@ type Attachment = { w: ChatWriter | null; sent: number[] };
 type StoredMessage = ChatMessage & { profileId: string };
 
 type Row = Record<string, string | number | null>;
+const liveTitle = (title: string | null, until: string | null) =>
+  parseMemberTitle(title) && (!until || !(Date.parse(until) > Date.now())) ? null : title;
 const toMessage = (r: Row): StoredMessage => ({
   id: String(r.id),
   at: Number(r.at),
@@ -50,7 +54,7 @@ const toMessage = (r: Row): StoredMessage => ({
   body: String(r.body),
   admin: r.admin === 1,
   tier: (r.tier as OwnerTier | null) ?? null,
-  title: (r.title as string | null) ?? null,
+  title: liveTitle(r.title as string | null, r.member_title_until as string | null),
   avatarId: (r.avatar_id as string | null) ?? null,
   profileId: String(r.profile_id),
 });
@@ -88,6 +92,8 @@ export class ChatRoom extends DurableObject<Bindings> {
     // T-11-150 대표 칭호 칸.
     if (!cols.some((c) => c.name === 'title'))
       this.sql.exec('ALTER TABLE messages ADD COLUMN title TEXT');
+    if (!cols.some((c) => c.name === 'member_title_until'))
+      this.sql.exec('ALTER TABLE messages ADD COLUMN member_title_until TEXT');
     if (!cols.some((c) => c.name === 'avatar_id'))
       this.sql.exec('ALTER TABLE messages ADD COLUMN avatar_id TEXT');
     this.sql.exec('CREATE INDEX IF NOT EXISTS messages_profile ON messages (profile_id)');
@@ -194,6 +200,7 @@ export class ChatRoom extends DurableObject<Bindings> {
       admin,
       tier = null,
       title = null,
+      memberTitleUntil = null,
       avatarId = null,
     } = att.w;
     const m: ChatMessage = {
@@ -204,13 +211,13 @@ export class ChatRoom extends DurableObject<Bindings> {
       body: check.body,
       admin,
       tier,
-      title,
+      title: liveTitle(title, memberTitleUntil),
       avatarId,
     };
     const notify = !admin && !!communityOwnerEmail(this.env);
     this.ctx.storage.transactionSync(() => {
       this.sql.exec(
-        'INSERT INTO messages (id, at, profile_id, author, nickname, body, admin, tier, title, avatar_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO messages (id, at, profile_id, author, nickname, body, admin, tier, title, avatar_id, member_title_until) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         m.id,
         m.at,
         profileId,
@@ -219,8 +226,9 @@ export class ChatRoom extends DurableObject<Bindings> {
         m.body,
         admin ? 1 : 0,
         tier,
-        title,
+        m.title,
         avatarId,
+        memberTitleUntil,
       );
       if (notify)
         this.sql.exec('INSERT INTO community_push_outbox (id, at) VALUES (?, ?)', m.id, now);

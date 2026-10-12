@@ -1,4 +1,6 @@
 <script lang="ts">
+  import {currentTeamSlot,selectTeamSlot} from '@offside/app-core/teamSlots';
+  import {membershipText as M} from '@offside/app-core/i18n/ko/membership';
   import LoginButtons from '../LoginButtons.svelte';
   import { seasonLabel } from '@offside/app-core/seasonName';
   import { needsOwnerLogin } from '@offside/app-core/market';
@@ -84,7 +86,11 @@
   let seasons = $state<OwnerTeamResponse['seasons']>([]);
   let lastManager = $state<string | null>(null);
   // T-11-113 개막 뒤에도 프리시즌 팀은 친선전용으로 고칠 수 있다.
-  const editable = $derived(teamEditableIn(season, current));
+  let selectedSlot=$state(currentTeamSlot());
+  let slotLimit=$state(1);
+  let slotEditable=$state(true);
+  let teamSlots=$state<NonNullable<OwnerTeamResponse['teamSlots']>>([]);
+  const editable = $derived(slotEditable && teamEditableIn(season, current));
   const seasonName = $derived(((o) => (o ? seasonLabel(o.id, o.name) : ''))(seasons.find((o) => o.id === season)));
 
   // 편집 초안 — 저장하기 전까지 이 기기에만 있다.
@@ -256,11 +262,13 @@
       return;
     }
     ({ season, current, seasons, lastManager, players, matchesLeft } = r.data);
+    selectedSlot=r.data.selectedSlot??0;slotLimit=r.data.slotLimit??1;slotEditable=r.data.slotEditable??true;teamSlots=r.data.teamSlots??[];
+    if(selectedSlot>0)friendsUi.mode='friends';
     perDay = r.data.matchesPerDay;
     needLogin = false;
     applyTeam(r.data.team);
     const account = accountCache.value;
-    draftKey = team?.id ?? (account && account !== 'error' ? `${account.id}:${season}` : null);
+    draftKey = team?.id ?? (account && account !== 'error' ? `${account.id}:${season}${selectedSlot?`:slot${selectedSlot}`:''}` : null);
     pendingDraft = null;
     restoredDraft = false;
     const draft = editable && draftKey ? readTeamDraft(draftKey) : null;
@@ -338,6 +346,7 @@
       return false;
     }
     if (sequence !== loadSequence) { if (key) writeTeamDraft(key, null); return false; }
+    teamSlots = [...teamSlots.filter(t=>t.slot!==selectedSlot), {slot:selectedSlot,id:r.data.team.id,name:r.data.team.name}];
     const created = !team;
     const unchanged = JSON.stringify(submitted) === JSON.stringify(draftValue());
     if (!unchanged) {
@@ -444,7 +453,7 @@
 
   // 화면마다 불러올 내용. 다른 화면에서 들어오면(뒤로·앞으로 가기 포함) 아래 $effect가, 이미 그 화면이면 open이 다시 불러온다.
   const LOAD = {
-    opponents: () => (matchHint || friendsUi.mode === 'friends' ? undefined : loadOpponents()),
+    opponents: () => (selectedSlot>0 || matchHint || friendsUi.mode === 'friends' ? undefined : loadOpponents()),
     achievements: () => loadAchievements(),
     history: loadHistory,
   };
@@ -480,6 +489,9 @@
     {:else if view === 'achievements'}
       <TeamAchievements {ach} status={achStatus} newIds={achNewIds} bind:cat={achCat} load={(s) => void loadAchievements(s)} onrank={openAchRanking} />
     {:else if view === 'team'}
+      <section class="card stack" data-team-slots><h2>{M.teamSlots}</h2><div class="seg" role="group" aria-label={M.teamSlots} style="flex-wrap:wrap;gap:8px">
+       {#each [0,1,2] as slot (slot)}<button class="btn" disabled={saving || !!playing} aria-pressed={selectedSlot===slot} onclick={()=>{if(selectedSlot===slot)return;if(slot>=slotLimit&&!teamSlots.some(t=>t.slot===slot)){go('membership');return;}selectTeamSlot(slot);void load(season);}}>{teamSlots.find(t=>t.slot===slot)?.name??(slot===0?M.primary:`${M.extra} ${slot+1}`)}</button>{/each}
+      </div><p class="muted fs-sm">{M.primaryNote}</p>{#if !slotEditable}<p>{M.slotLocked}</p>{/if}</section>
       {#if pendingDraft}
         <section class="card draft-notice" role="status">
           <p>{L.draftChangedWeb}</p>
@@ -488,7 +500,7 @@
       {:else if restoredDraft && dirty}
         <section class="card draft-notice" role="status"><p>{L.draftRestoredWeb}</p><button class="btn btn-sm" onclick={discardDraft} data-act="team-draft-discard">{L.draftDiscardWeb}</button></section>
       {/if}
-      {#if cupBand && editable && (cupBand.locked || cupBand.when)}<CupLineupBand locked={cupBand.locked} when={cupBand.when} />{/if}
+      {#if selectedSlot===0 && cupBand && editable && (cupBand.locked || cupBand.when)}<CupLineupBand locked={cupBand.locked} when={cupBand.when} />{/if}
       <TeamHead
         {team}
         {logo}
@@ -536,14 +548,14 @@
         onlock={toggleLock}
         onpresets={() => (presetsOpen = true)}
       />
-      <TeamPresets bind:open={presetsOpen} {presets} hasTeam={!!team} locked={!!cupBand?.locked} draft={presetDraft} persist={persistPresets} onload={applyPreset} />
+      <TeamPresets bind:open={presetsOpen} {presets} hasTeam={!!team} locked={!slotEditable || (selectedSlot===0 && !!cupBand?.locked)} draft={presetDraft} persist={persistPresets} onload={applyPreset} />
     {:else if view === 'opponents'}
       <div class="seg two tm-mode" role="group" aria-label={L.matchKindLabel}>
-        <button class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && oppStatus !== 'ready') void loadOpponents(); }}>{L.modeRanked}</button>
+        <button disabled={selectedSlot>0} class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && oppStatus !== 'ready') void loadOpponents(); }}>{L.modeRanked}</button>
         <button class="hof-sort" aria-pressed={friendsUi.mode === 'friends'} data-match-mode="friends" onclick={() => (friendsUi.mode = 'friends')}>{L.modeFriends}{#if appState.friendReq}<span class="btn-dot" data-friend-dot><span class="sr-only">{S.friendReq({ n: appState.friendReq })}</span></span>{/if}</button>
       </div>
       {#if friendsUi.mode === 'friends'}
-        <TeamFriends onplayed={(m, left) => openFriendly(m, left, true)} onopen={(m, left) => openFriendly(m, left, false)} onpreseason={() => pickSeason(0)} />
+        {#key selectedSlot}<TeamFriends onplayed={(m, left) => openFriendly(m, left, true)} onopen={(m, left) => openFriendly(m, left, false)} onpreseason={() => pickSeason(0)} />{/key}
       {:else}
       <TeamOpponents
         rating={team?.rating ?? TEAM_RATING_START}

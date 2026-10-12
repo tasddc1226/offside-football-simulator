@@ -2,6 +2,11 @@ import type { Translation } from '../core';
 import type { OwnerProfileMsgs } from '../ko/ownerProfile';
 
 export const ownerProfile: Translation<OwnerProfileMsgs> = {
+  supporterNote:
+    'Wear this while your membership is active. Your previous title returns when membership access ends.',
+  titleSupporter: 'Club supporter',
+  supporterTenure: ({ n }: { n: number }) => `${n}+ paid months · Membership active`,
+
   publicSeasonNote: 'Team results by season',
   publicTitleNote: 'Titles earned by this owner',
   backToTeam: '← Back to team',

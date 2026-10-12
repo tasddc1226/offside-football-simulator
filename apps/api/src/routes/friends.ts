@@ -1,3 +1,4 @@
+import { hasActiveMembership } from '../db/repos/membership.js';
 import {
   FriendPendingResponseSchema,
   FriendRemoveResponseSchema,
@@ -27,7 +28,13 @@ import {
   readBody,
   teamNotFound,
 } from './shared.js';
-import { currentSeasonOrThrow, kstTodayStart, requireOwner } from './ownerTeam.js';
+import {
+  currentSeasonOrThrow,
+  kstTodayStart,
+  requireOwner,
+  selectedTeamSlot,
+  requireTeamSlot,
+} from './ownerTeam.js';
 import { newId } from '../db/ids.js';
 import { runBatch } from '../db/repos/batch.js';
 import { commitNotifiedEvent } from '../push/events.js';
@@ -175,12 +182,14 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const season = teamSeasonAt(now);
+    const slot = selectedTeamSlot(c);
+    const editable = slot === 0 || (await hasActiveMembership(db, me.id, now));
     const [code, [rows, [played], myTeams], recentRows, invites] = await Promise.all([
       ensureFriendCode(db, me.id, me.friendCode ?? null),
       db.batch([
         listFriendRows(db, me.id),
         countFriendliesSince(db, me.id, kstTodayStart(now)),
-        teamsOfOwners(db, [me.id], [season ?? 0, 0]),
+        teamsOfOwners(db, [me.id], [season ?? 0, 0], slot),
       ]),
       listRecentFriendlies(db, me.id),
       inviteCountsOf(db, me.id),
@@ -225,9 +234,9 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         matchesLeft: Math.max(0, FRIENDLY_MATCHES_PER_DAY - Number(played?.n ?? 0)),
         matchesPerDay: FRIENDLY_MATCHES_PER_DAY,
         max: FRIENDS_MAX,
-        canPlay: !!myTeam && myTeam.filled > 0,
+        canPlay: editable && !!myTeam && myTeam.filled > 0,
         ...(season !== 0
-          ? { canPlayPreseason: !!myLegacy && friendlyTeamOf(myLegacy).filled > 0 }
+          ? { canPlayPreseason: editable && !!myLegacy && friendlyTeamOf(myLegacy).filled > 0 }
           : {}),
         invite: {
           pending: invites.pending,
@@ -404,6 +413,8 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
   // 겨룬다 — 휴식기에도 된다. 하루 친선전 수는 함께 센다.
   app.post('/v1/friends/:code/matches', requireProfile, idempotency, async (c) => {
     const me = await requireOwner(c);
+    const slot = selectedTeamSlot(c);
+    await requireTeamSlot(c, me.id, slot);
     const db = getDb(c);
     const target = await ownerOfCodeParam(c);
     const now = nowIso();
@@ -412,7 +423,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
     const teamWord = preseason ? '프리시즌 팀' : '이번 시즌 팀';
     const [[link], [myRow], [theirRow], [played]] = await db.batch([
       friendRowOf(db, me.id, target.id),
-      myTeamIn(db, me.id, season),
+      myTeamIn(db, me.id, season, slot),
       myTeamIn(db, target.id, season),
       countFriendliesSince(db, me.id, kstTodayStart(now)),
     ]);

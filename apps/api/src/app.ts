@@ -1,3 +1,4 @@
+import { registerMembershipRoutes } from './routes/membership.js';
 import { HealthDataSchema } from '@offside/contracts';
 import { Hono } from 'hono';
 import type { AppEnv } from './env.js';
@@ -79,6 +80,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerMarketRoutes(app);
   registerCupRoutes(app);
   registerIapRoutes(app);
+  registerMembershipRoutes(app);
   registerBoardRoutes(app);
   registerTranslateRoutes(app);
   registerReleaseNoteRoutes(app);

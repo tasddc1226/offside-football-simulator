@@ -645,6 +645,27 @@
       "when": 1791729675690,
       "tag": "0091_giant_jackpot",
       "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "6",
+      "when": 1791735264797,
+      "tag": "0092_club_membership",
+      "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "6",
+      "when": 1791736258879,
+      "tag": "0093_membership_period_rewards",
+      "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "6",
+      "when": 1791773368331,
+      "tag": "0094_membership_team_slots",
+      "breakpoints": true
     }
   ]
 }

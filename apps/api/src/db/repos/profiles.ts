@@ -1,5 +1,6 @@
+import { displayedOwnerTitleSql, memberTitleUntilSql } from './membership.js';
 import { ProfileSettingsSchema, type ProfileSettings } from '@offside/contracts';
-import { eq, isNotNull, or } from 'drizzle-orm';
+import { getTableColumns, eq, isNotNull, or } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
 import { profiles } from '../schema.js';
@@ -25,6 +26,7 @@ export type ProfileRecord = {
   /** T-11-150 대표 칭호와 직접 골랐는지. */
   title: string | null;
   titlePinned: boolean;
+  memberTitleUntil?: string | null;
   avatarId?: string | null;
 };
 
@@ -87,9 +89,24 @@ export async function createProfile(
   return toRecord(row!);
 }
 
-export async function getProfile(db: Db, id: string): Promise<ProfileRecord | undefined> {
-  const [row] = await db.select().from(profiles).where(eq(profiles.id, id));
-  return row ? toRecord(row) : undefined;
+export async function getProfile(
+  db: Db,
+  id: string,
+  displayTitle = false,
+): Promise<ProfileRecord | undefined> {
+  if (!displayTitle) {
+    const [row] = await db.select().from(profiles).where(eq(profiles.id, id));
+    return row ? toRecord(row) : undefined;
+  }
+  const [row] = await db
+    .select({
+      ...getTableColumns(profiles),
+      title: displayedOwnerTitleSql(),
+      memberTitleUntil: memberTitleUntilSql(),
+    })
+    .from(profiles)
+    .where(eq(profiles.id, id));
+  return row ? { ...toRecord(row), memberTitleUntil: row.memberTitleUntil } : undefined;
 }
 
 /** 기존 settings와 merge한 뒤 Zod로 검증한다. 유효하지 않으면(예: `textScale: 110`) throw한다. */

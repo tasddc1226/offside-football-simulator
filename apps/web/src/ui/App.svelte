@@ -94,6 +94,8 @@
   $effect(() => {
     if (appState.screen === 'players' && !OwnerPlayers) void import('./owner/OwnerPlayers.svelte').then((m) => (OwnerPlayers = m.default));
   });
+  let Membership = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => { if (appState.screen === 'membership' && !Membership) void import('./owner/Membership.svelte').then(m => Membership = m.default); });
   let OwnerHonors = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
     if ((appState.screen === 'honors' || appState.screen === 'recap') && !OwnerHonors) void import('./owner/OwnerHonors.svelte').then((m) => (OwnerHonors = m.default));
@@ -191,6 +193,8 @@
       {#if Settings}<Settings />{/if}
     {:else if appState.screen === 'owner'}
       {#if Owner}<Owner />{/if}
+    {:else if appState.screen === 'membership'}
+      {#if Membership}<Membership />{/if}
     {:else if appState.screen === 'players'}
       {#if OwnerPlayers}<OwnerPlayers />{/if}
     {:else if appState.screen === 'honors'}

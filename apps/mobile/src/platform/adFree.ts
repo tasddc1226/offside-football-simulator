@@ -22,6 +22,10 @@ export const SUPPORTED = STORE_SUPPORTED;
 
 export const adFree = proxy({
   owned: kv.getBoolean(OWNED) ?? false,
+  memberUntil: 0,
+  get effective(): boolean {
+    return this.owned || this.memberUntil > Date.now();
+  },
   /** 스토어가 알려 준 현지 가격('₩3,300'). 못 받으면 빈 문자열. */
   price: '',
   busy: false,
@@ -121,4 +125,8 @@ export async function restoreAdFree() {
   } finally {
     adFree.busy = false;
   }
+}
+
+export function setMemberAdFree(until: string | null) {
+  adFree.memberUntil = until ? Date.parse(until) || 0 : 0;
 }

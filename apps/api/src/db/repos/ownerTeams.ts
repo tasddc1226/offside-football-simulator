@@ -1,3 +1,4 @@
+import { displayedOwnerTitleSql } from './membership.js';
 import {
   PeakProfileSchema,
   TeamLayoutSchema,
@@ -112,11 +113,23 @@ export function presetsOf(row: Pick<OwnerTeamRow, 'presetsJson'>): TeamPreset[] 
 }
 
 /** T-11-217 그 시즌 내 팀의 프리셋을 통째로 바꾼다. 팀이 없으면 바뀐 행이 없다(빈 배열). */
-export const setTeamPresets = (db: Db, profileId: string, season: number, presets: TeamPreset[]) =>
+export const setTeamPresets = (
+  db: Db,
+  profileId: string,
+  season: number,
+  presets: TeamPreset[],
+  slot = 0,
+) =>
   db
     .update(ownerTeams)
     .set({ presetsJson: presets.length ? JSON.stringify(presets) : null })
-    .where(and(eq(ownerTeams.profileId, profileId), eq(ownerTeams.season, season)))
+    .where(
+      and(
+        eq(ownerTeams.profileId, profileId),
+        eq(ownerTeams.season, season),
+        eq(ownerTeams.slot, slot),
+      ),
+    )
     .returning({ id: ownerTeams.id });
 
 export function logoOf(row: Pick<OwnerTeamRow, 'logoJson'>) {
@@ -221,11 +234,17 @@ export function listMyTeams(db: Db, profileId: string) {
 }
 
 /** 그 시즌 내 팀(없으면 빈 배열) — (구단주, 시즌) 유니크 인덱스로 한 행만 읽는다. batch에 넣을 수 있게 쿼리로 돌려준다. */
-export const myTeamIn = (db: Db, profileId: string, season: number) =>
+export const myTeamIn = (db: Db, profileId: string, season: number, slot = 0) =>
   db
     .select()
     .from(ownerTeams)
-    .where(and(eq(ownerTeams.profileId, profileId), eq(ownerTeams.season, season)));
+    .where(
+      and(
+        eq(ownerTeams.profileId, profileId),
+        eq(ownerTeams.season, season),
+        eq(ownerTeams.slot, slot),
+      ),
+    );
 
 /**
  * 그 시즌에 넣을 수 있는 내 선수 카드(그 시즌까지 올라온 선수, 최고 OVR 순). T-11-114 지난 시즌 선수는 와일드카드로
@@ -371,7 +390,7 @@ export const liveTeam = (db: Db, teamId: string) =>
     .select({
       team: ownerTeams,
       ownerNickname: profiles.nickname,
-      title: profiles.title,
+      title: displayedOwnerTitleSql(),
       avatarId: profiles.avatarId,
     })
     .from(ownerTeams)
@@ -381,6 +400,7 @@ export const liveTeam = (db: Db, teamId: string) =>
 /** 랭킹·상대에 오르는 팀: 그 시즌 · 선수가 한 명 이상 · 구글 연결이 살아 있는(삭제되지 않은) 구단주. */
 const rankedIn = (season: number) =>
   and(
+    eq(ownerTeams.slot, 0),
     eq(ownerTeams.season, season),
     gt(ownerTeams.filled, 0),
     accountLinkedSql(),
@@ -435,7 +455,7 @@ export async function listOpponentCandidates(
   todayStart: string,
   perSide = 8,
 ) {
-  const cols = { team: ownerTeams, title: profiles.title };
+  const cols = { team: ownerTeams, title: displayedOwnerTitleSql() };
   const base = and(
     rankedIn(season),
     ne(ownerTeams.profileId, profileId),
@@ -495,7 +515,7 @@ export async function listTeamRanking(
   const value = lineupValueSql(!teamSeasonClosed(season, now));
   const [rows, [total]] = await db.batch([
     db
-      .select({ team: ownerTeams, value, title: profiles.title })
+      .select({ team: ownerTeams, value, title: displayedOwnerTitleSql() })
       .from(ownerTeams)
       .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
       .where(rankedIn(season))
@@ -547,7 +567,7 @@ export async function listTeamRecentForm(db: Db, teamIds: readonly string[]) {
 
 /** 레이팅 순위(랭킹과 같은 순서 — 레이팅 · OVR · 먼저 만든 팀). 랭킹에 오르지 않은 팀(선수 0명)이면 null. */
 export async function ratingRankOf(db: Db, t: OwnerTeamRow): Promise<number | null> {
-  if (t.filled === 0) return null;
+  if (t.filled === 0 || t.slot !== 0) return null;
   const [row] = await db
     .select({ n: sql<number>`count(*)` })
     .from(ownerTeams)

@@ -8,6 +8,7 @@ import {
 import {
   TITLE_NONE,
   titleLabel,
+  titleTenureLabel,
   titleCondition,
   permanentTitleOf,
   titleGradeLabel,
@@ -103,7 +104,7 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
           </Txt>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             <Txt tone="muted" style={small}>
-              {grade ? titleGradeLabel(grade) : L.titleCup}
+              {grade ? titleGradeLabel(grade) : (titleTenureLabel(id) ?? L.titleCup)}
             </Txt>
             {isNew ? <Txt style={{ ...small, color: c.accentText }}>{L.newTitle}</Txt> : null}
           </View>
@@ -156,6 +157,28 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
           {L.titleDisplayHint}
         </Txt>
       </Card>
+      {hall.membership?.active && hall.membership.badge ? (
+        <Press
+          testID={`title-pick-member-${hall.membership.badge}`}
+          accessibilityLabel={`${L.titleSupporter} · ${L.equip}`}
+          accessibilityState={{
+            selected: hall.title === `member-${hall.membership.badge}`,
+            disabled: saving,
+          }}
+          disabled={saving}
+          onPress={() => void pick(`member-${hall.membership!.badge}`)}
+          style={{
+            ...itemStyle,
+            borderColor: hall.title === `member-${hall.membership.badge}` ? c.accentText : c.line,
+          }}
+        >
+          {identity(`member-${hall.membership.badge}`)}
+          <Txt tone="muted" style={small}>
+            {L.supporterNote}
+          </Txt>
+          {hall.title === `member-${hall.membership.badge}` ? <Txt>{L.titleUsing}</Txt> : null}
+        </Press>
+      ) : null}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {(['earned', 'locked'] as const).map((key) => (
           <Press

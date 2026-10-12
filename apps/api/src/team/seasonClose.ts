@@ -100,7 +100,7 @@ async function closeRecords(db: Db, season: number, cutoff: string, now: string)
           sum(${retiredBy} and c.wall_of_honor_json is not null) as wall
         from careers c where ${seasonCareers} group by c.profile_id
       ) k on k.profile_id = o.profile_id
-      left join owner_teams t on t.profile_id = o.profile_id and t.season = ${season} and t.created_at < ${cutoff}`,
+      left join owner_teams t on t.slot = 0 and t.profile_id = o.profile_id and t.season = ${season} and t.created_at < ${cutoff}`,
     sql`
       update owner_season_records set best_career_id = x.id, best_score = x.legend_score
       from (
@@ -244,7 +244,7 @@ async function closeRanks(db: Db, season: number, cutoff: string) {
       from (
         select t.profile_id, row_number() over (order by t.rating desc, t.ovr desc, t.created_at, t.id) as rk
         from owner_teams t join profiles p on p.id = t.profile_id
-        where t.season = ${season} and t.filled > 0 and t.created_at < ${cutoff} and ${LINKED}
+        where t.slot = 0 and t.season = ${season} and t.filled > 0 and t.created_at < ${cutoff} and ${LINKED}
       ) x
       where x.profile_id = owner_season_records.profile_id and owner_season_records.season = ${season}`,
     sql`

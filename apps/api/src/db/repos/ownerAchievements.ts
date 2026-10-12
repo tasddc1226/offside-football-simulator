@@ -1,3 +1,4 @@
+import { displayedOwnerTitleSql } from './membership.js';
 // T-11-028 구단주 시즌 업적 점수(업적 랭킹). 업적 자체는 그때그때 계산하고(team/achievements.ts) 점수만 적어 둔다.
 import { ACH_RANK_PER_PAGE } from '@offside/contracts/owner-team';
 import {
@@ -115,7 +116,7 @@ export async function listAchievementRanking(db: Db, season: number, page: numbe
         done: ownerAchievements.done,
         players: ownerAchievements.players,
         nickname: profiles.nickname,
-        title: profiles.title,
+        title: displayedOwnerTitleSql(),
         teamId: ownerTeams.id,
         teamName: ownerTeams.name,
         logoJson: ownerTeams.logoJson,
@@ -126,6 +127,7 @@ export async function listAchievementRanking(db: Db, season: number, page: numbe
         ownerTeams,
         and(
           eq(ownerTeams.profileId, ownerAchievements.profileId),
+          eq(ownerTeams.slot, 0),
           eq(ownerTeams.season, ownerAchievements.season),
         ),
       )

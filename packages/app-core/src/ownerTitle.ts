@@ -1,3 +1,8 @@
+import {
+  parseMemberTitle,
+  MEMBER_BADGE_MONTHS,
+  MEMBER_BADGE_COLORS,
+} from '@offside/contracts/membership-rules';
 // T-11-150 대표 칭호 표시 — 칭호 id('cup-3-champion')에서 회차와 단계를 읽어 문구와 트로피를 고른다.
 import {
   parseTitle,
@@ -22,6 +27,7 @@ const LABEL: Record<TitleStage, (p: { n: number }) => string> = {
 
 /** '제3회 챔피언'(지금 언어). 알 수 없는 id면 null. */
 export function titleLabel(id: string | null | undefined): string | null {
+  if (parseMemberTitle(id)) return L.titleSupporter;
   const t = parseTitle(id);
   const permanent = permanentTitleOf(id);
   return t
@@ -279,7 +285,43 @@ const PIXEL_PATHS = Object.fromEntries(
       .join(''),
   ]),
 );
-export const titleIconPath = (id: string): string => PIXEL_PATHS[id] ?? '';
+const SUPPORTER_SHIELD = [
+  '..########..',
+  '.##########.',
+  '.##......##.',
+  '.##......##.',
+  '.##......##.',
+  '.##......##.',
+  '.##......##.',
+  '..##....##..',
+  '..##....##..',
+  '...##..##...',
+  '....####....',
+  '.....##.....',
+];
+const supporterPaths = Object.fromEntries(
+  Object.keys(MEMBER_BADGE_MONTHS).map((badge, i) => {
+    const rows = SUPPORTER_SHIELD.map((row) => [...row]);
+    // One to four bars make tenure distinguishable without relying on color.
+    for (let bar = 0; bar <= i; bar++) for (let x = 5; x <= 6; x++) rows[3 + bar * 2]![x] = '#';
+    return [
+      badge,
+      rows
+        .flatMap((row, y) =>
+          row.flatMap((v, x) => (v === '#' ? [`M${x + 2} ${y + 2}h1v1h-1z`] : [])),
+        )
+        .join(''),
+    ];
+  }),
+);
+export const titleIconPath = (id: string): string => {
+  const member = parseMemberTitle(id);
+  return member ? (supporterPaths[member] ?? '') : (PIXEL_PATHS[id] ?? '');
+};
+export const titleTenureLabel = (id: string): string | null => {
+  const badge = parseMemberTitle(id);
+  return badge ? L.supporterTenure({ n: MEMBER_BADGE_MONTHS[badge] }) : null;
+};
 
 export const titleGradeLabel = (grade: TitleGrade): string =>
   ({ entry: L.gradeEntry, skilled: L.gradeSkilled, honor: L.gradeHonor, legend: L.gradeLegend })[
@@ -304,6 +346,7 @@ export const titleRelated = (id: string): string | null => {
 };
 /** Matching metal accents on light and dark backgrounds; grade is also expressed in text. */
 export const titleGradeColor = (id: string): string =>
-  ({ entry: '#93A49A', skilled: '#6EAA8C', honor: '#80A8C9', legend: '#D7AF54' })[
+  (parseMemberTitle(id) ? MEMBER_BADGE_COLORS[parseMemberTitle(id)!] : undefined) ??
+  { entry: '#93A49A', skilled: '#6EAA8C', honor: '#80A8C9', legend: '#D7AF54' }[
     permanentTitleOf(id)?.grade ?? 'entry'
   ];

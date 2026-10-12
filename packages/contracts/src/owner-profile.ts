@@ -1,3 +1,4 @@
+import { MembershipStateSchema, MemberAppearanceSchema } from './membership.js';
 // T-11-150 구단주 프로필(누구나 보는 화면)과 명예관(대표 칭호 고르기). 시즌을 넘어 쌓이는 기록 — 컵 트로피, 시즌별 업적
 // 점수, 영구결번 — 을 한곳에 모은다. 남의 프로필은 팀 id로 연다(프로필 id는 내보내지 않는다).
 import { z } from 'zod';
@@ -28,6 +29,7 @@ export const OwnerSeasonLineSchema = z.strictObject({
 export type OwnerSeasonLine = z.infer<typeof OwnerSeasonLineSchema>;
 
 export const OwnerProfileSchema = z.strictObject({
+  appearance: MemberAppearanceSchema.omit({ supporterTitle: true }).optional(),
   nickname: z.string().nullable(),
   avatarId: z.uuid().nullable().optional(),
   title: OwnerTitleSchema.nullable(),
@@ -75,6 +77,7 @@ export type OwnerProfileResponse = z.infer<typeof OwnerProfileResponseSchema>;
 /** 명예관 — 지금 대표 칭호와 고를 수 있는 칭호(좋은 순). pinned: 내가 직접 고른 칭호(아니면 자동으로 가장 좋은 칭호).
  * teamId: 가장 최근 팀 — '내 구단주 프로필 보기'가 이 팀 id로 연다. */
 export const OwnerTitlesResponseSchema = z.strictObject({
+  membership: MembershipStateSchema.optional(),
   title: OwnerTitleSchema.nullable(),
   titles: z.array(OwnerTitleSchema),
   pinned: z.boolean(),

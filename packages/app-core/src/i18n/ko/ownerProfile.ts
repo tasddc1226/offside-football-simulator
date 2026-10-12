@@ -3,6 +3,10 @@
 import { ns } from '../core';
 
 const ko = {
+  supporterNote: '구독을 이용하는 동안 달 수 있어요. 이용 기간이 끝나면 이전 대표 칭호로 돌아가요.',
+  titleSupporter: '클럽 서포터',
+  supporterTenure: ({ n }: { n: number }) => `누적 ${n}개월 이상 · 구독 이용 중`,
+
   publicSeasonNote: '시즌별 팀 성적',
   publicTitleNote: '이 구단주가 획득한 칭호',
   backToTeam: '← 팀으로 돌아가기',

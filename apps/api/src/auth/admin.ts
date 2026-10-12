@@ -40,6 +40,7 @@ export function commentIdentity(
 export type Viewer = CommentIdentity & {
   profileId: string | null;
   title: string | null;
+  memberTitleUntil?: string | null;
   avatarId?: string | null;
 };
 
@@ -48,10 +49,11 @@ export async function getViewer(c: Context<AppEnv>): Promise<Viewer> {
   const session = await resolveSession(c);
   if (!session)
     return { profileId: null, admin: false, google: false, nickname: null, title: null };
-  const profile = await getProfile(getDb(c), session.profileId);
+  const profile = await getProfile(getDb(c), session.profileId, true);
   return {
     profileId: session.profileId,
     title: profile?.title ?? null,
+    memberTitleUntil: profile?.memberTitleUntil ?? null,
     avatarId: profile?.avatarId ?? null,
     ...commentIdentity(profile, c.env.ADMIN_EMAILS),
   };

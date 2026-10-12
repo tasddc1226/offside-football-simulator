@@ -1,3 +1,4 @@
+import { teamSlotQuery } from '../teamSlots';
 // T-11-098 친구 · 친선전 API. 팀 화면(지연 청크)만 import한다. 타입은 type-only import라 번들에 zod가 들어가지 않는다.
 import type {
   FriendRemoveResponse,
@@ -19,7 +20,8 @@ export type {
 } from '@offside/contracts';
 
 /** 친구 화면(내 코드 · 친구 · 신청 · 최근 친선전). 신청·수락·친선전(쓰기)을 하면 메모가 비워진다. */
-export const fetchFriends = () => withOwnerHint(cachedGet<FriendsResponse>('/v1/friends', 60_000));
+export const fetchFriends = () =>
+  withOwnerHint(cachedGet<FriendsResponse>(teamSlotQuery('/v1/friends'), 60_000));
 
 /** 친구 신청 — 친구 코드 또는 팀 프로필의 팀 id. */
 export const requestFriend = (body: FriendRequestBody) =>
@@ -40,6 +42,6 @@ export const removeFriend = (code: string) =>
 /** 친선전 한 판. preseason이면 두 사람의 프리시즌 팀끼리(T-11-113). */
 export const playFriendly = (code: string, preseason = false) =>
   apiFetch<PlayFriendlyResponse>(
-    `/v1/friends/${encodeURIComponent(code)}/matches${preseason ? '?season=0' : ''}`,
+    teamSlotQuery(`/v1/friends/${encodeURIComponent(code)}/matches${preseason ? '?season=0' : ''}`),
     { method: 'POST' },
   );

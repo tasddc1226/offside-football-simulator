@@ -2,10 +2,10 @@
   // 구단주 프로필 이미지 — 닉네임 첫 글자 동그라미. 구단주 화면 · 댓글 · 채팅이 같은 모양을 쓴다(장식이라 스크린 리더에는 숨긴다).
   import { ownerAvatarUrl } from '@offside/app-core/api/client';
   let broken = $state<string | null>(null);
-  let { name, size = 24, avatarId = null }: { name: string; size?: number; avatarId?: string | null | undefined } = $props();
+  let { name, size = 24, avatarId = null, frame = 'none' }: { frame?: 'none'|'brass'|'silver'|'emerald'; name: string; size?: number; avatarId?: string | null | undefined } = $props();
 </script>
 
-<span class="owner-avatar" aria-hidden="true" style="--avatar-size: {size}px">{#if avatarId && broken !== avatarId}<img src={ownerAvatarUrl(avatarId)} alt="" width={size} height={size} loading="lazy" decoding="async" onerror={() => broken = avatarId} />{:else}{name.slice(0, 1)}{/if}</span>
+<span class="owner-avatar" aria-hidden="true" style="--avatar-size: {size}px; outline: {frame==='none'?0:3}px solid {{none:'transparent',brass:'#b88954',silver:'#9cacb8',emerald:'#4e9777'}[frame]}; outline-offset: 1px">{#if avatarId && broken !== avatarId}<img src={ownerAvatarUrl(avatarId)} alt="" width={size} height={size} loading="lazy" decoding="async" onerror={() => broken = avatarId} />{:else}{name.slice(0, 1)}{/if}</span>
 
 <style>
   .owner-avatar img{width:100%;height:100%;object-fit:cover;border-radius:inherit;}

@@ -963,6 +963,7 @@ export const ownerTeams = sqliteTable(
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
     season: integer('season').notNull().default(0),
+    slot: integer('slot').notNull().default(0),
     name: text('name').notNull(),
     /** 감독 이름(팀마다, 공개). */
     manager: text('manager').notNull().default(''),
@@ -996,11 +997,15 @@ export const ownerTeams = sqliteTable(
     updatedAt: text('updated_at').notNull(),
   },
   (table) => [
-    uniqueIndex('owner_teams_profile_season_unique').on(table.profileId, table.season),
+    uniqueIndex('owner_teams_profile_season_slot_unique').on(
+      table.profileId,
+      table.season,
+      table.slot,
+    ),
     // 상대 목록: 같은 시즌에서 내 팀 OVR 위아래로 가까운 팀을 찾는다.
-    index('owner_teams_season_ovr_idx').on(table.season, table.ovr),
+    index('owner_teams_season_ovr_idx').on(table.season, table.slot, table.ovr),
     // 라이브 랭킹(팀 랭킹).
-    index('owner_teams_season_rating_idx').on(table.season, table.rating),
+    index('owner_teams_season_rating_idx').on(table.season, table.slot, table.rating),
   ],
 );
 
@@ -1517,3 +1522,115 @@ export const careerReminderOutcomes = sqliteTable('career_reminder_outcomes', {
   returnedAt: text('returned_at'),
   retiredAt: text('retired_at'),
 });
+
+/** Store-verified, account-bound subscription; earned titles remain in profiles.title. */
+export const ownerMemberships = sqliteTable(
+  'owner_memberships',
+  {
+    profileId: text('profile_id')
+      .primaryKey()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    store: text('store', { enum: ['apple', 'google', 'local'] }).notNull(),
+    environment: text('environment', { enum: ['production', 'sandbox', 'local'] }).notNull(),
+    chainId: text('chain_id').notNull(),
+    status: text('status', { enum: ['active', 'grace', 'expired', 'revoked', 'hold'] }).notNull(),
+    paidUntil: text('paid_until').notNull(),
+    graceUntil: text('grace_until'),
+    autoRenew: integer('auto_renew', { mode: 'boolean' }).notNull().default(true),
+    revision: integer('revision').notNull().default(0),
+    theme: text('theme').notNull().default('classic'),
+    frame: text('frame').notNull().default('none'),
+    supporterTitle: integer('supporter_title', { mode: 'boolean' }).notNull().default(false),
+    verifiedAt: text('verified_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('owner_memberships_chain').on(t.store, t.environment, t.chainId),
+    index('owner_memberships_expiry').on(t.status, t.paidUntil),
+  ],
+);
+export const membershipPeriods = sqliteTable(
+  'membership_periods',
+  {
+    store: text('store').notNull(),
+    environment: text('environment').notNull(),
+    transactionId: text('transaction_id').notNull(),
+    chainId: text('chain_id').notNull(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    startedAt: text('started_at').notNull(),
+    expiresAt: text('expires_at').notNull(),
+    paid: integer('paid', { mode: 'boolean' }).notNull(),
+    benefitVersion: integer('benefit_version').notNull(),
+    grantedAt: text('granted_at'),
+    refundedAt: text('refunded_at'),
+  },
+  (t) => [
+    primaryKey({ columns: [t.store, t.environment, t.transactionId] }),
+    index('membership_periods_owner').on(t.profileId, t.startedAt),
+  ],
+);
+export const membershipEvents = sqliteTable(
+  'membership_events',
+  {
+    id: text('id').primaryKey(),
+    store: text('store').notNull(),
+    environment: text('environment').notNull(),
+    profileId: text('profile_id'),
+    kind: text('kind').notNull(),
+    createdAt: text('created_at').notNull(),
+    status: text('status').notNull().default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    nextAttemptAt: text('next_attempt_at'),
+    errorCode: text('error_code'),
+  },
+  (t) => [index('membership_events_pending').on(t.status, t.nextAttemptAt)],
+);
+
+/** Each verified store chain is bound once; multiple stores never overwrite each other's state. */
+export const membershipChains = sqliteTable(
+  'membership_chains',
+  {
+    store: text('store').notNull(),
+    environment: text('environment').notNull(),
+    chainId: text('chain_id').notNull(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    status: text('status').notNull(),
+    paidUntil: text('paid_until').notNull(),
+    graceUntil: text('grace_until'),
+    autoRenew: integer('auto_renew', { mode: 'boolean' }).notNull(),
+    verifiedAt: text('verified_at').notNull(),
+    tokenCipher: text('token_cipher'),
+  },
+  (t) => [
+    primaryKey({ columns: [t.store, t.environment, t.chainId] }),
+    index('membership_chains_owner').on(t.profileId, t.environment, t.paidUntil),
+    index('membership_chains_reconcile').on(t.verifiedAt),
+  ],
+);
+/** Keep subscription rewards separate: a refund can remove only this period's unspent items. */
+export const membershipItemLots = sqliteTable(
+  'membership_item_lots',
+  {
+    store: text('store').notNull(),
+    environment: text('environment').notNull(),
+    transactionId: text('transaction_id').notNull(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    item: text('item').notNull(),
+    granted: integer('granted').notNull(),
+    remaining: integer('remaining').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.store, t.environment, t.transactionId, t.item] }),
+    index('membership_item_lots_spend').on(t.profileId, t.item, t.createdAt),
+    check(
+      'membership_item_lots_remaining',
+      sql`${t.remaining} >= 0 and ${t.remaining} <= ${t.granted}`,
+    ),
+  ],
+);

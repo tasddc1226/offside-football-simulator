@@ -15,6 +15,7 @@ const BROWSE_SCREENS: readonly Screen[] = [
   'funds',
   'recap',
   'honors',
+  'membership',
   'firsts',
   'dex',
   'legend',

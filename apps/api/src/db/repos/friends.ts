@@ -173,12 +173,21 @@ export const deleteFriendsStatements = (db: Db, profileId: string) =>
   ] as const;
 
 /** 그 시즌 여러 구단주의 팀(친구 목록에 붙인다). */
-export function teamsOfOwners(db: Db, profileIds: readonly string[], seasons: readonly number[]) {
+export function teamsOfOwners(
+  db: Db,
+  profileIds: readonly string[],
+  seasons: readonly number[],
+  slot = 0,
+) {
   return db
     .select()
     .from(ownerTeams)
     .where(
-      and(inArray(ownerTeams.profileId, [...profileIds]), inArray(ownerTeams.season, [...seasons])),
+      and(
+        eq(ownerTeams.slot, slot),
+        inArray(ownerTeams.profileId, [...profileIds]),
+        inArray(ownerTeams.season, [...seasons]),
+      ),
     );
 }
 
@@ -188,7 +197,7 @@ export async function latestManagersOf(db: Db, profileIds: readonly string[]) {
   const rows = await db
     .select({ profileId: ownerTeams.profileId, manager: ownerTeams.manager })
     .from(ownerTeams)
-    .where(inArray(ownerTeams.profileId, [...profileIds]))
+    .where(and(eq(ownerTeams.slot, 0), inArray(ownerTeams.profileId, [...profileIds])))
     .orderBy(desc(ownerTeams.season));
   const map = new Map<string, string>();
   for (const r of rows) if (r.manager && !map.has(r.profileId)) map.set(r.profileId, r.manager);

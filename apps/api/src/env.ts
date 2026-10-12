@@ -69,6 +69,18 @@ export type Bindings = {
   GOOGLE_PLAY_SA_JSON?: string;
   /** T-11-174 secret. 쉼표 구분 프로필 id. 있으면 이 구단주에게만 인앱 상품을 보인다(출시 전 실기기 구매 확인용). 지우면 모두에게 열린다. */
   IAP_TESTERS?: string;
+  /** Membership rollout is independent of consumable IAP. Closed unless explicitly enabled. */
+  MEMBERSHIP_SALES_ENABLED?: string;
+  MEMBERSHIP_RECONCILE_ENABLED?: string;
+  GOOGLE_MEMBERSHIP_PUSH_AUDIENCE?: string;
+  GOOGLE_MEMBERSHIP_PUSH_EMAIL?: string;
+  MEMBERSHIP_TESTERS?: string;
+  /** App Store Server API credentials, distinct from Sign in with Apple. */
+  APPLE_IAP_ISSUER_ID?: string;
+  APPLE_IAP_KEY_ID?: string;
+  APPLE_IAP_PRIVATE_KEY?: string;
+  /** Base64url-encoded 32-byte AES key; encrypts Google subscription tokens at rest. */
+  MEMBERSHIP_TOKEN_KEY?: string;
   /** T-10-011. secret. 쉼표 구분 관리자 구글 이메일(게시판 글쓰기). 비어 있으면 관리자가 없다. */
   ADMIN_EMAILS?: string;
   /** T-11-146 Workers AI(공지 번역 초안·댓글·채팅 번역 보기). staging·운영에만 있다 — 없으면 번역 경로가 503을 낸다. */

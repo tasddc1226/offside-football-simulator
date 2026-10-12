@@ -2,6 +2,8 @@
 // 소모성 상품을 환불받고도 아이템을 계속 쓰지 못하게, 스토어가 알려 준 환불 거래의 아이템을 회수한다(이용약관 1항).
 // Apple은 App Store 서버 알림(REFUND)을 바로 받고, Google은 매일 cron이 무효화된 구매 목록을 읽는다. 회수는 거래마다 한 번이고
 // 지금 가진 장수 안에서만 뺀다(repos/iap.ts revokeIapPurchase).
+import { MEMBERSHIP_PRODUCT } from '@offside/contracts/membership';
+import { handleMemberAppleNotification } from '../membership/notifications.js';
 import { DEFAULT_BUNDLE_ID } from '../auth/apple-id-token.js';
 import type { Db } from '../db/client.js';
 import { revokeIapPurchase, type IapRevoke } from '../db/repos/iap.js';
@@ -16,7 +18,7 @@ const log = (job: string, fields: Record<string, unknown>) =>
 const summary = (r: IapRevoke) =>
   r.found ? { already: r.already, item: r.item, qty: r.qty, revoked: r.revoked } : { found: false };
 
-export type AppleNotifyResult = 'invalid' | 'ignored' | 'revoked';
+export type AppleNotifyResult = 'invalid' | 'ignored' | 'revoked' | 'membership';
 
 /**
  * App Store 서버 알림 한 건. 서명이 맞지 않으면 invalid(400), 다른 앱이거나 환불이 아니면 ignored, 환불이면 회수.
@@ -32,6 +34,11 @@ export async function handleAppleNotification(
   const note = await verifyAppleNotification(signedPayload, appleRoot);
   if (!note) return 'invalid';
   if (note.data?.bundleId !== (env.APPLE_BUNDLE_ID ?? DEFAULT_BUNDLE_ID)) return 'ignored';
+  if (note.data.signedTransactionInfo) {
+    const memberTx = await verifyAppleTransaction(note.data.signedTransactionInfo, appleRoot);
+    if (memberTx?.productId === MEMBERSHIP_PRODUCT)
+      return handleMemberAppleNotification(env, db, note, memberTx, now);
+  }
   if (note.notificationType !== 'REFUND' || !note.data.signedTransactionInfo) {
     log('iap-apple-notify', { type: note.notificationType ?? null, handled: false });
     return 'ignored';

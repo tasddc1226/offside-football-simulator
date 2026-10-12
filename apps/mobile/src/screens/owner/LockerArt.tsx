@@ -1,4 +1,5 @@
 // Pixel artwork shared visually with the web locker room. No native assets or runtime changes.
+import { MEMBER_PALETTES } from '@offside/contracts/membership-rules';
 import Svg, { G, Path, Rect, Text as SvgText } from 'react-native-svg';
 import { titleIconPath } from '@offside/app-core/ownerTitle';
 function Shirt({ x, y, number, color }: { x: number; y: number; number: number; color: string }) {
@@ -50,19 +51,22 @@ function Trophy({
   );
 }
 export function LockerArt({
+  theme = 'classic',
   zone,
   season = 1,
   title = null,
   awards = 0,
 }: {
+  theme?: keyof typeof MEMBER_PALETTES;
   zone: number;
   season?: number;
   title?: string | null;
   awards?: number;
 }) {
+  const palette = MEMBER_PALETTES[theme];
   return (
     <Svg width="100%" height="100%" viewBox="0 0 240 290" fill="none">
-      <Rect width="240" height="290" fill="#273e33" />
+      <Rect width="240" height="290" fill={palette.wall} />
       {[0, 40, 80, 120, 160, 200].map((x) => (
         <G key={x}>
           <Rect x={x} y="10" width="1" height="251" fill="#354c3b" />
@@ -71,12 +75,12 @@ export function LockerArt({
       <Path d="M0 0h240v15H0Z" fill="#59644a" />
       <Path d="M6 2h228v4H6Z" fill="#b8a26a" />
       <Path d="M0 17h240v5H0Z" fill="#16271d" />
-      <Path d="M6 23h228v6H6Z" fill="#d8bd7e" />
+      <Path d="M6 23h228v6H6Z" fill={palette.gold} />
       <Path d="M14 29h212v3H14Z" fill="#857647" />
       <Path d="M0 235h240v55H0Z" fill="#66523a" />
       <Path d="M0 240h240v3H0ZM0 263h240v2H0Z" fill="#806a46" />
       <Path d="M8 35h224v187H8Z" fill="#0c1d16" />
-      <Path d="M13 40h214v179H13Z" fill="#162b20" />
+      <Path d="M13 40h214v179H13Z" fill={palette.bg} />
       <Path d="M15 41h210v2H15Z" fill="#324c34" />
       {zone === 0 ? (
         <>
