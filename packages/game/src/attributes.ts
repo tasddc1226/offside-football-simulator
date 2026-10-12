@@ -3,6 +3,7 @@ import { BODY_DEFAULT, bmiOf } from '@offside/contracts/body';
 import { LEGACY_DETAIL_POSITIONS, type PeakProfile } from '@offside/contracts/positions';
 import { ATTR_KEYS, DPOS, POS, type AttrKey, type Pos } from './data.js';
 import { clamp, ri } from './rng.js';
+import { BAL } from './balance.js';
 import type { GameState } from './types.js';
 import { gSubsText } from './i18n/ko/gSubs.js';
 import { gRoleNameText } from './i18n/ko/gRoleName.js';
@@ -68,6 +69,23 @@ const ROLE_RAW: Record<string, Record<string, number>> = {
     spr: 5,
     str: 5,
     com: 5,
+  },
+  // T-11-229 타겟맨: 같은 스트라이커라도 드리블 대신 헤딩·몸싸움·점프로 OVR이 오른다.
+  TM: {
+    fin: 15,
+    pos: 11,
+    hea: 16,
+    pow: 9,
+    vol: 1,
+    rea: 6,
+    bc: 7,
+    drb: 3,
+    com: 4,
+    acc: 2,
+    spr: 3,
+    str: 12,
+    jmp: 8,
+    agg: 3,
   },
   CF: {
     fin: 11,
@@ -196,8 +214,17 @@ export const POS_ROLES: Record<Pos, string[]> = {
   DF: ['CB', 'RB', 'CDM'],
   GK: ['GK'],
 };
-export const mainRole = (s: Pick<GameState, 'pos' | 'type' | 'dpos'>): string =>
-  s.dpos ? DPOS[s.dpos].role : (TYPE_ROLE[s.type] ?? POS_ROLES[s.pos][0]!);
+/**
+ * T-11-229 타겟맨 유형 스트라이커는 스트라이커·타겟맨 역할 중 OVR이 높은 쪽으로 평가한다(같으면 타겟맨). 몸싸움·헤딩으로
+ * 키워도 OVR이 오르고, 스트라이커처럼 키운 기존 선수도 OVR이 내려가지 않는다. 세부 능력치가 없는 생성 화면은 타겟맨.
+ */
+export function mainRole(
+  s: Pick<GameState, 'pos' | 'type' | 'dpos'> & { sub?: GameState['sub'] },
+): string {
+  const role = s.dpos ? DPOS[s.dpos].role : (TYPE_ROLE[s.type] ?? POS_ROLES[s.pos][0]!);
+  if (role !== 'ST' || s.type !== 'target' || !BAL.targetManRole) return role;
+  return s.sub && ovrRole({ sub: s.sub }, 'ST') > ovrRole({ sub: s.sub }, 'TM') ? 'ST' : 'TM';
+}
 
 function groupOfSub(face: Face, k: string): AttrKey | null {
   for (const g in face)

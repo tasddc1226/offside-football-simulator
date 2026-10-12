@@ -3,6 +3,7 @@ import type { GRoleNameMsgs } from '../ko/gRoleName';
 
 export const gRoleName: Translation<GRoleNameMsgs> = {
   ST: 'ストライカー',
+  TM: 'ターゲットマン',
   CF: 'シャドーストライカー',
   RW: 'ウイング',
   CAM: '攻撃的MF',
