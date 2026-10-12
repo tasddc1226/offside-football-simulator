@@ -96,6 +96,7 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
 
   it('Apple 거래 하나로 아이템을 한 번만 주고, 다른 계정의 거래 · 다른 상품은 받지 않는다', async () => {
     const me = await issueGoogleCookie(ctx);
+    ctx.env.BILLING_ALERTS_ENABLED = '1';
     appleTx.current = appleFor(me.profileId);
     const body = { store: 'apple', productId: REROLL_5, token: 'jws' };
     let res = await claim(me.cookie, body);
@@ -104,6 +105,9 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     // 같은 거래를 다시 보내도(앱이 응답을 못 받아 재전송) 그대로다.
     res = await claim(me.cookie, body);
     expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 5, boost: 0, scout: 0 });
+    expect((await ctx.env.DB.prepare('SELECT * FROM billing_alerts').all()).results).toHaveLength(
+      1,
+    );
     const rows = await ctx.db.select().from(iapPurchases);
     expect(rows).toMatchObject([
       { store: 'apple', transactionId: '2000000001', item: 'reroll', qty: 5, test: true },
@@ -321,5 +325,45 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     expect(await syncGoogleVoided(ctx.env, createDb(ctx.env.DB), now)).toMatchObject({
       revoked: 0,
     });
+  });
+  it('verified Apple notifications converge with claim alerts and reject mixed environments', async () => {
+    ctx.env.BILLING_ALERTS_ENABLED = '1';
+    const me = await issueGoogleCookie(ctx);
+    appleTx.current = appleFor(me.profileId);
+    await claim(me.cookie, { store: 'apple', productId: REROLL_5, token: 'jws' });
+    appleNote.current = {
+      notificationType: 'ONE_TIME_CHARGE',
+      data: {
+        bundleId: 'com.offsidelab.app',
+        environment: 'Sandbox',
+        signedTransactionInfo: 'tx',
+      },
+    };
+    const notify = () =>
+      createApp().request(
+        '/v1/iap/apple/notifications',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ signedPayload: 'jws' }),
+        },
+        ctx.env,
+      );
+    expect((await notify()).status).toBe(200);
+    expect((await ctx.env.DB.prepare('SELECT * FROM billing_alerts').all()).results).toHaveLength(
+      1,
+    );
+    appleNote.current = {
+      notificationType: 'DID_RENEW',
+      data: {
+        bundleId: 'com.offsidelab.app',
+        environment: 'Production',
+        signedTransactionInfo: 'tx',
+      },
+    };
+    expect((await notify()).status).toBe(400);
+    expect((await ctx.env.DB.prepare('SELECT * FROM billing_alerts').all()).results).toHaveLength(
+      1,
+    );
   });
 });

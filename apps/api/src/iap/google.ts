@@ -26,7 +26,11 @@ type ServiceAccount = { client_email: string; private_key: string };
 // 아이솔레이트가 살아 있는 동안 액세스 토큰을 다시 쓴다(한 시간짜리).
 let cached: { key: string; token: string; until: number } | undefined;
 
-async function accessToken(saJson: string, doFetch: typeof fetch, nowS: number): Promise<string> {
+export async function accessToken(
+  saJson: string,
+  doFetch: typeof fetch,
+  nowS: number,
+): Promise<string> {
   if (cached?.key === saJson && cached.until > nowS) return cached.token;
   const sa = JSON.parse(saJson) as ServiceAccount;
   const head = json64({ alg: 'RS256', typ: 'JWT' });
@@ -156,3 +160,20 @@ export async function listVoidedPurchases(
 export const resetGoogleTokenCache = () => {
   cached = undefined;
 };
+
+export async function getGoogleSubscription(saJson: string, token: string, opts: GoogleOpts) {
+  const doFetch = opts.fetcher ?? fetch;
+  const res = await doFetch(
+    `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${ANDROID_PACKAGE}/purchases/subscriptionsv2/tokens/${encodeURIComponent(token)}`,
+    {
+      headers: { authorization: `Bearer ${await accessToken(saJson, doFetch, opts.nowS)}` },
+    },
+  );
+  if (res.status === 400 || res.status === 404 || res.status === 410) return null;
+  if (!res.ok) throw new Error(`Google subscription ${res.status}`);
+  return (await res.json()) as {
+    subscriptionState?: string;
+    testPurchase?: object;
+    lineItems?: { productId?: string; latestSuccessfulOrderId?: string }[];
+  };
+}

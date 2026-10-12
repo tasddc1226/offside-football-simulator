@@ -1517,3 +1517,19 @@ export const careerReminderOutcomes = sqliteTable('career_reminder_outcomes', {
   returnedAt: text('returned_at'),
   retiredAt: text('retired_at'),
 });
+
+/** Verified store events; no receipts, purchase tokens, email addresses or names. */
+export const billingAlerts = sqliteTable(
+  'billing_alerts',
+  {
+    id: text('id').primaryKey(),
+    store: text('store').notNull(),
+    kind: text('kind').notNull(),
+    productId: text('product_id').notNull(),
+    test: integer('test', { mode: 'boolean' }).notNull(),
+    createdAt: text('created_at').notNull(),
+    sentAt: text('sent_at'),
+    leaseUntil: integer('lease_until').notNull().default(0),
+  },
+  (t) => [index('billing_alerts_pending_idx').on(t.sentAt, t.leaseUntil, t.createdAt)],
+);
