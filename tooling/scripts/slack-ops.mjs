@@ -42,6 +42,7 @@ export async function monitor(db, env, now = Date.now(), fetcher = fetch) {
     inspectInfraHealth(state, now);
     issues.push(...state.issues);
   } catch {
+    state = undefined;
     issues.push('인프라 점검 데이터 누락·지연');
   }
   for (const url of ['https://api.offside-lab.com/v1/health', 'https://offside-lab.com/']) {

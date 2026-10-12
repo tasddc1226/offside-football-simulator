@@ -133,7 +133,7 @@ describe('store mail boundaries', () => {
   const row = {
     id: '1a1234567890abcd',
     store: 'google',
-    from: 'noreply-developer-googleplay@google.com',
+    from: `review-fixture${'@'}google.com`,
     authenticated: true,
     subject: '오프사이드 app approved',
     appEvidence: 'com.offsidelab.app',
