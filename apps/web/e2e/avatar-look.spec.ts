@@ -43,3 +43,32 @@ test('자금이 모자라면 살 수 없다(은퇴 뒤 잠금은 game look.test.
   await expect(dialog.getByRole('alert')).toHaveText('자금이 모자라요. 6억원이 필요해요.');
   await expect(dialog.locator('[data-act="look-buy"]')).toHaveCount(0);
 });
+
+test('기록 아이템은 칭호를 얻어야 사고, 산 뒤에는 입고 벗는다', async ({ page }) => {
+  await resumeWithSave(page, {
+    money: 1_000_000,
+    contract: { years: 2, salary: 100_000 },
+    titles: [{ id: 'topscorer', year: 2030 }],
+  });
+  await page.locator('[data-act="avatar-look"]').click();
+  const dialog = page.getByRole('dialog', { name: '선수 꾸미기' });
+  // 칭호가 없는 아이템은 조건만 보이고 살 수 없다.
+  await expect(dialog.locator('[data-look-rec="champ-band"]')).toContainText(
+    "'챔피언' 칭호를 얻으면 열려요",
+  );
+  await dialog.locator('[data-look-rec="champ-band"]').click();
+  await expect(dialog.locator('[data-act="look-rec-buy"]')).toHaveCount(0);
+  // 득점왕 칭호로 열린 황금 축구화(연봉 10억 × 0.5 = 5억).
+  await dialog.locator('[data-look-rec="scorer-boots"]').click();
+  await expect(dialog.locator('[data-act="look-rec-buy"]')).toHaveText('5억원에 사기');
+  await dialog.locator('[data-act="look-rec-buy"]').click();
+  await expect(page.locator('#toast')).toHaveText('황금 축구화를 사서 입었어요.');
+  await expect(dialog).toContainText('선수 자금 95억');
+  await expect(dialog.locator('[data-look-rec="scorer-boots"]')).toContainText('입는 중');
+  const look = await page.evaluate(() => JSON.parse(localStorage.getItem('ft_save')!).look);
+  expect(look).toEqual({ owned: [], pick: { boots: 10 }, rec: ['scorer-boots'] });
+  // 벗으면 기본 축구화로 돌아간다(자금은 그대로).
+  await dialog.locator('[data-look-rec="scorer-boots"]').click();
+  await expect(dialog.locator('[data-look-rec="scorer-boots"]')).toContainText('입기');
+  await expect(dialog).toContainText('선수 자금 95억');
+});

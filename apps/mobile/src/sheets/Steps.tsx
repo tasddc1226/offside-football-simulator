@@ -5,6 +5,7 @@ import type { SheetView } from '@offside/app-core/sheets';
 import { useColors } from '../theme/useColors';
 import { rem } from '../theme/type';
 import { Txt } from '../ui/Txt';
+import { AvatarStage } from './AvatarStage';
 import { ProgBar } from './parts';
 
 export function Steps({ v }: { v: Extract<SheetView, { kind: 'steps' }> }) {
@@ -12,6 +13,7 @@ export function Steps({ v }: { v: Extract<SheetView, { kind: 'steps' }> }) {
   const c = useColors();
   return (
     <>
+      {v.avatar ? <AvatarStage spec={v.avatar} /> : null}
       <Txt v="eyebrow">{s.title}</Txt>
       <ProgBar progress={s.progress} fill={s.fill} />
       <View style={{ gap: 6 }}>

@@ -1877,6 +1877,48 @@ textarea {
   cursor: pointer;
   border-radius: 10px;
 }
+.player .avatar-btn {
+  position: relative;
+}
+/* T-11-191 누를 수 있다는 표시: 오른쪽 아래 '✎ 꾸미기' 칩, 한 번도 안 열었으면 둘레 고리가 깜빡인다. */
+.avatar-chip {
+  position: absolute;
+  right: -8px;
+  bottom: -6px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+}
+.player .avatar-btn.fresh::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 14px;
+  border: 2px solid var(--accent);
+  animation: look-ring 1.6s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes look-ring {
+  from {
+    transform: scale(0.94);
+  }
+  70%,
+  to {
+    transform: scale(1.08);
+    border-color: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .player .avatar-btn.fresh::before {
+    animation: none;
+  }
+}
 .player .avatar-btn:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 3px;
@@ -3203,6 +3245,30 @@ th.n {
 .steps div.done::before {
   content: '✓ ';
   color: var(--good);
+}
+/* T-11-191 프리시즌 준비 시트 위 무대: 내 도트 선수(24×36칸, 2배)가 잔디 줄 위를 돌아다닌다. */
+.avatar-stage {
+  position: relative;
+  height: 72px;
+  border-bottom: 2px solid var(--line);
+  overflow: hidden;
+}
+.avatar-walker {
+  position: absolute;
+  bottom: 0;
+  width: 64px;
+  height: 72px;
+  transform: translateX(-50%);
+  transition-property: left;
+  transition-timing-function: linear;
+}
+.avatar-walker svg {
+  display: block;
+  width: 64px;
+  height: 72px;
+}
+.avatar-walker svg.flip {
+  transform: scaleX(-1);
 }
 /* 판정 게이지 */
 .judge {

@@ -272,6 +272,8 @@ export type LookItem =
 export interface LookState {
   owned: LookItem[];
   pick: Partial<Record<LookItem, number>>;
+  /** 산 기록 아이템 id(look.ts LOOK_RECORDS). 없으면 하나도 안 샀다. */
+  rec?: string[];
 }
 
 export interface GameState {

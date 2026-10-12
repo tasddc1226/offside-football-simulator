@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { avatarPixels, avatarSpec, lookOf, primeAvatarSpec, retiredAvatarSpec } from './avatar.js';
 import { newGame } from './engine.js';
+import { LOOK_ITEMS, lookCode, lookOwned, parseLookCode } from './look.js';
 import {
-  LOOK_ITEMS,
+  buyLookRecord,
+  lookRecordCost,
+  wearLookRecord,
+  LOOK_RECORDS,
   buyLook,
-  lookCode,
   lookCost,
-  lookOwned,
-  parseLookCode,
   setLook,
-} from './look.js';
+} from './look-shop.js';
 import { createRng, setActiveRng } from './rng.js';
 
 const player = (money = 1e6, salary: number | null = 100_000) => {
@@ -49,6 +50,28 @@ describe('도트 선수 꾸미기 (T-11-191)', () => {
     const s = player();
     expect(buyLook(s, 'skin', 99)).toBe(false);
     expect(setLook(s, 'band', 1)).toBe(false);
+  });
+
+  it('기록 아이템은 칭호를 얻어야 사고, 항목을 산 것과 따로 산다', () => {
+    const boots = LOOK_RECORDS.find((r) => r.id === 'scorer-boots')!;
+    const s = player();
+    expect(buyLook(s, 'boots', boots.value)).toBe(false);
+    expect(buyLookRecord(s, boots)).toBe(false);
+    s.titles = [{ id: 'topscorer', year: 2030 }];
+    expect(lookRecordCost(s)).toBe(50_000);
+    expect(buyLookRecord(s, boots)).toBe(true);
+    expect(s.money).toBe(1e6 - 50_000);
+    expect(s.look?.pick.boots).toBe(boots.value);
+    expect(s.look?.owned).toEqual([]);
+    expect(setLook(s, 'boots', boots.value)).toBe(false);
+    expect(buyLookRecord(s, boots)).toBe(false);
+    // 축구화 항목을 안 샀으면 벗을 때 기본 모습으로 돌아간다.
+    expect(wearLookRecord(s, boots, false)).toBe(true);
+    expect(s.look?.pick.boots).toBeUndefined();
+    expect(wearLookRecord(s, boots, true)).toBe(true);
+    expect(lookCode(s.look)).toBe(`b${boots.value}`);
+    expect(parseLookCode(`b${boots.value}`).boots).toBe(boots.value);
+    expect(avatarSpec(s).boots).toBe(boots.value);
   });
 
   it('은퇴하면 사거나 바꿀 수 없다', () => {

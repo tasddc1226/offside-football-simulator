@@ -3,6 +3,7 @@ import type { AvatarLookMsgs } from '../ko/avatarLook';
 
 export const avatarLook: Translation<AvatarLookMsgs> = {
   open: 'Customize player',
+  chip: 'Style',
   title: 'Customize player',
   intro:
     'Buy an item once with your player’s money and you can change it any time this career. When you retire, your current look stays.',

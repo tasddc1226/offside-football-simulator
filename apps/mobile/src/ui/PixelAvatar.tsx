@@ -33,7 +33,7 @@ export const PixelAvatar = memo(function PixelAvatar({
           x={r.x}
           y={r.y}
           width={r.w}
-          height={1}
+          height={r.h}
           fill={r.fill}
           {...(r.opacity ? { fillOpacity: r.opacity } : {})}
         />

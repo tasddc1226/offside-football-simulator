@@ -1,152 +1,123 @@
 // ───────── T-11-191 도트 선수 모션 ─────────
-// 서 있는 모습(avatar.ts의 글자 지도)에서 팔 · 다리를 바꾸고, 칠한 뒤 몸을 올리거나(점프) 내리고(웅크림 · 무릎),
-// 공 · 트로피 같은 소품을 얹어 프레임을 만든다. 꾸미기(피부 · 머리 · 축구화 · 손목 밴드 등)와 유니폼은 서 있는 모습과 같은
-// 규칙으로 칠하므로 모든 모션에 그대로 나온다. 프레임은 24×36(머리 위 4줄 여유)이고, 게임 RNG는 쓰지 않는다.
-import { AVATAR_H, AVATAR_W, avatarChars, paintChars, type AvatarSpec } from './avatar.js';
+// 미니형 선수(avatar-mini.ts)의 모션. 자세 그림은 머리 모양마다 생성 시트에서 옮긴 64×72 재질 글자 지도이고
+// (avatar-mini-motion/<머리 모양>.ts, 무대가 열릴 때 그 선수 머리 모양 하나만 불러온다), 서 있는 자세는 카드와 같은 그림을 쓴다.
+// 색(피부 · 머리 · 유니폼 · 축구화 · 양말 · 밴드 · 고글)은 서 있는 모습과 같은 규칙으로 칠하고, 점프 · 숨쉬기는 칠한 뒤 몸을 옮기며,
+// 공 · 트로피 · 반짝임 · 흙먼지는 마지막에 얹는다. 프레임은 64×72(논리 32×36)이고, 게임 RNG는 쓰지 않는다.
+import { avatarPixels, miniColors, type AvatarSpec } from './avatar.js';
+import { MINI_SPRITES } from './avatar-mini-data.js';
+import { MINI_W, paintMini, type MiniBody } from './avatar-mini.js';
 
-/** 머리 위 여유 줄(점프 · 헤딩 · 트로피). 프레임의 y = 서 있는 자세 y + MOTION_TOP. */
+/** 머리 위 여유 줄(논리 칸). 프레임의 y = 서 있는 자세 y + MOTION_TOP. */
 export const MOTION_TOP = 4;
-export const MOTION_H = AVATAR_H + MOTION_TOP;
+/** 프레임 논리 크기(viewBox). 실제 픽셀은 두 배다. */
+export const MOTION_W = 32;
+export const MOTION_H = 36;
+const FW = MOTION_W * 2;
+const FH = MOTION_H * 2;
+/** 서 있는 그림(48×64)을 놓는 자리. */
+const SX = (FW - MINI_W) / 2;
+const SY = MOTION_TOP * 2;
 
-/** 부분 그림. '.'은 그대로 두고 '_'는 지운다. 좌표는 서 있는 자세 기준(y는 음수 가능). */
-interface Part {
-  x: number;
-  y: number;
-  r: readonly string[];
+/** 생성 시트에서 옮긴 자세. stand는 카드와 같은 서 있는 그림이다. */
+export const MINI_POSES = [
+  'runL',
+  'air',
+  'runR',
+  'juggle',
+  'balance',
+  'kick',
+  'fist',
+  'tuck',
+  'spread',
+  'jumpUp',
+  'kneelOut',
+  'kneelUp',
+  'kneelFist',
+  'waveHigh',
+  'waveLow',
+  'lift',
+  'sad',
+] as const;
+export type MiniPose = (typeof MINI_POSES)[number];
+/** [지도(길이 압축), 얼굴 x, y, 엠블럼 x, y, 완장 x, y, 앞발 x, y, 맨 위 손 x, y] — 좌표는 64×72 프레임 기준, -1은 없음. */
+export type MiniPoseData = Record<MiniPose, readonly [string, ...number[]]>;
+
+type Px = (string | null)[][];
+type Pt = readonly [number, number];
+interface PoseInfo {
+  rows: string[];
+  face: Pt;
+  crest: Pt | null;
+  arm: Pt;
+  foot: Pt;
+  top: Pt;
 }
-const mirror = (p: Part): Part => {
-  const w = Math.max(...p.r.map((row) => row.length));
-  return {
-    x: AVATAR_W - p.x - w,
-    y: p.y,
-    r: p.r.map((row) => [...row.padEnd(w, '.')].reverse().join('')),
-  };
+export type MiniPoses = Record<MiniPose, PoseInfo>;
+
+const decode = (rle: string): string[] => {
+  let s = '';
+  for (const [, ch, n] of rle.matchAll(/([^\d])(\d*)/g)) s += ch!.repeat(n ? Number(n) : 1);
+  return Array.from({ length: FH }, (_, y) => s.slice(y * FW, (y + 1) * FW));
 };
 
-// ── 팔(화면 왼쪽 팔 기준, 오른쪽은 좌우를 뒤집는다). 기본 팔(가로 3~5, 세로 15~20)을 지우고 새로 그린다.
-const ARM_CLEAR: Part[] = [
-  { x: 3, y: 15, r: ['___', '___', '___', '___', '___'] },
-  { x: 4, y: 20, r: ['__'] },
-];
-const ARMS = {
-  down: [],
-  /** 팔꿈치를 굽혀 손이 한 칸 위(달리기). */
-  bent: [...ARM_CLEAR, { x: 3, y: 15, r: ['OkkO', 'OKKO', 'OZZO', 'OssO', '.OO.'] }],
-  /** 머리 옆으로 곧게 든 팔(만세 · 인사). */
-  up: [
-    ...ARM_CLEAR,
-    {
-      x: 1,
-      y: 5,
-      r: ['.OO.', 'OssO', 'OssO', 'OZZO', 'OkkO', 'OkkO', 'OkkO', 'OKkO', 'OKkkk'],
-    },
-    { x: 2, y: 14, r: ['OKkk'] },
-  ],
-  /** 손을 흔드는 팔(up에서 손만 한 칸 바깥). */
-  wave: [
-    ...ARM_CLEAR,
-    { x: 0, y: 5, r: ['.OO.', 'OssO', 'OssO'] },
-    { x: 1, y: 8, r: ['OZZO', 'OkkO', 'OkkO', 'OkkO', 'OKkO', 'OKkkk'] },
-    { x: 2, y: 14, r: ['OKkk'] },
-  ],
-  /** 머리 위로 모은 팔(트로피 들기). 머리 가장자리를 살짝 가린다. */
-  hold: [
-    ...ARM_CLEAR,
-    {
-      x: 3,
-      y: 0,
-      r: [
-        '.OO.',
-        'OssO',
-        'OssO',
-        'OZZO',
-        'OkkO',
-        'OkkO',
-        'OkkO',
-        'OkkO',
-        'OkkO',
-        'OkkO',
-        'OkkO',
-        'OkkO',
-        'OKkO',
-        'OKkk',
-      ],
-    },
-    { x: 4, y: 14, r: ['K'] },
-  ],
-  /** 주먹을 어깨 위로(주먹 세리머니). */
-  fist: [...ARM_CLEAR, { x: 2, y: 9, r: ['.OO.', 'OssO', 'OZZO', 'OkkO', 'Okkk', 'OKKk', '.OOO'] }],
-  /** 옆으로 뻗은 팔(균형 · 비행기 세리머니). */
-  out: [...ARM_CLEAR, { x: 0, y: 13, r: ['.OOOOO', 'OsZkkkk', 'OsZKKkk', '.OOOOOO'] }],
-} satisfies Record<string, Part[]>;
-export type MotionArm = keyof typeof ARMS;
-
-// ── 다리(세로 23~28 여섯 줄 전체). runL은 화면 왼쪽 다리를 든 것, runR은 그 거울.
-const LEG_STAND = [
-  '.......OssO..OssO.......',
-  '.......OccO..OccO.......',
-  '.......OCCO..OCCO.......',
-  '.......OccO..OccO.......',
-  '......ObbbO..ObbbO......',
-  '......OOOOO..OOOOO......',
-];
-const LEG_RUN_L = [
-  '.......OssO..OssO.......',
-  '.......OccO..OccO.......',
-  '.......ObbbO.OCCO.......',
-  '.......OOOOO.OccO.......',
-  '.............ObbbO......',
-  '.............OOOOO......',
-];
-const LEGS = {
-  stand: LEG_STAND,
-  runL: LEG_RUN_L,
-  runR: mirror({ x: 0, y: 23, r: LEG_RUN_L }).r,
-  /** 무릎 꿇기: 다리를 지우고, 몸을 내린 뒤(sink 3) 무릎을 따로 그린다. */
-  kneel: Array<string>(6).fill('________________________'),
-} satisfies Record<string, readonly string[]>;
-export type MotionLegs = keyof typeof LEGS;
-const KNEES: Part = {
-  x: 0,
-  y: 26,
-  r: ['.......OssO..OssO.......', '.......OssO..OssO.......', '.......OOOO..OOOO.......'],
+const LOADERS: Record<keyof typeof MINI_SPRITES, () => Promise<{ default: MiniPoseData }>> = {
+  short: () => import('./avatar-mini-motion/short.js'),
+  fringe: () => import('./avatar-mini-motion/fringe.js'),
+  long: () => import('./avatar-mini-motion/long.js'),
+  mohawk: () => import('./avatar-mini-motion/mohawk.js'),
+  slick: () => import('./avatar-mini-motion/slick.js'),
+  buzz: () => import('./avatar-mini-motion/buzz.js'),
+  afro: () => import('./avatar-mini-motion/afro.js'),
+  bun: () => import('./avatar-mini-motion/bun.js'),
+  spiky: () => import('./avatar-mini-motion/spiky.js'),
 };
-
-// ── 소품
-const BALL = ['.OOO.', 'OBBBO', 'OBDBO', 'OBBBO', '.OOO.'];
-const TROPHY = [
-  '...OOOOOO...',
-  '..OyyyyyyO..',
-  'OOOyyyyyyOOO',
-  'Oy.OyyyYO.yO',
-  '.OOOyyyYOOO.',
-  '....OyYO....',
-  '...OYYYYO...',
-  '...OOOOOO...',
-];
-const SPARKLE = ['.Y.', 'YyY', '.Y.'];
-const DUST = ['u.u.', '.u.u'];
+const loaded = new Map<string, Promise<MiniPoses>>();
+/** 머리 모양 하나의 자세 그림을 불러온다(한 번만). 무대(진행 시트)가 열릴 때 부른다. */
+export function loadMotionPoses(style: AvatarSpec['hairStyle']): Promise<MiniPoses> {
+  let p = loaded.get(style);
+  if (!p) {
+    p = LOADERS[style]()
+      .then(({ default: d }) => {
+        const out = {} as MiniPoses;
+        for (const k of MINI_POSES) {
+          const [rle, fx, fy, cx, cy, ax, ay, px, py, tx, ty] = d[k] as [string, ...number[]];
+          out[k] = {
+            rows: decode(rle),
+            face: [fx!, fy!],
+            crest: cx! < 0 ? null : [cx!, cy!],
+            arm: [ax!, ay!],
+            foot: [px!, py!],
+            top: [tx!, ty!],
+          };
+        }
+        return out;
+      })
+      .catch((error: unknown) => {
+        loaded.delete(style);
+        throw error;
+      });
+    loaded.set(style, p);
+  }
+  return p;
+}
 
 export interface MotionFrame {
   /** 이 프레임을 보여 줄 시간(ms). */
   ms: number;
-  /** [화면 왼쪽 팔, 화면 오른쪽 팔] — 없으면 기본(내린 팔). */
-  arms?: [MotionArm, MotionArm];
-  legs?: MotionLegs;
+  /** 자세(없으면 서 있는 그림). */
+  pose?: MiniPose;
   /** 표정 덮어쓰기(부상 중 아픈 표정은 그대로). */
   expr?: AvatarSpec['expr'];
-  /** 윗몸(세로 0~22)을 n칸 내린다 — 숨쉬기 · 웅크림 · 무릎 꿇기. */
+  /** 윗몸을 n칸(논리) 내린다 — 숨쉬기 · 웅크림. */
   sink?: number;
-  /** 몸 전체(세로 0~28)를 n칸 올린다 — 점프. 그림자는 바닥에 남는다. */
+  /** 몸 전체를 n칸(논리) 올린다 — 점프. 그림자는 바닥에 남는다. */
   lift?: number;
-  /** 머리(세로 0~12)만 n칸 숙인다. */
-  bow?: number;
-  /** 그림자 폭(기본 14). */
+  /** 그림자 폭(실제 픽셀, 기본 30). */
   shadow?: number;
-  /** 공 왼쪽 위 좌표(서 있는 자세 기준). */
-  ball?: [number, number];
-  /** 트로피 위쪽 y(가로는 가운데). */
-  trophy?: number;
+  /** 공: 앞발(foot) · 얼굴(head) 기준이나 프레임 좌표(at)로 왼쪽 위를 정한다(실제 픽셀). */
+  ball?: { from: 'foot' | 'head' | 'at'; d: Pt };
+  /** 트로피: 맨 위 손 위에 얹는다. */
+  trophy?: boolean;
   sparkle?: boolean;
   dust?: boolean;
 }
@@ -157,16 +128,11 @@ export interface Motion {
   loop: boolean;
 }
 
-const stepF = (legs: MotionLegs, arms: [MotionArm, MotionArm], ms = 130): MotionFrame => ({
-  ms,
-  legs,
-  arms,
-});
 const RUN: MotionFrame[] = [
-  stepF('runL', ['down', 'bent']),
-  { ms: 110, arms: ['bent', 'bent'], lift: 1, shadow: 12 },
-  stepF('runR', ['bent', 'down']),
-  { ms: 110, arms: ['bent', 'bent'], lift: 1, shadow: 12 },
+  { ms: 130, pose: 'runL' },
+  { ms: 110, pose: 'air', lift: 1, shadow: 26 },
+  { ms: 130, pose: 'runR' },
+  { ms: 110, pose: 'air', lift: 1, shadow: 26 },
 ];
 
 /** 모션 목록. 순서가 화면(모션 고르기 · 견본) 순서다. */
@@ -186,43 +152,43 @@ export const MOTIONS = {
   dribble: {
     loop: true,
     frames: [
-      { ...RUN[0]!, ball: [14, 26] },
-      { ...RUN[1]!, ball: [13, 24] },
-      { ...RUN[2]!, ball: [6, 26] },
-      { ...RUN[3]!, ball: [7, 24] },
+      { ...RUN[0]!, ball: { from: 'foot', d: [1, -7] } },
+      { ...RUN[1]!, ball: { from: 'foot', d: [0, -6] } },
+      { ...RUN[2]!, ball: { from: 'foot', d: [1, -7] } },
+      { ...RUN[3]!, ball: { from: 'foot', d: [0, -6] } },
     ],
   },
   /** 공 리프팅(오른발로 띄우기). */
   juggle: {
     loop: true,
     frames: [
-      { ms: 160, legs: 'runR', arms: ['out', 'down'], ball: [13, 21] },
-      { ms: 140, arms: ['out', 'down'], ball: [13, 16] },
-      { ms: 180, arms: ['out', 'down'], ball: [13, 12] },
-      { ms: 140, arms: ['out', 'down'], ball: [13, 16] },
+      { ms: 160, pose: 'juggle', ball: { from: 'foot', d: [-4, -12] } },
+      { ms: 140, pose: 'juggle', ball: { from: 'foot', d: [-4, -22] } },
+      { ms: 180, pose: 'juggle', ball: { from: 'foot', d: [-4, -32] } },
+      { ms: 140, pose: 'juggle', ball: { from: 'foot', d: [-4, -22] } },
     ],
   },
   /** 슈팅: 들어 올렸다 차고 공이 날아간다. */
   shoot: {
     loop: true,
     frames: [
-      { ms: 300, ball: [13, 26] },
-      { ms: 260, legs: 'runR', arms: ['out', 'down'], ball: [11, 26], expr: 'happy' },
-      { ms: 90, arms: ['out', 'bent'], ball: [15, 23], expr: 'shout', sink: 1 },
-      { ms: 90, arms: ['out', 'bent'], ball: [19, 15], expr: 'shout' },
-      { ms: 90, arms: ['out', 'bent'], ball: [19, 5], expr: 'shout' },
-      { ms: 600, arms: ['fist', 'down'], expr: 'shout' },
+      { ms: 300, pose: 'balance', ball: { from: 'at', d: [42, 62] } },
+      { ms: 260, pose: 'juggle', ball: { from: 'at', d: [42, 62] } },
+      { ms: 90, pose: 'kick', ball: { from: 'foot', d: [1, -6] } },
+      { ms: 90, pose: 'kick', ball: { from: 'at', d: [54, 30] } },
+      { ms: 90, pose: 'kick', ball: { from: 'at', d: [56, 8] } },
+      { ms: 600, pose: 'fist' },
     ],
   },
   /** 헤딩: 웅크렸다 뛰어올라 머리로 받는다. */
   header: {
     loop: true,
     frames: [
-      { ms: 260, sink: 1, ball: [10, -12] },
-      { ms: 120, lift: 2, arms: ['bent', 'bent'], shadow: 12, ball: [10, -9] },
-      { ms: 160, lift: 3, arms: ['out', 'out'], shadow: 10, ball: [10, -5], expr: 'blink' },
-      { ms: 120, lift: 2, arms: ['out', 'out'], shadow: 12, ball: [16, -9], expr: 'shout' },
-      { ms: 160, sink: 1, ball: [21, -12] },
+      { ms: 260, sink: 1, ball: { from: 'head', d: [18, -22] } },
+      { ms: 120, pose: 'tuck', lift: 2, shadow: 26, ball: { from: 'head', d: [18, -14] } },
+      { ms: 160, pose: 'spread', lift: 3, shadow: 22, ball: { from: 'head', d: [18, -8] } },
+      { ms: 120, pose: 'spread', lift: 2, shadow: 26, ball: { from: 'head', d: [30, -16] } },
+      { ms: 160, sink: 1, ball: { from: 'head', d: [40, -24] } },
       { ms: 500 },
     ],
   },
@@ -231,10 +197,10 @@ export const MOTIONS = {
     loop: true,
     frames: [
       { ms: 300 },
-      { ms: 200, arms: ['down', 'fist'], expr: 'shout' },
-      { ms: 160, arms: ['down', 'fist'], expr: 'shout', sink: 1 },
-      { ms: 200, arms: ['down', 'fist'], expr: 'shout' },
-      { ms: 160, arms: ['down', 'fist'], expr: 'shout', sink: 1 },
+      { ms: 200, pose: 'fist' },
+      { ms: 160, pose: 'fist', sink: 1 },
+      { ms: 200, pose: 'fist' },
+      { ms: 160, pose: 'fist', sink: 1 },
     ],
   },
   /** 만세 점프. */
@@ -242,9 +208,9 @@ export const MOTIONS = {
     loop: true,
     frames: [
       { ms: 200, sink: 1, expr: 'happy' },
-      { ms: 160, lift: 2, arms: ['up', 'up'], expr: 'shout', shadow: 12 },
-      { ms: 200, lift: 3, arms: ['up', 'up'], expr: 'shout', shadow: 10 },
-      { ms: 160, lift: 1, arms: ['up', 'up'], expr: 'shout', shadow: 12 },
+      { ms: 160, pose: 'jumpUp', lift: 2, shadow: 26 },
+      { ms: 200, pose: 'jumpUp', lift: 3, shadow: 22 },
+      { ms: 160, pose: 'jumpUp', lift: 1, shadow: 26 },
     ],
   },
   /** 무릎 슬라이딩. */
@@ -253,117 +219,160 @@ export const MOTIONS = {
     frames: [
       { ...RUN[0]! },
       { ...RUN[1]! },
-      { ms: 160, legs: 'kneel', sink: 3, arms: ['out', 'out'], expr: 'shout', dust: true },
-      { ms: 400, legs: 'kneel', sink: 3, arms: ['up', 'up'], expr: 'shout' },
-      { ms: 400, legs: 'kneel', sink: 3, arms: ['fist', 'fist'], expr: 'shout' },
+      { ms: 160, pose: 'kneelOut', dust: true },
+      { ms: 400, pose: 'kneelUp' },
+      { ms: 400, pose: 'kneelFist' },
     ],
   },
   /** 관중에게 손 흔들기. */
   wave: {
     loop: true,
     frames: [
-      { ms: 260, arms: ['down', 'up'], expr: 'happy' },
-      { ms: 260, arms: ['down', 'wave'], expr: 'happy' },
+      { ms: 260, pose: 'waveHigh' },
+      { ms: 260, pose: 'waveLow' },
     ],
   },
   /** 트로피 들기. */
   trophy: {
     loop: true,
     frames: [
-      { ms: 300, arms: ['hold', 'hold'], trophy: -4, expr: 'shout' },
-      { ms: 300, arms: ['hold', 'hold'], trophy: -4, expr: 'shout', sparkle: true },
-      { ms: 220, arms: ['hold', 'hold'], trophy: -3, expr: 'happy', sink: 1 },
+      { ms: 300, pose: 'lift', trophy: true },
+      { ms: 300, pose: 'lift', trophy: true, sparkle: true },
+      { ms: 220, pose: 'lift', trophy: true, sink: 1 },
     ],
   },
   /** 좌절(무릎 꿇고 고개 숙임). */
   sad: {
     loop: true,
     frames: [
-      { ms: 900, legs: 'kneel', sink: 3, bow: 1, expr: 'tired' },
-      { ms: 600, legs: 'kneel', sink: 3, bow: 2, expr: 'tired' },
+      { ms: 900, pose: 'sad' },
+      { ms: 600, pose: 'sad', sink: 1 },
     ],
   },
 } satisfies Record<string, Motion>;
 export type MotionId = keyof typeof MOTIONS;
 export const MOTION_IDS = Object.keys(MOTIONS) as MotionId[];
 
-type Px = (string | null)[][];
+// ── 소품(실제 픽셀). O 바깥선, B/D 공 흰 · 검은 조각, y/Y 트로피 금 · 그늘, w 반짝임, u 흙먼지.
+const BALL = ['.OOOO.', 'OBBDBO', 'OBDDBO', 'ODBBBO', 'OBBDBO', '.OOOO.'];
+const TROPHY = [
+  '..OOOOOOOOOO..',
+  '.OyyyyyyyyyYO.',
+  'OOyyyyyyyyyYOO',
+  'OyOyyyyyyyYOyO',
+  'OyOyyyyyyyYOyO',
+  '.OOyyyyyyyYOO.',
+  '...OyyyyyYO...',
+  '....OyyyYO....',
+  '.....OyYO.....',
+  '.....OyYO.....',
+  '....OYYYYO....',
+  '...OyyyyyYO...',
+  '...OOOOOOOO...',
+];
+const SPARKLE = ['..w..', '..w..', 'wwyww', '..w..', '..w..'];
+const DUST = ['.u..u.', 'uu.uu.', '.uu..u'];
+const PROP: Record<string, string> = {
+  O: '#16171e',
+  B: '#f4f4ef',
+  D: '#1c1c1f',
+  y: '#f0b437',
+  Y: '#b8860b',
+  w: '#fff6c8',
+  u: '#c9b48a',
+};
+const SHADOW = 'rgba(0,0,0,.28)';
 
-/** 글자 지도에 부분 그림을 얹는다(top: 지도 위쪽 여유 줄). */
-function put(g: string[][], p: Part, top: number) {
-  p.r.forEach((row, i) => {
-    const y = p.y + i + top;
-    if (y < 0 || y >= g.length) return;
+const stamp = (px: Px, art: readonly string[], x0: number, y0: number) =>
+  art.forEach((row, y) => {
     for (let x = 0; x < row.length; x++) {
       const ch = row[x]!;
-      const gx = p.x + x;
-      if (ch === '.' || gx < 0 || gx >= AVATAR_W) continue;
-      g[y]![gx] = ch === '_' ? '.' : ch;
+      const yy = y0 + y,
+        xx = x0 + x;
+      if (ch !== '.' && yy >= 0 && yy < FH && xx >= 0 && xx < FW) px[yy]![xx] = PROP[ch]!;
     }
   });
-}
 
-/** 색 격자에서 세로 from~to 줄을 dy만큼 옮긴다(빈 칸은 덮지 않는다). */
-function shift(px: Px, from: number, to: number, dy: number) {
-  if (!dy) return;
-  const rows = px.slice(from, to + 1).map((r) => [...r]);
-  for (let y = from; y <= to; y++) px[y] = Array<string | null>(AVATAR_W).fill(null);
-  rows.forEach((r, i) => {
+/** 칠한 격자의 from~to 줄을 dy만큼 옮긴다(빈 줄은 투명). */
+function shiftRows(px: Px, from: number, to: number, dy: number) {
+  const band = px.slice(from, to).map((r) => [...r]);
+  for (let y = from; y < to; y++) px[y] = Array<string | null>(FW).fill(null);
+  band.forEach((r, i) => {
     const y = from + i + dy;
-    if (y < 0 || y >= px.length) return;
+    if (y < 0 || y >= FH) return;
     r.forEach((c, x) => {
       if (c) px[y]![x] = c;
     });
   });
 }
 
-/** 한 프레임 → 24×36 색 격자. */
-export function motionFrame(sp: AvatarSpec, f: MotionFrame): Px {
-  const T = MOTION_TOP;
+/** 한 프레임 → 64×72 색 격자. poses가 아직 없으면(불러오는 중) 서 있는 그림으로 그린다. */
+export function motionFrame(sp: AvatarSpec, f: MotionFrame, poses?: MiniPoses | null): Px {
+  // 목발을 짚거나 은퇴식 소품을 든 선수는 준비 운동 대신 정지 자세로 둔다. 소품도 함께 보존한다.
+  if (sp.acc.some((a) => a === 'crutch' || a === 'suit' || a === 'bouquet')) f = { ms: f.ms };
   const spec = f.expr !== undefined && sp.expr !== 'pain' ? { ...sp, expr: f.expr } : sp;
-  const blank = () => Array.from({ length: MOTION_H }, () => Array<string>(AVATAR_W).fill('.'));
-  const g = [
-    ...Array.from({ length: T }, () => Array<string>(AVATAR_W).fill('.')),
-    ...avatarChars(spec),
-  ];
-  // 그림자는 따로 그린다(몸이 떠도 바닥에 남게).
-  g[29 + T] = Array<string>(AVATAR_W).fill('.');
-  const [la, ra] = f.arms ?? ['down', 'down'];
-  for (const p of ARMS[la]) put(g, p, T);
-  for (const p of ARMS[ra]) put(g, mirror(p), T);
-  if (f.legs) put(g, { x: 0, y: 23, r: LEGS[f.legs] }, T);
-  const px = paintChars(spec, g, T);
-  // 몸 옮기기: 머리 숙이기 → 윗몸 내리기 → 몸 전체 올리기.
-  if (f.bow) shift(px, T, 12 + T, f.bow);
-  if (f.sink) shift(px, 0, 22 + T, f.sink);
-  if (f.lift) shift(px, 0, 28 + T, -f.lift);
-  // 몸을 옮긴 뒤에 얹는 것: 무릎 · 그림자 · 소품.
-  const over = blank();
-  if (f.legs === 'kneel') put(over, KNEES, T);
-  const sw = f.shadow ?? 14;
-  put(over, { x: (AVATAR_W - sw) / 2, y: 29, r: ['n'.repeat(sw)] }, T);
+  const info = f.pose && poses ? poses[f.pose] : null;
+  let px: Px;
+  let face: Pt = [SX, SY];
+  if (info) {
+    face = info.face;
+    const body: MiniBody = {
+      crest: info.crest,
+      arm: info.arm,
+      wrists: [],
+      ox: face[0],
+      collarY: face[1] + 34,
+    };
+    px = paintMini(info.rows, spec, miniColors(spec), body, {
+      stand: MINI_SPRITES[sp.hairStyle],
+      at: face,
+    });
+  } else {
+    const still = avatarPixels(spec);
+    px = Array.from({ length: FH }, () => Array<string | null>(FW).fill(null));
+    still.forEach((row, y) => row.forEach((c, x) => (px[SY + y]![SX + x] = c)));
+  }
+  // 몸 옮기기(논리 1칸 = 실제 2줄): 윗몸 내리기 → 몸 전체 올리기.
+  const waist = face[1] + 44;
+  if (f.sink) shiftRows(px, 0, waist, f.sink * 2);
+  const lift = (f.lift ?? 0) * 2;
+  if (lift) shiftRows(px, 0, FH, -lift);
+  // 그림자(몸 뒤, 바닥에 남는다).
+  const sw = f.shadow ?? 30;
+  for (let y = FH - 3; y < FH - 1; y++)
+    for (
+      let x = (FW - sw) / 2 + (y === FH - 3 ? 2 : 0);
+      x < (FW + sw) / 2 - (y === FH - 3 ? 2 : 0);
+      x++
+    )
+      if (!px[y]![x]) px[y]![x] = SHADOW;
+  // 소품(몸 앞).
   if (f.dust) {
-    put(over, { x: 2, y: 27, r: DUST }, T);
-    put(over, mirror({ x: 2, y: 27, r: DUST }), T);
+    stamp(px, DUST, 6, FH - 6);
+    stamp(px, DUST, FW - 12, FH - 6);
   }
-  if (f.trophy !== undefined) put(over, { x: 6, y: f.trophy, r: TROPHY }, T);
+  if (f.trophy) {
+    const top = info?.top ?? [FW / 2, 12];
+    stamp(px, TROPHY, top[0] - 7, top[1] - TROPHY.length - lift + (f.sink ?? 0) * 2);
+  }
   if (f.sparkle) {
-    put(over, { x: 1, y: -3, r: SPARKLE }, T);
-    put(over, mirror({ x: 1, y: -3, r: SPARKLE }), T);
+    stamp(px, SPARKLE, 4, 2);
+    stamp(px, SPARKLE, FW - 9, 4);
   }
-  if (f.ball) put(over, { x: f.ball[0], y: f.ball[1], r: BALL }, T);
-  const top = paintChars(spec, over, T);
-  // 그림자는 몸 뒤, 나머지 소품은 몸 앞.
-  return px.map((row, y) =>
-    row.map((c, x) => {
-      const o = top[y]![x];
-      if (!o) return c;
-      return over[y]![x] === 'n' ? (c ?? o) : o;
-    }),
-  );
+  if (f.ball) {
+    const [dx, dy] = f.ball.d;
+    const [bx, by] =
+      f.ball.from === 'foot'
+        ? [(info?.foot[0] ?? SX + 36) + dx, (info?.foot[1] ?? FH - 4) + dy - lift]
+        : f.ball.from === 'head'
+          ? [face[0] + dx, face[1] + dy - lift]
+          : [dx, dy];
+    stamp(px, BALL, bx, by);
+  }
+  return px;
 }
 
 /** 모션 → 프레임 색 격자 목록. */
-export function motionFrames(sp: AvatarSpec, id: MotionId): Px[] {
-  return MOTIONS[id].frames.map((f) => motionFrame(sp, f));
+export function motionFrames(sp: AvatarSpec, id: MotionId, poses?: MiniPoses | null): Px[] {
+  return MOTIONS[id].frames.map((f) => motionFrame(sp, f, poses));
 }

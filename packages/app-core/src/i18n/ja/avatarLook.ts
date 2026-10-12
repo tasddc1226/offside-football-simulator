@@ -3,6 +3,7 @@ import type { AvatarLookMsgs } from '../ko/avatarLook';
 
 export const avatarLook: Translation<AvatarLookMsgs> = {
   open: '選手をカスタマイズ',
+  chip: 'きせかえ',
   title: '選手カスタマイズ',
   intro:
     '選手の資金で項目を一度買えば、このキャリアの間いつでも変えられます。引退すると今の姿で残ります。',

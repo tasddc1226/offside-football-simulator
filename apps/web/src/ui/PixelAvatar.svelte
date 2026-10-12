@@ -6,4 +6,4 @@
   const rects = $derived(avatarRects(avatarPixels(spec)));
 </script>
 
-<svg class="avatar" viewBox="0 0 24 32" shape-rendering="crispEdges" aria-hidden="true">{#each rects as r, i (i)}<rect x={r.x} y={r.y} width={r.w} height="1" fill={r.fill} fill-opacity={r.opacity} />{/each}</svg>
+<svg class="avatar" viewBox="0 0 24 32" shape-rendering="crispEdges" aria-hidden="true">{#each rects as r, i (i)}<rect x={r.x} y={r.y} width={r.w} height={r.h} fill={r.fill} fill-opacity={r.opacity} />{/each}</svg>

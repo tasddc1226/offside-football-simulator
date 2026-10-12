@@ -1,5 +1,6 @@
 // 시트 본문 뷰 모델. 게임 진행 액션(game-actions.ts)이 게임 상태에서 화면에 필요한 값만 골라 만들고,
 // 웹(ui/sheets/*.svelte)·앱 시트 컴포넌트가 그대로 그린다(컴포넌트는 게임 로직을 직접 부르지 않는다).
+import type { AvatarSpec } from '@offside/game/avatar';
 import type { Chip } from '@offside/game/stats';
 import type { TitleView } from '@offside/game/titles';
 import type { Promotion } from '@offside/game/promotion';
@@ -101,6 +102,8 @@ export type SheetView =
       progress: number;
       /** 진행률 막대가 다음 값까지 차오르는 시간(ms) — 한 단계 길이와 같게 둬 끊김 없이 찬다(T-10-123). */
       fill: number;
+      /** T-11-191 막대 위 무대에서 돌아다니는 내 도트 선수(프리시즌 준비). 없으면 무대를 그리지 않는다. */
+      avatar?: AvatarSpec;
     }
   | {
       /** T-10-028: 구간 경기를 한 경기씩 흘려보내는 중계 시트(T-10-024 전의 연출). 끝나면 리포트로 넘어간다. */
