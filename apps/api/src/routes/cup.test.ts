@@ -115,6 +115,29 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
     expect(await ctx.db.select().from(cupEntries)).toHaveLength(1);
   });
 
+  it('T-11-228 신청 뒤 팀 이름·감독·선발을 바꾸면 대회 화면에도 지금 팀으로 보인다', async () => {
+    const a = await owner(9);
+    const save = (name: string, manager: string, slots: (string | null)[]) =>
+      call('PUT', '/v1/owner-team', {
+        cookie: a.cookie,
+        body: { name, manager, formation: '4-3-3', slots },
+      });
+    expect(
+      (await save('처음 이름', '김감독', [...a.ids.slice(0, 8), null, null, null])).status,
+    ).toBe(200);
+    expect((await enter(a.cookie)).status).toBe(204);
+    const [entry] = await ctx.db.select().from(cupEntries);
+    expect((await save('바꾼 이름', '박감독', [...a.ids, null, null])).status).toBe(200);
+    const view = CupRes.parse(await (await call('GET', `/v1/cups/${CUP.id}`)).json()).data;
+    expect(view.teams[0]).toMatchObject({ name: '바꾼 이름', owner: '박감독' });
+    expect(view.teams[0]!.ovr).toBeGreaterThan(entry!.ovr);
+    // 조 추첨 기준인 신청 기록은 그대로 둔다.
+    expect((await ctx.db.select().from(cupEntries))[0]).toMatchObject({
+      name: '처음 이름',
+      ovr: entry!.ovr,
+    });
+  });
+
   it('선발 7명이면 신청할 수 없다', async () => {
     const a = await owner(7);
     expect((await me(a.cookie)).eligibility).toMatchObject({ ok: false, reason: 'not-enough' });

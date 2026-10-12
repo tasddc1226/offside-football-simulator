@@ -33,6 +33,7 @@ import {
   myTeamIn,
   publicNamesOf,
   slotIdsOf,
+  liveTeamsByIds,
   teamLogosByIds,
   type MatchDetail,
 } from '../db/repos/ownerTeams.js';
@@ -145,10 +146,15 @@ async function cupView(db: Db, cup: CupDef, now: string): Promise<CupResponse> {
   ]);
   // 추첨 전에는 신청한 팀을 신청 순으로 보여 준다(T-11-160). 추첨 뒤에는 조에 들어간 팀만.
   const shown = entries.filter((e) => e.status !== 'withdrawn' && (!state || e.grp !== null));
-  const logos = await teamLogosByIds(
+  // T-11-228 경기는 그날 팀으로 치르므로 이름·감독·OVR도 지금 팀으로 보인다(팀이 없어졌으면 신청 때 값).
+  const live = await liveTeamsByIds(
     db,
     shown.map((e) => e.teamId),
   );
+  const current = (id: string) => {
+    const t = live.get(id);
+    return t && t.season === cup.season ? t : undefined;
+  };
   const groups =
     state && state.groups
       ? Array.from({ length: state.groups }, (_, i) => ({
@@ -161,13 +167,16 @@ async function cupView(db: Db, cup: CupDef, now: string): Promise<CupResponse> {
     cup: cupInfo(cup),
     phase: phaseOf(cup, state, matches, now),
     entries: activeCount(entries),
-    teams: shown.map((e) => ({
-      teamId: e.teamId,
-      name: e.name,
-      owner: e.manager,
-      logo: logos.get(e.teamId) ?? null,
-      ovr: e.ovr,
-    })),
+    teams: shown.map((e) => {
+      const t = current(e.teamId);
+      return {
+        teamId: e.teamId,
+        name: t?.name ?? e.name,
+        owner: t?.manager ?? e.manager,
+        logo: live.get(e.teamId)?.logo ?? null,
+        ovr: t?.ovr ?? e.ovr,
+      };
+    }),
     groups,
     matches: matches
       .sort(

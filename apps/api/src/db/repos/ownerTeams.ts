@@ -139,6 +139,28 @@ export async function teamLogosByIds(db: Db, ids: readonly string[]) {
   return new Map(rows.map((row) => [row.id, logoOf(row)]));
 }
 
+/** T-11-228 대회 화면에 그릴 지금 팀 이름·감독·OVR·로고. 신청 때 적은 값이 아니라 경기에 쓰는 팀 그대로 보인다. */
+export async function liveTeamsByIds(db: Db, ids: readonly string[]) {
+  if (ids.length === 0) return new Map<string, LiveTeam>();
+  const rows = await db
+    .select({
+      id: ownerTeams.id,
+      season: ownerTeams.season,
+      name: ownerTeams.name,
+      manager: ownerTeams.manager,
+      ovr: ownerTeams.ovr,
+      logoJson: ownerTeams.logoJson,
+    })
+    .from(ownerTeams)
+    .where(inArray(ownerTeams.id, [...new Set(ids)]));
+  return new Map<string, LiveTeam>(
+    rows.map(({ logoJson, ...row }) => [row.id, { ...row, logo: logoOf({ logoJson }) }]),
+  );
+}
+export type LiveTeam = Pick<OwnerTeamRow, 'id' | 'season' | 'name' | 'manager' | 'ovr'> & {
+  logo: ReturnType<typeof logoOf>;
+};
+
 /** 선발 맵에 넣는 커리어 모양(careers 행 → 팀 선수). */
 type LineupRow = {
   id: string;

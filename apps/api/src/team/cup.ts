@@ -382,7 +382,8 @@ export async function playCupMatch(
       .bind(now, hg, ag, pens?.home ?? null, pens?.away ?? null, winner, forfeit, detail, m.id),
   ];
   const round = cupKo(m.round as CupRound);
-  const name = (id: string | null) => (id ? (entries.get(id)?.name ?? '-') : '-');
+  // T-11-228 알림도 이 경기를 치른 지금 팀 이름으로(팀이 없으면 신청 때 이름).
+  const name = (id: string | null) => (id ? (team(id)?.name ?? entries.get(id)?.name ?? '-') : '-');
   // 본문은 팀 이름과 숫자뿐이라 언어마다 같다(승부차기는 PK).
   const score = `${name(m.homeTeamId)} ${hg} : ${ag} ${name(m.awayTeamId)}${pens ? ` (PK ${pens.home}:${pens.away})` : ''}`;
   for (const id of ids) {
