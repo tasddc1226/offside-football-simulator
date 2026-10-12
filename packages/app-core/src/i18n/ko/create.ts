@@ -99,6 +99,8 @@ const ko = {
   potentialLocked: '잠재력 등급 범위 미확인',
   potentialAd: '광고 보고 후보 3명 잠재력 보기',
   potentialFree: '후보 3명 잠재력 보기',
+  /** T-11-221 후보 화면 반폭 톤 버튼 글자(전체 문구는 potentialAd · potentialFree). */
+  potentialShort: '잠재력 보기',
   potentialBusy: '광고를 불러오는 중이에요…',
   potentialWatch:
     '광고를 끝까지 보면 후보 3명의 잠재력 등급 범위가 열려요. 광고는 범위를 보여 줄 뿐 잠재력을 바꾸지 않아요.',

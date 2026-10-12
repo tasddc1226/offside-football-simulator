@@ -1,0 +1,26 @@
+{
+  "id": "t-11-219-train-invest-view",
+  "title": "훈련 방향과 자기 투자를 고르기 쉬워졌어요",
+  "items": [
+    "훈련 방향을 버튼이나 육각형으로 바꿔 볼 수 있어요",
+    "훈련을 고르면 주력 성장과 치우침 성장을 아래에서 알려 줘요",
+    "자기 투자는 다섯 칸을 늘 보여 주고 한 번 눌러 골라요"
+  ],
+  "en": {
+    "title": "Training focus and self-investment are easier to pick",
+    "items": [
+      "Switch the training focus between buttons and the hexagon.",
+      "Picking a training now explains focus growth and lopsided growth below.",
+      "All five self-investment options are always shown, so one tap picks one."
+    ]
+  },
+  "ja": {
+    "title": "トレーニング方針と自己投資が選びやすくなりました",
+    "items": [
+      "トレーニング方針をボタン表示と六角形表示で切り替えられます。",
+      "トレーニングを選ぶと、主力の成長と偏った成長について下に表示されます。",
+      "自己投資は5つの項目を常に表示し、1回のタップで選べます。"
+    ]
+  },
+  "availability": "web-app"
+}

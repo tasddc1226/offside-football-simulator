@@ -1,7 +1,7 @@
 // 하단 탭바(웹 .tabs) — 게임 탭(시즌·선수·홈·커리어·트로피), 홈 하단 메뉴(기록실·소식·홈·구단주·설정), 내 팀 메뉴
 // (편성·경기·구단주·업적·기록, T-11-026)가 같은 모양.
 // T-11-031 세 벌이 같은 모양이라 바뀐 걸 알아보게: 메뉴가 새로 붙으면 칸들이 왼쪽부터 차례로 올라오고, 게임·내 팀
-// 메뉴(sub)는 위쪽 강조선과 가운데 나가기 버튼의 둥근 바탕으로 메인 메뉴와 구분하며, 처음 볼 때 한 번 말풍선을 띄운다.
+// 메뉴(sub)는 위쪽 강조선으로 메인 메뉴와 구분하며, 처음 볼 때 한 번 말풍선을 띄운다.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, Easing, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -110,8 +110,9 @@ function NavIntro({ kind, onShow }: { kind: SubNav; onShow: (on: boolean) => voi
   );
 }
 
-/** 가운데 나가기 버튼의 둥근 바탕 — 말풍선이 떠 있는 동안은 고리가 세 번 퍼진다(웹 .tab-ping). */
-function ExitChip({ ping, children }: { ping: boolean; children: ReactNode }) {
+/** 아이콘 둥근 바탕 — 지금 보고 있는 탭에만 깐다(T-11-221). 가운데 나가기 버튼은 말풍선이 떠 있는 동안 고리가
+ * 세 번 퍼진다(웹 .tab-ping). */
+function IconChip({ ping, on, children }: { ping: boolean; on: boolean; children: ReactNode }) {
   const c = useColors();
   const { motionOK } = useSnapshot(prefs);
   const v = useRef(new Animated.Value(0)).current;
@@ -146,7 +147,13 @@ function ExitChip({ ping, children }: { ping: boolean; children: ReactNode }) {
           }}
         />
       ) : null}
-      <View style={{ padding: 4, borderRadius: 999, backgroundColor: alpha(c.accent, 0.22) }}>
+      <View
+        style={{
+          padding: 4,
+          borderRadius: 999,
+          backgroundColor: on ? alpha(c.accent, 0.22) : 'transparent',
+        }}
+      >
         {children}
       </View>
     </View>
@@ -222,7 +229,9 @@ export function TabBar({ items, label, sub }: { items: TabItem[]; label: string;
               <View
                 style={t.active ? { transform: [{ translateY: -1 }, { scale: 1.06 }] } : undefined}
               >
-                {sub && i === 2 ? <ExitChip ping={ping}>{icon}</ExitChip> : icon}
+                <IconChip ping={!!sub && i === 2 && ping} on={t.active}>
+                  {icon}
+                </IconChip>
                 {t.dot ? (
                   <View
                     testID={`${t.testID ?? `tab-${t.key}`}-dot`}

@@ -5,6 +5,7 @@ import { positionGuide } from '@offside/app-core/careerGuide';
 import { careerGuideText as L } from '@offside/app-core/i18n/ko/careerGuide';
 import { Txt } from '../../ui/Txt';
 import { Press } from '../../ui/Press';
+import { DisclosureRow } from '../../ui/Disclosure';
 import { useColors } from '../../theme/useColors';
 export function PositionGuide({ pos }: { pos: Pos }) {
   const c = useColors();
@@ -12,18 +13,13 @@ export function PositionGuide({ pos }: { pos: Pos }) {
   const [chosen, setChosen] = useState<Pos | null>(null);
   const current = chosen ?? pos;
   return (
-    <View style={{ borderTopWidth: 1, borderTopColor: c.line }}>
-      <Press
-        onPress={() => setOpen(!open)}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: open }}
+    <View>
+      <DisclosureRow
+        open={open}
+        onToggle={() => setOpen(!open)}
+        label={L.guideTitle}
         testID="position-guide"
-        style={{ minHeight: 44, justifyContent: 'center' }}
-      >
-        <Txt>
-          {L.guideTitle} {open ? '−' : '+'}
-        </Txt>
-      </Press>
+      />
       {open ? (
         <View style={{ gap: 12, paddingBottom: 12 }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>

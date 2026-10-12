@@ -13,6 +13,8 @@ const ko = {
   mainTitle: '대표 칭호',
   selManual: '직접 고름',
   selAuto: '자동',
+  /** 칭호 도감에서 대표로 정해진 줄의 배지. */
+  mainBadge: '대표',
   pickHint: '칭호를 누르면 대표 칭호로 정해져 선수 카드와 명예의 전당에 표시돼요.',
   earlier: '이전 기록',
   emptyEarned: '아직 얻은 칭호가 없어요. 프로 데뷔가 첫 번째 칭호예요.',

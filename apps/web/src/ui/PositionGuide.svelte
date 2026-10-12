@@ -8,7 +8,7 @@
   const entries = $derived(positionGuide(current));
 </script>
 <details class="position-guide" data-position-guide>
-  <summary>{L.guideTitle}</summary>
+  <summary class="disc-row">{L.guideTitle}<span class="disc-chev" aria-hidden="true"></span></summary>
   <div class="stack guide-body">
     <div class="guide-tabs" role="group" aria-label={L.guideTitle}>
       {#each ['FW', 'MF', 'DF', 'GK'] as p (p)}
@@ -23,9 +23,6 @@
 </details>
 <style>
   .position-guide {border-top:1px solid var(--line);}
-  summary {min-height:44px;display:flex;align-items:center;cursor:pointer;font-size:13px;font-weight:700;}
-  summary::after {content:'+';margin-left:auto;}
-  details[open] summary::after {content:'−';}
   .guide-body {padding:0 0 12px;gap:12px;}
   .guide-tabs {display:flex;flex-wrap:wrap;gap:8px;}
   .guide-tabs button {min-height:44px;}

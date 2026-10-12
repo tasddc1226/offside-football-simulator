@@ -14,6 +14,8 @@ const ko = {
   // 이적시장
   marketTitle: '다음 시즌, 어디서 뛸까요?',
   salary: '연봉',
+  /** T-11-221 이적 카드 목록 위 안내(카드 전체가 버튼). */
+  marketHint: '카드를 누르면 계약서로 넘어가요.',
   offerA11y: (p: {
     name: string;
     lg: string;

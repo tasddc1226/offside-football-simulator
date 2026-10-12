@@ -35,8 +35,7 @@ export const gameBoost: Translation<GameBoostMsgs> = {
     `The chance was ${p.chance}%. The money is gone, and the next attempt's chance goes up by ${p.pct} percentage points.`,
   adButton: (p) => `Watch an ad to boost (${p.chance}%)`,
   adButtonFree: (p) => `Boost without funds (${p.chance}%)`,
-  adNote:
-    'Watch an ad to the end to try once without funds. The success chance is the same as paying with funds.',
+  adNote: 'Watch an ad to the end to try once without funds.',
   adNoteFree: 'You bought ad removal, so you can try once without funds.',
   adNoteExtra: (p) =>
     `Watch the whole ad to try once more without funds. ${p.left} extra ${p.left === 1 ? 'try' : 'tries'} left for this player.`,

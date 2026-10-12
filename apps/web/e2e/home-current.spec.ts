@@ -14,7 +14,9 @@ test('홈: 진행 중인 커리어가 있으면 첫 카드에서 바로 이어 �
 
   const hero = page.locator('[data-home-current]');
   await expect(hero.locator('strong')).toHaveText(name);
-  await expect(hero.locator('[data-act="continue"]')).toContainText(/(으)?로 계속/);
+  // T-11-221 버튼 글자는 '이어서 하기', 이름이 든 전체 문구는 접근성 이름으로 남는다.
+  await expect(hero.locator('[data-act="continue"]')).toContainText('이어서 하기');
+  await expect(hero.locator('[data-act="continue"]')).toHaveAccessibleName(/(으)?로 계속/);
   await expect(page.locator('[data-act="continue"]')).toHaveCount(1); // 아래쪽 이어하기 타일은 없다.
   expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 

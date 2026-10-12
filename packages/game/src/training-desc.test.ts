@@ -5,6 +5,8 @@ import {
   trainingCard,
   trainingHelp,
   trainingOvrNote,
+  trainingGrowthNotes,
+  focusOf,
   TRAININGS,
 } from './engine.js';
 import { createRng, setActiveRng } from './rng.js';
@@ -35,6 +37,15 @@ describe('훈련 설명 (T-10-074)', () => {
     const before = JSON.stringify(s);
     expect(trainingOvrNote(s, tr('sho'))).toMatch(/OVR에서 슈팅 비중은 \d+%/);
     for (const id of ['rest', 'coach', 'media']) expect(trainingOvrNote(s, tr(id))).toBe('');
+    // T-11-219 성장 배율은 버튼이 아니라 설명 칸에: 주력이면 초록, 아니면 주황, 치우침 규칙은 흐리게.
+    const focus = focusOf(s)[0]!;
+    const off = TRAININGS.find(
+      (t) => t.attr && t.attr !== 'phy' && !focusOf(s).includes(t.attr),
+    )!.id;
+    expect(trainingCard(s, tr(focus)).tag).toBe('');
+    expect(trainingGrowthNotes(s, tr(focus)).map((n) => n.tone)).toEqual(['good', 'muted']);
+    expect(trainingGrowthNotes(s, tr(off))[0]!.tone).toBe('warn');
+    for (const id of ['rest', 'coach', 'media']) expect(trainingGrowthNotes(s, tr(id))).toEqual([]);
     expect(JSON.stringify(s)).toBe(before);
   });
 

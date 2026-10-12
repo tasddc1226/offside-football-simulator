@@ -196,9 +196,9 @@
     return { duration: dur(360), easing: cubicOut, css: (t: number) => `transform: perspective(800px) rotateY(${(1 - t) * 90}deg); opacity: ${Math.min(1, t * 2)}` };
   }
 </script>
-{#snippet ovrGuide()}
+{#snippet ovrGuide(showTitle = true)}
   <div class="ovr-guide" data-testid="ovr-guide">
-    <b>{ovrFocus.title}</b>
+    {#if showTitle}<b>{ovrFocus.title}</b>{/if}
     <p>{ovrFocus.groups}</p>
     <p class="muted">{ovrFocus.subs}</p>
     <p class="muted">{ovrFocus.note}</p>
@@ -357,29 +357,7 @@
         <button class="icon-btn" data-act="open-all" onclick={openAll}>{L.openAll}</button>
       {/if}
     </div>
-    {#if scouts > 0}
-      <button class="btn btn-sm btn-primary self-start" data-act="premium-scout" disabled={scoutBusy || rerolling} onclick={premiumScout}>{scoutBusy ? SL.busy : SL.btn({ n: scouts })}</button>
-      <p class="muted fs-sm">{SL.what}</p>
-      <ScoutOdds />
-    {/if}
-    {#if premium}<p class="muted fs-sm" data-premium-note>{SL.premiumNote}</p>{/if}
-    {#if rerolls > 0}
-      <button class="btn btn-sm self-start" data-act="reroll-candidates" disabled={rerolling} onclick={reroll}>{rerolling ? CL.rerollBusy : CL.rerollBtn({ n: rerolls })}</button>
-    {:else if owner}
-      <p class="muted fs-sm" data-reroll-hint>
-        {CL.createShopHint} <button class="link-btn" data-act="reroll-shop-go" onclick={goRerollShop}>{CL.createShopGo}</button>
-      </p>
-    {/if}
-    <p class="muted">{appState.candidatePotentialOpen ? (premium ? SL.premiumHelp : L.potentialHelp) : L.potentialWeb}</p>
-    {#if clubCand}
-      <button class="btn btn-sm self-start" data-act="candidate-potential-club" disabled={clubBusy} onclick={revealWithClub}>
-        {clubBusy ? B.clubBusy : B.clubCandidates({ price: fundsText(clubCand.price) })}
-      </button>
-    {/if}
-    {#if clubMsg}<p class="muted fs-sm" aria-live="polite">{clubMsg}</p>{/if}
-    {@render ovrGuide()}
-    <p class="muted fs-sm">{L.ovrCore}</p>
-    <p class="muted fs-sm" data-candidate-stats-note>{CG.candidateNote}</p>
+    <!-- T-11-221 후보 카드를 먼저 보이고, 다시 뽑기 · 잠재력 보기 같은 도구는 카드 아래로. -->
     <div class="cand-list">
       {#each appState.candidates as cand, i (i)}
         {#if appState.candidatesOpen[i]}
@@ -418,6 +396,33 @@
         {/if}
       {/each}
     </div>
+    {#if scouts > 0}
+      <button class="btn btn-sm btn-primary self-start" data-act="premium-scout" disabled={scoutBusy || rerolling} onclick={premiumScout}>{scoutBusy ? SL.busy : SL.btn({ n: scouts })}</button>
+      <p class="muted fs-sm">{SL.what}</p>
+      <ScoutOdds />
+    {/if}
+    {#if premium}<p class="muted fs-sm" data-premium-note>{SL.premiumNote}</p>{/if}
+    {#if rerolls > 0}
+      <button class="btn btn-sm self-start" data-act="reroll-candidates" disabled={rerolling} onclick={reroll}>{rerolling ? CL.rerollBusy : CL.rerollBtn({ n: rerolls })}</button>
+    {:else if owner}
+      <p class="muted fs-sm" data-reroll-hint>
+        {CL.createShopHint} <button class="link-btn" data-act="reroll-shop-go" onclick={goRerollShop}>{CL.createShopGo}</button>
+      </p>
+    {/if}
+    <p class="muted fs-sm">{appState.candidatePotentialOpen ? (premium ? SL.premiumHelp : L.potentialHelp) : L.potentialWeb}</p>
+    {#if clubCand}
+      <button class="btn btn-sm self-start" data-act="candidate-potential-club" disabled={clubBusy} onclick={revealWithClub}>
+        {clubBusy ? B.clubBusy : B.clubCandidates({ price: fundsText(clubCand.price) })}
+      </button>
+    {/if}
+    {#if clubMsg}<p class="muted fs-sm" aria-live="polite">{clubMsg}</p>{/if}
+    <!-- T-11-221 OVR 주요 능력치 설명은 펼침 행으로 접어 둔다(후보 카드를 아래로 밀지 않게). -->
+    <details class="card ovr-guide-box">
+      <summary class="disc-row" data-act="ovr-guide-toggle">{ovrFocus.title}<span class="disc-chev" aria-hidden="true"></span></summary>
+      {@render ovrGuide(false)}
+      <p class="muted fs-sm">{L.ovrCore}</p>
+    </details>
+    <p class="muted fs-sm" data-candidate-stats-note>{CG.candidateNote}</p>
 
     <div class="action-bar at-bottom">
       <div class="action-bar-inner with-back">
@@ -432,6 +437,8 @@
 {#if scouting}<ScoutScan pos={C.pos} steps={scoutSteps} onDone={scouted} />{/if}
 
 <style>
+.ovr-guide-box { padding-block: 0; }
+.ovr-guide-box .ovr-guide { margin-top: 0; }
 .ovr-guide { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 12px 0; font-size: .8125rem; line-height: 1.5; }
 .ovr-guide p { margin: 4px 0 0; overflow-wrap: anywhere; }
 .cc-bar .ovr-core { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }

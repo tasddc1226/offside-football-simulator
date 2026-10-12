@@ -12,6 +12,7 @@ import { Press } from '../ui/Press';
 import { Btn } from '../ui/Btn';
 import { Txt } from '../ui/Txt';
 import { ClubMark } from '../ui/ClubBadge';
+import { Chevron } from '../ui/Disclosure';
 
 export function RetiredNumberGuide({ s }: { s: GameState }) {
   const c = useColors();
@@ -75,9 +76,7 @@ export function RetiredNumberGuide({ s }: { s: GameState }) {
             {L.rnIntro}
           </Txt>
         </View>
-        <Txt v="h2" accessible={false}>
-          {open ? '−' : '+'}
-        </Txt>
+        <Chevron open={open} />
       </Press>
       {open ? (
         <View style={{ gap: 12 }}>

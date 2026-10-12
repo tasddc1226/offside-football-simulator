@@ -60,7 +60,19 @@ import { appState, prefs } from '../../store';
 import { alpha } from '../../theme/colors';
 import { DISPLAY, num, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
-import { ActionBar, Btn, Card, Opt, Pill, Press, Row, Topbar, Txt, useShadow } from '../../ui';
+import {
+  ActionBar,
+  Btn,
+  Card,
+  DisclosureRow,
+  Opt,
+  Pill,
+  Press,
+  Row,
+  Topbar,
+  Txt,
+  useShadow,
+} from '../../ui';
 import { noteScrollY, revealFocusedInput } from '../../ui/scroll';
 import { useFormKeyboardScroll } from '../../ui/useFormKeyboardScroll';
 import { MiniRadar } from './MiniRadar';
@@ -167,6 +179,7 @@ export default function Create() {
   const offer = rewardOffer('candidates', owned);
   const rewardLock = useRef(false);
   const [rewardBusy, setRewardBusy] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [rewardMessage, setRewardMessage] = useState('');
   const reveal = async () => {
     if (rewardLock.current || appState.candidatePotentialOpen) return;
@@ -368,14 +381,16 @@ export default function Create() {
   const onPitch = c.onPitch;
   const small = { fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 };
 
-  const ovrGuide = (
+  const ovrGuideBody = (showTitle: boolean) => (
     <View
       testID="ovr-guide"
       style={{ borderLeftWidth: 3, borderLeftColor: c.accent, paddingLeft: 12, gap: 4 }}
     >
-      <Txt v="sm" bold>
-        {ovrFocus.title}
-      </Txt>
+      {showTitle ? (
+        <Txt v="sm" bold>
+          {ovrFocus.title}
+        </Txt>
+      ) : null}
       <Txt v="sm">{ovrFocus.groups}</Txt>
       <Txt v="sm" tone="muted">
         {ovrFocus.subs}
@@ -388,6 +403,7 @@ export default function Create() {
       </Txt>
     </View>
   );
+  const ovrGuide = ovrGuideBody(true);
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -730,113 +746,6 @@ export default function Create() {
                 </Btn>
               ) : null}
             </View>
-            {scouts > 0 ? (
-              <View style={{ gap: 6 }}>
-                <Btn
-                  block
-                  kind="primary"
-                  testID="candidate-premium-scout"
-                  disabled={rerolling || rewardBusy}
-                  onPress={askScout}
-                >
-                  {rerolling ? SL.busy : SL.btn({ n: scouts })}
-                </Btn>
-                <Txt v="sm" tone="muted">
-                  {SL.what}
-                </Txt>
-                <ScoutOdds />
-              </View>
-            ) : owner ? (
-              <Btn sm kind="ghost" testID="premium-scout-go" onPress={goRerollShop}>
-                {SL.shopGo}
-              </Btn>
-            ) : null}
-            {premium ? (
-              <Txt v="sm" tone="muted" testID="premium-note">
-                {SL.premiumNote}
-              </Txt>
-            ) : null}
-            {rerolls > 0 ? (
-              <Btn
-                block
-                testID="candidate-reroll"
-                disabled={rerolling || rewardBusy}
-                onPress={askReroll}
-              >
-                {rerolling ? CL.rerollBusy : CL.rerollBtn({ n: rerolls })}
-              </Btn>
-            ) : owner ? (
-              <View style={{ gap: 6 }} testID="reroll-hint">
-                <Txt v="sm" tone="muted">
-                  {CL.createShopHint}
-                </Txt>
-                <Btn sm kind="ghost" testID="reroll-shop-go" onPress={goRerollShop}>
-                  {CL.createShopGo}
-                </Btn>
-              </View>
-            ) : null}
-            {offer && adLeft > 0 ? (
-              <Btn
-                block
-                testID="candidate-ad-reroll"
-                disabled={rerolling || rewardBusy}
-                onPress={() => void rerollWithAd()}
-              >
-                {rerolling
-                  ? CL.rerollBusy
-                  : (offer === 'free' ? adText.adRerollFreeBtn : adText.adRerollBtn)({ n: adLeft })}
-              </Btn>
-            ) : null}
-            <View style={{ gap: 8 }}>
-              {s.candidatePotentialOpen ? (
-                <Txt v="sm" tone="muted">
-                  {premium ? SL.premiumHelp : L.potentialHelp}
-                </Txt>
-              ) : offer || club.offer ? (
-                <>
-                  {offer ? (
-                    <Btn
-                      block
-                      testID="candidate-potential-reward"
-                      disabled={rewardBusy}
-                      onPress={() => void reveal()}
-                    >
-                      {rewardBusy
-                        ? L.potentialBusy
-                        : offer === 'free'
-                          ? L.potentialFree
-                          : L.potentialAd}
-                    </Btn>
-                  ) : null}
-                  {club.offer ? (
-                    <Btn
-                      block
-                      testID="candidate-potential-club"
-                      disabled={rewardBusy}
-                      onPress={() => void revealWithClub()}
-                    >
-                      {B.clubCandidates({ price: fundsText(club.offer.price) })}
-                    </Btn>
-                  ) : null}
-                  <Txt v="sm" tone="muted">
-                    {offer === 'free'
-                      ? L.potentialHelp
-                      : club.offer
-                        ? B.clubNote
-                        : L.potentialWatch}
-                  </Txt>
-                </>
-              ) : null}
-              {rewardMessage ? (
-                <Txt v="sm" tone="muted" accessibilityLiveRegion="polite">
-                  {rewardMessage}
-                </Txt>
-              ) : null}
-            </View>
-            {ovrGuide}
-            <Txt v="sm" tone="muted">
-              {L.ovrCore}
-            </Txt>
             <View style={{ gap: 10 }}>
               {s.candidates.map((cand, i) => {
                 const isOpen = s.candidatesOpen[i];
@@ -1039,13 +948,148 @@ export default function Create() {
                 );
               })}
             </View>
+            {scouts > 0 ? (
+              <View style={{ gap: 6 }}>
+                <Btn
+                  block
+                  kind="primary"
+                  testID="candidate-premium-scout"
+                  disabled={rerolling || rewardBusy}
+                  onPress={askScout}
+                >
+                  {rerolling ? SL.busy : SL.btn({ n: scouts })}
+                </Btn>
+                <Txt v="sm" tone="muted">
+                  {SL.what}
+                </Txt>
+                <ScoutOdds />
+              </View>
+            ) : owner ? (
+              <Btn sm kind="ghost" testID="premium-scout-go" onPress={goRerollShop}>
+                {SL.shopGo}
+              </Btn>
+            ) : null}
+            {premium ? (
+              <Txt v="sm" tone="muted" testID="premium-note">
+                {SL.premiumNote}
+              </Txt>
+            ) : null}
+            {rerolls > 0 ? (
+              <Btn
+                block
+                testID="candidate-reroll"
+                disabled={rerolling || rewardBusy}
+                onPress={askReroll}
+              >
+                {rerolling ? CL.rerollBusy : CL.rerollBtn({ n: rerolls })}
+              </Btn>
+            ) : owner ? (
+              <View style={{ gap: 6 }} testID="reroll-hint">
+                <Txt v="sm" tone="muted">
+                  {CL.createShopHint}
+                </Txt>
+                <Btn sm kind="ghost" testID="reroll-shop-go" onPress={goRerollShop}>
+                  {CL.createShopGo}
+                </Btn>
+              </View>
+            ) : null}
+            {/* T-11-221 광고 두 개(다시 뽑기 · 잠재력 보기)는 후보 카드 아래 반폭 톤 버튼 한 줄로. 전에는 카드 위에 전폭으로 쌓여
+                첫 화면에 후보가 보이지 않았다. 접근성 이름은 전체 문구. */}
+            {(offer && adLeft > 0) || (offer && !s.candidatePotentialOpen) ? (
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {offer && adLeft > 0 ? (
+                  <Btn
+                    kind="tonal"
+                    testID="candidate-ad-reroll"
+                    disabled={rerolling || rewardBusy}
+                    onPress={() => void rerollWithAd()}
+                    accessibilityLabel={(offer === 'free'
+                      ? adText.adRerollFreeBtn
+                      : adText.adRerollBtn)({
+                      n: adLeft,
+                    })}
+                    badge={
+                      rerolling
+                        ? undefined
+                        : adText.adRerollBadge({ n: adLeft, ad: offer !== 'free' })
+                    }
+                    style={{ flex: 1, minWidth: 0, paddingHorizontal: 10 }}
+                  >
+                    {rerolling ? CL.rerollBusy : adText.adRerollShort}
+                  </Btn>
+                ) : null}
+                {offer && !s.candidatePotentialOpen ? (
+                  <Btn
+                    kind="tonal"
+                    testID="candidate-potential-reward"
+                    disabled={rewardBusy}
+                    onPress={() => void reveal()}
+                    accessibilityLabel={offer === 'free' ? L.potentialFree : L.potentialAd}
+                    badge={rewardBusy || offer === 'free' ? undefined : B.adCost}
+                    style={{ flex: 1, minWidth: 0, paddingHorizontal: 10 }}
+                  >
+                    {rewardBusy ? L.potentialBusy : L.potentialShort}
+                  </Btn>
+                ) : null}
+              </View>
+            ) : null}
+            <View style={{ gap: 8 }}>
+              {s.candidatePotentialOpen ? (
+                <Txt v="sm" tone="muted">
+                  {premium ? SL.premiumHelp : L.potentialHelp}
+                </Txt>
+              ) : offer || club.offer ? (
+                <>
+                  {club.offer ? (
+                    <Btn
+                      block
+                      testID="candidate-potential-club"
+                      disabled={rewardBusy}
+                      onPress={() => void revealWithClub()}
+                    >
+                      {B.clubCandidates({ price: fundsText(club.offer.price) })}
+                    </Btn>
+                  ) : null}
+                  <Txt v="sm" tone="muted">
+                    {offer === 'free'
+                      ? L.potentialHelp
+                      : club.offer
+                        ? B.clubNote
+                        : L.potentialWatch}
+                  </Txt>
+                </>
+              ) : null}
+              {rewardMessage ? (
+                <Txt v="sm" tone="muted" accessibilityLiveRegion="polite">
+                  {rewardMessage}
+                </Txt>
+              ) : null}
+            </View>
+            {/* T-11-221 OVR 주요 능력치 설명은 펼침 행으로 접어 둔다. */}
+            <Card gap={0} style={{ paddingVertical: 0 }}>
+              <DisclosureRow
+                border={false}
+                open={guideOpen}
+                onToggle={() => setGuideOpen(!guideOpen)}
+                label={ovrFocus.title}
+                testID="ovr-guide-toggle"
+              />
+              {guideOpen ? (
+                <View style={{ paddingBottom: 14, gap: 8 }}>
+                  {ovrGuideBody(false)}
+                  <Txt v="sm" tone="muted">
+                    {L.ovrCore}
+                  </Txt>
+                </View>
+              ) : null}
+            </Card>
           </>
         ) : null}
       </ScrollView>
 
       {step === 'form' ? (
         <ActionBar row>
-          <Btn testID="home" onPress={goHome}>
+          <Btn testID="home" onPress={goHome} style={{ width: '32%' }}>
             {L.cancel}
           </Btn>
           <Btn
@@ -1064,7 +1108,7 @@ export default function Create() {
         </ActionBar>
       ) : s.candidates ? (
         <ActionBar row>
-          <Btn testID="home" disabled={rewardBusy} onPress={backToForm}>
+          <Btn testID="home" disabled={rewardBusy} onPress={backToForm} style={{ width: '32%' }}>
             {L.back}
           </Btn>
           <Btn

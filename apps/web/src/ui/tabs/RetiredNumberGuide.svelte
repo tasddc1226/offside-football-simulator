@@ -36,7 +36,7 @@
   <button class="rn-trigger" onclick={() => (open = !open)} aria-expanded={open}>
     <span class="rn-shirt" aria-hidden="true">{s.number}</span>
     <span class="rn-heading"><strong>{L.rnTitle}</strong><span class="muted fs-sm">{L.rnIntro}</span></span>
-    <span class="rn-chevron" aria-hidden="true">{open ? '−' : '+'}</span>
+    <span class="disc-chev" aria-hidden="true"></span>
   </button>
   {#if open}
     <div class="rn-body" aria-busy={loading}>
@@ -75,7 +75,6 @@
   .rn-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
   .rn-shirt { display: grid; place-items: center; width: 44px; min-height: 48px; flex-shrink: 0; background: var(--surface2); border: 1px solid var(--line); border-radius: 6px; font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .rn-heading { flex: 1; min-width: 0; display: grid; gap: 4px; overflow-wrap: anywhere; }
-  .rn-chevron { font-size: 24px; }
   .rn-body { display: grid; gap: 12px; padding: 0 16px 16px; }
   .rn-clubs { display: grid; gap: 16px; }
   .rn-club { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }

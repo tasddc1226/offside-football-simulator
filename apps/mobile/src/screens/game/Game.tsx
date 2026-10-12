@@ -110,7 +110,6 @@ export default function Game() {
   // 대표 칭호를 누르면 트로피 탭의 칭호 도감으로 간다(웹 scrollIntoView 자리 — 탭 패널·도감 위치를 재 둔다).
   const panelY = useRef(0);
   const titlesY = useRef(0);
-  const prepY = useRef(0);
   const wantTitles = useRef(false);
   const toTitles = () => scrollTo(Math.max(0, panelY.current + titlesY.current - insets.top - 8));
   useEffect(() => {
@@ -153,8 +152,6 @@ export default function Game() {
     if (act.kind === 'pending') nextPending();
     else void advance();
   }
-  const openPrep = () =>
-    scrollTo(Math.max(0, panelY.current + prepY.current - insets.top - 8), prefs.motionOK);
 
   // T-10-117 탭을 바꾸면 이전 탭에서 내려 둔 스크롤을 물려받지 않게 맨 위로 올린다(즉시 이동).
   // T-11-025 지금 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다.
@@ -206,26 +203,33 @@ export default function Game() {
                   openPlayer={() => switchTab('player')}
                   onVisibility={setPlayerHint}
                 />
-                {act.kind === 'advance' ? (
-                  <Press
-                    testID="prep"
-                    accessibilityLabel={T.prepOpen({ prep: act.prep })}
-                    onPress={openPrep}
-                    hitSlop={{ top: 6, bottom: 2 }}
-                    style={{ marginBottom: -2 }}
-                  >
-                    <Txt tone="muted" center numberOfLines={1} style={{ fontSize: rem(0.8125) }}>
-                      {act.prep}
-                    </Txt>
-                  </Press>
-                ) : null}
                 <Btn
                   block
                   kind={act.kind === 'pending' ? 'accent' : 'primary'}
                   testID={act.kind === 'pending' ? 'resume' : 'advance'}
                   onPress={onAct}
+                  style={
+                    act.kind === 'advance'
+                      ? { flexDirection: 'column', gap: 1, paddingVertical: 8 }
+                      : undefined
+                  }
                 >
-                  {`${act.label} →`}
+                  {act.kind === 'advance' ? (
+                    // T-11-221 준비 요약(훈련 · 자기 투자 · 컨디션)은 버튼 둘째 줄에 둔다. 전에는 바 위의 작은 글자 링크였다.
+                    <>
+                      <Txt bold style={{ color: c.onPitch, fontSize: rem(0.9375) }}>
+                        {`${act.label} →`}
+                      </Txt>
+                      <Txt
+                        numberOfLines={1}
+                        style={{ color: c.onPitch, opacity: 0.8, fontSize: rem(0.75) }}
+                      >
+                        {act.prep}
+                      </Txt>
+                    </>
+                  ) : (
+                    `${act.label} →`
+                  )}
                 </Btn>
               </ActionBar>
             ) : undefined
@@ -258,7 +262,7 @@ export default function Game() {
                     testID="titles"
                     accessibilityLabel={T.titleOpen({ name: title.name })}
                     onPress={openTitles}
-                    hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+                    hitSlop={{ top: 11, bottom: 11, left: 4, right: 12 }}
                     style={{ alignSelf: 'flex-start', marginTop: 4 }}
                   >
                     <Txt
@@ -352,7 +356,7 @@ export default function Game() {
           {/* 탭 전환 모션(T-10-003): 탭이 바뀔 때만 새로 마운트해 들어오는 모션을 건다. 동작 줄이기면 바로. */}
           <TabPanel key={tab} onLayout={(e) => (panelY.current = e.nativeEvent.layout.y)}>
             {tab === 'season' ? (
-              <SeasonTab s={s} onPrepY={(y) => (prepY.current = y)} />
+              <SeasonTab s={s} />
             ) : tab === 'player' ? (
               <PlayerTab s={s} />
             ) : tab === 'career' ? (

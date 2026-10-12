@@ -11,6 +11,8 @@ const ko = {
     `${p.year} 시즌 ${p.phase} · OVR ${p.ovr}`,
   newCareer: '새 커리어 시작',
   continueCareer: (p: { name: string }) => `${withRo(p.name)} 계속 →`,
+  /** T-11-221 이어하기 버튼 글자(이름은 카드 제목에 있다). 접근성 이름은 continueCareer. */
+  continueBtn: '이어서 하기 →',
   // 첫 방문 카드 (제목은 세 줄 — 웹은 <br />, 앱은 줄바꿈으로 잇는다)
   kickoffLine1: '이번 생은 축구다',
   kickoffLine2: '고3부터 은퇴까지,',

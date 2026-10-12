@@ -15,7 +15,9 @@ import { titleText as L } from '@offside/app-core/i18n/ko/title';
 import { TitleTag } from '../../components/TitleTag';
 import { buzz, save } from '../../game/host';
 import { appState } from '../../store';
-import { useColors } from '../../theme/useColors';
+import { useColors, useIsDark } from '../../theme/useColors';
+import { alpha } from '../../theme/colors';
+import { DisclosureRow } from '../../ui/Disclosure';
 import { num, rem } from '../../theme/type';
 import { Card } from '../../ui/Card';
 import { Press } from '../../ui/Press';
@@ -23,6 +25,7 @@ import { Txt } from '../../ui/Txt';
 
 export function TitleDex({ s }: { s: GameState }) {
   const c = useColors();
+  const selColor = useIsDark() ? c.accent : c.pitch;
   const [openLocked, setOpenLocked] = useState(false);
   const earned = (s.titles ?? [])
     .map((e) => ({ d: titleById(e.id), year: e.year }))
@@ -101,15 +104,29 @@ export function TitleDex({ s }: { s: GameState }) {
                     paddingVertical: on ? 7.5 : 8,
                     paddingHorizontal: on ? 9.5 : 10,
                     borderRadius: 10,
-                    borderWidth: on ? 2.5 : 1.5,
-                    borderColor: on ? c.accent : c.line,
-                    backgroundColor: c.surface,
+                    borderWidth: on ? 2 : 1.5,
+                    borderColor: on ? selColor : c.line,
+                    backgroundColor: on ? alpha(c.pitch, 0.08) : c.surface,
                   }}
                 >
                   <TitleTag name={x.d.name} rarity={x.d.rarity} />
                   <Txt tone="muted" style={{ flex: 1, fontSize: rem(0.75) }}>
                     {x.d.desc}
                   </Txt>
+                  {on ? (
+                    <View
+                      style={{
+                        paddingHorizontal: 6,
+                        paddingVertical: 1,
+                        borderRadius: 4,
+                        backgroundColor: c.pitch,
+                      }}
+                    >
+                      <Txt bold style={{ fontSize: rem(0.6875), color: c.onPitch }}>
+                        {L.mainBadge}
+                      </Txt>
+                    </View>
+                  ) : null}
                   <Txt tone="muted" num style={{ fontSize: rem(0.75) }}>
                     {x.year ? x.year : L.earlier}
                   </Txt>
@@ -125,16 +142,12 @@ export function TitleDex({ s }: { s: GameState }) {
       )}
       {locked.length ? (
         <View>
-          <Press
+          <DisclosureRow
             testID="title-locked-toggle"
-            accessibilityState={{ expanded: openLocked }}
-            onPress={() => setOpenLocked(!openLocked)}
-            style={{ paddingVertical: 4 }}
-          >
-            <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '600' }}>
-              {`${openLocked ? '▾' : '▸'} ${L.lockedSummary({ n: pool.length - earned.length })}`}
-            </Txt>
-          </Press>
+            open={openLocked}
+            onToggle={() => setOpenLocked(!openLocked)}
+            label={L.lockedSummary({ n: pool.length - earned.length })}
+          />
           {openLocked
             ? locked.map((cat) => (
                 <View key={cat.id}>

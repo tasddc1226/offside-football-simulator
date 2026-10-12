@@ -169,13 +169,12 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
           {s.fans.map((f, i) => (
             <Enter key={i} kind="translateX" from={-14} ms={320} delay={200 + i * 110}>
               <View
+                // T-11-221 읽기만 하는 줄 — 버튼처럼 보이지 않게 테두리 없는 인용 줄(웹 .fan-line).
                 style={{
-                  paddingVertical: 8,
-                  paddingHorizontal: 10,
-                  borderRadius: 10,
-                  backgroundColor: c.surface2,
-                  borderWidth: 1,
-                  borderColor: c.line,
+                  paddingVertical: 3,
+                  paddingLeft: 10,
+                  borderLeftWidth: 2,
+                  borderLeftColor: alpha(c.accent, 0.45),
                 }}
               >
                 <Txt style={{ fontSize: rem(0.8125) }}>

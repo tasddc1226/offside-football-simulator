@@ -25,6 +25,9 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
           {s.assessment}
         </Txt>
       ) : null}
+      <Txt v="sm" tone="muted">
+        {L.marketHint}
+      </Txt>
       <View style={{ gap: 10 }}>
         {s.options.map((o, i) => (
           <Press
@@ -73,6 +76,9 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
                   </Txt>
                 </View>
               ) : null}
+              <Txt accessibilityElementsHidden tone="muted" style={{ fontSize: rem(1.5) }}>
+                ›
+              </Txt>
             </View>
             {o.sub ? (
               <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
