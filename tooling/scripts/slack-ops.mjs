@@ -110,7 +110,7 @@ export async function daily(db, env, now = Date.now(), fetcher = fetch) {
                 `${r.store === 'apple' ? 'App Store' : 'Google Play'} · ${kinds[r.kind] ?? r.kind} · ${productLabel(r.product_id)}: ${fmt(r.n)}건`,
             ),
           '한국 시간 전날 00:00–24:00에 서버가 수신한 검증 이벤트 기준입니다. Sandbox·연결 테스트는 제외합니다.',
-          '실제 결제 시각 기준 매출·스토어 정산액이 아닙니다. 지연·누락된 스토어 알림은 집계에 차이가 날 수 있습니다.',
+          '실제 결제 시각 기준 매출·스토어 정산액이 아닙니다. 알림 기록 수집 이전 구매와 지연·누락 알림은 포함되지 않을 수 있습니다.',
         ],
         [healthLink],
       ),

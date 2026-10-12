@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { sendSlack, slackMessage } from './slack-ops-client.mjs';
 
 export function storeMail(entry, enabledAt) {
+  if (!Number.isFinite(Date.parse(enabledAt))) throw new Error('Invalid activation time');
   if (!/^[a-f0-9]{12,40}$/.test(entry.id ?? '') || !['apple', 'google'].includes(entry.store))
     throw new Error('Invalid store mail');
   if (
@@ -13,7 +14,7 @@ export function storeMail(entry, enabledAt) {
     return null;
   const from = String(entry.from ?? '').toLowerCase();
   if (
-    !entry.authenticated ||
+    entry.authenticated !== true ||
     !(entry.store === 'apple' ? /@(?:email\.)?apple\.com$/.test(from) : /@google\.com$/.test(from))
   )
     throw new Error('Unverified store sender');
