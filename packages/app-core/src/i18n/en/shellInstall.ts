@@ -2,6 +2,21 @@ import type { Translation } from '../core';
 import type { ShellInstallMsgs } from '../ko/shellInstall';
 
 export const shellInstall: Translation<ShellInstallMsgs> = {
+  conversionShopTitle: 'How to buy in the app',
+  conversionShopBody:
+    'Premium purchases are available in the app. You can still buy reroll tickets with club funds on the web.',
+  conversionTitle: 'Play OFFSIDE in the app',
+  conversionMilestone: 'Manage your records in the app',
+  conversionIos:
+    'In the app, rewarded ads can unlock potential checks and extra boost tries. Eligibility and ad availability apply.',
+  conversionAndroid:
+    'Android is in closed testing. Apply to join, then follow the installation instructions.',
+  conversionTransfer:
+    'A career in progress does not transfer automatically. Copy its backup code in Settings and import it in the app.',
+  conversionTest: 'Join the Android closed test',
+  conversionStore: 'Get it on the App Store',
+  conversionDismiss: 'Hide app notices for 7 days',
+
   inappHint:
     "You're in an in-app browser (KakaoTalk, Instagram or similar). Your records are only saved inside this app. Open it in your regular browser for safer sign-in and saving.",
   inappHintAria: 'In-app browser notice',

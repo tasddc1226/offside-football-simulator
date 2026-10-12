@@ -16,18 +16,10 @@
   import HomeLive from './HomeLive.svelte';
   import HomeTicker from './HomeTicker.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
-  import { ANDROID_TESTER_FORM_URL, DC_GALLERY_URL, IOS_APP_STORE_URL } from '@offside/app-core/links';
-  import { APP_PROMO } from '@offside/app-core/appPromo';
-  import { trackAppStoreClick } from '../analytics/index.js';
-  import { appTarget } from './appStore.js';
-  import { adLanded } from './adLanding.js';
+  import { DC_GALLERY_URL } from '@offside/app-core/links';
   import { homeText as L } from '@offside/app-core/i18n/ko/home';
 
   const live = $derived(!!appState.G && !appState.G.retired);
-  const appFor = appTarget();
-  // T-11-195 광고로 온 방문(대부분 해외)에는 아직 비공개 테스트인 안드로이드 테스터 모집을 보이지 않는다.
-  const tester = appFor !== 'ios' && !adLanded();
-  const appTiles = (appFor !== 'android' ? 1 : 0) + (tester ? 1 : 0);
 </script>
 
 <div class="wrap">
@@ -78,6 +70,7 @@
   {#await import('./SeasonGauge.svelte') then { default: SeasonGauge }}<SeasonGauge />{/await}
   <!-- T-11-145 오프사이드 컵 소식은 모두가 먼저 보는 홈에서(신청은 대회 화면). 트로피 그림까지 끌고 와서 첫 화면 번들 밖 지연 청크로. -->
   {#await import('./cup/CupBanner.svelte') then { default: CupBanner }}<CupBanner onopen={() => go('cup')} />{/await}
+  {#await import('./AppConversion.svelte') then { default: AppConversion }}<AppConversion context="home" />{/await}
   <HomeLive />
   <div class="tiles">
     <!-- T-11-080f 구단주 화면을 거치지 않고 이적시장으로 바로 간다(뒤로 가기는 홈으로). 홈에서는 서버를 부르지 않는다. -->
@@ -90,19 +83,8 @@
     <button class="tile tile-link" data-act="dex" onclick={() => go('dex')}>
       <span class="eyebrow">Events</span><b>{L.dexTitle}</b><span class="muted fs-sm">{L.dexSubWeb}</span>
     </button>
-    <!-- T-11-092 기기에 맞는 앱 안내: iPhone은 App Store, 안드로이드는 비공개 테스터 모집(T-11-016), PC는 둘 다. -->
-    {#if appFor !== 'android'}
-      <a class="tile tile-link" data-act="app-store" href={IOS_APP_STORE_URL} target="_blank" rel="noopener noreferrer" onclick={() => trackAppStoreClick('home')}>
-        <span class="eyebrow">{APP_PROMO.tile.eyebrow}</span><b>{APP_PROMO.tile.title}</b><span class="muted fs-sm">{APP_PROMO.tile.sub}</span>
-      </a>
-    {/if}
-    {#if tester}
-      <a class="tile tile-link" data-act="android-tester" href={ANDROID_TESTER_FORM_URL} target="_blank" rel="noopener noreferrer">
-        <span class="eyebrow">Android</span><b>{L.testerTitle}</b><span class="muted fs-sm">{L.testerSub}</span>
-      </a>
-    {/if}
     <!-- T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일. 앱 타일이 둘이면 한 줄을 다 쓴다. -->
-    <a class="tile tile-link" class:tile-wide={appTiles % 2 === 0} data-act="dc-gallery" href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">
+    <a class="tile tile-link tile-wide" data-act="dc-gallery" href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">
       <span class="eyebrow">Community</span><b>{L.galleryTitle}</b><span class="muted fs-sm">{L.gallerySub}</span>
     </a>
   </div>

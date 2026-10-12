@@ -1,11 +1,8 @@
-// T-10-021 '홈 화면에 추가' 안내. 주소를 입력하지 않고 아이콘으로 바로 열 수 있게, 모바일 브라우저로 홈 화면에
-// 다시 들어올 때마다 보여 준다('다시 보지 않기'를 체크하면 이 브라우저에서는 그만). 홈 화면 앱으로 연 경우와 데스크톱은
-// 띄우지 않고, 설정 > 도움말에서는 언제든 다시 연다. T-11-092 아이폰은 iPhone 앱(App Store)을 먼저 권한다.
-import { hasKey, loadKey, saveKey } from '@offside/game/storage';
+// 설정에서 직접 여는 홈 화면 추가 안내. 자동 설치 팝업 대신 홈의 제한된 카드 안내를 사용한다.
+import { saveKey } from '@offside/game/storage';
 import { closeSheet, showSheet } from './sheetState.svelte.js';
 import { currentInApp, isStandalone, openExternal } from './inapp-open.js';
 import { INSTALL_STEPS, detectPlatform, type Platform } from './install-platform.js';
-import { appState } from './state.svelte.js';
 import { APP_PROMO } from '@offside/app-core/appPromo';
 import { openAppStore } from './appStore.js';
 import { shellInstallText as L } from '@offside/app-core/i18n/ko/shellInstall';
@@ -89,19 +86,4 @@ function homeScreenSteps(platform: Exclude<Platform, 'inapp'>, withOptOut: boole
     },
     [{ label: L.gotIt, cls: 'btn-primary', fn: closeSheet }],
   );
-}
-
-/** 앱을 열었을 때 모바일 브라우저의 홈 화면이면 보여 준다('다시 보지 않기'를 체크했으면 그만).
- * T-10-037: 처음 온 방문(세이브 없음)에는 띄우지 않는다 — 첫 화면을 시트로 가리지 않고(늦게 뜬 시트 문단이
- * 첫 화면 LCP가 됐다), 한 번 플레이하고 다시 찾아온 사람에게 권한다. */
-export function maybeShowInstallOnboarding() {
-  if (
-    appState.screen !== 'home' ||
-    loadKey<boolean>(HIDE_KEY) ||
-    isStandalone() ||
-    ['other', 'inapp'].includes(detectPlatform(navigator.userAgent)) // T-10-115 앱 안 브라우저엔 띄우지 않는다(홈의 안내 배너가 대신한다)
-  )
-    return;
-  if (!hasKey('ft_save')) return;
-  showInstallGuide(true);
 }
