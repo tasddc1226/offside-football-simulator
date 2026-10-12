@@ -1,0 +1,16 @@
+{
+  "id": "t-11-220-train-focus-star",
+  "title": "훈련 버튼에 주력 능력치가 보여요",
+  "items": ["훈련 방향 버튼 보기에서도 주력 능력치 훈련에 ★이 붙어요"],
+  "en": {
+    "title": "Training buttons show your main attributes",
+    "items": [
+      "In the button view, trainings for your main attributes now carry a ★, like the hexagon view."
+    ]
+  },
+  "ja": {
+    "title": "トレーニングボタンに主力能力値が表示されます",
+    "items": ["ボタン表示でも、主力能力値のトレーニングに★が付きます。"]
+  },
+  "availability": "web-app"
+}

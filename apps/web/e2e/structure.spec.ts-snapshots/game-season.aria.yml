@@ -23,9 +23,9 @@
   - paragraph: 약점 집중훈련은 아래 자기 투자에서 고를 수 있어요.
   - group: 포지션 육성 안내 +
   - button "스피드 훈련 스피드 ▲"
-  - button "슈팅 훈련 슈팅 ▲"
+  - button "슈팅 훈련 ★ 슈팅 ▲"
   - button "패스 훈련 패스 ▲"
-  - button "드리블 훈련 드리블 ▲"
+  - button "드리블 훈련 ★ 드리블 ▲"
   - button "수비 훈련 수비 ▲"
   - button "피지컬 훈련 피지컬·스피드 ▲"
   - button /휴식·회복 컨디션 \+\d+/ [pressed]
