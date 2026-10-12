@@ -1,0 +1,30 @@
+name: Slack release status
+on:
+  workflow_run:
+    workflows: [Production Release]
+    types: [completed]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: slack-operations
+  cancel-in-progress: false
+jobs:
+  notify:
+    if: github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SLACK_RELEASES_WEBHOOK: ${{ secrets.SLACK_RELEASES_WEBHOOK }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.23.1
+      - run: node tooling/scripts/slack-release.mjs
