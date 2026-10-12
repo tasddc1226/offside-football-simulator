@@ -1,4 +1,5 @@
 // T-11-150 컵 성적과 여러 시즌의 육성 이력을 담는 대표 칭호. zod 없는 공통 서브패스.
+import { parseMemberTitle } from './membership-rules.js';
 import type { CupStage } from './cup.js';
 
 export const TITLE_STAGES = ['champion', 'runnerup', 'sf'] as const;
@@ -166,4 +167,5 @@ export type TitleMetric = (typeof PERMANENT_TITLES)[number]['metric'];
 export const TITLE_CRITERIA_VERSION = 3;
 export const permanentTitleOf = (id: string | null | undefined) =>
   PERMANENT_TITLES.find((t) => t.id === id);
-export const isOwnerTitle = (id: string): boolean => !!parseTitle(id) || !!permanentTitleOf(id);
+export const isOwnerTitle = (id: string): boolean =>
+  !!parseTitle(id) || !!permanentTitleOf(id) || !!parseMemberTitle(id);

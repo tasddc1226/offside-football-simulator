@@ -63,6 +63,7 @@ export type Screen =
   | 'settings'
   | 'owner'
   | 'honors'
+  | 'membership'
   | 'players'
   /** T-10-092 구단주 팀(구단주 화면에서 연다). */
   | 'team'

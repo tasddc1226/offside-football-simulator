@@ -26,7 +26,11 @@ type ServiceAccount = { client_email: string; private_key: string };
 // 아이솔레이트가 살아 있는 동안 액세스 토큰을 다시 쓴다(한 시간짜리).
 let cached: { key: string; token: string; until: number } | undefined;
 
-async function accessToken(saJson: string, doFetch: typeof fetch, nowS: number): Promise<string> {
+export async function accessToken(
+  saJson: string,
+  doFetch: typeof fetch,
+  nowS: number,
+): Promise<string> {
   if (cached?.key === saJson && cached.until > nowS) return cached.token;
   const sa = JSON.parse(saJson) as ServiceAccount;
   const head = json64({ alg: 'RS256', typ: 'JWT' });

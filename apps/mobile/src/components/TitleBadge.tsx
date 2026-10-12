@@ -8,6 +8,7 @@ import { cupTrophy } from '@offside/app-core/cupTrophy';
 import {
   parseTitle,
   titleLabel,
+  titleTenureLabel,
   titleIconPath,
   titleGradeColor,
   titleGradeLabel,
@@ -24,6 +25,7 @@ export function TitleBadge({ title, size = 'md' }: { title: string; size?: 'md' 
   const t = parseTitle(title);
   const grade = permanentTitleOf(title)?.grade;
   const label = titleLabel(title);
+  const tenure = titleTenureLabel(title);
   if (!label) return null;
   const palette = t
     ? cupTrophy(t.stage).palette
@@ -35,7 +37,11 @@ export function TitleBadge({ title, size = 'md' }: { title: string; size?: 'md' 
       accessible
       accessibilityRole="image"
       accessibilityLabel={L.titleAria({
-        title: grade ? `${titleGradeLabel(grade)} · ${label}` : label,
+        title: tenure
+          ? `${label} · ${tenure}`
+          : grade
+            ? `${titleGradeLabel(grade)} · ${label}`
+            : label,
       })}
       style={{
         flexDirection: 'row',

@@ -16,6 +16,7 @@ import {
   cups,
   ownerSeasonRecords,
   ownerHonors,
+  ownerTitleAwards,
   appMeta,
 } from '../db/schema.js';
 import { createTestD1, syncCards, type TestD1 } from '../test/d1.js';
@@ -114,6 +115,81 @@ describe('/v1/owners · /v1/owner/title (T-11-150 구단주 프로필 · 대표 
       updatedAt: AT,
     });
   }
+
+  it('guest hall exposes only earned public data and never changes award seen state', async () => {
+    const a = await owner('공개');
+    const b = await owner('다른');
+    await ctx.db.insert(ownerTitleAwards).values({
+      profileId: a.profileId,
+      titleId: 'owner-developer',
+      criteriaVersion: 3,
+      evidence: 10,
+      earnedAt: AT,
+    });
+    const read = async (cookie?: string) => {
+      const res = await call('GET', `/v1/owners/by-team/${a.team.id}`, cookie ? { cookie } : {});
+      expect(res.status).toBe(200);
+      expect(res.headers.get('cache-control')).toContain('no-store');
+      return OwnerRes.parse(await res.json()).data;
+    };
+    const guest = await read();
+    expect(guest.mine).toBe(false);
+    expect(guest.hall?.owner.nickname).toBe('공개');
+    expect(guest.hall?.titles).toContain('owner-developer');
+    expect(guest.hall?.titles).not.toContain('owner-dynasty');
+    expect(Object.keys(guest.hall!).sort()).toEqual([
+      'honors',
+      'owner',
+      'pendingSeasons',
+      'titles',
+    ]);
+    expect(JSON.stringify(guest.hall)).not.toContain(a.profileId);
+    expect(JSON.stringify(guest.hall)).not.toContain('evidence');
+    expect((await read(b.cookie)).hall).toEqual(guest.hall);
+    expect((await read(a.cookie)).mine).toBe(true);
+    const awards = await ctx.db.select().from(ownerTitleAwards);
+    expect(awards.find((x) => x.titleId === 'owner-developer')?.seenAt).toBeNull();
+    expect((await call('GET', '/v1/owner/archive')).status).not.toBe(200);
+    expect(
+      (await call('PUT', '/v1/owner/title', { body: { title: 'owner-developer' } })).status,
+    ).not.toBe(200);
+  });
+
+  it('public hall hides provisional closed-season scores and awards until settlement completes', async () => {
+    const a = await owner('정산');
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z'));
+    await ctx.db.insert(ownerSeasonRecords).values({
+      profileId: a.profileId,
+      season: 0,
+      players: 3,
+      retired: 2,
+      retiredNumbers: 0,
+      wallOfHonor: 0,
+      firsts: 0,
+      achScore: 1500,
+      teamRank: 2,
+      createdAt: AT,
+    });
+    await ctx.db
+      .insert(ownerHonors)
+      .values({ profileId: a.profileId, season: 0, kind: 'pioneer', value: 2, grantedAt: AT });
+    const read = async () =>
+      OwnerRes.parse(await (await call('GET', `/v1/owners/by-team/${a.team.id}`)).json()).data
+        .hall!;
+    const pending = await read();
+    expect(pending.pendingSeasons).toContain(0);
+    expect(pending.owner.seasons.find((s) => s.season === 0)).toMatchObject({
+      achScore: null,
+      teamRank: null,
+    });
+    expect(pending.honors).toEqual([]);
+    await ctx.db
+      .insert(appMeta)
+      .values({ key: 'season-close:0', value: JSON.stringify({ step: 'done' }) });
+    const done = await read();
+    expect(done.honors).toHaveLength(1);
+    expect(done.owner.seasons.find((s) => s.season === 0)?.achScore).toBe(1500);
+  });
 
   const putTitle = (cookie: string, title: string | null) =>
     call('PUT', '/v1/owner/title', { cookie, body: { title } });

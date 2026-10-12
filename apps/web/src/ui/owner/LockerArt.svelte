@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { MEMBER_PALETTES } from '@offside/contracts/membership-rules';
   import { titleIconPath } from '@offside/app-core/ownerTitle';
-  const { zone, season = 1, title = null, awards = 0 }: { zone: number; season?: number; title?: string | null; awards?: number } = $props();
+  const { zone, season = 1, title = null, awards = 0, theme = 'classic' }: { theme?: keyof typeof MEMBER_PALETTES; zone: number; season?: number; title?: string | null; awards?: number } = $props();
+  const palette = $derived(MEMBER_PALETTES[theme]);
 </script>
 
 {#snippet shirt(x: number, y: number, number: number, color: string)}
@@ -20,13 +22,13 @@
   </g>
 {/snippet}
 <svg class="locker-art" viewBox="0 0 240 290" fill="none" shape-rendering="crispEdges" aria-hidden="true">
-  <rect width="240" height="290" fill="#273e33"/>
+  <rect width="240" height="290" fill={palette.wall}/>
   {#each [0,40,80,120,160,200] as x (x)}<rect {x} y="10" width="1" height="251" fill="#354c3b"/>{/each}
   <path d="M0 0h240v15H0Z" fill="#59644a"/><path d="M6 2h228v4H6Z" fill="#b8a26a"/>
   <path d="M0 17h240v5H0Z" fill="#16271d"/>
-  <path d="M6 23h228v6H6Z" fill="#d8bd7e"/><path d="M14 29h212v3H14Z" fill="#857647"/>
+  <path d="M6 23h228v6H6Z" fill={palette.gold}/><path d="M14 29h212v3H14Z" fill="#857647"/>
   <path d="M0 235h240v55H0Z" fill="#66523a"/><path d="M0 240h240v3H0ZM0 263h240v2H0Z" fill="#806a46"/>
-  <path d="M8 35h224v187H8Z" fill="#0c1d16"/><path d="M13 40h214v179H13Z" fill="#162b20"/>
+  <path d="M8 35h224v187H8Z" fill="#0c1d16"/><path d="M13 40h214v179H13Z" fill={palette.bg}/>
   <path d="M15 41h210v2H15Z" fill="#324c34"/>
   {#if zone === 0}
     <path d="M116 35h8v187h-8Z" fill="#85704c"/><path d="M120 35h2v187h-2Z" fill="#b89e66"/>

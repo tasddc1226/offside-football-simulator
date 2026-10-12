@@ -21,6 +21,12 @@ export interface AppleTransaction {
   environment?: string;
   quantity?: number;
   revocationDate?: number;
+  originalTransactionId?: string;
+  purchaseDate?: number;
+  expiresDate?: number;
+  price?: number;
+  offerDiscountType?: string;
+  inAppOwnershipType?: string;
 }
 
 const hex = (buf: ArrayBuffer) =>
@@ -61,6 +67,16 @@ export const verifyAppleTransaction = (jws: string, rootSha256 = APPLE_ROOT_G3_S
 /** T-11-215 서버 알림(signedPayload)도 거래와 같은 사슬로 서명된다. */
 export const verifyAppleNotification = (jws: string, rootSha256 = APPLE_ROOT_G3_SHA256) =>
   verifyAppleJws<AppleNotification>(jws, rootSha256);
+
+export interface AppleRenewal {
+  originalTransactionId?: string;
+  productId?: string;
+  environment?: string;
+  autoRenewStatus?: number;
+  gracePeriodExpiresDate?: number;
+}
+export const verifyAppleRenewal = (jws: string) =>
+  verifyAppleJws<AppleRenewal>(jws, APPLE_ROOT_G3_SHA256);
 
 /** Apple이 서명한 JWS를 확인하고 본문을 돌려준다. 서명·사슬이 맞지 않으면 null. */
 async function verifyAppleJws<T>(jws: string, rootSha256: string): Promise<T | null> {

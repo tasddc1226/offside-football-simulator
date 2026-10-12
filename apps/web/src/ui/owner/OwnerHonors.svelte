@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { MEMBER_PALETTES } from '@offside/contracts/membership-rules';
   import { onMount } from 'svelte';
-  import { fetchOwnerArchive, type OwnerArchiveResponse } from '@offside/app-core/api/ownerProfile';
+  import { fetchOwnerArchive, type PublicOwnerHall, type OwnerArchiveResponse } from '@offside/app-core/api/ownerProfile';
   import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
   import { honorViews } from '@offside/app-core/seasonRecap';
   import { titleLabel } from '@offside/app-core/ownerTitle';
@@ -13,6 +14,9 @@
   import HonorEmblem from '../HonorEmblem.svelte';
   import CupHonors from '../cup/CupHonors.svelte';
   import TitleBadge from '../cup/TitleBadge.svelte';
+
+  import PublicHallRecords from './PublicHallRecords.svelte';
+  let { publicData }: { publicData?: PublicOwnerHall } = $props();
 
   type Panel = 'records' | 'titles' | 'trophies';
   const panels: Panel[] = ['records', 'titles', 'trophies'];
@@ -29,12 +33,14 @@
   let swiped = false;
   let alive = true;
   const names = $derived([L.roomSeasons, L.roomOwner, L.roomTrophies]);
-  const notes = $derived([L.roomSeasonsNote, L.roomOwnerNote, L.roomTrophiesNote]);
+  const notes = $derived([publicData ? L.publicSeasonNote : L.roomSeasonsNote, publicData ? L.publicTitleNote : L.roomOwnerNote, L.roomTrophiesNote]);
   const badges = $derived(honorViews(data?.honors ?? []));
   const latestSeason = $derived(Math.max(0, ...(data?.owner.seasons.map((s) => s.season) ?? [])));
+  const room = $derived(MEMBER_PALETTES[data?.owner.appearance?.theme ?? 'classic']);
   const awards = $derived(badges.length + (data?.owner.cupHonors.length ?? 0));
   async function load() {
     failed = false;
+    if (publicData) { data = publicData; return; }
     const r = await fetchOwnerArchive();
     if (!alive) return;
     if (r.ok) data = r.data; else failed = true;
@@ -46,7 +52,7 @@
     drag = 0;
     panel = panels[next]!;
     visited[panel] = true;
-    if (panel !== 'trophies') appState.honorsView = panel;
+    if (!publicData && panel !== 'trophies') appState.honorsView = panel;
   }
   function start(e: PointerEvent) {
     if (e.button !== 0 || pointer !== null) return;
@@ -67,7 +73,7 @@
   }
 </script>
 
-<div class="locker-page" data-owner-honors-screen>
+<div style={`--member-bg:${room.bg};--member-wall:${room.wall};--member-ink:${room.ink};--member-gold:${room.gold}`} class="locker-page" data-owner-honors-screen class:public-hall={!!publicData}>
   <div class="room-scene">
   <header class="locker-heading"><div><h1>{L.hallTitle}</h1><p>{data?.owner.team?.name ?? L.roomTitle}</p></div><span class="locker-mark" aria-hidden="true">◈</span></header>
   <div class="locker-stage" class:still={!motionOK} class:grabbing role="group" aria-label={L.roomTitle} onpointerdown={start} onpointermove={move} onpointerup={end} onpointercancel={() => { grabbing = false; pointer = null; drag = 0; }}>
@@ -76,7 +82,7 @@
     <div class="room-camera" style={`--camera:${-(zone-1)*52 + (motionOK ? drag : 0)}deg;--motion:${grabbing || !motionOK ? 0 : 580}ms`}>
       {#each panels as destination, i (destination)}
         <div class="room-wall" class:lit={zone === i} style={`--wall-angle:${(i-1)*52}deg`}>
-          <LockerArt zone={i} season={latestSeason} title={data?.owner.title ?? null} {awards} />
+          <LockerArt zone={i} season={latestSeason} title={data?.owner.title ?? null} {awards} theme={data?.owner.appearance?.theme ?? 'classic'} />
           {#if i === 1}<div class="owner-nameplate"><b>{data?.owner.nickname ?? L.noNickname}</b></div>{/if}
           {#if i === 0}<div class="season-plates"><span>{teamSeasonLabel(0)}</span><span>{data ? teamSeasonLabel(latestSeason) : L.ongoing}</span></div>{/if}
           {#if i !== 0}
@@ -96,12 +102,12 @@
   </div>
   <section class="room-list" aria-label={names[zone]} data-room-list={panel}>
   <div class="detail-body">
-    {#if visited.records}<div hidden={panel !== 'records'}><OwnerArchive /></div>{/if}
-    {#if visited.titles}<div hidden={panel !== 'titles'}><OwnerHall onpick={(title) => { if (data) data = { ...data, owner: { ...data.owner, title } }; }} /></div>{/if}
+    {#if visited.records}<div hidden={panel !== 'records'}>{#if publicData}<PublicHallRecords data={publicData} />{:else}<OwnerArchive />{/if}</div>{/if}
+    {#if visited.titles}<div hidden={panel !== 'titles'}>{#if publicData}<PublicHallRecords data={publicData} titles />{:else}<OwnerHall onpick={(title) => { if (data) data = { ...data, owner: { ...data.owner, title } }; }} />{/if}</div>{/if}
     {#if panel === 'trophies'}
       <div class="trophy-gallery" data-trophy-gallery>
         {#if !data}<p class="muted">{failed ? L.archiveError : L.archiveLoading}</p>{#if failed}<button class="btn" onclick={() => void load()}>{L.retry}</button>{/if}
-        {:else if !awards}<p class="muted">{L.roomEmptyAwards}</p>
+        {:else if !awards}<p class="muted">{publicData ? L.publicEmptyAwards : L.roomEmptyAwards}</p>
         {:else}
           {#if badges.length}<h2>{L.roomBadgeCount} <span>{badges.length}</span></h2><div class="gallery-badges">{#each badges as h (`${h.season}-${h.kind}`)}<div class="gallery-badge medal {h.medal}"><div><HonorEmblem {h} /></div><b>{h.title}</b><small>{teamSeasonLabel(h.season)}</small><p>{h.detail}</p></div>{/each}</div>{/if}
           {#if data.owner.cupHonors.length}<h2>{L.roomCupCount}</h2><CupHonors honors={data.owner.cupHonors} />{/if}
@@ -113,8 +119,9 @@
 </div>
 
 <style>
-  .locker-page{--room-gold:#d5bd7d;width:min(100%,680px);margin:0 auto;display:flex;flex-direction:column;min-width:0;min-height:calc(100svh - 76px);background:#102219;color:#ede9d8;padding-bottom:20px;overflow:clip;isolation:isolate;}
-  .room-scene{position:sticky;top:0;z-index:0;background:#102219;}
+  .locker-page{--room-gold:var(--member-gold,#d5bd7d);width:min(100%,680px);margin:0 auto;display:flex;flex-direction:column;min-width:0;min-height:calc(100svh - 76px);background:var(--member-bg,#102219);color:var(--member-ink,#ede9d8);padding-bottom:20px;overflow:clip;isolation:isolate;}
+  .public-hall .room-scene{position:relative;}
+  .room-scene{position:sticky;top:0;z-index:0;background:var(--member-bg,#102219);}
   .locker-heading{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 8px;gap:12px;}.locker-heading h1{font-size:23px;margin:0 0 3px;}.locker-heading p{font-size:12px;color:#aebead;margin:0;}.locker-mark{color:var(--room-gold);font-size:30px;}
   .locker-stage{--wall-width:min(82vw,350px);--radius:calc(var(--wall-width)*.98);position:relative;height:clamp(290px,49svh,480px);perspective:850px;isolation:isolate;overflow:hidden;touch-action:pan-y;user-select:none;background:#14281e;}
   .room-camera{position:absolute;inset:6% 0 11%;transform-style:preserve-3d;transform:translateZ(calc(-1*var(--radius))) rotateY(var(--camera));transition:transform var(--motion) cubic-bezier(.22,.75,.22,1);}
@@ -124,7 +131,7 @@
   .floor-crest{position:absolute;width:165px;height:165px;top:35%;left:calc(50% - 82px);border:4px double #77806a60;border-radius:50%;display:grid;place-items:center;color:#a3a78d55;font-size:110px;}.floor-crest span{line-height:1;}
   .room-shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,#09150e80,transparent 20% 80%,#09150e80),linear-gradient(0deg,#102219 0,transparent 25%);}
   .room-gesture{position:absolute;bottom:1px;left:16px;right:16px;text-align:center;font-size:11px;color:#b6c3b2;pointer-events:none;}
-  .exhibit-hit{position:absolute;inset:0;width:100%;border:0;background:none;color:#eee8ce;cursor:pointer;display:flex;align-items:flex-end;justify-content:center;padding:0 10px 8%;}.exhibit-tag{padding:6px 12px;background:#102219e8;border:1px solid #9c8d58;font-size:12px;letter-spacing:.02em;}.exhibit-tag.owner-title{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:800;max-width:100%;overflow-wrap:anywhere;}.exhibit-title-icon{display:flex;align-items:center;flex:none;}.exhibit-title-icon :global(svg){width:16px;height:16px;}.exhibit-hit:focus-visible{outline:3px solid #f2d589;outline-offset:-4px;}
+  .exhibit-hit{position:absolute;inset:0;width:100%;border:0;background:none;color:#eee8ce;cursor:pointer;display:flex;align-items:flex-end;justify-content:center;padding:0 10px 8%;}.exhibit-tag{padding:6px 12px;background:var(--member-bg,#102219)e8;border:1px solid #9c8d58;font-size:12px;letter-spacing:.02em;}.exhibit-tag.owner-title{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:800;max-width:100%;overflow-wrap:anywhere;}.exhibit-title-icon{display:flex;align-items:center;flex:none;}.exhibit-title-icon :global(svg){width:16px;height:16px;}.exhibit-hit:focus-visible{outline:3px solid #f2d589;outline-offset:-4px;}
   .owner-nameplate{position:absolute;top:61.3%;left:24%;width:52%;height:8%;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;pointer-events:none;}.owner-nameplate b{font-size:clamp(10px,2.9vw,14px);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .season-plates{position:absolute;top:16%;left:9%;right:9%;display:flex;justify-content:space-around;color:#e6d296;font-size:10px;pointer-events:none;}.season-plates span{background:#172b21;padding:2px 7px;}
   .room-controls{padding:10px 20px 0;display:flex;flex-direction:column;gap:2px;}.room-navigation{display:flex;align-items:center;gap:10px;}.room-arrow{flex:none;width:44px;height:48px;background:transparent;border:1px solid #52674e;color:#e1d6b3;font-size:30px;border-radius:8px;}.room-arrow:disabled{opacity:.22;}.room-caption{flex:1;min-width:0;text-align:center;}.room-caption h2{margin:0;font-size:20px;}.room-caption p{margin:5px 0 0;color:#adbdab;font-size:12px;line-height:1.4;}

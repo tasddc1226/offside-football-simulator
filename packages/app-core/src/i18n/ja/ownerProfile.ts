@@ -2,6 +2,21 @@ import type { Translation } from '../core';
 import type { OwnerProfileMsgs } from '../ko/ownerProfile';
 
 export const ownerProfile: Translation<OwnerProfileMsgs> = {
+  supporterNote:
+    'メンバーシップ利用中に設定できます。利用期間が終了すると、以前の代表称号に戻ります。',
+  titleSupporter: 'クラブサポーター',
+  supporterTenure: ({ n }: { n: number }) => `累計${n}か月以上・メンバーシップ利用中`,
+
+  publicSeasonNote: 'シーズンごとのチーム成績',
+  publicTitleNote: 'このオーナーが獲得した称号',
+  backToTeam: '← チームに戻る',
+  visitHall: '名誉館を訪問',
+  publicEmptyAwards: 'このオーナーにはまだ展示するバッジやカップ成績がありません。',
+  publicHall: '公開名誉館',
+  publicTitles: '獲得した称号',
+  publicTitlesEmpty: '獲得した称号はまだありません。',
+  publicPending: 'シーズン記録を集計中です。',
+
   roomTitle: 'オーナーロッカールーム',
   roomHint: '左右に回すと、下の記録が切り替わります。',
   roomSeasons: 'シーズンロッカー',

@@ -16,6 +16,7 @@ import type {
   TeamRankSort,
 } from '@offside/contracts';
 import { apiFetch, cachedGet } from './client.js';
+import { teamSlotQuery } from '../teamSlots';
 import { withOwnerHint } from './friendPending.js';
 
 export type {
@@ -44,24 +45,30 @@ const seasonQ = (season?: number) => (season === undefined ? '' : `?season=${sea
 
 /** 그 시즌 내 팀 + 넣을 수 있는 은퇴 선수. 팀을 저장하거나 경기를 치르면(쓰기) 메모가 비워진다. */
 export const fetchOwnerTeam = (season?: number) =>
-  withOwnerHint(cachedGet<OwnerTeamResponse>(`/v1/owner-team${seasonQ(season)}`, 60_000));
+  withOwnerHint(
+    cachedGet<OwnerTeamResponse>(teamSlotQuery(`/v1/owner-team${seasonQ(season)}`), 60_000),
+  );
 export const saveOwnerTeam = (body: PutOwnerTeamBody) =>
-  apiFetch<PutOwnerTeamResponse>('/v1/owner-team', { method: 'PUT', body: JSON.stringify(body) });
+  apiFetch<PutOwnerTeamResponse>(teamSlotQuery('/v1/owner-team'), {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
 /** T-11-217 팀 프리셋 목록 통째 교체(저장 · 덮어쓰기 · 이름 바꾸기 · 삭제). */
 export const saveTeamPresets = (body: PutTeamPresetsBody) =>
-  apiFetch<PutTeamPresetsResponse>('/v1/owner-team/presets', {
+  apiFetch<PutTeamPresetsResponse>(teamSlotQuery('/v1/owner-team/presets'), {
     method: 'PUT',
     body: JSON.stringify(body),
   });
 /** 상대 후보는 서버가 섞어 준다 — '다른 상대 보기'가 새로 받게 메모하지 않는다. */
-export const fetchOpponents = () => apiFetch<TeamOpponentsResponse>('/v1/owner-team/opponents');
+export const fetchOpponents = () =>
+  apiFetch<TeamOpponentsResponse>(teamSlotQuery('/v1/owner-team/opponents'));
 export const playMatch = (opponentTeamId: string) =>
-  apiFetch<PlayTeamMatchResponse>('/v1/owner-team/matches', {
+  apiFetch<PlayTeamMatchResponse>(teamSlotQuery('/v1/owner-team/matches'), {
     method: 'POST',
     body: JSON.stringify({ opponentTeamId }),
   });
 export const fetchTeamMatches = (season?: number) =>
-  cachedGet<TeamMatchesResponse>(`/v1/owner-team/matches${seasonQ(season)}`, 60_000);
+  cachedGet<TeamMatchesResponse>(teamSlotQuery(`/v1/owner-team/matches${seasonQ(season)}`), 60_000);
 /** 구단 시즌 업적. season: 팀 시즌(0 = 프리시즌), 없으면 지금 시즌. */
 export const fetchClubAchievements = (season?: number) =>
   cachedGet<ClubAchievementsResponse>(`/v1/owner-team/achievements${seasonQ(season)}`, 60_000);

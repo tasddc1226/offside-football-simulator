@@ -11,7 +11,9 @@ export function OwnerAvatar({
   name,
   size = 24,
   avatarId,
+  frame = 'none',
 }: {
+  frame?: 'none' | 'brass' | 'silver' | 'emerald';
   name: string;
   size?: number;
   avatarId?: string | null | undefined;
@@ -23,6 +25,13 @@ export function OwnerAvatar({
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       style={{
+        borderWidth: frame === 'none' ? 0 : 3,
+        borderColor: {
+          none: 'transparent',
+          brass: '#b88954',
+          silver: '#9cacb8',
+          emerald: '#4e9777',
+        }[frame],
         width: size,
         height: size,
         borderRadius: size / 2,

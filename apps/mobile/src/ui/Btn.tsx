@@ -17,6 +17,7 @@ export interface BtnProps {
   sm?: boolean;
   block?: boolean;
   disabled?: boolean;
+  selected?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
   /** e2e·접근성용 식별자(웹 data-act). */
@@ -40,6 +41,7 @@ export function Btn({
   sm,
   block,
   disabled,
+  selected,
   style,
   dot,
   ...rest
@@ -58,7 +60,7 @@ export function Btn({
     <Press
       onPress={onPress}
       disabled={disabled}
-      accessibilityState={{ disabled: !!disabled }}
+      accessibilityState={{ disabled: !!disabled, ...(selected === undefined ? {} : { selected }) }}
       {...rest}
       style={[
         {

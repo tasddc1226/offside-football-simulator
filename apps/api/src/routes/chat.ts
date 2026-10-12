@@ -111,6 +111,7 @@ export function registerChatRoutes(app: Hono<AppEnv>) {
           tier:
             (await ownerTierOfProfile(db, profileId, new Date(now).toISOString()))?.tier ?? null,
           title: viewer.title,
+          memberTitleUntil: viewer.memberTitleUntil ?? null,
           avatarId: viewer.avatarId ?? null,
         });
     return ok(

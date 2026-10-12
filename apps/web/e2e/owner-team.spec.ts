@@ -1419,3 +1419,32 @@ test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없
   await expect.poll(() => puts.length).toBe(3);
   expect(puts[2]!.presets.map((p) => p.name)).toEqual(['주말 리그']);
 });
+
+test('membership switches three team slots without mixing drafts at mobile width', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await stubOwner(page, true);
+  await page.route(ownerTeamUrl, (r) => {
+    const slot = Number(new URL(r.request().url()).searchParams.get('slot') ?? 0);
+    return r.fulfill(
+      ownerTeam({ selectedSlot: slot, slotLimit: 3, slotEditable: true, teamSlots: [] }),
+    );
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  const slots = page.getByRole('group', { name: '팀 선택', exact: true });
+  await expect(slots.getByRole('button')).toHaveCount(3);
+  await page.locator('[data-team-name]').fill('대표 초안');
+  await slots.getByRole('button').nth(1).click();
+  await expect(page.locator('[data-team-name]')).toHaveValue('');
+  await page.locator('[data-team-name]').fill('두 번째 초안');
+  await slots.getByRole('button').nth(2).click();
+  await expect(page.locator('[data-team-name]')).toHaveValue('');
+  await slots.getByRole('button').nth(0).click();
+  await expect(page.locator('[data-team-name]')).toHaveValue('대표 초안');
+  await slots.getByRole('button').nth(1).click();
+  await expect(page.locator('[data-team-name]')).toHaveValue('두 번째 초안');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

@@ -1,3 +1,4 @@
+import { displayedOwnerTitleSql } from './membership.js';
 import {
   communityOwnerEmail,
   communityRecipients,
@@ -315,7 +316,7 @@ export async function listComments(db: Db, postId: string) {
       admin: boardComments.admin,
       createdAt: boardComments.createdAt,
       // T-11-150 작성자의 지금 대표 칭호.
-      title: profiles.title,
+      title: displayedOwnerTitleSql(),
       avatarId: profiles.avatarId,
     })
     .from(boardComments)

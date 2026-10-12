@@ -43,3 +43,21 @@ it('permanent labels and criteria are translated and unknown titles stay hidden'
   expect(titleLabel('owner-unknown')).toBeNull();
   setLocale('ko');
 });
+
+it('renders membership separately from earned achievements in every locale', async () => {
+  const { MEMBER_BADGES } = await import('@offside/contracts/membership-rules');
+  const { titleTenureLabel, titleIconPath } = await import('./ownerTitle.js');
+  for (const locale of ['ko', 'en', 'ja'] as const) {
+    setLocale(locale);
+    for (const badge of MEMBER_BADGES) {
+      const id = `member-${badge}`;
+      expect(titleLabel(id)).toBeTruthy();
+      expect(titleTenureLabel(id)).toBeTruthy();
+      expect(titleCondition(id)).toBeNull();
+      expect(PERMANENT_TITLES.some((t) => String(t.id) === id)).toBe(false);
+    }
+    expect(new Set(MEMBER_BADGES.map((b) => titleIconPath(`member-${b}`))).size).toBe(4);
+  }
+  expect(titleLabel('member-unknown')).toBeNull();
+  setLocale('ko');
+});

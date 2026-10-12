@@ -2,6 +2,9 @@ import type { CupTextKey } from '../ko/cup.js';
 
 // T-11-145 オフサイドカップのサーバー文言(日本語)。
 export const CUP_JA: Record<CupTextKey, string> = {
+  memberSlotInvalid: 'チーム枠は1〜3から選んでください。',
+  memberSlotLocked: '追加チームの運営には有効なクラブメンバーシップが必要です。',
+  memberPrimaryOnly: '公式競技には代表チームで参加してください。',
   completeTitle: '{cup}が終了しました',
   completeBody: 'カップの結果と報酬のリロール券を確認してください。',
   predictionRewardBody: 'カップの結果と勝敗予想で獲得したリロール券を確認してください。',

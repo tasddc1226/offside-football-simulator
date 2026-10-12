@@ -5,7 +5,10 @@ import { grantItemStatement } from './itemShop.js';
 // T-11-145 구단주 아이템(리롤권 · T-11-174 잠재력 강화권) 읽기 · 쓰기 · 인앱 구매 지급.
 
 type Items = Record<OwnerItem, number>;
-const ITEMS_SQL = `SELECT item, qty FROM owner_items WHERE profile_id = ?`;
+const ITEMS_SQL = `SELECT item, sum(qty) AS qty FROM (
+  SELECT item, qty FROM owner_items WHERE profile_id = ?1
+  UNION ALL SELECT item, remaining AS qty FROM membership_item_lots WHERE profile_id = ?1
+) GROUP BY item`;
 const OWNER_SQL = `SELECT profile_id AS profileId FROM iap_purchases WHERE store = ? AND transaction_id = ?`;
 
 const foldItems = (rows: readonly { item: string; qty: number }[]): Items => {
@@ -31,16 +34,25 @@ export async function spendItem(
   now: string,
 ): Promise<Items | null> {
   const d1 = db.$client;
-  const [used, items] = await d1.batch<{ item: string; qty: number }>([
+  const [memberUsed, used, items] = await d1.batch<{ item: string; qty: number }>([
+    // Consume refundable lots first; a later refund never touches independently earned items.
+    d1
+      .prepare(
+        `UPDATE membership_item_lots SET remaining = remaining - 1 WHERE rowid = (
+      SELECT rowid FROM membership_item_lots WHERE profile_id = ? AND item = ? AND remaining > 0
+      ORDER BY created_at, store, environment, transaction_id LIMIT 1
+    )`,
+      )
+      .bind(profileId, item),
     d1
       .prepare(
         `UPDATE owner_items SET qty = qty - 1, updated_at = ?
-         WHERE profile_id = ? AND item = ? AND qty > 0`,
+         WHERE changes() = 0 AND profile_id = ? AND item = ? AND qty > 0`,
       )
       .bind(now, profileId, item),
     d1.prepare(ITEMS_SQL).bind(profileId),
   ]);
-  return used?.meta.changes ? foldItems(items?.results ?? []) : null;
+  return memberUsed?.meta.changes || used?.meta.changes ? foldItems(items?.results ?? []) : null;
 }
 
 /** 이 거래를 받은 구단주(없으면 undefined). */

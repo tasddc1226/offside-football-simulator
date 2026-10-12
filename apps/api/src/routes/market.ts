@@ -1,3 +1,4 @@
+import { and, eq } from 'drizzle-orm';
 import {
   BuyListingBodySchema,
   BuyListingResponseSchema,
@@ -47,7 +48,8 @@ import {
   setCardLocked,
 } from '../db/repos/market.js';
 import { myFundsSpends } from '../db/repos/itemShop.js';
-import { myTeamIn, slotIdsOf } from '../db/repos/ownerTeams.js';
+import { ownerTeams } from '../db/schema.js';
+import { slotIdsOf } from '../db/repos/ownerTeams.js';
 import { checkCupListing } from './cup.js';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
@@ -321,11 +323,16 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     const input = readBody(c, ReleaseCardsBodySchema);
     const now = nowIso();
     const season = teamSeasonAt(now);
-    const [[team], rules] = await Promise.all([
-      season === null ? Promise.resolve([]) : myTeamIn(db, me.id, season),
+    const [teams, rules] = await Promise.all([
+      season === null
+        ? Promise.resolve([])
+        : db
+            .select()
+            .from(ownerTeams)
+            .where(and(eq(ownerTeams.profileId, me.id), eq(ownerTeams.season, season))),
       marketRules(db),
     ]);
-    const lineup = new Set(team ? slotIdsOf(team) : []);
+    const lineup = new Set(teams.flatMap((team) => slotIdsOf(team)));
     if (input.careerIds.some((id) => lineup.has(id)))
       throw conflictError('선발에 든 선수는 팀에서 뺀 뒤 방출해 주세요.', 'IN_LINEUP');
     const res = await releaseCards(db, {

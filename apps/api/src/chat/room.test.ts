@@ -21,6 +21,28 @@ describe('T-11-015 ChatRoom', () => {
     vi.unstubAllGlobals();
   });
 
+  it('subscription title expires for a connected writer and stored history', async () => {
+    vi.useFakeTimers({ now: new Date('2026-10-12T00:00:00.000Z') });
+    const { room, join } = fakeRoom();
+    const alice = await join(
+      room.issueTicket({
+        ...ALICE,
+        title: 'member-silver',
+        memberTitleUntil: '2026-10-12T00:00:10.000Z',
+      }),
+    );
+    say(alice, room, 'before expiry');
+    expect(last(alice)).toMatchObject({ t: 'msg', m: { title: 'member-silver' } });
+    vi.setSystemTime(new Date('2026-10-12T00:00:10.000Z'));
+    say(alice, room, 'after expiry');
+    expect(last(alice)).toMatchObject({ t: 'msg', m: { title: null } });
+    const reader = await join();
+    expect(reader.sent[0]).toMatchObject({
+      t: 'hello',
+      messages: [{ title: null }, { title: null }],
+    });
+  });
+
   it('avatar changes refresh stored messages and connected writers without exposing profile IDs', async () => {
     const { room, join } = fakeRoom();
     const alice = await join(room.issueTicket(ALICE));

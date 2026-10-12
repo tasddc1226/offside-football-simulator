@@ -1,4 +1,6 @@
 // My club: shared owner identity and operations, with team-specific play in the team card.
+import { memberBilling, syncMembership } from '../../platform/membership';
+import { membershipText as M } from '@offside/app-core/i18n/ko/membership';
 import { useEffect, useState } from 'react';
 import { shapeOf } from '@offside/contracts/owner-team';
 import { Alert, View } from 'react-native';
@@ -119,6 +121,10 @@ function LockedPitch() {
 }
 
 export default function Owner() {
+  const membership = useSnapshot(memberBilling).data?.membership;
+  useEffect(() => {
+    void syncMembership();
+  }, []);
   const c = useColors();
   const cache = useSnapshot(accountCache);
   // 받은 친구 신청(T-11-142)이나 아직 안 본 새 업적이 있으면 '내 팀' 버튼에 빨간 점, 누르면 바로 친구 · 업적 탭으로.
@@ -220,6 +226,7 @@ export default function Owner() {
         <Card gap={14} testID="owner-summary">
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <OwnerAvatar
+              frame={membership?.active ? membership.appearance.frame : 'none'}
               avatarId={acct?.avatarId ?? null}
               name={nickname ?? L.avatarInitial}
               size={48}
@@ -464,6 +471,11 @@ export default function Owner() {
         </>
       ) : null}
 
+      {linked ? (
+        <Btn testID="open-membership" onPress={() => go('membership')}>
+          {M.title}
+        </Btn>
+      ) : null}
       {linked ? (
         <Press
           testID="open-owner-hall"

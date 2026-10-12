@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fetchOwnerTitles, putOwnerTitle, type OwnerTitlesResponse } from '@offside/app-core/api/ownerProfile';
-  import { TITLE_NONE, titleLabel, titleCondition, permanentTitleOf, titleGradeLabel, titleRelated } from '@offside/app-core/ownerTitle';
+  import { TITLE_NONE, titleTenureLabel, titleLabel, titleCondition, permanentTitleOf, titleGradeLabel, titleRelated } from '@offside/app-core/ownerTitle';
   import { titleCollection } from '@offside/app-core/ownerTitleCollection';
   import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
   import TitleBadge from '../cup/TitleBadge.svelte';
@@ -37,7 +37,7 @@
 {#snippet identity(id: string, isNew = false)}
   <span class="oh-title-identity">
     <span class="oh-title-art" aria-hidden="true"><TitleBadge title={id} size="icon" /></span>
-    <span class="oh-title-name"><strong>{titleLabel(id)}</strong><span class="oh-title-meta">{permanentTitleOf(id) ? titleGradeLabel(permanentTitleOf(id)!.grade) : L.titleCup}{#if isNew}<span class="oh-title-new">{L.newTitle}</span>{/if}</span></span>
+    <span class="oh-title-name"><strong>{titleLabel(id)}</strong><span class="oh-title-meta">{permanentTitleOf(id) ? titleGradeLabel(permanentTitleOf(id)!.grade) : (titleTenureLabel(id) ?? L.titleCup)}{#if isNew}<span class="oh-title-new">{L.newTitle}</span>{/if}</span></span>
   </span>
 {/snippet}
 
@@ -52,6 +52,13 @@
       {#if hall.title}{@render identity(hall.title)}{:else}<strong>{L.currentNone}</strong>{/if}
       <p class="muted fs-sm">{L.titleDisplayHint}</p>
     </section>
+    {#if hall.membership?.active && hall.membership.badge}
+      {@const id = `member-${hall.membership.badge}`}
+      <button class="oh-title-item" class:equipped={hall.title === id} data-title-pick={id} aria-pressed={hall.title === id} disabled={saving} onclick={() => pick(id)}>
+        <span class="item-heading">{@render identity(id)}{#if hall.title === id}<span class="using">✓ {L.titleUsing}</span>{/if}</span>
+        <span class="muted fs-sm condition">{L.supporterNote}</span>
+      </button>
+    {/if}
     <div class="oh-title-filters" role="group" aria-label={L.titlesTab}>
       <button aria-pressed={shown === 'earned'} data-title-filter="earned" onclick={() => filter = 'earned'}>{L.collectionEarned}<span>{collection.earned.length}</span></button>
       <button aria-pressed={shown === 'locked'} data-title-filter="locked" onclick={() => filter = 'locked'}>{L.collectionLocked}<span>{collection.locked.length}</span></button>

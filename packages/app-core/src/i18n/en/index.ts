@@ -55,6 +55,7 @@ import { legendToast } from './legendToast';
 import { market } from './market';
 import { marketChart } from './marketChart';
 import { marketValueChart } from './marketValueChart';
+import { membership } from './membership';
 import { owner } from './owner';
 import { ownerConflict } from './ownerConflict';
 import { ownerPlayers } from './ownerPlayers';
@@ -145,6 +146,7 @@ export const en = {
   market,
   marketChart,
   marketValueChart,
+  membership,
   owner,
   ownerConflict,
   ownerPlayers,

@@ -2,7 +2,8 @@
   import Topbar from '../Topbar.svelte';
   import BackBar from '../BackBar.svelte';
   import { go } from '../nav.js';
+  import MemberComparison from './MemberComparison.svelte';
   import MyPlayers from '../MyPlayers.svelte';
 </script>
-<div class="wrap" data-owner-players-screen><Topbar /><MyPlayers /></div>
+<div class="wrap" data-owner-players-screen><Topbar /><MemberComparison /><MyPlayers /></div>
 <BackBar act="players-back" fallback={() => go('owner')} />

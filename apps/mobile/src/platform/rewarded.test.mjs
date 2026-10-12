@@ -16,7 +16,7 @@ vi.mock('react-native-google-mobile-ads', () => ({
 vi.mock('./adConsent', () => ({ askConsent: f.consent }));
 vi.mock('./adFree', () => ({
   adFree: {
-    get owned() {
+    get effective() {
       return f.owned;
     },
   },

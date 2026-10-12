@@ -84,7 +84,7 @@ function BoostCard({ s }: { s: GameState }) {
   const [fx, setFx] = useState<BoostOutcome | null>(null);
   const [adBusy, setAdBusy] = useState(false);
   const [adMessage, setAdMessage] = useState('');
-  const owned = useSnapshot(adFree).owned;
+  const owned = useSnapshot(adFree).effective;
   // T-11-153 광고 대신 구단 자금으로 시도(로그인한 구단주). 광고 제거 구매자는 이미 광고 없이 시도한다.
   // T-11-157 자금이 모자란 시즌의 한 번과 추가 시도에 쓴다. 광고는 하루 횟수가 없고, 구단 자금은 서버가 하루 상한을 둔다.
   const club = useClubReward('boost', boostFreeOpen(s) && !owned);
@@ -256,7 +256,7 @@ export function PlayerTab({ s }: { s: GameState }) {
   // 체격 입력 이전 선수는 포지션 표준 체격으로 보여 준다(표시만 — 능력치 보정은 없다).
   const body = s.body ?? BODY_DEFAULT[s.pos];
   // T-11-079 보상형 광고로 이번 시즌 스카우트 평가 보기. 광고 단위도 광고 제거도 없으면 예전 안내만 둔다.
-  const owned = useSnapshot(adFree).owned;
+  const owned = useSnapshot(adFree).effective;
   const peek = useSnapshot(potPeek);
   const pot = peekView(s, peek.peek, owned ? 'free' : 'ad');
   const canAd = peekAvailable();

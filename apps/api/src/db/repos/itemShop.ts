@@ -42,7 +42,8 @@ export async function rerollShopRules(db: Db) {
 export async function shopSnapshot(db: Db, profileId: string, since: string) {
   const row = await db.$client
     .prepare(
-      `SELECT (SELECT qty FROM owner_items WHERE profile_id = ?1 AND item = 'reroll') AS reroll,
+      `SELECT coalesce((SELECT qty FROM owner_items WHERE profile_id = ?1 AND item = 'reroll'), 0)
+              + coalesce((SELECT sum(remaining) FROM membership_item_lots WHERE profile_id = ?1 AND item = 'reroll'), 0) AS reroll,
               (SELECT balance FROM owner_funds WHERE profile_id = ?1) AS balance,
               (SELECT coalesce(sum(qty), 0) FROM owner_item_purchases
                 WHERE profile_id = ?1 AND item = 'reroll' AND created_at >= ?2) AS bought`,
@@ -91,10 +92,11 @@ async function buyItem(
       : []),
     d1
       .prepare(
-        `SELECT (SELECT balance FROM owner_funds WHERE profile_id = ?) AS balance,
-                (SELECT qty FROM owner_items WHERE profile_id = ? AND item = 'reroll') AS reroll`,
+        `SELECT (SELECT balance FROM owner_funds WHERE profile_id = ?1) AS balance,
+                coalesce((SELECT qty FROM owner_items WHERE profile_id = ?1 AND item = 'reroll'), 0)
+                + coalesce((SELECT sum(remaining) FROM membership_item_lots WHERE profile_id = ?1 AND item = 'reroll'), 0) AS reroll`,
       )
-      .bind(b.profileId, b.profileId),
+      .bind(b.profileId),
   ]);
   const row = results.at(-1)!.results[0] as { balance: number | null; reroll: number | null };
   return {

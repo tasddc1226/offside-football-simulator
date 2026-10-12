@@ -2,6 +2,9 @@ import type { CupTextKey } from '../ko/cup.js';
 
 // T-11-145 오프사이드 컵 서버 문구(영어).
 export const CUP_EN: Record<CupTextKey, string> = {
+  memberSlotInvalid: 'Choose a team slot from 1 to 3.',
+  memberSlotLocked: 'An active Club membership is required to manage extra teams.',
+  memberPrimaryOnly: 'Use your primary team for official competition.',
   completeTitle: '{cup} has ended',
   completeBody: 'Check the cup results and your reward rerolls.',
   predictionRewardBody: 'Check the cup results and the rerolls earned from your predictions.',

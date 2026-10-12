@@ -203,6 +203,14 @@ export type OwnerTeam = z.infer<typeof OwnerTeamSchema>;
  * 보기만 한다. players는 그 시즌에 처음 올라와 은퇴한 내 선수(팀에 넣을 수 있는 선수)다.
  */
 export const OwnerTeamResponseSchema = z.strictObject({
+  selectedSlot: z.number().int().min(0).max(2).optional(),
+  slotLimit: z.number().int().min(1).max(3).optional(),
+  slotEditable: z.boolean().optional(),
+  teamSlots: z
+    .array(
+      z.strictObject({ slot: z.number().int().min(0).max(2), id: TeamIdSchema, name: z.string() }),
+    )
+    .optional(),
   season: TeamSeasonSchema,
   current: TeamSeasonSchema.nullable(),
   seasons: z.array(TeamSeasonOptionSchema),

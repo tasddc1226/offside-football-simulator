@@ -33,7 +33,7 @@ type RewardPlacement = keyof typeof UNITS;
 const unitOf = (p: RewardPlacement) => (__DEV__ ? TestIds.REWARDED : Platform.select(UNITS[p]));
 
 /** 광고를 볼 수 있거나(단위 있음) 광고 없이 받을 수 있으면(광고 제거) 버튼을 보인다. */
-export const rewardAvailable = (p: RewardPlacement) => adFree.owned || !!unitOf(p);
+export const rewardAvailable = (p: RewardPlacement) => adFree.effective || !!unitOf(p);
 /** 보상 버튼 종류 — 광고 제거 구매자는 'free', 광고를 볼 수 있으면 'ad', 둘 다 아니면 null. owned는 화면이 구독한 값. */
 export const rewardOffer = (p: RewardPlacement, owned: boolean): 'free' | 'ad' | null =>
   owned ? 'free' : unitOf(p) ? 'ad' : null;
@@ -83,7 +83,7 @@ export async function claimReward(
   onEarned: () => void,
   skipped: string,
 ): Promise<string> {
-  if (!adFree.owned) {
+  if (!adFree.effective) {
     const unit = unitOf(p);
     if (!unit || !(await askConsent())) return adText.rewardedUnavailable;
     const result = await watch(unit);

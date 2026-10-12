@@ -1,3 +1,5 @@
+import { hasActiveMembership } from '../db/repos/membership.js';
+import { cupKo } from '../cupText.js';
 import { checkCupLineup } from './cup.js';
 import {
   ClubAchievementsResponseSchema,
@@ -96,7 +98,7 @@ const teamRequired = () => conflictError('먼저 이번 시즌 팀을 만들어 
 
 /** 구글 로그인한(삭제되지 않은) 프로필만 구단주다. 익명 프로필은 403 GOOGLE_LOGIN_REQUIRED — 웹이 로그인 안내를 띄운다. */
 export async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
-  const profile = await getProfile(getDb(c), getSessionOrThrow(c).profileId);
+  const profile = await getProfile(getDb(c), getSessionOrThrow(c).profileId, true);
   if (!profile || !hasAccount(profile) || profile.deletedAt) {
     throw new AppError({
       code: 'FORBIDDEN',
@@ -180,6 +182,16 @@ function toOwnerTeam(
   };
 }
 
+export function selectedTeamSlot(c: Context<AppEnv>): number {
+  const value = c.req.query('slot') ?? '0';
+  if (!/^[012]$/.test(value)) throw conflictError(cupKo('memberSlotInvalid'), 'TEAM_SLOT_INVALID');
+  return Number(value);
+}
+export async function requireTeamSlot(c: Context<AppEnv>, profileId: string, slot: number) {
+  if (slot > 0 && !(await hasActiveMembership(getDb(c), profileId, nowIso())))
+    throw conflictError(cupKo('memberSlotLocked'), 'MEMBERSHIP_INACTIVE');
+}
+
 export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
   // 내 팀(보고 있는 시즌) + 그 시즌에 넣을 수 있는 은퇴 선수 + 오늘 남은 경기 수. 화면을 열 때 한 번 부른다(웹 메모 1분).
   app.get('/v1/owner-team', requireProfile, async (c) => {
@@ -195,7 +207,9 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     ]);
     // T-11-113 개막 뒤의 프리시즌 팀은 친선전용 편성을 보이고 고친다(지금 가진 선수만).
     const editableSeason = season === teamSeasonAt(now) || season === 0;
-    const found = teams.find((t) => t.season === season);
+    const slot = selectedTeamSlot(c);
+    const memberActive = await hasActiveMembership(db, me.id, now);
+    const found = teams.find((t) => t.season === season && t.slot === slot);
     const team = found ? friendlyTeamOf(found) : null;
     const picks = players.map((p) => {
       const profile = peakOf(p.peakProfile);
@@ -222,6 +236,12 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       {
         season,
         current: teamSeasonAt(now),
+        selectedSlot: slot,
+        slotLimit: memberActive ? 3 : 1,
+        slotEditable: slot === 0 || memberActive,
+        teamSlots: teams
+          .filter((t) => t.season === season)
+          .map((t) => ({ slot: t.slot, id: t.id, name: t.name })),
         seasons: seasonOptions(now, reqLang(c)),
         team: team
           ? toOwnerTeam(
@@ -256,6 +276,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
   app.put('/v1/owner-team', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
+    const slot = selectedTeamSlot(c);
+    await requireTeamSlot(c, me.id, slot);
     const input = readBody(c, PutOwnerTeamBodySchema);
     const now = nowIso();
     const current = teamSeasonAt(now);
@@ -298,7 +320,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     // 이전 클라이언트가 좌표를 보내지 않으면 기존 자유 편성을 보존한다.
     // 포메이션을 바꾼 요청만 새 기본 배치로 돌아간다.
     const [stored] =
-      friendly || input.layout === undefined ? await myTeamIn(db, me.id, season) : [];
+      friendly || input.layout === undefined ? await myTeamIn(db, me.id, season, slot) : [];
     const previous = stored ? friendlyTeamOf(stored) : null;
     const layout =
       input.layout === undefined
@@ -307,7 +329,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           : null
         : input.layout;
     const lineup = buildLineup(input.formation, input.slots, eligible, layout);
-    if (!friendly) await checkCupLineup(db, me.id, season, ids, filledCount(lineup), now);
+    if (!friendly && slot === 0)
+      await checkCupLineup(db, me.id, season, ids, filledCount(lineup), now);
     const values = {
       name: input.name,
       manager: input.manager,
@@ -331,6 +354,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         .values({
           id: newId('tem'),
           profileId: me.id,
+          slot,
           season,
           name: input.name,
           manager: input.manager,
@@ -343,7 +367,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           updatedAt: now,
         })
         .onConflictDoUpdate({
-          target: [ownerTeams.profileId, ownerTeams.season],
+          target: [ownerTeams.profileId, ownerTeams.season, ownerTeams.slot],
           set: { friendlyJson: lineupJson },
         })
         .returning();
@@ -356,13 +380,14 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       .values({
         id: newId('tem'),
         profileId: me.id,
+        slot,
         season,
         createdAt: now,
         updatedAt: now,
         ...values,
       })
       .onConflictDoUpdate({
-        target: [ownerTeams.profileId, ownerTeams.season],
+        target: [ownerTeams.profileId, ownerTeams.season, ownerTeams.slot],
         set: { ...values, updatedAt: now },
       })
       .returning();
@@ -377,12 +402,14 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
   // 실제 팀 반영은 PUT /v1/owner-team이 선수 · 컵 잠금을 검사한다 — 여기서는 모양만 본다.
   app.put('/v1/owner-team/presets', requireProfile, async (c) => {
     const me = await requireOwner(c);
+    const slot = selectedTeamSlot(c);
+    await requireTeamSlot(c, me.id, slot);
     const input = readBody(c, PutTeamPresetsBodySchema);
     const now = nowIso();
     const current = teamSeasonAt(now);
     const season = input.season ?? currentSeasonOrThrow(now);
     checkEditableSeason(season, current);
-    const [row] = await setTeamPresets(getDb(c), me.id, season, input.presets);
+    const [row] = await setTeamPresets(getDb(c), me.id, season, input.presets, slot);
     if (!row) throw teamNotFound();
     return ok(c, PutTeamPresetsResponseSchema, { presets: input.presets });
   });
@@ -390,6 +417,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
   // 경기 상대 후보: 같은 시즌에서 내 팀 레이팅에 가까운 다른 구단주의 팀 몇 개를 섞어서(레이팅이 같으면 OVR이 가까운 팀부터).
   // OVR로만 고르면 비슷한 전력끼리만 만나 레이팅이 실력만큼 벌어지지 않았다(시즌 1 첫날 OVR 대별 평균 레이팅이 모두 1000 안팎).
   app.get('/v1/owner-team/opponents', requireProfile, async (c) => {
+    if (selectedTeamSlot(c) !== 0)
+      throw conflictError(cupKo('memberPrimaryOnly'), 'PRIMARY_TEAM_ONLY');
     const me = await requireOwner(c);
     const db = getDb(c);
     const now = nowIso();
@@ -429,6 +458,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
   // 경기 한 판(같은 시즌 팀끼리). 서버가 두 팀 선발을 읽어 시뮬레이션하고 결과·전적·레이팅을 남긴다. 재시도가 경기를 두 번
   // 치르지 않게 멱등 키를 쓴다.
   app.post('/v1/owner-team/matches', requireProfile, idempotency, async (c) => {
+    if (selectedTeamSlot(c) !== 0)
+      throw conflictError(cupKo('memberPrimaryOnly'), 'PRIMARY_TEAM_ONLY');
     const me = await requireOwner(c);
     const db = getDb(c);
     const input = readBody(c, PlayTeamMatchBodySchema);
@@ -447,7 +478,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         'TEAM_MATCH_DAILY_LIMIT',
       );
     }
-    if (!opp || opp.team.profileId === me.id || opp.team.season !== season) throw teamNotFound();
+    if (!opp || opp.team.slot !== 0 || opp.team.profileId === me.id || opp.team.season !== season)
+      throw teamNotFound();
     // T-10-095 같은 상대에게는 하루 한 번만 건다(받은 경기는 세지 않는다 — 받은 쪽은 되갚을 수 있다).
     if (challenged.some((m) => m.teamId === opp.team.id)) {
       throw rateLimited(
@@ -573,7 +605,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const me = await requireOwner(c);
     const db = getDb(c);
     const season = seasonQuery(c, nowIso());
-    const [team] = await myTeamIn(db, me.id, season);
+    const [team] = await myTeamIn(db, me.id, season, selectedTeamSlot(c));
     const items = team
       ? await matchViews(db, await listRecentMatches(db, me.id, team.id), () => team.id, reqLang(c))
       : [];

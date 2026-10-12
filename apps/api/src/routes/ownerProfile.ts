@@ -1,3 +1,5 @@
+import { membershipOf } from '../db/repos/membership.js';
+import { parseMemberTitle } from '@offside/contracts/membership-rules';
 // T-11-150 구단주 프로필과 명예관(대표 칭호). 남의 프로필은 팀 id로 연다 — 팀 프로필·랭킹이 이미 팀 id를 들고 있고, 프로필 id는
 // 내보내지 않는다. 대표 칭호는 받은 칭호(컵 성적) 가운데서만 고른다.
 import {
@@ -10,12 +12,12 @@ import {
   PutOwnerTitleResponseSchema,
   TeamIdSchema,
 } from '@offside/contracts';
-import { TITLE_NONE, titlesOf } from '@offside/contracts/owner-title';
+import { PERMANENT_TITLES, TITLE_NONE, titlesOf } from '@offside/contracts/owner-title';
 import { desc, eq, inArray } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { cupKo } from '../cupText.js';
 import { permanentTitlesOf, backfillOwnerTitles } from '../db/repos/ownerTitles.js';
-import { appMeta, ownerTitleAwards } from '../db/schema.js';
+import { appMeta, ownerTitleAwards, ownerMemberships } from '../db/schema.js';
 import { requireAdmin } from '../auth/admin.js';
 import { and } from 'drizzle-orm';
 import { ownerProfileOf } from '../db/repos/ownerProfile.js';
@@ -115,10 +117,61 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
       nowIso(),
       reqLang(c),
     );
+    // Reuse the existing profile read: no extra request per hall tab and no private recap read.
+    // This legacy response includes viewer-specific `mine`, so it remains NO_STORE.
+    const closed = openTeamSeasons(nowIso()).filter((s) => teamSeasonClosed(s, nowIso()));
+    const [honors, awards, states] = await Promise.all([
+      honorsOf(db, profileId),
+      db
+        .select({ id: ownerTitleAwards.titleId })
+        .from(ownerTitleAwards)
+        .where(eq(ownerTitleAwards.profileId, profileId)),
+      closed.length
+        ? db
+            .select()
+            .from(appMeta)
+            .where(inArray(appMeta.key, closed.map(closeMetaKey)))
+        : [],
+    ]);
+    const done = new Set(
+      states.flatMap((s) => {
+        try {
+          return JSON.parse(s.value).step === 'done' ? [s.key] : [];
+        } catch {
+          return [];
+        }
+      }),
+    );
+    const pendingSeasons = closed.filter((s) => !done.has(closeMetaKey(s)));
+    const publicOwner = {
+      ...owner,
+      seasons: owner.seasons.map((s) =>
+        pendingSeasons.includes(s.season) ? { ...s, achScore: null, teamRank: null } : s,
+      ),
+    };
+    const publicRanks = publicOwner.seasons.flatMap((s) =>
+      s.teamRank === null ? [] : [s.teamRank],
+    );
+    publicOwner.stats = {
+      ...owner.stats,
+      bestTeamRank: publicRanks.length ? Math.min(...publicRanks) : null,
+    };
+    const earned = new Set(awards.map((a) => a.id));
+    const hall = {
+      owner: publicOwner,
+      honors: honors.filter((h) => done.has(closeMetaKey(h.season))),
+      pendingSeasons,
+      titles: [
+        ...new Set([
+          ...PERMANENT_TITLES.filter((t) => earned.has(t.id)).map((t) => t.id),
+          ...titlesOf(owner.cupHonors),
+        ]),
+      ],
+    };
     return ok(
       c,
       OwnerProfileResponseSchema,
-      { owner, mine: session?.profileId === profileId },
+      { owner: publicOwner, mine: session?.profileId === profileId, hall },
       200,
       NO_STORE,
     );
@@ -136,24 +189,26 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/owner/title', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
-    const [honors, permanent, [latest]] = await Promise.all([
+    const [honors, permanent, [latest], membership] = await Promise.all([
       cupHonorsOf(db, me.id),
       permanentTitlesOf(db, me.id, nowIso()),
       db
         .select({ id: ownerTeams.id })
         .from(ownerTeams)
-        .where(eq(ownerTeams.profileId, me.id))
+        .where(and(eq(ownerTeams.profileId, me.id), eq(ownerTeams.slot, 0)))
         .orderBy(desc(ownerTeams.season))
         .limit(1),
+      membershipOf(db, me.id, nowIso()),
     ]);
     return ok(
       c,
       OwnerTitlesResponseSchema,
       {
+        membership,
         title: me.title,
         titles: [...titlesOf(honors), ...permanent.filter((t) => t.earnedAt).map((t) => t.id)],
         permanent,
-        pinned: me.titlePinned,
+        pinned: !!parseMemberTitle(me.title) || me.titlePinned,
         teamId: latest?.id ?? null,
       },
       200,
@@ -166,23 +221,42 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
     const me = await requireOwner(c);
     const db = getDb(c);
     const { title } = readBody(c, PutOwnerTitleBodySchema);
-    const [honors, permanent] = await Promise.all([
+    const [honors, permanent, membership] = await Promise.all([
       cupHonorsOf(db, me.id),
       permanentTitlesOf(db, me.id, nowIso()),
+      membershipOf(db, me.id, nowIso()),
     ]);
     const cupTitles = titlesOf(honors);
-    const titles = [...cupTitles, ...permanent.filter((t) => t.earnedAt).map((t) => t.id)];
+    const memberTitle = membership.active && membership.badge ? `member-${membership.badge}` : null;
+    const titles = [
+      ...cupTitles,
+      ...permanent.filter((t) => t.earnedAt).map((t) => t.id),
+      ...(memberTitle ? [memberTitle] : []),
+    ];
     if (title && title !== TITLE_NONE && !titles.includes(title))
       throw conflictError(cupKo('titleNotOwned'), 'TITLE_NOT_OWNED');
     const next =
       title === null
         ? { title: cupTitles[0] ?? null, titlePinned: 0 }
         : { title: title === TITLE_NONE ? null : title, titlePinned: 1 };
-    await db.update(profiles).set(next).where(eq(profiles.id, me.id));
+    if (parseMemberTitle(title)) {
+      await db
+        .update(ownerMemberships)
+        .set({ supporterTitle: true })
+        .where(eq(ownerMemberships.profileId, me.id));
+    } else {
+      await db.batch([
+        db.update(profiles).set(next).where(eq(profiles.id, me.id)),
+        db
+          .update(ownerMemberships)
+          .set({ supporterTitle: false })
+          .where(eq(ownerMemberships.profileId, me.id)),
+      ]);
+    }
     const seasons = await db
       .select({ season: ownerTeams.season })
       .from(ownerTeams)
-      .where(eq(ownerTeams.profileId, me.id));
+      .where(and(eq(ownerTeams.profileId, me.id), eq(ownerTeams.slot, 0)));
     // Known first-page keys are purged; remaining rank pages expire within the existing five-minute TTL.
     purgeEdge(
       c,

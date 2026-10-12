@@ -1,5 +1,8 @@
 // T-11-145 오프사이드 컵 서버 문구(한국어 원문). `{이름}` 자리는 cupText.ts의 fill로 채운다. 키는 en/ja와 같다.
 export const CUP_KO = {
+  memberSlotInvalid: '팀 슬롯은 1~3번만 선택할 수 있어요.',
+  memberSlotLocked: '추가 팀은 클럽 멤버십 이용 중에 운영할 수 있어요.',
+  memberPrimaryOnly: '공식 경쟁은 대표 팀으로 참가해 주세요.',
   completeTitle: '{cup}가 끝났어요',
   completeBody: '컵 결과와 보상으로 받은 리롤권을 확인해 주세요.',
   predictionRewardBody: '컵 결과와 승부예측으로 받은 리롤권을 확인해 주세요.',

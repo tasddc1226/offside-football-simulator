@@ -163,7 +163,7 @@ function FlyIn({ index, children }: { index: number; children: ReactNode }) {
 export default function Create() {
   const s = useSnapshot(appState, { sync: true });
   const C = s.C;
-  const owned = useSnapshot(adFree).owned;
+  const owned = useSnapshot(adFree).effective;
   const offer = rewardOffer('candidates', owned);
   const rewardLock = useRef(false);
   const [rewardBusy, setRewardBusy] = useState(false);
