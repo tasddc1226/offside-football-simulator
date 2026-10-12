@@ -179,6 +179,12 @@ const EXPR = {
     y: 7,
     r: ['..............s.........', '.............eee........', '', '..........mmmm..........'],
   },
+  // T-11-191 모션 전용: 소리치는 입(세리머니), 눈 감기(깜빡임 · 헤딩).
+  shout: {
+    y: 8,
+    r: ['........ese..ese........', '', '.........mmmmmm.........', '..........mmmm..........'],
+  },
+  blink: { y: 7, r: ['.........s....s.........'] },
 } satisfies Record<string, Layer>;
 // y 완장, W 목발, w 흰색(붕대·셔츠), r 넥타이, q/Q/v/x 꽃다발(꽃·잎·포장지).
 const ACC = {
@@ -327,6 +333,11 @@ const FIXED: Record<string, string> = {
   v: '#46a457',
   x: '#f4f0e4',
   b: '#ff7a3d',
+  // T-11-191 모션 소품: B/D 공(흰 · 검은 조각), Y 트로피 그늘, u 흙먼지.
+  B: '#f4f4ef',
+  D: '#1c1c1f',
+  Y: '#b8860b',
+  u: '#c9b48a',
 };
 const SHADOW = 'rgba(0,0,0,.28)';
 
@@ -493,8 +504,8 @@ export function avatarSpec(s: GameState, side: KitSide = 'home'): AvatarSpec {
   );
 }
 
-/** 모습 → 24×32 색 격자(null은 투명). */
-export function avatarPixels(sp: AvatarSpec): (string | null)[][] {
+/** 모습 → 24×32 글자 지도(부위 레이어를 쌓은 것). 모션(avatar-motion.ts)은 이 지도를 고쳐 그린다. */
+export function avatarChars(sp: AvatarSpec): string[][] {
   const g = BASE.map((r) => r.split(''));
   const lay = (o: Layer) =>
     o.r.forEach((row, i) => {
@@ -507,6 +518,19 @@ export function avatarPixels(sp: AvatarSpec): (string | null)[][] {
   if (sp.glasses) lay(GOGGLE_LAYER);
   if (sp.wrist) lay(WRIST_LAYER);
   for (const a of sp.acc) ACC[a].forEach(lay);
+  return g;
+}
+
+/** 모습 → 24×32 색 격자(null은 투명). */
+export function avatarPixels(sp: AvatarSpec): (string | null)[][] {
+  return paintChars(sp, avatarChars(sp));
+}
+
+/**
+ * 글자 지도 → 색 격자. top은 지도 위쪽에 더한 여유 줄 수다(모션은 머리 위 4줄을 더 쓴다) — 유니폼 무늬 · 엠블럼은
+ * 서 있는 자세의 좌표(y - top)로 칠한다. Z는 손목 자리(손목 밴드가 있으면 그 색, 없으면 피부).
+ */
+export function paintChars(sp: AvatarSpec, g: string[][], top = 0): (string | null)[][] {
   const band = BANDS[sp.band ?? 0] ?? null;
   const goggle = GOGGLES[sp.glasses ?? 0] ?? null;
   const wrist = WRISTS[sp.wrist ?? 0] ?? null;
@@ -561,6 +585,8 @@ export function avatarPixels(sp: AvatarSpec): (string | null)[][] {
         return socks ? darken(socks, 0.2) : k.cuff;
       case 'X':
         return wrist;
+      case 'Z':
+        return wrist ?? skin.s;
       case 'b':
         return k === SUIT_KIT ? '#18181b' : (BOOTS[sp.boots ?? 0] ?? FIXED.b!);
       case 'A':
@@ -575,7 +601,7 @@ export function avatarPixels(sp: AvatarSpec): (string | null)[][] {
         return FIXED[ch] ?? null;
     }
   };
-  return g.map((row, y) => row.map((ch, x) => color(ch, x, y)));
+  return g.map((row, y) => row.map((ch, x) => color(ch, x, y - top)));
 }
 
 /** 색 격자 → 사각형 목록(viewBox 0 0 24 32). 같은 색이 이어진 가로 칸은 사각형 하나로 합치고, 그림자 칸은 반투명 검정이다. */
