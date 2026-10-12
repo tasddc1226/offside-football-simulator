@@ -44,8 +44,8 @@ const ko = {
   ruleResultTerm: '결과 수치',
   ruleResult: (p: { span: string }) => `그 밖의 효과는 표시된 크기의 ${p.span} 사이에서 정해져요.`,
   ruleTwistTerm: '뜻밖의 반전',
-  ruleTwist: (p: { twist: string; ok: string; fail: string; safe: string }) =>
-    `대가가 없었다면 ${p.twist} 확률로 능력치 하나가 바뀌어요. 오를 확률은 성공·확정 ${p.ok}, 실패 ${p.fail}, 안전한 선택 ${p.safe}예요. 오르면 +1~2, 내리면 −1이에요.`,
+  ruleTwist: (p: { chance: string }) =>
+    `도전에 성공하거나 확정된 선택을 하면 ${p.chance} 확률로 능력치 하나가 +1~2 더 올라요. 실패나 안전한 선택에는 붙지 않고, 능력치가 깎이는 반전은 없어요.`,
 };
 
 export type DexMsgs = typeof ko;

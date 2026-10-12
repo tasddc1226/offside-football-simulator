@@ -157,7 +157,6 @@ export const STORY_EVENTS: EventDef[] = [
           fx: (s) => {
             addStat(s, 'morale', -8);
             addStat(s, 'trust', -1);
-            addAttr(s, weakKey(s), 1);
             endStory(s, 'rival', '영원한 2인자');
           },
         },
