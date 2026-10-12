@@ -70,8 +70,8 @@
   {#await import('./SeasonGauge.svelte') then { default: SeasonGauge }}<SeasonGauge />{/await}
   <!-- T-11-145 오프사이드 컵 소식은 모두가 먼저 보는 홈에서(신청은 대회 화면). 트로피 그림까지 끌고 와서 첫 화면 번들 밖 지연 청크로. -->
   {#await import('./cup/CupBanner.svelte') then { default: CupBanner }}<CupBanner onopen={() => go('cup')} />{/await}
-  {#await import('./AppConversion.svelte') then { default: AppConversion }}<AppConversion context="home" />{/await}
   <HomeLive />
+  {#await import('./AppConversion.svelte') then { default: AppConversion }}<AppConversion context="home" />{/await}
   <div class="tiles">
     <!-- T-11-080f 구단주 화면을 거치지 않고 이적시장으로 바로 간다(뒤로 가기는 홈으로). 홈에서는 서버를 부르지 않는다. -->
     <button class="tile tile-link tile-wide" data-act="home-market" onclick={() => go('market')}>
