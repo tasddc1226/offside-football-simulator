@@ -45,6 +45,8 @@ export interface Candidate {
   hintKeys: AttrKey[];
   /** T-11-196 프리미엄 스카우트의 A 이상 보장 후보. */
   guaranteed?: boolean;
+  /** T-11-225 다시 뽑아도 남겨 둔(킵) 후보 — 화면 전용. revealed는 킵할 때 잠재력 범위를 이미 봤는지. */
+  kept?: { revealed: boolean };
 }
 
 const CLAMP = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));

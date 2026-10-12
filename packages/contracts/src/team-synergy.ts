@@ -2,12 +2,12 @@
  * T-11-105 구단주 팀 선수 시너지. 기획: docs/tracking/team-synergy-plan.md.
  * zod 없는 모듈이라 owner-team 서브패스로 웹·앱 편성 미리보기와 서버 경기 계산이 같은 규칙을 쓴다.
  *
- * 세 층 — 듀오(두 선수의 유형 조합), 주발 맞춤(풀백·윙어 한 명), 팀 색깔(선발 전체). 모두 더하기만 한다(벌점 없음).
+ * 세 층 — 듀오(두 선수의 유형 조합), 주발 맞춤(풀백·윙어 한 명), 팀 색깔(선발 전체 — 우리가 키운 팀·국가대표 라인업). 모두 더하기만 한다(벌점 없음).
  * 유스 선수(null)는 어디에도 들지 않는다. 흔한 듀오(거의 모든 팀이 가진 조합)는 작게, 드문 듀오는 크게 준다.
  * 경기에는 SYNERGY_FROM_SEASON 시즌(시즌 1)부터 반영한다. 이미 끝난 프리시즌 경기·기록은 그대로 둔다.
  * T-11-197 듀오 효과 상한(줄마다 +3 · 합 +5)을 없앴다 — 켜진 듀오는 모두 표의 효과를 그대로 더한다.
  */
-import { DEFAULT_NATION } from './nations.js';
+import { DEFAULT_NATION, NATION_BY_CODE, type Confed } from './nations.js';
 import { BASE_DETAIL, type DetailPos } from './positions.js';
 
 /** 시너지를 경기 계산에 넣기 시작하는 서비스 시즌. */
@@ -159,8 +159,45 @@ export const DUOS: readonly DuoDef[] = [
 /** 팀 색깔 '우리가 키운 팀'에 필요한 직접 키운 선발 수와 효과. */
 export const HOMEGROWN_MIN = 8;
 export const HOMEGROWN_EFFECT: Partial<SynergyLines> = { atk: 1, mid: 1, def: 1 };
-/** '국가대표 라인업'(배지만, 경기 효과 없음)에 필요한 같은 국적 선발 수. */
+/** 팀 색깔 '국가대표 라인업'에 필요한 같은 국적(어느 나라든) 선발 수. */
 export const NATIONAL_MIN = 7;
+
+/**
+ * T-11-225 국가대표 라인업의 나라별 축구 색깔. 배지가 아니라 경기 효과를 주고, 나라마다 줄에 나누는 몫만 다르다.
+ * 선수 대부분이 같은 국적이라 흔한 조합이므로 합은 어느 나라든 NATIONAL_POWER('우리가 키운 팀'의 절반)로 같다.
+ * 표에 없는 나라는 대륙연맹 색깔을 쓴다.
+ */
+export const NATIONAL_POWER = 1.5;
+export type NationStyle = { id: string; name: string; effect: Partial<SynergyLines> };
+const style = (id: string, name: string, effect: Partial<SynergyLines>): NationStyle => ({
+  id,
+  name,
+  effect,
+});
+export const NATION_STYLES: Readonly<Record<string, NationStyle>> = {
+  KR: style('kr_press', '투지의 압박', { mid: 1, def: 0.5 }),
+  JP: style('jp_pass', '정교한 패스워크', { atk: 0.5, mid: 1 }),
+  BR: style('br_samba', '삼바 축구', { atk: 1, mid: 0.5 }),
+  AR: style('ar_grit', '탱고 투혼', { atk: 0.75, def: 0.75 }),
+  FR: style('fr_art', '아트 사커', { atk: 0.75, mid: 0.75 }),
+  ES: style('es_tiki', '티키타카', { mid: 1.5 }),
+  DE: style('de_machine', '전차 군단', { mid: 0.5, def: 1 }),
+  IT: style('it_lock', '빗장 수비', { def: 1, gk: 0.5 }),
+  'GB-ENG': style('eng_direct', '킥 앤 러시', { atk: 1, def: 0.5 }),
+  NL: style('nl_total', '토털 풋볼', { atk: 0.5, mid: 0.5, def: 0.5 }),
+  PT: style('pt_wing', '윙어의 나라', { atk: 1.25, mid: 0.25 }),
+};
+export const CONFED_STYLES: Readonly<Record<Confed, NationStyle>> = {
+  AFC: style('afc', '아시아의 기동력', { mid: 0.75, def: 0.75 }),
+  UEFA: style('uefa', '유럽의 조직력', { mid: 0.5, def: 0.75, gk: 0.25 }),
+  CONMEBOL: style('conmebol', '남미의 개인기', { atk: 1, mid: 0.25, gk: 0.25 }),
+  CAF: style('caf', '아프리카의 피지컬', { atk: 0.75, def: 0.75 }),
+  CONCACAF: style('concacaf', '빠른 역습', { atk: 0.75, mid: 0.75 }),
+  OFC: style('ofc', '섬나라의 끈기', { def: 1.25, gk: 0.25 }),
+};
+/** 그 나라의 축구 색깔(표에 없으면 대륙연맹 색깔). */
+export const nationStyle = (code: string): NationStyle =>
+  NATION_STYLES[code] ?? CONFED_STYLES[NATION_BY_CODE.get(code)?.conf ?? 'AFC'];
 
 /** 주발 맞춤 보정 — 맞는 발이면 +1, 양발은 어느 쪽이든 +0.5. */
 export const FOOT_BONUS = 1;
@@ -175,6 +212,9 @@ export type ActiveSynergy = {
   /** 실제로 더한 효과. 배지·주발 맞춤(자리 실력에 더함, foot 참고)은 비어 있다. */
   effect: Partial<SynergyLines>;
   kind: 'duo' | 'team' | 'badge' | 'foot';
+  /** T-11-225 국가대표 라인업의 나라 코드와 축구 색깔 id. */
+  nation?: string;
+  style?: string;
 };
 
 export type TeamSynergy = {
@@ -195,7 +235,7 @@ export const TEAM_RULES = {
   national: {
     id: 'national',
     name: '국가대표 라인업',
-    desc: `같은 국적 선수 ${NATIONAL_MIN}명 이상이 선발`,
+    desc: `같은 국적 선수 ${NATIONAL_MIN}명 이상이 선발. 나라마다 효과가 달라요`,
   },
   foot: { id: 'foot', name: '주발 맞춤', desc: '풀백은 같은 쪽 발, 윙어는 반대쪽 발' },
 } as const;
@@ -272,13 +312,19 @@ export function teamSynergy(players: readonly (SynergyPlayer | null)[]): TeamSyn
   const byNation = new Map<string, number[]>();
   for (const { p, i } of field)
     if (p.nation) byNation.set(p.nation, [...(byNation.get(p.nation) ?? []), i]);
-  const top = [...byNation.values()].sort((a, b) => b.length - a.length)[0];
-  if (top && top.length >= NATIONAL_MIN) {
+  // 11명이라 7명 이상인 국적은 많아야 하나다.
+  const top = [...byNation].find(([, m]) => m.length >= NATIONAL_MIN);
+  if (top) {
+    const [nation, members] = top;
+    const st = nationStyle(nation);
+    for (const l of SYN_LINES) lines[l] += st.effect[l] ?? 0;
     active.push({
       ...TEAM_RULES.national,
-      members: top,
-      effect: {},
-      kind: 'badge',
+      members,
+      effect: { ...st.effect },
+      kind: 'team',
+      nation,
+      style: st.id,
     });
   }
 

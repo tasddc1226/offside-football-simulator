@@ -102,7 +102,7 @@
   "packages/contracts/src/retired-numbers.ts": 44,
   "packages/contracts/src/service-seasons.ts": 4,
   "packages/contracts/src/team-logo.ts": 8,
-  "packages/contracts/src/team-synergy.ts": 28,
+  "packages/contracts/src/team-synergy.ts": 45,
   "packages/contracts/src/teams.ts": 6,
   "packages/game/src/comps.ts": 172,
   "packages/game/src/crests.ts": 1,

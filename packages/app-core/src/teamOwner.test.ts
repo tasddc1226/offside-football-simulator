@@ -177,8 +177,8 @@ describe('T-11-105 편성 화면 시너지', () => {
     ]);
     expect(rows.slice(2).every((r) => r.state === 'off')).toBe(true);
     expect(rows.find((r) => r.id === 'national')).toMatchObject({
-      badge: true,
-      effect: '배지만(경기 효과 없음)',
+      badge: false,
+      effect: '나라마다 달라요(합 +1.5)',
     });
   });
 });

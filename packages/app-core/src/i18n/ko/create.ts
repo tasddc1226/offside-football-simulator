@@ -112,6 +112,11 @@ const ko = {
   openAll: '모두 열기',
   candNo: (p: { n: number }) => `후보 ${p.n}`,
   picked: '✓ 선택',
+  // T-11-225 후보 킵
+  kept: '킵',
+  keepBtn: (p: { n: number }) => `후보 ${p.n} 킵하기`,
+  unkeepBtn: (p: { n: number }) => `후보 ${p.n} 킵 풀기`,
+  keepHelp: '킵한 후보는 다시 뽑아도 그 자리에 남아요. 한 명만 킵할 수 있어요.',
   scoutMemo: (p: { k: string }) => `스카우트 메모: 숨은 무기는 ${p.k}`,
   tapToOpen: '탭해서 열기',
   candOpenA11y: (p: { n: number; ovr: number; line: string }) =>

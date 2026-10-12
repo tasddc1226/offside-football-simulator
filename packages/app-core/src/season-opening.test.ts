@@ -202,6 +202,34 @@ describe('candidate reveal and retirement minimum', () => {
     actions.startCareer('test', 7, c.attrs, c.potential);
     expect(state.G!.pot + state.G!.bloom).toBe(c.potential.value);
   });
+  it('T-11-225 keeps one candidate in place across rerolls and drops it on start or another position', () => {
+    vi.setSystemTime(new Date(OPEN));
+    const { state, actions } = harness();
+    actions.rollCandidates();
+    const kept = state.candidates![1]!;
+    actions.keepCandidate(1);
+    actions.keepCandidate(2); // 한 명만 — 2번을 킵하면 1번은 풀린다.
+    expect(state.candidates!.map((c) => !!c.kept)).toEqual([false, false, true]);
+    actions.keepCandidate(1);
+    actions.rerollCandidates();
+    expect(state.candidates![1]!.attrs).toEqual(kept.attrs);
+    expect(state.candidates![1]!.kept).toEqual({ revealed: false });
+    expect(state.candidatesOpen[1]).toBe(true);
+    expect(state.candidates![0]!.attrs).not.toEqual(kept.attrs);
+    // 킵한 뒤 잠재력을 열면 다음 다시 뽑기에서도 그 후보의 범위는 보인다.
+    actions.revealCandidatePotential();
+    actions.rerollCandidates();
+    expect(state.candidatePotentialOpen).toBe(false);
+    expect(state.candidates![1]!.kept).toEqual({ revealed: true });
+    // 다른 포지션으로 뽑으면 넣지 않는다.
+    state.C.pos = state.C.pos === 'FW' ? 'DF' : 'FW';
+    actions.rollCandidates();
+    expect(state.candidates!.some((c) => c.kept)).toBe(false);
+    actions.startCareer('test', 7);
+    state.C.pos = state.G!.pos;
+    actions.rollCandidates();
+    expect(state.candidates!.some((c) => c.kept)).toBe(false);
+  });
   it('does not grant a reveal when saving fails', () => {
     const { state, actions } = harness();
     actions.rollCandidates();
