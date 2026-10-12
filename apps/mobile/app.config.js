@@ -22,7 +22,18 @@ module.exports = ({ config }) => {
   const plugins = [
     ...(config.plugins ?? []),
     ['@react-native-firebase/analytics', { ios: { withoutAdIdSupport: true } }],
-    ['expo-build-properties', { ios: { useFrameworks: 'dynamic' } }],
+    './plugins/withAndroidOptimization',
+    [
+      'expo-build-properties',
+      {
+        android: {
+          // Play evaluates native DEX, so Metro's JavaScript minification is insufficient.
+          enableMinifyInReleaseBuilds: true,
+          enableShrinkResourcesInReleaseBuilds: true,
+        },
+        ios: { useFrameworks: 'dynamic' },
+      },
+    ],
   ];
   if (iosFile || androidFile) plugins.push('@react-native-firebase/app');
   plugins.push((nativeConfig) =>
