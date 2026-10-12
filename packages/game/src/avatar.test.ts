@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   AVATAR_H,
+  AVATAR_PORTRAIT_H,
+  avatarPortraitRects,
+  cardAvatarSpec,
   AVATAR_W,
   avatarPixels,
   avatarRects,
@@ -197,5 +200,34 @@ describe('도트 선수 모션 (T-11-191)', () => {
       for (const id of MOTION_IDS)
         for (const frame of motionFrames(sp, id, poses)) expect(frame).toEqual(idle);
     }
+  });
+});
+
+describe('선수 카드 초상', () => {
+  it('옛 선수는 커리어 ID로 얼굴을 정하고 꾸미기는 저장된 코드대로 입힌다', () => {
+    const s = player();
+    expect(cardAvatarSpec({ careerId: s.cid }).look).toEqual(lookOf(s.cid));
+    const sp = cardAvatarSpec({ careerId: s.cid, look: 's5h6y2b2e2a3g2' });
+    expect(sp.look.skin).toBe(5);
+    expect(sp.look.hair).toBe(6);
+    expect(sp.hairStyle).toBe(LOOK_STYLES[2]);
+    expect(sp.gray).toBe(0);
+    expect(sp.acc).toEqual([]);
+  });
+
+  it('모든 머리 모양의 얼굴과 어깨를 같은 크기로 자르고 RNG를 건드리지 않는다', () => {
+    const s = player();
+    const rng = getActiveRng().getState();
+    for (let style = 0; style < LOOK_STYLES.length; style++) {
+      const sp = cardAvatarSpec({ careerId: s.cid, look: `y${style}` });
+      const rects = avatarPortraitRects(sp);
+      expect(rects.length).toBeGreaterThan(100);
+      expect(rects).toEqual(avatarRects(avatarPixels(sp)).filter((r) => r.y < AVATAR_PORTRAIT_H));
+      expect(
+        rects.every((r) => r.y + r.h <= AVATAR_PORTRAIT_H && r.x >= 0 && r.x + r.w <= AVATAR_W),
+      ).toBe(true);
+      expect(rects.some((r) => r.opacity !== undefined)).toBe(false);
+    }
+    expect(getActiveRng().getState()).toEqual(rng);
   });
 });

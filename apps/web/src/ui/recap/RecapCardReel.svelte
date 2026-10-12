@@ -96,7 +96,7 @@
 {#snippet cards(copy: boolean)}
   {#each squad as m (m.card.careerId)}
     <li class="reel-card" data-recap-reel-card={copy ? undefined : m.card.careerId}>
-      <PlayerCard player={m.card} name={nameOf(m)} rating={m.card.peak} role={detailPosOf(m.card)} season={m.card.season} />
+      <PlayerCard player={{ ...m.card, look: m.look ?? m.card.look }} name={nameOf(m)} rating={m.card.peak} role={detailPosOf(m.card)} season={m.card.season} />
     </li>
   {/each}
 {/snippet}

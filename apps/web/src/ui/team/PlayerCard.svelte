@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { cardAvatarSpec } from '@offside/game/avatar';
+  import PixelAvatar from '../PixelAvatar.svelte';
   import { intlLocale } from '@offside/contracts/i18n';
   import { tn } from '@offside/game/i18n/names';
   import { onMount } from 'svelte';
@@ -14,6 +16,7 @@
   let { player, name, rating, role, nation, season, compact = false, mini = false, youth = false, deploymentRating, ratingLabel = L.peakOvr }:
     { player?: TeamPlayer | undefined; name: string; rating: number; role: DetailPos; nation?: string | null | undefined; season?: number | undefined; compact?: boolean; mini?: boolean; youth?: boolean; deploymentRating?: number | undefined; ratingLabel?: string } = $props();
   // T-11-114 카드 시즌 뱃지(유스 선수·시즌을 모르는 옛 응답은 없다).
+  const portrait = $derived(!youth && player?.careerId ? cardAvatarSpec(player) : null);
   const cardSeason = $derived(youth ? undefined : (season ?? player?.season));
   const country = $derived(!youth ? NATION_BY_CODE.get(nation ?? player?.nation ?? DEFAULT_NATION) : undefined);
   const tier = $derived(youth ? 'youth' : cardTier(player?.legendScore, player?.peak ?? rating));
@@ -45,9 +48,14 @@
     {#if cardSeason !== undefined}<span class="card-season" data-card-season={cardSeason} style:--season-bg={cardSeasonColor(cardSeason)} title={teamSeasonLabel(cardSeason)}>{cardSeasonBadge(cardSeason)}</span>{/if}
     {#if country}<span class="card-nation" role="img" aria-label={L.nationAria({ name: tn(country.ko) })} title={tn(country.ko)}>{flagOf(country.code)}</span>{/if}
     {#if player?.locked && !youth}<span class="card-lock" data-card-locked role="img" aria-label={L.lockedAria} title={L.lockedAria}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></svg></span>{/if}
-    <div class="card-art" aria-hidden="true">
+    <div class="card-art" class:has-portrait={!!portrait} aria-hidden="true">
+      {#if portrait}
+        <PixelAvatar spec={portrait} portrait />
+        {#if player?.number != null}<span class="portrait-number">{player.number}</span>{/if}
+      {:else}
       <svg viewBox="0 0 100 96"><path d="M30 10 15 17 3 38 20 48 26 36 24 90 76 90 74 36 80 48 97 38 85 17 70 10 62 5Q50 16 38 5Z" /><path class="shirt-trim" d="M38 5Q50 25 62 5M25 73H75M34 12V87M66 12V87" /></svg>
       <span class="shirt-number">{player?.number ?? (youth ? '+' : name.slice(0, 1))}</span>
+      {/if}
     </div>
     {#if !mini}<strong class="card-name" class:scrolling={nameOverflow > 1} class:in-view={inView} title={name}
       bind:this={nameViewport} bind:clientWidth={viewportWidth} style:--name-offset="-{nameOverflow}px" style:--name-duration="{nameDuration}s">
@@ -93,6 +101,10 @@
   .card-art svg { width:100%; height:100%; fill:var(--card-dark); stroke:var(--card-ink); stroke-opacity:.4; stroke-width:1.4; }
   .card-art .shirt-trim { fill:none; stroke:var(--card-light); stroke-width:2; stroke-opacity:.65; }
   .shirt-number { position:absolute; inset:25% 0 0; display:flex; align-items:center; justify-content:center; font-family:var(--display); font-size:1.8rem; font-weight:700; }
+  .card-art.has-portrait { display:flex; justify-content:center; align-items:flex-end; }
+  .card-art.has-portrait :global(svg.avatar) { width:auto; max-width:100%; height:100%; fill:none; stroke:none; image-rendering:pixelated; }
+  .portrait-number { position:absolute; right:0; bottom:0; min-width:16px; padding:1px 3px; border-radius:3px; color:var(--card-light); background:var(--card-ink); font:700 10px/1.1 var(--display); text-align:center; }
+  .compact .portrait-number { min-width:10px; padding:0 2px; font-size:7px; }
   .card-name { display:block; margin-top:4px; text-align:center; font-size:.88rem; white-space:nowrap; overflow:hidden; line-height:1.6; }
   .name-track {display:inline-block;width:max-content;vertical-align:top;}
   .card-name.scrolling {text-align:left;}

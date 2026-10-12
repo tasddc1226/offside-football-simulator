@@ -42,6 +42,7 @@ const cardCols = {
   peak: cards.peak,
   number: cards.number,
   publicName: careers.publicName,
+  look: careers.look,
   legendScore: cards.legendScore,
   peakProfile: cards.peakProfile,
   type: careers.type,
@@ -70,6 +71,7 @@ const toListing = (r: ListingRow): MarketListing => ({
   createdAt: r.createdAt,
   card: {
     careerId: r.careerId as string,
+    ...(r.look ? { look: r.look as string } : {}),
     pos: r.pos as PosGroup,
     dpos: (r.dpos as MarketListing['card']['dpos']) ?? null,
     nation: (r.nation as string | null) ?? null,

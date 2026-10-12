@@ -97,6 +97,15 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
   const list = (cookie: string, careerId: string, price: number) =>
     call('POST', '/v1/market/listings', { cookie, headers: idem(), body: { careerId, price } });
 
+  it('선수 카드 초상은 공개 시장에서도 은퇴 때 저장한 꾸미기를 유지한다', async () => {
+    const seller = await issueGoogleCookie(ctx);
+    const id = await addCard(seller.profileId);
+    await ctx.db.update(careers).set({ look: 's5h6y2g2' }).where(eq(careers.id, id));
+    expect((await list(seller.cookie, id, 1_200_000)).status).toBe(201);
+    const data = ListRes.parse(await (await call('GET', '/v1/market')).json()).data;
+    expect(data.items.find((x) => x.card.careerId === id)?.card.look).toBe('s5h6y2g2');
+  });
+
   it('비로그인도 시장 목록을 보고, 방출·시장 쓰기는 구글 연결 구단주만 한다', async () => {
     const res = await call('GET', '/v1/market');
     expect(res.status).toBe(200);

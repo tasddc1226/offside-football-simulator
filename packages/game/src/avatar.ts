@@ -317,3 +317,18 @@ export function avatarRects(px: (string | null)[][]) {
   });
   return out;
 }
+
+/** 선수 카드용 전성기 얼굴. 커리어 ID와 은퇴 때 굳은 꾸미기로 같은 선수를 그린다.
+ * 카드에는 마지막 구단 정보가 없으므로 기본 유니폼을 쓰고, 나이·소품은 얼굴에 얹지 않는다. */
+export function cardAvatarSpec(p: {
+  careerId: string;
+  look?: string | null | undefined;
+}): AvatarSpec {
+  return primeAvatarSpec({ id: p.careerId, lastClub: '', look: p.look });
+}
+
+/** 얼굴과 어깨까지만 남긴 카드 초상(viewBox 0 0 24 21). 다리·그림자는 그리지 않는다. */
+export const AVATAR_PORTRAIT_H = 21;
+export function avatarPortraitRects(sp: AvatarSpec) {
+  return avatarRects(avatarPixels(sp)).filter((r) => r.y < AVATAR_PORTRAIT_H);
+}

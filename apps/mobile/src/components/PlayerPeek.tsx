@@ -128,6 +128,8 @@ export function PlayerPeek({
             <PlayerCard
               cell={{
                 name,
+                careerId: player.careerId,
+                look: player.look,
                 nation: player.nation,
                 season: player.season,
                 rating: player.peak,

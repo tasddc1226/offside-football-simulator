@@ -237,6 +237,8 @@ export function TeamLineup({
       : ghostPlayer
         ? {
             name: nameOf(ghostPlayer),
+            careerId: ghostPlayer.careerId,
+            look: ghostPlayer.look,
             nation: ghostPlayer.nation,
             season: ghostPlayer.season,
             rating: ghostPlayer.peak,
@@ -413,6 +415,8 @@ export function TeamLineup({
                       <PlayerCard
                         cell={{
                           name: nameOf(p),
+                          careerId: p.careerId,
+                          look: p.look,
                           nation: p.nation,
                           season: p.season,
                           rating: p.peak,

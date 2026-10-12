@@ -106,6 +106,8 @@ export type TeamRecord = z.infer<typeof TeamRecordSchema>;
 /** 팀에 넣을 수 있는 내 은퇴 선수. 서버에는 선수 이름이 없다 — 공개한 이름(publicName)만 있다. */
 export const TeamPlayerSchema = z.strictObject({
   careerId: z.string(),
+  /** 은퇴 때 굳은 꾸미기 코드. 옛 응답은 커리어 ID로 기본 얼굴을 그린다. */
+  look: z.string().nullable().optional(),
   pos: CareerPosSchema,
   /** 선수 국적. 옛 응답의 null/누락은 기본 국적(대한민국)으로 읽는다. */
   nation: z.string().nullable().optional(),

@@ -246,6 +246,8 @@ export default function Team() {
             peak: p.peak,
             number: p.number,
             legendScore: p.legendScore,
+            careerId: p.careerId,
+            look: p.look,
             nation: p.nation,
             season: p.season,
           }
