@@ -37,6 +37,7 @@ import type { GameState } from '@offside/game/types';
 import { seasonLabel } from '@offside/app-core/career';
 import { PositionGuide } from './PositionGuide';
 import { TrainRadar } from './TrainRadar';
+import { focusOf } from '@offside/game/player';
 import { careerGuideText as CG } from '@offside/app-core/i18n/ko/careerGuide';
 import {
   RANK_SEEN_RATIO,
@@ -325,6 +326,8 @@ interface Choice {
   /** 없으면 이름과 태그만(시즌 탭 훈련 칩 — 효과는 고른 뒤 설명 칸에). */
   effect?: string[];
   tag: string;
+  /** 주력 능력치 훈련이면 이름 옆 ★(육각형 보기의 축 표시와 같다). */
+  star?: boolean;
   selected: boolean;
   disabled?: boolean;
   onPress: () => void;
@@ -358,7 +361,10 @@ function ChoiceGrid({
                 paddingHorizontal: it.selected ? 8.5 : 10,
               }}
             >
-              <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>{it.label}</Txt>
+              <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>
+                {it.label}
+                {it.star ? <Txt style={{ color: c.accentText }}>{' ★'}</Txt> : null}
+              </Txt>
               {it.effect ? (
                 <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 }}>
                   {it.effect[0]}
@@ -552,6 +558,7 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
     [s],
   );
   const investCards = useMemo(() => new Map(INVESTS.map((d) => [d.id, investCard(s, d)])), [s]);
+  const focus = useMemo(() => focusOf(s), [s]);
   const { spot, wait, rankPlay, tour, reg, table } = useResultTour(report);
   const [popped, setPopped] = useState<{ g: TourGate; id: string } | null>(null);
 
@@ -716,6 +723,7 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
                   label: trainingLabel(s, tr),
                   effect: cd.effect,
                   tag: cd.tag,
+                  star: !!tr.attr && focus.includes(tr.attr),
                   selected: s.training === tr.id,
                   onPress: () => setTraining(tr.id),
                 };

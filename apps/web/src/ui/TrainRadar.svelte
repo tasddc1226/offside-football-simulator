@@ -73,7 +73,7 @@
       style="left:{(((x - VB.x) / VB.w) * 100).toFixed(2)}%;top:{(((y - VB.y) / VB.h) * 100).toFixed(2)}%"
       onclick={(e) => onpick(p.key, e.currentTarget)}
     >
-      <span class="rd-abbr"><span class="rd-kr">{p.labelKr}</span>{#if focus.includes(p.key)}<span class="tr-focus"> ★</span>{/if}</span>
+      <span class="rd-abbr"><span class="rd-kr">{p.labelKr}</span>{#if focus.includes(p.key)}<span class="tr-focus">&nbsp;★</span>{/if}</span>
       <span class="rd-val"
         >{p.value}{#if p.delta > 0}<span class="rd-up"> +{p.delta}</span>{:else if p.delta < 0}<span class="rd-down"> {p.delta}</span>{/if}</span
       >

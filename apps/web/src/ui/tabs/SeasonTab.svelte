@@ -30,6 +30,7 @@
   import LeagueTable from './LeagueTable.svelte';
   import PositionGuide from '../PositionGuide.svelte';
   import TrainRadar from '../TrainRadar.svelte';
+  import { focusOf } from '@offside/game/player';
   import { gameSeasonText as L } from '@offside/app-core/i18n/ko/gameSeason';
 
   const { s }: { s: GameState } = $props();
@@ -44,6 +45,8 @@
   const activeStories = $derived(Object.entries(s.story || {}).filter(([, v]) => !v.done));
   const t = $derived(turnNo(s));
   const picked = $derived(TRAININGS.find((x) => x.id === s.training));
+  // T-11-220 버튼 보기에서도 주력 능력치 훈련에 ★(육각형 보기의 축 표시와 같다).
+  const focus = $derived(focusOf(s));
   const invest = $derived(investDef(s));
   const spend = $derived(plannedSpend(s));
   const report = $derived(appState.report && appState.report.year === s.year ? appState.report : null);
@@ -266,7 +269,7 @@
     {#each trainView === 'radar' ? TRAININGS.filter((x) => !x.attr) : TRAININGS as tr (tr.id)}
       {@const c = trainingCard(s, tr)}
       <button class="opt" data-train={tr.id} aria-pressed={s.training === tr.id} onclick={(e) => setTraining(tr.id, e.currentTarget)}>
-        <b>{trainingLabel(s, tr)}</b><small>{c.effect[0]}</small>{#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
+        <b>{trainingLabel(s, tr)}{#if tr.attr && focus.includes(tr.attr)}<span class="tr-focus">&nbsp;★</span>{/if}</b><small>{c.effect[0]}</small>{#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
       </button>
     {/each}
   </div>
