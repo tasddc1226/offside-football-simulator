@@ -2,7 +2,7 @@
 // 은퇴 상세 화면과 은퇴 직후 화면이 같은 LegendView를 그린다. 내 선수는 로컬 ft_hof 항목(HofEntry)에서,
 // 다른 유저의 선수는 서버 /v1/hof에서 만든다.
 import type { LegendSnapshot, PublicHofEntry, RetiredNumberResult } from '@offside/contracts';
-import { lookCode } from '@offside/game/look';
+import { lookCode } from '@offside/game/look-code';
 import { toPublicName } from '@offside/contracts/content-filter';
 import { isHofEligible } from '@offside/contracts/hof-rules';
 import { DEFAULT_NATION } from '@offside/contracts/nations';

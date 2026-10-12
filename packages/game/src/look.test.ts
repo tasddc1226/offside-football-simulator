@@ -92,6 +92,20 @@ describe('도트 선수 꾸미기 (T-11-191)', () => {
     expect(parseLookCode('s3y4g2')).toEqual({ skin: 3, style: 4, glasses: 2 });
     expect(parseLookCode('s9z1h7')).toEqual({ hair: 7 });
     expect(lookCode(undefined)).toBeUndefined();
+    const pick = {
+      skin: 1,
+      hair: 2,
+      beard: 1,
+      style: 4,
+      expr: 2,
+      band: 3,
+      wrist: 4,
+      glasses: 2,
+      boots: 5,
+      socks: 6,
+    };
+    expect(lookCode({ owned: [], pick })).toBe('s1h2d1y4e2a3w4g2b5k6');
+    expect(parseLookCode('s1h2d1y4e2a3w4g2b5k6')).toEqual(pick);
   });
 
   it('고른 모습이 그림에 들어가고, 은퇴 · 전성기 모습도 같은 꾸미기를 쓴다', () => {

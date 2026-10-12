@@ -3,6 +3,8 @@
 // 산 항목과 고른 값은 세이브(GameState.look)에 남고, 은퇴 업로드 때 lookCode로 줄여 서버에 올린다(명예의 전당 · 결산 사진).
 // 그림(avatar.ts)은 이 파일의 선택지 순서를 그대로 쓴다. 게임 RNG는 쓰지 않고 성장 · 결과에 영향이 없다.
 import type { GameState, LookItem, LookState } from './types.js';
+import { LOOK_CODE, LOOK_ORDER } from './look-code.js';
+export { LOOK_ORDER, lookCode } from './look-code.js';
 
 /** 머리 모양(avatar.ts HAIR 키) — 순서가 코드 값이다. 뒤에만 더한다. */
 export const LOOK_STYLES = [
@@ -37,22 +39,6 @@ export const LOOK_ITEMS = {
   boots: { options: 11, rate: 0.3, min: 600 },
   socks: { options: 8, rate: 0.3, min: 600 },
 } as const satisfies Record<LookItem, { options: number; rate: number; min: number }>;
-export const LOOK_ORDER = Object.keys(LOOK_ITEMS) as LookItem[];
-
-/** 서버 코드의 글자(항목마다 한 글자). */
-const CODE: Record<LookItem, string> = {
-  skin: 's',
-  hair: 'h',
-  beard: 'd',
-  style: 'y',
-  expr: 'e',
-  band: 'a',
-  wrist: 'w',
-  glasses: 'g',
-  boots: 'b',
-  socks: 'k',
-};
-
 export const lookOwned = (s: GameState, item: LookItem): boolean => !!s.look?.owned.includes(item);
 
 /** 꾸밀 수 있나: 은퇴하면 굳는다. */
@@ -61,21 +47,12 @@ export const lookEditable = (s: GameState): boolean => !s.retired;
 export const validValue = (item: LookItem, v: number) =>
   Number.isInteger(v) && v >= 0 && v < LOOK_ITEMS[item].options;
 
-/** 고른 값만 서버용 짧은 코드로(예: `s2h5y3`). 고른 게 없으면 undefined. */
-export function lookCode(look: LookState | undefined): string | undefined {
-  if (!look) return undefined;
-  const code = LOOK_ORDER.filter((k) => look.pick[k] !== undefined)
-    .map((k) => `${CODE[k]}${look.pick[k]}`)
-    .join('');
-  return code || undefined;
-}
-
 /** 서버 코드 → 고른 값. 모르는 글자 · 범위 밖 값은 버린다(새 항목이 생긴 뒤 옛 앱이 읽어도 깨지지 않게). */
 export function parseLookCode(code: string | null | undefined): LookState['pick'] {
   const pick: LookState['pick'] = {};
   if (!code) return pick;
   for (const [, ch, n] of code.matchAll(/([a-z])(\d{1,2})/g)) {
-    const item = LOOK_ORDER.find((k) => CODE[k] === ch);
+    const item = LOOK_ORDER.find((k) => LOOK_CODE[k] === ch);
     const v = Number(n);
     if (item && validValue(item, v)) pick[item] = v;
   }
