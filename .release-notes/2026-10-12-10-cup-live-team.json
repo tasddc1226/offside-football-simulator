@@ -1,0 +1,23 @@
+{
+  "id": "t-11-228-cup-live-team",
+  "title": "컵 화면에 지금 팀 이름과 OVR이 보여요",
+  "items": [
+    "컵 경기는 원래대로 경기 당일 팀으로 치러요",
+    "컵 화면과 결과 알림이 신청 때 이름 대신 지금 팀 이름과 OVR을 보여 줘요"
+  ],
+  "en": {
+    "title": "The cup screen shows your current team name and OVR",
+    "items": [
+      "Cup matches are still played with your team as it stands on match day.",
+      "The cup screen and result notifications now show your current team name and OVR instead of the ones from sign-up."
+    ]
+  },
+  "ja": {
+    "title": "カップ画面に今のチーム名とOVRが表示されます",
+    "items": [
+      "カップの試合はこれまで通り試合当日のチームで行います。",
+      "カップ画面と結果通知に、申し込み時ではなく今のチーム名とOVRが表示されます。"
+    ]
+  },
+  "availability": "web-app"
+}
