@@ -61,7 +61,7 @@ it('영플레이어는 첫 프로 시즌이 아니어도 23세 이하면 받고,
       played: leagueOf('pl').matches,
       apps: 30,
       goals: 12,
-      ratingSum: 30 * 7.1,
+      ratingSum: 30 * 7.4,
     });
     return endSeason(s).awards;
   };

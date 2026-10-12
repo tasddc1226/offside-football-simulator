@@ -1,5 +1,7 @@
 // 시즌 진행 게이지(홈) 표시 — 웹·앱 공용. 서버 값(SeasonGaugeView)을 화면 문구로 바꾼다.
 import type { SeasonGaugeResponse } from '@offside/contracts';
+import { KST_MS } from '@offside/contracts/kst';
+import { SEASON_GAUGE } from '@offside/contracts/season-gauge';
 import { teamSeasonLabel } from './seasonName.js';
 import { seasonGaugeText as L } from './i18n/ko/seasonGauge.js';
 
@@ -22,6 +24,14 @@ export interface SeasonGaugeLines {
   pct: number;
   /** 마감이 정해졌으면 카운트다운. */
   countdown: string | null;
+  /** T-11-224 종료 날짜. 마감 전엔 가장 이른·늦은 날, 확정되면 그날. 끝났으면 null. */
+  endDate: string | null;
+}
+
+/** 마감 시각(00:00 KST)의 전날을 KST 날짜로 적는다 — 그날까지 시즌이 열려 있다. */
+function lastDay(iso: string): string {
+  const d = new Date(Date.parse(iso) + KST_MS - 1);
+  return L.date({ m: d.getUTCMonth() + 1, d: d.getUTCDate(), w: d.getUTCDay() });
 }
 
 export function seasonGaugeLines(g: SeasonGauge, now: number): SeasonGaugeLines {
@@ -33,5 +43,13 @@ export function seasonGaugeLines(g: SeasonGauge, now: number): SeasonGaugeLines 
     aria: L.aria({ season, pct }),
     pct,
     countdown: left === null ? null : left > 0 ? L.endsIn({ left: timeLeft(left) }) : L.ended,
+    endDate: g.endsAt
+      ? left! > 0
+        ? L.endsOn({ date: lastDay(g.endsAt) })
+        : null
+      : // 마감은 90%에 닿고 48시간 뒤라, 가장 이른 날이 그보다 가까우면 늦은 날만 적는다.
+        Date.parse(g.minEndsAt) - now > SEASON_GAUGE.noticeHours * 3_600_000
+        ? L.endsBetween({ from: lastDay(g.minEndsAt), to: lastDay(g.maxEndsAt) })
+        : L.endsBy({ date: lastDay(g.maxEndsAt) }),
   };
 }

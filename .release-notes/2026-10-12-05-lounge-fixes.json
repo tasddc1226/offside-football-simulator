@@ -1,28 +1,37 @@
 {
   "id": "t-11-224-lounge-fixes",
-  "title": "수상 · 영구결번 · 이적 제의 오류를 고쳤어요",
+  "title": "수상 · 이적 제의 오류를 고치고 안내를 더했어요",
   "items": [
     "23세 이하 영플레이어상을 첫 프로 시즌이 아니어도 받을 수 있어요",
     "FIFA 클럽 월드컵 우승이 영구결번 기여도에 들어가요",
     "고교 · 대학에서 OVR이 높으면 그 수준에 맞는 구단에서 제의가 와요",
-    "앱에서 무료 · 광고 다시 뽑기도 한 번 더 확인해요"
+    "앱에서 무료 · 광고 다시 뽑기도 한 번 더 확인해요",
+    "홈 시즌 게이지에 시즌이 끝나는 날짜가 보여요",
+    "훈련에서 잠재력 · 나이 때문에 성장이 줄면 얼마나 줄었는지 알려 줘요",
+    "원클럽맨 칭호 조건을 더 자세히 적었어요"
   ],
   "en": {
-    "title": "Fixes for awards, retired numbers and offers",
+    "title": "Award and offer fixes, plus clearer guidance",
     "items": [
       "You can win Young Player awards at 23 or younger, not only in your first pro season.",
       "FIFA Club World Cup wins now count toward retired-number contribution.",
       "High-rated school and university players now get offers from clubs that match their level.",
-      "In the app, free and ad redraws now ask for confirmation first."
+      "In the app, free and ad redraws now ask for confirmation first.",
+      "The home season gauge now shows when the season ends.",
+      "Training now tells you how much growth drops because of potential or age.",
+      "The One-Club Man title now explains its conditions in more detail."
     ]
   },
   "ja": {
-    "title": "表彰・永久欠番・移籍オファーの不具合を修正しました",
+    "title": "表彰・オファーの不具合修正と案内の追加",
     "items": [
       "23歳以下なら、プロ1年目でなくても最優秀若手選手賞を受賞できます。",
       "FIFAクラブワールドカップ優勝が永久欠番の貢献度に含まれます。",
       "高校・大学でOVRが高いと、そのレベルに合ったクラブからオファーが届きます。",
-      "アプリの無料・広告の引き直しも、実行前に確認します。"
+      "アプリの無料・広告の引き直しも、実行前に確認します。",
+      "ホームのシーズンゲージにシーズン終了日が表示されます。",
+      "潜在能力や年齢で成長が落ちると、トレーニングでどれだけ落ちたかを表示します。",
+      "ワンクラブマンの称号の条件を詳しく書きました。"
     ]
   },
   "availability": "web-app"

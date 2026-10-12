@@ -423,7 +423,7 @@ export function seasonAwards(
       L.amateur ? '대회 베스트 11' : L.tier >= 4 ? `${L.name} 올해의 팀` : `${L.name} 베스트 11`,
     );
   // 영플레이어는 23세 이하면 어느 프로 시즌에서든 받을 수 있고 커리어에 한 번이다(옛 rookieDone은 첫 프로 시즌만 봤다).
-  if (!L.amateur && s.age <= 23 && !wonYoung(s) && S.apps >= m * 0.45 && avg >= 6.85)
+  if (!L.amateur && s.age <= 23 && !wonYoung(s) && S.apps >= m * 0.45 && avg >= 7.25)
     awards.push(youngOf(L));
   if (L.amateur) return { awards, gala };
 
@@ -540,9 +540,9 @@ export function checkMilestones(
 }
 export function retireMilestones(s: GameState): string[] {
   const pro = s.career.filter((r) => r.pro && !r.mil && r.club !== SANGMU_NAME);
-  const clubs = new Set(pro.map((r) => r.club));
   const out: (string | null)[] = [];
-  if (pro.length >= 8 && clubs.size === 1)
+  // 구단 이름이 바뀌어도(데이터 갱신) 같은 구단이면 원클럽으로 센다 — clubId가 있으면 그것으로 비교한다.
+  if (pro.length >= 8 && pro.every((r) => sameClub(r, pro[0]!)))
     // 진짜 영구결번은 서버가 심사한다(T-10-076) — 여기서는 원클럽맨 헌정 이정표만 남긴다.
     out.push(mile(s, 'oneclub', `원클럽맨 · ${s.club.name} 헌정 (No.${s.number})`, 0));
   else {
