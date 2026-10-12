@@ -63,6 +63,8 @@ const LEAGUE_TITLE =
 
 /** 시즌 영예 한 줄의 구단 기여 점수. */
 export function honorPoints(h: string): number {
+  // 구단 대회라 아래 대표팀 '월드컵' 거름망보다 먼저 본다. 대륙 챔피언끼리라 유로파리그와 같은 급으로 둔다.
+  if (h.includes('클럽 월드컵')) return h.includes('우승') ? 20 : 0; // i18n-ignore 저장값
   if (NATIONAL.test(h) || CONF_HONORS.some((n) => h.includes(n))) return 0;
   if (h.includes('발롱도르')) return 60;
   if (h.includes('챔피언스리그 우승') && !h.includes('AFC')) return 40;

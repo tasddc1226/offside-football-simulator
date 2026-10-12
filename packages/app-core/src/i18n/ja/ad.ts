@@ -22,6 +22,8 @@ export const ad: Translation<AdMsgs> = {
   adRerollFreeBtn: (p) => `候補を引き直す(今日あと${p.n}回)`,
   adRerollShort: '引き直す',
   adRerollBadge: (p) => (p.ad ? `広告・残り${p.n}` : `残り${p.n}`),
+  adRerollConfirm: (p) =>
+    `候補3人を引き直しますか?今の候補と確認した潜在能力の範囲は消え、今日はあと${p.n}回になります。`,
   adRerollWatch: '広告を最後まで見ると候補を引き直せます。',
   adRerollDone: (p) => `候補を引き直しました。今日はあと${p.n}回引き直せます。`,
 };

@@ -42,3 +42,29 @@ it('마지막 시즌 수상은 은퇴 통산 횟수와 상세에 포함하고 �
   expect(entry.detail?.awards).toContainEqual({ year, t: '발롱도르' });
   expect(entry.detail?.ballon).toContainEqual({ year, rank: 1 });
 });
+
+it('영플레이어는 첫 프로 시즌이 아니어도 23세 이하면 받고, 커리어에 한 번만 받는다', () => {
+  const young = (awards: { year: number; t: string }[]) => {
+    setActiveRng(createRng(11));
+    const s = newGame(
+      { name: '신예', number: 7, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
+      11,
+    );
+    s.age = 21;
+    s.leagueId = 'pl';
+    s.club = { ...clubsIn('pl')[0]! };
+    s.season = newSeason(s);
+    // K3에서 첫 프로 시즌을 보낸 옛 세이브(플래그만 남고 상은 없음).
+    s.flags.rookieDone = true;
+    s.awards = awards;
+    Object.assign(s.season, {
+      played: leagueOf('pl').matches,
+      apps: 30,
+      goals: 12,
+      ratingSum: 30 * 7.1,
+    });
+    return endSeason(s).awards;
+  };
+  expect(young([])).toContain('PFA 올해의 영플레이어');
+  expect(young([{ year: 2025, t: 'K리그2 영플레이어상' }])).not.toContain('PFA 올해의 영플레이어');
+});

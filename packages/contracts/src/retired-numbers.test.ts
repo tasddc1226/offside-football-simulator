@@ -38,6 +38,7 @@ describe('영구결번 구단 기여 점수 (T-10-076)', () => {
     expect(honorPoints('커뮤니티 실드 우승')).toBe(3);
     expect(honorPoints('프리미어리그 득점왕')).toBe(10);
     expect(honorPoints('월드컵 우승')).toBe(0);
+    expect(honorPoints('FIFA 클럽 월드컵 우승')).toBe(20);
     expect(honorPoints('대한축구협회 올해의 선수')).toBe(0);
   });
 

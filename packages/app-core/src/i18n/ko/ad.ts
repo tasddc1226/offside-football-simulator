@@ -24,6 +24,9 @@ const ko = {
   /** T-11-221 후보 화면 반폭 톤 버튼 글자와 오른쪽 배지(광고 · 남은 횟수). 전체 문구는 접근성 이름(adRerollBtn). */
   adRerollShort: '다시 뽑기',
   adRerollBadge: (p: { n: number; ad: boolean }) => (p.ad ? `광고 · ${p.n}번` : `${p.n}번`),
+  /** T-11-224 무료 · 광고 다시 뽑기도 리롤권처럼 먼저 묻는다(모두 열기와 헷갈려 잘못 눌렀다는 제보). */
+  adRerollConfirm: (p: { n: number }) =>
+    `후보 3명을 다시 뽑을까요? 지금 후보와 확인한 잠재력 범위는 사라지고, 오늘 ${p.n}번 남아요.`,
   adRerollWatch: '광고를 끝까지 봐야 후보를 다시 뽑을 수 있어요.',
   adRerollDone: (p: { n: number }) => `후보를 다시 뽑았어요. 오늘 ${p.n}번 더 뽑을 수 있어요.`,
 };
