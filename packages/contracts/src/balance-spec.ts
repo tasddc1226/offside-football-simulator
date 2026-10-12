@@ -51,14 +51,14 @@ export const BALANCE_SPEC = {
     unit: 'x',
   },
   potGrowthFloor: {
-    def: 0.04,
+    def: 0.15,
     min: 0.01,
     max: 0.5,
     step: 0.01,
     unit: 'x',
   },
   targetManRole: {
-    def: 0,
+    def: 1,
     min: 0,
     max: 1,
     step: 1,
