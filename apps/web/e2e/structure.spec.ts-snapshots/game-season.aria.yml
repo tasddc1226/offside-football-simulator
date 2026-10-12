@@ -35,8 +35,8 @@
   - heading "자기 투자" [level=2]
   - text: /보유 \d+억 \d+,\d+만원/
   - button "투자 안 함" [pressed]
-  - button /\S+ 특훈 약점 .+원/
-  - button /\S+ 특훈 강점 .+원/
+  - button /\S+ 특훈약점 .+원/
+  - button /\S+ 특훈강점 .+원/
   - button /메디컬 케어 .+원/
   - button /멘탈 코칭 .+원/
   - text: 투자 안 함 · 자금을 아낀다
