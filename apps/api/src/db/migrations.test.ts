@@ -40,6 +40,16 @@ function firstProfilesCreateStatement(): string {
  * 5개뿐이다. 컬럼 목록은 schema.ts와 같다(snake_case).
  */
 const EXPECTED_COLUMNS: Record<string, string[]> = {
+  billing_alerts: [
+    'id',
+    'store',
+    'kind',
+    'product_id',
+    'test',
+    'created_at',
+    'sent_at',
+    'lease_until',
+  ],
   career_activity: [
     'profile_id',
     'career_id',

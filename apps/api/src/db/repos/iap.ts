@@ -67,6 +67,7 @@ export async function grantIapPurchase(
     qty: number;
     test: boolean;
     now: string;
+    alertId?: string;
   },
 ): Promise<Items | null> {
   const d1 = db.$client;
@@ -89,6 +90,18 @@ export async function grantIapPurchase(
     grantItemStatement(d1, p.profileId, p.item, p.qty, p.now, { sql: 'changes() = 1' }),
     d1.prepare(OWNER_SQL).bind(p.store, p.transactionId),
     d1.prepare(ITEMS_SQL).bind(p.profileId),
+    ...(p.alertId
+      ? [
+          d1
+            .prepare(
+              `INSERT INTO billing_alerts (id, store, kind, product_id, test, created_at)
+      SELECT ?, store, 'purchase', product_id, test, created_at FROM iap_purchases
+      WHERE store = ? AND transaction_id = ? AND profile_id = ? AND created_at = ?
+      ON CONFLICT DO NOTHING`,
+            )
+            .bind(p.alertId, p.store, p.transactionId, p.profileId, p.now),
+        ]
+      : []),
   ]);
   if (owner?.results[0]?.profileId !== p.profileId) return null;
   return foldItems(items?.results ?? []);

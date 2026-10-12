@@ -207,6 +207,8 @@ export const profiles = sqliteTable(
     avatarId: text('avatar_id'),
   },
   (table) => [
+    index('profiles_created_idx').on(table.createdAt),
+    index('profiles_last_seen_idx').on(table.lastSeenAt),
     uniqueIndex('profiles_google_sub_unique').on(table.googleSub),
     uniqueIndex('profiles_friend_code_unique').on(table.friendCode),
     uniqueIndex('profiles_apple_sub_unique').on(table.appleSub),
@@ -1519,3 +1521,22 @@ export const careerReminderOutcomes = sqliteTable('career_reminder_outcomes', {
   returnedAt: text('returned_at'),
   retiredAt: text('retired_at'),
 });
+
+/** Verified store events; no receipts, purchase tokens, email addresses or names. */
+export const billingAlerts = sqliteTable(
+  'billing_alerts',
+  {
+    id: text('id').primaryKey(),
+    store: text('store').notNull(),
+    kind: text('kind').notNull(),
+    productId: text('product_id').notNull(),
+    test: integer('test', { mode: 'boolean' }).notNull(),
+    createdAt: text('created_at').notNull(),
+    sentAt: text('sent_at'),
+    leaseUntil: integer('lease_until').notNull().default(0),
+  },
+  (t) => [
+    index('billing_alerts_pending_idx').on(t.sentAt, t.leaseUntil, t.createdAt),
+    index('billing_alerts_daily_idx').on(t.test, t.createdAt),
+  ],
+);

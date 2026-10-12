@@ -1,0 +1,45 @@
+name: Slack operations
+on:
+  schedule:
+    - cron: '27 * * * *'
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [monitor, daily, feedback]
+        default: monitor
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: slack-operations
+  cancel-in-progress: false
+jobs:
+  operations:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SLACK_ALERTS_WEBHOOK: ${{ secrets.SLACK_ALERTS_WEBHOOK }}
+      SLACK_DAILY_WEBHOOK: ${{ secrets.SLACK_DAILY_WEBHOOK }}
+      SLACK_PURCHASES_WEBHOOK: ${{ secrets.SLACK_PURCHASES_WEBHOOK }}
+      SLACK_FEEDBACK_WEBHOOK: ${{ secrets.SLACK_FEEDBACK_WEBHOOK }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.23.1
+      - name: Hourly infrastructure health and recovery
+        if: github.event.schedule == '27 * * * *' || inputs.mode == 'monitor'
+        run: node tooling/scripts/slack-ops.mjs monitor
+      - name: Morning reports (09:00 KST; GitHub schedule may be delayed)
+        if: github.event.schedule == '0 0 * * *' || inputs.mode == 'daily'
+        run: node tooling/scripts/slack-ops.mjs daily
+      - name: Collect feedback candidates
+        if: github.event.schedule == '27 * * * *' || inputs.mode == 'feedback'
+        run: node tooling/scripts/slack-feedback.mjs

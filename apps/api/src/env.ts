@@ -67,6 +67,11 @@ export type Bindings = {
    * 권한). 없으면 Android 인앱 상품을 보이지 않는다.
    */
   GOOGLE_PLAY_SA_JSON?: string;
+  BILLING_SLACK_WEBHOOK?: string;
+  BILLING_ALERTS_ENABLED?: string;
+  BILLING_QUEUE?: Queue<{ version: 1; id: string }>;
+  GOOGLE_RTDN_AUDIENCE?: string;
+  GOOGLE_RTDN_SERVICE_ACCOUNT?: string;
   /** T-11-174 secret. 쉼표 구분 프로필 id. 있으면 이 구단주에게만 인앱 상품을 보인다(출시 전 실기기 구매 확인용). 지우면 모두에게 열린다. */
   IAP_TESTERS?: string;
   /** T-10-011. secret. 쉼표 구분 관리자 구글 이메일(게시판 글쓰기). 비어 있으면 관리자가 없다. */
