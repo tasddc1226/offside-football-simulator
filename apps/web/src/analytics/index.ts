@@ -47,6 +47,13 @@ export const analytics = {
 };
 export const trackShareClick = () => adapter?.trackShareClick();
 /** T-11-092 App Store 링크를 누른 곳. */
-export type AppStorePlace = 'home' | 'sheet' | 'settings';
+export type AppStorePlace = 'home' | 'sheet' | 'settings' | 'shop';
 export const trackAppStoreClick = (place: AppStorePlace) => adapter?.trackAppStoreClick(place);
 export const trackShareSuccess = () => adapter?.trackShareSuccess();
+
+export type AppConversionPlace = 'home' | 'shop';
+export const trackAppConversion = (
+  action: 'view' | 'click' | 'dismiss',
+  place: AppConversionPlace,
+  target: 'ios' | 'android' | 'both',
+) => adapter?.trackAppConversion(action, place, target);

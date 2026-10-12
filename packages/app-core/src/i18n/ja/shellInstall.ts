@@ -2,6 +2,21 @@ import type { Translation } from '../core';
 import type { ShellInstallMsgs } from '../ko/shellInstall';
 
 export const shellInstall: Translation<ShellInstallMsgs> = {
+  conversionShopTitle: 'アプリでの購入方法',
+  conversionShopBody:
+    'プレミアム商品の購入はアプリで利用できます。リロール券はウェブでもクラブ資金で購入できます。',
+  conversionTitle: 'アプリでオフサイドを楽しもう',
+  conversionMilestone: '積み重ねた記録をアプリでも管理',
+  conversionIos:
+    'アプリではリワード広告でポテンシャルの確認や追加強化の機会を得られます。利用条件や広告の配信状況によって異なります。',
+  conversionAndroid:
+    'Androidはクローズドテスト中です。参加を申し込み、案内に従ってインストールしてください。',
+  conversionTransfer:
+    '進行中のキャリアは自動で移行されません。設定でバックアップコードをコピーし、アプリに読み込んでください。',
+  conversionTest: 'Androidクローズドテストに参加',
+  conversionStore: 'App Storeで入手',
+  conversionDismiss: 'アプリの案内を7日間非表示',
+
   inappHint:
     'アプリ内ブラウザ（KakaoTalk・Instagramなど）で開いています。記録はこのアプリの中にだけ保存されます。外部ブラウザで開くと、ログインと保存がより安全です。',
   inappHintAria: '外部ブラウザの案内',

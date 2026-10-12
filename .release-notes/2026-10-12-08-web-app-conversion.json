@@ -1,0 +1,23 @@
+{
+  "id": "web-app-conversion-20261012",
+  "title": "웹에서 앱으로 이동하는 안내",
+  "items": [
+    "홈에서 iPhone 앱 설치와 Android 비공개 테스트 참여를 안내해요.",
+    "상점의 앱 구매 안내를 펼쳐 설치 경로와 커리어 이전 방법을 확인할 수 있어요."
+  ],
+  "en": {
+    "title": "App guidance on the web",
+    "items": [
+      "Home links to the iPhone app and Android closed test.",
+      "Expand the shop guide for app links and career transfer instructions."
+    ]
+  },
+  "ja": {
+    "title": "ウェブからアプリへの案内",
+    "items": [
+      "ホームでiPhoneアプリとAndroidクローズドテストを案内します。",
+      "ショップの案内を開くと、アプリの入手方法とキャリアの移行方法を確認できます。"
+    ]
+  },
+  "availability": "web"
+}
