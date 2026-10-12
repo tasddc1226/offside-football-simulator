@@ -76,7 +76,7 @@ export const gTitles: Translation<GTitlesMsgs> = {
   europe_d: 'ヨーロッパ進出',
   big5_d: '欧州5大リーグ入り',
   veteran_d: '38歳まで現役でプレー',
-  oneclub_d: '1クラブだけでプレーして引退(8シーズン以上)',
+  oneclub_d: 'プロ1クラブだけで8シーズン以上プレーして引退(高校・大学・兵役のシーズンは数えません)',
   mil_d: '兵役を終える',
   topscorer_d: 'リーグ得点王',
   topscorer3_d: 'リーグ得点王3回',

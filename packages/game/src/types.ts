@@ -184,6 +184,7 @@ export interface Flags {
   rivalName?: string;
   lastEvent?: string;
   evSeen?: Record<string, { t: number; n: number }>;
+  /** 옛 세이브에 남은 값. 영플레이어 판정은 이제 받은 상(awards)으로 본다. */
   rookieDone?: boolean;
   [k: string]: unknown;
 }

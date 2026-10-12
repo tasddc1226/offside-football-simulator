@@ -47,6 +47,7 @@ import { detailOpenNow, draftBody, draftDpos, randomName } from '@offside/app-co
 import {
   revealCandidatePotential,
   rerollCandidates,
+  keepCandidate,
   premiumScoutCandidates,
   rollCandidates,
   startCareer,
@@ -268,6 +269,11 @@ export default function Create() {
       setRerolling(false);
     }
   }
+  const askAdReroll = () =>
+    Alert.alert(CA.rerollAskTitle, adText.adRerollConfirm({ n: Math.max(0, adLeft - 1) }), [
+      { text: CA.cancel, style: 'cancel' },
+      { text: CA.rerollAction, onPress: () => void rerollWithAd() },
+    ]);
   const askReroll = () =>
     Alert.alert(CA.rerollAskTitle, CL.rerollConfirm({ n: Math.max(0, rerolls - 1) }), [
       { text: CA.cancel, style: 'cancel' },
@@ -800,14 +806,17 @@ export default function Create() {
                             </Txt>
                           </Txt>
                           {cand.guaranteed ? <Pill>{SL.sure}</Pill> : null}
+                          {cand.kept ? <Pill>{L.kept}</Pill> : null}
                           {isPicked ? <Pill tone="good">{L.picked}</Pill> : null}
                         </View>
                         <Txt
                           v="sm"
-                          tone={s.candidatePotentialOpen ? 'accent' : 'muted'}
+                          tone={
+                            s.candidatePotentialOpen || cand.kept?.revealed ? 'accent' : 'muted'
+                          }
                           testID={`candidate-potential-${i}`}
                         >
-                          {s.candidatePotentialOpen
+                          {s.candidatePotentialOpen || cand.kept?.revealed
                             ? L.potentialRange(candidatePotentialGrades(cand.potential))
                             : L.potentialLocked}
                         </Txt>
@@ -948,6 +957,24 @@ export default function Create() {
                 );
               })}
             </View>
+            {s.candidatePick != null && s.candidates[s.candidatePick] ? (
+              <View style={{ gap: 6 }}>
+                <Btn
+                  sm
+                  testID="keep-candidate"
+                  onPress={() =>
+                    keepCandidate(s.candidates![s.candidatePick!]!.kept ? null : s.candidatePick)
+                  }
+                >
+                  {s.candidates[s.candidatePick]!.kept
+                    ? L.unkeepBtn({ n: s.candidatePick + 1 })
+                    : L.keepBtn({ n: s.candidatePick + 1 })}
+                </Btn>
+                <Txt v="sm" tone="muted">
+                  {L.keepHelp}
+                </Txt>
+              </View>
+            ) : null}
             {scouts > 0 ? (
               <View style={{ gap: 6 }}>
                 <Btn
@@ -1002,7 +1029,7 @@ export default function Create() {
                     kind="tonal"
                     testID="candidate-ad-reroll"
                     disabled={rerolling || rewardBusy}
-                    onPress={() => void rerollWithAd()}
+                    onPress={askAdReroll}
                     accessibilityLabel={(offer === 'free'
                       ? adText.adRerollFreeBtn
                       : adText.adRerollBtn)({

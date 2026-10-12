@@ -9,4 +9,9 @@ export const seasonGauge: Translation<SeasonGaugeMsgs> = {
   days: (p) => `${p.d}d ${p.h}h`,
   hours: (p) => `${p.h}h ${p.m}m`,
   minutes: (p) => `${p.m}m`,
+  date: (p) =>
+    `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][p.w]}, ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][p.m - 1]} ${p.d}`,
+  endsOn: (p) => `Open through ${p.date}`,
+  endsBy: (p) => `Open through ${p.date} at the latest`,
+  endsBetween: (p) => `Open through ${p.from} at the earliest, ${p.to} at the latest`,
 };

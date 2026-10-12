@@ -76,7 +76,8 @@ export const gTitles: Translation<GTitlesMsgs> = {
   europe_d: 'Move to Europe',
   big5_d: 'Join a European top-five league',
   veteran_d: 'Still playing at 38',
-  oneclub_d: 'Play for one club only and retire (8+ seasons)',
+  oneclub_d:
+    "Play 8+ seasons for a single pro club only, then retire (school, university and military seasons don't count)",
   mil_d: 'Complete military service',
   topscorer_d: 'Win a league top scorer award',
   topscorer3_d: 'Win the league top scorer award 3 times',

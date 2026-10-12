@@ -18,14 +18,20 @@ import { truePot, addAttr, addStat, fameEff, log } from './stats.js';
 import { gTrainingText as L } from './i18n/ko/gTraining.js';
 
 // ───────── 훈련 ─────────
-export function growthFactor(s: GameState): number {
+/** 나이 성장 배율과 그 성장형의 전성기 배율(안내용 비교 기준). */
+function ageGrowth(s: GameState): { f: number; peak: number } {
   const a = s.age;
-  let f: number;
-  if (s.trait === 'early') f = a <= 20 ? 1.5 : a <= 23 ? 1.15 : a <= 26 ? 0.6 : 0.14;
-  else if (s.trait === 'late') f = a <= 21 ? 0.85 : a <= 25 ? 1.15 : a <= 29 ? 0.8 : 0.25;
-  else f = a <= 21 ? 1.3 : a <= 24 ? 1 : a <= 27 ? 0.55 : a <= 30 ? 0.22 : 0.08;
-  const pot = truePot(s);
-  f *= clamp((pot - ovr(s)) / 12, 0.04, 1.3);
+  if (s.trait === 'early')
+    return { f: a <= 20 ? 1.5 : a <= 23 ? 1.15 : a <= 26 ? 0.6 : 0.14, peak: 1.5 };
+  if (s.trait === 'late')
+    return { f: a <= 21 ? 0.85 : a <= 25 ? 1.15 : a <= 29 ? 0.8 : 0.25, peak: 1.15 };
+  return { f: a <= 21 ? 1.3 : a <= 24 ? 1 : a <= 27 ? 0.55 : a <= 30 ? 0.22 : 0.08, peak: 1.3 };
+}
+/** 잠재력과 OVR의 차이로 정하는 성장 배율. 잠재력에 닿으면 하한 0.04까지 떨어진다. */
+const potGrowth = (s: GameState) => clamp((truePot(s) - ovr(s)) / 12, 0.04, 1.3);
+export function growthFactor(s: GameState): number {
+  let f = ageGrowth(s).f;
+  f *= potGrowth(s);
   f *= 0.75 + s.morale / 200;
   return f * BAL.growthScale;
 }
@@ -139,6 +145,13 @@ export function trainingGrowthNotes(s: GameState, t: TrainingDef): TrainingGrowt
       : { text: L.helpBalanceRule({ pct: pct(1 - BALANCE_MIN) }), tone: 'muted' },
   ];
   if (max.help) notes.push({ text: max.help, tone: 'warn' });
+  // T-11-224 성장을 가장 크게 줄이는 잠재력·나이 배율도 알린다(제보: "깎인다는 말도 없는데 몇 년째 안 올라요").
+  // 숨은 잠재력이 드러나지 않게 차이 숫자 대신 줄어든 비율만 적는다.
+  const potF = potGrowth(s);
+  if (potF <= 0.5) notes.push({ text: L.helpNearPot({ pct: pct(1 - potF) }), tone: 'warn' });
+  const age = ageGrowth(s);
+  if (age.f / age.peak <= 0.5)
+    notes.push({ text: L.helpAge({ pct: pct(1 - age.f / age.peak) }), tone: 'warn' });
   return notes;
 }
 /** Selected attribute's existing positional OVR weight; presentation only. */

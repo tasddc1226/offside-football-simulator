@@ -2,6 +2,20 @@
 import { ns } from '../core';
 
 const ko = {
+  conversionShopTitle: '앱에서 구매하는 방법',
+  conversionShopBody:
+    '프리미엄 상품 결제는 앱에서 제공해요. 리롤권은 웹에서도 구단 자금으로 살 수 있어요.',
+  conversionTitle: '앱에서 오프사이드를 즐겨요',
+  conversionMilestone: '쌓은 기록, 앱에서도 관리해요',
+  conversionIos:
+    '앱에서는 보상형 광고로 잠재력 확인과 추가 강화 기회를 받을 수 있어요. 이용 조건과 광고 제공 여부에 따라 달라요.',
+  conversionAndroid: 'Android는 비공개 테스트 중이에요. 참여 신청 후 안내에 따라 설치해 주세요.',
+  conversionTransfer:
+    '진행 중인 커리어는 자동으로 옮겨지지 않아요. 설정에서 백업 코드를 복사해 앱으로 옮겨 주세요.',
+  conversionTest: 'Android 비공개 테스트 참여',
+  conversionStore: 'App Store에서 받기',
+  conversionDismiss: '앱 안내 7일간 닫기',
+
   inappHint:
     '카톡·인스타 안에서 열린 화면이에요. 기록은 이 앱 안에만 저장돼요. 외부 브라우저로 열면 로그인과 저장이 더 안전해요.',
   inappHintAria: '외부 브라우저 안내',

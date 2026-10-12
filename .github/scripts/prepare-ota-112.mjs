@@ -27,6 +27,8 @@ export function prepare(root) {
   }
   const files = [
     'apps/mobile/app.json',
+    // #651 added Android build properties and a config plugin here; both change the native fingerprint.
+    'apps/mobile/app.config.js',
     'apps/mobile/package.json',
     'pnpm-lock.yaml',
     'apps/mobile/src/components/AdSlot.tsx',
@@ -36,6 +38,13 @@ export function prepare(root) {
   ];
   // Read everything first: a missing historical object must not leave a partial overlay.
   const contents = files.map((file) => git('show', `${source}:${file}`));
+  // The 1.1.2 store builds were made before OFFSIDE_FIREBASE_ANDROID_FILE existed on EAS. Server
+  // variables override the process environment, so the reviewed config must stop reading it here.
+  const config = files.indexOf('apps/mobile/app.config.js');
+  const androidFile = 'const androidFile = process.env.OFFSIDE_FIREBASE_ANDROID_FILE;';
+  if (!contents[config].includes(androidFile))
+    throw new Error('1.1.2 app.config.js changed shape.');
+  contents[config] = contents[config].replace(androidFile, 'const androidFile = undefined;');
   files.forEach((file, i) => {
     const target = resolve(root, file);
     mkdirSync(dirname(target), { recursive: true });
@@ -45,6 +54,7 @@ export function prepare(root) {
     'apps/mobile/src/platform/ads.ts',
     'apps/mobile/plugins/with-applovin-max.js',
     'apps/mobile/plugins/skadnetwork-ids.json',
+    'apps/mobile/plugins/withAndroidOptimization.js',
   ])
     rmSync(resolve(root, file), { force: true });
   console.log(`Prepared 1.1.2 AdMob compatibility overlay from ${source}`);

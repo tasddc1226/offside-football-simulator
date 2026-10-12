@@ -10,7 +10,11 @@ import { isHofEligible, SHORT_CAREER_NOTE } from '@offside/contracts/hof-rules';
 import { PHASES, LAST_PHASE, type AttrKey } from '@offside/game/data';
 import { avatarSpec } from '@offside/game/avatar';
 import { clamp, createRng, freshSeed, setActiveRng } from '@offside/game/rng';
-import { generateCandidates, type CandidatePotential } from '@offside/game/candidates';
+import {
+  generateCandidates,
+  type Candidate,
+  type CandidatePotential,
+} from '@offside/game/candidates';
 import {
   leagueOf,
   clubsIn,
@@ -187,6 +191,16 @@ function scoutSeed(): number {
   return seed;
 }
 const releaseScoutSeed = () => saveKey(SCOUT_SEED, null);
+// T-11-225 다시 뽑아도 남겨 두는 후보 한 명. 같은 포지션·주력·세부 포지션으로 뽑을 때만 원래 자리에 다시 넣는다.
+const SCOUT_KEEP = 'ft_scout_keep';
+type KeptCandidate = {
+  pos: string;
+  focus: string;
+  dpos: string | null;
+  idx: number;
+  cand: Candidate;
+  revealed: boolean;
+};
 
 export function createGameActions(host: GameHost) {
   const appState = host.state;
@@ -800,15 +814,21 @@ export function createGameActions(host: GameHost) {
     host.analytics.start(appState.G!, previous);
     appState.tab = 'season';
     appState.candidates = null;
+    saveKey(SCOUT_KEEP, null);
     appState.report = null;
     host.scrollTop(false);
     host.toast(L.careerStartToast);
   }
 
+  const keepMatches = (k: KeptCandidate) =>
+    k.pos === appState.C.pos &&
+    k.focus === appState.C.focus.join() &&
+    k.dpos === (draftCareerRules(appState.C).dpos ?? null);
+
   function rollCandidates() {
     applyLatestBalance();
     appState.candidatePotentialOpen = loadKey<number>(SCOUT_REVEAL) === scoutSeed();
-    appState.candidates = generateCandidates(
+    const batch: Candidate[] = generateCandidates(
       appState.C.pos,
       appState.C.focus,
       draftCareerRules(appState.C).dpos,
@@ -816,8 +836,45 @@ export function createGameActions(host: GameHost) {
       3,
       loadKey<number>(SCOUT_PREMIUM) === scoutSeed(),
     );
-    appState.candidatesOpen = [false, false, false];
+    const open = batch.map(() => false);
+    const k = loadKey<KeptCandidate>(SCOUT_KEEP);
+    if (k && keepMatches(k)) {
+      // 프리미엄 스카우트의 보장 후보 자리는 덮지 않는다.
+      const i =
+        batch[k.idx] && !batch[k.idx]!.guaranteed ? k.idx : batch.findIndex((c) => !c.guaranteed);
+      if (i >= 0) {
+        batch[i] = { ...k.cand, kept: { revealed: k.revealed } };
+        open[i] = true;
+      }
+    }
+    appState.candidates = batch;
+    appState.candidatesOpen = open;
     appState.candidatePick = null;
+  }
+
+  /** T-11-225 후보 한 명을 킵한다(다른 후보의 킵은 풀린다). null이면 킵을 푼다. 목록은 그 자리에서 고친다. */
+  function keepCandidate(i: number | null) {
+    const list = appState.candidates;
+    if (!list) return;
+    let saved: KeptCandidate | null = null;
+    list.forEach((c, j) => {
+      const { kept, ...cand } = c;
+      if (j !== i) {
+        if (kept) delete c.kept;
+        return;
+      }
+      const revealed = appState.candidatePotentialOpen || !!kept?.revealed;
+      c.kept = { revealed };
+      saved = {
+        pos: appState.C.pos,
+        focus: appState.C.focus.join(),
+        dpos: draftCareerRules(appState.C).dpos ?? null,
+        idx: j,
+        cand,
+        revealed,
+      };
+    });
+    saveKey(SCOUT_KEEP, saved);
   }
 
   /** T-11-145 리롤권을 쓴 뒤(서버가 1장 차감) 스카우트 시드를 새로 뽑아 후보를 다시 만든다. */
@@ -841,6 +898,8 @@ export function createGameActions(host: GameHost) {
     if (!saveKey(SCOUT_REVEAL, scoutSeed())) return false;
     appState.candidatePotentialOpen = true;
     appState.candidatesOpen = batch.map(() => true);
+    const k = loadKey<KeptCandidate>(SCOUT_KEEP);
+    if (k && keepMatches(k)) saveKey(SCOUT_KEEP, { ...k, revealed: true });
     return true;
   }
 
@@ -857,5 +916,6 @@ export function createGameActions(host: GameHost) {
     rollCandidates,
     rerollCandidates,
     premiumScoutCandidates,
+    keepCandidate,
   };
 }

@@ -332,3 +332,16 @@ export const trackShareSuccess = () => {
     /* optional */
   }
 };
+
+export const trackAppConversion = (
+  action: 'view' | 'click' | 'dismiss',
+  place: import('./index.js').AppConversionPlace,
+  target: 'ios' | 'android' | 'both',
+) => {
+  send('app_conversion_' + action, {
+    place,
+    target,
+    destination:
+      target === 'android' ? 'closed_test_form' : target === 'ios' ? 'app_store' : 'both',
+  });
+};

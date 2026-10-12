@@ -44,5 +44,5 @@ export const dex: Translation<DexMsgs> = {
   ruleResult: (p) => `Other effects land within ${p.span} of the size shown.`,
   ruleTwistTerm: 'Surprise twist',
   ruleTwist: (p) =>
-    `If there was no cost, there is a ${p.twist} chance that one attribute changes. The chance it goes up is ${p.ok} after a success or sure result, ${p.fail} after a failure and ${p.safe} after a safe choice. Going up is +1 to +2, going down is −1.`,
+    `After a successful challenge or a sure choice, there is a ${p.chance} chance that one attribute rises by another +1 to +2. It never follows a failure or a safe choice, and no twist lowers an attribute.`,
 };

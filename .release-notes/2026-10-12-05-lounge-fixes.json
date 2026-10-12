@@ -1,0 +1,41 @@
+{
+  "id": "t-11-224-lounge-fixes",
+  "title": "이벤트 선택 결과가 성공 · 실패와 어긋나지 않게 고쳤어요",
+  "items": [
+    "이벤트에서 성공했는데 능력치가 깎이거나 실패했는데 능력치가 오르는 일이 없어졌어요",
+    "23세 이하 영플레이어상을 첫 프로 시즌이 아니어도 받을 수 있어요",
+    "FIFA 클럽 월드컵 우승이 영구결번 기여도에 들어가요",
+    "고교 · 대학에서 OVR이 높으면 그 수준에 맞는 구단에서 제의가 와요",
+    "앱에서 무료 · 광고 다시 뽑기도 한 번 더 확인해요",
+    "홈 시즌 게이지에 시즌이 끝나는 날짜가 보여요",
+    "훈련에서 잠재력 · 나이 때문에 성장이 줄면 얼마나 줄었는지 알려 줘요",
+    "원클럽맨 칭호 조건을 더 자세히 적었어요"
+  ],
+  "en": {
+    "title": "Event outcomes now match success and failure",
+    "items": [
+      "Events no longer lower an attribute after a success or raise one after a failure.",
+      "You can win Young Player awards at 23 or younger, not only in your first pro season.",
+      "FIFA Club World Cup wins now count toward retired-number contribution.",
+      "High-rated school and university players now get offers from clubs that match their level.",
+      "In the app, free and ad redraws now ask for confirmation first.",
+      "The home season gauge now shows when the season ends.",
+      "Training now tells you how much growth drops because of potential or age.",
+      "The One-Club Man title now explains its conditions in more detail."
+    ]
+  },
+  "ja": {
+    "title": "イベントの結果が成功・失敗と食い違わないよう修正しました",
+    "items": [
+      "イベントで成功したのに能力値が下がったり、失敗したのに上がったりすることがなくなりました。",
+      "23歳以下なら、プロ1年目でなくても最優秀若手選手賞を受賞できます。",
+      "FIFAクラブワールドカップ優勝が永久欠番の貢献度に含まれます。",
+      "高校・大学でOVRが高いと、そのレベルに合ったクラブからオファーが届きます。",
+      "アプリの無料・広告の引き直しも、実行前に確認します。",
+      "ホームのシーズンゲージにシーズン終了日が表示されます。",
+      "潜在能力や年齢で成長が落ちると、トレーニングでどれだけ落ちたかを表示します。",
+      "ワンクラブマンの称号の条件を詳しく書きました。"
+    ]
+  },
+  "availability": "web-app"
+}

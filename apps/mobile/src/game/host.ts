@@ -85,6 +85,7 @@ export const {
   startCareer,
   rollCandidates,
   rerollCandidates,
+  keepCandidate,
   premiumScoutCandidates,
   revealCandidatePotential,
 } = createGameActions({

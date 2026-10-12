@@ -1,4 +1,6 @@
 <script lang="ts">
+  import AppConversion from './AppConversion.svelte';
+  import { shellInstallText as Install } from '@offside/app-core/i18n/ko/shellInstall';
   import LoginButtons from './LoginButtons.svelte';
   // My club keeps owner identity and shared operations outside the season team card.
   // Team slots can expand later without duplicating the owner profile, finances or honors.
@@ -227,6 +229,11 @@
     <RerollShop focus={shopFocus} onbought={(balance, spent) => market && (market = { balance, clubValue: market.clubValue - spent })} />
     <BoostShop />
     <ScoutShop />
+    <details class="card" data-app-shop-guide>
+      <summary class="disc-row">{Install.conversionShopTitle}<span class="disc-chev" aria-hidden="true"></span></summary>
+      <p class="muted fs-sm">{Install.conversionShopBody}</p>
+      <AppConversion context="shop" />
+    </details>
   {/if}
 
   {#if linked}

@@ -4,6 +4,9 @@ import {
   DUOS,
   HOMEGROWN_MIN,
   NATIONAL_MIN,
+  NATIONAL_POWER,
+  NATION_STYLES,
+  CONFED_STYLES,
   SYNERGY_FROM_SEASON,
   footBonus,
   synergyApplies,
@@ -19,7 +22,8 @@ const p = (i: number, type: string | null, over: Partial<SynergyPlayer> = {}): S
   x: L433[i]!.x,
   type,
   foot: '오른발',
-  nation: 'KR',
+  // 국적을 번갈아 둬 국가대표 라인업(같은 국적 7명)이 다른 규칙의 검사에 끼지 않게 한다.
+  nation: i % 2 ? 'JP' : 'KR',
   raised: false,
   ...over,
 });
@@ -98,21 +102,41 @@ describe('T-11-105 주발 맞춤', () => {
 });
 
 describe('T-11-105 팀 색깔', () => {
-  const full = (raised: number, nation = 'KR') =>
-    Array.from({ length: 11 }, (_, i) => p(i, 'poacher', { raised: i < raised, nation }));
+  const full = (raised: number, nation?: string) =>
+    Array.from({ length: 11 }, (_, i) =>
+      p(i, 'poacher', { raised: i < raised, ...(nation ? { nation } : {}) }),
+    );
   it(`직접 키운 선수 ${HOMEGROWN_MIN}명부터 우리가 키운 팀`, () => {
     expect(ids(teamSynergy(full(HOMEGROWN_MIN - 1)))).not.toContain('homegrown');
     const s = teamSynergy(full(HOMEGROWN_MIN));
     expect(ids(s)).toContain('homegrown');
     expect(s.lines).toMatchObject({ atk: 1, mid: 1, def: 1, gk: 0 });
   });
-  it(`같은 국적 ${NATIONAL_MIN}명이면 배지만 붙고 줄 힘은 그대로다`, () => {
-    const players = full(0);
+  it(`어느 나라든 같은 국적 ${NATIONAL_MIN}명이면 국가대표 라인업 효과가 붙는다`, () => {
+    const players = full(0, 'KR');
     const s = teamSynergy(players);
-    expect(s.active.find((a) => a.id === 'national')?.kind).toBe('badge');
-    expect(synergyPower(s)).toBe(0);
+    expect(s.active.find((a) => a.id === 'national')).toMatchObject({
+      kind: 'team',
+      nation: 'KR',
+      style: 'kr_press',
+    });
+    expect(s.lines).toMatchObject({ atk: 0, mid: 1, def: 0.5, gk: 0 });
     players.slice(0, 5).forEach((x) => (x.nation = 'BR'));
     expect(ids(teamSynergy(players))).not.toContain('national');
+    players.slice(0, 7).forEach((x) => (x.nation = 'JP'));
+    const jp = teamSynergy(players);
+    expect(jp.active.find((a) => a.id === 'national')).toMatchObject({
+      style: 'jp_pass',
+      members: [0, 1, 2, 3, 4, 5, 6],
+    });
+    expect(jp.lines).toMatchObject({ atk: 0.5, mid: 1 });
+    // 표에 없는 나라는 대륙연맹 색깔.
+    players.forEach((x) => (x.nation = 'NZ'));
+    expect(teamSynergy(players).active.find((a) => a.id === 'national')?.style).toBe('ofc');
+  });
+  it('나라별 색깔은 합이 모두 같다', () => {
+    for (const st of [...Object.values(NATION_STYLES), ...Object.values(CONFED_STYLES)])
+      expect(Object.values(st.effect).reduce((t, v) => t + (v ?? 0), 0)).toBe(NATIONAL_POWER);
   });
 });
 

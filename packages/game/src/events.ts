@@ -334,7 +334,7 @@ export const BASE_EVENTS: EventDef[] = [
         },
         fail: {
           text: '따라 하기엔 아직 몸이 준비되지 않았습니다.',
-          fx: (s) => addAttr(s, weakKey(s), 0.5),
+          fx: (s) => addStat(s, 'morale', -3),
         },
       },
       {
