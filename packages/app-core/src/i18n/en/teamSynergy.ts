@@ -25,11 +25,34 @@ const NAMES: Record<string, readonly [string, string]> = {
   killpass: ['Killer pass', 'Poacher type at ST / CF / SS + Playmaker type at AM / CM / LM / RM'],
   guardian: ['Guardian angel', 'Shot-stopper type at GK + Stopper type at CB / SW'],
   homegrown: ['Homegrown XI', `${HOMEGROWN_MIN}+ players you raised in the starting lineup`],
-  national: ['National team lineup', `${NATIONAL_MIN}+ starters from the same country`],
+  national: [
+    'National team lineup',
+    `${NATIONAL_MIN}+ starters from the same country. The effect differs by country`,
+  ],
   foot: [
     'Strong-foot fit',
     'FB / LB / RB / LWB / RWB: same-side foot. W / LW / RW: opposite foot. Any player type.',
   ],
+};
+
+const STYLES: Record<string, string> = {
+  kr_press: 'Relentless press',
+  jp_pass: 'Precise passing',
+  br_samba: 'Samba football',
+  ar_grit: 'Tango grit',
+  fr_art: 'Champagne football',
+  es_tiki: 'Tiki-taka',
+  de_machine: 'German machine',
+  it_lock: 'Catenaccio',
+  eng_direct: 'Kick and rush',
+  nl_total: 'Total football',
+  pt_wing: 'Land of wingers',
+  afc: 'Asian mobility',
+  uefa: 'European structure',
+  conmebol: 'South American flair',
+  caf: 'African power',
+  concacaf: 'Fast counters',
+  ofc: 'Island resilience',
 };
 
 export const teamSynergy: Translation<TeamSynergyMsgs> = {
@@ -39,7 +62,6 @@ export const teamSynergy: Translation<TeamSynergyMsgs> = {
   footChip: (p) => `${p.name} ×${p.n}`,
   fitEffect: (p) => `Position rating ${p.v}`,
   fitEffectBoth: (p) => `Position rating ${p.v} (two-footed ${p.both})`,
-  badgeOnly: 'Badge only (no match effect)',
   requirementsHint:
     'Duos need both the player type and a listed position. Tap a player card to check the type. A Speedster at W / LW / RW does not meet the Winger type requirement.',
   title: 'Team synergy',
@@ -48,7 +70,7 @@ export const teamSynergy: Translation<TeamSynergyMsgs> = {
   chipNoEffect: 'No effect',
   chipOff: 'Inactive',
   chipHint:
-    'Tap a synergy to show its players. Match effects apply regardless of selection. National team lineup is a badge only.',
+    'Tap a synergy to show its players. Match effects apply regardless of selection. National team lineup applies when 7+ starters share any nationality, and the effect differs by country.',
   pitchAll: (p) => `All ${p.n} synergies active`,
   pitchFocus: (p) => `Showing ${p.name} · all ${p.n} active`,
   pitchMemberAria: 'In an active synergy',
@@ -59,4 +81,7 @@ export const teamSynergy: Translation<TeamSynergyMsgs> = {
     'Each duo applies once, even with multiple matching pairs. Different synergy effects add up. Youth players are excluded.',
   synName: (p) => NAMES[p.id]?.[0] ?? p.ko,
   synDesc: (p) => NAMES[p.id]?.[1] ?? p.ko,
+  styleName: (p) => STYLES[p.id] ?? p.ko,
+  nationalChip: (p) => `${p.name} ${p.flag} ${p.style}`,
+  nationalVaries: (p) => `Varies by country (total ${p.sum})`,
 };

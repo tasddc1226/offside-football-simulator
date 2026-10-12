@@ -264,8 +264,11 @@ describe('T-11-105 시너지', () => {
   it('시너지를 켜면 켜진 시너지를 결과에 남기고 줄 힘이 오른다', () => {
     const syn = synergyTeam('A');
     const r = simulateMatch('mat_on', syn, fullTeam('B', 75), 1);
-    expect(r.synergy?.home).toEqual(expect.arrayContaining(['cross', 'engine', 'homegrown']));
-    expect(r.synergy?.away).toEqual([]);
+    expect(r.synergy?.home).toEqual(
+      expect.arrayContaining(['cross', 'engine', 'homegrown', 'national']),
+    );
+    // T-11-225 국적이 비면 기본 국적이라 같은 국적 11명 — 국가대표 라인업만 켜진다.
+    expect(r.synergy?.away).toEqual(['national']);
     expect(lineupLines(syn, lineupSynergy(syn)).atk).toBeGreaterThan(lineupLines(syn).atk);
   });
 

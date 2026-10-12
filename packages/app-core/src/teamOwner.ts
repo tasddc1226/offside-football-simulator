@@ -1,5 +1,6 @@
 // T-10-092 구단주 팀 화면의 순수 로직(웹 team/Team.svelte · 앱 screens/owner/Team.tsx 공용, T-11-005).
 // 편성(자동 배치·자리 바꾸기)·선수 고르기 후보·업적 표기·경기 결과 표기처럼 화면이 그리기 전에 계산하는 것만 둔다.
+import { flagOf } from '@offside/contracts/nations';
 import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
 import { ATTR_KEYS } from '@offside/game/data';
 import {
@@ -13,6 +14,8 @@ import {
   FOOT_BONUS,
   FOOT_BONUS_BOTH,
   HOMEGROWN_EFFECT,
+  NATIONAL_POWER,
+  nationStyle,
   TEAM_RULES,
   lineStrength,
   slotFit,
@@ -228,7 +231,16 @@ export const synergyChips = (s: TeamSynergy): SynergyChip[] =>
     const [name, desc] = synergyText(a.id, a.name, a.desc);
     return {
       id: a.id,
-      name: a.kind === 'foot' ? SY.footChip({ name, n: a.members.length }) : name,
+      name:
+        a.kind === 'foot'
+          ? SY.footChip({ name, n: a.members.length })
+          : a.nation
+            ? SY.nationalChip({
+                name,
+                flag: flagOf(a.nation),
+                style: SY.styleName({ id: a.style!, ko: nationStyle(a.nation).name }),
+              })
+            : name,
       desc,
       effect:
         a.kind === 'foot'
@@ -276,7 +288,7 @@ export function synergyRows(s: TeamSynergy): SynergyRow[] {
   const rules: (readonly [{ id: string; name: string; desc: string }, string])[] = [
     ...DUOS.map((d) => [d, synergyEffectText(d.effect)] as const),
     [TEAM_RULES.homegrown, synergyEffectText(HOMEGROWN_EFFECT)],
-    [TEAM_RULES.national, SY.badgeOnly],
+    [TEAM_RULES.national, SY.nationalVaries({ sum: signedNum(NATIONAL_POWER) })],
     [
       TEAM_RULES.foot,
       SY.fitEffectBoth({ v: signedNum(FOOT_BONUS), both: signedNum(FOOT_BONUS_BOTH) }),
@@ -292,7 +304,7 @@ export function synergyRows(s: TeamSynergy): SynergyRow[] {
         name,
         desc,
         effect,
-        badge: r.id === TEAM_RULES.national.id,
+        badge: false,
         applied: false,
         state: 'off',
       };

@@ -22,7 +22,6 @@ const ko = {
   footChip: (p: { name: string; n: number }) => `${p.name} ${p.n}명`,
   fitEffect: (p: { v: string }) => `자리 실력 ${p.v}`,
   fitEffectBoth: (p: { v: string; both: string }) => `자리 실력 ${p.v}(양발 ${p.both})`,
-  badgeOnly: '배지만(경기 효과 없음)',
   requirementsHint:
     '듀오는 선수 유형과 배치 자리가 모두 맞아야 해요. 괄호는 배치 자리예요. 선수 카드를 눌러 유형을 확인해요. W·LW·RW에 둔 스피드스터는 윙어 유형 조건에 들지 않아요.',
   title: '팀 시너지',
@@ -32,7 +31,7 @@ const ko = {
   chipNoEffect: '효과 없음',
   chipOff: '미적용',
   chipHint:
-    '시너지를 누르면 해당 선수들을 보여 줘요. 선택과 관계없이 경기 효과는 적용돼요. 국가대표 라인업은 배지만 표시해요.',
+    '시너지를 누르면 해당 선수들을 보여 줘요. 선택과 관계없이 경기 효과는 적용돼요. 국가대표 라인업은 어느 나라든 같은 국적 선발이 7명 이상이면 적용되고, 나라마다 효과가 달라요.',
   pitchAll: (p: { n: number }) => `시너지 ${p.n}개 모두 적용 중`,
   pitchFocus: (p: { name: string; n: number }) => `${p.name} 선수 보기 · ${p.n}개 모두 적용 중`,
   pitchMemberAria: '시너지 적용 선수',
@@ -46,6 +45,11 @@ const ko = {
   /** 이름은 기존 규칙을 쓰고, 자세한 조건 설명은 사전에서 찾는다. */
   synName: (p: { id: string; ko: string }) => p.ko,
   synDesc: (p: { id: string; ko: string }) => DESCRIPTIONS[p.id] ?? p.ko,
+  // T-11-225 국가대표 라인업의 나라별 색깔. 이름은 contracts NATION_STYLES·CONFED_STYLES 그대로다.
+  styleName: (p: { id: string; ko: string }) => p.ko,
+  nationalChip: (p: { name: string; flag: string; style: string }) =>
+    `${p.name} ${p.flag} ${p.style}`,
+  nationalVaries: (p: { sum: string }) => `나라마다 달라요(합 ${p.sum})`,
 };
 
 export type TeamSynergyMsgs = typeof ko;

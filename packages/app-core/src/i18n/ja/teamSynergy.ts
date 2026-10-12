@@ -25,11 +25,34 @@ const NAMES: Record<string, readonly [string, string]> = {
   killpass: ['キラーパス', '点取り屋型(ST・CF・SS) + プレーメーカー型(AM・CM・LM・RM)'],
   guardian: ['守護神', 'スーパーセーバー型(GK) + ストッパー型(CB・SW)'],
   homegrown: ['生え抜きチーム', `自分で育てた選手${HOMEGROWN_MIN}人以上がスタメン`],
-  national: ['代表ラインナップ', `同じ国籍の選手${NATIONAL_MIN}人以上がスタメン`],
+  national: [
+    '代表ラインナップ',
+    `同じ国籍の選手${NATIONAL_MIN}人以上がスタメン。国によって効果が違います`,
+  ],
   foot: [
     '利き足マッチ',
     'FB・LB・RB・LWB・RWBは同じ側の足、W・LW・RWは逆足。選手タイプは問いません。',
   ],
+};
+
+const STYLES: Record<string, string> = {
+  kr_press: '闘志のプレス',
+  jp_pass: '精密なパスワーク',
+  br_samba: 'サンバフットボール',
+  ar_grit: 'タンゴの闘魂',
+  fr_art: 'シャンパンサッカー',
+  es_tiki: 'ティキ・タカ',
+  de_machine: 'ゲルマン魂',
+  it_lock: 'カテナチオ',
+  eng_direct: 'キック・アンド・ラッシュ',
+  nl_total: 'トータルフットボール',
+  pt_wing: 'ウインガー王国',
+  afc: 'アジアの機動力',
+  uefa: '欧州の組織力',
+  conmebol: '南米の個人技',
+  caf: 'アフリカのフィジカル',
+  concacaf: '速攻',
+  ofc: '島国の粘り',
 };
 
 export const teamSynergy: Translation<TeamSynergyMsgs> = {
@@ -39,7 +62,6 @@ export const teamSynergy: Translation<TeamSynergyMsgs> = {
   footChip: (p) => `${p.name} ${p.n}人`,
   fitEffect: (p) => `ポジション適性 ${p.v}`,
   fitEffectBoth: (p) => `ポジション適性 ${p.v}（両足 ${p.both}）`,
-  badgeOnly: 'バッジのみ（試合効果なし）',
   requirementsHint:
     '連携には選手タイプと配置位置の両方が必要です。括弧内は配置位置です。カードをタップしてタイプを確認できます。W・LW・RWのスピードスターはウインガー型の条件を満たしません。',
   title: 'チームシナジー',
@@ -48,7 +70,7 @@ export const teamSynergy: Translation<TeamSynergyMsgs> = {
   chipNoEffect: '効果なし',
   chipOff: '未適用',
   chipHint:
-    'シナジーをタップすると対象選手を表示します。選択に関係なく試合効果は適用されます。代表ラインナップはバッジのみです。',
+    'シナジーをタップすると対象選手を表示します。選択に関係なく試合効果は適用されます。代表ラインナップは、どの国でも同じ国籍のスタメンが7人以上なら適用され、国によって効果が違います。',
   pitchAll: (p) => `シナジー${p.n}個すべて適用中`,
   pitchFocus: (p) => `${p.name}の選手を表示 · ${p.n}個すべて適用中`,
   pitchMemberAria: 'シナジー適用選手',
@@ -59,4 +81,7 @@ export const teamSynergy: Translation<TeamSynergyMsgs> = {
     '同じ連携は複数組あっても1回分です。異なるシナジーの効果は加算されます。ユース選手は対象外です。',
   synName: (p) => NAMES[p.id]?.[0] ?? p.ko,
   synDesc: (p) => NAMES[p.id]?.[1] ?? p.ko,
+  styleName: (p) => STYLES[p.id] ?? p.ko,
+  nationalChip: (p) => `${p.name} ${p.flag} ${p.style}`,
+  nationalVaries: (p) => `国によって異なります(合計 ${p.sum})`,
 };

@@ -16,7 +16,7 @@
   import { CONFEDS, flagOf } from '@offside/contracts/nations';
   import { BODY_LIMITS, BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
   import { isKorean, nationOf } from '@offside/game/nation';
-  import { startCareer, rollCandidates, rerollCandidates, premiumScoutCandidates, revealCandidatePotential } from './actions.js';
+  import { startCareer, rollCandidates, rerollCandidates, premiumScoutCandidates, revealCandidatePotential, keepCandidate } from './actions.js';
   import { clubOffer, loadClubShop, payWithClub } from '@offside/app-core/club-reward';
   import { fundsText } from '@offside/app-core/funds';
   import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
@@ -366,9 +366,10 @@
               <span class="cc-no">{L.candNo({ n: i + 1 })}</span>
               <span class="cc-ovr">OVR <b class="num">{startOvr(C.pos, cand.attrs)}</b></span>
               {#if cand.guaranteed}<span class="pill" data-cand-sure>{SL.sure}</span>{/if}
+              {#if cand.kept}<span class="pill" data-cand-kept>{L.kept}</span>{/if}
               {#if appState.candidatePick === i}<span class="pill good">{L.picked}</span>{/if}
             </span>
-            <span class="muted">{appState.candidatePotentialOpen ? L.potentialRange(candidatePotentialGrades(cand.potential)) : L.potentialLocked}</span>
+            <span class="muted">{appState.candidatePotentialOpen || cand.kept?.revealed ? L.potentialRange(candidatePotentialGrades(cand.potential)) : L.potentialLocked}</span>
             <span class="cc-scout">“{scoutLine(C.pos, cand.attrs)}”</span>
             <span class="cc-body">
               <MiniRadar pos={C.pos} attrs={cand.attrs} size={84} />
@@ -396,6 +397,13 @@
         {/if}
       {/each}
     </div>
+    {#if picked}
+      {@const n = appState.candidatePick! + 1}
+      <button class="btn btn-sm self-start" data-act="keep-candidate" aria-pressed={!!picked.kept} onclick={() => keepCandidate(picked.kept ? null : appState.candidatePick)}>
+        {picked.kept ? L.unkeepBtn({ n }) : L.keepBtn({ n })}
+      </button>
+      <p class="muted fs-sm">{L.keepHelp}</p>
+    {/if}
     {#if scouts > 0}
       <button class="btn btn-sm btn-primary self-start" data-act="premium-scout" disabled={scoutBusy || rerolling} onclick={premiumScout}>{scoutBusy ? SL.busy : SL.btn({ n: scouts })}</button>
       <p class="muted fs-sm">{SL.what}</p>
