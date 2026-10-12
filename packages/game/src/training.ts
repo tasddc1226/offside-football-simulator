@@ -27,8 +27,8 @@ function ageGrowth(s: GameState): { f: number; peak: number } {
     return { f: a <= 21 ? 0.85 : a <= 25 ? 1.15 : a <= 29 ? 0.8 : 0.25, peak: 1.15 };
   return { f: a <= 21 ? 1.3 : a <= 24 ? 1 : a <= 27 ? 0.55 : a <= 30 ? 0.22 : 0.08, peak: 1.3 };
 }
-/** 잠재력과 OVR의 차이로 정하는 성장 배율. 잠재력에 닿으면 하한 0.04까지 떨어진다. */
-const potGrowth = (s: GameState) => clamp((truePot(s) - ovr(s)) / 12, 0.04, 1.3);
+/** 잠재력과 OVR의 차이로 정하는 성장 배율. 잠재력에 닿으면 하한(BAL.potGrowthFloor)까지 떨어진다. */
+const potGrowth = (s: GameState) => clamp((truePot(s) - ovr(s)) / 12, BAL.potGrowthFloor, 1.3);
 export function growthFactor(s: GameState): number {
   let f = ageGrowth(s).f;
   f *= potGrowth(s);

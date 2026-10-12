@@ -6,6 +6,8 @@ const ko = {
   eventRateSeason: '전·후반기 이벤트 확률',
   eventTwist: '선택 뒤 반전 확률',
   growthScale: '성장 배율',
+  potGrowthFloor: '잠재력 근처 최소 성장',
+  targetManRole: '타겟맨 전용 OVR',
   investGain: '특훈 성장 비율',
   investCost: '자기 투자 비용 배율',
   boostCost: '잠재력 강화 비용 배율',

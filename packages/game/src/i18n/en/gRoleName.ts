@@ -3,6 +3,7 @@ import type { GRoleNameMsgs } from '../ko/gRoleName';
 
 export const gRoleName: Translation<GRoleNameMsgs> = {
   ST: 'Striker',
+  TM: 'Target Man',
   CF: 'Second striker',
   RW: 'Winger',
   CAM: 'Attacking midfielder',

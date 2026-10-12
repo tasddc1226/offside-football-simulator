@@ -3,6 +3,7 @@ import { ns } from '@offside/contracts/i18n';
 
 const ko = {
   ST: '스트라이커',
+  TM: '타겟맨',
   CF: '섀도 스트라이커',
   RW: '윙어',
   CAM: '공격형 미드필더',
