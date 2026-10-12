@@ -476,7 +476,7 @@ export const PutRetirementBodySchema = RetirementSummarySchema.extend({
   profile: PeakProfileSchema.optional().catch(undefined),
   /** T-11-030 은퇴 때 공개되는 실제 잠재력(스카우트 평가 + 숨은 성장). 관찰 전용 — 옛 클라이언트는 없고, 모양이 틀려도 은퇴는 받는다. */
   potReal: z.number().int().min(0).max(150).optional().catch(undefined),
-  /** T-11-191 은퇴 때 굳은 도트 선수 꾸미기(game look.ts lookCode, 예: `s2h5y3`). 옛 클라이언트는 없고, 모양이 틀려도 은퇴는 받는다. */
+  /** T-11-191 첫 은퇴 때 보내는 도트 선수 꾸미기(game look.ts lookCode, 예: `s2h5y3`). 옛 클라이언트는 없고, 모양이 틀려도 은퇴는 받는다. */
   look: LookCodeSchema.optional().catch(undefined),
 });
 export type PutRetirementBody = z.infer<typeof PutRetirementBodySchema>;

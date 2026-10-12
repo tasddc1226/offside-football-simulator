@@ -242,7 +242,7 @@ export type PutRetirementInput = {
   profile?: PeakProfile | undefined;
   /** T-11-030 은퇴 때 공개된 실제 잠재력(관찰 전용). 옛 클라이언트는 없다. */
   potReal?: number | undefined;
-  /** T-11-191 도트 선수 꾸미기 코드. 첫 은퇴 때만 적는다(은퇴하면 굳는다). */
+  /** T-11-191 도트 선수 꾸미기 코드. 은퇴 업로드에서는 최초만 적고, 이후 변경은 외형 전용 API에서 처리한다. */
   look?: string | undefined;
   /** T-11-163 은퇴 장려금 비율(밸런스 marketRetireBonusRate). */
   bonusRate: number;
