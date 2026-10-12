@@ -48,7 +48,7 @@
           <button class="title-item" data-title={x.d.id} aria-pressed={main?.id === x.d.id} onclick={() => pick(x.d.id)}>
             <TitleTag name={x.d.name} rarity={x.d.rarity} />
             <span class="title-desc">{x.d.desc}</span>
-            <span class="title-year num">{#if main?.id === x.d.id}<span class="title-main-badge">{L.mainBadge}</span>{' '}{/if}{x.year ? x.year : L.earlier}</span>
+            <span class="title-year num">{#if main?.id === x.d.id}<span class="title-main-badge">{L.mainBadge}</span>{/if} {x.year ? x.year : L.earlier}</span>
           </button>
         </li>
       {/each}
