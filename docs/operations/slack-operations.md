@@ -37,3 +37,15 @@ GitHub secrets: `SLACK_PURCHASES_WEBHOOK`, `SLACK_ALERTS_WEBHOOK`, `SLACK_DAILY_
 워크플로는 `slack-operations` 동시성 그룹으로 직렬화한다. Slack 수락 후 상태를 저장하므로 실패한 전송은 재시도 가능하다. 수락 후 상태 저장 실패·네트워크 응답 유실은 중복을 만들 수 있으며 exactly-once를 보장하지 않는다. Incoming Webhook만 사용하므로 메시지 스레드 갱신은 지원하지 않고 동일 GitHub 이슈 링크로 연결한다.
 
 수동 실행: `gh workflow run slack-operations.yml --ref main -f mode=monitor` (`daily`, `feedback`도 지원). 중지하려면 해당 GitHub workflow와 로컬 Orca 자동화를 비활성화한다. Cloudflare Notifications에서 별도 정책을 비활성화한다. 상태 키를 삭제하면 재전송/커서 재초기화될 수 있으므로 원인 확인 없이 지우지 않는다.
+
+## Meta 광고 모니터링 (#654 후속)
+
+`slack-meta-ads.yml`이 조회 전용 Marketing API 토큰을 사용한다. `ads_read`와 해당 광고 계정의 성과 조회 권한을 부여하고, 광고 수정 권한은 요구하지 않는다. `META_ADS_ACCESS_TOKEN`은 GitHub secret, `META_AD_ACCOUNT_ID`와 명시적인 `META_GRAPH_VERSION`은 repository variable이다. 실제 조회 검증 후 `META_ADS_ENABLED=true`로 활성화한다. 토큰을 문서·로그·URL에 넣지 않는다. 만료/권한 회수 시 갱신해야 하며 실패를 성과 0건으로 보고하지 않는다.
+
+오전 9:05 KST에는 **광고 계정 시간대의 직전 완료 날짜**를 집계한다. 지출·노출·클릭·랜딩 페이지 조회와 조회당 비용을 `offside-daily`로 보낸다. 랜딩 페이지 조회는 가입·앱 설치·결제가 아니다. 전환 수치는 Meta의 보고 지연·기여 설정에 따라 보정될 수 있다. 캠페인은 지출 기준 상위 10개만 본문에 표시하고 전체 합계를 함께 보낸다.
+
+매시 37분에는 광고의 `effective_status`와 계정 상태를 조회한다. 처음에는 정상 광고를 알리지 않고 거절·문제가 있는 광고만 알린다. 이후 관찰한 상태 변경은 `offside-alerts`로 보낸다. 광고명은 운영 목적의 알림에만 사용하고 상태에는 ID·상태 코드만 저장한다. 광고·타겟·예산을 자동 변경하지 않는다. 계정 시간대가 KST와 다르면 리포트 날짜도 게임 리포트와 다를 수 있다.
+
+목록 조회는 최대 100개 × 10페이지다. 한도를 넘거나 페이지 응답이 불완전하면 실패 처리하고 상태를 진행하지 않는다. API의 `paging.next` URL은 따라가지 않고 같은 계정 경로에 cursor만 전달하므로 응답 URL을 통한 토큰 노출을 방지한다. 일일 보고와 상태 알림은 별도의 동시성 그룹을 사용한다. 같은 날짜 요약은 Slack 수락 후 저장한 D1 상태로 중복을 방지한다. 네트워크 응답 유실/상태 저장 실패에 따른 중복 가능성은 기존 알림과 같다.
+
+조회 실패는 최초/6시간 간격으로 알려주고 성공으로 돌아오면 한 번 복구를 알린다. 비용 상승·지출 한도 경고는 기준 금액과 충분한 표본을 결정한 후 별도 추가한다. 현재 버전은 성과 요약과 상태 변경 알림에 한정한다. 수동 실행: `gh workflow run slack-meta-ads.yml --ref main -f mode=daily` 또는 `mode=monitor`. 중지: `META_ADS_ENABLED=false`.
