@@ -38,3 +38,17 @@ Apple setup: retain the existing V2 endpoint for production and Sandbox. Verify 
 Read pending/sent records using the normal read-only D1 operations workflow. No user identity is retained in this table. Rotate/revoke the webhook in Slack if exposed, replace the Worker secret, and test again. Watch pending age and DLQ growth.
 
 Sources: [Slack incoming webhooks](https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/), [authenticated Pub/Sub push](https://docs.cloud.google.com/pubsub/docs/authenticate-push-subscriptions), [Play RTDN](https://developer.android.com/google/play/billing/getting-ready#configure-rtdn).
+
+## 알림 표시 양식
+
+제목에서 새 구매·구독 갱신·환불·연결 테스트와 실결제·Sandbox를 구분한다. 상품은 공용 `IAP_PRODUCTS`의 종류와 수량으로 읽기 쉬운 이름을 표시하고 광고 제거는 별도 이름을 쓴다. 미등록 상품은 ID를 그대로 표시한다. 수신 시간은 한국 시간(KST)이며 스토어 결제 시각이나 금액으로 해석하지 않는다. 상품 ID와 알림 참조는 작은 하단 문구로 둔다.
+
+```text
+OFFSIDE · 💳 새 구매 · 실결제
+상품: 리롤권 5장
+스토어: Google Play
+알림 수신: 2026-10-12 17:06:41 (한국 시간)
+상품 ID: com.offsidelab.app.reroll_5 · 알림 참조: abcdef123456
+```
+
+Sandbox에는 “테스트 알림입니다. 실제 매출에 포함하지 마세요.”를 추가한다. 휴대폰 알림·스크린리더용 `text`에도 동일 정보를 포함한다. 운영 채널 기본 언어는 한국어이며 영어 사전도 함께 유지한다. 이미 보낸 메시지는 수정하지 않고 이후 발송부터 새 양식을 쓴다.

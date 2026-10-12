@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import {
   billingAlertId,
+  billingSlackMessage,
   consumeBillingAlerts,
   recordBillingAlert,
   recoverBillingAlerts,
@@ -48,7 +49,7 @@ describe('verified billing Slack outbox', () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(b.message.ack).toHaveBeenCalledTimes(2);
     const request = JSON.stringify(fetcher.mock.calls);
-    expect(request).toContain('TEST / Sandbox');
+    expect(request).toContain('테스트 · Sandbox');
     expect(request).not.toContain(event.transactionId);
   });
   it('recovers failed enqueue from D1, retries Slack failures and does not mark them sent', async () => {
@@ -143,5 +144,47 @@ describe('verified billing Slack outbox', () => {
       kind: 'test',
       test: 1,
     });
+  });
+});
+
+describe('billing Slack presentation', () => {
+  it('shows readable products, Korean time and distinct event/environment labels', () => {
+    for (const [kind, label] of Object.entries({
+      purchase: '새 구매',
+      renewal: '구독 갱신',
+      refund: '환불',
+      test: '연결 테스트',
+    })) {
+      const msg = billingSlackMessage(
+        {
+          store: 'apple',
+          kind,
+          product_id: 'com.offsidelab.app.scout_5',
+          test: 0,
+          created_at: '2026-10-12T08:06:41.332Z',
+        },
+        'abcdef1234567890',
+      );
+      expect(msg.text).toContain(label);
+      expect(msg.text).toContain('실결제');
+      expect(msg.text).toContain('2026-10-12 17:06:41 (한국 시간)');
+      expect(msg.text).not.toContain('실제 매출');
+      if (kind !== 'test') expect(msg.text).toContain('프리미엄 스카우트권 5장');
+    }
+  });
+  it('keeps unknown products literal and makes Sandbox explicit in fallback and blocks', () => {
+    const row = {
+      store: 'google',
+      kind: 'purchase',
+      product_id: '<!channel> *unknown*',
+      test: 1,
+      created_at: '2026-10-12T23:59:00Z',
+    };
+    const msg = billingSlackMessage(row, '1234567890abcdef');
+    expect(msg.text).toContain('2026-10-13 08:59:00');
+    expect(msg.text).toContain('실제 매출에 포함하지 마세요');
+    expect(msg.text).toContain(row.product_id);
+    expect(JSON.stringify(msg.blocks)).not.toContain('mrkdwn');
+    expect(billingSlackMessage(row, '123', 'en').text).toContain('Do not count this as revenue');
   });
 });
