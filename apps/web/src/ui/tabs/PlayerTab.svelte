@@ -159,7 +159,7 @@
     <div class="pot-peek" data-pot-peek={pot.kind}>
       <p class="muted fs-sm">{pot.text}</p>
       {#if pot.kind === 'available'}
-        <button class="btn btn-sm btn-block" data-act="pot-peek" onclick={onPeek}>{pot.button}</button>
+        <button class="btn btn-sm btn-block btn-tonal" data-act="pot-peek" aria-label={pot.button} onclick={onPeek}>{pot.label}{#if pot.badge}<span class="btn-badge">{pot.badge}</span>{/if}</button>
       {/if}
       {#if clubPeek}
         <button class="btn btn-sm btn-block" data-act="pot-peek-club" disabled={clubBusy} onclick={onClubPeek}>
@@ -187,7 +187,7 @@
     {#if boost.button}
       {#if arming}<p class="fs-sm boost-confirm" data-boost-confirm>{boost.confirm}</p>{/if}
       <div class="boost-acts">
-        <button class="btn btn-primary btn-block" data-act="boost" onclick={onBoost}>{arming ? B.confirmBtn : boost.button}</button>
+        <button class="btn btn-tonal btn-block" data-act="boost" aria-label={arming ? undefined : boost.button} onclick={onBoost}>{#if arming}{B.confirmBtn}{:else}{boost.label}<span class="btn-badge">{boost.badge}</span>{/if}</button>
         {#if arming}<button class="btn" data-act="boost-cancel" onclick={() => (arming = false)}>{B.cancel}</button>{/if}
       </div>
     {/if}
@@ -253,8 +253,10 @@
 <style>
   .pot-peek {
     display: grid;
-    gap: 6px;
-    margin-top: 10px;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
   }
   .boost-head {
     display: flex;

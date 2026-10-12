@@ -1,0 +1,26 @@
+{
+  "id": "t-11-221-button-system",
+  "title": "버튼 배치를 정리했어요",
+  "items": [
+    "시즌 진행 버튼 아래에 다음 구간 준비가 한 줄로 보여요",
+    "선수 만들기에서 후보 카드가 먼저 보이고 광고 버튼은 아래로 옮겼어요",
+    "이적 카드에 › 표시를 달고 계약서의 사인 보조 버튼을 정리했어요"
+  ],
+  "en": {
+    "title": "Buttons are laid out more clearly",
+    "items": [
+      "The season button now shows your next-phase setup on a second line.",
+      "Player creation shows the candidate cards first, with ad buttons below them.",
+      "Transfer cards have a › mark, and the contract's signing helpers are tidier."
+    ]
+  },
+  "ja": {
+    "title": "ボタンの配置を整理しました",
+    "items": [
+      "シーズン進行ボタンの下に次の区間の準備が1行で表示されます。",
+      "選手作成では候補カードが先に表示され、広告ボタンはその下に移りました。",
+      "移籍カードに › を付け、契約書のサイン補助ボタンを整理しました。"
+    ]
+  },
+  "availability": "web-app"
+}

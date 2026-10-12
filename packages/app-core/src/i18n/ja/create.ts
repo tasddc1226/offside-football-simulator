@@ -94,6 +94,7 @@ export const create: Translation<CreateMsgs> = {
   potentialLocked: 'ポテンシャルのランク範囲は未確認',
   potentialAd: '広告を見て候補3人のポテンシャルを見る',
   potentialFree: '候補3人のポテンシャルを見る',
+  potentialShort: 'ポテンシャルを見る',
   potentialBusy: '広告を読み込み中です…',
   potentialWatch:
     '広告を最後まで見ると、候補3人のポテンシャルのランク範囲が見られます。広告は範囲を見せるだけで、ポテンシャルは変わりません。',

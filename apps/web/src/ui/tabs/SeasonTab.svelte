@@ -292,18 +292,26 @@
   </div>
   {#if tourWait === 'invest'}<p class="tour-hint" aria-live="polite">{L.investHint}</p>{/if}
   <div class="invest-grid">
-    {#each INVESTS as d (d.id)}
+    {#each INVESTS.filter((d) => d.id !== 'none') as d (d.id)}
       {@const c = investCard(s, d)}
       {@const cost = investCost(s, d)}
       {@const note = investNote(d)}
-      <button class="opt" class:iv-none={!cost} data-invest={d.id} aria-pressed={invest.id === d.id} disabled={!c.affordable} onclick={(e) => setInvest(d.id, e.currentTarget)}>
+      <button class="opt" data-invest={d.id} aria-pressed={invest.id === d.id} disabled={!c.affordable} onclick={(e) => setInvest(invest.id === d.id ? 'none' : d.id, e.currentTarget)}>
         <b>{investName(s, d)}{#if note}<small class="iv-note">{note}</small>{/if}</b>
         {#if cost}<small class="iv-cost num">{c.affordable ? W.won({ v: fmtMoney(cost) }) : c.tag.split(' · ')[0]}</small>{/if}
       </button>
     {/each}
   </div>
   <div class="train-help" data-invest-help aria-live="polite">
-    <b>{investName(s, invest)} {#if investPicked.effect.length}<span class="muted">· {investPicked.effect.join(' · ')}</span>{/if}</b>
+    <div class="iv-help-head">
+      <b>{investName(s, invest)} {#if investPicked.effect.length}<span class="muted">· {investPicked.effect.join(' · ')}</span>{/if}</b>
+      <!-- T-11-221 '투자 안 함' 칸 대신: 고른 게 있으면 선택 해제, 안내 중 고르기를 기다리면 투자 안 함으로 넘어간다. -->
+      {#if invest.id !== 'none'}
+        <button class="iv-clear" data-invest="none" onclick={(e) => setInvest('none', e.currentTarget)}>{L.investClear}</button>
+      {:else if tourWait === 'invest'}
+        <button class="iv-clear" data-invest="none" onclick={(e) => setInvest('none', e.currentTarget)}>{investName(s, invest)}</button>
+      {/if}
+    </div>
     <p>{investHelp(s, invest)}</p>
   </div>
 </section>

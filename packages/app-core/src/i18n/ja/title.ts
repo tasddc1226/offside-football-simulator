@@ -9,6 +9,7 @@ export const title: Translation<TitleMsgs> = {
   mainTitle: 'メイン称号',
   selManual: '自分で選択',
   selAuto: '自動',
+  mainBadge: 'メイン',
   pickHint: '称号をタップするとメイン称号になり、選手カードと殿堂に表示されます。',
   earlier: '以前の記録',
   emptyEarned: 'まだ獲得した称号はありません。プロデビューが最初の称号です。',

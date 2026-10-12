@@ -15,6 +15,7 @@ export const gameSeason: Translation<GameSeasonMsgs> = {
   trainViewButtons: 'ボタンで表示',
   trainViewRadar: '六角形で表示',
   investTitle: '自己投資',
+  investClear: '選択を解除',
   funds: (p) => `所持 ${p.v}`,
   fundsAfter: (p) => `所持 ${p.v} → ${p.after}`,
   investHint: '投資を選ぶと次へ進みます · 節約するなら投資しない',

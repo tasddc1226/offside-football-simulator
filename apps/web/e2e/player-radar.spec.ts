@@ -11,9 +11,10 @@ test('선수 탭에 육각형이 있고 시즌 탭은 훈련 버튼으로 고른
   await page.locator('[data-train="pas"]').click();
   await expect(page.locator('[data-train="pas"]')).toHaveAttribute('aria-pressed', 'true');
 
-  // T-11-219 자기 투자는 5칸을 늘 보여 주고 한 번 눌러 고른다. 고른 투자의 설명은 아래 칸에.
+  // T-11-219 자기 투자는 칸을 늘 보여 주고 한 번 눌러 고른다. 고른 투자의 설명은 아래 칸에.
+  // T-11-221 '투자 안 함' 칸은 없애고, 고른 뒤에 설명 칸의 '선택 해제'로 되돌린다.
   const invest = page.locator('.invest-grid button');
-  await expect(invest).toHaveCount(5);
+  await expect(invest).toHaveCount(4);
   await page.locator('[data-invest="mental"]').click();
   await expect(page.locator('[data-invest="mental"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('[data-invest-help]')).toContainText('멘탈 코칭');

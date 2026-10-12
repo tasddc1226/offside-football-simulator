@@ -16,6 +16,7 @@ export const gameSeason: Translation<GameSeasonMsgs> = {
   trainViewButtons: 'Show as buttons',
   trainViewRadar: 'Show as hexagon',
   investTitle: 'Self-investment',
+  investClear: 'Clear',
   funds: (p) => `Funds ${p.v}`,
   fundsAfter: (p) => `Funds ${p.v} → ${p.after}`,
   investHint: 'Pick an investment to move on. Choose none to save money',

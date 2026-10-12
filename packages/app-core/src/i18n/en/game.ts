@@ -15,7 +15,6 @@ export const game: Translation<GameMsgs> = {
   focus: (p) => `Focus ${p.names}`,
   injury: (p) => `Injured · ${p.n} match${p.n === 1 ? '' : 'es'}`,
   titleOpen: (p) => `Main title ${p.name}, open titles`,
-  prepOpen: (p) => `View next phase prep: ${p.prep}`,
   storageFull: "Storage is full, so your progress couldn't be saved. Back it up in Settings.",
   actEvent: '⚡ View event',
   actSeasonEnd: 'View season review',

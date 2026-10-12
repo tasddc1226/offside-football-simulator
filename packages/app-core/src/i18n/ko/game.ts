@@ -15,7 +15,6 @@ const ko = {
   focus: (p: { names: string }) => `주력 ${p.names}`,
   injury: (p: { n: number }) => `부상 ${p.n}경기`,
   titleOpen: (p: { name: string }) => `대표 칭호 ${p.name}, 칭호 도감 열기`,
-  prepOpen: (p: { prep: string }) => `다음 구간 준비 보기: ${p.prep}`,
   storageFull: '저장 공간이 부족해 진행 상황을 저장하지 못했어요. 설정에서 백업해 두세요.',
   // 아래 고정 진행 바(seasonAction.ts)
   actEvent: '⚡ 이벤트 확인',

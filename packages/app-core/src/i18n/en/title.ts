@@ -10,6 +10,7 @@ export const title: Translation<TitleMsgs> = {
   mainTitle: 'Main title',
   selManual: 'Chosen by you',
   selAuto: 'Auto',
+  mainBadge: 'Main',
   pickHint:
     'Tap a title to make it your main title. It shows on your player card and in the Hall of Fame.',
   earlier: 'Earlier record',
