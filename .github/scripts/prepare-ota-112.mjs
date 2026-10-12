@@ -27,6 +27,8 @@ export function prepare(root) {
   }
   const files = [
     'apps/mobile/app.json',
+    // #651 added Android build properties and a config plugin here; both change the native fingerprint.
+    'apps/mobile/app.config.js',
     'apps/mobile/package.json',
     'pnpm-lock.yaml',
     'apps/mobile/src/components/AdSlot.tsx',
@@ -45,6 +47,7 @@ export function prepare(root) {
     'apps/mobile/src/platform/ads.ts',
     'apps/mobile/plugins/with-applovin-max.js',
     'apps/mobile/plugins/skadnetwork-ids.json',
+    'apps/mobile/plugins/withAndroidOptimization.js',
   ])
     rmSync(resolve(root, file), { force: true });
   console.log(`Prepared 1.1.2 AdMob compatibility overlay from ${source}`);
