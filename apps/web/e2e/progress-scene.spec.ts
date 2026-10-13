@@ -22,6 +22,9 @@ for (const size of [
     const scene = page.locator('[data-progress-scene]');
     await expect(scene).toBeVisible();
     const screen = page.locator('#sheet.progress-screen');
+    expect(
+      await page.evaluate(() => getComputedStyle(document.documentElement).scrollbarGutter),
+    ).toBe('auto');
     expect(await screen.boundingBox()).toMatchObject({
       x: 0,
       y: 0,

@@ -7686,6 +7686,10 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
 }
 
 /* T-11-191: 진행 중에는 경기장을 전체 화면으로. 결과·선택 시트는 기존 크기를 유지한다. */
+html.scroll-locked:has(.progress-screen) {
+  /* 일반 팝업의 스크롤바 빈자리는 전체 화면에서는 남기지 않는다. */
+  scrollbar-gutter: auto;
+}
 .modal:has(.progress-screen) {
   padding: 0;
   background: var(--surface);
