@@ -512,22 +512,45 @@ export async function listPublicHof(
         sql`${careers.publicName} like ${`%${q.replace(/[\\%_]/g, '\\$&')}%`} escape '\\'`,
       )
     : ranked;
-  const order = [desc(by), desc(careers.legendScore), careers.retiredAt] as const;
+  // Do not repeat legend_score for score sorting: SQLite otherwise sorts the duplicate suffix.
+  const order =
+    sort === 'score'
+      ? [desc(by), careers.retiredAt]
+      : [desc(by), desc(careers.legendScore), careers.retiredAt];
+  const rankSource =
+    sort === 'score'
+      ? season
+        ? sql`${careers} INDEXED BY careers_hof_season_score_order_idx`
+        : sql`${careers} INDEXED BY careers_hof_score_order_idx`
+      : careers;
   // Primary-anchored read sessions send later reads to a caught-up replica.
   // Await the page before count so its bookmark is established first.
-  const rows = await db
-    .select(publicColumns)
-    .from(careers)
-    .leftJoin(retiredNumbers, withRetiredNumber)
+  // For score sorting, filter/page on the covering index before fetching display columns.
+  const pageIds = db
+    .select({ id: sql<string>`${careers.id}`.as('hof_career_id') })
+    .from(rankSource)
     .where(where)
     .orderBy(...order)
     .limit(limit)
-    .offset((page - 1) * limit);
+    .offset((page - 1) * limit)
+    .as('hof_page');
+  const query = db
+    .select(publicColumns)
+    .from(careers)
+    .leftJoin(retiredNumbers, withRetiredNumber)
+    .$dynamic();
+  const rows = await (sort === 'score'
+    ? query.innerJoin(pageIds, eq(careers.id, sql`"hof_page"."hof_career_id"`)).orderBy(...order)
+    : query
+        .where(where)
+        .orderBy(...order)
+        .limit(limit)
+        .offset((page - 1) * limit));
   const [count] = await db
     .select({ n: sql<number>`count(*)` })
     .from(
       q
-        ? careers
+        ? rankSource
         : dpos
           ? sql`${careers} INDEXED BY careers_hof_dpos_idx`
           : sql`${careers} INDEXED BY careers_hof_count_idx`,
@@ -538,10 +561,10 @@ export async function listPublicHof(
     // 찾은 선수(최대 limit명)만 전체 순위에서 몇 위인지 — id·순번만 읽는 창 함수 한 번.
     const all = db
       .select({
-        id: careers.id,
+        id: sql<string>`${careers.id}`.as('id'),
         rk: sql<number>`row_number() over (order by ${sql.join([...order], sql`, `)})`.as('rk'),
       })
-      .from(careers)
+      .from(rankSource)
       .where(ranked)
       .as('ranked');
     const ranks = await db

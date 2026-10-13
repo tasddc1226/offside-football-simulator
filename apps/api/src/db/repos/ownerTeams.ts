@@ -528,11 +528,12 @@ const lineupValueSql = (open: boolean) => sql<number>`(
   ${open ? sql`and ${cards.ownerId} = ${ownerTeams.profileId}` : sql``}
 )`;
 
-const rankOrder = (sort: TeamRankSort, value: ReturnType<typeof lineupValueSql>) =>
+const rankOrder = (sort: TeamRankSort) =>
   ({
     rating: [desc(ownerTeams.rating), desc(ownerTeams.ovr), asc(ownerTeams.createdAt)],
     ovr: [desc(ownerTeams.ovr), desc(ownerTeams.rating), asc(ownerTeams.createdAt)],
-    value: [desc(value), desc(ownerTeams.rating), asc(ownerTeams.createdAt)],
+    // Refer to the selected value: repeating the correlated aggregate runs it twice per team.
+    value: [desc(sql`lineup_value`), desc(ownerTeams.rating), asc(ownerTeams.createdAt)],
   })[sort];
 
 /** 라이브 랭킹 한 페이지 + 랭킹에 오른 팀 수. 팀마다 구단 가치(value)를 함께 센다. */
@@ -546,11 +547,11 @@ export async function listTeamRanking(
   const value = lineupValueSql(!teamSeasonClosed(season, now));
   const [rows, [total]] = await db.batch([
     db
-      .select({ team: ownerTeams, value, title: profiles.title })
+      .select({ team: ownerTeams, value: value.as('lineup_value'), title: profiles.title })
       .from(ownerTeams)
       .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
       .where(rankedIn(season))
-      .orderBy(...rankOrder(sort, value), asc(ownerTeams.id))
+      .orderBy(...rankOrder(sort), asc(ownerTeams.id))
       .limit(TEAM_RANK_PER_PAGE)
       .offset((page - 1) * TEAM_RANK_PER_PAGE),
     db
