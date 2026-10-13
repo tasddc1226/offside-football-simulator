@@ -17,11 +17,12 @@
   import { CONFEDS, flagOf } from '@offside/contracts/nations';
   import { BODY_LIMITS, BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
   import { isKorean, nationOf } from '@offside/game/nation';
-  import { startCareer, rollCandidates, rerollCandidates, premiumScoutCandidates, revealCandidatePotential, keepCandidate } from './actions.js';
+  import { startCareer, rollCandidates, rerollCandidates, premiumScoutCandidates, planPremiumScout, revealCandidatePotential, keepCandidate } from './actions.js';
   import { clubOffer, loadClubShop, payWithClub } from '@offside/app-core/club-reward';
   import { fundsText } from '@offside/app-core/funds';
   import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
   import type { RewardShopResponse } from '@offside/contracts';
+  import { scoutPityView, type ScoutPity } from '@offside/contracts/cup';
   import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
   import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
   import ScoutOdds from './cup/ScoutOdds.svelte';
@@ -117,27 +118,40 @@
       owner = r.ok;
       rerolls = r.ok ? r.data.reroll : 0;
       scouts = r.ok ? (r.data.scout ?? 0) : 0;
+      pity = r.ok ? (r.data.pity ?? NO_PITY) : NO_PITY;
     });
   });
   // T-11-196 프리미엄 스카우트권 — 가진 장수가 있을 때만 버튼을 보인다(웹은 스토어 결제가 없다). 멱등 키는 리롤권과 같다.
   let scouts = $state(0);
   let scoutBusy = $state(false);
   let scoutKey: string | null = null;
+  // T-11-244 천장 카운트. 다시 보낼 때는 같은 시드 계획(scoutPlan)을 같은 멱등 키와 함께 쓴다.
+  const NO_PITY: ScoutPity = { used: 0, streak: 0, elites: 0 };
+  let pity = $state<ScoutPity>(NO_PITY);
+  let scoutPlan: { seed: number; hit: boolean } | null = null;
+  const pityView = $derived(scoutPityView(pity));
   const premium = $derived(!!appState.candidates?.some((c) => c.guaranteed));
   async function premiumScout() {
     if (scoutBusy || scouts < 1 || !confirm(SL.confirm({ n: scouts - 1 }))) return;
     scoutBusy = true;
     scoutKey ??= crypto.randomUUID();
-    const r = await spendScout(scoutKey);
+    scoutPlan ??= planPremiumScout();
+    const plan = scoutPlan;
+    const r = await spendScout(scoutKey, plan.hit);
     scoutBusy = false;
-    if (r.ok || !r.error.retryable) scoutKey = null;
+    if (r.ok || !r.error.retryable) {
+      scoutKey = null;
+      scoutPlan = null;
+    }
     if (!r.ok) {
       if (r.error.reason === 'NO_SCOUT') scouts = 0;
       return toast(r.error.message || SL.fail);
     }
     scouts = r.data.scout;
-    premiumScoutCandidates();
-    toast(SL.done({ n: scouts }));
+    if (r.data.pity) pity = r.data.pity;
+    const mode = r.data.scoutMode ?? 'normal';
+    premiumScoutCandidates(plan.seed, mode);
+    toast(mode === 'elite' ? SL.doneElite({ n: scouts }) : mode === 'sure' ? SL.doneSure({ n: scouts }) : SL.done({ n: scouts }));
   }
   async function reroll() {
     if (rerolling || rerolls < 1 || !confirm(CL.rerollConfirm({ n: rerolls - 1 }))) return;
@@ -368,7 +382,7 @@
             <span class="cc-head">
               <span class="cc-no">{L.candNo({ n: i + 1 })}</span>
               <span class="cc-ovr">OVR <b class="num">{startOvr(C.pos, cand.attrs)}</b></span>
-              {#if cand.guaranteed}<span class="pill" data-cand-sure>{SL.sure}</span>{/if}
+              {#if cand.pity}<span class="pill good" data-cand-pity={cand.pity}>{cand.pity === 'elite' ? SL.pillElite : SL.pillSure}</span>{:else if cand.guaranteed}<span class="pill" data-cand-sure>{SL.sure}</span>{/if}
               {#if cand.kept}<span class="pill" data-cand-kept>{L.kept}</span>{/if}
               {#if appState.candidatePick === i}<span class="pill good">{L.picked}</span>{/if}
             </span>
@@ -409,7 +423,8 @@
     {/if}
     {#if scouts > 0}
       <button class="btn btn-sm btn-primary self-start" data-act="premium-scout" disabled={scoutBusy || rerolling} onclick={premiumScout}>{scoutBusy ? SL.busy : SL.btn({ n: scouts })}</button>
-      <p class="muted fs-sm">{SL.what}</p>
+      <p class="fs-sm" data-scout-pity>{SL.pitySure({ n: pityView.sureIn })} · {SL.pityElite({ n: pityView.eliteIn })}</p>
+      <p class="muted fs-sm">{SL.what} {SL.pityHelp}</p>
       <ScoutOdds />
     {/if}
     {#if premium}<p class="muted fs-sm" data-premium-note>{SL.premiumNote}</p>{/if}

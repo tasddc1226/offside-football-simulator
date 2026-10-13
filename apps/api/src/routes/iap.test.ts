@@ -165,14 +165,61 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
         cookie: me.cookie,
         headers: { 'Idempotency-Key': crypto.randomUUID() },
       });
+    // 본문이 없는 옛 앱도 천장 장수는 센다(확정 모드는 받지 않는다).
     expect(ItemsRes.parse(await (await use()).json()).data).toEqual({
       reroll: 0,
       boost: 0,
       scout: 0,
+      pity: { used: 1, streak: 1, elites: 0 },
+      scoutMode: 'normal',
     });
     const empty = await use();
     expect(empty.status).toBe(409);
     expect(await empty.json()).toMatchObject({ error: { details: { reason: 'NO_SCOUT' } } });
+  });
+
+  it('T-11-244 S 없이 19장을 쓰면 20장째는 S 확정, 누적 100장째는 특급 S, 옛 앱은 확정을 받지 않는다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const now = new Date().toISOString();
+    await ctx.db
+      .insert(ownerItems)
+      .values({ profileId: me.profileId, item: 'scout', qty: 200, updatedAt: now });
+    const use = async (body?: { hit: boolean }) =>
+      ItemsRes.parse(
+        await (
+          await call('POST', '/v1/items/scout/use', {
+            cookie: me.cookie,
+            headers: { 'Idempotency-Key': crypto.randomUUID() },
+            ...(body ? { body } : {}),
+          })
+        ).json(),
+      ).data;
+    for (let i = 1; i <= 19; i++) {
+      const r = await use({ hit: false });
+      expect(r.scoutMode).toBe('normal');
+      expect(r.pity).toEqual({ used: i, streak: i, elites: 0 });
+    }
+    const sure = await use({ hit: false });
+    expect(sure.scoutMode).toBe('sure');
+    expect(sure.pity).toEqual({ used: 20, streak: 0, elites: 0 });
+    // 일반 후보에 S가 나오면 0으로 돌아간다.
+    await use({ hit: false });
+    expect((await use({ hit: true })).pity).toEqual({ used: 22, streak: 0, elites: 0 });
+    // 옛 앱은 streak가 넘어도 확정을 받지 않고 장수만 쌓인다.
+    for (let i = 0; i < 25; i++) expect((await use()).scoutMode).toBe('normal');
+    expect((await use()).pity).toEqual({ used: 48, streak: 26, elites: 0 });
+    // 천장을 아는 앱은 밀린 확정을 바로 받는다.
+    expect((await use({ hit: false })).scoutMode).toBe('sure');
+    await ctx.env.DB.prepare('UPDATE scout_pity SET used = 99').run();
+    const elite = await use({ hit: false });
+    expect(elite.scoutMode).toBe('elite');
+    expect(elite.pity).toEqual({ used: 100, streak: 0, elites: 1 });
+    expect((await use({ hit: false })).scoutMode).toBe('normal');
+    const items = ItemsRes.parse(
+      await (await call('GET', '/v1/items', { cookie: me.cookie })).json(),
+    );
+    expect(items.data.pity).toEqual({ used: 101, streak: 1, elites: 1 });
+    expect(items.data.scout).toBe(200 - 51);
   });
 
   it('계정을 지우면 아이템과 구매 원장도 지운다', async () => {

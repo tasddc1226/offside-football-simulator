@@ -4,7 +4,7 @@ import {
   FriendsResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
-import { INVITE_REROLLS, INVITE_REWARD_MAX } from '@offside/contracts/owner-team';
+import { INVITE_REROLLS, INVITE_REWARD_MAX, INVITE_SCOUTS } from '@offside/contracts/owner-team';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { notifications, ownerItems, referrals } from '../db/schema.js';
@@ -52,9 +52,11 @@ describe('T-11-171 친구 초대', () => {
     expect(res.status).toBe(200);
     return careerId;
   }
-  const rerollsOf = async (profileId: string) =>
-    (await ctx.db.select().from(ownerItems).where(eq(ownerItems.profileId, profileId)))[0]?.qty ??
-    0;
+  const itemOf = async (profileId: string, item: 'reroll' | 'scout') =>
+    (await ctx.db.select().from(ownerItems).where(eq(ownerItems.profileId, profileId))).find(
+      (r) => r.item === item,
+    )?.qty ?? 0;
+  const rerollsOf = (profileId: string) => itemOf(profileId, 'reroll');
 
   it('새 구단주가 초대 코드로 신청하고 커리어를 마치면 두 사람이 리롤권을 받는다(한 번만)', async () => {
     const inviter = await issueGoogleCookie(ctx, { nickname: '초대왕' });
@@ -76,6 +78,9 @@ describe('T-11-171 친구 초대', () => {
     const careerId = await retire(invitee.cookie);
     expect(await rerollsOf(invitee.profileId)).toBe(INVITE_REROLLS);
     expect(await rerollsOf(inviter.profileId)).toBe(INVITE_REROLLS);
+    // T-11-244 프리미엄 스카우트권도 같이 받는다.
+    expect(await itemOf(invitee.profileId, 'scout')).toBe(INVITE_SCOUTS);
+    expect(await itemOf(inviter.profileId, 'scout')).toBe(INVITE_SCOUTS);
     expect(await ctx.db.select().from(referrals)).toMatchObject([
       { inviteeId: invitee.profileId, careerId, inviterRewarded: true },
     ]);
@@ -150,6 +155,8 @@ describe('T-11-171 친구 초대', () => {
     await retire(invitee.cookie);
     expect(await rerollsOf(invitee.profileId)).toBe(INVITE_REROLLS);
     expect(await rerollsOf(inviter.profileId)).toBe(0);
+    expect(await itemOf(invitee.profileId, 'scout')).toBe(INVITE_SCOUTS);
+    expect(await itemOf(inviter.profileId, 'scout')).toBe(0);
     expect((await friendsOf(inviter.cookie)).invite).toMatchObject({
       done: INVITE_REWARD_MAX + 1,
       rewarded: INVITE_REWARD_MAX,

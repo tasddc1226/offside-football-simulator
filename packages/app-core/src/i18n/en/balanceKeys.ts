@@ -36,6 +36,8 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   rerollPrice: 'Reroll ticket price',
   rerollPriceGrowth: 'Reroll ticket price growth',
   rerollDailyCap: 'Reroll tickets per day',
+  scoutPrice: 'Premium scout ticket price',
+  scoutWeeklyCap: 'Premium scout tickets per week',
   rewardPriceCandidates: 'Candidate potential price',
   rewardPricePeek: 'Season rating price',
   rewardPriceBoost: 'Potential boost price',

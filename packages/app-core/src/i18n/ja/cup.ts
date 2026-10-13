@@ -152,6 +152,7 @@ export const cup: Translation<CupMsgs> = {
   rewardStage: '成績',
   rewardItem: '報酬',
   rewardReroll: (p) => `選手候補リロールチケット${p.n}枚`,
+  rewardScout: (p) => `プレミアムスカウト券${p.n}枚`,
   rewardTrophy: 'トロフィー・称号',
   rewardNote:
     'リロールチケットは、新しい選手を作るときに候補3人を引き直すために使います。敗退が決まるとすぐ受け取れます。',

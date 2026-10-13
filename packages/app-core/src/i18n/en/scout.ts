@@ -31,4 +31,24 @@ export const scout: Translation<ScoutMsgs> = {
   oddsRest: 'Premium · other candidates (2)',
   oddsNote:
     'Calculated from the current game settings. Odds differ before and after the season opens. Grades are based on true potential.',
+  pitySure: (p) => (p.n <= 1 ? 'Next ticket: S guaranteed' : `S guaranteed in ${p.n}`),
+  pityElite: (p) => (p.n <= 1 ? 'Next ticket: elite S guaranteed' : `Elite S in ${p.n}`),
+  pityHelp:
+    'If no S candidate shows up, your 20th ticket guarantees one. Every 100th ticket you use guarantees an S candidate with top potential (96).',
+  pillSure: 'S guaranteed',
+  pillElite: 'Elite S',
+  doneSure: (p) => `You hit the pity and got an S candidate. ${p.n} premium scout tickets left.`,
+  doneElite: (p) =>
+    `Your 100th ticket brought an elite S candidate. ${p.n} premium scout tickets left.`,
+  funds: 'Buy with club funds',
+  fundsWeek: (p) => `This week ${p.bought}/${p.cap}`,
+  fundsNote: 'You can buy 1 ticket a week with club funds. It resets every Monday at 00:00 (KST).',
+  fundsSoldOut: "You've bought this week's limit. You can buy more from 00:00 (KST) next Monday.",
+  fundsClosed: "They aren't on sale for club funds right now.",
+  fundsConfirm: (p) =>
+    `Buy 1 premium scout ticket for ${p.price}? You'll have ${p.balance} in club funds left, and this can't be undone.`,
+  fundsDone: (p) => `Premium scout ticket bought. You now have ${p.n}.`,
+  fundsFail: "Couldn't buy the premium scout ticket.",
+  oddsPity:
+    'Pity: after 19 tickets with no S, the guaranteed candidate on the 20th is S. On every 100th ticket, the guaranteed candidate has top potential (96).',
 };

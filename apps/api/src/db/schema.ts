@@ -1375,6 +1375,21 @@ export const ownerItems = sqliteTable(
 );
 
 /**
+ * T-11-244 프리미엄 스카우트 천장 카운트. used = 누적 사용, streak = 마지막 S 뒤 S 없이 쓴 장수, elites = 받은 특급 S 수,
+ * mode = 마지막 한 장의 모드(normal · sure · elite). 스카우트권을 쓰는 batch가 장수 차감과 함께 고친다(spendScout).
+ */
+export const scoutPity = sqliteTable('scout_pity', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  used: integer('used').notNull().default(0),
+  streak: integer('streak').notNull().default(0),
+  elites: integer('elites').notNull().default(0),
+  mode: text('mode').notNull().default('normal'),
+  updatedAt: text('updated_at').notNull(),
+});
+
+/**
  * T-11-152 구단 자금으로 산 아이템 원장(자금이 없어진 내역). 하루 상한을 세고, 운영에서 자금 대조
  * (방출 + 판매 − 영입 − 아이템 구매)에 쓴다.
  */

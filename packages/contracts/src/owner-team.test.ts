@@ -24,6 +24,7 @@ import {
   teamOvr,
   achGradeOf,
 } from './owner-team.js';
+import { cupScouts, scoutPityView } from './cup.js';
 import {
   ManagerNameSchema,
   PutOwnerTeamBodySchema,
@@ -198,5 +199,33 @@ describe('T-11-216 배치 프리셋', () => {
     // 칩은 정확히 맞는 프리셋만 켠다 — 손으로 옮긴 배치는 아무것도 아니다.
     expect(matchShape(moved)).toBeNull();
     expect(matchShape(shapeLayout('5-3-2'))).toBe('5-3-2');
+  });
+});
+
+describe('T-11-244 프리미엄 스카우트 천장 · 컵 스카우트권', () => {
+  it('S 없이 19장 뒤 20장째는 sure, 누적 100장째는 elite(밀린 특급은 다음 장)', () => {
+    expect(scoutPityView({ used: 0, streak: 0, elites: 0 })).toEqual({
+      next: 'normal',
+      sureIn: 20,
+      eliteIn: 100,
+    });
+    expect(scoutPityView({ used: 19, streak: 19, elites: 0 }).next).toBe('sure');
+    expect(scoutPityView({ used: 99, streak: 3, elites: 0 })).toMatchObject({
+      next: 'elite',
+      eliteIn: 1,
+    });
+    expect(scoutPityView({ used: 230, streak: 0, elites: 0 }).next).toBe('elite');
+    expect(scoutPityView({ used: 230, streak: 0, elites: 2 })).toMatchObject({
+      next: 'normal',
+      eliteIn: 70,
+    });
+  });
+
+  it('제1회 컵은 스카우트권이 없고 제2회부터 4강 이상만 받는다', () => {
+    expect(cupScouts(1, 'champion')).toBe(0);
+    expect([cupScouts(2, 'champion'), cupScouts(2, 'runnerup'), cupScouts(2, 'sf')]).toEqual([
+      3, 2, 1,
+    ]);
+    expect(cupScouts(2, 'qf')).toBe(0);
   });
 });

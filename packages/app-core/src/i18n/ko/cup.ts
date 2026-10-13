@@ -163,6 +163,7 @@ const ko = {
   rewardStage: '성적',
   rewardItem: '보상',
   rewardReroll: (p: { n: number }) => `선수 후보 리롤권 ${p.n}장`,
+  rewardScout: (p: { n: number }) => `프리미엄 스카우트권 ${p.n}장`,
   rewardTrophy: '트로피·칭호',
   rewardNote:
     '리롤권은 새 선수를 만들 때 후보 3명을 다시 뽑는 데 써요. 탈락이 정해지면 바로 받아요.',

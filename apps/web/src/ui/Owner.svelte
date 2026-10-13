@@ -228,7 +228,7 @@
     <!-- T-11-152 리롤권 상점: 펼칠 때만 상점을 묻는다. 사면 자금 줄을 다시 받는다(쓰기 성공으로 메모가 비워졌다). -->
     <RerollShop focus={shopFocus} onbought={(balance, spent) => market && (market = { balance, clubValue: market.clubValue - spent })} />
     <BoostShop />
-    <ScoutShop />
+    <ScoutShop onbought={(balance, spent) => market && (market = { balance, clubValue: market.clubValue - spent })} />
     <details class="card" data-app-shop-guide>
       <summary class="disc-row">{Install.conversionShopTitle}<span class="disc-chev" aria-hidden="true"></span></summary>
       <p class="muted fs-sm">{Install.conversionShopBody}</p>

@@ -133,6 +133,12 @@ export const CUP_REWARDS: Record<CupStage, { rerolls: number; trophy: boolean }>
   group: { rerolls: 1, trophy: false },
 };
 
+/** T-11-244 4강 이상이 리롤권과 함께 받는 프리미엄 스카우트권. 제1회(진행 중에 정한 보상)는 그대로 두고 CUP_SCOUTS_FROM회부터 준다. */
+export const CUP_SCOUTS: Partial<Record<CupStage, number>> = { champion: 3, runnerup: 2, sf: 1 };
+export const CUP_SCOUTS_FROM = 2;
+export const cupScouts = (edition: number, stage: CupStage) =>
+  edition >= CUP_SCOUTS_FROM ? (CUP_SCOUTS[stage] ?? 0) : 0;
+
 /** 승점. */
 export const CUP_POINTS = { win: 3, draw: 1, loss: 0 } as const;
 
@@ -142,6 +148,31 @@ export const CUP_POINTS = { win: 3, draw: 1, loss: 0 } as const;
  */
 export const OWNER_ITEMS = ['reroll', 'boost', 'scout'] as const;
 export type OwnerItem = (typeof OWNER_ITEMS)[number];
+
+/**
+ * T-11-244 프리미엄 스카우트 천장. S 후보 없이 SCOUT_PITY_SURE - 1장을 쓰면 SCOUT_PITY_SURE장째는 S 확정(sure),
+ * 누적 SCOUT_PITY_ELITE장째마다 잠재력 최고치(96) S 확정(elite). 서버가 장수를 세고 이번 장의 모드를 정한다.
+ * used = 누적 사용, streak = 마지막 S 뒤 S 없이 쓴 장수, elites = 지금까지 받은 특급 S 수.
+ */
+export const SCOUT_PITY_SURE = 20;
+export const SCOUT_PITY_ELITE = 100;
+export const SCOUT_MODES = ['normal', 'sure', 'elite'] as const;
+export type ScoutMode = (typeof SCOUT_MODES)[number];
+export type ScoutPity = { used: number; streak: number; elites: number };
+
+/** 다음 한 장의 모드와 남은 장수(이번 장 포함 — 1이면 다음 장이 확정). 서버 SQL(spendScout)과 같은 규칙이다. */
+export function scoutPityView(p: ScoutPity) {
+  const eliteDue = Math.floor((p.used + 1) / SCOUT_PITY_ELITE) > p.elites;
+  const sureDue = p.streak >= SCOUT_PITY_SURE - 1;
+  return {
+    next: (eliteDue ? 'elite' : sureDue ? 'sure' : 'normal') as ScoutMode,
+    sureIn: Math.max(1, SCOUT_PITY_SURE - p.streak),
+    eliteIn: Math.max(1, (p.elites + 1) * SCOUT_PITY_ELITE - p.used),
+  };
+}
+
+/** T-11-244 영구결번을 처음 받은 커리어의 구단주가 받는 프리미엄 스카우트권. */
+export const RETIRED_NUMBER_SCOUTS = 1;
 
 /** T-11-174 소모성 인앱 상품(App Store Connect·Play Console에 같은 ID로 만든다) — 사면 구단주 아이템이 qty만큼 는다. */
 export const IAP_PRODUCTS = {
@@ -169,8 +200,12 @@ export type RewardKind = (typeof REWARD_KINDS)[number];
  */
 export const REWARD_UNCAPPED = 999;
 /** 구단 자금으로 산 것(owner_item_purchases.item) — 리롤권(T-11-152)과 광고 대신 받은 보상(T-11-153). */
-export const FUNDS_ITEMS = ['reroll', ...REWARD_KINDS.map((k) => `reward:${k}` as const)] as const;
-export type FundsItem = 'reroll' | `reward:${RewardKind}`;
+export const FUNDS_ITEMS = [
+  'reroll',
+  'scout',
+  ...REWARD_KINDS.map((k) => `reward:${k}` as const),
+] as const;
+export type FundsItem = 'reroll' | 'scout' | `reward:${RewardKind}`;
 
 /**
  * T-11-152 구단 자금으로 사는 리롤권 가격(만 원). bought = 오늘(0시 한국 시각부터) 이미 산 장수.

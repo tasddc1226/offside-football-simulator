@@ -26,6 +26,7 @@ import {
   summarizeRetiredNumbers,
 } from '../db/repos/retiredNumbers.js';
 import { refreshOwnerTitles } from '../db/repos/ownerTitles.js';
+import { retiredNumberRewardStatements } from '../db/repos/itemShop.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -55,7 +56,12 @@ export async function judgeRetirement(
     if (claimed) {
       publishRetiredNumber(c, claimed);
       const career = await getCareerHead(getDb(c), careerId);
-      if (career) await refreshOwnerTitles(getDb(c), career.profileId, now);
+      if (career) {
+        await refreshOwnerTitles(getDb(c), career.profileId, now);
+        await c.env.DB.batch(
+          retiredNumberRewardStatements(c.env.DB, career.profileId, careerId, now),
+        );
+      }
     }
     return miss ? { retiredNumber: result, retiredNumberMiss: miss } : { retiredNumber: result };
   } catch (err) {

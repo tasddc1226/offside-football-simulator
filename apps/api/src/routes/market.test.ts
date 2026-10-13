@@ -8,6 +8,7 @@ import {
   AdminFundsReportSchema,
   MarketMeResponseSchema,
   OwnerTeamResponseSchema,
+  RerollShopResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
 import { readFileSync } from 'node:fs';
@@ -493,6 +494,39 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
       cookie: admin.cookie,
     });
     expect(none.status).toBe(404);
+  });
+
+  it('T-11-244 프리미엄 스카우트권은 구단 자금으로 한 주(월요일 0시 한국 시각부터) 1장까지 산다', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    await fund(owner.profileId, 12_000_000);
+    const shop = async () =>
+      successEnvelope(RerollShopResponseSchema).parse(
+        await (await call('GET', '/v1/items/shop', { cookie: owner.cookie })).json(),
+      ).data;
+    const buy = (price: number) =>
+      call('POST', '/v1/items/scout/buy', {
+        cookie: owner.cookie,
+        headers: idem(),
+        body: { price },
+      });
+    // 수요일 10:00 KST
+    vi.setSystemTime(new Date('2026-10-14T01:00:00.000Z'));
+    expect((await shop()).scout).toEqual({ have: 0, price: 5_000_000, bought: 0, cap: 1 });
+    expect(await reason(await buy(4_000_000))).toBe('PRICE_CHANGED');
+    const ok1 = successEnvelope(RerollShopResponseSchema).parse(
+      await (await buy(5_000_000)).json(),
+    );
+    expect(ok1.data).toMatchObject({
+      balance: 7_000_000,
+      scout: { have: 1, price: null, bought: 1, cap: 1 },
+    });
+    expect(await reason(await buy(5_000_000))).toBe('WEEKLY_LIMIT');
+    // 일요일 23:59 KST까지는 같은 주, 월요일 0시부터 다시 산다. 리롤권 하루 상한과는 따로 센다.
+    vi.setSystemTime(new Date('2026-10-18T14:59:00.000Z'));
+    expect((await shop()).scout?.price).toBeNull();
+    vi.setSystemTime(new Date('2026-10-18T15:00:00.000Z'));
+    expect(await shop()).toMatchObject({ bought: 0, scout: { price: 5_000_000, bought: 0 } });
+    expect((await me(owner.cookie)).spends).toMatchObject([{ item: 'scout', amount: 5_000_000 }]);
   });
 
   it('T-11-163 은퇴 장려금은 자금 내역과 운영 도구 대조에 출처로 잡힌다', async () => {

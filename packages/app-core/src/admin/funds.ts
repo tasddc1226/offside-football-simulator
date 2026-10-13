@@ -10,6 +10,7 @@ export const FUNDS_MOVE: Record<Exclude<AdminFundsMove['kind'], 'item'>, string>
 };
 const ITEM: Record<string, string> = {
   reroll: '리롤권 구매',
+  scout: '프리미엄 스카우트권 구매',
   'reward:candidates': '광고 대신 · 후보 잠재력',
   'reward:peek': '광고 대신 · 시즌 평가',
   'reward:boost': '광고 대신 · 잠재력 강화',

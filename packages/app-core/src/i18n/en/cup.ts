@@ -159,6 +159,7 @@ export const cup: Translation<CupMsgs> = {
   rewardStage: 'Result',
   rewardItem: 'Reward',
   rewardReroll: (p) => `${plural(p.n, 'candidate reroll ticket')}`,
+  rewardScout: (p) => `${plural(p.n, 'premium scout ticket')}`,
   rewardTrophy: 'Trophy and title',
   rewardNote:
     'A reroll ticket redraws the 3 candidates when you create a new player. You get it as soon as you are knocked out.',

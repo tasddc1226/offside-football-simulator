@@ -36,6 +36,8 @@ const ko = {
   rerollPrice: '리롤권 가격',
   rerollPriceGrowth: '리롤권 가격 상승 배율',
   rerollDailyCap: '하루 리롤권 구매 수',
+  scoutPrice: '프리미엄 스카우트권 가격',
+  scoutWeeklyCap: '주간 프리미엄 스카우트권 구매 수',
   rewardPriceCandidates: '후보 잠재력 보기 가격',
   rewardPricePeek: '시즌 평가 보기 가격',
   rewardPriceBoost: '잠재력 강화 가격',

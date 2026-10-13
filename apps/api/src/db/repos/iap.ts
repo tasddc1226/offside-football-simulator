@@ -1,18 +1,56 @@
-import { OWNER_ITEMS, type IapStore, type OwnerItem } from '@offside/contracts';
+import {
+  OWNER_ITEMS,
+  SCOUT_PITY_ELITE,
+  SCOUT_PITY_SURE,
+  type IapStore,
+  type OwnerItem,
+  type ScoutMode,
+  type ScoutPity,
+} from '@offside/contracts';
 import type { Db } from '../client.js';
 import { grantItemStatement } from './itemShop.js';
 
 // T-11-145 구단주 아이템(리롤권 · T-11-174 잠재력 강화권) 읽기 · 쓰기 · 인앱 구매 지급.
 
-type Items = Record<OwnerItem, number>;
-const ITEMS_SQL = `SELECT item, qty FROM owner_items WHERE profile_id = ?`;
+type Items = Record<OwnerItem, number> & { pity?: ScoutPity };
+// T-11-244 프리미엄 스카우트 천장 카운트도 같은 왕복에 'pity.<열>' 행으로 붙인다(행이 없으면 pity 없음 = 모두 0).
+const ITEMS_SQL = `SELECT item, qty FROM owner_items WHERE profile_id = ?1
+  UNION ALL SELECT 'pity.used', used FROM scout_pity WHERE profile_id = ?1
+  UNION ALL SELECT 'pity.streak', streak FROM scout_pity WHERE profile_id = ?1
+  UNION ALL SELECT 'pity.elites', elites FROM scout_pity WHERE profile_id = ?1`;
 const OWNER_SQL = `SELECT profile_id AS profileId FROM iap_purchases WHERE store = ? AND transaction_id = ?`;
 
 const foldItems = (rows: readonly { item: string; qty: number }[]): Items => {
-  const out = Object.fromEntries(OWNER_ITEMS.map((k) => [k, 0])) as Items;
-  for (const r of rows) if (r.item in out) out[r.item as OwnerItem] = r.qty;
-  return out;
+  const out = Object.fromEntries(OWNER_ITEMS.map((k) => [k, 0])) as Record<OwnerItem, number>;
+  const pity: ScoutPity = { used: 0, streak: 0, elites: 0 };
+  let hasPity = false;
+  for (const r of rows) {
+    if (r.item in out) out[r.item as OwnerItem] = r.qty;
+    else if (r.item.startsWith('pity.')) {
+      pity[r.item.slice(5) as keyof ScoutPity] = r.qty;
+      hasPity = true;
+    }
+  }
+  return hasPity ? { ...out, pity } : out;
 };
+
+/**
+ * T-11-244 스카우트권 한 장의 천장 카운트를 고친다(장수를 뺀 같은 batch, 차감이 됐을 때만). SET의 식은 모두 고치기 전
+ * 값을 읽는다. pity = 기기가 천장을 아는지(옛 앱은 확정 모드를 받지 못하니 장수만 센다), hit = 기기가 뽑은 일반 후보에
+ * S가 있었는지. 규칙은 contracts scoutPityView와 같다.
+ */
+const ELITE_DUE = `?2 = 1 AND (used + 1) / ${SCOUT_PITY_ELITE} > elites`;
+const SURE_DUE = `?2 = 1 AND streak >= ${SCOUT_PITY_SURE - 1}`;
+const PITY_SQL = `INSERT INTO scout_pity (profile_id, used, streak, elites, mode, updated_at)
+  SELECT ?1, 1, CASE WHEN ?2 = 1 AND ?3 = 1 THEN 0 ELSE 1 END, 0, 'normal', ?4
+  WHERE EXISTS (SELECT 1 FROM owner_items WHERE profile_id = ?1 AND item = 'scout' AND updated_at = ?4)
+  ON CONFLICT (profile_id) DO UPDATE SET
+    mode = CASE WHEN ${ELITE_DUE} THEN 'elite' WHEN ${SURE_DUE} THEN 'sure' ELSE 'normal' END,
+    elites = elites + (CASE WHEN ${ELITE_DUE} THEN 1 ELSE 0 END),
+    streak = CASE WHEN (${ELITE_DUE}) OR (${SURE_DUE}) OR (?2 = 1 AND ?3 = 1) THEN 0 ELSE streak + 1 END,
+    used = used + 1,
+    updated_at = excluded.updated_at
+  RETURNING mode`;
 
 /** 구단주 아이템 장수(행이 없으면 0). */
 export async function ownerItemsOf(db: Db, profileId: string): Promise<Items> {
@@ -23,24 +61,34 @@ export async function ownerItemsOf(db: Db, profileId: string): Promise<Items> {
   return foldItems(results);
 }
 
-/** 아이템 한 장 쓰기. 한 장도 없으면 null, 아니면 쓴 뒤 장수. 한 번의 왕복으로 끝난다. */
+/**
+ * 아이템 한 장 쓰기. 한 장도 없으면 null, 아니면 쓴 뒤 장수. 한 번의 왕복으로 끝난다. T-11-244 스카우트권이면 천장
+ * 카운트를 같이 고치고 이번 장의 모드(scoutMode)를 돌려준다.
+ */
 export async function spendItem(
   db: Db,
   profileId: string,
   item: OwnerItem,
   now: string,
-): Promise<Items | null> {
+  scout: { pity: boolean; hit: boolean } = { pity: false, hit: false },
+): Promise<(Items & { scoutMode?: ScoutMode }) | null> {
   const d1 = db.$client;
-  const [used, items] = await d1.batch<{ item: string; qty: number }>([
+  const results = await d1.batch<{ item: string; qty: number; mode?: ScoutMode }>([
     d1
       .prepare(
         `UPDATE owner_items SET qty = qty - 1, updated_at = ?
          WHERE profile_id = ? AND item = ? AND qty > 0`,
       )
       .bind(now, profileId, item),
+    ...(item === 'scout'
+      ? [d1.prepare(PITY_SQL).bind(profileId, scout.pity ? 1 : 0, scout.hit ? 1 : 0, now)]
+      : []),
     d1.prepare(ITEMS_SQL).bind(profileId),
   ]);
-  return used?.meta.changes ? foldItems(items?.results ?? []) : null;
+  if (!results[0]?.meta.changes) return null;
+  const items = foldItems(results.at(-1)?.results ?? []);
+  const mode = item === 'scout' ? results[1]?.results[0]?.mode : undefined;
+  return mode ? { ...items, scoutMode: mode } : items;
 }
 
 /** 이 거래를 받은 구단주(없으면 undefined). */

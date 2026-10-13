@@ -37,6 +37,9 @@ export const CUP_JA: Record<CupTextKey, string> = {
   iapUnavailable: '現在は購入を確認できません。しばらくしてからアプリを開き直すと受け取れます。',
   shopClosed: '現在リロール券は販売していません。',
   shopDaily: 'リロール券は1日に{n}枚まで購入できます。明日0時(韓国時間)から再び購入できます。',
+  shopWeekly:
+    'プレミアムスカウト券は1週間に{n}枚まで購入できます。来週月曜日0時(韓国時間)から再び購入できます。',
+  scoutClosed: '現在プレミアムスカウト券は販売していません。',
   rewardClosed: '現在はクラブ資金で受け取れません。',
   rewardDaily: 'クラブ資金では1日{n}回まで受け取れます。明日0時(韓国時間)から再び受け取れます。',
   rewardPriceChanged: 'クラブ資金の価格が変わりました。もう一度確認してください。',
@@ -65,4 +68,6 @@ export const CUP_JA: Record<CupTextKey, string> = {
   earlyTitle: '{cup}が定員に達したため日程が早まりました',
   earlyBody: '組み合わせ抽選 {draw}、初戦 {first}(韓国時間)です。',
   rewardBody: '最終成績 {stage}。選手候補リロール券を{n}枚受け取りました。',
+  rewardBodyScout:
+    '最終成績 {stage}。選手候補リロール券を{n}枚とプレミアムスカウト券を{s}枚受け取りました。',
 };
