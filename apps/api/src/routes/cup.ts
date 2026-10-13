@@ -2,6 +2,7 @@ import {
   CupMatchResponseSchema,
   CupMeResponseSchema,
   CupResponseSchema,
+  CupHomeResponseSchema,
   BuyRerollBodySchema,
   OwnerItemsResponseSchema,
   RerollShopResponseSchema,
@@ -12,9 +13,11 @@ import {
   type RewardShopResponse,
   type CupPhase,
   type CupResponse,
+  type CupHomeResponse,
 } from '@offside/contracts';
 import {
   CUP_GROUP_ROUNDS,
+  CUP_KO_ROUNDS,
   CUP_ROUNDS,
   cupById,
   currentCup,
@@ -25,7 +28,9 @@ import {
   type RewardKind,
   type CupRound,
 } from '@offside/contracts/cup';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
+import { edgeCached } from '../edgeCache.js';
+import { EDGE } from '../edgeKeys.js';
 import type { Context, Hono } from 'hono';
 import type { Db } from '../db/client.js';
 import { cupEntries, cupMatches } from '../db/schema.js';
@@ -190,13 +195,75 @@ async function cupView(db: Db, cup: CupDef, now: string): Promise<CupResponse> {
   };
 }
 
-const cupOf = async (c: Context<AppEnv>) => {
-  const id = c.req.param('cupId');
+const cupOf = async (c: Context<AppEnv>, selectedId?: string) => {
+  const id = selectedId ?? c.req.param('cupId');
   const all = await cupSchedule(getDb(c));
   const cup = id === 'current' ? currentCup(nowIso(), all) : id ? cupById(id, all) : undefined;
   if (!cup) throw notFoundError(cupKo('notFound'), 'CUP_NOT_FOUND');
   return cup;
 };
+
+/** Two DB round trips including schedule lookup; never load team logos or match details for home. */
+export async function cupHomeView(db: Db, cup: CupDef, now: string): Promise<CupHomeResponse> {
+  const roundOrder = sql.join(
+    CUP_KO_ROUNDS.map((r, i) => sql`WHEN ${r} THEN ${i}`),
+    sql` `,
+  );
+  const row = await db.get<{
+    entries: number;
+    drawn: number;
+    groups: number | null;
+    doneAt: string | null;
+    knockout: number;
+    round: CupRound | null;
+    championName: string | null;
+  }>(sql`
+    SELECT
+      (SELECT count(*) FROM cup_entries WHERE cup_id = ${cup.id} AND status <> 'withdrawn') AS entries,
+      (SELECT count(*) FROM cup_entries WHERE cup_id = ${cup.id} AND status <> 'withdrawn' AND grp IS NOT NULL) AS drawn,
+      s.groups, s.done_at AS doneAt,
+      EXISTS(SELECT 1 FROM cup_matches WHERE cup_id = ${cup.id} AND round IN (${sql.join(
+        CUP_KO_ROUNDS.map((r) => sql`${r}`),
+        sql`, `,
+      )})) AS knockout,
+      (SELECT round FROM cup_matches WHERE cup_id = ${cup.id}
+       AND round IN (${sql.join(
+         CUP_KO_ROUNDS.map((r) => sql`${r}`),
+         sql`, `,
+       )})
+       ORDER BY played_at IS NULL DESC,
+         CASE WHEN played_at IS NULL THEN (CASE round ${roundOrder} END)
+              ELSE -(CASE round ${roundOrder} END) END LIMIT 1) AS round,
+      coalesce(CASE WHEN t.season = ${cup.season} THEN t.name END, e.name) AS championName
+    FROM (SELECT 1) seed
+    LEFT JOIN cup_state s ON s.cup_id = ${cup.id}
+    LEFT JOIN cup_matches f ON f.cup_id = ${cup.id} AND f.round = 'f' AND f.played_at IS NOT NULL
+    LEFT JOIN cup_entries e ON e.cup_id = ${cup.id} AND e.team_id = f.winner_team_id AND e.status <> 'withdrawn'
+    LEFT JOIN owner_teams t ON t.id = f.winner_team_id
+    LIMIT 1`);
+  const phase: CupPhase =
+    now < cup.opensAt
+      ? 'soon'
+      : now < cup.closesAt
+        ? 'open'
+        : row!.groups === null
+          ? 'closed'
+          : row!.groups === 0
+            ? 'cancelled'
+            : row!.doneAt
+              ? 'done'
+              : row!.knockout
+                ? 'knockout'
+                : 'group';
+  return {
+    cup: cupInfo(cup),
+    phase,
+    entries: row!.entries,
+    teamCount: row!.groups === null ? row!.entries : row!.drawn,
+    round: row!.round,
+    championName: row!.championName,
+  };
+}
 
 /** 신청 자격(지금 팀 기준). 실제 선수 수는 선발을 다시 세어 본다(팔린 카드는 빠진다). */
 async function eligibility(
@@ -227,6 +294,13 @@ async function eligibility(
 
 export function registerCupRoutes(app: Hono<AppEnv>): void {
   registerCupPredictionRoutes(app, cupOf);
+  app.get('/v1/cups/home', async (c) => {
+    const data = await edgeCached(c, EDGE.cupHome, 30, async () => {
+      const cup = await cupOf(c, 'current');
+      return cupHomeView(getDb(c), cup, nowIso());
+    });
+    return ok(c, CupHomeResponseSchema, data, 200, PUBLIC_CACHE);
+  });
   // 대회 한눈에: 일정·참가 수·조 순위·대진·결과. 누구나 본다. cupId 'current'는 지금 보여 줄 대회.
   app.get('/v1/cups/:cupId', async (c) => {
     const cup = await cupOf(c);

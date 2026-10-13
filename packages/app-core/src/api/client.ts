@@ -37,6 +37,7 @@ let host: ApiHost = { baseUrl: 'http://localhost:8787', auth: () => ({ credentia
 /** 시작할 때 한 번(첫 요청 전에) 부른다. */
 export function configureApi(h: ApiHost): void {
   host = h;
+  clearApiCache();
 }
 export const apiBaseUrl = (): string => host.baseUrl;
 export const apiAuth = (): ReturnType<ApiHost['auth']> => host.auth();
@@ -74,6 +75,26 @@ const MEMO_SWEEP_AT = 100;
 
 export function clearApiCache(): void {
   memo.clear();
+  ownerDenied = null;
+  cacheGeneration++;
+}
+
+// Only a server-confirmed owner denial is memoized. Network/auth/server failures remain retryable.
+let ownerDenied: { locale: string; until: number; error: ApiError } | null = null;
+let cacheGeneration = 0;
+export async function ownerCachedGet<T>(path: string, ttlMs: number): Promise<ApiResult<T>> {
+  const locale = getLocale();
+  if (ownerDenied?.locale === locale && Date.now() < ownerDenied.until)
+    return { ok: false, error: ownerDenied.error };
+  const generation = cacheGeneration;
+  const result = await cachedGet<T>(path, ttlMs);
+  if (
+    generation === cacheGeneration &&
+    !result.ok &&
+    result.error.reason === 'GOOGLE_LOGIN_REQUIRED'
+  )
+    ownerDenied = { locale, until: Date.now() + 10 * 60_000, error: result.error };
+  return result;
 }
 
 /**
@@ -183,7 +204,13 @@ export async function apiFetch<T>(
 
 export async function getProfile(): Promise<ApiResult<Profile>> {
   const r = await apiFetch<Profile>('/v1/profile', { method: 'GET' });
-  if (r.ok) noteSession(true);
+  if (r.ok) {
+    noteSession(true);
+    if (r.data.linked.google || r.data.linked.apple) {
+      ownerDenied = null;
+      cacheGeneration++;
+    }
+  }
   return r;
 }
 

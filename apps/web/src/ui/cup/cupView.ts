@@ -5,7 +5,7 @@ import {
   type CupRound,
   type CupStage,
 } from '@offside/contracts/cup';
-import type { CupMatch, CupResponse, CupTeam } from '@offside/app-core/api/cup';
+import type { CupMatch, CupResponse, CupHomeResponse, CupTeam } from '@offside/app-core/api/cup';
 import { cupText as L } from '@offside/app-core/i18n/ko/cup';
 
 const KST = new Intl.DateTimeFormat('en-GB', {
@@ -138,8 +138,7 @@ export function winnerSide(m: CupMatch): 'home' | 'away' | null {
 }
 
 /** 대회 단계별 한 줄 안내. */
-export function phaseLine(c: CupResponse): string {
-  const names = teamMap(c.teams);
+export function phaseLine(c: CupResponse | CupHomeResponse): string {
   switch (c.phase) {
     case 'soon':
       return L.soonLine({ at: whenText(c.cup.opensAt) });
@@ -152,13 +151,18 @@ export function phaseLine(c: CupResponse): string {
     case 'closed':
       return L.closedLine({ at: whenText(c.cup.drawAt) });
     case 'group':
-      return L.groupLine({ teams: c.teams.length });
+      return L.groupLine({ teams: 'teamCount' in c ? c.teamCount : c.teams.length });
     case 'knockout': {
-      const r = currentKnockoutRound(c.matches);
+      const r = 'round' in c ? c.round : currentKnockoutRound(c.matches);
       return L.knockoutLine({ round: r ? roundLabel(r) : L.phaseKnockout });
     }
     case 'done':
-      return L.doneLine({ team: teamName(names, c.championTeamId) });
+      return L.doneLine({
+        team:
+          'championName' in c
+            ? (c.championName ?? L.tbd)
+            : teamName(teamMap(c.teams), c.championTeamId),
+      });
     case 'cancelled':
       return L.cancelledLine;
   }

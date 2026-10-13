@@ -804,31 +804,33 @@ test('업적 달성 알림 — 쓰기 뒤 홈에서 승급 시트, 업적 보기
   await page.route(ownerTeamUrl, (route) =>
     route.fulfill(ownerTeam({ season: 1, current: 1, seasons: SEASONS })),
   );
-  let calls = 0;
-  await page.route(`${API}/v1/owner-team/achievements**`, (route) => {
-    calls++;
-    return route.fulfill(
-      ok({
-        season: 1,
-        seasons: SEASONS,
-        players: 2,
-        score: 210,
-        rank: 40,
-        ranked: 297,
-        groups: [
-          {
-            id: 'first',
-            category: 'player',
-            stage: '0단계',
-            title: '축구 인생 출발',
-            items: [
-              { id: 'retire-FW', label: '공격수 1명 은퇴', done: true, points: 190, worth: 0 },
-              { id: 'retire-GK', label: '골키퍼 1명 은퇴', done: true, points: 20, worth: 0 },
-            ],
-          },
-        ],
-      }),
-    );
+  const calls: string[] = [];
+  await page.route(`${API}/v1/owner-team/achievement*`, (route) => {
+    calls.push(new URL(route.request().url()).pathname);
+    const full = {
+      season: 1,
+      seasons: SEASONS,
+      players: 2,
+      score: 210,
+      rank: 40,
+      ranked: 297,
+      groups: [
+        {
+          id: 'first',
+          category: 'player',
+          stage: '0단계',
+          title: '축구 인생 출발',
+          items: [
+            { id: 'retire-FW', label: '공격수 1명 은퇴', done: true, points: 190, worth: 0 },
+            { id: 'retire-GK', label: '골키퍼 1명 은퇴', done: true, points: 20, worth: 0 },
+          ],
+        },
+      ],
+    };
+    const data = calls.at(-1)?.endsWith('achievement-notifications')
+      ? { season: full.season, score: full.score, groups: full.groups }
+      : full;
+    return route.fulfill(ok(data));
   });
   await page.addInitScript(() => {
     // 새로고침에도 다시 심지 않게 첫 로드에만.
@@ -863,7 +865,10 @@ test('업적 달성 알림 — 쓰기 뒤 홈에서 승급 시트, 업적 보기
   await expect(box.locator('[data-ach-group="first"]')).toContainText('골키퍼 1명 은퇴NEW');
   await expect(page.locator('.tab-dot')).toHaveCount(0);
   // 알림 확인 한 번 + 업적 탭 한 번. 본 기록을 적었으니 다시 열어도 점·시트가 돌아오지 않는다.
-  expect(calls).toBe(2);
+  expect(calls).toEqual([
+    '/v1/owner-team/achievement-notifications',
+    '/v1/owner-team/achievements',
+  ]);
   await page.reload();
   await expect(page.locator('[data-club-achievements], [data-act="owner"]').first()).toBeVisible();
   await expect(page.locator('.tab-dot')).toHaveCount(0);

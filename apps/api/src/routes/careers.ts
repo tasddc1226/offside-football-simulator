@@ -185,7 +185,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     const prevOvr = growth && !overCap ? await storedSeasonOvr(db, careerId, year - 1) : null;
     const hide = overCap || growthTampered(growth, body.season.ovr, prevOvr);
 
-    await putCareerSeason(db, {
+    const status = await putCareerSeason(db, {
       careerId,
       profileId: session.profileId,
       year,
@@ -204,11 +204,10 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     if (hide) purgeEdge(c, STALE.firstsChanged());
     else await recordFirsts(c, careerId);
     publishLive(c, 'season', careerId, now);
-    const career = await getCareer(db, careerId);
     return ok(c, CareerUpsertResponseSchema, {
       careerId,
       year,
-      status: career?.status ?? 'active',
+      status,
     });
   });
 

@@ -15,15 +15,10 @@ export interface ClubOffer {
   confirm: string;
 }
 
-// 구단주가 아니라고(로그인 안 한 익명 프로필) 거절받으면 한동안 다시 묻지 않는다 — 화면에 들어올 때마다 403을 받지 않게.
-const DENIED_MS = 10 * 60_000;
-let deniedAt = -Infinity;
-
 /** 구단주라면 보상 값을 받는다. 아니거나 못 받으면 null — 구단 자금 버튼을 보이지 않는다. 30초 메모라 여러 자리가 불러도 요청은 하나. */
 export async function loadClubShop(): Promise<RewardShopResponse | null> {
-  if (!hasSessionHint() || Date.now() - deniedAt < DENIED_MS) return null;
+  if (!hasSessionHint()) return null;
   const r = await fetchRewardShop();
-  if (!r.ok && r.error.reason === 'GOOGLE_LOGIN_REQUIRED') deniedAt = Date.now();
   return r.ok ? r.data : null;
 }
 

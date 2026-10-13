@@ -71,6 +71,8 @@ const live = {
 async function setup(page: Page, pending: unknown = null): Promise<string[]> {
   const requests: string[] = [];
   await page.clock.setFixedTime(NOW);
+  // Keep the mocked chat socket open: network retries are unrelated to screen-entry reads.
+  await page.routeWebSocket(`${API.replace('http', 'ws')}/v1/chat/ws*`, () => {});
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.route(`${API}/**`, (r) => {
     const url = new URL(r.request().url());
@@ -105,6 +107,8 @@ async function setup(page: Page, pending: unknown = null): Promise<string[]> {
     [SAVE, pending] as const,
   );
   await page.goto('/');
+  // Home's lazy banner must mount before a fast test navigates away.
+  await expect.poll(() => requests.includes('GET /v1/cups/home')).toBe(true);
   return requests;
 }
 
@@ -116,7 +120,7 @@ const HOME_REQUESTS = [
   // Daily strength snapshot: one cached public read on open, none on game tab changes.
   'GET /v1/club-strength',
   // T-11-145 홈 컵 배너 — 대회가 없거나 끝났으면 그리지 않는다.
-  'GET /v1/cups/current',
+  'GET /v1/cups/home',
   'GET /v1/firsts',
   'GET /v1/hof?limit=3',
   'GET /v1/live',

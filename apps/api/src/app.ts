@@ -5,6 +5,7 @@ import { errorHandler, notFoundHandler } from './errors.js';
 import { bodyGuard } from './middleware/bodyGuard.js';
 import { cors } from './middleware/cors.js';
 import { logger } from './middleware/logger.js';
+import { cupHomeCache } from './middleware/cupHomeCache.js';
 import { originGuard } from './middleware/originGuard.js';
 import { requestId } from './middleware/requestId.js';
 import { seasonScheduleMiddleware } from './seasonSchedule.js';
@@ -49,6 +50,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
 
   app.use('*', requestId);
   app.use('*', logger);
+  app.use('*', cupHomeCache);
   app.use('*', cors);
   app.use('*', originGuard);
   app.use('*', bodyGuard);

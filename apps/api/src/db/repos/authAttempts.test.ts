@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestD1, type TestD1 } from '../../test/d1.js';
-import { getAttemptCount, recordAttempt } from './authAttempts.js';
+import { getAttemptCount, recordAttempt, tryAttempt } from './authAttempts.js';
 
 describe('authAttempts repo', () => {
   let ctx: TestD1;
@@ -49,5 +49,20 @@ describe('authAttempts repo', () => {
     expect(await getAttemptCount(ctx.db, 'RECOVERY_REDEEM', 'ip-2:ses-1', t0)).toBe(0);
     expect(await getAttemptCount(ctx.db, 'RECOVERY_ISSUE', 'ip-1:ses-1', t0)).toBe(0);
     expect(await getAttemptCount(ctx.db, 'RECOVERY_REDEEM', 'ip-1:ses-1', t0)).toBe(1);
+  });
+  it('atomically admits at most max concurrent attempts and resets at the exact boundary', async () => {
+    const now = '2026-09-02T00:00:00.000Z';
+    const results = await Promise.all(
+      Array.from({ length: 12 }, () => tryAttempt(ctx.db, 'RECOVERY_ISSUE', 'concurrent', 3, now)),
+    );
+    expect(results.filter(Boolean)).toHaveLength(3);
+    expect(await getAttemptCount(ctx.db, 'RECOVERY_ISSUE', 'concurrent', now)).toBe(3);
+    expect(
+      await tryAttempt(ctx.db, 'RECOVERY_ISSUE', 'concurrent', 3, '2026-09-02T01:00:00.000Z'),
+    ).toBe(true);
+    expect(
+      await getAttemptCount(ctx.db, 'RECOVERY_ISSUE', 'concurrent', '2026-09-02T01:00:00.000Z'),
+    ).toBe(1);
+    expect(await tryAttempt(ctx.db, 'RECOVERY_ISSUE', 'zero', 0, now)).toBe(false);
   });
 });

@@ -1,0 +1,23 @@
+{
+  "id": "t-11-242-page-api-efficiency",
+  "title": "홈과 기록 저장 속도 개선",
+  "items": [
+    "홈의 대회 소식을 더 가볍게 불러와요",
+    "기록 저장과 업적 알림의 불필요한 조회를 줄였어요"
+  ],
+  "en": {
+    "title": "Faster home and record saving",
+    "items": [
+      "Cup news on the home screen loads less data.",
+      "Record saving and achievement notifications make fewer unnecessary requests."
+    ]
+  },
+  "ja": {
+    "title": "ホームと記録保存の速度改善",
+    "items": [
+      "ホームの大会情報をより軽く読み込みます。",
+      "記録保存と実績通知の不要な問い合わせを減らしました。"
+    ]
+  },
+  "availability": "web-app"
+}

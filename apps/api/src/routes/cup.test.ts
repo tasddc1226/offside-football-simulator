@@ -1,16 +1,27 @@
 import {
   CupMeResponseSchema,
   CupResponseSchema,
+  CupHomeResponseSchema,
   ErrorEnvelopeSchema,
   successEnvelope,
 } from '@offside/contracts';
 import { planCup } from '@offside/contracts/cup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { cards, careers, cupEntries, cups, notifications, profiles } from '../db/schema.js';
-import { createTestD1, type TestD1 } from '../test/d1.js';
+import {
+  cards,
+  careers,
+  cupEntries,
+  cupMatches,
+  cupState,
+  cups,
+  notifications,
+  profiles,
+} from '../db/schema.js';
+import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
-import { checkCupListing } from './cup.js';
+import { installFakeEdgeCache, flushEdge } from '../test/edgeCache.js';
+import { checkCupListing, cupHomeView } from './cup.js';
 
 const MeRes = successEnvelope(CupMeResponseSchema);
 const CupRes = successEnvelope(CupResponseSchema);
@@ -90,6 +101,65 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
     expect((await put(slots)).status).toBe(200);
     return { ...who, ids, put };
   }
+
+  it('home summary matches each public phase and caches without session/logos/details', async () => {
+    const fake = installFakeEdgeCache();
+    try {
+      const a = await owner(8);
+      await enter(a.cookie);
+      const spy = spyDb(ctx.env.DB);
+      const read = async () => {
+        const res = await callJson({ ...ctx.env, DB: spy.DB }, 'GET', '/v1/cups/home');
+        expect(res.status).toBe(200);
+        return successEnvelope(CupHomeResponseSchema).parse(await res.json()).data;
+      };
+      const first = await read();
+      expect(first).toMatchObject({ phase: 'open', entries: 1, teamCount: 1 });
+      expect(JSON.stringify(first).length).toBeLessThan(2500);
+      expect(spy.seen.join(' ')).not.toMatch(/sessions|detail_json|logo_json/);
+      await flushEdge();
+      spy.seen.length = 0;
+      expect(await read()).toEqual(first);
+      expect(spy.seen).toEqual([]);
+      await call('DELETE', `/v1/cups/${CUP.id}/entries/me`, { cookie: a.cookie, headers: idem() });
+      await flushEdge();
+      expect((await read()).entries).toBe(0);
+      await enter(a.cookie);
+      await ctx.db.update(cupEntries).set({ grp: 1 }).where(eq(cupEntries.cupId, CUP.id));
+      for (const [at, phase] of [
+        [new Date(Date.parse(CUP.opensAt) - 1).toISOString(), 'soon'],
+        [CUP.closesAt, 'closed'],
+      ] as const)
+        expect((await cupHomeView(ctx.db, CUP, at)).phase).toBe(phase);
+      await ctx.db
+        .insert(cupState)
+        .values({ cupId: CUP.id, seed: 'test', groups: 1, drawnAt: CUP.drawAt });
+      expect((await cupHomeView(ctx.db, CUP, CUP.drawAt)).phase).toBe('group');
+      const entry = (await ctx.db.select().from(cupEntries))[0]!;
+      await ctx.db.insert(cupMatches).values({
+        id: 'home-final',
+        cupId: CUP.id,
+        round: 'f',
+        slot: 0,
+        at: CUP.drawAt,
+        homeTeamId: entry.teamId,
+      });
+      expect(await cupHomeView(ctx.db, CUP, CUP.drawAt)).toMatchObject({
+        phase: 'knockout',
+        round: 'f',
+        teamCount: 1,
+      });
+      await ctx.db.update(cupMatches).set({ playedAt: CUP.drawAt, winnerTeamId: entry.teamId });
+      await ctx.db.update(cupState).set({ doneAt: CUP.drawAt });
+      const full = CupRes.parse(await (await call('GET', `/v1/cups/${CUP.id}`)).json()).data;
+      const summary = await cupHomeView(ctx.db, CUP, CUP.drawAt);
+      expect(summary).toMatchObject({ phase: 'done', championName: full.teams[0]!.name });
+      await ctx.db.update(cupState).set({ groups: 0 });
+      expect((await cupHomeView(ctx.db, CUP, CUP.drawAt)).phase).toBe('cancelled');
+    } finally {
+      fake.uninstall();
+    }
+  });
 
   it('선발 8명 이상이면 신청·취소·다시 신청할 수 있다', async () => {
     const a = await owner(8);
