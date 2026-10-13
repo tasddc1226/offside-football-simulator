@@ -64,6 +64,7 @@ export function RecapTeamPhoto({
               id: m.card.careerId,
               lastClub: m.lastClub ?? '',
               lastClubId: m.lastClubId,
+              look: m.look,
             });
             return {
               id: m.card.careerId,

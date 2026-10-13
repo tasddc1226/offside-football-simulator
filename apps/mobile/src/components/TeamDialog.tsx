@@ -19,11 +19,13 @@ export function TeamDialog({
   children,
   close,
   avoidKeyboard = false,
+  footer,
 }: {
   title: string;
   children: ReactNode;
   close: () => void;
   avoidKeyboard?: boolean;
+  footer?: ReactNode;
 }) {
   const c = useColors();
   const insets = useSafeAreaInsets();
@@ -58,7 +60,11 @@ export function TeamDialog({
         >
           <ScrollView
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ padding: 18, paddingBottom: 18 + insets.bottom, gap: 14 }}
+            contentContainerStyle={{
+              padding: 18,
+              paddingBottom: footer ? 18 : 18 + insets.bottom,
+              gap: 14,
+            }}
           >
             <View
               style={{
@@ -77,6 +83,18 @@ export function TeamDialog({
             </View>
             {children}
           </ScrollView>
+          {footer ? (
+            <View
+              style={{
+                padding: 18,
+                paddingBottom: 18 + insets.bottom,
+                borderTopWidth: 1,
+                borderColor: c.line,
+              }}
+            >
+              {footer}
+            </View>
+          ) : null}
         </View>
       </KeyboardAvoidingView>
     </Modal>

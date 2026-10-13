@@ -222,6 +222,18 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     });
   });
 
+  it('선수 카드 초상에 은퇴 때 저장한 꾸미기를 싣고 옛 선수는 코드를 생략한다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const custom = await addCareer(me.profileId, { peak: 88 });
+    const old = await addCareer(me.profileId, { peak: 70 });
+    await ctx.db.update(careers).set({ look: 's5h6y2g2' }).where(eq(careers.id, custom));
+    const data = GetRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    ).data;
+    expect(data.players.find((p) => p.careerId === custom)?.look).toBe('s5h6y2g2');
+    expect(data.players.find((p) => p.careerId === old)?.look).toBeUndefined();
+  });
+
   it('T-10-091 세부 포지션이 있는 선수는 제자리에서 적합도 1.0, 다른 세부 자리에서 0.9', async () => {
     const me = await issueGoogleCookie(ctx);
     const w = await addCareer(me.profileId, { peak: 80, dpos: 'W' });

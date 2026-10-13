@@ -1,0 +1,26 @@
+{
+  "id": "t-11-191-retired-look-once",
+  "title": "은퇴 선수 외형 변경",
+  "items": [
+    "기존 은퇴 선수를 포함해, 이적 이력이 없는 선수의 외형을 은퇴 리포트에서 한 번 바꿀 수 있어요",
+    "미리보기와 취소는 변경 기회를 쓰지 않아요. 최종 확정 후에는 다시 바꿀 수 없어요",
+    "한 번이라도 이적한 선수는 재영입해도 외형이 유지돼요. 기록과 능력치는 바뀌지 않아요"
+  ],
+  "en": {
+    "title": "Retired player appearance",
+    "items": [
+      "Retired players, including existing careers, can change appearance once from their retirement report if they have never transferred.",
+      "Previewing and cancelling do not use the change. The final confirmation cannot be undone.",
+      "A player who has transferred keeps their appearance even after returning. Records and attributes are unchanged."
+    ]
+  },
+  "ja": {
+    "title": "引退選手の外見変更",
+    "items": [
+      "以前に引退した選手も、移籍歴がなければ引退レポートで一度だけ外見を変更できます。",
+      "プレビューやキャンセルでは変更回数を使いません。最終確定後は変更できません。",
+      "一度でも移籍した選手は、再獲得後も外見が維持されます。記録や能力値は変わりません。"
+    ]
+  },
+  "availability": "web-app"
+}

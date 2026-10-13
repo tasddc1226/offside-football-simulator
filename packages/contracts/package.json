@@ -39,7 +39,8 @@
     "./club-strength-calc": "./src/club-strength-calc.ts",
     "./club-strength-spec": "./src/club-strength-spec.ts",
     "./club-strength-fallback": "./src/club-strength-fallback.json",
-    "./club-strength-provider": "./src/club-strength-provider.ts"
+    "./club-strength-provider": "./src/club-strength-provider.ts",
+    "./avatar-look": "./src/avatar-look.ts"
   },
   "scripts": {
     "test": "vitest run",

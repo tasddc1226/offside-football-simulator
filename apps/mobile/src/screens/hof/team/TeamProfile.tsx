@@ -109,6 +109,8 @@ export default function TeamProfile({ id }: { id: string }) {
         youth: s.careerId === null,
         ...(p
           ? {
+              careerId: p.careerId,
+              look: p.look,
               peak: p.peak,
               number: p.number,
               legendScore: p.legendScore,

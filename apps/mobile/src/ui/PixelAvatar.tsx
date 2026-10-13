@@ -5,6 +5,8 @@ import Svg, { Rect } from 'react-native-svg';
 import {
   AVATAR_H,
   AVATAR_W,
+  AVATAR_PORTRAIT_H,
+  avatarPortraitRects,
   avatarPixels,
   avatarRects,
   type AvatarSpec,
@@ -14,16 +16,19 @@ import {
 export const PixelAvatar = memo(function PixelAvatar({
   spec,
   width,
+  portrait = false,
 }: {
   spec: AvatarSpec;
   width: number;
+  portrait?: boolean;
 }) {
-  const rects = avatarRects(avatarPixels(spec));
+  const rects = portrait ? avatarPortraitRects(spec) : avatarRects(avatarPixels(spec));
+  const height = portrait ? AVATAR_PORTRAIT_H : AVATAR_H;
   return (
     <Svg
       width={width}
-      height={(width / AVATAR_W) * AVATAR_H}
-      viewBox={`0 0 ${AVATAR_W} ${AVATAR_H}`}
+      height={(width / AVATAR_W) * height}
+      viewBox={`0 0 ${AVATAR_W} ${height}`}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
@@ -33,7 +38,7 @@ export const PixelAvatar = memo(function PixelAvatar({
           x={r.x}
           y={r.y}
           width={r.w}
-          height={1}
+          height={r.h}
           fill={r.fill}
           {...(r.opacity ? { fillOpacity: r.opacity } : {})}
         />

@@ -87,6 +87,8 @@ function MiniCard({
   dim,
 }: {
   c: {
+    careerId: string;
+    look?: string | null | undefined;
     nation?: string | null | undefined;
     season?: number | undefined;
     peak: number;
@@ -113,6 +115,8 @@ function MiniCard({
         code={detailPosOf(card)}
         cell={{
           name,
+          careerId: card.careerId,
+          look: card.look,
           nation: card.nation,
           season: card.season,
           rating: card.peak,
@@ -1407,6 +1411,8 @@ export default function Market() {
                   code={detailPosOf(buying.card)}
                   cell={{
                     name: marketName(buying.card, local),
+                    careerId: buying.card.careerId,
+                    look: buying.card.look,
                     nation: buying.card.nation,
                     season: buying.card.season,
                     rating: buying.card.peak,

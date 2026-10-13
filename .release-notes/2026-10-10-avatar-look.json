@@ -1,0 +1,26 @@
+{
+  "id": "t-11-191-avatar-look",
+  "title": "도트 선수 꾸미기",
+  "items": [
+    "미니형 선수 꾸미기와 카드 초상이 추가돼요.",
+    "은퇴 외형은 무료로 바꿔요. 기록·능력치는 유지해요.",
+    "진행 팝업 위쪽 가장자리를 따라 캐릭터가 달려요."
+  ],
+  "en": {
+    "title": "Customize your pixel player",
+    "items": [
+      "Mini player cosmetics and card portraits.",
+      "Free retired looks; records and stats stay intact.",
+      "Player motion appears over the progress dialog."
+    ]
+  },
+  "ja": {
+    "title": "ドット選手のカスタマイズ",
+    "items": [
+      "ミニ選手の着せ替えとカードの顔を追加。",
+      "引退後の外見変更は無料。記録・能力は不変。",
+      "進行ダイアログの上で選手が動きます。"
+    ]
+  },
+  "availability": "web-app"
+}

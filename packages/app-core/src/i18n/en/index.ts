@@ -7,6 +7,8 @@ import { appFlight } from './appFlight';
 import { appFormat } from './appFormat';
 import { appScout } from './appScout';
 import { automationModeration } from './automationModeration';
+import { avatarLook } from './avatarLook';
+import { avatarRecord } from './avatarRecord';
 import { backup } from './backup';
 import { balanceKeys } from './balanceKeys';
 import { board } from './board';
@@ -65,6 +67,7 @@ import { publicLegends } from './publicLegends';
 import { push } from './push';
 import { retention } from './retention';
 import { retired } from './retired';
+import { retiredLook } from './retiredLook';
 import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
 import { seasonRecap } from './seasonRecap';
@@ -99,6 +102,8 @@ export const en = {
   appFormat,
   appScout,
   automationModeration,
+  avatarLook,
+  avatarRecord,
   backup,
   balanceKeys,
   board,
@@ -157,6 +162,7 @@ export const en = {
   push,
   retention,
   retired,
+  retiredLook,
   scout,
   seasonGauge,
   seasonRecap,
