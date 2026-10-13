@@ -65,7 +65,19 @@ export async function tryAttempt(
   max: number,
   now: string,
 ): Promise<boolean> {
-  if ((await getAttemptCount(db, kind, subject, now)) >= max) return false;
-  await recordAttempt(db, kind, subject, now);
-  return true;
+  if (max <= 0) return false;
+  const threshold = new Date(Date.parse(now) - RATE_LIMIT_WINDOW_MS).toISOString();
+  const [row] = await db
+    .insert(authAttempts)
+    .values({ id: newId('att'), kind, subject, windowStart: now, count: 1 })
+    .onConflictDoUpdate({
+      target: [authAttempts.kind, authAttempts.subject],
+      set: {
+        windowStart: sql`CASE WHEN ${authAttempts.windowStart} <= ${threshold} THEN ${now} ELSE ${authAttempts.windowStart} END`,
+        count: sql`CASE WHEN ${authAttempts.windowStart} <= ${threshold} THEN 1 ELSE ${authAttempts.count} + 1 END`,
+      },
+      setWhere: sql`${authAttempts.windowStart} <= ${threshold} OR ${authAttempts.count} < ${max}`,
+    })
+    .returning({ count: authAttempts.count });
+  return !!row;
 }

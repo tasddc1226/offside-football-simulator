@@ -1,6 +1,7 @@
 import { checkCupLineup } from './cup.js';
 import {
   ClubAchievementsResponseSchema,
+  ClubAchievementNotificationsSchema,
   OwnerTeamResponseSchema,
   PlayTeamMatchBodySchema,
   PlayTeamMatchResponseSchema,
@@ -543,6 +544,24 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
 
   // 구단 시즌 업적(클럽하우스). season 없으면 지금 시즌, 0이면 프리시즌. 팀 업적은 그 시즌 팀으로 판정한다(지난 시즌에 팀이
   // 없었으면 보이지 않는다). T-11-028 점수를 다시 세어 적고 업적 랭킹 순위를 함께 준다.
+  app.get('/v1/owner-team/achievement-notifications', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const now = nowIso();
+    const season = seasonQuery(c, now);
+    const { groups, row } = await refreshOwnerAchievements(getDb(c), me, season, now, false);
+    return ok(
+      c,
+      ClubAchievementNotificationsSchema,
+      {
+        season,
+        groups: localizeAchievements(groups, reqLang(c)),
+        score: row.score,
+      },
+      200,
+      NO_STORE,
+    );
+  });
+
   app.get('/v1/owner-team/achievements', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);

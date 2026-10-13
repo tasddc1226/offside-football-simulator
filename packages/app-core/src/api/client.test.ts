@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setLocale } from '@offside/contracts/i18n';
-import { apiFetch, cachedGet, clearApiCache, invalidateApiCache, withLang } from './client.js';
+import {
+  apiFetch,
+  ownerCachedGet,
+  getProfile,
+  cachedGet,
+  clearApiCache,
+  invalidateApiCache,
+  withLang,
+} from './client.js';
 
 // T-10-015 공개 조회 메모: 같은 path는 TTL 동안 한 번만, 동시 요청은 하나로, 실패는 담지 않고, 쓰기 성공 시 비운다.
 describe('cachedGet', () => {
@@ -72,5 +80,83 @@ describe('withLang', () => {
     setLocale('en', {});
     expect(withLang('/v1/firsts?season=1')).toBe('/v1/firsts?season=1&lang=en');
     expect(withLang('/v1/firsts')).toBe('/v1/firsts?lang=en');
+  });
+});
+
+describe('ownerCachedGet server-confirmed denial', () => {
+  beforeEach(() => {
+    clearApiCache();
+    vi.useFakeTimers();
+    setLocale('ko');
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    setLocale('ko');
+  });
+  it('shares only owner denials across optional reads, expires and resets on login/cache clear', async () => {
+    const fetch = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            error: {
+              code: 'FORBIDDEN',
+              message: 'Login required',
+              details: { reason: 'GOOGLE_LOGIN_REQUIRED' },
+            },
+          }),
+          { status: 403 },
+        ),
+    );
+    vi.stubGlobal('fetch', fetch);
+    await ownerCachedGet('/v1/items', 30_000);
+    const denied = await ownerCachedGet('/v1/items/rewards', 30_000);
+    expect(denied).toMatchObject({ ok: false, error: { reason: 'GOOGLE_LOGIN_REQUIRED' } });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    setLocale('en', {});
+    await ownerCachedGet('/v1/items', 30_000);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    vi.advanceTimersByTime(600_001);
+    await ownerCachedGet('/v1/items', 30_000);
+    expect(fetch).toHaveBeenCalledTimes(3);
+    clearApiCache();
+    await ownerCachedGet('/v1/items', 30_000);
+    expect(fetch).toHaveBeenCalledTimes(4);
+    fetch.mockImplementationOnce(
+      async () =>
+        new Response(JSON.stringify({ data: { linked: { apple: true, google: false } } }), {
+          status: 200,
+        }),
+    );
+    await getProfile();
+    await ownerCachedGet('/v1/items/rewards', 30_000);
+    expect(fetch).toHaveBeenCalledTimes(6);
+  });
+  it('does not cache server/network failures or a denial that finishes after auth changes', async () => {
+    const fetch = vi.fn(async () => new Response('{}', { status: 503 }));
+    vi.stubGlobal('fetch', fetch);
+    await ownerCachedGet('/v1/items', 30_000);
+    await ownerCachedGet('/v1/items', 30_000);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    let resolve!: (r: Response) => void;
+    fetch.mockImplementationOnce(
+      () =>
+        new Promise<Response>((r) => {
+          resolve = r;
+        }),
+    );
+    const pending = ownerCachedGet('/v1/items', 30_000);
+    clearApiCache();
+    resolve(
+      new Response(
+        JSON.stringify({
+          error: { code: 'FORBIDDEN', details: { reason: 'GOOGLE_LOGIN_REQUIRED' } },
+        }),
+        { status: 403 },
+      ),
+    );
+    await pending;
+    await ownerCachedGet('/v1/items/rewards', 30_000);
+    expect(fetch).toHaveBeenCalledTimes(4);
   });
 });

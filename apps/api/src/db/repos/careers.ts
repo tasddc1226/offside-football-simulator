@@ -101,7 +101,10 @@ export type PutCareerSeasonInput = {
  * D1 batch(단일 트랜잭션)로 묶어 원자적으로 반영한다. 호출 전 소유권은 라우트가 `getCareerOwner`로
  * 이미 확인했다고 가정한다.
  */
-export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Promise<void> {
+export async function putCareerSeason(
+  db: Db,
+  input: PutCareerSeasonInput,
+): Promise<'active' | 'retired'> {
   const {
     careerId,
     profileId,
@@ -133,7 +136,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
 
   const dpos = dposFor(meta.pos, meta.dpos);
 
-  await runBatch(db, [
+  const [updated] = await runBatch(db, [
     db
       .insert(careers)
       .values({
@@ -171,7 +174,8 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
           updatedAt: now,
           // status는 의도적으로 뺀다 — 이미 retired인 커리어가 이 라우트로 다시 active가 되지 않는다.
         },
-      }),
+      })
+      .returning({ status: careers.status }),
     db
       .insert(careerSeasons)
       .values({
@@ -230,6 +234,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
     // 맨 뒤에 둔다 — 위 upsert가 행을 만든 뒤여야 숨김이 새 커리어에도 닿는다.
     ...(hide ? hideCareerStatements(db, careerId) : []),
   ]);
+  return (updated as { status: 'active' | 'retired' }[])[0]!.status;
 }
 
 export type PutRetirementInput = {

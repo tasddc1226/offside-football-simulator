@@ -21,6 +21,8 @@ import { consumeCareerReminders, queueCareerReminders } from './push/careerRemin
 import { consumeCupResults, publishCupResults } from './push/cupResult.js';
 import { consumeCommunityPush } from './push/communityQueue.js';
 import { runCup } from './team/cup.js';
+import { purgeEdgeOrigin } from './edgeCache.js';
+import { EDGE } from './edgeKeys.js';
 import { runSeasonClose } from './team/seasonClose.js';
 
 import { consumeBillingAlerts, recoverBillingAlerts } from './iap/alerts.js';
@@ -91,6 +93,13 @@ export default {
         .catch((e: unknown) =>
           console.error(
             JSON.stringify({ level: 'error', job: 'cup', error: String(e).slice(0, 500) }),
+          ),
+        );
+      // A cron round can commit before a later step fails; purge even on a partial run.
+      if (env.PUBLIC_API_ORIGIN)
+        await purgeEdgeOrigin(env.PUBLIC_API_ORIGIN, [EDGE.cupHome]).catch((e) =>
+          console.log(
+            JSON.stringify({ level: 'error', job: 'cup-cache', error: String(e).slice(0, 500) }),
           ),
         );
       await runSeasonEventsArchive(env, controller.scheduledTime)

@@ -6,6 +6,7 @@ import { BOARD_KEYS, BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
 // 없다 — 지울 키를 정확히 알 수 없는 조회(명예의 전당 목록처럼 쿼리가 여러 가지)는 TTL로만 새로 읽는다.
 
 export const EDGE = {
+  cupHome: '/v1/cups/home',
   balance: '/v1/balance',
   /** T-11-141 공개 밸런스 이력. */
   balanceHistory: '/v1/balance/history',

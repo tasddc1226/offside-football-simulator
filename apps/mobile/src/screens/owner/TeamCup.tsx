@@ -5,6 +5,8 @@ import { Alert, View } from 'react-native';
 import {
   enterCup,
   fetchCup,
+  fetchCupHome,
+  type CupHomeResponse,
   fetchCupMe,
   withdrawCup,
   type CupMeResponse,
@@ -367,7 +369,66 @@ export function CupLockNotice({ state }: { state: CupState }) {
 
 /** 홈의 컵 배너(누구나 보는 대회 소식). 취소됐거나 끝난 지 일주일이 지났거나 불러오지 못하면 그리지 않는다. */
 export function CupBanner({ onOpen }: { onOpen: () => void }) {
-  const state = useCup(true, false);
-  if (!state.cup || !cupOnHome(state.cup)) return null;
-  return <CupCard state={state} onOpen={onOpen} />;
+  const [data, setData] = useState<CupHomeResponse | null>(null);
+  const reload = useCallback(async () => {
+    const r = await fetchCupHome();
+    if (r.ok) setData(r.data);
+  }, []);
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+  useOnPull(reload);
+  if (!data || !cupOnHome(data)) return null;
+  let text: string;
+  switch (data.phase) {
+    case 'soon':
+      text = L.soonLine({ at: dayTimeText(data.cup.opensAt) });
+      break;
+    case 'open':
+      text = L.openLine({
+        entries: data.entries,
+        cap: data.cup.capacity,
+        until: dayTimeText(new Date(Date.parse(data.cup.closesAt) - 60_000).toISOString()),
+      });
+      break;
+    case 'closed':
+      text = L.closedLine({ at: dayTimeText(data.cup.drawAt) });
+      break;
+    case 'group':
+      text = L.groupLine({ teams: data.teamCount || data.entries });
+      break;
+    case 'knockout':
+      text = data.round ? L.knockoutLine({ round: roundLabel(data.round) }) : L.notEntered;
+      break;
+    case 'done':
+      text = data.championName ? L.doneLine({ team: data.championName }) : L.notEntered;
+      break;
+    case 'cancelled':
+      text = L.cancelledLine;
+      break;
+  }
+  return (
+    <Press
+      onPress={onOpen}
+      testID="cup-open"
+      scale={0.985}
+      accessibilityLabel={`${L.fullTitle({ n: data.cup.edition })} · ${L.open}`}
+    >
+      <Card gap={8} testID="cup-banner">
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <CupTrophy stage="champion" size={44} bare />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Txt v="eyebrow">Offside Cup</Txt>
+            <Txt v="h2" accessibilityRole="header">
+              {L.fullTitle({ n: data.cup.edition })}
+            </Txt>
+          </View>
+          <Pill tone={data.phase === 'open' ? 'good' : undefined}>{phaseLabel(data.phase)}</Pill>
+        </View>
+        <Txt v="sm" bold={data.phase === 'done' && !!data.championName}>
+          {text}
+        </Txt>
+      </Card>
+    </Press>
+  );
 }
