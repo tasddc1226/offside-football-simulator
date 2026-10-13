@@ -20,7 +20,11 @@ export type FanBucket =
   | 'transfer'
   | 'milestone'
   // T-10-034: 성적과 무관한 응원. 맞는 버킷이 모자랄 때 채우는 용도로만 쓴다(사실을 주장하지 않는다).
-  | 'general';
+  | 'general'
+  // T-11-236 인기(fame) 구간마다 다른 목소리 — 가족·학교·동네 응원, 늘어나는 팬, 해외 팬·스타 반응.
+  | 'fans_local'
+  | 'fans_growing'
+  | 'fans_star';
 
 /** 지금 언어의 대사 풀. 버킷마다 줄 수·순서가 언어와 상관없이 같다(해시로 고른 번호가 같은 줄을 가리킨다). */
 const pool = (key: FanBucket): string[] => L[key].split('\n');
@@ -71,5 +75,14 @@ export const FAN_LINES: Record<FanBucket, string[]> = {
   },
   get milestone() {
     return pool('milestone');
+  },
+  get fans_local() {
+    return pool('fans_local');
+  },
+  get fans_growing() {
+    return pool('fans_growing');
+  },
+  get fans_star() {
+    return pool('fans_star');
   },
 };

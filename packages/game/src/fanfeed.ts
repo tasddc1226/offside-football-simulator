@@ -42,29 +42,46 @@ function applicableBuckets(s: GameState, rec: CareerRecord, ctx: FanFeedContext)
   return out;
 }
 
-/** 이번 시즌 성적에 맞는 팬 반응 3~5줄을 고른다. 항상 같은 입력에 같은 결과(결정적). */
+/**
+ * T-11-236 인기(fame)가 오를수록 팬 반응이 늘어난다(최대 5줄). 고3 첫 시즌(인기 3에서 시작, 18세 중앙값 9)은 1줄,
+ * 시뮬레이터 1,500커리어 기준 20세 중앙값 20 · 23세 39 · 27세 54 · 31세 66 · 34세 87이라 전성기에 4~5줄이 된다.
+ */
+export const FAN_LINE_STEPS = [10, 20, 40, 70] as const;
+export const fanLineCount = (fame: number): number =>
+  1 + FAN_LINE_STEPS.filter((step) => fame >= step).length;
+
+/** 인기 구간의 목소리 — 동네·학교(20 미만), 늘어나는 팬(20~45), 해외 팬·스타(70 이상). 그 사이는 성적 반응만. */
+function fameBucket(fame: number): FanBucket | null {
+  if (fame < 20) return 'fans_local';
+  if (fame < 45) return 'fans_growing';
+  if (fame >= 70) return 'fans_star';
+  return null;
+}
+
+/** 이번 시즌 성적과 인기에 맞는 팬 반응을 인기만큼(1~5줄) 고른다. 항상 같은 입력에 같은 결과(결정적). */
 export function pickFanLines(
   s: GameState,
   rec: CareerRecord,
   ctx: FanFeedContext,
-  min = 3,
-  max = 5,
+  count = fanLineCount(s.fame),
 ): string[] {
-  const buckets = new Set(applicableBuckets(s, rec, ctx));
   const seed = `${s.cid}:${rec.year}`;
-  // 버킷이 max보다 많으면 해시로 안정적인 부분집합을 고른다(같은 입력엔 항상 같은 결과).
-  const ordered = [...buckets]
+  const voice = fameBucket(s.fame);
+  // 인기 구간의 목소리를 맨 앞에, 그다음 성적 버킷을 해시로 안정적인 순서로(같은 입력엔 항상 같은 결과).
+  const ordered = [...new Set(applicableBuckets(s, rec, ctx))]
     .map((b) => ({ b, k: hashStr(seed + '/order/' + b) }))
     .sort((x, y) => x.k - y.k)
     .map((x) => x.b);
-  const lines = ordered.slice(0, max).map((b) => pickLine(seed, b));
-  // 성적에 맞는 버킷이 min개보다 적으면(예: 평범한 시즌) 성적과 무관한 응원(general)으로 채운다.
+  const lines = [...(voice ? [voice] : []), ...ordered]
+    .slice(0, count)
+    .map((b) => pickLine(seed, b));
+  // 성적에 맞는 버킷이 모자라면(예: 평범한 시즌) 성적과 무관한 응원(general)으로 채운다.
   // T-10-034: 예전엔 아무 버킷에서나 채워 평범한 시즌에도 "우승이라니…", "부상 소식…"이 섞였다.
-  if (lines.length < min) {
+  if (lines.length < count) {
     const general = FAN_LINES.general
       .map((line, i) => ({ line, k: hashStr(`${seed}/general/${i}`) }))
       .sort((x, y) => x.k - y.k);
-    for (const { line } of general.slice(0, min - lines.length)) lines.push(line);
+    for (const { line } of general.slice(0, count - lines.length)) lines.push(line);
   }
   return lines;
 }

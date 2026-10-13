@@ -63,6 +63,12 @@ export const BALANCE_SPEC = {
     max: 1,
     step: 1,
   },
+  wingerRole: {
+    def: 1,
+    min: 0,
+    max: 1,
+    step: 1,
+  },
   investGain: {
     def: 0.4,
     min: 0,
