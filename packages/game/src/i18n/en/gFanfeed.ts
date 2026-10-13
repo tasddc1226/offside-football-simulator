@@ -107,4 +107,28 @@ export const gFanfeed: Translation<GFanfeedMsgs> = {
     "At this rate he's heading for legend status.",
     'Seeing it in numbers, you realize how special it is.',
   ),
+  fans_local: lines(
+    'Mum posted the match clip in the family group chat again.',
+    'Our school might actually be sending someone pro.',
+    'The kids at the local football school only talk about him.',
+    "Only a few people know him yet. I've watched him from the start.",
+    'Half the crowd cheering him on were his friends.',
+    'Seriously thinking about getting his autograph early.',
+  ),
+  fans_growing: lines(
+    'The fan club grows by the day.',
+    'Spotted quite a few shirts with his number on them.',
+    'Every football forum has a thread about him lately.',
+    'Some fans even travelled to the away game just for him.',
+    "I used to be his only fan. Now I'm not so lonely.",
+    'The autograph queue after the match keeps getting longer.',
+  ),
+  fans_star: lines(
+    'Fans abroad are commenting on his clips too.',
+    'The club shop sold out of his number.',
+    'Seeing his face on billboards feels normal now.',
+    'The friendly sold out in ten minutes because of him.',
+    "Even my friend who doesn't follow football knows his name.",
+    'Young players copy his celebration.',
+  ),
 };
