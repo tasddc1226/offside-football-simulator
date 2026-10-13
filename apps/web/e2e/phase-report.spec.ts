@@ -18,6 +18,7 @@ test('경기 중계 시트가 끝나면 확인을 눌러 시즌 탭 리포트로
 
   await page.locator('[data-act="advance"]').click();
   const sheet = page.locator('#sheet');
+  await page.locator('[data-progress-cover] button').click();
   await expect(sheet).toContainText('전반기 진행 중');
   await expect(sheet.locator('.ticker.live > div').first()).toBeVisible();
   await expect(page.locator('#an-skip')).toBeVisible();
@@ -74,6 +75,7 @@ test('경기 중계는 건너뛰기로 최종 기록까지 채우고, 확인을 
   await clearPendingEvent(page);
 
   await page.locator('[data-act="advance"]').click();
+  await page.locator('[data-progress-cover] button').click();
   await page.locator('#an-skip').click();
   // 건너뛰면 남은 경기를 한 번에 채워 최종 기록과 확인 버튼을 보여 준다.
   const ok = page.locator('#sheet [data-sheet="0"]');
@@ -92,6 +94,7 @@ test('경기 중계 시트에 접근성 위반이 없다 (T-10-028)', async ({ p
   await clearPendingEvent(page);
 
   await page.locator('[data-act="advance"]').click();
+  await page.locator('[data-progress-cover] button').click();
   await expect(page.locator('#sheet .ticker.live > div').nth(1)).toBeVisible();
   const results = await new AxeBuilder({ page }).include('#sheet').analyze();
   expect(

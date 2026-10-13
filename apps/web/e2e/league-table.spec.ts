@@ -21,6 +21,7 @@ test('구단 이름이 겹쳐도 순위표가 그려진다', async ({ page }) =>
   await expect(sheet).toBeHidden({ timeout: 10_000 });
   await clearPendingEvent(page);
   await page.locator('[data-act="advance"]').click(); // 전반기 경기
+  await page.locator('[data-progress-cover] button').click();
   await page.locator('#an-skip').click();
   await sheet.locator('[data-sheet="0"]').click();
   await expect(sheet).toBeHidden();
