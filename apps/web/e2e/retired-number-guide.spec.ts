@@ -94,3 +94,73 @@ test('retirement guide recovers from a failed request without reporting an open 
   await page.getByRole('button', { name: '다시 확인', exact: true }).click();
   await expect(page.locator('[data-rn-club]')).toHaveCount(2);
 });
+
+for (const openDuringSync of [true, false]) {
+  test(`season upload refreshes ${openDuringSync ? 'open' : 'closed'} guide without polling`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 780 });
+    await page.addInitScript((fixture) => {
+      localStorage.setItem('ft_save', JSON.stringify(fixture));
+      localStorage.setItem('ft_lang', JSON.stringify('ko'));
+    }, fixture);
+    await page.route('**/v1/**', (route) => route.fulfill(fail(404, 'NOT_FOUND', 'unavailable')));
+    let synced = false;
+    let reads = 0;
+    const clubs = Array.from({ length: 12 }, (_, i) => ({
+      ...preview.clubs[0],
+      clubId: `pl-${i}`,
+      club: `구단 ${i + 1}`,
+    }));
+    await page.route('**/retired-number-progress?*', (route) => {
+      reads++;
+      return route.fulfill(ok({ ...preview, clubs: synced ? clubs : clubs.slice(0, 11) }));
+    });
+    await page.goto('/');
+    await page.locator('[data-act="continue"]').click();
+    await page.getByRole('tab', { name: '커리어', exact: true }).click();
+    const toggle = page.locator('[data-rn-guide] button').first();
+    await toggle.click();
+    await expect(page.locator('[data-rn-club]')).toHaveCount(11);
+    expect(reads).toBe(1);
+    if (!openDuringSync) await toggle.click();
+    // Retry the real persisted outbox through the application's online handler.
+    await page.route('**/v1/profile', (route) => route.fulfill(ok({})));
+    await page.route('**/v1/careers/*/seasons/*', (route) => {
+      synced = true;
+      return route.fulfill(ok({}));
+    });
+    const saved = await page.evaluate(() => localStorage.getItem('ft_save'));
+    await page.evaluate((cid) => {
+      localStorage.setItem(
+        'ft_outbox',
+        JSON.stringify([
+          { kind: 'season', careerId: cid, year: 2040, body: {} },
+          { kind: 'season', careerId: cid, year: 2041, body: {} },
+        ]),
+      );
+      window.dispatchEvent(new Event('online'));
+    }, fixture.cid);
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('ft_outbox'))).toBe('[]');
+    if (!openDuringSync) {
+      expect(reads).toBe(1);
+      await toggle.click();
+    }
+    await expect(page.locator('[data-rn-club]')).toHaveCount(12);
+    expect(reads).toBe(2);
+    await toggle.click();
+    await toggle.click();
+    await expect(page.locator('[data-rn-club]')).toHaveCount(12);
+    expect(reads).toBe(2);
+    expect(await page.evaluate(() => localStorage.getItem('ft_save'))).toBe(saved);
+    const bounds = await page.locator('[data-rn-guide]').evaluate((el) => ({
+      left: el.getBoundingClientRect().left,
+      right: el.getBoundingClientRect().right,
+      width: innerWidth,
+      overflow: el.scrollWidth > el.clientWidth,
+    }));
+    expect(bounds.left).toBeGreaterThanOrEqual(0);
+    expect(bounds.right).toBeLessThanOrEqual(bounds.width);
+    expect(bounds.overflow).toBe(false);
+  });
+}

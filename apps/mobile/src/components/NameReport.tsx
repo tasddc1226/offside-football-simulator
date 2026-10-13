@@ -1,6 +1,7 @@
 // 남의 공개 이름(명예의 전당 선수·구단) 신고(웹 NameReport.svelte) — 앱스토어 UGC 정책. 운영자가 관리 화면에서
 // 가리거나 기각한다.
-import { useState } from 'react';
+import { Children, Fragment, useState, type ReactNode } from 'react';
+import { View } from 'react-native';
 import { reportName } from '@offside/app-core/api/reports';
 import type { NameReportKind } from '@offside/contracts/board-limits';
 import { toast } from '../game/host';
@@ -19,7 +20,11 @@ export function NameReport({ kind, id, name }: { kind: NameReportKind; id: strin
   const T =
     kind === 'owner'
       ? { title: L.reportNickTitle, label: L.reportNickLabel, btn: L.reportNickBtn }
-      : { title: L.reportTitle, label: L.reportLabel, btn: L.reportBtn };
+      : {
+          title: L.reportTitle,
+          label: L.reportLabel,
+          btn: kind === 'team' ? L.reportTeamBtn : L.reportPlayerBtn,
+        };
   async function send() {
     if (busy) return;
     const ok = await confirmAsync(T.title({ name }), L.reportBody, L.reportConfirm);
@@ -37,15 +42,33 @@ export function NameReport({ kind, id, name }: { kind: NameReportKind; id: strin
       accessibilityLabel={T.label({ name })}
       disabled={sent || busy}
       onPress={() => void send()}
-      style={{
-        alignSelf: 'center',
-        minHeight: 36,
-        justifyContent: 'center',
-        paddingHorizontal: 12,
-        marginTop: 12,
-      }}
+      style={{ minHeight: 36, justifyContent: 'center', paddingHorizontal: 8 }}
     >
       <Txt style={{ fontSize: rem(0.8125), color: c.muted }}>{sent ? L.reportDone : T.btn}</Txt>
     </Press>
+  );
+}
+
+/** T-11-237 화면 맨 아래 신고 버튼 줄(웹 NameReports.svelte) — 구단 화면은 구단 이름·구단주 닉네임을 한 줄에 · 로 잇는다. */
+export function NameReports({ children }: { children: ReactNode }) {
+  const c = useColors();
+  const items = Children.toArray(children).filter(Boolean);
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 12,
+      }}
+    >
+      {items.map((item, i) => (
+        <Fragment key={i}>
+          {i > 0 ? <Txt style={{ fontSize: rem(0.8125), color: c.muted }}>·</Txt> : null}
+          {item}
+        </Fragment>
+      ))}
+    </View>
   );
 }

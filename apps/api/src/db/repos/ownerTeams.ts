@@ -7,6 +7,7 @@ import {
 import type { TeamPlayer, TeamPreset, TeamRankItem, TeamRankSort } from '@offside/contracts';
 import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
+import { defaultClubIds, isAmateurClubId } from '@offside/contracts/club-names';
 import { CARD_VALUE_FLOOR } from '@offside/contracts/market-value';
 import { teamSeasonClosed } from '@offside/contracts/service-seasons';
 import {
@@ -338,6 +339,33 @@ export const challengedSince = (db: Db, profileId: string, sinceIso: string) =>
  * 여러 팀 선발의 카드를 한 번에 읽는다. 소유자는 부르는 쪽이 팀마다 확인한다(eligibleMap). 팀 업적이 보는 기록(마지막
  * 구단·A매치·영구결번)도 함께 읽어 업적 판정이 화면과 같은 선발을 쓴다(T-11-103).
  */
+let clubIdByName: Map<string, string> | null = null;
+/**
+ * T-11-237 선수마다 커리어 중 뛴 프로 구단 id(업적 '11명 모두 같은 구단에서 뛴 적 있음'). 고교·대학·병역 시즌은 뺀다.
+ * 구단 id가 없는 옛 시즌은 기본 구단 이름으로 찾는다. 선발 11명뿐이라 career_seasons 기본 키로 한 번에 읽는다.
+ */
+export async function proClubsOf(db: Db, ids: string[]): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  if (ids.length === 0) return out;
+  const rows = await db
+    .select({
+      careerId: careerSeasons.careerId,
+      clubId: careerSeasons.clubId,
+      club: careerSeasons.club,
+    })
+    .from(careerSeasons)
+    .where(and(inArray(careerSeasons.careerId, ids), eq(careerSeasons.mil, 0)));
+  clubIdByName ??= defaultClubIds();
+  for (const r of rows) {
+    const id = r.clubId ?? clubIdByName.get(r.club);
+    if (!id || isAmateurClubId(id)) continue;
+    const list = out.get(r.careerId) ?? [];
+    if (!list.includes(id)) list.push(id);
+    out.set(r.careerId, list);
+  }
+  return out;
+}
+
 export async function careersByIds(db: Db, ids: string[]) {
   if (ids.length === 0) return [];
   return db
@@ -363,6 +391,7 @@ export async function careersByIds(db: Db, ids: string[]) {
       hidden: sql<number>`coalesce(${careers.hidden}, 0)`,
       lastClubId: careers.lastClubId,
       caps: careers.caps,
+      ballon: careers.ballon,
       rn: retiredNumbers.careerId,
     })
     .from(cards)

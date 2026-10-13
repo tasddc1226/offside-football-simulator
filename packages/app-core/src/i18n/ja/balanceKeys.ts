@@ -8,6 +8,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   growthScale: '成長倍率',
   potGrowthFloor: '潜在能力付近の最低成長',
   targetManRole: 'ターゲットマン専用OVR',
+  wingerRole: 'サイドMFウインガーOVR',
   investGain: '特訓の成長割合',
   investCost: '自己投資の費用倍率',
   boostCost: '潜在能力強化の費用倍率',

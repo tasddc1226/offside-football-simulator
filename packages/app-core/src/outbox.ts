@@ -13,6 +13,7 @@ import type {
 import { loadKey, saveKey } from '@offside/game/storage';
 import { OUTBOX_KEY, markAchDirty } from './achDirty.js';
 import { apiAuth, apiBaseUrl, clearApiCache, noteSession } from './api/client.js';
+import { retiredNumberProgressSynced } from './api/retiredNumberProgress.js';
 
 const OUTBOX_CAP = 100;
 /** T-11-182 못 보낸 항목이 남으면 앱이 켜져 있는 동안 이 간격으로 다시 보낸다(마지막 값에서 멈춘다). */
@@ -162,14 +163,16 @@ export function flushOutbox(): Promise<void> {
     return running;
   }
   running = (async () => {
+    const syncedSeasons = new Set<string>();
     try {
       do {
         again = false;
-        await flushOnce();
+        await flushOnce(syncedSeasons);
       } while (again);
     } finally {
       running = null;
     }
+    for (const careerId of syncedSeasons) retiredNumberProgressSynced(careerId);
     scheduleRetry();
   })();
   return running;
@@ -192,7 +195,7 @@ function scheduleRetry(): void {
   }, ms);
 }
 
-async function flushOnce(): Promise<void> {
+async function flushOnce(syncedSeasons: Set<string>): Promise<void> {
   try {
     const items = loadOutbox();
     if (!items.length) return;
@@ -216,6 +219,7 @@ async function flushOnce(): Promise<void> {
       settled.add(JSON.stringify(item));
       if (result === 'conflict') conflicts.push(item);
       else if (result === 'ok' && item.kind === 'retirement') retired = true;
+      else if (result === 'ok' && item.kind === 'season') syncedSeasons.add(item.careerId);
       else if (result === 'drop')
         console.warn('[outbox] 4xx 응답으로 항목을 버립니다', item.kind, item.careerId);
     }

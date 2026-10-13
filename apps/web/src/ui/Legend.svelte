@@ -6,6 +6,7 @@
   import OwnHofCards from './OwnHofCards.svelte';
   import ShareBar from './ShareBar.svelte';
   import NameReport from './NameReport.svelte';
+  import NameReports from './NameReports.svelte';
   import AdSlot from '../ads/AdSlot.svelte';
   import { motionOK } from './motion.js';
   import { rollCredits } from './creditRoll.js';
@@ -37,7 +38,7 @@
   {#if v}
     <LegendReport {v} />
     {#if v.own?.id}<OwnHofCards {v} />{/if}
-    {#if v.reportId}<NameReport kind="career" id={v.reportId} name={v.name} />{/if}
+    {#if v.reportId}<NameReports><NameReport kind="career" id={v.reportId} name={v.name} /></NameReports>{/if}
     <AdSlot place="legend-bottom" />
   {/if}
   {#if motionOK && v}

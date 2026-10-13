@@ -165,6 +165,11 @@ function Group({
                   <Txt style={{ flexShrink: 1 }}>{tn(i.label)}</Txt>
                   {newIds.has(i.id) ? <NewChip /> : null}
                 </View>
+                {i.desc ? (
+                  <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+                    {i.desc}
+                  </Txt>
+                ) : null}
                 <Txt
                   tone={i.done ? 'accent' : 'muted'}
                   style={{ fontSize: rem(0.75), fontWeight: i.done ? '700' : '400' }}

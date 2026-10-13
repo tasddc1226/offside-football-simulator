@@ -463,3 +463,78 @@ describe('T-11-182 남은 기록 다시 보내기 · 은퇴 알림', () => {
     expect(puts(fetchMock)).toHaveLength(2);
   });
 });
+
+describe('T-11-240 retirement guide season sync', () => {
+  it('invalidates only the synced career and notifies once after a multi-season batch', async () => {
+    const { cachedGet } = await import('./api/client.js');
+    const { fetchRetiredNumberProgress, onRetiredNumberProgressSynced } =
+      await import('./api/retiredNumberProgress.js');
+    const { enqueueSeason, flushOutbox } = await import('./outbox.js');
+    let recordedSeasons = 1;
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'PUT') recordedSeasons++;
+      return new Response(JSON.stringify({ data: { recordedSeasons } }), { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const first = await fetchRetiredNumberProgress('synced', 7);
+    await fetchRetiredNumberProgress('synced', 10);
+    const other = await fetchRetiredNumberProgress('other', 7);
+    const unrelated = await cachedGet('/v1/hof', 300_000);
+    const seen: number[] = [];
+    const stop = onRetiredNumberProgressSynced('synced', () => seen.push(recordedSeasons));
+    const otherListener = vi.fn();
+    const stopOther = onRetiredNumberProgressSynced('other', otherListener);
+    try {
+      enqueueSeason('synced', 2030, seasonBody);
+      enqueueSeason('synced', 2031, seasonBody);
+      await flushOutbox();
+      expect(seen).toEqual([3]);
+      expect(otherListener).not.toHaveBeenCalled();
+      expect(await fetchRetiredNumberProgress('synced', 7)).not.toEqual(first);
+      expect(await fetchRetiredNumberProgress('synced', 10)).toMatchObject({
+        ok: true,
+        data: { recordedSeasons: 3 },
+      });
+      const calls = fetchMock.mock.calls.length;
+      expect(await fetchRetiredNumberProgress('other', 7)).toEqual(other);
+      expect(await cachedGet('/v1/hof', 300_000)).toEqual(unrelated);
+      expect(fetchMock).toHaveBeenCalledTimes(calls);
+      stop();
+      enqueueSeason('synced', 2032, seasonBody);
+      await flushOutbox();
+      expect(seen).toEqual([3]);
+      expect(await fetchRetiredNumberProgress('synced', 7)).toMatchObject({
+        ok: true,
+        data: { recordedSeasons: 4 },
+      });
+    } finally {
+      stop();
+      stopOther();
+    }
+  });
+
+  it('rejected season uploads neither notify nor invalidate the guide', async () => {
+    const { fetchRetiredNumberProgress, onRetiredNumberProgressSynced } =
+      await import('./api/retiredNumberProgress.js');
+    const { enqueueSeason, flushOutbox } = await import('./outbox.js');
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) =>
+      init?.method === 'PUT'
+        ? new Response('{}', { status: 400 })
+        : new Response(JSON.stringify({ data: { recordedSeasons: 1 } }), { status: 200 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const first = await fetchRetiredNumberProgress('rejected', 7);
+    const listener = vi.fn();
+    const stop = onRetiredNumberProgressSynced('rejected', listener);
+    try {
+      enqueueSeason('rejected', 2030, seasonBody);
+      await flushOutbox();
+      expect(listener).not.toHaveBeenCalled();
+      const calls = fetchMock.mock.calls.length;
+      expect(await fetchRetiredNumberProgress('rejected', 7)).toEqual(first);
+      expect(fetchMock).toHaveBeenCalledTimes(calls);
+    } finally {
+      stop();
+    }
+  });
+});

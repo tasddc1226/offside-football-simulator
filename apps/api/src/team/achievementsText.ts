@@ -1,6 +1,6 @@
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
-import { tenureLabels } from '../i18n/en/achievements.js';
-import { GROUP_JA, LABEL_JA, UNIT_JA, ageLabelJa } from '../i18n/ja/achievements.js';
+import { achievementDescs, tenureLabels } from '../i18n/en/achievements.js';
+import { DESC_JA, GROUP_JA, LABEL_JA, UNIT_JA, ageLabelJa } from '../i18n/ja/achievements.js';
 import type { Lang } from '../lang.js';
 
 // T-11-106 업적 문구의 영어. 판정(achievements.ts)은 한국어 문구와 id를 그대로 만들고, 응답을 보낼 때 id로 문구만
@@ -12,6 +12,7 @@ const GROUP: Record<string, { stage: string; title: string }> = {
   legend: { stage: 'Stage 3', title: 'A true legend' },
   world: { stage: 'Stage 4', title: 'Conquering the world' },
   immortal: { stage: 'Stage 5', title: 'Immortal club' },
+  beyond: { stage: 'Stage 6', title: 'Beyond legend' },
   team: { stage: 'TEAM', title: 'Your best team' },
   race: { stage: 'RACE', title: 'Season race' },
   owner: { stage: 'OWNER', title: 'Running the club' },
@@ -71,13 +72,26 @@ const LABEL: Record<string, string> = {
   'ballon-10': "10 Ballon d'Or awards for one player",
   'goals-800': '800 career goals for one player',
   'legend-3000': '3,000 legend points for one player',
+  // 6단계
+  'ballon-15': "15 Ballon d'Or awards for one player",
+  'goals-1000': '1,000 career goals for one player',
+  'legend-4000': '4,000 legend points for one player',
+  'ballon-100': "100 Ballon d'Or awards in total",
+  'world-cup-5': 'Win the World Cup 5 times',
+  'big5-one': 'One player wins all Big 5 leagues',
   // 팀
   'team-one': 'Register a player',
   'team-full': 'Fill all 11 spots without youth players',
   'team-fit': 'All 11 in their right position',
   'team-caps': 'All 11 with international caps',
+  'team-mates': 'All 11 once played for the same club',
   'team-club': 'All 11 from the same club',
   'team-rn': 'All 11 with retired numbers',
+  'team-ballon': "All 11 Ballon d'Or winners",
+  'team-nation': 'All 11 from the same nation',
+  'team-ovr95': 'All 11 with peak OVR 95+',
+  'team-cup-sf': 'Offside Cup semi-finalist',
+  'team-cup-win': 'Win the Offside Cup',
   'team-wins': 'Team match wins',
   'team-streak': 'Longest winning streak',
   'team-margin': 'Win by 5 or more goals',
@@ -115,19 +129,31 @@ const UNIT: Record<string, string> = {
 type Tables = {
   group: Record<string, { stage: string; title: string }>;
   label: Record<string, string>;
+  desc: Record<string, string>;
   unit: Record<string, string>;
   age: (age: string) => string;
 };
 const TABLES: Record<Exclude<Lang, 'ko'>, Tables> = {
-  en: { group: GROUP, label: LABEL, unit: UNIT, age: (age) => `Still playing at ${age}` },
-  ja: { group: GROUP_JA, label: LABEL_JA, unit: UNIT_JA, age: ageLabelJa },
+  en: {
+    group: GROUP,
+    label: LABEL,
+    desc: achievementDescs,
+    unit: UNIT,
+    age: (age) => `Still playing at ${age}`,
+  },
+  ja: { group: GROUP_JA, label: LABEL_JA, desc: DESC_JA, unit: UNIT_JA, age: ageLabelJa },
 };
 
 function item(i: ClubAchievement, T: Tables): ClubAchievement {
   // '○○세까지 현역'은 시즌마다 나이가 달라 한국어 문구의 숫자를 그대로 쓴다.
   const label =
     i.id === 'age-40' ? T.age(/\d+/.exec(i.label)?.[0] ?? '') : (T.label[i.id] ?? i.label);
-  return { ...i, label, ...(i.unit !== undefined ? { unit: T.unit[i.id] ?? i.unit } : {}) };
+  return {
+    ...i,
+    label,
+    ...(i.desc !== undefined ? { desc: T.desc[i.id] ?? i.desc } : {}),
+    ...(i.unit !== undefined ? { unit: T.unit[i.id] ?? i.unit } : {}),
+  };
 }
 
 /** 응답 직전에 업적 문구를 요청 언어(영어·일본어)로 바꾼다. 한국어면 그대로 돌려준다. */

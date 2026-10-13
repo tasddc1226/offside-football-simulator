@@ -7,6 +7,7 @@ import { gAttrLabel } from './gAttrLabel';
 import { gBoost } from './gBoost';
 import { gComps } from './gComps';
 import { gData } from './gData';
+import { gDating } from './gDating';
 import { gDex } from './gDex';
 import { gDexGroups } from './gDexGroups';
 import { gFanfeed } from './gFanfeed';
@@ -19,6 +20,7 @@ import { gPeek } from './gPeek';
 import { gPlayStyle } from './gPlayStyle';
 import { gRarity } from './gRarity';
 import { gRecords } from './gRecords';
+import { gRival } from './gRival';
 import { gRoleName } from './gRoleName';
 import { gSeason } from './gSeason';
 import { gStats } from './gStats';
@@ -35,6 +37,7 @@ export const en = {
   gBoost,
   gComps,
   gData,
+  gDating,
   gDex,
   gDexGroups,
   gFanfeed,
@@ -47,6 +50,7 @@ export const en = {
   gPlayStyle,
   gRarity,
   gRecords,
+  gRival,
   gRoleName,
   gSeason,
   gStats,

@@ -303,6 +303,8 @@ export type SlotPlayer = {
   pos: PosGroup;
   dpos?: DetailPos | null;
   roles?: PeakProfile['roles'] | null;
+  /** 유형 id(T-11-237 타겟맨 스트라이커 자리 보정). 구버전 응답에는 없다. */
+  type?: string | null | undefined;
 };
 
 /**
@@ -316,10 +318,14 @@ export const SLOT_OVER_PEAK = 2;
  * 그 자리에서의 실력. 최고 시점 능력치가 있으면 그 자리 역할의 실력(최고 OVR + SLOT_OVER_PEAK까지) — 발 빠른 센터백은
  * 풀백 자리에서도 잘 뛰고, 슈팅형 스트라이커는 윙어 자리에서 떨어진다. 없으면 최고 OVR × 적합도(반올림).
  */
-export const slotRating = (slot: DetailPos, p: SlotPlayer): number =>
-  p.roles
-    ? Math.min(p.roles[slot] ?? p.roles[BASE_DETAIL[slot]], p.peak + SLOT_OVER_PEAK)
-    : Math.round(p.peak * fit(slot, p.pos, p.dpos));
+export const slotRating = (slot: DetailPos, p: SlotPlayer): number => {
+  if (!p.roles) return Math.round(p.peak * fit(slot, p.pos, p.dpos));
+  const role = p.roles[slot] ?? p.roles[BASE_DETAIL[slot]];
+  // T-11-237 타겟맨 유형은 최고 OVR을 스트라이커·타겟맨 역할 중 높은 쪽으로 잰다(T-11-229). 자리별 실력의 ST는 스트라이커
+  // 역할로만 저장돼 헤딩·몸싸움으로 키운 타겟맨이 스트라이커 자리에서도 최고 OVR보다 낮게 뛰었다 — 스트라이커 자리는 최고 OVR 아래로 내리지 않는다.
+  const own = p.type === 'target' && BASE_DETAIL[slot] === 'ST' ? Math.max(role, p.peak) : role;
+  return Math.min(own, p.peak + SLOT_OVER_PEAK);
+};
 
 /** 그 자리 적합도(보여 주기) — 자리별 실력이 있으면 최고 OVR 대비 비율(소수 둘째 자리, 주 포지션보다 맞으면 1을 넘는다), 없으면 적합도 규칙. */
 export const slotFit = (slot: DetailPos, p: SlotPlayer, rating = slotRating(slot, p)): number =>

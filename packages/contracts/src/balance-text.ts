@@ -53,6 +53,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '타겟맨 전용 OVR',
     desc: '1이면 타겟맨 유형 스트라이커의 OVR을 헤딩·몸싸움·점프 비중이 큰 타겟맨 역할로 계산',
   },
+  wingerRole: {
+    group: 'growth',
+    label: '측면 미드필더 윙어 OVR',
+    desc: '1이면 윙어 유형 좌·우 미드필더의 OVR을 중앙 미드필더·윙어 역할 중 높은 쪽으로 계산',
+  },
   investGain: {
     group: 'growth',
     label: '특훈 성장 비율',

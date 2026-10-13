@@ -414,6 +414,7 @@ test('시즌 업적 — 등급·점수·랭킹 순위, 분류별 단계 묶음�
               {
                 id: 'all-dpos',
                 label: '전 세부 포지션 선수 배출',
+                desc: '세부 포지션마다 한 명씩 은퇴시키면 돼요.',
                 done: false,
                 cur: 2,
                 max: 8,
@@ -492,6 +493,11 @@ test('시즌 업적 — 등급·점수·랭킹 순위, 분류별 단계 묶음�
   await expect(first).toContainText('달성 완료');
   await expect(first).toContainText('+10점');
   await expect(first).toContainText('2 / 8');
+  // T-11-237 판정 기준이 있는 업적은 이름 아래 한 줄로 보인다.
+  await expect(first.locator('.tm-ach-desc')).toHaveText(
+    '세부 포지션마다 한 명씩 은퇴시키면 돼요.',
+  );
+  if (process.env.SHOT) await first.screenshot({ path: process.env.SHOT });
   const records = box.locator('[data-ach-group="records"]');
   await records.locator('summary').click();
   await expect(records).toContainText('2단계 · 370골 · NEXT 1,000');
@@ -698,6 +704,7 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
           seasonName: '시즌 1',
           rank: 1,
           manager: '라이벌 감독',
+          ownerNickname: '라이벌 구단주',
           rating: 1100,
           record: { w: 9, d: 0, l: 1 },
           goals: { for: 31, against: 8 },
@@ -775,6 +782,15 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
   await expect(befriend).toHaveText('신청 보냄');
   await expect(befriend).toBeDisabled();
   expect(friendBodies).toEqual([{ teamId: RIVAL }]);
+  // T-11-237 남의 구단 신고 버튼은 화면 맨 아래 한 줄에 대상을 밝혀 둔다.
+  const reports = page.locator('.name-reports');
+  await expect(reports.locator('[data-act="name-report"]')).toHaveText('구단 이름 신고');
+  await expect(reports.locator('[data-act="nick-report"]')).toHaveText('닉네임 신고');
+  if (process.env.SHOT) {
+    await reports.scrollIntoViewIfNeeded();
+    await page.locator('#toast').evaluate((t) => t.remove());
+    await page.screenshot({ path: process.env.SHOT });
+  }
   await page.goBack();
   await expect(list).toBeVisible();
 });

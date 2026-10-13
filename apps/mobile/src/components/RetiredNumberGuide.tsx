@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import type { GameState } from '@offside/game/types';
 import type { RetiredNumberProgress } from '@offside/contracts';
-import { fetchRetiredNumberProgress } from '@offside/app-core/api/retiredNumberProgress';
+import {
+  fetchRetiredNumberProgress,
+  onRetiredNumberProgressSynced,
+} from '@offside/app-core/api/retiredNumberProgress';
 import { retiredNumberNext } from '@offside/app-core/retiredNumberGuide';
 import { gameCareerText } from '@offside/app-core/i18n/ko/gameCareer';
 import { tn } from '@offside/game/i18n/names';
@@ -25,22 +28,29 @@ export function RetiredNumberGuide({ s }: { s: GameState }) {
   useEffect(() => {
     if (!open || !s.career.length) return;
     let alive = true;
-    setLoading(true);
-    setFailed(false);
-    void fetchRetiredNumberProgress(s.cid, s.number)
-      .then((r) => {
-        if (!alive) return;
-        if (r.ok) setData(r.data);
-        else setFailed(true);
-      })
-      .catch(() => {
-        if (alive) setFailed(true);
-      })
-      .finally(() => {
-        if (alive) setLoading(false);
-      });
+    let request = 0;
+    const load = () => {
+      const version = ++request;
+      setLoading(true);
+      setFailed(false);
+      void fetchRetiredNumberProgress(s.cid, s.number)
+        .then((r) => {
+          if (!alive || version !== request) return;
+          if (r.ok) setData(r.data);
+          else setFailed(true);
+        })
+        .catch(() => {
+          if (alive && version === request) setFailed(true);
+        })
+        .finally(() => {
+          if (alive && version === request) setLoading(false);
+        });
+    };
+    const stop = onRetiredNumberProgressSynced(s.cid, load);
+    load();
     return () => {
       alive = false;
+      stop();
     };
   }, [open, s.cid, s.number, s.career.length, attempt]);
   return (

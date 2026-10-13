@@ -1,5 +1,7 @@
 // 트로피 탭(웹 tabs/TrophyTab.svelte): 우승 연혁 · 개인 수상 · 발롱도르 순위 · 완결된 스토리.
 // 선수 상세(은퇴 화면)도 같은 카드를 쓸 수 있게 LegendSource를 받는다.
+import { CareerTrophy } from '../../ui/CareerTrophy';
+import { careerTrophy, type CareerTrophy as TrophyArt } from '@offside/app-core/career-trophy';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import type { LegendSource } from '@offside/game/types';
@@ -15,10 +17,12 @@ import { tn } from '@offside/game/i18n/names';
 export function TrophyRow({
   year,
   first,
+  art,
   children,
 }: {
   year: ReactNode;
   first?: boolean;
+  art?: TrophyArt;
   children: ReactNode;
 }) {
   const c = useColors();
@@ -44,6 +48,7 @@ export function TrophyRow({
       >
         {year}
       </Txt>
+      {art ? <CareerTrophy art={art} size={30} color={c.accent} /> : null}
       <View style={{ flex: 1 }}>{children}</View>
     </View>
   );
@@ -70,7 +75,7 @@ export function TrophyTab({ s }: { s: LegendSource }) {
         </Txt>
         {trophies.length ? (
           trophies.map((x, i) => (
-            <TrophyRow key={i} year={x.year}>
+            <TrophyRow key={i} year={x.year} art={careerTrophy(x.t)}>
               <Txt style={{ fontWeight: '700' }}>{tn(x.t)}</Txt>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <ClubMark name={x.club} id={x.clubId} size={14} />

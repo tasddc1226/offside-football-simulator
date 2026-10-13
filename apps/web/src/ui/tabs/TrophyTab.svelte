@@ -1,4 +1,6 @@
 <script lang="ts">
+  import CareerTrophy from '../CareerTrophy.svelte';
+  import { careerTrophy } from '@offside/app-core/career-trophy';
   import { tn } from '@offside/game/i18n/names';
   // ui.ts trophyTab() 포트 (388~395줄)
   import type { LegendSource } from '@offside/game/types';
@@ -17,7 +19,7 @@
   <h2 style="margin-bottom:4px">{L.honours}</h2>
   {#if trophies.length}
     {#each trophies as x, i (i)}
-      <div class="trophy"><span class="y">{x.year}</span><div><b>{tn(x.t)}</b><span class="muted fs-xs"><ClubMark name={x.club} id={x.clubId} size={14} /> {tn(x.club)}</span></div></div>
+      <div class="trophy"><span class="y">{x.year}</span><CareerTrophy art={careerTrophy(x.t)} size={30} /><div><b>{tn(x.t)}</b><span class="muted fs-xs"><ClubMark name={x.club} id={x.clubId} size={14} /> {tn(x.club)}</span></div></div>
     {/each}
   {:else}
     <p class="empty">{L.empty}</p>

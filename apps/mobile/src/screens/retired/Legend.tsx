@@ -9,7 +9,7 @@ import { alpha } from '../../theme/colors';
 import { useColors, useIsDark } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { AdSlot } from '../../components/AdSlot';
-import { NameReport } from '../../components/NameReport';
+import { NameReport, NameReports } from '../../components/NameReport';
 import { Press } from '../../ui/Press';
 import { Topbar } from '../../ui/Topbar';
 import { Txt } from '../../ui/Txt';
@@ -33,7 +33,11 @@ export default function Legend() {
         <>
           <LegendReport v={v} />
           {v.own?.id ? <OwnHofCards v={v} /> : null}
-          {v.reportId ? <NameReport kind="career" id={v.reportId} name={v.name} /> : null}
+          {v.reportId ? (
+            <NameReports>
+              <NameReport kind="career" id={v.reportId} name={v.name} />
+            </NameReports>
+          ) : null}
           <AdSlot place="legend-bottom" />
         </>
       ) : null}

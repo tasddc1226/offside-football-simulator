@@ -330,6 +330,8 @@ export type TeamMatchesResponse = z.infer<typeof TeamMatchesResponseSchema>;
 export const ClubAchievementSchema = z.strictObject({
   id: z.string(),
   label: z.string(),
+  /** T-11-237 판정 기준 한 줄(이름만으로 헷갈리는 업적만). 구버전 응답에는 없다. */
+  desc: z.string().optional(),
   done: z.boolean(),
   cur: z.number().int().min(0).optional(),
   max: z.number().int().min(1).optional(),
