@@ -2,24 +2,24 @@
   "id": "t-11-191-avatar-look",
   "title": "도트 선수 꾸미기",
   "items": [
-    "선수가 미니형 도트로 바뀌어요. 선수 자금으로 꾸미기 항목과 칭호 기록 아이템을 한 번 사면 커리어 동안 무료로 바꿀 수 있어요. 능력치에는 영향이 없어요.",
-    "기존 은퇴 선수도 리포트에서 외형을 무료로 바꿔요. 기록·능력치·자금은 그대로이며 선수 카드 얼굴에도 반영돼요.",
-    "프리시즌·시즌 진행을 전체 화면 경기장에서 보여 줘요. 선수가 뛰고 슛하고 훈련해요. 동작 줄이기나 목발 사용 중에는 정지해요."
+    "미니형 선수 꾸미기와 카드 초상이 추가돼요.",
+    "은퇴 외형은 무료로 바꿔요. 기록·능력치는 유지해요.",
+    "전체 화면 시즌 모션은 동작 줄이기를 지원해요."
   ],
   "en": {
     "title": "Customize your pixel player",
     "items": [
-      "Players now use mini pixel art. Buy customization options and title record items once with player funds, then change them freely during that career. Attributes are unaffected.",
-      "Existing retired players can change their look for free in reports. Records, attributes and funds stay unchanged; card portraits update too.",
-      "Preseason and season progress fill the screen with a pitch where your player runs, shoots and trains. Reduced motion or crutches keep a standing pose."
+      "Mini player cosmetics and card portraits.",
+      "Free retired looks; records and stats stay intact.",
+      "Full-screen season motion respects reduced motion."
     ]
   },
   "ja": {
     "title": "ドット選手のカスタマイズ",
     "items": [
-      "選手がミニドットになります。選手資金でカスタマイズ項目や称号の記録アイテムを一度買えば、キャリア中は無料で変更できます。能力値は変わりません。",
-      "以前に引退した選手もレポートから無料で外見を変えられます。記録・能力値・資金は変わらず、カードの顔にも反映されます。",
-      "プレシーズン・シーズンの進行を全画面のピッチで表示します。選手が走り、シュートや練習をします。動きを減らす設定や松葉杖の使用中は静止します。"
+      "ミニ選手の着せ替えとカードの顔を追加。",
+      "引退後の外見変更は無料。記録・能力は不変。",
+      "全画面の進行演出。動きを減らす設定に対応。"
     ]
   },
   "availability": "web-app"
