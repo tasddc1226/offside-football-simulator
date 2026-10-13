@@ -1,5 +1,5 @@
-// Decorative running poses; ProgressRunner handles travel along the popup edge.
-import { useEffect, useMemo, useState } from 'react';
+// Run and kick poses selected by the shared popup choreography.
+import { memo, useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
 import { avatarRects, type AvatarSpec } from '@offside/game/avatar';
@@ -8,24 +8,28 @@ import {
   MOTION_H,
   MOTION_W,
   MOTIONS,
-  motionFrames,
+  motionFrame,
   type MiniPoses,
   type MotionId,
+  type MotionFrame,
 } from '@offside/game/avatar-motion';
 import { canRun } from '@offside/app-core/avatarStage';
 import { prefs } from '../store';
 
-export function AvatarStage({
+export const AvatarStage = memo(function AvatarStage({
   spec,
   active = true,
   onReady,
+  motion = 'run',
+  frame = 0,
 }: {
   spec: AvatarSpec;
   active?: boolean;
   onReady?: (ready: boolean) => void;
+  motion?: MotionId;
+  frame?: number;
 }) {
   const still = !canRun(spec, active && prefs.motionOK);
-  const [frame, setFrame] = useState(0);
   const [poses, setPoses] = useState<MiniPoses | null>(null);
   useEffect(() => {
     setPoses(null);
@@ -43,24 +47,19 @@ export function AvatarStage({
   const cache = useMemo(() => new Map<MotionId, ReturnType<typeof avatarRects>[]>(), [spec, poses]);
   const rectsOf = (id: MotionId) => {
     let r = cache.get(id);
-    if (!r) cache.set(id, (r = motionFrames(spec, id, poses).map(avatarRects)));
+    if (!r)
+      cache.set(
+        id,
+        (r = MOTIONS[id].frames.map((f) => {
+          const body: MotionFrame = { ...f };
+          delete body.ball;
+          return avatarRects(motionFrame(spec, body, poses));
+        })),
+      );
     return r;
   };
   useEffect(() => onReady?.(!still && !!poses), [still, poses, onReady]);
-  useEffect(() => {
-    setFrame(0);
-    if (still || !poses) return;
-    let f = 0;
-    let t: ReturnType<typeof setTimeout>;
-    const tick = () => {
-      f = (f + 1) % MOTIONS.run.frames.length;
-      setFrame(f);
-      t = setTimeout(tick, MOTIONS.run.frames[f]!.ms);
-    };
-    t = setTimeout(tick, MOTIONS.run.frames[0]!.ms);
-    return () => clearTimeout(t);
-  }, [still, poses]);
-  const frames = rectsOf(still || !poses ? 'idle' : 'run');
+  const frames = rectsOf(still || !poses ? 'idle' : motion);
   const rects = frames[frame] ?? frames[0]!;
   return (
     <View
@@ -83,4 +82,4 @@ export function AvatarStage({
       </Svg>
     </View>
   );
-}
+});

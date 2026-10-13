@@ -1,33 +1,67 @@
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, View } from 'react-native';
+import { memo, useEffect, useState } from 'react';
+import { View } from 'react-native';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import type { AvatarSpec } from '@offside/game/avatar';
-import { RUNNER_SIZE, runnerDuration, canRun } from '@offside/app-core/avatarStage';
+import {
+  RUNNER_SIZE,
+  RUNNER_HEIGHT,
+  GOAL_WIDTH,
+  GOAL_HEIGHT,
+  BALL_SIZE,
+  GOAL_RECTS,
+  GOAL_COLORS,
+  runnerScene,
+  canRun,
+} from '@offside/app-core/avatarStage';
 import { useSnapshot } from 'valtio';
 import { prefs } from '../store';
 import { AvatarStage } from './AvatarStage';
 
-/** Decorative sibling of the scroll body: feet follow the popup's top edge. */
+const Goal = memo(function Goal({ scored }: { scored: boolean }) {
+  return (
+    <Svg width={GOAL_WIDTH} height={GOAL_HEIGHT} viewBox="0 0 34 34">
+      {GOAL_RECTS.map((r, i) => (
+        <Rect
+          key={i}
+          x={r[0]}
+          y={r[1]}
+          width={r[2]}
+          height={r[3]}
+          fill={r[4] ? GOAL_COLORS.net : scored ? GOAL_COLORS.scored : GOAL_COLORS.frame}
+        />
+      ))}
+    </Svg>
+  );
+});
+const Ball = memo(function Ball() {
+  return (
+    <Svg width={BALL_SIZE} height={BALL_SIZE} viewBox="0 0 8 8">
+      <Circle cx={4} cy={4} r={3.5} fill="#f5f5ef" stroke="#202c24" strokeWidth={1} />
+      <Path d="M3 2h2v2H3zM1 4h2v2H1zM5 5h2v2H5z" fill="#202c24" />
+    </Svg>
+  );
+});
+
+/** Uses the same elapsed-time choreography, pixel goal and ball as the web. */
 export function ProgressRunner({ spec }: { spec: AvatarSpec }) {
   const { motionOK } = useSnapshot(prefs);
   const [width, setWidth] = useState(0);
   const [ready, setReady] = useState(false);
-  const cycle = useRef(new Animated.Value(0)).current;
-  const travel = Math.max(0, width - RUNNER_SIZE);
+  const [elapsed, setElapsed] = useState(0);
   const running = canRun(spec, motionOK);
   useEffect(() => {
-    cycle.setValue(0);
-    if (!running || !ready || !travel) return;
-    const animation = Animated.loop(
-      Animated.timing(cycle, {
-        toValue: 1,
-        duration: runnerDuration(travel),
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [cycle, travel, running, ready]);
+    setElapsed(0);
+    if (!running || !ready || !width) return;
+    const start = performance.now();
+    let raf: number;
+    const tick = () => {
+      setElapsed(performance.now() - start);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [width, running, ready]);
+  const scene = runnerScene(width, elapsed, running && ready);
   return (
     <View
       testID="progress-runner"
@@ -39,41 +73,43 @@ export function ProgressRunner({ spec }: { spec: AvatarSpec }) {
         position: 'absolute',
         left: 12,
         right: 12,
-        top: (-RUNNER_SIZE * 9) / 8 + 3,
-        height: (RUNNER_SIZE * 9) / 8,
+        top: -RUNNER_HEIGHT + 3,
+        height: RUNNER_HEIGHT,
       }}
     >
-      <Animated.View
+      <View
         style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
           width: RUNNER_SIZE,
-          height: (RUNNER_SIZE * 9) / 8,
-          transform: [
-            {
-              translateX: cycle.interpolate({
-                inputRange: [0, 0.5, 1],
-                outputRange: [0, travel, 0],
-              }),
-            },
-          ],
+          height: RUNNER_HEIGHT,
+          transform: [{ translateX: scene.x }],
+          opacity: scene.playerOpacity,
         }}
       >
-        <Animated.View
-          style={{
-            width: '100%',
-            height: '100%',
-            transform: [
-              {
-                scaleX: cycle.interpolate({
-                  inputRange: [0, 0.4999, 0.5, 0.9999, 1],
-                  outputRange: [1, 1, -1, -1, 1],
-                }),
-              },
-            ],
-          }}
-        >
-          <AvatarStage spec={spec} active={running} onReady={setReady} />
-        </Animated.View>
-      </Animated.View>
+        <AvatarStage
+          spec={spec}
+          active={running}
+          motion={scene.motion}
+          frame={scene.frame}
+          onReady={setReady}
+        />
+      </View>
+      <View style={{ position: 'absolute', right: 0, bottom: 0 }}>
+        <Goal scored={scene.scored} />
+      </View>
+      <View
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          transform: [{ translateX: scene.ballX }, { translateY: scene.ballY }],
+          opacity: scene.ballOpacity,
+        }}
+      >
+        <Ball />
+      </View>
     </View>
   );
 }

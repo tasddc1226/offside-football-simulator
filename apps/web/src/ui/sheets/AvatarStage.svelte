@@ -1,18 +1,19 @@
 <script lang="ts">
-  // Decorative running poses; the host moves the player along the popup edge.
+  // Run and kick poses selected by the shared popup choreography.
   import { avatarRects, type AvatarSpec } from '@offside/game/avatar';
   import {
     loadMotionPoses,
     MOTION_H,
     MOTION_W,
     MOTIONS,
-    motionFrames,
+    motionFrame,
     type MiniPoses,
     type MotionId,
+    type MotionFrame,
   } from '@offside/game/avatar-motion';
   import { canRun } from '@offside/app-core/avatarStage';
 
-  const { spec, active = true }: { spec: AvatarSpec; active?: boolean } = $props();
+  const { spec, active = true, motion = 'run', frame = 0, onReady }: { spec: AvatarSpec; active?: boolean; motion?: MotionId; frame?: number; onReady?: (ready: boolean) => void } = $props();
   const still = $derived(!canRun(spec, active));
 
   type Rects = ReturnType<typeof avatarRects>;
@@ -35,28 +36,19 @@
     void spec;
     return {} as Partial<Record<MotionId, Rects[]>>;
   });
-  const rectsOf = (id: MotionId): Rects[] => (cache[id] ??= motionFrames(spec, id, poses).map(avatarRects));
+  const rectsOf = (id: MotionId): Rects[] => (cache[id] ??= MOTIONS[id].frames.map(f => {
+    const body: MotionFrame = { ...f };
+    delete body.ball;
+    return avatarRects(motionFrame(spec, body, poses));
+  }));
 
-  let frame = $state(0);
-  const motion = $derived(still || !poses ? 'idle' : 'run');
-  const rects = $derived(rectsOf(motion)[frame] ?? rectsOf(motion)[0]!);
+  const shownMotion = $derived(still || !poses ? 'idle' : motion);
+  const rects = $derived(rectsOf(shownMotion)[frame] ?? rectsOf(shownMotion)[0]!);
+  $effect(() => onReady?.(!still && !!poses));
 
-  $effect(() => {
-    frame = 0;
-    if (still || !poses) return;
-    let f = 0;
-    let t: ReturnType<typeof setTimeout>;
-    const tick = () => {
-      f = (f + 1) % MOTIONS.run.frames.length;
-      frame = f;
-      t = setTimeout(tick, MOTIONS.run.frames[f]!.ms);
-    };
-    t = setTimeout(tick, MOTIONS.run.frames[0]!.ms);
-    return () => clearTimeout(t);
-  });
 </script>
 
-<div class="avatar-stage" aria-hidden="true" data-motion={motion}>
+<div class="avatar-stage" aria-hidden="true" data-motion={shownMotion} data-frame={still || !poses ? 0 : frame}>
   <div class="avatar-walker">
     <svg viewBox="0 0 {MOTION_W} {MOTION_H}" shape-rendering="crispEdges">{#each rects as r, i (i)}<rect x={r.x} y={r.y} width={r.w} height={r.h} fill={r.fill} fill-opacity={r.opacity} />{/each}</svg>
   </div>
