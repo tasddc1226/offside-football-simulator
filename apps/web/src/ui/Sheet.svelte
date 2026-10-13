@@ -27,17 +27,6 @@
   // 이 시트가 "선택 필수"(이벤트·이적시장 등)가 아니라 끌어서/배경 클릭으로 닫을 수 있는지 여부.
   // 배경 클릭 닫기 조건(Sheet.svelte 원래 로직)과 동일한 기준을 스와이프-다운에도 그대로 쓴다.
   const dismissible = $derived(!sheetState.busy && !(appState.G && appState.G.pending));
-  const fullscreen = $derived(!!sheetState.view &&
-    (sheetState.view.kind === 'steps' || sheetState.view.kind === 'block') && !!sheetState.view.avatar);
-  $effect(() => {
-    if (!sheetState.open || !fullscreen) return;
-    const app = document.getElementById('app');
-    if (!app) return;
-    const wasInert = app.inert;
-    app.inert = true;
-    sheetEl?.focus({ preventScroll: true });
-    return () => { app.inert = wasInert; };
-  });
 
   $effect(() => {
     registerSheetEl(sheetEl);
@@ -126,7 +115,6 @@
   {#if sheetState.open}
     <div
       class="sheet"
-      class:progress-screen={fullscreen}
       class:dragging
       id="sheet"
       role="dialog"
@@ -135,12 +123,12 @@
       tabindex="-1"
       bind:this={sheetEl}
       style={dragY ? `transform:translateY(${dragY}px)` : undefined}
-      transition:fly={{ y: fullscreen ? 0 : 60, duration: fullscreen ? 0 : dur(SHEET_MS) }}
+      transition:fly={{ y: 60, duration: dur(SHEET_MS) }}
       ontouchstart={onTouchStart}
       ontouchend={onTouchEnd}
       ontouchcancel={onTouchEnd}
     >
-      {#if !fullscreen}<div class="sheet-handle" aria-hidden="true"></div>{/if}
+      <div class="sheet-handle" aria-hidden="true"></div>
       {#if sheetState.view}<SheetBody v={sheetState.view} />{/if}
       {#each sheetState.buttons as b, i (i)}
         <button class="btn {b.cls || ''} btn-block" data-sheet={i} onclick={() => clickButton(b)}>{b.label}</button>
@@ -148,3 +136,9 @@
     </div>
   {/if}
 </div>
+
+{#if sheetState.open && (sheetState.view?.kind === 'steps' || sheetState.view?.kind === 'block') && sheetState.view.avatar}
+  {#key sheetState.view}
+    {#await import('./ProgressCover.svelte') then { default: Cover }}<Cover v={sheetState.view} />{/await}
+  {/key}
+{/if}

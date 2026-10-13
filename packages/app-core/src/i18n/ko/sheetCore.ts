@@ -3,6 +3,7 @@ import { ns } from '../core';
 
 const ko = {
   skip: '건너뛰기',
+  revealProgress: '진행 내용 보기',
   // 경기 중계 집계
   tallyApps: '출전',
   tallyGoals: '골',

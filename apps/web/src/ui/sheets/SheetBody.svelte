@@ -13,9 +13,7 @@
   });
 </script>
 
-{#if (v.kind === 'steps' || v.kind === 'block') && v.avatar}
-  {#await import('./ProgressScene.svelte')}<h2>{v.title}</h2>{:then { default: Scene }}<Scene {v} />{/await}
-{:else if v.kind === 'steps'}{#await import('./Steps.svelte') then { default: Steps }}<Steps {v} />{/await}
+{#if v.kind === 'steps'}{#await import('./Steps.svelte') then { default: Steps }}<Steps {v} />{/await}
 {:else if v.kind === 'block'}{#await import('./Block.svelte') then { default: Block }}<Block {v} />{/await}
 {:else if v.kind === 'judge'}<Judge {v} />
 {:else if v.kind === 'achieve'}

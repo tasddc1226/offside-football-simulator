@@ -1,3 +1,4 @@
+import { useState } from 'react';
 // 아래에서 올라오는 시트(웹 Sheet.svelte). 선택이 필수인 시트(진행 중·이벤트 대기)는 배경 누르기·끌어 내리기·
 // Android 뒤로로 닫히지 않는다. 본문은 SheetBody가 뷰 종류별로 그리고, 버튼은 sheetState.buttons 그대로.
 import { Keyboard, Modal, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
@@ -9,6 +10,7 @@ import { buzz, dismissSheet } from '../game/host';
 import { useColors } from '../theme/useColors';
 import { SheetBody } from '../sheets/SheetBody';
 import { AvatarStage } from '../sheets/AvatarStage';
+import { sheetCoreText } from '@offside/app-core/i18n/ko/sheetCore';
 import { Btn } from './Btn';
 import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
@@ -18,57 +20,83 @@ export function Sheet() {
   const { motionOK } = useSnapshot(prefs);
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { height, width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const avatarSize = height <= 540 ? 80 : Math.min(160, Math.max(96, width * 0.26));
-  const fullscreen =
-    !!s.view && (s.view.kind === 'steps' || s.view.kind === 'block') && !!s.view.avatar;
+  const [dismissedView, setDismissedView] = useState<SheetView | null>(null);
+  const v = sheetState.view;
+  const covered =
+    s.open &&
+    s.busy &&
+    s.buttons.length === 0 &&
+    (v?.kind === 'steps' || v?.kind === 'block') &&
+    !!v.avatar &&
+    dismissedView !== v;
+  const reveal = () => setDismissedView(v);
   const dismissible = !s.busy && !G?.pending;
   const close = () => dismissible && dismissSheet();
   return (
     <Modal
       visible={s.open}
       transparent
-      animationType={motionOK && !fullscreen ? 'slide' : 'none'}
+      animationType={motionOK && !covered ? 'slide' : 'none'}
       statusBarTranslucent
       navigationBarTranslucent
       onShow={Keyboard.dismiss}
-      onRequestClose={close}
+      onRequestClose={() => (covered ? reveal() : close())}
     >
-      {fullscreen ? (
+      <View
+        accessibilityElementsHidden={covered}
+        importantForAccessibility={covered ? 'no-hide-descendants' : 'auto'}
+        pointerEvents={covered ? 'none' : 'auto'}
+        style={{ flex: 1, justifyContent: 'flex-end' }}
+      >
+        <Pressable
+          accessibilityLabel={shellMoreText.close}
+          onPress={close}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: c.scrim,
+          }}
+        />
         <View
           accessibilityViewIsModal
           accessibilityLabel={s.view ? sheetLabel(s.view as SheetView) : undefined}
           style={{
-            flex: 1,
             backgroundColor: c.surface,
-            paddingTop: insets.top + 20,
-            paddingBottom: insets.bottom + 16,
-            gap: 14,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            maxHeight: '90%',
           }}
         >
-          <View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              top: 0,
-              bottom: 0,
-              left: 0,
-              right: 0,
-              alignItems: 'center',
-              justifyContent: 'center',
+          <ScrollView
+            bounces={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{
+              paddingTop: 10,
+              paddingHorizontal: 18,
+              paddingBottom: 18 + insets.bottom,
+              gap: 14,
             }}
           >
-            <View style={{ width: avatarSize, height: (avatarSize * 9) / 8 }}>
-              {(sheetState.view?.kind === 'steps' || sheetState.view?.kind === 'block') &&
-              sheetState.view.avatar ? (
-                <AvatarStage spec={sheetState.view.avatar} active={s.buttons.length === 0} />
-              ) : null}
-            </View>
-          </View>
-          {s.view ? <SheetBody v={sheetState.view!} /> : null}
-          {s.buttons.map((b, i) => (
-            <View key={i} style={{ paddingHorizontal: 20 }}>
+            <View
+              style={{
+                alignSelf: 'center',
+                width: 40,
+                height: 5,
+                borderRadius: 3,
+                backgroundColor: c.line,
+                marginBottom: 2,
+              }}
+            />
+            {/* 스냅숏이 아니라 원본 뷰를 넘긴다 — 본문(미니게임 등)이 뷰를 고치고, 읽을 때는 각자 useSnapshot으로 구독한다. */}
+            {s.view ? <SheetBody v={sheetState.view!} /> : null}
+            {s.buttons.map((b, i) => (
               <Btn
+                key={i}
                 block
                 cls={b.cls}
                 testID={`sheet-${i}`}
@@ -79,73 +107,36 @@ export function Sheet() {
               >
                 {b.label}
               </Btn>
-            </View>
-          ))}
+            ))}
+          </ScrollView>
         </View>
-      ) : (
-        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-          <Pressable
-            accessibilityLabel={shellMoreText.close}
-            onPress={close}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: c.scrim,
-            }}
-          />
-          <View
-            accessibilityViewIsModal
-            accessibilityLabel={s.view ? sheetLabel(s.view as SheetView) : undefined}
-            style={{
-              backgroundColor: c.surface,
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              maxHeight: '90%',
-            }}
-          >
-            <ScrollView
-              bounces={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{
-                paddingTop: 10,
-                paddingHorizontal: 18,
-                paddingBottom: 18 + insets.bottom,
-                gap: 14,
-              }}
-            >
-              <View
-                style={{
-                  alignSelf: 'center',
-                  width: 40,
-                  height: 5,
-                  borderRadius: 3,
-                  backgroundColor: c.line,
-                  marginBottom: 2,
-                }}
-              />
-              {/* 스냅숏이 아니라 원본 뷰를 넘긴다 — 본문(미니게임 등)이 뷰를 고치고, 읽을 때는 각자 useSnapshot으로 구독한다. */}
-              {s.view ? <SheetBody v={sheetState.view!} /> : null}
-              {s.buttons.map((b, i) => (
-                <Btn
-                  key={i}
-                  block
-                  cls={b.cls}
-                  testID={`sheet-${i}`}
-                  onPress={() => {
-                    buzz();
-                    sheetState.buttons[i]?.fn();
-                  }}
-                >
-                  {b.label}
-                </Btn>
-              ))}
-            </ScrollView>
+      </View>
+      {covered ? (
+        <Pressable
+          testID="progress-cover"
+          accessibilityRole="button"
+          accessibilityViewIsModal
+          accessibilityLabel={sheetCoreText.revealProgress}
+          onPress={reveal}
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 100,
+            backgroundColor: c.surface,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <View style={{ width: avatarSize, height: (avatarSize * 9) / 8 }}>
+            {(v?.kind === 'steps' || v?.kind === 'block') && v.avatar ? (
+              <AvatarStage spec={v.avatar} />
+            ) : null}
           </View>
-        </View>
-      )}
+        </Pressable>
+      ) : null}
     </Modal>
   );
 }

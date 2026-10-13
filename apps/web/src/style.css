@@ -7661,33 +7661,5 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
   font-weight: 600;
 }
 
-/* T-11-191: 진행 중에는 중앙 캐릭터 로딩을 전체 화면으로. 결과·선택 시트는 기존 크기를 유지한다. */
-html.scroll-locked:has(.progress-screen) {
-  /* 일반 팝업의 스크롤바 빈자리는 전체 화면에서는 남기지 않는다. */
-  scrollbar-gutter: auto;
-}
-.modal:has(.progress-screen) {
-  padding: 0;
-  background: var(--surface);
-  transition: none;
-  opacity: 1;
-}
-.sheet.progress-screen {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  max-width: none;
-  height: 100dvh;
-  max-height: none;
-  border-radius: 0;
-  padding: calc(20px + var(--safe-t, 0px)) 0 calc(16px + var(--safe-b));
-  overflow: hidden;
-  gap: 14px;
-}
-.progress-screen > .btn {
-  width: calc(100% - 40px);
-  max-width: 480px;
-  align-self: center;
-  flex-shrink: 0;
-  min-height: 48px;
-}
+/* The separate cover fills the scrollbar gutter too; ordinary sheets keep their original layout. */
+html.scroll-locked:has([data-progress-cover]) { scrollbar-gutter: auto; }
