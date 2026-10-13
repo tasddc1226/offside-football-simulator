@@ -4,7 +4,12 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import * as api from '@offside/app-core/api/admin';
 import type { AdminFundsOwner, AdminFundsReport } from '@offside/app-core/api/admin';
-import { FUNDS_MOVE, fundsItemName, signedFunds } from '@offside/app-core/admin/funds';
+import {
+  FUNDS_MOVE,
+  fundsItemName,
+  scoutUsageText,
+  signedFunds,
+} from '@offside/app-core/admin/funds';
 import { kstDateTime as kst } from '@offside/app-core/boardText';
 import { fundsText } from '@offside/app-core/funds';
 import { LoadState, type LoadStatus } from '../../../components/LoadState';
@@ -163,6 +168,11 @@ export default function AdminFunds() {
           <Txt bold tone={owner.diff === 0 ? 'good' : 'bad'} style={small}>
             {owner.diff === 0 ? '일치' : `차이 ${signedFunds(owner.diff)}`}
           </Txt>
+          {owner.scout ? (
+            <Txt testID="funds-scout" style={small}>
+              {scoutUsageText(owner.scout)}
+            </Txt>
+          ) : null}
           <View>
             {owner.moves.length ? (
               owner.moves.map((m, i) => (

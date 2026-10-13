@@ -479,12 +479,19 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
       mismatched: 1,
       mismatches: [{ profileId: owner.profileId, nickname: '대조구단', balance: 5, diff: 5 }],
     });
+    // T-11-245 스카우트권 사용 현황도 같이 본다(기록이 없으면 0).
+    await ctx.env.DB.prepare(
+      `INSERT INTO scout_pity (profile_id, used, streak, elites, mode, updated_at) VALUES (?, 31, 4, 0, 'normal', ?)`,
+    )
+      .bind(owner.profileId, new Date().toISOString())
+      .run();
     for (const q of [owner.profileId, '대조구단']) {
       const res = await callJson(env, 'GET', `/v1/admin/funds/owner?q=${encodeURIComponent(q)}`, {
         cookie: admin.cookie,
       });
       const one = successEnvelope(AdminFundsOwnerSchema).parse(await res.json()).data;
       expect(one).toMatchObject({ released: 1_000_000, items: 1_000_000, diff: 5 });
+      expect(one.scout).toEqual({ used: 31, streak: 4, elites: 0, held: 0, paid: 0 });
       expect(one.moves.map((m) => [m.kind, m.item, m.amount])).toEqual([
         ['item', 'reroll', -1_000_000],
         ['released', null, 1_000_000],
