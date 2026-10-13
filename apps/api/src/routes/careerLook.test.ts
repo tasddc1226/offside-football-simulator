@@ -58,6 +58,9 @@ describe('retired appearance-only write', () => {
       { look: 'y6', profileId: other.profileId },
       { look: 's6' },
       { look: 'y15' },
+      { look: 'l6' },
+      { look: 'u5' },
+      { look: 'n4' },
       { look: 'x0' },
       { look: 'y1y2' },
       { look: 'y01' },
@@ -76,7 +79,7 @@ describe('retired appearance-only write', () => {
       cards: await ctx.db.select().from(cards),
     });
     const before = await snapshot();
-    const code = 's5h11d2y8e2a7w5g5b9k6';
+    const code = 's5h11d2y8e2a7w5g5b9k6l5u4n3';
     for (const look of [code, code]) {
       const res = await put({ look });
       expect(res.status).toBe(200);

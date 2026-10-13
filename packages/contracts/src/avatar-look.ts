@@ -10,6 +10,9 @@ export const APPEARANCE_OPTIONS = {
   g: 7,
   b: 11,
   k: 8,
+  l: 6,
+  u: 5,
+  n: 4,
 } as const;
 
 export const LOOK_RECORDS = [
@@ -33,7 +36,7 @@ const RECORD_CODES = {
 /** null restores the ID-derived default. Reject unknown, repeated or out-of-range values. */
 export function validAppearance(code: string | null): boolean {
   if (code === null) return true;
-  if (!/^(?:[a-z](?:0|[1-9]\d?)){1,10}$/.test(code)) return false;
+  if (!/^(?:[a-z](?:0|[1-9]\d?)){1,13}$/.test(code)) return false;
   const seen = new Set<string>();
   for (const [, key, digits] of code.matchAll(/([a-z])(\d+)/g)) {
     const limit = APPEARANCE_OPTIONS[key as keyof typeof APPEARANCE_OPTIONS];

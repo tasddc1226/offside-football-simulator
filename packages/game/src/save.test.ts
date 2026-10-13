@@ -39,6 +39,9 @@ describe('migrateSave (T-10-046)', () => {
     restored.look!.rec = ['scorer-boots'];
     restored.look!.pick.boots = 10;
     expect(loadSave(JSON.parse(JSON.stringify(restored)))!.G.look).toEqual(restored.look);
+    restored.look!.owned.push('gloves', 'keeperKit', 'kneePads');
+    Object.assign(restored.look!.pick, { gloves: 5, keeperKit: 4, kneePads: 3 });
+    expect(loadSave(JSON.parse(JSON.stringify(restored)))!.G.look).toEqual(restored.look);
   });
   it('최종 표가 없는 이전 저장은 완료 기록·pending을 추정해서 다시 쓰지 않고 그대로 읽는다', () => {
     const G = current();

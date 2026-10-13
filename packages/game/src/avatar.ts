@@ -94,9 +94,23 @@ const GOGGLES = [
   // 기록 아이템: 빅이어 은빛 고글.
   { G: '#dfe4ea', g: '#ffffff' },
 ] as const;
+// Goalkeeper equipment is opt-in; zero always preserves the existing club appearance.
+const GLOVES = [null, '#f4f4ef', '#e8c33c', '#38aa70', '#3c87d6', '#ed7140'] as const;
+const KEEPER_KITS = [null, '#36a471', '#e8bb35', '#379bd1', '#e87639'] as const;
+const KNEE_PADS = [null, '#303847', '#f4f4ef', '#365c91'] as const;
+
 /** T-11-191 꾸미기 선택지 색(웹 · 앱 견본). 색이 아닌 항목(머리 모양 · 수염)은 null, 선택지 '없음'은 null. */
 export const LOOK_SWATCHES: Record<
-  'skin' | 'hair' | 'band' | 'wrist' | 'socks' | 'boots' | 'glasses',
+  | 'skin'
+  | 'hair'
+  | 'band'
+  | 'wrist'
+  | 'socks'
+  | 'boots'
+  | 'glasses'
+  | 'gloves'
+  | 'keeperKit'
+  | 'kneePads',
   readonly (string | null)[]
 > = {
   skin: AVATAR_SKINS.map((c) => c.s),
@@ -106,6 +120,9 @@ export const LOOK_SWATCHES: Record<
   socks: SOCKS,
   boots: BOOTS,
   glasses: GOGGLES.map((c) => c?.g ?? null),
+  gloves: GLOVES,
+  keeperKit: KEEPER_KITS,
+  kneePads: KNEE_PADS,
 };
 type HairStyle = keyof typeof MINI_SPRITES;
 type AvatarAcc = 'armband' | 'crutch' | 'bandage' | 'suit' | 'bouquet';
@@ -184,6 +201,9 @@ export interface AvatarSpec {
   glasses?: number;
   wrist?: number;
   socks?: number;
+  gloves?: number;
+  keeperKit?: number;
+  kneePads?: number;
 }
 
 /**
@@ -201,6 +221,9 @@ function withLook(sp: AvatarSpec, pick: LookState['pick'], forceStyle = false): 
   if (pick.glasses) out.glasses = pick.glasses;
   if (pick.wrist) out.wrist = pick.wrist;
   if (pick.socks) out.socks = pick.socks;
+  if (pick.gloves) out.gloves = pick.gloves;
+  if (pick.keeperKit) out.keeperKit = pick.keeperKit;
+  if (pick.kneePads) out.kneePads = pick.kneePads;
   // 표정: 부상 중 아픈 표정은 그대로 둔다.
   if (pick.expr && sp.expr !== 'pain') out.expr = LOOK_EXPRS[pick.expr] ?? sp.expr;
   return out;
@@ -278,6 +301,21 @@ export function avatarSpec(s: GameState, side: KitSide = 'home'): AvatarSpec {
 export function miniColors(sp: AvatarSpec): MiniColors {
   const suit = sp.acc.includes('suit');
   const hair = AVATAR_HAIRS[sp.look.hair % AVATAR_HAIRS.length]!;
+  // Formal retirement and active military uniforms keep their existing presentation.
+  const equipment = !suit && sp.kit !== ARMY_KIT;
+  const keeper = equipment ? KEEPER_KITS[sp.keeperKit ?? 0] : null;
+  const kit: KitSpec = keeper
+    ? {
+        ...sp.kit,
+        body: keeper,
+        pc: keeper,
+        pat: '-',
+        sleeve: keeper,
+        collar: '#25313c',
+        cuff: '#25313c',
+        shorts: '#25313c',
+      }
+    : sp.kit;
   return {
     skin: AVATAR_SKINS[sp.look.skin % AVATAR_SKINS.length]!.s,
     hair: sp.gray > 0 ? mix(hair.h, GRAY, sp.gray) : hair.h,
@@ -286,7 +324,11 @@ export function miniColors(sp: AvatarSpec): MiniColors {
     band: BANDS[sp.band ?? 0] ?? null,
     wrist: WRISTS[sp.wrist ?? 0] ?? null,
     goggle: GOGGLES[sp.glasses ?? 0] ?? null,
-    shirt: (x, y) => shirtColor(sp.kit, x, y),
+    shirt: (x, y) => shirtColor(kit, x, y),
+    shorts: kit.shorts,
+    glove: equipment ? (GLOVES[sp.gloves ?? 0] ?? null) : null,
+    longSleeve: !!keeper,
+    kneePad: equipment ? (KNEE_PADS[sp.kneePads ?? 0] ?? null) : null,
     suit,
   };
 }

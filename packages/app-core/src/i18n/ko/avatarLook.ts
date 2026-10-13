@@ -48,6 +48,10 @@ const ko = {
   styleFauxhawk: '스파이크 모히칸',
   stylePonytail: '포니테일',
   styleMullet: '투톤 꽁지머리',
+  itemGloves: '키퍼 장갑',
+  itemKeeperKit: '키퍼 유니폼',
+  itemKneePads: '무릎 보호대',
+  kitClub: '구단 유니폼',
   socksTeam: '구단 양말',
 };
 

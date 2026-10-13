@@ -46,5 +46,9 @@ export const avatarLook: Translation<AvatarLookMsgs> = {
   styleFauxhawk: 'スパイクモヒカン',
   stylePonytail: 'ポニーテール',
   styleMullet: 'ツートン襟足ヘア',
+  itemGloves: 'キーパーグローブ',
+  itemKeeperKit: 'キーパーユニフォーム',
+  itemKneePads: '膝パッド',
+  kitClub: 'クラブのユニフォーム',
   socksTeam: 'クラブのソックス',
 };

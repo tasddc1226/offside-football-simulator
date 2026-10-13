@@ -5,6 +5,7 @@
 import type { AvatarSpec } from './avatar.js';
 import { mix } from './color.js';
 import { crestOf } from './crests.js';
+import { paintEquipment } from './avatar-mini-equipment.js';
 
 export const MINI_W = 48;
 export const MINI_H = 64;
@@ -21,6 +22,10 @@ export interface MiniColors {
   /** 셔츠 칸 색(유니폼 무늬 · 군복 위장 무늬). 좌표는 서 있는 자세의 24×32 칸이다. */
   shirt: (x: number, y: number) => string;
   suit: boolean;
+  shorts: string;
+  glove: string | null;
+  longSleeve: boolean;
+  kneePad: string | null;
 }
 
 /** 몸에 붙는 소품 자리(서 있는 자세 기준값, 모션 프레임은 프레임마다 따로 둔다). */
@@ -127,7 +132,7 @@ export function paintMini(
   sp: AvatarSpec,
   c: MiniColors,
   body: MiniBody = MINI_STAND,
-  pose?: { stand: readonly string[]; at: readonly [number, number] },
+  pose?: { stand: readonly string[]; at: readonly [number, number]; id?: string },
 ): (string | null)[][] {
   const cache = new Map<string, string[]>();
   const tones = (base: string) => {
@@ -138,7 +143,7 @@ export function paintMini(
   };
   const skinT = tones(c.skin),
     hairT = tones(c.hair),
-    shortT = tones(sp.kit.shorts),
+    shortT = tones(c.shorts),
     sockT = tones(c.sock),
     bootT = tones(c.boot);
   const H = src.length,
@@ -315,6 +320,8 @@ export function paintMini(
     }
     for (const p of points) put(p.x, p.y, c.wrist);
   }
+  // Gloves cover wristbands; the selected band returns when gloves are removed.
+  paintEquipment(px, src, c, body, pose);
   if (sp.acc.includes('armband') && body.arm) rect(body.arm[0], body.arm[1], 4, 2, '#f0b437');
   if (body.crest && !c.suit && sp.club.id) {
     const crest = crestOf(sp.club);

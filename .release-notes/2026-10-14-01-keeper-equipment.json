@@ -1,0 +1,26 @@
+{
+  "id": "t-11-243-keeper-equipment",
+  "title": "키퍼 용품 꾸미기",
+  "items": [
+    "선수 꾸미기에 키퍼 장갑 5색, 긴팔 키퍼 유니폼 4색, 무릎 보호대 3색이 추가됐어요",
+    "장갑과 보호대는 벗을 수 있고, 유니폼은 구단 유니폼으로 되돌릴 수 있어요",
+    "경기 능력치나 기록에는 영향을 주지 않아요"
+  ],
+  "en": {
+    "title": "Goalkeeper equipment",
+    "items": [
+      "Player customization now includes gloves in 5 colors, long-sleeve goalkeeper kits in 4 colors, and knee pads in 3 colors.",
+      "You can remove gloves and knee pads or switch back to your club kit.",
+      "These choices do not affect attributes or records."
+    ]
+  },
+  "ja": {
+    "title": "キーパー用品のカスタマイズ",
+    "items": [
+      "選手カスタマイズにグローブ5色、長袖キーパーユニフォーム4色、膝パッド3色が追加されました。",
+      "グローブと膝パッドは外せて、クラブのユニフォームにも戻せます。",
+      "能力値や記録には影響しません。"
+    ]
+  },
+  "availability": "web-app"
+}
