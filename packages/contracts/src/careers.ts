@@ -647,7 +647,7 @@ export const RetiredNumbersResponseSchema = z.strictObject({
   items: z.array(RetiredNumberItemSchema),
   /** T-11-101 최신순 페이지(`?before=`)일 때만 — 다음 페이지의 before(더 없으면 null). */
   next: z.number().int().nullable().optional(),
-  /** T-11-234 구단(`?club=`)일 때만 — 그 구단 명예의 벽 전부(먼저 오른 선수 먼저). 시즌 요약은 상한이 있어 구단 몫이 잘린다. */
+  /** T-11-234 구단(`?club=`)일 때만 — 그 구단 명예의 벽(T-11-235 최근에 오른 선수 먼저, 상한 1000). 시즌 요약은 상한이 있어 구단 몫이 잘린다. */
   wall: z.array(WallOfHonorItemSchema).optional(),
 });
 export type RetiredNumbersResponse = z.infer<typeof RetiredNumbersResponseSchema>;
