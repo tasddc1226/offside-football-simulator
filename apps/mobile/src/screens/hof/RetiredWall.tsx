@@ -489,7 +489,7 @@ function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> })
           <SectionTitle
             right={
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <CountPill c={c} count={summary.wall.length} />
+                <CountPill c={c} count={summary.wallTotal ?? summary.wall.length} />
                 <Press
                   testID="rn-wall-toggle"
                   scale={1}
@@ -556,12 +556,13 @@ function ClubScreen({
     let live = true;
     void track(getRetiredNumbersOfClub(season, clubId)).then((r) => {
       if (!live) return;
-      if (r.ok) setItems(r.data.items);
-      else setFailed(true);
-    });
-    // T-11-121 이 구단 명예의 벽 — 요약(60초 메모라 첫 화면에서 받은 것을 그대로 쓴다)에서 그 구단 몫만.
-    void track(getRetiredNumbersSummary(season)).then((r) => {
-      if (live) setWall(r.ok ? (r.data.wall ?? []).filter((w) => w.clubId === clubId) : []);
+      if (!r.ok) return setFailed(true);
+      setItems(r.data.items);
+      // T-11-234 이 구단 명예의 벽은 구단 응답에서(요약은 최근 몇백 명까지라 잘린다). 옛 캐시 응답이면 요약에서 고른다.
+      if (r.data.wall) return setWall(r.data.wall);
+      void track(getRetiredNumbersSummary(season)).then((s) => {
+        if (live) setWall(s.ok ? (s.data.wall ?? []).filter((w) => w.clubId === clubId) : []);
+      });
     });
     return () => {
       live = false;

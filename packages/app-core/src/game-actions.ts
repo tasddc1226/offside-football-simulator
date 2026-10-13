@@ -808,7 +808,10 @@ export function createGameActions(host: GameHost) {
     host.analytics.start(appState.G!, previous);
     appState.tab = 'season';
     appState.candidates = null;
-    saveKey(SCOUT_KEEP, null);
+    // T-11-234 킵한 후보로 시작했을 때만 킵을 푼다. 다른 후보로 시작하면 다음 커리어 후보에도 그대로 남는다.
+    const k = loadKey<KeptCandidate>(SCOUT_KEEP);
+    if (k && presetAttrs && JSON.stringify(k.cand.attrs) === JSON.stringify(presetAttrs))
+      saveKey(SCOUT_KEEP, null);
     appState.report = null;
     host.scrollTop(false);
     host.toast(L.careerStartToast);

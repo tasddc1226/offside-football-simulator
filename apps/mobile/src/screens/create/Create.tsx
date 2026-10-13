@@ -79,6 +79,7 @@ import { useFormKeyboardScroll } from '../../ui/useFormKeyboardScroll';
 import { MiniRadar } from './MiniRadar';
 import { NationPicker } from './NationPicker';
 import { ScoutScan } from './ScoutScan';
+import { PositionGuide } from '../game/PositionGuide';
 import { BodyInput, Field, Seg, SegCell, mixHex, useInputStyle } from './parts';
 import { tn } from '@offside/game/i18n/names';
 
@@ -671,6 +672,8 @@ export default function Create() {
               {CG.candidateNote}
             </Txt>
             {ovrGuide}
+            {/* T-11-234 유형별 주력 능력치를 생성 중에도 본다(시즌 탭과 같은 안내). */}
+            <PositionGuide pos={C.pos} />
             <Field label={L.footLabel}>
               <Seg>
                 {feet.map((f) => (
@@ -1109,6 +1112,9 @@ export default function Create() {
                   </Txt>
                 </View>
               ) : null}
+            </Card>
+            <Card gap={0} style={{ paddingVertical: 0 }}>
+              <PositionGuide pos={C.pos} />
             </Card>
           </>
         ) : null}

@@ -202,11 +202,12 @@ describe('candidate reveal and retirement minimum', () => {
     actions.startCareer('test', 7, c.attrs, c.potential);
     expect(state.G!.pot + state.G!.bloom).toBe(c.potential.value);
   });
-  it('T-11-225 keeps one candidate in place across rerolls and drops it on start or another position', () => {
+  it('T-11-225 keeps one candidate in place across rerolls and other careers, dropping it once started', () => {
     vi.setSystemTime(new Date(OPEN));
     const { state, actions } = harness();
     actions.rollCandidates();
     const kept = state.candidates![1]!;
+    const keptPos = state.C.pos;
     actions.keepCandidate(1);
     actions.keepCandidate(2); // 한 명만 — 2번을 킵하면 1번은 풀린다.
     expect(state.candidates!.map((c) => !!c.kept)).toEqual([false, false, true]);
@@ -225,8 +226,15 @@ describe('candidate reveal and retirement minimum', () => {
     state.C.pos = state.C.pos === 'FW' ? 'DF' : 'FW';
     actions.rollCandidates();
     expect(state.candidates!.some((c) => c.kept)).toBe(false);
-    actions.startCareer('test', 7);
-    state.C.pos = state.G!.pos;
+    // T-11-234 다른 후보로 커리어를 시작해도 킵은 남아 다음 커리어 후보에 다시 들어간다.
+    const other = state.candidates![0]!;
+    actions.startCareer('test', 7, other.attrs, other.potential);
+    state.C.pos = keptPos;
+    actions.rollCandidates();
+    expect(state.candidates![1]!.attrs).toEqual(kept.attrs);
+    // 킵한 후보로 시작하면 풀린다.
+    const mine = state.candidates![1]!;
+    actions.startCareer('test', 7, mine.attrs, mine.potential);
     actions.rollCandidates();
     expect(state.candidates!.some((c) => c.kept)).toBe(false);
   });

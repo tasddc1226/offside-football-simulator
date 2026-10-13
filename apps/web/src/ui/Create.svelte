@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PositionGuide from './PositionGuide.svelte';
   import { careerGuideText as CG } from '@offside/app-core/i18n/ko/careerGuide';
   import { tn } from '@offside/game/i18n/names';
   // 선수 생성(T-10-022): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
@@ -307,6 +308,8 @@
       {/if}
 
       {@render ovrGuide()}
+      <!-- T-11-234 타깃맨·골 사냥꾼 같은 유형별 주력 능력치를 생성 중에도 본다(커리어 시작 뒤 시즌 탭과 같은 안내). -->
+      <PositionGuide pos={C.pos} />
 
       <div class="field">
         <span class="lbl">{L.footLabel}</span>
@@ -430,6 +433,7 @@
       {@render ovrGuide(false)}
       <p class="muted fs-sm">{L.ovrCore}</p>
     </details>
+    <div class="card position-guide-box"><PositionGuide pos={C.pos} /></div>
     <p class="muted fs-sm" data-candidate-stats-note>{CG.candidateNote}</p>
 
     <div class="action-bar at-bottom">
@@ -445,7 +449,8 @@
 {#if scouting}<ScoutScan pos={C.pos} steps={scoutSteps} onDone={scouted} />{/if}
 
 <style>
-.ovr-guide-box { padding-block: 0; }
+.ovr-guide-box, .position-guide-box { padding-block: 0; }
+.position-guide-box :global(.position-guide) { border-top: 0; }
 .ovr-guide-box .ovr-guide { margin-top: 0; }
 .ovr-guide { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 12px 0; font-size: .8125rem; line-height: 1.5; }
 .ovr-guide p { margin: 4px 0 0; overflow-wrap: anywhere; }

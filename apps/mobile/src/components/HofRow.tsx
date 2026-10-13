@@ -49,6 +49,8 @@ export interface HofRowProps {
   clubId?: string | null | undefined;
   /** T-10-076 영구결번 등번호. */
   rn?: number | null | undefined;
+  /** T-11-234 명예의 벽 등번호(영구결번이 없을 때만 칩으로). */
+  wall?: number | null | undefined;
   /** T-10-096 국적 코드 — 없는 예전 커리어는 대한민국으로 표시한다. */
   nation?: string | null | undefined;
   /** 국적을 모르는 옛 로컬 기록에는 국기를 표시하지 않는다. */
@@ -264,6 +266,7 @@ export function HofRow({
   club = null,
   clubId = null,
   rn = null,
+  wall = null,
   nation = null,
   showNation = true,
   flow = false,
@@ -363,6 +366,26 @@ export function HofRow({
               >
                 <Txt style={{ fontSize: rem(0.75), fontWeight: '700', color: c.muted }}>
                   {L.rnChip({ number: rn })}
+                </Txt>
+              </View>
+            ) : null}
+            {rn == null && wall != null ? (
+              <View
+                accessibilityLabel={L.wallChipTitle({ number: wall })}
+                testID="wall-chip"
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  borderRadius: 999,
+                  paddingVertical: 2,
+                  paddingHorizontal: 9,
+                  backgroundColor: c.surface2,
+                  borderWidth: 1,
+                  borderColor: c.accent,
+                }}
+              >
+                <Txt style={{ fontSize: rem(0.75), fontWeight: '700', color: c.muted }}>
+                  {L.wallChip({ number: wall })}
                 </Txt>
               </View>
             ) : null}

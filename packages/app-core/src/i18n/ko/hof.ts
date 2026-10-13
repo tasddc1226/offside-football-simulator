@@ -86,6 +86,9 @@ const ko = {
     `${p.rank}위 ${p.name}, ${p.country}${p.pos ? `, ${p.pos}` : ''}, ${p.value}${p.unit}${p.mine ? ', 내 선수' : ''}`,
   rnChipTitle: (p: { number: number }) => `영구결번 ${p.number}번`,
   rnChip: (p: { number: number }) => `👑 영결 ${p.number}`,
+  // T-11-234 명예의 벽(영구결번 자리가 이미 찬 구단에서 받은 칭호)도 이름 옆에 번호와 함께.
+  wallChipTitle: (p: { number: number }) => `명예의 벽 ${p.number}번`,
+  wallChip: (p: { number: number }) => `🏅 명예의 벽 ${p.number}`,
   rowStats: (p: {
     apps: number;
     goals: number;
