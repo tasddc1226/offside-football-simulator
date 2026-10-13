@@ -50,7 +50,7 @@ export async function judgeRetirement(
     }
     // T-11-121 명예의 벽은 그 시즌 요약에도 실린다 — 막 받았거나 이름 공개를 바꿨을 수 있다.
     if (result?.kind === 'taken' && result.wallOfHonor && season !== undefined) {
-      purgeEdge(c, STALE.wallOfHonorChanged(season, careerId));
+      purgeEdge(c, STALE.wallOfHonorChanged(season, careerId, result.clubId));
     }
     if (claimed) {
       publishRetiredNumber(c, claimed);

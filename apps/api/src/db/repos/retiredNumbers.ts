@@ -383,7 +383,7 @@ export async function listRetiredNumbers(
   season: number,
   clubId?: string,
 ): Promise<RetiredNumbersResponse> {
-  const items = await itemsOf(db)
+  const items = itemsOf(db)
     .where(
       and(
         eq(retiredNumbers.season, season),
@@ -391,7 +391,15 @@ export async function listRetiredNumbers(
       ),
     )
     .orderBy(clubId === undefined ? retiredNumbers.seq : retiredNumbers.number);
-  return { season, items };
+  if (clubId === undefined) return { season, items: await items };
+  // T-11-234 구단 화면의 명예의 벽은 그 구단 몫을 따로 다 싣는다(시즌 요약은 상한에서 잘린다).
+  const [rows, wall] = await db.batch([
+    items,
+    wallOf(db, season, clubId).orderBy(
+      sql`json_extract(${careers.wallOfHonorJson}, '$.grantedAt')`,
+    ),
+  ]);
+  return { season, items: rows, wall: wall.map(wallItem) };
 }
 
 /** T-11-101 최신순 한 페이지 — before(0이면 처음)보다 앞선 결번 RETIRED_PAGE개. next는 다음 페이지의 before. */
@@ -415,8 +423,45 @@ export async function pageRetiredNumbers(
 
 /** 벽 첫 화면에 보이는 최근 결번 수. */
 const RECENT_ON_SUMMARY = 8;
-/** T-11-121 요약에 싣는 명예의 벽 상한(한 시즌에 몇 명뿐이라 다 싣는다 — 응답이 끝없이 커지지만 않게). */
+/** T-11-121 요약에 싣는 명예의 벽 상한 — T-11-234 시즌 1에 900명을 넘어 최근 순으로 이만큼만 싣는다(구단 화면은 구단 응답). */
 const WALL_ON_SUMMARY = 200;
+/** 구단 한 곳의 명예의 벽 상한(응답이 끝없이 커지지만 않게). */
+const WALL_ON_CLUB = 300;
+
+/** 그 시즌(clubId를 주면 그 구단) 명예의 벽 선수. 저장된 칭호 JSON의 구단으로 고른다. */
+const wallOf = (db: Db, season: number, clubId?: string) =>
+  db
+    .select({
+      careerId: careers.id,
+      name: careers.publicName,
+      pos: careers.pos,
+      dpos: sql<DetailPos | null>`${careers.dpos}`,
+      json: careers.wallOfHonorJson,
+    })
+    .from(careers)
+    .where(
+      and(
+        isPublicRetired,
+        isNotNull(careers.wallOfHonorJson),
+        sql`coalesce(${careers.serviceSeason}, 0) = ${season}`,
+        clubId === undefined
+          ? undefined
+          : sql`json_extract(${careers.wallOfHonorJson}, '$.clubId') = ${clubId}`,
+      ),
+    )
+    .limit(clubId === undefined ? WALL_ON_SUMMARY : WALL_ON_CLUB)
+    .$dynamic();
+
+const wallItem = ({
+  json,
+  ...r
+}: { json: string | null } & Omit<
+  WallOfHonorItem,
+  'clubId' | 'club' | 'number' | 'grantedAt'
+>): WallOfHonorItem => {
+  const { clubId, club, number, grantedAt } = parseWall(json!);
+  return { ...r, clubId, club, number, grantedAt };
+};
 
 /** T-11-101 벽 첫 화면 — 구단별 결번 수(많은 구단 먼저, 같으면 먼저 결번을 낸 구단)와 최근 결번 몇 개. */
 export async function summarizeRetiredNumbers(
@@ -424,7 +469,7 @@ export async function summarizeRetiredNumbers(
   season: number,
 ): Promise<RetiredNumbersSummary> {
   const count = sql<number>`count(*)`;
-  const [clubs, items, wall] = await db.batch([
+  const [clubs, items, wall, [wallCount]] = await db.batch([
     db
       .select({
         clubId: retiredNumbers.clubId,
@@ -439,14 +484,9 @@ export async function summarizeRetiredNumbers(
       .where(eq(retiredNumbers.season, season))
       .orderBy(desc(retiredNumbers.seq))
       .limit(RECENT_ON_SUMMARY),
+    wallOf(db, season).orderBy(sql`json_extract(${careers.wallOfHonorJson}, '$.grantedAt') desc`),
     db
-      .select({
-        careerId: careers.id,
-        name: careers.publicName,
-        pos: careers.pos,
-        dpos: sql<DetailPos | null>`${careers.dpos}`,
-        json: careers.wallOfHonorJson,
-      })
+      .select({ count })
       .from(careers)
       .where(
         and(
@@ -454,19 +494,15 @@ export async function summarizeRetiredNumbers(
           isNotNull(careers.wallOfHonorJson),
           sql`coalesce(${careers.serviceSeason}, 0) = ${season}`,
         ),
-      )
-      .orderBy(sql`json_extract(${careers.wallOfHonorJson}, '$.grantedAt')`)
-      .limit(WALL_ON_SUMMARY),
+      ),
   ]);
   return {
     season,
     total: clubs.reduce((n, c) => n + c.count, 0),
     clubs,
     recent: items,
-    wall: wall.map(({ json, ...r }) => {
-      const { clubId, club, number, grantedAt } = parseWall(json!);
-      return { ...r, clubId, club, number, grantedAt };
-    }),
+    wall: wall.map(wallItem),
+    wallTotal: wallCount?.count ?? wall.length,
   };
 }
 

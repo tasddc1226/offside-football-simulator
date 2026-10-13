@@ -41,6 +41,7 @@ type MineRow = {
   club: string;
   clubId?: string | null | undefined;
   rn?: number | null | undefined;
+  wall?: number | null | undefined;
   tag: string | null;
   stats: RowStats;
   title: string | null;
@@ -59,6 +60,7 @@ const localRow = (h: HofEntry, i: number, pending: ReadonlySet<string>, now: str
   club: h.lastClub,
   clubId: h.lastClubId,
   rn: h.rn?.kind === 'granted' ? h.rn.number : null,
+  wall: h.rn?.kind === 'taken' && h.rn.wallOfHonor ? h.rn.number : null,
   tag: h.public ? L.tagPublic : null,
   stats: h,
   title: h.title ?? null,
@@ -75,6 +77,7 @@ const serverRow = (e: PublicHofEntry): MineRow => ({
   club: e.lastClub,
   clubId: e.lastClubId,
   rn: e.retiredNumber?.number,
+  wall: e.wallOfHonor ? e.number : null,
   tag: e.name ? L.tagPublic : null,
   stats: { ...e, score: e.legendScore },
   title: e.title ?? null,
@@ -236,6 +239,7 @@ export function MyPlayers() {
                       club={r.club}
                       clubId={r.clubId}
                       rn={r.rn}
+                      wall={r.wall}
                       tag={r.tag}
                       t={r.stats}
                       titleId={r.title}

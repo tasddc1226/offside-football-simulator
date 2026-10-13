@@ -64,6 +64,8 @@ export const hof: Translation<HofMsgs> = {
     `${ordinal(p.rank)}, ${p.name}, ${p.country}${p.pos ? `, ${p.pos}` : ''}, ${p.value}${p.unit}${p.mine ? ', your player' : ''}`,
   rnChipTitle: (p) => `Retired No. ${p.number}`,
   rnChip: (p) => `👑 Retired ${p.number}`,
+  wallChipTitle: (p) => `Wall of Honour No. ${p.number}`,
+  wallChip: (p) => `🏅 Wall of Honour ${p.number}`,
   rowStats: (p) =>
     `${plural(p.apps, 'app')} ${plural(p.goals, 'goal')} ${plural(p.assists, 'assist')} · trophies ${p.trophies} · peak OVR ${p.peak}${p.ballon ? ` · Ballon d’Or ×${p.ballon}` : ''}${p.score != null ? ` · Legend ${p.score}` : ''}`,
   appsN: (p) => `${p.n} ${p.n === '1' ? 'app' : 'apps'}`,

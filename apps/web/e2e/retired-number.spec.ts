@@ -328,6 +328,8 @@ test('기록실 영구결번 탭: 리그별 구단·최신순으로 보고, 누�
               }),
             ),
           ],
+          // T-11-234 요약은 최근 몇백 명까지만 — 전체 수는 따로 온다.
+          wallTotal: 5,
         }),
       );
     const club = url.searchParams.get('club');
@@ -336,6 +338,15 @@ test('기록실 영구결번 탭: 리그별 구단·최신순으로 보고, 누�
         ok({
           season: 0,
           items: items.filter((it) => it.clubId === club).sort((a, b) => a.number - b.number),
+          // T-11-234 구단 명예의 벽은 구단 응답에서 — 요약에 없던 선수도 보인다.
+          wall:
+            club === 'pl-0'
+              ? [199, 198].map((n) =>
+                  (({ seq: _seq, ...w }) => w)(
+                    item(n, { careerId: `0d000000-0000-4000-8000-000000000${n}`, number: 7 }),
+                  ),
+                )
+              : [],
         }),
       );
     return r.fulfill(ok({ season: 0, items: [...items].reverse(), next: null }));
@@ -391,6 +402,7 @@ test('기록실 영구결번 탭: 리그별 구단·최신순으로 보고, 누�
   await wallToggle.click();
   await expect(wallToggle).toHaveAttribute('aria-expanded', 'true');
   await expect(wall.locator('[data-rn-wall-of-honor]')).toHaveCount(1);
+  await expect(wall.locator('[data-rn-wall-section] .rn-club-count')).toHaveText('5');
   await wallToggle.click();
   await expect(wall.locator('[data-rn-wall-of-honor]')).toHaveCount(0);
   const axe = await new AxeBuilder({ page }).include('[data-rn-wall]').analyze();
@@ -407,6 +419,8 @@ test('기록실 영구결번 탭: 리그별 구단·최신순으로 보고, 누�
     /10\s*옛레전드.*내 선수/s,
   ]);
   expect(asked.at(-1)).toBe('/v1/retired-numbers?season=0&club=pl-0');
+  await expect(wall.locator('[data-rn-club-wall]')).toBeVisible();
+  await expect(wall.locator('[data-rn-wall-of-honor]')).toHaveCount(2);
   await wall.locator('[data-rn-pos="DF"]').click();
   await expect(wall.locator('[data-rn-tile]')).toHaveCount(1);
   await wall.locator('[data-rn-back]').click();

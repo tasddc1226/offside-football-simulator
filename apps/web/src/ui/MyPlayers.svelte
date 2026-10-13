@@ -21,7 +21,7 @@
   import { ownerPlayersText as L } from '@offside/app-core/i18n/ko/ownerPlayers';
   import { seasonLabel } from '@offside/app-core/seasonName';
 
-  type MineRow = { nation?: string | undefined; key: string; name: string; pos: keyof typeof POS; dpos?: DetailPos | null | undefined; club: string; clubId?: string | null | undefined; rn?: number | null | undefined; tag: string | null; stats: RowStats; title: string | null; season: number; /** T-11-109 비로그인 구단 가치용 카드 기준가(이 기기 기록만). */ value?: number; open: () => void };
+  type MineRow = { nation?: string | undefined; key: string; name: string; pos: keyof typeof POS; dpos?: DetailPos | null | undefined; club: string; clubId?: string | null | undefined; rn?: number | null | undefined; wall?: number | null | undefined; tag: string | null; stats: RowStats; title: string | null; season: number; /** T-11-109 비로그인 구단 가치용 카드 기준가(이 기기 기록만). */ value?: number; open: () => void };
 
 
   const local = loadHOF();
@@ -37,6 +37,7 @@
     club: h.lastClub,
     clubId: h.lastClubId,
     rn: h.rn?.kind === 'granted' ? h.rn.number : null,
+    wall: h.rn?.kind === 'taken' && h.rn.wallOfHonor ? h.rn.number : null,
     tag: h.public ? L.tagPublic : null,
     stats: h,
     title: h.title ?? null,
@@ -53,6 +54,7 @@
     club: e.lastClub,
     clubId: e.lastClubId,
     rn: e.retiredNumber?.number,
+    wall: e.wallOfHonor ? e.number : null,
     tag: e.name ? L.tagPublic : null,
     stats: { ...e, score: e.legendScore },
     title: e.title ?? null,
@@ -142,7 +144,7 @@
     {:else}
     {#each shown as r, i (r.key)}
       <button class="hof-row" data-my-player={i} onclick={r.open}>
-        <HofRow nation={r.nation} showNation={r.nation !== undefined} rank={i} name={r.name} pos={r.pos} dpos={r.dpos} club={r.club} clubId={r.clubId} rn={r.rn} tag={r.tag} t={r.stats} titleId={r.title} />
+        <HofRow nation={r.nation} showNation={r.nation !== undefined} rank={i} name={r.name} pos={r.pos} dpos={r.dpos} club={r.club} clubId={r.clubId} rn={r.rn} wall={r.wall} tag={r.tag} t={r.stats} titleId={r.title} />
       </button>
     {:else}
       <p class="empty">{emptySeasonText(season, seasons.length > 1 ? rows.length : 0)}</p>
