@@ -1,5 +1,8 @@
 // T-11-191 미니형 선수(2026-10-12 사용자 승인 시안). 생성 이미지를 48×64 재질 글자 지도로 옮긴 것이다(원본·생성 기록은 docs/assets/mini-character-v1).
+import { EXTRA_MINI_SPRITES } from './avatar-mini-hair-data.js';
+
 export const MINI_SPRITES = {
+  ...EXTRA_MINI_SPRITES,
   short: [
     '................................................',
     '................................................',

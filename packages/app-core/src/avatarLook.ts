@@ -62,6 +62,12 @@ const STYLE_LABEL = () => [
   L.styleAfro,
   L.styleBun,
   L.styleSpiky,
+  L.styleBald,
+  L.styleShaved,
+  L.styleDread,
+  L.styleFauxhawk,
+  L.stylePonytail,
+  L.styleMullet,
 ];
 const BEARD_LABEL = () => [L.none, L.beardStubble, L.beardFull];
 const EXPR_LABEL = () => [L.exprBase, L.exprHappy, L.exprWink];

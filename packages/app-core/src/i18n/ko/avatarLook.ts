@@ -42,6 +42,12 @@ const ko = {
   styleAfro: '아프로',
   styleBun: '묶은 머리',
   styleSpiky: '삐죽 머리',
+  styleBald: '완전 민머리',
+  styleShaved: '삭발',
+  styleDread: '드레드',
+  styleFauxhawk: '스파이크 모히칸',
+  stylePonytail: '포니테일',
+  styleMullet: '투톤 꽁지머리',
   socksTeam: '구단 양말',
 };
 

@@ -40,5 +40,11 @@ export const avatarLook: Translation<AvatarLookMsgs> = {
   styleAfro: 'アフロ',
   styleBun: 'お団子',
   styleSpiky: 'ツンツン',
+  styleBald: 'スキンヘッド',
+  styleShaved: '深剃り',
+  styleDread: 'ドレッド',
+  styleFauxhawk: 'スパイクモヒカン',
+  stylePonytail: 'ポニーテール',
+  styleMullet: 'ツートン襟足ヘア',
   socksTeam: 'クラブのソックス',
 };

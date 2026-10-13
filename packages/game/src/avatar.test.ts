@@ -87,7 +87,7 @@ describe('도트 아바타 (T-11-120)', () => {
 });
 
 describe('미니형 도트 선수 (T-11-191)', () => {
-  it('머리 모양 9종 그림이 48×64이고, 모든 피부 · 머리색으로 칠해진다', () => {
+  it('모든 머리 모양 그림이 48×64이고, 모든 피부 · 머리색으로 칠해진다', () => {
     const base = avatarSpec(player());
     for (const hairStyle of LOOK_STYLES) {
       const rows = MINI_SPRITES[hairStyle];
@@ -147,7 +147,7 @@ describe('도트 선수 모션 (T-11-191)', () => {
     ).toEqual(still.slice(0, -3));
   });
 
-  it('머리 모양 9종 자세 그림이 모두 있고, 꾸미기(축구화)가 움직이는 자세에도 칠해진다', async () => {
+  it('모든 머리 모양 자세 그림이 모두 있고, 꾸미기(축구화)가 움직이는 자세에도 칠해진다', async () => {
     for (const hairStyle of LOOK_STYLES) {
       const poses = await loadMotionPoses(hairStyle);
       for (const k of MINI_POSES) {

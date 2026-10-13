@@ -17,6 +17,12 @@ export const LOOK_STYLES = [
   'afro',
   'bun',
   'spiky',
+  'bald',
+  'shaved',
+  'dread',
+  'fauxhawk',
+  'ponytail',
+  'mullet',
 ] as const;
 /** 수염 — 0 없음, 1 짧은 수염, 2 덥수룩한 수염. */
 export const LOOK_BEARDS = [null, 'stubble', 'full'] as const;
