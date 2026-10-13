@@ -2,7 +2,7 @@
 // '동작 줄이기'면 가운데에 서 있기만 한다. 장식이라 화면 읽기에서는 숨긴다.
 import { useEffect, useMemo, useState } from 'react';
 import { Animated, Easing, View } from 'react-native';
-import Svg, { Rect } from 'react-native-svg';
+import Svg, { Rect, Path, Circle } from 'react-native-svg';
 import { avatarRects, type AvatarSpec } from '@offside/game/avatar';
 import {
   loadMotionPoses,
@@ -13,7 +13,13 @@ import {
   type MiniPoses,
   type MotionId,
 } from '@offside/game/avatar-motion';
-import { firstBeat, nextBeat, type StageBeat } from '@offside/app-core/avatarStage';
+import {
+  firstBeat,
+  nextBeat,
+  fieldBeat,
+  fieldGeometry,
+  type StageBeat,
+} from '@offside/app-core/avatarStage';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 
@@ -21,11 +27,23 @@ const SCALE = 2;
 const W = MOTION_W * SCALE;
 const H = MOTION_H * SCALE;
 
-export function AvatarStage({ spec }: { spec: AvatarSpec }) {
+export function AvatarStage({
+  spec,
+  immersive = false,
+  active = true,
+}: {
+  spec: AvatarSpec;
+  immersive?: boolean;
+  active?: boolean;
+}) {
   const c = useColors();
   const still =
-    !prefs.motionOK || spec.acc.some((a) => a === 'crutch' || a === 'suit' || a === 'bouquet');
+    !active ||
+    !prefs.motionOK ||
+    spec.acc.some((a) => a === 'crutch' || a === 'suit' || a === 'bouquet');
   const [stageW, setStageW] = useState(0);
+  const [stageH, setStageH] = useState(0);
+  const [y] = useState(() => new Animated.Value(0.66));
   const [beat, setBeat] = useState<StageBeat>(firstBeat);
   const [frame, setFrame] = useState(0);
   const [x] = useState(() => new Animated.Value(0.5));
@@ -52,21 +70,29 @@ export function AvatarStage({ spec }: { spec: AvatarSpec }) {
   };
 
   useEffect(() => {
-    setBeat(firstBeat());
+    setBeat(immersive ? fieldBeat() : firstBeat());
     setFrame(0);
-    x.setValue(0.5);
+    x.setValue(immersive && !still ? 0.32 : 0.5);
+    y.setValue(0.66);
     if (still) return;
-    let b = firstBeat();
+    let b = immersive ? fieldBeat() : firstBeat();
     let f = 0;
     let end = Date.now() + b.ms;
     let t: ReturnType<typeof setTimeout>;
     const tick = () => {
       const now = Date.now();
       if (now >= end) {
-        b = nextBeat(b);
+        b = immersive ? fieldBeat((b.step ?? 0) + 1) : nextBeat(b);
         f = 0;
         end = now + b.ms;
         setBeat(b);
+        if (immersive)
+          Animated.timing(y, {
+            toValue: b.y ?? 0.66,
+            duration: b.ms,
+            easing: Easing.linear,
+            useNativeDriver: true,
+          }).start();
         Animated.timing(x, {
           toValue: b.x,
           duration: b.ms,
@@ -77,32 +103,105 @@ export function AvatarStage({ spec }: { spec: AvatarSpec }) {
       setFrame(f);
       t = setTimeout(tick, MOTIONS[b.motion].frames[f]!.ms);
     };
-    t = setTimeout(tick, MOTIONS[b.motion].frames[0]!.ms);
+    t = setTimeout(tick, Math.min(b.ms, MOTIONS[b.motion].frames[0]!.ms));
     return () => {
       clearTimeout(t);
       x.stopAnimation();
+      y.stopAnimation();
     };
-  }, [still, x]);
+  }, [still, x, y, immersive]);
 
+  const pitch = fieldGeometry(stageW, stageH);
   const frames = rectsOf(still ? 'idle' : beat.motion);
   const rects = frames[frame] ?? frames[0]!;
   return (
     <View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      onLayout={(e) => setStageW(e.nativeEvent.layout.width)}
-      style={{ height: H, borderBottomWidth: 2, borderColor: c.line, overflow: 'hidden' }}
+      onLayout={(e) => {
+        setStageW(e.nativeEvent.layout.width);
+        setStageH(e.nativeEvent.layout.height);
+      }}
+      style={{
+        height: immersive ? '100%' : H,
+        minHeight: immersive ? 150 : H,
+        borderBottomWidth: immersive ? 0 : 2,
+        borderColor: c.line,
+        backgroundColor: immersive ? c.pitch : undefined,
+        overflow: 'hidden',
+      }}
     >
+      {immersive ? (
+        <Svg
+          width="100%"
+          height="100%"
+          viewBox={`0 0 ${pitch.w} ${pitch.h}`}
+          style={{ position: 'absolute' }}
+        >
+          <Rect
+            x={pitch.p}
+            y={pitch.p}
+            width={pitch.w - pitch.p * 2}
+            height={pitch.h - pitch.p * 2}
+            rx={2}
+            fill="none"
+            stroke={c.onPitch}
+            strokeOpacity={0.28}
+            strokeWidth={2}
+          />
+          <Path
+            d={pitch.halfway}
+            fill="none"
+            stroke={c.onPitch}
+            strokeOpacity={0.28}
+            strokeWidth={2}
+          />
+          <Circle
+            cx={pitch.w / 2}
+            cy={pitch.h / 2}
+            r={pitch.radius}
+            fill="none"
+            stroke={c.onPitch}
+            strokeOpacity={0.28}
+            strokeWidth={2}
+          />
+          {pitch.boxes.map((b, i) => (
+            <Rect
+              key={i}
+              x={b.x}
+              y={b.y}
+              width={b.w}
+              height={b.h}
+              fill="none"
+              stroke={c.onPitch}
+              strokeOpacity={0.28}
+              strokeWidth={2}
+            />
+          ))}
+        </Svg>
+      ) : null}
       {stageW ? (
         <Animated.View
           style={{
             position: 'absolute',
-            bottom: 0,
+            top: immersive ? 0 : undefined,
+            bottom: immersive ? undefined : 0,
             left: -W / 2,
             width: W,
             height: H,
             transform: [
               { translateX: x.interpolate({ inputRange: [0, 1], outputRange: [0, stageW] }) },
+              ...(immersive
+                ? [
+                    {
+                      translateY: y.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [-H * 0.75, stageH - H * 0.75],
+                      }),
+                    },
+                    { scale: 1.4 },
+                  ]
+                : []),
               { scaleX: beat.flip ? -1 : 1 },
             ],
           }}

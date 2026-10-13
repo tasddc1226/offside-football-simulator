@@ -165,7 +165,7 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
    * 경기를 한 번에 채워 최종 기록을 보여 주고 같은 확인 버튼을 띄운다.
    */
   function playBlock(
-    head: { eyebrow: string; title: string; back: boolean; matches: number },
+    head: { eyebrow: string; title: string; back: boolean; matches: number; avatar?: AvatarSpec },
     b: BlockResult,
     rows: TickerRow[],
     extras: string[],
@@ -228,6 +228,7 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
       };
       const v = showSheet<ViewOf<'block'>>({
         kind: 'block',
+        ...(head.avatar ? { avatar: head.avatar } : {}),
         eyebrow: head.eyebrow,
         title: head.title,
         back: head.back,

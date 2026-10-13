@@ -102,12 +102,13 @@ export type SheetView =
       progress: number;
       /** 진행률 막대가 다음 값까지 차오르는 시간(ms) — 한 단계 길이와 같게 둬 끊김 없이 찬다(T-10-123). */
       fill: number;
-      /** T-11-191 막대 위 무대에서 돌아다니는 내 도트 선수(프리시즌 준비). 없으면 무대를 그리지 않는다. */
+      /** 내 선수의 전체 화면 진행 연출. 없으면 일반 단계 시트. */
       avatar?: AvatarSpec;
     }
   | {
       /** T-10-028: 구간 경기를 한 경기씩 흘려보내는 중계 시트(T-10-024 전의 연출). 끝나면 리포트로 넘어간다. */
       kind: 'block';
+      avatar?: AvatarSpec;
       eyebrow: string;
       title: string;
       back: boolean;

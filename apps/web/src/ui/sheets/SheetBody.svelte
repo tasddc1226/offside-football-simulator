@@ -1,8 +1,6 @@
 <script lang="ts">
-  import Block from './Block.svelte';
   import Judge from './Judge.svelte';
   import Notice from './Notice.svelte';
-  import Steps from './Steps.svelte';
   import { gameSheets, isGameSheet, loadGameSheets } from './gameSheets.svelte.js';
   import type { SheetView } from '@offside/app-core/sheets';
 
@@ -15,8 +13,10 @@
   });
 </script>
 
-{#if v.kind === 'steps'}<Steps {v} />
-{:else if v.kind === 'block'}<Block {v} />
+{#if (v.kind === 'steps' || v.kind === 'block') && v.avatar}
+  {#await import('./ProgressScene.svelte')}<h2>{v.title}</h2>{:then { default: Scene }}<Scene {v} />{/await}
+{:else if v.kind === 'steps'}{#await import('./Steps.svelte') then { default: Steps }}<Steps {v} />{/await}
+{:else if v.kind === 'block'}{#await import('./Block.svelte') then { default: Block }}<Block {v} />{/await}
 {:else if v.kind === 'judge'}<Judge {v} />
 {:else if v.kind === 'achieve'}
   <!-- T-11-034 업적 달성 알림은 가끔 뜨는 시트라 엠블럼과 함께 첫 화면 번들 밖에서 불러온다. -->

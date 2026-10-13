@@ -89,7 +89,7 @@ for (const width of [320, 390]) {
     );
     await page.keyboard.press('Escape');
     await page.locator('[data-act="advance"]').click();
-    const stage = page.locator('.avatar-stage svg');
+    const stage = page.locator('.avatar-walker svg');
     await expect(stage).toHaveAttribute('viewBox', '0 0 32 36');
     await expect(stage.locator('rect').first()).toHaveAttribute('height', '0.5');
     const box = await stage.boundingBox();

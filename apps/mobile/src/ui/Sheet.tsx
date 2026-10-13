@@ -17,66 +17,36 @@ export function Sheet() {
   const { motionOK } = useSnapshot(prefs);
   const c = useColors();
   const insets = useSafeAreaInsets();
+  const fullscreen =
+    !!s.view && (s.view.kind === 'steps' || s.view.kind === 'block') && !!s.view.avatar;
   const dismissible = !s.busy && !G?.pending;
   const close = () => dismissible && dismissSheet();
   return (
     <Modal
       visible={s.open}
       transparent
-      animationType={motionOK ? 'slide' : 'none'}
+      animationType={motionOK && !fullscreen ? 'slide' : 'none'}
       statusBarTranslucent
       navigationBarTranslucent
       onShow={Keyboard.dismiss}
       onRequestClose={close}
     >
-      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-        <Pressable
-          accessibilityLabel={shellMoreText.close}
-          onPress={close}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: c.scrim,
-          }}
-        />
+      {fullscreen ? (
         <View
           accessibilityViewIsModal
           accessibilityLabel={s.view ? sheetLabel(s.view as SheetView) : undefined}
           style={{
+            flex: 1,
             backgroundColor: c.surface,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            maxHeight: '90%',
+            paddingTop: insets.top + 20,
+            paddingBottom: insets.bottom + 16,
+            gap: 14,
           }}
         >
-          <ScrollView
-            bounces={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{
-              paddingTop: 10,
-              paddingHorizontal: 18,
-              paddingBottom: 18 + insets.bottom,
-              gap: 14,
-            }}
-          >
-            <View
-              style={{
-                alignSelf: 'center',
-                width: 40,
-                height: 5,
-                borderRadius: 3,
-                backgroundColor: c.line,
-                marginBottom: 2,
-              }}
-            />
-            {/* 스냅숏이 아니라 원본 뷰를 넘긴다 — 본문(미니게임 등)이 뷰를 고치고, 읽을 때는 각자 useSnapshot으로 구독한다. */}
-            {s.view ? <SheetBody v={sheetState.view!} /> : null}
-            {s.buttons.map((b, i) => (
+          {s.view ? <SheetBody v={sheetState.view!} /> : null}
+          {s.buttons.map((b, i) => (
+            <View key={i} style={{ paddingHorizontal: 20 }}>
               <Btn
-                key={i}
                 block
                 cls={b.cls}
                 testID={`sheet-${i}`}
@@ -87,10 +57,73 @@ export function Sheet() {
               >
                 {b.label}
               </Btn>
-            ))}
-          </ScrollView>
+            </View>
+          ))}
         </View>
-      </View>
+      ) : (
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Pressable
+            accessibilityLabel={shellMoreText.close}
+            onPress={close}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: c.scrim,
+            }}
+          />
+          <View
+            accessibilityViewIsModal
+            accessibilityLabel={s.view ? sheetLabel(s.view as SheetView) : undefined}
+            style={{
+              backgroundColor: c.surface,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              maxHeight: '90%',
+            }}
+          >
+            <ScrollView
+              bounces={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{
+                paddingTop: 10,
+                paddingHorizontal: 18,
+                paddingBottom: 18 + insets.bottom,
+                gap: 14,
+              }}
+            >
+              <View
+                style={{
+                  alignSelf: 'center',
+                  width: 40,
+                  height: 5,
+                  borderRadius: 3,
+                  backgroundColor: c.line,
+                  marginBottom: 2,
+                }}
+              />
+              {/* 스냅숏이 아니라 원본 뷰를 넘긴다 — 본문(미니게임 등)이 뷰를 고치고, 읽을 때는 각자 useSnapshot으로 구독한다. */}
+              {s.view ? <SheetBody v={sheetState.view!} /> : null}
+              {s.buttons.map((b, i) => (
+                <Btn
+                  key={i}
+                  block
+                  cls={b.cls}
+                  testID={`sheet-${i}`}
+                  onPress={() => {
+                    buzz();
+                    sheetState.buttons[i]?.fn();
+                  }}
+                >
+                  {b.label}
+                </Btn>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      )}
     </Modal>
   );
 }

@@ -266,6 +266,7 @@ export function createGameActions(host: GameHost) {
             title: L.blockTitle({ range, n: b.n }),
             back,
             matches: leagueOf(s.leagueId).matches,
+            avatar: avatarSpec(s),
           },
           b,
           games,

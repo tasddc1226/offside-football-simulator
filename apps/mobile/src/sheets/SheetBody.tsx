@@ -14,8 +14,10 @@ import { Minigame } from './Minigame';
 import { Notice } from './Notice';
 import { SeasonResult } from './SeasonResult';
 import { Steps } from './Steps';
+import { ProgressScene } from './ProgressScene';
 
 export function SheetBody({ v }: { v: SheetView }) {
+  if ((v.kind === 'steps' || v.kind === 'block') && v.avatar) return <ProgressScene v={v} />;
   switch (v.kind) {
     case 'steps':
       return <Steps v={v} />;
