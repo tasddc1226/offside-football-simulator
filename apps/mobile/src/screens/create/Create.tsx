@@ -38,6 +38,7 @@ import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as CA } from '@offside/app-core/i18n/ko/cupApp';
 import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
 import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
+import { scoutPityView, type ScoutPity } from '@offside/contracts/cup';
 import { ScoutOdds } from '../owner/ScoutOdds';
 import { fundsText } from '@offside/app-core/funds';
 import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
@@ -49,6 +50,7 @@ import {
   rerollCandidates,
   keepCandidate,
   premiumScoutCandidates,
+  planPremiumScout,
   rollCandidates,
   startCareer,
   toast,
@@ -82,6 +84,9 @@ import { ScoutScan } from './ScoutScan';
 import { PositionGuide } from '../game/PositionGuide';
 import { BodyInput, Field, Seg, SegCell, mixHex, useInputStyle } from './parts';
 import { tn } from '@offside/game/i18n/names';
+
+// T-11-244 천장 카운트가 없는 구단주(아직 스카우트권을 쓴 적 없음).
+const NO_PITY: ScoutPity = { used: 0, streak: 0, elites: 0 };
 
 const posKeys = Object.keys(POS) as Pos[];
 const feet = ['오른발', '왼발', '양발'] as const; // 저장값(화면에는 L.foot으로)
@@ -218,6 +223,10 @@ export default function Create() {
   // T-11-196 프리미엄 스카우트권 — 가진 장수가 있으면 버튼, 없으면 구단주에게 상점(구단주 화면)으로 가는 안내. 잠금 · 멱등 키는 리롤과 함께 쓴다.
   const [scouts, setScouts] = useState(0);
   const scoutKey = useRef<string | null>(null);
+  // T-11-244 천장 카운트. 다시 보낼 때는 같은 시드 계획을 같은 멱등 키와 함께 쓴다.
+  const [pity, setPity] = useState<ScoutPity>(NO_PITY);
+  const scoutPlan = useRef<{ seed: number; hit: boolean } | null>(null);
+  const pityView = scoutPityView(pity);
   const premium = !!s.candidates?.some((x) => x.guaranteed);
   useEffect(() => {
     if (!hasCandidates) return;
@@ -227,6 +236,7 @@ export default function Create() {
       setOwner(r.ok);
       setRerolls(r.ok ? r.data.reroll : 0);
       setScouts(r.ok ? (r.data.scout ?? 0) : 0);
+      setPity(r.ok ? (r.data.pity ?? NO_PITY) : NO_PITY);
     });
     return () => {
       live = false;
@@ -313,17 +323,31 @@ export default function Create() {
     setRerolling(true);
     try {
       scoutKey.current ??= crypto.randomUUID();
-      const r = await spendScout(scoutKey.current);
-      if (r.ok || !r.error.retryable) scoutKey.current = null;
+      scoutPlan.current ??= planPremiumScout();
+      const plan = scoutPlan.current;
+      const r = await spendScout(scoutKey.current, plan.hit);
+      if (r.ok || !r.error.retryable) {
+        scoutKey.current = null;
+        scoutPlan.current = null;
+      }
       if (!r.ok) {
         if (r.error.reason === 'NO_SCOUT') setScouts(0);
         toast(r.error.message || SL.fail);
         return;
       }
       setScouts(r.data.scout);
-      premiumScoutCandidates();
+      if (r.data.pity) setPity(r.data.pity);
+      const mode = r.data.scoutMode ?? 'normal';
+      premiumScoutCandidates(plan.seed, mode);
       setRewardMessage('');
-      toast(SL.done({ n: r.data.scout }));
+      const n = r.data.scout;
+      toast(
+        mode === 'elite'
+          ? SL.doneElite({ n })
+          : mode === 'sure'
+            ? SL.doneSure({ n })
+            : SL.done({ n }),
+      );
     } finally {
       rerollLock.current = false;
       setRerolling(false);
@@ -808,7 +832,13 @@ export default function Create() {
                               {startOvr(C.pos, cand.attrs)}
                             </Txt>
                           </Txt>
-                          {cand.guaranteed ? <Pill>{SL.sure}</Pill> : null}
+                          {cand.pity ? (
+                            <Pill tone="good">
+                              {cand.pity === 'elite' ? SL.pillElite : SL.pillSure}
+                            </Pill>
+                          ) : cand.guaranteed ? (
+                            <Pill>{SL.sure}</Pill>
+                          ) : null}
                           {cand.kept ? <Pill>{L.kept}</Pill> : null}
                           {isPicked ? <Pill tone="good">{L.picked}</Pill> : null}
                         </View>
@@ -989,8 +1019,11 @@ export default function Create() {
                 >
                   {rerolling ? SL.busy : SL.btn({ n: scouts })}
                 </Btn>
+                <Txt v="sm" testID="candidate-scout-pity">
+                  {`${SL.pitySure({ n: pityView.sureIn })} · ${SL.pityElite({ n: pityView.eliteIn })}`}
+                </Txt>
                 <Txt v="sm" tone="muted">
-                  {SL.what}
+                  {`${SL.what} ${SL.pityHelp}`}
                 </Txt>
                 <ScoutOdds />
               </View>

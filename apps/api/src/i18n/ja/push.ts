@@ -1,4 +1,9 @@
-import { INVITE_REROLLS } from '@offside/contracts/owner-team';
+import { RETIRED_NUMBER_SCOUTS } from '@offside/contracts/cup';
+import { INVITE_REROLLS, INVITE_SCOUTS } from '@offside/contracts/owner-team';
+
+// T-11-244 전에 받은 친구 초대 알림 본문(리롤권 2장). 그때 저장된 알림을 계속 옮긴다(push/text.ts EN도 쓴다).
+export const OLD_INVITEE = '커리어를 끝까지 마쳐 선수 후보 리롤권 2장을 받았어요.';
+export const OLD_INVITER = '친구 초대 보상으로 선수 후보 리롤권 2장을 받았어요.';
 
 // T-11-140 서버가 만든 알림 문구의 일본어. 키는 push/text.ts의 한국어 문구와 같다.
 export const PUSH_JA: Record<string, string> = {
@@ -21,9 +26,15 @@ export const PUSH_JA: Record<string, string> = {
   '친선전 결과가 도착했어요': '親善試合の結果が届きました',
   '내 팀에 새 경기 결과가 있어요': '自分のチームに新しい試合結果があります',
   '친구 초대 보상을 받았어요': 'フレンド招待の報酬を受け取りました',
-  [`커리어를 끝까지 마쳐 선수 후보 리롤권 ${INVITE_REROLLS}장을 받았어요.`]: `キャリアを最後まで終えて候補リロール券を${INVITE_REROLLS}枚受け取りました。`,
+  [`커리어를 끝까지 마쳐 선수 후보 리롤권 ${INVITE_REROLLS}장과 프리미엄 스카우트권 ${INVITE_SCOUTS}장을 받았어요.`]: `キャリアを最後まで終えて候補リロール券を${INVITE_REROLLS}枚とプレミアムスカウト券を${INVITE_SCOUTS}枚受け取りました。`,
   '초대한 친구가 커리어를 마쳤어요': '招待したフレンドがキャリアを終えました',
-  [`친구 초대 보상으로 선수 후보 리롤권 ${INVITE_REROLLS}장을 받았어요.`]: `フレンド招待の報酬で候補リロール券を${INVITE_REROLLS}枚受け取りました。`,
+  [`친구 초대 보상으로 선수 후보 리롤권 ${INVITE_REROLLS}장과 프리미엄 스카우트권 ${INVITE_SCOUTS}장을 받았어요.`]: `フレンド招待の報酬で候補リロール券を${INVITE_REROLLS}枚とプレミアムスカウト券を${INVITE_SCOUTS}枚受け取りました。`,
+  '영구결번 보상을 받았어요': '永久欠番の報酬を受け取りました',
+  [`영구결번을 받아 프리미엄 스카우트권 ${RETIRED_NUMBER_SCOUTS}장을 받았어요.`]: `永久欠番になり、プレミアムスカウト券を${RETIRED_NUMBER_SCOUTS}枚受け取りました。`,
+  '커리어를 끝까지 마쳐 선수 후보 리롤권 2장을 받았어요.':
+    'キャリアを最後まで終えて候補リロール券を2枚受け取りました。',
+  '친구 초대 보상으로 선수 후보 리롤권 2장을 받았어요.':
+    'フレンド招待の報酬で候補リロール券を2枚受け取りました。',
 };
 
 /** 팀 이름이 끼는 경기 결과 본문의 안내 꼬리. 정규식은 push/text.ts와 같은 순서다. */

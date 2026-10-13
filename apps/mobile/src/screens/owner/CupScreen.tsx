@@ -21,9 +21,10 @@ import {
 import { kstMonthDayTime } from '@offside/app-core/boardText';
 import { cupBeforeDraw } from '@offside/app-core/cupHome';
 import { cupText as L } from '@offside/app-core/i18n/ko/cup';
+import { cupRewardText } from '@offside/app-core/cupReward';
 import { cupAppText as A } from '@offside/app-core/i18n/ko/cupApp';
 import { teamMatchText as TM } from '@offside/app-core/i18n/ko/teamMatch';
-import { CUP_REWARDS, CUP_STAGES, type CupRound } from '@offside/contracts/cup';
+import { CUP_STAGES, type CupRound } from '@offside/contracts/cup';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLogo } from '../../components/TeamLogo';
 import { refreshAccount } from '../../game/host';
@@ -732,11 +733,7 @@ function CupBody({
           </Txt>
         </View>
         {CUP_STAGES.map((s) => (
-          <Kv
-            key={s}
-            k={stageLabel(s)}
-            v={`${L.rewardReroll({ n: CUP_REWARDS[s].rerolls })}${CUP_REWARDS[s].trophy ? ` · ${L.rewardTrophy}` : ''}`}
-          />
+          <Kv key={s} k={stageLabel(s)} v={cupRewardText(state.cup?.cup.edition ?? 0, s)} />
         ))}
         <Txt v="xs" tone="muted">
           {L.rewardNote}

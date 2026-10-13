@@ -243,6 +243,20 @@ describe('T-11-196 프리미엄 스카우트', () => {
     }
   });
 
+  it('T-11-244 천장: sure면 보장 후보가 S, elite면 잠재력 최고치(96)이고 나머지 두 명은 프리미엄과 같다', () => {
+    for (let seed = 1; seed <= 300; seed++) {
+      const base = generateCandidates('FW', ['sho', 'pac'], 'ST', seed, 3, true);
+      for (const mode of ['sure', 'elite'] as const) {
+        const got = generateCandidates('FW', ['sho', 'pac'], 'ST', seed, 3, mode);
+        const i = got.findIndex((c) => c.guaranteed);
+        expect(i).toBe(base.findIndex((c) => c.guaranteed));
+        expect(got[i]!.pity).toBe(mode);
+        expect(got[i]!.potential.value).toBeGreaterThanOrEqual(mode === 'elite' ? 96 : 90);
+        got.forEach((c, j) => j !== i && expect(c).toEqual(base[j]));
+      }
+    }
+  });
+
   it('프리미엄이 아니면 후보가 그대로다(일반 경로 불변)', () => {
     const a = generateCandidates('MF', ['pas', 'dri'], 'CM', 42);
     const b = generateCandidates('MF', ['pas', 'dri'], 'CM', 42, 3, false);

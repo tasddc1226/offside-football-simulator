@@ -33,6 +33,9 @@ export function ScoutOdds() {
               </Txt>
             </View>
           ))}
+          <Txt tone="muted" style={small} testID="scout-odds-pity">
+            {L.oddsPity}
+          </Txt>
           <Txt tone="muted" style={small}>
             {L.oddsNote}
           </Txt>

@@ -88,9 +88,11 @@ export const FRIENDS_MAX = 50;
 export const FRIENDLY_MATCHES_PER_DAY = 10;
 
 // T-11-171 친구 초대 이벤트. 아직 은퇴 선수가 없는 구단주가 친구 코드(초대 링크)로 친구 신청을 하면 초대로 기록하고, 그
-// 구단주가 선수 커리어를 은퇴까지 마치면 두 사람 모두 리롤권을 받는다(초대한 쪽은 INVITE_REWARD_MAX명까지).
-/** 초대가 성공하면 두 사람이 각각 받는 리롤권 장수. */
-export const INVITE_REROLLS = 2;
+// 구단주가 선수 커리어를 은퇴까지 마치면 두 사람 모두 리롤권과 프리미엄 스카우트권을 받는다(초대한 쪽은 INVITE_REWARD_MAX명까지).
+/** 초대가 성공하면 두 사람이 각각 받는 리롤권 장수(T-11-244 2 → 3). */
+export const INVITE_REROLLS = 3;
+/** T-11-244 초대가 성공하면 두 사람이 각각 받는 프리미엄 스카우트권 장수. */
+export const INVITE_SCOUTS = 1;
 /** 초대한 사람이 리롤권을 받는 성공 초대 수 상한(그 뒤 성공은 초대받은 사람만 받는다). */
 export const INVITE_REWARD_MAX = 10;
 export {

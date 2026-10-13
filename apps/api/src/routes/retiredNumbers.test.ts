@@ -222,6 +222,26 @@ describe('영구결번 (T-10-076)', () => {
     });
   });
 
+  it('T-11-244 결번을 처음 받은 커리어만 프리미엄 스카우트권 1장을 받는다(익명·재심사·찬 자리는 없음)', async () => {
+    const scouts = async () =>
+      (
+        await ctx.env.DB.prepare(
+          `SELECT coalesce(sum(qty), 0) AS n FROM owner_items WHERE item = 'scout'`,
+        ).first<{ n: number }>()
+      )?.n ?? 0;
+    await retire(A, skyBlue(10), null);
+    expect(await scouts()).toBe(0);
+    await retire(A, skyBlue(10), '김결번');
+    expect(await scouts()).toBe(1);
+    await retire(A, skyBlue(10), '김결번');
+    await retire(B, skyBlue(10), '늦은자');
+    expect(await scouts()).toBe(1);
+    const inbox = await ctx.env.DB.prepare(
+      `SELECT count(*) AS n FROM notifications WHERE source_key LIKE 'retired-number:%'`,
+    ).first<{ n: number }>();
+    expect(inbox?.n).toBe(1);
+  });
+
   it('자리를 막 잡은 순간에만 앱을 열어 둔 브라우저에 알린다(재전송·익명·이미 찬 자리는 알리지 않는다)', async () => {
     const hub = fakeHub();
     const env = { ...ctx.env, LIVE: hub.ns };

@@ -10,3 +10,12 @@ export function rerollShopState(s: RerollShopResponse): RerollShopState {
   if (s.price === null) return 'soldOut';
   return s.balance < s.price ? 'short' : 'buy';
 }
+
+/** T-11-244 같은 응답의 프리미엄 스카우트권(한 주 상한). 옛 서버라 값이 없으면 null. */
+export function scoutShopState(s: RerollShopResponse): RerollShopState | null {
+  const x = s.scout;
+  if (!x) return null;
+  if (x.cap === 0) return 'closed';
+  if (x.price === null) return 'soldOut';
+  return s.balance < x.price ? 'short' : 'buy';
+}

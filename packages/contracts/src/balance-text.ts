@@ -193,6 +193,16 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '하루 리롤권 구매 수',
     desc: '한 구단주가 하루(한국 시각)에 구단 자금으로 살 수 있는 리롤권 수. 0이면 팔지 않는다',
   },
+  scoutPrice: {
+    group: 'market',
+    label: '프리미엄 스카우트권 가격',
+    desc: '구단 자금으로 사는 프리미엄 스카우트권 한 장 가격(만 원)',
+  },
+  scoutWeeklyCap: {
+    group: 'market',
+    label: '주간 프리미엄 스카우트권 구매 수',
+    desc: '한 구단주가 한 주(월요일 0시 한국 시각부터)에 구단 자금으로 살 수 있는 프리미엄 스카우트권 수. 0이면 팔지 않는다',
+  },
   rewardPriceCandidates: {
     group: 'market',
     label: '후보 잠재력 보기 가격',

@@ -45,11 +45,15 @@ export interface Candidate {
   hintKeys: AttrKey[];
   /** T-11-196 프리미엄 스카우트의 A 이상 보장 후보. */
   guaranteed?: boolean;
+  /** T-11-244 천장으로 뽑은 보장 후보(sure = S 확정 · elite = 잠재력 최고치 S). */
+  pity?: 'sure' | 'elite';
   /** T-11-225 다시 뽑아도 남겨 둔(킵) 후보 — 화면 전용. revealed는 킵할 때 잠재력 범위를 이미 봤는지. */
   kept?: { revealed: boolean };
 }
 
 const CLAMP = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+/** 후보 잠재력 최고치(T-11-244 특급 S). */
+const POT_MAX = 96;
 
 export type PotDraw = { mean: number; sd: number };
 export const potDraw = (dpos?: DetailPos | null): PotDraw =>
@@ -57,7 +61,8 @@ export const potDraw = (dpos?: DetailPos | null): PotDraw =>
 
 // T-11-196 프리미엄 후보의 잠재력 식은 premiumScout.ts에 있다. 첫 화면 번들에 넣지 않으려고 떼어 두고, 후보 선택 화면이
 // premiumScout.ts를 불러올 때 여기에 등록한다.
-type PremiumPot = (draw: PotDraw, r: () => number, sure: boolean) => number;
+// sure: 보장 후보(A 이상), 'S': T-11-244 천장으로 S 확정.
+type PremiumPot = (draw: PotDraw, r: () => number, sure: boolean | 'S') => number;
 let premiumPot: PremiumPot | null = null;
 export function setPremiumPot(fn: PremiumPot) {
   premiumPot = fn;
@@ -113,14 +118,15 @@ function candidateSeed(
 }
 
 /** 후보 3명을 만든다. 세 후보의 attrs 합계는 모두 같다(baseline 총합과 동일) — 분포만 다르다.
- * T-10-112 seed를 주면 같은 시드·조건에서 늘 같은 후보가 나온다(다시 뽑아 고르는 리세 방지). */
+ * T-10-112 seed를 주면 같은 시드·조건에서 늘 같은 후보가 나온다(다시 뽑아 고르는 리세 방지).
+ * T-11-244 premium이 'sure'면 보장 후보가 S 확정, 'elite'면 보장 후보의 잠재력이 최고치(96)다(프리미엄 스카우트 천장). */
 export function generateCandidates(
   pos: Pos,
   focus: readonly AttrKey[],
   dpos?: DetailPos | null,
   seed: number = Math.floor(Math.random() * 0xffffffff),
   n = 3,
-  premium = false,
+  premium: boolean | 'sure' | 'elite' = false,
 ): Candidate[] {
   const base = baseline(pos, focus, dpos);
   const rand = localRng(candidateSeed(seed, pos, focus, dpos));
@@ -133,13 +139,20 @@ export function generateCandidates(
     const sorted = ATTR_KEYS.slice().sort((a, b) => attrs[b] - attrs[a]);
     // Potential ignores position/focus edits, preventing a fresh draw by editing the form.
     const potRng = localRng((seed ^ Math.imul(i + 1, 0x9e3779b1)) >>> 0);
-    const value = CLAMP(
-      Math.round(
-        premium ? premiumPot!(draw, potRng, i === sure) : draw.mean + gauss(potRng) * draw.sd,
-      ),
-      55,
-      96,
-    );
+    // 보장 후보 자리: true = A 이상, 'sure' = S 확정, 'elite' = 잠재력 최고치(T-11-244).
+    const slot = i === sure ? premium : false;
+    const value =
+      slot === 'elite'
+        ? POT_MAX
+        : CLAMP(
+            Math.round(
+              premium
+                ? premiumPot!(draw, potRng, slot === 'sure' ? 'S' : slot)
+                : draw.mean + gauss(potRng) * draw.sd,
+            ),
+            55,
+            POT_MAX,
+          );
     const scouted = CLAMP(Math.round(value + gauss(potRng) * BAL.potScoutSd), 55, 96);
     // 보장 후보는 표시 하한을 A(84)로 올린다 — 10단위 범위(80–89)로 'B–A'가 보이면 보장과 어긋난다. 표시 전용이다.
     const min = Math.max(55, Math.floor(value / 10) * 10, i === sure ? 84 : 0);
@@ -149,6 +162,7 @@ export function generateCandidates(
       total: ATTR_KEYS.reduce((sum, k) => sum + attrs[k], 0),
       hintKeys: sorted.slice(0, 2),
       ...(i === sure ? { guaranteed: true } : {}),
+      ...(slot === 'sure' || slot === 'elite' ? { pity: slot } : {}),
     });
   }
   return out;

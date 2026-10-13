@@ -250,6 +250,20 @@ export const BALANCE_SPEC = {
     max: 20,
     step: 1,
   },
+  // T-11-244 구단 자금으로 사는 프리미엄 스카우트권. 한 주(월요일 0시 한국 시각부터)에 scoutWeeklyCap장까지 같은 가격.
+  scoutPrice: {
+    def: 5_000_000,
+    min: 100_000,
+    max: 100_000_000,
+    step: 100_000,
+    unit: 'man',
+  },
+  scoutWeeklyCap: {
+    def: 1,
+    min: 0,
+    max: 7,
+    step: 1,
+  },
   // T-11-153 앱의 보상형 광고 자리(후보 잠재력 · 시즌 평가 보기 · 자금이 모자란 시즌의 강화)를 광고 대신 구단 자금으로
   // 받는다. 웹은 광고가 없어 후보 잠재력 · 강화만 구단 자금으로 받는다.
   rewardPriceCandidates: {

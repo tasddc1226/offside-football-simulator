@@ -1,4 +1,4 @@
-import { INVITE_REROLLS, INVITE_REWARD_MAX } from '@offside/contracts/owner-team';
+import { INVITE_REROLLS, INVITE_REWARD_MAX, INVITE_SCOUTS } from '@offside/contracts/owner-team';
 import type { AdminInvite, AdminInviteReport, AdminInviter } from '@offside/contracts';
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
@@ -68,17 +68,20 @@ export function completeReferralStatements(
       .bind(...mine.params, r.inviterId, INVITE_REWARD_MAX),
     grantItemStatement(d1, r.inviteeId, 'reroll', INVITE_REROLLS, now, mine),
     grantItemStatement(d1, r.inviterId, 'reroll', INVITE_REROLLS, now, inviterPaid),
+    // T-11-244 프리미엄 스카우트권도 같은 조건으로 준다.
+    grantItemStatement(d1, r.inviteeId, 'scout', INVITE_SCOUTS, now, mine),
+    grantItemStatement(d1, r.inviterId, 'scout', INVITE_SCOUTS, now, inviterPaid),
     ...notice(
       r.inviteeId,
       mine,
       '친구 초대 보상을 받았어요', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
-      `커리어를 끝까지 마쳐 선수 후보 리롤권 ${INVITE_REROLLS}장을 받았어요.`, // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
+      `커리어를 끝까지 마쳐 선수 후보 리롤권 ${INVITE_REROLLS}장과 프리미엄 스카우트권 ${INVITE_SCOUTS}장을 받았어요.`, // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
     ),
     ...notice(
       r.inviterId,
       inviterPaid,
       '초대한 친구가 커리어를 마쳤어요', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
-      `친구 초대 보상으로 선수 후보 리롤권 ${INVITE_REROLLS}장을 받았어요.`, // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
+      `친구 초대 보상으로 선수 후보 리롤권 ${INVITE_REROLLS}장과 프리미엄 스카우트권 ${INVITE_SCOUTS}장을 받았어요.`, // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
     ),
   ];
 }

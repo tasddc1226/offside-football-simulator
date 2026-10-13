@@ -72,6 +72,8 @@ export function fairnessView(): FairnessView {
       }),
       // T-11-196 프리미엄 스카우트권: 모든 후보의 S 확률 2배 · 1명 A 이상 보장(candidates.ts scoutOdds와 같은 식).
       L.premium({ season: oddsPct(2 * season.S), pre: oddsPct(2 * pre.S) }),
+      // T-11-244 프리미엄 스카우트 천장(contracts SCOUT_PITY_*).
+      L.premiumPity,
       `${L.potNote} ${L.version({ v })}`,
     ],
     boost: BOOST.p.map((p, i) => [L.boostLv({ lv: i + 1 }), `${Math.round(p * 100)}%`] as const),

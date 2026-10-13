@@ -36,6 +36,8 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   rerollPrice: 'リロールチケットの価格',
   rerollPriceGrowth: 'リロールチケットの値上がり倍率',
   rerollDailyCap: '1日のリロールチケット購入数',
+  scoutPrice: 'プレミアムスカウト券の価格',
+  scoutWeeklyCap: '週のプレミアムスカウト券購入数',
   rewardPriceCandidates: '候補ポテンシャル表示の価格',
   rewardPricePeek: 'シーズン評価表示の価格',
   rewardPriceBoost: 'ポテンシャル強化の価格',

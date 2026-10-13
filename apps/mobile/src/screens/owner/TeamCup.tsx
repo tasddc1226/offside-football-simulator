@@ -13,9 +13,9 @@ import {
   type CupResponse,
 } from '@offside/app-core/api/cup';
 import { cupText as L } from '@offside/app-core/i18n/ko/cup';
+import { cupRewardText } from '@offside/app-core/cupReward';
 import { cupAppText as A } from '@offside/app-core/i18n/ko/cupApp';
 import { cupOnHome } from '@offside/app-core/cupHome';
-import { CUP_REWARDS } from '@offside/contracts/cup';
 import { type LoadStatus } from '../../components/LoadState';
 import { toast } from '../../game/host';
 import { alpha } from '../../theme/colors';
@@ -151,7 +151,7 @@ function linesOf(state: CupState): Line[] {
           lines.push({ text: L.youWon, bold: true, tone: 'good' });
         else lines.push({ text: L.myResult({ stage: stageLabel(entry.stage) }), bold: true });
         lines.push({
-          text: L.rewardReroll({ n: CUP_REWARDS[entry.stage].rerolls }),
+          text: cupRewardText(data.cup.edition, entry.stage, false),
           tone: 'muted',
         });
       }

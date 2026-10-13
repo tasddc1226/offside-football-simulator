@@ -460,7 +460,11 @@ export default function Owner() {
             }
           />
           <BoostShop />
-          <ScoutShop />
+          <ScoutShop
+            onBought={(balance, spent) =>
+              setMarket((m) => m && { balance, clubValue: m.clubValue - spent })
+            }
+          />
         </>
       ) : null}
 

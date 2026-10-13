@@ -92,6 +92,7 @@ export const market: Translation<MarketMsgs> = {
   tradeSpent: '使用',
   tradeBonus: '奨励金',
   spendReroll: 'リロール券の購入',
+  spendScout: 'プレミアムスカウト券の購入',
   spendCandidates: '候補のポテンシャル表示',
   spendPeek: 'シーズン評価の表示',
   spendBoost: 'ポテンシャル強化',

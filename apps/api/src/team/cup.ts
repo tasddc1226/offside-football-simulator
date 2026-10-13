@@ -3,6 +3,7 @@ import {
   CUP_GROUP_ROUNDS,
   CUP_KO_ROUNDS,
   CUP_REWARDS,
+  cupScouts,
   CUP_ROUNDS,
   CUP_STAGES,
   cupById,
@@ -124,6 +125,8 @@ function rewardStatements(
   now: string,
 ) {
   const status = stage === 'champion' ? 'champion' : 'out';
+  const scouts = cupScouts(cup.edition, stage);
+  const n = CUP_REWARDS[stage].rerolls;
   return [
     d1
       .prepare(
@@ -134,6 +137,15 @@ function rewardStatements(
     grantItemStatement(d1, e.profileId, 'reroll', CUP_REWARDS[stage].rerolls, now, {
       sql: 'changes() = 1',
     }),
+    // T-11-244 4강 이상은 프리미엄 스카우트권도(CUP_SCOUTS_FROM회부터). 바로 앞 문장이 리롤권이라 보상 줄로 거른다.
+    ...(scouts > 0
+      ? [
+          grantItemStatement(d1, e.profileId, 'scout', scouts, now, {
+            sql: 'EXISTS (SELECT 1 FROM cup_entries WHERE cup_id = ? AND team_id = ? AND rewarded_at = ?)',
+            params: [cup.id, e.teamId, now],
+          }),
+        ]
+      : []),
     ...autoTitle(d1, cup, e.profileId, stage),
     // 개인 성적·보상은 알림함에 남긴다. 대회 종료 때 참가·예측을 합쳐 종료 푸시 한 건을 보낸다.
     ...notify(
@@ -141,7 +153,9 @@ function rewardStatements(
       e.profileId,
       `cup:${cup.id}:result`,
       cupKo(stage === 'champion' ? 'championTitle' : 'outTitle', { cup: cupTitle(cup) }),
-      cupKo('rewardBody', { stage: cupKo(stage), n: CUP_REWARDS[stage].rerolls }),
+      scouts > 0
+        ? cupKo('rewardBodyScout', { stage: cupKo(stage), n, s: scouts })
+        : cupKo('rewardBody', { stage: cupKo(stage), n }),
       now,
       false,
     ),
