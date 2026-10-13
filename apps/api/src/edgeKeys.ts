@@ -68,10 +68,11 @@ export const STALE = {
     EDGE.retiredNumbersClub(season, clubId),
     EDGE.retiredNumbersPage(season, 0),
   ],
-  /** T-11-121 명예의 벽을 받았거나 그 선수가 이름 공개를 바꿨다 — 은퇴 상세와 그 시즌 요약. */
-  wallOfHonorChanged: (season: number, careerId: string) => [
+  /** T-11-121 명예의 벽을 받았거나 그 선수가 이름 공개를 바꿨다 — 은퇴 상세와 그 시즌 요약, T-11-234 그 구단. */
+  wallOfHonorChanged: (season: number, careerId: string, clubId: string) => [
     EDGE.hofDetail(careerId),
     EDGE.retiredNumbersSummary(season),
+    EDGE.retiredNumbersClub(season, clubId),
   ],
   /** 이름 공개 토글이 바로 보이게(최초 기록의 이름 포함). */
   retirementPut: (careerId: string) => [EDGE.hofDetail(careerId), ...allFirsts()],

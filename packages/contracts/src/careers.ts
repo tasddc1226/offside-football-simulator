@@ -665,6 +665,8 @@ export const RetiredNumbersResponseSchema = z.strictObject({
   items: z.array(RetiredNumberItemSchema),
   /** T-11-101 최신순 페이지(`?before=`)일 때만 — 다음 페이지의 before(더 없으면 null). */
   next: z.number().int().nullable().optional(),
+  /** T-11-234 구단(`?club=`)일 때만 — 그 구단 명예의 벽(T-11-235 최근에 오른 선수 먼저, 상한 1000). 시즌 요약은 상한이 있어 구단 몫이 잘린다. */
+  wall: z.array(WallOfHonorItemSchema).optional(),
 });
 export type RetiredNumbersResponse = z.infer<typeof RetiredNumbersResponseSchema>;
 
@@ -695,10 +697,12 @@ export const RetiredNumbersSummarySchema = z.strictObject({
   ),
   recent: z.array(RetiredNumberItemSchema),
   /**
-   * T-11-121 그 시즌 명예의 벽 — 결번 자격을 채웠지만 후보 구단의 번호가 모두 먼저 결번돼 칭호로 남은 선수. 먼저 오른 선수 먼저.
-   * 구단 화면도 이 목록에서 그 구단 몫을 고른다. 이 필드 전의 캐시 응답에는 없다.
+   * T-11-121 그 시즌 명예의 벽 — 결번 자격을 채웠지만 후보 구단의 번호가 모두 먼저 결번돼 칭호로 남은 선수.
+   * T-11-234 최근에 오른 선수 먼저, 상한까지만(전체 수는 wallTotal). 구단 화면은 구단 응답의 wall을 쓴다. 이 필드 전의 캐시 응답에는 없다.
    */
   wall: z.array(WallOfHonorItemSchema).optional(),
+  /** T-11-234 그 시즌 명예의 벽 전체 수(wall은 상한까지만 싣는다). */
+  wallTotal: z.number().int().nonnegative().optional(),
 });
 export type RetiredNumbersSummary = z.infer<typeof RetiredNumbersSummarySchema>;
 

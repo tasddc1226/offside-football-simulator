@@ -383,6 +383,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
                   shortPos
                   retireAge={h.retireAge}
                   rn={h.retiredNumber?.number}
+                  wall={h.wallOfHonor ? h.number : null}
                   tag={myIds.has(h.id) ? L.mine : null}
                   t={t}
                   titleId={h.title}

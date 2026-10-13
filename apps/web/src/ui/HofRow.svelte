@@ -34,6 +34,7 @@
     club = null,
     clubId = null,
     rn = null,
+    wall = null,
     nation = null,
     showNation = true,
     flow = false,
@@ -63,6 +64,8 @@
     clubId?: string | null | undefined;
     /** T-10-076 영구결번 등번호. */
     rn?: number | null | undefined;
+    /** T-11-234 명예의 벽 등번호(영구결번이 없을 때만 칩으로). */
+    wall?: number | null | undefined;
     /** 국적 코드 — 없는 예전 커리어는 대한민국으로 표시한다. */
     nation?: string | null | undefined;
     /** 국적을 모르는 옛 로컬 기록에는 국기를 표시하지 않는다. */
@@ -105,9 +108,9 @@
 <div class="hof-main" class:hof-main-compact={compact}>
   <!-- 은퇴 시점 구단을 따로 적으면(showClub) 엠블럼은 이름 앞이 아니라 구단 이름 앞에 둔다. -->
   <span class="hof-identity">{#if !clubName}<ClubMark name={club} id={clubId} size={18} />{/if}{#if country}<span class="hof-flag" role="img" aria-label={tn(country.ko)} title={tn(country.ko)} data-hof-nation={country.code}>{flagOf(country.code)}</span>{/if}<b>{name}</b></span>
-  {#if showPosition || rn != null || tag || tt}
+  {#if showPosition || rn != null || wall != null || tag || tt}
     <span class="hof-badges">{#if showPosition}<span class="pill" title={shortPos ? posLabel({ pos, dpos }) : undefined}>{shortPos ? posAbbr({ pos, dpos }) : posLabel({ pos, dpos })}</span>{/if}
-      {#if rn != null}<span class="pill pill-rn" data-rn-chip title={L.rnChipTitle({ number: rn })}>{L.rnChip({ number: rn })}</span>{/if}
+      {#if rn != null}<span class="pill pill-rn" data-rn-chip title={L.rnChipTitle({ number: rn })}>{L.rnChip({ number: rn })}</span>{:else if wall != null}<span class="pill pill-rn" data-wall-chip title={L.wallChipTitle({ number: wall })}>{L.wallChip({ number: wall })}</span>{/if}
       {#if tag}<span class="pill">{tag}</span>{/if}
       {#if tt}<TitleTag name={tt.name} rarity={tt.rarity} />{/if}
     </span>

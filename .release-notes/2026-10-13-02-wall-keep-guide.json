@@ -1,0 +1,29 @@
+{
+  "id": "t-11-234-wall-keep-guide",
+  "title": "명예의 벽과 선수 생성 화면이 좋아졌어요",
+  "items": [
+    "구단 화면에서 그 구단 명예의 벽 선수를 모두 볼 수 있어요",
+    "명예의 전당 이름 옆에 명예의 벽 번호가 보여요",
+    "다른 후보로 커리어를 시작해도 킵한 후보가 남아요",
+    "선수를 만들 때 세부 포지션별 주력 능력치를 볼 수 있어요"
+  ],
+  "en": {
+    "title": "Better Wall of Honour and player creation",
+    "items": [
+      "Club pages now list every Wall of Honour player for that club.",
+      "Hall of Fame rows show the Wall of Honour number next to the name.",
+      "Your kept candidate stays even after you start a career with another one.",
+      "Player creation now shows the key attributes for each detailed role."
+    ]
+  },
+  "ja": {
+    "title": "名誉の壁と選手作成が使いやすくなりました",
+    "items": [
+      "クラブ画面でそのクラブの名誉の壁の選手をすべて見られます。",
+      "殿堂の名前の横に名誉の壁の背番号が表示されます。",
+      "別の候補でキャリアを始めても、キープした候補は残ります。",
+      "選手作成中に詳細ポジションごとの主要能力値を確認できます。"
+    ]
+  },
+  "availability": "web-app"
+}

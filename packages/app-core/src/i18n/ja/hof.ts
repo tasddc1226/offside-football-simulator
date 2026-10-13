@@ -66,6 +66,8 @@ export const hof: Translation<HofMsgs> = {
     `${p.rank}位 ${p.name}、${p.country}${p.pos ? `、${p.pos}` : ''}、${p.value}${p.unit}${p.mine ? '、自分の選手' : ''}`,
   rnChipTitle: (p) => `永久欠番 ${p.number}番`,
   rnChip: (p) => `👑 永久欠番 ${p.number}`,
+  wallChipTitle: (p) => `名誉の壁 ${p.number}番`,
+  wallChip: (p) => `🏅 名誉の壁 ${p.number}`,
   rowStats: (p) =>
     `${p.apps}試合 ${p.goals}ゴール ${p.assists}アシスト · トロフィー ${p.trophies} · 最高OVR ${p.peak}${p.ballon ? ` · バロンドール ${p.ballon}回` : ''}${p.score != null ? ` · レジェンド ${p.score}` : ''}`,
   appsN: (p) => `${p.n}試合`,

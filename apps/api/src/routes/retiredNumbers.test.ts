@@ -493,9 +493,22 @@ describe('영구결번 (T-10-076)', () => {
       expect(await retire(B, skyBlue(10), '후배')).toMatchObject({ wallOfHonor: true });
       await flushEdge();
       expect(edge.purged).toContain(`http://localhost${EDGE.retiredNumbersSummary(0)}`);
-      expect((await summary(0)).wall).toMatchObject([
-        { careerId: B, name: '후배', clubId: 'pl-0', number: 10 },
-      ]);
+      expect(edge.purged).toContain(`http://localhost${EDGE.retiredNumbersClub(0, 'pl-0')}`);
+      expect(await summary(0)).toMatchObject({
+        wall: [{ careerId: B, name: '후배', clubId: 'pl-0', number: 10 }],
+        wallTotal: 1,
+      });
+      // T-11-234 구단 화면은 요약 상한과 상관없이 구단 응답에서 그 구단 명예의 벽을 받는다.
+      const club = async (clubId: string) => {
+        const res = await createApp().request(
+          `/v1/retired-numbers?season=0&club=${clubId}`,
+          {},
+          ctx.env,
+        );
+        return successEnvelope(RetiredNumbersResponseSchema).parse(await res.json()).data;
+      };
+      expect((await club('pl-0')).wall).toMatchObject([{ careerId: B, number: 10 }]);
+      expect((await club('pl-1')).wall).toEqual([]);
       // 다른 시즌 요약엔 없다.
       expect((await summary(1)).wall).toEqual([]);
     } finally {

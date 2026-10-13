@@ -45,6 +45,7 @@
   let summary = $state<RetiredNumbersSummary | null>(null);
   let items = $state<Item[] | null>(null);
   let next = $state<number | null>(null);
+  let clubWallRaw = $state<Wall[] | null>(null);
   let more = $state(false);
   let failed = $state(false);
   let listFailed = $state(false);
@@ -67,6 +68,7 @@
     const club = view.clubId;
     items = null;
     next = null;
+    clubWallRaw = null;
     listFailed = false;
     if (upcoming || view.screen === 'home') return;
     const req = view.screen === 'club' && club ? getRetiredNumbersOfClub(se, club) : getRetiredNumbersPage(se, 0);
@@ -75,6 +77,7 @@
       if (!r.ok) return void (listFailed = true);
       items = r.data.items;
       next = r.data.next ?? null;
+      clubWallRaw = r.data.wall ?? null;
     });
   });
   async function loadMore() {
@@ -95,7 +98,8 @@
   const leagues = $derived(rnByLeague(summary?.clubs ?? []));
   // T-11-121 명예의 벽은 요약에 다 실려 온다 — 구단 화면은 그중 그 구단 몫만.
   const wall = $derived(summary?.wall ?? []);
-  const clubWall = $derived(wall.filter((w) => w.clubId === view.clubId && (!view.pos || w.pos === view.pos) && (!view.dpos || w.dpos === view.dpos)));
+  // T-11-234 구단 화면은 구단 응답의 명예의 벽(요약은 최근 몇백 명까지라 잘린다). 옛 캐시 응답이면 요약에서 고른다.
+  const clubWall = $derived((clubWallRaw ?? wall.filter((w) => w.clubId === view.clubId)).filter((w) => (!view.pos || w.pos === view.pos) && (!view.dpos || w.dpos === view.dpos)));
 
   function pickSeason(id: number) {
     view.season = id;
@@ -193,7 +197,7 @@
       {#if wall.length}
         <!-- T-11-193 명판이 수백 개라 구단 목록이 한참 아래로 밀려 접어 둔다. -->
         <div class="rn-sec-head" data-rn-wall-section>
-          <h2>{L.wallTitle} <span class="num rn-club-count">{wall.length}</span></h2>
+          <h2>{L.wallTitle} <span class="num rn-club-count">{summary?.wallTotal ?? wall.length}</span></h2>
           <button class="link-btn" data-rn-wall-toggle aria-expanded={view.wallOpen} onclick={() => (view.wallOpen = !view.wallOpen)}>{view.wallOpen ? L.wallClose : L.wallOpen}</button>
         </div>
         {#if view.wallOpen}
