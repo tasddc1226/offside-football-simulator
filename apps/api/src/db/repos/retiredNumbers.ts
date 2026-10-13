@@ -392,11 +392,11 @@ export async function listRetiredNumbers(
     )
     .orderBy(clubId === undefined ? retiredNumbers.seq : retiredNumbers.number);
   if (clubId === undefined) return { season, items: await items };
-  // T-11-234 구단 화면의 명예의 벽은 그 구단 몫을 따로 다 싣는다(시즌 요약은 상한에서 잘린다).
+  // T-11-234 구단 화면의 명예의 벽은 그 구단 몫을 따로 싣는다(시즌 요약은 상한에서 잘린다). T-11-235 최근 순.
   const [rows, wall] = await db.batch([
     items,
     wallOf(db, season, clubId).orderBy(
-      sql`json_extract(${careers.wallOfHonorJson}, '$.grantedAt')`,
+      sql`json_extract(${careers.wallOfHonorJson}, '$.grantedAt') desc`,
     ),
   ]);
   return { season, items: rows, wall: wall.map(wallItem) };
@@ -425,8 +425,8 @@ export async function pageRetiredNumbers(
 const RECENT_ON_SUMMARY = 8;
 /** T-11-121 요약에 싣는 명예의 벽 상한 — T-11-234 시즌 1에 900명을 넘어 최근 순으로 이만큼만 싣는다(구단 화면은 구단 응답). */
 const WALL_ON_SUMMARY = 200;
-/** 구단 한 곳의 명예의 벽 상한(응답이 끝없이 커지지만 않게). */
-const WALL_ON_CLUB = 300;
+/** 구단 한 곳의 명예의 벽 상한(응답이 끝없이 커지지만 않게) — T-11-235 시즌 1 맨체스터 스카이블루가 700명을 넘어 300에서 올림. 최근 순. */
+const WALL_ON_CLUB = 1000;
 
 /** 그 시즌(clubId를 주면 그 구단) 명예의 벽 선수. 저장된 칭호 JSON의 구단으로 고른다. */
 const wallOf = (db: Db, season: number, clubId?: string) =>
