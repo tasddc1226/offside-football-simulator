@@ -32,6 +32,8 @@ export const shell: Translation<ShellMsgs> = {
   footGuide: 'Game guide',
   footFaq: 'Frequently asked questions',
   footFairness: 'Fairness and probabilities',
+  footLegends: 'Hall of Fame',
+  footAbout: 'About',
   footFootballData: 'Football data provided by the Football-Data.org API',
   footContact: 'Contact',
   footCommunity: 'Community',

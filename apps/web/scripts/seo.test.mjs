@@ -95,7 +95,12 @@ test('public static pages do not load the app bundle, but index.html does', () =
 test('production discovery files contain the public pages', () => {
   const config = { origin: 'https://play.example.com', indexingEnabled: true };
   assert.match(createRobotsTxt(config), /Sitemap: https:\/\/play\.example\.com\/sitemap\.xml/);
-  assert.equal((createSitemapXml(config.origin).match(/<url>/g) ?? []).length, 6);
+  assert.equal((createSitemapXml(config.origin).match(/<url>/g) ?? []).length, 7);
+  // T-11-231 운영 소개 페이지.
+  assert.match(
+    createSitemapXml(config.origin),
+    /<loc>https:\/\/play\.example\.com\/about\/<\/loc>/,
+  );
   assert.match(createSitemapXml(config.origin), /<loc>https:\/\/play\.example\.com\/<\/loc>/);
   assert.match(createHeaders(config), /\/\*\n[ ]{2}X-Robots-Tag: noindex/);
   assert.match(createHeaders(config), /\/\n[ ]{2}X-Robots-Tag: index, follow/);

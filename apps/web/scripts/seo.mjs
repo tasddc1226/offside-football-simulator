@@ -39,6 +39,11 @@ export const PUBLIC_PAGES = {
     description:
       '오프사이드(풀타임)의 확률 판정 방식, 광고·결제와 확률의 관계, 밸런스 조정 원칙, 숨겨 둔 정보와 그 이유를 공개합니다.',
   },
+  '/about/': {
+    title: '오프사이드 소개 | 오프사이드',
+    description:
+      '오프사이드(풀타임)가 어떤 게임인지, 누가 만들고 어떻게 운영하는지, 문의는 어디로 하는지 안내합니다.',
+  },
   '/legal/terms/': {
     title: '이용약관 | 오프사이드',
     description: '오프사이드(풀타임) 서비스 이용약관입니다.',
@@ -178,7 +183,7 @@ export function createSitemapXml(origin) {
 export function createLlmsTxt(origin) {
   const link = (path) =>
     `- [${PUBLIC_PAGES[path].title}](${absoluteUrl(origin, path)}): ${PUBLIC_PAGES[path].description}`;
-  return `# 오프사이드 (OFFSIDE · 풀타임)\n\n> ${PUBLIC_PAGES['/'].description}\n\n웹 브라우저에서 무료로 플레이하는 한국어 축구 선수 커리어 스토리 시뮬레이션 게임이다. 설치나 로그인 없이 바로 시작할 수 있다.\n\n## 문서\n\n${['/guide/', '/faq/', '/fairness/'].map(link).join('\n')}\n\n## 정책\n\n${['/legal/terms/', '/legal/privacy/'].map(link).join('\n')}\n`;
+  return `# 오프사이드 (OFFSIDE · 풀타임)\n\n> ${PUBLIC_PAGES['/'].description}\n\n웹 브라우저에서 무료로 플레이하는 한국어 축구 선수 커리어 스토리 시뮬레이션 게임이다. 설치나 로그인 없이 바로 시작할 수 있다.\n\n## 문서\n\n${['/guide/', '/faq/', '/fairness/', '/about/'].map(link).join('\n')}\n\n## 정책\n\n${['/legal/terms/', '/legal/privacy/'].map(link).join('\n')}\n`;
 }
 export function createHeaders({ indexingEnabled }) {
   const publicHeaders = PUBLIC_PATHS.map(
@@ -301,7 +306,7 @@ const GUIDE_SECTIONS = [
     ],
   ],
 ];
-const guideBody = `<div class="os-screen"><header><p class="os-eyebrow">HOW TO PLAY</p><h1>게임 가이드</h1><p>고교 3학년부터 은퇴까지 한 선수의 커리어를 진행하고, 은퇴한 선수로 구단주 팀을 꾸리는 방법입니다.</p></header>${GUIDE_SECTIONS.map(([h, ps], i) => `<section class="os-panel"><h2>${i + 1}. ${h}</h2>${ps.map((t) => `<p>${t}</p>`).join('')}</section>`).join('')}<section class="os-panel"><h2>진행 상황 저장</h2><p>진행 상황(세이브)은 이 브라우저(기기)에만 저장됩니다. 다른 기기나 앱으로 옮기려면 환경설정에서 백업 코드나 파일을 내보낸 뒤 새 기기에서 불러와야 합니다. 백업 코드는 다른 사람에게 보내지 마세요. 다만 커리어·시즌 요약 기록과 플레이 중 선택 기록은 서비스 개선·밸런스 분석을 위해 익명 프로필 단위로 서버에도 함께 저장됩니다. ${guideCopy.publicRetirement} ${NAME_POLICY} 자세한 내용은 <a href="/legal/privacy/">개인정보처리방침</a>을 확인해 주세요.</p></section><p><a href="/">첫 커리어 시작</a></p><nav><a href="/">홈</a> · <a href="/faq/">자주 묻는 질문</a> · <a href="/fairness/">확률과 공정성</a></nav></div>`;
+const guideBody = `<div class="os-screen"><header><p class="os-eyebrow">HOW TO PLAY</p><h1>게임 가이드</h1><p>고교 3학년부터 은퇴까지 한 선수의 커리어를 진행하고, 은퇴한 선수로 구단주 팀을 꾸리는 방법입니다.</p></header>${GUIDE_SECTIONS.map(([h, ps], i) => `<section class="os-panel"><h2>${i + 1}. ${h}</h2>${ps.map((t) => `<p>${t}</p>`).join('')}</section>`).join('')}<section class="os-panel"><h2>진행 상황 저장</h2><p>진행 상황(세이브)은 이 브라우저(기기)에만 저장됩니다. 다른 기기나 앱으로 옮기려면 환경설정에서 백업 코드나 파일을 내보낸 뒤 새 기기에서 불러와야 합니다. 백업 코드는 다른 사람에게 보내지 마세요. 다만 커리어·시즌 요약 기록과 플레이 중 선택 기록은 서비스 개선·밸런스 분석을 위해 익명 프로필 단위로 서버에도 함께 저장됩니다. ${guideCopy.publicRetirement} ${NAME_POLICY} 자세한 내용은 <a href="/legal/privacy/">개인정보처리방침</a>을 확인해 주세요.</p></section><p><a href="/">첫 커리어 시작</a></p><nav><a href="/">홈</a> · <a href="/faq/">자주 묻는 질문</a> · <a href="/fairness/">확률과 공정성</a> · <a href="/legends/">명예의 전당</a></nav></div>`;
 const FAQ_ITEMS = [
   [
     '다른 팀으로 이적했다가 복귀해도 장기근속인가요?',
@@ -557,7 +562,11 @@ async function createBrandAssets(outputDirectory) {
     }),
   );
 }
+// T-11-231 운영 소개. AdSense 심사가 보는 운영 주체 · 연락처 · 정책 링크를 한 곳에 모은다.
+const aboutBody = `<div class="os-screen"><header><p class="os-eyebrow">ABOUT</p><h1>오프사이드 소개</h1><p>오프사이드(풀타임)는 웹 브라우저와 iOS · Android 앱에서 무료로 즐기는 축구 선수 커리어 시뮬레이션 게임입니다.</p></header><section class="os-panel"><h2>어떤 게임인가요</h2><p>고교 3학년 선수 한 명을 만들어 은퇴할 때까지 키웁니다. 시즌마다 훈련 방향을 고르고, 성공 확률이 표시된 이벤트 선택지를 고르며, 이적 · 국가대표 · 병역 · 부상 같은 갈림길을 지납니다. 같은 선수라도 선택과 확률에 따라 전혀 다른 커리어가 나옵니다.</p><p>은퇴한 선수는 통산 기록으로 레전드 점수를 받고 <a href="/legends/">명예의 전당</a>에 오릅니다. 지금까지 이용자들이 키운 선수 수만 명의 시즌별 기록을 누구나 볼 수 있습니다. 은퇴한 선수로는 구단주 팀을 꾸려 다른 이용자의 팀과 경기하고, 시즌마다 열리는 오프사이드 컵에 나갑니다.</p></section><section class="os-panel"><h2>어떻게 운영하나요</h2><p>오프사이드는 1인 개발자가 만들고 운영합니다. 게임 규칙과 확률은 <a href="/fairness/">확률과 공정성</a>에 공개하고, 바뀐 내용은 <a href="/news/">공지와 업데이트</a>에 기록으로 남깁니다. 밸런스는 실제 은퇴 기록과 대량 시뮬레이션으로 확인한 뒤 모든 이용자에게 같은 값으로 바꿉니다.</p><p>게임은 설치나 로그인 없이 바로 할 수 있고, 진행 상황은 이용자의 기기에 저장됩니다. 서버에는 명예의 전당과 구단주 팀에 필요한 기록만 남습니다. 자세한 내용은 <a href="/legal/privacy/">개인정보처리방침</a>과 <a href="/legal/terms/">이용약관</a>을 확인해 주세요.</p></section><section class="os-panel"><h2>문의</h2><p>게임 문의, 오류 제보, 제안은 <a href="mailto:contact@offside-lab.com">contact@offside-lab.com</a>으로 보내 주세요. 게임 안 라운지 채팅과 게시판에서도 의견을 받습니다.</p></section><p><a href="/">게임 시작</a></p><nav><a href="/">홈</a> · <a href="/guide/">게임 가이드</a> · <a href="/faq/">자주 묻는 질문</a> · <a href="/legends/">명예의 전당</a></nav></div>`;
+
 export const STATIC_PAGES = {
+  '/about/': aboutBody,
   '/guide/': guideBody,
   '/faq/': faqBody,
   '/fairness/': fairnessBody,

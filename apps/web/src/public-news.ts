@@ -173,10 +173,15 @@ export async function serveNews(
     },
   });
 }
-export async function newsSitemap(asset: Response, url: URL): Promise<Response> {
+/** extra: 함께 싣는 다른 공개 경로(T-11-231 명예의 전당). */
+export async function newsSitemap(
+  asset: Response,
+  url: URL,
+  extra: string[] = [],
+): Promise<Response> {
   try {
     const posts = await readNewsIndex(url.hostname);
-    const urls = ['/news/', ...posts.map((p) => newsPath(p.id))];
+    const urls = ['/news/', ...posts.map((p) => newsPath(p.id)), ...extra];
     const xml = (await asset.text()).replace(
       '</urlset>',
       () =>
