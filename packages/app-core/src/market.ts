@@ -147,6 +147,9 @@ export const SPEND_LABEL: Record<FundsItem, string> = {
   get reroll() {
     return L.spendReroll;
   },
+  get scout() {
+    return L.spendScout;
+  },
   get 'reward:candidates'() {
     return L.spendCandidates;
   },

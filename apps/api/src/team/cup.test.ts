@@ -424,7 +424,16 @@ describe('T-11-145 컵 진행(cron)', () => {
       });
     const reason = async (r: Response) =>
       ((await r.json()) as { error: { details: { reason: string } } }).error.details.reason;
-    expect(await shop()).toEqual({ reroll: 0, balance: 0, price: 1_000_000, bought: 0, cap: 3 });
+    // T-11-244 프리미엄 스카우트권(한 주 상한)도 같은 응답에 실린다.
+    const scout = { have: 0, price: 5_000_000, bought: 0, cap: 1 };
+    expect(await shop()).toEqual({
+      reroll: 0,
+      balance: 0,
+      price: 1_000_000,
+      bought: 0,
+      cap: 3,
+      scout,
+    });
     // 자금 행이 없으면 사지 못한다(공짜로 지나가지 않는다).
     expect(await reason(await buy(1_000_000, 'a'))).toBe('FUNDS_SHORT');
     await ctx.db
@@ -438,13 +447,21 @@ describe('T-11-145 컵 진행(cron)', () => {
       price: 2_000_000,
       bought: 1,
       cap: 3,
+      scout,
     });
     // 같은 키로 다시 보내면 두 번 사지 않는다. 옛 가격으로 새로 사면 가격이 바뀌었다고 알린다.
     expect((await buy(1_000_000, 'b')).status).toBe(200);
     expect(await reason(await buy(1_000_000, 'c'))).toBe('PRICE_CHANGED');
     expect((await buy(2_000_000, 'd')).status).toBe(200);
     expect((await buy(4_000_000, 'e')).status).toBe(200);
-    expect(await shop()).toEqual({ reroll: 3, balance: 3_000_000, price: null, bought: 3, cap: 3 });
+    expect(await shop()).toEqual({
+      reroll: 3,
+      balance: 3_000_000,
+      price: null,
+      bought: 3,
+      cap: 3,
+      scout,
+    });
     expect(await reason(await buy(8_000_000, 'f'))).toBe('DAILY_LIMIT');
     const ledger = await ctx.db.select().from(ownerItemPurchases);
     expect(ledger.map((r) => r.price).sort((a, b) => a - b)).toEqual([

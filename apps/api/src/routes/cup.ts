@@ -4,6 +4,7 @@ import {
   CupResponseSchema,
   CupHomeResponseSchema,
   BuyRerollBodySchema,
+  ScoutUseBodySchema,
   OwnerItemsResponseSchema,
   RerollShopResponseSchema,
   BuyRewardBodySchema,
@@ -46,6 +47,7 @@ import {
   buyReroll,
   buyRewardWithFunds,
   rerollShopRules,
+  buyScout,
   rewardShopRules,
   rewardSnapshot,
   shopSnapshot,
@@ -74,6 +76,7 @@ import { cupSchedule } from '../team/cupSchedule.js';
 import { lineupsOf, toMatch } from '../team/match.js';
 import { filledCount } from '../team/sim.js';
 import { kstTodayStart, requireOwner } from './ownerTeam.js';
+import { kstWeekStart } from '../time.js';
 import {
   conflictError,
   fundsShort,
@@ -292,6 +295,26 @@ async function eligibility(
   return { ok: reason === null, reason, filled, team };
 }
 
+/** 리롤권 상점 응답(T-11-244 스카우트권 포함). */
+function shopView(
+  snap: { reroll: number; scout: number; balance: number; bought: number; scoutBought: number },
+  rules: Awaited<ReturnType<typeof rerollShopRules>>,
+) {
+  return {
+    reroll: snap.reroll,
+    balance: snap.balance,
+    price: shopPriceAt(rules, snap.bought),
+    bought: snap.bought,
+    cap: rules.cap,
+    scout: {
+      have: snap.scout,
+      price: shopPriceAt(rules.scout, snap.scoutBought),
+      bought: snap.scoutBought,
+      cap: rules.scout.cap,
+    },
+  };
+}
+
 export function registerCupRoutes(app: Hono<AppEnv>): void {
   registerCupPredictionRoutes(app, cupOf);
   app.get('/v1/cups/home', async (c) => {
@@ -481,63 +504,74 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
   for (const item of OWNER_ITEMS)
     app.post(`/v1/items/${item}/use`, requireProfile, idempotency, async (c) => {
       const me = await requireOwner(c);
-      const items = await spendItem(getDb(c), me.id, item, nowIso());
+      // T-11-244 스카우트권은 천장 카운트를 같이 센다. 본문(hit)이 없으면 천장을 모르는 옛 앱이다.
+      const body = item === 'scout' ? readBody(c, ScoutUseBodySchema) : {};
+      const scout = { pity: body.hit !== undefined, hit: body.hit === true };
+      const items = await spendItem(getDb(c), me.id, item, nowIso(), scout);
       if (!items) throw conflictError(cupKo(EMPTY[item][0]), EMPTY[item][1]);
       return ok(c, OwnerItemsResponseSchema, items, 200, NO_STORE);
     });
 
   // T-11-152 리롤권 상점: 가진 장수 · 구단 자금 · 다음 한 장 가격 · 오늘 산 장수와 하루 상한. 상점을 펼칠 때만 부른다.
+  // T-11-244 이번 주 프리미엄 스카우트권(가진 장수 · 가격 · 산 장수 · 주간 상한)도 같은 왕복에 싣는다.
   app.get('/v1/items/shop', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
-    const [{ reroll, balance, bought }, rules] = await Promise.all([
-      shopSnapshot(db, me.id, kstTodayStart(nowIso())),
+    const now = nowIso();
+    const [snap, rules] = await Promise.all([
+      shopSnapshot(db, me.id, kstTodayStart(now), kstWeekStart(now)),
       rerollShopRules(db),
     ]);
-    const shop = { reroll, balance, price: shopPriceAt(rules, bought), bought, cap: rules.cap };
-    return ok(c, RerollShopResponseSchema, shop, 200, NO_STORE);
+    return ok(c, RerollShopResponseSchema, shopView(snap, rules), 200, NO_STORE);
   });
 
   // T-11-152 리롤권 한 장 사기. 화면에서 본 가격을 함께 보낸다 — 그 사이 다른 기기에서 샀거나 운영 수치가 바뀌어
-  // 가격이 다르면 409. 재시도가 두 장을 사지 않게 멱등 키를 쓴다.
-  app.post('/v1/items/reroll/buy', requireProfile, idempotency, async (c) => {
-    const me = await requireOwner(c);
-    const db = getDb(c);
-    const input = readBody(c, BuyRerollBodySchema);
-    const now = nowIso();
-    const since = kstTodayStart(now);
-    const [{ balance: funds, bought }, rules] = await Promise.all([
-      shopSnapshot(db, me.id, since),
-      rerollShopRules(db),
-    ]);
-    const price = shopPriceAt(rules, bought);
-    if (price === null)
-      throw rules.cap === 0
-        ? conflictError(cupKo('shopClosed'), 'SHOP_CLOSED')
-        : conflictError(cupKo('shopDaily', { n: rules.cap }), 'DAILY_LIMIT');
-    if (input.price !== price) throw conflictError(cupKo('shopPriceChanged'), 'PRICE_CHANGED');
-    // 잔액 행이 없거나 모자라면 batch 전에 막는다(행이 없으면 출금 UPDATE가 0행으로 지나가 공짜가 된다).
-    if (funds < price) throw fundsShort();
-    let res: Awaited<ReturnType<typeof buyReroll>>;
-    try {
-      res = await buyReroll(db, { id: newId('ipc'), profileId: me.id, price, bought, since, now });
-    } catch (e) {
-      // 같은 구단주가 동시에 영입·구매를 해 잔액이 모자라게 되면 CHECK 위반으로 batch 전체가 되돌아간다.
-      if (isFundsCheck(e)) throw fundsShort();
-      throw e;
-    }
-    // 같은 순간 다른 기기에서 한 장 먼저 샀다 — 다음 가격은 달라졌다.
-    if (!res.won) throw conflictError(cupKo('shopPriceChanged'), 'PRICE_CHANGED');
-    const next = bought + 1;
-    const shop = {
-      reroll: res.reroll,
-      balance: res.balance,
-      price: shopPriceAt(rules, next),
-      bought: next,
-      cap: rules.cap,
-    };
-    return ok(c, RerollShopResponseSchema, shop, 200, NO_STORE);
-  });
+  // 가격이 다르면 409. 재시도가 두 장을 사지 않게 멱등 키를 쓴다. T-11-244 스카우트권은 한 주 상한으로 같은 길을 쓴다.
+  for (const item of ['reroll', 'scout'] as const)
+    app.post(`/v1/items/${item}/buy`, requireProfile, idempotency, async (c) => {
+      const me = await requireOwner(c);
+      const db = getDb(c);
+      const input = readBody(c, BuyRerollBodySchema);
+      const now = nowIso();
+      const day = kstTodayStart(now);
+      const week = kstWeekStart(now);
+      const [snap, rules] = await Promise.all([
+        shopSnapshot(db, me.id, day, week),
+        rerollShopRules(db),
+      ]);
+      const r = item === 'scout' ? rules.scout : rules;
+      const bought = item === 'scout' ? snap.scoutBought : snap.bought;
+      const price = shopPriceAt(r, bought);
+      if (price === null)
+        throw r.cap === 0
+          ? conflictError(cupKo(item === 'scout' ? 'scoutClosed' : 'shopClosed'), 'SHOP_CLOSED')
+          : item === 'scout'
+            ? conflictError(cupKo('shopWeekly', { n: r.cap }), 'WEEKLY_LIMIT')
+            : conflictError(cupKo('shopDaily', { n: r.cap }), 'DAILY_LIMIT');
+      if (input.price !== price) throw conflictError(cupKo('shopPriceChanged'), 'PRICE_CHANGED');
+      // 잔액 행이 없거나 모자라면 batch 전에 막는다(행이 없으면 출금 UPDATE가 0행으로 지나가 공짜가 된다).
+      if (snap.balance < price) throw fundsShort();
+      const buy = item === 'scout' ? buyScout : buyReroll;
+      const since = item === 'scout' ? week : day;
+      let res: Awaited<ReturnType<typeof buyReroll>>;
+      try {
+        res = await buy(db, { id: newId('ipc'), profileId: me.id, price, bought, since, now });
+      } catch (e) {
+        // 같은 구단주가 동시에 영입·구매를 해 잔액이 모자라게 되면 CHECK 위반으로 batch 전체가 되돌아간다.
+        if (isFundsCheck(e)) throw fundsShort();
+        throw e;
+      }
+      // 같은 순간 다른 기기에서 한 장 먼저 샀다 — 다음 가격은 달라졌다.
+      if (!res.won) throw conflictError(cupKo('shopPriceChanged'), 'PRICE_CHANGED');
+      const next = {
+        reroll: res.reroll,
+        scout: res.scout,
+        balance: res.balance,
+        bought: snap.bought + (item === 'reroll' ? 1 : 0),
+        scoutBought: snap.scoutBought + (item === 'scout' ? 1 : 0),
+      };
+      return ok(c, RerollShopResponseSchema, shopView(next, rules), 200, NO_STORE);
+    });
 
   // T-11-153 광고 대신 구단 자금으로 받는 보상들의 값. 앱 · 웹이 그 보상 버튼을 보일 때만 부른다.
   app.get('/v1/items/rewards', requireProfile, async (c) => {

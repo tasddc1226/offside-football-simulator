@@ -104,6 +104,7 @@ const ko = {
   tradeSpent: '사용',
   tradeBonus: '장려금',
   spendReroll: '리롤권 구매',
+  spendScout: '프리미엄 스카우트권 구매',
   spendCandidates: '후보 잠재력 보기',
   spendPeek: '시즌 평가 보기',
   spendBoost: '잠재력 강화',

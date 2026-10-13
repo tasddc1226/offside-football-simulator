@@ -27,6 +27,8 @@ const ko = {
     `후보 3명 중 ${p.grade} 등급이 1명 이상 나올 확률은 시즌 중 ${p.season}, 프리시즌 ${p.pre}예요.`,
   premium: (p: { season: string; pre: string }) =>
     `프리미엄 스카우트권으로 뽑으면 후보 3명 중 1명은 A 이상이 보장돼요. 모든 후보의 S 확률은 일반의 2배라 시즌 중 ${p.season}, 프리시즌 ${p.pre}예요. 나머지 후보의 A~D는 위 표의 비율을 그대로 따라요.`,
+  premiumPity:
+    '천장: 프리미엄 스카우트권을 S 후보 없이 29장 쓰면 30장째 보장 후보는 S로 확정돼요. 누적 100장째마다 보장 후보의 잠재력은 최고치(96)로 확정돼요. 남은 장수는 후보 선택 화면에서 볼 수 있어요.',
   boostTitle: '잠재력 강화 확률',
   boostLv: (p: { lv: number }) => `+${p.lv} 단계`,
   boostNote: (p: { pity: string }) =>

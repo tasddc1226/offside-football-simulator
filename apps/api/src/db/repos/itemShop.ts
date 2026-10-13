@@ -1,4 +1,5 @@
 import {
+  RETIRED_NUMBER_SCOUTS,
   REWARD_KINDS,
   REWARD_UNCAPPED,
   resolveBalance,
@@ -8,6 +9,7 @@ import {
 } from '@offside/contracts';
 import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
+import { eventNotificationStatements } from '../../push/events.js';
 
 // T-11-152 구단 자금으로 사는 선수 후보 리롤권. 쌓이기만 하는 구단 자금을 없애는 곳이라 비싸게 팔고, 같은 날 더 살수록
 // 비싸지며 하루 상한이 있다. 수치는 운영 도구 밸런스 설정(이적시장 묶음)의 활성 버전을 요청 때 바로 읽는다.
@@ -32,29 +34,52 @@ export const grantItemStatement = (
     )
     .bind(profileId, item, qty, now, ...(guard.params ?? []));
 
-/** 리롤권 상점 수치(활성 버전, 없으면 기본값). */
+/** 리롤권 상점 수치(활성 버전, 없으면 기본값). T-11-244 프리미엄 스카우트권은 한 주 상한 · 같은 가격. */
 export async function rerollShopRules(db: Db) {
   const b = resolveBalance((await getActiveBalance(db))?.values);
-  return { price: b.rerollPrice, growth: b.rerollPriceGrowth, cap: b.rerollDailyCap };
+  return {
+    price: b.rerollPrice,
+    growth: b.rerollPriceGrowth,
+    cap: b.rerollDailyCap,
+    scout: { price: b.scoutPrice, growth: 1, cap: b.scoutWeeklyCap },
+  };
 }
 
-/** 가진 리롤권 · 구단 자금 · since(오늘 0시, 한국 시각) 뒤에 산 장수를 한 번에 읽는다(행이 없으면 0). */
-export async function shopSnapshot(db: Db, profileId: string, since: string) {
+/**
+ * 가진 리롤권 · 구단 자금 · since(오늘 0시, 한국 시각) 뒤에 산 장수를 한 번에 읽는다(행이 없으면 0). T-11-244 가진
+ * 스카우트권과 week(이번 주 월요일 0시) 뒤에 산 스카우트권도 같이 읽는다.
+ */
+export async function shopSnapshot(db: Db, profileId: string, since: string, week: string) {
   const row = await db.$client
     .prepare(
       `SELECT (SELECT qty FROM owner_items WHERE profile_id = ?1 AND item = 'reroll') AS reroll,
+              (SELECT qty FROM owner_items WHERE profile_id = ?1 AND item = 'scout') AS scout,
               (SELECT balance FROM owner_funds WHERE profile_id = ?1) AS balance,
               (SELECT coalesce(sum(qty), 0) FROM owner_item_purchases
-                WHERE profile_id = ?1 AND item = 'reroll' AND created_at >= ?2) AS bought`,
+                WHERE profile_id = ?1 AND item = 'reroll' AND created_at >= ?2) AS bought,
+              (SELECT coalesce(sum(qty), 0) FROM owner_item_purchases
+                WHERE profile_id = ?1 AND item = 'scout' AND created_at >= ?3) AS scoutBought`,
     )
-    .bind(profileId, since)
-    .first<{ reroll: number | null; balance: number | null; bought: number }>();
-  return { reroll: row?.reroll ?? 0, balance: row?.balance ?? 0, bought: row?.bought ?? 0 };
+    .bind(profileId, since, week)
+    .first<{
+      reroll: number | null;
+      scout: number | null;
+      balance: number | null;
+      bought: number;
+      scoutBought: number;
+    }>();
+  return {
+    reroll: row?.reroll ?? 0,
+    scout: row?.scout ?? 0,
+    balance: row?.balance ?? 0,
+    bought: row?.bought ?? 0,
+    scoutBought: row?.scoutBought ?? 0,
+  };
 }
 
 /**
  * 구단 자금으로 하나 사기(item = 원장 이름). 1) 오늘 같은 item을 산 수가 라우트가 본 값(bought) 그대로일 때만 원장에 넣고
- * 2) 그 행이 있으면 자금을 빼고 3) grantReroll이면 리롤권을 더한다. 동시에 두 번 사면 뒤 요청은 1이 0행이라 아무것도 바꾸지
+ * 2) 그 행이 있으면 자금을 빼고 3) grant가 있으면 그 아이템을 1장 더한다. 동시에 두 번 사면 뒤 요청은 1이 0행이라 아무것도 바꾸지
  * 않는다(won = false). 잔액이 모자라면 CHECK 위반으로 batch 전체가 되돌아간다.
  */
 async function buyItem(
@@ -63,13 +88,14 @@ async function buyItem(
     id: string;
     profileId: string;
     item: string;
-    grantReroll: boolean;
+    /** 원장과 함께 더할 구단주 아이템(리롤권 · T-11-244 스카우트권). 광고 대신 받는 보상은 없다. */
+    grant: OwnerItem | null;
     price: number;
     bought: number;
     since: string;
     now: string;
   },
-): Promise<{ won: boolean; balance: number; reroll: number }> {
+): Promise<{ won: boolean; balance: number; reroll: number; scout: number }> {
   const d1 = db.$client;
   const won = `EXISTS (SELECT 1 FROM owner_item_purchases WHERE id = ?)`;
   const results = await d1.batch([
@@ -86,21 +112,27 @@ async function buyItem(
         `UPDATE owner_funds SET balance = balance - ?, updated_at = ? WHERE profile_id = ? AND ${won}`,
       )
       .bind(b.price, b.now, b.profileId, b.id),
-    ...(b.grantReroll
-      ? [grantItemStatement(d1, b.profileId, 'reroll', 1, b.now, { sql: won, params: [b.id] })]
+    ...(b.grant
+      ? [grantItemStatement(d1, b.profileId, b.grant, 1, b.now, { sql: won, params: [b.id] })]
       : []),
     d1
       .prepare(
-        `SELECT (SELECT balance FROM owner_funds WHERE profile_id = ?) AS balance,
-                (SELECT qty FROM owner_items WHERE profile_id = ? AND item = 'reroll') AS reroll`,
+        `SELECT (SELECT balance FROM owner_funds WHERE profile_id = ?1) AS balance,
+                (SELECT qty FROM owner_items WHERE profile_id = ?1 AND item = 'reroll') AS reroll,
+                (SELECT qty FROM owner_items WHERE profile_id = ?1 AND item = 'scout') AS scout`,
       )
-      .bind(b.profileId, b.profileId),
+      .bind(b.profileId),
   ]);
-  const row = results.at(-1)!.results[0] as { balance: number | null; reroll: number | null };
+  const row = results.at(-1)!.results[0] as {
+    balance: number | null;
+    reroll: number | null;
+    scout: number | null;
+  };
   return {
     won: results[0]!.meta.changes === 1,
     balance: row.balance ?? 0,
     reroll: row.reroll ?? 0,
+    scout: row.scout ?? 0,
   };
 }
 
@@ -108,7 +140,13 @@ async function buyItem(
 export const buyReroll = (
   db: Db,
   b: { id: string; profileId: string; price: number; bought: number; since: string; now: string },
-) => buyItem(db, { ...b, item: 'reroll', grantReroll: true });
+) => buyItem(db, { ...b, item: 'reroll', grant: 'reroll' });
+
+/** T-11-244 프리미엄 스카우트권 한 장 사기(buyItem, since = 이번 주 월요일 0시). */
+export const buyScout = (
+  db: Db,
+  b: { id: string; profileId: string; price: number; bought: number; since: string; now: string },
+) => buyItem(db, { ...b, item: 'scout', grant: 'scout' });
 
 // ───────── T-11-153 광고 대신 구단 자금으로 받는 보상 ─────────
 // 앱의 보상형 광고 자리(후보 잠재력 · 시즌 평가 보기 · 자금이 모자란 시즌의 강화)를 구단 자금으로도 받게 한다. 서버는 자금만
@@ -166,7 +204,7 @@ export const buyRewardWithFunds = (
     since: string;
     now: string;
   },
-) => buyItem(db, { ...b, item: rewardItem(b.kind), grantReroll: false });
+) => buyItem(db, { ...b, item: rewardItem(b.kind), grant: null });
 
 /** 구단 자금으로 산 것(리롤권 · 광고 대신 받은 보상) 최근 limit개. 이적시장 '자금 내역'에 거래와 함께 보인다. */
 export async function myFundsSpends(
@@ -182,4 +220,39 @@ export async function myFundsSpends(
     .bind(profileId, limit)
     .all<FundsSpend>();
   return results;
+}
+
+/**
+ * T-11-244 영구결번을 처음 받은 커리어의 구단주에게 프리미엄 스카우트권을 준다. 이번 심사(now)가 막 넣은 결번 줄이 있을
+ * 때만 줘서, 같은 커리어를 다시 심사하거나 동시에 두 번 불려도 한 번만 받는다. 알림함에만 남긴다(은퇴 화면을 보고 있다).
+ */
+export function retiredNumberRewardStatements(
+  d1: D1Database,
+  profileId: string,
+  careerId: string,
+  now: string,
+) {
+  const guard = {
+    sql: 'EXISTS (SELECT 1 FROM retired_numbers WHERE career_id = ? AND granted_at = ?)',
+    params: [careerId, now],
+  };
+  return [
+    grantItemStatement(d1, profileId, 'scout', RETIRED_NUMBER_SCOUTS, now, guard),
+    ...eventNotificationStatements(
+      d1,
+      {
+        profileId,
+        sourceKey: `retired-number:${careerId}`,
+        now,
+        content: {
+          kind: 'team',
+          title: '영구결번 보상을 받았어요', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
+          body: `영구결번을 받아 프리미엄 스카우트권 ${RETIRED_NUMBER_SCOUTS}장을 받았어요.`, // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
+          target: { type: 'screen', screen: 'home' },
+        },
+      },
+      guard,
+      { push: false },
+    ),
+  ];
 }

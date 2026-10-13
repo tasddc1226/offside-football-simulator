@@ -38,6 +38,9 @@ export const CUP_EN: Record<CupTextKey, string> = {
   shopClosed: "Reroll tickets aren't on sale right now.",
   shopDaily:
     'You can buy up to {n} reroll ticket(s) a day. You can buy more from 00:00 (KST) tomorrow.',
+  shopWeekly:
+    'You can buy up to {n} premium scout ticket(s) a week. You can buy more from 00:00 (KST) next Monday.',
+  scoutClosed: "Premium scout tickets aren't on sale right now.",
   rewardClosed: "You can't use club funds for this right now.",
   rewardDaily:
     'You can use club funds for this up to {n} time(s) a day. You can use them again from 00:00 (KST) tomorrow.',
@@ -69,4 +72,6 @@ export const CUP_EN: Record<CupTextKey, string> = {
   earlyTitle: '{cup} is full, so the schedule moved up',
   earlyBody: 'Group draw {draw}, first match {first} (KST).',
   rewardBody: 'Final result: {stage}. You received {n} player reroll ticket(s).',
+  rewardBodyScout:
+    'Final result: {stage}. You received {n} player reroll ticket(s) and {s} premium scout ticket(s).',
 };

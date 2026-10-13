@@ -87,6 +87,7 @@ export const {
   rerollCandidates,
   keepCandidate,
   premiumScoutCandidates,
+  planPremiumScout,
   revealCandidatePotential,
 } = createGameActions({
   state: appState,

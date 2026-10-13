@@ -9,6 +9,7 @@ import {
   FRIEND_INVITE_PARAM,
   INVITE_REROLLS,
   INVITE_REWARD_MAX,
+  INVITE_SCOUTS,
 } from '@offside/contracts/owner-team';
 import { friendText as L } from './i18n/ko/friend.js';
 import { teamCoreText } from './i18n/ko/teamCore.js';
@@ -36,7 +37,7 @@ export const friendRequestText = (r: { state: 'sent' | 'accepted'; friend: { nam
 
 /** T-11-171 신청 결과 토스트 — 이 신청으로 친구 초대 이벤트에 참여했으면 그 안내를 먼저 보인다. */
 export const friendRequestToast = (r: FriendRequestResponse) =>
-  r.invited ? L.joinedEvent({ n: INVITE_REROLLS }) : friendRequestText(r);
+  r.invited ? L.joinedEvent({ n: INVITE_REROLLS, s: INVITE_SCOUTS }) : friendRequestText(r);
 
 /**
  * T-11-171 친구 초대 이벤트 카드 문구. mine: 나를 초대한 사람이 있을 때의 한 줄, status: 내가 초대한 친구가 있을 때의 현황,
@@ -45,7 +46,7 @@ export const friendRequestToast = (r: FriendRequestResponse) =>
 export function inviteEventLines(i: InviteStatus) {
   return {
     title: L.eventTitle,
-    body: L.eventBody({ n: INVITE_REROLLS }),
+    body: L.eventBody({ n: INVITE_REROLLS, s: INVITE_SCOUTS }),
     mine: i.invitedBy
       ? i.invitedBy.done
         ? L.invitedDone({ name: i.invitedBy.name })

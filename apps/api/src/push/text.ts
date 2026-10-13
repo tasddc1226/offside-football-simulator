@@ -1,8 +1,9 @@
 import { careerReminderText as reminderKo } from '../i18n/ko/careerReminder.js';
 import { careerReminderText as reminderEn } from '../i18n/en/careerReminder.js';
 import { careerReminderText as reminderJa } from '../i18n/ja/careerReminder.js';
-import { INVITE_REROLLS } from '@offside/contracts/owner-team';
-import { PUSH_JA, PUSH_TAIL_JA } from '../i18n/ja/push.js';
+import { RETIRED_NUMBER_SCOUTS } from '@offside/contracts/cup';
+import { INVITE_REROLLS, INVITE_SCOUTS } from '@offside/contracts/owner-team';
+import { OLD_INVITEE, OLD_INVITER, PUSH_JA, PUSH_TAIL_JA } from '../i18n/ja/push.js';
 import { cupText } from '../cupText.js';
 import type { Lang } from '../lang.js';
 
@@ -31,9 +32,15 @@ const EN: Record<string, string> = {
   '내 팀에 새 경기 결과가 있어요': 'Your team has a new match result',
   // T-11-171 친구 초대 알림(키는 db/repos/referrals.ts의 한국어 문구).
   '친구 초대 보상을 받았어요': 'You got the friend invite reward', // i18n-ignore: 번역표 키
-  [`커리어를 끝까지 마쳐 선수 후보 리롤권 ${INVITE_REROLLS}장을 받았어요.`]: `You finished a career and got ${INVITE_REROLLS} candidate rerolls.`, // i18n-ignore: 번역표 키
+  [`커리어를 끝까지 마쳐 선수 후보 리롤권 ${INVITE_REROLLS}장과 프리미엄 스카우트권 ${INVITE_SCOUTS}장을 받았어요.`]: `You finished a career and got ${INVITE_REROLLS} candidate rerolls and ${INVITE_SCOUTS} premium scout ticket.`, // i18n-ignore: 번역표 키
   '초대한 친구가 커리어를 마쳤어요': 'A friend you invited finished a career', // i18n-ignore: 번역표 키
-  [`친구 초대 보상으로 선수 후보 리롤권 ${INVITE_REROLLS}장을 받았어요.`]: `You got ${INVITE_REROLLS} candidate rerolls as an invite reward.`, // i18n-ignore: 번역표 키
+  [`친구 초대 보상으로 선수 후보 리롤권 ${INVITE_REROLLS}장과 프리미엄 스카우트권 ${INVITE_SCOUTS}장을 받았어요.`]: `You got ${INVITE_REROLLS} candidate rerolls and ${INVITE_SCOUTS} premium scout ticket as an invite reward.`, // i18n-ignore: 번역표 키
+  // T-11-244 retired number reward (db/repos/itemShop.ts).
+  '영구결번 보상을 받았어요': 'You got a retired number reward', // i18n-ignore: 번역표 키
+  [`영구결번을 받아 프리미엄 스카우트권 ${RETIRED_NUMBER_SCOUTS}장을 받았어요.`]: `Your number was retired, so you got ${RETIRED_NUMBER_SCOUTS} premium scout ticket.`, // i18n-ignore: 번역표 키
+  // Notices sent before T-11-244 (2 rerolls).
+  [OLD_INVITEE]: 'You finished a career and got 2 candidate rerolls.',
+  [OLD_INVITER]: 'You got 2 candidate rerolls as an invite reward.',
 };
 
 /** 팀 이름이 끼는 경기 결과 본문(`원정 0 : 0 홈. …`). 팀 이름은 구단주가 지은 이름이라 그대로 둔다. 끝 문장은 TABLES의 tails 순서. */

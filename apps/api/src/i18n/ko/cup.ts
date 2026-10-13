@@ -36,6 +36,9 @@ export const CUP_KO = {
   iapUnavailable: '지금은 구매를 확인할 수 없어요. 잠시 뒤 앱을 다시 열면 받아요.',
   shopClosed: '지금은 리롤권을 팔지 않아요.',
   shopDaily: '리롤권은 하루에 {n}장까지 살 수 있어요. 내일 0시(한국 시간)에 다시 살 수 있어요.',
+  shopWeekly:
+    '프리미엄 스카우트권은 한 주에 {n}장까지 살 수 있어요. 다음 주 월요일 0시(한국 시간)에 다시 살 수 있어요.',
+  scoutClosed: '지금은 프리미엄 스카우트권을 팔지 않아요.',
   rewardClosed: '지금은 구단 자금으로 받을 수 없어요.',
   rewardDaily:
     '구단 자금으로는 하루에 {n}번까지 받을 수 있어요. 내일 0시(한국 시간)에 다시 받을 수 있어요.',
@@ -65,6 +68,8 @@ export const CUP_KO = {
   earlyTitle: '{cup} 정원이 다 차서 일정이 당겨졌어요',
   earlyBody: '조 추첨 {draw}, 첫 경기 {first}(한국 시간)에 열려요.',
   rewardBody: '최종 성적 {stage}. 선수 후보 리롤권 {n}장을 받았어요.',
+  rewardBodyScout:
+    '최종 성적 {stage}. 선수 후보 리롤권 {n}장과 프리미엄 스카우트권 {s}장을 받았어요.',
 } as const;
 
 export type CupTextKey = keyof typeof CUP_KO;

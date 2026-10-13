@@ -22,6 +22,7 @@
         </span>
       </div>
     {/each}
+    <p class="muted fs-sm" data-odds-pity>{L.oddsPity}</p>
     <p class="muted fs-sm">{L.oddsNote}</p>
   </div>
 {/if}

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CUP_ROUNDS, CUP_STAGES, IAP_PRODUCT_IDS, REWARD_KINDS } from './cup.js';
+import { CUP_ROUNDS, CUP_STAGES, IAP_PRODUCT_IDS, REWARD_KINDS, SCOUT_MODES } from './cup.js';
 import { IsoUtcSchema } from './primitives.js';
 import { TeamIdSchema, TeamLogoSchema, TeamMatchSchema } from './teams.js';
 
@@ -160,6 +160,16 @@ export const OwnerItemsResponseSchema = z.strictObject({
   boost: z.number().int().min(0),
   scout: z.number().int().min(0),
   iap: z.strictObject({ account: z.uuid(), stores: z.array(IapStoreSchema) }).optional(),
+  /** T-11-244 프리미엄 스카우트 천장 카운트(scoutPityView로 남은 장수를 그린다). */
+  pity: z
+    .strictObject({
+      used: z.number().int().min(0),
+      streak: z.number().int().min(0),
+      elites: z.number().int().min(0),
+    })
+    .optional(),
+  /** T-11-244 스카우트권을 쓴 응답에만: 이번 장의 모드(sure · elite면 기기가 그 확정 후보로 뽑는다). */
+  scoutMode: z.enum(SCOUT_MODES).optional(),
 });
 export type OwnerItemsResponse = z.infer<typeof OwnerItemsResponseSchema>;
 
@@ -184,8 +194,23 @@ export const RerollShopResponseSchema = z.strictObject({
   price: z.number().int().min(1).nullable(),
   bought: z.number().int().min(0),
   cap: z.number().int().min(0),
+  /** T-11-244 구단 자금으로 사는 프리미엄 스카우트권(한 주 = 월요일 0시 한국 시각부터). 옛 앱은 모른다. */
+  scout: z
+    .strictObject({
+      have: z.number().int().min(0),
+      price: z.number().int().min(1).nullable(),
+      bought: z.number().int().min(0),
+      cap: z.number().int().min(0),
+    })
+    .optional(),
 });
 export type RerollShopResponse = z.infer<typeof RerollShopResponseSchema>;
+
+/**
+ * T-11-244 POST /v1/items/scout/use 본문. hit = 기기가 이번 시드로 뽑은 일반 프리미엄 후보에 S가 있는지(천장 카운트를
+ * 0으로 돌린다). 본문이 없으면(천장을 모르는 옛 앱) 확정 모드를 주지 않고 장수만 센다.
+ */
+export const ScoutUseBodySchema = z.strictObject({ hit: z.boolean().optional() });
 
 /** POST /v1/items/reroll/buy — 화면에서 본 가격을 함께 보낸다(그 사이 가격이 바뀌었으면 409). */
 export const BuyRerollBodySchema = z.strictObject({ price: z.number().int().min(1) });

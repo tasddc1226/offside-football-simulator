@@ -18,6 +18,8 @@ import {
   type Candidate,
   type CandidatePotential,
 } from '@offside/game/candidates';
+import { gradeOf } from '@offside/game/stats';
+import type { ScoutMode } from '@offside/contracts/cup';
 import {
   leagueOf,
   clubsIn,
@@ -186,6 +188,9 @@ const SCOUT_SEED = 'ft_scout_seed';
 const SCOUT_REVEAL = 'ft_scout_reveal';
 // T-11-196 프리미엄 스카우트로 뽑은 시드. 새로 고침해도 같은 시드면 프리미엄 후보가 그대로 나온다.
 const SCOUT_PREMIUM = 'ft_scout_premium';
+// T-11-244 천장으로 뽑은 시드와 모드(sure · elite). 새로 고침해도 같은 시드면 확정 후보가 그대로 나온다.
+const SCOUT_PITY = 'ft_scout_pity';
+type PityDraw = { seed: number; mode: 'sure' | 'elite' };
 function scoutSeed(): number {
   const kept = loadKey<number>(SCOUT_SEED);
   if (typeof kept === 'number') return kept;
@@ -194,6 +199,12 @@ function scoutSeed(): number {
   return seed;
 }
 const releaseScoutSeed = () => saveKey(SCOUT_SEED, null);
+/** 이 시드로 뽑을 후보의 프리미엄 모드: 일반이면 false, 프리미엄이면 true, 천장이면 sure · elite. */
+function premiumModeOf(seed: number): boolean | 'sure' | 'elite' {
+  if (loadKey<number>(SCOUT_PREMIUM) !== seed) return false;
+  const pity = loadKey<PityDraw>(SCOUT_PITY);
+  return pity?.seed === seed ? pity.mode : true;
+}
 // T-11-225 다시 뽑아도 남겨 두는 후보 한 명. 같은 포지션·주력·세부 포지션으로 뽑을 때만 원래 자리에 다시 넣는다.
 const SCOUT_KEEP = 'ft_scout_keep';
 type KeptCandidate = {
@@ -863,7 +874,7 @@ export function createGameActions(host: GameHost) {
       draftCareerRules(appState.C).dpos,
       scoutSeed(),
       3,
-      loadKey<number>(SCOUT_PREMIUM) === scoutSeed(),
+      premiumModeOf(scoutSeed()),
     );
     const open = batch.map(() => false);
     const k = loadKey<KeptCandidate>(SCOUT_KEEP);
@@ -913,11 +924,31 @@ export function createGameActions(host: GameHost) {
     rollCandidates();
   }
 
-  /** T-11-196 프리미엄 스카우트권을 쓴 뒤(서버가 1장 차감) 새 시드로 프리미엄 후보를 뽑고 잠재력도 바로 공개한다. */
-  function premiumScoutCandidates() {
-    releaseScoutSeed();
-    const seed = scoutSeed();
+  /**
+   * T-11-244 프리미엄 스카우트권을 쓰기 전에 다음 시드를 정하고, 그 시드의 일반 프리미엄 후보에 S가 있는지(hit) 미리 본다.
+   * 서버가 천장 카운트를 그 결과로 센다. 응답을 못 받아 다시 보낼 때는 같은 계획을 그대로 쓴다.
+   */
+  function planPremiumScout(): { seed: number; hit: boolean } {
+    const seed = freshSeed();
+    const batch = generateCandidates(
+      appState.C.pos,
+      appState.C.focus,
+      draftCareerRules(appState.C).dpos,
+      seed,
+      3,
+      true,
+    );
+    return { seed, hit: batch.some((c) => gradeOf(c.potential.value) === 'S') };
+  }
+
+  /**
+   * T-11-196 프리미엄 스카우트권을 쓴 뒤(서버가 1장 차감) 프리미엄 후보를 뽑고 잠재력도 바로 공개한다. T-11-244 seed는
+   * planPremiumScout가 정한 시드, mode는 서버가 정한 이번 장의 모드(sure · elite면 천장 확정 후보).
+   */
+  function premiumScoutCandidates(seed: number = freshSeed(), mode: ScoutMode = 'normal') {
+    saveKey(SCOUT_SEED, seed);
     saveKey(SCOUT_PREMIUM, seed);
+    saveKey(SCOUT_PITY, mode === 'normal' ? null : ({ seed, mode } satisfies PityDraw));
     saveKey(SCOUT_REVEAL, seed);
     rollCandidates();
   }
@@ -944,6 +975,7 @@ export function createGameActions(host: GameHost) {
     startCareer,
     rollCandidates,
     rerollCandidates,
+    planPremiumScout,
     premiumScoutCandidates,
     keepCandidate,
   };

@@ -1,0 +1,32 @@
+{
+  "id": "t-11-244-scout-pity",
+  "title": "프리미엄 스카우트 천장과 새 획득 경로",
+  "items": [
+    "프리미엄 스카우트권을 S 후보 없이 29장 쓰면 30장째는 S 후보가 확정돼요. 누적 100장째마다 잠재력 최고치 S 후보가 나와요.",
+    "지금까지 쓴 프리미엄 스카우트권도 누적 장수에 들어가요. 남은 장수는 후보 선택 화면에 보여요.",
+    "친구 초대 보상이 리롤권 3장과 프리미엄 스카우트권 1장으로 바뀌었어요.",
+    "영구결번을 처음 받으면 프리미엄 스카우트권 1장을 받아요. 구단 자금으로도 한 주에 1장 살 수 있어요.",
+    "제2회 오프사이드컵부터 4강 이상 팀은 프리미엄 스카우트권을 받아요. 우승 3장, 준우승 2장, 4강 1장이에요."
+  ],
+  "en": {
+    "title": "Premium scout pity and new ways to earn tickets",
+    "items": [
+      "If 29 premium scout tickets in a row bring no S candidate, the 30th guarantees one. Every 100th ticket brings an S candidate with top potential.",
+      "Premium scout tickets you have already used count toward the total. The candidate screen shows how many are left.",
+      "The invite reward is now 3 rerolls and 1 premium scout ticket.",
+      "Your first retired number gives you 1 premium scout ticket. You can also buy 1 per week with club funds.",
+      "From the 2nd OFFSIDE Cup, the top 4 teams get premium scout tickets: 3 for the champion, 2 for the runner-up, 1 for semifinalists."
+    ]
+  },
+  "ja": {
+    "title": "プレミアムスカウトの天井と新しい入手方法",
+    "items": [
+      "S候補なしでプレミアムスカウト券を29枚使うと、30枚目でS候補が確定します。累計100枚目ごとにポテンシャル最高値のS候補が出ます。",
+      "これまで使ったプレミアムスカウト券も累計に含まれます。残り枚数は候補選択画面に表示されます。",
+      "友達招待の報酬がリロール券3枚とプレミアムスカウト券1枚になりました。",
+      "初めて永久欠番を得るとプレミアムスカウト券を1枚もらえます。クラブ資金でも週に1枚買えます。",
+      "第2回オフサイドカップから、ベスト4以上のチームはプレミアムスカウト券をもらえます。優勝3枚、準優勝2枚、ベスト4は1枚です。"
+    ]
+  },
+  "availability": "web-app"
+}

@@ -47,12 +47,13 @@ function normalOdds(draw: PotDraw): Record<ScoutGrade, number> {
 const within = (draw: PotDraw, lo: number, hi: number, u: number) =>
   draw.mean + draw.sd * phiInv(lo + (hi - lo) * u);
 
-function premiumPot(draw: PotDraw, r: () => number, sure: boolean): number {
+function premiumPot(draw: PotDraw, r: () => number, sure: boolean | 'S'): number {
   const sCut = phi((CUT.S - draw.mean) / draw.sd);
   const pS = Math.min(1, 2 * (1 - sCut));
   const pick = r(),
     u = r();
-  if (pick < pS) return within(draw, sCut, 1, u);
+  // T-11-244 천장: S 구간 안에서만 뽑는다.
+  if (sure === 'S' || pick < pS) return within(draw, sCut, 1, u);
   if (sure) return within(draw, phi((CUT.A - draw.mean) / draw.sd), sCut, u);
   return within(draw, 0, sCut, u);
 }

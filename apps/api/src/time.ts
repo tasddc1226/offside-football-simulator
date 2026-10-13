@@ -15,3 +15,11 @@ export function kstDays(now: Date, days: number): { days: string[]; startIso: st
     startIso: new Date(today.getTime() - (days - 1) * DAY_MS - KST_MS).toISOString(),
   };
 }
+
+/** T-11-244 이번 주 시작(월요일 0시, 한국 시각)의 UTC ISO. */
+export function kstWeekStart(now: string): string {
+  const k = new Date(Date.parse(now) + KST_MS);
+  k.setUTCHours(0, 0, 0, 0);
+  const back = (k.getUTCDay() + 6) % 7;
+  return new Date(k.getTime() - back * DAY_MS - KST_MS).toISOString();
+}

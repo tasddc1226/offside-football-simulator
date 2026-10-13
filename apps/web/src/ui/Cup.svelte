@@ -3,11 +3,12 @@
   // T-11-145 오프사이드 컵 화면 — 구단주 화면의 컵 배너로 연다. 내 상태(신청·다음 경기), 토너먼트 대진, 조별 순위표와 경기,
   // 일정·보상·규칙. 치른 경기를 누르면 같은 화면에서 상세(득점·승부차기)를 연다. 처음 열 때 불러오는 지연 청크다.
   import { onMount, tick } from 'svelte';
-  import { CUP_REWARDS, CUP_STAGES } from '@offside/contracts/cup';
+  import { CUP_STAGES } from '@offside/contracts/cup';
   import { fetchCup, fetchCupMe, type CupMatch, type CupMeResponse, type CupResponse } from '@offside/app-core/api/cup';
   import { isMember } from '@offside/app-core/account';
   import { cupBeforeDraw } from '@offside/app-core/cupHome';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
+  import { cupRewardText } from '@offside/app-core/cupReward';
   import { createCupPredictionController, emptyCupPredictions, type CupPredictionContext } from '@offside/app-core/cupPredictions';
   import { cupFolds, rememberCupFolds, type CupScheduleTab } from '@offside/app-core/cupFolds';
   import Topbar from './Topbar.svelte';
@@ -223,7 +224,7 @@
               {#each stages as s (s)}
                 <tr>
                   <th scope="row">{stageLabel(s)}</th>
-                  <td>{L.rewardReroll({ n: CUP_REWARDS[s].rerolls })}{#if CUP_REWARDS[s].trophy} · {L.rewardTrophy}{/if}</td>
+                  <td>{cupRewardText(data?.cup.edition ?? 0, s)}</td>
                 </tr>
               {/each}
             </tbody>
