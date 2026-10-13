@@ -7662,4 +7662,6 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
 }
 
 /* The separate cover fills the scrollbar gutter too; ordinary sheets keep their original layout. */
-html.scroll-locked:has([data-progress-cover]) { scrollbar-gutter: auto; }
+html.scroll-locked:has([data-progress-cover]) {
+  scrollbar-gutter: auto;
+}
