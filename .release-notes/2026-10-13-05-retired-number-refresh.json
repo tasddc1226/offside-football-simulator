@@ -1,0 +1,18 @@
+{
+  "id": "t-11-240-retired-number-refresh",
+  "title": "영구결번 도전 목록 갱신 수정",
+  "items": ["시즌 기록 저장이 완료되면 영구결번 도전 목록에 새로 뛴 팀과 최신 기록이 반영돼요."],
+  "en": {
+    "title": "Retired-number challenge refresh fix",
+    "items": [
+      "Once season records are saved, the retired-number challenge list updates with your new club and latest records."
+    ]
+  },
+  "ja": {
+    "title": "永久欠番チャレンジの一覧更新を修正",
+    "items": [
+      "シーズン記録の保存が完了すると、永久欠番チャレンジの一覧に新たにプレーしたクラブと最新の記録が反映されます。"
+    ]
+  },
+  "availability": "web-app"
+}

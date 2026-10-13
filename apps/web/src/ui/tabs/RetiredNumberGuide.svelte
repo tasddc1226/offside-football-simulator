@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { GameState } from '@offside/game/types';
   import type { RetiredNumberProgress } from '@offside/contracts';
-  import { fetchRetiredNumberProgress } from '@offside/app-core/api/retiredNumberProgress';
+  import { fetchRetiredNumberProgress, onRetiredNumberProgressSynced } from '@offside/app-core/api/retiredNumberProgress';
   import { retiredNumberNext } from '@offside/app-core/retiredNumberGuide';
   import { gameCareerText } from '@offside/app-core/i18n/ko/gameCareer';
   import { tn } from '@offside/game/i18n/names';
@@ -25,10 +25,11 @@
     finally { if (version === request) loading = false; }
   }
   $effect(() => {
-    // Only load on explicit expansion; completed-season changes use the shared invalidated cache.
     const key = `${s.cid}:${s.number}:${s.career.length}`;
-    if (open && key && s.career.length) void load();
-    return () => { request++; };
+    if (!open || !key || !s.career.length) return;
+    const stop = onRetiredNumberProgressSynced(s.cid, () => void load());
+    void load();
+    return () => { stop(); request++; };
   });
 </script>
 
