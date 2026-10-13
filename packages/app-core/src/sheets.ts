@@ -169,6 +169,7 @@ export type SheetView =
       ch: string[];
       stats: { apps: number; goals: number; col: number; colLabel: string; rating: string };
       honors: string[];
+      trophyHonors?: { name: string; art: import('./career-trophy').CareerTrophy }[];
       comps: string[];
       tours: TourView[];
       gala: string[];
@@ -192,6 +193,7 @@ export type SheetView =
       options: {
         clubId?: string;
         reason?: string | undefined;
+        destination?: string | undefined;
         name: string;
         lg: string;
         salary: string | null;

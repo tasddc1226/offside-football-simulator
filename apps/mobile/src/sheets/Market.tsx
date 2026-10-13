@@ -1,4 +1,5 @@
 // 이적시장 시트(웹 sheets/Market.svelte): 다음 시즌 뛸 곳을 고른다. 선택은 pickOption이 이어서 처리한다.
+import { careerMomentText as CM } from '@offside/app-core/i18n/ko/careerMoment';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import type { SheetView } from '@offside/app-core/sheets';
@@ -28,6 +29,11 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
       <Txt v="sm" tone="muted">
         {L.marketHint}
       </Txt>
+      {s.options.some((o) => o.destination) ? (
+        <Txt v="xs" tone="muted">
+          {CM.estimateNote}
+        </Txt>
+      ) : null}
       <View style={{ gap: 10 }}>
         {s.options.map((o, i) => (
           <Press
@@ -37,7 +43,7 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
               name: o.name,
               lg: o.lg,
               salary: o.salary,
-              sub: o.sub,
+              sub: [o.sub, o.destination].filter(Boolean).join(' · ') || null,
               reason: o.reason,
             })}
             onPress={() => {
@@ -83,6 +89,11 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
             {o.sub ? (
               <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
                 {o.sub}
+              </Txt>
+            ) : null}
+            {o.destination ? (
+              <Txt v="sm" tone="muted" testID={`transfer-outlook-${i}`}>
+                {o.destination}
               </Txt>
             ) : null}
             {o.reason ? (
