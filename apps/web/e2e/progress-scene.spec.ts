@@ -12,116 +12,94 @@ for (const size of [
   { width: 1280, height: 900 },
   { width: 844, height: 390 },
 ]) {
-  test(`separate character cover preserves the original modal through motion and rotation (${size.width})`, async ({
+  test(`runner travels above the readable popup and stays within rotated screens (${size.width})`, async ({
     page,
   }) => {
     await page.setViewportSize(size);
     await resumeWithSave(page, { pending: null, phase: 0, injury: 0, serving: false });
     await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
     await page.locator('[data-act="advance"]').click();
-    const scene = page.locator('[data-progress-cover]');
-    await expect(scene).toBeVisible();
-    const screen = scene;
-    expect(
-      await page.evaluate(() => getComputedStyle(document.documentElement).scrollbarGutter),
-    ).toBe('auto');
-    expect(await screen.boundingBox()).toMatchObject({
-      x: 0,
-      y: 0,
-      width: size.width,
-      height: size.height,
-    });
-    await expect(page.locator('#app')).toHaveAttribute('inert', '');
-    await expect(page.locator('.sheet-handle')).toHaveCount(1);
-    await expect(page.locator('#modal')).toHaveAttribute('inert', '');
-    expect(
-      await page.evaluate(() =>
-        document.getElementById('modal')!.contains(document.querySelector('[data-progress-cover]')),
-      ),
-    ).toBe(false);
-    expect(await scene.innerText()).toBe('');
-    await expect(scene.locator('h2, .prog, .ticker, .steps')).toHaveCount(0);
-    await expect(page.locator('#sheet .avatar-stage')).toHaveCount(0);
-    expect((await page.locator('#sheet').boundingBox())!.height).toBeLessThan(size.height);
-    expect((await page.locator('#sheet').boundingBox())!.width).toBeLessThanOrEqual(460);
-    await page.clock.runFor(350);
-    await expect(scene.locator('.avatar-stage')).toHaveAttribute('data-motion', 'run');
-    await page.clock.runFor(550);
-    await expect(scene.locator('.avatar-stage')).toHaveAttribute('data-motion', 'shoot');
-    const expectCentered = async (viewport: { width: number; height: number }) => {
-      const player = (await scene.locator('.avatar-walker').boundingBox())!;
-      expect(player.x + player.width / 2).toBeCloseTo(viewport.width / 2, 0);
-      expect(player.y + player.height / 2).toBeCloseTo(viewport.height / 2, 0);
+    const runner = page.locator('[data-progress-runner]');
+    await expect(runner).toBeVisible();
+    await expect(page.locator('[data-progress-cover]')).toHaveCount(0);
+    await expect(page.locator('#modal')).not.toHaveAttribute('inert', '');
+    await expect(runner).toHaveAttribute('aria-hidden', 'true');
+    expect(await runner.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
+    expect(await runner.innerText()).toBe('');
+    await expect(page.locator('#sheet')).toContainText('프리시즌 진행 중');
+    await page.clock.runFor(400);
+    await expect(runner.locator('.avatar-stage')).toHaveAttribute('data-motion', 'run');
+
+    const expectOnEdge = async (viewport: { width: number; height: number }) => {
+      const track = (await runner.boundingBox())!;
+      const sheet = (await page.locator('#sheet').boundingBox())!;
+      expect(track.y).toBeGreaterThanOrEqual(0);
+      expect(track.y + track.height).toBeCloseTo(sheet.y + 3, 0);
+      expect(track.x).toBeGreaterThanOrEqual(sheet.x);
+      expect(track.x + track.width).toBeLessThanOrEqual(sheet.x + sheet.width);
+      expect(track.x + track.width).toBeLessThanOrEqual(viewport.width);
+      expect(sheet.y + sheet.height).toBeLessThanOrEqual(viewport.height + 1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
     };
-    await expectCentered(size);
-    await expect(scene.locator('.field-lines')).toHaveCount(0);
+    await expectOnEdge(size);
+    const at = async (fraction: number) => {
+      await runner.evaluate((el, f) => {
+        for (const animation of el.getAnimations({ subtree: true })) {
+          animation.pause();
+          animation.currentTime = Number(animation.effect!.getTiming().duration) * f;
+        }
+      }, fraction);
+      return (await runner.locator('.runner-player').boundingBox())!;
+    };
+    const start = await at(0);
+    const middle = await at(0.25);
+    expect(middle.x - start.x).toBeGreaterThan(80);
+    const end = await at(0.5);
+    expect(end.x + end.width).toBeCloseTo(
+      (await runner.boundingBox())!.x + (await runner.boundingBox())!.width,
+      0,
+    );
     expect(
-      await scene.locator('.avatar-stage').evaluate((el) => getComputedStyle(el).backgroundColor),
-    ).toBe('rgba(0, 0, 0, 0)');
-    // Rotation keeps the character in the viewport center, without a travel transition.
+      await runner.locator('.runner-facing').evaluate((el) => getComputedStyle(el).transform),
+    ).toContain('-1');
+    await at(0);
     const rotated = { width: size.height, height: size.width };
     await page.setViewportSize(rotated);
     await page.clock.runFor(100);
-    await expectCentered(rotated);
+    await expectOnEdge(rotated);
     await page.setViewportSize(size);
     await page.clock.runFor(100);
-    await expectCentered(size);
+    await expectOnEdge(size);
     if (process.env.CAPTURE_PROGRESS_DIR)
       await page.screenshot({
-        path: `${process.env.CAPTURE_PROGRESS_DIR}/progress-cover-${size.width}.png`,
-        animations: 'disabled',
+        path: `${process.env.CAPTURE_PROGRESS_DIR}/popup-runner-${size.width}.png`,
       });
-
     await page.clock.runFor(10000);
-    await expect(screen).toBeHidden();
-    await expect(page.locator('#app')).not.toHaveAttribute('inert', '');
-    await expect(page.locator('#modal')).not.toHaveAttribute('inert', '');
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-      true,
-    );
+    await expect(runner).toBeHidden();
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ft_save')!).phase)).toBe(1);
   });
 }
 
-test('season records/skip/confirmation remain functional; motion stops on completion', async ({
+test('season skip is directly clickable while the runner is visible; results remain unchanged', async ({
   page,
 }) => {
   await page.route(`${API}/v1/careers/**`, (r) => r.fulfill(ok({})));
   await resumeWithSave(page, { pending: null, phase: 1, injury: 0, serving: false });
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
   await page.locator('[data-act="advance"]').click();
-  const scene = page.locator('[data-progress-cover]');
-  await expect(scene).toBeVisible();
+  const runner = page.locator('[data-progress-runner]');
+  await expect(runner).toBeVisible();
   const saved = await page.evaluate(() => localStorage.getItem('ft_save'));
   await page.clock.runFor(600);
-  if (process.env.CAPTURE_PROGRESS_DIR)
-    await page.screenshot({
-      path: `${process.env.CAPTURE_PROGRESS_DIR}/progress-cover-season.png`,
-      animations: 'disabled',
-    });
-  // Revealing the original modal must not finish the simulation or alter saved results.
-  await scene.getByRole('button', { name: '진행 내용 보기' }).click();
-  await expect(scene).toBeHidden();
-  await expect(page.locator('#modal')).not.toHaveAttribute('inert', '');
   await expect(page.locator('#an-skip')).toBeInViewport();
-  await expect(page.locator('#sheet [data-sheet="0"]')).toHaveCount(0);
-  expect(await page.evaluate(() => localStorage.getItem('ft_save'))).toBe(saved);
-  if (process.env.CAPTURE_PROGRESS_DIR)
-    await page.screenshot({
-      path: `${process.env.CAPTURE_PROGRESS_DIR}/progress-modal-season.png`,
-      animations: 'disabled',
-    });
   await page.locator('#an-skip').click();
+  await expect(runner).toBeHidden();
   await expect(page.locator('#sheet [data-sheet="0"]')).toBeInViewport();
-  await expect(page.locator('#sheet .avatar-stage')).toHaveCount(0);
   await expect(page.locator('[data-block-wdl]')).not.toBeEmpty();
-  if (process.env.CAPTURE_PROGRESS_DIR)
-    await page.screenshot({
-      path: `${process.env.CAPTURE_PROGRESS_DIR}/progress-modal-result.png`,
-      animations: 'disabled',
-    });
+  expect(await page.evaluate(() => localStorage.getItem('ft_save'))).toBe(saved);
   await page.clock.resume();
-  // Audit the readable modal after its reveal/bump animations settle, not an in-between frame.
   await page.locator('#modal').evaluate(async (el) => {
     await Promise.all(
       el
@@ -131,35 +109,30 @@ test('season records/skip/confirmation remain functional; motion stops on comple
     );
   });
   const issues = await new AxeBuilder({ page }).include('#sheet').analyze();
-  expect(
-    issues.violations.map((v) => ({
-      id: v.id,
-      nodes: v.nodes.map((n) => ({ target: n.target, summary: n.failureSummary })),
-    })),
-  ).toEqual([]);
+  expect(issues.violations.map((v) => ({ id: v.id, nodes: v.nodes.map((n) => n.target) }))).toEqual(
+    [],
+  );
   await page.locator('#sheet [data-sheet="0"]').click();
-  await page.clock.runFor(500);
   await expect(page.locator('#sheet')).toBeHidden();
   expect(await page.evaluate(() => localStorage.getItem('ft_save'))).toBe(saved);
 });
 
-test('reduced motion keeps a safe static player; progress still completes', async ({ page }) => {
+test('reduced motion stops both travel and running poses without delaying progress', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.route(
-    /(?:avatar-mini-motion\/[^/?]+|assets\/(?:short|fringe|long|mohawk|slick|buzz|afro|bun|spiky)-[^/]+\.js)(?:\?|$)/,
-    (r) => r.abort(),
-  );
   await resumeWithSave(page, { pending: null, phase: 0 });
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
   await page.locator('[data-act="advance"]').click();
-  await expect(page.locator('[data-progress-cover]')).toBeVisible();
-  await page.clock.runFor(1000);
-  await expect(page.locator('.avatar-stage')).toHaveAttribute('data-motion', 'idle');
+  const runner = page.locator('[data-progress-runner]');
+  await expect(runner).toBeVisible();
+  await expect(runner.locator('.avatar-stage')).toHaveAttribute('data-motion', 'idle');
+  expect(await runner.evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
   await page.clock.runFor(10000);
-  await expect(page.locator('[data-progress-cover]')).toBeHidden();
+  await expect(runner).toBeHidden();
 });
 
-test('pose loading failure does not block progress or erase the player', async ({ page }) => {
+test('pose loading failure keeps a still player and does not block progress', async ({ page }) => {
   let failed = 0;
   await page.route(
     /(?:avatar-mini-motion\/[^/?]+|assets\/(?:short|fringe|long|mohawk|slick|buzz|afro|bun|spiky)-[^/]+\.js)(?:\?|$)/,
@@ -171,49 +144,44 @@ test('pose loading failure does not block progress or erase the player', async (
   await resumeWithSave(page, { pending: null, phase: 0, injury: 0, serving: false });
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
   await page.locator('[data-act="advance"]').click();
-  await expect(page.locator('[data-progress-cover]')).toBeVisible();
+  const runner = page.locator('[data-progress-runner]');
+  await expect(runner).toBeVisible();
   await expect.poll(() => failed).toBeGreaterThan(0);
-  await expect(page.locator('.avatar-walker svg rect').first()).toBeVisible();
+  await expect(runner.locator('.avatar-stage')).toHaveAttribute('data-motion', 'idle');
+  await expect(runner.locator('svg rect').first()).toBeVisible();
+  expect(await runner.evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
   await page.clock.runFor(10000);
-  await expect(page.locator('[data-progress-cover]')).toBeHidden();
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ft_save')!).phase)).toBe(1);
+  await expect(runner).toBeHidden();
 });
 
-test('season finishes naturally and waits for confirmation without changing saved results', async ({
+test('natural season completion removes the runner and keeps confirmation available', async ({
   page,
 }) => {
   await resumeWithSave(page, { pending: null, phase: 1, injury: 0, serving: false });
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
   await page.locator('[data-act="advance"]').click();
-  await expect(page.locator('[data-progress-cover]')).toBeVisible();
+  await expect(page.locator('[data-progress-runner]')).toBeVisible();
   const saved = await page.evaluate(() => localStorage.getItem('ft_save'));
   await page.clock.runFor(20000);
   await expect(page.locator('#sheet [data-sheet="0"]')).toBeInViewport();
-  await expect(page.locator('[data-progress-cover]')).toBeHidden();
-  await expect(page.locator('#sheet .avatar-stage')).toHaveCount(0);
-  await expect(page.locator('#modal')).not.toHaveAttribute('inert', '');
+  await expect(page.locator('[data-progress-runner]')).toBeHidden();
   await page.locator('#sheet [data-sheet="0"]').click();
   await expect(page.locator('#sheet')).toBeHidden();
   expect(await page.evaluate(() => localStorage.getItem('ft_save'))).toBe(saved);
 });
 
-test('Escape only removes the cover; the original progress modal and keyboard control stay available', async ({
+test('decoration does not steal keyboard focus or dismiss the busy progress modal', async ({
   page,
 }) => {
-  await resumeWithSave(page, { pending: null, phase: 0, injury: 0, serving: false });
+  await resumeWithSave(page, { pending: null, phase: 1, injury: 0, serving: false });
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
   await page.locator('[data-act="advance"]').click();
-  const cover = page.locator('[data-progress-cover]');
-  await expect(cover).toBeVisible();
-  await expect(cover.getByRole('button')).toBeFocused();
-  await page.keyboard.press('Tab');
-  await expect(cover.getByRole('button')).toBeFocused();
-  const saved = await page.evaluate(() => localStorage.getItem('ft_save'));
+  const runner = page.locator('[data-progress-runner]');
+  await expect(runner).toBeVisible();
+  await expect(runner.locator('button, [tabindex]')).toHaveCount(0);
   await page.keyboard.press('Escape');
-  await expect(cover).toBeHidden();
-  await expect(page.locator('#sheet')).toBeVisible();
-  await expect(page.locator('#sheet')).toBeFocused();
-  expect(await page.evaluate(() => localStorage.getItem('ft_save'))).toBe(saved);
-  await page.clock.runFor(10000);
-  await expect(page.locator('#sheet')).toBeHidden();
+  await expect(runner).toBeVisible();
+  await page.locator('#an-skip').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#sheet [data-sheet="0"]')).toBeInViewport();
 });

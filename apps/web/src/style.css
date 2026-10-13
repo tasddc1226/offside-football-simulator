@@ -7661,7 +7661,12 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
   font-weight: 600;
 }
 
-/* The separate cover fills the scrollbar gutter too; ordinary sheets keep their original layout. */
-html.scroll-locked:has([data-progress-cover]) {
-  scrollbar-gutter: auto;
+/* Leave room above the progress sheet for the decorative runner, including landscape phones. */
+.sheet.progress-sheet {
+  max-height: min(90dvh, calc(100dvh - 80px - var(--safe-t, 0px)));
+}
+@media (min-width: 720px) {
+  .sheet.progress-sheet {
+    max-height: calc(100dvh - 160px - var(--safe-t, 0px));
+  }
 }

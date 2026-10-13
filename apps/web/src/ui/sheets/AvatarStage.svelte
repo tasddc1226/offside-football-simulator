@@ -1,6 +1,5 @@
 <script lang="ts">
-  // T-11-191 배경 없이 중앙에서 내 선수의 제자리 모션을 재생한다(웹·앱 공통 박자).
-  // '동작 줄이기'면 가운데에 서 있기만 한다. 장식이라 화면 읽기에서는 숨긴다.
+  // Decorative running poses; the host moves the player along the popup edge.
   import { avatarRects, type AvatarSpec } from '@offside/game/avatar';
   import {
     loadMotionPoses,
@@ -11,13 +10,10 @@
     type MiniPoses,
     type MotionId,
   } from '@offside/game/avatar-motion';
-  import { progressBeat } from '@offside/app-core/avatarStage';
+  import { canRun } from '@offside/app-core/avatarStage';
 
   const { spec, active = true }: { spec: AvatarSpec; active?: boolean } = $props();
-  const still = $derived(
-    !active || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) ||
-    spec.acc.some((a) => a === 'crutch' || a === 'suit' || a === 'bouquet'),
-  );
+  const still = $derived(!canRun(spec, active));
 
   type Rects = ReturnType<typeof avatarRects>;
   // 자세 그림은 그 선수 머리 모양 것만 무대가 열릴 때 불러온다. 오기 전에는 서 있는 그림으로 움직인다.
@@ -41,42 +37,32 @@
   });
   const rectsOf = (id: MotionId): Rects[] => (cache[id] ??= motionFrames(spec, id, poses).map(avatarRects));
 
-  let beat = $state(progressBeat());
   let frame = $state(0);
-  const rects = $derived(rectsOf(beat.motion)[frame] ?? rectsOf(beat.motion)[0]!);
+  const motion = $derived(still || !poses ? 'idle' : 'run');
+  const rects = $derived(rectsOf(motion)[frame] ?? rectsOf(motion)[0]!);
 
   $effect(() => {
-    beat = progressBeat();
     frame = 0;
-    if (still) return;
-    let b = progressBeat();
+    if (still || !poses) return;
     let f = 0;
-    let end = performance.now() + b.ms;
     let t: ReturnType<typeof setTimeout>;
     const tick = () => {
-      const now = performance.now();
-      if (now >= end) {
-        b = progressBeat(b.step + 1);
-        f = 0;
-        end = now + b.ms;
-        beat = b;
-      } else f = (f + 1) % MOTIONS[b.motion].frames.length;
+      f = (f + 1) % MOTIONS.run.frames.length;
       frame = f;
-      t = setTimeout(tick, MOTIONS[b.motion].frames[f]!.ms);
+      t = setTimeout(tick, MOTIONS.run.frames[f]!.ms);
     };
-    t = setTimeout(tick, Math.min(b.ms, MOTIONS[b.motion].frames[0]!.ms));
+    t = setTimeout(tick, MOTIONS.run.frames[0]!.ms);
     return () => clearTimeout(t);
   });
 </script>
 
-<div class="avatar-stage" aria-hidden="true" data-motion={still ? 'idle' : beat.motion}>
+<div class="avatar-stage" aria-hidden="true" data-motion={motion}>
   <div class="avatar-walker">
-    <svg class:flip={beat.flip} viewBox="0 0 {MOTION_W} {MOTION_H}" shape-rendering="crispEdges">{#each rects as r, i (i)}<rect x={r.x} y={r.y} width={r.w} height={r.h} fill={r.fill} fill-opacity={r.opacity} />{/each}</svg>
+    <svg viewBox="0 0 {MOTION_W} {MOTION_H}" shape-rendering="crispEdges">{#each rects as r, i (i)}<rect x={r.x} y={r.y} width={r.w} height={r.h} fill={r.fill} fill-opacity={r.opacity} />{/each}</svg>
   </div>
 </div>
 
 <style>
   .avatar-stage { width: 100%; height: 100%; background: transparent; }
   .avatar-walker, svg { display: block; width: 100%; height: 100%; }
-  svg.flip { transform: scaleX(-1); }
 </style>

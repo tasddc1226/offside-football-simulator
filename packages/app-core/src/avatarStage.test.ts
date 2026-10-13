@@ -1,18 +1,19 @@
 import { expect, it } from 'vitest';
 import { createRng, getActiveRng, setActiveRng } from '@offside/game/rng';
-import { progressBeat } from './avatarStage.js';
+import { runnerDuration, canRun } from './avatarStage.js';
+import type { AvatarSpec } from '@offside/game/avatar';
 
-it('visual choreography includes running, shooting and training without consuming game RNG', () => {
+it('decorative travel does not consume game RNG and respects static fallback conditions', () => {
   const previous = getActiveRng();
   const rng = createRng(609);
   setActiveRng(rng);
   const before = rng.getState();
   try {
-    const beats = Array.from({ length: 70 }, (_, i) => progressBeat(i));
-    expect(new Set(beats.map((b) => b.motion))).toEqual(
-      new Set(['idle', 'run', 'shoot', 'dribble', 'juggle', 'header']),
-    );
-    expect(beats.every((b) => b.ms > 0)).toBe(true);
+    expect(runnerDuration(220)).toBe(4000);
+    expect(canRun({ acc: [] } as unknown as AvatarSpec, true)).toBe(true);
+    expect(canRun({ acc: [] } as unknown as AvatarSpec, false)).toBe(false);
+    for (const acc of ['crutch', 'suit', 'bouquet'])
+      expect(canRun({ acc: [acc] } as AvatarSpec, true)).toBe(false);
     expect(rng.getState()).toEqual(before);
   } finally {
     setActiveRng(previous);

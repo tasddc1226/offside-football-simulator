@@ -3,7 +3,6 @@ import type { SheetCoreMsgs } from '../ko/sheetCore';
 
 export const sheetCore: Translation<SheetCoreMsgs> = {
   skip: 'Skip',
-  revealProgress: 'Show progress details',
   tallyApps: 'Apps',
   tallyGoals: 'Goals',
   tallyCleanSheets: 'Clean sheets',

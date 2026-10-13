@@ -142,7 +142,6 @@ test('actual play measures first action, milestones and a resumed career without
   // Natural UI play, never patching the save or invoking the analytics adapter directly.
   async function step() {
     for (const selector of [
-      '[data-progress-cover] button',
       '#an-skip',
       '.choice:visible',
       '[data-opt]:visible',

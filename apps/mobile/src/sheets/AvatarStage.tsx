@@ -1,5 +1,4 @@
-// T-11-191 배경 없이 중앙에서 내 선수의 제자리 모션을 재생한다(웹·앱 공통 박자).
-// '동작 줄이기'면 가운데에 서 있기만 한다. 장식이라 화면 읽기에서는 숨긴다.
+// Decorative running poses; ProgressRunner handles travel along the popup edge.
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
@@ -13,15 +12,19 @@ import {
   type MiniPoses,
   type MotionId,
 } from '@offside/game/avatar-motion';
-import { progressBeat, type StageBeat } from '@offside/app-core/avatarStage';
+import { canRun } from '@offside/app-core/avatarStage';
 import { prefs } from '../store';
 
-export function AvatarStage({ spec, active = true }: { spec: AvatarSpec; active?: boolean }) {
-  const still =
-    !active ||
-    !prefs.motionOK ||
-    spec.acc.some((a) => a === 'crutch' || a === 'suit' || a === 'bouquet');
-  const [beat, setBeat] = useState<StageBeat>(progressBeat);
+export function AvatarStage({
+  spec,
+  active = true,
+  onReady,
+}: {
+  spec: AvatarSpec;
+  active?: boolean;
+  onReady?: (ready: boolean) => void;
+}) {
+  const still = !canRun(spec, active && prefs.motionOK);
   const [frame, setFrame] = useState(0);
   const [poses, setPoses] = useState<MiniPoses | null>(null);
   useEffect(() => {
@@ -43,29 +46,21 @@ export function AvatarStage({ spec, active = true }: { spec: AvatarSpec; active?
     if (!r) cache.set(id, (r = motionFrames(spec, id, poses).map(avatarRects)));
     return r;
   };
+  useEffect(() => onReady?.(!still && !!poses), [still, poses, onReady]);
   useEffect(() => {
-    setBeat(progressBeat());
     setFrame(0);
-    if (still) return;
-    let b = progressBeat();
+    if (still || !poses) return;
     let f = 0;
-    let end = Date.now() + b.ms;
     let t: ReturnType<typeof setTimeout>;
     const tick = () => {
-      const now = Date.now();
-      if (now >= end) {
-        b = progressBeat(b.step + 1);
-        f = 0;
-        end = now + b.ms;
-        setBeat(b);
-      } else f = (f + 1) % MOTIONS[b.motion].frames.length;
+      f = (f + 1) % MOTIONS.run.frames.length;
       setFrame(f);
-      t = setTimeout(tick, MOTIONS[b.motion].frames[f]!.ms);
+      t = setTimeout(tick, MOTIONS.run.frames[f]!.ms);
     };
-    t = setTimeout(tick, Math.min(b.ms, MOTIONS[b.motion].frames[0]!.ms));
+    t = setTimeout(tick, MOTIONS.run.frames[0]!.ms);
     return () => clearTimeout(t);
-  }, [still]);
-  const frames = rectsOf(still ? 'idle' : beat.motion);
+  }, [still, poses]);
+  const frames = rectsOf(still || !poses ? 'idle' : 'run');
   const rects = frames[frame] ?? frames[0]!;
   return (
     <View
@@ -73,12 +68,7 @@ export function AvatarStage({ spec, active = true }: { spec: AvatarSpec; active?
       importantForAccessibility="no-hide-descendants"
       style={{ width: '100%', height: '100%' }}
     >
-      <Svg
-        width="100%"
-        height="100%"
-        viewBox={`0 0 ${MOTION_W} ${MOTION_H}`}
-        style={{ transform: [{ scaleX: beat.flip ? -1 : 1 }] }}
-      >
+      <Svg width="100%" height="100%" viewBox={`0 0 ${MOTION_W} ${MOTION_H}`}>
         {rects.map((r, i) => (
           <Rect
             key={i}

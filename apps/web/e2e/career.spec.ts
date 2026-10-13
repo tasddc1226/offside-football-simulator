@@ -6,7 +6,6 @@ import { API, ok, startCareer } from './helpers.js';
 // 방식으로 진행한다. 순수 UI 폴링이라 애니메이션 타이밍에 흔들리지 않는다.
 async function clickWhateverIsNext(page: Page): Promise<boolean> {
   const candidates = [
-    '[data-progress-cover] button',
     '#an-skip',
     '.choice:visible',
     '[data-opt]:visible',

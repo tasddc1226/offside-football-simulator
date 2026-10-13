@@ -1,4 +1,3 @@
-import { useState } from 'react';
 // 아래에서 올라오는 시트(웹 Sheet.svelte). 선택이 필수인 시트(진행 중·이벤트 대기)는 배경 누르기·끌어 내리기·
 // Android 뒤로로 닫히지 않는다. 본문은 SheetBody가 뷰 종류별로 그리고, 버튼은 sheetState.buttons 그대로.
 import { Keyboard, Modal, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
@@ -9,8 +8,7 @@ import { appState, prefs, sheetState } from '../store';
 import { buzz, dismissSheet } from '../game/host';
 import { useColors } from '../theme/useColors';
 import { SheetBody } from '../sheets/SheetBody';
-import { AvatarStage } from '../sheets/AvatarStage';
-import { sheetCoreText } from '@offside/app-core/i18n/ko/sheetCore';
+import { ProgressRunner } from '../sheets/ProgressRunner';
 import { Btn } from './Btn';
 import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
@@ -20,36 +18,23 @@ export function Sheet() {
   const { motionOK } = useSnapshot(prefs);
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
-  const avatarSize = height <= 540 ? 80 : Math.min(160, Math.max(96, width * 0.26));
-  const [dismissedView, setDismissedView] = useState<SheetView | null>(null);
+  const { height } = useWindowDimensions();
   const v = sheetState.view;
-  const covered =
-    s.open &&
-    s.busy &&
-    s.buttons.length === 0 &&
-    (v?.kind === 'steps' || v?.kind === 'block') &&
-    !!v.avatar &&
-    dismissedView !== v;
-  const reveal = () => setDismissedView(v);
+  const progress = (v?.kind === 'steps' || v?.kind === 'block') && !!v.avatar;
+  const running = s.open && s.busy && s.buttons.length === 0 && progress;
   const dismissible = !s.busy && !G?.pending;
   const close = () => dismissible && dismissSheet();
   return (
     <Modal
       visible={s.open}
       transparent
-      animationType={motionOK && !covered ? 'slide' : 'none'}
+      animationType={motionOK ? 'slide' : 'none'}
       statusBarTranslucent
       navigationBarTranslucent
       onShow={Keyboard.dismiss}
-      onRequestClose={() => (covered ? reveal() : close())}
+      onRequestClose={close}
     >
-      <View
-        accessibilityElementsHidden={covered}
-        importantForAccessibility={covered ? 'no-hide-descendants' : 'auto'}
-        pointerEvents={covered ? 'none' : 'auto'}
-        style={{ flex: 1, justifyContent: 'flex-end' }}
-      >
+      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable
           accessibilityLabel={shellMoreText.close}
           onPress={close}
@@ -69,9 +54,12 @@ export function Sheet() {
             backgroundColor: c.surface,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
-            maxHeight: '90%',
+            maxHeight: progress ? Math.min(height * 0.9, height - 80 - insets.top) : '90%',
           }}
         >
+          {running && (v?.kind === 'steps' || v?.kind === 'block') && v.avatar ? (
+            <ProgressRunner spec={v.avatar} />
+          ) : null}
           <ScrollView
             bounces={false}
             keyboardShouldPersistTaps="handled"
@@ -111,32 +99,6 @@ export function Sheet() {
           </ScrollView>
         </View>
       </View>
-      {covered ? (
-        <Pressable
-          testID="progress-cover"
-          accessibilityRole="button"
-          accessibilityViewIsModal
-          accessibilityLabel={sheetCoreText.revealProgress}
-          onPress={reveal}
-          style={{
-            position: 'absolute',
-            top: 0,
-            bottom: 0,
-            left: 0,
-            right: 0,
-            zIndex: 100,
-            backgroundColor: c.surface,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <View style={{ width: avatarSize, height: (avatarSize * 9) / 8 }}>
-            {(v?.kind === 'steps' || v?.kind === 'block') && v.avatar ? (
-              <AvatarStage spec={v.avatar} />
-            ) : null}
-          </View>
-        </Pressable>
-      ) : null}
     </Modal>
   );
 }
