@@ -1,0 +1,2 @@
+CREATE INDEX `careers_hof_score_order_idx` ON `careers` (`status`,`hidden`,"legend_score" desc,`retired_at`,`id`,`retire_age`,`service_season`,`pos`,`dpos`,`public_name`);--> statement-breakpoint
+CREATE INDEX `careers_hof_season_score_order_idx` ON `careers` (`status`,`hidden`,`service_season`,"legend_score" desc,`retired_at`,`id`,`retire_age`,`pos`,`dpos`,`public_name`);

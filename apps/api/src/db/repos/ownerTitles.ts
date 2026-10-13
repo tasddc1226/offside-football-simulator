@@ -11,7 +11,8 @@ import { accountLinkedSql } from './profiles.js';
 
 type Metrics = Record<TitleMetric, number>;
 
-/** Scalar aggregates use careers.profile_id, never the transferable cards.owner_id. */
+/** Scalar aggregates use careers.profile_id, never the transferable cards.owner_id.
+ * Pin the owner index: the global HOF peak index can otherwise scan every owner's retirees. */
 export async function titleMetricsOf(db: Db, profileId: string): Promise<Metrics> {
   const row = await db.get<Metrics>(sql`
     select
@@ -28,7 +29,8 @@ export async function titleMetricsOf(db: Db, profileId: string): Promise<Metrics
       (select count(*) from retired_numbers r join careers c on c.id = r.career_id
        where c.profile_id = ${profileId} and c.hidden = 0) as numbers,
       (select count(*) from owner_honors h where h.profile_id = ${profileId} and h.kind = 'first') as firsts
-    from careers where profile_id = ${profileId} and status = 'retired'
+    from careers INDEXED BY careers_profile_status_season_idx
+    where profile_id = ${profileId} and status = 'retired'
       and hidden = 0 and peak is not null and retire_age >= 30`);
   return row!;
 }
