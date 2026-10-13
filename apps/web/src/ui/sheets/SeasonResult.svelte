@@ -2,6 +2,8 @@
   import { tn } from '@offside/game/i18n/names';
   import { visibleSeasonNotes } from '@offside/app-core/potential-view';
   import type { SheetView } from '@offside/app-core/sheets';
+  import CareerTrophy from '../CareerTrophy.svelte';
+  import { careerMomentText as CM } from '@offside/app-core/i18n/ko/careerMoment';
   import NewTitles from '../titles/NewTitles.svelte';
   import { sheetPlayText as L } from '@offside/app-core/i18n/ko/sheetPlay';
   import { sheetCoreText } from '@offside/app-core/i18n/ko/sheetCore';
@@ -22,9 +24,16 @@
   <div><b>{v.stats.col}</b><span>{v.stats.colLabel}</span></div>
   <div><b>{v.stats.rating}</b><span>{sheetCoreText.tallyRating}</span></div>
 </div>
+{#if v.trophyHonors?.length}
+  <section class="season-trophies" aria-label={CM.trophies} data-season-trophies>
+    {#each v.trophyHonors as trophy, i (i)}
+      <div class="season-trophy"><span class="trophy-reveal"><CareerTrophy art={trophy.art} /></span><b>{trophy.name}</b></div>
+    {/each}
+  </section>
+{/if}
 {#if v.honors.length}
   <div class="stack">{#each v.honors as t, i (i)}<p class="hl"><b>{t}</b></p>{/each}</div>
-{:else}
+{:else if !v.trophyHonors?.length}
   <p class="muted">{L.noHonors}</p>
 {/if}
 {#if v.promo}
@@ -79,3 +88,13 @@
   </div>
 </div>
 <p class="muted">{L.ageWeb({ age: v.age })}</p>
+
+<style>
+  .season-trophies { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 10px; margin: 14px 0; }
+  .season-trophy { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--accent-text); min-width: 0; }
+  .season-trophy b { font-size: .875rem; overflow-wrap: anywhere; }
+  .trophy-reveal { display: flex; flex-shrink: 0; color: var(--gold, var(--accent)); animation: trophy-lift 480ms ease-out both; }
+  @keyframes trophy-lift { from { transform: translateY(10px) scale(.86); } to { transform: translateY(0) scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .trophy-reveal { animation: none; } }
+  :global(.no-motion) .trophy-reveal { animation: none; }
+</style>

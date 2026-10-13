@@ -1,5 +1,7 @@
 // 시즌 결산 시트(웹 sheets/SeasonResult.svelte): 기록·수상·대회·국가대표·시상식·여정·새 칭호·팬 반응.
 // 모션(CH 배지 팝, 스카우트 카드 팝, 팬 반응 순차 등장)은 웹 CSS 애니메이션 자리 — 동작 줄이기면 바로 보인다.
+import { CareerTrophy } from '../ui/CareerTrophy';
+import { careerMomentText as CM } from '@offside/app-core/i18n/ko/careerMoment';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { visibleSeasonNotes } from '@offside/app-core/potential-view';
@@ -60,6 +62,36 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
           { key: 'rating', v: s.stats.rating, l: sheetCoreText.tallyRating },
         ]}
       />
+      {s.trophyHonors?.length ? (
+        <View
+          accessibilityLabel={CM.trophies}
+          testID="season-trophies"
+          style={{ gap: 10, marginTop: 14 }}
+        >
+          {s.trophyHonors.map((t, i) => (
+            <View
+              key={i}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+                padding: 12,
+                borderWidth: 1,
+                borderColor: c.line,
+                borderRadius: 12,
+                backgroundColor: c.surface,
+              }}
+            >
+              <Enter kind="translateY" from={10} ms={480}>
+                <CareerTrophy art={t.art} color={c.accent} />
+              </Enter>
+              <Txt bold style={{ flex: 1, fontSize: rem(0.875), color: c.accentText }}>
+                {t.name}
+              </Txt>
+            </View>
+          ))}
+        </View>
+      ) : null}
       {s.honors.length ? (
         <View style={{ gap: 10 }}>
           {s.honors.map((t, i) => (
@@ -68,9 +100,9 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
             </Hl>
           ))}
         </View>
-      ) : (
+      ) : !s.trophyHonors?.length ? (
         <Txt tone="muted">{L.noHonors}</Txt>
-      )}
+      ) : null}
       {s.promo ? (
         <Pop from={0.4} ms={400} delay={160}>
           <View

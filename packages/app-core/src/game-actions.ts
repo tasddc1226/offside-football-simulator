@@ -1,3 +1,6 @@
+import { transferOutlook } from '@offside/game/comps';
+import { careerMomentText as CM } from './i18n/ko/careerMoment';
+import { careerTrophy } from './career-trophy';
 import { measureOperation } from './measurement.js';
 import type { Progress } from './player-metrics.js';
 import { marketFeedback, offerFeedback } from './career-feedback.js';
@@ -486,7 +489,8 @@ export function createGameActions(host: GameHost) {
           colLabel,
           rating: rec.rating ? rec.rating.toFixed(2) : '-',
         },
-        honors: [...trophies, ...awards].map(tn),
+        honors: awards.map(tn),
+        trophyHonors: trophies.map((name) => ({ name: tn(name), art: careerTrophy(name) })),
         comps: (rec.comps || []).map((c) =>
           L.compLine({ name: tn(c.name), stage: tn(c.stage), apps: c.apps, g: c.g, a: c.a }),
         ),
@@ -534,10 +538,15 @@ export function createGameActions(host: GameHost) {
         note: m.note,
         options: m.options.map((o) => {
           if (o.kind === 'offer') {
+            const outlook = transferOutlook(G, o.clubId, o.leagueId);
+            const destination = outlook
+              ? `${CM.rank({ rank: outlook.rank })} · ${outlook.competition ? CM.competition({ competition: tn(outlook.competition) }) : CM.noCompetition}`
+              : undefined;
             const extra = `${o.role ? ` · ${tn(o.role)}` : ''}${o.fee ? ` · ${L.feeAbout({ fee: fmtValue(o.fee) })}` : G.contract && !leagueOf(G.leagueId).amateur ? ` · ${L.freeAgent}` : ''}`;
             return {
               clubId: o.clubId,
               reason: offerFeedback(G, o),
+              destination,
               name: tn(o.name),
               lg: strLine(o.leagueId, o.str),
               salary: fmtMoney(o.salary),
@@ -598,6 +607,22 @@ export function createGameActions(host: GameHost) {
       },
       terms: [
         { label: L.termSalary, value: fmtMoney(o.salary) },
+        ...(o.kind === 'offer'
+          ? (() => {
+              const outlook = transferOutlook(G, o.clubId, o.leagueId);
+              return outlook
+                ? [
+                    {
+                      label: CM.rank({ rank: outlook.rank }),
+                      value: outlook.competition
+                        ? CM.competition({ competition: tn(outlook.competition) })
+                        : CM.noCompetition,
+                    },
+                    { label: CM.estimateNote, value: '' },
+                  ]
+                : [];
+            })()
+          : []),
         ...(extension
           ? [
               { label: L.termLeft, value: L.termLeftValue },

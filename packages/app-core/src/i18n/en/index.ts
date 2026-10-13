@@ -12,6 +12,7 @@ import { balanceKeys } from './balanceKeys';
 import { board } from './board';
 import { boardLabel } from './boardLabel';
 import { careerGuide } from './careerGuide';
+import { careerMoment } from './careerMoment';
 import { chat } from './chat';
 import { chatReject } from './chatReject';
 import { club } from './club';
@@ -103,6 +104,7 @@ export const en = {
   board,
   boardLabel,
   careerGuide,
+  careerMoment,
   chat,
   chatReject,
   club,

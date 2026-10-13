@@ -1,7 +1,9 @@
 // ───────── 연쇄 이벤트 · 스토리 라인 ─────────
-import { SURNAMES, GIVEN, POS } from './data.js';
+import { POS } from './data.js';
+import { rivalName } from './rival-names.js';
+export { rivalName } from './rival-names.js';
 import { ovr } from './attributes.js';
-import { clamp, ri, pick } from './rng.js';
+import { clamp, ri } from './rng.js';
 import {
   addStat,
   addAttr,
@@ -21,16 +23,6 @@ import {
 } from './engine.js';
 import type { EventDef, GameState, StoryState } from './types.js';
 
-/** 라이벌 이름(처음 부를 때 정해 flags.rivalName에 남긴다). 영어 문구(i18n/en/events-story.ts)도 이것을 부른다. */
-export function rivalName(s: GameState): string {
-  if (!s.flags.rivalName) {
-    let n: string;
-    do n = pick(SURNAMES) + pick(GIVEN);
-    while (n === s.name);
-    s.flags.rivalName = n;
-  }
-  return s.flags.rivalName as string;
-}
 const rv = (s: GameState) => s.story.rival as StoryState & { gap: number; tone: string };
 
 export const STORY_EVENTS: EventDef[] = [

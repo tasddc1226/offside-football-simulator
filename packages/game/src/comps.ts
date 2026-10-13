@@ -132,6 +132,26 @@ export function expectedRank(idx: number, n: number): number {
   );
 }
 
+/** The competition assigned by the game's league slots. No random draws. */
+export function continentalForRank(leagueId: string, rank: number): string | null {
+  let acc = 0;
+  for (const [key, slots] of CONT_SLOTS[leagueId] ?? []) {
+    if (rank <= acc + slots) return key;
+    acc += slots;
+  }
+  return null;
+}
+
+/** New-club entry uses a strength-based estimate, not a simulated foreign-league table. */
+export function transferOutlook(s: GameState, clubId: string, leagueId: string) {
+  const league = clubsIn(leagueId, s).sort((a, b) => b.str - a.str);
+  const index = league.findIndex((c) => c.id === clubId);
+  if (index < 0 || leagueOf(leagueId).amateur || clubId === 'sangmu') return null;
+  const rank = expectedRank(index, league.length);
+  const key = continentalForRank(leagueId, rank);
+  return { rank, competition: key ? CONT[key]!.name : null };
+}
+
 export function seasonSetup(s: GameState, S: Season) {
   const L = leagueOf(s.leagueId);
   S.trophiesMid = [];
@@ -154,25 +174,20 @@ export function seasonSetup(s: GameState, S: Season) {
   const league = clubsIn(s.leagueId, s).sort((a, b) => b.str - a.str);
   const idx = league.findIndex((c) => c.id === s.club.id);
   const rank = same ? (last!.rank as number) : expectedRank(idx, league.length);
-  let acc = 0;
-  for (const [k, n] of CONT_SLOTS[L.id] ?? []) {
-    if (rank <= acc + n) {
-      S.comps.push({
-        type: 'cont',
-        key: k,
-        name: CONT[k]!.name,
-        alive: true,
-        stage: CONT[k]!.ko ? '1라운드' : '리그 페이즈',
-        pts: 0,
-        played: 0,
-        apps: 0,
-        g: 0,
-        a: 0,
-      });
-      break;
-    }
-    acc += n;
-  }
+  const key = continentalForRank(L.id, rank);
+  if (key)
+    S.comps.push({
+      type: 'cont',
+      key,
+      name: CONT[key]!.name,
+      alive: true,
+      stage: CONT[key]!.ko ? '1라운드' : '리그 페이즈',
+      pts: 0,
+      played: 0,
+      apps: 0,
+      g: 0,
+      a: 0,
+    });
   if (
     SUPERCUP[L.id] &&
     same &&

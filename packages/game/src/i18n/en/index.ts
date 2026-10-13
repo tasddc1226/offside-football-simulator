@@ -19,6 +19,7 @@ import { gPeek } from './gPeek';
 import { gPlayStyle } from './gPlayStyle';
 import { gRarity } from './gRarity';
 import { gRecords } from './gRecords';
+import { gRival } from './gRival';
 import { gRoleName } from './gRoleName';
 import { gSeason } from './gSeason';
 import { gStats } from './gStats';
@@ -47,6 +48,7 @@ export const en = {
   gPlayStyle,
   gRarity,
   gRecords,
+  gRival,
   gRoleName,
   gSeason,
   gStats,
