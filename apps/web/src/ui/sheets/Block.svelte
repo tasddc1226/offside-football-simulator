@@ -3,7 +3,7 @@
   import TickerLine from './TickerLine.svelte';
   import type { SheetView } from '@offside/app-core/sheets';
   import { sheetCoreText } from '@offside/app-core/i18n/ko/sheetCore';
-  let { v }: { v: Extract<SheetView, { kind: 'block' }> } = $props();
+  let { v, compact = false }: { compact?: boolean; v: Extract<SheetView, { kind: 'block' }> } = $props();
   const tally = $derived([
     { k: v.tally.apps, l: sheetCoreText.tallyApps },
     { k: v.tally.g, l: sheetCoreText.tallyGoals },
@@ -12,8 +12,8 @@
   ]);
 </script>
 
-<div class="eyebrow">{v.eyebrow}</div>
-<h2>{v.title}</h2>
+{#if !compact}<div class="eyebrow">{v.eyebrow}</div>
+<h2>{v.title}</h2>{/if}
 <div class="prog"><i style:width="{v.progress * 100}%" style:transition-duration="{v.fill}ms"></i></div>
 <div class="prog-meta"><span>{v.round}</span><span data-block-wdl>{sheetCoreText.wdl(v.wdl)}</span></div>
 <div class="tally">
@@ -32,6 +32,6 @@
     <div class:on={!x.done} class:done={x.done}>{x.text}</div>
   {/each}
 </div>
-{#if v.skip}
+{#if v.skip && !compact}
   <button class="link-btn skip" id="an-skip" onclick={v.skip}>{sheetCoreText.skip}</button>
 {/if}

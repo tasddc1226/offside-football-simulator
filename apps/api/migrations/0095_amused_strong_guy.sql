@@ -1,0 +1,1 @@
+ALTER TABLE `careers` ADD `retired_look_used` integer DEFAULT 0 NOT NULL;

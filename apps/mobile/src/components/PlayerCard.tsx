@@ -1,7 +1,9 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
+import { cardAvatarSpec } from '@offside/game/avatar';
+import { PixelAvatar } from '../ui/PixelAvatar';
 import { prefs } from '../store';
 import { DISPLAY } from '../theme/type';
 import { RN_SHIRT, RN_TRIM } from '@offside/app-core/rnStyle';
@@ -206,6 +208,8 @@ function CardShirt({
 }
 
 export type PlayerCardData = {
+  careerId?: string | undefined;
+  look?: string | null | undefined;
   name: string;
   nation?: string | null;
   rating: number;
@@ -381,6 +385,13 @@ export function PlayerCard({
   mini?: boolean;
   animate?: boolean;
 }) {
+  const portrait = useMemo(
+    () =>
+      !cell.youth && cell.careerId
+        ? cardAvatarSpec({ careerId: cell.careerId, look: cell.look })
+        : null,
+    [cell.youth, cell.careerId, cell.look],
+  );
   const country = !cell.youth ? NATION_BY_CODE.get(cell.nation ?? DEFAULT_NATION) : undefined;
   const tone =
     CARD_TONES[cell.youth ? 'youth' : cardTier(cell.legendScore, cell.peak ?? cell.rating)];
@@ -500,7 +511,45 @@ export function PlayerCard({
             minWidth: 0,
           }}
         >
-          <CardShirt number={cell.number} youth={cell.youth} width={shirtWidth} tone={tone} />
+          {portrait ? (
+            <View
+              style={{
+                width: compact ? 27 : Math.min(76, Math.max(32, cardWidth - 56)),
+                height: compact ? 24 : 48,
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <PixelAvatar
+                spec={portrait}
+                width={compact ? 27 : Math.min(54, Math.max(32, cardWidth - 56))}
+                portrait
+              />
+              {cell.number != null ? (
+                <Text
+                  accessible={false}
+                  maxFontSizeMultiplier={1}
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    bottom: 0,
+                    paddingHorizontal: 2,
+                    borderRadius: 2,
+                    color: tone.light,
+                    backgroundColor: tone.ink,
+                    fontSize: compact ? 7 : 10,
+                    lineHeight: compact ? 9 : 12,
+                    fontFamily: DISPLAY[700],
+                    includeFontPadding: false,
+                  }}
+                >
+                  {cell.number}
+                </Text>
+              ) : null}
+            </View>
+          ) : (
+            <CardShirt number={cell.number} youth={cell.youth} width={shirtWidth} tone={tone} />
+          )}
           {!compact && cell.legendScore != null ? (
             <Text
               numberOfLines={1}

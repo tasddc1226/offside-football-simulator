@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { SheetView } from '@offside/app-core/sheets';
-  let { v }: { v: Extract<SheetView, { kind: 'steps' }> } = $props();
+  let { v, compact = false }: { compact?: boolean; v: Extract<SheetView, { kind: 'steps' }> } = $props();
 </script>
 
-<div class="eyebrow">{v.title}</div>
+{#if !compact}<div class="eyebrow">{v.title}</div>{/if}
 <div class="prog"><i style:width="{v.progress * 100}%" style:transition-duration="{v.fill}ms"></i></div>
 <div class="steps">
   {#each v.steps as t, i (i)}

@@ -29,6 +29,8 @@
   import { gameText as T } from '@offside/app-core/i18n/ko/game';
   import { notePlayerVisit, playerNudge } from '@offside/app-core/player-nudge';
   import { avatarSpec } from '@offside/game/avatar';
+  import { avatarLookText as LK } from '@offside/app-core/i18n/ko/avatarLook';
+  import { lookSeen, markLookSeen } from '@offside/app-core/lookSeen';
   import PixelAvatar from './PixelAvatar.svelte';
 
   let actionHeight = $state(0);
@@ -58,6 +60,17 @@
   const title = $derived(mainTitle(s));
   // T-11-120 도트 선수: 나이·소속·부상·은퇴에 따라 모습이 바뀐다(커리어 ID로 외형을 정하고 RNG는 쓰지 않는다).
   const avatar = $derived(avatarSpec(s));
+  // T-11-191 도트 선수를 누르면 꾸미기(선수 자금으로 산다, 은퇴 후 외형 편집은 별도 경로). 시트는 따로 불러온다.
+  let lookOpen = $state(false);
+  // 꾸미기를 한 번도 안 열었으면 도트 선수 둘레 고리를 깜빡여 누를 수 있다고 알린다.
+  let lookSeenNow = $state(lookSeen());
+  function openLook() {
+    lookOpen = true;
+    if (!lookSeenNow) {
+      markLookSeen();
+      lookSeenNow = true;
+    }
+  }
   // 대표 칭호를 누르면 트로피 탭의 칭호 도감으로 간다.
   function openTitles() {
     appState.tab = 'trophy';
@@ -101,7 +114,7 @@
   <Topbar sticky />
   <section class="player">
     <div class="chalk"></div>
-    <PixelAvatar spec={avatar} />
+    <button class="avatar-btn" class:fresh={!lookSeenNow} data-act="avatar-look" aria-label={LK.open} onclick={openLook}><PixelAvatar spec={avatar} /><span class="avatar-chip" aria-hidden="true">✎ {LK.chip}</span></button>
     <div>
       <div class="shirt">No.{s.number} · {posLabel(s)}</div>
       {#if title}<button class="card-title r{title.rarity}" data-act="titles" aria-label={T.titleOpen({ name: tn(title.name) })} onclick={openTitles}>{tn(title.name)}</button>{/if}
@@ -163,3 +176,5 @@
   </button>
   <NavIntro kind="game" />
 </nav>
+
+{#if lookOpen}{#await import('./AvatarLook.svelte') then { default: AvatarLook }}<AvatarLook {s} onclose={() => (lookOpen = false)} />{/await}{/if}

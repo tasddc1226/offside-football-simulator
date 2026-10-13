@@ -30,6 +30,8 @@ const ReelCard = memo(function ReelCard({ m }: { m: RecapSquadMember }) {
         animate={false}
         code={detailPosOf(card)}
         cell={{
+          careerId: card.careerId,
+          look: m.look ?? card.look,
           name: playerName(card.publicName, card.pos, card.number),
           nation: card.nation,
           season: card.season,

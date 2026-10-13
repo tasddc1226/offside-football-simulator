@@ -116,6 +116,7 @@
     <div
       class="sheet"
       class:dragging
+      class:progress-sheet={(sheetState.view?.kind === 'steps' || sheetState.view?.kind === 'block') && !!sheetState.view.avatar}
       id="sheet"
       role="dialog"
       aria-modal="true"
@@ -136,3 +137,9 @@
     </div>
   {/if}
 </div>
+
+{#if sheetState.open && (sheetState.view?.kind === 'steps' || sheetState.view?.kind === 'block') && sheetState.view.avatar}
+  {#key sheetState.view}
+    {#await import('./ProgressRunner.svelte') then { default: Runner }}<Runner v={sheetState.view} />{/await}
+  {/key}
+{/if}

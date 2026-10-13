@@ -27,6 +27,8 @@ export const ListingIdSchema = z.string().regex(/^lst_[0-9a-f-]{36}$/);
 /** 시장에 보이는 카드. 서버에는 선수 이름이 없다 — 공개한 이름(publicName)만 있다. */
 export const MarketCardSchema = z.strictObject({
   careerId: z.string(),
+  /** 은퇴 때 굳은 꾸미기 코드. 옛 응답은 커리어 ID로 기본 얼굴을 그린다. */
+  look: z.string().nullable().optional(),
   pos: CareerPosSchema,
   dpos: DetailPosSchema.nullable(),
   /** 선수 국적(없으면 기본 국적). 카드 상세에 그린다. */

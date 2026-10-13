@@ -21,6 +21,7 @@ const card = {
   pos: 'FW',
   dpos: 'ST',
   peak: 88,
+  look: 's5h6y2g2',
   number: 9,
   publicName: '시장 골잡이',
   legendScore: 420,
@@ -294,6 +295,11 @@ test('자금이 모자라면 영입 버튼이 잠기고, 이미 팔린 선수는
   );
   // T-11-211 카드 체격 줄 끝에 주발.
   await expect(page.locator('[data-card-body]')).toHaveText('183cm · 76kg · 왼발');
+  await expect(page.getByRole('dialog').locator('svg.avatar')).toHaveAttribute(
+    'viewBox',
+    '0 0 24 21',
+  );
+  await expect(page.getByRole('dialog').locator('rect[fill="#e06aa5"]')).not.toHaveCount(0);
   await expect(page.locator('[data-act="buy"]')).toBeDisabled();
   await page.getByRole('dialog').getByRole('button', { name: '닫기' }).click();
 

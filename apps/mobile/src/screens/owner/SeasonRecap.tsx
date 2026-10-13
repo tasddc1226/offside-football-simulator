@@ -673,6 +673,8 @@ function BestFace({ best }: { best: Best }) {
             code={detailPosOf(card)}
             cell={{
               name,
+              careerId: card.careerId,
+              look: card.look,
               nation: card.nation,
               season: card.season,
               rating: card.peak,

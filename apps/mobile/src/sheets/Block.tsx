@@ -53,7 +53,13 @@ function Bump({ value }: { value: number | string }) {
   );
 }
 
-export function Block({ v }: { v: Extract<SheetView, { kind: 'block' }> }) {
+export function Block({
+  v,
+  compact = false,
+}: {
+  v: Extract<SheetView, { kind: 'block' }>;
+  compact?: boolean;
+}) {
   const s = useSnapshot(v);
   const c = useColors();
   const tally = [
@@ -68,10 +74,14 @@ export function Block({ v }: { v: Extract<SheetView, { kind: 'block' }> }) {
   ];
   return (
     <>
-      <Txt v="eyebrow">{s.eyebrow}</Txt>
-      <Txt v="h2" accessibilityRole="header">
-        {s.title}
-      </Txt>
+      {!compact ? (
+        <>
+          <Txt v="eyebrow">{s.eyebrow}</Txt>
+          <Txt v="h2" accessibilityRole="header">
+            {s.title}
+          </Txt>
+        </>
+      ) : null}
       <ProgBar progress={s.progress} fill={s.fill} />
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: -6 }}>
         <Txt tone="muted" style={{ fontSize: rem(0.75), fontVariant: ['tabular-nums'] }}>
@@ -110,7 +120,7 @@ export function Block({ v }: { v: Extract<SheetView, { kind: 'block' }> }) {
           </Txt>
         ))}
       </View>
-      {s.skip ? <SkipLink onPress={() => v.skip?.()} /> : null}
+      {s.skip && !compact ? <SkipLink onPress={() => v.skip?.()} /> : null}
     </>
   );
 }

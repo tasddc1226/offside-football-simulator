@@ -26,6 +26,20 @@ function legacy(edit: (g: Record<string, unknown>) => void = () => {}): GameStat
 }
 
 describe('migrateSave (T-10-046)', () => {
+  it('꾸미기가 없던 저장과 기록 아이템 도입 전 저장을 외형 선택값 변경 없이 읽는다', () => {
+    const old = current();
+    delete old.look;
+    expect(loadSave(old)!.G.look).toBeUndefined();
+    const customized = current();
+    customized.look = { owned: ['style', 'hair'], pick: { style: 8, hair: 11 } };
+    const selected = structuredClone(customized.look);
+    const restored = loadSave(JSON.parse(JSON.stringify(customized)))!.G;
+    expect(restored.look).toEqual(selected);
+    expect(restored.look?.rec).toBeUndefined();
+    restored.look!.rec = ['scorer-boots'];
+    restored.look!.pick.boots = 10;
+    expect(loadSave(JSON.parse(JSON.stringify(restored)))!.G.look).toEqual(restored.look);
+  });
   it('최종 표가 없는 이전 저장은 완료 기록·pending을 추정해서 다시 쓰지 않고 그대로 읽는다', () => {
     const G = current();
     delete G.season.finalTable;

@@ -1,0 +1,23 @@
+{
+  "id": "t-11-191-popup-runner",
+  "title": "진행 팝업 위를 달리는 내 선수",
+  "items": [
+    "프리시즌과 시즌 진행 중 내 선수가 팝업 위쪽 골대까지 달려가 슛을 해요",
+    "진행 내용과 건너뛰기 버튼을 가리지 않고, 동작 줄이기 설정에서는 정지 모습으로 보여요"
+  ],
+  "en": {
+    "title": "Your player runs above the progress popup",
+    "items": [
+      "Your player runs along the top of the progress popup and shoots into a goal.",
+      "Progress details and the skip button stay visible. Reduced motion shows a still player."
+    ]
+  },
+  "ja": {
+    "title": "進行ポップアップの上を走る選手",
+    "items": [
+      "プレシーズンとシーズン進行中、選手がポップアップの上を走ってゴールにシュートします。",
+      "進行内容とスキップボタンを隠しません。視差効果を減らす設定では静止姿で表示します。"
+    ]
+  },
+  "availability": "web-app"
+}

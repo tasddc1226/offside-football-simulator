@@ -8,16 +8,19 @@ export function PrimeAvatar({
   id,
   lastClub,
   lastClubId,
+  look,
   width,
 }: {
   id: string;
   lastClub: string;
   lastClubId?: string | null | undefined;
+  /** T-11-191 도트 선수 꾸미기 코드. */
+  look?: string | null | undefined;
   width: number;
 }) {
   const spec = useMemo(
-    () => primeAvatarSpec({ id, lastClub, lastClubId }),
-    [id, lastClub, lastClubId],
+    () => primeAvatarSpec({ id, lastClub, lastClubId, look }),
+    [id, lastClub, lastClubId, look],
   );
   return <PixelAvatar spec={spec} width={width} />;
 }

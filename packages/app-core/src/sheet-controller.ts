@@ -2,6 +2,7 @@
 // 아래에서 올라오는 시트 하나에 뷰 모델(sheets.ts)을 띄우고, 진행 단계·경기 중계·판정 바늘·미니게임을 시간에 맞춰
 // 채운다. 상태 객체는 클라이언트가 반응형으로 감싸 넘긴다(웹 Svelte `$state`, 앱 스토어) — 여기서는 그 객체를
 // 고치기만 한다. 띄운 뷰는 showSheet이 돌려준 것(state.view를 다시 읽은 반응형 프록시)을 고쳐야 화면이 바뀐다.
+import type { AvatarSpec } from '@offside/game/avatar';
 import { clamp, ri } from '@offside/game/rng';
 import { clubsIn } from '@offside/game/engine';
 import { tn } from '@offside/game/i18n/names';
@@ -135,7 +136,7 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
   }
 
   /** 단계 목록을 하나씩 켰다 끄며 진행률 막대를 채운다. 막대는 단계마다 그 단계 길이 동안 고르게 차오른다(T-10-123). */
-  async function playSteps(title: string, steps: string[], ms = STEP_MS) {
+  async function playSteps(title: string, steps: string[], ms = STEP_MS, avatar?: AvatarSpec) {
     state.busy = true;
     const v = showSheet<ViewOf<'steps'>>({
       kind: 'steps',
@@ -144,6 +145,7 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
       active: -1,
       progress: 0,
       fill: ms,
+      ...(avatar ? { avatar } : {}),
     });
     await ui.painted();
     for (let i = 0; i < steps.length; i++) {
@@ -163,7 +165,7 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
    * 경기를 한 번에 채워 최종 기록을 보여 주고 같은 확인 버튼을 띄운다.
    */
   function playBlock(
-    head: { eyebrow: string; title: string; back: boolean; matches: number },
+    head: { eyebrow: string; title: string; back: boolean; matches: number; avatar?: AvatarSpec },
     b: BlockResult,
     rows: TickerRow[],
     extras: string[],
@@ -226,6 +228,7 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
       };
       const v = showSheet<ViewOf<'block'>>({
         kind: 'block',
+        ...(head.avatar ? { avatar: head.avatar } : {}),
         eyebrow: head.eyebrow,
         title: head.title,
         back: head.back,

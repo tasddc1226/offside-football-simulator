@@ -1,3 +1,4 @@
+import { RetiredLookButton } from './RetiredLookButton';
 import { retiredTitleOf } from '@offside/app-core/retiredTitle';
 // 은퇴 리포트 본문(웹 LegendReport.svelte). 은퇴 직후 화면(Retired) · 명예의 전당 상세(Legend) · 공유 링크(Shared)가
 // 함께 쓴다 — 진행 중 세이브(G)든 저장된 스냅샷이든 LegendView 하나로 그린다.
@@ -61,8 +62,8 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
   const { width, height } = useWindowDimensions();
   // 같은 선수면 모습을 다시 만들지 않는다(PixelAvatar는 memo라 다시 그리지 않는다).
   const avatar = useMemo(
-    () => (v.avatarId ? retiredAvatarSpec(v.avatarId, v.age) : null),
-    [v.avatarId, v.age],
+    () => (v.avatarId ? retiredAvatarSpec(v.avatarId, v.age, v.avatarLook) : null),
+    [v.avatarId, v.age, v.avatarLook],
   );
   const { motionOK } = useSnapshot(prefs);
   const rs = useSnapshot(rnResults);
@@ -122,8 +123,9 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
               paddingBottom: playing ? 72 : 0,
             }}
           >
-            {/* T-11-122 은퇴식 정장 차림의 도트 선수. 커리어 ID가 없는 옛 기록은 그리지 않는다. */}
+            {/* T-11-122 은퇴식 정장 차림의 도트 선수. 옛 로컬 기록도 같은 기본 얼굴을 다시 그린다. */}
             {avatar ? <PixelAvatar spec={avatar} width={avatarWidth(width)} /> : null}
+            {v.canEditLook && v.avatarId ? <RetiredLookButton v={v} /> : null}
             <Kicker>{`Full Time${v.number != null ? ` · No.${v.number}` : ''}`}</Kicker>
             <FText
               accessibilityRole="header"

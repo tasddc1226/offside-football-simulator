@@ -11,6 +11,7 @@ import { marketFeedback, offerFeedback } from './career-feedback.js';
 import type { SeasonGrowth } from '@offside/contracts';
 import { isHofEligible, SHORT_CAREER_NOTE } from '@offside/contracts/hof-rules';
 import { PHASES, LAST_PHASE, type AttrKey } from '@offside/game/data';
+import { avatarSpec } from '@offside/game/avatar';
 import { clamp, createRng, freshSeed, setActiveRng } from '@offside/game/rng';
 import {
   generateCandidates,
@@ -268,19 +269,25 @@ export function createGameActions(host: GameHost) {
             title: L.blockTitle({ range, n: b.n }),
             back,
             matches: leagueOf(s.leagueId).matches,
+            avatar: avatarSpec(s),
           },
           b,
           games,
           extras,
         );
       } else
-        await sheet.playSteps(L.preseasonRunning({ year: s.year }), [
-          isPro(s) ? L.stepCampPro : L.stepCampAmateur,
-          L.stepFitness,
-          L.stepTactics,
-          L.stepFriendly,
-          ...extras,
-        ]);
+        await sheet.playSteps(
+          L.preseasonRunning({ year: s.year }),
+          [
+            isPro(s) ? L.stepCampPro : L.stepCampAmateur,
+            L.stepFitness,
+            L.stepTactics,
+            L.stepFriendly,
+            ...extras,
+          ],
+          undefined,
+          avatarSpec(s),
+        );
       sheet.closeSheet();
       appState.report = {
         key: Date.now(),

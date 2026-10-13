@@ -164,6 +164,7 @@ export type LiveTeam = Pick<OwnerTeamRow, 'id' | 'season' | 'name' | 'manager' |
 
 /** 선발 맵에 넣는 커리어 모양(careers 행 → 팀 선수). */
 type LineupRow = {
+  look?: string | null;
   id: string;
   pos: PosGroup;
   nation?: string | null;
@@ -212,6 +213,7 @@ export function teamPlayerCard(
   const estimated = profile ? null : estimatedAttrsOf(r.cardAttrsJson);
   return {
     careerId: r.id,
+    ...(r.look ? { look: r.look } : {}),
     pos: career.pos,
     nation: career.nation,
     dpos: career.dpos,
@@ -269,6 +271,7 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       weight: careers.weight,
       number: cards.number,
       publicName: careers.publicName,
+      look: careers.look,
       type: careers.type,
       foot: careers.foot,
       serviceSeason: cards.serviceSeason,
@@ -380,6 +383,7 @@ export async function careersByIds(db: Db, ids: string[]) {
       legendScore: cards.legendScore,
       number: cards.number,
       publicName: careers.publicName,
+      look: careers.look,
       type: careers.type,
       foot: careers.foot,
       raiserId: careers.profileId,

@@ -1435,3 +1435,60 @@ test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없
   await expect.poll(() => puts.length).toBe(3);
   expect(puts[2]!.presets.map((p) => p.name)).toEqual(['주말 리그']);
 });
+
+for (const width of [320, 390, 1280]) {
+  test(`선수 카드 초상이 ${width}px에서 꾸미기와 옛 얼굴을 유지하고 카드 밖으로 넘치지 않는다`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await stubOwner(page, true);
+    await page.route(`${API}/v1/careers/mine**`, (r) =>
+      r.fulfill(ok({ linked: true, entries: [] })),
+    );
+    await page.route(`${API}/v1/market/funds`, (r) => r.fulfill(ok({ balance: 0, clubValue: 0 })));
+    const players = [
+      { ...PLAYERS[0]!, look: 's5h6y2g2', publicName: '길고긴 선수 이름 초상 검증' },
+      PLAYERS[1]!,
+    ];
+    let calls = 0;
+    await page.route(ownerTeamUrl, (r) => {
+      calls++;
+      return r.fulfill(ownerTeam({ players }));
+    });
+    await page.goto('/');
+    await page.locator('[data-act="owner"]').click();
+    await page.locator('[data-act="team"]').click();
+    const cards = page.locator('[data-locker-player] .player-card');
+    await expect(cards).toHaveCount(2);
+    for (const card of await cards.all()) {
+      await expect(card.locator('svg.avatar')).toHaveAttribute('viewBox', '0 0 24 21');
+      const box = await card.boundingBox();
+      const face = await card.locator('svg.avatar').boundingBox();
+      expect(face!.x).toBeGreaterThanOrEqual(box!.x);
+      expect(face!.x + face!.width).toBeLessThanOrEqual(box!.x + box!.width + 1);
+      expect(face!.y + face!.height).toBeLessThanOrEqual(
+        (await card.locator('.card-name').boundingBox())!.y,
+      );
+    }
+    const custom = cards.first();
+    await expect(custom.locator('rect[fill="#e06aa5"]')).not.toHaveCount(0);
+    await expect(custom.locator('.portrait-number')).toHaveText('9');
+    await expect(custom.locator('.card-name')).toHaveAttribute(
+      'title',
+      '길고긴 선수 이름 초상 검증',
+    );
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    expect(calls).toBe(1);
+    await page.locator('[data-locker-player] .locker-select').first().click();
+    await page.locator('[data-slot="9"]').click();
+    await expect(page.locator('.tm-slot[data-slot="9"] svg.avatar')).toHaveAttribute(
+      'viewBox',
+      '0 0 24 21',
+    );
+    // 비어 있는 유스 자리는 선수 얼굴을 임의로 만들지 않는다.
+    await expect(page.locator('.tm-slot[data-slot="0"] svg.avatar')).toHaveCount(0);
+    expect(calls).toBe(1);
+  });
+}

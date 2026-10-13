@@ -242,6 +242,8 @@ export type PutRetirementInput = {
   profile?: PeakProfile | undefined;
   /** T-11-030 은퇴 때 공개된 실제 잠재력(관찰 전용). 옛 클라이언트는 없다. */
   potReal?: number | undefined;
+  /** T-11-191 도트 선수 꾸미기 코드. 은퇴 업로드에서는 최초만 적고, 이후 변경은 외형 전용 API에서 처리한다. */
+  look?: string | undefined;
   /** T-11-163 은퇴 장려금 비율(밸런스 marketRetireBonusRate). */
   bonusRate: number;
   now: string;
@@ -257,7 +259,7 @@ export const retiredCountKey = (at: Date) => `retired:${kstDay(at.toISOString())
 /** `PUT /v1/careers/:careerId/retirement`의 첫 은퇴. 소유권 확인과 요약 보정(plausibility.ts)은 라우트가 미리
  * 끝낸다. 다시 보낸 은퇴(이름 공개 토글·대표 칭호)는 `updateRetired`로 간다. */
 export async function putRetirement(db: Db, input: PutRetirementInput): Promise<void> {
-  const { careerId, summary, publicName, snapshot, profile, potReal, bonusRate, now } = input;
+  const { careerId, summary, publicName, snapshot, profile, potReal, look, bonusRate, now } = input;
   const value = snapshot ? cardValue(snapshot.career, summary.peak) : null;
   // T-11-163 은퇴 장려금: 기준가가 있는 카드만(스냅샷 없는 옛 기록은 거래도 하지 않는다).
   const bonus = value === null ? 0 : releasePayout(value, bonusRate);
@@ -311,6 +313,12 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
           : {}),
         ...(profile ? { peakProfile: JSON.stringify(profile) } : {}),
         ...(potReal !== undefined ? { potReal } : {}),
+        // A delayed first-retirement request must not overwrite the one-time edited/transferred look.
+        ...(look
+          ? {
+              look: sql`CASE WHEN ${careers.status} <> 'retired' AND ${careers.retiredLookUsed} = 0 THEN ${look} ELSE ${careers.look} END`,
+            }
+          : {}),
       })
       .where(eq(careers.id, careerId)),
     // T-11-163 은퇴 장려금. 아래 카드 insert보다 먼저 — 카드가 아직 없을 때(이 커리어의 첫 은퇴)만 한 번 준다.
@@ -403,6 +411,7 @@ const publicColumns = {
   ballon: careers.ballon,
   lastClub: careers.lastClub,
   lastClubId: careers.lastClubId,
+  look: careers.look,
   retiredAt: careers.retiredAt,
   hasDetail: sql<number>`${careers.snapshotJson} is not null`,
   title: careers.title,
@@ -439,6 +448,7 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
     ballon: n(r.ballon),
     lastClub: String(r.lastClub ?? ''),
     lastClubId: (r.lastClubId as string | null) ?? null,
+    ...(r.look ? { look: String(r.look) } : {}),
     retiredAt: String(r.retiredAt ?? ''),
     hasDetail: Boolean(r.hasDetail),
     title:
@@ -782,5 +792,56 @@ export async function getCareerHead(db: Db, careerId: string) {
 /** 커리어 한 행(존재 여부·상태 확인). */
 export async function getCareer(db: Db, careerId: string): Promise<CareerRow | undefined> {
   const [row] = await db.select().from(careers).where(eq(careers.id, careerId));
+  return row;
+}
+
+/** Appearance-only update. Retirement dates, snapshots, rankings and financial values stay untouched. */
+export async function retiredLookPolicy(db: Db, careerId: string) {
+  const [row] = await db
+    .select({
+      careerId: careers.id,
+      look: careers.look,
+      used: careers.retiredLookUsed,
+      transfers: cards.transfers,
+    })
+    .from(careers)
+    .leftJoin(cards, eq(cards.careerId, careers.id))
+    .where(eq(careers.id, careerId));
+  if (!row) return undefined;
+  const lockedReason =
+    (row.transfers ?? 0) > 0 ? ('transferred' as const) : row.used ? ('used' as const) : null;
+  return {
+    careerId: row.careerId,
+    look: row.look,
+    remaining: lockedReason ? (0 as const) : (1 as const),
+    lockedReason,
+  };
+}
+
+export async function updateRetiredLook(
+  db: Db,
+  careerId: string,
+  profileId: string,
+  look: string | null,
+) {
+  const [row] = await db
+    .update(careers)
+    .set({ look, retiredLookUsed: 1 })
+    .where(
+      and(
+        eq(careers.id, careerId),
+        eq(careers.profileId, profileId),
+        eq(careers.status, 'retired'),
+        eq(careers.retiredLookUsed, 0),
+        // Checked in the write itself: concurrent saves and market purchases cannot bypass it.
+        notExists(
+          db
+            .select({ id: cards.careerId })
+            .from(cards)
+            .where(and(eq(cards.careerId, careers.id), gte(cards.transfers, 1))),
+        ),
+      ),
+    )
+    .returning({ careerId: careers.id, look: careers.look });
   return row;
 }
