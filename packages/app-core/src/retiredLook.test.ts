@@ -9,7 +9,12 @@ import { loadKey, saveKey, setStorage } from '@offside/game/storage';
 import { apiFetch } from './api/client.js';
 import { createLegends } from './legend.js';
 import { initialAppState } from './state.js';
-import { pickRetiredLook, retiredLookRows, saveRetiredLook } from './retiredLook.js';
+import {
+  loadRetiredLook,
+  pickRetiredLook,
+  retiredLookRows,
+  saveRetiredLook,
+} from './retiredLook.js';
 
 vi.mock('./api/client.js', () => ({
   apiFetch: vi.fn(),
@@ -158,4 +163,56 @@ it('keeps wire option limits aligned with the game renderer', () => {
     expect(APPEARANCE_OPTIONS[code as keyof typeof APPEARANCE_OPTIONS]).toBe(
       LOOK_ITEMS[item as keyof typeof LOOK_ITEMS].options,
     );
+});
+
+it('loads authoritative server policy on editor open and fails closed on auth/network errors', async () => {
+  const { state, v } = fixture();
+  vi.mocked(apiFetch).mockResolvedValue({
+    ok: true,
+    data: { careerId: v.avatarId, look: 'y8', remaining: 0, lockedReason: 'transferred' },
+  });
+  expect(await loadRetiredLook(state, v)).toMatchObject({
+    ok: true,
+    policy: { look: 'y8', remaining: 0, lockedReason: 'transferred' },
+  });
+  expect(apiFetch).toHaveBeenCalledWith(`/v1/careers/${v.avatarId}/look`);
+  vi.mocked(apiFetch).mockResolvedValue({
+    ok: false,
+    error: { code: 'UNAUTHORIZED', message: '', retryable: false },
+  });
+  expect((await loadRetiredLook(state, v)).ok).toBe(false);
+});
+
+it('local-only one-time receipt survives reload; preview/no-op/failure never consumes it', async () => {
+  const { state, h, legends } = fixture();
+  delete h.id;
+  saveKey('ft_hof', [h]);
+  const v = legends.viewFromEntry(h);
+  expect(await loadRetiredLook(state, v)).toMatchObject({ ok: true, policy: { remaining: 1 } });
+  pickRetiredLook(null, 'style', 6);
+  expect((await saveRetiredLook(state, v, null)).ok).toBe(true);
+  expect(await loadRetiredLook(state, v)).toMatchObject({ ok: true, policy: { remaining: 1 } });
+  expect((await saveRetiredLook(state, v, 'y6')).ok).toBe(true);
+  const reopened = legends.viewFromEntry(loadKey<(typeof h)[]>('ft_hof')![0]!);
+  expect(await loadRetiredLook(state, reopened)).toMatchObject({
+    ok: true,
+    policy: { look: 'y6', remaining: 0, lockedReason: 'used' },
+  });
+  expect((await saveRetiredLook(state, reopened, 'y7')).ok).toBe(false);
+  expect((await saveRetiredLook(state, reopened, 'y6')).ok).toBe(true);
+  expect(apiFetch).not.toHaveBeenCalled();
+});
+
+it('legacy server-missing fallback persists the limit without bypassing other errors', async () => {
+  const { state, v } = fixture();
+  vi.mocked(apiFetch).mockResolvedValue({
+    ok: false,
+    error: { code: 'NOT_FOUND', reason: 'CAREER_NOT_FOUND', message: '', retryable: false },
+  });
+  expect((await saveRetiredLook(state, v, 'y6')).ok).toBe(true);
+  expect(await loadRetiredLook(state, v)).toMatchObject({
+    ok: true,
+    policy: { remaining: 0, look: 'y6' },
+  });
+  expect((await saveRetiredLook(state, v, 'y7')).ok).toBe(false);
 });

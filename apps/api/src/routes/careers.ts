@@ -10,6 +10,7 @@ import {
   PutRetirementBodySchema,
   PutRetiredLookBodySchema,
   RetiredLookResponseSchema,
+  RetiredLookPolicySchema,
   RetirementResponseSchema,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
@@ -32,6 +33,7 @@ import {
   storedSeasonsOf,
   updateRetired,
   updateRetiredLook,
+  retiredLookPolicy,
   verifiedRetiredTitle,
 } from '../db/repos/careers.js';
 import { boundProfile, boundRetirement, sanitizeSeason } from '../plausibility.js';
@@ -97,6 +99,20 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     return ok(c, MyCareersResponseSchema, { linked, entries }, 200, 'private, no-store');
   });
 
+  // Private editor-open check. Public HOF reads remain session-free and cacheable.
+  app.get('/v1/careers/:careerId/look', requireProfile, async (c) => {
+    const db = getDb(c);
+    const careerId = parseWithAppError(CareerIdParamSchema, c.req.param('careerId'));
+    const row = await getCareerHead(db, careerId);
+    const text = retiredLookErrors(reqLang(c));
+    if (!row) throw notFoundError(text.missing, 'CAREER_NOT_FOUND');
+    if (row.profileId !== getSessionOrThrow(c).profileId) throw careerOwnerMismatch();
+    if (row.status !== 'retired') throw conflictError(text.active, 'CAREER_NOT_RETIRED');
+    const policy = await retiredLookPolicy(db, careerId);
+    if (!policy) throw notFoundError(text.missing, 'CAREER_NOT_FOUND');
+    return ok(c, RetiredLookPolicySchema, policy, 200, 'private, no-store');
+  });
+
   // Separate from retirement upload: no score recalculation, rewards, titles or live notices.
   app.put('/v1/careers/:careerId/look', requireProfile, async (c) => {
     const db = getDb(c);
@@ -108,6 +124,16 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     if (!row) throw notFoundError(text.missing, 'CAREER_NOT_FOUND');
     if (row.profileId !== profileId) throw careerOwnerMismatch();
     if (row.status !== 'retired') throw conflictError(text.active, 'CAREER_NOT_RETIRED');
+    // No-op/retry never spends another change, even if a successful response was lost.
+    if (row.look === look)
+      return ok(c, RetiredLookResponseSchema, { careerId, look }, 200, 'private, no-store');
+    const policy = await retiredLookPolicy(db, careerId);
+    if (policy?.lockedReason) {
+      throw conflictError(
+        text[policy.lockedReason],
+        policy.lockedReason === 'transferred' ? 'LOOK_TRANSFERRED' : 'LOOK_ALREADY_USED',
+      );
+    }
     const titles = row.snapshotJson
       ? ((JSON.parse(row.snapshotJson) as { titles?: { id: string }[] }).titles ?? []).map(
           (t) => t.id,
@@ -118,7 +144,16 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     }
     await limitUpload(db, 'CAREER_LOOK', profileId);
     const saved = await updateRetiredLook(db, careerId, profileId, look);
-    if (!saved) throw careerOwnerMismatch();
+    if (!saved) {
+      const latest = await retiredLookPolicy(db, careerId);
+      if (latest?.look === look)
+        return ok(c, RetiredLookResponseSchema, { careerId, look }, 200, 'private, no-store');
+      const reason = latest?.lockedReason ?? 'used';
+      throw conflictError(
+        text[reason],
+        reason === 'transferred' ? 'LOOK_TRANSFERRED' : 'LOOK_ALREADY_USED',
+      );
+    }
     purgeEdge(c, [EDGE.hofDetail(careerId)]);
     return ok(c, RetiredLookResponseSchema, saved, 200, 'private, no-store');
   });

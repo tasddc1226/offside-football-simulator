@@ -313,7 +313,12 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
           : {}),
         ...(profile ? { peakProfile: JSON.stringify(profile) } : {}),
         ...(potReal !== undefined ? { potReal } : {}),
-        ...(look ? { look } : {}),
+        // A delayed first-retirement request must not overwrite the one-time edited/transferred look.
+        ...(look
+          ? {
+              look: sql`CASE WHEN ${careers.status} <> 'retired' AND ${careers.retiredLookUsed} = 0 THEN ${look} ELSE ${careers.look} END`,
+            }
+          : {}),
       })
       .where(eq(careers.id, careerId)),
     // T-11-163 은퇴 장려금. 아래 카드 insert보다 먼저 — 카드가 아직 없을 때(이 커리어의 첫 은퇴)만 한 번 준다.
@@ -768,6 +773,28 @@ export async function getCareer(db: Db, careerId: string): Promise<CareerRow | u
 }
 
 /** Appearance-only update. Retirement dates, snapshots, rankings and financial values stay untouched. */
+export async function retiredLookPolicy(db: Db, careerId: string) {
+  const [row] = await db
+    .select({
+      careerId: careers.id,
+      look: careers.look,
+      used: careers.retiredLookUsed,
+      transfers: cards.transfers,
+    })
+    .from(careers)
+    .leftJoin(cards, eq(cards.careerId, careers.id))
+    .where(eq(careers.id, careerId));
+  if (!row) return undefined;
+  const lockedReason =
+    (row.transfers ?? 0) > 0 ? ('transferred' as const) : row.used ? ('used' as const) : null;
+  return {
+    careerId: row.careerId,
+    look: row.look,
+    remaining: lockedReason ? (0 as const) : (1 as const),
+    lockedReason,
+  };
+}
+
 export async function updateRetiredLook(
   db: Db,
   careerId: string,
@@ -776,12 +803,20 @@ export async function updateRetiredLook(
 ) {
   const [row] = await db
     .update(careers)
-    .set({ look })
+    .set({ look, retiredLookUsed: 1 })
     .where(
       and(
         eq(careers.id, careerId),
         eq(careers.profileId, profileId),
         eq(careers.status, 'retired'),
+        eq(careers.retiredLookUsed, 0),
+        // Checked in the write itself: concurrent saves and market purchases cannot bypass it.
+        notExists(
+          db
+            .select({ id: cards.careerId })
+            .from(cards)
+            .where(and(eq(cards.careerId, careers.id), gte(cards.transfers, 1))),
+        ),
       ),
     )
     .returning({ careerId: careers.id, look: careers.look });

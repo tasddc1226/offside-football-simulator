@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { LegendView } from '@offside/app-core/state';
-  import { pickRetiredLook, retiredLookRows, saveRetiredLook } from '@offside/app-core/retiredLook';
+  import { loadRetiredLook, pickRetiredLook, retiredLookRows, saveRetiredLook } from '@offside/app-core/retiredLook';
   import { retiredAvatarSpec, primeAvatarSpec } from '@offside/game/avatar';
   import { retiredLookText as L } from '@offside/app-core/i18n/ko/retiredLook';
   import { avatarLookText as A } from '@offside/app-core/i18n/ko/avatarLook';
@@ -12,17 +12,30 @@
   const { v, onclose }: { v: LegendView; onclose: () => void } = $props();
   let draft = $state(v.avatarLook ?? null);
   let busy = $state(false);
+  let checking = $state(true);
+  let allowed = $state(false);
+  let locked = $state('');
+  let confirming = $state(false);
+  let original = $state(v.avatarLook ?? null);
+  const editingView = $derived({ ...v, avatarLook: original });
   let error = $state('');
   let dialog: HTMLDivElement;
   let cancel: HTMLButtonElement;
-  const rows = $derived(retiredLookRows(v, draft));
-  const dirty = $derived(draft !== (v.avatarLook ?? null));
+  const rows = $derived(retiredLookRows(editingView, draft));
+  const dirty = $derived(draft !== original);
   onMount(() => {
     // Retirement credits have transform/overflow; keep the modal in the viewport, like PlayerPeek.
     const root = dialog.closest<HTMLElement>('[data-retired-look]')!;
     document.body.append(root);
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    void loadRetiredLook(appState, v).then((r) => {
+      if (r.ok) {
+        original = draft = r.policy.look;
+        allowed = r.policy.remaining === 1;
+        locked = r.policy.lockedReason ? L[r.policy.lockedReason] : '';
+      } else error = r.message;
+    }).catch(() => error = L.checkFailed).finally(() => checking = false);
     cancel?.focus({ preventScroll: true });
     return () => { document.body.style.overflow = overflow; root.remove(); };
   });
@@ -37,10 +50,11 @@
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
   }
   async function save() {
-    if (busy || !dirty) return;
+    if (busy || checking || !allowed || !dirty) return;
+    if (!confirming) { confirming = true; return; }
     busy = true; error = '';
     try {
-      const r = await saveRetiredLook(appState, v, draft);
+      const r = await saveRetiredLook(appState, editingView, draft);
       if (r.ok) { toast(r.message); onclose(); }
       else error = r.message;
     } catch { error = L.failed; }
@@ -51,13 +65,16 @@
 <svelte:window onkeydown={key} />
 <div class="retired-look" data-retired-look>
   <button class="backdrop" tabindex="-1" aria-hidden="true" onclick={close}></button>
-  <div bind:this={dialog} class="body" role="dialog" aria-modal="true" aria-label={L.title} aria-busy={busy}>
-    <header><h2>{L.title}</h2><p>{L.intro}</p></header>
+  <div bind:this={dialog} class="body" role="dialog" aria-modal="true" aria-label={L.title} aria-busy={busy || checking}>
+    <header><h2>{L.title}</h2><p>{L.intro}</p><p>{L.policy}</p></header>
     <div class="scroll">
       <div class="previews">
         <div><PixelAvatar spec={retiredAvatarSpec(v.avatarId!, v.age, draft)} /><small>{L.retiredPreview}</small></div>
         <div><PixelAvatar spec={primeAvatarSpec({ id: v.avatarId!, lastClub: v.lastClub, lastClubId: v.lastClubId, look: draft })} /><small>{L.kitPreview}</small></div>
       </div>
+      {#if checking}<p role="status">{L.checking}</p>{/if}
+      {#if locked}<p role="status">{locked}</p>{/if}
+      {#if allowed && !confirming}
       <p class="muted fs-sm">{L.recordNote}</p>
       {#each rows as r (r.item)}
         <section data-look-item={r.item}><b>{r.name}</b>
@@ -73,11 +90,14 @@
         </section>
       {/each}
       <button class="btn" disabled={busy || draft === null} data-act="retired-look-reset" onclick={() => draft = null}>{L.reset}</button>
+      {/if}
     </div>
     <footer>
+      {#if confirming}<p class="confirmation" role="status">{L.confirmNote}</p>{/if}
       {#if error}<p role="alert">{error}</p>{/if}
+      {#if confirming}<button class="btn back" disabled={busy} onclick={() => confirming = false}>{L.back}</button>{/if}
       <div><button bind:this={cancel} class="btn" disabled={busy} onclick={close}>{L.cancel}</button>
-      <button class="btn btn-primary" disabled={busy || !dirty} data-act="retired-look-save" onclick={save}>{busy ? L.saving : L.save}</button></div>
+      <button class="btn btn-primary" disabled={busy || checking || !allowed || !dirty} data-act="retired-look-save" onclick={save}>{busy ? L.saving : confirming ? L.confirm : L.save}</button></div>
     </footer>
   </div>
 </div>
@@ -100,7 +120,9 @@
   .swatch span { display: block; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line); }
   .scroll > .btn { margin-top: 16px; }
   footer { flex-shrink: 0; padding: 12px 18px max(16px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--surface); }
+  footer .back { width: 100%; margin-bottom: 8px; }
+  footer p.confirmation { color: var(--ink); }
   footer > div { display: flex; gap: 8px; }
-  footer .btn { flex: 1; min-height: 44px; }
+  footer .btn { flex: 1; min-height: 44px; min-width: 0; white-space: normal; }
   footer p { color: var(--bad); font-size: .8125rem; margin-bottom: 8px; }
 </style>

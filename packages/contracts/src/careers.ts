@@ -277,6 +277,11 @@ export const RetiredLookResponseSchema = z.strictObject({
   look: z.string().nullable(),
 });
 export type RetiredLookResponse = z.infer<typeof RetiredLookResponseSchema>;
+export const RetiredLookPolicySchema = RetiredLookResponseSchema.extend({
+  remaining: z.union([z.literal(0), z.literal(1)]),
+  lockedReason: z.enum(['used', 'transferred']).nullable(),
+});
+export type RetiredLookPolicy = z.infer<typeof RetiredLookPolicySchema>;
 
 /** season.ts `retire()`가 만드는 `HofEntry` + `legendScore()`에서 뽑아낸 은퇴 요약. */
 export const RetirementSummarySchema = z.strictObject({

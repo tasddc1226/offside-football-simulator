@@ -1,6 +1,6 @@
 // Loaded only by retired appearance editors. Never run retirement/game-save side effects here.
 import { appearanceUnlocked, validAppearance } from '@offside/contracts/avatar-look';
-import type { RetiredLookResponse } from '@offside/contracts';
+import type { RetiredLookResponse, RetiredLookPolicy } from '@offside/contracts';
 import { retiredAvatarSpec } from '@offside/game/avatar';
 import { LOOK_ORDER, LOOK_STYLES, LOOK_BEARDS, parseLookCode } from '@offside/game/look';
 import { LOOK_RECORDS } from '@offside/game/look-shop';
@@ -59,13 +59,44 @@ const sameEntry = (h: HofEntry, v: LegendView) =>
       h.number === v.own.number &&
       h.pos === v.own.pos;
 
-/** Copy only cosmetics in the raw stored records; avoid loadHOF/saveGame migrations and RNG updates. */
-function applyLocal(
+// Local-only legacy records have no server/card to transfer. Keep their one-time receipt outside
+// game/HOF saves: no save migration or score recalculation. Appearance + used flag are one write.
+const receiptKey = (v: LegendView) => `ft_retired_look:${v.avatarId}`;
+type LocalReceipt = { used: true; look: string | null };
+const receiptOf = (v: LegendView) => loadKey<LocalReceipt>(receiptKey(v));
+const localPolicy = (v: LegendView): RetiredLookPolicy => {
+  const receipt = receiptOf(v);
+  return {
+    careerId: v.avatarId!,
+    look: receipt ? receipt.look : (v.avatarLook ?? null),
+    remaining: receipt?.used ? 0 : 1,
+    lockedReason: receipt?.used ? 'used' : null,
+  };
+};
+
+/** Called once when the editor opens, never on every option/preview change. Fail closed. */
+export async function loadRetiredLook(
   state: AppState,
   v: LegendView,
-  code: string | null,
-  serverSaved: boolean,
-): boolean {
+): Promise<{ ok: true; policy: RetiredLookPolicy } | { ok: false; message: string }> {
+  if (!v.canEditLook || !v.avatarId) return { ok: false, message: L.checkFailed };
+  if (v.own && !v.own.id) {
+    const policy = localPolicy(v);
+    if (policy.remaining === 0) applyLocal(state, v, policy.look);
+    return { ok: true, policy };
+  }
+  const r = await apiFetch<RetiredLookPolicy>(`/v1/careers/${encodeURIComponent(v.avatarId)}/look`);
+  if (r.ok) return { ok: true, policy: r.data };
+  if (r.error.reason === 'CAREER_NOT_FOUND' && v.own) {
+    const policy = localPolicy(v);
+    if (policy.remaining === 0) applyLocal(state, v, policy.look);
+    return { ok: true, policy };
+  }
+  return { ok: false, message: r.error.message || L.checkFailed };
+}
+
+/** Copy only cosmetics in the raw stored records; avoid loadHOF/saveGame migrations and RNG updates. */
+function applyLocal(state: AppState, v: LegendView, code: string | null): boolean {
   const hof = loadKey<HofEntry[]>('ft_hof') ?? loadKey<HofEntry[]>('sl_hof') ?? [];
   const target = hof.findIndex((h) => sameEntry(h, v));
   const entries = hof.map((h, i) => (i === target ? { ...h, look: code ?? undefined } : h));
@@ -73,11 +104,9 @@ function applyLocal(
   const stored = loadKey<GameState>('ft_save');
   const gameMatches = stored?.retired && stored.cid === v.avatarId;
   const look = { ...stored?.look, owned: stored?.look?.owned ?? [], pick: parseLookCode(code) };
-  if (!serverSaved && !own && !gameMatches) return false;
   const ok =
     (!own || saveKey('ft_hof', entries)) &&
     (!gameMatches || saveKey('ft_save', { ...stored, look }));
-  if (!ok && !serverSaved) return false;
   // React snapshots can be frozen; update the live store instead of mutating the view supplied by RN.
   const legend = state.legend;
   if (legend && legend.avatarId === v.avatarId) {
@@ -102,10 +131,22 @@ export async function saveRetiredLook(
     !appearanceUnlocked(code, v.avatarLook ?? null, titlesOf(v))
   )
     return { ok: false, message: L.failed };
+  function saveLocal() {
+    const previous = receiptOf(v);
+    if (previous?.used)
+      return previous.look === code
+        ? { ok: true as const, message: L.localSaved }
+        : { ok: false as const, message: L.used };
+    const hof = loadKey<HofEntry[]>('ft_hof') ?? loadKey<HofEntry[]>('sl_hof') ?? [];
+    if (!hof.some((h) => sameEntry(h, v))) return { ok: false as const, message: L.storageFailed };
+    if (code === (v.avatarLook ?? null)) return { ok: true as const, message: L.localSaved };
+    if (!saveKey(receiptKey(v), { used: true, look: code }))
+      return { ok: false as const, message: L.storageFailed };
+    const mirrored = applyLocal(state, v, code);
+    return { ok: true as const, message: mirrored ? L.localSaved : L.localPartial };
+  }
   if (v.own && !v.own.id) {
-    return applyLocal(state, v, code, false)
-      ? { ok: true, message: L.localSaved }
-      : { ok: false, message: L.storageFailed };
+    return saveLocal();
   }
   const r = await apiFetch<RetiredLookResponse>(
     `/v1/careers/${encodeURIComponent(v.avatarId)}/look`,
@@ -117,12 +158,10 @@ export async function saveRetiredLook(
   if (!r.ok) {
     // Pre-server local archives remain editable. Never bypass an ownership/authentication failure.
     if (r.error.reason === 'CAREER_NOT_FOUND' && v.own) {
-      return applyLocal(state, v, code, false)
-        ? { ok: true, message: L.localSaved }
-        : { ok: false, message: L.storageFailed };
+      return saveLocal();
     }
     return { ok: false, message: r.error.message || L.failed };
   }
-  const cached = applyLocal(state, v, r.data.look, true);
+  const cached = applyLocal(state, v, r.data.look);
   return { ok: true, message: cached ? L.saved : L.serverSaved };
 }
