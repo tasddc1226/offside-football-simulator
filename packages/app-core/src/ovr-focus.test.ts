@@ -33,6 +33,27 @@ describe('role-based OVR guidance', () => {
     expect(mainRole(s)).toBe('TM');
     expect(ovr(s)).toBe(Math.round(ovrRole(s, 'TM')));
   });
+  it('T-11-236 judges a wide-midfield winger by the higher of central midfield and winger OVR', () => {
+    const s = newGame(
+      {
+        name: 'QA',
+        trait: 'late',
+        number: 7,
+        foot: '오른발',
+        pos: 'MF',
+        dpos: 'RM',
+        focus: ['pac', 'dri'],
+      },
+      7,
+    );
+    expect(s.type).toBe('winger');
+    for (const k of ['acc', 'spr', 'drb', 'cro']) s.sub[k] = 95;
+    expect(mainRole(s)).toBe('RW');
+    expect(ovr(s)).toBe(Math.round(Math.max(ovrRole(s, 'RW'), ovrRole(s, 'CM'))));
+    // 중앙 미드필더 자리는 그대로, 측면 미드필더도 다른 유형은 그대로 중앙 미드필더 역할.
+    expect(mainRole({ ...s, dpos: 'CM' })).toBe('CM');
+    expect(mainRole({ ...s, type: 'maker' })).toBe('CM');
+  });
   it('distinguishes winger and keeper groups', () => {
     expect(ovrFocusView('FW', [], 'W').keys).toEqual(['dri', 'pas', 'sho']);
     const gk = ovrFocusView('GK', [], 'GK');

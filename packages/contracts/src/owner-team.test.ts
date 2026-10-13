@@ -77,6 +77,14 @@ describe('T-10-092 자리별 실력·줄 무게', () => {
     expect(slotFit('AM', { peak: 85, pos: 'MF', dpos: 'AM', roles })).toBe(1.02);
     expect(slotRating('W', { peak: 86, pos: 'MF', dpos: 'AM', roles })).toBe(85);
     expect(slotRating('CB', { peak: 86, pos: 'MF', dpos: 'AM', roles })).toBe(60);
+    // T-11-237 타겟맨 유형은 스트라이커 자리(ST·CF·SS)에서 최고 OVR 아래로 내려가지 않는다. 다른 자리·다른 유형은 그대로.
+    const tm = { GK: 20, CB: 62, FB: 55, DM: 60, CM: 64, AM: 70, W: 66, ST: 78 } as const;
+    const target = { peak: 85, pos: 'FW', dpos: 'ST', roles: tm, type: 'target' } as const;
+    expect(slotRating('ST', target)).toBe(85);
+    expect(slotRating('CF', target)).toBe(85);
+    expect(slotRating('W', target)).toBe(66);
+    expect(slotRating('ST', { ...target, type: 'poacher' })).toBe(78);
+    expect(slotRating('ST', { ...target, roles: { ...tm, ST: 90 } })).toBe(87);
     // roles가 null이면 옛 적합도 규칙.
     expect(slotRating('W', { peak: 86, pos: 'MF', dpos: 'AM', roles: null })).toBe(65);
   });

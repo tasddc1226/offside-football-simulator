@@ -8,6 +8,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   growthScale: 'Growth multiplier',
   potGrowthFloor: 'Minimum growth near potential',
   targetManRole: 'Target man OVR',
+  wingerRole: 'Wide midfield winger OVR',
   investGain: 'Special training growth share',
   investCost: 'Self-investment cost multiplier',
   boostCost: 'Potential boost cost multiplier',
