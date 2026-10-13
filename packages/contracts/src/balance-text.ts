@@ -43,6 +43,16 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '성장 배율',
     desc: '경기·훈련으로 오르는 능력치에 곱하는 값',
   },
+  potGrowthFloor: {
+    group: 'growth',
+    label: '잠재력 근처 최소 성장',
+    desc: 'OVR이 잠재력에 닿거나 넘었을 때도 남는 성장 배율의 하한',
+  },
+  targetManRole: {
+    group: 'growth',
+    label: '타겟맨 전용 OVR',
+    desc: '1이면 타겟맨 유형 스트라이커의 OVR을 헤딩·몸싸움·점프 비중이 큰 타겟맨 역할로 계산',
+  },
   investGain: {
     group: 'growth',
     label: '특훈 성장 비율',

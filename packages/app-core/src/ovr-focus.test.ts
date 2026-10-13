@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DETAILS_OF, DPOS, defaultFocus, type Pos } from '@offside/game/data';
-import { mainRole, ROLES, FACE } from '@offside/game/attributes';
+import { mainRole, ovr, ovrRole, ROLES, FACE } from '@offside/game/attributes';
 import { newGame } from '@offside/game/engine';
 import { trainingHelp, TRAININGS } from '@offside/game/training';
 import { ovrFocusView } from './create-view';
@@ -12,6 +12,26 @@ describe('role-based OVR guidance', () => {
     expect(v.groups).toContain('수비(헤딩)');
     expect(v.subs).toContain('헤딩 정확도');
     expect(v.note).toContain('헤딩 정확도만');
+  });
+  it('T-11-229 judges a target man by the higher of striker and target man OVR', () => {
+    const s = newGame(
+      {
+        name: 'QA',
+        trait: 'late',
+        number: 9,
+        foot: '오른발',
+        pos: 'FW',
+        dpos: 'ST',
+        focus: ['sho', 'phy'],
+      },
+      7,
+    );
+    expect(s.type).toBe('target');
+    expect(mainRole(s)).toBe('ST');
+    expect(ovrFocusView('FW', ['sho', 'phy'], 'ST').role).toBe('ST');
+    for (const k of ['hea', 'str', 'jmp']) s.sub[k] = 95;
+    expect(mainRole(s)).toBe('TM');
+    expect(ovr(s)).toBe(Math.round(ovrRole(s, 'TM')));
   });
   it('distinguishes winger and keeper groups', () => {
     expect(ovrFocusView('FW', [], 'W').keys).toEqual(['dri', 'pas', 'sho']);

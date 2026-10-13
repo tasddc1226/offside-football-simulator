@@ -1,4 +1,4 @@
-// 홈 화면(웹 Home.svelte · HomeNews · HomeFirsts · HomeTicker · VoluntarySupport, 앱 screens/home/*). 웹·앱 문구가 다른 줄은 Web/App 접미사로 나눈다.
+// 홈 화면(웹 Home.svelte · HomeNews · HomeFirsts · HomeTicker, 앱 screens/home/*). 웹·앱 문구가 다른 줄은 Web/App 접미사로 나눈다.
 import { ns } from '../core';
 import { withRo } from '../../format.js';
 
@@ -59,13 +59,6 @@ const ko = {
   tickerAria: '이적·서버 기록 소식',
   tickerIdle: '이적 소식과 서버 최초 기록이 여기로 흘러요',
   tickerAge: (p: { age: number }) => `(${p.age}세)`,
-  // 개발자 응원
-  supportTitle: '개발자 응원하기',
-  supportBody: '재밌게 즐기셨다면 개발자를 위해서 응원해 주세요.',
-  supportCopy: '후원 계좌 복사',
-  supportCopied: '계좌번호를 복사했어요. 고마워요',
-  // 계좌번호는 화면에 적지 않으니 복사가 안 되면 알림에 보인다.
-  supportCopyFailed: (p: { account: string }) => `복사하지 못했어요. ${p.account}`,
 };
 
 export type HomeMsgs = typeof ko;

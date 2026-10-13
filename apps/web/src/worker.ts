@@ -1,4 +1,10 @@
 import { serveNews, newsSitemap } from './public-news.js';
+import {
+  LEGENDS_TTL,
+  legendsSitemapPaths,
+  readLegendsIndex,
+  serveLegends,
+} from './public-legends.js';
 import { NEWS_ID } from './news-id.js';
 import { resolveApiBaseUrl } from './api/base-url.js';
 import { fetchHofEntry } from './hof-entry.js';
@@ -28,6 +34,9 @@ const PUBLIC_PATHS = new Set([
   '/fairness',
   '/fairness/',
   '/fairness/index.html',
+  '/about',
+  '/about/',
+  '/about/index.html',
   '/legal/terms',
   '/legal/terms/',
   '/legal/terms/index.html',
@@ -105,11 +114,11 @@ export default {
   async fetch(request: Request, env: Env, ctx: Ctx): Promise<Response> {
     const url = new URL(request.url);
     if (OG_CARD_PATH.test(url.pathname)) return careerCard(request, env, ctx);
-    return withPreconnect(await route(request, env, url), url);
+    return withPreconnect(await route(request, env, url, ctx), url);
   },
 };
 
-async function route(request: Request, env: Env, url: URL): Promise<Response> {
+async function route(request: Request, env: Env, url: URL, ctx: Ctx): Promise<Response> {
   if (url.pathname === '/' && url.searchParams.has('news')) {
     // 공개 소식의 "게임에서 보기" 링크. 형식이 틀린 글 ID는 게임 게시판에 넘기지 않고 홈으로 보낸다.
     if (!NEWS_ID.test(url.searchParams.get('news') ?? ''))
@@ -123,6 +132,7 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
     );
   }
   const isNews = url.pathname === '/news' || url.pathname.startsWith('/news/');
+  const isLegends = /^\/legends(\/|$)/i.test(url.pathname);
   const asset = await env.ASSETS.fetch(request);
   const isPublicPage = PUBLIC_PATHS.has(url.pathname);
   const isDiscovery = url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml';
@@ -133,7 +143,7 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   // T-10-023: 새 배포 감지용 — 항상 최신 값을 받아야 한다.
   if (url.pathname === '/version.json' && asset.status === 200)
     return withCacheControl(asset, 'no-store');
-  if (!isNews && !isPublicPage && !isDiscovery && asset.status !== 404)
+  if (!isNews && !isLegends && !isPublicPage && !isDiscovery && asset.status !== 404)
     return withRobots(asset, 'noindex, nofollow');
   const appShell = () => env.ASSETS.fetch(new Request(new URL('/app-shell', url.origin), request));
   const shareId = asset.status === 404 ? SHARE_PATH.exec(url.pathname)?.[1] : undefined;
@@ -159,8 +169,11 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
       });
     return serveNews(request, await template.text(), indexingEnabled);
   }
-  if (url.pathname === '/sitemap.xml' && indexingEnabled && asset.ok)
-    return newsSitemap(asset, url);
+  if (isLegends) return legends(request, env, url, ctx, indexingEnabled);
+  if (url.pathname === '/sitemap.xml' && indexingEnabled && asset.ok) {
+    const ids = await legendsIndex(url, ctx).catch(() => [] as string[]);
+    return newsSitemap(asset, url, legendsSitemapPaths(ids));
+  }
 
   if (url.pathname === '/robots.txt' && !indexingEnabled) {
     return new Response('User-agent: *\nDisallow: /\n', {
@@ -193,4 +206,53 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   // (routes/__root.tsx notFoundComponent)이 셸 안에서 그려지게 한다. 상태 코드·noindex는 유지.
   const notFound = new Response(shell.body, { status: 404, headers: shell.headers });
   return withRobots(notFound, 'noindex, nofollow');
+}
+
+const edgeCache = () => (globalThis as unknown as { caches?: { default: Cache } }).caches?.default;
+
+// T-11-231 색인 대상 선수 ID(레전드 점수 상위 · 포지션별 상위). 목록 API 14번이라 데이터센터마다 하루 한 번만 읽는다.
+async function legendsIndex(url: URL, ctx: Ctx): Promise<string[]> {
+  const cache = edgeCache();
+  const key = new Request(`${url.origin}/__legends-index.json`);
+  const hit = await cache?.match(key);
+  if (hit) return (await hit.json()) as string[];
+  const ids = await readLegendsIndex(url.hostname);
+  if (cache)
+    ctx.waitUntil(
+      cache.put(
+        key,
+        Response.json(ids, {
+          headers: { 'Cache-Control': `public, max-age=${LEGENDS_TTL.index}` },
+        }),
+      ),
+    );
+  return ids;
+}
+
+// T-11-231 명예의 전당 공개 페이지. 그린 HTML을 엣지에 두어(목록 1시간 · 선수 하루) 크롤러가 많이 돌아도
+// 같은 페이지는 API를 다시 부르지 않는다. 캐시는 GET 키 하나로 HEAD도 같이 받는다.
+async function legends(
+  request: Request,
+  env: Env,
+  url: URL,
+  ctx: Ctx,
+  indexing: boolean,
+): Promise<Response> {
+  if (!['GET', 'HEAD'].includes(request.method)) return new Response(null, { status: 405 });
+  const cache = edgeCache();
+  const key = new Request(url.toString());
+  const strip = (res: Response) => (request.method === 'HEAD' ? new Response(null, res) : res);
+  const hit = await cache?.match(key);
+  if (hit) return strip(hit);
+  const template = await env.ASSETS.fetch(new Request(new URL('/news-shell', url.origin)));
+  if (!template.ok)
+    return new Response('Service Unavailable', {
+      status: 503,
+      headers: { 'X-Robots-Tag': 'noindex, nofollow' },
+    });
+  const res = await serveLegends(key, await template.text(), indexing, () =>
+    legendsIndex(url, ctx),
+  );
+  if (res.status === 200 && cache) ctx.waitUntil(cache.put(key, res.clone()));
+  return strip(res);
 }

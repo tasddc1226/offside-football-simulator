@@ -62,6 +62,7 @@ import { ownerConflict } from './ownerConflict';
 import { ownerPlayers } from './ownerPlayers';
 import { ownerProfile } from './ownerProfile';
 import { playerNudge } from './playerNudge';
+import { publicLegends } from './publicLegends';
 import { push } from './push';
 import { retention } from './retention';
 import { retired } from './retired';
@@ -155,6 +156,7 @@ export const ja = {
   ownerPlayers,
   ownerProfile,
   playerNudge,
+  publicLegends,
   push,
   retention,
   retired,

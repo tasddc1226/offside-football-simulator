@@ -50,6 +50,19 @@ export const BALANCE_SPEC = {
     step: 0.01,
     unit: 'x',
   },
+  potGrowthFloor: {
+    def: 0.15,
+    min: 0.01,
+    max: 0.5,
+    step: 0.01,
+    unit: 'x',
+  },
+  targetManRole: {
+    def: 1,
+    min: 0,
+    max: 1,
+    step: 1,
+  },
   investGain: {
     def: 0.4,
     min: 0,

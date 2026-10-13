@@ -7638,3 +7638,49 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
 .public-news .board-row {
   min-height: 44px;
 }
+/* T-11-231 명예의 전당 공개 페이지(public-legends.ts). 표는 좁은 화면에서 표 안에서만 가로로 민다. */
+.legends-table {
+  overflow-x: auto;
+}
+.legends-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.legends-table th,
+.legends-table td {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+.legends-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.legends-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 0;
+  list-style: none;
+}
+.legends-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.legends-dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+}
+.legends-dl dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.legends-dl dd {
+  margin: 0;
+  font-weight: 600;
+}

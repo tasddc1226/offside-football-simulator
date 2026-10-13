@@ -6,6 +6,8 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   eventRateSeason: '前半戦・後半戦のイベント確率',
   eventTwist: '選択後のどんでん返し確率',
   growthScale: '成長倍率',
+  potGrowthFloor: '潜在能力付近の最低成長',
+  targetManRole: 'ターゲットマン専用OVR',
   investGain: '特訓の成長割合',
   investCost: '自己投資の費用倍率',
   boostCost: '潜在能力強化の費用倍率',
