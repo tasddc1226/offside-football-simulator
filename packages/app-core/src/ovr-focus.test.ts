@@ -26,6 +26,11 @@ describe('role-based OVR guidance', () => {
       },
       7,
     );
+    // newGame draws attributes from the active RNG before storing its seed. Use a controlled
+    // striker-leaning distribution so this role comparison is independent of test order/RNG.
+    for (const k of Object.keys(s.sub)) s.sub[k] = 50;
+    s.sub.fin = 80;
+    for (const k of ['hea', 'str', 'jmp']) s.sub[k] = 20;
     expect(s.type).toBe('target');
     expect(mainRole(s)).toBe('ST');
     expect(ovrFocusView('FW', ['sho', 'phy'], 'ST').role).toBe('ST');

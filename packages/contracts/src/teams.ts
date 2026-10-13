@@ -377,6 +377,13 @@ export const ClubAchievementsResponseSchema = z.strictObject({
 });
 export type ClubAchievementsResponse = z.infer<typeof ClubAchievementsResponseSchema>;
 
+export const ClubAchievementNotificationsSchema = ClubAchievementsResponseSchema.pick({
+  season: true,
+  groups: true,
+  score: true,
+});
+export type ClubAchievementNotifications = z.infer<typeof ClubAchievementNotificationsSchema>;
+
 // ───────── 라이브 랭킹(팀 랭킹) · 팀 프로필 ─────────
 
 /** value: 구단 가치(선발 11명 카드 기준가 합, T-11-129). */
