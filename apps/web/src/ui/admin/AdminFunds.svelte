@@ -7,7 +7,7 @@
   import type { AdminFundsOwner, AdminFundsReport } from '@offside/app-core/api/admin';
   import { kstDateTime as kst } from '@offside/app-core/boardText';
   import { fundsText } from '@offside/app-core/funds';
-  import { FUNDS_MOVE, fundsItemName, signedFunds } from '@offside/app-core/admin/funds';
+  import { FUNDS_MOVE, fundsItemName, scoutUsageText, signedFunds } from '@offside/app-core/admin/funds';
 
   let report = $state<AdminFundsReport | null>(null);
   let status = $state<LoadStatus>('loading');
@@ -88,6 +88,7 @@
         {fundsText(owner.bought)} − 사용 {fundsText(owner.items)}
         <b class:bad={owner.diff !== 0}>{owner.diff === 0 ? '· 일치' : `· 차이 ${signedFunds(owner.diff)}`}</b>
       </p>
+      {#if owner.scout}<p class="fs-sm" style="margin:0" data-funds-scout>{scoutUsageText(owner.scout)}</p>{/if}
       <ul class="moves">
         {#each owner.moves as m, i (i)}
           <li>

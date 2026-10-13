@@ -81,7 +81,7 @@ export async function fundsOwner(db: Db, q: string): Promise<AdminFundsOwner | n
           .first<{ id: string }>()
       )?.id;
   if (!pid) return null;
-  const [row, moves] = await d1.batch([
+  const [row, moves, scout] = await d1.batch([
     d1.prepare(`WITH ${sums(true)} SELECT * FROM d`).bind(pid),
     d1
       .prepare(
@@ -101,8 +101,22 @@ export async function fundsOwner(db: Db, q: string): Promise<AdminFundsOwner | n
          ORDER BY at DESC LIMIT ?2`,
       )
       .bind(pid, MOVES_LIMIT),
+    // T-11-245 프리미엄 스카우트권 사용 현황(천장 카운트 · 보유 · 앱 구매).
+    d1
+      .prepare(
+        `SELECT coalesce(sp.used, 0) used, coalesce(sp.streak, 0) streak, coalesce(sp.elites, 0) elites,
+                coalesce((SELECT qty FROM owner_items WHERE profile_id = ?1 AND item = 'scout'), 0) held,
+                coalesce((SELECT sum(qty - coalesce(revoked_qty, 0)) FROM iap_purchases
+                           WHERE profile_id = ?1 AND item = 'scout'), 0) paid
+           FROM (SELECT 1) LEFT JOIN scout_pity sp ON sp.profile_id = ?1`,
+      )
+      .bind(pid),
   ]);
   const sumsRow = row!.results[0] as SumsRow | undefined;
   if (!sumsRow) return null;
-  return { ...ownerSums(sumsRow), moves: moves!.results as AdminFundsMove[] };
+  return {
+    ...ownerSums(sumsRow),
+    moves: moves!.results as AdminFundsMove[],
+    scout: scout!.results[0] as NonNullable<AdminFundsOwner['scout']>,
+  };
 }

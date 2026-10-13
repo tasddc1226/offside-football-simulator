@@ -250,6 +250,16 @@ export type AdminFundsMove = z.infer<typeof AdminFundsMoveSchema>;
 /** `GET /v1/admin/funds/owner?q=` 프로필 id(prf_…) 또는 닉네임으로 찾은 구단주 한 명의 대조와 최근 움직임(최대 50). */
 export const AdminFundsOwnerSchema = AdminFundsOwnerSumsSchema.extend({
   moves: z.array(AdminFundsMoveSchema),
+  /** T-11-245 프리미엄 스카우트권: 누적 사용·S 없이 연속·받은 특급(scout_pity), 보유(owner_items), 앱 구매(iap_purchases, 환불 뺀). */
+  scout: z
+    .object({
+      used: z.number().int(),
+      streak: z.number().int(),
+      elites: z.number().int(),
+      held: z.number().int(),
+      paid: z.number().int(),
+    })
+    .optional(),
 });
 export type AdminFundsOwner = z.infer<typeof AdminFundsOwnerSchema>;
 export const AdminFundsQuerySchema = z.string().trim().min(1).max(64);
