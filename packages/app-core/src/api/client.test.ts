@@ -3,6 +3,7 @@ import { setLocale } from '@offside/contracts/i18n';
 import {
   apiFetch,
   ownerCachedGet,
+  getProfile,
   cachedGet,
   clearApiCache,
   invalidateApiCache,
@@ -121,6 +122,15 @@ describe('ownerCachedGet server-confirmed denial', () => {
     clearApiCache();
     await ownerCachedGet('/v1/items', 30_000);
     expect(fetch).toHaveBeenCalledTimes(4);
+    fetch.mockImplementationOnce(
+      async () =>
+        new Response(JSON.stringify({ data: { linked: { apple: true, google: false } } }), {
+          status: 200,
+        }),
+    );
+    await getProfile();
+    await ownerCachedGet('/v1/items/rewards', 30_000);
+    expect(fetch).toHaveBeenCalledTimes(6);
   });
   it('does not cache server/network failures or a denial that finishes after auth changes', async () => {
     const fetch = vi.fn(async () => new Response('{}', { status: 503 }));
