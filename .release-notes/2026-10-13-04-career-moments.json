@@ -1,0 +1,29 @@
+{
+  "id": "t-11-238-career-moments",
+  "title": "라이벌과 우승 기록에 축구다운 장면을 더했어요",
+  "items": [
+    "새 라이벌은 처음 만난 리그 국가에 맞는 이름으로 등장해요. 기존 라이벌 이름은 유지돼요.",
+    "시즌 결산과 트로피 탭에서 우승 대회에 맞는 트로피를 볼 수 있어요.",
+    "이적 제의와 계약서에서 예상 리그 순위와 다음 시즌 대륙 대회를 미리 확인해요.",
+    "성인 프로 선수에게 연애설과 대응 선택지가 추가됐어요."
+  ],
+  "en": {
+    "title": "More football moments for rivals and trophies",
+    "items": [
+      "New rivals have names matching the country of the league where you first meet. Existing names stay the same.",
+      "Season reviews and the trophy tab show trophies suited to each competition.",
+      "Transfer offers and contracts show an estimated league finish and next season's continental competition.",
+      "Adult professional players can encounter dating rumors and choose their response."
+    ]
+  },
+  "ja": {
+    "title": "ライバルと優勝記録の演出を追加しました",
+    "items": [
+      "新しいライバルは初めて出会うリーグの国に合った名前で登場します。既存の名前は変わりません。",
+      "シーズン総括とトロフィータブに、大会に合ったトロフィーを表示します。",
+      "移籍オファーと契約書で予想順位と来季の大陸大会を確認できます。",
+      "成人プロ選手に交際報道と対応の選択肢を追加しました。"
+    ]
+  },
+  "availability": "web-app"
+}

@@ -7,6 +7,7 @@ import { gAttrLabel } from './gAttrLabel';
 import { gBoost } from './gBoost';
 import { gComps } from './gComps';
 import { gData } from './gData';
+import { gDating } from './gDating';
 import { gDex } from './gDex';
 import { gDexGroups } from './gDexGroups';
 import { gFanfeed } from './gFanfeed';
@@ -36,6 +37,7 @@ export const ja = {
   gBoost,
   gComps,
   gData,
+  gDating,
   gDex,
   gDexGroups,
   gFanfeed,
