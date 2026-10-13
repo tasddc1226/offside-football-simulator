@@ -48,9 +48,4 @@ export const home: Translation<HomeMsgs> = {
   tickerAria: 'Transfer and server record news',
   tickerIdle: 'Transfer news and server firsts show up here',
   tickerAge: (p) => `(age ${p.age})`,
-  supportTitle: 'Support the developer',
-  supportBody: 'If you enjoyed the game, please support the developer.',
-  supportCopy: 'Copy bank account',
-  supportCopied: 'Account number copied. Thank you',
-  supportCopyFailed: (p) => `Couldn't copy. ${p.account}`,
 };

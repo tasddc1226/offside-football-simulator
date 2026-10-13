@@ -47,9 +47,4 @@ export const home: Translation<HomeMsgs> = {
   tickerAria: '移籍・サーバー記録のニュース',
   tickerIdle: '移籍ニュースとサーバー初記録がここに流れます',
   tickerAge: (p) => `（${p.age}歳）`,
-  supportTitle: '開発者を応援する',
-  supportBody: '楽しんでいただけたら、開発者を応援してください。',
-  supportCopy: '支援用口座をコピー',
-  supportCopied: '口座番号をコピーしました。ありがとうございます',
-  supportCopyFailed: (p) => `コピーできませんでした。${p.account}`,
 };
