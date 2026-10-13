@@ -15,10 +15,15 @@
   import HomeLive from './HomeLive.svelte';
   import HomeTicker from './HomeTicker.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
-  import { DC_GALLERY_URL } from '@offside/app-core/links';
+  import { ANDROID_TESTER_FORM_URL, DC_GALLERY_URL } from '@offside/app-core/links';
+  import { appTarget } from './appStore.js';
+  import { adLanded } from './adLanding.js';
   import { homeText as L } from '@offside/app-core/i18n/ko/home';
 
   const live = $derived(!!appState.G && !appState.G.retired);
+  // T-11-233 안드로이드 비공개 테스터 모집(T-11-016)은 하루 한 번 뜨는 앱 안내 카드와 별개로 타일에 늘 둔다.
+  // 아이폰은 App Store 안내만, 광고로 온 방문(대부분 해외)에는 보이지 않는다(T-11-195).
+  const tester = appTarget() !== 'ios' && !adLanded();
 </script>
 
 <div class="wrap">
@@ -82,8 +87,13 @@
     <button class="tile tile-link" data-act="dex" onclick={() => go('dex')}>
       <span class="eyebrow">Events</span><b>{L.dexTitle}</b><span class="muted fs-sm">{L.dexSubWeb}</span>
     </button>
-    <!-- T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일. 앱 타일이 둘이면 한 줄을 다 쓴다. -->
-    <a class="tile tile-link tile-wide" data-act="dc-gallery" href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">
+    {#if tester}
+      <a class="tile tile-link" data-act="home-android-tester" href={ANDROID_TESTER_FORM_URL} target="_blank" rel="noopener noreferrer">
+        <span class="eyebrow">Android</span><b>{L.testerTitle}</b><span class="muted fs-sm">{L.testerSub}</span>
+      </a>
+    {/if}
+    <!-- T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일. 테스터 타일이 없으면 한 줄을 다 쓴다. -->
+    <a class="tile tile-link" class:tile-wide={!tester} data-act="dc-gallery" href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">
       <span class="eyebrow">Community</span><b>{L.galleryTitle}</b><span class="muted fs-sm">{L.gallerySub}</span>
     </a>
   </div>
