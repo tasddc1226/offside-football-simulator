@@ -1,7 +1,7 @@
 <script lang="ts">
   // T-11-145 홈 화면의 오프사이드 컵 배너 — 단계별 한 줄 안내와 '대회 보기'. 대회는 누구나 보니 공개 응답(30초 메모)만으로
   // 그린다. 신청 · 내 상태는 대회 화면에서 한다. 취소됐거나 끝난 지 일주일이 지났거나 불러오지 못하면 배너를 숨긴다.
-  import { fetchCup, type CupResponse } from '@offside/app-core/api/cup';
+  import { fetchCupHome, type CupHomeResponse } from '@offside/app-core/api/cup';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
   import { cupOnHome } from '@offside/app-core/cupHome';
   import CupTrophy from './CupTrophy.svelte';
@@ -9,10 +9,10 @@
 
   let { onopen }: { onopen: () => void } = $props();
 
-  let data = $state<CupResponse | null>(null);
+  let data = $state<CupHomeResponse | null>(null);
 
   $effect(() => {
-    void fetchCup().then((r) => {
+    void fetchCupHome().then((r) => {
       if (r.ok) data = r.data;
     });
   });

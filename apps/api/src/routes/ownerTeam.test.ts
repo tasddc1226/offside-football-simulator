@@ -6,6 +6,7 @@ import {
   FriendsResponseSchema,
   PlayFriendlyResponseSchema,
   ClubAchievementsResponseSchema,
+  ClubAchievementNotificationsSchema,
   ErrorEnvelopeSchema,
   OwnerTeamResponseSchema,
   PlayTeamMatchResponseSchema,
@@ -41,7 +42,7 @@ import {
   teamMatches,
 } from '../db/schema.js';
 import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
-import { createTestD1, type TestD1 } from '../test/d1.js';
+import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { callJson, deleteProfile, issueCookie, issueGoogleCookie } from '../test/http.js';
 import { addAppPushDevice } from '../test/push.js';
 import { runPersonalPush } from '../push/personal.js';
@@ -175,6 +176,34 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(res.status).toBe(200);
     return { ...who, ids, team: PutRes.parse(await res.json()).data.team };
   }
+
+  it('achievement notifications keep scores/groups without counting global ranks', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const full = AchRes.parse(
+      await (
+        await callJson(ctx.env, 'GET', '/v1/owner-team/achievements', { cookie: me.cookie })
+      ).json(),
+    ).data;
+    const spy = spyDb(ctx.env.DB);
+    const res = await callJson(
+      { ...ctx.env, DB: spy.DB },
+      'GET',
+      '/v1/owner-team/achievement-notifications',
+      { cookie: me.cookie },
+    );
+    expect(res.status).toBe(200);
+    const brief = successEnvelope(ClubAchievementNotificationsSchema).parse(await res.json()).data;
+    expect(brief).toEqual({ season: full.season, groups: full.groups, score: full.score });
+    expect(spy.seen.filter((q) => /count\(\*\).*owner_achievements/i.test(q))).toHaveLength(0);
+    const anon = await issueCookie(ctx);
+    expect(
+      (
+        await callJson(ctx.env, 'GET', '/v1/owner-team/achievement-notifications', {
+          cookie: anon.cookie,
+        })
+      ).status,
+    ).toBe(403);
+  });
 
   it('세션이 없으면 401, 익명 프로필은 403 GOOGLE_LOGIN_REQUIRED', async () => {
     expect((await call('GET', '/v1/owner-team')).status).toBe(401);

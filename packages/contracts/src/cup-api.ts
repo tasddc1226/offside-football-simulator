@@ -97,6 +97,17 @@ export const CupResponseSchema = z.strictObject({
 });
 export type CupResponse = z.infer<typeof CupResponseSchema>;
 
+/** Home banner only; no lineups, logos, standings or match payloads. */
+export const CupHomeResponseSchema = z.strictObject({
+  cup: CupInfoSchema,
+  phase: CupPhaseSchema,
+  entries: z.number().int(),
+  teamCount: z.number().int(),
+  round: CupRoundSchema.nullable(),
+  championName: z.string().nullable(),
+});
+export type CupHomeResponse = z.infer<typeof CupHomeResponseSchema>;
+
 /** 신청 자격 검사 결과. ok가 아니면 reason으로 안내한다. */
 export const CupEligibilitySchema = z.strictObject({
   ok: z.boolean(),

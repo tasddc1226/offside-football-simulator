@@ -3,7 +3,7 @@
 // 홈·구단주·내 팀 화면에 올 때 한 번 업적을 받아 비교한다 — 새로 오른 업적이 있으면 시트(등급이 오르면 엠블럼과 함께)를
 // 띄우고, 업적 탭을 열 때까지 하단 '구단주'와 내 팀 '업적' 탭에 점을, 업적 목록엔 NEW를 붙인다.
 import { achGradeOf, type AchGrade } from '@offside/contracts/owner-team';
-import type { ClubAchievementsResponse } from '@offside/contracts';
+import type { ClubAchievementNotifications } from '@offside/contracts';
 import { loadKey, saveKey } from '@offside/game/storage';
 import { ACH_SEEN_KEY, OUTBOX_KEY, achUnseenCount, clearAchDirty, isAchDirty } from './achDirty.js';
 import type { ApiResult } from './api/client.js';
@@ -36,7 +36,7 @@ export type AchNudge = {
   next: AchGrade | null;
 };
 
-const pointsOf = (r: ClubAchievementsResponse): Record<string, number> =>
+const pointsOf = (r: ClubAchievementNotifications): Record<string, number> =>
   Object.fromEntries(
     r.groups.flatMap((g) => (g.locked ? [] : g.items.map((i) => [i.id, i.points] as const))),
   );
@@ -47,7 +47,7 @@ const pointsOf = (r: ClubAchievementsResponse): Record<string, number> =>
  */
 export function absorbAch(
   prev: AchSeen | null,
-  r: ClubAchievementsResponse,
+  r: ClubAchievementNotifications,
 ): { seen: AchSeen; nudge: AchNudge | null } {
   const pts = pointsOf(r);
   const same = prev?.season === r.season;
@@ -101,7 +101,7 @@ export function achieveView(n: AchNudge): Extract<SheetView, { kind: 'achieve' }
 export interface AchNudgeHost {
   state: AppState;
   /** 지금 시즌 업적(api/team fetchClubAchievements). */
-  fetch(): Promise<ApiResult<ClubAchievementsResponse>>;
+  fetch(): Promise<ApiResult<ClubAchievementNotifications>>;
   sheetOpen(): boolean;
   showSheet(view: SheetView, buttons: SheetButton[]): void;
   closeSheet(): void;
@@ -160,7 +160,7 @@ export function createAchNudge(host: AchNudgeHost) {
    * 업적 탭이 지금 시즌 업적을 받았을 때 — 본 것으로 적고 NEW를 붙일 업적 id를 돌려준다. 지난 시즌을 고른 화면은 본 기록을
    * 건드리지 않는다.
    */
-  function viewed(r: ClubAchievementsResponse): ReadonlySet<string> {
+  function viewed(r: ClubAchievementNotifications): ReadonlySet<string> {
     const prev = loadSeen();
     if (prev && r.season < prev.season) return new Set();
     const { seen } = absorbAch(prev, r);

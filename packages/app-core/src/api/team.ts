@@ -2,6 +2,7 @@
 import type {
   AchRankResponse,
   ClubAchievementsResponse,
+  ClubAchievementNotifications,
   OwnerTeamResponse,
   PlayTeamMatchResponse,
   PutOwnerTeamBody,
@@ -15,7 +16,7 @@ import type {
   TeamRankResponse,
   TeamRankSort,
 } from '@offside/contracts';
-import { apiFetch, cachedGet } from './client.js';
+import { apiFetch, cachedGet, ownerCachedGet } from './client.js';
 import { withOwnerHint } from './friendPending.js';
 
 export type {
@@ -24,6 +25,7 @@ export type {
   ClubAchievement,
   ClubAchievementGroup,
   ClubAchievementsResponse,
+  ClubAchievementNotifications,
   OwnerTeam,
   OwnerTeamResponse,
   TeamMatch,
@@ -65,6 +67,9 @@ export const fetchTeamMatches = (season?: number) =>
 /** 구단 시즌 업적. season: 팀 시즌(0 = 프리시즌), 없으면 지금 시즌. */
 export const fetchClubAchievements = (season?: number) =>
   cachedGet<ClubAchievementsResponse>(`/v1/owner-team/achievements${seasonQ(season)}`, 60_000);
+
+export const fetchAchievementNotifications = () =>
+  ownerCachedGet<ClubAchievementNotifications>('/v1/owner-team/achievement-notifications', 60_000);
 
 /** 라이브 랭킹(팀 랭킹). 서버가 5분마다 새로 센다. */
 export const fetchTeamRanking = (season: number | undefined, sort: TeamRankSort, page: number) =>
