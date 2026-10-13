@@ -10,6 +10,8 @@
     <a href="/faq/">{L.footFaq}</a>
     <a href="/fairness/">{L.footFairness}</a>
     <a href="/news/">{L.navBoard}</a>
+    <a href="/legends/">{L.footLegends}</a>
+    <a href="/about/">{L.footAbout}</a>
   </nav>
   <p>{L.footContact} <a href="mailto:contact@offside-lab.com">contact@offside-lab.com</a></p>
   <p>

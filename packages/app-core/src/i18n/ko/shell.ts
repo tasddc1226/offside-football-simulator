@@ -32,6 +32,8 @@ const ko = {
   footGuide: '게임 가이드',
   footFaq: '자주 묻는 질문',
   footFairness: '확률과 공정성',
+  footLegends: '명예의 전당',
+  footAbout: '소개',
   footFootballData: 'Football data provided by the Football-Data.org API',
   footContact: '문의',
   footCommunity: '커뮤니티',

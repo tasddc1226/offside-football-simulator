@@ -11,7 +11,6 @@
   import HallOfFame from './HallOfFame.svelte';
   import HomeNews from './HomeNews.svelte';
   import SiteFooter from './SiteFooter.svelte';
-  import VoluntarySupport from './VoluntarySupport.svelte';
   import HomeFirsts from './firsts/HomeFirsts.svelte';
   import HomeLive from './HomeLive.svelte';
   import HomeTicker from './HomeTicker.svelte';
@@ -93,7 +92,6 @@
   {#await import('./HomeClubValue.svelte') then { default: HomeClubValue }}<HomeClubValue />{/await}
   <HomeNews board="notice" eyebrow="Notice" title={L.noticeTitle} />
   <HomeNews board="release" eyebrow="Release notes" title={L.releaseTitle} />
-  <VoluntarySupport />
   <SiteFooter />
   <!-- T-11-015 라운지 채팅으로 가는 떠 있는 버튼(하단 메뉴 위). -->
   <button class="chat-fab" data-act="chat" aria-label={chatState.unread ? L.chatLabelUnread({ n: chatState.unread }) : L.chatLabel} onclick={() => go('chat')}>
