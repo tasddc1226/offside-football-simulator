@@ -16,6 +16,7 @@
   import { toast } from '../helpers.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import NameReport from '../NameReport.svelte';
+  import NameReports from '../NameReports.svelte';
   import TeamLines from './TeamLines.svelte';
   import TeamPitch from './TeamPitch.svelte';
   import TeamLogo from './TeamLogo.svelte';
@@ -161,8 +162,10 @@
     </section>
     {#if team.cupHonors?.length}<CupHonors honors={team.cupHonors} />{/if}
     {#if !mine}
-      <NameReport kind="team" id={team.id} name={team.name} />
-      {#if team.ownerNickname}<NameReport kind="owner" id={team.id} name={team.ownerNickname} />{/if}
+      <NameReports>
+        <NameReport kind="team" id={team.id} name={team.name} />
+        {#if team.ownerNickname}<NameReport kind="owner" id={team.id} name={team.ownerNickname} />{/if}
+      </NameReports>
     {/if}
     </div>
   {/if}

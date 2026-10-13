@@ -11,6 +11,7 @@ export const GROUP_JA: Record<string, { stage: string; title: string }> = {
   legend: { stage: 'ステージ3', title: '伝説の1人' },
   world: { stage: 'ステージ4', title: '世界の舞台を制す' },
   immortal: { stage: 'ステージ5', title: '不滅のクラブ' },
+  beyond: { stage: 'ステージ6', title: '伝説の向こう' },
   team: { stage: 'TEAM', title: '自分だけの最強チーム' },
   race: { stage: 'RACE', title: 'シーズンレース' },
   owner: { stage: 'OWNER', title: 'クラブ運営' },
@@ -70,13 +71,25 @@ export const LABEL_JA: Record<string, string> = {
   'ballon-10': 'バロンドール10回の選手',
   'goals-800': '通算800ゴールの選手',
   'legend-3000': 'レジェンドスコア3,000点の選手',
+  'ballon-15': 'バロンドール15回の選手',
+  'goals-1000': '通算1,000ゴールの選手',
+  'legend-4000': 'レジェンドスコア4,000点の選手',
+  'ballon-100': 'バロンドール合計100回',
+  'world-cup-5': 'ワールドカップ優勝5回',
+  'big5-one': '1人の選手が5大リーグすべてで優勝',
   // 팀
   'team-one': 'チームに選手を1人登録',
   'team-full': 'ユースなしで11人をそろえる',
   'team-fit': '11人全員が本職のポジション',
   'team-caps': '11人全員が代表経験者',
+  'team-mates': '11人全員が同じクラブでプレー経験あり',
   'team-club': '11人全員が同じクラブ出身',
   'team-rn': '11人全員が永久欠番',
+  'team-ballon': '11人全員がバロンドール受賞者',
+  'team-nation': '11人全員が同じ国籍',
+  'team-ovr95': '11人全員が最高OVR95以上',
+  'team-cup-sf': 'オフサイドカップ ベスト4',
+  'team-cup-win': 'オフサイドカップ優勝',
   'team-wins': 'チーム戦勝利',
   'team-streak': '最多連勝',
   'team-margin': '5点差以上で勝利',
@@ -113,3 +126,9 @@ export const UNIT_JA: Record<string, string> = {
 
 /** '○○세까지 현역'(시즌마다 나이가 다르다). */
 export const ageLabelJa = (age: string) => `${age}歳まで現役`;
+
+export const DESC_JA: Record<string, string> = {
+  'team-mates':
+    'キャリアで1シーズンでも同じプロクラブでプレーしていれば達成です。高校・大学・兵役のシーズンは数えません。',
+  'team-club': '引退時に最後に所属したクラブが11人全員同じである必要があります。',
+};

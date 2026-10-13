@@ -117,7 +117,7 @@
             <ul>
               {#each g.items as i (i.id)}
                 <li class:done={i.done}>
-                  <span class="tm-ach-txt"><span>{i.label}{#if newIds.has(i.id)}<em class="tm-ach-new">NEW</em>{/if}</span><small>{achState(i)}</small>{#if i.missing?.length}<small class="tm-ach-missing">{achMissing(i)}</small>{/if}</span>
+                  <span class="tm-ach-txt"><span>{i.label}{#if newIds.has(i.id)}<em class="tm-ach-new">NEW</em>{/if}</span>{#if i.desc}<small class="tm-ach-desc">{i.desc}</small>{/if}<small>{achState(i)}</small>{#if i.missing?.length}<small class="tm-ach-missing">{achMissing(i)}</small>{/if}</span>
                   <span class="tm-pts" class:got={i.points > 0}>{achPoints(i)}</span>
                 </li>
               {/each}
@@ -251,7 +251,8 @@
     color: var(--muted);
     font-size: 0.75rem;
   }
-  .tm-ach-txt .tm-ach-missing {
+  .tm-ach-txt .tm-ach-missing,
+  .tm-ach-txt .tm-ach-desc {
     font-size: 0.6875rem;
   }
   .tm-pts {

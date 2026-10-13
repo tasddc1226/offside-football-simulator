@@ -1,0 +1,35 @@
+{
+  "id": "t-11-237-achievements",
+  "title": "새 업적이 많이 생겼어요",
+  "items": [
+    "선수 업적에 6단계 전설 너머가 생겼어요",
+    "11명 모두 발롱도르 수상자 같은 드림팀 업적과 오프사이드 컵 업적이 생겼어요",
+    "11명 모두 같은 구단에서 뛴 적이 있으면 받는 팀 업적이 생겼어요",
+    "기록 쌓기와 은퇴시킨 선수 업적에 윗단계가 열렸어요",
+    "11명 모두 같은 구단 출신은 은퇴 구단 기준이라고 설명을 붙였어요",
+    "구단 화면의 신고 버튼을 한 줄로 정리했어요"
+  ],
+  "en": {
+    "title": "Lots of new achievements",
+    "items": [
+      "Player achievements now have Stage 6: Beyond legend.",
+      "New dream team achievements, like all 11 Ballon d'Or winners, plus Offside Cup achievements.",
+      "New team achievement for a lineup whose 11 players all once played for the same club.",
+      "Record and players-retired achievements now have higher tiers.",
+      "'All 11 from the same club' now explains that it counts the club each player retired at.",
+      "Report buttons on club pages now sit on one line."
+    ]
+  },
+  "ja": {
+    "title": "新しい実績がたくさん加わりました",
+    "items": [
+      "選手実績にステージ6「伝説の向こう」が加わりました。",
+      "11人全員がバロンドール受賞者などのドリームチーム実績と、オフサイドカップ実績が加わりました。",
+      "11人全員が同じクラブでプレーした経験があればもらえるチーム実績が加わりました。",
+      "記録と引退させた選手の実績に上の段階が開きました。",
+      "「11人全員が同じクラブ出身」に、引退時のクラブで判定する説明を付けました。",
+      "クラブ画面の通報ボタンを1行にまとめました。"
+    ]
+  },
+  "availability": "web-app"
+}

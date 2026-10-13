@@ -10,7 +10,12 @@
   const T =
     kind === 'owner'
       ? { act: 'nick-report', title: L.reportNickTitle, label: L.reportNickLabel, btn: L.reportNickBtn }
-      : { act: 'name-report', title: L.reportTitle, label: L.reportLabel, btn: L.reportBtn };
+      : {
+          act: 'name-report',
+          title: L.reportTitle,
+          label: L.reportLabel,
+          btn: kind === 'team' ? L.reportTeamBtn : L.reportPlayerBtn,
+        };
   let sent = $state(false);
   let busy = $state(false);
 
@@ -25,19 +30,23 @@
   }
 </script>
 
-<p class="name-report">
-  <button class="icon-btn" data-act={T.act} aria-label={T.label({ name })} disabled={sent || busy} onclick={send}>
-    {sent ? L.reportDone : T.btn}
-  </button>
-</p>
+<button class="name-report" data-act={T.act} aria-label={T.label({ name })} disabled={sent || busy} onclick={send}>
+  {sent ? L.reportDone : T.btn}
+</button>
 
 <style>
+  /* T-11-237 가끔 쓰는 기능이라 테두리 없는 작은 회색 글자로(앱과 같게). 여러 개는 NameReports가 한 줄로 묶는다. */
   .name-report {
-    margin: 12px 0 0;
-    text-align: center;
-  }
-  .name-report button {
+    min-height: 36px;
+    padding: 0 8px;
+    border: 0;
+    background: none;
+    font: inherit;
     font-size: 0.8125rem;
     color: var(--muted);
+    cursor: pointer;
+  }
+  .name-report:disabled {
+    cursor: default;
   }
 </style>
