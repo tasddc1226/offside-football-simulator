@@ -12,7 +12,7 @@ for (const size of [
   { width: 1280, height: 900 },
   { width: 844, height: 390 },
 ]) {
-  test(`preseason covers viewport, moves and shoots, then restores gameplay (${size.width})`, async ({
+  test(`preseason centers a background-free player through motion and rotation, then restores gameplay (${size.width})`, async ({
     page,
   }) => {
     await page.setViewportSize(size);
@@ -37,18 +37,27 @@ for (const size of [
     await expect(scene.locator('.avatar-stage')).toHaveAttribute('data-motion', 'run');
     await page.clock.runFor(550);
     await expect(scene.locator('.avatar-stage')).toHaveAttribute('data-motion', 'shoot');
-    // Rotation adapts immediately; the player must not fly in from old viewport coordinates.
-    await page.setViewportSize({ width: size.height, height: size.width });
+    const expectCentered = async (viewport: { width: number; height: number }) => {
+      const player = (await scene.locator('.avatar-walker').boundingBox())!;
+      expect(player.x + player.width / 2).toBeCloseTo(viewport.width / 2, 0);
+      expect(player.y + player.height / 2).toBeCloseTo(viewport.height / 2, 0);
+    };
+    await expectCentered(size);
+    await expect(scene.locator('.field-lines')).toHaveCount(0);
+    expect(
+      await scene.locator('.avatar-stage').evaluate((el) => getComputedStyle(el).backgroundColor),
+    ).toBe('rgba(0, 0, 0, 0)');
+    // Rotation keeps the character in the viewport center, without a travel transition.
+    const rotated = { width: size.height, height: size.width };
+    await page.setViewportSize(rotated);
     await page.clock.runFor(100);
-    const field = (await scene.locator('.avatar-stage').boundingBox())!;
-    const player = (await scene.locator('.avatar-walker').boundingBox())!;
-    expect(player.x).toBeGreaterThanOrEqual(field.x);
-    expect(player.x + player.width).toBeLessThanOrEqual(field.x + field.width + 1);
+    await expectCentered(rotated);
     await page.setViewportSize(size);
     await page.clock.runFor(100);
+    await expectCentered(size);
     if (process.env.CAPTURE_PROGRESS_DIR)
       await page.screenshot({
-        path: `${process.env.CAPTURE_PROGRESS_DIR}/progress-verified-${size.width}.png`,
+        path: `${process.env.CAPTURE_PROGRESS_DIR}/progress-centered-${size.width}.png`,
         animations: 'disabled',
       });
 
@@ -74,6 +83,11 @@ test('season records/skip/confirmation remain functional; motion stops on comple
   const saved = await page.evaluate(() => localStorage.getItem('ft_save'));
   await page.clock.runFor(600);
   await expect(page.locator('#an-skip')).toBeInViewport();
+  if (process.env.CAPTURE_PROGRESS_DIR)
+    await page.screenshot({
+      path: `${process.env.CAPTURE_PROGRESS_DIR}/progress-centered-season.png`,
+      animations: 'disabled',
+    });
   await page.locator('#an-skip').click();
   await expect(page.locator('#sheet [data-sheet="0"]')).toBeInViewport();
   await expect(scene.locator('.avatar-stage')).toHaveAttribute('data-motion', 'idle');

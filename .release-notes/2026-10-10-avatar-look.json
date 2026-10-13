@@ -4,14 +4,14 @@
   "items": [
     "미니형 선수 꾸미기와 카드 초상이 추가돼요.",
     "은퇴 외형은 무료로 바꿔요. 기록·능력치는 유지해요.",
-    "전체 화면 시즌 모션은 동작 줄이기를 지원해요."
+    "중앙 캐릭터 모션은 동작 줄이기를 지원해요."
   ],
   "en": {
     "title": "Customize your pixel player",
     "items": [
       "Mini player cosmetics and card portraits.",
       "Free retired looks; records and stats stay intact.",
-      "Full-screen season motion respects reduced motion."
+      "Centered player motion respects reduced motion."
     ]
   },
   "ja": {
@@ -19,7 +19,7 @@
     "items": [
       "ミニ選手の着せ替えとカードの顔を追加。",
       "引退後の外見変更は無料。記録・能力は不変。",
-      "全画面の進行演出。動きを減らす設定に対応。"
+      "中央の選手が動きます。動きを減らす設定に対応。"
     ]
   },
   "availability": "web-app"

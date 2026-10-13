@@ -3246,30 +3246,6 @@ th.n {
   content: '✓ ';
   color: var(--good);
 }
-/* T-11-191 프리시즌 준비 시트 위 무대: 내 도트 선수(24×36칸, 2배)가 잔디 줄 위를 돌아다닌다. */
-.avatar-stage {
-  position: relative;
-  height: 72px;
-  border-bottom: 2px solid var(--line);
-  overflow: hidden;
-}
-.avatar-walker {
-  position: absolute;
-  bottom: 0;
-  width: 64px;
-  height: 72px;
-  transform: translateX(-50%);
-  transition-property: left;
-  transition-timing-function: linear;
-}
-.avatar-walker svg {
-  display: block;
-  width: 64px;
-  height: 72px;
-}
-.avatar-walker svg.flip {
-  transform: scaleX(-1);
-}
 /* 판정 게이지 */
 .judge {
   position: relative;
@@ -7685,7 +7661,7 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
   font-weight: 600;
 }
 
-/* T-11-191: 진행 중에는 경기장을 전체 화면으로. 결과·선택 시트는 기존 크기를 유지한다. */
+/* T-11-191: 진행 중에는 중앙 캐릭터 로딩을 전체 화면으로. 결과·선택 시트는 기존 크기를 유지한다. */
 html.scroll-locked:has(.progress-screen) {
   /* 일반 팝업의 스크롤바 빈자리는 전체 화면에서는 남기지 않는다. */
   scrollbar-gutter: auto;

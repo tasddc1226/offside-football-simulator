@@ -1,6 +1,6 @@
 // 아래에서 올라오는 시트(웹 Sheet.svelte). 선택이 필수인 시트(진행 중·이벤트 대기)는 배경 누르기·끌어 내리기·
 // Android 뒤로로 닫히지 않는다. 본문은 SheetBody가 뷰 종류별로 그리고, 버튼은 sheetState.buttons 그대로.
-import { Keyboard, Modal, Pressable, ScrollView, View } from 'react-native';
+import { Keyboard, Modal, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { sheetLabel, type SheetView } from '@offside/app-core/sheets';
@@ -8,6 +8,7 @@ import { appState, prefs, sheetState } from '../store';
 import { buzz, dismissSheet } from '../game/host';
 import { useColors } from '../theme/useColors';
 import { SheetBody } from '../sheets/SheetBody';
+import { AvatarStage } from '../sheets/AvatarStage';
 import { Btn } from './Btn';
 import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
@@ -17,6 +18,8 @@ export function Sheet() {
   const { motionOK } = useSnapshot(prefs);
   const c = useColors();
   const insets = useSafeAreaInsets();
+  const { height, width } = useWindowDimensions();
+  const avatarSize = height <= 540 ? 80 : Math.min(160, Math.max(96, width * 0.26));
   const fullscreen =
     !!s.view && (s.view.kind === 'steps' || s.view.kind === 'block') && !!s.view.avatar;
   const dismissible = !s.busy && !G?.pending;
@@ -43,6 +46,25 @@ export function Sheet() {
             gap: 14,
           }}
         >
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              left: 0,
+              right: 0,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <View style={{ width: avatarSize, height: (avatarSize * 9) / 8 }}>
+              {(sheetState.view?.kind === 'steps' || sheetState.view?.kind === 'block') &&
+              sheetState.view.avatar ? (
+                <AvatarStage spec={sheetState.view.avatar} active={s.buttons.length === 0} />
+              ) : null}
+            </View>
+          </View>
           {s.view ? <SheetBody v={sheetState.view!} /> : null}
           {s.buttons.map((b, i) => (
             <View key={i} style={{ paddingHorizontal: 20 }}>
