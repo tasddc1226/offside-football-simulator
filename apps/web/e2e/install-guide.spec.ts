@@ -20,6 +20,7 @@ test.describe('아이폰 Chrome', () => {
       /apps\.apple\.com/,
     );
     await expect(card.locator('[data-act="android-tester"]')).toHaveCount(0);
+    await expect(page.locator('[data-act="home-android-tester"]')).toHaveCount(0);
     await card.scrollIntoViewIfNeeded();
     await expect
       .poll(() => page.evaluate(() => localStorage.getItem('ft_app_conversion_last_seen')))
@@ -49,6 +50,11 @@ test('데스크톱 홈 카드에는 iPhone 앱과 Android 비공개 테스트 �
   await expect(page.locator('#sheet')).toBeHidden();
   await expect(page.locator('[data-act="app-store"]')).toBeVisible();
   await expect(page.locator('[data-act="android-tester"]')).toBeVisible();
+  // T-11-233 카드를 닫거나 이미 봤어도 홈 타일로 테스터 모집에 들어갈 수 있다.
+  await expect(page.locator('[data-act="home-android-tester"]')).toHaveAttribute(
+    'href',
+    /docs\.google\.com\/forms/,
+  );
 });
 
 test.describe('안드로이드 Chrome', () => {
@@ -63,6 +69,8 @@ test.describe('안드로이드 Chrome', () => {
     await page.goto('/?utm_source=meta&utm_medium=paid');
     await expect(page.locator('[data-act="android-tester"]')).toBeVisible();
     await expect(page.locator('[data-act="app-store"]')).toHaveCount(0);
+    // 광고로 온 방문에는 늘 보이는 테스터 타일을 두지 않는다(T-11-195).
+    await expect(page.locator('[data-act="home-android-tester"]')).toHaveCount(0);
     await page.locator('[data-act="settings"]').click();
     await expect(page.locator('[data-settings="backup"]')).toBeVisible();
     await expect(page.locator('[data-settings="app-move"]')).toHaveCount(0);
@@ -83,6 +91,7 @@ test('홈 설치 카드를 닫으면 7일간 숨기고 플레이 화면에 반�
   await page.reload();
   await expect(page.locator('[data-act="new"]')).toBeVisible();
   await expect(card).toHaveCount(0);
+  await expect(page.locator('[data-act="home-android-tester"]')).toBeVisible();
   await page.locator('[data-act="new"]').click();
   await expect(page.locator('[data-app-conversion]')).toHaveCount(0);
 });
