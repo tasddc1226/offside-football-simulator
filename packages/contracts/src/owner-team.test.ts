@@ -203,13 +203,13 @@ describe('T-11-216 배치 프리셋', () => {
 });
 
 describe('T-11-244 프리미엄 스카우트 천장 · 컵 스카우트권', () => {
-  it('S 없이 19장 뒤 20장째는 sure, 누적 100장째는 elite(밀린 특급은 다음 장)', () => {
+  it('S 없이 29장 뒤 30장째는 sure, 누적 100장째는 elite(밀린 특급은 다음 장)', () => {
     expect(scoutPityView({ used: 0, streak: 0, elites: 0 })).toEqual({
       next: 'normal',
-      sureIn: 20,
+      sureIn: 30,
       eliteIn: 100,
     });
-    expect(scoutPityView({ used: 19, streak: 19, elites: 0 }).next).toBe('sure');
+    expect(scoutPityView({ used: 29, streak: 29, elites: 0 }).next).toBe('sure');
     expect(scoutPityView({ used: 99, streak: 3, elites: 0 })).toMatchObject({
       next: 'elite',
       eliteIn: 1,

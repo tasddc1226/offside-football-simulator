@@ -34,7 +34,7 @@ export const scout: Translation<ScoutMsgs> = {
   pitySure: (p) => (p.n <= 1 ? 'Next ticket: S guaranteed' : `S guaranteed in ${p.n}`),
   pityElite: (p) => (p.n <= 1 ? 'Next ticket: elite S guaranteed' : `Elite S in ${p.n}`),
   pityHelp:
-    'If no S candidate shows up, your 20th ticket guarantees one. Every 100th ticket you use guarantees an S candidate with top potential (96).',
+    'If no S candidate shows up, your 30th ticket guarantees one. Every 100th ticket you use guarantees an S candidate with top potential (96).',
   pillSure: 'S guaranteed',
   pillElite: 'Elite S',
   doneSure: (p) => `You hit the pity and got an S candidate. ${p.n} premium scout tickets left.`,
@@ -50,5 +50,5 @@ export const scout: Translation<ScoutMsgs> = {
   fundsDone: (p) => `Premium scout ticket bought. You now have ${p.n}.`,
   fundsFail: "Couldn't buy the premium scout ticket.",
   oddsPity:
-    'Pity: after 19 tickets with no S, the guaranteed candidate on the 20th is S. On every 100th ticket, the guaranteed candidate has top potential (96).',
+    'Pity: after 29 tickets with no S, the guaranteed candidate on the 30th is S. On every 100th ticket, the guaranteed candidate has top potential (96).',
 };

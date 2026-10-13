@@ -154,7 +154,7 @@ export type OwnerItem = (typeof OWNER_ITEMS)[number];
  * 누적 SCOUT_PITY_ELITE장째마다 잠재력 최고치(96) S 확정(elite). 서버가 장수를 세고 이번 장의 모드를 정한다.
  * used = 누적 사용, streak = 마지막 S 뒤 S 없이 쓴 장수, elites = 지금까지 받은 특급 S 수.
  */
-export const SCOUT_PITY_SURE = 20;
+export const SCOUT_PITY_SURE = 30;
 export const SCOUT_PITY_ELITE = 100;
 export const SCOUT_MODES = ['normal', 'sure', 'elite'] as const;
 export type ScoutMode = (typeof SCOUT_MODES)[number];
