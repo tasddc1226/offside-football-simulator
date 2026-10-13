@@ -16,7 +16,12 @@ import {
   type DetailPos,
   type PosGroup,
 } from '@offside/contracts/positions';
-import { tenureLabels } from '../i18n/ko/achievements.js';
+import {
+  achievementDescs,
+  achievementGroups,
+  achievementLabels,
+  tenureLabels,
+} from '../i18n/ko/achievements.js';
 import { NATIONAL_WINS } from '@offside/contracts/nations';
 
 export type AchievementCareer = {
@@ -58,6 +63,12 @@ export type AchievementTeamSlot = {
   careerId: string | null;
   fit: number;
   lastClubId: string | null;
+  /** T-11-237 커리어 중 뛴 프로 구단 id(고교·대학·병역 시즌 제외). 모르면 빈 배열. */
+  clubIds?: readonly string[];
+  /** T-11-237 드림팀 업적 재료: 발롱도르 수·국적·최고 OVR. 모르면 0·null. */
+  ballon?: number;
+  nation?: string | null;
+  peak?: number;
   caps: number;
   retiredNumber: boolean;
 };
@@ -71,6 +82,8 @@ export type AchievementTeam = {
   goalsFor: number;
   rating: number;
   likes: number;
+  /** T-11-237 이 팀의 오프사이드 컵 최고 성적(끝난 컵만). 없으면 null. */
+  cupBest?: 'champion' | 'runnerup' | 'sf' | 'qf' | 'r16' | 'r32' | 'group' | null;
 };
 
 /** 그 시즌 구단주 활동. */
@@ -108,6 +121,9 @@ const leaguesFrom = (minTier: number) =>
 const LEAGUES = leaguesFrom(0);
 const EUROPE = leaguesFrom(4);
 const BIG5 = leaguesFrom(5);
+/** T-11-237 저장된 우승 이름(시즌 honors는 한국어로 저장된다). */
+const WORLD_CUP_WIN = 'FIFA 월드컵 우승'; // i18n-ignore 저장값
+const leagueWin = (league: string) => `${league} 우승`; // i18n-ignore 저장값
 const POTY = [
   'PFA 올해의 선수',
   '라리가 올해의 선수',
@@ -203,49 +219,76 @@ const TIERS: {
     label: '골',
     unit: '골',
     get: (c) => c.goals,
-    steps: [100, 300, 1000, 3000, 10000],
+    steps: [100, 300, 1000, 3000, 10000, 30000],
   },
   {
     id: 'assists',
     label: '도움',
     unit: '도움',
     get: (c) => c.assists,
-    steps: [100, 300, 1000, 3000, 10000],
+    steps: [100, 300, 1000, 3000, 10000, 15000],
   },
   {
     id: 'apps',
     label: '출전',
     unit: '경기',
     get: (c) => c.apps,
-    steps: [1000, 3000, 10000, 30000],
+    steps: [1000, 3000, 10000, 30000, 60000, 100000],
   },
   {
     id: 'caps',
     label: 'A매치 출전',
     unit: '경기',
     get: (c) => c.caps,
-    steps: [100, 300, 1000, 3000],
+    steps: [100, 300, 1000, 3000, 10000],
   },
-  { id: 'trophies', label: '우승', unit: '회', get: (c) => c.trophies, steps: [10, 30, 100, 300] },
-  { id: 'awards', label: '개인 수상', unit: '회', get: (c) => c.awards, steps: [10, 30, 100, 300] },
+  // T-11-237 모든 업적을 한 번씩 깬 구단주가 나와 윗단계를 연다(운영 시즌 1 구단주 7천여 명 중 상위 몇십 명 · 몇 명).
+  {
+    id: 'trophies',
+    label: '우승',
+    unit: '회',
+    get: (c) => c.trophies,
+    steps: [10, 30, 100, 300, 1000, 2000],
+  },
+  {
+    id: 'awards',
+    label: '개인 수상',
+    unit: '회',
+    get: (c) => c.awards,
+    steps: [10, 30, 100, 300, 1000, 3000],
+  },
   {
     id: 'legend',
     label: '레전드 점수',
     unit: '점',
     get: (c) => c.legendScore,
-    steps: [1000, 3000, 10000, 30000],
+    steps: [1000, 3000, 10000, 30000, 100000],
   },
 ];
 
 /** 단계마다 매기는 점수(한 번 달성 · 모으기). 단계 업적은 단계마다 LADDER를 쓴다. */
-const PTS = { first: 10, collection: 30, legend: 50, world: 80, immortal: 150 } as const;
+const PTS = {
+  first: 10,
+  collection: 30,
+  legend: 50,
+  world: 80,
+  immortal: 150,
+  beyond: 250,
+} as const;
 /** 단계 업적의 단계별 점수(앞에서부터 목표 수만큼). */
-const LADDER = [10, 20, 40, 80, 160];
+const LADDER = [10, 20, 40, 80, 160, 320];
 const TEAM_LADDER = [20, 40, 80];
 
-const once = (id: string, label: string, done: boolean, pts: number): ClubAchievement => ({
+const once = (
+  id: string,
+  label: string,
+  done: boolean,
+  pts: number,
+  desc?: string,
+): ClubAchievement => ({
   id,
   label,
+  ...(desc ? { desc } : {}),
   done,
   points: done ? pts : 0,
   worth: done ? 0 : pts,
@@ -344,6 +387,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
   const hasHonor = (n: string) => honors.has(n);
   const feat = (id: string, label: string, done: boolean) => once(id, label, done, PTS.legend);
   const world = (id: string, label: string, done: boolean) => once(id, label, done, PTS.world);
+  const beyond = (id: string, done: boolean) => once(id, achievementLabels[id]!, done, PTS.beyond);
 
   const firsts: ClubAchievement[] = [
     ...POS_FIRST.map(([pos, label]) =>
@@ -510,6 +554,48 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
         PTS.immortal,
       ),
     ]),
+    // T-11-237 5단계를 모두 깬 구단주를 위한 다음 목표. 목표치는 운영 시즌 1 기록(2026-10-13)에서 손꼽히는 몇 명만 닿게.
+    group('player', 'beyond', achievementGroups.beyond!.stage, achievementGroups.beyond!.title, [
+      beyond(
+        'ballon-15',
+        anyone((c) => c.ballon >= 15),
+      ),
+      beyond(
+        'goals-1000',
+        anyone((c) => c.goals >= 1000),
+      ),
+      beyond(
+        'legend-4000',
+        anyone((c) => c.legendScore >= 4000),
+      ),
+      collect(
+        'ballon-100',
+        achievementLabels['ballon-100']!,
+        sum((c) => c.ballon),
+        100,
+        PTS.beyond,
+      ),
+      collect(
+        'world-cup-5',
+        achievementLabels['world-cup-5']!,
+        honorCount(WORLD_CUP_WIN),
+        5,
+        PTS.beyond,
+      ),
+      collect(
+        'big5-one',
+        achievementLabels['big5-one']!,
+        Math.max(
+          0,
+          ...careers.map(
+            (c) =>
+              BIG5.filter((l) => c.seasons.some((s) => s.honors.includes(leagueWin(l)))).length,
+          ),
+        ),
+        BIG5.length,
+        PTS.beyond,
+      ),
+    ]),
   ];
 
   if (team) {
@@ -519,8 +605,13 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
     const club = players[0]?.lastClubId;
     // T-11-103 팀 업적은 그 시즌에 한 번 닿으면 남는다 — 선수를 팔거나 방출해 선발이 바뀌어도, 레이팅·좋아요가 내려가도.
     const kept = input.kept ?? {};
-    const held = (id: string, label: string, done: boolean, pts: number) =>
-      once(id, label, done || (kept[id] ?? 0) > 0, pts);
+    const held = (id: string, label: string, done: boolean, pts: number, desc?: string) =>
+      once(id, label, done || (kept[id] ?? 0) > 0, pts, desc);
+    // T-11-237 11명 모두가 뛰어 본 프로 구단이 하나라도 겹치는가(은퇴 구단과 상관없이).
+    const shared = players.reduce<Set<string> | null>((acc, s) => {
+      const mine = new Set(s.clubIds ?? []);
+      return acc ? new Set([...acc].filter((c) => mine.has(c))) : mine;
+    }, null);
     const best = (id: string, label: string, unit: string, cur: number, steps: number[]) =>
       tier(id, label, unit, Math.max(cur, kept[id] ?? 0), steps, TEAM_LADDER);
     groups.push(
@@ -540,10 +631,18 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
           40,
         ),
         held(
+          'team-mates',
+          achievementLabels['team-mates']!,
+          all(() => !!shared?.size),
+          40,
+          achievementDescs['team-mates']!,
+        ),
+        held(
           'team-club',
           '11명 모두 같은 구단 출신',
           all((s) => !!club && s.lastClubId === club),
           60,
+          achievementDescs['team-club']!,
         ),
         held(
           'team-rn',
@@ -551,6 +650,32 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
           all((s) => s.retiredNumber),
           150,
         ),
+        // T-11-237 드림팀 — 모든 업적을 깬 구단주의 다음 편성 목표.
+        held(
+          'team-ballon',
+          achievementLabels['team-ballon']!,
+          all((s) => (s.ballon ?? 0) > 0),
+          150,
+        ),
+        held(
+          'team-nation',
+          achievementLabels['team-nation']!,
+          all((s) => !!s.nation && s.nation === players[0]?.nation),
+          80,
+        ),
+        held(
+          'team-ovr95',
+          achievementLabels['team-ovr95']!,
+          all((s) => (s.peak ?? 0) >= 95),
+          150,
+        ),
+        held(
+          'team-cup-sf',
+          achievementLabels['team-cup-sf']!,
+          ['champion', 'runnerup', 'sf'].includes(team.cupBest ?? ''),
+          80,
+        ),
+        held('team-cup-win', achievementLabels['team-cup-win']!, team.cupBest === 'champion', 200),
       ]),
       group('team', 'race', 'RACE', '시즌 레이스', [
         best('team-wins', '팀 경기 승리', '승', team.wins, [10, 30, 100]),
@@ -566,7 +691,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
   groups.push(
     group('owner', 'owner', 'OWNER', '구단 운영', [
       once('owner-nickname', '공개 닉네임 정하기', owner.nickname, 10),
-      tier('owner-players', '은퇴시킨 선수', '명', careers.length, [3, 10, 30, 100]),
+      tier('owner-players', '은퇴시킨 선수', '명', careers.length, [3, 10, 30, 100, 200]),
       tier('owner-retire-days', '선수를 은퇴시킨 날', '일', owner.retireDays, [3, 7, 14, 30]),
       tier('owner-match-days', '팀 경기를 치른 날', '일', owner.matchDays, [3, 7, 14, 30]),
       tier('owner-likes', '다른 팀 응원(좋아요)', '번', owner.likesGiven, [1, 5, 20], TEAM_LADDER),

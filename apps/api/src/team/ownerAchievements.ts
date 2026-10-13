@@ -15,12 +15,14 @@ import {
   eligibleMap,
   layoutOf,
   myTeamIn,
+  proClubsOf,
   seasonCareersOf,
   slotIdsOf,
 } from '../db/repos/ownerTeams.js';
 import { getProfile, hasAccount } from '../db/repos/profiles.js';
 import { achievementScore, clubAchievements, teamKeptOf, type TeamKept } from './achievements.js';
 import { buildLineup } from './sim.js';
+import { cupBestOf } from './cup.js';
 import { kstDay } from '../time.js';
 
 /** 적어 둔 팀 업적 기록(team_kept). 없거나 깨졌으면 빈 기록. */
@@ -57,9 +59,11 @@ export async function computeOwnerAchievements(
   const end = teamSeasonEndsAt(season);
   const team = seasonTeam && !(end && seasonTeam.createdAt >= end) ? seasonTeam : undefined;
   const ids = team ? slotIdsOf(team).filter((id): id is string => id !== null) : [];
-  const [activity, slotRows] = await Promise.all([
+  const [activity, slotRows, clubs, cupBest] = await Promise.all([
     ownerActivityIn(db, owner.id, season, team?.id ?? null, asOf),
     careersByIds(db, ids),
+    proClubsOf(db, ids),
+    team ? cupBestOf(db, owner.id, team.id) : null,
   ]);
   // T-11-103 선발은 화면과 같이 카드로 판정한다 — 영입한 선수도 들어가고, 지금 시즌은 지금 가진 선수만(eligibleMap).
   const eligible = eligibleMap(slotRows, owner.id, season, open);
@@ -72,6 +76,10 @@ export async function computeOwnerAchievements(
             careerId: r ? s.careerId : null,
             fit: s.fit,
             lastClubId: r?.lastClubId ?? null,
+            clubIds: (s.careerId && clubs.get(s.careerId)) || [],
+            ballon: r?.ballon ?? 0,
+            nation: r?.nation ?? null,
+            peak: r?.peak ?? 0,
             caps: r?.caps ?? 0,
             retiredNumber: !!r?.rn,
           };
@@ -89,6 +97,7 @@ export async function computeOwnerAchievements(
           goalsFor: team.goalsFor,
           rating: team.rating,
           likes: team.likes,
+          cupBest,
         }
       : open
         ? { slots: [], wins: 0, bestStreak: 0, bestMargin: 0, goalsFor: 0, rating: 0, likes: 0 }

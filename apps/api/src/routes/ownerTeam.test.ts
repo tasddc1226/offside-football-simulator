@@ -542,7 +542,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(item(pre, 'retire-DF')?.done).toBe(false);
     expect(item(pre, 'all-dpos')).toBeUndefined();
     // 지금 시즌(프리시즌) — 팀이 없어도 팀 업적 목록은 보인다. T-11-028 선수 → 팀 → 구단주 → 감독(잠금) 순.
-    expect(pre.groups.map((g) => g.id).slice(6)).toEqual(['team', 'race', 'owner', 'manager']);
+    expect(pre.groups.map((g) => g.id).slice(7)).toEqual(['team', 'race', 'owner', 'manager']);
     // T-11-026 3~5단계가 열렸다 — 잠긴 단계 없이 시즌 요약(국적·은퇴 나이·시즌 골)까지 읽어 판정한다.
     expect(pre.groups.filter((g) => g.locked).map((g) => g.id)).toEqual(['manager']);
     // T-11-028 점수(첫 골키퍼 은퇴 10점)와 업적 랭킹 순위.

@@ -14,7 +14,7 @@ import { teamSeasonClosed } from '@offside/contracts/service-seasons';
 import { num as n, recordText } from '@offside/app-core/teamText';
 import { localCareerNames } from '@offside/game/hof-store';
 import { LoadState, type LoadStatus } from '../../../components/LoadState';
-import { NameReport } from '../../../components/NameReport';
+import { NameReport, NameReports } from '../../../components/NameReport';
 import { TeamLogo } from '../../../components/TeamLogo';
 import { TeamLines, TeamPitch } from '../../../components/TeamPitch';
 import { PlayerPeek, pitchPeekOrigin, type PeekOrigin } from '../../../components/PlayerPeek';
@@ -372,10 +372,14 @@ export default function TeamProfile({ id }: { id: string }) {
             )}
           </Card>
           <CupHonors honors={team.cupHonors ?? []} />
-          {mine ? null : <NameReport kind="team" id={team.id} name={team.name} />}
-          {!mine && team.ownerNickname ? (
-            <NameReport kind="owner" id={team.id} name={team.ownerNickname} />
-          ) : null}
+          {mine ? null : (
+            <NameReports>
+              <NameReport kind="team" id={team.id} name={team.name} />
+              {team.ownerNickname ? (
+                <NameReport kind="owner" id={team.id} name={team.ownerNickname} />
+              ) : null}
+            </NameReports>
+          )}
         </>
       ) : null}
     </LoadState>

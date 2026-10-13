@@ -4,6 +4,7 @@ import {
   CUP_KO_ROUNDS,
   CUP_REWARDS,
   CUP_ROUNDS,
+  CUP_STAGES,
   cupById,
   cupGroupCount,
   firstKoRound,
@@ -534,6 +535,27 @@ export const activeEntriesOf = (db: Db, profileId: string) =>
     .where(and(eq(cupEntries.profileId, profileId), eq(cupEntries.status, 'active')));
 
 /** T-11-145 구단주의 컵 성적(보상까지 끝난 것, 최근 대회부터). 팀 프로필 트로피·칭호, 받침대에 새길 닉네임. */
+/** T-11-237 그 팀의 오프사이드 컵 최고 성적(보상까지 끝난 컵만, 업적 판정용). 없으면 null. */
+export async function cupBestOf(
+  db: Db,
+  profileId: string,
+  teamId: string,
+): Promise<CupStage | null> {
+  // 구단주 인덱스(cup_entries_profile_idx)로 찾는다 — 한 구단주의 컵 참가는 몇 줄뿐이다.
+  const rows = await db
+    .select({ stage: cupEntries.stage })
+    .from(cupEntries)
+    .where(
+      and(
+        eq(cupEntries.profileId, profileId),
+        eq(cupEntries.teamId, teamId),
+        isNotNull(cupEntries.rewardedAt),
+      ),
+    );
+  const stages = rows.flatMap((r) => (r.stage ? [r.stage as CupStage] : []));
+  return CUP_STAGES.find((st) => stages.includes(st)) ?? null;
+}
+
 export async function cupHonorsOf(db: Db, profileId: string) {
   const rows = await db
     .select()
