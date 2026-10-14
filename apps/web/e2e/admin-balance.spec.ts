@@ -389,3 +389,119 @@ test('자동 숨김 이력: 모바일, 페이지 이동, 복구 및 탭 재진�
   await expect(panel.getByRole('button', { name: '숨김 해제' })).toHaveCount(0);
   expect(reads).toBe(3);
 });
+
+test('T-11-263 유저 조회 탭: 찾아서 요약을 보고, 확인 뒤 아이템을 지급한다', async ({ page }) => {
+  await mockApi(page, { linked: true, admin: true });
+  const queries: string[] = [];
+  const grants: unknown[] = [];
+  let reroll = 2;
+  const user = () => ({
+    generatedAt: T,
+    profile: {
+      id: FAN,
+      nickname: '팬1',
+      friendCode: 'ABCD2345',
+      title: null,
+      createdAt: T,
+      lastSeenAt: T,
+      deletedAt: null,
+      google: true,
+      apple: false,
+      toss: false,
+      recoveryIssuedAt: null,
+    },
+    sessions: [{ channel: 'app', active: 1, lastSeenAt: T }],
+    devices: [{ platform: 'ios', appVersion: '1.1.2', updatedAt: T }],
+    careers: { total: 3, active: 1, retired: 2, recent: [] },
+    teams: [],
+    cups: [],
+    funds: 120,
+    items: { reroll },
+    purchases: [
+      {
+        store: 'apple',
+        productId: 'com.offsidelab.app.reroll_40',
+        item: 'reroll',
+        qty: 40,
+        test: false,
+        createdAt: T,
+        refundedAt: null,
+        revokedQty: 0,
+      },
+    ],
+    fundsPurchases: [],
+    grants: grants.length
+      ? [{ item: 'reroll', delta: 5, reason: '점검 보상', by: 'prf_admin', createdAt: T }]
+      : [],
+    scout: { used: 0, streak: 0, elites: 0 },
+  });
+  await page.route(`${API}/v1/admin/users**`, (route) => {
+    const url = new URL(route.request().url());
+    if (route.request().method() === 'POST') {
+      grants.push(route.request().postDataJSON());
+      reroll += 5;
+      return route.fulfill(ok({ item: 'reroll', qty: reroll }));
+    }
+    queries.push(url.searchParams.get('q')!);
+    return route.fulfill(ok(user()));
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="admin"]').click();
+  await page.locator('[data-admin-tab="users"]').click();
+  expect(queries).toEqual([]);
+  await page.locator('[data-user-query]').fill('팬1');
+  await page.locator('[data-act="find-user"]').click();
+  const card = page.locator(`[data-user="${FAN}"]`);
+  await expect(card).toContainText('리롤권 2');
+  await expect(card.locator('[data-user-section="purchases"]')).toContainText(
+    '리롤권 40장 · App Store',
+  );
+  await page.locator('[data-grant-delta]').fill('5');
+  await page.locator('[data-grant-reason]').fill('점검 보상');
+  page.once('dialog', (d) => void d.accept());
+  await page.locator('[data-act="grant-item"]').click();
+  await expect
+    .poll(() => grants)
+    .toEqual([{ item: 'reroll', delta: 5, reason: '점검 보상', notify: true }]);
+  await expect(card.locator('[data-user-section="grants"]')).toContainText('리롤권 +5 · 점검 보상');
+  expect(queries).toEqual(['팬1', FAN]);
+});
+
+test('T-11-263 매출 탭: 열 때 불러오고, 기간을 바꾸면 다시 받는다', async ({ page }) => {
+  await mockApi(page, { linked: true, admin: true });
+  const asked: string[] = [];
+  await page.route(`${API}/v1/admin/revenue**`, (route) => {
+    const days = Number(new URL(route.request().url()).searchParams.get('days'));
+    asked.push(String(days));
+    return route.fulfill(
+      ok({
+        generatedAt: T,
+        days,
+        total: { count: 3, krw: 8800, buyers: 2, firstBuyers: 1, refunds: 0, refundKrw: 0 },
+        allTime: { count: 10, krw: 22000, buyers: 5 },
+        daily: Array.from({ length: days }, (_, i) => ({
+          day: `2026-09-${String(10 + i).padStart(2, '0')}`,
+          count: 1,
+          krw: 1100,
+        })),
+        products: [{ productId: 'com.offsidelab.app.scout_5', count: 2, krw: 8800, refunded: 0 }],
+        stores: [{ store: 'google', count: 3, krw: 8800 }],
+        removeAds: { count: 1, refunds: 0, krw: 3300, since: T },
+        recent: [],
+      }),
+    );
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="admin"]').click();
+  await expect(page.locator('[data-stat="users"]')).toBeVisible();
+  expect(asked).toEqual([]);
+  await page.locator('[data-admin-tab="revenue"]').click();
+  const sum = page.locator('[data-revenue-summary]');
+  await expect(sum).toContainText('₩8,800 · 3건');
+  await expect(sum).toContainText('광고 제거');
+  await expect(page.locator('[data-admin="revenue"]')).toContainText('프리미엄 스카우트권 5장');
+  await page.locator('[data-revenue-days="30"]').click();
+  await expect.poll(() => asked).toEqual(['7', '30']);
+});

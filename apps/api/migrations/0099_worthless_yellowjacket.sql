@@ -1,0 +1,1 @@
+CREATE INDEX `iap_purchases_created_idx` ON `iap_purchases` (`created_at`);

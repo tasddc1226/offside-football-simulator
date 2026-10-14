@@ -8,6 +8,13 @@ import {
   AdminFundsQuerySchema,
   AdminFundsReportSchema,
   AdminInviteReportSchema,
+  AdminItemGrantInputSchema,
+  AdminItemGrantResultSchema,
+  AdminRevenueQuerySchema,
+  AdminRevenueSchema,
+  AdminUserQuerySchema,
+  AdminUserSchema,
+  AdminProfileIdSchema,
   AdminNameReportListSchema,
   AdminNameReportResolveSchema,
   AdminStatsSchema,
@@ -28,10 +35,14 @@ import { getActiveBalance } from '../db/repos/balance.js';
 import { anomalyReport, setCareerHidden } from '../db/repos/anomalies.js';
 import { automationReport } from '../db/repos/automation.js';
 import { fundsOwner, fundsReport } from '../db/repos/fundsAudit.js';
+import { adminUser, grantOwnerItem } from '../db/repos/adminUsers.js';
+import { revenueReport } from '../db/repos/revenue.js';
+import { requireProfile } from '../middleware/requireProfile.js';
+import { idempotency } from '../middleware/idempotency.js';
 import { inviteReport } from '../db/repos/referrals.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
-import { notFoundError, ok, readBody, nowIso } from './shared.js';
+import { conflictError, notFoundError, ok, readBody, nowIso } from './shared.js';
 import { parseWithAppError } from '../errors.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { getPushPerformance } from '../db/repos/pushPerformance.js';
@@ -99,6 +110,43 @@ export function registerAdminRoutes(app: Hono<AppEnv>): void {
     const data = await fundsOwner(getDb(c), q);
     if (!data) throw notFoundError('구단 자금 기록이 없는 구단주예요.', 'FUNDS_OWNER_NOT_FOUND');
     return ok(c, AdminFundsOwnerSchema, data, 200, 'private, no-store');
+  });
+
+  // T-11-263 유저 한 명 조회(프로필 · 접속 · 커리어 · 구단 · 컵 · 결제 · 아이템 · 지급 기록). 운영자가 찾을 때만 읽는다.
+  app.get('/v1/admin/users', async (c) => {
+    await requireAdmin(c);
+    const q = parseWithAppError(AdminUserQuerySchema, c.req.query('q'));
+    const data = await adminUser(getDb(c), q, new Date());
+    // i18n-ignore: 운영 도구는 한국어
+    if (!data) throw notFoundError('찾는 유저가 없어요.', 'ADMIN_USER_NOT_FOUND');
+    return ok(c, AdminUserSchema, data, 200, 'private, no-store');
+  });
+
+  // T-11-263 아이템 지급(+)·회수(−). 감사 기록(ITEM_GRANTED)을 남기고 지급이면 알림을 보낸다.
+  app.post('/v1/admin/users/:profileId/items', requireProfile, idempotency, async (c) => {
+    const viewer = await requireAdmin(c);
+    const profileId = parseWithAppError(AdminProfileIdSchema, c.req.param('profileId'));
+    const input = readBody(c, AdminItemGrantInputSchema);
+    const res = await grantOwnerItem(
+      getDb(c),
+      { profileId, ...input },
+      viewer.profileId!,
+      nowIso(),
+    );
+    // i18n-ignore: 운영 도구는 한국어
+    if (res === 'missing') throw notFoundError('찾는 유저가 없어요.', 'ADMIN_USER_NOT_FOUND');
+    if (res === 'short')
+      // i18n-ignore: 운영 도구는 한국어
+      throw conflictError('가진 장수보다 많이 회수할 수 없어요.', 'ADMIN_ITEM_SHORT');
+    return ok(c, AdminItemGrantResultSchema, { item: input.item, qty: res });
+  });
+
+  // T-11-263 매출(소모성 결제 · 광고 제거 알림). 운영자가 열 때만 읽는다.
+  app.get('/v1/admin/revenue', async (c) => {
+    await requireAdmin(c);
+    const days = parseWithAppError(AdminRevenueQuerySchema, c.req.query('days'));
+    const data = await revenueReport(getDb(c), new Date(), days);
+    return ok(c, AdminRevenueSchema, data, 200, 'private, no-store');
   });
 
   // T-11-177 친구 초대 현황(T-11-171). 운영자가 열 때만 읽는다.
