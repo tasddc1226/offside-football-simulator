@@ -5,6 +5,9 @@ import { newGame } from './engine.js';
 import { continentalForRank, seasonSetup, transferOutlook } from './comps.js';
 import { rivalName } from './rival-names.js';
 import { DATING_EVENT } from './dating-event.js';
+import { BASE_EVENTS } from './events.js';
+import { LIFE_EVENTS } from './life-events.js';
+import { natWindow, ntRetireAsk } from './national.js';
 import { en } from './i18n/en/index.js';
 import { ja } from './i18n/ja/index.js';
 import { createRng, setActiveRng } from './rng.js';
@@ -113,5 +116,48 @@ describe('dating rumor eligibility and choices', () => {
       return [s.morale, s.fame, s.trust, s.cond];
     });
     expect(new Set(results.map((x) => JSON.stringify(x))).size).toBe(3);
+  });
+});
+
+describe('international retirement and the party follow-up (T-11-258)', () => {
+  const veteran = () => {
+    const s = player();
+    Object.assign(s, { age: 31, leagueId: 'pl', phase: 1 });
+    s.nat.caps = 10;
+    return s;
+  };
+  it('asks veterans with 10+ caps once per season', () => {
+    const s = veteran();
+    expect(ntRetireAsk(s)).toBe(true);
+    for (const patch of [{ age: 30 }, { flags: { ['ntAsk' + s.year]: 1 } }]) {
+      expect(ntRetireAsk({ ...s, ...patch })).toBe(false);
+    }
+    expect(ntRetireAsk({ ...s, nat: { ...s.nat, caps: 9 } })).toBe(false);
+    expect(ntRetireAsk({ ...s, nat: { ...s.nat, retired: s.year } })).toBe(false);
+  });
+  it('retiring ends call-ups and the captain armband but keeps caps', () => {
+    const s = veteran();
+    s.nat.captain = true;
+    const ev = LIFE_EVENTS.find((e) => e.id === 'nt-retire')!;
+    ev.choices[0]!.ok.fx(s);
+    expect(s.nat.retired).toBe(s.year);
+    expect(s.nat.caps).toBe(10);
+    expect(ev.cond(s)).toBe(false);
+    for (const phase of [1, 2, 3]) expect(natWindow({ ...s, phase })).toBeNull();
+  });
+  it('a good night at the party schedules one message per career', () => {
+    const s = player();
+    Object.assign(s, { age: 24, leagueId: 'pl', fame: 30 });
+    const party = BASE_EVENTS.find((e) => e.id === 'party')!;
+    party.choices[0]!.ok.fx(s);
+    expect(s.chains.map((c) => c.id)).toContain('party-wags');
+    s.chains = [];
+    party.choices[0]!.ok.fx(s);
+    expect(s.chains).toEqual([]);
+    const wags = LIFE_EVENTS.find((e) => e.id === 'party-wags')!;
+    expect(wags.choices).toHaveLength(3);
+    wags.choices[1]!.ok.fx(s);
+    expect(s.flags.wags).toBe(s.year);
+    expect(wags.cond(s)).toBe(false);
   });
 });

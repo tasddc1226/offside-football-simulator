@@ -4,6 +4,10 @@ export default {
     'The estimated finish on a transfer offer is based on club strength, not current standings. In the first season at a new club, continental entry uses this estimate and the game’s league slots. Staying at a club uses its actual finish from the previous season.',
   datingRumor:
     'Professional players aged 20 or older with at least 35 fame can encounter dating rumors during the playing season. Keep your private life private, agree with your partner to go public, or focus on football. Choices make small changes to morale, fame, manager trust or condition.',
+  ntRetirement:
+    'Players aged 31 or older with at least 10 caps can choose to retire from international football once a season, right after a call-up. Once retired, you are no longer picked for internationals or tournaments, so call-ups stop draining your condition. Your international record stays. Retirement cannot be undone.',
+  partyFollowUp:
+    'If you drop by a party invitation and it goes well, a professional player aged 20 or older with at least 25 fame hears from someone they met there in the next part of the season. You can meet openly, meet quietly or politely decline. It happens once per career.',
 
   investment:
     'In each phase, you can spend career funds on extra training, medical care or mental coaching in addition to regular training. Costs scale with salary. Training gains depend on age, potential and morale. Potential controls growth speed; it is not a hard ability cap.',

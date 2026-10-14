@@ -223,6 +223,7 @@
   </div>
   <dl class="kv" style="margin-top:10px">
     <dt>{L.debut}</dt><dd>{s.nat.debutYear || L.notCalled}</dd>
+    {#if s.nat.retired}<dt>{L.ntRetired}</dt><dd data-nt-retired>{s.nat.retired}</dd>{/if}
     {#if isKorean(s)}
       <dt>{L.military}</dt><dd style="overflow-wrap:anywhere" data-military-status>{milTxt}</dd>
     {/if}

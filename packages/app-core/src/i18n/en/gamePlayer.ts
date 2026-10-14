@@ -26,6 +26,7 @@ export const gamePlayer: Translation<GamePlayerMsgs> = {
   captain: 'Captain',
   debut: 'International debut',
   notCalled: 'Not called up',
+  ntRetired: 'International retirement',
   military: 'Military service',
   nextWc: 'Next World Cup',
   hostTbd: 'Host to be decided',

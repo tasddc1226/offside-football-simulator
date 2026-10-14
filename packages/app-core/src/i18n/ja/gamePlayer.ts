@@ -25,6 +25,7 @@ export const gamePlayer: Translation<GamePlayerMsgs> = {
   captain: 'キャプテン',
   debut: 'Aマッチデビュー',
   notCalled: '未招集',
+  ntRetired: '代表引退',
   military: '兵役',
   nextWc: '次のワールドカップ',
   hostTbd: '開催地未定',
