@@ -204,6 +204,10 @@ export const cup: Translation<CupMsgs> = {
     `Use 1 reroll ticket to redraw the 3 candidates? The current ones and any potential ranges you revealed with an ad disappear, and you'll have ${plural(p.n, 'ticket')} left.`,
   rerollDone: (p) => `Candidates redrawn. ${plural(p.n, 'reroll ticket')} left.`,
   rerollFail: "Couldn't use the reroll ticket.",
+  rerollMileage: (p) =>
+    `Every ${plural(p.need, 'reroll ticket')} you use earns 1 premium scout ticket. ${p.n} to go.`,
+  rerollMileageDone: (p) =>
+    `Candidates redrawn. You used ${plural(p.need, 'reroll ticket')} and earned 1 premium scout ticket. ${plural(p.n, 'reroll ticket')} left.`,
   shopTitle: 'Reroll shop',
   shopSub: 'Buy player reroll tickets with club funds',
   shopSubHave: (p) => `You have ${plural(p.n, 'reroll ticket')} · buy more with club funds`,

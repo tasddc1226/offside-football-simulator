@@ -214,6 +214,11 @@ const ko = {
     `리롤권 1장을 써서 후보 3명을 다시 뽑을까요? 지금 후보와 광고로 확인한 잠재력 범위는 사라지고, 리롤권은 ${p.n}장 남아요.`,
   rerollDone: (p: { n: number }) => `후보를 다시 뽑았어요. 리롤권 ${p.n}장 남았어요.`,
   rerollFail: '리롤권을 쓰지 못했어요.',
+  // T-11-248 리롤권 마일리지(contracts REROLL_MILEAGE)
+  rerollMileage: (p: { n: number; need: number }) =>
+    `리롤권 ${p.need}장마다 프리미엄 스카우트권 1장을 받아요. 다음까지 ${p.n}장 남았어요.`,
+  rerollMileageDone: (p: { n: number; need: number }) =>
+    `후보를 다시 뽑았어요. 리롤권 ${p.need}장을 채워 프리미엄 스카우트권 1장을 받았어요. 리롤권은 ${p.n}장 남았어요.`,
   // T-11-152 구단 자금으로 사는 리롤권
   shopTitle: '리롤권 상점',
   shopSub: '구단 자금으로 선수 후보 리롤권을 사요',

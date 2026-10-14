@@ -22,7 +22,7 @@
   import { fundsText } from '@offside/app-core/funds';
   import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
   import type { RewardShopResponse } from '@offside/contracts';
-  import { scoutPityView, type ScoutPity } from '@offside/contracts/cup';
+  import { REROLL_MILEAGE, rerollMileageLeft, scoutPityView, type ScoutPity } from '@offside/contracts/cup';
   import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
   import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
   import ScoutOdds from './cup/ScoutOdds.svelte';
@@ -112,6 +112,8 @@
   let rerolling = $state(false);
   // 한 번의 '다시 뽑기' 시도에 멱등 키 하나 — 응답을 못 받아(네트워크) 다시 누르면 같은 키로 보내 두 번 차감되지 않는다.
   let rerollKey: string | null = null;
+  // T-11-248 리롤권 마일리지 — 마지막 스카우트권 지급 뒤 쓴 장수. 차면 서버가 같은 응답에서 스카우트권을 준다.
+  let mileage = $state(0);
   $effect(() => {
     if (step !== 'candidates' || !hasSessionHint()) return;
     void fetchItems().then((r) => {
@@ -119,6 +121,7 @@
       rerolls = r.ok ? r.data.reroll : 0;
       scouts = r.ok ? (r.data.scout ?? 0) : 0;
       pity = r.ok ? (r.data.pity ?? NO_PITY) : NO_PITY;
+      mileage = r.ok ? (r.data.mileage ?? 0) : 0;
     });
   });
   // T-11-196 프리미엄 스카우트권 — 가진 장수가 있을 때만 버튼을 보인다(웹은 스토어 결제가 없다). 멱등 키는 리롤권과 같다.
@@ -165,8 +168,10 @@
       return toast(r.error.message || CL.rerollFail);
     }
     rerolls = r.data.reroll;
+    scouts = r.data.scout;
+    mileage = r.data.mileage ?? 0;
     rerollCandidates();
-    toast(CL.rerollDone({ n: rerolls }));
+    toast(r.data.mileageScout ? CL.rerollMileageDone({ n: rerolls, need: REROLL_MILEAGE }) : CL.rerollDone({ n: rerolls }));
   }
   // T-11-153 웹은 보상형 광고가 없어 로그인한 구단주가 구단 자금으로 후보 잠재력을 본다. 구단주(장수를 받음)이고 아직 안 봤을 때만 묻는다.
   let club = $state<RewardShopResponse | null>(null);
@@ -430,6 +435,7 @@
     {#if premium}<p class="muted fs-sm" data-premium-note>{SL.premiumNote}</p>{/if}
     {#if rerolls > 0}
       <button class="btn btn-sm self-start" data-act="reroll-candidates" disabled={rerolling} onclick={reroll}>{rerolling ? CL.rerollBusy : CL.rerollBtn({ n: rerolls })}</button>
+      <p class="muted fs-sm" data-reroll-mileage>{CL.rerollMileage({ n: rerollMileageLeft(mileage), need: REROLL_MILEAGE })}</p>
     {:else if owner}
       <p class="muted fs-sm" data-reroll-hint>
         {CL.createShopHint} <button class="link-btn" data-act="reroll-shop-go" onclick={goRerollShop}>{CL.createShopGo}</button>

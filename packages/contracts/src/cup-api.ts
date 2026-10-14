@@ -170,6 +170,10 @@ export const OwnerItemsResponseSchema = z.strictObject({
     .optional(),
   /** T-11-244 스카우트권을 쓴 응답에만: 이번 장의 모드(sure · elite면 기기가 그 확정 후보로 뽑는다). */
   scoutMode: z.enum(SCOUT_MODES).optional(),
+  /** T-11-248 리롤권 마일리지: 마지막 스카우트권 지급 뒤 쓴 리롤권 장수(rerollMileageLeft로 남은 장수를 그린다). */
+  mileage: z.number().int().min(0).optional(),
+  /** T-11-248 리롤권을 쓴 응답에만: 이번 장으로 마일리지가 차 프리미엄 스카우트권 1장을 받았다. */
+  mileageScout: z.literal(true).optional(),
 });
 export type OwnerItemsResponse = z.infer<typeof OwnerItemsResponseSchema>;
 

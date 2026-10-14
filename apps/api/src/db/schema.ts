@@ -1390,6 +1390,20 @@ export const scoutPity = sqliteTable('scout_pity', {
 });
 
 /**
+ * T-11-248 리롤권 마일리지. used = 누적 사용, progress = 마지막 스카우트권 지급 뒤 쓴 장수, rewarded = 받은 스카우트권 수.
+ * 리롤권을 쓰는 batch가 장수 차감과 함께 고치고, progress가 REROLL_MILEAGE에 닿으면 0으로 되돌리며 스카우트권을 준다.
+ */
+export const rerollMileage = sqliteTable('reroll_mileage', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  used: integer('used').notNull().default(0),
+  progress: integer('progress').notNull().default(0),
+  rewarded: integer('rewarded').notNull().default(0),
+  updatedAt: text('updated_at').notNull(),
+});
+
+/**
  * T-11-152 구단 자금으로 산 아이템 원장(자금이 없어진 내역). 하루 상한을 세고, 운영에서 자금 대조
  * (방출 + 판매 − 영입 − 아이템 구매)에 쓴다.
  */
