@@ -27,6 +27,8 @@ const CACHE = 'public, max-age=60';
 /** 엣지 캐시 TTL(초). 목록은 새 은퇴가 1분 안에 보이게, 상세는 은퇴 PUT(이름 공개 토글) 때 지운다. */
 const LIST_TTL = 60;
 const DETAIL_TTL = 300;
+/** T-11-257 전체 인원 TTL(초). 페이지를 넘길 때마다 6만 행 넘게 다시 세지 않게 목록보다 길게 둔다 — 새 은퇴는 5분 안에 반영된다. */
+const COUNT_TTL = 300;
 
 export function registerHofRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/hof', async (c) => {
@@ -64,6 +66,16 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
           q,
           pos,
           dpos,
+          (load) =>
+            q
+              ? load()
+              : edgeCached(
+                  c,
+                  EDGE.hofCount(sort, season?.id, pos, dpos),
+                  COUNT_TTL,
+                  load,
+                  () => !filling,
+                ),
         );
       },
       () => !filling,
