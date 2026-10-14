@@ -15,6 +15,8 @@ import AdminNameReports from './admin/AdminNameReports';
 import AdminDashboard from './admin/AdminDashboard';
 import AdminFunds from './admin/AdminFunds';
 import AdminInvites from './admin/AdminInvites';
+import AdminUsers from './admin/AdminUsers';
+import AdminRevenue from './admin/AdminRevenue';
 import AdminPush from './admin/AdminPush';
 import AdminCupPredictions from './admin/AdminCupPredictions';
 import { cupText as L } from '@offside/app-core/i18n/ko/cup';
@@ -24,6 +26,8 @@ import { T as strengthText } from '@offside/app-core/admin/club-strength';
 
 const TABS = [
   { id: 'dashboard', label: '대시보드' },
+  { id: 'users', label: '유저 조회' },
+  { id: 'revenue', label: '매출' },
   { id: 'push', label: '앱 푸시' },
   {
     id: 'cup',
@@ -86,6 +90,10 @@ export default function Admin() {
               <AdminClubStrength />
             ) : tab === 'dashboard' ? (
               <AdminDashboard />
+            ) : tab === 'users' ? (
+              <AdminUsers />
+            ) : tab === 'revenue' ? (
+              <AdminRevenue />
             ) : tab === 'cup' ? (
               <AdminCupPredictions />
             ) : tab === 'push' ? (

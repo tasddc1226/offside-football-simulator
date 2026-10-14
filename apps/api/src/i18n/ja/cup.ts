@@ -75,4 +75,8 @@ export const CUP_JA: Record<CupTextKey, string> = {
     '最終成績 {stage}。選手候補リロール券を{n}枚、プレミアムスカウト券を{s}枚、ポテンシャル強化券を{b}枚受け取りました。',
   rewardBodyScout:
     '最終成績 {stage}。選手候補リロール券を{n}枚とプレミアムスカウト券を{s}枚受け取りました。',
+  grantTitle: 'アイテムが届きました',
+  grantReroll: '運営チームから選手候補リロール券が{n}枚届きました。',
+  grantBoost: '運営チームからポテンシャル強化券が{n}枚届きました。',
+  grantScout: '運営チームからプレミアムスカウト券が{n}枚届きました。',
 };

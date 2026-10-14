@@ -75,6 +75,10 @@ export const CUP_KO = {
     '최종 성적 {stage}. 선수 후보 리롤권 {n}장, 프리미엄 스카우트권 {s}장, 잠재력 강화권 {b}장을 받았어요.',
   rewardBodyScout:
     '최종 성적 {stage}. 선수 후보 리롤권 {n}장과 프리미엄 스카우트권 {s}장을 받았어요.',
+  grantTitle: '아이템이 도착했어요',
+  grantReroll: '운영팀이 선수 후보 리롤권 {n}장을 보냈어요.',
+  grantBoost: '운영팀이 잠재력 강화권 {n}장을 보냈어요.',
+  grantScout: '운영팀이 프리미엄 스카우트권 {n}장을 보냈어요.',
 } as const;
 
 export type CupTextKey = keyof typeof CUP_KO;
