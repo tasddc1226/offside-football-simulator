@@ -3,7 +3,7 @@
   // T-11-145 오프사이드 컵 화면 — 구단주 화면의 컵 배너로 연다. 내 상태(신청·다음 경기), 토너먼트 대진, 조별 순위표와 경기,
   // 일정·보상·규칙. 치른 경기를 누르면 같은 화면에서 상세(득점·승부차기)를 연다. 처음 열 때 불러오는 지연 청크다.
   import { onMount, tick } from 'svelte';
-  import { CUP_STAGES } from '@offside/contracts/cup';
+  import { CUP_STAGES, cupPredictionCap } from '@offside/contracts/cup';
   import { fetchCup, fetchCupMe, type CupMatch, type CupMeResponse, type CupResponse } from '@offside/app-core/api/cup';
   import { isMember } from '@offside/app-core/account';
   import { cupBeforeDraw } from '@offside/app-core/cupHome';
@@ -101,6 +101,7 @@
   const matchTime = $derived(data ? kstParts(data.cup.rounds[0]?.at ?? data.cup.opensAt).time : '');
   const lockTime = $derived(data ? kstParts(data.cup.rounds[0]?.lockAt ?? data.cup.opensAt).time : '');
   const stages = CUP_STAGES;
+  const predictionCap = $derived(data ? cupPredictionCap(data.cup.edition) : null);
 
   function openTeam(id: string) {
     if (data && content) {
@@ -171,6 +172,7 @@
           <h2>{L.predictionTitle}</h2>
           <ul class="cup-rules">
             <li>{L.predictionIntro}</li>
+            {#if predictionCap}<li data-cup-prediction-cap>{L.predictionCap({ n: predictionCap })}</li>{/if}
             <li>{L.predictionSaved}</li>
             <li>{L.predictionKnockout}</li>
           </ul>

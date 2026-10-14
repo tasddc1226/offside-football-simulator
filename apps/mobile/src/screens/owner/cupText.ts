@@ -20,6 +20,7 @@ export const roundLabel = (r: CupRound): string =>
     g1: L.roundG1,
     g2: L.roundG2,
     g3: L.roundG3,
+    r64: L.roundR64,
     r32: L.roundR32,
     r16: L.roundR16,
     qf: L.roundQf,
@@ -35,6 +36,7 @@ export const stageLabel = (s: CupStage): string =>
     qf: L.stageQf,
     r16: L.stageR16,
     r32: L.stageR32,
+    r64: L.stageR64,
     group: L.stageGroup,
   })[s];
 

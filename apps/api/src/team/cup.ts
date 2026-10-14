@@ -2,8 +2,8 @@ import { isTitleStage, TITLE_STAGES, titleIdOf } from '@offside/contracts/owner-
 import {
   CUP_GROUP_ROUNDS,
   CUP_KO_ROUNDS,
-  CUP_REWARDS,
-  cupScouts,
+  cupPredictionCap,
+  cupReward,
   CUP_ROUNDS,
   CUP_STAGES,
   cupById,
@@ -125,8 +125,11 @@ function rewardStatements(
   now: string,
 ) {
   const status = stage === 'champion' ? 'champion' : 'out';
-  const scouts = cupScouts(cup.edition, stage);
-  const n = CUP_REWARDS[stage].rerolls;
+  const { rerolls: n, scouts, boosts } = cupReward(cup.edition, stage);
+  const granted = {
+    sql: 'EXISTS (SELECT 1 FROM cup_entries WHERE cup_id = ? AND team_id = ? AND rewarded_at = ?)',
+    params: [cup.id, e.teamId, now],
+  };
   return [
     d1
       .prepare(
@@ -134,18 +137,12 @@ function rewardStatements(
          WHERE cup_id = ? AND team_id = ? AND rewarded_at IS NULL`,
       )
       .bind(stage, status, now, now, cup.id, e.teamId),
-    grantItemStatement(d1, e.profileId, 'reroll', CUP_REWARDS[stage].rerolls, now, {
+    grantItemStatement(d1, e.profileId, 'reroll', n, now, {
       sql: 'changes() = 1',
     }),
-    // T-11-244 4강 이상은 프리미엄 스카우트권도(CUP_SCOUTS_FROM회부터). 바로 앞 문장이 리롤권이라 보상 줄로 거른다.
-    ...(scouts > 0
-      ? [
-          grantItemStatement(d1, e.profileId, 'scout', scouts, now, {
-            sql: 'EXISTS (SELECT 1 FROM cup_entries WHERE cup_id = ? AND team_id = ? AND rewarded_at = ?)',
-            params: [cup.id, e.teamId, now],
-          }),
-        ]
-      : []),
+    // T-11-244·249 프리미엄 스카우트권·잠재력 강화권(제2회부터). 바로 앞 문장이 리롤권이라 보상 줄로 거른다.
+    ...(scouts > 0 ? [grantItemStatement(d1, e.profileId, 'scout', scouts, now, granted)] : []),
+    ...(boosts > 0 ? [grantItemStatement(d1, e.profileId, 'boost', boosts, now, granted)] : []),
     ...autoTitle(d1, cup, e.profileId, stage),
     // 개인 성적·보상은 알림함에 남긴다. 대회 종료 때 참가·예측을 합쳐 종료 푸시 한 건을 보낸다.
     ...notify(
@@ -153,9 +150,11 @@ function rewardStatements(
       e.profileId,
       `cup:${cup.id}:result`,
       cupKo(stage === 'champion' ? 'championTitle' : 'outTitle', { cup: cupTitle(cup) }),
-      scouts > 0
-        ? cupKo('rewardBodyScout', { stage: cupKo(stage), n, s: scouts })
-        : cupKo('rewardBody', { stage: cupKo(stage), n }),
+      boosts > 0
+        ? cupKo('rewardBodyBoost', { stage: cupKo(stage), n, s: scouts, b: boosts })
+        : scouts > 0
+          ? cupKo('rewardBodyScout', { stage: cupKo(stage), n, s: scouts })
+          : cupKo('rewardBody', { stage: cupKo(stage), n }),
       now,
       false,
     ),
@@ -225,10 +224,13 @@ export async function drawCup(db: Db, cup: CupDef, now: string) {
         .select({ team: ownerTeams })
         .from(ownerTeams)
         .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
-        .where(
-          inArray(
-            ownerTeams.id,
-            entries.map((e) => e.teamId),
+        // T-11-246 128팀은 D1 바인드 변수 상한(100)을 넘으므로 id 목록 대신 참가 표와 잇는다.
+        .innerJoin(
+          cupEntries,
+          and(
+            eq(cupEntries.teamId, ownerTeams.id),
+            eq(cupEntries.cupId, cup.id),
+            eq(cupEntries.status, 'active'),
           ),
         )
     : [];
@@ -238,7 +240,7 @@ export async function drawCup(db: Db, cup: CupDef, now: string) {
     return t && t.season === cup.season && t.filled >= cup.minFilled;
   });
   const dropped = entries.filter((e) => !ok.includes(e));
-  const groups = cupGroupCount(ok.length);
+  const groups = cupGroupCount(ok.length, cup.capacity);
   const seed = crypto.randomUUID();
   const stmts: D1PreparedStatement[] = [
     d1
@@ -417,7 +419,7 @@ export async function playCupMatch(
       ),
     );
   }
-  stmts.push(...predictionSettlementStatements(d1, m.id, now));
+  stmts.push(...predictionSettlementStatements(d1, m.id, now, cupPredictionCap(cup.edition)));
   await d1.batch(stmts);
 }
 
@@ -518,7 +520,9 @@ export async function runCup(db: Db, now: string, cups?: readonly CupDef[]) {
           round,
           n: due.filter((x) => x.round === round).length,
         });
-        continue;
+        // T-11-246 128팀이면 조별 3차전(64경기)과 64강 만들기·조별 탈락 보상을 한 번에 하면 D1 쿼리 상한(호출당 1000)에
+        // 가깝다. cron 한 번에 라운드 하나만 치르고, 다음 라운드 만들기·보상은 다음 cron(5분 뒤)이 한다.
+        break;
       }
       // 경기가 모두 끝난 가장 늦은 라운드 다음 단계가 아직 없으면 만든다.
       const rounds = [...new Set(matches.map((m) => m.round))].sort(

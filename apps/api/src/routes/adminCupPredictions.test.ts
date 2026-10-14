@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, it, describe } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueAdminCookie, issueGoogleCookie, ADMIN_EMAIL } from '../test/http.js';
+import { predictionSettlementStatements } from '../team/cupPredictions.js';
 import { cupMatches, cupPredictions, ownerItems, auditLog, profiles } from '../db/schema.js';
 
 const base = '/v1/admin/cups/s1-1';
@@ -168,5 +169,27 @@ describe('cup prediction operations', () => {
       ).status,
     ).toBe(200);
     expect(await ctx.db.select().from(ownerItems)).toHaveLength(1);
+  });
+  it('T-11-249 caps prediction rerolls per cup and leaves the rest unpaid', async () => {
+    const user = await issueGoogleCookie(ctx);
+    for (const id of ['m1', 'm2', 'm3']) {
+      await fixture(id);
+      await ctx.db.insert(cupPredictions).values({
+        cupId: 's1-1',
+        matchId: id,
+        profileId: user.profileId,
+        pick: 'draw',
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+    const d1 = ctx.env.DB;
+    for (const id of ['m1', 'm2', 'm3', 'm3'])
+      await d1.batch(predictionSettlementStatements(d1, id, now, 2));
+    const [item] = await ctx.db.select().from(ownerItems);
+    expect(item).toMatchObject({ item: 'reroll', qty: 2 });
+    const rows = await ctx.db.select().from(cupPredictions);
+    expect(rows.every((r) => r.correct)).toBe(true);
+    expect(rows.filter((r) => r.rewardedAt)).toHaveLength(2);
   });
 });

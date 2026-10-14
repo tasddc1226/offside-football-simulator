@@ -1,5 +1,6 @@
 import {
   OWNER_ITEMS,
+  REROLL_MILEAGE,
   SCOUT_PITY_ELITE,
   SCOUT_PITY_SURE,
   type IapStore,
@@ -12,26 +13,34 @@ import { grantItemStatement } from './itemShop.js';
 
 // T-11-145 구단주 아이템(리롤권 · T-11-174 잠재력 강화권) 읽기 · 쓰기 · 인앱 구매 지급.
 
-type Items = Record<OwnerItem, number> & { pity?: ScoutPity };
+type Items = Record<OwnerItem, number> & { pity?: ScoutPity; mileage?: number };
 // T-11-244 프리미엄 스카우트 천장 카운트도 같은 왕복에 'pity.<열>' 행으로 붙인다(행이 없으면 pity 없음 = 모두 0).
+// T-11-248 리롤권 마일리지도 'mileage' 행으로 붙인다(행이 없으면 mileage 없음 = 0).
 const ITEMS_SQL = `SELECT item, qty FROM owner_items WHERE profile_id = ?1
   UNION ALL SELECT 'pity.used', used FROM scout_pity WHERE profile_id = ?1
   UNION ALL SELECT 'pity.streak', streak FROM scout_pity WHERE profile_id = ?1
-  UNION ALL SELECT 'pity.elites', elites FROM scout_pity WHERE profile_id = ?1`;
+  UNION ALL SELECT 'pity.elites', elites FROM scout_pity WHERE profile_id = ?1
+  UNION ALL SELECT 'mileage', progress FROM reroll_mileage WHERE profile_id = ?1`;
 const OWNER_SQL = `SELECT profile_id AS profileId FROM iap_purchases WHERE store = ? AND transaction_id = ?`;
 
 const foldItems = (rows: readonly { item: string; qty: number }[]): Items => {
   const out = Object.fromEntries(OWNER_ITEMS.map((k) => [k, 0])) as Record<OwnerItem, number>;
   const pity: ScoutPity = { used: 0, streak: 0, elites: 0 };
   let hasPity = false;
+  let mileage: number | undefined;
   for (const r of rows) {
     if (r.item in out) out[r.item as OwnerItem] = r.qty;
+    else if (r.item === 'mileage') mileage = r.qty;
     else if (r.item.startsWith('pity.')) {
       pity[r.item.slice(5) as keyof ScoutPity] = r.qty;
       hasPity = true;
     }
   }
-  return hasPity ? { ...out, pity } : out;
+  return {
+    ...out,
+    ...(hasPity ? { pity } : {}),
+    ...(mileage !== undefined ? { mileage } : {}),
+  };
 };
 
 /**
@@ -52,6 +61,23 @@ const PITY_SQL = `INSERT INTO scout_pity (profile_id, used, streak, elites, mode
     updated_at = excluded.updated_at
   RETURNING mode`;
 
+/**
+ * T-11-248 리롤권 한 장의 마일리지를 센다(장수를 뺀 같은 batch, 차감이 됐을 때만). progress가 REROLL_MILEAGE에 닿으면
+ * 0으로 되돌리고 rewarded를 하나 올린다. 이어지는 MILEAGE_GRANT가 그때만 스카우트권 1장을 준다. 규칙은 contracts
+ * rerollMileageLeft와 같다.
+ */
+const MILEAGE_FULL = `progress + 1 >= ${REROLL_MILEAGE}`;
+const MILEAGE_SQL = `INSERT INTO reroll_mileage (profile_id, used, progress, rewarded, updated_at)
+  SELECT ?1, 1, 1, 0, ?2
+  WHERE EXISTS (SELECT 1 FROM owner_items WHERE profile_id = ?1 AND item = 'reroll' AND updated_at = ?2)
+  ON CONFLICT (profile_id) DO UPDATE SET
+    rewarded = rewarded + (CASE WHEN ${MILEAGE_FULL} THEN 1 ELSE 0 END),
+    progress = CASE WHEN ${MILEAGE_FULL} THEN 0 ELSE progress + 1 END,
+    used = used + 1,
+    updated_at = excluded.updated_at
+  RETURNING progress`;
+const MILEAGE_GRANT = `EXISTS (SELECT 1 FROM reroll_mileage WHERE profile_id = ? AND progress = 0 AND updated_at = ?)`;
+
 /** 구단주 아이템 장수(행이 없으면 0). */
 export async function ownerItemsOf(db: Db, profileId: string): Promise<Items> {
   const { results } = await db.$client
@@ -63,7 +89,8 @@ export async function ownerItemsOf(db: Db, profileId: string): Promise<Items> {
 
 /**
  * 아이템 한 장 쓰기. 한 장도 없으면 null, 아니면 쓴 뒤 장수. 한 번의 왕복으로 끝난다. T-11-244 스카우트권이면 천장
- * 카운트를 같이 고치고 이번 장의 모드(scoutMode)를 돌려준다.
+ * 카운트를 같이 고치고 이번 장의 모드(scoutMode)를 돌려준다. T-11-248 리롤권이면 마일리지를 세고, 이번 장으로 차면
+ * 스카우트권 1장을 같이 주고 mileageScout를 붙인다.
  */
 export async function spendItem(
   db: Db,
@@ -71,7 +98,7 @@ export async function spendItem(
   item: OwnerItem,
   now: string,
   scout: { pity: boolean; hit: boolean } = { pity: false, hit: false },
-): Promise<(Items & { scoutMode?: ScoutMode }) | null> {
+): Promise<(Items & { scoutMode?: ScoutMode; mileageScout?: true }) | null> {
   const d1 = db.$client;
   const results = await d1.batch<{ item: string; qty: number; mode?: ScoutMode }>([
     d1
@@ -83,10 +110,20 @@ export async function spendItem(
     ...(item === 'scout'
       ? [d1.prepare(PITY_SQL).bind(profileId, scout.pity ? 1 : 0, scout.hit ? 1 : 0, now)]
       : []),
+    ...(item === 'reroll'
+      ? [
+          d1.prepare(MILEAGE_SQL).bind(profileId, now),
+          grantItemStatement(d1, profileId, 'scout', 1, now, {
+            sql: MILEAGE_GRANT,
+            params: [profileId, now],
+          }),
+        ]
+      : []),
     d1.prepare(ITEMS_SQL).bind(profileId),
   ]);
   if (!results[0]?.meta.changes) return null;
   const items = foldItems(results.at(-1)?.results ?? []);
+  if (item === 'reroll') return results[2]?.meta.changes ? { ...items, mileageScout: true } : items;
   const mode = item === 'scout' ? results[1]?.results[0]?.mode : undefined;
   return mode ? { ...items, scoutMode: mode } : items;
 }

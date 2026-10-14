@@ -12,6 +12,7 @@ export const CUP_EN: Record<CupTextKey, string> = {
   g1: 'Group matchday 1',
   g2: 'Group matchday 2',
   g3: 'Group matchday 3',
+  r64: 'Round of 64',
   r32: 'Round of 32',
   r16: 'Round of 16',
   qf: 'Quarter-final',
@@ -72,6 +73,8 @@ export const CUP_EN: Record<CupTextKey, string> = {
   earlyTitle: '{cup} is full, so the schedule moved up',
   earlyBody: 'Group draw {draw}, first match {first} (KST).',
   rewardBody: 'Final result: {stage}. You received {n} player reroll ticket(s).',
+  rewardBodyBoost:
+    'Final result: {stage}. You received {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s).',
   rewardBodyScout:
     'Final result: {stage}. You received {n} player reroll ticket(s) and {s} premium scout ticket(s).',
 };

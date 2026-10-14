@@ -49,6 +49,7 @@ const ko = {
   predictionTitle: '승부예측',
   predictionIntro:
     '컵에 신청하지 않아도 모든 경기의 결과를 예측할 수 있어요. 맞힌 경기마다 선수 후보 리롤권 1장을 받아요.',
+  predictionCap: (p: { n: number }) => `한 대회에서 받는 예측 보상은 최대 ${p.n}장이에요.`,
   predictionHome: '홈 승',
   predictionDraw: '무승부',
   predictionAway: '원정 승',
@@ -88,10 +89,12 @@ const ko = {
   stageQf: '8강',
   stageR16: '16강',
   stageR32: '32강',
+  stageR64: '64강',
   stageGroup: '조별 예선',
   roundG1: '조별 1경기',
   roundG2: '조별 2경기',
   roundG3: '조별 3경기',
+  roundR64: '64강',
   roundR32: '32강',
   roundR16: '16강',
   roundQf: '8강',
@@ -164,6 +167,7 @@ const ko = {
   rewardItem: '보상',
   rewardReroll: (p: { n: number }) => `선수 후보 리롤권 ${p.n}장`,
   rewardScout: (p: { n: number }) => `프리미엄 스카우트권 ${p.n}장`,
+  rewardBoost: (p: { n: number }) => `잠재력 강화권 ${p.n}장`,
   rewardTrophy: '트로피·칭호',
   rewardNote:
     '리롤권은 새 선수를 만들 때 후보 3명을 다시 뽑는 데 써요. 탈락이 정해지면 바로 받아요.',
@@ -212,6 +216,11 @@ const ko = {
     `리롤권 1장을 써서 후보 3명을 다시 뽑을까요? 지금 후보와 광고로 확인한 잠재력 범위는 사라지고, 리롤권은 ${p.n}장 남아요.`,
   rerollDone: (p: { n: number }) => `후보를 다시 뽑았어요. 리롤권 ${p.n}장 남았어요.`,
   rerollFail: '리롤권을 쓰지 못했어요.',
+  // T-11-248 리롤권 마일리지(contracts REROLL_MILEAGE)
+  rerollMileage: (p: { n: number; need: number }) =>
+    `리롤권 ${p.need}장마다 프리미엄 스카우트권 1장을 받아요. 다음까지 ${p.n}장 남았어요.`,
+  rerollMileageDone: (p: { n: number; need: number }) =>
+    `후보를 다시 뽑았어요. 리롤권 ${p.need}장을 채워 프리미엄 스카우트권 1장을 받았어요. 리롤권은 ${p.n}장 남았어요.`,
   // T-11-152 구단 자금으로 사는 리롤권
   shopTitle: '리롤권 상점',
   shopSub: '구단 자금으로 선수 후보 리롤권을 사요',

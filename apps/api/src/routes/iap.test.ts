@@ -222,6 +222,45 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     expect(items.data.scout).toBe(200 - 71);
   });
 
+  it('T-11-248 리롤권을 30장 쓸 때마다 프리미엄 스카우트권 1장을 같은 응답으로 받는다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const now = new Date().toISOString();
+    await ctx.db
+      .insert(ownerItems)
+      .values({ profileId: me.profileId, item: 'reroll', qty: 61, updatedAt: now });
+    const key = () => ({ 'Idempotency-Key': crypto.randomUUID() });
+    const use = async (headers = key()) =>
+      ItemsRes.parse(
+        await (await call('POST', '/v1/items/reroll/use', { cookie: me.cookie, headers })).json(),
+      ).data;
+    for (let i = 1; i <= 29; i++) {
+      const r = await use();
+      expect(r).toEqual({ reroll: 61 - i, boost: 0, scout: 0, mileage: i });
+    }
+    // 같은 멱등 키로 다시 보내도 한 장만 쓰고 한 장만 받는다.
+    const again = key();
+    const full = await use(again);
+    expect(full).toEqual({ reroll: 31, boost: 0, scout: 1, mileage: 0, mileageScout: true });
+    expect(await use(again)).toEqual(full);
+    expect(await use()).toEqual({ reroll: 30, boost: 0, scout: 1, mileage: 1 });
+    for (let i = 0; i < 28; i++) await use();
+    expect(await use()).toMatchObject({ scout: 2, mileage: 0, mileageScout: true });
+    const row = await ctx.env.DB.prepare(
+      'SELECT used, progress, rewarded FROM reroll_mileage WHERE profile_id = ?',
+    )
+      .bind(me.profileId)
+      .first();
+    expect(row).toEqual({ used: 60, progress: 0, rewarded: 2 });
+    // 리롤권이 없으면 409이고 마일리지도 그대로다.
+    await use();
+    const empty = await call('POST', '/v1/items/reroll/use', { cookie: me.cookie, headers: key() });
+    expect(empty.status).toBe(409);
+    const items = ItemsRes.parse(
+      await (await call('GET', '/v1/items', { cookie: me.cookie })).json(),
+    );
+    expect(items.data).toMatchObject({ reroll: 0, scout: 2, mileage: 1 });
+  });
+
   it('계정을 지우면 아이템과 구매 원장도 지운다', async () => {
     const me = await issueGoogleCookie(ctx);
     appleTx.current = appleFor(me.profileId);
