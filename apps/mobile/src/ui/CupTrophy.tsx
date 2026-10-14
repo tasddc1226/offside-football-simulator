@@ -42,8 +42,16 @@ const CYCLE: Record<TrophyStage, number> = { champion: 8500, runnerup: 8000, sf:
 const STAR = 'M8 0L10 6L16 8L10 10L8 16L6 10L0 8L6 6Z';
 
 /** 움직임 없는 컵 그림(받침대 없이) — 닉네임 옆 작은 칭호(TitleBadge)처럼 여러 개가 한꺼번에 그려지는 자리. */
-export function TrophyArt({ stage, size }: { stage: TrophyStage; size: number }) {
-  const { layers, palette } = cupTrophy(stage);
+export function TrophyArt({
+  stage,
+  size,
+  edition = 1,
+}: {
+  stage: TrophyStage;
+  size: number;
+  edition?: number;
+}) {
+  const { layers, palette } = cupTrophy(stage, edition);
   return (
     <Svg width={size} height={size} viewBox={TROPHY_CUP_VIEWBOX}>
       {layers
@@ -138,18 +146,21 @@ function PlateName({
 
 export function CupTrophy({
   stage,
+  edition = 1,
   name,
   size = 40,
   bare = false,
 }: {
   stage: TrophyStage;
+  /** T-11-253 회차(모양·보석이 바뀐다). */
+  edition?: number;
   /** 받침대에 새길 이름(구단주). 없으면 비워 둔다. */
   name?: string;
   size?: number;
   /** 받침대 없이 컵만(홈 배너). 작게 그리면(TROPHY_PLATE_MIN 미만) 늘 컵만. */
   bare?: boolean;
 }) {
-  const trophy = cupTrophy(stage);
+  const trophy = cupTrophy(stage, edition);
   const { palette } = trophy;
   const cupOnly = bare || size < TROPHY_PLATE_MIN;
   const layers = cupOnly ? trophy.layers.filter((l) => !l.plinth) : trophy.layers;

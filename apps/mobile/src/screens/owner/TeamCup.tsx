@@ -285,7 +285,9 @@ export function CupCard({
         <View
           style={{ flexDirection: 'row', alignItems: onOpen ? 'center' : 'flex-start', gap: 10 }}
         >
-          {onOpen ? <CupTrophy stage="champion" size={44} bare /> : null}
+          {onOpen ? (
+            <CupTrophy stage="champion" edition={data?.cup.edition} size={44} bare />
+          ) : null}
           {onOpen ? (
             <View style={{ flex: 1, minWidth: 0 }}>
               <Txt v="eyebrow">Offside Cup</Txt>
@@ -416,7 +418,7 @@ export function CupBanner({ onOpen }: { onOpen: () => void }) {
     >
       <Card gap={8} testID="cup-banner">
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <CupTrophy stage="champion" size={44} bare />
+          <CupTrophy stage="champion" edition={data?.cup.edition} size={44} bare />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Txt v="eyebrow">Offside Cup</Txt>
             <Txt v="h2" accessibilityRole="header">

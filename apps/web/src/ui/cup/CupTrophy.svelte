@@ -4,8 +4,8 @@
   // 화면 밖에서는 움직임을 멈춘다. 작게 그리거나(TROPHY_PLATE_MIN 미만) bare면 받침대 없이 컵만 그린다(배지·홈 배너).
   import { cupTrophy, TROPHY_CUP_VIEWBOX, TROPHY_PLATE as P, TROPHY_PLATE_MIN, TROPHY_VIEWBOX, type TrophyStage } from '@offside/app-core/cupTrophy';
 
-  const { stage, name, size = 40, bare = false }: { stage: TrophyStage; name?: string | undefined; size?: number; bare?: boolean } = $props();
-  const trophy = $derived(cupTrophy(stage));
+  const { stage, edition = 1, name, size = 40, bare = false }: { stage: TrophyStage; edition?: number; name?: string | undefined; size?: number; bare?: boolean } = $props();
+  const trophy = $derived(cupTrophy(stage, edition));
   const palette = $derived(trophy.palette);
   const cupOnly = $derived(bare || size < TROPHY_PLATE_MIN);
   const layers = $derived(cupOnly ? trophy.layers.filter((l) => !l.plinth) : trophy.layers);
