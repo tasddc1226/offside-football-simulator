@@ -85,6 +85,8 @@ export interface CareerRecord {
   /** T-10-002. 이 시즌에 경신한 개인 커리어 하이(CH) 지표 키 목록(goals/assists/apps/rating/cs).
    * 옛 저장 데이터의 과거 시즌 레코드에는 없을 수 있다 — 없으면 그냥 배지를 표시하지 않는다. */
   ch?: string[] | undefined;
+  /** T-11-257 임대로 뛴 시즌(club은 임대 구단). 서버 업로드에는 담지 않는다. */
+  loan?: boolean | undefined;
 }
 
 /** s.nat.tours에 남기는 대회 기록. 시즌 결산이 돌려주는 더 자세한 결과는 national.ts NatTourResult. */
@@ -205,6 +207,8 @@ export interface OfferOption {
   role: string;
   fee: number;
   trust?: number;
+  /** T-11-257 임대: 'out' 원소속 구단 계약을 둔 채 한 시즌 임대, 'buy' 임대 구단의 완전 이적 제안. */
+  loan?: 'out' | 'buy';
 }
 export interface UniOption {
   kind: 'uni';
@@ -215,6 +219,8 @@ export interface StayOption {
   kind: 'stay';
   name: string;
   desc: string;
+  /** T-11-257 임대를 마치고 원소속 구단으로 돌아간다. */
+  loanBack?: true;
 }
 export interface RenewOption {
   kind: 'renew';
@@ -224,6 +230,8 @@ export interface RenewOption {
   desc: string;
   /** 조기 연장: years는 잔여 1년을 포함한 총기간. 없는 옛 제안은 만료 재계약이다. */
   extension?: { years: number; clubId: string; year: number };
+  /** T-11-257 임대를 마치고 원소속 구단과 재계약한다. */
+  loanBack?: true;
 }
 export type MilOptionKind = 'sangmu' | 'army' | 'serve';
 /** military.ts의 병역 관련 선택지. market()이 다루는 MarketOption의 한 갈래이기도 하다. */
@@ -340,6 +348,8 @@ export interface GameState {
   awards: { year: number; t: string }[];
   ballon?: { year: number; rank: number }[];
   nat: NatState;
+  /** T-11-257 임대 중이면 원소속 구단(계약은 s.contract 그대로). 옛 세이브엔 없다. */
+  loan?: { club: Club; leagueId: string; year: number } | undefined;
   mil: MilState;
   injury: number;
   log: LogEntry[];

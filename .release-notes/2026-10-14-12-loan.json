@@ -1,0 +1,26 @@
+{
+  "id": "t-11-257-loan",
+  "title": "임대 이적",
+  "items": [
+    "26세 이하이고 주전이 아닌데 출전이나 공격 포인트가 적으면, 시즌 중 면담에서 구단에 임대를 요청할 수 있어요.",
+    "요청하면 시즌이 끝난 뒤 이적시장에 1시즌 임대 제의가 와요. 연봉과 남은 계약은 원소속 구단 그대로예요.",
+    "임대가 끝나면 원소속 구단으로 돌아가거나, 임대에서 잘 뛰었다면 임대 구단으로 완전 이적할 수 있어요."
+  ],
+  "en": {
+    "title": "Loans",
+    "items": [
+      "If you are 26 or younger, not a starter, and short on appearances or goal contributions, you can ask the club for a loan in a mid-season talk.",
+      "After the season, season-long loan offers appear in the transfer window. Your salary and remaining contract stay with your parent club.",
+      "When the loan ends, return to your parent club, or move permanently to your loan club if you played well there."
+    ]
+  },
+  "ja": {
+    "title": "レンタル移籍",
+    "items": [
+      "26歳以下でレギュラーではなく、出場やゴール・アシストが少ないと、シーズン中の面談でクラブにレンタル移籍を申し出られます。",
+      "申し出るとシーズン後の移籍市場に1シーズンのレンタルオファーが届きます。年俸と残りの契約は元のクラブのままです。",
+      "レンタルが終わったら元のクラブに戻るか、活躍していればレンタル先へ完全移籍できます。"
+    ]
+  },
+  "availability": "web-app"
+}

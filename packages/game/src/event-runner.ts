@@ -168,6 +168,8 @@ export function resolveChoice(
   const roll = rollOverride ?? r;
   const ok = roll < p;
   const out = ok || !c.fail ? c.ok : c.fail;
+  // T-11-257 시즌별 실패 횟수(임대 면담 조건). 실패 결과가 따로 있는 선택지만 센다.
+  if (!ok && c.fail) s.flags['evFail' + s.year] = ((s.flags['evFail' + s.year] as number) || 0) + 1;
   const before = snapshot(s);
   const text = txt(out.text, s);
   log(s, `[${ev.title}] ${text}`, ok ? 'good' : 'bad', Math.max(0, s.phase - 1));

@@ -40,6 +40,18 @@ const ko = {
   trialNote: '졸업반. 프로 구단의 제의는 없었지만 K3리그 입단 테스트에 합격했습니다.',
   gradNote: '졸업반. 어느 팀에서도 연락이 오지 않았습니다. 선수의 꿈을 접어야 할지도 모릅니다.',
   // 프로
+  // T-11-257 임대
+  roleLoan: '임대 · 주전 경쟁',
+  roleLoanBuy: '임대 구단의 완전 이적 제안',
+  loanBackName: (p: { club: string }) => `${p.club} 복귀`,
+  loanBackGood: (p: { salary: string; years: number }) =>
+    `임대 활약으로 감독 신뢰 상승 · 연봉 ${p.salary} · 계약 ${p.years}년 남음`,
+  loanBackRenewName: (p: { club: string }) => `${p.club} 복귀 재계약`,
+  loanEndNote: (p: { club: string; host: string }) =>
+    `${p.host} 임대가 끝났습니다. ${p.club}로 돌아가거나 새 팀을 고를 수 있습니다.`,
+  loanLog: (p: { from: string; club: string; league: string }) =>
+    `${p.from}에서 ${p.club}(${p.league})로 한 시즌 임대를 떠났습니다.`,
+  loanBackLog: (p: { club: string }) => `임대를 마치고 ${p.club}로 돌아왔습니다.`,
   stayName: (p: { club: string }) => `${p.club} 잔류`,
   stayDesc: (p: { salary: string; years: number }) => `연봉 ${p.salary} · 계약 ${p.years}년 남음`,
   stayDescPromoted: (p: { league: string; salary: string; years: number }) =>

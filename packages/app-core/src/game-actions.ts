@@ -560,7 +560,8 @@ export function createGameActions(host: GameHost) {
             const destination = outlook
               ? `${CM.rank({ rank: outlook.rank })} · ${outlook.competition ? CM.competition({ competition: tn(outlook.competition) }) : CM.noCompetition}`
               : undefined;
-            const extra = `${o.role ? ` · ${tn(o.role)}` : ''}${o.fee ? ` · ${L.feeAbout({ fee: fmtValue(o.fee) })}` : G.contract && !leagueOf(G.leagueId).amateur ? ` · ${L.freeAgent}` : ''}`;
+            // T-11-257 임대는 이적료·FA 표시가 없다(원소속 구단 계약 그대로).
+            const extra = `${o.role ? ` · ${tn(o.role)}` : ''}${o.loan === 'out' ? '' : o.fee ? ` · ${L.feeAbout({ fee: fmtValue(o.fee) })}` : G.contract && !leagueOf(G.leagueId).amateur ? ` · ${L.freeAgent}` : ''}`;
             return {
               clubId: o.clubId,
               reason: offerFeedback(G, o),
@@ -568,7 +569,7 @@ export function createGameActions(host: GameHost) {
               name: tn(o.name),
               lg: strLine(o.leagueId, o.str),
               salary: fmtMoney(o.salary),
-              sub: `${L.contractYears({ years: o.years })}${extra}`,
+              sub: `${o.loan === 'out' ? L.loanSeason : L.contractYears({ years: o.years })}${extra}`,
             };
           }
           if (o.kind === 'renew')
@@ -608,17 +609,30 @@ export function createGameActions(host: GameHost) {
     const G = appState.G!;
     const extension = o.kind === 'renew' ? o.extension : undefined;
     const rookie = o.kind === 'offer' && !!leagueOf(G.leagueId).amateur;
+    const loan = o.kind === 'offer' && o.loan === 'out';
     if (o.kind === 'offer' && crossesBorder(G.leagueId, o.leagueId))
       void loadFlightMap().catch(() => {});
     sheet.showSheet({
       kind: 'contract',
-      eyebrow: extension ? 'Extension Contract' : rookie ? 'Rookie Contract' : 'Transfer Contract',
+      eyebrow: extension
+        ? 'Extension Contract'
+        : rookie
+          ? 'Rookie Contract'
+          : loan
+            ? 'Loan Contract'
+            : 'Transfer Contract',
       title: extension
         ? L.contractTitleExt
         : rookie
           ? L.contractTitleRookie
-          : L.contractTitleTransfer,
-      text: extension ? L.contractTextExt : L.contractTextStart({ club: tn(o.name), rookie }),
+          : loan
+            ? L.contractTitleLoan
+            : L.contractTitleTransfer,
+      text: extension
+        ? L.contractTextExt
+        : loan
+          ? L.contractTextLoan({ club: tn(o.name) })
+          : L.contractTextStart({ club: tn(o.name), rookie }),
       club: {
         id: o.kind === 'offer' ? o.clubId : G.club.id,
         name: o.kind === 'offer' ? o.name : G.club.name,
@@ -647,14 +661,14 @@ export function createGameActions(host: GameHost) {
               { label: L.termExtra, value: L.termYears({ n: extension.years }) },
               { label: L.termTotal, value: L.termYears({ n: o.years }) },
             ]
-          : [{ label: L.termPeriod, value: L.termYears({ n: o.years }) }]),
+          : [{ label: L.termPeriod, value: loan ? L.loanSeason : L.termYears({ n: o.years }) }]),
         ...(o.kind === 'offer' && o.fee
           ? [{ label: L.termFee, value: L.termFeeValue({ fee: fmtValue(o.fee) }) }]
           : []),
         ...(o.kind === 'offer' && o.role ? [{ label: L.termRole, value: tn(o.role) }] : []),
       ],
       name: G.name,
-      cta: extension ? L.ctaExt : rookie ? L.ctaRookie : L.ctaTransfer,
+      cta: extension ? L.ctaExt : rookie ? L.ctaRookie : loan ? L.ctaLoan : L.ctaTransfer,
       // 두 번 눌러도 한 번만 부른다(본문이 도장을 찍으며 버튼을 잠근다).
       onSign: () => void signContract(i, o, options),
       onClose: nextPending,
