@@ -251,6 +251,7 @@ const GUIDE_SECTIONS = [
     '이적 시장 · 계약',
     [
       guideCopy.transferPreview,
+      guideCopy.loan,
       '시즌이 끝나면 잔류, 재계약, 이적 제의 중에서 다음 행선지를 정합니다. 성적과 평판에 따라 해외 리그에서도 제의가 오고, 제의마다 평가 요소와 출전 조건이 표시됩니다. 계약 기간이 출전을 보장하지는 않습니다.',
       '계약이 1년 남으면 구단이 조기 연장을 제안할 수 있습니다. 연장하지 않고 기존 조건으로 잔류하거나 다른 구단으로 이적해도 됩니다. 41세부터는 1년 계약만 받고, 재계약은 지난 시즌 활약에 따라 정해집니다.',
     ],
@@ -323,6 +324,7 @@ const guideBody = `<div class="os-screen"><header><p class="os-eyebrow">HOW TO P
 const FAQ_ITEMS = [
   ['이적 제의에 표시되는 예상 순위가 현재 순위인가요?', guideCopy.transferPreview],
   ['연애설 이벤트는 언제 나오나요?', guideCopy.datingRumor],
+  ['임대를 갈 수 있나요?', guideCopy.loan],
   ['국가대표에서만 은퇴할 수 있나요?', guideCopy.ntRetirement],
   [
     '다른 팀으로 이적했다가 복귀해도 장기근속인가요?',

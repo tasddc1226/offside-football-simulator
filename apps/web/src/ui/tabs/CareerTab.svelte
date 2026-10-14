@@ -64,7 +64,7 @@
             {@const sv = seasonValue(r)}
             <tr>
               <td>{r.mil ? r.year : seasonLabelOf(r)} <span class="muted">({r.age})</span>{#if r.ch?.length}<br /><span class="badge-ch">CH×{r.ch.length}</span>{/if}</td>
-              <td><ClubMark name={r.club} id={r.clubId} /> {tn(r.club)}<div class="muted season-sub">{tn(r.league)}{sv ? ' · ' : ''}{#if sv}<span class="season-value" data-season-value>{L.seasonValue({ value: fmtValue(sv) })}</span>{/if}{r.honors.length ? ` · ` : ''}{#if r.honors.length}<span class="honor">{r.honors.map(tn).join(', ')}</span>{/if}</div></td>
+              <td><ClubMark name={r.club} id={r.clubId} /> {tn(r.club)}<div class="muted season-sub">{tn(r.league)}{#if r.loan} · <span data-season-loan>{L.loanTag}</span>{/if}{sv ? ' · ' : ''}{#if sv}<span class="season-value" data-season-value>{L.seasonValue({ value: fmtValue(sv) })}</span>{/if}{r.honors.length ? ` · ` : ''}{#if r.honors.length}<span class="honor">{r.honors.map(tn).join(', ')}</span>{/if}</div></td>
               <td class="n">{r.apps}</td>
               <td class="n">{r.goals}</td>
               <td class="n">{r.assists}</td>

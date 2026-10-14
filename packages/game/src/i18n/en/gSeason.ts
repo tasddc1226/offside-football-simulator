@@ -30,6 +30,16 @@ export const gSeason: Translation<GSeasonMsgs> = {
   uniStayDesc: (p) => `One more season in year ${p.year}`,
   trialNote: 'Final year. No pro club made an offer, but you passed a trial with a K3 League club.',
   gradNote: 'Final year. No team got in touch. You may have to give up on your dream.',
+  roleLoan: 'Loan · Fight for a start',
+  roleLoanBuy: 'Permanent offer from your loan club',
+  loanBackName: (p) => `Return to ${p.club}`,
+  loanBackGood: (p) =>
+    `Manager trust up after a strong loan · Salary ${p.salary} · ${p.years} yr left`,
+  loanBackRenewName: (p) => `Return to ${p.club} on a new contract`,
+  loanEndNote: (p) =>
+    `Your loan at ${p.host} is over. You can go back to ${p.club} or choose a new club.`,
+  loanLog: (p) => `Left ${p.from} on a season-long loan to ${p.club} (${p.league}).`,
+  loanBackLog: (p) => `Back at ${p.club} after the loan.`,
   stayName: (p) => `Stay at ${p.club}`,
   stayDesc: (p) =>
     `Salary ${p.salary} · ${p.years} ${plural(p.years, 'year', 'years')} left on your contract`,

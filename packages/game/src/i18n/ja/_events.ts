@@ -1,5 +1,6 @@
 // 이벤트 일본어 문구(events-data.ts EventText) — 이벤트 id → 문구. 정의 모듈별 파일을 묶는다.
 import { gDating as D } from './gDating';
+import { gLoan as N } from './gLoan';
 import { gLife as F } from './gLife';
 import { gMoments as M } from './gMoments';
 import type { EventText } from '../../events-data';
@@ -17,6 +18,14 @@ export const events: Record<string, EventText> = {
       { label: D.privateLabel, ok: D.privateResult },
       { label: D.confirmLabel, ok: D.confirmResult },
       { label: D.pitchLabel, ok: D.pitchResult },
+    ],
+  },
+  'loan-talk': {
+    title: N.title,
+    text: () => N.text,
+    choices: [
+      { label: N.askLabel, ok: N.askResult },
+      { label: N.stayLabel, ok: N.stayResult, fail: N.stayFail },
     ],
   },
   'nt-retire': {

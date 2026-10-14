@@ -14,6 +14,7 @@ import { gFanfeed } from './gFanfeed';
 import { gGkLabel } from './gGkLabel';
 import { gLegend } from './gLegend';
 import { gLife } from './gLife';
+import { gLoan } from './gLoan';
 import { gMilitary } from './gMilitary';
 import { gMinigame } from './gMinigame';
 import { gMoments } from './gMoments';
@@ -46,6 +47,7 @@ export const ja = {
   gGkLabel,
   gLegend,
   gLife,
+  gLoan,
   gMilitary,
   gMinigame,
   gMoments,

@@ -188,6 +188,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
                         style={{ fontSize: rem(0.6875), lineHeight: rem(0.6875) * 1.5 }}
                       >
                         {tn(r.league)}
+                        {r.loan ? ` · ${L.loanTag}` : ''}
                         {sv ? ' · ' : ''}
                         {sv ? (
                           <Txt style={{ fontSize: rem(0.6875), fontWeight: '600' }}>

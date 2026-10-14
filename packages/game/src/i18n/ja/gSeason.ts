@@ -29,6 +29,16 @@ export const gSeason: Translation<GSeasonMsgs> = {
     '最終学年。プロクラブからのオファーはありませんでしたが、K3リーグの入団テストに合格しました。',
   gradNote:
     '最終学年。どのチームからも連絡が来ませんでした。選手の夢をあきらめるしかないかもしれません。',
+  roleLoan: 'レンタル · レギュラー争い',
+  roleLoanBuy: 'レンタル先からの完全移籍オファー',
+  loanBackName: (p) => `${p.club}に復帰`,
+  loanBackGood: (p) =>
+    `レンタルでの活躍で監督の信頼アップ · 年俸${p.salary} · 契約残り${p.years}年`,
+  loanBackRenewName: (p) => `${p.club}に復帰して再契約`,
+  loanEndNote: (p) =>
+    `${p.host}へのレンタルが終わりました。${p.club}に戻るか、新しいチームを選べます。`,
+  loanLog: (p) => `${p.from}から${p.club}(${p.league})へ1シーズンのレンタル移籍をしました。`,
+  loanBackLog: (p) => `レンタルを終えて${p.club}に戻りました。`,
   stayName: (p) => `${p.club}に残留`,
   stayDesc: (p) => `年俸${p.salary} · 契約残り${p.years}年`,
   stayDescPromoted: (p) => `このクラブで${p.league}に挑戦 · 年俸${p.salary} · 契約残り${p.years}年`,
