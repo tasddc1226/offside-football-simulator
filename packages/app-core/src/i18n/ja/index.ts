@@ -8,6 +8,7 @@ import { appFormat } from './appFormat';
 import { appScout } from './appScout';
 import { automationModeration } from './automationModeration';
 import { avatarLook } from './avatarLook';
+import { avatarPngReview } from './avatarPngReview';
 import { avatarRecord } from './avatarRecord';
 import { backup } from './backup';
 import { balanceKeys } from './balanceKeys';
@@ -103,6 +104,7 @@ export const ja = {
   appScout,
   automationModeration,
   avatarLook,
+  avatarPngReview,
   avatarRecord,
   backup,
   balanceKeys,

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { cardAvatarSpec } from '@offside/game/avatar';
   import PixelAvatar from '../PixelAvatar.svelte';
+  import type { OriginalAvatarStyle } from '../originalAvatar';
   import { intlLocale } from '@offside/contracts/i18n';
   import { tn } from '@offside/game/i18n/names';
   import { onMount } from 'svelte';
@@ -13,8 +14,8 @@
   import { teamSeasonLabel } from '@offside/app-core/seasonName';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
-  let { player, name, rating, role, nation, season, compact = false, mini = false, youth = false, deploymentRating, ratingLabel = L.peakOvr }:
-    { player?: TeamPlayer | undefined; name: string; rating: number; role: DetailPos; nation?: string | null | undefined; season?: number | undefined; compact?: boolean; mini?: boolean; youth?: boolean; deploymentRating?: number | undefined; ratingLabel?: string } = $props();
+  let { player, name, rating, role, nation, season, compact = false, mini = false, youth = false, deploymentRating, ratingLabel = L.peakOvr, artwork }:
+    { player?: TeamPlayer | undefined; name: string; rating: number; role: DetailPos; nation?: string | null | undefined; season?: number | undefined; compact?: boolean; mini?: boolean; youth?: boolean; deploymentRating?: number | undefined; ratingLabel?: string; artwork?: OriginalAvatarStyle | undefined } = $props();
   // T-11-114 카드 시즌 뱃지(유스 선수·시즌을 모르는 옛 응답은 없다).
   const portrait = $derived(!youth && player?.careerId ? cardAvatarSpec(player) : null);
   const cardSeason = $derived(youth ? undefined : (season ?? player?.season));
@@ -50,7 +51,7 @@
     {#if player?.locked && !youth}<span class="card-lock" data-card-locked role="img" aria-label={L.lockedAria} title={L.lockedAria}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></svg></span>{/if}
     <div class="card-art" class:has-portrait={!!portrait} aria-hidden="true">
       {#if portrait}
-        <PixelAvatar spec={portrait} portrait />
+        <PixelAvatar spec={portrait} portrait {artwork} />
         {#if player?.number != null}<span class="portrait-number">{player.number}</span>{/if}
       {:else}
       <svg viewBox="0 0 100 96"><path d="M30 10 15 17 3 38 20 48 26 36 24 90 76 90 74 36 80 48 97 38 85 17 70 10 62 5Q50 16 38 5Z" /><path class="shirt-trim" d="M38 5Q50 25 62 5M25 73H75M34 12V87M66 12V87" /></svg>

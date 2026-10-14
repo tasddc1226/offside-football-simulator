@@ -1,9 +1,9 @@
 {
   "version": 3,
-  "status": "concept-review",
+  "status": "web-original-png-preview",
   "tool": "built-in image_gen",
   "created_on": "2026-10-14",
-  "runtime": "Existing nine-style baseline only; these PNGs are not loaded by the game.",
+  "runtime": "Unmodified PNGs used by local web character/card preview; production defaults remain existing nine-style renderer.",
   "assets": [
     {
       "name": "bald",

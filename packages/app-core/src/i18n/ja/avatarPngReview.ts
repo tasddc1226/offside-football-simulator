@@ -1,0 +1,32 @@
+import type { Translation } from '../core';
+import type { AvatarPngReviewMsgs } from '../ko/avatarPngReview';
+export const avatarPngReview: Translation<AvatarPngReviewMsgs> = {
+  title: '元のPNGをゲーム画面で確認',
+  intro: 'ドット変換や顔の再構築なしで元の画像を表示します',
+  note: 'ローカルの外見プレビューです。髪・肌・ユニフォームの色は元画像に固定され、選手の記録や保存した外見は変わりません。',
+  artwork: '外見を選択',
+  bald: 'スキンヘッド',
+  shaved: '短い坊主',
+  dread: 'ドレッド',
+  fauxhawk: 'スパイクモヒカン',
+  ponytail: 'ポニーテール',
+  mullet: 'ツートーンマレット',
+  keeper: 'キーパー用品',
+  theme: 'ライト / ダーク',
+  character: 'キャラクター',
+  originalSize: '元のPNG · 144px',
+  gameSize: 'ゲームのサイズ · 72px',
+  careerSize: 'キャリア画面のサイズ',
+  cards: '選手カード',
+  cardIntro: '実際の選手カードに同じPNGの顔と肩を表示します。',
+  poses: '元のポーズ',
+  poseAria: 'ポーズを選択',
+  standing: '立つ',
+  running: '走る',
+  shooting: 'シュート',
+  poseNote: '元画像の3ポーズです。全モーションのアニメーションはまだ接続していません。',
+  openSource: '元のPNGを開く',
+  openGame: 'PNGプレビューでローカルゲームを開く',
+  footer:
+    'ローカルゲームでは、このタブのキャラクターとカードのみ変更します。全選手に同じデザインが表示され、選手ごとの保存や色変更は未接続です。本番環境とモバイルアプリは変更しません。',
+};
