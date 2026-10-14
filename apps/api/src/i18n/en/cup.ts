@@ -79,4 +79,8 @@ export const CUP_EN: Record<CupTextKey, string> = {
     'Final result: {stage}. You received {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s).',
   rewardBodyScout:
     'Final result: {stage}. You received {n} player reroll ticket(s) and {s} premium scout ticket(s).',
+  grantTitle: 'Items have arrived',
+  grantReroll: 'The OFFSIDE team sent you {n} player reroll ticket(s).',
+  grantBoost: 'The OFFSIDE team sent you {n} potential boost ticket(s).',
+  grantScout: 'The OFFSIDE team sent you {n} premium scout ticket(s).',
 };

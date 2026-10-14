@@ -76,8 +76,15 @@ export async function saveAchievementScore(
   return row;
 }
 
-/** 랭킹 순위(점수 · 먼저 닿은 순)와 랭킹에 오른 구단주 수. 점수가 0이면 순위는 null. */
-export async function achievementRankOf(db: Db, row: AchievementRow) {
+/**
+ * 랭킹 순위(점수 · 먼저 닿은 순)와 랭킹에 오른 구단주 수. 점수가 0이면 순위는 null.
+ * T-11-262 랭킹 인원은 모두에게 같아 cachedRanked로 감싼다(라우트가 엣지 캐시에 담는다). 기본은 매번 센다.
+ */
+export async function achievementRankOf(
+  db: Db,
+  row: AchievementRow,
+  cachedRanked: (load: () => Promise<number>) => Promise<number> = (load) => load(),
+) {
   const ahead = and(
     rankedIn(row.season),
     or(
@@ -100,11 +107,14 @@ export async function achievementRankOf(db: Db, row: AchievementRow) {
       .from(ownerAchievements)
       .innerJoin(profiles, eq(profiles.id, ownerAchievements.profileId))
       .where(where);
-  const [[a], [t]] = await db.batch([counted(ahead), counted(rankedIn(row.season))]);
-  return {
-    rank: row.score > 0 ? Number(a?.n ?? 0) + 1 : null,
-    ranked: Number(t?.n ?? 0),
-  };
+  const [[a], ranked] = await Promise.all([
+    row.score > 0 ? counted(ahead) : [undefined],
+    cachedRanked(async () => {
+      const [t] = await counted(rankedIn(row.season));
+      return Number(t?.n ?? 0);
+    }),
+  ]);
+  return { rank: row.score > 0 ? Number(a?.n ?? 0) + 1 : null, ranked };
 }
 
 export async function listAchievementRanking(db: Db, season: number, page: number) {
@@ -154,9 +164,11 @@ export async function ownerActivityIn(
   teamId: string | null,
   asOf?: string,
 ) {
+  // T-11-262 내가 누른 좋아요(몇 건)부터 읽는다. 지정하지 않으면 플래너가 그 시즌 팀 전체(운영 1,860팀)를 훑으며
+  // 팀마다 좋아요를 찾았다.
   const likes = db
     .select({ n: count() })
-    .from(teamLikes)
+    .from(sql`${teamLikes} INDEXED BY team_likes_profile_idx`)
     .innerJoin(ownerTeams, eq(ownerTeams.id, teamLikes.teamId))
     .where(
       and(

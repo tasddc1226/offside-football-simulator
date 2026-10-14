@@ -14,6 +14,7 @@
     CAREERS_MERGED: '커리어 합치기',
     BALANCE_ACTIVATED: '밸런스 적용',
     COMMENTS_PURGED: '작성자 댓글 일괄 삭제',
+    ITEM_GRANTED: '아이템 지급·회수',
   };
   const SERIES = [
     { key: 'profiles', label: '신규 가입' },
