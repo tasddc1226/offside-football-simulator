@@ -268,19 +268,7 @@ export type Pending =
 
 /** T-11-191 도트 선수 꾸미기 항목(look.ts LOOK_ITEMS). */
 export type LookItem =
-  | 'skin'
-  | 'hair'
-  | 'beard'
-  | 'style'
-  | 'expr'
-  | 'band'
-  | 'wrist'
-  | 'glasses'
-  | 'boots'
-  | 'socks'
-  | 'gloves'
-  | 'keeperKit'
-  | 'kneePads';
+  'skin' | 'hair' | 'beard' | 'style' | 'expr' | 'band' | 'wrist' | 'glasses' | 'boots' | 'socks';
 /** T-11-191 산 꾸미기 항목과 고른 값(선택지 번호). 은퇴 후에는 전용 외형 편집 화면을 쓴다. */
 export interface LookState {
   owned: LookItem[];

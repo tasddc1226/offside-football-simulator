@@ -14,9 +14,6 @@ export const LOOK_ORDER: LookItem[] = [
   'glasses',
   'boots',
   'socks',
-  'gloves',
-  'keeperKit',
-  'kneePads',
 ];
 
 /** 서버 코드의 글자(항목마다 한 글자). */
@@ -31,9 +28,6 @@ export const LOOK_CODE: Record<LookItem, string> = {
   glasses: 'g',
   boots: 'b',
   socks: 'k',
-  gloves: 'l',
-  keeperKit: 'u',
-  kneePads: 'n',
 };
 
 /** 고른 값만 서버용 짧은 코드로(예: `s2h5y3`). 고른 게 없으면 undefined. */

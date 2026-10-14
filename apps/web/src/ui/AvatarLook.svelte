@@ -98,7 +98,7 @@ import { buyLookRecord, wearLookRecord, buyLook, setLook, type LookRecord } from
           <div class="look-opts" role="group" aria-label={r.name}>
             {#each r.options as o (o.value)}
               {@const on = pending?.item === r.item ? pending.value === o.value : r.current === o.value}
-              <button class="look-opt" class:equipment={r.item === 'gloves' || r.item === 'keeperKit' || r.item === 'kneePads'} class:swatch={!!o.swatch} aria-pressed={on} disabled={!editable} data-look-opt={o.value}
+              <button class="look-opt" class:swatch={!!o.swatch} aria-pressed={on} disabled={!editable} data-look-opt={o.value}
                 aria-label={o.label ?? L.pickAria({ item: r.name, n: o.value + 1 })} onclick={() => pick(r.item, o.value, r.owned)}>
                 {#if o.swatch}<span style:background={o.swatch}></span>{:else}{o.label}{/if}
               </button>
@@ -154,7 +154,6 @@ import { buyLookRecord, wearLookRecord, buyLook, setLook, type LookRecord } from
   .look-row-head .look-owned {color:var(--good);}
   .look-opts {display:flex;flex-wrap:wrap;gap:8px;}
   .look-opt {min-height:36px;min-width:36px;padding:0 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font:inherit;font-size:.8rem;cursor:pointer;}
-  .look-opt.equipment {min-width:48px;min-height:48px;}
   .look-opt.swatch {padding:4px;display:grid;place-items:center;}
   .look-opt.swatch span {display:block;width:24px;height:24px;border-radius:50%;box-shadow:inset 0 0 0 1px #0003;}
   .look-opt[aria-pressed='true'] {border-color:var(--accent);box-shadow:0 0 0 2px var(--accent);font-weight:700;}

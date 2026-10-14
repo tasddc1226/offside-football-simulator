@@ -125,8 +125,8 @@ export function AvatarLook({ close }: { close: () => void }) {
                   accessibilityLabel={o.label ?? L.pickAria({ item: r.name, n: o.value + 1 })}
                   onPress={() => pick(r.item, o.value, r.owned)}
                   style={{
-                    minHeight: ['gloves', 'keeperKit', 'kneePads'].includes(r.item) ? 48 : 36,
-                    minWidth: ['gloves', 'keeperKit', 'kneePads'].includes(r.item) ? 48 : 36,
+                    minHeight: 36,
+                    minWidth: 36,
                     paddingHorizontal: o.swatch ? 4 : 10,
                     borderRadius: 999,
                     borderWidth: on ? 2 : 1,

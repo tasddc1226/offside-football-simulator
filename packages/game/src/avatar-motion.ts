@@ -332,7 +332,6 @@ export function motionFrame(sp: AvatarSpec, f: MotionFrame, poses?: MiniPoses | 
     px = paintMini(info.rows, spec, miniColors(spec), body, {
       stand: MINI_SPRITES[sp.hairStyle],
       at: face,
-      id: f.pose!,
     });
   } else {
     const still = avatarPixels(spec);

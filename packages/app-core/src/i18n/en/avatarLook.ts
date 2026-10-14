@@ -46,9 +46,5 @@ export const avatarLook: Translation<AvatarLookMsgs> = {
   styleFauxhawk: 'Spiked mohawk',
   stylePonytail: 'Ponytail',
   styleMullet: 'Two-tone mullet',
-  itemGloves: 'Goalkeeper gloves',
-  itemKeeperKit: 'Goalkeeper kit',
-  itemKneePads: 'Knee pads',
-  kitClub: 'Club kit',
   socksTeam: 'Club socks',
 };

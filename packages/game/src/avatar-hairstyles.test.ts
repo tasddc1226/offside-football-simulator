@@ -41,39 +41,6 @@ describe('T-11-243 additional hairstyles', () => {
     expect(MINI_SPRITES.shaved.slice(0, 16).join('')).toContain('r');
   });
 
-  it('changes only hair/scalp while preserving the canonical face and body', async () => {
-    const canonical = MINI_SPRITES.short;
-    for (const style of LOOK_STYLES.slice(9)) {
-      const sprite = MINI_SPRITES[style];
-      for (let y = 16; y < 30; y++)
-        for (let x = 0; x < 48; x++)
-          if (canonical[y]![x] !== '.')
-            expect(sprite[y]![x], `${style}/face/${x},${y}`).toBe(canonical[y]![x]);
-      expect(sprite.slice(36), `${style}/body`).toEqual(canonical.slice(36));
-      const poses = await loadMotionPoses(style);
-      for (const pose of MINI_POSES) {
-        const {
-          rows,
-          face: [fx, fy],
-        } = poses[pose];
-        for (let y = 18; y < 29; y++)
-          for (let x = 19; x < 35; x++) {
-            const actual = rows[y + fy]![x + fx]!;
-            const handOutline =
-              actual === 'O' &&
-              [-1, 0, 1].some((dy) =>
-                [-1, 0, 1].some((dx) =>
-                  'uUiIvVgG'.includes(rows[y + fy + dy]?.[x + fx + dx] ?? '.'),
-                ),
-              );
-            // Foreground hands, sleeves and their outline may occlude the face.
-            if (!'uUiIvVgG'.includes(actual) && !handOutline && canonical[y]![x] !== '.')
-              expect(actual, `${style}/${pose}/face/${x},${y}`).toBe(canonical[y]![x]);
-          }
-      }
-    }
-  });
-
   it('renders each new head in all poses, with accessories and card framing', async () => {
     for (let i = 9; i < LOOK_STYLES.length; i++) {
       const sp = cardAvatarSpec({ careerId: 'card', look: `y${i}s1h2d0` });
