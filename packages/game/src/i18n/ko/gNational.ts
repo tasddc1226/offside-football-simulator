@@ -20,6 +20,7 @@ const ko = {
   whyCut: '최종 명단 탈락',
   whyRefused: '소속팀이 차출을 거부',
   whyWildcard: '와일드카드 발탁',
+  whyQuit: '대표팀 소집 거부 선언',
 };
 export type GNationalMsgs = typeof ko;
 export const gNationalText = ns('gNational', ko);

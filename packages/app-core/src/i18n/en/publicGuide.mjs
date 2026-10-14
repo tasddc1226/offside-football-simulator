@@ -4,6 +4,8 @@ export default {
     'The estimated finish on a transfer offer is based on club strength, not current standings. In the first season at a new club, continental entry uses this estimate and the game’s league slots. Staying at a club uses its actual finish from the previous season.',
   datingRumor:
     'Professional players aged 20 or older with at least 35 fame can encounter dating rumors during the playing season. Keep your private life private, agree with your partner to go public, or focus on football. Choices make small changes to morale, fame, manager trust or condition.',
+  refuseCallup:
+    'If a capped player is left out of the World Cup squad, a squad snub event may appear in the next pre-season. Declaring a call-up refusal keeps you out of senior national team call-ups and continental cup and World Cup squads for that season and the next, and you give up the captaincy. Asian Games and Olympic squads are not affected.',
 
   investment:
     'In each phase, you can spend career funds on extra training, medical care or mental coaching in addition to regular training. Costs scale with salary. Training gains depend on age, potential and morale. Potential controls growth speed; it is not a hard ability cap.',
