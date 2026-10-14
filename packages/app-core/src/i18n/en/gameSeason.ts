@@ -5,6 +5,9 @@ import { plural } from './_util';
 export const gameSeason: Translation<GameSeasonMsgs> = {
   preseason: 'Preseason',
   prepTitle: 'Prepare for the next phase',
+  seasonOver: 'Season over',
+  nextSeasonTitle: 'Next season',
+  nextSeasonWait: 'Pick your next club to set training and spending for next season.',
   condition: 'Condition',
   morale: 'Morale',
   fame: 'Fame',

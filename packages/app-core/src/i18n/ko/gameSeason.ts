@@ -4,6 +4,9 @@ import { ns } from '../core';
 const ko = {
   preseason: '프리시즌',
   prepTitle: '다음 구간 준비',
+  seasonOver: '시즌 종료',
+  nextSeasonTitle: '다음 시즌 준비',
+  nextSeasonWait: '이적할 팀을 고르면 다음 시즌 훈련과 투자를 정할 수 있어요.',
   condition: '컨디션',
   morale: '사기',
   fame: '인기',

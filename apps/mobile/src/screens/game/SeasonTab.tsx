@@ -545,7 +545,13 @@ export function SeasonTab({ s }: { s: GameState }) {
   const S = s.season;
   const avg = S.apps ? (S.ratingSum / S.apps).toFixed(2) : '-';
   const phase = Math.min(s.phase, LAST_PHASE);
-  const label = phase === 0 ? L.preseason : `${PHASES[phase]} · ${roundRange(s, phase)}`;
+  // T-11-254 이적시장을 잠시 닫았을 때(웹 SeasonTab과 같다): 끝난 시즌(year - 1)을 '시즌 종료'로 보이고 훈련·투자는 숨긴다.
+  const ended = s.pending?.type === 'market';
+  const label = ended
+    ? L.seasonOver
+    : phase === 0
+      ? L.preseason
+      : `${PHASES[phase]} · ${roundRange(s, phase)}`;
   const back = s.pos === 'GK' || s.pos === 'DF';
   const lastCol = (back ? [L.colCs, S.cs] : [L.colAssists, S.assists]) as [string, number];
   const comps = s.season.comps || [];
@@ -616,7 +622,7 @@ export function SeasonTab({ s }: { s: GameState }) {
       <Spotlight reg={reg('status')} on={spot === 'status'}>
         <Card gap={14}>
           <View>
-            <Txt v="eyebrow">{`${seasonLabel(s)} Season`}</Txt>
+            <Txt v="eyebrow">{`${seasonLabel(s, ended ? s.year - 1 : s.year)} Season`}</Txt>
             <Txt v="h2" accessibilityRole="header">
               {label}
             </Txt>
@@ -628,7 +634,8 @@ export function SeasonTab({ s }: { s: GameState }) {
                     flex: 1,
                     height: 6,
                     borderRadius: 3,
-                    backgroundColor: i < phase ? c.pitch2 : i === phase ? c.accent : c.line,
+                    backgroundColor:
+                      ended || i < phase ? c.pitch2 : i === phase ? c.accent : c.line,
                   }}
                 />
               ))}
@@ -677,80 +684,94 @@ export function SeasonTab({ s }: { s: GameState }) {
         </Card>
       </Spotlight>
 
-      <Spotlight reg={reg('prep')} on={spot === 'prep'}>
-        <Card gap={10}>
+      {ended ? (
+        <Card gap={10} testID="prep-wait">
           <View>
-            <Txt v="eyebrow">{`Next · ${label}`}</Txt>
+            <Txt v="eyebrow">Next</Txt>
             <Txt v="h2" accessibilityRole="header">
-              {L.prepTitle}
+              {L.nextSeasonTitle}
             </Txt>
           </View>
-          <View style={{ gap: 9 }}>
-            <Meter label={L.condition} value={s.cond} tone={meterTone(s.cond, 40, 65)} />
-            <Meter label={L.morale} value={s.morale} tone={meterTone(s.morale, 40, 60)} />
-            <Meter label={L.fame} value={s.fame} tone="acc" />
-          </View>
-          <View style={{ gap: 6 }} testID="coach-feedback">
-            <SubTitle>{L.coachMemo}</SubTitle>
-            <Txt v="sm">{coach.summary}</Txt>
-            {coach.notes.map((note) => (
-              <Txt key={note} v="sm" tone="muted">
-                {note}
-              </Txt>
-            ))}
-          </View>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 8,
-            }}
-          >
-            <SubTitle>{L.trainingTitle}</SubTitle>
-            <TrainViewToggle view={trainView} onChange={setTrainView} />
-          </View>
-          {wait === 'train' ? (
-            <TourHint>{L.trainHint}</TourHint>
-          ) : trainView === 'radar' ? (
-            <Txt v="sm" tone="muted" testID="train-pick">
-              {L.trainPick}
-            </Txt>
-          ) : null}
-          {trainView === 'radar' ? <TrainRadar s={s} onPick={setTraining} /> : null}
           <Txt v="sm" tone="muted">
-            {CG.trainWeak}
+            {L.nextSeasonWait}
           </Txt>
-          <PositionGuide pos={s.pos} />
-          <ChoiceGrid
-            testPrefix="train"
-            popped={popped?.g === 'train' ? popped.id : null}
-            items={(trainView === 'radar' ? TRAININGS.filter((tr) => !tr.attr) : TRAININGS).map(
-              (tr) => {
-                const cd = trainCards.get(tr.id)!;
-                return {
-                  id: tr.id,
-                  label: trainingLabel(s, tr),
-                  effect: cd.effect,
-                  tag: cd.tag,
-                  star: !!tr.attr && focus.includes(tr.attr),
-                  selected: s.training === tr.id,
-                  onPress: () => setTraining(tr.id),
-                };
-              },
-            )}
-          />
-          {picked ? (
-            <HelpBox
-              testID="train-help"
-              title={trainingLabel(s, picked)}
-              effect={trainCards.get(picked.id)!.effect}
-              notes={trainingGrowthNotes(s, picked)}
-              body={trainingOvrNote(s, picked)}
-            />
-          ) : null}
         </Card>
-      </Spotlight>
+      ) : (
+        <Spotlight reg={reg('prep')} on={spot === 'prep'}>
+          <Card gap={10}>
+            <View>
+              <Txt v="eyebrow">{`Next · ${label}`}</Txt>
+              <Txt v="h2" accessibilityRole="header">
+                {L.prepTitle}
+              </Txt>
+            </View>
+            <View style={{ gap: 9 }}>
+              <Meter label={L.condition} value={s.cond} tone={meterTone(s.cond, 40, 65)} />
+              <Meter label={L.morale} value={s.morale} tone={meterTone(s.morale, 40, 60)} />
+              <Meter label={L.fame} value={s.fame} tone="acc" />
+            </View>
+            <View style={{ gap: 6 }} testID="coach-feedback">
+              <SubTitle>{L.coachMemo}</SubTitle>
+              <Txt v="sm">{coach.summary}</Txt>
+              {coach.notes.map((note) => (
+                <Txt key={note} v="sm" tone="muted">
+                  {note}
+                </Txt>
+              ))}
+            </View>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
+              }}
+            >
+              <SubTitle>{L.trainingTitle}</SubTitle>
+              <TrainViewToggle view={trainView} onChange={setTrainView} />
+            </View>
+            {wait === 'train' ? (
+              <TourHint>{L.trainHint}</TourHint>
+            ) : trainView === 'radar' ? (
+              <Txt v="sm" tone="muted" testID="train-pick">
+                {L.trainPick}
+              </Txt>
+            ) : null}
+            {trainView === 'radar' ? <TrainRadar s={s} onPick={setTraining} /> : null}
+            <Txt v="sm" tone="muted">
+              {CG.trainWeak}
+            </Txt>
+            <PositionGuide pos={s.pos} />
+            <ChoiceGrid
+              testPrefix="train"
+              popped={popped?.g === 'train' ? popped.id : null}
+              items={(trainView === 'radar' ? TRAININGS.filter((tr) => !tr.attr) : TRAININGS).map(
+                (tr) => {
+                  const cd = trainCards.get(tr.id)!;
+                  return {
+                    id: tr.id,
+                    label: trainingLabel(s, tr),
+                    effect: cd.effect,
+                    tag: cd.tag,
+                    star: !!tr.attr && focus.includes(tr.attr),
+                    selected: s.training === tr.id,
+                    onPress: () => setTraining(tr.id),
+                  };
+                },
+              )}
+            />
+            {picked ? (
+              <HelpBox
+                testID="train-help"
+                title={trainingLabel(s, picked)}
+                effect={trainCards.get(picked.id)!.effect}
+                notes={trainingGrowthNotes(s, picked)}
+                body={trainingOvrNote(s, picked)}
+              />
+            ) : null}
+          </Card>
+        </Spotlight>
+      )}
 
       <Spotlight reg={reg('invest')} on={spot === 'invest'}>
         <Card gap={10}>
