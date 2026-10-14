@@ -10,6 +10,7 @@ export const gameActions: Translation<GameActionsMsgs> = {
   compLeagueGame: (p) => `リーグフェーズ 第${p.n}戦 · ${p.res}`,
   compThrough: '突破',
   compOut: '敗退',
+  compVs: (p) => `vs ${p.name}`,
   natNotInSquad: 'メンバー外',
   natNoMedal: 'メダルなし',
   natTourLine: (p) =>

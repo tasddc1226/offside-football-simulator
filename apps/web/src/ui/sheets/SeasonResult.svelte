@@ -48,6 +48,8 @@
   <div>
     <div class="eyebrow" style="margin-bottom:6px">{L.comps}</div>
     {#each v.comps as c, i (i)}<p class="muted">{c}</p>{/each}
+    <!-- T-11-261 대륙 대회 녹아웃 경로(상대·결과) -->
+    {#each v.compPaths ?? [] as p (p.key)}<p class="muted fs-sm" data-comp-path={p.key}>{p.name} · {p.line}</p>{/each}
   </div>
 {/if}
 {#if v.tours.length}

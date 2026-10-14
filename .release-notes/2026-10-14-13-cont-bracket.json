@@ -1,0 +1,23 @@
+{
+  "id": "t-11-261-cont-bracket",
+  "title": "대륙 대회 녹아웃 상대와 진출 경로",
+  "items": [
+    "챔피언스리그 같은 대륙 대회에서 리그 페이즈를 통과하면 시즌 탭에 다음 상대 구단이 보여요.",
+    "후반기 녹아웃을 치르면 16강부터 결승까지 어느 구단을 이기고 올라갔는지 시즌 탭과 시즌 결산에 경로로 남아요."
+  ],
+  "en": {
+    "title": "Knockout opponents and your path in continental cups",
+    "items": [
+      "Once you get through the league phase of a continental cup such as the Champions League, the season tab shows your next opponent.",
+      "When the knockout rounds are played, your path from the round of 16 to the final is kept on the season tab and in the season review, with the club you beat in each tie."
+    ]
+  },
+  "ja": {
+    "title": "大陸大会のノックアウト相手と道のり",
+    "items": [
+      "チャンピオンズリーグなどの大陸大会でリーグフェーズを突破すると、シーズンタブに次の相手クラブが表示されます。",
+      "後半のノックアウトを戦うと、ベスト16から決勝までどのクラブを倒して進んだかが、シーズンタブとシーズン総括に道のりとして残ります。"
+    ]
+  },
+  "availability": "web-app"
+}

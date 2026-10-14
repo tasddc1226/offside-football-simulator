@@ -32,6 +32,7 @@
   import TrainRadar from '../TrainRadar.svelte';
   import { focusOf } from '@offside/game/player';
   import { gameSeasonText as L } from '@offside/app-core/i18n/ko/gameSeason';
+  import { bracketView } from '@offside/app-core/bracket';
 
   const { s }: { s: GameState } = $props();
 
@@ -231,11 +232,26 @@
     <div>
       <h3 class="sub-title" style="margin-bottom:2px">{L.compsTitle}</h3>
       {#each comps as c (c.name)}
+        {@const bracket = bracketView(c)}
         <div class="story-row">
           <b>{tn(c.name)}</b>
           <span class="muted">{tn(c.stage) || (c.type === 'super' ? L.compSuper : L.compStart)}{c.alive && c.stage ? ` · ${L.compAlive}` : ''}</span>
           <span class="muted">{L.compLine({ apps: c.apps, g: c.g })}</span>
         </div>
+        {#if bracket}
+          <!-- T-11-261 대륙 대회 녹아웃 대진: 내 팀이 치른(치를) 승부만. 엔진이 저장한 상대·결과를 그대로 그린다. -->
+          <ol class="bracket" data-bracket={c.key} aria-label={L.bracketAria({ name: tn(c.name) })}>
+            {#each bracket.rows as row, i (i)}
+              <li class="bracket-row {row.state}" data-bracket-row={row.state}>
+                <span class="bracket-stage">{row.stage}</span>
+                <span class="bracket-vs">{row.vs}</span>
+                <span class="bracket-legs muted">{row.legs}</span>
+                <span class="bracket-result">{row.result}</span>
+              </li>
+            {/each}
+            {#if bracket.note}<li class="bracket-note muted fs-sm" data-bracket-note>{bracket.note}</li>{/if}
+          </ol>
+        {/if}
       {/each}
     </div>
   {/if}
