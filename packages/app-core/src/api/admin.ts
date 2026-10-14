@@ -13,7 +13,11 @@ import type {
   AdminFundsOwner,
   AdminFundsReport,
   AdminInviteReport,
+  AdminItemGrantInput,
+  AdminItemGrantResult,
+  AdminRevenue,
   AdminStats,
+  AdminUser,
   AutomationReport,
   AutomationEnforcement,
   BalanceDraftInput,
@@ -25,6 +29,9 @@ import { apiFetch, cachedGet, invalidateApiCache } from './client.js';
 
 export type {
   AdminComment,
+  AdminItemGrantInput,
+  AdminRevenue,
+  AdminUser,
   AdminFundsOwner,
   AdminFundsReport,
   AdminInviteReport,
@@ -95,6 +102,17 @@ export const fetchFundsReport = () => apiFetch<AdminFundsReport>('/v1/admin/fund
 /** q: 프로필 id(prf_…) 또는 닉네임. */
 export const fetchFundsOwner = (q: string) =>
   apiFetch<AdminFundsOwner>(`/v1/admin/funds/owner?q=${encodeURIComponent(q)}`);
+
+// T-11-263 유저 조회 · 아이템 지급/회수 · 매출. 늘 최신을 봐야 해서 메모하지 않는다.
+export const fetchAdminUser = (q: string) =>
+  apiFetch<AdminUser>(`/v1/admin/users?q=${encodeURIComponent(q)}`);
+export const grantAdminItem = (profileId: string, input: AdminItemGrantInput) =>
+  apiFetch<AdminItemGrantResult>(`/v1/admin/users/${profileId}/items`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+export const fetchRevenue = (days: number) =>
+  apiFetch<AdminRevenue>(`/v1/admin/revenue?days=${days}`);
 
 /** T-11-177 친구 초대 현황. 열 때마다 새로 읽는다. */
 export const fetchInviteReport = () => apiFetch<AdminInviteReport>('/v1/admin/invites');

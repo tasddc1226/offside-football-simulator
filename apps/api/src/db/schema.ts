@@ -731,6 +731,7 @@ export const auditLog = sqliteTable(
         'COMMENTS_PURGED',
         'NAME_REPORT_RESOLVED',
         'CUP_PREDICTIONS_RECOVERED',
+        'ITEM_GRANTED',
       ],
     }).notNull(),
     profileId: text('profile_id').notNull(),
@@ -1450,6 +1451,8 @@ export const iapPurchases = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.store, table.transactionId] }),
     index('iap_purchases_profile_idx').on(table.profileId, table.createdAt),
+    // T-11-263 운영 도구 매출(기간 합 · 최근 결제).
+    index('iap_purchases_created_idx').on(table.createdAt),
   ],
 );
 

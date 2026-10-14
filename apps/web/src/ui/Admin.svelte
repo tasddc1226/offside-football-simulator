@@ -15,12 +15,16 @@
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
   import AdminFunds from './admin/AdminFunds.svelte';
   import AdminInvites from './admin/AdminInvites.svelte';
+  import AdminUsers from './admin/AdminUsers.svelte';
+  import AdminRevenue from './admin/AdminRevenue.svelte';
 
   import AdminClubStrength from './admin/AdminClubStrength.svelte';
   import { T as strengthText } from '@offside/app-core/admin/club-strength';
 
   const TABS = [
     { id: 'dashboard', label: '대시보드' },
+    { id: 'users', label: '유저 조회' },
+    { id: 'revenue', label: '매출' },
     { id: 'push', label: '앱 푸시' },
     { id: 'cup', get label() { return L.adminCupTitle; } },
     { id: 'comments', label: '신고·댓글' },
@@ -56,6 +60,8 @@
         {/each}
       </div>
       {#if tab === 'dashboard'}<AdminDashboard />
+      {:else if tab === 'users'}<AdminUsers />
+      {:else if tab === 'revenue'}<AdminRevenue />
       {:else if tab === 'push'}<AdminPush />
       {:else if tab === 'cup'}<AdminCups />
       {:else if tab === 'comments'}<AdminChatReports /><AdminNameReports /><AdminComments />
