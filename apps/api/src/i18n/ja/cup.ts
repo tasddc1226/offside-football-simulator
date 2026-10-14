@@ -69,6 +69,8 @@ export const CUP_JA: Record<CupTextKey, string> = {
   earlyTitle: '{cup}が定員に達したため日程が早まりました',
   earlyBody: '組み合わせ抽選 {draw}、初戦 {first}(韓国時間)です。',
   rewardBody: '最終成績 {stage}。選手候補リロール券を{n}枚受け取りました。',
+  openTitle: '{cup}の受付が始まりました',
+  openBody: '先着{n}チームです。ホームのカップバナーから申し込めます。',
   rewardBodyBoost:
     '最終成績 {stage}。選手候補リロール券を{n}枚、プレミアムスカウト券を{s}枚、ポテンシャル強化券を{b}枚受け取りました。',
   rewardBodyScout:

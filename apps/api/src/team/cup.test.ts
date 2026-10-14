@@ -2,6 +2,7 @@ import { IDEMPOTENCY_KEY_HEADER, REWARD_UNCAPPED } from '@offside/contracts';
 import {
   CUP_REWARDS,
   cupReward,
+  cupFinalAt,
   cupGroupCount,
   cupRoundsOf,
   currentCup,
@@ -34,6 +35,8 @@ import {
   lineupLocked,
   runCup,
 } from './cup.js';
+import { announceCupOpen, cupStalls, nextCupFor, scheduleNextCup } from './cupAutopilot.js';
+import { applySeasonSchedule, closeSeasonSchedule } from '@offside/contracts/service-seasons';
 import { drawGroups, firstKoPairs, groupFixtures, groupStandings } from './cupRules.js';
 import { buildLineup, penaltyShootout } from './sim.js';
 
@@ -226,6 +229,44 @@ describe('T-11-145 컵 규칙', () => {
   });
 });
 
+describe('T-11-250 다음 회차 일정', () => {
+  // 운영 제1회 결승(10/16 21:00 KST) 뒤 손으로 연 제2회(s1-2)와 같은 일정이 나와야 한다.
+  const PREV = {
+    ...CUP128,
+    id: 's1-1',
+    edition: 1,
+    rounds: [...CUP128.rounds.slice(0, 8), '2026-10-16T12:00:00.000Z'],
+  };
+  afterEach(() => void applySeasonSchedule([]));
+
+  it('결승 10분 뒤 접수, 사흘째 자정 마감, 정원은 앞 대회와 같다', () => {
+    expect(nextCupFor(PREV)).toMatchObject({
+      id: 's1-2',
+      season: 1,
+      edition: 2,
+      capacity: 128,
+      opensAt: '2026-10-16T12:10:00.000Z',
+      closesAt: '2026-10-18T15:00:00.000Z',
+      drawAt: '2026-10-19T03:00:00.000Z',
+    });
+    const rounds = nextCupFor(PREV)!.rounds;
+    expect([rounds.length, rounds[0], rounds.at(-1)]).toEqual([
+      9,
+      '2026-10-19T12:00:00.000Z',
+      '2026-10-27T12:00:00.000Z',
+    ]);
+  });
+
+  it('시즌이 대회 중에 끝나면 다음 시즌 개막일 21:10으로 미룬다', () => {
+    applySeasonSchedule(closeSeasonSchedule(1, '2026-10-22T15:00:00.000Z', false));
+    expect(nextCupFor(PREV)).toMatchObject({
+      id: 's2-2',
+      season: 2,
+      opensAt: '2026-10-23T12:10:00.000Z',
+    });
+  });
+});
+
 describe('T-11-145 컵 진행(cron)', () => {
   let ctx: TestD1;
   beforeEach(async () => {
@@ -313,6 +354,64 @@ describe('T-11-145 컵 진행(cron)', () => {
     ]);
     expect([want('rerolls'), want('scouts'), want('boosts')]).toEqual([211, 11, 7]);
   }, 120_000);
+
+  it('T-11-250 결승이 끝나면 다음 회차를 만들고 접수 알림을 한 번 보낸다', async () => {
+    const teams = await enter(8);
+    await addAppPushDevice(ctx, teams[0]!.profileId);
+    const final = cupFinalAt(CUP);
+    // 결승 전에는 만들지 않는다. 밀린 단계도 없다.
+    expect(await scheduleNextCup(ctx.db, CUP.drawAt, [CUP])).toBeNull();
+    expect(await cupStalls(ctx.db, CUP.opensAt, [CUP])).toEqual([]);
+    // 추첨이 30분 넘게 안 되면 경보 대상.
+    const lateDraw = new Date(Date.parse(CUP.drawAt) + 31 * 60_000).toISOString();
+    expect((await cupStalls(ctx.db, lateDraw, [CUP])).map((s) => s.key)).toEqual(['draw:s1-1']);
+    await runAll();
+    const after = new Date(Date.parse(final) + 5 * 60_000).toISOString();
+    const next = await scheduleNextCup(ctx.db, after, [CUP]);
+    expect(next).toMatchObject({
+      id: 's1-2',
+      season: 1,
+      edition: 2,
+      capacity: CUP.capacity,
+      opensAt: new Date(Date.parse(final) + 10 * 60_000).toISOString(),
+    });
+    expect(next!.rounds).toHaveLength(cupRoundsOf(next!).length);
+    // 두 번째 cron·관리자가 이미 만든 경우는 그대로 둔다.
+    expect(await scheduleNextCup(ctx.db, after, [CUP])).toBeNull();
+    // 다음 회차가 없으면 경보, 있으면 조용하다.
+    const late = new Date(Date.parse(final) + 31 * 60_000).toISOString();
+    expect((await cupStalls(ctx.db, late, [CUP])).map((s) => s.key)).toEqual(['next:s1-1']);
+    expect(await cupStalls(ctx.db, late, [CUP, next!])).toEqual([]);
+    // 접수가 열리면 그 시즌 팀 구단주에게 한 번만 알린다(앱 기기가 있으면 푸시 대기열도).
+    expect(await announceCupOpen(ctx.db, after, [CUP, next!])).toEqual([]);
+    const open = new Date(Date.parse(next!.opensAt) + 60_000).toISOString();
+    expect(await announceCupOpen(ctx.db, open, [CUP, next!])).toEqual(['s1-2:8']);
+    expect(await announceCupOpen(ctx.db, open, [CUP, next!])).toEqual([]);
+    const sent = await ctx.db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.sourceKey, 'cup-open:s1-2'));
+    expect(sent).toHaveLength(8);
+    const queued = await ctx.env.DB.prepare(
+      `SELECT count(*) AS n FROM push_deliveries q JOIN notifications n ON n.id = q.notification_id
+       WHERE n.source_key = 'cup-open:s1-2' AND q.profile_id = ?`,
+    )
+      .bind(teams[0]!.profileId)
+      .first<{ n: number }>();
+    expect(queued?.n).toBe(1);
+    expect(cupText(sent[0]!.title, 'en')).toMatch(/registration is open$/);
+    expect(cupText(sent[0]!.body, 'ja')).toContain('64');
+  }, 60_000);
+
+  it('T-11-250 운영이 끄면 다음 회차를 만들지 않는다', async () => {
+    await enter(4);
+    await runAll();
+    await ctx.env.DB.prepare(
+      "INSERT INTO app_meta (key, value) VALUES ('cup:autopilot', 'off')",
+    ).run();
+    const after = new Date(Date.parse(cupFinalAt(CUP)) + 5 * 60_000).toISOString();
+    expect(await scheduleNextCup(ctx.db, after, [CUP])).toBeNull();
+  });
 
   it.each([64, 40, 20, 5])(
     '%i팀: 끝까지 치르고 모두 한 번씩 보상받는다',

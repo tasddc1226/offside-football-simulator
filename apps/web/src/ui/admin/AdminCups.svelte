@@ -62,6 +62,7 @@
 <div class="stack" style="gap:12px" data-admin="cups">
   {#if status === 'ready'}<AdminCupPredictions cups={items} />{/if}
   <h2 style="margin:0">새 대회 열기</h2>
+  <p class="muted fs-sm" style="margin:0" data-cup-autopilot>결승이 끝나면 서버가 다음 회차를 자동으로 만들어요(결승 10분 뒤 접수, 사흘째 자정 마감, 정원은 앞 대회와 같음). 접수가 열리면 참가할 수 있는 구단주에게 알림이 가고, 추첨·경기가 30분 넘게 밀리면 운영 슬랙에 경보가 와요. 자동 생성을 멈추려면 app_meta의 cup:autopilot을 off로 둬요. 일정을 바꾸려면 아래에서 직접 열어요.</p>
   <div class="cup-form">
     <label>접수 시작일(KST)<input type="date" bind:value={opensOn} data-cup-field="opensOn" /></label>
     <label>접수 시작 시각(KST, 비우면 0시)<input type="time" bind:value={opensTime} data-cup-field="opensTime" /></label>

@@ -21,6 +21,7 @@ import { consumeCareerReminders, queueCareerReminders } from './push/careerRemin
 import { consumeCupResults, publishCupResults } from './push/cupResult.js';
 import { consumeCommunityPush } from './push/communityQueue.js';
 import { runCup } from './team/cup.js';
+import { runCupAutopilot } from './team/cupAutopilot.js';
 import { purgeEdgeOrigin } from './edgeCache.js';
 import { EDGE } from './edgeKeys.js';
 import { runSeasonClose } from './team/seasonClose.js';
@@ -95,6 +96,8 @@ export default {
             JSON.stringify({ level: 'error', job: 'cup', error: String(e).slice(0, 500) }),
           ),
         );
+      // T-11-250 다음 회차 만들기 → 접수 시작 알림 → 밀린 단계 슬랙 경보(15분마다).
+      await runCupAutopilot(env, controller.scheduledTime).catch(logged('cup-autopilot'));
       // A cron round can commit before a later step fails; purge even on a partial run.
       if (env.PUBLIC_API_ORIGIN)
         await purgeEdgeOrigin(env.PUBLIC_API_ORIGIN, [EDGE.cupHome]).catch((e) =>
