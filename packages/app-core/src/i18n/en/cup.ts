@@ -51,6 +51,8 @@ export const cup: Translation<CupMsgs> = {
   predictionTitle: 'Match predictions',
   predictionIntro:
     'Predict any match, even if you did not enter the cup. Each correct prediction earns 1 candidate reroll ticket.',
+  predictionCap: (p: { n: number }) =>
+    `You can earn up to ${p.n} reroll tickets from predictions per cup.`,
   predictionHome: 'Home win',
   predictionDraw: 'Draw',
   predictionAway: 'Away win',
@@ -162,6 +164,7 @@ export const cup: Translation<CupMsgs> = {
   rewardItem: 'Reward',
   rewardReroll: (p) => `${plural(p.n, 'candidate reroll ticket')}`,
   rewardScout: (p) => `${plural(p.n, 'premium scout ticket')}`,
+  rewardBoost: (p) => `${plural(p.n, 'potential boost ticket')}`,
   rewardTrophy: 'Trophy and title',
   rewardNote:
     'A reroll ticket redraws the 3 candidates when you create a new player. You get it as soon as you are knocked out.',

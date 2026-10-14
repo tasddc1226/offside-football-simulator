@@ -24,7 +24,7 @@ import {
   teamOvr,
   achGradeOf,
 } from './owner-team.js';
-import { cupScouts, scoutPityView } from './cup.js';
+import { cupPredictionCap, cupReward, cupScouts, scoutPityView } from './cup.js';
 import {
   ManagerNameSchema,
   PutOwnerTeamBodySchema,
@@ -221,11 +221,12 @@ describe('T-11-244 프리미엄 스카우트 천장 · 컵 스카우트권', () 
     });
   });
 
-  it('제1회 컵은 스카우트권이 없고 제2회부터 4강 이상만 받는다', () => {
-    expect(cupScouts(1, 'champion')).toBe(0);
-    expect([cupScouts(2, 'champion'), cupScouts(2, 'runnerup'), cupScouts(2, 'sf')]).toEqual([
-      3, 2, 1,
-    ]);
-    expect(cupScouts(2, 'qf')).toBe(0);
+  it('제1회 컵은 리롤권만, 제2회부터 8강 이상 스카우트권·4강 이상 강화권', () => {
+    expect(cupReward(1, 'champion')).toEqual({ rerolls: 10, scouts: 0, boosts: 0, trophy: true });
+    expect(cupReward(2, 'champion')).toEqual({ rerolls: 15, scouts: 3, boosts: 3, trophy: true });
+    expect([cupScouts(2, 'runnerup'), cupScouts(2, 'sf'), cupScouts(2, 'qf')]).toEqual([2, 1, 1]);
+    expect(cupReward(2, 'qf')).toMatchObject({ boosts: 0, trophy: false });
+    expect(cupScouts(2, 'r16')).toBe(0);
+    expect([cupPredictionCap(1), cupPredictionCap(2)]).toEqual([null, 10]);
   });
 });

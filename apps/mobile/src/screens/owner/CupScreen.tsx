@@ -24,7 +24,7 @@ import { cupText as L } from '@offside/app-core/i18n/ko/cup';
 import { cupRewardText } from '@offside/app-core/cupReward';
 import { cupAppText as A } from '@offside/app-core/i18n/ko/cupApp';
 import { teamMatchText as TM } from '@offside/app-core/i18n/ko/teamMatch';
-import { CUP_KO_ROUNDS, CUP_STAGES, type CupRound } from '@offside/contracts/cup';
+import { CUP_KO_ROUNDS, CUP_STAGES, cupPredictionCap, type CupRound } from '@offside/contracts/cup';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLogo } from '../../components/TeamLogo';
 import { refreshAccount } from '../../game/host';
@@ -691,6 +691,7 @@ function CupBody({
       <PredictionIntro
         prediction={prediction}
         retry={() => void controller.load(data.cup.id, linked)}
+        cap={cupPredictionCap(data.cup.edition)}
       />
       {early && data.teams.length ? (
         <Entrants teams={data.teams} mineId={mineId} onteam={openTeam} />

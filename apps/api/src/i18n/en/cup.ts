@@ -73,6 +73,8 @@ export const CUP_EN: Record<CupTextKey, string> = {
   earlyTitle: '{cup} is full, so the schedule moved up',
   earlyBody: 'Group draw {draw}, first match {first} (KST).',
   rewardBody: 'Final result: {stage}. You received {n} player reroll ticket(s).',
+  rewardBodyBoost:
+    'Final result: {stage}. You received {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s).',
   rewardBodyScout:
     'Final result: {stage}. You received {n} player reroll ticket(s) and {s} premium scout ticket(s).',
 };

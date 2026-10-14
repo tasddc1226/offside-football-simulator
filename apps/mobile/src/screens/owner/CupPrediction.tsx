@@ -47,15 +47,23 @@ export function usePredictions(
 export function PredictionIntro({
   prediction,
   retry,
+  cap,
 }: {
   prediction: CupPredictionContext;
   retry: () => void;
+  /** T-11-249 한 대회 예측 보상 상한(제1회는 null). */
+  cap: number | null;
 }) {
   const s = prediction.state;
   return (
     <Card gap={8} testID="cup-prediction-intro">
       <Txt v="h2">{L.predictionTitle}</Txt>
-      {[L.predictionIntro, L.predictionSaved, L.predictionKnockout].map((text) => (
+      {[
+        L.predictionIntro,
+        ...(cap ? [L.predictionCap({ n: cap })] : []),
+        L.predictionSaved,
+        L.predictionKnockout,
+      ].map((text) => (
         <View key={text} style={{ flexDirection: 'row', gap: 8 }}>
           <Txt v="sm" tone="muted">
             ·

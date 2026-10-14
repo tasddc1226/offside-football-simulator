@@ -41,7 +41,7 @@ describe('cup predictions', () => {
       body: { pick: choice },
     });
   const settle = (id: string) =>
-    ctx.env.DB.batch(predictionSettlementStatements(ctx.env.DB, id, AT));
+    ctx.env.DB.batch(predictionSettlementStatements(ctx.env.DB, id, AT, null));
   const qty = async () => (await ctx.db.select().from(ownerItems))[0]?.qty ?? 0;
 
   it('allows non-entrants, upserts one pick, returns aggregate counts without account data or session reads', async () => {
