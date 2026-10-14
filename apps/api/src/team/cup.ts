@@ -489,6 +489,9 @@ export async function advanceRound(
   if (stmts.length) await d1.batch(stmts);
 }
 
+/** cron 한 번에 치르는 경기 수 상한. 128팀 조별 라운드(64경기)는 cron 4번(15분)에 나눠 치른다. */
+export const CUP_MATCHES_PER_TICK = 16;
+
 /** cron 한 번: 대회마다 추첨 → 시각이 된 경기 → 끝난 라운드 정리. */
 export async function runCup(db: Db, now: string, cups?: readonly CupDef[]) {
   const log: Record<string, unknown>[] = [];
@@ -512,14 +515,11 @@ export async function runCup(db: Db, now: string, cups?: readonly CupDef[]) {
       const entryMap = new Map(entries.map((e) => [e.teamId, e]));
       if (due.length) {
         const round = due[0]!.round;
-        for (const m of due.filter((x) => x.round === round))
-          await playCupMatch(db, cup, m, entryMap, now);
-        log.push({
-          cup: cup.id,
-          step: 'play',
-          round,
-          n: due.filter((x) => x.round === round).length,
-        });
+        // 한 라운드가 CUP_MATCHES_PER_TICK경기를 넘으면 나머지는 다음 cron(5분 뒤)이 이어서 치른다. 명단 잠금·승부예측
+        // 마감은 경기 시각(at) 기준이라 늦게 치른 경기도 같은 조건이다.
+        const batch = due.filter((x) => x.round === round).slice(0, CUP_MATCHES_PER_TICK);
+        for (const m of batch) await playCupMatch(db, cup, m, entryMap, now);
+        log.push({ cup: cup.id, step: 'play', round, n: batch.length });
         // T-11-246 128팀이면 조별 3차전(64경기)과 64강 만들기·조별 탈락 보상을 한 번에 하면 D1 쿼리 상한(호출당 1000)에
         // 가깝다. cron 한 번에 라운드 하나만 치르고, 다음 라운드 만들기·보상은 다음 cron(5분 뒤)이 한다.
         break;

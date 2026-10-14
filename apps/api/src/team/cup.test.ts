@@ -34,6 +34,7 @@ import {
   cupStateOf,
   lineupLocked,
   runCup,
+  CUP_MATCHES_PER_TICK,
 } from './cup.js';
 import { announceCupOpen, cupStalls, nextCupFor, scheduleNextCup } from './cupAutopilot.js';
 import { applySeasonSchedule, closeSeasonSchedule } from '@offside/contracts/service-seasons';
@@ -317,17 +318,20 @@ describe('T-11-145 컵 진행(cron)', () => {
     return out;
   }
 
-  // cron은 한 번에 라운드 하나를 치르고 다음 라운드 만들기는 다음 cron이 한다 — 시각마다 두 번 돌린다.
+  // cron은 한 번에 라운드 하나(최대 CUP_MATCHES_PER_TICK경기)를 치르고 다음 라운드 만들기는 다음 cron이 한다 — 시각마다
+  // 할 일이 없을 때까지 돌린다.
   async function runAll(cup = CUP) {
     await runCup(ctx.db, cup.drawAt, [cup]);
-    for (const at of cup.rounds) {
-      await runCup(ctx.db, at, [cup]);
-      await runCup(ctx.db, at, [cup]);
-    }
+    for (const at of cup.rounds) while (await runCup(ctx.db, at, [cup]));
   }
 
   it('T-11-246 128팀: 32개 조 → 64강부터 결승까지 치른다', async () => {
     await enter(128, 11, CUP128);
+    // 조별 1차전 64경기는 cron 한 번에 CUP_MATCHES_PER_TICK경기씩 나눠 치른다.
+    await runCup(ctx.db, CUP128.drawAt, [CUP128]);
+    expect(await runCup(ctx.db, CUP128.rounds[0]!, [CUP128])).toEqual([
+      { cup: CUP128.id, step: 'play', round: 'g1', n: CUP_MATCHES_PER_TICK },
+    ]);
     await runAll(CUP128);
     const [state] = await cupStateOf(ctx.db, CUP128.id);
     expect(state).toMatchObject({ groups: 32 });
