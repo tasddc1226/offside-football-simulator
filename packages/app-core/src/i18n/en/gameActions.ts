@@ -12,6 +12,7 @@ export const gameActions: Translation<GameActionsMsgs> = {
   compLeagueGame: (p) => `League phase, game ${p.n} · ${p.res}`,
   compThrough: 'Through',
   compOut: 'Out',
+  compVs: (p) => `vs ${p.name}`,
   natNotInSquad: 'Not in squad',
   natNoMedal: 'No medal',
   natTourLine: (p) =>

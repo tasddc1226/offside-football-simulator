@@ -43,6 +43,8 @@ import { offsetToRoll, tapOffset, timingNote, zoneLabel, zoneWidth } from '@offs
 import { isHiddenEvent } from '@offside/game/dexGroups';
 import { scoreLine, type NatTourResult } from '@offside/game/national';
 import type { CompGame } from '@offside/game/comps';
+import { clubById } from '@offside/game/clubs';
+import { bracketLine } from './bracket.js';
 import { isMilOption } from '@offside/game/military';
 import {
   endSeason,
@@ -123,6 +125,8 @@ function compGameViews(games: CompGame[]): NatGameView[] {
       : m.leg
         ? L.compLeg({ stage, leg: m.leg })
         : stage;
+    // T-11-261 대륙 대회 녹아웃은 상대 구단을 안다.
+    if (m.opp) line += ` · ${L.compVs({ name: tn(clubById(m.opp)?.name ?? m.opp) })}`;
     if (m.won !== undefined)
       line += ` · ${m.stage === '결승' ? tn(m.won ? '우승' : '준우승') : m.won ? L.compThrough : L.compOut}`; // i18n-ignore 저장값(그릴 때 tn)
     return {
@@ -512,6 +516,11 @@ export function createGameActions(host: GameHost) {
         comps: (rec.comps || []).map((c) =>
           L.compLine({ name: tn(c.name), stage: tn(c.stage), apps: c.apps, g: c.g, a: c.a }),
         ),
+        // T-11-261 endSeason은 s.season을 비우지 않으므로 녹아웃 경로는 아직 여기 있다(새 시즌은 시장에서 팀을 고른 뒤).
+        compPaths: (s.season.comps ?? []).flatMap((c) => {
+          const line = bracketLine(c);
+          return line && c.key ? [{ key: c.key, name: tn(c.name), line }] : [];
+        }),
         tours: tours.map(tourView),
         gala,
         miles: miles.map(tn),

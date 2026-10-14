@@ -22,6 +22,21 @@ export interface LogEntry {
   kind: string;
 }
 
+/** T-11-261 대륙 대회 녹아웃에서 내 팀이 만난(만날) 상대 한 승부. stage는 저장값 한국어('16강'), opp는 구단 id. */
+export interface CompTie {
+  stage: string;
+  opp: string;
+  legs: number;
+  /** 치른 승부에만 — 다음 단계로 갔는지(결승이면 우승). */
+  won?: boolean;
+}
+/** T-11-261 대륙 대회 녹아웃 대진 기록(내 팀 경로). 리그 페이즈를 통과할 때 만들고, 치른 승부를 순서대로 쌓는다. */
+export interface CompBracket {
+  path: CompTie[];
+  /** 추첨은 됐지만 아직 치르지 않은 다음 승부. 탈락·우승 뒤엔 없다. */
+  next?: CompTie | undefined;
+}
+
 export interface SeasonComp {
   type: 'cup' | 'cont' | 'super';
   key?: string;
@@ -33,6 +48,8 @@ export interface SeasonComp {
   a: number;
   pts?: number;
   played?: number;
+  /** T-11-261 대륙 대회 녹아웃 대진. 옛 세이브·리그 페이즈 중·컵에는 없다. */
+  bracket?: CompBracket | undefined;
 }
 
 export interface Season {

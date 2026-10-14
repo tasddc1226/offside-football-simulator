@@ -15,6 +15,8 @@ const ko = {
   compLeagueGame: (p: { n: number; res: string }) => `리그 페이즈 ${p.n}경기 · ${p.res}`,
   compThrough: '통과',
   compOut: '탈락',
+  /** T-11-261 녹아웃 상대 구단 */
+  compVs: (p: { name: string }) => `vs ${p.name}`,
   natNotInSquad: '명단 외',
   natNoMedal: '메달 없음',
   natTourLine: (p: {

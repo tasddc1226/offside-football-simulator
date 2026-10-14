@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { visibleCareerLog } from '@offside/app-core/potential-view';
 import { gameSeasonText as L } from '@offside/app-core/i18n/ko/gameSeason';
+import { bracketView, type BracketRow } from '@offside/app-core/bracket';
 import { PHASES, LAST_PHASE } from '@offside/game/data';
 import {
   roundRange,
@@ -127,6 +128,75 @@ function StoryRow({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+    </View>
+  );
+}
+/** T-11-261 대륙 대회 녹아웃 대진 한 줄(웹 .bracket-row): 단계 · vs 상대 · 차전 · 결과 알약. */
+function BracketRows({
+  rows,
+  note,
+  label,
+}: {
+  rows: BracketRow[];
+  note: string | null;
+  label: string;
+}) {
+  const c = useColors();
+  const tone = (r: BracketRow) =>
+    r.state === 'won' || r.state === 'champion'
+      ? c.good
+      : r.state === 'lost' || r.state === 'runnerUp'
+        ? c.bad
+        : c.accent;
+  return (
+    <View
+      accessibilityLabel={label}
+      testID="bracket"
+      style={{
+        marginBottom: 6,
+        paddingLeft: 10,
+        borderLeftWidth: 2,
+        borderLeftColor: c.line,
+        gap: 4,
+      }}
+    >
+      {rows.map((r, i) => (
+        <View
+          key={i}
+          testID={`bracket-row-${r.state}`}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+        >
+          <Txt v="sm" style={{ fontWeight: '700' }}>
+            {r.stage}
+          </Txt>
+          <Txt v="sm" style={{ flex: 1 }} numberOfLines={1}>
+            {r.vs}
+          </Txt>
+          <Txt v="sm" tone="muted" style={{ fontSize: rem(0.75) }}>
+            {r.legs}
+          </Txt>
+          <Txt
+            v="sm"
+            style={{
+              fontSize: rem(0.75),
+              fontWeight: '700',
+              color: tone(r),
+              borderWidth: 1,
+              borderColor: tone(r),
+              borderRadius: 999,
+              paddingHorizontal: 7,
+              paddingVertical: 1,
+            }}
+          >
+            {r.result}
+          </Txt>
+        </View>
+      ))}
+      {note ? (
+        <Txt v="sm" tone="muted" testID="bracket-note">
+          {note}
+        </Txt>
+      ) : null}
     </View>
   );
 }
@@ -668,17 +738,29 @@ export function SeasonTab({ s }: { s: GameState }) {
           {comps.length ? (
             <View>
               <SubTitle>{L.compsTitle}</SubTitle>
-              {comps.map((cp) => (
-                <StoryRow key={cp.name}>
-                  <Txt style={{ flex: 1, fontSize: rem(0.875), fontWeight: '700' }}>
-                    {tn(cp.name)}
-                  </Txt>
-                  <RowMuted>
-                    {`${cp.stage ? tn(cp.stage) : cp.type === 'super' ? L.compSuper : L.compStart}${cp.alive && cp.stage ? ` · ${L.compAlive}` : ''}`}
-                  </RowMuted>
-                  <RowMuted>{L.compLine({ apps: cp.apps, g: cp.g })}</RowMuted>
-                </StoryRow>
-              ))}
+              {comps.map((cp) => {
+                const bracket = bracketView(cp);
+                return (
+                  <View key={cp.name}>
+                    <StoryRow>
+                      <Txt style={{ flex: 1, fontSize: rem(0.875), fontWeight: '700' }}>
+                        {tn(cp.name)}
+                      </Txt>
+                      <RowMuted>
+                        {`${cp.stage ? tn(cp.stage) : cp.type === 'super' ? L.compSuper : L.compStart}${cp.alive && cp.stage ? ` · ${L.compAlive}` : ''}`}
+                      </RowMuted>
+                      <RowMuted>{L.compLine({ apps: cp.apps, g: cp.g })}</RowMuted>
+                    </StoryRow>
+                    {bracket ? (
+                      <BracketRows
+                        rows={bracket.rows}
+                        note={bracket.note}
+                        label={L.bracketAria({ name: tn(cp.name) })}
+                      />
+                    ) : null}
+                  </View>
+                );
+              })}
             </View>
           ) : null}
         </Card>
