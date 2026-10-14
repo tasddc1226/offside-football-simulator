@@ -20,7 +20,12 @@ export function seasonAction(s: GameState): SeasonAction {
   if (s.pending) {
     return {
       kind: 'pending',
-      label: s.pending.type === 'event' ? L.actEvent : L.actSeasonEnd,
+      label:
+        s.pending.type === 'event'
+          ? L.actEvent
+          : s.pending.type === 'market' && !s.pending.res
+            ? L.actMarket
+            : L.actSeasonEnd,
     };
   }
   const phase = Math.min(s.phase, LAST_PHASE);

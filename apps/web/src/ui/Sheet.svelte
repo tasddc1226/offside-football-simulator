@@ -5,6 +5,7 @@
   // 이 컴포넌트는 #modal에 마운트되어(main.ts) 그 자리에 `.sheet#sheet`를 다시 그리고, 부모
   // #modal의 hidden 속성과 배경 클릭-닫기 동작을 이펙트로 관리한다(원본 ui.ts의
   // `$modal.addEventListener` 포트).
+  import { canDismissSheet } from '@offside/app-core/sheet-controller';
   import { fly } from 'svelte/transition';
   import { dismissSheet, registerSheetEl, sheetState } from './sheetState.svelte.js';
   import SheetBody from './sheets/SheetBody.svelte';
@@ -24,9 +25,9 @@
   let dragY = $state(0);
   let dragging = $state(false);
 
-  // 이 시트가 "선택 필수"(이벤트·이적시장 등)가 아니라 끌어서/배경 클릭으로 닫을 수 있는지 여부.
+  // 이벤트·계약 확정은 유지하고, 저장된 이적시장 목록은 잠시 닫을 수 있다.
   // 배경 클릭 닫기 조건(Sheet.svelte 원래 로직)과 동일한 기준을 스와이프-다운에도 그대로 쓴다.
-  const dismissible = $derived(!sheetState.busy && !(appState.G && appState.G.pending));
+  const dismissible = $derived(canDismissSheet(sheetState, appState.G?.pending));
 
   $effect(() => {
     registerSheetEl(sheetEl);
@@ -69,7 +70,7 @@
     return () => modal.removeEventListener('click', onClick);
   });
 
-  // 스와이프-다운으로 닫기: 필수 선택지가 있는 시트(이벤트/이적시장 등)에서는 동작하지 않는다
+  // 스와이프-다운으로 닫기: 이벤트·계약 확정 등 필수 선택 시트에서는 동작하지 않는다
   // (dismissible === false). 드래그 핸들이나 시트 상단 여백에서 시작한 터치만 처리해, 내부
   // 스크롤 영역(예: 타임라인 리스트)의 제스처와 충돌하지 않게 한다.
   let startY = 0;
