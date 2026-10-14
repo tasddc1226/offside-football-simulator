@@ -33,6 +33,12 @@ export function paintEquipment(
     for (let y = 0; y < H; y++)
       for (let x = 0; x < W; x++) if (SHIRT.includes(src[y]![x]!)) shirt.push({ x, y });
     const [fx, fy] = pose?.at ?? [0, 0];
+    // These authored poses put a forearm against the ear/scalp. Skin connectivity
+    // alone merges that arm into the face; keep the limb on its own layer.
+    const foregroundArm = (x: number, y: number) =>
+      (pose?.id === 'waveLow' && x <= fx + 12 && y >= fy + 17) ||
+      (pose?.id === 'waveHigh' && x <= fx + 11 && y >= fy + 11) ||
+      (pose?.id === 'lift' && (x <= fx + 16 || x >= fx + 33) && y < fy + 27);
     // Face skin is a separate island inside its outline. This also protects the
     // face when legacy poses place the hands over the standing-head silhouette.
     const face = new Set<number>();
@@ -57,6 +63,7 @@ export function paintEquipment(
         x >= fx + 44 ||
         y < fy ||
         y >= fy + 34 ||
+        foregroundArm(x, y) ||
         !'sSLN'.includes(src[y]?.[x] ?? '.')
       )
         continue;

@@ -1,0 +1,23 @@
+{
+  "id": "t-11-243-avatar-refinement",
+  "title": "선수 헤어와 키퍼 용품 표시 개선",
+  "items": [
+    "추가된 머리 모양 6종은 기존 얼굴을 유지하고 헤어만 바뀌어요",
+    "머리 윤곽을 다듬고, 손을 얼굴 가까이 올리는 동작에서도 키퍼 장갑과 긴 소매가 보여요"
+  ],
+  "en": {
+    "title": "Refined hairstyles and goalkeeper equipment",
+    "items": [
+      "The six additional hairstyles keep the existing face and change only the hair.",
+      "Hair outlines are cleaner, and goalkeeper gloves and long sleeves remain visible when a hand is raised beside the face."
+    ]
+  },
+  "ja": {
+    "title": "髪型とキーパー用品の表示を改善",
+    "items": [
+      "追加された6種類の髪型は、元の顔を保ったまま髪だけが変わります。",
+      "髪の輪郭を整え、顔の近くに手を上げる動きでもグローブと長袖が表示されます。"
+    ]
+  },
+  "availability": "web-app"
+}

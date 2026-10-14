@@ -99,4 +99,29 @@ describe('goalkeeper cosmetic equipment', () => {
       }
     }
   });
+
+  it('keeps the glove and long sleeve on the raised arm beside the face', async () => {
+    for (const [index, style] of LOOK_STYLES.entries()) {
+      const sp = cardAvatarSpec({ careerId: 'keeper', look: `y${index}s1h2` });
+      const poses = await loadMotionPoses(style);
+      const {
+        rows,
+        face: [fx, fy],
+      } = poses.waveLow;
+      const frame = { ms: 100, pose: 'waveLow' } as const;
+      const plain = motionFrame(sp, frame, poses);
+      const gloves = motionFrame({ ...sp, gloves: 1 }, frame, poses);
+      const sleeves = motionFrame({ ...sp, keeperKit: 1 }, frame, poses);
+      let glovePixels = 0,
+        sleevePixels = 0;
+      for (let y = fy + 17; y < fy + 34; y++)
+        for (let x = 0; x <= fx + 12; x++)
+          if ('sSLNuUiI'.includes(rows[y]![x]!)) {
+            if (gloves[y]![x] !== plain[y]![x]) glovePixels++;
+            if (sleeves[y]![x] !== plain[y]![x]) sleevePixels++;
+          }
+      expect(glovePixels, `${style}/raised glove`).toBeGreaterThan(0);
+      expect(sleevePixels, `${style}/raised sleeve`).toBeGreaterThan(0);
+    }
+  });
 });

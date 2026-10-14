@@ -1,5 +1,5 @@
 // T-11-243: approved raster heads -> recolorable material maps. Run from the repository root.
-// Keep the existing canonical body and 17 pose timings/anchors; replace only the head artwork.
+// Keep the existing canonical body and 17 pose timings/anchors; preserve the canonical face and replace only scalp/hair artwork.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -66,9 +66,9 @@ for (const style of styles) {
     }
   const eyeX = (Math.min(...white.map((p) => p[0])) + Math.max(...white.map((p) => p[0]))) / 2;
   const eyeY = (Math.min(...white.map((p) => p[1])) + Math.max(...white.map((p) => p[1]))) / 2;
-  // Both whites span 14 canonical cells, with their center at (27, 21).
+  // Align hair to the existing face: eye whites span 11 cells centered at x=25.5.
   const scale =
-    14 / (Math.max(...white.map((p) => p[0])) - Math.min(...white.map((p) => p[0])) + 1);
+    11 / (Math.max(...white.map((p) => p[0])) - Math.min(...white.map((p) => p[0])) + 1);
   let sourceTop = info.height;
   for (let y = 0; y < neck; y++)
     for (let x = 0; x < info.width; x++)
@@ -77,7 +77,7 @@ for (const style of styles) {
   const head = Array.from({ length: 36 }, () => Array(48).fill('.'));
   for (let y = 0; y < 36; y++)
     for (let x = 0; x < 48; x++) {
-      const sx = Math.round((x - 27) / scale + eyeX);
+      const sx = Math.round((x - 25.5) / scale + eyeX);
       const sy = Math.round(
         y < 17 ? sourceTop + ((y - 2) * (browY - sourceTop)) / 15 : (y - 21) / scale + eyeY,
       );
@@ -106,17 +106,82 @@ for (const style of styles) {
       else token = v > 0.28 ? 'j' : v > 0.18 ? 'h' : v > 0.11 ? 'H' : 'J';
       head[y][x] = token;
     }
-  // No scalp hair materials in the fully bald variant. Brows/eyes are canonical dark facial marks.
-  if (style === 'bald')
-    for (let y = 0; y < 18; y++)
+  // An authored, smooth scalp replaces the old hair silhouette. Everything from
+  // the eyebrows through ears/chin remains the exact canonical short-style face.
+  const scalp = [
+    [21, 27],
+    [18, 30],
+    [16, 32],
+    [15, 33],
+    [14, 34],
+    [13, 34],
+    [12, 34],
+    [12, 34],
+    [11, 34],
+    [11, 34],
+    [11, 34],
+    [11, 34],
+    [11, 34],
+    [11, 34],
+  ];
+  const rows = body.map((r, y) => [...r].map((c) => (y < 16 ? '.' : c)));
+  scalp.forEach(([left, right], i) => {
+    const y = i + 2;
+    for (let x = left; x <= right; x++)
+      rows[y][x] =
+        x === left || x === right || y === 2 || x < scalp[i - 1]?.[0] || x > scalp[i - 1]?.[1]
+          ? 'O'
+          : x < left + 3
+            ? 'S'
+            : 'L';
+  });
+  if (style === 'shaved') {
+    for (let y = 4; y < 16; y++)
+      for (let x = 12; x < 22; x++)
+        if ('sSLN'.includes(rows[y][x]) && x < 18 + Math.floor((16 - y) / 3)) rows[y][x] = 'r';
+  }
+  // Ignore raster facial marks and skin. Source art contributes only hair and
+  // its adjacent outline, never a second set of eyes, ears or a different chin.
+  const hair = (c) => 'hHjJfF'.includes(c);
+  const protectedFace = (x, y) => y >= 16 && y < 30 && body[y][x] !== '.';
+  const hairCells = new Set();
+  if (!['bald', 'shaved'].includes(style))
+    head.forEach((r, y) =>
+      r.forEach((c, x) => {
+        if (protectedFace(x, y)) return;
+        const nearHair = [-1, 0, 1].some((dy) =>
+          [-1, 0, 1].some((dx) => hair(head[y + dy]?.[x + dx] ?? '.')),
+        );
+        if (hair(c) || (c === 'O' && nearHair)) {
+          rows[y][x] = c;
+          hairCells.add(y * 48 + x);
+        }
+      }),
+    );
+  // Dense hairstyles cover the scalp; source antialiasing must not leave tiny
+  // skin-colored pinholes or transparent chips along the outer contour.
+  if (['dread', 'ponytail', 'mullet'].includes(style))
+    for (let y = 2; y < 12; y++)
       for (let x = 0; x < 48; x++)
-        if ('hHjJfFr'.includes(head[y][x])) head[y][x] = y < 16 ? 'S' : 'O';
-  const rows = body.map((r, y) => [...r].map((c) => (y < 30 ? '.' : c)));
-  head.forEach((r, y) =>
-    r.forEach((c, x) => {
-      if (c !== '.') rows[y][x] = c;
-    }),
-  );
+        if ('sSLN'.includes(rows[y][x])) rows[y][x] = style === 'mullet' ? 'h' : 'H';
+  const beforeContour = rows.map((r) => [...r]);
+  for (let y = 2; y < 30; y++)
+    for (let x = 1; x < 47; x++) {
+      if (protectedFace(x, y)) continue;
+      const adjacent = [
+        [0, -1],
+        [0, 1],
+        [-1, 0],
+        [1, 0],
+      ].map(([dx, dy]) => beforeContour[y + dy]?.[x + dx] ?? '.');
+      if (rows[y][x] === '.' && adjacent.filter((c) => c !== '.').length >= 3) {
+        rows[y][x] = 'O';
+        hairCells.add(y * 48 + x);
+      } else if (rows[y][x] !== '.' && adjacent.includes('.')) rows[y][x] = 'O';
+    }
+  const composedHead = rows
+    .slice(0, 36)
+    .map((r, y) => r.map((c, x) => (y < 30 || hairCells.has(y * 48 + x) ? c : '.')));
   sheets[style] = rows.map((r) => r.join(''));
   metrics[style] = { neck, scale, eye: [eyeX, eyeY] };
   const poses = [];
@@ -126,6 +191,13 @@ for (const style of styles) {
     const grid = Array.from({ length: 72 }, (_, y) => [...decode(rle).slice(y * 64, (y + 1) * 64)]);
     // Flood the face/hair inside its dark boundary, so raised arms remain in front of the head.
     const original = grid.map((r) => [...r]);
+    // Authored overlapping forearms cannot be separated from face skin by a
+    // flood fill alone. Keep these limbs in front, including their equipment.
+    const foregroundArm = (x, y) =>
+      (pose === 'waveLow' && x <= dx + 12 && y >= dy + 17) ||
+      (pose === 'waveHigh' && x <= dx + 11 && y >= dy + 11) ||
+      (pose === 'lift' && (x <= dx + 16 || x >= dx + 33) && y < dy + 27);
+
     const mask = new Set();
     const key = (x, y) => y * 64 + x;
     const inside = (x, y) => x >= dx + 5 && x < dx + 44 && y >= dy && y < dy + 30;
@@ -148,7 +220,13 @@ for (const style of styles) {
     if (seed) seeds.push(seed);
     while (seeds.length) {
       const [x, y] = seeds.pop();
-      if (!inside(x, y) || !grid[y]?.[x] || mask.has(key(x, y)) || !'sSLN'.includes(grid[y][x]))
+      if (
+        !inside(x, y) ||
+        foregroundArm(x, y) ||
+        !grid[y]?.[x] ||
+        mask.has(key(x, y)) ||
+        !'sSLN'.includes(grid[y][x])
+      )
         continue;
       mask.add(key(x, y));
       seeds.push([x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]);
@@ -156,17 +234,26 @@ for (const style of styles) {
     const armMask = new Set();
     for (let y = Math.max(0, dy); y < Math.min(72, dy + 30); y++)
       for (let x = 0; x < 64; x++)
-        if ('sSLN'.includes(original[y][x]) && !mask.has(key(x, y))) armMask.add(key(x, y));
+        if ('sSLN'.includes(original[y][x]) && (foregroundArm(x, y) || x < dx + 5 || x >= dx + 39))
+          armMask.add(key(x, y));
     const outline = new Set(mask);
     for (const k of mask) {
       const x = k % 64,
         y = Math.floor(k / 64);
-      for (let yy = y - 2; yy <= y + 2; yy++)
-        for (let xx = x - 2; xx <= x + 2; xx++)
+      for (let yy = y - 4; yy <= y + 4; yy++)
+        for (let xx = x - 4; xx <= x + 4; xx++)
           if (inside(xx, yy) && original[yy]?.[xx] === 'O') outline.add(key(xx, yy));
     }
+    const armOutline = new Set(armMask);
+    for (const k of armMask) {
+      const x = k % 64,
+        y = Math.floor(k / 64);
+      for (let yy = y - 1; yy <= y + 1; yy++)
+        for (let xx = x - 1; xx <= x + 1; xx++)
+          if (original[yy]?.[xx] === 'O') armOutline.add(key(xx, yy));
+    }
     for (const k of outline) grid[Math.floor(k / 64)][k % 64] = '.';
-    head.forEach((r, y) =>
+    composedHead.forEach((r, y) =>
       r.forEach((c, x) => {
         const px = x + dx,
           py = y + dy;
@@ -175,7 +262,11 @@ for (const style of styles) {
     );
     for (let y = Math.max(0, dy); y < Math.min(72, dy + 30); y++)
       for (let x = 0; x < 64; x++)
-        if ((!outline.has(key(x, y)) || armMask.has(key(x, y))) && original[y][x] !== '.') {
+        if (
+          (armOutline.has(key(x, y)) ||
+            (!outline.has(key(x, y)) && (composedHead[y - dy]?.[x - dx] ?? '.') === '.')) &&
+          original[y][x] !== '.'
+        ) {
           const c = original[y][x],
             skin = 'sSLN'.indexOf(c);
           grid[y][x] = skin >= 0 ? 'uUiI'[skin] : c;
@@ -186,7 +277,7 @@ for (const style of styles) {
   }
   await writeFormatted(
     path.join(game, 'avatar-mini-motion', style + '.ts'),
-    `// T-11-243 ${style}: approved head on canonical short-style body poses.\nimport type { MiniPoseData } from '../avatar-motion.js';\nconst POSES: MiniPoseData = {\n${poses.join('\n')}\n};\nexport default POSES;\n`,
+    `// T-11-243 ${style}: hair-only layer on canonical short-style face/body poses.\nimport type { MiniPoseData } from '../avatar-motion.js';\nconst POSES: MiniPoseData = {\n${poses.join('\n')}\n};\nexport default POSES;\n`,
   );
 }
 await writeFormatted(
