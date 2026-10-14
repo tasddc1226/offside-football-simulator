@@ -1,6 +1,7 @@
 // T-11-141 확률 도감의 '확률과 공정성' — 잠재력 등급·강화 확률을 게임 코드의 값에서 바로 계산한다(웹 Fairness.svelte · 앱
 // screens/hof/Fairness.tsx는 이 결과를 그리기만 한다). 경기 중 화면에는 숫자를 내지 않고 이 표만 정확한 값을 보여 준다.
 import type { BalanceHistory } from '@offside/contracts';
+import { REROLL_MILEAGE } from '@offside/contracts/cup';
 import {
   BALANCE_KEYS,
   BALANCE_SPEC,
@@ -74,6 +75,8 @@ export function fairnessView(): FairnessView {
       L.premium({ season: oddsPct(2 * season.S), pre: oddsPct(2 * pre.S) }),
       // T-11-244 프리미엄 스카우트 천장(contracts SCOUT_PITY_*).
       L.premiumPity,
+      // T-11-248 리롤권 마일리지(contracts REROLL_MILEAGE).
+      L.rerollMileage({ need: REROLL_MILEAGE }),
       `${L.potNote} ${L.version({ v })}`,
     ],
     boost: BOOST.p.map((p, i) => [L.boostLv({ lv: i + 1 }), `${Math.round(p * 100)}%`] as const),

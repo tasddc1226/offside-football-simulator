@@ -428,17 +428,25 @@ const WALL_ON_SUMMARY = 200;
 /** 구단 한 곳의 명예의 벽 상한(응답이 끝없이 커지지만 않게) — T-11-235 시즌 1 맨체스터 스카이블루가 700명을 넘어 300에서 올림. 최근 순. */
 const WALL_ON_CLUB = 1000;
 
+/**
+ * T-11-259 명예의 벽 칭호를 받은 행만 든 부분 인덱스로 읽는다. 지정하지 않으면 플래너가 공개 은퇴 조건에 맞춰
+ * careers_hof_score_order_idx를 골라 그 시즌 공개 은퇴 전체(운영 약 11만 행)를 훑었다.
+ */
+type CareerRow = typeof careers.$inferSelect;
+const wallSource = sql`${careers} INDEXED BY careers_wall_of_honor_idx`;
+
 /** 그 시즌(clubId를 주면 그 구단) 명예의 벽 선수. 저장된 칭호 JSON의 구단으로 고른다. */
 const wallOf = (db: Db, season: number, clubId?: string) =>
   db
+    // FROM이 SQL 조각이라 컬럼도 SQL 식으로 고른다(drizzle은 FROM에 없는 테이블 컬럼을 거부한다).
     .select({
-      careerId: careers.id,
-      name: careers.publicName,
-      pos: careers.pos,
+      careerId: sql<string>`${careers.id}`,
+      name: sql<CareerRow['publicName']>`${careers.publicName}`,
+      pos: sql<CareerRow['pos']>`${careers.pos}`,
       dpos: sql<DetailPos | null>`${careers.dpos}`,
-      json: careers.wallOfHonorJson,
+      json: sql<string | null>`${careers.wallOfHonorJson}`,
     })
-    .from(careers)
+    .from(wallSource)
     .where(
       and(
         isPublicRetired,
@@ -487,7 +495,7 @@ export async function summarizeRetiredNumbers(
     wallOf(db, season).orderBy(sql`json_extract(${careers.wallOfHonorJson}, '$.grantedAt') desc`),
     db
       .select({ count })
-      .from(careers)
+      .from(wallSource)
       .where(
         and(
           isPublicRetired,

@@ -4,6 +4,7 @@ import {
   AdminCupPredictionRecoverySchema,
   AdminCupPredictionRecoveryResultSchema,
 } from '@offside/contracts';
+import { cupPredictionCap } from '@offside/contracts/cup';
 import { and, eq } from 'drizzle-orm';
 import type { Hono, Context } from 'hono';
 import { requireAdmin } from '../auth/admin.js';
@@ -146,9 +147,13 @@ export function registerAdminCupPredictionRoutes(app: Hono<AppEnv>) {
     if (!m.playedAt) throw conflictError(cupKo('predictionNotFinished'), 'CUP_MATCH_NOT_FINISHED');
     const now = nowIso();
     const d1 = getDb(c).$client;
+    const [cup] = await getDb(c)
+      .select({ edition: cups.edition })
+      .from(cups)
+      .where(eq(cups.id, m.cupId));
     // Same atomic settlement as the match runner; prior grant markers prevent duplicate inventory.
     const results = await d1.batch([
-      ...predictionSettlementStatements(d1, m.id, now),
+      ...predictionSettlementStatements(d1, m.id, now, cupPredictionCap(cup?.edition ?? 1)),
       d1
         .prepare(
           'INSERT INTO audit_log (id,kind,profile_id,payload_json,created_at) VALUES (?,?,?,?,?)',

@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setStorage } from '@offside/game/storage';
+import { generateCandidates } from '@offside/game/candidates';
+import { gradeOf } from '@offside/game/stats';
+import '@offside/game/premiumScout';
 import { ovr } from '@offside/game/attributes';
 import { startOvr } from './create-view.js';
 import { setLatestBalance } from '@offside/game/balance';
@@ -54,6 +57,7 @@ beforeEach(() => {
   setActiveRng(createRng(61006));
 });
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.useRealTimers();
   setLatestBalance(null);
 });
@@ -237,6 +241,40 @@ describe('candidate reveal and retirement minimum', () => {
     actions.startCareer('test', 7, mine.attrs, mine.potential);
     actions.rollCandidates();
     expect(state.candidates!.some((c) => c.kept)).toBe(false);
+  });
+  it('T-11-244 천장 S 여부(hit)는 킵한 후보가 덮을 자리를 세지 않는다', () => {
+    const { state, actions } = harness();
+    // 보장 후보가 아닌 자리 하나에만 S가 있는 시드를 찾는다.
+    const dpos = draftCareerRules(state.C).dpos;
+    let seed = 1;
+    let sIdx = -1;
+    for (; seed < 100_000 && sIdx < 0; seed++) {
+      const b = generateCandidates(state.C.pos, state.C.focus, dpos, seed, 3, true);
+      const s = b.map((c) => gradeOf(c.potential.value) === 'S');
+      if (s.filter(Boolean).length === 1 && !b[s.indexOf(true)]!.guaranteed) sIdx = s.indexOf(true);
+    }
+    seed--;
+    expect(sIdx).toBeGreaterThanOrEqual(0);
+    const random = vi.spyOn(Math, 'random').mockReturnValue((seed + 0.5) / 0xffffffff);
+    expect(actions.planPremiumScout()).toEqual({ seed, hit: true });
+    // 앞서 다른 시드로 뽑은 S 아닌 후보를 그 자리에 킵한다.
+    let other = seed + 1;
+    do {
+      random.mockReturnValue((other++ + 0.5) / 0xffffffff);
+      actions.rerollCandidates();
+    } while (gradeOf(state.candidates![sIdx]!.potential.value) === 'S');
+    actions.keepCandidate(sIdx);
+    random.mockReturnValue((seed + 0.5) / 0xffffffff);
+    // S가 나올 자리를 킵한 후보가 덮으면 유저는 S를 못 보니 hit도 아니다.
+    expect(actions.planPremiumScout()).toEqual({ seed, hit: false });
+    actions.premiumScoutCandidates(seed, 'normal');
+    expect(state.candidates!.some((c) => gradeOf(c.potential.value) === 'S')).toBe(false);
+    expect(state.candidates![sIdx]!.kept).toBeTruthy();
+    // 다른 자리를 킵하면 S는 그대로 보이므로 hit다.
+    actions.keepCandidate([0, 1, 2].find((i) => i !== sIdx && !state.candidates![i]!.guaranteed)!);
+    expect(actions.planPremiumScout()).toEqual({ seed, hit: true });
+    actions.premiumScoutCandidates(seed, 'normal');
+    expect(gradeOf(state.candidates![sIdx]!.potential.value)).toBe('S');
   });
   it('does not grant a reveal when saving fails', () => {
     const { state, actions } = harness();

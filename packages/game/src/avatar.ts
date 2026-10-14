@@ -266,7 +266,8 @@ export function avatarSpec(s: GameState, side: KitSide = 'home'): AvatarSpec {
       beard: serving ? null : s.age >= 28 ? 'full' : s.age >= 24 ? 'stubble' : null,
       kit: serving && s.mil.type === 'army' ? ARMY_KIT : kitOf(s.club, side),
       expr: s.injury > 0 ? 'pain' : s.age >= 30 ? 'tired' : null,
-      acc: s.injury > 0 ? ['bandage', 'crutch'] : s.nat.captain ? ['armband'] : [],
+      acc:
+        s.injury > 0 ? ['bandage', 'crutch'] : s.nat.captain && !s.nat.retired ? ['armband'] : [],
     },
     pick,
     serving,

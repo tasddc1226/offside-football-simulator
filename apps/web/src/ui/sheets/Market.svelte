@@ -1,14 +1,26 @@
 <script lang="ts">
   import { careerMomentText as CM } from '@offside/app-core/i18n/ko/careerMoment';
+  import { dismissSheet } from '../sheetState.svelte.js';
+  import { shellMoreText as S } from '@offside/app-core/i18n/ko/shellMore';
   import { pickOption } from '../actions.js';
   import type { SheetView } from '@offside/app-core/sheets';
   import ClubBadge from '../ClubBadge.svelte';
   import { sheetPlayText as L } from '@offside/app-core/i18n/ko/sheetPlay';
   let { v }: { v: Extract<SheetView, { kind: 'market' }> } = $props();
+  function close() {
+    dismissSheet();
+    document.querySelector<HTMLButtonElement>('[data-act="resume"]')?.focus({ preventScroll: true });
+  }
 </script>
 
-<div class="eyebrow">{v.eyebrow}</div>
-<h2>{L.marketTitle}</h2>
+<svelte:window onkeydown={(e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } }} />
+
+<div class="market-head">
+  <div class="eyebrow">{v.eyebrow}</div>
+  <h2>{L.marketTitle}</h2>
+  <!-- 계약서(.contract-x)와 같은 자리·모양의 닫기. -->
+  <button class="market-x" data-market-close aria-label={S.close} onclick={close}>×</button>
+</div>
 <p class="muted">{v.note}</p>
 {#if v.assessment}<p class="fs-sm" data-market-feedback>{v.assessment}</p>{/if}
 <p class="muted fs-sm">{L.marketHint}</p>
@@ -29,5 +41,8 @@
 </div>
 
 <style>
+.market-head { position: relative; display: flex; flex-direction: column; gap: 14px; }
+.market-head h2 { padding-right: 40px; word-break: keep-all; }
+.market-x { position: absolute; top: -6px; right: -4px; width: 44px; height: 44px; border-radius: 999px; border: 0; background: var(--surface-2); color: var(--muted); font-size: 1.375rem; line-height: 1; }
 .destination { color: var(--ink); font-size: .8125rem; line-height: 1.5; }
 </style>

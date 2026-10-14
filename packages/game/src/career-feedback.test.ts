@@ -5,6 +5,12 @@ import { newGame } from './engine.js';
 import { continentalForRank, seasonSetup, transferOutlook } from './comps.js';
 import { rivalName } from './rival-names.js';
 import { DATING_EVENT } from './dating-event.js';
+import { BASE_EVENTS } from './events.js';
+import { LIFE_EVENTS } from './life-events.js';
+import { MOMENT_EVENTS } from './moment-events.js';
+import { natRefusing, natWindow, ntRetireAsk } from './national.js';
+import { eventById } from './events-data.js';
+import './event-registry.js';
 import { en } from './i18n/en/index.js';
 import { ja } from './i18n/ja/index.js';
 import { createRng, setActiveRng } from './rng.js';
@@ -113,5 +119,101 @@ describe('dating rumor eligibility and choices', () => {
       return [s.morale, s.fame, s.trust, s.cond];
     });
     expect(new Set(results.map((x) => JSON.stringify(x))).size).toBe(3);
+  });
+});
+
+describe('international retirement and the party follow-up (T-11-258)', () => {
+  const veteran = () => {
+    const s = player();
+    Object.assign(s, { age: 31, leagueId: 'pl', phase: 1 });
+    s.nat.caps = 10;
+    return s;
+  };
+  it('asks veterans with 10+ caps once per season', () => {
+    const s = veteran();
+    expect(ntRetireAsk(s)).toBe(true);
+    for (const patch of [{ age: 30 }, { flags: { ['ntAsk' + s.year]: 1 } }]) {
+      expect(ntRetireAsk({ ...s, ...patch })).toBe(false);
+    }
+    expect(ntRetireAsk({ ...s, nat: { ...s.nat, caps: 9 } })).toBe(false);
+    expect(ntRetireAsk({ ...s, nat: { ...s.nat, retired: s.year } })).toBe(false);
+  });
+  it('retiring ends call-ups and the captain armband but keeps caps', () => {
+    const s = veteran();
+    s.nat.captain = true;
+    const ev = LIFE_EVENTS.find((e) => e.id === 'nt-retire')!;
+    ev.choices[0]!.ok.fx(s);
+    expect(s.nat.retired).toBe(s.year);
+    expect(s.nat.caps).toBe(10);
+    expect(ev.cond(s)).toBe(false);
+    for (const phase of [1, 2, 3]) expect(natWindow({ ...s, phase })).toBeNull();
+  });
+  it('a good night at the party schedules one message per career', () => {
+    const s = player();
+    Object.assign(s, { age: 24, leagueId: 'pl', fame: 30 });
+    const party = BASE_EVENTS.find((e) => e.id === 'party')!;
+    party.choices[0]!.ok.fx(s);
+    expect(s.chains.map((c) => c.id)).toContain('party-wags');
+    s.chains = [];
+    party.choices[0]!.ok.fx(s);
+    expect(s.chains).toEqual([]);
+    const wags = LIFE_EVENTS.find((e) => e.id === 'party-wags')!;
+    expect(wags.choices).toHaveLength(3);
+    wags.choices[1]!.ok.fx(s);
+    expect(s.flags.wags).toBe(s.year);
+    expect(wags.cond(s)).toBe(false);
+  });
+});
+
+describe('career moment events', () => {
+  const ev = (id: string) => MOMENT_EVENTS.find((e) => e.id === id)!;
+  it('offers the World Cup snub only after missing last year’s World Cup squad', () => {
+    const s = player();
+    Object.assign(s, { leagueId: 'pl', phase: 0, year: 2027 });
+    s.nat.caps = 12;
+    s.nat.tours = [
+      { year: 2026, name: '2026 FIFA 월드컵', stage: '16강', inSquad: false, apps: 0, goals: 0 },
+    ];
+    expect(ev('wc-snub').cond(s)).toBe(true);
+    expect(ev('wc-snub').cond({ ...s, phase: 1 })).toBe(false);
+    expect(ev('wc-snub').cond({ ...s, nat: { ...s.nat, caps: 0 } })).toBe(false);
+    s.nat.tours[0]!.inSquad = true;
+    expect(ev('wc-snub').cond(s)).toBe(false);
+  });
+  it('keeps a refusing player out of A-team call-ups for two seasons', () => {
+    setActiveRng(createRng(255));
+    const s = player();
+    Object.assign(s, { leagueId: 'pl', phase: 1, year: 2027 });
+    s.nat.captain = true;
+    ev('wc-snub').choices[0]!.ok.fx(s);
+    expect(s.nat.captain).toBe(false);
+    expect(natRefusing(s)).toBe(true);
+    expect(natWindow(s)).toBeNull();
+    s.year = 2028;
+    expect(natRefusing(s)).toBe(true);
+    s.year = 2029;
+    expect(natRefusing(s)).toBe(false);
+  });
+  it('gives the hat-trick event once per season to scorers', () => {
+    const s = player();
+    Object.assign(s, { leagueId: 'pl', phase: 1 });
+    s.season.goals = 3;
+    expect(ev('hat-trick').cond(s)).toBe(true);
+    ev('hat-trick').choices[1]!.ok.fx(s);
+    expect(ev('hat-trick').cond(s)).toBe(false);
+    expect(ev('hat-trick').cond({ ...s, pos: 'GK', flags: {} })).toBe(false);
+  });
+  it('uses the player name in every language', () => {
+    const s = player();
+    expect(eventById('kid-autograph')!.text(s)).toContain('QA');
+    for (const [locale, dict] of [
+      ['en', en],
+      ['ja', ja],
+    ] as const) {
+      setLocale(locale, dict);
+      const e = eventById('kid-autograph')!;
+      expect(e.text(s)).toContain('QA');
+      expect(e.title).not.toMatch(/[가-힣]/);
+    }
   });
 });

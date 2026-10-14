@@ -1,0 +1,23 @@
+{
+  "id": "t-11-258-national-retire-party",
+  "title": "대표팀 은퇴와 파티 뒤 연락",
+  "items": [
+    "31세 이상이고 A매치 10경기 이상 뛴 선수는 대표팀 소집을 마친 뒤 대표팀 은퇴를 고를 수 있어요. 은퇴하면 더는 소집되지 않아 컨디션을 아낄 수 있고, A매치 기록은 그대로 남아요.",
+    "파티 초대에서 잠깐 들렀다가 잘 풀리면, 파티에서 만난 사람에게서 연락이 와요. 공개적으로 만날지, 조용히 만날지, 정중히 거절할지 골라요."
+  ],
+  "en": {
+    "title": "International retirement and a message after the party",
+    "items": [
+      "Players aged 31 or older with at least 10 caps can retire from international football after a call-up. You will not be called up again, which saves your condition, and your international record stays.",
+      "If dropping by a party invitation goes well, someone you met there gets in touch. Choose to meet openly, meet quietly or politely decline."
+    ]
+  },
+  "ja": {
+    "title": "代表引退とパーティー後の連絡",
+    "items": [
+      "31歳以上でAマッチ10試合以上に出場した選手は、代表招集のあとに代表引退を選べます。引退すると招集されなくなりコンディションを温存でき、Aマッチ記録はそのまま残ります。",
+      "パーティーの招待に少し顔を出してうまくいくと、そこで会った人から連絡が来ます。堂々と会うか、静かに会うか、丁寧に断るかを選びます。"
+    ]
+  },
+  "availability": "web-app"
+}

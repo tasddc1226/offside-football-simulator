@@ -43,6 +43,8 @@ import { offsetToRoll, tapOffset, timingNote, zoneLabel, zoneWidth } from '@offs
 import { isHiddenEvent } from '@offside/game/dexGroups';
 import { scoreLine, type NatTourResult } from '@offside/game/national';
 import type { CompGame } from '@offside/game/comps';
+import { clubById } from '@offside/game/clubs';
+import { bracketLine } from './bracket.js';
 import { isMilOption } from '@offside/game/military';
 import {
   endSeason,
@@ -123,6 +125,8 @@ function compGameViews(games: CompGame[]): NatGameView[] {
       : m.leg
         ? L.compLeg({ stage, leg: m.leg })
         : stage;
+    // T-11-261 대륙 대회 녹아웃은 상대 구단을 안다.
+    if (m.opp) line += ` · ${L.compVs({ name: tn(clubById(m.opp)?.name ?? m.opp) })}`;
     if (m.won !== undefined)
       line += ` · ${m.stage === '결승' ? tn(m.won ? '우승' : '준우승') : m.won ? L.compThrough : L.compOut}`; // i18n-ignore 저장값(그릴 때 tn)
     return {
@@ -512,6 +516,11 @@ export function createGameActions(host: GameHost) {
         comps: (rec.comps || []).map((c) =>
           L.compLine({ name: tn(c.name), stage: tn(c.stage), apps: c.apps, g: c.g, a: c.a }),
         ),
+        // T-11-261 endSeason은 s.season을 비우지 않으므로 녹아웃 경로는 아직 여기 있다(새 시즌은 시장에서 팀을 고른 뒤).
+        compPaths: (s.season.comps ?? []).flatMap((c) => {
+          const line = bracketLine(c);
+          return line && c.key ? [{ key: c.key, name: tn(c.name), line }] : [];
+        }),
         tours: tours.map(tourView),
         gala,
         miles: miles.map(tn),
@@ -560,7 +569,8 @@ export function createGameActions(host: GameHost) {
             const destination = outlook
               ? `${CM.rank({ rank: outlook.rank })} · ${outlook.competition ? CM.competition({ competition: tn(outlook.competition) }) : CM.noCompetition}`
               : undefined;
-            const extra = `${o.role ? ` · ${tn(o.role)}` : ''}${o.fee ? ` · ${L.feeAbout({ fee: fmtValue(o.fee) })}` : G.contract && !leagueOf(G.leagueId).amateur ? ` · ${L.freeAgent}` : ''}`;
+            // T-11-257 임대는 이적료·FA 표시가 없다(원소속 구단 계약 그대로).
+            const extra = `${o.role ? ` · ${tn(o.role)}` : ''}${o.loan === 'out' ? '' : o.fee ? ` · ${L.feeAbout({ fee: fmtValue(o.fee) })}` : G.contract && !leagueOf(G.leagueId).amateur ? ` · ${L.freeAgent}` : ''}`;
             return {
               clubId: o.clubId,
               reason: offerFeedback(G, o),
@@ -568,7 +578,7 @@ export function createGameActions(host: GameHost) {
               name: tn(o.name),
               lg: strLine(o.leagueId, o.str),
               salary: fmtMoney(o.salary),
-              sub: `${L.contractYears({ years: o.years })}${extra}`,
+              sub: `${o.loan === 'out' ? L.loanSeason : L.contractYears({ years: o.years })}${extra}`,
             };
           }
           if (o.kind === 'renew')
@@ -608,17 +618,30 @@ export function createGameActions(host: GameHost) {
     const G = appState.G!;
     const extension = o.kind === 'renew' ? o.extension : undefined;
     const rookie = o.kind === 'offer' && !!leagueOf(G.leagueId).amateur;
+    const loan = o.kind === 'offer' && o.loan === 'out';
     if (o.kind === 'offer' && crossesBorder(G.leagueId, o.leagueId))
       void loadFlightMap().catch(() => {});
     sheet.showSheet({
       kind: 'contract',
-      eyebrow: extension ? 'Extension Contract' : rookie ? 'Rookie Contract' : 'Transfer Contract',
+      eyebrow: extension
+        ? 'Extension Contract'
+        : rookie
+          ? 'Rookie Contract'
+          : loan
+            ? 'Loan Contract'
+            : 'Transfer Contract',
       title: extension
         ? L.contractTitleExt
         : rookie
           ? L.contractTitleRookie
-          : L.contractTitleTransfer,
-      text: extension ? L.contractTextExt : L.contractTextStart({ club: tn(o.name), rookie }),
+          : loan
+            ? L.contractTitleLoan
+            : L.contractTitleTransfer,
+      text: extension
+        ? L.contractTextExt
+        : loan
+          ? L.contractTextLoan({ club: tn(o.name) })
+          : L.contractTextStart({ club: tn(o.name), rookie }),
       club: {
         id: o.kind === 'offer' ? o.clubId : G.club.id,
         name: o.kind === 'offer' ? o.name : G.club.name,
@@ -647,14 +670,14 @@ export function createGameActions(host: GameHost) {
               { label: L.termExtra, value: L.termYears({ n: extension.years }) },
               { label: L.termTotal, value: L.termYears({ n: o.years }) },
             ]
-          : [{ label: L.termPeriod, value: L.termYears({ n: o.years }) }]),
+          : [{ label: L.termPeriod, value: loan ? L.loanSeason : L.termYears({ n: o.years }) }]),
         ...(o.kind === 'offer' && o.fee
           ? [{ label: L.termFee, value: L.termFeeValue({ fee: fmtValue(o.fee) }) }]
           : []),
         ...(o.kind === 'offer' && o.role ? [{ label: L.termRole, value: tn(o.role) }] : []),
       ],
       name: G.name,
-      cta: extension ? L.ctaExt : rookie ? L.ctaRookie : L.ctaTransfer,
+      cta: extension ? L.ctaExt : rookie ? L.ctaRookie : loan ? L.ctaLoan : L.ctaTransfer,
       // 두 번 눌러도 한 번만 부른다(본문이 도장을 찍으며 버튼을 잠근다).
       onSign: () => void signContract(i, o, options),
       onClose: nextPending,
@@ -878,18 +901,22 @@ export function createGameActions(host: GameHost) {
     );
     const open = batch.map(() => false);
     const k = loadKey<KeptCandidate>(SCOUT_KEEP);
-    if (k && keepMatches(k)) {
-      // 프리미엄 스카우트의 보장 후보 자리는 덮지 않는다.
-      const i =
-        batch[k.idx] && !batch[k.idx]!.guaranteed ? k.idx : batch.findIndex((c) => !c.guaranteed);
-      if (i >= 0) {
-        batch[i] = { ...k.cand, kept: { revealed: k.revealed } };
-        open[i] = true;
-      }
+    const i = k ? keptSlot(batch, k) : -1;
+    if (k && i >= 0) {
+      batch[i] = { ...k.cand, kept: { revealed: k.revealed } };
+      open[i] = true;
     }
     appState.candidates = batch;
     appState.candidatesOpen = open;
     appState.candidatePick = null;
+  }
+
+  /** 킵한 후보가 이 후보 묶음에서 덮을 자리(없으면 -1). 프리미엄 스카우트의 보장 후보 자리는 덮지 않는다. */
+  function keptSlot(batch: Candidate[], k: KeptCandidate): number {
+    if (!keepMatches(k)) return -1;
+    return batch[k.idx] && !batch[k.idx]!.guaranteed
+      ? k.idx
+      : batch.findIndex((c) => !c.guaranteed);
   }
 
   /** T-11-225 후보 한 명을 킵한다(다른 후보의 킵은 풀린다). null이면 킵을 푼다. 목록은 그 자리에서 고친다. */
@@ -927,6 +954,7 @@ export function createGameActions(host: GameHost) {
   /**
    * T-11-244 프리미엄 스카우트권을 쓰기 전에 다음 시드를 정하고, 그 시드의 일반 프리미엄 후보에 S가 있는지(hit) 미리 본다.
    * 서버가 천장 카운트를 그 결과로 센다. 응답을 못 받아 다시 보낼 때는 같은 계획을 그대로 쓴다.
+   * 킵한 후보(T-11-225)가 덮을 자리는 화면에 나오지 않으니 세지 않는다 — 천장은 '본 후보에 S가 없는 장수'로 센다.
    */
   function planPremiumScout(): { seed: number; hit: boolean } {
     const seed = freshSeed();
@@ -938,7 +966,12 @@ export function createGameActions(host: GameHost) {
       3,
       true,
     );
-    return { seed, hit: batch.some((c) => gradeOf(c.potential.value) === 'S') };
+    const k = loadKey<KeptCandidate>(SCOUT_KEEP);
+    const skip = k ? keptSlot(batch, k) : -1;
+    return {
+      seed,
+      hit: batch.some((c, i) => i !== skip && gradeOf(c.potential.value) === 'S'),
+    };
   }
 
   /**

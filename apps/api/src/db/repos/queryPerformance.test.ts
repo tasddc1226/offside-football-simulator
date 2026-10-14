@@ -5,6 +5,7 @@ import { createTestD1, syncCards, type TestD1 } from '../../test/d1.js';
 import { createDb } from '../client.js';
 import { listPublicHof } from './careers.js';
 import { listTeamRanking } from './ownerTeams.js';
+import { listRetiredNumbers, summarizeRetiredNumbers } from './retiredNumbers.js';
 import { titleMetricsOf } from './ownerTitles.js';
 
 type Query = { sql: string; params: unknown[] };
@@ -246,5 +247,44 @@ describe('critical query result and read-cost regressions (local D1)', () => {
       );
     }
     expect(livePages.find((r) => r.id === 'team-1')).toMatchObject({ value: 100 });
+  });
+  it('wall of honor reads only wall rows through its partial index (T-11-259)', async () => {
+    await ctx.env.DB.prepare(
+      `UPDATE careers SET wall_of_honor_json = json_object('clubId', 'pl-' || (cast(substr(id, 8) as integer) % 3),
+        'club', 'club', 'number', 7, 'grantedAt', retired_at) WHERE cast(substr(id, 8) as integer) % 40 = 1`,
+    ).run();
+    for (const season of [0, 1]) {
+      for (const read of [
+        () => summarizeRetiredNumbers(traced.db, season),
+        () => listRetiredNumbers(traced.db, season, 'pl-1'),
+      ]) {
+        traced.queries.length = 0;
+        await read();
+        const wallQueries = traced.queries.filter((q) =>
+          q.sql.includes('careers_wall_of_honor_idx'),
+        );
+        expect(wallQueries.length).toBeGreaterThan(0);
+        for (const q of wallQueries) {
+          const baseline = {
+            ...q,
+            sql: q.sql.replace(' INDEXED BY careers_wall_of_honor_idx', ''),
+          };
+          const current = await run(q);
+          const old = await run(baseline);
+          expect(current.results).toEqual(old.results);
+          expect(await plan(q)).toContain('careers_wall_of_honor_idx');
+          expect(current.meta.rows_read).toBeLessThan(old.meta.rows_read / 5);
+          console.info('wall of honor rows read', {
+            season,
+            count: q.sql.includes('count(*)'),
+            before: old.meta.rows_read,
+            after: current.meta.rows_read,
+          });
+        }
+      }
+    }
+    const summary = await summarizeRetiredNumbers(ctx.db, 1);
+    expect(summary.wallTotal).toBe(summary.wall?.length);
+    expect(summary.wallTotal).toBeGreaterThan(0);
   });
 });

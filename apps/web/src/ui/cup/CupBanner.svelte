@@ -21,7 +21,7 @@
 {#if data && cupOnHome(data)}
   <button type="button" class="card cup-banner" aria-label={`${L.fullTitle({ n: data.cup.edition })} · ${L.open}`} data-cup-banner data-cup-phase={data.phase} data-act="cup-open" onclick={onopen}>
     <div class="cb-head">
-      <CupTrophy stage="champion" size={44} bare />
+      <CupTrophy stage="champion" edition={data.cup.edition} size={44} bare />
       <div class="cb-who">
         <small class="eyebrow">Offside Cup · {L.edition({ n: data.cup.edition })}</small>
         <strong class="cb-title">{L.fullTitle({ n: data.cup.edition })}</strong>

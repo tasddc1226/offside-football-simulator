@@ -22,6 +22,7 @@ import {
   pkWin,
 } from './engine.js';
 import type { EventDef } from './types.js';
+import { wagsAsk } from './life-events.js';
 
 export const BASE_EVENTS: EventDef[] = [
   {
@@ -293,6 +294,11 @@ export const BASE_EVENTS: EventDef[] = [
           fx: (s) => {
             addStat(s, 'fame', 4);
             addStat(s, 'morale', 6);
+            // T-11-258 파티에서 만난 사람에게서 다음 구간에 연락이 온다(life-events.ts party-wags).
+            if (wagsAsk(s)) {
+              s.flags.wagsAsked = 1;
+              schedule(s, 'party-wags', 1, 3);
+            }
           },
         },
         fail: {

@@ -11,7 +11,7 @@ export const sheetPlay: Translation<SheetPlayMsgs> = {
   storyNext: '物語は次のフェーズに続きます。',
   marketTitle: '来シーズン、どこでプレーしますか？',
   salary: '年俸',
-  marketHint: 'カードをタップすると契約書に進みます。',
+  marketHint: 'カードをタップすると契約書に進みます。画面を閉じてもオファーは残ります。',
   offerA11y: (p) =>
     `${p.name}、${p.lg}${p.salary !== null ? `、年俸 ${p.salary}` : ''}${p.sub ? `、${p.sub}` : ''}${p.reason ? `、${p.reason}` : ''}`,
   noHonors: '今シーズンの受賞はありませんでした。',

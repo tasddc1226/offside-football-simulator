@@ -23,7 +23,7 @@
         {@const trophy = trophyStage(h.stage)}
         {@const medal = trophy && MEDAL[trophy]}
         <li class="ch {medal ? `medal ${medal}` : ''}" class:trophy={!!medal} data-cup-honor={h.stage}>
-          {#if trophy}<CupTrophy stage={trophy} name={plateText(h.owner, h.season)} size={60} />{/if}
+          {#if trophy}<CupTrophy stage={trophy} edition={h.edition} name={plateText(h.owner, h.season, h.edition)} size={60} />{/if}
           <span class="ch-text">
             <b>{h.stage === 'champion' ? L.champTitle({ n: h.edition }) : L.honorResult({ edition: h.edition, stage: stageLabel(h.stage) })}</b>
             <small class="muted">{L.honorTeam({ team: h.teamName })}</small>

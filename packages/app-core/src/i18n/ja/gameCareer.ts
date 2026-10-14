@@ -42,6 +42,7 @@ export const gameCareer: Translation<GameCareerMsgs> = {
   colClub: '所属',
   colRating: '評価点',
   colRank: '順位',
+  loanTag: 'レンタル',
   seasonValue: (p) => `市場価値 ${p.value}`,
   emptyRecords: '最初のシーズンを終えると記録がたまります。',
   recordsNote:

@@ -17,6 +17,7 @@ export const game: Translation<GameMsgs> = {
   titleOpen: (p) => `代表称号 ${p.name}、称号図鑑を開く`,
   storageFull: '保存容量が足りず、進行状況を保存できませんでした。設定でバックアップしてください。',
   actEvent: '⚡ イベントを確認',
+  actMarket: '移籍先を選ぶ',
   actSeasonEnd: 'シーズン総括を見る',
   actPreseason: 'プレシーズントレーニングを進める',
   actPlay: (p) => `トレーニング後に${p.n}試合を進める`,

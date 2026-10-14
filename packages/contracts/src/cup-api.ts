@@ -170,6 +170,10 @@ export const OwnerItemsResponseSchema = z.strictObject({
     .optional(),
   /** T-11-244 스카우트권을 쓴 응답에만: 이번 장의 모드(sure · elite면 기기가 그 확정 후보로 뽑는다). */
   scoutMode: z.enum(SCOUT_MODES).optional(),
+  /** T-11-248 리롤권 마일리지: 마지막 스카우트권 지급 뒤 쓴 리롤권 장수(rerollMileageLeft로 남은 장수를 그린다). */
+  mileage: z.number().int().min(0).optional(),
+  /** T-11-248 리롤권을 쓴 응답에만: 이번 장으로 마일리지가 차 프리미엄 스카우트권 1장을 받았다. */
+  mileageScout: z.literal(true).optional(),
 });
 export type OwnerItemsResponse = z.infer<typeof OwnerItemsResponseSchema>;
 
@@ -247,10 +251,14 @@ export type BuyRewardBody = z.infer<typeof BuyRewardBodySchema>;
 export const AdminCupCreateSchema = z
   .strictObject({
     opensOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    opensTime: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+      .optional(),
     entryDays: z.number().int().min(1).max(14).optional(),
     drawHour: z.number().int().min(0).max(23).optional(),
     matchHour: z.number().int().min(0).max(23).optional(),
-    capacity: z.number().int().min(4).max(64).optional(),
+    capacity: z.number().int().min(4).max(128).optional(),
     minFilled: z.number().int().min(1).max(11).optional(),
   })
   // 추첨은 첫 경기 2시간 전보다 앞서야 한다.

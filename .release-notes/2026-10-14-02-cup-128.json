@@ -1,0 +1,23 @@
+{
+  "id": "t-11-246-cup-128",
+  "title": "오프사이드 컵 정원 128팀",
+  "items": [
+    "제2회 오프사이드 컵부터 128팀이 참가할 수 있어요. 32개 조로 나누고 64강부터 토너먼트를 해요.",
+    "앞 대회 결승이 끝나면 다음 대회 접수가 바로 열려요."
+  ],
+  "en": {
+    "title": "OFFSIDE Cup expands to 128 teams",
+    "items": [
+      "From the 2nd OFFSIDE Cup, 128 teams can enter. Teams play in 32 groups, then knockouts start from the round of 64.",
+      "Registration for the next cup opens right after the previous final."
+    ]
+  },
+  "ja": {
+    "title": "オフサイドカップが128チームに",
+    "items": [
+      "第2回オフサイドカップから128チームが参加できます。32組に分かれ、ベスト64から決勝トーナメントです。",
+      "前の大会の決勝が終わると、次の大会の受付がすぐに始まります。"
+    ]
+  },
+  "availability": "web-app"
+}

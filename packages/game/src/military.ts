@@ -106,6 +106,7 @@ export function milCanApply(s: GameState): boolean {
     !s.mil.applied &&
     !s.mil.accepted &&
     !s.mil.armyNext &&
+    !s.loan &&
     !leagueOf(s.leagueId).amateur &&
     s.age >= SANGMU_MIN_AGE &&
     s.age < MIL_AGE

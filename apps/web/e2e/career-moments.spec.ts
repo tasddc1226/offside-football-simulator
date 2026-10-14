@@ -152,3 +152,35 @@ for (const index of [0, 1, 2]) {
     expect(await saved(page)).toEqual(after);
   });
 }
+
+test('대표팀 은퇴를 고르면 저장되고 선수 탭에 은퇴 연도가 보인다', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const vet = { ...pro, age: 32, nat: { ...fixture.nat, caps: 25 } };
+  await resumeWithSave(page, { ...vet, pending: { type: 'event', id: 'nt-retire' } });
+  await expect(page.locator('#sheet h2')).toHaveText('대표팀 은퇴 고민');
+  await expect(page.locator('#sheet')).toContainText('A매치 25경기째');
+  await expect(page.locator('[data-choice]')).toHaveCount(2);
+  await page.locator('[data-choice="0"]').click();
+  await expect(page.locator('.result-big')).toBeVisible();
+  const after = await saved(page);
+  expect(after.nat.retired).toBe(after.year);
+  await page.reload();
+  await page.locator('[data-act="continue"]').click();
+  await expect(page.locator('#sheet')).toBeHidden();
+  await page.locator('[data-tab="player"]').click();
+  await expect(page.locator('[data-nt-retired]')).toHaveText(String(after.year));
+});
+
+test('파티 뒤 연락은 세 선택지로 열리고 고른 뒤 다시 열리지 않는다', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await resumeWithSave(page, { ...pro, pending: { type: 'event', id: 'party-wags' } });
+  await expect(page.locator('#sheet h2')).toHaveText('파티에서 받은 연락');
+  await expect(page.locator('[data-choice]')).toHaveCount(3);
+  await page.locator('[data-choice="1"]').click();
+  await expect(page.locator('.result-big')).toBeVisible();
+  const after = await saved(page);
+  expect(after.flags.wags).toBe(after.year);
+  await page.reload();
+  await page.locator('[data-act="continue"]').click();
+  await expect(page.locator('#sheet')).toBeHidden();
+});

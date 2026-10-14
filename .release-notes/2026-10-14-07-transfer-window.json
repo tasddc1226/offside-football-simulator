@@ -1,0 +1,20 @@
+{
+  "id": "t-11-250-transfer-window",
+  "title": "이적 제안을 여유 있게 비교해요",
+  "items": [
+    "이적 창을 잠시 닫고 선수 능력치와 기록을 확인할 수 있어요. 하단의 ‘이적할 팀 선택하기’를 누르면 같은 제안을 다시 볼 수 있어요."
+  ],
+  "en": {
+    "title": "Take your time comparing offers",
+    "items": [
+      "Close the transfer window to check your player and records, then tap ‘Choose your next club’ to return to the same offers."
+    ]
+  },
+  "ja": {
+    "title": "移籍オファーをじっくり比較",
+    "items": [
+      "移籍画面を閉じて選手の能力や記録を確認できます。下部の「移籍先を選ぶ」から同じオファーに戻れます。"
+    ]
+  },
+  "availability": "web-app"
+}

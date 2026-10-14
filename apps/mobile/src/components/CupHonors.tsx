@@ -42,7 +42,12 @@ export function CupHonors({ honors }: { honors: readonly CupHonor[] }) {
               }}
             >
               {trophy ? (
-                <CupTrophy stage={trophy} name={plateText(h.owner, h.season)} size={56} />
+                <CupTrophy
+                  stage={trophy}
+                  edition={h.edition}
+                  name={plateText(h.owner, h.season, h.edition)}
+                  size={56}
+                />
               ) : null}
               <View style={{ gap: 2, flexShrink: 1 }}>
                 <Txt bold>

@@ -1,8 +1,17 @@
 // 아래에서 올라오는 시트(웹 Sheet.svelte). 선택이 필수인 시트(진행 중·이벤트 대기)는 배경 누르기·끌어 내리기·
 // Android 뒤로로 닫히지 않는다. 본문은 SheetBody가 뷰 종류별로 그리고, 버튼은 sheetState.buttons 그대로.
-import { Keyboard, Modal, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
+import {
+  PanResponder,
+  Keyboard,
+  Modal,
+  Pressable,
+  ScrollView,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
+import { canDismissSheet } from '@offside/app-core/sheet-controller';
 import { sheetLabel, type SheetView } from '@offside/app-core/sheets';
 import { appState, prefs, sheetState } from '../store';
 import { buzz, dismissSheet } from '../game/host';
@@ -22,8 +31,18 @@ export function Sheet() {
   const v = sheetState.view;
   const progress = (v?.kind === 'steps' || v?.kind === 'block') && !!v.avatar;
   const running = s.open && s.busy && s.buttons.length === 0 && progress;
-  const dismissible = !s.busy && !G?.pending;
+  const dismissible = canDismissSheet(
+    { busy: s.busy, view: s.view as SheetView | null },
+    G?.pending as Parameters<typeof canDismissSheet>[1],
+  );
   const close = () => dismissible && dismissSheet();
+  const handlePan = PanResponder.create({
+    onMoveShouldSetPanResponder: (_, g) =>
+      dismissible && v?.kind === 'market' && g.dy > 10 && Math.abs(g.dy) > Math.abs(g.dx),
+    onPanResponderRelease: (_, g) => {
+      if (g.dy > 90) close();
+    },
+  });
   return (
     <Modal
       visible={s.open}
@@ -70,16 +89,18 @@ export function Sheet() {
               gap: 14,
             }}
           >
-            <View
-              style={{
-                alignSelf: 'center',
-                width: 40,
-                height: 5,
-                borderRadius: 3,
-                backgroundColor: c.line,
-                marginBottom: 2,
-              }}
-            />
+            <View {...handlePan.panHandlers} style={{ minHeight: 24, justifyContent: 'center' }}>
+              <View
+                style={{
+                  alignSelf: 'center',
+                  width: 40,
+                  height: 5,
+                  borderRadius: 3,
+                  backgroundColor: c.line,
+                  marginBottom: 2,
+                }}
+              />
+            </View>
             {/* 스냅숏이 아니라 원본 뷰를 넘긴다 — 본문(미니게임 등)이 뷰를 고치고, 읽을 때는 각자 useSnapshot으로 구독한다. */}
             {s.view ? <SheetBody v={sheetState.view!} /> : null}
             {s.buttons.map((b, i) => (

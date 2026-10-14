@@ -10,6 +10,7 @@ export const gameActions: Translation<GameActionsMsgs> = {
   compLeagueGame: (p) => `リーグフェーズ 第${p.n}戦 · ${p.res}`,
   compThrough: '突破',
   compOut: '敗退',
+  compVs: (p) => `vs ${p.name}`,
   natNotInSquad: 'メンバー外',
   natNoMedal: 'メダルなし',
   natTourLine: (p) =>
@@ -56,6 +57,11 @@ export const gameActions: Translation<GameActionsMsgs> = {
   retireBtn: '引退する',
   contractTitleExt: '延長契約にサインしますか？',
   contractTitleRookie: 'プロ契約にサインしますか？',
+  loanSeason: '1シーズンのレンタル',
+  contractTitleLoan: 'レンタル契約にサインしますか？',
+  contractTextLoan: (p) =>
+    `${p.club}で1シーズンプレーします。年俸と残りの契約は元のクラブのままです。`,
+  ctaLoan: 'サインしてレンタル移籍',
   contractTitleTransfer: '移籍契約にサインしますか？',
   contractTextExt: '残りの契約に期間を追加します。新しい年俸は今シーズンから適用されます。',
   contractTextStart: (p) =>

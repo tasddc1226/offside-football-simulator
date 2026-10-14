@@ -1,6 +1,7 @@
 <script lang="ts">
-  // T-11-145 오프사이드 컵 열기: 접수 시작일만 고르면 표준 일정(접수 4일 → 추첨 12시 → 8일간 매일 21시 경기)으로
+  // T-11-145 오프사이드 컵 열기: 접수 시작일만 고르면 표준 일정(접수 4일 → 추첨 12시 → 정원 128이면 9일간, 64 이하면 8일간 매일 21시 경기)으로
   // 다음 회차를 연다. 시즌·회차·id는 서버가 정하고, 다른 대회와 기간이 겹치면 막는다. 접수 전 대회만 지울 수 있다.
+  // T-11-246 접수 시작 시각을 고르면 앞 대회 결승 직후(결승 시각 뒤)에 바로 접수를 열 수 있다. 정원 128이면 64강부터.
   import { onMount } from 'svelte';
   import AdminCupPredictions from './AdminCupPredictions.svelte';
   import { CUP_PLAN_DEFAULTS as D, planCup } from '@offside/contracts/cup';
@@ -16,12 +17,13 @@
   let status = $state<LoadStatus>('loading');
   let busy = $state(false);
   let opensOn = $state('');
+  let opensTime = $state('');
   let entryDays = $state<number>(D.entryDays);
   let matchHour = $state<number>(D.matchHour);
   let capacity = $state<number>(D.capacity);
   let minFilled = $state<number>(D.minFilled);
 
-  const input = $derived({ opensOn, entryDays, matchHour, capacity, minFilled });
+  const input = $derived({ opensOn, ...(opensTime ? { opensTime } : {}), entryDays, matchHour, capacity, minFilled });
   const preview = $derived(
     /^\d{4}-\d{2}-\d{2}$/.test(opensOn) ? planCup({ ...input, id: '', season: 0, edition: 0 }) : null,
   );
@@ -43,6 +45,7 @@
     if (!r.ok) return toast(r.error.message);
     toast(`제${r.data.cup.edition}회 대회를 열었어요`);
     opensOn = '';
+    opensTime = '';
     await load();
   }
   async function remove(it: AdminCup) {
@@ -59,11 +62,13 @@
 <div class="stack" style="gap:12px" data-admin="cups">
   {#if status === 'ready'}<AdminCupPredictions cups={items} />{/if}
   <h2 style="margin:0">새 대회 열기</h2>
+  <p class="muted fs-sm" style="margin:0" data-cup-autopilot>결승이 끝나면 서버가 다음 회차를 자동으로 만들어요(결승 10분 뒤 접수, 사흘째 자정 마감, 정원은 앞 대회와 같음). 접수가 열리면 참가할 수 있는 구단주에게 알림이 가고, 추첨·경기가 30분 넘게 밀리면 운영 슬랙에 경보가 와요. 자동 생성을 멈추려면 app_meta의 cup:autopilot을 off로 둬요. 일정을 바꾸려면 아래에서 직접 열어요.</p>
   <div class="cup-form">
     <label>접수 시작일(KST)<input type="date" bind:value={opensOn} data-cup-field="opensOn" /></label>
+    <label>접수 시작 시각(KST, 비우면 0시)<input type="time" bind:value={opensTime} data-cup-field="opensTime" /></label>
     <label>접수 기간(일)<input type="number" min="1" max="14" bind:value={entryDays} /></label>
     <label>경기 시각(시)<input type="number" min="14" max="23" bind:value={matchHour} /></label>
-    <label>정원<input type="number" min="4" max="64" bind:value={capacity} /></label>
+    <label>정원<input type="number" min="4" max="128" bind:value={capacity} /></label>
     <label>자격(선발 실제 선수)<input type="number" min="1" max="11" bind:value={minFilled} /></label>
   </div>
   {#if preview}

@@ -76,11 +76,20 @@ describe('/v1/admin/cups (T-11-145 컵 열기)', () => {
   it('기간이 겹치거나 지난 날짜면 열지 않는다', async () => {
     const { cookie } = await issueAdminCookie(ctx);
     const post = (body: object) => call('POST', '/v1/admin/cups', { cookie, body });
-    // 제1회는 10/20 결승 + 하루까지 — 10/21 접수 시작은 겹친다.
-    expect(await reason(await post({ opensOn: '2026-10-21' }))).toBe('CUP_OVERLAP');
+    // T-11-246 제1회 결승(10/20 21:00) 시각까지는 겹친다. 그 뒤면 지난 대회를 보여 주는 하루 안이라도 연다.
+    expect(await reason(await post({ opensOn: '2026-10-20' }))).toBe('CUP_OVERLAP');
+    expect(await reason(await post({ opensOn: '2026-10-20', opensTime: '21:00' }))).toBe(
+      'CUP_OVERLAP',
+    );
     expect(await reason(await post({ opensOn: '2026-10-01' }))).toBe('CUP_PAST');
     expect((await post({ opensOn: '2026-10-22', drawHour: 20 })).status).toBe(400);
-    expect((await post({ opensOn: '2026-10-22', capacity: 65 })).status).toBe(400);
+    expect((await post({ opensOn: '2026-10-22', capacity: 129 })).status).toBe(400);
+    expect((await post({ opensOn: '2026-10-22', opensTime: '25:00' })).status).toBe(400);
+    const made = await post({ opensOn: '2026-10-20', opensTime: '21:10' });
+    expect(made.status).toBe(201);
+    expect(await made.json()).toMatchObject({
+      data: { cup: { id: 's1-2', opensAt: '2026-10-20T12:10:00.000Z', capacity: 128 } },
+    });
   });
 
   it('새 회차는 다음 대회로 보이고 크론이 그대로 치른다', async () => {

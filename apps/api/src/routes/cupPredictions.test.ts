@@ -9,7 +9,7 @@ import { planCup } from '@offside/contracts/cup';
 
 const NOW = '2026-10-10T03:00:00.000Z';
 const AT = '2026-10-11T12:00:00.000Z';
-const CUP = planCup({ id: 's1-1', season: 1, edition: 1, opensOn: '2026-10-09' });
+const CUP = planCup({ id: 's1-1', season: 1, edition: 1, opensOn: '2026-10-09', capacity: 64 });
 const path = '/v1/cups/s1-1';
 describe('cup predictions', () => {
   let ctx: TestD1;
@@ -41,7 +41,7 @@ describe('cup predictions', () => {
       body: { pick: choice },
     });
   const settle = (id: string) =>
-    ctx.env.DB.batch(predictionSettlementStatements(ctx.env.DB, id, AT));
+    ctx.env.DB.batch(predictionSettlementStatements(ctx.env.DB, id, AT, null));
   const qty = async () => (await ctx.db.select().from(ownerItems))[0]?.qty ?? 0;
 
   it('allows non-entrants, upserts one pick, returns aggregate counts without account data or session reads', async () => {

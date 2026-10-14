@@ -40,7 +40,9 @@ export const gNational: Translation<GNationalMsgs> = {
     }`,
   captain: 'You were named national team captain.',
   whyInjury: 'Missed the final squad through injury',
+  whyRetired: 'Retired from international football',
   whyCut: 'Cut from the final squad',
   whyRefused: 'Your club refused to release you',
   whyWildcard: 'Picked as an over-age wildcard',
+  whyQuit: 'Refusing national team call-ups',
 };

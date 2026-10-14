@@ -17,9 +17,11 @@ const ko = {
     `[${p.comp}] ${p.score}${p.mins ? ` · ${p.mins}분${p.g ? ` ${p.g}골` : ''}${p.a ? ` ${p.a}도움` : ''}` : ' · 벤치'}`,
   captain: '국가대표팀 주장으로 선임됐습니다.',
   whyInjury: '부상으로 최종 명단 제외',
+  whyRetired: '대표팀 은퇴',
   whyCut: '최종 명단 탈락',
   whyRefused: '소속팀이 차출을 거부',
   whyWildcard: '와일드카드 발탁',
+  whyQuit: '대표팀 소집 거부 선언',
 };
 export type GNationalMsgs = typeof ko;
 export const gNationalText = ns('gNational', ko);

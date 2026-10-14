@@ -38,7 +38,12 @@ import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as CA } from '@offside/app-core/i18n/ko/cupApp';
 import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
 import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
-import { scoutPityView, type ScoutPity } from '@offside/contracts/cup';
+import {
+  REROLL_MILEAGE,
+  rerollMileageLeft,
+  scoutPityView,
+  type ScoutPity,
+} from '@offside/contracts/cup';
 import { ScoutOdds } from '../owner/ScoutOdds';
 import { fundsText } from '@offside/app-core/funds';
 import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
@@ -219,6 +224,8 @@ export default function Create() {
   const rerollLock = useRef(false);
   // 한 번의 '다시 뽑기' 시도에 멱등 키 하나 — 응답을 못 받아(네트워크) 다시 누르면 같은 키로 보내 두 번 차감되지 않는다.
   const rerollKey = useRef<string | null>(null);
+  // T-11-248 리롤권 마일리지 — 마지막 스카우트권 지급 뒤 쓴 장수. 차면 서버가 같은 응답에서 스카우트권을 준다.
+  const [mileage, setMileage] = useState(0);
   const hasCandidates = !!s.candidates;
   // T-11-196 프리미엄 스카우트권 — 가진 장수가 있으면 버튼, 없으면 구단주에게 상점(구단주 화면)으로 가는 안내. 잠금 · 멱등 키는 리롤과 함께 쓴다.
   const [scouts, setScouts] = useState(0);
@@ -237,6 +244,7 @@ export default function Create() {
       setRerolls(r.ok ? r.data.reroll : 0);
       setScouts(r.ok ? (r.data.scout ?? 0) : 0);
       setPity(r.ok ? (r.data.pity ?? NO_PITY) : NO_PITY);
+      setMileage(r.ok ? (r.data.mileage ?? 0) : 0);
     });
     return () => {
       live = false;
@@ -304,9 +312,15 @@ export default function Create() {
         return;
       }
       setRerolls(r.data.reroll);
+      setScouts(r.data.scout);
+      setMileage(r.data.mileage ?? 0);
       rerollCandidates();
       setRewardMessage('');
-      toast(CL.rerollDone({ n: r.data.reroll }));
+      toast(
+        r.data.mileageScout
+          ? CL.rerollMileageDone({ n: r.data.reroll, need: REROLL_MILEAGE })
+          : CL.rerollDone({ n: r.data.reroll }),
+      );
     } finally {
       rerollLock.current = false;
       setRerolling(false);
@@ -1038,14 +1052,19 @@ export default function Create() {
               </Txt>
             ) : null}
             {rerolls > 0 ? (
-              <Btn
-                block
-                testID="candidate-reroll"
-                disabled={rerolling || rewardBusy}
-                onPress={askReroll}
-              >
-                {rerolling ? CL.rerollBusy : CL.rerollBtn({ n: rerolls })}
-              </Btn>
+              <View style={{ gap: 6 }}>
+                <Btn
+                  block
+                  testID="candidate-reroll"
+                  disabled={rerolling || rewardBusy}
+                  onPress={askReroll}
+                >
+                  {rerolling ? CL.rerollBusy : CL.rerollBtn({ n: rerolls })}
+                </Btn>
+                <Txt v="sm" tone="muted" testID="reroll-mileage">
+                  {CL.rerollMileage({ n: rerollMileageLeft(mileage), need: REROLL_MILEAGE })}
+                </Txt>
+              </View>
             ) : owner ? (
               <View style={{ gap: 6 }} testID="reroll-hint">
                 <Txt v="sm" tone="muted">

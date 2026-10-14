@@ -51,6 +51,8 @@ export const cup: Translation<CupMsgs> = {
   predictionTitle: 'Match predictions',
   predictionIntro:
     'Predict any match, even if you did not enter the cup. Each correct prediction earns 1 candidate reroll ticket.',
+  predictionCap: (p: { n: number }) =>
+    `You can earn up to ${p.n} reroll tickets from predictions per cup.`,
   predictionHome: 'Home win',
   predictionDraw: 'Draw',
   predictionAway: 'Away win',
@@ -87,10 +89,12 @@ export const cup: Translation<CupMsgs> = {
   stageQf: 'Quarterfinals',
   stageR16: 'Round of 16',
   stageR32: 'Round of 32',
+  stageR64: 'Round of 64',
   stageGroup: 'Group stage',
   roundG1: 'Group match 1',
   roundG2: 'Group match 2',
   roundG3: 'Group match 3',
+  roundR64: 'Round of 64',
   roundR32: 'Round of 32',
   roundR16: 'Round of 16',
   roundQf: 'Quarterfinals',
@@ -160,6 +164,8 @@ export const cup: Translation<CupMsgs> = {
   rewardItem: 'Reward',
   rewardReroll: (p) => `${plural(p.n, 'candidate reroll ticket')}`,
   rewardScout: (p) => `${plural(p.n, 'premium scout ticket')}`,
+  plateEdition: (p) => `No.${p.n}`,
+  rewardBoost: (p) => `${plural(p.n, 'potential boost ticket')}`,
   rewardTrophy: 'Trophy and title',
   rewardNote:
     'A reroll ticket redraws the 3 candidates when you create a new player. You get it as soon as you are knocked out.',
@@ -202,6 +208,10 @@ export const cup: Translation<CupMsgs> = {
     `Use 1 reroll ticket to redraw the 3 candidates? The current ones and any potential ranges you revealed with an ad disappear, and you'll have ${plural(p.n, 'ticket')} left.`,
   rerollDone: (p) => `Candidates redrawn. ${plural(p.n, 'reroll ticket')} left.`,
   rerollFail: "Couldn't use the reroll ticket.",
+  rerollMileage: (p) =>
+    `Every ${plural(p.need, 'reroll ticket')} you use earns 1 premium scout ticket. ${p.n} to go.`,
+  rerollMileageDone: (p) =>
+    `Candidates redrawn. You used ${plural(p.need, 'reroll ticket')} and earned 1 premium scout ticket. ${plural(p.n, 'reroll ticket')} left.`,
   shopTitle: 'Reroll shop',
   shopSub: 'Buy player reroll tickets with club funds',
   shopSubHave: (p) => `You have ${plural(p.n, 'reroll ticket')} · buy more with club funds`,

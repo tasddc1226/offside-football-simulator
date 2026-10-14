@@ -5,7 +5,7 @@ import { CONFEDS, NATIONS, cupTrophy, NATIONAL_WINS } from '@offside/contracts/n
 import { LAST_PHASE, scoreRate } from './data.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, pick, chance, gauss, poisson, rnd } from './rng.js';
-import { leagueOf, addStat, log, fameEff, atkOf, creOf } from './engine.js';
+import { leagueOf, addStat, log, fameEff, atkOf, creOf, schedule } from './engine.js';
 import { BAL } from './balance.js';
 import type { GameState, NatTour } from './types.js';
 import { isKorean, KR, nationOf, RIVAL, type Confed } from './nation.js';
@@ -218,6 +218,10 @@ const isQualYear = (y: number) => y % 4 === 0 || y % 4 === 1;
 export const nextWC = (y: number) => y + ((2 - (y % 4) + 4) % 4 || 4);
 const u23 = (t: [string, number]): [string, number] => [`${t[0]} U-23`, t[1] - 6];
 
+/** 월드컵 명단 탈락 이벤트(moment-events.ts)에서 소집 거부를 선언했다 — flags.natQuit 해까지 A대표팀에 가지 않는다. */
+export const natRefusing = (s: GameState): boolean =>
+  typeof s.flags.natQuit === 'number' && s.year <= s.flags.natQuit;
+
 export function callupScore(s: GameState): number {
   const S = s.season,
     form = S.apps ? S.ratingSum / S.apps : 6.6;
@@ -322,14 +326,30 @@ export function scoreLine(m: IntlResult): string {
   return L.score({ team: teamName(m.team), kg: m.kg, og: m.og, opp: teamName(m.opp), pso: m.pso });
 }
 
+// T-11-258 대표팀 은퇴를 물을 수 있는 나이·A매치 수. 이벤트 문구(life-events.ts)는 게임 청크에 두고 판정만 여기 둔다
+// — national.ts는 첫 화면 엔진 청크에 실린다.
+export const NT_RETIRE_AGE = 31;
+export const NT_RETIRE_CAPS = 10;
+/** 대표팀 은퇴를 물을 수 있는지(아직 은퇴 안 함 · 나이 · A매치 수 · 올해 아직 안 물음). */
+export function ntRetireAsk(s: GameState): boolean {
+  return (
+    !s.nat.retired &&
+    s.age >= NT_RETIRE_AGE &&
+    s.nat.caps >= NT_RETIRE_CAPS &&
+    !s.flags['ntAsk' + s.year]
+  );
+}
+
 export function natWindow(s: GameState) {
   natInit(s);
-  if (leagueOf(s.leagueId).amateur || s.phase < 1 || s.phase > LAST_PHASE) return null;
+  if (leagueOf(s.leagueId).amateur || s.phase < 1 || s.phase > LAST_PHASE || s.nat.retired)
+    return null;
   const months = WINDOW_MONTHS[s.phase] ?? [];
   const out = months.map((m) => natOne(s, L.windowName({ m }))).filter((x) => x !== null);
   return out.length ? out : null;
 }
 function natOne(s: GameState, name: string) {
+  if (natRefusing(s)) return null;
   const sc = callupScore(s),
     thr = NT_THRESHOLD + gauss() * 1.2;
   if (s.injury > 0 || sc < thr)
@@ -356,6 +376,11 @@ function natOne(s: GameState, name: string) {
   games.forEach((m) =>
     log(s, L.matchLog({ comp, score: scoreLine(m), mins: m.mins, g: m.g, a: m.a })),
   );
+  // T-11-258 베테랑은 소집을 마친 그 구간에 대표팀 은퇴를 한 시즌 한 번 고를 수 있다(체인이라 RNG를 쓰지 않는다).
+  if (ntRetireAsk(s)) {
+    s.flags['ntAsk' + s.year] = 1;
+    schedule(s, 'nt-retire', 0, 2);
+  }
   return { name, comp, called: true as const, role, games };
 }
 
@@ -463,6 +488,7 @@ function squadRole(
 ): { role: 'starter' | 'sub' | 'none'; why: string } {
   const sc = callupScore(s);
   if (leagueOf(s.leagueId).amateur && !T.youth) return { role: 'none', why: '' };
+  if (s.nat.retired) return { role: 'none', why: L.whyRetired };
   if (s.injury > 0) return { role: 'none', why: L.whyInjury };
   if (T.youth) {
     const young = s.age <= 23;
@@ -481,6 +507,7 @@ function squadRole(
       why: young ? '' : L.whyWildcard,
     };
   }
+  if (natRefusing(s)) return { role: 'none', why: L.whyQuit };
   if (sc < NT_THRESHOLD - 1 + gauss() * 1.2)
     return { role: 'none', why: s.nat.caps ? L.whyCut : '' };
   return { role: sc >= 85 || s.nat.captain ? 'starter' : chance(0.5) ? 'starter' : 'sub', why: '' };
@@ -635,7 +662,14 @@ export function natSeasonEnd(s: GameState) {
       matches: [],
     });
   }
-  if (!s.nat.captain && s.nat.caps >= 40 && ovr(s) >= 78 && chance(0.35)) {
+  if (
+    !s.nat.captain &&
+    !s.nat.retired &&
+    !natRefusing(s) &&
+    s.nat.caps >= 40 &&
+    ovr(s) >= 78 &&
+    chance(0.35)
+  ) {
     s.nat.captain = true;
     log(s, L.captain, 'big');
     addStat(s, 'fame', 6);

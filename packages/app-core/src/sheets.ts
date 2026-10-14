@@ -175,6 +175,8 @@ export type SheetView =
       honors: string[];
       trophyHonors?: { name: string; art: import('./career-trophy').CareerTrophy }[];
       comps: string[];
+      /** T-11-261 대륙 대회 녹아웃 경로(대회 키·이름·한 줄). 녹아웃을 치른 대회만. */
+      compPaths?: { key: string; name: string; line: string }[];
       tours: TourView[];
       gala: string[];
       miles: string[];

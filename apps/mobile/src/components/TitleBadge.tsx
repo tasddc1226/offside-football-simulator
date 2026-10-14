@@ -59,9 +59,9 @@ export function TitleBadge({ title, size = 'md' }: { title: string; size?: 'md' 
           <Path d={titleIconPath(title)} fill={c.ink} />
         </Svg>
       ) : size === 'md' ? (
-        <CupTrophy stage={t.stage} size={22} />
+        <CupTrophy stage={t.stage} edition={t.edition} size={22} />
       ) : (
-        <TrophyArt stage={t.stage} size={16} />
+        <TrophyArt stage={t.stage} edition={t.edition} size={16} />
       )}
       {icon ? null : (
         <Txt bold numberOfLines={1} style={{ fontSize: rem(size === 'md' ? 0.75 : 0.75) }}>

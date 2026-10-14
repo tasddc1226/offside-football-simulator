@@ -45,6 +45,7 @@ const ko = {
   colClub: '소속',
   colRating: '평점',
   colRank: '순위',
+  loanTag: '임대',
   seasonValue: (p: { value: string }) => `몸값 ${p.value}`,
   emptyRecords: '첫 시즌을 마치면 기록이 쌓여요.',
   recordsNote:

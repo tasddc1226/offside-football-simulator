@@ -12,6 +12,7 @@ export const gameActions: Translation<GameActionsMsgs> = {
   compLeagueGame: (p) => `League phase, game ${p.n} · ${p.res}`,
   compThrough: 'Through',
   compOut: 'Out',
+  compVs: (p) => `vs ${p.name}`,
   natNotInSquad: 'Not in squad',
   natNoMedal: 'No medal',
   natTourLine: (p) =>
@@ -61,6 +62,11 @@ export const gameActions: Translation<GameActionsMsgs> = {
   retireBtn: 'Retire',
   contractTitleExt: 'Sign the extension?',
   contractTitleRookie: 'Sign the pro contract?',
+  loanSeason: 'Season-long loan',
+  contractTitleLoan: 'Sign the loan contract?',
+  contractTextLoan: (p) =>
+    `You will play a season at ${p.club}. Your salary and remaining contract stay with your parent club.`,
+  ctaLoan: 'Sign and go on loan',
   contractTitleTransfer: 'Sign the transfer contract?',
   contractTextExt:
     'This adds time to your current contract. The new salary applies from this season.',

@@ -32,6 +32,7 @@
   import TrainRadar from '../TrainRadar.svelte';
   import { focusOf } from '@offside/game/player';
   import { gameSeasonText as L } from '@offside/app-core/i18n/ko/gameSeason';
+  import { bracketView } from '@offside/app-core/bracket';
 
   const { s }: { s: GameState } = $props();
 
@@ -39,7 +40,10 @@
   const S = $derived(s.season);
   const avg = $derived(S.apps ? (S.ratingSum / S.apps).toFixed(2) : '-');
   const phase = $derived(Math.min(s.phase, LAST_PHASE));
-  const label = $derived(phase === 0 ? L.preseason : `${tn(PHASES[phase] ?? '')} · ${roundRange(s, phase)}`);
+  // T-11-254 이적시장을 잠시 닫으면 그 뒤로 시즌 탭이 보인다. 연도는 이미 넘어갔으니 끝난 시즌(year - 1)을 '시즌 종료'로 보이고
+  // 훈련·투자는 숨긴다(팀을 고르면 훈련이 휴식으로 돌아가 여기서 고른 값은 쓰이지 않는다).
+  const ended = $derived(s.pending?.type === 'market');
+  const label = $derived(ended ? L.seasonOver : phase === 0 ? L.preseason : `${tn(PHASES[phase] ?? '')} · ${roundRange(s, phase)}`);
   const lastCol = $derived((s.pos === 'GK' || s.pos === 'DF' ? [L.colCs, S.cs] : [L.colAssists, S.assists]) as [string, number]);
   const comps = $derived(s.season.comps || []);
   const activeStories = $derived(Object.entries(s.story || {}).filter(([, v]) => !v.done));
@@ -207,11 +211,11 @@
 
 <section class="card stack" data-season-status data-tour="status">
   <div>
-    <div class="eyebrow">{seasonLabel(s)} Season</div>
+    <div class="eyebrow">{seasonLabel(s, ended ? s.year - 1 : s.year)} Season</div>
     <h2>{label}</h2>
     <div class="track">
       {#each [0, 1, 2] as i (i)}
-        <div class={i < phase ? 'done' : i === phase ? 'now' : ''}></div>
+        <div class={ended || i < phase ? 'done' : i === phase ? 'now' : ''}></div>
       {/each}
     </div>
     <div class="track-lbl">
@@ -228,16 +232,37 @@
     <div>
       <h3 class="sub-title" style="margin-bottom:2px">{L.compsTitle}</h3>
       {#each comps as c (c.name)}
+        {@const bracket = bracketView(c)}
         <div class="story-row">
           <b>{tn(c.name)}</b>
           <span class="muted">{tn(c.stage) || (c.type === 'super' ? L.compSuper : L.compStart)}{c.alive && c.stage ? ` · ${L.compAlive}` : ''}</span>
           <span class="muted">{L.compLine({ apps: c.apps, g: c.g })}</span>
         </div>
+        {#if bracket}
+          <!-- T-11-261 대륙 대회 녹아웃 대진: 내 팀이 치른(치를) 승부만. 엔진이 저장한 상대·결과를 그대로 그린다. -->
+          <ol class="bracket" data-bracket={c.key} aria-label={L.bracketAria({ name: tn(c.name) })}>
+            {#each bracket.rows as row, i (i)}
+              <li class="bracket-row {row.state}" data-bracket-row={row.state}>
+                <span class="bracket-stage">{row.stage}</span>
+                <span class="bracket-vs">{row.vs}</span>
+                <span class="bracket-legs muted">{row.legs}</span>
+                <span class="bracket-result">{row.result}</span>
+              </li>
+            {/each}
+            {#if bracket.note}<li class="bracket-note muted fs-sm" data-bracket-note>{bracket.note}</li>{/if}
+          </ol>
+        {/if}
       {/each}
     </div>
   {/if}
 </section>
 
+{#if ended}
+<section class="card stack" data-prep-wait>
+  <div><div class="eyebrow">Next</div><h2>{L.nextSeasonTitle}</h2></div>
+  <p class="muted fs-sm">{L.nextSeasonWait}</p>
+</section>
+{:else}
 <section class="card stack" data-prep data-tour="prep">
   <div><div class="eyebrow">Next · {label}</div><h2>{L.prepTitle}</h2></div>
   <div class="meters">
@@ -315,6 +340,7 @@
     <p>{investHelp(s, invest)}</p>
   </div>
 </section>
+{/if}
 
 {#if activeStories.length}
   <section class="card" data-stories data-tour="stories">

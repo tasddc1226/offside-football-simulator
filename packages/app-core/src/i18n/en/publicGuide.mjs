@@ -4,6 +4,14 @@ export default {
     'The estimated finish on a transfer offer is based on club strength, not current standings. In the first season at a new club, continental entry uses this estimate and the game’s league slots. Staying at a club uses its actual finish from the previous season.',
   datingRumor:
     'Professional players aged 20 or older with at least 35 fame can encounter dating rumors during the playing season. Keep your private life private, agree with your partner to go public, or focus on football. Choices make small changes to morale, fame, manager trust or condition.',
+  ntRetirement:
+    'Players aged 31 or older with at least 10 caps can choose to retire from international football once a season, right after a call-up. Once retired, you are no longer picked for internationals or tournaments, so call-ups stop draining your condition. Your international record stays. Retirement cannot be undone.',
+  partyFollowUp:
+    'If you drop by a party invitation and it goes well, a professional player aged 20 or older with at least 25 fame hears from someone they met there in the next part of the season. You can meet openly, meet quietly or politely decline. It happens once per career.',
+  refuseCallup:
+    'If a capped player is left out of the World Cup squad, a squad snub event may appear in the next pre-season. Declaring a call-up refusal keeps you out of senior national team call-ups and continental cup and World Cup squads for that season and the next, and you give up the captaincy. Asian Games and Olympic squads are not affected.',
+
+  loan: "A professional aged 26 or younger who is not a starter can get a talk about playing time during the season if their appearances or goal contributions are low, or if they fail two or more events in a season. If you ask for a loan, season-long loan offers from clubs in the same or a lower tier appear in the transfer window after the season. You need at least two years left on your contract, and Korean players must not reach the military service deadline during the loan. Your salary and contract stay with your parent club during the loan. When the loan ends you can return to your parent club, and with 15+ appearances and a 6.8+ rating your loan club can also offer a permanent transfer. A strong loan raises the manager's trust when you return. Loan seasons are recorded at the loan club and count as another club for one-club and long-service checks.",
 
   investment:
     'In each phase, you can spend career funds on extra training, medical care or mental coaching in addition to regular training. Costs scale with salary. Training gains depend on age, potential and morale. Potential controls growth speed; it is not a hard ability cap.',

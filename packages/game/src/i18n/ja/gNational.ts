@@ -34,7 +34,9 @@ export const gNational: Translation<GNationalMsgs> = {
     `[${p.comp}] ${p.score}${p.mins ? ` · ${p.mins}分${p.g ? ` ${p.g}ゴール` : ''}${p.a ? ` ${p.a}アシスト` : ''}` : ' · ベンチ'}`,
   captain: '代表チームのキャプテンに任命されました。',
   whyInjury: 'ケガで最終メンバー外',
+  whyRetired: '代表引退',
   whyCut: '最終メンバーから落選',
   whyRefused: '所属クラブが招集を拒否',
   whyWildcard: 'オーバーエイジ枠で選出',
+  whyQuit: '代表招集の拒否を宣言中',
 };

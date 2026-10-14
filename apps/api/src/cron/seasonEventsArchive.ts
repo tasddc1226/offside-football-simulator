@@ -6,7 +6,8 @@ import { gzipToR2 } from './backup.js';
  * Since T-11-207 new uploads go to season_telemetry; this only drains events left in career_seasons
  * (and logs restored from dormant-career archives) into immutable R2 batches. Signals/growth,
  * season summaries, snapshots and the dormant-career policy are untouched. */
-export const EVENT_KEEP_DAYS = 7;
+/** T-11-252 7일 → 2일: 새 업로드는 season_telemetry로 가므로 남은 옛 값을 빨리 비운다(D1 10GB 한도). */
+export const EVENT_KEEP_DAYS = 2;
 export const EVENT_ARCHIVE_META_KEY = 'cron:season-events:last';
 const LEASE_KEY = 'cron:season-events:lease';
 const PAGE_BYTES = 512 * 1024;
