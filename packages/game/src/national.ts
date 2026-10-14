@@ -218,6 +218,10 @@ const isQualYear = (y: number) => y % 4 === 0 || y % 4 === 1;
 export const nextWC = (y: number) => y + ((2 - (y % 4) + 4) % 4 || 4);
 const u23 = (t: [string, number]): [string, number] => [`${t[0]} U-23`, t[1] - 6];
 
+/** 월드컵 명단 탈락 이벤트(moment-events.ts)에서 소집 거부를 선언했다 — flags.natQuit 해까지 A대표팀에 가지 않는다. */
+export const natRefusing = (s: GameState): boolean =>
+  typeof s.flags.natQuit === 'number' && s.year <= s.flags.natQuit;
+
 export function callupScore(s: GameState): number {
   const S = s.season,
     form = S.apps ? S.ratingSum / S.apps : 6.6;
@@ -330,6 +334,7 @@ export function natWindow(s: GameState) {
   return out.length ? out : null;
 }
 function natOne(s: GameState, name: string) {
+  if (natRefusing(s)) return null;
   const sc = callupScore(s),
     thr = NT_THRESHOLD + gauss() * 1.2;
   if (s.injury > 0 || sc < thr)
@@ -481,6 +486,7 @@ function squadRole(
       why: young ? '' : L.whyWildcard,
     };
   }
+  if (natRefusing(s)) return { role: 'none', why: L.whyQuit };
   if (sc < NT_THRESHOLD - 1 + gauss() * 1.2)
     return { role: 'none', why: s.nat.caps ? L.whyCut : '' };
   return { role: sc >= 85 || s.nat.captain ? 'starter' : chance(0.5) ? 'starter' : 'sub', why: '' };
@@ -635,7 +641,7 @@ export function natSeasonEnd(s: GameState) {
       matches: [],
     });
   }
-  if (!s.nat.captain && s.nat.caps >= 40 && ovr(s) >= 78 && chance(0.35)) {
+  if (!s.nat.captain && !natRefusing(s) && s.nat.caps >= 40 && ovr(s) >= 78 && chance(0.35)) {
     s.nat.captain = true;
     log(s, L.captain, 'big');
     addStat(s, 'fame', 6);
