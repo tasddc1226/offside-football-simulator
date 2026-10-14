@@ -171,6 +171,14 @@ export function scoutPityView(p: ScoutPity) {
   };
 }
 
+/**
+ * T-11-248 리롤권 마일리지. 서버가 차감한 리롤권(구매 · 구단 자금 · 보상으로 받은 것 모두)을 REROLL_MILEAGE장 쓸 때마다
+ * 프리미엄 스카우트권 1장을 준다. 광고로 다시 뽑기는 기기에서만 세므로 들어가지 않는다. progress = 마지막 지급 뒤 쓴 장수.
+ */
+export const REROLL_MILEAGE = 30;
+/** 스카우트권까지 남은 리롤권 장수(이번 장 포함 — 1이면 다음 장에서 받는다). 서버 SQL(spendItem)과 같은 규칙이다. */
+export const rerollMileageLeft = (progress: number) => Math.max(1, REROLL_MILEAGE - progress);
+
 /** T-11-244 영구결번을 처음 받은 커리어의 구단주가 받는 프리미엄 스카우트권. */
 export const RETIRED_NUMBER_SCOUTS = 1;
 
