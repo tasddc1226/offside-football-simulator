@@ -9,7 +9,7 @@ import { planCup } from '@offside/contracts/cup';
 
 const NOW = '2026-10-10T03:00:00.000Z';
 const AT = '2026-10-11T12:00:00.000Z';
-const CUP = planCup({ id: 's1-1', season: 1, edition: 1, opensOn: '2026-10-09' });
+const CUP = planCup({ id: 's1-1', season: 1, edition: 1, opensOn: '2026-10-09', capacity: 64 });
 const path = '/v1/cups/s1-1';
 describe('cup predictions', () => {
   let ctx: TestD1;

@@ -251,10 +251,14 @@ export type BuyRewardBody = z.infer<typeof BuyRewardBodySchema>;
 export const AdminCupCreateSchema = z
   .strictObject({
     opensOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    opensTime: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+      .optional(),
     entryDays: z.number().int().min(1).max(14).optional(),
     drawHour: z.number().int().min(0).max(23).optional(),
     matchHour: z.number().int().min(0).max(23).optional(),
-    capacity: z.number().int().min(4).max(64).optional(),
+    capacity: z.number().int().min(4).max(128).optional(),
     minFilled: z.number().int().min(1).max(11).optional(),
   })
   // 추첨은 첫 경기 2시간 전보다 앞서야 한다.

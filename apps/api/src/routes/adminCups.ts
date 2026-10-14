@@ -1,6 +1,6 @@
 import { registerAdminCupPredictionRoutes } from './adminCupPredictions.js';
 import { AdminCupCreateSchema, AdminCupListSchema, AdminCupSchema } from '@offside/contracts';
-import { cupEndsAt, planCup, type CupDef } from '@offside/contracts/cup';
+import { cupFinalAt, planCup, type CupDef } from '@offside/contracts/cup';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import { and, eq, ne, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
@@ -52,7 +52,8 @@ export function registerAdminCupRoutes(app: Hono<AppEnv>): void {
     const season = teamSeasonAt(draft.opensAt);
     if (season === null || teamSeasonAt(draft.rounds.at(-1)!) !== season)
       throw conflictError(cupKo('adminSeason'), 'CUP_SEASON');
-    const clash = all.find((x) => draft.opensAt < cupEndsAt(x) && x.opensAt < cupEndsAt(draft));
+    // T-11-246 앞 대회 결승 시각 뒤면 접수를 열 수 있다(지난 대회를 보여 주는 하루와 겹쳐도 된다).
+    const clash = all.find((x) => draft.opensAt <= cupFinalAt(x) && x.opensAt <= cupFinalAt(draft));
     if (clash)
       throw conflictError(cupKo('adminOverlap', { edition: clash.edition }), 'CUP_OVERLAP');
     const cup: CupDef = { ...draft, id: `s${season}-${edition}`, season };

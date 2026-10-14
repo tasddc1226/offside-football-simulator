@@ -225,10 +225,13 @@ export async function drawCup(db: Db, cup: CupDef, now: string) {
         .select({ team: ownerTeams })
         .from(ownerTeams)
         .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
-        .where(
-          inArray(
-            ownerTeams.id,
-            entries.map((e) => e.teamId),
+        // T-11-246 128팀은 D1 바인드 변수 상한(100)을 넘으므로 id 목록 대신 참가 표와 잇는다.
+        .innerJoin(
+          cupEntries,
+          and(
+            eq(cupEntries.teamId, ownerTeams.id),
+            eq(cupEntries.cupId, cup.id),
+            eq(cupEntries.status, 'active'),
           ),
         )
     : [];
@@ -238,7 +241,7 @@ export async function drawCup(db: Db, cup: CupDef, now: string) {
     return t && t.season === cup.season && t.filled >= cup.minFilled;
   });
   const dropped = entries.filter((e) => !ok.includes(e));
-  const groups = cupGroupCount(ok.length);
+  const groups = cupGroupCount(ok.length, cup.capacity);
   const seed = crypto.randomUUID();
   const stmts: D1PreparedStatement[] = [
     d1
@@ -518,7 +521,9 @@ export async function runCup(db: Db, now: string, cups?: readonly CupDef[]) {
           round,
           n: due.filter((x) => x.round === round).length,
         });
-        continue;
+        // T-11-246 128팀이면 조별 3차전(64경기)과 64강 만들기·조별 탈락 보상을 한 번에 하면 D1 쿼리 상한(호출당 1000)에
+        // 가깝다. cron 한 번에 라운드 하나만 치르고, 다음 라운드 만들기·보상은 다음 cron(5분 뒤)이 한다.
+        break;
       }
       // 경기가 모두 끝난 가장 늦은 라운드 다음 단계가 아직 없으면 만든다.
       const rounds = [...new Set(matches.map((m) => m.round))].sort(

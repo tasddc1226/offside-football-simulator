@@ -172,6 +172,6 @@ export const nextKoSlot = (slot: number) => Math.floor(slot / 2);
 
 /** 토너먼트 라운드에서 진 팀의 성적. */
 export const koLoserStage = (round: CupRound) =>
-  (({ r32: 'r32', r16: 'r16', qf: 'qf', sf: 'sf', f: 'runnerup' }) as const)[
-    round as 'r32' | 'r16' | 'qf' | 'sf' | 'f'
+  (({ r64: 'r64', r32: 'r32', r16: 'r16', qf: 'qf', sf: 'sf', f: 'runnerup' }) as const)[
+    round as 'r64' | 'r32' | 'r16' | 'qf' | 'sf' | 'f'
   ];

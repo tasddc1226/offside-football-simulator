@@ -16,7 +16,7 @@ import { pushText } from './text.js';
 
 const NOW = Date.parse('2026-10-11T12:00:00.000Z'); // KST21:00, cup window
 const now = new Date(NOW).toISOString();
-const cup = planCup({ id: 's1-1', season: 1, edition: 1, opensOn: '2026-10-01' });
+const cup = planCup({ id: 's1-1', season: 1, edition: 1, opensOn: '2026-10-01', capacity: 64 });
 let ctx: TestD1;
 let user: Awaited<ReturnType<typeof issueCookie>>;
 let queue: { sendBatch: ReturnType<typeof vi.fn> };

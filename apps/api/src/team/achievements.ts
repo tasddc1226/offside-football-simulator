@@ -83,7 +83,7 @@ export type AchievementTeam = {
   rating: number;
   likes: number;
   /** T-11-237 이 팀의 오프사이드 컵 최고 성적(끝난 컵만). 없으면 null. */
-  cupBest?: 'champion' | 'runnerup' | 'sf' | 'qf' | 'r16' | 'r32' | 'group' | null;
+  cupBest?: 'champion' | 'runnerup' | 'sf' | 'qf' | 'r16' | 'r32' | 'r64' | 'group' | null;
 };
 
 /** 그 시즌 구단주 활동. */

@@ -24,7 +24,7 @@ import { cupText as L } from '@offside/app-core/i18n/ko/cup';
 import { cupRewardText } from '@offside/app-core/cupReward';
 import { cupAppText as A } from '@offside/app-core/i18n/ko/cupApp';
 import { teamMatchText as TM } from '@offside/app-core/i18n/ko/teamMatch';
-import { CUP_STAGES, type CupRound } from '@offside/contracts/cup';
+import { CUP_KO_ROUNDS, CUP_STAGES, type CupRound } from '@offside/contracts/cup';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLogo } from '../../components/TeamLogo';
 import { refreshAccount } from '../../game/host';
@@ -42,7 +42,7 @@ import { cupFolds, rememberCupFolds, type CupScheduleTab } from '@offside/app-co
 import { CupPrediction, PredictionIntro, usePredictions } from './CupPrediction';
 import type { CupPredictionContext } from '@offside/app-core/cupPredictions';
 
-const KO_ROUNDS: CupRound[] = ['r32', 'r16', 'qf', 'sf', 'f'];
+const KO_ROUNDS: readonly CupRound[] = CUP_KO_ROUNDS;
 
 function Bullet({ children }: { children: string }) {
   return (
