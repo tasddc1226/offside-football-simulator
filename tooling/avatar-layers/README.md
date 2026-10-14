@@ -34,3 +34,5 @@ node tooling/avatar-layers/mobile-sources.mjs                    # Metro require
   ```
 
 Check every hairstyle, outfit and accessory in all 18 poses before replacing the committed atlases. image_gen sometimes moves a limb or misses a figure. When that happens, delete `gen/<job>.png` and run that job again.
+
+A figure that stays unchanged after a rerun is too small for image_gen. Crop that figure from `gen/base-<sheet>.png`, enlarge it 3× (nearest), edit the crop alone, shrink it back, key it and paste it over the same window of `cut/<job>-<sheet>.png`. The runL figure of `expr-wink-A` was made this way with `wink-fix.prompt` (window x 47–329, y 0–401 of sheet A).

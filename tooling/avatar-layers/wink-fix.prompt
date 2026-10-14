@@ -1,0 +1,4 @@
+Use your built-in image generation tool (image_gen) exactly once to EDIT Image 1, then copy the generated PNG to ./gen/wcrop.png (create nothing else). Do not write code to draw or modify the image.
+
+Image prompt:
+Precise local edit of one bald chibi footballer on a flat pure magenta (#FF00FF) background. Keep the SAME canvas size, the same figure in the same position, pose and scale, pixel-aligned with Image 1, with the same thick dark outline and pixel-inspired shading. Change ONLY the face: the figure WINKS — the viewer-right eye is CLOSED, drawn as a short dark downward-curved line, while the viewer-left eye stays open — with a subtle smile. Eyebrows may follow the expression. Everything else (bald head, ears, skin, white undershirt and shorts, bare feet, background) stays exactly identical.

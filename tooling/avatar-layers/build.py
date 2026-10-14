@@ -39,6 +39,8 @@ ATLASES.update({
 ATLASES.update({f'band-{h}': (f'band-{h}', 'band') for h in HAIRS})
 PARENT = {f'band-{h}': f'hair-{h}' for h in HAIRS}
 STAND_ONLY = {'suit', 'bouquet', 'crutch', 'bandage'}
+# light stubble differs from bare skin by less than the usual change threshold
+THRESH = {'beard-stubble': 40}
 
 
 def load(p):
@@ -293,7 +295,11 @@ for s, poses in POSES.items():
                 P = aligned[PARENT[name]]
                 m, Ew, shift = extract(P, E[y0:y1, x0:x1], P[..., 3] > 0, others)
             else:
-                m, Ew, shift = extract(Bf, E[y0:y1, x0:x1], fig, others, 60 if kind == 'kit' else 90)
+                m, Ew, shift = extract(Bf, E[y0:y1, x0:x1], fig, others, THRESH.get(name, 60 if kind == 'kit' else 90))
+            if name in THRESH:
+                # the low threshold also picks up lip and cheek tone shifts: keep only skin and dark hair dots
+                c = classes(Ew[..., :3])
+                m &= c['skin'] | ((c['L'] < 175) & (c['sat'] < 80))
             if name.startswith('hair-'):
                 aligned[name] = Ew
             report.append((name, s, pose, int(m.sum()), round(shift, 1)))
