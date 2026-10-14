@@ -17,6 +17,7 @@ export const game: Translation<GameMsgs> = {
   titleOpen: (p) => `Main title ${p.name}, open titles`,
   storageFull: "Storage is full, so your progress couldn't be saved. Back it up in Settings.",
   actEvent: '⚡ View event',
+  actMarket: 'Choose your next club',
   actSeasonEnd: 'View season review',
   actPreseason: 'Start preseason training',
   actPlay: (p) => `Train, then play ${p.n} match${p.n === 1 ? '' : 'es'}`,

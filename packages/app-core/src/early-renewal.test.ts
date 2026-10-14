@@ -4,7 +4,7 @@ import { createRng, getActiveRng, setActiveRng } from '@offside/game/rng';
 import { loadSave } from '@offside/game/save';
 import type { GameState } from '@offside/game/types';
 import { createGameActions, type GameHost } from './game-actions.js';
-import { createSheetController, initialSheetState } from './sheet-controller.js';
+import { canDismissSheet, createSheetController, initialSheetState } from './sheet-controller.js';
 import { initialAppState } from './state.js';
 
 function harness(saved?: GameState) {
@@ -65,6 +65,36 @@ function harness(saved?: GameState) {
 }
 
 describe('웹·앱 공용 조기 연장 진행', () => {
+  it('시장을 닫고 다시 열거나 저장 복원해도 제안·RNG는 같고 시즌 진행은 막힌다', async () => {
+    const h = harness();
+    h.actions.nextPending();
+    expect(canDismissSheet(h.sheet.state, h.s.pending)).toBe(true);
+    const saved = JSON.stringify(h.s);
+    const rng = getActiveRng().getState();
+    const offers = h.s.pending?.type === 'market' ? h.s.pending.m : null;
+    h.sheet.dismissSheet();
+    expect(h.sheet.state.open).toBe(false);
+    await h.actions.advance();
+    expect(JSON.stringify(h.s)).toBe(saved);
+    h.actions.nextPending();
+    expect(h.sheet.state.view?.kind).toBe('market');
+    expect(h.s.pending?.type === 'market' && h.s.pending.m).toBe(offers);
+    expect(getActiveRng().getState()).toEqual(rng);
+    const restored = harness(loadSave(JSON.parse(saved))!.G);
+    restored.actions.nextPending();
+    expect(JSON.stringify(restored.s)).toBe(saved);
+    expect(restored.save).not.toHaveBeenCalled();
+    const index = offers!.options.findIndex((o) => o.kind === 'renew');
+    restored.actions.pickOption(index);
+    expect(restored.sheet.state.view?.kind).toBe('contract');
+    expect(canDismissSheet(restored.sheet.state, restored.s.pending)).toBe(false);
+    h.sheet.state.busy = true;
+    expect(canDismissSheet(h.sheet.state, h.s.pending)).toBe(false);
+    h.sheet.state.busy = false;
+    h.s.pending = { type: 'event', id: 'x' } as never;
+    expect(canDismissSheet(h.sheet.state, h.s.pending)).toBe(false);
+  });
+
   it('시장·계약서 반복 열기와 저장복원은 제안·RNG를 보존하고 사인은 한 번만 처리한다', () => {
     const h = harness();
     h.actions.nextPending();

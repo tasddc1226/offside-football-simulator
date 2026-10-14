@@ -25,6 +25,14 @@ describe('seasonAction', () => {
     expect(seasonAction(s)).toMatchObject({ prep: expect.stringMatching(/ · 투자 없음 · /) });
   });
 
+  it('이적시장 대기는 팀 선택으로 돌아가고 결산이 남으면 결산부터 연다', () => {
+    const s = game();
+    s.pending = { type: 'market', res: null, m: null };
+    expect(seasonAction(s)).toEqual({ kind: 'pending', label: '이적할 팀 선택하기' });
+    s.pending.res = {} as never;
+    expect(seasonAction(s)).toEqual({ kind: 'pending', label: '시즌 결산 보기' });
+  });
+
   it('대기 중인 이벤트·시즌 결산은 요약 없이 그걸 여는 버튼', () => {
     const s = game();
     s.pending = { type: 'event', id: 'x' } as never;
