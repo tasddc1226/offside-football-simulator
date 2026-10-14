@@ -13,6 +13,7 @@ import { gDexGroups } from './gDexGroups';
 import { gFanfeed } from './gFanfeed';
 import { gGkLabel } from './gGkLabel';
 import { gLegend } from './gLegend';
+import { gLife } from './gLife';
 import { gMilitary } from './gMilitary';
 import { gMinigame } from './gMinigame';
 import { gMoments } from './gMoments';
@@ -44,6 +45,7 @@ export const en = {
   gFanfeed,
   gGkLabel,
   gLegend,
+  gLife,
   gMilitary,
   gMinigame,
   gMoments,

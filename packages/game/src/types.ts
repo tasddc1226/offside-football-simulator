@@ -105,6 +105,8 @@ export interface NatState {
   qual: Record<number, boolean>;
   captain: boolean;
   debutYear: number | null;
+  /** T-11-258 대표팀 은퇴를 발표한 해. 없으면 은퇴하지 않았다(옛 세이브 포함). */
+  retired?: number;
 }
 
 export interface MilState {
