@@ -3,7 +3,7 @@ import type { AvatarPngReviewMsgs } from '../ko/avatarPngReview';
 export const avatarPngReview: Translation<AvatarPngReviewMsgs> = {
   title: '元のPNGをゲーム画面で確認',
   intro: 'ドット変換や顔の再構築なしで元の画像を表示します',
-  note: 'ローカルの外見プレビューです。髪・肌・ユニフォームの色は元画像に固定され、選手の記録や保存した外見は変わりません。',
+  note: '既存9種には保存済みの外見を反映します · 下の新規7種は元画像の色を使用するデザイン案です',
   artwork: '外見を選択',
   bald: 'スキンヘッド',
   shaved: '短い坊主',
@@ -28,5 +28,16 @@ export const avatarPngReview: Translation<AvatarPngReviewMsgs> = {
   openSource: '元のPNGを開く',
   openGame: 'PNGプレビューでローカルゲームを開く',
   footer:
-    'ローカルゲームでは、このタブのキャラクターとカードのみ変更します。全選手に同じデザインが表示され、選手ごとの保存や色変更は未接続です。本番環境とモバイルアプリは変更しません。',
+    '既存9種はWeb・アプリ共通のPNG描画に対応 · 下の新規7種のリンクはローカルプレビュー用です · 本番には未反映です',
+  legacyTitle: '既存の選手エセット全体 · PNG',
+  legacyIntro: '髪型9種、モーション17ポーズ、外見、負傷・軍服・引退式の画像を確認できます',
+  states: '選手の状態',
+  normal: '現役',
+  army: '軍服務',
+  injured: '負傷',
+  retired: '引退式',
+  gray: '白髪',
+  kitPattern: 'ユニフォームの柄',
+  animation: 'モーション',
+  playPause: '再生 / 一時停止',
 };

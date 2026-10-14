@@ -3,7 +3,7 @@
 // (avatar-mini-motion/<머리 모양>.ts, 무대가 열릴 때 그 선수 머리 모양 하나만 불러온다), 서 있는 자세는 카드와 같은 그림을 쓴다.
 // 색(피부 · 머리 · 유니폼 · 축구화 · 양말 · 밴드 · 고글)은 서 있는 모습과 같은 규칙으로 칠하고, 점프 · 숨쉬기는 칠한 뒤 몸을 옮기며,
 // 공 · 트로피 · 반짝임 · 흙먼지는 마지막에 얹는다. 프레임은 64×72(논리 32×36)이고, 게임 RNG는 쓰지 않는다.
-import { avatarPixels, miniColors, type AvatarSpec } from './avatar.js';
+import { avatarPixels, avatarRects, miniColors, type AvatarSpec } from './avatar.js';
 import { MINI_SPRITES } from './avatar-mini-data.js';
 import { MINI_W, paintMini, type MiniBody } from './avatar-mini.js';
 
@@ -375,4 +375,35 @@ export function motionFrame(sp: AvatarSpec, f: MotionFrame, poses?: MiniPoses | 
 /** 모션 → 프레임 색 격자 목록. */
 export function motionFrames(sp: AvatarSpec, id: MotionId, poses?: MiniPoses | null): Px[] {
   return MOTIONS[id].frames.map((f) => motionFrame(sp, f, poses));
+}
+
+/** Existing non-player dot props remain unchanged alongside the PNG player. Anchors use 32x36 units. */
+export function motionDecorationRects(f: MotionFrame, at: { face: Pt; foot: Pt; top: Pt }) {
+  const px: Px = Array.from({ length: FH }, () => Array<string | null>(FW).fill(null));
+  if (f.dust) {
+    stamp(px, DUST, 6, FH - 6);
+    stamp(px, DUST, FW - 12, FH - 6);
+  }
+  if (f.sparkle) {
+    stamp(px, SPARKLE, 4, 2);
+    stamp(px, SPARKLE, FW - 9, 4);
+  }
+  const shift = (f.sink ?? 0) - (f.lift ?? 0);
+  if (f.trophy)
+    stamp(
+      px,
+      TROPHY,
+      Math.round(at.top[0] * 2 - 7),
+      Math.round((at.top[1] + shift) * 2 - TROPHY.length),
+    );
+  if (f.ball) {
+    const base = f.ball.from === 'foot' ? at.foot : f.ball.from === 'head' ? at.face : [0, 0];
+    stamp(
+      px,
+      BALL,
+      Math.round(base[0]! * 2 + f.ball.d[0]),
+      Math.round((base[1]! + shift) * 2 + f.ball.d[1]),
+    );
+  }
+  return avatarRects(px);
 }

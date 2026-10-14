@@ -2,7 +2,7 @@ import { ns } from '../core';
 const ko = {
   title: '원본 PNG를 게임 화면에서 보기',
   intro: '도트 변환이나 얼굴 재조립 없이 원본 이미지를 그대로 표시해요',
-  note: '로컬 외형 미리보기예요 · 머리·피부·유니폼 색은 원본에 고정되어 있으며 선수 기록과 저장된 꾸미기 값은 바뀌지 않아요',
+  note: '기존 9종은 저장된 꾸미기를 이미지에 반영해요 · 아래 신규 7종은 색상이 고정된 원본 시안이에요',
   artwork: '외형 선택',
   bald: '완전 민머리',
   shaved: '짧은 삭발',
@@ -27,7 +27,18 @@ const ko = {
   openSource: '원본 PNG 보기',
   openGame: 'PNG 미리보기로 로컬 게임 열기',
   footer:
-    '로컬 게임 링크는 이 탭의 캐릭터와 카드 그림만 바꿔요 · 모든 선수에게 선택한 시안이 표시되며 커리어별 저장·색 변경은 아직 연결하지 않았어요 · 운영 환경과 모바일 앱은 그대로예요',
+    '기존 9종은 웹·앱 공통 PNG 렌더러에 연결했어요 · 아래 신규 7종의 게임 링크는 로컬 미리보기 전용이에요 · 운영 환경에는 아직 적용되지 않았어요',
+  legacyTitle: '기존 선수 에셋 전체 · PNG',
+  legacyIntro: '기존 9종 · 17개 모션 자세 · 꾸미기 · 부상·군복·은퇴 소품을 이미지로 확인해요',
+  states: '선수 상태',
+  normal: '현역',
+  army: '군 복무',
+  injured: '부상',
+  retired: '은퇴식',
+  gray: '흰머리',
+  kitPattern: '유니폼 무늬',
+  animation: '모션',
+  playPause: '재생 / 일시정지',
 };
 export type AvatarPngReviewMsgs = typeof ko;
 export const avatarPngReviewText = ns('avatarPngReview', ko);

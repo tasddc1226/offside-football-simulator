@@ -4,6 +4,7 @@
   import PixelAvatar from '../ui/PixelAvatar.svelte';
   import PlayerCard from '../ui/team/PlayerCard.svelte';
   import OriginalPngAvatar from '../ui/OriginalPngAvatar.svelte';
+  import LegacyImagePreview from './LegacyImagePreview.svelte';
   import { ORIGINAL_AVATARS, type OriginalAvatarStyle, type OriginalAvatarPose } from '../ui/originalAvatar';
 
   import { avatarPngReviewText as L } from '@offside/app-core/i18n/ko/avatarPngReview';
@@ -26,6 +27,7 @@
     <p>{L.intro}</p>
     <p class="note">{L.note}</p>
   </header>
+  <LegacyImagePreview />
   <nav aria-label={L.artwork}>
     {#each Object.keys(ORIGINAL_AVATARS) as key (key)}
       {@const style = key as OriginalAvatarStyle}

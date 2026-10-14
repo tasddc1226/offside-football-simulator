@@ -3,7 +3,7 @@ import type { AvatarPngReviewMsgs } from '../ko/avatarPngReview';
 export const avatarPngReview: Translation<AvatarPngReviewMsgs> = {
   title: 'The source artwork, in game.',
   intro: 'Original PNG pixels, without dot conversion or face reconstruction.',
-  note: 'Local appearance preview. Hair, skin and kit colours are fixed in each source. Career data and saved customisation stay unchanged.',
+  note: 'The nine existing styles use saved appearance settings · The seven new concepts below keep their original colours',
   artwork: 'Artwork',
   bald: 'Bald',
   shaved: 'Shaved',
@@ -29,5 +29,17 @@ export const avatarPngReview: Translation<AvatarPngReviewMsgs> = {
   openSource: 'Open unchanged source PNG',
   openGame: 'Open local game with PNG preview',
   footer:
-    'The local game link overrides character and card artwork in this tab. All players show the selected concept; per-career saving and recolouring are not connected. Production and the mobile app are unchanged.',
+    'The nine existing styles share the web and app PNG renderer · Game links for the seven new concepts are local previews · Not deployed to production',
+  legacyTitle: 'All existing player assets · PNG',
+  legacyIntro:
+    'Nine hairstyles, 17 motion poses, customisation and injury, military and retirement image assets.',
+  states: 'Player state',
+  normal: 'Active',
+  army: 'Military',
+  injured: 'Injured',
+  retired: 'Retirement',
+  gray: 'Grey hair',
+  kitPattern: 'Kit pattern',
+  animation: 'Motion',
+  playPause: 'Play / Pause',
 };

@@ -31,8 +31,9 @@ for (const size of [
     await expect(page.locator('#modal')).not.toHaveAttribute('inert', '');
     await expect(runner).toHaveAttribute('aria-hidden', 'true');
     expect(await runner.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
-    expect(await runner.innerText()).toBe('');
+    await expect(runner.getByRole('button')).toHaveCount(0);
     await expect(page.locator('#sheet')).toContainText('전반기 진행 중');
+    await expect(runner.locator('.avatar-stage')).toHaveAttribute('data-ready', 'true');
     await page.clock.runFor(400);
     await expect(runner.locator('.avatar-stage')).toHaveAttribute('data-motion', 'run');
 
@@ -166,7 +167,7 @@ test('reduced motion stops both travel and running poses without delaying progre
 test('pose loading failure keeps a still player and does not block progress', async ({ page }) => {
   let failed = 0;
   await page.route(
-    /(?:avatar-mini-motion\/[^/?]+|assets\/(?:short|fringe|long|mohawk|slick|buzz|afro|bun|spiky)-[^/]+\.js)(?:\?|$)/,
+    /(?:avatar-images\/(?:short|fringe|long|mohawk|slick|buzz|afro|bun|spiky)-A\.png|assets\/(?:short|fringe|long|mohawk|slick|buzz|afro|bun|spiky)-A-[^/]+\.png)(?:\?|$)/,
     (r) => {
       failed++;
       return r.abort();
@@ -179,7 +180,8 @@ test('pose loading failure keeps a still player and does not block progress', as
   await expect(runner).toBeVisible();
   await expect.poll(() => failed).toBeGreaterThan(0);
   await expect(runner.locator('.avatar-stage')).toHaveAttribute('data-motion', 'idle');
-  await expect(runner.locator('svg rect').first()).toBeVisible();
+  await expect(runner.locator('.avatar-walker > svg')).toBeVisible();
+  await expect(runner.locator('.image-avatar > g')).toBeVisible();
   expect(await runner.evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
   await page.clock.runFor(10000);
   await expect(runner).toBeHidden();

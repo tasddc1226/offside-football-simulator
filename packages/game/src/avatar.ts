@@ -143,6 +143,8 @@ function shirtColor(k: KitSpec, x: number, y: number): string {
   return kitColorAt(k, x, y);
 }
 
+export const isArmyAvatar = (sp: AvatarSpec): boolean => sp.kit === ARMY_KIT;
+
 /** 화면 너비에 맞는 아바타 너비(px). 칸이 고르게 보이게 정수배(좁으면 2배, 아니면 3배)로만 키운다. 웹 CSS도 같은 값이다. */
 export const avatarWidth = (viewportW: number) => (viewportW < 360 ? AVATAR_W * 2 : AVATAR_W * 3);
 
