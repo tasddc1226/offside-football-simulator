@@ -62,10 +62,12 @@ describe('T-11-243 additional hairstyles', () => {
             const handOutline =
               actual === 'O' &&
               [-1, 0, 1].some((dy) =>
-                [-1, 0, 1].some((dx) => 'uUiI'.includes(rows[y + fy + dy]?.[x + fx + dx] ?? '.')),
+                [-1, 0, 1].some((dx) =>
+                  'uUiIvVgG'.includes(rows[y + fy + dy]?.[x + fx + dx] ?? '.'),
+                ),
               );
-            // Foreground hands and their outline may occlude the face.
-            if (!'uUiI'.includes(actual) && !handOutline && canonical[y]![x] !== '.')
+            // Foreground hands, sleeves and their outline may occlude the face.
+            if (!'uUiIvVgG'.includes(actual) && !handOutline && canonical[y]![x] !== '.')
               expect(actual, `${style}/${pose}/face/${x},${y}`).toBe(canonical[y]![x]);
           }
       }

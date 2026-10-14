@@ -1,3 +1,4 @@
+import armRegions from './avatar-mini-limbs.json';
 import { mix } from './color.js';
 import type { MiniBody, MiniColors } from './avatar-mini.js';
 
@@ -35,10 +36,13 @@ export function paintEquipment(
     const [fx, fy] = pose?.at ?? [0, 0];
     // These authored poses put a forearm against the ear/scalp. Skin connectivity
     // alone merges that arm into the face; keep the limb on its own layer.
+    const authoredLimbs = src.some((row) => /[uUiI]/.test(row));
     const foregroundArm = (x: number, y: number) =>
-      (pose?.id === 'waveLow' && x <= fx + 12 && y >= fy + 17) ||
-      (pose?.id === 'waveHigh' && x <= fx + 11 && y >= fy + 11) ||
-      (pose?.id === 'lift' && (x <= fx + 16 || x >= fx + 33) && y < fy + 27);
+      !authoredLimbs &&
+      (armRegions[pose?.id as keyof typeof armRegions] ?? []).some(
+        ([left, right, top, bottom]) =>
+          x - fx >= left! && x - fx <= right! && y - fy >= top! && y - fy < bottom!,
+      );
     // Face skin is a separate island inside its outline. This also protects the
     // face when legacy poses place the hands over the standing-head silhouette.
     const face = new Set<number>();
