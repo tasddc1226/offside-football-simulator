@@ -106,6 +106,37 @@ export const cupFinalAt = (cup: CupDef) => cup.rounds.at(-1)!;
 export const cupEndsAt = (cup: CupDef) =>
   new Date(Date.parse(cupFinalAt(cup)) + CUP_AFTERGLOW_MS).toISOString();
 
+/**
+ * T-11-251 결승이 끝나면 서버가 다음 대회를 스스로 연다. 접수는 결승 CUP_NEXT_GAP_MS 뒤, 접수 기간·정원·최소 인원은
+ * 앞 대회와 같은 규칙(제2회: KST 21:10 접수, 사흘째 자정 마감, 128팀). 시즌이 맞지 않으면 api가 다음 시즌 개막으로 미룬다.
+ */
+export const CUP_NEXT_GAP_MS = 10 * 60_000;
+export const CUP_NEXT_ENTRY_DAYS = 3;
+
+const kstParts = (iso: string) => {
+  const d = new Date(Date.parse(iso) + 9 * 3600_000).toISOString();
+  return { day: d.slice(0, 10), time: d.slice(11, 16) };
+};
+
+/** 앞 대회 다음 회차 일정(id·season은 api가 채운다). opensAt을 주면 그 시각(KST 분 단위)에 접수를 연다. */
+export function planNextCup(prev: CupDef, opensAt = cupFinalAt(prev)): CupDef {
+  const at =
+    opensAt === cupFinalAt(prev)
+      ? new Date(Date.parse(opensAt) + CUP_NEXT_GAP_MS).toISOString()
+      : opensAt;
+  const { day, time } = kstParts(at);
+  return planCup({
+    id: '',
+    season: 0,
+    edition: prev.edition + 1,
+    opensOn: day,
+    opensTime: time,
+    entryDays: CUP_NEXT_ENTRY_DAYS,
+    capacity: prev.capacity,
+    minFilled: prev.minFilled,
+  });
+}
+
 /** 정원이 일찍 차서 일정을 당길 때 추첨까지 남기는 최소 시간(신청한 구단주가 알림을 보고 명단을 챙길 시간). */
 export const CUP_EARLY_NOTICE_MS = 12 * 3600_000;
 
