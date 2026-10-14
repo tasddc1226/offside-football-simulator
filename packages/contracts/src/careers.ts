@@ -330,22 +330,23 @@ export const RetiredNumberResultSchema = z.discriminatedUnion('kind', [
 export type RetiredNumberResult = z.infer<typeof RetiredNumberResultSchema>;
 
 /**
- * T-11-180 결번 자격에 못 미친 이유(retiredNumber가 null일 때, 기준의 절반 이상 채웠을 때만). seasons: 그 구단 시즌이
- * 모자람(need 시즌 필요). score: 구단 기여 점수가 기준의 pct%(10% 단위). 옛 응답엔 없다. 모양은 RnMiss 하나.
+ * T-11-180 결번 자격에 못 미친 이유(retiredNumber가 null일 때). seasons: 점수는 넘겼지만 그 구단 시즌이 모자람(need 시즌
+ * 필요). score: 구단 기여 점수가 기준의 pct%(10% 단위). T-11-264 둘 다 시즌 수·점수를 함께 담는다 — 옛 응답(T-11-264
+ * 전)은 seasons 사유에 pct가, score 사유에 seasons·need가 없을 수 있어 선택 필드다. 옛 응답엔 통째로 없다.
  */
-export const RetiredNumberMissSchema = z.discriminatedUnion('reason', [
-  z.strictObject({
-    reason: z.literal('seasons'),
+export const RetiredNumberMissSchema = z
+  .strictObject({
+    reason: z.enum(['seasons', 'score']),
     club: z.string(),
-    seasons: z.number().int(),
-    need: z.number().int(),
-  }),
-  z.strictObject({
-    reason: z.literal('score'),
-    club: z.string(),
-    pct: z.number().int(),
-  }),
-]) satisfies z.ZodType<RnMiss>;
+    seasons: z.number().int().optional(),
+    need: z.number().int().optional(),
+    pct: z.number().int().optional(),
+  })
+  // 옛 응답 보정. 6 = retired-numbers.ts RN_MIN_SEASONS(기준값 모듈을 값으로 끌어오지 않는다).
+  .transform((m) => ({ ...m, seasons: m.seasons ?? 0, need: m.need ?? 6 })) satisfies z.ZodType<
+  RnMiss,
+  unknown
+>;
 export type RetiredNumberMiss = RnMiss;
 
 export const RetirementResponseSchema = z.strictObject({

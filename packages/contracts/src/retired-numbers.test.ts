@@ -109,10 +109,20 @@ describe('영구결번 구단 기여 점수 (T-10-076)', () => {
       club: '맨체스터 스카이블루',
       seasons: 5,
       need: 6,
+      pct: 100,
     });
     expect(rnMissOf([club({ score: 799 })], 800)).toMatchObject({ reason: 'score', pct: 90 });
     expect(rnMissOf([club({ score: 400 })], 800)).toMatchObject({ reason: 'score', pct: 50 });
-    expect(rnMissOf([club({ score: 399 })], 800)).toBeNull();
+    // T-11-264 시즌 수·점수를 함께 담고, 한 구단에서 3시즌 이상 뛰었으면 점수가 낮아도 이유를 준다.
+    expect(rnMissOf([club({ seasons: 4, score: 160 })], 800)).toEqual({
+      reason: 'score',
+      club: '맨체스터 스카이블루',
+      seasons: 4,
+      need: 6,
+      pct: 20,
+    });
+    expect(rnMissOf([club({ seasons: 2, score: 399 })], 800)).toBeNull();
+    expect(rnMissOf([club({ seasons: 2, score: 0 })], 800)).toBeNull();
     expect(rnMissOf([club({ clubId: null, score: 700 })], 800)).toBeNull();
     expect(rnMissOf([], 800)).toBeNull();
   });

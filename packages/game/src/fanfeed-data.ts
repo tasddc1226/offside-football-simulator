@@ -24,7 +24,10 @@ export type FanBucket =
   // T-11-236 인기(fame) 구간마다 다른 목소리 — 가족·학교·동네 응원, 늘어나는 팬, 해외 팬·스타 반응.
   | 'fans_local'
   | 'fans_growing'
-  | 'fans_star';
+  | 'fans_star'
+  // T-11-264 지난 시즌과 견준 흐름 — 좋아진 시즌·나빠진 시즌에 팬 반응이 달라진다.
+  | 'trend_up'
+  | 'trend_down';
 
 /** 지금 언어의 대사 풀. 버킷마다 줄 수·순서가 언어와 상관없이 같다(해시로 고른 번호가 같은 줄을 가리킨다). */
 const pool = (key: FanBucket): string[] => L[key].split('\n');
@@ -84,5 +87,11 @@ export const FAN_LINES: Record<FanBucket, string[]> = {
   },
   get fans_star() {
     return pool('fans_star');
+  },
+  get trend_up() {
+    return pool('trend_up');
+  },
+  get trend_down() {
+    return pool('trend_down');
   },
 };

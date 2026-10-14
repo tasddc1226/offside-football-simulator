@@ -1,0 +1,26 @@
+{
+  "id": "t-11-264-rn-miss-veteran",
+  "title": "영구결번 미달 사유와 베테랑 시즌 결산",
+  "items": [
+    "은퇴 뒤 영구결번을 받지 못했으면 한 구단 시즌 수와 기여 점수 중 어디가 얼마나 모자랐는지 보여요. 나중에 은퇴 기록을 다시 열어도 그대로 남아요.",
+    "31세부터는 시즌 결산의 스카우트 한마디가 잠재력 대신 지난 시즌과 견준 흐름(상승·유지·하락)을 말해요.",
+    "지난 시즌보다 좋아지거나 나빠진 시즌에는 팬 반응도 그에 맞게 달라져요."
+  ],
+  "en": {
+    "title": "Why a number wasn't retired, and veteran season reviews",
+    "items": [
+      "If your number isn't retired after you hang up your boots, you now see how far short you fell on seasons at one club and on contribution. It stays on your retirement record when you open it later.",
+      "From age 31 the scout's remark in the season review talks about your trend against last season (up, holding, down) instead of potential.",
+      "Fan reactions also change when a season is clearly better or worse than the one before."
+    ]
+  },
+  "ja": {
+    "title": "永久欠番に届かなかった理由とベテランのシーズン総括",
+    "items": [
+      "引退後に永久欠番を受けられなかった場合、同一クラブのシーズン数と貢献ポイントのどちらがどれだけ足りなかったかが見えます。あとで引退記録を開いてもそのまま残ります。",
+      "31歳からはシーズン総括のスカウトの一言が、潜在能力ではなく昨シーズンと比べた流れ(上昇・維持・下降)を語ります。",
+      "昨シーズンより明らかに良くなった、または悪くなったシーズンには、ファンの反応もそれに合わせて変わります。"
+    ]
+  },
+  "availability": "web-app"
+}

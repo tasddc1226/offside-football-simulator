@@ -111,14 +111,15 @@ export const {
   syncClubCustom,
 } = createClubCustom(clubCustom, { game: () => appState.G, save });
 
-export const { recordRn, fillGranted, rnOf, watchRetiredNumberAlerts } = createRetiredNumbers(
-  rnResults,
-  rnAlert,
-  (id, title) => {
-    pickedTitles[id] = title;
-  },
-  rnMisses,
-);
+export const { recordRn, fillGranted, rnOf, rnMissOf, watchRetiredNumberAlerts } =
+  createRetiredNumbers(
+    rnResults,
+    rnAlert,
+    (id, title) => {
+      pickedTitles[id] = title;
+    },
+    rnMisses,
+  );
 
 export const {
   viewFromEntry,
