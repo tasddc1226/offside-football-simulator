@@ -17,7 +17,9 @@ import { fileURLToPath } from 'node:url';
 // T-11-198: 검색엔진이 홈에서 찾도록 푸터에 공개 페이지 링크 4개(가이드·FAQ·공정성·소식)와 공개 글의 게임 링크(`/?news=`)
 // 처리가 첫 화면에 실려 +0.12KB — 운영 빌드(GA·픽셀 설정 포함) 142.09KB로 넘었다. 링크는 서버 HTML에 있어야 해서 지연 청크로
 // 못 뺀다. 엔진을 첫 화면 밖으로 빼기 전까지 143KB로.
-const LIMIT_BYTES = 143 * 1024;
+// T-11-256: 커리어 장면 이벤트 6종의 한국어 문구(엔진 사전)가 첫 화면에 실려 운영 빌드 143.01KB로 넘었다. 이벤트 정의는
+// 추첨 풀(엔진)과 함께 있어야 해서 지연 청크로 못 뺀다. 엔진을 첫 화면 밖으로 빼기 전까지 144KB로.
+const LIMIT_BYTES = 144 * 1024;
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.resolve(scriptDir, '../dist');
