@@ -1,7 +1,14 @@
-// Image-only avatar composition. PNG pixels/geometry stay immutable; colours are rendering filters.
-import data from './avatar-image-data.json';
+// 겹쳐 그리는 선수 그림. 자세마다 같은 맨몸 위에 옷 · 표정 · 수염 · 머리카락 · 꾸미기 층을 순서대로 얹는다.
+// 층 PNG(assets/avatar-layers)는 자세마다 그 자세의 모든 층을 한 장에 모은 아틀라스이고, 색은 그릴 때 필터로 입힌다.
+// 안드로이드 react-native-svg는 메모리 캐시에 남은 그림만 그려서, 한 화면이 쓰는 그림 장수를 자세 수로 줄인다.
+import data from './avatar-layers.json';
 import { isArmyAvatar, miniColors, type AvatarSpec } from './avatar.js';
-import { motionDecorationRects, type MiniPose, type MotionFrame } from './avatar-motion.js';
+import {
+  MOTIONS,
+  motionDecorationRects,
+  type MiniPose,
+  type MotionFrame,
+} from './avatar-motion.js';
 import { kitColorAt } from './kits.js';
 import { crestOf, crestSvg } from './crests.js';
 
@@ -18,13 +25,21 @@ export const IMAGE_HAIRS = [
 ] as const;
 export type ImageHair = (typeof IMAGE_HAIRS)[number];
 export type ImageBox = readonly [number, number, number, number];
-type Measured = { crop: number[]; face: number[]; skin: number[][]; boots: number[][] };
-type Sheet = { width: number; height: number; frames: Measured[]; sha256: string };
-export const IMAGE_SHEETS: Readonly<Record<string, Sheet>> = data;
-export function avatarMotionImageSources(sp: AvatarSpec): string[] {
-  const body = isArmyAvatar(sp) ? 'army' : sp.hairStyle;
-  return [`${body}-A`, `${body}-B`, `heads-${sp.hairStyle}`];
-}
+/** 아틀라스 안 조각: [아틀라스 x, y, 너비, 높이, 자세 원점 기준 x, y]. */
+type Part = [number, number, number, number, number, number];
+type Atlas = { width: number; height: number; parts: Record<string, Record<string, Part>> };
+type Pose = {
+  sheet: string;
+  size: number[];
+  /** 짧게 깎은 머리 층의 상자 = 머리통. 크기와 가로 위치의 기준이다. */
+  head: number[];
+  /** 유니폼 상의 상자. 무늬 · 엠블럼 위치의 기준이다. */
+  shirt?: number[];
+};
+const LAYERS = data as unknown as { poses: Record<string, Pose>; atlases: Record<string, Atlas> };
+/** 자세별 층 아틀라스 크기. 이름은 자세 이름(stand · runL …)이다. */
+export const IMAGE_SHEETS: Readonly<Record<string, { width: number; height: number }>> =
+  LAYERS.atlases;
 export type FilterOp =
   | { kind: 'matrix'; input: string; result: string; values: number[] }
   | {
@@ -35,12 +50,14 @@ export type FilterOp =
       operator: 'in' | 'over' | 'arithmetic';
     };
 export interface ImageLayer {
+  /** 아틀라스(자세) 이름. */
   source: string;
+  /** 층 이름(base · kit · hair-afro …). */
+  layer: string;
   crop: ImageBox;
   x: number;
   y: number;
   scale: number;
-  exclude?: ImageBox;
   filters: FilterOp[];
   pattern?: {
     rects: { x: number; y: number; width: number; height: number; fill: string }[];
@@ -54,35 +71,6 @@ export interface AvatarImagePlan {
   crest?: { svg: string; x: number; y: number; size: number };
   decorations?: ReturnType<typeof motionDecorationRects>;
 }
-const poseIndex: Record<MiniPose | 'stand', [string, number]> = {
-  runL: ['A', 0],
-  air: ['A', 1],
-  runR: ['A', 2],
-  juggle: ['A', 3],
-  balance: ['A', 4],
-  kick: ['A', 5],
-  fist: ['A', 6],
-  tuck: ['A', 7],
-  spread: ['A', 8],
-  jumpUp: ['A', 9],
-  kneelOut: ['B', 0],
-  kneelUp: ['B', 1],
-  kneelFist: ['B', 2],
-  waveHigh: ['B', 3],
-  waveLow: ['B', 4],
-  lift: ['B', 5],
-  sad: ['B', 6],
-  stand: ['B', 7],
-};
-const moods: Record<NonNullable<AvatarSpec['expr']>, number> = {
-  happy: 1,
-  wink: 2,
-  pain: 3,
-  tired: 4,
-  blink: 5,
-  shout: 6,
-};
-const box = (a: readonly number[]): ImageBox => [a[0]!, a[1]!, a[2]!, a[3]!];
 const rgb = (hex: string) => {
   const h = hex.replace('#', '');
   const s = h.length === 3 ? [...h].map((c) => c + c).join('') : h;
@@ -110,124 +98,85 @@ const alphaMatrix = ([r, g, b, a, k]: readonly number[]) => [
   a!,
   k!,
 ];
-const toneMatrix = (colour: string, channel: readonly number[]) => {
+/** 색칠 조각은 밝기만 담은 회색이고 주된 밝기가 0.75다. 색 × 밝기 ÷ 0.75로 칠하면 그림자 · 빛이 그대로 남는다. */
+const tint = (colour: string): FilterOp[] => {
   const c = rgb(colour);
-  return c
-    .flatMap((v) => [channel[0]! * v, channel[1]! * v, channel[2]! * v, 0, 0])
-    .concat([0, 0, 0, 1, 0]);
-};
-// Every mask is calculated from the source colour, never from edited facial geometry.
-const MASKS = {
-  skin: [
-    [80, -80, 0, -12, 0],
-    [0, -30, 60, 0, 0],
-  ],
-  armySkin: [
-    [80, -80, 0, -12, 0],
-    [0, 80, -80, -12, 0],
-  ],
-  hair: [
-    [0, 0, 0, 1.05, 0],
-    [20, 20, 20, -5, 0],
-    [-10, -10, -10, 22, 0],
-    [-80, 80, 0, 8, 0],
-    [80, -80, 0, 8, 0],
-    [0, -80, 80, 8, 0],
-    [0, 80, -80, 8, 0],
-  ],
-  shirt: [[-120, 170, -50, -5, 0]],
-  shorts: [
-    [-40, -120, 160, -6, 0],
-    [80, -80, 0, 15, 0],
-  ],
-  socks: [
-    [80, 50, -130, -8, 0],
-    [0, 60, -120, 0, 0],
-  ],
-} as const;
-function filters(sp: AvatarSpec, head: boolean, state: string): FilterOp[] {
-  const c = miniColors(sp),
-    colours: [string, string, readonly number[]][] = [
-      [!head && state === 'army' ? 'armySkin' : 'skin', c.skin, [1, 0, 0]],
-    ];
-  if (head) colours.push(['hair', c.hair, [1.7, 1.7, 1.7]]);
-  else if (state === 'normal')
-    colours.push(
-      ['shirt', sp.kit.sleeve, [0, 1.6, 0]],
-      ['shorts', sp.kit.shorts, [0, 0, 2.8]],
-      ['socks', c.sock, [0, 1.45, 0]],
-    );
-  else if (state === 'boots') colours.push(['hair', c.boot, [1.7, 1.7, 1.7]]);
-  else if (state === 'feet')
-    colours.push(['shirt', c.sock, [0, 1.6, 0]], ['hair', c.boot, [1.7, 1.7, 1.7]]);
-  else if (state === 'injured')
-    colours.push(['shirt', sp.kit.sleeve, [0, 1.6, 0]], ['shorts', sp.kit.shorts, [0, 0, 2.8]]);
-  const ops: FilterOp[] = [];
-  let previous = 'SourceGraphic';
-  colours.forEach(([name, colour, tone], i) => {
-    let mask = '';
-    MASKS[name as keyof typeof MASKS].forEach((v, j) => {
-      const id = `m${i}_${j}`;
-      ops.push({ kind: 'matrix', input: 'SourceGraphic', result: id, values: alphaMatrix(v) });
-      if (mask) {
-        const combined = `c${i}_${j}`;
-        ops.push({ kind: 'composite', input: id, input2: mask, result: combined, operator: 'in' });
-        mask = combined;
-      } else mask = id;
-    });
-    const coloured = `tone${i}`,
-      inside = `inside${i}`,
-      next = `out${i}`;
-    ops.push({
+  return [
+    {
       kind: 'matrix',
       input: 'SourceGraphic',
-      result: coloured,
-      values: toneMatrix(colour, tone),
-    });
-    ops.push({ kind: 'composite', input: coloured, input2: mask, result: inside, operator: 'in' });
-    // Remove the original only under the colour mask before overlaying the replacement.
-    const inverse = `inv${i}`,
-      outside = `outside${i}`;
-    ops.push({
-      kind: 'matrix',
-      input: mask,
-      result: inverse,
-      values: alphaMatrix([0, 0, 0, -1, 1]),
-    });
-    ops.push({
-      kind: 'composite',
-      input: previous,
-      input2: inverse,
-      result: outside,
-      operator: 'in',
-    });
-    ops.push({
-      kind: 'composite',
-      input: inside,
-      input2: outside,
-      result: next,
-      operator: 'arithmetic',
-    });
-    previous = next;
-  });
-  return ops;
+      result: 'tint',
+      values: c.flatMap((v) => [v / 0.75, 0, 0, 0, 0]).concat([0, 0, 0, 1, 0]),
+    },
+  ];
+};
+/** 머리 너비(논리 칸). 머리 모양이 달라도 얼굴 크기는 같다. */
+const HEAD_W = 13;
+const sheetHead = new Map<string, number>();
+/** 시트마다 머리통 너비의 중앙값. 자세마다 고개 방향이 달라도 같은 배율로 그린다. */
+function headWidth(sheet: string): number {
+  let w = sheetHead.get(sheet);
+  if (w === undefined) {
+    const ws = Object.values(LAYERS.poses)
+      .filter((p) => p.sheet === sheet)
+      .map((p) => p.head[2]!)
+      .sort((a, b) => a - b);
+    w = ws[Math.floor(ws.length / 2)]!;
+    sheetHead.set(sheet, w);
+  }
+  return w;
 }
-function layer(
-  source: string,
-  index: number,
-  x: number,
-  y: number,
-  scale: number,
-  ops: FilterOp[],
-): ImageLayer {
-  return {
-    source,
-    crop: box(IMAGE_SHEETS[source]!.frames[index]!.crop),
-    x,
-    y,
-    scale,
-    filters: ops,
-  };
+type State = 'normal' | 'army' | 'injured' | 'retired';
+const stateOf = (sp: AvatarSpec): State =>
+  sp.acc.includes('suit')
+    ? 'retired'
+    : sp.acc.includes('crutch')
+      ? 'injured'
+      : isArmyAvatar(sp)
+        ? 'army'
+        : 'normal';
+/** 그릴 층 이름(시트 접미사 없이)과 조각별 색. 순서가 곧 그리는 순서다. */
+function layerList(
+  sp: AvatarSpec,
+  state: State,
+  expression: AvatarSpec['expr'],
+): [string, Record<string, string>][] {
+  const c = miniColors(sp);
+  const skin = { skin: c.skin },
+    hair = { ...skin, hair: c.hair };
+  // 어깨 아래로 내려온 머리카락은 몸 · 옷 뒤에 그린다.
+  const list: [string, Record<string, string>][] = [
+    [`hair-${sp.hairStyle}-back`, hair],
+    ['base', skin],
+  ];
+  if (state === 'retired') list.push(['suit', skin]);
+  else if (state === 'army') list.push(['army', skin]);
+  else
+    list.push([
+      'kit',
+      { ...skin, shirt: sp.kit.sleeve, shorts: sp.kit.shorts, socks: c.sock, boots: c.boot },
+    ]);
+  if (expression) list.push([`expr-${expression}`, skin]);
+  if (sp.beard) list.push([`beard-${sp.beard}`, hair]);
+  list.push([`hair-${sp.hairStyle}`, hair]);
+  // 헤어밴드는 머리 모양마다 그 머리 위에 따로 그렸다.
+  if (c.band) list.push([`band-${sp.hairStyle}`, { ...hair, tint: c.band }]);
+  if (c.goggle) list.push(['goggles', { ...skin, frame: c.goggle.G, lens: c.goggle.g }]);
+  if (c.wrist) list.push(['wrist', { ...skin, tint: c.wrist }]);
+  if (sp.acc.includes('armband')) list.push(['armband', { ...skin, tint: '#f0b437' }]);
+  if (sp.acc.includes('bandage')) list.push(['bandage', skin]);
+  if (sp.acc.includes('crutch')) list.push(['crutch', skin]);
+  if (sp.acc.includes('bouquet')) list.push(['bouquet', skin]);
+  return list;
+}
+/** 모션에 쓰는 아틀라스 전부(미리 받기용) = 서 있는 자세와 모션 자세들. 부상 · 은퇴는 서 있는 자세 하나다. */
+export function avatarMotionImageSources(sp: AvatarSpec): string[] {
+  const state = stateOf(sp);
+  if (state === 'injured' || state === 'retired' || sp.acc.includes('bouquet')) return ['stand'];
+  const poses = new Set<string>(['stand']);
+  for (const m of Object.values(MOTIONS))
+    for (const f of m.frames) if ('pose' in f && f.pose) poses.add(f.pose);
+  return [...poses];
 }
 /** The same plan drives Svelte and React Native. No game RNG, storage or network. */
 export function avatarImagePlan(
@@ -235,179 +184,65 @@ export function avatarImagePlan(
   f?: MotionFrame,
   portrait = false,
 ): AvatarImagePlan {
-  const still = sp.acc.some((a) => a === 'crutch' || a === 'suit' || a === 'bouquet');
-  const pose = still ? 'stand' : (f?.pose ?? 'stand');
-  const [part, index] = poseIndex[pose];
-  const state = sp.acc.includes('suit')
-    ? 'retired'
-    : sp.acc.includes('crutch')
-      ? 'injured'
-      : isArmyAvatar(sp)
-        ? 'army'
-        : 'normal';
-  const movingBody = state === 'normal' || state === 'army';
-  const source =
-    state === 'normal' ? `${sp.hairStyle}-${part}` : state === 'army' ? `army-${part}` : state;
-  const body = IMAGE_SHEETS[source]!.frames[movingBody ? index : 0]!;
-  const [bx, by, bw, bh] = box(body.crop),
-    [fx, fy, fw, fh] = box(body.face);
+  const state = stateOf(sp);
+  const still = state === 'injured' || state === 'retired' || sp.acc.includes('bouquet');
+  const pose: MiniPose | 'stand' = still ? 'stand' : (f?.pose ?? 'stand');
+  const info = LAYERS.poses[pose]!;
+  const [pw, ph] = info.size as [number, number];
+  const [hx, hy, hw] = info.head as [number, number, number, number];
   const width = f ? 32 : 24,
     height = f ? 36 : 32;
-  const scale = Math.min(13 / fw, (height - 2) / bh, (width - 1) / bw);
-  const dx = Math.max(
-      0.5,
-      Math.min(width - bw * scale - 0.5, width / 2 - (fx + fw / 2 - bx) * scale),
-    ),
-    dy = height - 1 - bh * scale;
+  const scale = Math.min(HEAD_W / headWidth(info.sheet), (height - 2) / ph, (width - 1) / pw);
+  // 머리를 가운데에 두고 발을 바닥에 붙인다. 몸이 칸 밖으로 나가면 안쪽으로 민다.
+  const dx = Math.max(0.5, Math.min(width - pw * scale - 0.5, width / 2 - (hx + hw / 2) * scale)),
+    dy = height - 1 - ph * scale;
   const expression = sp.expr === 'pain' ? sp.expr : (f?.expr ?? sp.expr);
-  const beard = sp.beard === 'full' ? 2 : sp.beard === 'stubble' ? 1 : 0;
-  const headIndex = beard * 7 + (expression ? moods[expression] : 0);
-  const headSource = `heads-${sp.hairStyle}`,
-    head = IMAGE_SHEETS[headSource]!.frames[headIndex]!;
-  const [hx, hy] = box(head.crop),
-    [hfx, hfy, hfw] = box(head.face);
-  const headScale = (fw * scale) / hfw;
-  const headX = dx + (fx + fw / 2 - bx) * scale - (hfx + hfw / 2 - hx) * headScale;
-  const neutralFace = IMAGE_SHEETS[headSource]!.frames[0]!.face;
-  const neckJoin = state === 'normal' ? 0 : (fh - (neutralFace[3]! * fw) / neutralFace[2]!) * scale;
-  const headY = dy + (fy - by) * scale - (hfy - hy) * headScale + neckJoin;
-  const bodyLayer = layer(source, movingBody ? index : 0, dx, dy, scale, filters(sp, false, state));
-  const headTop = Math.max(by, fy - fh * 0.95);
-  bodyLayer.exclude =
-    pose === 'stand'
-      ? [bx, headTop, bw, fy + fh - headTop]
-      : [fx - fw * 0.22, headTop, fw * 1.44, fy + fh - headTop];
-  if (state === 'normal' || state === 'injured') {
-    // Uniform pattern geometry is masked by the original jersey PNG, including its folds/sleeves.
-    const rects: { x: number; y: number; width: number; height: number; fill: string }[] = [];
-    const left = fx + fw * 0.05,
-      top = fy + fh * 0.94,
-      unitX = fw * 0.08,
-      unitY = fh / 11;
-    for (let row = 0; row < 14; row++) {
-      let start = -4,
-        colour = kitColorAt(sp.kit, start, 13 + row);
-      for (let col = -3; col <= 28; col++) {
-        const next = col < 28 ? kitColorAt(sp.kit, col, 13 + row) : '';
-        if (next !== colour) {
-          rects.push({
-            x: left + (start - 7) * unitX,
-            y: top + row * unitY,
-            width: (col - start) * unitX + 0.02,
-            height: unitY + 0.02,
-            fill: colour,
-          });
-          start = col;
-          colour = next;
+  const layers: ImageLayer[] = [];
+  for (const [name, colours] of layerList(sp, state, expression)) {
+    const parts = LAYERS.atlases[pose]!.parts[name];
+    if (!parts) continue;
+    for (const [part, [ax, ay, w, h, ox, oy]] of Object.entries(parts)) {
+      const colour = colours[part];
+      const l: ImageLayer = {
+        source: pose,
+        layer: name,
+        crop: [ax, ay, w, h],
+        x: dx + ox * scale,
+        y: dy + oy * scale,
+        scale,
+        filters: colour ? tint(colour) : [],
+      };
+      if (name === 'kit' && part === 'shirt' && info.shirt) {
+        // 무늬는 상의 조각 모양으로 자른다(소매 · 주름까지). 무늬 칸은 예전 24칸 그림의 몸통 x 7~16, y 13~26이다.
+        const [, sy, , sh] = info.shirt as [number, number, number, number];
+        const unitX = hw * 0.08,
+          unitY = sh / 12,
+          left = hx + hw * 0.05 - ox + ax,
+          top = sy - oy + ay;
+        const rects: NonNullable<ImageLayer['pattern']>['rects'] = [];
+        for (let row = 0; row < 14; row++) {
+          let start = -4,
+            c = kitColorAt(sp.kit, start, 13 + row);
+          for (let col = -3; col <= 28; col++) {
+            const next = col < 28 ? kitColorAt(sp.kit, col, 13 + row) : '';
+            if (next !== c) {
+              rects.push({
+                x: left + (start - 7) * unitX,
+                y: top + row * unitY,
+                width: (col - start) * unitX + 0.5,
+                height: unitY + 0.5,
+                fill: c,
+              });
+              start = col;
+              c = next;
+            }
+          }
         }
+        l.pattern = { rects, mask: alphaMatrix([0, 0, 0, 1, 0]) };
       }
-    }
-    bodyLayer.pattern = { rects, mask: alphaMatrix(MASKS.shirt[0]) };
-  }
-  const layers = [
-    bodyLayer,
-    layer(headSource, headIndex, headX, headY, headScale, filters(sp, true, state)),
-  ];
-  if (state === 'normal') {
-    for (const a of body.boots) {
-      const boot = layer(source, index, dx, dy, scale, filters(sp, false, 'boots'));
-      boot.crop = box(a);
-      boot.x += (a[0]! - bx) * scale;
-      boot.y += (a[1]! - by) * scale;
-      layers.push(boot);
+      layers.push(l);
     }
   }
-  if (state === 'injured') {
-    // Both feet lie inside the face width; leave the separate crutch shaft untouched.
-    const feet = layer(source, 0, dx, dy, scale, filters(sp, false, 'feet'));
-    const top = fy + fh * 1.9;
-    feet.crop = [fx, top, fw, by + bh - top];
-    feet.x += (feet.crop[0] - bx) * scale;
-    feet.y += (feet.crop[1] - by) * scale;
-    layers.push(feet);
-  }
-  const accessories = IMAGE_SHEETS.accessories!;
-  const add = (i: number, x: number, y: number, w: number, colour?: string) => {
-    const a = accessories.frames[i]!,
-      s = w / a.crop[2]!;
-    const ops: FilterOp[] = colour
-      ? [
-          {
-            kind: 'matrix',
-            input: 'SourceGraphic',
-            result: 'tint',
-            values: toneMatrix(colour, [0.35, 0.35, 0.35]),
-          },
-        ]
-      : [];
-    layers.push(layer('accessories', i, x, y, s, ops));
-  };
-  const faceX = dx + (fx - bx) * scale,
-    faceY = dy + (fy - by) * scale,
-    faceW = fw * scale,
-    faceH = fh * scale;
-  const c = miniColors(sp);
-  if (c.band) add(0, faceX - faceW * 0.05, faceY - faceH * 0.12, faceW * 1.03, c.band);
-  if (c.goggle) {
-    add(1, faceX + faceW * 0.18, faceY + faceH * 0.24, faceW * 0.82, c.goggle.G);
-    const lens = layers[layers.length - 1]!;
-    lens.filters.push(
-      {
-        kind: 'matrix',
-        input: 'SourceGraphic',
-        result: 'lensMask',
-        values: alphaMatrix([20, 20, 20, -45, 0]),
-      },
-      {
-        kind: 'matrix',
-        input: 'SourceGraphic',
-        result: 'lensTone',
-        values: toneMatrix(c.goggle.g, [0.35, 0.35, 0.35]),
-      },
-      {
-        kind: 'composite',
-        input: 'lensTone',
-        input2: 'lensMask',
-        result: 'lensInside',
-        operator: 'in',
-      },
-      {
-        kind: 'matrix',
-        input: 'lensMask',
-        result: 'lensInverse',
-        values: alphaMatrix([0, 0, 0, -1, 1]),
-      },
-      {
-        kind: 'composite',
-        input: 'tint',
-        input2: 'lensInverse',
-        result: 'lensOutside',
-        operator: 'in',
-      },
-      {
-        kind: 'composite',
-        input: 'lensInside',
-        input2: 'lensOutside',
-        result: 'lensResult',
-        operator: 'arithmetic',
-      },
-    );
-  }
-  if (sp.acc.includes('bandage')) add(4, faceX + faceW * 0.55, faceY - faceH * 0.08, faceW * 0.28);
-  const arms = body.skin.filter(
-    (a) => a[2]! > fw * 0.08 && a[3]! > fh * 0.08 && a[1]! < fy + fh * 2.2,
-  );
-  if (c.wrist)
-    for (const a of arms.slice(0, 2))
-      add(
-        2,
-        dx + (a[0]! - bx) * scale,
-        dy + (a[1]! + a[3]! * 0.65 - by) * scale,
-        Math.max(1.4, a[2]! * scale * 0.65),
-        c.wrist,
-      );
-  if (sp.acc.includes('armband'))
-    add(3, faceX - faceW * 0.22, faceY + faceH * 1.25, faceW * 0.22, '#f0b437');
   const minX = Math.min(...layers.map((l) => l.x)),
     minY = Math.min(...layers.map((l) => l.y)),
     maxX = Math.max(...layers.map((l) => l.x + l.crop[2] * l.scale)),
@@ -420,29 +255,35 @@ export function avatarImagePlan(
   );
   const offsetX = Math.max(margin - minX * fit, Math.min(0, width - margin - maxX * fit));
   const offsetY = Math.max(margin - minY * fit, Math.min(0, height - margin - maxY * fit));
+  const shift = still ? 0 : (f?.sink ?? 0) - (f?.lift ?? 0);
   for (const l of layers) {
     l.x = l.x * fit + offsetX;
-    l.y = l.y * fit + offsetY;
+    l.y = l.y * fit + offsetY + shift;
     l.scale *= fit;
   }
-  const shift = still ? 0 : (f?.sink ?? 0) - (f?.lift ?? 0);
-  for (const l of layers) l.y += shift;
+  const at = (x: number, y: number): [number, number] => [
+    (dx + x * scale) * fit + offsetX,
+    (dy + y * scale) * fit + offsetY + shift,
+  ];
   const crest =
-    sp.club.id && state !== 'retired' && state !== 'army'
-      ? {
-          svg:
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
-            crestSvg(crestOf(sp.club), 'avatar-kit-crest', 'transparent') +
-            '</svg>',
-          x: (faceX + faceW * 0.51) * fit + offsetX,
-          y: (faceY + faceH * 1.25) * fit + offsetY + shift,
-          size: faceW * 0.16 * fit,
-        }
+    sp.club.id && state === 'normal' && info.shirt
+      ? (() => {
+          const [cx, cy] = at(hx + hw * 0.56, info.shirt[1]! + hw * 0.22);
+          return {
+            svg:
+              '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
+              crestSvg(crestOf(sp.club), 'avatar-kit-crest', 'transparent') +
+              '</svg>',
+            x: cx,
+            y: cy,
+            size: hw * 0.17 * scale * fit,
+          };
+        })()
       : undefined;
   const decorations =
     f && !still
       ? motionDecorationRects(f, {
-          face: [(faceX + faceW / 2) * fit + offsetX, faceY * fit + offsetY],
+          face: at(hx + hw / 2, hy + hw * 0.35),
           foot: [width * 0.66, height - 4],
           top: [width / 2, Math.max(6.5, minY * fit + offsetY)],
         })

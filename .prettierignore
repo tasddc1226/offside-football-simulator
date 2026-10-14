@@ -5,6 +5,8 @@ build
 .wrangler
 coverage
 pnpm-lock.yaml
+# 선수 층 표(tooling/avatar-layers/build.py가 생성한다)
+packages/game/src/avatar-layers.json
 # 테스트 스냅샷은 도구가 생성한다(T-10-044)
 **/__snapshots__
 **/*-snapshots

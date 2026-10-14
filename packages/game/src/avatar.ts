@@ -1,10 +1,7 @@
-// ───────── 도트 선수 아바타 (T-11-120 · T-11-191 미니형) ─────────
-// 2026-10-12 승인한 미니형 그림(48×64 재질 글자 지도, avatar-mini-data.ts)을 모습대로 칠해(avatar-mini.ts) 색 격자 → 사각형 목록으로 만들고
-// 웹(<svg><rect>)과 앱(react-native-svg Rect)이 같이 그린다. 외형(피부·머리)은 커리어 ID 해시로 정해 게임 RNG를 절대 쓰지 않고,
+// ───────── 선수 아바타 모습 (T-11-120 · T-11-191 · T-11-243) ─────────
+// 모습(AvatarSpec)과 색표를 정한다. 그림은 원본 PNG 레이어(avatar-image.ts)로 웹·앱이 같이 그린다. 외형(피부·머리)은 커리어 ID 해시로 정해 게임 RNG를 절대 쓰지 않고,
 // 세이브에도 저장하지 않는다. 수염·흰머리·목발·정장 같은 건 나이와 상태에서 그때그때 정한다. 이 파일이 색표의 정본이다.
 import { mix } from './color.js';
-import { MINI_SPRITES } from './avatar-mini-data.js';
-import { paintMini, type MiniColors } from './avatar-mini.js';
 import type { Club } from './data.js';
 import { hashStr } from './hash.js';
 import { kitColorAt, kitOf, type KitSide, type KitSpec } from './kits.js';
@@ -107,7 +104,7 @@ export const LOOK_SWATCHES: Record<
   boots: BOOTS,
   glasses: GOGGLES.map((c) => c?.g ?? null),
 };
-type HairStyle = keyof typeof MINI_SPRITES;
+type HairStyle = (typeof LOOK_STYLES)[number];
 type AvatarAcc = 'armband' | 'crutch' | 'bandage' | 'suit' | 'bouquet';
 /** 표정. blink · shout는 모션(서 있는 그림 프레임) 전용이다. */
 type AvatarExpr = 'happy' | 'pain' | 'tired' | 'wink' | 'shout' | 'blink';
@@ -276,7 +273,21 @@ export function avatarSpec(s: GameState, side: KitSide = 'home'): AvatarSpec {
   );
 }
 
-/** T-11-191 미니형 그림(avatar-mini.ts)에 칠할 색. 색표는 이 파일이 정본이다. */
+/** 그림에 칠할 색(avatar-image.ts가 PNG 레이어 색 필터로 쓴다). */
+export interface MiniColors {
+  skin: string;
+  hair: string;
+  boot: string;
+  sock: string;
+  band: string | null;
+  wrist: string | null;
+  goggle: { G: string; g: string } | null;
+  /** 셔츠 칸 색(유니폼 무늬 · 군복 위장 무늬). 좌표는 서 있는 자세의 24×32 칸이다. */
+  shirt: (x: number, y: number) => string;
+  suit: boolean;
+}
+
+/** T-11-191 그림에 칠할 색. 색표는 이 파일이 정본이다. */
 export function miniColors(sp: AvatarSpec): MiniColors {
   const suit = sp.acc.includes('suit');
   const hair = AVATAR_HAIRS[sp.look.hair % AVATAR_HAIRS.length]!;
@@ -293,12 +304,7 @@ export function miniColors(sp: AvatarSpec): MiniColors {
   };
 }
 
-/** 모습 → 48×64 색 격자(null은 투명). 승인된 미니형 그림을 모습대로 칠한다. */
-export function avatarPixels(sp: AvatarSpec): (string | null)[][] {
-  return paintMini(MINI_SPRITES[sp.hairStyle], sp, miniColors(sp));
-}
-
-/** 색 격자 → 사각형 목록(viewBox 0 0 24 32). 같은 색이 이어진 가로 칸은 사각형 하나로 합치고, 그림자 칸은 반투명 검정이다. */
+/** 색 격자(한 칸 0.5) → 사각형 목록. 모션 소품(공·트로피)이 쓴다. 같은 색이 이어진 가로 칸은 사각형 하나로 합치고, 그림자 칸은 반투명 검정이다. */
 export function avatarRects(px: (string | null)[][]) {
   const out: { x: number; y: number; w: number; h: number; fill: string; opacity?: number }[] = [];
   px.forEach((row, y) => {
@@ -308,7 +314,6 @@ export function avatarRects(px: (string | null)[][]) {
       let w = 1;
       while (x + w < row.length && row[x + w] === c) w++;
       if (c)
-        // 고해상도 격자(refinePixels)는 한 칸이 0.5 — viewBox(24×32)는 그대로 둔다.
         out.push(
           c === SHADOW
             ? { x: x / 2, y: y / 2, w: w / 2, h: 0.5, fill: '#000', opacity: 0.28 }
@@ -327,10 +332,4 @@ export function cardAvatarSpec(p: {
   look?: string | null | undefined;
 }): AvatarSpec {
   return primeAvatarSpec({ id: p.careerId, lastClub: '', look: p.look });
-}
-
-/** 얼굴과 어깨까지만 남긴 카드 초상(viewBox 0 0 24 21). 다리·그림자는 그리지 않는다. */
-export const AVATAR_PORTRAIT_H = 21;
-export function avatarPortraitRects(sp: AvatarSpec) {
-  return avatarRects(avatarPixels(sp)).filter((r) => r.y < AVATAR_PORTRAIT_H);
 }

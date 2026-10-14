@@ -1,11 +1,7 @@
-// ───────── T-11-191 도트 선수 모션 ─────────
-// 미니형 선수(avatar-mini.ts)의 모션. 자세 그림은 머리 모양마다 생성 시트에서 옮긴 64×72 재질 글자 지도이고
-// (avatar-mini-motion/<머리 모양>.ts, 무대가 열릴 때 그 선수 머리 모양 하나만 불러온다), 서 있는 자세는 카드와 같은 그림을 쓴다.
-// 색(피부 · 머리 · 유니폼 · 축구화 · 양말 · 밴드 · 고글)은 서 있는 모습과 같은 규칙으로 칠하고, 점프 · 숨쉬기는 칠한 뒤 몸을 옮기며,
-// 공 · 트로피 · 반짝임 · 흙먼지는 마지막에 얹는다. 프레임은 64×72(논리 32×36)이고, 게임 RNG는 쓰지 않는다.
-import { avatarPixels, avatarRects, miniColors, type AvatarSpec } from './avatar.js';
-import { MINI_SPRITES } from './avatar-mini-data.js';
-import { MINI_W, paintMini, type MiniBody } from './avatar-mini.js';
+// ───────── T-11-191 선수 모션 ─────────
+// 모션은 자세(PNG 시트의 포즈, avatar-image.ts)와 시간의 목록이다. 점프 · 숨쉬기는 몸을 옮기고,
+// 공 · 트로피 · 반짝임 · 흙먼지는 그 위에 얹는다. 프레임은 논리 32×36이고, 게임 RNG는 쓰지 않는다.
+import { avatarRects, type AvatarSpec } from './avatar.js';
 
 /** 머리 위 여유 줄(논리 칸). 프레임의 y = 서 있는 자세 y + MOTION_TOP. */
 export const MOTION_TOP = 4;
@@ -14,11 +10,8 @@ export const MOTION_W = 32;
 export const MOTION_H = 36;
 const FW = MOTION_W * 2;
 const FH = MOTION_H * 2;
-/** 서 있는 그림(48×64)을 놓는 자리. */
-const SX = (FW - MINI_W) / 2;
-const SY = MOTION_TOP * 2;
 
-/** 생성 시트에서 옮긴 자세. stand는 카드와 같은 서 있는 그림이다. */
+/** PNG 시트의 자세. stand는 카드와 같은 서 있는 그림이다. */
 export const MINI_POSES = [
   'runL',
   'air',
@@ -39,67 +32,8 @@ export const MINI_POSES = [
   'sad',
 ] as const;
 export type MiniPose = (typeof MINI_POSES)[number];
-/** [지도(길이 압축), 얼굴 x, y, 엠블럼 x, y, 완장 x, y, 앞발 x, y, 맨 위 손 x, y] — 좌표는 64×72 프레임 기준, -1은 없음. */
-export type MiniPoseData = Record<MiniPose, readonly [string, ...number[]]>;
-
 type Px = (string | null)[][];
 type Pt = readonly [number, number];
-interface PoseInfo {
-  rows: string[];
-  face: Pt;
-  crest: Pt | null;
-  arm: Pt;
-  foot: Pt;
-  top: Pt;
-}
-export type MiniPoses = Record<MiniPose, PoseInfo>;
-
-const decode = (rle: string): string[] => {
-  let s = '';
-  for (const [, ch, n] of rle.matchAll(/([^\d])(\d*)/g)) s += ch!.repeat(n ? Number(n) : 1);
-  return Array.from({ length: FH }, (_, y) => s.slice(y * FW, (y + 1) * FW));
-};
-
-const LOADERS: Record<keyof typeof MINI_SPRITES, () => Promise<{ default: MiniPoseData }>> = {
-  short: () => import('./avatar-mini-motion/short.js'),
-  fringe: () => import('./avatar-mini-motion/fringe.js'),
-  long: () => import('./avatar-mini-motion/long.js'),
-  mohawk: () => import('./avatar-mini-motion/mohawk.js'),
-  slick: () => import('./avatar-mini-motion/slick.js'),
-  buzz: () => import('./avatar-mini-motion/buzz.js'),
-  afro: () => import('./avatar-mini-motion/afro.js'),
-  bun: () => import('./avatar-mini-motion/bun.js'),
-  spiky: () => import('./avatar-mini-motion/spiky.js'),
-};
-const loaded = new Map<string, Promise<MiniPoses>>();
-/** 머리 모양 하나의 자세 그림을 불러온다(한 번만). 무대(진행 시트)가 열릴 때 부른다. */
-export function loadMotionPoses(style: AvatarSpec['hairStyle']): Promise<MiniPoses> {
-  let p = loaded.get(style);
-  if (!p) {
-    p = LOADERS[style]()
-      .then(({ default: d }) => {
-        const out = {} as MiniPoses;
-        for (const k of MINI_POSES) {
-          const [rle, fx, fy, cx, cy, ax, ay, px, py, tx, ty] = d[k] as [string, ...number[]];
-          out[k] = {
-            rows: decode(rle),
-            face: [fx!, fy!],
-            crest: cx! < 0 ? null : [cx!, cy!],
-            arm: [ax!, ay!],
-            foot: [px!, py!],
-            top: [tx!, ty!],
-          };
-        }
-        return out;
-      })
-      .catch((error: unknown) => {
-        loaded.delete(style);
-        throw error;
-      });
-    loaded.set(style, p);
-  }
-  return p;
-}
 
 export interface MotionFrame {
   /** 이 프레임을 보여 줄 시간(ms). */
@@ -281,7 +215,6 @@ const PROP: Record<string, string> = {
   w: '#fff6c8',
   u: '#c9b48a',
 };
-const SHADOW = 'rgba(0,0,0,.28)';
 
 const stamp = (px: Px, art: readonly string[], x0: number, y0: number) =>
   art.forEach((row, y) => {
@@ -292,90 +225,6 @@ const stamp = (px: Px, art: readonly string[], x0: number, y0: number) =>
       if (ch !== '.' && yy >= 0 && yy < FH && xx >= 0 && xx < FW) px[yy]![xx] = PROP[ch]!;
     }
   });
-
-/** 칠한 격자의 from~to 줄을 dy만큼 옮긴다(빈 줄은 투명). */
-function shiftRows(px: Px, from: number, to: number, dy: number) {
-  const band = px.slice(from, to).map((r) => [...r]);
-  for (let y = from; y < to; y++) px[y] = Array<string | null>(FW).fill(null);
-  band.forEach((r, i) => {
-    const y = from + i + dy;
-    if (y < 0 || y >= FH) return;
-    r.forEach((c, x) => {
-      if (c) px[y]![x] = c;
-    });
-  });
-}
-
-/** 한 프레임 → 64×72 색 격자. poses가 아직 없으면(불러오는 중) 서 있는 그림으로 그린다. */
-export function motionFrame(sp: AvatarSpec, f: MotionFrame, poses?: MiniPoses | null): Px {
-  // 목발을 짚거나 은퇴식 소품을 든 선수는 준비 운동 대신 정지 자세로 둔다. 소품도 함께 보존한다.
-  if (sp.acc.some((a) => a === 'crutch' || a === 'suit' || a === 'bouquet')) f = { ms: f.ms };
-  const spec = f.expr !== undefined && sp.expr !== 'pain' ? { ...sp, expr: f.expr } : sp;
-  const info = f.pose && poses ? poses[f.pose] : null;
-  let px: Px;
-  let face: Pt = [SX, SY];
-  if (info) {
-    face = info.face;
-    const body: MiniBody = {
-      crest: info.crest,
-      arm: info.arm,
-      wrists: [],
-      ox: face[0],
-      collarY: face[1] + 34,
-    };
-    px = paintMini(info.rows, spec, miniColors(spec), body, {
-      stand: MINI_SPRITES[sp.hairStyle],
-      at: face,
-    });
-  } else {
-    const still = avatarPixels(spec);
-    px = Array.from({ length: FH }, () => Array<string | null>(FW).fill(null));
-    still.forEach((row, y) => row.forEach((c, x) => (px[SY + y]![SX + x] = c)));
-  }
-  // 몸 옮기기(논리 1칸 = 실제 2줄): 윗몸 내리기 → 몸 전체 올리기.
-  const waist = face[1] + 44;
-  if (f.sink) shiftRows(px, 0, waist, f.sink * 2);
-  const lift = (f.lift ?? 0) * 2;
-  if (lift) shiftRows(px, 0, FH, -lift);
-  // 그림자(몸 뒤, 바닥에 남는다).
-  const sw = f.shadow ?? 30;
-  for (let y = FH - 3; y < FH - 1; y++)
-    for (
-      let x = (FW - sw) / 2 + (y === FH - 3 ? 2 : 0);
-      x < (FW + sw) / 2 - (y === FH - 3 ? 2 : 0);
-      x++
-    )
-      if (!px[y]![x]) px[y]![x] = SHADOW;
-  // 소품(몸 앞).
-  if (f.dust) {
-    stamp(px, DUST, 6, FH - 6);
-    stamp(px, DUST, FW - 12, FH - 6);
-  }
-  if (f.trophy) {
-    const top = info?.top ?? [FW / 2, 12];
-    stamp(px, TROPHY, top[0] - 7, top[1] - TROPHY.length - lift + (f.sink ?? 0) * 2);
-  }
-  if (f.sparkle) {
-    stamp(px, SPARKLE, 4, 2);
-    stamp(px, SPARKLE, FW - 9, 4);
-  }
-  if (f.ball) {
-    const [dx, dy] = f.ball.d;
-    const [bx, by] =
-      f.ball.from === 'foot'
-        ? [(info?.foot[0] ?? SX + 36) + dx, (info?.foot[1] ?? FH - 4) + dy - lift]
-        : f.ball.from === 'head'
-          ? [face[0] + dx, face[1] + dy - lift]
-          : [dx, dy];
-    stamp(px, BALL, bx, by);
-  }
-  return px;
-}
-
-/** 모션 → 프레임 색 격자 목록. */
-export function motionFrames(sp: AvatarSpec, id: MotionId, poses?: MiniPoses | null): Px[] {
-  return MOTIONS[id].frames.map((f) => motionFrame(sp, f, poses));
-}
 
 /** Existing non-player dot props remain unchanged alongside the PNG player. Anchors use 32x36 units. */
 export function motionDecorationRects(f: MotionFrame, at: { face: Pt; foot: Pt; top: Pt }) {

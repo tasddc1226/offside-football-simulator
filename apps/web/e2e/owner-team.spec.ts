@@ -1476,7 +1476,8 @@ for (const width of [320, 390, 1280]) {
       );
     }
     const custom = cards.first();
-    await expect(custom.locator('rect[fill="#e06aa5"]')).not.toHaveCount(0);
+    await expect(custom.locator('svg.image-avatar')).toHaveAttribute('data-hair', 'long');
+    await expect(custom.locator('svg.image-avatar > g')).toBeVisible();
     await expect(custom.locator('.portrait-number')).toHaveText('9');
     await expect(custom.locator('.card-name')).toHaveAttribute(
       'title',

@@ -167,7 +167,7 @@ test('reduced motion stops both travel and running poses without delaying progre
 test('pose loading failure keeps a still player and does not block progress', async ({ page }) => {
   let failed = 0;
   await page.route(
-    /(?:avatar-images\/(?:short|fringe|long|mohawk|slick|buzz|afro|bun|spiky)-A\.png|assets\/(?:short|fringe|long|mohawk|slick|buzz|afro|bun|spiky)-A-[^/]+\.png)(?:\?|$)/,
+    /(?:avatar-layers\/|assets\/)(?:runL|air|runR|juggle|balance|kick|fist|tuck|spread|jumpUp)(?:-[^/]+)?\.png(?:\?|$)/,
     (r) => {
       failed++;
       return r.abort();
