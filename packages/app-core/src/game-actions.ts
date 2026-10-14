@@ -878,18 +878,22 @@ export function createGameActions(host: GameHost) {
     );
     const open = batch.map(() => false);
     const k = loadKey<KeptCandidate>(SCOUT_KEEP);
-    if (k && keepMatches(k)) {
-      // 프리미엄 스카우트의 보장 후보 자리는 덮지 않는다.
-      const i =
-        batch[k.idx] && !batch[k.idx]!.guaranteed ? k.idx : batch.findIndex((c) => !c.guaranteed);
-      if (i >= 0) {
-        batch[i] = { ...k.cand, kept: { revealed: k.revealed } };
-        open[i] = true;
-      }
+    const i = k ? keptSlot(batch, k) : -1;
+    if (k && i >= 0) {
+      batch[i] = { ...k.cand, kept: { revealed: k.revealed } };
+      open[i] = true;
     }
     appState.candidates = batch;
     appState.candidatesOpen = open;
     appState.candidatePick = null;
+  }
+
+  /** 킵한 후보가 이 후보 묶음에서 덮을 자리(없으면 -1). 프리미엄 스카우트의 보장 후보 자리는 덮지 않는다. */
+  function keptSlot(batch: Candidate[], k: KeptCandidate): number {
+    if (!keepMatches(k)) return -1;
+    return batch[k.idx] && !batch[k.idx]!.guaranteed
+      ? k.idx
+      : batch.findIndex((c) => !c.guaranteed);
   }
 
   /** T-11-225 후보 한 명을 킵한다(다른 후보의 킵은 풀린다). null이면 킵을 푼다. 목록은 그 자리에서 고친다. */
@@ -927,6 +931,7 @@ export function createGameActions(host: GameHost) {
   /**
    * T-11-244 프리미엄 스카우트권을 쓰기 전에 다음 시드를 정하고, 그 시드의 일반 프리미엄 후보에 S가 있는지(hit) 미리 본다.
    * 서버가 천장 카운트를 그 결과로 센다. 응답을 못 받아 다시 보낼 때는 같은 계획을 그대로 쓴다.
+   * 킵한 후보(T-11-225)가 덮을 자리는 화면에 나오지 않으니 세지 않는다 — 천장은 '본 후보에 S가 없는 장수'로 센다.
    */
   function planPremiumScout(): { seed: number; hit: boolean } {
     const seed = freshSeed();
@@ -938,7 +943,12 @@ export function createGameActions(host: GameHost) {
       3,
       true,
     );
-    return { seed, hit: batch.some((c) => gradeOf(c.potential.value) === 'S') };
+    const k = loadKey<KeptCandidate>(SCOUT_KEEP);
+    const skip = k ? keptSlot(batch, k) : -1;
+    return {
+      seed,
+      hit: batch.some((c, i) => i !== skip && gradeOf(c.potential.value) === 'S'),
+    };
   }
 
   /**

@@ -1,0 +1,20 @@
+{
+  "id": "t-11-254-scout-pity-kept",
+  "title": "프리미엄 스카우트 천장 계산 수정",
+  "items": [
+    "후보를 킵한 채 프리미엄 스카우트권을 쓰면, 킵한 후보 자리에 가려 보지 못한 S 후보 때문에 S 확정까지 남은 장수가 처음으로 돌아가던 문제를 고쳤어요. 이제 화면에서 본 후보에 S가 없으면 그대로 이어져요."
+  ],
+  "en": {
+    "title": "Premium scout pity counter fix",
+    "items": [
+      "When you used a premium scout ticket with a kept candidate, an S candidate hidden behind the kept slot could reset your guaranteed-S countdown. The countdown now only resets when an S candidate actually appears on screen."
+    ]
+  },
+  "ja": {
+    "title": "プレミアムスカウト天井カウントの修正",
+    "items": [
+      "候補をキープしたままプレミアムスカウト券を使うと、キープ枠に隠れて見えなかったS候補のせいでS確定までの残り枚数が最初に戻る問題を直しました。画面で見た候補にSがなければ、そのまま続きます。"
+    ]
+  },
+  "availability": "web-app"
+}
