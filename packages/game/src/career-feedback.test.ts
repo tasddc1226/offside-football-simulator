@@ -177,6 +177,8 @@ describe('career moment events', () => {
     expect(ev('wc-snub').cond(s)).toBe(true);
     expect(ev('wc-snub').cond({ ...s, phase: 1 })).toBe(false);
     expect(ev('wc-snub').cond({ ...s, nat: { ...s.nat, caps: 0 } })).toBe(false);
+    // T-11-265 대표팀 은퇴를 발표했으면 소집 거부를 묻지 않는다.
+    expect(ev('wc-snub').cond({ ...s, nat: { ...s.nat, retired: 2026 } })).toBe(false);
     s.nat.tours[0]!.inSquad = true;
     expect(ev('wc-snub').cond(s)).toBe(false);
   });

@@ -44,6 +44,7 @@ export const MOMENT_EVENTS: EventDef[] = [
   },
   {
     // 지난 시즌(월드컵 해) 본선에 나갔는데 최종 명단에 들지 못한 A대표 경력 선수에게 새 시즌 프리시즌에 온다.
+    // T-11-265 대표팀 은퇴를 발표했으면 오지 않는다(은퇴한 해의 월드컵 명단 탈락으로 소집 거부를 묻지 않는다).
     id: 'wc-snub',
     get title() {
       return L.wcTitle;
@@ -53,6 +54,7 @@ export const MOMENT_EVENTS: EventDef[] = [
       isPro(s) &&
       s.phase === 0 &&
       s.nat.caps > 0 &&
+      !s.nat.retired &&
       !natRefusing(s) &&
       s.nat.tours.some((t) => t.year === s.year - 1 && t.name.includes('FIFA') && !t.inSquad),
     text: () => L.wcText,
