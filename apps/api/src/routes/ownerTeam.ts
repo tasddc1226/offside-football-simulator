@@ -70,8 +70,8 @@ import {
 import { achievementRankOf } from '../db/repos/ownerAchievements.js';
 import { getProfile, hasAccount, type ProfileRecord } from '../db/repos/profiles.js';
 import { ownerTeams } from '../db/schema.js';
-import { purgeEdge, waitUntil } from '../edgeCache.js';
-import { STALE } from '../edgeKeys.js';
+import { edgeCached, purgeEdge, waitUntil } from '../edgeCache.js';
+import { EDGE, STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
@@ -92,6 +92,8 @@ import { reqLang, type Lang } from '../lang.js';
 // T-10-092 구단주 팀(시즌마다 한 팀). 구글 로그인한 구단주만 쓴다 — 사람마다 다른 응답이라 엣지 캐시하지 않는다.
 /** 상대 목록에 보여 줄 팀 수. */
 const OPPONENTS_SHOWN = 5;
+/** T-11-262 업적 랭킹 인원 엣지 캐시 TTL(초). */
+const ACH_RANKED_TTL = 300;
 
 const teamRequired = () => conflictError('먼저 이번 시즌 팀을 만들어 주세요.', 'TEAM_REQUIRED');
 
@@ -568,7 +570,10 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const now = nowIso();
     const season = seasonQuery(c, now);
     const { groups, row, players } = await refreshOwnerAchievements(db, me, season, now, false);
-    const { rank, ranked } = await achievementRankOf(db, row);
+    // T-11-262 랭킹 인원은 모두에게 같다 — 시즌마다 5분 엣지 캐시(순위는 사람마다 달라 매번 센다).
+    const { rank, ranked } = await achievementRankOf(db, row, (load) =>
+      edgeCached(c, EDGE.achRanked(season), ACH_RANKED_TTL, load),
+    );
     const lang = reqLang(c);
     return ok(
       c,

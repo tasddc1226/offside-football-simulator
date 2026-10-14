@@ -5,6 +5,7 @@ import { createTestD1, syncCards, type TestD1 } from '../../test/d1.js';
 import { createDb } from '../client.js';
 import { listPublicHof } from './careers.js';
 import { listTeamRanking } from './ownerTeams.js';
+import { achievementRankOf, ownerActivityIn } from './ownerAchievements.js';
 import { listRetiredNumbers, summarizeRetiredNumbers } from './retiredNumbers.js';
 import { titleMetricsOf } from './ownerTitles.js';
 
@@ -286,5 +287,60 @@ describe('critical query result and read-cost regressions (local D1)', () => {
     const summary = await summarizeRetiredNumbers(ctx.db, 1);
     expect(summary.wallTotal).toBe(summary.wall?.length);
     expect(summary.wallTotal).toBeGreaterThan(0);
+  });
+  it('owner likes count starts from that owner’s likes, not every team of the season (T-11-262)', async () => {
+    await ctx.env.DB.prepare(
+      `INSERT INTO team_likes (team_id, profile_id, created_at)
+       SELECT id, 'profile-5', '2026-09-29' FROM owner_teams WHERE cast(substr(id, 6) as integer) % 20 = 1
+       UNION ALL SELECT id, 'profile-6', '2026-09-29' FROM owner_teams WHERE cast(substr(id, 6) as integer) % 2 = 0`,
+    ).run();
+    for (const [profileId, likes] of [
+      ['profile-5', 4],
+      ['profile-6', 40],
+      ['profile-7', 0],
+    ] as const) {
+      traced.queries.length = 0;
+      const activity = await ownerActivityIn(traced.db, profileId, 0, null);
+      expect(activity.likesGiven).toBe(likes);
+      const q = traced.queries.find((x) => x.sql.includes('team_likes_profile_idx'))!;
+      const baseline = { ...q, sql: q.sql.replace(' INDEXED BY team_likes_profile_idx', '') };
+      const current = await run(q);
+      const old = await run(baseline);
+      expect(current.results).toEqual(old.results);
+      expect(await plan(q)).toContain('team_likes_profile_idx (profile_id=?)');
+      expect(current.meta.rows_read).toBeLessThanOrEqual(old.meta.rows_read);
+      if (likes < 40) expect(current.meta.rows_read).toBeLessThan(old.meta.rows_read / 5);
+    }
+  });
+
+  it('achievement rank takes the shared ranked total from the cache when given (T-11-262)', async () => {
+    await ctx.env.DB.prepare(
+      `INSERT INTO owner_achievements (profile_id, season, score, done, players, reached_at, updated_at)
+       SELECT id, 0, 10 + cast(substr(id, 9) as integer) % 7, 1, 1, '2026-09-29', '2026-09-29' FROM profiles`,
+    ).run();
+    const row = {
+      profileId: 'profile-3',
+      season: 0,
+      score: 13,
+      done: 1,
+      players: 1,
+      teamKept: null,
+      reachedAt: '2026-09-29',
+      updatedAt: '2026-09-29',
+    };
+    traced.queries.length = 0;
+    const fresh = await achievementRankOf(traced.db, row);
+    expect(traced.queries).toHaveLength(2);
+    traced.queries.length = 0;
+    const cached = await achievementRankOf(traced.db, row, async () => fresh.ranked);
+    expect(cached).toEqual(fresh);
+    expect(traced.queries).toHaveLength(1);
+    // 점수가 0이면 순위를 세지 않는다.
+    traced.queries.length = 0;
+    expect(await achievementRankOf(traced.db, { ...row, score: 0 }, async () => 9)).toEqual({
+      rank: null,
+      ranked: 9,
+    });
+    expect(traced.queries).toHaveLength(0);
   });
 });
