@@ -229,7 +229,7 @@ describe('T-11-145 컵 규칙', () => {
   });
 });
 
-describe('T-11-250 다음 회차 일정', () => {
+describe('T-11-251 다음 회차 일정', () => {
   // 운영 제1회 결승(10/16 21:00 KST) 뒤 손으로 연 제2회(s1-2)와 같은 일정이 나와야 한다.
   const PREV = {
     ...CUP128,
@@ -355,7 +355,7 @@ describe('T-11-145 컵 진행(cron)', () => {
     expect([want('rerolls'), want('scouts'), want('boosts')]).toEqual([211, 11, 7]);
   }, 120_000);
 
-  it('T-11-250 결승이 끝나면 다음 회차를 만들고 접수 알림을 한 번 보낸다', async () => {
+  it('T-11-251 결승이 끝나면 다음 회차를 만들고 접수 알림을 한 번 보낸다', async () => {
     const teams = await enter(8);
     await addAppPushDevice(ctx, teams[0]!.profileId);
     const final = cupFinalAt(CUP);
@@ -403,7 +403,7 @@ describe('T-11-145 컵 진행(cron)', () => {
     expect(cupText(sent[0]!.body, 'ja')).toContain('64');
   }, 60_000);
 
-  it('T-11-250 운영이 끄면 다음 회차를 만들지 않는다', async () => {
+  it('T-11-251 운영이 끄면 다음 회차를 만들지 않는다', async () => {
     await enter(4);
     await runAll();
     await ctx.env.DB.prepare(

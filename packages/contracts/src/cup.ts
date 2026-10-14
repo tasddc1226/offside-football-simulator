@@ -107,7 +107,7 @@ export const cupEndsAt = (cup: CupDef) =>
   new Date(Date.parse(cupFinalAt(cup)) + CUP_AFTERGLOW_MS).toISOString();
 
 /**
- * T-11-250 결승이 끝나면 서버가 다음 대회를 스스로 연다. 접수는 결승 CUP_NEXT_GAP_MS 뒤, 접수 기간·정원·최소 인원은
+ * T-11-251 결승이 끝나면 서버가 다음 대회를 스스로 연다. 접수는 결승 CUP_NEXT_GAP_MS 뒤, 접수 기간·정원·최소 인원은
  * 앞 대회와 같은 규칙(제2회: KST 21:10 접수, 사흘째 자정 마감, 128팀). 시즌이 맞지 않으면 api가 다음 시즌 개막으로 미룬다.
  */
 export const CUP_NEXT_GAP_MS = 10 * 60_000;

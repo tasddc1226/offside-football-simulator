@@ -5,7 +5,7 @@ import { cupKo, cupTitle } from '../cupText.js';
 import type { Bindings } from '../env.js';
 import { cupSchedule } from './cupSchedule.js';
 
-// T-11-250 오프사이드 컵 자동 운영. 5분 cron이 runCup 뒤에 부른다.
+// T-11-251 오프사이드 컵 자동 운영. 5분 cron이 runCup 뒤에 부른다.
 // 1) 마지막 대회 결승이 끝나면 다음 회차를 만든다(접수는 결승 10분 뒤). app_meta `cup:autopilot` = 'off'면 만들지 않는다.
 // 2) 접수가 열리면 참가 자격이 있는 구단주에게 한 번 알린다(source_key cup-open:<id>, 컵 알림이라 22시까지 푸시).
 // 3) 추첨·경기·종료·다음 회차가 30분 넘게 밀리면 운영 슬랙에 한 번 알린다.
