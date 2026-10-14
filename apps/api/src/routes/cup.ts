@@ -21,6 +21,7 @@ import {
   CUP_KO_ROUNDS,
   CUP_ROUNDS,
   cupById,
+  cupRoundsOf,
   currentCup,
   lockAt,
   OWNER_ITEMS,
@@ -134,7 +135,7 @@ export const cupInfo = (cup: CupDef) => ({
   opensAt: cup.opensAt,
   closesAt: cup.closesAt,
   drawAt: cup.drawAt,
-  rounds: CUP_ROUNDS.map((round, i) => ({
+  rounds: cupRoundsOf(cup).map((round, i) => ({
     round,
     at: cup.rounds[i]!,
     lockAt: lockAt(cup.rounds[i]!),

@@ -12,6 +12,7 @@ export const CUP_JA: Record<CupTextKey, string> = {
   g1: 'グループ第1節',
   g2: 'グループ第2節',
   g3: 'グループ第3節',
+  r64: 'ベスト64',
   r32: 'ベスト32',
   r16: 'ベスト16',
   qf: '準々決勝',

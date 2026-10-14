@@ -25,7 +25,7 @@ import { checkCupListing, cupHomeView } from './cup.js';
 
 const MeRes = successEnvelope(CupMeResponseSchema);
 const CupRes = successEnvelope(CupResponseSchema);
-const CUP = planCup({ id: 's1-1', season: 1, edition: 1, opensOn: '2026-10-09' });
+const CUP = planCup({ id: 's1-1', season: 1, edition: 1, opensOn: '2026-10-09', capacity: 64 });
 const OPEN = '2026-10-10T03:00:00.000Z';
 let seq = 0;
 

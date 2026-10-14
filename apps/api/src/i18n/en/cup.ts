@@ -12,6 +12,7 @@ export const CUP_EN: Record<CupTextKey, string> = {
   g1: 'Group matchday 1',
   g2: 'Group matchday 2',
   g3: 'Group matchday 3',
+  r64: 'Round of 64',
   r32: 'Round of 32',
   r16: 'Round of 16',
   qf: 'Quarter-final',
