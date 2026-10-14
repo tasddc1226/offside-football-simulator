@@ -38,4 +38,5 @@ export const gNational: Translation<GNationalMsgs> = {
   whyCut: '最終メンバーから落選',
   whyRefused: '所属クラブが招集を拒否',
   whyWildcard: 'オーバーエイジ枠で選出',
+  whyQuit: '代表招集の拒否を宣言中',
 };

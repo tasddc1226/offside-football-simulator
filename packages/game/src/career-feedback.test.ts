@@ -7,7 +7,10 @@ import { rivalName } from './rival-names.js';
 import { DATING_EVENT } from './dating-event.js';
 import { BASE_EVENTS } from './events.js';
 import { LIFE_EVENTS } from './life-events.js';
-import { natWindow, ntRetireAsk } from './national.js';
+import { MOMENT_EVENTS } from './moment-events.js';
+import { natRefusing, natWindow, ntRetireAsk } from './national.js';
+import { eventById } from './events-data.js';
+import './event-registry.js';
 import { en } from './i18n/en/index.js';
 import { ja } from './i18n/ja/index.js';
 import { createRng, setActiveRng } from './rng.js';
@@ -159,5 +162,58 @@ describe('international retirement and the party follow-up (T-11-258)', () => {
     wags.choices[1]!.ok.fx(s);
     expect(s.flags.wags).toBe(s.year);
     expect(wags.cond(s)).toBe(false);
+  });
+});
+
+describe('career moment events', () => {
+  const ev = (id: string) => MOMENT_EVENTS.find((e) => e.id === id)!;
+  it('offers the World Cup snub only after missing last year’s World Cup squad', () => {
+    const s = player();
+    Object.assign(s, { leagueId: 'pl', phase: 0, year: 2027 });
+    s.nat.caps = 12;
+    s.nat.tours = [
+      { year: 2026, name: '2026 FIFA 월드컵', stage: '16강', inSquad: false, apps: 0, goals: 0 },
+    ];
+    expect(ev('wc-snub').cond(s)).toBe(true);
+    expect(ev('wc-snub').cond({ ...s, phase: 1 })).toBe(false);
+    expect(ev('wc-snub').cond({ ...s, nat: { ...s.nat, caps: 0 } })).toBe(false);
+    s.nat.tours[0]!.inSquad = true;
+    expect(ev('wc-snub').cond(s)).toBe(false);
+  });
+  it('keeps a refusing player out of A-team call-ups for two seasons', () => {
+    setActiveRng(createRng(255));
+    const s = player();
+    Object.assign(s, { leagueId: 'pl', phase: 1, year: 2027 });
+    s.nat.captain = true;
+    ev('wc-snub').choices[0]!.ok.fx(s);
+    expect(s.nat.captain).toBe(false);
+    expect(natRefusing(s)).toBe(true);
+    expect(natWindow(s)).toBeNull();
+    s.year = 2028;
+    expect(natRefusing(s)).toBe(true);
+    s.year = 2029;
+    expect(natRefusing(s)).toBe(false);
+  });
+  it('gives the hat-trick event once per season to scorers', () => {
+    const s = player();
+    Object.assign(s, { leagueId: 'pl', phase: 1 });
+    s.season.goals = 3;
+    expect(ev('hat-trick').cond(s)).toBe(true);
+    ev('hat-trick').choices[1]!.ok.fx(s);
+    expect(ev('hat-trick').cond(s)).toBe(false);
+    expect(ev('hat-trick').cond({ ...s, pos: 'GK', flags: {} })).toBe(false);
+  });
+  it('uses the player name in every language', () => {
+    const s = player();
+    expect(eventById('kid-autograph')!.text(s)).toContain('QA');
+    for (const [locale, dict] of [
+      ['en', en],
+      ['ja', ja],
+    ] as const) {
+      setLocale(locale, dict);
+      const e = eventById('kid-autograph')!;
+      expect(e.text(s)).toContain('QA');
+      expect(e.title).not.toMatch(/[가-힣]/);
+    }
   });
 });

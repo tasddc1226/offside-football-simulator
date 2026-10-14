@@ -8,6 +8,8 @@ export default {
     'Players aged 31 or older with at least 10 caps can choose to retire from international football once a season, right after a call-up. Once retired, you are no longer picked for internationals or tournaments, so call-ups stop draining your condition. Your international record stays. Retirement cannot be undone.',
   partyFollowUp:
     'If you drop by a party invitation and it goes well, a professional player aged 20 or older with at least 25 fame hears from someone they met there in the next part of the season. You can meet openly, meet quietly or politely decline. It happens once per career.',
+  refuseCallup:
+    'If a capped player is left out of the World Cup squad, a squad snub event may appear in the next pre-season. Declaring a call-up refusal keeps you out of senior national team call-ups and continental cup and World Cup squads for that season and the next, and you give up the captaincy. Asian Games and Olympic squads are not affected.',
 
   investment:
     'In each phase, you can spend career funds on extra training, medical care or mental coaching in addition to regular training. Costs scale with salary. Training gains depend on age, potential and morale. Potential controls growth speed; it is not a hard ability cap.',

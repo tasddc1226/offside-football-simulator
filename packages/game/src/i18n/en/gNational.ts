@@ -44,4 +44,5 @@ export const gNational: Translation<GNationalMsgs> = {
   whyCut: 'Cut from the final squad',
   whyRefused: 'Your club refused to release you',
   whyWildcard: 'Picked as an over-age wildcard',
+  whyQuit: 'Refusing national team call-ups',
 };
