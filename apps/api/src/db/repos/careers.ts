@@ -512,6 +512,8 @@ export async function listPublicHof(
   q?: string,
   pos?: CareerPos,
   dpos?: DetailPos,
+  /** T-11-257 전체 인원 세기를 감싼다(라우트가 엣지 캐시에 담는다). 기본은 매번 센다. */
+  cachedTotal: (load: () => Promise<number>) => Promise<number> = (load) => load(),
 ): Promise<{ entries: PublicHofEntry[]; total: number }> {
   const by = HOF_SORT[sort];
   const ranked = and(
@@ -561,16 +563,19 @@ export async function listPublicHof(
         .orderBy(...order)
         .limit(limit)
         .offset((page - 1) * limit));
-  const [count] = await db
-    .select({ n: sql<number>`count(*)` })
-    .from(
-      q
-        ? rankSource
-        : dpos
-          ? sql`${careers} INDEXED BY careers_hof_dpos_idx`
-          : sql`${careers} INDEXED BY careers_hof_count_idx`,
-    )
-    .where(where);
+  const total = await cachedTotal(async () => {
+    const [count] = await db
+      .select({ n: sql<number>`count(*)` })
+      .from(
+        q
+          ? rankSource
+          : dpos
+            ? sql`${careers} INDEXED BY careers_hof_dpos_idx`
+            : sql`${careers} INDEXED BY careers_hof_count_idx`,
+      )
+      .where(where);
+    return Number(count?.n ?? 0);
+  });
   const entries = rows.map(toPublicEntry);
   if (q && entries.length) {
     // 찾은 선수(최대 limit명)만 전체 순위에서 몇 위인지 — id·순번만 읽는 창 함수 한 번.
@@ -594,7 +599,7 @@ export async function listPublicHof(
     const at = new Map(ranks.map((r) => [r.id, Number(r.rk)]));
     for (const e of entries) e.rank = at.get(e.id);
   }
-  return { entries, total: Number(count?.n ?? 0) };
+  return { entries, total };
 }
 
 /**

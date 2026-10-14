@@ -11,6 +11,7 @@ import { ensureCardValuesBackfilled } from '../db/repos/cardValues.js';
 import { eq, inArray } from 'drizzle-orm';
 import { cardValue, releasePayout, retireValue, valueFor } from '@offside/contracts/market-value';
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
+import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
 import { issueCookie, putJson, putSeasonsFor, seasonBody } from '../test/http.js';
 
 const CAREER_ID = '3b1d6c1e-2a4f-4f7e-9a0b-7c8d9e0f1a2b';
@@ -510,6 +511,36 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect(res.status).toBe(200);
     expect(seen.length).toBeGreaterThan(0);
     expect(seen.filter((q) => /"sessions"|"profiles"/.test(q))).toEqual([]);
+  });
+
+  it('페이지를 넘겨도 전체 인원은 엣지 캐시에서 읽고 다시 세지 않는다(T-11-257)', async () => {
+    const edge = installFakeEdgeCache();
+    try {
+      const { DB, seen } = spyDb(ctx.env.DB);
+      const counts = () => seen.filter((q) => /count\(\*\)/.test(q)).length;
+      const countKeys = () => [...edge.store.keys()].filter((k) => k.includes('/_count/hof'));
+      // 옛 기록 채우기(backfill)가 도는 동안은 담지 않는다 — 다 채울 때까지 첫 페이지를 다시 읽는다.
+      let first!: Response;
+      for (let i = 0; i < 10 && !countKeys().length; i++) {
+        edge.store.clear();
+        first = await createApp().request('/v1/hof?limit=1', {}, { ...ctx.env, DB });
+        await flushEdge();
+      }
+      expect(countKeys()).toHaveLength(1);
+      const before = counts();
+      expect(before).toBeGreaterThan(0);
+      const second = await createApp().request('/v1/hof?limit=1&page=2', {}, { ...ctx.env, DB });
+      expect(counts()).toBe(before);
+      const total = async (r: Response) =>
+        successEnvelope(HofListResponseSchema).parse(await r.json()).data.total;
+      expect(await total(second)).toBe(await total(first));
+      // 검색은 담지 않는다(검색어마다 키가 늘지 않게).
+      await createApp().request('/v1/hof?q=%EC%98%A4%ED%94%84', {}, { ...ctx.env, DB });
+      expect(counts()).toBeGreaterThan(before);
+      expect(countKeys()).toHaveLength(1);
+    } finally {
+      edge.uninstall();
+    }
   });
 
   it('링크·욕설이 든 공개 이름은 거절한다', async () => {
