@@ -12,8 +12,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { canDismissSheet } from '@offside/app-core/sheet-controller';
-import { Txt } from './Txt';
-import { Press } from './Press';
 import { sheetLabel, type SheetView } from '@offside/app-core/sheets';
 import { appState, prefs, sheetState } from '../store';
 import { buzz, dismissSheet } from '../game/host';
@@ -103,22 +101,6 @@ export function Sheet() {
                 }}
               />
             </View>
-            {s.view?.kind === 'market' && dismissible ? (
-              <Press
-                testID="market-close"
-                accessibilityLabel={shellMoreText.close}
-                onPress={close}
-                style={{
-                  alignSelf: 'flex-end',
-                  minWidth: 48,
-                  minHeight: 48,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Txt accessibilityElementsHidden>✕</Txt>
-              </Press>
-            ) : null}
             {/* 스냅숏이 아니라 원본 뷰를 넘긴다 — 본문(미니게임 등)이 뷰를 고치고, 읽을 때는 각자 useSnapshot으로 구독한다. */}
             {s.view ? <SheetBody v={sheetState.view!} /> : null}
             {s.buttons.map((b, i) => (

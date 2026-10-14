@@ -4,6 +4,9 @@ import type { GameSeasonMsgs } from '../ko/gameSeason';
 export const gameSeason: Translation<GameSeasonMsgs> = {
   preseason: 'プレシーズン',
   prepTitle: '次のフェーズの準備',
+  seasonOver: 'シーズン終了',
+  nextSeasonTitle: '来シーズンの準備',
+  nextSeasonWait: '移籍先を決めると来シーズンのトレーニングと投資を選べます。',
   condition: '体調',
   morale: '士気',
   fame: '人気',
