@@ -6,6 +6,11 @@
 /** Candidate row cap. Payloads are additionally bounded in SQL before crossing D1 RPC. */
 const PAGE = 2000;
 export const BACKUP_PAGE_BYTES = 4 * 1024 * 1024;
+/** Yield the primary between pages, without adding seconds to every table. */
+export const BACKUP_PAGE_PAUSE_MS = 20;
+const LEASE_KEY = 'cron:backup:lease';
+// Scheduled handlers stop after 15 minutes; a crashed owner expires before the next daily run.
+const LEASE_MS = 20 * 60_000;
 /** R2 멀티파트 조각(마지막 조각 말고는 5MiB 이상이어야 한다). */
 const PART_BYTES = 8 * 1024 * 1024;
 /** 매일 백업은 이만큼 두고, 매달 1일 백업은 계속 둔다. */
@@ -17,6 +22,8 @@ export type BackupResult = {
   rows: number;
   bytes: number;
   pruned: number;
+  pages: number;
+  pauseMs: number;
 };
 
 type SchemaRow = { type: string; name: string; sql: string };
@@ -143,6 +150,30 @@ export async function backupToR2(
   env: string,
   now: number,
 ): Promise<BackupResult> {
+  const wall = Date.now();
+  const lease = JSON.stringify({ token: crypto.randomUUID(), expiresAt: wall + LEASE_MS });
+  const claimed = await db
+    .prepare(
+      `INSERT INTO app_meta(key,value) VALUES (?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value
+       WHERE CAST(json_extract(app_meta.value,'$.expiresAt') AS INTEGER) <= ?3 RETURNING value`,
+    )
+    .bind(LEASE_KEY, lease, wall)
+    .first();
+  if (!claimed) throw new Error('D1 backup already running');
+  try {
+    return await exportToR2(db, bucket, env, now);
+  } finally {
+    // A stale owner must never release a replacement owner's lease.
+    await db.prepare('DELETE FROM app_meta WHERE key=?1 AND value=?2').bind(LEASE_KEY, lease).run();
+  }
+}
+
+async function exportToR2(
+  db: D1Database,
+  bucket: R2Bucket,
+  env: string,
+  now: number,
+): Promise<BackupResult> {
   const { results: schema } = await db
     .prepare(
       `SELECT type, name, sql FROM sqlite_master
@@ -154,6 +185,7 @@ export async function backupToR2(
 
   const key = backupKey(env, now);
   let rows = 0;
+  let pages = 0;
   const bytes = await gzipToR2(bucket, key, 'application/sql', async (write) => {
     await write(
       `-- offside D1 backup · ${env} · ${new Date(now).toISOString()}\nPRAGMA defer_foreign_keys = true;\n`,
@@ -163,7 +195,9 @@ export async function backupToR2(
       const columns = (await db.prepare(`PRAGMA table_info(${q(t.name)})`).all<{ name: string }>())
         .results;
       const size = columns
-        .map((c) => `coalesce(length(CAST(${q(c.name)} AS BLOB)), 0) + 16`)
+        // SQLite reads TEXT/BLOB byte lengths from record metadata. Casting first
+        // loads wide JSON overflow pages just to size rows we may not export yet.
+        .map((c) => `coalesce(octet_length(${q(c.name)}), 0) + 16`)
         .join(' + ');
       let after = 0;
       let candidates = 64;
@@ -187,6 +221,7 @@ export async function backupToR2(
           .raw<unknown[]>({ columnNames: true });
         const [cols, ...data] = page as [string[], ...unknown[][]];
         if (!cols || data.length === 0) break;
+        pages++;
         const insert = `INSERT INTO ${q(t.name)} (${cols.slice(1).map(q).join(', ')}) VALUES `;
         // Do not retain both an entire SQL page and its encoded copy alongside raw rows.
         for (const r of data) await write(`${insert}(${r.slice(1).map(literal).join(', ')});\n`);
@@ -194,13 +229,23 @@ export async function backupToR2(
         after = Number(data[data.length - 1]![0]);
         // Avoid repeatedly sizing thousands of wide rows to return just a few.
         candidates = data.length < candidates ? data.length : Math.min(PAGE, candidates * 2);
+        // Backpressure from gzip/R2 does not guarantee a break between D1 reads.
+        await new Promise<void>((resolve) => setTimeout(resolve, BACKUP_PAGE_PAUSE_MS));
       }
     }
     // 인덱스·트리거는 데이터를 넣은 뒤에 만든다(넣는 동안 인덱스를 고치지 않게).
     for (const s of schema) if (s.type !== 'table') await write(`${s.sql};\n`);
   });
 
-  return { key, tables: tables.length, rows, bytes, pruned: await prune(bucket, env, now) };
+  return {
+    key,
+    tables: tables.length,
+    rows,
+    bytes,
+    pruned: await prune(bucket, env, now),
+    pages,
+    pauseMs: pages * BACKUP_PAGE_PAUSE_MS,
+  };
 }
 
 /** KEEP_DAYS보다 오래된 매일 백업을 지운다. 매달 1일 백업은 남긴다. */
