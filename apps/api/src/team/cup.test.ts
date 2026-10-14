@@ -2,9 +2,11 @@ import { IDEMPOTENCY_KEY_HEADER, REWARD_UNCAPPED } from '@offside/contracts';
 import {
   CUP_REWARDS,
   cupGroupCount,
+  cupRoundsOf,
   currentCup,
   planCup,
   pullCupForward,
+  roundAt,
 } from '@offside/contracts/cup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
@@ -35,11 +37,17 @@ import { drawGroups, firstKoPairs, groupFixtures, groupStandings } from './cupRu
 import { buildLineup, penaltyShootout } from './sim.js';
 
 // 실제 제1회 대회 일정 그대로 돌린다(마이그레이션 0075가 cups에 넣어 둔 s1-1 — 기록·명단 검사가 그 행을 본다).
-const CUP = planCup({ id: 's1-1', season: 1, edition: 1, opensOn: '2026-10-09' });
+const CUP = planCup({ id: 's1-1', season: 1, edition: 1, opensOn: '2026-10-09', capacity: 64 });
+// T-11-246 제2회부터 정원 128(64강부터).
+const CUP128 = planCup({ id: 's1-2', season: 1, edition: 2, opensOn: '2026-10-09' });
 
 describe('T-11-145 컵 규칙', () => {
   it('팀 수로 조 수를 정한다', () => {
-    expect(cupGroupCount(64)).toBe(16);
+    expect(cupGroupCount(128)).toBe(32);
+    expect(cupGroupCount(64)).toBe(32);
+    expect(cupGroupCount(63)).toBe(16);
+    // 정원 64 대회(제1회)는 64강을 열지 않는다.
+    expect(cupGroupCount(64, 64)).toBe(16);
     expect(cupGroupCount(32)).toBe(16);
     expect(cupGroupCount(31)).toBe(8);
     expect(cupGroupCount(8)).toBe(4);
@@ -140,6 +148,29 @@ describe('T-11-145 컵 규칙', () => {
     expect(CUP.rounds.at(-1)).toBe('2026-10-20T12:00:00.000Z');
   });
 
+  it('T-11-246 정원 128은 64강 일정(9라운드), 접수 시작 시각을 고를 수 있다', () => {
+    expect(CUP128.capacity).toBe(128);
+    expect(cupRoundsOf(CUP128)).toEqual(['g1', 'g2', 'g3', 'r64', 'r32', 'r16', 'qf', 'sf', 'f']);
+    expect(CUP128.rounds).toHaveLength(9);
+    expect(roundAt(CUP128, 'r64')).toBe('2026-10-16T12:00:00.000Z');
+    expect(CUP128.rounds.at(-1)).toBe('2026-10-21T12:00:00.000Z');
+    // 저장된 제1회(8라운드)는 64강 없이 그대로 읽는다.
+    expect(cupRoundsOf(CUP)).not.toContain('r64');
+    expect(roundAt(CUP, 'r32')).toBe('2026-10-16T12:00:00.000Z');
+    expect(roundAt(CUP, 'f')).toBe('2026-10-20T12:00:00.000Z');
+    // 제1회 결승(10/16 21:00) 직후 21:10에 접수를 여는 제2회.
+    const after = planCup({
+      id: 's1-2',
+      season: 1,
+      edition: 2,
+      opensOn: '2026-10-16',
+      opensTime: '21:10',
+      entryDays: 3,
+    });
+    expect(after.opensAt).toBe('2026-10-16T12:10:00.000Z');
+    expect(after.closesAt).toBe('2026-10-18T15:00:00.000Z');
+  });
+
   it('정원이 일찍 차면 접수를 닫고 12시간 뒤 첫 추첨 시각으로 일정을 당긴다', () => {
     // 10/9 03:00 KST에 다 차면 → 추첨 10/10 12:00, 경기 10/10~10/17 21:00(3일 당김).
     const full = '2026-10-08T18:00:00.000Z';
@@ -172,6 +203,16 @@ describe('T-11-145 컵 규칙', () => {
     expect(currentCup('2026-10-21T12:00:00.000Z', both)?.id).toBe('s1-2');
     expect(currentCup('2026-12-01T00:00:00.000Z', both)?.id).toBe('s1-2');
     expect(currentCup('2026-10-01T00:00:00.000Z', [])).toBeUndefined();
+    // T-11-246 지난 대회를 보여 주는 하루 안에 다음 대회 접수가 열리면 다음 대회를 보여 준다.
+    const soon = planCup({
+      id: 's1-2',
+      season: 1,
+      edition: 2,
+      opensOn: '2026-10-20',
+      opensTime: '21:10',
+    });
+    expect(currentCup('2026-10-20T12:05:00.000Z', [CUP, soon])?.id).toBe('s1-1');
+    expect(currentCup('2026-10-20T12:10:00.000Z', [CUP, soon])?.id).toBe('s1-2');
   });
 
   it('승부차기는 늘 승자가 있고 시드가 같으면 같다', () => {
@@ -194,7 +235,7 @@ describe('T-11-145 컵 진행(cron)', () => {
     await ctx.dispose();
   });
 
-  async function enter(n: number, filled = 11) {
+  async function enter(n: number, filled = 11, cup = CUP) {
     const out: { profileId: string; teamId: string }[] = [];
     for (let i = 0; i < n; i++) {
       // 세션 발급은 IP 한도가 있어 프로필을 바로 넣는다(cron은 세션을 보지 않는다).
@@ -220,7 +261,7 @@ describe('T-11-145 컵 진행(cron)', () => {
         updatedAt: CUP.opensAt,
       });
       await ctx.db.insert(cupEntries).values({
-        cupId: CUP.id,
+        cupId: cup.id,
         teamId,
         profileId: who.profileId,
         name: `팀${i}`,
@@ -234,10 +275,31 @@ describe('T-11-145 컵 진행(cron)', () => {
     return out;
   }
 
-  async function runAll() {
-    await runCup(ctx.db, CUP.drawAt, [CUP]);
-    for (const at of CUP.rounds) await runCup(ctx.db, at, [CUP]);
+  // cron은 한 번에 라운드 하나를 치르고 다음 라운드 만들기는 다음 cron이 한다 — 시각마다 두 번 돌린다.
+  async function runAll(cup = CUP) {
+    await runCup(ctx.db, cup.drawAt, [cup]);
+    for (const at of cup.rounds) {
+      await runCup(ctx.db, at, [cup]);
+      await runCup(ctx.db, at, [cup]);
+    }
   }
+
+  it('T-11-246 128팀: 32개 조 → 64강부터 결승까지 치른다', async () => {
+    await enter(128, 11, CUP128);
+    await runAll(CUP128);
+    const [state] = await cupStateOf(ctx.db, CUP128.id);
+    expect(state).toMatchObject({ groups: 32 });
+    expect(state?.doneAt).not.toBeNull();
+    const matches = await cupMatchesOf(ctx.db, CUP128.id);
+    const r64 = matches.filter((m) => m.round === 'r64');
+    expect(r64).toHaveLength(32);
+    expect(r64.every((m) => m.at === roundAt(CUP128, 'r64'))).toBe(true);
+    const entries = await cupEntriesOf(ctx.db, CUP128.id);
+    const count = (st: string) => entries.filter((e) => e.stage === st).length;
+    expect([count('group'), count('r64'), count('r32'), count('r16')]).toEqual([64, 32, 16, 8]);
+    expect([count('qf'), count('sf'), count('runnerup'), count('champion')]).toEqual([4, 2, 1, 1]);
+    expect(entries.every((e) => e.rewardedAt)).toBe(true);
+  }, 120_000);
 
   it.each([64, 40, 20, 5])(
     '%i팀: 끝까지 치르고 모두 한 번씩 보상받는다',
@@ -251,7 +313,7 @@ describe('T-11-145 컵 진행(cron)', () => {
       expect(entries.filter((e) => e.stage === 'champion')).toHaveLength(1);
       expect(entries.filter((e) => e.stage === 'runnerup')).toHaveLength(1);
       // 조 수 × 2팀이 토너먼트, 나머지는 조별 탈락.
-      const g = cupGroupCount(n);
+      const g = cupGroupCount(n, CUP.capacity);
       expect(entries.filter((e) => e.stage === 'group')).toHaveLength(n - 2 * g);
       const items = await ctx.db.select().from(ownerItems);
       const expected = entries.reduce((s, e) => s + CUP_REWARDS[e.stage as 'group'].rerolls, 0);
