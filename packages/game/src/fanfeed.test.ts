@@ -120,3 +120,34 @@ it('평범한 시즌에는 성적과 무관한 응원으로만 채운다(우승�
     expect(lines.filter((l) => wrong.has(l))).toEqual([]);
   }
 });
+
+// T-11-264 지난 시즌과 견준 흐름 — 좋아진 시즌·나빠진 시즌에 그 반응이 섞이고, 평범한 시즌엔 섞이지 않는다.
+it('흐름이 상승·하락이면 그 버킷 문장이 섞이고, 흐름이 없으면 섞이지 않는다', async () => {
+  const { FAN_LINES } = await import('./fanfeed-data.js');
+  const up = new Set(FAN_LINES.trend_up);
+  const down = new Set(FAN_LINES.trend_down);
+  expect(up.size).toBe(5);
+  expect(down.size).toBe(5);
+  setActiveRng(createRng(11));
+  const s = newGame(
+    { name: 'a', number: 1, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
+    11,
+  );
+  s.fame = 60;
+  const rec = makeRec({ rank: 9, rating: 6.9, goals: 4, apps: 20 });
+  let sawUp = 0;
+  let sawDown = 0;
+  for (let i = 0; i < 100; i++) {
+    s.cid = `cid-${i}`;
+    const upLines = pickFanLines(s, rec, { ...ctx, trend: 'up' });
+    const downLines = pickFanLines(s, rec, { ...ctx, trend: 'down' });
+    const noneLines = pickFanLines(s, rec, { ...ctx, trend: null });
+    sawUp += upLines.some((l) => up.has(l)) ? 1 : 0;
+    sawDown += downLines.some((l) => down.has(l)) ? 1 : 0;
+    expect(upLines.filter((l) => down.has(l))).toEqual([]);
+    expect(downLines.filter((l) => up.has(l))).toEqual([]);
+    expect(noneLines.filter((l) => up.has(l) || down.has(l))).toEqual([]);
+  }
+  expect(sawUp).toBeGreaterThan(0);
+  expect(sawDown).toBeGreaterThan(0);
+});

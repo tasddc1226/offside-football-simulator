@@ -8,6 +8,13 @@ export const legendRn: Translation<LegendRnMsgs> = {
     `You played ${p.seasons} seasons at ${p.club}. A retired number needs ${p.need}+ seasons at one club.`,
   missScore: (p: { club: string; pct: number }) =>
     `Your contribution at ${p.club} reached ${p.pct}% of the retired number bar. You need to pass it to have your number retired.`,
+  missScoreSeasons: (p) =>
+    `Your contribution at ${p.club} reached ${p.pct}% of the retired number bar, and ${plural(p.seasons, 'season')} there fell short of ${p.need}.`,
+  missStatSeasons: 'Seasons at one club',
+  missStatSeasonsVal: (p) => `${p.seasons} / ${p.need}`,
+  missStatScore: 'Contribution',
+  missStatScoreVal: (p) => `${p.pct}% of the bar`,
+  missStatScoreOver: 'Over the bar',
   pending: 'The server is reviewing your retired number. Check the Hall of Fame in a moment.',
   lineNum: (p) => `No. ${p.number}`,
   lineNumAfter: ' now belongs to',

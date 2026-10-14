@@ -131,4 +131,18 @@ export const gFanfeed: Translation<GFanfeedMsgs> = {
     "Even my friend who doesn't follow football knows his name.",
     'Young players copy his celebration.',
   ),
+  trend_up: lines(
+    "Clearly better than last year. That's growth.",
+    'He looks like a different player from last season.',
+    'Watching him this year just hits different.',
+    'You can see he has gone up a level.',
+    'If this keeps up, next season will be even better.',
+  ),
+  trend_down: lines(
+    "Not as good as last year, that's true. Still believe in him.",
+    'His form has dipped a bit. Rest up in the off-season.',
+    "Where did last season's version go? Come back.",
+    'This year was tough. Bounce back next season.',
+    "One quiet season, that's all. It's not over.",
+  ),
 };

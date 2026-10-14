@@ -6523,6 +6523,47 @@ button.title-item:hover {
   font-size: 0.875rem;
   margin: 0;
 }
+/* T-11-264 결번 심사 미달 — 시즌 수·기여 점수 게이지 */
+.rn-miss-stats {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 0;
+  width: min(100%, 320px);
+}
+.rn-miss-stat {
+  display: grid;
+  gap: 4px;
+  font-size: 0.8125rem;
+}
+.rn-miss-stat dt {
+  color: var(--film-muted);
+}
+.rn-miss-stat dd {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+.rn-miss-bar {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--film-muted) 30%, transparent);
+  overflow: hidden;
+}
+.rn-miss-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--film-gold);
+}
+.rn-miss-stat[data-met='true'] .rn-miss-bar i {
+  background: var(--good);
+}
+.rn-miss-val {
+  font-variant-numeric: tabular-nums;
+}
 .pill-rn {
   border-color: var(--accent);
   font-weight: 700;

@@ -6,9 +6,9 @@
   import { setLegendPublic } from './legend.js';
   import { pendingRetirementIds } from '@offside/app-core/outbox';
   import { checkRetiredNumber } from '@offside/app-core/api/client';
-  import { recordRn, rnMisses, rnResults } from './retiredNumber.svelte.js';
+  import { recordRn, rnMissOf, rnResults } from './retiredNumber.svelte.js';
   import { isHofEligible } from '@offside/contracts/hof-rules';
-  import { rnClubStats, rnMissText, rnSlotOf } from '@offside/app-core/legendReport';
+  import { rnClubStats, rnMissStats, rnMissText, rnSlotOf } from '@offside/app-core/legendReport';
   import type { LegendView } from './state.svelte.js';
   import ClubMark from './ClubMark.svelte';
   import RnFrame from './RnFrame.svelte';
@@ -43,8 +43,9 @@
   const rn = $derived(rn0?.kind === 'taken' && v.own?.id && !(v.own.id in rnResults) ? { ...rn0, wallOfHonor: false } : rn0 ?? null);
   const rnSlot = $derived(rnSlotOf(rn, v.own));
   const rnClub = $derived((rnSlot?.kind === 'granted' || (rnSlot?.kind === 'taken' && rnSlot.wallOfHonor)) ? rnClubStats(rnSlot, v.d) : null);
-  // T-11-180 자격에 못 미쳤으면 이유(기준의 절반 이상일 때만 서버가 준다).
-  const miss = $derived(!rn && v.own?.id ? rnMisses[v.own.id] : undefined);
+  // T-11-180 자격에 못 미쳤으면 이유. T-11-264 이번 접속 값이 없으면 기기 기록(HofEntry.rnMiss)에 남긴 값.
+  const miss = $derived(!rn && v.own?.id ? rnMissOf(v.own.id, v.own.rnMiss) : undefined);
+  const missStats = $derived(miss ? rnMissStats(miss) : []);
 </script>
 
 {#if rn?.kind === 'pending' || rnSlot || v.wallOfHonor || miss}
@@ -91,6 +92,17 @@
       <div class="rn-ceremony rn-miss">
         <div class="eyebrow film-kicker">{L.missKicker}</div>
         <p class="rn-pending" data-rn-miss={miss.reason}>{rnMissText(miss)}</p>
+        <!-- T-11-264 어디서 모자랐는지: 시즌 수 · 기여 점수 게이지 -->
+        {#if missStats.length}
+          <dl class="rn-miss-stats">
+            {#each missStats as st (st.key)}
+              <div class="rn-miss-stat" data-rn-miss-stat={st.key} data-met={st.met}>
+                <dt>{st.label}</dt>
+                <dd><span class="rn-miss-bar" aria-hidden="true"><i style:width="{st.pct}%"></i></span><span class="rn-miss-val">{st.value}</span></dd>
+              </div>
+            {/each}
+          </dl>
+        {/if}
       </div>
     {/if}
   </section>

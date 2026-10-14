@@ -3,7 +3,12 @@
 // 완전한 판별 유니온으로 다시 모델링하면 포팅 리스크가 커지므로, 여기서는 알려진 필드는 구체적으로
 // 타이핑하고 나머지(로그 라인 종류가 다양한 필드, 이벤트별 임시 플래그 등)는 폭넓게 둡니다.
 import type { Body } from '@offside/contracts/body';
-import type { LegendSnapshot, PlayStyle, RetiredNumberResult } from '@offside/contracts';
+import type {
+  LegendSnapshot,
+  PlayStyle,
+  RetiredNumberMiss,
+  RetiredNumberResult,
+} from '@offside/contracts';
 import type { PeakProfile } from '@offside/contracts/positions';
 import type { CareerBalance } from './balance.js';
 import type { CareerClubStrength } from './clubStrength.js';
@@ -441,6 +446,8 @@ export interface HofEntry {
   title?: string | undefined;
   /** T-10-076. 서버의 영구결번 심사 결과(null = 자격 없음). 업로드 응답을 받기 전·옛 항목에는 없다. */
   rn?: RetiredNumberResult | null;
+  /** T-11-264. 결번을 못 받은 이유(rn이 null일 때 서버가 준 것). 나중에 은퇴 상세를 열어도 보이게 남긴다. 옛 항목·자격 밖 짧은 커리어엔 없다. */
+  rnMiss?: RetiredNumberMiss | undefined;
   /**
    * T-11-029. 서버가 정한 선수의 서비스 시즌(0 = 프리시즌) — 은퇴 업로드 응답으로 받아 남긴다. 업로드 전이거나 옛
    * 항목에는 없다(없으면 프리시즌으로 센다 — mySeason.ts).

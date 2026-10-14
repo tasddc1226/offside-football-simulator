@@ -15,7 +15,7 @@ import { onLive } from './api/liveSocket.js';
 
 export type RnResults = Record<string, RetiredNumberResult | null>;
 export type RnAlert = { item: LiveRetiredNumber | null };
-/** T-11-180 커리어 id → 결번을 못 받은 이유(이번 접속에서 받은 것만, 기기에 남기지 않는다). */
+/** T-11-180 커리어 id → 결번을 못 받은 이유(이번 접속에서 받은 것). T-11-264 기기 은퇴 기록(HofEntry.rnMiss)에도 남긴다. */
 export type RnMisses = Record<string, RetiredNumberMiss>;
 
 export function createRetiredNumbers(
@@ -42,6 +42,9 @@ export function createRetiredNumbers(
     const h = hof.find((x) => x.id === careerId);
     if (!h) return;
     h.rn = result;
+    // T-11-264 못 받은 이유는 나중에 열어도 보이게 남기고, 결과가 생기거나 이유가 없어지면 지운다.
+    if (miss && !result) h.rnMiss = miss;
+    else delete h.rnMiss;
     if (title !== undefined) h.title = title ?? undefined;
     const granted = result?.kind === 'taken' && result.wallOfHonor;
     if (h.detail) {
@@ -71,6 +74,9 @@ export function createRetiredNumbers(
   /** 이 선수의 결과 — 이번 접속에서 받은 값이 먼저, 없으면 저장된 값. */
   const rnOf = (careerId: string | undefined, saved: RetiredNumberResult | null | undefined) =>
     careerId && careerId in rnResults ? rnResults[careerId] : saved;
+  /** T-11-264 못 받은 이유 — 이번 접속에서 받은 값이 먼저, 없으면 기기 기록에 남긴 값. */
+  const rnMissOf = (careerId: string | undefined, saved: RetiredNumberMiss | undefined) =>
+    careerId && rnMisses && careerId in rnMisses ? rnMisses[careerId] : saved;
 
   /** 홈 라이브 소켓으로 영구결번 소식을 듣는다(어느 화면에서나). 내 선수는 은퇴 화면 세리머니로 이미 봤다. */
   function watchRetiredNumberAlerts() {
@@ -81,5 +87,5 @@ export function createRetiredNumbers(
     });
   }
 
-  return { recordRn, fillGranted, rnOf, watchRetiredNumberAlerts };
+  return { recordRn, fillGranted, rnOf, rnMissOf, watchRetiredNumberAlerts };
 }
