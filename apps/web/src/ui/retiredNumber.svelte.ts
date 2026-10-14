@@ -13,14 +13,15 @@ export const rnAlert = $state<RnAlert>({ item: null });
 /** T-11-180 커리어 id → 결번을 못 받은 이유. */
 export const rnMisses = $state<RnMisses>({});
 
-export const { recordRn, fillGranted, rnOf, watchRetiredNumberAlerts } = createRetiredNumbers(
-  rnResults,
-  rnAlert,
-  (id, title) => {
-    picked[id] = title;
-  },
-  rnMisses,
-);
+export const { recordRn, fillGranted, rnOf, rnMissOf, watchRetiredNumberAlerts } =
+  createRetiredNumbers(
+    rnResults,
+    rnAlert,
+    (id, title) => {
+      picked[id] = title;
+    },
+    rnMisses,
+  );
 
 export function watchRetiredNumbers() {
   window.addEventListener(RETIRED_NUMBER_EVENT, (e) => {

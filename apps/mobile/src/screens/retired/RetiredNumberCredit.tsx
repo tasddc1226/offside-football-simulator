@@ -7,11 +7,11 @@ import { View } from 'react-native';
 import type { RetiredNumberResult } from '@offside/contracts';
 import { pendingRetirementIds } from '@offside/app-core/outbox';
 import { checkRetiredNumber } from '@offside/app-core/api/client';
-import { rnClubStats, rnMissText, rnSlotOf } from '@offside/app-core/legendReport';
+import { rnClubStats, rnMissStats, rnMissText, rnSlotOf } from '@offside/app-core/legendReport';
 import type { LegendView } from '@offside/app-core/state';
 import { isHofEligible } from '@offside/contracts/hof-rules';
 import { RnUnveil } from '../../components/RnFrame';
-import { recordRn, setLegendPublic } from '../../game/host';
+import { recordRn, rnMissOf, setLegendPublic } from '../../game/host';
 import { Btn } from '../../ui/Btn';
 import { ClubMark } from '../../ui/ClubBadge';
 import { Reveal } from './credit';
@@ -57,7 +57,10 @@ export function RetiredNumberCredit({
       : null;
   // T-11-180 자격에 못 미쳤으면 이유(기준의 절반 이상일 때만 서버가 준다).
   const misses = useSnapshot(rnMisses);
-  const miss = !rn && v.own?.id ? misses[v.own.id] : undefined;
+  // T-11-264 이번 접속 값이 없으면 기기 기록(HofEntry.rnMiss)에 남긴 값.
+  const miss =
+    !rn && v.own?.id ? (misses[v.own.id] ?? rnMissOf(v.own.id, v.own.rnMiss)) : undefined;
+  const missStats = miss ? rnMissStats(miss) : [];
 
   if (!(rn?.kind === 'pending' || rnSlot || v.wallOfHonor || miss)) return null;
   return (
@@ -181,6 +184,39 @@ export function RetiredNumberCredit({
             <FText tone="muted" size={0.875} lh={1.5} center testID={`rn-miss-${miss.reason}`}>
               {rnMissText(miss)}
             </FText>
+            {/* T-11-264 어디서 모자랐는지: 시즌 수 · 기여 점수 게이지 */}
+            {missStats.length ? (
+              <View style={{ width: '100%', maxWidth: 320, gap: 8, marginTop: 4 }}>
+                {missStats.map((st) => (
+                  <View key={st.key} style={{ gap: 4 }} testID={`rn-miss-stat-${st.key}`}>
+                    <FText tone="muted" size={0.8125}>
+                      {st.label}
+                    </FText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View
+                        style={{
+                          flex: 1,
+                          height: 6,
+                          borderRadius: 999,
+                          backgroundColor: 'rgba(255,255,255,0.18)',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <View
+                          style={{
+                            width: `${st.pct}%`,
+                            height: '100%',
+                            borderRadius: 999,
+                            backgroundColor: st.met ? '#4fb27d' : '#e5ad2e',
+                          }}
+                        />
+                      </View>
+                      <FText size={0.8125}>{st.value}</FText>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : null}
           </View>
         ) : null}
       </View>

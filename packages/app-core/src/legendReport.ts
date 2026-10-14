@@ -33,11 +33,42 @@ export function rnSlotOf(
   return rn && rn.kind !== 'pending' && (rn.kind !== 'anonymous' || own) ? rn : null;
 }
 
-/** T-11-180 결번을 못 받은 이유 한 문장(웹·앱 같이). */
+/** T-11-180 결번을 못 받은 이유 한 문장(웹·앱 같이). T-11-264 점수도 시즌도 모자랐으면 둘 다 말한다. */
 export const rnMissText = (m: RetiredNumberMiss) =>
   m.reason === 'seasons'
     ? RN.missSeasons({ club: tn(m.club), seasons: m.seasons, need: m.need })
-    : RN.missScore({ club: tn(m.club), pct: m.pct });
+    : m.seasons > 0 && m.seasons < m.need
+      ? RN.missScoreSeasons({ club: tn(m.club), pct: m.pct ?? 0, seasons: m.seasons, need: m.need })
+      : RN.missScore({ club: tn(m.club), pct: m.pct ?? 0 });
+
+/** T-11-264 어디서 모자랐는지 줄별로(라벨 · 값 · 넘었는지). 옛 응답(시즌 0 · pct 없음)은 아는 줄만 돌려준다. */
+export type RnMissStat = {
+  key: 'seasons' | 'score';
+  label: string;
+  value: string;
+  met: boolean;
+  pct: number;
+};
+export function rnMissStats(m: RetiredNumberMiss): RnMissStat[] {
+  const out: RnMissStat[] = [];
+  if (m.seasons > 0 || m.reason === 'seasons')
+    out.push({
+      key: 'seasons',
+      label: RN.missStatSeasons,
+      value: RN.missStatSeasonsVal({ seasons: m.seasons, need: m.need }),
+      met: m.seasons >= m.need,
+      pct: Math.min(100, Math.round((m.seasons / m.need) * 100)),
+    });
+  if (m.pct !== undefined)
+    out.push({
+      key: 'score',
+      label: RN.missStatScore,
+      value: m.pct >= 100 ? RN.missStatScoreOver : RN.missStatScoreVal({ pct: m.pct }),
+      met: m.pct >= 100,
+      pct: Math.min(100, m.pct),
+    });
+  return out;
+}
 
 /** 결번 구단에서 뛴 시즌(옛 기록은 구단 id가 없어 이름으로 찾는다). */
 export function rnClubStats(rnSlot: Pick<Granted, 'clubId' | 'club'>, d: LegendView['d']) {

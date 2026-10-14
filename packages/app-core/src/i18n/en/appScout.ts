@@ -45,6 +45,21 @@ const POOLS: Record<string, readonly string[]> = {
     'The type who holds his place through hard work. That counts as talent too.',
     "He'll get by on experience and play for a long time.",
   ],
+  vetUp: [
+    "He's ageing in reverse. Better than last season.",
+    'A season like this at his age. Experience has become his weapon.',
+    'His conditioning is immaculate. His prime is not over yet.',
+  ],
+  vetSteady: [
+    "At an age when most decline, he's holding his level. That is not easy.",
+    'No big change. At his age, that is a compliment.',
+    'Consistency will be his last weapon.',
+  ],
+  vetDown: [
+    "Not the player he was last season. The body isn't what it used to be.",
+    "The decline has begun. From here on he'll have to lean on experience.",
+    'The days of powering through are behind him. Time for a new role.',
+  ],
 };
 
 export const appScout: Translation<AppScoutMsgs> = {

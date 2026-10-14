@@ -73,7 +73,7 @@ import type {
 } from '@offside/game/types';
 import { markDexSeen } from './dex.js';
 import { pushEvLog, seasonLabel } from './career.js';
-import { scoutHint } from './scoutHint.js';
+import { scoutHint, seasonTrend } from './scoutHint.js';
 import { recordPhaseOvr, takeSeasonGrowth } from './growth.js';
 import { publicNameOf } from './namePublic.js';
 import { fmtValue, seasonLabelOf } from './format.js';
@@ -492,6 +492,14 @@ export function createGameActions(host: GameHost) {
     const idx = s.career.findIndex((r) => r.year === rec.year);
     const prev = idx > 0 ? s.career[idx - 1] : null;
     const fans = pickFanLines(s, rec, {
+      // T-11-264 지난(군 복무 아닌) 시즌과 견준 흐름 — 좋아진 시즌·나빠진 시즌 반응.
+      trend: seasonTrend(
+        rec,
+        s.career
+          .slice(0, Math.max(idx, 0))
+          .filter((r) => !r.mil)
+          .pop(),
+      ),
       gotTrophy: trophies.length > 0,
       // 구간 경기에서 다친 시즌이거나 지금도 결장 중이면(로그 문장을 읽지 않는다).
       injuredThisSeason: s.flags.injuredYear === rec.year || s.injury > 0,

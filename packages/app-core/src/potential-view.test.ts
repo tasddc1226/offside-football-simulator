@@ -11,7 +11,8 @@ import { createLegends } from './legend.js';
 import { initialAppState } from './state.js';
 import { potentialFlowLines, potentialSeedLines } from './potential-flow.js';
 import { retirementPotential, visibleCareerLog, visibleSeasonNotes } from './potential-view.js';
-import { scoutHint } from './scoutHint.js';
+import { scoutHint, seasonTrend, VETERAN_HINT_AGE } from './scoutHint.js';
+import { appScoutText } from './i18n/ko/appScout.js';
 
 function setup() {
   const items = new Map<string, string>();
@@ -217,6 +218,48 @@ describe('시즌 결산 스카우트 한마디', () => {
     expect(scoutHint(s, 2027)).toBe(scoutHint(s, 2027));
     expect(scoutHint(s, 2028)).not.toBe(scoutHint(s, 2027));
     for (let y = 2026; y < 2040; y++) expect(scoutHint(s, y)).not.toMatch(/[SABCD]/);
+  });
+  // T-11-264 베테랑은 잠재력 대신 지난 시즌과 견준 흐름을 말한다.
+  it('31세부터는 잠재력 풀 대신 지난 시즌 대비 상승·유지·하락 문장을 고른다', () => {
+    const rec = (year: number, rating: number, apps = 30, mil?: boolean) =>
+      ({
+        year,
+        age: 20,
+        club: 'c',
+        league: 'l',
+        apps,
+        goals: 0,
+        assists: 0,
+        cs: 0,
+        rating,
+        rank: 5,
+        ovr: 70,
+        honors: [],
+        pro: true,
+        ...(mil ? { mil: true } : {}),
+      }) as GameState['career'][number];
+    const vet = (ratings: number[]) => {
+      const s = at(80, 2);
+      s.age = VETERAN_HINT_AGE;
+      s.career = ratings.map((r, i) => rec(2030 + i, r));
+      return s;
+    };
+    const pool = (name: string) =>
+      Array.from({ length: 3 }, (_, i) => appScoutText.hint({ pool: name, i }));
+    const pools = { up: pool('vetUp'), steady: pool('vetSteady'), down: pool('vetDown') };
+    expect(pools.up).toContain(scoutHint(vet([7.0, 7.3]), 2031));
+    expect(pools.steady).toContain(scoutHint(vet([7.0, 7.1]), 2031));
+    expect(pools.down).toContain(scoutHint(vet([7.0, 6.7]), 2031));
+    // 첫 시즌·비교 불가는 유지로, 30세까지는 여전히 잠재력 문장이다.
+    expect(pools.steady).toContain(scoutHint(vet([7.3]), 2030));
+    const young = vet([7.0, 7.3]);
+    young.age = VETERAN_HINT_AGE - 1;
+    expect([...pools.up, ...pools.steady, ...pools.down]).not.toContain(scoutHint(young, 2031));
+    // 군 복무 시즌은 건너뛰고 그 전 시즌과 견준다. 출전이 크게 줄면 평점이 비슷해도 하락이다.
+    expect(seasonTrend(rec(2033, 7.3), rec(2031, 7.0))).toBe('up');
+    expect(seasonTrend(rec(2032, 7.0, 8), rec(2031, 7.0, 30))).toBe('down');
+    expect(seasonTrend(rec(2032, 7.0, 0), rec(2031, 7.0))).toBeNull();
+    expect(seasonTrend(rec(2032, 7.0), undefined)).toBeNull();
   });
   it('영어에서도 같은 번호의 문장이 나오고 한글이 섞이지 않는다', () => {
     const s = at(80, 2);

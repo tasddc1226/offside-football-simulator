@@ -16,6 +16,8 @@ export interface FanFeedContext {
   injuredThisSeason: boolean;
   transferredThisSeason: boolean;
   hasMilestone: boolean;
+  /** T-11-264 지난 시즌과 견준 흐름(app-core scoutHint seasonTrend). 첫 시즌·군 복무 뒤처럼 견줄 수 없으면 없다. */
+  trend?: 'up' | 'steady' | 'down' | null;
 }
 
 function applicableBuckets(s: GameState, rec: CareerRecord, ctx: FanFeedContext): FanBucket[] {
@@ -39,6 +41,8 @@ function applicableBuckets(s: GameState, rec: CareerRecord, ctx: FanFeedContext)
   if (ctx.injuredThisSeason) out.push('injury');
   if (ctx.transferredThisSeason) out.push('transfer');
   if (ctx.hasMilestone) out.push('milestone');
+  if (ctx.trend === 'up') out.push('trend_up');
+  else if (ctx.trend === 'down') out.push('trend_down');
   return out;
 }
 

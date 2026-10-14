@@ -554,12 +554,20 @@ describe('영구결번 (T-10-076)', () => {
       years(2030, 10).map((y) => quietSeason(y, '맨체스터 스카이블루', 'pl-0')),
     );
     expect(await retire(A, quiet, '평범')).toBeNull();
-    expect(lastMiss).toBeUndefined(); // 기준의 절반도 못 채우면 이유를 띄우지 않는다
+    // T-11-264 한 구단에서 3시즌 이상 뛰었으면 점수가 기준의 절반 아래라도 어디서 모자랐는지 알려 준다(시즌 수·점수 함께).
+    expect(lastMiss).toMatchObject({
+      reason: 'score',
+      club: '맨체스터 스카이블루',
+      seasons: 10,
+      need: 6,
+    });
+    expect((lastMiss as { pct: number }).pct).toBeLessThan(50);
     const short = snapshot(
       9,
       years(2030, 5).map((y) => legendSeason(y, '맨체스터 스카이블루', 'pl-0')),
     );
     expect(await retire(B, short, '짧음')).toBeNull();
+    expect(lastMiss).toBeUndefined(); // 20대 은퇴는 결번 심사 자체가 없다
     // T-11-180 점수는 넘었지만 한 구단 시즌이 모자란 이유를 알려 준다(공개 명예의 전당에 오르는 30세 이상 은퇴).
     const late = snapshot(
       9,
@@ -571,6 +579,7 @@ describe('영구결번 (T-10-076)', () => {
       club: '맨체스터 스카이블루',
       seasons: 5,
       need: 6,
+      pct: 100,
     });
   });
 

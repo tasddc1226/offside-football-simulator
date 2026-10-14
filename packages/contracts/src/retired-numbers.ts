@@ -176,23 +176,31 @@ function bondRate(order: readonly string[], key: string): number {
 export const rnQualifies = (c: RnClub, cut: number): boolean =>
   c.clubId != null && c.seasons >= RN_MIN_SEASONS && c.score >= cut;
 
+/** T-11-264 이유를 띄우는 최소 재적 시즌 — 이만큼 한 구단에서 뛰었으면 점수가 낮아도 어디서 모자랐는지 알려 준다. */
+export const RN_MISS_MIN_SEASONS = 3;
 /**
- * T-11-180 결번을 못 받은 이유(가장 큰 기여 구단 기준). 기준의 절반도 못 채웠으면 null — 대부분의 은퇴엔 띄우지 않는다.
- * 기준값을 그대로 내보내지 않게 점수는 기준 대비 10% 단위(최대 90%)로만 준다.
+ * T-11-180 결번을 못 받은 이유(가장 큰 기여 구단 기준). 기준값을 그대로 내보내지 않게 점수는 기준 대비 10% 단위(최대 90%)로만
+ * 준다. T-11-264 시즌 수와 점수를 둘 다 담아 어디서 모자랐는지 보여 주고, 그 구단에서 RN_MISS_MIN_SEASONS 시즌 이상
+ * 뛰었거나 점수가 기준의 절반 이상이면 띄운다(짧게 떠돈 커리어엔 여전히 띄우지 않는다). reason은 가장 큰 걸림돌이다.
  */
 export function rnMissOf(clubs: readonly RnClub[], cut: number): RnMiss | null {
   const best = clubs.find((c) => c.clubId != null);
   if (!best) return null;
+  const pct = Math.min(90, Math.floor((best.score / cut) * 10) * 10);
+  const base = { club: best.club, seasons: best.seasons, need: RN_MIN_SEASONS, pct };
   if (best.score >= cut)
-    return best.seasons < RN_MIN_SEASONS
-      ? { reason: 'seasons', club: best.club, seasons: best.seasons, need: RN_MIN_SEASONS }
-      : null;
-  const pct = Math.floor((best.score / cut) * 10) * 10;
-  return pct >= 50 ? { reason: 'score', club: best.club, pct } : null;
+    return best.seasons < RN_MIN_SEASONS ? { reason: 'seasons', ...base, pct: 100 } : null;
+  return best.seasons >= RN_MISS_MIN_SEASONS || pct >= 50 ? { reason: 'score', ...base } : null;
 }
-export type RnMiss =
-  | { reason: 'seasons'; club: string; seasons: number; need: number }
-  | { reason: 'score'; club: string; pct: number };
+export type RnMiss = {
+  /** seasons: 점수는 넘겼지만 시즌이 모자람. score: 기여 점수가 모자람(시즌도 모자랄 수 있다). */
+  reason: 'seasons' | 'score';
+  club: string;
+  seasons: number;
+  need: number;
+  /** 기준 대비 기여 점수(10% 단위, 최대 90%. 기준을 넘긴 seasons 사유는 100). T-11-264 전 응답엔 seasons 사유에 없다. */
+  pct?: number | undefined;
+};
 
 /** 결번을 노릴 구단 — 가장 큰 기여 구단, 그 자리가 이미 찼으면 두 번째 구단(자격이 있을 때만). */
 export const rnCandidates = (clubs: readonly RnClub[], cut: number): RnClub[] =>
