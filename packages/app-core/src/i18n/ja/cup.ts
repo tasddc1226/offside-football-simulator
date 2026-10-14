@@ -47,6 +47,7 @@ export const cup: Translation<CupMsgs> = {
   predictionTitle: '勝敗予想',
   predictionIntro:
     '大会に申し込んでいなくても全試合を予想できます。的中した試合ごとに選手候補リロール券を1枚もらえます。',
+  predictionCap: (p: { n: number }) => `1大会で受け取れる予想報酬は最大${p.n}枚です。`,
   predictionHome: 'ホーム勝利',
   predictionDraw: '引き分け',
   predictionAway: 'アウェイ勝利',
@@ -155,6 +156,7 @@ export const cup: Translation<CupMsgs> = {
   rewardItem: '報酬',
   rewardReroll: (p) => `選手候補リロールチケット${p.n}枚`,
   rewardScout: (p) => `プレミアムスカウト券${p.n}枚`,
+  rewardBoost: (p) => `ポテンシャル強化券${p.n}枚`,
   rewardTrophy: 'トロフィー・称号',
   rewardNote:
     'リロールチケットは、新しい選手を作るときに候補3人を引き直すために使います。敗退が決まるとすぐ受け取れます。',

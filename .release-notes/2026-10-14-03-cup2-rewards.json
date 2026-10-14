@@ -1,0 +1,26 @@
+{
+  "id": "t-11-249-cup2-rewards",
+  "title": "제2회 오프사이드 컵 보상",
+  "items": [
+    "제2회 컵부터 우승 보상이 리롤권 15장, 프리미엄 스카우트권 3장, 잠재력 강화권 3장으로 커져요.",
+    "8강까지 프리미엄 스카우트권을, 4강부터 잠재력 강화권을 받아요.",
+    "승부예측 보상은 한 대회에 리롤권 10장까지 받아요."
+  ],
+  "en": {
+    "title": "2nd OFFSIDE Cup rewards",
+    "items": [
+      "From the 2nd cup, the champion receives 15 reroll tickets, 3 Premium Scout tickets and 3 potential boost tickets.",
+      "Quarterfinalists and better receive Premium Scout tickets, and semifinalists and better also receive potential boost tickets.",
+      "Prediction rewards are capped at 10 reroll tickets per cup."
+    ]
+  },
+  "ja": {
+    "title": "第2回オフサイドカップの報酬",
+    "items": [
+      "第2回カップから、優勝報酬はリロール券15枚、プレミアムスカウト券3枚、ポテンシャル強化券3枚になります。",
+      "ベスト8以上はプレミアムスカウト券を、ベスト4以上はポテンシャル強化券ももらえます。",
+      "勝敗予想の報酬は1大会につきリロール券10枚までです。"
+    ]
+  },
+  "availability": "web-app"
+}

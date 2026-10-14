@@ -49,6 +49,7 @@ const ko = {
   predictionTitle: '승부예측',
   predictionIntro:
     '컵에 신청하지 않아도 모든 경기의 결과를 예측할 수 있어요. 맞힌 경기마다 선수 후보 리롤권 1장을 받아요.',
+  predictionCap: (p: { n: number }) => `한 대회에서 받는 예측 보상은 최대 ${p.n}장이에요.`,
   predictionHome: '홈 승',
   predictionDraw: '무승부',
   predictionAway: '원정 승',
@@ -166,6 +167,7 @@ const ko = {
   rewardItem: '보상',
   rewardReroll: (p: { n: number }) => `선수 후보 리롤권 ${p.n}장`,
   rewardScout: (p: { n: number }) => `프리미엄 스카우트권 ${p.n}장`,
+  rewardBoost: (p: { n: number }) => `잠재력 강화권 ${p.n}장`,
   rewardTrophy: '트로피·칭호',
   rewardNote:
     '리롤권은 새 선수를 만들 때 후보 3명을 다시 뽑는 데 써요. 탈락이 정해지면 바로 받아요.',

@@ -1,6 +1,7 @@
 import { IDEMPOTENCY_KEY_HEADER, REWARD_UNCAPPED } from '@offside/contracts';
 import {
   CUP_REWARDS,
+  cupReward,
   cupGroupCount,
   cupRoundsOf,
   currentCup,
@@ -299,6 +300,18 @@ describe('T-11-145 컵 진행(cron)', () => {
     expect([count('group'), count('r64'), count('r32'), count('r16')]).toEqual([64, 32, 16, 8]);
     expect([count('qf'), count('sf'), count('runnerup'), count('champion')]).toEqual([4, 2, 1, 1]);
     expect(entries.every((e) => e.rewardedAt)).toBe(true);
+    // T-11-249 제2회 보상: 리롤권·프리미엄 스카우트권·잠재력 강화권을 성적표대로 한 번씩.
+    const items = await ctx.db.select().from(ownerItems);
+    const sum = (item: string) =>
+      items.filter((x) => x.item === item).reduce((s, x) => s + x.qty, 0);
+    const want = (k: 'rerolls' | 'scouts' | 'boosts') =>
+      entries.reduce((s, e) => s + cupReward(2, e.stage as 'group')[k], 0);
+    expect([sum('reroll'), sum('scout'), sum('boost')]).toEqual([
+      want('rerolls'),
+      want('scouts'),
+      want('boosts'),
+    ]);
+    expect([want('rerolls'), want('scouts'), want('boosts')]).toEqual([211, 11, 7]);
   }, 120_000);
 
   it.each([64, 40, 20, 5])(

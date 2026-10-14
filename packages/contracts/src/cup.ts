@@ -168,11 +168,42 @@ export const CUP_REWARDS: Record<CupStage, { rerolls: number; trophy: boolean }>
   group: { rerolls: 1, trophy: false },
 };
 
-/** T-11-244 4강 이상이 리롤권과 함께 받는 프리미엄 스카우트권. 제1회(진행 중에 정한 보상)는 그대로 두고 CUP_SCOUTS_FROM회부터 준다. */
-export const CUP_SCOUTS: Partial<Record<CupStage, number>> = { champion: 3, runnerup: 2, sf: 1 };
-export const CUP_SCOUTS_FROM = 2;
-export const cupScouts = (edition: number, stage: CupStage) =>
-  edition >= CUP_SCOUTS_FROM ? (CUP_SCOUTS[stage] ?? 0) : 0;
+/**
+ * T-11-249 제2회(128팀)부터의 성적별 보상. 7연승(조별 3 + 64강~결승 6)이 필요해 상위 보상을 키우고, 8강까지 프리미엄
+ * 스카우트권(T-11-244는 4강 이상), 4강 이상은 잠재력 강화권도 준다. 제1회는 CUP_REWARDS(리롤권만) 그대로다.
+ */
+export const CUP_REWARDS_V2: Record<CupStage, { rerolls: number; scouts: number; boosts: number }> =
+  {
+    champion: { rerolls: 15, scouts: 3, boosts: 3 },
+    runnerup: { rerolls: 10, scouts: 2, boosts: 2 },
+    sf: { rerolls: 7, scouts: 1, boosts: 1 },
+    qf: { rerolls: 5, scouts: 1, boosts: 0 },
+    r16: { rerolls: 3, scouts: 0, boosts: 0 },
+    r32: { rerolls: 2, scouts: 0, boosts: 0 },
+    r64: { rerolls: 1, scouts: 0, boosts: 0 },
+    group: { rerolls: 1, scouts: 0, boosts: 0 },
+  };
+export const CUP_REWARDS_V2_FROM = 2;
+
+export interface CupReward {
+  rerolls: number;
+  scouts: number;
+  boosts: number;
+  trophy: boolean;
+}
+/** 그 회차·단계의 보상(리롤권·프리미엄 스카우트권·잠재력 강화권·트로피). */
+export function cupReward(edition: number, stage: CupStage): CupReward {
+  const { trophy, rerolls } = CUP_REWARDS[stage];
+  return edition >= CUP_REWARDS_V2_FROM
+    ? { ...CUP_REWARDS_V2[stage], trophy }
+    : { rerolls, scouts: 0, boosts: 0, trophy };
+}
+export const cupScouts = (edition: number, stage: CupStage) => cupReward(edition, stage).scouts;
+
+/** T-11-249 승부예측 보상(맞힌 경기마다 리롤권 1장)의 한 대회 상한. 제2회부터(제1회는 상한 없음 = null). */
+export const CUP_PREDICTION_CAP = 10;
+export const cupPredictionCap = (edition: number): number | null =>
+  edition >= CUP_REWARDS_V2_FROM ? CUP_PREDICTION_CAP : null;
 
 /** 승점. */
 export const CUP_POINTS = { win: 3, draw: 1, loss: 0 } as const;

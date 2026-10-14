@@ -69,6 +69,8 @@ export const CUP_KO = {
   earlyTitle: '{cup} 정원이 다 차서 일정이 당겨졌어요',
   earlyBody: '조 추첨 {draw}, 첫 경기 {first}(한국 시간)에 열려요.',
   rewardBody: '최종 성적 {stage}. 선수 후보 리롤권 {n}장을 받았어요.',
+  rewardBodyBoost:
+    '최종 성적 {stage}. 선수 후보 리롤권 {n}장, 프리미엄 스카우트권 {s}장, 잠재력 강화권 {b}장을 받았어요.',
   rewardBodyScout:
     '최종 성적 {stage}. 선수 후보 리롤권 {n}장과 프리미엄 스카우트권 {s}장을 받았어요.',
 } as const;
