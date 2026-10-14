@@ -18,6 +18,7 @@ const ko = {
   storageFull: '저장 공간이 부족해 진행 상황을 저장하지 못했어요. 설정에서 백업해 두세요.',
   // 아래 고정 진행 바(seasonAction.ts)
   actEvent: '⚡ 이벤트 확인',
+  actMarket: '이적할 팀 선택하기',
   actSeasonEnd: '시즌 결산 보기',
   actPreseason: '프리시즌 훈련 진행',
   actPlay: (p: { n: number }) => `훈련 후 ${p.n}경기 진행`,

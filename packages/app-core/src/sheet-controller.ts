@@ -25,6 +25,17 @@ export interface SheetState {
   buttons: SheetButton[];
 }
 
+/** Pending choices stay saved when the transfer list is temporarily dismissed. */
+export function canDismissSheet(
+  state: Pick<SheetState, 'busy' | 'view'>,
+  pending: GameState['pending'] | undefined,
+): boolean {
+  return (
+    !state.busy &&
+    (!pending || (state.view?.kind === 'market' && pending.type === 'market' && !pending.res))
+  );
+}
+
 export const initialSheetState = (): SheetState => ({
   open: false,
   busy: false,

@@ -29,6 +29,9 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
       <Txt v="sm" tone="muted">
         {L.marketHint}
       </Txt>
+      <Txt v="sm" tone="muted">
+        {L.marketDismissHint}
+      </Txt>
       {s.options.some((o) => o.destination) ? (
         <Txt v="xs" tone="muted">
           {CM.estimateNote}
