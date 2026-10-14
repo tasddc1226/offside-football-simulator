@@ -227,4 +227,7 @@ it('wire limits accept all normal values and record item definitions', () => {
     expect(validAppearance(`${code}${limit}`)).toBe(false);
   }
   expect(LOOK_RECORDS).toHaveLength(6);
+  // T-11-243 13개 항목을 모두 고른 가장 긴 코드(키퍼 용품 포함)도 받는다.
+  expect(validAppearance('s1h2d1y14e2a3w4g2b5k6l5u4n3')).toBe(true);
+  expect(validAppearance('s1h2d1y14e2a3w4g2b5k6l5u4n3s1')).toBe(false);
 });

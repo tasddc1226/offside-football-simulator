@@ -3,20 +3,26 @@
   "title": "선수 캐릭터 이미지 개선",
   "items": [
     "기존 선수 9종과 모션을 선명한 이미지로 바꿨어요",
-    "선수 카드와 꾸미기, 부상·군 복무·은퇴식 모습에도 같은 그림을 적용했어요"
+    "꾸미기에 머리 모양 6종과 키퍼 장갑, 긴팔 키퍼 유니폼, 무릎 보호대가 생겼어요",
+    "선수 카드와 꾸미기, 부상·군 복무·은퇴식 모습에도 같은 그림을 적용했어요",
+    "그림이 바뀌어서 은퇴한 선수의 외형을 한 번 더 무료로 바꿀 수 있어요"
   ],
   "en": {
     "title": "Sharper player characters",
     "items": [
       "The nine existing player styles and their motion poses now use detailed images.",
-      "Player cards, appearance settings, injury, military service and retirement scenes use the same artwork."
+      "Customization adds six hairstyles, goalkeeper gloves, a long-sleeve goalkeeper kit and knee pads.",
+      "Player cards, appearance settings, injury, military service and retirement scenes use the same artwork.",
+      "With the new artwork, retired players can change their look for free one more time."
     ]
   },
   "ja": {
     "title": "選手キャラクター画像の改善",
     "items": [
       "既存9種の選手とモーションを鮮明な画像に変更しました",
-      "選手カード、着せ替え、負傷・兵役・引退式にも同じ絵柄を使用します"
+      "着せ替えに髪型6種とキーパーグローブ、長袖キーパーユニフォーム、膝パッドが加わりました",
+      "選手カード、着せ替え、負傷・兵役・引退式にも同じ絵柄を使用します",
+      "絵柄が変わったため、引退した選手の外見をもう一度無料で変更できます"
     ]
   },
   "availability": "web-app"

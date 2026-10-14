@@ -24,7 +24,7 @@ node tooling/avatar-layers/mobile-sources.mjs                    # Metro require
   1. Aligns the edit to the base (ECC on tones, falling back to the silhouette).
   2. Keeps only the pixels that changed, plus the outlines bridging them.
   3. Splits those pixels by colour into skin, tintable materials and fixed-colour parts.
-     Hair below the kit collar goes to `hair-<style>-back`, drawn behind the body. A headband is cut against its own hair sheet, so it wraps that hairstyle.
+     Hair below the kit collar goes to `hair-<style>-back`, drawn behind the body. A headband is cut against its own hair sheet, so it wraps that hairstyle. `band-bald` is cut against the base, because `bald` has no hair layer.
   4. Downscales each layer by `SCALE` (0.6), keeping its parts gap-free.
   5. Packs one atlas per pose.
 - `preview.py` composites layers the way the renderer does, for checking a build:

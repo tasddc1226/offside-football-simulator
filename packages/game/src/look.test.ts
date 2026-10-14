@@ -104,9 +104,15 @@ describe('선수 꾸미기 (T-11-191)', () => {
       glasses: 2,
       boots: 5,
       socks: 6,
+      gloves: 5,
+      keeperKit: 4,
+      kneePads: 3,
     };
-    expect(lookCode({ owned: [], pick })).toBe('s1h2d1y4e2a3w4g2b5k6');
-    expect(parseLookCode('s1h2d1y4e2a3w4g2b5k6')).toEqual(pick);
+    expect(lookCode({ owned: [], pick })).toBe('s1h2d1y4e2a3w4g2b5k6l5u4n3');
+    expect(parseLookCode('s1h2d1y4e2a3w4g2b5k6l5u4n3')).toEqual(pick);
+    // T-11-243 새 머리 모양은 뒤에 붙였다(옛 코드 값은 그대로다).
+    expect(parseLookCode('y14')).toEqual({ style: 14 });
+    expect(parseLookCode('y15')).toEqual({});
   });
 
   it('고른 모습이 그림에 들어가고, 은퇴 · 전성기 모습도 같은 꾸미기를 쓴다', () => {

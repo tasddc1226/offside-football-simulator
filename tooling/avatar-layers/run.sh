@@ -4,6 +4,7 @@
 W=${1:A}; cd $W
 [ -f gen/$2.png ] && { echo "skip $2"; exit 0; }
 if [[ $2 == base-* ]]; then IN=ref/short-$3.png
+elif [[ $2 == band-bald-* ]]; then IN=gen/base-$3.png               # bald has no hair layer
 elif [[ $2 == band-* ]]; then IN=gen/hair-${${2#band-}%-*}-$3.png   # band-afro-A edits gen/hair-afro-A.png
 else IN=gen/base-$3.png; fi
 # The prompt goes on stdin: a positional prompt after --image is read as another image path.

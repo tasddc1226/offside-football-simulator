@@ -22,6 +22,12 @@ export const IMAGE_HAIRS = [
   'afro',
   'bun',
   'spiky',
+  'bald',
+  'shaved',
+  'dread',
+  'fauxhawk',
+  'ponytail',
+  'mullet',
 ] as const;
 export type ImageHair = (typeof IMAGE_HAIRS)[number];
 export type ImageBox = readonly [number, number, number, number];
@@ -151,11 +157,17 @@ function layerList(
   ];
   if (state === 'retired') list.push(['suit', skin]);
   else if (state === 'army') list.push(['army', skin]);
+  else if (c.keeper)
+    list.push([
+      'keeper',
+      { ...skin, shirt: c.keeper, shorts: c.shorts, socks: c.sock, boots: c.boot },
+    ]);
   else
     list.push([
       'kit',
       { ...skin, shirt: sp.kit.sleeve, shorts: sp.kit.shorts, socks: c.sock, boots: c.boot },
     ]);
+  if (c.kneePad) list.push(['kneepads', { ...skin, tint: c.kneePad }]);
   if (expression) list.push([`expr-${expression}`, skin]);
   if (sp.beard) list.push([`beard-${sp.beard}`, hair]);
   list.push([`hair-${sp.hairStyle}`, hair]);
@@ -163,6 +175,7 @@ function layerList(
   if (c.band) list.push([`band-${sp.hairStyle}`, { ...hair, tint: c.band }]);
   if (c.goggle) list.push(['goggles', { ...skin, frame: c.goggle.G, lens: c.goggle.g }]);
   if (c.wrist) list.push(['wrist', { ...skin, tint: c.wrist }]);
+  if (c.glove) list.push(['gloves', { ...skin, tint: c.glove }]);
   if (sp.acc.includes('armband')) list.push(['armband', { ...skin, tint: '#f0b437' }]);
   if (sp.acc.includes('bandage')) list.push(['bandage', skin]);
   if (sp.acc.includes('crutch')) list.push(['crutch', skin]);

@@ -109,7 +109,9 @@ describe('선수 카드 초상', () => {
       const sp = cardAvatarSpec({ careerId: s.cid, look: `y${style}` });
       const plan = avatarImagePlan(sp, undefined, true);
       expect(plan.layers.length).toBeGreaterThan(0);
-      expect(plan.layers.map((l) => l.layer)).toContain(`hair-${LOOK_STYLES[style]}`);
+      // 완전 민머리(bald)는 맨몸 머리 그대로다.
+      if (LOOK_STYLES[style] !== 'bald')
+        expect(plan.layers.map((l) => l.layer)).toContain(`hair-${LOOK_STYLES[style]}`);
       expect(plan).toEqual(
         avatarImagePlan(cardAvatarSpec({ careerId: s.cid, look: `y${style}` }), undefined, true),
       );

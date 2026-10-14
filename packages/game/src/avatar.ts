@@ -91,9 +91,23 @@ const GOGGLES = [
   // 기록 아이템: 빅이어 은빛 고글.
   { G: '#dfe4ea', g: '#ffffff' },
 ] as const;
+// T-11-243 키퍼 용품. 0은 언제나 지금 모습(장갑 · 보호대 없음, 구단 유니폼)이다.
+const GLOVES = [null, '#f4f4ef', '#e8c33c', '#38aa70', '#3c87d6', '#ed7140'] as const;
+const KEEPER_KITS = [null, '#36a471', '#e8bb35', '#379bd1', '#e87639'] as const;
+const KNEE_PADS = [null, '#303847', '#f4f4ef', '#365c91'] as const;
+const KEEPER_SHORTS = '#25313c';
 /** T-11-191 꾸미기 선택지 색(웹 · 앱 견본). 색이 아닌 항목(머리 모양 · 수염)은 null, 선택지 '없음'은 null. */
 export const LOOK_SWATCHES: Record<
-  'skin' | 'hair' | 'band' | 'wrist' | 'socks' | 'boots' | 'glasses',
+  | 'skin'
+  | 'hair'
+  | 'band'
+  | 'wrist'
+  | 'socks'
+  | 'boots'
+  | 'glasses'
+  | 'gloves'
+  | 'keeperKit'
+  | 'kneePads',
   readonly (string | null)[]
 > = {
   skin: AVATAR_SKINS.map((c) => c.s),
@@ -103,6 +117,9 @@ export const LOOK_SWATCHES: Record<
   socks: SOCKS,
   boots: BOOTS,
   glasses: GOGGLES.map((c) => c?.g ?? null),
+  gloves: GLOVES,
+  keeperKit: KEEPER_KITS,
+  kneePads: KNEE_PADS,
 };
 type HairStyle = (typeof LOOK_STYLES)[number];
 type AvatarAcc = 'armband' | 'crutch' | 'bandage' | 'suit' | 'bouquet';
@@ -183,6 +200,9 @@ export interface AvatarSpec {
   glasses?: number;
   wrist?: number;
   socks?: number;
+  gloves?: number;
+  keeperKit?: number;
+  kneePads?: number;
 }
 
 /**
@@ -200,6 +220,9 @@ function withLook(sp: AvatarSpec, pick: LookState['pick'], forceStyle = false): 
   if (pick.glasses) out.glasses = pick.glasses;
   if (pick.wrist) out.wrist = pick.wrist;
   if (pick.socks) out.socks = pick.socks;
+  if (pick.gloves) out.gloves = pick.gloves;
+  if (pick.keeperKit) out.keeperKit = pick.keeperKit;
+  if (pick.kneePads) out.kneePads = pick.kneePads;
   // 표정: 부상 중 아픈 표정은 그대로 둔다.
   if (pick.expr && sp.expr !== 'pain') out.expr = LOOK_EXPRS[pick.expr] ?? sp.expr;
   return out;
@@ -285,6 +308,11 @@ export interface MiniColors {
   goggle: { G: string; g: string } | null;
   /** 셔츠 칸 색(유니폼 무늬 · 군복 위장 무늬). 좌표는 서 있는 자세의 24×32 칸이다. */
   shirt: (x: number, y: number) => string;
+  shorts: string;
+  /** T-11-243 긴팔 키퍼 유니폼 색. 없으면 구단 유니폼이다. */
+  keeper: string | null;
+  glove: string | null;
+  kneePad: string | null;
   suit: boolean;
 }
 
@@ -292,6 +320,9 @@ export interface MiniColors {
 export function miniColors(sp: AvatarSpec): MiniColors {
   const suit = sp.acc.includes('suit');
   const hair = AVATAR_HAIRS[sp.look.hair % AVATAR_HAIRS.length]!;
+  // 은퇴식 정장과 군 복무 군복은 키퍼 용품을 입히지 않는다.
+  const equipment = !suit && sp.kit !== ARMY_KIT;
+  const keeper = (equipment && KEEPER_KITS[sp.keeperKit ?? 0]) || null;
   return {
     skin: AVATAR_SKINS[sp.look.skin % AVATAR_SKINS.length]!.s,
     hair: sp.gray > 0 ? mix(hair.h, GRAY, sp.gray) : hair.h,
@@ -300,7 +331,11 @@ export function miniColors(sp: AvatarSpec): MiniColors {
     band: BANDS[sp.band ?? 0] ?? null,
     wrist: WRISTS[sp.wrist ?? 0] ?? null,
     goggle: GOGGLES[sp.glasses ?? 0] ?? null,
-    shirt: (x, y) => shirtColor(sp.kit, x, y),
+    shirt: (x, y) => keeper ?? shirtColor(sp.kit, x, y),
+    shorts: keeper ? KEEPER_SHORTS : sp.kit.shorts,
+    keeper,
+    glove: (equipment && GLOVES[sp.gloves ?? 0]) || null,
+    kneePad: (equipment && KNEE_PADS[sp.kneePads ?? 0]) || null,
     suit,
   };
 }

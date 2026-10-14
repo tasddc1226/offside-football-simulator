@@ -17,6 +17,13 @@ export const LOOK_STYLES = [
   'afro',
   'bun',
   'spiky',
+  // T-11-243 겹쳐 그리는 선수 그림과 함께 더한 머리 모양. bald는 맨몸 머리 그대로다.
+  'bald',
+  'shaved',
+  'dread',
+  'fauxhawk',
+  'ponytail',
+  'mullet',
 ] as const;
 /** 수염 — 0 없음, 1 짧은 수염, 2 덥수룩한 수염. */
 export const LOOK_BEARDS = [null, 'stubble', 'full'] as const;
@@ -38,6 +45,10 @@ export const LOOK_ITEMS = {
   glasses: { options: 7, rate: 0.6, min: 1200 },
   boots: { options: 11, rate: 0.3, min: 600 },
   socks: { options: 8, rate: 0.3, min: 600 },
+  // T-11-243 키퍼 용품. 0은 없음(키퍼 유니폼은 구단 유니폼)이다.
+  gloves: { options: 6, rate: 0.3, min: 600 },
+  keeperKit: { options: 5, rate: 0.3, min: 600 },
+  kneePads: { options: 4, rate: 0.15, min: 300 },
 } as const satisfies Record<LookItem, { options: number; rate: number; min: number }>;
 export const lookOwned = (s: GameState, item: LookItem): boolean => !!s.look?.owned.includes(item);
 

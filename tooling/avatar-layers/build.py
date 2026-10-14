@@ -23,7 +23,9 @@ POSES = {
     'A': ['runL', 'air', 'runR', 'juggle', 'balance', 'kick', 'fist', 'tuck', 'spread', 'jumpUp'],
     'B': ['kneelOut', 'kneelUp', 'kneelFist', 'waveHigh', 'waveLow', 'lift', 'sad', 'stand'],
 }
-HAIRS = ['short', 'fringe', 'long', 'mohawk', 'slick', 'buzz', 'afro', 'bun', 'spiky']
+HAIRS = ['short', 'fringe', 'long', 'mohawk', 'slick', 'buzz', 'afro', 'bun', 'spiky',
+         'shaved', 'dread', 'fauxhawk', 'ponytail', 'mullet']
+# 'bald' has no hair layer (the base head is already bald); only its headband is cut, against the base.
 EXPRS = ['happy', 'wink', 'pain', 'tired', 'blink', 'shout']
 # atlas -> (job prefix, kind). kind picks the part split.
 ATLASES = {f'hair-{h}': (f'hair-{h}', 'hair') for h in HAIRS}
@@ -34,10 +36,12 @@ ATLASES.update({
     'goggles': ('acc-goggles', 'goggles'), 'wrist': ('acc-wrist', 'tint'),
     'armband': ('acc-armband', 'tint'), 'bandage': ('acc-bandage', 'fixed'),
     'bouquet': ('prop-bouquet', 'fixed'), 'crutch': ('prop-crutch', 'fixed'),
+    # goalkeeper equipment: the keeper kit uses the kit palette so it splits into the same tintable parts
+    'keeper': ('keeper', 'kit'), 'gloves': ('acc-gloves', 'tint'), 'kneepads': ('acc-knee', 'tint'),
 })
 # headband worn over each hairstyle: cut against that hair edit instead of the base
-ATLASES.update({f'band-{h}': (f'band-{h}', 'band') for h in HAIRS})
-PARENT = {f'band-{h}': f'hair-{h}' for h in HAIRS}
+ATLASES.update({f'band-{h}': (f'band-{h}', 'band') for h in [*HAIRS, 'bald']})
+PARENT = {f'band-{h}': f'hair-{h}' for h in [*HAIRS, 'bald']}
 STAND_ONLY = {'suit', 'bouquet', 'crutch', 'bandage'}
 # light stubble differs from bare skin by less than the usual change threshold
 THRESH = {'beard-stubble': 40}
@@ -290,9 +294,12 @@ for s, poses in POSES.items():
                 continue
             others = (lab[y0:y1, x0:x1] > 0) & (lab[y0:y1, x0:x1] != li)
             if name in PARENT:
-                if PARENT[name] not in aligned:
+                if PARENT[name] == 'hair-bald':
+                    P = Bf
+                elif PARENT[name] not in aligned:
                     continue
-                P = aligned[PARENT[name]]
+                else:
+                    P = aligned[PARENT[name]]
                 m, Ew, shift = extract(P, E[y0:y1, x0:x1], P[..., 3] > 0, others)
             else:
                 m, Ew, shift = extract(Bf, E[y0:y1, x0:x1], fig, others, THRESH.get(name, 60 if kind == 'kit' else 90))

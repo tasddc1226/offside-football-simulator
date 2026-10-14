@@ -23,13 +23,18 @@ describe('paper-doll avatar layer contract', () => {
       expect(bytes.readUInt32BE(20), name).toBe(sheet.height);
       expect(bytes[25], name).toBe(6); // IHDR RGBA colour type
     }
+    // 완전 민머리는 맨몸 머리 그대로라 머리카락 층이 없고 헤어밴드만 있다.
     for (const hairStyle of IMAGE_HAIRS)
-      for (const pose of ['stand', ...MINI_POSES])
-        expect(
-          names(avatarImagePlan({ ...base(), hairStyle }, { ms: 100, pose } as MotionFrame)),
-        ).toContain(`hair-${hairStyle}`);
+      for (const pose of ['stand', ...MINI_POSES]) {
+        const plan = avatarImagePlan({ ...base(), hairStyle, band: 2 }, {
+          ms: 100,
+          pose,
+        } as MotionFrame);
+        if (hairStyle !== 'bald') expect(names(plan)).toContain(`hair-${hairStyle}`);
+        expect(names(plan)).toContain(`band-${hairStyle}`);
+      }
   });
-  it('draws the same base body under all nine hairstyles in every pose and frame, inside the frame', () => {
+  it('draws the same base body under every hairstyle in every pose and frame, inside the frame', () => {
     for (const hairStyle of IMAGE_HAIRS) {
       const spec = { ...base(), hairStyle };
       const frames: MotionFrame[] = [
@@ -41,7 +46,7 @@ describe('paper-doll avatar layer contract', () => {
         const plan = avatarImagePlan(spec, f);
         // 어깨 뒤 머리카락만 맨몸보다 먼저 그린다.
         expect(names(plan).filter((n) => !n.endsWith('-back'))[0]).toBe('base');
-        expect(names(plan)).toContain(`hair-${hairStyle}`);
+        if (hairStyle !== 'bald') expect(names(plan)).toContain(`hair-${hairStyle}`);
         expect(names(plan)).toContain('kit');
         expect(new Set(sources(plan)).size).toBe(1);
         for (const l of plan.layers) {
@@ -95,6 +100,21 @@ describe('paper-doll avatar layer contract', () => {
     expect(p.layers.filter((l) => l.filters.length).length).toBeGreaterThan(5);
     expect(JSON.stringify(sp)).toBe(before);
     expect(getActiveRng().getState()).toEqual(rng);
+  });
+  it('dresses goalkeepers in every pose, but not soldiers or the retirement suit', () => {
+    const keeper: AvatarSpec = { ...base(), keeperKit: 2, gloves: 4, kneePads: 1 };
+    for (const pose of ['stand', ...MINI_POSES]) {
+      const s = names(avatarImagePlan(keeper, { ms: 100, pose } as MotionFrame));
+      expect(s).toContain('keeper');
+      expect(s).not.toContain('kit');
+      expect(s.indexOf('kneepads')).toBeGreaterThan(s.indexOf('keeper'));
+      expect(s.indexOf('gloves')).toBeGreaterThan(s.indexOf(`hair-${keeper.hairStyle}`));
+    }
+    // 0은 구단 유니폼 · 맨손이다.
+    expect(names(avatarImagePlan({ ...base(), keeperKit: 0, gloves: 0 }))).toContain('kit');
+    const retired = { ...retiredAvatarSpec('retired-keeper', 40), keeperKit: 2, gloves: 4 };
+    expect(names(avatarImagePlan(retired))).not.toContain('gloves');
+    expect(names(avatarImagePlan(retired))).toContain('suit');
   });
   it('keeps injury/retirement still with their props and dresses soldiers in every motion', () => {
     const injured: AvatarSpec = { ...base(), acc: ['bandage', 'crutch'] };
