@@ -3758,6 +3758,65 @@ th.n {
 .story-row:first-of-type {
   border-top: 0;
 }
+/* T-11-261 대륙 대회 녹아웃 대진(시즌 탭 대회 카드 아래 경로) */
+.bracket {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0 0 0 10px;
+  border-left: 2px solid var(--line);
+  display: grid;
+  gap: 4px;
+}
+.bracket-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 0.8125rem;
+  min-width: 0;
+}
+.bracket-stage {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.bracket-vs {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.bracket-legs {
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.bracket-result {
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+.bracket-row.won .bracket-result,
+.bracket-row.champion .bracket-result {
+  color: var(--good);
+  border-color: var(--good);
+}
+.bracket-row.lost .bracket-result,
+.bracket-row.runnerUp .bracket-result {
+  color: var(--bad);
+  border-color: var(--bad);
+}
+.bracket-row.next .bracket-result {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+@media (max-width: 359px) {
+  .bracket-row {
+    grid-template-columns: auto 1fr auto;
+  }
+  .bracket-legs {
+    display: none;
+  }
+}
 .story-row .muted {
   font-size: 0.75rem;
   min-width: 64px;
