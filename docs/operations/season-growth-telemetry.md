@@ -38,7 +38,7 @@ T-11-207부터 `season_telemetry`에 업로드마다 한 줄 덧붙는다. `grow
 
 ## 보관 (T-11-207)
 
-`season_telemetry`는 5분 cron(`apps/api/src/cron/seasonTelemetryArchive.ts`)이 올라온 지 7일 지난 줄을 올라온 순서대로
+`season_telemetry`는 5분 cron(`apps/api/src/cron/seasonTelemetryArchive.ts`)이 올라온 지 2일(`TELEMETRY_KEEP_DAYS`, T-11-252에서 7일 → 2일) 지난 줄을 올라온 순서대로
 R2 `season-telemetry/<env>/<UTC 날짜>/<첫 id>-<끝 id>.ndjson.gz`로 올리고 D1에서 줄을 지운다. 한 줄:
 `{"id","careerId","year","age","ovr","createdAt","events","growth"}`. 오래된 줄부터 통째로 지우므로 빈 페이지를 새 줄이
 다시 써 D1 파일이 더 커지지 않는다(열만 비우면 빈 자리가 페이지에 남는다). 한 번에 최대 1만 줄. 긴급 중지:
@@ -46,19 +46,19 @@ R2 `season-telemetry/<env>/<UTC 날짜>/<첫 id>-<끝 id>.ndjson.gz`로 올리�
 
 ## 옛 행 보관 (T-11-100)
 
-매일 작업(KST 04:00, `apps/api/src/cron/growthArchive.ts`)이 올라온 지 7일(`KEEP_DAYS`, T-11-203에서 30일 → 7일) 지난 시즌의 성장 기록을 R2
+매일 작업(KST 04:00, `apps/api/src/cron/growthArchive.ts`)이 올라온 지 2일(`KEEP_DAYS`, T-11-203에서 30일 → 7일, T-11-252에서 2일) 지난 시즌의 성장 기록을 R2
 `offside-d1-backup` 버킷 `growth/<env>/<실행일>-<시각>.ndjson.gz`로 옮기고 D1에서는 `growth_json`을 비운다. 시즌 행과 다른
 열은 그대로다. 그날 D1 백업 뒤에 돌아서, 백업이 성공했으면 비우기 전 값은 그날 백업에도 남는다. 백업 정리는 `d1/` 아래만 지우므로 이 파일은
 지워지지 않는다.
 
 - 한 줄이 한 시즌이다: `{"careerId","year","age","ovr","createdAt","growth":{…growth_json 그대로}}`. 포지션·잠재력·숨김 같은
   커리어 정보는 D1 `careers`와 `careerId`로 잇는다.
-- D1에 남은 성장 기록 중 7일 지난 것을 부분 인덱스(`career_seasons_growth_created_idx`)로 찾아 옮기고, 올린 행만 비운다.
+- D1에 남은 성장 기록 중 2일 지난 것을 부분 인덱스(`career_seasons_growth_created_idx`)로 찾아 옮기고, 올린 행만 비운다.
   한 번에 40만 행까지 옮기고 남은 행은 다음 날 옮긴다.
 - 옮긴 뒤 같은 시즌이 성장 기록과 함께 다시 올라오면(진행 중 커리어의 재전송) 그 행은 다음 실행이 다시 옮긴다. 같은
   `(careerId, year)`가 여러 파일에 있으면 나중 파일(파일 이름의 시각) 값을 쓴다.
 
-분석은 최근 7일은 D1 `season_telemetry`, 그 전은 R2 파일(`season-telemetry/`, 옛 행은 `growth/`)을 내려받아 한다:
+분석은 최근 2일은 D1 `season_telemetry`, 그 전은 R2 파일(`season-telemetry/`, 옛 행은 `growth/`)을 내려받아 한다:
 
 ```bash
 wrangler r2 object get offside-d1-backup/growth/production/<파일> --remote --file g.ndjson.gz
@@ -81,12 +81,12 @@ gunzip -c g.ndjson.gz | jq -c 'select(.age == 18) | [.growth.o0, .ovr]'
 ## 집계 예
 
 ```sql
--- 시즌 시작 OVR과 첫 시즌 말 OVR, 잠재력(숨김 제외, 최근 7일)
+-- 시즌 시작 OVR과 첫 시즌 말 OVR, 잠재력(숨김 제외, 최근 2일)
 SELECT json_extract(t.growth_json, '$.o0'), t.ovr AS ovr_end, c.pot
 FROM season_telemetry t JOIN careers c ON c.id = t.career_id
 WHERE t.age = 18 AND json_extract(t.growth_json, '$.o0') IS NOT NULL AND c.hidden = 0;
 
--- 나이별 평균 시즌 성장(시작 → 끝, 최근 7일)
+-- 나이별 평균 시즌 성장(시작 → 끝, 최근 2일)
 SELECT t.age, count(*) n, round(avg(t.ovr - json_extract(t.growth_json, '$.o0')), 2) gain
 FROM season_telemetry t JOIN careers c ON c.id = t.career_id
 WHERE t.growth_json IS NOT NULL AND c.hidden = 0 GROUP BY t.age ORDER BY t.age;
