@@ -34,6 +34,7 @@ import { legendBand, legendBandName } from './legend-bands.js';
 import { checkTitles, mainTitle, titleView, type TitleView } from './titles.js';
 import { natInit, natSeasonEnd, NATIONAL_TROPHIES, type NatTourResult } from './national.js';
 import {
+  milDone,
   milSeasonEnd,
   milDue,
   milOptions,
@@ -125,6 +126,7 @@ function seasonRecord(
     pro: !L.amateur,
     comps,
     caps: s.nat.caps - (S.capsStart || 0),
+    ...(s.loan ? { loan: true } : {}),
   } as CareerRecord;
 }
 
@@ -535,6 +537,8 @@ function proShelf(
 /** 시즌 뒤 이적 시장: 병역 → 이적 제의 → 단계별(고교·대학·프로) 선택지 → 병역 선택지 → 은퇴 가능 여부(RNG 순서). */
 export function market(s: GameState): MarketResult {
   natInit(s);
+  // T-11-257 임대 중에 입대가 정해지면 원소속 구단으로 먼저 돌아간다(상무가 원소속 구단을 기억하게).
+  if (s.loan && (s.mil.accepted || s.mil.armyNext || milDue(s))) endLoan(s, false);
   const L = leagueOf(s.leagueId),
     o = ovr(s);
   const mil = militaryMarket(s);
@@ -547,7 +551,10 @@ export function market(s: GameState): MarketResult {
       ? highSchoolShelf(offers)
       : s.leagueId === 'uni'
         ? universityShelf(s, offers, o)
-        : proShelf(s, offers, o, L.id, promoted);
+        : s.loan
+          ? loanShelf(s, offers, o)
+          : proShelf(s, offers, o, L.id, promoted);
+  if (loanEligible(s)) options.push(...loanOffers(s, o));
   const note = promoted
     ? T.promotedNote({ club: tn(s.club.name), league: tn(L.name), note: shelfNote })
     : shelfNote;
@@ -585,7 +592,13 @@ export function acceptOption(
   if (opt.kind === 'renew' && !canAcceptRenewal(s, opt)) return null;
   noteMarket(s, opt, options);
   if (isMilOption(opt)) return acceptMilitary(s, opt);
-  if (opt.kind === 'uni') {
+  if (s.loan) {
+    // 임대를 마친 시장: 복귀(잔류·재계약)는 원소속 구단으로, 다른 선택은 원소속 구단을 떠난다.
+    if ((opt.kind === 'stay' || opt.kind === 'renew') && opt.loanBack) endLoan(s, loanWentWell(s));
+    else s.loan = undefined;
+  }
+  if (opt.kind === 'offer' && opt.loan === 'out') startLoan(s, opt);
+  else if (opt.kind === 'uni') {
     const c = pick(clubsIn('uni'));
     // T-10-034: 마친 학년 수. endSeason이 시즌마다 1씩 올린다 — 1로 시작하면 3시즌 만에 4학년 졸업이 됐다.
     s.leagueId = 'uni';
@@ -649,6 +662,105 @@ export function acceptOption(
   s.season = newSeason(s);
   s.phase = 0;
   return null;
+}
+
+// ───────── 임대 (T-11-257) ─────────
+/** 임대를 마친 시즌이 잘 풀렸는지(출전·평점). 복귀하면 감독 신뢰가 오르고, 임대 구단이 완전 이적을 제안한다. */
+export const LOAN_GOOD = { apps: 15, rating: 6.8 } as const;
+function loanWentWell(s: GameState): boolean {
+  const last = lastPlayed(s);
+  return !!last && !!last.loan && last.apps >= LOAN_GOOD.apps && last.rating >= LOAN_GOOD.rating;
+}
+/** 지난 시즌에 임대를 요청했고 원소속 구단 계약이 남은 프로 선수. 입대 기한이 임대 중에 오지 않을 때만. */
+export function loanEligible(s: GameState): boolean {
+  return (
+    s.flags.loanReq === s.year - 1 &&
+    !s.loan &&
+    !!s.contract &&
+    s.contract.years > 0 &&
+    !leagueOf(s.leagueId).amateur &&
+    !s.mil.serving &&
+    !s.mil.accepted &&
+    !s.mil.armyNext &&
+    (milDone(s) || s.age < 27)
+  );
+}
+/** 임대 제의: 같은 등급 이하 리그에서 지금 실력으로 뛸 수 있는 구단 1~2곳. 연봉은 원소속 구단 계약 그대로다. */
+function loanOffers(s: GameState, o: number): OfferOption[] {
+  const tier = leagueOf(s.leagueId).tier;
+  const pool = CLUBS.filter(
+    (c) =>
+      !clubLeague(c, s).amateur &&
+      c.id !== s.club.id &&
+      c.leagueId !== 'mls' &&
+      clubLeague(c, s).tier <= tier &&
+      c.str <= o + 1 &&
+      c.str >= o - 8,
+  );
+  const wt = (c: Club) => Math.exp(-((c.str - (o - 2)) ** 2) / 12);
+  const out: OfferOption[] = [];
+  for (let i = Math.min(2, pool.length); i > 0; i--) {
+    const c = pool.splice(Math.max(0, weightedIndex(pool, wt)), 1)[0]!;
+    out.push({
+      ...offerFrom(s, c),
+      loan: 'out',
+      years: 1,
+      salary: s.contract!.salary,
+      fee: 0,
+      role: T.roleLoan,
+    });
+  }
+  return out;
+}
+/** 임대를 마친 시장: 원소속 구단 복귀(계약이 끝났으면 재계약) · 잘 풀렸으면 임대 구단 완전 이적 · 다른 제의. */
+function loanShelf(s: GameState, offers: MarketOption[], o: number): Shelf {
+  const parent = s.loan!.club;
+  const good = loanWentWell(s);
+  const options: MarketOption[] = [];
+  if (s.contract && s.contract.years > 0) {
+    const p = { salary: fmtMoney(s.contract.salary), years: s.contract.years };
+    options.push({
+      kind: 'stay',
+      loanBack: true,
+      name: T.loanBackName({ club: tn(parent.name) }),
+      desc: good ? T.loanBackGood(p) : T.stayDesc(p),
+    });
+  } else if (o >= parent.str - 7 && s.age < 38) {
+    options.push({
+      kind: 'renew',
+      loanBack: true,
+      name: T.loanBackRenewName({ club: tn(parent.name) }),
+      years: Math.min(renewalYears(s), Math.max(1, retireAge(s) - s.age)),
+      salary: renewalSalary(s, o),
+      desc: '',
+    });
+  }
+  const host = CLUBS.find((c) => c.id === s.club.id);
+  if (good && host) options.push({ ...offerFrom(s, host), loan: 'buy', role: T.roleLoanBuy });
+  options.push(...offers.filter((x) => x.kind !== 'offer' || x.clubId !== parent.id));
+  return { options, note: T.loanEndNote({ club: tn(parent.name), host: tn(s.club.name) }) };
+}
+function startLoan(s: GameState, opt: OfferOption) {
+  const c = CLUBS.find((x) => x.id === opt.clubId)!;
+  const from = s.club.name;
+  s.loan = { club: { ...s.club }, leagueId: s.leagueId, year: s.year };
+  s.leagueId = clubLeagueId(c, s);
+  s.club = { ...c };
+  s.trust = 1;
+  log(
+    s,
+    T.loanLog({ from: tn(from), club: tn(c.name), league: tn(leagueOf(s.leagueId).name) }),
+    'big',
+  );
+}
+function endLoan(s: GameState, good: boolean) {
+  const parent = s.loan!.club;
+  s.club = { ...parent };
+  // 임대 동안 원소속 구단이 리그를 옮겼을 수도 있다(상무 복귀와 같다).
+  s.leagueId = clubLeagueId(parent, s);
+  s.trust = good ? 2 : 0;
+  s.loan = undefined;
+  log(s, T.loanBackLog({ club: tn(parent.name) }), 'big');
 }
 
 // ───────── 은퇴 · 명예의 전당 ─────────

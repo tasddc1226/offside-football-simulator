@@ -43,6 +43,7 @@ export const gameCareer: Translation<GameCareerMsgs> = {
   colClub: 'Club',
   colRating: 'Rating',
   colRank: 'Pos.',
+  loanTag: 'Loan',
   seasonValue: (p) => `Value ${p.value}`,
   emptyRecords: 'Your records build up after your first season.',
   recordsNote:

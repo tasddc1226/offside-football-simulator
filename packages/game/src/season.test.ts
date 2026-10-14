@@ -257,3 +257,61 @@ describe('아마추어 고OVR 제의', () => {
     expect(offers.map((o) => o.name)).not.toContain(weakestK3.name);
   });
 });
+
+describe('T-11-257 임대', () => {
+  const setup = async () => {
+    await import('./index.js');
+    const season = await import('./season.js');
+    const { CLUBS } = await import('./data.js');
+    setActiveRng(createRng(9));
+    const s = newGame(
+      { name: '임대생', number: 9, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
+      9,
+    );
+    const parent = CLUBS.find((c) => c.leagueId === 'pl' && c.str >= 80)!;
+    Object.assign(s, { club: { ...parent }, leagueId: 'pl', age: 21, phase: 0 });
+    s.contract = { years: 2, salary: 5000 };
+    s.flags.loanReq = s.year - 1;
+    return { s, parent, ...season };
+  };
+  it('요청한 다음 시장에 임대 제의가 오고, 잘 뛰고 돌아오면 복귀·완전 이적을 고른다', async () => {
+    const { s, parent, market, acceptOption } = await setup();
+    const m = market(s);
+    const loans = m.options.filter((o) => o.kind === 'offer' && o.loan === 'out');
+    expect(loans.length).toBeGreaterThan(0);
+    for (const o of loans) expect(o).toMatchObject({ years: 1, salary: 5000, fee: 0 });
+    const pick = loans[0]!;
+    acceptOption(s, pick, m.options);
+    expect(s.loan?.club.id).toBe(parent.id);
+    expect(s.club.id).toBe(pick.kind === 'offer' ? pick.clubId : '');
+    expect(s.contract).toEqual({ years: 2, salary: 5000 });
+
+    s.career.push({
+      ...{ year: s.year, age: s.age, club: s.club.name, clubId: s.club.id, league: '-' },
+      ...{ apps: 30, goals: 6, assists: 3, cs: 0, rating: 7.1, rank: 3, ovr: 60, honors: [] },
+      ...{ pro: true, loan: true },
+    });
+    s.year++;
+    s.age++;
+    s.contract = { years: 1, salary: 5000 };
+    const m2 = market(s);
+    const back = m2.options.find((o) => o.kind === 'stay' && o.loanBack);
+    const buy = m2.options.find((o) => o.kind === 'offer' && o.loan === 'buy');
+    expect(back).toBeTruthy();
+    expect(buy && buy.kind === 'offer' && buy.clubId).toBe(s.club.id);
+    expect(m2.options.some((o) => o.kind === 'offer' && o.clubId === parent.id && !o.loan)).toBe(
+      false,
+    );
+    acceptOption(s, back!, m2.options);
+    expect(s.club.id).toBe(parent.id);
+    expect(s.loan).toBeUndefined();
+    expect(s.trust).toBe(2);
+  });
+  it('요청하지 않았거나 임대 중에 입대 기한이 오면 임대 제의가 없다', async () => {
+    const { s, loanEligible } = await setup();
+    expect(loanEligible(s)).toBe(true);
+    expect(loanEligible({ ...s, flags: {} })).toBe(false);
+    expect(loanEligible({ ...s, age: 27 })).toBe(false);
+    expect(loanEligible({ ...s, contract: { years: 0, salary: 5000 } })).toBe(false);
+  });
+});

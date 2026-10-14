@@ -77,6 +77,11 @@ const ko = {
   // 계약서
   contractTitleExt: '연장 계약서에 사인할까요?',
   contractTitleRookie: '프로 계약서에 사인할까요?',
+  loanSeason: '임대 1시즌',
+  contractTitleLoan: '임대 계약서에 사인할까요?',
+  contractTextLoan: (p: { club: string }) =>
+    `${p.club}에서 한 시즌 뛰어요. 연봉과 남은 계약은 원소속 구단 그대로예요.`,
+  ctaLoan: '사인하고 임대',
   contractTitleTransfer: '이적 계약서에 사인할까요?',
   contractTextExt: '남은 계약에 기간을 더해요. 새 연봉은 이번 시즌부터 적용돼요.',
   contractTextStart: (p: { club: string; rookie: boolean }) =>
