@@ -6,7 +6,7 @@ import { issueCookie } from '../test/http.js';
 import { createDb } from '../db/client.js';
 import { listPublicHof } from '../db/repos/careers.js';
 import { squadOf } from '../routes/seasonRecap.js';
-import { backupToR2, BACKUP_PAGE_BYTES, gzipToR2 } from './backup.js';
+import { backupToR2, BACKUP_PAGE_BYTES, BACKUP_PAGE_PAUSE_MS, gzipToR2 } from './backup.js';
 import { runSeasonEventsArchive, EVENT_ARCHIVE_META_KEY } from './seasonEventsArchive.js';
 import {
   assessInfraHealth,
@@ -254,12 +254,18 @@ describe('capacity safeguards', () => {
         new Uint8Array([0, 255, 39]).buffer,
       );
     const sizes: number[] = [];
+    const reads: number[] = [];
     const wrap = (stmt: D1PreparedStatement, query: string): D1PreparedStatement =>
       new Proxy(stmt, {
         get(target, key) {
           if (key === 'bind') return (...args: unknown[]) => wrap(target.bind(...args), query);
           if (key === 'raw')
             return async (options: { columnNames?: boolean }) => {
+              if (query.includes('WITH candidates') && query.includes('large_backup_fixture')) {
+                expect(query).toContain('octet_length("body")');
+                expect(query).not.toContain('CAST(');
+                reads.push(Date.now());
+              }
               const value = await target.raw<unknown[]>({ ...options, columnNames: true });
               if (query.includes('WITH candidates') && query.includes('large_backup_fixture'))
                 sizes.push(new TextEncoder().encode(JSON.stringify(value)).length);
@@ -284,8 +290,90 @@ describe('capacity safeguards', () => {
     expect(dump).toContain("quote''가");
     expect(sizes.length).toBeGreaterThan(2);
     expect(Math.max(...sizes)).toBeLessThan(BACKUP_PAGE_BYTES + 2048);
+    for (let i = 1; i < reads.length; i++)
+      expect(reads[i]! - reads[i - 1]!).toBeGreaterThanOrEqual(BACKUP_PAGE_PAUSE_MS - 2);
+    expect(result.pauseMs).toBe(result.pages * BACKUP_PAGE_PAUSE_MS);
     await run('DROP TABLE large_backup_fixture');
   }, 60_000);
+
+  it('backup byte sizing preserves UTF-8, BLOB, null and numeric lengths without loading TEXT via CAST', async () => {
+    await run('CREATE TABLE backup_sizing_fixture(body TEXT, bytes BLOB, n REAL, empty TEXT)');
+    await run(
+      'INSERT INTO backup_sizing_fixture VALUES (?1,?2,?3,NULL)',
+      `가😀\0${'wide'.repeat(100_000)}`,
+      new Uint8Array([0, 255, 39]).buffer,
+      -123.5,
+    );
+    const { results } = await ctx.env.DB.prepare(
+      `SELECT octet_length(body) AS text_new, length(CAST(body AS BLOB)) AS text_old,
+              octet_length(bytes) AS blob_new, length(CAST(bytes AS BLOB)) AS blob_old,
+              octet_length(n) AS number_new, length(CAST(n AS BLOB)) AS number_old,
+              coalesce(octet_length(empty),0) AS null_new
+       FROM backup_sizing_fixture`,
+    ).all<Record<string, number>>();
+    expect(results[0]).toEqual({
+      text_new: 400008,
+      text_old: 400008,
+      blob_new: 3,
+      blob_old: 3,
+      number_new: 6,
+      number_old: 6,
+      null_new: 0,
+    });
+    await run('DROP TABLE backup_sizing_fixture');
+  });
+
+  it('a concurrent backup cannot open a second upload; completion releases the lease', async () => {
+    let opened!: () => void;
+    let release!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      opened = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const first = backupToR2(
+      ctx.env.DB,
+      bucketWithHook(async () => {
+        opened();
+        await gate;
+      }),
+      'backup-lease',
+      NOW,
+    );
+    await ready;
+    try {
+      await expect(backupToR2(ctx.env.DB, ctx.env.BACKUP!, 'backup-lease', NOW)).rejects.toThrow(
+        'D1 backup already running',
+      );
+    } finally {
+      release();
+    }
+    await first;
+    expect(
+      await ctx.env.DB.prepare("SELECT value FROM app_meta WHERE key='cron:backup:lease'").first(),
+    ).toBeNull();
+    expect(await ctx.env.BACKUP!.head('d1/backup-lease/2026-10-08.sql.gz')).not.toBeNull();
+  });
+
+  it('an expired backup lease recovers; upload failure releases it and preserves the completed object', async () => {
+    const key = 'd1/backup-failure/2026-10-08.sql.gz';
+    await ctx.env.BACKUP!.put(key, 'previous completed backup');
+    await run(
+      "INSERT INTO app_meta(key,value) VALUES ('cron:backup:lease',?1)",
+      JSON.stringify({ token: 'crashed', expiresAt: Date.now() - 1 }),
+    );
+    const failing = bucketWithHook(async () => {
+      throw new Error('upload unavailable');
+    });
+    await expect(backupToR2(ctx.env.DB, failing, 'backup-failure', NOW)).rejects.toThrow(
+      'upload unavailable',
+    );
+    expect(
+      await ctx.env.DB.prepare("SELECT value FROM app_meta WHERE key='cron:backup:lease'").first(),
+    ).toBeNull();
+    expect(await (await ctx.env.BACKUP!.get(key))!.text()).toBe('previous completed backup');
+  });
 
   it('R2 part failure cancels a backpressured gzip producer and aborts the upload', async () => {
     const abort = vi.fn(async () => {});
