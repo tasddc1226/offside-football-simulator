@@ -43,6 +43,8 @@ export const EDGE = {
   /** T-10-092 라이브 랭킹(팀 랭킹). TTL로만 새로 읽는다(원작처럼 5분마다 갱신). */
   teamRank: (season: number, sort: string, page: number) =>
     `/v1/teams?season=${season}&sort=${sort}&page=${page}&form=5&logo=1`,
+  /** T-11-262 업적 랭킹에 오른 구단주 수(클럽하우스 순위의 분모). 모두에게 같다. */
+  achRanked: (season: number) => `/_count/ach-ranked?season=${season}`,
   /** T-11-028 업적 랭킹(기록실). TTL로만 새로 읽는다. */
   achRank: (season: number, page: number) =>
     `/v1/achievements/ranking?season=${season}&page=${page}&logo=1`,
