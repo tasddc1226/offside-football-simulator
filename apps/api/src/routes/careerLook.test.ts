@@ -57,7 +57,6 @@ describe('retired appearance-only write', () => {
       { look: 'y6', snapshot: {} },
       { look: 'y6', profileId: other.profileId },
       { look: 's6' },
-      { look: 'y15' },
       { look: 'x0' },
       { look: 'y1y2' },
       { look: 'y01' },
@@ -85,18 +84,6 @@ describe('retired appearance-only write', () => {
       expect(after).toEqual({ ...before, career: { ...before.career, look, retiredLookUsed: 1 } });
     }
   });
-
-  it.each([9, 10, 11, 12, 13, 14])(
-    'accepts new hairstyle y%s within the existing one-edit policy',
-    async (style) => {
-      const before = (await ctx.db.select().from(careers).where(eq(careers.id, ID)))[0]!;
-      const look = `y${style}`;
-      expect((await put({ look })).status).toBe(200);
-      const after = (await ctx.db.select().from(careers).where(eq(careers.id, ID)))[0]!;
-      expect(after).toEqual({ ...before, look, retiredLookUsed: 1 });
-      expect((await put({ look: `y${style === 14 ? 9 : style + 1}` })).status).toBe(409);
-    },
-  );
 
   it('requires stored title evidence for rare items, preserves already-worn legacy items', async () => {
     expect((await put({ look: 'h12' })).status).toBe(409);

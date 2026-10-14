@@ -40,11 +40,5 @@ export const avatarLook: Translation<AvatarLookMsgs> = {
   styleAfro: 'Afro',
   styleBun: 'Top knot',
   styleSpiky: 'Spiky',
-  styleBald: 'Fully bald',
-  styleShaved: 'Shaved',
-  styleDread: 'Dreadlocks',
-  styleFauxhawk: 'Spiked mohawk',
-  stylePonytail: 'Ponytail',
-  styleMullet: 'Two-tone mullet',
   socksTeam: 'Club socks',
 };

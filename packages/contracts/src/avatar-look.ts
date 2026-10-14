@@ -3,7 +3,7 @@ export const APPEARANCE_OPTIONS = {
   s: 6,
   h: 13,
   d: 3,
-  y: 15,
+  y: 9,
   e: 3,
   a: 9,
   w: 7,

@@ -70,12 +70,6 @@ const LOADERS: Record<keyof typeof MINI_SPRITES, () => Promise<{ default: MiniPo
   afro: () => import('./avatar-mini-motion/afro.js'),
   bun: () => import('./avatar-mini-motion/bun.js'),
   spiky: () => import('./avatar-mini-motion/spiky.js'),
-  bald: () => import('./avatar-mini-motion/bald.js'),
-  shaved: () => import('./avatar-mini-motion/shaved.js'),
-  dread: () => import('./avatar-mini-motion/dread.js'),
-  fauxhawk: () => import('./avatar-mini-motion/fauxhawk.js'),
-  ponytail: () => import('./avatar-mini-motion/ponytail.js'),
-  mullet: () => import('./avatar-mini-motion/mullet.js'),
 };
 const loaded = new Map<string, Promise<MiniPoses>>();
 /** 머리 모양 하나의 자세 그림을 불러온다(한 번만). 무대(진행 시트)가 열릴 때 부른다. */

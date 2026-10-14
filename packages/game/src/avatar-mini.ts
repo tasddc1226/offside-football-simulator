@@ -168,14 +168,8 @@ export function paintMini(
       }
       const i = SKIN.indexOf(ch);
       if (i >= 0) return skinT[i]!;
-      const armSkin = 'uUiI'.indexOf(ch);
-      if (armSkin >= 0) return skinT[armSkin]!;
       const h = 'hHjJ'.indexOf(ch);
       if (h >= 0) return hairT[h]!;
-      // Closely shaved scalp follows skin; the mullet's lower section stays darker than its top.
-      if (ch === 'r') return mix(c.skin, c.hair, 0.18);
-      if (ch === 'f') return shadow(c.hair, 0.72);
-      if (ch === 'F') return shadow(c.hair, 0.86);
       const p = 'pPq'.indexOf(ch);
       if (p >= 0) return shortT[p]!;
       const s = 'cCd'.indexOf(ch);
@@ -297,11 +291,10 @@ export function paintMini(
       const edge: { x: number; y: number; distance: number }[] = [];
       for (let y = 0; y < H; y++)
         for (let x = 0; x < W; x++) {
-          const armSkin = 'uUiI'.includes(src[y]?.[x] ?? '.');
-          if (!onSkin(x, y) && !armSkin) continue;
+          if (!onSkin(x, y)) continue;
           const hy = y - pose.at[1],
             hx = x - pose.at[0];
-          if (!armSkin && hy >= 0 && hy < 33 && (pose.stand[hy]?.[hx] ?? '.') !== '.') continue;
+          if (hy >= 0 && hy < 33 && (pose.stand[hy]?.[hx] ?? '.') !== '.') continue;
           let distance = 10;
           for (let dy = -8; dy <= 8; dy++)
             for (let dx = -8; dx <= 8; dx++)
