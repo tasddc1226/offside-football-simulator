@@ -1,0 +1,23 @@
+{
+  "id": "t-11-253-cup-trophy-editions",
+  "title": "회차마다 다른 컵 트로피",
+  "items": [
+    "오프사이드 컵 트로피 모양이 회차마다 달라져요. 보석과 리본 색도 회차마다 바뀌어요.",
+    "트로피 받침대에 회차와 구단주 이름이 함께 새겨져요."
+  ],
+  "en": {
+    "title": "A new cup trophy every edition",
+    "items": [
+      "Each OFFSIDE Cup edition now has its own trophy shape, with its own gem and ribbon color.",
+      "Trophy plates now show the edition along with the owner's name."
+    ]
+  },
+  "ja": {
+    "title": "大会ごとに違うカップトロフィー",
+    "items": [
+      "オフサイドカップのトロフィーの形が大会ごとに変わります。宝石とリボンの色も大会ごとに変わります。",
+      "トロフィーの台座に大会回とオーナー名が刻まれます。"
+    ]
+  },
+  "availability": "web-app"
+}

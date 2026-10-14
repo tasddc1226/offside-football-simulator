@@ -167,6 +167,7 @@ const ko = {
   rewardItem: '보상',
   rewardReroll: (p: { n: number }) => `선수 후보 리롤권 ${p.n}장`,
   rewardScout: (p: { n: number }) => `프리미엄 스카우트권 ${p.n}장`,
+  plateEdition: (p: { n: number }) => `제${p.n}회`,
   rewardBoost: (p: { n: number }) => `잠재력 강화권 ${p.n}장`,
   rewardTrophy: '트로피·칭호',
   rewardNote:

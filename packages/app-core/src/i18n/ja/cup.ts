@@ -156,6 +156,7 @@ export const cup: Translation<CupMsgs> = {
   rewardItem: '報酬',
   rewardReroll: (p) => `選手候補リロールチケット${p.n}枚`,
   rewardScout: (p) => `プレミアムスカウト券${p.n}枚`,
+  plateEdition: (p) => `第${p.n}回`,
   rewardBoost: (p) => `ポテンシャル強化券${p.n}枚`,
   rewardTrophy: 'トロフィー・称号',
   rewardNote:

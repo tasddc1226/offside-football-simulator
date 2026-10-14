@@ -164,6 +164,7 @@ export const cup: Translation<CupMsgs> = {
   rewardItem: 'Reward',
   rewardReroll: (p) => `${plural(p.n, 'candidate reroll ticket')}`,
   rewardScout: (p) => `${plural(p.n, 'premium scout ticket')}`,
+  plateEdition: (p) => `No.${p.n}`,
   rewardBoost: (p) => `${plural(p.n, 'potential boost ticket')}`,
   rewardTrophy: 'Trophy and title',
   rewardNote:
