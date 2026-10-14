@@ -1,4 +1,4 @@
-// T-11-207 시즌 측정 기록(season_telemetry) 보관. 7일 지난 행을 올라온 순서(id)대로 R2 NDJSON(gzip)으로 올리고
+// T-11-207 시즌 측정 기록(season_telemetry) 보관. TELEMETRY_KEEP_DAYS 지난 행을 올라온 순서(id)대로 R2 NDJSON(gzip)으로 올리고
 // D1에서는 행을 통째로 지운다. 오래된 행부터 지우므로 빈 페이지는 새 행이 다시 쓴다(D1 파일이 더 커지지 않는다).
 // 행은 덧붙이기만 하고 고치지 않으므로, 올린 id 구간을 그대로 지우면 된다. 파일 이름이 id 구간이라 겹쳐 돈 실행은
 // 같은 파일을 같은 내용으로 덮어쓴다.
@@ -6,7 +6,8 @@ import type { Bindings } from '../env.js';
 import { DAY_MS } from '../time.js';
 import { gzipToR2 } from './backup.js';
 
-export const TELEMETRY_KEEP_DAYS = 7;
+/** T-11-252 7일 → 2일: D1이 하루 350~450MB씩 커져 10GB 한도가 2주 남았다. 이 표는 분석 때만 읽고, 그 분석은 R2 파일로도 한다. */
+export const TELEMETRY_KEEP_DAYS = 2;
 export const TELEMETRY_ARCHIVE_META_KEY = 'cron:season-telemetry:last';
 const PAGE = 1000;
 /** 5분마다 돈다. 하루 약 19만 행이 올라오므로 한 번에 최대 1만 행이면 밀린 것도 따라잡는다. */
