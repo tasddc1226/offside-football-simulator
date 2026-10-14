@@ -26,6 +26,7 @@ const ko = {
   captain: '주장',
   debut: 'A매치 데뷔',
   notCalled: '미발탁',
+  ntRetired: '대표팀 은퇴',
   military: '병역',
   nextWc: '다음 월드컵',
   hostTbd: '개최지 미정',

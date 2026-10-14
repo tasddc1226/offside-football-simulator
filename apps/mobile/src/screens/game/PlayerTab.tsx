@@ -393,6 +393,7 @@ export function PlayerTab({ s }: { s: GameState }) {
           mt={10}
           rows={[
             { k: L.debut, v: String(s.nat.debutYear || L.notCalled) },
+            ...(s.nat.retired ? [{ k: L.ntRetired, v: String(s.nat.retired) }] : []),
             ...(isKorean(s) ? [{ k: L.military, v: milTxt }] : []),
             { k: L.nextWc, v: `${nextWcYear} · ${tn(nextWcHost)}` },
           ]}

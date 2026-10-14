@@ -15,6 +15,7 @@ import { BASE_EVENTS } from './events.js';
 import { STORY_EVENTS } from './stories.js';
 import { REAL_EVENTS } from './realevents.js';
 import { POSITIONAL_EVENTS } from './positional.js';
+import { LIFE_EVENTS } from './life-events.js';
 import { LOAN_EVENT } from './loan-event.js';
 
 EVENTS.push(
@@ -25,5 +26,6 @@ EVENTS.push(
   ...POSITIONAL_EVENTS,
   DATING_EVENT,
   ...MOMENT_EVENTS,
+  ...LIFE_EVENTS,
   LOAN_EVENT,
 );

@@ -37,6 +37,9 @@ export const EDGE = {
     dpos?: string,
   ) =>
     `/v1/hof?limit=${limit}&page=${page}&sort=${sort}${season !== undefined ? `&season=${season}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}${pos ? `&pos=${pos}` : ''}${dpos ? `&dpos=${dpos}` : ''}`,
+  /** T-11-257 명예의 전당 전체 인원. 페이지·목록 크기와 상관없어 목록 캐시와 따로 둔다(검색은 담지 않는다). */
+  hofCount: (sort: string, season?: number, pos?: string, dpos?: string) =>
+    `/_count/hof?sort=${sort}${season !== undefined ? `&season=${season}` : ''}${pos ? `&pos=${pos}` : ''}${dpos ? `&dpos=${dpos}` : ''}`,
   /** T-10-092 라이브 랭킹(팀 랭킹). TTL로만 새로 읽는다(원작처럼 5분마다 갱신). */
   teamRank: (season: number, sort: string, page: number) =>
     `/v1/teams?season=${season}&sort=${sort}&page=${page}&form=5&logo=1`,
