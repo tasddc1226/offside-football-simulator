@@ -40,11 +40,15 @@
     return () => { document.body.style.overflow = overflow; root.remove(); };
   });
   function close() { if (!busy) onclose(); }
+  let confirmBack = $state<HTMLButtonElement>();
+  $effect(() => { if (confirming) confirmBack?.focus(); });
+  function back() { if (!busy) { confirming = false; error = ''; } }
   function key(e: KeyboardEvent) {
-    if (e.key === 'Escape') { e.preventDefault(); close(); }
+    if (e.key === 'Escape') { e.preventDefault(); if (confirming) back(); else close(); }
     if (e.key !== 'Tab') return;
     if (busy) { e.preventDefault(); return; }
-    const buttons = [...dialog.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
+    // The confirmation popup makes the sheet behind it inert.
+    const buttons = [...dialog.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')].filter((b) => !b.closest('[inert]'));
     const first = buttons[0], last = buttons.at(-1);
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
@@ -66,15 +70,15 @@
 <div class="retired-look" data-retired-look>
   <button class="backdrop" tabindex="-1" aria-hidden="true" onclick={close}></button>
   <div bind:this={dialog} class="body" role="dialog" aria-modal="true" aria-label={L.title} aria-busy={busy || checking}>
-    <header><h2>{L.title}</h2><p>{L.intro}</p><p>{L.policy}</p></header>
-    <div class="scroll">
+    <header inert={confirming}><h2>{L.title}</h2><p>{L.intro}</p><p>{L.policy}</p></header>
+    <div class="scroll" inert={confirming}>
       <div class="previews">
         <div><PixelAvatar spec={retiredAvatarSpec(v.avatarId!, v.age, draft)} /><small>{L.retiredPreview}</small></div>
         <div><PixelAvatar spec={primeAvatarSpec({ id: v.avatarId!, lastClub: v.lastClub, lastClubId: v.lastClubId, look: draft })} /><small>{L.kitPreview}</small></div>
       </div>
       {#if checking}<p role="status">{L.checking}</p>{/if}
       {#if locked}<p role="status">{locked}</p>{/if}
-      {#if allowed && !confirming}
+      {#if allowed}
       <p class="muted fs-sm">{L.recordNote}</p>
       {#each rows as r (r.item)}
         <section data-look-item={r.item}><b>{r.name}</b>
@@ -92,13 +96,24 @@
       <button class="btn" disabled={busy || draft === null} data-act="retired-look-reset" onclick={() => draft = null}>{L.reset}</button>
       {/if}
     </div>
-    <footer>
-      {#if confirming}<p class="confirmation" role="status">{L.confirmNote}</p>{/if}
-      {#if error}<p role="alert">{error}</p>{/if}
-      {#if confirming}<button class="btn back" disabled={busy} onclick={() => confirming = false}>{L.back}</button>{/if}
+    <footer inert={confirming}>
+      {#if error && !confirming}<p role="alert">{error}</p>{/if}
       <div><button bind:this={cancel} class="btn" disabled={busy} onclick={close}>{L.cancel}</button>
-      <button class="btn btn-primary" disabled={busy || checking || !allowed || !dirty} data-act="retired-look-save" onclick={save}>{busy ? L.saving : confirming ? L.confirm : L.save}</button></div>
+      <button class="btn btn-primary" disabled={busy || checking || !allowed || !dirty} data-act="retired-look-save" onclick={save}>{L.save}</button></div>
     </footer>
+    {#if confirming}
+      <!-- 마지막 확인 팝업: 저장하면 이 선수의 외형 변경 기회를 쓴다. -->
+      <div class="confirm-layer">
+        <div class="confirm" role="alertdialog" aria-modal="true" aria-labelledby="retired-look-confirm-title" aria-describedby="retired-look-confirm-note" data-retired-look-confirm>
+          <div class="confirm-preview"><PixelAvatar spec={retiredAvatarSpec(v.avatarId!, v.age, draft)} /></div>
+          <h3 id="retired-look-confirm-title">{L.confirmTitle}</h3>
+          <p id="retired-look-confirm-note">{L.confirmNote}</p>
+          {#if error}<p class="confirm-error" role="alert">{error}</p>{/if}
+          <div><button bind:this={confirmBack} class="btn" disabled={busy} data-act="retired-look-back" onclick={back}>{L.back}</button>
+          <button class="btn btn-primary" disabled={busy} data-act="retired-look-confirm" onclick={save}>{busy ? L.saving : L.confirm}</button></div>
+        </div>
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -120,8 +135,14 @@
   .swatch span { display: block; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line); }
   .scroll > .btn { margin-top: 16px; }
   footer { flex-shrink: 0; padding: 12px 18px max(16px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--surface); }
-  footer .back { width: 100%; margin-bottom: 8px; }
-  footer p.confirmation { color: var(--ink); }
+  .confirm-layer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgb(0 0 0 / .55); }
+  .confirm { width: min(100%, 340px); padding: 20px 18px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; text-align: center; }
+  .confirm-preview { color: var(--on-pitch); display: flex; justify-content: center; padding: 10px; margin-bottom: 12px; background: var(--pitch); border-radius: 12px; }
+  .confirm h3 { font-size: 1.0625rem; color: var(--ink); }
+  .confirm p { margin-top: 8px; font-size: .875rem; color: var(--muted); }
+  .confirm p.confirm-error { color: var(--bad); }
+  .confirm > div { display: flex; gap: 8px; margin-top: 16px; }
+  .confirm .btn { flex: 1; min-height: 44px; min-width: 0; white-space: normal; }
   footer > div { display: flex; gap: 8px; }
   footer .btn { flex: 1; min-height: 44px; min-width: 0; white-space: normal; }
   footer p { color: var(--bad); font-size: .8125rem; margin-bottom: 8px; }

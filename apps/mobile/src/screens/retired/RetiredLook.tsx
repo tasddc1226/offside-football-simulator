@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Modal, View } from 'react-native';
+import { useSnapshot } from 'valtio';
 import type { LegendView } from '@offside/app-core/state';
 import {
   loadRetiredLook,
@@ -10,7 +11,7 @@ import {
 import { retiredAvatarSpec, primeAvatarSpec } from '@offside/game/avatar';
 import { retiredLookText as L } from '@offside/app-core/i18n/ko/retiredLook';
 import { avatarLookText as A } from '@offside/app-core/i18n/ko/avatarLook';
-import { appState } from '../../store';
+import { appState, prefs } from '../../store';
 import { toast } from '../../game/host';
 import { TeamDialog } from '../../components/TeamDialog';
 import { useColors } from '../../theme/useColors';
@@ -19,6 +20,7 @@ import { PixelAvatar } from '../../ui/PixelAvatar';
 
 export default function RetiredLook({ v, close }: { v: LegendView; close: () => void }) {
   const c = useColors();
+  const { motionOK } = useSnapshot(prefs);
   const [career] = useState(v);
   const [draft, setDraft] = useState(v.avatarLook ?? null);
   const [busy, setBusy] = useState(false);
@@ -72,6 +74,11 @@ export default function RetiredLook({ v, close }: { v: LegendView; close: () => 
       setBusy(false);
     }
   }
+  const back = () => {
+    if (busy) return;
+    setConfirming(false);
+    setError('');
+  };
   const cancel = () => {
     if (!busy) close();
   };
@@ -81,16 +88,10 @@ export default function RetiredLook({ v, close }: { v: LegendView; close: () => 
       close={cancel}
       footer={
         <View style={{ gap: 8 }}>
-          {confirming ? <Txt>{L.confirmNote}</Txt> : null}
-          {error ? (
+          {error && !confirming ? (
             <Txt accessibilityRole="alert" style={{ color: c.bad }}>
               {error}
             </Txt>
-          ) : null}
-          {confirming ? (
-            <Btn disabled={busy} onPress={() => setConfirming(false)}>
-              {L.back}
-            </Btn>
           ) : null}
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Btn disabled={busy} style={{ flex: 1 }} onPress={cancel}>
@@ -103,12 +104,81 @@ export default function RetiredLook({ v, close }: { v: LegendView; close: () => 
               style={{ flex: 1 }}
               onPress={() => void save()}
             >
-              {busy ? L.saving : confirming ? L.confirm : L.save}
+              {L.save}
             </Btn>
           </View>
         </View>
       }
     >
+      {/* 마지막 확인 팝업: 저장하면 이 선수의 외형 변경 기회를 쓴다. */}
+      <Modal
+        visible={confirming}
+        transparent
+        animationType={motionOK ? 'fade' : 'none'}
+        statusBarTranslucent
+        onRequestClose={back}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 24,
+            backgroundColor: c.scrim,
+          }}
+        >
+          <View
+            accessibilityViewIsModal
+            testID="retired-look-confirm-dialog"
+            style={{
+              width: '100%',
+              maxWidth: 340,
+              gap: 10,
+              padding: 20,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: c.line,
+              backgroundColor: c.surface,
+            }}
+          >
+            <View
+              style={{
+                alignItems: 'center',
+                padding: 10,
+                borderRadius: 12,
+                backgroundColor: c.pitch,
+              }}
+            >
+              <PixelAvatar spec={retiredAvatarSpec(v.avatarId!, v.age, draft)} width={60} />
+            </View>
+            <Txt bold accessibilityRole="header" style={{ textAlign: 'center' }}>
+              {L.confirmTitle}
+            </Txt>
+            <Txt tone="muted" style={{ textAlign: 'center' }}>
+              {L.confirmNote}
+            </Txt>
+            {error ? (
+              <Txt accessibilityRole="alert" style={{ color: c.bad, textAlign: 'center' }}>
+                {error}
+              </Txt>
+            ) : null}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+              <Btn disabled={busy} style={{ flex: 1 }} testID="retired-look-back" onPress={back}>
+                {L.back}
+              </Btn>
+              <Btn
+                kind="primary"
+                disabled={busy}
+                style={{ flex: 1 }}
+                testID="retired-look-confirm"
+                onPress={() => void save()}
+              >
+                {busy ? L.saving : L.confirm}
+              </Btn>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <Txt tone="muted">{L.intro}</Txt>
       <Txt tone="muted">{L.policy}</Txt>
       <View
@@ -134,7 +204,7 @@ export default function RetiredLook({ v, close }: { v: LegendView; close: () => 
       </View>
       {checking ? <Txt>{L.checking}</Txt> : null}
       {locked ? <Txt>{locked}</Txt> : null}
-      {allowed && !confirming ? (
+      {allowed ? (
         <>
           <Txt tone="muted">{L.recordNote}</Txt>
           {rows.map((r) => (

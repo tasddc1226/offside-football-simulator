@@ -5,8 +5,8 @@ export const retiredLook: Translation<RetiredLookMsgs> = {
   title: 'Customize retired player',
   intro: 'Basic customization is free. Records, attributes and player funds stay unchanged.',
   policy:
-    'Appearance can be changed once after retirement. Saving is final. Players with any transfer history cannot change appearance.',
-  used: 'This player has already used their one appearance change after retirement.',
+    'Appearance can be changed once for free after retirement. The player art is new, so players who changed it before get one more change. Players with any transfer history cannot change appearance.',
+  used: 'This player has already used their appearance change for the new player art.',
   transferred: 'Players who have transferred cannot change appearance, even after returning.',
   checking: 'Checking availability',
   checkFailed: 'Could not check availability. Close and reopen to try again.',
@@ -16,7 +16,9 @@ export const retiredLook: Translation<RetiredLookMsgs> = {
   retiredPreview: 'Retirement look',
   kitPreview: 'Player card look',
   confirm: 'Confirm appearance',
-  confirmNote: 'Saving uses the one available change. Confirm this appearance?',
+  confirmTitle: 'Confirm this appearance?',
+  confirmNote:
+    "Once confirmed, this player's appearance cannot be changed again. Records and stats stay the same.",
   back: 'Keep editing',
   save: 'Save appearance',
   saving: 'Saving',

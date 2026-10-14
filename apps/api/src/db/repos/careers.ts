@@ -805,6 +805,13 @@ export async function getCareer(db: Db, careerId: string): Promise<CareerRow | u
   return row;
 }
 
+/**
+ * T-11-243 retired_look_used holds the art round a change was spent in. Round 1 was the dot
+ * character; the layered character is round 2, so every retiree gets one more free change.
+ * Older rounds read as unused without rewriting existing rows.
+ */
+export const RETIRED_LOOK_ROUND = 2;
+
 /** Appearance-only update. Retirement dates, snapshots, rankings and financial values stay untouched. */
 export async function retiredLookPolicy(db: Db, careerId: string) {
   const [row] = await db
@@ -819,7 +826,11 @@ export async function retiredLookPolicy(db: Db, careerId: string) {
     .where(eq(careers.id, careerId));
   if (!row) return undefined;
   const lockedReason =
-    (row.transfers ?? 0) > 0 ? ('transferred' as const) : row.used ? ('used' as const) : null;
+    (row.transfers ?? 0) > 0
+      ? ('transferred' as const)
+      : row.used >= RETIRED_LOOK_ROUND
+        ? ('used' as const)
+        : null;
   return {
     careerId: row.careerId,
     look: row.look,
@@ -836,13 +847,13 @@ export async function updateRetiredLook(
 ) {
   const [row] = await db
     .update(careers)
-    .set({ look, retiredLookUsed: 1 })
+    .set({ look, retiredLookUsed: RETIRED_LOOK_ROUND })
     .where(
       and(
         eq(careers.id, careerId),
         eq(careers.profileId, profileId),
         eq(careers.status, 'retired'),
-        eq(careers.retiredLookUsed, 0),
+        lt(careers.retiredLookUsed, RETIRED_LOOK_ROUND),
         // Checked in the write itself: concurrent saves and market purchases cannot bypass it.
         notExists(
           db

@@ -401,7 +401,8 @@ export const careers = sqliteTable(
     lastClubId: text('last_club_id'),
     // T-11-191 은퇴 선수 도트 꾸미기 코드(외형 전용 PUT으로 갱신 가능)(game look.ts lookCode). 꾸미지 않았거나 옛 기록은 NULL.
     look: text('look'),
-    /** Server-owned, separate from active-career cosmetics. Existing retirees get one change. */
+    /** Server-owned, separate from active-career cosmetics. The art round a change was spent in (0 = none);
+     * a new character art round (RETIRED_LOOK_ROUND in repos/careers.ts) gives every retiree one more change. */
     retiredLookUsed: integer('retired_look_used').notNull().default(0),
     // T-10-005 공개 명예의 전당. publicName은 유저가 이름 공개를 켠 경우에만 채운다(NULL = 익명). T-10-065부터
     // 시즌 업로드도 채워 진행 중 커리어가 홈 라이브에 이름으로 보인다.

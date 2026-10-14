@@ -203,6 +203,24 @@ it('local-only one-time receipt survives reload; preview/no-op/failure never con
   expect(apiFetch).not.toHaveBeenCalled();
 });
 
+it('a local receipt from the dot character keeps its look and gives one more change (T-11-243)', async () => {
+  const { state, h, legends } = fixture();
+  delete h.id;
+  saveKey('ft_hof', [h]);
+  const v = legends.viewFromEntry(h);
+  saveKey(`ft_retired_look:${v.avatarId}`, { used: true, look: 'y6' });
+  expect(await loadRetiredLook(state, v)).toMatchObject({
+    ok: true,
+    policy: { look: 'y6', remaining: 1, lockedReason: null },
+  });
+  expect((await saveRetiredLook(state, v, 'y7')).ok).toBe(true);
+  expect(await loadRetiredLook(state, v)).toMatchObject({
+    ok: true,
+    policy: { look: 'y7', remaining: 0, lockedReason: 'used' },
+  });
+  expect((await saveRetiredLook(state, v, 'y8')).ok).toBe(false);
+});
+
 it('legacy server-missing fallback persists the limit without bypassing other errors', async () => {
   const { state, v } = fixture();
   vi.mocked(apiFetch).mockResolvedValue({
