@@ -1,7 +1,7 @@
 // ───────── 실제 대회 구조: 국내 컵 · 슈퍼컵 · 대륙 클럽 대회 · 시상식 · 커리어 여정 ─────────
 import { ovr } from './attributes.js';
 import { clamp, ri, chance, gauss, rnd } from './rng.js';
-import { clubRef, LEAGUES, sameClub, type Pos } from './data.js';
+import { clubRef, CLUBS, LEAGUES, sameClub, type Club, type Pos } from './data.js';
 import {
   leagueOf,
   clubsIn,
@@ -89,6 +89,61 @@ export const CONT: Record<
   ACL2: { name: 'AFC 챔피언스리그 2', avg: 59, games: 6, top: 10, po: null },
   CCC: { name: 'CONCACAF 챔피언스컵', avg: 63, games: 0, top: 0, po: null, ko: true },
 };
+/**
+ * T-11-261 대륙 대회 녹아웃 상대를 고르는 구단 표(리그 id). 상대 이름은 RNG를 쓰지 않고 정한다 — 승부 결과·전력 계산은
+ * 그대로고, 그 전력에 가장 가까운 구단 몇 곳 가운데 커리어·연도·대회·단계로 만든 해시로 하나를 고른다.
+ */
+const CONT_POOL: Record<string, string[]> = {
+  UCL: ['pl', 'll', 'bl', 'sa', 'l1', 'ere'],
+  UEL: ['pl', 'll', 'bl', 'sa', 'l1', 'ere'],
+  UECL: ['pl', 'll', 'bl', 'sa', 'l1', 'ere'],
+  ACLE: ['k1', 'j1'],
+  ACL2: ['k1', 'j1'],
+  CCC: ['mls'],
+};
+/** 첫 녹아웃 라운드(16강·PO·1라운드)는 같은 리그 구단을 피한다 — 그 뒤는 만날 수 있다. */
+const FIRST_KO = new Set(['16강', '녹아웃 PO', '1라운드']); // i18n-ignore 저장값
+function fnv(str: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 0x01000193) >>> 0;
+  return h >>> 0;
+}
+/** 대회 녹아웃 상대 한 곳. oppStr에 가까운 구단 4곳 중 해시로 고른다(RNG 소모 없음). 내 구단·이미 만난 구단은 뺀다. */
+export function drawOpponent(s: GameState, c: SeasonComp, stage: string, oppStr: number): string {
+  const used = new Set((c.bracket?.path ?? []).map((t) => t.opp));
+  const m = s.leagueMoves ?? {};
+  const leagueOfClub = (x: Club) => m[x.id] ?? x.leagueId;
+  const leagues = CONT_POOL[c.key ?? ''] ?? [];
+  let pool = CLUBS.filter(
+    (x) => leagues.includes(leagueOfClub(x)) && x.id !== s.club.id && !used.has(x.id),
+  );
+  if (FIRST_KO.has(stage)) {
+    const other = pool.filter((x) => leagueOfClub(x) !== s.leagueId);
+    if (other.length >= 4) pool = other;
+  }
+  if (!pool.length) return '';
+  const near = pool.sort(
+    (a, b) => Math.abs(a.str - oppStr) - Math.abs(b.str - oppStr) || (a.id < b.id ? -1 : 1),
+  );
+  const top = near.slice(0, Math.min(4, near.length));
+  // cid는 저장마다 무작위라 쓰지 않는다 — 같은 상태(같은 시드 커리어)면 언어·실행과 무관하게 같은 상대여야 한다(골든).
+  const S = s.season;
+  const seed = [
+    s.year,
+    c.key,
+    stage,
+    s.club.id,
+    S.apps,
+    S.goals,
+    S.assists,
+    S.ratingSum.toFixed(2),
+    c.pts ?? 0,
+    c.apps,
+    c.g,
+  ].join('|');
+  return top[fnv(seed) % top.length]!.id;
+}
+
 const BIG5: [string, number][] = [
   ['UCL', 4],
   ['UEL', 2],
@@ -248,6 +303,8 @@ export type CompGame = {
   res?: 'W' | 'D' | 'L';
   /** 승부가 끝난 경기(마지막 차전)에만 — 다음 단계로 갔는지. */
   won?: boolean;
+  /** T-11-261 대륙 대회 녹아웃 상대 구단 id(clubNameOf로 이름). 컵·리그 페이즈엔 없다. */
+  opp?: string;
 };
 export type CompLine = { t: string; k: string; games: CompGame[] };
 
@@ -258,13 +315,21 @@ function tie(
   legs: number,
   stage: string,
   out: CompGame[],
+  opp?: string,
 ): boolean {
   let edge = 0;
   for (let i = 0; i < legs; i++) {
     const m = compMatch(s, oppStr, startChance(s, c.type as 'cup' | 'cont'));
     tally(c, m);
     edge += m.edge;
-    out.push({ stage, ...(legs > 1 ? { leg: i + 1 } : {}), mins: m.mins, g: m.g, a: m.a });
+    out.push({
+      stage,
+      ...(legs > 1 ? { leg: i + 1 } : {}),
+      mins: m.mins,
+      g: m.g,
+      a: m.a,
+      ...(opp ? { opp } : {}),
+    });
   }
   const won = chance(clamp(0.5 + edge / legs, 0.08, 0.92));
   out[out.length - 1]!.won = won;
@@ -318,13 +383,44 @@ export function compsPhase(s: GameState): CompLine[] {
   }
   return lines;
 }
+/** T-11-261 녹아웃 라운드 상대 전력의 기준값(가우스 흔들림 전) — 다음 상대를 미리 추첨할 때 쓴다. */
+const KO_BONUS: Record<string, number> = {
+  '녹아웃 PO': 0,
+  '16강': 2,
+  '8강': 5,
+  '4강': 8,
+  결승: 10,
+}; // i18n-ignore 저장값
+/** 한 승부를 치르고 대진 기록에 남긴다. 미리 추첨한 다음 상대가 이 단계면 그 구단, 아니면 전력에 가까운 구단을 고른다. */
+function koTie(
+  s: GameState,
+  c: SeasonComp,
+  oppStr: number,
+  legs: number,
+  stage: string,
+  games: CompGame[],
+): boolean {
+  const b = (c.bracket ??= { path: [] });
+  const opp = b.next?.stage === stage ? b.next.opp : drawOpponent(s, c, stage, oppStr);
+  b.next = undefined;
+  const won = tie(s, c, oppStr, legs, stage, games, opp || undefined);
+  b.path.push({ stage, opp, legs, won });
+  return won;
+}
+/** 다음 라운드 상대를 미리 추첨해 둔다 — 시즌 탭이 아직 치르지 않은 승부로 보여 준다. */
+function drawNext(s: GameState, c: SeasonComp, stage: string, legs: number) {
+  const b = (c.bracket ??= { path: [] });
+  const opp = drawOpponent(s, c, stage, CONT[c.key!]!.avg + (KO_BONUS[stage] ?? 0));
+  b.next = opp ? { stage, opp, legs } : undefined;
+}
 function contPhase(s: GameState, c: SeasonComp, games: CompGame[]): { t: string; k: string } {
   const C = CONT[c.key!]!,
     S = s.season;
   if (s.phase === 1 && C.ko) {
-    if (tie(s, c, C.avg - 2 + gauss() * 2, 2, '1라운드', games)) {
+    if (koTie(s, c, C.avg - 2 + gauss() * 2, 2, '1라운드', games)) {
       // i18n-ignore 저장값
       c.stage = '16강 진출';
+      drawNext(s, c, '16강', 2); // i18n-ignore 저장값
       return { t: M.contKoPass({ name: tn(c.name) }), k: 'good' };
     }
     c.alive = false;
@@ -344,10 +440,12 @@ function contPhase(s: GameState, c: SeasonComp, games: CompGame[]): { t: string;
     }
     if (c.pts! >= C.top) {
       c.stage = '16강 직행';
+      drawNext(s, c, '16강', 2); // i18n-ignore 저장값
       return { t: M.leagueDirect({ name: tn(c.name), pts: c.pts! }), k: 'good' };
     }
     if (C.po && c.pts! >= C.po) {
       c.stage = '녹아웃 PO';
+      drawNext(s, c, '녹아웃 PO', 2); // i18n-ignore 저장값
       return { t: M.leaguePlayoff({ name: tn(c.name), pts: c.pts! }), k: '' };
     }
     c.alive = false;
@@ -357,11 +455,8 @@ function contPhase(s: GameState, c: SeasonComp, games: CompGame[]): { t: string;
   const rounds = [...(c.stage === '녹아웃 PO' ? ['녹아웃 PO'] : []), '16강', '8강', '4강', '결승'];
   const asia = c.key!.startsWith('ACL');
   for (const r of rounds) {
-    const opp =
-      C.avg +
-      ({ '녹아웃 PO': 0, '16강': 2, '8강': 5, '4강': 8, 결승: 10 } as Record<string, number>)[r]! +
-      gauss() * 2;
-    const won = tie(s, c, opp, r === '결승' || (asia && r !== '16강') ? 1 : 2, r, games);
+    const opp = C.avg + KO_BONUS[r]! + gauss() * 2;
+    const won = koTie(s, c, opp, r === '결승' || (asia && r !== '16강') ? 1 : 2, r, games);
     if (!won) {
       c.alive = false;
       c.stage = r === '결승' ? '준우승' : `${r} 탈락`;

@@ -138,6 +138,11 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
               {x}
             </Txt>
           ))}
+          {(s.compPaths ?? []).map((p) => (
+            <Txt key={p.key} v="sm" tone="muted" testID={`comp-path-${p.key}`}>
+              {`${p.name} · ${p.line}`}
+            </Txt>
+          ))}
         </View>
       ) : null}
       {s.tours.length ? (
