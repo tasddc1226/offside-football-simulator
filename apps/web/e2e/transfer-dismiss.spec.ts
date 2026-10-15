@@ -12,8 +12,9 @@ for (const width of [320, 390]) {
     const saved = await page.evaluate(() => localStorage.getItem('ft_save'));
     const close = page.locator('[data-market-close]');
     const box = await close.boundingBox();
-    expect(box!.width).toBeGreaterThanOrEqual(44);
-    expect(box!.height).toBeGreaterThanOrEqual(44);
+    // CSS는 44px이지만 시트 등장 변환 중에 재면 43.9999처럼 서브픽셀이 깎인다(CI 플레이크). 0.5px 여유.
+    expect(box!.width).toBeGreaterThanOrEqual(43.5);
+    expect(box!.height).toBeGreaterThanOrEqual(43.5);
     await close.click();
     await expect(sheet).toBeHidden();
     await expect(page.locator('[data-act="resume"]')).toContainText('이적할 팀 선택하기');
