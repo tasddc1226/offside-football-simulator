@@ -41,6 +41,22 @@ function room(c: Context<AppEnv>) {
   return chatRoom(c.env.CHAT);
 }
 
+const enc = new TextEncoder();
+/** 길이가 같을 때 끝까지 비교한다(토큰 추측 방지). */
+function sameSecret(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
+/** 작성자 가명: 토큰을 섞은 해시 앞 8자. 같은 사람은 같은 가명이지만 프로필 ID로 되돌릴 수 없다. */
+async function pseudonym(secret: string, profileId: string) {
+  const h = new Uint8Array(
+    await crypto.subtle.digest('SHA-256', enc.encode(`${secret}:${profileId}`)),
+  );
+  return `u${[...h.slice(0, 4)].map((b) => b.toString(16).padStart(2, '0')).join('')}`;
+}
+
 /** 가려지지 않은 메시지. 없으면 404. */
 async function findMessage(c: Context<AppEnv>) {
   const id = parseWithAppError(ChatMessageIdSchema, c.req.param('messageId'));
@@ -171,6 +187,27 @@ export function registerChatRoutes(app: Hono<AppEnv>) {
       nowIso(),
     );
     return ok(c, ChatBlockResponseSchema, { ...block, author: m.author }, 201);
+  });
+
+  // T-11-275 슬랙 에이전트(apps/agents)가 라운지 반응을 읽는 내부 주소. 세션 · D1을 건드리지 않고 비밀 토큰만 본다.
+  // 토큰이 없거나 틀리면 주소가 없는 것처럼 404를 준다. 닉네임 · 프로필 ID는 넘기지 않는다.
+  app.get('/v1/internal/agents/chat', async (c) => {
+    const secret = c.env.AGENTS_READ_TOKEN;
+    if (!secret || !sameSecret(c.req.header('authorization') ?? '', `Bearer ${secret}`))
+      return c.body(null, 404);
+    const now = Date.now();
+    const since = Math.max(Number(c.req.query('since')) || now - 3600_000, now - CHAT_KEEP_MS);
+    const limit = Math.min(200, Math.max(1, Number(c.req.query('limit')) || 100));
+    const rows = await room(c).recent(since, limit);
+    const items = await Promise.all(
+      rows.map(async (r) => ({
+        id: r.id,
+        at: r.at,
+        author: await pseudonym(secret, r.profileId),
+        body: r.body,
+      })),
+    );
+    return c.json({ items }, 200, { 'Cache-Control': NO_STORE });
   });
 
   app.post('/v1/admin/chat/messages/:messageId/hide', async (c) => {

@@ -1,0 +1,38 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // ADR-015 슬랙 에이전트 팀. 운영 API(offside-api)와 배포 · 저장소를 나눈다(운영 D1 바인딩 없음).
+  "name": "offside-agents",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-02",
+  "workers_dev": false,
+  "routes": [{ "pattern": "agents.offside-lab.com", "custom_domain": true }],
+  "rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }],
+  "durable_objects": {
+    "bindings": [
+      { "name": "THREAD", "class_name": "AgentThread" },
+      { "name": "LEDGER", "class_name": "AgentLedger" },
+    ],
+  },
+  "migrations": [{ "tag": "v1-agents", "new_sqlite_classes": ["AgentThread", "AgentLedger"] }],
+  // 매시간 17분 유저 반응 살피기(@plan, reactions.ts).
+  "triggers": { "crons": ["17 * * * *"] },
+  "observability": { "enabled": true, "logs": { "enabled": true, "invocation_logs": false } },
+  "vars": {
+    // 2단계까지 @ops · @plan을 연다(ADR-015 도입 단계).
+    "ENABLED_ROLES": "ops,plan",
+    "OPERATOR_USER_ID": "U0C9BAYGT8Q",
+    // 에이전트 봇 4개(자기 · 서로의 메시지에 반응하지 않는다).
+    "AGENT_APP_IDS": "A0C987NV8HZ,A0C9CFUM98E,A0C996C6R3P,A0C9E9PELTC",
+    "AGENT_BOT_USERS": "U0C987SP9MH,U0C9J5P80JG,U0C996EN269,U0C8Z49E58F",
+    // #offside-alerts
+    "ALERT_CHANNELS": "C0C8FEU657G",
+    "CF_ACCOUNT_ID": "12f369468d8f8386e116a5c76da455d2",
+    "D1_DATABASE_ID": "2cfe462c-204e-4842-805c-5840fc9b1758",
+    "GITHUB_REPO": "tasddc1226/offside-football-simulator",
+    "API_BASE": "https://api.offside-lab.com",
+    // #agent-desk
+    "DESK_CHANNEL": "C0C9E9WRVA6",
+    "TASK_BUDGET_USD": "1.5",
+    "DAILY_BUDGET_USD": "5",
+  },
+}

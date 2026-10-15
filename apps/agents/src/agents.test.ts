@@ -1,0 +1,426 @@
+import { describe, expect, it } from 'vitest';
+import { costOf, MODEL, runAgent, type Tool } from './claude.ts';
+import type { Env } from './env.ts';
+import { decide } from './index.ts';
+import { verifySlack } from './slack.ts';
+import { failureText } from './thread.ts';
+import { ClaudeError } from './claude.ts';
+import { readOnlySql } from './tools/ops.ts';
+import { alertSignature } from './ledger.ts';
+import { mcpTools, parseRpc } from './mcp.ts';
+import { parseHandoffs } from './handoff.ts';
+import { collect, meaningful, triagePrompt } from './reactions.ts';
+
+async function sign(secret: string, ts: string, body: string) {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const mac = new Uint8Array(
+    await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`v0:${ts}:${body}`)),
+  );
+  return `v0=${[...mac].map((b) => b.toString(16).padStart(2, '0')).join('')}`;
+}
+
+describe('verifySlack', () => {
+  it('맞는 서명만 받고, 5분 지난 요청은 거절한다', async () => {
+    const body = '{"type":"event_callback"}';
+    const sig = await sign('s3cret', '1000', body);
+    expect(await verifySlack('s3cret', '1000', sig, body, 1000)).toBe(true);
+    expect(await verifySlack('other', '1000', sig, body, 1000)).toBe(false);
+    expect(await verifySlack('s3cret', '1000', sig, `${body} `, 1000)).toBe(false);
+    expect(await verifySlack('s3cret', '1000', sig, body, 1000 + 301)).toBe(false);
+    expect(await verifySlack('', '1000', sig, body, 1000)).toBe(false);
+  });
+});
+
+describe('readOnlySql', () => {
+  it('SELECT · WITH 한 문장만 통과시킨다', () => {
+    expect(readOnlySql('SELECT 1;')).toBe('SELECT 1');
+    expect(readOnlySql('-- 메모\nWITH a AS (SELECT 1) SELECT * FROM a')).toContain('WITH');
+    expect(readOnlySql("SELECT * FROM t WHERE note = 'delete me'")).toContain('delete me');
+    for (const bad of [
+      'DELETE FROM t',
+      'SELECT 1; DROP TABLE t',
+      'PRAGMA table_info(t)',
+      'select 1 /* x */; update t set a=1',
+      'WITH x AS (DELETE FROM t RETURNING *) SELECT * FROM x',
+      '',
+    ])
+      expect(() => readOnlySql(bad)).toThrow();
+  });
+});
+
+describe('runAgent', () => {
+  const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+  const usage = { input_tokens: 1000, output_tokens: 100, cache_read_input_tokens: 2000 };
+
+  it('도구를 부르고 결과를 넘긴 뒤 답과 비용을 돌려준다', async () => {
+    const sent: { model: string; messages: unknown[] }[] = [];
+    const responses = [
+      reply({
+        model: MODEL,
+        stop_reason: 'tool_use',
+        usage,
+        content: [{ type: 'tool_use', id: 't1', name: 'echo', input: { v: 'x' } }],
+      }),
+      reply({
+        model: MODEL,
+        stop_reason: 'end_turn',
+        usage,
+        content: [{ type: 'text', text: '끝났어요' }],
+      }),
+    ];
+    const fetcher = (async (_u: string, init: RequestInit) => {
+      sent.push(JSON.parse(String(init.body)));
+      return responses.shift()!;
+    }) as unknown as typeof fetch;
+    const tool: Tool = {
+      name: 'echo',
+      description: '',
+      input_schema: { type: 'object' },
+      run: async (i) => `got ${String(i.v)}`,
+    };
+    const r = await runAgent({
+      apiKey: 'k',
+      system: 's',
+      tools: [tool],
+      messages: [{ role: 'user', content: 'hi' }],
+      maxTurns: 5,
+      budgetUsd: 1,
+      fetcher,
+    });
+    expect(r).toMatchObject({ text: '끝났어요', turns: 2 });
+    expect(r.costUsd).toBeCloseTo(2 * costOf(usage));
+    expect(sent.every((b) => b.model === MODEL)).toBe(true);
+    expect(JSON.stringify(sent[1]!.messages)).toContain('got x');
+  });
+
+  it('응답 모델이 Opus 5.5가 아니면 실패한다', async () => {
+    const fetcher = (async () =>
+      reply({
+        model: 'claude-sonnet-5-5',
+        stop_reason: 'end_turn',
+        usage,
+        content: [],
+      })) as unknown as typeof fetch;
+    await expect(
+      runAgent({
+        apiKey: 'k',
+        system: 's',
+        tools: [],
+        messages: [],
+        maxTurns: 5,
+        budgetUsd: 1,
+        fetcher,
+      }),
+    ).rejects.toThrow(/unexpected model/);
+  });
+
+  it('작업 한도 금액에 닿으면 멈춘다', async () => {
+    const big = { input_tokens: 1_000_000, output_tokens: 0 };
+    const fetcher = (async () =>
+      reply({
+        model: MODEL,
+        stop_reason: 'tool_use',
+        usage: big,
+        content: [{ type: 'tool_use', id: 't', name: 'none', input: {} }],
+      })) as unknown as typeof fetch;
+    const r = await runAgent({
+      apiKey: 'k',
+      system: 's',
+      tools: [],
+      messages: [],
+      maxTurns: 5,
+      budgetUsd: 1,
+      fetcher,
+    });
+    expect(r).toMatchObject({ stopped: 'budget', turns: 1 });
+  });
+
+  it('API 오류는 상태 코드로 알린다', async () => {
+    const fetcher = (async () =>
+      reply({ error: { type: 'authentication_error' } }, 401)) as unknown as typeof fetch;
+    const e = await runAgent({
+      apiKey: 'k',
+      system: 's',
+      tools: [],
+      messages: [],
+      maxTurns: 5,
+      budgetUsd: 1,
+      fetcher,
+    }).catch((x: unknown) => x);
+    expect(failureText(e)).toContain('키를 확인');
+    expect(failureText(new ClaudeError(529, 'overloaded'))).toContain('바빠서');
+  });
+});
+
+describe('decide', () => {
+  const env = {
+    OPERATOR_USER_ID: 'UOP',
+    AGENT_APP_IDS: 'AOPS,APLAN',
+    AGENT_BOT_USERS: 'UBOTOPS,UBOTPLAN',
+    ALERT_CHANNELS: 'CALERT',
+  } as Env;
+  const ev = (e: Record<string, unknown>) =>
+    ({ channel: 'CDESK', ts: '1.1', ...e }) as Parameters<typeof decide>[3];
+
+  it('운영자 멘션만 받는다', () => {
+    expect(
+      decide(
+        env,
+        'ops',
+        'E1',
+        ev({ type: 'app_mention', user: 'UOP', text: '<@UBOTOPS> 오늘 가입 수' }),
+        'UBOTOPS',
+      ),
+    ).toMatchObject({ kind: 'mention', threadTs: '1.1', text: '오늘 가입 수' });
+    expect(
+      decide(
+        env,
+        'ops',
+        'E2',
+        ev({ type: 'app_mention', user: 'USTRANGER', text: 'hi' }),
+        'UBOTOPS',
+      ),
+    ).toBeNull();
+  });
+
+  it('경보 채널의 웹훅 글을 경보로 받고, 정상 복구 · 에이전트 글은 건너뛴다', () => {
+    expect(
+      decide(
+        env,
+        'ops',
+        'E3',
+        ev({
+          type: 'message',
+          subtype: 'bot_message',
+          bot_id: 'B1',
+          channel: 'CALERT',
+          text: '🚨 점검 필요',
+        }),
+        'UBOTOPS',
+      ),
+    ).toMatchObject({ kind: 'alert' });
+    expect(
+      decide(
+        env,
+        'ops',
+        'E4',
+        ev({
+          type: 'message',
+          subtype: 'bot_message',
+          bot_id: 'B1',
+          channel: 'CALERT',
+          text: '✅ 정상 복구',
+        }),
+        'UBOTOPS',
+      ),
+    ).toBeNull();
+    expect(
+      decide(
+        env,
+        'ops',
+        'E5',
+        ev({ type: 'message', bot_id: 'B2', app_id: 'APLAN', channel: 'CALERT', text: '🚨' }),
+        'UBOTOPS',
+      ),
+    ).toBeNull();
+    expect(
+      decide(
+        env,
+        'ops',
+        'E6',
+        ev({
+          type: 'message',
+          subtype: 'bot_message',
+          bot_id: 'B1',
+          channel: 'CALERT',
+          thread_ts: '0.9',
+          text: '🚨',
+        }),
+        'UBOTOPS',
+      ),
+    ).toBeNull();
+  });
+
+  it('운영자 스레드 답글은 이어 받고, 멘션이 든 글은 app_mention 쪽에 맡긴다', () => {
+    expect(
+      decide(
+        env,
+        'ops',
+        'E7',
+        ev({ type: 'message', user: 'UOP', thread_ts: '0.5', text: '더 봐 줘' }),
+        'UBOTOPS',
+      ),
+    ).toMatchObject({ kind: 'reply', threadTs: '0.5' });
+    expect(
+      decide(
+        env,
+        'ops',
+        'E8',
+        ev({ type: 'message', user: 'UOP', thread_ts: '0.5', text: '<@UBOTOPS> 더' }),
+        'UBOTOPS',
+      ),
+    ).toBeNull();
+    expect(
+      decide(
+        env,
+        'ops',
+        'E9',
+        ev({ type: 'message', subtype: 'message_changed', user: 'UOP', thread_ts: '0.5' }),
+        'UBOTOPS',
+      ),
+    ).toBeNull();
+  });
+});
+
+describe('alertSignature', () => {
+  it('숫자만 다른 재안내는 같은 경보로 본다', () => {
+    const a = '🚨 점검 필요 D1 할당 용량: 4.41 GB / 10 GB 용량 소진 예상: 15.1일';
+    const b = '🚨 점검 필요 D1 할당 용량: 4.34 GB / 10 GB 용량 소진 예상: 14.0일';
+    expect(alertSignature(a)).toBe(alertSignature(b));
+    expect(alertSignature(a)).not.toBe(alertSignature('🚨 운영 API 응답 실패'));
+  });
+});
+
+describe('mcpTools', () => {
+  it('SSE 응답을 읽고, 세션을 이어 가며 도구를 옮긴다', async () => {
+    expect(parseRpc('event: message\ndata: {"result":{"ok":1}}\n\n')).toEqual({
+      result: { ok: 1 },
+    });
+    const calls: { method: string; session: string | null; auth: string | null }[] = [];
+    const fetcher = (async (_u: string, init: RequestInit) => {
+      const h = new Headers(init.headers);
+      const msg = JSON.parse(String(init.body)) as {
+        method: string;
+        params?: { arguments?: unknown };
+      };
+      calls.push({
+        method: msg.method,
+        session: h.get('mcp-session-id'),
+        auth: h.get('authorization'),
+      });
+      const result =
+        msg.method === 'tools/list'
+          ? { tools: [{ name: 'execute', description: 'run', inputSchema: { type: 'object' } }] }
+          : msg.method === 'tools/call'
+            ? { content: [{ type: 'text', text: `ran ${JSON.stringify(msg.params?.arguments)}` }] }
+            : {};
+      return new Response(
+        `event: message\ndata: ${JSON.stringify({ jsonrpc: '2.0', id: 1, result })}\n\n`,
+        {
+          headers: { 'mcp-session-id': 'S1', 'content-type': 'text/event-stream' },
+        },
+      );
+    }) as unknown as typeof fetch;
+    const tools = await mcpTools(
+      { name: 'cloudflare', url: 'https://mcp.example/mcp', token: 't' },
+      fetcher,
+    );
+    expect(tools.map((t) => t.name)).toEqual(['cloudflare_execute']);
+    expect(await tools[0]!.run({ code: 'x' })).toBe('ran {"code":"x"}');
+    expect(calls.map((c) => c.method)).toEqual([
+      'initialize',
+      'notifications/initialized',
+      'tools/list',
+      'tools/call',
+    ]);
+    expect(calls.slice(1).every((c) => c.session === 'S1' && c.auth === 'Bearer t')).toBe(true);
+  });
+});
+
+describe('parseHandoffs', () => {
+  it('줄 머리의 → @역할: 만 넘기고, 자기 자신 · 모르는 역할 · 중복은 뺀다', () => {
+    const text = [
+      '정리했어요. 본문 중간의 → @ops: 는 넘기지 않아요.',
+      '→ @ops: 10-15 20시쯤 시즌 저장 실패가 있었는지 확인해 주세요',
+      '- **→ @dev:** 작업 후보',
+      '→ @plan: 자기 자신',
+      '→ @ops: 두 번째',
+      '-> @boss: 모르는 역할',
+    ].join('\n');
+    expect(parseHandoffs(text, 'plan')).toEqual([
+      { to: 'ops', request: '10-15 20시쯤 시즌 저장 실패가 있었는지 확인해 주세요' },
+      { to: 'dev', request: '작업 후보' },
+    ]);
+  });
+});
+
+describe('collect', () => {
+  const env = {
+    CF_ACCOUNT_ID: 'acc',
+    D1_DATABASE_ID: 'db',
+    CF_D1_READ_TOKEN: 'd1',
+    API_BASE: 'https://api.test',
+    AGENTS_READ_TOKEN: 'salt',
+  } as Env;
+  const now = Date.parse('2026-10-15T12:00:00Z');
+
+  it('댓글 · 채팅을 가명으로 모으고 짧은 글은 빼며, 실패한 쪽 커서는 그대로 둔다', async () => {
+    const calls: string[] = [];
+    const fetcher = (async (url: string, init?: RequestInit) => {
+      calls.push(String(url));
+      if (String(url).includes('/d1/')) {
+        const { params } = JSON.parse(String(init?.body)) as { params: string[] };
+        expect(params[0]).toBe('2026-10-15T11:00:00.000Z');
+        return Response.json({
+          success: true,
+          result: [
+            {
+              results: [
+                {
+                  id: 'c1',
+                  created_at: '2026-10-15T11:10:00.000Z',
+                  profile_id: 'p1',
+                  body: '저장하면 선수가 사라져요',
+                  post_id: 'n1',
+                  title: '업데이트',
+                  board: 'release',
+                },
+                {
+                  id: 'c2',
+                  created_at: '2026-10-15T11:20:00.000Z',
+                  profile_id: 'p1',
+                  body: 'ㅋㅋㅋㅋ',
+                  post_id: 'n1',
+                  title: '업데이트',
+                  board: 'release',
+                },
+              ],
+            },
+          ],
+        });
+      }
+      return new Response('down', { status: 503 });
+    }) as typeof fetch;
+    const r = await collect(env, { chat: 123 }, now, fetcher);
+    expect(r.items).toHaveLength(1);
+    expect(r.items[0]).toMatchObject({
+      source: 'comment',
+      at: '2026-10-15 20:10',
+      body: '저장하면 선수가 사라져요',
+      link: 'https://offside-lab.com/?news=n1&board=release',
+    });
+    expect(r.items[0]!.author).toMatch(/^u[0-9a-f]{8}$/);
+    expect(JSON.stringify(r.items)).not.toContain('p1');
+    expect(r.cursors).toEqual({
+      comments: { at: '2026-10-15T11:20:00.000Z', id: 'c2' },
+      chat: 123,
+    });
+    expect(r.errors[0]).toContain('chat 503');
+    expect(calls[1]).toBe('https://api.test/v1/internal/agents/chat?since=123&limit=200');
+
+    const prompt = triagePrompt(r.items, '2026-10-15 21:00');
+    expect(prompt).toContain('<reactions>');
+    expect(prompt).toContain('"출처":"댓글"');
+  });
+
+  it('meaningful은 웃음 · 기호만 있는 글을 뺀다', () => {
+    expect(meaningful('ㅋㅋㅋ!!')).toBe(false);
+    expect(meaningful('골키퍼 버그')).toBe(true);
+  });
+});

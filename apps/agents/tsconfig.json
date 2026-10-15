@@ -1,0 +1,7 @@
+{
+  "extends": "@offside/tsconfig/worker.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src"]
+}
