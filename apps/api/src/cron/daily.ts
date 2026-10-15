@@ -1,9 +1,9 @@
 import { sweepAutomation } from '../db/repos/automationEnforcement.js';
-// T-10-070 매일 KST 04:00(UTC 19:00) cron. 정리가 실패해도 백업은 돈다. 결과는 요청 로그처럼
+// T-10-070 매일 KST 04:00(UTC 19:00) cron. 한 단계가 실패해도 나머지는 돈다. 결과는 요청 로그처럼
 // JSON 한 줄로 남긴다(middleware/logger.ts와 같은 모양 — Workers Logs에서 job으로 찾는다).
+// T-11-267 R2 백업은 여기서 빠졌다 — 15분 상한을 넘겨 뒤 단계를 함께 죽였다. 지금은 5분 cron이 조각으로 올린다(backup.ts).
 import type { Bindings } from '../env.js';
 import { sweepAnomalies, type SweepResult } from '../db/repos/anomalies.js';
-import { backupToR2, type BackupResult } from './backup.js';
 import { runCareerRetention, type RetentionResult } from './careerRetention.js';
 import { archiveGrowth, type GrowthArchiveResult } from './growthArchive.js';
 import { cleanupExpired, type CleanupResult } from './cleanup.js';
@@ -18,8 +18,6 @@ export type DailyResult = {
   cleanup: CleanupResult | { error: string };
   /** 비정상 기록 점검: 확실한 것은 숨기고 애매한 것은 운영자 검토로 남긴다(repos/anomalies.ts). */
   anomalies: SweepResult | { error: string };
-  /** R2 바인딩(BACKUP)이 없으면(로컬·staging) 건너뛴다. */
-  backup: BackupResult | { error: string } | 'skipped';
   /** T-11-100 오래된 시즌 성장 기록을 R2로 옮기고 D1에서 비운다. R2 바인딩이 없으면 건너뛴다. */
   growthArchive: GrowthArchiveResult | { error: string } | 'skipped';
   /** T-11-028 놓친 구단주 업적 점수 다시 세기. */
@@ -38,16 +36,13 @@ export const DAILY_META_KEY = 'cron:daily:last';
 
 export async function runDaily(env: Bindings, now: number): Promise<DailyResult> {
   const startedAt = Date.now();
-  // 정리 먼저 — 백업에 지울 행을 싣지 않는다.
+  // 정리 먼저 — 그날 백업에 지울 행을 싣지 않는다.
   const cleanup = await cleanupExpired(env.DB, now).catch(errorOf);
-  // 숨기는 쪽이 백업 전에 끝나도록 정리 다음에 돈다. 실패해도 백업은 돈다.
+  // 숨기는 쪽이 정리 다음에 돈다. 실패해도 뒤 단계는 돈다.
   const automation =
     env.AUTOMATION_HIDE_DISABLED === '1' ? null : await sweepAutomation(env.DB, now).catch(errorOf);
   const anomalies = await sweepAnomalies(env.DB, now).catch(errorOf);
-  const backup = env.BACKUP
-    ? await backupToR2(env.DB, env.BACKUP, env.ENVIRONMENT, now).catch(errorOf)
-    : ('skipped' as const);
-  // 백업 다음에 돈다 — 백업이 성공했으면 그날 백업에도 비우기 전 성장 기록이 남는다. 옮기기는 R2에 올린 뒤에만 비우므로 백업과 상관없이 돈다.
+  // 옮기기는 R2에 올린 뒤에만 비운다.
   const growthArchive = env.BACKUP
     ? await archiveGrowth(env.DB, env.BACKUP, env.ENVIRONMENT, now).catch(errorOf)
     : ('skipped' as const);
@@ -63,7 +58,6 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
     (typeof iapRefunds === 'object' && 'error' in iapRefunds) ||
     'error' in cleanup ||
     'error' in anomalies ||
-    (typeof backup === 'object' && 'error' in backup) ||
     (typeof growthArchive === 'object' && 'error' in growthArchive) ||
     'error' in achievements ||
     'error' in careerRetention;
@@ -74,7 +68,6 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
     cleanup,
     anomalies,
     automation,
-    backup,
     growthArchive,
     careerRetention,
     achievements,
@@ -92,7 +85,6 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
     cleanup,
     anomalies,
     automation,
-    backup,
     growthArchive,
     careerRetention,
     achievements,

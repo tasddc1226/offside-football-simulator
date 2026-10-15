@@ -1,5 +1,6 @@
 import type { Bindings } from '../env.js';
 import { DAY_MS } from '../time.js';
+import { BACKUP_LAST_KEY, BACKUP_STATE_KEY, chunkKey } from './backup.js';
 import { DAILY_META_KEY } from './daily.js';
 import { EVENT_ARCHIVE_META_KEY } from './seasonEventsArchive.js';
 
@@ -7,6 +8,15 @@ export const INFRA_HEALTH_META_KEY = 'cron:infra-health:last';
 const HOUR_MS = 60 * 60_000;
 export const D1_LIMIT_BYTES = 10_000_000_000;
 type Sample = { at: number; sizeBytes: number };
+/** T-11-267 끝난 백업(cron:backup:last)과 진행 중인 백업(cron:backup:state)에서 보는 것. */
+export type BackupHealthInput = {
+  last: { key?: string; chunks?: number; finishedAt?: number } | null;
+  inProgress: { startedAt?: number } | null;
+};
+/** 하루 한 번 백업이 보통 KST 04시 뒤 1~3시간에 끝난다 — 이보다 오래 새 백업이 없으면 경보. */
+export const BACKUP_STALE_MS = 30 * 60 * 60_000;
+/** 조각 이어받기가 이만큼 끝나지 않으면 막힌 것으로 본다. */
+export const BACKUP_STALL_MS = 6 * 60 * 60_000;
 export type InfraHealth = {
   at: number;
   sizeBytes: number;
@@ -20,9 +30,10 @@ export function assessInfraHealth(
   now: number,
   sizeBytes: number,
   previous: Sample[],
-  daily: { ts?: string; level?: string; backup?: unknown } | null,
+  daily: { ts?: string; level?: string } | null,
   archive: { at: number } | null,
   archiveEnabled: boolean,
+  backup: BackupHealthInput = { last: null, inProgress: null },
 ): InfraHealth {
   const samples = [
     ...previous.filter(
@@ -47,15 +58,19 @@ export function assessInfraHealth(
   if (!Number.isFinite(dailyAt) || dailyAt > now + 60_000 || now - dailyAt > 26 * 60 * 60_000)
     issues.push('daily-job-missing-or-stale');
   if (daily?.level === 'error') issues.push('daily-job-failed');
+  const finishedAt = backup.last?.finishedAt;
   if (
-    !daily ||
-    !daily.backup ||
-    typeof daily.backup !== 'object' ||
-    !('key' in daily.backup) ||
-    typeof daily.backup.key !== 'string' ||
-    !daily.backup.key
+    !backup.last ||
+    typeof backup.last.key !== 'string' ||
+    !backup.last.key ||
+    !Number.isFinite(finishedAt) ||
+    finishedAt! > now + 60_000 ||
+    now - finishedAt! > BACKUP_STALE_MS
   )
     issues.push('backup-not-completed');
+  const startedAt = backup.inProgress?.startedAt;
+  if (backup.inProgress && (!Number.isFinite(startedAt) || now - startedAt! > BACKUP_STALL_MS))
+    issues.push('backup-stalled');
   if (
     archiveEnabled &&
     (!archive ||
@@ -78,9 +93,15 @@ export function assessInfraHealth(
 export async function runInfraHealth(env: Bindings, now: number): Promise<InfraHealth | null> {
   if (env.ENVIRONMENT !== 'production' || !Number.isFinite(now) || now < 0) return null;
   const { results: stored, meta } = await env.DB.prepare(
-    'SELECT key,value FROM app_meta WHERE key IN (?1,?2,?3)',
+    'SELECT key,value FROM app_meta WHERE key IN (?1,?2,?3,?4,?5)',
   )
-    .bind(INFRA_HEALTH_META_KEY, DAILY_META_KEY, EVENT_ARCHIVE_META_KEY)
+    .bind(
+      INFRA_HEALTH_META_KEY,
+      DAILY_META_KEY,
+      EVENT_ARCHIVE_META_KEY,
+      BACKUP_LAST_KEY,
+      BACKUP_STATE_KEY,
+    )
     .all<{ key: string; value: string }>();
   const read = <T>(key: string): T | null => {
     const value = stored.find((r) => r.key === key)?.value;
@@ -95,7 +116,11 @@ export async function runInfraHealth(env: Bindings, now: number): Promise<InfraH
   // response metadata instead; this includes reusable pages, not just live payloads.
   if (!Number.isFinite(meta.size_after) || meta.size_after <= 0)
     throw new Error('D1 storage metadata unavailable');
-  const daily = read<{ ts?: string; level?: string; backup?: { key?: string } }>(DAILY_META_KEY);
+  const daily = read<{ ts?: string; level?: string }>(DAILY_META_KEY);
+  const backup: BackupHealthInput = {
+    last: read(BACKUP_LAST_KEY),
+    inProgress: read(BACKUP_STATE_KEY),
+  };
   const result = assessInfraHealth(
     now,
     meta.size_after,
@@ -103,16 +128,23 @@ export async function runInfraHealth(env: Bindings, now: number): Promise<InfraH
     daily,
     read(EVENT_ARCHIVE_META_KEY),
     Boolean(env.BACKUP) && env.SEASON_EVENTS_ARCHIVE_DISABLED !== '1',
+    backup,
   );
-  // HEAD sees completed objects, never an unfinished multipart upload. The
-  // daily result alone cannot prove that the last backup still exists in R2.
+  // The completion record alone cannot prove the backup still exists in R2 — HEAD the
+  // last chunk (T-11-267: a backup is a numbered chunk series under a day prefix).
   if (!env.BACKUP) result.issues.push('backup-binding-unavailable');
   if (!result.issues.includes('backup-not-completed') && env.BACKUP) {
-    const key = daily!.backup!.key!;
-    if (!key.startsWith(`d1/${env.ENVIRONMENT}/`) || !key.endsWith('.sql.gz')) {
+    const key = backup.last!.key!;
+    const chunks = backup.last!.chunks;
+    if (
+      !key.startsWith(`d1/${env.ENVIRONMENT}/`) ||
+      !key.endsWith('/') ||
+      !Number.isInteger(chunks) ||
+      chunks! < 1
+    ) {
       result.issues.push('backup-key-invalid');
     } else {
-      const object = await env.BACKUP.head(key).catch(() => null);
+      const object = await env.BACKUP.head(chunkKey(key, chunks!)).catch(() => null);
       if (!object || object.size <= 0) result.issues.push('backup-object-missing-or-unavailable');
     }
   }
