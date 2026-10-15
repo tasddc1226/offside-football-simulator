@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { costOf, MODEL, runAgent, type Tool } from './claude.ts';
 import type { Env } from './env.ts';
 import { decide } from './index.ts';
-import { verifySlack } from './slack.ts';
+import { slackClient, verifySlack } from './slack.ts';
 import { failureText } from './thread.ts';
 import { ClaudeError } from './claude.ts';
 import { readOnlySql } from './tools/ops.ts';
@@ -35,6 +35,19 @@ describe('verifySlack', () => {
     expect(await verifySlack('s3cret', '1000', sig, `${body} `, 1000)).toBe(false);
     expect(await verifySlack('s3cret', '1000', sig, body, 1000 + 301)).toBe(false);
     expect(await verifySlack('', '1000', sig, body, 1000)).toBe(false);
+  });
+
+  it('글을 올릴 때만 한글 작성자 이름을 붙인다', async () => {
+    const sent: Record<string, unknown>[] = [];
+    const fetcher = (async (_u: string, init: RequestInit) => {
+      sent.push(JSON.parse(String(init.body)));
+      return new Response('{"ok":true}');
+    }) as unknown as typeof fetch;
+    const slack = slackClient('xoxb-t', fetcher, '이운재 · 운영');
+    await slack('chat.postMessage', { channel: 'C1', text: 'hi' });
+    await slack('reactions.add', { channel: 'C1', timestamp: '1', name: 'eyes' });
+    expect(sent[0]).toMatchObject({ username: '이운재 · 운영', text: 'hi' });
+    expect(sent[1]).not.toHaveProperty('username');
   });
 });
 
