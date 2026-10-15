@@ -3,7 +3,7 @@
 import { SAVE_VERSION } from './data.js';
 import { controlPoints } from '@offside/contracts/hof-rules';
 import { legendRawScore } from './legend.js';
-import { loadKey } from './storage.js';
+import { loadKey, saveKey } from './storage.js';
 import type { GameState, HofEntry } from './types.js';
 import { NATION_BY_CODE } from '@offside/contracts/nations';
 
@@ -48,6 +48,27 @@ export function loadHOF(): HofEntry[] {
     .filter((h) => !h.id || (!seen.has(h.id) && !!seen.add(h.id)))
     .map((h) => rescoreHofEntry(migrateHofEntry(h, source)));
 }
+/** T-11-266 은퇴 선수 이름표 키. 명예의 전당(ft_hof)은 점수 상위 30명만 남아, 그 밖의 내 선수 이름은 따로 둔다. */
+export const CAREER_NAMES_KEY = 'ft_names';
+/** 이름표에 남기는 수(오래된 것부터 지운다). 한 줄이 60바이트 안팎이라 5천 명이어도 300KB쯤이다. */
+export const CAREER_NAMES_MAX = 5000;
+
+const loadNames = (): Record<string, string> =>
+  loadKey<Record<string, string>>(CAREER_NAMES_KEY) ?? {};
+
+/** 은퇴한 선수의 이름을 이름표에 남긴다(같은 커리어는 맨 뒤로 옮긴다). */
+export function rememberCareerName(id: string, name: string): void {
+  const names = loadNames();
+  delete names[id];
+  names[id] = name;
+  const ids = Object.keys(names);
+  for (const old of ids.slice(0, Math.max(0, ids.length - CAREER_NAMES_MAX))) delete names[old];
+  saveKey(CAREER_NAMES_KEY, names);
+}
+
 /** 이 기기에 남은 은퇴 선수 이름(커리어 id → 이름). 서버엔 이름 공개를 끈 선수의 이름이 없어 화면이 이것으로 채운다. */
 export const localCareerNames = (): Map<string, string> =>
-  new Map(loadHOF().flatMap((h) => (h.id ? [[h.id, h.name] as const] : [])));
+  new Map([
+    ...Object.entries(loadNames()),
+    ...loadHOF().flatMap((h) => (h.id ? [[h.id, h.name] as const] : [])),
+  ]);

@@ -2,12 +2,16 @@ import { reqLang } from '../lang.js';
 import { retiredLookErrors } from '../retiredLookText.js';
 import { appearanceUnlocked } from '@offside/contracts/avatar-look';
 import {
+  ANON_CAREER_IDS_MAX,
+  AnonCareerIdsResponseSchema,
   CareerIdParamSchema,
   CareerUpsertResponseSchema,
   CareerYearParamSchema,
   MyCareersResponseSchema,
   PutCareerSeasonBodySchema,
   PutRetirementBodySchema,
+  PutCareerNamesBodySchema,
+  PutCareerNamesResponseSchema,
   PutRetiredLookBodySchema,
   RetiredLookResponseSchema,
   RetiredLookPolicySchema,
@@ -28,6 +32,8 @@ import {
   getCareerHead,
   listOwnHof,
   putCareerSeason,
+  listAnonRetiredIds,
+  publishCareerNames,
   putRetirement,
   storedSeasonOvr,
   storedSeasonsOf,
@@ -61,7 +67,13 @@ import { completeInvite } from '../db/repos/referrals.js';
 
 /** 프로필당 시간당 업로드 한도. 정상 플레이는 시즌당 PUT 1회, 오프라인 큐 상한은 100이다.
  * T-11-182 시즌 한도 120은 빠르게 여러 커리어를 도는 이용자가 넘겨(한 커리어 최대 약 28시즌) 은퇴 기록이 한 시간까지 밀렸다. */
-export const UPLOAD_LIMIT = { CAREER_SEASON: 300, CAREER_RETIRE: 30, CAREER_LOOK: 60 } as const;
+// CAREER_NAMES는 한 번에 100명까지라 시간당 20번이면 2천 명이다(T-11-266).
+export const UPLOAD_LIMIT = {
+  CAREER_SEASON: 300,
+  CAREER_RETIRE: 30,
+  CAREER_LOOK: 60,
+  CAREER_NAMES: 20,
+} as const;
 
 /** 검증을 통과한 업로드만 센다 — 잘못된 요청이 쿼터를 쓰지 않게, D1 쓰기 직전에 부른다. */
 async function limitUpload(
@@ -97,6 +109,40 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     const linked = !!profile && isLinked(profile);
     const entries = linked ? await listOwnHof(db, session.profileId) : [];
     return ok(c, MyCareersResponseSchema, { linked, entries }, 200, 'private, no-store');
+  });
+
+  // T-11-266 이름 없이 올라간 내 선수 id. 라커룸 안내가 이 기기가 아는 이름과 맞춰 본다(팔았거나 방출한 선수 포함).
+  app.get('/v1/careers/mine/anonymous', requireProfile, async (c) => {
+    const { profileId } = getSessionOrThrow(c);
+    const ids = await listAnonRetiredIds(getDb(c), profileId, ANON_CAREER_IDS_MAX);
+    return ok(c, AnonCareerIdsResponseSchema, { ids }, 200, 'private, no-store');
+  });
+
+  // T-11-266 익명으로 은퇴한 내 선수 이름을 한꺼번에 공개한다. 영구결번 심사는 다시 하지 않는다(은퇴 때와 선수별 이름
+  // 공개 토글에서만). 카드·이적시장·명예의 전당은 careers.public_name을 그대로 읽어 바로 이름이 보인다.
+  app.put('/v1/careers/public-names', requireProfile, async (c) => {
+    const db = getDb(c);
+    const { profileId } = getSessionOrThrow(c);
+    const { items } = readBody(c, PutCareerNamesBodySchema);
+    if (items.some((x) => !isAcceptablePublicName(x.publicName))) {
+      throw new AppError({
+        code: 'VALIDATION_FAILED',
+        // i18n-ignore: 기존 은퇴 업로드와 같은 문구(클라이언트가 보내기 전에 거른다)
+        message: '공개할 수 없는 이름이에요.',
+        details: { reason: 'PUBLIC_NAME_REJECTED' },
+      });
+    }
+    await limitUpload(db, 'CAREER_NAMES', profileId);
+    const updated = await publishCareerNames(db, profileId, items, nowIso());
+    if (updated.length)
+      purgeEdge(c, [...updated.map(EDGE.hofDetail), ...STALE.retirementPut(updated[0]!)]);
+    return ok(
+      c,
+      PutCareerNamesResponseSchema,
+      { updated: updated.length },
+      200,
+      'private, no-store',
+    );
   });
 
   // Private editor-open check. Public HOF reads remain session-free and cacheable.

@@ -30,6 +30,14 @@ const ko = {
   nickPlaceholder: (p: { max: number }) => `구단주 이름 (2~${p.max}자)`,
   nickChange: '바꾸기',
   nickSet: '정하기',
+  // T-11-266 익명으로 은퇴한 내 선수 이름 한꺼번에 공개(라커룸)
+  anonCardsNote: (p: { n: number }) =>
+    `익명으로 올라간 내 선수가 ${p.n}명 있어요. 이 기기에 이름이 남아 있어 지금 공개할 수 있어요.`,
+  anonCardsBtn: '이름 공개하기',
+  anonCardsConfirm: (p: { n: number }) =>
+    `내 선수 ${p.n}명의 이름을 공개할까요? 다른 유저와 이적시장에 이 이름이 보여요.`,
+  anonCardsDone: (p: { n: number }) => `${p.n}명의 이름을 공개했어요.`,
+  anonCardsFail: '이름을 공개하지 못했어요. 잠시 뒤에 다시 해 주세요.',
 };
 
 export type HofOwnMsgs = typeof ko;

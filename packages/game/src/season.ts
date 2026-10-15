@@ -57,7 +57,7 @@ import type {
   OfferOption,
   RenewOption,
 } from './types.js';
-import { HOF_LOCAL_MAX, loadHOF } from './hof-store.js';
+import { HOF_LOCAL_MAX, loadHOF, rememberCareerName } from './hof-store.js';
 import { saveKey } from './storage.js';
 import { ballonWinsOf, legendScore, legendSnapshot, legendTermsOf } from './legend.js';
 import { gSeasonText as T } from './i18n/ko/gSeason.js';
@@ -854,6 +854,7 @@ export function retire(s: GameState, isPublic = false): HofEntry {
   const kept = hof.slice(0, HOF_LOCAL_MAX);
   if (!kept.includes(entry)) kept[HOF_LOCAL_MAX - 1] = entry;
   saveKey('ft_hof', kept);
+  rememberCareerName(s.cid, s.name);
   return entry;
 }
 export function legendTitle(score: number, dpos: string | null | undefined): string {
