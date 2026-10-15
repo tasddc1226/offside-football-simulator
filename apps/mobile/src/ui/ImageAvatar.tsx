@@ -117,7 +117,8 @@ export const AvatarLayers = memo(function AvatarLayers({
                 [x, y, w, h] = layer.crop,
                 // 안드로이드 react-native-svg는 같은 id의 자르기 · 마스크 · 필터 정의가 바뀌어도 처음 것을 계속 써서,
                 // 프레임이 바뀌면 몸이 예전 프레임 자리로 잘려 사라진다. 그림 칸마다 id를 따로 둔다.
-                k = `${i}-${layer.source}-${Math.round(x)}-${Math.round(y)}`;
+                // 색만 바뀌어도 예전 필터를 쓰지 않게 색 · 무늬도 id에 넣는다(T-11-271 머리색 제보).
+                k = `${i}-${layer.source}-${Math.round(x)}-${Math.round(y)}-${paintKey(layer)}`;
               return (
                 <G key={k}>
                   <Defs>
@@ -216,6 +217,14 @@ export const AvatarLayers = memo(function AvatarLayers({
 // 색 필터는 픽셀마다 계산이라 영역이 없어도(기본 영역) 결과가 같다.
 const filterRegion = (x: number, y: number, width: number, height: number) =>
   Platform.OS === 'android' ? {} : { x, y, width, height, filterUnits: 'userSpaceOnUse' as const };
+
+/** 층의 색 · 무늬를 id에 넣을 짧은 글자로 줄인다. */
+const paintKey = (layer: AvatarImagePlan['layers'][number]) => {
+  const t = JSON.stringify([layer.filters, layer.pattern]);
+  let h = 0;
+  for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+};
 
 const styles = StyleSheet.create({
   probe: { position: 'absolute', width: 1, height: 1, opacity: 0 },
