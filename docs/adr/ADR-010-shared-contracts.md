@@ -11,14 +11,14 @@
 
 ### kind → 타깃 소유권
 
-| kind | 타깃 | 바꿀 수 있는 주체 |
-|---|---|---|
-| `PERMANENT` | `attributes.*` | 성장(시즌 결산)과 명시적 이벤트/챕터 outcome만. 단일 이벤트 ±1, 중대 이벤트 ±2 이내(다른 규칙 위반 금지) |
-| `CURRENT` | `state.form` / `state.fitness` / `state.morale` | 경기·이벤트·챕터, Phase 4 부상 |
-| `CONTEXT` | `context.tacticalFit` / `context.squadStatus` / `context.positionProficiency` | T-2-002 역할 제안, Phase 3 이적/임대, 이벤트 |
-| `RELATION` | `relationships.managerTrust` / `captain` / `rival` / `fans` / `agent`, `reputation.popularityCenti` / `mediaCenti`(타깃 이름은 `popularity`/`media`, T-4-001 D-49) | 이벤트·챕터, Phase 4 미디어·SNS 이벤트·결산 |
-| `HEALTH`(신규, T-4-001 D-49) | `availability.matchesRemaining` / `health.recurrenceRiskBp`만 | Phase 4 부상 재활·재발(T-4-002)만. `stackingRule: SUM`·`appliesAt: IMMEDIATE`·`expiresAt: null`만 허용(위반 시 `HEALTH_RULE`로 reject). `matchesRemaining`은 `season.availability.kind === 'INJURY'`일 때만 적용(아니면 `NO_ACTIVE_INJURY`), `recurrenceRiskBp`는 활성(ACTIVE/REHAB) 에피소드가 있을 때만 적용(아니면 `NO_ACTIVE_EPISODE`). 다른 kind와 달리 `activeEffects`에 저장하지 않는다(적용 즉시 소멸, 만료 개념이 없다) |
-| `DEFERRED` | 위 다섯 중 하나(예약만, 즉시 적용 없음) | 모든 Phase — `appliesAt.NEXT_SEASON_STEP{step}`으로만. `resolveDeferredKind`는 `reputation.` 접두도 `RELATION`으로 푼다(T-4-001 D-49) |
+| kind                         | 타깃                                                                                                                                                               | 바꿀 수 있는 주체                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PERMANENT`                  | `attributes.*`                                                                                                                                                     | 성장(시즌 결산)과 명시적 이벤트/챕터 outcome만. 단일 이벤트 ±1, 중대 이벤트 ±2 이내(다른 규칙 위반 금지)                                                                                                                                                                                                                                                                                                                         |
+| `CURRENT`                    | `state.form` / `state.fitness` / `state.morale`                                                                                                                    | 경기·이벤트·챕터, Phase 4 부상                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `CONTEXT`                    | `context.tacticalFit` / `context.squadStatus` / `context.positionProficiency`                                                                                      | T-2-002 역할 제안, Phase 3 이적/임대, 이벤트                                                                                                                                                                                                                                                                                                                                                                                     |
+| `RELATION`                   | `relationships.managerTrust` / `captain` / `rival` / `fans` / `agent`, `reputation.popularityCenti` / `mediaCenti`(타깃 이름은 `popularity`/`media`, T-4-001 D-49) | 이벤트·챕터, Phase 4 미디어·SNS 이벤트·결산                                                                                                                                                                                                                                                                                                                                                                                      |
+| `HEALTH`(신규, T-4-001 D-49) | `availability.matchesRemaining` / `health.recurrenceRiskBp`만                                                                                                      | Phase 4 부상 재활·재발(T-4-002)만. `stackingRule: SUM`·`appliesAt: IMMEDIATE`·`expiresAt: null`만 허용(위반 시 `HEALTH_RULE`로 reject). `matchesRemaining`은 `season.availability.kind === 'INJURY'`일 때만 적용(아니면 `NO_ACTIVE_INJURY`), `recurrenceRiskBp`는 활성(ACTIVE/REHAB) 에피소드가 있을 때만 적용(아니면 `NO_ACTIVE_EPISODE`). 다른 kind와 달리 `activeEffects`에 저장하지 않는다(적용 즉시 소멸, 만료 개념이 없다) |
+| `DEFERRED`                   | 위 다섯 중 하나(예약만, 즉시 적용 없음)                                                                                                                            | 모든 Phase — `appliesAt.NEXT_SEASON_STEP{step}`으로만. `resolveDeferredKind`는 `reputation.` 접두도 `RELATION`으로 푼다(T-4-001 D-49)                                                                                                                                                                                                                                                                                            |
 
 두 Phase가 같은 타깃을 동시에 `REPLACE`로 직접 덮어쓰지 않는다(예: Phase 3과 Phase 4가 둘 다 `context.tacticalFit`을 REPLACE하지 않는다). `SUM`은 여러 Phase가 공유해도 안전하다(클램프만 하고 서로 상쇄되지 않는다).
 
@@ -54,15 +54,15 @@ Market Value Index = Base OVR 35% + Scouted Potential Mid 20% + Age Curve 15%
 
 `packages/domain/src/market-value.ts`의 `computeMarketValueIndex(input, rules)`는 순수 함수이고 상태에 저장하지 않는다(호출할 때마다 계산). `truePotential`은 `MarketValueInput` 타입에 없다 — 03 문서 "시장가치가 정찰 범위 밖의 정보를 드러내지 않음" 테스트 벡터를 타입 레벨에서 보증한다.
 
-| 입력 | 소유 Phase | 비고 |
-|---|---|---|
-| `baseOvr` | 도메인 현재값(Phase 1~2) | `state.player.profile.baseOvr` |
-| `scoutedPotentialMid` | 도메인 현재값(Phase 1~2) | `profile.scoutedPotentialMin`·`Max`의 중간값. `truePotential` 아님 |
-| `age` | 도메인 현재값(Phase 1~2) | `state.age` |
-| `form` | 도메인 현재값(Phase 1~2) | `state.state.form` |
-| `contractSeasonsRemaining` | Phase 3 | `buildMarketValueInput`이 `contract.lengthSeasons − timeline SEASON_STARTED 횟수(서명 이후)`로 유도한다(브리프가 유도식을 명시하지 않아 이 ADR이 정한다) |
-| `leagueTier` | Phase 3 | `contract.leagueTier` |
-| `popularityCenti` | Phase 4 | Phase 4 평판 체계가 생기기 전까지 호출자가 5000(중간값) 고정 |
+| 입력                       | 소유 Phase               | 비고                                                                                                                                                     |
+| -------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `baseOvr`                  | 도메인 현재값(Phase 1~2) | `state.player.profile.baseOvr`                                                                                                                           |
+| `scoutedPotentialMid`      | 도메인 현재값(Phase 1~2) | `profile.scoutedPotentialMin`·`Max`의 중간값. `truePotential` 아님                                                                                       |
+| `age`                      | 도메인 현재값(Phase 1~2) | `state.age`                                                                                                                                              |
+| `form`                     | 도메인 현재값(Phase 1~2) | `state.state.form`                                                                                                                                       |
+| `contractSeasonsRemaining` | Phase 3                  | `buildMarketValueInput`이 `contract.lengthSeasons − timeline SEASON_STARTED 횟수(서명 이후)`로 유도한다(브리프가 유도식을 명시하지 않아 이 ADR이 정한다) |
+| `leagueTier`               | Phase 3                  | `contract.leagueTier`                                                                                                                                    |
+| `popularityCenti`          | Phase 4                  | Phase 4 평판 체계가 생기기 전까지 호출자가 5000(중간값) 고정                                                                                             |
 
 `buildMarketValueInput(state, ruleset)`은 Phase 3가 그대로 재사용할 어댑터다. 정규화 표(`marketValueRules`)는 `packages/content`의 ruleset 데이터이며 밸런스 수치는 LINE TEST 기준선 뒤로 조정될 수 있다(로드맵 "Phase 3 이후 병렬화" 4번).
 
@@ -70,24 +70,24 @@ Market Value Index = Base OVR 35% + Scouted Potential Mid 20% + Age Curve 15%
 
 `packages/domain/src/career-tags.ts`의 `CAREER_TAGS`는 14 문서 "커리어 태그 카탈로그" 표의 16종을 라벨·희귀도까지 그대로 담는다. `evaluateAt`·`ownerPhase`는 14 문서가 명시하지 않으므로 이 ADR이 04 문서 "이벤트군" 표(감독/계약/관계/부상/경기/미디어/국가대표)와 로드맵의 Phase별 도메인 범위를 근거로 배정한다.
 
-| 태그 | 조건 요약(14 문서) | evaluateAt | ownerPhase | 근거 |
-|---|---|---|---|---|
-| TAG-BIG-GAME | 핵심 경기 챕터 성공 5회 이상 | SEASON_SETTLED | 2 | 경기군, 이미 구현된 챕터 개념 — 이 브리프가 평가기 등록 |
-| TAG-DERBY-HERO | 더비 챕터 결정적 기여 3회 이상 | SEASON_SETTLED | 2 | 경기군 — 이 브리프가 평가기 등록 |
-| TAG-IRONMAN | 10시즌 이상 시즌당 출전 비율 80% 이상 | SEASON_SETTLED | 2 | 경기군, 출전 통계는 이미 도메인에 있음 — 이 브리프가 조건을 코드화하되 10시즌 미만인 Phase 2에서는 항상 false로 테스트 고정 |
-| TAG-ONE-CLUB | 프로 8시즌 이상 한 구단, 임대 제외 | SEASON_SETTLED | 3 | 계약군(재계약) |
-| TAG-JOURNEYMAN | 완전 이적 5회 이상 또는 6개 구단 | SEASON_SETTLED | 3 | 계약군(이적) |
-| TAG-LOAN-LEGEND | 임대 출전 70%+평점 상위, 복귀 후 주전 | SEASON_SETTLED | 3 | 계약군(임대) |
-| TAG-PROMOTION-EXPERT | 승격 2회 이상, 해당 시즌 주전 | SEASON_SETTLED | 3 | 계약군·리그 이동 |
-| TAG-TRAITOR | 라이벌 구단 직행 이적 또는 약속 위반 이적 후 팬 관계 급락 | SEASON_SETTLED | 3 | 계약군(이적)+관계 |
-| TAG-GLASS-GENIUS | 잠재력 상위 밴드와 중대 부상 3회 이상 | SEASON_SETTLED | 4 | 부상군 |
-| TAG-MANAGER-FAVOURITE | 같은 감독 아래 신뢰 80 이상 3시즌 | SEASON_SETTLED | 4 | 감독군(재직 기간 추적은 Phase 4가 도입) |
-| TAG-LOCKER-LEADER | 주장·부주장 3시즌 이상, 동료 관계 75 이상 | SEASON_SETTLED | 4 | 관계군 |
-| TAG-COMEBACK | 중대 부상 또는 장기 결장 후 주전 복귀 | SEASON_SETTLED | 4 | 부상군 |
-| TAG-CONTROVERSIAL | 미디어·윤리 이벤트 부정 결과 3회 이상 | SEASON_SETTLED | 4 | 미디어군 |
-| TAG-LATE-BLOOMER | 26세 이후 최고 OVR 6 이상 갱신 또는 첫 1부 주전 | RETIREMENT | 5 | 통산 커리어 평가, Legacy(14 문서 소유) |
-| TAG-MENTOR | 유망주 멘토링 이벤트 성공 3회 이상 | RETIREMENT | 5 | Legacy |
-| TAG-UNCROWNED | 10시즌 이상 팀 트로피 0, 개인 기록 상위 | RETIREMENT | 5 | Legacy |
+| 태그                  | 조건 요약(14 문서)                                        | evaluateAt     | ownerPhase | 근거                                                                                                                        |
+| --------------------- | --------------------------------------------------------- | -------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------- |
+| TAG-BIG-GAME          | 핵심 경기 챕터 성공 5회 이상                              | SEASON_SETTLED | 2          | 경기군, 이미 구현된 챕터 개념 — 이 브리프가 평가기 등록                                                                     |
+| TAG-DERBY-HERO        | 더비 챕터 결정적 기여 3회 이상                            | SEASON_SETTLED | 2          | 경기군 — 이 브리프가 평가기 등록                                                                                            |
+| TAG-IRONMAN           | 10시즌 이상 시즌당 출전 비율 80% 이상                     | SEASON_SETTLED | 2          | 경기군, 출전 통계는 이미 도메인에 있음 — 이 브리프가 조건을 코드화하되 10시즌 미만인 Phase 2에서는 항상 false로 테스트 고정 |
+| TAG-ONE-CLUB          | 프로 8시즌 이상 한 구단, 임대 제외                        | SEASON_SETTLED | 3          | 계약군(재계약)                                                                                                              |
+| TAG-JOURNEYMAN        | 완전 이적 5회 이상 또는 6개 구단                          | SEASON_SETTLED | 3          | 계약군(이적)                                                                                                                |
+| TAG-LOAN-LEGEND       | 임대 출전 70%+평점 상위, 복귀 후 주전                     | SEASON_SETTLED | 3          | 계약군(임대)                                                                                                                |
+| TAG-PROMOTION-EXPERT  | 승격 2회 이상, 해당 시즌 주전                             | SEASON_SETTLED | 3          | 계약군·리그 이동                                                                                                            |
+| TAG-TRAITOR           | 라이벌 구단 직행 이적 또는 약속 위반 이적 후 팬 관계 급락 | SEASON_SETTLED | 3          | 계약군(이적)+관계                                                                                                           |
+| TAG-GLASS-GENIUS      | 잠재력 상위 밴드와 중대 부상 3회 이상                     | SEASON_SETTLED | 4          | 부상군                                                                                                                      |
+| TAG-MANAGER-FAVOURITE | 같은 감독 아래 신뢰 80 이상 3시즌                         | SEASON_SETTLED | 4          | 감독군(재직 기간 추적은 Phase 4가 도입)                                                                                     |
+| TAG-LOCKER-LEADER     | 주장·부주장 3시즌 이상, 동료 관계 75 이상                 | SEASON_SETTLED | 4          | 관계군                                                                                                                      |
+| TAG-COMEBACK          | 중대 부상 또는 장기 결장 후 주전 복귀                     | SEASON_SETTLED | 4          | 부상군                                                                                                                      |
+| TAG-CONTROVERSIAL     | 미디어·윤리 이벤트 부정 결과 3회 이상                     | SEASON_SETTLED | 4          | 미디어군                                                                                                                    |
+| TAG-LATE-BLOOMER      | 26세 이후 최고 OVR 6 이상 갱신 또는 첫 1부 주전           | RETIREMENT     | 5          | 통산 커리어 평가, Legacy(14 문서 소유)                                                                                      |
+| TAG-MENTOR            | 유망주 멘토링 이벤트 성공 3회 이상                        | RETIREMENT     | 5          | Legacy                                                                                                                      |
+| TAG-UNCROWNED         | 10시즌 이상 팀 트로피 0, 개인 기록 상위                   | RETIREMENT     | 5          | Legacy                                                                                                                      |
 
 인터페이스:
 
@@ -100,11 +100,11 @@ Market Value Index = Base OVR 35% + Scouted Potential Mid 20% + Age Curve 15%
 
 ## 검토한 대안
 
-| 대안 | 보류 이유 |
-|---|---|
+| 대안                                                                       | 보류 이유                                                                                                                                                                     |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | CareerTag 평가기를 각 Phase가 완전히 독립적으로 정의(카탈로그도 나눠 소유) | 16종이 서로 참조하는 엔딩(14 문서 "엔딩 카탈로그")과 태그 조합이 있어, 카탈로그를 한곳에서 관리하지 않으면 Phase 3·4·5가 같은 `CareerTagId` 유니온을 각자 확장하려다 충돌한다 |
-| `expiresAt`을 시즌과 무관하게 절대 step으로만 관리(시즌 개념 없이) | 이미 여러 시즌에 걸친 챕터(TAG-BIG-GAME 등)와 시즌 경계 회귀가 존재해, 시즌 인덱스를 모르면 "이 효과가 몇 번째 시즌에 만료되는가"를 계약만으로 표현할 수 없다 |
-| 시장가치를 상태에 캐시해 재계산 비용을 줄임 | 03 문서가 시장가치를 "요청 시점 계산값"으로 규정하고, 입력 대부분(폼·계약 잔여)이 매 step 바뀌어 캐시 무효화 규칙이 오히려 더 복잡해진다 |
+| `expiresAt`을 시즌과 무관하게 절대 step으로만 관리(시즌 개념 없이)         | 이미 여러 시즌에 걸친 챕터(TAG-BIG-GAME 등)와 시즌 경계 회귀가 존재해, 시즌 인덱스를 모르면 "이 효과가 몇 번째 시즌에 만료되는가"를 계약만으로 표현할 수 없다                 |
+| 시장가치를 상태에 캐시해 재계산 비용을 줄임                                | 03 문서가 시장가치를 "요청 시점 계산값"으로 규정하고, 입력 대부분(폼·계약 잔여)이 매 step 바뀌어 캐시 무효화 규칙이 오히려 더 복잡해진다                                      |
 
 ## 결과
 

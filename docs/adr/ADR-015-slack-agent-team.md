@@ -1,6 +1,6 @@
 # ADR-015. 슬랙 에이전트 팀: 개발 · 기획 · 운영 · 마케팅
 
-- 상태: 제안 (2026-10-15, T-11-273)
+- 상태: 확정 (2026-10-15, T-11-273). 미결 항목은 단계별 도입 중에 정한다
 - 관련: [ADR-007](ADR-007-hosting-and-infra.md)(Cloudflare 인프라), [CLAUDE.md](../../CLAUDE.md)의 개발·운영 규칙, [CI 테스트 정책](../operations/ci-test-policy.md)
 
 ## 배경
