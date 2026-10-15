@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useId, useMemo, useState } from 'react';
-import { Image as NativeImage, Platform, StyleSheet } from 'react-native';
+import { Image as NativeImage, Platform, StyleSheet, View } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import Svg, {
   G,
   Rect,
@@ -12,46 +13,69 @@ import Svg, {
   FeColorMatrix,
   FeComposite,
 } from 'react-native-svg';
-import {
-  avatarImagePlan,
-  avatarMotionImageSources,
-  IMAGE_SHEETS,
-} from '@offside/game/avatar-image';
+import { avatarImagePlan, IMAGE_SHEETS, type AvatarImagePlan } from '@offside/game/avatar-image';
 import type { AvatarSpec } from '@offside/game/avatar';
-import type { MotionFrame } from '@offside/game/avatar-motion';
 import { avatarImageSource } from './avatarImageSources';
+import { useBakedAvatar } from './avatarBake';
 
+/**
+ * T-11-270 선수 그림은 한 번 구워 둔 PNG로 보여 준다.
+ * 층 20~30개를 react-native-svg 색 필터로 겹쳐 그리면 스크롤 · 다시 그리기마다 필터를 다시 계산해 화면이 1~2초씩 멈췄다.
+ * 그림 계획이 같으면 같은 그림이라, 화면 밖 굽는 곳(AvatarBaker)이 한 번 찍은 파일을 모든 화면이 같이 쓴다.
+ * 굽기에 실패하면 예전처럼 층을 직접 그린다.
+ */
 export const ImageAvatar = memo(function ImageAvatar({
   spec,
   width,
   portrait = false,
-  motionFrame,
   onReady,
-  preloadMotion = false,
 }: {
   spec: AvatarSpec;
   width: number | string;
   portrait?: boolean;
-  motionFrame?: MotionFrame | undefined;
   onReady?: ((ready: boolean) => void) | undefined;
-  preloadMotion?: boolean;
+}) {
+  const plan = useMemo(() => avatarImagePlan(spec, portrait), [spec, portrait]);
+  const baked = useBakedAvatar(plan);
+  useEffect(() => {
+    if (!baked.failed) onReady?.(!!baked.uri);
+  }, [baked.uri, baked.failed, onReady]);
+  if (baked.failed) return <AvatarLayers plan={plan} width={width} onReady={onReady} />;
+  const size =
+    typeof width === 'number'
+      ? { width, height: (width / plan.width) * plan.height }
+      : { width: '100%' as const, height: '100%' as const };
+  if (!baked.uri) return <View style={size} />;
+  return (
+    <ExpoImage
+      source={{ uri: baked.uri }}
+      style={size}
+      contentFit="contain"
+      contentPosition="bottom"
+      cachePolicy="memory"
+      transition={0}
+      accessible={false}
+    />
+  );
+});
+
+/** 층을 react-native-svg로 직접 겹쳐 그린다. 굽는 곳과 굽기 실패 때만 쓴다. */
+export const AvatarLayers = memo(function AvatarLayers({
+  plan,
+  width,
+  onReady,
+}: {
+  plan: AvatarImagePlan;
+  width: number | string;
+  onReady?: ((ready: boolean) => void) | undefined;
 }) {
   const id = useId().replace(/:/g, '');
-  const plan = useMemo(
-    () => avatarImagePlan(spec, motionFrame, portrait),
-    [spec, motionFrame, portrait],
-  );
   const [loaded, setLoaded] = useState<ReadonlySet<string>>(new Set());
   const markLoaded = useCallback(
     (source: string) => setLoaded((old) => (old.has(source) ? old : new Set([...old, source]))),
     [],
   );
-  const wanted = [
-    ...new Set([
-      ...plan.layers.map((l) => l.source),
-      ...(preloadMotion ? avatarMotionImageSources(spec) : []),
-    ]),
-  ];
+  const wanted = [...new Set(plan.layers.map((l) => l.source))];
   const sources = wanted.join('|');
   const complete = wanted.every((s) => loaded.has(s));
   useEffect(
@@ -59,7 +83,7 @@ export const ImageAvatar = memo(function ImageAvatar({
     [sources, loaded, onReady],
   );
   // 안드로이드 react-native-svg의 <Image>는 onLoad를 부르지 않고, 그림을 받기 전에 필터를 그리면 그 뒤 레이어까지 빠진다.
-  // 같은 그림을 숨긴 RN Image로 먼저 받아(같은 Fresco 캐시) 다 받은 뒤에 레이어를 그린다. 모션 그림 미리 받기도 이쪽이 맡는다.
+  // 같은 그림을 숨긴 RN Image로 먼저 받아(같은 Fresco 캐시) 다 받은 뒤에 레이어를 그린다.
   return (
     <>
       {wanted.map((source) => (
@@ -181,17 +205,6 @@ export const ImageAvatar = memo(function ImageAvatar({
                 <SvgXml xml={plan.crest.svg} width={plan.crest.size} height={plan.crest.size} />
               </G>
             )}
-            {plan.decorations?.map((r, i) => (
-              <Rect
-                key={`prop-${i}`}
-                x={r.x}
-                y={r.y}
-                width={r.w}
-                height={r.h}
-                fill={r.fill}
-                opacity={r.opacity}
-              />
-            ))}
           </G>
         )}
       </Svg>

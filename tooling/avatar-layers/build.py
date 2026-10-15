@@ -8,7 +8,7 @@ For every pose figure of the base sheet and every job sheet:
   3. layer = clearly changed pixels (+ dark outline pixels bridging them, + small enclosed holes)
   4. split into parts by colour: skin (tinted with skin colour), tintable materials stored as
      normalised greyscale, and fixed-colour 'line' pixels
-Writes one atlas per pose, <atlas dir>/<pose>.png, holding every layer of that pose, and the part table <data json>.
+Writes the standing-pose atlas <atlas dir>/stand.png, holding every layer, and the part table <data json>.
 One bitmap per pose keeps decoded memory low on Android, where react-native-svg only draws images held in Fresco's memory cache.
 """
 import sys, os, json
@@ -336,8 +336,16 @@ for s, poses in POSES.items():
             if k in info:
                 info[k] = [round(v * SCALE, 2) for v in info[k]]
         data['poses'][pose] = info
+# The game draws only the standing pose (T-11-270). The other poses are still cut: the head scale
+# reference is the median head width over every pose of the stand sheet, which keeps sizes unchanged.
+SHIP = ['stand']
+for pose in SHIP:
+    sheet = data['poses'][pose]['sheet']
+    ws = sorted(v['head'][2] for v in data['poses'].values() if v['sheet'] == sheet)
+    data['poses'][pose]['headRef'] = ws[len(ws) // 2]
+data['poses'] = {k: data['poses'][k] for k in SHIP}
 for name, atlas in sorted(atlases.items()):
-    if not atlas.items:
+    if not atlas.items or name not in SHIP:
         continue
     sheet, placed = atlas.pack()
     Image.fromarray(sheet, 'RGBA').save(f'{OUT}/{name}.png', optimize=True)

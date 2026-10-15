@@ -1,14 +1,8 @@
 // 겹쳐 그리는 선수 그림. 자세마다 같은 맨몸 위에 옷 · 표정 · 수염 · 머리카락 · 꾸미기 층을 순서대로 얹는다.
-// 층 PNG(assets/avatar-layers)는 자세마다 그 자세의 모든 층을 한 장에 모은 아틀라스이고, 색은 그릴 때 필터로 입힌다.
-// 안드로이드 react-native-svg는 메모리 캐시에 남은 그림만 그려서, 한 화면이 쓰는 그림 장수를 자세 수로 줄인다.
+// 층 PNG(assets/avatar-layers/stand.png)는 서 있는 자세의 모든 층을 한 장에 모은 아틀라스이고, 색은 그릴 때 입힌다.
+// T-11-270 모션(뛰는 자세 17장)은 쓰는 화면이 없어져 지웠다. 선수는 언제나 서 있는 자세 한 장으로 그린다.
 import data from './avatar-layers.json';
 import { isArmyAvatar, miniColors, type AvatarSpec } from './avatar.js';
-import {
-  MOTIONS,
-  motionDecorationRects,
-  type MiniPose,
-  type MotionFrame,
-} from './avatar-motion.js';
 import { kitColorAt } from './kits.js';
 import { crestOf, crestSvg } from './crests.js';
 
@@ -39,11 +33,13 @@ type Pose = {
   size: number[];
   /** 짧게 깎은 머리 층의 상자 = 머리통. 크기와 가로 위치의 기준이다. */
   head: number[];
+  /** 같은 시트 자세들의 머리통 너비 중앙값(예전 18자세 기준, 크기를 그대로 두려고 남겼다). */
+  headRef: number;
   /** 유니폼 상의 상자. 무늬 · 엠블럼 위치의 기준이다. */
   shirt?: number[];
 };
 const LAYERS = data as unknown as { poses: Record<string, Pose>; atlases: Record<string, Atlas> };
-/** 자세별 층 아틀라스 크기. 이름은 자세 이름(stand · runL …)이다. */
+/** 층 아틀라스 크기. 이름은 자세 이름(stand)이다. */
 export const IMAGE_SHEETS: Readonly<Record<string, { width: number; height: number }>> =
   LAYERS.atlases;
 export type FilterOp =
@@ -75,7 +71,6 @@ export interface AvatarImagePlan {
   width: number;
   height: number;
   crest?: { svg: string; x: number; y: number; size: number };
-  decorations?: ReturnType<typeof motionDecorationRects>;
 }
 const rgb = (hex: string) => {
   const h = hex.replace('#', '');
@@ -118,20 +113,6 @@ const tint = (colour: string): FilterOp[] => {
 };
 /** 머리 너비(논리 칸). 머리 모양이 달라도 얼굴 크기는 같다. */
 const HEAD_W = 13;
-const sheetHead = new Map<string, number>();
-/** 시트마다 머리통 너비의 중앙값. 자세마다 고개 방향이 달라도 같은 배율로 그린다. */
-function headWidth(sheet: string): number {
-  let w = sheetHead.get(sheet);
-  if (w === undefined) {
-    const ws = Object.values(LAYERS.poses)
-      .filter((p) => p.sheet === sheet)
-      .map((p) => p.head[2]!)
-      .sort((a, b) => a - b);
-    w = ws[Math.floor(ws.length / 2)]!;
-    sheetHead.set(sheet, w);
-  }
-  return w;
-}
 type State = 'normal' | 'army' | 'injured' | 'retired';
 const stateOf = (sp: AvatarSpec): State =>
   sp.acc.includes('suit')
@@ -182,34 +163,20 @@ function layerList(
   if (sp.acc.includes('bouquet')) list.push(['bouquet', skin]);
   return list;
 }
-/** 모션에 쓰는 아틀라스 전부(미리 받기용) = 서 있는 자세와 모션 자세들. 부상 · 은퇴는 서 있는 자세 하나다. */
-export function avatarMotionImageSources(sp: AvatarSpec): string[] {
-  const state = stateOf(sp);
-  if (state === 'injured' || state === 'retired' || sp.acc.includes('bouquet')) return ['stand'];
-  const poses = new Set<string>(['stand']);
-  for (const m of Object.values(MOTIONS))
-    for (const f of m.frames) if ('pose' in f && f.pose) poses.add(f.pose);
-  return [...poses];
-}
 /** The same plan drives Svelte and React Native. No game RNG, storage or network. */
-export function avatarImagePlan(
-  sp: AvatarSpec,
-  f?: MotionFrame,
-  portrait = false,
-): AvatarImagePlan {
+export function avatarImagePlan(sp: AvatarSpec, portrait = false): AvatarImagePlan {
   const state = stateOf(sp);
-  const still = state === 'injured' || state === 'retired' || sp.acc.includes('bouquet');
-  const pose: MiniPose | 'stand' = still ? 'stand' : (f?.pose ?? 'stand');
+  const pose = 'stand';
   const info = LAYERS.poses[pose]!;
   const [pw, ph] = info.size as [number, number];
-  const [hx, hy, hw] = info.head as [number, number, number, number];
-  const width = f ? 32 : 24,
-    height = f ? 36 : 32;
-  const scale = Math.min(HEAD_W / headWidth(info.sheet), (height - 2) / ph, (width - 1) / pw);
+  const [hx, , hw] = info.head as [number, number, number, number];
+  const width = 24,
+    height = 32;
+  const scale = Math.min(HEAD_W / info.headRef, (height - 2) / ph, (width - 1) / pw);
   // 머리를 가운데에 두고 발을 바닥에 붙인다. 몸이 칸 밖으로 나가면 안쪽으로 민다.
   const dx = Math.max(0.5, Math.min(width - pw * scale - 0.5, width / 2 - (hx + hw / 2) * scale)),
     dy = height - 1 - ph * scale;
-  const expression = sp.expr === 'pain' ? sp.expr : (f?.expr ?? sp.expr);
+  const expression = sp.expr;
   const layers: ImageLayer[] = [];
   for (const [name, colours] of layerList(sp, state, expression)) {
     const parts = LAYERS.atlases[pose]!.parts[name];
@@ -260,7 +227,7 @@ export function avatarImagePlan(
     minY = Math.min(...layers.map((l) => l.y)),
     maxX = Math.max(...layers.map((l) => l.x + l.crop[2] * l.scale)),
     maxY = Math.max(...layers.map((l) => l.y + l.crop[3] * l.scale));
-  const margin = f ? 3 : 0.5;
+  const margin = 0.5;
   const fit = Math.min(
     1,
     (width - margin * 2) / (maxX - minX),
@@ -268,15 +235,14 @@ export function avatarImagePlan(
   );
   const offsetX = Math.max(margin - minX * fit, Math.min(0, width - margin - maxX * fit));
   const offsetY = Math.max(margin - minY * fit, Math.min(0, height - margin - maxY * fit));
-  const shift = still ? 0 : (f?.sink ?? 0) - (f?.lift ?? 0);
   for (const l of layers) {
     l.x = l.x * fit + offsetX;
-    l.y = l.y * fit + offsetY + shift;
+    l.y = l.y * fit + offsetY;
     l.scale *= fit;
   }
   const at = (x: number, y: number): [number, number] => [
     (dx + x * scale) * fit + offsetX,
-    (dy + y * scale) * fit + offsetY + shift,
+    (dy + y * scale) * fit + offsetY,
   ];
   const crest =
     sp.club.id && state === 'normal' && info.shirt
@@ -293,19 +259,10 @@ export function avatarImagePlan(
           };
         })()
       : undefined;
-  const decorations =
-    f && !still
-      ? motionDecorationRects(f, {
-          face: at(hx + hw / 2, hy + hw * 0.35),
-          foot: [width * 0.66, height - 4],
-          top: [width / 2, Math.max(6.5, minY * fit + offsetY)],
-        })
-      : undefined;
   return {
     layers,
     width,
     height: portrait ? 21 : height,
     ...(crest ? { crest } : {}),
-    ...(decorations ? { decorations } : {}),
   };
 }

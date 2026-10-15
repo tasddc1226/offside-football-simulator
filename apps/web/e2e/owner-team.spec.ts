@@ -1597,9 +1597,10 @@ for (const width of [320, 390, 1280]) {
     const cards = page.locator('[data-locker-player] .player-card');
     await expect(cards).toHaveCount(2);
     for (const card of await cards.all()) {
-      await expect(card.locator('svg.avatar')).toHaveAttribute('viewBox', '0 0 24 21');
+      // T-11-270 초상은 24×21칸 캔버스(× 10px).
+      await expect(card.locator('canvas.avatar')).toHaveAttribute('height', '210');
       const box = await card.boundingBox();
-      const face = await card.locator('svg.avatar').boundingBox();
+      const face = await card.locator('canvas.avatar').boundingBox();
       expect(face!.x).toBeGreaterThanOrEqual(box!.x);
       expect(face!.x + face!.width).toBeLessThanOrEqual(box!.x + box!.width + 1);
       expect(face!.y + face!.height).toBeLessThanOrEqual(
@@ -1607,8 +1608,8 @@ for (const width of [320, 390, 1280]) {
       );
     }
     const custom = cards.first();
-    await expect(custom.locator('svg.image-avatar')).toHaveAttribute('data-hair', 'long');
-    await expect(custom.locator('svg.image-avatar > g')).toBeVisible();
+    await expect(custom.locator('canvas.image-avatar')).toHaveAttribute('data-hair', 'long');
+    await expect(custom.locator('canvas.image-avatar[data-ready="true"]')).toBeVisible();
     await expect(custom.locator('.portrait-number')).toHaveText('9');
     await expect(custom.locator('.card-name')).toHaveAttribute(
       'title',
@@ -1620,12 +1621,12 @@ for (const width of [320, 390, 1280]) {
     expect(calls).toBe(1);
     await page.locator('[data-locker-player] .locker-select').first().click();
     await page.locator('[data-slot="9"]').click();
-    await expect(page.locator('.tm-slot[data-slot="9"] svg.avatar')).toHaveAttribute(
-      'viewBox',
-      '0 0 24 21',
+    await expect(page.locator('.tm-slot[data-slot="9"] canvas.avatar')).toHaveAttribute(
+      'height',
+      '210',
     );
     // 비어 있는 유스 자리는 선수 얼굴을 임의로 만들지 않는다.
-    await expect(page.locator('.tm-slot[data-slot="0"] svg.avatar')).toHaveCount(0);
+    await expect(page.locator('.tm-slot[data-slot="0"] .avatar')).toHaveCount(0);
     expect(calls).toBe(1);
   });
 }

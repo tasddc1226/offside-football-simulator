@@ -126,7 +126,6 @@ type AvatarAcc = 'armband' | 'crutch' | 'bandage' | 'suit' | 'bouquet';
 /** 표정. blink · shout는 모션(서 있는 그림 프레임) 전용이다. */
 type AvatarExpr = 'happy' | 'pain' | 'tired' | 'wink' | 'shout' | 'blink';
 const GRAY = '#c9c6bf';
-const SHADOW = 'rgba(0,0,0,.28)';
 /** 현역 입대(상무 아님) 동안 입는 위장 무늬 훈련복. */
 const ARMY_KIT: KitSpec = {
   body: '#5f6b3a',
@@ -338,27 +337,6 @@ export function miniColors(sp: AvatarSpec): MiniColors {
     kneePad: (equipment && KNEE_PADS[sp.kneePads ?? 0]) || null,
     suit,
   };
-}
-
-/** 색 격자(한 칸 0.5) → 사각형 목록. 모션 소품(공·트로피)이 쓴다. 같은 색이 이어진 가로 칸은 사각형 하나로 합치고, 그림자 칸은 반투명 검정이다. */
-export function avatarRects(px: (string | null)[][]) {
-  const out: { x: number; y: number; w: number; h: number; fill: string; opacity?: number }[] = [];
-  px.forEach((row, y) => {
-    let x = 0;
-    while (x < row.length) {
-      const c = row[x];
-      let w = 1;
-      while (x + w < row.length && row[x + w] === c) w++;
-      if (c)
-        out.push(
-          c === SHADOW
-            ? { x: x / 2, y: y / 2, w: w / 2, h: 0.5, fill: '#000', opacity: 0.28 }
-            : { x: x / 2, y: y / 2, w: w / 2, h: 0.5, fill: c },
-        );
-      x += w;
-    }
-  });
-  return out;
 }
 
 /** 선수 카드용 전성기 얼굴. 커리어 ID와 은퇴 때 굳은 꾸미기로 같은 선수를 그린다.
