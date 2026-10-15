@@ -63,10 +63,26 @@ test('workspaces added after 1.1.2 are dropped, new shared packages stop the ove
   );
 });
 
-test('the reviewed 1.1.2 lockfile lists the workspaces the overlay expects', () => {
-  const reviewed = execFileSync('git', ['show', `${source}:pnpm-lock.yaml`], { encoding: 'utf8' });
-  assert.ok(lockImporters(reviewed).includes('apps/mobile'));
-  assert.deepEqual(addedWorkspaces(readFileSync('pnpm-lock.yaml', 'utf8'), reviewed), [
-    'apps/agents',
-  ]);
-});
+const hasSource = (() => {
+  try {
+    execFileSync('git', ['cat-file', '-e', `${source}^{commit}`], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+// CI의 얕은 checkout에는 1.1.2 커밋이 없다(운영 OTA 잡은 fetch-depth 0으로 받는다).
+test(
+  'the reviewed 1.1.2 lockfile lists the workspaces the overlay expects',
+  { skip: !hasSource },
+  () => {
+    const reviewed = execFileSync('git', ['show', `${source}:pnpm-lock.yaml`], {
+      encoding: 'utf8',
+    });
+    assert.ok(lockImporters(reviewed).includes('apps/mobile'));
+    assert.deepEqual(addedWorkspaces(readFileSync('pnpm-lock.yaml', 'utf8'), reviewed), [
+      'apps/agents',
+    ]);
+  },
+);
