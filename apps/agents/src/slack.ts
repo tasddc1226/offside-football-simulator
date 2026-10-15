@@ -36,9 +36,11 @@ export type SlackCall = (
   body: Record<string, unknown>,
 ) => Promise<{ ok: boolean; error?: string; ts?: string }>;
 
+/** username: 메시지 작성자 이름(한글 봇 이름, chat:write.customize). 슬랙 봇 표시 이름은 한글을 받지 않는다. */
 export const slackClient =
-  (token: string, fetcher: typeof fetch = fetch): SlackCall =>
+  (token: string, fetcher: typeof fetch = fetch, username?: string): SlackCall =>
   async (method, body) => {
+    if (username && method === 'chat.postMessage') body = { username, ...body };
     const r = await fetcher(`https://slack.com/api/${method}`, {
       method: 'POST',
       headers: {

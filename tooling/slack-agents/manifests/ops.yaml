@@ -1,11 +1,11 @@
-# ADR-015 슬랙 에이전트 `@offside-ops` — 1단계(T-11-277): 멘션 · 채널 메시지를 apps/agents Worker로 받는다. 승인 버튼은 3단계
+# ADR-015 슬랙 에이전트 이운재(`@Lee Woon-jae`) — 1단계(T-11-277): 멘션 · 채널 메시지를 apps/agents Worker로 받는다. 승인 버튼은 3단계
 display_information:
-  name: OFFSIDE Ops
-  description: OFFSIDE 운영 에이전트. 알림을 읽고 원인을 정리해요. 운영 데이터는 읽기만 해요.
+  name: 이운재 · 운영
+  description: OFFSIDE 운영 담당. 골문을 지키듯 서버와 알림을 지켜요. 운영 데이터는 읽기만 해요.
   background_color: '#1f6f50'
 features:
   bot_user:
-    display_name: offside-ops
+    display_name: Lee Woon-jae
     always_online: true
 oauth_config:
   scopes:
@@ -14,6 +14,8 @@ oauth_config:
       - channels:history
       - channels:read
       - chat:write
+      # T-11-281 메시지 작성자를 한글 이름으로(`username`).
+      - chat:write.customize
       - files:write
       - groups:history
       - groups:read
