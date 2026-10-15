@@ -11,6 +11,15 @@
 
 네 앱 공통 권한은 멘션 받기(`app_mentions:read`), 참여한 공개 채널 읽기(`channels:history` · `channels:read`), 글쓰기(`chat:write` · 작성자 이름 `chat:write.customize`), 운영자 DM(`im:history` · `im:write`), 진행 표시 이모지(`reactions:write`), 운영자 확인(`users:read`)이다. 채널 만들기 · 초대 · 관리자 권한은 주지 않는다. 채널에는 운영자가 직접 초대한다.
 
+## 한글로 부르기 · 프로필 사진 (2026-10-15, T-11-283)
+
+- **한글로 부르기.** 슬랙 멘션 자동완성은 봇의 영어 표시 이름만 찾는다. 그래서 운영자가 채널 · 스레드에 `@이운재 오늘 가입 수`처럼 한글 이름이나 역할 이름(`@운영` · `@기획` · `@개발` · `@마케팅`)을 글로 쓰면 Worker가 그 역할의 멘션으로 받는다(`message.channels` 이벤트, `env.ts`의 `ROLE_CALLS`). 다른 역할을 부른 답글에는 스레드 주인이 답하지 않는다. 에이전트 넘기기 줄도 `→ @이운재:` 꼴을 받는다.
+- **프로필 사진.** 앱 아이콘은 위키미디어 공용의 자유 이용 사진을 잘라 **Basic Information → App icon**에 올렸다(저장소에는 넣지 않는다). 출처:
+  - 이운재: "Suwon ACL 2009 Squad.jpg", 신유식, CC BY-SA 4.0 (2009)
+  - 박지성: "Ji-Sung Park vs Fulham (cropped).jpg", Magnus D, CC BY 2.0 (2010)
+  - 손흥민: "Best Footballer in Asia 2022 Son Heung-min (cropped).jpg", Ujishadow, CC BY-SA 4.0 (2023)
+  - 안정환: "Ahn Jung-hwan.JPG", MSV Duisburg, CC BY-SA 3.0 (2006)
+
 ## 0단계: 앱 만들기 (2026-10-15 완료)
 
 지금 manifest에는 이벤트 받기 · 버튼 설정이 없다. 받는 주소(Worker)가 아직 없어서, 넣으면 슬랙이 주소를 확인하다 실패한다.

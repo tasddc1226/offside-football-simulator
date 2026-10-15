@@ -195,6 +195,39 @@ describe('decide', () => {
   const ev = (e: Record<string, unknown>) =>
     ({ channel: 'CDESK', ts: '1.1', ...e }) as Parameters<typeof decide>[3];
 
+  it('한글로 부른 글은 부른 역할만 멘션으로 받는다', () => {
+    const call = (role: 'ops' | 'plan', e: Record<string, unknown>) =>
+      decide(
+        env,
+        role,
+        'EK',
+        ev({ type: 'message', user: 'UOP', ...e }),
+        role === 'ops' ? 'UBOTOPS' : 'UBOTPLAN',
+      );
+    expect(call('ops', { text: '@이운재 오늘 가입 수' })).toMatchObject({
+      kind: 'mention',
+      threadTs: '1.1',
+      text: '오늘 가입 수',
+    });
+    expect(call('plan', { text: '@이운재 오늘 가입 수' })).toBeNull();
+    expect(call('plan', { text: '@기획 댓글 정리해 줘', thread_ts: '0.9' })).toMatchObject({
+      kind: 'mention',
+      threadTs: '0.9',
+    });
+    // 박지성이 연 스레드라도 이운재를 불렀으면 박지성은 답하지 않는다.
+    expect(call('plan', { text: '@운영 서버 봐 줘', thread_ts: '0.9' })).toBeNull();
+    expect(call('ops', { text: '@운영팀 이야기' })).toBeNull();
+    expect(
+      decide(
+        env,
+        'ops',
+        'EK2',
+        ev({ type: 'message', user: 'USTRANGER', text: '@이운재 hi' }),
+        'UBOTOPS',
+      ),
+    ).toBeNull();
+  });
+
   it('운영자 멘션만 받는다', () => {
     expect(
       decide(
@@ -373,6 +406,10 @@ describe('parseHandoffs', () => {
     expect(parseHandoffs(text, 'plan')).toEqual([
       { to: 'ops', request: '10-15 20시쯤 시즌 저장 실패가 있었는지 확인해 주세요' },
       { to: 'dev', request: '작업 후보' },
+    ]);
+    expect(parseHandoffs('→ @이운재: 서버 확인\n→ @마케팅: 공지 초안', 'plan')).toEqual([
+      { to: 'ops', request: '서버 확인' },
+      { to: 'mkt', request: '공지 초안' },
     ]);
   });
 });

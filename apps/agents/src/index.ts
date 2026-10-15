@@ -1,5 +1,14 @@
 // ADR-015 슬랙 에이전트 Worker. 슬랙 이벤트를 받아 서명을 확인하고 3초 안에 200을 돌려준 뒤, 일은 스레드 객체에 넘긴다.
-import { enabled, isRole, list, signingSecret, type Env, type Role } from './env.ts';
+import {
+  calledRoles,
+  enabled,
+  isRole,
+  list,
+  signingSecret,
+  stripCalls,
+  type Env,
+  type Role,
+} from './env.ts';
 import { alertSignature, kstDay, ledger } from './ledger.ts';
 import { collect, triagePrompt, type DcCursor, type Reaction } from './reactions.ts';
 import { verifySlack } from './slack.ts';
@@ -68,6 +77,17 @@ export function decide(
     if (text.trimStart().startsWith('✅')) return null;
     return { ...base, kind: 'alert', threadTs: ev.ts, text };
   }
+  // 한글로 부른 글(`@이운재 …`)은 부른 역할만 멘션으로 받는다. 다른 역할을 불렀으면 스레드 주인도 답하지 않는다.
+  const called = operator ? calledRoles(text) : [];
+  if (called.length)
+    return called.includes(role)
+      ? {
+          ...base,
+          kind: 'mention',
+          threadTs: ev.thread_ts ?? ev.ts,
+          text: stripCalls(stripMentions(text)),
+        }
+      : null;
   if (ev.thread_ts && operator)
     return { ...base, kind: 'reply', threadTs: ev.thread_ts, text: stripMentions(text) };
   return null;
