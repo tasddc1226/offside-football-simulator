@@ -1,0 +1,25 @@
+# ADR-015 슬랙 에이전트 `@offside-mkt` — 0단계(이벤트 받기 없음). 1단계 설정은 ../README.md
+display_information:
+  name: OFFSIDE Mkt
+  description: OFFSIDE 마케팅 에이전트. 공지 · 스토어 · 광고 문구 초안을 써요. 게시는 운영자 승인 뒤에만 해요.
+  background_color: '#c0532b'
+features:
+  bot_user:
+    display_name: offside-mkt
+    always_online: true
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - channels:history
+      - channels:read
+      - chat:write
+      - files:write
+      - im:history
+      - im:write
+      - reactions:write
+      - users:read
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

@@ -1,0 +1,24 @@
+# ADR-015 슬랙 에이전트 `@offside-plan` — 0단계(이벤트 받기 없음). 1단계 설정은 ../README.md
+display_information:
+  name: OFFSIDE Plan
+  description: OFFSIDE 기획 에이전트. 피드백과 운영 보고를 이슈와 작업으로 정리해요.
+  background_color: '#3a4fa0'
+features:
+  bot_user:
+    display_name: offside-plan
+    always_online: true
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - channels:history
+      - channels:read
+      - chat:write
+      - im:history
+      - im:write
+      - reactions:write
+      - users:read
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
