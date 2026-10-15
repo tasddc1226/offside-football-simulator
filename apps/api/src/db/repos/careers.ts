@@ -261,14 +261,21 @@ export type PutRetirementInput = {
  */
 export const retiredCountKey = (at: Date) => `retired:${kstDay(at.toISOString())}`;
 
+/** T-11-276 은퇴 PUT이 쓴 직후의 칭호·명예의 벽(응답 칭호를 다시 읽지 않고 쓰기 결과에서 받는다). */
+export type RetiredHead = { title: string | null; wallOfHonorJson: string | null };
+const retiredHead = { title: careers.title, wallOfHonorJson: careers.wallOfHonorJson };
+
 /** `PUT /v1/careers/:careerId/retirement`의 첫 은퇴. 소유권 확인과 요약 보정(plausibility.ts)은 라우트가 미리
- * 끝낸다. 다시 보낸 은퇴(이름 공개 토글·대표 칭호)는 `updateRetired`로 간다. */
-export async function putRetirement(db: Db, input: PutRetirementInput): Promise<void> {
+ * 끝낸다. 다시 보낸 은퇴(이름 공개 토글·대표 칭호)는 `updateRetired`로 간다. 쓴 뒤의 칭호·명예의 벽을 돌려준다. */
+export async function putRetirement(
+  db: Db,
+  input: PutRetirementInput,
+): Promise<RetiredHead | undefined> {
   const { careerId, summary, publicName, snapshot, profile, potReal, look, bonusRate, now } = input;
   const value = snapshot ? cardValue(snapshot.career, summary.peak) : null;
   // T-11-163 은퇴 장려금: 기준가가 있는 카드만(스냅샷 없는 옛 기록은 거래도 하지 않는다).
   const bonus = value === null ? 0 : releasePayout(value, bonusRate);
-  await runBatch(db, [
+  const results = await runBatch(db, [
     // 처음 은퇴할 때만 센다 — 같은 커리어의 첫 은퇴가 동시에 두 번 와도 retired_at이 이미 있으면 아무 행도 넣지
     // 않는다. 같은 트랜잭션에서 아래 update보다 먼저 돌아야 retired_at이 비어 있는 것을 본다.
     db
@@ -325,7 +332,8 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
             }
           : {}),
       })
-      .where(eq(careers.id, careerId)),
+      .where(eq(careers.id, careerId))
+      .returning(retiredHead),
     // T-11-163 은퇴 장려금. 아래 카드 insert보다 먼저 — 카드가 아직 없을 때(이 커리어의 첫 은퇴)만 한 번 준다.
     ...(bonus > 0
       ? [
@@ -392,6 +400,7 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
       )
       .onConflictDoNothing(),
   ]);
+  return (results[1] as RetiredHead[])[0];
 }
 
 // ───────── T-10-005 공개 명예의 전당 (로그인 불필요 · 읽기 전용) ─────────
@@ -706,9 +715,9 @@ export async function updateRetired(
   input: Pick<PutRetirementInput, 'careerId' | 'publicName' | 'snapshot' | 'now'> & {
     title: string | null | undefined;
   },
-): Promise<void> {
+): Promise<RetiredHead | undefined> {
   const { careerId, publicName, snapshot, title, now } = input;
-  await db
+  const [row] = await db
     .update(careers)
     .set({
       updatedAt: now,
@@ -725,7 +734,9 @@ export async function updateRetired(
           }
         : {}),
     })
-    .where(eq(careers.id, careerId));
+    .where(eq(careers.id, careerId))
+    .returning(retiredHead);
+  return row;
 }
 
 /**
@@ -803,17 +814,17 @@ export type StoredSeasonRow = Omit<
   'honorsJson' | 'mil'
 > & { honors: string[]; mil: boolean };
 
-/** 커리어별 받아 둔 시즌 기록 — 은퇴 요약 보정(plausibility.ts)과 영구결번 판정의 근거. */
-export async function storedSeasonsOf(
-  db: Db,
-  careerIds: string[],
-): Promise<Map<string, StoredSeasonRow[]>> {
-  const out = new Map<string, StoredSeasonRow[]>();
-  if (!careerIds.length) return out;
-  const rows = await db
+/** 받아 둔 시즌 기록 조회문(다른 읽기와 한 batch로 보낼 때). 결과는 groupStoredSeasons로 묶는다. */
+export const storedSeasonsQuery = (db: Db, careerIds: string[]) =>
+  db
     .select(storedSeasonColumns)
     .from(careerSeasons)
     .where(inArray(careerSeasons.careerId, careerIds));
+
+export function groupStoredSeasons(
+  rows: Awaited<ReturnType<typeof storedSeasonsQuery>>,
+): Map<string, StoredSeasonRow[]> {
+  const out = new Map<string, StoredSeasonRow[]>();
   for (const { honorsJson, mil, ...r } of rows) {
     const list = out.get(r.careerId) ?? [];
     list.push({ ...r, honors: honorsOf(honorsJson), mil: mil === 1 });
@@ -822,19 +833,31 @@ export async function storedSeasonsOf(
   return out;
 }
 
+/** 커리어별 받아 둔 시즌 기록 — 은퇴 요약 보정(plausibility.ts)과 영구결번 판정의 근거. */
+export async function storedSeasonsOf(
+  db: Db,
+  careerIds: string[],
+): Promise<Map<string, StoredSeasonRow[]>> {
+  if (!careerIds.length) return new Map();
+  return groupStoredSeasons(await storedSeasonsQuery(db, careerIds));
+}
+
 /** T-11-097 한 시즌의 저장된 OVR(성장 기록 조작 판정의 '지난 시즌'). 없으면 null. 업로드마다 부르므로 storedSeasonsOf처럼
  * 커리어 시즌 전부를 읽지 않고 기본 키 한 줄만 읽는다. */
-export async function storedSeasonOvr(db: Db, careerId: string, year: number) {
-  const [row] = await db
+export const seasonOvrQuery = (db: Db, careerId: string, year: number) =>
+  db
     .select({ ovr: careerSeasons.ovr })
     .from(careerSeasons)
     .where(and(eq(careerSeasons.careerId, careerId), eq(careerSeasons.year, year)));
+
+export async function storedSeasonOvr(db: Db, careerId: string, year: number) {
+  const [row] = await seasonOvrQuery(db, careerId, year);
   return row?.ovr ?? null;
 }
 
-/** 은퇴 PUT이 보는 커리어의 소유자·상태·포지션(스냅샷 JSON까지 읽지 않는다). */
-export async function getCareerHead(db: Db, careerId: string) {
-  const [row] = await db
+/** 은퇴 PUT이 보는 커리어의 소유자·상태·포지션(스냅샷 JSON까지 읽지 않는다). 조회문 — 다른 읽기와 한 batch로 보낼 수 있다. */
+export const careerHeadQuery = (db: Db, careerId: string) =>
+  db
     .select({
       profileId: careers.profileId,
       detailArchiveKey: careers.detailArchiveKey,
@@ -848,6 +871,9 @@ export async function getCareerHead(db: Db, careerId: string) {
     })
     .from(careers)
     .where(eq(careers.id, careerId));
+
+export async function getCareerHead(db: Db, careerId: string) {
+  const [row] = await careerHeadQuery(db, careerId);
   return row;
 }
 
