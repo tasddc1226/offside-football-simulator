@@ -21,7 +21,7 @@ import {
   mySeasonOptions,
   serverSeasonOf,
 } from '@offside/app-core/mySeason';
-import { pendingRetirementIds } from '@offside/app-core/outbox';
+import { onRetirementSynced, pendingRetirementIds } from '@offside/app-core/outbox';
 import { playerName } from '@offside/app-core/format';
 import { fillGranted, openLocalLegend, openPublicLegend } from '../../game/host';
 import { HofRow, type RowStats } from '../../components/HofRow';
@@ -104,13 +104,17 @@ export function MyPlayers() {
   const shown = inSeason;
   // T-11-111 당겨서 새로고침 — 보이던 목록은 두고 응답이 오면 바꾼다(source도 되돌리지 않는다).
   const { tick, track } = useRefresh();
+  // T-11-276 은퇴 업로드가 끝나면 목록을 다시 받는다(은퇴 직후 열어 서버 응답에도 큐에도 없던 선수가 그때 들어온다).
+  const [synced, setSynced] = useState(0);
+  useEffect(() => onRetirementSynced(() => setSynced((n) => n + 1)), []);
   useEffect(() => {
     let alive = true;
     void (async () => {
+      // 큐는 서버 목록을 받기 전에 읽는다 — 받는 사이 업로드가 끝나면 서버 응답과 큐 어디에도 없다.
+      // 시즌을 아직 못 받은 기록은 지금 시즌으로 센다.
+      const pending = pendingRetirementIds();
       const r = await track(getMyCareers());
       if (!alive) return;
-      // 방금 은퇴해 아직 업로드 대기 중인 선수 — 시즌을 아직 못 받았으면 지금 시즌으로 센다.
-      const pending = pendingRetirementIds();
       let list: MineRow[];
       let src: 'account' | 'device' | 'offline';
       if (!r.ok || !r.data.linked) {
@@ -160,7 +164,7 @@ export function MyPlayers() {
     return () => {
       alive = false;
     };
-  }, [local, now, tick, track]);
+  }, [local, now, tick, track, synced]);
 
   return (
     <Card gap={0}>

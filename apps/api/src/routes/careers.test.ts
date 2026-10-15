@@ -22,7 +22,7 @@ import {
   profiles,
   seasonTelemetry,
 } from '../db/schema.js';
-import { createTestD1, type TestD1 } from '../test/d1.js';
+import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import {
   deleteProfile,
   issueCookie,
@@ -1092,6 +1092,54 @@ describe('조작된 기록 보정', () => {
     expect(ErrorEnvelopeSchema.parse(await res.json()).error.details).toMatchObject({
       reason: 'NO_SEASONS',
     });
+  });
+});
+
+describe('T-11-276 업로드의 D1 왕복 수', () => {
+  // 은퇴·시즌 PUT의 응답 시간은 쿼리 비용(1ms 아래)이 아니라 D1 왕복 수다. 응답 전에 읽는 것은 한 batch로, 쓰기 뒤 판정은
+  // 나란히 보내 왕복을 줄였다 — 조회를 하나 더하거나 빼면 여기서 바로 보인다(수를 올리는 변경은 PR에 이유를 적는다).
+  // 응답 뒤로 미룬 구단주 점수·칭호 갱신(waitUntil)도 첫 조회는 응답 전에 시작하므로 수에 들어간다(각 1).
+  let ctx: TestD1;
+  let cookie: string;
+  beforeEach(async () => {
+    ctx = await createTestD1();
+    cookie = (await issueCookie(ctx)).cookie;
+    // 운영처럼 영구결번 소급 심사는 끝난 상태로 둔다 — 빈 D1에서는 첫 심사가 소급 훑기(왕복 3회)를 먼저 돈다.
+    await ctx.env.DB.prepare(
+      "insert into app_meta (key, value) values ('retired_numbers_backfill', '1')",
+    ).run();
+  });
+  afterEach(async () => {
+    await ctx.dispose();
+  });
+  const spied = async (path: string, body: unknown) => {
+    const { DB, trips } = spyDb(ctx.env.DB);
+    const res = await createApp().request(path, jsonInit({ method: 'PUT', body, cookie }), {
+      ...ctx.env,
+      DB,
+    });
+    expect(res.status).toBe(200);
+    return { n: trips.n, log: trips.log };
+  };
+
+  it('시즌 PUT: 세션 1 · 머리+지난 OVR 1 · 한도 1 · 저장 1 · 기록 판정 3(커리어+시즌 읽기 · 보유 기록 읽기 · 쓰기) = 7', async () => {
+    await putSeasonsFor(ctx.env, cookie, CAREER_ID);
+    const body = seasonBody({ season: { ...seasonBody().season, age: 19 } });
+    const { n, log } = await spied(`/v1/careers/${CAREER_ID}/seasons/2027`, body);
+    expect(n, log.join('\n')).toBe(7);
+  });
+
+  it('첫 은퇴 PUT: 세션 1 · 읽기 batch 1 · 한도 1 · 저장 1 · 나란히(심사 1 · 레전드 기록 3 · 초대 1) · 응답 뒤 2 = 11, 이름 토글 재전송은 8', async () => {
+    await putSeasonsFor(ctx.env, cookie, CAREER_ID, retirementBody());
+    const first = await spied(`/v1/careers/${CAREER_ID}/retirement`, retirementBody());
+    // 변경 전엔 16이었다(머리 · 시즌 · 밸런스 각각 읽기, 심사가 시즌 · 구단명을 다시 읽기, 응답 칭호를 위해 머리 다시 읽기).
+    expect(first.n, first.log.join('\n')).toBe(11);
+    // 재전송: 세션 · 읽기 batch · 한도 · 갱신 · 심사 · 초대 · 응답 뒤 2.
+    const again = await spied(`/v1/careers/${CAREER_ID}/retirement`, {
+      ...retirementBody(),
+      publicName: '김오프',
+    });
+    expect(again.n, again.log.join('\n')).toBe(8);
   });
 });
 

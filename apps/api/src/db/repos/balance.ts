@@ -10,17 +10,22 @@ const HISTORY_MAX = 100;
 
 type Row = typeof balanceVersions.$inferSelect;
 /** 저장 뒤 스펙(키·범위)이 바뀌었을 수 있으니 읽을 때도 거른다. */
-const toVersion = ({ valuesJson, createdBy: _createdBy, ...r }: Row): BalanceVersion => ({
+export const balanceVersionOf = ({
+  valuesJson,
+  createdBy: _createdBy,
+  ...r
+}: Row): BalanceVersion => ({
   ...r,
   values: sanitizeBalance(JSON.parse(valuesJson)),
 });
+const toVersion = balanceVersionOf;
+
+/** 활성 버전 조회문(다른 읽기와 한 batch로 보낼 때). 결과 행은 balanceVersionOf로 푼다. */
+export const activeBalanceQuery = (db: Db) =>
+  db.select().from(balanceVersions).where(eq(balanceVersions.status, 'active')).limit(1);
 
 export async function getActiveBalance(db: Db): Promise<BalanceVersion | undefined> {
-  const [row] = await db
-    .select()
-    .from(balanceVersions)
-    .where(eq(balanceVersions.status, 'active'))
-    .limit(1);
+  const [row] = await activeBalanceQuery(db);
   return row && toVersion(row);
 }
 
