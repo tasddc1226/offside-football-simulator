@@ -47,8 +47,15 @@ tooling/fulltime-sim/results/
 *.pem
 *.key
 *.p12
+# 앱 서명·스토어 API 키 (iOS .p8·프로비저닝, 안드로이드 키스토어, 서비스 계정 JSON)
+*.p8
+*.mobileprovision
+*.jks
+*.keystore
+*service-account*.json
 prod-d1*.sql
 *-dump*.sql
+*.sql.gz
 *.sqlite*
 
 # 로컬 에이전트·도구 설정
