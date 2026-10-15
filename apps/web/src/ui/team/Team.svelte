@@ -28,10 +28,12 @@
     fetchOpponents,
     fetchOwnerTeam,
     fetchTeamMatches,
+    fetchTeamStats,
     playMatch,
     saveOwnerTeam,
     saveTeamPresets,
     type ClubAchievementsResponse,
+    type TeamStatsResponse,
     type OwnerTeam,
     type OwnerTeamResponse,
     type TeamMatch,
@@ -53,6 +55,7 @@
   import TeamAchievements from './TeamAchievements.svelte';
   import TeamHead from './TeamHead.svelte';
   import TeamHistory from './TeamHistory.svelte';
+  import TeamStats from './TeamStats.svelte';
   import TeamLineup from './TeamLineup.svelte';
   import TeamLive from './TeamLive.svelte';
   import TeamNav from './TeamNav.svelte';
@@ -125,6 +128,12 @@
   const show = (v: TeamView) => (appState.teamView = v);
   let history = $state<TeamMatch[]>([]);
   let histStatus = $state<LoadStatus>('loading');
+  /** T-11-269 경기 기록 다음 쪽 커서('더 보기'), 시즌 통계와 경기 결과에서 누른 선수. */
+  let histNext = $state<string | null>(null);
+  let moreStatus = $state<'idle' | 'loading' | 'error'>('idle');
+  let stats = $state<TeamStatsResponse | null>(null);
+  let statsStatus = $state<LoadStatus>('loading');
+  let statsFocus = $state<string | null>(null);
   let ach = $state<ClubAchievementsResponse | null>(null);
   let achStatus = $state<LoadStatus>('loading');
   /** T-11-028 업적 화면에서 보고 있는 분류(선수·팀·구단주·감독). */
@@ -458,7 +467,38 @@
       return;
     }
     history = r.data.items;
+    histNext = r.data.next ?? null;
+    moreStatus = 'idle';
     histStatus = 'ready';
+  }
+  async function loadMore() {
+    if (!histNext || moreStatus === 'loading') return;
+    moreStatus = 'loading';
+    const cursor = histNext;
+    const r = await fetchTeamMatches(season, cursor);
+    if (histNext !== cursor) return;
+    if (!r.ok) {
+      moreStatus = 'error';
+      return;
+    }
+    const seen = new Set(history.map((m) => m.id));
+    history = [...history, ...r.data.items.filter((m) => !seen.has(m.id))];
+    histNext = r.data.next ?? null;
+    moreStatus = 'idle';
+  }
+  async function loadStats() {
+    statsStatus = 'loading';
+    const r = await fetchTeamStats(season);
+    if (!r.ok) {
+      statsStatus = 'error';
+      return;
+    }
+    stats = r.data;
+    statsStatus = 'ready';
+  }
+  function openStats(focus: string | null = null) {
+    statsFocus = focus;
+    switchView('stats');
   }
 
   // 화면마다 불러올 내용. 다른 화면에서 들어오면(뒤로·앞으로 가기 포함) 아래 $effect가, 이미 그 화면이면 open이 다시 불러온다.
@@ -466,6 +506,7 @@
     opponents: () => (matchHint || friendsUi.mode === 'friends' ? undefined : loadOpponents()),
     achievements: () => loadAchievements(),
     history: loadHistory,
+    stats: loadStats,
   };
   function open(v: keyof typeof LOAD) {
     if (appState.teamView === v) void LOAD[v]();
@@ -476,7 +517,7 @@
     if (status !== 'ready' || needLogin) return;
     if (v in LOAD) untrack(() => void LOAD[v as keyof typeof LOAD]());
   });
-  const navOn = $derived(view === 'result' ? resultOrigin : view);
+  const navOn = $derived(view === 'result' ? resultOrigin : view === 'stats' ? 'history' : view);
   /** 탭을 바꾸면 맨 위에서 시작하고, 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다(게임 화면 탭과 같다). */
   function switchView(v: TeamView) {
     if (view === v) return window.scrollTo({ top: 0, behavior: dur(1) ? 'smooth' : 'instant' });
@@ -605,14 +646,31 @@
           onreplay={() => (live = true)}
           onagain={() => open('opponents')}
           onhistory={resultOrigin === 'history' ? () => switchView('history') : undefined}
+          onplayer={(id) => openStats(id)}
         />
       {/if}
     {:else if view === 'history'}
       <TeamHistory
         {history}
         status={histStatus}
+        record={team?.record ?? null}
+        {seasonName}
+        more={!!histNext}
+        {moreStatus}
         onreload={() => void loadHistory()}
         onopen={(m) => { result = m; resultOrigin = 'history'; live = false; switchView('result'); }}
+        onmore={() => void loadMore()}
+        onstats={() => openStats()}
+      />
+    {:else if view === 'stats'}
+      <TeamStats
+        {stats}
+        status={statsStatus}
+        {seasonName}
+        focus={statsFocus}
+        name={eventName}
+        onreload={() => void loadStats()}
+        onback={() => switchView('history')}
       />
     {/if}
   </LoadState>

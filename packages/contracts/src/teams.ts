@@ -20,6 +20,7 @@ import {
   legacyPositionRole,
   TEAM_NAME_MAX,
   TEAM_NAME_MIN,
+  TEAM_STATS_MATCHES_MAX,
 } from './owner-team.js';
 import { IsoUtcSchema } from './primitives.js';
 import { TEAM_LOGO_IMG_MAX, TEAM_LOGO_PATTERNS, TEAM_LOGO_SHAPES } from './team-logo.js';
@@ -318,8 +319,75 @@ export const PlayTeamMatchResponseSchema = z.strictObject({
 });
 export type PlayTeamMatchResponse = z.infer<typeof PlayTeamMatchResponseSchema>;
 
-export const TeamMatchesResponseSchema = z.strictObject({ items: z.array(TeamMatchSchema) });
+/** T-11-269 경기 기록 다음 쪽 커서(`<createdAt>_<경기 id>`). 첫 쪽에는 붙이지 않는다. */
+export const TeamMatchCursorSchema = z
+  .string()
+  .max(96)
+  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z_[\w-]{1,64}$/);
+/** 첫 쪽(커서 없음)과 다음 쪽 크기. */
+export const TEAM_MATCHES_FIRST_PAGE = 10;
+export const TEAM_MATCHES_PAGE = 20;
+
+/** next는 다음 쪽 커서(더 없으면 null). T-11-269 전 응답에는 없다. */
+export const TeamMatchesResponseSchema = z.strictObject({
+  items: z.array(TeamMatchSchema),
+  next: TeamMatchCursorSchema.nullable().optional(),
+});
 export type TeamMatchesResponse = z.infer<typeof TeamMatchesResponseSchema>;
+
+// ───────── 시즌 통계(T-11-269) ─────────
+
+export { TEAM_STATS_MATCHES_MAX };
+/** 상대별 전적에 보여 줄 팀 수. */
+export const TEAM_STATS_OPPONENTS_MAX = 30;
+
+const winDrawLoss = {
+  w: z.number().int().min(0),
+  d: z.number().int().min(0),
+  l: z.number().int().min(0),
+  gf: z.number().int().min(0),
+  ga: z.number().int().min(0),
+};
+
+/** 우리 팀 선수 한 명의 그 시즌 랭크 경기 골 · 도움. careerId가 null이면 유스 선수(한 줄로 모은다). */
+export const TeamStatsPlayerSchema = z.strictObject({
+  careerId: z.string().nullable(),
+  /** 지금 공개 이름, 없으면 익명 표기(웹 · 앱이 이 기기에 남은 이름으로 바꿔 보여 준다). */
+  name: z.string(),
+  goals: z.number().int().min(0),
+  assists: z.number().int().min(0),
+});
+export type TeamStatsPlayer = z.infer<typeof TeamStatsPlayerSchema>;
+
+/** 한국 시각 하루의 전적. */
+export const TeamStatsDaySchema = z.strictObject({
+  day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  ...winDrawLoss,
+});
+export type TeamStatsDay = z.infer<typeof TeamStatsDaySchema>;
+
+/** 한 상대와의 전적. 이름 · 구단주는 가장 최근 경기 때 이름, 로고는 지금 로고다. */
+export const TeamStatsOpponentSchema = z.strictObject({
+  teamId: z.string(),
+  name: z.string(),
+  owner: z.string(),
+  logo: TeamLogoSchema.nullable(),
+  ...winDrawLoss,
+});
+export type TeamStatsOpponent = z.infer<typeof TeamStatsOpponentSchema>;
+
+/** 내 팀(그 시즌)의 랭크 경기 통계. 친선전은 저장하지 않아 들어가지 않는다. */
+export const TeamStatsResponseSchema = z.strictObject({
+  season: z.number().int().min(0),
+  /** 센 경기 수. capped면 최근 TEAM_STATS_MATCHES_MAX경기씩만 셌다. */
+  matches: z.number().int().min(0),
+  capped: z.boolean(),
+  total: z.strictObject(winDrawLoss),
+  players: z.array(TeamStatsPlayerSchema),
+  days: z.array(TeamStatsDaySchema),
+  opponents: z.array(TeamStatsOpponentSchema),
+});
+export type TeamStatsResponse = z.infer<typeof TeamStatsResponseSchema>;
 
 // ───────── 구단 시즌 업적(클럽하우스) ─────────
 
