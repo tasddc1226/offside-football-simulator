@@ -43,6 +43,7 @@ import { gamePotentialNote } from './gamePotentialNote';
 import { gameReport } from './gameReport';
 import { gameSeason } from './gameSeason';
 import { gameTrophy } from './gameTrophy';
+import { gift } from './gift';
 import { hof } from './hof';
 import { hofOwn } from './hofOwn';
 import { hofRn } from './hofRn';
@@ -138,6 +139,7 @@ export const ja = {
   gameReport,
   gameSeason,
   gameTrophy,
+  gift,
   hof,
   hofOwn,
   hofRn,

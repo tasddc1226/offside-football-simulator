@@ -1,0 +1,26 @@
+{
+  "id": "t-11-269-team-stats",
+  "title": "팀 경기 기록 더 보기와 시즌 통계",
+  "items": [
+    "내 팀 경기 기록 탭에서 '더 보기'로 지난 랭크 경기를 계속 볼 수 있어요.",
+    "기록 탭 맨 위 시즌 통계에서 선수별 골·도움과 날짜별·상대별 전적을 볼 수 있어요.",
+    "경기 결과에서 우리 선수 이름을 누르면 그 선수의 시즌 기록으로 가요."
+  ],
+  "en": {
+    "title": "More team match history and season stats",
+    "items": [
+      "Tap 'Show more' in your team's match history to keep browsing past ranked matches.",
+      "Season stats at the top of the history tab show goals and assists by player, plus records by day and by opponent.",
+      "Tap one of your players' names in a match result to jump to their season stats."
+    ]
+  },
+  "ja": {
+    "title": "チーム試合記録の続きとシーズン統計",
+    "items": [
+      "マイチームの試合記録タブで「もっと見る」を押すと、過去のランク戦を続けて見られます。",
+      "記録タブ上部のシーズン統計で、選手別のゴール・アシストと日付別・相手別の戦績を見られます。",
+      "試合結果で自分の選手名を押すと、その選手のシーズン記録に移動します。"
+    ]
+  },
+  "availability": "web-app"
+}

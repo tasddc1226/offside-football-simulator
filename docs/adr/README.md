@@ -22,6 +22,7 @@
 | [ADR-012](ADR-012-server-annual-careers.md) | 서버 권위 연간 커리어 진행 | Superseded by ADR-013 |
 | [ADR-013](ADR-013-fulltime-replacement.md) | 원작 OFFSIDE → 풀타임 전면 교체, 서버는 로그인·프로필만, 구현은 Sonnet 5 서브에이전트에게 위임 | 확정. 서버 범위는 D-87 이후 확장, 구현 위임 규칙은 2026-09-24 메인 세션 직접 구현으로 변경 |
 | [ADR-014](ADR-014-native-app.md) | 네이티브 앱은 Expo(React Native), 게임 엔진은 `packages/game` 공용 패키지로 웹·앱·시뮬레이터가 함께 쓴다 | 확정 (2026-09-30) |
+| [ADR-015](ADR-015-slack-agent-team.md) | 슬랙 에이전트 팀(개발 · 기획 · 운영 · 마케팅): 역할별 슬랙 앱 4개, 전부 Claude Opus 5.5 고정, Claude API 키(역할별 4개), Cloudflare Worker · Durable Object · Sandbox, 머지 · 배포 · 외부 게시는 운영자 승인 | 확정 (2026-10-15) |
 
 ## 한 줄 요약
 

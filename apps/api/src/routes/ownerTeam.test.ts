@@ -15,6 +15,7 @@ import {
   TeamOpponentsResponseSchema,
   TeamProfileResponseSchema,
   TeamRankResponseSchema,
+  TeamStatsResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
 import {
@@ -59,6 +60,7 @@ const FriendReqRes = successEnvelope(FriendRequestResponseSchema);
 const FriendDelRes = successEnvelope(FriendRemoveResponseSchema);
 const FriendlyRes = successEnvelope(PlayFriendlyResponseSchema);
 const TeamProfileRes = successEnvelope(TeamProfileResponseSchema);
+const StatsRes = successEnvelope(TeamStatsResponseSchema);
 
 type Pos = 'FW' | 'MF' | 'DF' | 'GK';
 let seq = 0;
@@ -213,6 +215,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       ['PUT', '/v1/owner-team'],
       ['GET', '/v1/owner-team/opponents'],
       ['GET', '/v1/owner-team/matches'],
+      ['GET', '/v1/owner-team/stats'],
       ['GET', '/v1/owner-team/achievements'],
     ] as const) {
       const res = await call(method, path, { cookie: anon.cookie, body: {} });
@@ -489,6 +492,126 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     ).data.team;
     expect(reset).toMatchObject({ layout: null, logo: null });
     expect(reset.slots[2]).toMatchObject({ slot: 'CB', rating: 83 });
+  });
+
+  it('T-11-269 경기 기록을 커서로 이어 받고, 시즌 통계는 우리 쪽 골 · 도움과 날짜별 · 상대별 전적을 센다', async () => {
+    const me = await ownerWithTeam(2, 80, '김골잡');
+    const rival = await ownerWithTeam(1);
+    const third = await ownerWithTeam(1);
+    const [striker, winger] = me.ids as [string, string];
+    const side = (t: { id: string; name: string }, owner: string) => ({
+      teamId: t.id,
+      name: t.name,
+      owner,
+      formation: '4-3-3',
+      ovr: 80,
+    });
+    const ref = (careerId: string | null, anon = '익명의 공격수 No.9') => ({ careerId, anon });
+    let n = 0;
+    /** 경기 하나를 바로 넣는다(내가 건 경기면 home, 받은 경기면 away). at은 UTC ISO. */
+    async function addMatch(
+      opp: typeof rival,
+      mineHome: boolean,
+      my: number,
+      their: number,
+      at: string,
+      events: {
+        side: 'home' | 'away';
+        scorer: ReturnType<typeof ref>;
+        assist: ReturnType<typeof ref> | null;
+      }[] = [],
+    ) {
+      const mine = side(me.team, '김감독');
+      const other = side(opp.team, '상대 감독');
+      await ctx.db.insert(teamMatches).values({
+        id: `m${String(++n).padStart(3, '0')}`,
+        profileId: mineHome ? me.profileId : opp.profileId,
+        homeTeamId: mineHome ? me.team.id : opp.team.id,
+        awayTeamId: mineHome ? opp.team.id : me.team.id,
+        homeGoals: mineHome ? my : their,
+        awayGoals: mineHome ? their : my,
+        detailJson: JSON.stringify({
+          home: mineHome ? mine : other,
+          away: mineHome ? other : mine,
+          events: events.map((e) => ({ minute: 10, ...e })),
+        }),
+        createdAt: at,
+      });
+    }
+    // 한국 시각 9/29(UTC 9/28 15:00~): 받은 경기 2:1 승. 9/30: 건 경기 3:0 승 · 0:1 패 · 1:1 무(다른 상대).
+    await addMatch(rival, false, 2, 1, '2026-09-28T16:00:00.000Z', [
+      { side: 'away', scorer: ref(striker), assist: ref(winger) },
+      { side: 'away', scorer: ref(null, '유스 선수'), assist: null },
+      { side: 'home', scorer: ref(rival.ids[0]!), assist: null },
+    ]);
+    await addMatch(rival, true, 3, 0, '2026-09-29T15:30:00.000Z', [
+      { side: 'home', scorer: ref(striker), assist: null },
+      { side: 'home', scorer: ref(striker), assist: ref(winger) },
+      { side: 'home', scorer: ref(winger), assist: ref(striker) },
+    ]);
+    await addMatch(rival, true, 0, 1, '2026-09-29T16:00:00.000Z', [
+      { side: 'away', scorer: ref(rival.ids[0]!), assist: null },
+    ]);
+    await addMatch(third, true, 1, 1, '2026-09-29T17:00:00.000Z', [
+      { side: 'home', scorer: ref(null, '유스 선수'), assist: null },
+      { side: 'away', scorer: ref(third.ids[0]!), assist: null },
+    ]);
+    const stats = StatsRes.parse(
+      await (await call('GET', '/v1/owner-team/stats', { cookie: me.cookie })).json(),
+    ).data;
+    expect(stats).toMatchObject({ season: 0, matches: 4, capped: false });
+    expect(stats.total).toEqual({ w: 2, d: 1, l: 1, gf: 6, ga: 3 });
+    expect(stats.players).toEqual([
+      { careerId: striker, name: '김골잡', goals: 3, assists: 1 },
+      { careerId: winger, name: '김골잡', goals: 1, assists: 2 },
+      { careerId: null, name: '유스 선수', goals: 2, assists: 0 },
+    ]);
+    expect(stats.days).toEqual([
+      { day: '2026-09-30', w: 1, d: 1, l: 1, gf: 4, ga: 2 },
+      { day: '2026-09-29', w: 1, d: 0, l: 0, gf: 2, ga: 1 },
+    ]);
+    expect(stats.opponents.map((o) => [o.teamId, o.w, o.d, o.l, o.gf, o.ga])).toEqual([
+      [rival.team.id, 2, 0, 1, 5, 2],
+      [third.team.id, 0, 1, 0, 1, 1],
+    ]);
+    // 상대 쪽에서 보면 그 팀 쪽 골만 센다.
+    const theirs = StatsRes.parse(
+      await (await call('GET', '/v1/owner-team/stats', { cookie: rival.cookie })).json(),
+    ).data;
+    expect(theirs.total).toEqual({ w: 1, d: 0, l: 2, gf: 2, ga: 5 });
+    expect(theirs.players.map((p) => [p.careerId, p.goals])).toEqual([[rival.ids[0], 2]]);
+
+    // 경기 기록: 25경기 더(같은 시각 2경기 포함) → 10 · 20경기 쪽으로 빠짐없이 겹침 없이 이어 받는다.
+    for (let i = 0; i < 25; i++)
+      await addMatch(
+        rival,
+        i % 2 === 0,
+        1,
+        0,
+        `2026-09-29T18:${String(Math.min(i, 23)).padStart(2, '0')}:00.000Z`,
+      );
+    const page = async (cursor?: string) =>
+      MatchesRes.parse(
+        await (
+          await call(
+            'GET',
+            `/v1/owner-team/matches${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`,
+            {
+              cookie: me.cookie,
+            },
+          )
+        ).json(),
+      ).data;
+    const first = await page();
+    expect(first.items).toHaveLength(10);
+    const second = await page(first.next!);
+    expect(second.items).toHaveLength(19);
+    expect(second.next).toBeNull();
+    const ids = [...first.items, ...second.items].map((m) => m.id);
+    expect(new Set(ids).size).toBe(29);
+    expect(ids.at(-1)).toBe('m001');
+    const bad = await call('GET', '/v1/owner-team/matches?cursor=nope', { cookie: me.cookie });
+    expect(bad.status).toBe(400);
   });
 
   it('유효하지 않은 좌표·자리 및 큰 이미지 로고는 저장하지 않는다', async () => {

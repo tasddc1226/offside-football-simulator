@@ -1,0 +1,26 @@
+{
+  "id": "t-11-275-home-gift",
+  "title": "구단주 선물",
+  "items": [
+    "로그인한 구단주는 홈의 오프사이드 컵 아래에서 선물을 받을 수 있어요.",
+    "잠재력 강화권 20장과 프리미엄 스카우트권 5장을 한 번 받을 수 있어요.",
+    "선물로 받은 스카우트권도 쓸 때 천장 횟수에 똑같이 들어가요."
+  ],
+  "en": {
+    "title": "A gift for club owners",
+    "items": [
+      "Signed-in club owners can claim a gift on the home screen, right below the OFFSIDE Cup.",
+      "Claim 20 boost tickets and 5 premium scout tickets, once per account.",
+      "Scout tickets from the gift count toward the pity counter just like any others."
+    ]
+  },
+  "ja": {
+    "title": "オーナーへのプレゼント",
+    "items": [
+      "ログインしたオーナーは、ホームのオフサイドカップの下でプレゼントを受け取れます。",
+      "ポテンシャル強化券20枚とプレミアムスカウト券5枚を一度だけ受け取れます。",
+      "プレゼントのスカウト券も、使うと天井カウントに同じように入ります。"
+    ]
+  },
+  "availability": "web-app"
+}

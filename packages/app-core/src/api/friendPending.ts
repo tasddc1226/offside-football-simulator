@@ -10,17 +10,25 @@ const PATH = '/v1/friends/pending';
 export const FRIEND_PENDING_MS = 5 * 60_000;
 
 function ownerHint() {
+  return ownerHintState() === true;
+}
+/** T-11-275 구단주 표시: true(구단주로 확인) · false(로그인 필요로 확인) · null(아직 모름). */
+export function ownerHintState(): boolean | null {
   try {
-    return storage().getItem(OWNER_HINT) === '1';
+    const v = storage().getItem(OWNER_HINT);
+    return v === '1' ? true : v === '0' ? false : null;
   } catch {
     return false;
   }
 }
+/** T-11-275 홈 선물을 받은(또는 이미 받은 것으로 확인한) 선물 id. 로그아웃하면 지워 다른 계정이 다시 묻게 한다. */
+export const GIFT_HINT = 'ft_gift';
 /** 구단주 표시를 남기거나(팀·친구를 불러옴) 지운다(로그인 필요 · 로그아웃). 그대로면 쓰지 않는다. */
 export function noteOwner(on: boolean) {
-  if (ownerHint() === on) return;
+  if (ownerHintState() === on) return;
   try {
     storage().setItem(OWNER_HINT, on ? '1' : '0');
+    if (!on) storage().setItem(GIFT_HINT, '');
   } catch {
     // 저장소를 못 쓰면 점을 띄우지 않는다.
   }

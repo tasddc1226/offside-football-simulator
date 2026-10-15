@@ -7,7 +7,7 @@ import { OUTCOME_TITLE, outcomeOf } from '@offside/app-core/teamOwner';
 import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
 import { recordText, signedNum } from '@offside/app-core/teamText';
 import { DISPLAY, rem } from '../../theme/type';
-import { Btn, Card, Txt } from '../../ui';
+import { Btn, Card, Press, Txt } from '../../ui';
 import { Grid2 } from './TeamParts';
 
 export function TeamResult({
@@ -19,6 +19,7 @@ export function TeamResult({
   replay,
   again,
   backLabel = L.backDefaultApp,
+  onPlayer,
 }: {
   m: TeamMatch;
   team: OwnerTeam | null;
@@ -28,8 +29,12 @@ export function TeamResult({
   replay: () => void;
   again: () => void;
   backLabel?: string;
+  /** T-11-269 우리 선수 이름을 누르면 시즌 통계의 그 선수 줄로(랭크 경기만, 웹 TeamResult onplayer). */
+  onPlayer?: (careerId: string) => void;
 }) {
   const friendly = !!m.friendly;
+  const linkable = (id: string | null): id is string => !!onPlayer && !friendly && !!id;
+  const under = { textDecorationLine: 'underline' } as const;
   const gain = m[m.mine].ratingChange;
   const side = (s: TeamMatch['home'], away: boolean, mine: boolean) => (
     <View style={{ flex: 1, minWidth: 0, gap: 2, alignItems: away ? 'flex-end' : 'flex-start' }}>
@@ -95,11 +100,40 @@ export function TeamResult({
                 }}
               >{`${e.minute}'`}</Txt>
               <View style={{ alignItems: e.side === 'away' ? 'flex-end' : 'flex-start' }}>
-                <Txt bold>{eventName(e.scorerId, e.scorer)}</Txt>
+                {linkable(e.scorerId) ? (
+                  <Press
+                    onPress={() => onPlayer!(e.scorerId!)}
+                    accessibilityRole="button"
+                    accessibilityLabel={L.playerStatsAria({
+                      name: eventName(e.scorerId, e.scorer),
+                    })}
+                    testID="team-player-stats"
+                  >
+                    <Txt bold style={under}>
+                      {eventName(e.scorerId, e.scorer)}
+                    </Txt>
+                  </Press>
+                ) : (
+                  <Txt bold>{eventName(e.scorerId, e.scorer)}</Txt>
+                )}
                 {e.assist ? (
-                  <Txt tone="muted" v="xs">
-                    {L.assist({ name: eventName(e.assistId, e.assist) })}
-                  </Txt>
+                  linkable(e.assistId) ? (
+                    <Press
+                      onPress={() => onPlayer!(e.assistId!)}
+                      accessibilityRole="button"
+                      accessibilityLabel={L.playerStatsAria({
+                        name: eventName(e.assistId, e.assist),
+                      })}
+                    >
+                      <Txt tone="muted" v="xs" style={under}>
+                        {L.assist({ name: eventName(e.assistId, e.assist) })}
+                      </Txt>
+                    </Press>
+                  ) : (
+                    <Txt tone="muted" v="xs">
+                      {L.assist({ name: eventName(e.assistId, e.assist) })}
+                    </Txt>
+                  )
                 ) : null}
               </View>
             </View>

@@ -3,6 +3,7 @@ import { CHAT_SOCKET_PATH } from '@offside/contracts/chat';
 import { LIVE_SOCKET_PATH } from '@offside/contracts/polling';
 import { app } from './app.js';
 import { updateClubStrength } from './clubStrength/update.js';
+import { runBackupStep } from './cron/backup.js';
 import { runDaily } from './cron/daily.js';
 import { runSeasonEventsArchive } from './cron/seasonEventsArchive.js';
 import { runSeasonTelemetryArchive } from './cron/seasonTelemetryArchive.js';
@@ -118,6 +119,12 @@ export default {
             console.log(JSON.stringify({ level: 'info', job: 'season-telemetry-archive', ...r })),
         )
         .catch(logged('season-telemetry-archive'));
+      // T-11-274 D1 → R2 백업을 5분마다 한 조각씩. UTC 19:00(KST 04:00) 뒤 첫 틱에 시작해 끝까지 이어받는다.
+      // 15분 상한 안에 들게 한 조각은 45초만 읽고, 실패하면 다음 틱이 같은 조각을 다시 만든다.
+      if (env.BACKUP)
+        await runBackupStep(env.DB, env.BACKUP, env.ENVIRONMENT, controller.scheduledTime)
+          .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'backup', ...r })))
+          .catch(logged('backup'));
       if (env.AUTOMATION_HIDE_DISABLED !== '1')
         await sweepAutomation(env.DB, controller.scheduledTime, true).catch(logged('automation'));
       await updateClubStrength(env, controller.scheduledTime).catch(logged('club-strength'));

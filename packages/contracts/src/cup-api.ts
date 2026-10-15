@@ -214,6 +214,18 @@ export type RerollShopResponse = z.infer<typeof RerollShopResponseSchema>;
  * T-11-244 POST /v1/items/scout/use 본문. hit = 기기가 이번 시드로 뽑은 일반 프리미엄 후보에 S가 있는지(천장 카운트를
  * 0으로 돌린다). 본문이 없으면(천장을 모르는 옛 앱) 확정 모드를 주지 않고 장수만 센다.
  */
+/** T-11-275 GET /v1/items/gift — 받을 수 있는 홈 선물. 받았으면 null. */
+export const HomeGiftResponseSchema = z.strictObject({
+  gift: z
+    .strictObject({
+      id: z.string(),
+      boost: z.number().int().min(0),
+      scout: z.number().int().min(0),
+    })
+    .nullable(),
+});
+export type HomeGiftResponse = z.infer<typeof HomeGiftResponseSchema>;
+
 export const ScoutUseBodySchema = z.strictObject({ hit: z.boolean().optional() });
 
 /** POST /v1/items/reroll/buy — 화면에서 본 가격을 함께 보낸다(그 사이 가격이 바뀌었으면 409). */

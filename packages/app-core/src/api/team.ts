@@ -15,6 +15,7 @@ import type {
   TeamProfileResponse,
   TeamRankResponse,
   TeamRankSort,
+  TeamStatsResponse,
 } from '@offside/contracts';
 import { apiFetch, cachedGet, ownerCachedGet } from './client.js';
 import { withOwnerHint } from './friendPending.js';
@@ -39,6 +40,10 @@ export type {
   TeamLines,
   TeamRecord,
   TeamSlot,
+  TeamStatsDay,
+  TeamStatsOpponent,
+  TeamStatsPlayer,
+  TeamStatsResponse,
 } from '@offside/contracts';
 
 /** `?season=` 꼬리(없으면 지금 시즌). */
@@ -62,8 +67,20 @@ export const playMatch = (opponentTeamId: string) =>
     method: 'POST',
     body: JSON.stringify({ opponentTeamId }),
   });
-export const fetchTeamMatches = (season?: number) =>
-  cachedGet<TeamMatchesResponse>(`/v1/owner-team/matches${seasonQ(season)}`, 60_000);
+/** 경기 기록 첫 쪽, cursor(앞 쪽의 next)를 주면 그다음 쪽(T-11-269 '더 보기'). */
+export const fetchTeamMatches = (season?: number, cursor?: string) => {
+  const q = [
+    ...(season === undefined ? [] : [`season=${season}`]),
+    ...(cursor ? [`cursor=${encodeURIComponent(cursor)}`] : []),
+  ];
+  return cachedGet<TeamMatchesResponse>(
+    `/v1/owner-team/matches${q.length ? `?${q.join('&')}` : ''}`,
+    60_000,
+  );
+};
+/** T-11-269 그 시즌 내 팀 랭크 경기 통계. 통계 화면을 열 때만 부른다(경기를 치르면 쓰기라 메모가 비워진다). */
+export const fetchTeamStats = (season?: number) =>
+  cachedGet<TeamStatsResponse>(`/v1/owner-team/stats${seasonQ(season)}`, 5 * 60_000);
 /** 구단 시즌 업적. season: 팀 시즌(0 = 프리시즌), 없으면 지금 시즌. */
 export const fetchClubAchievements = (season?: number) =>
   cachedGet<ClubAchievementsResponse>(`/v1/owner-team/achievements${seasonQ(season)}`, 60_000);

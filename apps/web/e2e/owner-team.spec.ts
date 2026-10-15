@@ -383,6 +383,137 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await expect(page.locator('[data-team-record] dd').nth(1)).toHaveText('1,016');
 });
 
+test('T-11-269 기록 탭 — 더 보기로 지난 경기를 잇고, 통계 카드와 득점자 이름으로 시즌 통계를 연다', async ({
+  page,
+}) => {
+  await stubOwner(page, true);
+  const team = {
+    ...teamFrom({ name: '우리 동네 FC', formation: '4-3-3', slots: [null] }),
+    record: { w: 8, d: 2, l: 2 },
+  };
+  await page.route(ownerTeamUrl, (route) => route.fulfill(ownerTeam({ team })));
+  const STRIKER = PLAYERS[0]!.careerId;
+  const match = (i: number) => ({
+    id: `mat_${i}`,
+    home: {
+      teamId: MY_TEAM,
+      name: '우리 동네 FC',
+      owner: '홍감독',
+      formation: '4-3-3',
+      ovr: 56,
+      goals: 2,
+      ratingChange: 8,
+    },
+    away: {
+      teamId: RIVAL,
+      name: `라이벌 ${i}`,
+      owner: '라이벌 감독',
+      formation: '4-4-2',
+      ovr: 55,
+      goals: 1,
+      ratingChange: -8,
+    },
+    events: [
+      {
+        minute: 30,
+        side: 'home',
+        scorer: '공개 골잡이',
+        assist: null,
+        scorerId: STRIKER,
+        assistId: null,
+      },
+    ],
+    mine: 'home',
+    createdAt: `2026-09-29T${String(23 - (i % 20)).padStart(2, '0')}:00:00.000Z`,
+  });
+  const pages: string[] = [];
+  await page.route(`${API}/v1/owner-team/matches**`, (route) => {
+    const cursor = new URL(route.request().url()).searchParams.get('cursor');
+    pages.push(cursor ?? 'first');
+    if (!cursor)
+      return route.fulfill(
+        ok({ items: Array.from({ length: 10 }, (_, i) => match(i)), next: 'cursor-1' }),
+      );
+    return route.fulfill(ok({ items: [match(10), match(11)], next: null }));
+  });
+  let statsCalls = 0;
+  await page.route(`${API}/v1/owner-team/stats**`, (route) => {
+    statsCalls++;
+    return route.fulfill(
+      ok({
+        season: 0,
+        matches: 12,
+        capped: false,
+        total: { w: 8, d: 2, l: 2, gf: 21, ga: 9 },
+        players: [
+          { careerId: STRIKER, name: '공개 골잡이', goals: 12, assists: 3 },
+          { careerId: null, name: '유스 선수', goals: 4, assists: 1 },
+        ],
+        days: [
+          { day: '2026-09-30', w: 5, d: 1, l: 1, gf: 13, ga: 5 },
+          { day: '2026-09-29', w: 3, d: 1, l: 1, gf: 8, ga: 4 },
+        ],
+        opponents: [
+          {
+            teamId: RIVAL,
+            name: '라이벌 FC',
+            owner: '라이벌 감독',
+            logo: null,
+            w: 4,
+            d: 1,
+            l: 1,
+            gf: 11,
+            ga: 5,
+          },
+        ],
+      }),
+    );
+  });
+
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await page.locator('[data-team-tab="history"]').click();
+  await expect(page.locator('[data-stats-record]')).toHaveText('프리시즌 · 8승 2무 2패');
+  await expect(page.locator('[data-team-match]')).toHaveCount(10);
+  await page.locator('[data-act="team-history-more"]').click();
+  await expect(page.locator('[data-team-match]')).toHaveCount(12);
+  await expect(page.locator('[data-act="team-history-more"]')).toHaveCount(0);
+  expect(pages).toEqual(['first', 'cursor-1']);
+  await expectNoA11yViolations(page);
+
+  // 통계 카드 → 통계 화면(선수 · 날짜 · 상대). 기록 탭은 계속 켜져 있다.
+  await page.locator('[data-act="team-stats"]').click();
+  const stats = page.locator('[data-team-stats]');
+  await expect(stats.locator('[data-stats-total]')).toHaveText('8승 2무 2패');
+  await expect(page.locator('[data-team-tab="history"]')).toHaveAttribute('aria-selected', 'true');
+  await expect(stats.locator(`[data-stats-player="${STRIKER}"]`)).toContainText('공개 골잡이');
+  await expect(stats.locator(`[data-stats-player="${STRIKER}"]`)).toContainText('12');
+  await expect(stats).toContainText('유스 선수');
+  await expectNoA11yViolations(page);
+  await stats.locator('[data-stats-tab="days"]').click();
+  await expect(stats.locator('[data-stats-day="2026-09-30"]')).toContainText('9/30');
+  await expect(stats.locator('[data-stats-day="2026-09-30"]')).toContainText('5승 1무 1패');
+  await stats.locator('[data-stats-tab="opponents"]').click();
+  await expect(stats.locator(`[data-stats-opp="${RIVAL}"]`)).toContainText('라이벌 FC');
+  await expect(stats.locator(`[data-stats-opp="${RIVAL}"]`)).toContainText('6경기');
+
+  // 기록으로 돌아갔다 다시 들어와도 통계를 다시 부르지 않는다(메모).
+  await stats.locator('[data-act="team-stats-back"]').click();
+  await expect(page.locator('[data-team-match]').first()).toBeVisible();
+  await page.locator('[data-act="team-stats"]').click();
+  await expect(page.locator('[data-team-stats]')).toBeVisible();
+  expect(statsCalls).toBe(1);
+
+  // 경기 결과의 우리 득점자 이름을 누르면 통계의 그 선수 줄로 간다.
+  await page.locator('[data-team-tab="history"]').click();
+  await page.locator('[data-team-match="mat_0"]').click();
+  await page.locator('[data-team-result] [data-act="team-player-stats"]').click();
+  await expect(page.locator(`[data-team-stats] [data-stats-player="${STRIKER}"]`)).toHaveClass(
+    /focus/,
+  );
+});
+
 test('시즌 업적 — 등급·점수·랭킹 순위, 분류별 단계 묶음과 업적마다 상태·점수를 보인다', async ({
   page,
 }) => {
