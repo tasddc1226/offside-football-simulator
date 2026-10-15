@@ -72,9 +72,16 @@
   const season = $derived(picked ?? myDefaultSeason(clock.now));
   const inSeason = $derived(seasons.length > 1 ? rows.filter((r) => r.season === season) : rows);
   const shown = $derived(inSeason);
-  onMount(async () => {
-    const [r, outbox] = await Promise.all([getMyCareers(), import('../sync/outbox.js')]);
-    pendingIds = outbox.pendingRetirementIds();
+  // T-11-276 은퇴 직후 열면 서버 목록을 받는 사이 업로드가 끝나 선수가 서버 응답(요청 시점엔 없음)과 큐(응답 시점엔 비움)
+  // 어디에도 없었다 — 큐를 먼저 읽고, 업로드가 끝나면 목록을 다시 받는다. 뒤에 시작한 불러오기만 화면에 쓴다.
+  let loadSeq = 0;
+  async function load() {
+    const seq = ++loadSeq;
+    const outbox = await import('../sync/outbox.js');
+    const pending = outbox.pendingRetirementIds();
+    const r = await getMyCareers();
+    if (seq !== loadSeq) return;
+    pendingIds = pending;
     let list: MineRow[];
     if (!r.ok || !r.data.linked) {
       source = !r.ok && r.error.code === 'NETWORK_ERROR' ? 'offline' : 'device';
@@ -83,7 +90,6 @@
       const onServer = new Set(r.data.entries.map((e) => e.id));
       const byId = new Map(local.flatMap((h, i) => (h.id ? [[h.id, localRow(h, i)] as const] : [])));
       // 방금 은퇴해 아직 업로드 대기 중인 선수도 잠깐 더한다.
-      const pending = outbox.pendingRetirementIds();
       list = [
         ...r.data.entries.map((e) => {
           const row = byId.get(e.id);
@@ -102,11 +108,24 @@
       const rn = await getRetiredNumbersIn(
         local.filter((h) => h.id && h.detail && h.rn === undefined).map((h) => deviceSeasonOf(h, pendingIds, now)),
       );
-      if (!rn.ok) return;
+      if (!rn.ok || seq !== loadSeq) return;
       fillGranted(rn.data);
       const byCareer = new Map(rn.data.map((x) => [x.careerId, x.number]));
       rows = rows.map((r) => ({ ...r, rn: r.rn ?? byCareer.get(r.key) }));
     }
+  }
+  onMount(() => {
+    void load();
+    let off: (() => void) | undefined;
+    let gone = false;
+    void import('../sync/outbox.js').then((outbox) => {
+      if (gone) return;
+      off = outbox.onRetirementSynced(() => void load());
+    });
+    return () => {
+      gone = true;
+      off?.();
+    };
   });
 </script>
 

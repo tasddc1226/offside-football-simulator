@@ -1,0 +1,23 @@
+{
+  "id": "t-11-276-retire-my-players",
+  "title": "은퇴 직후 내 선수 목록",
+  "items": [
+    "은퇴하고 바로 내 선수를 열어도 방금 은퇴한 선수가 보여요. 기록이 올라가는 중이면 올라간 뒤 목록이 자동으로 갱신돼요.",
+    "은퇴 기록 저장이 더 빨라졌어요."
+  ],
+  "en": {
+    "title": "My players right after retiring",
+    "items": [
+      "Open My Players right after retiring and the player is there. If the record is still uploading, the list refreshes on its own once it lands.",
+      "Saving a retirement is faster now."
+    ]
+  },
+  "ja": {
+    "title": "引退直後のマイ選手",
+    "items": [
+      "引退してすぐにマイ選手を開いても、引退した選手が表示されます。記録の送信中なら、届いた時点で一覧が自動で更新されます。",
+      "引退記録の保存が速くなりました。"
+    ]
+  },
+  "availability": "web-app"
+}

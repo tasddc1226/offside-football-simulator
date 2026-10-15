@@ -70,27 +70,66 @@ export async function linkGoogle(
 }
 
 /** 지나간 SQL을 `seen`에 모으는 D1 — 어떤 표를 읽는지 확인하는 테스트용. */
-export function spyDb(db: D1Database): { DB: D1Database; seen: string[] } {
+/** D1 왕복(한 번의 HTTP 요청)으로 세는 호출: 문장 하나를 바로 실행하거나, 여러 문장을 batch로 보내는 것. */
+const TRIP_METHODS = new Set(['run', 'all', 'first', 'raw']);
+
+/**
+ * seen: prepare된 SQL(문장 수). trips: D1 왕복 수(T-11-276) — 문장 실행(run/all/first/raw) 1회 또는 batch 1회.
+ * batch 안의 문장은 자기 run을 부르지 않으므로 왕복 하나로만 센다. 운영에서 응답 시간은 쿼리 비용이 아니라 이 왕복 수다.
+ */
+export function spyDb(db: D1Database): {
+  DB: D1Database;
+  seen: string[];
+  trips: { n: number; log: string[] };
+} {
   const seen: string[] = [];
-  const observe = (session: D1DatabaseSession): D1DatabaseSession =>
-    new Proxy(session, {
+  /** log: 왕복마다 첫 문장의 앞부분(batch는 문장 수를 붙인다) — 어느 왕복이 남았는지 볼 때. */
+  const trips = { n: 0, log: [] as string[] };
+  const head = (q: string) => q.replace(/\s+/g, ' ').slice(0, 90);
+  const trip = (label: string) => (trips.n++, trips.log.push(label));
+  const statement = (stmt: D1PreparedStatement, query: string): D1PreparedStatement =>
+    new Proxy(stmt, {
       get(target, key) {
-        if (key === 'prepare') return (query: string) => (seen.push(query), target.prepare(query));
         const value = Reflect.get(target, key) as unknown;
-        return typeof value === 'function' ? value.bind(target) : value;
+        if (typeof value !== 'function') return value;
+        const fn = value as (...a: unknown[]) => unknown;
+        if (key === 'bind')
+          return (...a: unknown[]) => statement(fn.apply(target, a) as D1PreparedStatement, query);
+        if (TRIP_METHODS.has(String(key)))
+          return (...a: unknown[]) => (trip(head(query)), fn.apply(target, a));
+        return fn.bind(target);
       },
     });
+  const queryOf = new WeakMap<D1PreparedStatement, string>();
+  const get = (target: D1Database | D1DatabaseSession, key: string | symbol) => {
+    if (key === 'prepare')
+      return (query: string) => {
+        seen.push(query);
+        const raw = target.prepare(query);
+        queryOf.set(raw, query);
+        return statement(raw, query);
+      };
+    if (key === 'batch')
+      return (stmts: D1PreparedStatement[]) => (
+        trip(`batch[${stmts.length}] ${head(queryOf.get(stmts[0]!) ?? '?')}`),
+        target.batch(stmts)
+      );
+    const value = Reflect.get(target, key) as unknown;
+    return typeof value === 'function'
+      ? (value as (...a: unknown[]) => unknown).bind(target)
+      : value;
+  };
+  const observe = (session: D1DatabaseSession): D1DatabaseSession =>
+    new Proxy(session, { get: (target, key) => get(target, key) });
   const DB = new Proxy(db, {
     get(target, key) {
-      if (key === 'prepare') return (query: string) => (seen.push(query), target.prepare(query));
       if (key === 'withSession')
         return (...args: Parameters<D1Database['withSession']>) =>
           observe(target.withSession(...args));
-      const v = Reflect.get(target, key) as unknown;
-      return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(target) : v;
+      return get(target, key);
     },
   });
-  return { DB, seen };
+  return { DB, seen, trips };
 }
 
 /** T-11-080 테스트가 careers에 바로 넣은 은퇴 선수의 카드를 만든다(마이그레이션 0056·은퇴 업로드와 같은 복사). */

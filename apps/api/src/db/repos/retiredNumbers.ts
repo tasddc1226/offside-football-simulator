@@ -133,17 +133,23 @@ const claimStatements = (
       .onConflictDoNothing(),
   );
 
+/** 구단명 커스텀 조회문(다른 읽기와 한 batch로 보낼 때). 결과 행은 clubsJsonMap으로 묶는다. */
+export const clubsJsonQuery = (db: Db, profileIds: string[]) =>
+  db
+    .select({ id: clubCustoms.profileId, json: clubCustoms.clubsJson })
+    .from(clubCustoms)
+    .where(inArray(clubCustoms.profileId, profileIds));
+export const clubsJsonMap = (rows: Awaited<ReturnType<typeof clubsJsonQuery>>) =>
+  new Map(rows.map((r) => [r.id, r.json]));
 const clubsJsonOf = async (db: Db, profileIds: string[]) =>
-  new Map(
-    profileIds.length
-      ? (
-          await db
-            .select({ id: clubCustoms.profileId, json: clubCustoms.clubsJson })
-            .from(clubCustoms)
-            .where(inArray(clubCustoms.profileId, profileIds))
-        ).map((r) => [r.id, r.json])
-      : [],
-  );
+  clubsJsonMap(profileIds.length ? await clubsJsonQuery(db, profileIds) : []);
+
+/** T-11-276 은퇴 PUT이 응답 전 읽기 batch에서 이미 받아 둔 것 — 심사가 같은 표를 다시 읽지 않는다.
+ * 은퇴 PUT은 career_seasons·club_customs를 바꾸지 않으므로 쓰기 전에 읽은 값과 같다. */
+export type JudgePreread = {
+  seasons: StoredSeasonRow[];
+  customs: ReturnType<typeof clubsJsonMap>;
+};
 
 const backfillMeta = (db: Db) =>
   db
@@ -236,7 +242,12 @@ type Judged = {
 };
 
 /** 은퇴 PUT 뒤에 부른다. 자격이 없으면(또는 공개 명예의 전당 밖의 짧은 커리어면) result가 null. */
-export async function judgeRetiredNumber(db: Db, careerId: string, now: string): Promise<Judged> {
+export async function judgeRetiredNumber(
+  db: Db,
+  careerId: string,
+  now: string,
+  pre?: JudgePreread,
+): Promise<Judged> {
   const heldBy = () =>
     db
       .select({ ...slotColumns, season: retiredNumbers.season })
@@ -283,10 +294,9 @@ export async function judgeRetiredNumber(db: Db, careerId: string, now: string):
       season: seasonOf(row),
     };
   }
-  const [customs, seasons] = await Promise.all([
-    clubsJsonOf(db, [row.profileId]),
-    storedSeasonsOf(db, [careerId]),
-  ]);
+  const [customs, seasons] = pre
+    ? [pre.customs, new Map([[careerId, pre.seasons]])]
+    : await Promise.all([clubsJsonOf(db, [row.profileId]), storedSeasonsOf(db, [careerId])]);
   const k = contributionsOf(row, seasons.get(careerId), customs.get(row.profileId));
   const c = candidatesFrom(k);
   if (!c) {
