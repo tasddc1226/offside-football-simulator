@@ -299,7 +299,12 @@ test('자금이 모자라면 영입 버튼이 잠기고, 이미 팔린 선수는
     'viewBox',
     '0 0 24 21',
   );
-  await expect(page.getByRole('dialog').locator('rect[fill="#e06aa5"]')).not.toHaveCount(0);
+  // 꾸미기 코드의 머리 모양이 PNG 초상에 들어간다(T-11-243 도트 그림 제거).
+  await expect(page.getByRole('dialog').locator('svg.image-avatar')).toHaveAttribute(
+    'data-hair',
+    'long',
+  );
+  await expect(page.getByRole('dialog').locator('svg.image-avatar > g')).toBeVisible();
   await expect(page.locator('[data-act="buy"]')).toBeDisabled();
   await page.getByRole('dialog').getByRole('button', { name: '닫기' }).click();
 

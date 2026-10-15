@@ -81,7 +81,7 @@ describe('retired appearance-only write', () => {
       expect(res.status).toBe(200);
       expect(((await res.json()) as { data: unknown }).data).toEqual({ careerId: ID, look });
       const after = await snapshot();
-      expect(after).toEqual({ ...before, career: { ...before.career, look, retiredLookUsed: 1 } });
+      expect(after).toEqual({ ...before, career: { ...before.career, look, retiredLookUsed: 2 } });
     }
   });
 
@@ -124,6 +124,25 @@ describe('retired appearance-only write', () => {
       (await callJson(ctx.env, 'GET', `/v1/careers/${ID}/look`, { cookie: other.cookie })).status,
     ).toBe(409);
     expect((await callJson(ctx.env, 'GET', `/v1/careers/${ID}/look`)).status).toBe(401);
+  });
+
+  it('gives a retiree who spent the change on the dot character one more change (T-11-243)', async () => {
+    await ctx.db.update(careers).set({ look: 'y6', retiredLookUsed: 1 }).where(eq(careers.id, ID));
+    expect(await retiredLookPolicy(ctx.db, ID)).toMatchObject({
+      remaining: 1,
+      lockedReason: null,
+      look: 'y6',
+    });
+    expect((await put({ look: 'y7' })).status).toBe(200);
+    expect(
+      (await ctx.db.select().from(careers).where(eq(careers.id, ID)))[0]?.retiredLookUsed,
+    ).toBe(2);
+    expect((await put({ look: 'y8' })).status).toBe(409);
+    expect(await retiredLookPolicy(ctx.db, ID)).toMatchObject({
+      remaining: 0,
+      lockedReason: 'used',
+      look: 'y7',
+    });
   });
 
   it('allows exactly one of concurrent different appearances', async () => {
@@ -208,4 +227,7 @@ it('wire limits accept all normal values and record item definitions', () => {
     expect(validAppearance(`${code}${limit}`)).toBe(false);
   }
   expect(LOOK_RECORDS).toHaveLength(6);
+  // T-11-243 13개 항목을 모두 고른 가장 긴 코드(키퍼 용품 포함)도 받는다.
+  expect(validAppearance('s1h2d1y14e2a3w4g2b5k6l5u4n3')).toBe(true);
+  expect(validAppearance('s1h2d1y14e2a3w4g2b5k6l5u4n3s1')).toBe(false);
 });

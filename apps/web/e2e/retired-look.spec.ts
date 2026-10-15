@@ -48,9 +48,8 @@ async function capture(page: Page, name: string) {
   await page.screenshot({ path: `${dir}/${name}.png` });
 }
 async function save(dialog: Locator) {
-  const button = dialog.locator('[data-act="retired-look-save"]');
-  if ((await button.textContent()) === '외형 저장') await button.click();
-  await button.click();
+  await dialog.locator('[data-act="retired-look-save"]').click();
+  await dialog.locator('[data-act="retired-look-confirm"]').click();
 }
 const savedPolicy = (page: Page, look: string | null) =>
   policies.set(page, { look, remaining: 0, lockedReason: 'used' });
@@ -112,7 +111,12 @@ for (const width of [320, 390, 1280])
       [],
     );
     await dialog.locator('[data-act="retired-look-save"]').click();
-    await expect(dialog.getByRole('button', { name: '외형 확정', exact: true })).toBeVisible();
+    // 마지막 확인 팝업이 떠야만 저장한다.
+    const confirm = dialog.getByRole('alertdialog', { name: '이 외형으로 확정할까요?' });
+    await expect(confirm).toBeVisible();
+    await expect(confirm).toContainText('다시 바꿀 수 없어요');
+    await expect(confirm.getByRole('button', { name: '계속 꾸미기', exact: true })).toBeFocused();
+    await expect(confirm.getByRole('button', { name: '외형 확정', exact: true })).toBeVisible();
     expect(writes).toEqual([]);
     expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
     await capture(page, `confirm-${width}`);
@@ -125,7 +129,7 @@ for (const width of [320, 390, 1280])
     expect(saved).toEqual({ ...JSON.parse(before!)[0], look: 'y6e2' });
     // Reload checks the server policy and displays the permanent one-time lock.
     dialog = await openOwn(page);
-    await expect(dialog.getByRole('status')).toContainText('은퇴 후 외형 변경 기회를 이미 사용');
+    await expect(dialog.getByRole('status')).toContainText('외형 변경 기회를 이미 사용');
     await expect(dialog.locator('[data-act="retired-look-save"]')).toBeDisabled();
     await expect(dialog.locator('[data-look-item]')).toHaveCount(0);
     await capture(page, `used-${width}`);
