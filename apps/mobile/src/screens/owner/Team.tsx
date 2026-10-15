@@ -32,6 +32,7 @@ import {
   fetchOpponents,
   fetchOwnerTeam,
   fetchTeamMatches,
+  fetchTeamStats,
   playMatch,
   saveOwnerTeam,
   saveTeamPresets,
@@ -39,6 +40,7 @@ import {
   type OwnerTeam,
   type OwnerTeamResponse,
   type TeamMatch,
+  type TeamStatsResponse,
   type TeamOpponent,
   type TeamPlayer,
 } from '@offside/app-core/api/team';
@@ -84,6 +86,7 @@ import { LoginButtons } from './LoginButtons';
 import { TeamAchievements } from './TeamAchievements';
 import { TeamFriends, OppSwitch, useFriends, type OppTab } from './TeamFriends';
 import { TeamHistory } from './TeamHistory';
+import { TeamStats } from './TeamStats';
 import { TeamLive } from './TeamLive';
 import { TeamOpponents } from './TeamOpponents';
 import { OvrBadge } from './TeamParts';
@@ -187,6 +190,12 @@ export default function Team() {
   const [resultOrigin, setResultOrigin] = useState<'opponents' | 'history'>('opponents');
   const [history, setHistory] = useState<TeamMatch[]>([]);
   const [histStatus, setHistStatus] = useState<LoadStatus>('loading');
+  // T-11-269 경기 기록 다음 쪽 커서('더 보기'), 시즌 통계와 경기 결과에서 누른 선수.
+  const [histNext, setHistNext] = useState<string | null>(null);
+  const [moreStatus, setMoreStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [stats, setStats] = useState<TeamStatsResponse | null>(null);
+  const [statsStatus, setStatsStatus] = useState<LoadStatus>('loading');
+  const [statsFocus, setStatsFocus] = useState<string | null>(null);
   const [ach, setAch] = useState<ClubAchievementsResponse | null>(null);
   const [achStatus, setAchStatus] = useState<LoadStatus>('loading');
   /** T-11-034 지난번 업적 탭을 본 뒤 새로 오른 업적(NEW). */
@@ -530,7 +539,32 @@ export default function Team() {
     const r = await fetchTeamMatches(season);
     if (!r.ok) return silent ? undefined : setHistStatus('error');
     setHistory(r.data.items);
+    setHistNext(r.data.next ?? null);
+    setMoreStatus('idle');
     setHistStatus('ready');
+  }
+  async function loadMore() {
+    if (!histNext || moreStatus === 'loading') return;
+    setMoreStatus('loading');
+    const r = await fetchTeamMatches(season, histNext);
+    if (!r.ok) return setMoreStatus('error');
+    setHistory((prev) => {
+      const seen = new Set(prev.map((m) => m.id));
+      return [...prev, ...r.data.items.filter((m) => !seen.has(m.id))];
+    });
+    setHistNext(r.data.next ?? null);
+    setMoreStatus('idle');
+  }
+  async function loadStats(silent = false) {
+    if (!silent) setStatsStatus('loading');
+    const r = await fetchTeamStats(season);
+    if (!r.ok) return silent ? undefined : setStatsStatus('error');
+    setStats(r.data);
+    setStatsStatus('ready');
+  }
+  function openStats(focus: string | null = null) {
+    setStatsFocus(focus);
+    switchView('stats');
   }
 
   // 화면마다 불러올 내용. 다른 화면에서 들어오면(뒤로·앞으로 가기 포함) 아래 effect가, 이미 그 화면이면 open이 다시 불러온다.
@@ -543,6 +577,7 @@ export default function Team() {
           : loadOpponents(),
     achievements: () => loadAchievements(),
     history: loadHistory,
+    stats: loadStats,
   };
   function open(v: keyof typeof LOAD) {
     if (appState.teamView === v) void LOAD[v]();
@@ -554,6 +589,7 @@ export default function Team() {
     if (teamView === 'opponents') void LOAD.opponents();
     else if (teamView === 'achievements') void loadAchievements();
     else if (teamView === 'history') void loadHistory();
+    else if (teamView === 'stats') void loadStats();
     // 화면·상태가 바뀔 때만(시즌 등 다른 값 변화로는 다시 부르지 않는다).
   }, [teamView, status, needLogin]);
 
@@ -573,7 +609,9 @@ export default function Team() {
           ? loadAchievements(season, true)
           : teamView === 'history'
             ? loadHistory(true)
-            : null,
+            : teamView === 'stats'
+              ? loadStats(true)
+              : null,
     ]);
   });
 
@@ -583,7 +621,7 @@ export default function Team() {
     show(v);
     scrollTo(0);
   }
-  const navOn = view === 'result' ? resultOrigin : view;
+  const navOn = view === 'result' ? resultOrigin : view === 'stats' ? 'history' : view;
   const navItems: TabItem[] = nav().map(([k, label, icon]) => ({
     key: icon,
     label,
@@ -946,6 +984,7 @@ export default function Team() {
         matchesLeft={matchesLeft}
         toTeam={() => show(resultOrigin === 'history' ? 'history' : 'team')}
         backLabel={resultOrigin === 'history' ? L.backToHistoryApp : L.backToLineupApp}
+        onPlayer={(id) => openStats(id)}
         replay={() => setLive(true)}
         again={() => {
           if (result.friendly) {
@@ -971,6 +1010,24 @@ export default function Team() {
           setLive(false);
           show('result');
         }}
+        record={team?.record ?? null}
+        seasonName={seasonName}
+        more={!!histNext}
+        moreStatus={moreStatus}
+        onMore={() => void loadMore()}
+        onStats={() => openStats()}
+      />
+    );
+  } else if (view === 'stats') {
+    body = (
+      <TeamStats
+        stats={stats}
+        status={statsStatus}
+        seasonName={seasonName}
+        focus={statsFocus}
+        name={eventName}
+        reload={() => void loadStats()}
+        back={() => switchView('history')}
       />
     );
   }

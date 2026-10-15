@@ -777,30 +777,64 @@ export function recordMatchStatements(
   ] as const;
 }
 
-/** 한 팀의 최근 경기(건 경기 + 받은 경기), 최근 limit개. */
-export async function listRecentMatches(
+const newestFirst = (a: TeamMatchRow, b: TeamMatchRow) =>
+  a.createdAt < b.createdAt
+    ? 1
+    : a.createdAt > b.createdAt
+      ? -1
+      : a.id < b.id
+        ? 1
+        : a.id > b.id
+          ? -1
+          : 0;
+
+/**
+ * T-11-269 한 팀의 경기 기록 한 쪽(건 경기 + 받은 경기, 최신순). cursor는 앞 쪽 마지막 경기의 (createdAt, id)다.
+ * 두 갈래를 limit+1개씩 (팀, created_at, id) 인덱스로 읽어 합친다. next는 다음 쪽이 있을 때 마지막 경기다.
+ */
+export async function listMatchesPage(
   db: Db,
-  profileId: string,
   teamId: string,
-  limit = 10,
-): Promise<TeamMatchRow[]> {
-  const [home, away] = await db.batch([
+  cursor: { createdAt: string; id: string } | null,
+  limit: number,
+): Promise<{ rows: TeamMatchRow[]; next: TeamMatchRow | null }> {
+  const before = cursor
+    ? or(
+        lt(teamMatches.createdAt, cursor.createdAt),
+        and(eq(teamMatches.createdAt, cursor.createdAt), lt(teamMatches.id, cursor.id)),
+      )
+    : undefined;
+  const leg = (col: typeof teamMatches.homeTeamId | typeof teamMatches.awayTeamId) =>
     db
       .select()
       .from(teamMatches)
-      .where(and(eq(teamMatches.profileId, profileId), eq(teamMatches.homeTeamId, teamId)))
-      .orderBy(desc(teamMatches.createdAt))
-      .limit(limit),
+      .where(and(eq(col, teamId), before))
+      .orderBy(desc(teamMatches.createdAt), desc(teamMatches.id))
+      .limit(limit + 1);
+  const [home, away] = await db.batch([leg(teamMatches.homeTeamId), leg(teamMatches.awayTeamId)]);
+  const all = [...home, ...away].sort(newestFirst);
+  const rows = all.slice(0, limit);
+  return { rows, next: all.length > limit ? rows.at(-1)! : null };
+}
+
+/** T-11-269 시즌 통계에 쓸 한 팀의 최근 경기(건 경기 · 받은 경기 각각 limit개). 상세 JSON까지 읽는다. */
+export async function listStatsMatches(db: Db, teamId: string, limit: number) {
+  const cols = {
+    homeTeamId: teamMatches.homeTeamId,
+    homeGoals: teamMatches.homeGoals,
+    awayGoals: teamMatches.awayGoals,
+    detailJson: teamMatches.detailJson,
+    createdAt: teamMatches.createdAt,
+  };
+  const leg = (col: typeof teamMatches.homeTeamId | typeof teamMatches.awayTeamId) =>
     db
-      .select()
+      .select(cols)
       .from(teamMatches)
-      .where(eq(teamMatches.awayTeamId, teamId))
+      .where(eq(col, teamId))
       .orderBy(desc(teamMatches.createdAt))
-      .limit(limit),
-  ]);
-  return [...home, ...away]
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0))
-    .slice(0, limit);
+      .limit(limit);
+  const [home, away] = await db.batch([leg(teamMatches.homeTeamId), leg(teamMatches.awayTeamId)]);
+  return { rows: [...home, ...away], capped: home.length >= limit || away.length >= limit };
 }
 
 /** 경기 기록에 나온 커리어의 지금 공개 이름. */

@@ -52,7 +52,8 @@ export const hofStart = (): HofView => ({
   pos: null,
 });
 
-export type TeamView = 'team' | 'achievements' | 'opponents' | 'result' | 'history';
+/** stats는 기록 탭에서 들어가는 시즌 통계(T-11-269). */
+export type TeamView = 'team' | 'achievements' | 'opponents' | 'result' | 'history' | 'stats';
 
 export type Screen =
   | 'home'
