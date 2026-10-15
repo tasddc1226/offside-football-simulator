@@ -170,10 +170,15 @@ describe('로컬 명예의 전당 30명 한도', () => {
       Array.from({ length: 30 }, (_, i) => ({ name: `고수${i}`, score: 5000 - i })),
     );
     expect(localCareerNames().get(entry.id!)).toBe('막내');
-    for (let i = 0; i < CAREER_NAMES_MAX; i++) rememberCareerName(`c${i}`, `선수${i}`);
+    // 가득 찬 이름표에 하나를 더하면 가장 오래된 이름(방금 은퇴한 선수보다 먼저 들어온 첫 항목)부터 지운다.
+    const full = loadKey<Record<string, string>>(CAREER_NAMES_KEY)!;
+    for (let i = 1; i < CAREER_NAMES_MAX; i++) full[`c${i}`] = `선수${i}`;
+    saveKey(CAREER_NAMES_KEY, full);
+    rememberCareerName('new', '새 선수');
     const names = loadKey<Record<string, string>>(CAREER_NAMES_KEY)!;
     expect(Object.keys(names)).toHaveLength(CAREER_NAMES_MAX);
     expect(names[entry.id!]).toBeUndefined();
+    expect(names.new).toBe('새 선수');
   });
   it('같은 커리어가 다시 은퇴하면 기록을 바꾸고, 예전에 겹친 기록은 하나로 읽는다(T-10-107)', async () => {
     const { retire } = await import('./season.js');
