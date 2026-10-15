@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { costOf, MODEL, runAgent, type Tool } from './claude.ts';
+import { costOf, MODEL, runAgent, withCacheTail, type Tool } from './claude.ts';
 import type { Env } from './env.ts';
 import { decide } from './index.ts';
 import { slackClient, verifySlack } from './slack.ts';
@@ -72,6 +72,26 @@ describe('readOnlySql', () => {
 });
 
 describe('runAgent', () => {
+  it('대화 끝 블록 하나에만 캐시 표시를 달고 원본은 바꾸지 않는다', () => {
+    const msgs = [
+      { role: 'user' as const, content: '질문' },
+      {
+        role: 'assistant' as const,
+        content: [{ type: 'tool_use', id: 't', name: 'x', input: {} }],
+      },
+      { role: 'user' as const, content: [{ type: 'tool_result', tool_use_id: 't', content: 'r' }] },
+    ];
+    const out = withCacheTail(msgs);
+    expect(out[2]!.content).toEqual([
+      { type: 'tool_result', tool_use_id: 't', content: 'r', cache_control: { type: 'ephemeral' } },
+    ]);
+    expect(JSON.stringify(out.slice(0, 2))).not.toContain('cache_control');
+    expect(JSON.stringify(msgs)).not.toContain('cache_control');
+    expect(withCacheTail([{ role: 'user', content: '질문' }])[0]!.content).toEqual([
+      { type: 'text', text: '질문', cache_control: { type: 'ephemeral' } },
+    ]);
+  });
+
   const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
   const usage = { input_tokens: 1000, output_tokens: 100, cache_read_input_tokens: 2000 };
 

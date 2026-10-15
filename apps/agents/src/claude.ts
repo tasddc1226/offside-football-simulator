@@ -37,6 +37,21 @@ const FINAL_AT = 0.85;
 const FINAL_NOTE =
   '조회 한도에 닿았어요. 도구를 더 쓰지 말고 지금까지 확인한 것만으로 답을 정리해 주세요. 확인하지 못한 것은 그렇다고 적어 주세요.';
 
+/**
+ * 대화 끝(마지막 메시지의 마지막 블록)에 캐시 표시를 단 사본. 도구 루프는 턴마다 앞 대화를 통째로 다시 보내므로,
+ * 직전 턴까지를 캐시에서 읽게 한다(캐시 읽기는 입력 값의 5%). 표시는 system · tools와 합쳐 4개 상한 안에서 이것 하나만 쓴다.
+ */
+export function withCacheTail(messages: Message[]): Message[] {
+  const last = messages.at(-1);
+  if (!last) return messages;
+  const blocks: Block[] =
+    typeof last.content === 'string' ? [{ type: 'text', text: last.content }] : [...last.content];
+  const end = blocks.at(-1);
+  if (!end) return messages;
+  blocks[blocks.length - 1] = { ...end, cache_control: { type: 'ephemeral' } };
+  return [...messages.slice(0, -1), { ...last, content: blocks }];
+}
+
 export class ClaudeError extends Error {
   constructor(
     readonly status: number,
@@ -94,7 +109,7 @@ export async function runAgent(opts: {
         system: [{ type: 'text', text: opts.system, cache_control: { type: 'ephemeral' } }],
         tools,
         ...(stopped ? { tool_choice: { type: 'none' } } : {}),
-        messages,
+        messages: withCacheTail(messages),
       }),
     });
     const data = (await r.json().catch(() => ({}))) as {
