@@ -121,25 +121,38 @@ describe('runAgent', () => {
     ).rejects.toThrow(/unexpected model/);
   });
 
-  it('작업 한도 금액에 닿으면 멈춘다', async () => {
+  it('작업 한도 금액에 닿으면 도구 없이 마지막 답을 받고 멈춘다', async () => {
     const big = { input_tokens: 1_000_000, output_tokens: 0 };
-    const fetcher = (async () =>
-      reply({
-        model: MODEL,
-        stop_reason: 'tool_use',
-        usage: big,
-        content: [{ type: 'tool_use', id: 't', name: 'none', input: {} }],
-      })) as unknown as typeof fetch;
+    const bodies: { tool_choice?: unknown; messages: { content: unknown }[] }[] = [];
+    const fetcher = (async (_u: string, init: RequestInit) => {
+      bodies.push(JSON.parse(String(init.body)));
+      return bodies.length === 1
+        ? reply({
+            model: MODEL,
+            stop_reason: 'tool_use',
+            usage: big,
+            content: [{ type: 'tool_use', id: 't', name: 'none', input: {} }],
+          })
+        : reply({
+            model: MODEL,
+            stop_reason: 'end_turn',
+            usage: { input_tokens: 10, output_tokens: 10 },
+            content: [{ type: 'text', text: '확인한 것까지 정리' }],
+          });
+    }) as unknown as typeof fetch;
     const r = await runAgent({
       apiKey: 'k',
       system: 's',
       tools: [],
-      messages: [],
+      messages: [{ role: 'user', content: '봐 줘' }],
       maxTurns: 5,
       budgetUsd: 1,
       fetcher,
     });
-    expect(r).toMatchObject({ stopped: 'budget', turns: 1 });
+    expect(r).toMatchObject({ stopped: 'budget', turns: 2, text: '확인한 것까지 정리' });
+    expect(bodies[0]!.tool_choice).toBeUndefined();
+    expect(bodies[1]!.tool_choice).toEqual({ type: 'none' });
+    expect(JSON.stringify(bodies[1]!.messages.at(-1))).toContain('조회 한도에 닿았어요');
   });
 
   it('API 오류는 상태 코드로 알린다', async () => {

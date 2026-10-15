@@ -32,6 +32,11 @@ export type Tool = {
   run: (input: Record<string, unknown>) => Promise<string>;
 };
 
+/** 금액 한도의 이 비율을 넘으면 다음 턴을 마지막으로 한다. */
+const FINAL_AT = 0.85;
+const FINAL_NOTE =
+  '조회 한도에 닿았어요. 도구를 더 쓰지 말고 지금까지 확인한 것만으로 답을 정리해 주세요. 확인하지 못한 것은 그렇다고 적어 주세요.';
+
 export class ClaudeError extends Error {
   constructor(
     readonly status: number,
@@ -65,7 +70,17 @@ export async function runAgent(opts: {
     i === all.length - 1 ? { ...t, cache_control: { type: 'ephemeral' } } : t,
   );
   let costUsd = 0;
+  let stopped: RunResult['stopped'];
   for (let turn = 1; ; turn++) {
+    // 마지막 턴(턴 · 금액 한도)은 도구 없이 지금까지 확인한 것으로 답을 쓰게 한다(빈손으로 끝나지 않게).
+    if (!stopped && (turn >= opts.maxTurns || costUsd >= opts.budgetUsd * FINAL_AT)) {
+      stopped = turn >= opts.maxTurns ? 'turns' : 'budget';
+      const last = messages.at(-1);
+      const note: TextBlock = { type: 'text', text: FINAL_NOTE };
+      if (last?.role === 'user' && Array.isArray(last.content))
+        last.content = [...last.content, note];
+      else messages.push({ role: 'user', content: [note] });
+    }
     const r = await fetcher(API, {
       method: 'POST',
       headers: {
@@ -78,6 +93,7 @@ export async function runAgent(opts: {
         max_tokens: 8000,
         system: [{ type: 'text', text: opts.system, cache_control: { type: 'ephemeral' } }],
         tools,
+        ...(stopped ? { tool_choice: { type: 'none' } } : {}),
         messages,
       }),
     });
@@ -104,9 +120,8 @@ export async function runAgent(opts: {
       .map((b) => b.text)
       .join('\n')
       .trim();
-    if (data.stop_reason !== 'tool_use') return { text, costUsd, turns: turn };
-    if (costUsd >= opts.budgetUsd) return { text, costUsd, turns: turn, stopped: 'budget' };
-    if (turn >= opts.maxTurns) return { text, costUsd, turns: turn, stopped: 'turns' };
+    if (data.stop_reason !== 'tool_use' || stopped)
+      return { text, costUsd, turns: turn, ...(stopped ? { stopped } : {}) };
     const results: ToolResult[] = [];
     for (const b of content) {
       if (b.type !== 'tool_use') continue;
