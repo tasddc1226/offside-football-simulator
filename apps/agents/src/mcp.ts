@@ -4,7 +4,7 @@ import type { Tool } from './claude.ts';
 
 export type McpServer = { name: string; url: string; token: string };
 
-const MAX_CHARS = 12_000;
+const MAX_CHARS = 6_000;
 
 /** JSON 응답 또는 SSE(`data:` 줄) 응답에서 JSON-RPC 결과를 꺼낸다. */
 export function parseRpc(body: string): { result?: unknown; error?: { message?: string } } {

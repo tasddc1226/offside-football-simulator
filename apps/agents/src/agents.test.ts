@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { costOf, MODEL, runAgent, withCacheTail, type Tool } from './claude.ts';
+import { costOf, MODEL, MODELS, runAgent, withCacheTail, type Tool } from './claude.ts';
+import { modelFor } from './roles.ts';
+import { digestTools } from './tools/digest.ts';
 import type { Env } from './env.ts';
 import { decide } from './index.ts';
 import { slackClient, verifySlack } from './slack.ts';
@@ -155,6 +157,37 @@ describe('runAgent', () => {
         fetcher,
       }),
     ).rejects.toThrow(/unexpected model/);
+  });
+
+  it('일마다 모델을 고른다: 분류 · 경보 첫 정리 Haiku, 아침 보고 Sonnet, 나머지 Opus', () => {
+    expect(modelFor('triage')).toBe(MODELS.haiku);
+    expect(modelFor('alert')).toBe(MODELS.haiku);
+    expect(modelFor('report')).toBe(MODELS.sonnet);
+    for (const k of ['mention', 'reply', 'handoff'] as const) expect(modelFor(k)).toBe(MODELS.opus);
+  });
+
+  it('고른 모델로 요청하고 그 모델 단가로 비용을 센다', async () => {
+    const sent: { model: string }[] = [];
+    const fetcher = (async (_u: string, init: RequestInit) => {
+      sent.push(JSON.parse(String(init.body)));
+      return reply({ model: 'claude-haiku-5-5', stop_reason: 'end_turn', usage, content: [] });
+    }) as unknown as typeof fetch;
+    const r = await runAgent({
+      apiKey: 'k',
+      system: 's',
+      tools: [],
+      messages: [{ role: 'user', content: 'hi' }],
+      maxTurns: 5,
+      budgetUsd: 1,
+      model: MODELS.haiku,
+      fetcher,
+    });
+    expect(sent[0]!.model).toBe('claude-haiku-5-5');
+    // 1000 × 0.1 + 2000 × 0.01 + 100 × 0.5 = 170 / 1e6
+    expect(r.costUsd).toBeCloseTo(170 / 1e6);
+    expect(costOf(usage, MODELS.sonnet)).toBeCloseTo(costOf(usage) / 2);
+    // Haiku는 프롬프트가 10만 토큰을 넘으면 5배
+    expect(costOf({ input_tokens: 120_000, output_tokens: 0 }, MODELS.haiku)).toBeCloseTo(0.06);
   });
 
   it('작업 한도 금액에 닿으면 도구 없이 마지막 답을 받고 멈춘다', async () => {
@@ -723,5 +756,89 @@ describe('@dev', () => {
         new TextEncoder().encode(`${h}.${b}`),
       ),
     ).toBe(true);
+  });
+});
+
+describe('report_digest', () => {
+  it('예약 워크플로 24시간 결과 · 로그 오류 집계 · 백업 기록을 한 번에 모은다', async () => {
+    const urls: string[] = [];
+    const json = (b: unknown) => new Response(JSON.stringify(b));
+    const fetcher = (async (u: string, init?: RequestInit) => {
+      urls.push(u);
+      if (u.endsWith('/actions/workflows?per_page=100'))
+        return json({
+          workflows: [
+            {
+              id: 1,
+              name: 'Infra health',
+              path: '.github/workflows/infra-health.yml',
+              state: 'active',
+            },
+          ],
+        });
+      if (u.includes('raw.githubusercontent.com'))
+        return new Response("on:\n  schedule:\n    - cron: '17 * * * *'\n");
+      if (u.includes('/actions/workflows/1/runs'))
+        return json({
+          workflow_runs: [
+            {
+              status: 'completed',
+              conclusion: 'failure',
+              created_at: '2026-10-16T00:17:00Z',
+              html_url: 'https://x/1',
+              event: 'schedule',
+            },
+            {
+              status: 'completed',
+              conclusion: 'success',
+              created_at: '2026-10-15T23:17:00Z',
+              html_url: 'https://x/2',
+              event: 'schedule',
+            },
+          ],
+        });
+      if (u.endsWith('/schedules'))
+        return json({ success: true, result: { schedules: [{ cron: '*/5 * * * *' }] } });
+      if (u.endsWith('/telemetry/query')) {
+        const q = JSON.parse(String(init?.body)) as {
+          parameters: { groupBys: { value: string }[] };
+        };
+        return json({
+          success: true,
+          result: {
+            calculations: [
+              {
+                aggregates: [
+                  { count: 3, groups: [{ key: q.parameters.groupBys[0]!.value, value: 'backup' }] },
+                ],
+              },
+            ],
+          },
+        });
+      }
+      throw new Error(`unexpected ${u}`);
+    }) as unknown as typeof fetch;
+    const sqls: string[] = [];
+    const [tool] = digestTools({
+      repo: 'o/r',
+      accountId: 'a',
+      cfToken: 't',
+      workers: ['offside-api'],
+      fetcher,
+      d1: async (sql) => (sqls.push(sql), '{"rows":[]}'),
+    });
+    const out = JSON.parse(await tool!.run({})) as {
+      actions: { last24h: Record<string, number>; problems: { url: string }[] }[];
+      logs_24h: { 'offside-api': { logs_by_job: { job: string; count: number }[] } };
+      backup: { meta: string };
+    };
+    expect(out.actions[0]).toMatchObject({
+      last24h: { failure: 1, success: 1 },
+      problems: [{ url: 'https://x/1' }],
+    });
+    expect(out.logs_24h['offside-api'].logs_by_job).toEqual([{ job: 'backup', count: 3 }]);
+    expect(out.backup.meta).toBe('{"rows":[]}');
+    expect(sqls[0]).toContain('cron:backup:last');
+    expect(urls.some((u) => u.includes('per_page=40&created=%3E%3D'))).toBe(true);
   });
 });
