@@ -370,6 +370,8 @@ function CardAttributes({ cell, color }: { cell: PlayerCardData; color: string }
 /** 큰 카드 높이(자리 OVR 줄 · 플레이스타일 줄 없이)와 플레이스타일 줄 높이 — 카드 팝업(PlayerPeek)도 같은 값을 쓴다. */
 export const CARD_HEIGHT = 242;
 export const CARD_STYLE_ROW = 19;
+/** 키 · 몸무게 · 주발 줄 높이. 이 줄이 있으면 위 칸(그림 · LS)과 카드를 그만큼 늘린다(LS 아래로 겹치지 않게). */
+export const CARD_BODY_ROW = 12;
 
 export function PlayerCard({
   cell,
@@ -407,7 +409,7 @@ export function PlayerCard({
     ? mini
       ? 68
       : 88
-    : CARD_HEIGHT + (deployed ? 31 : 0) + (style ? CARD_STYLE_ROW : 0);
+    : CARD_HEIGHT + (deployed ? 31 : 0) + (style ? CARD_STYLE_ROW : 0) + (body ? CARD_BODY_ROW : 0);
   const shield = 'M2 14H17L25 5L50 1L75 5L83 14H98L97 149L88 161L50 173L12 161L3 149Z';
   return (
     <View
@@ -457,7 +459,7 @@ export function PlayerCard({
         style={{
           flexDirection: 'row',
           width: '100%',
-          height: compact ? 34 : 72,
+          height: compact ? 34 : 72 + (body ? CARD_BODY_ROW : 0),
           alignItems: 'flex-start',
           justifyContent: 'space-between',
         }}
