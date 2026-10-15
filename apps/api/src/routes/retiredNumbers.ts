@@ -20,6 +20,7 @@ import type { Db } from '../db/client.js';
 import {
   ensureRetiredNumbersBackfilled,
   judgeRetiredNumber,
+  type JudgePreread,
   listRetiredNumbers,
   retiredNumberProgress,
   pageRetiredNumbers,
@@ -42,9 +43,15 @@ export async function judgeRetirement(
   c: Context<AppEnv>,
   careerId: string,
   now: string,
+  pre?: JudgePreread,
 ): Promise<{ retiredNumber: RetiredNumberResult | null; retiredNumberMiss?: RetiredNumberMiss }> {
   try {
-    const { result, miss, season, claimed } = await judgeRetiredNumber(getDb(c), careerId, now);
+    const { result, miss, season, claimed } = await judgeRetiredNumber(
+      getDb(c),
+      careerId,
+      now,
+      pre,
+    );
     // 이미 가진 자리여도 이름 공개 토글이 목록의 이름을 바꾼다. 그 시즌의 목록만 낡는다(T-11-029).
     if (result?.kind === 'granted' && season !== undefined) {
       purgeEdge(c, STALE.retiredNumbersChanged(season, result.clubId));
