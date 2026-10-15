@@ -1,4 +1,4 @@
-# ADR-015 슬랙 에이전트 `@offside-plan` — 2단계(T-11-275): 멘션 · 채널 메시지를 apps/agents Worker로 받고, 매시간 유저 반응을 정리한다
+# ADR-015 슬랙 에이전트 `@offside-plan` — 2단계(T-11-277): 멘션 · 채널 메시지를 apps/agents Worker로 받고, 매시간 유저 반응을 정리한다
 display_information:
   name: OFFSIDE Plan
   description: OFFSIDE 기획 에이전트. 피드백과 운영 보고를 이슈와 작업으로 정리해요.

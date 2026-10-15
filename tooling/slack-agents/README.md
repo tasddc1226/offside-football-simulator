@@ -31,7 +31,7 @@ pnpm exec wrangler secret put SLACK_OPS_SIGNING_SECRET
 # PLAN · DEV · MKT도 같은 이름 꼴로
 ```
 
-## 1단계: `@offside-ops` 연결 (2026-10-15, T-11-275)
+## 1단계: `@offside-ops` 연결 (2026-10-15, T-11-277)
 
 Worker는 `apps/agents`(`agents.offside-lab.com`)다. `manifests/ops.yaml`에 이벤트 주소를 넣었고, `@offside-ops`는 `#offside-alerts`에 초대했다.
 
@@ -39,7 +39,7 @@ Worker는 `apps/agents`(`agents.offside-lab.com`)다. `manifests/ops.yaml`에 �
 - **배포.** `pnpm --filter @offside/agents deploy`. 역할을 열 때는 `wrangler.jsonc`의 `ENABLED_ROLES`에 더한다.
 - **하는 일.** `#offside-alerts` 웹훅 경보(정상 복구 알림 · 24시간 안의 같은 경보 제외)와 운영자 멘션 · 그 스레드 답글을 받아 스레드에 답한다. 답 아래 줄에 턴 수 · 비용 · 그날 누적이 붙는다.
 
-## 2단계: `@offside-plan` 연결 · 유저 반응 살피기 (2026-10-15, T-11-275)
+## 2단계: `@offside-plan` 연결 · 유저 반응 살피기 (2026-10-15, T-11-277)
 
 `manifests/plan.yaml`에 이벤트 주소를 넣었다. `ENABLED_ROLES`는 `ops,plan`.
 

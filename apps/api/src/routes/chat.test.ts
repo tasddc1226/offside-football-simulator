@@ -45,7 +45,7 @@ describe('T-11-015 채팅 /v1/chat', () => {
     await ctx.dispose();
   });
 
-  it('T-11-275 에이전트 읽기 주소는 토큰이 맞을 때만 열리고, 닉네임 없이 가명 · 본문만 준다', async () => {
+  it('T-11-277 에이전트 읽기 주소는 토큰이 맞을 때만 열리고, 닉네임 없이 가명 · 본문만 준다', async () => {
     const a = await speak('도하람', '골키퍼 장갑 색이 안 바뀌어요');
     await speak('누리', '한 번 더');
     const b = await speak('라온', '좋아요');

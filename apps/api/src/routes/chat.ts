@@ -189,7 +189,7 @@ export function registerChatRoutes(app: Hono<AppEnv>) {
     return ok(c, ChatBlockResponseSchema, { ...block, author: m.author }, 201);
   });
 
-  // T-11-275 슬랙 에이전트(apps/agents)가 라운지 반응을 읽는 내부 주소. 세션 · D1을 건드리지 않고 비밀 토큰만 본다.
+  // T-11-277 슬랙 에이전트(apps/agents)가 라운지 반응을 읽는 내부 주소. 세션 · D1을 건드리지 않고 비밀 토큰만 본다.
   // 토큰이 없거나 틀리면 주소가 없는 것처럼 404를 준다. 닉네임 · 프로필 ID는 넘기지 않는다.
   app.get('/v1/internal/agents/chat', async (c) => {
     const secret = c.env.AGENTS_READ_TOKEN;
