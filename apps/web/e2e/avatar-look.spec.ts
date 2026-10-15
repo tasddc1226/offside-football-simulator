@@ -74,27 +74,21 @@ test('기록 아이템은 칭호를 얻어야 사고, 산 뒤에는 입고 벗�
 });
 
 for (const width of [320, 390]) {
-  test(`미니형 꾸미기와 준비 모션이 ${width}px 화면 안에 표시된다`, async ({ page }) => {
+  test(`미니형 꾸미기가 ${width}px 화면 안에 표시된다`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await resumeWithSave(page, { money: 1_000_000, age: 26 });
     const avatar = page.locator('.player .avatar');
-    await expect(avatar).toHaveAttribute('viewBox', '0 0 24 32');
+    // T-11-270 한 번 합성한 캔버스 한 장(24×32칸 × 10px).
     await expect(avatar).toHaveAttribute('data-avatar-renderer', 'image');
-    await expect(avatar.locator('image').first()).toHaveAttribute('href', /\.png/);
+    await expect(avatar).toHaveAttribute('width', '240');
+    await expect(avatar).toHaveAttribute('height', '320');
+    await expect(avatar).toHaveAttribute('data-ready', 'true');
     await page.locator('[data-act="avatar-look"]').click();
     const dialog = page.getByRole('dialog', { name: '선수 꾸미기' });
     await dialog.locator('[data-look-item="style"] [data-look-opt="2"]').click();
-    await expect(dialog.locator('svg.avatar')).toBeVisible();
+    await expect(dialog.locator('canvas.avatar[data-ready="true"]').first()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    await page.keyboard.press('Escape');
-    await page.locator('[data-act="advance"]').click();
-    const stage = page.locator('.avatar-walker > svg');
-    await expect(stage).toHaveAttribute('viewBox', '0 0 32 36');
-    await expect(stage).toHaveAttribute('data-avatar-renderer', 'image');
-    const box = await stage.boundingBox();
-    expect(box!.x).toBeGreaterThanOrEqual(0);
-    expect(box!.x + box!.width).toBeLessThanOrEqual(width);
   });
 }

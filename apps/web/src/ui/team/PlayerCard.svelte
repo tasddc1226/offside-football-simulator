@@ -102,7 +102,7 @@
   .card-art .shirt-trim { fill:none; stroke:var(--card-light); stroke-width:2; stroke-opacity:.65; }
   .shirt-number { position:absolute; inset:25% 0 0; display:flex; align-items:center; justify-content:center; font-family:var(--display); font-size:1.8rem; font-weight:700; }
   .card-art.has-portrait { display:flex; justify-content:center; align-items:flex-end; }
-  .card-art.has-portrait :global(svg.avatar) { width:auto; max-width:100%; height:100%; fill:none; stroke:none; image-rendering:pixelated; }
+  .card-art.has-portrait :global(.avatar) { width:auto; max-width:100%; height:100%; }
   .portrait-number { position:absolute; right:0; bottom:0; min-width:16px; padding:1px 3px; border-radius:3px; color:var(--card-light); background:var(--card-ink); font:700 10px/1.1 var(--display); text-align:center; }
   .compact .portrait-number { min-width:10px; padding:0 2px; font-size:7px; }
   .card-name { display:block; margin-top:4px; text-align:center; font-size:.88rem; white-space:nowrap; overflow:hidden; line-height:1.6; }

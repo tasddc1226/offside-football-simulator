@@ -26,13 +26,13 @@ node tooling/avatar-layers/mobile-sources.mjs                    # Metro require
   3. Splits those pixels by colour into skin, tintable materials and fixed-colour parts.
      Hair below the kit collar goes to `hair-<style>-back`, drawn behind the body. A headband is cut against its own hair sheet, so it wraps that hairstyle. `band-bald` is cut against the base, because `bald` has no hair layer.
   4. Downscales each layer by `SCALE` (0.6), keeping its parts gap-free.
-  5. Packs one atlas per pose.
+  5. Packs the atlas. Every pose is still cut (the head scale reference `headRef` is the median head width over the stand sheet), but only `stand` is written, because the game draws only the standing pose (T-11-270).
 - `preview.py` composites layers the way the renderer does, for checking a build:
 
   ```sh
-  $PY tooling/avatar-layers/preview.py <atlas dir> <data json> out.png "poses=runL,stand;layers=kit,hair-afro;hair=6e4428"
+  $PY tooling/avatar-layers/preview.py <atlas dir> <data json> out.png "poses=stand;layers=kit,hair-afro;hair=6e4428"
   ```
 
-Check every hairstyle, outfit and accessory in all 18 poses before replacing the committed atlases. image_gen sometimes moves a limb or misses a figure. When that happens, delete `gen/<job>.png` and run that job again.
+Check every hairstyle, outfit and accessory in the standing pose before replacing the committed atlas (to preview other poses, drop `SHIP` in `build.py` for a local build). image_gen sometimes moves a limb or misses a figure. When that happens, delete `gen/<job>.png` and run that job again.
 
 A figure that stays unchanged after a rerun is too small for image_gen. Crop that figure from `gen/base-<sheet>.png`, enlarge it 3× (nearest), edit the crop alone, shrink it back, key it and paste it over the same window of `cut/<job>-<sheet>.png`. The runL figure of `expr-wink-A` was made this way with `wink-fix.prompt` (window x 47–329, y 0–401 of sheet A).
