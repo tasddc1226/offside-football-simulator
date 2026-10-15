@@ -1,7 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { costOf, MODEL, MODELS, runAgent, withCacheTail, type Tool } from './claude.ts';
 import { modelFor } from './roles.ts';
 import { digestTools } from './tools/digest.ts';
+import {
+  maskAddress,
+  newMail,
+  parseMessage,
+  replyRaw,
+  supportInteraction,
+  type Gmail,
+  type MailDraft,
+  type RawMessage,
+} from './support.ts';
 import type { Env } from './env.ts';
 import { decide } from './index.ts';
 import { slackClient, verifySlack } from './slack.ts';
@@ -840,5 +850,157 @@ describe('report_digest', () => {
     expect(out.backup.meta).toBe('{"rows":[]}');
     expect(sqls[0]).toContain('cron:backup:last');
     expect(urls.some((u) => u.includes('per_page=40&created=%3E%3D'))).toBe(true);
+  });
+});
+
+describe('고객 문의', () => {
+  const enc = (t: string) =>
+    btoa(String.fromCharCode(...new TextEncoder().encode(t)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_');
+  const raw = (
+    id: string,
+    at: number,
+    from: string,
+    text: string,
+    extra: Partial<RawMessage> = {},
+  ): RawMessage => ({
+    id,
+    threadId: `t-${id}`,
+    internalDate: String(at),
+    payload: {
+      mimeType: 'multipart/alternative',
+      headers: [
+        { name: 'From', value: from },
+        { name: 'Subject', value: '결제 문의' },
+        { name: 'Message-ID', value: `<${id}@mail>` },
+      ],
+      parts: [{ mimeType: 'text/plain', body: { data: enc(text) } }],
+    },
+    ...extra,
+  });
+
+  it('본문에서 인용된 앞 메일을 빼고 주소를 가린다', () => {
+    const m = parseMessage(
+      raw(
+        '1',
+        1000,
+        '유저 <someone@example.com>',
+        '광고 제거가 안 돼요\n\nOn Mon, a wrote:\n> 이전 답장',
+      ),
+    );
+    expect(m.body).toBe('광고 제거가 안 돼요');
+    expect(maskAddress(m.from)).toBe('so***@example.com');
+  });
+
+  it('커서 뒤 문의만, 자동 메일 · 우리가 보낸 메일은 빼고 오래된 순으로', async () => {
+    const msgs: Record<string, RawMessage> = {
+      a: raw('a', 3000, 'u1@example.com', '두 번째'),
+      b: raw('b', 2000, 'u2@example.com', '첫 번째'),
+      c: raw('c', 2500, 'no-reply@example.com', '영수증'),
+      d: raw('d', 2600, 'me@example.com', '우리 답', { labelIds: ['SENT'] }),
+      e: raw('e', 500, 'u3@example.com', '예전 것'),
+    };
+    const qs: string[] = [];
+    const g = (async (path: string) => {
+      if (path.startsWith('/messages?')) {
+        qs.push(decodeURIComponent(path));
+        return { messages: Object.keys(msgs).map((id) => ({ id })) };
+      }
+      return msgs[path.split('/')[2]!.split('?')[0]!];
+    }) as Gmail;
+    const r = await newMail({ SUPPORT_QUERY: 'to:contact@offside-lab.com' } as Env, 1000, g);
+    expect(r.mails.map((m) => m.body)).toEqual(['첫 번째', '두 번째']);
+    expect(r).toMatchObject({ skipped: 1, latest: 3000 });
+    expect(qs[0]).toContain('to:contact@offside-lab.com after:1 -from:me');
+  });
+
+  it('답장 헤더에 줄바꿈을 끼워 넣지 못한다', () => {
+    const r = replyRaw({
+      to: 'u@example.com\r\nBcc: evil@example.com',
+      subject: '문의',
+      inReplyTo: '<1@mail>',
+      references: '',
+      body: '안녕하세요',
+    });
+    const text = atob(r.replace(/-/g, '+').replace(/_/g, '/'));
+    expect(text).toContain('To: u@example.com Bcc: evil@example.com\r\n');
+    expect(text).not.toMatch(/\r\nBcc:/);
+    expect(text).toContain('In-Reply-To: <1@mail>');
+    const named = atob(
+      replyRaw({
+        from: '오프사이드 <contact@offside-lab.com>',
+        to: 'u@example.com',
+        subject: 's',
+        inReplyTo: '',
+        references: '',
+        body: 'b',
+      })
+        .replace(/-/g, '+')
+        .replace(/_/g, '/'),
+    );
+    expect(named).toMatch(/^From: =\?UTF-8\?B\?[A-Za-z0-9+/=]+\?= <contact@offside-lab\.com>\r\n/);
+  });
+
+  describe('답장 승인 버튼', () => {
+    afterEach(() => vi.unstubAllGlobals());
+    const draft: MailDraft = {
+      draftId: 'r1',
+      threadId: 't',
+      to: 'u@example.com',
+      subject: 's',
+      body: 'b',
+    };
+    const setup = (to: string) => {
+      const slack: string[] = [];
+      vi.stubGlobal('fetch', async (u: string) => {
+        slack.push(u.split('/').pop()!);
+        return new Response('{"ok":true}');
+      });
+      const records: unknown[] = [];
+      const book = {
+        mailDraft: async () => draft,
+        recordMailApproval: async (a: unknown) => void records.push(a),
+      };
+      const env = {
+        OPERATOR_USER_ID: 'UOP',
+        APPROVAL_CHANNEL: 'C',
+        SLACK_PLAN_BOT_TOKEN: 'x',
+        LEDGER: { idFromName: () => 'id', get: () => book },
+      } as unknown as Env;
+      const calls: string[] = [];
+      const g = (async (path: string, init?: { method?: string }) => {
+        calls.push(`${init?.method ?? 'GET'} ${path.split('?')[0]}`);
+        if (path.startsWith('/drafts/r1'))
+          return { message: { payload: { headers: [{ name: 'To', value: to }] } } };
+        return { id: 'sent1' };
+      }) as Gmail;
+      return { env, g, calls, slack, records };
+    };
+    const press = (user: string, action = 'mail_send') => ({
+      type: 'block_actions',
+      user: { id: user },
+      channel: { id: 'C' },
+      message: { ts: '1.0', blocks: [] },
+      actions: [{ action_id: action, value: JSON.stringify({ draft: 'r1' }) }],
+    });
+
+    it('운영자가 아니면 보내지 않는다', async () => {
+      const s = setup('u@example.com');
+      expect(await supportInteraction(s.env, press('UOTHER'), async () => s.g)).toBe('forbidden');
+      expect(s.calls).toEqual([]);
+    });
+    it('받는 사람이 바뀌었으면 보내지 않는다', async () => {
+      const s = setup('other@example.com');
+      expect(await supportInteraction(s.env, press('UOP'), async () => s.g)).toBe('blocked');
+      expect(s.calls).toEqual(['GET /drafts/r1']);
+    });
+    it('운영자 승인이면 초안을 보내고 기록한다', async () => {
+      const s = setup('User <U@example.com>');
+      expect(await supportInteraction(s.env, press('UOP'), async () => s.g)).toBe('sent');
+      expect(s.calls).toEqual(['GET /drafts/r1', 'POST /drafts/send']);
+      expect(s.records).toMatchObject([{ draft: 'r1', action: 'send', user: 'UOP' }]);
+      expect(s.slack).toContain('chat.update');
+    });
   });
 });

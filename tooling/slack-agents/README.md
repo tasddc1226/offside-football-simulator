@@ -69,6 +69,16 @@ Worker는 `apps/agents`(`agents.offside-lab.com`)다. `manifests/ops.yaml`에 �
 - **시험 실행.** `POST https://agents.offside-lab.com/internal/run?job=reactions|report`(디시 넣기는 `dc-cursor` · `dc-push`)(헤더 `Authorization: Bearer <AGENTS_READ_TOKEN>`). `job=reactions&dry=1`은 커서를 옮기지 않고 출처별 건수 · 오류만 돌려준다.
 - **비밀값 추가.** 같은 `AGENTS_READ_TOKEN`(임의 문자열)을 `offside-api`(`--env production`) · `offside-agents` Worker와 GitHub Actions 비밀값에 넣는다. 값은 채팅 읽기 토큰이자 작성자 가명의 소금이다.
 
+## 고객 문의: `@plan`이 문의 메일 정리 · 답장 초안 (2026-10-16, T-11-291)
+
+- **하는 일.** 매시 7분(cron) 문의 Gmail에서 `contact@offside-lab.com`으로 온 새 메일(`SUPPORT_QUERY`)을 읽어, 새 메일이 있을 때만 `@plan`(Sonnet 5.5)이 분류 · 요약해 `#agent-desk`에 올린다. 답장이 필요하면 `support_draft`가 Gmail 초안을 만들고 `#agent-approvals`에 승인 카드를 올린다. 운영자가 "승인하고 보내기"를 눌러야 보내고, "버리기"면 초안을 지운다. 운영자 지시 · 그 스레드 답글에서는 `support_recent`(최근 문의 목록) · `support_thread`도 쓴다.
+- **받는 사람.** 초안의 받는 사람은 그 스레드에서 마지막으로 문의한 사람(Reply-To 우선)으로 Worker가 정한다. 모델은 주소를 고르지 못한다. 보내기 직전에 초안의 받는 사람이 처음과 같은지 다시 보고, 다르면 보내지 않는다. 마지막 메일이 우리 답이면 초안을 만들지 않는다.
+- **보내는 사람.** `SUPPORT_FROM` = `오프사이드 <contact@offside-lab.com>`. Gmail "다른 주소에서 메일 보내기" 별칭(Cloudflare SMTP, DKIM 자동)과 같아야 그 별칭으로 나간다. 도메인이 DMARC p=reject라 contact@는 Cloudflare를 거쳐야 한다.
+- **권한.** Google Cloud 프로젝트 `offside-agents`(게임 Google 로그인 프로젝트와 따로)의 OAuth 앱 "OFFSIDE 문의 에이전트"(외부 · 프로덕션 게시, 인증 안 받음 · 운영자 본인만 씀). 범위는 `gmail.readonly` · `gmail.compose`뿐. 테스트 상태로 두면 갱신 토큰이 7일마다 끊겨 프로덕션으로 게시했다.
+- **비밀값.** `GMAIL_CLIENT_ID` · `GMAIL_CLIENT_SECRET` · `GMAIL_REFRESH_TOKEN`(Worker). 다시 연결할 때는 `apps/agents`에서 `GMAIL_CLIENT_ID=… GMAIL_CLIENT_SECRET=… node scripts/gmail-auth.ts`를 돌리고 브라우저에서 문의 Gmail로 동의한다(토큰은 화면에 찍지 않고 `wrangler secret put`으로 바로 넣는다). 클라이언트 비밀번호를 잃었으면 Google Cloud에서 클라이언트를 새로 만든다.
+- **시험(2026-10-16).** 우리 도메인 주소(qa@, 답장 주소 contact@)에서 보낸 시험 문의로 초안 → 카드 → 승인 → 「오프사이드 <contact@offside-lab.com>」 발송까지 확인했다. contact@에서 보낸 메일은 Gmail이 보낸 메일로 표시해 시험 문의로 쓸 수 없다.
+- **Gmail MCP.** Google 공식 Gmail MCP(`gmailmcp.googleapis.com`)는 Developer Preview(가입 승인 필요)이고 보내기 도구가 없어 쓰지 않았다. 같은 범위로 Gmail API를 Worker가 직접 부른다.
+
 ## 3단계: `@dev`(손흥민) 연결 · 승인 버튼 (2026-10-15, T-11-285)
 
 `manifests/dev.yaml`에 이벤트 · 버튼 주소를 넣었다. `ENABLED_ROLES`는 `ops,plan,dev`. 구조는 ADR-015 인프라 절 "3단계 결정"을 본다.

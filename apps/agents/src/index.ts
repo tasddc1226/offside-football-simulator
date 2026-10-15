@@ -13,6 +13,7 @@ import { alertSignature, kstDay, ledger } from './ledger.ts';
 import { collect, triagePrompt, type DcCursor, type Reaction } from './reactions.ts';
 import { devCi, devInteraction, devResult, type DevCi, type DevResult } from './dev.ts';
 import { verifySlack } from './slack.ts';
+import { scanSupport, supportInteraction } from './support.ts';
 import { threadOf, type Task } from './thread.ts';
 
 export { AgentThread } from './thread.ts';
@@ -102,8 +103,9 @@ export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
     if (url.pathname === '/internal/run') return internalRun(req, url, env);
-    if (url.pathname === '/slack/dev/interactive' && req.method === 'POST')
-      return interactive(req, env, ctx);
+    const inter = /^\/slack\/(dev|plan)\/interactive$/.exec(url.pathname);
+    if (inter && req.method === 'POST')
+      return interactive(req, env, ctx, inter[1] as 'dev' | 'plan');
     const m = /^\/slack\/([a-z]+)\/events$/.exec(url.pathname);
     if (url.pathname === '/health') return new Response('ok');
     if (!m || req.method !== 'POST') return new Response('not found', { status: 404 });
@@ -140,10 +142,20 @@ export default {
     return new Response('');
   },
 
-  /** 3시간마다 47분 유저 반응 살피기(@plan), 매일 08:50 KST 주기 작업 보고(@ops). */
+  /** 3시간마다 47분 유저 반응 살피기(@plan), 매시 7분 고객 문의 메일(@plan), 매일 08:50 KST 주기 작업 보고(@ops). */
   async scheduled(ev: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     if (ev.cron === REPORT_CRON) {
       if (enabled(env, 'ops')) ctx.waitUntil(morningReport(env, ev.scheduledTime));
+      return;
+    }
+    if (ev.cron === SUPPORT_CRON) {
+      if (enabled(env, 'plan'))
+        ctx.waitUntil(
+          scanSupport(env, ev.scheduledTime).then(
+            (r) => r.mails && console.log('support', JSON.stringify(r)),
+            (e: unknown) => console.error('support scan failed', String(e).slice(0, 300)),
+          ),
+        );
       return;
     }
     if (enabled(env, 'plan')) ctx.waitUntil(scanReactions(env));
@@ -152,6 +164,7 @@ export default {
 
 /** wrangler.jsonc triggers와 같은 값. */
 export const REPORT_CRON = '50 23 * * *';
+export const SUPPORT_CRON = '7 * * * *';
 
 export async function morningReport(env: Env, now = Date.now(), eventId = `report:${kstDay(now)}`) {
   await threadOf(env, 'ops', env.DESK_CHANNEL, 'report').enqueue({
@@ -193,6 +206,11 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
   }
   if (job === 'dev-ci')
     return Response.json({ result: await devCi(env, (await req.json()) as DevCi) });
+  // 고객 문의: dry=1이면 커서를 옮기지 않고 새 문의 수만 돌려준다.
+  if (job === 'support')
+    return Response.json(
+      await scanSupport(env, Date.now(), undefined, url.searchParams.get('dry') === '1'),
+    );
   if (job === 'report') {
     await morningReport(env, Date.now(), `report:manual:${Date.now()}`);
     return Response.json({ queued: 'report' });
@@ -208,12 +226,17 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
   return Response.json(await scanReactions(env));
 }
 
-/** 슬랙 버튼(@dev 승인 카드). 서명을 확인하고 3초 안에 200을 돌려준 뒤 일은 뒤에서 한다. */
-async function interactive(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-  if (!enabled(env, 'dev')) return new Response('not found', { status: 404 });
+/** 슬랙 버튼(@dev 머지 승인 · @plan 답장 승인 카드). 서명을 확인하고 3초 안에 200을 돌려준 뒤 일은 뒤에서 한다. */
+async function interactive(
+  req: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  role: 'dev' | 'plan',
+): Promise<Response> {
+  if (!enabled(env, role)) return new Response('not found', { status: 404 });
   const body = await req.text();
   const ok = await verifySlack(
-    signingSecret(env, 'dev'),
+    signingSecret(env, role),
     req.headers.get('x-slack-request-timestamp'),
     req.headers.get('x-slack-signature'),
     body,
@@ -221,10 +244,11 @@ async function interactive(req: Request, env: Env, ctx: ExecutionContext): Promi
   if (!ok) return new Response('bad signature', { status: 401 });
   const raw = new URLSearchParams(body).get('payload');
   if (!raw) return new Response('');
+  const handle = role === 'dev' ? devInteraction : supportInteraction;
   ctx.waitUntil(
-    devInteraction(env, JSON.parse(raw)).then(
-      (r) => console.log('dev interaction', r),
-      (e: unknown) => console.error('dev interaction failed', String(e)),
+    handle(env, JSON.parse(raw)).then(
+      (r) => console.log(`${role} interaction`, r),
+      (e: unknown) => console.error(`${role} interaction failed`, String(e)),
     ),
   );
   return new Response('');
