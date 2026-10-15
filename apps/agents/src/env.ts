@@ -22,6 +22,16 @@ export interface Env {
   DESK_CHANNEL: string;
   TASK_BUDGET_USD: string;
   DAILY_BUDGET_USD: string;
+  /** @dev 하루 한도(Actions 작업 비용 포함). 없으면 DAILY_BUDGET_USD. */
+  DAILY_BUDGET_DEV_USD?: string;
+  /** agent-dev.yml의 `--max-budget-usd`와 같은 값. 남은 하루 한도가 이보다 적으면 작업을 띄우지 않는다. */
+  DEV_RUN_BUDGET_USD: string;
+  /** 승인 카드를 올릴 채널(#agent-approvals). */
+  APPROVAL_CHANNEL: string;
+  GITHUB_APP_ID: string;
+  GITHUB_APP_INSTALLATION_ID: string;
+  /** PKCS#8 PEM. */
+  GITHUB_APP_PRIVATE_KEY?: string;
   CF_D1_READ_TOKEN: string;
   CF_MCP_TOKEN?: string;
   GITHUB_TOKEN?: string;
@@ -75,6 +85,10 @@ export const calledRoles = (text: string): Role[] => [
 ];
 
 export const stripCalls = (text: string) => text.replace(CALL, '').trim();
+
+/** 역할별 하루 한도(달러). */
+export const dailyBudget = (env: Env, role: Role) =>
+  Number((role === 'dev' && env.DAILY_BUDGET_DEV_USD) || env.DAILY_BUDGET_USD);
 
 export const isRole = (v: string): v is Role => (ROLES as readonly string[]).includes(v);
 export const enabled = (env: Env, role: Role) => list(env.ENABLED_ROLES).includes(role);

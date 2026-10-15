@@ -1,10 +1,12 @@
-// 역할마다 시스템 프롬프트(roles/<역할>.md) · 도구 · 턴 상한. 2단계까지 @ops · @plan이 있다.
+// 역할마다 시스템 프롬프트(roles/<역할>.md) · 도구 · 턴 상한. 3단계까지 @ops · @plan · @dev가 있다.
 import type { Tool } from './claude.ts';
 import type { McpServer } from './mcp.ts';
 import type { Env, Role } from './env.ts';
 import type { Task } from './thread.ts';
+import dev from '../roles/dev.md';
 import ops from '../roles/ops.md';
 import plan from '../roles/plan.md';
+import { devTools } from './dev.ts';
 import { opsTools } from './tools/ops.ts';
 import { scheduleTools } from './tools/schedules.ts';
 
@@ -23,7 +25,7 @@ const kstNow = () =>
 const handoffPrompt = (t: Task) =>
   `지금 KST ${kstNow()}. @${t.from}가 같은 스레드에서 일을 넘겼어요.\n\n요청: ${t.text}\n\n<context>\n${t.context ?? ''}\n</context>`;
 
-export function roleSpec(env: Env, role: Role): RoleSpec {
+export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
   const tools = opsTools({
     accountId: env.CF_ACCOUNT_ID,
     databaseId: env.D1_DATABASE_ID,
@@ -44,6 +46,20 @@ export function roleSpec(env: Env, role: Role): RoleSpec {
           : t.kind === 'handoff'
             ? handoffPrompt(t)
             : `지금 KST ${kstNow()}. 운영자 지시:\n${t.text}`,
+    };
+  if (role === 'dev')
+    return {
+      system: dev,
+      // 개발은 저장소 · PR을 읽고, 운영자가 맡긴 일이면 Actions 작업을 띄운다(start_work). 고치는 건 Actions의 Claude Code가 한다.
+      tools: [...tools.filter((t) => t.name === 'repo_file'), ...devTools(env, task)],
+      maxTurns: 8,
+      mcpServers: [],
+      prompt: (t) =>
+        t.kind === 'handoff'
+          ? `${handoffPrompt(t)}
+
+(넘겨받은 일이라 바로 고치지 않아요. 할 일을 정리해 운영자 확인을 받아요.)`
+          : `지금 KST ${kstNow()}. 운영자 지시:\n${t.text}`,
     };
   if (role !== 'ops') throw new Error(`role ${role} is not open yet`);
   return {

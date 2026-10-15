@@ -19,7 +19,7 @@
   "observability": { "enabled": true, "logs": { "enabled": true, "invocation_logs": false } },
   "vars": {
     // 2단계까지 @ops · @plan을 연다(ADR-015 도입 단계).
-    "ENABLED_ROLES": "ops,plan",
+    "ENABLED_ROLES": "ops,plan,dev",
     "OPERATOR_USER_ID": "U0C9BAYGT8Q",
     // 에이전트 봇 4개(자기 · 서로의 메시지에 반응하지 않는다).
     "AGENT_APP_IDS": "A0C987NV8HZ,A0C9CFUM98E,A0C996C6R3P,A0C9E9PELTC",
@@ -34,5 +34,10 @@
     "DESK_CHANNEL": "C0C9E9WRVA6",
     "TASK_BUDGET_USD": "1.5",
     "DAILY_BUDGET_USD": "5",
+    "DAILY_BUDGET_DEV_USD": "20",
+    "DEV_RUN_BUDGET_USD": "5",
+    "APPROVAL_CHANNEL": "C0C9GCJPYAV",
+    "GITHUB_APP_ID": "",
+    "GITHUB_APP_INSTALLATION_ID": "",
   },
 }
