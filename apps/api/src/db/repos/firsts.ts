@@ -161,20 +161,25 @@ async function claimStatements(db: Db, list: SeasonCareer[]) {
     }
   }
   if (!firsts.size && !records.size) return [];
+  // T-11-268 기본키 (시즌, id)로 찾는다 — id만으로 찾으면 인덱스를 못 타 표 전체(운영 373행)를 매번 훑었다.
+  const wanted = new Map<number, string[]>();
+  for (const g of firsts.values()) wanted.set(g.season, [...(wanted.get(g.season) ?? []), g.id]);
   const [heldRecords, ...heldFirsts] = await db.batch([
     db
       .select({ season: serverRecords.season, id: serverRecords.id, value: serverRecords.value })
       .from(serverRecords),
-    ...chunks([...new Set([...firsts.values()].map((g) => g.id))]).map((ids) =>
-      db
-        .select({
-          season: serverFirsts.season,
-          id: serverFirsts.id,
-          careerId: serverFirsts.careerId,
-          at: serverFirsts.achievedAt,
-        })
-        .from(serverFirsts)
-        .where(inArray(serverFirsts.id, ids)),
+    ...[...wanted].flatMap(([season, seasonIds]) =>
+      chunks(seasonIds).map((ids) =>
+        db
+          .select({
+            season: serverFirsts.season,
+            id: serverFirsts.id,
+            careerId: serverFirsts.careerId,
+            at: serverFirsts.achievedAt,
+          })
+          .from(serverFirsts)
+          .where(and(eq(serverFirsts.season, season), inArray(serverFirsts.id, ids))),
+      ),
     ),
   ]);
   const cur = new Map(heldFirsts.flat().map((h) => [key(h.season, h.id), h]));

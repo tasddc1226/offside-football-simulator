@@ -293,6 +293,22 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     }
   });
 
+  it('T-11-268: 가치순 랭킹은 엣지에 30분, 평점·OVR순은 5분 담는다', async () => {
+    await team(1, 80);
+    const edge = installFakeEdgeCache();
+    try {
+      for (const sort of ['rating', 'ovr', 'value']) await rank(`?sort=${sort}`);
+      await flushEdge();
+      const ttl = (sort: string) =>
+        edge.controls.get(`http://localhost/v1/teams?season=0&sort=${sort}&page=1&form=5&logo=1`);
+      expect(ttl('rating')).toBe('public, max-age=300');
+      expect(ttl('ovr')).toBe('public, max-age=300');
+      expect(ttl('value')).toBe('public, max-age=1800');
+    } finally {
+      edge.uninstall();
+    }
+  });
+
   it('좋아요는 한 사람이 한 번(익명 프로필도), 내 팀은 누를 수 없고, 조회수는 부를 때마다 오른다', async () => {
     const a = await team(1, 80);
     const fan = await issueCookie(ctx);
