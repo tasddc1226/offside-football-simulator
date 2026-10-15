@@ -140,7 +140,7 @@ export default {
     return new Response('');
   },
 
-  /** 매시간 47분 유저 반응 살피기(@plan), 매일 08:50 KST 주기 작업 보고(@ops). */
+  /** 3시간마다 47분 유저 반응 살피기(@plan), 매일 08:50 KST 주기 작업 보고(@ops). */
   async scheduled(ev: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     if (ev.cron === REPORT_CRON) {
       if (enabled(env, 'ops')) ctx.waitUntil(morningReport(env, ev.scheduledTime));

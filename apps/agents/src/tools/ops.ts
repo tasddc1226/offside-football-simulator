@@ -1,9 +1,10 @@
 // @ops 도구: 전부 읽기 전용이다(ADR-015 도구와 권한). D1 토큰은 D1 읽기 권한만 있어 쓰기 쿼리는 Cloudflare가 거절하고,
 // 여기서도 SELECT 한 문장만 보낸다. 결과는 행 · 글자 수를 잘라 넘긴다(토큰 비용).
 import type { Tool } from '../claude.ts';
+import { ghAuth, type GhToken } from '../github.ts';
 
 const MAX_ROWS = 50;
-const MAX_CHARS = 12_000;
+const MAX_CHARS = 6_000;
 const clip = (s: string, n = MAX_CHARS) =>
   s.length > n ? `${s.slice(0, n)}\n…(잘림, ${s.length}자)` : s;
 
@@ -30,7 +31,7 @@ export type OpsDeps = {
   databaseId: string;
   d1Token: string;
   repo: string;
-  githubToken?: string | undefined;
+  githubToken?: GhToken;
   fetcher?: typeof fetch;
 };
 
@@ -41,7 +42,7 @@ export function opsTools(d: OpsDeps): Tool[] {
       headers: {
         Accept: 'application/vnd.github+json',
         'User-Agent': 'offside-agents',
-        ...(d.githubToken ? { Authorization: `Bearer ${d.githubToken}` } : {}),
+        ...(await ghAuth(d.githubToken)),
       },
     });
     if (!r.ok) throw new Error(`GitHub ${r.status}`);

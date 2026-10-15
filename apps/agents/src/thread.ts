@@ -1,7 +1,7 @@
 // 슬랙 스레드 하나 = 역할마다 객체 하나. 일을 받은 순서대로 하나씩 처리하고, 이어지는 지시를 위해 대화 요약 · 비용을 저장한다.
 // 운영 D1은 쓰지 않는다(ADR-015 인프라).
 import { DurableObject } from 'cloudflare:workers';
-import { ClaudeError, runAgent, type Message, type Tool } from './claude.ts';
+import { ClaudeError, MODEL_LABEL, runAgent, type Message, type Tool } from './claude.ts';
 import { apiKey, botToken, dailyBudget, enabled, ROLE_NAMES, type Env, type Role } from './env.ts';
 import { MAX_HOPS, parseHandoffs } from './handoff.ts';
 import { kstDay, ledger } from './ledger.ts';
@@ -114,6 +114,7 @@ export class AgentThread extends DurableObject<Env> {
         messages: [...state.history, { role: 'user', content: prompt }],
         maxTurns: spec.maxTurns,
         budgetUsd: Number(env.TASK_BUDGET_USD),
+        model: spec.model,
       });
       const day = await book.add(task.role, r.costUsd);
       // 검토할 반응이 없으면 슬랙에 올리지 않는다(비용만 적는다).
@@ -129,7 +130,7 @@ export class AgentThread extends DurableObject<Env> {
         (r.stopped === 'turns'
           ? '\n\n_조회 횟수 한도에 닿아 여기서 멈췄어요. 이어서 하려면 다시 불러 주세요._'
           : '');
-      footer = `Opus 5.5 · ${r.turns}턴 · $${r.costUsd.toFixed(3)} · 오늘 ${task.role} $${day.costUsd.toFixed(2)} (${kstDay()})`;
+      footer = `${MODEL_LABEL[spec.model]} · ${r.turns}턴 · $${r.costUsd.toFixed(3)} · 오늘 ${task.role} $${day.costUsd.toFixed(2)} (${kstDay()})`;
       state.history = [
         ...state.history,
         { role: 'user', content: prompt },

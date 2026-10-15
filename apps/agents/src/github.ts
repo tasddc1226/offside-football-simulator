@@ -51,6 +51,34 @@ export async function installationToken(app: GitHubApp, fetcher: typeof fetch = 
   return data.token;
 }
 
+/** 읽기 도구의 GitHub 토큰: 문자열이거나, 부를 때 받아 오는 함수. 없으면 공개 API로 읽는다. */
+export type GhToken = string | undefined | (() => Promise<string | undefined>);
+export const ghAuth = async (t: GhToken): Promise<Record<string, string>> => {
+  const token = typeof t === 'function' ? await t().catch(() => undefined) : t;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+/**
+ * @ops · @plan 읽기 도구용 토큰(T-11-289). 공개 API는 Workers가 IP를 나눠 써서 한 시간 60번 한도에 자주 걸린다(403).
+ * GITHUB_TOKEN이 없으면 앱 설치 토큰으로 읽는다(GET만 부른다).
+ */
+export const repoReadToken = (env: {
+  GITHUB_TOKEN?: string;
+  GITHUB_APP_ID: string;
+  GITHUB_APP_INSTALLATION_ID: string;
+  GITHUB_APP_PRIVATE_KEY?: string;
+}): GhToken => {
+  if (env.GITHUB_TOKEN) return env.GITHUB_TOKEN;
+  const key = env.GITHUB_APP_PRIVATE_KEY;
+  if (!key) return undefined;
+  return () =>
+    installationToken({
+      appId: env.GITHUB_APP_ID,
+      privateKey: key,
+      installationId: env.GITHUB_APP_INSTALLATION_ID,
+    });
+};
+
 export type Gh = <T = Record<string, unknown>>(
   path: string,
   init?: { method?: string; body?: unknown },
