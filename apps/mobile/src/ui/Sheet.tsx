@@ -1,14 +1,6 @@
 // 아래에서 올라오는 시트(웹 Sheet.svelte). 선택이 필수인 시트(진행 중·이벤트 대기)는 배경 누르기·끌어 내리기·
 // Android 뒤로로 닫히지 않는다. 본문은 SheetBody가 뷰 종류별로 그리고, 버튼은 sheetState.buttons 그대로.
-import {
-  PanResponder,
-  Keyboard,
-  Modal,
-  Pressable,
-  ScrollView,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { PanResponder, Keyboard, Modal, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { canDismissSheet } from '@offside/app-core/sheet-controller';
@@ -17,7 +9,6 @@ import { appState, prefs, sheetState } from '../store';
 import { buzz, dismissSheet } from '../game/host';
 import { useColors } from '../theme/useColors';
 import { SheetBody } from '../sheets/SheetBody';
-import { ProgressRunner } from '../sheets/ProgressRunner';
 import { Btn } from './Btn';
 import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
@@ -27,10 +18,7 @@ export function Sheet() {
   const { motionOK } = useSnapshot(prefs);
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
   const v = sheetState.view;
-  const progress = (v?.kind === 'steps' || v?.kind === 'block') && !!v.avatar;
-  const running = s.open && s.busy && s.buttons.length === 0 && progress;
   const dismissible = canDismissSheet(
     { busy: s.busy, view: s.view as SheetView | null },
     G?.pending as Parameters<typeof canDismissSheet>[1],
@@ -73,12 +61,9 @@ export function Sheet() {
             backgroundColor: c.surface,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
-            maxHeight: progress ? Math.min(height * 0.9, height - 80 - insets.top) : '90%',
+            maxHeight: '90%',
           }}
         >
-          {running && (v?.kind === 'steps' || v?.kind === 'block') && v.avatar ? (
-            <ProgressRunner spec={v.avatar} />
-          ) : null}
           <ScrollView
             bounces={false}
             keyboardShouldPersistTaps="handled"
