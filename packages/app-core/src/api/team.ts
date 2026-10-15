@@ -1,5 +1,8 @@
 // T-10-092 구단주 팀 · 라이브 랭킹 API. 팀 화면·기록실(지연 청크)만 import한다. 타입은 type-only import라 번들에 zod가 들어가지 않는다.
 import type {
+  Comment,
+  CommentInput,
+  TeamCommentsResponse,
   AchRankResponse,
   ClubAchievementsResponse,
   ClubAchievementNotifications,
@@ -102,6 +105,11 @@ export const fetchAchRanking = (season: number | undefined, page: number) =>
   );
 /** 팀 프로필(좋아요 여부가 사람마다 달라 메모하지 않는다). */
 export const fetchTeamProfile = (id: string) => apiFetch<TeamProfileResponse>(`/v1/teams/${id}`);
+/** T-11-290 팀 프로필의 스쿼드 댓글(보는 사람이 신고·차단한 것은 빠진다). 지우기·신고·차단은 api/boards의 함수를 그대로 쓴다. */
+export const fetchTeamComments = (id: string) =>
+  apiFetch<TeamCommentsResponse>(`/v1/teams/${id}/comments`);
+export const addTeamComment = (id: string, input: CommentInput) =>
+  apiFetch<Comment>(`/v1/teams/${id}/comments`, { method: 'POST', body: JSON.stringify(input) });
 export const viewTeam = (id: string) =>
   apiFetch<undefined>(`/v1/teams/${id}/views`, { method: 'POST', keepCache: true });
 export const likeTeam = (id: string, like: boolean) =>

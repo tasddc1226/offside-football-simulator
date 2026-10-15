@@ -14,7 +14,7 @@ import { currentInApp, showInAppLoginNotice } from './inapp-open.js';
 import { openFriends, pendingInvite } from './friendInvite.svelte.js';
 import { openLocalLegend } from './legend.js';
 import { openBoard } from './nav.js';
-import { appState } from './state.svelte.js';
+import { appState, hofStart } from './state.svelte.js';
 
 /** 로그인을 마치고 돌아와 다시 열 곳. T-10-028 소식 글(댓글), T-10-029 내 은퇴 선수(공유), T-11-015 채팅. */
 export type LoginReturn =
@@ -22,7 +22,9 @@ export type LoginReturn =
   | { career: string }
   | { chat: true }
   | { market: true }
-  | { cup: true };
+  | { cup: true }
+  /** T-11-290 팀 프로필(스쿼드 댓글)에서 로그인했으면 그 팀 프로필로 돌아온다. */
+  | { team: string };
 const LOGIN_RETURN_KEY = 'ft_board_return';
 /** null이면 기록을 지운다(설정에서 로그인할 때). */
 function rememberLoginReturn(to: LoginReturn | null) {
@@ -78,6 +80,10 @@ export function handleOAuthReturn() {
     if ('chat' in back) return void (appState.screen = 'chat');
     if ('market' in back) return void (appState.screen = 'market');
     if ('cup' in back) return void (appState.screen = 'cup');
+    if ('team' in back) {
+      appState.hof = { ...hofStart(), tab: 'teams', team: back.team };
+      return void (appState.screen = 'hof');
+    }
     // 은퇴 화면에서 로그인했으면 그 선수의 상세로 돌아온다.
     const h = loadHOF().find((x) => x.id === back.career);
     if (h) return openLocalLegend(h);

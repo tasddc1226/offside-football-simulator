@@ -23,7 +23,8 @@ export * from './board-limits.js';
  */
 export const BoardKeySchema = z.enum(BOARD_KEYS);
 
-export const BoardIdParamSchema = z.string().regex(/^(pst|cmt|blk)_[0-9a-f-]{36}$/);
+/** tcm: T-11-290 팀 프로필 댓글 — 지우기·신고·차단은 게시판 댓글 라우트가 접두사로 가려 받는다. */
+export const BoardIdParamSchema = z.string().regex(/^(pst|cmt|blk|tcm)_[0-9a-f-]{36}$/);
 
 export const BoardListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(BOARD_PAGE_LIMIT),
@@ -145,6 +146,13 @@ export const BoardListResponseSchema = z.object({
   hasMore: z.boolean(),
 });
 export type BoardListResponse = z.infer<typeof BoardListResponseSchema>;
+
+/** T-11-290 팀 프로필의 스쿼드 댓글(GET /v1/teams/:teamId/comments). 글 댓글과 같은 모양·같은 숨김 규칙(신고·차단). */
+export const TeamCommentsResponseSchema = z.object({
+  comments: z.array(CommentSchema),
+  blocks: z.array(BoardBlockSchema).default([]),
+});
+export type TeamCommentsResponse = z.infer<typeof TeamCommentsResponseSchema>;
 
 export const PostDetailResponseSchema = z.object({
   post: PostSchema,

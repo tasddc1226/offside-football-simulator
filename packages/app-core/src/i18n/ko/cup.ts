@@ -175,6 +175,18 @@ const ko = {
   groupName: (p: { no: number }) => `${p.no}조`,
   myGroup: '내 조',
   teamOwnerLabel: '구단주',
+  // T-11-290 승부예측 줄의 팀·구단주 누르기
+  teamProfileOpen: (p: { team: string }) => `${p.team} 팀 프로필 보기`,
+  ownerProfileOpen: (p: { owner: string }) => `구단주 ${p.owner} 프로필 보기`,
+  // T-11-290 우승 팝업(앱·웹을 열 때 한 번)
+  championPopupAria: '오프사이드 컵 우승 소식',
+  championPopupEyebrow: (p: { n: number }) => `Offside Cup · 제${p.n}회`,
+  championPopupTitle: (p: { n: number }) => `제${p.n}회 오프사이드 컵 우승`,
+  championPopupBody: '결승에서 이기고 트로피를 들었어요.',
+  championPopupOwner: (p: { owner: string }) => `구단주 ${p.owner}`,
+  championPopupTeam: '우승 팀 보기',
+  championPopupClose: '닫기',
+  championPopupNoMore: '다시 보지 않기',
   standingsScroll: '옆으로 밀면 전체 기록을 볼 수 있어요.',
   standingsRule: '순위는 승점, 골득실, 다득점, 맞대결, 추첨 순서로 정해요.',
   thTeam: '팀',

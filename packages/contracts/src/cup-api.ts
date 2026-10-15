@@ -97,7 +97,21 @@ export const CupResponseSchema = z.strictObject({
 });
 export type CupResponse = z.infer<typeof CupResponseSchema>;
 
-/** Home banner only; no lineups, logos, standings or match payloads. */
+/** T-11-290 가장 최근에 끝난 대회의 우승 팀(홈 우승 팝업). 팀 이름·구단주·로고는 지금 팀 기준(없어졌으면 신청 때 값). */
+export const CupChampionSchema = z.strictObject({
+  cupId: CupIdSchema,
+  season: z.number().int(),
+  edition: z.number().int(),
+  teamId: z.string(),
+  name: z.string(),
+  owner: z.string(),
+  logo: TeamLogoSchema.nullable(),
+  /** 대회 마감(보상·칭호 지급) 시각. */
+  doneAt: IsoUtcSchema,
+});
+export type CupChampion = z.infer<typeof CupChampionSchema>;
+
+/** Home banner only; no lineups, standings or match payloads. The only logo is the recent champion's (one row). */
 export const CupHomeResponseSchema = z.strictObject({
   cup: CupInfoSchema,
   phase: CupPhaseSchema,
@@ -105,6 +119,8 @@ export const CupHomeResponseSchema = z.strictObject({
   teamCount: z.number().int(),
   round: CupRoundSchema.nullable(),
   championName: z.string().nullable(),
+  /** T-11-290 결승 뒤 CUP_HOME_AFTER_MS 안에 끝난 가장 최근 대회의 우승 팀. 다음 대회 접수가 열려 cup이 바뀌어도 남는다. */
+  champion: CupChampionSchema.nullable(),
 });
 export type CupHomeResponse = z.infer<typeof CupHomeResponseSchema>;
 

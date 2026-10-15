@@ -5,6 +5,7 @@ import type { Db } from '../db/client.js';
 import { auditLogStatement } from '../db/repos/auditLog.js';
 import { runBatch } from '../db/repos/batch.js';
 import { deleteBoardActivityStatements } from '../db/repos/boards.js';
+import { deleteTeamCommentActivityStatements } from '../db/repos/teamComments.js';
 import { deleteChatActivityStatements } from '../db/repos/chat.js';
 import { deleteNameReportsStatement } from '../db/repos/nameReports.js';
 import { deleteCareersStatements } from '../db/repos/careers.js';
@@ -162,6 +163,7 @@ export async function executeProfileDeletion(
     db.delete(rerollMileage).where(eq(rerollMileage.profileId, input.profileId)),
     db.delete(iapPurchases).where(eq(iapPurchases.profileId, input.profileId)),
     ...deleteBoardActivityStatements(db, input.profileId),
+    ...deleteTeamCommentActivityStatements(db, input.profileId),
     ...deleteChatActivityStatements(db, input.profileId),
     db.delete(pushDevices).where(eq(pushDevices.profileId, input.profileId)),
     db.delete(pushNewsDeliveries).where(eq(pushNewsDeliveries.profileId, input.profileId)),
