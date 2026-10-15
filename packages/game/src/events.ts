@@ -1,5 +1,6 @@
 // ───────── 랜덤 이벤트 (기본 이벤트 정의) ─────────
 import { ATTR_KEYS, POS } from './data.js';
+import { eunNeun } from './i18n/particles.js';
 import { ovr, wOf } from './attributes.js';
 import { clamp, ri, pick, chance } from './rng.js';
 import {
@@ -325,8 +326,10 @@ export const BASE_EVENTS: EventDef[] = [
     title: '레전드 선배의 조언',
     w: 2,
     cond: () => true,
-    text: (s) =>
-      `은퇴한 대선배가 훈련장에 찾아왔습니다. "${labelOf(s, bestKey(s))}은 좋은데, 나머지가 아쉽구나."`,
+    text: (s) => {
+      const best = labelOf(s, bestKey(s));
+      return `은퇴한 대선배가 훈련장에 찾아왔습니다. "${best}${eunNeun(best)} 좋은데, 나머지가 아쉽구나."`;
+    },
     choices: [
       {
         label: '비법을 전수받는다',

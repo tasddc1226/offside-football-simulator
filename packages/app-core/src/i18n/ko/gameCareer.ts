@@ -1,6 +1,7 @@
 // 커리어 탭 문구(웹 tabs/CareerTab.svelte · 앱 components/CareerTab.tsx)와 코치 메모·이적 평가(app-core career-feedback.ts).
 // 이정표·수상·소속·리그 이름과 '다음 목표' 이름은 게임이 만든 문구라 옮기지 않는다.
 import { ns } from '../core';
+import { iGa } from '../../format';
 
 const ko = {
   rnTitle: '영구결번 도전',
@@ -63,12 +64,12 @@ const ko = {
   coachLowMorale:
     '사기가 낮으면 같은 능력치 훈련에서도 성장이 줄어요. 휴식·회복으로 사기를 회복할 수 있어요.',
   coachLopsided: (p: { attr: string }) =>
-    `${p.attr}이 다른 핵심 능력치보다 앞서 있어 이 능력치의 훈련 성장이 줄어요. 다른 핵심 능력치를 보완해 주세요.`,
+    `${p.attr}${iGa(p.attr)} 다른 핵심 능력치보다 앞서 있어 이 능력치의 훈련 성장이 줄어요. 다른 핵심 능력치를 보완해 주세요.`,
   // 이적 시장 평가
   marketAssess: (p: { ovr: number; rating: string | null; fame: number; age: number }) =>
     `현재 OVR ${p.ovr} · ${p.rating === null ? '' : `지난 시즌 평점 ${p.rating} · `}인기 ${p.fame} · ${p.age}세. 구단은 기량·지난 시즌 평점·인기·나이를 함께 봐요. 리그 조건과 스카우트·에이전트 이벤트도 제의에 영향을 줘요. 좋은 활약이 특정 구단의 제의를 보장하지는 않아요.`,
   offerAssess: (p: { ovr: number; str: number | string; role: string }) =>
-    `현재 OVR ${p.ovr} · 팀 전력 ${p.str}. 제시된 출전 조건은 ${p.role || '별도 안내 없음'}이에요. 실제 출전은 컨디션·부상·감독 신뢰 등에 따라 달라져요.`,
+    `현재 OVR ${p.ovr} · 팀 전력 ${p.str} · 제시된 출전 조건 ${p.role || '별도 안내 없음'}. 실제 출전은 컨디션·부상·감독 신뢰 등에 따라 달라져요.`,
 };
 
 export type GameCareerMsgs = typeof ko;

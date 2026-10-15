@@ -13,7 +13,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   roomPrev: '左を見る',
   roomNext: '右を見る',
   roomEmptyAwards:
-    'まだ展示できるバッジはありません。シーズンを終えるか、カップで記録を残しましょう。',
+    'まだ展示できるバッジはありません。シーズンを終えるか、カップで記録を残すとここに並びます。',
   roomLoading: 'ロッカールームを準備しています。',
   roomBadgeCount: '記録バッジ',
   roomCupCount: 'カップ成績',

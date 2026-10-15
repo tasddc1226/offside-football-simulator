@@ -1,5 +1,6 @@
 // ───────── 연쇄 이벤트 · 스토리 라인 ─────────
 import { POS } from './data.js';
+import { iGa } from './i18n/particles.js';
 import { rivalName } from './rival-names.js';
 export { rivalName } from './rival-names.js';
 import { ovr } from './attributes.js';
@@ -538,8 +539,10 @@ export const STORY_EVENTS: EventDef[] = [
     title: '감독의 특별 과제',
     w: 0,
     cond: (s) => isPro(s),
-    text: (s) =>
-      `감독이 따로 불렀습니다. "${weakKeyLabel(s)}이 부족해. 이것만 채우면 넌 더 큰 선수가 된다."`,
+    text: (s) => {
+      const weak = weakKeyLabel(s);
+      return `감독이 따로 불렀습니다. "${weak}${iGa(weak)} 부족해. 이것만 채우면 넌 더 큰 선수가 된다."`;
+    },
     choices: [
       {
         label: '새로운 역할을 받아들인다',

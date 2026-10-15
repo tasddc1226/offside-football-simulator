@@ -50,8 +50,8 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
   },
   targetManRole: {
     group: 'growth',
-    label: '타겟맨 전용 OVR',
-    desc: '1이면 타겟맨 유형 스트라이커의 OVR을 헤딩·몸싸움·점프 비중이 큰 타겟맨 역할로 계산',
+    label: '타깃맨 전용 OVR',
+    desc: '1이면 타깃맨 유형 스트라이커의 OVR을 헤딩·몸싸움·점프 비중이 큰 타깃맨 역할로 계산',
   },
   wingerRole: {
     group: 'growth',

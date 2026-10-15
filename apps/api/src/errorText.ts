@@ -138,7 +138,7 @@ const EXACT: Record<string, string> = {
   '이번 시즌 선수만 내놓을 수 있어요.': "You can only list this season's players.",
   '기준가가 없는 선수는 내놓을 수 없어요.': "Players without a base value can't be listed.",
   '이미 내놓은 선수예요.': 'That player is already listed.',
-  '판매가가 정할 수 있는 범위를 벗어났어요.': 'The asking price is outside the allowed range.',
+  '판매가가 정해진 범위를 벗어났어요.': 'The asking price is outside the allowed range.',
   '이미 내놓았거나 방출했거나 잠근 선수예요.':
     'That player has already been listed, released or locked.',
   '잠긴 선수예요. 잠금을 풀어야 내놓을 수 있어요.':
@@ -183,11 +183,11 @@ const PATTERNS: [RegExp, (m: RegExpExecArray) => string][] = [
     (m) => `A moderator account's comment nickname is fixed as '${m[1]}'.`,
   ],
   [
-    /^'운영자'처럼 운영진으로 보이는 (닉네임|팀 이름|감독 이름|로고 글자)(?:은|는) 쓸 수 없어요\.$/,
+    /^(닉네임|팀 이름|감독 이름|로고 글자)에 '운영자'처럼 운영진으로 보이는 말은 쓸 수 없어요\.$/,
     (m) => `A ${WHAT[m[1]!]} that looks like staff, such as 'Moderator', isn't allowed.`,
   ],
   [
-    /^쓸 수 없는 (닉네임|팀 이름|감독 이름|로고 글자)이에요\.$/,
+    /^(닉네임|팀 이름|감독 이름|로고 글자)에 쓸 수 없는 말이 들어 있어요\.$/,
     (m) => `That ${WHAT[m[1]!]} isn't allowed.`,
   ],
   [/^(글|댓글|차단) 항목을 찾을 수 없어요\.$/, (m) => `We couldn't find that ${KIND[m[1]!]}.`],

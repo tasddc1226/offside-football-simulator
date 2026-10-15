@@ -141,17 +141,18 @@ const seasonQuery = (c: Context<AppEnv>, now: string) =>
 
 /** 팀·감독 이름 검사(욕설·운영자 사칭). */
 function checkName(value: string, what: string) {
+  // '로고 글자'처럼 받침이 없는 이름도 오므로 문장은 조사 없이 잇는다(errorText의 번역 패턴과 같이 바꾼다).
   if (isReservedNickname(value)) {
     throw new AppError({
       code: 'VALIDATION_FAILED',
-      message: `'운영자'처럼 운영진으로 보이는 ${what}은 쓸 수 없어요.`,
+      message: `${what}에 '운영자'처럼 운영진으로 보이는 말은 쓸 수 없어요.`,
       details: { reason: 'RESERVED_NAME' },
     });
   }
   if (!isAcceptablePublicName(value)) {
     throw new AppError({
       code: 'VALIDATION_FAILED',
-      message: `쓸 수 없는 ${what}이에요.`,
+      message: `${what}에 쓸 수 없는 말이 들어 있어요.`,
       details: { reason: 'BLOCKED_WORD' },
     });
   }

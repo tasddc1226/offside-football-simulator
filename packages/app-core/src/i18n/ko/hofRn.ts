@@ -7,7 +7,7 @@ const ko = {
   seasonAria: '영구결번 시즌',
   notOpen: ' (개막 예정)',
   lead: '한 구단에서 오래 활약한 선수의 등번호는 다시 쓰지 않아요. 구단마다 한 번호에 한 명뿐이에요.',
-  opens: (p: { name: string; when: string }) => `${p.name}은 ${p.when}(한국 시각)에 개막해요.`,
+  opens: (p: { name: string; when: string }) => `${p.name} 개막은 ${p.when}(한국 시각)이에요.`,
   loadFailed: '영구결번을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.',
   loading: '불러오는 중…',
   empty: (p: { season: string }) => `아직 ${p.season} 영구결번이 없어요.`,

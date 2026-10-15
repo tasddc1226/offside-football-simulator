@@ -87,5 +87,5 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   cardManagerApp: (p) => `Manager ${p.name}`,
   cardUnsavedApp: ' · Unsaved',
   cardFootApp: 'Card OVR is peak strength · Layout uses strength at that position',
-  cardTaglineApp: 'Your own football career · offside-lab.com',
+  cardTaglineApp: 'Football career simulation · offside-lab.com',
 };

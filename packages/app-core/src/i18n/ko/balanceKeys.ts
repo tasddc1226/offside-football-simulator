@@ -7,7 +7,7 @@ const ko = {
   eventTwist: '선택 뒤 반전 확률',
   growthScale: '성장 배율',
   potGrowthFloor: '잠재력 근처 최소 성장',
-  targetManRole: '타겟맨 전용 OVR',
+  targetManRole: '타깃맨 전용 OVR',
   wingerRole: '측면 미드필더 윙어 OVR',
   investGain: '특훈 성장 비율',
   investCost: '자기 투자 비용 배율',

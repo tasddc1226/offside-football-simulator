@@ -51,7 +51,7 @@ for (const inside of [true, false]) {
     await expect(sheet.locator('.mg-caption')).toHaveText(inside ? '골!' : '크로스바!');
     await expect(sheet.locator('.result-big')).toHaveText(inside ? '성공' : '실패');
     await expect(sheet.locator('[data-mg-timing]')).toHaveText(
-      inside ? /완벽한 타이밍!|타이밍 성공/ : '타이밍을 놓쳤어요',
+      inside ? /정확한 타이밍!|타이밍 성공/ : '타이밍을 놓쳤어요',
     );
     const log = await lastLog(page);
     expect(log).toMatchObject({ id: 'penalty', ok: inside });

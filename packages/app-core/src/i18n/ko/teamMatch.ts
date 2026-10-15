@@ -92,7 +92,7 @@ const ko = {
   cardManagerApp: (p: { name: string }) => `${p.name} 감독`,
   cardUnsavedApp: ' · 저장 전',
   cardFootApp: '카드 OVR은 최고 실력 · 배치는 해당 자리 실력',
-  cardTaglineApp: '나만의 축구 커리어 · offside-lab.com',
+  cardTaglineApp: '축구 선수 커리어 시뮬레이션 · offside-lab.com',
 };
 
 export type TeamMatchMsgs = typeof ko;
