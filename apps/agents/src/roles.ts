@@ -8,6 +8,7 @@ import ops from '../roles/ops.md';
 import plan from '../roles/plan.md';
 import { devTools } from './dev.ts';
 import { repoReadToken } from './github.ts';
+import { supportTools } from './support.ts';
 import { opsTools } from './tools/ops.ts';
 import { digestTools } from './tools/digest.ts';
 import { scheduleTools } from './tools/schedules.ts';
@@ -35,7 +36,7 @@ const handoffPrompt = (t: Task) =>
 export const modelFor = (kind: Task['kind']): Model =>
   kind === 'triage' || kind === 'alert'
     ? MODELS.haiku
-    : kind === 'report'
+    : kind === 'report' || kind === 'support'
       ? MODELS.sonnet
       : MODELS.opus;
 
@@ -54,11 +55,15 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
       system: plan,
       model,
       // 기획은 규칙 · 보드 확인과 비슷한 댓글 찾기만 한다. Actions · Cloudflare 로그는 @ops에게 넘긴다.
-      tools: tools.filter((t) => t.name === 'repo_file' || t.name === 'd1_query'),
-      maxTurns: 8,
+      // 고객 문의 정리 · 운영자 지시에는 문의 메일 도구(읽기 · 초안 + 승인 카드)를 더한다.
+      tools: [
+        ...tools.filter((t) => t.name === 'repo_file' || t.name === 'd1_query'),
+        ...supportTools(env, task),
+      ],
+      maxTurns: task.kind === 'support' ? 14 : 8,
       mcpServers: [],
       prompt: (t) =>
-        t.kind === 'triage'
+        t.kind === 'triage' || t.kind === 'support'
           ? t.text
           : t.kind === 'handoff'
             ? handoffPrompt(t)

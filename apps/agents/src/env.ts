@@ -32,6 +32,17 @@ export interface Env {
   GITHUB_APP_INSTALLATION_ID: string;
   /** PKCS#8 PEM. */
   GITHUB_APP_PRIVATE_KEY?: string;
+  /** 고객 문의(T-11-291): 문의를 받는 Gmail 검색 조건(예: `to:contact@offside-lab.com`). */
+  SUPPORT_QUERY: string;
+  /**
+   * 답장 보내는 사람. Gmail "다른 주소에서 메일 보내기"에 등록된 별칭과 같아야 그 별칭(Cloudflare SMTP)으로 나간다.
+   * 도메인이 DMARC p=reject라 contact@는 Cloudflare를 거쳐야 한다. 없으면 Gmail 기본 주소로 나간다.
+   */
+  SUPPORT_FROM?: string;
+  /** Google OAuth(gmail.readonly · gmail.compose). 없으면 고객 문의를 돌리지 않는다. */
+  GMAIL_CLIENT_ID?: string;
+  GMAIL_CLIENT_SECRET?: string;
+  GMAIL_REFRESH_TOKEN?: string;
   CF_D1_READ_TOKEN: string;
   CF_MCP_TOKEN?: string;
   GITHUB_TOKEN?: string;

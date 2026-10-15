@@ -2,6 +2,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import type { Env, Role } from './env.ts';
 import type { Cursors, DcCursor, Reaction } from './reactions.ts';
+import type { MailDraft } from './support.ts';
 
 export const kstDay = (now = Date.now()) => new Date(now + 9 * 3600_000).toISOString().slice(0, 10);
 
@@ -23,6 +24,14 @@ export type Approval = {
   pr: number;
   sha: string;
   action: 'merge' | 'reject';
+  user: string;
+  at: number;
+  result: string;
+};
+
+export type MailApproval = {
+  draft: string;
+  action: 'send' | 'discard';
   user: string;
   at: number;
   result: string;
@@ -89,6 +98,22 @@ export class AgentLedger extends DurableObject<Env> {
   /** 승인 · 거절 기록(누가 · 언제 · 무엇을). ADR-015 승인 단계. */
   async recordApproval(a: Approval): Promise<void> {
     await this.ctx.storage.put(`approval:${a.pr}:${a.at}`, a);
+  }
+  /** 고객 문의: 문의 메일함을 어디까지 읽었는지(epoch ms) · 만든 답장 초안 · 승인 기록(T-11-291). */
+  async supportCursor(): Promise<number | undefined> {
+    return this.ctx.storage.get<number>('support:cursor');
+  }
+  async setSupportCursor(at: number): Promise<void> {
+    await this.ctx.storage.put('support:cursor', at);
+  }
+  async mailDraft(id: string): Promise<MailDraft | undefined> {
+    return this.ctx.storage.get<MailDraft>(`maildraft:${id}`);
+  }
+  async setMailDraft(d: MailDraft): Promise<void> {
+    await this.ctx.storage.put(`maildraft:${d.draftId}`, d);
+  }
+  async recordMailApproval(a: MailApproval): Promise<void> {
+    await this.ctx.storage.put(`mailapproval:${a.draft}:${a.at}`, a);
   }
   /** 한도 초과 안내는 하루 한 번만 한다. 처음이면 true. */
   async warnOnce(role: Role, day = kstDay()): Promise<boolean> {

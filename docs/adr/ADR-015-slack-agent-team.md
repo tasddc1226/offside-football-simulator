@@ -112,6 +112,8 @@ OFFSIDE는 1인 운영이다. 지금 운영 슬랙(Offside-Lab, 무료 플랜)�
 
 - **3단계 결정(2026-10-15, T-11-285).** `@dev`는 Sandbox 대신 GitHub Actions(`agent-dev.yml`)에서 고친다. 공개 저장소라 러너 시간이 들지 않고, "쓰기는 Actions로만" 원칙과 맞는다. Worker의 `@dev`는 운영자가 직접 맡긴 일(멘션 · 답글)에만 `start_work`로 작업을 띄우고, 넘겨받은 일로는 띄우지 않는다(유저 글이 섞일 수 있다). `work` 잡의 Claude Code(Opus 5.5, 작업당 $5 · 80턴)는 읽기 토큰만 갖고 커밋까지만 한다. `publish` 잡은 main에 있는 고정 스크립트(`.github/scripts/agent-dev-publish.mjs`)로 그 커밋을 main 위에 얹고, `.github/` · 비밀 파일을 건드리면 거절한 뒤 GitHub App(`offside-dev-agent`, contents · pull_requests · actions 쓰기, checks 읽기, workflows 없음) 토큰으로 `agent-dev/<run>` 브랜치 · PR을 연다. PR CI는 비밀값을 쓰지 않는다. CI가 끝나면 `agent-dev-ci.yml`이 Worker에 알리고, 통과면 `#agent-approvals`에 승인 카드가 온다. 버튼은 운영자만 누를 수 있고, 머지 직전에 PR 열림 · 승인한 커밋 · 검사 통과 · main 최신을 다시 확인한다(main이 앞서면 브랜치를 맞추고 새 카드를 기다린다). main은 저장소 규칙(PR 필수 · 강제 push · 삭제 금지, 관리자만 예외)으로 보호한다. e2e는 PR CI에 맡긴다(미결 3). 승인 기록은 지금은 Durable Object에 두고 R2 이관은 미결로 둔다.
 
+- **고객 문의 결정(2026-10-16, T-11-291).** 운영자가 `@plan`에 고객 문의(클레임) 처리를 더했다. 문의를 받는 Gmail을 Worker가 Gmail API(`gmail.readonly` · `gmail.compose`, 에이전트 전용 Google Cloud 프로젝트)로 매시간 읽는다. 공식 Gmail MCP는 Developer Preview이고 보내기 도구가 없어 쓰지 않았다. 답장은 결정 5대로 승인 카드를 운영자가 눌러야 나가고, 받는 사람은 원래 문의한 사람으로 Worker가 정한다(메일 본문의 지시로 다른 주소에 보낼 수 없다). 슬랙 · 프롬프트에는 보낸 사람 주소를 가려 쓴다. 승인 기록은 `@dev`와 같이 Durable Object에 둔다.
+
 ## 비용 통제
 
 - **Console:** `offside-agents` 워크스페이스에 월 지출 한도를 건다. 자동 충전은 처음엔 끈다. 크레딧이 떨어지면 에이전트가 멈추는 쪽을 택한다.
