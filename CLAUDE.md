@@ -162,7 +162,7 @@ pnpm --filter @offside/fulltime-sim analyze
 
 ## 문서 정본 우선순위
 
-문서 충돌 시: [`docs/adr/`](docs/adr/README.md)(ADR-001~014) >
+문서 충돌 시: [`docs/adr/`](docs/adr/README.md)(ADR-001~015) >
 [`docs/tracking/`](docs/tracking/README.md)(보드는 `board.md`, 결정은
 `decision-log.md`) > [`docs/operations/`](docs/operations)(런북) 순이다.
 

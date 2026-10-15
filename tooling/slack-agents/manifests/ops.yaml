@@ -1,0 +1,27 @@
+# ADR-015 슬랙 에이전트 `@offside-ops` — 0단계(이벤트 받기 없음). 1단계 설정은 ../README.md
+display_information:
+  name: OFFSIDE Ops
+  description: OFFSIDE 운영 에이전트. 알림을 읽고 원인을 정리해요. 운영 데이터는 읽기만 해요.
+  background_color: '#1f6f50'
+features:
+  bot_user:
+    display_name: offside-ops
+    always_online: true
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - channels:history
+      - channels:read
+      - chat:write
+      - files:write
+      - groups:history
+      - groups:read
+      - im:history
+      - im:write
+      - reactions:write
+      - users:read
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
