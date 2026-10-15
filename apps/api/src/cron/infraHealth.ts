@@ -8,7 +8,7 @@ export const INFRA_HEALTH_META_KEY = 'cron:infra-health:last';
 const HOUR_MS = 60 * 60_000;
 export const D1_LIMIT_BYTES = 10_000_000_000;
 type Sample = { at: number; sizeBytes: number };
-/** T-11-269 끝난 백업(cron:backup:last)과 진행 중인 백업(cron:backup:state)에서 보는 것. */
+/** T-11-274 끝난 백업(cron:backup:last)과 진행 중인 백업(cron:backup:state)에서 보는 것. */
 export type BackupHealthInput = {
   last: { key?: string; chunks?: number; finishedAt?: number } | null;
   inProgress: { startedAt?: number } | null;
@@ -131,7 +131,7 @@ export async function runInfraHealth(env: Bindings, now: number): Promise<InfraH
     backup,
   );
   // The completion record alone cannot prove the backup still exists in R2 — HEAD the
-  // last chunk (T-11-269: a backup is a numbered chunk series under a day prefix).
+  // last chunk (T-11-274: a backup is a numbered chunk series under a day prefix).
   if (!env.BACKUP) result.issues.push('backup-binding-unavailable');
   if (!result.issues.includes('backup-not-completed') && env.BACKUP) {
     const key = backup.last!.key!;

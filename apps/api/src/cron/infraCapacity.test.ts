@@ -86,7 +86,7 @@ function bucketWithHook(hook: () => Promise<void>) {
           await hook();
           return target.createMultipartUpload(...args);
         };
-      // T-11-269 백업 조각은 put으로 올린다.
+      // T-11-274 백업 조각은 put으로 올린다.
       if (key === 'put')
         return async (...args: Parameters<R2Bucket['put']>) => {
           await hook();

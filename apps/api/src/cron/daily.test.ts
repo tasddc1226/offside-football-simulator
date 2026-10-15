@@ -190,7 +190,7 @@ describe('T-10-070 D1 → R2 백업', () => {
     expect([...joined]).toEqual(chunks.flatMap((x) => [...x]));
   });
 
-  // T-11-269 조각 상한을 1MiB로 낮춰 여러 객체로 갈라지게 한다. 번호 순으로 이으면 한 파일과 같다.
+  // T-11-274 조각 상한을 1MiB로 낮춰 여러 객체로 갈라지게 한다. 번호 순으로 이으면 한 파일과 같다.
   it('큰 DB는 조각 객체 여러 개로 나눠 올린다', { timeout: 60_000 }, async () => {
     // 압축이 잘 안 되는 값으로 압축 후 조각 상한을 넘긴다.
     const big = await createTestD1();
@@ -243,7 +243,7 @@ describe('T-10-070 D1 → R2 백업', () => {
     ]);
   });
 
-  it('T-11-269 5분 cron이 한 번에 한 조각씩 이어받고, 끝나면 기록을 남기며 같은 날은 다시 시작하지 않는다', async () => {
+  it('T-11-274 5분 cron이 한 번에 한 조각씩 이어받고, 끝나면 기록을 남기며 같은 날은 다시 시작하지 않는다', async () => {
     await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%'");
     const at = NOW + 60_000;
     // 예산 0ms: 단계마다 페이지 하나만 읽고 조각을 닫는다.
@@ -287,7 +287,7 @@ describe('T-10-070 D1 → R2 백업', () => {
     await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%'");
   });
 
-  it('T-11-269 조각 업로드가 실패하면 위치를 바꾸지 않아 다음 단계가 같은 조각을 다시 만든다. 잠금이 있으면 건너뛴다', async () => {
+  it('T-11-274 조각 업로드가 실패하면 위치를 바꾸지 않아 다음 단계가 같은 조각을 다시 만든다. 잠금이 있으면 건너뛴다', async () => {
     await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%'");
     const first = await runBackupStep(ctx.env.DB, bucket(), 'redo', NOW, { stepMs: 0 });
     expect(first).toMatchObject({ chunk: 1, done: false });

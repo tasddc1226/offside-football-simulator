@@ -1,7 +1,7 @@
 import { sweepAutomation } from '../db/repos/automationEnforcement.js';
 // T-10-070 매일 KST 04:00(UTC 19:00) cron. 한 단계가 실패해도 나머지는 돈다. 결과는 요청 로그처럼
 // JSON 한 줄로 남긴다(middleware/logger.ts와 같은 모양 — Workers Logs에서 job으로 찾는다).
-// T-11-269 R2 백업은 여기서 빠졌다 — 15분 상한을 넘겨 뒤 단계를 함께 죽였다. 지금은 5분 cron이 조각으로 올린다(backup.ts).
+// T-11-274 R2 백업은 여기서 빠졌다 — 15분 상한을 넘겨 뒤 단계를 함께 죽였다. 지금은 5분 cron이 조각으로 올린다(backup.ts).
 import type { Bindings } from '../env.js';
 import { sweepAnomalies, type SweepResult } from '../db/repos/anomalies.js';
 import { runCareerRetention, type RetentionResult } from './careerRetention.js';

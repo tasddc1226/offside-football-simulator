@@ -11,7 +11,7 @@ export const EVENT_KEEP_DAYS = 2;
 export const EVENT_ARCHIVE_META_KEY = 'cron:season-events:last';
 const LEASE_KEY = 'cron:season-events:lease';
 const PAGE_BYTES = 512 * 1024;
-/** T-11-269 200 → 1000: 행이 작아(수십~수백 B) 페이지가 바이트보다 행 수에 먹혀 시간당 5천 행밖에 못 옮겼다(잔여 71만 행). */
+/** T-11-274 200 → 1000: 행이 작아(수십~수백 B) 페이지가 바이트보다 행 수에 먹혀 시간당 5천 행밖에 못 옮겼다(잔여 71만 행). */
 const PAGE_ROWS = 1000;
 const MAX_PAGES = 100;
 const INTERVAL_MS = 60 * 60_000;

@@ -119,7 +119,7 @@ export default {
             console.log(JSON.stringify({ level: 'info', job: 'season-telemetry-archive', ...r })),
         )
         .catch(logged('season-telemetry-archive'));
-      // T-11-269 D1 → R2 백업을 5분마다 한 조각씩. UTC 19:00(KST 04:00) 뒤 첫 틱에 시작해 끝까지 이어받는다.
+      // T-11-274 D1 → R2 백업을 5분마다 한 조각씩. UTC 19:00(KST 04:00) 뒤 첫 틱에 시작해 끝까지 이어받는다.
       // 15분 상한 안에 들게 한 조각은 45초만 읽고, 실패하면 다음 틱이 같은 조각을 다시 만든다.
       if (env.BACKUP)
         await runBackupStep(env.DB, env.BACKUP, env.ENVIRONMENT, controller.scheduledTime)
