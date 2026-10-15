@@ -7,10 +7,11 @@ import type { TeamPlayer } from '@offside/app-core/api/team';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { tn } from '@offside/game/i18n/names';
 import { typeName } from '@offside/game/data';
+import { cardBody } from '@offside/app-core/format';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { Btn, Txt } from '../ui';
-import { CARD_HEIGHT, CARD_STYLE_ROW, PlayerCard } from './PlayerCard';
+import { CARD_BODY_ROW, CARD_HEIGHT, CARD_STYLE_ROW, PlayerCard } from './PlayerCard';
 
 export type PeekOrigin = { x: number; y: number; w: number; h: number };
 /** 그라운드(measureInWindow 값) 위 자리 카드가 화면에서 놓인 곳 — 자리 카드는 62×88, 가운데가 자리 좌표(TeamPitch). */
@@ -23,8 +24,9 @@ export const pitchPeekOrigin = (
 ): PeekOrigin => ({ x: px + (pos.x / 100) * w - 31, y: py + (pos.y / 100) * h - 44, w: 62, h: 88 });
 // 라커룸 카드(2열 중 한 칸)와 같은 폭·높이로 그려 글자·여백 비율을 같게 두고, 통째로 키운다.
 const CARD_W = 165;
-// PlayerCard 큰 카드 높이(플레이스타일 줄이 있으면 그만큼 더).
-const cardHeight = (p: TeamPlayer) => CARD_HEIGHT + (typeName(p.pos, p.type) ? CARD_STYLE_ROW : 0);
+// PlayerCard 큰 카드 높이(플레이스타일 줄 · 키 몸무게 줄이 있으면 그만큼 더).
+const cardHeight = (p: TeamPlayer) =>
+  CARD_HEIGHT + (typeName(p.pos, p.type) ? CARD_STYLE_ROW : 0) + (cardBody(p) ? CARD_BODY_ROW : 0);
 
 /** 그라운드 카드를 누르면 그 자리에서 커져 라커룸 카드를 그대로 확대해 보여 준다. 닫으면 제자리로 돌아간다(웹 PlayerPeek). */
 export function PlayerPeek({
