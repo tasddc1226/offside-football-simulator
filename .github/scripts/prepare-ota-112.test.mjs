@@ -4,7 +4,14 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { assertRuntime, prepare, runtimes } from './prepare-ota-112.mjs';
+import {
+  addedWorkspaces,
+  assertRuntime,
+  lockImporters,
+  prepare,
+  runtimes,
+  source,
+} from './prepare-ota-112.mjs';
 
 test('only the reviewed store runtimes can receive the 1.1.2 bundle', () => {
   for (const [platform, runtime] of Object.entries(runtimes)) {
@@ -33,3 +40,49 @@ test('preparation protects dirty work and existing native test environments', ()
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('workspaces added after 1.1.2 are dropped, new shared packages stop the overlay', () => {
+  const lock = (...paths) =>
+    `lockfileVersion: '9.0'\n\nimporters:\n\n  .:\n    devDependencies: {}\n${paths
+      .map((p) => `\n  ${p}:\n    dependencies:\n      zod:\n        specifier: ^4\n`)
+      .join('')}\npackages:\n\n  zod@4.0.0: {}\n`;
+  const reviewed = lock('apps/api', 'apps/mobile', 'packages/game');
+  assert.deepEqual(lockImporters(reviewed), ['apps/api', 'apps/mobile', 'packages/game']);
+  assert.deepEqual(
+    addedWorkspaces(lock('apps/agents', 'apps/api', 'apps/mobile', 'packages/game'), reviewed),
+    ['apps/agents'],
+  );
+  assert.deepEqual(addedWorkspaces(reviewed, reviewed), []);
+  assert.throws(
+    () =>
+      addedWorkspaces(
+        lock('apps/api', 'apps/mobile', 'packages/game', 'packages/new-ui'),
+        reviewed,
+      ),
+    /packages\/new-ui/,
+  );
+});
+
+const hasSource = (() => {
+  try {
+    execFileSync('git', ['cat-file', '-e', `${source}^{commit}`], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+// CI의 얕은 checkout에는 1.1.2 커밋이 없다(운영 OTA 잡은 fetch-depth 0으로 받는다).
+test(
+  'the reviewed 1.1.2 lockfile lists the workspaces the overlay expects',
+  { skip: !hasSource },
+  () => {
+    const reviewed = execFileSync('git', ['show', `${source}:pnpm-lock.yaml`], {
+      encoding: 'utf8',
+    });
+    assert.ok(lockImporters(reviewed).includes('apps/mobile'));
+    assert.deepEqual(addedWorkspaces(readFileSync('pnpm-lock.yaml', 'utf8'), reviewed), [
+      'apps/agents',
+    ]);
+  },
+);
