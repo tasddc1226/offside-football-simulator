@@ -67,6 +67,8 @@
   import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, tooManyWildcards, wildcardFullText, wildcardLabel } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
+  import { hofOwnText as HO } from '@offside/app-core/i18n/ko/hofOwn';
+  import { loadAnonNames, publishAnonNames, type AnonName } from '@offside/app-core/cardNames';
   import { fetchCup, fetchCupMe } from '@offside/app-core/api/cup';
   import CupLineupBand from '../cup/CupLineupBand.svelte';
   import { involves, lockAtOf, lockWhen } from '../cup/cupView.js';
@@ -135,6 +137,23 @@
   const byId = $derived(new Map(players.map((p) => [p.careerId, p])));
   const nameOf = (p: TeamPlayer) => marketName(p, localNames);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
+  // T-11-266 익명으로 은퇴한 내 선수 중 이 기기가 이름을 아는 카드(이적시장에 팔린 선수 포함) — 한꺼번에 이름을 공개할 수 있다.
+  let anonNames = $state<AnonName[]>([]);
+  $effect(() => {
+    if (editable && status === 'ready' && !needLogin) void loadAnonNames(localNames).then((x) => (anonNames = x));
+  });
+  let namesStep = $state<'idle' | 'confirm' | 'busy'>('idle');
+  async function publishNames() {
+    const items = anonNames;
+    namesStep = 'busy';
+    const n = await publishAnonNames(items);
+    namesStep = 'idle';
+    if (n === null) return toast(HO.anonCardsFail);
+    const named = new Map(items.map((x) => [x.careerId, x.publicName]));
+    players = players.map((p) => (named.has(p.careerId) ? { ...p, publicName: named.get(p.careerId)! } : p));
+    anonNames = [];
+    toast(HO.anonCardsDone({ n }));
+  }
 
   const previewLayout = $derived(editable && season > 0 ? positionedLayout(layout ?? presetLayout(formation)) : layout ?? presetLayout(formation));
   const slotCodes = $derived(previewLayout.map(p => p.slot));
@@ -508,6 +527,15 @@
         onseason={pickSeason}
       />
       {#if retireSyncing && editable}<p class="muted fs-sm" data-retire-syncing>{L.retireSyncing}</p>{/if}
+      {#if editable && anonNames.length}
+        <section class="card anon-names" role="status" data-anon-names>
+          <p class="fs-sm">{namesStep === 'idle' ? HO.anonCardsNote({ n: anonNames.length }) : HO.anonCardsConfirm({ n: anonNames.length })}</p>
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            {#if namesStep === 'idle'}<button class="btn btn-sm" onclick={() => (namesStep = 'confirm')} data-act="anon-names">{HO.anonCardsBtn}</button>
+            {:else}<button class="btn btn-sm btn-primary" disabled={namesStep === 'busy'} onclick={publishNames} data-act="anon-names-confirm">{HO.anonCardsBtn}</button><button class="btn btn-sm" disabled={namesStep === 'busy'} onclick={() => (namesStep = 'idle')}>{L.cancel}</button>{/if}
+          </div>
+        </section>
+      {/if}
       {#if editingLogo && editable}<TeamLogoEditor {logo} name={name.trim() || L.myTeam} onapply={(value) => { logo = value; editingLogo = false; }} onclose={() => (editingLogo = false)} />{/if}
       <TeamLineup
         {team}
@@ -601,4 +629,7 @@
   .draft-notice p {margin:0;font-size:13px;flex:1 1 200px;}
   .draft-notice > div {display:flex;flex-wrap:wrap;gap:8px;}
   .draft-notice .btn {min-height:44px;}
+  .anon-names {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 16px;}
+  .anon-names p {margin:0;flex:1 1 200px;}
+  .anon-names .btn {min-height:44px;}
 </style>

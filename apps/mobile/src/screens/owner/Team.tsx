@@ -3,7 +3,7 @@
 // 편성·후보·업적 표기 같은 순수 계산은 웹과 같은 @offside/app-core/teamOwner.
 import { teamNameIssues } from '@offside/app-core/careerGuide';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import {
   FORMATION_IDS,
@@ -45,6 +45,8 @@ import {
 import { type TeamView } from '@offside/app-core/state';
 import { recordText, num } from '@offside/app-core/teamText';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
+import { hofOwnText as HO } from '@offside/app-core/i18n/ko/hofOwn';
+import { loadAnonNames, publishAnonNames, type AnonName } from '@offside/app-core/cardNames';
 import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import {
   autoFillSlots,
@@ -205,6 +207,35 @@ export default function Team() {
   const wildcards = wildcardLabel(slots, byId, season);
   const nameOf = (p: TeamPlayer) => marketName(p, localNames);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
+  // T-11-266 익명으로 은퇴한 내 선수 중 이 기기가 이름을 아는 카드(이적시장에 팔린 선수 포함) — 한꺼번에 이름을 공개할 수 있다.
+  const [anonNames, setAnonNames] = useState<AnonName[]>([]);
+  useEffect(() => {
+    if (!editable || status !== 'ready' || needLogin) return;
+    let live = true;
+    void loadAnonNames(localNames).then((x) => live && setAnonNames(x));
+    return () => {
+      live = false;
+    };
+  }, [editable, status, needLogin, localNames]);
+  const [namesBusy, setNamesBusy] = useState(false);
+  async function publishNames() {
+    const items = anonNames;
+    setNamesBusy(true);
+    const n = await publishAnonNames(items);
+    setNamesBusy(false);
+    if (n === null) return toast(HO.anonCardsFail);
+    const named = new Map(items.map((x) => [x.careerId, x.publicName]));
+    setPlayers((prev) =>
+      prev.map((p) => (named.has(p.careerId) ? { ...p, publicName: named.get(p.careerId)! } : p)),
+    );
+    setAnonNames([]);
+    toast(HO.anonCardsDone({ n }));
+  }
+  const askPublishNames = () =>
+    Alert.alert(HO.anonCardsBtn, HO.anonCardsConfirm({ n: anonNames.length }), [
+      { text: L.cancel, style: 'cancel' },
+      { text: HO.anonCardsBtn, onPress: () => void publishNames() },
+    ]);
 
   const positions =
     editable && season > 0
@@ -824,6 +855,14 @@ export default function Team() {
                 </Txt>
               ) : null}
             </Card>
+            {editable && anonNames.length ? (
+              <Card testID="team-anon-names">
+                <Txt v="sm">{HO.anonCardsNote({ n: anonNames.length })}</Txt>
+                <Btn sm testID="anon-names" disabled={namesBusy} onPress={askPublishNames}>
+                  {HO.anonCardsBtn}
+                </Btn>
+              </Card>
+            ) : null}
             <TeamLineup
               formation={formation}
               layout={positions}

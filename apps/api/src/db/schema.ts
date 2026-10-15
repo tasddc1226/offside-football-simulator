@@ -281,6 +281,7 @@ export const authAttempts = sqliteTable(
         'CAREER_SEASON',
         'CAREER_RETIRE',
         'CAREER_LOOK',
+        'CAREER_NAMES',
         'PUSH_DEVICE',
         'PUSH_PREFERENCES',
         'PUSH_TEST',

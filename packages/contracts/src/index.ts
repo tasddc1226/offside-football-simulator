@@ -77,6 +77,11 @@ export {
   CareerUpsertResponseSchema,
   RetirementSummarySchema,
   PutRetirementBodySchema,
+  ANON_CAREER_IDS_MAX,
+  AnonCareerIdsResponseSchema,
+  CAREER_NAMES_MAX,
+  PutCareerNamesBodySchema,
+  PutCareerNamesResponseSchema,
   RetirementResponseSchema,
   PutRetiredLookBodySchema,
   RetiredLookResponseSchema,
@@ -144,6 +149,9 @@ export {
   type CareerUpsertResponse,
   type RetirementSummary,
   type PutRetirementBody,
+  type AnonCareerIdsResponse,
+  type PutCareerNamesBody,
+  type PutCareerNamesResponse,
   type RetirementResponse,
 } from './careers.js';
 

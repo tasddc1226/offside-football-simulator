@@ -1,0 +1,23 @@
+{
+  "id": "t-11-266-card-public-name",
+  "title": "익명으로 은퇴한 선수 이름을 나중에 공개",
+  "items": [
+    "이름 공개를 꺼 둔 채 은퇴한 내 선수를 라커룸에서 한꺼번에 이름 공개할 수 있어요. 이적시장에 이미 판 선수도 산 사람 화면에 이름이 보여요.",
+    "명예의 전당 30명 밖으로 밀려난 내 선수도 라커룸과 이적시장에서 이름으로 보여요."
+  ],
+  "en": {
+    "title": "Reveal names of players who retired anonymously",
+    "items": [
+      "Players you retired with name sharing off can now have their names revealed all at once from the locker room. Players you already sold on the transfer market show their names to the buyer too.",
+      "Your players who dropped out of the top 30 Hall of Fame records now show their names in the locker room and transfer market."
+    ]
+  },
+  "ja": {
+    "title": "匿名で引退した選手の名前を後から公開",
+    "items": [
+      "名前公開をオフにしたまま引退した自分の選手を、ロッカールームからまとめて名前公開できるようになりました。移籍市場で売った選手も、買った人の画面に名前が表示されます。",
+      "殿堂の上位30人から外れた自分の選手も、ロッカールームと移籍市場で名前が表示されます。"
+    ]
+  },
+  "availability": "web-app"
+}
