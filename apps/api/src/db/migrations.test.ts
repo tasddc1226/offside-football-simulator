@@ -514,6 +514,18 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'presets_json',
   ],
   team_likes: ['team_id', 'profile_id', 'created_at'],
+  // T-11-290 팀 프로필 스쿼드 댓글(게시판 댓글과 같은 열, 글 대신 팀에 달린다).
+  team_comments: [
+    'id',
+    'team_id',
+    'profile_id',
+    'nickname',
+    'body',
+    'admin',
+    'created_at',
+    'deleted_at',
+  ],
+  team_comment_reports: ['comment_id', 'profile_id', 'reason', 'created_at'],
   owner_achievements: [
     'profile_id',
     'season',

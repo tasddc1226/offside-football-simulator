@@ -60,8 +60,10 @@ export const AdminCommentQuerySchema = z.object({
 export const AdminCommentSchema = z.object({
   id: z.string(),
   postId: z.string(),
+  /** 글 제목. 팀 프로필 댓글(T-11-290)이면 팀 이름. */
   postTitle: z.string(),
-  board: BoardKeySchema,
+  /** 게시판 키. 팀 프로필 댓글이면 'team'(postId는 팀 id). */
+  board: z.union([BoardKeySchema, z.literal('team')]),
   profileId: z.string(),
   nickname: z.string(),
   body: z.string(),

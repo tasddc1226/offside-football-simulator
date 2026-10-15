@@ -871,6 +871,48 @@ export const boardBlocks = sqliteTable(
   ],
 );
 
+/** T-11-290 팀 프로필의 스쿼드 댓글. 게시판 댓글(board_comments)과 같은 열이지만 글이 아니라 팀(owner_teams)에 달린다 —
+ *  board_comments.post_id가 글 FK라 팀 id를 넣을 수 없어 표를 따로 둔다. 닉네임·관리자·삭제(deleted_at) 규칙은 같다.
+ *  팀이 지워지면 함께 지워진다. */
+export const teamComments = sqliteTable(
+  'team_comments',
+  {
+    id: text('id').primaryKey(),
+    teamId: text('team_id')
+      .notNull()
+      .references(() => ownerTeams.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id').notNull(),
+    nickname: text('nickname').notNull(),
+    body: text('body').notNull(),
+    admin: integer('admin', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('created_at').notNull(),
+    deletedAt: text('deleted_at'),
+  },
+  (table) => [
+    index('team_comments_team_created_idx').on(table.teamId, table.createdAt),
+    index('team_comments_profile_idx').on(table.profileId),
+    // 운영 도구: 전체 최근 댓글(게시판 댓글과 합쳐 보인다).
+    index('team_comments_created_idx').on(table.createdAt),
+  ],
+);
+
+/** 팀 댓글 신고 — board_comment_reports와 같은 규칙(프로필 하나가 댓글 하나에 한 번, 신고한 사람 화면에서 숨김). */
+export const teamCommentReports = sqliteTable(
+  'team_comment_reports',
+  {
+    commentId: text('comment_id')
+      .notNull()
+      .references(() => teamComments.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id').notNull(),
+    reason: text('reason', { enum: COMMENT_REPORT_REASONS }).notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.commentId, table.profileId] }),
+    index('team_comment_reports_profile_idx').on(table.profileId),
+  ],
+);
+
 /** T-10-016. 서버에서 조정하는 게임 밸런스 설정. version이 곧 버전 번호다. 초안(draft)만 고칠 수 있고,
  * 활성(active)은 늘 하나다 — 다른 버전을 활성화하면 이전 활성은 archived가 된다(되돌리기 = 옛 버전 재활성화).
  * values_json은 기본값과 다른 값만 담는다(@offside/contracts/balance). */

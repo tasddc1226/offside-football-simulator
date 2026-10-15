@@ -18,9 +18,12 @@
   import NameReport from '../NameReport.svelte';
   import NameReports from '../NameReports.svelte';
   import TeamLines from './TeamLines.svelte';
+  import TeamSynergy from './TeamSynergy.svelte';
+  import { synergyFocus } from '@offside/app-core/teamOwner';
   import TeamPitch from './TeamPitch.svelte';
   import TeamLogo from './TeamLogo.svelte';
   import CupHonors from '../cup/CupHonors.svelte';
+  import TeamComments from './TeamComments.svelte';
   import TitleBadge from '../cup/TitleBadge.svelte';
   import { ownerProfileText as LO } from '@offside/app-core/i18n/ko/ownerProfile';
   import { appState } from '../state.svelte.js';
@@ -39,6 +42,9 @@
   /** T-11-098 나와 이 팀 구단주의 친구 상태(로그인한 구단주가 남의 팀을 볼 때만 온다). */
   let friend = $state<FriendState | null>(null);
   let befriending = $state(false);
+  // T-11-290 시너지 표에서 고른 항목 — 그라운드에서 그 선수들을 잇는다(내 팀 TeamLineup과 같은 동작, 읽기 전용).
+  let synFocus = $state<string | null>(null);
+  const syn = $derived(team?.synergy ? synergyFocus(team.synergy, synFocus) : null);
   // T-11-029 끝난 시즌의 팀은 좋아요가 굳는다(서버가 409로 거절한다).
   const closed = $derived(!!team && teamSeasonClosed(team.season, new Date().toISOString()));
 
@@ -109,21 +115,28 @@
   {#if team}
     <!-- 기록실 탭 패널 안이라 화면(.wrap)의 카드 간격이 닿지 않는다 — 같은 14px로 섹션을 띄운다. -->
     <div class="tp-sections">
+    <!-- T-11-290 머리 정리 — 순위는 한 번만, 포메이션은 정체성 줄로, 감독·구단주·칭호는 한 줄의 링크(줄 전체가 구단주 프로필). -->
     <section class="card stack tp-head" style="gap:10px" data-team-profile={team.id}>
-      <div class="tp-top">
-        <span class="eyebrow">Team profile{team.rank ? ` · #${team.rank}` : ''}</span>
-      </div>
+      <span class="eyebrow">Team profile</span>
       <div class="tp-title">
         <div class="tp-identity"><TeamLogo logo={team.logo} name={team.name} size={56} /><div class="tp-names">
-          <small class="muted">{seasonLabel(team.season, team.seasonName)}{team.rank ? ` · RANK #${team.rank}` : ''}</small>
           <h1>{team.name}</h1>
-          {#if team.ownerTitle}<span class="tp-title-badge"><TitleBadge title={team.ownerTitle} /></span>{/if}
-          <p class="muted fs-sm">{L.profManager}<b class="tp-manager">{team.manager}</b>{mine ? L.profMine : ''}</p>
-          {#if team.ownerNickname}<p class="muted fs-sm" data-team-owner>{L.profOwner}<b>{team.ownerNickname}</b></p>{/if}
-          <button class="btn btn-sm tp-owner" data-act="owner-profile" onclick={openOwner}>{LO.open}</button>
+          <small class="muted">{seasonLabel(team.season, team.seasonName)}{team.rank ? ` · RANK #${team.rank}` : ''} · {shapeOf(team.formation, team.layout)}</small>
         </div></div>
         <div class="tp-rating" aria-label={L.profRatingAria({ n: team.rating })}><small>RATING</small><b>{n(team.rating)}</b></div>
       </div>
+      <button class="tp-people" data-act="owner-profile" onclick={openOwner}>
+        <span class="tp-people-text muted fs-sm">
+          {#if team.ownerNickname && team.ownerNickname === team.manager}
+            <span data-team-owner>{L.profManagerOwner}<b class="tp-manager">{team.manager}</b>{mine ? L.profMine : ''}</span>
+          {:else}
+            <span>{L.profManager}<b class="tp-manager">{team.manager}</b>{mine ? L.profMine : ''}</span>
+            {#if team.ownerNickname}<span data-team-owner>{L.profOwner}<b class="tp-manager">{team.ownerNickname}</b></span>{/if}
+          {/if}
+          {#if team.ownerTitle}<TitleBadge title={team.ownerTitle} size="sm" />{/if}
+        </span>
+        <span class="tp-people-go muted fs-sm">{LO.open} ›</span>
+      </button>
       <dl class="tp-stats">
         <div><dt>{L.profStatOvr}</dt><dd>{team.ovr}</dd></div>
         <div><dt>{L.profStatRecord}</dt><dd>{recordText(team.record)}</dd></div>
@@ -131,17 +144,17 @@
       </dl>
     </section>
 
-    <TeamPitch formation={team.formation} layout={team.layout} {cells} />
+    <TeamPitch formation={team.formation} layout={team.layout} {cells} links={syn?.links ?? []} focus={syn?.members ?? null} applied={syn?.applied ?? []} caption={syn ? syn.caption : null} />
 
     <section class="card stack" style="gap:12px">
       <TeamLines lines={team.lines} />
+      {#if team.synergy}<div class="tp-syn" data-team-profile-synergy><TeamSynergy synergy={team.synergy} season={team.season} bind:focus={synFocus} /></div>{/if}
       <div class="tp-social">
         <button class="tp-like" aria-pressed={liked} disabled={mine || liking || closed} onclick={toggleLike} data-act="team-like" aria-label={L.profLikeAria({ n: team.likes })}>
           <span aria-hidden="true">{liked ? '♥' : '♡'}</span> {n(team.likes)}
         </button>
         <span class="muted">{L.profViews}<b>{n(team.views)}</b></span>
         {#if friend}<button class="btn btn-sm" class:btn-primary={friend === 'none' || friend === 'received'} disabled={befriending || friend === 'sent' || friend === 'accepted'} onclick={befriend} data-act="team-friend" data-friend-state={friend}>{friendButton(friend)}</button>{/if}
-        <span class="muted fs-xs tp-formation">{shapeOf(team.formation, team.layout)}</span>
       </div>
     </section>
 
@@ -161,6 +174,8 @@
       {/if}
     </section>
     {#if team.cupHonors?.length}<CupHonors honors={team.cupHonors} />{/if}
+    <!-- T-11-290 스쿼드 댓글 — 프로필을 그린 뒤 따로 불러온다(보는 사람마다 달라 프로필 응답에 섞지 않는다). -->
+    <TeamComments teamId={team.id} />
     {#if !mine}
       <NameReports>
         <NameReport kind="team" id={team.id} name={team.name} />
@@ -178,12 +193,6 @@
     flex-direction: column;
     gap: 14px;
   }
-  .tp-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
   .tp-title {
     display: flex;
     justify-content: space-between;
@@ -195,8 +204,45 @@
   }
   .tp-identity {display:flex;align-items:center;gap:10px;min-width:0;}
   .tp-names {min-width:0;}
-  .tp-title-badge {display:block; margin:2px 0 4px;}
-  .tp-owner {margin-top:4px; white-space:nowrap;}
+  .tp-people {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface-2);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .tp-people:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  @media (hover: hover) {
+    .tp-people:hover {
+      border-color: var(--accent);
+    }
+    .tp-people:hover .tp-people-go {
+      color: var(--accent-text);
+    }
+  }
+  .tp-people-text {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    min-width: 0;
+  }
+  .tp-people-go {
+    flex: none;
+    white-space: nowrap;
+  }
   .tp-manager {
     color: var(--ink);
   }
@@ -243,14 +289,16 @@
     margin: 0;
     font-weight: 700;
   }
+  /* 시너지 표는 자체 안쪽 여백·밑줄을 가지는데(편성 카드용) 프로필 카드 안에서는 카드 여백을 쓴다. */
+  .tp-syn :global(.syn) {
+    padding: 0;
+    border-bottom: 0;
+  }
   .tp-social {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 14px;
-  }
-  .tp-formation {
-    margin-left: auto;
   }
   .tp-like {
     min-height: 40px;

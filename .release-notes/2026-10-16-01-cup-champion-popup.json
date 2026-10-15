@@ -1,0 +1,32 @@
+{
+  "id": "t-11-290-cup-champion-popup",
+  "title": "오프사이드 컵 우승 소식과 상대 살피기",
+  "items": [
+    "대회가 끝나면 홈을 열 때 우승 팀과 구단주를 트로피와 함께 알려요. 다시 보지 않기를 고를 수 있어요.",
+    "승부예측에서 팀 이름과 구단주 이름을 누르면 팀·구단주 프로필을 바로 볼 수 있어요.",
+    "팀 프로필 머리를 정리했어요. 감독·구단주 줄을 누르면 바로 구단주 프로필로 가요.",
+    "다른 팀 프로필에서도 그 팀에 적용된 시너지를 볼 수 있어요.",
+    "다른 팀 프로필 아래에 스쿼드 댓글이 생겼어요. 구단주들끼리 그 팀의 선발에 대해 이야기를 나눌 수 있어요."
+  ],
+  "en": {
+    "title": "Offside Cup champion spotlight and rival profiles",
+    "items": [
+      "When a cup ends, the home screen shows the champions and their owner with the trophy. You can choose not to see it again.",
+      "In predictions, tap a team or owner name to open their profile.",
+      "Team profile headers are tidier. Tap the manager and owner line to open the owner profile.",
+      "Other teams' profiles now show the synergies applied to their lineup.",
+      "Team profiles now have squad comments at the bottom, so owners can talk about that team's lineup."
+    ]
+  },
+  "ja": {
+    "title": "オフサイドカップ優勝のお知らせと相手チームの確認",
+    "items": [
+      "大会が終わると、ホームで優勝チームとオーナーをトロフィーと一緒に知らせます。次から表示しないこともできます。",
+      "勝敗予想でチーム名やオーナー名をタップすると、プロフィールをすぐ見られます。",
+      "チームプロフィールの見出しを整理しました。監督・オーナーの行をタップするとオーナープロフィールに移動します。",
+      "他チームのプロフィールでも、そのチームに適用中のシナジーを見られます。",
+      "チームプロフィールの下にスカッドコメントが付きました。オーナー同士でそのチームの先発について語れます。"
+    ]
+  },
+  "availability": "web-app"
+}

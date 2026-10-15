@@ -45,25 +45,30 @@ import {
 } from '../db/repos/boards.js';
 import { ownerTierOfProfile, ownerTiersOf } from '../db/repos/ownerTiers.js';
 import { getDb, type AppEnv } from '../env.js';
-import { notFoundError, ok, readBody, nowIso, enforceLimit } from './shared.js';
+import { notFoundError, ok, readBody, nowIso } from './shared.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
 import { EDGE, STALE } from '../edgeKeys.js';
-import { hasProfanity } from '@offside/contracts/content-filter';
 import { kickNewsPush } from '../push/dispatch.js';
 import { reqLang } from '../lang.js';
 import { draftTranslations } from '../translate/ai.js';
+import { assertCanComment } from './commentGuard.js';
+import { isTeamCommentId } from '../db/repos/teamComments.js';
+import {
+  blockTeamCommentAuthor,
+  deleteTeamCommentById,
+  reportTeamCommentById,
+} from './teamComments.js';
 
 // T-10-011 게시판(공지·릴리즈 노트). 읽기는 누구나, 글은 관리자만, 댓글은 프로필이 있는 누구나.
 // T-10-058 조회수는 웹이 기기마다 글 하나에 한 번 보내고, 좋아요는 프로필이 있는 누구나(구글 로그인 없이도).
-// 댓글은 프로필당 시간당 COMMENT_LIMIT개까지(관리자 제외).
+// 댓글은 프로필당 시간당 COMMENT_LIMIT개까지(관리자 제외, commentGuard.ts).
+// T-11-290 팀 프로필 댓글(tcm_)의 지우기·신고·차단도 아래 /v1/boards/comments/:commentId 라우트가 받아 팀 댓글 표로 돌린다.
 // 앱스토어 UGC 정책: 프로필이 있는 누구나 남의 댓글을 신고하고 작성자를 차단한다. 신고한 댓글과 차단한 작성자의
 // 댓글은 그 사람의 글 화면에서 빠진다(글 상세는 보는 사람마다 달라 엣지에 담지 않는다).
-const COMMENT_LIMIT = 10;
-
 const notFoundPost = () => notFound('글');
 const notFound = (what: string) =>
   notFoundError(`${what} 항목을 찾을 수 없어요.`, 'BOARD_NOT_FOUND');
@@ -213,40 +218,11 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     const postId = idParam(c, 'postId');
     const db = getDb(c);
     const { body } = readBody(c, CommentInputSchema);
-    if (hasProfanity(body)) {
-      throw new AppError({
-        code: 'VALIDATION_FAILED',
-        message: '쓸 수 없는 표현이 들어 있어요.',
-        details: { reason: 'BLOCKED_WORD' },
-      });
-    }
-    const [viewer, post] = await Promise.all([getViewer(c), postOr404(c, postId)]);
-    // T-10-028: 댓글은 구글 로그인한 프로필만, 그 프로필의 닉네임으로.
-    if (!viewer.google)
-      throw new AppError({
-        code: 'FORBIDDEN',
-        message: '로그인하면 댓글을 쓸 수 있어요.',
-        details: { reason: 'GOOGLE_LOGIN_REQUIRED' },
-      });
-    const nickname = viewer.nickname;
-    if (!nickname)
-      throw new AppError({
-        code: 'FORBIDDEN',
-        message: '댓글에 쓸 닉네임을 먼저 정해 주세요.',
-        details: { reason: 'NICKNAME_REQUIRED' },
-      });
-    const profileId = getSessionOrThrow(c).profileId;
     const now = nowIso();
-    if (!viewer.admin) {
-      await enforceLimit(
-        db,
-        'BOARD_COMMENT',
-        profileId,
-        COMMENT_LIMIT,
-        now,
-        '댓글을 너무 자주 쓰고 있어요. 잠시 뒤에 다시 시도해 주세요.',
-      );
-    }
+    const [{ viewer, nickname, profileId }, post] = await Promise.all([
+      assertCanComment(c, body, now),
+      postOr404(c, postId),
+    ]);
     const id = await createComment(
       db,
       { postId, profileId, nickname, body, admin: viewer.admin },
@@ -270,6 +246,10 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
 
   app.delete('/v1/boards/comments/:commentId', requireProfile, async (c) => {
     const id = idParam(c, 'commentId');
+    if (isTeamCommentId(id)) {
+      await deleteTeamCommentById(c, id);
+      return c.body(null, 204);
+    }
     const db = getDb(c);
     const [owner, viewer] = await Promise.all([getCommentOwner(db, id), getViewer(c)]);
     if (!owner) throw notFound('댓글');
@@ -293,6 +273,8 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
   }
 
   app.post('/v1/boards/comments/:commentId/report', requireProfile, async (c) => {
+    const id = idParam(c, 'commentId');
+    if (isTeamCommentId(id)) return reportTeamCommentById(c, id);
     const { reason } = readBody(c, CommentReportInputSchema);
     const { db, commentId, profileId } = await othersComment(c);
     await reportComment(db, { commentId, profileId, reason }, nowIso());
@@ -300,6 +282,8 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
   });
 
   app.post('/v1/boards/comments/:commentId/block', requireProfile, async (c) => {
+    const id = idParam(c, 'commentId');
+    if (isTeamCommentId(id)) return blockTeamCommentAuthor(c, id);
     const { db, author, profileId } = await othersComment(c);
     if (author.admin)
       throw new AppError({ code: 'FORBIDDEN', message: '운영자는 차단할 수 없어요.' });

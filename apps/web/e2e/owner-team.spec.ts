@@ -820,6 +820,8 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
       views++;
       return route.fulfill({ status: 204, body: '' });
     }
+    // T-11-290 스쿼드 댓글은 프로필과 따로 받는다(여기선 빈 목록).
+    if (req.url().endsWith('/comments')) return route.fulfill(ok({ comments: [], blocks: [] }));
     if (req.url().endsWith('/like')) {
       likes.push(req.method());
       return route.fulfill(

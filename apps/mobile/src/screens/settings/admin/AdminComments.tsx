@@ -5,7 +5,7 @@ import { View } from 'react-native';
 import * as api from '@offside/app-core/api/admin';
 import type { AdminComment } from '@offside/app-core/api/admin';
 import { deleteComment } from '@offside/app-core/api/boards';
-import { BOARD_LABEL, kstDateTime as kst } from '@offside/app-core/boardText';
+import { commentSourceLabel, kstDateTime as kst } from '@offside/app-core/boardText';
 import { LoadState, type LoadStatus } from '../../../components/LoadState';
 import { toast } from '../../../game/host';
 import { rem } from '../../../theme/type';
@@ -149,7 +149,7 @@ export default function AdminComments() {
                 </View>
                 <Txt>{cm.body}</Txt>
                 <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-                  {`[${BOARD_LABEL[cm.board]}] ${cm.postTitle}`}
+                  {`[${commentSourceLabel(cm.board)}] ${cm.postTitle}`}
                 </Txt>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                   <Btn sm testID="delete-comment" disabled={busy} onPress={() => void remove(cm)}>

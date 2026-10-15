@@ -276,28 +276,60 @@ function MatchLine({
   const home = cup.teams.find((t) => t.teamId === m.homeTeamId);
   const away = cup.teams.find((t) => t.teamId === m.awayTeamId);
   const mine = !!mineId && (m.homeTeamId === mineId || m.awayTeamId === mineId);
-  const side = (t: typeof home, id: string | null, right: boolean) => (
-    <View
-      style={{
-        flex: 1,
-        minWidth: 0,
-        flexDirection: right ? 'row-reverse' : 'row',
-        alignItems: 'center',
-        gap: 6,
-      }}
-    >
-      {t ? <TeamLogo logo={t.logo} name={t.name} size={24} decorative /> : null}
+  // T-11-290 팀(로고·이름)을 누르면 팀 프로필, 그 아래 구단주 이름을 누르면 구단주 프로필(승부예측 줄에서 상대를 살핀다).
+  const side = (t: typeof home, id: string | null, right: boolean) => {
+    const name = (
       <Txt
         v="sm"
         numberOfLines={1}
         bold={m.winnerTeamId === id && !!id}
         tone={id && id === mineId ? 'accent' : 'ink'}
-        style={{ flex: 1, textAlign: right ? 'right' : 'left' }}
+        style={{ flexShrink: 1, textAlign: right ? 'right' : 'left' }}
       >
         {t?.name ?? L.tbd}
       </Txt>
-    </View>
-  );
+    );
+    return (
+      <View style={{ flex: 1, minWidth: 0, alignItems: right ? 'flex-end' : 'flex-start', gap: 2 }}>
+        {t && id ? (
+          <>
+            <Press
+              onPress={() => prediction.team(id)}
+              accessibilityLabel={L.teamProfileOpen({ team: t.name })}
+              testID={`cup-match-team-${m.id}-${right ? 'home' : 'away'}`}
+              style={{
+                maxWidth: '100%',
+                flexDirection: right ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingVertical: 2,
+              }}
+            >
+              <TeamLogo logo={t.logo} name={t.name} size={24} decorative />
+              {name}
+            </Press>
+            <Press
+              onPress={() => prediction.team(id, true)}
+              accessibilityLabel={L.ownerProfileOpen({ owner: t.owner })}
+              testID={`cup-match-owner-${m.id}-${right ? 'home' : 'away'}`}
+              style={{ maxWidth: '100%', minHeight: 20, justifyContent: 'center' }}
+            >
+              <Txt
+                v="xs"
+                tone="muted"
+                numberOfLines={1}
+                style={{ textDecorationLine: 'underline', textDecorationStyle: 'dotted' }}
+              >
+                {t.owner}
+              </Txt>
+            </Press>
+          </>
+        ) : (
+          name
+        )}
+      </View>
+    );
+  };
   const notes = [
     m.round.startsWith('g') ? dayTimeText(m.at) : null,
     m.pens ? L.pens({ home: m.pens.home, away: m.pens.away }) : null,
@@ -599,14 +631,21 @@ function CupBody({
     now,
     controller,
   } = usePredictions(data?.cup.id, accountId, data?.matches);
-  function openTeam(id: string) {
+  // T-11-290 owner면 그 팀 구단주의 프로필(승부예측 줄의 구단주 이름). 뒤로 가면 팀 프로필.
+  function openTeam(id: string, owner = false) {
     if (data)
       rememberCupFolds(data.cup.id, accountId, {
         groups: Object.fromEntries(data.groups.map((g) => [g.no, groupOpen(g.no)])),
         rounds: Object.fromEntries(KO_ROUNDS.map((r) => [r, roundOpen(r)])),
         schedule: { tab: scheduleTab, group: selectedGroup, bracketList },
       });
-    appState.hof = { ...hofStart(), tab: 'teams', team: id, season: data?.cup.season ?? null };
+    appState.hof = {
+      ...hofStart(),
+      tab: 'teams',
+      team: id,
+      season: data?.cup.season ?? null,
+      owner,
+    };
     go('hof');
   }
   const prediction: CupPredictionContext = {

@@ -111,5 +111,6 @@ export interface CupPredictionContext {
   linked: boolean;
   now: number;
   pick: (matchId: string, choice: CupPredictionPick) => void;
-  team: (teamId: string) => void;
+  /** 팀 프로필을 연다. owner면 그 팀 구단주의 프로필(T-11-290 승부예측 줄의 팀·구단주 누르기). */
+  team: (teamId: string, owner?: boolean) => void;
 }

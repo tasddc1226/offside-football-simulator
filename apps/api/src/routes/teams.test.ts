@@ -12,7 +12,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cards, careers, ownerTeams, profiles, teamLikes, teamMatches } from '../db/schema.js';
 import { createTestD1, spyDb, syncCards, type TestD1 } from '../test/d1.js';
 import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
-import { callJson, deleteProfile, issueCookie, issueGoogleCookie } from '../test/http.js';
+import {
+  ADMIN_EMAIL,
+  callJson,
+  deleteProfile,
+  issueCookie,
+  issueGoogleCookie,
+} from '../test/http.js';
 
 const PutRes = successEnvelope(PutOwnerTeamResponseSchema);
 const PlayRes = successEnvelope(PlayTeamMatchResponseSchema);
@@ -212,6 +218,12 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     expect(p.team.slots[9]).toMatchObject({ slot: 'ST', name: '홍감독 에이스' });
     expect(p.team.slots[8]!.name).toBe('익명의 공격수 No.9');
     expect(p.team.badges.map((x) => x.id)).toContain('debut');
+    // T-11-290 선발 시너지 — 내 팀 화면과 같은 표(서버가 경기 계산과 같은 입력으로 센다).
+    expect(p.team.synergy).toMatchObject({
+      lines: { atk: expect.any(Number), gk: expect.any(Number) },
+    });
+    expect(p.team.synergy!.foot).toHaveLength(11);
+    expect(Array.isArray(p.team.synergy!.active)).toBe(true);
     expect(p.team.badges.some((x) => x.id.startsWith('final-'))).toBe(false); // 아직 진행 중인 시즌
     expect((await profile(a.team.id, a.cookie)).mine).toBe(true);
     // T-11-167 구단주 닉네임(닉네임 신고 대상). 정하지 않았으면 null.
@@ -227,6 +239,113 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     expect(final.team.badges[0]).toMatchObject({ id: 'final-1', desc: '프리시즌 최종 1위' });
     expect((await rank('?season=0')).data.total).toBe(2);
     expect((await rank()).data).toMatchObject({ season: 1, total: 0 });
+  });
+
+  it('T-11-290: 스쿼드 댓글 — 누구나 읽고, 구글 로그인·닉네임이 있어야 쓰고, 지우기·신고·차단은 게시판 댓글 라우트로 한다', async () => {
+    const a = await team(3, 88, '홍감독');
+    const anon = await issueCookie(ctx);
+    const noNick = await issueGoogleCookie(ctx);
+    const bob = await issueGoogleCookie(ctx, { nickname: '밥' });
+    const carol = await issueGoogleCookie(ctx, { nickname: '캐롤' });
+    const path = `/v1/teams/${a.team.id}/comments`;
+    const read = async (cookie?: string) =>
+      (await (await call('GET', path, cookie ? { cookie } : {})).json()) as {
+        data: {
+          comments: { id: string; nickname: string; body: string; deletable: boolean }[];
+          blocks: { id: string; nickname: string }[];
+        };
+      };
+
+    expect((await read()).data).toEqual({ comments: [], blocks: [] });
+    expect((await call('GET', `/v1/teams/tem_${crypto.randomUUID()}/comments`)).status).toBe(404);
+    // 익명 프로필·닉네임 없는 구글 프로필은 쓸 수 없다.
+    expect(
+      (await call('POST', path, { cookie: anon.cookie, body: { body: '좋네요' } })).status,
+    ).toBe(403);
+    expect(
+      (await call('POST', path, { cookie: noNick.cookie, body: { body: '좋네요' } })).status,
+    ).toBe(403);
+    expect(
+      (await call('POST', path, { cookie: bob.cookie, body: { body: '시발 뭐냐' } })).status,
+    ).toBe(400);
+    expect(
+      (await call('POST', path, { cookie: bob.cookie, body: { body: '좋네요' } })).status,
+    ).toBe(201);
+    const res = await call('POST', path, { cookie: carol.cookie, body: { body: '수비가 약해요' } });
+    expect(res.status).toBe(201);
+    const carolId = ((await res.json()) as { data: { id: string } }).data.id;
+    expect(carolId.startsWith('tcm_')).toBe(true);
+    expect(
+      (
+        await call('POST', `/v1/teams/tem_${crypto.randomUUID()}/comments`, {
+          cookie: bob.cookie,
+          body: { body: '좋네요' },
+        })
+      ).status,
+    ).toBe(404);
+
+    const asBob = (await read(bob.cookie)).data;
+    expect(asBob.comments.map((c) => [c.nickname, c.body, c.deletable])).toEqual([
+      ['밥', '좋네요', true],
+      ['캐롤', '수비가 약해요', false],
+    ]);
+    expect((await read()).data.comments.every((c) => !c.deletable)).toBe(true);
+    // 남의 댓글은 못 지우고(403), 신고하면 내 화면에서만 빠진다.
+    expect(
+      (await call('DELETE', `/v1/boards/comments/${carolId}`, { cookie: bob.cookie })).status,
+    ).toBe(403);
+    expect(
+      (
+        await call('POST', `/v1/boards/comments/${carolId}/report`, {
+          cookie: bob.cookie,
+          body: { reason: 'abuse' },
+        })
+      ).status,
+    ).toBe(204);
+    expect((await read(bob.cookie)).data.comments.map((c) => c.nickname)).toEqual(['밥']);
+    expect((await read(carol.cookie)).data.comments.map((c) => c.nickname)).toEqual(['밥', '캐롤']);
+    // 차단하면 그 사람의 댓글이 모두 빠지고 차단 목록에 남는다. 풀면 돌아온다.
+    const bobId = asBob.comments[0]!.id;
+    const blocked = await call('POST', `/v1/boards/comments/${bobId}/block`, {
+      cookie: carol.cookie,
+    });
+    expect(blocked.status).toBe(201);
+    const asCarol = (await read(carol.cookie)).data;
+    expect(asCarol.comments.map((c) => c.nickname)).toEqual(['캐롤']);
+    expect(asCarol.blocks.map((b) => b.nickname)).toEqual(['밥']);
+    expect(
+      (await call('DELETE', `/v1/boards/blocks/${asCarol.blocks[0]!.id}`, { cookie: carol.cookie }))
+        .status,
+    ).toBe(204);
+    expect((await read(carol.cookie)).data.comments).toHaveLength(2);
+    // 본인은 지운다. 지운 댓글은 다시 지우거나 신고할 수 없다.
+    expect(
+      (await call('DELETE', `/v1/boards/comments/${carolId}`, { cookie: carol.cookie })).status,
+    ).toBe(204);
+    expect((await read()).data.comments.map((c) => c.nickname)).toEqual(['밥']);
+    expect(
+      (await call('DELETE', `/v1/boards/comments/${carolId}`, { cookie: carol.cookie })).status,
+    ).toBe(404);
+    // 운영 도구 최근 댓글 목록에 팀 이름과 함께 섞여 보인다.
+    const admin = await issueGoogleCookie(ctx, { email: ADMIN_EMAIL, nickname: '관리' });
+    const list = (await (
+      await callJson(
+        { ...ctx.env, ADMIN_EMAILS: ADMIN_EMAIL },
+        'GET',
+        '/v1/admin/comments?limit=5',
+        {
+          cookie: admin.cookie,
+        },
+      )
+    ).json()) as {
+      data: { comments: { id: string; board: string; postTitle: string; postId: string }[] };
+    };
+    expect(list.data.comments).toMatchObject([
+      { id: bobId, board: 'team', postTitle: a.team.name, postId: a.team.id },
+    ]);
+    // 프로필을 지우면 그 사람의 팀 댓글도 사라진다.
+    expect((await deleteProfile(ctx.env, bob.cookie, 'team-comment-del')).status).toBe(204);
+    expect((await read()).data.comments).toEqual([]);
   });
 
   it('T-11-106: lang=en이면 시즌 이름·익명 선수·배지 문구가 영어, lang이 없거나 모르는 값이면 한국어', async () => {

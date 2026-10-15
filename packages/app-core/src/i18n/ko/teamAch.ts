@@ -135,6 +135,8 @@ const ko = {
   // 팀 프로필
   profLoadFail: '팀을 불러오지 못했어요.',
   profManager: '감독 ',
+  /** T-11-290 감독과 구단주가 같은 사람일 때 한 줄로. */
+  profManagerOwner: '감독·구단주 ',
   profMine: ' · 내 팀',
   profOwner: '구단주 ',
   profRatingAria: (p: { n: number }) => `팀 레이팅 ${p.n}`,
@@ -145,6 +147,12 @@ const ko = {
   profViews: '조회수 ',
   profHistoryTitle: '팀 히스토리',
   profHistoryEmpty: '아직 기록이 없어요. 팀 경기와 시즌 순위 배지가 여기에 쌓여요.',
+  // T-11-290 스쿼드 댓글(팀 프로필 아래). 나머지 문구(신고·차단·로그인 문턱)는 board 사전을 같이 쓴다.
+  profCommentsTitle: '스쿼드 댓글',
+  profCommentsHint: '이 팀의 선발 스쿼드를 보고 구단주들이 남긴 이야기예요.',
+  profCommentsEmpty: '아직 댓글이 없어요. 이 스쿼드에 첫 한마디를 남길 수 있어요.',
+  profCommentPlaceholder: '이 스쿼드에 대해 한마디',
+  profCommentsFail: '댓글을 불러오지 못했어요.',
 };
 
 export type TeamAchMsgs = typeof ko;
