@@ -11,6 +11,7 @@ import {
 } from './env.ts';
 import { alertSignature, kstDay, ledger } from './ledger.ts';
 import { collect, triagePrompt, type DcCursor, type Reaction } from './reactions.ts';
+import { devCi, devInteraction, devResult, type DevCi, type DevResult } from './dev.ts';
 import { verifySlack } from './slack.ts';
 import { threadOf, type Task } from './thread.ts';
 
@@ -101,6 +102,8 @@ export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
     if (url.pathname === '/internal/run') return internalRun(req, url, env);
+    if (url.pathname === '/slack/dev/interactive' && req.method === 'POST')
+      return interactive(req, env, ctx);
     const m = /^\/slack\/([a-z]+)\/events$/.exec(url.pathname);
     if (url.pathname === '/health') return new Response('ok');
     if (!m || req.method !== 'POST') return new Response('not found', { status: 404 });
@@ -183,6 +186,13 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
       return new Response('bad body', { status: 400 });
     return Response.json({ pending: await ledger(env).pushDc(items.slice(0, 100), cursor) });
   }
+  // @dev: agent-dev.yml 결과 · PR CI 결과(agent-dev-ci.yml).
+  if (job === 'dev-result') {
+    await devResult(env, (await req.json()) as DevResult);
+    return Response.json({ ok: true });
+  }
+  if (job === 'dev-ci')
+    return Response.json({ result: await devCi(env, (await req.json()) as DevCi) });
   if (job === 'report') {
     await morningReport(env, Date.now(), `report:manual:${Date.now()}`);
     return Response.json({ queued: 'report' });
@@ -196,6 +206,28 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
     return Response.json({ bySource, errors });
   }
   return Response.json(await scanReactions(env));
+}
+
+/** 슬랙 버튼(@dev 승인 카드). 서명을 확인하고 3초 안에 200을 돌려준 뒤 일은 뒤에서 한다. */
+async function interactive(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  if (!enabled(env, 'dev')) return new Response('not found', { status: 404 });
+  const body = await req.text();
+  const ok = await verifySlack(
+    signingSecret(env, 'dev'),
+    req.headers.get('x-slack-request-timestamp'),
+    req.headers.get('x-slack-signature'),
+    body,
+  );
+  if (!ok) return new Response('bad signature', { status: 401 });
+  const raw = new URLSearchParams(body).get('payload');
+  if (!raw) return new Response('');
+  ctx.waitUntil(
+    devInteraction(env, JSON.parse(raw)).then(
+      (r) => console.log('dev interaction', r),
+      (e: unknown) => console.error('dev interaction failed', String(e)),
+    ),
+  );
+  return new Response('');
 }
 
 function sameText(a: string, b: string) {

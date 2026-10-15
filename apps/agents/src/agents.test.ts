@@ -11,6 +11,9 @@ import { mcpTools, parseRpc } from './mcp.ts';
 import { parseHandoffs } from './handoff.ts';
 import { collect, fetchDc, meaningful, parseDcList, triagePrompt } from './reactions.ts';
 import { nextRuns, kstText } from './cron.ts';
+import { devTools, mergeBlocker } from './dev.ts';
+import { appJwt, type Gh } from './github.ts';
+import type { Task } from './thread.ts';
 
 async function sign(secret: string, ts: string, body: string) {
   const key = await crypto.subtle.importKey(
@@ -606,5 +609,99 @@ describe('디시 갤러리', () => {
       'https://gall.dcinside.com/mgallery/board/view/?id=offsidegame&no=200',
     ]);
     expect(next.cursor?.comment).toBe(501);
+  });
+});
+
+describe('@dev', () => {
+  const gh =
+    (routes: Record<string, unknown>, calls: string[] = []): Gh =>
+    async (path, init) => {
+      calls.push(`${init?.method ?? 'GET'} ${path}`);
+      const hit = Object.keys(routes).find((k) => path.startsWith(k));
+      return { status: 200, data: (hit ? routes[hit] : {}) as never };
+    };
+  const pr = (o: Record<string, unknown> = {}) =>
+    ({
+      number: 7,
+      title: 'T-11-999: 고침',
+      state: 'open',
+      html_url: '',
+      head: { sha: 'abc', ref: 'agent-dev/1' },
+      base: { ref: 'main' },
+      ...o,
+    }) as Parameters<typeof mergeBlocker>[1];
+  const green = { check_runs: [{ name: 'PR plan', status: 'completed', conclusion: 'success' }] };
+
+  it('검사 통과 · main 최신 · 승인한 커밋일 때만 머지한다', async () => {
+    expect(
+      await mergeBlocker(gh({ '/commits/': green, '/compare/': { behind_by: 0 } }), pr(), 'abc'),
+    ).toBeNull();
+    expect(await mergeBlocker(gh({}), pr(), 'zzz')).toMatch('커밋이 바뀌었어요');
+    expect(
+      await mergeBlocker(gh({}), pr({ head: { sha: 'abc', ref: 'feature/x' } }), 'abc'),
+    ).toMatch('@dev가 연');
+    const red = { check_runs: [{ name: 'e2e', status: 'completed', conclusion: 'failure' }] };
+    expect(await mergeBlocker(gh({ '/commits/': red }), pr(), 'abc')).toMatch('통과하지 않았어요');
+    const calls: string[] = [];
+    expect(
+      await mergeBlocker(
+        gh({ '/commits/': green, '/compare/': { behind_by: 2 } }, calls),
+        pr(),
+        'abc',
+      ),
+    ).toMatch('최신 main으로 맞췄어요');
+    expect(calls).toContain('PUT /pulls/7/update-branch');
+  });
+
+  it('작업 시작 도구는 운영자가 맡긴 일에만 있다', () => {
+    const env = { GITHUB_REPO: 'o/r' } as Env;
+    const task = (kind: Task['kind']) =>
+      ({
+        kind,
+        role: 'dev',
+        channel: 'C',
+        threadTs: '1.1',
+        eventId: 'e',
+        sourceTs: '',
+        text: '',
+      }) as Task;
+    const names = (k: Task['kind']) =>
+      devTools(env, task(k), async () => gh({})).map((t) => t.name);
+    expect(names('mention')).toContain('start_work');
+    expect(names('reply')).toContain('start_work');
+    expect(names('handoff')).not.toContain('start_work');
+  });
+
+  it('앱 JWT를 RS256으로 서명한다', async () => {
+    const pair = (await crypto.subtle.generateKey(
+      {
+        name: 'RSASSA-PKCS1-v1_5',
+        modulusLength: 2048,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: 'SHA-256',
+      },
+      true,
+      ['sign', 'verify'],
+    )) as CryptoKeyPair;
+    const der = new Uint8Array(
+      (await crypto.subtle.exportKey('pkcs8', pair.privateKey)) as ArrayBuffer,
+    );
+    const pem = `-----BEGIN PRIVATE KEY-----\n${btoa(String.fromCharCode(...der))}\n-----END PRIVATE KEY-----`;
+    const jwt = await appJwt('123', pem, 1_000_000_000_000);
+    const [h, b, s] = jwt.split('.');
+    const dec = (x: string) =>
+      Uint8Array.from(atob(x.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+    expect(JSON.parse(new TextDecoder().decode(dec(b!)))).toMatchObject({
+      iss: '123',
+      iat: 999_999_970,
+    });
+    expect(
+      await crypto.subtle.verify(
+        'RSASSA-PKCS1-v1_5',
+        pair.publicKey,
+        dec(s!),
+        new TextEncoder().encode(`${h}.${b}`),
+      ),
+    ).toBe(true);
   });
 });

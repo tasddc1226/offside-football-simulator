@@ -2,7 +2,7 @@
 // 운영 D1은 쓰지 않는다(ADR-015 인프라).
 import { DurableObject } from 'cloudflare:workers';
 import { ClaudeError, runAgent, type Message, type Tool } from './claude.ts';
-import { apiKey, botToken, enabled, ROLE_NAMES, type Env, type Role } from './env.ts';
+import { apiKey, botToken, dailyBudget, enabled, ROLE_NAMES, type Env, type Role } from './env.ts';
 import { MAX_HOPS, parseHandoffs } from './handoff.ts';
 import { kstDay, ledger } from './ledger.ts';
 import { mcpTools, type McpServer } from './mcp.ts';
@@ -77,7 +77,7 @@ export class AgentThread extends DurableObject<Env> {
     const slack = slackClient(botToken(env, task.role), fetch, ROLE_NAMES[task.role]);
     const book = ledger(env);
     const today = await book.day(task.role);
-    if (today.costUsd >= Number(env.DAILY_BUDGET_USD)) {
+    if (today.costUsd >= dailyBudget(env, task.role)) {
       if (!isNewPost(task) && (await book.warnOnce(task.role)))
         await slack(
           'chat.postMessage',
@@ -101,7 +101,7 @@ export class AgentThread extends DurableObject<Env> {
       runs: 0,
       owner: task.kind !== 'handoff',
     };
-    const spec = roleSpec(env, task.role);
+    const spec = roleSpec(env, task.role, task);
     const prompt = spec.prompt(task);
     let reply: string;
     let footer: string | undefined;
