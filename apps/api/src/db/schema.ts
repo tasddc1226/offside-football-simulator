@@ -1407,6 +1407,23 @@ export const rerollMileage = sqliteTable('reroll_mileage', {
 });
 
 /**
+ * T-11-275 홈 선물을 받은 기록. 구단주 · 선물 id마다 한 줄이라 두 번 받지 못한다. claim_id는 받는 batch가 아이템을
+ * 이 줄을 새로 넣었을 때만 주도록 거는 조건이다(같은 시각에 두 번 눌러도 한 번).
+ */
+export const giftClaims = sqliteTable(
+  'gift_claims',
+  {
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    giftId: text('gift_id').notNull(),
+    claimId: text('claim_id').notNull(),
+    claimedAt: text('claimed_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.profileId, table.giftId] })],
+);
+
+/**
  * T-11-152 구단 자금으로 산 아이템 원장(자금이 없어진 내역). 하루 상한을 세고, 운영에서 자금 대조
  * (방출 + 판매 − 영입 − 아이템 구매)에 쓴다.
  */
