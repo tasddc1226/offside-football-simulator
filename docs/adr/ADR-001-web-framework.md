@@ -9,21 +9,21 @@
 
 ## 결정
 
-| 항목            | 선택                                                                                                                                                                                          |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 앱 형태         | Vite 6 + React 19 + TypeScript SPA. SSR 없음                                                                                                                                                  |
-| 라우팅          | TanStack Router (타입 안전 경로, 화면 ID를 라우트 이름에 매핑)                                                                                                                                |
-| 스타일          | Tailwind CSS v4. `@theme`에 `--os-*` 토큰을 그대로 등록한다. 임의 색상 클래스 금지                                                                                                            |
-| 서버 상태       | TanStack Query (동기화·보관함·시즌 조회)                                                                                                                                                      |
-| 클라이언트 상태 | Zustand (화면 상태, DRAFT). 게임 정본 상태는 엔진 소유                                                                                                                                        |
-| 게임 엔진 실행  | Web Worker + Comlink. `packages/domain`을 워커 안에서 실행                                                                                                                                    |
-| 로컬 저장       | Dexie (IndexedDB). 스냅샷·명령 로그·설정                                                                                                                                                      |
-| 폼·검증         | Zod (contracts 패키지와 공유)                                                                                                                                                                 |
-| 접근성          | Radix Primitives 일부(Dialog, RadioGroup, Tabs)만 사용                                                                                                                                        |
-| 테스트          | Vitest, Testing Library, Playwright, axe-core                                                                                                                                                 |
-| 랜딩            | `apps/web`의 정적 사전 렌더링 페이지 1장 (vite-plugin 또는 빌드 스크립트)                                                                                                                     |
-| 배포 채널       | 같은 SPA를 두 채널로 빌드한다. `web`(Workers Static Assets)과 `toss`(앱인토스 WebView 미니앱). 채널별 차이는 `packages/platform` 어댑터 뒤에 둔다. [ADR-009](ADR-009-apps-in-toss-channel.md) |
-| 앱인토스 SDK    | `@apps-in-toss/web-framework` 3.x(설정 `apps-in-toss.config.ts`), `@apps-in-toss/devtools` Vite 플러그인(로컬 브라우저 모킹). TDS(`@toss/tds-mobile`)는 쓰지 않고 자체 디자인 시스템을 유지   |
+| 항목 | 선택 |
+|---|---|
+| 앱 형태 | Vite 6 + React 19 + TypeScript SPA. SSR 없음 |
+| 라우팅 | TanStack Router (타입 안전 경로, 화면 ID를 라우트 이름에 매핑) |
+| 스타일 | Tailwind CSS v4. `@theme`에 `--os-*` 토큰을 그대로 등록한다. 임의 색상 클래스 금지 |
+| 서버 상태 | TanStack Query (동기화·보관함·시즌 조회) |
+| 클라이언트 상태 | Zustand (화면 상태, DRAFT). 게임 정본 상태는 엔진 소유 |
+| 게임 엔진 실행 | Web Worker + Comlink. `packages/domain`을 워커 안에서 실행 |
+| 로컬 저장 | Dexie (IndexedDB). 스냅샷·명령 로그·설정 |
+| 폼·검증 | Zod (contracts 패키지와 공유) |
+| 접근성 | Radix Primitives 일부(Dialog, RadioGroup, Tabs)만 사용 |
+| 테스트 | Vitest, Testing Library, Playwright, axe-core |
+| 랜딩 | `apps/web`의 정적 사전 렌더링 페이지 1장 (vite-plugin 또는 빌드 스크립트) |
+| 배포 채널 | 같은 SPA를 두 채널로 빌드한다. `web`(Workers Static Assets)과 `toss`(앱인토스 WebView 미니앱). 채널별 차이는 `packages/platform` 어댑터 뒤에 둔다. [ADR-009](ADR-009-apps-in-toss-channel.md) |
+| 앱인토스 SDK | `@apps-in-toss/web-framework` 3.x(설정 `apps-in-toss.config.ts`), `@apps-in-toss/devtools` Vite 플러그인(로컬 브라우저 모킹). TDS(`@toss/tds-mobile`)는 쓰지 않고 자체 디자인 시스템을 유지 |
 
 ## 이유
 
@@ -33,11 +33,11 @@
 
 ## 검토한 대안
 
-| 대안               | 보류 이유                                                            |
-| ------------------ | -------------------------------------------------------------------- |
+| 대안 | 보류 이유 |
+|---|---|
 | Next.js App Router | RSC와 서버 컴포넌트가 불필요. Vercel Hobby는 상용 불가, Pro는 고정비 |
-| SvelteKit          | 에이전트 구현 사례가 React보다 적음                                  |
-| CSS Modules 단독   | 가능하지만 에이전트 산출물의 클래스 명명 일관성이 떨어짐             |
+| SvelteKit | 에이전트 구현 사례가 React보다 적음 |
+| CSS Modules 단독 | 가능하지만 에이전트 산출물의 클래스 명명 일관성이 떨어짐 |
 
 ## 결과
 
