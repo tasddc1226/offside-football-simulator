@@ -1,0 +1,14 @@
+{
+  "id": "t-11-267-progress-smooth",
+  "title": "시즌 진행 끊김 수정",
+  "items": ["시즌을 진행할 때 화면이 끊기던 문제를 고쳤어요"],
+  "en": {
+    "title": "Smoother season progress",
+    "items": ["Fixed stuttering while a season is in progress."]
+  },
+  "ja": {
+    "title": "シーズン進行のカクつきを修正",
+    "items": ["シーズン進行中に画面がカクつく問題を修正しました。"]
+  },
+  "availability": "web-app"
+}

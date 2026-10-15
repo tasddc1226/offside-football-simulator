@@ -79,7 +79,8 @@ for (const width of [320, 390]) {
     await resumeWithSave(page, { money: 1_000_000, age: 26 });
     const avatar = page.locator('.player .avatar');
     await expect(avatar).toHaveAttribute('viewBox', '0 0 24 32');
-    expect(await avatar.locator('rect').first().getAttribute('height')).toBe('0.5');
+    await expect(avatar).toHaveAttribute('data-avatar-renderer', 'image');
+    await expect(avatar.locator('image').first()).toHaveAttribute('href', /\.png/);
     await page.locator('[data-act="avatar-look"]').click();
     const dialog = page.getByRole('dialog', { name: '선수 꾸미기' });
     await dialog.locator('[data-look-item="style"] [data-look-opt="2"]').click();
@@ -89,9 +90,9 @@ for (const width of [320, 390]) {
     );
     await page.keyboard.press('Escape');
     await page.locator('[data-act="advance"]').click();
-    const stage = page.locator('.avatar-walker svg');
+    const stage = page.locator('.avatar-walker > svg');
     await expect(stage).toHaveAttribute('viewBox', '0 0 32 36');
-    await expect(stage.locator('rect').first()).toHaveAttribute('height', '0.5');
+    await expect(stage).toHaveAttribute('data-avatar-renderer', 'image');
     const box = await stage.boundingBox();
     expect(box!.x).toBeGreaterThanOrEqual(0);
     expect(box!.x + box!.width).toBeLessThanOrEqual(width);

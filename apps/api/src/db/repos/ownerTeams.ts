@@ -549,15 +549,35 @@ export async function listTeamRanking(
   now: string,
 ) {
   const value = lineupValueSql(!teamSeasonClosed(season, now));
+  const columns = { team: ownerTeams, value: value.as('lineup_value'), title: profiles.title };
+  const order = [...rankOrder(sort), asc(ownerTeams.id)];
+  // T-11-268 평점·OVR순은 순서에 구단 가치가 필요 없다 — 페이지 팀을 먼저 고르고 그 팀만 가치를 센다.
+  // 한 쿼리로 고르면 랭킹에 든 팀 전부(운영 약 1,900팀)의 가치를 세고 정렬해 1회 5.5만 행을 읽었다.
+  const pageIds = db
+    .select({ id: ownerTeams.id })
+    .from(ownerTeams)
+    .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
+    .where(rankedIn(season))
+    .orderBy(...order)
+    .limit(TEAM_RANK_PER_PAGE)
+    .offset((page - 1) * TEAM_RANK_PER_PAGE)
+    .as('team_page');
   const [rows, [total]] = await db.batch([
-    db
-      .select({ team: ownerTeams, value: value.as('lineup_value'), title: profiles.title })
-      .from(ownerTeams)
-      .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
-      .where(rankedIn(season))
-      .orderBy(...rankOrder(sort), asc(ownerTeams.id))
-      .limit(TEAM_RANK_PER_PAGE)
-      .offset((page - 1) * TEAM_RANK_PER_PAGE),
+    sort === 'value'
+      ? db
+          .select(columns)
+          .from(ownerTeams)
+          .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
+          .where(rankedIn(season))
+          .orderBy(...order)
+          .limit(TEAM_RANK_PER_PAGE)
+          .offset((page - 1) * TEAM_RANK_PER_PAGE)
+      : db
+          .select(columns)
+          .from(ownerTeams)
+          .innerJoin(pageIds, eq(pageIds.id, ownerTeams.id))
+          .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
+          .orderBy(...order),
     db
       .select({ n: sql<number>`count(*)` })
       .from(ownerTeams)

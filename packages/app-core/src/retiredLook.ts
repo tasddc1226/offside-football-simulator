@@ -62,15 +62,20 @@ const sameEntry = (h: HofEntry, v: LegendView) =>
 // Local-only legacy records have no server/card to transfer. Keep their one-time receipt outside
 // game/HOF saves: no save migration or score recalculation. Appearance + used flag are one write.
 const receiptKey = (v: LegendView) => `ft_retired_look:${v.avatarId}`;
-type LocalReceipt = { used: true; look: string | null };
+// T-11-243 Same art round as the server (RETIRED_LOOK_ROUND). Receipts from the dot character have
+// no round, so they keep their look but give one more change.
+const LOOK_ROUND = 2;
+type LocalReceipt = { used: true; look: string | null; round?: number };
 const receiptOf = (v: LegendView) => loadKey<LocalReceipt>(receiptKey(v));
+const spent = (r: LocalReceipt | null | undefined): boolean =>
+  !!r?.used && (r.round ?? 1) >= LOOK_ROUND;
 const localPolicy = (v: LegendView): RetiredLookPolicy => {
   const receipt = receiptOf(v);
   return {
     careerId: v.avatarId!,
     look: receipt ? receipt.look : (v.avatarLook ?? null),
-    remaining: receipt?.used ? 0 : 1,
-    lockedReason: receipt?.used ? 'used' : null,
+    remaining: spent(receipt) ? 0 : 1,
+    lockedReason: spent(receipt) ? 'used' : null,
   };
 };
 
@@ -133,14 +138,15 @@ export async function saveRetiredLook(
     return { ok: false, message: L.failed };
   function saveLocal() {
     const previous = receiptOf(v);
-    if (previous?.used)
+    if (previous && spent(previous))
       return previous.look === code
         ? { ok: true as const, message: L.localSaved }
         : { ok: false as const, message: L.used };
     const hof = loadKey<HofEntry[]>('ft_hof') ?? loadKey<HofEntry[]>('sl_hof') ?? [];
     if (!hof.some((h) => sameEntry(h, v))) return { ok: false as const, message: L.storageFailed };
-    if (code === (v.avatarLook ?? null)) return { ok: true as const, message: L.localSaved };
-    if (!saveKey(receiptKey(v), { used: true, look: code }))
+    if (code === (previous ? previous.look : (v.avatarLook ?? null)))
+      return { ok: true as const, message: L.localSaved };
+    if (!saveKey(receiptKey(v), { used: true, look: code, round: LOOK_ROUND }))
       return { ok: false as const, message: L.storageFailed };
     const mirrored = applyLocal(state, v, code);
     return { ok: true as const, message: mirrored ? L.localSaved : L.localPartial };

@@ -50,6 +50,9 @@ export const lookItemName = (item: LookItem): string =>
     glasses: L.itemGlasses,
     boots: L.itemBoots,
     socks: L.itemSocks,
+    gloves: L.itemGloves,
+    keeperKit: L.itemKeeperKit,
+    kneePads: L.itemKneePads,
   })[item];
 
 const STYLE_LABEL = () => [
@@ -62,6 +65,12 @@ const STYLE_LABEL = () => [
   L.styleAfro,
   L.styleBun,
   L.styleSpiky,
+  L.styleBald,
+  L.styleShaved,
+  L.styleDread,
+  L.styleFauxhawk,
+  L.stylePonytail,
+  L.styleMullet,
 ];
 const BEARD_LABEL = () => [L.none, L.beardStubble, L.beardFull];
 const EXPR_LABEL = () => [L.exprBase, L.exprHappy, L.exprWink];
@@ -76,7 +85,8 @@ export function optionsOf(item: LookItem): LookOption[] {
       if (item === 'beard') return { value, label: BEARD_LABEL()[value]!, swatch: null };
       if (item === 'expr') return { value, label: EXPR_LABEL()[value]!, swatch: null };
       const swatch = LOOK_SWATCHES[item][value] ?? null;
-      return { value, label: swatch ? null : item === 'socks' ? L.socksTeam : L.none, swatch };
+      const empty = item === 'socks' ? L.socksTeam : item === 'keeperKit' ? L.kitClub : L.none;
+      return { value, label: swatch ? null : empty, swatch };
     });
 }
 
