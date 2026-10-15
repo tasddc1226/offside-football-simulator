@@ -10,7 +10,7 @@ export default [
       'apps/mobile/android/**',
       'apps/mobile/.expo/**',
       'apps/mobile/plugins/**',
-      // T-11-283 1.1.2 OTA 묶음에 넣으려고 그대로 들여온 fflate.
+      // T-11-286 1.1.2 OTA 묶음에 넣으려고 그대로 들여온 fflate.
       'apps/mobile/src/vendor/**',
     ],
   },

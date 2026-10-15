@@ -55,6 +55,27 @@ export const ROLE_NAMES: Record<Role, string> = {
   mkt: '안정환 · 마케팅',
 };
 
+/** 슬랙에서 한글로 부르는 이름(T-11-283). 슬랙 멘션은 영어 표시 이름만 찾아서, 운영자가 `@이운재`처럼 글로 쓰면 Worker가 멘션으로 받는다. */
+export const ROLE_CALLS: Record<Role, readonly string[]> = {
+  ops: ['이운재', '운영'],
+  plan: ['박지성', '기획'],
+  dev: ['손흥민', '개발'],
+  mkt: ['안정환', '마케팅'],
+};
+
+const CALL = new RegExp(`@(${Object.values(ROLE_CALLS).flat().join('|')})(?![가-힣])`, 'g');
+
+/** 한글 이름 · 역할 이름(`이운재` · `운영`)을 역할 키로. */
+export const roleOfCall = (name: string): Role | undefined =>
+  (Object.keys(ROLE_CALLS) as Role[]).find((r) => ROLE_CALLS[r].includes(name));
+
+/** 글에서 `@이운재` · `@운영` 꼴로 부른 역할들. */
+export const calledRoles = (text: string): Role[] => [
+  ...new Set([...text.matchAll(CALL)].map((m) => roleOfCall(m[1]!)!)),
+];
+
+export const stripCalls = (text: string) => text.replace(CALL, '').trim();
+
 export const isRole = (v: string): v is Role => (ROLES as readonly string[]).includes(v);
 export const enabled = (env: Env, role: Role) => list(env.ENABLED_ROLES).includes(role);
 
