@@ -1,4 +1,5 @@
 import {
+  HOME_GIFT,
   OWNER_ITEMS,
   REROLL_MILEAGE,
   SCOUT_PITY_ELITE,
@@ -251,4 +252,38 @@ export async function revokeIapPurchase(
   const r = row?.results[0];
   if (!r) return { found: false };
   return { found: true, already: !marked?.meta.changes, ...r };
+}
+
+/** T-11-275 이 구단주가 지금 홈 선물을 받았는지(PK 조회 한 번). */
+export async function homeGiftClaimed(db: Db, profileId: string): Promise<boolean> {
+  const row = await db.$client
+    .prepare(`SELECT 1 AS x FROM gift_claims WHERE profile_id = ? AND gift_id = ?`)
+    .bind(profileId, HOME_GIFT.id)
+    .first();
+  return row !== null;
+}
+
+/**
+ * T-11-275 홈 선물 받기. 받은 기록을 넣고, 그 줄을 이 batch가 새로 넣었을 때만(claim_id) 강화권 · 스카우트권을 더한다.
+ * 이미 받았으면 null, 아니면 받은 뒤 장수. 스카우트권은 다른 경로로 받은 것과 같은 줄이라 쓸 때 천장을 똑같이 센다.
+ */
+export async function claimHomeGift(db: Db, profileId: string, now: string): Promise<Items | null> {
+  const d1 = db.$client;
+  const claimId = crypto.randomUUID();
+  const guard = {
+    sql: `EXISTS (SELECT 1 FROM gift_claims WHERE profile_id = ? AND gift_id = ? AND claim_id = ?)`,
+    params: [profileId, HOME_GIFT.id, claimId],
+  };
+  const results = await d1.batch<{ item: string; qty: number }>([
+    d1
+      .prepare(
+        `INSERT OR IGNORE INTO gift_claims (profile_id, gift_id, claim_id, claimed_at) VALUES (?, ?, ?, ?)`,
+      )
+      .bind(profileId, HOME_GIFT.id, claimId, now),
+    grantItemStatement(d1, profileId, 'boost', HOME_GIFT.boost, now, guard),
+    grantItemStatement(d1, profileId, 'scout', HOME_GIFT.scout, now, guard),
+    d1.prepare(ITEMS_SQL).bind(profileId),
+  ]);
+  if (!results[0]?.meta.changes) return null;
+  return foldItems(results.at(-1)?.results ?? []);
 }

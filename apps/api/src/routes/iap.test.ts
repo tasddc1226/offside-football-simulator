@@ -1,6 +1,11 @@
-import { OwnerItemsResponseSchema, successEnvelope } from '@offside/contracts';
+import {
+  HOME_GIFT,
+  HomeGiftResponseSchema,
+  OwnerItemsResponseSchema,
+  successEnvelope,
+} from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { iapPurchases, ownerItems } from '../db/schema.js';
+import { giftClaims, iapPurchases, ownerItems } from '../db/schema.js';
 import { resetGoogleTokenCache } from '../iap/google.js';
 import { syncGoogleVoided } from '../iap/refunds.js';
 import { createApp } from '../app.js';
@@ -269,6 +274,49 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     await deleteProfile(ctx.env, me.cookie, 'iap-delete');
     expect(await ctx.db.select().from(iapPurchases)).toHaveLength(0);
     expect(await ctx.db.select().from(ownerItems)).toHaveLength(0);
+  });
+
+  it('T-11-275 홈 선물은 로그인한 구단주만 한 번 받고, 받은 스카우트권도 쓸 때 천장을 센다', async () => {
+    const GiftRes = successEnvelope(HomeGiftResponseSchema);
+    const guest = await issueCookie(ctx);
+    expect((await call('GET', '/v1/items/gift', { cookie: guest.cookie })).status).toBe(403);
+    const key = () => ({ 'Idempotency-Key': crypto.randomUUID() });
+    const guestClaim = await call('POST', '/v1/items/gift/claim', {
+      cookie: guest.cookie,
+      headers: key(),
+    });
+    expect(guestClaim.status).toBe(403);
+
+    const me = await issueGoogleCookie(ctx);
+    const gift = async () =>
+      GiftRes.parse(await (await call('GET', '/v1/items/gift', { cookie: me.cookie })).json()).data
+        .gift;
+    expect(await gift()).toEqual({ id: HOME_GIFT.id, boost: 20, scout: 5 });
+    const claim = (headers = key()) =>
+      call('POST', '/v1/items/gift/claim', { cookie: me.cookie, headers });
+    // 같은 멱등 키로 다시 보내면 같은 응답, 새 키로 다시 누르면 409이고 장수는 그대로다.
+    const first = key();
+    const got = ItemsRes.parse(await (await claim(first)).json()).data;
+    expect(got).toEqual({ reroll: 0, boost: 20, scout: 5 });
+    expect(ItemsRes.parse(await (await claim(first)).json()).data).toEqual(got);
+    const again = await claim();
+    expect(again.status).toBe(409);
+    expect(await again.json()).toMatchObject({ error: { details: { reason: 'GIFT_CLAIMED' } } });
+    expect(await gift()).toBeNull();
+
+    const used = ItemsRes.parse(
+      await (
+        await call('POST', '/v1/items/scout/use', {
+          cookie: me.cookie,
+          headers: key(),
+          body: { hit: false },
+        })
+      ).json(),
+    ).data;
+    expect(used).toMatchObject({ boost: 20, scout: 4, pity: { used: 1, streak: 1, elites: 0 } });
+
+    await deleteProfile(ctx.env, me.cookie, 'gift-delete');
+    expect(await ctx.db.select().from(giftClaims)).toHaveLength(0);
   });
 
   it('로그인하지 않은 프로필은 살 수 없다', async () => {

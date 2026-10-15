@@ -145,6 +145,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'created_at',
   ],
   owner_items: ['profile_id', 'item', 'qty', 'updated_at'],
+  gift_claims: ['profile_id', 'gift_id', 'claim_id', 'claimed_at'],
   owner_item_purchases: ['id', 'profile_id', 'item', 'qty', 'price', 'created_at'],
   scout_pity: ['profile_id', 'used', 'streak', 'elites', 'mode', 'updated_at'],
   reroll_mileage: ['profile_id', 'used', 'progress', 'rewarded', 'updated_at'],

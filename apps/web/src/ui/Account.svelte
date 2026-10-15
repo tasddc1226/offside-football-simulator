@@ -29,6 +29,9 @@
   async function load(silent = false) {
     if (!silent) set(undefined);
     await refreshAccount();
+    // T-11-275 로그인 상태를 구단주 표시로도 남겨 홈 선물이 로그인한 기기에서만 묻게 한다.
+    const p = accountCache.value;
+    if (p !== undefined && p !== 'error') noteOwner(!!p && isMember(p));
   }
 
   onMount(() => {

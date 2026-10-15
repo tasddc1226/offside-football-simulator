@@ -5,6 +5,7 @@ import {
   CupHomeResponseSchema,
   BuyRerollBodySchema,
   ScoutUseBodySchema,
+  HomeGiftResponseSchema,
   OwnerItemsResponseSchema,
   RerollShopResponseSchema,
   BuyRewardBodySchema,
@@ -23,6 +24,7 @@ import {
   cupById,
   cupRoundsOf,
   currentCup,
+  HOME_GIFT,
   lockAt,
   OWNER_ITEMS,
   shopPriceAt,
@@ -53,7 +55,7 @@ import {
   rewardSnapshot,
   shopSnapshot,
 } from '../db/repos/itemShop.js';
-import { ownerItemsOf, spendItem } from '../db/repos/iap.js';
+import { claimHomeGift, homeGiftClaimed, ownerItemsOf, spendItem } from '../db/repos/iap.js';
 import { countOpenListingsAmong } from '../db/repos/market.js';
 import { newId } from '../db/ids.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -512,6 +514,27 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
       if (!items) throw conflictError(cupKo(EMPTY[item][0]), EMPTY[item][1]);
       return ok(c, OwnerItemsResponseSchema, items, 200, NO_STORE);
     });
+
+  // T-11-275 홈 선물. 로그인한 구단주만(아니면 403 GOOGLE_LOGIN_REQUIRED) 한 번 받는다. 조회는 PK 한 번이고 홈을 열 때
+  // 구단주 표시가 있는 기기만 부른다. 받기는 재시도가 두 번 받지 않게 멱등 키도 쓴다(받은 기록 PK가 최종 방어선).
+  app.get('/v1/items/gift', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const claimed = await homeGiftClaimed(getDb(c), me.id);
+    const { id, boost, scout } = HOME_GIFT;
+    return ok(
+      c,
+      HomeGiftResponseSchema,
+      { gift: claimed ? null : { id, boost, scout } },
+      200,
+      NO_STORE,
+    );
+  });
+  app.post('/v1/items/gift/claim', requireProfile, idempotency, async (c) => {
+    const me = await requireOwner(c);
+    const items = await claimHomeGift(getDb(c), me.id, nowIso());
+    if (!items) throw conflictError(cupKo('giftClaimed'), 'GIFT_CLAIMED');
+    return ok(c, OwnerItemsResponseSchema, items, 200, NO_STORE);
+  });
 
   // T-11-152 리롤권 상점: 가진 장수 · 구단 자금 · 다음 한 장 가격 · 오늘 산 장수와 하루 상한. 상점을 펼칠 때만 부른다.
   // T-11-244 이번 주 프리미엄 스카우트권(가진 장수 · 가격 · 산 장수 · 주간 상한)도 같은 왕복에 싣는다.

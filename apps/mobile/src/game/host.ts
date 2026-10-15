@@ -15,6 +15,8 @@ import { createNews } from '@offside/app-core/news';
 import { createOwnerConflicts } from '@offside/app-core/ownerConflict';
 import { createNavStack } from '@offside/app-core/navHistory';
 import { getProfile } from '@offside/app-core/api/client';
+import { noteOwner } from '@offside/app-core/api/friendPending';
+import { isMember } from '@offside/app-core/account';
 import { gameText as T } from '@offside/app-core/i18n/ko/game';
 import { APP_VERSION, WEB_ORIGIN } from '../platform/config';
 import { ensureSession, renewSession, sessionToken } from '../platform/session';
@@ -158,6 +160,8 @@ export async function refreshAccount() {
   }
   accountCache.fetchedAt = Date.now();
   accountCache.value = r.ok ? r.data : 'error';
+  // T-11-275 로그인 상태를 구단주 표시로도 남겨 홈 선물이 로그인한 기기에서만 묻게 한다.
+  if (r.ok) noteOwner(isMember(r.data));
 }
 
 // ───────── 뒤로 가기 ─────────
