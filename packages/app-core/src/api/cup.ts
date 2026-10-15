@@ -14,6 +14,7 @@ import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
 import { apiFetch, cachedGet, ownerCachedGet } from './client.js';
 
 export type {
+  CupChampion,
   CupMatch,
   CupMatchResponse,
   CupMeResponse,

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { TeamSynergy } from './team-synergy.js';
 import {
   CareerIdParamSchema,
   CareerPosSchema,
@@ -556,6 +557,34 @@ export const CupHonorSchema = z.strictObject({
 });
 export type CupHonor = z.infer<typeof CupHonorSchema>;
 
+/** T-11-290 팀 프로필에 싣는 선발 시너지(contracts team-synergy TeamSynergy와 같은 모양 — 서버가 경기 계산과 같은 입력으로 센다). */
+const SynergyLinesSchema = z.strictObject({
+  atk: z.number(),
+  mid: z.number(),
+  def: z.number(),
+  gk: z.number(),
+});
+const TeamSynergyShape = z.strictObject({
+  active: z.array(
+    z.strictObject({
+      id: z.string(),
+      name: z.string(),
+      desc: z.string(),
+      members: z.array(z.number().int().min(0)),
+      effect: SynergyLinesSchema.partial(),
+      kind: z.enum(['duo', 'team', 'badge', 'foot']),
+      nation: z.string().optional(),
+      style: z.string().optional(),
+    }),
+  ),
+  foot: z.array(z.number()),
+  lines: SynergyLinesSchema,
+});
+/** 모양은 위 스키마로 검사하고 타입은 contracts team-synergy의 TeamSynergy 그대로(exactOptionalPropertyTypes 때문에 z.infer를 쓰지 않는다). */
+export const TeamSynergySchema = z.custom<TeamSynergy>(
+  (v) => TeamSynergyShape.safeParse(v).success,
+);
+
 /** 누구나 보는 팀 프로필. 선수 이름은 공개 이름·익명 표기뿐이다. rank는 랭킹에 오르지 않은 팀(선수 0명)이면 null. */
 export const TeamProfileSchema = z.strictObject({
   id: TeamIdSchema,
@@ -587,6 +616,8 @@ export const TeamProfileSchema = z.strictObject({
    * 배포 전 응답엔 없다.
    */
   players: z.array(TeamPlayerSchema).optional(),
+  /** T-11-290 선발 시너지(내 팀 화면과 같은 표). 구단주가 직접 키운 선수 여부까지 서버가 알아야 해서 서버가 센다. 배포 전 응답엔 없다. */
+  synergy: TeamSynergySchema.optional(),
   createdAt: IsoUtcSchema,
 });
 export type TeamProfile = z.infer<typeof TeamProfileSchema>;

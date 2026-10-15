@@ -103,7 +103,8 @@
   const stages = CUP_STAGES;
   const predictionCap = $derived(data ? cupPredictionCap(data.cup.edition) : null);
 
-  function openTeam(id: string) {
+  // T-11-290 owner면 그 팀 구단주의 프로필(승부예측 줄의 구단주 이름). 뒤로 가면 팀 프로필.
+  function openTeam(id: string, owner = false) {
     if (data && content) {
       const states = (selector: string, attr: string) => Object.fromEntries(
         [...content.querySelectorAll<HTMLDetailsElement>(selector)].map(el => [el.getAttribute(attr)!, el.open]),
@@ -114,7 +115,7 @@
         schedule: { tab: scheduleTab, group: selectedGroup, bracketList },
       });
     }
-    appState.hof = { ...hofStart(), tab: 'teams', team: id, season: data?.cup.season ?? null };
+    appState.hof = { ...hofStart(), tab: 'teams', team: id, season: data?.cup.season ?? null, owner };
     go('hof');
   }
   function openMatch(m: CupMatch) {

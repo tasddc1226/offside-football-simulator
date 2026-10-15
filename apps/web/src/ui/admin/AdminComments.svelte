@@ -6,7 +6,7 @@
   import type { AdminComment } from '@offside/app-core/api/admin';
   import { deleteComment } from '@offside/app-core/api/boards';
   import { toast } from '../helpers.js';
-  import { BOARD_LABEL, kstDateTime as kst } from '@offside/app-core/boardText';
+  import { commentSourceLabel, kstDateTime as kst } from '@offside/app-core/boardText';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
 
   let comments = $state<AdminComment[]>([]);
@@ -87,7 +87,7 @@
             <span class="muted fs-xs">{short(c.profileId)} · {kst(c.createdAt)}</span>
           </div>
           <p>{c.body}</p>
-          <span class="muted fs-xs">[{BOARD_LABEL[c.board]}] {c.postTitle}</span>
+          <span class="muted fs-xs">[{commentSourceLabel(c.board)}] {c.postTitle}</span>
           <div class="row" style="gap:6px">
             <button class="icon-btn" data-act="delete-comment" disabled={busy} onclick={() => remove(c)}>삭제</button>
             {#if !author}<button class="icon-btn" data-act="filter-author" onclick={() => filterBy(c)}>이 작성자 댓글</button>{/if}

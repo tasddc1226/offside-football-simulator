@@ -11,8 +11,12 @@ import {
   boardComments,
   boardPosts,
   careers,
+  ownerTeams,
   profiles,
+  teamCommentReports,
+  teamComments,
 } from '../schema.js';
+import { adminTeamCommentColumns } from './teamComments.js';
 
 // T-10-016 운영 도구. 관리자만 드물게 여는 화면이라 집계는 테이블을 한 번씩 훑는다(쿼리당 한 번,
 // 한 번의 D1 왕복으로 묶는다). 라우트가 결과를 60초 엣지 캐시에 둔다.
@@ -122,32 +126,60 @@ export async function listRecentComments(
     .from(boardCommentReports)
     .groupBy(boardCommentReports.commentId)
     .as('reports');
-  const rows = await db
-    .select({
-      id: boardComments.id,
-      postId: boardComments.postId,
-      postTitle: boardPosts.title,
-      board: boardPosts.board,
-      profileId: boardComments.profileId,
-      nickname: boardComments.nickname,
-      body: boardComments.body,
-      admin: boardComments.admin,
-      reports: sql<number>`coalesce(${reports.n}, 0)`.as('reports'),
-      createdAt: boardComments.createdAt,
-    })
-    .from(boardComments)
-    .innerJoin(boardPosts, eq(boardPosts.id, boardComments.postId))
-    .leftJoin(reports, eq(reports.commentId, boardComments.id))
-    .where(
-      and(
-        isNull(boardComments.deletedAt),
-        q.before ? lt(boardComments.createdAt, q.before) : undefined,
-        q.profile ? eq(boardComments.profileId, q.profile) : undefined,
-        q.reported ? isNotNull(reports.commentId) : undefined,
-      ),
-    )
-    .orderBy(desc(boardComments.createdAt))
-    .limit(q.limit + 1);
+  const teamReports = db
+    .select({ commentId: teamCommentReports.commentId, n: count('n') })
+    .from(teamCommentReports)
+    .groupBy(teamCommentReports.commentId)
+    .as('team_reports');
+  // T-11-290 게시판 댓글과 팀 프로필 댓글을 한 목록으로(각각 limit+1개씩 읽어 최신순으로 합친다).
+  const [boardRows, teamRows] = await Promise.all([
+    db
+      .select({
+        id: boardComments.id,
+        postId: boardComments.postId,
+        postTitle: boardPosts.title,
+        board: boardPosts.board,
+        profileId: boardComments.profileId,
+        nickname: boardComments.nickname,
+        body: boardComments.body,
+        admin: boardComments.admin,
+        reports: sql<number>`coalesce(${reports.n}, 0)`.as('reports'),
+        createdAt: boardComments.createdAt,
+      })
+      .from(boardComments)
+      .innerJoin(boardPosts, eq(boardPosts.id, boardComments.postId))
+      .leftJoin(reports, eq(reports.commentId, boardComments.id))
+      .where(
+        and(
+          isNull(boardComments.deletedAt),
+          q.before ? lt(boardComments.createdAt, q.before) : undefined,
+          q.profile ? eq(boardComments.profileId, q.profile) : undefined,
+          q.reported ? isNotNull(reports.commentId) : undefined,
+        ),
+      )
+      .orderBy(desc(boardComments.createdAt))
+      .limit(q.limit + 1),
+    db
+      .select({
+        ...adminTeamCommentColumns,
+        board: sql<'team'>`'team'`.as('board'),
+        reports: sql<number>`coalesce(${teamReports.n}, 0)`.as('reports'),
+      })
+      .from(teamComments)
+      .innerJoin(ownerTeams, eq(ownerTeams.id, teamComments.teamId))
+      .leftJoin(teamReports, eq(teamReports.commentId, teamComments.id))
+      .where(
+        and(
+          isNull(teamComments.deletedAt),
+          q.before ? lt(teamComments.createdAt, q.before) : undefined,
+          q.profile ? eq(teamComments.profileId, q.profile) : undefined,
+          q.reported ? isNotNull(teamReports.commentId) : undefined,
+        ),
+      )
+      .orderBy(desc(teamComments.createdAt))
+      .limit(q.limit + 1),
+  ]);
+  const rows = [...boardRows, ...teamRows].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
   return { comments: rows.slice(0, q.limit) as AdminComment[], hasMore: rows.length > q.limit };
 }
 
@@ -158,11 +190,17 @@ export async function purgeCommentsBy(
   adminProfileId: string,
   now: string,
 ): Promise<number> {
-  const res = await db
-    .update(boardComments)
-    .set({ deletedAt: now })
-    .where(and(eq(boardComments.profileId, target), isNull(boardComments.deletedAt)));
-  const deleted = res.meta.changes;
+  const [res, teamRes] = await Promise.all([
+    db
+      .update(boardComments)
+      .set({ deletedAt: now })
+      .where(and(eq(boardComments.profileId, target), isNull(boardComments.deletedAt))),
+    db
+      .update(teamComments)
+      .set({ deletedAt: now })
+      .where(and(eq(teamComments.profileId, target), isNull(teamComments.deletedAt))),
+  ]);
+  const deleted = res.meta.changes + teamRes.meta.changes;
   if (deleted > 0) {
     await insertAuditLog(db, {
       kind: 'COMMENTS_PURGED',

@@ -16,12 +16,15 @@ import {
   type CupPhase,
   type CupResponse,
   type CupHomeResponse,
+  type CupChampion,
 } from '@offside/contracts';
 import {
   CUP_GROUP_ROUNDS,
   CUP_KO_ROUNDS,
   CUP_ROUNDS,
+  CUP_HOME_AFTER_MS,
   cupById,
+  cupFinalAt,
   cupRoundsOf,
   currentCup,
   HOME_GIFT,
@@ -43,6 +46,7 @@ import {
   publicNamesOf,
   slotIdsOf,
   liveTeamsByIds,
+  logoOf,
   teamLogosByIds,
   type MatchDetail,
 } from '../db/repos/ownerTeams.js';
@@ -210,7 +214,11 @@ const cupOf = async (c: Context<AppEnv>, selectedId?: string) => {
 };
 
 /** Two DB round trips including schedule lookup; never load team logos or match details for home. */
-export async function cupHomeView(db: Db, cup: CupDef, now: string): Promise<CupHomeResponse> {
+export async function cupHomeView(
+  db: Db,
+  cup: CupDef,
+  now: string,
+): Promise<Omit<CupHomeResponse, 'champion'>> {
   const roundOrder = sql.join(
     CUP_KO_ROUNDS.map((r, i) => sql`WHEN ${r} THEN ${i}`),
     sql` `,
@@ -271,6 +279,60 @@ export async function cupHomeView(db: Db, cup: CupDef, now: string): Promise<Cup
   };
 }
 
+/**
+ * T-11-290 홈 우승 팝업에 보여 줄 대회: 결승 뒤 CUP_HOME_AFTER_MS 안에 끝난 가장 최근 대회. 다음 대회 접수가 열려
+ * currentCup이 바뀌어도 앞 대회 우승은 일주일 동안 남는다. 없으면 undefined.
+ */
+export function recentCupFor(now: string, cups: readonly CupDef[]): CupDef | undefined {
+  const t = Date.parse(now);
+  return [...cups]
+    .filter((c) => {
+      const final = Date.parse(cupFinalAt(c));
+      return final <= t && t < final + CUP_HOME_AFTER_MS;
+    })
+    .sort((a, b) => cupFinalAt(b).localeCompare(cupFinalAt(a)))[0];
+}
+
+/**
+ * 그 대회의 우승 팀(마감 처리까지 끝났을 때만). 한 행 — 결승 승자 + 신청 때 값 + 지금 팀(이름·구단주·로고). 우승 팀이
+ * 없어졌거나(다른 시즌) 결승이 몰수로 둘 다 없으면 신청 때 이름으로 보인다.
+ */
+export async function cupChampionView(db: Db, cup: CupDef): Promise<CupChampion | null> {
+  const row = await db.get<{
+    teamId: string | null;
+    doneAt: string;
+    entryName: string | null;
+    entryManager: string | null;
+    teamSeason: number | null;
+    teamName: string | null;
+    teamManager: string | null;
+    logoJson: string | null;
+  }>(sql`
+    SELECT f.winner_team_id AS teamId, s.done_at AS doneAt, e.name AS entryName, e.manager AS entryManager,
+      t.season AS teamSeason, t.name AS teamName, t.manager AS teamManager, t.logo_json AS logoJson
+    FROM cup_state s
+    JOIN cup_matches f ON f.cup_id = s.cup_id AND f.round = 'f' AND f.played_at IS NOT NULL
+    LEFT JOIN cup_entries e ON e.cup_id = s.cup_id AND e.team_id = f.winner_team_id
+    LEFT JOIN owner_teams t ON t.id = f.winner_team_id
+    WHERE s.cup_id = ${cup.id} AND s.done_at IS NOT NULL
+    LIMIT 1`);
+  if (!row?.teamId) return null;
+  const live = row.teamSeason === cup.season;
+  const name = (live ? row.teamName : null) ?? row.entryName;
+  const owner = (live ? row.teamManager : null) ?? row.entryManager;
+  if (!name || !owner) return null;
+  return {
+    cupId: cup.id,
+    season: cup.season,
+    edition: cup.edition,
+    teamId: row.teamId,
+    name,
+    owner,
+    logo: logoOf({ logoJson: row.logoJson }),
+    doneAt: row.doneAt,
+  };
+}
+
 /** 신청 자격(지금 팀 기준). 실제 선수 수는 선발을 다시 세어 본다(팔린 카드는 빠진다). */
 async function eligibility(
   db: Db,
@@ -322,8 +384,18 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
   registerCupPredictionRoutes(app, cupOf);
   app.get('/v1/cups/home', async (c) => {
     const data = await edgeCached(c, EDGE.cupHome, 30, async () => {
-      const cup = await cupOf(c, 'current');
-      return cupHomeView(getDb(c), cup, nowIso());
+      const db = getDb(c);
+      const now = nowIso();
+      const all = await cupSchedule(db);
+      const cup = currentCup(now, all);
+      if (!cup) throw notFoundError(cupKo('notFound'), 'CUP_NOT_FOUND');
+      // 우승 팝업용 최근 우승은 지금 보여 줄 대회와 다를 수 있다(다음 대회 접수가 열린 뒤). 끝난 대회가 있을 때만 한 행 더 읽는다.
+      const recent = recentCupFor(now, all);
+      const [home, champion] = await Promise.all([
+        cupHomeView(db, cup, now),
+        recent ? cupChampionView(db, recent) : null,
+      ]);
+      return { ...home, champion };
     });
     return ok(c, CupHomeResponseSchema, data, 200, PUBLIC_CACHE);
   });

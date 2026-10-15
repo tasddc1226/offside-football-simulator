@@ -102,6 +102,8 @@ export function planCup(input: CupPlanInput): CupDef {
  * 다음 대회가 열리면 그쪽을 먼저 보여 준다(currentCup).
  */
 export const CUP_AFTERGLOW_MS = 86400_000;
+/** 끝난 대회를 홈(배너·우승 팝업)에 우승 소식으로 남기는 기간(결승 뒤 일주일). */
+export const CUP_HOME_AFTER_MS = 7 * 86400_000;
 export const cupFinalAt = (cup: CupDef) => cup.rounds.at(-1)!;
 export const cupEndsAt = (cup: CupDef) =>
   new Date(Date.parse(cupFinalAt(cup)) + CUP_AFTERGLOW_MS).toISOString();

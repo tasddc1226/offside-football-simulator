@@ -110,6 +110,7 @@ export const teamAch: Translation<TeamAchMsgs> = {
     `${p.rank}位 ${p.name}、監督 ${p.manager}、クラブ価値 ${p.value}、チーム詳細を見る`,
   profLoadFail: 'チームを読み込めませんでした。',
   profManager: '監督 ',
+  profManagerOwner: '監督・オーナー ',
   profMine: ' · マイチーム',
   profOwner: 'オーナー ',
   profRatingAria: (p) => `チームレーティング ${p.n}`,
@@ -121,4 +122,9 @@ export const teamAch: Translation<TeamAchMsgs> = {
   profHistoryTitle: 'チームヒストリー',
   profHistoryEmpty:
     'まだ記録がありません。チームの試合とシーズン順位のバッジがここに積み上がります。',
+  profCommentsTitle: 'スカッドコメント',
+  profCommentsHint: 'このチームの先発スカッドを見てオーナーたちが残した声です。',
+  profCommentsEmpty: 'まだコメントがありません。このスカッドに最初のひと言を残せます。',
+  profCommentPlaceholder: 'このスカッドについてひと言',
+  profCommentsFail: 'コメントを読み込めませんでした。',
 };

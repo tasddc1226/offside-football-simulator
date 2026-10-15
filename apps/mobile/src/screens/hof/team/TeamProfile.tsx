@@ -17,13 +17,16 @@ import { LoadState, type LoadStatus } from '../../../components/LoadState';
 import { NameReport, NameReports } from '../../../components/NameReport';
 import { TeamLogo } from '../../../components/TeamLogo';
 import { TeamLines, TeamPitch } from '../../../components/TeamPitch';
+import { TeamSynergy } from '../../../components/TeamSynergy';
 import { PlayerPeek, pitchPeekOrigin, type PeekOrigin } from '../../../components/PlayerPeek';
 import { presetLayout, shapeOf } from '@offside/contracts/owner-team';
 import { friendRequestText } from '@offside/app-core/friendText';
+import { synergyFocus } from '@offside/app-core/teamOwner';
 import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
 import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
 import { ownerProfileText as LO } from '@offside/app-core/i18n/ko/ownerProfile';
 import { CupHonors } from '../../../components/CupHonors';
+import { TeamComments } from './TeamComments';
 import { TitleBadge } from '../../../components/TitleBadge';
 import { toast } from '../../../game/host';
 import { appState } from '../../../store';
@@ -95,7 +98,9 @@ export default function TeamProfile({ id }: { id: string }) {
     toast(friendRequestText(r.data));
   }
 
-  // 가장 최근 우승 — 팀 이름 아래 챔피언 배지.
+  // T-11-290 시너지 표에서 고른 항목 — 그라운드에서 그 선수들을 잇는다(내 팀 화면과 같은 동작, 읽기 전용).
+  const [synFocus, setSynFocus] = useState<string | null>(null);
+  const syn = team?.synergy ? synergyFocus(team.synergy, synFocus) : null;
   // T-11-165 선발 선수 카드 — 그라운드 카드를 누르면 내 팀처럼 확대 카드가 열린다(웹 TeamProfile, 배포 전 응답엔 없다).
   const players = useMemo(() => new Map(team?.players?.map((p) => [p.careerId, p]) ?? []), [team]);
   const cells =
@@ -144,8 +149,10 @@ export default function TeamProfile({ id }: { id: string }) {
       {team ? (
         <>
           <Card gap={10}>
+            {/* T-11-290 머리 정리(웹 TeamProfile.svelte) — 순위는 한 번만, 포메이션은 정체성 줄로, 감독·구단주·칭호는
+                한 줄의 링크(줄 전체가 구단주 프로필). */}
             <View testID={`team-profile-${team.id}`}>
-              <Txt v="eyebrow">{`Team profile${team.rank ? ` · #${team.rank}` : ''}`}</Txt>
+              <Txt v="eyebrow">Team profile</Txt>
             </View>
             <View
               style={{
@@ -157,40 +164,12 @@ export default function TeamProfile({ id }: { id: string }) {
             >
               <TeamLogo name={team.name} logo={team.logo} size={48} />
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Txt tone="muted" style={{ fontSize: rem(0.8333) }}>
-                  {`${team.seasonName}${team.rank ? ` · RANK #${team.rank}` : ''}`}
-                </Txt>
                 <Txt v="h1" accessibilityRole="header">
                   {team.name}
                 </Txt>
-                {team.ownerTitle ? (
-                  <View style={{ marginTop: 2, marginBottom: 4, alignItems: 'flex-start' }}>
-                    <TitleBadge title={team.ownerTitle} />
-                  </View>
-                ) : null}
-                <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-                  {L.profManager}
-                  <Txt bold style={{ fontSize: rem(0.8125) }}>
-                    {team.manager}
-                  </Txt>
-                  {mine ? L.profMine : ''}
+                <Txt tone="muted" style={{ fontSize: rem(0.8333) }}>
+                  {`${team.seasonName}${team.rank ? ` · RANK #${team.rank}` : ''} · ${shapeOf(team.formation, team.layout)}`}
                 </Txt>
-                <Btn
-                  sm
-                  testID="owner-profile"
-                  style={{ alignSelf: 'flex-start', marginTop: 6 }}
-                  onPress={() => (appState.hof = { ...appState.hof, owner: true })}
-                >
-                  {LO.open}
-                </Btn>
-                {team.ownerNickname ? (
-                  <Txt tone="muted" style={{ fontSize: rem(0.8125) }} testID="team-owner">
-                    {L.profOwner}
-                    <Txt bold style={{ fontSize: rem(0.8125) }}>
-                      {team.ownerNickname}
-                    </Txt>
-                  </Txt>
-                ) : null}
               </View>
               <View
                 accessible
@@ -228,6 +207,69 @@ export default function TeamProfile({ id }: { id: string }) {
                 </Txt>
               </View>
             </View>
+            <Press
+              testID="owner-profile"
+              accessibilityRole="button"
+              scale={0.985}
+              onPress={() => (appState.hof = { ...appState.hof, owner: true })}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                minHeight: 44,
+                paddingVertical: 6,
+                paddingHorizontal: 12,
+                borderWidth: 1,
+                borderColor: c.line,
+                borderRadius: 12,
+                backgroundColor: c.surface2,
+              }}
+            >
+              <View
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  columnGap: 10,
+                  rowGap: 4,
+                }}
+              >
+                {team.ownerNickname && team.ownerNickname === team.manager ? (
+                  <Txt tone="muted" style={{ fontSize: rem(0.8125) }} testID="team-owner">
+                    {L.profManagerOwner}
+                    <Txt bold style={{ fontSize: rem(0.8125) }}>
+                      {team.manager}
+                    </Txt>
+                    {mine ? L.profMine : ''}
+                  </Txt>
+                ) : (
+                  <>
+                    <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                      {L.profManager}
+                      <Txt bold style={{ fontSize: rem(0.8125) }}>
+                        {team.manager}
+                      </Txt>
+                      {mine ? L.profMine : ''}
+                    </Txt>
+                    {team.ownerNickname ? (
+                      <Txt tone="muted" style={{ fontSize: rem(0.8125) }} testID="team-owner">
+                        {L.profOwner}
+                        <Txt bold style={{ fontSize: rem(0.8125) }}>
+                          {team.ownerNickname}
+                        </Txt>
+                      </Txt>
+                    ) : null}
+                  </>
+                )}
+                {team.ownerTitle ? <TitleBadge title={team.ownerTitle} size="sm" /> : null}
+              </View>
+              <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                {`${LO.open} ›`}
+              </Txt>
+            </Press>
             <View style={{ flexDirection: 'row', gap: 6 }}>
               {(
                 [
@@ -266,6 +308,10 @@ export default function TeamProfile({ id }: { id: string }) {
             cells={cells}
             pitchRef={pitch}
             onpick={players.size ? openPeek : undefined}
+            links={syn?.links ?? []}
+            focus={syn?.members ?? null}
+            applied={syn?.applied ?? []}
+            caption={syn ? syn.caption : null}
           />
           {peek && peekPlayer && positions[peek.i] ? (
             <PlayerPeek
@@ -280,6 +326,14 @@ export default function TeamProfile({ id }: { id: string }) {
 
           <Card gap={12}>
             <TeamLines lines={team.lines} />
+            {team.synergy ? (
+              <TeamSynergy
+                synergy={team.synergy}
+                season={team.season}
+                focus={synFocus}
+                setFocus={setSynFocus}
+              />
+            ) : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <Press
                 testID="team-like"
@@ -310,9 +364,6 @@ export default function TeamProfile({ id }: { id: string }) {
                 <Txt bold tone="muted">
                   {n(team.views)}
                 </Txt>
-              </Txt>
-              <Txt tone="muted" style={{ fontSize: rem(0.75), marginLeft: 'auto' }}>
-                {shapeOf(team.formation, team.layout)}
               </Txt>
             </View>
           </Card>
@@ -374,6 +425,8 @@ export default function TeamProfile({ id }: { id: string }) {
             )}
           </Card>
           <CupHonors honors={team.cupHonors ?? []} />
+          {/* T-11-290 스쿼드 댓글 — 프로필을 그린 뒤 따로 불러온다(보는 사람마다 달라 프로필 응답에 섞지 않는다). */}
+          <TeamComments teamId={team.id} />
           {mine ? null : (
             <NameReports>
               <NameReport kind="team" id={team.id} name={team.name} />

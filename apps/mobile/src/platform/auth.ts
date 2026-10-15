@@ -12,6 +12,7 @@ import { apiFetch, clearApiCache } from '@offside/app-core/api/client';
 import { flushOutbox } from '@offside/app-core/outbox';
 import { googleFailText, loginDoneText, loginOfflineText } from '@offside/app-core/loginText';
 import { loadHOF } from '@offside/game/hof-store';
+import { hofStart } from '@offside/app-core/state';
 import { appState } from '../store';
 import { openLocalLegend, refreshAccount, syncClubCustom, toast } from '../game/host';
 import { openBoard } from '../game/nav';
@@ -26,7 +27,9 @@ export type LoginReturn =
   | { chat: true }
   /** 이적시장 매물을 보다 로그인했으면 이적시장으로 돌아온다. */
   | { market: true }
-  | { cup: true };
+  | { cup: true }
+  /** T-11-290 팀 프로필(스쿼드 댓글)에서 로그인했으면 그 팀 프로필로 돌아온다. */
+  | { team: string };
 
 /** API가 구글 로그인을 마치고 돌려보내는 주소(contracts APP_AUTH_REDIRECT_URL). */
 const REDIRECT_URL = 'offside://auth';
@@ -142,6 +145,10 @@ async function finishLogin(r: AuthResult, back: LoginReturn | null, via: string)
     if ('chat' in back) return void (appState.screen = 'chat');
     if ('market' in back) return void (appState.screen = 'market');
     if ('cup' in back) return void (appState.screen = 'cup');
+    if ('team' in back) {
+      appState.hof = { ...hofStart(), tab: 'teams', team: back.team };
+      return void (appState.screen = 'hof');
+    }
     const h = loadHOF().find((x) => x.id === back.career);
     if (h) return openLocalLegend(h);
   }

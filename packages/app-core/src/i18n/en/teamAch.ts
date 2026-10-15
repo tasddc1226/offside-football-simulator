@@ -112,6 +112,7 @@ export const teamAch: Translation<TeamAchMsgs> = {
     `#${p.rank} ${p.name}, manager ${p.manager}, club value ${p.value}, view team details`,
   profLoadFail: "Couldn't load the team.",
   profManager: 'Manager ',
+  profManagerOwner: 'Manager & owner ',
   profMine: ' · My team',
   profOwner: 'Owner ',
   profRatingAria: (p) => `Team rating ${p.n}`,
@@ -122,4 +123,9 @@ export const teamAch: Translation<TeamAchMsgs> = {
   profViews: 'Views ',
   profHistoryTitle: 'Team history',
   profHistoryEmpty: 'No history yet. Team matches and season ranking badges will build up here.',
+  profCommentsTitle: 'Squad comments',
+  profCommentsHint: "What owners said after looking at this team's starting squad.",
+  profCommentsEmpty: 'No comments yet. You can leave the first word on this squad.',
+  profCommentPlaceholder: 'A word about this squad',
+  profCommentsFail: "Couldn't load comments.",
 };

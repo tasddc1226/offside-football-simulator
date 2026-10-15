@@ -66,6 +66,8 @@ export const EXPECTED_TABLES = Object.freeze([
   'season_telemetry',
   'server_records',
   'sessions',
+  'team_comment_reports',
+  'team_comments',
   'team_likes',
   'team_matches',
   'translations',

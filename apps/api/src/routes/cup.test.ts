@@ -5,7 +5,7 @@ import {
   ErrorEnvelopeSchema,
   successEnvelope,
 } from '@offside/contracts';
-import { planCup } from '@offside/contracts/cup';
+import { planCup, planNextCup } from '@offside/contracts/cup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import {
@@ -21,7 +21,7 @@ import {
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
 import { installFakeEdgeCache, flushEdge } from '../test/edgeCache.js';
-import { checkCupListing, cupHomeView } from './cup.js';
+import { checkCupListing, cupChampionView, cupHomeView, recentCupFor } from './cup.js';
 
 const MeRes = successEnvelope(CupMeResponseSchema);
 const CupRes = successEnvelope(CupResponseSchema);
@@ -154,11 +154,41 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
       const full = CupRes.parse(await (await call('GET', `/v1/cups/${CUP.id}`)).json()).data;
       const summary = await cupHomeView(ctx.db, CUP, CUP.drawAt);
       expect(summary).toMatchObject({ phase: 'done', championName: full.teams[0]!.name });
+      // T-11-290 우승 팝업: 마감(done_at)까지 끝난 대회의 우승 팀을 한 행으로(지금 팀 이름·구단주·로고).
+      expect(await cupChampionView(ctx.db, CUP)).toEqual({
+        cupId: CUP.id,
+        season: CUP.season,
+        edition: CUP.edition,
+        teamId: entry.teamId,
+        name: full.teams[0]!.name,
+        owner: '김감독',
+        logo: full.teams[0]!.logo,
+        doneAt: CUP.drawAt,
+      });
+      await ctx.db.update(cupState).set({ doneAt: null });
+      expect(await cupChampionView(ctx.db, CUP)).toBeNull();
+      await ctx.db.update(cupState).set({ doneAt: CUP.drawAt });
       await ctx.db.update(cupState).set({ groups: 0 });
       expect((await cupHomeView(ctx.db, CUP, CUP.drawAt)).phase).toBe('cancelled');
     } finally {
       fake.uninstall();
     }
+  });
+
+  it('T-11-290 우승 팝업 대회: 결승 뒤 일주일 안에 끝난 가장 최근 대회, 다음 대회 접수가 열려도 남는다', () => {
+    // 제2회는 제1회 결승 10분 뒤 접수를 연다(T-11-251).
+    const next = { ...planNextCup(CUP), id: 's1-2', season: 1 };
+    const final = CUP.rounds.at(-1)!;
+    const t = (ms: number) => new Date(Date.parse(final) + ms).toISOString();
+    expect(recentCupFor(t(-1), [CUP, next])).toBeUndefined();
+    expect(recentCupFor(t(0), [CUP, next])?.id).toBe('s1-1');
+    // 제2회 접수가 열린 뒤에도(홈은 제2회를 보여 준다) 제1회 우승은 남는다.
+    expect(recentCupFor(next.opensAt, [CUP, next])?.id).toBe('s1-1');
+    expect(recentCupFor(t(7 * 86400_000 - 1), [next, CUP])?.id).toBe('s1-1');
+    expect(recentCupFor(t(7 * 86400_000), [CUP, next])).toBeUndefined();
+    // 둘 다 끝났으면 더 최근 것.
+    const far = new Date(Date.parse(next.rounds.at(-1)!) + 60_000).toISOString();
+    expect(recentCupFor(far, [CUP, next])?.id).toBe('s1-2');
   });
 
   it('선발 8명 이상이면 신청·취소·다시 신청할 수 있다', async () => {

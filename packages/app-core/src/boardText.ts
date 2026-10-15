@@ -127,6 +127,9 @@ export const BOARD_LABEL: Record<BoardKey, string> = {
     return boardLabelText.releaseLabel;
   },
 };
+/** 운영 도구 댓글 목록의 출처 — 게시판 이름, 팀 프로필 댓글(T-11-290)이면 '팀 프로필'(운영 도구는 한국어). */
+export const commentSourceLabel = (board: BoardKey | 'team'): string =>
+  board === 'team' ? '팀 프로필' : BOARD_LABEL[board]; // i18n-ignore 운영 도구
 
 /** 댓글 신고 사유 — 웹·앱 신고 패널이 이 순서로 버튼을 놓는다. */
 /** 이름 신고 대상(운영 도구). */

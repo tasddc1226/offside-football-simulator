@@ -44,7 +44,7 @@ import { resolveSession } from '../middleware/session.js';
 import { teamBadges } from '../team/badges.js';
 import { refreshAfterChange } from '../team/ownerAchievements.js';
 import { queryWithoutLang, reqLang, type Lang } from '../lang.js';
-import { buildLineup, lineupOvr } from '../team/sim.js';
+import { buildLineup, lineupOvr, lineupSynergy } from '../team/sim.js';
 import { linesOf, recordOf, seasonOptions, slotsOf } from '../team/view.js';
 
 // T-10-092 라이브 랭킹(팀 랭킹)과 팀 프로필. 로그인 없이 누구나 본다 — 팀 이름·감독 이름·선수의 공개 이름(없으면 익명
@@ -192,6 +192,8 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           ownerNickname,
           // T-11-165 선발에 실제로 든 선수만(숨김·지난 주인 카드는 eligible에서 이미 빠졌다).
           players: rows.filter((r) => eligible.has(r.id)).map((r) => teamPlayerCard(r)),
+          // T-11-290 선발 시너지 — 내 팀 화면과 같은 표를 남의 팀 프로필에도(경기 계산과 같은 입력).
+          synergy: lineupSynergy(lineup),
           createdAt: t.createdAt,
         },
         liked,
