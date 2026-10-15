@@ -6,7 +6,16 @@ import { issueCookie } from '../test/http.js';
 import { createDb } from '../db/client.js';
 import { listPublicHof } from '../db/repos/careers.js';
 import { squadOf } from '../routes/seasonRecap.js';
-import { backupToR2, BACKUP_PAGE_BYTES, BACKUP_PAGE_PAUSE_MS, gzipToR2 } from './backup.js';
+import {
+  BACKUP_LAST_KEY,
+  BACKUP_PAGE_BYTES,
+  BACKUP_PAGE_PAUSE_MS,
+  BACKUP_STATE_KEY,
+  backupKey,
+  backupToR2,
+  chunkKey,
+  gzipToR2,
+} from './backup.js';
 import { runSeasonEventsArchive, EVENT_ARCHIVE_META_KEY } from './seasonEventsArchive.js';
 import {
   assessInfraHealth,
@@ -49,7 +58,17 @@ beforeEach(async () => {
   await run('DELETE FROM app_meta WHERE key = ?1', INFRA_HEALTH_META_KEY);
   await run("UPDATE careers SET status='active',legend_score=NULL,retired_at=NULL WHERE id='own'");
   await run("DELETE FROM app_meta WHERE key LIKE 'cron:season-events:%'");
+  await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%'");
 });
+/** 끝난 백업 기록과 그 마지막 조각 객체 — 점검이 R2 HEAD로 확인한다. */
+async function completedBackup(key: string, finishedAt: number) {
+  await run(
+    'INSERT OR REPLACE INTO app_meta(key,value) VALUES (?1,?2)',
+    BACKUP_LAST_KEY,
+    JSON.stringify({ key, chunks: 1, finishedAt, day: key.slice(-11, -1) }),
+  );
+  await ctx.env.BACKUP!.put(chunkKey(key, 1), 'completed test backup');
+}
 const season = (year: number, events: string, at = OLD) =>
   run(
     `INSERT INTO career_seasons(career_id,year,age,club,league,apps,goals,assists,rating,rank,ovr,honors_json,events_json,signals_json,growth_json,mil,created_at)
@@ -66,6 +85,12 @@ function bucketWithHook(hook: () => Promise<void>) {
         return async (...args: Parameters<R2Bucket['createMultipartUpload']>) => {
           await hook();
           return target.createMultipartUpload(...args);
+        };
+      // T-11-274 백업 조각은 put으로 올린다.
+      if (key === 'put')
+        return async (...args: Parameters<R2Bucket['put']>) => {
+          await hook();
+          return target.put(...args);
         };
       const value = Reflect.get(target, key) as unknown;
       return typeof value === 'function' ? value.bind(target) : value;
@@ -283,7 +308,8 @@ describe('capacity safeguards', () => {
       },
     });
     const result = await backupToR2(bounded, ctx.env.BACKUP!, 'capacity-test', NOW);
-    const object = await ctx.env.BACKUP!.get(result.key);
+    expect(result.chunks).toBe(1);
+    const object = await ctx.env.BACKUP!.get(chunkKey(result.key, 1));
     const dump = gunzipSync(new Uint8Array(await object!.arrayBuffer())).toString();
     expect(dump.match(/INSERT INTO "large_backup_fixture"/g)).toHaveLength(14);
     expect(dump).toContain("X'00ff27'");
@@ -353,11 +379,11 @@ describe('capacity safeguards', () => {
     expect(
       await ctx.env.DB.prepare("SELECT value FROM app_meta WHERE key='cron:backup:lease'").first(),
     ).toBeNull();
-    expect(await ctx.env.BACKUP!.head('d1/backup-lease/2026-10-08.sql.gz')).not.toBeNull();
+    expect(await ctx.env.BACKUP!.head(chunkKey(backupKey('backup-lease', NOW), 1))).not.toBeNull();
   });
 
   it('an expired backup lease recovers; upload failure releases it and preserves the completed object', async () => {
-    const key = 'd1/backup-failure/2026-10-08.sql.gz';
+    const key = 'd1/backup-failure/2026-10-06/0001.sql.gz';
     await ctx.env.BACKUP!.put(key, 'previous completed backup');
     await run(
       "INSERT INTO app_meta(key,value) VALUES ('cron:backup:lease',?1)",
@@ -402,31 +428,48 @@ describe('capacity safeguards', () => {
     await run(
       'INSERT OR REPLACE INTO app_meta(key,value) VALUES (?1,?2)',
       DAILY_META_KEY,
-      JSON.stringify({
-        ts: new Date(NOW).toISOString(),
-        level: 'info',
-        backup: { key: 'd1/production/2026-10-08.sql.gz' },
-      }),
+      JSON.stringify({ ts: new Date(NOW).toISOString(), level: 'info' }),
     );
     await run(
       'INSERT OR REPLACE INTO app_meta(key,value) VALUES (?1,?2)',
       EVENT_ARCHIVE_META_KEY,
       JSON.stringify({ at: NOW }),
     );
-    await ctx.env.BACKUP!.put('d1/production/2026-10-08.sql.gz', 'completed test backup');
+    await completedBackup('d1/production/2026-10-07/', NOW - 3_600_000);
     const health = await runInfraHealth(env(), NOW);
     expect(health!.sizeBytes).toBeGreaterThan(0);
     expect(health!.issues).toEqual([]);
     expect(await runInfraHealth(env(), NOW + 300_000)).toBeNull();
-    await ctx.env.BACKUP!.delete('d1/production/2026-10-08.sql.gz');
+    await ctx.env.BACKUP!.delete('d1/production/2026-10-07/0001.sql.gz');
     expect((await runInfraHealth(env(), NOW + 3_600_000))!.issues).toContain(
       'backup-object-missing-or-unavailable',
     );
+    // 조각 이어받기가 6시간 넘게 끝나지 않으면 막힌 것으로 본다.
+    await run(
+      'INSERT OR REPLACE INTO app_meta(key,value) VALUES (?1,?2)',
+      BACKUP_STATE_KEY,
+      JSON.stringify({ day: '2026-10-07', startedAt: NOW - 7 * 3_600_000 }),
+    );
+    expect((await runInfraHealth(env(), NOW + 2 * 3_600_000))!.issues).toContain('backup-stalled');
+    // 끝난 백업이 30시간보다 오래됐으면 완료 기록이 있어도 경보.
+    const stale = assessInfraHealth(
+      NOW,
+      1000,
+      [],
+      { ts: new Date(NOW).toISOString(), level: 'info' },
+      { at: NOW },
+      true,
+      {
+        last: { key: 'd1/production/2026-10-06/', chunks: 3, finishedAt: NOW - 31 * 3_600_000 },
+        inProgress: null,
+      },
+    );
+    expect(stale.issues).toEqual(['backup-not-completed']);
     const forecast = assessInfraHealth(
       NOW,
       D1_LIMIT_BYTES * 0.5,
       [{ at: NOW - DAY_MS, sizeBytes: D1_LIMIT_BYTES * 0.45 }],
-      { ts: new Date(NOW).toISOString(), level: 'error', backup: { error: 'redacted' } },
+      { ts: new Date(NOW).toISOString(), level: 'error' },
       null,
       true,
     );
@@ -500,12 +543,9 @@ describe('infrastructure report cadence', () => {
     await run(
       'INSERT OR REPLACE INTO app_meta(key,value) VALUES (?1,?2)',
       DAILY_META_KEY,
-      JSON.stringify({
-        ts: new Date(NOW).toISOString(),
-        level: 'info',
-        backup: { key: 'd1/production/cadence.sql.gz' },
-      }),
+      JSON.stringify({ ts: new Date(NOW).toISOString(), level: 'info' }),
     );
+    await completedBackup('d1/production/2026-10-07/', NOW - 3_600_000);
     const race = async (times: number[]) => {
       let ready!: () => void;
       let release!: () => void;
