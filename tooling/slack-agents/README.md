@@ -68,7 +68,19 @@ Worker는 `apps/agents`(`agents.offside-lab.com`)다. `manifests/ops.yaml`에 �
 - **시험 실행.** `POST https://agents.offside-lab.com/internal/run?job=reactions|report`(디시 넣기는 `dc-cursor` · `dc-push`)(헤더 `Authorization: Bearer <AGENTS_READ_TOKEN>`). `job=reactions&dry=1`은 커서를 옮기지 않고 출처별 건수 · 오류만 돌려준다.
 - **비밀값 추가.** 같은 `AGENTS_READ_TOKEN`(임의 문자열)을 `offside-api`(`--env production`) · `offside-agents` Worker와 GitHub Actions 비밀값에 넣는다. 값은 채팅 읽기 토큰이자 작성자 가명의 소금이다.
 
-## 다음 단계: 다른 역할 · 승인 버튼 (Worker 배포 뒤)
+## 3단계: `@dev`(손흥민) 연결 · 승인 버튼 (2026-10-15, T-11-285)
+
+`manifests/dev.yaml`에 이벤트 · 버튼 주소를 넣었다. `ENABLED_ROLES`는 `ops,plan,dev`. 구조는 ADR-015 인프라 절 "3단계 결정"을 본다.
+
+- **흐름.** 운영자가 `@손흥민 …`(또는 `@개발`)으로 고칠 일을 맡긴다 → `@dev`가 지시를 정리해 `agent-dev.yml`을 띄운다 → Actions의 Claude Code가 고치고 커밋 → 고정 스크립트가 `agent-dev/<run>` 브랜치 · PR을 연다 → 스레드에 PR 링크 → CI가 끝나면 스레드에 알리고, 통과면 `#agent-approvals`에 **승인하고 머지 / 거절** 카드 → 운영자가 누르면 squash 머지. 운영 배포는 따로 한다.
+- **한도.** Actions 작업 한 번 $5 · 80턴(`--max-budget-usd`, `DEV_RUN_BUDGET_USD`와 같은 값), `@dev` 하루 $20(`DAILY_BUDGET_DEV_USD`, Actions 비용 포함). 한 번에 하나씩 돈다(`concurrency`).
+- **비밀값 · 설정.**
+  - GitHub Actions: `ANTHROPIC_DEV_API_KEY`(Console `offside-dev-actions` 키), `AGENT_APP_PRIVATE_KEY`(GitHub App 키), 변수 `AGENT_APP_ID`. `AGENTS_READ_TOKEN`은 결과를 Worker에 알릴 때 쓴다.
+  - Worker: `GITHUB_APP_PRIVATE_KEY`(같은 키를 PKCS#8로 바꾼 것, `openssl pkcs8 -topk8 -nocrypt`), 변수 `GITHUB_APP_ID` · `GITHUB_APP_INSTALLATION_ID`.
+- **GitHub App `offside-dev-agent`.** 이 저장소에만 설치. 권한은 contents · pull_requests · actions 쓰기, checks · metadata 읽기. workflows 권한이 없어 `.github/workflows`를 바꿀 수 없다.
+- **main 보호.** 저장소 규칙 "main 보호 (ADR-015 에이전트)": PR 없이 바꾸기 · 강제 push · 삭제 금지. 저장소 관리자는 예외라 운영자 작업 방식은 그대로다.
+
+## 다음 단계: 다른 역할 (Worker 배포 뒤)
 
 `apps/agents` Worker가 배포되면 앱마다 **App Manifest** 편집에서 `settings`를 아래로 바꾼다. `<role>`은 `ops` · `plan` · `dev` · `mkt`다. 주소는 1단계에서 확정한다.
 

@@ -110,6 +110,8 @@ OFFSIDE는 1인 운영이다. 지금 운영 슬랙(Offside-Lab, 무료 플랜)�
 - **Cloudflare MCP(1단계).** `@ops`는 Cloudflare 공식 MCP(`https://mcp.cloudflare.com/mcp`)로 Workers 로그 · 실행 기록 · 분석을 읽는다. 토큰은 읽기 권한만 준다(계정: Workers 스크립트 · Workers Observability · Account Analytics · D1 · 계정 설정, 영역 `offside-lab.com`: Analytics, 사용자: 세부 정보 · 멤버십). Worker가 직접 MCP 서버와 연결해 그 도구를 Claude에 넘긴다. Claude API MCP 커넥터는 이 서버와 연결에 실패했고, 직접 연결하면 토큰이 Claude API 요청에 실리지 않는 장점도 있다.
 - **2단계 결정(2026-10-15, T-11-277).** `@plan`의 첫 일은 유저 반응 살피기다. 게임 댓글은 D1 읽기 토큰으로, 라운지 채팅(채팅방 Durable Object에만 7일 보관)은 `offside-api`에 더한 내부 읽기 주소로 읽는다. 이 주소는 토큰이 맞을 때만 열리고(아니면 404) 가린 줄 · 운영자 줄을 빼고 작성자 가명 · 본문만 준다. 채팅방 객체에 에이전트 Worker를 바로 묶지 않은 것은 가리기 · 정지 같은 쓰기 메서드까지 열리기 때문이다. 넘기기는 줄 머리 `→ @역할:` 형식으로 Worker 안에서 하고, 스레드마다 6번까지다. GitHub 이슈 만들기는 쓰기 토큰이 필요해 아직 하지 않고 "작업 후보"로 적는다. 디시 마이너 갤러리는 웹훅 · RSS가 없어 공개 목록 · 글 · 댓글을 매시간 상한(글 8개)을 두고 읽는다. Cloudflare Worker에서 읽으면 빈 응답이 잦아(T-11-280) GitHub Actions 러너가 읽어 Worker에 넣는다. `@ops`는 매일 아침 주기 작업 보고(GitHub 예약 워크플로 · Worker cron의 결과와 예정)를 올린다.
 
+- **3단계 결정(2026-10-15, T-11-285).** `@dev`는 Sandbox 대신 GitHub Actions(`agent-dev.yml`)에서 고친다. 공개 저장소라 러너 시간이 들지 않고, "쓰기는 Actions로만" 원칙과 맞는다. Worker의 `@dev`는 운영자가 직접 맡긴 일(멘션 · 답글)에만 `start_work`로 작업을 띄우고, 넘겨받은 일로는 띄우지 않는다(유저 글이 섞일 수 있다). `work` 잡의 Claude Code(Opus 5.5, 작업당 $5 · 80턴)는 읽기 토큰만 갖고 커밋까지만 한다. `publish` 잡은 main에 있는 고정 스크립트(`.github/scripts/agent-dev-publish.mjs`)로 그 커밋을 main 위에 얹고, `.github/` · 비밀 파일을 건드리면 거절한 뒤 GitHub App(`offside-dev-agent`, contents · pull_requests · actions 쓰기, checks 읽기, workflows 없음) 토큰으로 `agent-dev/<run>` 브랜치 · PR을 연다. PR CI는 비밀값을 쓰지 않는다. CI가 끝나면 `agent-dev-ci.yml`이 Worker에 알리고, 통과면 `#agent-approvals`에 승인 카드가 온다. 버튼은 운영자만 누를 수 있고, 머지 직전에 PR 열림 · 승인한 커밋 · 검사 통과 · main 최신을 다시 확인한다(main이 앞서면 브랜치를 맞추고 새 카드를 기다린다). main은 저장소 규칙(PR 필수 · 강제 push · 삭제 금지, 관리자만 예외)으로 보호한다. e2e는 PR CI에 맡긴다(미결 3). 승인 기록은 지금은 Durable Object에 두고 R2 이관은 미결로 둔다.
+
 ## 비용 통제
 
 - **Console:** `offside-agents` 워크스페이스에 월 지출 한도를 건다. 자동 충전은 처음엔 끈다. 크레딧이 떨어지면 에이전트가 멈추는 쪽을 택한다.
@@ -149,9 +151,9 @@ OFFSIDE는 1인 운영이다. 지금 운영 슬랙(Offside-Lab, 무료 플랜)�
 
 ## 미결
 
-1. Sandbox SDK에서 Agent SDK가 도는지와 비용. 1단계는 Sandbox 없이 열었고(인프라 절), `@dev`(3단계)에서 다시 확인한다.
+1. ~~Sandbox SDK에서 Agent SDK가 도는지와 비용.~~ 3단계는 GitHub Actions로 정했다(인프라 절, T-11-285). 승인 기록의 R2 이관은 남는다.
 2. 월 지출 한도 · 역할별 작업당 상한 금액. 2026-10-15 시작값: Console 월 $50(알림 $40), 작업당 $1.5 · 역할별 하루 $5. 첫 측정: 경보 정리 1건 6턴 $0.33, 짧은 질문 2턴 $0.02.
-3. `@dev`가 e2e를 컨테이너에서 돌릴지, PR CI에만 맡길지.
+3. ~~`@dev`가 e2e를 컨테이너에서 돌릴지, PR CI에만 맡길지.~~ PR CI에 맡긴다(T-11-285).
 4. 기존 알림 웹훅을 봇 토큰으로 옮길지(앱 수 · 권한 정리), 그대로 둘지.
 5. 외부 반응 수집 범위(X 유료 API 포함 여부)와 수집 주기.
 6. 무료 플랜 앱 한도 10개는 공식 요금제 페이지에서 다시 확인한다(2026-10-15 확인은 제3자 자료 기준).
