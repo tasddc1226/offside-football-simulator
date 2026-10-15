@@ -179,7 +179,7 @@ en-US와 같고 아래만 다르다.
 구간마다 이벤트가 나오고, 선택지마다 실제 성공 확률이 보여요. 페널티킥·1대1·승부차기는 타이밍 게이지로 판정해요. 여러 시즌에 걸쳐 이어지는 스토리도 있어요.
 
 ■ 이적, 해외 진출, 국가대표
-고교 시즌이 끝나면 프로 입단이나 대학 진학을 정하고, 시즌이 끝날 때마다 잔류·재계약·이적 중에서 골라요. 성적이 좋으면 일본, 미국, 유럽 리그에서도 제의가 와요. 고른 국적의 대표팀에 뽑히면 월드컵·올림픽·아시안게임 같은 국제 대회에 나가고, 대한민국 선수는 병역도 거쳐요.
+고교 시즌이 끝나면 프로 입단이나 대학 진학을 정하고, 시즌이 끝날 때마다 잔류·재계약·이적 중에서 골라요. 성적이 좋으면 일본, 미국, 유럽 리그에서도 제의가 와요. 고른 국적의 대표팀에 뽑히면 올림픽·아시안게임 같은 국제 대회에 나가고, 대한민국 선수는 병역도 거쳐요.
 
 ■ 은퇴와 명예의 전당
 은퇴하면 통산 기록·트로피·수상으로 레전드 점수와 등급이 매겨지고 잠재력이 공개돼요. 만 30세 이상에 은퇴한 선수는 명예의 전당에 올라요. 한 구단에서 레전드급으로 활약하면 등번호가 영구결번될 수 있어요.
@@ -210,7 +210,7 @@ Each season runs in three parts: preseason, first half and second half. Choose y
 Events pop up as the season goes on, and every option shows its real success chance. Penalties, one-on-ones and shootouts are decided with a timing gauge. Some stories carry on across several seasons.
 
 ■ Transfers, moving abroad, national team
-After high school, turn pro or go to university. At the end of each season, stay, re-sign or move. Play well and offers arrive from Japan, the US and Europe's top leagues. Pick any nationality, get called up by that country and play in the World Cup, the Olympics and other international tournaments. Korean players also have to handle military service.
+After high school, turn pro or go to university. At the end of each season, stay, re-sign or move. Play well and offers arrive from Japan, the US and Europe's top leagues. Pick any nationality, get called up by that country and play in the Olympics and other international tournaments. Korean players also have to handle military service.
 
 ■ Retirement and the Hall of Fame
 When you retire, your career totals, trophies and awards earn a legend score and grade, and your potential is revealed. Players who retire at 30 or older enter the public Hall of Fame. Become a club legend and your shirt number may be retired.
@@ -241,7 +241,7 @@ Contact: contact@offside-lab.com
 シーズン中にイベントが起き、選択肢ごとに実際の成功確率が表示されます。PK、1対1、PK戦はタイミングゲージで決まります。いくつかのストーリーは複数のシーズンにわたって続きます。
 
 ■ 移籍、海外進出、代表
-高校卒業後はプロ入りか大学進学を選びます。シーズンが終わるたびに残留、再契約、移籍を決めます。活躍すれば日本、アメリカ、ヨーロッパのトップリーグからオファーが届きます。選んだ国籍の代表に選ばれれば、ワールドカップやオリンピックなどの国際大会にも出場します。韓国の選手は兵役にも向き合います。
+高校卒業後はプロ入りか大学進学を選びます。シーズンが終わるたびに残留、再契約、移籍を決めます。活躍すれば日本、アメリカ、ヨーロッパのトップリーグからオファーが届きます。選んだ国籍の代表に選ばれれば、オリンピックなどの国際大会にも出場します。韓国の選手は兵役にも向き合います。
 
 ■ 引退と殿堂
 引退すると、通算成績、トロフィー、受賞歴からレジェンドスコアとランクが決まり、ポテンシャルが明かされます。30歳以上で引退した選手は公開の殿堂に入ります。クラブのレジェンドになれば背番号が永久欠番になることもあります。
@@ -269,8 +269,8 @@ App Store는 6.9"(1320×2868), Google Play는 휴대전화(1080×2160)와 그래
 | 2   | 선수 생성           | 나만의 선수를 직접 만들어요 | 국적을 고르면 그 나라 대표로 뛰어요      | Build your own player         | Pick any nation and play for its national team |
 | 3   | 1대1 타이밍 게이지  | 결정적인 순간은 내 손으로   | 1대1·페널티킥은 타이밍 게이지로 판정해요 | Big moments, your timing      | One-on-ones and penalties use a timing gauge   |
 | 4   | 선수 능력치 레이더  | 시즌마다 자라는 내 선수     | 훈련과 자기 투자로 능력치를 키워요       | Grow every season             | Train and invest to build attributes           |
-| 5   | 시즌 리뷰·월드컵    | 모든 시즌이 기록으로 남아요 | 골·도움·평점부터 월드컵까지              | Every season on the record    | Goals, ratings, awards and World Cups          |
-| 6   | 이적 시장·해외 제의 | 해외 이적, 국가대표까지     | 일본·미국·유럽 리그에서 제의가 와요      | Transfers abroad, World Cups  | Offers from Japan, the US and Europe           |
+| 5   | 시즌 리뷰           | 모든 시즌이 기록으로 남아요 | 골·도움·평점부터 국가대표까지            | Every season on the record    | Goals, ratings, awards and caps                |
+| 6   | 이적 시장·해외 제의 | 해외 이적, 국가대표까지     | 일본·미국·유럽 리그에서 제의가 와요      | Transfers abroad, national team | Offers from Japan, the US and Europe           |
 | 7   | 은퇴·레전드 리포트  | 은퇴하면 명예의 전당에      | 레전드 점수와 잠재력이 공개돼요          | Retire into the Hall of Fame  | Legend score and potential revealed            |
 
 일본어 문구는 `frames.json`의 `ja`에 있다(1 今度の人生はサッカーだ · 2 自分だけの選手を一からつくる(国籍を選べば、その国の代表でプレー) · 3 決定的な瞬間は自分の手で · 4 シーズンごとに成長する選手 · 5 すべてのシーズンが記録に残る · 6 海外移籍、代表入りまで · 7 引退したら殿堂へ). 일본어 스크린샷은 앱을 일본어로 두고 찍은 `shots/ja/`로 만든다.

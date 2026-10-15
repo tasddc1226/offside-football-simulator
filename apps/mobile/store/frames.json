@@ -68,15 +68,15 @@
     "lineX": 0.86,
     "ko": {
       "h": "모든 시즌이\n*기록*으로 남아요",
-      "s": "골·도움·평점부터 월드컵까지"
+      "s": "골·도움·평점부터 국가대표까지"
     },
     "en": {
       "h": "Every season\n*on the record*",
-      "s": "Goals, ratings, awards and World Cups"
+      "s": "Goals, ratings, awards and caps"
     },
     "ja": {
       "h": "すべてのシーズンが\n*記録*に残る",
-      "s": "ゴール・アシスト・評価点からW杯まで"
+      "s": "ゴール・アシスト・評価点から代表まで"
     }
   },
   {
@@ -87,7 +87,7 @@
       "s": "일본·미국·유럽 리그에서 제의가 와요"
     },
     "en": {
-      "h": "*Transfers abroad*,\nWorld Cups",
+      "h": "*Transfers abroad*,\nnational team",
       "s": "Offers from Japan, the US and Europe"
     },
     "ja": {

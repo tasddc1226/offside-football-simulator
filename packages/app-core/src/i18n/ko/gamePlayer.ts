@@ -28,7 +28,7 @@ const ko = {
   notCalled: '미발탁',
   ntRetired: '대표팀 은퇴',
   military: '병역',
-  nextWc: '다음 월드컵',
+  nextWc: '다음 월드 챔피언십',
   hostTbd: '개최지 미정',
   tourLine: (p: { stage: string; apps: number; goals: number }) =>
     `${p.stage} · ${p.apps}경기 ${p.goals}골`,

@@ -21,7 +21,7 @@ const ko = {
   mlsYoungPull: '30세 미만 MLS 오퍼 가중치',
   koreaStr: 'A대표팀 전력',
   koreaU23: 'U-23 대표팀 전력',
-  wcQual: '월드컵 예선 통과 확률',
+  wcQual: '월드 챔피언십 예선 통과 확률',
   olympicQual: '올림픽 예선 통과 확률',
   agRelease: '아시안게임 해외 구단 차출 허락',
   olyRelease: '올림픽 해외 구단 차출 허락',

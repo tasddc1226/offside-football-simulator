@@ -27,7 +27,7 @@ export const gamePlayer: Translation<GamePlayerMsgs> = {
   notCalled: '未招集',
   ntRetired: '代表引退',
   military: '兵役',
-  nextWc: '次のワールドカップ',
+  nextWc: '次のワールドチャンピオンシップ',
   hostTbd: '開催地未定',
   tourLine: (p) => `${p.stage} · ${p.apps}試合 ${p.goals}ゴール`,
   retire: '引退を宣言する',

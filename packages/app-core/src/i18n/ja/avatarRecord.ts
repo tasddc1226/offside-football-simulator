@@ -15,5 +15,5 @@ export const avatarRecord: Translation<AvatarRecordMsgs> = {
   recNationWrist: '代表チームのリストバンド',
   recBigearGoggle: '銀のゴーグル',
   recBallonHair: '金色の髪',
-  recWorldcupSocks: 'ワールドカップのソックス',
+  recWorldcupSocks: 'ワールドチャンピオンシップのソックス',
 };

@@ -41,5 +41,5 @@ export const legend: Translation<LegendMsgs> = {
   moreSummary: 'Season records and Legend Score breakdown',
   breakdownTitle: 'Legend Score breakdown',
   breakdownNote:
-    'Position-based contribution (goals and assists for forwards and midfielders, mostly clean sheets for defenders and goalkeepers) + appearances · honors · individual awards · caps · peak OVR · Ballon d’Or/World Cup bonus',
+    'Position-based contribution (goals and assists for forwards and midfielders, mostly clean sheets for defenders and goalkeepers) + appearances · honors · individual awards · caps · peak OVR · Ballon d’Or/World Championship bonus',
 };

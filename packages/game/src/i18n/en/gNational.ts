@@ -30,7 +30,7 @@ export const gNational: Translation<GNationalMsgs> = {
   debut: (p) => `Your first senior international call-up! (${p.name})`,
   windowName: (p) => `${MONTH[p.m] ?? `Month ${p.m}`} internationals`,
   friendly: 'International friendly',
-  wcQual: (p) => `${p.year} World Cup qualifiers (${REGION[p.conf] ?? p.region})`,
+  wcQual: (p) => `${p.year} World Championship qualifiers (${REGION[p.conf] ?? p.region})`,
   score: (p) => `${p.team} ${p.kg}-${p.og} ${p.opp}${p.pso ? ` (${p.pso} on penalties)` : ''}`,
   matchLog: (p) =>
     `[${p.comp}] ${p.score}${

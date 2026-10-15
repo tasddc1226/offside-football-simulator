@@ -5,7 +5,7 @@ import { ordinal, plural, theLeague } from './_gUtil';
 export const gSeason: Translation<GSeasonMsgs> = {
   seasonEnd: (p) =>
     `${p.year} season over · ${p.league}: ${ordinal(p.rank)} · ${p.apps} official ${plural(p.apps, 'match', 'matches')}, ${p.goals} ${plural(p.goals, 'goal', 'goals')}, ${p.assists} ${plural(p.assists, 'assist', 'assists')}`,
-  cwcNote: (p) => `Club World Cup: ${p.stage}`,
+  cwcNote: (p) => `Club World Championship: ${p.stage}`,
   exemptNote: (p) => `Military service exemption · ${p.what}`,
   promoted: (p) =>
     `${p.club} are promoted to ${theLeague(p.league)}! You play in ${theLeague(p.league)} next season (${p.down} relegated)`,
@@ -79,7 +79,7 @@ export const gSeason: Translation<GSeasonMsgs> = {
   lgPeak: 'Peak OVR',
   lgBallonWin: "Ballon d'Or wins",
   lgBallonRank: "Ballon d'Or rankings",
-  lgWc: 'World Cup wins',
+  lgWc: 'World Championship wins',
   lgCentury: 'Century club',
   lgControl: 'Match control',
 };

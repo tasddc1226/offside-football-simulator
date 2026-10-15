@@ -260,7 +260,7 @@ describe.each(LANGS)('저장된 이름 → %s', (lang, dict) => {
     expect(tn('일본 축구협회 올해의 선수')).toBe('Japan FA Player of the Year');
     expect(tn('2026 전반기')).toBe('2026 First half');
     expect(tn('2026 FIFA 월드컵 (미국·캐나다·멕시코)')).toBe(
-      '2026 FIFA World Cup (USA, Canada and Mexico)',
+      '2026 World Championship (USA, Canada and Mexico)',
     );
     expect(tn('16강 탈락')).toBe('Out in the round of 16');
     expect(tn('8강')).toBe('Quarter-finals');
@@ -271,5 +271,37 @@ describe.each(LANGS)('저장된 이름 → %s', (lang, dict) => {
     // 유저가 지은 구단명처럼 표에 없는 이름은 그대로 둔다.
     expect(tn('우리동네FC')).toBe('우리동네FC');
     expect(tn('우리동네FC 우승')).toBe('우리동네FC winners');
+  });
+});
+
+// T-11-292 FIFA 상표 사용 중단 요청 — 저장값은 FIFA 이름 그대로 두고, 어느 언어로 그려도 FIFA 대회·상 이름이 보이지 않는다.
+describe('FIFA 대회·상 이름은 화면에 보이지 않는다', () => {
+  const STORED = [
+    'FIFA 월드컵 우승',
+    'FIFA 클럽 월드컵 우승',
+    'FIFA 클럽 월드컵 8강',
+    'FIFA 더 베스트 남자 선수',
+    'FIFA 푸스카스상',
+    '2026 FIFA 월드컵 (미국·캐나다·멕시코)',
+    '2026 FIFA 월드컵',
+    '2030 월드컵 아시아 예선',
+    '월드컵 본선 출전',
+    '월드컵 본선 득점',
+  ];
+  const FIFA = /FIFA|월드컵|World Cup|ワールドカップ|Puskás|プスカシュ|The Best/i;
+
+  it.each([['ko'], ...LANGS] as const)('%s', (lang, dict?: object) => {
+    setLocale(lang, dict as Record<string, object> | undefined);
+    for (const n of STORED) expect(tn(n)).not.toMatch(FIFA);
+  });
+
+  it('한국어 이름은 바뀐 이름으로 그린다', () => {
+    setLocale('ko');
+    expect(tn('FIFA 월드컵 우승')).toBe('월드 챔피언십 우승');
+    expect(tn('FIFA 클럽 월드컵 8강')).toBe('클럽 월드 챔피언십 8강');
+    expect(tn('2026 FIFA 월드컵 (미국·캐나다·멕시코)')).toBe(
+      '2026 월드 챔피언십 (미국·캐나다·멕시코)',
+    );
+    expect(tn('FIFA 푸스카스상')).toBe('올해의 골');
   });
 });
