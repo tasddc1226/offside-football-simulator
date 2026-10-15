@@ -3,7 +3,7 @@
 // 하나씩 그려 그림 1장에 0.7초쯤 걸렸다. 처음 여는 화면에서 스크롤이 끊기고 팀 그라운드 카드 그림이 하나씩 떴다.
 // 아틀라스 픽셀은 한 번만 풀어 두고, 색칠 · 겹치기 · PNG 만들기를 JS에서 끝내 화면 스레드를 쓰지 않는다.
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { Unzlib, zlibSync } from 'fflate';
+import { Unzlib, zlibSync } from '../vendor/fflate';
 import type { AvatarImagePlan, ImageLayer } from '@offside/game/avatar-image';
 import { avatarAtlasBase64 } from './avatarImageSources';
 
