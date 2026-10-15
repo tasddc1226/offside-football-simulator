@@ -43,8 +43,10 @@ Worker는 `apps/agents`(`agents.offside-lab.com`)다. `manifests/ops.yaml`에 �
 
 `manifests/plan.yaml`에 이벤트 주소를 넣었다. `ENABLED_ROLES`는 `ops,plan`.
 
-- **유저 반응 살피기.** 매시간 17분(cron) 새 게임 댓글(운영 D1 읽기)과 라운지 채팅(`offside-api`의 `GET /v1/internal/agents/chat`, 토큰이 맞을 때만 열린다)을 모아 `@plan`에게 넘긴다. 새 글이 없거나 웃음 · 기호뿐이면 Claude를 부르지 않고, 검토할 글(버그 의심 · 개선 제안 · 요구사항)이 없으면 슬랙에 올리지 않는다. 있으면 `#agent-desk`에 정리를 올린다. 닉네임 · 프로필 ID는 넘기지 않고 작성자 가명만 쓴다.
+- **유저 반응 살피기.** 매시간 17분(cron) 새 게임 댓글(운영 D1 읽기), 라운지 채팅(`offside-api`의 `GET /v1/internal/agents/chat`, 토큰이 맞을 때만 열린다), 디시 마이너 갤러리 `offsidegame`의 새 글 · 댓글을 모아 `@plan`에게 넘긴다. 디시는 웹훅 · RSS가 없어 공개 목록 첫 쪽을 읽고, 새 글과 댓글 수가 늘어난 글만 한 번에 8개까지 연다(링크는 지운다). 새 글이 없거나 웃음 · 기호뿐이면 Claude를 부르지 않고, 검토할 글(버그 의심 · 개선 제안 · 요구사항)이 없으면 슬랙에 올리지 않는다. 있으면 `#agent-desk`에 정리를 올린다. 닉네임 · 프로필 ID는 넘기지 않고 작성자 가명만 쓴다.
 - **넘기기.** 에이전트 답의 줄 머리에 `→ @ops: 확인할 것`이 있으면 같은 스레드에서 그 역할이 이어 받는다(Worker 안에서 넘기고 슬랙 이벤트는 거치지 않는다). 스레드마다 6번까지. 운영자 답글은 그 스레드를 연 역할만 받는다.
+- **주기 작업 보고(@ops).** 매일 08:50 KST(`50 23 * * *`) `#agent-desk`에 지난 24시간 결과와 앞으로 24시간 예정을 올린다. `schedules` 도구가 GitHub Actions 예약 워크플로(cron · 최근 결과)와 Worker cron(`offside-api` · `offside-agents`)을 모으고, Worker cron 결과는 Cloudflare MCP로 Workers 로그의 `job` 오류를 센다. 운영자가 멘션해도 같은 도구로 답한다.
+- **시험 실행.** `POST https://agents.offside-lab.com/internal/run?job=reactions|report`(헤더 `Authorization: Bearer <AGENTS_READ_TOKEN>`). `job=reactions&dry=1`은 커서를 옮기지 않고 출처별 건수 · 오류만 돌려준다.
 - **비밀값 추가.** 두 Worker에 같은 `AGENTS_READ_TOKEN`(임의 문자열)을 넣는다: `offside-api`(`--env production`)와 `offside-agents`. 값은 채팅 읽기 토큰이자 작성자 가명의 소금이다.
 
 ## 다음 단계: 다른 역할 · 승인 버튼 (Worker 배포 뒤)

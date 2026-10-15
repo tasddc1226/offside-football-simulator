@@ -9,7 +9,8 @@ import { readOnlySql } from './tools/ops.ts';
 import { alertSignature } from './ledger.ts';
 import { mcpTools, parseRpc } from './mcp.ts';
 import { parseHandoffs } from './handoff.ts';
-import { collect, meaningful, triagePrompt } from './reactions.ts';
+import { collect, fetchDc, meaningful, parseDcList, triagePrompt } from './reactions.ts';
+import { nextRuns, kstText } from './cron.ts';
 
 async function sign(secret: string, ts: string, body: string) {
   const key = await crypto.subtle.importKey(
@@ -411,16 +412,127 @@ describe('collect', () => {
       comments: { at: '2026-10-15T11:20:00.000Z', id: 'c2' },
       chat: 123,
     });
-    expect(r.errors[0]).toContain('chat 503');
+    expect(r.errors).toEqual(['Error: chat 503', 'Error: dc 503']);
     expect(calls[1]).toBe('https://api.test/v1/internal/agents/chat?since=123&limit=200');
 
     const prompt = triagePrompt(r.items, '2026-10-15 21:00');
     expect(prompt).toContain('<reactions>');
-    expect(prompt).toContain('"출처":"댓글"');
+    expect(prompt).toContain('"출처":"게임 댓글"');
   });
 
   it('meaningful은 웃음 · 기호만 있는 글을 뺀다', () => {
     expect(meaningful('ㅋㅋㅋ!!')).toBe(false);
     expect(meaningful('골키퍼 버그')).toBe(true);
+  });
+});
+
+describe('nextRuns', () => {
+  it('*/5 · 매일 · 매시 n분을 KST로 다음 실행을 낸다', () => {
+    const at = Date.parse('2026-10-15T18:58:30Z');
+    expect(nextRuns('*/5 * * * *', at, 2).map(kstText)).toEqual([
+      '2026-10-16 04:00',
+      '2026-10-16 04:05',
+    ]);
+    expect(nextRuns('0 19 * * *', at, 1).map(kstText)).toEqual(['2026-10-16 04:00']);
+    expect(nextRuns('17 * * * *', at, 1).map(kstText)).toEqual(['2026-10-16 04:17']);
+    expect(nextRuns('0 9 * * 1', Date.parse('2026-10-15T00:00:00Z'), 1).map(kstText)).toEqual([]);
+    expect(() => nextRuns('* *', at)).toThrow();
+  });
+});
+
+describe('디시 갤러리', () => {
+  const row = (no: number, title: string, at: string, replies = 0, notice = false) =>
+    `<tr class="ub-content us-post" data-no="${no}" data-type="${notice ? 'icon_notice' : 'icon_txt'}" >
+      <td class="gall_tit ub-word"><a href="/mgallery/board/view/?id=offsidegame&no=${no}&page=1"><em class="icon_img"></em>${title}</a>
+      ${replies ? `<a class="reply_numbox"><span class="reply_num">[${replies}]</span></a>` : ''}</td>
+      <td class="gall_writer ub-writer" data-nick="닉${no}" data-uid="" data-ip="1.2" data-loc="list"></td>
+      <td class="gall_date" title="${at}">x</td></tr>`;
+  const list = (rows: string[]) => `<table class="gall_list">${rows.join('')}</table>`;
+  const env = { AGENTS_READ_TOKEN: 'salt' } as Env;
+  const now = Date.parse('2026-10-15T12:00:00Z'); // 21:00 KST
+
+  it('목록에서 공지를 빼고 시각 · 댓글 수를 읽는다', () => {
+    const rows = parseDcList(
+      list([
+        row(1, '공지', '2026-10-01 10:00:00', 0, true),
+        row(270, '렉 &amp; 끊김', '2026-10-15 20:32:38', 4),
+      ]),
+    );
+    expect(rows).toEqual([
+      {
+        no: 270,
+        title: '렉 & 끊김',
+        at: Date.parse('2026-10-15T11:32:38Z'),
+        author: '닉270@1.2',
+        replies: 4,
+      },
+    ]);
+  });
+
+  it('새 글 본문과 새 댓글만 모으고 링크는 지우며, 다음엔 늘어난 글만 다시 연다', async () => {
+    const calls: string[] = [];
+    let listing = list([
+      row(270, '렉 해결 시급', '2026-10-15 20:32:38', 2),
+      row(200, '옛 글', '2026-10-10 10:00:00', 5),
+    ]);
+    let comments = [
+      {
+        no: '492',
+        user_id: '',
+        name: 'ㅇㅇ',
+        ip: '1.1',
+        reg_date: '10.15 20:40:00',
+        memo: '<a href="https://spam.example/x">https://spam.example/x</a> 여기서 보세요',
+        del_yn: 'N',
+        is_delete: '0',
+      },
+      {
+        no: '493',
+        user_id: 'u1',
+        name: '갤러',
+        ip: '',
+        reg_date: '10.15 20:45:00',
+        memo: '저도 경기 화면이 멈춰요',
+        del_yn: 'N',
+        is_delete: '0',
+      },
+    ];
+    const fetcher = (async (url: string) => {
+      calls.push(String(url));
+      if (String(url).includes('/lists/')) return new Response(listing);
+      if (String(url).includes('/view/'))
+        return new Response(
+          '<input id="e_s_n_o" name="e_s_n_o" value="tok"><div class="write_div" style="x">경기 중에 <b>렉</b>이 심해요</div>',
+        );
+      return Response.json({ comments });
+    }) as typeof fetch;
+    const first = await fetchDc(env, undefined, now, fetcher);
+    expect(first.items.map((x) => [x.source, x.body])).toEqual([
+      ['dc-post', '렉 해결 시급 / 경기 중에 렉 이 심해요'],
+      ['dc-comment', '[링크] 여기서 보세요'],
+      ['dc-comment', '저도 경기 화면이 멈춰요'],
+    ]);
+    expect(JSON.stringify(first.items)).not.toMatch(/닉270|갤러|spam\.example/);
+    expect(first.cursor).toEqual({ post: 270, comment: 493, counts: { 270: 2, 200: 5 } });
+    expect(calls.filter((u) => u.includes('/view/'))).toHaveLength(1);
+
+    // 옛 글에 댓글이 하나 늘었다: 그 글만 열고 새 댓글만 가져온다.
+    calls.length = 0;
+    listing = list([
+      row(270, '렉 해결 시급', '2026-10-15 20:32:38', 2),
+      row(200, '옛 글', '2026-10-10 10:00:00', 6),
+    ]);
+    comments = [
+      { ...comments[1]!, no: '501', memo: '아직도 안 고쳐졌네요', reg_date: '10.15 21:10:00' },
+      comments[1]!,
+    ];
+    const next = await fetchDc(env, first.cursor, now + 3600_000, fetcher);
+    expect(next.items.map((x) => [x.source, x.body, x.post])).toEqual([
+      ['dc-comment', '아직도 안 고쳐졌네요', '옛 글'],
+    ]);
+    expect(calls.filter((u) => u.includes('/view/'))).toEqual([
+      'https://gall.dcinside.com/mgallery/board/view/?id=offsidegame&no=200',
+    ]);
+    expect(next.cursor?.comment).toBe(501);
   });
 });

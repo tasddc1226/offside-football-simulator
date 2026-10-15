@@ -11,11 +11,11 @@ import { slackClient, threadReply } from './slack.ts';
 
 export type Task = {
   eventId: string;
-  /** triage: 유저 반응 살피기(새 글로 올린다). handoff: 다른 에이전트가 넘긴 일. */
-  kind: 'alert' | 'mention' | 'reply' | 'triage' | 'handoff';
+  /** triage: 유저 반응 살피기, report: 아침 주기 작업 보고(둘 다 새 글로 올린다). handoff: 다른 에이전트가 넘긴 일. */
+  kind: 'alert' | 'mention' | 'reply' | 'triage' | 'report' | 'handoff';
   role: Role;
   channel: string;
-  /** 답을 달 스레드(첫 메시지 ts). triage는 아직 없다(올린 글이 스레드가 된다). */
+  /** 답을 달 스레드(첫 메시지 ts). 새 글(triage · report)은 아직 없다(올린 글이 스레드가 된다). */
   threadTs: string;
   /** 반응(👀)을 달 메시지 ts. 없으면 달지 않는다. */
   sourceTs: string;
@@ -32,6 +32,8 @@ type State = { history: Message[]; costUsd: number; runs: number; owner?: boolea
 const HISTORY = 12;
 /** 반응 살피기에서 검토할 글이 없을 때 @plan이 쓰는 한 줄(roles/plan.md). */
 export const NOTHING = '검토할 반응 없음';
+
+const isNewPost = (t: Task) => t.kind === 'triage' || t.kind === 'report';
 
 export const threadOf = (env: Env, role: Role, channel: string, threadTs: string) =>
   env.THREAD.get(env.THREAD.idFromName(`${role}:${channel}:${threadTs}`));
@@ -76,7 +78,7 @@ export class AgentThread extends DurableObject<Env> {
     const book = ledger(env);
     const today = await book.day(task.role);
     if (today.costUsd >= Number(env.DAILY_BUDGET_USD)) {
-      if (task.kind !== 'triage' && (await book.warnOnce(task.role)))
+      if (!isNewPost(task) && (await book.warnOnce(task.role)))
         await slack(
           'chat.postMessage',
           threadReply(
@@ -137,7 +139,7 @@ export class AgentThread extends DurableObject<Env> {
       state.runs += 1;
       ok = true;
     } catch (e) {
-      // 반응 살피기 실패는 스레드가 없으니 로그만 남긴다.
+      // 반응 살피기 실패는 올릴 곳이 없으니 로그만 남긴다. 아침 보고 실패는 새 글로 알린다.
       if (task.kind === 'triage') {
         console.error('triage failed', String(e).slice(0, 300));
         return;
@@ -146,7 +148,7 @@ export class AgentThread extends DurableObject<Env> {
     }
     const posted = await slack(
       'chat.postMessage',
-      threadReply(task.channel, task.kind === 'triage' ? undefined : task.threadTs, reply, footer),
+      threadReply(task.channel, isNewPost(task) ? undefined : task.threadTs, reply, footer),
     );
     if (task.sourceTs)
       await slack('reactions.remove', {
@@ -155,10 +157,10 @@ export class AgentThread extends DurableObject<Env> {
         name: 'eyes',
       });
     if (!ok) return;
-    // 반응 정리는 올린 글이 스레드가 된다. 그 스레드 객체가 대화를 이어 받는다.
-    const threadTs = task.kind === 'triage' ? posted.ts : task.threadTs;
+    // 새 글은 올린 글이 스레드가 된다. 그 스레드 객체가 대화를 이어 받는다.
+    const threadTs = isNewPost(task) ? posted.ts : task.threadTs;
     if (!threadTs) return;
-    if (task.kind === 'triage') await threadOf(env, task.role, task.channel, threadTs).seed(state);
+    if (isNewPost(task)) await threadOf(env, task.role, task.channel, threadTs).seed(state);
     else await this.ctx.storage.put('state', state);
     await this.passOn(task, threadTs, posted.ts ?? threadTs, reply);
   }

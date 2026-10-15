@@ -1,6 +1,6 @@
 // ADR-015 슬랙 에이전트 Worker. 슬랙 이벤트를 받아 서명을 확인하고 3초 안에 200을 돌려준 뒤, 일은 스레드 객체에 넘긴다.
 import { enabled, isRole, list, signingSecret, type Env, type Role } from './env.ts';
-import { alertSignature, ledger } from './ledger.ts';
+import { alertSignature, kstDay, ledger } from './ledger.ts';
 import { collect, triagePrompt } from './reactions.ts';
 import { verifySlack } from './slack.ts';
 import { threadOf, type Task } from './thread.ts';
@@ -80,6 +80,7 @@ const botUserOf = (env: Env, role: Role) =>
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
+    if (url.pathname === '/internal/run') return internalRun(req, url, env);
     const m = /^\/slack\/([a-z]+)\/events$/.exec(url.pathname);
     if (url.pathname === '/health') return new Response('ok');
     if (!m || req.method !== 'POST') return new Response('not found', { status: 404 });
@@ -116,12 +117,64 @@ export default {
     return new Response('');
   },
 
-  /** 매시간 유저 반응 살피기(@plan). 새 글이 없으면 Claude를 부르지 않는다. */
-  async scheduled(_ev: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    if (!enabled(env, 'plan')) return;
-    ctx.waitUntil(scanReactions(env));
+  /** 매시간 유저 반응 살피기(@plan), 매일 08:50 KST 주기 작업 보고(@ops). */
+  async scheduled(ev: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    if (ev.cron === REPORT_CRON) {
+      if (enabled(env, 'ops')) ctx.waitUntil(morningReport(env, ev.scheduledTime));
+      return;
+    }
+    if (enabled(env, 'plan')) ctx.waitUntil(scanReactions(env));
   },
 } satisfies ExportedHandler<Env>;
+
+/** wrangler.jsonc triggers와 같은 값. */
+export const REPORT_CRON = '50 23 * * *';
+
+export async function morningReport(env: Env, now = Date.now(), eventId = `report:${kstDay(now)}`) {
+  await threadOf(env, 'ops', env.DESK_CHANNEL, 'report').enqueue({
+    eventId,
+    kind: 'report',
+    role: 'ops',
+    channel: env.DESK_CHANNEL,
+    threadTs: '',
+    sourceTs: '',
+    text: '',
+  });
+}
+
+/**
+ * 운영자 시험용: `POST /internal/run?job=reactions|report` (AGENTS_READ_TOKEN). reactions에 `dry=1`이면 커서를 옮기지
+ * 않고 출처별 건수 · 오류만 돌려준다(글 내용은 돌려주지 않는다).
+ */
+async function internalRun(req: Request, url: URL, env: Env): Promise<Response> {
+  const auth = req.headers.get('authorization') ?? '';
+  if (
+    req.method !== 'POST' ||
+    !env.AGENTS_READ_TOKEN ||
+    !sameText(auth, `Bearer ${env.AGENTS_READ_TOKEN}`)
+  )
+    return new Response('not found', { status: 404 });
+  const job = url.searchParams.get('job');
+  if (job === 'report') {
+    await morningReport(env, Date.now(), `report:manual:${Date.now()}`);
+    return Response.json({ queued: 'report' });
+  }
+  if (job !== 'reactions') return new Response('unknown job', { status: 400 });
+  if (url.searchParams.get('dry') === '1') {
+    const { items, errors } = await collect(env, await ledger(env).cursors());
+    const bySource: Record<string, number> = {};
+    for (const x of items) bySource[x.source] = (bySource[x.source] ?? 0) + 1;
+    return Response.json({ bySource, errors });
+  }
+  return Response.json(await scanReactions(env));
+}
+
+function sameText(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
 
 const kstNow = () =>
   new Date(Date.now() + 9 * 3600_000).toISOString().replace('T', ' ').slice(0, 16);
@@ -132,7 +185,7 @@ export async function scanReactions(env: Env, now = Date.now()) {
   if (errors.length) console.error('reactions: read failed', errors.join(' | '));
   // 읽은 데까지 커서를 먼저 옮긴다(정리가 실패해도 같은 글로 다시 돈을 쓰지 않는다).
   await book.setCursors(cursors);
-  if (!items.length) return;
+  if (!items.length) return { items: 0, errors };
   const task: Task = {
     eventId: `triage:${now}`,
     kind: 'triage',
@@ -143,4 +196,5 @@ export async function scanReactions(env: Env, now = Date.now()) {
     text: triagePrompt(items, kstNow()),
   };
   await threadOf(env, 'plan', env.DESK_CHANNEL, 'triage').enqueue(task);
+  return { items: items.length, errors };
 }

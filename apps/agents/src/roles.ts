@@ -6,6 +6,7 @@ import type { Task } from './thread.ts';
 import ops from '../roles/ops.md';
 import plan from '../roles/plan.md';
 import { opsTools } from './tools/ops.ts';
+import { scheduleTools } from './tools/schedules.ts';
 
 export type RoleSpec = {
   system: string;
@@ -47,7 +48,16 @@ export function roleSpec(env: Env, role: Role): RoleSpec {
   if (role !== 'ops') throw new Error(`role ${role} is not open yet`);
   return {
     system: ops,
-    tools,
+    tools: [
+      ...tools,
+      ...scheduleTools({
+        repo: env.GITHUB_REPO,
+        githubToken: env.GITHUB_TOKEN,
+        accountId: env.CF_ACCOUNT_ID,
+        cfToken: env.CF_MCP_TOKEN,
+        workers: ['offside-api', 'offside-agents'],
+      }),
+    ],
     maxTurns: 15,
     // Cloudflare API MCP(읽기 권한만 있는 토큰): Workers 로그 · 분석 · 설정 조회.
     mcpServers: env.CF_MCP_TOKEN
@@ -56,8 +66,10 @@ export function roleSpec(env: Env, role: Role): RoleSpec {
     prompt: (t) =>
       t.kind === 'handoff'
         ? handoffPrompt(t)
-        : t.kind === 'alert'
-          ? `지금 KST ${kstNow()}. #offside-alerts에 경보가 올라왔어요. 원인을 찾아 정리해 주세요.\n\n<alert>\n${t.text}\n</alert>`
-          : `지금 KST ${kstNow()}. 운영자 지시:\n${t.text}`,
+        : t.kind === 'report'
+          ? `지금 KST ${kstNow()}. 아침 주기 작업 보고를 써 주세요(지난 24시간 결과와 앞으로 24시간 예정).`
+          : t.kind === 'alert'
+            ? `지금 KST ${kstNow()}. #offside-alerts에 경보가 올라왔어요. 원인을 찾아 정리해 주세요.\n\n<alert>\n${t.text}\n</alert>`
+            : `지금 KST ${kstNow()}. 운영자 지시:\n${t.text}`,
   };
 }
