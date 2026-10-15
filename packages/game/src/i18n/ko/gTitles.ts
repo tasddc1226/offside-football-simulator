@@ -111,7 +111,7 @@ const ko = {
   legendLast: (p: { below: number }) => `은퇴(레전드 점수 ${p.below} 미만)`,
   // 분류
   catRecord: '기록',
-  catJourney: '여정',
+  catJourney: '발자취',
   catAward: '개인 수상',
   catTrophy: '우승',
   catNation: '국가대표',

@@ -127,7 +127,7 @@ describe('T-11-145 컵 규칙', () => {
   });
 
   it('알림 문장을 영어·일본어로 옮긴다(팀 이름은 그대로)', () => {
-    expect(cupText('오프사이드 컵 결승 — 이겼어요', 'en')).toBe('OFFSIDE Cup Final: You won');
+    expect(cupText('오프사이드 컵 결승 · 이겼어요', 'en')).toBe('OFFSIDE Cup Final: You won');
     expect(cupText('시즌 1 제1회 오프사이드 컵 조 추첨 결과', 'en')).toBe(
       'Season 1 OFFSIDE Cup #1 group draw',
     );

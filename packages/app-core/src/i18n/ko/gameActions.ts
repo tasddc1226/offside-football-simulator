@@ -87,7 +87,7 @@ const ko = {
   contractTitleTransfer: '이적 계약서에 사인할까요?',
   contractTextExt: '남은 계약에 기간을 더해요. 새 연봉은 이번 시즌부터 적용돼요.',
   contractTextStart: (p: { club: string; rookie: boolean }) =>
-    `${p.club}${waGwa(p.club)} 함께 ${p.rookie ? '첫 프로 시즌을' : '새 시즌을'} 시작합니다.`,
+    `${p.club}${waGwa(p.club)} 함께 ${p.rookie ? '첫 프로 시즌을' : '새 시즌을'} 시작해요.`,
   termSalary: '연봉',
   termLeft: '남은 계약',
   termLeftValue: '1년',

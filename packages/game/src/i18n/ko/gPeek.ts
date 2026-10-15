@@ -2,7 +2,8 @@
 import { ns } from '@offside/contracts/i18n';
 
 const ko = {
-  paid: (p: { cost: string }) => `스카우트에게 ${p.cost}원을 내고 이번 시즌 잠재력 평가를 받았다.`,
+  paid: (p: { cost: string }) =>
+    `스카우트에게 ${p.cost}원을 내고 이번 시즌 잠재력 평가를 받았습니다.`,
 };
 export type GPeekMsgs = typeof ko;
 export const gPeekText = ns('gPeek', ko);

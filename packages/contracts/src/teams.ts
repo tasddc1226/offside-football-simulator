@@ -98,7 +98,7 @@ export type TeamSeasonOption = z.infer<typeof TeamSeasonOptionSchema>;
 export const OwnerTitleSchema = z.string().refine(isOwnerTitle);
 const titleField = OwnerTitleSchema.nullable().optional();
 
-export const TeamIdSchema = z.string().regex(/^tem_[0-9a-f-]{36}$/, '팀 id 형식이 아닙니다.');
+export const TeamIdSchema = z.string().regex(/^tem_[0-9a-f-]{36}$/, '팀 id 형식이 아니에요.');
 
 const count = z.number().int().min(0);
 export const TeamRecordSchema = z.strictObject({ w: count, d: count, l: count });

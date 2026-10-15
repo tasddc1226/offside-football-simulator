@@ -88,7 +88,9 @@ export const CareerMetaSchema = z
     const { height: h, weight: w } = ctx.value;
     if (h === undefined && w === undefined) return;
     const err =
-      h === undefined || w === undefined ? '키와 몸무게를 모두 입력해 주세요' : bodyError({ h, w });
+      h === undefined || w === undefined
+        ? '키와 몸무게를 모두 입력해 주세요.'
+        : bodyError({ h, w });
     if (err) ctx.issues.push({ code: 'custom', message: err, input: ctx.value, path: ['height'] });
   });
 export type CareerMeta = z.infer<typeof CareerMetaSchema>;

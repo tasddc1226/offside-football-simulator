@@ -54,7 +54,7 @@ describe('원터치 미니게임', () => {
       expect(roll).toBeGreaterThanOrEqual(p);
       expect(roll).toBeLessThan(1);
     }
-    expect(timingNote(0.1)).toBe('완벽한 타이밍!');
+    expect(timingNote(0.1)).toBe('정확한 타이밍!');
     expect(timingNote(3)).toBe('타이밍을 놓쳤어요');
   });
 

@@ -11,7 +11,7 @@ export const seasonRecap: Translation<SeasonRecapMsgs> = {
   newBadge: 'NEW',
   title: (p) => `${p.season}の総括`,
   cutoff: (p) => `${p.day}までの記録です`,
-  honorsNone: '今シーズンに獲得した記録バッジはありません。次のシーズンに挑戦しましょう。',
+  honorsNone: '今シーズンに獲得した記録バッジはありません。',
   secActivity: '今シーズンの活動',
   players: '育てた選手',
   retired: '引退した選手',
