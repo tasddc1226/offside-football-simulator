@@ -1,11 +1,12 @@
 // 역할별 하루 사용액(KST 날짜). 한도를 넘으면 그날은 새 작업을 받지 않는다(ADR-015 비용 통제).
 import { DurableObject } from 'cloudflare:workers';
 import type { Env, Role } from './env.ts';
-import type { Cursors } from './reactions.ts';
+import type { Cursors, DcCursor, Reaction } from './reactions.ts';
 
 export const kstDay = (now = Date.now()) => new Date(now + 9 * 3600_000).toISOString().slice(0, 10);
 
 const ALERT_REPEAT_MS = 24 * 3600_000;
+const DC_PENDING_MAX = 200;
 
 /** 경보 서명: 숫자를 지워 용량 · 남은 일수만 바뀐 재안내를 같은 경보로 본다. */
 export const alertSignature = (text: string) =>
@@ -41,6 +42,25 @@ export class AgentLedger extends DurableObject<Env> {
   }
   async setCursors(c: Cursors): Promise<void> {
     await this.ctx.storage.put('reactions:cursors', c);
+  }
+  /** 디시: Actions가 읽은 데까지(커서)와 아직 정리하지 않은 글. */
+  async dcCursor(): Promise<DcCursor | undefined> {
+    return this.ctx.storage.get<DcCursor>('reactions:dc');
+  }
+  async pushDc(items: Reaction[], cursor: DcCursor): Promise<number> {
+    const pending = [
+      ...((await this.ctx.storage.get<Reaction[]>('reactions:dc-pending')) ?? []),
+      ...items,
+    ];
+    // 정리가 오래 밀려도 쌓인 글이 끝없이 늘지 않게 최근 것만 둔다.
+    const kept = pending.slice(-DC_PENDING_MAX);
+    await this.ctx.storage.put({ 'reactions:dc': cursor, 'reactions:dc-pending': kept });
+    return kept.length;
+  }
+  async takeDc(peek = false): Promise<Reaction[]> {
+    const pending = (await this.ctx.storage.get<Reaction[]>('reactions:dc-pending')) ?? [];
+    if (!peek && pending.length) await this.ctx.storage.delete('reactions:dc-pending');
+    return pending;
   }
   /** 스레드 하나에서 넘기기 횟수를 하나 올리고 올린 값을 돌려준다(MAX_HOPS 상한). */
   async hop(thread: string): Promise<number> {

@@ -1,7 +1,7 @@
 // ADR-015 슬랙 에이전트 Worker. 슬랙 이벤트를 받아 서명을 확인하고 3초 안에 200을 돌려준 뒤, 일은 스레드 객체에 넘긴다.
 import { enabled, isRole, list, signingSecret, type Env, type Role } from './env.ts';
 import { alertSignature, kstDay, ledger } from './ledger.ts';
-import { collect, triagePrompt } from './reactions.ts';
+import { collect, triagePrompt, type DcCursor, type Reaction } from './reactions.ts';
 import { verifySlack } from './slack.ts';
 import { threadOf, type Task } from './thread.ts';
 
@@ -117,7 +117,7 @@ export default {
     return new Response('');
   },
 
-  /** 매시간 유저 반응 살피기(@plan), 매일 08:50 KST 주기 작업 보고(@ops). */
+  /** 매시간 47분 유저 반응 살피기(@plan), 매일 08:50 KST 주기 작업 보고(@ops). */
   async scheduled(ev: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     if (ev.cron === REPORT_CRON) {
       if (enabled(env, 'ops')) ctx.waitUntil(morningReport(env, ev.scheduledTime));
@@ -155,6 +155,14 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
   )
     return new Response('not found', { status: 404 });
   const job = url.searchParams.get('job');
+  // 디시: GitHub Actions(scripts/dc-push.ts)가 커서를 받아 읽고, 정리할 글과 새 커서를 넣는다.
+  if (job === 'dc-cursor') return Response.json({ cursor: (await ledger(env).dcCursor()) ?? null });
+  if (job === 'dc-push') {
+    const { items, cursor } = (await req.json()) as { items: Reaction[]; cursor: DcCursor };
+    if (!Array.isArray(items) || !cursor || typeof cursor.post !== 'number')
+      return new Response('bad body', { status: 400 });
+    return Response.json({ pending: await ledger(env).pushDc(items.slice(0, 100), cursor) });
+  }
   if (job === 'report') {
     await morningReport(env, Date.now(), `report:manual:${Date.now()}`);
     return Response.json({ queued: 'report' });
@@ -162,6 +170,7 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
   if (job !== 'reactions') return new Response('unknown job', { status: 400 });
   if (url.searchParams.get('dry') === '1') {
     const { items, errors } = await collect(env, await ledger(env).cursors());
+    items.push(...(await ledger(env).takeDc(true)));
     const bySource: Record<string, number> = {};
     for (const x of items) bySource[x.source] = (bySource[x.source] ?? 0) + 1;
     return Response.json({ bySource, errors });
@@ -185,6 +194,7 @@ export async function scanReactions(env: Env, now = Date.now()) {
   if (errors.length) console.error('reactions: read failed', errors.join(' | '));
   // 읽은 데까지 커서를 먼저 옮긴다(정리가 실패해도 같은 글로 다시 돈을 쓰지 않는다).
   await book.setCursors(cursors);
+  items.push(...(await book.takeDc()));
   if (!items.length) return { items: 0, errors };
   const task: Task = {
     eventId: `triage:${now}`,
