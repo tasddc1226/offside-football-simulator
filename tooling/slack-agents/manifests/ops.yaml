@@ -1,4 +1,4 @@
-# ADR-015 슬랙 에이전트 `@offside-ops` — 0단계(이벤트 받기 없음). 1단계 설정은 ../README.md
+# ADR-015 슬랙 에이전트 `@offside-ops` — 1단계(T-11-277): 멘션 · 채널 메시지를 apps/agents Worker로 받는다. 승인 버튼은 3단계
 display_information:
   name: OFFSIDE Ops
   description: OFFSIDE 운영 에이전트. 알림을 읽고 원인을 정리해요. 운영 데이터는 읽기만 해요.
@@ -25,3 +25,8 @@ settings:
   org_deploy_enabled: false
   socket_mode_enabled: false
   token_rotation_enabled: false
+  event_subscriptions:
+    request_url: https://agents.offside-lab.com/slack/ops/events
+    bot_events:
+      - app_mention
+      - message.channels

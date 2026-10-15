@@ -293,6 +293,29 @@ export class ChatRoom extends DurableObject<Bindings> {
     return row ? toMessage(row) : null;
   }
 
+  /**
+   * T-11-277 슬랙 에이전트(@plan)가 읽는 최근 줄(오래된 순). 가린 줄 · 운영자 줄은 빼고 닉네임 · 표시 이름 없이
+   * 작성자 프로필만 넘긴다(라우트가 가명으로 바꾼다).
+   */
+  recent(
+    since: number,
+    limit: number,
+  ): { id: string; at: number; profileId: string; body: string }[] {
+    return this.sql
+      .exec<Row>(
+        'SELECT id, at, profile_id, body FROM messages WHERE hidden = 0 AND admin = 0 AND at > ? ORDER BY at, rowid LIMIT ?',
+        since,
+        limit,
+      )
+      .toArray()
+      .map((r) => ({
+        id: String(r.id),
+        at: Number(r.at),
+        profileId: String(r.profile_id),
+        body: String(r.body),
+      }));
+  }
+
   /** 메시지를 가리고 모두의 화면에서 뺀다. 이미 가렸거나 없으면 false. */
   hide(id: string): boolean {
     const { rowsWritten } = this.sql.exec(

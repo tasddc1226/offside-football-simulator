@@ -85,6 +85,8 @@ export type Bindings = {
   LIVE?: DurableObjectNamespace<LiveHub>;
   /** T-11-015 채팅방(src/chat/room.ts). 테스트엔 없다 — 없으면 채팅 소켓은 503, 입장권은 SERVICE_UNAVAILABLE. */
   CHAT?: DurableObjectNamespace<ChatRoom>;
+  /** T-11-277 슬랙 에이전트가 라운지 채팅을 읽을 때 쓰는 비밀 토큰(`/v1/internal/agents/chat`). */
+  AGENTS_READ_TOKEN?: string;
 };
 
 export type SessionContext = {

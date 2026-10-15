@@ -45,6 +45,30 @@ describe('T-11-015 채팅 /v1/chat', () => {
     await ctx.dispose();
   });
 
+  it('T-11-277 에이전트 읽기 주소는 토큰이 맞을 때만 열리고, 닉네임 없이 가명 · 본문만 준다', async () => {
+    const a = await speak('도하람', '골키퍼 장갑 색이 안 바뀌어요');
+    await speak('누리', '한 번 더');
+    const b = await speak('라온', '좋아요');
+    chat.room.hide(b.id);
+    const path = `/v1/internal/agents/chat?since=${Date.now() - 60_000}`;
+    expect((await call('GET', path)).status).toBe(404);
+    env.AGENTS_READ_TOKEN = 'agent-secret';
+    expect(
+      (await call('GET', path, { headers: { Authorization: 'Bearer wrong-secret' } })).status,
+    ).toBe(404);
+    const res = await call('GET', path, { headers: { Authorization: 'Bearer agent-secret' } });
+    expect(res.status).toBe(200);
+    const { items } = (await res.json()) as {
+      items: { id: string; author: string; body: string }[];
+    };
+    expect(items.map((i) => i.body)).toEqual(['골키퍼 장갑 색이 안 바뀌어요', '한 번 더']);
+    expect(items[0]!.id).toBe(a.id);
+    expect(items[0]!.author).toMatch(/^u[0-9a-f]{8}$/);
+    expect(items[1]!.author).toMatch(/^u[0-9a-f]{8}$/);
+    expect(items[1]!.author).not.toBe(items[0]!.author);
+    expect(JSON.stringify(items)).not.toContain('도하람');
+  });
+
   it('입장권은 계정 로그인과 닉네임이 있어야 받고, 못 받으면 이유를 알려 준다', async () => {
     expect((await call('POST', '/v1/chat/ticket')).status).toBe(401);
     const anon = await ticketOf((await issueCookie(ctx)).cookie);
