@@ -1,11 +1,11 @@
-# ADR-015 슬랙 에이전트 `@offside-dev` — 0단계(이벤트 받기 없음). 1단계 설정은 ../README.md
+# ADR-015 슬랙 에이전트 손흥민(`@Son Heung-min`) — 0단계(이벤트 받기 없음). 1단계 설정은 ../README.md
 display_information:
-  name: OFFSIDE Dev
-  description: OFFSIDE 개발 에이전트. 이슈를 고쳐 PR을 올려요. 머지와 배포는 운영자 승인 뒤에만 해요.
+  name: 손흥민 · 개발
+  description: OFFSIDE 개발 담당. 이슈를 받아 PR까지 마무리해요. 머지는 승인 뒤에만 해요.
   background_color: '#24292f'
 features:
   bot_user:
-    display_name: offside-dev
+    display_name: Son Heung-min
     always_online: true
 oauth_config:
   scopes:
@@ -14,6 +14,8 @@ oauth_config:
       - channels:history
       - channels:read
       - chat:write
+      # T-11-281 메시지 작성자를 한글 이름으로(`username`).
+      - chat:write.customize
       - files:write
       - im:history
       - im:write

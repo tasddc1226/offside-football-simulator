@@ -1,11 +1,11 @@
-# ADR-015 슬랙 에이전트 `@offside-plan` — 2단계(T-11-277): 멘션 · 채널 메시지를 apps/agents Worker로 받고, 매시간 유저 반응을 정리한다
+# ADR-015 슬랙 에이전트 박지성(`@Park Ji-sung`) — 2단계(T-11-277): 멘션 · 채널 메시지를 apps/agents Worker로 받고, 매시간 유저 반응을 정리한다
 display_information:
-  name: OFFSIDE Plan
-  description: OFFSIDE 기획 에이전트. 피드백과 운영 보고를 이슈와 작업으로 정리해요.
+  name: 박지성 · 기획
+  description: OFFSIDE 기획 담당. 게임 댓글 · 라운지 · 커뮤니티 반응을 읽고 버그 · 개선 · 요구사항으로 정리해요.
   background_color: '#3a4fa0'
 features:
   bot_user:
-    display_name: offside-plan
+    display_name: Park Ji-sung
     always_online: true
 oauth_config:
   scopes:
@@ -14,6 +14,8 @@ oauth_config:
       - channels:history
       - channels:read
       - chat:write
+      # T-11-281 메시지 작성자를 한글 이름으로(`username`).
+      - chat:write.customize
       - im:history
       - im:write
       - reactions:write

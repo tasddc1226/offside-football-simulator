@@ -47,6 +47,14 @@ export const list = (v: string | undefined) =>
     .map((s) => s.trim())
     .filter(Boolean);
 
+/** 슬랙에 보이는 이름(T-11-281). 넘기기 줄 · 설정 키는 역할 키(ops · plan · dev · mkt)를 그대로 쓴다. */
+export const ROLE_NAMES: Record<Role, string> = {
+  ops: '이운재 · 운영',
+  plan: '박지성 · 기획',
+  dev: '손흥민 · 개발',
+  mkt: '안정환 · 마케팅',
+};
+
 export const isRole = (v: string): v is Role => (ROLES as readonly string[]).includes(v);
 export const enabled = (env: Env, role: Role) => list(env.ENABLED_ROLES).includes(role);
 

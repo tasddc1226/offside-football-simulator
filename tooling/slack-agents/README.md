@@ -1,15 +1,15 @@
 # 슬랙 에이전트 앱 manifest (ADR-015)
 
-[ADR-015](../../docs/adr/ADR-015-slack-agent-team.md)의 역할 에이전트 네 개를 Offside-Lab 슬랙에 앱으로 만들 때 쓰는 설정이다. ADR의 `@ops` · `@plan` · `@dev` · `@mkt`는 슬랙에서 `@offside-ops` · `@offside-plan` · `@offside-dev` · `@offside-mkt`로 보인다.
+[ADR-015](../../docs/adr/ADR-015-slack-agent-team.md)의 역할 에이전트 네 개를 Offside-Lab 슬랙에 앱으로 만들 때 쓰는 설정이다. ADR의 `@ops` · `@plan` · `@dev` · `@mkt`는 슬랙에서 한국 축구 레전드 이름으로 보인다(T-11-281): 운영 이운재(골문 지키기), 기획 박지성(경기 전체 읽기), 개발 손흥민(마무리), 마케팅 안정환(방송). 슬랙 봇 표시 이름은 한글을 받지 않아 로마자(`@Lee Woon-jae` …)로 두고, Worker가 글을 올릴 때 `username`으로 한글 이름(`이운재 · 운영` …)을 붙인다(`chat:write.customize`). 넘기기 줄(`→ @ops:`) · 이벤트 주소 · 비밀값 이름은 역할 키 그대로다.
 
 | 파일 | 앱 이름 | 봇 이름 | 역할에만 더한 권한 |
 |---|---|---|---|
-| `manifests/ops.yaml` | OFFSIDE Ops | `offside-ops` | `files:write`(점검 화면), `groups:history` · `groups:read`(비공개 `#offside-purchases` 읽기) |
-| `manifests/plan.yaml` | OFFSIDE Plan | `offside-plan` | 없음 |
-| `manifests/dev.yaml` | OFFSIDE Dev | `offside-dev` | `files:write`(화면 확인 스크린샷) |
-| `manifests/mkt.yaml` | OFFSIDE Mkt | `offside-mkt` | `files:write`(문구 · 이미지 초안) |
+| `manifests/ops.yaml` | 이운재 · 운영 | `Lee Woon-jae` | `files:write`(점검 화면), `groups:history` · `groups:read`(비공개 `#offside-purchases` 읽기) |
+| `manifests/plan.yaml` | 박지성 · 기획 | `Park Ji-sung` | 없음 |
+| `manifests/dev.yaml` | 손흥민 · 개발 | `Son Heung-min` | `files:write`(화면 확인 스크린샷) |
+| `manifests/mkt.yaml` | 안정환 · 마케팅 | `Ahn Jung-hwan` | `files:write`(문구 · 이미지 초안) |
 
-네 앱 공통 권한은 멘션 받기(`app_mentions:read`), 참여한 공개 채널 읽기(`channels:history` · `channels:read`), 글쓰기(`chat:write`), 운영자 DM(`im:history` · `im:write`), 진행 표시 이모지(`reactions:write`), 운영자 확인(`users:read`)이다. 채널 만들기 · 초대 · 관리자 권한은 주지 않는다. 채널에는 운영자가 직접 초대한다.
+네 앱 공통 권한은 멘션 받기(`app_mentions:read`), 참여한 공개 채널 읽기(`channels:history` · `channels:read`), 글쓰기(`chat:write` · 작성자 이름 `chat:write.customize`), 운영자 DM(`im:history` · `im:write`), 진행 표시 이모지(`reactions:write`), 운영자 확인(`users:read`)이다. 채널 만들기 · 초대 · 관리자 권한은 주지 않는다. 채널에는 운영자가 직접 초대한다.
 
 ## 0단계: 앱 만들기 (2026-10-15 완료)
 
@@ -21,7 +21,7 @@
 4. 앱마다 두 값을 받아 둔다. 채팅 · 저장소 · 메모에 붙이지 않는다.
    - **OAuth & Permissions → Bot User OAuth Token** (`xoxb-…`)
    - **Basic Information → Signing Secret**
-5. 슬랙에서 `#agent-desk` · `#agent-approvals` 채널을 만들고 네 봇을 초대한다(`/invite @offside-ops` …). `@offside-ops` · `@offside-plan`은 알림 채널(`#offside-alerts` · `#offside-daily` · `#offside-feedback` · `#offside-releases`)에도, `@offside-ops`는 `#offside-purchases`에도 초대한다.
+5. 슬랙에서 `#agent-desk` · `#agent-approvals` 채널을 만들고 네 봇을 초대한다(`/invite @Lee Woon-jae` …). 운영 · 기획 봇은 알림 채널(`#offside-alerts` · `#offside-daily` · `#offside-feedback` · `#offside-releases`)에도, 운영 봇은 `#offside-purchases`에도 초대한다.
 
 받은 값은 1단계에 Worker 비밀값으로 넣는다(`apps/agents`에서 실행, 값은 프롬프트에 직접 입력).
 
@@ -31,15 +31,15 @@ pnpm exec wrangler secret put SLACK_OPS_SIGNING_SECRET
 # PLAN · DEV · MKT도 같은 이름 꼴로
 ```
 
-## 1단계: `@offside-ops` 연결 (2026-10-15, T-11-277)
+## 1단계: `@ops`(이운재) 연결 (2026-10-15, T-11-277)
 
-Worker는 `apps/agents`(`agents.offside-lab.com`)다. `manifests/ops.yaml`에 이벤트 주소를 넣었고, `@offside-ops`는 `#offside-alerts`에 초대했다.
+Worker는 `apps/agents`(`agents.offside-lab.com`)다. `manifests/ops.yaml`에 이벤트 주소를 넣었고, 운영 봇은 `#offside-alerts`에 초대했다.
 
 - **비밀값(Worker `offside-agents`).** `ANTHROPIC_<ROLE>_API_KEY`(Console `offside-agents` 워크스페이스 키), `SLACK_<ROLE>_BOT_TOKEN`, `SLACK_<ROLE>_SIGNING_SECRET`, `CF_D1_READ_TOKEN`(D1 읽기 권한만 있는 Cloudflare API 토큰), `CF_MCP_TOKEN`(Cloudflare MCP용 읽기 전용 토큰, 권한은 ADR-015 인프라 절). `GITHUB_TOKEN`은 없으면 공개 API로 읽는다.
 - **배포.** `pnpm --filter @offside/agents deploy`. 역할을 열 때는 `wrangler.jsonc`의 `ENABLED_ROLES`에 더한다.
 - **하는 일.** `#offside-alerts` 웹훅 경보(정상 복구 알림 · 24시간 안의 같은 경보 제외)와 운영자 멘션 · 그 스레드 답글을 받아 스레드에 답한다. 답 아래 줄에 턴 수 · 비용 · 그날 누적이 붙는다.
 
-## 2단계: `@offside-plan` 연결 · 유저 반응 살피기 (2026-10-15, T-11-277)
+## 2단계: `@plan`(박지성) 연결 · 유저 반응 살피기 (2026-10-15, T-11-277)
 
 `manifests/plan.yaml`에 이벤트 주소를 넣었다. `ENABLED_ROLES`는 `ops,plan`.
 
@@ -72,7 +72,7 @@ settings:
 ```
 
 - 앱마다 Signing Secret이 달라서 주소를 역할별로 나눈다.
-- `message.groups`는 `@offside-ops`에만 넣는다(다른 앱은 `groups:history` 권한이 없다).
+- `message.groups`는 운영 봇(`@ops`)에만 넣는다(다른 앱은 `groups:history` 권한이 없다).
 - 승인 버튼은 그 카드를 올린 봇의 앱으로 들어온다. Worker는 버튼을 누른 사람이 운영자인지 사용자 ID로 확인한다.
 
 ## 앱 수
