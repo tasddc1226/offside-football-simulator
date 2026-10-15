@@ -425,7 +425,7 @@ describe('collect', () => {
       comments: { at: '2026-10-15T11:20:00.000Z', id: 'c2' },
       chat: 123,
     });
-    expect(r.errors).toEqual(['Error: chat 503', 'Error: dc 503']);
+    expect(r.errors).toEqual(['Error: chat 503']);
     expect(calls[1]).toBe('https://api.test/v1/internal/agents/chat?since=123&limit=200');
 
     const prompt = triagePrompt(r.items, '2026-10-15 21:00');
@@ -480,6 +480,15 @@ describe('디시 갤러리', () => {
         replies: 4,
       },
     ]);
+  });
+
+  it('빈 응답은 다시 받고, 끝내 비면 실패로 던진다(커서는 그대로)', async () => {
+    let n = 0;
+    const flaky = (async () => new Response(++n < 3 ? '' : list([]))) as unknown as typeof fetch;
+    expect((await fetchDc(env, undefined, now, flaky)).items).toEqual([]);
+    expect(n).toBe(3);
+    const empty = (async () => new Response('')) as unknown as typeof fetch;
+    await expect(fetchDc(env, undefined, now, empty)).rejects.toThrow('dc empty response');
   });
 
   it('새 글 본문과 새 댓글만 모으고 링크는 지우며, 다음엔 늘어난 글만 다시 연다', async () => {

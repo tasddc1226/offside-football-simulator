@@ -25,8 +25,8 @@
   - `0 19 * * *`(04:00 KST): 매일 정리 `runDaily`(오래된 기록 정리 등) 뒤 인프라 점검.
   - `*/5 * * * *`: 한 틱에 차례로 결제 알림 복구 → 소식 푸시 → (정각만) 커리어 알림 → 복귀 푸시 → 개인 푸시 → 시즌 게이지 → 시즌 결산 → 오프사이드 컵 진행 · 자동 운영 → 컵 캐시 비우기 → 시즌 이벤트 · 성장 기록 R2 보관 → D1 백업 조각(04:00 KST 뒤 이어받기) → 자동화 숨김 → 구단 전력 → 인프라 점검 → 최초 기록 재계산.
   - 단계마다 실패는 `{"level":"error","job":"<이름>"}` 로그로 남고 다음 단계는 계속 돈다. 결과 로그는 `{"level":"info","job":"season-close" | "cup" | "backup" | ...}`. Workers 로그(`cloudflare_*`)에서 `job` 필드로 찾는다. 틱 전체 실패는 cron 실행 결과(`outcome`이 `ok`가 아님 · `exceededCpu` 등)로 본다.
-- **`offside-agents` Worker cron:** `17 * * * *` 유저 반응 살피기(@plan), `50 23 * * *` 이 보고.
-- **GitHub Actions 예약:** `infra-health.yml`(매시 17분, 저장 용량 예측 · 백업 확인), `slack-operations.yml`(매시 27분 운영 점검 · 피드백 후보, 매일 00:00 UTC 아침 리포트), `slack-meta-ads.yml`(매시 37분 · 매일 00:05 UTC 광고 성과). GitHub 예약은 몇 분~수십 분 늦게 돌 수 있다(늦은 건 실패가 아니다).
+- **`offside-agents` Worker cron:** `47 * * * *` 유저 반응 살피기(@plan), `50 23 * * *` 이 보고.
+- **GitHub Actions 예약:** `infra-health.yml`(매시 17분, 저장 용량 예측 · 백업 확인), `slack-operations.yml`(매시 27분 운영 점검 · 피드백 후보 · 디시 글을 에이전트에 넣기, 매일 00:00 UTC 아침 리포트), `slack-meta-ads.yml`(매시 37분 · 매일 00:05 UTC 광고 성과). GitHub 예약은 몇 분~수십 분 늦게 돌 수 있다(늦은 건 실패가 아니다).
 
 ## 조회 규칙
 

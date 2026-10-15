@@ -1,5 +1,6 @@
 // 유저 반응 살피기(ADR-015 @plan). 매시간 새 게임 댓글(운영 D1 읽기), 라운지 채팅(offside-api 내부 읽기 주소),
-// 디시 마이너 갤러리 글 · 댓글(공개 페이지, 웹훅이 없어 읽어 온다)을 모아 @plan에게 분류를 맡긴다. 새 글이 없으면 Claude를 부르지 않는다. 닉네임 · 프로필 ID는 넘기지 않고 가명만 쓴다.
+// 디시 마이너 갤러리 글 · 댓글을 모아 @plan에게 분류를 맡긴다. 디시는 웹훅이 없고 Cloudflare에서 읽으면 빈 응답이 잦아,
+// GitHub Actions(scripts/dc-push.ts)가 fetchDc로 읽어 Worker에 넣어 두고 여기서 함께 꺼낸다. 새 글이 없으면 Claude를 부르지 않는다. 닉네임 · 프로필 ID는 넘기지 않고 가명만 쓴다.
 import type { Env } from './env.ts';
 
 export type Reaction = {
@@ -16,11 +17,10 @@ export type Reaction = {
 
 type CommentCursor = { at: string; id: string };
 /** 디시: 마지막으로 본 글 번호 · 댓글 번호(갤러리 전체에서 늘어난다), 글마다 본 댓글 수. */
-type DcCursor = { post: number; comment: number; counts: Record<string, number> };
+export type DcCursor = { post: number; comment: number; counts: Record<string, number> };
 export type Cursors = {
   comments?: CommentCursor | undefined;
   chat?: number | undefined;
-  dc?: DcCursor | undefined;
 };
 
 const BODY_MAX = 300;
@@ -111,7 +111,10 @@ export async function fetchChat(
 
 export const DC_GALLERY = 'offsidegame';
 const DC = 'https://gall.dcinside.com';
-const DC_UA = 'Mozilla/5.0 OFFSIDE-operations';
+const DC_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36';
+/** 디시는 Cloudflare에서 가끔 200 빈 응답을 준다. 빈 응답이면 이만큼 다시 받는다. */
+const DC_TRIES = 5;
 /** 한 번에 본문 · 댓글을 읽을 글 수(디시에 부담을 주지 않게). */
 const DC_POSTS_MAX = 8;
 
@@ -133,7 +136,8 @@ export type DcRow = { no: number; title: string; at: number; author: string; rep
 
 /** 목록 한 쪽: 공지 · 설문은 뺀다. 시각은 KST 표기("2026-10-15 18:32:38")를 epoch ms로. */
 export function parseDcList(html: string): DcRow[] {
-  if (!html.includes('gall_list')) throw new Error('dc list unavailable');
+  if (!html.includes('gall_list'))
+    throw new Error(`dc list unavailable: ${html.replace(/\s+/g, ' ').slice(0, 160)}`);
   const rows: DcRow[] = [];
   for (const m of html.matchAll(/<tr\b([^>]*)data-no="(\d+)"([^>]*)>([\s\S]*?)<\/tr>/g)) {
     if (/icon_notice|icon_survey/.test(m[1]! + m[3]!)) continue;
@@ -172,19 +176,25 @@ type DcComment = {
 };
 
 export async function fetchDc(
-  env: Env,
+  env: Pick<Env, 'AGENTS_READ_TOKEN'>,
   cursor: DcCursor | undefined,
   now: number,
   fetcher: typeof fetch = fetch,
 ): Promise<{ items: Reaction[]; cursor: DcCursor | undefined }> {
+  // 빈 응답은 다시 받고, 끝내 비면 던진다(커서를 옮기지 않아 다음 시간에 이어서 읽는다).
   const get = async (url: string, init?: RequestInit) => {
-    const r = await fetcher(url, { ...init, headers: { 'user-agent': DC_UA, ...init?.headers } });
-    if (!r.ok) throw new Error(`dc ${r.status}`);
-    return r;
+    for (let i = 0; i < DC_TRIES; i++) {
+      const r = await fetcher(url, {
+        ...init,
+        headers: { 'user-agent': DC_UA, 'accept-language': 'ko-KR,ko;q=0.9', ...init?.headers },
+      });
+      if (!r.ok) throw new Error(`dc ${r.status}`);
+      const text = await r.text();
+      if (text.trim()) return text;
+    }
+    throw new Error('dc empty response');
   };
-  const rows = parseDcList(
-    await (await get(`${DC}/mgallery/board/lists/?id=${DC_GALLERY}&page=1`)).text(),
-  );
+  const rows = parseDcList(await get(`${DC}/mgallery/board/lists/?id=${DC_GALLERY}&page=1`));
   const first = !cursor;
   const since = now - FIRST_LOOKBACK_MS;
   const prev = cursor ?? { post: 0, comment: 0, counts: {} };
@@ -201,7 +211,7 @@ export async function fetchDc(
   let token: string | null = null;
   let maxComment = prev.comment;
   for (const r of open) {
-    const view = parseDcView(await (await get(link(r.no))).text());
+    const view = parseDcView(await get(link(r.no)));
     token = view.token ?? token;
     if (fresh(r) && meaningful(r.title + view.body))
       items.push({
@@ -230,7 +240,7 @@ export async function fetchDc(
         _GALLTYPE_: 'M',
       }).toString(),
     });
-    const { comments } = (await res.json().catch(() => ({}))) as { comments?: DcComment[] | null };
+    const { comments } = JSON.parse(res) as { comments?: DcComment[] | null };
     for (const c of comments ?? []) {
       const no = Number(c.no);
       if (!Number.isFinite(no) || c.del_yn === 'Y' || c.is_delete !== '0') continue;
@@ -272,10 +282,9 @@ export async function collect(
   now = Date.now(),
   fetcher: typeof fetch = fetch,
 ) {
-  const [c, m, g] = await Promise.allSettled([
+  const [c, m] = await Promise.allSettled([
     fetchComments(env, cursors.comments, now, fetcher),
     fetchChat(env, cursors.chat, now, fetcher),
-    fetchDc(env, cursors.dc, now, fetcher),
   ]);
   const errors: string[] = [];
   const next: Cursors = { ...cursors };
@@ -288,10 +297,6 @@ export async function collect(
     items.push(...m.value.items);
     next.chat = m.value.cursor;
   } else errors.push(String(m.reason).slice(0, 200));
-  if (g.status === 'fulfilled') {
-    items.push(...g.value.items);
-    next.dc = g.value.cursor;
-  } else errors.push(String(g.reason).slice(0, 200));
   return { items, cursors: next, errors };
 }
 

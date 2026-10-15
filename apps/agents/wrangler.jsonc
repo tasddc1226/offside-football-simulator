@@ -14,8 +14,8 @@
     ],
   },
   "migrations": [{ "tag": "v1-agents", "new_sqlite_classes": ["AgentThread", "AgentLedger"] }],
-  // 매시간 17분 유저 반응 살피기(@plan, reactions.ts), 매일 23:50 UTC(08:50 KST) 주기 작업 보고(@ops).
-  "triggers": { "crons": ["17 * * * *", "50 23 * * *"] },
+  // 매시간 47분 유저 반응 살피기(@plan, reactions.ts, 디시는 27분 Actions가 넣어 둔 것), 매일 23:50 UTC(08:50 KST) 주기 작업 보고(@ops).
+  "triggers": { "crons": ["47 * * * *", "50 23 * * *"] },
   "observability": { "enabled": true, "logs": { "enabled": true, "invocation_logs": false } },
   "vars": {
     // 2단계까지 @ops · @plan을 연다(ADR-015 도입 단계).

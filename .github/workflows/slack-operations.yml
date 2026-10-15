@@ -43,3 +43,9 @@ jobs:
       - name: Collect feedback candidates
         if: github.event.schedule == '27 * * * *' || inputs.mode == 'feedback'
         run: node tooling/scripts/slack-feedback.mjs
+      # T-11-279 디시 갤러리 글 · 댓글을 에이전트 Worker에 넣는다(Cloudflare에서 디시를 읽으면 빈 응답이 잦다). @plan이 47분에 정리한다.
+      - name: Push community posts to agents
+        if: github.event.schedule == '27 * * * *' || inputs.mode == 'feedback'
+        env:
+          AGENTS_READ_TOKEN: ${{ secrets.AGENTS_READ_TOKEN }}
+        run: node apps/agents/scripts/dc-push.ts
