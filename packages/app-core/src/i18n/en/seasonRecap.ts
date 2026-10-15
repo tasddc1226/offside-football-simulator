@@ -12,7 +12,7 @@ export const seasonRecap: Translation<SeasonRecapMsgs> = {
   newBadge: 'NEW',
   title: (p) => `${p.season} recap`,
   cutoff: (p) => `Records through ${p.day}`,
-  honorsNone: 'No badges this season. Give it a shot next season.',
+  honorsNone: 'No badges this season.',
   secActivity: 'This season',
   players: 'Players raised',
   retired: 'Players retired',

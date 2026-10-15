@@ -37,6 +37,8 @@ const SENTENCES = (Object.keys(CUP_KO) as CupTextKey[]).map((key) => {
 /** 한국어 컵 문구를 요청 언어로. 컵 문구가 아니면 undefined. */
 export function cupText(ko: string, lang: Lang): string | undefined {
   if (lang === 'ko') return ko;
+  // T-11-279 전에 저장된 경기 알림 제목은 라운드와 결과를 ' — '로 이었다. 지금 틀로 바꿔 다시 맞춘다.
+  if (ko.includes(' — ')) return cupText(ko.replace(' — ', ' · '), lang);
   for (const { key, names, re } of SENTENCES) {
     const m = re.exec(ko);
     if (!m) continue;

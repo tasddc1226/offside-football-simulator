@@ -22,7 +22,7 @@ const ko = {
   newBadge: 'NEW',
   title: (p: { season: string }) => `${p.season} 결산`,
   cutoff: (p: { day: string }) => `${p.day}까지의 기록이에요`,
-  honorsNone: '이번 시즌에 받은 기록 배지는 없어요. 다음 시즌에 도전해 보세요.',
+  honorsNone: '이번 시즌에 받은 기록 배지는 없어요.',
   secActivity: '이번 시즌 활동',
   players: '키운 선수',
   retired: '은퇴한 선수',

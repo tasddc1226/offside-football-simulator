@@ -36,7 +36,7 @@
   "apps/api/src/routes/hof.ts": 1,
   "apps/api/src/routes/market.ts": 19,
   "apps/api/src/routes/notifications.ts": 3,
-  "apps/api/src/routes/ownerTeam.ts": 21,
+  "apps/api/src/routes/ownerTeam.ts": 20,
   "apps/api/src/routes/profile.ts": 10,
   "apps/api/src/routes/push.ts": 8,
   "apps/api/src/routes/releaseNotes.ts": 1,

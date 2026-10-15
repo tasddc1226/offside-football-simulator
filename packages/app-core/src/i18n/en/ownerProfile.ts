@@ -12,7 +12,8 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   roomTrophiesNote: 'Badges and results earned in competition',
   roomPrev: 'Look left',
   roomNext: 'Look right',
-  roomEmptyAwards: 'No awards on display yet. Finish a season or make your mark in a cup.',
+  roomEmptyAwards:
+    'No awards on display yet. Finish a season or make your mark in a cup and it shows up here.',
   roomLoading: 'Preparing your locker room…',
   roomBadgeCount: 'Record badges',
   roomCupCount: 'Cup results',

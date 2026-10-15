@@ -1,6 +1,7 @@
 // 내 팀 편성 화면(웹 team/Team · TeamHead · TeamLineup · TeamPicker · TeamLogoEditor · TeamPitch · PlayerCard · TeamNav,
 // 앱 screens/owner/Team · TeamLineup · TeamPicker · TeamLogoEditor 와 그 부품). 웹·앱 문구가 다른 줄은 Web/App 접미사로 나눈다.
 import { ns } from '../core';
+import { withEulReul } from '../../format';
 
 const ko = {
   // 하단 메뉴 · 공통
@@ -95,8 +96,9 @@ const ko = {
   // 그라운드(웹 TeamLineup)
   presetAnnounce: (p: { f: string }) => `${p.f} 배치로 바꿨어요.`,
   playerFallback: '선수',
-  movedTo: (p: { name: string; pos: string }) => `${p.name}를 ${p.pos} 위치로 옮겼어요.`,
-  placedIn: (p: { name: string; pos: string }) => `${p.name}를 ${p.pos} 자리에 넣었어요.`,
+  movedTo: (p: { name: string; pos: string }) => `${withEulReul(p.name)} ${p.pos} 위치로 옮겼어요.`,
+  placedIn: (p: { name: string; pos: string }) =>
+    `${withEulReul(p.name)} ${p.pos} 자리에 넣었어요.`,
   sentToLocker: '선수를 라커룸으로 보냈어요.',
   swapped: '선수 자리를 바꿨어요.',
   groundLabel: '편성 그라운드',

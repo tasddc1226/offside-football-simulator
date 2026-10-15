@@ -237,7 +237,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
       throw conflictError(`한 번에 ${rules.listLimit}명까지 내놓을 수 있어요.`, 'LISTING_LIMIT');
     const band = priceBand(card.cardValue, rules);
     if (input.price < band.min || input.price > band.max)
-      throw conflictError('판매가가 정할 수 있는 범위를 벗어났어요.', 'PRICE_OUT_OF_BAND');
+      throw conflictError('판매가가 정해진 범위를 벗어났어요.', 'PRICE_OUT_OF_BAND');
     const id = newId('lst');
     if (
       !(await insertListing(db, {

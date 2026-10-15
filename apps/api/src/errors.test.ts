@@ -40,12 +40,12 @@ describe('오류 문구 영어(T-11-106)', () => {
     expect(localizeMessage('한 번에 5명까지 내놓을 수 있어요.', 'en')).toBe(
       'You can list up to 5 players at a time.',
     );
-    expect(localizeMessage('쓸 수 없는 팀 이름이에요.', 'en')).toBe(
+    expect(localizeMessage('팀 이름에 쓸 수 없는 말이 들어 있어요.', 'en')).toBe(
       "That team name isn't allowed.",
     );
-    expect(localizeMessage("'운영자'처럼 운영진으로 보이는 감독 이름은 쓸 수 없어요.", 'en')).toBe(
-      "A manager name that looks like staff, such as 'Moderator', isn't allowed.",
-    );
+    expect(
+      localizeMessage("감독 이름에 '운영자'처럼 운영진으로 보이는 말은 쓸 수 없어요.", 'en'),
+    ).toBe("A manager name that looks like staff, such as 'Moderator', isn't allowed.");
     expect(localizeMessage('글 항목을 찾을 수 없어요.', 'en')).toBe("We couldn't find that post.");
     expect(localizeMessage('지난 시즌 선수는 선발에 3명까지 넣을 수 있어요.', 'en')).toBe(
       'You can start up to 3 players from past seasons.',

@@ -87,5 +87,5 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   cardManagerApp: (p) => `${p.name}監督`,
   cardUnsavedApp: ' · 未保存',
   cardFootApp: 'カードOVRは最高の実力 · 配置はその位置での実力',
-  cardTaglineApp: '自分だけのサッカーキャリア · offside-lab.com',
+  cardTaglineApp: 'サッカー選手キャリアシミュレーション · offside-lab.com',
 };

@@ -1,5 +1,6 @@
 // 시즌 결산·이적 시장·은퇴 문구(season.ts)와 K리그2 승격 로그(promotion.ts). 구단·리그·국가 이름은 부른 쪽이 tn()으로 옮겨 넘긴다.
 import { ns } from '@offside/contracts/i18n';
+import { waGwa, withRo } from '../particles.js';
 
 const ko = {
   // 시즌 결산
@@ -48,10 +49,10 @@ const ko = {
     `임대 활약으로 감독 신뢰 상승 · 연봉 ${p.salary} · 계약 ${p.years}년 남음`,
   loanBackRenewName: (p: { club: string }) => `${p.club} 복귀 재계약`,
   loanEndNote: (p: { club: string; host: string }) =>
-    `${p.host} 임대가 끝났습니다. ${p.club}로 돌아가거나 새 팀을 고를 수 있습니다.`,
+    `${p.host} 임대가 끝났습니다. ${withRo(p.club)} 돌아가거나 새 팀을 고를 수 있습니다.`,
   loanLog: (p: { from: string; club: string; league: string }) =>
     `${p.from}에서 ${p.club}(${p.league})로 한 시즌 임대를 떠났습니다.`,
-  loanBackLog: (p: { club: string }) => `임대를 마치고 ${p.club}로 돌아왔습니다.`,
+  loanBackLog: (p: { club: string }) => `임대를 마치고 ${withRo(p.club)} 돌아왔습니다.`,
   stayName: (p: { club: string }) => `${p.club} 잔류`,
   stayDesc: (p: { salary: string; years: number }) => `연봉 ${p.salary} · 계약 ${p.years}년 남음`,
   stayDescPromoted: (p: { league: string; salary: string; years: number }) =>
@@ -59,7 +60,7 @@ const ko = {
   extendName: (p: { club: string }) => `${p.club} 연장 계약`,
   extendDesc: '새 연봉은 이번 시즌부터 적용돼요.',
   contractLeftNote: (p: { club: string; years: number }) =>
-    `${p.club}와의 계약이 ${p.years}년 남았습니다.`,
+    `${p.club}${waGwa(p.club)}의 계약이 ${p.years}년 남았습니다.`,
   renewName: (p: { club: string }) => `${p.club} 재계약`,
   renewVeteranDesc: '베테랑 재계약',
   faNote: '계약이 만료되어 FA 신분이 되었습니다.',
@@ -73,9 +74,9 @@ const ko = {
   // 선택 결과 로그
   enrolled: (p: { club: string }) => `${p.club}에 진학했습니다.`,
   renewExtLog: (p: { club: string; ext: number; total: number; salary: string }) =>
-    `${p.club}와 ${p.ext}년 연장, 잔여 계약 포함 총 ${p.total}년. 이번 시즌부터 연봉 ${p.salary}`,
+    `${p.club}${waGwa(p.club)} ${p.ext}년 연장, 잔여 계약 포함 총 ${p.total}년. 이번 시즌부터 연봉 ${p.salary}`,
   renewLog: (p: { club: string; years: number; salary: string }) =>
-    `${p.club}와 ${p.years}년 재계약, 연봉 ${p.salary}`,
+    `${p.club}${waGwa(p.club)} ${p.years}년 재계약, 연봉 ${p.salary}`,
   signLog: (p: { club: string; league: string; years: number; salary: string }) =>
     `${p.club}(${p.league}) 입단! ${p.years}년 · 연봉 ${p.salary}`,
   transferPaidLog: (p: {
