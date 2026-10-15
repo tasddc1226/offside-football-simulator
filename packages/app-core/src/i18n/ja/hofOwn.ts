@@ -28,4 +28,11 @@ export const hofOwn: Translation<HofOwnMsgs> = {
   nickPlaceholder: (p) => `オーナー名（2〜${p.max}文字）`,
   nickChange: '変更',
   nickSet: '決定',
+  anonCardsNote: (p) =>
+    `匿名で登録された自分の選手が${p.n}人います。この端末に名前が残っているので、今公開できます。`,
+  anonCardsBtn: '名前を公開する',
+  anonCardsConfirm: (p) =>
+    `選手${p.n}人の名前を公開しますか？ほかのユーザーと移籍市場にこの名前が表示されます。`,
+  anonCardsDone: (p) => `${p.n}人の名前を公開しました。`,
+  anonCardsFail: '名前を公開できませんでした。しばらくしてからもう一度お試しください。',
 };

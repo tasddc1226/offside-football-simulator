@@ -29,4 +29,11 @@ export const hofOwn: Translation<HofOwnMsgs> = {
   nickPlaceholder: (p) => `Owner name (2–${p.max} characters)`,
   nickChange: 'Change',
   nickSet: 'Set',
+  anonCardsNote: (p) =>
+    `${p.n} of your players were uploaded anonymously. Their names are still on this device, so you can publish them now.`,
+  anonCardsBtn: 'Publish names',
+  anonCardsConfirm: (p) =>
+    `Publish the names of ${p.n} players? Other users and the transfer market will see these names.`,
+  anonCardsDone: (p) => `Published ${p.n} names.`,
+  anonCardsFail: 'Couldn’t publish the names. Please try again in a moment.',
 };

@@ -728,6 +728,58 @@ export async function updateRetired(
     .where(eq(careers.id, careerId));
 }
 
+/**
+ * T-11-266 은퇴 때 익명으로 올라간 내 선수에게 이름을 붙인다(이름은 기기에만 있어 기기가 보낸다). 내가 키운 은퇴
+ * 커리어 중 이름이 비어 있고 운영자가 가리지 않은 것만 채운다. 이미 공개된 이름은 바꾸지 않는다. 붙인 커리어 id를 돌려준다.
+ */
+export async function publishCareerNames(
+  db: Db,
+  profileId: string,
+  items: { careerId: string; publicName: string }[],
+  now: string,
+): Promise<string[]> {
+  const rows = (await runBatch(
+    db,
+    items.map((x) =>
+      db
+        .update(careers)
+        .set({ publicName: x.publicName, updatedAt: now })
+        .where(
+          and(
+            eq(careers.id, x.careerId),
+            eq(careers.profileId, profileId),
+            eq(careers.status, 'retired'),
+            isNull(careers.publicName),
+            isNull(careers.nameHiddenAt),
+          ),
+        )
+        .returning({ id: careers.id }),
+    ),
+  )) as { id: string }[][];
+  return rows.flatMap((r) => r.map((x) => x.id));
+}
+
+/** T-11-266 내가 키운 은퇴 선수 중 서버에 이름이 없고 운영자가 가리지 않은 커리어 id. 카드를 팔았거나 방출했어도 들어간다. */
+export async function listAnonRetiredIds(
+  db: Db,
+  profileId: string,
+  limit: number,
+): Promise<string[]> {
+  const rows = await db
+    .select({ id: careers.id })
+    .from(careers)
+    .where(
+      and(
+        eq(careers.profileId, profileId),
+        eq(careers.status, 'retired'),
+        isNull(careers.publicName),
+        isNull(careers.nameHiddenAt),
+      ),
+    )
+    .limit(limit);
+  return rows.map((r) => r.id);
+}
+
 const storedSeasonColumns = {
   careerId: careerSeasons.careerId,
   createdAt: careerSeasons.createdAt,

@@ -1039,6 +1039,50 @@ describe('조작된 기록 보정', () => {
     expect(await row()).toMatchObject({ legendScore: 420, goals: 120, publicName: '김오프' });
   });
 
+  it('T-11-266 익명으로 은퇴한 내 선수만 나중에 이름을 붙이고, 공개된 이름·남의 커리어·가린 이름은 그대로 둔다', async () => {
+    await putSeasonsFor(ctx.env, cookie, CAREER_ID, retirementBody());
+    await put(`/v1/careers/${CAREER_ID}/retirement`, retirementBody());
+    const named = '0d000000-0000-4000-8000-000000000002';
+    await putSeasonsFor(ctx.env, cookie, named, retirementBody());
+    await put(`/v1/careers/${named}/retirement`, { ...retirementBody(), publicName: '김공개' });
+    const theirs = '0d000000-0000-4000-8000-000000000003';
+    const other = (await issueCookie(ctx)).cookie;
+    await putSeasonsFor(ctx.env, other, theirs, retirementBody());
+    await putJson(ctx, other, `/v1/careers/${theirs}/retirement`, retirementBody());
+    // 이름 없는 내 선수 목록은 내가 키운 익명 커리어만 담는다(이적시장에 팔린 카드도 careers 기준이라 같이 나온다).
+    const anonIds = async () =>
+      (
+        (await (
+          await createApp().request(
+            '/v1/careers/mine/anonymous',
+            { headers: { Cookie: cookie } },
+            ctx.env,
+          )
+        ).json()) as { data: { ids: string[] } }
+      ).data.ids;
+    expect(await anonIds()).toEqual([CAREER_ID]);
+    const names = (body: unknown) => put('/v1/careers/public-names', body);
+    const res = await names({
+      items: [
+        { careerId: CAREER_ID, publicName: '김익명' },
+        { careerId: named, publicName: '바꾼이름' },
+        { careerId: theirs, publicName: '남의선수' },
+      ],
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ data: { updated: 1 } });
+    const nameOf = async (id: string) =>
+      (await ctx.db.select().from(careers).where(eq(careers.id, id)))[0]!.publicName;
+    expect([await nameOf(CAREER_ID), await nameOf(named), await nameOf(theirs)]).toEqual([
+      '김익명',
+      '김공개',
+      null,
+    ]);
+    expect(await anonIds()).toEqual([]);
+    expect((await names({ items: [{ careerId: named, publicName: '시발' }] })).status).toBe(400);
+    expect((await names({ items: [] })).status).toBe(400);
+  });
+
   it('받아 둔 시즌이 없는 커리어의 은퇴는 400', async () => {
     const other = '0d000000-0000-4000-8000-000000000001';
     await put(`/v1/careers/${other}/seasons/2026`, seasonBody());

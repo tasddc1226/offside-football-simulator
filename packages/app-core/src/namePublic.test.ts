@@ -13,3 +13,16 @@ describe('선수 이름 공개 (T-10-065)', () => {
     expect(publicNameOf('도하람')).toBeNull();
   });
 });
+
+describe('익명으로 은퇴한 내 선수 이름 공개 (T-11-266)', () => {
+  it('서버에 이름이 없는 내 선수 중 이 기기가 공개할 수 있는 이름을 아는 것만 고른다', async () => {
+    const { anonOwnNames } = await import('./cardNames.js');
+    const local = new Map([
+      ['a', '도하람'],
+      ['b', '시발 FC'],
+      ['c', '남의선수'],
+      ['d', '이미공개'],
+    ]);
+    expect(anonOwnNames(['a', 'b', 'e'], local)).toEqual([{ careerId: 'a', publicName: '도하람' }]);
+  });
+});

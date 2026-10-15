@@ -161,6 +161,19 @@ describe('로컬 명예의 전당 30명 한도', () => {
     expect(hof).toHaveLength(30);
     expect(hof.at(-1)).toMatchObject({ name: '막내', id: entry.id });
     expect(hof.some((h) => h.name === '고수29')).toBe(false);
+    // T-11-266 30명 밖으로 밀려나도 이름표(ft_names)에 남아 화면이 이름을 그린다.
+    const { localCareerNames, rememberCareerName, CAREER_NAMES_KEY, CAREER_NAMES_MAX } =
+      await import('./hof-store.js');
+    expect(localCareerNames().get(entry.id!)).toBe('막내');
+    saveKey(
+      'ft_hof',
+      Array.from({ length: 30 }, (_, i) => ({ name: `고수${i}`, score: 5000 - i })),
+    );
+    expect(localCareerNames().get(entry.id!)).toBe('막내');
+    for (let i = 0; i < CAREER_NAMES_MAX; i++) rememberCareerName(`c${i}`, `선수${i}`);
+    const names = loadKey<Record<string, string>>(CAREER_NAMES_KEY)!;
+    expect(Object.keys(names)).toHaveLength(CAREER_NAMES_MAX);
+    expect(names[entry.id!]).toBeUndefined();
   });
   it('같은 커리어가 다시 은퇴하면 기록을 바꾸고, 예전에 겹친 기록은 하나로 읽는다(T-10-107)', async () => {
     const { retire } = await import('./season.js');

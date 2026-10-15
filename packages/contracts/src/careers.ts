@@ -367,6 +367,25 @@ export type RetirementResponse = z.infer<typeof RetirementResponseSchema>;
 /** careerId 경로 파라미터. 클라이언트가 `crypto.randomUUID()`로 만든다(브리프). */
 export const CareerIdParamSchema = z.string().uuid();
 
+/** T-11-266 은퇴 때 익명으로 올라간 내 선수 이름을 나중에 한꺼번에 공개한다(이름은 기기에만 남아 있다). */
+export const CAREER_NAMES_MAX = 100;
+export const PutCareerNamesBodySchema = z.strictObject({
+  items: z
+    .array(z.strictObject({ careerId: CareerIdParamSchema, publicName: PublicNameSchema }))
+    .min(1)
+    .max(CAREER_NAMES_MAX),
+});
+export type PutCareerNamesBody = z.infer<typeof PutCareerNamesBodySchema>;
+/** 실제로 이름이 붙은 수(이미 공개됐거나 운영자가 가린 이름·남의 커리어는 세지 않는다). */
+export const PutCareerNamesResponseSchema = z.strictObject({ updated: z.number().int().min(0) });
+export type PutCareerNamesResponse = z.infer<typeof PutCareerNamesResponseSchema>;
+/** 내가 키운 은퇴 선수 중 서버에 이름이 없는 커리어 id(팔았거나 방출한 선수 포함). 이 기기가 아는 이름과 맞춰 본다. */
+export const ANON_CAREER_IDS_MAX = 5000;
+export const AnonCareerIdsResponseSchema = z.strictObject({
+  ids: z.array(CareerIdParamSchema).max(ANON_CAREER_IDS_MAX),
+});
+export type AnonCareerIdsResponse = z.infer<typeof AnonCareerIdsResponseSchema>;
+
 /** `/seasons/:year` 경로 파라미터. */
 export const CareerYearParamSchema = z.coerce.number().int().min(2000).max(2200);
 
