@@ -18,7 +18,6 @@ import { syncAdFree } from '../platform/adFree';
 import { recoverIapItems } from '../platform/iapItems';
 import { useColors, useIsDark } from '../theme/useColors';
 import { useSnapshot } from 'valtio';
-import { AvatarBaker } from '../ui/AvatarBaker';
 import { prefs } from '../store';
 
 void SplashScreen.preventAutoHideAsync();
@@ -57,7 +56,6 @@ export default function RootLayout() {
         key={lang}
         screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}
       />
-      <AvatarBaker />
     </GestureHandlerRootView>
   );
 }

@@ -18,6 +18,16 @@ export const alertSignature = (text: string) =>
 
 type Day = { costUsd: number; tasks: number; warned?: boolean };
 
+export type DevJob = { channel: string; threadTs: string; pr: number; title: string };
+export type Approval = {
+  pr: number;
+  sha: string;
+  action: 'merge' | 'reject';
+  user: string;
+  at: number;
+  result: string;
+};
+
 export class AgentLedger extends DurableObject<Env> {
   async day(role: Role, day = kstDay()): Promise<Day> {
     return (await this.ctx.storage.get<Day>(`${role}:${day}`)) ?? { costUsd: 0, tasks: 0 };
@@ -68,6 +78,17 @@ export class AgentLedger extends DurableObject<Env> {
     const n = ((await this.ctx.storage.get<number>(key)) ?? 0) + 1;
     await this.ctx.storage.put(key, n);
     return n;
+  }
+  /** @dev 작업(브랜치 agent-dev/<run>)을 어느 스레드 · PR에 이었는지. CI 결과 · 승인 카드에 쓴다. */
+  async devJob(branch: string): Promise<DevJob | undefined> {
+    return this.ctx.storage.get<DevJob>(`dev:${branch}`);
+  }
+  async setDevJob(branch: string, job: DevJob): Promise<void> {
+    await this.ctx.storage.put(`dev:${branch}`, job);
+  }
+  /** 승인 · 거절 기록(누가 · 언제 · 무엇을). ADR-015 승인 단계. */
+  async recordApproval(a: Approval): Promise<void> {
+    await this.ctx.storage.put(`approval:${a.pr}:${a.at}`, a);
   }
   /** 한도 초과 안내는 하루 한 번만 한다. 처음이면 true. */
   async warnOnce(role: Role, day = kstDay()): Promise<boolean> {

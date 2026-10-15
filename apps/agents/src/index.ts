@@ -1,7 +1,17 @@
 // ADR-015 슬랙 에이전트 Worker. 슬랙 이벤트를 받아 서명을 확인하고 3초 안에 200을 돌려준 뒤, 일은 스레드 객체에 넘긴다.
-import { enabled, isRole, list, signingSecret, type Env, type Role } from './env.ts';
+import {
+  calledRoles,
+  enabled,
+  isRole,
+  list,
+  signingSecret,
+  stripCalls,
+  type Env,
+  type Role,
+} from './env.ts';
 import { alertSignature, kstDay, ledger } from './ledger.ts';
 import { collect, triagePrompt, type DcCursor, type Reaction } from './reactions.ts';
+import { devCi, devInteraction, devResult, type DevCi, type DevResult } from './dev.ts';
 import { verifySlack } from './slack.ts';
 import { threadOf, type Task } from './thread.ts';
 
@@ -68,6 +78,17 @@ export function decide(
     if (text.trimStart().startsWith('✅')) return null;
     return { ...base, kind: 'alert', threadTs: ev.ts, text };
   }
+  // 한글로 부른 글(`@이운재 …`)은 부른 역할만 멘션으로 받는다. 다른 역할을 불렀으면 스레드 주인도 답하지 않는다.
+  const called = operator ? calledRoles(text) : [];
+  if (called.length)
+    return called.includes(role)
+      ? {
+          ...base,
+          kind: 'mention',
+          threadTs: ev.thread_ts ?? ev.ts,
+          text: stripCalls(stripMentions(text)),
+        }
+      : null;
   if (ev.thread_ts && operator)
     return { ...base, kind: 'reply', threadTs: ev.thread_ts, text: stripMentions(text) };
   return null;
@@ -81,6 +102,8 @@ export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
     if (url.pathname === '/internal/run') return internalRun(req, url, env);
+    if (url.pathname === '/slack/dev/interactive' && req.method === 'POST')
+      return interactive(req, env, ctx);
     const m = /^\/slack\/([a-z]+)\/events$/.exec(url.pathname);
     if (url.pathname === '/health') return new Response('ok');
     if (!m || req.method !== 'POST') return new Response('not found', { status: 404 });
@@ -117,7 +140,7 @@ export default {
     return new Response('');
   },
 
-  /** 매시간 47분 유저 반응 살피기(@plan), 매일 08:50 KST 주기 작업 보고(@ops). */
+  /** 3시간마다 47분 유저 반응 살피기(@plan), 매일 08:50 KST 주기 작업 보고(@ops). */
   async scheduled(ev: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     if (ev.cron === REPORT_CRON) {
       if (enabled(env, 'ops')) ctx.waitUntil(morningReport(env, ev.scheduledTime));
@@ -163,6 +186,13 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
       return new Response('bad body', { status: 400 });
     return Response.json({ pending: await ledger(env).pushDc(items.slice(0, 100), cursor) });
   }
+  // @dev: agent-dev.yml 결과 · PR CI 결과(agent-dev-ci.yml).
+  if (job === 'dev-result') {
+    await devResult(env, (await req.json()) as DevResult);
+    return Response.json({ ok: true });
+  }
+  if (job === 'dev-ci')
+    return Response.json({ result: await devCi(env, (await req.json()) as DevCi) });
   if (job === 'report') {
     await morningReport(env, Date.now(), `report:manual:${Date.now()}`);
     return Response.json({ queued: 'report' });
@@ -176,6 +206,28 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
     return Response.json({ bySource, errors });
   }
   return Response.json(await scanReactions(env));
+}
+
+/** 슬랙 버튼(@dev 승인 카드). 서명을 확인하고 3초 안에 200을 돌려준 뒤 일은 뒤에서 한다. */
+async function interactive(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  if (!enabled(env, 'dev')) return new Response('not found', { status: 404 });
+  const body = await req.text();
+  const ok = await verifySlack(
+    signingSecret(env, 'dev'),
+    req.headers.get('x-slack-request-timestamp'),
+    req.headers.get('x-slack-signature'),
+    body,
+  );
+  if (!ok) return new Response('bad signature', { status: 401 });
+  const raw = new URLSearchParams(body).get('payload');
+  if (!raw) return new Response('');
+  ctx.waitUntil(
+    devInteraction(env, JSON.parse(raw)).then(
+      (r) => console.log('dev interaction', r),
+      (e: unknown) => console.error('dev interaction failed', String(e)),
+    ),
+  );
+  return new Response('');
 }
 
 function sameText(a: string, b: string) {

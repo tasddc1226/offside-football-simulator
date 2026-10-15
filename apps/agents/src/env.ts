@@ -22,6 +22,16 @@ export interface Env {
   DESK_CHANNEL: string;
   TASK_BUDGET_USD: string;
   DAILY_BUDGET_USD: string;
+  /** @dev 하루 한도(Actions 작업 비용 포함). 없으면 DAILY_BUDGET_USD. */
+  DAILY_BUDGET_DEV_USD?: string;
+  /** agent-dev.yml의 `--max-budget-usd`와 같은 값. 남은 하루 한도가 이보다 적으면 작업을 띄우지 않는다. */
+  DEV_RUN_BUDGET_USD: string;
+  /** 승인 카드를 올릴 채널(#agent-approvals). */
+  APPROVAL_CHANNEL: string;
+  GITHUB_APP_ID: string;
+  GITHUB_APP_INSTALLATION_ID: string;
+  /** PKCS#8 PEM. */
+  GITHUB_APP_PRIVATE_KEY?: string;
   CF_D1_READ_TOKEN: string;
   CF_MCP_TOKEN?: string;
   GITHUB_TOKEN?: string;
@@ -46,6 +56,39 @@ export const list = (v: string | undefined) =>
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+
+/** 슬랙에 보이는 이름(T-11-281). 넘기기 줄 · 설정 키는 역할 키(ops · plan · dev · mkt)를 그대로 쓴다. */
+export const ROLE_NAMES: Record<Role, string> = {
+  ops: '이운재 · 운영',
+  plan: '박지성 · 기획',
+  dev: '손흥민 · 개발',
+  mkt: '안정환 · 마케팅',
+};
+
+/** 슬랙에서 한글로 부르는 이름(T-11-283). 슬랙 멘션은 영어 표시 이름만 찾아서, 운영자가 `@이운재`처럼 글로 쓰면 Worker가 멘션으로 받는다. */
+export const ROLE_CALLS: Record<Role, readonly string[]> = {
+  ops: ['이운재', '운영'],
+  plan: ['박지성', '기획'],
+  dev: ['손흥민', '개발'],
+  mkt: ['안정환', '마케팅'],
+};
+
+const CALL = new RegExp(`@(${Object.values(ROLE_CALLS).flat().join('|')})(?![가-힣])`, 'g');
+
+/** 한글 이름 · 역할 이름(`이운재` · `운영`)을 역할 키로. */
+export const roleOfCall = (name: string): Role | undefined =>
+  (Object.keys(ROLE_CALLS) as Role[]).find((r) => ROLE_CALLS[r].includes(name));
+
+/** 글에서 `@이운재` · `@운영` 꼴로 부른 역할들. */
+export const calledRoles = (text: string): Role[] => [
+  ...new Set([...text.matchAll(CALL)].map((m) => roleOfCall(m[1]!)!)),
+];
+
+export const stripCalls = (text: string) => text.replace(CALL, '').trim();
+
+/** 역할별 하루 한도(달러). */
+export const dailyBudget = (env: Env, role: Role) =>
+  Number((role === 'dev' && env.DAILY_BUDGET_DEV_USD) || env.DAILY_BUDGET_USD);
 
 export const isRole = (v: string): v is Role => (ROLES as readonly string[]).includes(v);
 export const enabled = (env: Env, role: Role) => list(env.ENABLED_ROLES).includes(role);

@@ -1,10 +1,11 @@
 // @ops 주기 작업 목록: GitHub Actions 예약 워크플로와 Cloudflare Worker cron을 모아 최근 결과 · 다음 실행을 돌려준다(읽기 전용).
 import type { Tool } from '../claude.ts';
+import { ghAuth, type GhToken } from '../github.ts';
 import { kstText, nextRuns } from '../cron.ts';
 
 export type ScheduleDeps = {
   repo: string;
-  githubToken?: string | undefined;
+  githubToken?: GhToken;
   accountId: string;
   /** Workers 스크립트 읽기 권한이 있는 토큰(CF_MCP_TOKEN). */
   cfToken?: string | undefined;
@@ -22,13 +23,28 @@ type Run = {
 };
 
 export function scheduleTools(d: ScheduleDeps): Tool[] {
+  const { collect } = scheduleData(d);
+  return [
+    {
+      name: 'schedules',
+      description:
+        '운영 인프라의 주기 작업 전체: GitHub Actions 예약 워크플로(cron · 다음 실행 · 최근 예약 실행 5번 결과)와 Cloudflare Worker cron(다음 실행). Worker cron의 실행 결과는 cloudflare_* 도구로 Workers 로그를 본다.',
+      input_schema: { type: 'object', properties: {} },
+      run: async () => JSON.stringify(await collect(Date.now())).slice(0, 6_000),
+    },
+  ];
+}
+
+/** 주기 작업 목록 모으기(schedules · report_digest가 같이 쓴다). */
+/** sinceMs: 그 뒤 예약 실행을 최대 runs번까지(기본 최근 5번). */
+export function scheduleData(d: ScheduleDeps, opt: { runs?: number; sinceMs?: number } = {}) {
   const f = d.fetcher ?? fetch;
   const gh = async <T>(path: string): Promise<T> => {
     const r = await f(`https://api.github.com/repos/${d.repo}${path}`, {
       headers: {
         Accept: 'application/vnd.github+json',
         'User-Agent': 'offside-agents',
-        ...(d.githubToken ? { Authorization: `Bearer ${d.githubToken}` } : {}),
+        ...(await ghAuth(d.githubToken)),
       },
     });
     if (!r.ok) throw new Error(`GitHub ${r.status}`);
@@ -48,7 +64,11 @@ export function scheduleTools(d: ScheduleDeps): Tool[] {
       );
       if (!crons.length) continue;
       const { workflow_runs } = await gh<{ workflow_runs: Run[] }>(
-        `/actions/workflows/${w.id}/runs?event=schedule&per_page=5`,
+        `/actions/workflows/${w.id}/runs?event=schedule&per_page=${opt.runs ?? 5}${
+          opt.sinceMs
+            ? `&created=${encodeURIComponent(`>=${new Date(opt.sinceMs).toISOString()}`)}`
+            : ''
+        }`,
       );
       out.push({
         kind: 'github-actions',
@@ -64,7 +84,8 @@ export function scheduleTools(d: ScheduleDeps): Tool[] {
           at_kst: kstText(Date.parse(x.created_at)),
           status: x.status,
           conclusion: x.conclusion,
-          url: x.html_url,
+          // 성공한 실행은 링크를 빼 결과를 줄인다.
+          ...(x.conclusion === 'success' ? {} : { url: x.html_url }),
         })),
       });
     }
@@ -107,21 +128,14 @@ export function scheduleTools(d: ScheduleDeps): Tool[] {
     return out;
   }
 
-  return [
-    {
-      name: 'schedules',
-      description:
-        '운영 인프라의 주기 작업 전체: GitHub Actions 예약 워크플로(cron · 다음 실행 · 최근 예약 실행 5번 결과)와 Cloudflare Worker cron(다음 실행). Worker cron의 실행 결과는 cloudflare_* 도구로 Workers 로그를 본다.',
-      input_schema: { type: 'object', properties: {} },
-      run: async () => {
-        const now = Date.now();
-        const [a, w] = await Promise.allSettled([actions(now), workers(now)]);
-        return JSON.stringify({
-          now_kst: kstText(now),
-          actions: a.status === 'fulfilled' ? a.value : { error: String(a.reason).slice(0, 200) },
-          workers: w.status === 'fulfilled' ? w.value : { error: String(w.reason).slice(0, 200) },
-        }).slice(0, 12_000);
-      },
-    },
-  ];
+  async function collect(now: number) {
+    const [a, w] = await Promise.allSettled([actions(now), workers(now)]);
+    return {
+      now_kst: kstText(now),
+      actions: a.status === 'fulfilled' ? a.value : { error: String(a.reason).slice(0, 200) },
+      workers: w.status === 'fulfilled' ? w.value : { error: String(w.reason).slice(0, 200) },
+    };
+  }
+
+  return { collect };
 }

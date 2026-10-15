@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { costOf, MODEL, runAgent, type Tool } from './claude.ts';
+import { costOf, MODEL, MODELS, runAgent, withCacheTail, type Tool } from './claude.ts';
+import { modelFor } from './roles.ts';
+import { digestTools } from './tools/digest.ts';
 import type { Env } from './env.ts';
 import { decide } from './index.ts';
-import { verifySlack } from './slack.ts';
+import { slackClient, verifySlack } from './slack.ts';
 import { failureText } from './thread.ts';
 import { ClaudeError } from './claude.ts';
 import { readOnlySql } from './tools/ops.ts';
@@ -11,6 +13,9 @@ import { mcpTools, parseRpc } from './mcp.ts';
 import { parseHandoffs } from './handoff.ts';
 import { collect, fetchDc, meaningful, parseDcList, triagePrompt } from './reactions.ts';
 import { nextRuns, kstText } from './cron.ts';
+import { devTools, mergeBlocker } from './dev.ts';
+import { appJwt, type Gh } from './github.ts';
+import type { Task } from './thread.ts';
 
 async function sign(secret: string, ts: string, body: string) {
   const key = await crypto.subtle.importKey(
@@ -36,6 +41,19 @@ describe('verifySlack', () => {
     expect(await verifySlack('s3cret', '1000', sig, body, 1000 + 301)).toBe(false);
     expect(await verifySlack('', '1000', sig, body, 1000)).toBe(false);
   });
+
+  it('글을 올릴 때만 한글 작성자 이름을 붙인다', async () => {
+    const sent: Record<string, unknown>[] = [];
+    const fetcher = (async (_u: string, init: RequestInit) => {
+      sent.push(JSON.parse(String(init.body)));
+      return new Response('{"ok":true}');
+    }) as unknown as typeof fetch;
+    const slack = slackClient('xoxb-t', fetcher, '이운재 · 운영');
+    await slack('chat.postMessage', { channel: 'C1', text: 'hi' });
+    await slack('reactions.add', { channel: 'C1', timestamp: '1', name: 'eyes' });
+    expect(sent[0]).toMatchObject({ username: '이운재 · 운영', text: 'hi' });
+    expect(sent[1]).not.toHaveProperty('username');
+  });
 });
 
 describe('readOnlySql', () => {
@@ -56,6 +74,26 @@ describe('readOnlySql', () => {
 });
 
 describe('runAgent', () => {
+  it('대화 끝 블록 하나에만 캐시 표시를 달고 원본은 바꾸지 않는다', () => {
+    const msgs = [
+      { role: 'user' as const, content: '질문' },
+      {
+        role: 'assistant' as const,
+        content: [{ type: 'tool_use', id: 't', name: 'x', input: {} }],
+      },
+      { role: 'user' as const, content: [{ type: 'tool_result', tool_use_id: 't', content: 'r' }] },
+    ];
+    const out = withCacheTail(msgs);
+    expect(out[2]!.content).toEqual([
+      { type: 'tool_result', tool_use_id: 't', content: 'r', cache_control: { type: 'ephemeral' } },
+    ]);
+    expect(JSON.stringify(out.slice(0, 2))).not.toContain('cache_control');
+    expect(JSON.stringify(msgs)).not.toContain('cache_control');
+    expect(withCacheTail([{ role: 'user', content: '질문' }])[0]!.content).toEqual([
+      { type: 'text', text: '질문', cache_control: { type: 'ephemeral' } },
+    ]);
+  });
+
   const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
   const usage = { input_tokens: 1000, output_tokens: 100, cache_read_input_tokens: 2000 };
 
@@ -121,6 +159,37 @@ describe('runAgent', () => {
     ).rejects.toThrow(/unexpected model/);
   });
 
+  it('일마다 모델을 고른다: 분류 · 경보 첫 정리 Haiku, 아침 보고 Sonnet, 나머지 Opus', () => {
+    expect(modelFor('triage')).toBe(MODELS.haiku);
+    expect(modelFor('alert')).toBe(MODELS.haiku);
+    expect(modelFor('report')).toBe(MODELS.sonnet);
+    for (const k of ['mention', 'reply', 'handoff'] as const) expect(modelFor(k)).toBe(MODELS.opus);
+  });
+
+  it('고른 모델로 요청하고 그 모델 단가로 비용을 센다', async () => {
+    const sent: { model: string }[] = [];
+    const fetcher = (async (_u: string, init: RequestInit) => {
+      sent.push(JSON.parse(String(init.body)));
+      return reply({ model: 'claude-haiku-5-5', stop_reason: 'end_turn', usage, content: [] });
+    }) as unknown as typeof fetch;
+    const r = await runAgent({
+      apiKey: 'k',
+      system: 's',
+      tools: [],
+      messages: [{ role: 'user', content: 'hi' }],
+      maxTurns: 5,
+      budgetUsd: 1,
+      model: MODELS.haiku,
+      fetcher,
+    });
+    expect(sent[0]!.model).toBe('claude-haiku-5-5');
+    // 1000 × 0.1 + 2000 × 0.01 + 100 × 0.5 = 170 / 1e6
+    expect(r.costUsd).toBeCloseTo(170 / 1e6);
+    expect(costOf(usage, MODELS.sonnet)).toBeCloseTo(costOf(usage) / 2);
+    // Haiku는 프롬프트가 10만 토큰을 넘으면 5배
+    expect(costOf({ input_tokens: 120_000, output_tokens: 0 }, MODELS.haiku)).toBeCloseTo(0.06);
+  });
+
   it('작업 한도 금액에 닿으면 도구 없이 마지막 답을 받고 멈춘다', async () => {
     const big = { input_tokens: 1_000_000, output_tokens: 0 };
     const bodies: { tool_choice?: unknown; messages: { content: unknown }[] }[] = [];
@@ -181,6 +250,39 @@ describe('decide', () => {
   } as Env;
   const ev = (e: Record<string, unknown>) =>
     ({ channel: 'CDESK', ts: '1.1', ...e }) as Parameters<typeof decide>[3];
+
+  it('한글로 부른 글은 부른 역할만 멘션으로 받는다', () => {
+    const call = (role: 'ops' | 'plan', e: Record<string, unknown>) =>
+      decide(
+        env,
+        role,
+        'EK',
+        ev({ type: 'message', user: 'UOP', ...e }),
+        role === 'ops' ? 'UBOTOPS' : 'UBOTPLAN',
+      );
+    expect(call('ops', { text: '@이운재 오늘 가입 수' })).toMatchObject({
+      kind: 'mention',
+      threadTs: '1.1',
+      text: '오늘 가입 수',
+    });
+    expect(call('plan', { text: '@이운재 오늘 가입 수' })).toBeNull();
+    expect(call('plan', { text: '@기획 댓글 정리해 줘', thread_ts: '0.9' })).toMatchObject({
+      kind: 'mention',
+      threadTs: '0.9',
+    });
+    // 박지성이 연 스레드라도 이운재를 불렀으면 박지성은 답하지 않는다.
+    expect(call('plan', { text: '@운영 서버 봐 줘', thread_ts: '0.9' })).toBeNull();
+    expect(call('ops', { text: '@운영팀 이야기' })).toBeNull();
+    expect(
+      decide(
+        env,
+        'ops',
+        'EK2',
+        ev({ type: 'message', user: 'USTRANGER', text: '@이운재 hi' }),
+        'UBOTOPS',
+      ),
+    ).toBeNull();
+  });
 
   it('운영자 멘션만 받는다', () => {
     expect(
@@ -360,6 +462,10 @@ describe('parseHandoffs', () => {
     expect(parseHandoffs(text, 'plan')).toEqual([
       { to: 'ops', request: '10-15 20시쯤 시즌 저장 실패가 있었는지 확인해 주세요' },
       { to: 'dev', request: '작업 후보' },
+    ]);
+    expect(parseHandoffs('→ @이운재: 서버 확인\n→ @마케팅: 공지 초안', 'plan')).toEqual([
+      { to: 'ops', request: '서버 확인' },
+      { to: 'mkt', request: '공지 초안' },
     ]);
   });
 });
@@ -556,5 +662,183 @@ describe('디시 갤러리', () => {
       'https://gall.dcinside.com/mgallery/board/view/?id=offsidegame&no=200',
     ]);
     expect(next.cursor?.comment).toBe(501);
+  });
+});
+
+describe('@dev', () => {
+  const gh =
+    (routes: Record<string, unknown>, calls: string[] = []): Gh =>
+    async (path, init) => {
+      calls.push(`${init?.method ?? 'GET'} ${path}`);
+      const hit = Object.keys(routes).find((k) => path.startsWith(k));
+      return { status: 200, data: (hit ? routes[hit] : {}) as never };
+    };
+  const pr = (o: Record<string, unknown> = {}) =>
+    ({
+      number: 7,
+      title: 'T-11-999: 고침',
+      state: 'open',
+      html_url: '',
+      head: { sha: 'abc', ref: 'agent-dev/1' },
+      base: { ref: 'main' },
+      ...o,
+    }) as Parameters<typeof mergeBlocker>[1];
+  const green = { check_runs: [{ name: 'PR plan', status: 'completed', conclusion: 'success' }] };
+
+  it('검사 통과 · main 최신 · 승인한 커밋일 때만 머지한다', async () => {
+    expect(
+      await mergeBlocker(gh({ '/commits/': green, '/compare/': { behind_by: 0 } }), pr(), 'abc'),
+    ).toBeNull();
+    expect(await mergeBlocker(gh({}), pr(), 'zzz')).toMatch('커밋이 바뀌었어요');
+    expect(
+      await mergeBlocker(gh({}), pr({ head: { sha: 'abc', ref: 'feature/x' } }), 'abc'),
+    ).toMatch('@dev가 연');
+    const red = { check_runs: [{ name: 'e2e', status: 'completed', conclusion: 'failure' }] };
+    expect(await mergeBlocker(gh({ '/commits/': red }), pr(), 'abc')).toMatch('통과하지 않았어요');
+    const calls: string[] = [];
+    expect(
+      await mergeBlocker(
+        gh({ '/commits/': green, '/compare/': { behind_by: 2 } }, calls),
+        pr(),
+        'abc',
+      ),
+    ).toMatch('최신 main으로 맞췄어요');
+    expect(calls).toContain('PUT /pulls/7/update-branch');
+  });
+
+  it('작업 시작 도구는 운영자가 맡긴 일에만 있다', () => {
+    const env = { GITHUB_REPO: 'o/r' } as Env;
+    const task = (kind: Task['kind']) =>
+      ({
+        kind,
+        role: 'dev',
+        channel: 'C',
+        threadTs: '1.1',
+        eventId: 'e',
+        sourceTs: '',
+        text: '',
+      }) as Task;
+    const names = (k: Task['kind']) =>
+      devTools(env, task(k), async () => gh({})).map((t) => t.name);
+    expect(names('mention')).toContain('start_work');
+    expect(names('reply')).toContain('start_work');
+    expect(names('handoff')).not.toContain('start_work');
+  });
+
+  it('앱 JWT를 RS256으로 서명한다', async () => {
+    const pair = (await crypto.subtle.generateKey(
+      {
+        name: 'RSASSA-PKCS1-v1_5',
+        modulusLength: 2048,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: 'SHA-256',
+      },
+      true,
+      ['sign', 'verify'],
+    )) as CryptoKeyPair;
+    const der = new Uint8Array(
+      (await crypto.subtle.exportKey('pkcs8', pair.privateKey)) as ArrayBuffer,
+    );
+    const pem = `-----BEGIN PRIVATE KEY-----\n${btoa(String.fromCharCode(...der))}\n-----END PRIVATE KEY-----`;
+    const jwt = await appJwt('123', pem, 1_000_000_000_000);
+    const [h, b, s] = jwt.split('.');
+    const dec = (x: string) =>
+      Uint8Array.from(atob(x.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+    expect(JSON.parse(new TextDecoder().decode(dec(b!)))).toMatchObject({
+      iss: '123',
+      iat: 999_999_970,
+    });
+    expect(
+      await crypto.subtle.verify(
+        'RSASSA-PKCS1-v1_5',
+        pair.publicKey,
+        dec(s!),
+        new TextEncoder().encode(`${h}.${b}`),
+      ),
+    ).toBe(true);
+  });
+});
+
+describe('report_digest', () => {
+  it('예약 워크플로 24시간 결과 · 로그 오류 집계 · 백업 기록을 한 번에 모은다', async () => {
+    const urls: string[] = [];
+    const json = (b: unknown) => new Response(JSON.stringify(b));
+    const fetcher = (async (u: string, init?: RequestInit) => {
+      urls.push(u);
+      if (u.endsWith('/actions/workflows?per_page=100'))
+        return json({
+          workflows: [
+            {
+              id: 1,
+              name: 'Infra health',
+              path: '.github/workflows/infra-health.yml',
+              state: 'active',
+            },
+          ],
+        });
+      if (u.includes('raw.githubusercontent.com'))
+        return new Response("on:\n  schedule:\n    - cron: '17 * * * *'\n");
+      if (u.includes('/actions/workflows/1/runs'))
+        return json({
+          workflow_runs: [
+            {
+              status: 'completed',
+              conclusion: 'failure',
+              created_at: '2026-10-16T00:17:00Z',
+              html_url: 'https://x/1',
+              event: 'schedule',
+            },
+            {
+              status: 'completed',
+              conclusion: 'success',
+              created_at: '2026-10-15T23:17:00Z',
+              html_url: 'https://x/2',
+              event: 'schedule',
+            },
+          ],
+        });
+      if (u.endsWith('/schedules'))
+        return json({ success: true, result: { schedules: [{ cron: '*/5 * * * *' }] } });
+      if (u.endsWith('/telemetry/query')) {
+        const q = JSON.parse(String(init?.body)) as {
+          parameters: { groupBys: { value: string }[] };
+        };
+        return json({
+          success: true,
+          result: {
+            calculations: [
+              {
+                aggregates: [
+                  { count: 3, groups: [{ key: q.parameters.groupBys[0]!.value, value: 'backup' }] },
+                ],
+              },
+            ],
+          },
+        });
+      }
+      throw new Error(`unexpected ${u}`);
+    }) as unknown as typeof fetch;
+    const sqls: string[] = [];
+    const [tool] = digestTools({
+      repo: 'o/r',
+      accountId: 'a',
+      cfToken: 't',
+      workers: ['offside-api'],
+      fetcher,
+      d1: async (sql) => (sqls.push(sql), '{"rows":[]}'),
+    });
+    const out = JSON.parse(await tool!.run({})) as {
+      actions: { last24h: Record<string, number>; problems: { url: string }[] }[];
+      logs_24h: { 'offside-api': { logs_by_job: { job: string; count: number }[] } };
+      backup: { meta: string };
+    };
+    expect(out.actions[0]).toMatchObject({
+      last24h: { failure: 1, success: 1 },
+      problems: [{ url: 'https://x/1' }],
+    });
+    expect(out.logs_24h['offside-api'].logs_by_job).toEqual([{ job: 'backup', count: 3 }]);
+    expect(out.backup.meta).toBe('{"rows":[]}');
+    expect(sqls[0]).toContain('cron:backup:last');
+    expect(urls.some((u) => u.includes('per_page=40&created=%3E%3D'))).toBe(true);
   });
 });

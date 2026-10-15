@@ -1,0 +1,28 @@
+# ADR-015 3단계: @dev PR(agent-dev/* 브랜치)의 CI가 끝나면 Worker에 알린다. 통과면 Worker가 #agent-approvals에 머지 승인 카드를 올린다.
+name: Agent dev CI report
+
+on:
+  workflow_run:
+    workflows: ['CI and Staging']
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  report:
+    if: github.event.workflow_run.event == 'pull_request' && startsWith(github.event.workflow_run.head_branch, 'agent-dev/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Report to Worker
+        env:
+          AGENTS_READ_TOKEN: ${{ secrets.AGENTS_READ_TOKEN }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          jq -n --arg branch "$BRANCH" --arg sha "$SHA" --arg conclusion "$CONCLUSION" --arg url "$URL" \
+            '{branch: $branch, sha: $sha, conclusion: $conclusion, url: $url}' |
+            curl -sS -f -X POST 'https://agents.offside-lab.com/internal/run?job=dev-ci' \
+              -H "Authorization: Bearer $AGENTS_READ_TOKEN" -H 'Content-Type: application/json' --data-binary @-

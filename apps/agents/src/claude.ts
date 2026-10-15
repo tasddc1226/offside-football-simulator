@@ -1,9 +1,29 @@
-// Claude Messages API 도구 루프. 모델은 Opus 5.5로 고정하고(ADR-015 결정 2), 응답 모델이 다르면 실패로 끝낸다.
-export const MODEL = 'claude-opus-5-5';
+// Claude Messages API 도구 루프. 모델은 일마다 정해 명시하고(ADR-015 결정 2 · T-11-289), 응답 모델이 다르면 실패로 끝낸다.
+export const MODELS = {
+  opus: 'claude-opus-5-5',
+  sonnet: 'claude-sonnet-5-5',
+  haiku: 'claude-haiku-5-5',
+} as const;
+export type Model = (typeof MODELS)[keyof typeof MODELS];
+export const MODEL: Model = MODELS.opus;
 const API = 'https://api.anthropic.com/v1/messages';
 
-/** 100만 토큰당 달러(2026-10 Opus 5.5 가격표). 입력 · 5분 캐시 쓰기 · 캐시 읽기 · 출력. */
-export const PRICE = { input: 4, cacheWrite: 5, cacheRead: 0.2, output: 20 } as const;
+type Price = { input: number; cacheWrite: number; cacheRead: number; output: number };
+/** 100만 토큰당 달러(2026-10 가격표). 입력 · 5분 캐시 쓰기 · 캐시 읽기 · 출력. */
+export const PRICES: Record<Model, Price> = {
+  'claude-opus-5-5': { input: 4, cacheWrite: 5, cacheRead: 0.2, output: 20 },
+  'claude-sonnet-5-5': { input: 2, cacheWrite: 2.5, cacheRead: 0.1, output: 10 },
+  'claude-haiku-5-5': { input: 0.1, cacheWrite: 0.125, cacheRead: 0.01, output: 0.5 },
+};
+/** Haiku 5.5는 프롬프트가 10만 토큰을 넘으면 모든 단가가 5배다. */
+const HAIKU_LONG = 100_000;
+export const PRICE = PRICES[MODEL];
+
+export const MODEL_LABEL: Record<Model, string> = {
+  'claude-opus-5-5': 'Opus 5.5',
+  'claude-sonnet-5-5': 'Sonnet 5.5',
+  'claude-haiku-5-5': 'Haiku 5.5',
+};
 
 export type Usage = {
   input_tokens: number;
@@ -12,12 +32,20 @@ export type Usage = {
   cache_read_input_tokens?: number | null;
 };
 
-export const costOf = (u: Usage) =>
-  (u.input_tokens * PRICE.input +
-    (u.cache_creation_input_tokens ?? 0) * PRICE.cacheWrite +
-    (u.cache_read_input_tokens ?? 0) * PRICE.cacheRead +
-    u.output_tokens * PRICE.output) /
-  1e6;
+export const costOf = (u: Usage, model: Model = MODEL) => {
+  const p = PRICES[model];
+  const write = u.cache_creation_input_tokens ?? 0;
+  const read = u.cache_read_input_tokens ?? 0;
+  const k = model === MODELS.haiku && u.input_tokens + write + read > HAIKU_LONG ? 5 : 1;
+  return (
+    (k *
+      (u.input_tokens * p.input +
+        write * p.cacheWrite +
+        read * p.cacheRead +
+        u.output_tokens * p.output)) /
+    1e6
+  );
+};
 
 type TextBlock = { type: 'text'; text: string };
 type ToolUse = { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> };
@@ -36,6 +64,21 @@ export type Tool = {
 const FINAL_AT = 0.85;
 const FINAL_NOTE =
   '조회 한도에 닿았어요. 도구를 더 쓰지 말고 지금까지 확인한 것만으로 답을 정리해 주세요. 확인하지 못한 것은 그렇다고 적어 주세요.';
+
+/**
+ * 대화 끝(마지막 메시지의 마지막 블록)에 캐시 표시를 단 사본. 도구 루프는 턴마다 앞 대화를 통째로 다시 보내므로,
+ * 직전 턴까지를 캐시에서 읽게 한다(캐시 읽기는 입력 값의 5%). 표시는 system · tools와 합쳐 4개 상한 안에서 이것 하나만 쓴다.
+ */
+export function withCacheTail(messages: Message[]): Message[] {
+  const last = messages.at(-1);
+  if (!last) return messages;
+  const blocks: Block[] =
+    typeof last.content === 'string' ? [{ type: 'text', text: last.content }] : [...last.content];
+  const end = blocks.at(-1);
+  if (!end) return messages;
+  blocks[blocks.length - 1] = { ...end, cache_control: { type: 'ephemeral' } };
+  return [...messages.slice(0, -1), { ...last, content: blocks }];
+}
 
 export class ClaudeError extends Error {
   constructor(
@@ -60,9 +103,11 @@ export async function runAgent(opts: {
   messages: Message[];
   maxTurns: number;
   budgetUsd: number;
+  model?: Model;
   fetcher?: typeof fetch;
 }): Promise<RunResult> {
   const fetcher = opts.fetcher ?? fetch;
+  const model = opts.model ?? MODEL;
   const messages = [...opts.messages];
   const byName = new Map(opts.tools.map((t) => [t.name, t]));
   // 역할 설명 · 도구 정의는 매번 같으니 캐시한다(ADR-015 비용 통제).
@@ -89,12 +134,12 @@ export async function runAgent(opts: {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: MODEL,
+        model,
         max_tokens: 8000,
         system: [{ type: 'text', text: opts.system, cache_control: { type: 'ephemeral' } }],
         tools,
         ...(stopped ? { tool_choice: { type: 'none' } } : {}),
-        messages,
+        messages: withCacheTail(messages),
       }),
     });
     const data = (await r.json().catch(() => ({}))) as {
@@ -111,8 +156,8 @@ export async function runAgent(opts: {
           .filter(Boolean)
           .join(': '),
       );
-    if (!data.model?.startsWith(MODEL)) throw new ClaudeError(0, `unexpected model: ${data.model}`);
-    if (data.usage) costUsd += costOf(data.usage);
+    if (!data.model?.startsWith(model)) throw new ClaudeError(0, `unexpected model: ${data.model}`);
+    if (data.usage) costUsd += costOf(data.usage, model);
     const content = data.content ?? [];
     messages.push({ role: 'assistant', content });
     const text = content

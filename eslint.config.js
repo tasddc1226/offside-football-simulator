@@ -10,6 +10,8 @@ export default [
       'apps/mobile/android/**',
       'apps/mobile/.expo/**',
       'apps/mobile/plugins/**',
+      // T-11-286 1.1.2 OTA 묶음에 넣으려고 그대로 들여온 fflate.
+      'apps/mobile/src/vendor/**',
     ],
   },
   // T-10-001: apps/web UI가 Svelte 5(runes)로 옮겨오며 .svelte 파일에도 린트를 켠다.
