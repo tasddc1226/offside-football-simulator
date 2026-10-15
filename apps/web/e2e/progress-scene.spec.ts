@@ -27,6 +27,13 @@ test('progress popup has no running player; skip and confirmation keep the resul
   await expect(page.locator('[data-block-wdl]')).not.toBeEmpty();
   expect(await page.evaluate(() => localStorage.getItem('ft_save'))).toBe(saved);
   await page.clock.resume();
+  // 결과가 떠오르는 중간(반투명)에 대비를 재면 잘못 걸린다. 끝나는 애니메이션이 다 끝난 뒤에 잰다.
+  await page.waitForFunction(() =>
+    document
+      .querySelector('#sheet')!
+      .getAnimations({ subtree: true })
+      .every((a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity),
+  );
   const issues = await new AxeBuilder({ page }).include('#sheet').analyze();
   expect(issues.violations.map((v) => v.id)).toEqual([]);
   await page.locator('#sheet [data-sheet="0"]').click();

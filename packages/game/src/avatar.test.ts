@@ -107,13 +107,13 @@ describe('선수 카드 초상', () => {
     const rng = getActiveRng().getState();
     for (let style = 0; style < LOOK_STYLES.length; style++) {
       const sp = cardAvatarSpec({ careerId: s.cid, look: `y${style}` });
-      const plan = avatarImagePlan(sp, undefined, true);
+      const plan = avatarImagePlan(sp, true);
       expect(plan.layers.length).toBeGreaterThan(0);
       // 완전 민머리(bald)는 맨몸 머리 그대로다.
       if (LOOK_STYLES[style] !== 'bald')
         expect(plan.layers.map((l) => l.layer)).toContain(`hair-${LOOK_STYLES[style]}`);
       expect(plan).toEqual(
-        avatarImagePlan(cardAvatarSpec({ careerId: s.cid, look: `y${style}` }), undefined, true),
+        avatarImagePlan(cardAvatarSpec({ careerId: s.cid, look: `y${style}` }), true),
       );
     }
     expect(getActiveRng().getState()).toEqual(rng);
