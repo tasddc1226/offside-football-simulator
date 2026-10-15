@@ -188,7 +188,8 @@ export async function countOpenListingsOf(db: Db, sellerId: string): Promise<num
   return row?.n ?? 0;
 }
 
-/** T-11-145 이 선수들 중 시장에 내놓은(열린 매물) 수. */
+/** T-11-145 이 선수들 중 시장에 내놓은(열린 매물) 수.
+ * T-11-268 열린 매물의 선수 인덱스(부분 유니크)로 고정 — 플래너가 status 인덱스를 골라 열린 매물 전체(운영 1,600행)를 훑었다. */
 export async function countOpenListingsAmong(
   db: Db,
   careerIds: readonly string[],
@@ -196,7 +197,7 @@ export async function countOpenListingsAmong(
   if (!careerIds.length) return 0;
   const row = await db.$client
     .prepare(
-      `SELECT count(*) AS n FROM market_listings WHERE status = 'open' AND career_id IN (SELECT value FROM json_each(?))`,
+      `SELECT count(*) AS n FROM market_listings INDEXED BY market_listings_open_card_unique WHERE status = 'open' AND career_id IN (SELECT value FROM json_each(?))`,
     )
     .bind(JSON.stringify(careerIds))
     .first<{ n: number }>();

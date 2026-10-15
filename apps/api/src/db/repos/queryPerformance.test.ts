@@ -5,6 +5,8 @@ import { createTestD1, syncCards, type TestD1 } from '../../test/d1.js';
 import { createDb } from '../client.js';
 import { listPublicHof } from './careers.js';
 import { listTeamRanking } from './ownerTeams.js';
+import { recordCareerFirsts } from './firsts.js';
+import { countOpenListingsAmong } from './market.js';
 import { achievementRankOf, ownerActivityIn } from './ownerAchievements.js';
 import { listRetiredNumbers, summarizeRetiredNumbers } from './retiredNumbers.js';
 import { titleMetricsOf } from './ownerTitles.js';
@@ -342,5 +344,107 @@ describe('critical query result and read-cost regressions (local D1)', () => {
       ranked: 9,
     });
     expect(traced.queries).toHaveLength(0);
+  });
+  // 운영(시즌 1, 약 1,900팀) 평점순 1쪽: 12,717 → 6,403행. 이 작은 픽스처에선 차이가 드러나지 않아 결과·쿼리 모양만 본다.
+  it('rating and ovr team ranks count lineup value only for the page teams (T-11-268)', async () => {
+    await ctx.env.DB.exec(
+      'UPDATE owner_teams SET rating = 900 + (cast(substr(id,6) as integer) * 37) % 200, ovr = 60 + cast(substr(id,6) as integer) % 30;',
+    );
+    try {
+      for (const now of ['2026-09-30T00:00:00.000Z', '2030-01-01T00:00:00.000Z']) {
+        const allValues = new Map<string, number>();
+        for (const page of [1, 2, 3, 4])
+          for (const r of (await listTeamRanking(ctx.db, 0, 'value', page, now)).rows)
+            allValues.set(r.id, r.value);
+        for (const sort of ['rating', 'ovr'] as const) {
+          for (const page of [1, 2, 4]) {
+            traced.queries.length = 0;
+            await listTeamRanking(traced.db, 0, 'value', page, now);
+            const valueQuery = traced.queries[0]!;
+            traced.queries.length = 0;
+            const result = await listTeamRanking(traced.db, 0, sort, page, now);
+            expect(result.total).toBe(77);
+            const q = traced.queries[0]!;
+            expect(q.sql).toContain('"team_page"');
+            // 바꾸기 전 쿼리: 페이지를 고르면서 모든 팀의 가치를 센다.
+            const order =
+              sort === 'rating'
+                ? 'order by "owner_teams"."rating" desc, "owner_teams"."ovr" desc, "owner_teams"."created_at" asc, "owner_teams"."id" asc'
+                : 'order by "owner_teams"."ovr" desc, "owner_teams"."rating" desc, "owner_teams"."created_at" asc, "owner_teams"."id" asc';
+            const baseline = {
+              ...valueQuery,
+              sql: valueQuery.sql.replace(
+                'order by lineup_value desc, "owner_teams"."rating" desc, "owner_teams"."created_at" asc, "owner_teams"."id" asc',
+                order,
+              ),
+            };
+            expect(baseline.sql).not.toBe(valueQuery.sql);
+            const current = await run(q);
+            const old = await run(baseline);
+            expect(current.results).toEqual(old.results);
+            expect(current.results.length).toBe(page === 4 ? 17 : 20);
+            for (const r of result.rows) expect(r.value).toBe(allValues.get(r.id));
+          }
+        }
+      }
+    } finally {
+      await ctx.env.DB.exec('UPDATE owner_teams SET rating = 1000, ovr = 80;');
+    }
+  });
+
+  it('server firsts are looked up by their (season, id) key, ignoring other seasons (T-11-268)', async () => {
+    // 다른 시즌에 같은 기록 id를 더 이르게 가진 커리어가 있어도 이 시즌 자리는 비어 있다.
+    traced.queries.length = 0;
+    await recordCareerFirsts(traced.db, 'career-1', { legendOnly: true, automaticHiding: false });
+    const lookup = traced.queries.find((q) => /from "server_firsts" where/.test(q.sql))!;
+    expect(lookup.sql).toContain('"server_firsts"."season" = ?');
+    expect(await plan(lookup)).toContain('(season=? AND id=?)');
+    const claimed = await ctx.env.DB.prepare(
+      'SELECT id, achieved_at FROM server_firsts WHERE season = 1 AND career_id = ?',
+    )
+      .bind('career-1')
+      .all<{ id: string; achieved_at: string }>();
+    expect(claimed.results.length).toBeGreaterThan(0);
+    await ctx.env.DB.prepare(
+      "INSERT INTO server_firsts (season, id, career_id, achieved_at) SELECT 7, id, 'career-2', '2000-01-01' FROM server_firsts WHERE season = 1",
+    ).run();
+    // 다른 시즌의 더 이른 기록은 이 시즌 자리를 뺏지도, 다시 쓰게 하지도 않는다.
+    expect(
+      await recordCareerFirsts(ctx.db, 'career-1', { legendOnly: true, automaticHiding: false }),
+    ).toBe(false);
+    const after = await ctx.env.DB.prepare(
+      'SELECT count(*) AS n FROM server_firsts WHERE season = 1 AND career_id = ?',
+    )
+      .bind('career-1')
+      .first<{ n: number }>();
+    expect(after?.n).toBe(claimed.results.length);
+  });
+
+  it('open listing count among a lineup reads only those cards (T-11-268)', async () => {
+    await ctx.env.DB.prepare(
+      `
+      WITH RECURSIVE n(x) AS (VALUES(0) UNION ALL SELECT x+1 FROM n WHERE x<1499)
+      INSERT INTO market_listings (id, career_id, seller_id, season, price, status, created_at, closed_at)
+      SELECT 'listing-'||x, 'career-'||(x+100), 'profile-'||(x%80), 0, 1000,
+        CASE WHEN x%3=0 THEN 'sold' ELSE 'open' END, '2026-09-28', NULL FROM n
+    `,
+    ).run();
+    const ids = ['career-101', 'career-102', 'career-103', 'career-105', 'career-1', 'career-2'];
+    traced.queries.length = 0;
+    expect(await countOpenListingsAmong(traced.db, ids)).toBe(3);
+    const q = traced.queries[0]!;
+    const baseline = {
+      ...q,
+      sql: q.sql.replace(' INDEXED BY market_listings_open_card_unique', ''),
+    };
+    const current = await run(q);
+    const old = await run(baseline);
+    expect(current.results).toEqual(old.results);
+    expect(await plan(q)).toContain('market_listings_open_card_unique');
+    expect(current.meta.rows_read * 20).toBeLessThan(old.meta.rows_read);
+    console.info('open listings rows read', {
+      before: old.meta.rows_read,
+      after: current.meta.rows_read,
+    });
   });
 });

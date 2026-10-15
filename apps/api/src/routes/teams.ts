@@ -50,6 +50,9 @@ import { linesOf, recordOf, seasonOptions, slotsOf } from '../team/view.js';
 // T-10-092 라이브 랭킹(팀 랭킹)과 팀 프로필. 로그인 없이 누구나 본다 — 팀 이름·감독 이름·선수의 공개 이름(없으면 익명
 // 표기)만 있고 구단주 계정 정보는 없다. 랭킹은 원작처럼 5분마다 새로 센다(엣지 캐시).
 const RANK_TTL = 300;
+/** T-11-268 가치순은 팀마다 선발 카드 가치를 모두 더해 정렬한다(운영 1회 약 5.6만 행) — 편성 저장 때도 지우지 않는
+ * 목록이라 30분 동안 담는다. 평점·OVR순은 그대로 5분. */
+const RANK_VALUE_TTL = 1800;
 const RANK_CACHE = 'public, max-age=60';
 
 const teamParam = (c: Context<AppEnv>) => parseWithAppError(TeamIdSchema, c.req.param('teamId'));
@@ -69,7 +72,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     const data = await edgeCached(
       c,
       EDGE.teamRank(season, q.sort, q.page),
-      RANK_TTL,
+      q.sort === 'value' ? RANK_VALUE_TTL : RANK_TTL,
       async (): Promise<Omit<TeamRankResponse, 'seasons'>> => {
         const { rows, total } = await listTeamRanking(getDb(c), season, q.sort, q.page, now);
         const forms = await listTeamRecentForm(
