@@ -9,8 +9,13 @@ import {
   PutOwnerTeamResponseSchema,
   PutTeamPresetsBodySchema,
   PutTeamPresetsResponseSchema,
+  TEAM_MATCHES_FIRST_PAGE,
+  TEAM_MATCHES_PAGE,
+  TEAM_STATS_MATCHES_MAX,
+  TeamMatchCursorSchema,
   TeamMatchesResponseSchema,
   TeamOpponentsResponseSchema,
+  TeamStatsResponseSchema,
   type OwnerTeam,
   type TeamOpponent,
 } from '@offside/contracts';
@@ -52,7 +57,8 @@ import {
   listEligibleCareers,
   listMyTeams,
   listOpponentCandidates,
-  listRecentMatches,
+  listMatchesPage,
+  listStatsMatches,
   liveTeam,
   meetingsSince,
   myTeamIn,
@@ -73,7 +79,7 @@ import { ownerTeams } from '../db/schema.js';
 import { edgeCached, purgeEdge, waitUntil } from '../edgeCache.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
-import { AppError } from '../errors.js';
+import { AppError, parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { refreshAfterChange, refreshOwnerAchievements } from '../team/ownerAchievements.js';
@@ -85,6 +91,7 @@ import {
   type LineupSlot,
 } from '../team/sim.js';
 import { lineupsOf, matchDetailOf, matchViews, playedMatch } from '../team/match.js';
+import { teamStatsView } from '../team/stats.js';
 import { linesOf, recordOf, seasonOptions, slotsOf } from '../team/view.js';
 import { localizeAchievements } from '../team/achievementsText.js';
 import { reqLang, type Lang } from '../lang.js';
@@ -592,15 +599,38 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     );
   });
 
-  // 그 시즌 내 팀의 최근 경기(건 경기 + 받은 경기). 선수 이름은 지금 공개 이름으로 붙인다.
+  // 그 시즌 내 팀의 경기 기록(건 경기 + 받은 경기, 최신순). 선수 이름은 지금 공개 이름으로 붙인다.
+  // T-11-269 cursor(앞 쪽의 next)를 주면 그다음 TEAM_MATCHES_PAGE경기를 준다. 첫 쪽은 예전처럼 TEAM_MATCHES_FIRST_PAGE경기.
   app.get('/v1/owner-team/matches', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
     const season = seasonQuery(c, nowIso());
+    const raw = c.req.query('cursor');
+    const cursor = raw ? parseWithAppError(TeamMatchCursorSchema, raw) : null;
     const [team] = await myTeamIn(db, me.id, season);
-    const items = team
-      ? await matchViews(db, await listRecentMatches(db, me.id, team.id), () => team.id, reqLang(c))
-      : [];
-    return ok(c, TeamMatchesResponseSchema, { items }, 200, NO_STORE);
+    if (!team) return ok(c, TeamMatchesResponseSchema, { items: [], next: null }, 200, NO_STORE);
+    const cut = cursor ? cursor.lastIndexOf('_') : -1;
+    const page = await listMatchesPage(
+      db,
+      team.id,
+      cursor ? { createdAt: cursor.slice(0, cut), id: cursor.slice(cut + 1) } : null,
+      cursor ? TEAM_MATCHES_PAGE : TEAM_MATCHES_FIRST_PAGE,
+    );
+    const items = await matchViews(db, page.rows, () => team.id, reqLang(c));
+    const next = page.next ? `${page.next.createdAt}_${page.next.id}` : null;
+    return ok(c, TeamMatchesResponseSchema, { items, next }, 200, NO_STORE);
+  });
+
+  // T-11-269 그 시즌 내 팀의 랭크 경기 통계(선수별 골 · 도움, 날짜별 · 상대별 전적). 통계 화면을 열 때만 부른다.
+  app.get('/v1/owner-team/stats', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const season = seasonQuery(c, nowIso());
+    const [team] = await myTeamIn(db, me.id, season);
+    const { rows, capped } = team
+      ? await listStatsMatches(db, team.id, TEAM_STATS_MATCHES_MAX)
+      : { rows: [], capped: false };
+    const stats = await teamStatsView(db, season, team?.id ?? '', rows, capped, reqLang(c));
+    return ok(c, TeamStatsResponseSchema, stats, 200, NO_STORE);
   });
 }

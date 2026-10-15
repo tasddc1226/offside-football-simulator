@@ -86,6 +86,8 @@ export const WILDCARD_FULL_TEXT = `지난 시즌 선수는 선발에 ${TEAM_WILD
 export const FRIENDS_MAX = 50;
 /** 구단주 한 명이 한국 시각 하루에 걸 수 있는 친선전 수(랭크 경기와 따로 센다). */
 export const FRIENDLY_MATCHES_PER_DAY = 10;
+/** T-11-269 시즌 통계에 세는 최근 랭크 경기 상한(건 경기 · 받은 경기 각각). */
+export const TEAM_STATS_MATCHES_MAX = 2000;
 
 // T-11-171 친구 초대 이벤트. 아직 은퇴 선수가 없는 구단주가 친구 코드(초대 링크)로 친구 신청을 하면 초대로 기록하고, 그
 // 구단주가 선수 커리어를 은퇴까지 마치면 두 사람 모두 리롤권과 프리미엄 스카우트권을 받는다(초대한 쪽은 INVITE_REWARD_MAX명까지).

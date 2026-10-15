@@ -295,16 +295,16 @@ test('자금이 모자라면 영입 버튼이 잠기고, 이미 팔린 선수는
   );
   // T-11-211 카드 체격 줄 끝에 주발.
   await expect(page.locator('[data-card-body]')).toHaveText('183cm · 76kg · 왼발');
-  await expect(page.getByRole('dialog').locator('svg.avatar')).toHaveAttribute(
-    'viewBox',
-    '0 0 24 21',
-  );
+  // T-11-270 초상은 24×21칸 캔버스(× 10px).
+  await expect(page.getByRole('dialog').locator('canvas.avatar')).toHaveAttribute('height', '210');
   // 꾸미기 코드의 머리 모양이 PNG 초상에 들어간다(T-11-243 도트 그림 제거).
-  await expect(page.getByRole('dialog').locator('svg.image-avatar')).toHaveAttribute(
+  await expect(page.getByRole('dialog').locator('canvas.image-avatar')).toHaveAttribute(
     'data-hair',
     'long',
   );
-  await expect(page.getByRole('dialog').locator('svg.image-avatar > g')).toBeVisible();
+  await expect(
+    page.getByRole('dialog').locator('canvas.image-avatar[data-ready="true"]'),
+  ).toBeVisible();
   await expect(page.locator('[data-act="buy"]')).toBeDisabled();
   await page.getByRole('dialog').getByRole('button', { name: '닫기' }).click();
 

@@ -16,6 +16,7 @@
     onreplay,
     onagain,
     onhistory,
+    onplayer,
   }: {
     m: TeamMatch;
     team: OwnerTeam | null;
@@ -25,7 +26,10 @@
     onreplay: () => void;
     onagain: () => void;
     onhistory?: (() => void) | undefined;
+    /** T-11-269 우리 선수 이름을 누르면 시즌 통계의 그 선수 줄로(랭크 경기만 — 친선전은 통계에 없다). */
+    onplayer?: ((careerId: string) => void) | undefined;
   } = $props();
+  const link = (id: string | null) => (onplayer && !m.friendly && id ? id : null);
 
   const gain = $derived(m[m.mine].ratingChange);
 </script>
@@ -52,8 +56,14 @@
         <li class:away={e.side === 'away'}>
           <span class="tm-min">{e.minute}'</span>
           <span>
-            <b>{eventName(e.scorerId, e.scorer)}</b>
-            {#if e.assist}<small class="muted">{L.assist({ name: eventName(e.assistId, e.assist) })}</small>{/if}
+            {#if link(e.scorerId)}
+              <button class="tm-player" onclick={() => onplayer!(e.scorerId!)} aria-label={L.playerStatsAria({ name: eventName(e.scorerId, e.scorer) })} data-act="team-player-stats"><b>{eventName(e.scorerId, e.scorer)}</b></button>
+            {:else}<b>{eventName(e.scorerId, e.scorer)}</b>{/if}
+            {#if e.assist}
+              {#if link(e.assistId)}
+                <button class="tm-player muted fs-sm" onclick={() => onplayer!(e.assistId!)} aria-label={L.playerStatsAria({ name: eventName(e.assistId, e.assist) })}>{L.assist({ name: eventName(e.assistId, e.assist) })}</button>
+              {:else}<small class="muted">{L.assist({ name: eventName(e.assistId, e.assist) })}</small>{/if}
+            {/if}
           </span>
         </li>
       {/each}
@@ -126,6 +136,17 @@
   .tm-events li > span:last-child {
     display: flex;
     flex-direction: column;
+  }
+  .tm-player {
+    all: unset;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: var(--line);
+    text-underline-offset: 3px;
+  }
+  .tm-player:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
   .tm-min {
     flex: none;

@@ -1,0 +1,23 @@
+{
+  "id": "t-11-270-avatar-smooth",
+  "title": "선수 그림 화면 끊김 수정",
+  "items": [
+    "선수 그림이 많은 화면에서 1~2초씩 멈추던 문제를 고쳤어요",
+    "앱 업데이트 용량이 줄었어요"
+  ],
+  "en": {
+    "title": "Smoother player artwork",
+    "items": [
+      "Fixed 1–2 second freezes on screens with many player characters.",
+      "App updates are smaller."
+    ]
+  },
+  "ja": {
+    "title": "選手イラスト画面のカクつきを修正",
+    "items": [
+      "選手イラストが多い画面で1〜2秒止まる問題を修正しました。",
+      "アプリのアップデート容量が小さくなりました。"
+    ]
+  },
+  "availability": "web-app"
+}
