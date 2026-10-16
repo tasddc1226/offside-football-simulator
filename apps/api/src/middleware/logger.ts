@@ -56,20 +56,23 @@ function recordStatus(c: Context<AppEnv>, status: number, durationMs: number) {
   const db = c.env?.DB;
   if (!db || !STATUS_ENVS.has(c.env.ENVIRONMENT ?? '')) return;
   if (!countable(c.req.method, c.req.header('upgrade'))) return;
+  let ctx: Pick<ExecutionContext, 'waitUntil'>;
+  try {
+    ctx = c.executionCtx;
+  } catch {
+    return; // executionCtx가 없는 실행(app.request 테스트)에서는 세지도 쓰지도 않는다.
+  }
   const due = recordRequest(Date.now(), durationMs, status);
   if (!due) return;
-  const write = flushTallies(db, due).catch((error: unknown) =>
-    console.log(
-      JSON.stringify({
-        level: 'warn',
-        msg: 'status-flush-failed',
-        error: String(error).slice(0, 200),
-      }),
+  ctx.waitUntil(
+    flushTallies(db, due).catch((error: unknown) =>
+      console.log(
+        JSON.stringify({
+          level: 'warn',
+          msg: 'status-flush-failed',
+          error: String(error).slice(0, 200),
+        }),
+      ),
     ),
   );
-  try {
-    c.executionCtx.waitUntil(write);
-  } catch {
-    // executionCtx가 없는 실행(테스트)에서는 기다리지 않는다.
-  }
 }
