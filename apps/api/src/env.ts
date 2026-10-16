@@ -34,6 +34,8 @@ export type Bindings = {
   EXPO_PUSH_ACCESS_TOKEN?: string;
   /** Emergency stop for dormant career archival (restores remain enabled). */
   CAREER_RETENTION_DISABLED?: string;
+  /** T-11-311 `'1'`이면 은퇴 상세를 R2에 쓰지 않고 D1(snapshot_json)에 둔다. 이미 R2에 있는 상세는 계속 읽는다. */
+  SNAPSHOT_R2_DISABLED?: string;
   /** Emergency stops for telemetry offload and public HOF read sessions. */
   SEASON_EVENTS_ARCHIVE_DISABLED?: string;
   SEASON_TELEMETRY_ARCHIVE_DISABLED?: string;

@@ -21,9 +21,10 @@ type Day = { costUsd: number; tasks: number; warned?: boolean };
 
 export type DevJob = { channel: string; threadTs: string; pr: number; title: string };
 export type Approval = {
+  /** 운영 배포 승인(T-11-312)은 0. */
   pr: number;
   sha: string;
-  action: 'merge' | 'reject';
+  action: 'merge' | 'reject' | 'deploy' | 'preflight' | 'deploy_reject';
   user: string;
   at: number;
   result: string;
@@ -101,6 +102,13 @@ export class AgentLedger extends DurableObject<Env> {
   /** 승인 · 거절 기록(누가 · 언제 · 무엇을). ADR-015 승인 단계. */
   async recordApproval(a: Approval): Promise<void> {
     await this.ctx.storage.put(`approval:${a.pr}:${a.at}`, a);
+  }
+  /** T-11-312 같은 main 커밋을 같은 모드로 두 번 띄우지 않는다. 처음이면 true. */
+  async claimDeploy(sha: string, mode: string): Promise<boolean> {
+    const key = `deploy:${sha}:${mode}`;
+    if (await this.ctx.storage.get(key)) return false;
+    await this.ctx.storage.put(key, Date.now());
+    return true;
   }
   /** 고객 문의: 문의 메일함을 어디까지 읽었는지(epoch ms) · 만든 답장 초안 · 승인 기록(T-11-291). */
   async supportCursor(): Promise<number | undefined> {

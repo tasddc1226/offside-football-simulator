@@ -282,6 +282,10 @@ const ko = {
   statFriendlyOnly: '전용',
   // T-11-182 은퇴 기록이 아직 서버에 없을 때
   retireSyncing: '은퇴한 선수 기록을 올리고 있어요. 올라가면 라커룸에 바로 들어와요.',
+  // T-11-301 올리기가 오래 멈췄을 때 손으로 다시 보내기
+  retireSyncRetry: '다시 올리기',
+  retireSyncRetrying: '올리는 중',
+  retireSyncFailed: '아직 올리지 못했어요. 연결을 확인하고 다시 올리기를 눌러 주세요.',
   // T-11-217 팀 프리셋
   tpButton: '프리셋',
   tpTitle: '팀 프리셋',

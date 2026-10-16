@@ -86,7 +86,7 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/hof/:careerId', async (c) => {
     const careerId = parseWithAppError(CareerIdParamSchema, c.req.param('careerId'));
     const found = await edgeCached(c, EDGE.hofDetail(careerId), DETAIL_TTL, () =>
-      getPublicHof(getDb(c), careerId),
+      getPublicHof(getDb(c), careerId, c.env),
     );
     if (!found) throw notFoundError('명예의 전당에서 선수를 찾지 못했어요.', 'HOF_NOT_FOUND');
     return ok(c, HofDetailResponseSchema, found, 200, CACHE);

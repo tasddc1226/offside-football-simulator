@@ -1,5 +1,7 @@
 import type { Bindings } from '../env.js';
 import { DAY_MS } from '../time.js';
+
+const GROWTH_WINDOW_MS = 3 * DAY_MS;
 import { BACKUP_LAST_KEY, BACKUP_STATE_KEY, chunkKey } from './backup.js';
 import { DAILY_META_KEY } from './daily.js';
 import { EVENT_ARCHIVE_META_KEY } from './seasonEventsArchive.js';
@@ -43,7 +45,8 @@ export function assessInfraHealth(
     { at: now, sizeBytes },
   ];
   // Hourly samples are bounded; compare only a full day's history, not an initial partial hour.
-  const first = samples.find((s) => now - s.at >= DAY_MS);
+  // T-11-311 증가 속도는 최근 3일로 잰다 — 7일 전 표본까지 쓰면 이미 고친 증가(정리 전 쓰기)가 예측을 끌어올린다.
+  const first = samples.find((s) => now - s.at >= DAY_MS && now - s.at <= GROWTH_WINDOW_MS);
   const growthBytesPerDay = first
     ? Math.max(0, ((sizeBytes - first.sizeBytes) * DAY_MS) / (now - first.at))
     : null;

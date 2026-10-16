@@ -340,6 +340,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'public_name',
     'shirt_number',
     'snapshot_json',
+    'snapshot_key',
     'wall_of_honor_json',
     'title',
     'last_club_id',

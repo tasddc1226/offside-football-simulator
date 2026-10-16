@@ -1,58 +1,9 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "dd97a2ee-5475-4a13-95b1-46f7c5f27f27",
+  "id": "1d29dc0c-3592-47b0-a76d-0ecdb03419e6",
   "prevId": "873188f8-ce00-42b9-b2aa-38bf967a454b",
   "tables": {
-    "api_status_buckets": {
-      "name": "api_status_buckets",
-      "columns": {
-        "bucket": {
-          "name": "bucket",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "requests": {
-          "name": "requests",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "total_ms": {
-          "name": "total_ms",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "slow": {
-          "name": "slow",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "errors": {
-          "name": "errors",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "app_auth_tickets": {
       "name": "app_auth_tickets",
       "columns": {
@@ -1622,6 +1573,13 @@
         },
         "snapshot_json": {
           "name": "snapshot_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "snapshot_key": {
+          "name": "snapshot_key",
           "type": "text",
           "primaryKey": false,
           "notNull": false,

@@ -538,3 +538,73 @@ describe('T-11-240 retirement guide season sync', () => {
     }
   });
 });
+
+describe('T-11-301 매달린 요청·회차', () => {
+  const CID = '77777777-7777-7777-7777-777777777777';
+  const seed = (items: unknown[]) => localStorage.setItem('ft_outbox', JSON.stringify(items));
+  const retirement = { kind: 'retirement', careerId: CID, body: summary };
+  /** signal이 끊길 때까지 응답하지 않는 fetch(iOS에서 뒤로 간 앱의 소켓처럼). */
+  const hangUntilAbort = (url: string, init?: RequestInit) =>
+    new Promise<Response>((_, reject) => {
+      if (String(url).endsWith('/v1/profile')) return void reject(new Error('unexpected'));
+      init?.signal?.addEventListener('abort', () =>
+        reject(new DOMException('The operation was aborted.', 'AbortError')),
+      );
+    });
+
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('응답이 없는 업로드는 시간 상한 뒤 끊고 큐에 남긴다(회차는 끝난다)', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation((url: string, init?: RequestInit) =>
+        String(url).endsWith('/v1/profile') ? Promise.resolve(ok()) : hangUntilAbort(url, init),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+    seed([retirement]);
+    const { flushOutbox } = await import('./outbox.js');
+    let done = false;
+    const run = flushOutbox().then(() => (done = true));
+    await vi.advanceTimersByTimeAsync(19_000);
+    expect(done).toBe(false);
+    await vi.advanceTimersByTimeAsync(2_000);
+    await run;
+    expect(done).toBe(true);
+    expect(queue()).toHaveLength(1);
+    expect((fetchMock.mock.calls[1]![1] as RequestInit).signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('회차가 오래 매달려 있으면 다음 flush가 새 회차를 열어 보낸다', async () => {
+    // 런타임이 abort를 무시해 영원히 끝나지 않는 fetch.
+    let hung = true;
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => (hung ? new Promise<Response>(() => {}) : Promise.resolve(ok())));
+    vi.stubGlobal('fetch', fetchMock);
+    seed([retirement]);
+    const { flushOutbox } = await import('./outbox.js');
+    const first = flushOutbox();
+    // 60초 안에는 같은 회차를 돌려준다.
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(flushOutbox()).toBe(first);
+    await vi.advanceTimersByTimeAsync(31_000);
+    hung = false;
+    const second = flushOutbox();
+    expect(second).not.toBe(first);
+    await second;
+    expect(queue()).toHaveLength(0);
+  });
+
+  it('retryOutboxNow는 재시도 타이머를 기다리지 않고 바로 보낸다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 503 }));
+    vi.stubGlobal('fetch', fetchMock);
+    seed([retirement]);
+    const { flushOutbox, retryOutboxNow } = await import('./outbox.js');
+    await flushOutbox();
+    expect(queue()).toHaveLength(1);
+    fetchMock.mockResolvedValue(ok());
+    await retryOutboxNow();
+    expect(queue()).toHaveLength(0);
+  });
+});

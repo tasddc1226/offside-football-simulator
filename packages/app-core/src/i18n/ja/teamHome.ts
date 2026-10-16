@@ -260,6 +260,9 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   statFriendly: '親善試合',
   statFriendlyOnly: '専用',
   retireSyncing: '引退した選手の記録を送っています。届いたらすぐロッカールームに入ります。',
+  retireSyncRetry: 'もう一度送る',
+  retireSyncRetrying: '送信中',
+  retireSyncFailed: 'まだ送れていません。接続を確認して、もう一度送るを押してください。',
   // T-11-217 チームプリセット
   tpButton: 'プリセット',
   tpTitle: 'チームプリセット',
