@@ -30,7 +30,7 @@
 
 - 규칙 값: `packages/contracts/src/manager-rules.ts`(zod 없음 · 서버 경기와 화면이 같이 쓴다), API 스키마 `manager.ts`.
 - 게임: `packages/game/src/manager.ts`(독립 시드 RNG, 세이브 `ft_mgr_save` · 버전 1). 선수 엔진 · 골든 해시와 무관하다.
-- 서버: `manager_careers`(마이그레이션 0103, 진행 중은 구단주마다 하나 · 카드마다 한 번 유니크),
+- 서버: `manager_careers`(마이그레이션 0104, 진행 중은 구단주마다 하나 · 카드마다 한 번 유니크),
   `GET/POST /v1/managers`, `POST /v1/managers/:id/abandon`, `POST /v1/managers/:id/finish`, `PUT /v1/owner-team/coach`.
   서버는 감독 커리어를 시뮬레이션하지 않고 시작값(origin · seed)과 끝낸 결과만 가진다. 경기 시뮬레이션은 두 팀 감독 칸을
   읽어 `managerLines`를 더한다(같은 구단주가 끝낸 감독만).

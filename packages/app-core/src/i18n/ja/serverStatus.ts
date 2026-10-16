@@ -1,0 +1,31 @@
+import type { Translation } from '../core';
+import type { ServerStatusMsgs } from '../ko/serverStatus';
+
+export const serverStatus: Translation<ServerStatusMsgs> = {
+  title: 'サーバー状況',
+  intro: 'ゲームサーバーが受けたリクエストを5分ごとにまとめて表示します。',
+  loading: '読み込み中です。',
+  error: 'サーバー状況を読み込めませんでした。少し待ってからもう一度開いてください。',
+  levelOk: '正常です',
+  levelSlow: 'いつもより遅いです',
+  levelDown: 'サーバーエラーが増えています',
+  levelUnknown: '最近の記録がありません',
+  recentTitle: '直近15分',
+  perMinute: '1分あたりのリクエスト',
+  avgResponse: '平均応答',
+  slowShare: '1秒以上かかったリクエスト',
+  errorShare: 'サーバーエラー',
+  hoursTitle: '直近24時間',
+  hoursRequests: '1時間あたりのリクエスト',
+  hoursAvg: '平均応答時間',
+  daysTitle: '直近30日',
+  colDay: '日付',
+  colRequests: 'リクエスト',
+  colAvg: '平均応答',
+  colSlow: '遅いリクエスト',
+  trendUp: (p) => `昨日のリクエストは${p.n}件です。1週間前より${p.pct}増えました。`,
+  trendDown: (p) => `昨日のリクエストは${p.n}件です。1週間前より${p.pct}減りました。`,
+  trendFlat: (p) => `昨日のリクエストは${p.n}件です。1週間前とほぼ同じです。`,
+  yesterday: (p) => `昨日のリクエストは${p.n}件です。`,
+  note: 'リクエスト数はサーバー自身が数えた概算で、実際より少し少ないことがあります。2026年10月16日から記録しています。',
+};

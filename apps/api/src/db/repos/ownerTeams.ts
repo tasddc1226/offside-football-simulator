@@ -35,6 +35,7 @@ import {
   sql,
 } from 'drizzle-orm';
 import type { Db } from '../client.js';
+import { readInChunks } from '../chunk.js';
 import { runBatch } from './batch.js';
 import { honorsOf } from './firsts.js';
 import {
@@ -132,28 +133,31 @@ export function logoOf(row: Pick<OwnerTeamRow, 'logoJson'>) {
 
 /** 경기 목록에 필요한 현재 로고만 한 번에 읽는다. 옛 경기 JSON은 바꾸지 않는다. */
 export async function teamLogosByIds(db: Db, ids: readonly string[]) {
-  if (ids.length === 0) return new Map<string, ReturnType<typeof logoOf>>();
-  const rows = await db
-    .select({ id: ownerTeams.id, logoJson: ownerTeams.logoJson })
-    .from(ownerTeams)
-    .where(inArray(ownerTeams.id, [...new Set(ids)]));
+  const rows = await readInChunks(ids, (chunk) =>
+    db
+      .select({ id: ownerTeams.id, logoJson: ownerTeams.logoJson })
+      .from(ownerTeams)
+      .where(inArray(ownerTeams.id, chunk)),
+  );
   return new Map(rows.map((row) => [row.id, logoOf(row)]));
 }
 
 /** T-11-228 대회 화면에 그릴 지금 팀 이름·감독·OVR·로고. 신청 때 적은 값이 아니라 경기에 쓰는 팀 그대로 보인다. */
+// 대회는 128팀까지라 D1 바인딩 한도(100)를 넘는다 — 나눠 읽는다(T-11-322).
 export async function liveTeamsByIds(db: Db, ids: readonly string[]) {
-  if (ids.length === 0) return new Map<string, LiveTeam>();
-  const rows = await db
-    .select({
-      id: ownerTeams.id,
-      season: ownerTeams.season,
-      name: ownerTeams.name,
-      manager: ownerTeams.manager,
-      ovr: ownerTeams.ovr,
-      logoJson: ownerTeams.logoJson,
-    })
-    .from(ownerTeams)
-    .where(inArray(ownerTeams.id, [...new Set(ids)]));
+  const rows = await readInChunks(ids, (chunk) =>
+    db
+      .select({
+        id: ownerTeams.id,
+        season: ownerTeams.season,
+        name: ownerTeams.name,
+        manager: ownerTeams.manager,
+        ovr: ownerTeams.ovr,
+        logoJson: ownerTeams.logoJson,
+      })
+      .from(ownerTeams)
+      .where(inArray(ownerTeams.id, chunk)),
+  );
   return new Map<string, LiveTeam>(
     rows.map(({ logoJson, ...row }) => [row.id, { ...row, logo: logoOf({ logoJson }) }]),
   );
@@ -844,11 +848,13 @@ export async function listStatsMatches(db: Db, teamId: string, limit: number) {
 
 /** 경기 기록에 나온 커리어의 지금 공개 이름. */
 export async function publicNamesOf(db: Db, ids: string[]): Promise<Map<string, string>> {
-  if (ids.length === 0) return new Map();
-  const rows = await db
-    .select({ id: careers.id, publicName: careers.publicName })
-    .from(careers)
-    .where(and(inArray(careers.id, ids), isNotNull(careers.publicName)));
+  // 경기 여러 판이면 커리어가 100명을 넘는다 — 나눠 읽는다.
+  const rows = await readInChunks(ids, (chunk) =>
+    db
+      .select({ id: careers.id, publicName: careers.publicName })
+      .from(careers)
+      .where(and(inArray(careers.id, chunk), isNotNull(careers.publicName))),
+  );
   return new Map(rows.map((r) => [r.id, r.publicName!]));
 }
 

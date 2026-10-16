@@ -22,6 +22,8 @@ export const EDGE = {
   retiredNumbersPage: (season: number, before: number) =>
     `/v1/retired-numbers?season=${season}&before=${before}`,
   live: '/v1/live',
+  /** T-11-321 서버 상태 화면. TTL로만 새로 읽는다. */
+  serverStatus: '/v1/status',
   /** T-10-122 홈 전광판(이적·최초 기록). TTL로만 새로 읽는다. */
   ticker: '/v1/ticker',
   /** 시즌 진행 게이지(홈). TTL로만 새로 읽는다. */

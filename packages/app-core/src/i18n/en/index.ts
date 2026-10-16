@@ -73,6 +73,7 @@ import { retiredLook } from './retiredLook';
 import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
 import { seasonRecap } from './seasonRecap';
+import { serverStatus } from './serverStatus';
 import { settings } from './settings';
 import { settingsApi } from './settingsApi';
 import { share } from './share';
@@ -170,6 +171,7 @@ export const en = {
   scout,
   seasonGauge,
   seasonRecap,
+  serverStatus,
   settings,
   settingsApi,
   share,
