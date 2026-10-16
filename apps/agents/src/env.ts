@@ -45,6 +45,11 @@ export interface Env {
   GMAIL_REFRESH_TOKEN?: string;
   /** 드림보트 받기 · 보내기 주소(키가 들어 있어 비밀값, T-11-296). 없으면 @mkt 요약을 돌리지 않는다. */
   DREAMBOAT_URL?: string;
+  /** @mkt GA4 읽기(T-11-299): 서비스 계정 비공개 키(PKCS#8 PEM, 비밀값) · 계정 메일 · 키 ID · 속성 ID. */
+  GA4_SA_KEY?: string;
+  GA4_SA_EMAIL?: string;
+  GA4_KEY_ID?: string;
+  GA4_PROPERTY_ID?: string;
   CF_D1_READ_TOKEN: string;
   CF_MCP_TOKEN?: string;
   GITHUB_TOKEN?: string;

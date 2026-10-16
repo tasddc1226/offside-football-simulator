@@ -11,6 +11,7 @@ import plan from '../roles/plan.md';
 import team from '../roles/team.md';
 import { devTools } from './dev.ts';
 import { repoReadToken } from './github.ts';
+import { ga4Tools } from './ga4.ts';
 import { mktTools } from './mkt.ts';
 import { supportTools } from './support.ts';
 import { opsTools } from './tools/ops.ts';
@@ -95,7 +96,11 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
       system: `${mkt}\n\n${team}\n\n${glossary}`,
       model,
       // 마케팅은 저장소 · 배포 기록을 읽고 드림보트 요약 초안만 올린다(보내기는 운영자 승인 버튼).
-      tools: [...tools.filter((t) => t.name === 'repo_file'), ...mktTools(env, task)],
+      tools: [
+        ...tools.filter((t) => t.name === 'repo_file'),
+        ...mktTools(env, task),
+        ...ga4Tools(env, task.kind),
+      ],
       maxTurns: task.kind === 'release' ? 5 : 8,
       mcpServers: [],
       prompt: (t) =>
