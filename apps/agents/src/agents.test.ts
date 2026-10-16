@@ -21,7 +21,7 @@ import { ClaudeError } from './claude.ts';
 import { readOnlySql } from './tools/ops.ts';
 import { alertSignature } from './ledger.ts';
 import { mcpTools, parseRpc } from './mcp.ts';
-import { parseHandoffs } from './handoff.ts';
+import { linkRoles, parseHandoffs, shouldReturn } from './handoff.ts';
 import { collect, fetchDc, meaningful, parseDcList, triagePrompt } from './reactions.ts';
 import { nextRuns, kstText } from './cron.ts';
 import { devTools, mergeBlocker } from './dev.ts';
@@ -487,6 +487,25 @@ describe('parseHandoffs', () => {
       { to: 'ops', request: '서버 확인' },
       { to: 'mkt', request: '공지 초안' },
     ]);
+  });
+
+  it('슬랙에 올릴 때 역할 키를 봇 멘션으로 바꾸고, 코드 표기 · 메일 주소는 그대로 둔다', () => {
+    const env = { AGENT_BOT_USERS: 'UOPS,UPLAN,UDEV,UMKT' } as unknown as Env;
+    expect(linkRoles(env, '@plan 결론부터요.\n→ @ops: 확인해 주세요')).toBe(
+      '<@UPLAN> 결론부터요.\n→ <@UOPS>: 확인해 주세요',
+    );
+    expect(linkRoles(env, '`→ @dev:` 줄 · co***@ops.com · @planning')).toBe(
+      '`→ @dev:` 줄 · co***@ops.com · @planning',
+    );
+  });
+
+  it('넘겨받은 일의 결과는 넘긴 역할에게 한 번만 돌려준다', () => {
+    expect(shouldReturn({ kind: 'handoff', from: 'plan' }, [])).toBe(true);
+    expect(shouldReturn({ kind: 'handoff', from: 'plan', back: true }, [])).toBe(false);
+    expect(shouldReturn({ kind: 'handoff', from: 'plan' }, [{ to: 'plan', request: 'x' }])).toBe(
+      false,
+    );
+    expect(shouldReturn({ kind: 'mention' }, [])).toBe(false);
   });
 });
 
