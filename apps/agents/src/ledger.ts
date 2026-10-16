@@ -37,6 +37,9 @@ export type MailApproval = {
   result: string;
 };
 
+export type MktDraft = { id: string; notes: string; at: number; done?: boolean };
+export type MktApproval = MailApproval;
+
 export class AgentLedger extends DurableObject<Env> {
   async day(role: Role, day = kstDay()): Promise<Day> {
     return (await this.ctx.storage.get<Day>(`${role}:${day}`)) ?? { costUsd: 0, tasks: 0 };
@@ -114,6 +117,16 @@ export class AgentLedger extends DurableObject<Env> {
   }
   async recordMailApproval(a: MailApproval): Promise<void> {
     await this.ctx.storage.put(`mailapproval:${a.draft}:${a.at}`, a);
+  }
+  /** @mkt 드림보트 요약 초안 · 승인 기록(T-11-296). */
+  async mktDraft(id: string): Promise<MktDraft | undefined> {
+    return this.ctx.storage.get<MktDraft>(`mktdraft:${id}`);
+  }
+  async setMktDraft(d: MktDraft): Promise<void> {
+    await this.ctx.storage.put(`mktdraft:${d.id}`, d);
+  }
+  async recordMktApproval(a: MktApproval): Promise<void> {
+    await this.ctx.storage.put(`mktapproval:${a.draft}:${a.at}`, a);
   }
   /** 한도 초과 안내는 하루 한 번만 한다. 처음이면 true. */
   async warnOnce(role: Role, day = kstDay()): Promise<boolean> {

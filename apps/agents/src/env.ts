@@ -43,6 +43,8 @@ export interface Env {
   GMAIL_CLIENT_ID?: string;
   GMAIL_CLIENT_SECRET?: string;
   GMAIL_REFRESH_TOKEN?: string;
+  /** 드림보트 받기 · 보내기 주소(키가 들어 있어 비밀값, T-11-296). 없으면 @mkt 요약을 돌리지 않는다. */
+  DREAMBOAT_URL?: string;
   CF_D1_READ_TOKEN: string;
   CF_MCP_TOKEN?: string;
   GITHUB_TOKEN?: string;

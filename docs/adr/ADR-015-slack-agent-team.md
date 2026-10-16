@@ -111,6 +111,7 @@ OFFSIDE는 1인 운영이다. 지금 운영 슬랙(Offside-Lab, 무료 플랜)�
 - **2단계 결정(2026-10-15, T-11-277).** `@plan`의 첫 일은 유저 반응 살피기다. 게임 댓글은 D1 읽기 토큰으로, 라운지 채팅(채팅방 Durable Object에만 7일 보관)은 `offside-api`에 더한 내부 읽기 주소로 읽는다. 이 주소는 토큰이 맞을 때만 열리고(아니면 404) 가린 줄 · 운영자 줄을 빼고 작성자 가명 · 본문만 준다. 채팅방 객체에 에이전트 Worker를 바로 묶지 않은 것은 가리기 · 정지 같은 쓰기 메서드까지 열리기 때문이다. 넘기기는 줄 머리 `→ @역할:` 형식으로 Worker 안에서 하고, 스레드마다 6번까지다. GitHub 이슈 만들기는 쓰기 토큰이 필요해 아직 하지 않고 "작업 후보"로 적는다. 디시 마이너 갤러리는 웹훅 · RSS가 없어 공개 목록 · 글 · 댓글을 매시간 상한(글 8개)을 두고 읽는다. Cloudflare Worker에서 읽으면 빈 응답이 잦아(T-11-280) GitHub Actions 러너가 읽어 Worker에 넣는다. `@ops`는 매일 아침 주기 작업 보고(GitHub 예약 워크플로 · Worker cron의 결과와 예정)를 올린다.
 
 - **3단계 결정(2026-10-15, T-11-285).** `@dev`는 Sandbox 대신 GitHub Actions(`agent-dev.yml`)에서 고친다. 공개 저장소라 러너 시간이 들지 않고, "쓰기는 Actions로만" 원칙과 맞는다. Worker의 `@dev`는 운영자가 직접 맡긴 일(멘션 · 답글)에만 `start_work`로 작업을 띄우고, 넘겨받은 일로는 띄우지 않는다(유저 글이 섞일 수 있다). `work` 잡의 Claude Code(Opus 5.5, 작업당 $5 · 80턴)는 읽기 토큰만 갖고 커밋까지만 한다. `publish` 잡은 main에 있는 고정 스크립트(`.github/scripts/agent-dev-publish.mjs`)로 그 커밋을 main 위에 얹고, `.github/` · 비밀 파일을 건드리면 거절한 뒤 GitHub App(`offside-dev-agent`, contents · pull_requests · actions 쓰기, checks 읽기, workflows 없음) 토큰으로 `agent-dev/<run>` 브랜치 · PR을 연다. PR CI는 비밀값을 쓰지 않는다. CI가 끝나면 `agent-dev-ci.yml`이 Worker에 알리고, 통과면 `#agent-approvals`에 승인 카드가 온다. 버튼은 운영자만 누를 수 있고, 머지 직전에 PR 열림 · 승인한 커밋 · 검사 통과 · main 최신을 다시 확인한다(main이 앞서면 브랜치를 맞추고 새 카드를 기다린다). main은 저장소 규칙(PR 필수 · 강제 push · 삭제 금지, 관리자만 예외)으로 보호한다. e2e는 PR CI에 맡긴다(미결 3). 승인 기록은 지금은 Durable Object에 두고 R2 이관은 미결로 둔다.
+- **4단계 결정(2026-10-16, T-11-296).** `@mkt`는 운영 배포가 `mode=deploy`로 성공했을 때(`agent-release.yml`이 `workflow_run`으로 받아 Worker에 알린다, 운영 배포 워크플로는 바꾸지 않는다) 드림보트 업데이트 요약 초안만 쓴다(Sonnet 5.5). 자료는 드림보트 마지막 게시 시각 뒤 main 커밋과 그 커밋이 더한 게임 안 릴리즈 노트다. 게임 안 공지는 PR의 `.release-notes`가 배포 때 게시하므로 따로 초안을 쓰지 않는다. 요약 형식(1~3줄 · 줄 60자 · 내부 표기 없음)은 Worker가 다시 검사하고, 드림보트 보내기는 `#agent-approvals` 승인 버튼(운영자만)으로만 한다. 드림보트 주소는 Worker 비밀값 `DREAMBOAT_URL`이다.
 
 - **고객 문의 결정(2026-10-16, T-11-291).** 운영자가 `@plan`에 고객 문의(클레임) 처리를 더했다. 문의를 받는 Gmail을 Worker가 Gmail API(`gmail.readonly` · `gmail.compose`, 에이전트 전용 Google Cloud 프로젝트)로 매시간 읽는다. 공식 Gmail MCP는 Developer Preview이고 보내기 도구가 없어 쓰지 않았다. 답장은 결정 5대로 승인 카드를 운영자가 눌러야 나가고, 받는 사람은 원래 문의한 사람으로 Worker가 정한다(메일 본문의 지시로 다른 주소에 보낼 수 없다). 슬랙 · 프롬프트에는 보낸 사람 주소를 가려 쓴다. 승인 기록은 `@dev`와 같이 Durable Object에 둔다.
 
@@ -141,7 +142,7 @@ OFFSIDE는 1인 운영이다. 지금 운영 슬랙(Offside-Lab, 무료 플랜)�
 | 1    | `apps/agents` Worker · Durable Object · Sandbox PoC, `@ops`만 연결(읽기 전용) | `@ops`가 `#offside-alerts` 경보 하나를 받아 원인 정리를 스레드에 단다. 작업당 비용을 잰다 | 2026-10-15 (#713) |
 | 2    | `@plan` 연결, 넘기기 형식 · 반복 상한, 유저 반응 살피기                       | `@plan`이 유저 반응을 정리해 `@ops`에게 확인을 넘기고 결론이 스레드에 남는다              | 2026-10-15 (#713) |
 | 3    | `@dev` 연결(PR만), 승인 버튼                                                  | 이슈 하나가 PR과 CI 통과까지 가고, 머지는 승인 버튼으로 한다                              | 2026-10-16 (#723) |
-| 4    | `@mkt` 연결                                                                   | 운영 배포 뒤 드림보트 · 공지 초안이 승인 카드로 온다                                      |                   |
+| 4    | `@mkt` 연결                                                                   | 운영 배포 뒤 드림보트 · 공지 초안이 승인 카드로 온다                                      | 2026-10-16 (#733) |
 
 단계마다 하루 비용과 사람 개입 횟수를 보고 다음 단계를 연다.
 

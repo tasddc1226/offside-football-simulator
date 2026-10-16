@@ -13,6 +13,7 @@ import { alertSignature, kstDay, ledger } from './ledger.ts';
 import { collect, triagePrompt, type DcCursor, type Reaction } from './reactions.ts';
 import { devCi, devInteraction, devResult, type DevCi, type DevResult } from './dev.ts';
 import { verifySlack } from './slack.ts';
+import { mktInteraction, releaseTask } from './mkt.ts';
 import { scanSupport, supportInteraction } from './support.ts';
 import { threadOf, type Task } from './thread.ts';
 
@@ -103,9 +104,9 @@ export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
     if (url.pathname === '/internal/run') return internalRun(req, url, env);
-    const inter = /^\/slack\/(dev|plan)\/interactive$/.exec(url.pathname);
+    const inter = /^\/slack\/(dev|plan|mkt)\/interactive$/.exec(url.pathname);
     if (inter && req.method === 'POST')
-      return interactive(req, env, ctx, inter[1] as 'dev' | 'plan');
+      return interactive(req, env, ctx, inter[1] as 'dev' | 'plan' | 'mkt');
     const m = /^\/slack\/([a-z]+)\/events$/.exec(url.pathname);
     if (url.pathname === '/health') return new Response('ok');
     if (!m || req.method !== 'POST') return new Response('not found', { status: 404 });
@@ -206,6 +207,13 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
   }
   if (job === 'dev-ci')
     return Response.json({ result: await devCi(env, (await req.json()) as DevCi) });
+  // @mkt: 운영 배포가 성공하면(agent-release.yml) 드림보트 요약을 맡긴다.
+  if (job === 'release') {
+    if (!enabled(env, 'mkt')) return Response.json({ result: 'mkt disabled' });
+    return Response.json({
+      result: await releaseTask(env, (await req.json()) as { sha: string; url?: string }),
+    });
+  }
   // 고객 문의: dry=1이면 커서를 옮기지 않고 새 문의 수만 돌려준다.
   if (job === 'support')
     return Response.json(
@@ -226,12 +234,12 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
   return Response.json(await scanReactions(env));
 }
 
-/** 슬랙 버튼(@dev 머지 승인 · @plan 답장 승인 카드). 서명을 확인하고 3초 안에 200을 돌려준 뒤 일은 뒤에서 한다. */
+/** 슬랙 버튼(@dev 머지 승인 · @plan 답장 승인 · @mkt 드림보트 승인 카드). 서명을 확인하고 3초 안에 200을 돌려준 뒤 일은 뒤에서 한다. */
 async function interactive(
   req: Request,
   env: Env,
   ctx: ExecutionContext,
-  role: 'dev' | 'plan',
+  role: 'dev' | 'plan' | 'mkt',
 ): Promise<Response> {
   if (!enabled(env, role)) return new Response('not found', { status: 404 });
   const body = await req.text();
@@ -244,7 +252,7 @@ async function interactive(
   if (!ok) return new Response('bad signature', { status: 401 });
   const raw = new URLSearchParams(body).get('payload');
   if (!raw) return new Response('');
-  const handle = role === 'dev' ? devInteraction : supportInteraction;
+  const handle = { dev: devInteraction, plan: supportInteraction, mkt: mktInteraction }[role];
   ctx.waitUntil(
     handle(env, JSON.parse(raw)).then(
       (r) => console.log(`${role} interaction`, r),
