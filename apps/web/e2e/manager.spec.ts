@@ -183,7 +183,7 @@ test('은퇴 선수로 감독 커리어를 끝까지 하고 감독 칸에 앉힌
   await expect(dialog).toContainText('구단 가치가');
   await expect(dialog).toContainText('팔거나 방출하거나 잠글 수 없어요');
   await page.locator('[data-act="manager-start"]').click();
-  expect(s.started).toEqual([A]);
+  await expect.poll(() => s.started).toEqual([A]);
   await expect(page.locator('[data-manager-play]')).toHaveAttribute('data-manager-play', 'offers');
 
   // 첫 시즌 준비까지 간 뒤 새로 고쳐도 기기 세이브로 이어 한다.
@@ -210,7 +210,9 @@ test('은퇴 선수로 감독 커리어를 끝까지 하고 감독 칸에 앉힌
   await expect(page.locator('[data-manager-totals]')).toBeVisible();
   await expect(page.locator('[data-manager-done]')).toContainText('등급');
   await page.locator('[data-act="manager-finish"]').click();
-  expect(s.finished).toMatchObject({ seasons: expect.any(Number), grade: expect.any(String) });
+  await expect
+    .poll(() => s.finished)
+    .toMatchObject({ seasons: expect.any(Number), grade: expect.any(String) });
   const card = page.locator(`[data-manager-card="${A}"]`);
   await expect(card).toContainText('감독 칸 효과');
   await expect(page.locator('[data-manager-start]')).toContainText('다른 후보');
@@ -219,7 +221,7 @@ test('은퇴 선수로 감독 커리어를 끝까지 하고 감독 칸에 앉힌
   await expect(card).toContainText('우리 팀 감독');
   await card.locator('[data-act="manager-unseat"]').click();
   await expect(card.locator('[data-act="manager-seat"]')).toBeVisible();
-  expect(s.coachPuts).toEqual([A, null]);
+  await expect.poll(() => s.coachPuts).toEqual([A, null]);
 });
 
 test('감독 커리어를 포기하면 원래 선수로 돌아온다', async ({ page }) => {
@@ -239,6 +241,6 @@ test('감독 커리어를 포기하면 원래 선수로 돌아온다', async ({ 
   await page.locator('[data-act="manager-abandon"]').click();
   await expect(page.locator('[data-manager-abandon]')).toContainText('원래 선수로 돌아와요');
   await page.locator('[data-act="manager-abandon-confirm"]').click();
-  expect(s.abandoned).toBe(1);
+  await expect.poll(() => s.abandoned).toBe(1);
   await expect(page.locator('[data-manager-start]')).toContainText('감독 후보');
 });
