@@ -1,0 +1,44 @@
+# ADR-015 4단계(T-11-296): 운영 배포(Production Release, mode=deploy)가 성공하면 Worker에 알린다.
+# Worker의 @mkt가 드림보트 업데이트 요약 초안을 #agent-approvals 승인 카드로 올린다. preflight · 실패한 실행은 건너뛴다.
+name: Agent release report
+
+on:
+  workflow_run:
+    workflows: ['Production Release']
+    types: [completed]
+  # 시험 · 다시 보내기: 이미 운영에 나간 main 커밋으로 요약을 다시 맡긴다.
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 운영에 나간 main 커밋(40자)
+        required: true
+
+permissions:
+  actions: read
+
+jobs:
+  report:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Report deploy to Worker
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AGENTS_READ_TOKEN: ${{ secrets.AGENTS_READ_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          SHA: ${{ inputs.sha || github.event.workflow_run.head_sha }}
+          URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          # 수동 실행(workflow_dispatch)은 RUN_ID가 없다. 운영 배포 실행이면 deploy 모드였는지 본다.
+          if [ -n "$RUN_ID" ]; then
+            deployed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs" \
+              --jq '[.jobs[] | select(.name == "Deploy production" and .conclusion == "success")] | length')
+            if [ "$deployed" = "0" ]; then
+              echo "Deploy production 잡이 없어요(preflight). 건너뛰어요"
+              exit 0
+            fi
+          fi
+          jq -n --arg sha "$SHA" --arg url "$URL" '{sha: $sha, url: $url}' |
+            curl -sS -f -X POST 'https://agents.offside-lab.com/internal/run?job=release' \
+              -H "Authorization: Bearer $AGENTS_READ_TOKEN" -H 'Content-Type: application/json' --data-binary @-

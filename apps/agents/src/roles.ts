@@ -1,14 +1,16 @@
-// 역할마다 시스템 프롬프트(roles/<역할>.md) · 도구 · 턴 상한. 3단계까지 @ops · @plan · @dev가 있다.
+// 역할마다 시스템 프롬프트(roles/<역할>.md) · 도구 · 턴 상한. 4단계(T-11-296)에 @mkt까지 연다.
 import { MODELS, type Model, type Tool } from './claude.ts';
 import type { McpServer } from './mcp.ts';
 import type { Env, Role } from './env.ts';
 import type { Task } from './thread.ts';
 import dev from '../roles/dev.md';
 import glossary from '../roles/glossary.md';
+import mkt from '../roles/mkt.md';
 import ops from '../roles/ops.md';
 import plan from '../roles/plan.md';
 import { devTools } from './dev.ts';
 import { repoReadToken } from './github.ts';
+import { mktTools } from './mkt.ts';
 import { supportTools } from './support.ts';
 import { opsTools } from './tools/ops.ts';
 import { digestTools } from './tools/digest.ts';
@@ -37,7 +39,7 @@ const handoffPrompt = (t: Task) =>
 export const modelFor = (kind: Task['kind']): Model =>
   kind === 'triage' || kind === 'alert'
     ? MODELS.haiku
-    : kind === 'report' || kind === 'support'
+    : kind === 'report' || kind === 'support' || kind === 'release'
       ? MODELS.sonnet
       : MODELS.opus;
 
@@ -84,6 +86,21 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
 
 (넘겨받은 일이라 바로 고치지 않아요. 할 일을 정리해 운영자 확인을 받아요.)`
           : `지금 KST ${kstNow()}. 운영자 지시:\n${t.text}`,
+    };
+  if (role === 'mkt')
+    return {
+      system: `${mkt}\n\n${glossary}`,
+      model,
+      // 마케팅은 저장소 · 배포 기록을 읽고 드림보트 요약 초안만 올린다(보내기는 운영자 승인 버튼).
+      tools: [...tools.filter((t) => t.name === 'repo_file'), ...mktTools(env, task)],
+      maxTurns: task.kind === 'release' ? 5 : 8,
+      mcpServers: [],
+      prompt: (t) =>
+        t.kind === 'release'
+          ? `지금 KST ${kstNow()}. ${t.text}\n역할 설명의 "배포 뒤 업데이트 요약" 순서대로 해 주세요. 먼저 \`release_changes\`를 한 번 불러요.`
+          : t.kind === 'handoff'
+            ? handoffPrompt(t)
+            : `지금 KST ${kstNow()}. 운영자 지시:\n${t.text}`,
     };
   if (role !== 'ops') throw new Error(`role ${role} is not open yet`);
   return {

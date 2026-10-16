@@ -18,8 +18,8 @@
   "triggers": { "crons": ["47 */3 * * *", "7 * * * *", "50 23 * * *"] },
   "observability": { "enabled": true, "logs": { "enabled": true, "invocation_logs": false } },
   "vars": {
-    // 2단계까지 @ops · @plan을 연다(ADR-015 도입 단계).
-    "ENABLED_ROLES": "ops,plan,dev",
+    // ADR-015 도입 단계: 4단계(T-11-296)에 @mkt까지 연다.
+    "ENABLED_ROLES": "ops,plan,dev,mkt",
     "OPERATOR_USER_ID": "U0C9BAYGT8Q",
     // 에이전트 봇 4개(자기 · 서로의 메시지에 반응하지 않는다).
     "AGENT_APP_IDS": "A0C987NV8HZ,A0C9CFUM98E,A0C996C6R3P,A0C9E9PELTC",

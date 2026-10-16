@@ -11,8 +11,8 @@ import { slackClient, threadReply } from './slack.ts';
 
 export type Task = {
   eventId: string;
-  /** triage: 유저 반응 살피기, report: 아침 주기 작업 보고, support: 고객 문의 메일(셋 다 새 글로 올린다). handoff: 다른 에이전트가 넘긴 일. */
-  kind: 'alert' | 'mention' | 'reply' | 'triage' | 'report' | 'support' | 'handoff';
+  /** triage: 유저 반응 살피기, report: 아침 주기 작업 보고, support: 고객 문의 메일, release: 운영 배포 뒤 드림보트 요약(넷 다 새 글로 올린다). handoff: 다른 에이전트가 넘긴 일. */
+  kind: 'alert' | 'mention' | 'reply' | 'triage' | 'report' | 'support' | 'release' | 'handoff';
   role: Role;
   channel: string;
   /** 답을 달 스레드(첫 메시지 ts). 새 글(triage · report)은 아직 없다(올린 글이 스레드가 된다). */
@@ -33,7 +33,8 @@ const HISTORY = 12;
 /** 반응 살피기에서 검토할 글이 없을 때 @plan이 쓰는 한 줄(roles/plan.md). */
 export const NOTHING = '검토할 반응 없음';
 
-const isNewPost = (t: Task) => t.kind === 'triage' || t.kind === 'report' || t.kind === 'support';
+const isNewPost = (t: Task) =>
+  t.kind === 'triage' || t.kind === 'report' || t.kind === 'support' || t.kind === 'release';
 
 export const threadOf = (env: Env, role: Role, channel: string, threadTs: string) =>
   env.THREAD.get(env.THREAD.idFromName(`${role}:${channel}:${threadTs}`));

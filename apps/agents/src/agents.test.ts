@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { costOf, MODEL, MODELS, runAgent, withCacheTail, type Tool } from './claude.ts';
 import { modelFor, roleSpec } from './roles.ts';
+import { checkNotes, mktInteraction, releaseTask } from './mkt.ts';
 import { digestTools } from './tools/digest.ts';
 import {
   maskAddress,
@@ -1010,6 +1011,82 @@ describe('고객 문의', () => {
       expect(s.calls).toEqual(['GET /drafts/r1', 'POST /drafts/send']);
       expect(s.records).toMatchObject([{ draft: 'r1', action: 'send', user: 'UOP' }]);
       expect(s.slack).toContain('chat.update');
+    });
+  });
+});
+
+describe('@mkt 드림보트 요약', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('요약 형식: 1~3줄, "- "로 시작, 60자 안쪽, 내부 표기 없음', () => {
+    expect(checkNotes('- 검색이 빨라졌어요\n- 결제에 카카오페이가 생겼어요')).toBeNull();
+    expect(checkNotes('')).toMatch(/1~3/);
+    expect(checkNotes('- a\n- b\n- c\n- d')).toMatch(/1~3/);
+    expect(checkNotes('검색이 빨라졌어요')).toMatch(/- /);
+    expect(checkNotes(`- ${'가'.repeat(61)}`)).toMatch(/60자/);
+    expect(checkNotes('- T-11-294 킵 수정')).toMatch(/작업 번호/);
+    expect(checkNotes('- 프롬프트 40편 · 디시 32편')).toMatch(/가운뎃점/);
+  });
+
+  it('배포 알림은 올바른 커밋만 받는다', async () => {
+    await expect(releaseTask({} as Env, { sha: 'abc' })).rejects.toThrow(/bad sha/);
+  });
+
+  describe('승인 버튼', () => {
+    const setup = (
+      draft: { id: string; notes: string; at: number; done?: boolean } | undefined,
+    ) => {
+      const slack: string[] = [];
+      vi.stubGlobal('fetch', async (u: string) => {
+        slack.push(u.split('/').pop()!);
+        return new Response('{"ok":true}');
+      });
+      const records: unknown[] = [];
+      const saved: unknown[] = [];
+      const book = {
+        mktDraft: async () => draft,
+        setMktDraft: async (d: unknown) => void saved.push(d),
+        recordMktApproval: async (a: unknown) => void records.push(a),
+      };
+      const env = {
+        OPERATOR_USER_ID: 'UOP',
+        APPROVAL_CHANNEL: 'C',
+        SLACK_MKT_BOT_TOKEN: 'x',
+        DREAMBOAT_URL: 'https://dreamboat.example.com/api/in/k',
+        LEDGER: { idFromName: () => 'id', get: () => book },
+      } as unknown as Env;
+      const posts: string[] = [];
+      const db = (async (_u: string, init?: { body?: string }) => {
+        posts.push(String(init?.body));
+        return new Response('{"ok":true,"scheduled":"내일 새벽 4시에 게시돼요"}');
+      }) as unknown as typeof fetch;
+      return { env, db, posts, slack, records, saved };
+    };
+    const press = (user: string, action = 'dreamboat_send') => ({
+      type: 'block_actions',
+      user: { id: user },
+      channel: { id: 'C' },
+      message: { ts: '1.0', blocks: [] },
+      actions: [{ action_id: action, value: JSON.stringify({ draft: 'd1' }) }],
+    });
+    const d = { id: 'd1', notes: '- 검색이 빨라졌어요', at: 1 };
+
+    it('운영자가 아니면 보내지 않는다', async () => {
+      const s = setup(d);
+      expect(await mktInteraction(s.env, press('UOTHER'), s.db)).toBe('forbidden');
+      expect(s.posts).toEqual([]);
+    });
+    it('운영자 승인이면 그 초안을 보내고 기록한다', async () => {
+      const s = setup(d);
+      expect(await mktInteraction(s.env, press('UOP'), s.db)).toBe('sent');
+      expect(s.posts).toEqual([JSON.stringify({ notes: '- 검색이 빨라졌어요' })]);
+      expect(s.records).toMatchObject([{ draft: 'd1', action: 'send', user: 'UOP' }]);
+      expect(s.slack).toContain('chat.update');
+    });
+    it('이미 처리한 초안은 다시 보내지 않는다', async () => {
+      const s = setup({ ...d, done: true });
+      expect(await mktInteraction(s.env, press('UOP'), s.db)).toBe('missing');
+      expect(s.posts).toEqual([]);
     });
   });
 });
