@@ -17,7 +17,7 @@
   import { CONFEDS, flagOf } from '@offside/contracts/nations';
   import { BODY_LIMITS, BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
   import { isKorean, nationOf } from '@offside/game/nation';
-  import { startCareer, rollCandidates, rerollCandidates, premiumScoutCandidates, planPremiumScout, revealCandidatePotential, keepCandidate } from './actions.js';
+  import { startCareer, rollCandidates, rerollCandidates, premiumScoutCandidates, planPremiumScout, revealCandidatePotential, keepCandidate, keptDraft, restoreKeptDraft } from './actions.js';
   import { clubOffer, loadClubShop, payWithClub } from '@offside/app-core/club-reward';
   import { fundsText } from '@offside/app-core/funds';
   import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
@@ -45,6 +45,8 @@
   const growthPct = Math.round((FOCUS_GROWTH - 1) * 100);
   // T-10-091 세부 포지션은 시즌 1 개막부터 고른다. 프리시즌엔 선택지를 보이지 않고, 저장된 선택도 쓰지 않는다.
   let detailOpen = $state(detailOpenNow());
+  // T-11-294 입력은 저장하지 않아 다시 열면 기본값이다. 킵한 후보가 있으면 그 조건으로 맞춰 바로 다시 나오게 한다.
+  restoreKeptDraft();
   if (detailOpenNow() && !draftDpos(C)) pickDetail(DETAILS_OF[C.pos][0]!);
   onMount(() => watchDetailOpening(() => {
     detailOpen = true;
@@ -52,6 +54,11 @@
     if (!draftDpos(C)) C.dpos = DETAILS_OF[C.pos][0]!;
   }));
   const dpos = $derived(draftDpos(C));
+  // 킵 저장소는 반응형이 아니라 후보 목록이 바뀔 때도 다시 본다(킵하고 입력으로 돌아온 경우).
+  const kept = $derived.by(() => {
+    void appState.candidates;
+    return keptDraft();
+  });
   const focusLeft = $derived(FOCUS_PICK - C.focus.length);
   // 고른 조합이 시작 분포를 어떻게 바꾸는지 버튼마다 미리 보여준다(주력 ▲ / 가장 덜 쓰는 능력치 ▼).
   const preview = $derived(focusMod(C.pos, C.focus));
@@ -363,6 +370,13 @@
       </div>
       <p class="muted fs-sm">{L.potentialNote}</p>
     </section>
+
+    {#if kept}
+      <section class="card stack" data-kept-elsewhere>
+        <p class="fs-sm">{L.keptElsewhere({ pos: posLabel(kept), focus: kept.focus.map((k) => labels[k]).join('·') })}</p>
+        <button class="btn btn-sm self-start" data-act="restore-kept" onclick={restoreKeptDraft}>{L.keptRestore}</button>
+      </section>
+    {/if}
 
     <div class="action-bar at-bottom">
       <div class="action-bar-inner with-back">

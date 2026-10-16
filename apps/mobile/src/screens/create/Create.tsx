@@ -54,6 +54,8 @@ import {
   revealCandidatePotential,
   rerollCandidates,
   keepCandidate,
+  keptDraft,
+  restoreKeptDraft,
   premiumScoutCandidates,
   planPremiumScout,
   rollCandidates,
@@ -375,6 +377,10 @@ export default function Create() {
 
   // 세부 포지션은 시즌 1 개막부터 고른다. 프리시즌엔 선택지를 보이지 않고, 저장된 선택도 쓰지 않는다.
   const [detailOpen, setDetailOpen] = useState(() => detailOpenNow());
+  // T-11-294 입력은 저장하지 않아 다시 열면 기본값이다. 킵한 후보가 있으면 그 조건으로 맞춰 바로 다시 나오게 한다.
+  useEffect(() => {
+    restoreKeptDraft();
+  }, []);
   useEffect(() => {
     if (detailOpen && !draftDpos(appState.C)) pickDetail(DETAILS_OF[appState.C.pos][0]!);
   }, [detailOpen]);
@@ -394,6 +400,7 @@ export default function Create() {
   const ovrFocus = ovrFocusView(C.pos, C.focus, dpos);
 
   const step: 'form' | 'candidates' = s.candidates ? 'candidates' : 'form';
+  const kept = step === 'form' ? keptDraft() : null;
   const labels = attrLabels(C.pos);
   const picked =
     s.candidates && s.candidatePick != null ? (s.candidates[s.candidatePick] ?? null) : null;
@@ -780,6 +787,23 @@ export default function Create() {
             <Txt v="sm" tone="muted">
               {L.potentialNote}
             </Txt>
+            {kept ? (
+              <View testID="kept-elsewhere" style={{ gap: 8 }}>
+                <Txt v="sm">
+                  {L.keptElsewhere({
+                    pos: posLabel(kept),
+                    focus: kept.focus.map((k) => labels[k]).join('·'),
+                  })}
+                </Txt>
+                <Btn
+                  testID="restore-kept"
+                  onPress={restoreKeptDraft}
+                  style={{ alignSelf: 'flex-start' }}
+                >
+                  {L.keptRestore}
+                </Btn>
+              </View>
+            ) : null}
           </Card>
         ) : s.candidates ? (
           <>
