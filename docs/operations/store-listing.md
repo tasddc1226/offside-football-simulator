@@ -334,6 +334,6 @@ App Store는 6.9"(1320×2868), Google Play는 휴대전화(1080×2160)와 그래
 `apps/mobile/store/render.mjs`로 다시 렌더한 7장(5 · 6번 문구 변경)을 6.3인치 · Duo 칸에 올린다. Google Play는 앱 출시 없이
 등록정보만 바꿔 검토로 보냈다(2026-10-16).
 
-- 한국어: 대회와 상 이름이 바뀌었어요. 국가대표 세계 대회는 월드 챔피언십, 올해의 골처럼 새 이름으로 보여요. / 앱 안정성을 개선했어요.
+- 한국어: 일부 대회와 상 이름이 월드 챔피언십, 올해의 골 같은 새 이름으로 바뀌었어요. / 앱 안정성을 개선했어요.
 - English (en-US · en-GB): Some competition and award names have changed, such as the World Championship and Goal of the Year. / Stability improvements.
-- 日本語: 大会と賞の名前が変わりました。ワールドチャンピオンシップや年間最優秀ゴール賞などの新しい名前で表示されます。 / アプリの安定性を改善しました。
+- 日本語: 一部の大会と賞の名前が、ワールドチャンピオンシップや年間最優秀ゴール賞などの新しい名前に変わりました。 / アプリの安定性を改善しました。
