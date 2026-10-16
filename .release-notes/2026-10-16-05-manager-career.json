@@ -2,14 +2,14 @@
   "id": "t-11-310-manager-career",
   "title": "은퇴한 선수로 감독 커리어",
   "items": [
-    "내 구단의 감독 커리어에서 가진 선수 카드로 8~10시즌 감독 커리어를 할 수 있어요",
+    "내 구단의 감독 커리어에서 가진 선수 카드로 8~10시즌 감독 커리어를 할 수 있어요. 시즌 경기가 한 경기씩 중계돼요",
     "커리어를 끝낸 감독은 우리 팀 감독 칸에 앉혀 공격 · 중원 · 수비를 조금 올려요",
     "감독 업적이 열렸어요"
   ],
   "en": {
     "title": "Manager careers for retired players",
     "items": [
-      "Open Manager career in My Club to run an 8–10 season manager career with a player card you own.",
+      "Open Manager career in My Club to run an 8–10 season manager career with a player card you own. Each season plays out match by match.",
       "Seat a finished manager in your team's manager slot for a small boost to attack, midfield and defense.",
       "Manager achievements are now open."
     ]
@@ -17,7 +17,7 @@
   "ja": {
     "title": "引退した選手で監督キャリア",
     "items": [
-      "マイクラブの監督キャリアで、持っている選手カードを使って8〜10シーズンの監督キャリアを遊べます。",
+      "マイクラブの監督キャリアで、持っている選手カードを使って8〜10シーズンの監督キャリアを遊べます。シーズンの試合が1試合ずつ中継されます。",
       "キャリアを終えた監督をチームの監督枠に置くと、攻撃・中盤・守備が少し上がります。",
       "監督の実績が開放されました。"
     ]

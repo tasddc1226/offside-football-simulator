@@ -21,6 +21,7 @@ import {
 } from '@offside/contracts/manager-rules';
 import { CLUBS, LEAGUES, type League, type Pos } from './data.js';
 import { createRng, type Rng, type RngState } from './rng.js';
+import { hashStr } from './hash.js';
 import { tn } from './i18n/names.js';
 import { gManagerText as T } from './i18n/ko/gManager.js';
 
@@ -84,6 +85,30 @@ export interface MgrSeason {
   outcome: 'renew' | 'sacked' | 'rest' | 'end';
   /** 결산 문장(합니다체). */
   lines: string[];
+  /** 시즌 시작 · 끝 상태(결산 화면의 변화 칩 · 숙련 오름 표시용). 옛 세이브에는 없다. */
+  start?: MgrSnapshot;
+  end?: MgrSnapshot;
+}
+
+/** 감독 상태 여섯 값과 이번 시즌 포메이션 숙련(화면 연출용). */
+export interface MgrSnapshot {
+  fame: number;
+  trust: number;
+  morale: number;
+  fans: number;
+  control: number;
+  adapt: number;
+  mastery: MasteryGrade;
+}
+
+/** 시즌 경기 한 줄(연출용). */
+export interface MgrMatch {
+  rd: number;
+  /** 상대 구단 이름(한국어 저장값, 그릴 때 tn). */
+  opp: string;
+  res: 'W' | 'D' | 'L';
+  gf: number;
+  ga: number;
 }
 
 export interface ManagerState {
@@ -133,6 +158,8 @@ export interface ManagerState {
   /** 경질된 뒤 우승 · 승격을 해냈는지(엔딩 '경질 뒤 재기'). */
   comeback: boolean;
   log: string[];
+  /** 이번 시즌을 시작할 때 상태(setupSeason이 적는다). 옛 세이브에는 없다. */
+  seasonStart?: MgrSnapshot;
 }
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
@@ -429,6 +456,7 @@ export function setupSeason(
   s.formation = pick.formation;
   s.style = pick.style;
   s.target = pick.target;
+  s.seasonStart = snapshot(s);
   withRng(s, (r) => (s.transfers = makeTransfers(s, r)));
   s.phase = 'transfer';
   return true;
@@ -752,7 +780,9 @@ function finishSeason(s: ManagerState) {
     met,
     outcome,
     lines,
+    ...(s.seasonStart ? { start: s.seasonStart } : {}),
   });
+  const done = s.history.at(-1)!;
 
   // 다음 시즌 구단: 승격 · 강등은 리그만 바꾼다(전력은 새 리그 안쪽에서 다시 시작).
   const next = promoted ? UP[club.leagueId] : relegated ? DOWN[club.leagueId] : undefined;
@@ -763,6 +793,8 @@ function finishSeason(s: ManagerState) {
   s.squad = Math.round(s.squad * 0.6);
   s.morale = clamp(Math.round(50 + (s.morale - 50) * 0.5 + (met ? 5 : -5)), 20, 90);
   s.phase = 'result';
+  delete s.seasonStart;
+  done.end = snapshot(s);
   if (last) return;
   withRng(s, (r) => {
     if (sacked) {
@@ -778,6 +810,45 @@ function finishSeason(s: ManagerState) {
   });
   if (sacked) lines.push(s.offers.length ? T.out_offers({ n: s.offers.length }) : T.out_none);
   else if (s.offers.length) lines.push(T.out_offers({ n: s.offers.length }));
+  done.end = snapshot(s);
+}
+
+/** 지금 상태 스냅숏(포메이션 숙련은 이번 시즌 포메이션 기준). */
+export const snapshot = (s: ManagerState): MgrSnapshot => ({
+  fame: s.fame,
+  trust: s.trust,
+  morale: s.morale,
+  fans: s.fans,
+  control: s.control,
+  adapt: s.adapt,
+  mastery: masteryGrade(s.masteryXp[s.formation]),
+});
+
+/**
+ * 시즌 경기 목록(화면 연출용). 결산이 정한 승무패 수를 그대로 나눠 상대 · 스코어를 붙인다. 감독 세이브의 rng를 쓰지 않고
+ * 커리어 id와 시즌 번호로 따로 시드를 만들어, 다시 열어도 같은 경기가 나오고 커리어 결과에는 영향이 없다.
+ */
+export function managerMatchday(id: string, h: MgrSeason): MgrMatch[] {
+  if (!h.clubId || !h.leagueId) return [];
+  const r = createRng(hashStr(`${id}:${h.n}`));
+  const opps = clubsIn(h.leagueId).filter((c) => c.id !== h.clubId);
+  if (!opps.length) return [];
+  const res: MgrMatch['res'][] = [
+    ...Array<'W'>(h.w).fill('W'),
+    ...Array<'D'>(h.d).fill('D'),
+    ...Array<'L'>(h.l).fill('L'),
+  ];
+  for (let i = res.length - 1; i > 0; i--) {
+    const j = Math.floor(r.next() * (i + 1));
+    [res[i], res[j]] = [res[j]!, res[i]!];
+  }
+  const start = Math.floor(r.next() * opps.length);
+  return res.map((x, i) => {
+    const low = Math.floor(r.next() * 3);
+    const gap = 1 + Math.floor(r.next() * r.next() * 3);
+    const [gf, ga] = x === 'D' ? [low, low] : x === 'W' ? [low + gap, low] : [low, low + gap];
+    return { rd: i + 1, opp: opps[(start + i) % opps.length]!.name, res: x, gf, ga };
+  });
 }
 
 /** 결산을 보고 다음으로 넘어간다: 마지막 시즌이면 done, 제의 · 경질이면 offers, 아니면 새 시즌 준비. */

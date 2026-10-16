@@ -3,6 +3,11 @@
   // 하나), 기기에서 시즌을 돌린 뒤 감독 카드로 확정해 우리 팀 감독 칸에 앉힌다. 화면을 열 때 목록을 한 번 받는다(메모 1분).
   import Topbar from './Topbar.svelte';
   import LoginButtons from './LoginButtons.svelte';
+  import ManagerLive from './ManagerLive.svelte';
+  import Chips from './sheets/Chips.svelte';
+  import CountUp from './CountUp.svelte';
+  import { buzz } from './motion.js';
+  import type { Chip } from './sheetState.svelte.js';
   import type { ManagerCandidate, ManagerCareer, ManagersResponse } from '@offside/contracts';
   import { FORMATION_IDS, type FormationId } from '@offside/contracts/owner-team';
   import type { ManagerStyle } from '@offside/contracts/manager-rules';
@@ -18,8 +23,10 @@
     endingName,
     leagueName,
     managerEventText,
+    managerMatchday,
     managerResult,
     masteryGrade,
+    snapshot,
     pickTransfer,
     restSeason,
     setupSeason,
@@ -46,6 +53,10 @@
     finishManager,
     loadManagerState,
     managerName,
+    masteryUpLine,
+    seasonBadges,
+    seasonChips,
+    statChips,
     saveManagerState,
     setTeamCoach,
     startConfirmLines,
@@ -64,6 +75,10 @@
   let st = $state.raw<ManagerState | null>(null);
   // 방금 답한 이벤트(결과 문장을 보여 준 뒤 '다음'으로 넘긴다).
   let answered = $state<string | null>(null);
+  // 방금 답한 이벤트가 바꾼 상태(변화 칩).
+  let evChips = $state<Chip[]>([]);
+  // 경기 중계 중인 시즌 번호(새로 고치면 중계 없이 결산을 바로 보인다).
+  let live = $state<number | null>(null);
   let pick = $state<{ formation: FormationId; style: ManagerStyle; target: BoardTarget }>({
     formation: '4-3-3',
     style: 'balance',
@@ -137,6 +152,26 @@
   }
   async function seat(id: string | null) {
     if (await run(() => setTeamCoach(id))) await load();
+  }
+
+  function answer(id: string, i: number) {
+    if (!st) return;
+    const before = snapshot(st);
+    act((s) => {
+      answered = id;
+      answerEvent(s, i);
+    });
+    evChips = st ? statChips(before, snapshot(st)) : [];
+  }
+  function playSeason() {
+    act(closeEvents);
+    const h = st?.history.at(-1);
+    if (h?.clubId) live = h.n;
+  }
+  function liveDone() {
+    live = null;
+    const h = st?.history.at(-1);
+    if (h && seasonBadges(h).some((b) => !b.bad)) buzz(40);
   }
 
   const ev = $derived(st && st.phase === 'event' ? currentEvent(st) : null);
@@ -258,28 +293,52 @@
           <p>{t.b}</p>
           {#if shownEv.result !== null}
             <p class="mg-result" data-manager-event-result>{shownEv.result}</p>
-            <button class="btn btn-primary btn-block" data-act="manager-next" onclick={() => (answered = null)}>{M.next}</button>
+            <Chips chips={evChips} pop />
+            <button class="btn btn-primary btn-block" data-act="manager-next" onclick={() => ((answered = null), (evChips = []))}>{M.next}</button>
           {:else}
             {#each t.choices as c, i (i)}
-              <button class="btn btn-block mg-choice" data-act="manager-choice" onclick={() => act((s) => { answered = shownEv.id; answerEvent(s, i); })}>{c}</button>
+              <button class="btn btn-block mg-choice" data-act="manager-choice" onclick={() => answer(shownEv.id, i)}>{c}</button>
             {/each}
           {/if}
         {:else}
-          <button class="btn btn-primary btn-block" data-act="manager-result" onclick={() => act(closeEvents)}>{M.toResult}</button>
+          <button class="btn btn-primary btn-block" data-act="manager-result" onclick={playSeason}>{M.toResult}</button>
         {/if}
       </section>
+    {:else if st.phase === 'result' && lastSeason && live === lastSeason.n && lastSeason.club}
+      <ManagerLive n={lastSeason.n} club={tn(lastSeason.club)} matches={managerMatchday(st.id, lastSeason)} ondone={liveDone} />
     {:else if st.phase === 'result' && lastSeason}
+      {@const badges = seasonBadges(lastSeason)}
+      {@const chips = seasonChips(lastSeason)}
+      {@const up = masteryUpLine(lastSeason)}
       <section class="card mg-col" data-manager-result>
         <h2>{M.resultHeading({ n: lastSeason.n })}</h2>
+        {#if badges.length}
+          <div class="mg-badges" data-manager-badges>
+            {#each badges as b, i (b.k)}<span class="mg-trophy" class:bad={b.bad} style="--d:{i * 120}ms">{b.label}</span>{/each}
+          </div>
+        {/if}
         {#if lastSeason.clubId}<p class="muted fs-sm">{M.record({ w: lastSeason.w, d: lastSeason.d, l: lastSeason.l })}</p>{/if}
         {#each lastSeason.lines as line, i (i)}<p class="mg-log">{line}</p>{/each}
+        {#if chips.length || up}
+          <div class="mg-change" data-manager-change>
+            <h3>{M.seasonChange}</h3>
+            <Chips {chips} pop split />
+            {#if up}<p class="mg-up">{up}</p>{/if}
+          </div>
+        {/if}
         <button class="btn btn-primary btn-block" data-act="manager-continue" onclick={() => act(continueAfterResult)}>{M.nextSeason}</button>
       </section>
     {:else if st.phase === 'done' && result}
       <section class="card mg-col" data-manager-done>
         <h2>{M.doneHeading}</h2>
+        <div class="tally" data-manager-totals>
+          <div><b><CountUp value={result.wins} /></b><span>{M.tallyW}</span></div>
+          <div><b><CountUp value={result.titles} /></b><span>{M.badgeTitle}</span></div>
+          <div><b><CountUp value={result.cups} /></b><span>{M.badgeCup}</span></div>
+          <div><b><CountUp value={result.promotions} /></b><span>{M.badgePromoted}</span></div>
+        </div>
         <div class="mg-card">
-          <b class="mg-grade">{M.grade({ grade: result.grade })}</b>
+          <b class="mg-grade mg-grade-pop">{M.grade({ grade: result.grade })}</b>
           <b>{endingName(result.ending)}</b>
           <p class="muted fs-sm">{endingDesc(result.ending)}</p>
           {@render cardBody(result)}
@@ -506,6 +565,51 @@
     border-radius: 10px;
     background: var(--surface-2);
     line-height: 1.5;
+  }
+  .mg-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .mg-trophy {
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--pitch);
+    color: var(--on-pitch);
+    font-weight: 700;
+    font-size: 0.875rem;
+    animation: mg-pop 0.42s cubic-bezier(0.2, 1.4, 0.4, 1) var(--d, 0ms) both;
+  }
+  .mg-trophy.bad {
+    background: var(--bad);
+    color: #fff;
+  }
+  .mg-change {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 4px;
+    border-top: 1px solid var(--line);
+  }
+  .mg-up {
+    font-weight: 700;
+    color: var(--accent-text, var(--accent));
+  }
+  .mg-grade-pop {
+    display: inline-block;
+    font-size: 1.25rem;
+    animation: mg-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) 0.3s both;
+  }
+  @keyframes mg-pop {
+    from {
+      transform: scale(0.6);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mg-trophy,
+    .mg-grade-pop {
+      animation: none;
+    }
   }
   .mg-choice {
     text-align: left;

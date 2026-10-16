@@ -15,12 +15,15 @@ import {
   migrateManagerSave,
   newManagerCareer,
   type ManagerState,
+  type MgrSeason,
+  type MgrSnapshot,
 } from '@offside/game/manager';
+import type { Chip } from '@offside/game/stats';
 import { apiFetch, ownerCachedGet } from './api/client.js';
 import { fmtValue } from './format.js';
 import { managerText as M } from './i18n/ko/manager.js';
 
-export type { ManagerCandidate, ManagerCareer, ManagersResponse, TeamCoach };
+export type { Chip, ManagerCandidate, ManagerCareer, ManagersResponse, TeamCoach };
 export { coachEffectText, managerName } from './managerCard.js';
 
 /** 감독 화면 데이터(진행 중 · 끝낸 감독 · 시작할 수 있는 카드). 쓰기가 성공하면 메모가 비워진다. */
@@ -73,4 +76,60 @@ export function startConfirmLines(c: ManagerCandidate): string[] {
     M.confirmLocked,
     M.confirmAbandon,
   ];
+}
+
+// ───────── 진행 연출(선수 커리어의 경기 중계 · 변화 칩과 같은 방식) ─────────
+
+const STAT_KEYS = ['fame', 'trust', 'morale', 'fans', 'control', 'adapt'] as const;
+const STAT_LABEL = {
+  fame: () => M.statFame,
+  trust: () => M.statTrust,
+  morale: () => M.statMorale,
+  fans: () => M.statFans,
+  control: () => M.statControl,
+  adapt: () => M.statAdapt,
+} as const;
+
+/** 두 상태 사이 변화 칩(0인 값은 뺀다). */
+export function statChips(
+  a: Omit<MgrSnapshot, 'mastery'>,
+  b: Omit<MgrSnapshot, 'mastery'>,
+): Chip[] {
+  return STAT_KEYS.filter((k) => b[k] !== a[k]).map((k) => ({
+    label: STAT_LABEL[k](),
+    d: b[k] - a[k],
+  }));
+}
+
+/** 결산 변화 칩(옛 세이브 시즌은 빈 목록). */
+export const seasonChips = (h: MgrSeason): Chip[] =>
+  h.start && h.end ? statChips(h.start, h.end) : [];
+
+/** 이번 시즌에 오른 포메이션 숙련 한 줄(오르지 않았으면 null). */
+export const masteryUpLine = (h: MgrSeason): string | null =>
+  h.start && h.end && h.formation && h.start.mastery !== h.end.mastery
+    ? M.masteryUp({ formation: h.formation, from: h.start.mastery, to: h.end.mastery })
+    : null;
+
+export type SeasonBadge = 'title' | 'cup' | 'promoted' | 'relegated' | 'sacked';
+/** 결산 머리 배지(우승 · 컵 · 승격은 좋은 것, 강등 · 경질은 나쁜 것). */
+export function seasonBadges(h: MgrSeason): { k: SeasonBadge; label: string; bad: boolean }[] {
+  const out: { k: SeasonBadge; label: string; bad: boolean }[] = [];
+  if (h.title) out.push({ k: 'title', label: M.badgeTitle, bad: false });
+  if (h.cup) out.push({ k: 'cup', label: M.badgeCup, bad: false });
+  if (h.promoted) out.push({ k: 'promoted', label: M.badgePromoted, bad: false });
+  if (h.relegated) out.push({ k: 'relegated', label: M.badgeRelegated, bad: true });
+  if (h.outcome === 'sacked') out.push({ k: 'sacked', label: M.badgeSacked, bad: true });
+  return out;
+}
+
+/** 경기 중계 한 경기 간격(ms): 시즌 전체가 약 3.6초 안에 끝나게(선수 커리어 경기 중계와 같은 템포). */
+export const liveStepMs = (matches: number) =>
+  Math.max(70, Math.min(260, Math.round(3600 / Math.max(1, matches))));
+
+/** 경기 중계 누적(승 · 무 · 패 · 승점). */
+export function liveTally(rows: readonly { res: 'W' | 'D' | 'L' }[]) {
+  const w = rows.filter((r) => r.res === 'W').length;
+  const d = rows.filter((r) => r.res === 'D').length;
+  return { w, d, l: rows.length - w - d, pts: w * 3 + d };
 }

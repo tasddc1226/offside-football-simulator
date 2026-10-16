@@ -133,6 +133,8 @@ async function stubOwner(page: Page) {
 async function step(page: Page): Promise<boolean> {
   const order = [
     'manager-finish',
+    'manager-live-skip',
+    'manager-live-done',
     'manager-accept',
     'manager-rest',
     'manager-season',
@@ -194,7 +196,18 @@ test('은퇴 선수로 감독 커리어를 끝까지 하고 감독 칸에 앉힌
   }
   await expect(page.locator('[data-manager-setup]')).toBeVisible();
 
+  // 첫 시즌: 이벤트를 다 보면 경기 중계가 한 경기씩 올라오고, 결산에 이번 시즌 변화가 칩으로 나온다.
+  const liveBox = page.locator('[data-manager-live]');
+  for (let i = 0; i < 20 && !(await liveBox.isVisible()); i++) await step(page);
+  await expect(liveBox.locator('.ticker div').first()).toBeVisible();
+  await page.locator('[data-act="manager-live-skip"]').click();
+  await expect(liveBox.locator('.ticker div')).toHaveCount(5);
+  await page.locator('[data-act="manager-live-done"]').click();
+  await expect(page.locator('[data-manager-result]')).toBeVisible();
+  await expect(page.locator('[data-manager-change] .chip').first()).toBeVisible();
+
   for (let i = 0; i < 300 && (await step(page)); i++);
+  await expect(page.locator('[data-manager-totals]')).toBeVisible();
   await expect(page.locator('[data-manager-done]')).toContainText('등급');
   await page.locator('[data-act="manager-finish"]').click();
   expect(s.finished).toMatchObject({ seasons: expect.any(Number), grade: expect.any(String) });

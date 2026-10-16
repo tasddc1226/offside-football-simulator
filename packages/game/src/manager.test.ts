@@ -8,6 +8,7 @@ import {
   continueAfterResult,
   currentEvent,
   managerEventText,
+  managerMatchday,
   managerResult,
   managerStart,
   migrateManagerSave,
@@ -135,5 +136,35 @@ describe('감독 커리어', () => {
     expect(migrateManagerSave(JSON.parse(JSON.stringify(s)))).toEqual(s);
     expect(migrateManagerSave({ ...s, v: 2 })).toBeNull();
     expect(migrateManagerSave(null)).toBeNull();
+  });
+
+  it('시즌 경기 목록은 결산 승무패와 같고, 다시 만들어도 같으며 커리어 난수를 쓰지 않는다', () => {
+    const s = playThrough(start(11));
+    const played = s.history.filter((h) => h.clubId);
+    expect(played.length).toBeGreaterThan(0);
+    for (const h of played) {
+      const rng = JSON.stringify(s.rng);
+      const m = managerMatchday(s.id, h);
+      expect(JSON.stringify(s.rng)).toBe(rng);
+      expect(m).toEqual(managerMatchday(s.id, h));
+      expect(m.length).toBe(h.w + h.d + h.l);
+      expect(m.filter((x) => x.res === 'W').length).toBe(h.w);
+      expect(m.filter((x) => x.res === 'D').length).toBe(h.d);
+      for (const x of m) {
+        expect(x.opp).not.toBe(h.club);
+        expect(Math.sign(x.gf - x.ga)).toBe(x.res === 'W' ? 1 : x.res === 'L' ? -1 : 0);
+      }
+    }
+    expect(managerMatchday(s.id, { ...played[0]!, clubId: null })).toEqual([]);
+  });
+
+  it('치른 시즌은 시작 · 끝 상태를 남긴다(결산 변화 칩)', () => {
+    const s = playThrough(start(5));
+    for (const h of s.history.filter((x) => x.clubId)) {
+      expect(h.start).toBeDefined();
+      expect(h.end).toBeDefined();
+      expect(h.end!.fame).toBeGreaterThanOrEqual(0);
+    }
+    expect(s.seasonStart).toBeUndefined();
   });
 });

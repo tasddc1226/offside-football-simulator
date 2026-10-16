@@ -17,8 +17,10 @@ import {
   endingName,
   leagueName,
   managerEventText,
+  managerMatchday,
   managerResult,
   masteryGrade,
+  snapshot,
   pickTransfer,
   restSeason,
   setupSeason,
@@ -45,6 +47,11 @@ import {
   finishManager,
   loadManagerState,
   managerName,
+  masteryUpLine,
+  seasonBadges,
+  seasonChips,
+  statChips,
+  type Chip,
   saveManagerState,
   setTeamCoach,
   startConfirmLines,
@@ -56,6 +63,11 @@ import { useColors } from '../../theme/useColors';
 import { Btn, Card, Opt, Press, Screen, Topbar, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 import { LoginButtons } from './LoginButtons';
+import { ManagerLive } from './ManagerLive';
+import { buzz } from '../../game/host';
+import { CountUp } from '../../components/CountUp';
+import { Chips } from '../../sheets/Chips';
+import { Pop } from '../../sheets/anim';
 
 type CardRules = {
   mastery: Record<FormationId, string>;
@@ -169,6 +181,9 @@ export default function Manager() {
   const [error, setError] = useState<string | null>(null);
   const [st, setSt] = useState<ManagerState | null>(null);
   const [answered, setAnswered] = useState<string | null>(null);
+  // 방금 답한 이벤트가 바꾼 상태(변화 칩), 경기 중계 중인 시즌 번호(다시 열면 중계 없이 결산).
+  const [evChips, setEvChips] = useState<Chip[]>([]);
+  const [live, setLive] = useState<number | null>(null);
   const [pick, setPick] = useState<{
     formation: FormationId;
     style: ManagerStyle;
@@ -206,13 +221,30 @@ export default function Manager() {
   }, [tick, retryN]);
 
   /** 엔진 함수로 상태를 바꾸고 저장한다. 엔진이 제자리에서 바꾸므로 사본에 적용해 새 상태로 넣는다(세이브와 같은 JSON 모양). */
-  function act(fn: (s: ManagerState) => unknown) {
-    if (!st) return;
+  function act(fn: (s: ManagerState) => unknown): ManagerState | null {
+    if (!st) return null;
     const next = JSON.parse(JSON.stringify(st)) as ManagerState;
     fn(next);
     saveManagerState(next);
     if (next.phase === 'setup') resetPick(next);
     setSt(next);
+    return next;
+  }
+  function answer(id: string, i: number) {
+    if (!st) return;
+    const before = snapshot(st);
+    setAnswered(id);
+    const next = act((s) => answerEvent(s, i));
+    setEvChips(next ? statChips(before, snapshot(next)) : []);
+  }
+  function playSeason() {
+    const h = act(closeEvents)?.history.at(-1);
+    if (h?.clubId) setLive(h.n);
+  }
+  function liveDone() {
+    setLive(null);
+    const h = st?.history.at(-1);
+    if (h && seasonBadges(h).some((b) => !b.bad)) buzz();
   }
   async function run(fn: () => Promise<{ ok: boolean; error?: { message: string } }>) {
     setBusy(true);
@@ -500,11 +532,15 @@ export default function Manager() {
                         >
                           <Txt testID="manager-event-result">{shownEv.result}</Txt>
                         </View>
+                        <Chips chips={evChips} pop />
                         <Btn
                           block
                           kind="primary"
                           testID="manager-next"
-                          onPress={() => setAnswered(null)}
+                          onPress={() => {
+                            setAnswered(null);
+                            setEvChips([]);
+                          }}
                         >
                           {M.next}
                         </Btn>
@@ -515,12 +551,7 @@ export default function Manager() {
                           key={i}
                           block
                           testID="manager-choice"
-                          onPress={() =>
-                            act((s) => {
-                              setAnswered(shownEv.id);
-                              answerEvent(s, i);
-                            })
-                          }
+                          onPress={() => answer(shownEv.id, i)}
                         >
                           {label}
                         </Btn>
@@ -530,14 +561,44 @@ export default function Manager() {
                 );
               })()
             ) : (
-              <Btn block kind="primary" testID="manager-result" onPress={() => act(closeEvents)}>
+              <Btn block kind="primary" testID="manager-result" onPress={playSeason}>
                 {M.toResult}
               </Btn>
             )}
           </Card>
+        ) : st.phase === 'result' && lastSeason && live === lastSeason.n && lastSeason.club ? (
+          <ManagerLive
+            n={lastSeason.n}
+            club={tn(lastSeason.club)}
+            matches={managerMatchday(st.id, lastSeason)}
+            onDone={liveDone}
+          />
         ) : st.phase === 'result' && lastSeason ? (
           <Card gap={10} testID="manager-result-card">
             <Txt v="h2">{M.resultHeading({ n: lastSeason.n })}</Txt>
+            {seasonBadges(lastSeason).length ? (
+              <View
+                style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}
+                testID="manager-badges"
+              >
+                {seasonBadges(lastSeason).map((b, i) => (
+                  <Pop key={b.k} delay={i * 120}>
+                    <View
+                      style={{
+                        paddingVertical: 4,
+                        paddingHorizontal: 12,
+                        borderRadius: 999,
+                        backgroundColor: b.bad ? c.bad : c.pitch,
+                      }}
+                    >
+                      <Txt bold tone="onPitch" style={small}>
+                        {b.label}
+                      </Txt>
+                    </View>
+                  </Pop>
+                ))}
+              </View>
+            ) : null}
             {lastSeason.clubId ? (
               <Txt tone="muted" style={small}>
                 {M.record({ w: lastSeason.w, d: lastSeason.d, l: lastSeason.l })}
@@ -548,6 +609,22 @@ export default function Manager() {
                 {line}
               </Txt>
             ))}
+            {seasonChips(lastSeason).length || masteryUpLine(lastSeason) ? (
+              <View
+                testID="manager-change"
+                style={{ gap: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: c.line }}
+              >
+                <Txt tone="muted" bold style={tiny}>
+                  {M.seasonChange}
+                </Txt>
+                <Chips chips={seasonChips(lastSeason)} pop split />
+                {masteryUpLine(lastSeason) ? (
+                  <Txt bold tone="accent">
+                    {masteryUpLine(lastSeason)}
+                  </Txt>
+                ) : null}
+              </View>
+            ) : null}
             <Btn
               block
               kind="primary"
@@ -560,12 +637,42 @@ export default function Manager() {
         ) : st.phase === 'done' && result ? (
           <Card gap={10} testID="manager-done">
             <Txt v="h2">{M.doneHeading}</Txt>
+            <View style={{ flexDirection: 'row', gap: 6 }} testID="manager-totals">
+              {(
+                [
+                  [M.tallyW, result.wins],
+                  [M.badgeTitle, result.titles],
+                  [M.badgeCup, result.cups],
+                  [M.badgePromoted, result.promotions],
+                ] as const
+              ).map(([l, v]) => (
+                <View
+                  key={l}
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                    backgroundColor: c.surface2,
+                  }}
+                >
+                  <Txt bold style={{ fontSize: rem(1.25), fontVariant: ['tabular-nums'] }}>
+                    <CountUp value={v} />
+                  </Txt>
+                  <Txt tone="muted" style={tiny}>
+                    {l}
+                  </Txt>
+                </View>
+              ))}
+            </View>
             <View
               style={{ gap: 6, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: c.line }}
             >
-              <Txt bold tone="accent">
-                {M.grade({ grade: result.grade })}
-              </Txt>
+              <Pop delay={300} style={{ alignSelf: 'flex-start' }}>
+                <Txt bold tone="accent" style={{ fontSize: rem(1.25) }}>
+                  {M.grade({ grade: result.grade })}
+                </Txt>
+              </Pop>
               <Txt bold>{endingName(result.ending)}</Txt>
               <Txt tone="muted" style={small}>
                 {endingDesc(result.ending)}
