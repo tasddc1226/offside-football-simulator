@@ -1,0 +1,23 @@
+{
+  "id": "t-11-321-server-status",
+  "title": "서버 상태 보기",
+  "items": [
+    "설정의 도움말 아래에서 서버 상태를 펼쳐 볼 수 있어요",
+    "최근 15분 응답 속도, 24시간 요청 추이, 30일 기록을 보여 줘요"
+  ],
+  "en": {
+    "title": "Server status",
+    "items": [
+      "Open server status under Help in Settings.",
+      "It shows response speed for the last 15 minutes, requests over 24 hours and the last 30 days."
+    ]
+  },
+  "ja": {
+    "title": "サーバー状況の表示",
+    "items": [
+      "設定のヘルプの下でサーバー状況を開けます。",
+      "直近15分の応答速度、24時間のリクエスト推移、30日間の記録を表示します。"
+    ]
+  },
+  "availability": "web-app"
+}

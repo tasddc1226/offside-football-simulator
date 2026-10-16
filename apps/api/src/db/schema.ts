@@ -1021,6 +1021,18 @@ export const translations = sqliteTable(
   (table) => [index('translations_created_idx').on(table.createdAt)],
 );
 
+/** T-11-321 서버 상태 화면. 5분 칸(`bucket` = 칸 시작 UTC ISO)마다 워커가 받은 요청 수·응답 시간 합·느린 요청·서버
+ * 오류를 더한다. isolate마다 메모리에 모았다가 1분에 한 번 더하므로 요청마다 쓰지 않는다(status/metrics.ts). 35일 보관. */
+export const apiStatusBuckets = sqliteTable('api_status_buckets', {
+  bucket: text('bucket').primaryKey(),
+  requests: integer('requests').notNull().default(0),
+  totalMs: integer('total_ms').notNull().default(0),
+  /** 1초 이상 걸린 요청. */
+  slow: integer('slow').notNull().default(0),
+  /** 5xx로 끝난 요청. */
+  errors: integer('errors').notNull().default(0),
+});
+
 export const appMeta = sqliteTable('app_meta', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
