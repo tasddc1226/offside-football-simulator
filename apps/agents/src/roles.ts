@@ -4,6 +4,7 @@ import type { McpServer } from './mcp.ts';
 import type { Env, Role } from './env.ts';
 import type { Task } from './thread.ts';
 import dev from '../roles/dev.md';
+import glossary from '../roles/glossary.md';
 import ops from '../roles/ops.md';
 import plan from '../roles/plan.md';
 import { devTools } from './dev.ts';
@@ -52,7 +53,7 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
   });
   if (role === 'plan')
     return {
-      system: plan,
+      system: `${plan}\n\n${glossary}`,
       model,
       // 기획은 규칙 · 보드 확인과 비슷한 댓글 찾기만 한다. Actions · Cloudflare 로그는 @ops에게 넘긴다.
       // 고객 문의 정리 · 운영자 지시에는 문의 메일 도구(읽기 · 초안 + 승인 카드)를 더한다.
@@ -86,7 +87,7 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
     };
   if (role !== 'ops') throw new Error(`role ${role} is not open yet`);
   return {
-    system: ops,
+    system: `${ops}\n\n${glossary}`,
     model,
     tools: [
       ...tools,
