@@ -12,7 +12,13 @@ import { eq, inArray } from 'drizzle-orm';
 import { cardValue, releasePayout, retireValue, valueFor } from '@offside/contracts/market-value';
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
-import { issueCookie, putJson, putSeasonsFor, seasonBody } from '../test/http.js';
+import {
+  issueCookie,
+  issueGoogleCookie,
+  putJson,
+  putSeasonsFor,
+  seasonBody,
+} from '../test/http.js';
 
 const CAREER_ID = '3b1d6c1e-2a4f-4f7e-9a0b-7c8d9e0f1a2b';
 
@@ -510,7 +516,68 @@ describe('공개 명예의 전당 /v1/hof', () => {
     );
     expect(res.status).toBe(200);
     expect(seen.length).toBeGreaterThan(0);
-    expect(seen.filter((q) => /"sessions"|"profiles"/.test(q))).toEqual([]);
+    // T-11-297 키운 구단주 닉네임은 명예의 전당 쿼리 안에서 left join으로만 읽는다(요청자 프로필을 따로 찾지 않는다).
+    expect(seen.filter((q) => /"sessions"|from "profiles"|"profiles"\."id" = \?/.test(q))).toEqual(
+      [],
+    );
+  });
+
+  it('T-11-297: 키운 구단주(닉네임·가장 최근 팀)를 싣고, 익명 선수는 구단주도 숨긴다', async () => {
+    const app = createApp();
+    const owner = await issueGoogleCookie(ctx, { nickname: '키운구단주' });
+    const RAISED = '5c2e7d9a-1b3f-4a6c-8d0e-2f4a6b8c0d1e';
+    await putSeasonsFor(ctx.env, owner.cookie, RAISED, summary);
+    const attrs = { pac: 91, sho: 88, pas: 70, dri: 86, def: 35, phy: 72 };
+    const roles = Object.fromEntries(
+      ['GK', 'CB', 'FB', 'DM', 'CM', 'AM', 'W', 'ST'].map((k) => [k, 60]),
+    );
+    expect(
+      (
+        await putJson(ctx, owner.cookie, `/v1/careers/${RAISED}/retirement`, {
+          ...summary,
+          publicName: '키운선수',
+          snapshot,
+          profile: { attrs, roles },
+        })
+      ).status,
+    ).toBe(200);
+    // 아직 팀이 없다 — 닉네임만.
+    let list = successEnvelope(HofListResponseSchema).parse(
+      await (await app.request('/v1/hof', {}, ctx.env)).json(),
+    ).data;
+    const raised = () => list.entries.find((e) => e.id === RAISED)!;
+    expect(raised().raiser).toEqual({ nickname: '키운구단주', teamId: null, teamName: null });
+    // 팀을 만들면 가장 최근 팀 id·이름이 붙는다(구단주 프로필은 이 팀 id로 연다).
+    const team = await putJson(ctx, owner.cookie, '/v1/owner-team', {
+      name: '육성 FC',
+      manager: '김감독',
+      formation: '4-3-3',
+      slots: Array(11).fill(null),
+    });
+    expect(team.status).toBe(200);
+    const teamId = ((await team.json()) as { data: { team: { id: string } } }).data.team.id;
+    list = successEnvelope(HofListResponseSchema).parse(
+      await (await app.request('/v1/hof', {}, ctx.env)).json(),
+    ).data;
+    expect(raised().raiser).toEqual({ nickname: '키운구단주', teamId, teamName: '육성 FC' });
+    // 상세에는 최고 시점 능력치 6개도 싣는다.
+    const detail = successEnvelope(HofDetailResponseSchema).parse(
+      await (await app.request(`/v1/hof/${RAISED}`, {}, ctx.env)).json(),
+    ).data;
+    expect(detail.entry.raiser).toEqual({ nickname: '키운구단주', teamId, teamName: '육성 FC' });
+    expect(detail.entry.attrs).toEqual(attrs);
+    // 익명 선수(이름 비공개)는 구단주도 null, 능력치 없는 옛 기록은 attrs null.
+    await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, { ...summary, snapshot });
+    list = successEnvelope(HofListResponseSchema).parse(
+      await (await app.request('/v1/hof', {}, ctx.env)).json(),
+    ).data;
+    const anon = list.entries.find((e) => e.id === CAREER_ID)!;
+    expect(anon.name).toBeNull();
+    expect(anon.raiser).toBeNull();
+    const anonDetail = successEnvelope(HofDetailResponseSchema).parse(
+      await (await app.request(`/v1/hof/${CAREER_ID}`, {}, ctx.env)).json(),
+    ).data;
+    expect(anonDetail.entry.attrs).toBeNull();
   });
 
   it('페이지를 넘겨도 전체 인원은 엣지 캐시에서 읽고 다시 세지 않는다(T-11-257)', async () => {

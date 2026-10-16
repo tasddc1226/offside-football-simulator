@@ -16,6 +16,7 @@
   import { seasonNow } from './seasonNow.svelte.js';
   import { openPublicLegend } from './legend.js';
   import { fmtValue, playerName } from '@offside/app-core/format';
+  import { raiserLabel } from '@offside/app-core/hofRaiser';
   import { openHof } from './nav.js';
   import HofRow, { type RowStats } from './HofRow.svelte';
   import HofPodium from './HofPodium.svelte';
@@ -176,6 +177,7 @@
       rn={h.retiredNumber?.number}
       wall={h.wallOfHonor ? h.number : null}
       tag={myIds.has(h.id) ? L.mine : null}
+      owner={raiserLabel(h.raiser)}
       {t}
       titleId={h.title}
       value={by.get(t)}

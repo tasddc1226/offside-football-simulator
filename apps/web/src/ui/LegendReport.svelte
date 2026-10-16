@@ -29,6 +29,10 @@
   import { retiredAvatarSpec } from '@offside/game/avatar';
   import PixelAvatar from './PixelAvatar.svelte';
   import { NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
+  import { raiserLabel } from '@offside/app-core/hofRaiser';
+  import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
+  import { appState, hofStart } from './state.svelte.js';
+  import { go } from './nav.js';
 
   // end: 리포트 맨 아래(다음 행동 버튼 등).
   const { v, end }: { v: LegendView; end?: Snippet } = $props();
@@ -36,6 +40,23 @@
   const back = $derived(v.pos === 'GK' || v.pos === 'DF');
   const t = $derived(d ? totals(d) : null);
   const main = $derived(titleById(legendTitleOf(v.own ? (v.own.id ?? '') : undefined, v.title)));
+
+  // T-11-297 키운 구단주 칩 — 누르면 기록실 구단주 프로필(가장 최근 팀 id로 연다). 팀이 없으면 이름만.
+  const raiser = $derived(raiserLabel(v.raiser));
+  function openRaiser() {
+    const teamId = v.raiser?.teamId;
+    if (!teamId) return;
+    appState.hof = { ...hofStart(), tab: 'teams', team: teamId, owner: true };
+    go('hof');
+  }
+  // T-11-297 최고 시점 능력치 6개 — 카드와 같은 순서·약어(GK는 골키퍼 약어). 가장 높은 둘을 강조해 어디에 힘을 실었는지 보인다.
+  const attrKeys = $derived(v.pos === 'GK' ? (['def', 'phy', 'pas', 'pac', 'sho', 'dri'] as const) : (['pac', 'sho', 'dri', 'pas', 'def', 'phy'] as const));
+  const attrAbbr = $derived(v.pos === 'GK' ? GK_ABBR : FACE_ABBR);
+  const topAttrs = $derived.by(() => {
+    const a = v.attrs;
+    if (!a) return new Set<string>();
+    return new Set([...attrKeys].sort((x, y) => a[y] - a[x]).slice(0, 2));
+  });
 
   const chapters = $derived(d ? careerChapters(d) : []);
   /** 거쳐 간 구단 엠블럼 줄 — 은퇴 가치와 통산 기록 사이에서 커리어를 한눈에. */
@@ -117,6 +138,13 @@
     <div class="eyebrow film-kicker">Full Time{v.number != null ? ` · No.${v.number}` : ''}</div>
     <h1>{#if country}<span class="film-flag" role="img" aria-label={tn(country.ko)} title={tn(country.ko)} data-legend-nation={country.code}>{flagOf(country.code)}</span> {/if}{v.name}</h1>
     <div class="film-sub">{tn(POS_LABEL[v.pos])}{span ? ` · ${span}` : ''} · {L.retiredAge({ age: v.age })}</div>
+    {#if raiser}
+      {#if v.raiser?.teamId}
+        <button class="film-raiser" data-legend-raiser data-act="legend-raiser" onclick={openRaiser} aria-label={L.raiserOpen({ owner: raiser })}><span class="film-raiser-label">{L.raiserLabel}</span><b>{raiser}</b><i aria-hidden="true">›</i></button>
+      {:else}
+        <span class="film-raiser" data-legend-raiser><span class="film-raiser-label">{L.raiserLabel}</span><b>{raiser}</b></span>
+      {/if}
+    {/if}
     <div class="film-score">
       <b><CountUp value={v.score} animate={playing} ms={1800} /></b><span>Legend Score</span>
     </div>
@@ -154,6 +182,18 @@
       <div><b><CountUp value={v.totals.trophies} animate={playing} run={seen.highlights} /></b><span>{L.statTrophies}</span></div>
       <div data-legend-ballon><b><CountUp value={v.totals.ballon} animate={playing} run={seen.highlights} /></b><span>{L.statBallon}</span></div>
     </section>
+    {#if v.attrs}
+      {@const attrs = v.attrs}
+      <section class="film-attrs" data-legend-attrs aria-label={L.peakAttrsTitle} use:reveal>
+        <div class="eyebrow film-kicker">{L.peakAttrsTitle}</div>
+        <dl>
+          {#each attrKeys as k (k)}
+            <div class:top={topAttrs.has(k)}><dt>{attrAbbr[k]}</dt><dd>{attrs[k]}</dd></div>
+          {/each}
+        </dl>
+        <p class="film-note">{L.peakAttrsNote}</p>
+      </section>
+    {/if}
     {#if !d}<p class="film-note">{L.noDetailNote}</p>{/if}
     {#if playing && !seen.journey}<div class="film-cue" aria-hidden="true">{L.scrollCue}<i>↓</i></div>{/if}
   </section>

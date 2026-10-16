@@ -106,6 +106,8 @@ const ko = {
   retireAgeN: (p: { n: number }) => `${p.n}세 은퇴`,
   peakN: (p: { n: number }) => `최고 OVR ${p.n}`,
   ballonN: (p: { n: number }) => `발롱도르 ${p.n}회`,
+  // T-11-297 이 선수를 키운 구단주(공개 닉네임, 없으면 팀 이름).
+  raiserN: (p: { owner: string }) => `구단주 ${p.owner}`,
 };
 
 export type HofMsgs = typeof ko;

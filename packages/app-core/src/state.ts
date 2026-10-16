@@ -7,7 +7,7 @@ import { personName } from '@offside/game/i18n/names';
 import { BODY_DEFAULT, type Body } from '@offside/contracts/body';
 import { nationFromLocales } from '@offside/contracts/nations';
 import { deviceLocales } from './i18n/core.js';
-import type { HofSort, RetiredNumberResult, TeamRankSort } from '@offside/contracts';
+import type { HofRaiser, HofSort, RetiredNumberResult, TeamRankSort } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { activeSeason, retireAtNow } from '@offside/contracts/service-seasons';
 import { detailPosOpen, dposFor, DETAILS_OF } from '@offside/contracts/positions';
@@ -187,6 +187,10 @@ export interface LegendView {
   rn?: RetiredNumberResult | null | undefined;
   /** Server-verified public retirement honor, even when the selected title differs. */
   wallOfHonor?: boolean | undefined;
+  /** T-11-297 이 선수를 키운 구단주(서버 명예의 전당 기록만). 내 선수·익명·구단주 정보 없음은 null. */
+  raiser?: HofRaiser | null | undefined;
+  /** T-11-297 최고 시점 대표 능력치 6개. 서버 상세·이 기기의 기록에서 읽고, 없는 옛 기록은 null. */
+  attrs?: Record<AttrKey, number> | null | undefined;
 }
 
 export interface AppState {

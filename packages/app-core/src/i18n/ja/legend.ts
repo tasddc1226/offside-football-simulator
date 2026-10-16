@@ -33,6 +33,11 @@ export const legend: Translation<LegendMsgs> = {
   potTitle: '引退時のポテンシャル評価',
   potLine: (p) => `ポテンシャル ${p.value} · 引退時に記録した値`,
   peakOvrLabel: '最高OVR',
+  raiserLabel: '育てたオーナー',
+  raiserOpen: (p) => `${p.owner}のオーナープロフィールを見る`,
+  peakAttrsTitle: '最高時の能力値',
+  peakAttrsNote:
+    '引退時に残した最も良かった時期の主要能力値です。どこに力を入れて育てたかが分かります。',
   finaleLine1: (p) => `${p.age}歳、${p.club}で`,
   finaleLine2: '最後のホイッスルが鳴りました。',
   thanks: (p) => `お疲れさまでした、${p.name}`,
