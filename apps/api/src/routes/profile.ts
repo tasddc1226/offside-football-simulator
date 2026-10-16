@@ -40,6 +40,7 @@ import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
+import { deleteSnapshots } from '../careerSnapshots.js';
 import { edgeCached, purgeEdge, waitUntil } from '../edgeCache.js';
 import { revokeAppleAuthorization } from '../auth/apple-revoke.js';
 import { STALE } from '../edgeKeys.js';
@@ -291,6 +292,8 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
       purgeEdge(c, [`/v1/avatars/${previousAvatar.id}`]);
       if (c.env.CHAT) waitUntil(c, chatRoom(c.env.CHAT).updateAvatar(session.profileId, null));
     }
+    // T-11-311 지운 커리어의 R2 은퇴 상세도 지운다(응답 뒤).
+    waitUntil(c, deleteSnapshots(c.env, careerIds));
     if (heldFirsts) purgeEdge(c, STALE.firstsChanged());
     purgeEdge(c, [
       ...STALE.profileDeleted(careerIds, hadComments),
