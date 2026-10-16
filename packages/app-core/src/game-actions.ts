@@ -88,6 +88,8 @@ import {
   draftCareerRules,
   randomName,
   randomNumber,
+  draftIdentity,
+  DRAFT_IDENTITY_KEY,
   type AppState,
   type Screen,
 } from './state.js';
@@ -796,6 +798,9 @@ export function createGameActions(host: GameHost) {
     appState.screen = 'retired';
     host.trackPage('retired');
     host.analytics.retire(appState.G!);
+    // 은퇴한 뒤의 선수 만들기는 무작위 이름·등번호로 시작한다(은퇴 세이브를 쓴 뒤에 뽑는다).
+    saveKey(DRAFT_IDENTITY_KEY, null);
+    Object.assign(appState.C, draftIdentity());
     host.scrollTop(false);
   }
 
@@ -818,8 +823,7 @@ export function createGameActions(host: GameHost) {
             host.save();
             sheet.closeSheet();
             appState.screen = 'create';
-            appState.C.name = randomName();
-            appState.C.number = randomNumber();
+            Object.assign(appState.C, draftIdentity());
           },
         },
         { label: L.cancel, fn: sheet.closeSheet },
@@ -873,6 +877,7 @@ export function createGameActions(host: GameHost) {
     appState.screen = 'game';
     host.trackPage('game');
     host.analytics.start(appState.G!, previous);
+    saveKey(DRAFT_IDENTITY_KEY, { name: finalName, number: finalNumber });
     appState.tab = 'season';
     appState.candidates = null;
     // T-11-234 킵한 후보로 시작했을 때만 킵을 푼다. 다른 후보로 시작하면 다음 커리어 후보에도 그대로 남는다.
