@@ -66,6 +66,26 @@ const live = {
   ],
 };
 
+const CUP_HOME_HIDDEN = {
+  cup: {
+    id: 's1-1',
+    season: 1,
+    edition: 1,
+    opensAt: '2026-10-08T15:00:00.000Z',
+    closesAt: '2026-10-08T19:00:00.000Z',
+    drawAt: '2026-10-09T01:00:00.000Z',
+    rounds: [],
+    capacity: 64,
+    minFilled: 8,
+  },
+  phase: 'cancelled',
+  entries: 0,
+  teamCount: 0,
+  round: null,
+  championName: null,
+  champion: null,
+};
+
 /** 시계·API·세이브를 고정한다. 목록 API(명예의 전당·게시판 등)는 503으로 막아 오류 상태 마크업도 기준선에 넣는다.
  * 보낸 API 요청(메서드·경로·쿼리)을 순서대로 모아 돌려준다. */
 async function setup(page: Page, pending: unknown = null): Promise<string[]> {
@@ -94,7 +114,11 @@ async function setup(page: Page, pending: unknown = null): Promise<string[]> {
           : // 시즌 진행 게이지: 진행 중인 시즌이 없으면 그리지 않는다(정상 응답이라 메모돼 한 번만 묻는다).
             path === '/v1/season/gauge'
             ? { gauge: null, seasons: [] }
-            : null;
+            : // 컵 배너 · 우승 팝업(지연 청크)이 같은 메모를 쓴다. 실패(503)는 메모되지 않아 팝업이 늦게 뜨면 다시 묻는
+              // 경쟁이 생기므로, 배너 · 팝업을 그리지 않는 정상 응답(취소된 대회, 우승 팀 없음)을 준다.
+              path === '/v1/cups/home'
+              ? CUP_HOME_HIDDEN
+              : null;
     return r.fulfill(data ? ok(data) : { status: 503, body: '' });
   });
   await page.addInitScript(
@@ -107,8 +131,9 @@ async function setup(page: Page, pending: unknown = null): Promise<string[]> {
     [SAVE, pending] as const,
   );
   await page.goto('/');
-  // Home's lazy banner must mount before a fast test navigates away.
+  // Home's lazy banner and TOP 3 must mount before a fast test navigates away.
   await expect.poll(() => requests.includes('GET /v1/cups/home')).toBe(true);
+  await expect.poll(() => requests.includes('GET /v1/teams?sort=value&page=1')).toBe(true);
   return requests;
 }
 
