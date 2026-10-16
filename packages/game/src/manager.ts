@@ -796,7 +796,8 @@ export function continueAfterResult(s: ManagerState): boolean {
 /** 표시용 감독 등급. */
 export function managerGrade(s: ManagerState): ManagerGrade {
   const score = s.fame + s.titles * 6 + s.cups * 3 + s.promotions * 4 - s.sacked * 4;
-  return score >= 85 ? 'S' : score >= 60 ? 'A' : score >= 38 ? 'B' : 'C';
+  // S는 리그 우승이 있어야 한다(명성만 높게 유지한 무관 감독은 A).
+  return score >= 85 && s.titles > 0 ? 'S' : score >= 60 ? 'A' : score >= 38 ? 'B' : 'C';
 }
 
 /** 가장 많이 쓴 성향(같으면 마지막 성향). */
