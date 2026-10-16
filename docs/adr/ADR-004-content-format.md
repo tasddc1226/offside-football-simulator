@@ -5,16 +5,16 @@
 
 ## 결정
 
-| 항목 | 선택 |
-|---|---|
-| 포맷 | JSON. 이벤트 정의, 팀·리그 데이터, ruleset manifest 모두 JSON 파일 |
-| 스키마 | `packages/content`의 Zod 스키마가 정본. 빌드와 로드 시 검증 |
-| 조건 DSL | 04 문서의 JSON 연산자 트리. 스크립트 실행 없음 |
-| 저작 위치 | 리포지토리 안 `packages/content/packs/<contentPackVersion>/` 와 `packages/content/rulesets/<rulesetVersion>/` |
-| 빌드 산출물 | 팩 하나를 단일 JSON 번들로 합치고 `manifest.json`에 checksum·버전·호환 `clientMinVersion` 기록 |
-| 배포 | 웹 Static Assets Worker의 `/content/<version>/bundle.json`. 과거 버전은 R2에 영구 보관 |
-| 캐시 | 버전이 경로에 들어가므로 immutable 캐시. `manifest.json`만 짧은 캐시 |
-| 문구 | narrative token(`{name:이/가}`) 규칙을 렌더러가 처리. 한국어 우선, 문자열 키는 다국어 확장 가능 |
+| 항목        | 선택                                                                                                          |
+| ----------- | ------------------------------------------------------------------------------------------------------------- |
+| 포맷        | JSON. 이벤트 정의, 팀·리그 데이터, ruleset manifest 모두 JSON 파일                                            |
+| 스키마      | `packages/content`의 Zod 스키마가 정본. 빌드와 로드 시 검증                                                   |
+| 조건 DSL    | 04 문서의 JSON 연산자 트리. 스크립트 실행 없음                                                                |
+| 저작 위치   | 리포지토리 안 `packages/content/packs/<contentPackVersion>/` 와 `packages/content/rulesets/<rulesetVersion>/` |
+| 빌드 산출물 | 팩 하나를 단일 JSON 번들로 합치고 `manifest.json`에 checksum·버전·호환 `clientMinVersion` 기록                |
+| 배포        | 웹 Static Assets Worker의 `/content/<version>/bundle.json`. 과거 버전은 R2에 영구 보관                        |
+| 캐시        | 버전이 경로에 들어가므로 immutable 캐시. `manifest.json`만 짧은 캐시                                          |
+| 문구        | narrative token(`{name:이/가}`) 규칙을 렌더러가 처리. 한국어 우선, 문자열 키는 다국어 확장 가능               |
 
 ## 검증 파이프라인
 
@@ -30,11 +30,11 @@
 
 ## 검토한 대안
 
-| 대안 | 보류 이유 |
-|---|---|
-| YAML | 한국어 문장에 들여쓰기 오류가 잦고 스키마 도구가 약함 |
+| 대안                          | 보류 이유                                                     |
+| ----------------------------- | ------------------------------------------------------------- |
+| YAML                          | 한국어 문장에 들여쓰기 오류가 잦고 스키마 도구가 약함         |
 | TypeScript 코드로 이벤트 정의 | 타입 안전하지만 앱 배포와 결합되고 운영 CMS로 확장하기 어려움 |
-| 서버 DB에 콘텐츠 저장 | 로컬 우선 실행과 맞지 않음 |
+| 서버 DB에 콘텐츠 저장         | 로컬 우선 실행과 맞지 않음                                    |
 
 ## 결과
 
