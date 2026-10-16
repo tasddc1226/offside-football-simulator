@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { costOf, MODEL, MODELS, runAgent, withCacheTail, type Tool } from './claude.ts';
-import { modelFor } from './roles.ts';
+import { modelFor, roleSpec } from './roles.ts';
 import { digestTools } from './tools/digest.ts';
 import {
   maskAddress,
@@ -174,6 +174,15 @@ describe('runAgent', () => {
     expect(modelFor('alert')).toBe(MODELS.haiku);
     expect(modelFor('report')).toBe(MODELS.sonnet);
     for (const k of ['mention', 'reply', 'handoff'] as const) expect(modelFor(k)).toBe(MODELS.opus);
+  });
+
+  it('운영 · 기획은 게임 용어집을 함께 읽는다(킵은 후보 킵, 잠금과 다름)', () => {
+    const task = { kind: 'mention', text: '' } as Task;
+    for (const role of ['ops', 'plan'] as const) {
+      const { system } = roleSpec({ GITHUB_REPO: 'o/r' } as Env, role, task);
+      expect(system).toContain('## 게임 용어');
+      expect(system).toContain('ft_scout_keep');
+    }
   });
 
   it('고른 모델로 요청하고 그 모델 단가로 비용을 센다', async () => {
