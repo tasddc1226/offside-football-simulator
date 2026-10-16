@@ -43,6 +43,7 @@ import {
   updateRetiredLook,
   retiredLookPolicy,
   verifiedRetiredTitle,
+  verifiedSnapshot,
 } from '../db/repos/careers.js';
 import { clubsJsonMap, clubsJsonQuery } from '../db/repos/retiredNumbers.js';
 import { boundProfile, boundRetirement, sanitizeSeason } from '../plausibility.js';
@@ -62,6 +63,7 @@ import { publishLive } from '../live/publish.js';
 import { isHeadless } from '../db/repos/automation.js';
 import { isAcceptablePublicName, toPublicName } from '@offside/contracts/content-filter';
 import { resumeCareerDetails } from '../cron/careerRetention.js';
+import { putSnapshot, readSnapshotJson, titleIdsOf } from '../careerSnapshots.js';
 import { retireAtOf } from '@offside/contracts/service-seasons';
 import { legendScoreOfRecord } from '@offside/contracts/hof-rules';
 import { resolveBalance } from '@offside/contracts';
@@ -180,11 +182,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
         policy.lockedReason === 'transferred' ? 'LOOK_TRANSFERRED' : 'LOOK_ALREADY_USED',
       );
     }
-    const titles = row.snapshotJson
-      ? ((JSON.parse(row.snapshotJson) as { titles?: { id: string }[] }).titles ?? []).map(
-          (t) => t.id,
-        )
-      : [];
+    const titles = titleIdsOf(await readSnapshotJson(c.env, row));
     if (!appearanceUnlocked(look, row.look, titles)) {
       throw conflictError(text.locked, 'LOOK_RECORD_LOCKED');
     }
@@ -296,20 +294,40 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     }
     await limitUpload(db, 'CAREER_RETIRE', session.profileId);
     const now = nowIso();
-    await resumeCareerDetails(
-      c.env,
-      careerId,
-      session.profileId,
-      career.detailArchiveKey,
-      career.updatedAt,
-      now,
-    );
+    const first = career.status !== 'retired';
+    // T-11-311 상세 스냅샷은 R2에 먼저 쓴다(첫 은퇴, 또는 상세 없이 은퇴한 기록에 처음 올 때만 — 첫 상세가 정본).
+    // 이미 은퇴한 기록의 대표 칭호를 바꾸면 R2에 둔 상세의 획득 칭호로 확인한다. 둘 다 아래 보관 복원과 나란히 돈다.
+    const [snapshotKey, snapshotTitleIds] = await Promise.all([
+      snapshot && (first || !career.hasSnapshot)
+        ? putSnapshot(c.env, careerId, JSON.stringify(verifiedSnapshot(snapshot, false)))
+        : null,
+      !first && sent.title && career.snapshotKey
+        ? readSnapshotJson(c.env, { snapshotJson: null, snapshotKey: career.snapshotKey }).then(
+            titleIdsOf,
+          )
+        : [],
+      resumeCareerDetails(
+        c.env,
+        careerId,
+        session.profileId,
+        career.detailArchiveKey,
+        career.updatedAt,
+        now,
+      ),
+    ]);
 
     const seasons = groupStoredSeasons(seasonRows).get(careerId) ?? [];
-    const first = career.status !== 'retired';
     let written;
     if (!first) {
-      written = await updateRetired(db, { careerId, publicName, snapshot, title: sent.title, now });
+      written = await updateRetired(db, {
+        careerId,
+        publicName,
+        snapshot,
+        snapshotKey,
+        snapshotTitleIds,
+        title: sent.title,
+        now,
+      });
     } else {
       // 은퇴 요약은 받아 둔 시즌 기록에 맞춘다 — 보낸 숫자를 그대로 믿지 않는다.
       // T-11-187 스냅샷이 있으면 레전드 점수는 서버가 지금 공식으로 다시 매긴다. 레전드 공식을 바꾼 뒤에도 OTA를 못 받은
@@ -338,6 +356,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
         summary,
         publicName,
         snapshot,
+        snapshotKey,
         profile: profile && boundProfile(profile, summary.peak),
         potReal: sent.potReal,
         look: sent.look,

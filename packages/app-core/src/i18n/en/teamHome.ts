@@ -263,6 +263,9 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   statFriendlyOnly: 'Only',
   retireSyncing:
     "Uploading your retired player's record. They'll join the locker room as soon as it's in.",
+  retireSyncRetry: 'Upload again',
+  retireSyncRetrying: 'Uploading',
+  retireSyncFailed: "Couldn't upload yet. Check your connection and tap Upload again.",
   // T-11-217 Team presets
   tpButton: 'Presets',
   tpTitle: 'Team presets',

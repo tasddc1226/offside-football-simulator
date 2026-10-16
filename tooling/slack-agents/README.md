@@ -83,13 +83,19 @@ Worker는 `apps/agents`(`agents.offside-lab.com`)다. `manifests/ops.yaml`에 �
 
 `manifests/dev.yaml`에 이벤트 · 버튼 주소를 넣었다. `ENABLED_ROLES`는 `ops,plan,dev`. 구조는 ADR-015 인프라 절 "3단계 결정"을 본다.
 
-- **흐름.** 운영자가 `@손흥민 …`(또는 `@개발`)으로 고칠 일을 맡긴다 → `@dev`가 지시를 정리해 `agent-dev.yml`을 띄운다 → Actions의 Claude Code가 고치고 커밋 → 고정 스크립트가 `agent-dev/<run>` 브랜치 · PR을 연다 → 스레드에 PR 링크 → CI가 끝나면 스레드에 알리고, 통과면 `#agent-approvals`에 **승인하고 머지 / 거절** 카드 → 운영자가 누르면 squash 머지. 운영 배포는 따로 한다.
+- **흐름.** 운영자가 `@손흥민 …`(또는 `@개발`)으로 고칠 일을 맡긴다 → `@dev`가 지시를 정리해 `agent-dev.yml`을 띄운다 → Actions의 Claude Code가 고치고 커밋 → 고정 스크립트가 `agent-dev/<run>` 브랜치 · PR을 연다 → 스레드에 PR 링크 → CI가 끝나면 스레드에 알리고, 통과면 `#agent-approvals`에 **승인하고 머지 / 거절** 카드 → 운영자가 누르면 squash 머지 → 이어서 **운영 배포 승인 카드**(아래).
 - **한도.** Actions 작업 한 번 $5 · 80턴(`--max-budget-usd`, `DEV_RUN_BUDGET_USD`와 같은 값), `@dev` 하루 $20(`DAILY_BUDGET_DEV_USD`, Actions 비용 포함). 한 번에 하나씩 돈다(`concurrency`).
 - **비밀값 · 설정.**
   - GitHub Actions: `ANTHROPIC_DEV_API_KEY`(Console `offside-dev-actions` 키), `AGENT_APP_PRIVATE_KEY`(GitHub App 키), 변수 `AGENT_APP_ID`. `AGENTS_READ_TOKEN`은 결과를 Worker에 알릴 때 쓴다.
   - Worker: `GITHUB_APP_PRIVATE_KEY`(같은 키를 PKCS#8로 바꾼 것, `openssl pkcs8 -topk8 -nocrypt`), 변수 `GITHUB_APP_ID` · `GITHUB_APP_INSTALLATION_ID`.
 - **GitHub App `offside-dev-agent`.** 이 저장소에만 설치. 권한은 contents · pull_requests · actions 쓰기, checks · metadata 읽기. workflows 권한이 없어 `.github/workflows`를 바꿀 수 없다.
 - **main 보호.** 저장소 규칙 "main 보호 (ADR-015 에이전트)": PR 없이 바꾸기 · 강제 push · 삭제 금지. 저장소 관리자는 예외라 운영자 작업 방식은 그대로다.
+
+## `@dev` 운영 배포 승인 (2026-10-16, T-11-312)
+
+- **카드가 오는 때.** 승인 머지가 끝났을 때(머지한 main 커밋), 운영자가 `@손흥민 운영에 배포해`처럼 맡겼을 때(`deploy_request`, main 최신 커밋). 지난 운영 배포 태그 뒤 바뀐 커밋이 없으면 올리지 않는다.
+- **카드 내용.** 지난 배포 태그 · 커밋 목록(8개까지) · 마이그레이션 파일 · 요청 스레드. 버튼은 **승인하고 배포 / 거절**이고, 마이그레이션이 있으면 **프리플라이트**가 앞에 붙는다(프리플라이트를 눌러도 카드는 남아 배포를 이어서 누를 수 있다).
+- **누르면.** 운영자만 된다. main 최신 커밋이 카드의 커밋과 같을 때만 GitHub App으로 `deploy-production.yml`을 띄운다(앱의 actions 쓰기 권한). main이 바뀌었으면 띄우지 않고 새 카드를 올린다. 같은 커밋 · 같은 모드는 한 번만 띄우고(Durable Object `deploy:<sha>:<mode>`), 누가 언제 눌렀는지 승인 기록에 남긴다. 배포가 끝나면 `@mkt` 드림보트 요약 카드가 온다.
 
 ## 4단계: `@mkt`(안정환) 연결 · 배포 뒤 드림보트 요약 (2026-10-16, T-11-296)
 

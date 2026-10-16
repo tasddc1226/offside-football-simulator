@@ -64,7 +64,7 @@ import {
   teamEditableIn,
 } from '@offside/app-core/teamOwner';
 import { MARKET_TOAST, marketName, needsOwnerLogin } from '@offside/app-core/market';
-import { onRetirementSynced, pendingRetirementIds } from '@offside/app-core/outbox';
+import { onRetirementSynced, pendingRetirementIds, retryOutboxNow } from '@offside/app-core/outbox';
 import { localCareerNames } from '@offside/game/hof-store';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLines } from '../../components/TeamPitch';
@@ -399,6 +399,16 @@ export default function Team() {
   }, []);
   // T-11-182 은퇴 기록이 아직 서버에 없으면 알리고, 올라가면 팀·라커룸을 조용히 다시 받는다(편집 중인 팀은 그대로).
   const [retireSyncing, setRetireSyncing] = useState(() => pendingRetirementIds().size > 0);
+  // T-11-301 올리기가 멈춘 것 같을 때 사용자가 바로 다시 보낸다.
+  const [retireRetry, setRetireRetry] = useState<'idle' | 'busy' | 'failed'>('idle');
+  async function retryRetireSync() {
+    if (retireRetry === 'busy') return;
+    setRetireRetry('busy');
+    await retryOutboxNow();
+    const still = pendingRetirementIds().size > 0;
+    setRetireSyncing(still);
+    setRetireRetry(still ? 'failed' : 'idle');
+  }
   useEffect(
     () =>
       onRetirementSynced(() => {
@@ -891,9 +901,19 @@ export default function Team() {
                 </Txt>
               ) : null}
               {editable && retireSyncing ? (
-                <Txt v="xs" tone="muted" testID="team-retire-syncing">
-                  {L.retireSyncing}
-                </Txt>
+                <View style={{ gap: 6 }}>
+                  <Txt v="xs" tone="muted" testID="team-retire-syncing">
+                    {retireRetry === 'failed' ? L.retireSyncFailed : L.retireSyncing}
+                  </Txt>
+                  <Btn
+                    sm
+                    testID="team-retire-retry"
+                    disabled={retireRetry === 'busy'}
+                    onPress={() => void retryRetireSync()}
+                  >
+                    {retireRetry === 'busy' ? L.retireSyncRetrying : L.retireSyncRetry}
+                  </Btn>
+                </View>
               ) : null}
             </Card>
             {editable && anonNames.length ? (

@@ -160,3 +160,39 @@ describe('ownerCachedGet server-confirmed denial', () => {
     expect(fetch).toHaveBeenCalledTimes(4);
   });
 });
+
+describe('T-11-301 apiFetch 시간 상한', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    clearApiCache();
+  });
+
+  it('응답이 없으면 15초 뒤 끊고 재시도 가능한 네트워크 오류로 돌려준다(메모도 비운다)', async () => {
+    vi.useFakeTimers();
+    let aborted = false;
+    vi.stubGlobal(
+      'fetch',
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((_, reject) => {
+          init.signal?.addEventListener('abort', () => {
+            aborted = true;
+            reject(new DOMException('The operation was aborted.', 'AbortError'));
+          });
+        }),
+    );
+    const p = cachedGet<unknown>('/v1/notices', 60_000);
+    await vi.advanceTimersByTimeAsync(15_100);
+    const r = await p;
+    expect(aborted).toBe(true);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error.code).toBe('NETWORK_ERROR');
+      expect(r.error.retryable).toBe(true);
+    }
+    // 실패는 메모에 남지 않아 다음 호출은 다시 요청한다.
+    vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ data: 1 }), { status: 200 }));
+    const again = await cachedGet<number>('/v1/notices', 60_000);
+    expect(again.ok && again.data).toBe(1);
+  });
+});

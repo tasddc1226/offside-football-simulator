@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "9670b0fe-4da5-49a5-baa2-0a306d466046",
+  "id": "1d29dc0c-3592-47b0-a76d-0ecdb03419e6",
   "prevId": "873188f8-ce00-42b9-b2aa-38bf967a454b",
   "tables": {
     "app_auth_tickets": {
@@ -914,14 +914,6 @@
           "autoincrement": false,
           "default": false
         },
-        "manager": {
-          "name": "manager",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "text",
@@ -1581,6 +1573,13 @@
         },
         "snapshot_json": {
           "name": "snapshot_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "snapshot_key": {
+          "name": "snapshot_key",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -3158,125 +3157,6 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "manager_careers": {
-      "name": "manager_careers",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "profile_id": {
-          "name": "profile_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "career_id": {
-          "name": "career_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "seed": {
-          "name": "seed",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "origin_json": {
-          "name": "origin_json",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "result_json": {
-          "name": "result_json",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "service_season": {
-          "name": "service_season",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "finished_at": {
-          "name": "finished_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "manager_careers_active_unique": {
-          "name": "manager_careers_active_unique",
-          "columns": [
-            "profile_id"
-          ],
-          "isUnique": true,
-          "where": "\"manager_careers\".\"status\" = 'active'"
-        },
-        "manager_careers_card_unique": {
-          "name": "manager_careers_card_unique",
-          "columns": [
-            "career_id"
-          ],
-          "isUnique": true
-        },
-        "manager_careers_profile_idx": {
-          "name": "manager_careers_profile_idx",
-          "columns": [
-            "profile_id",
-            "status",
-            "finished_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "manager_careers_profile_id_profiles_id_fk": {
-          "name": "manager_careers_profile_id_profiles_id_fk",
-          "tableFrom": "manager_careers",
-          "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "market_daily": {
       "name": "market_daily",
       "columns": {
@@ -4528,13 +4408,6 @@
         },
         "presets_json": {
           "name": "presets_json",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "coach_id": {
-          "name": "coach_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false,

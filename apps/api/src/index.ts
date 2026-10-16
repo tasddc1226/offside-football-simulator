@@ -4,6 +4,7 @@ import { LIVE_SOCKET_PATH } from '@offside/contracts/polling';
 import { app } from './app.js';
 import { updateClubStrength } from './clubStrength/update.js';
 import { runBackupStep } from './cron/backup.js';
+import { runSnapshotOffload } from './careerSnapshots.js';
 import { runDaily } from './cron/daily.js';
 import { runSeasonEventsArchive } from './cron/seasonEventsArchive.js';
 import { runSeasonTelemetryArchive } from './cron/seasonTelemetryArchive.js';
@@ -125,6 +126,12 @@ export default {
         await runBackupStep(env.DB, env.BACKUP, env.ENVIRONMENT, controller.scheduledTime)
           .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'backup', ...r })))
           .catch(logged('backup'));
+      // T-11-311 이 기능 전에 은퇴한 기록의 상세 스냅샷을 D1에서 R2로 조금씩 옮긴다(다 옮기면 멈춘다).
+      await runSnapshotOffload(env)
+        .then(
+          (r) => r && console.log(JSON.stringify({ level: 'info', job: 'snapshot-offload', ...r })),
+        )
+        .catch(logged('snapshot-offload'));
       if (env.AUTOMATION_HIDE_DISABLED !== '1')
         await sweepAutomation(env.DB, controller.scheduledTime, true).catch(logged('automation'));
       await updateClubStrength(env, controller.scheduledTime).catch(logged('club-strength'));
