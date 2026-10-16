@@ -1143,7 +1143,7 @@ describe('@mkt GA4', () => {
     const pem = `-----BEGIN PRIVATE KEY-----\n${btoa(String.fromCharCode(...der))}\n-----END PRIVATE KEY-----`;
     const env = {
       GA4_SA_KEY: pem,
-      GA4_SA_EMAIL: 'sa@x.iam.gserviceaccount.com',
+      GA4_SA_EMAIL: 'sa@example.com',
       GA4_KEY_ID: 'k1',
       GA4_PROPERTY_ID: '1',
     } as unknown as Env;
