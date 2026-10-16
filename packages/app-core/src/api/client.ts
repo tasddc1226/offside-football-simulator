@@ -129,6 +129,30 @@ export function cachedGet<T>(path: string, ttlMs: number): Promise<ApiResult<T>>
   return result;
 }
 
+/** T-11-301 응답 없이 매달리는 요청의 상한. iOS에서 요청 중 앱이 뒤로 가면 소켓이 조용히 끊겨 fetch가 영원히
+ * 끝나지 않았다(공지 칸이 "불러오는 중"에 멈추고, 업로드 큐가 그 약속에 묶여 은퇴 기록이 안 올라갔다).
+ * 이 시간이 지나면 끊고 네트워크 오류로 돌려준다 — 부르는 쪽은 같은 재시도 경로를 탄다. */
+export const API_TIMEOUT_MS = 15_000;
+
+/** fetch에 시간 상한을 둔다. 호출자가 준 signal도 함께 듣는다. AbortController가 없는 런타임은 그대로 부른다. */
+export async function fetchWithTimeout(
+  input: string,
+  init: RequestInit = {},
+  ms = API_TIMEOUT_MS,
+): Promise<Response> {
+  if (typeof AbortController !== 'function') return fetch(input, init);
+  const ctl = new AbortController();
+  const outer = init.signal;
+  if (outer?.aborted) ctl.abort();
+  else outer?.addEventListener('abort', () => ctl.abort(), { once: true });
+  const timer = setTimeout(() => ctl.abort(), ms);
+  try {
+    return await fetch(input, { ...init, signal: ctl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** keepCache: 조회수 같은 카운터 쓰기 — 메모해 둔 목록을 비울 만큼의 변화가 아니다. */
 export async function apiFetch<T>(
   path: string,
@@ -151,7 +175,7 @@ export async function apiFetch<T>(
 
   let response: Response;
   try {
-    response = await fetch(`${host.baseUrl}${withLang(path)}`, {
+    response = await fetchWithTimeout(`${host.baseUrl}${withLang(path)}`, {
       ...init,
       method,
       headers,
