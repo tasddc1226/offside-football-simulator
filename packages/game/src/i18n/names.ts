@@ -21,19 +21,17 @@ const HANGUL = /[가-힣]/;
 
 // T-11-292 FIFA 상표 사용 중단 요청(2026-10-16)으로 FIFA 대회·상 이름을 화면에서 뺀다. 저장값('FIFA 월드컵 우승' 등)은
 // 영구결번·업적·칭호 판정 식별자라 그대로 두고, 한국어 화면에 그릴 때만 바꾼다(영어·일본어는 대응표가 바꾼다).
-const KO_RENAME: readonly (readonly [RegExp, string])[] = [
-  [/FIFA 클럽 월드컵/g, '클럽 월드 챔피언십'],
-  [/FIFA 월드컵|월드컵/g, '월드 챔피언십'],
-  [/FIFA 더 베스트 남자 선수/g, '올해의 세계 최우수 선수'],
-  [/FIFA 푸스카스상/g, '올해의 골'],
-];
-const KO_RENAME_HINT = /FIFA|월드컵/;
+const KO_RENAME: Record<string, string> = {
+  '더 베스트 남자 선수': '올해의 세계 최우수 선수',
+  푸스카스상: '올해의 골',
+};
 
 /** 한국어 화면에 그릴 저장된 이름 — FIFA 대회·상 이름만 바꾼다. */
-export function koName(ko: string): string {
-  if (!KO_RENAME_HINT.test(ko)) return ko;
-  return KO_RENAME.reduce((s, [re, to]) => s.replace(re, to), ko);
-}
+export const koName = (ko: string): string =>
+  ko.replace(
+    /(?:FIFA )?(클럽 )?(월드컵|더 베스트 남자 선수|푸스카스상)/g,
+    (_, club = '', k: string) => club + (KO_RENAME[k] ?? '월드 챔피언십'),
+  );
 
 /** 저장된 한국어 이름을 지금 언어로. 한국어거나 대응이 없으면 그대로 돌려준다. */
 export function tn(ko: string): string {
