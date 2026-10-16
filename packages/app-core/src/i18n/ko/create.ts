@@ -116,7 +116,12 @@ const ko = {
   kept: '킵',
   keepBtn: (p: { n: number }) => `후보 ${p.n} 킵하기`,
   unkeepBtn: (p: { n: number }) => `후보 ${p.n} 킵 풀기`,
-  keepHelp: '킵한 후보는 다시 뽑아도 그 자리에 남아요. 한 명만 킵할 수 있어요.',
+  keepHelp:
+    '킵한 후보는 같은 포지션 · 주력으로 다시 뽑으면 그 자리에 남아요. 한 명만 킵할 수 있어요.',
+  // T-11-294 킵한 후보가 지금 입력으로는 나오지 않을 때
+  keptElsewhere: (p: { pos: string; focus: string }) =>
+    `킵한 후보가 있어요. ${p.pos} · 주력 ${p.focus}로 뽑으면 나와요. 다른 후보를 킵하면 이 후보는 사라져요.`,
+  keptRestore: '킵한 후보 조건으로 맞추기',
   scoutMemo: (p: { k: string }) => `스카우트 메모: 숨은 무기는 ${p.k}`,
   tapToOpen: '탭해서 열기',
   candOpenA11y: (p: { n: number; ovr: number; line: string }) =>

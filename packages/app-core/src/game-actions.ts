@@ -10,7 +10,7 @@ import { marketFeedback, offerFeedback } from './career-feedback.js';
 // 게임 로직 호출 순서(=RNG 소비 순서)는 포팅 전 ui.ts와 동일하게 유지한다.
 import type { SeasonGrowth } from '@offside/contracts';
 import { isHofEligible, SHORT_CAREER_NOTE } from '@offside/contracts/hof-rules';
-import { PHASES, LAST_PHASE, type AttrKey } from '@offside/game/data';
+import { PHASES, LAST_PHASE, type AttrKey, type DetailPos, type Pos } from '@offside/game/data';
 import { clamp, createRng, freshSeed, setActiveRng } from '@offside/game/rng';
 import {
   generateCandidates,
@@ -884,10 +884,37 @@ export function createGameActions(host: GameHost) {
     host.toast(L.careerStartToast);
   }
 
+  // T-11-294 주력은 누른 순서와 상관없이 같은 두 능력치면 같은 조합으로 본다(저장값은 그대로 쉼표로 이은 문자열).
+  const sameFocus = (a: string, b: readonly string[]) =>
+    a.split(',').sort().join() === [...b].sort().join();
   const keepMatches = (k: KeptCandidate) =>
     k.pos === appState.C.pos &&
-    k.focus === appState.C.focus.join() &&
+    sameFocus(k.focus, appState.C.focus) &&
     k.dpos === (draftCareerRules(appState.C).dpos ?? null);
+
+  /**
+   * T-11-294 킵한 후보가 있는데 지금 입력(포지션 · 세부 포지션 · 주력)으로는 나오지 않으면 그 후보의 조건. 선수 만들기 입력은
+   * 저장하지 않아 앱을 다시 열면 기본값으로 돌아가므로, 화면이 이 값으로 안내하고 맞춘다.
+   */
+  function keptDraft(): { pos: Pos; dpos: DetailPos | null; focus: AttrKey[] } | null {
+    const k = loadKey<KeptCandidate>(SCOUT_KEEP);
+    if (!k || keepMatches(k)) return null;
+    return {
+      pos: k.pos as Pos,
+      dpos: k.dpos as DetailPos | null,
+      focus: k.focus.split(',') as AttrKey[],
+    };
+  }
+
+  /** T-11-294 입력을 킵한 후보의 조건으로 맞춘다. 맞출 것이 없으면 false. */
+  function restoreKeptDraft(): boolean {
+    const d = keptDraft();
+    if (!d) return false;
+    appState.C.pos = d.pos;
+    appState.C.dpos = d.dpos;
+    appState.C.focus = d.focus;
+    return true;
+  }
 
   function rollCandidates() {
     applyLatestBalance();
@@ -1012,5 +1039,7 @@ export function createGameActions(host: GameHost) {
     planPremiumScout,
     premiumScoutCandidates,
     keepCandidate,
+    keptDraft,
+    restoreKeptDraft,
   };
 }

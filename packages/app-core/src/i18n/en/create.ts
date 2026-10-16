@@ -112,7 +112,11 @@ export const create: Translation<CreateMsgs> = {
   kept: 'Kept',
   keepBtn: (p) => `Keep candidate ${p.n}`,
   unkeepBtn: (p) => `Release candidate ${p.n}`,
-  keepHelp: 'A kept candidate stays in place when you redraw. You can keep one at a time.',
+  keepHelp:
+    'A kept candidate stays in place when you redraw with the same position and focus. You can keep one at a time.',
+  keptElsewhere: (p) =>
+    `You have a kept candidate. Draw as ${p.pos} with focus ${p.focus} to see it. Keeping another candidate replaces it.`,
+  keptRestore: 'Match the kept candidate',
   scoutMemo: (p) => `Scout note: hidden strength is ${p.k}`,
   tapToOpen: 'Tap to open',
   candOpenA11y: (p) => `Candidate ${p.n}, OVR ${p.ovr}, ${p.line}`,
