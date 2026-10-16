@@ -829,6 +829,12 @@ button.what:active {
   white-space: nowrap;
 }
 /* 은퇴 시점 소속 구단(엠블럼 + 이름). 긴 이름(구단명 커스텀)은 기록 칸을 밀지 않게 말줄임. */
+/* T-11-297 키운 구단주 — 구단 이름과 같은 굵기로, 기록 숫자와 구분되게. */
+.hof-owner {
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
 .hof-club-name {
   display: inline-flex;
   max-width: 100%;
@@ -6121,6 +6127,92 @@ button.title-item:hover {
   font-size: 0.8125rem;
   text-align: center;
   margin: 0;
+}
+/* T-11-297 키운 구단주 칩(이름 아래) — 팀이 있으면 버튼(구단주 프로필), 없으면 글자만. */
+.film-raiser {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  margin-top: 2px;
+  padding: 2px 12px;
+  border: 1px solid var(--film-line);
+  border-radius: 999px;
+  background: rgba(238, 244, 239, 0.06);
+  color: var(--film-ink);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+button.film-raiser {
+  cursor: pointer;
+}
+button.film-raiser:focus-visible {
+  outline: 2px solid var(--film-gold);
+  outline-offset: 2px;
+}
+@media (hover: hover) {
+  button.film-raiser:hover {
+    border-color: var(--film-gold);
+  }
+}
+.film-raiser-label {
+  color: var(--film-muted);
+  font-size: 0.75rem;
+}
+.film-raiser b {
+  overflow-wrap: anywhere;
+}
+.film-raiser i {
+  color: var(--film-gold);
+  font-style: normal;
+}
+/* T-11-297 최고 시점 능력치 — 통산 기록 아래 여섯 칸, 가장 높은 둘은 금색. */
+.film-attrs {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+  text-align: center;
+}
+.film-attrs dl {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin: 0;
+}
+.film-attrs dl div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 2px;
+  border: 1px solid var(--film-line);
+  border-radius: 10px;
+  background: rgba(238, 244, 239, 0.05);
+}
+.film-attrs dt {
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  color: var(--film-muted);
+}
+.film-attrs dd {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.375rem;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.film-attrs dl div.top {
+  border-color: var(--film-gold);
+}
+.film-attrs dl div.top dd {
+  color: var(--film-gold);
+}
+@media (max-width: 380px) {
+  .film-attrs dl {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 .film-head,
 .film-value,

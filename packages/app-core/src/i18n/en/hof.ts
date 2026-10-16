@@ -74,4 +74,5 @@ export const hof: Translation<HofMsgs> = {
   retireAgeN: (p) => `Retired at ${p.n}`,
   peakN: (p) => `Peak OVR ${p.n}`,
   ballonN: (p) => `Ballon d’Or ×${p.n}`,
+  raiserN: (p) => `Owner ${p.owner}`,
 };

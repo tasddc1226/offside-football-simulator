@@ -21,6 +21,7 @@ import { RankBadge } from './Laurel';
 import { PrimeAvatar } from './PrimeAvatar';
 import { avatarWidth } from '@offside/game/avatar';
 import { hofText as L } from '@offside/app-core/i18n/ko/hof';
+import { raiserLabel } from '@offside/app-core/hofRaiser';
 import { tn } from '@offside/game/i18n/names';
 
 export function HofPodium({
@@ -120,6 +121,16 @@ export function HofPodium({
                     {tn(entry.lastClub)}
                   </Txt>
                 </View>
+              ) : null}
+              {raiserLabel(entry.raiser) ? (
+                <Txt
+                  testID="hof-podium-owner"
+                  center
+                  numberOfLines={1}
+                  style={{ fontSize: 12, fontWeight: '600', marginTop: -2 }}
+                >
+                  {L.raiserN({ owner: raiserLabel(entry.raiser)! })}
+                </Txt>
               ) : null}
               {mine ? (
                 <Txt tone="muted" center style={{ fontSize: 12 }}>

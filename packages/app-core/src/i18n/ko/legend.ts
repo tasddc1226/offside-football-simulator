@@ -39,6 +39,12 @@ const ko = {
   potTitle: '은퇴 시점 잠재력 평가',
   potLine: (p: { value: number }) => `잠재력 ${p.value} · 은퇴 시점에 기록한 값`,
   peakOvrLabel: '최고 OVR',
+  // T-11-297 키운 구단주 칩(누르면 구단주 프로필)과 최고 시점 능력치.
+  raiserLabel: '키운 구단주',
+  raiserOpen: (p: { owner: string }) => `${p.owner} 구단주 프로필 보기`,
+  peakAttrsTitle: '최고 시점 능력치',
+  peakAttrsNote:
+    '은퇴 때 남긴 가장 좋았던 시점의 대표 능력치예요. 어디에 힘을 실어 키웠는지 보여요.',
   // 마지막 휘슬
   finaleLine1: (p: { age: number; club: string }) => `${p.age}세, ${p.club}에서`,
   finaleLine2: '마지막 휘슬이 울렸습니다.',

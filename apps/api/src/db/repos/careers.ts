@@ -10,7 +10,12 @@ import type {
 import { HOF_MIN_RETIRE_AGE, WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { cardValue, releasePayout, retireValue } from '@offside/contracts/market-value';
 import { firstUploadSeasonAt, type ServiceSeason } from '@offside/contracts/service-seasons';
-import { dposFor, type DetailPos, type PeakProfile } from '@offside/contracts/positions';
+import {
+  dposFor,
+  FACE_ATTRS,
+  type DetailPos,
+  type PeakProfile,
+} from '@offside/contracts/positions';
 import {
   and,
   desc,
@@ -36,6 +41,8 @@ import {
   careerSeasons,
   goalsPlusAssists,
   ownerFunds,
+  ownerTeams,
+  profiles,
   retiredNumbers,
   seasonTelemetry,
 } from '../schema.js';
@@ -440,9 +447,56 @@ const publicColumns = {
 };
 type PublicRow = { [K in keyof typeof publicColumns]: unknown };
 
-function toPublicEntry(r: PublicRow): PublicHofEntry {
+/**
+ * T-11-297 키운 구단주(공개 목록·상세에서만 — profiles·owner_teams를 left join한 쿼리). 닉네임은 프로필의 공개 닉네임,
+ * 팀은 그 구단주의 가장 최근 시즌 팀(구단주 프로필을 팀 id로 연다). 둘 다 PK·유니크 인덱스(profile_id, season)로 찾는다.
+ */
+const raiserColumns = {
+  raiserNickname: profiles.nickname,
+  raiserTeamId: ownerTeams.id,
+  raiserTeamName: ownerTeams.name,
+};
+type RaiserRow = { [K in keyof typeof raiserColumns]: unknown };
+const withRaiserProfile = eq(profiles.id, careers.profileId);
+const withRaiserTeam = and(
+  eq(ownerTeams.profileId, careers.profileId),
+  eq(
+    ownerTeams.season,
+    sql`(select max(t.season) from owner_teams t where t.profile_id = ${careers.profileId})`,
+  ),
+);
+
+/** 익명 선수(이름 비공개)는 구단주도 숨긴다. 닉네임·팀이 둘 다 없으면 null. */
+function raiserOf(r: Partial<RaiserRow> & { name: unknown }): PublicHofEntry['raiser'] {
+  if (r.name == null) return null;
+  const nickname = (r.raiserNickname as string | null | undefined) ?? null;
+  const teamId = (r.raiserTeamId as string | null | undefined) ?? null;
+  if (nickname == null && teamId == null) return null;
+  return {
+    nickname,
+    teamId,
+    teamName: teamId ? String(r.raiserTeamName ?? '') : null,
+  };
+}
+
+/** T-11-297 은퇴 때 남긴 최고 시점 대표 능력치 6개. 모양이 틀리거나 없으면 null. */
+export function peakAttrsOf(json: unknown): PublicHofEntry['attrs'] {
+  if (typeof json !== 'string' || !json) return null;
+  try {
+    const attrs = (JSON.parse(json) as Partial<PeakProfile>).attrs;
+    if (!attrs || !FACE_ATTRS.every((k) => Number.isFinite(attrs[k]))) return null;
+    return Object.fromEntries(FACE_ATTRS.map((k) => [k, Math.round(attrs[k])])) as NonNullable<
+      PublicHofEntry['attrs']
+    >;
+  } catch {
+    return null;
+  }
+}
+
+function toPublicEntry(r: PublicRow & Partial<RaiserRow>): PublicHofEntry {
   const n = (v: unknown) => Number(v ?? 0);
   return {
+    ...('raiserNickname' in r ? { raiser: raiserOf(r) } : {}),
     id: String(r.id),
     name: (r.name as string | null) ?? null,
     pos: r.pos as PublicHofEntry['pos'],
@@ -561,9 +615,11 @@ export async function listPublicHof(
     .offset((page - 1) * limit)
     .as('hof_page');
   const query = db
-    .select(publicColumns)
+    .select({ ...publicColumns, ...raiserColumns })
     .from(careers)
     .leftJoin(retiredNumbers, withRetiredNumber)
+    .leftJoin(profiles, withRaiserProfile)
+    .leftJoin(ownerTeams, withRaiserTeam)
     .$dynamic();
   const rows = await (sort === 'score'
     ? query.innerJoin(pageIds, eq(careers.id, sql`"hof_page"."hof_career_id"`)).orderBy(...order)
@@ -625,14 +681,21 @@ export async function getPublicHof(
   careerId: string,
 ): Promise<{ entry: PublicHofEntry; snapshot: LegendSnapshot | null } | undefined> {
   const [row] = await db
-    .select({ ...publicColumns, snapshotJson: careers.snapshotJson })
+    .select({
+      ...publicColumns,
+      ...raiserColumns,
+      snapshotJson: careers.snapshotJson,
+      peakProfile: careers.peakProfile,
+    })
     .from(careers)
     .leftJoin(retiredNumbers, withRetiredNumber)
+    .leftJoin(profiles, withRaiserProfile)
+    .leftJoin(ownerTeams, withRaiserTeam)
     .where(and(eq(careers.id, careerId), isPublicRetired));
   if (!row) return undefined;
-  const { snapshotJson, ...rest } = row;
+  const { snapshotJson, peakProfile, ...rest } = row;
   return {
-    entry: toPublicEntry(rest),
+    entry: { ...toPublicEntry(rest), attrs: peakAttrsOf(peakProfile) },
     snapshot: snapshotJson
       ? verifiedSnapshot(JSON.parse(snapshotJson) as LegendSnapshot, Boolean(rest.wallOfHonor))
       : null,
