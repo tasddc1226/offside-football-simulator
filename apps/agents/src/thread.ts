@@ -3,7 +3,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { ClaudeError, MODEL_LABEL, runAgent, type Message, type Tool } from './claude.ts';
 import { apiKey, botToken, dailyBudget, enabled, ROLE_NAMES, type Env, type Role } from './env.ts';
-import { MAX_HOPS, parseHandoffs } from './handoff.ts';
+import { linkRoles, MAX_HOPS, parseHandoffs, shouldReturn } from './handoff.ts';
 import { kstDay, ledger } from './ledger.ts';
 import { mcpTools, type McpServer } from './mcp.ts';
 import { roleSpec } from './roles.ts';
@@ -23,6 +23,8 @@ export type Task = {
   /** handoff: 넘긴 역할과 그 답 전체. */
   from?: Role;
   context?: string;
+  /** handoff: 넘겨준 일의 결과를 돌려받은 것(다시 돌려주지 않는다). */
+  back?: boolean;
 };
 
 /** owner: 이 역할이 연 스레드인지. 넘겨받기만 한 스레드에선 운영자 답글을 받지 않는다(한 답글에 두 봇이 답하지 않게). */
@@ -150,7 +152,12 @@ export class AgentThread extends DurableObject<Env> {
     }
     const posted = await slack(
       'chat.postMessage',
-      threadReply(task.channel, isNewPost(task) ? undefined : task.threadTs, reply, footer),
+      threadReply(
+        task.channel,
+        isNewPost(task) ? undefined : task.threadTs,
+        linkRoles(env, reply),
+        footer,
+      ),
     );
     if (task.sourceTs)
       await slack('reactions.remove', {
@@ -170,7 +177,15 @@ export class AgentThread extends DurableObject<Env> {
   /** 답의 `→ @역할:` 줄대로 같은 스레드에서 다른 에이전트에게 넘긴다. 스레드마다 MAX_HOPS번까지. */
   private async passOn(task: Task, threadTs: string, replyTs: string, reply: string) {
     const env = this.env;
-    for (const h of parseHandoffs(reply, task.role)) {
+    const handoffs = parseHandoffs(reply, task.role);
+    // 넘겨받은 일을 끝냈으면 그 결과를 넘긴 역할에게 한 번 돌려준다(결론 · 운영자 할 일은 넘긴 쪽이 쓴다).
+    if (shouldReturn(task, handoffs))
+      handoffs.push({
+        to: task.from!,
+        request: '넘긴 확인의 결과예요. 결론과 운영자가 할 일을 짧게 정리해 주세요.',
+        back: true,
+      });
+    for (const h of handoffs) {
       if (!enabled(env, h.to)) continue;
       const n = await ledger(env).hop(`${task.channel}:${threadTs}`);
       if (n > MAX_HOPS) {
@@ -198,6 +213,7 @@ export class AgentThread extends DurableObject<Env> {
         text: h.request,
         from: task.role,
         context: reply,
+        ...(h.back ? { back: true } : {}),
       });
     }
   }
