@@ -167,6 +167,7 @@ export async function cardForListing(db: Db, careerId: string) {
       season: cards.serviceSeason,
       cardValue: cards.cardValue,
       locked: cards.locked,
+      manager: cards.manager,
       hidden: sql<number>`coalesce(${careers.hidden}, 0)`,
       openListing: marketListings.id,
     })
@@ -348,7 +349,10 @@ export async function myTrades(db: Db, profileId: string): Promise<MarketTrade[]
     .slice(0, TRADES);
 }
 
-/** 판매 등록. 지금도 내 카드이고 잠기지 않았고 열린 등록이 없을 때만 넣는다(그 사이 방출·잠금되면 0행). 넣었으면 true. */
+/**
+ * 판매 등록. 지금도 내 카드이고 잠기지 않았고 감독이 아니고 열린 등록이 없을 때만 넣는다(그 사이 방출 · 잠금 · 감독 전향되면
+ * 0행). 넣었으면 true.
+ */
 export async function insertListing(
   db: Db,
   l: { id: string; careerId: string; sellerId: string; season: number; price: number; now: string },
@@ -357,7 +361,7 @@ export async function insertListing(
     .prepare(
       `INSERT OR IGNORE INTO market_listings (id, career_id, seller_id, season, price, status, created_at)
        SELECT ?, career_id, owner_id, service_season, ?, 'open', ? FROM cards
-       WHERE career_id = ? AND owner_id = ? AND service_season = ? AND locked = 0`,
+       WHERE career_id = ? AND owner_id = ? AND service_season = ? AND locked = 0 AND manager = 0`,
     )
     .bind(l.id, l.price, l.now, l.careerId, l.sellerId, l.season)
     .run();
@@ -482,7 +486,7 @@ export async function releaseCards(
     d1
       .prepare(
         `UPDATE cards SET owner_id = NULL, released_at = ?, updated_at = ?, released_value = -1
-         WHERE career_id IN (SELECT value FROM json_each(?)) AND owner_id = ? AND locked = 0
+         WHERE career_id IN (SELECT value FROM json_each(?)) AND owner_id = ? AND locked = 0 AND manager = 0
            AND EXISTS (SELECT 1 FROM careers c WHERE c.id = cards.career_id AND c.profile_id = ? AND c.hidden = 0)
            AND NOT EXISTS (SELECT 1 FROM market_listings l WHERE l.career_id = cards.career_id AND l.status = 'open')`,
       )
@@ -518,7 +522,7 @@ export async function setCardLocked(
   const res = await db.$client
     .prepare(
       `UPDATE cards SET locked = ?, updated_at = ?
-       WHERE career_id = ? AND owner_id = ?
+       WHERE career_id = ? AND owner_id = ? AND manager = 0
          AND (? = 0 OR NOT EXISTS (SELECT 1 FROM market_listings l WHERE l.career_id = cards.career_id AND l.status = 'open'))`,
     )
     .bind(r.locked ? 1 : 0, r.now, r.careerId, r.profileId, r.locked ? 1 : 0)

@@ -104,6 +104,14 @@ const LABEL: Record<string, string> = {
   'owner-retire-days': 'Days you retired a player',
   'owner-match-days': 'Days you played team matches',
   'owner-likes': 'Likes given to other teams',
+  // 감독
+  'mgr-first': 'Finish a manager career',
+  'mgr-count': 'Managers raised',
+  'mgr-title': 'League-winning manager',
+  'mgr-promote': 'Manager who won promotion',
+  'mgr-mastery': 'Manager with S formation mastery',
+  'mgr-grade': 'S-grade manager',
+  'mgr-coach': 'Fill the manager slot',
 };
 
 /** 단계 업적의 단위(숫자 바로 뒤에 붙는다). */
@@ -124,6 +132,7 @@ const UNIT: Record<string, string> = {
   'owner-retire-days': ' days',
   'owner-match-days': ' days',
   'owner-likes': ' likes',
+  'mgr-count': ' managers',
 };
 
 type Tables = {

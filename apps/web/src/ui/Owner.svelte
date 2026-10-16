@@ -32,6 +32,7 @@
   import { openFriends } from './friendInvite.svelte.js';
   import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
   import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
+  import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
   import { type OwnerTierTag } from '@offside/contracts';
   import { shapeOf } from '@offside/contracts/owner-team';
   import { tierTitle } from '@offside/app-core/ownerTier';
@@ -217,6 +218,14 @@
       </div>
       <span class="tap-go" aria-hidden="true">›</span>
       <button class="tap-cover" data-act="market" aria-label={`${L.marketTitle} ${L.open}`} onclick={() => go('market')}></button>
+    </section>
+    <section class="card owner-market owner-tap" aria-label={MG.entryTitle} data-owner-manager>
+      <div class="owner-who">
+        <h2>{MG.entryTitle}</h2>
+        <span class="muted fs-sm">{MG.entrySub}</span>
+      </div>
+      <span class="tap-go" aria-hidden="true">›</span>
+      <button class="tap-cover" data-act="manager" aria-label={MG.entryAria} onclick={() => go('manager')}></button>
     </section>
 
   {/if}

@@ -40,6 +40,7 @@ import {
   careers,
   careerSeasons,
   goalsPlusAssists,
+  managerCareers,
   ownerFunds,
   ownerTeams,
   profiles,
@@ -399,6 +400,7 @@ export async function putRetirement(
             releasedValue: sql<number | null>`null`.as('released_value'),
             bonusValue: sql<number | null>`${bonus > 0 ? bonus : null}`.as('bonus_value'),
             locked: sql<boolean>`0`.as('locked'),
+            manager: sql<boolean>`0`.as('manager'),
             createdAt: sql<string>`${now}`.as('created_at'),
             updatedAt: sql<string>`${now}`.as('updated_at'),
           })
@@ -765,6 +767,8 @@ export function deleteCareersStatements(db: Db, profileId: string) {
     db.delete(careers).where(eq(careers.profileId, profileId)),
     // T-11-080 지금 가진 카드도 지운다. 다른 구단주에게 넘어간 카드는 그 구단주의 것이라 남는다.
     db.delete(cards).where(eq(cards.ownerId, profileId)),
+    // T-11-310 감독 커리어(진행 중 · 끝낸 감독 카드)도 지운다.
+    db.delete(managerCareers).where(eq(managerCareers.profileId, profileId)),
   ] as const;
 }
 

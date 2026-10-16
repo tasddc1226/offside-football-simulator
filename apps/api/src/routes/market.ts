@@ -89,6 +89,9 @@ function seasonOrThrow(now: string): number {
 }
 
 const listingGone = () => conflictError('이미 팔렸거나 내린 선수예요.', 'LISTING_GONE');
+/** T-11-310 감독으로 분류된 카드(감독 커리어 중 · 감독 카드)는 거래 · 방출 · 잠금 대상이 아니다. */
+const cardManager = () =>
+  conflictError('감독으로 분류된 선수는 내놓거나 방출하거나 잠글 수 없어요.', 'CARD_MANAGER');
 const listingIdOf = (c: Context<AppEnv>) =>
   parseWithAppError(ListingIdSchema, c.req.param('listingId'));
 
@@ -230,6 +233,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
       throw conflictError('이번 시즌 선수만 내놓을 수 있어요.', 'CARD_OTHER_SEASON');
     if (card.cardValue === null || card.hidden)
       throw conflictError('기준가가 없는 선수는 내놓을 수 없어요.', 'CARD_NOT_TRADABLE');
+    if (card.manager) throw cardManager();
     if (card.openListing) throw conflictError('이미 내놓은 선수예요.', 'CARD_LISTED');
     if (card.locked) throw cardLocked();
     await checkCupListing(db, me.id, season, input.careerId);
@@ -356,6 +360,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     const card = await cardForListing(db, input.careerId);
     if (!card || card.ownerId !== me.id)
       throw notFoundError('내 선수 카드를 찾을 수 없어요.', 'CARD_NOT_FOUND');
+    if (card.manager) throw cardManager();
     throw conflictError('판매 중인 선수예요. 판매를 내린 뒤 잠글 수 있어요.', 'CARD_LISTED');
   });
 }

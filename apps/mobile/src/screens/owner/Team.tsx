@@ -72,6 +72,9 @@ import { TeamSynergy } from '../../components/TeamSynergy';
 import { toast } from '../../game/host';
 import { setCardLock } from '@offside/app-core/api/market';
 import { go } from '../../game/nav';
+import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
+import { coachSummary } from '@offside/app-core/managerCard';
+import { rem } from '../../theme/type';
 import { achNudge } from '../../game/achNudge';
 import { accountCache, appState, prefs } from '../../store';
 import { notificationDestination } from '../../platform/notificationDestination';
@@ -899,6 +902,24 @@ export default function Team() {
                 <Btn sm testID="anon-names" disabled={namesBusy} onPress={askPublishNames}>
                   {HO.anonCardsBtn}
                 </Btn>
+              </Card>
+            ) : null}
+            {team && season === current ? (
+              // T-11-310 감독 칸: 감독은 감독 커리어 화면에서 고른다.
+              <Card gap={8} testID="team-coach">
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                    <Txt bold>{MG.teamCoach}</Txt>
+                    <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                      {team.coach
+                        ? coachSummary(team.coach, formation, localNames)
+                        : MG.teamCoachEmpty}
+                    </Txt>
+                  </View>
+                  <Btn sm testID="team-coach-manage" onPress={() => go('manager')}>
+                    {MG.teamCoachManage}
+                  </Btn>
+                </View>
               </Card>
             ) : null}
             <TeamLineup
