@@ -411,6 +411,9 @@ export const careers = sqliteTable(
     publicName: text('public_name'),
     shirtNumber: integer('shirt_number'),
     snapshotJson: text('snapshot_json'),
+    // T-11-311 은퇴 상세를 둔 R2 객체 키(BACKUP 버킷 career-snapshots/…). 채워지면 snapshot_json은 비운다(D1 용량).
+    // 둘 다 NULL이면 상세가 없는 옛 기록이다. R2가 없거나 쓰기에 실패하면 예전처럼 snapshot_json에 둔다.
+    snapshotKey: text('snapshot_key'),
     // Server-owned award evidence (slot + grantedAt), independent of client snapshots.
     wallOfHonorJson: text('wall_of_honor_json'),
     // T-10-026 은퇴 때의 대표 칭호 id(web game/titles.ts). 옛 은퇴 기록은 NULL.

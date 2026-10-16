@@ -620,6 +620,8 @@ describe('공개 명예의 전당 /v1/hof', () => {
 
   // T-10-081 T-10-066 이전 은퇴(구단 id 없음) 중 유저가 이름을 바꾼 구단은 그 유저의 구단 꾸미기로 id를 되찾는다.
   it('구단 id 없는 옛 기록은 올린 유저가 바꾼 구단 이름으로 id를 채운다', async () => {
+    // 이 기능 전 기록은 상세가 D1(snapshot_json)에 있다 — T-11-311 전처럼 R2를 끄고 올린다.
+    ctx.env.SNAPSHOT_R2_DISABLED = '1';
     const renamed = '버밍엄 시티';
     await putJson(ctx, cookie, '/v1/club-custom', {
       clubs: {
@@ -723,6 +725,8 @@ describe('공개 명예의 전당 /v1/hof', () => {
   });
 
   it('T-11-080: 은퇴하면 카드가 한 장 생기고, 기존 카드의 기준가는 명예의 전당 조회 때 스냅샷으로 소급한다', async () => {
+    // 이 기능 전 기록은 상세가 D1(snapshot_json)에 있다 — T-11-311 전처럼 R2를 끄고 올린다.
+    ctx.env.SNAPSHOT_R2_DISABLED = '1';
     const pro = (ovr: number, age: number) => ({ ...snapshot.career[0]!, ovr, age });
     const rows = [
       { id: '0c000000-0000-4000-8000-000000000011', career: [pro(summary.peak, 31)] },
@@ -783,6 +787,8 @@ describe('공개 명예의 전당 /v1/hof', () => {
   });
 
   it('T-10-100: 이 기능 전 은퇴 기록(value 없음)은 명예의 전당 조회 때 스냅샷으로 소급한다', async () => {
+    // 이 기능 전 기록은 상세가 D1(snapshot_json)에 있다 — T-11-311 전처럼 R2를 끄고 올린다.
+    ctx.env.SNAPSHOT_R2_DISABLED = '1';
     const snap = {
       ...snapshot,
       career: [{ ...snapshot.career[0]!, league: 'K리그1', clubId: undefined, ovr: 75, age: 23 }],

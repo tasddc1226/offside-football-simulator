@@ -30,6 +30,8 @@ import {
   type AnyColumn,
   type SQL,
 } from 'drizzle-orm';
+import { readSnapshotJson } from '../../careerSnapshots.js';
+import type { Bindings } from '../../env.js';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { kstDay } from '../../time.js';
@@ -258,6 +260,8 @@ export type PutRetirementInput = {
   look?: string | undefined;
   /** T-11-163 은퇴 장려금 비율(밸런스 marketRetireBonusRate). */
   bonusRate: number;
+  /** T-11-311 스냅샷을 먼저 R2에 썼으면 그 키(careerSnapshots.putSnapshot). 없으면 snapshot_json에 둔다. */
+  snapshotKey?: string | null | undefined;
   now: string;
 };
 
@@ -278,7 +282,18 @@ export async function putRetirement(
   db: Db,
   input: PutRetirementInput,
 ): Promise<RetiredHead | undefined> {
-  const { careerId, summary, publicName, snapshot, profile, potReal, look, bonusRate, now } = input;
+  const {
+    careerId,
+    summary,
+    publicName,
+    snapshot,
+    snapshotKey,
+    profile,
+    potReal,
+    look,
+    bonusRate,
+    now,
+  } = input;
   const value = snapshot ? cardValue(snapshot.career, summary.peak) : null;
   // T-11-163 은퇴 장려금: 기준가가 있는 카드만(스냅샷 없는 옛 기록은 거래도 하지 않는다).
   const bonus = value === null ? 0 : releasePayout(value, bonusRate);
@@ -325,7 +340,9 @@ export async function putRetirement(
         ...publicNameSet(publicName),
         ...(snapshot
           ? {
-              snapshotJson: JSON.stringify(verifiedSnapshot(snapshot, false)),
+              ...(snapshotKey
+                ? { snapshotKey, snapshotJson: null }
+                : { snapshotJson: JSON.stringify(verifiedSnapshot(snapshot, false)) }),
               shirtNumber: snapshot.number,
               value: retireValue(snapshot.career, summary.legendScore),
             }
@@ -434,7 +451,7 @@ const publicColumns = {
   lastClubId: careers.lastClubId,
   look: careers.look,
   retiredAt: careers.retiredAt,
-  hasDetail: sql<number>`${careers.snapshotJson} is not null`,
+  hasDetail: sql<number>`${careers.snapshotJson} is not null or ${careers.snapshotKey} is not null`,
   title: careers.title,
   wallOfHonor: sql<number>`${careers.wallOfHonorJson} is not null`,
   value: careers.value,
@@ -679,12 +696,14 @@ function inSeason(s: ServiceSeason): SQL | undefined {
 export async function getPublicHof(
   db: Db,
   careerId: string,
+  env: Pick<Bindings, 'BACKUP'>,
 ): Promise<{ entry: PublicHofEntry; snapshot: LegendSnapshot | null } | undefined> {
   const [row] = await db
     .select({
       ...publicColumns,
       ...raiserColumns,
       snapshotJson: careers.snapshotJson,
+      snapshotKey: careers.snapshotKey,
       peakProfile: careers.peakProfile,
     })
     .from(careers)
@@ -693,7 +712,8 @@ export async function getPublicHof(
     .leftJoin(ownerTeams, withRaiserTeam)
     .where(and(eq(careers.id, careerId), isPublicRetired));
   if (!row) return undefined;
-  const { snapshotJson, peakProfile, ...rest } = row;
+  const { snapshotJson: inD1, snapshotKey, peakProfile, ...rest } = row;
+  const snapshotJson = await readSnapshotJson(env, { snapshotJson: inD1, snapshotKey });
   return {
     entry: { ...toPublicEntry(rest), attrs: peakAttrsOf(peakProfile) },
     snapshot: snapshotJson
@@ -775,11 +795,16 @@ export function deleteCareersStatements(db: Db, profileId: string) {
  */
 export async function updateRetired(
   db: Db,
-  input: Pick<PutRetirementInput, 'careerId' | 'publicName' | 'snapshot' | 'now'> & {
+  input: Pick<
+    PutRetirementInput,
+    'careerId' | 'publicName' | 'snapshot' | 'snapshotKey' | 'now'
+  > & {
     title: string | null | undefined;
+    /** T-11-311 R2에 둔 스냅샷의 획득 칭호 id(D1 snapshot_json이 비어 있을 때 대표 칭호 확인용). */
+    snapshotTitleIds?: readonly string[] | undefined;
   },
 ): Promise<RetiredHead | undefined> {
-  const { careerId, publicName, snapshot, title, now } = input;
+  const { careerId, publicName, snapshot, snapshotKey, title, snapshotTitleIds = [], now } = input;
   const [row] = await db
     .update(careers)
     .set({
@@ -787,12 +812,19 @@ export async function updateRetired(
       ...publicNameSet(publicName),
       ...(title
         ? {
-            title: sql`case when (${title} = ${WALL_OF_HONOR_TITLE_ID} and ${careers.wallOfHonorJson} is not null) or (${title} <> ${WALL_OF_HONOR_TITLE_ID} and exists (select 1 from json_each(${careers.snapshotJson}, '$.titles') where json_extract(value, '$.id') = ${title})) then ${title} else ${careers.title} end`,
+            title: sql`case when (${title} = ${WALL_OF_HONOR_TITLE_ID} and ${careers.wallOfHonorJson} is not null) or (${title} <> ${WALL_OF_HONOR_TITLE_ID} and (exists (select 1 from json_each(${careers.snapshotJson}, '$.titles') where json_extract(value, '$.id') = ${title}) or ${title} in (select value from json_each(${JSON.stringify(snapshotTitleIds)})))) then ${title} else ${careers.title} end`,
           }
         : {}),
       ...(snapshot
         ? {
-            snapshotJson: sql`coalesce(${careers.snapshotJson}, ${JSON.stringify(verifiedSnapshot(snapshot, false))})`,
+            // 상세가 이미 있으면(D1이든 R2든) 그대로 둔다. 키는 상세가 없을 때만 라우트가 R2에 먼저 써서 넘긴다.
+            ...(snapshotKey
+              ? {
+                  snapshotKey: sql`case when ${careers.snapshotJson} is null then coalesce(${careers.snapshotKey}, ${snapshotKey}) else ${careers.snapshotKey} end`,
+                }
+              : {
+                  snapshotJson: sql`case when ${careers.snapshotKey} is null then coalesce(${careers.snapshotJson}, ${JSON.stringify(verifiedSnapshot(snapshot, false))}) else ${careers.snapshotJson} end`,
+                }),
             // A late client snapshot cannot establish a historical retirement number.
           }
         : {}),
@@ -925,6 +957,8 @@ export const careerHeadQuery = (db: Db, careerId: string) =>
       profileId: careers.profileId,
       detailArchiveKey: careers.detailArchiveKey,
       updatedAt: careers.updatedAt,
+      snapshotKey: careers.snapshotKey,
+      hasSnapshot: sql<number>`${careers.snapshotJson} is not null or ${careers.snapshotKey} is not null`,
       title: careers.title,
       wallOfHonorJson: careers.wallOfHonorJson,
       status: careers.status,
