@@ -43,6 +43,7 @@
     showClub = false,
     shortPos = false,
     retireAge = null,
+    owner = null,
   }: {
     /** 0부터. 0~2는 금·은·동 월계관. */
     rank: number;
@@ -80,6 +81,8 @@
     shortPos?: boolean;
     /** 기록실 줄(compact)에 은퇴 나이·최고 OVR·발롱도르(받은 선수만)를 더한다(명예의 전당). */
     retireAge?: number | null;
+    /** T-11-297 이 선수를 키운 구단주(공개 닉네임, 없으면 팀 이름). 서버 명예의 전당 줄에만 온다. */
+    owner?: string | null;
   } = $props();
   const country = $derived(showNation ? (NATION_BY_CODE.get(nation || DEFAULT_NATION) ?? NATION_BY_CODE.get(DEFAULT_NATION)!) : undefined);
   const tt = $derived(titleById(titleId));
@@ -120,13 +123,13 @@
 {#if flow}
   <div class="muted fs-xs hof-stats" class:flowing bind:clientWidth={boxW}>
     <div class="hof-flow" style:animation-duration={flowing ? `${copyW / FLOW_SPEED}s` : null}>
-      <span bind:clientWidth={copyW} style:padding-right="{FLOW_GAP}px">{#if clubName}{@render clubLabel()} · {/if}{stats}</span>{#if flowing}<span aria-hidden="true" style:padding-right="{FLOW_GAP}px">{#if clubName}{@render clubLabel()} · {/if}{stats}</span>{/if}
+      <span bind:clientWidth={copyW} style:padding-right="{FLOW_GAP}px">{#if clubName}{@render clubLabel()} · {/if}{#if owner}<span class="hof-owner" data-hof-owner>{L.raiserN({ owner })}</span> · {/if}{stats}</span>{#if flowing}<span aria-hidden="true" style:padding-right="{FLOW_GAP}px">{#if clubName}{@render clubLabel()} · {/if}{#if owner}<span class="hof-owner" data-hof-owner>{L.raiserN({ owner })}</span> · {/if}{stats}</span>{/if}
     </div>
   </div>
 {:else if compact}
   <div class="muted hof-stats hof-stats-compact">
-    {#if clubName}{@render clubLabel()}{/if}{#if retireAge != null}<span>{L.retireAgeN({ n: retireAge })}</span><i class="hof-stats-break" aria-hidden="true"></i>{/if}<span>{L.appsN({ n: t.apps.toLocaleString(intlLocale()) })}</span><span>{L.goalsN({ n: t.goals.toLocaleString(intlLocale()) })}</span><span>{L.assistsN({ n: t.assists.toLocaleString(intlLocale()) })}</span>{#if retireAge != null}<span>{L.peakN({ n: t.peak })}</span>{#if t.ballon}<span class="hof-ballon">{L.ballonN({ n: t.ballon })}</span>{/if}{/if}
+    {#if clubName}{@render clubLabel()}{/if}{#if owner}<span class="hof-owner" data-hof-owner>{L.raiserN({ owner })}</span>{/if}{#if retireAge != null}<span>{L.retireAgeN({ n: retireAge })}</span><i class="hof-stats-break" aria-hidden="true"></i>{/if}<span>{L.appsN({ n: t.apps.toLocaleString(intlLocale()) })}</span><span>{L.goalsN({ n: t.goals.toLocaleString(intlLocale()) })}</span><span>{L.assistsN({ n: t.assists.toLocaleString(intlLocale()) })}</span>{#if retireAge != null}<span>{L.peakN({ n: t.peak })}</span>{#if t.ballon}<span class="hof-ballon">{L.ballonN({ n: t.ballon })}</span>{/if}{/if}
   </div>
 {:else}
-  <div class="muted fs-xs hof-stats">{#if clubName}{@render clubLabel()} · {/if}{stats}</div>
+  <div class="muted fs-xs hof-stats">{#if clubName}{@render clubLabel()} · {/if}{#if owner}<span class="hof-owner" data-hof-owner>{L.raiserN({ owner })}</span> · {/if}{stats}</div>
 {/if}

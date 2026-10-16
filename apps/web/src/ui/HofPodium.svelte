@@ -8,6 +8,7 @@
   import ClubMark from './ClubMark.svelte';
   import Laurel from './Laurel.svelte';
   import { hofText as L } from '@offside/app-core/i18n/ko/hof';
+  import { raiserLabel } from '@offside/app-core/hofRaiser';
   import { tn } from '@offside/game/i18n/names';
   import { intlLocale } from '@offside/contracts/i18n';
 
@@ -37,6 +38,7 @@
         <!-- 국기는 이름 앞, 엠블럼은 은퇴 시점 구단 이름 앞. -->
         <b class="hof-podium-name" title={name}><span class="hof-flag" role="img" aria-label={tn(country.ko)} title={tn(country.ko)} data-hof-nation={country.code}>{flagOf(country.code)}</span> {name}{#if showPosition}<span class="hof-podium-pos" title={posLabel({ pos: h.pos, dpos: h.dpos })}>{posAbbr({ pos: h.pos, dpos: h.dpos })}</span>{/if}</b>
         {#if h.lastClub}<span class="hof-podium-team" data-hof-club><ClubMark name={h.lastClub} id={h.lastClubId} size={16} /><span>{tn(h.lastClub)}</span></span>{/if}
+        {#if raiserLabel(h.raiser)}<span class="hof-podium-team hof-podium-owner" data-hof-owner><span>{L.raiserN({ owner: raiserLabel(h.raiser)! })}</span></span>{/if}
         {#if player.own}<span class="hof-podium-mine">{L.mine}</span>{/if}
         <!-- T-11-124 시상대 위에 선 전성기 모습(마지막 구단 유니폼). 그림은 따로 불러오고 자리는 미리 잡아 둔다. -->
         <span class="hof-podium-avatar" aria-hidden="true">{#await import('./PrimeAvatar.svelte') then { default: PrimeAvatar }}<PrimeAvatar entry={h} />{/await}</span>
@@ -112,6 +114,11 @@
     color: var(--muted);
     font-size: 12px;
     line-height: 1.4;
+  }
+  .hof-podium-owner {
+    margin-top: -2px;
+    color: var(--ink);
+    font-weight: 600;
   }
   .hof-podium-team > span {
     min-width: 0;

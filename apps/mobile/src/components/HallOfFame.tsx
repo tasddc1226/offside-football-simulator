@@ -45,6 +45,7 @@ import { HofRow, type RowStats } from './HofRow';
 import { HofPodium } from './HofPodium';
 import { RecordsSelect, RecordsFilters, RecordsChips } from '../screens/hof/RecordsControls';
 import { hofText as L } from '@offside/app-core/i18n/ko/hof';
+import { raiserLabel } from '@offside/app-core/hofRaiser';
 import { seasonLabel } from '@offside/app-core/seasonName';
 
 const TOP = 3;
@@ -385,6 +386,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
                   rn={h.retiredNumber?.number}
                   wall={h.wallOfHonor ? h.number : null}
                   tag={myIds.has(h.id) ? L.mine : null}
+                  owner={raiserLabel(h.raiser)}
                   t={t}
                   titleId={h.title}
                   value={by.get(t)}

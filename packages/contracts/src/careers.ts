@@ -508,6 +508,14 @@ export const PutRetirementBodySchema = RetirementSummarySchema.extend({
 });
 export type PutRetirementBody = z.infer<typeof PutRetirementBodySchema>;
 
+/** T-11-297 명예의 전당 선수를 키운 구단주. 프로필 id는 내보내지 않는다. */
+export const HofRaiserSchema = z.strictObject({
+  nickname: z.string().nullable(),
+  teamId: z.string().nullable(),
+  teamName: z.string().nullable(),
+});
+export type HofRaiser = z.infer<typeof HofRaiserSchema>;
+
 /** `GET /v1/hof` 목록 한 줄. `name`이 null이면 익명(유저가 이름 공개를 끔). */
 export const PublicHofEntrySchema = z.strictObject({
   id: z.string().min(1),
@@ -551,6 +559,14 @@ export const PublicHofEntrySchema = z.strictObject({
   season: z.number().int().nonnegative().nullable().optional(),
   /** T-10-101 이름 검색 결과에만: 고른 순위 유형·시즌에서의 실제 순위(1부터). */
   rank: z.number().int().min(1).optional(),
+  /**
+   * T-11-297 이 선수를 키운 구단주(커리어를 올린 프로필 — 카드가 팔려도 바뀌지 않는다). 닉네임은 팀 프로필·업적 랭킹에
+   * 보이는 공개 닉네임, team은 그 구단주의 가장 최근 팀(구단주 프로필은 팀 id로 연다). 선수가 익명이면 구단주도 null,
+   * 닉네임·팀이 둘 다 없어도 null. 배포 전 엣지 캐시 응답엔 없다.
+   */
+  raiser: HofRaiserSchema.nullable().optional(),
+  /** T-11-297 은퇴 때 남긴 최고 시점의 대표 능력치 6개(상세 응답에만). 이 기능 전에 은퇴한 옛 기록은 null. */
+  attrs: PeakProfileSchema.shape.attrs.nullable().optional(),
 });
 export type PublicHofEntry = z.infer<typeof PublicHofEntrySchema>;
 

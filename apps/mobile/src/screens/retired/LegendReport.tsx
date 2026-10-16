@@ -39,7 +39,11 @@ import type { LegendView } from '@offside/app-core/state';
 import { CareerTab } from '../../components/CareerTab';
 import { CountUp } from '../../components/CountUp';
 import { ValueChart } from '../../components/ValueChart';
-import { pickedTitles, prefs, rnResults } from '../../store';
+import { appState, pickedTitles, prefs, rnResults } from '../../store';
+import { go } from '../../game/nav';
+import { hofStart } from '@offside/app-core/state';
+import { raiserLabel } from '@offside/app-core/hofRaiser';
+import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Card } from '../../ui/Card';
@@ -73,6 +77,25 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
   const t = d ? totals(d) : null;
   const ownId = v.own?.id;
   const main = titleById(retiredTitleOf(v.own ? (ownId ?? '') : undefined, v.title, pk));
+
+  // T-11-297 키운 구단주 칩 — 누르면 기록실 구단주 프로필(가장 최근 팀 id로 연다). 팀이 없으면 이름만.
+  const raiser = raiserLabel(v.raiser);
+  const raiserTeam = v.raiser?.teamId ?? null;
+  const openRaiser = () => {
+    if (!raiserTeam) return;
+    appState.hof = { ...hofStart(), tab: 'teams', team: raiserTeam, owner: true };
+    go('hof');
+  };
+  // T-11-297 최고 시점 능력치 6개 — 카드와 같은 순서·약어(GK는 골키퍼 약어). 가장 높은 둘을 금색으로.
+  const attrKeys =
+    v.pos === 'GK'
+      ? (['def', 'phy', 'pas', 'pac', 'sho', 'dri'] as const)
+      : (['pac', 'sho', 'dri', 'pas', 'def', 'phy'] as const);
+  const attrAbbr = v.pos === 'GK' ? GK_ABBR : FACE_ABBR;
+  const attrs = v.attrs ?? null;
+  const topAttrs = new Set(
+    attrs ? [...attrKeys].sort((x, y) => attrs[y] - attrs[x]).slice(0, 2) : [],
+  );
 
   const chapters = d ? careerChapters(d) : [];
   /** 거쳐 간 구단 엠블럼 줄(웹 .film-clubs) — 은퇴 가치와 통산 기록 사이에서 커리어를 한눈에. */
@@ -149,6 +172,42 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
               {tn(POS_LABEL[v.pos])}
               {span ? ` · ${span}` : ''} · {L.retiredAge({ age: v.age })}
             </FText>
+            {raiser ? (
+              <Press
+                testID="legend-raiser"
+                disabled={!raiserTeam}
+                accessibilityRole={raiserTeam ? 'button' : 'text'}
+                accessibilityLabel={
+                  raiserTeam ? L.raiserOpen({ owner: raiser }) : `${L.raiserLabel} ${raiser}`
+                }
+                onPress={openRaiser}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  minHeight: 32,
+                  marginTop: 2,
+                  paddingVertical: 2,
+                  paddingHorizontal: 12,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: f.line,
+                  backgroundColor: 'rgba(238,244,239,0.06)',
+                }}
+              >
+                <FText tone="muted" size={0.75}>
+                  {L.raiserLabel}
+                </FText>
+                <FText size={0.8125} style={{ fontWeight: '700' }}>
+                  {raiser}
+                </FText>
+                {raiserTeam ? (
+                  <FText tone="gold" size={0.8125}>
+                    ›
+                  </FText>
+                ) : null}
+              </Press>
+            ) : null}
             <View style={{ alignItems: 'center', marginTop: 14 }}>
               <FText
                 tone="gold"
@@ -322,6 +381,48 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
                 />
               </View>
             </Reveal>
+            {attrs ? (
+              <Reveal testID="legend-attrs" style={{ alignSelf: 'stretch', marginTop: 16 }}>
+                <View
+                  accessibilityLabel={L.peakAttrsTitle}
+                  style={{ alignItems: 'center', gap: 10 }}
+                >
+                  <Kicker>{L.peakAttrsTitle}</Kicker>
+                  <View style={{ flexDirection: 'row', gap: 6, alignSelf: 'stretch' }}>
+                    {attrKeys.map((k) => {
+                      const top = topAttrs.has(k);
+                      return (
+                        <View
+                          key={k}
+                          testID={`legend-attr-${k}`}
+                          style={{
+                            flex: 1,
+                            alignItems: 'center',
+                            gap: 2,
+                            paddingVertical: 8,
+                            paddingHorizontal: 2,
+                            borderRadius: 10,
+                            borderWidth: 1,
+                            borderColor: top ? f.gold : f.line,
+                            backgroundColor: 'rgba(238,244,239,0.05)',
+                          }}
+                        >
+                          <FText tone="muted" size={0.6875} ls={0.08}>
+                            {attrAbbr[k]}
+                          </FText>
+                          <FText display={700} size={1.375} lh={1.05} tone={top ? 'gold' : 'ink'}>
+                            {String(attrs[k])}
+                          </FText>
+                        </View>
+                      );
+                    })}
+                  </View>
+                  <FText tone="muted" size={0.8125} center>
+                    {L.peakAttrsNote}
+                  </FText>
+                </View>
+              </Reveal>
+            ) : null}
             {!d ? (
               <FText tone="muted" size={0.8125} center>
                 {L.noDetailNote}
