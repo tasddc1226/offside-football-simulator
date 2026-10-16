@@ -20,6 +20,9 @@
   "vars": {
     // ADR-015 도입 단계: 4단계(T-11-296)에 @mkt까지 연다.
     "ENABLED_ROLES": "ops,plan,dev,mkt",
+    // T-11-299 @mkt GA4 읽기(OFFSIDE - Production 속성, 서비스 계정은 뷰어). 비공개 키 · 계정 메일은 비밀값 GA4_SA_KEY · GA4_SA_EMAIL.
+    "GA4_PROPERTY_ID": "556515567",
+    "GA4_KEY_ID": "0de7dab176e5ac1a7a2d413b993a0d760a5fc717",
     "OPERATOR_USER_ID": "U0C9BAYGT8Q",
     // 에이전트 봇 4개(자기 · 서로의 메시지에 반응하지 않는다).
     "AGENT_APP_IDS": "A0C987NV8HZ,A0C9CFUM98E,A0C996C6R3P,A0C9E9PELTC",

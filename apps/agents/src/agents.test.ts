@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { costOf, MODEL, MODELS, runAgent, withCacheTail, type Tool } from './claude.ts';
 import { modelFor, roleSpec } from './roles.ts';
 import { checkNotes, mktInteraction, releaseTask } from './mkt.ts';
+import { ga4Tools, reportBody } from './ga4.ts';
 import { digestTools } from './tools/digest.ts';
 import {
   maskAddress,
@@ -1107,5 +1108,66 @@ describe('@mkt 드림보트 요약', () => {
       expect(await mktInteraction(s.env, press('UOP'), s.db)).toBe('missing');
       expect(s.posts).toEqual([]);
     });
+  });
+});
+
+describe('@mkt GA4', () => {
+  it('보고서 요청을 기간 · 이름 형식 · 개수 상한으로 좁힌다', () => {
+    const b = reportBody({
+      metrics: ['sessions', 'bad name!', 'a', 'b', 'c', 'd', 'e'],
+      dimensions: ['sessionSourceMedium'],
+      filter: { dimension: 'eventName', value: 'career_start' },
+      limit: 500,
+    });
+    expect(b.dateRanges).toEqual([{ startDate: '7daysAgo', endDate: 'yesterday' }]);
+    expect(b.metrics.map((m) => m.name)).toEqual(['sessions', 'a', 'b', 'c', 'd', 'e']);
+    expect(b.limit).toBe(50);
+    expect(b.orderBys).toEqual([{ metric: { metricName: 'sessions' }, desc: true }]);
+    expect(() => reportBody({ metrics: ['sessions'], start_date: '1; drop' })).toThrow(/날짜/);
+    expect(() => reportBody({ metrics: [] })).toThrow(/metrics/);
+  });
+
+  it('서비스 계정 JWT로 토큰을 받아 보고서를 표로 돌려준다(키가 없으면 도구를 열지 않는다)', async () => {
+    expect(ga4Tools({} as Env, 'mention')).toEqual([]);
+    const { privateKey } = (await crypto.subtle.generateKey(
+      {
+        name: 'RSASSA-PKCS1-v1_5',
+        modulusLength: 2048,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: 'SHA-256',
+      },
+      true,
+      ['sign', 'verify'],
+    )) as CryptoKeyPair;
+    const der = new Uint8Array((await crypto.subtle.exportKey('pkcs8', privateKey)) as ArrayBuffer);
+    const pem = `-----BEGIN PRIVATE KEY-----\n${btoa(String.fromCharCode(...der))}\n-----END PRIVATE KEY-----`;
+    const env = {
+      GA4_SA_KEY: pem,
+      GA4_SA_EMAIL: 'sa@example.com',
+      GA4_KEY_ID: 'k1',
+      GA4_PROPERTY_ID: '1',
+    } as unknown as Env;
+    const calls: string[] = [];
+    const f = (async (u: string, init?: { body?: unknown }) => {
+      calls.push(u);
+      if (u.includes('oauth2')) {
+        const jwt = new URLSearchParams(String(init?.body)).get('assertion')!;
+        expect(JSON.parse(atob(jwt.split('.')[0]!))).toMatchObject({ alg: 'RS256', kid: 'k1' });
+        return Response.json({ access_token: 't', expires_in: 3600 });
+      }
+      return Response.json({
+        dimensionHeaders: [{ name: 'date' }],
+        metricHeaders: [{ name: 'sessions' }],
+        rows: [{ dimensionValues: [{ value: '20261015' }], metricValues: [{ value: '12' }] }],
+        rowCount: 1,
+      });
+    }) as unknown as typeof fetch;
+    const [report] = ga4Tools(env, 'mention', f);
+    expect(JSON.parse(await report!.run({ metrics: ['sessions'], dimensions: ['date'] }))).toEqual({
+      head: ['date', 'sessions'],
+      rows: [['20261015', '12']],
+      rowCount: 1,
+    });
+    expect(calls[1]).toContain('/properties/1:runReport');
   });
 });

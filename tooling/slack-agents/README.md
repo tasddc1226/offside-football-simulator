@@ -100,6 +100,12 @@ Worker는 `apps/agents`(`agents.offside-lab.com`)다. `manifests/ops.yaml`에 �
 - **비밀값.** `DREAMBOAT_URL`(드림보트 받기 · 보내기 주소, 키가 들어 있어 공개 저장소에 두지 않는다). 없으면 요약을 돌리지 않는다.
 - **세션과 나누기.** 드림보트는 마지막으로 보낸 것만 쓰므로, 4단계부터 배포 뒤 요약은 `@mkt` 승인 카드로 보낸다. 작업 세션이 직접 보내지 않는다.
 
+## `@mkt` GA4 읽기 (2026-10-16, T-11-299)
+
+- **하는 일.** 운영자 지시 · 그 스레드 답글 · 넘겨받은 일에서 `ga4_report`(Analytics Data API `runReport`, 측정항목 6개 · 측정기준 4개 · 50줄까지)와 `ga4_fields`(맞춤 측정기준 이름)를 쓴다. 속성은 `OFFSIDE - Production`(`556515567`, 웹 · 앱).
+- **권한.** GCP 프로젝트 `offside-agents`의 서비스 계정 `offside-mkt-ga4`를 GA4 속성 **뷰어**로 추가했다. GCP 역할은 주지 않았다. Analytics Data API를 켰다.
+- **키.** 키 쌍은 로컬에서 만들고 공개 인증서만 서비스 계정에 올렸다(Google이 비공개 키를 만들지 않음). 비공개 키는 Worker 비밀값 `GA4_SA_KEY`(PKCS#8 PEM)에만 있고, 계정 메일은 비밀값 `GA4_SA_EMAIL`(공개 저장소 메일 검사), 키 ID · 속성 ID는 `wrangler.jsonc` 변수다. 다시 만들 때는 `openssl req -x509 -nodes -newkey rsa:2048 -days 3650 -keyout key.pem -out cert.pem -subj /CN=offside-mkt-ga4` → `openssl pkcs8 -topk8 -nocrypt -in key.pem` 결과를 `wrangler secret put GA4_SA_KEY`로 넣고, `cert.pem`을 서비스 계정 키 "기존 키 업로드"로 올린 뒤 새 키 ID로 `GA4_KEY_ID`를 바꾼다. 로컬 파일은 지운다.
+
 ## 다음 단계: 다른 역할 (Worker 배포 뒤)
 
 `apps/agents` Worker가 배포되면 앱마다 **App Manifest** 편집에서 `settings`를 아래로 바꾼다. `<role>`은 `ops` · `plan` · `dev` · `mkt`다. 주소는 1단계에서 확정한다.
