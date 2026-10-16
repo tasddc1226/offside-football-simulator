@@ -6,7 +6,7 @@ const s = (n: number) => (n === 1 ? '' : 's');
 
 export const gMilitary: Translation<GMilitaryMsgs> = {
   sportsNotice:
-    'Korean players who are named to the squad and win Asian Games gold or an Olympic gold, silver or bronze medal get a military service exemption. You keep playing without joining Sangmu (the military football team) or the army. Matches played do not matter, and winning the Asian Cup or World Cup does not count. Legally you become a sports service member: you complete basic military training and 544 hours of volunteer work, and your service ends once you have played for 34 months. In the game this fills in automatically as seasons pass. If you switch over from Sangmu, the time and volunteer hours are cut down to the share of Sangmu service you have left, and you do not repeat training you have already done.',
+    'Korean players who are named to the squad and win Asian Games gold or an Olympic gold, silver or bronze medal get a military service exemption. You keep playing without joining Sangmu (the military football team) or the army. Matches played do not matter, and winning the Asian Cup or World Championship does not count. Legally you become a sports service member: you complete basic military training and 544 hours of volunteer work, and your service ends once you have played for 34 months. In the game this fills in automatically as seasons pass. If you switch over from Sangmu, the time and volunteer hours are cut down to the share of Sangmu service you have left, and you do not repeat training you have already done.',
   sportsLegacyNotice:
     'Older exemption records have no service period, so the time left is not shown. Your exemption and career are unaffected.',
   sportsGranted: (p) =>

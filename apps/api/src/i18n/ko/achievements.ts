@@ -11,7 +11,7 @@ export const achievementLabels: Record<string, string> = {
   'goals-1000': '통산 1,000골 선수',
   'legend-4000': '레전드 점수 4,000점 선수',
   'ballon-100': '발롱도르 합계 100회',
-  'world-cup-5': '월드컵 우승 5번',
+  'world-cup-5': '월드 챔피언십 우승 5번',
   'big5-one': '한 선수가 빅5 리그 모두 우승',
   // 팀 드림팀
   'team-ballon': '11명 모두 발롱도르 수상자',

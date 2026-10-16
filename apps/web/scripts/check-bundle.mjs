@@ -19,7 +19,9 @@ import { fileURLToPath } from 'node:url';
 // 못 뺀다. 엔진을 첫 화면 밖으로 빼기 전까지 143KB로.
 // T-11-256: 커리어 장면 이벤트 6종의 한국어 문구(엔진 사전)가 첫 화면에 실려 운영 빌드 143.01KB로 넘었다. 이벤트 정의는
 // 추첨 풀(엔진)과 함께 있어야 해서 지연 청크로 못 뺀다. 엔진을 첫 화면 밖으로 빼기 전까지 144KB로.
-const LIMIT_BYTES = 144 * 1024;
+// T-11-292: FIFA 상표 사용 중단 요청으로 대회·상 이름을 바꾸며(엔진 한국어 사전이 길어지고, 저장값을 그릴 때 바꾸는
+// koName이 tn과 함께 첫 화면에 실린다) 운영 빌드 144.05KB로 넘었다. 법적 요청이라 미룰 수 없어 145KB로.
+const LIMIT_BYTES = 145 * 1024;
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.resolve(scriptDir, '../dist');

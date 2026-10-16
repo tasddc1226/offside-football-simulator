@@ -11,9 +11,9 @@ export const gMoments: Translation<typeof gMomentsText> = {
   kidSignResult:
     'You signed for every kid in the line before boarding the bus. Your legs were heavy, but your mood was light.',
 
-  wcTitle: 'Left out of the World Cup squad',
+  wcTitle: 'Left out of the World Championship squad',
   wcText:
-    'Your name was missing from last summer’s World Cup squad. At the pre-season press conference, a reporter asks how you feel.',
+    'Your name was missing from last summer’s World Championship squad. At the pre-season press conference, a reporter asks how you feel.',
   wcQuitLabel: 'Criticize the manager and refuse future call-ups',
   wcQuitResult:
     '"I won’t play under this manager." Headlines poured out and opinion split. You will refuse national team call-ups for the next two seasons.',

@@ -21,7 +21,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   mlsYoungPull: 'MLS offer weight under 30',
   koreaStr: 'Korea senior team strength',
   koreaU23: 'Korea U-23 team strength',
-  wcQual: 'World Cup qualifying chance',
+  wcQual: 'World Championship qualifying chance',
   olympicQual: 'Olympic qualifying chance',
   agRelease: 'Overseas club release for the Asian Games',
   olyRelease: 'Overseas club release for the Olympics',

@@ -16,7 +16,7 @@ const ko = {
   recNationWrist: '대표팀 손목 밴드',
   recBigearGoggle: '은빛 고글',
   recBallonHair: '금빛 머리',
-  recWorldcupSocks: '월드컵 양말',
+  recWorldcupSocks: '월드 챔피언십 양말',
 };
 
 export type AvatarRecordMsgs = typeof ko;

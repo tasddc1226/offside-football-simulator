@@ -10,7 +10,7 @@ const ko = {
   windowName: (p: { m: number }) => `${p.m}월 A매치`,
   friendly: '친선 A매치',
   wcQual: (p: { year: number; region: string; conf: string }) =>
-    `${p.year} 월드컵 ${p.region} 예선`,
+    `${p.year} 월드 챔피언십 ${p.region} 예선`,
   score: (p: { team: string; kg: number; og: number; opp: string; pso: string | null }) =>
     `${p.team} ${p.kg}-${p.og} ${p.opp}${p.pso ? ` (승부차기 ${p.pso})` : ''}`,
   matchLog: (p: { comp: string; score: string; mins: number; g: number; a: number }) =>

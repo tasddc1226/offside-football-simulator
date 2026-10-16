@@ -1,0 +1,26 @@
+{
+  "id": "t-11-292-competition-names",
+  "title": "대회·상 이름 변경",
+  "items": [
+    "국가대표 세계 대회는 '월드 챔피언십', 대륙 챔피언끼리 겨루는 클럽 대회는 '클럽 월드 챔피언십'으로 불러요",
+    "세계 최고 선수상은 '올해의 세계 최우수 선수', 가장 멋진 골에 주는 상은 '올해의 골'로 바뀌었어요",
+    "이름만 바뀌었고 지금까지 받은 우승·수상·칭호는 그대로 남아 있어요"
+  ],
+  "en": {
+    "title": "Competition and award names",
+    "items": [
+      "The international world tournament is now the 'World Championship', and the club tournament for continental champions is the 'Club World Championship'.",
+      "The best-player award is now 'World Player of the Year', and the most beautiful goal wins 'Goal of the Year'.",
+      "Only the names changed. Every title, award and honor you have already won stays on your record."
+    ]
+  },
+  "ja": {
+    "title": "大会・賞の名称変更",
+    "items": [
+      "代表の世界大会は「ワールドチャンピオンシップ」、大陸王者同士のクラブ大会は「クラブワールドチャンピオンシップ」になりました。",
+      "世界最優秀選手賞は「年間世界最優秀選手」、最も美しいゴールの賞は「年間最優秀ゴール賞」になりました。",
+      "名前が変わっただけで、これまでの優勝・受賞・称号はそのまま残ります。"
+    ]
+  },
+  "availability": "web-app"
+}

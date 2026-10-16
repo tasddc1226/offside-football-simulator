@@ -497,11 +497,11 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
       ),
     ]),
     group('player', 'world', '4단계', '세계 무대 정복', [
-      world('world-cup', 'FIFA 월드컵 우승', honors.has('FIFA 월드컵 우승')),
+      world('world-cup', '월드 챔피언십 우승', honors.has(WORLD_CUP_WIN)),
       world('conf-cup', '대륙컵 우승', has(CONF_CUPS) > 0),
       world('olympic', '올림픽 금메달', honors.has('올림픽 금메달')),
       world('ucl', 'UEFA 챔피언스리그 우승', honors.has('UEFA 챔피언스리그 우승')),
-      world('club-wc', 'FIFA 클럽 월드컵 우승', honors.has('FIFA 클럽 월드컵 우승')),
+      world('club-wc', '클럽 월드 챔피언십 우승', honors.has('FIFA 클럽 월드컵 우승')),
       world('golden-shoe', '유러피언 골든슈', honors.has('유러피언 골든슈')),
       pieceOf('all-continental', '대륙 클럽 대회 모두 우승', CONTINENTAL, hasHonor, PTS.world),
       collect(
@@ -534,7 +534,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
         POS.length,
         PTS.immortal,
       ),
-      collect('world-cup-3', '월드컵 우승 3번', honorCount('FIFA 월드컵 우승'), 3, PTS.immortal),
+      collect('world-cup-3', '월드 챔피언십 우승 3번', honorCount(WORLD_CUP_WIN), 3, PTS.immortal),
       once(
         'ballon-10',
         '발롱도르 10회 선수',

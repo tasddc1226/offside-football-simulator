@@ -347,15 +347,16 @@ const SPECS: FirstSpec[] = [
     [
       ['goldenshoe', '유러피언 골든슈'],
       ['yashin', '야신 트로피'],
-      ['thebest', 'FIFA 더 베스트 남자 선수'],
+      // T-11-292 저장값은 FIFA 이름 그대로, 화면 문장은 FIFA를 뺀 이름으로.
+      ['thebest', 'FIFA 더 베스트 남자 선수', '올해의 세계 최우수 선수'],
       ['kopa', '코파 트로피'],
       ['muller', '게르트 뮐러 트로피'],
       ['fifpro', 'FIFPRO 월드 11'],
-    ] as const
-  ).map(([id, h]): FirstDef => ({
+    ] as readonly (readonly [string, string, string?])[]
+  ).map(([id, h, name = h]): FirstDef => ({
     id,
     cat: 'honor',
-    label: `${h} 최초 수상!`,
+    label: `${name} 최초 수상!`,
     at: honorCount(h, 1),
   })),
   ...(
@@ -363,8 +364,8 @@ const SPECS: FirstSpec[] = [
       ['ucl', 'UEFA 챔피언스리그 우승', 'UEFA 챔피언스리그 최초 우승!'],
       ['uel', 'UEFA 유로파리그 우승', 'UEFA 유로파리그 최초 우승!'],
       ['acle', 'AFC 챔피언스리그 엘리트 우승', 'AFC 챔피언스리그 엘리트 최초 우승!'],
-      ['cwc', 'FIFA 클럽 월드컵 우승', 'FIFA 클럽 월드컵 최초 우승!'],
-      ['wc', 'FIFA 월드컵 우승', 'FIFA 월드컵 최초 우승!'],
+      ['cwc', 'FIFA 클럽 월드컵 우승', '클럽 월드 챔피언십 최초 우승!'],
+      ['wc', 'FIFA 월드컵 우승', '월드 챔피언십 최초 우승!'],
       // T-10-096 연맹마다 대륙컵(아시안컵이 맨 앞 — 예전 순서 그대로).
       ...CONF_ORDER.map(
         (c) => [CONFEDS[c].title.id, cupTrophy(c), `${CONFEDS[c].cup} 최초 우승!`] as const,

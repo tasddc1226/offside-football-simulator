@@ -13,7 +13,7 @@ const ko = {
     assists: number;
   }) =>
     `${p.year} 시즌 종료 · ${p.league} ${p.rank}위 · 공식전 ${p.apps}경기 ${p.goals}골 ${p.assists}도움`,
-  cwcNote: (p: { stage: string }) => `FIFA 클럽 월드컵 ${p.stage}`,
+  cwcNote: (p: { stage: string }) => `클럽 월드 챔피언십 ${p.stage}`,
   exemptNote: (p: { what: string }) => `병역 특례(입대 면제) · ${p.what}`,
   promoted: (p: { club: string; league: string; down: string }) =>
     `${p.club} ${p.league} 승격 확정! 다음 시즌은 ${p.league}에서 뜁니다 (${p.down} 강등)`,
@@ -107,7 +107,7 @@ const ko = {
   lgPeak: '최고 OVR',
   lgBallonWin: '발롱도르 수상',
   lgBallonRank: '발롱도르 순위',
-  lgWc: '월드컵 우승',
+  lgWc: '월드 챔피언십 우승',
   lgCentury: '센추리 클럽',
   lgControl: '경기 장악',
 };

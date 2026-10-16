@@ -39,5 +39,5 @@ export const legend: Translation<LegendMsgs> = {
   moreSummary: 'シーズン別記録 · レジェンドスコアの内訳を詳しく見る',
   breakdownTitle: 'レジェンドスコアの内訳',
   breakdownNote:
-    'ポジション別の貢献（FW・MFはゴール・アシスト、DF・GKは無失点が中心）+ 出場 · 優勝 · 個人タイトル · Aマッチ · 最高OVR · バロンドール/ワールドカップのボーナス',
+    'ポジション別の貢献（FW・MFはゴール・アシスト、DF・GKは無失点が中心）+ 出場 · 優勝 · 個人タイトル · Aマッチ · 最高OVR · バロンドール/ワールドチャンピオンシップのボーナス',
 };
