@@ -1,0 +1,23 @@
+{
+  "id": "t-11-300-draft-identity",
+  "title": "다시 시작할 때 이름·등번호 이어 쓰기",
+  "items": [
+    "은퇴하기 전에 새 커리어로 다시 시작하면 선수 만들기에 지난 이름과 등번호가 미리 채워져요",
+    "은퇴한 뒤에 만드는 선수는 전처럼 무작위 이름과 등번호로 시작해요"
+  ],
+  "en": {
+    "title": "Keep your name and number when you restart",
+    "items": [
+      "If you start a new career before retiring, player creation fills in your last name and number.",
+      "After retiring, a new player starts with a random name and number as before."
+    ]
+  },
+  "ja": {
+    "title": "やり直すときに名前と背番号を引き継ぎ",
+    "items": [
+      "引退前に新しいキャリアを始めると、選手作成に前回の名前と背番号が入っています。",
+      "引退した後に作る選手は、これまでどおりランダムな名前と背番号で始まります。"
+    ]
+  },
+  "availability": "web-app"
+}
