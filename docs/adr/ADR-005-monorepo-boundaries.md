@@ -48,16 +48,16 @@ fixtures → domain, content
 
 ## 개발 명령
 
-| 명령 | 내용 |
-|---|---|
-| `pnpm dev` | web + api 로컬 동시 실행 (wrangler dev, D1 로컬) |
-| `pnpm test` | Vitest 전체. `domain` 결정론 테스트 포함 |
-| `pnpm e2e` | Playwright, preview 빌드 대상 |
-| `pnpm content:validate` | 팩·ruleset 검증 |
-| `pnpm db:migrate` | Drizzle migration 생성·적용 |
-| `pnpm deploy:<env>` | wrangler로 preview/staging/production 배포 |
-| `pnpm build:toss` | `vite build --mode toss && ait build`, `apps/web/*.ait` 생성 |
-| `pnpm deploy:toss` | `ait deploy`로 앱인토스 콘솔에 번들 업로드(QR 테스트용). 출시는 콘솔에서 사람이 누른다 |
+| 명령                    | 내용                                                                                   |
+| ----------------------- | -------------------------------------------------------------------------------------- |
+| `pnpm dev`              | web + api 로컬 동시 실행 (wrangler dev, D1 로컬)                                       |
+| `pnpm test`             | Vitest 전체. `domain` 결정론 테스트 포함                                               |
+| `pnpm e2e`              | Playwright, preview 빌드 대상                                                          |
+| `pnpm content:validate` | 팩·ruleset 검증                                                                        |
+| `pnpm db:migrate`       | Drizzle migration 생성·적용                                                            |
+| `pnpm deploy:<env>`     | wrangler로 preview/staging/production 배포                                             |
+| `pnpm build:toss`       | `vite build --mode toss && ait build`, `apps/web/*.ait` 생성                           |
+| `pnpm deploy:toss`      | `ait deploy`로 앱인토스 콘솔에 번들 업로드(QR 테스트용). 출시는 콘솔에서 사람이 누른다 |
 
 ## 이유
 
@@ -66,10 +66,10 @@ fixtures → domain, content
 
 ## 검토한 대안
 
-| 대안 | 보류 이유 |
-|---|---|
+| 대안        | 보류 이유                      |
+| ----------- | ------------------------------ |
 | 단일 패키지 | domain 순수성을 강제할 수 없음 |
-| Nx | 기능은 많지만 이 규모에 과함 |
+| Nx          | 기능은 많지만 이 규모에 과함   |
 
 ## 결과
 

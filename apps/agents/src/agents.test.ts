@@ -3,6 +3,7 @@ import { costOf, MODEL, MODELS, runAgent, withCacheTail, type Tool } from './cla
 import { modelFor, roleSpec } from './roles.ts';
 import { checkNotes, mktInteraction, releaseTask } from './mkt.ts';
 import { ga4Tools, reportBody } from './ga4.ts';
+import { deployCard, deployPlan } from './deploy.ts';
 import { digestTools } from './tools/digest.ts';
 import {
   maskAddress,
@@ -25,7 +26,7 @@ import { mcpTools, parseRpc } from './mcp.ts';
 import { linkRoles, parseHandoffs, shouldReturn } from './handoff.ts';
 import { collect, fetchDc, meaningful, parseDcList, triagePrompt } from './reactions.ts';
 import { nextRuns, kstText } from './cron.ts';
-import { devTools, mergeBlocker } from './dev.ts';
+import { devInteraction, devTools, mergeBlocker } from './dev.ts';
 import { appJwt, type Gh } from './github.ts';
 import type { Task } from './thread.ts';
 
@@ -1169,5 +1170,148 @@ describe('@mkt GA4', () => {
       rowCount: 1,
     });
     expect(calls[1]).toContain('/properties/1:runReport');
+  });
+});
+
+describe('@dev 운영 배포 승인 (T-11-312)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const SHA = 'a'.repeat(40);
+  const setup = (main = SHA, migrations: string[] = []) => {
+    const slack: { method: string; body: Record<string, unknown> }[] = [];
+    vi.stubGlobal('fetch', async (u: string, init?: { body?: string }) => {
+      slack.push({ method: u.split('/').pop()!, body: JSON.parse(init?.body ?? '{}') });
+      return new Response('{"ok":true}');
+    });
+    const records: { action: string; result: string }[] = [];
+    const claimed = new Set<string>();
+    const book = {
+      recordApproval: async (a: { action: string; result: string }) => void records.push(a),
+      claimDeploy: async (sha: string, mode: string) =>
+        claimed.has(`${sha}:${mode}`) ? false : (claimed.add(`${sha}:${mode}`), true),
+    };
+    const env = {
+      OPERATOR_USER_ID: 'UOP',
+      APPROVAL_CHANNEL: 'CAPP',
+      GITHUB_REPO: 'o/r',
+      SLACK_DEV_BOT_TOKEN: 'x',
+      LEDGER: { idFromName: () => 'id', get: () => book },
+    } as unknown as Env;
+    const calls: { path: string; method: string; body?: unknown }[] = [];
+    const g = (async (path: string, init?: { method?: string; body?: unknown }) => {
+      calls.push({ path, method: init?.method ?? 'GET', body: init?.body });
+      if (path === '/commits/main') return { status: 200, data: { sha: main } };
+      if (path === '/releases/latest') return { status: 200, data: { tag_name: 'v2026.10.16.1' } };
+      if (path.startsWith('/compare/'))
+        return {
+          status: 200,
+          data: {
+            ahead_by: 2,
+            commits: [
+              { commit: { message: 'T-1: 첫째' } },
+              { commit: { message: 'T-2: 둘째\n\n본문' } },
+            ],
+            files: migrations.map((filename) => ({ filename })),
+          },
+        };
+      if (path.includes('/dispatches')) return { status: 204, data: {} };
+      return { status: 404, data: {} };
+    }) as Gh;
+    return { env, g, calls, slack, records };
+  };
+  const press = (user: string, action: string, sha = SHA) => ({
+    type: 'block_actions',
+    user: { id: user },
+    channel: { id: 'CAPP' },
+    message: { ts: '1.0', blocks: [{ type: 'section' }, { type: 'actions' }] },
+    actions: [
+      { action_id: action, value: JSON.stringify({ sha, o: { channel: 'CD', threadTs: '9.9' } }) },
+    ],
+  });
+  const dispatches = (calls: { path: string; body?: unknown }[]) =>
+    calls.filter((c) => c.path.includes('/dispatches'));
+
+  it('카드에 지난 배포 뒤 커밋과 마이그레이션을 적고, 마이그레이션이 있으면 프리플라이트 버튼을 붙인다', async () => {
+    const s = setup(SHA, ['apps/api/migrations/0102_x.sql', 'apps/api/src/a.ts']);
+    const plan = await deployPlan(s.g, SHA);
+    expect(plan).toMatchObject({
+      since: 'v2026.10.16.1',
+      ahead: 2,
+      migrations: ['apps/api/migrations/0102_x.sql'],
+    });
+    expect(plan.commits).toEqual(['T-2: 둘째', 'T-1: 첫째']);
+    const card = deployCard(s.env, plan);
+    const ids = (card.blocks[1] as { elements: { action_id: string }[] }).elements.map(
+      (e) => e.action_id,
+    );
+    expect(ids).toEqual(['dev_preflight', 'dev_deploy', 'dev_deploy_reject']);
+    expect(JSON.stringify(card)).toContain('0102_x.sql');
+    const plain = deployCard(s.env, { ...plan, migrations: [] });
+    expect((plain.blocks[1] as { elements: unknown[] }).elements).toHaveLength(2);
+  });
+
+  it('운영자가 아니면 띄우지 않는다', async () => {
+    const s = setup();
+    expect(await devInteraction(s.env, press('UOTHER', 'dev_deploy'), async () => s.g)).toBe(
+      'forbidden',
+    );
+    expect(s.calls).toEqual([]);
+  });
+
+  it('운영자 승인이면 main 최신 커밋으로 deploy를 한 번만 띄우고 기록한다', async () => {
+    const s = setup();
+    expect(await devInteraction(s.env, press('UOP', 'dev_deploy'), async () => s.g)).toBe('deploy');
+    expect(dispatches(s.calls)).toEqual([
+      {
+        path: '/actions/workflows/deploy-production.yml/dispatches',
+        method: 'POST',
+        body: {
+          ref: 'main',
+          inputs: { mode: 'deploy', expected_sha: SHA, confirmation: 'DEPLOY_PRODUCTION' },
+        },
+      },
+    ]);
+    expect(s.records).toMatchObject([{ action: 'deploy', result: 'dispatched' }]);
+    // 카드 갱신 + 요청 스레드 답.
+    expect(s.slack.map((c) => c.method)).toEqual(['chat.update', 'chat.postMessage']);
+    expect(await devInteraction(s.env, press('UOP', 'dev_deploy'), async () => s.g)).toBe(
+      'duplicate',
+    );
+    expect(dispatches(s.calls)).toHaveLength(1);
+  });
+
+  it('프리플라이트는 확인 문구 없이 띄우고 배포 버튼을 남긴다', async () => {
+    const s = setup();
+    expect(await devInteraction(s.env, press('UOP', 'dev_preflight'), async () => s.g)).toBe(
+      'preflight',
+    );
+    expect(dispatches(s.calls)[0]!.body).toEqual({
+      ref: 'main',
+      inputs: { mode: 'preflight', expected_sha: SHA },
+    });
+    const update = s.slack.find((c) => c.method === 'chat.update')!;
+    expect((update.body.blocks as { type: string }[]).map((b) => b.type)).toEqual([
+      'section',
+      'actions',
+      'context',
+    ]);
+  });
+
+  it('main이 바뀌었으면 띄우지 않고 새 커밋의 카드를 올린다', async () => {
+    const s = setup('b'.repeat(40));
+    expect(await devInteraction(s.env, press('UOP', 'dev_deploy'), async () => s.g)).toBe('stale');
+    expect(dispatches(s.calls)).toEqual([]);
+    const posted = s.slack
+      .filter((c) => c.method === 'chat.postMessage')
+      .map((c) => c.body.channel);
+    expect(posted).toContain('CAPP');
+  });
+
+  it('거절은 기록만 한다', async () => {
+    const s = setup();
+    expect(await devInteraction(s.env, press('UOP', 'dev_deploy_reject'), async () => s.g)).toBe(
+      'rejected',
+    );
+    expect(s.calls).toEqual([]);
+    expect(s.records).toMatchObject([{ action: 'deploy_reject' }]);
   });
 });
