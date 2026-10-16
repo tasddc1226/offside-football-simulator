@@ -111,7 +111,7 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
   koreaStr: {
     group: 'national',
     label: 'A대표팀 전력',
-    desc: '월드컵·아시안컵·A매치에서 한국 대표팀 전력',
+    desc: '월드 챔피언십·아시안컵·A매치에서 한국 대표팀 전력',
   },
   koreaU23: {
     group: 'national',
@@ -120,8 +120,8 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
   },
   wcQual: {
     group: 'national',
-    label: '월드컵 예선 통과 확률',
-    desc: '월드컵 아시아 예선을 통과할 확률',
+    label: '월드 챔피언십 예선 통과 확률',
+    desc: '월드 챔피언십 아시아 예선을 통과할 확률',
   },
   olympicQual: {
     group: 'national',

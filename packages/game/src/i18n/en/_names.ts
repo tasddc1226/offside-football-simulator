@@ -398,10 +398,10 @@ const COMP: Record<string, string> = {
   'AFC 챔피언스리그 2': 'AFC Champions League Two',
   'CONCACAF 챔피언스컵': 'CONCACAF Champions Cup',
   챔피언스리그: 'Champions League',
-  'FIFA 클럽 월드컵': 'FIFA Club World Cup',
+  'FIFA 클럽 월드컵': 'Club World Championship',
   // 국가대표 대회
-  'FIFA 월드컵': 'FIFA World Cup',
-  월드컵: 'World Cup',
+  'FIFA 월드컵': 'World Championship',
+  월드컵: 'World Championship',
   아시안게임: 'Asian Games',
   올림픽: 'Olympics',
   '올림픽 남자축구': 'Olympic men’s football',
@@ -427,11 +427,11 @@ const AWARD: Record<string, string> = {
   '발롱도르 수상!': 'Ballon d’Or winner!',
   '코파 트로피': 'Kopa Trophy',
   '야신 트로피': 'Yashin Trophy',
-  'FIFA 더 베스트 남자 선수': 'FIFA The Best Men’s Player',
+  'FIFA 더 베스트 남자 선수': 'World Player of the Year',
   'FIFPRO 월드 11': 'FIFPRO World XI',
   '게르트 뮐러 트로피': 'Gerd Müller Trophy',
   '유러피언 골든슈': 'European Golden Shoe',
-  'FIFA 푸스카스상': 'FIFA Puskás Award',
+  'FIFA 푸스카스상': 'Goal of the Year',
   대한축구협회: 'Korea Football Association',
   '대한축구협회 올해의 선수': 'Korea Football Association Player of the Year',
   // 대표팀 메달
@@ -480,8 +480,8 @@ const MISC: Record<string, string> = {
   'A매치 데뷔골': 'First international goal',
   '센추리 클럽 가입 (A매치 100경기)': 'Joined the century club (100 caps)',
   '국가대표팀 주장 선임': 'Named national team captain',
-  '월드컵 본선 출전': 'Played at a World Cup',
-  '월드컵 본선 득점': 'Scored at a World Cup',
+  '월드컵 본선 출전': 'Played at a World Championship',
+  '월드컵 본선 득점': 'Scored at a World Championship',
   '발롱도르 30인 후보 선정': 'Named in the Ballon d’Or top 30',
   'A대표팀 은퇴 경기': 'National team farewell match',
   // 스토리 이름
@@ -593,7 +593,7 @@ const patterns: NamePattern[] = [
     (m, tn) => `${m[1]} ${tn(m[2]!)}${host(tn, m[3])}`,
   ],
   [/^UEFA 유로 (\d{4})(?: \((.+)\))?$/, (m, tn) => `UEFA Euro ${m[1]}${host(tn, m[2])}`],
-  [/^(\d{4}) 월드컵 (.+) 예선$/, (m, tn) => `${m[1]} World Cup qualifying (${tn(m[2]!)})`],
+  [/^(\d{4}) 월드컵 (.+) 예선$/, (m, tn) => `${m[1]} World Championship qualifying (${tn(m[2]!)})`],
   [
     /^(\d{4}) 올림픽 아시아 예선 \(AFC U-23 아시안컵\)$/,
     (m) => `${m[1]} Olympic qualifying, Asia (AFC U-23 Asian Cup)`,
@@ -644,7 +644,7 @@ const patterns: NamePattern[] = [
   [/^(.+) 홈구장에서 은퇴 경기$/, (m, tn) => `Farewell match at ${tn(m[1]!)}’s home stadium`],
   // 스토리 · 병역 · 시즌 결산
   [/^「(.+)」 (.+)$/, (m, tn) => `${tn(m[1]!)}: ${tn(m[2]!)}`],
-  [/^FIFA 클럽 월드컵 (.+)$/, (m, tn) => `FIFA Club World Cup: ${tn(m[1]!)}`],
+  [/^FIFA 클럽 월드컵 (.+)$/, (m, tn) => `Club World Championship: ${tn(m[1]!)}`],
   [/^병역 특례\(입대 면제\) · (.+)$/, (m, tn) => `Military service exemption · ${tn(m[1]!)}`],
 ];
 

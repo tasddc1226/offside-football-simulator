@@ -28,7 +28,7 @@ export const gamePlayer: Translation<GamePlayerMsgs> = {
   notCalled: 'Not called up',
   ntRetired: 'International retirement',
   military: 'Military service',
-  nextWc: 'Next World Cup',
+  nextWc: 'Next World Championship',
   hostTbd: 'Host to be decided',
   tourLine: (p) => `${p.stage} · ${plural(p.apps, 'app')}, ${plural(p.goals, 'goal')}`,
   retire: 'Announce retirement',

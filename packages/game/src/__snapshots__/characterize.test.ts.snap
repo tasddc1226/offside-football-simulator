@@ -3,15 +3,15 @@
 exports[`게임 특성화 (T-11-044) > endSeason — 시즌 정산(seasonAwards·natSeasonEnd·milSeasonEnd 포함) 1`] = `
 {
   "대표팀": {
-    "hash": "e085f8c36e28182b",
+    "hash": "41d47649383c8638",
     "n": 174,
   },
   "병역": {
-    "hash": "2b30dc9993cba503",
+    "hash": "ef37bceaae9d3158",
     "n": 174,
   },
   "원본": {
-    "hash": "001171fe53d3bad6",
+    "hash": "5bf36d393ddb3ccf",
     "n": 174,
   },
 }
@@ -30,31 +30,31 @@ exports[`게임 특성화 (T-11-044) > market·acceptOption — 시장 선택지
   ],
   "대표팀": {
     "accepted": {
-      "hash": "79d01b729129f18d",
+      "hash": "a65e88ae70500daa",
       "n": 174,
     },
     "options": {
-      "hash": "30ef800db14fb638",
+      "hash": "6a0c2861abe903e5",
       "n": 174,
     },
   },
   "병역": {
     "accepted": {
-      "hash": "492524d9ff14f850",
+      "hash": "ea3e788472d3bccd",
       "n": 174,
     },
     "options": {
-      "hash": "986e577a097e28d6",
+      "hash": "587c76ed1bba4588",
       "n": 174,
     },
   },
   "원본": {
     "accepted": {
-      "hash": "afa6c395d7f480d0",
+      "hash": "a903a60ee6954efd",
       "n": 174,
     },
     "options": {
-      "hash": "38836ae5290ebe71",
+      "hash": "e386102deed86c98",
       "n": 174,
     },
   },
@@ -64,11 +64,11 @@ exports[`게임 특성화 (T-11-044) > market·acceptOption — 시장 선택지
 exports[`게임 특성화 (T-11-044) > natWindow — A매치·국제대회 창 1`] = `
 {
   "대표팀": {
-    "hash": "2ee836111b480048",
+    "hash": "2c9d12c2907b0134",
     "n": 522,
   },
   "원본": {
-    "hash": "587e8660dd4b6117",
+    "hash": "050ff73ab6023abe",
     "n": 522,
   },
 }
@@ -77,7 +77,7 @@ exports[`게임 특성화 (T-11-044) > natWindow — A매치·국제대회 창 1
 exports[`게임 특성화 (T-11-044) > rollEvent — 이벤트 추첨 1`] = `
 {
   "distinct": 51,
-  "hash": "f124922aa1c1cd06",
+  "hash": "c4dec2d21f53f60c",
   "n": 522,
 }
 `;
@@ -85,15 +85,15 @@ exports[`게임 특성화 (T-11-044) > rollEvent — 이벤트 추첨 1`] = `
 exports[`게임 특성화 (T-11-044) > simBlock — 리그 구간 경기 결과 1`] = `
 {
   "대표팀": {
-    "hash": "6b05cf2b917a8a91",
+    "hash": "57feffa976f09bfa",
     "n": 351,
   },
   "병역": {
-    "hash": "8b57f054785757a5",
+    "hash": "6116f19eb8a6b216",
     "n": 351,
   },
   "원본": {
-    "hash": "1de9e681b9ae3728",
+    "hash": "b0cfa395f0cf8a50",
     "n": 351,
   },
 }
@@ -105,7 +105,7 @@ exports[`게임 특성화 (T-11-044) > 이벤트 × 선택지 — 확률 p 격�
   "reached": 64,
   "table": {
     "ad": "721 d1449a763a87ff3e",
-    "ag-release": "6 8cbde8cb6d165864",
+    "ag-release": "6 43e6e8f4b56f4803",
     "asia-tour": "0 155cad1fc4d9cff1",
     "bench-talk": "24 1ce19029cd0d4916",
     "charity": "870 4c64cf07e9493c1b",
@@ -115,7 +115,7 @@ exports[`게임 특성화 (T-11-044) > 이벤트 × 선택지 — 확률 p 격�
     "df-header": "95 e99b7ca0ddbf959a",
     "df-lastman": "95 5733b1c7683f52ad",
     "df-marking": "95 c7c13ad087b12d17",
-    "df-overlap": "3 3d1f84e51a01a2d9",
+    "df-overlap": "3 dc29f17303c326d6",
     "diet": "870 6c3c49294a683369",
     "europe-2": "870 a2288369af57edd2",
     "europe-3": "0 71049308ceb77612",
@@ -130,7 +130,7 @@ exports[`게임 특성화 (T-11-044) > 이벤트 × 선택지 — 확률 p 격�
     "gk-pk": "84 284fca76002d13b6",
     "gk-sweeper": "136 6e35037b4f24c88d",
     "hat-trick": "89 befcd4736f3914cb",
-    "haters": "84 7dc49310294d9fcd",
+    "haters": "84 86330627ef7e1b6d",
     "interview": "870 1c0de8928e9fd6dc",
     "kid-autograph": "437 eb0ceb49b02a279e",
     "knock": "737 21ffd8cd0c629f34",
@@ -152,9 +152,9 @@ exports[`게임 특성화 (T-11-044) > 이벤트 × 선택지 — 확률 p 격�
     "party-wags": "739 4bd346bc3d2905a0",
     "penalty": "260 51d105c9dc201b18",
     "pk-save": "108 4c086f6bd30606c7",
-    "puskas": "117 efa19da07cb59a3e",
+    "puskas": "117 697504b830a671e7",
     "racism": "0 ec86f2247d90e708",
-    "rehab-1": "6 8959eea91c243c76",
+    "rehab-1": "6 2a86ff2c5c8971c8",
     "rehab-2": "870 c713b96777c01dc9",
     "rehab-3": "737 fb0f0ba4d69c7ad0",
     "rival": "644 e6037dd247edcb41",
@@ -169,7 +169,7 @@ exports[`게임 특성화 (T-11-044) > 이벤트 × 선택지 — 확률 p 격�
     "team-k": "88 9a0aa7bf25412881",
     "trainer": "415 67befc060dae5b6c",
     "var": "498 f8461671cd1072c5",
-    "wc-snub": "8 e40f80ec4956f461",
+    "wc-snub": "8 59bfa152149f210e",
     "winter-camp": "322 3c2059dcd6d94997",
     "winter-window": "242 159995850ff80c24",
   },

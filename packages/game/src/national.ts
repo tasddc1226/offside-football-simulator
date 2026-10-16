@@ -494,7 +494,7 @@ function squadRole(
     const young = s.age <= 23;
     const need = young ? 68 : 84;
     if (sc < need + gauss() * 1.5) return { role: 'none', why: young ? L.whyCut : '' };
-    // 아시안게임·올림픽 남자축구는 FIFA 의무 차출 대회가 아니라 해외 구단은 거절할 수 있다(T-10-016 올림픽 추가).
+    // 아시안게임·올림픽 남자축구는 의무 차출 대회가 아니라 해외 구단은 거절할 수 있다(T-10-016 올림픽 추가).
     // 올림픽은 7~8월이라 유럽 프리시즌과 겹쳐 시즌 중인 아시안게임(9월)보다 조금 더 잘 보내 준다.
     const release = RELEASE[key];
     if (release) {

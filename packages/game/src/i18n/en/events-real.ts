@@ -146,7 +146,7 @@ export const events_real: Record<string, EventText> = {
     title: 'Asian Games release talks',
     text: 'The Asian Games squad wants you.',
     mil: 'A gold medal means exemption from military service.',
-    rest: 'But the Asian Games are not a mandatory FIFA release window, so you need your club to agree to let you go mid-season.',
+    rest: 'But the Asian Games are not a mandatory international release window, so you need your club to agree to let you go mid-season.',
     blessing: '"Bring back the gold." The club agreed to release you.',
     refusal: 'The club refused, saying it cannot lose a regular starter in mid-season.',
     missed: "Talks broke down. You'll be watching these Asian Games on TV.",
@@ -155,19 +155,19 @@ export const events_real: Record<string, EventText> = {
     title: 'Olympics release talks',
     text: 'The Olympic squad wants you.',
     mil: 'A bronze medal or better means exemption from military service.',
-    rest: "But Olympic men's football is not a mandatory FIFA release window either, so you need your club to agree to a release that clashes with pre-season.",
+    rest: "But Olympic men's football is not a mandatory international release window either, so you need your club to agree to a release that clashes with pre-season.",
     blessing: '"Bring back a medal." The club agreed to release you.',
     refusal: 'The club refused, saying you cannot miss preparations for the new season.',
     missed: "Talks broke down. You'll be watching these Olympics on TV.",
   }),
   puskas: {
-    title: 'Wonder goal, Puskas Award nominee',
+    title: 'Wonder goal, Goal of the Year nominee',
     text: () =>
-      'Your volley from 35 meters out found the corner of the net. FIFA has shortlisted the goal for the Puskas Award. The winner is decided by fan and expert votes.',
+      'Your volley from 35 meters out found the corner of the net. The goal has been shortlisted for Goal of the Year. The winner is decided by fan and expert votes.',
     choices: [
       {
         label: 'Rally fan votes on social media',
-        ok: 'FIFA Puskas Award winner! Your goal has been chosen as the most beautiful of the year.',
+        ok: 'Goal of the Year winner! Your goal has been chosen as the most beautiful of the year.',
         fail: 'You missed out, and the relentless campaigning for votes drew criticism. Still, the clip has racked up millions of views.',
       },
       {
@@ -195,7 +195,7 @@ export const events_real: Record<string, EventText> = {
   'team-k': {
     title: 'Selected for Team K League',
     text: () =>
-      'Fan votes have put you in the Team K League squad! In midsummer you take on a visiting European giant in a friendly at Seoul World Cup Stadium.',
+      'Fan votes have put you in the Team K League squad! In midsummer you take on a visiting European giant in a friendly at Sangam Stadium in Seoul.',
     choices: [
       {
         label: 'Give everything in front of the European scouts',

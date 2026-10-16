@@ -28,7 +28,7 @@ export const gNational: Translation<GNationalMsgs> = {
   debut: (p) => `キャリア初のA代表選出！（${p.name}）`,
   windowName: (p) => `${p.m}月の国際Aマッチ`,
   friendly: '国際親善試合',
-  wcQual: (p) => `${p.year} ワールドカップ ${REGION[p.conf] ?? p.region}予選`,
+  wcQual: (p) => `${p.year} ワールドチャンピオンシップ ${REGION[p.conf] ?? p.region}予選`,
   score: (p) => `${p.team} ${p.kg}-${p.og} ${p.opp}${p.pso ? `（PK戦 ${p.pso}）` : ''}`,
   matchLog: (p) =>
     `[${p.comp}] ${p.score}${p.mins ? ` · ${p.mins}分${p.g ? ` ${p.g}ゴール` : ''}${p.a ? ` ${p.a}アシスト` : ''}` : ' · ベンチ'}`,

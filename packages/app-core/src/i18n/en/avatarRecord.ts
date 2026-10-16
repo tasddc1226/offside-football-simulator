@@ -15,5 +15,5 @@ export const avatarRecord: Translation<AvatarRecordMsgs> = {
   recNationWrist: 'National team wristband',
   recBigearGoggle: 'Silver goggles',
   recBallonHair: 'Golden hair',
-  recWorldcupSocks: 'World Cup socks',
+  recWorldcupSocks: 'World Championship socks',
 };
