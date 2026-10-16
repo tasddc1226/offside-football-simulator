@@ -13,6 +13,7 @@ const BROWSE_SCREENS: readonly Screen[] = [
   'cup',
   'market',
   'funds',
+  'manager',
   'recap',
   'honors',
   'firsts',

@@ -20,6 +20,7 @@ import {
   achievementDescs,
   achievementGroups,
   achievementLabels,
+  managerUnits,
   tenureLabels,
 } from '../i18n/ko/achievements.js';
 import { NATIONAL_WINS } from '@offside/contracts/nations';
@@ -82,6 +83,8 @@ export type AchievementTeam = {
   goalsFor: number;
   rating: number;
   likes: number;
+  /** T-11-310 감독 칸에 감독이 있는지. */
+  coach?: boolean;
   /** T-11-237 이 팀의 오프사이드 컵 최고 성적(끝난 컵만). 없으면 null. */
   cupBest?: 'champion' | 'runnerup' | 'sf' | 'qf' | 'r16' | 'r32' | 'r64' | 'group' | null;
 };
@@ -98,8 +101,18 @@ export type AchievementOwner = {
   nickname: boolean;
 };
 
+/** T-11-310 그 시즌에 끝낸 감독 커리어(감독 업적 재료). */
+export type AchievementManager = {
+  titles: number;
+  promotions: number;
+  grade: string;
+  mastery: Readonly<Record<string, string>>;
+};
+
 export type AchievementInput = {
   careers: readonly AchievementCareer[];
+  /** T-11-310 그 시즌에 끝낸 감독(없으면 빈 배열). */
+  managers?: readonly AchievementManager[];
   /** 그 시즌 팀(팀이 없는 지난 시즌이면 null — 팀 업적을 보이지 않는다). */
   team: AchievementTeam | null;
   owner: AchievementOwner;
@@ -354,6 +367,7 @@ export function achievementScore(groups: readonly ClubAchievementGroup[]) {
 
 export function clubAchievements(input: AchievementInput): ClubAchievementGroup[] {
   const { careers, team, owner, detail, retireAt } = input;
+  const managers = input.managers ?? [];
   const veteranAge = retireAt - 1;
   const honors = new Set(careers.flatMap((c) => c.seasons.flatMap((s) => s.honors)));
   const leagues = new Set(careers.flatMap((c) => c.seasons.map((s) => s.league)));
@@ -696,8 +710,43 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
       tier('owner-match-days', '팀 경기를 치른 날', '일', owner.matchDays, [3, 7, 14, 30]),
       tier('owner-likes', '다른 팀 응원(좋아요)', '번', owner.likesGiven, [1, 5, 20], TEAM_LADDER),
     ]),
-    // 감독 시뮬레이션이 열리면 공개한다(지금은 잠금으로 예고만).
-    { ...group('manager', 'manager', 'MANAGER', '감독 커리어', []), locked: true },
+    // T-11-310 감독 커리어(그 시즌에 끝낸 감독 · 지금 팀 감독 칸).
+    group('manager', 'manager', 'MANAGER', '감독 커리어', [
+      once('mgr-first', achievementLabels['mgr-first']!, managers.length > 0, 30),
+      tier(
+        'mgr-count',
+        achievementLabels['mgr-count']!,
+        managerUnits['mgr-count']!,
+        managers.length,
+        [2, 3, 5],
+        TEAM_LADDER,
+      ),
+      once(
+        'mgr-title',
+        achievementLabels['mgr-title']!,
+        managers.some((m) => m.titles > 0),
+        40,
+      ),
+      once(
+        'mgr-promote',
+        achievementLabels['mgr-promote']!,
+        managers.some((m) => m.promotions > 0),
+        30,
+      ),
+      once(
+        'mgr-mastery',
+        achievementLabels['mgr-mastery']!,
+        managers.some((m) => Object.values(m.mastery).includes('S')),
+        40,
+      ),
+      once(
+        'mgr-grade',
+        achievementLabels['mgr-grade']!,
+        managers.some((m) => m.grade === 'S'),
+        80,
+      ),
+      ...(team ? [once('mgr-coach', achievementLabels['mgr-coach']!, !!team.coach, 10)] : []),
+    ]),
   );
   return groups;
 }

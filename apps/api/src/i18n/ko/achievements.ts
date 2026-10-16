@@ -19,7 +19,18 @@ export const achievementLabels: Record<string, string> = {
   'team-ovr95': '11명 모두 최고 OVR 95 이상',
   'team-cup-sf': '오프사이드 컵 4강',
   'team-cup-win': '오프사이드 컵 우승',
+  // T-11-310 감독 업적(그 시즌에 끝낸 감독 커리어)
+  'mgr-first': '감독 커리어 마치기',
+  'mgr-count': '키운 감독',
+  'mgr-title': '리그 우승 감독',
+  'mgr-promote': '승격시킨 감독',
+  'mgr-mastery': '포메이션 숙련 S 감독',
+  'mgr-grade': 'S등급 감독',
+  'mgr-coach': '감독 칸 채우기',
 };
+
+/** T-11-310 감독 업적 단위. */
+export const managerUnits: Record<string, string> = { 'mgr-count': '명' };
 
 /** T-11-237 새 업적 묶음(그룹 id → 단계 표시·제목). */
 export const achievementGroups: Record<string, { stage: string; title: string }> = {

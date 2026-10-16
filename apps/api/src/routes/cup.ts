@@ -772,6 +772,14 @@ export async function checkCupLineup(
   }
 }
 
+/** T-11-310 감독 전향 검사: 컵 참가 중이면 지금 선발에 든 선수는 감독이 될 수 없다(명단이 비면 대회 최소 인원이 깨진다). */
+export async function checkCupManager(db: Db, profileId: string, season: number, careerId: string) {
+  if (!(await activeCups(db, profileId, season)).length) return;
+  const [team] = await myTeamIn(db, profileId, season);
+  if (team && slotIdsOf(team).includes(careerId))
+    throw conflictError(cupKo('cardManager'), 'CUP_CARD_LOCKED');
+}
+
 /** T-11-145 판매 등록 검사(R2): 컵 참가 중이면 지금 선발에 든 선수는 내놓을 수 없다. */
 export async function checkCupListing(db: Db, profileId: string, season: number, careerId: string) {
   if (!(await activeCups(db, profileId, season)).length) return;

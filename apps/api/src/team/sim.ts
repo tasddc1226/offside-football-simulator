@@ -1,4 +1,5 @@
 import { expandDetailRoles } from '@offside/contracts/positions';
+import { addLines, managerLines, type ManagerCardRules } from '@offside/contracts/manager-rules';
 // T-10-092 구단주 팀 경기 시뮬레이션. 서버만 돌리는 순수 함수다 — 같은 경기 id(시드)와 같은 선발이면 결과가 늘 같다.
 import {
   FORMATIONS,
@@ -235,16 +236,27 @@ export type SimResult = {
 
 const synergyIds = (s: TeamSynergy) => s.active.filter((a) => a.kind !== 'badge').map((a) => a.id);
 
+/** T-11-310 그 경기 두 팀의 감독(감독 칸이 비면 null)과 팀 포메이션. */
+export type MatchCoach = { card: ManagerCardRules; formation: FormationId } | null;
+export type MatchCoaches = { home: MatchCoach; away: MatchCoach };
+
+/** 감독 보정을 줄 힘에 더한다. 감독이 없으면 그대로다. */
+const withCoach = (lines: LineStrength, coach: MatchCoach | undefined, syn: TeamSynergy | null) =>
+  coach
+    ? addLines(lines, managerLines(coach.card, coach.formation, syn ? synergyIds(syn) : []))
+    : lines;
+
 /**
  * 경기 한 판. seed는 경기 id — 같은 id·같은 선발이면 같은 결과다. season이 시너지 반영 시즌(T-11-105,
- * SYNERGY_FROM_SEASON)부터면 두 팀 줄 힘에 시너지 보정을 더한다. 그 전 시즌은 지금까지와 같은 결과다.
+ * SYNERGY_FROM_SEASON)부터면 두 팀 줄 힘에 시너지 보정을 더한다. 그 전 시즌은 지금까지와 같은 결과다. T-11-310 coaches를 주면
+ * 감독 보정(contracts manager-rules managerLines)을 더한다. 감독 칸이 비면 지금과 같은 결과다.
  */
 export function simulateMatch(
   seed: string,
   home: readonly LineupSlot[],
   away: readonly LineupSlot[],
   season: number,
-  opts: { neutral?: boolean } = {},
+  opts: { neutral?: boolean; coaches?: MatchCoaches } = {},
 ): SimResult {
   if (home.length !== LINEUP_SIZE || away.length !== LINEUP_SIZE)
     throw new Error('선발은 11명이어야 합니다.');
@@ -252,8 +264,8 @@ export function simulateMatch(
   const on = synergyApplies(season);
   const hSyn = on ? lineupSynergy(home) : null;
   const aSyn = on ? lineupSynergy(away) : null;
-  const hs = lineupLines(home, hSyn);
-  const as = lineupLines(away, aSyn);
+  const hs = withCoach(lineupLines(home, hSyn), opts.coaches?.home, hSyn);
+  const as = withCoach(lineupLines(away, aSyn), opts.coaches?.away, aSyn);
   // T-11-145 컵은 중립 경기 — 홈 이점을 주지 않는다.
   const homeGoals = poisson(expectedGoals(hs, as, !opts.neutral), rng);
   const awayGoals = poisson(expectedGoals(as, hs, false), rng);

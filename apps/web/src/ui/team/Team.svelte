@@ -70,6 +70,8 @@
   import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, tooManyWildcards, wildcardFullText, wildcardLabel } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
+  import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
+  import { coachSummary } from '@offside/app-core/managerCard';
   import { hofOwnText as HO } from '@offside/app-core/i18n/ko/hofOwn';
   import { loadAnonNames, publishAnonNames, type AnonName } from '@offside/app-core/cardNames';
   import { fetchCup, fetchCupMe } from '@offside/app-core/api/cup';
@@ -623,6 +625,13 @@
         onlock={toggleLock}
         onpresets={() => (presetsOpen = true)}
       />
+      {#if team && season === current}
+        <!-- T-11-310 감독 칸: 감독은 감독 커리어 화면에서 고른다. -->
+        <section class="card tm-coach" data-team-coach>
+          <span class="tm-coach-info"><b>{MG.teamCoach}</b><span class="muted fs-sm">{team.coach ? coachSummary(team.coach, formation, localNames) : MG.teamCoachEmpty}</span></span>
+          <button class="btn btn-sm" data-act="team-coach" onclick={() => go('manager')}>{MG.teamCoachManage}</button>
+        </section>
+      {/if}
       <TeamPresets bind:open={presetsOpen} {presets} hasTeam={!!team} locked={!!cupBand?.locked} draft={presetDraft} persist={persistPresets} onload={applyPreset} />
     {:else if view === 'opponents'}
       <div class="seg two tm-mode" role="group" aria-label={L.matchKindLabel}>
@@ -708,4 +717,16 @@
   .anon-names {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 16px;}
   .anon-names p {margin:0;flex:1 1 200px;}
   .anon-names .btn {min-height:44px;}
+  .tm-coach {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .tm-coach-info {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+  }
 </style>

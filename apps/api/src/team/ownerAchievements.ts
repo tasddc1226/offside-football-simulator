@@ -20,6 +20,7 @@ import {
   slotIdsOf,
 } from '../db/repos/ownerTeams.js';
 import { getProfile, hasAccount } from '../db/repos/profiles.js';
+import { seasonManagersOf } from '../db/repos/managers.js';
 import { achievementScore, clubAchievements, teamKeptOf, type TeamKept } from './achievements.js';
 import { buildLineup } from './sim.js';
 import { cupBestOf } from './cup.js';
@@ -46,11 +47,13 @@ export async function computeOwnerAchievements(
   now: string,
   asOf?: string,
 ) {
-  const [allCareers, [seasonTeam], prev] = await Promise.all([
+  const [allCareers, [seasonTeam], prev, allManagers] = await Promise.all([
     seasonCareersOf(db, owner.id, season),
     myTeamIn(db, owner.id, season),
     achievementRowOf(db, owner.id, season),
+    seasonManagersOf(db, owner.id, season),
   ]);
+  const managers = asOf ? allManagers.filter((m) => m.finishedAt <= asOf) : allManagers;
   const careersIn = asOf
     ? allCareers.filter((c) => c.retiredAt !== null && c.retiredAt <= asOf)
     : allCareers;
@@ -98,12 +101,14 @@ export async function computeOwnerAchievements(
           rating: team.rating,
           likes: team.likes,
           cupBest,
+          coach: !!team.coachId,
         }
       : open
         ? { slots: [], wins: 0, bestStreak: 0, bestMargin: 0, goalsFor: 0, rating: 0, likes: 0 }
         : null;
   const groups = clubAchievements({
     careers: careersIn,
+    managers,
     team: teamInput,
     owner: {
       retireDays: new Set(careersIn.flatMap((c) => (c.retiredAt ? [kstDay(c.retiredAt)] : [])))
