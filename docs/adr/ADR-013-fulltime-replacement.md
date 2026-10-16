@@ -20,7 +20,7 @@ T-9-001d 문서 작업).
 1. **전면 교체.** 원작 OFFSIDE의 기획·화면·엔진·콘텐츠 체계를 유지하지 않는다.
    풀타임이 흡수해야 할 것만 남긴다.
 2. **브랜드는 OFFSIDE 유지.** 부제에 "풀타임"을 포함한다 — 부제 `풀타임: 휘슬이
-   울릴 때까지`, 페이지 타이틀 `오프사이드 — 풀타임 축구 커리어`. offside-lab.com
+울릴 때까지`, 페이지 타이틀 `오프사이드 — 풀타임 축구 커리어`. offside-lab.com
    도메인도 그대로 쓴다.
 3. **서버는 로그인·프로필만.** `apps/api`는 health, profile(익명 프로필·설정·복구
    코드·복구·삭제), Google 로그인(시작·콜백·연결 해제·로그아웃)만 남긴다. 계정
@@ -34,17 +34,17 @@ T-9-001d 문서 작업).
 
 새 게임의 구조:
 
-| 항목 | 풀타임 |
-|---|---|
-| 클라이언트 | Vite + TypeScript vanilla 앱(`apps/web`). React·TanStack 없음 |
-| 게임 로직 | `apps/web/src/game/*` 모듈(계정·속성·엔진·이벤트·군 복무·국가대표·포지션·시즌 등), 배럴 `index.ts` |
-| 난수 | 시드 RNG가 세이브 상태 안에 저장된다(엔진 실행 위치와 결정론 검증 인프라는 더 이상 필요 없다) |
-| 저장 | `localStorage`만. 서버 동기화·체크포인트·Dexie 없음 |
-| 선수 모델 | FIFA식 34개 세부 능력치, 육각형 레이더, 포지션별 OVR |
-| 콘텐츠 | 선택지가 있는 이벤트, 국가대표, 병역, 이적 시장, 로컬 명예의 전당 |
-| 공개 페이지 | `/guide/`, `/faq/`, `/legal/terms/`, `/legal/privacy/` 정적 페이지 |
-| 서버 | `apps/api` — health·profile·Google 로그인만(Hono, Cloudflare Workers + D1) |
-| 공유 계약 | `packages/contracts` — auth·profile·health·errors·envelope·headers·primitives로 축소 |
+| 항목        | 풀타임                                                                                                                     |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 클라이언트  | Vite + TypeScript vanilla 앱(`apps/web`). React·TanStack 없음                                                              |
+| 게임 로직   | `apps/web/src/game/*` 모듈(계정·속성·엔진·이벤트·군 복무·국가대표·포지션·시즌 등), 배럴 `index.ts`                         |
+| 난수        | 시드 RNG가 세이브 상태 안에 저장된다(엔진 실행 위치와 결정론 검증 인프라는 더 이상 필요 없다)                              |
+| 저장        | `localStorage`만. 서버 동기화·체크포인트·Dexie 없음                                                                        |
+| 선수 모델   | FIFA식 34개 세부 능력치, 육각형 레이더, 포지션별 OVR                                                                       |
+| 콘텐츠      | 선택지가 있는 이벤트, 국가대표, 병역, 이적 시장, 로컬 명예의 전당                                                          |
+| 공개 페이지 | `/guide/`, `/faq/`, `/legal/terms/`, `/legal/privacy/` 정적 페이지                                                         |
+| 서버        | `apps/api` — health·profile·Google 로그인만(Hono, Cloudflare Workers + D1)                                                 |
+| 공유 계약   | `packages/contracts` — auth·profile·health·errors·envelope·headers·primitives로 축소                                       |
 | 밸런스 검증 | `tooling/fulltime-sim` — 원작 풀타임 v4와의 패리티를 2만 커리어로 검증(peak p50 74, corr 0.85, Europe 74.7%, capped 68.0%) |
 
 ## 대체하는 ADR (Supersedes)
