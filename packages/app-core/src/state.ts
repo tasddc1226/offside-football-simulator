@@ -14,6 +14,7 @@ import { detailPosOpen, dposFor, DETAILS_OF } from '@offside/contracts/positions
 import type { OutboxItem } from './outbox.js';
 import type { AttrKey, DetailPos, Pos } from '@offside/game/data';
 import { pick, ri } from '@offside/game/rng';
+import { loadKey } from '@offside/game/storage';
 import { SURNAMES, GIVEN, defaultFocus } from '@offside/game/data';
 import type { GameState, HofEntry, LegendSource } from '@offside/game/types';
 import type { Candidate } from '@offside/game/candidates';
@@ -139,6 +140,24 @@ export function randomName(): string {
 /** T-10-076 기본 등번호는 무작위(1~99) — 모두 10번으로 시작하면 영구결번이 10번에 몰린다. 칸은 비우고 직접 적을 수 있다. */
 export const randomNumber = (): number => ri(1, 99);
 
+/** 마지막으로 시작한 커리어의 이름·등번호. 은퇴하면 지운다 — 은퇴 전에 다시 시작할 때만 이어 쓴다. */
+export const DRAFT_IDENTITY_KEY = 'ft_last_draft_identity';
+export type DraftIdentity = Pick<DraftCharacter, 'name' | 'number'>;
+
+/** 저장된 이름·등번호. 없거나 깨졌거나 이름이 비었거나 등번호가 정수 1~99 밖이면 null. */
+export function savedDraftIdentity(): DraftIdentity | null {
+  const v = loadKey<Partial<DraftIdentity> | null>(DRAFT_IDENTITY_KEY);
+  if (!v || typeof v !== 'object') return null;
+  const { name, number } = v;
+  if (typeof name !== 'string' || !name.trim()) return null;
+  if (!Number.isInteger(number) || number! < 1 || number! > 99) return null;
+  return { name, number: number! };
+}
+
+/** 선수 만들기의 처음 이름·등번호 — 저장된 값이 있으면 그 값, 없으면 무작위(이름 → 등번호 순으로 뽑는다). */
+export const draftIdentity = (): DraftIdentity =>
+  savedDraftIdentity() ?? { name: randomName(), number: randomNumber() };
+
 /** T-10-005 은퇴 선수 상세 화면에 띄울 대상. 내 선수(로컬 ft_hof)면 `own`이 있고 이름 공개를 바꿀 수 있다. */
 export interface LegendView {
   name: string;
@@ -248,8 +267,7 @@ export const initialAppState = (): AppState => ({
   lastRetired: null,
   legend: null,
   C: {
-    name: randomName(),
-    number: randomNumber(),
+    ...draftIdentity(),
     pos: 'FW',
     dpos: null,
     foot: '오른발',
