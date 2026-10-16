@@ -90,13 +90,17 @@
   function resetPick(s: ManagerState) {
     pick = { formation: s.formation, style: s.style, target: boardMinimum(s) };
   }
-  /** 엔진 함수로 상태를 바꾸고 저장한다(raw 상태라 새 객체로 다시 넣어 화면을 그린다). */
+  /**
+   * 엔진 함수로 상태를 바꾸고 저장한다. 엔진은 이벤트 · 시즌 객체를 제자리에서 바꾸므로 깊은 사본을 다시 넣어야
+   * 파생값(지금 이벤트 등)이 새 객체가 되어 화면이 다시 그려진다.
+   */
   function act(fn: (s: ManagerState) => unknown) {
     if (!st) return;
-    fn(st);
-    saveManagerState(st);
-    if (st.phase === 'setup') resetPick(st);
-    st = { ...st };
+    const next = structuredClone(st);
+    fn(next);
+    saveManagerState(next);
+    if (next.phase === 'setup') resetPick(next);
+    st = next;
   }
 
   async function run<T>(fn: () => Promise<{ ok: true; data: T } | { ok: false; error: { message: string } }>) {

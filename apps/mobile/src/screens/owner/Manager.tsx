@@ -205,13 +205,14 @@ export default function Manager() {
     void load();
   }, [tick, retryN]);
 
-  /** 엔진 함수로 상태를 바꾸고 저장한다(새 객체로 다시 넣어 화면을 그린다). */
+  /** 엔진 함수로 상태를 바꾸고 저장한다. 엔진이 제자리에서 바꾸므로 사본에 적용해 새 상태로 넣는다(세이브와 같은 JSON 모양). */
   function act(fn: (s: ManagerState) => unknown) {
     if (!st) return;
-    fn(st);
-    saveManagerState(st);
-    if (st.phase === 'setup') resetPick(st);
-    setSt({ ...st });
+    const next = JSON.parse(JSON.stringify(st)) as ManagerState;
+    fn(next);
+    saveManagerState(next);
+    if (next.phase === 'setup') resetPick(next);
+    setSt(next);
   }
   async function run(fn: () => Promise<{ ok: boolean; error?: { message: string } }>) {
     setBusy(true);

@@ -171,7 +171,11 @@ test('은퇴 선수로 감독 커리어를 끝까지 하고 감독 칸에 앉힌
   expect(violations.map((v) => `${v.id} (${v.impact})`)).toEqual([]);
 
   // 확인 창이 잃는 것을 보여 준다(선발 · 구단 가치 · 팔 수 없음 · 포기).
-  await page.locator('[data-manager-candidate]').first().locator('[data-act="manager-pick"]').click();
+  await page
+    .locator('[data-manager-candidate]')
+    .first()
+    .locator('[data-act="manager-pick"]')
+    .click();
   const dialog = page.locator('[data-manager-confirm]');
   await expect(dialog).toContainText('선발 · 친선 편성 · 프리셋에서 빠지고');
   await expect(dialog).toContainText('구단 가치가');
@@ -212,7 +216,11 @@ test('감독 커리어를 포기하면 원래 선수로 돌아온다', async ({ 
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-act="manager"]').click();
-  await page.locator('[data-manager-candidate]').first().locator('[data-act="manager-pick"]').click();
+  await page
+    .locator('[data-manager-candidate]')
+    .first()
+    .locator('[data-act="manager-pick"]')
+    .click();
   await page.locator('[data-act="manager-start"]').click();
   await expect(page.locator('[data-manager-play]')).toBeVisible();
   await page.locator('[data-act="manager-abandon"]').click();
