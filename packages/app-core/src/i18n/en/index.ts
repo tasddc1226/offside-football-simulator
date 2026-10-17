@@ -6,6 +6,7 @@ import { ad } from './ad';
 import { appFlight } from './appFlight';
 import { appFormat } from './appFormat';
 import { appScout } from './appScout';
+import { attendance } from './attendance';
 import { automationModeration } from './automationModeration';
 import { avatarLook } from './avatarLook';
 import { avatarRecord } from './avatarRecord';
@@ -105,6 +106,7 @@ export const en = {
   appFlight,
   appFormat,
   appScout,
+  attendance,
   automationModeration,
   avatarLook,
   avatarRecord,
