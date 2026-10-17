@@ -33,6 +33,7 @@ export const CUP_EN: Record<CupTextKey, string> = {
   noBoost: "You don't have any boost tickets.",
   noScout: "You don't have any premium scout tickets.",
   giftClaimed: 'You have already claimed this gift.',
+  attendanceChecked: 'You have already checked in today.',
   iapInvalid: "We couldn't verify this purchase.",
   iapPending: "The payment hasn't finished yet. You'll get it automatically once it does.",
   iapOtherAccount: 'This purchase was made on a different account. Log in with that account.',

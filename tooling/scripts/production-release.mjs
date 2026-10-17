@@ -63,6 +63,8 @@ export const EXPECTED_TABLES = Object.freeze([
   'iap_purchases',
   'scout_pity',
   'gift_claims',
+  'owner_attendance',
+  'owner_attendance_days',
   'reroll_mileage',
   'billing_alerts',
   'retired_numbers',

@@ -1535,6 +1535,37 @@ export const giftClaims = sqliteTable(
 );
 
 /**
+ * T-11-360 출석 체크 요약(구단주마다 한 줄). stamps = 지금까지 찍은 도장 수, streak = 마지막 출석까지의 연속 기록,
+ * grace_week = 연속 유예(한 주에 하루)를 마지막으로 쓴 주의 월요일. claim_id는 출석 batch가 이 줄을 바꿨을 때만
+ * 하루 기록 · 아이템을 넣도록 거는 조건이다(같은 날 두 번 눌러도 한 번).
+ */
+export const ownerAttendance = sqliteTable('owner_attendance', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  stamps: integer('stamps').notNull().default(0),
+  streak: integer('streak').notNull().default(0),
+  bestStreak: integer('best_streak').notNull().default(0),
+  lastDay: text('last_day'),
+  graceWeek: text('grace_week'),
+  claimId: text('claim_id').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+/** T-11-360 출석한 날(KST 날짜). 구단주 · 날짜마다 한 줄 — 출석 뒤 플레이 전환 같은 측정과 2단계 일일 미션이 쓴다. */
+export const ownerAttendanceDays = sqliteTable(
+  'owner_attendance_days',
+  {
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    day: text('day').notNull(),
+    checkedAt: text('checked_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.profileId, table.day] })],
+);
+
+/**
  * T-11-152 구단 자금으로 산 아이템 원장(자금이 없어진 내역). 하루 상한을 세고, 운영에서 자금 대조
  * (방출 + 판매 − 영입 − 아이템 구매)에 쓴다.
  */
