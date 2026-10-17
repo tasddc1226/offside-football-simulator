@@ -90,7 +90,7 @@ describe('storeApi', () => {
     )) as CryptoKeyPair;
     const env = {
       PLAY_PACKAGE: 'com.offsidelab.app',
-      PLAY_SA_EMAIL: 'sa@example.iam.gserviceaccount.com',
+      PLAY_SA_EMAIL: 'sa@example.com',
       PLAY_SA_KEY: pem(await crypto.subtle.exportKey('pkcs8', pair.privateKey), 'PRIVATE KEY'),
     } as Env;
     const urls: string[] = [];
