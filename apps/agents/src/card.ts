@@ -261,6 +261,17 @@ export class WorkCard extends DurableObject<Env> {
         console.error('card post failed', String(e).slice(0, 200));
       }
     }
+    const prev = await this.ctx.storage.get<Card>('card');
+    // T-11-332 닫히거나 보류된 카드의 결론은 다른 스레드에서도 찾을 수 있게 남긴다(recall).
+    if ((card.status === '닫힘' || card.status === '보류') && prev?.status !== card.status)
+      await ledger(this.env).remember({
+        at: card.updatedAt,
+        kind: 'card',
+        role: card.owner,
+        text: `[${card.status}] ${card.goal}${card.note ? ` → ${card.note}` : ''}`,
+        channel: card.channel,
+        threadTs: card.threadTs,
+      });
     await this.ctx.storage.put('card', card);
     await ledger(this.env).trackCard(cardKey(card.channel, card.threadTs), summaryOf(card));
     return card;

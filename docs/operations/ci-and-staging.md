@@ -12,13 +12,13 @@ T-9-001(풀타임 마이그레이션) 이후 버전. `apps/web`은 localStorage 
 
 ## 실행 정책
 
-| 상황                | 자동 실행                                                                          |
-| ------------------- | ----------------------------------------------------------------------------------- |
-| 순수 문서 PR        | checkout·변경 분류 후 성공 보고. 패키지 설치·검사·배포 없음                         |
-| 코드 PR(Draft 포함) | `pr-checks` job: lint·lint:deps·lint:i18n·format:check·typecheck·test → db:check·build·check:bundle. E2E·배포 없음|
+| 상황                | 자동 실행                                                                                                                              |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 순수 문서 PR        | checkout·변경 분류 후 성공 보고. 패키지 설치·검사·배포 없음                                                                            |
+| 코드 PR(Draft 포함) | `pr-checks` job: lint·lint:deps·lint:i18n·format:check·typecheck·test → db:check·build·check:bundle. E2E·배포 없음                     |
 | main 코드 변경      | `deploy-staging` job: 위 검사 → build → check:bundle → e2e → 풀타임 밸런스 스모크 → staging D1 migrate → staging 배포 → API/web 스모크 |
-| main 문서 변경      | 마지막 성공 main 이후 미배포 코드가 없을 때 검사·배포 생략                          |
-| 전체 회귀           | `Full Validation (manual)`을 필요할 때 실행. 전체 테스트·E2E·N=20000 밸런스 회귀, 배포 없음 |
+| main 문서 변경      | 마지막 성공 main 이후 미배포 코드가 없을 때 검사·배포 생략                                                                             |
+| 전체 회귀           | `Full Validation (manual)`을 필요할 때 실행. 전체 테스트·E2E·N=20000 밸런스 회귀, 배포 없음                                            |
 
 PR이 main에 합쳐져도 원격 반영 전의 최소 검증이 실패하면 배포하지 않는다. 같은 run의
 `Main checks and staging deploy` 한 job이 검증부터 배포 후 확인까지 맡아 job 사이의 추가

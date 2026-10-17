@@ -79,6 +79,35 @@ const PENDING_KEEP_MS = 3 * 24 * 3600_000;
 const INCIDENT_COOLDOWN_MS = 6 * 3600_000;
 const WAITS_MAX = 200;
 
+/** T-11-332 스레드를 넘어 기억할 것: 닫힌 작업 카드의 결론, 운영자가 정한 결정. */
+export type Memory = {
+  at: number;
+  kind: 'card' | 'decision';
+  role: Role;
+  text: string;
+  channel: string;
+  threadTs: string;
+};
+const MEMORY_MAX = 500;
+const MEMORY_TEXT_MAX = 400;
+
+/** 질문 낱말이 많이 든 기억부터, 같으면 최근 것부터. 낱말이 없으면 최근 것. */
+export function rankMemories(all: Memory[], query: string, limit: number): Memory[] {
+  const terms = query
+    .toLowerCase()
+    .split(/[\s,.·/()]+/)
+    .filter((t) => t.length >= 2);
+  const scored = all.map((m) => {
+    const text = m.text.toLowerCase();
+    return { m, score: terms.filter((t) => text.includes(t)).length };
+  });
+  return scored
+    .filter((x) => !terms.length || x.score > 0)
+    .sort((a, b) => b.score - a.score || b.m.at - a.m.at)
+    .slice(0, limit)
+    .map((x) => x.m);
+}
+
 export class AgentLedger extends DurableObject<Env> {
   async day(role: Role, day = kstDay()): Promise<Day> {
     return (await this.ctx.storage.get<Day>(`${role}:${day}`)) ?? { costUsd: 0, tasks: 0 };
@@ -281,6 +310,21 @@ export class AgentLedger extends DurableObject<Env> {
     if (at && now - at < INCIDENT_COOLDOWN_MS) return false;
     await this.ctx.storage.put('incident:at', now);
     return true;
+  }
+  async remember(m: Memory): Promise<void> {
+    const text = m.text.replace(/\s+/g, ' ').trim().slice(0, MEMORY_TEXT_MAX);
+    if (!text) return;
+    await this.ctx.storage.put(`memory:${String(m.at).padStart(15, '0')}:${m.threadTs}`, {
+      ...m,
+      text,
+    });
+    const keys = [...(await this.ctx.storage.list({ prefix: 'memory:' })).keys()];
+    if (keys.length > MEMORY_MAX)
+      await this.ctx.storage.delete(keys.slice(0, keys.length - MEMORY_MAX));
+  }
+  async recall(query: string, limit = 8): Promise<Memory[]> {
+    const all = [...(await this.ctx.storage.list<Memory>({ prefix: 'memory:' })).values()];
+    return rankMemories(all, query, limit);
   }
   /** 한도 초과 안내는 하루 한 번만 한다. 처음이면 true. */
   async warnOnce(role: Role, day = kstDay()): Promise<boolean> {

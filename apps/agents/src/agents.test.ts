@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { costOf, MODEL, MODELS, runAgent, withCacheTail, type Tool } from './claude.ts';
-import { modelFor, roleSpec } from './roles.ts';
+import { ANSWER_RULE, modelFor, roleSpec } from './roles.ts';
 import { checkNotes, mktInteraction, releaseTask } from './mkt.ts';
 import { ga4Tools, reportBody } from './ga4.ts';
 import { deployCard, deployPlan } from './deploy.ts';
@@ -177,6 +177,21 @@ describe('runAgent', () => {
     expect(modelFor('alert')).toBe(MODELS.haiku);
     expect(modelFor('report')).toBe(MODELS.sonnet);
     for (const k of ['mention', 'reply', 'handoff'] as const) expect(modelFor(k)).toBe(MODELS.opus);
+  });
+
+  it('네 역할 모두 답 규칙을 읽고, 지시 · 넘기기 · 경보 요청 끝에 규칙을 다시 붙인다(T-11-332)', () => {
+    for (const role of ['ops', 'plan', 'dev', 'mkt'] as const) {
+      for (const kind of ['mention', 'handoff'] as const) {
+        const task = { kind, text: '저장 실패 확인', from: 'plan' } as Task;
+        const spec = roleSpec({ GITHUB_REPO: 'o/r' } as Env, role, task);
+        expect(spec.system).toContain('## 답 규칙');
+        expect(spec.prompt(task)).toContain(ANSWER_RULE);
+      }
+    }
+    const alert = { kind: 'alert', text: '5xx' } as Task;
+    expect(roleSpec({ GITHUB_REPO: 'o/r' } as Env, 'ops', alert).prompt(alert)).toContain(
+      ANSWER_RULE,
+    );
   });
 
   it('운영 · 기획은 게임 용어집을 함께 읽는다(킵은 후보 킵, 잠금과 다름)', () => {

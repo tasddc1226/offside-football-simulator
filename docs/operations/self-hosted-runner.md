@@ -10,16 +10,16 @@
 
 ## 설치
 
-| 항목 | 값 |
-| --- | --- |
-| 범위 | private `tasddc1226/offside-football-simulator` 전용 |
-| 이름 / 초기 runner ID | `offside-mac-arm64` / `21` |
-| 선택 라벨 | `self-hosted`, `macOS`, `ARM64`, `offside` |
-| 실행 장비 | 사용자 Mac, macOS ARM64, 로그인 사용자 LaunchAgent |
-| 설치 디렉터리 | `~/actions-runner-offside` (접근 권한 700) |
-| CI checkout | 설치 디렉터리 하위 `_work`; 개발 worktree와 분리 |
-| 설치 버전 | GitHub Actions runner `2.337.0`, 자동 업데이트 허용 |
-| 다운로드 SHA-256 | `5a2cd92908a93d7276a194e1de6008099f3e7946f3f8e14aa7a1a7b4a31fdec2` |
+| 항목                  | 값                                                                 |
+| --------------------- | ------------------------------------------------------------------ |
+| 범위                  | private `tasddc1226/offside-football-simulator` 전용               |
+| 이름 / 초기 runner ID | `offside-mac-arm64` / `21`                                         |
+| 선택 라벨             | `self-hosted`, `macOS`, `ARM64`, `offside`                         |
+| 실행 장비             | 사용자 Mac, macOS ARM64, 로그인 사용자 LaunchAgent                 |
+| 설치 디렉터리         | `~/actions-runner-offside` (접근 권한 700)                         |
+| CI checkout           | 설치 디렉터리 하위 `_work`; 개발 worktree와 분리                   |
+| 설치 버전             | GitHub Actions runner `2.337.0`, 자동 업데이트 허용                |
+| 다운로드 SHA-256      | `5a2cd92908a93d7276a194e1de6008099f3e7946f3f8e14aa7a1a7b4a31fdec2` |
 
 GitHub의 repository runner download API가 반환한 공식 macOS ARM64 배포본을 다운로드하고
 SHA-256 일치 확인 후 등록했다. 단기 등록 토큰은 출력/커밋하지 않는다. runner credentials도 저장소 밖에 둔다.
