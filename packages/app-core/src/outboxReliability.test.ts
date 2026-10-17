@@ -124,3 +124,12 @@ it('keeps original season events when durable queue storage is unavailable', asy
   upload.uploadSeason(state as never, rec as never);
   expect(state.evBuf).toEqual([event]);
 });
+
+it('native upload does not depend on browser TextEncoder availability', async () => {
+  vi.stubGlobal('TextEncoder', undefined);
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }));
+  const { enqueueSeason, flushOutbox } = await import('./outbox.js');
+  enqueueSeason('native', 2026, body as never);
+  await flushOutbox();
+  expect(JSON.parse(stored.get('ft_outbox')!)).toEqual([]);
+});

@@ -126,7 +126,9 @@ async function sendItem(item: OutboxItem): Promise<SendResult> {
         body,
         ...auth,
         // Browsers reject keepalive bodies above 64 KiB. The durable queue survives closure.
-        keepalive: new TextEncoder().encode(body).byteLength <= 60_000,
+        // Three UTF-8 bytes per UTF-16 code unit is a safe upper bound, including surrogate pairs.
+        // Avoid requiring TextEncoder in older native JS runtimes.
+        keepalive: body.length <= 20_000,
       },
       UPLOAD_TIMEOUT_MS,
     );
