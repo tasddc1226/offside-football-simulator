@@ -52,12 +52,10 @@ describe('카드 강화 (T-11-373)', () => {
       ?.reason;
   /** 다음 판정 난수(0~1)를 고정한다. */
   const nextRoll = (r: number) =>
-    vi
-      .spyOn(crypto, 'getRandomValues')
-      .mockImplementationOnce(((a: Uint32Array) => {
-        a[0] = Math.floor(r * 2 ** 32);
-        return a;
-      }) as unknown as typeof crypto.getRandomValues);
+    vi.spyOn(crypto, 'getRandomValues').mockImplementationOnce(((a: Uint32Array) => {
+      a[0] = Math.floor(r * 2 ** 32);
+      return a;
+    }) as unknown as typeof crypto.getRandomValues);
 
   /** 이 프로필이 키운 은퇴 선수 + 카드(기준가 100억). */
   async function addCard(profileId: string) {
