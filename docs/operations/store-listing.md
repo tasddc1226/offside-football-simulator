@@ -263,15 +263,15 @@ App Store는 6.9"(1320×2868), Google Play는 휴대전화(1080×2160)와 그래
 
 2026-10-07 main(#561까지) 기준으로 7장을 한국어·영어·일본어 모두 다시 찍었다. 시뮬레이터 기기 언어·지역을 그 언어(ko-KR·en-US·ja-JP)로 두고 찍어 선수 생성 화면의 국적 기본값이 대한민국·USA·日本으로 나온다. 일본어 커리어는 일본 국적 선수(같은 시드)다. 6장 "재촬영 필요" 표시는 이것으로 해소됐다.
 
-| #   | 장면                | 한국어 제목                 | 한국어 부제                              | English headline              | English sub                                    |
-| --- | ------------------- | --------------------------- | ---------------------------------------- | ----------------------------- | ---------------------------------------------- |
-| 1   | 홈·진행 중 커리어   | 이번 생은 축구다            | 고3부터 은퇴까지, 한 선수로 살아요       | One player. One whole career. | From high school to retirement                 |
-| 2   | 선수 생성           | 나만의 선수를 직접 만들어요 | 국적을 고르면 그 나라 대표로 뛰어요      | Build your own player         | Pick any nation and play for its national team |
-| 3   | 1대1 타이밍 게이지  | 결정적인 순간은 내 손으로   | 1대1·페널티킥은 타이밍 게이지로 판정해요 | Big moments, your timing      | One-on-ones and penalties use a timing gauge   |
-| 4   | 선수 능력치 레이더  | 시즌마다 자라는 내 선수     | 훈련과 자기 투자로 능력치를 키워요       | Grow every season             | Train and invest to build attributes           |
-| 5   | 시즌 리뷰           | 모든 시즌이 기록으로 남아요 | 골·도움·평점부터 국가대표까지            | Every season on the record    | Goals, ratings, awards and caps                |
+| #   | 장면                | 한국어 제목                 | 한국어 부제                              | English headline                | English sub                                    |
+| --- | ------------------- | --------------------------- | ---------------------------------------- | ------------------------------- | ---------------------------------------------- |
+| 1   | 홈·진행 중 커리어   | 이번 생은 축구다            | 고3부터 은퇴까지, 한 선수로 살아요       | One player. One whole career.   | From high school to retirement                 |
+| 2   | 선수 생성           | 나만의 선수를 직접 만들어요 | 국적을 고르면 그 나라 대표로 뛰어요      | Build your own player           | Pick any nation and play for its national team |
+| 3   | 1대1 타이밍 게이지  | 결정적인 순간은 내 손으로   | 1대1·페널티킥은 타이밍 게이지로 판정해요 | Big moments, your timing        | One-on-ones and penalties use a timing gauge   |
+| 4   | 선수 능력치 레이더  | 시즌마다 자라는 내 선수     | 훈련과 자기 투자로 능력치를 키워요       | Grow every season               | Train and invest to build attributes           |
+| 5   | 시즌 리뷰           | 모든 시즌이 기록으로 남아요 | 골·도움·평점부터 국가대표까지            | Every season on the record      | Goals, ratings, awards and caps                |
 | 6   | 이적 시장·해외 제의 | 해외 이적, 국가대표까지     | 일본·미국·유럽 리그에서 제의가 와요      | Transfers abroad, national team | Offers from Japan, the US and Europe           |
-| 7   | 은퇴·레전드 리포트  | 은퇴하면 명예의 전당에      | 레전드 점수와 잠재력이 공개돼요          | Retire into the Hall of Fame  | Legend score and potential revealed            |
+| 7   | 은퇴·레전드 리포트  | 은퇴하면 명예의 전당에      | 레전드 점수와 잠재력이 공개돼요          | Retire into the Hall of Fame    | Legend score and potential revealed            |
 
 일본어 문구는 `frames.json`의 `ja`에 있다(1 今度の人生はサッカーだ · 2 自分だけの選手を一からつくる(国籍を選べば、その国の代表でプレー) · 3 決定的な瞬間は自分の手で · 4 シーズンごとに成長する選手 · 5 すべてのシーズンが記録に残る · 6 海外移籍、代表入りまで · 7 引退したら殿堂へ). 일본어 스크린샷은 앱을 일본어로 두고 찍은 `shots/ja/`로 만든다.
 
@@ -326,3 +326,14 @@ App Store는 6.9"(1320×2868), Google Play는 휴대전화(1080×2160)와 그래
 - 한국어: 오프사이드 컵 승부예측과 대진표가 생겼어요. 맞히면 리롤권을 받아요. / 내 선수를 잠가 실수로 팔거나 방출하지 않게 할 수 있어요. / 앱 안정성을 개선했어요.
 - English (en-US · en-GB): Predict OFFSIDE Cup matches and follow the bracket. Correct picks earn reroll tickets. / Lock your players so you never sell or release them by mistake. / Stability improvements.
 - 日本語: オフサイドカップの勝敗予想とトーナメント表が加わりました。的中するとリロール券がもらえます。 / 選手をロックして、うっかり売却や放出をしないようにできます。 / アプリの安定性を改善しました。
+
+## 8. 앱 1.1.3 새 기능 (T-11-295)
+
+1.1.3은 FIFA 상표 사용 중단 요청(T-11-292)으로 App Store 설명 · 스크린샷의 월드컵 언급을 지우려고 낸 빌드다. 출시된 버전의
+설명 · 스크린샷은 고칠 수 없어 버전만 올렸다(게임 코드는 OTA로 이미 나감). 설명 본문은 위 정본(월드컵 삭제본), 스크린샷은
+`apps/mobile/store/render.mjs`로 다시 렌더한 7장(5 · 6번 문구 변경)을 6.3인치 · Duo 칸에 올린다. Google Play는 앱 출시 없이
+등록정보만 바꿔 검토로 보냈다(2026-10-16).
+
+- 한국어: 일부 대회와 상 이름이 월드 챔피언십, 올해의 골 같은 새 이름으로 바뀌었어요. / 앱 안정성을 개선했어요.
+- English (en-US · en-GB): Some competition and award names have changed, such as the World Championship and Goal of the Year. / Stability improvements.
+- 日本語: 一部の大会と賞の名前が、ワールドチャンピオンシップや年間最優秀ゴール賞などの新しい名前に変わりました。 / アプリの安定性を改善しました。
