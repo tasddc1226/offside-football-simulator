@@ -1,0 +1,23 @@
+{
+  "id": "t-11-338-manager-entry",
+  "title": "감독 커리어를 더 쉽게 찾아요",
+  "items": [
+    "감독 커리어를 하는 중이면 홈과 내 구단 맨 위에 이어 하기 카드가 보여요",
+    "내 구단에서 감독 커리어 입구가 내 팀 바로 아래로 올라왔어요"
+  ],
+  "en": {
+    "title": "Manager career is easier to find",
+    "items": [
+      "While a manager career is in progress, a continue card shows at the top of Home and My Club.",
+      "In My Club, the manager career entry now sits right under My Team."
+    ]
+  },
+  "ja": {
+    "title": "監督キャリアが見つけやすくなりました",
+    "items": [
+      "監督キャリアの途中なら、ホームとマイクラブの一番上に続きから遊ぶカードが表示されます。",
+      "マイクラブでは監督キャリアの入口がマイチームのすぐ下に移りました。"
+    ]
+  },
+  "availability": "web-app"
+}

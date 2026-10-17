@@ -201,6 +201,14 @@ test('은퇴 선수로 감독 커리어를 끝까지 하고 감독 칸에 앉힌
     await page.locator('[data-act="manager"]').click();
   }
   await expect(page.locator('[data-manager-setup]')).toBeVisible();
+  // T-11-338 진행 중이면 홈 · 내 구단 맨 위의 이어 하기 카드로 바로 돌아온다(서버를 더 부르지 않는다).
+  await page.goto('/');
+  await expect(page.locator('[data-manager-resume]')).toContainText('감독 커리어 이어 하기');
+  await expect(page.locator('[data-manager-resume]')).toContainText('1/');
+  await page.locator('[data-act="owner"]').click();
+  await expect(page.locator('[data-manager-resume]')).toBeVisible();
+  await page.locator('[data-act="manager-resume"]').click();
+  await expect(page.locator('[data-manager-setup]')).toBeVisible();
 
   // 첫 시즌: 이벤트를 다 보면 경기 중계가 한 경기씩 올라오고, 결산에 이번 시즌 변화가 칩으로 나온다.
   // T-11-329 이벤트 선택지에 선수 이벤트처럼 확률 칸이 붙고, 고르면 바뀐 상단 칸 옆에 변화가 뜬다.
