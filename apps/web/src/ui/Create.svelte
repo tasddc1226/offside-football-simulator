@@ -1,5 +1,6 @@
 <script lang="ts">
   import PositionGuide from './PositionGuide.svelte';
+  import ItemsHint from './ItemsHint.svelte';
   import { careerGuideText as CG } from '@offside/app-core/i18n/ko/careerGuide';
   import { tn } from '@offside/game/i18n/names';
   // 선수 생성(T-10-022): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
@@ -455,6 +456,8 @@
         {CL.createShopHint} <button class="link-btn" data-act="reroll-shop-go" onclick={goRerollShop}>{CL.createShopGo}</button>
       </p>
     {/if}
+    <!-- T-11-355 상품 위치 안내(설정과 같은 카드, 기기마다 닫을 때까지) -->
+    <ItemsHint />
     <p class="muted fs-sm">{appState.candidatePotentialOpen ? (premium ? SL.premiumHelp : L.potentialHelp) : L.potentialWeb}</p>
     {#if clubCand}
       <button class="btn btn-sm self-start" data-act="candidate-potential-club" disabled={clubBusy} onclick={revealWithClub}>
