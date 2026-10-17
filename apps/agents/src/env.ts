@@ -65,6 +65,8 @@ export interface Env {
   PLAY_SA_EMAIL?: string;
   PLAY_SA_KEY?: string;
   PLAY_KEY_ID?: string;
+  /** T-11-332 EAS 빌드 · OTA 읽기(Expo 액세스 토큰). */
+  EXPO_TOKEN?: string;
   CF_D1_READ_TOKEN: string;
   CF_MCP_TOKEN?: string;
   GITHUB_TOKEN?: string;
