@@ -11,6 +11,7 @@ import { appMeta, careers } from '../schema.js';
 import { runBatch } from './batch.js';
 import { hideCareerStatements, setMeta } from './firsts.js';
 import { AUTOMATION_RULE_VERSION } from './automation.js';
+import { logErrorText } from '../../logError.js';
 
 const PREFIX = 'automation_action:';
 export const AUTOMATION_SWEEP_KEY = 'automation:sweep';
@@ -198,7 +199,7 @@ export async function sweepAutomation(
     return state;
   } catch (error) {
     state.status = 'error';
-    state.error = (error instanceof Error ? error.message : String(error)).slice(0, 500);
+    state.error = logErrorText(error);
     state.updatedAt = new Date(Date.now()).toISOString();
     await setMeta(db, AUTOMATION_SWEEP_KEY, JSON.stringify(state));
     throw error;

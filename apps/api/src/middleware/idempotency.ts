@@ -6,6 +6,7 @@ import { getIdempotent, putIdempotent } from '../db/repos/idempotency.js';
 import { AppError } from '../errors.js';
 import { getDb, type AppEnv } from '../env.js';
 import { getSessionOrThrow } from './requireProfile.js';
+import { logErrorText } from '../logError.js';
 
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_-]{8,128}$/;
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -63,7 +64,7 @@ export const idempotency = createMiddleware<AppEnv>(async (c, next) => {
       // 라우트는 이미 성공했다. 저장 실패로 응답을 바꾸지 않고 로그로만 남긴다.
       c.set('storeFailure', {
         code: 'IDEMPOTENCY_STORE_FAILED',
-        message: err instanceof Error ? err.message : String(err),
+        message: logErrorText(err),
       });
     }
   }

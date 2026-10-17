@@ -34,6 +34,7 @@ import { getDb, type AppEnv } from '../env.js';
 import { publishRetiredNumber } from '../live/publish.js';
 import { parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
+import { logErrorText } from '../logError.js';
 
 // T-10-076 영구결번. 로그인 없이 누구나 읽는다 — 이름은 명예의 전당에 이름 공개를 고른 경우에만 있다.
 const TTL = 60;
@@ -74,7 +75,7 @@ export async function judgeRetirement(
   } catch (err) {
     c.set('storeFailure', {
       code: 'RETIRED_NUMBER_FAILED',
-      message: err instanceof Error ? err.message : String(err),
+      message: logErrorText(err),
     });
     return { retiredNumber: null };
   }

@@ -27,6 +27,7 @@ import { runCupAutopilot } from './team/cupAutopilot.js';
 import { purgeEdgeOrigin } from './edgeCache.js';
 import { STALE } from './edgeKeys.js';
 import { runSeasonClose } from './team/seasonClose.js';
+import { logErrorText } from './logError.js';
 
 import { consumeBillingAlerts, recoverBillingAlerts } from './iap/alerts.js';
 
@@ -54,7 +55,7 @@ export default {
   // 중간에 끊겼다(실행 기록은 success). 핸들러가 기다리면 cron은 15분까지 돈다.
   async scheduled(controller: ScheduledController, env: Bindings) {
     const logged = (job: string) => (e: unknown) =>
-      console.error(JSON.stringify({ level: 'error', job, error: String(e).slice(0, 500) }));
+      console.error(JSON.stringify({ level: 'error', job, error: logErrorText(e) }));
     // 시즌 일정(게이지가 확정한 마감·다음 시즌)을 먼저 입힌다 — 아래 결산·보존·게이지가 같은 일정을 본다.
     await loadSeasonSchedule(env.DB, true).catch(logged('season-schedule'));
     if (controller.cron === '0 19 * * *')
@@ -80,7 +81,7 @@ export default {
         .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'season-close', ...r })))
         .catch((e: unknown) =>
           console.error(
-            JSON.stringify({ level: 'error', job: 'season-close', error: String(e).slice(0, 500) }),
+            JSON.stringify({ level: 'error', job: 'season-close', error: logErrorText(e) }),
           ),
         );
       // T-11-145 오프사이드 컵: 추첨 → 시각이 된 경기 → 진출·보상. 실패하면 다음 5분에 이어서 한다.
@@ -94,18 +95,14 @@ export default {
           );
         })
         .catch((e: unknown) =>
-          console.error(
-            JSON.stringify({ level: 'error', job: 'cup', error: String(e).slice(0, 500) }),
-          ),
+          console.error(JSON.stringify({ level: 'error', job: 'cup', error: logErrorText(e) })),
         );
       // T-11-251 다음 회차 만들기 → 접수 시작 알림 → 밀린 단계 슬랙 경보(15분마다).
       await runCupAutopilot(env, controller.scheduledTime).catch(logged('cup-autopilot'));
       // A cron round can commit before a later step fails; purge even on a partial run.
       if (env.PUBLIC_API_ORIGIN)
         await purgeEdgeOrigin(env.PUBLIC_API_ORIGIN, STALE.cupChanged()).catch((e) =>
-          console.log(
-            JSON.stringify({ level: 'error', job: 'cup-cache', error: String(e).slice(0, 500) }),
-          ),
+          console.log(JSON.stringify({ level: 'error', job: 'cup-cache', error: logErrorText(e) })),
         );
       // Daily work has its own durable cursor and precedes bulk backup/archive work.
       const daily = await runDailyTick(env, controller.scheduledTime).catch((e: unknown) => {

@@ -11,6 +11,7 @@ import { createDb } from '../db/client.js';
 import { setMeta } from '../db/repos/firsts.js';
 import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
 import { syncGoogleVoided } from '../iap/refunds.js';
+import { logErrorText } from '../logError.js';
 
 export type DailyResult = {
   automation: Awaited<ReturnType<typeof sweepAutomation>> | { error: string };
@@ -27,9 +28,7 @@ export type DailyResult = {
 };
 
 /** 요청 로그(middleware/logger.ts)처럼 메시지는 500자까지. */
-const errorOf = (e: unknown) => ({
-  error: (e instanceof Error ? e.message : String(e)).slice(0, 500),
-});
+const errorOf = (e: unknown) => ({ error: logErrorText(e) });
 
 /** app_meta에 남기는 마지막 매일 작업 결과(JSON 한 줄). */
 export const DAILY_META_KEY = 'cron:daily:last';
