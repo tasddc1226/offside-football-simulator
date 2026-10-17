@@ -1,0 +1,14 @@
+{
+  "id": "t-11-343-manager-start-recovery",
+  "title": "감독 커리어 시작 개선",
+  "items": ["연결이 불안정할 때 감독 커리어를 시작하는 처리를 개선했어요"],
+  "en": {
+    "title": "More reliable manager career starts",
+    "items": ["Improved recovery when starting a manager career on an unstable connection."]
+  },
+  "ja": {
+    "title": "監督キャリア開始処理の改善",
+    "items": ["接続が不安定なときの監督キャリア開始処理を改善しました。"]
+  },
+  "availability": "web-app"
+}

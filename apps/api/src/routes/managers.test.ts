@@ -11,6 +11,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cards, careerSeasons, careers, marketListings } from '../db/schema.js';
 import { createTestD1, syncCards, type TestD1 } from '../test/d1.js';
 import { callJson, issueGoogleCookie, issueCookie } from '../test/http.js';
+import { createDb } from '../db/client.js';
+import { managerOriginOf, startManagerCareer } from '../db/repos/managers.js';
 
 const ListRes = successEnvelope(ManagersResponseSchema);
 const CareerRes = successEnvelope(ManagerCareerResponseSchema);
@@ -126,6 +128,68 @@ describe('감독 커리어 (T-11-310)', () => {
     expect((await call('GET', '/v1/managers')).status).toBe(401);
     const anon = await issueCookie(ctx);
     expect((await call('GET', '/v1/managers', { cookie: anon.cookie })).status).toBe(403);
+  });
+
+  it('recovers a lost connection before or after commit without duplicating a manager or leaving its listing open', async () => {
+    for (const loseAfterCommit of [false, true]) {
+      const owner = await issueGoogleCookie(ctx);
+      const careerId = await addCard(owner.profileId);
+      expect(
+        (
+          await call('POST', '/v1/market/listings', {
+            cookie: owner.cookie,
+            headers: idem(),
+            body: { careerId, price: 1_000_000 },
+          })
+        ).status,
+      ).toBe(201);
+      const origin = (await managerOriginOf(ctx.db, careerId))!;
+      let calls = 0;
+      const DB = new Proxy(ctx.env.DB, {
+        get(target, key) {
+          if (key === 'batch')
+            return async (...args: Parameters<D1Database['batch']>) => {
+              calls++;
+              if (calls === 1 && !loseAfterCommit)
+                throw new Error('D1_ERROR: Network connection lost.');
+              const result = await target.batch(...args);
+              if (calls === 1) throw new Error('D1_ERROR: Network connection lost.');
+              return result;
+            };
+          const v = Reflect.get(target, key);
+          return typeof v === 'function' ? v.bind(target) : v;
+        },
+      });
+      const id = await startManagerCareer(createDb(DB), {
+        profileId: owner.profileId,
+        careerId,
+        seed: 123,
+        origin,
+        now: new Date().toISOString(),
+      });
+      expect(id).toEqual(expect.any(String));
+      expect(calls).toBe(2);
+      expect(
+        await ctx.env.DB.prepare('SELECT count(*) n FROM manager_careers WHERE profile_id=?')
+          .bind(owner.profileId)
+          .first(),
+      ).toEqual({ n: 1 });
+      expect(
+        await ctx.env.DB.prepare('SELECT id FROM manager_careers WHERE profile_id=?')
+          .bind(owner.profileId)
+          .first(),
+      ).toEqual({ id });
+      expect(
+        await ctx.env.DB.prepare('SELECT manager FROM cards WHERE career_id=?')
+          .bind(careerId)
+          .first(),
+      ).toEqual({ manager: 1 });
+      expect(
+        await ctx.env.DB.prepare('SELECT status FROM market_listings WHERE career_id=?')
+          .bind(careerId)
+          .first(),
+      ).toEqual({ status: 'cancelled' });
+    }
   });
 
   it('시작하면 카드가 감독으로 분류돼 선발 · 판매 · 잠금에서 빠지고, 진행 중 커리어는 하나뿐이다', async () => {
