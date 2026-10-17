@@ -34,6 +34,8 @@ import { readSnapshotJson } from '../../careerSnapshots.js';
 import type { Bindings } from '../../env.js';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
+import { sha256Hex } from '../hash.js';
+import { retryTransientWrite } from '../retry.js';
 import { kstDay } from '../../time.js';
 import { honorsOf, hideCareerStatements } from './firsts.js';
 import {
@@ -103,6 +105,7 @@ export type PutCareerSeasonInput = {
   /** 나이별 OVR 상한을 크게 넘겨 보낸 시즌이면 같은 batch에서 커리어를 숨긴다(저장 땐 상한으로 잘려 나중엔 알 수 없다, T-11-037). */
   hide?: boolean | undefined;
   now: string;
+  uploadRevision?: number;
 };
 
 /**
@@ -145,71 +148,68 @@ export async function putCareerSeason(
   };
 
   const dpos = dposFor(meta.pos, meta.dpos);
-
-  const [updated] = await runBatch(db, [
-    db
-      .insert(careers)
-      .values({
-        id: careerId,
-        profileId,
-        pos: meta.pos,
-        dpos,
-        nation: meta.nation ?? null,
-        height: meta.height ?? null,
-        weight: meta.weight ?? null,
-        foot: meta.foot,
-        type: meta.type,
-        trait: meta.trait,
-        startYear: meta.startYear,
-        status: 'active',
-        appVersion: meta.appVersion,
-        pot: meta.pot ?? null,
-        ...name,
-        // 처음 올라온 시각의 시즌(0 = 프리시즌, 시즌 사이 휴식기면 NULL) — onConflict set에 없어 바뀌지 않는다.
-        // T-11-095 세부 포지션 없이 만든 프리시즌 선수는 개막 뒤에 처음 올라와도 프리시즌이다.
-        serviceSeason: firstUploadSeasonAt(now, dpos !== null),
-        createdAt: now,
-        updatedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: careers.id,
-        set: {
-          // 포지션·주발·유형·특성·시작 연도는 커리어를 만들 때 정해져 바뀌지 않는다 — 처음 값을 지킨다(뒤늦게
-          // 포지션을 바꿔 레전드 점수·결번 가중을 고르지 못하게).
+  const uploadHash = await sha256Hex(
+    JSON.stringify({ meta, season, eventsJson, publicName, signalsJson }),
+  );
+  const revision = input.uploadRevision ?? 0;
+  // Check inside the same transaction, before updating the season. This also covers
+  // a committed write whose HTTP response was lost, and concurrent duplicate PUTs.
+  const accept = sql`not exists (select 1 from career_seasons where career_id = ${careerId}
+    and year = ${year} and (upload_hash = ${uploadHash}
+      or (${revision} > 0 and upload_revision >= ${revision})))`;
+  const results = await retryTransientWrite(() =>
+    runBatch(db, [
+      db
+        .insert(careers)
+        .values({
+          id: careerId,
+          profileId,
+          pos: meta.pos,
+          dpos,
+          nation: meta.nation ?? null,
+          height: meta.height ?? null,
+          weight: meta.weight ?? null,
+          foot: meta.foot,
+          type: meta.type,
+          trait: meta.trait,
+          startYear: meta.startYear,
+          status: 'active',
           appVersion: meta.appVersion,
-          // 처음 스카우트 평가는 비어 있을 때만 채운다(첫 시즌 업로드가 늦게 와도 한 번만).
-          ...(meta.pot !== undefined && { pot: sql`coalesce(${careers.pot}, ${meta.pot})` }),
-          // 은퇴한 커리어의 공개 이름은 은퇴 PUT(명예의 전당 토글)만 바꾼다 — 늦게 도착한 시즌 업로드가 되돌리지 않게.
-          ...publicNameSet(publicName, { keepRetired: true }),
+          pot: meta.pot ?? null,
+          ...name,
+          // 처음 올라온 시각의 시즌(0 = 프리시즌, 시즌 사이 휴식기면 NULL) — onConflict set에 없어 바뀌지 않는다.
+          // T-11-095 세부 포지션 없이 만든 프리시즌 선수는 개막 뒤에 처음 올라와도 프리시즌이다.
+          serviceSeason: firstUploadSeasonAt(now, dpos !== null),
+          createdAt: now,
           updatedAt: now,
-          // status는 의도적으로 뺀다 — 이미 retired인 커리어가 이 라우트로 다시 active가 되지 않는다.
-        },
-      })
-      .returning({ status: careers.status }),
-    db
-      .insert(careerSeasons)
-      .values({
-        careerId,
-        year,
-        age: season.age,
-        club: season.club,
-        league: season.league,
-        apps: season.apps,
-        goals: season.goals,
-        assists: season.assists,
-        rating: season.rating,
-        rank: String(season.rank),
-        ovr: season.ovr,
-        honorsJson: JSON.stringify(season.honors),
-        mil: season.mil ? 1 : 0,
-        eventsJson: '[]',
-        ...detail,
-        ...signals,
-        createdAt: now,
-      })
-      .onConflictDoUpdate({
-        target: [careerSeasons.careerId, careerSeasons.year],
-        set: {
+        })
+        .onConflictDoUpdate({
+          target: careers.id,
+          setWhere: accept,
+          set: {
+            // 포지션·주발·유형·특성·시작 연도는 커리어를 만들 때 정해져 바뀌지 않는다 — 처음 값을 지킨다(뒤늦게
+            // 포지션을 바꿔 레전드 점수·결번 가중을 고르지 못하게).
+            appVersion: meta.appVersion,
+            // 처음 스카우트 평가는 비어 있을 때만 채운다(첫 시즌 업로드가 늦게 와도 한 번만).
+            ...(meta.pot !== undefined && { pot: sql`coalesce(${careers.pot}, ${meta.pot})` }),
+            // 은퇴한 커리어의 공개 이름은 은퇴 PUT(명예의 전당 토글)만 바꾼다 — 늦게 도착한 시즌 업로드가 되돌리지 않게.
+            ...publicNameSet(publicName, { keepRetired: true }),
+            updatedAt: now,
+            // status는 의도적으로 뺀다 — 이미 retired인 커리어가 이 라우트로 다시 active가 되지 않는다.
+          },
+        })
+        .returning({ status: careers.status }),
+      ...(events !== null || growthJson !== null
+        ? [
+            db.insert(seasonTelemetry).select(sql`select null, ${careerId}, ${year},
+          ${season.age}, ${season.ovr}, ${events}, ${growthJson}, ${now} where ${accept}`),
+          ]
+        : []),
+      db
+        .insert(careerSeasons)
+        .values({
+          careerId,
+          year,
           age: season.age,
           club: season.club,
           league: season.league,
@@ -221,30 +221,48 @@ export async function putCareerSeason(
           ovr: season.ovr,
           honorsJson: JSON.stringify(season.honors),
           mil: season.mil ? 1 : 0,
+          eventsJson: '[]',
+          uploadHash,
+          uploadRevision: revision,
           ...detail,
           ...signals,
-          // 같은 시즌을 다시 보내면 덮어써 결과는 같다(멱등). createdAt은 최초값을 유지한다.
-        },
-        // 은퇴한 커리어의 시즌은 고치지 않는다(은퇴 요약·결번 판정의 근거). 늦게 도착한 빠진 시즌은 새 행이라 들어간다.
-        setWhere: sql`(select ${careers.status} from ${careers} where ${careers.id} = ${careerId}) <> 'retired'`,
-      }),
-    ...(events !== null || growthJson !== null
-      ? [
-          db.insert(seasonTelemetry).values({
-            careerId,
-            year,
+          createdAt: now,
+        })
+        .onConflictDoUpdate({
+          target: [careerSeasons.careerId, careerSeasons.year],
+          set: {
             age: season.age,
+            club: season.club,
+            league: season.league,
+            apps: season.apps,
+            goals: season.goals,
+            assists: season.assists,
+            rating: season.rating,
+            rank: String(season.rank),
             ovr: season.ovr,
-            eventsJson: events,
-            growthJson,
-            createdAt: now,
-          }),
-        ]
-      : []),
-    // 맨 뒤에 둔다 — 위 upsert가 행을 만든 뒤여야 숨김이 새 커리어에도 닿는다.
-    ...(hide ? hideCareerStatements(db, careerId) : []),
-  ]);
-  return (updated as { status: 'active' | 'retired' }[])[0]!.status;
+            honorsJson: JSON.stringify(season.honors),
+            mil: season.mil ? 1 : 0,
+            ...detail,
+            ...signals,
+            uploadHash,
+            uploadRevision: revision > 0 ? revision : sql`${careerSeasons.uploadRevision}`,
+            // 같은 시즌을 다시 보내면 덮어써 결과는 같다(멱등). createdAt은 최초값을 유지한다.
+          },
+          // 은퇴한 커리어의 시즌은 고치지 않는다(은퇴 요약·결번 판정의 근거). 늦게 도착한 빠진 시즌은 새 행이라 들어간다.
+          setWhere: sql`${accept} and (select ${careers.status} from ${careers} where ${careers.id} = ${careerId}) <> 'retired'`,
+        }),
+      // 맨 뒤에 둔다 — 위 upsert가 행을 만든 뒤여야 숨김이 새 커리어에도 닿는다.
+      ...(hide
+        ? hideCareerStatements(
+            db,
+            careerId,
+            sql`exists (select 1 from career_seasons where career_id = ${careerId} and year = ${year} and upload_hash = ${uploadHash})`,
+          )
+        : []),
+      db.select({ status: careers.status }).from(careers).where(eq(careers.id, careerId)),
+    ]),
+  );
+  return (results.at(-1) as { status: 'active' | 'retired' }[])[0]!.status;
 }
 
 export type PutRetirementInput = {

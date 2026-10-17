@@ -9,7 +9,12 @@ import {
 import { cachedGet } from '@offside/app-core/api/client';
 import type { BalanceConfig } from '@offside/contracts';
 import { appState } from './state.svelte.js';
-import { uploadLegacyRetirement, uploadRetirement } from './helpers.js';
+// Existing local retirement data remains the source while the upload code loads.
+const uploadRetirement: (typeof import('./uploads.js'))['uploadRetirement'] = (...args) =>
+  void import('./uploads.js').then((m) => m.uploadRetirement(...args));
+const uploadLegacyRetirement: (typeof import('./uploads.js'))['uploadLegacyRetirement'] = (
+  ...args
+) => void import('./uploads.js').then((m) => m.uploadLegacyRetirement(...args));
 import { loadClubCustom } from './clubCustom.svelte.js';
 
 /** 아주 오래된 저장 키(sl_save)를 한 번만 ft_save로 옮기고 지운다. 예전엔 부팅마다 ft_save가 비어 있으면
