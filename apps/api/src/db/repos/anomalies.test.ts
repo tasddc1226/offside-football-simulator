@@ -197,6 +197,39 @@ describe('비정상 기록 정기 점검', () => {
     expect((await sweepAnomalies(ctx.env.DB, NOW + 2 * DAY)).hidden).toBe(1);
   });
 
+  it('paged incremental checks preserve the legacy season and legend eligibility', async () => {
+    await career('old-season', [[18, 99]]);
+    await career('recent-season', [[18, 99]]);
+    await career('legend-only', [[18, 60]], {
+      status: 'retired',
+      retireAge: 35,
+      legendScore: ANOMALY.legendHide,
+    });
+    await ctx.env.DB.prepare('UPDATE career_seasons SET created_at=? WHERE career_id=?')
+      .bind(iso(-2 * DAY), 'old-season')
+      .run();
+    const reset = async () => {
+      await ctx.env.DB.prepare('UPDATE careers SET hidden=0').run();
+      await ctx.env.DB.prepare(
+        'INSERT INTO app_meta(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+      )
+        .bind(SWEPT_AT_KEY, iso(-DAY))
+        .run();
+    };
+    await reset();
+    await sweepAnomalies(ctx.env.DB, NOW);
+    const legacy = await q('SELECT id,hidden FROM careers ORDER BY id');
+    await reset();
+    expect(await sweepAnomaliesPage(ctx.env.DB, NOW)).toMatchObject({
+      done: true,
+      checked: 3,
+      hidden: 1,
+    });
+    expect(await q('SELECT id,hidden FROM careers ORDER BY id')).toEqual(legacy);
+    expect(await hiddenOf('old-season')).toBe(0);
+    expect(await hiddenOf('legend-only')).toBe(0);
+  });
+
   it('은퇴 레전드 점수가 높으면 검토 목록에만 올린다', async () => {
     await career('star', [[18, 60]], {
       status: 'retired',

@@ -61,6 +61,17 @@ const LOWEST_CAP = OVR_CAP_BY_AGE[0]!;
 
 /** since(ISO) 이후 시즌이 올라온 커리어만 훑는다(빈 문자열 = 전부, 숨긴 커리어 포함). 은퇴 레전드 점수는 전부 훑을 때만 본다. */
 async function findAnomalies(d1: D1Database, since: string, ids?: string[]): Promise<Found> {
+  if (ids && since) {
+    // Preserve the legacy incremental scope: a changed career alone is not a new season.
+    const changed = await d1
+      .prepare(
+        `SELECT DISTINCT career_id FROM career_seasons
+       WHERE career_id IN (SELECT value FROM json_each(?1)) AND created_at >= ?2`,
+      )
+      .bind(JSON.stringify(ids), since)
+      .all<{ career_id: string }>();
+    ids = changed.results.map((r) => r.career_id);
+  }
   const found: Found = new Map();
   const note = (info: Info, reason: AnomalyReason) => {
     const f = found.get(info.id) ?? { info, reasons: new Set() };
@@ -86,7 +97,7 @@ async function findAnomalies(d1: D1Database, since: string, ids?: string[]): Pro
         LOWEST_CAP,
       )
       .all<Info & { age: number; ovr: number; jump: number | null }>(),
-    since && !ids
+    since
       ? undefined
       : d1
           .prepare(
@@ -176,7 +187,7 @@ export async function sweepAnomaliesPage(d1: D1Database, now: number, cursor?: A
   const found = rows.length
     ? await findAnomalies(
         d1,
-        '',
+        cursor.since,
         rows.map((r) => r.id),
       )
     : new Map();
