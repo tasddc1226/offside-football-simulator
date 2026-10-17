@@ -110,4 +110,5 @@ export const manager: Translation<ManagerMsgs> = {
   teamCoach: 'Manager slot',
   teamCoachEmpty: 'Empty',
   teamCoachManage: 'Choose manager',
+  teamCoachLine: (p: { v: string }) => `Manager ${p.v}`,
 };

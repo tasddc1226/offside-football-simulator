@@ -110,4 +110,5 @@ export const manager: Translation<ManagerMsgs> = {
   teamCoach: '監督枠',
   teamCoachEmpty: '空いています',
   teamCoachManage: '監督を選ぶ',
+  teamCoachLine: (p: { v: string }) => `監督 ${p.v}`,
 };

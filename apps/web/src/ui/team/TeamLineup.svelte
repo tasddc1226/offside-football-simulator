@@ -8,6 +8,7 @@
   import { attrLine, synergyFocus } from '@offside/app-core/teamOwner';
   import { lockToggleable } from '@offside/app-core/market';
   import { synergyApplies, type TeamSynergy as Synergy } from '@offside/contracts/owner-team';
+  import { coachLineBonus } from '@offside/app-core/managerCard';
   import TeamLines from './TeamLines.svelte';
   import TeamSynergy from './TeamSynergy.svelte';
   import TeamPitch from './TeamPitch.svelte';
@@ -40,6 +41,8 @@
   // T-11-105 고른 시너지 칩 — 그라운드에서 그 듀오의 선은 굵게, 선수는 테두리로 보여 준다.
   let synFocus = $state<string | null>(null);
   const syn = $derived(synergyFocus(synergy, synFocus));
+  // T-11-323 감독 칸 보정(경기 계산과 같은 값) — 줄 힘 칸에 더해 보인다.
+  const coachBonus = $derived(team?.coach ? coachLineBonus(team.coach, formation, synergy, season) : null);
   const chosen = $derived(players.find((p) => p.careerId === selectedPlayer));
   const selectedCell = $derived(selectedSlot !== null ? cells[selectedSlot] : undefined);
   const selectedFit = $derived(selectedCell?.player && selectedSlot !== null ? Math.round(slotFit(positions[selectedSlot]!.slot, selectedCell.player, selectedCell.rating) * 100) : null);
@@ -165,7 +168,7 @@
     </div>
     <TeamPitch {formation} {cells} layout={positions} selected={selectedSlot} dragging={drag?.moving ? drag.from : null} links={syn.links} focus={syn.members} applied={syn.applied} caption={synergyApplies(season) ? syn.caption : null} bind:element={pitch}
       onpick={editable ? pickSlot : undefined} onstart={editable ? (e, i) => start(e, slots[i] ?? null, i) : undefined} onkey={editable ? keyMove : undefined} onplace={editable ? place : undefined} />
-    <div class="ground-strength"><TeamLines {lines} compact /></div>
+    <div class="ground-strength"><TeamLines {lines} coach={coachBonus} compact /></div>
     <TeamSynergy {synergy} {season} bind:focus={synFocus} />
     {#if editable}
       <div class="placement-bar" aria-live="polite">

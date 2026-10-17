@@ -119,6 +119,8 @@ const ko = {
   teamCoach: '감독 칸',
   teamCoachEmpty: '비어 있어요',
   teamCoachManage: '감독 고르기',
+  /** T-11-323 줄 힘 칸 아래 감독 보정(+1.0). */
+  teamCoachLine: (p: { v: string }) => `감독 ${p.v}`,
 };
 
 export type ManagerMsgs = typeof ko;
