@@ -10,7 +10,6 @@ import Toast from './ui/Toast.svelte';
 import SheetChrome from './ui/SheetChrome.svelte';
 import { loadGame, syncBalance } from './ui/boot.js';
 import { keepStorage } from './ui/helpers.js';
-import { handleOAuthReturn } from './ui/login.js';
 import { hasSessionHint } from '@offside/app-core/api/client';
 import { routeSharedCareer } from './ui/legend.js';
 import { routeFriendInvite } from './ui/friendInvite.svelte.js';
@@ -39,7 +38,9 @@ loadGame();
 if (appState.G) keepStorage();
 // OAuth 복귀는 세이브를 읽은 뒤에 처리한다 — 돌아갈 곳이 로컬 명예의 전당 선수일 수 있고, loadGame이
 // 옛 은퇴 선수에 커리어 id를 붙인다(ft_hof).
-handleOAuthReturn();
+// 구글 · Apple 로그인에서 돌아온 경우에만 로그인 코드를 불러온다(첫 화면 번들 예산).
+if (/[?&](google|apple)=/.test(location.search))
+  void import('./ui/login.js').then((m) => m.handleOAuthReturn());
 routeSharedCareer();
 // T-11-098 친구 초대 링크(`/?friend=코드`)로 들어왔으면 친구 화면을 연다.
 routeFriendInvite();
