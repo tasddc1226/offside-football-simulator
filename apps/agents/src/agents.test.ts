@@ -23,7 +23,7 @@ import { ClaudeError } from './claude.ts';
 import { readOnlySql } from './tools/ops.ts';
 import { alertSignature } from './ledger.ts';
 import { mcpTools, parseRpc } from './mcp.ts';
-import { linkRoles, parseHandoffs, shouldReturn } from './handoff.ts';
+import { linkRoles, parseHandoffs } from './handoff.ts';
 import { collect, fetchDc, meaningful, parseDcList, triagePrompt } from './reactions.ts';
 import { nextRuns, kstText } from './cron.ts';
 import { devInteraction, devTools, mergeBlocker } from './dev.ts';
@@ -385,7 +385,7 @@ describe('decide', () => {
     ).toBeNull();
   });
 
-  it('운영자 스레드 답글은 이어 받고, 멘션이 든 글은 app_mention 쪽에 맡긴다', () => {
+  it('멘션 없는 운영자 스레드 답글로는 깨우지 않고, 멘션이 든 글은 app_mention 쪽에 맡긴다', () => {
     expect(
       decide(
         env,
@@ -394,7 +394,7 @@ describe('decide', () => {
         ev({ type: 'message', user: 'UOP', thread_ts: '0.5', text: '더 봐 줘' }),
         'UBOTOPS',
       ),
-    ).toMatchObject({ kind: 'reply', threadTs: '0.5' });
+    ).toBeNull();
     expect(
       decide(
         env,
@@ -499,15 +499,6 @@ describe('parseHandoffs', () => {
     expect(linkRoles(env, '`→ @dev:` 줄 · co***@ops.com · @planning')).toBe(
       '`→ @dev:` 줄 · co***@ops.com · @planning',
     );
-  });
-
-  it('넘겨받은 일의 결과는 넘긴 역할에게 한 번만 돌려준다', () => {
-    expect(shouldReturn({ kind: 'handoff', from: 'plan' }, [])).toBe(true);
-    expect(shouldReturn({ kind: 'handoff', from: 'plan', back: true }, [])).toBe(false);
-    expect(shouldReturn({ kind: 'handoff', from: 'plan' }, [{ to: 'plan', request: 'x' }])).toBe(
-      false,
-    );
-    expect(shouldReturn({ kind: 'mention' }, [])).toBe(false);
   });
 });
 

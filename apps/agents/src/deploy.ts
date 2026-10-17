@@ -88,7 +88,14 @@ export function deployCard(env: Env, plan: DeployPlan, origin?: Origin) {
 export async function postDeployCard(env: Env, g: Gh, sha: string, origin?: Origin) {
   const plan = await deployPlan(g, sha);
   if (plan.ahead === 0) return { posted: false as const, plan };
-  await devSlack(env)('chat.postMessage', deployCard(env, plan, origin));
+  const posted = await devSlack(env)('chat.postMessage', deployCard(env, plan, origin));
+  if (posted.ts)
+    await ledger(env).pendingAdd({
+      ts: posted.ts,
+      channel: env.APPROVAL_CHANNEL,
+      label: `운영 배포 ${sha.slice(0, 7)}`,
+      at: Date.now(),
+    });
   return { posted: true as const, plan };
 }
 

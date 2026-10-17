@@ -3,7 +3,8 @@
 import { DurableObject } from 'cloudflare:workers';
 import { ClaudeError, MODEL_LABEL, runAgent, type Message, type Tool } from './claude.ts';
 import { apiKey, botToken, dailyBudget, enabled, ROLE_NAMES, type Env, type Role } from './env.ts';
-import { linkRoles, MAX_HOPS, parseHandoffs, shouldReturn } from './handoff.ts';
+import { cardOf } from './card.ts';
+import { isIncident, linkRoles, MAX_HOPS, parseHandoffs } from './handoff.ts';
 import { kstDay, ledger } from './ledger.ts';
 import { mcpTools, type McpServer } from './mcp.ts';
 import { roleSpec } from './roles.ts';
@@ -11,8 +12,22 @@ import { slackClient, threadReply } from './slack.ts';
 
 export type Task = {
   eventId: string;
-  /** triage: 유저 반응 살피기, report: 아침 주기 작업 보고, support: 고객 문의 메일, release: 운영 배포 뒤 드림보트 요약(넷 다 새 글로 올린다). handoff: 다른 에이전트가 넘긴 일. */
-  kind: 'alert' | 'mention' | 'reply' | 'triage' | 'report' | 'support' | 'release' | 'handoff';
+  /**
+   * triage: 유저 반응 살피기, report: 아침 주기 작업 보고, support: 고객 문의 메일, release: 운영 배포 뒤 드림보트 요약(넷 다 새 글로
+   * 올린다). handoff: 다른 에이전트가 넘긴 일. incident: 사건 조사(@ops, Opus. 서버 상태 감시가 연 사건은 새 글, 경보에서 넘어온
+   * 사건은 그 스레드). verify: 배포 뒤 30 · 60분 지표 비교(@ops, 작업 카드 알람).
+   */
+  kind:
+    | 'alert'
+    | 'mention'
+    | 'reply'
+    | 'triage'
+    | 'report'
+    | 'support'
+    | 'release'
+    | 'handoff'
+    | 'incident'
+    | 'verify';
   role: Role;
   channel: string;
   /** 답을 달 스레드(첫 메시지 ts). 새 글(triage · report)은 아직 없다(올린 글이 스레드가 된다). */
@@ -25,6 +40,8 @@ export type Task = {
   context?: string;
   /** handoff: 넘겨준 일의 결과를 돌려받은 것(다시 돌려주지 않는다). */
   back?: boolean;
+  /** verify: 마지막(60분) 확인. 끝나면 주장에게 결과를 넘긴다. */
+  final?: boolean;
 };
 
 /** owner: 이 역할이 연 스레드인지. 넘겨받기만 한 스레드에선 운영자 답글을 받지 않는다(한 답글에 두 봇이 답하지 않게). */
@@ -36,7 +53,11 @@ const HISTORY = 12;
 export const NOTHING = '검토할 반응 없음';
 
 const isNewPost = (t: Task) =>
-  t.kind === 'triage' || t.kind === 'report' || t.kind === 'support' || t.kind === 'release';
+  t.kind === 'triage' ||
+  t.kind === 'report' ||
+  t.kind === 'support' ||
+  t.kind === 'release' ||
+  (t.kind === 'incident' && !t.threadTs);
 
 export const threadOf = (env: Env, role: Role, channel: string, threadTs: string) =>
   env.THREAD.get(env.THREAD.idFromName(`${role}:${channel}:${threadTs}`));
@@ -79,6 +100,8 @@ export class AgentThread extends DurableObject<Env> {
     const env = this.env;
     const slack = slackClient(botToken(env, task.role), fetch, ROLE_NAMES[task.role]);
     const book = ledger(env);
+    // 운영자가 끼어든 횟수(주간 회고, T-11-325).
+    if (task.kind === 'mention' || task.kind === 'reply') await book.touch();
     const today = await book.day(task.role);
     if (today.costUsd >= dailyBudget(env, task.role)) {
       if (!isNewPost(task) && (await book.warnOnce(task.role)))
@@ -120,6 +143,10 @@ export class AgentThread extends DurableObject<Env> {
         model: spec.model,
       });
       const day = await book.add(task.role, r.costUsd);
+      if (!isNewPost(task))
+        await cardOf(env, task.channel, task.threadTs)
+          .addCost(task.role, r.costUsd)
+          .catch((e: unknown) => console.error('card cost failed', String(e).slice(0, 200)));
       // 검토할 반응이 없으면 슬랙에 올리지 않는다(비용만 적는다).
       if (task.kind === 'triage' && r.text.trim().startsWith(NOTHING)) {
         console.log('triage: nothing', r.costUsd.toFixed(3));
@@ -171,20 +198,56 @@ export class AgentThread extends DurableObject<Env> {
     if (!threadTs) return;
     if (isNewPost(task)) await threadOf(env, task.role, task.channel, threadTs).seed(state);
     else await this.ctx.storage.put('state', state);
+    await this.follow(task, threadTs, reply);
     await this.passOn(task, threadTs, posted.ts ?? threadTs, reply);
+  }
+
+  /** T-11-325 사건 · 배포 뒤 확인의 다음 걸음. 넘기기 줄과 달리 Worker가 정해서 넘긴다(넘기기 횟수에 세지 않는다). */
+  private async follow(task: Task, threadTs: string, reply: string) {
+    const env = this.env;
+    // 경보 첫 정리(Haiku)가 사건이라고 보면 같은 스레드에서 Opus로 다시 본다.
+    if (task.kind === 'alert' && isIncident(reply))
+      await threadOf(env, 'ops', task.channel, threadTs).enqueue({
+        eventId: `incident:${threadTs}`,
+        kind: 'incident',
+        role: 'ops',
+        channel: task.channel,
+        threadTs,
+        sourceTs: '',
+        text: task.text,
+      });
+    // 사건은 카드를 연다(담당 @ops, 조사). 경보 스레드에서 넘어온 사건도 같다.
+    if (task.kind === 'incident')
+      await cardOf(env, task.channel, threadTs).open({
+        channel: task.channel,
+        threadTs,
+        goal: firstLine(reply) || '서버 사건 조사',
+        source: 'incident',
+        owner: 'ops',
+        status: '조사',
+      });
+    // 마지막 배포 뒤 확인이 끝나면 주장이 카드를 닫거나 되돌리기를 정한다(돌려받은 일이라 다시 돌려주지 않는다).
+    if (task.kind === 'verify' && task.final && enabled(env, 'plan'))
+      await threadOf(env, 'plan', task.channel, threadTs).enqueue({
+        eventId: `verify-done:${threadTs}:${task.eventId}`,
+        kind: 'handoff',
+        role: 'plan',
+        channel: task.channel,
+        threadTs,
+        sourceTs: '',
+        text: '배포 뒤 마지막 확인 결과예요. 좋아졌으면 card_update로 카드를 닫아 주세요(메모에 전후 수치 한 줄). 그대로거나 나빠졌으면 되돌리기 · 추가 수정 work_order를 내거나 운영자에게 물어 주세요.',
+        from: 'ops',
+        context: reply,
+        back: true,
+      });
   }
 
   /** 답의 `→ @역할:` 줄대로 같은 스레드에서 다른 에이전트에게 넘긴다. 스레드마다 MAX_HOPS번까지. */
   private async passOn(task: Task, threadTs: string, replyTs: string, reply: string) {
     const env = this.env;
     const handoffs = parseHandoffs(reply, task.role);
-    // 넘겨받은 일을 끝냈으면 그 결과를 넘긴 역할에게 한 번 돌려준다(결론 · 운영자 할 일은 넘긴 쪽이 쓴다).
-    if (shouldReturn(task, handoffs))
-      handoffs.push({
-        to: task.from!,
-        request: '넘긴 확인의 결과예요. 결론과 운영자가 할 일을 짧게 정리해 주세요.',
-        back: true,
-      });
+    // T-11-325: 넘겨받은 결과를 넘긴 역할에게 자동으로 돌려주지 않는다(같은 결론을 한 번 더 정리하는 호출이 생겼다).
+    // 다시 맡길 일이 있으면 답에 `→ @역할:` 줄을 쓴다. 주장의 배포 뒤 확인만 예외다(위 verify).
     for (const h of handoffs) {
       if (!enabled(env, h.to)) continue;
       const n = await ledger(env).hop(`${task.channel}:${threadTs}`);
@@ -218,6 +281,13 @@ export class AgentThread extends DurableObject<Env> {
     }
   }
 }
+
+const firstLine = (s: string) =>
+  (s.split('\n').find((l) => l.trim()) ?? '')
+    .replace(/[*#>`]/g, '')
+    .replace(/^\s*사건\s*[:：]\s*/, '')
+    .trim()
+    .slice(0, 120);
 
 /** MCP 서버가 안 되면 그 도구 없이 진행한다(역할 기본 도구로는 계속 일할 수 있다). */
 async function loadMcp(servers: McpServer[]): Promise<Tool[]> {

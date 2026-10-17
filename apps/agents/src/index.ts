@@ -16,9 +16,12 @@ import { verifySlack } from './slack.ts';
 import { mktInteraction, releaseTask } from './mkt.ts';
 import { scanSupport, supportInteraction } from './support.ts';
 import { threadOf, type Task } from './thread.ts';
+import { START_ACTIONS, startInteraction } from './captain.ts';
+import { afterDeploy, approvalsBundle, captainMorning, watchStatus } from './team.ts';
 
 export { AgentThread } from './thread.ts';
 export { AgentLedger } from './ledger.ts';
+export { WorkCard } from './card.ts';
 
 type SlackEvent = {
   type: string;
@@ -91,8 +94,7 @@ export function decide(
           text: stripCalls(stripMentions(text)),
         }
       : null;
-  if (ev.thread_ts && operator)
-    return { ...base, kind: 'reply', threadTs: ev.thread_ts, text: stripMentions(text) };
+  // T-11-325: 멘션 없는 답글 · 글로는 깨우지 않는다(불필요한 호출 줄이기). 일을 시키려면 봇을 멘션하거나 `@이름`으로 부른다.
   return null;
 }
 
@@ -143,10 +145,34 @@ export default {
     return new Response('');
   },
 
-  /** 3시간마다 47분 유저 반응 살피기(@plan), 매시 7분 고객 문의 메일(@plan), 매일 08:50 KST 주기 작업 보고(@ops). */
+  /**
+   * 3시간마다 47분 유저 반응 살피기(@plan), 매시 7분 고객 문의 메일(@plan), 매일 08:50 KST 주기 작업 보고(@ops) · 열린 카드
+   * 목록 · 월요일 주간 회고(@plan) · 주간 유입 리포트(@mkt). T-11-325: 5분마다 서버 상태 감시, 10:00 · 18:00 KST 승인 대기 묶음.
+   */
   async scheduled(ev: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    const log = (job: string) => (e: unknown) =>
+      console.error(`${job} failed`, String(e).slice(0, 300));
     if (ev.cron === REPORT_CRON) {
       if (enabled(env, 'ops')) ctx.waitUntil(morningReport(env, ev.scheduledTime));
+      if (enabled(env, 'plan'))
+        ctx.waitUntil(captainMorning(env, ev.scheduledTime).catch(log('captain morning')));
+      if (enabled(env, 'mkt') && isMonday(ev.scheduledTime))
+        ctx.waitUntil(mktWeekly(env, ev.scheduledTime).catch(log('mkt weekly')));
+      return;
+    }
+    if (ev.cron === WATCH_CRON) {
+      if (enabled(env, 'ops'))
+        ctx.waitUntil(
+          watchStatus(env, ev.scheduledTime).then(
+            (r) => r.startsWith('ok') || console.log('watch', r),
+            log('watch'),
+          ),
+        );
+      return;
+    }
+    if (ev.cron === BUNDLE_CRON) {
+      if (enabled(env, 'plan'))
+        ctx.waitUntil(approvalsBundle(env, ev.scheduledTime).catch(log('approvals bundle')));
       return;
     }
     if (ev.cron === SUPPORT_CRON) {
@@ -166,6 +192,24 @@ export default {
 /** wrangler.jsonc triggers와 같은 값. */
 export const REPORT_CRON = '50 23 * * *';
 export const SUPPORT_CRON = '7 * * * *';
+export const WATCH_CRON = '*/5 * * * *';
+export const BUNDLE_CRON = '0 1,9 * * *';
+
+/** 23:50 UTC 일요일 = 월요일 08:50 KST. */
+const isMonday = (ms: number) => new Date(ms + 9 * 3600_000).getUTCDay() === 1;
+
+/** 월요일 아침 @mkt 주간 유입 리포트(GA4, 지난 7일). */
+export async function mktWeekly(env: Env, now = Date.now()) {
+  await threadOf(env, 'mkt', env.DESK_CHANNEL, 'weekly').enqueue({
+    eventId: `mkt-weekly:${kstDay(now)}`,
+    kind: 'report',
+    role: 'mkt',
+    channel: env.DESK_CHANNEL,
+    threadTs: '',
+    sourceTs: '',
+    text: '',
+  });
+}
 
 export async function morningReport(env: Env, now = Date.now(), eventId = `report:${kstDay(now)}`) {
   await threadOf(env, 'ops', env.DESK_CHANNEL, 'report').enqueue({
@@ -207,13 +251,22 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
   }
   if (job === 'dev-ci')
     return Response.json({ result: await devCi(env, (await req.json()) as DevCi) });
-  // @mkt: 운영 배포가 성공하면(agent-release.yml) 드림보트 요약을 맡긴다.
+  // @mkt: 운영 배포가 성공하면(agent-release.yml) 드림보트 요약을 맡긴다. 배포 상태 카드도 이때 넘긴다(T-11-325).
   if (job === 'release') {
-    if (!enabled(env, 'mkt')) return Response.json({ result: 'mkt disabled' });
-    return Response.json({
-      result: await releaseTask(env, (await req.json()) as { sha: string; url?: string }),
-    });
+    const body = (await req.json()) as { sha: string; url?: string };
+    const cards = /^[0-9a-f]{40}$/.test(body.sha ?? '')
+      ? await afterDeploy(env, body.sha).catch((e: unknown) => String(e).slice(0, 200))
+      : 'bad sha';
+    if (!enabled(env, 'mkt')) return Response.json({ result: 'mkt disabled', cards });
+    return Response.json({ result: await releaseTask(env, body), cards });
   }
+  // T-11-325 시험용: 서버 상태 감시 한 번 · 아침 카드 목록 · 승인 대기 묶음.
+  if (job === 'watch') return Response.json({ result: await watchStatus(env) });
+  if (job === 'cards') {
+    await captainMorning(env);
+    return Response.json({ ok: true });
+  }
+  if (job === 'bundle') return Response.json({ result: await approvalsBundle(env) });
   // 고객 문의: dry=1이면 커서를 옮기지 않고 새 문의 수만 돌려준다.
   if (job === 'support')
     return Response.json(
@@ -252,15 +305,29 @@ async function interactive(
   if (!ok) return new Response('bad signature', { status: 401 });
   const raw = new URLSearchParams(body).get('payload');
   if (!raw) return new Response('');
-  const handle = { dev: devInteraction, plan: supportInteraction, mkt: mktInteraction }[role];
+  const p = JSON.parse(raw) as {
+    message?: { ts?: string };
+    actions?: { action_id?: string }[];
+  };
+  const action = p.actions?.[0]?.action_id ?? '';
+  const handle =
+    role === 'plan' && START_ACTIONS.includes(action)
+      ? startInteraction
+      : { dev: devInteraction, plan: supportInteraction, mkt: mktInteraction }[role];
   ctx.waitUntil(
-    handle(env, JSON.parse(raw)).then(
-      (r) => console.log(`${role} interaction`, r),
-      (e: unknown) => console.error(`${role} interaction failed`, String(e)),
-    ),
+    handle(env, JSON.parse(raw))
+      .then(async (r) => {
+        console.log(`${role} interaction`, r);
+        // T-11-325 승인 대기에서 빼고 대기 시간을 잰다. 버튼이 남는 결과(권한 없음 · 프리플라이트 · 띄우기 실패)는 그대로 둔다.
+        if (p.message?.ts && !KEEP_PENDING.has(String(r)))
+          await ledger(env).pendingDone(p.message.ts);
+      })
+      .catch((e: unknown) => console.error(`${role} interaction failed`, String(e))),
   );
   return new Response('');
 }
+
+const KEEP_PENDING = new Set(['forbidden', 'ignored', 'preflight', 'failed']);
 
 function sameText(a: string, b: string) {
   if (a.length !== b.length) return false;

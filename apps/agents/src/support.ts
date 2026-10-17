@@ -425,6 +425,13 @@ export function supportTools(
         await ledger(env).setMailDraft(d);
         const posted = await planSlack(env)('chat.postMessage', mailCard(env, d));
         if (!posted.ok) throw new Error(`승인 카드를 못 올렸어요(${posted.error})`);
+        if (posted.ts)
+          await ledger(env).pendingAdd({
+            ts: posted.ts,
+            channel: env.APPROVAL_CHANNEL,
+            label: '문의 답장',
+            at: Date.now(),
+          });
         return `초안을 만들고 승인 카드를 올렸어요(받는 사람 ${maskAddress(d.to)}).`;
       },
     },

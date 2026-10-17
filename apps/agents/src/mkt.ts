@@ -133,6 +133,13 @@ export function mktTools(env: Env, task: Task, fetcher: typeof fetch = fetch): T
           dreamboatCard(env, id, notes, String(input.why ?? '')),
         );
         if (!posted.ok) throw new Error(`승인 카드를 못 올렸어요(${posted.error})`);
+        if (posted.ts)
+          await ledger(env).pendingAdd({
+            ts: posted.ts,
+            channel: env.APPROVAL_CHANNEL,
+            label: '드림보트 요약',
+            at: Date.now(),
+          });
         return '승인 카드를 올렸어요.';
       },
     },

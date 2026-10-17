@@ -4,7 +4,9 @@ import type { Tool } from './claude.ts';
 import { botToken, dailyBudget, ROLE_NAMES, type Env } from './env.ts';
 import { ghClient, installationToken, type Gh } from './github.ts';
 import { ledger, type DevJob } from './ledger.ts';
+import { cardOf } from './card.ts';
 import { DEPLOY_ACTIONS, deployInteraction, postDeployCard } from './deploy.ts';
+import { above, RISK_LABEL, riskOf } from './risk.ts';
 import { slackClient, threadLink, threadReply } from './slack.ts';
 import type { Task } from './thread.ts';
 
@@ -28,6 +30,42 @@ export const appGh = async (env: Env, fetcher: typeof fetch = fetch): Promise<Gh
 const devSlack = (env: Env) => slackClient(botToken(env, 'dev'), fetch, ROLE_NAMES.dev);
 
 export { threadLink };
+
+/** `channel:ts` → 그 스레드의 작업 카드. */
+const cardOfThread = (env: Env, thread: string) => {
+  const [channel, ts] = thread.split(':');
+  return cardOf(env, channel!, ts!);
+};
+
+/**
+ * agent-dev.yml을 띄운다(운영자의 start_work · 주장의 work_order · 시작 카드 승인이 같이 쓴다). @dev 하루 한도가 작업 한 번
+ * 한도보다 적게 남았으면 띄우지 않는다. 띄웠으면 null, 아니면 이유.
+ */
+export async function dispatchWork(
+  env: Env,
+  g: Gh,
+  w: { title: string; request: string; thread: string },
+): Promise<string | null> {
+  const today = await ledger(env).day('dev');
+  const left = dailyBudget(env, 'dev') - today.costUsd;
+  if (left < Number(env.DEV_RUN_BUDGET_USD))
+    return `오늘 남은 금액($${left.toFixed(2)})이 작업 한 번 한도($${env.DEV_RUN_BUDGET_USD})보다 적어서 시작하지 않았어요`;
+  const r = await g(`/actions/workflows/${WORKFLOW}/dispatches`, {
+    method: 'POST',
+    body: {
+      ref: 'main',
+      inputs: {
+        title: w.title.slice(0, 120),
+        request: w.request.slice(0, 20_000),
+        thread: w.thread,
+      },
+    },
+  });
+  return r.status === 204 ? null : `작업을 띄우지 못했어요 (GitHub ${r.status})`;
+}
+
+export const workRunsUrl = (env: Env) =>
+  `https://github.com/${env.GITHUB_REPO}/actions/workflows/${WORKFLOW}`;
 
 /**
  * @dev 도구. `start_work`는 운영자가 직접 맡긴 일(멘션 · 답글)에만 준다. 다른 에이전트가 넘긴 일(유저 글이 섞일 수 있다)로는
@@ -103,25 +141,34 @@ export function devTools(env: Env, task: Task, gh: () => Promise<Gh> = () => app
     },
     run: async (input) => {
       if (started) return '이미 이 답에서 작업을 시작했어요';
-      const today = await ledger(env).day('dev');
-      const left = dailyBudget(env, 'dev') - today.costUsd;
-      if (left < Number(env.DEV_RUN_BUDGET_USD))
-        return `오늘 남은 금액($${left.toFixed(2)})이 작업 한 번 한도($${env.DEV_RUN_BUDGET_USD})보다 적어서 시작하지 않았어요`;
-      const g = await gh();
-      const r = await g(`/actions/workflows/${WORKFLOW}/dispatches`, {
-        method: 'POST',
-        body: {
-          ref: 'main',
-          inputs: {
-            title: String(input.title).slice(0, 120),
-            request: String(input.request).slice(0, 20_000),
-            thread: `${task.channel}:${task.threadTs}`,
-          },
-        },
-      });
-      if (r.status !== 204) return `작업을 띄우지 못했어요 (GitHub ${r.status})`;
+      const thread = `${task.channel}:${task.threadTs}`;
+      const title = String(input.title);
+      const request = String(input.request);
+      const why = await dispatchWork(env, await gh(), { title, request, thread });
+      if (why) return why;
       started = true;
-      return `시작했어요. 진행은 https://github.com/${env.GITHUB_REPO}/actions/workflows/${WORKFLOW} 에서 보이고, 끝나면 이 스레드에 결과가 올라와요(보통 10~30분).`;
+      // T-11-325 운영자가 직접 맡긴 일: 위험도 경고 없이 승인 카드로 간다. 카드는 담당 @dev · 수정으로 연다(있으면 고친다).
+      await ledger(env).setOrder({
+        id: crypto.randomUUID(),
+        title,
+        request,
+        thread,
+        risk: 'high',
+        by: 'operator',
+        at: Date.now(),
+        started: true,
+      });
+      const card = cardOf(env, task.channel, task.threadTs);
+      if (!(await card.patch({ status: '수정', owner: 'dev' })))
+        await card.open({
+          channel: task.channel,
+          threadTs: task.threadTs,
+          goal: title,
+          source: 'operator',
+          owner: 'dev',
+          status: '수정',
+        });
+      return `시작했어요. 진행은 ${workRunsUrl(env)} 에서 보이고, 끝나면 이 스레드에 결과가 올라와요(보통 10~30분).`;
     },
   });
   return tools;
@@ -165,6 +212,8 @@ export type DevResult = {
   pr?: number;
   branch?: string;
   title?: string;
+  /** T-11-325 실제 바뀐 파일 경로(agent-dev-publish.mjs). 위험도를 다시 판정한다. 옛 스크립트는 개수를 보냈다. */
+  files?: string[] | number;
 };
 
 /** agent-dev.yml publish 잡이 보낸 결과를 스레드에 올린다. 비용은 @dev 하루 사용액에 더한다. */
@@ -176,8 +225,23 @@ export async function devResult(env: Env, r: DevResult) {
   const said = (r.text ?? '').trim();
   let text: string;
   if (r.ok && r.pr && r.branch) {
-    await ledger(env).setDevJob(r.branch, { channel, threadTs, pr: r.pr, title: r.title ?? '' });
-    text = `${said || '고쳐서 PR을 올렸어요.'}\n\n**PR #${r.pr}** https://github.com/${env.GITHUB_REPO}/pull/${r.pr}\nCI가 끝나면 결과를 여기 알려 드릴게요. 통과하면 #agent-approvals에 머지 승인 요청을 올려요.`;
+    const files = Array.isArray(r.files) ? r.files : [];
+    const risk = files.length ? riskOf(files) : undefined;
+    const order = await ledger(env).orderOf(r.thread);
+    const expected = !order || order.by === 'operator' ? 'operator' : order.risk;
+    await ledger(env).setDevJob(r.branch, {
+      channel,
+      threadTs,
+      pr: r.pr,
+      title: r.title ?? '',
+      ...(risk ? { risk } : {}),
+      expected,
+    });
+    const prUrl = `https://github.com/${env.GITHUB_REPO}/pull/${r.pr}`;
+    await cardOfThread(env, r.thread)
+      .patch({ link: `<${prUrl}|PR #${r.pr}>`, ...(risk ? { risk } : {}) })
+      .catch(() => undefined);
+    text = `${said || '고쳐서 PR을 올렸어요.'}\n\n**PR #${r.pr}** ${prUrl}\nCI가 끝나면 결과를 여기 알려 드릴게요. 통과하면 #agent-approvals에 머지 승인 요청을 올려요.`;
   } else {
     text = `작업을 끝까지 넣지 못했어요. ${r.reason ?? ''}${said ? `\n\n${said}` : ''}`;
   }
@@ -206,7 +270,17 @@ export async function devCi(env: Env, c: DevCi, gh: () => Promise<Gh> = () => ap
   const g = await gh();
   const { data: pr } = await g<PullRequest>(`/pulls/${job.pr}`);
   if (pr.state !== 'open' || pr.head?.sha !== c.sha) return 'stale';
-  await slack('chat.postMessage', approvalCard(env, job, c));
+  const card = await slack('chat.postMessage', approvalCard(env, job, c));
+  if (card.ts)
+    await ledger(env).pendingAdd({
+      ts: card.ts,
+      channel: env.APPROVAL_CHANNEL,
+      label: `머지 PR #${job.pr} ${job.title}`.slice(0, 120),
+      at: Date.now(),
+    });
+  await cardOf(env, job.channel, job.threadTs)
+    .patch({ status: '승인 대기' })
+    .catch(() => undefined);
   await slack(
     'chat.postMessage',
     threadReply(
@@ -226,6 +300,7 @@ export function approvalCard(env: Env, job: DevJob, c: DevCi) {
     `• 무엇을: 위 PR을 main에 squash 머지`,
     `• 왜: 운영자 지시(<${threadLink(job.channel, job.threadTs)}|스레드>)`,
     `• 검사: <${c.url}|CI 통과> · 커밋 \`${c.sha.slice(0, 7)}\``,
+    ...riskLines(job),
     `• 되돌리기: main에서 이 PR을 revert. 운영 배포는 머지 뒤 배포 승인 카드로 따로 받아요.`,
   ].join('\n');
   return {
@@ -254,6 +329,19 @@ export function approvalCard(env: Env, job: DevJob, c: DevCi) {
       },
     ],
   };
+}
+
+/** T-11-325 승인 카드의 위험도 줄. 실제 경로가 시작할 때 예상보다 높으면 경고를 붙인다. */
+export function riskLines(job: Pick<DevJob, 'risk' | 'expected'>): string[] {
+  if (!job.risk) return [];
+  const line = `• 위험도: ${RISK_LABEL[job.risk]}(실제 바뀐 경로 기준)`;
+  if (!job.expected || job.expected === 'operator') return [line];
+  if (!above(job.risk, job.expected))
+    return [`${line} · 시작할 때 예상 ${RISK_LABEL[job.expected]}`];
+  return [
+    line,
+    `• ⚠️ 시작할 때 예상은 ${RISK_LABEL[job.expected]}이었어요. ${job.risk === 'high' ? '높음은 운영자가 직접 맡겨야 하는 범위예요' : '중간은 시작 카드 승인을 거쳐야 하는 범위예요'}. 머지 전에 바뀐 파일을 직접 확인해 주세요.`,
+  ];
 }
 
 type Interaction = {
@@ -312,6 +400,11 @@ export async function devInteraction(
     });
   if (act.action_id === 'dev_reject') {
     await record('reject', 'rejected');
+    const rejected = await ledger(env).devJob(v.branch);
+    if (rejected)
+      await cardOf(env, rejected.channel, rejected.threadTs)
+        .patch({ status: '보류', note: `PR #${v.pr} 머지 거절` })
+        .catch(() => undefined);
     await finish(`<@${p.user.id}>님이 PR #${v.pr} 머지를 거절했어요. PR은 열어 둬요.`);
     return 'rejected';
   }
@@ -335,6 +428,10 @@ export async function devInteraction(
   await record('merge', `merged ${m.data.sha}`);
   // T-11-312 머지한 main 커밋의 운영 배포 승인 카드를 이어서 올린다(카드가 실패해도 머지는 끝났다).
   const job = await ledger(env).devJob(v.branch);
+  if (job)
+    await cardOf(env, job.channel, job.threadTs)
+      .patch({ status: '배포', next: null })
+      .catch(() => undefined);
   const card = m.data.sha
     ? await postDeployCard(
         env,
