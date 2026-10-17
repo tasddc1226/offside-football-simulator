@@ -26,6 +26,7 @@
     "./admin-items": "./src/admin-items.ts",
     "./positions": "./src/positions.ts",
     "./owner-team": "./src/owner-team.ts",
+    "./team-division": "./src/team-division.ts",
     "./owner-tier": "./src/owner-tier.ts",
     "./owner-title": "./src/owner-title.ts",
     "./card-tier": "./src/card-tier.ts",

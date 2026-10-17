@@ -93,6 +93,11 @@ export const HONOR_GLYPH: Record<OwnerHonor['kind'], readonly GlyphPart[]> = {
       d: 'M6.8 2.6 C10 1 13 4.4 16.2 2.8 C17.8 2.1 19.2 1.8 20.5 2.3 V12.4 C17.4 13.8 14.4 10.6 10.8 12 C9.2 12.6 8 13 6.8 13.2 Z',
     },
   ],
+  // 계단 위 화살표 — T-11-375 시즌 디비전.
+  division: [
+    { d: 'M2 21.5 H8 V16 H14 V10.5 H20 V21.5 Z' },
+    { d: 'M5 12 L12 4.5 L19 12 M12 4.5 V13', stroke: true },
+  ],
   // 나침반 — 프리시즌 개척자(처음 길을 연 구단주).
   pioneer: [
     { d: 'M21.5 12 A9.5 9.5 0 1 1 2.5 12 A9.5 9.5 0 1 1 21.5 12', stroke: true },

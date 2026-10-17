@@ -1118,6 +1118,8 @@ export const ownerTeams = sqliteTable(
     ovr: integer('ovr').notNull(),
     /** 팀 레이팅(경기 결과로 오르내린다, TEAM_RATING_START에서 시작). */
     rating: integer('rating').notNull().default(1000),
+    /** T-11-375 디비전 index(0 아마추어 ~ 7 마스터). 레이팅 구간 + 강등 보호라 레이팅만으로 못 정해 따로 둔다. */
+    division: integer('division').notNull().default(0),
     wins: integer('wins').notNull().default(0),
     draws: integer('draws').notNull().default(0),
     losses: integer('losses').notNull().default(0),

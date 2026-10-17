@@ -284,6 +284,7 @@ const GUIDE_SECTIONS = [
       guideCopy.teamAssembly,
       guideCopy.ownerRecords,
       guideCopy.teamSynergy,
+      guideCopy.teamDivision,
       '선수를 맞는 자리에 둘수록 적합도가 높아지고, 선수 유형 조합·주발·직접 키운 선수로 팀 시너지가 켜지면 경기에서 힘이 오릅니다. 다른 구단주의 팀과 하루 10경기까지 치를 수 있고(같은 상대는 하루 한 번), 결과에 따라 팀 레이팅이 오르내립니다. 선수·팀·구단주·감독 업적을 모아 구단주 랭킹에 도전하고(선수 업적은 0~6단계, 팀 업적에는 드림팀 편성과 오프사이드 컵 성적도 있습니다), 팀 로고를 꾸며 팀 소개 이미지를 공유할 수 있습니다.',
     ],
   ],
@@ -335,6 +336,7 @@ const FAQ_ITEMS = [
   ['이적 제의에 표시되는 예상 순위가 현재 순위인가요?', guideCopy.transferPreview],
   ['연애설 이벤트는 언제 나오나요?', guideCopy.datingRumor],
   ['임대를 갈 수 있나요?', guideCopy.loan],
+  ['디비전은 어떻게 오르고 내리나요?', guideCopy.teamDivision],
   ['국가대표에서만 은퇴할 수 있나요?', guideCopy.ntRetirement],
   [
     '다른 팀으로 이적했다가 복귀해도 장기근속인가요?',

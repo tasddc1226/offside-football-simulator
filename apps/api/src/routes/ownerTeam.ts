@@ -34,6 +34,9 @@ import {
   type FormationId,
 } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
+import { resolveBalance } from '@offside/contracts/balance';
+import { clampDivision, divisionRules, nextDivision } from '@offside/contracts/team-division';
+import { activeBalanceQuery, balanceVersionOf } from '../db/repos/balance.js';
 import type { Context, Hono } from 'hono';
 import {
   NO_STORE,
@@ -194,6 +197,7 @@ function toOwnerTeam(
     ovr: lineupOvr(lineup),
     lines: linesOf(lineup, row.season),
     rating: row.rating,
+    division: row.division,
     record: recordOf(row),
     likes: row.likes,
     views: row.views,
@@ -491,11 +495,16 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const input = readBody(c, PlayTeamMatchBodySchema);
     const now = nowIso();
     const season = currentSeasonOrThrow(now);
-    const [[mine], challenged, [opp]] = await db.batch([
+    // T-11-375 디비전 경계 · 강등 보호는 활성 밸런스에서 — 같은 batch로 읽어 왕복을 늘리지 않는다.
+    const [[mine], challenged, [opp], [active]] = await db.batch([
       myTeamIn(db, me.id, season),
       challengedSince(db, me.id, kstTodayStart(now)),
       liveTeam(db, input.opponentTeamId),
+      activeBalanceQuery(db),
     ]);
+    const divisions = divisionRules(
+      resolveBalance(active ? balanceVersionOf(active).values : undefined),
+    );
     if (!mine) throw teamRequired();
     const usedToday = challenged.length;
     if (usedToday >= TEAM_MATCHES_PER_DAY) {
@@ -554,6 +563,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           away: awaySide,
           detail,
           now,
+          divisions,
         }),
       ],
       {
@@ -595,6 +605,11 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           l: mine.losses + (score === 0 ? 1 : 0),
         },
         rating: mine.rating + delta.home,
+        // 읽은 레이팅으로 셈한 값이다(같은 순간 받은 경기가 있으면 저장값과 한 칸 다를 수 있고, 다음 팀 응답이 바로잡는다).
+        division: {
+          from: clampDivision(mine.division),
+          to: nextDivision(mine.rating + delta.home, mine.division, divisions),
+        },
         matchesLeft: Math.max(0, TEAM_MATCHES_PER_DAY - usedToday - 1),
       },
       201,

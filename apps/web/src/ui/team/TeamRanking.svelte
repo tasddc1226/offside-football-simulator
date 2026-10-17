@@ -4,7 +4,10 @@
   // 순으로 보여 주고, 줄을 누르면 팀 프로필(appState.hof.team)을 연다. 서버가 5분마다 새로 센다.
   import { TEAM_RANK_PER_PAGE } from '@offside/contracts/owner-team';
   import { displaySeasonAt, openTeamSeasons, teamSeasonName } from '@offside/contracts/service-seasons';
-  import { fetchTeamRanking, type TeamRankResponse, type TeamRankSort } from '@offside/app-core/api/team';
+  import { fetchTeamDivisions, fetchTeamRanking, type TeamDivisionsResponse, type TeamRankResponse, type TeamRankSort } from '@offside/app-core/api/team';
+  import { divisionName, TEAM_DIVISION_KEYS } from '@offside/app-core/teamDivision';
+  import { teamDivisionText as LD } from '@offside/app-core/i18n/ko/teamDivision';
+  import DivisionEmblem from './DivisionEmblem.svelte';
   import { seasonNow } from '../seasonNow.svelte.js';
   import { appState } from '../state.svelte.js';
   import TeamProfile from './TeamProfile.svelte';
@@ -34,6 +37,9 @@
   let season = $state<number | undefined>(undefined);
   let sort = $state<TeamRankSort>(appState.hof.teamSort ?? 'rating');
   let page = $state(1);
+  /** T-11-375 디비전 탭(레이팅순에만, undefined = 전체). */
+  let division = $state<number | undefined>(undefined);
+  let divisions = $state<TeamDivisionsResponse | null>(null);
   let data = $state<TeamRankResponse | null>(null);
   let failed = $state(false);
   let loading = $state(true);
@@ -49,18 +55,34 @@
 
   $effect(() => {
     const [se, so, p] = [season, sort, page];
+    const dv = so === 'rating' ? division : undefined;
     void shownSeason;
     let live = true;
     failed = false;
     loading = true;
-    void fetchTeamRanking(se, so, p).then((r) => {
-      if (!live || se !== season || so !== sort || p !== page) return;
+    void fetchTeamRanking(se, so, p, dv).then((r) => {
+      if (!live || se !== season || so !== sort || p !== page || dv !== (sort === 'rating' ? division : undefined)) return;
       loading = false;
       if (r.ok) data = r.data;
       else failed = true;
     });
     return () => { live = false; };
   });
+
+  // 디비전별 팀 수는 레이팅순을 볼 때만 한 번 받는다(5분 엣지 캐시 · 1분 메모).
+  $effect(() => {
+    if (sort !== 'rating') return;
+    const se = season;
+    let live = true;
+    void fetchTeamDivisions(se).then((r) => {
+      if (live && se === season && r.ok) divisions = r.data;
+    });
+    return () => { live = false; };
+  });
+  function pickDivision(d: number | undefined) {
+    division = d;
+    page = 1;
+  }
 
   const pages = $derived(data ? Math.max(1, Math.ceil(data.total / TEAM_RANK_PER_PAGE)) : 1);
   function goPage(p: number) {
@@ -94,6 +116,16 @@
         <button class="hof-sort" aria-pressed={sort === k} data-rank-sort={k} onclick={() => ((sort = k), (page = 1))}>{label}</button>
       {/each}
     </div>
+    {#if sort === 'rating'}
+      <div class="hof-sorts team-div-tabs" role="group" aria-label={LD.tabsAria} data-rank-divisions>
+        <button class="hof-sort" aria-pressed={division === undefined} data-rank-division="all" onclick={() => pickDivision(undefined)}>{LD.tabAll}</button>
+        {#each TEAM_DIVISION_KEYS.map((_, i) => TEAM_DIVISION_KEYS.length - 1 - i) as d (d)}
+          <button class="hof-sort team-div-tab" aria-pressed={division === d} data-rank-division={d} onclick={() => pickDivision(d)}>
+            <DivisionEmblem division={d} size={16} />{divisionName(d)}{#if divisions}<small class="num">{n(divisions.counts[d] ?? 0)}</small>{/if}
+          </button>
+        {/each}
+      </div>
+    {/if}
     <p class="team-form-guide muted">{L.formGuide}</p>
     {#if failed}
       <p class="empty">{L.rankFail}</p>
@@ -110,7 +142,7 @@
               {@const played = t.record.w + t.record.d + t.record.l}
               <li value={t.rank}>
                 <button class="team-standings-columns team-standings-row" data-rank-team={t.teamId} aria-label={L.teamRowAria({ rank: t.rank, name: t.name, played: n(played), w: n(t.record.w), d: n(t.record.d), l: n(t.record.l), metric: metricLabel, value: metricOf(t), form: formText(t.recentForm) })} onclick={() => open(t.teamId)}>
-                  <span class="team-standings-team"><span class="team-standings-rank num">{t.rank}</span><span class="team-standings-logo"><TeamLogo logo={t.logo} name={t.name} size={24} decorative />{#if t.title}<span class="team-standings-title"><TitleBadge title={t.title} size="icon" /></span>{/if}</span><b title={t.name}>{t.name}</b></span>
+                  <span class="team-standings-team"><span class="team-standings-rank num">{t.rank}</span>{#if t.division !== undefined}<span class="team-standings-div" title={divisionName(t.division)}><DivisionEmblem division={t.division} size={14} /></span>{/if}<span class="team-standings-logo"><TeamLogo logo={t.logo} name={t.name} size={24} decorative />{#if t.title}<span class="team-standings-title"><TitleBadge title={t.title} size="icon" /></span>{/if}</span><b title={t.name}>{t.name}</b></span>
                   <span class="num" title={L.playedTitle({ n: n(played) })}>{n(played)}</span>
                   <span class="num" title={L.winTitle({ n: n(t.record.w) })}>{n(t.record.w)}</span>
                   <span class="num" title={L.drawTitle({ n: n(t.record.d) })}>{n(t.record.d)}</span>
@@ -138,7 +170,7 @@
         </nav>
       {/if}
     {:else}
-      <p class="empty">{L.teamsEmpty}</p>
+      <p class="empty">{division !== undefined ? LD.emptyDivision : L.teamsEmpty}</p>
     {/if}
     <p class="muted fs-xs" style="margin-top:10px">{sort === 'value' ? L.valueFoot : L.teamsFoot}</p>
 </section>
@@ -270,6 +302,24 @@
     align-items: center;
     gap: 2px;
     padding-left: 26px;
+  }
+  .team-div-tabs {
+    margin: -4px 0 12px;
+  }
+  .team-div-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .team-div-tab small {
+    font-size: 11px;
+    font-weight: 400;
+    color: inherit;
+  }
+  .team-standings-div {
+    flex: none;
+    display: inline-flex;
+    margin-left: -2px;
   }
   .team-form-guide {
     margin: 0 0 6px;

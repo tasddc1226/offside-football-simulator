@@ -103,6 +103,12 @@ import type { PutOwnerTeamBody } from '@offside/contracts';
 import { readTeamDraft, writeTeamDraft, teamDraftBase, type TeamDraft } from './teamDraft';
 import { RecordsChips as SortChips } from '../hof/RecordsControls';
 import { TeamResult } from './TeamResult';
+import { TeamDivision } from './TeamDivision';
+import {
+  markDivisionSeen,
+  takeDivisionChange,
+  type DivisionShift,
+} from '@offside/app-core/teamDivision';
 import { CupLockNotice, useCup } from './TeamCup';
 import { TeamPresets } from './TeamPresets';
 import { loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPresets';
@@ -188,6 +194,9 @@ export default function Team() {
   const [oppStatus, setOppStatus] = useState<LoadStatus>('loading');
   const [playing, setPlaying] = useState(false);
   const [result, setResult] = useState<TeamMatch | null>(null);
+  /** T-11-375 방금 치른 경기의 디비전 전후(결과 화면 승격 · 강등), 받은 경기로 바뀐 디비전 알림. */
+  const [divisionShift, setDivisionShift] = useState<DivisionShift | null>(null);
+  const [divisionNotice, setDivisionNotice] = useState<string | null>(null);
   /** 방금 치른 경기(또는 '다시 보기')를 문자중계로 보여 주는 중(T-10-097). */
   const [live, setLive] = useState(false);
   const [resultOrigin, setResultOrigin] = useState<'opponents' | 'history'>('opponents');
@@ -376,6 +385,11 @@ export default function Team() {
     }
     setNeedLogin(false);
     applyTeam(d.team, d.lastManager);
+    setDivisionNotice(
+      d.team && teamEditableIn(d.season, d.current) && d.season === d.current
+        ? (takeDivisionChange(d.season, d.team.division)?.text ?? null)
+        : null,
+    );
     const profile = accountCache.value;
     const key =
       d.team?.id ??
@@ -518,13 +532,27 @@ export default function Team() {
     setResult(r.data.match);
     setLive(true);
     setMatchesLeft(r.data.matchesLeft);
-    setTeam((t) => (t ? { ...t, record: r.data.record, rating: r.data.rating } : t));
+    const shift = r.data.division ?? null;
+    setDivisionShift(shift);
+    setDivisionNotice(null);
+    if (shift) markDivisionSeen(season, shift.to);
+    setTeam((t) =>
+      t
+        ? {
+            ...t,
+            record: r.data.record,
+            rating: r.data.rating,
+            ...(shift ? { division: shift.to } : {}),
+          }
+        : t,
+    );
     show('result');
     scrollTo(0);
   }
 
   /** 친구 칸에서 친선전을 치렀거나(중계부터) 최근 친선전을 열 때(결과부터). 친선전은 레이팅·전적을 건드리지 않는다. */
   function showFriendly(m: TeamMatch, withLive: boolean) {
+    setDivisionShift(null);
     setResultOrigin('opponents');
     setResult(m);
     setLive(withLive);
@@ -725,6 +753,14 @@ export default function Team() {
               {L.introApp({ ovr: YOUTH_OVR })}
             </Txt>
           )}
+          {team && !legacy && team.season > 0 ? (
+            <TeamDivision
+              rating={team.rating}
+              division={team.division}
+              season={team.season}
+              notice={divisionNotice}
+            />
+          ) : null}
           {legacy ? (
             <Txt v="sm" tone="muted" testID="team-legacy">
               {preseasonTeamNote()}
@@ -1023,6 +1059,7 @@ export default function Team() {
       <TeamResult
         m={result}
         team={team}
+        shift={divisionShift}
         eventName={eventName}
         matchesLeft={matchesLeft}
         toTeam={() => show(resultOrigin === 'history' ? 'history' : 'team')}
@@ -1049,6 +1086,7 @@ export default function Team() {
         reload={() => void loadHistory()}
         open={(m) => {
           setResultOrigin('history');
+          setDivisionShift(null);
           setResult(m);
           setLive(false);
           show('result');
