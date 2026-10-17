@@ -6,6 +6,7 @@ import {
   ManagerCareerIdSchema,
   ManagerCareerResponseSchema,
   ManagersResponseSchema,
+  ReleaseManagerResponseSchema,
   StartManagerBodySchema,
 } from '@offside/contracts';
 import type { FormationId } from '@offside/contracts/owner-team';
@@ -22,8 +23,10 @@ import {
   listManagers,
   managerCareerOf,
   managerOriginOf,
+  releaseManagerCard,
   startManagerCareer,
 } from '../db/repos/managers.js';
+import { marketRules } from '../db/repos/market.js';
 import {
   careersByIds,
   eligibleMap,
@@ -112,7 +115,11 @@ export function registerManagerRoutes(app: Hono<AppEnv>): void {
     const now = nowIso();
     const season = teamSeasonAt(now);
     const [list, cards, teams] = await Promise.all([
-      listManagers(db, me.id),
+      listManagers(
+        db,
+        me.id,
+        marketRules(db).then((r) => r.releaseRate),
+      ),
       // 지금 가진 카드 전부(시즌 상관없이 · 감독 아닌 카드) — listEligibleCareers는 시즌 이하로 거르므로 넉넉히 준다.
       listEligibleCareers(db, me.id, Number.MAX_SAFE_INTEGER),
       listMyTeams(db, me.id),
@@ -198,6 +205,30 @@ export function registerManagerRoutes(app: Hono<AppEnv>): void {
     )
       throw managerGone();
     return c.body(null, 204);
+  });
+
+  // T-11-345 끝낸 감독 경질. 지금 시즌 · 프리시즌 팀 감독 칸에 앉아 있으면 먼저 내려야 한다(선수 방출이 선발을
+  // 먼저 빼게 하는 것과 같다). 직접 키운 선수면 방출처럼 자금을 받는다. 되돌릴 수 없다.
+  app.post('/v1/managers/:managerId/release', requireProfile, idempotency, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const id = managerIdOf(c);
+    const now = nowIso();
+    const found = await managerCareerOf(db, id, me.id);
+    if (!found || found.status !== 'done') throw managerGone();
+    const current = teamSeasonAt(now);
+    const seated = (await listMyTeams(db, me.id)).some(
+      (t) => (t.season === current || t.season === 0) && t.coachId === found.careerId,
+    );
+    if (seated) throw conflictError('감독 칸에서 내린 뒤 경질할 수 있어요.', 'MANAGER_SEATED');
+    const res = await releaseManagerCard(db, {
+      profileId: me.id,
+      careerId: found.careerId,
+      rate: (await marketRules(db)).releaseRate,
+      now,
+    });
+    if (!res) throw managerGone();
+    return ok(c, ReleaseManagerResponseSchema, res, 200, NO_STORE);
   });
 
   // 감독 커리어 완료: 결과(감독 카드)를 적는다. 그 뒤 다른 선수로 새 감독 커리어를 시작할 수 있다.

@@ -83,6 +83,8 @@ export const ManagerCareerSchema = z.strictObject({
   look: z.string().nullable().optional(),
   startedAt: IsoUtcSchema,
   finishedAt: IsoUtcSchema.nullable(),
+  /** T-11-345 끝낸 감독을 경질하면 받을 구단 자금(만 원). 직접 키운 선수만 방출처럼 받고, 영입한 카드는 0. 목록에만 온다. */
+  releaseValue: z.number().int().min(0).optional(),
 });
 export type ManagerCareer = z.infer<typeof ManagerCareerSchema>;
 
@@ -119,6 +121,13 @@ export type StartManagerBody = z.infer<typeof StartManagerBodySchema>;
 
 export const ManagerCareerResponseSchema = z.strictObject({ career: ManagerCareerSchema });
 export type ManagerCareerResponse = z.infer<typeof ManagerCareerResponseSchema>;
+
+/** T-11-345 끝낸 감독 경질 결과: 받은 자금 · 남은 잔액(만 원). */
+export const ReleaseManagerResponseSchema = z.strictObject({
+  amount: z.number().int().min(0),
+  balance: z.number().int(),
+});
+export type ReleaseManagerResponse = z.infer<typeof ReleaseManagerResponseSchema>;
 
 export const FinishManagerBodySchema = z.strictObject({ result: ManagerResultSchema });
 export type FinishManagerBody = z.infer<typeof FinishManagerBodySchema>;

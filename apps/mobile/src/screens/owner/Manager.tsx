@@ -54,6 +54,7 @@ import {
   managerSheetLabel,
   managerSteps,
   masteryUpLine,
+  releaseManager,
   seasonBadges,
   seasonChips,
   statChips,
@@ -65,6 +66,7 @@ import {
   startConfirmLines,
   startManager,
 } from '@offside/app-core/manager';
+import { fundsText } from '@offside/app-core/funds';
 import { managerText as M } from '@offside/app-core/i18n/ko/manager';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
@@ -190,6 +192,8 @@ export default function Manager() {
   const [loginNeeded, setLoginNeeded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // T-11-345 방금 경질한 감독 알림.
+  const [released, setReleased] = useState<string | null>(null);
   const [st, setSt] = useState<ManagerState | null>(null);
   const [answered, setAnswered] = useState<string | null>(null);
   // 방금 답한 이벤트가 바꾼 상태(변화 칩), 경기 중계 중인 시즌 번호(다시 열면 중계 없이 결산).
@@ -318,8 +322,37 @@ export default function Manager() {
     }
   }
   async function seat(id: string | null) {
+    setReleased(null);
     if (await run(() => setTeamCoach(id))) await load();
   }
+  // T-11-345 끝낸 감독 경질. 감독 칸에 앉아 있으면 먼저 비우라고만 알린다.
+  const askRelease = (m: ManagerCareer) => {
+    const name = nameOf(m);
+    if (data?.coachId === m.careerId) return Alert.alert(M.release, M.releaseSeated);
+    Alert.alert(
+      M.releaseTitle({ name }),
+      [
+        m.releaseValue ? M.releasePay({ amount: fundsText(m.releaseValue) }) : M.releaseNoPay,
+        M.releaseKeep,
+        M.releaseFinal,
+      ]
+        .map((l) => `· ${l}`)
+        .join('\n'),
+      [
+        { text: M.cancel, style: 'cancel' },
+        {
+          text: M.releaseOk,
+          style: 'destructive',
+          onPress: () =>
+            void releaseManager(m.id).then((r) => {
+              if (!r.ok) return Alert.alert(M.releaseFail, r.error.message);
+              setReleased(M.releaseDone({ name }));
+              void load();
+            }),
+        },
+      ],
+    );
+  };
 
   const ev = st && st.phase === 'event' ? currentEvent(st) : null;
   const shownEv = st && answered ? (st.events.find((e) => e.id === answered) ?? null) : ev;
@@ -962,18 +995,38 @@ export default function Manager() {
                       })}`}
                     </Txt>
                     <CardBody r={r} />
-                    {data.hasTeam ? (
+                    {/* 감독 칸 버튼은 왼쪽, T-11-345 경질은 오른쪽 끝에 한 줄로. */}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 8,
+                        marginTop: 4,
+                      }}
+                    >
+                      {data.hasTeam ? (
+                        <Btn
+                          sm
+                          kind={seated ? 'default' : 'primary'}
+                          testID={seated ? 'manager-unseat' : 'manager-seat'}
+                          disabled={busy}
+                          onPress={() => void seat(seated ? null : m.careerId)}
+                        >
+                          {seated ? M.unseat : M.seat}
+                        </Btn>
+                      ) : null}
                       <Btn
                         sm
-                        kind={seated ? 'default' : 'primary'}
-                        testID={seated ? 'manager-unseat' : 'manager-seat'}
+                        kind="danger"
+                        testID="manager-release"
                         disabled={busy}
-                        style={{ alignSelf: 'flex-start' }}
-                        onPress={() => void seat(seated ? null : m.careerId)}
+                        style={{ marginLeft: 'auto' }}
+                        onPress={() => askRelease(m)}
                       >
-                        {seated ? M.unseat : M.seat}
+                        {M.release}
                       </Btn>
-                    ) : null}
+                    </View>
                   </View>
                 );
               })
@@ -982,6 +1035,11 @@ export default function Manager() {
                 {M.noManagers}
               </Txt>
             )}
+            {released ? (
+              <Txt tone="muted" style={small} testID="manager-released">
+                {released}
+              </Txt>
+            ) : null}
             {play && st?.phase !== 'done' ? errLine : null}
           </Card>
         </>

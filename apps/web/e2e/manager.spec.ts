@@ -42,6 +42,7 @@ function server() {
     started: [] as unknown[],
     finished: null as unknown,
     abandoned: 0,
+    released: 0,
     coachPuts: [] as unknown[],
     active: null as null | Record<string, unknown>,
     managers: [] as Record<string, unknown>[],
@@ -96,6 +97,11 @@ function server() {
       s.managers = [done];
       s.active = null;
       return r.fulfill(ok({ career: done }));
+    });
+    await page.route(`${API}/v1/managers/${MGR}/release`, (r) => {
+      s.released++;
+      s.managers = s.managers.filter((m) => m.id !== MGR);
+      return r.fulfill(ok({ amount: 3_000_000, balance: 5_000_000 }));
     });
     await page.route(`${API}/v1/owner-team/coach`, (r) => {
       const { coach } = r.request().postDataJSON() as { coach: string | null };
@@ -271,4 +277,68 @@ test('감독 커리어를 포기하면 원래 선수로 돌아온다', async ({ 
   await page.locator('[data-act="manager-abandon-confirm"]').click();
   await expect.poll(() => s.abandoned).toBe(1);
   await expect(page.locator('[data-manager-start]')).toContainText('감독 후보');
+});
+
+test('T-11-345 끝낸 감독은 확인 창에서 받을 자금을 보고 경질한다(감독 칸에 앉아 있으면 먼저 비운다)', async ({
+  page,
+}) => {
+  await stubOwner(page);
+  const { s, install } = server();
+  s.managers = [
+    {
+      id: MGR,
+      careerId: A,
+      status: 'done',
+      seed: 12345,
+      origin: ORIGIN,
+      result: {
+        mastery: { '4-3-3': 'S', '4-4-2': 'B', '3-5-2': 'C' },
+        style: 'attack',
+        specials: ['wing'],
+        grade: 'A',
+        ending: 'promoter',
+        seasons: 9,
+        titles: 1,
+        cups: 0,
+        promotions: 2,
+        sacked: 0,
+        clubs: 2,
+        topLeague: 'k1',
+        wins: 150,
+        draws: 80,
+        losses: 90,
+      },
+      publicName: '명장',
+      number: 8,
+      startedAt: '2026-10-16T00:00:00.000Z',
+      finishedAt: '2026-10-16T01:00:00.000Z',
+      releaseValue: 3_000_000,
+    },
+  ];
+  s.coachId = A;
+  await install(page);
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="manager"]').click();
+  const card = page.locator(`[data-manager-card="${A}"]`);
+  await card.locator('[data-act="manager-release"]').click();
+  const sheet = page.locator('[data-manager-release]');
+  await expect(sheet).toContainText('명장 감독을 경질할까요?');
+  await expect(sheet).toContainText('방출처럼 구단 자금');
+  await expect(sheet).toContainText('되돌릴 수 없고');
+  // 감독 칸에 앉아 있으면 경질 버튼이 잠긴다.
+  await expect(sheet.locator('[data-manager-release-seated]')).toBeVisible();
+  await expect(sheet.locator('[data-act="manager-release-confirm"]')).toBeDisabled();
+  {
+    const { violations } = await new AxeBuilder({ page }).analyze();
+    expect(violations.map((v) => `${v.id} (${v.impact})`)).toEqual([]);
+  }
+  await page.locator('.mg-scrim').click();
+  await card.locator('[data-act="manager-unseat"]').click();
+  await expect(card.locator('[data-act="manager-seat"]')).toBeVisible();
+  await card.locator('[data-act="manager-release"]').click();
+  await page.locator('[data-act="manager-release-confirm"]').click();
+  await expect.poll(() => s.released).toBe(1);
+  await expect(page.locator('[data-manager-released]')).toContainText('명장 감독을 경질했어요');
+  await expect(card).toHaveCount(0);
 });
