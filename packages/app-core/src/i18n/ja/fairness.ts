@@ -51,7 +51,11 @@ export const fairness: Translation<FairnessMsgs> = {
   historyVersion: (p) => `バージョン${p.v} · ${p.day}`,
   historyActive: '現在適用中',
   historySame: '変わった項目はありません。',
-  historyNote: '項目名の横は、直前のバージョンの値から変わった値です。日付は韓国時間です。',
+  historyNote:
+    '項目名の横は、直前のバージョンの値から変わった値です。コード更新パッチは計算式やルールを直した配信です。日付は韓国時間です。',
+  historyPatch: 'コード更新',
+  historyPatchDay: (p) => `${p.day} 適用`,
+  historyOpenNote: 'リリースノートで見る',
   version: (p) =>
     p.v
       ? `いま新しいキャリアにはバランスバージョン${p.v}が適用されます。`
