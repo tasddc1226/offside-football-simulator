@@ -1,6 +1,6 @@
 <script lang="ts">
   // T-11-355 처음 안내 카드 — 포지션·유형, 스카우트권 위치, 영구결번처럼 자주 묻는 길찾기를 홈에서 한 번 알려 준다.
-  // 기기마다 닫을 때까지(app-core firstGuide). 첫 화면 번들 밖 지연 청크(Home.svelte가 import()로 부른다).
+  // 기기마다 닫을 때까지(app-core firstGuide). 홈 첫 화면 번들에 둔다(늦게 그리면 홈이 밀린다).
   import { FOCUS_PICK } from '@offside/game/data';
   import { closeGuide, guideOpen } from '@offside/app-core/firstGuide';
   import { firstGuideText as L } from '@offside/app-core/i18n/ko/firstGuide';

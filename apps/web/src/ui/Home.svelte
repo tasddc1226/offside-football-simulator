@@ -18,6 +18,7 @@
   import { appTarget } from './appStore.js';
   import { adLanded } from './adLanding.js';
   import { homeText as L } from '@offside/app-core/i18n/ko/home';
+  import FirstGuide from './FirstGuide.svelte';
 
   const live = $derived(!!appState.G && !appState.G.retired);
   // T-11-233 안드로이드 비공개 테스터 모집(T-11-016)은 하루 한 번 뜨는 앱 안내 카드와 별개로 타일에 늘 둔다.
@@ -79,8 +80,8 @@
   {#await import('./cup/CupChampionPopup.svelte') then { default: CupChampionPopup }}<CupChampionPopup />{/await}
   <!-- T-11-275 구단주 선물(로그인한 구단주가 한 번 받으면 사라진다). 컵 배너 바로 아래, 첫 화면 번들 밖 지연 청크. -->
   {#await import('./HomeGift.svelte') then { default: HomeGift }}<HomeGift />{/await}
-  <!-- T-11-355 처음 안내 카드(기기마다 닫을 때까지). 첫 화면 번들 밖 지연 청크. -->
-  {#await import('./FirstGuide.svelte') then { default: FirstGuide }}<FirstGuide />{/await}
+  <!-- T-11-355 처음 안내 카드(기기마다 닫을 때까지). 늦게 그리면 아래 홈 전체가 밀려서(CLS) 첫 화면 번들에 둔다. -->
+  <FirstGuide />
   <HomeLive />
   <div class="tiles">
     <!-- T-11-080f 구단주 화면을 거치지 않고 이적시장으로 바로 간다(뒤로 가기는 홈으로). 홈에서는 서버를 부르지 않는다. -->
