@@ -1,0 +1,23 @@
+{
+  "id": "t-11-344-chat-user-sheet",
+  "title": "라운지 채팅 사용자 창",
+  "items": [
+    "채팅에서 프로필 사진이나 이름을 누르면 그 사람 창이 떠요",
+    "창에서 바로 그 구단주의 프로필로 갈 수 있어요"
+  ],
+  "en": {
+    "title": "Lounge chat user card",
+    "items": [
+      "Tap a profile picture or name in chat to open that person's card.",
+      "Go straight to that owner's profile from the card."
+    ]
+  },
+  "ja": {
+    "title": "ラウンジチャットのユーザー画面",
+    "items": [
+      "チャットでプロフィール画像や名前をタップすると、その人の画面が開きます。",
+      "画面からそのオーナーのプロフィールへ移動できます。"
+    ]
+  },
+  "availability": "web-app"
+}
