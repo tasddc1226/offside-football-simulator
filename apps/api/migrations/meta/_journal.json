@@ -757,6 +757,13 @@
       "when": 1792231180642,
       "tag": "0107_last_maestro",
       "breakpoints": true
+    },
+    {
+      "idx": 108,
+      "version": "6",
+      "when": 1792241819864,
+      "tag": "0108_career_abandoned",
+      "breakpoints": true
     }
   ]
 }

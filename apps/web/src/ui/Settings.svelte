@@ -15,6 +15,7 @@
   import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
   import ClubCustomSettings from './ClubCustomSettings.svelte';
   import BackupSettings from './BackupSettings.svelte';
+  import CareerCleanup from './CareerCleanup.svelte';
   import ServerStatus from './ServerStatus.svelte';
   import AppMoveCard from './AppMoveCard.svelte';
   import { settingsText as L } from '@offside/app-core/i18n/ko/settings';
@@ -130,6 +131,8 @@
   <AppMoveCard />
   <!-- T-10-116 진행 중 커리어 백업·불러오기 -->
   <BackupSettings />
+  <!-- T-11-354 이어 하지 않은 지난 커리어 정리(찾기를 누를 때만 불러온다) -->
+  <CareerCleanup />
   <ClubCustomSettings />
   <AnalyticsConsent settings />
 

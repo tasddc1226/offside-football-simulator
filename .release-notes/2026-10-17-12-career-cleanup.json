@@ -1,0 +1,26 @@
+{
+  "id": "t-11-354-career-cleanup",
+  "title": "지난 커리어를 정리할 수 있어요",
+  "items": [
+    "설정의 지난 커리어 정리에서 이어 하지 않은 커리어를 한 번에 정리해요",
+    "은퇴한 선수의 기록, 카드, 명예의 전당은 그대로예요",
+    "정리한 커리어도 백업으로 다시 이어 하면 정리가 풀려요"
+  ],
+  "en": {
+    "title": "Clean up old careers",
+    "items": [
+      "Clean up careers you never continued in one go from Clean up old careers in Settings.",
+      "Retired players keep their records, cards and Hall of Fame entries.",
+      "If you continue a cleaned-up career from a backup, it is restored."
+    ]
+  },
+  "ja": {
+    "title": "過去のキャリアを整理できます",
+    "items": [
+      "設定の過去のキャリア整理から、続けなかったキャリアをまとめて整理できます。",
+      "引退した選手の記録、カード、殿堂はそのまま残ります。",
+      "整理したキャリアもバックアップから続けると整理が解除されます。"
+    ]
+  },
+  "availability": "web-app"
+}

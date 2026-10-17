@@ -18,6 +18,7 @@ import { useColors, useIsDark } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { Card, Press, Screen, Topbar, Txt } from '../../ui';
 import { BackupSettings } from './BackupSettings';
+import { CareerCleanup } from './CareerCleanup';
 import { ClubCustomSettings } from './ClubCustomSettings';
 import { AdFreeSettings } from './AdFreeSettings';
 import { PushSettings } from './PushSettings';
@@ -214,6 +215,8 @@ export default function Settings() {
 
       {/* T-10-116 진행 중 커리어 백업·불러오기 */}
       <BackupSettings />
+      {/* T-11-354 이어 하지 않은 지난 커리어 정리(찾기를 누를 때만 불러온다) */}
+      <CareerCleanup />
       <AdFreeSettings />
       <PushSettings />
       <ReviewSettings />

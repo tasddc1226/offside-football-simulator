@@ -282,6 +282,7 @@ export const authAttempts = sqliteTable(
         'CAREER_RETIRE',
         'CAREER_LOOK',
         'CAREER_NAMES',
+        'CAREER_CLEAN',
         'PUSH_DEVICE',
         'PUSH_PREFERENCES',
         'PUSH_TEST',
@@ -436,6 +437,9 @@ export const careers = sqliteTable(
     // T-11-030 잠재력 관찰. pot은 비공개 최초 스카우트 평가, potReal은 은퇴 리포트·기록실에 공개하는 은퇴 시점 값.
     pot: integer('pot'),
     potReal: integer('pot_real'),
+    // T-11-354 주인이 '이어 하지 않은 커리어 정리'로 표시한 시각(진행 중 커리어만). 공개 기록·순위와 상관없는 표시이고,
+    // 같은 커리어의 시즌·은퇴가 다시 올라오면 비운다(백업으로 다시 이어 한 경우).
+    abandonedAt: text('abandoned_at'),
   },
   (table) => [
     index('careers_detail_archive_idx').on(table.detailArchiveKey),
@@ -450,6 +454,14 @@ export const careers = sqliteTable(
       table.peak,
     ),
     index('careers_profile_status_legend_idx').on(table.profileId, table.status, table.legendScore),
+    // T-11-354 내 정리 대상(진행 중 · 정리 안 함 · 오래 안 올라옴) 세기와 정리. id까지 담아 행을 읽지 않는다.
+    index('careers_profile_abandoned_idx').on(
+      table.profileId,
+      table.status,
+      table.abandonedAt,
+      table.updatedAt,
+      table.id,
+    ),
     index('careers_status_legend_idx').on(table.status, table.legendScore),
     // Cover name filtering and search ranks without loading every retired career's detail columns.
     index('careers_hof_score_order_idx').on(

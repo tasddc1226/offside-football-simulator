@@ -1,10 +1,19 @@
 import { reqLang } from '../lang.js';
 import { retiredLookErrors } from '../retiredLookText.js';
+import { careerCleanupErrors as cleanupKo } from '../i18n/ko/careerCleanup.js';
+import { careerCleanupErrors as cleanupEn } from '../i18n/en/careerCleanup.js';
+import { careerCleanupErrors as cleanupJa } from '../i18n/ja/careerCleanup.js';
+import type { Lang } from '../lang.js';
 import { appearanceUnlocked } from '@offside/contracts/avatar-look';
 import {
   ANON_CAREER_IDS_MAX,
   AnonCareerIdsResponseSchema,
   CareerIdParamSchema,
+  ClearStaleCareersBodySchema,
+  ClearStaleCareersResponseSchema,
+  STALE_CAREER_MIN_IDLE_MS,
+  StaleCareerKeepSchema,
+  StaleCareersResponseSchema,
   CareerUpsertResponseSchema,
   CareerYearParamSchema,
   MyCareersResponseSchema,
@@ -26,7 +35,9 @@ import {
   readBody,
   nowIso,
   rateLimited,
+  enforceLimit,
 } from './shared.js';
+import { clearStaleCareers, countStaleCareers } from '../db/repos/staleCareers.js';
 import {
   careerHeadQuery,
   getCareer,
@@ -91,6 +102,14 @@ async function limitUpload(
   }
 }
 
+/** T-11-354 진행 중 커리어 정리 한도(프로필당 시간당). 한 번에 STALE_CAREER_CLEAR_MAX개라 정상 정리는 몇 번이면 끝난다. */
+export const CAREER_CLEAN_LIMIT = 30;
+const careerCleanupErrors = (lang: Lang) => ({ ko: cleanupKo, en: cleanupEn, ja: cleanupJa })[lang];
+const staleCutoff = () => new Date(Date.now() - STALE_CAREER_MIN_IDLE_MS).toISOString();
+/** `?keep=id,id` — 이 기기가 아직 하는 커리어. 형식이 틀리면 400. */
+const parseKeep = (raw: string | undefined): string[] =>
+  parseWithAppError(StaleCareerKeepSchema, raw ? raw.split(',').filter(Boolean) : []);
+
 type CareerHead = Awaited<ReturnType<typeof careerHeadQuery>>[number];
 
 /** 소유권 확인: careerId가 이미 다른 프로필 소유면 409. 없으면(새 커리어) 통과. */
@@ -118,6 +137,33 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     const { profileId } = getSessionOrThrow(c);
     const ids = await listAnonRetiredIds(getDb(c), profileId, ANON_CAREER_IDS_MAX);
     return ok(c, AnonCareerIdsResponseSchema, { ids }, 200, 'private, no-store');
+  });
+
+  // T-11-354 이어 하지 않은 진행 중 커리어 정리. 설정에서 '찾기'를 눌렀을 때만 부른다(세기 → 정리).
+  // keep = 이 기기가 아직 하는 커리어. 하루 넘게 시즌이 올라오지 않은 내 진행 중 커리어만 대상이다.
+  app.get('/v1/careers/mine/stale', requireProfile, async (c) => {
+    const { profileId } = getSessionOrThrow(c);
+    const keep = parseKeep(c.req.query('keep'));
+    const count = await countStaleCareers(getDb(c), profileId, staleCutoff(), keep);
+    return ok(c, StaleCareersResponseSchema, { count }, 200, 'private, no-store');
+  });
+
+  // 정리는 abandoned_at 표시뿐이라 공개 응답(명예의 전당·홈 소식 등)이 바뀌지 않아 엣지 캐시를 지우지 않는다.
+  app.post('/v1/careers/mine/stale/clear', requireProfile, async (c) => {
+    const db = getDb(c);
+    const { profileId } = getSessionOrThrow(c);
+    const { keep } = readBody(c, ClearStaleCareersBodySchema);
+    const now = nowIso();
+    await enforceLimit(
+      db,
+      'CAREER_CLEAN',
+      profileId,
+      CAREER_CLEAN_LIMIT,
+      now,
+      careerCleanupErrors(reqLang(c)).tooOften,
+    );
+    const result = await clearStaleCareers(db, profileId, staleCutoff(), keep, now);
+    return ok(c, ClearStaleCareersResponseSchema, result, 200, 'private, no-store');
   });
 
   // T-11-266 익명으로 은퇴한 내 선수 이름을 한꺼번에 공개한다. 영구결번 심사는 다시 하지 않는다(은퇴 때와 선수별 이름

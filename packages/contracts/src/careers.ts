@@ -388,6 +388,29 @@ export const AnonCareerIdsResponseSchema = z.strictObject({
 });
 export type AnonCareerIdsResponse = z.infer<typeof AnonCareerIdsResponseSchema>;
 
+// ───────── T-11-354 이어 하지 않은 진행 중 커리어 정리 ─────────
+/** 이 시간보다 오래 시즌이 올라오지 않은 진행 중 커리어만 정리 대상이다(다른 기기에서 하던 커리어를 건드리지 않게). */
+export const STALE_CAREER_MIN_IDLE_MS = 24 * 60 * 60 * 1000;
+/** 한 번 요청에 정리하는 최대 수. 남으면 클라이언트가 다시 부른다. */
+export const STALE_CAREER_CLEAR_MAX = 500;
+/** 정리에서 뺄 커리어(이 기기의 진행 중 세이브·올리지 못한 업로드). */
+export const STALE_CAREER_KEEP_MAX = 20;
+export const StaleCareerKeepSchema = z.array(CareerIdParamSchema).max(STALE_CAREER_KEEP_MAX);
+/** 세는 상한. 넘으면 상한까지만 센다(초헤비 프로필도 한 번에 끝나는 크기). */
+export const STALE_CAREER_COUNT_MAX = 10_000;
+export const StaleCareersResponseSchema = z.strictObject({
+  count: z.number().int().min(0).max(STALE_CAREER_COUNT_MAX),
+});
+export type StaleCareersResponse = z.infer<typeof StaleCareersResponseSchema>;
+export const ClearStaleCareersBodySchema = z.strictObject({ keep: StaleCareerKeepSchema });
+export type ClearStaleCareersBody = z.infer<typeof ClearStaleCareersBodySchema>;
+/** cleared = 이번에 정리한 수, remaining = 아직 남은 정리 대상 수(상한까지). */
+export const ClearStaleCareersResponseSchema = z.strictObject({
+  cleared: z.number().int().min(0).max(STALE_CAREER_CLEAR_MAX),
+  remaining: z.number().int().min(0).max(STALE_CAREER_COUNT_MAX),
+});
+export type ClearStaleCareersResponse = z.infer<typeof ClearStaleCareersResponseSchema>;
+
 /** `/seasons/:year` 경로 파라미터. */
 export const CareerYearParamSchema = z.coerce.number().int().min(2000).max(2200);
 

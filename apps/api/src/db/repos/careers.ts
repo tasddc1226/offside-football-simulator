@@ -195,6 +195,8 @@ export async function putCareerSeason(
             // 은퇴한 커리어의 공개 이름은 은퇴 PUT(명예의 전당 토글)만 바꾼다 — 늦게 도착한 시즌 업로드가 되돌리지 않게.
             ...publicNameSet(publicName, { keepRetired: true }),
             updatedAt: now,
+            // T-11-354 정리한 커리어를 다시 이어 하면(백업 불러오기 등) 정리를 푼다.
+            abandonedAt: null,
             // status는 의도적으로 뺀다 — 이미 retired인 커리어가 이 라우트로 다시 active가 되지 않는다.
           },
         })
@@ -340,6 +342,8 @@ export async function putRetirement(
         status: 'retired',
         retiredAt: sql`coalesce(${careers.retiredAt}, ${now})`,
         updatedAt: now,
+        // T-11-354 정리했던 커리어도 은퇴하면 정리 표시를 지운다.
+        abandonedAt: null,
         retireAge: summary.retireAge,
         peak: summary.peak,
         legendScore: summary.legendScore,
