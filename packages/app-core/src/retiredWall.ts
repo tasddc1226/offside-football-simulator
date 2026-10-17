@@ -33,3 +33,17 @@ export function rnByLeague<T extends Pick<ClubSum, 'clubId' | 'count'>>(
   }
   return [...by.values()].sort((a, b) => b.count - a.count);
 }
+
+/** 고를 수 있는 등번호 범위(선수 만들기와 같다). */
+export const RN_NUMBERS = { min: 1, max: 99 } as const;
+
+/**
+ * T-11-356 한 구단에서 아직 결번이 아닌 등번호(작은 번호 먼저). 결번은 구단·시즌마다 따로라 구단 화면이 이미 받은
+ * 그 구단 결번 목록만으로 센다 — 따로 묻지 않는다.
+ */
+export function rnFreeNumbers(items: readonly Pick<Item, 'number'>[]): number[] {
+  const taken = new Set(items.map((it) => it.number));
+  const free: number[] = [];
+  for (let n = RN_NUMBERS.min; n <= RN_NUMBERS.max; n++) if (!taken.has(n)) free.push(n);
+  return free;
+}
