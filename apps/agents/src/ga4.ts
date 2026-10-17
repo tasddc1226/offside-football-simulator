@@ -2,8 +2,8 @@
 // 비공개 키는 Worker 비밀값 GA4_SA_KEY(PKCS#8 PEM). 키 쌍은 로컬에서 만들고 공개 인증서만 Google에 올렸다.
 import type { Tool } from './claude.ts';
 import type { Env } from './env.ts';
+import { serviceAccountToken } from './google.ts';
 
-const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const SCOPE = 'https://www.googleapis.com/auth/analytics.readonly';
 const DATE = /^(\d{4}-\d{2}-\d{2}|today|yesterday|\d{1,3}daysAgo)$/;
 const NAME = /^[A-Za-z][A-Za-z0-9_:]{0,60}$/;
@@ -11,56 +11,14 @@ const NAME = /^[A-Za-z][A-Za-z0-9_:]{0,60}$/;
 export const ga4Ready = (env: Env) =>
   !!(env.GA4_SA_KEY && env.GA4_SA_EMAIL && env.GA4_KEY_ID && env.GA4_PROPERTY_ID);
 
-const b64u = (b: ArrayBuffer | string) => {
-  const bytes = typeof b === 'string' ? new TextEncoder().encode(b) : new Uint8Array(b);
-  let s = '';
-  for (const x of bytes) s += String.fromCharCode(x);
-  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-};
-
-let cached: { token: string; until: number } | undefined;
-
 /** 서비스 계정 JWT로 접근 토큰을 받는다(한 시간짜리, 격리 안에서 다시 쓴다). */
-async function accessToken(env: Env, fetcher: typeof fetch): Promise<string> {
-  if (cached && cached.until > Date.now() + 60_000) return cached.token;
-  const der = Uint8Array.from(atob(env.GA4_SA_KEY!.replace(/-----[^-]+-----|\s/g, '')), (c) =>
-    c.charCodeAt(0),
+const accessToken = (env: Env, fetcher: typeof fetch) =>
+  serviceAccountToken(
+    { email: env.GA4_SA_EMAIL!, key: env.GA4_SA_KEY!, keyId: env.GA4_KEY_ID },
+    SCOPE,
+    fetcher,
+    'GA4',
   );
-  const key = await crypto.subtle.importKey(
-    'pkcs8',
-    der,
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const now = Math.floor(Date.now() / 1000);
-  const head = b64u(JSON.stringify({ alg: 'RS256', typ: 'JWT', kid: env.GA4_KEY_ID }));
-  const body = b64u(
-    JSON.stringify({
-      iss: env.GA4_SA_EMAIL,
-      scope: SCOPE,
-      aud: TOKEN_URL,
-      iat: now,
-      exp: now + 3600,
-    }),
-  );
-  const sig = b64u(
-    await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(`${head}.${body}`)),
-  );
-  const r = (await (
-    await fetcher(TOKEN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-        assertion: `${head}.${body}.${sig}`,
-      }),
-    })
-  ).json()) as { access_token?: string; expires_in?: number; error?: string };
-  if (!r.access_token) throw new Error(`GA4 토큰을 받지 못했어요(${r.error ?? 'unknown'})`);
-  cached = { token: r.access_token, until: Date.now() + (r.expires_in ?? 3600) * 1000 };
-  return r.access_token;
-}
 
 const names = (v: unknown, max: number) =>
   (Array.isArray(v) ? v : [])

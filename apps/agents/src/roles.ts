@@ -17,6 +17,7 @@ import { repoReadToken } from './github.ts';
 import { ga4Tools } from './ga4.ts';
 import { mktTools } from './mkt.ts';
 import { supportTools } from './support.ts';
+import { reviewTools } from './reviews.ts';
 import { opsTools } from './tools/ops.ts';
 import { digestTools } from './tools/digest.ts';
 import { scheduleTools } from './tools/schedules.ts';
@@ -46,7 +47,11 @@ const handoffPrompt = (t: Task) =>
 export const modelFor = (kind: Task['kind']): Model =>
   kind === 'triage' || kind === 'alert'
     ? MODELS.haiku
-    : kind === 'report' || kind === 'support' || kind === 'release' || kind === 'verify'
+    : kind === 'report' ||
+        kind === 'support' ||
+        kind === 'reviews' ||
+        kind === 'release' ||
+        kind === 'verify'
       ? MODELS.sonnet
       : MODELS.opus;
 
@@ -74,12 +79,13 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
         ...repo,
         ...tools.filter((t) => t.name === 'd1_query'),
         ...supportTools(env, task),
+        ...reviewTools(env, task),
         ...captainTools(env, task),
       ],
-      maxTurns: task.kind === 'support' ? 14 : 10,
+      maxTurns: task.kind === 'support' ? 14 : task.kind === 'reviews' ? 12 : 10,
       mcpServers: [],
       prompt: (t) =>
-        t.kind === 'triage' || t.kind === 'support'
+        t.kind === 'triage' || t.kind === 'support' || t.kind === 'reviews'
           ? t.text
           : t.kind === 'handoff'
             ? handoffPrompt(t)

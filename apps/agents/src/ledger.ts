@@ -3,6 +3,7 @@ import { DurableObject } from 'cloudflare:workers';
 import type { Env, Role } from './env.ts';
 import type { Cursors, DcCursor, Reaction } from './reactions.ts';
 import type { MailDraft } from './support.ts';
+import type { ReviewDraft } from './reviews.ts';
 import type { CardSummary } from './card.ts';
 import type { Risk } from './risk.ts';
 
@@ -162,6 +163,22 @@ export class AgentLedger extends DurableObject<Env> {
   }
   async recordMailApproval(a: MailApproval): Promise<void> {
     await this.ctx.storage.put(`mailapproval:${a.draft}:${a.at}`, a);
+  }
+  /** 스토어 리뷰: 어디까지 읽었는지(리뷰 시각 epoch ms) · 답글 초안 · 승인 기록(T-11-328). */
+  async reviewsCursor(): Promise<number | undefined> {
+    return this.ctx.storage.get<number>('reviews:cursor');
+  }
+  async setReviewsCursor(at: number): Promise<void> {
+    await this.ctx.storage.put('reviews:cursor', at);
+  }
+  async reviewDraft(id: string): Promise<ReviewDraft | undefined> {
+    return this.ctx.storage.get<ReviewDraft>(`reviewdraft:${id}`);
+  }
+  async setReviewDraft(d: ReviewDraft): Promise<void> {
+    await this.ctx.storage.put(`reviewdraft:${d.id}`, d);
+  }
+  async recordReviewApproval(a: MailApproval): Promise<void> {
+    await this.ctx.storage.put(`reviewapproval:${a.draft}:${a.at}`, a);
   }
   /** @mkt 드림보트 요약 초안 · 승인 기록(T-11-296). */
   async mktDraft(id: string): Promise<MktDraft | undefined> {
