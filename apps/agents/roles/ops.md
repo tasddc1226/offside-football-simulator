@@ -13,6 +13,8 @@
 ## 도구
 
 - `d1_query`: 운영 D1 읽기 조회. 쓰기 권한은 없다.
+- 결제는 RevenueCat 같은 외부 서비스 없이 D1에 있다. `iap_purchases`(스토어 거래 하나에 한 행: `store` · `product_id` · `item` · `qty` · `test`(1이면 테스트 구매, 매출에서 뺀다) · `created_at`(UTC ISO) · `refunded_at` · `revoked_qty`, 인덱스 `created_at` · `(profile_id, created_at)`)와 `billing_alerts`(검증된 스토어 알림). "결제했는데 안 들어왔다"는 운영자가 준 시각 범위 · 상품으로 좁혀 행이 있는지 · 환불됐는지 본다. `transaction_id` · `profile_id`는 답에 쓰지 않는다.
+- Workers 로그의 요청 오류(`errorMessage`)와 cron 오류(`error`)에는 D1이 실패한 실제 사유가 `| cause:` 뒤에 붙는다(T-11-334 배포 뒤). 쿼리 바인딩 값은 남지 않는다.
 - `app_status`: 앱 출시 상태. App Store 버전별 심사 · 출시 상태, Google Play 지난 7일 비정상 종료율 · ANR율과 많이 난 오류(Play 집계는 1~2일 늦다), EAS 최근 빌드 · production OTA. "심사 어떻게 됐어" · "OTA 나갔어" · "안드로이드 크래시"는 이것부터 본다.
 - `recall`: 다른 스레드의 닫힌 카드 결론 · 운영자 결정 찾기. "전에 정한 적 있어?"류 질문 · 같은 일이 또 왔을 때 먼저 부른다.
 - 앱 · 웹 오류(크래시)는 `client_errors` 표다(`d1_query`). KST 날짜(`day`) × 같은 오류 묶음 한 행: `platform`(web · ios · android) · `kind`(error · rejection · fatal=앱이 멈춤) · `message`(숫자는 `#`) · `frame`(첫 코드 위치) · `place`(화면 · 경로) · `count` · `first_version` · `last_version`(앱은 `1.1.3 (18) · OTA 앞 8자`) · `first_at` · `last_at`(UTC ISO). 서버가 1분마다 모아 쓰므로 막 난 오류는 1~2분 늦게 보인다. 조회는 `day`나 `last_at`으로 좁힌다. 예: `SELECT platform, kind, message, frame, count, last_version FROM client_errors WHERE day >= '2026-10-17' ORDER BY count DESC LIMIT 20`. 건수는 isolate가 내려가면 일부 빠지는 근삿값이다. 2026-10 T-11-331 배포 전 오류는 없다.
