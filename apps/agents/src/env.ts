@@ -53,6 +53,18 @@ export interface Env {
   GA4_SA_EMAIL?: string;
   GA4_KEY_ID?: string;
   GA4_PROPERTY_ID?: string;
+  /**
+   * 스토어 리뷰(T-11-328). App Store Connect API 키(고객 지원 권한): 키 ID · 발급자 ID · 비공개 키(PKCS#8 PEM, 비밀값) · 앱 ID.
+   * Google Play: 패키지 이름과 서비스 계정(Play Console "리뷰에 답글" 권한). 서비스 계정이 없으면 GA4 계정을 쓴다.
+   */
+  ASC_KEY_ID?: string;
+  ASC_ISSUER_ID?: string;
+  ASC_PRIVATE_KEY?: string;
+  ASC_APP_ID?: string;
+  PLAY_PACKAGE?: string;
+  PLAY_SA_EMAIL?: string;
+  PLAY_SA_KEY?: string;
+  PLAY_KEY_ID?: string;
   CF_D1_READ_TOKEN: string;
   CF_MCP_TOKEN?: string;
   GITHUB_TOKEN?: string;

@@ -15,6 +15,7 @@ import { devCi, devInteraction, devResult, type DevCi, type DevResult } from './
 import { verifySlack } from './slack.ts';
 import { mktInteraction, releaseTask } from './mkt.ts';
 import { scanSupport, supportInteraction } from './support.ts';
+import { REVIEW_ACTIONS, reviewInteraction, scanReviews } from './reviews.ts';
 import { threadOf, type Task } from './thread.ts';
 import { START_ACTIONS, startInteraction } from './captain.ts';
 import { afterDeploy, approvalsBundle, captainMorning, watchStatus } from './team.ts';
@@ -183,6 +184,14 @@ export default {
             (e: unknown) => console.error('support scan failed', String(e).slice(0, 300)),
           ),
         );
+      // T-11-328 스토어 리뷰도 같은 1시간 주기로 본다.
+      if (enabled(env, 'plan'))
+        ctx.waitUntil(
+          scanReviews(env, ev.scheduledTime).then(
+            (r) => r.reviews && console.log('reviews', JSON.stringify(r)),
+            log('reviews scan'),
+          ),
+        );
       return;
     }
     if (enabled(env, 'plan')) ctx.waitUntil(scanReactions(env));
@@ -272,6 +281,11 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
     return Response.json(
       await scanSupport(env, Date.now(), undefined, url.searchParams.get('dry') === '1'),
     );
+  // 스토어 리뷰: dry=1이면 커서를 옮기지 않고 새 리뷰 수만 돌려준다.
+  if (job === 'reviews')
+    return Response.json(
+      await scanReviews(env, Date.now(), undefined, url.searchParams.get('dry') === '1'),
+    );
   if (job === 'report') {
     await morningReport(env, Date.now(), `report:manual:${Date.now()}`);
     return Response.json({ queued: 'report' });
@@ -313,7 +327,9 @@ async function interactive(
   const handle =
     role === 'plan' && START_ACTIONS.includes(action)
       ? startInteraction
-      : { dev: devInteraction, plan: supportInteraction, mkt: mktInteraction }[role];
+      : role === 'plan' && REVIEW_ACTIONS.includes(action)
+        ? reviewInteraction
+        : { dev: devInteraction, plan: supportInteraction, mkt: mktInteraction }[role];
   ctx.waitUntil(
     handle(env, JSON.parse(raw))
       .then(async (r) => {
