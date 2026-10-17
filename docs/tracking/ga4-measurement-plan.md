@@ -23,15 +23,15 @@ User-ID, 서버 측 태깅, BigQuery, 별도 분석 DB, 모든 클릭·턴·경�
 
 ## 2. 현재 코드와 연결 후보
 
-| 확인한 코드 | 현재 동작 | 측정 설계에 주는 제약 |
-|---|---|---|
-| `apps/web/src/main.ts`, `ui/App.svelte` | Svelte SPA 초기화와 내부 화면 분기 | URL만으로 모든 화면 전환을 알 수 없음 |
-| `apps/web/src/ui/actions.ts`의 `startCareer` | newGame → save → game 화면 | 생성 버튼 클릭이 아니라 실제 새 커리어 생성 후 측정 |
-| 같은 파일의 `endSeason` 호출 경로 | 시즌 종료 → uploadSeason → save | 첫 종료 전환에서 측정, 보고서 다시 열기는 제외 |
-| 같은 파일의 `doRetire` | retire → 업로드 요청 → save → retired 화면 | 실제 은퇴와 은퇴 화면 열람을 구분 |
-| `apps/web/src/ui/helpers.ts`, `game/outbox.ts` | 비동기 업로드·재시도·옛 은퇴 기록 업로드 | outbox 성공을 플레이 이벤트 발생 기준으로 삼지 않음 |
-| `apps/web/src/ui/ShareBar.svelte` | 링크 유효성 확인 후 클립보드 복사 | 버튼 클릭, 복사 성공, 실제 SNS 게시를 구분 |
-| `apps/web/src/ui/helpers.ts`의 `APP_VERSION` | 빌드 커밋 식별자 | 배포별 관측 구분에 재사용 가능 |
+| 확인한 코드                                    | 현재 동작                                  | 측정 설계에 주는 제약                               |
+| ---------------------------------------------- | ------------------------------------------ | --------------------------------------------------- |
+| `apps/web/src/main.ts`, `ui/App.svelte`        | Svelte SPA 초기화와 내부 화면 분기         | URL만으로 모든 화면 전환을 알 수 없음               |
+| `apps/web/src/ui/actions.ts`의 `startCareer`   | newGame → save → game 화면                 | 생성 버튼 클릭이 아니라 실제 새 커리어 생성 후 측정 |
+| 같은 파일의 `endSeason` 호출 경로              | 시즌 종료 → uploadSeason → save            | 첫 종료 전환에서 측정, 보고서 다시 열기는 제외      |
+| 같은 파일의 `doRetire`                         | retire → 업로드 요청 → save → retired 화면 | 실제 은퇴와 은퇴 화면 열람을 구분                   |
+| `apps/web/src/ui/helpers.ts`, `game/outbox.ts` | 비동기 업로드·재시도·옛 은퇴 기록 업로드   | outbox 성공을 플레이 이벤트 발생 기준으로 삼지 않음 |
+| `apps/web/src/ui/ShareBar.svelte`              | 링크 유효성 확인 후 클립보드 복사          | 버튼 클릭, 복사 성공, 실제 SNS 게시를 구분          |
+| `apps/web/src/ui/helpers.ts`의 `APP_VERSION`   | 빌드 커밋 식별자                           | 배포별 관측 구분에 재사용 가능                      |
 
 apps/packages에서 gtag·dataLayer·Google Analytics/GTM 식별자·Cloudflare beacon 참조를
 검색했으나 일치하는 연결 코드를 찾지 못했다. 이것은 소스 점검 결과이며 대시보드 자동 삽입이나
@@ -43,14 +43,14 @@ apps/packages에서 gtag·dataLayer·Google Analytics/GTM 식별자·Cloudflare 
 `position`(FW/MF/DF/GK), `player_trait`(early/late/iron/star), `balance_version`을 붙인다.
 값은 고정 열거형/버전으로 제한하고 모르는 값은 `unknown`으로 처리한다.
 
-| 이벤트 | 발생 조건 | 범위·중복 규칙 | 추가 값 |
-|---|---|---|---|
-| `page_view` | 최초 화면과 주요 화면의 실제 전환 | 하나의 전환에서 1회. 재렌더는 제외 | 정규화한 화면 URL·제목 |
-| `career_start` | startCareer가 새 상태를 만들고 저장을 시도한 후 게임 화면으로 전환 | 커리어당 1회. 후보 뽑기·이어서 하기는 제외 | `start_context`, `position_changed`, `trait_changed` |
-| `first_season_complete` | 새 커리어의 첫 시즌 종료 기록이 생성됨 | 커리어당 1회. 학교 마지막 시즌도 포함 | `career_origin` |
-| `career_retire` | doRetire에서 실제 은퇴 기록 생성 | 커리어당 1회. 옛 기록 소급 업로드·조회 제외 | `career_origin`, `completed_seasons_bucket` |
-| `career_share_click` | 활성 공유 버튼의 사용자 클릭 | 비활성 중 재클릭 제외. 별도 재시도는 새 시도 | `share_method=copy_link` |
-| `career_share_copy_success` | 해당 시도의 clipboard write가 resolve | 시도당 1회. 실패/수동 복사 안내는 제외 | `share_method=copy_link` |
+| 이벤트                      | 발생 조건                                                          | 범위·중복 규칙                               | 추가 값                                              |
+| --------------------------- | ------------------------------------------------------------------ | -------------------------------------------- | ---------------------------------------------------- |
+| `page_view`                 | 최초 화면과 주요 화면의 실제 전환                                  | 하나의 전환에서 1회. 재렌더는 제외           | 정규화한 화면 URL·제목                               |
+| `career_start`              | startCareer가 새 상태를 만들고 저장을 시도한 후 게임 화면으로 전환 | 커리어당 1회. 후보 뽑기·이어서 하기는 제외   | `start_context`, `position_changed`, `trait_changed` |
+| `first_season_complete`     | 새 커리어의 첫 시즌 종료 기록이 생성됨                             | 커리어당 1회. 학교 마지막 시즌도 포함        | `career_origin`                                      |
+| `career_retire`             | doRetire에서 실제 은퇴 기록 생성                                   | 커리어당 1회. 옛 기록 소급 업로드·조회 제외  | `career_origin`, `completed_seasons_bucket`          |
+| `career_share_click`        | 활성 공유 버튼의 사용자 클릭                                       | 비활성 중 재클릭 제외. 별도 재시도는 새 시도 | `share_method=copy_link`                             |
+| `career_share_copy_success` | 해당 시도의 clipboard write가 resolve                              | 시도당 1회. 실패/수동 복사 안내는 제외       | `share_method=copy_link`                             |
 
 새 커리어 시작은 별도 이벤트를 또 보내지 않고 `career_start.start_context`로 구분한다:
 `first_observed`, `after_retirement`, `replace_active`, `unknown`.
@@ -73,15 +73,15 @@ true/false/unknown이다. 후속 생성 정보를 사용자 입력 원문으로 
 GA의 측정 가능한 브라우저 사용자 단위로 집계한다. 계정 수·실제 사람 수와 동일시하지 않는다.
 시간대는 Asia/Seoul, 주간 관찰을 기본으로 하고 최초 2주는 계측 검증·기준선 수집에 사용한다.
 
-| 지표 | 정의 / 관측 기간 | 해석 |
-|---|---|---|
-| 방문 → 시작 | 같은 세션에서 page_view 뒤 career_start가 있는 세션 / 페이지를 본 세션 | 세션 유입 source/medium 기준 비교 |
-| 시작 → 첫 시즌 | 시작 주의 career_start 사용자 중 24시간 내 first_season_complete가 이어진 사용자 / 시작 사용자 | 성숙한 24시간 표본만 포함 |
-| 시작 → 은퇴 | 시작 주의 사용자 중 7일 내 career_retire가 이어진 사용자 / 시작 사용자 | observed_start만 포함, 성숙한 7일 표본 |
-| 은퇴 → 재시작 | 은퇴 주의 사용자 중 7일 내 after_retirement 시작이 있는 사용자 / 은퇴 사용자 | 중복 사용자 제거, 단순 생성 이벤트 수 나눗셈 금지 |
-| 재시작 다양성 | after_retirement 생성 중 position_changed=true 건수 / 비교값이 알려진 해당 생성 건수 | 유형 변경도 같은 방식, unknown 건수 별도 표시 |
-| 공유 복사 성공 | 복사 성공 이벤트 수 / 공유 클릭 이벤트 수 | 시도 기준, 실제 외부 게시율 아님 |
-| D1/D7 재방문 | 시작 코호트 중 KST 다음 날/7일 뒤에 활동한 사용자 비율 | 24시간/168시간 경과 정의와 혼용하지 않음 |
+| 지표           | 정의 / 관측 기간                                                                               | 해석                                              |
+| -------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| 방문 → 시작    | 같은 세션에서 page_view 뒤 career_start가 있는 세션 / 페이지를 본 세션                         | 세션 유입 source/medium 기준 비교                 |
+| 시작 → 첫 시즌 | 시작 주의 career_start 사용자 중 24시간 내 first_season_complete가 이어진 사용자 / 시작 사용자 | 성숙한 24시간 표본만 포함                         |
+| 시작 → 은퇴    | 시작 주의 사용자 중 7일 내 career_retire가 이어진 사용자 / 시작 사용자                         | observed_start만 포함, 성숙한 7일 표본            |
+| 은퇴 → 재시작  | 은퇴 주의 사용자 중 7일 내 after_retirement 시작이 있는 사용자 / 은퇴 사용자                   | 중복 사용자 제거, 단순 생성 이벤트 수 나눗셈 금지 |
+| 재시작 다양성  | after_retirement 생성 중 position_changed=true 건수 / 비교값이 알려진 해당 생성 건수           | 유형 변경도 같은 방식, unknown 건수 별도 표시     |
+| 공유 복사 성공 | 복사 성공 이벤트 수 / 공유 클릭 이벤트 수                                                      | 시도 기준, 실제 외부 게시율 아님                  |
+| D1/D7 재방문   | 시작 코호트 중 KST 다음 날/7일 뒤에 활동한 사용자 비율                                         | 24시간/168시간 경과 정의와 혼용하지 않음          |
 
 첫 세 보고서는 (1) 채널별 시작 전환, (2) 순서가 있는 진행 퍼널,
 (3) 은퇴 후 재시작과 다양성으로 구성한다. UTM 캠페인, 포지션, 유형, 버전으로 필요할 때 나눈다.

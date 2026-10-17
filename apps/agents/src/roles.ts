@@ -11,6 +11,8 @@ import plan from '../roles/plan.md';
 import team from '../roles/team.md';
 import { appStatusTools } from './appStatus.ts';
 import { memoryTools } from './memory.ts';
+import { marketingTools } from './marketing.ts';
+import { webTools } from './tools/web.ts';
 import captain from '../roles/captain.md';
 import baseline from '../knowledge/ops-baseline.md';
 import { captainTools } from './captain.ts';
@@ -76,6 +78,8 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
   // 저장소 읽기 · 찾기와 PR 목록은 모든 역할이 쓴다(경로를 짐작하지 않게).
   const REPO = new Set(['repo_file', 'repo_find', 'repo_grep', 'pr_list']);
   const repo = tools.filter((t) => REPO.has(t.name));
+  // T-11-332 운영자가 붙인 외부 링크 읽기(운영자 지시 · 답글 · 넘겨받은 일).
+  const web = webTools(task.kind);
   if (role === 'plan')
     return {
       system: `${plan}\n\n${captain}\n\n${team}\n\n${glossary}\n\n${baseline}`,
@@ -85,6 +89,7 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
       // T-11-325 주장: 운영자 지시 · 답글 · 넘겨받은 일에는 작업 카드 · 작업 명세 도구를 더한다.
       tools: [
         ...repo,
+        ...web,
         ...tools.filter((t) => t.name === 'd1_query'),
         ...appStatusTools(env),
         ...memoryTools(env, 'plan', task),
@@ -108,6 +113,7 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
       // 개발은 저장소 · PR을 읽고, 운영자가 맡긴 일이면 Actions 작업을 띄운다(start_work). 고치는 건 Actions의 Claude Code가 한다.
       tools: [
         ...repo,
+        ...web,
         ...tools.filter((t) => t.name === 'github_runs' || t.name === 'github_run_jobs'),
         ...devTools(env, task),
         ...memoryTools(env, 'dev', task),
@@ -129,8 +135,10 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
       // 마케팅은 저장소 · 배포 기록을 읽고 드림보트 요약 초안만 올린다(보내기는 운영자 승인 버튼).
       tools: [
         ...repo,
+        ...web,
         ...mktTools(env, task),
         ...ga4Tools(env, task.kind),
+        ...marketingTools(env, task.kind),
         ...appStatusTools(env),
         ...memoryTools(env, 'mkt', task),
       ],
@@ -151,6 +159,7 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
     model,
     tools: [
       ...tools,
+      ...webTools(task.kind),
       ...appStatusTools(env),
       ...memoryTools(env, 'ops', task),
       ...digestTools({
