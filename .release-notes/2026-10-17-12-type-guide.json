@@ -1,0 +1,26 @@
+{
+  "id": "t-11-355-type-guide",
+  "title": "선수 유형 도감과 처음 안내가 생겼어요",
+  "items": [
+    "선수 유형 도감에서 주력 조합별 유형과 맞는 팀 시너지를 볼 수 있어요",
+    "홈의 처음 안내 카드가 유형 도감 · 상점 · 게임 가이드로 바로 이어 줘요",
+    "설정과 선수 만들기에서 스카우트권 · 강화권을 사는 곳을 알려 줘요"
+  ],
+  "en": {
+    "title": "New player type guide and getting started card",
+    "items": [
+      "The player type guide shows which focus pairs give each type and the team synergies it fits.",
+      "A getting started card on Home links to the type guide, the shop and the game guide.",
+      "Settings and player creation now point you to where scout and boost tickets are sold."
+    ]
+  },
+  "ja": {
+    "title": "選手タイプ図鑑とはじめての案内を追加しました",
+    "items": [
+      "選手タイプ図鑑で、得意能力の組み合わせごとのタイプと合うチームシナジーを確認できます。",
+      "ホームのはじめての案内カードから、タイプ図鑑・ショップ・ゲームガイドへすぐ移動できます。",
+      "設定と選手作成で、スカウト券・強化券を買える場所をお知らせします。"
+    ]
+  },
+  "availability": "web-app"
+}

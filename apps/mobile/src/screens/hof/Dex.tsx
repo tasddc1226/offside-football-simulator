@@ -20,6 +20,7 @@ import { Txt } from '../../ui/Txt';
 import { AutoGrid, TabOpt } from '../board/parts';
 import { tn } from '@offside/game/i18n/names';
 import { Fairness } from './Fairness';
+import { PositionGuide } from '../game/PositionGuide';
 import { Fold, Terms } from './Fold';
 
 /** 이벤트 한 칸 — 눌러서 선택지별 확률을 펼친다(웹 <details>). */
@@ -179,6 +180,7 @@ function DexItem({
 export default function Dex() {
   const RULES = useMemo(() => dexRules(), []);
   const [focusFair] = useState(() => takeFocus('fairness'));
+  const [focusTypes] = useState(() => takeFocus('types'));
   const [dex, setDex] = useState<DexEntry[] | null>(null);
   const [filter, setFilter] = useState<DexGroup | 'all'>('all');
   const [rulesOpen, setRulesOpen] = useState(true);
@@ -213,6 +215,8 @@ export default function Dex() {
         </View>
 
         <Fairness initialOpen={focusFair} />
+        {/* T-11-355 선수 유형 도감(선수 생성 · 시즌 탭과 같은 내용). 진행 중인 커리어가 있으면 그 포지션부터. */}
+        <PositionGuide pos={appState.G?.pos ?? 'FW'} initialOpen={focusTypes} />
 
         <Fold
           title={L.rulesTitle}

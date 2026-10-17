@@ -67,6 +67,18 @@ const POOLS: Record<string, readonly string[]> = {
 const ko = {
   /** pool 묶음의 i번째 문장. */
   hint: (p: { pool: string; i: number }) => POOLS[p.pool]![p.i]!,
+  // T-11-353 결산 코멘트 아래 지난 시즌과 견준 흐름 + 나이(seasonTrendLine). 평점은 소수 둘째 자리 문자열.
+  trendUp: (p: { prev: string; now: string }) =>
+    `평점 ${p.prev} → ${p.now}, 지난 시즌보다 좋아졌어요.`,
+  trendSteady: (p: { prev: string; now: string }) =>
+    `평점 ${p.prev} → ${p.now}, 지난 시즌과 비슷해요.`,
+  trendDown: (p: { prev: string; now: string }) =>
+    `평점 ${p.prev} → ${p.now}, 지난 시즌보다 나빠졌어요.`,
+  trendDownApps: (p: { prev: number; now: number }) =>
+    `출전 ${p.prev}경기 → ${p.now}경기, 지난 시즌보다 덜 뛰었어요.`,
+  ageYoung: '아직 한창 클 나이예요.',
+  agePrime: '전성기 나이예요.',
+  ageVet: '이제 몸 관리가 중요한 나이예요.',
 };
 
 export type AppScoutMsgs = typeof ko;

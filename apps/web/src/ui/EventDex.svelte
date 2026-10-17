@@ -11,10 +11,12 @@
   import { appState } from './state.svelte.js';
   import { takeFocus } from './nav.js';
   import Fairness from './Fairness.svelte';
+  import PositionGuide from './PositionGuide.svelte';
   import Topbar from './Topbar.svelte';
 
   const RULES = dexRules();
   const focusFair = takeFocus('fairness');
+  const focusTypes = takeFocus('types');
 
   let dex = $state<DexEntry[] | null>(null);
   let filter = $state<DexGroup | 'all'>('all');
@@ -45,6 +47,8 @@
     </div>
 
     <Fairness open={focusFair} />
+    <!-- T-11-355 선수 유형 도감(선수 생성 · 시즌 탭과 같은 내용). 진행 중인 커리어가 있으면 그 포지션부터. -->
+    <PositionGuide pos={appState.G?.pos ?? 'FW'} open={focusTypes} />
 
     <details class="dex-rules" open>
       <summary><b>{L.rulesTitle}</b></summary>

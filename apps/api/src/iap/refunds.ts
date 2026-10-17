@@ -104,7 +104,8 @@ export async function syncGoogleVoided(
   const sa = env.GOOGLE_PLAY_SA_JSON;
   if (!sa) return 'skipped';
   const list = await listVoidedPurchases(sa, nowMs - GOOGLE_VOIDED_WINDOW_MS, {
-    nowS: Math.floor(nowMs / 1000),
+    // A recovered daily job can carry an old business date; OAuth must be issued now.
+    nowS: Math.floor(Date.now() / 1000),
     ...(fetcher ? { fetcher } : {}),
   });
   const now = new Date(nowMs).toISOString();

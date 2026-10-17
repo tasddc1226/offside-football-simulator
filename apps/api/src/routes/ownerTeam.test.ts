@@ -35,6 +35,7 @@ import {
   cards,
   careerSeasons,
   careers,
+  cupMatches,
   friendMatches,
   notifications,
   pushDeliveries,
@@ -580,6 +581,66 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     ).data;
     expect(theirs.total).toEqual({ w: 1, d: 0, l: 2, gf: 2, ga: 5 });
     expect(theirs.players.map((p) => [p.careerId, p.goals])).toEqual([[rival.ids[0], 2]]);
+    // T-11-358 흐름 요약: 최신이 앞, 지금 1무, 가장 길게 2연승, 건 경기 · 받은 경기, 가장 큰 승패. 친선 · 컵은 아직 0.
+    expect(stats.summary).toEqual({
+      form: ['d', 'l', 'w', 'w'],
+      streak: { kind: 'd', n: 1 },
+      bestWinStreak: 2,
+      home: { w: 1, d: 1, l: 1, gf: 4, ga: 2 },
+      away: { w: 1, d: 0, l: 0, gf: 2, ga: 1 },
+      biggestWin: { opponent: rival.team.name, gf: 3, ga: 0, at: '2026-09-29T15:30:00.000Z' },
+      biggestLoss: { opponent: rival.team.name, gf: 0, ga: 1, at: '2026-09-29T16:00:00.000Z' },
+      friendly: { w: 0, d: 0, l: 0, gf: 0, ga: 0 },
+      cup: { w: 0, d: 0, l: 0, gf: 0, ga: 0 },
+    });
+    expect(theirs.summary).toMatchObject({ form: ['w', 'l', 'l'], streak: { kind: 'w', n: 1 } });
+    // 친선전(받은 경기 0:2 패 · 건 경기 1:1 무)과 컵(승부차기 승 · 패 · 기권 · 아직 안 치른 경기)은 합계로 센다.
+    const friendly = (id: string, home: typeof me, away: typeof me, hg: number, ag: number) =>
+      ctx.db.insert(friendMatches).values({
+        id,
+        profileId: home.profileId,
+        opponentId: away.profileId,
+        homeTeamId: home.team.id,
+        awayTeamId: away.team.id,
+        homeGoals: hg,
+        awayGoals: ag,
+        detailJson: '{}',
+        createdAt: '2026-09-29T18:00:00.000Z',
+      });
+    await friendly('f1', rival, me, 2, 0);
+    await friendly('f2', me, third, 1, 1);
+    const cup = (
+      slot: number,
+      home: string | null,
+      away: string | null,
+      hg: number | null,
+      ag: number | null,
+      winner: string | null,
+      forfeit = 0,
+    ) =>
+      ctx.db.insert(cupMatches).values({
+        id: `c${slot}`,
+        cupId: 'cup1',
+        round: 'r16',
+        slot,
+        homeTeamId: home,
+        awayTeamId: away,
+        at: '2026-09-29T12:00:00.000Z',
+        playedAt: hg === null ? null : '2026-09-29T12:00:00.000Z',
+        homeGoals: hg,
+        awayGoals: ag,
+        winnerTeamId: winner,
+        forfeit,
+      });
+    await cup(1, me.team.id, rival.team.id, 1, 1, me.team.id);
+    await cup(2, third.team.id, me.team.id, 2, 0, third.team.id);
+    await cup(3, me.team.id, null, 3, 0, me.team.id, 1);
+    await cup(4, rival.team.id, me.team.id, null, null, null);
+    const kinds = StatsRes.parse(
+      await (await call('GET', '/v1/owner-team/stats', { cookie: me.cookie })).json(),
+    ).data.summary!;
+    expect(kinds.friendly).toEqual({ w: 0, d: 1, l: 1, gf: 1, ga: 3 });
+    expect(kinds.cup).toEqual({ w: 1, d: 0, l: 1, gf: 1, ga: 3 });
 
     // 경기 기록: 25경기 더(같은 시각 2경기 포함) → 10 · 20경기 쪽으로 빠짐없이 겹침 없이 이어 받는다.
     for (let i = 0; i < 25; i++)

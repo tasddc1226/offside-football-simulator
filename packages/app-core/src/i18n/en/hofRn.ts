@@ -46,4 +46,8 @@ export const hofRn: Translation<HofRnMsgs> = {
   wallOpen: 'Show',
   wallClose: 'Hide',
   wallLabel: (p) => `Wall of Honour: ${p.name}, ${p.club} No. ${p.number}, ${p.day}`,
+  freeTitle: (p) => `Numbers still free (${p.n})`,
+  freeLead: 'Numbers this club has not retired yet. Each club retires its own numbers.',
+  freeNone: 'Every number at this club is retired.',
+  freeLabel: (p) => `${plural(p.n, 'number')} not yet retired at this club`,
 };

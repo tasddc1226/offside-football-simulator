@@ -154,6 +154,24 @@ export function trainingGrowthNotes(s: GameState, t: TrainingDef): TrainingGrowt
     notes.push({ text: L.helpAge({ pct: pct(1 - age.f / age.peak) }), tone: 'warn' });
   return notes;
 }
+/** T-11-353 능력치 카드의 "성장이 느린 이유" 한 줄(표시만, RNG·상태를 건드리지 않는다).
+ * 성장 공식(growthFactor·attrGain)에서 가장 크게 깎는 배율 하나를 고른다: 잠재력 근처·나이·지금 훈련의 치우침.
+ * 크게 깎는 배율이 없으면 개인 코치(고르게 조금씩)일 때만 그 이유를, 아니면 빈 문자열. 숨은 잠재력 값은 드러내지 않는다. */
+export function growthSlowNote(s: GameState): string {
+  const age = ageGrowth(s);
+  const k = ATTR_KEYS.includes(s.training as AttrKey) ? (s.training as AttrKey) : null;
+  const cands: { f: number; text: () => string }[] = [
+    { f: potGrowth(s), text: () => L.helpNearPot({ pct: pct(1 - potGrowth(s)) }) },
+    { f: age.f / age.peak, text: () => L.helpAge({ pct: pct(1 - age.f / age.peak) }) },
+  ];
+  if (k) {
+    const bf = balanceFactor(s, k);
+    cands.push({ f: bf, text: () => L.helpLopsided({ pct: pct(1 - bf) }) });
+  }
+  const worst = cands.filter((c) => c.f <= 0.5).sort((a, b) => a.f - b.f)[0];
+  if (worst) return worst.text();
+  return s.training === 'coach' ? L.slowSpread : '';
+}
 /** Selected attribute's existing positional OVR weight; presentation only. */
 export function trainingOvrNote(s: GameState, t: TrainingDef): string {
   if (!t.attr) return '';

@@ -22,6 +22,7 @@ import { HomeClubValue } from './HomeClubValue';
 import { HomeFirsts } from './HomeFirsts';
 import { HomeGift } from './HomeGift';
 import { HomeAttendance } from './HomeAttendance';
+import { FirstGuide } from './FirstGuide';
 import { HomeLive } from './HomeLive';
 import { HomeNews } from './HomeNews';
 import { HomeTicker } from './HomeTicker';
@@ -175,6 +176,8 @@ export default function Home() {
         {/* T-11-275 구단주 선물(로그인한 구단주가 한 번 받으면 사라진다). 컵 배너 바로 아래. */}
         <HomeGift />
         <HomeAttendance />
+        {/* T-11-355 처음 안내 카드(기기마다 닫을 때까지). */}
+        <FirstGuide />
         <HomeLive />
         {/* T-11-080f 구단주 화면을 거치지 않고 이적시장으로 바로 간다(뒤로 가기는 홈으로). 홈에서는 서버를 부르지 않는다. */}
         <Tile

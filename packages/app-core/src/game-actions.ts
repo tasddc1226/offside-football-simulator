@@ -72,7 +72,7 @@ import type {
 } from '@offside/game/types';
 import { markDexSeen } from './dex.js';
 import { pushEvLog, seasonLabel } from './career.js';
-import { scoutHint, seasonTrend } from './scoutHint.js';
+import { scoutHint, seasonTrend, seasonTrendLine } from './scoutHint.js';
 import { recordPhaseOvr, takeSeasonGrowth } from './growth.js';
 import { publicNameOf } from './namePublic.js';
 import { fmtValue, seasonLabelOf } from './format.js';
@@ -531,6 +531,7 @@ export function createGameActions(host: GameHost) {
         promo: promo && { club: tn(promo.club), down: tn(promo.down) },
         notes,
         scoutHint: scoutHint(s, rec.year),
+        seasonTrend: seasonTrendLine(s, rec.year),
         fans,
         age: s.age,
       },

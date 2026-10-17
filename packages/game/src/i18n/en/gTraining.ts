@@ -42,6 +42,8 @@ export const gTraining: Translation<GTrainingMsgs> = {
   helpOvrSeparate: 'OVR contribution differs from usefulness in matches.',
   helpWeightLow: 'It barely counts toward OVR in your current position.',
   helpWeight: (p) => `${p.attr} makes up ${p.pct}% of OVR in your current position.`,
+  slowSpread:
+    'A personal coach raises many attributes a little at a time. To raise one attribute faster, pick its own training.',
   coachBroke: 'You could not afford a personal coach and trained on your own instead.',
   investBroke: (p) => `You could not afford the “${p.label}” investment, so it was dropped.`,
   investNone: 'No investment',

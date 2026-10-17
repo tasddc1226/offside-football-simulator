@@ -11,7 +11,9 @@
   import { setSheetSkin, skin } from './skin.svelte.js';
   import SiteFooter from './SiteFooter.svelte';
   import { showInstallGuide } from './install.js';
-  import { goFairness } from './nav.js';
+  import { goFairness, goTypeDex } from './nav.js';
+  import ItemsHint from './ItemsHint.svelte';
+  import { firstGuideText as FG } from '@offside/app-core/i18n/ko/firstGuide';
   import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
   import ClubCustomSettings from './ClubCustomSettings.svelte';
   import BackupSettings from './BackupSettings.svelte';
@@ -35,6 +37,8 @@
     <div class="eyebrow">Settings</div>
     <h1>{L.title}</h1>
   </header>
+  <!-- T-11-355 상품 위치 안내(기기마다 닫을 때까지) -->
+  <ItemsHint />
 
   <section class="card settings-card">
     <div class="settings-row">
@@ -141,6 +145,7 @@
       <a href="/guide/">{L.guide} <span aria-hidden="true">›</span></a>
       <a href="/faq/">{L.faq} <span aria-hidden="true">›</span></a>
       <button data-act="fairness" onclick={goFairness}>{L.fairness} <span aria-hidden="true">›</span></button>
+      <button data-act="type-dex" onclick={goTypeDex}>{FG.typeDex} <span aria-hidden="true">›</span></button>
     </nav>
     <!-- T-11-321 서버 상태(펼칠 때만 불러온다) -->
     <ServerStatus />

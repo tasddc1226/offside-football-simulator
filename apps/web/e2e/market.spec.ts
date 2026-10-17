@@ -33,6 +33,7 @@ const card = {
   height: 183,
   weight: 76,
   foot: '왼발',
+  type: 'speed',
 };
 const listing = { id: LISTING, price: 120_000, createdAt: '2026-10-04T00:00:00.000Z', card };
 
@@ -189,6 +190,8 @@ test('구단주 화면에서 이적시장을 열고 선수를 영입한다(화�
   await expect(page.locator('[data-market-funds]')).toContainText('20억');
   await expect(page.locator(`[data-listing="${LISTING}"]`)).toContainText('시장 골잡이');
   await expect(page.locator(`[data-listing="${LISTING}"]`)).toContainText('기준가 +20%');
+  // T-11-356 매물 줄에 선수 유형을 띠로 보인다(목록 응답에 실린 값 — 카드마다 따로 묻지 않는다).
+  await expect(page.locator(`[data-listing="${LISTING}"] .mk-style`)).toHaveText('스피드스터');
   // 시장 지수 — 마지막 거래일 평균과 그 전 거래일과의 차이(오름은 빨강).
   await expect(page.locator('[data-market-index]')).toContainText('103%');
   await expect(page.locator('[data-market-index]')).toContainText('▲ 3%p');

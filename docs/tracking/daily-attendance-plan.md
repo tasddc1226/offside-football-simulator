@@ -209,7 +209,7 @@ owner_attendance        (profile_id PK, stamps, board, streak, best_streak, last
 ## 12. 1단계 구현 메모
 
 - API: `GET /v1/attendance`, `POST /v1/attendance/check-in`(`requireOwner` · 멱등 키, 같은 날 다시 누르면 409 `ATTENDANCE_CHECKED`).
-- 테이블: `owner_attendance`(요약, 마지막 출석일 비교로 바꾼 batch만 지급), `owner_attendance_days`(출석한 날). 마이그레이션 0108.
+- 테이블: `owner_attendance`(요약, 마지막 출석일 비교로 바꾼 batch만 지급), `owner_attendance_days`(출석한 날). 마이그레이션 0109.
 - 화면: 웹 `HomeAttendance.svelte`, 앱 `screens/home/HomeAttendance.tsx`(홈 선물 아래 한 줄 입구 + 출석 창). 조회는 세션이 있고
   비로그인으로 확인되지 않은 기기만, 5분 메모. 창을 띄우는 날은 `attendance-view.ts`의 `attendancePopupDue`.
 - 로그인 버튼은 `{ home: true }`로 돌아올 곳을 남겨 로그인 뒤 홈으로 온다(웹 OAuth 복귀 때 구단주 표시를 바로 켠다).

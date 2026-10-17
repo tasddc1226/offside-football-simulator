@@ -10,7 +10,9 @@ import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
 import { saveKey } from '@offside/game/storage';
 import { buzz } from '../../game/host';
 import { SiteFooter } from '../../components/SiteFooter';
-import { goFairness } from '../../game/nav';
+import { goFairness, goTypeDex } from '../../game/nav';
+import { ItemsHint } from '../../components/ItemsHint';
+import { firstGuideText as FG } from '@offside/app-core/i18n/ko/firstGuide';
 import { openWeb } from '../../platform/openWeb';
 import { appBuildInfo } from '../../platform/updates';
 import { prefs } from '../../store';
@@ -138,6 +140,8 @@ export default function Settings() {
           {L.title}
         </Txt>
       </View>
+      {/* T-11-355 상품 위치 안내(기기마다 닫을 때까지) */}
+      <ItemsHint />
 
       <SettingsCard>
         <SettingsRow>
@@ -226,6 +230,7 @@ export default function Settings() {
             { text: L.guide, path: '/guide/' },
             { text: L.faq, path: '/faq/' },
             { text: L.fairness, id: 'fairness', onPress: goFairness },
+            { text: FG.typeDex, id: 'type-dex', onPress: goTypeDex },
           ]}
         />
         {/* T-11-321 서버 상태(펼칠 때만 불러온다) */}

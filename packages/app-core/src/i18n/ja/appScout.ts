@@ -64,4 +64,11 @@ const POOLS: Record<string, readonly string[]> = {
 
 export const appScout: Translation<AppScoutMsgs> = {
   hint: (p) => POOLS[p.pool]![p.i]!,
+  trendUp: (p) => `評価点 ${p.prev} → ${p.now}、昨シーズンより良くなりました。`,
+  trendSteady: (p) => `評価点 ${p.prev} → ${p.now}、昨シーズンとほぼ同じです。`,
+  trendDown: (p) => `評価点 ${p.prev} → ${p.now}、昨シーズンより悪くなりました。`,
+  trendDownApps: (p) => `出場 ${p.prev}試合 → ${p.now}試合、昨シーズンより出場が減りました。`,
+  ageYoung: 'まだ大きく伸びる年齢です。',
+  agePrime: '全盛期の年齢です。',
+  ageVet: 'これからは体のケアが大切な年齢です。',
 };

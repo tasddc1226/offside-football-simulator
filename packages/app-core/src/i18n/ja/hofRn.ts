@@ -44,4 +44,8 @@ export const hofRn: Translation<HofRnMsgs> = {
   wallOpen: '開く',
   wallClose: '閉じる',
   wallLabel: (p) => `名誉の壁 ${p.name}、${p.club} ${p.number}番、${p.day}`,
+  freeTitle: (p) => `残っている番号 ${p.n}個`,
+  freeLead: 'このクラブでまだ永久欠番になっていない番号です。永久欠番はクラブごとに別々です。',
+  freeNone: 'このクラブの番号はすべて永久欠番です。',
+  freeLabel: (p) => `このクラブでまだ永久欠番になっていない番号 ${p.n}個`,
 };

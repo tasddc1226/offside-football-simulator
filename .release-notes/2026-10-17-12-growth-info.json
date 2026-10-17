@@ -1,0 +1,26 @@
+{
+  "id": "t-11-353-growth-info",
+  "title": "능력치마다 OVR 반영 비율을 다시 보여 줘요",
+  "items": [
+    "선수 탭 능력치 카드에 항목·세부 능력치별 OVR 반영 %가 보여요",
+    "성장이 느릴 때는 그 이유를 한 줄로 알려 줘요",
+    "시즌 결산에 지난 시즌과 견준 평점 흐름과 나이 이야기가 붙어요"
+  ],
+  "en": {
+    "title": "OVR share is back for each attribute",
+    "items": [
+      "The Attributes card on the Player tab shows how much each attribute counts toward OVR.",
+      "When growth is slow, one line tells you why.",
+      "The season summary now compares your rating with last season and mentions your age."
+    ]
+  },
+  "ja": {
+    "title": "能力値ごとのOVR反映率をまた表示します",
+    "items": [
+      "選手タブの能力値カードに、項目・詳細能力値ごとのOVR反映率が表示されます。",
+      "成長が遅いときは、その理由を一行でお知らせします。",
+      "シーズン総括に、昨シーズンと比べた評価点の流れと年齢のひと言が付きます。"
+    ]
+  },
+  "availability": "web-app"
+}

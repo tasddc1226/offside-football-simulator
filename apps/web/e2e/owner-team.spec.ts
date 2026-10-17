@@ -1688,3 +1688,117 @@ test('T-11-323 감독 칸에 감독이 있으면 줄 힘에 감독 보정을 더
   await expect(lines.locator('[data-coach-line="mid"]')).toHaveCount(0);
   await expectNoA11yViolations(page);
 });
+
+// T-11-358 남의 팀 프로필의 경기 통계 — 버튼을 누를 때만 받고, 닫았다 다시 열거나 프로필을 다시 들어와도 다시 묻지 않는다.
+test('T-11-358 팀 프로필에서 경기 통계를 열면 흐름 요약과 경기 종류별 전적을 보이고 한 번만 받는다', async ({
+  page,
+}) => {
+  await stubOwner(page, true);
+  await page.route(`${API}/v1/teams?*`, (route) =>
+    route.fulfill(
+      ok({
+        season: 0,
+        seasons: SEASONS,
+        sort: 'rating',
+        page: 1,
+        total: 1,
+        items: [
+          {
+            rank: 1,
+            teamId: RIVAL,
+            name: '라이벌 FC',
+            manager: '라이벌 감독',
+            formation: '4-4-2',
+            ovr: 70,
+            rating: 1100,
+            record: { w: 2, d: 0, l: 1 },
+            likes: 0,
+            createdAt: '2026-09-29T00:00:00.000Z',
+          },
+        ],
+      }),
+    ),
+  );
+  let statsAsked = 0;
+  await page.route(`${API}/v1/teams/${RIVAL}**`, (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/views')) return route.fulfill({ status: 204, body: '' });
+    if (path.endsWith('/comments')) return route.fulfill(ok({ comments: [], blocks: [] }));
+    if (path.endsWith('/stats')) {
+      statsAsked++;
+      const zero = { w: 0, d: 0, l: 0, gf: 0, ga: 0 };
+      return route.fulfill(
+        ok({
+          season: 0,
+          matches: 3,
+          capped: false,
+          total: { w: 2, d: 0, l: 1, gf: 7, ga: 2 },
+          players: [{ careerId: null, name: '유스 선수', goals: 7, assists: 0 }],
+          days: [{ day: '2026-09-29', w: 2, d: 0, l: 1, gf: 7, ga: 2 }],
+          opponents: [],
+          summary: {
+            form: ['w', 'w', 'l'],
+            streak: { kind: 'w', n: 2 },
+            bestWinStreak: 2,
+            home: { w: 2, d: 0, l: 0, gf: 6, ga: 0 },
+            away: { w: 0, d: 0, l: 1, gf: 1, ga: 2 },
+            biggestWin: { opponent: '약체 FC', gf: 5, ga: 0, at: '2026-09-29T03:00:00.000Z' },
+            biggestLoss: { opponent: '강호 FC', gf: 1, ga: 2, at: '2026-09-28T03:00:00.000Z' },
+            friendly: { w: 1, d: 1, l: 0, gf: 3, ga: 2 },
+            cup: zero,
+          },
+        }),
+      );
+    }
+    return route.fulfill(
+      ok({
+        team: {
+          ...teamFrom({ name: '라이벌 FC', formation: '4-4-2', slots: Array(11).fill(null) }),
+          id: RIVAL,
+          season: 0,
+          seasonName: '프리시즌',
+          rank: 1,
+          manager: '라이벌 감독',
+          rating: 1100,
+          record: { w: 2, d: 0, l: 1 },
+          goals: { for: 7, against: 2 },
+          likes: 0,
+          views: 1,
+          badges: [],
+        },
+        liked: false,
+        mine: false,
+        friend: null,
+      }),
+    );
+  });
+
+  await page.goto('/');
+  await page.locator('[data-act="hof"]').click();
+  await page.locator('[data-hof-tab="teams"]').click();
+  const list = page.locator('[data-team-ranking]');
+  await list.locator(`[data-rank-team="${RIVAL}"]`).click();
+  await expect(page.locator(`[data-team-profile="${RIVAL}"]`)).toContainText('라이벌 FC');
+  // 프로필만 열었을 때는 통계를 묻지 않는다.
+  expect(statsAsked).toBe(0);
+  await page.locator('[data-act="team-profile-stats"]').click();
+  const stats = page.locator('[data-team-stats]');
+  await expect(stats.locator('[data-stats-total]')).toHaveText('2승 0무 1패');
+  await expect(stats.locator('[data-stats-form="wwl"]')).toBeVisible();
+  await expect(stats.locator('[data-stats-flow]')).toContainText('2연승 중');
+  await expect(stats.locator('[data-stats-big="win"]')).toContainText('5 : 0 · 약체 FC · 9/29');
+  await expect(stats.locator('[data-stats-kind="friendly"]')).toContainText('1승 1무 0패');
+  await expect(stats.locator('[data-stats-kind="cup"]')).toContainText('기록 없음');
+  await expectNoA11yViolations(page);
+  // 닫고 다시 열기 · 랭킹으로 나갔다 다시 들어오기 — 메모에서 꺼낸다.
+  await page.locator('[data-act="team-stats-back"]').click();
+  await expect(stats).toHaveCount(0);
+  await page.locator('[data-act="team-profile-stats"]').click();
+  await expect(stats.locator('[data-stats-total]')).toBeVisible();
+  await page.goBack();
+  await expect(list).toBeVisible();
+  await list.locator(`[data-rank-team="${RIVAL}"]`).click();
+  await page.locator('[data-act="team-profile-stats"]').click();
+  await expect(stats.locator('[data-stats-total]')).toBeVisible();
+  expect(statsAsked).toBe(1);
+});

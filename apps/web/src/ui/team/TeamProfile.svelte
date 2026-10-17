@@ -6,10 +6,12 @@
   // T-11-335 감독 칸에 앉힌 감독(이름 · 등급 · 포메이션 효과)과 줄 힘의 감독 보정을 내 팀 화면처럼 보인다.
   import { onMount } from 'svelte';
   import {
+    fetchPublicTeamStats,
     fetchTeamProfile,
     likeTeam,
     viewTeam,
     type TeamProfile,
+    type TeamStatsResponse,
   } from '@offside/app-core/api/team';
   import { requestFriend, type FriendState } from '@offside/app-core/api/friends';
   import { teamSeasonClosed } from '@offside/contracts/service-seasons';
@@ -34,6 +36,8 @@
   import { friendRequestText } from '@offside/app-core/friendText';
   import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
   import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
+  import { teamMatchText as LM } from '@offside/app-core/i18n/ko/teamMatch';
+  import type { Component } from 'svelte';
 
   let { id }: { id: string } = $props();
 
@@ -102,6 +106,32 @@
   }
   const friendButton = (s: FriendState): string =>
     ({ none: LF.reqNone, sent: LF.reqSent, received: LF.reqReceived, accepted: LF.reqAccepted })[s];
+
+  // T-11-358 경기 통계 — '경기 통계 보기'를 누를 때만 화면 조각(지연 청크)과 통계를 불러온다.
+  let statsOpen = $state(false);
+  let statsStatus = $state<LoadStatus>('loading');
+  let stats = $state<TeamStatsResponse | null>(null);
+  let StatsView = $state<Component<any> | null>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  async function loadStats() {
+    statsStatus = 'loading';
+    const [view, r] = await Promise.all([
+      StatsView ? null : import('./TeamStats.svelte').catch(() => null),
+      fetchPublicTeamStats(id),
+    ]);
+    if (view) StatsView = view.default;
+    if (!r.ok || !StatsView) {
+      statsStatus = 'error';
+      return;
+    }
+    stats = r.data;
+    statsStatus = 'ready';
+  }
+  function openStats() {
+    statsOpen = true;
+    if (!stats) void loadStats();
+  }
+  const statsName = (_id: string | null, fallback: string) =>
+    (mine && _id && localNames.get(_id)) || fallback;
 
   // T-11-165 선발 선수 카드 — 그라운드 카드를 누르면 내 팀처럼 확대 카드가 열린다(배포 전 응답엔 없다).
   const players = $derived(new Map(team?.players?.map((p) => [p.careerId, p]) ?? []));
@@ -186,6 +216,11 @@
       {/if}
     </section>
     {#if team.cupHonors?.length}<CupHonors honors={team.cupHonors} />{/if}
+    {#if statsOpen && StatsView}
+      <StatsView {stats} status={statsStatus} seasonName={seasonLabel(team.season, team.seasonName)} focus={null} name={statsName} onreload={() => void loadStats()} onback={() => (statsOpen = false)} backText={LM.statsTeamClose} embedded />
+    {:else}
+      <button class="btn" onclick={openStats} disabled={statsOpen && statsStatus === 'loading'} data-act="team-profile-stats">{LM.statsTeamOpen}</button>
+    {/if}
     <!-- T-11-290 스쿼드 댓글 — 프로필을 그린 뒤 따로 불러온다(보는 사람마다 달라 프로필 응답에 섞지 않는다). -->
     <TeamComments teamId={team.id} />
     {#if !mine}
