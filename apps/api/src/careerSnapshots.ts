@@ -5,6 +5,7 @@
  * D1 백업(d1/…)에는 키만 남으므로 이 객체는 지우지 않는다. 계정 삭제 때만 함께 지운다.
  */
 import type { Bindings } from './env.js';
+import { logErrorText } from './logError.js';
 
 export const SNAPSHOT_OFFLOAD_STATE_KEY = 'cron:snapshot-offload:state';
 /** 5분마다 이만큼 옮긴다(12.2만 명이면 이틀 남짓). R2 쓰기는 한 번에 OFFLOAD_PARALLEL개씩. */
@@ -33,7 +34,7 @@ export async function putSnapshot(
     return key;
   } catch (e) {
     console.error(
-      JSON.stringify({ level: 'error', job: 'snapshot-put', error: String(e).slice(0, 300) }),
+      JSON.stringify({ level: 'error', job: 'snapshot-put', error: logErrorText(e, 300) }),
     );
     return null;
   }
