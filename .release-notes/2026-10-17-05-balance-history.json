@@ -1,0 +1,26 @@
+{
+  "id": "t-11-333-balance-history",
+  "title": "밸런스 변경 이력에 코드 업데이트 패치도 보여요",
+  "items": [
+    "확률 도감 → 확률과 공정성의 밸런스 변경 이력에 코드 업데이트로 바꾼 산식·규칙 패치가 함께 나와요",
+    "시즌 1에 나간 패치 9건(미드필더 레전드 점수, 강화 하루 제한 해제, 프리미엄 스카우트, 성장 하한, 스카우트 천장 등)을 적용 날짜와 함께 채웠어요",
+    "패치마다 그때 올린 업데이트 소식으로 바로 갈 수 있어요"
+  ],
+  "en": {
+    "title": "Balance change history now includes code update patches",
+    "items": [
+      "The balance change history under Odds guide → Odds and fairness now lists formula and rule patches shipped as code updates.",
+      "The 9 season 1 patches (midfielder legend score, no daily boost limit, premium scout, growth floor, scout pity and more) are filled in with their dates.",
+      "Each patch links to the release note posted at the time."
+    ]
+  },
+  "ja": {
+    "title": "バランス変更履歴にコード更新パッチも表示されます",
+    "items": [
+      "図鑑 → 確率と公正性のバランス変更履歴に、コード更新で変えた計算式・ルールのパッチも表示されます。",
+      "シーズン1に配信したパッチ9件(MFレジェンドスコア、強化の1日制限解除、プレミアムスカウト、成長下限、スカウトの天井など)を適用日とともに載せました。",
+      "パッチごとに当時のリリースノートへ移動できます。"
+    ]
+  },
+  "availability": "web-app"
+}

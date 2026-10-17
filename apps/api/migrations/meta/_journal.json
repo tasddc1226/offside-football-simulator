@@ -740,8 +740,15 @@
     {
       "idx": 105,
       "version": "6",
-      "when": 1792228134007,
-      "tag": "0105_client_errors",
+      "when": 1792228550387,
+      "tag": "0105_balance_patches",
+      "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "6",
+      "when": 1792230378411,
+      "tag": "0106_client_errors",
       "breakpoints": true
     }
   ]

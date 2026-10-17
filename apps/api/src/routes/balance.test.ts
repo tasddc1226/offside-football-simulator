@@ -196,9 +196,32 @@ describe('밸런스 설정 /v1/balance · /v1/admin/balance (T-10-016)', () => {
     const edge = installFakeEdgeCache();
     try {
       const admin = await makeAdmin();
-      type History = { versions: { version: number; active: boolean; note?: string }[] };
+      type History = {
+        versions: { version: number; active: boolean; note?: string }[];
+        patches: { id: string; appliedAt: string; postId: string | null; changes: unknown[] }[];
+      };
       const history = async () => data<History>(await call('GET', '/v1/balance/history'));
-      expect(await history()).toEqual({ versions: [] });
+      const empty = await history();
+      expect(empty.versions).toEqual([]);
+      // T-11-333 시즌 1 코드 배포 패치 백필(0105) — 최근 적용 순, 키를 바꾼 패치는 changes를 싣는다.
+      expect(empty.patches.map((p) => p.id)).toEqual([
+        't-11-244-scout-pity',
+        't-11-236-fans-targetman-winger',
+        't-11-229-growth-targetman',
+        't-11-224-lounge-fixes',
+        't-11-197-team-slot-synergy',
+        't-11-196-premium-scout',
+        't-11-173-club-boost-no-cap',
+        't-11-172-boost-no-day-cap',
+        't-11-168-midfield-legend',
+      ]);
+      expect(empty.patches[2]).toMatchObject({
+        postId: 'pst_release_20261013',
+        changes: [
+          { key: 'potGrowthFloor', from: 0.04, to: 0.15 },
+          { key: 'targetManRole', from: 0, to: 1 },
+        ],
+      });
       await flushEdge();
       const v1 = await draft(admin.cookie, { potMean: 76 }, '내부 메모');
       await draft(admin.cookie, { potMean: 77 });

@@ -1,8 +1,14 @@
-import { sanitizeBalance, type BalanceHistory, type BalanceVersion } from '@offside/contracts';
+import {
+  BalancePatchSchema,
+  sanitizeBalance,
+  type BalanceHistory,
+  type BalancePatch,
+  type BalanceVersion,
+} from '@offside/contracts';
 import { and, desc, eq, isNotNull } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
-import { auditLog, balanceVersions } from '../schema.js';
+import { auditLog, balancePatches, balanceVersions } from '../schema.js';
 import { runBatch } from './batch.js';
 
 // T-10-016 밸런스 설정 버전. 활성은 늘 하나 — 다른 버전을 활성화하면 이전 활성은 archived가 된다.
@@ -37,19 +43,23 @@ export async function getBalanceVersion(
   return row && toVersion(row);
 }
 
-/** T-11-141 공개 이력: 한 번이라도 적용된 버전(적용 시각이 있는 것), 최근 적용 순. 운영 메모는 읽지 않는다. */
+/** T-11-141 공개 이력: 한 번이라도 적용된 버전(적용 시각이 있는 것), 최근 적용 순. 운영 메모는 읽지 않는다.
+ * T-11-333 코드 배포 패치(balance_patches)도 같은 응답에 최근 적용 순으로 싣는다 — 두 조회를 한 batch로 보낸다. */
 export async function listAppliedBalanceVersions(db: Db, limit: number): Promise<BalanceHistory> {
-  const rows = await db
-    .select({
-      version: balanceVersions.version,
-      status: balanceVersions.status,
-      valuesJson: balanceVersions.valuesJson,
-      activatedAt: balanceVersions.activatedAt,
-    })
-    .from(balanceVersions)
-    .where(isNotNull(balanceVersions.activatedAt))
-    .orderBy(desc(balanceVersions.activatedAt))
-    .limit(limit);
+  const [rows, patches] = await db.batch([
+    db
+      .select({
+        version: balanceVersions.version,
+        status: balanceVersions.status,
+        valuesJson: balanceVersions.valuesJson,
+        activatedAt: balanceVersions.activatedAt,
+      })
+      .from(balanceVersions)
+      .where(isNotNull(balanceVersions.activatedAt))
+      .orderBy(desc(balanceVersions.activatedAt))
+      .limit(limit),
+    db.select().from(balancePatches).orderBy(desc(balancePatches.appliedAt)).limit(limit),
+  ]);
   return {
     versions: rows.map((r) => ({
       version: r.version,
@@ -57,7 +67,21 @@ export async function listAppliedBalanceVersions(db: Db, limit: number): Promise
       activatedAt: r.activatedAt!,
       active: r.status === 'active',
     })),
+    patches: patches.flatMap(balancePatchOf),
   };
+}
+
+/** 저장 뒤 스펙에서 빠진 키가 있을 수 있어 스키마로 걸러 읽는다(안 맞는 행은 이력에서 뺀다). */
+export function balancePatchOf(r: typeof balancePatches.$inferSelect): BalancePatch[] {
+  const parsed = BalancePatchSchema.safeParse({
+    id: r.id,
+    appliedAt: r.appliedAt,
+    title: JSON.parse(r.titleJson),
+    items: JSON.parse(r.itemsJson),
+    changes: r.changesJson ? JSON.parse(r.changesJson) : [],
+    postId: r.postId,
+  });
+  return parsed.success ? [parsed.data] : [];
 }
 
 /** 최신 버전부터. */

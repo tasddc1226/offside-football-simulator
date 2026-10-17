@@ -12,6 +12,7 @@ export const EXPECTED_TABLES = Object.freeze([
   'app_meta',
   'audit_log',
   'auth_attempts',
+  'balance_patches',
   'balance_versions',
   'board_blocks',
   'board_comment_reports',

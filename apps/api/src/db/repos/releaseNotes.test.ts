@@ -56,7 +56,12 @@ describe('릴리즈 노트 게시 트랜잭션', () => {
   it('오늘 글의 본문·작성자·고정·버전·조회수·좋아요를 보존하고 감사 인사 앞에 이어 쓴다', async () => {
     await daily();
     const r = await publishReleaseNotes(ctx.env.DB, input(), now);
-    expect(r).toEqual({ postId: 'manual', updated: true, publishedIds: ['test-records'] });
+    expect(r).toEqual({
+      postId: 'manual',
+      updated: true,
+      publishedIds: ['test-records'],
+      balancePatchIds: [],
+    });
     expect(await post()).toMatchObject({
       body: '직접 쓴 내용\n\n## 7. 응원하기\n- 기존 안내\n\n## 8. 기록실 개선\n- 선수 국적을 모두 표시해요\n감사합니다\n',
       pinned: 1,
