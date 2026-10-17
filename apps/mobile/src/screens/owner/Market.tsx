@@ -19,6 +19,7 @@ import {
   type MarketChartPoint,
   type MarketListing,
   type MarketSale,
+  type MarketCard,
   type MarketMeResponse,
   type MarketSort,
   isStaleListing,
@@ -36,6 +37,7 @@ import {
   marketTabs,
   buyBlock,
   cardMeta,
+  cardStyle,
   fundsText,
   lineupOf,
   marketEmptyText,
@@ -486,6 +488,7 @@ function LiveStrip({
                   {marketName(s.card, local)}
                 </Txt>
                 <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                  <StyleTag card={s.card} />
                   {L.liveBase({
                     ago: agoKo(Date.now() - Date.parse(s.soldAt)),
                     value: fmtValue(s.card.cardValue),
@@ -505,6 +508,12 @@ function LiveStrip({
 
 const small = { fontSize: rem(0.875) } as const;
 const tiny = { fontSize: rem(0.75) } as const;
+
+/** T-11-356 선수 유형(스피드스터 등) — 줄 아래 한 줄 앞에 굵게(카드 상세의 유형 띠와 같은 이름). 없으면 그리지 않는다. */
+function StyleTag({ card }: { card: MarketCard }) {
+  const style = cardStyle(card);
+  return style ? <Txt bold style={tiny}>{`${style} · `}</Txt> : null;
+}
 
 // T-11-158 '구단 자금 내역 보기'로 나갔다가 뒤로 돌아오면 '내 거래' 탭을 다시 연다(한 번만 읽는다).
 let backToTrades = false;
@@ -1097,6 +1106,7 @@ export default function Market() {
                                 ) : null}
                               </Txt>
                               <Txt tone="muted" style={tiny}>
+                                <StyleTag card={l.card} />
                                 {cardMeta(l.card)}
                               </Txt>
                             </View>
@@ -1350,6 +1360,7 @@ export default function Market() {
                               {marketName(l.card, local)}
                             </Txt>
                             <Txt tone="muted" style={tiny}>
+                              <StyleTag card={l.card} />
                               {L.listedAgo({
                                 price: fmtValue(l.price),
                                 ago: agoKo(Date.now() - Date.parse(l.createdAt)),

@@ -13,6 +13,8 @@ import { en } from './i18n/en/index.js';
 import { ja } from './i18n/ja/index.js';
 import { setLocale } from './i18n/core.js';
 import {
+  cardMeta,
+  cardStyle,
   lockToggleable,
   priceAtPct,
   priceDiff,
@@ -57,6 +59,18 @@ describe('cardBody (T-11-211)', () => {
     expect(cardBody({ foot: '양발' })).toBe('양발');
     expect(cardBody({ height: 183, weight: 76 })).toBe('183cm · 76kg');
     expect(cardBody({})).toBeNull();
+  });
+});
+
+describe('이적시장 줄 유형 (T-11-356)', () => {
+  it('유형은 따로 돌려주고 아래 한 줄에는 레전드 점수·이적 횟수만', () => {
+    expect(cardStyle({ pos: 'FW', type: 'speed' })).toBe('스피드스터');
+    expect(cardMeta({ legendScore: 1234, transfers: 2 })).toBe('레전드 1,234 · 이적 2회');
+  });
+  it('유형이 없거나 모르는 id면 null', () => {
+    expect(cardStyle({ pos: 'FW', type: null })).toBeNull();
+    expect(cardStyle({ pos: 'FW' })).toBeNull();
+    expect(cardStyle({ pos: 'GK', type: 'speed' })).toBeNull();
   });
 });
 

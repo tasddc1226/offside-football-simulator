@@ -419,6 +419,10 @@ test('기록실 영구결번 탭: 리그별 구단·최신순으로 보고, 누�
     /10\s*옛레전드.*내 선수/s,
   ]);
   expect(asked.at(-1)).toBe('/v1/retired-numbers?season=0&club=pl-0');
+  // T-11-356 남은 번호 — 받은 결번(4·10번)을 뺀 1~99. 따로 묻지 않는다.
+  await expect(wall.locator('[data-rn-free]')).toHaveAttribute('data-rn-free', '97');
+  await expect(wall.locator('.rn-free-list li')).toHaveCount(97);
+  await expect(wall.locator('.rn-free-list li').nth(3)).toHaveText('5');
   await expect(wall.locator('[data-rn-club-wall]')).toBeVisible();
   await expect(wall.locator('[data-rn-wall-of-honor]')).toHaveCount(2);
   await wall.locator('[data-rn-pos="DF"]').click();
