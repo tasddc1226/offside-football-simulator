@@ -57,7 +57,7 @@ export const settings: Translation<SettingsMsgs> = {
     'If you agree, OFFSIDE records campaign visits, game starts and app links on its server. Signing in with the same Google or Apple account connects visits within 30 days to verified app purchases. Sign-in is optional. Visit records older than 90 days are deleted in daily batches. Account details are not sent to ad companies or Google Analytics. Withdrawing deletes the connection records.',
   acquisitionAgree: 'Agree to connect visits and purchases',
   acquisitionRetry:
-    'The server could not save your choice. Please try again. This device stops sending new records while withdrawal is pending.',
+    'The server could not save your choice. Please try again. This device stops sending new records while withdrawal is pending. Retry withdrawal with this Settings button in the original account. If you switched accounts, sign back into the original one first.',
   consentMore: 'Learn more',
   consentNow: 'Current:',
   consentGranted: 'Agreed',

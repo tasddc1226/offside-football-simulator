@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CONSENT_KEY } from '@offside/app-core/analytics-model';
-const api = vi.hoisted(() => ({ hint: false, getProfile: vi.fn() }));
+const api = vi.hoisted(() => ({ hint: false, getProfile: vi.fn(), status: vi.fn() }));
 vi.mock('@offside/app-core/api/client', () => ({
-  cachedGet: async () => ({ ok: false }),
+  cachedGet: (...args: unknown[]) => api.status(...args),
   invalidateApiCache: () => {},
   apiAuth: () => ({ credentials: 'include' }),
   apiBaseUrl: () => 'https://api.offside.invalid',
@@ -30,7 +30,8 @@ describe('first-party consent and delivery', () => {
       href: 'https://offside.invalid/?utm_source=meta&utm_medium=paid&utm_campaign=global_test&utm_content=jp_a&fbclid=PRIVATE',
     });
     api.hint = false;
-    api.getProfile.mockResolvedValue({ ok: true });
+    api.getProfile.mockResolvedValue({ ok: true, data: { id: 'profile-a' } });
+    api.status.mockResolvedValue({ ok: false });
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -82,6 +83,41 @@ describe('first-party consent and delivery', () => {
     await tick();
     expect(bodies).toHaveLength(n);
     expect(a.acquisitionGranted()).toBe(false);
+  });
+
+  it('persists withdrawal before a fresh offline lookup and retries the known original account after reload', async () => {
+    api.hint = true;
+    localStorage.setItem('offside_acquisition_profile_v1', 'profile-a');
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    let a = await import('./acquisition.js');
+    expect(await a.setAcquisitionConsent('denied')).toBe(false);
+    expect(localStorage.getItem('offside_acquisition_revoke_v1')).toBe('profile-a');
+    vi.resetModules();
+    const f = vi.fn(
+      async (_url: string, _init: RequestInit) => new Response(null, { status: 204 }),
+    );
+    vi.stubGlobal('fetch', f);
+    a = await import('./acquisition.js');
+    expect(await a.acquisitionStatus()).toBe('denied');
+    expect(JSON.parse(f.mock.calls[0]![1]!.body as string)).toMatchObject({
+      action: 'revoke',
+      profileId: 'profile-a',
+    });
+    expect(localStorage.getItem('offside_acquisition_revoke_v1')).toBeNull();
+  });
+  it('retains an unknown offline withdrawal without deleting a subsequently switched account', async () => {
+    api.hint = true;
+    let a = await import('./acquisition.js');
+    expect(await a.setAcquisitionConsent('denied')).toBe(false);
+    expect(localStorage.getItem('offside_acquisition_revoke_v1')).toBe('unresolved');
+    vi.resetModules();
+    const f = vi.fn();
+    vi.stubGlobal('fetch', f);
+    api.status.mockResolvedValue({ ok: true, data: { profileId: 'profile-b', granted: true } });
+    a = await import('./acquisition.js');
+    expect(await a.acquisitionStatus()).toBe('denied');
+    expect(f).not.toHaveBeenCalled();
+    expect(localStorage.getItem('offside_acquisition_revoke_v1')).toBe('unresolved');
   });
   it('replays an offline withdrawal even while analytics remains denied', async () => {
     localStorage.setItem(CONSENT_KEY, 'denied');

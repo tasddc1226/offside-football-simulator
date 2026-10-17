@@ -26,7 +26,7 @@ Apple의 캠페인 표시 privacy threshold와 첫 다운로드 24시간/최종 
 
 ## 거래 정본과 매출
 
-현재 범위의 정본은 서버 검증 후 `iap_purchases`에 들어간 **소모성 상품 거래**다. `(store, transaction_id)` PK와 같은 D1 batch에서 지급·유입 snapshot을 확정한다. 앱 응답 손실·충돌·복원 재전송은 기존 행을 바꾸거나 다시 지급하지 않는다. 신규 구매, 복원, 재시도 요청 횟수를 매출 건수로 세지 않는다. 대기·취소·검증 실패는 행을 만들지 않는다. Sandbox/test는 운영 집계에서 제외한다. 새 GA4 `purchase`/`in_app_purchase` 이벤트는 보내지 않는다.
+현재 범위의 정본은 서버 검증 후 `iap_purchases`(소모성), `iap_ad_free_purchases`(광고 제거)에 들어간 거래다. 소모성은 `(store, transaction_id)` PK와 같은 D1 batch에서 지급·유입 snapshot을 확정한다. 앱 응답 손실·충돌·복원 재전송은 기존 행을 바꾸거나 다시 지급하지 않는다. 신규 구매, 복원, 재시도 요청 횟수를 매출 건수로 세지 않는다. 대기·취소·검증 실패는 행을 만들지 않는다. Sandbox/test는 운영 집계에서 제외한다. 새 GA4 `purchase`/`in_app_purchase` 이벤트는 보내지 않는다.
 
 Apple 서명 JWS의 `purchaseDate`, `price`(milliunits), `currency`, `storefront`만 선택적으로 저장한다. 검증된 원문에 없거나 형식이 맞지 않으면 NULL이다. Google `products.get`의 검증된 purchaseTimeMillis만 저장하고 이 API에 없는 금액/통화는 NULL로 둔다. 표시가격·하드코딩 가격·아이템 qty·임의 환율·수수료로 매출을 만들지 않는다. 저장 금액은 검증 거래의 원시 가격 필드이며 정산금·세후수익을 뜻하지 않는다.
 
@@ -38,7 +38,7 @@ Apple 서명 JWS의 `purchaseDate`, `price`(milliunits), `currency`, `storefront
 
 두 상품 원장을 동일한 명시적 열의 UNION ALL로 투영해 계정별 최초 구매 순서를 한 번만 계산한다. 같은 서명 거래가 서로 다른 상품 원장으로 들어가려는 요청은 검증 상품 ID/type이 막는다. 익명 거래는 고유 결제자에 추정 합산하지 않고 unknown_account_transactions로 표시한다. 새 비소모성 데이터는 동의된 구매·복원만 수신하므로 전체 App Store 매출과 동일한 coverage를 주장하지 않는다. #649 미병합 구독도 포함하지 않는다.
 
-검증된 환불이 기록보다 먼저 오면 iap_refund_markers에 거래 키를 먼저 남기고, 나중에 수신한 광고 제거 거래가 이를 읽는다. 환불 알림 재전송은 같은 키 하나이며 가짜 구매 행을 만들지 않는다. 원장에 연결된 환불 거래 수·그 거래의 구매가격 합계만 보고한다. purchase_value_of_refunded_transactions_milliunits는 실제 현금 환불액이 아니며 부분 환불/수수료/순수익으로 해석하거나 차감하지 않는다.
+검증된 환불이 기록보다 먼저 오면 iap_refund_markers에 거래 키를 먼저 남기고, 나중에 수신한 두 상품 원장이 이를 읽는다. 소모성 거래는 환불 상태로 저장하고 아이템을 지급하지 않는다. 환불 알림 재전송은 같은 키 하나이며 가짜 구매 행을 만들지 않는다. 원장에 연결된 환불 거래 수·그 거래의 구매가격 합계만 보고한다. purchase_value_of_refunded_transactions_milliunits는 실제 현금 환불액이 아니며 부분 환불/수수료/순수익으로 해석하거나 차감하지 않는다.
 
 ## GA4/StoreKit 확인과 추가 승인
 
@@ -50,7 +50,7 @@ expo-iap 5.8.2는 StoreKit 2 경로이며 앱 코드에 Firebase `logTransaction
 
 관리자 전용 `GET /v1/admin/acquisition?start=<UTC ISO>&end=<UTC ISO>&model=first|last`, private/no-store. 반열린 구간 `[start,end)`, 최대 93일이다. 반환은 개인 식별자 없는 합계다. 세션은 서버 수신일, 구매는 검증 구매일(과거 원장만 receipt fallback, missing_purchase_time 표시), 환불은 처리일 기준이다. 구매 cohort와 세션 cohort가 다르므로 단순 나눗셈을 설치 전환율이라고 부르지 않는다.
 
-통화별 transactions·unique_purchasers·가격 검증된 unique_payers·신규 결제자·반복 거래·금액 합계·환불·가격 누락·0원·sandbox를 분리한다. 신규 결제자는 모든 운영 소모성 거래의 최초 행이며 검증 금액이 양수인 경우에만 센다. 과거 금액 미확인 거래가 먼저 있으면 신규로 추정하지 않으므로 보수적 하한이다. 미확인 가격 거래를 유료 결제자로 확정하지 않는다. `repeat_transactions`는 모든 운영 소모성 반복 거래이며 유료 확인 여부는 가격 coverage와 함께 해석한다. 통화끼리 합산하지 않는다. 직접 유입은 빈 campaign, 연결 없는 구매는 `unattributed`다.
+통화별 transactions·unique_purchasers·가격 검증된 unique_payers·신규 결제자·반복 거래·금액 합계·환불·가격 누락·0원·sandbox를 분리한다. 신규 결제자는 두 원장의 모든 운영 거래 중 계정별 최초 행이며 검증 금액이 양수인 경우에만 센다. 과거 금액 미확인 거래가 먼저 있으면 신규로 추정하지 않으므로 보수적 하한이다. 미확인 가격 거래를 유료 결제자로 확정하지 않는다. `repeat_transactions`는 두 원장의 모든 운영 반복 거래이며 유료 확인 여부는 가격 coverage와 함께 해석한다. 통화끼리 합산하지 않는다. 직접 유입은 빈 campaign, 연결 없는 구매는 `unattributed`다.
 
 Migration은 PR782의 0109를 피한 0110이며 journal index와 snapshot도 110/0110이다. 현재 main 14d35d31 기준 schema generate 추가 변경 없음이다. PR782 병합 후 snapshot 재생성 조건은 마지막 절을 따른다.
 
@@ -62,7 +62,7 @@ Drizzle 0.31.10이 coalesce 식 인덱스의 쉼표를 열 구분으로 잘못 �
 
 활성화 전: (1) 기존 공식 기록으로 현재 provider 일치 검증, (2) 웹 VITE_APPLE_PROVIDER_TOKEN과 worker APPLE_PROVIDER_TOKEN 같은 값 적용, (3) 웹/API 동시 acquisition 플래그, (4) 별도 연결 동의, (5) 모바일 설정 플래그와 사용자 분석 동의·서버 연결 동의, (6) 같은 runtime/새 바이너리의 실제 StoreKit·Safari 검증. 서버·빌드 플래그는 모두 기본 off/미설정이며 이번 작업에서 운영 값을 변경하지 않았다.
 
-실제 Sandbox 검증은 테스트 Apple/Google 계정 로그인, StoreKit 구매·보류·취소·복원·환불, GA4 테스트 앱 스트림 DebugView 접근, 필요한 개발 바이너리 실행이 필요하다. 이 계정 동작은 현재 승인되지 않았고 실행하지 않았다. 운영 계정/거래/광고 설정은 대상이 아니다. 원격 쓰기403도 해소 증거가 없어 push/PR 우회는 하지 않는다.
+실제 Sandbox 검증은 테스트 Apple/Google 계정 로그인, StoreKit 구매·보류·취소·복원·환불, GA4 테스트 앱 스트림 DebugView 접근, 필요한 개발 바이너리 실행이 필요하다. 이 계정 동작은 현재 승인되지 않았고 실행하지 않았다. 운영 계정/거래/광고 설정은 대상이 아니다. 이번 실행에서는 push/PR 쓰기를 시도하지 않았다. 인계의 과거 쓰기403은 정확한 실패 동작이 확인되지 않았으며 collaborator-permission 조회403만으로 쓰기 불가를 단정하지 않는다. 현재 gh auth status는 확인 실패, gh repository API는 네트워크 연결 실패여서 유효 인증/쓰기 권한을 판정하지 못했다. 다른 설치·자격증명으로 우회하지 않는다.
 
 회귀 검증 결과는 acquisition-iap-pr.md의 추가 구현과 최종 검증을 따른다. API 전체 병렬 실행은 Miniflare 런타임 오류 후 중단했으므로 전체 통과로 보지 않는다. 0110은 기능 off여도 환불 경로에서 필요하므로 코드 배포 전 적용이 필수다.
 
@@ -71,3 +71,7 @@ Drizzle 0.31.10이 coalesce 식 인덱스의 쉼표를 열 구분으로 잘못 �
 2026-10-17 읽기 확인: 최신 main은 14d35d31이다. PR782(head b999bdd8)는 열림/미병합이며 0109_owner_attendance, journal idx109, meta/0109_snapshot.json을 추가한다. PR772는 현재 closed/미병합으로 확인됐다. 기존 "여전히 열림" 기록보다 이 상태가 최신이다. 다른 PR은 수정하지 않았다.
 
 우리 migration을 0110_acquisition_iap.sql, journal idx110, meta/0110_snapshot.json으로 옮겼다. 현재 main 기준 drizzle generate 추가 변경 없음이며 번호·파일명은 PR782와 겹치지 않는다. 아직 PR782가 main에 없으므로 0110 snapshot은 현재 main 0108을 부모로 가진다. **PR782가 먼저 병합되면 반드시 최신 main을 반영해 0110 snapshot/journal을 다시 생성하고 전체 schema drift·migration·번들을 재검증해야 한다.** 파일 번호 변경만으로 미래 snapshot 병합까지 완료됐다고 보지 않는다. 이 조건을 충족하기 전 운영 배포하지 않는다.
+
+리뷰 수정: 오프라인 철회는 네트워크보다 먼저 원래 프로필 대상을 영속화한다. 프로필을 한 번도 확인하지 못한 철회는 `unresolved`로 남겨 다른 계정에 자동 적용하지 않으며 원래 계정에서 명시적 재시도가 필요하다. 광고 제거 INSERT에서 현행 동의/미삭제 프로필을 원자적으로 재검사하고, 소모성 환불 선도착 marker는 구매 원장에 즉시 반영해 아이템 지급을 막는다.
+
+철회 복구: 환경설정에서 분석 동의가 꺼져 있어도 철회 대기 카드는 표시된다. 원래 계정 A 대상 철회가 대기 중인 상태에서 B로 바꿨다면 A에 다시 로그인하여 같은 카드의 거절/철회 버튼을 누른다. A의 철회가 완료될 때까지 B의 새 연결 동의는 차단한다. 대상 미확정(`unresolved`)인 경우에도 원래 계정으로 로그인 후 거절 버튼을 명시적으로 다시 누른다. 자동으로 현재 B의 기록을 삭제하지 않는다.

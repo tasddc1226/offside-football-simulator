@@ -71,6 +71,7 @@ export function registerIapRoutes(app: Hono<AppEnv>) {
       store: body.store,
       transactionId: verdict.transactionId,
       profileId: verdict.accountMatched ? profileId : null,
+      consentProfileId: profileId,
       test: verdict.test,
       now: nowIso(),
       metadata: verdict.metadata,

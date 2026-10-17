@@ -4,7 +4,7 @@
 
 **Draft 범위입니다.** Apple provider token 미검증, Safari 최초 HTML 배너 로컬 구현(실기기 미검증), 광고 제거 구매의 실제 StoreKit 실기기 미검증, 실제 GA4 app stream/StoreKit sandbox 수집 미검증입니다. 전체 IAP 연동 완료나 100% 추적을 주장하지 않습니다. 구현 세부사항·동의/계정 전환·집계 기준·승인 차단은 `acquisition-iap-integration.md`에 기록했습니다.
 
-원격 GitHub 쓰기403은 해소되었다는 증거가 없으므로 다른 자격증명·git push·브라우저로 게시하지 않았습니다. 최신 main에서 분리했고, PR 772/774/775는 변경하지 않았습니다. Migration은 PR782의 0109까지 피해 0110으로 분리했으며 최종 병합 전 최신 main 기준 재검증이 필요합니다.
+이번 실행은 push/PR 쓰기를 시도하지 않았습니다. 과거 쓰기403은 인계 내용이며 실제 실패 동작 증거는 아직 미확인입니다. collaborator-permission 조회403은 push 불가 증거가 아닙니다. 현재 gh auth status 확인 실패와 repository API 연결 실패로 권한을 판정할 수 없으며, 다른 설치·자격증명으로 우회하지 않았습니다. 최신 main에서 분리했고, PR 772/774/775는 변경하지 않았습니다. Migration은 PR782의 0109까지 피해 0110으로 분리했으며 최종 병합 전 최신 main 기준 재검증이 필요합니다.
 
 운영 활성화 전 조건: 공식 pt 링크 검증, 비소모성 원장/계정 연결 실기기 검증, 실제 app-stream consent-on/off sandbox 검증, 최종 개인정보 안내·보존 처리량 검토. Meta App Events·MMP 활성화, 새 권한·ATT/스토어 신고·새 바이너리 출시, 병합·운영 배포는 별도 승인 범위입니다.
 
@@ -37,3 +37,7 @@ release-notes: none
 우리 migration을 0110_acquisition_iap.sql, journal idx110, meta/0110_snapshot.json으로 옮겼다. 현재 main 기준 drizzle generate 추가 변경 없음이며 번호·파일명은 PR782와 겹치지 않는다. 아직 PR782가 main에 없으므로 0110 snapshot은 현재 main 0108을 부모로 가진다. **PR782가 먼저 병합되면 반드시 최신 main을 반영해 0110 snapshot/journal을 다시 생성하고 전체 schema drift·migration·번들을 재검증해야 한다.** 파일 번호 변경만으로 미래 snapshot 병합까지 완료됐다고 보지 않는다. 이 조건을 충족하기 전 운영 배포하지 않는다.
 
 PR782 DDL을 끼워 넣은 main+0110 SQLite smoke 및 현재 main+0110 D1 migration 테스트 7개도 통과했다. 이 검증은 PR782 코드의 병합 승인이나 최종 snapshot 재생성을 대체하지 않는다.
+
+리뷰 수정: 오프라인 철회는 네트워크보다 먼저 원래 프로필 대상을 영속화한다. 프로필을 한 번도 확인하지 못한 철회는 `unresolved`로 남겨 다른 계정에 자동 적용하지 않으며 원래 계정에서 명시적 재시도가 필요하다. 광고 제거 INSERT에서 현행 동의/미삭제 프로필을 원자적으로 재검사하고, 소모성 환불 선도착 marker는 구매 원장에 즉시 반영해 아이템 지급을 막는다.
+
+독립 리뷰의 3개 결함(오프라인 철회 유실, 철회/삭제 중 광고 제거 기록 재생성, 소모성 환불 선도착 후 지급)을 수정하고 읽기 재검토를 마쳤다. 웹 전체 78개와 브라우저 E2E 7개 통과, 분석 off 철회 복구 UI 및 원래 계정 안내 포함. 합성 설정 활성화 빌드 144.53KB gzip / 145KB 통과. 전체 API는 maxWorkers=1, fileParallelism=false, hook/test timeout 90초로 직렬 재실행 중이며 최종 결과는 아래 기록으로 확정한다. 이전 병렬 중단의 단정적인 코드 결함/권한 결론은 내리지 않는다.

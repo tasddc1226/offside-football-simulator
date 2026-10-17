@@ -35,6 +35,17 @@ describe('optional first-party acquisition and authoritative transactions', () =
     expect(row?.linked_at).toBeTruthy();
     expect(row?.started_at).toBeTruthy();
     await post(b.cookie, { action: 'grant' });
+    expect((await post(b.cookie, { action: 'grant', profileId: a.profileId })).status).toBe(409);
+    expect(
+      (
+        await post(b.cookie, {
+          action: 'start',
+          profileId: a.profileId,
+          sessionId: crypto.randomUUID(),
+          campaign,
+        })
+      ).status,
+    ).toBe(409);
     expect((await post(b.cookie, { action: 'start', sessionId, campaign })).status).toBe(409);
     expect(
       (

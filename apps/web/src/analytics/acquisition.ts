@@ -13,6 +13,8 @@ import {
 } from '@offside/contracts/acquisition';
 const SESSION_KEY = 'offside_acquisition_session_v1';
 const REVOKE_KEY = 'offside_acquisition_revoke_v1';
+const PROFILE_KEY = 'offside_acquisition_profile_v1';
+const UNRESOLVED = 'unresolved';
 const CHOICE_KEY = 'offside_acquisition_choice_v1';
 const landing = typeof location === 'undefined' ? '' : campaignQuery(location.href);
 export const acquisitionEnabled = () => import.meta.env.VITE_ACQUISITION_ENABLED === 'true';
@@ -35,6 +37,7 @@ async function request(action?: Record<string, unknown>) {
     fetch(`${apiBaseUrl()}/v1/acquisition${action ? '' : '/consent'}`, {
       ...auth,
       method: action ? 'POST' : 'GET',
+      signal: AbortSignal.timeout(10_000),
       headers: { ...auth.headers, 'Content-Type': 'application/json' },
       ...(action ? { body: JSON.stringify({ version, ...action }) } : {}),
     });
@@ -55,6 +58,13 @@ async function request(action?: Record<string, unknown>) {
   );
   return result;
 }
+export function acquisitionWithdrawalPending() {
+  try {
+    return !!localStorage.getItem(REVOKE_KEY);
+  } catch {
+    return false;
+  }
+}
 export function acquisitionGranted() {
   return granted && !blocked && analyticsAllowed();
 }
@@ -65,6 +75,9 @@ export async function acquisitionStatus(): Promise<'granted' | 'denied' | 'unkno
     const pending = localStorage.getItem(REVOKE_KEY);
     if (pending) {
       blocked = true;
+      // No account identity was available offline. Keep the request pending rather than
+      // applying it to a possibly different account. An explicit retry resolves it.
+      if (pending === UNRESOLVED) return 'denied';
       if (!(await request({ action: 'revoke', profileId: pending })).ok) return 'denied';
       localStorage.removeItem(REVOKE_KEY);
       blocked = false;
@@ -80,6 +93,7 @@ export async function acquisitionStatus(): Promise<'granted' | 'denied' | 'unkno
     if (generation !== epoch || !analyticsAllowed()) return 'denied';
     if (profileId && profileId !== state.profileId) sessionStorage.removeItem(SESSION_KEY);
     profileId = state.profileId;
+    localStorage.setItem(PROFILE_KEY, profileId);
     granted = state.granted;
     if (granted) recordAcquisition('session');
     return granted
@@ -99,9 +113,16 @@ export async function setAcquisitionConsent(value: 'granted' | 'denied'): Promis
     if (value === 'denied') {
       blocked = true;
       localStorage.setItem(CHOICE_KEY, 'denied');
+      const knownProfile = profileId ?? localStorage.getItem(PROFILE_KEY);
+      // Persist before any network operation; reload/offline cannot lose withdrawal.
+      localStorage.setItem(REVOKE_KEY, knownProfile ?? UNRESOLVED);
       sessionStorage.removeItem(SESSION_KEY);
+      profileId = knownProfile;
       if (!profileId) {
-        if (!hasSessionHint()) return true;
+        if (!hasSessionHint()) {
+          localStorage.removeItem(REVOKE_KEY);
+          return true;
+        }
         const res = await request();
         if (!res.ok) return false;
         profileId = ((await res.json()) as { profileId: string }).profileId;
@@ -114,15 +135,19 @@ export async function setAcquisitionConsent(value: 'granted' | 'denied'): Promis
     }
     if (!acquisitionEnabled() || !analyticsAllowed()) return false;
     // Only an explicit choice can create a profile. No forced login.
-    if (!(await getProfile()).ok) return false;
+    const me = await getProfile();
+    if (!me.ok) return false;
+    const expectedProfile = me.data.id;
     const pending = localStorage.getItem(REVOKE_KEY);
     if (pending) {
+      if (pending === UNRESOLVED) return false;
       if (!(await request({ action: 'revoke', profileId: pending })).ok) return false;
       localStorage.removeItem(REVOKE_KEY);
     }
-    const response = await request({ action: 'grant' });
+    const response = await request({ action: 'grant', profileId: expectedProfile });
     if (!response.ok || generation !== epoch || !analyticsAllowed()) return false;
     profileId = ((await response.json()) as { profileId: string }).profileId;
+    localStorage.setItem(PROFILE_KEY, profileId);
     localStorage.removeItem(REVOKE_KEY);
     localStorage.setItem(CHOICE_KEY, 'granted');
     blocked = false;
@@ -156,7 +181,12 @@ export function recordAcquisition(action: 'session' | 'start' | 'store_click') {
         session = { id: crypto.randomUUID(), profile: profileId!, campaign: landing, at: now };
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
       }
-      const res = await request({ action, sessionId: session.id, campaign: session.campaign });
+      const res = await request({
+        action,
+        profileId: session.profile,
+        sessionId: session.id,
+        campaign: session.campaign,
+      });
       if (res.status === 409 || res.status === 401) {
         granted = false;
         sessionStorage.removeItem(SESSION_KEY);

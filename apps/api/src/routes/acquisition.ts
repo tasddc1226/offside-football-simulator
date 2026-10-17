@@ -48,6 +48,7 @@ export function registerAcquisitionRoutes(app: Hono<AppEnv>) {
     }
     if (c.env.ACQUISITION_ENABLED !== '1') return c.body(null, 503);
     if (body.version !== ACQUISITION_CONSENT_VERSION) return c.body(null, 400);
+    if (body.profileId !== undefined && body.profileId !== profileId) return c.body(null, 409);
     if (body.action === 'grant') {
       await db
         .prepare(

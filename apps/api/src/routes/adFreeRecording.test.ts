@@ -102,8 +102,84 @@ describe('ad removal verified recording', () => {
     tx.value = { ...tx.value, type: 'Non-Consumable', revocationDate: now };
     expect((await post(a.cookie)).status).toBe(409);
   });
+
+  it('does not recreate optional records after consent withdrawal or profile deletion during verification', async () => {
+    const a = await issueGoogleCookie(ctx);
+    const p = {
+      store: 'apple' as const,
+      transactionId: 'late',
+      profileId: a.profileId,
+      consentProfileId: a.profileId,
+      test: false,
+      now: new Date().toISOString(),
+      metadata: { purchasedAt: null, priceMilliunits: null, currency: null, storefront: null },
+    };
+    await callJson(ctx.env, 'POST', '/v1/acquisition', {
+      cookie: a.cookie,
+      body: { action: 'grant', version: 'account-acquisition-v1' },
+    });
+    await callJson(ctx.env, 'POST', '/v1/acquisition', {
+      cookie: a.cookie,
+      body: { action: 'revoke', profileId: a.profileId },
+    });
+    await recordAdFreePurchase(ctx.env.DB, p);
+    await recordAdFreePurchase(ctx.env.DB, {
+      ...p,
+      transactionId: 'unbound-late',
+      profileId: null,
+    });
+    expect(
+      (await ctx.env.DB.prepare('SELECT * FROM iap_ad_free_purchases').all()).results,
+    ).toHaveLength(0);
+    await callJson(ctx.env, 'POST', '/v1/acquisition', {
+      cookie: a.cookie,
+      body: { action: 'grant', version: 'account-acquisition-v1' },
+    });
+    await ctx.env.DB.prepare('UPDATE profiles SET deleted_at=? WHERE id=?')
+      .bind(p.now, a.profileId)
+      .run();
+    await recordAdFreePurchase(ctx.env.DB, p);
+    expect(
+      (await ctx.env.DB.prepare('SELECT * FROM iap_ad_free_purchases').all()).results,
+    ).toHaveLength(0);
+  });
+  it('never grants consumables when a verified refund marker arrived before an old purchase replay', async () => {
+    const a = await issueGoogleCookie(ctx);
+    const now = new Date().toISOString();
+    await markPurchaseRefund(ctx.env.DB, 'apple', 'early-refund', now);
+    const p = {
+      store: 'apple' as const,
+      transactionId: 'early-refund',
+      profileId: a.profileId,
+      productId: 'com.offsidelab.app.reroll_5',
+      item: 'reroll' as const,
+      qty: 5,
+      test: false,
+      now,
+      alertId: 'early-refund-alert',
+    };
+    for (let n = 0; n < 3; n++)
+      expect(await grantIapPurchase(ctx.db, p)).toMatchObject({ reroll: 0 });
+    const rows = (
+      await ctx.env.DB.prepare(
+        'SELECT refunded_at,revoked_qty FROM iap_purchases WHERE transaction_id=?',
+      )
+        .bind('early-refund')
+        .all()
+    ).results;
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ refunded_at: now, revoked_qty: 0 });
+    expect((await ctx.env.DB.prepare('SELECT * FROM owner_items').all()).results).toHaveLength(0);
+    expect((await ctx.env.DB.prepare('SELECT * FROM billing_alerts').all()).results).toHaveLength(
+      0,
+    );
+  });
   it('uses one payer across consumable/nonconsumable events and separates anonymous legacy/test/refund', async () => {
     const a = await issueGoogleCookie(ctx);
+    await callJson(ctx.env, 'POST', '/v1/acquisition', {
+      cookie: a.cookie,
+      body: { action: 'grant', version: 'account-acquisition-v1' },
+    });
     const now = new Date().toISOString();
     const metadata = {
       purchasedAt: now,
@@ -115,6 +191,7 @@ describe('ad removal verified recording', () => {
       store: 'apple' as const,
       transactionId: 'ad-1',
       profileId: a.profileId,
+      consentProfileId: a.profileId,
       test: false,
       now,
       metadata,

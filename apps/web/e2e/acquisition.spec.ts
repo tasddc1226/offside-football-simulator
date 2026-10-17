@@ -78,3 +78,35 @@ test('320px optional consent, one session/start, campaign new tab and withdrawal
   await page.screenshot({ path: 'test-results/acquisition-320.png', fullPage: true });
   expect(JSON.stringify(sent)).not.toContain('PRIVATE');
 });
+
+test('settings keeps pending withdrawal available with analytics off and never targets the switched account', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('offside_acquisition_choice_v1', 'denied');
+    localStorage.setItem('offside_acquisition_revoke_v1', 'profile-a');
+    localStorage.setItem('offside_acquisition_profile_v1', 'profile-a');
+  });
+  const sent: Record<string, unknown>[] = [];
+  let originalAccount = false;
+  await page.route(`${API}/**`, async (r) => {
+    if (new URL(r.request().url()).pathname === '/v1/acquisition') {
+      sent.push(r.request().postDataJSON() as Record<string, unknown>);
+      return r.fulfill({ status: originalAccount ? 204 : 409 });
+    }
+    return r.fulfill({ status: 503 });
+  });
+  await page.goto('/');
+  await page.locator('[data-act="settings"]').click();
+  const consent = page.locator('section[aria-label="유입과 앱 결제 연결"]');
+  await expect(consent).toBeVisible();
+  await expect(consent.getByRole('alert')).toContainText('원래 계정');
+  await expect(consent.getByRole('button', { name: '유입·결제 연결에 동의' })).toBeDisabled();
+  expect(sent.every((b) => b.profileId === 'profile-a' && b.action === 'revoke')).toBe(true);
+  originalAccount = true;
+  await consent.getByRole('button', { name: '동의 안 함', exact: true }).click();
+  await expect(consent).not.toBeVisible();
+  expect(
+    await page.evaluate(() => localStorage.getItem('offside_acquisition_revoke_v1')),
+  ).toBeNull();
+});
