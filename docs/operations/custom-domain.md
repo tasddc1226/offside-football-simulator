@@ -4,9 +4,9 @@
 
 ## 구성과 보존 범위
 
-| 웹 | API | 용도 |
-| --- | --- | --- |
-| `https://offside-lab.com` | `https://api.offside-lab.com` | 대표 주소 |
+| 웹                                           | API                                          | 용도                     |
+| -------------------------------------------- | -------------------------------------------- | ------------------------ |
+| `https://offside-lab.com`                    | `https://api.offside-lab.com`                | 대표 주소                |
 | `https://offside-web.tasddc1569.workers.dev` | `https://offside-api.tasddc1569.workers.dev` | 기존 기록 접근·이전 호환 |
 
 두 주소는 같은 `offside-web`, `offside-api`, D1 `offside-production`을 사용한다.
