@@ -1,0 +1,23 @@
+{
+  "id": "t-11-323-coach-lines",
+  "title": "팀 화면에 감독 효과 표시",
+  "items": [
+    "감독 칸에 감독을 앉히면 팀 편성의 공격·중원·수비 힘에 감독 효과가 더해져 보여요",
+    "힘 숫자 아래에 감독 몫(+1.0 같은)을 따로 보여 줘요"
+  ],
+  "en": {
+    "title": "Manager effect on the team screen",
+    "items": [
+      "With a manager in the manager slot, attack, midfield and defence strength on the team screen now include the manager's effect.",
+      "The manager's share (such as +1.0) is shown under each number."
+    ]
+  },
+  "ja": {
+    "title": "チーム画面に監督効果を表示",
+    "items": [
+      "監督枠に監督を置くと、チーム編成の攻撃・中盤・守備の力に監督効果が加わって表示されます。",
+      "数値の下に監督の分(+1.0など)を表示します。"
+    ]
+  },
+  "availability": "web-app"
+}

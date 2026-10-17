@@ -73,7 +73,7 @@ import { toast } from '../../game/host';
 import { setCardLock } from '@offside/app-core/api/market';
 import { go } from '../../game/nav';
 import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
-import { coachSummary } from '@offside/app-core/managerCard';
+import { coachLineBonus, coachSummary } from '@offside/app-core/managerCard';
 import { rem } from '../../theme/type';
 import { achNudge } from '../../game/achNudge';
 import { accountCache, appState, prefs } from '../../store';
@@ -265,6 +265,8 @@ export default function Team() {
   const syn = synergyFocus(synergy, synFocus);
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
   const lines = draftLines(slotCodes, ratings, synergy, season);
+  // T-11-323 감독 칸 보정(경기 계산과 같은 값) — 줄 힘 칸에 더해 보인다.
+  const coachBonus = team?.coach ? coachLineBonus(team.coach, formation, synergy, season) : null;
   const filled = slots.filter((s) => s !== null).length;
   const dirty =
     !team ||
@@ -849,7 +851,7 @@ export default function Team() {
                   testIDPrefix="formation"
                 />
               ) : null}
-              <TeamLines lines={lines} />
+              <TeamLines lines={lines} coach={coachBonus} />
               <TeamSynergy
                 synergy={synergy}
                 season={season}

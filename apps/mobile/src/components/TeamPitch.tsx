@@ -1,7 +1,12 @@
 import { useState, type RefObject } from 'react';
 import { Pressable, View } from 'react-native';
 import Svg, { Line } from 'react-native-svg';
-import { presetLayout, type FormationId, type TeamLayout } from '@offside/contracts/owner-team';
+import {
+  presetLayout,
+  type FormationId,
+  type SynergyLines,
+  type TeamLayout,
+} from '@offside/contracts/owner-team';
 import type { TeamLines as Lines } from '@offside/app-core/api/team';
 import { rem } from '../theme/type';
 import { useColors } from '../theme/useColors';
@@ -11,6 +16,8 @@ import { PlayerCard, type PlayerCardData } from './PlayerCard';
 import { DragPlayer, type PlayerDrag } from './DragPlayer';
 import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
+import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
+import { coachLineTag } from '@offside/app-core/managerCard';
 import { tn } from '@offside/game/i18n/names';
 
 export type PitchCell = PlayerCardData;
@@ -262,31 +269,53 @@ const cells = () =>
     ['gk', L.lineGk],
   ] as const;
 
-export function TeamLines({ lines }: { lines: Lines }) {
+/** T-11-323 coach를 주면 경기 계산처럼 감독 보정을 더한 값을 보이고, 칸 아래에 감독 몫(+1.0)을 붙인다. */
+export function TeamLines({ lines, coach = null }: { lines: Lines; coach?: SynergyLines | null }) {
   const c = useColors();
   return (
     <View testID="team-lines" style={{ flexDirection: 'row', gap: 6 }}>
-      {cells().map(([k, label]) => (
-        <View
-          key={k}
-          accessible
-          accessibilityLabel={`${label} ${Math.round(lines[k])}`}
-          style={{
-            flex: 1,
-            alignItems: 'center',
-            paddingVertical: 6,
-            borderRadius: 10,
-            backgroundColor: c.surface2,
-          }}
-        >
-          <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.5 }}>
-            {label}
-          </Txt>
-          <Txt num style={{ fontSize: rem(1.25), lineHeight: rem(1.25) * 1.3, fontWeight: '700' }}>
-            {Math.round(lines[k])}
-          </Txt>
-        </View>
-      ))}
+      {cells().map(([k, label]) => {
+        const v = Math.round(lines[k] + (coach?.[k] ?? 0));
+        const tag = coach ? coachLineTag(coach[k]) : null;
+        return (
+          <View
+            key={k}
+            accessible
+            accessibilityLabel={
+              tag ? `${label} ${v}, ${MG.teamCoachLine({ v: tag })}` : `${label} ${v}`
+            }
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              paddingVertical: 6,
+              borderRadius: 10,
+              backgroundColor: c.surface2,
+            }}
+          >
+            <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.5 }}>
+              {label}
+            </Txt>
+            <Txt
+              num
+              style={{ fontSize: rem(1.25), lineHeight: rem(1.25) * 1.3, fontWeight: '700' }}
+            >
+              {v}
+            </Txt>
+            {tag ? (
+              <Txt
+                testID={`coach-line-${k}`}
+                style={{
+                  fontSize: rem(0.6875),
+                  fontWeight: '600',
+                  color: coach![k] < 0 ? c.bad : c.good,
+                }}
+              >
+                {MG.teamCoachLine({ v: tag })}
+              </Txt>
+            ) : null}
+          </View>
+        );
+      })}
     </View>
   );
 }
