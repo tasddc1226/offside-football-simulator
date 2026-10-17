@@ -326,3 +326,10 @@
 {#if end}
   <div class="credit-wrap">{@render end()}</div>
 {/if}
+
+<style>
+  /* T-11-371 공개 연출 결과 글자는 크레딧의 금색을 그대로 쓴다(어두운 배경). */
+  .film-pot :global(.rv-text) {
+    color: inherit;
+  }
+</style>

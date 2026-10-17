@@ -7,7 +7,7 @@
   import { revealText as R } from '@offside/app-core/i18n/ko/reveal';
   import { buzz, motionOK } from './motion.js';
   import { sheetOn } from './skin.svelte.js';
-  import { revealShort, revealTone } from './revealPrefs.js';
+  import { flashEdge, revealShort, revealTone } from './revealPrefs.js';
 
   let { grade, text, tier, id }: { grade: string; text: string; tier: RevealTier; id?: string } = $props();
 
@@ -30,6 +30,7 @@
     phase = 'done';
     buzz(REVEAL_BUZZ[tier]);
     revealTone(tier);
+    if (tier === 'jackpot') flashEdge();
   }
   function run() {
     phase = 'back';
@@ -88,7 +89,6 @@
     </button>
   {/if}
 </span>
-{#if phase === 'done' && !instant && tier === 'jackpot'}<span class="rv-edge" aria-hidden="true"></span>{/if}
 
 <style>
   .rv {
@@ -101,7 +101,7 @@
     padding: 2px 10px;
     border: 1px solid var(--line);
     border-radius: 10px;
-    background: var(--surface-2);
+    background: transparent;
     font: inherit;
     color: inherit;
     cursor: pointer;
@@ -110,8 +110,15 @@
     display: inline-block;
     min-width: 1.4em;
     text-align: center;
-    font-size: 1.375rem;
+    /* 글줄 안(선수 탭)에서는 조금 크게, 큰 글자(은퇴 리포트) 안에서는 그 크기 그대로. */
+    font-size: max(1.375rem, 1em);
     font-variant-numeric: tabular-nums;
+  }
+  .rv-stage small {
+    font-size: 0.75rem;
+    font-weight: 400;
+    font-family: var(--body);
+    white-space: nowrap;
   }
   .rv-good .rv-stage,
   .rv-jackpot .rv-stage {
@@ -131,14 +138,6 @@
   .rv-jackpot .rv-text {
     font-weight: 700;
     color: var(--accent-text);
-  }
-  .rv-edge {
-    position: fixed;
-    inset: 0;
-    z-index: 60;
-    pointer-events: none;
-    box-shadow: inset 0 0 0 4px var(--accent), inset 0 0 48px 8px color-mix(in srgb, var(--accent) 55%, transparent);
-    animation: rv-edge 1.4s ease-out forwards;
   }
   @keyframes rv-glow {
     to {
@@ -161,16 +160,10 @@
       transform: scale(1);
     }
   }
-  @keyframes rv-edge {
-    to {
-      opacity: 0;
-    }
-  }
   @media (prefers-reduced-motion: reduce) {
     .rv-jackpot .rv-stage,
     .rv-hold,
-    .rv-pop,
-    .rv-edge {
+    .rv-pop {
       animation: none;
     }
   }

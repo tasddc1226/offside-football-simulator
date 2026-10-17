@@ -45,7 +45,7 @@
   import { revealText as R } from '@offside/app-core/i18n/ko/reveal';
   import { buzz, motionOK } from './motion.js';
   import { sheetOn } from './skin.svelte.js';
-  import { revealShort, revealTone } from './revealPrefs.js';
+  import { flashEdge, revealShort, revealTone } from './revealPrefs.js';
 
   const C = appState.C;
   const posKeys = Object.keys(POS) as Pos[];
@@ -257,12 +257,8 @@
     const tier = tiers[i] ?? 'normal';
     buzz(REVEAL_BUZZ[tier]);
     revealTone(tier);
-    if (tier === 'jackpot' && revealTotal(f) > 0) {
-      edge = true;
-      setTimeout(() => (edge = false), 1400);
-    }
+    if (tier === 'jackpot' && revealTotal(f) > 0) flashEdge();
   }
-  let edge = $state(false);
   // 잠재력 범위를 이 화면에서 새로 열었을 때만 등급 연출(다시 들어온 화면 · 킵하며 이미 본 후보는 그대로).
   let potFresh = $state(false);
   let potWas = appState.candidatePotentialOpen;
@@ -549,7 +545,6 @@
   {/if}
 </div>
 {#if scouting}<ScoutScan pos={C.pos} steps={scoutSteps} onDone={scouted} />{/if}
-{#if edge}<span class="rv-edge" aria-hidden="true"></span>{/if}
 
 <style>
 .ovr-guide-box, .position-guide-box { padding-block: 0; }
@@ -562,10 +557,8 @@
 .rv-run .cc-bar em { animation: rv-fill var(--rv-hint) cubic-bezier(.22,.61,.36,1) var(--rv-delay) both; }
 .rv-good.rv-land, .rv-jackpot.rv-land { box-shadow: 0 0 0 2px var(--accent), 0 0 18px 2px color-mix(in srgb, var(--accent) 45%, transparent); animation: rv-land .5s ease-out; }
 .rv-jackpot.rv-run { box-shadow: 0 0 0 2px var(--accent); animation: rv-charge .45s ease-in-out infinite alternate; }
-.rv-edge { position: fixed; inset: 0; z-index: 60; pointer-events: none; box-shadow: inset 0 0 0 4px var(--accent), inset 0 0 48px 8px color-mix(in srgb, var(--accent) 55%, transparent); animation: rv-edge 1.4s ease-out forwards; }
 @keyframes rv-fill { from { width: 0; } }
 @keyframes rv-land { 0% { transform: scale(.96); } 60% { transform: scale(1.02); } 100% { transform: scale(1); } }
 @keyframes rv-charge { to { box-shadow: 0 0 0 2px var(--accent), 0 0 16px 4px color-mix(in srgb, var(--accent) 50%, transparent); } }
-@keyframes rv-edge { to { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .rv-run .cc-bar em, .rv-land, .rv-run, .rv-edge { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .rv-run .cc-bar em, .rv-land, .rv-run { animation: none; } }
 </style>

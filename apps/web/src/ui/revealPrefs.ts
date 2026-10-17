@@ -33,3 +33,20 @@ export function revealTone(kind: 'hint' | RevealTier) {
     // 오디오를 못 쓰는 환경은 조용히 넘어간다.
   }
 }
+
+/** 대박 결과 — 화면 가장자리를 잠깐 빛낸다. 크레딧 장면처럼 transform이 걸린 조상 안에서도 화면 기준이 되게 body에 붙인다. */
+export function flashEdge() {
+  try {
+    const el = document.createElement('div');
+    el.setAttribute('aria-hidden', 'true');
+    el.dataset.revealEdge = '';
+    el.style.cssText =
+      'position:fixed;inset:0;z-index:60;pointer-events:none;transition:opacity 1.4s ease-out;' +
+      'box-shadow:inset 0 0 0 4px var(--accent),inset 0 0 48px 8px color-mix(in srgb,var(--accent) 55%,transparent)';
+    document.body.append(el);
+    requestAnimationFrame(() => requestAnimationFrame(() => (el.style.opacity = '0')));
+    setTimeout(() => el.remove(), 1500);
+  } catch {
+    // 화면 효과만이라 실패해도 넘어간다.
+  }
+}
