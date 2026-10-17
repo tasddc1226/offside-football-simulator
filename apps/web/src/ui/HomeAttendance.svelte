@@ -197,25 +197,24 @@
     grid-template-columns: repeat(7, 1fr);
     gap: 4px;
   }
-  /* 글자는 기본 글자색, 아이템은 칸 바탕 · 아래 막대 색으로만 보인다(색 글자는 옅은 바탕에서 대비가 모자란다). */
+  /* T-11-378 동그라미 도장. 글자는 기본 글자색, 아이템은 칸 바탕 · 테두리 고리 색으로만 보인다(색 글자는 옅은 바탕에서
+     대비가 모자란다). 큰 보상 칸은 고리가 두껍다. */
   .ha-cell {
-    aspect-ratio: 1.15;
+    aspect-ratio: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 1px;
-    border-radius: 6px;
+    border-radius: 50%;
     line-height: 1;
     color: var(--ink);
     background: color-mix(in srgb, var(--it) 8%, var(--surface));
-    box-shadow: inset 0 -3px 0 var(--it);
+    box-shadow: inset 0 0 0 2px var(--it);
   }
   .ha-cell.big {
     background: color-mix(in srgb, var(--it) 16%, var(--surface));
-    box-shadow:
-      inset 0 -3px 0 var(--it),
-      inset 0 0 0 1px var(--it);
+    box-shadow: inset 0 0 0 3px var(--it);
   }
   .ha-day {
     font-size: 0.625rem;
@@ -230,6 +229,7 @@
     color: var(--accent-ink);
   }
   .ha-cell.today {
+    box-shadow: none;
     outline: 2px dashed var(--accent);
     outline-offset: -2px;
   }
@@ -251,7 +251,7 @@
     content: '';
     width: 8px;
     height: 8px;
-    border-radius: 2px;
+    border-radius: 50%;
     background: var(--it);
   }
   .ha-meta {
