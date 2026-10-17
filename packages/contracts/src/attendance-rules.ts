@@ -20,7 +20,11 @@ export const ATTENDANCE_SPECIAL: Readonly<Record<number, AttendanceReward>> = {
   18: { boost: 1 },
   21: { boost: 3 },
   25: { boost: 1 },
+<<<<<<< HEAD
   28: { scout: 2, boost: 3, rename: 1 },
+=======
+  28: { scout: 2, boost: 3 },
+>>>>>>> origin/main
 };
 /** 큰 보상 칸(도장판에서 강조한다). */
 export const ATTENDANCE_BIG = [7, 14, 21, 28] as const;

@@ -18,7 +18,10 @@ const ko = {
   reroll: (p: { n: number }) => `리롤권 ${p.n}장`,
   boost: (p: { n: number }) => `잠재력 강화권 ${p.n}장`,
   scout: (p: { n: number }) => `프리미엄 스카우트권 ${p.n}장`,
+<<<<<<< HEAD
   rename: (p: { n: number }) => `선수 이름 변경권 ${p.n}장`,
+=======
+>>>>>>> origin/main
   itemReroll: '리롤권',
   itemBoost: '잠재력 강화권',
   itemScout: '프리미엄 스카우트권',

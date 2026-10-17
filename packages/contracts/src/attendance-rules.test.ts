@@ -22,6 +22,7 @@ describe('T-11-360 출석 규칙', () => {
     expect(checkInReward(4)).toEqual({ boost: 1 });
     expect(checkInReward(7)).toEqual({ boost: 2 });
     expect(checkInReward(14)).toEqual({ scout: 1 });
+<<<<<<< HEAD
     expect(checkInReward(28)).toEqual({ scout: 2, boost: 3, rename: 1 });
     expect(checkInReward(29)).toEqual({ reroll: 1 });
     expect(checkInReward(35)).toEqual({ boost: 2 });
@@ -30,6 +31,16 @@ describe('T-11-360 출석 규칙', () => {
     for (let n = 1; n <= ATTENDANCE_BOARD; n++)
       for (const [k, v] of Object.entries(checkInReward(n))) sum[k as keyof typeof sum] += v;
     expect(sum).toEqual({ reroll: 20, boost: 12, scout: 3, rename: 1 });
+=======
+    expect(checkInReward(28)).toEqual({ scout: 2, boost: 3 });
+    expect(checkInReward(29)).toEqual({ reroll: 1 });
+    expect(checkInReward(35)).toEqual({ boost: 2 });
+    // 한 판(28일) 합계.
+    const sum = { reroll: 0, boost: 0, scout: 0 };
+    for (let n = 1; n <= ATTENDANCE_BOARD; n++)
+      for (const [k, v] of Object.entries(checkInReward(n))) sum[k as keyof typeof sum] += v;
+    expect(sum).toEqual({ reroll: 20, boost: 12, scout: 3 });
+>>>>>>> origin/main
   });
 
   it('다음 칸은 채운 칸 다음이고, 판을 다 채우면 다음 판의 1칸이다', () => {

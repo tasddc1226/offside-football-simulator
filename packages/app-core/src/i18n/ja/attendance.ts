@@ -17,7 +17,10 @@ export const attendance: Translation<AttendanceMsgs> = {
   reroll: (p) => `リロール券${p.n}枚`,
   boost: (p) => `ポテンシャル強化券${p.n}枚`,
   scout: (p) => `プレミアムスカウト券${p.n}枚`,
+<<<<<<< HEAD
   rename: (p) => `選手名変更券${p.n}枚`,
+=======
+>>>>>>> origin/main
   itemReroll: 'リロール券',
   itemBoost: 'ポテンシャル強化券',
   itemScout: 'プレミアムスカウト券',
