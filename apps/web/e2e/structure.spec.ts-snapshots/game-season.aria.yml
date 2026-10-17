@@ -21,7 +21,7 @@
     - button "버튼으로 보기" [pressed]
     - button "육각형으로 보기"
   - paragraph: 약점 집중훈련은 아래 자기 투자에서 고를 수 있어요.
-  - group: 포지션 육성 안내
+  - group: 선수 유형 도감
   - button "스피드 훈련 스피드 ▲"
   - button "슈팅 훈련 ★ 슈팅 ▲"
   - button "패스 훈련 패스 ▲"
