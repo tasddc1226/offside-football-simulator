@@ -13,4 +13,5 @@ export const seasonGauge: Translation<SeasonGaugeMsgs> = {
   endsOn: (p) => `${p.date}まで開催`,
   endsBy: (p) => `遅くとも${p.date}まで開催`,
   endsBetween: (p) => `早ければ${p.from}、遅くとも${p.to}まで開催`,
+  why: (p) => `${p.n}人で一緒に進めています。参加者が増えると目標も大きくなります。`,
 };
