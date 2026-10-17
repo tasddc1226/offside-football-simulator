@@ -231,6 +231,8 @@ export default function Manager() {
     setLoginNeeded(false);
     setData(r.data);
     const s = r.data.active ? loadManagerState(r.data.active, nameOf(r.data.active)) : null;
+    // T-11-338 서버에 진행 중 감독이 없으면(다른 기기에서 끝냄 · 포기) 남은 세이브를 지워 이어 하기 카드가 뜨지 않게 한다.
+    if (!r.data.active) clearManagerState();
     setSt(s);
     if (s) resetPick(s);
   }

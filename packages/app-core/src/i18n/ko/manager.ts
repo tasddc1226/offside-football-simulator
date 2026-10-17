@@ -9,6 +9,17 @@ const ko = {
   entryTitle: '감독 커리어',
   entrySub: '은퇴한 선수로 감독 인생을 이어 가요',
   entryAria: '감독 커리어 열기',
+  /** T-11-338 진행 중 감독 커리어 이어 하기(홈 · 내 구단 맨 위). */
+  resumeEyebrow: 'Manager career',
+  resumeTitle: '감독 커리어 이어 하기',
+  resumeLine: (p: { club: string; n: number; total: number }) =>
+    `${p.club} · ${p.n}/${p.total}시즌`,
+  resumeOffers: (p: { n: number; total: number }) =>
+    `구단 제의를 고르는 중이에요 · ${p.n}/${p.total}시즌`,
+  resumeDone: '감독 카드로 확정만 남았어요',
+  resumeAria: (p: { name: string }) => `${p.name} 감독 커리어 이어 하기`,
+  resumeNoName: '진행 중인',
+  entryNew: 'NEW',
   loading: '불러오는 중…',
   loadFail: '감독 정보를 불러오지 못했어요.',
   retry: '다시 시도',

@@ -69,6 +69,8 @@
       </div>
     </section>
   {/if}
+  <!-- T-11-338 진행 중인 감독 커리어 이어 하기(기기 세이브가 있을 때만). 첫 화면 번들 밖 지연 청크. -->
+  {#await import('./ManagerResume.svelte') then { default: ManagerResume }}<ManagerResume />{/await}
   <!-- 시즌 진행 게이지: 유저들이 끝까지 뛴 커리어로 시즌이 차고, 90%면 마감 카운트다운. -->
   <!-- 시즌 진행 게이지는 첫 화면 번들 밖(지연 청크). -->
   {#await import('./SeasonGauge.svelte') then { default: SeasonGauge }}<SeasonGauge />{/await}

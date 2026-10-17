@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ManagerResume from './ManagerResume.svelte';
   import AppConversion from './AppConversion.svelte';
   import { shellInstallText as Install } from '@offside/app-core/i18n/ko/shellInstall';
   import LoginButtons from './LoginButtons.svelte';
@@ -141,6 +142,8 @@
     <AdSlot place="owner-summary" />
   {/if}
 
+  <!-- T-11-338 진행 중인 감독 커리어가 있으면 맨 위에서 이어 한다. -->
+  {#if linked}<ManagerResume />{/if}
   {#if linked || guest}<h2 class="hub-section-title">{L.teamsHeading}</h2>{/if}
   <!-- T-10-092 내 팀: 구글로 로그인한 구단주만 — 확인 중·연결 실패면 그리지 않는다. 비로그인이면 잠긴 카드. -->
   {#if linked}
@@ -175,6 +178,15 @@
           {card && card.players > 0 ? L.buildTeam : L.myTeam}{@render achDot()}
         </button>
       {/if}
+    </section>
+    <!-- T-11-338 감독 커리어는 '팀' 묶음 안, 내 팀 바로 아래(이적시장 · 상점 사이에 묻혀 찾기 어려웠다). -->
+    <section class="card owner-market owner-tap" aria-label={MG.entryTitle} data-owner-manager>
+      <div class="owner-who">
+        <h2>{MG.entryTitle}<span class="pill good owner-founder" data-owner-manager-new>{MG.entryNew}</span></h2>
+        <span class="muted fs-sm">{MG.entrySub}</span>
+      </div>
+      <span class="tap-go" aria-hidden="true">›</span>
+      <button class="tap-cover" data-act="manager" aria-label={MG.entryAria} onclick={() => go('manager')}></button>
     </section>
   {:else if guest}
     <section class="card owner-team" aria-label={L.myTeam} data-owner-team-locked>
@@ -218,14 +230,6 @@
       </div>
       <span class="tap-go" aria-hidden="true">›</span>
       <button class="tap-cover" data-act="market" aria-label={`${L.marketTitle} ${L.open}`} onclick={() => go('market')}></button>
-    </section>
-    <section class="card owner-market owner-tap" aria-label={MG.entryTitle} data-owner-manager>
-      <div class="owner-who">
-        <h2>{MG.entryTitle}</h2>
-        <span class="muted fs-sm">{MG.entrySub}</span>
-      </div>
-      <span class="tap-go" aria-hidden="true">›</span>
-      <button class="tap-cover" data-act="manager" aria-label={MG.entryAria} onclick={() => go('manager')}></button>
     </section>
 
   {/if}
