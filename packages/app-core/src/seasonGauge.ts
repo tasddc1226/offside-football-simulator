@@ -24,6 +24,8 @@ export interface SeasonGaugeLines {
   pct: number;
   /** 마감이 정해졌으면 카운트다운. */
   countdown: string | null;
+  /** T-11-352 마감 확정 전에만: 참여자 수와 목표가 같이 커진다는 한 줄(게이지가 느려 보이는 까닭). */
+  why: string | null;
   /** T-11-224 종료 날짜. 마감 전엔 가장 이른·늦은 날, 확정되면 그날. 끝났으면 null. */
   endDate: string | null;
 }
@@ -51,5 +53,6 @@ export function seasonGaugeLines(g: SeasonGauge, now: number): SeasonGaugeLines 
         Date.parse(g.minEndsAt) - now > SEASON_GAUGE.noticeHours * 3_600_000
         ? L.endsBetween({ from: lastDay(g.minEndsAt), to: lastDay(g.maxEndsAt) })
         : L.endsBy({ date: lastDay(g.maxEndsAt) }),
+    why: g.endsAt ? null : L.why({ n: g.participants.toLocaleString('en-US') }),
   };
 }
