@@ -89,6 +89,7 @@ import { MiniRadar } from './MiniRadar';
 import { NationPicker } from './NationPicker';
 import { ScoutScan } from './ScoutScan';
 import { PositionGuide } from '../game/PositionGuide';
+import { ItemsHint } from '../../components/ItemsHint';
 import { BodyInput, Field, Seg, SegCell, mixHex, useInputStyle } from './parts';
 import { tn } from '@offside/game/i18n/names';
 
@@ -1099,6 +1100,8 @@ export default function Create() {
                 </Btn>
               </View>
             ) : null}
+            {/* T-11-355 상품 위치 안내(설정과 같은 카드, 기기마다 닫을 때까지) */}
+            <ItemsHint />
             {/* T-11-221 광고 두 개(다시 뽑기 · 잠재력 보기)는 후보 카드 아래 반폭 톤 버튼 한 줄로. 전에는 카드 위에 전폭으로 쌓여
                 첫 화면에 후보가 보이지 않았다. 접근성 이름은 전체 문구. */}
             {(offer && adLeft > 0) || (offer && !s.candidatePotentialOpen) ? (

@@ -7,9 +7,10 @@ import { Txt } from '../../ui/Txt';
 import { Press } from '../../ui/Press';
 import { DisclosureRow } from '../../ui/Disclosure';
 import { useColors } from '../../theme/useColors';
-export function PositionGuide({ pos }: { pos: Pos }) {
+/** 선수 유형 도감(T-11-355, 웹 PositionGuide.svelte) — 선수 생성 · 시즌 탭 · 확률 도감이 같이 쓴다. */
+export function PositionGuide({ pos, initialOpen = false }: { pos: Pos; initialOpen?: boolean }) {
   const c = useColors();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const [chosen, setChosen] = useState<Pos | null>(null);
   const current = chosen ?? pos;
   return (
@@ -61,8 +62,21 @@ export function PositionGuide({ pos }: { pos: Pos }) {
               <Txt v="sm">
                 {L.focusLabel} · {e.focus}
               </Txt>
+              {e.combos.length ? (
+                <Txt v="sm" testID={`type-combos-${e.id}`}>
+                  {`${L.combosLabel} · ${e.combos.join(', ')}`}
+                </Txt>
+              ) : null}
+              {e.synergies.length ? (
+                <Txt v="sm" testID={`type-synergies-${e.id}`}>
+                  {`${L.synergyLabel} · ${e.synergies.map((s) => L.synergyItem(s)).join(', ')}`}
+                </Txt>
+              ) : null}
             </View>
           ))}
+          <Txt v="sm" tone="muted">
+            {L.synergyNote}
+          </Txt>
         </View>
       ) : null}
     </View>

@@ -1,13 +1,14 @@
 <script lang="ts">
+  // 선수 유형 도감(T-11-355) — 선수 생성 · 시즌 탭 · 확률 도감이 같이 쓴다. 항목은 app-core positionGuide가 게임 정의에서 만든다.
   import { POS, type Pos } from '@offside/game/data';
   import { positionGuide } from '@offside/app-core/careerGuide';
   import { careerGuideText as L } from '@offside/app-core/i18n/ko/careerGuide';
-  const { pos }: { pos: Pos } = $props();
+  const { pos, open = false }: { pos: Pos; open?: boolean } = $props();
   let chosen = $state<Pos | null>(null);
   const current = $derived(chosen ?? pos);
   const entries = $derived(positionGuide(current));
 </script>
-<details class="position-guide" data-position-guide>
+<details class="position-guide" data-position-guide {open}>
   <summary class="disc-row">{L.guideTitle}<span class="disc-chev" aria-hidden="true"></span></summary>
   <div class="stack guide-body">
     <div class="guide-tabs" role="group" aria-label={L.guideTitle}>
@@ -17,8 +18,13 @@
     </div>
     <p class="muted fs-sm">{L.guideNote}</p>
     {#each entries as e (e.id)}
-      <article><b>{e.name}</b><p class="muted fs-sm">{e.desc}</p><p class="fs-sm">{L.focusLabel} · {e.focus}</p></article>
+      <article data-type-entry={e.id}>
+        <b>{e.name}</b><p class="muted fs-sm">{e.desc}</p><p class="fs-sm">{L.focusLabel} · {e.focus}</p>
+        {#if e.combos.length}<p class="fs-sm" data-type-combos>{L.combosLabel} · {e.combos.join(', ')}</p>{/if}
+        {#if e.synergies.length}<p class="fs-sm" data-type-synergies>{L.synergyLabel} · {e.synergies.map((s) => L.synergyItem(s)).join(', ')}</p>{/if}
+      </article>
     {/each}
+    <p class="muted fs-sm">{L.synergyNote}</p>
   </div>
 </details>
 <style>

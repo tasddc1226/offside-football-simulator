@@ -26,6 +26,7 @@ import { cupApp } from './cupApp';
 import { cupPush } from './cupPush';
 import { dex } from './dex';
 import { fairness } from './fairness';
+import { firstGuide } from './firstGuide';
 import { firsts } from './firsts';
 import { firstsTab } from './firstsTab';
 import { friend } from './friend';
@@ -124,6 +125,7 @@ export const ja = {
   cupPush,
   dex,
   fairness,
+  firstGuide,
   firsts,
   firstsTab,
   friend,
