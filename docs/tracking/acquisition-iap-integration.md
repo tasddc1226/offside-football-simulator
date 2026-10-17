@@ -34,7 +34,7 @@ Apple 서명 JWS의 `purchaseDate`, `price`(milliunits), `currency`, `storefront
 
 광고 제거 비소모성 상품도 `iap_ad_free_purchases` 원장에 기록한다. 아이템 qty를 만들거나 기존 영구 광고 제거 권한을 바꾸지 않는다. 새 Apple 구매는 검증된 프로필 UUID를 appAccountToken으로 붙이고, Google은 obfuscatedAccountId를 사용한다. 로그인 강제는 없다. 토큰 없는 과거 복원은 profile_id=NULL로 미귀속이며 나중에 임의로 계정을 붙이지 않는다. Apple 비소모성은 originalTransactionId와 originalPurchaseDate를 우선해 복원 시 새 transactionId가 와도 최초 구매 한 건으로 센다. Family Sharing은 추가 구매로 기록하지 않는다.
 
-네이티브 활성화는 `OFFSIDE_ACCOUNT_PURCHASES_ENABLED=true`, 앱 분석 동의 granted, 해당 프로필의 서버 연결 동의가 모두 필요하다. 하나라도 거절이면 추가 계정/거래 요청을 보내지 않거나 서버에서 기록하지 않는다. 연결 동의 조회는 cachedGet을 쓴다. 동의 여부 조회/기록이 일시 실패하면 기존 광고 제거 권한은 즉시 제공하면서 거래 마무리를 미뤄 다음 StoreKit 동기화 때 같은 거래를 재전송한다. 복원은 새 매출이 아니다. 앱 config와 fingerprint가 바뀌므로 실제 스토어 앱에는 별도 바이너리/런타임 검증 후 출시 승인이 필요하다. 이번 작업에서 빌드·제출·OTA·판매 설정 변경은 하지 않았다.
+네이티브 활성화는 `OFFSIDE_ACCOUNT_PURCHASES_ENABLED=true`, 앱 분석 동의 granted, 해당 프로필의 서버 연결 동의가 모두 필요하다. 하나라도 거절이면 추가 계정/거래 요청을 보내지 않거나 서버에서 기록하지 않는다. 연결 동의 조회는 cachedGet을 쓴다. 동의/기록 조회 실패·hang·409가 native finishTransaction을 막지 않는다. PURCHASED 광고 제거의 권한과 승인 처리는 독립 실행한다. 명시적 연결 동의가 확인된 프로필의 선택적 토큰만 MMKV 대기열(16건, 논리7일)에 보관해 다음 앱/스토어 활동 때 별도 재전송한다. 만료는 다음 활동 때 삭제하며 동의 철회·앱 세션 변경은 대기열을 즉시 비운다. preflight가 끝난 구매는 첫 await 전에 대기열을 동기 저장한다. 복원에서 아직 동의를 확인하지 못했다면 native finish를 먼저 진행하고, 완료된 비소모성 상품은 다음 getAvailablePurchases에서 다시 발견할 수 있다. 가격 조회 실패나 지연도 승인 재시도를 막지 않는다. 복원은 새 매출이 아니다. 앱 config와 fingerprint가 바뀌므로 실제 스토어 앱에는 별도 바이너리/런타임 검증 후 출시 승인이 필요하다. 이번 작업에서 빌드·제출·OTA·판매 설정 변경은 하지 않았다.
 
 두 상품 원장을 동일한 명시적 열의 UNION ALL로 투영해 계정별 최초 구매 순서를 한 번만 계산한다. 같은 서명 거래가 서로 다른 상품 원장으로 들어가려는 요청은 검증 상품 ID/type이 막는다. 익명 거래는 고유 결제자에 추정 합산하지 않고 unknown_account_transactions로 표시한다. 새 비소모성 데이터는 동의된 구매·복원만 수신하므로 전체 App Store 매출과 동일한 coverage를 주장하지 않는다. #649 미병합 구독도 포함하지 않는다.
 
@@ -62,7 +62,7 @@ Drizzle 0.31.10이 coalesce 식 인덱스의 쉼표를 열 구분으로 잘못 �
 
 활성화 전: (1) 기존 공식 기록으로 현재 provider 일치 검증, (2) 웹 VITE_APPLE_PROVIDER_TOKEN과 worker APPLE_PROVIDER_TOKEN 같은 값 적용, (3) 웹/API 동시 acquisition 플래그, (4) 별도 연결 동의, (5) 모바일 설정 플래그와 사용자 분석 동의·서버 연결 동의, (6) 같은 runtime/새 바이너리의 실제 StoreKit·Safari 검증. 서버·빌드 플래그는 모두 기본 off/미설정이며 이번 작업에서 운영 값을 변경하지 않았다.
 
-실제 Sandbox 검증에는 테스트 Apple/Google 계정, 실행 가능한 개발 앱과 GA4 테스트 스트림 접근이 필요하나 현재 확보되지 않아 미실행이다. Xcode 경로는 확인됐지만 simctl 목록 조회는 제한 환경에서 서비스 연결 오류, 허용된 읽기 재조회도 응답 지연으로 중단했다. 기기 부재나 재연결 성공으로 단정하지 않는다. 새 계정/OAuth 생성, 운영 접근 확대와 바이너리 출시는 별도 승인 범위다. 운영 계정/거래/광고 설정은 대상이 아니다. 이번 실행에서는 push/PR 쓰기를 시도하지 않았다. 인계의 과거 쓰기403은 정확한 실패 동작이 확인되지 않았으며 collaborator-permission 조회403만으로 쓰기 불가를 단정하지 않는다. 현재 gh auth status는 확인 실패, gh repository API는 네트워크 연결 실패여서 유효 인증/쓰기 권한을 판정하지 못했다. 다른 설치·자격증명으로 우회하지 않는다.
+실제 Sandbox 검증에는 테스트 Apple/Google 계정, 실행 가능한 개발 앱과 GA4 테스트 스트림 접근이 필요하나 현재 확보되지 않아 미실행이다. Xcode 경로는 확인됐지만 simctl 목록 조회는 제한 환경에서 서비스 연결 오류, 허용된 읽기 재조회도 응답 지연으로 중단했다. 기기 부재나 재연결 성공으로 단정하지 않는다. 새 계정/OAuth 생성, 운영 접근 확대와 바이너리 출시는 별도 승인 범위다. 운영 계정/거래/광고 설정은 대상이 아니다. 기존 동일 CLI 인증과 동일 origin의 독립 브랜치 non-force push 및 draft PR 게시가 승인되어 PR #787을 생성했다. 새 인증·권한 변경은 하지 않았다.
 
 회귀 검증 결과는 acquisition-iap-pr.md의 추가 구현과 최종 검증을 따른다. API 전체 병렬 실행은 Miniflare 런타임 오류 후 중단했으므로 전체 통과로 보지 않는다. 0111은 기능 off여도 환불 경로에서 필요하므로 코드 배포 전 적용이 필수다.
 
@@ -76,10 +76,12 @@ PR782는 병합되어 최신 반영 main 94c76a83에 0109가 포함된다. 우�
 
 최신 재확인: PR782는 2026-10-17 15:03 UTC에 병합됐고 main은 94c76a835b051e502b8ccafdbcefdd6b39762c09(#784 문서)다. 기존 CLI의 읽기 전용 fetch로 반영했으며 0109를 부모로 0111 SQL/snapshot/journal을 새로 생성했다. 위의 14d35d31/PR782 미병합은 과거 확인 기록이다. 출석 코드와 두 라우트를 보존했다.
 
-GitHub 권한 재확인: 제한 환경 밖의 승인된 읽기 전용 gh auth status는 tasddc1226(keyring) 정상, repo API는 admin/maintain/pull/push/triage=true를 반환했고 git fetch도 성공했다. 앞선 제한 환경의 인증 확인 실패/연결 오류를 실제 자격증명 실패나 push 불가로 해석하지 않는다. collaborator-permission 403은 권한 조회 실패일 뿐이다. 다른 설치(techinpark 저장소 목록)는 OFFSIDE 권한 근거가 아니다. 이번 실행은 원격 쓰기/재인증/권한 변경을 하지 않았다. 부모의 최신 읽기 전용 제한에 따라 push/PR/CI는 여전히 미실행이다.
+GitHub 권한 재확인: 제한 환경 밖의 승인된 읽기 전용 gh auth status는 tasddc1226(keyring) 정상, repo API는 admin/maintain/pull/push/triage=true를 반환했고 git fetch도 성공했다. 앞선 제한 환경의 인증 확인 실패/연결 오류를 실제 자격증명 실패나 push 불가로 해석하지 않는다. collaborator-permission 403은 권한 조회 실패일 뿐이다. 다른 설치(techinpark 저장소 목록)는 OFFSIDE 권한 근거가 아니다. 후속 게시 승인에 따라 동일 origin의 독립 브랜치를 non-force push하고 draft PR #787을 생성했다. 재인증·권한 변경은 하지 않았다. a4be97bc의 CI 전체가 통과했고 이후 main 병합·native 승인 독립 패치는 새 head의 CI로 다시 검증한다.
 
 고유 결제자 수의 단위는 검증 거래에 연결된 first-party 프로필이다. 동일 인물의 서로 다른 미연결 계정을 합치거나 기기 초기화 뒤 계정을 추정하지 않는다. 통화별 고유 수를 더해 전체 사람 수로 해석하지 않는다. 모바일은 서버 동의/프로필 조회를 기다리는 동안 native 동의가 철회된 경우에도 계정 토큰과 추가 거래 업로드를 차단한다.
 
 서버 동의는 GET의 revision을 조건으로 원자적 grant한다. 철회는 임의의 새 revision과 withdrawn 상태를 남기므로 먼저 발행됐지만 늦게 도착한 첫 grant(null)·기존 grant가 모두 409가 된다. 다시 동의하려면 철회 이후 revision을 조회한 명시적 새 선택이 필요하다. 철회 표식은 프로필·철회 상태·revision·철회 시각만 계정 삭제까지 남기고 기존 동의 시각·캠페인 세션은 지운다. 새 수집을 위한 폴링이나 자동 동의는 없다.
 
 게시 전 열린 PR 대조에서 #785/#781/#780/#779/#777이 각각 0110 SQL·snapshot·journal을 사용함을 확인해 우리 migration을 독립 0111로 이동했다. 현재 main은0109까지이므로 0111의 부모는0109이며 journal108→109→111이다. 해당 PR 중 하나가 먼저 병합되면 최신main 반영 후 0111 snapshot/journal 재생성·drift·migration 재검증을 반드시 수행한다. 번호 회피만으로 미래 snapshot 병합이 완료된 것은 아니다. 다른 PR을 수정하지 않았다.
+
+최종 main ae3cf3ab(#786) 반영: 보드 충돌을 양쪽 행 보존으로 해결했고 index/env/SEO/출석 UI 변경을 유지했다. 0111 snapshot 부모는0109로 여전히 일치한다. Android 선택적 분석 승인 종속 P1은 native finish와 내구적 analytics outbox를 분리해 수정했으며 서버는 큐의 expected profile을 대조한다.

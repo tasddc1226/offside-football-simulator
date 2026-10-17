@@ -36,7 +36,7 @@ export function registerIapRoutes(app: Hono<AppEnv>) {
   app.post('/v1/iap/ad-free/record', requireProfile, async (c) => {
     c.header('Cache-Control', NO_STORE);
     if (c.env.ACQUISITION_ENABLED !== '1') return c.body(null, 503);
-    let body: { store?: unknown; token?: unknown };
+    let body: { store?: unknown; token?: unknown; profileId?: unknown };
     try {
       body = JSON.parse(c.get('rawBody') ?? '{}') as typeof body;
     } catch {
@@ -51,6 +51,7 @@ export function registerIapRoutes(app: Hono<AppEnv>) {
     )
       return c.body(null, 400);
     const profileId = getSessionOrThrow(c).profileId;
+    if (body.profileId !== undefined && body.profileId !== profileId) return c.body(null, 409);
     const consent = await c.env.DB.prepare(
       'SELECT version FROM acquisition_consents WHERE profile_id=?',
     )

@@ -44,6 +44,14 @@ describe('ad removal verified recording', () => {
     const a = await issueGoogleCookie(ctx);
     const b = await issueGoogleCookie(ctx);
     for (const me of [a, b]) await grant(me.cookie);
+    expect(
+      (
+        await callJson(ctx.env, 'POST', '/v1/iap/ad-free/record', {
+          cookie: b.cookie,
+          body: { store: 'apple', token: 'signed-fixture', profileId: a.profileId },
+        })
+      ).status,
+    ).toBe(409);
     const now = Date.now();
     tx.value = {
       transactionId: 'ad-1',
