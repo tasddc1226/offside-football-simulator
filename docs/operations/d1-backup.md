@@ -26,7 +26,7 @@ D1 Time Travel(30일 시점 복구)과 별개로, D1 밖(R2)에 SQL 사본을 �
 - 진행: 5분 cron이 매 틱 `src/cron/backup.ts`의 `runBackupStep`을 부른다. UTC 19:00 뒤 첫 틱이 그날 백업을 시작하고,
   틱마다 45초(`BACKUP_STEP_MS`) 또는 압축 24MiB(`BACKUP_CHUNK_BYTES`)만큼 읽어 조각 하나를 `put`하고 다음 위치(표·rowid·
   조각 번호)를 `app_meta`의 `cron:backup:state`에 적는다. 끝나면 `cron:backup:last`에 결과(접두사 `key`, `chunks`, `rows`,
-  `bytes`, `steps`, `startedAt`·`finishedAt`)를 남기고 상태를 지운다. 운영 4.3GB 기준 조각 25~35개·1~3시간이 든다.
+  `bytes`, `steps`, `startedAt`·`finishedAt`)를 남기고 상태를 지운다. 운영 4.3GB 기준 조각 25~~35개·1~~3시간이 든다.
 - 이어받기: 조각을 올린 뒤에만 위치를 바꾼다. 호출이 중간에 죽으면 다음 틱이 같은 번호 조각을 다시 만들어 같은 키에
   덮어쓴다. 잠금(`cron:backup:lease`)은 4분이라 죽은 호출 뒤 다음 틱이 바로 잇는다.
 - 보존: 매일 백업은 30일, 매달 1일 백업은 계속(코드에서 지운다 — 버킷 수명 주기 규칙으로 옮길 수도 있지만 정책을

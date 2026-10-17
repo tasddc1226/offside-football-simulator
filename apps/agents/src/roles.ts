@@ -9,6 +9,10 @@ import mkt from '../roles/mkt.md';
 import ops from '../roles/ops.md';
 import plan from '../roles/plan.md';
 import team from '../roles/team.md';
+import { appStatusTools } from './appStatus.ts';
+import { memoryTools } from './memory.ts';
+import { marketingTools } from './marketing.ts';
+import { webTools } from './tools/web.ts';
 import captain from '../roles/captain.md';
 import baseline from '../knowledge/ops-baseline.md';
 import { captainTools } from './captain.ts';
@@ -35,10 +39,16 @@ const kstNow = () =>
   new Date(Date.now() + 9 * 3600_000).toISOString().replace('T', ' ').slice(0, 16);
 
 /** 넘겨받은 일: 넘긴 역할의 요청과 그 답 전체(자료). */
+/** T-11-332 답 규칙(team.md)을 요청 끝에 한 줄로 다시 붙인다. 긴 조사 뒤에도 첫 줄 결론 · 확인한 것만 쓰게. */
+export const ANSWER_RULE =
+  '(답 규칙: 첫 줄에 결론 한 문장, 정해진 형식이 없으면 5줄 안. 확인한 사실만 근거와 함께, 모르면 "확인 못 함: 무엇". 과정 · 인사 · 맺음말 · 동료 답 되풀이는 쓰지 않아요.)';
+
+const directive = (t: Task) => `지금 KST ${kstNow()}. 운영자 지시:\n${t.text}\n\n${ANSWER_RULE}`;
+
 const handoffPrompt = (t: Task) =>
   t.back
-    ? `지금 KST ${kstNow()}. 내가 넘긴 일을 @${t.from}가 끝내고 결과를 돌려줬어요.\n\n${t.text}\n\n<context>\n${t.context ?? ''}\n</context>`
-    : `지금 KST ${kstNow()}. @${t.from}가 같은 스레드에서 일을 넘겼어요.\n\n요청: ${t.text}\n\n<context>\n${t.context ?? ''}\n</context>`;
+    ? `지금 KST ${kstNow()}. 내가 넘긴 일을 @${t.from}가 끝내고 결과를 돌려줬어요.\n\n${t.text}\n\n<context>\n${t.context ?? ''}\n</context>\n\n${ANSWER_RULE}`
+    : `지금 KST ${kstNow()}. @${t.from}가 같은 스레드에서 일을 넘겼어요.\n\n요청: ${t.text}\n\n<context>\n${t.context ?? ''}\n</context>\n\n${ANSWER_RULE}`;
 
 /**
  * 일에 맞는 모델(T-11-289 비용 절감). 유저 반응 분류 · 경보 첫 정리는 Haiku, 아침 보고는 Sonnet, 운영자 지시 ·
@@ -68,6 +78,8 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
   // 저장소 읽기 · 찾기와 PR 목록은 모든 역할이 쓴다(경로를 짐작하지 않게).
   const REPO = new Set(['repo_file', 'repo_find', 'repo_grep', 'pr_list']);
   const repo = tools.filter((t) => REPO.has(t.name));
+  // T-11-332 운영자가 붙인 외부 링크 읽기(운영자 지시 · 답글 · 넘겨받은 일).
+  const web = webTools(task.kind);
   if (role === 'plan')
     return {
       system: `${plan}\n\n${captain}\n\n${team}\n\n${glossary}\n\n${baseline}`,
@@ -77,7 +89,10 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
       // T-11-325 주장: 운영자 지시 · 답글 · 넘겨받은 일에는 작업 카드 · 작업 명세 도구를 더한다.
       tools: [
         ...repo,
+        ...web,
         ...tools.filter((t) => t.name === 'd1_query'),
+        ...appStatusTools(env),
+        ...memoryTools(env, 'plan', task),
         ...supportTools(env, task),
         ...reviewTools(env, task),
         ...captainTools(env, task),
@@ -89,7 +104,7 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
           ? t.text
           : t.kind === 'handoff'
             ? handoffPrompt(t)
-            : `지금 KST ${kstNow()}. 운영자 지시:\n${t.text}`,
+            : directive(t),
     };
   if (role === 'dev')
     return {
@@ -98,8 +113,10 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
       // 개발은 저장소 · PR을 읽고, 운영자가 맡긴 일이면 Actions 작업을 띄운다(start_work). 고치는 건 Actions의 Claude Code가 한다.
       tools: [
         ...repo,
+        ...web,
         ...tools.filter((t) => t.name === 'github_runs' || t.name === 'github_run_jobs'),
         ...devTools(env, task),
+        ...memoryTools(env, 'dev', task),
       ],
       // 파일 찾기 · 나눠 읽기에 턴이 더 든다(8턴에서 "앞부분만 봤다"로 끝나던 문제).
       maxTurns: 12,
@@ -109,14 +126,22 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
           ? `${handoffPrompt(t)}
 
 (넘겨받은 일이라 바로 고치지 않아요. 할 일을 정리해 운영자 확인을 받아요.)`
-          : `지금 KST ${kstNow()}. 운영자 지시:\n${t.text}`,
+          : directive(t),
     };
   if (role === 'mkt')
     return {
       system: `${mkt}\n\n${team}\n\n${glossary}`,
       model,
       // 마케팅은 저장소 · 배포 기록을 읽고 드림보트 요약 초안만 올린다(보내기는 운영자 승인 버튼).
-      tools: [...repo, ...mktTools(env, task), ...ga4Tools(env, task.kind)],
+      tools: [
+        ...repo,
+        ...web,
+        ...mktTools(env, task),
+        ...ga4Tools(env, task.kind),
+        ...marketingTools(env, task.kind),
+        ...appStatusTools(env),
+        ...memoryTools(env, 'mkt', task),
+      ],
       maxTurns: task.kind === 'release' ? 5 : task.kind === 'report' ? 7 : 8,
       mcpServers: [],
       prompt: (t) =>
@@ -126,7 +151,7 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
             ? `지금 KST ${kstNow()}. 월요일 주간 유입 리포트를 써 주세요. 역할 설명의 "주간 유입 리포트" 순서대로, \`ga4_report\`는 4번 안쪽으로 불러요.`
             : t.kind === 'handoff'
               ? handoffPrompt(t)
-              : `지금 KST ${kstNow()}. 운영자 지시:\n${t.text}`,
+              : directive(t),
     };
   if (role !== 'ops') throw new Error(`role ${role} is not open yet`);
   return {
@@ -134,6 +159,9 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
     model,
     tools: [
       ...tools,
+      ...webTools(task.kind),
+      ...appStatusTools(env),
+      ...memoryTools(env, 'ops', task),
       ...digestTools({
         repo: env.GITHUB_REPO,
         githubToken: gh,
@@ -163,11 +191,11 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
         : t.kind === 'report'
           ? `지금 KST ${kstNow()}. 아침 주기 작업 보고를 써 주세요(지난 24시간 결과와 앞으로 24시간 예정). 먼저 \`report_digest\`를 한 번 부르고, 그 결과로 모자란 것만 더 조회해요.`
           : t.kind === 'alert'
-            ? `지금 KST ${kstNow()}. #offside-alerts에 경보가 올라왔어요. 첫 정리예요: 조회는 4번 안쪽으로, 확인한 것까지만 정리해 주세요. 원인이 분명하지 않으면 "더 보려면 이 스레드에서 불러 주세요"라고 끝내요. 역할 설명의 "사건 판정"에 맞으면 첫 줄을 \`사건: <한 줄>\`로 써요.\n\n<alert>\n${t.text}\n</alert>`
+            ? `지금 KST ${kstNow()}. #offside-alerts에 경보가 올라왔어요. 첫 정리예요: 조회는 4번 안쪽으로, 확인한 것까지만 정리해 주세요. 원인이 분명하지 않으면 "더 보려면 이 스레드에서 불러 주세요"라고 끝내요. 역할 설명의 "사건 판정"에 맞으면 첫 줄을 \`사건: <한 줄>\`로 써요.\n\n<alert>\n${t.text}\n</alert>\n\n${ANSWER_RULE}`
             : t.kind === 'incident'
-              ? `지금 KST ${kstNow()}. 사건이에요. 역할 설명의 "사건 조사" 순서대로 원인을 확정해 주세요. 첫 줄은 무슨 일인지 한 줄로 써요(작업 카드 목표가 돼요).\n\n<signal>\n${t.text}\n</signal>`
+              ? `지금 KST ${kstNow()}. 사건이에요. 역할 설명의 "사건 조사" 순서대로 원인을 확정해 주세요. 첫 줄은 무슨 일인지 한 줄로 써요(작업 카드 목표가 돼요).\n\n<signal>\n${t.text}\n</signal>\n\n${ANSWER_RULE}`
               : t.kind === 'verify'
-                ? `지금 KST ${kstNow()}. ${t.text}`
-                : `지금 KST ${kstNow()}. 운영자 지시:\n${t.text}`,
+                ? `지금 KST ${kstNow()}. ${t.text}\n\n${ANSWER_RULE}`
+                : directive(t),
   };
 }

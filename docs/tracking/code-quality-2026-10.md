@@ -13,18 +13,18 @@
 
 ## 진행
 
-| # | 묶음 | 상태 |
-|---|---|---|
-| 1 | 안 쓰는 코드·의존성 제거(영구결번 오픈 게이트, 토스 스키마, 죽은 repo 함수, Placeholder, 죽은 스크립트, devDeps 3개) | 완료 |
-| 2 | 회원 판정 공용화 `app-core/account` — 웹이 애플 전용 계정을 게스트로 보던 drift 수정 | 완료 |
-| 3 | 로그인 안내 문구 공용화 `app-core/loginText` — session 안내 drift 수정 | 완료 |
-| 4 | API 공통 헬퍼: 속도 제한 `enforceLimit`, 오류 팩토리(`conflictError`·`rateLimited`), KST 시간 `time.ts`, 작은 우회(`auditLogStatement`, `clientIp`). 관리자 통계는 원본 D1이 필요해 `c.env.DB` 그대로 | 완료 |
-| 5 | 공개 GET 12곳(+게시판별 목록)이 쿠키가 있어도 세션을 읽지 않고 쿠키를 내리지 않는지 표 기반 테스트 `routes/publicReads.test.ts` | 완료 |
-| 6 | game 특성화 테스트 `characterize.test.ts`: 커리어 10개의 중간 상태 528개 + 변형(대표팀·병역 마감)에서 `simBlock`·`natWindow`·`rollEvent`·`endSeason`(seasonAwards·natSeasonEnd·milSeasonEnd)·시장 선택(병역 7종)·이벤트×선택지 `p` 격자(58개 중 53개 도달) 해시 고정 | 완료 |
-| 7 | 웹·앱 중복 순수 로직 → app-core(+테스트 34개): 홈 라이브 피드 `homeLive`, 팀 라이브 재생 계획 `teamLive.playbackPlan`, 영구결번 벽 `retiredWall`, 국적 검색 `nationSearch`, 공유 링크 `shareLink`, 체격 보정 `create-view.bodyNote`. 동작 차이 없음 | 완료 |
-| 8 | app-core 미테스트 핵심 특성화 테스트 88개: `teamOwner`(라인업 배치·후보 정렬·힌트), `navHistory`, `legendReport`, `news` | 완료 |
-| 9 | game 큰 함수 분리: `simBlock`(출전·결과·평점·하이라이트·부상·구간 뒤), `endSeason`(클럽 월드컵·시즌 기록·한 해 넘기기), `market`(병역·고교·대학·프로 선반), `runTournament`(대진·병역 특례·명성 표), 가중 룰렛 3곳 → `rng.weightedIndex`. 골든·특성화 해시 그대로 | 완료 |
-| 10 | 웹 `Team.svelte` 1135줄 → 411줄: `TeamHead`·`TeamLineup`·`TeamPicker`·`TeamOpponents`·`TeamResult`·`TeamAchievements`·`TeamHistory`·`TeamNav`(앱과 같은 경계). 로드 성공 때 `needLogin`을 되돌리는 drift 수정(앱과 같게) | 완료 |
+| #   | 묶음                                                                                                                                                                                                                                                                 | 상태 |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+| 1   | 안 쓰는 코드·의존성 제거(영구결번 오픈 게이트, 토스 스키마, 죽은 repo 함수, Placeholder, 죽은 스크립트, devDeps 3개)                                                                                                                                                 | 완료 |
+| 2   | 회원 판정 공용화 `app-core/account` — 웹이 애플 전용 계정을 게스트로 보던 drift 수정                                                                                                                                                                                 | 완료 |
+| 3   | 로그인 안내 문구 공용화 `app-core/loginText` — session 안내 drift 수정                                                                                                                                                                                               | 완료 |
+| 4   | API 공통 헬퍼: 속도 제한 `enforceLimit`, 오류 팩토리(`conflictError`·`rateLimited`), KST 시간 `time.ts`, 작은 우회(`auditLogStatement`, `clientIp`). 관리자 통계는 원본 D1이 필요해 `c.env.DB` 그대로                                                                | 완료 |
+| 5   | 공개 GET 12곳(+게시판별 목록)이 쿠키가 있어도 세션을 읽지 않고 쿠키를 내리지 않는지 표 기반 테스트 `routes/publicReads.test.ts`                                                                                                                                      | 완료 |
+| 6   | game 특성화 테스트 `characterize.test.ts`: 커리어 10개의 중간 상태 528개 + 변형(대표팀·병역 마감)에서 `simBlock`·`natWindow`·`rollEvent`·`endSeason`(seasonAwards·natSeasonEnd·milSeasonEnd)·시장 선택(병역 7종)·이벤트×선택지 `p` 격자(58개 중 53개 도달) 해시 고정 | 완료 |
+| 7   | 웹·앱 중복 순수 로직 → app-core(+테스트 34개): 홈 라이브 피드 `homeLive`, 팀 라이브 재생 계획 `teamLive.playbackPlan`, 영구결번 벽 `retiredWall`, 국적 검색 `nationSearch`, 공유 링크 `shareLink`, 체격 보정 `create-view.bodyNote`. 동작 차이 없음                  | 완료 |
+| 8   | app-core 미테스트 핵심 특성화 테스트 88개: `teamOwner`(라인업 배치·후보 정렬·힌트), `navHistory`, `legendReport`, `news`                                                                                                                                             | 완료 |
+| 9   | game 큰 함수 분리: `simBlock`(출전·결과·평점·하이라이트·부상·구간 뒤), `endSeason`(클럽 월드컵·시즌 기록·한 해 넘기기), `market`(병역·고교·대학·프로 선반), `runTournament`(대진·병역 특례·명성 표), 가중 룰렛 3곳 → `rng.weightedIndex`. 골든·특성화 해시 그대로    | 완료 |
+| 10  | 웹 `Team.svelte` 1135줄 → 411줄: `TeamHead`·`TeamLineup`·`TeamPicker`·`TeamOpponents`·`TeamResult`·`TeamAchievements`·`TeamHistory`·`TeamNav`(앱과 같은 경계). 로드 성공 때 `needLogin`을 되돌리는 drift 수정(앱과 같게)                                             | 완료 |
 
 ## 보류(결정 필요·범위 큼)
 
