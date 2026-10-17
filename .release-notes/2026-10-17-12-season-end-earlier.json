@@ -1,0 +1,23 @@
+{
+  "id": "t-11-352-season-end-earlier",
+  "title": "시즌 1이 늦어도 10월 30일(금)까지 열려요",
+  "items": [
+    "시즌 최대 기간을 4주에서 25일로 줄였어요. 시즌 1은 늦어도 10월 30일(금)에 끝나고, 10월 31일(토) 0시에 시즌 2가 개막해요",
+    "홈 시즌 진행률 아래에 함께 채우는 인원이 나와요. 참여자가 늘면 목표도 같이 커져서 진행이 느려 보일 수 있어요"
+  ],
+  "en": {
+    "title": "Season 1 now ends by Friday, Oct 30",
+    "items": [
+      "The longest a season can run is now 25 days instead of four weeks. Season 1 ends by Friday, Oct 30 at the latest, and season 2 opens at midnight KST on Saturday, Oct 31.",
+      "The season progress card on Home now shows how many players are filling it. The goal grows as more players join, so progress can look slower."
+    ]
+  },
+  "ja": {
+    "title": "シーズン1は遅くとも10月30日(金)まで開催します",
+    "items": [
+      "シーズンの最長期間を4週間から25日に短くしました。シーズン1は遅くとも10月30日(金)に終わり、10月31日(土)0時(韓国時間)にシーズン2が開幕します。",
+      "ホームのシーズン進行度の下に、一緒に進めている人数が表示されます。参加者が増えると目標も大きくなるため、進みが遅く見えることがあります。"
+    ]
+  },
+  "availability": "web-app"
+}

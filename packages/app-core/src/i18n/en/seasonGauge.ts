@@ -14,4 +14,5 @@ export const seasonGauge: Translation<SeasonGaugeMsgs> = {
   endsOn: (p) => `Open through ${p.date}`,
   endsBy: (p) => `Open through ${p.date} at the latest`,
   endsBetween: (p) => `Open through ${p.from} at the earliest, ${p.to} at the latest`,
+  why: (p) => `${p.n} players are filling it together. The goal grows as more players join.`,
 };
