@@ -122,4 +122,5 @@ export const manager: Translation<ManagerMsgs> = {
   stepTransfer: 'Signing',
   stepEvent: 'Story',
   stepResult: 'Review',
+  sheetEvent: (p) => `Season ${p.n} story`,
 };

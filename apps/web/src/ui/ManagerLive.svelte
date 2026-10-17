@@ -44,7 +44,8 @@
   const finished = $derived(shown >= matches.length);
 </script>
 
-<section class="card mg-live" data-manager-live aria-live="polite" aria-busy={!finished}>
+<!-- T-11-330 감독 시트(PopSheet) 안에 그려서 카드 틀은 두지 않는다. -->
+<section class="mg-live" data-manager-live aria-live="polite" aria-busy={!finished}>
   <div class="eyebrow">{M.liveEyebrow({ n })}</div>
   <h2>{club}</h2>
   <div class="prog"><i style:width="{matches.length ? (shown / matches.length) * 100 : 100}%" style:transition-duration="{step}ms"></i></div>

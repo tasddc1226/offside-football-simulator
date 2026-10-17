@@ -122,4 +122,5 @@ export const manager: Translation<ManagerMsgs> = {
   stepTransfer: '補強',
   stepEvent: '出来事',
   stepResult: '総括',
+  sheetEvent: (p) => `${p.n}シーズンの出来事`,
 };

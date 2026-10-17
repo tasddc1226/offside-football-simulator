@@ -1,0 +1,23 @@
+{
+  "id": "t-11-330-manager-sheets",
+  "title": "감독 커리어 선택지 · 결과를 창으로",
+  "items": [
+    "감독 제의, 영입, 시즌 이야기, 경기, 결산이 선수 커리어처럼 아래에서 올라오는 창으로 떠요",
+    "창 아래에서 바로 다음 단계로 넘어가고, 감독 커리어 포기도 창에서 할 수 있어요"
+  ],
+  "en": {
+    "title": "Manager career choices and results in a sheet",
+    "items": [
+      "Offers, signings, season stories, matches and the season review now pop up from the bottom, like in player careers.",
+      "You can move on from the bottom of the sheet, and leave the manager career from there too."
+    ]
+  },
+  "ja": {
+    "title": "監督キャリアの選択と結果をシートで表示",
+    "items": [
+      "監督オファー、補強、シーズンの出来事、試合、総括が選手キャリアと同じく下から開くシートで表示されます。",
+      "シートの下からそのまま次へ進めて、監督キャリアの断念もシートからできます。"
+    ]
+  },
+  "availability": "web-app"
+}

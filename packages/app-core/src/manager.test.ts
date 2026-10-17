@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { MANAGER_EVENTS, newManagerCareer, type ManagerState } from '@offside/game/manager';
-import { choiceOddsLabels, eventOutcome, managerBar, managerSteps, statDelta } from './manager.js';
+import {
+  choiceOddsLabels,
+  eventOutcome,
+  managerBar,
+  managerSheetLabel,
+  managerSteps,
+  statDelta,
+} from './manager.js';
 
 const ORIGIN = {
   pos: 'MF' as const,
@@ -60,5 +67,17 @@ describe('T-11-329 감독 진행 화면', () => {
     const a = { fame: 40, trust: 50, morale: 55, fans: 50, control: 30, adapt: 20 };
     expect(statDelta(a, { ...a, fame: 43, trust: 48 })).toEqual({ fame: 3, trust: -2 });
     expect(statDelta(a, a)).toEqual({});
+  });
+
+  it('T-11-330 고르거나 결과를 보는 단계만 창으로 띄운다', () => {
+    const s = start();
+    expect(managerSheetLabel(s, false)).toBe('감독 제의');
+    expect(managerSheetLabel({ ...s, phase: 'setup' }, false)).toBeNull();
+    expect(managerSheetLabel({ ...s, phase: 'transfer' }, false)).toBe('이적시장');
+    expect(managerSheetLabel({ ...s, phase: 'event' }, false)).toBe('1시즌 이야기');
+    const h = { ...s, phase: 'result' as const, season: 1, history: [{ n: 1 } as never] };
+    expect(managerSheetLabel(h, true)).toBe('1시즌 경기');
+    expect(managerSheetLabel(h, false)).toBe('1시즌 결산');
+    expect(managerSheetLabel({ ...s, phase: 'done' }, false)).toBeNull();
   });
 });

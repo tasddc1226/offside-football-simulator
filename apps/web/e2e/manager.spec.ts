@@ -188,6 +188,7 @@ test('은퇴 선수로 감독 커리어를 끝까지 하고 감독 칸에 앉힌
 
   // T-11-329 시즌 단계 막대가 보인다(제의 → 준비).
   await expect(page.locator('[data-manager-steps]')).toHaveAttribute('data-manager-steps', '0');
+  await expect(page.locator('[role="dialog"] [data-manager-offers]')).toBeVisible();
   // 첫 시즌 준비까지 간 뒤 새로 고쳐도 기기 세이브로 이어 한다.
   await page.locator('[data-act="manager-accept"]').first().click();
   await expect(page.locator('[data-manager-setup]')).toBeVisible();
@@ -210,6 +211,12 @@ test('은퇴 선수로 감독 커리어를 끝까지 하고 감독 칸에 앉힌
   )
     await step(page);
   await expect(page.locator('[data-act="manager-choice"] .odds').first()).toHaveText(/%|확정/);
+  // T-11-330 선수 플레이처럼 선택지는 아래에서 올라오는 창 안에 뜬다.
+  await expect(page.locator('[role="dialog"] [data-act="manager-choice"]').first()).toBeVisible();
+  {
+    const { violations } = await new AxeBuilder({ page }).analyze();
+    expect(violations.map((v) => `${v.id} (${v.impact})`)).toEqual([]);
+  }
   const liveBox = page.locator('[data-manager-live]');
   for (let i = 0; i < 20 && !(await liveBox.isVisible()); i++) await step(page);
   await expect(liveBox.locator('.ticker div').first()).toBeVisible();

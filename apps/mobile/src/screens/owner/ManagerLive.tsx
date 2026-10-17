@@ -12,7 +12,7 @@ import { Bump } from '../../sheets/Block';
 import { Enter } from '../../sheets/anim';
 import { ProgBar, StatGrid } from '../../sheets/parts';
 import { ResBadge } from '../../sheets/TickerLine';
-import { Btn, Card, Press, Txt } from '../../ui';
+import { Btn, Press, Txt } from '../../ui';
 
 export function ManagerLive({
   n,
@@ -55,7 +55,8 @@ export function ManagerLive({
   const recent = played.slice(-5).reverse();
 
   return (
-    <Card gap={10} testID="manager-live">
+    // T-11-330 감독 시트(PopSheet) 안에 그려서 카드 틀은 두지 않는다.
+    <View style={{ gap: 10 }} testID="manager-live">
       <Txt v="eyebrow">{M.liveEyebrow({ n })}</Txt>
       <Txt v="h2" accessibilityRole="header">
         {club}
@@ -101,6 +102,6 @@ export function ManagerLive({
           </Txt>
         </Press>
       )}
-    </Card>
+    </View>
   );
 }
