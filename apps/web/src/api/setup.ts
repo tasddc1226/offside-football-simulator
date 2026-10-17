@@ -10,3 +10,15 @@ configureApi({
   ),
   auth: () => ({ credentials: 'include' }),
 });
+
+// T-11-331 잡히지 않은 오류를 서버로 모은다(운영 빌드, 로컬 미리보기 · e2e 제외). 보내는 코드(errorWatch)는 첫 오류가
+// 났을 때만 불러온다(첫 화면 번들 예산).
+if (import.meta.env.PROD && !/^(localhost|127\.)/.test(location.hostname)) {
+  const report = (kind: 'error' | 'rejection', error: unknown) =>
+    void import('./errorWatch.js').then(
+      (m) => m.report(kind, error),
+      () => {},
+    );
+  addEventListener('error', (e) => report('error', e.error ?? e.message));
+  addEventListener('unhandledrejection', (e) => report('rejection', e.reason));
+}
