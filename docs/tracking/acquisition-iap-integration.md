@@ -52,7 +52,7 @@ expo-iap 5.8.2는 StoreKit 2 경로이며 앱 코드에 Firebase `logTransaction
 
 통화별 transactions·unique_purchasers·가격 검증된 unique_payers·신규 결제자·반복 거래·금액 합계·환불·가격 누락·0원·sandbox를 분리한다. 신규 결제자는 두 원장의 모든 운영 거래 중 계정별 최초 행이며 검증 금액이 양수인 경우에만 센다. 과거 금액 미확인 거래가 먼저 있으면 신규로 추정하지 않으므로 보수적 하한이다. 미확인 가격 거래를 유료 결제자로 확정하지 않는다. `repeat_transactions`는 두 원장의 모든 운영 반복 거래이며 유료 확인 여부는 가격 coverage와 함께 해석한다. 통화끼리 합산하지 않는다. 직접 유입은 빈 campaign, 연결 없는 구매는 `unattributed`다.
 
-Migration은 PR782의 0109를 피한 0110이며 journal index와 snapshot도 110/0110이다. 현재 main 14d35d31 기준 schema generate 추가 변경 없음이다. PR782 병합 후 snapshot 재생성 조건은 마지막 절을 따른다.
+Migration은 최신 main 0109 기준 독립 0111이며 journal idx111, meta/0111_snapshot.json이다. 현재 schema generate 추가 변경 없음이다. 다른 0110 PR 병합 시 마지막 절의 재생성 조건을 따른다.
 
 Drizzle 0.31.10이 coalesce 식 인덱스의 쉼표를 열 구분으로 잘못 직렬화한 SQL을 로컬 테스트에서 발견해 표현식 SQL만 바로잡았다. ADD COLUMN FK의 ON DELETE SET NULL도 명시했다. schema/snapshot은 생성본을 유지하며 재생성 drift 없음과 빈 D1 전체 적용을 다시 검증한다.
 
@@ -64,22 +64,22 @@ Drizzle 0.31.10이 coalesce 식 인덱스의 쉼표를 열 구분으로 잘못 �
 
 실제 Sandbox 검증에는 테스트 Apple/Google 계정, 실행 가능한 개발 앱과 GA4 테스트 스트림 접근이 필요하나 현재 확보되지 않아 미실행이다. Xcode 경로는 확인됐지만 simctl 목록 조회는 제한 환경에서 서비스 연결 오류, 허용된 읽기 재조회도 응답 지연으로 중단했다. 기기 부재나 재연결 성공으로 단정하지 않는다. 새 계정/OAuth 생성, 운영 접근 확대와 바이너리 출시는 별도 승인 범위다. 운영 계정/거래/광고 설정은 대상이 아니다. 이번 실행에서는 push/PR 쓰기를 시도하지 않았다. 인계의 과거 쓰기403은 정확한 실패 동작이 확인되지 않았으며 collaborator-permission 조회403만으로 쓰기 불가를 단정하지 않는다. 현재 gh auth status는 확인 실패, gh repository API는 네트워크 연결 실패여서 유효 인증/쓰기 권한을 판정하지 못했다. 다른 설치·자격증명으로 우회하지 않는다.
 
-회귀 검증 결과는 acquisition-iap-pr.md의 추가 구현과 최종 검증을 따른다. API 전체 병렬 실행은 Miniflare 런타임 오류 후 중단했으므로 전체 통과로 보지 않는다. 0110은 기능 off여도 환불 경로에서 필요하므로 코드 배포 전 적용이 필수다.
+회귀 검증 결과는 acquisition-iap-pr.md의 추가 구현과 최종 검증을 따른다. API 전체 병렬 실행은 Miniflare 런타임 오류 후 중단했으므로 전체 통과로 보지 않는다. 0111은 기능 off여도 환불 경로에서 필요하므로 코드 배포 전 적용이 필수다.
 
-### PR782 충돌 재검증
+### Migration 충돌 재검증
 
-2026-10-17 읽기 확인: 최신 main은 14d35d31이다. PR782(head b999bdd8)는 열림/미병합이며 0109_owner_attendance, journal idx109, meta/0109_snapshot.json을 추가한다. PR772는 현재 closed/미병합으로 확인됐다. 기존 "여전히 열림" 기록보다 이 상태가 최신이다. 다른 PR은 수정하지 않았다.
-
-우리 migration을 0110_acquisition_iap.sql, journal idx110, meta/0110_snapshot.json으로 옮겼다. 현재 main 기준 drizzle generate 추가 변경 없음이며 번호·파일명은 PR782와 겹치지 않는다. 아직 PR782가 main에 없으므로 0110 snapshot은 현재 main 0108을 부모로 가진다. **PR782가 먼저 병합되면 반드시 최신 main을 반영해 0110 snapshot/journal을 다시 생성하고 전체 schema drift·migration·번들을 재검증해야 한다.** 파일 번호 변경만으로 미래 snapshot 병합까지 완료됐다고 보지 않는다. 이 조건을 충족하기 전 운영 배포하지 않는다.
+PR782는 병합되어 최신 반영 main 94c76a83에 0109가 포함된다. 우리 0111의 부모는0109이고 출석 테이블·코드를 유지했다. 열린 PR785/781/780/779/777의 0110 파일·snapshot 충돌을 피했다. 이 중 하나가 먼저 병합되면 반드시 최신 main 반영 후 0111 snapshot/journal을 재생성하고 drift·migration을 다시 확인한다. 번호만 다르게 했다고 미래 snapshot 병합까지 완료한 것으로 보지 않는다. 다른 PR은 수정하지 않았다.
 
 리뷰 수정: 오프라인 철회는 네트워크보다 먼저 원래 프로필 대상을 영속화한다. 프로필을 한 번도 확인하지 못한 철회는 `unresolved`로 남겨 다른 계정에 자동 적용하지 않으며 원래 계정에서 명시적 재시도가 필요하다. 광고 제거 INSERT에서 현행 동의/미삭제 프로필을 원자적으로 재검사하고, 소모성 환불 선도착 marker는 구매 원장에 즉시 반영해 아이템 지급을 막는다.
 
 철회 복구: 환경설정에서 분석 동의가 꺼져 있어도 철회 대기 카드는 표시된다. 원래 계정 A 대상 철회가 대기 중인 상태에서 B로 바꿨다면 A에 다시 로그인하여 같은 카드의 거절/철회 버튼을 누른다. A의 철회가 완료될 때까지 B의 새 연결 동의는 차단한다. 대상 미확정(`unresolved`)인 경우에도 원래 계정으로 로그인 후 거절 버튼을 명시적으로 다시 누른다. 자동으로 현재 B의 기록을 삭제하지 않는다.
 
-최신 재확인: PR782는 2026-10-17 15:03 UTC에 병합됐고 main은 94c76a835b051e502b8ccafdbcefdd6b39762c09(#784 문서)다. 기존 CLI의 읽기 전용 fetch로 반영했으며 0109를 부모로 0110 SQL/snapshot/journal을 새로 생성했다. 위의 14d35d31/PR782 미병합은 과거 확인 기록이다. 출석 코드와 두 라우트를 보존했다.
+최신 재확인: PR782는 2026-10-17 15:03 UTC에 병합됐고 main은 94c76a835b051e502b8ccafdbcefdd6b39762c09(#784 문서)다. 기존 CLI의 읽기 전용 fetch로 반영했으며 0109를 부모로 0111 SQL/snapshot/journal을 새로 생성했다. 위의 14d35d31/PR782 미병합은 과거 확인 기록이다. 출석 코드와 두 라우트를 보존했다.
 
 GitHub 권한 재확인: 제한 환경 밖의 승인된 읽기 전용 gh auth status는 tasddc1226(keyring) 정상, repo API는 admin/maintain/pull/push/triage=true를 반환했고 git fetch도 성공했다. 앞선 제한 환경의 인증 확인 실패/연결 오류를 실제 자격증명 실패나 push 불가로 해석하지 않는다. collaborator-permission 403은 권한 조회 실패일 뿐이다. 다른 설치(techinpark 저장소 목록)는 OFFSIDE 권한 근거가 아니다. 이번 실행은 원격 쓰기/재인증/권한 변경을 하지 않았다. 부모의 최신 읽기 전용 제한에 따라 push/PR/CI는 여전히 미실행이다.
 
 고유 결제자 수의 단위는 검증 거래에 연결된 first-party 프로필이다. 동일 인물의 서로 다른 미연결 계정을 합치거나 기기 초기화 뒤 계정을 추정하지 않는다. 통화별 고유 수를 더해 전체 사람 수로 해석하지 않는다. 모바일은 서버 동의/프로필 조회를 기다리는 동안 native 동의가 철회된 경우에도 계정 토큰과 추가 거래 업로드를 차단한다.
 
 서버 동의는 GET의 revision을 조건으로 원자적 grant한다. 철회는 임의의 새 revision과 withdrawn 상태를 남기므로 먼저 발행됐지만 늦게 도착한 첫 grant(null)·기존 grant가 모두 409가 된다. 다시 동의하려면 철회 이후 revision을 조회한 명시적 새 선택이 필요하다. 철회 표식은 프로필·철회 상태·revision·철회 시각만 계정 삭제까지 남기고 기존 동의 시각·캠페인 세션은 지운다. 새 수집을 위한 폴링이나 자동 동의는 없다.
+
+게시 전 열린 PR 대조에서 #785/#781/#780/#779/#777이 각각 0110 SQL·snapshot·journal을 사용함을 확인해 우리 migration을 독립 0111로 이동했다. 현재 main은0109까지이므로 0111의 부모는0109이며 journal108→109→111이다. 해당 PR 중 하나가 먼저 병합되면 최신main 반영 후 0111 snapshot/journal 재생성·drift·migration 재검증을 반드시 수행한다. 번호 회피만으로 미래 snapshot 병합이 완료된 것은 아니다. 다른 PR을 수정하지 않았다.

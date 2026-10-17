@@ -10,9 +10,9 @@
 
 ## 최신 main과 migration
 
-main `94c76a835b051e502b8ccafdbcefdd6b39762c09`를 읽기 전용 fetch로 반영했다. PR782의 출석 코드·라우트·삭제 경로·EXPECTED_TABLES를 보존했다. 0109 기준으로 0110을 새로 생성해 snapshot 부모 일치와 journal 108→109→110을 확인했다. schema 재생성 추가 변경 없음. Drizzle의 coalesce 식 인덱스 직렬화와 ADD COLUMN FK SET NULL SQL만 교정했다.
+main `94c76a835b051e502b8ccafdbcefdd6b39762c09`를 읽기 전용 fetch로 반영했다. PR782의 출석 코드·라우트·삭제 경로·EXPECTED_TABLES를 보존했다. 0109 기준으로 0111을 새로 생성해 snapshot 부모 일치와 journal 108→109→111을 확인했다. schema 재생성 추가 변경 없음. Drizzle의 coalesce 식 인덱스 직렬화와 ADD COLUMN FK SET NULL SQL만 교정했다.
 
-0110은 기능 off여도 환불 marker 경로에서 필요하므로 코드 배포 전 적용이 필수다. 이번 작업에서 migration을 운영 DB에 적용하지 않았다. 다른 PR772/774/775/782/784를 수정하지 않았다.
+0111은 기능 off여도 환불 marker 경로에서 필요하므로 코드 배포 전 적용이 필수다. 이번 작업에서 migration을 운영 DB에 적용하지 않았다. 다른 PR772/774/775/782/784를 수정하지 않았다.
 
 ## 검증
 
@@ -36,6 +36,8 @@ release-notes: none
 
 모바일 비동기 동의 재검사와 모의 회귀도 독립 재검토 완료. 고유 결제자는 first-party 프로필 단위이며 서로 미연결된 계정을 같은 사람으로 추정하지 않는다.
 
-최종 서버 revision: 철회는 최소 표식을 보관하고 먼저 발행된 오래된 grant(null/이전 revision)를 원자적으로 거절한다. 새 명시적 동의는 최신 revision을 읽어야 한다. marker는 계정 삭제까지 유지하며 UI ko/en/ja와 개인정보 안내에 반영했다. 0110을 0109 기준 재생성했고 drizzle 추가 변경 없음이다. 전체 976 이후 이 최종 패치의 관련 5파일 31개가 통과했다(전체 재실행과 구분). 실기기 목록 조회는 CoreSimulator 서비스 오류/지연으로 확정하지 못했으며 구매·로그인·앱 설치는 하지 않았다.
+최종 서버 revision: 철회는 최소 표식을 보관하고 먼저 발행된 오래된 grant(null/이전 revision)를 원자적으로 거절한다. 새 명시적 동의는 최신 revision을 읽어야 한다. marker는 계정 삭제까지 유지하며 UI ko/en/ja와 개인정보 안내에 반영했다. 0111을 0109 기준 재생성했고 drizzle 추가 변경 없음이다. 전체 976 이후 이 최종 패치의 관련 5파일 31개가 통과했다(전체 재실행과 구분). 실기기 목록 조회는 CoreSimulator 서비스 오류/지연으로 확정하지 못했으며 구매·로그인·앱 설치는 하지 않았다.
 
 최종 E2E는 13개 통과, 기존 출석 창 ha-streak 접근성 1개 실패다(대비 4.12:1, 요구4.5:1). 동일 테스트 단독 재실행도 실패했다. HomeAttendance.svelte는 origin/main과 동일하며 변경하지 않았다. 이전 14개 통과와 혼동하지 않으며, 현재 브라우저 전체 green은 아니다. 원인 분리/별도 출석 접근성 수정은 남아 있다. 새 유입·철회 E2E 2개는 최종 실행에서도 통과했다.
+
+게시 전 열린 PR 대조에서 #785/#781/#780/#779/#777이 각각 0110 SQL·snapshot·journal을 사용함을 확인해 우리 migration을 독립 0111로 이동했다. 현재 main은0109까지이므로 0111의 부모는0109이며 journal108→109→111이다. 해당 PR 중 하나가 먼저 병합되면 최신main 반영 후 0111 snapshot/journal 재생성·drift·migration 재검증을 반드시 수행한다. 번호 회피만으로 미래 snapshot 병합이 완료된 것은 아니다. 다른 PR을 수정하지 않았다.
