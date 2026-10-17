@@ -9,6 +9,7 @@
   import Topbar from './Topbar.svelte';
   import InAppBanner from './InAppBanner.svelte';
   import HallOfFame from './HallOfFame.svelte';
+  import HomeNews from './HomeNews.svelte';
   import HomeFirsts from './firsts/HomeFirsts.svelte';
   import HomeLive from './HomeLive.svelte';
   import HomeTicker from './HomeTicker.svelte';
@@ -103,11 +104,9 @@
   <HallOfFame />
   <!-- T-11-129 구단 가치 TOP 3. 첫 화면 번들 밖에서 따로 불러온다. -->
   {#await import('./HomeClubValue.svelte') then { default: HomeClubValue }}<HomeClubValue />{/await}
-  <!-- 공지 · 업데이트 소식 · 푸터는 홈 맨 아래라 첫 화면 번들 밖 지연 청크로. -->
-  {#await import('./HomeNews.svelte') then { default: HomeNews }}
-    <HomeNews board="notice" eyebrow="Notice" title={L.noticeTitle} />
-    <HomeNews board="release" eyebrow="Release notes" title={L.releaseTitle} />
-  {/await}
+  <HomeNews board="notice" eyebrow="Notice" title={L.noticeTitle} />
+  <HomeNews board="release" eyebrow="Release notes" title={L.releaseTitle} />
+  <!-- 푸터는 홈 맨 아래라 첫 화면 번들 밖 지연 청크로(소식은 앱 시작 때 새 글 점과 같은 요청을 함께 써야 해서 그대로 둔다). -->
   {#await import('./SiteFooter.svelte') then { default: SiteFooter }}<SiteFooter />{/await}
   <!-- T-11-015 라운지 채팅으로 가는 떠 있는 버튼(하단 메뉴 위). -->
   <button class="chat-fab" data-act="chat" aria-label={chatState.unread ? L.chatLabelUnread({ n: chatState.unread }) : L.chatLabel} onclick={() => go('chat')}>
