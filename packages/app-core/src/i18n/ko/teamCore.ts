@@ -37,6 +37,11 @@ const ko = {
   achUndoneHint: (p: { hint: string }) => `미달성 · ${p.hint}`,
   achPointsGot: (p: { n: string }) => `+${p.n}점`,
   achPointsWorth: (p: { n: string }) => `${p.n}점`,
+  // T-11-357 업적 달성 보상(아이템).
+  achRewardNext: (p: { items: string }) => `달성 보상 ${p.items}`,
+  achRewardGot: (p: { items: string }) => `받은 보상 ${p.items}`,
+  achRewardBoost: (p: { n: number }) => `잠재력 강화권 ${p.n}장`,
+  achRewardScout: (p: { n: number }) => `프리미엄 스카우트권 ${p.n}장`,
   achRankNone: '업적을 하나 달성하면 랭킹에 올라요',
   achRank: (p: { rank: string; ranked: string }) => `${p.rank}위 · ${p.ranked}명 중`,
   achCatPlayer: '선수 업적',

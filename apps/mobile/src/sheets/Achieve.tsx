@@ -78,6 +78,27 @@ export function Achieve({ v }: { v: Extract<SheetView, { kind: 'achieve' }> }) {
           </View>
         ) : null}
       </View>
+      {s.reward ? (
+        <View
+          testID="ach-reward"
+          style={{
+            marginTop: 10,
+            paddingVertical: 8,
+            paddingHorizontal: 12,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: c.accent,
+            backgroundColor: c.surface2,
+          }}
+        >
+          <Txt
+            tone="accent"
+            style={{ fontSize: rem(0.875), fontWeight: '700', textAlign: 'center' }}
+          >
+            {s.reward}
+          </Txt>
+        </View>
+      ) : null}
       <Txt tone="muted" style={{ fontSize: rem(0.8125), textAlign: 'center', marginTop: 8 }}>
         <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>
           {L.gainedPts({ n: n(s.gained) })}

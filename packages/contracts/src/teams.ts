@@ -425,6 +425,10 @@ export const ClubAchievementSchema = z.strictObject({
   points: count,
   /** 다음에 달성하면 더 얻는 점수(끝까지 왔으면 0). */
   worth: count,
+  /** T-11-357 다음에 달성하면 받는 아이템(지금 시즌만, 없으면 생략). */
+  reward: z.strictObject({ boost: count, scout: count }).optional(),
+  /** T-11-357 이 시즌에 이 업적으로 받은 아이템(지금 시즌만, 없으면 생략). */
+  got: z.strictObject({ boost: count, scout: count }).optional(),
 });
 export type ClubAchievement = z.infer<typeof ClubAchievementSchema>;
 
