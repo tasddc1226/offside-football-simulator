@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "35895979-b99d-442d-af89-c236ce08c9f6",
+  "id": "a9d08b28-9524-452e-befe-213f549752f3",
   "prevId": "7baa9c59-9439-4769-a74e-ce618c71ca5e",
   "tables": {
     "acquisition_consents": {
@@ -23,6 +23,20 @@
         },
         "granted_at": {
           "name": "granted_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "revision": {
+          "name": "revision",
           "type": "text",
           "primaryKey": false,
           "notNull": true,

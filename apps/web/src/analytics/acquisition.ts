@@ -31,25 +31,31 @@ function analyticsAllowed() {
     return false;
   }
 }
-async function request(action?: Record<string, unknown>) {
+async function request(action?: Record<string, unknown>, activeEpoch?: number) {
   const auth = apiAuth();
-  const perform = () =>
-    fetch(`${apiBaseUrl()}/v1/acquisition${action ? '' : '/consent'}`, {
+  const perform = () => {
+    if (action?.action === 'grant' && activeEpoch !== epoch)
+      return Promise.resolve(new Response(null, { status: 409 }));
+    return fetch(`${apiBaseUrl()}/v1/acquisition${action ? '' : '/consent'}`, {
       ...auth,
       method: action ? 'POST' : 'GET',
       signal: AbortSignal.timeout(10_000),
       headers: { ...auth.headers, 'Content-Type': 'application/json' },
       ...(action ? { body: JSON.stringify({ version, ...action }) } : {}),
     });
+  };
   if (!action) {
-    const result = await cachedGet<{ profileId: string; granted: boolean }>(
-      '/v1/acquisition/consent',
-      30_000,
-    );
-    return result.ok ? Response.json(result.data) : new Response(null, { status: 503 });
+    const result = await cachedGet<{
+      profileId: string;
+      granted: boolean;
+      revision: string | null;
+    }>('/v1/acquisition/consent', 30_000);
+    return result.ok
+      ? Response.json(result.data)
+      : new Response(null, { status: result.error.code === 'PROFILE_REQUIRED' ? 401 : 503 });
   }
   const result = wireQueue.then(perform).then((response) => {
-    if (response.ok) invalidateApiCache('/v1/acquisition/consent');
+    if (response.ok || response.status === 409) invalidateApiCache('/v1/acquisition/consent');
     return response;
   });
   wireQueue = result.then(
@@ -119,11 +125,13 @@ export async function setAcquisitionConsent(value: 'granted' | 'denied'): Promis
       sessionStorage.removeItem(SESSION_KEY);
       profileId = knownProfile;
       if (!profileId) {
-        if (!hasSessionHint()) {
+        // This explicit withdrawal may check an existing httpOnly session even when
+        // browser storage (and its hint) was cleared; it never creates a profile.
+        const res = await request();
+        if (res.status === 401) {
           localStorage.removeItem(REVOKE_KEY);
           return true;
         }
-        const res = await request();
         if (!res.ok) return false;
         profileId = ((await res.json()) as { profileId: string }).profileId;
       }
@@ -136,7 +144,7 @@ export async function setAcquisitionConsent(value: 'granted' | 'denied'): Promis
     if (!acquisitionEnabled() || !analyticsAllowed()) return false;
     // Only an explicit choice can create a profile. No forced login.
     const me = await getProfile();
-    if (!me.ok) return false;
+    if (!me.ok || generation !== epoch || !analyticsAllowed()) return false;
     const expectedProfile = me.data.id;
     const pending = localStorage.getItem(REVOKE_KEY);
     if (pending) {
@@ -144,7 +152,17 @@ export async function setAcquisitionConsent(value: 'granted' | 'denied'): Promis
       if (!(await request({ action: 'revoke', profileId: pending })).ok) return false;
       localStorage.removeItem(REVOKE_KEY);
     }
-    const response = await request({ action: 'grant', profileId: expectedProfile });
+    if (generation !== epoch || !analyticsAllowed()) return false;
+    profileId = expectedProfile;
+    localStorage.setItem(PROFILE_KEY, expectedProfile);
+    const consent = await request();
+    if (!consent.ok || generation !== epoch || !analyticsAllowed()) return false;
+    const current = (await consent.json()) as { profileId: string; revision: string | null };
+    if (current.profileId !== expectedProfile) return false;
+    const response = await request(
+      { action: 'grant', profileId: expectedProfile, revision: current.revision ?? null },
+      generation,
+    );
     if (!response.ok || generation !== epoch || !analyticsAllowed()) return false;
     profileId = ((await response.json()) as { profileId: string }).profileId;
     localStorage.setItem(PROFILE_KEY, profileId);

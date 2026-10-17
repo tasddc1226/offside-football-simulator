@@ -31,14 +31,19 @@ describe('ad removal verified recording', () => {
       cookie,
       body: { store: 'apple', token: 'signed-fixture' },
     });
+  const grant = async (cookie: string) => {
+    const state = (await (
+      await callJson(ctx.env, 'GET', '/v1/acquisition/consent', { cookie })
+    ).json()) as { data: { revision: string | null } };
+    return callJson(ctx.env, 'POST', '/v1/acquisition', {
+      cookie,
+      body: { action: 'grant', version: 'account-acquisition-v1', revision: state.data.revision },
+    });
+  };
   it('records exactly once, never grants items, preserves unbound legacy restores and rejects account/product tampering', async () => {
     const a = await issueGoogleCookie(ctx);
     const b = await issueGoogleCookie(ctx);
-    for (const me of [a, b])
-      await callJson(ctx.env, 'POST', '/v1/acquisition', {
-        cookie: me.cookie,
-        body: { action: 'grant', version: 'account-acquisition-v1' },
-      });
+    for (const me of [a, b]) await grant(me.cookie);
     const now = Date.now();
     tx.value = {
       transactionId: 'ad-1',
@@ -114,10 +119,7 @@ describe('ad removal verified recording', () => {
       now: new Date().toISOString(),
       metadata: { purchasedAt: null, priceMilliunits: null, currency: null, storefront: null },
     };
-    await callJson(ctx.env, 'POST', '/v1/acquisition', {
-      cookie: a.cookie,
-      body: { action: 'grant', version: 'account-acquisition-v1' },
-    });
+    await grant(a.cookie);
     await callJson(ctx.env, 'POST', '/v1/acquisition', {
       cookie: a.cookie,
       body: { action: 'revoke', profileId: a.profileId },
@@ -131,10 +133,7 @@ describe('ad removal verified recording', () => {
     expect(
       (await ctx.env.DB.prepare('SELECT * FROM iap_ad_free_purchases').all()).results,
     ).toHaveLength(0);
-    await callJson(ctx.env, 'POST', '/v1/acquisition', {
-      cookie: a.cookie,
-      body: { action: 'grant', version: 'account-acquisition-v1' },
-    });
+    await grant(a.cookie);
     await ctx.env.DB.prepare('UPDATE profiles SET deleted_at=? WHERE id=?')
       .bind(p.now, a.profileId)
       .run();
@@ -176,10 +175,7 @@ describe('ad removal verified recording', () => {
   });
   it('uses one payer across consumable/nonconsumable events and separates anonymous legacy/test/refund', async () => {
     const a = await issueGoogleCookie(ctx);
-    await callJson(ctx.env, 'POST', '/v1/acquisition', {
-      cookie: a.cookie,
-      body: { action: 'grant', version: 'account-acquisition-v1' },
-    });
+    await grant(a.cookie);
     const now = new Date().toISOString();
     const metadata = {
       purchasedAt: now,

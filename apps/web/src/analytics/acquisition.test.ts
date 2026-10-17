@@ -23,6 +23,7 @@ const tick = async () => {
 describe('first-party consent and delivery', () => {
   beforeEach(() => {
     vi.resetModules();
+    vi.clearAllMocks();
     vi.stubEnv('VITE_ACQUISITION_ENABLED', 'true');
     vi.stubGlobal('localStorage', store());
     vi.stubGlobal('sessionStorage', store());
@@ -31,7 +32,10 @@ describe('first-party consent and delivery', () => {
     });
     api.hint = false;
     api.getProfile.mockResolvedValue({ ok: true, data: { id: 'profile-a' } });
-    api.status.mockResolvedValue({ ok: false });
+    api.status.mockResolvedValue({
+      ok: true,
+      data: { profileId: 'profile-a', granted: false, revision: null },
+    });
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -107,6 +111,7 @@ describe('first-party consent and delivery', () => {
   });
   it('retains an unknown offline withdrawal without deleting a subsequently switched account', async () => {
     api.hint = true;
+    api.status.mockResolvedValue({ ok: false, error: { code: 'NETWORK_ERROR' } });
     let a = await import('./acquisition.js');
     expect(await a.setAcquisitionConsent('denied')).toBe(false);
     expect(localStorage.getItem('offside_acquisition_revoke_v1')).toBe('unresolved');
@@ -118,6 +123,85 @@ describe('first-party consent and delivery', () => {
     expect(await a.acquisitionStatus()).toBe('denied');
     expect(f).not.toHaveBeenCalled();
     expect(localStorage.getItem('offside_acquisition_revoke_v1')).toBe('unresolved');
+  });
+  it('explicit withdrawal checks an existing httpOnly account even after its local session hint was cleared', async () => {
+    api.hint = false;
+    api.status.mockResolvedValue({ ok: true, data: { profileId: 'profile-a', granted: true } });
+    const f = vi.fn(
+      async (_url: string, _init: RequestInit) => new Response(null, { status: 204 }),
+    );
+    vi.stubGlobal('fetch', f);
+    const a = await import('./acquisition.js');
+    expect(await a.setAcquisitionConsent('denied')).toBe(true);
+    expect(JSON.parse(f.mock.calls[0]![1]!.body as string)).toMatchObject({
+      action: 'revoke',
+      profileId: 'profile-a',
+    });
+    expect(api.getProfile).not.toHaveBeenCalled();
+  });
+  it('explicit withdrawal with no server session confirms denial without creating a profile', async () => {
+    api.status.mockResolvedValue({ ok: false, error: { code: 'PROFILE_REQUIRED' } });
+    const f = vi.fn();
+    vi.stubGlobal('fetch', f);
+    const a = await import('./acquisition.js');
+    expect(await a.setAcquisitionConsent('denied')).toBe(true);
+    expect(localStorage.getItem('offside_acquisition_revoke_v1')).toBeNull();
+    expect(api.getProfile).not.toHaveBeenCalled();
+    expect(f).not.toHaveBeenCalled();
+  });
+  it('cannot resurrect server consent when profile lookup finishes after withdrawal', async () => {
+    localStorage.setItem(CONSENT_KEY, 'granted');
+    let finishProfile!: (value: unknown) => void;
+    api.getProfile.mockReturnValue(
+      new Promise((resolve) => {
+        finishProfile = resolve;
+      }),
+    );
+    api.status.mockResolvedValue({ ok: true, data: { profileId: 'profile-a', granted: false } });
+    const bodies: Record<string, unknown>[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: RequestInit) => {
+        bodies.push(JSON.parse(String(init.body)));
+        return new Response(null, { status: 204 });
+      }),
+    );
+    const a = await import('./acquisition.js');
+    const oldGrant = a.setAcquisitionConsent('granted');
+    expect(await a.setAcquisitionConsent('denied')).toBe(true);
+    finishProfile({ ok: true, data: { id: 'profile-a' } });
+    expect(await oldGrant).toBe(false);
+    expect(bodies.map((b) => b.action)).toEqual(['revoke']);
+    expect(a.acquisitionGranted()).toBe(false);
+  });
+  it('drops a queued grant after withdrawal while an older event is in flight', async () => {
+    localStorage.setItem(CONSENT_KEY, 'granted');
+    let finishSession!: (value: Response) => void;
+    const bodies: Record<string, unknown>[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: RequestInit) => {
+        const body = JSON.parse(String(init.body));
+        bodies.push(body);
+        if (body.action === 'grant')
+          return Response.json({ profileId: 'profile-a', granted: true });
+        if (body.action === 'session')
+          return new Promise<Response>((resolve) => {
+            finishSession = resolve;
+          });
+        return new Response(null, { status: 204 });
+      }),
+    );
+    const a = await import('./acquisition.js');
+    expect(await a.setAcquisitionConsent('granted')).toBe(true);
+    await tick();
+    const queuedGrant = a.setAcquisitionConsent('granted');
+    await tick();
+    const withdrawal = a.setAcquisitionConsent('denied');
+    finishSession(new Response(null, { status: 204 }));
+    expect(await queuedGrant).toBe(false);
+    expect(await withdrawal).toBe(true);
+    expect(bodies.map((b) => b.action)).toEqual(['grant', 'session', 'revoke']);
   });
   it('replays an offline withdrawal even while analytics remains denied', async () => {
     localStorage.setItem(CONSENT_KEY, 'denied');

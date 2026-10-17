@@ -1818,7 +1818,9 @@ export const acquisitionConsents = sqliteTable('acquisition_consents', {
     .primaryKey()
     .references(() => profiles.id, { onDelete: 'cascade' }),
   version: text('version').notNull(),
-  grantedAt: text('granted_at').notNull(),
+  grantedAt: text('granted_at'),
+  revokedAt: text('revoked_at'),
+  revision: text('revision').notNull(),
 });
 export const acquisitionSessions = sqliteTable(
   'acquisition_sessions',

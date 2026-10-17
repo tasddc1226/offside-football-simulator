@@ -1,7 +1,9 @@
 CREATE TABLE `acquisition_consents` (
 	`profile_id` text PRIMARY KEY NOT NULL,
 	`version` text NOT NULL,
-	`granted_at` text NOT NULL,
+	`granted_at` text,
+	`revoked_at` text,
+	`revision` text NOT NULL,
 	FOREIGN KEY (`profile_id`) REFERENCES `profiles`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint

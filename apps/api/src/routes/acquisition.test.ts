@@ -14,8 +14,47 @@ describe('optional first-party acquisition and authoritative transactions', () =
   afterEach(async () => {
     await ctx.dispose();
   });
-  const post = (cookie: string, body: Record<string, unknown>) =>
-    callJson(ctx.env, 'POST', '/v1/acquisition', { cookie, body: { version, ...body } });
+  const post = async (cookie: string, body: Record<string, unknown>) => {
+    let revision: string | null | undefined;
+    if (body.action === 'grant') {
+      const state = await callJson(ctx.env, 'GET', '/v1/acquisition/consent', { cookie });
+      revision = ((await state.json()) as { data: { revision: string | null } }).data.revision;
+    }
+    return callJson(ctx.env, 'POST', '/v1/acquisition', {
+      cookie,
+      body: { version, revision, ...body },
+    });
+  };
+  it('rejects a delayed grant after withdrawal, including the first-ever grant and another device', async () => {
+    const a = await issueGoogleCookie(ctx);
+    const raw = (revision: string | null) =>
+      callJson(ctx.env, 'POST', '/v1/acquisition', {
+        cookie: a.cookie,
+        body: { action: 'grant', version, profileId: a.profileId, revision },
+      });
+    await post(a.cookie, { action: 'revoke', profileId: a.profileId });
+    expect((await raw(null)).status).toBe(409);
+    const revoked = (await (
+      await callJson(ctx.env, 'GET', '/v1/acquisition/consent', { cookie: a.cookie })
+    ).json()) as { data: { revision: string; granted: boolean } };
+    expect(revoked.data.granted).toBe(false);
+    expect((await raw(revoked.data.revision)).status).toBe(200);
+    const granted = (await (
+      await callJson(ctx.env, 'GET', '/v1/acquisition/consent', { cookie: a.cookie })
+    ).json()) as { data: { revision: string } };
+    await post(a.cookie, { action: 'revoke', profileId: a.profileId });
+    expect((await raw(granted.data.revision)).status).toBe(409);
+    expect(
+      (
+        await ctx.env.DB.prepare(
+          'SELECT version,revoked_at FROM acquisition_consents WHERE profile_id=?',
+        )
+          .bind(a.profileId)
+          .first()
+      )?.version,
+    ).toBe('withdrawn');
+    expect((await post(a.cookie, { action: 'grant' })).status).toBe(200);
+  });
   it('requires explicit consent; anonymous stays unlinked; account switching never transfers a session', async () => {
     const a = await issueCookie(ctx);
     const b = await issueGoogleCookie(ctx);

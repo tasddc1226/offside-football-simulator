@@ -177,7 +177,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
   scout_pity: ['profile_id', 'used', 'streak', 'elites', 'mode', 'updated_at'],
   reroll_mileage: ['profile_id', 'used', 'progress', 'rewarded', 'updated_at'],
   referrals: ['invitee_id', 'inviter_id', 'claimed_at', 'done_at', 'career_id', 'inviter_rewarded'],
-  acquisition_consents: ['profile_id', 'version', 'granted_at'],
+  acquisition_consents: ['profile_id', 'version', 'granted_at', 'revoked_at', 'revision'],
   acquisition_sessions: [
     'id',
     'profile_id',

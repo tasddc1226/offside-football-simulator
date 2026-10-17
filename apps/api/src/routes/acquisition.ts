@@ -16,12 +16,16 @@ export function registerAcquisitionRoutes(app: Hono<AppEnv>) {
     c.header('Cache-Control', 'private, no-store');
     const profileId = getSessionOrThrow(c).profileId;
     const row = await c.env.DB.prepare(
-      'SELECT version FROM acquisition_consents WHERE profile_id=?',
+      'SELECT version, revision FROM acquisition_consents WHERE profile_id=?',
     )
       .bind(profileId)
-      .first<{ version: string }>();
+      .first<{ version: string; revision: string }>();
     return c.json({
-      data: { profileId, granted: row?.version === ACQUISITION_CONSENT_VERSION },
+      data: {
+        profileId,
+        granted: row?.version === ACQUISITION_CONSENT_VERSION,
+        revision: row?.revision ?? null,
+      },
       meta: { requestId: c.get('requestId') },
     });
   });
@@ -41,7 +45,13 @@ export function registerAcquisitionRoutes(app: Hono<AppEnv>) {
       // A queued withdrawal may never delete another account's records after a switch.
       if (body.profileId !== profileId) return c.body(null, 409);
       await db.batch([
-        db.prepare('DELETE FROM acquisition_consents WHERE profile_id=?').bind(profileId),
+        db
+          .prepare(
+            `INSERT INTO acquisition_consents (profile_id,version,granted_at,revoked_at,revision)
+ SELECT id,'withdrawn',NULL,?2,?3 FROM profiles WHERE id=?1 AND deleted_at IS NULL
+ ON CONFLICT(profile_id) DO UPDATE SET version='withdrawn',granted_at=NULL,revoked_at=excluded.revoked_at,revision=excluded.revision`,
+          )
+          .bind(profileId, now, crypto.randomUUID()),
         db.prepare('DELETE FROM acquisition_sessions WHERE profile_id=?').bind(profileId),
       ]);
       return c.body(null, 204);
@@ -50,13 +60,24 @@ export function registerAcquisitionRoutes(app: Hono<AppEnv>) {
     if (body.version !== ACQUISITION_CONSENT_VERSION) return c.body(null, 400);
     if (body.profileId !== undefined && body.profileId !== profileId) return c.body(null, 409);
     if (body.action === 'grant') {
-      await db
+      if (
+        body.revision !== null &&
+        (typeof body.revision !== 'string' || !uuid.test(body.revision))
+      )
+        return c.body(null, 400);
+      const revision = crypto.randomUUID();
+      const changed = await db
         .prepare(
-          'INSERT INTO acquisition_consents (profile_id, version, granted_at) VALUES (?,?,?) ON CONFLICT (profile_id) DO UPDATE SET version=excluded.version, granted_at=excluded.granted_at',
+          `INSERT INTO acquisition_consents (profile_id,version,granted_at,revoked_at,revision)
+        SELECT p.id,?2,?3,NULL,?4 FROM profiles p WHERE p.id=?1 AND p.deleted_at IS NULL
+          AND ((?5 IS NULL AND NOT EXISTS(SELECT 1 FROM acquisition_consents WHERE profile_id=?1))
+            OR EXISTS(SELECT 1 FROM acquisition_consents WHERE profile_id=?1 AND revision=?5))
+        ON CONFLICT(profile_id) DO UPDATE SET version=excluded.version,granted_at=excluded.granted_at,
+          revoked_at=NULL,revision=excluded.revision WHERE acquisition_consents.revision=?5 RETURNING profile_id`,
         )
-        .bind(profileId, ACQUISITION_CONSENT_VERSION, now)
-        .run();
-      return c.json({ profileId, granted: true });
+        .bind(profileId, ACQUISITION_CONSENT_VERSION, now, revision, body.revision)
+        .first();
+      return changed ? c.json({ profileId, granted: true, revision }) : c.body(null, 409);
     }
     if (
       !['session', 'start', 'store_click'].includes(String(body.action)) ||
