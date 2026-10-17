@@ -11,6 +11,7 @@ import {
   seasonReasons,
   setCareerHidden,
   sweepAnomalies,
+  sweepAnomaliesPage,
   SWEPT_AT_KEY,
 } from './anomalies.js';
 
@@ -126,6 +127,34 @@ describe('비정상 기록 정기 점검', () => {
   });
   afterEach(async () => {
     await ctx.dispose();
+  });
+
+  it('pages equal timestamps without skipping the next career or committing the completion watermark early', async () => {
+    await ctx.env.DB.prepare(
+      `WITH RECURSIVE n(i) AS (VALUES(0) UNION ALL SELECT i+1 FROM n WHERE i<100)
+      INSERT INTO careers(id,profile_id,pos,foot,type,trait,start_year,app_version,status,created_at,updated_at)
+      SELECT printf('page-%03d',i),?1,'FW','right','poacher','late',2026,'test','active',?2,?2 FROM n`,
+    )
+      .bind(profileId, iso(-DAY))
+      .run();
+    await ctx.env.DB.prepare(
+      `INSERT INTO career_seasons(career_id,year,age,club,league,apps,goals,assists,rating,rank,ovr,honors_json,mil,events_json,created_at)
+      SELECT id,2026,18,'A','L',30,10,5,7,'1',CASE WHEN id='page-100' THEN 99 ELSE 60 END,'[]',0,'[]',?1 FROM careers WHERE id LIKE 'page-%'`,
+    )
+      .bind(iso(-2 * DAY))
+      .run();
+    const first = await sweepAnomaliesPage(ctx.env.DB, NOW);
+    expect(first).toMatchObject({ done: false, checked: 100, hidden: 0 });
+    expect(
+      await ctx.env.DB.prepare('SELECT value FROM app_meta WHERE key=?').bind(SWEPT_AT_KEY).first(),
+    ).toBeNull();
+    expect(await hiddenOf('page-100')).toBe(0);
+    const second = await sweepAnomaliesPage(ctx.env.DB, NOW, first.cursor!);
+    expect(second).toMatchObject({ done: true, checked: 1, hidden: 1, cursor: null });
+    expect(await hiddenOf('page-100')).toBe(1);
+    expect(
+      await ctx.env.DB.prepare('SELECT value FROM app_meta WHERE key=?').bind(SWEPT_AT_KEY).first(),
+    ).toEqual({ value: new Date(NOW).toISOString() });
   });
 
   it('확실한 이상만 숨기고, 정상·애매한 기록은 둔다', async () => {

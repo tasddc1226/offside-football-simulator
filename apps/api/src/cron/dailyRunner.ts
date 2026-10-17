@@ -2,7 +2,7 @@ import type { Bindings } from '../env.js';
 import { createDb } from '../db/client.js';
 import { DAY_MS } from '../time.js';
 import { sweepAutomation, AUTOMATION_SWEEP_KEY } from '../db/repos/automationEnforcement.js';
-import { sweepAnomalies } from '../db/repos/anomalies.js';
+import { sweepAnomaliesPage, type AnomalyCursor } from '../db/repos/anomalies.js';
 import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
 import { syncGoogleVoided } from '../iap/refunds.js';
 import { cleanupExpired } from './cleanup.js';
@@ -37,10 +37,15 @@ export type DailyState = {
   error?: string;
 };
 type StepResult = { done: boolean; result: unknown };
-export type DailyStep = (stage: Stage, logicalAt: number, token: string) => Promise<StepResult>;
+export type DailyStep = (
+  stage: Stage,
+  logicalAt: number,
+  token: string,
+  prior?: unknown,
+) => Promise<StepResult>;
 
 function steps(env: Bindings): DailyStep {
-  return async (stage, at, token) => {
+  return async (stage, at, token, prior) => {
     const db = createDb(env.DB);
     switch (stage) {
       case 'cleanup': {
@@ -60,8 +65,14 @@ function steps(env: Bindings): DailyStep {
         const result = await sweepAutomation(env.DB, at, false, { maxPages: 1, pageSize: 100 });
         return { done: result?.status === 'complete' && Date.parse(result.through) >= at, result };
       }
-      case 'anomalies':
-        return { done: true, result: await sweepAnomalies(env.DB, at) };
+      case 'anomalies': {
+        const result = await sweepAnomaliesPage(
+          env.DB,
+          at,
+          (prior as { cursor?: AnomalyCursor } | undefined)?.cursor,
+        );
+        return { done: result.done, result };
+      }
       case 'growthArchive': {
         const result = env.BACKUP
           ? await archiveGrowth(env.DB, env.BACKUP, env.ENVIRONMENT, at, {
@@ -144,7 +155,12 @@ export async function runDailyStep(
   const stage = DAILY_STAGES[claimed.stage]!;
   let next: DailyState;
   try {
-    const result = await execute(stage, Date.parse(claimed.day) + 19 * 3_600_000, claimed.token);
+    const result = await execute(
+      stage,
+      Date.parse(claimed.day) + 19 * 3_600_000,
+      claimed.token,
+      claimed.results[stage],
+    );
     next = {
       ...claimed,
       stage: claimed.stage + (result.done ? 1 : 0),
