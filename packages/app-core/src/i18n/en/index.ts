@@ -25,6 +25,7 @@ import { cup } from './cup';
 import { cupApp } from './cupApp';
 import { cupPush } from './cupPush';
 import { dex } from './dex';
+import { exchange } from './exchange';
 import { fairness } from './fairness';
 import { firstGuide } from './firstGuide';
 import { firsts } from './firsts';
@@ -124,6 +125,7 @@ export const en = {
   cupApp,
   cupPush,
   dex,
+  exchange,
   fairness,
   firstGuide,
   firsts,

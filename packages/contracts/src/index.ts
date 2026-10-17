@@ -217,3 +217,5 @@ export * from './owner-summary.js';
 export * from './manager.js';
 export * from './manager-rules.js';
 export * from './client-errors.js';
+export * from './card-exchange.js';
+export * from './card-exchange-rules.js';

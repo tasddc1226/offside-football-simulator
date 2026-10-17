@@ -153,6 +153,14 @@ export const PERMANENT_TITLES = [
     related: 'ballon',
   },
   {
+    id: 'owner-exchange',
+    metric: 'exchanges',
+    target: 10,
+    symbol: 'star',
+    grade: 'skilled',
+    related: 'exchange',
+  },
+  {
     id: 'owner-dynasty',
     metric: 'numbers',
     target: 25,

@@ -46,6 +46,8 @@ import { SettingsCard, SettingsLabel, SettingsTrigger } from '../settings/parts'
 import { ManagerResume } from './ManagerResume';
 import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
 import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
+import { exchangeText as XC } from '@offside/app-core/i18n/ko/exchange';
+import { CardExchange } from './CardExchange';
 import { teamHomeText as T } from '@offside/app-core/i18n/ko/teamHome';
 import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { openFriends } from '../../platform/inbox';
@@ -142,6 +144,8 @@ export default function Owner() {
   // T-11-152 후보 화면 '리롤권 상점 가기'로 들어왔으면 리롤권 상점을 펼친 채로 연다(한 번만 읽힌다).
   const [shopFocus] = useState(() => takeFocus('rerollShop'));
   const [admin, setAdmin] = useState(false);
+  // T-11-374 카드 과제 창.
+  const [exchangeOpen, setExchangeOpen] = useState(false);
   const linked = !!acct && acct !== 'error' && isMember(acct);
   // T-10-103 비로그인으로 확인됐고 이 기기에 은퇴한 선수도 없으면 빈 '내 선수'를 숨긴다(확인 중·연결 실패면 그대로 둔다).
   const [localCount] = useState(() => loadHOF().length);
@@ -362,6 +366,30 @@ export default function Owner() {
               </View>
             </Card>
           </Press>
+          <Press
+            testID="exchange"
+            accessibilityLabel={XC.entryAria}
+            onPress={() => setExchangeOpen(true)}
+            scale={0.98}
+          >
+            <Card gap={12} testID="owner-exchange">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Txt v="h2">{XC.entryTitle}</Txt>
+                    <Pill tone="good">{XC.entryNew}</Pill>
+                  </View>
+                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                    {XC.entrySub}
+                  </Txt>
+                </View>
+                <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+                  ›
+                </Txt>
+              </View>
+            </Card>
+          </Press>
+          {exchangeOpen ? <CardExchange onClose={() => setExchangeOpen(false)} /> : null}
         </>
       ) : guest ? (
         <>

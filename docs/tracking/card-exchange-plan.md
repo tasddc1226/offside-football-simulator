@@ -1,6 +1,7 @@
 # 카드 바치기 과제 (T-11-374)
 
-2026-10-17 초안. 아직 구현하지 않았다. 수치는 모두 시작값이며 "열린 질문"을 정한 뒤 확정한다.
+2026-10-17 초안, 같은 날 1차 구현(PR #780, 배포 전). 아래 "1차 구현에서 정한 것"이 앞 절의 초안보다 우선한다.
+수치는 모두 시작값이다.
 같은 날 정리한 도파민 콘텐츠 우선순위의 4번이다(1 결과 공개 연출, 2 시즌 1 특별 카드, 3 강화 T-11-373, 5 랭크전).
 
 ## 한 줄 요약
@@ -157,6 +158,36 @@ batch 전에 `checkCupListing`과 같은 함수로 한다. 같은 멱등 키로 
 - 지금 시즌 선발 카드를 낼 수 있게 할지(감독 전향과 같은 규칙) 아니면 아예 막을지.
 - 과제 칭호를 매주 줄지(칭호가 너무 많아짐), 시즌 과제에만 줄지.
 - 운영 미리 보기를 둘지, 처음엔 과제 정의 검증만 둘지.
+
+## 1차 구현에서 정한 것 (2026-10-17, PR #780)
+
+열린 질문은 아래처럼 정하고 구현했다. 앞 절의 표 · API 설계와 다른 곳은 이 절을 따른다.
+
+- **과제 정의는 코드에 둔다.** `packages/contracts/src/card-exchange-rules.ts`(zod 없는 서브패스 `@offside/contracts/card-exchange-rules`)의
+  난이도별 묶음이 주마다 돈다(월요일 0시 KST, 주 키 `YYYY-MM-DD`). 과제 id는 `<주 키>-<난이도>`, 시즌 과제는 `s<시즌>-season`.
+  `card_exchanges` 표와 운영 도구(만들기 · 미리 보기 · 내리기)는 이번에 만들지 않았다(후속).
+- **목록 GET은 없다.** 웹 · 앱이 같은 함수(`exchangesAt`)로 이번 주 과제를 직접 계산한다. 서버는 내 낸 횟수
+  `GET /v1/exchanges/me`(로그인 구단주, 1분 메모)와 `POST /v1/exchanges/:id/claim`(멱등 키 필수)만 연다.
+  서버도 같은 함수로 과제가 지금 열려 있는지 확인하고, 아니면 404 `EXCHANGE_CLOSED`.
+- **조건은 카드에 있는 값만 쓴다.** 포지션 · 포메이션 자리 수 · 최고 OVR 범위 · 평균 최고 OVR · 같은 국적 · 레전드 점수 1명 이상 ·
+  시즌(0 프리시즌, `prev` · `now`) · 주발. A매치 · 트로피 · 거친 구단 · 리그 조건은 커리어 원본을 읽어야 해서 뺐다.
+- **이번 시즌 선발 카드는 막는다**(방출과 같은 규칙, 409 `IN_LINEUP`). 컵 명단은 선발 안에 있어 따로 막지 않아도 된다.
+- **직접 키운 카드도 아이템만 준다.** 방출 지급액 보전은 하지 않고, 확인 창에 "방출하면 받을 수 있던 자금을 받지 않는다"를 적는다.
+- **칭호는 누적 칭호 하나.** `owner-exchange`(헌납의 명가 · House of Tribute · 献上の名門): 과제 10번(`owner_title_progress.exchanges`),
+  등급 skilled. 기준 버전(TITLE_CRITERIA_VERSION)은 올리지 않는다(새 칭호라 기존 판정이 바뀌지 않는다).
+- **표와 batch.** `card_exchange_claims`(id, profile_id, exchange_id, need, cards, reward_json, created_at, `(profile_id, exchange_id)` 인덱스,
+  `cards IS NULL OR cards = need` CHECK)와 `cards.consumed_in`, `owner_title_progress.exchanges`. 내기는 한 batch다:
+  ① 횟수 상한 안일 때만 claim INSERT ② 카드 소유자 비우기(잠김 · 감독 · 숨김 · 열린 판매 등록이면 건너뜀) ③ 바뀐 카드 수를 claim에 적어
+  모자라면 CHECK로 batch 전체를 되돌림(409 `EXCHANGE_CARDS_GONE`) ④ claim이 있을 때만 아이템 지급. 낸 카드는 `released_at`을 비워 두어
+  자금 감사(방출 지급액 합)와 섞이지 않는다.
+- **화면.** 웹은 내 구단 화면 '카드 과제' 칸 → `owner/CardExchange.svelte`(열 때만 import, PopSheet). 앱은 `screens/owner/CardExchange.tsx`.
+  목록 → 선수 고르기(잠김 · 판매 중 · 선발 · 조건 밖 표시, 맞는 선수로 채우기) → 확인 → 결과.
+
+### 후속으로 미룬 것
+
+- 강화 재료 보상(T-11-373 재료 아이템이 정해진 뒤).
+- 과제 정의 표 · 운영 도구(만들기 · 미리 보기 · 내리기)와 운영 지표 화면.
+- 리그 · A매치 · 트로피 조건(커리어 원본 요약을 카드 표에 더할지 함께 정한다).
 
 ## 배포 뒤 볼 지표
 

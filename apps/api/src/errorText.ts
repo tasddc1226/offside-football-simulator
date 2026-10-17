@@ -142,6 +142,13 @@ const EXACT: Record<string, string> = {
   '감독으로 분류된 선수는 내놓거나 방출하거나 잠글 수 없어요.':
     "A player who became a manager can't be listed, released or locked.",
   '감독 커리어를 찾을 수 없어요.': "We couldn't find that manager career.",
+  '지금 열린 카드 과제가 아니에요.': "That card challenge isn't open right now.",
+  '낼 수 없는 선수가 섞여 있어요. 목록을 새로 받아 주세요.':
+    "Some of those players can't be handed in. Refresh the list and try again.",
+  '선발에 든 선수는 팀에서 뺀 뒤 낼 수 있어요.':
+    'Take starters out of your lineup before handing them in.',
+  '과제 조건에 맞지 않는 선수가 있어요.': "Some players don't meet the challenge conditions.",
+  '이 과제는 낼 수 있는 횟수를 다 썼어요.': "You've used all your attempts for this challenge.",
   '감독 칸에서 내린 뒤 경질할 수 있어요.':
     'That manager is in the manager slot. Clear the slot before sacking them.',
   '이미 감독인 선수예요.': 'That player is already a manager.',
