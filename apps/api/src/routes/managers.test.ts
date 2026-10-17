@@ -290,6 +290,65 @@ describe('감독 커리어 (T-11-310)', () => {
     expect(await profile(other.cookie)).toBeNull();
   });
 
+  it('T-11-345 끝낸 감독을 경질하면 목록에서 빠지고, 직접 키운 선수만 방출처럼 자금을 받는다', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    const other = await issueGoogleCookie(ctx);
+    const a = await addCard(owner.profileId);
+    const bought = await addCard(other.profileId);
+    // 영입한 카드: 주인만 나로 바꾼다(키운 사람은 그대로).
+    await ctx.db.update(cards).set({ ownerId: owner.profileId }).where(eq(cards.careerId, bought));
+    const finishOf = async (careerId: string) => {
+      const { career } = CareerRes.parse(await (await start(owner.cookie, careerId)).json()).data;
+      return career.id;
+    };
+    const release = (id: string, cookie = owner.cookie) =>
+      call('POST', `/v1/managers/${id}/release`, { cookie, headers: idem() });
+
+    const ida = await finishOf(a);
+    // 진행 중인 커리어는 경질하지 않는다(포기를 쓴다).
+    expect(await reason(await release(ida))).toBe('MANAGER_NOT_FOUND');
+    const finish = (id: string) =>
+      call('POST', `/v1/managers/${id}/finish`, {
+        cookie: owner.cookie,
+        headers: idem(),
+        body: { result: RESULT },
+      });
+    await finish(ida);
+    const idb = await finishOf(bought);
+    await finish(idb);
+
+    const list = await managers(owner.cookie);
+    const value = list.managers.find((m) => m.careerId === a)!.releaseValue!;
+    expect(value).toBeGreaterThan(0);
+    expect(list.managers.find((m) => m.careerId === bought)!.releaseValue).toBe(0);
+
+    // 감독 칸에 앉아 있으면 먼저 내려야 한다.
+    await putTeam(owner.cookie, Array(11).fill(null), a);
+    expect(await reason(await release(ida))).toBe('MANAGER_SEATED');
+    await putTeam(owner.cookie, Array(11).fill(null), null);
+    // 남의 감독은 경질할 수 없다.
+    expect(await reason(await release(ida, other.cookie))).toBe('MANAGER_NOT_FOUND');
+
+    const res = await release(ida);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { amount: number; balance: number } };
+    expect(body.data.amount).toBe(value);
+    expect(body.data.balance).toBeGreaterThanOrEqual(value);
+    const [card] = await ctx.db.select().from(cards).where(eq(cards.careerId, a));
+    expect(card).toMatchObject({ ownerId: null, releasedValue: value });
+    // 다시 경질하거나 감독 칸에 앉힐 수 없다.
+    expect(await reason(await release(ida))).toBe('MANAGER_NOT_FOUND');
+    expect(await reason(await putTeam(owner.cookie, Array(11).fill(null), a))).toBe(
+      'COACH_NOT_ELIGIBLE',
+    );
+
+    const rb = await release(idb);
+    expect(((await rb.json()) as { data: { amount: number } }).data.amount).toBe(0);
+    const [b] = await ctx.db.select().from(cards).where(eq(cards.careerId, bought));
+    expect(b).toMatchObject({ ownerId: null, releasedAt: null, releasedValue: null });
+    expect((await managers(owner.cookie)).managers).toEqual([]);
+  });
+
   it('끝낸 결과는 범위를 검사한다', async () => {
     const owner = await issueGoogleCookie(ctx);
     const a = await addCard(owner.profileId);

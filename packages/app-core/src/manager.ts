@@ -1,6 +1,7 @@
 // T-11-310 감독 커리어(웹 ui/Manager.svelte · 앱 screens/owner/Manager.tsx 공용). 감독 커리어는 기기에서 돌고(게임 엔진
 // manager.ts, 세이브 ft_mgr_save), 서버는 시작 · 포기 · 완료와 팀 감독 칸만 맡는다. 감독 화면(지연 청크)만 import한다.
 import type {
+  ReleaseManagerResponse,
   ManagerCandidate,
   ManagerCareer,
   ManagerCareerResponse,
@@ -44,6 +45,9 @@ export const finishManager = (id: string, result: ManagerResult) =>
     body: JSON.stringify({ result }),
   });
 /** 지금 시즌 팀 감독 칸(null이면 비운다). */
+/** T-11-345 끝낸 감독 경질(되돌릴 수 없다). 직접 키운 선수면 방출처럼 자금을 받는다. */
+export const releaseManager = (id: string) =>
+  apiFetch<ReleaseManagerResponse>(`/v1/managers/${id}/release`, { method: 'POST' });
 export const setTeamCoach = (coach: string | null) =>
   apiFetch<PutTeamCoachResponse>('/v1/owner-team/coach', {
     method: 'PUT',

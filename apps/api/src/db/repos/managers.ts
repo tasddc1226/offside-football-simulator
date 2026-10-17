@@ -8,6 +8,7 @@ import {
   type ManagerResult,
   type TeamCoach,
 } from '@offside/contracts';
+import { CARD_VALUE_FLOOR, releasePayout } from '@offside/contracts/market-value';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { cards, careers, managerCareers } from '../schema.js';
@@ -221,17 +222,27 @@ function toCareer(r: Row): ManagerCareer {
   };
 }
 
-/** 내 감독 커리어(진행 중 하나 + 끝낸 감독 카드, 최근 순). */
-export async function listManagers(db: Db, profileId: string) {
-  const rows = (await db
-    .select(rowCols)
+/**
+ * 내 감독 커리어(진행 중 하나 + 끝낸 감독 카드, 최근 순). 경질한 감독(카드 주인이 없다)은 빠진다. rate(방출 지급률, 함께
+ * 읽도록 Promise로도 받는다)를 주면 끝낸 감독마다 경질할 때 받을 자금을 붙인다(직접 키운 선수만, 영입한 카드는 0).
+ */
+export async function listManagers(db: Db, profileId: string, rateP?: number | Promise<number>) {
+  const query = db
+    .select({ ...rowCols, cardValue: cards.cardValue, raiser: careers.profileId })
     .from(managerCareers)
     .innerJoin(cards, eq(cards.careerId, managerCareers.careerId))
     .leftJoin(careers, eq(careers.id, managerCareers.careerId))
-    .where(eq(managerCareers.profileId, profileId))
+    .where(and(eq(managerCareers.profileId, profileId), eq(cards.ownerId, profileId)))
     .orderBy(desc(managerCareers.createdAt))
-    .limit(MANAGERS_LIMIT + 1)) as Row[];
-  const list = rows.map(toCareer);
+    .limit(MANAGERS_LIMIT + 1);
+  const [found, rate] = await Promise.all([query, rateP]);
+  const rows = found as (Row & { cardValue: number | null; raiser: string | null })[];
+  const list = rows.map((r) => ({
+    ...toCareer(r),
+    ...(rate !== undefined && r.status === 'done'
+      ? { releaseValue: r.raiser === profileId ? releasePayout(r.cardValue, rate) : 0 }
+      : {}),
+  }));
   return {
     active: list.find((m) => m.status === 'active') ?? null,
     managers: list.filter((m) => m.status === 'done' && m.result),
@@ -256,21 +267,22 @@ export async function managerCareerOf(db: Db, id: string, profileId: string) {
 export async function coachesByIds(
   db: Db,
   ids: readonly (string | null | undefined)[],
-): Promise<Map<string, TeamCoach & { profileId: string }>> {
+): Promise<Map<string, TeamCoach & { profileId: string; ownerId: string | null }>> {
   const want = [...new Set(ids.filter((x): x is string => !!x))];
-  const out = new Map<string, TeamCoach & { profileId: string }>();
+  const out = new Map<string, TeamCoach & { profileId: string; ownerId: string | null }>();
   if (!want.length) return out;
   const rows = await db
-    .select({ ...rowCols, profileId: managerCareers.profileId })
+    .select({ ...rowCols, profileId: managerCareers.profileId, ownerId: cards.ownerId })
     .from(managerCareers)
     .innerJoin(cards, eq(cards.careerId, managerCareers.careerId))
     .leftJoin(careers, eq(careers.id, managerCareers.careerId))
     .where(and(inArray(managerCareers.careerId, want), eq(managerCareers.status, 'done')));
-  for (const r of rows as (Row & { profileId: string })[]) {
+  for (const r of rows as (Row & { profileId: string; ownerId: string | null })[]) {
     const res = resultOf(r.resultJson);
     if (!res) continue;
     out.set(r.careerId, {
       profileId: r.profileId,
+      ownerId: r.ownerId,
       careerId: r.careerId,
       publicName: r.publicName,
       number: r.number,
@@ -305,7 +317,10 @@ export async function seasonManagersOf(db: Db, profileId: string, season: number
   });
 }
 
-/** T-11-310 · T-11-335 팀 감독 칸에 든 그 구단주의 감독(끝낸 감독만, 없거나 남의 카드면 null). 내 팀 · 남의 팀 프로필이 같이 쓴다. */
+/**
+ * T-11-310 · T-11-335 팀 감독 칸에 든 그 구단주의 감독(끝낸 감독만, 없거나 남의 카드 · 경질한 감독이면 null). 내 팀 · 남의 팀
+ * 프로필 · 감독 칸 앉히기가 같이 쓴다.
+ */
 export async function teamCoachOf(
   db: Db,
   row: { coachId: string | null; profileId: string },
@@ -313,6 +328,52 @@ export async function teamCoachOf(
   if (!row.coachId) return null;
   const c = (await coachesByIds(db, [row.coachId])).get(row.coachId);
   if (!c) return null;
-  const { profileId, ...coach } = c;
-  return profileId === row.profileId ? coach : null;
+  const { profileId, ownerId, ...coach } = c;
+  return profileId === row.profileId && ownerId === row.profileId ? coach : null;
+}
+
+/**
+ * T-11-345 끝낸 감독 경질. 내가 끝낸 감독이고 지금 내 카드일 때만 카드 주인을 비운다. 직접 키운 선수면 방출과 똑같이
+ * released_at · released_value를 적고 기준가 × 지급률을 자금에 더한다(releaseCards와 같은 -1 표시 · 계산). 영입한 카드는
+ * 자금 없이 주인만 비운다(방출 기록은 키운 사람 기준이라 적지 않는다). 감독 기록 · 업적(manager_careers)은 남긴다.
+ * 한 batch(트랜잭션). 경질했으면 받은 돈 · 잔액, 아니면 null.
+ */
+export async function releaseManagerCard(
+  db: Db,
+  r: { profileId: string; careerId: string; rate: number; now: string },
+): Promise<{ amount: number; balance: number } | null> {
+  const d1 = db.$client;
+  const amountOf = `CAST(round(coalesce(card_value, ${CARD_VALUE_FLOOR}) * ? / 1000.0) AS INTEGER) * 1000`;
+  const raised = `EXISTS (SELECT 1 FROM careers c WHERE c.id = cards.career_id AND c.profile_id = ?)`;
+  const marked = `career_id = ? AND released_value = -1`;
+  const results = await d1.batch([
+    d1
+      .prepare(
+        `UPDATE cards SET owner_id = NULL, updated_at = ?,
+           released_at = CASE WHEN ${raised} THEN ? END,
+           released_value = CASE WHEN ${raised} THEN -1 END
+         WHERE career_id = ? AND owner_id = ? AND manager = 1
+           AND EXISTS (SELECT 1 FROM manager_careers m
+             WHERE m.career_id = cards.career_id AND m.profile_id = ? AND m.status = 'done')`,
+      )
+      .bind(r.now, r.profileId, r.now, r.profileId, r.careerId, r.profileId, r.profileId),
+    d1
+      .prepare(
+        `INSERT INTO owner_funds (profile_id, balance, updated_at)
+         SELECT ?, sum(${amountOf}), ? FROM cards WHERE ${marked} HAVING count(*) > 0
+         ON CONFLICT (profile_id) DO UPDATE SET balance = balance + excluded.balance, updated_at = excluded.updated_at`,
+      )
+      .bind(r.profileId, r.rate, r.now, r.careerId),
+    d1
+      .prepare(`SELECT coalesce(sum(${amountOf}), 0) AS amount FROM cards WHERE ${marked}`)
+      .bind(r.rate, r.careerId),
+    d1
+      .prepare(`UPDATE cards SET released_value = ${amountOf} WHERE ${marked}`)
+      .bind(r.rate, r.careerId),
+    d1.prepare(`SELECT balance FROM owner_funds WHERE profile_id = ?`).bind(r.profileId),
+  ]);
+  if (results[0]!.meta.changes !== 1) return null;
+  const amount = (results[2]!.results[0] as { amount: number } | undefined)?.amount ?? 0;
+  const bal = results[4]!.results[0] as { balance: number } | undefined;
+  return { amount, balance: bal?.balance ?? 0 };
 }

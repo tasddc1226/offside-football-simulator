@@ -60,6 +60,7 @@
     managerStats,
     managerSheetLabel,
     managerSteps,
+    releaseManager,
     masteryUpLine,
     seasonBadges,
     seasonChips,
@@ -71,6 +72,7 @@
     startManager,
     type ManagerStatKey,
   } from '@offside/app-core/manager';
+  import { fundsText } from '@offside/app-core/funds';
   import { managerText as M } from '@offside/app-core/i18n/ko/manager';
 
   const local = localCareerNames();
@@ -81,6 +83,9 @@
   let error = $state<string | null>(null);
   let confirm = $state<ManagerCandidate | null>(null);
   let confirmAbandon = $state(false);
+  // T-11-345 경질할지 묻는 끝낸 감독 · 방금 경질한 알림.
+  let confirmRelease = $state<ManagerCareer | null>(null);
+  let released = $state<string | null>(null);
   let st = $state.raw<ManagerState | null>(null);
   // 방금 답한 이벤트(결과 문장을 보여 준 뒤 '다음'으로 넘긴다).
   let answered = $state<string | null>(null);
@@ -167,7 +172,15 @@
     }
   }
   async function seat(id: string | null) {
+    released = null;
     if (await run(() => setTeamCoach(id))) await load();
+  }
+  async function release(m: ManagerCareer) {
+    if (await run(() => releaseManager(m.id))) {
+      confirmRelease = null;
+      released = M.releaseDone({ name: nameOf(m) });
+      await load();
+    }
   }
 
   function answer(id: string, i: number) {
@@ -473,11 +486,14 @@
           {#if data.hasTeam}
             <button class="btn btn-sm self-start {seated ? '' : 'btn-primary'}" data-act={seated ? 'manager-unseat' : 'manager-seat'} disabled={busy} onclick={() => void seat(seated ? null : m.careerId)}>{seated ? M.unseat : M.seat}</button>
           {/if}
+          <!-- T-11-345 끝낸 감독 경질(확인 창에서 받을 자금 · 되돌릴 수 없음을 보인다). -->
+          <button class="btn btn-sm self-start mg-release" data-act="manager-release" disabled={busy} onclick={() => ((confirmRelease = m), (error = null))}>{M.release}</button>
         </div>
       {:else}
         <p class="muted fs-sm">{M.noManagers}</p>
       {/each}
-      {#if error && !confirm && !confirmAbandon && st?.phase !== 'done'}<p class="mg-err" role="alert">{error}</p>{/if}
+      {#if released}<p class="muted fs-sm" role="status" data-manager-released>{released}</p>{/if}
+      {#if error && !confirm && !confirmAbandon && !confirmRelease && st?.phase !== 'done'}<p class="mg-err" role="alert">{error}</p>{/if}
     </section>
   {/if}
 </div>
@@ -524,6 +540,26 @@
     <div class="mg-actions">
       <button class="btn" onclick={() => (confirmAbandon = false)}>{M.cancel}</button>
       <button class="btn mg-danger" data-act="manager-abandon-confirm" disabled={busy} onclick={() => void abandon()}>{M.abandonOk}</button>
+    </div>
+  </div>
+{/if}
+
+{#if confirmRelease}
+  {@const m = confirmRelease}
+  {@const seated = data?.coachId === m.careerId}
+  <button class="mg-scrim" aria-label={M.cancel} onclick={() => (confirmRelease = null)}></button>
+  <div class="mg-sheet" role="dialog" aria-modal="true" aria-label={M.releaseTitle({ name: nameOf(m) })} data-manager-release>
+    <h2>{M.releaseTitle({ name: nameOf(m) })}</h2>
+    <ul class="mg-lines">
+      <li>{m.releaseValue ? M.releasePay({ amount: fundsText(m.releaseValue) }) : M.releaseNoPay}</li>
+      <li>{M.releaseKeep}</li>
+      <li>{M.releaseFinal}</li>
+    </ul>
+    {#if seated}<p class="mg-err" data-manager-release-seated>{M.releaseSeated}</p>{/if}
+    {#if error}<p class="mg-err" role="alert">{error}</p>{/if}
+    <div class="mg-actions">
+      <button class="btn" onclick={() => (confirmRelease = null)}>{M.cancel}</button>
+      <button class="btn mg-danger" data-act="manager-release-confirm" disabled={busy || seated} onclick={() => void release(m)}>{M.releaseOk}</button>
     </div>
   </div>
 {/if}
@@ -826,6 +862,9 @@
   }
   .mg-actions .btn {
     min-height: 50px;
+  }
+  .mg-release {
+    color: var(--bad);
   }
   .mg-danger {
     border: 0;

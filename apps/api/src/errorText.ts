@@ -142,6 +142,8 @@ const EXACT: Record<string, string> = {
   '감독으로 분류된 선수는 내놓거나 방출하거나 잠글 수 없어요.':
     "A player who became a manager can't be listed, released or locked.",
   '감독 커리어를 찾을 수 없어요.': "We couldn't find that manager career.",
+  '감독 칸에서 내린 뒤 경질할 수 있어요.':
+    'That manager is in the manager slot. Clear the slot before sacking them.',
   '이미 감독인 선수예요.': 'That player is already a manager.',
   '진행 중인 감독 커리어를 먼저 마치거나 포기해 주세요.':
     'Finish or give up your current manager career first.',
