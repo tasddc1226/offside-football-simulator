@@ -12,6 +12,7 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { cards, careers, managerCareers } from '../schema.js';
 import { newId } from '../ids.js';
+import { retryTransientWrite } from '../retry.js';
 
 /** 프로 시즌(병역 · 고교 · 대학 제외) 조건. 클럽 id가 없는 옛 시즌은 리그 이름으로 거른다. */
 const PRO_SEASON = `s.mil = 0 AND coalesce(s.club_id, '') NOT LIKE 'hs-%' AND coalesce(s.club_id, '') NOT LIKE 'uni-%'
@@ -74,7 +75,8 @@ export async function startManagerCareer(
   const d1 = db.$client;
   const id = newId('mgr');
   const won = `EXISTS (SELECT 1 FROM manager_careers WHERE id = ?)`;
-  const results = await d1.batch([
+  // Keep this ID and every statement stable across a response-lost retry.
+  const statements = [
     d1
       .prepare(
         `INSERT INTO manager_careers (id, profile_id, career_id, status, seed, origin_json, created_at)
@@ -100,8 +102,13 @@ export async function startManagerCareer(
          WHERE career_id = ? AND status = 'open' AND ${won}`,
       )
       .bind(r.now, r.careerId, id),
-  ]);
-  return results[0]!.meta.changes === 1 ? id : null;
+    d1
+      .prepare('SELECT id FROM manager_careers WHERE id = ? AND profile_id = ? AND career_id = ?')
+      .bind(id, r.profileId, r.careerId),
+  ];
+  const results = await retryTransientWrite(() => d1.batch<{ id: string }>(statements));
+  // A replay after commit inserts zero rows because the card is already a manager.
+  return results[3]!.results[0]?.id ?? null;
 }
 
 const isUnique = (e: unknown) =>
