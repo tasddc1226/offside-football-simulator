@@ -401,8 +401,16 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
   });
   // 대회 한눈에: 일정·참가 수·조 순위·대진·결과. 누구나 본다. cupId 'current'는 지금 보여 줄 대회.
   app.get('/v1/cups/:cupId', async (c) => {
-    const cup = await cupOf(c);
-    return ok(c, CupResponseSchema, await cupView(getDb(c), cup, nowIso()), 200, PUBLIC_CACHE);
+    const load = async () => {
+      const cup = await cupOf(c);
+      return cupView(getDb(c), cup, nowIso());
+    };
+    // Bound the key space to the current public cup; personal eligibility always stays uncached.
+    const data =
+      c.req.param('cupId') === 'current'
+        ? await edgeCached(c, EDGE.cupCurrent, 30, load)
+        : await load();
+    return ok(c, CupResponseSchema, data, 200, PUBLIC_CACHE);
   });
 
   // 내 참가·자격·다음 경기·명단 잠금·리롤권.

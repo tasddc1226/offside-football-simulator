@@ -1,0 +1,23 @@
+{
+  "id": "t-11-335-firsts-series",
+  "title": "서버 최초 업적을 한눈에",
+  "items": [
+    "통산 골 · 레전드 점수처럼 단계가 이어지는 기록을 한 줄로 묶었어요. 가장 높이 오른 단계와 다음 목표가 보여요",
+    "최근 기록 위에 이번 시즌 기록을 가장 많이 세운 선수가 나와요"
+  ],
+  "en": {
+    "title": "Server firsts at a glance",
+    "items": [
+      "Records with many steps, like career goals and legend score, now sit on one line with the highest step and the next goal.",
+      "The players who set the most records this season show above the recent records."
+    ]
+  },
+  "ja": {
+    "title": "サーバー初の実績をひと目で",
+    "items": [
+      "通算ゴールやレジェンドスコアのように段階が続く記録を1行にまとめました。最も高い段階と次の目標が表示されます。",
+      "最近の記録の上に、今シーズン最も多く記録を打ち立てた選手が表示されます。"
+    ]
+  },
+  "availability": "web-app"
+}

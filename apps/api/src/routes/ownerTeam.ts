@@ -76,8 +76,7 @@ import {
   type OwnerTeamRow,
 } from '../db/repos/ownerTeams.js';
 import { achievementRankOf } from '../db/repos/ownerAchievements.js';
-import { coachesByIds } from '../db/repos/managers.js';
-import type { Db } from '../db/client.js';
+import { teamCoachOf } from '../db/repos/managers.js';
 import { getProfile, hasAccount, type ProfileRecord } from '../db/repos/profiles.js';
 import { ownerTeams } from '../db/schema.js';
 import { and, eq } from 'drizzle-orm';
@@ -172,13 +171,7 @@ export const kstTodayStart = (now: string) => kstDays(new Date(now), 1).startIso
 const repeatWindowStart = (now: string) => kstDays(new Date(now), TEAM_REPEAT_WINDOW_DAYS).startIso;
 
 /** T-11-310 감독 칸에 든 내 감독(끝낸 감독만, 없으면 null). */
-async function coachOf(db: Db, row: Pick<OwnerTeamRow, 'coachId' | 'profileId'>) {
-  if (!row.coachId) return null;
-  const c = (await coachesByIds(db, [row.coachId])).get(row.coachId);
-  if (!c) return null;
-  const { profileId, ...coach } = c;
-  return profileId === row.profileId ? coach : null;
-}
+const coachOf = teamCoachOf;
 
 function toOwnerTeam(
   row: OwnerTeamRow,

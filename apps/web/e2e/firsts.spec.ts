@@ -69,15 +69,24 @@ test('홈 카드 → 서버 최초 기록 화면(연대기·분류 탭·내 선�
   const view = page.locator('[data-firsts]');
   await expect(view.locator('[data-firsts-count]')).toHaveText('3/4');
   // 최근 기록: 한국 시간 날짜별(09-24 15:30Z = 09-25 00:30 KST), 최근 것부터.
-  await expect(view.locator('.first-day')).toHaveText(['26.09.25']);
+  await expect(view.locator('.first-day:not(.first-top-title)')).toHaveText(['26.09.25']);
   await expect(view.locator('[data-first]')).toHaveCount(3);
   await expect(view.locator('[data-first]').first()).toContainText('12:05');
   await expect(view.locator('[data-first="sgoals30"]')).toContainText('내 선수');
   await expect(view.locator('[data-first="goals100"]')).toContainText('김오프');
   await expect(view.locator('[data-first="ballon"]')).toContainText('익명의');
+  // T-11-335 이 시즌 기록을 가장 많이 세운 선수(같은 선수 2개).
+  await expect(view.locator('[data-firsts-top] li').first()).toContainText('2개');
 
+  // T-11-335 단계 기록은 한 줄로 묶여 가장 높은 단계 · 다음 목표 · 진행을 보이고, 펼치면 단계를 다 본다.
   await view.locator('[data-firsts-tab="total"]').click();
-  await expect(view.locator('[data-first]')).toHaveCount(2);
+  const goals = view.locator('[data-series="goals"]');
+  await expect(view.locator('.first-list > li')).toHaveCount(1);
+  await expect(goals).toContainText('통산 100골 최초 달성!');
+  await expect(goals).toContainText('다음 목표: 통산 150골 최초 달성!');
+  await expect(goals).toContainText('1/2단계');
+  await goals.locator('.first-toggle').click();
+  await expect(goals.locator('.first-toggle')).toHaveAttribute('aria-expanded', 'true');
   await expect(view.locator('[data-first="goals150"]')).toContainText('미달성');
 
   // T-10-056 서버 기록 탭: 값·단위·보유자, 아직 없는 기록.

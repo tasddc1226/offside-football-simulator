@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { AppError } from '../errors.js';
+import { logErrorText, safeStack } from '../logError.js';
 import type { AppEnv } from '../env.js';
 import { countable, flushTallies, recordRequest } from '../status/metrics.js';
 import { flushClientErrors, takeClientErrors } from '../status/clientErrors.js';
@@ -36,8 +37,9 @@ export const logger = createMiddleware<AppEnv>(async (c, next) => {
 
   if (c.error) {
     entry.errorCode = c.error instanceof AppError ? c.error.code : 'SERVICE_UNAVAILABLE';
-    entry.errorMessage = c.error.message.slice(0, MAX_ERROR_MESSAGE_LENGTH);
-    entry.error = { name: c.error.name, message: c.error.message, stack: c.error.stack };
+    // T-11-334 D1 실패 사유(cause)까지, 쿼리 바인딩 값은 빼고.
+    entry.errorMessage = logErrorText(c.error, MAX_ERROR_MESSAGE_LENGTH);
+    entry.error = { name: c.error.name, message: entry.errorMessage, stack: safeStack(c.error) };
   } else if (storeFailure) {
     entry.errorCode = storeFailure.code;
     entry.error = { message: storeFailure.message };
@@ -66,7 +68,7 @@ function recordStatus(c: Context<AppEnv>, status: number, durationMs: number) {
   const due = recordRequest(Date.now(), durationMs, status);
   if (!due) return;
   const warn = (msg: string) => (error: unknown) =>
-    console.log(JSON.stringify({ level: 'warn', msg, error: String(error).slice(0, 200) }));
+    console.log(JSON.stringify({ level: 'warn', msg, error: logErrorText(error, 300) }));
   ctx.waitUntil(flushTallies(db, due).catch(warn('status-flush-failed')));
   // T-11-331 앱·웹 오류도 같은 1분 주기에 더한다.
   const errors = takeClientErrors();

@@ -93,7 +93,11 @@ export function assessInfraHealth(
 }
 
 /** Once an hour on the existing scheduled tick. No user requests or per-request writes. */
-export async function runInfraHealth(env: Bindings, now: number): Promise<InfraHealth | null> {
+export async function runInfraHealth(
+  env: Bindings,
+  now: number,
+  force = false,
+): Promise<InfraHealth | null> {
   if (env.ENVIRONMENT !== 'production' || !Number.isFinite(now) || now < 0) return null;
   const { results: stored, meta } = await env.DB.prepare(
     'SELECT key,value FROM app_meta WHERE key IN (?1,?2,?3,?4,?5)',
@@ -114,7 +118,12 @@ export async function runInfraHealth(env: Bindings, now: number): Promise<InfraH
   const previous = read<InfraHealth>(INFRA_HEALTH_META_KEY);
   // Cron timestamps include seconds. Use the last completed UTC hour, not exact alignment.
   // Older/delayed invocations must not replace a newer report.
-  if (previous && Math.floor(previous.at / HOUR_MS) >= Math.floor(now / HOUR_MS)) return null;
+  if (
+    previous &&
+    (previous.at >= now ||
+      (!force && Math.floor(previous.at / HOUR_MS) >= Math.floor(now / HOUR_MS)))
+  )
+    return null;
   // page_count/freelist_count are not allowed by production D1. Read its supported
   // response metadata instead; this includes reusable pages, not just live payloads.
   if (!Number.isFinite(meta.size_after) || meta.size_after <= 0)

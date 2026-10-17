@@ -271,12 +271,23 @@ describe('감독 커리어 (T-11-310)', () => {
     expect(await reason(await setCoach(owner.cookie, theirs))).toBe('COACH_NOT_ELIGIBLE');
     const set = await setCoach(owner.cookie, a);
     expect(set.status).toBe(200);
-    expect((await team(owner.cookie)).team!.coach?.careerId).toBe(a);
+    const mine = (await team(owner.cookie)).team!;
+    expect(mine.coach?.careerId).toBe(a);
+    // T-11-335 다른 구단주가 내 팀 프로필을 열면 앉힌 감독이 보인다.
+    const profile = async (cookie?: string) =>
+      (
+        (await (await call('GET', `/v1/teams/${mine.id}`, cookie ? { cookie } : {})).json()) as {
+          data: { team: { coach: { careerId: string; style: string } | null } };
+        }
+      ).data.team.coach;
+    expect(await profile(other.cookie)).toMatchObject({ careerId: a, style: 'attack' });
+    expect(await profile()).toMatchObject({ careerId: a });
     // 다른 구단주는 내 감독을 앉힐 수 없다.
     await putTeam(other.cookie, Array(11).fill(null));
     expect(await reason(await setCoach(other.cookie, a))).toBe('COACH_NOT_ELIGIBLE');
     expect((await setCoach(owner.cookie, null)).status).toBe(200);
     expect((await team(owner.cookie)).team!.coach).toBeNull();
+    expect(await profile(other.cookie)).toBeNull();
   });
 
   it('끝낸 결과는 범위를 검사한다', async () => {

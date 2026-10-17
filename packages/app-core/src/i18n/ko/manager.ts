@@ -130,6 +130,8 @@ const ko = {
   teamCoach: '감독 칸',
   teamCoachEmpty: '비어 있어요',
   teamCoachManage: '감독 고르기',
+  /** T-11-335 남의 팀 프로필의 감독 칸. */
+  profileCoach: '앉힌 감독',
   /** T-11-323 줄 힘 칸 아래 감독 보정(+1.0). */
   teamCoachLine: (p: { v: string }) => `감독 ${p.v}`,
   // T-11-329 선수 커리어와 같은 진행 연출(선택지 확률 · 성공/실패 · 시즌 단계)

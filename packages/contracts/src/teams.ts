@@ -629,6 +629,8 @@ export const TeamProfileSchema = z.strictObject({
   players: z.array(TeamPlayerSchema).optional(),
   /** T-11-290 선발 시너지(내 팀 화면과 같은 표). 구단주가 직접 키운 선수 여부까지 서버가 알아야 해서 서버가 센다. 배포 전 응답엔 없다. */
   synergy: TeamSynergySchema.optional(),
+  /** T-11-335 감독 칸에 앉힌 감독(끝낸 감독만, 없으면 null). 배포 전 응답엔 없다. */
+  coach: TeamCoachSchema.nullable().optional(),
   createdAt: IsoUtcSchema,
 });
 export type TeamProfile = z.infer<typeof TeamProfileSchema>;

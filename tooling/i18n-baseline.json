@@ -73,7 +73,7 @@
   "packages/app-core/src/game-actions.ts": 5,
   "packages/app-core/src/koSearch.ts": 1,
   "packages/app-core/src/loginText.ts": 1,
-  "packages/app-core/src/outbox.ts": 3,
+  "packages/app-core/src/outbox.ts": 1,
   "packages/app-core/src/potential-view.ts": 1,
   "packages/app-core/src/pushPerformance.ts": 21,
   "packages/app-core/src/seasonName.ts": 1,

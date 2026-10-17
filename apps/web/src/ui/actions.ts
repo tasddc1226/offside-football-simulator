@@ -4,7 +4,8 @@
 import { createGameActions } from '@offside/app-core/game-actions';
 import { analytics, trackPage } from '../analytics/index.js';
 import { appState } from './state.svelte.js';
-import { save, toast, uploadSeason, uploadRetirement } from './helpers.js';
+import { save, toast } from './helpers.js';
+import { uploadSeason, uploadRetirement } from './uploads.js';
 import { motionOK } from './motion.js';
 import { sheet } from './sheetState.svelte.js';
 

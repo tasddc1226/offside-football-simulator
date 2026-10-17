@@ -1,3 +1,4 @@
+import { teamCoachOf } from '../db/repos/managers.js';
 import { cupHonorsOf } from '../team/cup.js';
 import {
   AchRankQuerySchema,
@@ -149,7 +150,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     const ids = slotIdsOf(t);
     const other = session && session.profileId !== t.profileId ? session.profileId : null;
     const { ownerNickname } = found;
-    const [rows, rank, liked, friend, cupHonors] = await Promise.all([
+    const [rows, rank, liked, friend, cupHonors, coach] = await Promise.all([
       careersByIds(
         db,
         ids.filter((x): x is string => !!x),
@@ -158,6 +159,8 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       session ? isTeamLiked(db, t.id, session.profileId) : false,
       other ? friendStateOf(db, other, t.profileId) : null,
       cupHonorsOf(db, t.profileId),
+      // T-11-335 감독 칸에 앉힌 감독(카드 id 고유 인덱스 한 줄).
+      teamCoachOf(db, t),
     ]);
     const now = nowIso();
     const eligible = eligibleMap(rows, t.profileId, t.season, t.season === teamSeasonAt(now));
@@ -194,6 +197,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           players: rows.filter((r) => eligible.has(r.id)).map((r) => teamPlayerCard(r)),
           // T-11-290 선발 시너지 — 내 팀 화면과 같은 표를 남의 팀 프로필에도(경기 계산과 같은 입력).
           synergy: lineupSynergy(lineup),
+          coach,
           createdAt: t.createdAt,
         },
         liked,

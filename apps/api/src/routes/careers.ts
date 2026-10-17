@@ -234,7 +234,14 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     const prevOvr = growth && !overCap ? (prevRow?.ovr ?? null) : null;
     const hide = overCap || growthTampered(growth, body.season.ovr, prevOvr);
 
+    const sentRevision = Number(c.req.header('X-Upload-Revision'));
+    // Legacy clients omit the header; retain their existing update contract.
+    const uploadRevision =
+      Number.isSafeInteger(sentRevision) && sentRevision > 0 && sentRevision <= Date.now() + 300_000
+        ? sentRevision
+        : undefined;
     const status = await putCareerSeason(db, {
+      ...(uploadRevision !== undefined && { uploadRevision }),
       careerId,
       profileId: session.profileId,
       year,

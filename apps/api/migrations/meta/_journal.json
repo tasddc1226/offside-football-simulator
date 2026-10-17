@@ -750,6 +750,13 @@
       "when": 1792230378411,
       "tag": "0106_client_errors",
       "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "6",
+      "when": 1792231180642,
+      "tag": "0107_last_maestro",
+      "breakpoints": true
     }
   ]
 }

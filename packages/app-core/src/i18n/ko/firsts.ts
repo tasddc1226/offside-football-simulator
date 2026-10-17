@@ -14,6 +14,14 @@ const ko = {
   noRecord: '아직 기록 없음',
   locked: '미달성',
   mine: '내 선수',
+  steps: (p: { done: number; total: number }) => `${p.done}/${p.total}단계`,
+  next: (p: { label: string }) => `다음 목표: ${p.label}`,
+  allDone: '마지막 단계까지 달성했어요',
+  showSteps: '단계 모두 보기',
+  hideSteps: '단계 접기',
+  burst: (p: { n: number }) => `${p.n}단계`,
+  topTitle: '기록을 가장 많이 세운 선수',
+  topCount: (p: { n: number }) => `${p.n}개`,
 };
 
 export type FirstsMsgs = typeof ko;

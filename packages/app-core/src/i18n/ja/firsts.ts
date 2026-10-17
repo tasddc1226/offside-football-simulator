@@ -13,4 +13,12 @@ export const firsts: Translation<FirstsMsgs> = {
   noRecord: 'まだ記録なし',
   locked: '未達成',
   mine: '自分の選手',
+  steps: (p) => `${p.done}/${p.total}段階`,
+  next: (p) => `次の目標: ${p.label}`,
+  allDone: '最後の段階まで達成しました',
+  showSteps: 'すべての段階を見る',
+  hideSteps: '段階を閉じる',
+  burst: (p) => `${p.n}段階`,
+  topTitle: '記録を最も多く打ち立てた選手',
+  topCount: (p) => `${p.n}個`,
 };

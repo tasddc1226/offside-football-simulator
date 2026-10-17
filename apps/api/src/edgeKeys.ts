@@ -7,6 +7,7 @@ import { BOARD_KEYS, BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
 
 export const EDGE = {
   cupHome: '/v1/cups/home',
+  cupCurrent: '/v1/cups/current',
   balance: '/v1/balance',
   /** T-11-141 공개 밸런스 이력. */
   balanceHistory: '/v1/balance/history',
@@ -67,6 +68,7 @@ const allBoardLists = () => BOARD_KEYS.map(EDGE.boardFirstPage);
 
 /** 쓰기 → 지울 엣지 키. */
 export const STALE = {
+  cupChanged: () => [EDGE.cupHome, EDGE.cupCurrent],
   balanceActivated: () => [EDGE.balance, EDGE.balanceHistory],
   /** T-11-333 코드 배포 밸런스 패치가 이력에 쌓였다 — 지금 값은 그대로라 이력만 지운다. */
   balancePatched: () => [EDGE.balanceHistory],
@@ -91,11 +93,15 @@ export const STALE = {
   commentsPurged: allBoardLists,
   /** 팀 등록·편성 저장 — 새 팀이 라이브 랭킹 첫 페이지에 바로 보이게(경기 결과는 TTL로만). */
   teamSaved: (season: number) => [
+    EDGE.cupHome,
+    EDGE.cupCurrent,
     EDGE.teamRank(season, 'rating', 1),
     EDGE.teamRank(season, 'ovr', 1),
     EDGE.achRank(season, 1),
   ],
   profileDeleted: (careerIds: string[], hadComments: boolean) => [
+    EDGE.cupHome,
+    EDGE.cupCurrent,
     ...careerIds.map(EDGE.hofDetail),
     ...(hadComments ? allBoardLists() : []),
   ],

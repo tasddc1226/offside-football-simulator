@@ -26,6 +26,7 @@ import { setMeta } from '../db/repos/firsts.js';
 import { appMeta, ownerAchievements, ownerSeasonRecords, profiles } from '../db/schema.js';
 import { achievementScore } from './achievements.js';
 import { computeOwnerAchievements } from './ownerAchievements.js';
+import { logErrorText } from '../logError.js';
 
 /** 업적 다시 세기 한 번에 몇 명(구단주마다 D1을 7번쯤 부른다). */
 const ACH_CHUNK = 40;
@@ -205,7 +206,7 @@ async function closeAchievements(db: Db, season: number, cutoff: string): Promis
           level: 'error',
           job: 'season-close',
           owner: owner.id,
-          error: String(e).slice(0, 300),
+          error: logErrorText(e, 300),
         }),
       );
       score = owner.score === null ? null : { score: owner.score, done: 0 };
