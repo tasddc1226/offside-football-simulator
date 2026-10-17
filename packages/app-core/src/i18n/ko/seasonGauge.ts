@@ -14,6 +14,8 @@ const ko = {
   endsOn: (p: { date: string }) => `${p.date}까지 열려요`,
   endsBy: (p: { date: string }) => `늦어도 ${p.date}까지 열려요`,
   endsBetween: (p: { from: string; to: string }) => `빠르면 ${p.from}, 늦어도 ${p.to}까지 열려요`,
+  /** T-11-352 마감 확정 전 게이지 아래 줄. 참여자가 늘면 목표(참여자 × 12)도 커져 게이지가 느려 보이는 까닭. */
+  why: (p: { n: string }) => `${p.n}명이 함께 채우고 있어요. 참여자가 늘면 목표도 같이 커져요.`,
 };
 
 export type SeasonGaugeMsgs = typeof ko;
