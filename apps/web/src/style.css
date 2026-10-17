@@ -5373,6 +5373,27 @@ html:has(.wrap.has-actionbar) {
   margin: 4px 0 12px;
   font-size: 1rem;
 }
+.rn-free {
+  margin-bottom: 14px;
+}
+.rn-free .rn-recent-title {
+  margin-bottom: 4px;
+}
+.rn-free-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.rn-free-list li {
+  padding: 3px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.8125rem;
+}
 .rn-more {
   margin-top: 4px;
 }

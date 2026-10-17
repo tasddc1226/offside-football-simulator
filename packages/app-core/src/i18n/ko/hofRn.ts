@@ -51,6 +51,11 @@ const ko = {
   wallClose: '접기',
   wallLabel: (p: { name: string; club: string; number: number; day: string }) =>
     `명예의 벽 ${p.name}, ${p.club} ${p.number}번, ${p.day}`,
+  // T-11-356 구단 화면의 남은 번호
+  freeTitle: (p: { n: number }) => `남은 번호 ${p.n}개`,
+  freeLead: '이 구단에서 아직 결번되지 않은 번호예요. 결번은 구단마다 따로 정해요.',
+  freeNone: '이 구단은 모든 번호가 결번됐어요.',
+  freeLabel: (p: { n: number }) => `이 구단에서 아직 결번되지 않은 번호 ${p.n}개`,
 };
 
 export type HofRnMsgs = typeof ko;
