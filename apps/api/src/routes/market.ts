@@ -20,7 +20,13 @@ import {
   ReleaseCardsBodySchema,
   ReleaseCardsResponseSchema,
 } from '@offside/contracts';
-import { marketFee, marketRatio, ovrBand, priceBand } from '@offside/contracts/market-value';
+import {
+  marketFee,
+  marketRatio,
+  ovrBand,
+  priceBand,
+  tradeValue,
+} from '@offside/contracts/market-value';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
 import { newId } from '../db/ids.js';
@@ -239,7 +245,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     await checkCupListing(db, me.id, season, input.careerId);
     if (open >= rules.listLimit)
       throw conflictError(`한 번에 ${rules.listLimit}명까지 내놓을 수 있어요.`, 'LISTING_LIMIT');
-    const band = priceBand(card.cardValue, rules);
+    const band = priceBand(tradeValue(card.cardValue, card.enhance), rules);
     if (input.price < band.min || input.price > band.max)
       throw conflictError('판매가가 정해진 범위를 벗어났어요.', 'PRICE_OUT_OF_BAND');
     const id = newId('lst');

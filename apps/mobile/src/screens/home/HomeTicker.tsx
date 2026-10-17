@@ -26,7 +26,13 @@ const SPEED = 42;
 const STILL_STEP_MS = 5_000;
 
 const tag = (kind: TickerItem['kind']): string =>
-  ({ transfer: L.tagTransfer, debut: L.tagDebut, first: L.tagFirst, record: L.tagRecord })[kind];
+  ({
+    transfer: L.tagTransfer,
+    debut: L.tagDebut,
+    first: L.tagFirst,
+    record: L.tagRecord,
+    enhance: L.tagEnhance,
+  })[kind];
 const club = (id: string) => tn(clubById(id)?.name ?? '');
 
 export function HomeTicker() {
@@ -249,7 +255,7 @@ function Fade({ side, color }: { side: 'left' | 'right'; color: string }) {
 function TickTag({ kind, label }: { kind?: TickerItem['kind']; label?: string }) {
   const c = useColors();
   const gold = kind === 'transfer' || kind === 'debut';
-  const warm = kind === 'first' || kind === 'record';
+  const warm = kind === 'first' || kind === 'record' || kind === 'enhance';
   return (
     <View
       style={{

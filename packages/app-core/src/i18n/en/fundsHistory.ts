@@ -15,6 +15,7 @@ export const fundsHistory: Translation<FundsHistoryMsgs> = {
   fees: (p) => `${p.fee} fee taken`,
   bought: 'Signed',
   spent: 'Spent from funds',
+  enhance: 'Card upgrade',
   log: 'History',
   empty:
     'No club funds have moved yet. Release players you raised or sell them on the market to earn funds.',

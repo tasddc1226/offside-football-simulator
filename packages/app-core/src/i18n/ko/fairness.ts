@@ -36,6 +36,16 @@ const ko = {
   boostLv: (p: { lv: number }) => `+${p.lv} 단계`,
   boostNote: (p: { pity: string }) =>
     `같은 단계에서 실패할 때마다 다음 시도 확률이 ${p.pity}씩 올라요. 광고나 구단 자금으로 시도해도 확률은 같아요.`,
+  enhanceTitle: '카드 강화 확률',
+  enhanceColTry: '도전',
+  enhanceColRate: '첫 시도 확률',
+  enhanceColCost: '비용',
+  enhanceColFail: '실패하면',
+  enhanceTry: (p: { from: number; to: number }) => `+${p.from} → +${p.to}`,
+  enhanceStay: '그대로',
+  enhanceDrop: (p: { lv: number }) => `+${p.lv} 단계로`,
+  enhanceNote: (p: { pity: string }) =>
+    `구단주의 은퇴 선수 카드를 구단 자금으로 강화해요. 같은 카드가 연속으로 실패할 때마다 다음 시도 확률이 기본의 ${p.pity}씩 오르고, 성공하면 처음 확률로 돌아가요. 카드 강화는 구단주 기능이라 판정은 서버에서 해요.`,
   hiddenTitle: '숨겨 둔 것과 이유',
   hiddenPotTerm: '실제 잠재력',
   hiddenPot: '은퇴할 때 공개해요. 스카우트 평가는 실제 값과 조금 다를 수 있어요.',

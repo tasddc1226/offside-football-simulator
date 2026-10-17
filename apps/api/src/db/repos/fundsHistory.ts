@@ -3,7 +3,8 @@ import type { Db } from '../client.js';
 
 // 구단 자금 내역(구단주 화면 → 구단 자금). 잔액을 바꾸는 기록 네 곳을 시각순으로 합친다 — 원장 테이블이 따로 없다
 // (운영 도구 대조 fundsAudit.ts와 같은 출처): 방출(cards.released_value, 키운 사람) · 은퇴 장려금(cards.bonus_value) · 판매(가격 − 수수료) · 영입(가격) ·
-// 구단 자금으로 산 것(owner_item_purchases). 한 번에 여러 장 방출하면 시각이 같아 id로 순서를 굳힌다.
+// 구단 자금으로 산 것(owner_item_purchases) · T-11-373 카드 강화(card_enhance_log — 옛 앱이 모르는 item 대신 item NULL에 카드를 붙이고
+// id를 'enhance:'로 시작한다). D1은 UNION 한 덩어리에 다섯 항까지라 지출 두 곳은 안쪽에서 먼저 합친다. 한 번에 여러 장 방출하면 시각이 같아 id로 순서를 굳힌다.
 
 export const FUNDS_HISTORY_PAGE = 30;
 
@@ -23,8 +24,10 @@ const MOVES = `
   SELECT id, 'bought', NULL, -price, NULL, closed_at, career_id
     FROM market_listings WHERE buyer_id = ?1 AND status = 'sold'
   UNION ALL
-  SELECT id, 'spent', item, -price, NULL, created_at, NULL
-    FROM owner_item_purchases WHERE profile_id = ?1`;
+  SELECT id, 'spent', item, -price, NULL, created_at, cid FROM (
+    SELECT id, item, price, created_at, NULL cid FROM owner_item_purchases WHERE profile_id = ?1
+    UNION ALL
+    SELECT 'enhance:' || id, NULL, cost, created_at, career_id FROM card_enhance_log WHERE profile_id = ?1)`;
 
 type TradeCard = NonNullable<FundsHistoryEntry['card']>;
 type MoveRow = Omit<FundsHistoryEntry, 'card'> & {
@@ -58,7 +61,8 @@ export async function fundsHistory(
         `SELECT r.released, r.bonus,
            (SELECT coalesce(sum(price - fee), 0) FROM market_listings WHERE seller_id = ?1 AND status = 'sold') AS sold,
            (SELECT coalesce(sum(price), 0) FROM market_listings WHERE buyer_id = ?1 AND status = 'sold') AS bought,
-           (SELECT coalesce(sum(price), 0) FROM owner_item_purchases WHERE profile_id = ?1) AS spent,
+           (SELECT coalesce(sum(price), 0) FROM owner_item_purchases WHERE profile_id = ?1)
+             + (SELECT coalesce(sum(cost), 0) FROM card_enhance_log WHERE profile_id = ?1) AS spent,
            (SELECT balance FROM owner_funds WHERE profile_id = ?1) AS balance
            FROM (SELECT coalesce(sum(CASE WHEN c.released_at IS NOT NULL THEN c.released_value END), 0) AS released,
                         coalesce(sum(c.bonus_value), 0) AS bonus

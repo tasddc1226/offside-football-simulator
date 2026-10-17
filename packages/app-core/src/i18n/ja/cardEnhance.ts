@@ -1,0 +1,36 @@
+import type { Translation } from '../core';
+import type { CardEnhanceMsgs } from '../ko/cardEnhance';
+
+export const cardEnhance: Translation<CardEnhanceMsgs> = {
+  title: 'カード強化',
+  open: '強化',
+  openAria: (p) => `${p.name}のカードを強化`,
+  now: '現在',
+  next: '成功すると',
+  rate: '成功確率',
+  cost: '費用',
+  balance: 'クラブ資金',
+  left: (p) => `今日はあと${p.n}回できます`,
+  failStay: '失敗しても段階はそのままです。',
+  failDrop: (p) => `失敗すると+${p.lv}に下がります。`,
+  pity: (p) => `${p.n}回続けて失敗したので確率が上がりました。`,
+  effect: (p) => `試合のポジション能力値 +${p.now} → +${p.next}`,
+  effectNote:
+    '強化はオーナーチームの試合のポジション能力値にだけ加わります。カードのOVRとチームOVRの表示は変わりません。',
+  go: '強化する',
+  going: '強化中…',
+  skip: 'スキップ',
+  close: '閉じる',
+  success: (p) => `+${p.lv}への強化に成功しました。`,
+  failKeep: (p) => `強化に失敗しました。+${p.lv}のままです。`,
+  failDropped: (p) => `強化に失敗し、+${p.lv}に下がりました。`,
+  max: '最高段階です。',
+  short: 'クラブ資金が足りません。',
+  limit: '今日の強化回数を使い切りました。',
+  closed: '現在カード強化はお休み中です。',
+  listed: '売却登録中の選手は強化できません。',
+  loadFail: '強化情報を読み込めませんでした。',
+  retry: '再試行',
+  tryFail: '強化できませんでした。しばらくしてからもう一度お試しください。',
+  sellNote: (p) => `+${p.lv}の強化価値${p.value}が販売価格の範囲に加わります。`,
+};

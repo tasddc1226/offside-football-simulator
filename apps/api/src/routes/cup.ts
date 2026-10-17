@@ -788,6 +788,21 @@ export async function checkCupManager(db: Db, profileId: string, season: number,
     throw conflictError(cupKo('cardManager'), 'CUP_CARD_LOCKED');
 }
 
+/** T-11-373 카드 강화 검사: 컵 명단이 잠긴 동안 그 명단의 선수는 강화할 수 없다(잠금 시점의 단계로 대회를 치른다). */
+export async function checkCupEnhance(
+  db: Db,
+  profileId: string,
+  season: number,
+  careerId: string,
+  now: string,
+) {
+  const cups = await activeCups(db, profileId, season);
+  if (!cups.some(({ entry, matches }) => lineupLocked(matches, entry.teamId, now))) return;
+  const [team] = await myTeamIn(db, profileId, season);
+  if (team && slotIdsOf(team).includes(careerId))
+    throw conflictError(cupKo('cardEnhance'), 'CUP_CARD_LOCKED');
+}
+
 /** T-11-145 판매 등록 검사(R2): 컵 참가 중이면 지금 선발에 든 선수는 내놓을 수 없다. */
 export async function checkCupListing(db: Db, profileId: string, season: number, careerId: string) {
   if (!(await activeCups(db, profileId, season)).length) return;

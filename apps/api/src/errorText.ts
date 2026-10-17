@@ -138,6 +138,14 @@ const EXACT: Record<string, string> = {
   '이번 시즌 선수만 내놓을 수 있어요.': "You can only list this season's players.",
   '기준가가 없는 선수는 내놓을 수 없어요.': "Players without a base value can't be listed.",
   '이미 내놓은 선수예요.': 'That player is already listed.',
+  // T-11-373 카드 강화
+  '감독 카드는 강화할 수 없어요.': "Manager cards can't be upgraded.",
+  '기준가가 없는 옛 기록은 강화할 수 없어요.':
+    "Older records without a base value can't be upgraded.",
+  '판매 등록 중인 선수는 강화할 수 없어요.': "Players on the transfer list can't be upgraded.",
+  '이미 가장 높은 단계예요.': 'This card is already at the highest level.',
+  '지금은 카드 강화를 쉬고 있어요.': 'Card upgrades are paused right now.',
+  '강화 상태가 바뀌었어요. 다시 확인해 주세요.': 'The upgrade status changed. Please check again.',
   // T-11-310 감독 커리어
   '감독으로 분류된 선수는 내놓거나 방출하거나 잠글 수 없어요.':
     "A player who became a manager can't be listed, released or locked.",
@@ -184,6 +192,10 @@ const PATTERNS: [RegExp, (m: RegExpExecArray) => string][] = [
   [
     /^한 번에 (\d+)명까지 내놓을 수 있어요\.$/,
     (m) => `You can list up to ${m[1]} players at a time.`,
+  ],
+  [
+    /^오늘은 (\d+)번까지 카드를 강화할 수 있어요\.$/,
+    (m) => `You can upgrade cards up to ${m[1]} times today.`,
   ],
   [
     /^오늘은 (\d+)명까지 영입할 수 있어요\. 내일 다시 영입해 주세요\.$/,

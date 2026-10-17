@@ -7,6 +7,7 @@
 export const RELEASE_MAX = 50;
 
 import { LEAGUE_BASE, type LeagueBase } from './club-names.js';
+import { enhanceValue } from './card-enhance.js';
 
 /** 레전드 점수 이만큼마다 은퇴 가치가 1배씩 더 붙는다. */
 export const LEGACY_PER = 250;
@@ -108,6 +109,12 @@ export function priceBand(cardValue: number, r: { priceMin: number; priceMax: nu
     max: Math.floor((cardValue * r.priceMax) / 100) * 100,
   };
 }
+/**
+ * T-11-373 판매 가격 범위의 기준 가치: 카드 기준가 + 강화 가치(그 단계 기대 비용의 절반). 강화로 쓴 자금이 거래로 일부 돌아오지만
+ * 구단주끼리 오가는 돈이라 새 자금은 생기지 않는다. 시세 집계(marketRatio)는 기준가 그대로다.
+ */
+export const tradeValue = (cardValue: number, enhance?: number) =>
+  cardValue + enhanceValue(enhance ?? 0);
 /** 판매 수수료(만 원). 팔리면 판매자는 가격에서 이만큼 빼고 받는다. */
 export const marketFee = (price: number, feeRate: number) => Math.round(price * feeRate);
 /** T-11-080e 시세 집계 비율: 판매가 ÷ 기준가(천분율, 1000 = 기준가 그대로). 0059_market_daily.sql의 지난 거래 채우기와 같은 계산. */

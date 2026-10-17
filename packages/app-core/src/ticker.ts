@@ -1,9 +1,15 @@
 // T-10-122 홈 전광판에 흘릴 줄을 만든다. 서버가 따로 준 이적·최초 기록(각각 최신순)을 이적 3줄마다 기록 1줄씩
 // 섞는다 — 기록은 드물고 오래돼 시각순으로만 섞으면 맨 뒤로 밀린다.
-import type { TickerFirst, TickerResponse, TickerTransfer } from '@offside/contracts';
+import type {
+  TickerEnhance,
+  TickerFirst,
+  TickerResponse,
+  TickerTransfer,
+} from '@offside/contracts';
 import { isAmateurClubId } from '@offside/contracts/club-names';
 import { playerName } from './format.js';
 import { firstLabel, firstUnit } from './firsts.js';
+import { homeText as L } from './i18n/ko/home.js';
 
 export type TickerItem =
   | {
@@ -15,7 +21,7 @@ export type TickerItem =
       from: string;
       to: string;
     }
-  | { key: string; kind: 'first' | 'record'; at: string; who: string; text: string };
+  | { key: string; kind: 'first' | 'record' | 'enhance'; at: string; who: string; text: string };
 
 const who = (x: { name: string | null; pos: TickerTransfer['pos']; number: number | null }) =>
   playerName(x.name, x.pos, x.number);
@@ -40,11 +46,24 @@ const firstItem = (f: TickerFirst): TickerItem => ({
       : firstLabel(f.label),
 });
 
+// T-11-373 +8 이상 카드 강화 성공. 최초 기록과 같은 자리(이적 3줄마다)에 시각순으로 섞는다.
+const enhanceItem = (e: TickerEnhance): TickerItem => ({
+  key: `e:${e.at}:${e.number ?? ''}:${e.level}`,
+  kind: 'enhance',
+  at: e.at,
+  who: who(e),
+  text: L.tickerEnhance({ lv: e.level }),
+});
+
 const EVERY = 3;
 
-export function tickerItems(d: Pick<TickerResponse, 'transfers' | 'firsts'>): TickerItem[] {
+export function tickerItems(
+  d: Pick<TickerResponse, 'transfers' | 'firsts' | 'enhances'>,
+): TickerItem[] {
   const out: TickerItem[] = [];
-  const firsts = d.firsts.map(firstItem);
+  const firsts = [...d.firsts.map(firstItem), ...(d.enhances ?? []).map(enhanceItem)].sort((a, b) =>
+    b.at.localeCompare(a.at),
+  );
   d.transfers.forEach((t, i) => {
     out.push(transferItem(t));
     if ((i + 1) % EVERY === 0 && firsts.length) out.push(firsts.shift()!);
