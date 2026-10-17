@@ -1,4 +1,4 @@
-# ADR-015 슬랙 에이전트 안정환(`@Ahn Jung-hwan`) — 0단계(이벤트 받기 없음). 1단계 설정은 ../README.md
+# ADR-015 슬랙 에이전트 안정환(`@Ahn Jung-hwan`) — 4단계(T-11-296): 멘션 · 채널 메시지와 드림보트 승인 버튼을 apps/agents Worker로 받는다
 display_information:
   name: 안정환 · 마케팅
   description: OFFSIDE 마케팅 담당. 공지와 업데이트 소식을 전해요. 게시는 승인 뒤에만 해요.
@@ -25,3 +25,11 @@ settings:
   org_deploy_enabled: false
   socket_mode_enabled: false
   token_rotation_enabled: false
+  event_subscriptions:
+    request_url: https://agents.offside-lab.com/slack/mkt/events
+    bot_events:
+      - app_mention
+      - message.channels
+  interactivity:
+    is_enabled: true
+    request_url: https://agents.offside-lab.com/slack/mkt/interactive

@@ -14,7 +14,7 @@ import { ProgBar, SkipLink, StatGrid } from './parts';
 import { TickerLine } from './TickerLine';
 
 /** 값이 바뀔 때마다 커졌다 돌아오는 숫자(웹 tally b.bump: 40%에서 1.25배 + 금색). 0·'-'은 그대로. */
-function Bump({ value }: { value: number | string }) {
+export function Bump({ value }: { value: number | string }) {
   const c = useColors();
   const { motionOK } = useSnapshot(prefs);
   const bump = value !== 0 && value !== '-' && motionOK;

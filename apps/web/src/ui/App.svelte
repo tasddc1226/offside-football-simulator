@@ -113,6 +113,11 @@
   $effect(() => {
     if (appState.screen === 'funds' && !FundsHistory) void import('./FundsHistory.svelte').then((m) => (FundsHistory = m.default));
   });
+  // T-11-310: 감독 커리어도 처음 열 때 불러온다(감독 엔진 포함).
+  let Manager = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'manager' && !Manager) void import('./Manager.svelte').then((m) => (Manager = m.default));
+  });
   // T-11-128: 시즌 결산도 처음 열 때 불러온다.
 
   // T-11-145: 오프사이드 컵도 처음 열 때 불러온다.
@@ -201,6 +206,8 @@
       {#if Market}<Market />{/if}
     {:else if appState.screen === 'funds'}
       {#if FundsHistory}<FundsHistory />{/if}
+    {:else if appState.screen === 'manager'}
+      {#if Manager}<Manager />{/if}
     {:else if appState.screen === 'recap'}
       {#if OwnerHonors}<OwnerHonors />{/if}
     {:else if appState.screen === 'cup'}

@@ -56,6 +56,7 @@ import { legend } from './legend';
 import { legendRn } from './legendRn';
 import { legendStyle } from './legendStyle';
 import { legendToast } from './legendToast';
+import { manager } from './manager';
 import { market } from './market';
 import { marketChart } from './marketChart';
 import { marketValueChart } from './marketValueChart';
@@ -72,6 +73,7 @@ import { retiredLook } from './retiredLook';
 import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
 import { seasonRecap } from './seasonRecap';
+import { serverStatus } from './serverStatus';
 import { settings } from './settings';
 import { settingsApi } from './settingsApi';
 import { share } from './share';
@@ -152,6 +154,7 @@ export const en = {
   legendRn,
   legendStyle,
   legendToast,
+  manager,
   market,
   marketChart,
   marketValueChart,
@@ -168,6 +171,7 @@ export const en = {
   scout,
   seasonGauge,
   seasonRecap,
+  serverStatus,
   settings,
   settingsApi,
   share,

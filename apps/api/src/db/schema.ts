@@ -411,6 +411,9 @@ export const careers = sqliteTable(
     publicName: text('public_name'),
     shirtNumber: integer('shirt_number'),
     snapshotJson: text('snapshot_json'),
+    // T-11-311 은퇴 상세를 둔 R2 객체 키(BACKUP 버킷 career-snapshots/…). 채워지면 snapshot_json은 비운다(D1 용량).
+    // 둘 다 NULL이면 상세가 없는 옛 기록이다. R2가 없거나 쓰기에 실패하면 예전처럼 snapshot_json에 둔다.
+    snapshotKey: text('snapshot_key'),
     // Server-owned award evidence (slot + grantedAt), independent of client snapshots.
     wallOfHonorJson: text('wall_of_honor_json'),
     // T-10-026 은퇴 때의 대표 칭호 id(web game/titles.ts). 옛 은퇴 기록은 NULL.
@@ -559,6 +562,9 @@ export const cards = sqliteTable(
     bonusValue: integer('bonus_value'),
     // T-11-188 구단주가 잠근 선수(1). 잠기면 내놓거나 방출할 수 없고, 판매 중인 선수는 잠글 수 없다(판매 중 카드는 늘 0).
     locked: integer('locked', { mode: 'boolean' }).notNull().default(false),
+    // T-11-310 감독으로 분류된 카드(1). 감독 커리어를 시작하면 켜지고 포기하면 꺼진다. 켜진 카드는 선발 · 판매 · 방출 · 잠금에서
+    // 빠진다(manager_careers가 진행 · 완료 상태를 가진다).
+    manager: integer('manager', { mode: 'boolean' }).notNull().default(false),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -1021,6 +1027,18 @@ export const translations = sqliteTable(
   (table) => [index('translations_created_idx').on(table.createdAt)],
 );
 
+/** T-11-321 서버 상태 화면. 5분 칸(`bucket` = 칸 시작 UTC ISO)마다 워커가 받은 요청 수·응답 시간 합·느린 요청·서버
+ * 오류를 더한다. isolate마다 메모리에 모았다가 1분에 한 번 더하므로 요청마다 쓰지 않는다(status/metrics.ts). 35일 보관. */
+export const apiStatusBuckets = sqliteTable('api_status_buckets', {
+  bucket: text('bucket').primaryKey(),
+  requests: integer('requests').notNull().default(0),
+  totalMs: integer('total_ms').notNull().default(0),
+  /** 1초 이상 걸린 요청. */
+  slow: integer('slow').notNull().default(0),
+  /** 5xx로 끝난 요청. */
+  errors: integer('errors').notNull().default(0),
+});
+
 export const appMeta = sqliteTable('app_meta', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
@@ -1069,6 +1087,8 @@ export const ownerTeams = sqliteTable(
     friendlyJson: text('friendly_json'),
     /** T-11-217 팀 프리셋(포메이션 · 선발 · 배치, 최대 5개) JSON 배열. 없으면 null. */
     presetsJson: text('presets_json'),
+    /** T-11-310 감독 칸(끝낸 감독 카드의 career_id). 비었으면 null — 지금과 같은 결과. */
+    coachId: text('coach_id'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -1659,5 +1679,35 @@ export const billingAlerts = sqliteTable(
   (t) => [
     index('billing_alerts_pending_idx').on(t.sentAt, t.leaseUntil, t.createdAt),
     index('billing_alerts_daily_idx').on(t.test, t.createdAt),
+  ],
+);
+
+/**
+ * T-11-310 감독 커리어. 은퇴 카드 한 장으로 시작해 기기에서 8~10시즌을 돈다. 서버는 시작값(origin · 시드)과 끝낸 결과
+ * (감독 카드)만 가진다. active는 구단주마다 하나, 끝낸(done) 커리어는 카드마다 하나다. 포기하면 행을 지운다.
+ */
+export const managerCareers = sqliteTable(
+  'manager_careers',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    careerId: text('career_id').notNull(),
+    status: text('status', { enum: ['active', 'done'] }).notNull(),
+    seed: integer('seed').notNull(),
+    originJson: text('origin_json').notNull(),
+    resultJson: text('result_json'),
+    // 끝낸 시각의 서비스 시즌(감독 업적). 진행 중이면 NULL.
+    serviceSeason: integer('service_season'),
+    createdAt: text('created_at').notNull(),
+    finishedAt: text('finished_at'),
+  },
+  (t) => [
+    uniqueIndex('manager_careers_active_unique')
+      .on(t.profileId)
+      .where(sql`${t.status} = 'active'`),
+    uniqueIndex('manager_careers_card_unique').on(t.careerId),
+    index('manager_careers_profile_idx').on(t.profileId, t.status, t.finishedAt),
   ],
 );

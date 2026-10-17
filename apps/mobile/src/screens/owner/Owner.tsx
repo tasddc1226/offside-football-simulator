@@ -44,6 +44,7 @@ import { GradeEmblem } from '../../ui/GradeEmblem';
 import { AdSlot } from '../../components/AdSlot';
 import { SettingsCard, SettingsLabel, SettingsTrigger } from '../settings/parts';
 import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
+import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
 import { teamHomeText as T } from '@offside/app-core/i18n/ko/teamHome';
 import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { openFriends } from '../../platform/inbox';
@@ -440,6 +441,26 @@ export default function Owner() {
                   <Txt v="h2">{L.marketTitle}</Txt>
                   <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
                     {L.marketSub({ funds })}
+                  </Txt>
+                </View>
+                <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+                  ›
+                </Txt>
+              </View>
+            </Card>
+          </Press>
+          <Press
+            testID="manager"
+            accessibilityLabel={MG.entryAria}
+            onPress={() => go('manager')}
+            scale={0.98}
+          >
+            <Card gap={12} testID="owner-manager">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <Txt v="h2">{MG.entryTitle}</Txt>
+                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                    {MG.entrySub}
                   </Txt>
                 </View>
                 <Txt tone="muted" style={{ fontSize: rem(1.5) }}>

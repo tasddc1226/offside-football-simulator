@@ -91,10 +91,49 @@ describe('구단 시즌 업적', () => {
       'owner',
       'manager',
     ]);
-    // 감독 업적은 감독 시뮬레이션이 열릴 때까지 잠금으로 예고만 한다.
-    expect(g.filter((x) => x.locked).map((x) => x.id)).toEqual(['manager']);
+    // T-11-310 감독 업적이 열렸다(잠금 없음).
+    expect(g.filter((x) => x.locked).map((x) => x.id)).toEqual([]);
     expect(g.flatMap((x) => x.items).every((i) => !i.done && i.points === 0)).toBe(true);
     expect(achievementScore(g)).toEqual({ score: 0, done: 0 });
+  });
+
+  it('T-11-310 감독 업적은 그 시즌에 끝낸 감독과 감독 칸으로 판정한다', () => {
+    const g = clubAchievements({
+      careers: [],
+      team: null,
+      owner: OWNER,
+      detail: true,
+      retireAt: 41,
+      managers: [
+        {
+          titles: 1,
+          promotions: 0,
+          grade: 'S',
+          mastery: { '4-3-3': 'S', '4-4-2': 'B', '3-5-2': 'C' },
+        },
+        {
+          titles: 0,
+          promotions: 2,
+          grade: 'B',
+          mastery: { '4-3-3': 'A', '4-4-2': 'C', '3-5-2': 'C' },
+        },
+      ],
+    });
+    const done = g
+      .find((x) => x.id === 'manager')!
+      .items.filter((i) => i.done)
+      .map((i) => i.id);
+    expect(done).toEqual([
+      'mgr-first',
+      'mgr-count',
+      'mgr-title',
+      'mgr-promote',
+      'mgr-mastery',
+      'mgr-grade',
+    ]);
+    expect(g.find((x) => x.id === 'manager')!.items.find((i) => i.id === 'mgr-count')!.level).toBe(
+      1,
+    );
   });
 
   it('첫 업적·모으기는 시즌 기록의 리그·영예 이름으로 판정한다', () => {

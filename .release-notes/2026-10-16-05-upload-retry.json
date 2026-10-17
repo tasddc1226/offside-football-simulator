@@ -1,0 +1,26 @@
+{
+  "id": "t-11-301-upload-retry",
+  "title": "은퇴한 선수가 내 선수·구단에 늦게 보이던 문제 수정",
+  "items": [
+    "앱을 잠깐 내려놓은 뒤 기록 올리기가 멈춰 은퇴한 선수가 내 선수와 구단에 안 보이던 문제를 고쳤어요",
+    "서버 응답이 오래 없으면 기다리지 않고 바로 다시 보내요",
+    "구단 화면에서 은퇴 기록이 올라가지 않으면 다시 올리기 버튼으로 바로 보낼 수 있어요"
+  ],
+  "en": {
+    "title": "Retired players showing up late in My Players and your club",
+    "items": [
+      "Fixed uploads stalling after the app went to the background, which kept retired players out of My Players and your club.",
+      "If the server stays silent for too long, the game stops waiting and sends again.",
+      "If a retirement record is still not in, the club screen now has an Upload again button."
+    ]
+  },
+  "ja": {
+    "title": "引退した選手がマイ選手・クラブに遅れて表示される問題を修正",
+    "items": [
+      "アプリを一度閉じた後に記録の送信が止まり、引退した選手がマイ選手とクラブに表示されない問題を修正しました。",
+      "サーバーからの応答が長くない場合は、待たずにすぐ送り直します。",
+      "引退記録がまだ届いていないときは、クラブ画面のもう一度送るボタンですぐ送れます。"
+    ]
+  },
+  "availability": "web-app"
+}

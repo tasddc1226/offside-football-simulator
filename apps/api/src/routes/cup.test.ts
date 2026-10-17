@@ -16,11 +16,13 @@ import {
   cupState,
   cups,
   notifications,
+  ownerTeams,
   profiles,
 } from '../db/schema.js';
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
 import { installFakeEdgeCache, flushEdge } from '../test/edgeCache.js';
+import { drawCup } from '../team/cup.js';
 import { checkCupListing, cupChampionView, cupHomeView, recentCupFor } from './cup.js';
 
 const MeRes = successEnvelope(CupMeResponseSchema);
@@ -340,5 +342,56 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
     await call('DELETE', `/v1/cups/${CUP.id}/entries/me`, { cookie: a.cookie });
     await expect(checkCupListing(ctx.db, a.profileId, 1, a.ids[0]!)).resolves.toBeUndefined();
     expect((await a.put([...a.ids.slice(0, 7), ...Array(4).fill(null)])).status).toBe(200);
+  });
+
+  // T-11-322 owner_teams를 IN (...) 한 번으로 읽어 101팀부터 D1 바인딩 한도(100)를 넘겨 503이 났다.
+  it.each([100, 101, 128])('신청 팀이 %i팀이어도 현재 대회에 팀이 빠짐없이 나온다', async (n) => {
+    const at = OPEN;
+    // 시드도 바인딩 한도에 걸리지 않게 한 줄씩 넣는다(한 batch).
+    const rows = Array.from({ length: n }, (_, k) => [
+      ctx.db
+        .insert(profiles)
+        .values({ id: `prf_many_${k}`, settingsJson: '{}', createdAt: at, lastSeenAt: at }),
+      ctx.db.insert(ownerTeams).values({
+        id: `tem_many_${k}`,
+        profileId: `prf_many_${k}`,
+        season: CUP.season,
+        name: `지금팀${k}`,
+        manager: `감독${k}`,
+        formation: '4-3-3',
+        slotsJson: '[]',
+        filled: 11,
+        ovr: 70,
+        createdAt: at,
+        updatedAt: at,
+      }),
+      ctx.db.insert(cupEntries).values({
+        cupId: CUP.id,
+        teamId: `tem_many_${k}`,
+        profileId: `prf_many_${k}`,
+        name: `신청팀${k}`,
+        manager: '감독',
+        ovr: 60,
+        createdAt: at,
+        updatedAt: at,
+      }),
+    ]).flat();
+    await ctx.db.batch(rows as [(typeof rows)[number], ...typeof rows]);
+    const res = await call('GET', '/v1/cups/current');
+    expect(res.status).toBe(200);
+    const cur = CupRes.parse(await res.json()).data;
+    expect(cur.entries).toBe(n);
+    expect(cur.teams.map((t) => t.teamId).sort()).toEqual(
+      Array.from({ length: n }, (_, k) => `tem_many_${k}`).sort(),
+    );
+    // 신청 때 값이 아니라 지금 팀으로 읽혔다 = 모든 팀을 owner_teams에서 찾았다.
+    expect(cur.teams.every((t) => t.name.startsWith('지금팀') && t.ovr === 70)).toBe(true);
+    if (n !== 128) return;
+    // 조 추첨(정원 128)도 바인딩 없이 참가 표와 이어 읽고, 추첨 뒤 화면에도 128팀이 모두 나온다.
+    await drawCup(ctx.db, { ...CUP, capacity: 128 }, CUP.drawAt);
+    const drawn = CupRes.parse(await (await call('GET', '/v1/cups/current')).json()).data;
+    expect(drawn.groups).toHaveLength(32);
+    expect(drawn.teams).toHaveLength(128);
+    expect(drawn.teams.every((t) => t.name.startsWith('지금팀'))).toBe(true);
   });
 });

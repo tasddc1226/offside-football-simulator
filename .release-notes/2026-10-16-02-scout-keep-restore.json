@@ -1,0 +1,26 @@
+{
+  "id": "t-11-294-scout-keep-restore",
+  "title": "킵한 후보가 사라지지 않게",
+  "items": [
+    "앱을 다시 열어도 킵한 후보의 포지션·주력으로 맞춰져서 킵한 후보가 바로 다시 나와요",
+    "주력 능력치를 누른 순서가 달라도 킵한 후보가 나와요",
+    "다른 조건으로 바꾸면 킵한 후보가 있다고 알려 주고, 버튼 하나로 다시 맞출 수 있어요"
+  ],
+  "en": {
+    "title": "Kept candidates stay put",
+    "items": [
+      "Reopening the app restores the kept candidate's position and focus, so the candidate shows up again.",
+      "The kept candidate appears even if you pick the focus stats in a different order.",
+      "If you change the setup, you'll see a note about your kept candidate and can match it with one tap."
+    ]
+  },
+  "ja": {
+    "title": "キープした候補が消えないように",
+    "items": [
+      "アプリを開き直しても、キープした候補のポジション・主力に合わせるので、すぐにまた出てきます。",
+      "主力能力値を押す順番が違ってもキープした候補が出てきます。",
+      "条件を変えるとキープした候補がいることをお知らせし、ボタンひとつで合わせ直せます。"
+    ]
+  },
+  "availability": "web-app"
+}

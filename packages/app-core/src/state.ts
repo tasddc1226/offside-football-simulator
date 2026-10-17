@@ -7,13 +7,14 @@ import { personName } from '@offside/game/i18n/names';
 import { BODY_DEFAULT, type Body } from '@offside/contracts/body';
 import { nationFromLocales } from '@offside/contracts/nations';
 import { deviceLocales } from './i18n/core.js';
-import type { HofSort, RetiredNumberResult, TeamRankSort } from '@offside/contracts';
+import type { HofRaiser, HofSort, RetiredNumberResult, TeamRankSort } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { activeSeason, retireAtNow } from '@offside/contracts/service-seasons';
 import { detailPosOpen, dposFor, DETAILS_OF } from '@offside/contracts/positions';
 import type { OutboxItem } from './outbox.js';
 import type { AttrKey, DetailPos, Pos } from '@offside/game/data';
 import { pick, ri } from '@offside/game/rng';
+import { loadKey } from '@offside/game/storage';
 import { SURNAMES, GIVEN, defaultFocus } from '@offside/game/data';
 import type { GameState, HofEntry, LegendSource } from '@offside/game/types';
 import type { Candidate } from '@offside/game/candidates';
@@ -71,6 +72,8 @@ export type Screen =
   | 'market'
   /** 구단 자금 내역(구단주 화면의 구단 자금 칸에서 연다). */
   | 'funds'
+  /** T-11-310 감독 커리어(구단주 화면의 감독 커리어 카드로 연다). */
+  | 'manager'
   /** T-11-128 구단주 시즌 결산(구단주 화면의 '시즌 결산' 카드로 연다). */
   | 'recap'
   /** T-11-145 오프사이드 컵(구단주 화면의 컵 배너로 연다). */
@@ -139,6 +142,24 @@ export function randomName(): string {
 /** T-10-076 기본 등번호는 무작위(1~99) — 모두 10번으로 시작하면 영구결번이 10번에 몰린다. 칸은 비우고 직접 적을 수 있다. */
 export const randomNumber = (): number => ri(1, 99);
 
+/** 마지막으로 시작한 커리어의 이름·등번호. 은퇴하면 지운다 — 은퇴 전에 다시 시작할 때만 이어 쓴다. */
+export const DRAFT_IDENTITY_KEY = 'ft_last_draft_identity';
+export type DraftIdentity = Pick<DraftCharacter, 'name' | 'number'>;
+
+/** 저장된 이름·등번호. 없거나 깨졌거나 이름이 비었거나 등번호가 정수 1~99 밖이면 null. */
+export function savedDraftIdentity(): DraftIdentity | null {
+  const v = loadKey<Partial<DraftIdentity> | null>(DRAFT_IDENTITY_KEY);
+  if (!v || typeof v !== 'object') return null;
+  const { name, number } = v;
+  if (typeof name !== 'string' || !name.trim()) return null;
+  if (!Number.isInteger(number) || number! < 1 || number! > 99) return null;
+  return { name, number: number! };
+}
+
+/** 선수 만들기의 처음 이름·등번호 — 저장된 값이 있으면 그 값, 없으면 무작위(이름 → 등번호 순으로 뽑는다). */
+export const draftIdentity = (): DraftIdentity =>
+  savedDraftIdentity() ?? { name: randomName(), number: randomNumber() };
+
 /** T-10-005 은퇴 선수 상세 화면에 띄울 대상. 내 선수(로컬 ft_hof)면 `own`이 있고 이름 공개를 바꿀 수 있다. */
 export interface LegendView {
   name: string;
@@ -187,6 +208,10 @@ export interface LegendView {
   rn?: RetiredNumberResult | null | undefined;
   /** Server-verified public retirement honor, even when the selected title differs. */
   wallOfHonor?: boolean | undefined;
+  /** T-11-297 이 선수를 키운 구단주(서버 명예의 전당 기록만). 내 선수·익명·구단주 정보 없음은 null. */
+  raiser?: HofRaiser | null | undefined;
+  /** T-11-297 최고 시점 대표 능력치 6개. 서버 상세·이 기기의 기록에서 읽고, 없는 옛 기록은 null. */
+  attrs?: Record<AttrKey, number> | null | undefined;
 }
 
 export interface AppState {
@@ -244,8 +269,7 @@ export const initialAppState = (): AppState => ({
   lastRetired: null,
   legend: null,
   C: {
-    name: randomName(),
-    number: randomNumber(),
+    ...draftIdentity(),
     pos: 'FW',
     dpos: null,
     foot: '오른발',

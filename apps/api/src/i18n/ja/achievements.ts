@@ -102,6 +102,13 @@ export const LABEL_JA: Record<string, string> = {
   'owner-retire-days': '選手を引退させた日数',
   'owner-match-days': 'チーム戦をした日数',
   'owner-likes': '他チームへの応援（いいね）',
+  'mgr-first': '監督キャリアを終える',
+  'mgr-count': '育てた監督',
+  'mgr-title': 'リーグ優勝監督',
+  'mgr-promote': '昇格を果たした監督',
+  'mgr-mastery': 'フォーメーション熟練度Sの監督',
+  'mgr-grade': 'S等級の監督',
+  'mgr-coach': '監督枠を埋める',
 };
 
 /** 단계 업적의 단위(숫자 바로 뒤에 붙는다). */
@@ -122,6 +129,7 @@ export const UNIT_JA: Record<string, string> = {
   'owner-retire-days': '日',
   'owner-match-days': '日',
   'owner-likes': '回',
+  'mgr-count': '人',
 };
 
 /** '○○세까지 현역'(시즌마다 나이가 다르다). */

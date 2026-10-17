@@ -1,14 +1,18 @@
-// 역할마다 시스템 프롬프트(roles/<역할>.md) · 도구 · 턴 상한. 3단계까지 @ops · @plan · @dev가 있다.
+// 역할마다 시스템 프롬프트(roles/<역할>.md) · 도구 · 턴 상한. 4단계(T-11-296)에 @mkt까지 연다.
 import { MODELS, type Model, type Tool } from './claude.ts';
 import type { McpServer } from './mcp.ts';
 import type { Env, Role } from './env.ts';
 import type { Task } from './thread.ts';
 import dev from '../roles/dev.md';
 import glossary from '../roles/glossary.md';
+import mkt from '../roles/mkt.md';
 import ops from '../roles/ops.md';
 import plan from '../roles/plan.md';
+import team from '../roles/team.md';
 import { devTools } from './dev.ts';
 import { repoReadToken } from './github.ts';
+import { ga4Tools } from './ga4.ts';
+import { mktTools } from './mkt.ts';
 import { supportTools } from './support.ts';
 import { opsTools } from './tools/ops.ts';
 import { digestTools } from './tools/digest.ts';
@@ -28,7 +32,9 @@ const kstNow = () =>
 
 /** 넘겨받은 일: 넘긴 역할의 요청과 그 답 전체(자료). */
 const handoffPrompt = (t: Task) =>
-  `지금 KST ${kstNow()}. @${t.from}가 같은 스레드에서 일을 넘겼어요.\n\n요청: ${t.text}\n\n<context>\n${t.context ?? ''}\n</context>`;
+  t.back
+    ? `지금 KST ${kstNow()}. 내가 넘긴 일을 @${t.from}가 끝내고 결과를 돌려줬어요.\n\n${t.text}\n\n<context>\n${t.context ?? ''}\n</context>`
+    : `지금 KST ${kstNow()}. @${t.from}가 같은 스레드에서 일을 넘겼어요.\n\n요청: ${t.text}\n\n<context>\n${t.context ?? ''}\n</context>`;
 
 /**
  * 일에 맞는 모델(T-11-289 비용 절감). 유저 반응 분류 · 경보 첫 정리는 Haiku, 아침 보고는 Sonnet, 운영자 지시 ·
@@ -37,7 +43,7 @@ const handoffPrompt = (t: Task) =>
 export const modelFor = (kind: Task['kind']): Model =>
   kind === 'triage' || kind === 'alert'
     ? MODELS.haiku
-    : kind === 'report' || kind === 'support'
+    : kind === 'report' || kind === 'support' || kind === 'release'
       ? MODELS.sonnet
       : MODELS.opus;
 
@@ -53,7 +59,7 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
   });
   if (role === 'plan')
     return {
-      system: `${plan}\n\n${glossary}`,
+      system: `${plan}\n\n${team}\n\n${glossary}`,
       model,
       // 기획은 규칙 · 보드 확인과 비슷한 댓글 찾기만 한다. Actions · Cloudflare 로그는 @ops에게 넘긴다.
       // 고객 문의 정리 · 운영자 지시에는 문의 메일 도구(읽기 · 초안 + 승인 카드)를 더한다.
@@ -72,7 +78,7 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
     };
   if (role === 'dev')
     return {
-      system: dev,
+      system: `${dev}\n\n${team}`,
       model,
       // 개발은 저장소 · PR을 읽고, 운영자가 맡긴 일이면 Actions 작업을 띄운다(start_work). 고치는 건 Actions의 Claude Code가 한다.
       tools: [...tools.filter((t) => t.name === 'repo_file'), ...devTools(env, task)],
@@ -85,9 +91,28 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
 (넘겨받은 일이라 바로 고치지 않아요. 할 일을 정리해 운영자 확인을 받아요.)`
           : `지금 KST ${kstNow()}. 운영자 지시:\n${t.text}`,
     };
+  if (role === 'mkt')
+    return {
+      system: `${mkt}\n\n${team}\n\n${glossary}`,
+      model,
+      // 마케팅은 저장소 · 배포 기록을 읽고 드림보트 요약 초안만 올린다(보내기는 운영자 승인 버튼).
+      tools: [
+        ...tools.filter((t) => t.name === 'repo_file'),
+        ...mktTools(env, task),
+        ...ga4Tools(env, task.kind),
+      ],
+      maxTurns: task.kind === 'release' ? 5 : 8,
+      mcpServers: [],
+      prompt: (t) =>
+        t.kind === 'release'
+          ? `지금 KST ${kstNow()}. ${t.text}\n역할 설명의 "배포 뒤 업데이트 요약" 순서대로 해 주세요. 먼저 \`release_changes\`를 한 번 불러요.`
+          : t.kind === 'handoff'
+            ? handoffPrompt(t)
+            : `지금 KST ${kstNow()}. 운영자 지시:\n${t.text}`,
+    };
   if (role !== 'ops') throw new Error(`role ${role} is not open yet`);
   return {
-    system: `${ops}\n\n${glossary}`,
+    system: `${ops}\n\n${team}\n\n${glossary}`,
     model,
     tools: [
       ...tools,

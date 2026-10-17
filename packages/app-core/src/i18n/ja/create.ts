@@ -110,7 +110,11 @@ export const create: Translation<CreateMsgs> = {
   kept: 'キープ',
   keepBtn: (p) => `候補${p.n}をキープ`,
   unkeepBtn: (p) => `候補${p.n}のキープを外す`,
-  keepHelp: 'キープした候補は引き直してもその場に残ります。キープできるのは1人だけです。',
+  keepHelp:
+    'キープした候補は同じポジション・主力で引き直すとその場に残ります。キープできるのは1人だけです。',
+  keptElsewhere: (p) =>
+    `キープした候補がいます。${p.pos}・主力 ${p.focus}で引くと出てきます。ほかの候補をキープするとこの候補は消えます。`,
+  keptRestore: 'キープした候補の条件に合わせる',
   scoutMemo: (p) => `スカウトメモ：隠れた武器は${p.k}`,
   tapToOpen: 'タップして開く',
   candOpenA11y: (p) => `候補${p.n}、OVR ${p.ovr}、${p.line}`,

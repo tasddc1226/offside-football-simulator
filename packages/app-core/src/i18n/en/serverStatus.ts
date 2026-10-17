@@ -1,0 +1,31 @@
+import type { Translation } from '../core';
+import type { ServerStatusMsgs } from '../ko/serverStatus';
+
+export const serverStatus: Translation<ServerStatusMsgs> = {
+  title: 'Server status',
+  intro: 'Requests the game server received, grouped every 5 minutes.',
+  loading: 'Loading…',
+  error: 'Could not load the server status. Please open it again in a moment.',
+  levelOk: 'All good',
+  levelSlow: 'Slower than usual',
+  levelDown: 'More server errors than usual',
+  levelUnknown: 'No recent data',
+  recentTitle: 'Last 15 minutes',
+  perMinute: 'Requests per minute',
+  avgResponse: 'Average response',
+  slowShare: 'Requests over 1 second',
+  errorShare: 'Server errors',
+  hoursTitle: 'Last 24 hours',
+  hoursRequests: 'Requests per hour',
+  hoursAvg: 'Average response time',
+  daysTitle: 'Last 30 days',
+  colDay: 'Date',
+  colRequests: 'Requests',
+  colAvg: 'Avg response',
+  colSlow: 'Slow',
+  trendUp: (p) => `Yesterday had ${p.n} requests, ${p.pct} more than a week before.`,
+  trendDown: (p) => `Yesterday had ${p.n} requests, ${p.pct} fewer than a week before.`,
+  trendFlat: (p) => `Yesterday had ${p.n} requests, about the same as a week before.`,
+  yesterday: (p) => `Yesterday had ${p.n} requests.`,
+  note: 'Request counts are approximate, counted by the server itself, and may be slightly low. Recorded since October 16, 2026.',
+};

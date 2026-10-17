@@ -15,7 +15,8 @@ import {
 } from '../db/repos/ownerTeams.js';
 import type { Lang } from '../lang.js';
 import { anonText } from './anon.js';
-import { buildLineup, lineupOvr, type PlayerRef, type SimResult } from './sim.js';
+import { buildLineup, lineupOvr, type MatchCoach, type PlayerRef, type SimResult } from './sim.js';
+import { coachesByIds } from '../db/repos/managers.js';
 
 // 랭크 경기(T-10-092)와 친선전(T-11-098)이 함께 쓰는 경기 한 판 준비 · 저장할 상세 · 화면 모양 변환.
 
@@ -24,13 +25,25 @@ export type MatchHead = Pick<
   'id' | 'homeTeamId' | 'homeGoals' | 'awayGoals' | 'createdAt'
 >;
 
-/** 두 팀(그 시즌)의 선발. 각 팀은 자기 구단주의 그 시즌 은퇴 선수만 뛴다. 쿼리 1번. */
+/**
+ * 두 팀(그 시즌)의 선발. 각 팀은 자기 구단주의 그 시즌 은퇴 선수만 뛴다. T-11-310 감독 칸의 감독도 함께 읽는다(그 팀
+ * 구단주가 끝낸 감독만). 쿼리 2번(나란히).
+ */
 export async function lineupsOf(db: Db, season: number, home: OwnerTeamRow, away: OwnerTeamRow) {
   const homeSlots = slotIdsOf(home);
   const awaySlots = slotIdsOf(away);
-  const rows = await careersByIds(db, [
-    ...new Set([...homeSlots, ...awaySlots].filter((x): x is string => x !== null)),
+  const [rows, coachRows] = await Promise.all([
+    careersByIds(db, [
+      ...new Set([...homeSlots, ...awaySlots].filter((x): x is string => x !== null)),
+    ]),
+    coachesByIds(db, [home.coachId, away.coachId]),
   ]);
+  const coach = (t: OwnerTeamRow): MatchCoach => {
+    const c = t.coachId ? coachRows.get(t.coachId) : undefined;
+    return c && c.profileId === t.profileId
+      ? { card: c, formation: t.formation as FormationId }
+      : null;
+  };
   const lineup = (t: OwnerTeamRow, slots: typeof homeSlots) =>
     buildLineup(
       t.formation as FormationId,
@@ -38,7 +51,11 @@ export async function lineupsOf(db: Db, season: number, home: OwnerTeamRow, away
       eligibleMap(rows, t.profileId, season, true),
       layoutOf(t),
     );
-  return { home: lineup(home, homeSlots), away: lineup(away, awaySlots) };
+  return {
+    home: lineup(home, homeSlots),
+    away: lineup(away, awaySlots),
+    coaches: { home: coach(home), away: coach(away) },
+  };
 }
 
 export type Lineups = Awaited<ReturnType<typeof lineupsOf>>;

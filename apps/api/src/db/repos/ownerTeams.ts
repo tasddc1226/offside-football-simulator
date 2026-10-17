@@ -35,6 +35,7 @@ import {
   sql,
 } from 'drizzle-orm';
 import type { Db } from '../client.js';
+import { readInChunks } from '../chunk.js';
 import { runBatch } from './batch.js';
 import { honorsOf } from './firsts.js';
 import {
@@ -132,28 +133,31 @@ export function logoOf(row: Pick<OwnerTeamRow, 'logoJson'>) {
 
 /** 경기 목록에 필요한 현재 로고만 한 번에 읽는다. 옛 경기 JSON은 바꾸지 않는다. */
 export async function teamLogosByIds(db: Db, ids: readonly string[]) {
-  if (ids.length === 0) return new Map<string, ReturnType<typeof logoOf>>();
-  const rows = await db
-    .select({ id: ownerTeams.id, logoJson: ownerTeams.logoJson })
-    .from(ownerTeams)
-    .where(inArray(ownerTeams.id, [...new Set(ids)]));
+  const rows = await readInChunks(ids, (chunk) =>
+    db
+      .select({ id: ownerTeams.id, logoJson: ownerTeams.logoJson })
+      .from(ownerTeams)
+      .where(inArray(ownerTeams.id, chunk)),
+  );
   return new Map(rows.map((row) => [row.id, logoOf(row)]));
 }
 
 /** T-11-228 대회 화면에 그릴 지금 팀 이름·감독·OVR·로고. 신청 때 적은 값이 아니라 경기에 쓰는 팀 그대로 보인다. */
+// 대회는 128팀까지라 D1 바인딩 한도(100)를 넘는다 — 나눠 읽는다(T-11-322).
 export async function liveTeamsByIds(db: Db, ids: readonly string[]) {
-  if (ids.length === 0) return new Map<string, LiveTeam>();
-  const rows = await db
-    .select({
-      id: ownerTeams.id,
-      season: ownerTeams.season,
-      name: ownerTeams.name,
-      manager: ownerTeams.manager,
-      ovr: ownerTeams.ovr,
-      logoJson: ownerTeams.logoJson,
-    })
-    .from(ownerTeams)
-    .where(inArray(ownerTeams.id, [...new Set(ids)]));
+  const rows = await readInChunks(ids, (chunk) =>
+    db
+      .select({
+        id: ownerTeams.id,
+        season: ownerTeams.season,
+        name: ownerTeams.name,
+        manager: ownerTeams.manager,
+        ovr: ownerTeams.ovr,
+        logoJson: ownerTeams.logoJson,
+      })
+      .from(ownerTeams)
+      .where(inArray(ownerTeams.id, chunk)),
+  );
   return new Map<string, LiveTeam>(
     rows.map(({ logoJson, ...row }) => [row.id, { ...row, logo: logoOf({ logoJson }) }]),
   );
@@ -292,6 +296,8 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       and(
         eq(cards.ownerId, profileId),
         lte(cards.serviceSeason, season),
+        // T-11-310 감독으로 분류된 카드는 선수 목록에서 빠진다.
+        eq(cards.manager, false),
         sql`coalesce(${careers.hidden}, 0) = 0`,
       ),
     )
@@ -372,6 +378,7 @@ export async function careersByIds(db: Db, ids: string[]) {
     .select({
       id: cards.careerId,
       ownerId: cards.ownerId,
+      manager: cards.manager,
       pos: cards.pos,
       nation: cards.nation,
       dpos: cards.dpos,
@@ -413,7 +420,8 @@ export function eligibleMap(
 ) {
   const map = new Map<string, ReturnType<typeof toLineupCareer>>();
   for (const r of rows) {
-    if (open && r.ownerId !== ownerId) continue;
+    // T-11-310 감독이 된 카드는 지금 시즌 팀에서 뛰지 않는다(닫힌 시즌 기록은 그대로 읽는다).
+    if (open && (r.ownerId !== ownerId || r.manager)) continue;
     if (r.serviceSeason > season || r.hidden) continue;
     map.set(r.id, toLineupCareer({ ...r, raised: r.raiserId === ownerId }));
   }
@@ -446,7 +454,8 @@ const rankedIn = (season: number) =>
 export type FriendlyLineup = Pick<
   OwnerTeamRow,
   'name' | 'manager' | 'formation' | 'slotsJson' | 'layoutJson' | 'logoJson' | 'filled' | 'ovr'
->;
+> &
+  Partial<Pick<OwnerTeamRow, 'coachId'>>;
 
 /**
  * T-11-113 친선전·내 팀 화면에서 쓰는 팀: 끝난 시즌 팀을 친선전용으로 고쳤으면 그 편성을 덮어 쓴다. 랭킹·팀 프로필·업적은
@@ -529,7 +538,7 @@ const lineupValueSql = (open: boolean) => sql<number>`(
   cross join ${cards} on ${cards.careerId} = slot.value
   left join ${careers} on ${careers.id} = ${cards.careerId}
   where ${cards.serviceSeason} <= ${ownerTeams.season} and coalesce(${careers.hidden}, 0) = 0
-  ${open ? sql`and ${cards.ownerId} = ${ownerTeams.profileId}` : sql``}
+  ${open ? sql`and ${cards.ownerId} = ${ownerTeams.profileId} and ${cards.manager} = 0` : sql``}
 )`;
 
 const rankOrder = (sort: TeamRankSort) =>
@@ -839,11 +848,13 @@ export async function listStatsMatches(db: Db, teamId: string, limit: number) {
 
 /** 경기 기록에 나온 커리어의 지금 공개 이름. */
 export async function publicNamesOf(db: Db, ids: string[]): Promise<Map<string, string>> {
-  if (ids.length === 0) return new Map();
-  const rows = await db
-    .select({ id: careers.id, publicName: careers.publicName })
-    .from(careers)
-    .where(and(inArray(careers.id, ids), isNotNull(careers.publicName)));
+  // 경기 여러 판이면 커리어가 100명을 넘는다 — 나눠 읽는다.
+  const rows = await readInChunks(ids, (chunk) =>
+    db
+      .select({ id: careers.id, publicName: careers.publicName })
+      .from(careers)
+      .where(and(inArray(careers.id, chunk), isNotNull(careers.publicName))),
+  );
   return new Map(rows.map((r) => [r.id, r.publicName!]));
 }
 

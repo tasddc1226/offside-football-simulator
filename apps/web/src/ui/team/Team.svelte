@@ -70,6 +70,8 @@
   import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, tooManyWildcards, wildcardFullText, wildcardLabel } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
+  import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
+  import { coachSummary } from '@offside/app-core/managerCard';
   import { hofOwnText as HO } from '@offside/app-core/i18n/ko/hofOwn';
   import { loadAnonNames, publishAnonNames, type AnonName } from '@offside/app-core/cardNames';
   import { fetchCup, fetchCupMe } from '@offside/app-core/api/cup';
@@ -311,6 +313,16 @@
   }
   // T-11-182 은퇴 기록이 아직 서버에 없으면 알리고, 올라가면 라커룸 선수 목록만 다시 받는다(편집 중인 팀은 그대로).
   let retireSyncing = $state(false);
+  // T-11-301 올리기가 멈춘 것 같을 때 사용자가 바로 다시 보낸다.
+  let retireRetry = $state<'idle' | 'busy' | 'failed'>('idle');
+  let outboxMod: typeof import('../../sync/outbox.js') | undefined;
+  async function retryRetireSync() {
+    if (!outboxMod || retireRetry === 'busy') return;
+    retireRetry = 'busy';
+    await outboxMod.retryOutboxNow();
+    retireSyncing = outboxMod.pendingRetirementIds().size > 0;
+    retireRetry = retireSyncing ? 'failed' : 'idle';
+  }
   async function refreshPlayers() {
     if (status !== 'ready' || needLogin || !editable) return;
     const sequence = loadSequence;
@@ -322,6 +334,7 @@
     let off: (() => void) | undefined;
     let gone = false;
     void import('../../sync/outbox.js').then((outbox) => {
+      outboxMod = outbox;
       retireSyncing = outbox.pendingRetirementIds().size > 0;
       if (gone) return;
       off = outbox.onRetirementSynced(() => {
@@ -567,7 +580,14 @@
         bind:renaming
         onseason={pickSeason}
       />
-      {#if retireSyncing && editable}<p class="muted fs-sm" data-retire-syncing>{L.retireSyncing}</p>{/if}
+      {#if retireSyncing && editable}
+        <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap" data-retire-syncing>
+          <p class="muted fs-sm">{retireRetry === 'failed' ? L.retireSyncFailed : L.retireSyncing}</p>
+          <button class="btn btn-sm" disabled={retireRetry === 'busy'} onclick={retryRetireSync} data-act="retire-retry">
+            {retireRetry === 'busy' ? L.retireSyncRetrying : L.retireSyncRetry}
+          </button>
+        </div>
+      {/if}
       {#if editable && anonNames.length}
         <section class="card anon-names" role="status" data-anon-names>
           <p class="fs-sm">{namesStep === 'idle' ? HO.anonCardsNote({ n: anonNames.length }) : HO.anonCardsConfirm({ n: anonNames.length })}</p>
@@ -605,6 +625,13 @@
         onlock={toggleLock}
         onpresets={() => (presetsOpen = true)}
       />
+      {#if team && season === current}
+        <!-- T-11-310 감독 칸: 감독은 감독 커리어 화면에서 고른다. -->
+        <section class="card tm-coach" data-team-coach>
+          <span class="tm-coach-info"><b>{MG.teamCoach}</b><span class="muted fs-sm">{team.coach ? coachSummary(team.coach, formation, localNames) : MG.teamCoachEmpty}</span></span>
+          <button class="btn btn-sm" data-act="team-coach" onclick={() => go('manager')}>{MG.teamCoachManage}</button>
+        </section>
+      {/if}
       <TeamPresets bind:open={presetsOpen} {presets} hasTeam={!!team} locked={!!cupBand?.locked} draft={presetDraft} persist={persistPresets} onload={applyPreset} />
     {:else if view === 'opponents'}
       <div class="seg two tm-mode" role="group" aria-label={L.matchKindLabel}>
@@ -690,4 +717,16 @@
   .anon-names {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 16px;}
   .anon-names p {margin:0;flex:1 1 200px;}
   .anon-names .btn {min-height:44px;}
+  .tm-coach {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .tm-coach-info {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+  }
 </style>

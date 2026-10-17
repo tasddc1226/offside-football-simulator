@@ -10,7 +10,12 @@ import type {
 import { HOF_MIN_RETIRE_AGE, WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { cardValue, releasePayout, retireValue } from '@offside/contracts/market-value';
 import { firstUploadSeasonAt, type ServiceSeason } from '@offside/contracts/service-seasons';
-import { dposFor, type DetailPos, type PeakProfile } from '@offside/contracts/positions';
+import {
+  dposFor,
+  FACE_ATTRS,
+  type DetailPos,
+  type PeakProfile,
+} from '@offside/contracts/positions';
 import {
   and,
   desc,
@@ -25,6 +30,8 @@ import {
   type AnyColumn,
   type SQL,
 } from 'drizzle-orm';
+import { readSnapshotJson } from '../../careerSnapshots.js';
+import type { Bindings } from '../../env.js';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { kstDay } from '../../time.js';
@@ -35,7 +42,10 @@ import {
   careers,
   careerSeasons,
   goalsPlusAssists,
+  managerCareers,
   ownerFunds,
+  ownerTeams,
+  profiles,
   retiredNumbers,
   seasonTelemetry,
 } from '../schema.js';
@@ -251,6 +261,8 @@ export type PutRetirementInput = {
   look?: string | undefined;
   /** T-11-163 은퇴 장려금 비율(밸런스 marketRetireBonusRate). */
   bonusRate: number;
+  /** T-11-311 스냅샷을 먼저 R2에 썼으면 그 키(careerSnapshots.putSnapshot). 없으면 snapshot_json에 둔다. */
+  snapshotKey?: string | null | undefined;
   now: string;
 };
 
@@ -271,7 +283,18 @@ export async function putRetirement(
   db: Db,
   input: PutRetirementInput,
 ): Promise<RetiredHead | undefined> {
-  const { careerId, summary, publicName, snapshot, profile, potReal, look, bonusRate, now } = input;
+  const {
+    careerId,
+    summary,
+    publicName,
+    snapshot,
+    snapshotKey,
+    profile,
+    potReal,
+    look,
+    bonusRate,
+    now,
+  } = input;
   const value = snapshot ? cardValue(snapshot.career, summary.peak) : null;
   // T-11-163 은퇴 장려금: 기준가가 있는 카드만(스냅샷 없는 옛 기록은 거래도 하지 않는다).
   const bonus = value === null ? 0 : releasePayout(value, bonusRate);
@@ -318,7 +341,9 @@ export async function putRetirement(
         ...publicNameSet(publicName),
         ...(snapshot
           ? {
-              snapshotJson: JSON.stringify(verifiedSnapshot(snapshot, false)),
+              ...(snapshotKey
+                ? { snapshotKey, snapshotJson: null }
+                : { snapshotJson: JSON.stringify(verifiedSnapshot(snapshot, false)) }),
               shirtNumber: snapshot.number,
               value: retireValue(snapshot.career, summary.legendScore),
             }
@@ -392,6 +417,7 @@ export async function putRetirement(
             releasedValue: sql<number | null>`null`.as('released_value'),
             bonusValue: sql<number | null>`${bonus > 0 ? bonus : null}`.as('bonus_value'),
             locked: sql<boolean>`0`.as('locked'),
+            manager: sql<boolean>`0`.as('manager'),
             createdAt: sql<string>`${now}`.as('created_at'),
             updatedAt: sql<string>`${now}`.as('updated_at'),
           })
@@ -427,7 +453,7 @@ const publicColumns = {
   lastClubId: careers.lastClubId,
   look: careers.look,
   retiredAt: careers.retiredAt,
-  hasDetail: sql<number>`${careers.snapshotJson} is not null`,
+  hasDetail: sql<number>`${careers.snapshotJson} is not null or ${careers.snapshotKey} is not null`,
   title: careers.title,
   wallOfHonor: sql<number>`${careers.wallOfHonorJson} is not null`,
   value: careers.value,
@@ -440,9 +466,56 @@ const publicColumns = {
 };
 type PublicRow = { [K in keyof typeof publicColumns]: unknown };
 
-function toPublicEntry(r: PublicRow): PublicHofEntry {
+/**
+ * T-11-297 키운 구단주(공개 목록·상세에서만 — profiles·owner_teams를 left join한 쿼리). 닉네임은 프로필의 공개 닉네임,
+ * 팀은 그 구단주의 가장 최근 시즌 팀(구단주 프로필을 팀 id로 연다). 둘 다 PK·유니크 인덱스(profile_id, season)로 찾는다.
+ */
+const raiserColumns = {
+  raiserNickname: profiles.nickname,
+  raiserTeamId: ownerTeams.id,
+  raiserTeamName: ownerTeams.name,
+};
+type RaiserRow = { [K in keyof typeof raiserColumns]: unknown };
+const withRaiserProfile = eq(profiles.id, careers.profileId);
+const withRaiserTeam = and(
+  eq(ownerTeams.profileId, careers.profileId),
+  eq(
+    ownerTeams.season,
+    sql`(select max(t.season) from owner_teams t where t.profile_id = ${careers.profileId})`,
+  ),
+);
+
+/** 익명 선수(이름 비공개)는 구단주도 숨긴다. 닉네임·팀이 둘 다 없으면 null. */
+function raiserOf(r: Partial<RaiserRow> & { name: unknown }): PublicHofEntry['raiser'] {
+  if (r.name == null) return null;
+  const nickname = (r.raiserNickname as string | null | undefined) ?? null;
+  const teamId = (r.raiserTeamId as string | null | undefined) ?? null;
+  if (nickname == null && teamId == null) return null;
+  return {
+    nickname,
+    teamId,
+    teamName: teamId ? String(r.raiserTeamName ?? '') : null,
+  };
+}
+
+/** T-11-297 은퇴 때 남긴 최고 시점 대표 능력치 6개. 모양이 틀리거나 없으면 null. */
+export function peakAttrsOf(json: unknown): PublicHofEntry['attrs'] {
+  if (typeof json !== 'string' || !json) return null;
+  try {
+    const attrs = (JSON.parse(json) as Partial<PeakProfile>).attrs;
+    if (!attrs || !FACE_ATTRS.every((k) => Number.isFinite(attrs[k]))) return null;
+    return Object.fromEntries(FACE_ATTRS.map((k) => [k, Math.round(attrs[k])])) as NonNullable<
+      PublicHofEntry['attrs']
+    >;
+  } catch {
+    return null;
+  }
+}
+
+function toPublicEntry(r: PublicRow & Partial<RaiserRow>): PublicHofEntry {
   const n = (v: unknown) => Number(v ?? 0);
   return {
+    ...('raiserNickname' in r ? { raiser: raiserOf(r) } : {}),
     id: String(r.id),
     name: (r.name as string | null) ?? null,
     pos: r.pos as PublicHofEntry['pos'],
@@ -561,9 +634,11 @@ export async function listPublicHof(
     .offset((page - 1) * limit)
     .as('hof_page');
   const query = db
-    .select(publicColumns)
+    .select({ ...publicColumns, ...raiserColumns })
     .from(careers)
     .leftJoin(retiredNumbers, withRetiredNumber)
+    .leftJoin(profiles, withRaiserProfile)
+    .leftJoin(ownerTeams, withRaiserTeam)
     .$dynamic();
   const rows = await (sort === 'score'
     ? query.innerJoin(pageIds, eq(careers.id, sql`"hof_page"."hof_career_id"`)).orderBy(...order)
@@ -623,16 +698,26 @@ function inSeason(s: ServiceSeason): SQL | undefined {
 export async function getPublicHof(
   db: Db,
   careerId: string,
+  env: Pick<Bindings, 'BACKUP'>,
 ): Promise<{ entry: PublicHofEntry; snapshot: LegendSnapshot | null } | undefined> {
   const [row] = await db
-    .select({ ...publicColumns, snapshotJson: careers.snapshotJson })
+    .select({
+      ...publicColumns,
+      ...raiserColumns,
+      snapshotJson: careers.snapshotJson,
+      snapshotKey: careers.snapshotKey,
+      peakProfile: careers.peakProfile,
+    })
     .from(careers)
     .leftJoin(retiredNumbers, withRetiredNumber)
+    .leftJoin(profiles, withRaiserProfile)
+    .leftJoin(ownerTeams, withRaiserTeam)
     .where(and(eq(careers.id, careerId), isPublicRetired));
   if (!row) return undefined;
-  const { snapshotJson, ...rest } = row;
+  const { snapshotJson: inD1, snapshotKey, peakProfile, ...rest } = row;
+  const snapshotJson = await readSnapshotJson(env, { snapshotJson: inD1, snapshotKey });
   return {
-    entry: toPublicEntry(rest),
+    entry: { ...toPublicEntry(rest), attrs: peakAttrsOf(peakProfile) },
     snapshot: snapshotJson
       ? verifiedSnapshot(JSON.parse(snapshotJson) as LegendSnapshot, Boolean(rest.wallOfHonor))
       : null,
@@ -702,6 +787,8 @@ export function deleteCareersStatements(db: Db, profileId: string) {
     db.delete(careers).where(eq(careers.profileId, profileId)),
     // T-11-080 지금 가진 카드도 지운다. 다른 구단주에게 넘어간 카드는 그 구단주의 것이라 남는다.
     db.delete(cards).where(eq(cards.ownerId, profileId)),
+    // T-11-310 감독 커리어(진행 중 · 끝낸 감독 카드)도 지운다.
+    db.delete(managerCareers).where(eq(managerCareers.profileId, profileId)),
   ] as const;
 }
 
@@ -712,11 +799,16 @@ export function deleteCareersStatements(db: Db, profileId: string) {
  */
 export async function updateRetired(
   db: Db,
-  input: Pick<PutRetirementInput, 'careerId' | 'publicName' | 'snapshot' | 'now'> & {
+  input: Pick<
+    PutRetirementInput,
+    'careerId' | 'publicName' | 'snapshot' | 'snapshotKey' | 'now'
+  > & {
     title: string | null | undefined;
+    /** T-11-311 R2에 둔 스냅샷의 획득 칭호 id(D1 snapshot_json이 비어 있을 때 대표 칭호 확인용). */
+    snapshotTitleIds?: readonly string[] | undefined;
   },
 ): Promise<RetiredHead | undefined> {
-  const { careerId, publicName, snapshot, title, now } = input;
+  const { careerId, publicName, snapshot, snapshotKey, title, snapshotTitleIds = [], now } = input;
   const [row] = await db
     .update(careers)
     .set({
@@ -724,12 +816,19 @@ export async function updateRetired(
       ...publicNameSet(publicName),
       ...(title
         ? {
-            title: sql`case when (${title} = ${WALL_OF_HONOR_TITLE_ID} and ${careers.wallOfHonorJson} is not null) or (${title} <> ${WALL_OF_HONOR_TITLE_ID} and exists (select 1 from json_each(${careers.snapshotJson}, '$.titles') where json_extract(value, '$.id') = ${title})) then ${title} else ${careers.title} end`,
+            title: sql`case when (${title} = ${WALL_OF_HONOR_TITLE_ID} and ${careers.wallOfHonorJson} is not null) or (${title} <> ${WALL_OF_HONOR_TITLE_ID} and (exists (select 1 from json_each(${careers.snapshotJson}, '$.titles') where json_extract(value, '$.id') = ${title}) or ${title} in (select value from json_each(${JSON.stringify(snapshotTitleIds)})))) then ${title} else ${careers.title} end`,
           }
         : {}),
       ...(snapshot
         ? {
-            snapshotJson: sql`coalesce(${careers.snapshotJson}, ${JSON.stringify(verifiedSnapshot(snapshot, false))})`,
+            // 상세가 이미 있으면(D1이든 R2든) 그대로 둔다. 키는 상세가 없을 때만 라우트가 R2에 먼저 써서 넘긴다.
+            ...(snapshotKey
+              ? {
+                  snapshotKey: sql`case when ${careers.snapshotJson} is null then coalesce(${careers.snapshotKey}, ${snapshotKey}) else ${careers.snapshotKey} end`,
+                }
+              : {
+                  snapshotJson: sql`case when ${careers.snapshotKey} is null then coalesce(${careers.snapshotJson}, ${JSON.stringify(verifiedSnapshot(snapshot, false))}) else ${careers.snapshotJson} end`,
+                }),
             // A late client snapshot cannot establish a historical retirement number.
           }
         : {}),
@@ -862,6 +961,8 @@ export const careerHeadQuery = (db: Db, careerId: string) =>
       profileId: careers.profileId,
       detailArchiveKey: careers.detailArchiveKey,
       updatedAt: careers.updatedAt,
+      snapshotKey: careers.snapshotKey,
+      hasSnapshot: sql<number>`${careers.snapshotJson} is not null or ${careers.snapshotKey} is not null`,
       title: careers.title,
       wallOfHonorJson: careers.wallOfHonorJson,
       status: careers.status,

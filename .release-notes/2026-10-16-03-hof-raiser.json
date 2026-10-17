@@ -1,0 +1,26 @@
+{
+  "id": "t-11-297-hof-raiser",
+  "title": "명예의 전당에서 키운 구단주 보기",
+  "items": [
+    "명예의 전당 선수 옆에 그 선수를 키운 구단주가 보여요",
+    "선수 상세의 '키운 구단주'를 누르면 구단주 프로필과 그 팀 스쿼드로 갈 수 있어요",
+    "선수 상세에 최고 시점 능력치 6개가 생겨 어디에 힘을 실어 키웠는지 볼 수 있어요"
+  ],
+  "en": {
+    "title": "See who raised each Hall of Fame player",
+    "items": [
+      "Hall of Fame entries now show the owner who raised the player.",
+      "Tap 'Raised by' on a player's page to open the owner's profile and their squad.",
+      "Player pages now show six peak attributes, so you can see where the owner focused."
+    ]
+  },
+  "ja": {
+    "title": "殿堂で育てたオーナーを見る",
+    "items": [
+      "殿堂の選手の横に、その選手を育てたオーナーが表示されます。",
+      "選手詳細の「育てたオーナー」を押すと、オーナープロフィールとそのチームのスカッドへ行けます。",
+      "選手詳細に最高時の能力値6つが加わり、どこに力を入れて育てたかが分かります。"
+    ]
+  },
+  "availability": "web-app"
+}

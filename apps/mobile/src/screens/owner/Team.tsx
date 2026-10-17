@@ -64,7 +64,7 @@ import {
   teamEditableIn,
 } from '@offside/app-core/teamOwner';
 import { MARKET_TOAST, marketName, needsOwnerLogin } from '@offside/app-core/market';
-import { onRetirementSynced, pendingRetirementIds } from '@offside/app-core/outbox';
+import { onRetirementSynced, pendingRetirementIds, retryOutboxNow } from '@offside/app-core/outbox';
 import { localCareerNames } from '@offside/game/hof-store';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLines } from '../../components/TeamPitch';
@@ -72,6 +72,9 @@ import { TeamSynergy } from '../../components/TeamSynergy';
 import { toast } from '../../game/host';
 import { setCardLock } from '@offside/app-core/api/market';
 import { go } from '../../game/nav';
+import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
+import { coachLineBonus, coachSummary } from '@offside/app-core/managerCard';
+import { rem } from '../../theme/type';
 import { achNudge } from '../../game/achNudge';
 import { accountCache, appState, prefs } from '../../store';
 import { notificationDestination } from '../../platform/notificationDestination';
@@ -262,6 +265,8 @@ export default function Team() {
   const syn = synergyFocus(synergy, synFocus);
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
   const lines = draftLines(slotCodes, ratings, synergy, season);
+  // T-11-323 감독 칸 보정(경기 계산과 같은 값) — 줄 힘 칸에 더해 보인다.
+  const coachBonus = team?.coach ? coachLineBonus(team.coach, formation, synergy, season) : null;
   const filled = slots.filter((s) => s !== null).length;
   const dirty =
     !team ||
@@ -396,6 +401,16 @@ export default function Team() {
   }, []);
   // T-11-182 은퇴 기록이 아직 서버에 없으면 알리고, 올라가면 팀·라커룸을 조용히 다시 받는다(편집 중인 팀은 그대로).
   const [retireSyncing, setRetireSyncing] = useState(() => pendingRetirementIds().size > 0);
+  // T-11-301 올리기가 멈춘 것 같을 때 사용자가 바로 다시 보낸다.
+  const [retireRetry, setRetireRetry] = useState<'idle' | 'busy' | 'failed'>('idle');
+  async function retryRetireSync() {
+    if (retireRetry === 'busy') return;
+    setRetireRetry('busy');
+    await retryOutboxNow();
+    const still = pendingRetirementIds().size > 0;
+    setRetireSyncing(still);
+    setRetireRetry(still ? 'failed' : 'idle');
+  }
   useEffect(
     () =>
       onRetirementSynced(() => {
@@ -836,7 +851,7 @@ export default function Team() {
                   testIDPrefix="formation"
                 />
               ) : null}
-              <TeamLines lines={lines} />
+              <TeamLines lines={lines} coach={coachBonus} />
               <TeamSynergy
                 synergy={synergy}
                 season={season}
@@ -888,9 +903,19 @@ export default function Team() {
                 </Txt>
               ) : null}
               {editable && retireSyncing ? (
-                <Txt v="xs" tone="muted" testID="team-retire-syncing">
-                  {L.retireSyncing}
-                </Txt>
+                <View style={{ gap: 6 }}>
+                  <Txt v="xs" tone="muted" testID="team-retire-syncing">
+                    {retireRetry === 'failed' ? L.retireSyncFailed : L.retireSyncing}
+                  </Txt>
+                  <Btn
+                    sm
+                    testID="team-retire-retry"
+                    disabled={retireRetry === 'busy'}
+                    onPress={() => void retryRetireSync()}
+                  >
+                    {retireRetry === 'busy' ? L.retireSyncRetrying : L.retireSyncRetry}
+                  </Btn>
+                </View>
               ) : null}
             </Card>
             {editable && anonNames.length ? (
@@ -899,6 +924,24 @@ export default function Team() {
                 <Btn sm testID="anon-names" disabled={namesBusy} onPress={askPublishNames}>
                   {HO.anonCardsBtn}
                 </Btn>
+              </Card>
+            ) : null}
+            {team && season === current ? (
+              // T-11-310 감독 칸: 감독은 감독 커리어 화면에서 고른다.
+              <Card gap={8} testID="team-coach">
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                    <Txt bold>{MG.teamCoach}</Txt>
+                    <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                      {team.coach
+                        ? coachSummary(team.coach, formation, localNames)
+                        : MG.teamCoachEmpty}
+                    </Txt>
+                  </View>
+                  <Btn sm testID="team-coach-manage" onPress={() => go('manager')}>
+                    {MG.teamCoachManage}
+                  </Btn>
+                </View>
               </Card>
             ) : null}
             <TeamLineup

@@ -67,8 +67,18 @@ function publicView(e: PublicHofEntry, d: LegendView['d']): LegendView {
     pot: retirementPotential(e.potReal),
     rn: e.retiredNumber ? { kind: 'granted', ...e.retiredNumber } : null,
     wallOfHonor: e.wallOfHonor,
+    raiser: e.raiser ?? null,
+    attrs: e.attrs ?? null,
   };
 }
+
+/** 이 기기 기록의 최고 시점 능력치(은퇴 때 굳힌 PeakProfile). 옛 기록엔 없다. */
+const ownAttrs = (h: HofEntry | null | undefined): LegendView['attrs'] =>
+  h?.profile?.attrs
+    ? (Object.fromEntries(
+        Object.entries(h.profile.attrs).map(([k, v]) => [k, Math.round(v)]),
+      ) as LegendView['attrs'])
+    : null;
 
 export function createLegends(host: LegendHost) {
   function viewFromEntry(h: HofEntry): LegendView {
@@ -103,6 +113,7 @@ export function createLegends(host: LegendHost) {
       pot: retirementPotential(h.pot),
       flow: hofPotentialFlow(h),
       rn: host.rnOf(h.id, h.rn),
+      attrs: ownAttrs(h),
     };
   }
 
@@ -141,6 +152,7 @@ export function createLegends(host: LegendHost) {
       pot: s.retired ? retirementPotential(own?.pot ?? Math.round(truePot(s))) : undefined,
       flow: potentialFlow(s),
       rn: host.rnOf(s.cid, own?.rn),
+      attrs: ownAttrs(own),
     };
   }
 
@@ -159,7 +171,11 @@ export function createLegends(host: LegendHost) {
         loadHOF().map((h) => (h.id === own.id ? own : h)),
       );
       const local = viewFromEntry(own);
-      return { ...local, pot: local.pot ?? retirementPotential(e.potReal) };
+      return {
+        ...local,
+        pot: local.pot ?? retirementPotential(e.potReal),
+        attrs: local.attrs ?? e.attrs ?? null,
+      };
     }
     const v = publicView(e, d);
     return mine ? { ...v, shareId: e.id, reportId: null, canEditLook: true } : v;

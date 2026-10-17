@@ -15,6 +15,7 @@
   import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
   import ClubCustomSettings from './ClubCustomSettings.svelte';
   import BackupSettings from './BackupSettings.svelte';
+  import ServerStatus from './ServerStatus.svelte';
   import AppMoveCard from './AppMoveCard.svelte';
   import { settingsText as L } from '@offside/app-core/i18n/ko/settings';
   import { getLocale, LOCALE_NAMES, LOCALES, type Locale } from '@offside/app-core/i18n/core';
@@ -141,6 +142,8 @@
       <a href="/faq/">{L.faq} <span aria-hidden="true">›</span></a>
       <button data-act="fairness" onclick={goFairness}>{L.fairness} <span aria-hidden="true">›</span></button>
     </nav>
+    <!-- T-11-321 서버 상태(펼칠 때만 불러온다) -->
+    <ServerStatus />
   </section>
 
   <section class="settings-group" aria-labelledby="settings-legal">

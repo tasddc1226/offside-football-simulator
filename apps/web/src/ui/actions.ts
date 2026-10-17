@@ -20,6 +20,8 @@ export const {
   rollCandidates,
   rerollCandidates,
   keepCandidate,
+  keptDraft,
+  restoreKeptDraft,
   premiumScoutCandidates,
   planPremiumScout,
   revealCandidatePotential,

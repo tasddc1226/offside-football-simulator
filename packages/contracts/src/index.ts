@@ -58,6 +58,14 @@ export {
 } from './headers.js';
 
 export { HealthDataSchema } from './health.js';
+export {
+  ServerStatusSchema,
+  ServerStatusBucketSchema,
+  ServerStatusDaySchema,
+  type ServerStatus,
+  type ServerStatusBucket,
+  type ServerStatusDay,
+} from './server-status.js';
 
 export {
   CareerPosSchema,
@@ -124,6 +132,7 @@ export {
   HofListResponseSchema,
   MyCareersResponseSchema,
   HofDetailResponseSchema,
+  HofRaiserSchema,
   HofListQuerySchema,
   HofPageQuerySchema,
   HofSearchQuerySchema,
@@ -135,6 +144,7 @@ export {
   type LegendSnapshot,
   type PlayStyle,
   type PublicHofEntry,
+  type HofRaiser,
   type HofListResponse,
   type HofSort,
   type MyCareersResponse,
@@ -204,3 +214,5 @@ export * from './push-performance.js';
 export * from './admin-cup-predictions.js';
 
 export * from './owner-summary.js';
+export * from './manager.js';
+export * from './manager-rules.js';

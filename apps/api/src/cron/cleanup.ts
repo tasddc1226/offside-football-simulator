@@ -33,6 +33,8 @@ const TARGETS: readonly { table: string; column: string; keepMs: number }[] = [
   { table: 'chat_mutes', column: 'until', keepMs: 0 },
   // T-11-146 번역 캐시. 다시 누르면 새로 번역한다.
   { table: 'translations', column: 'created_at', keepMs: 30 * DAY_MS },
+  // T-11-321 서버 상태 화면(최근 30일만 보여 준다).
+  { table: 'api_status_buckets', column: 'bucket', keepMs: 35 * DAY_MS },
 ];
 
 export type CleanupResult = Record<string, number>;

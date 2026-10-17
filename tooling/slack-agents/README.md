@@ -28,8 +28,8 @@
 | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | 운영 이운재                                        | 과묵 · 침착. 결론 한 문장, 책임은 자기 쪽으로("뒤는 제가 볼게요"). 골문 비유는 한 답에 한 번까지                           |
 | 기획 박지성                                        | 겸손 · 담백. 수치와 근거로, 판단과 한계를 같이. 유저 반응을 존중하고 빠뜨린 곳을 챙긴다                                    |
-| 개발 손흥민 (3단계에 역할 설명을 만들 때 넣는다)   | 밝고 긍정적. 동료 공을 먼저 말하고, 끝까지 마무리("PR까지 넣었어요"). 과한 감탄 · 이모지는 빼고 한 답에 한 번만 힘을 준다  |
-| 마케팅 안정환 (3단계에 역할 설명을 만들 때 넣는다) | 재치 · 입담. 공지 초안은 가볍고 귀에 붙게, 운영자에게 하는 말은 능청스럽되 짧게. 유저 대상 문구는 copy-style 정본을 따른다 |
+| 개발 손흥민                                        | 밝고 긍정적. 동료 공을 먼저 말하고, 끝까지 마무리("PR까지 넣었어요"). 과한 감탄 · 이모지는 빼고 한 답에 한 번만 힘을 준다  |
+| 마케팅 안정환                                      | 재치 · 입담. 공지 초안은 가볍고 귀에 붙게, 운영자에게 하는 말은 능청스럽되 짧게. 유저 대상 문구는 copy-style 정본을 따른다 |
 
 ## 0단계: 앱 만들기 (2026-10-15 완료)
 
@@ -64,7 +64,7 @@ Worker는 `apps/agents`(`agents.offside-lab.com`)다. `manifests/ops.yaml`에 �
 `manifests/plan.yaml`에 이벤트 주소를 넣었다. `ENABLED_ROLES`는 `ops,plan`.
 
 - **유저 반응 살피기.** 3시간마다 47분(cron, Haiku 5.5) 새 게임 댓글(운영 D1 읽기), 라운지 채팅(`offside-api`의 `GET /v1/internal/agents/chat`, 토큰이 맞을 때만 열린다), 디시 마이너 갤러리 `offsidegame`의 새 글 · 댓글을 모아 `@plan`에게 넘긴다. 디시는 웹훅 · RSS가 없고 Cloudflare에서 읽으면 빈 응답이 잦아, `slack-operations.yml`(매시 27분)이 `apps/agents/scripts/dc-push.ts`로 공개 목록 첫 쪽 · 새 글 · 댓글 수가 늘어난 글(한 번에 8개)을 읽어 Worker에 넣어 두고 47분에 함께 정리한다(링크는 지우고 작성자는 가명). 새 글이 없거나 웃음 · 기호뿐이면 Claude를 부르지 않고, 검토할 글(버그 의심 · 개선 제안 · 요구사항)이 없으면 슬랙에 올리지 않는다. 있으면 `#agent-desk`에 정리를 올린다. 닉네임 · 프로필 ID는 넘기지 않고 작성자 가명만 쓴다.
-- **넘기기.** 에이전트 답의 줄 머리에 `→ @ops: 확인할 것`이 있으면 같은 스레드에서 그 역할이 이어 받는다(Worker 안에서 넘기고 슬랙 이벤트는 거치지 않는다). 스레드마다 6번까지. 운영자 답글은 그 스레드를 연 역할만 받는다.
+- **넘기기.** 에이전트 답의 줄 머리에 `→ @ops: 확인할 것`이 있으면 같은 스레드에서 그 역할이 이어 받는다(Worker 안에서 넘기고 슬랙 이벤트는 거치지 않는다). 스레드마다 6번까지. 넘겨받은 일의 결과는 넘긴 역할에게 한 번 자동으로 돌아가 그 역할이 결론을 쓴다(T-11-298). 답을 올릴 때 `@ops` · `→ @plan:` 같은 역할 키는 그 봇의 진짜 슬랙 멘션으로 바꾼다(코드 표기 안은 그대로). 봇끼리의 멘션 이벤트는 받지 않아 두 번 넘어가지 않는다. 넘기기 규칙은 네 역할 공통 `apps/agents/roles/team.md`. 운영자 답글은 그 스레드를 연 역할만 받는다.
 - **주기 작업 보고(@ops).** 매일 08:50 KST(`50 23 * * *`) `#agent-desk`에 지난 24시간 결과와 앞으로 24시간 예정을 올린다. `schedules` 도구가 GitHub Actions 예약 워크플로(cron · 최근 결과)와 Worker cron(`offside-api` · `offside-agents`)을 모으고, Worker cron 결과는 Cloudflare MCP로 Workers 로그의 `job` 오류를 센다. 운영자가 멘션해도 같은 도구로 답한다.
 - **시험 실행.** `POST https://agents.offside-lab.com/internal/run?job=reactions|report`(디시 넣기는 `dc-cursor` · `dc-push`)(헤더 `Authorization: Bearer <AGENTS_READ_TOKEN>`). `job=reactions&dry=1`은 커서를 옮기지 않고 출처별 건수 · 오류만 돌려준다.
 - **비밀값 추가.** 같은 `AGENTS_READ_TOKEN`(임의 문자열)을 `offside-api`(`--env production`) · `offside-agents` Worker와 GitHub Actions 비밀값에 넣는다. 값은 채팅 읽기 토큰이자 작성자 가명의 소금이다.
@@ -83,13 +83,34 @@ Worker는 `apps/agents`(`agents.offside-lab.com`)다. `manifests/ops.yaml`에 �
 
 `manifests/dev.yaml`에 이벤트 · 버튼 주소를 넣었다. `ENABLED_ROLES`는 `ops,plan,dev`. 구조는 ADR-015 인프라 절 "3단계 결정"을 본다.
 
-- **흐름.** 운영자가 `@손흥민 …`(또는 `@개발`)으로 고칠 일을 맡긴다 → `@dev`가 지시를 정리해 `agent-dev.yml`을 띄운다 → Actions의 Claude Code가 고치고 커밋 → 고정 스크립트가 `agent-dev/<run>` 브랜치 · PR을 연다 → 스레드에 PR 링크 → CI가 끝나면 스레드에 알리고, 통과면 `#agent-approvals`에 **승인하고 머지 / 거절** 카드 → 운영자가 누르면 squash 머지. 운영 배포는 따로 한다.
+- **흐름.** 운영자가 `@손흥민 …`(또는 `@개발`)으로 고칠 일을 맡긴다 → `@dev`가 지시를 정리해 `agent-dev.yml`을 띄운다 → Actions의 Claude Code가 고치고 커밋 → 고정 스크립트가 `agent-dev/<run>` 브랜치 · PR을 연다 → 스레드에 PR 링크 → CI가 끝나면 스레드에 알리고, 통과면 `#agent-approvals`에 **승인하고 머지 / 거절** 카드 → 운영자가 누르면 squash 머지 → 이어서 **운영 배포 승인 카드**(아래).
 - **한도.** Actions 작업 한 번 $5 · 80턴(`--max-budget-usd`, `DEV_RUN_BUDGET_USD`와 같은 값), `@dev` 하루 $20(`DAILY_BUDGET_DEV_USD`, Actions 비용 포함). 한 번에 하나씩 돈다(`concurrency`).
 - **비밀값 · 설정.**
   - GitHub Actions: `ANTHROPIC_DEV_API_KEY`(Console `offside-dev-actions` 키), `AGENT_APP_PRIVATE_KEY`(GitHub App 키), 변수 `AGENT_APP_ID`. `AGENTS_READ_TOKEN`은 결과를 Worker에 알릴 때 쓴다.
   - Worker: `GITHUB_APP_PRIVATE_KEY`(같은 키를 PKCS#8로 바꾼 것, `openssl pkcs8 -topk8 -nocrypt`), 변수 `GITHUB_APP_ID` · `GITHUB_APP_INSTALLATION_ID`.
 - **GitHub App `offside-dev-agent`.** 이 저장소에만 설치. 권한은 contents · pull_requests · actions 쓰기, checks · metadata 읽기. workflows 권한이 없어 `.github/workflows`를 바꿀 수 없다.
 - **main 보호.** 저장소 규칙 "main 보호 (ADR-015 에이전트)": PR 없이 바꾸기 · 강제 push · 삭제 금지. 저장소 관리자는 예외라 운영자 작업 방식은 그대로다.
+
+## `@dev` 운영 배포 승인 (2026-10-16, T-11-312)
+
+- **카드가 오는 때.** 승인 머지가 끝났을 때(머지한 main 커밋), 운영자가 `@손흥민 운영에 배포해`처럼 맡겼을 때(`deploy_request`, main 최신 커밋). 지난 운영 배포 태그 뒤 바뀐 커밋이 없으면 올리지 않는다.
+- **카드 내용.** 지난 배포 태그 · 커밋 목록(8개까지) · 마이그레이션 파일 · 요청 스레드. 버튼은 **승인하고 배포 / 거절**이고, 마이그레이션이 있으면 **프리플라이트**가 앞에 붙는다(프리플라이트를 눌러도 카드는 남아 배포를 이어서 누를 수 있다).
+- **누르면.** 운영자만 된다. main 최신 커밋이 카드의 커밋과 같을 때만 GitHub App으로 `deploy-production.yml`을 띄운다(앱의 actions 쓰기 권한). main이 바뀌었으면 띄우지 않고 새 카드를 올린다. 같은 커밋 · 같은 모드는 한 번만 띄우고(Durable Object `deploy:<sha>:<mode>`), 누가 언제 눌렀는지 승인 기록에 남긴다. 배포가 끝나면 `@mkt` 드림보트 요약 카드가 온다.
+
+## 4단계: `@mkt`(안정환) 연결 · 배포 뒤 드림보트 요약 (2026-10-16, T-11-296)
+
+`manifests/mkt.yaml`에 이벤트 · 버튼 주소를 넣었다. `ENABLED_ROLES`는 `ops,plan,dev,mkt`.
+
+- **흐름.** 운영 배포(`deploy-production.yml`, 워크플로 이름 Production Release)가 `mode=deploy`로 성공하면 `agent-release.yml`이 Worker(`/internal/run?job=release`)에 커밋을 알린다 → `@mkt`(Sonnet 5.5)가 `release_changes`로 드림보트 마지막 게시 시각(since) 뒤 main 커밋과 그 커밋이 더한 게임 안 릴리즈 노트를 읽는다 → 유저 변경 중 큰 것만 1~3줄 요약 → `dreamboat_draft`가 `#agent-approvals`에 **승인하고 보내기 / 버리기** 카드를 올리고 `#agent-desk`에 고른 이유를 남긴다 → 운영자가 누르면 Worker가 드림보트에 보낸다(드림보트는 매일 04:00 KST에 게시).
+- **형식 검사.** 요약은 Worker가 다시 본다: `- `로 시작하는 줄 1~3개, 줄 60자 안쪽, 작업 번호 · 코드 · 주소 · 가운뎃점 없음. 틀리면 카드를 올리지 않는다. 한 초안은 한 번만 보낸다.
+- **비밀값.** `DREAMBOAT_URL`(드림보트 받기 · 보내기 주소, 키가 들어 있어 공개 저장소에 두지 않는다). 없으면 요약을 돌리지 않는다.
+- **세션과 나누기.** 드림보트는 마지막으로 보낸 것만 쓰므로, 4단계부터 배포 뒤 요약은 `@mkt` 승인 카드로 보낸다. 작업 세션이 직접 보내지 않는다.
+
+## `@mkt` GA4 읽기 (2026-10-16, T-11-299)
+
+- **하는 일.** 운영자 지시 · 그 스레드 답글 · 넘겨받은 일에서 `ga4_report`(Analytics Data API `runReport`, 측정항목 6개 · 측정기준 4개 · 50줄까지)와 `ga4_fields`(맞춤 측정기준 이름)를 쓴다. 속성은 `OFFSIDE - Production`(`556515567`, 웹 · 앱).
+- **권한.** GCP 프로젝트 `offside-agents`의 서비스 계정 `offside-mkt-ga4`를 GA4 속성 **뷰어**로 추가했다. GCP 역할은 주지 않았다. Analytics Data API를 켰다.
+- **키.** 키 쌍은 로컬에서 만들고 공개 인증서만 서비스 계정에 올렸다(Google이 비공개 키를 만들지 않음). 비공개 키는 Worker 비밀값 `GA4_SA_KEY`(PKCS#8 PEM)에만 있고, 계정 메일은 비밀값 `GA4_SA_EMAIL`(공개 저장소 메일 검사), 키 ID · 속성 ID는 `wrangler.jsonc` 변수다. 다시 만들 때는 `openssl req -x509 -nodes -newkey rsa:2048 -days 3650 -keyout key.pem -out cert.pem -subj /CN=offside-mkt-ga4` → `openssl pkcs8 -topk8 -nocrypt -in key.pem` 결과를 `wrangler secret put GA4_SA_KEY`로 넣고, `cert.pem`을 서비스 계정 키 "기존 키 업로드"로 올린 뒤 새 키 ID로 `GA4_KEY_ID`를 바꾼다. 로컬 파일은 지운다.
 
 ## 다음 단계: 다른 역할 (Worker 배포 뒤)
 

@@ -138,6 +138,15 @@ const EXACT: Record<string, string> = {
   '이번 시즌 선수만 내놓을 수 있어요.': "You can only list this season's players.",
   '기준가가 없는 선수는 내놓을 수 없어요.': "Players without a base value can't be listed.",
   '이미 내놓은 선수예요.': 'That player is already listed.',
+  // T-11-310 감독 커리어
+  '감독으로 분류된 선수는 내놓거나 방출하거나 잠글 수 없어요.':
+    "A player who became a manager can't be listed, released or locked.",
+  '감독 커리어를 찾을 수 없어요.': "We couldn't find that manager career.",
+  '이미 감독인 선수예요.': 'That player is already a manager.',
+  '진행 중인 감독 커리어를 먼저 마치거나 포기해 주세요.':
+    'Finish or give up your current manager career first.',
+  '감독 커리어를 끝낸 감독만 감독 칸에 넣을 수 있어요.':
+    'Only a manager who finished their manager career can fill the manager slot.',
   '판매가가 정해진 범위를 벗어났어요.': 'The asking price is outside the allowed range.',
   '이미 내놓았거나 방출했거나 잠근 선수예요.':
     'That player has already been listed, released or locked.',

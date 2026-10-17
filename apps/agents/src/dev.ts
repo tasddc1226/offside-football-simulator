@@ -4,7 +4,8 @@ import type { Tool } from './claude.ts';
 import { botToken, dailyBudget, ROLE_NAMES, type Env } from './env.ts';
 import { ghClient, installationToken, type Gh } from './github.ts';
 import { ledger, type DevJob } from './ledger.ts';
-import { slackClient, threadReply } from './slack.ts';
+import { DEPLOY_ACTIONS, deployInteraction, postDeployCard } from './deploy.ts';
+import { slackClient, threadLink, threadReply } from './slack.ts';
 import type { Task } from './thread.ts';
 
 const WORKFLOW = 'agent-dev.yml';
@@ -26,8 +27,7 @@ export const appGh = async (env: Env, fetcher: typeof fetch = fetch): Promise<Gh
 
 const devSlack = (env: Env) => slackClient(botToken(env, 'dev'), fetch, ROLE_NAMES.dev);
 
-export const threadLink = (channel: string, ts: string) =>
-  `https://offside-lab.slack.com/archives/${channel}/p${ts.replace('.', '')}`;
+export { threadLink };
 
 /**
  * @dev 도구. `start_work`는 운영자가 직접 맡긴 일(멘션 · 답글)에만 준다. 다른 에이전트가 넘긴 일(유저 글이 섞일 수 있다)로는
@@ -60,6 +60,34 @@ export function devTools(env: Env, task: Task, gh: () => Promise<Gh> = () => app
     },
   ];
   if (task.kind !== 'mention' && task.kind !== 'reply') return tools;
+  // T-11-312 운영 배포는 승인 카드로만. 운영자가 직접 맡긴 일에서만 카드를 올린다(누르는 건 운영자).
+  let carded = false;
+  tools.push({
+    name: 'deploy_request',
+    description:
+      '지금 main 최신 커밋의 운영 배포 승인 카드를 #agent-approvals에 올린다. 지난 운영 배포 뒤 바뀐 커밋 · 마이그레이션을 카드에 적는다. 배포는 운영자가 카드 버튼을 눌러야 시작된다. 한 답에 한 번만.',
+    input_schema: { type: 'object', properties: {} },
+    run: async () => {
+      if (carded) return '이미 이 답에서 카드를 올렸어요';
+      const g = await gh();
+      const { data: head } = await g<{ sha?: string }>('/commits/main');
+      if (!head.sha) return 'main 커밋을 읽지 못했어요';
+      const r = await postDeployCard(env, g, head.sha, {
+        channel: task.channel,
+        threadTs: task.threadTs,
+      });
+      if (!r.posted)
+        return `지난 운영 배포(${r.plan.since}) 뒤 main에 바뀐 커밋이 없어요. 카드를 올리지 않았어요`;
+      carded = true;
+      return JSON.stringify({
+        posted: true,
+        sha: head.sha.slice(0, 7),
+        since: r.plan.since,
+        commits: r.plan.commits.length,
+        migrations: r.plan.migrations,
+      });
+    },
+  });
   let started = false;
   tools.push({
     name: 'start_work',
@@ -198,7 +226,7 @@ export function approvalCard(env: Env, job: DevJob, c: DevCi) {
     `• 무엇을: 위 PR을 main에 squash 머지`,
     `• 왜: 운영자 지시(<${threadLink(job.channel, job.threadTs)}|스레드>)`,
     `• 검사: <${c.url}|CI 통과> · 커밋 \`${c.sha.slice(0, 7)}\``,
-    `• 되돌리기: main에서 이 PR을 revert. 운영 배포는 따로예요(머지만 해요).`,
+    `• 되돌리기: main에서 이 PR을 revert. 운영 배포는 머지 뒤 배포 승인 카드로 따로 받아요.`,
   ].join('\n');
   return {
     channel: env.APPROVAL_CHANNEL,
@@ -243,6 +271,8 @@ export async function devInteraction(
   gh: () => Promise<Gh> = () => appGh(env),
 ) {
   const act = p.actions?.[0];
+  if (p.type === 'block_actions' && act && DEPLOY_ACTIONS.includes(act.action_id))
+    return deployInteraction(env, p, gh);
   if (p.type !== 'block_actions' || !act || !['dev_merge', 'dev_reject'].includes(act.action_id))
     return 'ignored';
   const slack = devSlack(env);
@@ -303,8 +333,18 @@ export async function devInteraction(
     return 'failed';
   }
   await record('merge', `merged ${m.data.sha}`);
+  // T-11-312 머지한 main 커밋의 운영 배포 승인 카드를 이어서 올린다(카드가 실패해도 머지는 끝났다).
+  const job = await ledger(env).devJob(v.branch);
+  const card = m.data.sha
+    ? await postDeployCard(
+        env,
+        g,
+        m.data.sha,
+        job && { channel: job.channel, threadTs: job.threadTs },
+      ).catch(() => null)
+    : null;
   await finish(
-    `<@${p.user.id}>님 승인으로 PR #${v.pr}을 머지했어요(\`${(m.data.sha ?? '').slice(0, 7)}\`). 운영 배포는 따로 해 주세요.`,
+    `<@${p.user.id}>님 승인으로 PR #${v.pr}을 머지했어요(\`${(m.data.sha ?? '').slice(0, 7)}\`). ${card?.posted ? '#agent-approvals에 운영 배포 승인 카드를 올렸어요.' : '운영 배포 카드는 올리지 못했어요. 배포가 필요하면 저에게 말해 주세요.'}`,
   );
   return 'merged';
 }

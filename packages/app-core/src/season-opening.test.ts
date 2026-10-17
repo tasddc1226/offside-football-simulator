@@ -13,6 +13,7 @@ import { createGameActions, type GameHost } from './game-actions.js';
 import { createSheetController, initialSheetState } from './sheet-controller.js';
 import { watchDetailOpening, watchSeasonClock, watchSeasonNow } from './season-opening.js';
 import { draftCareerRules, initialAppState } from './state.js';
+import { DETAILS_OF, DPOS } from '@offside/game/data';
 
 const BEFORE = '2026-10-05T14:59:59.999Z';
 const OPEN = '2026-10-05T15:00:00.000Z';
@@ -241,6 +242,29 @@ describe('candidate reveal and retirement minimum', () => {
     actions.startCareer('test', 7, mine.attrs, mine.potential);
     actions.rollCandidates();
     expect(state.candidates!.some((c) => c.kept)).toBe(false);
+  });
+  it('T-11-294 kept candidate survives an app reopen and a different focus order', () => {
+    vi.setSystemTime(new Date(OPEN));
+    const a = harness();
+    const d = DETAILS_OF.DF[1]!;
+    Object.assign(a.state.C, { pos: 'DF', dpos: d, focus: [...DPOS[d].focus] });
+    a.actions.rollCandidates();
+    a.actions.keepCandidate(0);
+    const kept = a.state.candidates![0]!;
+    // 다음 날 앱을 새로 연다: 입력은 기본값(FW)이라 킵 후보가 나오지 않고, 그 조건을 알려 준다.
+    const b = harness();
+    b.actions.rollCandidates();
+    expect(b.state.candidates!.some((c) => c.kept)).toBe(false);
+    expect(b.actions.keptDraft()).toEqual({ pos: 'DF', dpos: d, focus: [...DPOS[d].focus] });
+    expect(b.actions.restoreKeptDraft()).toBe(true);
+    expect(b.actions.keptDraft()).toBeNull();
+    b.actions.rollCandidates();
+    expect(b.state.candidates![0]!.attrs).toEqual(kept.attrs);
+    // 같은 주력을 다른 순서로 골라도 같은 조합이다.
+    b.state.C.focus = [...DPOS[d].focus].reverse();
+    b.actions.rollCandidates();
+    expect(b.state.candidates![0]!.attrs).toEqual(kept.attrs);
+    expect(b.actions.restoreKeptDraft()).toBe(false);
   });
   it('T-11-244 천장 S 여부(hit)는 킵한 후보가 덮을 자리를 세지 않는다', () => {
     const { state, actions } = harness();

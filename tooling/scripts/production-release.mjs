@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 // 이 목록 밖의 테이블이 나타나거나 이 목록의 테이블이 없으면 preflight/deploy 모두 실패로 취급해야 한다
 // (사람이 직접 스키마를 검토해야 하는 신호).
 export const EXPECTED_TABLES = Object.freeze([
+  'api_status_buckets',
   'app_auth_tickets',
   'app_meta',
   'audit_log',
@@ -36,6 +37,7 @@ export const EXPECTED_TABLES = Object.freeze([
   'name_reports',
   'market_daily',
   'market_listings',
+  'manager_careers',
   'owner_achievements',
   'owner_funds',
   'owner_honors',

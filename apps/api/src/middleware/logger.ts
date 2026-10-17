@@ -1,6 +1,8 @@
+import type { Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { AppError } from '../errors.js';
 import type { AppEnv } from '../env.js';
+import { countable, flushTallies, recordRequest } from '../status/metrics.js';
 
 /** T-2-015: 응답 본문에는 고정 문구만 나가므로(errors.ts) 원문 메시지는 여기서만 남긴다. */
 const MAX_ERROR_MESSAGE_LENGTH = 500;
@@ -24,6 +26,7 @@ export const logger = createMiddleware<AppEnv>(async (c, next) => {
     status,
     durationMs: Date.now() - startedAt,
   };
+  recordStatus(c, status, entry.durationMs as number);
 
   const session = c.get('session');
   if (session) {
@@ -45,3 +48,31 @@ export const logger = createMiddleware<AppEnv>(async (c, next) => {
   }
   console.log(JSON.stringify(entry));
 });
+
+/** T-11-321 서버 상태 화면용 집계. 원격 환경에서만 센다(로컬·테스트 DB에 쓰지 않는다). */
+const STATUS_ENVS = new Set(['production', 'staging']);
+
+function recordStatus(c: Context<AppEnv>, status: number, durationMs: number) {
+  const db = c.env?.DB;
+  if (!db || !STATUS_ENVS.has(c.env.ENVIRONMENT ?? '')) return;
+  if (!countable(c.req.method, c.req.header('upgrade'))) return;
+  let ctx: Pick<ExecutionContext, 'waitUntil'>;
+  try {
+    ctx = c.executionCtx;
+  } catch {
+    return; // executionCtx가 없는 실행(app.request 테스트)에서는 세지도 쓰지도 않는다.
+  }
+  const due = recordRequest(Date.now(), durationMs, status);
+  if (!due) return;
+  ctx.waitUntil(
+    flushTallies(db, due).catch((error: unknown) =>
+      console.log(
+        JSON.stringify({
+          level: 'warn',
+          msg: 'status-flush-failed',
+          error: String(error).slice(0, 200),
+        }),
+      ),
+    ),
+  );
+}

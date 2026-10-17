@@ -69,6 +69,8 @@ export interface HofRowProps {
   shortPos?: boolean;
   /** 기록실 줄(plain)에 은퇴 나이·최고 OVR·발롱도르(받은 선수만)를 더한다(명예의 전당). */
   retireAge?: number | null | undefined;
+  /** T-11-297 이 선수를 키운 구단주(공개 닉네임, 없으면 팀 이름). 서버 명예의 전당 줄에만 온다. */
+  owner?: string | null | undefined;
 }
 
 // 흐를 때 두 벌을 이어 붙여 -50%까지 민다(HomeTicker와 같은 방식). 한 벌 = 글 + 뒤 여백(FLOW_GAP).
@@ -277,6 +279,7 @@ export function HofRow({
   showClub = false,
   shortPos = false,
   retireAge = null,
+  owner = null,
 }: HofRowProps) {
   const c = useColors();
   const country = showNation
@@ -284,10 +287,19 @@ export function HofRow({
     : undefined;
   const tt = titleById(titleId);
   const clubName = showClub && club ? tn(club) : null;
-  const stats = useMemo(
-    () => L.rowStats({ ...t, score: showScore ? t.score : null }),
-    [t, showScore],
-  );
+  const stats = useMemo(() => {
+    const line = L.rowStats({ ...t, score: showScore ? t.score : null });
+    return owner ? `${L.raiserN({ owner })} · ${line}` : line;
+  }, [t, showScore, owner]);
+  const ownerLabel = owner ? (
+    <Txt
+      testID="hof-owner"
+      numberOfLines={1}
+      style={{ fontSize: 12, fontWeight: '600', flexShrink: 1 }}
+    >
+      {L.raiserN({ owner })}
+    </Txt>
+  ) : null;
   const clubLabel = clubName ? (
     <View
       testID="hof-club"
@@ -397,6 +409,7 @@ export function HofRow({
         {plain ? (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 10, paddingTop: 3 }}>
             {clubLabel}
+            {ownerLabel}
             {retireAge != null ? (
               <>
                 <Txt tone="muted" style={{ fontSize: 12 }}>

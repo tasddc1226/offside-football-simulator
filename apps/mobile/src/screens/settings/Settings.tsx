@@ -22,6 +22,7 @@ import { ClubCustomSettings } from './ClubCustomSettings';
 import { AdFreeSettings } from './AdFreeSettings';
 import { PushSettings } from './PushSettings';
 import { ReviewSettings } from './ReviewSettings';
+import { ServerStatus } from './ServerStatus';
 import { SelectField, SettingsCard, SettingsLabel, SettingsRow, Switch } from './parts';
 import { settingsText as L } from '@offside/app-core/i18n/ko/settings';
 import { LOCALE_NAMES, LOCALES, type Locale } from '@offside/app-core/i18n/core';
@@ -227,6 +228,8 @@ export default function Settings() {
             { text: L.fairness, id: 'fairness', onPress: goFairness },
           ]}
         />
+        {/* T-11-321 서버 상태(펼칠 때만 불러온다) */}
+        <ServerStatus />
       </Group>
 
       <Group eyebrow="Legal" title={L.legal}>

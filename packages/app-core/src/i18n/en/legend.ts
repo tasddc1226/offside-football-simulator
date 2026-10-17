@@ -35,6 +35,11 @@ export const legend: Translation<LegendMsgs> = {
   potTitle: 'Potential rating at retirement',
   potLine: (p) => `Potential ${p.value} · recorded at retirement`,
   peakOvrLabel: 'Peak OVR',
+  raiserLabel: 'Raised by',
+  raiserOpen: (p) => `Open ${p.owner}’s owner profile`,
+  peakAttrsTitle: 'Peak attributes',
+  peakAttrsNote:
+    'The key attributes at this player’s best, saved at retirement. They show where the owner focused.',
   finaleLine1: (p) => `${p.club}, age ${p.age}`,
   finaleLine2: 'The final whistle blew.',
   thanks: (p) => `Well played, ${p.name}`,

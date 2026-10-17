@@ -24,6 +24,7 @@ import {
   TEAM_STATS_MATCHES_MAX,
 } from './owner-team.js';
 import { IsoUtcSchema } from './primitives.js';
+import { TeamCoachSchema } from './manager.js';
 import { TEAM_LOGO_IMG_MAX, TEAM_LOGO_PATTERNS, TEAM_LOGO_SHAPES } from './team-logo.js';
 
 // T-10-092 구단주 팀(팀 슬롯). 값(포메이션·적합도)은 zod 없는 `./owner-team.ts`에 있다.
@@ -197,6 +198,8 @@ export const OwnerTeamSchema = z.strictObject({
   views: count,
   /** T-11-217 내 팀 프리셋(최대 5개). 배포 전 응답엔 없다. */
   presets: TeamPresetsSchema.optional(),
+  /** T-11-310 감독 칸(끝낸 감독 카드). 비었으면 null, 배포 전 응답엔 없다. */
+  coach: TeamCoachSchema.nullable().optional(),
   createdAt: IsoUtcSchema,
   updatedAt: IsoUtcSchema,
 });
@@ -236,11 +239,19 @@ export const PutOwnerTeamBodySchema = z.strictObject({
   formation: FormationIdSchema,
   slots: z.array(CareerIdParamSchema.nullable()).length(LINEUP_SIZE),
   layout: TeamLayoutSchema.nullable().optional(),
+  /** T-11-310 감독 칸에 넣을 감독 카드(careerId). null이면 비운다, 보내지 않으면 그대로 둔다. */
+  coach: CareerIdParamSchema.nullable().optional(),
 });
 export type PutOwnerTeamBody = z.infer<typeof PutOwnerTeamBodySchema>;
 
 export const PutOwnerTeamResponseSchema = z.strictObject({ team: OwnerTeamSchema });
 export type PutOwnerTeamResponse = z.infer<typeof PutOwnerTeamResponseSchema>;
+
+/** T-11-310 지금 시즌 팀의 감독 칸만 바꾼다(null이면 비운다). 감독 화면에서 쓴다. */
+export const PutTeamCoachBodySchema = z.strictObject({ coach: CareerIdParamSchema.nullable() });
+export type PutTeamCoachBody = z.infer<typeof PutTeamCoachBodySchema>;
+export const PutTeamCoachResponseSchema = z.strictObject({ coach: TeamCoachSchema.nullable() });
+export type PutTeamCoachResponse = z.infer<typeof PutTeamCoachResponseSchema>;
 
 /** T-11-217 프리셋 목록 통째 교체(저장 · 덮어쓰기 · 이름 바꾸기 · 삭제 모두). 팀을 한 번 저장한 뒤에만. */
 export const PutTeamPresetsBodySchema = z.strictObject({
