@@ -85,3 +85,5 @@ GitHub 권한 재확인: 제한 환경 밖의 승인된 읽기 전용 gh auth st
 게시 전 열린 PR 대조에서 #785/#781/#780/#779/#777이 각각 0110 SQL·snapshot·journal을 사용함을 확인해 우리 migration을 독립 0111로 이동했다. 현재 main은0109까지이므로 0111의 부모는0109이며 journal108→109→111이다. 해당 PR 중 하나가 먼저 병합되면 최신main 반영 후 0111 snapshot/journal 재생성·drift·migration 재검증을 반드시 수행한다. 번호 회피만으로 미래 snapshot 병합이 완료된 것은 아니다. 다른 PR을 수정하지 않았다.
 
 최종 main ae3cf3ab(#786) 반영: 보드 충돌을 양쪽 행 보존으로 해결했고 index/env/SEO/출석 UI 변경을 유지했다. 0111 snapshot 부모는0109로 여전히 일치한다. Android 선택적 분석 승인 종속 P1은 native finish와 내구적 analytics outbox를 분리해 수정했으며 서버는 큐의 expected profile을 대조한다.
+
+최신 migration 재생성: 게시 중 main be92d4d1(#785)이0110을 추가하여 다시 병합했다. 0111을 병합 schema에서 재생성했고 snapshot 부모0110, journal109→110→111 및 career_renames 보존을 확인했다. Drizzle 재실행 추가 변경 없음. 생성기의 알려진 coalesce 인덱스·ON DELETE SET NULL SQL 교정만 재적용했으며 운영 DB 적용은 하지 않았다. 앞선0109 부모 기록은 당시 검사 이력이다.

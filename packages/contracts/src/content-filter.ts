@@ -8,6 +8,8 @@ export function isAcceptablePublicName(name: string): boolean {
 }
 /** 공개 이름 형식(careers.ts PublicNameSchema와 같은 규칙) — zod 없이 웹 메인 번들에서도 쓴다. */
 export const PUBLIC_NAME_MAX = 16;
+/** 선수를 만들 때 · 이름을 바꿀 때 쓰는 이름 길이 상한(T-11-377). */
+export const PLAYER_NAME_MAX = 12;
 export const PUBLIC_NAME_CHARS = /^[^\p{Cc}<>]+$/u;
 /** 서버가 받는 공개 이름으로 다듬는다. 형식이 틀리거나 링크·욕설이 있으면 null(익명). */
 export function toPublicName(name: string): string | null {

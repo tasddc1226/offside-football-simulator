@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "a9d08b28-9524-452e-befe-213f549752f3",
-  "prevId": "7baa9c59-9439-4769-a74e-ce618c71ca5e",
+  "id": "8dbcb088-bacf-47ff-898d-e3d560ebea8e",
+  "prevId": "acca5a2d-28a6-4186-88b2-6293d0c412a5",
   "tables": {
     "acquisition_consents": {
       "name": "acquisition_consents",
@@ -1363,6 +1363,89 @@
           "tableTo": "notifications",
           "columnsFrom": [
             "notification_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "career_renames": {
+      "name": "career_renames",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "career_id": {
+          "name": "career_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "profile_id": {
+          "name": "profile_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "old_name": {
+          "name": "old_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "new_name": {
+          "name": "new_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "career_renames_career_idx": {
+          "name": "career_renames_career_idx",
+          "columns": [
+            "career_id",
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "career_renames_profile_idx": {
+          "name": "career_renames_profile_idx",
+          "columns": [
+            "profile_id",
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "career_renames_profile_id_profiles_id_fk": {
+          "name": "career_renames_profile_id_profiles_id_fk",
+          "tableFrom": "career_renames",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "profile_id"
           ],
           "columnsTo": [
             "id"
