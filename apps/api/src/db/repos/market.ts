@@ -52,6 +52,7 @@ const cardCols = {
   cardValue: cards.cardValue,
   transfers: cards.transfers,
   season: cards.serviceSeason,
+  enhance: cards.enhance,
 };
 const listingCols = {
   id: marketListings.id,
@@ -86,6 +87,7 @@ const toListing = (r: ListingRow): MarketListing => ({
     cardValue: (r.cardValue as number | null) ?? 0,
     transfers: r.transfers as number,
     season: r.season as number,
+    ...(r.enhance ? { enhance: r.enhance as number } : {}),
   },
 });
 
@@ -166,6 +168,7 @@ export async function cardForListing(db: Db, careerId: string) {
       ownerId: cards.ownerId,
       season: cards.serviceSeason,
       cardValue: cards.cardValue,
+      enhance: cards.enhance,
       locked: cards.locked,
       manager: cards.manager,
       hidden: sql<number>`coalesce(${careers.hidden}, 0)`,

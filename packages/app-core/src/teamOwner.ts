@@ -1,5 +1,6 @@
 // T-10-092 구단주 팀 화면의 순수 로직(웹 team/Team.svelte · 앱 screens/owner/Team.tsx 공용, T-11-005).
 // 편성(자동 배치·자리 바꾸기)·선수 고르기 후보·업적 표기·경기 결과 표기처럼 화면이 그리기 전에 계산하는 것만 둔다.
+import { DEFAULT_ENHANCE_RULES, enhanceBoost } from '@offside/contracts/card-enhance';
 import { flagOf } from '@offside/contracts/nations';
 import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
 import { ATTR_KEYS } from '@offside/game/data';
@@ -185,13 +186,29 @@ export function slotsSynergy(
   );
 }
 
-/** 편성 줄 힘 — 시너지 반영 시즌부터 시너지 보정을 더한다(서버 view.ts linesOf와 같은 규칙). */
+/**
+ * 편성 줄 힘 — 시너지 반영 시즌부터 시너지 보정을 더한다(서버 view.ts linesOf와 같은 규칙). T-11-373 boosts는 자리마다의 카드 강화
+ * 보정(slotBoosts) — 서버 경기 계산처럼 줄 힘에만 더한다.
+ */
 export const draftLines = (
   slotCodes: readonly DetailPos[],
   ratings: readonly (number | null)[],
   synergy: TeamSynergy,
   season: number,
-): LineStrength => lineStrength(slotCodes, ratings, synergyApplies(season) ? synergy : null);
+  boosts?: readonly number[],
+): LineStrength =>
+  lineStrength(
+    slotCodes,
+    boosts ? ratings.map((r, i) => (r === null ? null : r + (boosts[i] ?? 0))) : ratings,
+    synergyApplies(season) ? synergy : null,
+  );
+
+/** T-11-373 자리마다의 카드 강화 보정. scale은 서버가 준 enhanceEffectScale(옛 서버면 기본값). */
+export const slotBoosts = (
+  slots: readonly (string | null)[],
+  byId: ReadonlyMap<string, { enhance?: number | undefined }>,
+  scale: number = DEFAULT_ENHANCE_RULES.effectScale,
+): number[] => slots.map((id) => enhanceBoost((id ? byId.get(id)?.enhance : 0) ?? 0, scale));
 
 const SYN_LABEL = { atk: 'lineAtk', mid: 'lineMid', def: 'lineDef', gk: 'lineGk' } as const;
 /** 시너지 효과 표기 — '공격 +2 · 중원 +0.5'. 효과가 비면(배지) '경기 효과 없음'. */

@@ -13,6 +13,7 @@ export const fundsHistory: Translation<FundsHistoryMsgs> = {
   fees: (p) => `手数料 ${p.fee} 差引`,
   bought: '獲得',
   spent: 'クラブ資金で購入',
+  enhance: 'カード強化',
   log: '履歴',
   empty: 'まだクラブ資金の動きがありません。育てた選手を放出するか移籍市場で売ると資金が入ります。',
   more: 'もっと見る',

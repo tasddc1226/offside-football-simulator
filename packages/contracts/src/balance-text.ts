@@ -203,6 +203,31 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '주간 프리미엄 스카우트권 구매 수',
     desc: '한 구단주가 한 주(월요일 0시 한국 시각부터)에 구단 자금으로 살 수 있는 프리미엄 스카우트권 수. 0이면 팔지 않는다',
   },
+  enhanceCostScale: {
+    group: 'market',
+    label: '카드 강화 비용 배율',
+    desc: '카드 강화 단계별 비용표(5억~250억) 전체에 곱하는 배율',
+  },
+  enhanceRateScale: {
+    group: 'market',
+    label: '카드 강화 확률 배율',
+    desc: '카드 강화 단계별 성공 확률표(100%~20%) 전체에 곱하는 배율. 100%를 넘지 않는다',
+  },
+  enhancePity: {
+    group: 'market',
+    label: '카드 강화 천장',
+    desc: '같은 카드가 연속으로 실패할 때마다 다음 시도 확률에 더하는 기본 확률의 비율. 성공하면 처음부터 센다',
+  },
+  enhanceDailyCap: {
+    group: 'market',
+    label: '하루 카드 강화 수',
+    desc: '한 구단주가 하루(한국 시각)에 할 수 있는 카드 강화 시도 수. 0이면 강화를 닫는다',
+  },
+  enhanceEffectScale: {
+    group: 'market',
+    label: '카드 강화 경기 효과 배율',
+    desc: '강화한 카드가 구단주 팀 경기에서 자리 능력치에 더하는 값(+10 = 2.0)에 곱하는 배율. 기본 0.8은 선발 전원 +10이 같은 전력 승률을 +5%p 안쪽으로 올리는 값이다. 0이면 효과를 끈다',
+  },
   rewardPriceCandidates: {
     group: 'market',
     label: '후보 잠재력 보기 가격',

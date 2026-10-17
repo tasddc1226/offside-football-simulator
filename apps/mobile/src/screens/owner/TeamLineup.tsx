@@ -10,6 +10,7 @@ import type { TeamPlayer } from '@offside/app-core/api/team';
 import { assignSlot, attrLine } from '@offside/app-core/teamOwner';
 import { lockToggleable } from '@offside/app-core/market';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
+import { cardEnhanceText as CE } from '@offside/app-core/i18n/ko/cardEnhance';
 import { DragPlayer, type PlayerDrag } from '../../components/DragPlayer';
 import { PlayerCard } from '../../components/PlayerCard';
 import { PlayerPeek, pitchPeekOrigin, type PeekOrigin } from '../../components/PlayerPeek';
@@ -51,6 +52,7 @@ export function TeamLineup({
   synApplied,
   synCaption,
   onLock,
+  onEnhance,
 }: {
   formation: FormationId;
   layout: TeamPosition[];
@@ -71,6 +73,8 @@ export function TeamLineup({
   synCaption: string | null;
   /** T-11-188 선수 잠금·풀기. */
   onLock?: ((p: TeamPlayer) => void) | undefined;
+  /** T-11-373 카드 강화 창을 연다. */
+  onEnhance?: ((p: TeamPlayer) => void) | undefined;
 }) {
   const c = useColors();
   const { height } = useWindowDimensions();
@@ -431,6 +435,7 @@ export function TeamLineup({
                           pos: p.pos,
                           type: p.type,
                           locked: p.locked,
+                          enhance: p.enhance,
                           youth: false,
                         }}
                         code={p.dpos ?? p.pos}
@@ -481,6 +486,27 @@ export function TeamLineup({
                             : p.listing
                               ? L.lockerListed
                               : L.lockerLock}
+                        </Txt>
+                      </Press>
+                    ) : null}
+                    {onEnhance && p.cardValue != null ? (
+                      <Press
+                        testID={`team-enhance-${p.careerId}`}
+                        accessibilityRole="button"
+                        accessibilityLabel={CE.openAria({ name: nameOf(p) })}
+                        hitSlop={6}
+                        onPress={() => onEnhance(p)}
+                        style={{
+                          minHeight: 28,
+                          paddingHorizontal: 8,
+                          borderRadius: 999,
+                          borderWidth: 1,
+                          borderColor: c.line,
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Txt v="xs" style={{ color: c.accentText, fontWeight: '600' }}>
+                          {p.enhance ? `+${p.enhance}` : CE.open}
                         </Txt>
                       </Press>
                     ) : null}

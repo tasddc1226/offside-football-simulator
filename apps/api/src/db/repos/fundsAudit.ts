@@ -9,7 +9,7 @@ import type { Db } from '../client.js';
 // T-11-153 구단 자금 대조(운영 도구). 잔액(owner_funds)이 기록 세 곳에서 다시 계산한 값과 같은지 본다.
 //   방출(cards.released_value, 키운 사람 = careers.profile_id) + 은퇴 장려금(cards.bonus_value, T-11-163)
 //   + 판매(market_listings 가격 − 수수료)
-//   − 영입(market_listings 가격) − 구단 자금으로 산 것(owner_item_purchases)
+//   − 영입(market_listings 가격) − 구단 자금으로 산 것(owner_item_purchases) − 카드 강화(card_enhance_log, T-11-373)
 // 운영자가 열 때만 읽는다. 전체 대조는 세 기록을 한 번씩 훑는다(2026-10 운영 기준 약 15만 행 · 1초).
 
 const MISMATCH_LIMIT = 50;
@@ -26,7 +26,10 @@ const sums = (one: boolean) => {
          WHERE status = 'sold'${w('seller_id')} GROUP BY 1),
   b AS (SELECT buyer_id pid, sum(price) v FROM market_listings
          WHERE status = 'sold' AND buyer_id IS NOT NULL${w('buyer_id')} GROUP BY 1),
-  i AS (SELECT profile_id pid, sum(price) v FROM owner_item_purchases WHERE 1 = 1${w('profile_id')} GROUP BY 1),
+  i AS (SELECT pid, sum(v) v FROM (
+           SELECT profile_id pid, price v FROM owner_item_purchases WHERE 1 = 1${w('profile_id')}
+           UNION ALL
+           SELECT profile_id, cost FROM card_enhance_log WHERE 1 = 1${w('profile_id')}) GROUP BY 1),
   x AS (SELECT f.profile_id profileId, p.nickname, f.balance,
                coalesce(r.v, 0) released, coalesce(r.bonus, 0) bonus, coalesce(s.v, 0) sold, coalesce(s.fee, 0) fees,
                coalesce(b.v, 0) bought, coalesce(i.v, 0) items
@@ -56,7 +59,10 @@ export async function fundsReport(db: Db, now: Date): Promise<AdminFundsReport> 
         `WITH ${sums(false)} SELECT * FROM d WHERE diff <> 0 ORDER BY abs(diff) DESC LIMIT ?`,
       )
       .bind(MISMATCH_LIMIT),
-    d1.prepare(`SELECT item, sum(price) v FROM owner_item_purchases GROUP BY item`),
+    d1.prepare(
+      `SELECT item, sum(price) v FROM owner_item_purchases GROUP BY item
+       UNION ALL SELECT 'enhance', sum(cost) FROM card_enhance_log HAVING count(*) > 0`,
+    ),
   ]);
   const t = total!.results[0] as Omit<AdminFundsReport, 'generatedAt' | 'items' | 'mismatches'>;
   return {
@@ -97,7 +103,10 @@ export async function fundsOwner(db: Db, q: string): Promise<AdminFundsOwner | n
          UNION ALL
          SELECT 'bought', NULL, -price, closed_at FROM market_listings WHERE buyer_id = ?1 AND status = 'sold'
          UNION ALL
-         SELECT 'item', item, -price, created_at FROM owner_item_purchases WHERE profile_id = ?1
+         SELECT 'item', item, -price, created_at FROM (
+           SELECT item, price, created_at FROM owner_item_purchases WHERE profile_id = ?1
+           UNION ALL
+           SELECT 'enhance', cost, created_at FROM card_enhance_log WHERE profile_id = ?1)
          ORDER BY at DESC LIMIT ?2`,
       )
       .bind(pid, MOVES_LIMIT),

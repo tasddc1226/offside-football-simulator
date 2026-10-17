@@ -565,10 +565,42 @@ export const cards = sqliteTable(
     // T-11-310 감독으로 분류된 카드(1). 감독 커리어를 시작하면 켜지고 포기하면 꺼진다. 켜진 카드는 선발 · 판매 · 방출 · 잠금에서
     // 빠진다(manager_careers가 진행 · 완료 상태를 가진다).
     manager: integer('manager', { mode: 'boolean' }).notNull().default(false),
+    // T-11-373 카드 강화 단계(0~10)와 같은 카드의 연속 실패 수(천장). 거래 · 시즌이 바뀌어도 카드에 남는다.
+    enhance: integer('enhance').notNull().default(0),
+    enhanceFails: integer('enhance_fails').notNull().default(0),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
   (table) => [index('cards_owner_season_idx').on(table.ownerId, table.serviceSeason, table.peak)],
+);
+
+/**
+ * T-11-373 카드 강화 시도 기록. 한 줄이 곧 구단 자금 지출(cost)이라 자금 내역 · 운영 도구 대조의 출처가 된다. roll은 서버가 뽑은
+ * 난수(백만분율)로, 판정을 나중에 다시 확인할 수 있게 남긴다.
+ */
+export const cardEnhanceLog = sqliteTable(
+  'card_enhance_log',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id').notNull(),
+    careerId: text('career_id').notNull(),
+    fromLevel: integer('from_level').notNull(),
+    toLevel: integer('to_level').notNull(),
+    success: integer('success', { mode: 'boolean' }).notNull(),
+    // 시도 확률(만분율)과 뽑은 난수(백만분율).
+    rateBp: integer('rate_bp').notNull(),
+    roll: integer('roll').notNull(),
+    cost: integer('cost').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    // 하루 한도 · 자금 내역 · 대조.
+    index('card_enhance_log_profile_idx').on(table.profileId, table.createdAt),
+    // 홈 전광판(+8 이상 성공만 최신순).
+    index('card_enhance_log_big_idx')
+      .on(table.createdAt)
+      .where(sql`${table.success} = 1 AND ${table.toLevel} >= 8`),
+  ],
 );
 
 /**

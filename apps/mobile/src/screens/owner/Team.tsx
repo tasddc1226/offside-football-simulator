@@ -56,6 +56,7 @@ import {
   wildcardFullText,
   wildcardLabel,
   draftLines,
+  slotBoosts,
   isPreseasonLegacy,
   matchHintOf,
   preseasonTeamNote,
@@ -105,6 +106,7 @@ import { RecordsChips as SortChips } from '../hof/RecordsControls';
 import { TeamResult } from './TeamResult';
 import { CupLockNotice, useCup } from './TeamCup';
 import { TeamPresets } from './TeamPresets';
+import { EnhanceSheet } from './EnhanceSheet';
 import { loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPresets';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
 
@@ -153,6 +155,9 @@ export default function Team() {
   const [menu, setMenu] = useState(false);
   /** T-11-217 팀 프리셋 시트. */
   const [presetsOpen, setPresetsOpen] = useState(false);
+  // T-11-373 카드 강화 창 · 경기 효과 배율(서버 응답).
+  const [enhancing, setEnhancing] = useState<TeamPlayer | null>(null);
+  const [boostScale, setBoostScale] = useState<number | undefined>(undefined);
   const [selected, setSelected] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [share, setShare] = useState<TeamShareData | null>(null);
@@ -264,7 +269,13 @@ export default function Team() {
   const synergy = slotsSynergy(positions, slots, byId);
   const syn = synergyFocus(synergy, synFocus);
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
-  const lines = draftLines(slotCodes, ratings, synergy, season);
+  const lines = draftLines(
+    slotCodes,
+    ratings,
+    synergy,
+    season,
+    slotBoosts(slots, byId, boostScale),
+  );
   // T-11-323 감독 칸 보정(경기 계산과 같은 값) — 줄 힘 칸에 더해 보인다.
   const coachBonus = team?.coach ? coachLineBonus(team.coach, formation, synergy, season) : null;
   const filled = slots.filter((s) => s !== null).length;
@@ -367,6 +378,7 @@ export default function Team() {
     setPlayers(d.players);
     setMatchesLeft(d.matchesLeft);
     setPerDay(d.matchesPerDay);
+    setBoostScale(d.enhanceEffectScale);
     if (silent) {
       if (JSON.stringify(d.team) !== JSON.stringify(teamNow.current)) {
         if (dirtyNow.current) setTeam(d.team);
@@ -961,6 +973,7 @@ export default function Team() {
               synApplied={syn.applied}
               synCaption={synergyApplies(season) ? syn.caption : null}
               onLock={(p) => void toggleLock(p)}
+              onEnhance={editable ? setEnhancing : undefined}
               change={(nextSlots, nextLayout) => {
                 // T-11-114 지난 시즌 선수는 와일드카드 상한까지만.
                 if (tooManyWildcards(nextSlots, byId, season)) return toast(wildcardFullText());
@@ -1143,6 +1156,23 @@ export default function Team() {
           {needLogin ? null : <TabBar label={L.navLabel} items={navItems} sub="team" />}
         </View>
       </BarBelow.Provider>
+      {enhancing ? (
+        <EnhanceSheet
+          player={enhancing}
+          name={nameOf(enhancing)}
+          close={() => setEnhancing(null)}
+          onResult={(r) => {
+            const id = enhancing.careerId;
+            setPlayers((prev) =>
+              prev.map((x) =>
+                x.careerId === id
+                  ? { ...x, enhance: r.to || undefined, enhanceFails: r.fails || undefined }
+                  : x,
+              ),
+            );
+          }}
+        />
+      ) : null}
       {presetsOpen ? (
         <TeamPresets
           close={() => setPresetsOpen(false)}

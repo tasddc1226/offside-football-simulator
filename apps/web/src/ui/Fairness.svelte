@@ -53,6 +53,17 @@
   </table>
   <p class="muted fs-xs fair-note">{V.boostNote}</p>
 
+  <h3 class="fair-h">{L.enhanceTitle}</h3>
+  <table data-fair-enhance>
+    <thead><tr><th>{L.enhanceColTry}</th><th class="n">{L.enhanceColRate}</th><th class="n">{L.enhanceColCost}</th><th class="n">{L.enhanceColFail}</th></tr></thead>
+    <tbody>
+      {#each V.enhance as [step, rate, cost, fail] (step)}
+        <tr><td>{step}</td><td class="n">{rate}</td><td class="n">{cost}</td><td class="n">{fail}</td></tr>
+      {/each}
+    </tbody>
+  </table>
+  <p class="muted fs-xs fair-note">{V.enhanceNote}</p>
+
   <h3 class="fair-h">{L.hiddenTitle}</h3>
   {@render terms(V.hidden)}
 

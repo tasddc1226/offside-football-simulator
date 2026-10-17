@@ -27,7 +27,7 @@
   let still = $state(0);
 
   const tag = (kind: TickerItem['kind']): string =>
-    ({ transfer: L.tagTransfer, debut: L.tagDebut, first: L.tagFirst, record: L.tagRecord })[kind];
+    ({ transfer: L.tagTransfer, debut: L.tagDebut, first: L.tagFirst, record: L.tagRecord, enhance: L.tagEnhance })[kind];
   const club = (id: string) => clubById(id)?.name ?? '';
   const ago = (at: string) => agoKo(now + skew - Date.parse(at));
   const duration = $derived(copyW ? copyW / SPEED : 0);
@@ -158,7 +158,8 @@
     background: color-mix(in srgb, var(--accent) 16%, transparent);
   }
   .tk-tag.first,
-  .tk-tag.record {
+  .tk-tag.record,
+  .tk-tag.enhance {
     color: var(--ink);
     background: color-mix(in srgb, var(--warn) 28%, transparent);
   }

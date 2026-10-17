@@ -1,0 +1,26 @@
+{
+  "id": "t-11-373-card-enhance",
+  "title": "카드 강화가 생겼어요",
+  "items": [
+    "라커룸에서 은퇴 선수 카드를 구단 자금으로 +10까지 강화할 수 있어요",
+    "강화한 카드는 구단주 팀 경기에서 자리 능력치가 조금 올라요",
+    "단계별 확률과 비용은 확률과 공정성에서 볼 수 있어요"
+  ],
+  "en": {
+    "title": "Card upgrades are here",
+    "items": [
+      "Upgrade retired player cards up to +10 with club funds from the locker room.",
+      "Upgraded cards get a small position rating boost in owner team matches.",
+      "See the odds and cost of every step in Odds and fairness."
+    ]
+  },
+  "ja": {
+    "title": "カード強化が登場しました",
+    "items": [
+      "ロッカールームで引退選手のカードをクラブ資金で+10まで強化できます。",
+      "強化したカードはオーナーチームの試合でポジション能力値が少し上がります。",
+      "段階ごとの確率と費用は「確率と公正さ」で確認できます。"
+    ]
+  },
+  "availability": "web-app"
+}

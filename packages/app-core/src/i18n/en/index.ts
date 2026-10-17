@@ -13,6 +13,7 @@ import { backup } from './backup';
 import { balanceKeys } from './balanceKeys';
 import { board } from './board';
 import { boardLabel } from './boardLabel';
+import { cardEnhance } from './cardEnhance';
 import { careerGuide } from './careerGuide';
 import { careerMoment } from './careerMoment';
 import { chat } from './chat';
@@ -112,6 +113,7 @@ export const en = {
   balanceKeys,
   board,
   boardLabel,
+  cardEnhance,
   careerGuide,
   careerMoment,
   chat,

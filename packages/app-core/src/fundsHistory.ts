@@ -34,8 +34,13 @@ function fundsHistoryRow(
   return {
     id: e.id,
     kind: e.kind,
-    badge:
-      e.kind === 'spent' ? M.tradeSpent : e.kind === 'bonus' ? M.tradeBonus : TRADE_LABEL[e.kind],
+    badge: e.id.startsWith('enhance:')
+      ? H.enhance
+      : e.kind === 'spent'
+        ? M.tradeSpent
+        : e.kind === 'bonus'
+          ? M.tradeBonus
+          : TRADE_LABEL[e.kind],
     title: e.item
       ? SPEND_LABEL[e.item]
       : e.card

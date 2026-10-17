@@ -6,6 +6,9 @@ import { Animated, Modal, PanResponder, Pressable, ScrollView, View } from 'reac
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import type { CareerPos } from '@offside/contracts';
+import { tradeValue } from '@offside/contracts/market-value';
+import { enhanceValue } from '@offside/contracts/card-enhance';
+import { cardEnhanceText as CE } from '@offside/app-core/i18n/ko/cardEnhance';
 import { detailPosOf, type DetailPos } from '@offside/contracts/positions';
 import {
   buyListing,
@@ -100,6 +103,7 @@ function MiniCard({
     dpos: DetailPos | null;
     attrs: TeamPlayer['attrs'];
     locked?: boolean | undefined;
+    enhance?: number | undefined;
   };
   name: string;
   dim?: boolean;
@@ -127,6 +131,7 @@ function MiniCard({
           attrs: card.attrs,
           pos: card.pos,
           locked: card.locked,
+          enhance: card.enhance,
           youth: false,
         }}
       />
@@ -639,8 +644,9 @@ export default function Market() {
   // 팔기 — 고른 선수와 판매가(기준가의 %).
   const [selling, setSelling] = useState<TeamPlayer | null>(null);
   const [pct, setPct] = useState(100);
-  const sellPrice = selling?.cardValue && me ? priceAtPct(selling.cardValue, pct, me.rules) : 0;
-  const quote = selling?.cardValue && me ? sellQuote(selling.cardValue, sellPrice, me.rules) : null;
+  const sellValue = selling?.cardValue ? tradeValue(selling.cardValue, selling.enhance) : 0;
+  const sellPrice = sellValue && me ? priceAtPct(sellValue, pct, me.rules) : 0;
+  const quote = sellValue && me ? sellQuote(sellValue, sellPrice, me.rules) : null;
 
   // 시트: 영입 · 방출 확인.
   const [buying, setBuying] = useState<MarketListing | null>(null);
@@ -711,7 +717,7 @@ export default function Market() {
     </Txt>
   ) : null;
   const range = me ? sellSlider(me.rules) : null;
-  const sellDiff = selling?.cardValue ? priceDiff(sellPrice, selling.cardValue) : null;
+  const sellDiff = sellValue ? priceDiff(sellPrice, sellValue) : null;
   const buyDiff = buying ? priceDiff(buying.price, buying.card.cardValue) : null;
   const buyBlocked =
     buying && me
@@ -1222,12 +1228,7 @@ export default function Market() {
                     <View style={{ flexDirection: 'row', gap: 8 }}>
                       {(
                         [
-                          [
-                            L.presetBase,
-                            fmtValue(selling.cardValue!),
-                            pct === 100,
-                            () => setPct(100),
-                          ],
+                          [L.presetBase, fmtValue(sellValue), pct === 100, () => setPct(100)],
                           [
                             L.presetCustom,
                             pct === 100 ? L.presetSlider : fmtValue(sellPrice),
@@ -1312,6 +1313,14 @@ export default function Market() {
                     <Txt tone="muted" style={small}>
                       {L.sellHelp}
                     </Txt>
+                    {selling.enhance ? (
+                      <Txt tone="muted" style={small}>
+                        {CE.sellNote({
+                          lv: selling.enhance,
+                          value: fmtValue(enhanceValue(selling.enhance)),
+                        })}
+                      </Txt>
+                    ) : null}
                     {errText}
                     <Btn
                       block

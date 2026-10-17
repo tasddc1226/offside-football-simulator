@@ -13,6 +13,13 @@ import {
 } from '@offside/contracts/balance';
 import { latestBalance } from '@offside/game/balance';
 import { BOOST, BOOST_PITY_PCT } from '@offside/game/boost';
+import {
+  ENHANCE_MAX,
+  enhanceCost,
+  enhanceFailLevel,
+  enhanceRate,
+  type EnhanceRules,
+} from '@offside/contracts/card-enhance';
 import { fmtValue } from './format.js';
 import { gradeOf } from '@offside/game/stats';
 import { phi } from '@offside/game/premiumScout';
@@ -51,6 +58,9 @@ export interface FairnessView {
   /** [단계 이름, 첫 시도 확률]. */
   boost: (readonly [string, string])[];
   boostNote: string;
+  /** T-11-373 카드 강화 — [도전, 첫 시도 확률, 비용, 실패하면]. */
+  enhance: (readonly [string, string, string, string])[];
+  enhanceNote: string;
   hidden: (readonly [string, string])[];
 }
 
@@ -82,11 +92,34 @@ export function fairnessView(): FairnessView {
     ],
     boost: BOOST.p.map((p, i) => [L.boostLv({ lv: i + 1 }), `${Math.round(p * 100)}%`] as const),
     boostNote: L.boostNote({ pity: `${BOOST_PITY_PCT}%p` }),
+    ...enhanceRows({
+      costScale: values.enhanceCostScale,
+      rateScale: values.enhanceRateScale,
+      pity: values.enhancePity,
+      dailyCap: values.enhanceDailyCap,
+      effectScale: values.enhanceEffectScale,
+    }),
     hidden: [
       [L.hiddenPotTerm, L.hiddenPot],
       [L.hiddenBloomTerm, L.hiddenBloom],
       [L.hiddenStoryTerm, L.hiddenStory],
     ],
+  };
+}
+
+/** T-11-373 카드 강화 표(서버 판정과 같은 contracts 식, 지금 밸런스 버전 수치). */
+function enhanceRows(r: EnhanceRules): Pick<FairnessView, 'enhance' | 'enhanceNote'> {
+  return {
+    enhance: Array.from({ length: ENHANCE_MAX }, (_, lv) => {
+      const drop = enhanceFailLevel(lv);
+      return [
+        L.enhanceTry({ from: lv, to: lv + 1 }),
+        oddsPct(enhanceRate(lv, 0, r)),
+        fmtValue(enhanceCost(lv, r) ?? 0),
+        drop < lv ? L.enhanceDrop({ lv: drop }) : L.enhanceStay,
+      ] as const;
+    }),
+    enhanceNote: L.enhanceNote({ pity: `${Math.round(r.pity * 100)}%` }),
   };
 }
 

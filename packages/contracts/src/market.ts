@@ -9,6 +9,7 @@ import {
 import { MARKET_CHART_RANGES } from './market-value.js';
 import { IsoUtcSchema } from './primitives.js';
 import { FUNDS_ITEMS, type FundsItem } from './cup.js';
+import { ENHANCE_MAX } from './card-enhance.js';
 
 export { MARKET_CHART_DAYS, MARKET_CHART_RANGES, type MarketChartRange } from './market-value.js';
 
@@ -51,6 +52,8 @@ export const MarketCardSchema = z.strictObject({
   /** 지금까지 팔린 횟수. */
   transfers: z.number().int().min(0),
   season: z.number().int().min(0),
+  /** T-11-373 카드 강화 단계(0~10). 강화하지 않은 카드 · 옛 응답에는 없다. 판매 가격 범위의 기준 가치에 강화 가치가 더해진다. */
+  enhance: z.number().int().min(1).max(ENHANCE_MAX).optional(),
 });
 export type MarketCard = z.infer<typeof MarketCardSchema>;
 
@@ -244,6 +247,48 @@ export const CardLockBodySchema = z.strictObject({
 export type CardLockBody = z.infer<typeof CardLockBodySchema>;
 export const CardLockResponseSchema = z.strictObject({ locked: z.boolean() });
 export type CardLockResponse = z.infer<typeof CardLockResponseSchema>;
+
+const enhanceLevelSchema = z.number().int().min(0).max(ENHANCE_MAX);
+
+/** T-11-373 카드 강화 수치(운영 도구 밸런스의 활성 버전). 화면이 카드마다 확률 · 비용을 card-enhance.ts로 그린다. */
+export const EnhanceRulesSchema = z.strictObject({
+  costScale: z.number(),
+  rateScale: z.number(),
+  pity: z.number(),
+  dailyCap: z.number().int().min(0),
+  effectScale: z.number(),
+});
+
+/** GET /v1/cards/enhance — 강화 창을 열 때 한 번. 오늘 쓴 횟수 · 잔액 · 수치. */
+export const EnhanceStateResponseSchema = z.strictObject({
+  rules: EnhanceRulesSchema,
+  /** 오늘(한국 시각 0시부터) 시도한 횟수. */
+  used: z.number().int().min(0),
+  balance: z.number().int(),
+});
+export type EnhanceStateResponse = z.infer<typeof EnhanceStateResponseSchema>;
+
+/**
+ * POST /v1/cards/:careerId/enhance — 화면에서 본 단계 · 비용을 함께 보낸다. 그 사이 다른 기기에서 강화했거나 운영 수치가 바뀌어
+ * 다르면 409(ENHANCE_STALE). 같은 요청의 재시도는 멱등 키로 한 번만 판정 · 차감한다.
+ */
+export const EnhanceBodySchema = z.strictObject({
+  level: enhanceLevelSchema,
+  cost: man,
+});
+export type EnhanceBody = z.infer<typeof EnhanceBodySchema>;
+
+export const EnhanceResponseSchema = z.strictObject({
+  success: z.boolean(),
+  from: enhanceLevelSchema,
+  to: enhanceLevelSchema,
+  /** 이 카드의 연속 실패 수(천장). 성공하면 0. */
+  fails: z.number().int().min(0),
+  cost: man,
+  balance: z.number().int(),
+  used: z.number().int().min(0),
+});
+export type EnhanceResponse = z.infer<typeof EnhanceResponseSchema>;
 
 export const ReleaseCardsBodySchema = z.strictObject({
   careerIds: z.array(CareerIdParamSchema).min(1).max(RELEASE_MAX),
