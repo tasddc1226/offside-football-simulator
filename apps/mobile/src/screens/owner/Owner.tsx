@@ -43,6 +43,7 @@ import { TeamLogo } from '../../components/TeamLogo';
 import { GradeEmblem } from '../../ui/GradeEmblem';
 import { AdSlot } from '../../components/AdSlot';
 import { SettingsCard, SettingsLabel, SettingsTrigger } from '../settings/parts';
+import { ManagerResume } from './ManagerResume';
 import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
 import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
 import { teamHomeText as T } from '@offside/app-core/i18n/ko/teamHome';
@@ -254,6 +255,8 @@ export default function Owner() {
 
       {linked || guest ? <AdSlot place="owner-summary" /> : null}
 
+      {/* T-11-338 진행 중인 감독 커리어가 있으면 맨 위에서 이어 한다. */}
+      {linked ? <ManagerResume /> : null}
       {linked || guest ? (
         <Txt v="h2" accessibilityRole="header">
           {L.teamsHeading}
@@ -335,6 +338,30 @@ export default function Owner() {
               </>
             )}
           </Card>
+          {/* T-11-338 감독 커리어는 '팀' 묶음 안, 내 팀 바로 아래(이적시장 · 상점 사이에 묻혀 찾기 어려웠다). */}
+          <Press
+            testID="manager"
+            accessibilityLabel={MG.entryAria}
+            onPress={() => go('manager')}
+            scale={0.98}
+          >
+            <Card gap={12} testID="owner-manager">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Txt v="h2">{MG.entryTitle}</Txt>
+                    <Pill tone="good">{MG.entryNew}</Pill>
+                  </View>
+                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                    {MG.entrySub}
+                  </Txt>
+                </View>
+                <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+                  ›
+                </Txt>
+              </View>
+            </Card>
+          </Press>
         </>
       ) : guest ? (
         <>
@@ -441,26 +468,6 @@ export default function Owner() {
                   <Txt v="h2">{L.marketTitle}</Txt>
                   <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
                     {L.marketSub({ funds })}
-                  </Txt>
-                </View>
-                <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
-                  ›
-                </Txt>
-              </View>
-            </Card>
-          </Press>
-          <Press
-            testID="manager"
-            accessibilityLabel={MG.entryAria}
-            onPress={() => go('manager')}
-            scale={0.98}
-          >
-            <Card gap={12} testID="owner-manager">
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                  <Txt v="h2">{MG.entryTitle}</Txt>
-                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                    {MG.entrySub}
                   </Txt>
                 </View>
                 <Txt tone="muted" style={{ fontSize: rem(1.5) }}>

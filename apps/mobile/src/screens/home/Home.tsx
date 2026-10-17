@@ -27,6 +27,7 @@ import { HomeTicker } from './HomeTicker';
 import { SeasonGauge } from './SeasonGauge';
 import { Tile } from './Tile';
 import { PushOptInCard } from './PushOptInCard';
+import { ManagerResume } from '../owner/ManagerResume';
 import { InboxButton } from '../../components/InboxButton';
 import { openFriends } from '../../platform/inbox';
 import { INVITE_REROLLS, INVITE_SCOUTS } from '@offside/contracts/owner-team';
@@ -163,6 +164,8 @@ export default function Home() {
             </Card>
           </View>
         ) : null}
+        {/* T-11-338 진행 중인 감독 커리어 이어 하기(기기 세이브가 있을 때만). */}
+        <ManagerResume />
         {/* T-11-145 오프사이드 컵 소식은 모두가 먼저 보는 홈에서. 신청은 대회 화면에서 한다. */}
         <SeasonGauge />
         <CupBanner onOpen={() => go('cup')} />
