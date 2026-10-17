@@ -352,6 +352,8 @@ export type TeamMatchesResponse = z.infer<typeof TeamMatchesResponseSchema>;
 export { TEAM_STATS_MATCHES_MAX };
 /** 상대별 전적에 보여 줄 팀 수. */
 export const TEAM_STATS_OPPONENTS_MAX = 30;
+/** T-11-358 최근 흐름에 보여 줄 경기 수. */
+export const TEAM_STATS_FORM_MAX = 10;
 
 const winDrawLoss = {
   w: z.number().int().min(0),
@@ -388,7 +390,39 @@ export const TeamStatsOpponentSchema = z.strictObject({
 });
 export type TeamStatsOpponent = z.infer<typeof TeamStatsOpponentSchema>;
 
-/** 내 팀(그 시즌)의 랭크 경기 통계. 친선전은 저장하지 않아 들어가지 않는다. */
+/** T-11-358 최근 흐름 한 칸(최신이 앞). */
+export const TeamFormSchema = z.enum(['w', 'd', 'l']);
+export type TeamForm = z.infer<typeof TeamFormSchema>;
+
+/** T-11-358 가장 큰 승리 · 패배 한 경기. 상대 이름은 그 경기 때 이름이다. */
+export const TeamStatsMatchSchema = z.strictObject({
+  opponent: z.string(),
+  gf: z.number().int().min(0),
+  ga: z.number().int().min(0),
+  at: z.string(),
+});
+export type TeamStatsMatch = z.infer<typeof TeamStatsMatchSchema>;
+
+/** T-11-358 경기 흐름 요약. 랭크 경기(센 범위 안)에서 센다. */
+export const TeamStatsSummarySchema = z.strictObject({
+  /** 최근 TEAM_STATS_FORM_MAX경기 결과(최신이 앞). */
+  form: z.array(TeamFormSchema).max(TEAM_STATS_FORM_MAX),
+  /** 지금 이어지는 결과와 경기 수(경기가 없으면 null). */
+  streak: z.strictObject({ kind: TeamFormSchema, n: z.number().int().min(1) }).nullable(),
+  /** 가장 길게 이어 이긴 경기 수. */
+  bestWinStreak: z.number().int().min(0),
+  /** 건 경기(홈) · 받은 경기(원정) 전적. */
+  home: z.strictObject(winDrawLoss),
+  away: z.strictObject(winDrawLoss),
+  biggestWin: TeamStatsMatchSchema.nullable(),
+  biggestLoss: TeamStatsMatchSchema.nullable(),
+  /** 친선전 · 컵 경기 전적(랭크 경기는 total). 컵 승부차기는 이긴 쪽 승리, 기권 경기는 세지 않는다. */
+  friendly: z.strictObject(winDrawLoss),
+  cup: z.strictObject(winDrawLoss),
+});
+export type TeamStatsSummary = z.infer<typeof TeamStatsSummarySchema>;
+
+/** 내 팀(그 시즌)의 랭크 경기 통계. T-11-358부터 summary에 친선전 · 컵 전적과 흐름 요약을 함께 준다. */
 export const TeamStatsResponseSchema = z.strictObject({
   season: z.number().int().min(0),
   /** 센 경기 수. capped면 최근 TEAM_STATS_MATCHES_MAX경기씩만 셌다. */
@@ -398,6 +432,8 @@ export const TeamStatsResponseSchema = z.strictObject({
   players: z.array(TeamStatsPlayerSchema),
   days: z.array(TeamStatsDaySchema),
   opponents: z.array(TeamStatsOpponentSchema),
+  /** T-11-358 전 응답에는 없다. */
+  summary: TeamStatsSummarySchema.optional(),
 });
 export type TeamStatsResponse = z.infer<typeof TeamStatsResponseSchema>;
 

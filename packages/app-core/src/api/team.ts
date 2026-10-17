@@ -43,10 +43,13 @@ export type {
   TeamLines,
   TeamRecord,
   TeamSlot,
+  TeamForm,
   TeamStatsDay,
+  TeamStatsMatch,
   TeamStatsOpponent,
   TeamStatsPlayer,
   TeamStatsResponse,
+  TeamStatsSummary,
 } from '@offside/contracts';
 
 /** `?season=` 꼬리(없으면 지금 시즌). */
@@ -84,6 +87,9 @@ export const fetchTeamMatches = (season?: number, cursor?: string) => {
 /** T-11-269 그 시즌 내 팀 랭크 경기 통계. 통계 화면을 열 때만 부른다(경기를 치르면 쓰기라 메모가 비워진다). */
 export const fetchTeamStats = (season?: number) =>
   cachedGet<TeamStatsResponse>(`/v1/owner-team/stats${seasonQ(season)}`, 5 * 60_000);
+/** T-11-358 남의 팀(팀 프로필) 경기 통계. 프로필에서 '경기 통계 보기'를 누를 때만 부른다(서버 엣지 캐시 5분). */
+export const fetchPublicTeamStats = (teamId: string) =>
+  cachedGet<TeamStatsResponse>(`/v1/teams/${encodeURIComponent(teamId)}/stats`, 5 * 60_000);
 /** 구단 시즌 업적. season: 팀 시즌(0 = 프리시즌), 없으면 지금 시즌. */
 export const fetchClubAchievements = (season?: number) =>
   cachedGet<ClubAchievementsResponse>(`/v1/owner-team/achievements${seasonQ(season)}`, 60_000);

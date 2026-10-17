@@ -41,7 +41,7 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   statsFail: "Couldn't load stats.",
   statsEmpty: "You haven't played any ranked matches yet.",
   statsNote: (p: { n: number }) =>
-    `Counted ${p.n} ranked ${p.n === 1 ? 'match' : 'matches'}. Friendlies are not included.`,
+    `Counted ${p.n} ranked ${p.n === 1 ? 'match' : 'matches'}. Friendlies and cup matches only appear in the record by match type.`,
   statsCapped: (p: { n: number }) =>
     `You have a lot of matches, so only the latest ${p.n} played and ${p.n} received are counted.`,
   statsNoScorers: 'No player has scored or assisted yet.',
@@ -50,6 +50,29 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   statsGfGa: (p: { gf: number; ga: number }) => `Scored ${p.gf} · Conceded ${p.ga}`,
   statsOppOwner: (p: { owner: string; n: number }) =>
     `${p.owner} · ${p.n} ${p.n === 1 ? 'match' : 'matches'}`,
+  // T-11-358 flow summary · record by match type · other teams' stats
+  statsFlowTitle: 'Form',
+  statsFormLabel: (p: { n: number }) => `Last ${p.n} ${p.n === 1 ? 'match' : 'matches'}`,
+  statsFormW: 'W',
+  statsFormD: 'D',
+  statsFormL: 'L',
+  statsFormAria: (p: { list: string }) => `Recent results, newest first: ${p.list}`,
+  statsStreakW: (p: { n: number }) => `Won ${p.n} in a row`,
+  statsStreakD: (p: { n: number }) => `Drew ${p.n} in a row`,
+  statsStreakL: (p: { n: number }) => `Lost ${p.n} in a row`,
+  statsBestWinStreak: (p: { n: number }) => `Longest win streak ${p.n}`,
+  statsBiggestWin: 'Biggest win',
+  statsBiggestLoss: 'Biggest loss',
+  statsBigLine: (p: { gf: number; ga: number; opponent: string; day: string }) =>
+    `${p.gf} : ${p.ga} · ${p.opponent} · ${p.day}`,
+  statsKindsTitle: 'Record by match type',
+  statsKindRank: 'Ranked',
+  statsKindFriendly: 'Friendly',
+  statsKindCup: 'Cup',
+  statsKindNone: 'No matches',
+  statsKindNote: 'Cup wins on penalties count as wins. Forfeited matches are not counted.',
+  statsTeamOpen: 'View match stats',
+  statsTeamClose: 'Close stats',
   playerStatsAria: (p: { name: string }) => `View season stats for ${p.name}`,
   assist: (p) => `Assist ${p.name}`,
   noGoals: 'A goalless draw.',

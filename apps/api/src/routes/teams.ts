@@ -10,10 +10,12 @@ import {
   TeamRankQuerySchema,
   TeamRankResponseSchema,
   type TeamRankResponse,
+  TeamStatsResponseSchema,
 } from '@offside/contracts';
 import {
   ACH_RANK_PER_PAGE,
   TEAM_RANK_PER_PAGE,
+  TEAM_STATS_MATCHES_MAX,
   type FormationId,
 } from '@offside/contracts/owner-team';
 import { teamSeasonAt, teamSeasonClosed, teamSeasonName } from '@offside/contracts/service-seasons';
@@ -27,6 +29,8 @@ import {
   liveTeam,
   listTeamRanking,
   listTeamRecentForm,
+  listStatsMatches,
+  otherKindTotals,
   ratingRankOf,
   setTeamLike,
   slotIdsOf,
@@ -47,6 +51,8 @@ import { refreshAfterChange } from '../team/ownerAchievements.js';
 import { queryWithoutLang, reqLang, type Lang } from '../lang.js';
 import { buildLineup, lineupOvr, lineupSynergy } from '../team/sim.js';
 import { linesOf, recordOf, seasonOptions, slotsOf } from '../team/view.js';
+import { anonText } from '../team/anon.js';
+import { teamStatsView } from '../team/stats.js';
 
 // T-10-092 라이브 랭킹(팀 랭킹)과 팀 프로필. 로그인 없이 누구나 본다 — 팀 이름·감독 이름·선수의 공개 이름(없으면 익명
 // 표기)만 있고 구단주 계정 정보는 없다. 랭킹은 원작처럼 5분마다 새로 센다(엣지 캐시).
@@ -55,6 +61,8 @@ const RANK_TTL = 300;
  * 목록이라 30분 동안 담는다. 평점·OVR순은 그대로 5분. */
 const RANK_VALUE_TTL = 1800;
 const RANK_CACHE = 'public, max-age=60';
+/** T-11-358 남의 팀 경기 통계. 랭크 경기 · 친선전을 치르면 지우고, 컵 경기는 이 TTL로만 새로 읽는다. */
+const TEAM_STATS_TTL = 300;
 
 const teamParam = (c: Context<AppEnv>) => parseWithAppError(TeamIdSchema, c.req.param('teamId'));
 
@@ -207,6 +215,29 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       200,
       NO_STORE,
     );
+  });
+
+  // T-11-358 팀 경기 통계 — 팀 프로필에서 '경기 통계'를 열 때만 부른다. 누구에게나 같아 엣지에 담고(세션 · 프로필 조회
+  // 없음), 선수 익명 표기만 꺼낸 뒤 요청 언어로 옮긴다. 없는 팀(404)은 담지 않는다.
+  app.get('/v1/teams/:teamId/stats', async (c) => {
+    const id = teamParam(c);
+    const db = getDb(c);
+    const data = await edgeCached(c, EDGE.teamStats(id), TEAM_STATS_TTL, async () => {
+      const [found] = await liveTeam(db, id);
+      if (!found) return undefined;
+      const [{ rows, capped }, kinds] = await Promise.all([
+        listStatsMatches(db, id, TEAM_STATS_MATCHES_MAX),
+        otherKindTotals(db, id),
+      ]);
+      return teamStatsView(db, found.team.season, id, rows, capped, 'ko', kinds);
+    });
+    if (!data) throw teamNotFound();
+    const lang = reqLang(c);
+    const view =
+      lang === 'ko'
+        ? data
+        : { ...data, players: data.players.map((p) => ({ ...p, name: anonText(p.name, lang) })) };
+    return ok(c, TeamStatsResponseSchema, view, 200, RANK_CACHE);
   });
 
   // 조회수 — 웹이 남의 팀 프로필을 열 때 한 번 부른다(게시판 글과 같은 방식).
