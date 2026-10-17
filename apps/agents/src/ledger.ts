@@ -3,6 +3,8 @@ import { DurableObject } from 'cloudflare:workers';
 import type { Env, Role } from './env.ts';
 import type { Cursors, DcCursor, Reaction } from './reactions.ts';
 import type { MailDraft } from './support.ts';
+import type { CardSummary } from './card.ts';
+import type { Risk } from './risk.ts';
 
 export const kstDay = (now = Date.now()) => new Date(now + 9 * 3600_000).toISOString().slice(0, 10);
 
@@ -19,7 +21,15 @@ export const alertSignature = (text: string) =>
 
 type Day = { costUsd: number; tasks: number; warned?: boolean };
 
-export type DevJob = { channel: string; threadTs: string; pr: number; title: string };
+export type DevJob = {
+  channel: string;
+  threadTs: string;
+  pr: number;
+  title: string;
+  /** T-11-325 실제 바뀐 경로로 판정한 위험도와, 시작할 때 예상한 위험도(운영자가 직접 맡긴 일이면 operator). */
+  risk?: Risk;
+  expected?: Risk | 'operator';
+};
 export type Approval = {
   /** 운영 배포 승인(T-11-312)은 0. */
   pr: number;
@@ -40,6 +50,33 @@ export type MailApproval = {
 
 export type MktDraft = { id: string; notes: string; at: number; done?: boolean };
 export type MktApproval = MailApproval;
+
+/**
+ * T-11-325 고치기 작업 명세. 주장(@plan)의 work_order나 운영자의 start_work가 남긴다. PR 뒤 실제 경로로 다시 판정한
+ * 위험도와 견줄 때 쓴다. by가 operator면 운영자가 직접 맡긴 일이라 위험도 경고를 붙이지 않는다.
+ */
+export type WorkOrder = {
+  id: string;
+  title: string;
+  request: string;
+  /** 결과를 올릴 스레드(channel:ts). */
+  thread: string;
+  risk: Risk;
+  by: 'plan' | 'operator';
+  at: number;
+  started?: boolean;
+};
+
+/** 승인 대기 카드(승인 묶음 · 대기 시간 측정). ts는 #agent-approvals 카드 메시지 ts. */
+export type PendingApproval = { ts: string; channel: string; label: string; at: number };
+
+/** 서버 상태 감시(7단계): 이어진 나쁜 칸 수 · 읽기 실패 수 · 마지막으로 본 칸. */
+export type WatchState = { bad: number; fail: number; lastAt?: string };
+
+const CARD_KEEP_MS = 35 * 24 * 3600_000;
+const PENDING_KEEP_MS = 3 * 24 * 3600_000;
+const INCIDENT_COOLDOWN_MS = 6 * 3600_000;
+const WAITS_MAX = 200;
 
 export class AgentLedger extends DurableObject<Env> {
   async day(role: Role, day = kstDay()): Promise<Day> {
@@ -135,6 +172,98 @@ export class AgentLedger extends DurableObject<Env> {
   }
   async recordMktApproval(a: MktApproval): Promise<void> {
     await this.ctx.storage.put(`mktapproval:${a.draft}:${a.at}`, a);
+  }
+  /** T-11-325 작업 카드 요약. 닫힌 지 35일 넘은 카드는 목록에서 지운다. */
+  async trackCard(key: string, s: CardSummary): Promise<void> {
+    await this.ctx.storage.put(`card:${key}`, s);
+  }
+  async cards(now = Date.now()): Promise<CardSummary[]> {
+    const all = await this.ctx.storage.list<CardSummary>({ prefix: 'card:' });
+    const out: CardSummary[] = [];
+    const old: string[] = [];
+    for (const [k, v] of all) {
+      if (v.closedAt && now - v.closedAt > CARD_KEEP_MS) old.push(k);
+      else out.push(v);
+    }
+    if (old.length) await this.ctx.storage.delete(old);
+    return out;
+  }
+  async order(id: string): Promise<WorkOrder | undefined> {
+    return this.ctx.storage.get<WorkOrder>(`order:${id}`);
+  }
+  /** 스레드에 걸린 가장 최근 작업 명세. */
+  async orderOf(thread: string): Promise<WorkOrder | undefined> {
+    const id = await this.ctx.storage.get<string>(`order-thread:${thread}`);
+    return id ? this.order(id) : undefined;
+  }
+  async setOrder(o: WorkOrder): Promise<void> {
+    await this.ctx.storage.put({ [`order:${o.id}`]: o, [`order-thread:${o.thread}`]: o.id });
+  }
+  /** 낮음 자동 시작 하루 횟수를 하나 올리고 올린 값을 돌려준다. */
+  async autoStart(day = kstDay()): Promise<number> {
+    const key = `auto:${day}`;
+    const n = ((await this.ctx.storage.get<number>(key)) ?? 0) + 1;
+    await this.ctx.storage.put(key, n);
+    return n;
+  }
+  async autoStarts(day = kstDay()): Promise<number> {
+    return (await this.ctx.storage.get<number>(`auto:${day}`)) ?? 0;
+  }
+  /** 운영자가 끼어든 횟수(멘션 · 답글 · 승인 버튼). 주간 회고에 쓴다. */
+  async touch(day = kstDay()): Promise<void> {
+    const key = `touch:${day}`;
+    await this.ctx.storage.put(key, ((await this.ctx.storage.get<number>(key)) ?? 0) + 1);
+  }
+  async touches(day: string): Promise<number> {
+    return (await this.ctx.storage.get<number>(`touch:${day}`)) ?? 0;
+  }
+  async pendingAdd(p: PendingApproval): Promise<void> {
+    await this.ctx.storage.put(`pending:${p.ts}`, p);
+  }
+  /** 승인 카드가 눌렸다. 기다린 시간(ms)을 기록하고 돌려준다. 모르는 카드면 null. */
+  async pendingDone(ts: string, now = Date.now()): Promise<number | null> {
+    const p = await this.ctx.storage.get<PendingApproval>(`pending:${ts}`);
+    if (!p) return null;
+    await this.ctx.storage.delete(`pending:${ts}`);
+    const waits = (await this.ctx.storage.get<{ at: number; ms: number }[]>('waits')) ?? [];
+    await this.ctx.storage.put('waits', [...waits, { at: now, ms: now - p.at }].slice(-WAITS_MAX));
+    return now - p.at;
+  }
+  async pending(now = Date.now()): Promise<PendingApproval[]> {
+    const all = await this.ctx.storage.list<PendingApproval>({ prefix: 'pending:' });
+    const out: PendingApproval[] = [];
+    const old: string[] = [];
+    for (const [k, v] of all) {
+      if (now - v.at > PENDING_KEEP_MS) old.push(k);
+      else out.push(v);
+    }
+    if (old.length) await this.ctx.storage.delete(old);
+    return out;
+  }
+  async waits(): Promise<{ at: number; ms: number }[]> {
+    return (await this.ctx.storage.get<{ at: number; ms: number }[]>('waits')) ?? [];
+  }
+  /** 승인 · 거절 기록 수(머지 · 배포 · 메일 · 드림보트). since 뒤만. */
+  async approvalCount(since: number): Promise<number> {
+    let n = 0;
+    for (const prefix of ['approval:', 'mailapproval:', 'mktapproval:']) {
+      const all = await this.ctx.storage.list<{ at: number }>({ prefix });
+      for (const v of all.values()) if (v.at >= since) n++;
+    }
+    return n;
+  }
+  async watch(): Promise<WatchState> {
+    return (await this.ctx.storage.get<WatchState>('watch')) ?? { bad: 0, fail: 0 };
+  }
+  async setWatch(w: WatchState): Promise<void> {
+    await this.ctx.storage.put('watch', w);
+  }
+  /** 서버 상태 사건은 6시간에 한 번만 연다. 처음이면 true. */
+  async claimIncident(now = Date.now()): Promise<boolean> {
+    const at = await this.ctx.storage.get<number>('incident:at');
+    if (at && now - at < INCIDENT_COOLDOWN_MS) return false;
+    await this.ctx.storage.put('incident:at', now);
+    return true;
   }
   /** 한도 초과 안내는 하루 한 번만 한다. 처음이면 true. */
   async warnOnce(role: Role, day = kstDay()): Promise<boolean> {

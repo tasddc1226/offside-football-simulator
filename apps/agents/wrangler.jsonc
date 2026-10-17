@@ -11,11 +11,20 @@
     "bindings": [
       { "name": "THREAD", "class_name": "AgentThread" },
       { "name": "LEDGER", "class_name": "AgentLedger" },
+      // T-11-325 작업 카드(스레드마다 하나, card.ts).
+      { "name": "CARD", "class_name": "WorkCard" },
     ],
   },
-  "migrations": [{ "tag": "v1-agents", "new_sqlite_classes": ["AgentThread", "AgentLedger"] }],
-  // 매시 7분 고객 문의 메일(@plan, support.ts, T-11-291). 3시간마다 47분 유저 반응 살피기(@plan, reactions.ts, 디시는 매시 27분 Actions가 넣어 둔 것, T-11-289), 매일 23:50 UTC(08:50 KST) 주기 작업 보고(@ops).
-  "triggers": { "crons": ["47 */3 * * *", "7 * * * *", "50 23 * * *"] },
+  "migrations": [
+    { "tag": "v1-agents", "new_sqlite_classes": ["AgentThread", "AgentLedger"] },
+    { "tag": "v2-cards", "new_sqlite_classes": ["WorkCard"] },
+  ],
+  // 매시 7분 고객 문의 메일(@plan, support.ts, T-11-291). 3시간마다 47분 유저 반응 살피기(@plan, reactions.ts, 디시는 매시 27분 Actions가 넣어 둔 것, T-11-289),
+  // 매일 23:50 UTC(08:50 KST) 주기 작업 보고(@ops) · 열린 카드 목록(@plan) · 월요일 주간 회고(@plan) · 주간 유입 리포트(@mkt).
+  // T-11-325: 5분마다 서버 상태 감시(@ops, watch.ts), 01:00 · 09:00 UTC(10:00 · 18:00 KST) 승인 대기 묶음(@plan).
+  "triggers": {
+    "crons": ["47 */3 * * *", "7 * * * *", "50 23 * * *", "*/5 * * * *", "0 1,9 * * *"],
+  },
   "observability": { "enabled": true, "logs": { "enabled": true, "invocation_logs": false } },
   "vars": {
     // ADR-015 도입 단계: 4단계(T-11-296)에 @mkt까지 연다.

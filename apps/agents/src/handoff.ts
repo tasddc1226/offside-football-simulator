@@ -44,8 +44,9 @@ export function linkRoles(env: Env, text: string): string {
     .join('`');
 }
 
-/** 넘겨받은 일의 결과를 넘긴 역할에게 한 번 돌려줄지. 돌려받은 일 · 답에서 그 역할에게 다시 넘긴 경우는 돌려주지 않는다. */
-export const shouldReturn = (
-  t: { kind: string; from?: Role; back?: boolean },
-  handoffs: Handoff[],
-) => t.kind === 'handoff' && !!t.from && !t.back && !handoffs.some((h) => h.to === t.from);
+/**
+ * T-11-325 경보 첫 정리가 사건이라고 본 답인지. roles/ops.md: 장애로 보이면 첫 줄을 `사건: <한 줄>`로 쓴다.
+ * 첫 줄만 본다(본문에 인용된 경보 글이 사건 판정을 흉내 내지 못하게).
+ */
+export const isIncident = (reply: string) =>
+  /^\s*(?:\*\*)?사건(?:\*\*)?\s*[:：]/.test(reply.split('\n').find((l) => l.trim()) ?? '');
