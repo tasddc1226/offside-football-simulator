@@ -13,4 +13,12 @@ export const firsts: Translation<FirstsMsgs> = {
   noRecord: 'No record yet',
   locked: 'Not achieved',
   mine: 'Your player',
+  steps: (p) => `${p.done}/${p.total} steps`,
+  next: (p) => `Next: ${p.label}`,
+  allDone: 'Every step is done',
+  showSteps: 'Show all steps',
+  hideSteps: 'Hide steps',
+  burst: (p) => `${p.n} steps`,
+  topTitle: 'Most records set',
+  topCount: (p) => `${p.n}`,
 };
