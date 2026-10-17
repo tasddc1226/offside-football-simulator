@@ -16,6 +16,7 @@ import {
 } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { ownerAchievements, ownerTeams, profiles, teamLikes, teamMatches } from '../schema.js';
+import { grantItemStatement } from './itemShop.js';
 import { accountLinkedSql } from './profiles.js';
 
 export type AchievementRow = typeof ownerAchievements.$inferSelect;
@@ -222,4 +223,89 @@ export async function staleAchievementOwners(
     group by x.profile_id
     limit ${limit}`);
   return rows.map((r) => r.id);
+}
+
+// ───────── T-11-357 업적 달성 보상 ─────────
+// 받은 기록은 홈 선물과 같은 gift_claims에 'ach:<시즌>:<업적>[:<단계>]'로 남기고(PK가 한 번만 받게 막는다), 아이템은
+// 컵 보상·홈 선물과 같은 owner_items에 더한다(grantItemStatement). 기준선 줄(claim_id 'base:…')은 보상 없이 '이미
+// 달성'으로만 적은 줄이다. 'ach:<시즌>:#base'는 그 시즌 기준선을 잡았다는 표시다.
+
+export const achClaimKey = (season: number, key: string) => `ach:${season}:${key}`;
+export const ACH_BASE_KEY = '#base';
+const BASE_PREFIX = 'base:';
+export const isBaseClaim = (claimId: string) => claimId.startsWith(BASE_PREFIX);
+
+/** 그 시즌 업적 보상 기록(key → claim_id). PK(profile_id, gift_id) 범위로 읽는다. */
+export async function achievementClaimsOf(
+  db: Db,
+  profileId: string,
+  season: number,
+): Promise<Map<string, string>> {
+  const prefix = achClaimKey(season, '');
+  const { results } = await db.$client
+    .prepare(
+      `SELECT gift_id AS id, claim_id AS claim FROM gift_claims
+        WHERE profile_id = ? AND gift_id >= ? AND gift_id < ?`,
+    )
+    .bind(profileId, prefix, `ach:${season};`)
+    .all<{ id: string; claim: string }>();
+  return new Map(results.map((r) => [r.id.slice(prefix.length), r.claim]));
+}
+
+/**
+ * 새로 달성한 업적의 보상을 적고 준다. baseline이면 그 시즌 기준선 표시와 함께 지금 달성한 것을 보상 없이 적는다 — 이
+ * batch가 표시를 새로 넣었을 때만(다른 요청이 먼저 잡았으면 건너뛴다). 아니면 업적마다 기록을 넣고, 그 줄을 이 batch가
+ * 넣었을 때만(claim_id) 아이템을 더한다 — 다시 불리거나 겹쳐 불려도 한 번만 준다. 이 batch가 준 key를 돌려준다.
+ */
+export async function claimAchievementRewards(
+  db: Db,
+  profileId: string,
+  season: number,
+  steps: readonly { key: string; boost: number; scout: number }[],
+  now: string,
+  baseline: boolean,
+): Promise<string[]> {
+  const d1 = db.$client;
+  const claimId = `${baseline ? BASE_PREFIX : ''}${crypto.randomUUID()}`;
+  const insert = `INSERT OR IGNORE INTO gift_claims (profile_id, gift_id, claim_id, claimed_at)`;
+  const mine = (key: string) => ({
+    sql: 'EXISTS (SELECT 1 FROM gift_claims WHERE profile_id = ? AND gift_id = ? AND claim_id = ?)',
+    params: [profileId, achClaimKey(season, key), claimId],
+  });
+  if (baseline) {
+    const g = mine(ACH_BASE_KEY);
+    await d1.batch([
+      d1
+        .prepare(`${insert} VALUES (?, ?, ?, ?)`)
+        .bind(profileId, achClaimKey(season, ACH_BASE_KEY), claimId, now),
+      ...steps.map((s) =>
+        d1
+          .prepare(`${insert} SELECT ?, ?, ?, ? WHERE ${g.sql}`)
+          .bind(profileId, achClaimKey(season, s.key), claimId, now, ...g.params),
+      ),
+    ]);
+    return [];
+  }
+  if (!steps.length) return [];
+  const results = await d1.batch(
+    steps.flatMap((s) => [
+      d1
+        .prepare(`${insert} VALUES (?, ?, ?, ?)`)
+        .bind(profileId, achClaimKey(season, s.key), claimId, now),
+      ...(s.boost > 0
+        ? [grantItemStatement(d1, profileId, 'boost', s.boost, now, mine(s.key))]
+        : []),
+      ...(s.scout > 0
+        ? [grantItemStatement(d1, profileId, 'scout', s.scout, now, mine(s.key))]
+        : []),
+    ]),
+  );
+  // 업적마다 기록 넣기가 첫 문장이다 — 새로 넣었으면(changes 1) 이 batch가 준 것.
+  const granted: string[] = [];
+  let i = 0;
+  for (const s of steps) {
+    if (results[i]?.meta.changes) granted.push(s.key);
+    i += 1 + (s.boost > 0 ? 1 : 0) + (s.scout > 0 ? 1 : 0);
+  }
+  return granted;
 }

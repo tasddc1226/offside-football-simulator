@@ -214,6 +214,8 @@ export type SheetView =
       gained: number;
       score: number;
       next: string | null;
+      /** T-11-357 받은 업적 보상 한 줄(없으면 null). */
+      reward?: string | null;
     }
   | {
       /** 이적·조기 연장 계약서. 사인하면 onSign, ×는 onClose(저장된 이적시장으로 돌아간다). */

@@ -438,5 +438,25 @@ export function achGradeOf(score: number): { grade: AchGrade; next: AchGrade | n
   return { grade: ACH_GRADES[i]!, next: ACH_GRADES[i + 1] ?? null };
 }
 
+/**
+ * T-11-357 업적 달성 보상(아이템만 · 확률·가격은 그대로). 업적(단계 업적은 단계마다)의 점수로 난이도를 나눈다 —
+ * 40점 미만은 없음, 40~149점은 잠재력 강화권 1장, 150점 이상은 프리미엄 스카우트권 1장. 시즌마다 업적이 처음부터 다시
+ * 쌓이므로 보상도 시즌마다 업적·단계당 한 번이다(서버 gift_claims 'ach:<시즌>:<업적>[:<단계>]').
+ */
+export const ACH_REWARD_BOOST_MIN = 40;
+export const ACH_REWARD_SCOUT_MIN = 150;
+export type AchReward = { boost: number; scout: number };
+/** 한 업적(단계)의 점수로 정하는 보상. 없으면 null. */
+export function achRewardOf(points: number): AchReward | null {
+  if (points >= ACH_REWARD_SCOUT_MIN) return { boost: 0, scout: 1 };
+  if (points >= ACH_REWARD_BOOST_MIN) return { boost: 1, scout: 0 };
+  return null;
+}
+/**
+ * 업적 보상을 처음 연 시즌. 이 시즌까지는 보상을 처음 셀 때 이미 달성해 둔 업적을 기준선으로 적고 주지 않는다(소급 지급
+ * 없음). 다음 시즌부터는 시즌 첫 달성부터 준다.
+ */
+export const ACH_REWARD_BASELINE_SEASON = 1;
+
 /** 업적 랭킹 한 페이지의 구단주 수. */
 export const ACH_RANK_PER_PAGE = 20;

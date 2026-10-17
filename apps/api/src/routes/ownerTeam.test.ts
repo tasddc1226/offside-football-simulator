@@ -39,6 +39,7 @@ import {
   notifications,
   pushDeliveries,
   friends,
+  ownerItems,
   ownerTeams,
   teamMatches,
 } from '../db/schema.js';
@@ -792,6 +793,18 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     const after = await read();
     expect(feats(after).map((i) => i.done)).toEqual([true, true]);
     expect(feats(after).map((i) => i.points)).toEqual([50, 50]);
+    // T-11-357 첫 화면(기준선) 뒤에 달성한 위업은 잠재력 강화권을 한 장씩 준다 — 다시 읽어도 더 주지 않는다.
+    expect(feats(after).map((i) => i.got)).toEqual([
+      { boost: 1, scout: 0 },
+      { boost: 1, scout: 0 },
+    ]);
+    const boosts = async () =>
+      (await ctx.db.select().from(ownerItems).where(eq(ownerItems.profileId, me.profileId))).find(
+        (r) => r.item === 'boost',
+      )?.qty;
+    expect(await boosts()).toBe(2);
+    await read();
+    expect(await boosts()).toBe(2);
     // 판매해도 원 육성자의 선수 업적은 기존처럼 남는다.
     await ctx.db
       .update(cards)
