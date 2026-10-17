@@ -29,7 +29,9 @@ export type LoginReturn =
   | { market: true }
   | { cup: true }
   /** T-11-290 팀 프로필(스쿼드 댓글)에서 로그인했으면 그 팀 프로필로 돌아온다. */
-  | { team: string };
+  | { team: string }
+  /** T-11-360 홈 출석 체크에서 로그인했으면 홈으로 돌아와 바로 출석한다. */
+  | { home: true };
 
 /** API가 구글 로그인을 마치고 돌려보내는 주소(contracts APP_AUTH_REDIRECT_URL). */
 const REDIRECT_URL = 'offside://auth';
@@ -145,6 +147,7 @@ async function finishLogin(r: AuthResult, back: LoginReturn | null, via: string)
     if ('chat' in back) return void (appState.screen = 'chat');
     if ('market' in back) return void (appState.screen = 'market');
     if ('cup' in back) return void (appState.screen = 'cup');
+    if ('home' in back) return void (appState.screen = 'home');
     if ('team' in back) {
       appState.hof = { ...hofStart(), tab: 'teams', team: back.team };
       return void (appState.screen = 'hof');

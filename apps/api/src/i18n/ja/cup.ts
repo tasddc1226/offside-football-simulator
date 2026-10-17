@@ -33,6 +33,7 @@ export const CUP_JA: Record<CupTextKey, string> = {
   noBoost: 'ポテンシャル強化券がありません。',
   noScout: 'プレミアムスカウト券がありません。',
   giftClaimed: 'このプレゼントはすでに受け取りました。',
+  attendanceChecked: '今日はすでに出席しました。',
   iapInvalid: '購入を確認できませんでした。',
   iapPending: 'お支払いがまだ完了していません。完了すると自動で受け取れます。',
   iapOtherAccount: '別のアカウントで購入されています。購入したアカウントでログインしてください。',
