@@ -52,7 +52,10 @@ export const fairness: Translation<FairnessMsgs> = {
   historyActive: 'Current',
   historySame: 'No values changed.',
   historyNote:
-    'Each item shows the previous version value and the new value. Dates are in Korea time.',
+    'Each item shows the previous version value and the new value. Code update patches are deployments that changed formulas or rules. Dates are in Korea time.',
+  historyPatch: 'Code update',
+  historyPatchDay: (p) => `Applied ${p.day}`,
+  historyOpenNote: 'Open in release notes',
   version: (p) =>
     p.v
       ? `New careers currently use balance version ${p.v}.`

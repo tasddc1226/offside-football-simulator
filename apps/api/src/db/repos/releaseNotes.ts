@@ -131,6 +131,8 @@ export async function publishReleaseNotes(db: D1Database, input: PublishReleaseN
   const published = new Set(seen.results.map((r) => r.key));
   const pending = input.entries.filter((e) => !published.has(keyOf(e.id)));
   if (!pending.length) return { postId: null, publishedIds: [], updated: false };
+  // T-11-333 커리어 결과·확률·점수 산식을 바꾼 항목은 공개 밸런스 이력(balance_patches)에도 같은 batch로 쌓는다.
+  const balancePatches = pending.filter((e) => e.balance);
 
   const date = releaseDay(now);
   // board,created_at 인덱스를 쓰는 하루 범위 조회. 삭제된 오늘 글은 자동으로 다시 만들지 않는다.
@@ -167,7 +169,8 @@ export async function publishReleaseNotes(db: D1Database, input: PublishReleaseN
   const i18nJson = JSON.stringify(i18n);
   const postId = post?.id ?? `pst_release_${date.day.replaceAll('-', '')}`;
   const publishedIds = pending.map((e) => e.id);
-  if (input.dryRun) return { postId, publishedIds, updated: false, preview: body };
+  const balancePatchIds = balancePatches.map((e) => e.id);
+  if (input.dryRun) return { postId, publishedIds, updated: false, preview: body, balancePatchIds };
 
   // 같은 밀리초의 수정도 알림에 잡히게 마지막 수정 시각보다 최소 1ms 늦게 쓴다.
   const updated = new Date(
@@ -220,6 +223,32 @@ export async function publishReleaseNotes(db: D1Database, input: PublishReleaseN
           })),
         ),
       ),
+    // T-11-333 바로 앞 이력 INSERT가 한 줄 이상 들어갔을 때만(= 본문 CAS 성공) 밸런스 패치를 쌓는다.
+    ...(balancePatches.length
+      ? [
+          db
+            .prepare(
+              `INSERT OR IGNORE INTO balance_patches
+        (id, applied_at, post_id, title_json, items_json, changes_json, created_at)
+        SELECT json_extract(value, '$.id'), ?, ?, json_extract(value, '$.title'),
+          json_extract(value, '$.items'), json_extract(value, '$.changes'), ?
+        FROM json_each(?) WHERE changes() >= 1`,
+            )
+            .bind(
+              updated,
+              postId,
+              now,
+              JSON.stringify(
+                balancePatches.map((entry) => ({
+                  id: entry.id,
+                  title: { ko: entry.title, en: entry.en?.title, ja: entry.ja?.title },
+                  items: { ko: entry.items, en: entry.en?.items, ja: entry.ja?.items },
+                  changes: entry.balance === true ? null : entry.balance!.changes,
+                })),
+              ),
+            ),
+        ]
+      : []),
     // 기존 글에 항목을 추가해도 푸시를 다시 보내지 않는다.
     ...(!post ? newsPushStatements(db, postId, 'release', now) : []),
   ]);
@@ -228,5 +257,5 @@ export async function publishReleaseNotes(db: D1Database, input: PublishReleaseN
       '릴리즈 노트가 다른 작업에서 수정됐어요. 다시 실행해 주세요.',
       'RELEASE_POST_CONFLICT',
     );
-  return { postId, publishedIds, updated: true };
+  return { postId, publishedIds, updated: true, balancePatchIds };
 }

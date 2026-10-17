@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BALANCE_PATCH_CHANGES_MAX, BalancePatchChangeSchema } from './balance.js';
 import { POST_BODY_MAX } from './board-limits.js';
 
 const line = (max: number) =>
@@ -25,6 +26,16 @@ export const ReleaseNoteSchema = z
       .string()
       .regex(/^\d+\.\d+\.\d+$/)
       .optional(),
+    /** T-11-333 커리어 결과·확률·점수 산식을 바꾼 항목. 게시와 함께 공개 밸런스 이력(balance_patches)에 쌓는다.
+     * `true`면 문구만, 밸런스 키 기본값을 바꿨으면 `{ changes: [{ key, from, to }] }`. */
+    balance: z
+      .union([
+        z.literal(true),
+        z.strictObject({
+          changes: z.array(BalancePatchChangeSchema).min(1).max(BALANCE_PATCH_CHANGES_MAX),
+        }),
+      ])
+      .optional(),
   })
   .strict()
   .refine((n) => n.availability !== 'web-app-pending' || !!n.appVersion, {
@@ -47,6 +58,8 @@ export const PublishedReleaseNotesSchema = z.object({
   publishedIds: z.array(z.string()),
   updated: z.boolean(),
   preview: z.string().max(POST_BODY_MAX).optional(),
+  /** T-11-333 이번 게시로 공개 밸런스 이력에 쌓인 항목 id. */
+  balancePatchIds: z.array(z.string()).optional(),
 });
 
 export type ReleaseNote = z.infer<typeof ReleaseNoteSchema>;

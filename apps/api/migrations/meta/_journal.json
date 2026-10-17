@@ -736,6 +736,13 @@
       "when": 1792171144480,
       "tag": "0104_manager_careers",
       "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "6",
+      "when": 1792228550387,
+      "tag": "0105_balance_patches",
+      "breakpoints": true
     }
   ]
 }
