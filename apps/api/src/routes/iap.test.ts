@@ -419,6 +419,49 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     expect((await notify()).status).toBe(200);
   });
 
+  it('authenticates delayed refund recovery with wall time while preserving its business window', async () => {
+    const wall = Date.now();
+    const logical = wall - 2 * 24 * 3600 * 1000;
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(wall);
+    try {
+      ctx.env.GOOGLE_PLAY_SA_JSON = await serviceAccountJson();
+      let tokenCalls = 0;
+      let listCalls = 0;
+      const fetcher = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+        const target = String(url);
+        if (target.startsWith('https://oauth2.googleapis.com/token')) {
+          tokenCalls++;
+          const assertion = new URLSearchParams(String(init?.body)).get('assertion')!;
+          const claims = JSON.parse(
+            atob(assertion.split('.')[1]!.replace(/-/g, '+').replace(/_/g, '/')),
+          ) as { iat: number; exp: number };
+          if (claims.iat < Math.floor(wall / 1000) - 60) return new Response(null, { status: 400 });
+          expect(claims.iat).toBe(Math.floor(wall / 1000));
+          expect(claims.exp).toBe(claims.iat + 3600);
+          return Response.json({ access_token: 'current-token', expires_in: 3600 });
+        }
+        expect(target).toContain('/voidedpurchases');
+        listCalls++;
+        expect(new URL(target).searchParams.get('startTime')).toBe(
+          String(logical - 7 * 24 * 3600 * 1000),
+        );
+        expect(new Headers(init?.headers).get('authorization')).toBe('Bearer current-token');
+        return Response.json({ voidedPurchases: [] });
+      }) as typeof fetch;
+      await expect(
+        syncGoogleVoided(ctx.env, createDb(ctx.env.DB), logical, fetcher),
+      ).resolves.toEqual({
+        seen: 0,
+        revoked: 0,
+        unknown: 0,
+      });
+      expect(tokenCalls).toBe(1);
+      expect(listCalls).toBe(1);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   it('T-11-215 Google이 무효화한 구매를 매일 읽어 회수한다', async () => {
     const me = await issueGoogleCookie(ctx);
     expect(await syncGoogleVoided(ctx.env, createDb(ctx.env.DB), Date.now())).toBe('skipped');
