@@ -16,6 +16,7 @@ import {
   TeamProfileResponseSchema,
   TeamRankResponseSchema,
   TeamStatsResponseSchema,
+  TeamDivisionsResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
 import {
@@ -29,6 +30,8 @@ import {
   FORMATIONS,
 } from '@offside/contracts/owner-team';
 import { eq } from 'drizzle-orm';
+import { resolveBalance } from '@offside/contracts/balance';
+import { divisionRules, nextDivision } from '@offside/contracts/team-division';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   boardBlocks,
@@ -62,6 +65,8 @@ const FriendDelRes = successEnvelope(FriendRemoveResponseSchema);
 const FriendlyRes = successEnvelope(PlayFriendlyResponseSchema);
 const TeamProfileRes = successEnvelope(TeamProfileResponseSchema);
 const StatsRes = successEnvelope(TeamStatsResponseSchema);
+const RankRes = successEnvelope(TeamRankResponseSchema);
+const DivRes = successEnvelope(TeamDivisionsResponseSchema);
 
 type Pos = 'FW' | 'MF' | 'DF' | 'GK';
 let seq = 0;
@@ -1390,6 +1395,65 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       want.away + 0,
     ]);
     expect(await rivalRating()).toBe(rivalBefore + want.away);
+  });
+
+  it('T-11-375 경기 뒤 두 팀 디비전을 같은 UPDATE에서 고치고(강등 보호 포함), 응답에 내 디비전 전후를 싣는다', async () => {
+    const rules = divisionRules(resolveBalance());
+    const me = await ownerWithTeam(5, 85);
+    const rival = await ownerWithTeam(3, 70);
+    // 나는 프로 II 경계(1,050) 바로 아래 세미프로 I, 상대는 경계 아래로 내려왔지만 강등 보호 중인 프로 II.
+    await ctx.db
+      .update(ownerTeams)
+      .set({ rating: 1045, division: 2 })
+      .where(eq(ownerTeams.id, me.team.id));
+    await ctx.db
+      .update(ownerTeams)
+      .set({ rating: 1040, division: 3 })
+      .where(eq(ownerTeams.id, rival.team.id));
+    const res = await call('POST', '/v1/owner-team/matches', {
+      cookie: me.cookie,
+      headers: idem(),
+      body: { opponentTeamId: rival.team.id },
+    });
+    expect(res.status).toBe(201);
+    const body = PlayRes.parse(await res.json()).data;
+    const [homeRow] = await ctx.db.select().from(ownerTeams).where(eq(ownerTeams.id, me.team.id));
+    const [awayRow] = await ctx.db
+      .select()
+      .from(ownerTeams)
+      .where(eq(ownerTeams.id, rival.team.id));
+    expect(homeRow!.division).toBe(nextDivision(homeRow!.rating, 2, rules));
+    expect(awayRow!.division).toBe(nextDivision(awayRow!.rating, 3, rules));
+    expect(body.division).toEqual({ from: 2, to: homeRow!.division });
+    // 팀 화면 응답에도 저장된 디비전이 온다.
+    const mine = GetRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    ).data;
+    expect(mine.team?.division).toBe(homeRow!.division);
+  });
+
+  it('T-11-375 디비전 랭킹은 레이팅 구간 팀만, 디비전별 팀 수는 세션 없이 경계와 함께', async () => {
+    const teams = await Promise.all([1, 1, 1, 1].map(() => ownerWithTeam(1)));
+    const ratings = [900, 1010, 1040, 1400];
+    await Promise.all(
+      teams.map((t, i) =>
+        ctx.db.update(ownerTeams).set({ rating: ratings[i]! }).where(eq(ownerTeams.id, t.team.id)),
+      ),
+    );
+    const semi1 = RankRes.parse(
+      await (await call('GET', '/v1/teams?sort=rating&division=2')).json(),
+    ).data;
+    expect(semi1.items.map((i) => i.rating)).toEqual([1040, 1010]);
+    expect(semi1.total).toBe(2);
+    const master = RankRes.parse(await (await call('GET', '/v1/teams?division=7')).json()).data;
+    expect(master.items.map((i) => i.rating)).toEqual([1400]);
+    const div = DivRes.parse(await (await call('GET', '/v1/teams/divisions')).json()).data;
+    expect(div.bounds).toEqual([950, 1000, 1050, 1100, 1175, 1250, 1350]);
+    expect(div.guard).toBe(30);
+    expect(div.counts).toEqual([1, 0, 2, 0, 0, 0, 0, 1]);
+    expect(div.total).toBe(4);
+    // 범위 밖 디비전은 400.
+    expect((await call('GET', '/v1/teams?division=8')).status).toBe(400);
   });
 
   it('프로필을 지우면 팀과 그 팀의 경기도 지워진다', async () => {

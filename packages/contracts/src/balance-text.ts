@@ -13,6 +13,8 @@ export const BALANCE_GROUPS = {
   military: '병역',
   // T-11-080 이적시장. 게임(웹)은 읽지 않고, 서버가 방출·등록·구매 요청 때 활성 버전을 바로 읽는다(커리어별 고정 아님).
   market: '이적시장',
+  // T-11-375 구단 디비전. 서버가 랭크 경기 · 디비전 랭킹 · 시즌 마감 때 활성 버전을 바로 읽는다.
+  team: '구단 디비전',
 } as const;
 export type BalanceGroup = keyof typeof BALANCE_GROUPS;
 
@@ -227,5 +229,80 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     group: 'market',
     label: '광고 대신 구단 자금 하루 횟수',
     desc: '보상마다 한 구단주가 하루(한국 시각)에 구단 자금으로 받을 수 있는 횟수(잠재력 강화는 횟수 없음). 0이면 구단 자금으로 받지 않는다',
+  },
+  teamDiv1: {
+    group: 'team',
+    label: '세미프로 II 승격 레이팅',
+    desc: '팀 레이팅이 이 값 이상이면 세미프로 II 디비전으로 오른다. 앞 경계보다 낮게 두면 앞 경계 값을 쓴다',
+  },
+  teamDiv2: {
+    group: 'team',
+    label: '세미프로 I 승격 레이팅',
+    desc: '팀 레이팅이 이 값 이상이면 세미프로 I 디비전으로 오른다. 앞 경계보다 낮게 두면 앞 경계 값을 쓴다',
+  },
+  teamDiv3: {
+    group: 'team',
+    label: '프로 II 승격 레이팅',
+    desc: '팀 레이팅이 이 값 이상이면 프로 II 디비전으로 오른다. 앞 경계보다 낮게 두면 앞 경계 값을 쓴다',
+  },
+  teamDiv4: {
+    group: 'team',
+    label: '프로 I 승격 레이팅',
+    desc: '팀 레이팅이 이 값 이상이면 프로 I 디비전으로 오른다. 앞 경계보다 낮게 두면 앞 경계 값을 쓴다',
+  },
+  teamDiv5: {
+    group: 'team',
+    label: '엘리트 II 승격 레이팅',
+    desc: '팀 레이팅이 이 값 이상이면 엘리트 II 디비전으로 오른다. 앞 경계보다 낮게 두면 앞 경계 값을 쓴다',
+  },
+  teamDiv6: {
+    group: 'team',
+    label: '엘리트 I 승격 레이팅',
+    desc: '팀 레이팅이 이 값 이상이면 엘리트 I 디비전으로 오른다. 앞 경계보다 낮게 두면 앞 경계 값을 쓴다',
+  },
+  teamDiv7: {
+    group: 'team',
+    label: '마스터 승격 레이팅',
+    desc: '팀 레이팅이 이 값 이상이면 마스터 디비전으로 오른다. 앞 경계보다 낮게 두면 앞 경계 값을 쓴다',
+  },
+  teamDivGuard: {
+    group: 'team',
+    label: '디비전 강등 보호 점수',
+    desc: '올라간 디비전은 레이팅이 그 경계보다 이만큼 더 떨어져야 내려간다',
+  },
+  teamDivRewardFrom: {
+    group: 'team',
+    label: '디비전 보상 시작 시즌',
+    desc: '이 시즌 마감부터 디비전 배지 · 리롤권을 준다. 그 전 시즌은 디비전을 보여 주기만 한다',
+  },
+  teamDivMinMatches: {
+    group: 'team',
+    label: '디비전 보상 최소 경기 수',
+    desc: '시즌 마감 디비전 보상을 받으려면 그 시즌 팀이 치른 랭크 경기(건 경기 + 받은 경기) 수가 이만큼 있어야 한다',
+  },
+  teamDivReward3: {
+    group: 'team',
+    label: '프로 II 시즌 보상 리롤권',
+    desc: '시즌 마감 때 프로 II 디비전인 구단주가 받는 선수 후보 리롤권 장수',
+  },
+  teamDivReward4: {
+    group: 'team',
+    label: '프로 I 시즌 보상 리롤권',
+    desc: '시즌 마감 때 프로 I 디비전인 구단주가 받는 선수 후보 리롤권 장수',
+  },
+  teamDivReward5: {
+    group: 'team',
+    label: '엘리트 II 시즌 보상 리롤권',
+    desc: '시즌 마감 때 엘리트 II 디비전인 구단주가 받는 선수 후보 리롤권 장수',
+  },
+  teamDivReward6: {
+    group: 'team',
+    label: '엘리트 I 시즌 보상 리롤권',
+    desc: '시즌 마감 때 엘리트 I 디비전인 구단주가 받는 선수 후보 리롤권 장수',
+  },
+  teamDivReward7: {
+    group: 'team',
+    label: '마스터 시즌 보상 리롤권',
+    desc: '시즌 마감 때 마스터 디비전인 구단주가 받는 선수 후보 리롤권 장수',
   },
 };

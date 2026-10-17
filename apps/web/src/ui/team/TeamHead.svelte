@@ -10,6 +10,7 @@
   import { doneOnEnter } from '../inputDone.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import TeamLogo from './TeamLogo.svelte';
+  import TeamDivision from './TeamDivision.svelte';
   import type { TeamLogo as Logo } from '@offside/contracts/team-logo';
 
   let {
@@ -29,6 +30,7 @@
     manager = $bindable(),
     renaming = $bindable(),
     onseason,
+    divisionNotice = null,
   }: {
     team: OwnerTeam | null;
     logo: Logo | null;
@@ -47,6 +49,8 @@
     /** 팀이 있으면 이름 칸은 '이름 바꾸기'를 눌렀을 때만 펼친다. */
     renaming: boolean;
     onseason: (id: number) => void;
+    /** T-11-375 받은 경기로 바뀐 디비전 알림(한 번). */
+    divisionNotice?: string | null;
   } = $props();
   // T-11-113 개막 뒤 프리시즌 팀 — 친선전 전용으로 고칠 수 있다.
   const issues = $derived(teamNameIssues(name, manager));
@@ -108,6 +112,7 @@
       {#if legacy}<div><dt>{L.statFriendly}</dt><dd>{L.statFriendlyOnly}</dd></div>
       {:else}<div aria-label={editable ? L.leftAria({ left: matchesLeft, per: perDay }) : undefined}><dt>{editable ? L.statLeft : L.statSeason}</dt><dd>{editable ? L.statTimes({ n: matchesLeft }) : L.statPast}</dd></div>{/if}
     </dl>
+    {#if !legacy && team.season > 0}<TeamDivision rating={team.rating} division={team.division} season={team.season} notice={divisionNotice} />{/if}
   {/if}
   {#if legacy}
     <p class="muted fs-sm" data-team-legacy>{preseasonTeamNote()}</p>

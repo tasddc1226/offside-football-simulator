@@ -5,12 +5,14 @@ import { loadKey, saveKey } from '@offside/game/storage';
 import { intlLocale } from './i18n/core.js';
 import { seasonRecapText as L } from './i18n/ko/seasonRecap.js';
 import { teamSeasonLabel } from './seasonName.js';
+import { divisionName, divisionTier } from './teamDivision.js';
 import { num } from './teamText.js';
 
 /** 휘장 보여 줄 순서(작은 값이 먼저). */
 const ORDER: Record<OwnerHonor['kind'], number> = {
   achievements: 0,
   team: 1,
+  division: 1,
   hof: 2,
   'wall-of-honor': 3,
   'retired-number': 4,
@@ -41,9 +43,12 @@ const TITLE: Record<OwnerHonor['kind'], (season: number) => string> = {
   'retired-number': () => L.honorRetiredNumber,
   'wall-of-honor': () => L.honorWallOfHonor,
   first: () => L.honorFirst,
+  division: () => L.honorDivision,
 };
 
 function ribbonOf(h: OwnerHonor): string {
+  // T-11-375 디비전 휘장은 디비전 이름(value = 디비전 index).
+  if (h.kind === 'division') return divisionName(h.value ?? 0);
   if (h.band !== null) return h.band === 1 ? L.bandFirst : L.ribbonTop({ band: h.band });
   return h.kind === 'pioneer' ? teamSeasonLabel(h.season) : L.ribbonCount({ n: h.value ?? 0 });
 }
@@ -52,12 +57,25 @@ function detailOf(h: OwnerHonor): string {
   if (h.band !== null)
     return h.rank === null ? L.bandTop({ band: h.band }) : L.rankFinal({ rank: num(h.rank) });
   const n = h.value ?? 0;
+  if (h.kind === 'division') return L.divisionFinal({ name: divisionName(n) });
   if (h.kind === 'pioneer') return L.pioneerDetail({ n });
   return h.kind === 'wall-of-honor' ? L.countPlayers({ n }) : L.countNumbers({ n });
 }
 
 const medalOf = (h: OwnerHonor): HonorView['medal'] =>
-  h.band === 1 ? 'gold' : h.band !== null && h.band <= 10 ? 'silver' : 'bronze';
+  h.kind === 'division'
+    ? divisionMedal(h.value ?? 0)
+    : h.band === 1
+      ? 'gold'
+      : h.band !== null && h.band <= 10
+        ? 'silver'
+        : 'bronze';
+
+/** 디비전 휘장 메달: 엘리트 이상 금 · 프로 은 · 그 밖 동. */
+const divisionMedal = (d: number): HonorView['medal'] => {
+  const t = divisionTier(d);
+  return t === 'master' || t === 'gold' ? 'gold' : t;
+};
 
 const MEDALS: Record<HonorView['medal'], number> = { gold: 0, silver: 1, bronze: 2 };
 

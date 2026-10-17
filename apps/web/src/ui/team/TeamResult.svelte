@@ -6,10 +6,13 @@
   import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
   import { recordText, signedNum } from '@offside/app-core/teamText';
   import TeamLogo from './TeamLogo.svelte';
+  import DivisionEmblem from './DivisionEmblem.svelte';
+  import { divisionShiftView, type DivisionShift } from '@offside/app-core/teamDivision';
 
   let {
     m,
     team,
+    shift = null,
     eventName,
     matchesLeft,
     ontoTeam,
@@ -20,6 +23,8 @@
   }: {
     m: TeamMatch;
     team: OwnerTeam | null;
+    /** T-11-375 방금 치른 경기의 내 디비전 전후(기록에서 연 경기는 null). */
+    shift?: DivisionShift | null;
     eventName: (id: string | null, fallback: string) => string;
     matchesLeft: number;
     ontoTeam: () => void;
@@ -32,6 +37,7 @@
   const link = (id: string | null) => (onplayer && !m.friendly && id ? id : null);
 
   const gain = $derived(m[m.mine].ratingChange);
+  const moved = $derived(m.friendly ? null : divisionShiftView(shift));
 </script>
 
 <section class="card stack tm-result" style="gap:14px" data-team-result>
@@ -74,6 +80,12 @@
   <p class="muted fs-sm">{kstMonthDayTime(m.createdAt)}{team && m.mine === 'home' && !m.friendly ? L.resultRecord({ record: recordText(team.record) }) : ''}</p>
   {#if gain != null}
     <p class="fs-sm" data-rating-change>{L.ratingChange}<b>{signedNum(gain)}</b></p>
+  {/if}
+  {#if moved}
+    <div class="tm-div-shift" class:up={moved.up} role="status" data-division-shift={moved.up ? 'up' : 'down'}>
+      <span class="tm-div-shift-emblem"><DivisionEmblem division={moved.division} size={44} /></span>
+      <div><b>{moved.title}</b><small class="muted">{moved.body}</small></div>
+    </div>
   {/if}
   <div class="tm-actions">
     {#if onhistory}<button class="btn" onclick={onhistory} data-act="team-result-history">{L.backHistory}</button>{:else}<button class="btn" onclick={ontoTeam}>{L.toLineup}</button>{/if}
@@ -154,5 +166,43 @@
     font-weight: 700;
     color: var(--muted);
     min-width: 2.2em;
+  }
+  .tm-div-shift {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--bad) 8%, var(--surface));
+  }
+  .tm-div-shift.up {
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+    background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  }
+  .tm-div-shift div {
+    display: grid;
+    gap: 2px;
+  }
+  .tm-div-shift b {
+    font-size: 17px;
+  }
+  .tm-div-shift.up .tm-div-shift-emblem {
+    animation: tm-div-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  }
+  @keyframes tm-div-pop {
+    from {
+      transform: scale(0.4) rotate(-12deg);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tm-div-shift.up .tm-div-shift-emblem {
+      animation: none;
+    }
   }
 </style>
