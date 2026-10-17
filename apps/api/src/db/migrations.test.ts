@@ -41,6 +41,21 @@ function firstProfilesCreateStatement(): string {
  */
 const EXPECTED_COLUMNS: Record<string, string[]> = {
   api_status_buckets: ['bucket', 'requests', 'total_ms', 'slow', 'errors'],
+  client_errors: [
+    'day',
+    'fingerprint',
+    'platform',
+    'kind',
+    'message',
+    'frame',
+    'place',
+    'stack',
+    'first_version',
+    'last_version',
+    'count',
+    'first_at',
+    'last_at',
+  ],
   billing_alerts: [
     'id',
     'store',

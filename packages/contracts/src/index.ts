@@ -216,3 +216,4 @@ export * from './admin-cup-predictions.js';
 export * from './owner-summary.js';
 export * from './manager.js';
 export * from './manager-rules.js';
+export * from './client-errors.js';
