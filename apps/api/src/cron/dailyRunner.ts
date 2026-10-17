@@ -10,6 +10,7 @@ import { archiveGrowth } from './growthArchive.js';
 import { runCareerRetention } from './careerRetention.js';
 import { DAILY_META_KEY } from './daily.js';
 import { backupDay } from './backup.js';
+import { logErrorText } from '../logError.js';
 
 export const DAILY_STATE_KEY = 'cron:daily:state';
 const LEASE_MS = 4 * 60_000;
@@ -182,7 +183,7 @@ export async function runDailyStep(
       attempts: claimed.attempts + 1,
       nextAttemptAt: Date.now() + Math.min(3_600_000, 300_000 * 2 ** Math.min(claimed.attempts, 4)),
       updatedAt: Date.now(),
-      error: String(error).split('params:')[0]!.slice(0, 300),
+      error: logErrorText(error, 500),
     };
   }
   const owner = `EXISTS (SELECT 1 FROM app_meta WHERE key=?1 AND value=?2 AND json_extract(value,'$.leaseUntil') >= ?3)`;
@@ -233,7 +234,13 @@ export async function runDailyTick(env: Bindings, scheduledAt: number, execute?:
   let result: DailyState | null = null;
   for (let step = 0; step < 3 && Date.now() - started < 5000; step++) {
     const previousStage = result?.stage;
-    const next = await runDailyStep(env, scheduledAt, execute);
+    // Even a failed checkpoint read/claim must retain the overload signal so bulk work yields.
+    const next = await runDailyStep(env, scheduledAt, execute).catch((error: unknown) => {
+      const message = logErrorText(error);
+      console.error(JSON.stringify({ level: 'error', job: 'daily-step', error: message }));
+      return { status: 'retry' as const, error: message, stage: undefined };
+    });
+    if (next && next.stage === undefined) return next;
     if (!next) break;
     result = next;
     if (next.status !== 'pending' || (previousStage !== undefined && next.stage === previousStage))
