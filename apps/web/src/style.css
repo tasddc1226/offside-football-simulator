@@ -2935,6 +2935,26 @@ details[open] > summary .disc-chev,
 .stat-note b {
   color: var(--ink);
 }
+/* T-11-353 OVR 반영 비율과 성장이 느린 이유 */
+.ovr-pct {
+  font-style: normal;
+  font-weight: 400;
+  font-size: 0.6875rem;
+  color: var(--muted);
+  margin-left: 6px;
+}
+.stat-grp .sv {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.stat-grp .sv .ovr-pct {
+  margin-left: 0;
+}
+.growth-slow {
+  margin-top: 6px;
+  color: var(--warn, var(--muted));
+}
 @media (max-width: 330px) {
   .stat-list {
     columns: 1;

@@ -41,6 +41,8 @@ export const gTraining: Translation<GTrainingMsgs> = {
   helpOvrSeparate: 'OVRへの反映と試合での活躍は別物です。',
   helpWeightLow: '今のポジションのOVRにはほとんど反映されません。',
   helpWeight: (p) => `今のポジションのOVRに占める${p.attr}の比重は${p.pct}%です。`,
+  slowSpread:
+    '個人コーチは複数の能力値を少しずつ均等に伸ばします。ひとつの能力値を早く上げたいなら、その能力値のトレーニングを選びましょう。',
   coachBroke: '資金が足りず、個人コーチの代わりに自主トレーニングをしました。',
   investBroke: (p) => `資金が足りず、「${p.label}」への投資を中止しました。`,
   investNone: '投資しない',
