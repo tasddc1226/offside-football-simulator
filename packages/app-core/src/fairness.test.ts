@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { gradeOf } from '@offside/game/stats';
 import { BALANCE_KEYS } from '@offside/contracts/balance';
+import { setLocale } from '@offside/contracts/i18n';
 import { BALANCE_TEXT } from '@offside/contracts/balance-text';
 import { atLeastOneOf3, fairnessView, gradeOdds, GRADES, historyRows, oddsPct } from './fairness';
 import { balanceKeysText } from './i18n/ko/balanceKeys';
@@ -50,6 +51,7 @@ describe('fairness', () => {
 
   it('이력은 바로 앞 버전(맨 처음은 기본값)과 달라진 항목만 보여 준다', () => {
     const rows = historyRows({
+      patches: [],
       versions: [
         {
           version: 2,
@@ -73,6 +75,58 @@ describe('fairness', () => {
       [balanceKeysText.potMean, '75 → 76'],
       [balanceKeysText.injuryRate, '1.2% → 1%'],
     ]);
+  });
+
+  describe('T-11-333 코드 배포 패치', () => {
+    afterEach(() => setLocale('ko'));
+    const patch = {
+      id: 't-11-229-growth-targetman',
+      appliedAt: '2026-10-12T16:28:05.431Z',
+      title: { ko: '타겟맨 훈련', en: 'Target men' },
+      items: { ko: ['헤딩으로 키워도 올라요'], en: ['Heading counts now'] },
+      changes: [{ key: 'potGrowthFloor' as const, from: 0.04, to: 0.15 }],
+      postId: 'pst_release_20261013',
+    };
+    const history = {
+      versions: [
+        {
+          version: 1,
+          values: { potMean: 76 },
+          activatedAt: '2026-10-20T00:00:00.000Z',
+          active: true,
+        },
+      ],
+      patches: [
+        patch,
+        { ...patch, id: 'older', appliedAt: '2026-10-09T07:07:53.731Z', changes: [] },
+      ],
+    };
+
+    it('버전과 섞어 최근 적용 순으로 늘어놓고, 키 변경은 버전 줄과 같은 모양으로 보여 준다', () => {
+      const rows = historyRows(history);
+      expect(rows.map((r) => [r.kind, r.id])).toEqual([
+        ['version', 'v1'],
+        ['patch', 't-11-229-growth-targetman'],
+        ['patch', 'older'],
+      ]);
+      expect(rows[1]).toMatchObject({
+        title: '타겟맨 훈련',
+        items: ['헤딩으로 키워도 올라요'],
+        postId: 'pst_release_20261013',
+        changes: [[balanceKeysText.potGrowthFloor, '×0.04 → ×0.15']],
+      });
+      expect(rows[2]!.changes).toEqual([]);
+    });
+
+    it('패치 문구는 지금 언어로 고르고, 번역이 없으면 한국어다', () => {
+      setLocale('en');
+      expect(historyRows(history)[1]).toMatchObject({
+        title: 'Target men',
+        items: ['Heading counts now'],
+      });
+      setLocale('ja');
+      expect(historyRows(history)[1]).toMatchObject({ title: '타겟맨 훈련' });
+    });
   });
 
   it('밸런스 항목 이름은 운영 도구 이름(스펙 label)과 같다', () => {

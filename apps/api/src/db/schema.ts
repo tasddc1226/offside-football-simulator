@@ -944,6 +944,25 @@ export const balanceVersions = sqliteTable(
   ],
 );
 
+/** T-11-333. 코드 배포로 적용된 밸런스 패치(서버 밸런스 버전이 아닌 산식·규칙 변경). 공개 이력
+ * `GET /v1/balance/history`가 버전과 함께 적용 순으로 보여 준다. id는 릴리즈 노트 항목 id와 같고, 운영 배포가
+ * `balance`를 단 릴리즈 노트를 게시할 때 같은 batch로 쌓는다(repos/releaseNotes.ts). title_json·items_json은
+ * `{ko, en?, ja?}`, changes_json은 밸런스 키 기본값 변경 `[{key, from, to}]`(없으면 NULL). */
+export const balancePatches = sqliteTable(
+  'balance_patches',
+  {
+    id: text('id').primaryKey(),
+    appliedAt: text('applied_at').notNull(),
+    /** 이 패치를 알린 릴리즈 노트 글(board_posts.id). 글이 없으면 NULL. */
+    postId: text('post_id'),
+    titleJson: text('title_json').notNull(),
+    itemsJson: text('items_json').notNull(),
+    changesJson: text('changes_json'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('balance_patches_applied_idx').on(table.appliedAt)],
+);
+
 /** T-10-027 서버 최초 기록. 기록 id(src/firsts.ts firstsCatalog)마다 가장 먼저 달성한 커리어 한 줄. 커리어가 지워지면
  * 함께 지워지고, 다음 재계산(app_meta 버전) 때 그다음으로 이른 커리어가 채운다.
  * T-11-029 시즌마다 따로 겨룬다 — season은 커리어의 service_season(NULL이면 0, 0 = 프리시즌), 키는 (season, id). */

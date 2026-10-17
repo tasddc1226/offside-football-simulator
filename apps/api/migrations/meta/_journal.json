@@ -740,8 +740,15 @@
     {
       "idx": 105,
       "version": "6",
-      "when": 1792229911324,
-      "tag": "0105_watery_shard",
+      "when": 1792228550387,
+      "tag": "0105_balance_patches",
+      "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "6",
+      "when": 1792230508517,
+      "tag": "0106_daily_khan",
       "breakpoints": true
     }
   ]

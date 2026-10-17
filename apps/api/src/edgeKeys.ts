@@ -70,6 +70,8 @@ const allBoardLists = () => BOARD_KEYS.map(EDGE.boardFirstPage);
 export const STALE = {
   cupChanged: () => [EDGE.cupHome, EDGE.cupCurrent],
   balanceActivated: () => [EDGE.balance, EDGE.balanceHistory],
+  /** T-11-333 코드 배포 밸런스 패치가 이력에 쌓였다 — 지금 값은 그대로라 이력만 지운다. */
+  balancePatched: () => [EDGE.balanceHistory],
   firstsChanged: allFirsts,
   /** 새 결번·이름 공개 토글 — 그 시즌 전체 목록·요약·그 구단·최신순 첫 페이지(뒤 페이지는 TTL로만). */
   retiredNumbersChanged: (season: number, clubId: string) => [

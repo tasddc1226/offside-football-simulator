@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "6b3a5fc5-7ba3-4876-9dc7-cc1d36beb8fe",
+  "id": "877845f5-1cbb-470e-aa1b-1e8b78ef1e31",
   "prevId": "6e31c41f-5a13-4d8a-86e5-8f52dcc395f7",
   "tables": {
     "api_status_buckets": {
@@ -258,6 +258,73 @@
             "subject"
           ],
           "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "balance_patches": {
+      "name": "balance_patches",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "applied_at": {
+          "name": "applied_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "post_id": {
+          "name": "post_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "title_json": {
+          "name": "title_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "items_json": {
+          "name": "items_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "changes_json": {
+          "name": "changes_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "balance_patches_applied_idx": {
+          "name": "balance_patches_applied_idx",
+          "columns": [
+            "applied_at"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {},
@@ -1323,21 +1390,6 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
-        },
-        "upload_hash": {
-          "name": "upload_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "upload_revision": {
-          "name": "upload_revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
         },
         "created_at": {
           "name": "created_at",

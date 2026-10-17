@@ -480,6 +480,16 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'updated_at',
     'activated_at',
   ],
+  // T-11-333 코드 배포 밸런스 패치 공개 이력.
+  balance_patches: [
+    'id',
+    'applied_at',
+    'post_id',
+    'title_json',
+    'items_json',
+    'changes_json',
+    'created_at',
+  ],
   server_firsts: ['season', 'id', 'career_id', 'achieved_at', 'year'],
   app_meta: ['key', 'value'],
   server_records: ['season', 'id', 'career_id', 'value', 'achieved_at', 'year'],
