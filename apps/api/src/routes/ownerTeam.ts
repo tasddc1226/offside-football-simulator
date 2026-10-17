@@ -61,6 +61,8 @@ import {
   listOpponentCandidates,
   listMatchesPage,
   listStatsMatches,
+  NO_KIND_TOTALS,
+  otherKindTotals,
   liveTeam,
   meetingsSince,
   myTeamIn,
@@ -566,6 +568,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         },
       },
     );
+    purgeEdge(c, STALE.teamMatchPlayed(mine.id, opp.team.id));
     // 상대 팀 기록(승패·레이팅)도 바뀌어 두 구단주 점수를 함께 센다.
     waitUntil(
       c,
@@ -669,15 +672,19 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
   });
 
   // T-11-269 그 시즌 내 팀의 랭크 경기 통계(선수별 골 · 도움, 날짜별 · 상대별 전적). 통계 화면을 열 때만 부른다.
+  // T-11-358 친선전 · 컵 전적(SQL 합계)과 흐름 요약을 summary로 함께 준다.
   app.get('/v1/owner-team/stats', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
     const season = seasonQuery(c, nowIso());
     const [team] = await myTeamIn(db, me.id, season);
-    const { rows, capped } = team
-      ? await listStatsMatches(db, team.id, TEAM_STATS_MATCHES_MAX)
-      : { rows: [], capped: false };
-    const stats = await teamStatsView(db, season, team?.id ?? '', rows, capped, reqLang(c));
+    const [{ rows, capped }, kinds] = team
+      ? await Promise.all([
+          listStatsMatches(db, team.id, TEAM_STATS_MATCHES_MAX),
+          otherKindTotals(db, team.id),
+        ])
+      : [{ rows: [], capped: false }, NO_KIND_TOTALS];
+    const stats = await teamStatsView(db, season, team?.id ?? '', rows, capped, reqLang(c), kinds);
     return ok(c, TeamStatsResponseSchema, stats, 200, NO_STORE);
   });
 }

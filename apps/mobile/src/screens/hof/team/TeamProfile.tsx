@@ -5,11 +5,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { requestFriend, type FriendState } from '@offside/app-core/api/friends';
 import {
+  fetchPublicTeamStats,
   fetchTeamProfile,
   likeTeam,
   viewTeam,
   type TeamProfile as TeamProfileData,
+  type TeamStatsResponse,
 } from '@offside/app-core/api/team';
+import { seasonLabel } from '@offside/app-core/seasonName';
+import { teamMatchText as LM } from '@offside/app-core/i18n/ko/teamMatch';
+import { TeamStats } from '../../owner/TeamStats';
 import { teamSeasonClosed } from '@offside/contracts/service-seasons';
 import { num as n, recordText } from '@offside/app-core/teamText';
 import { localCareerNames } from '@offside/game/hof-store';
@@ -79,6 +84,22 @@ export default function TeamProfile({ id }: { id: string }) {
   );
   useEffect(() => void load(), [load]);
   useOnPull(() => (liking || requesting ? undefined : load(true)));
+
+  // T-11-358 경기 통계 — '경기 통계 보기'를 누를 때만 불러온다.
+  const [statsOpen, setStatsOpen] = useState(false);
+  const [statsStatus, setStatsStatus] = useState<LoadStatus>('loading');
+  const [stats, setStats] = useState<TeamStatsResponse | null>(null);
+  const loadStats = useCallback(async () => {
+    setStatsStatus('loading');
+    const r = await fetchPublicTeamStats(id);
+    if (!r.ok) return setStatsStatus('error');
+    setStats(r.data);
+    setStatsStatus('ready');
+  }, [id]);
+  function openStats() {
+    setStatsOpen(true);
+    if (!stats) void loadStats();
+  }
 
   async function toggleLike() {
     if (!team || liking) return;
@@ -443,6 +464,23 @@ export default function TeamProfile({ id }: { id: string }) {
             )}
           </Card>
           <CupHonors honors={team.cupHonors ?? []} />
+          {statsOpen ? (
+            <TeamStats
+              stats={stats}
+              status={statsStatus}
+              seasonName={seasonLabel(team.season, team.seasonName)}
+              focus={null}
+              name={(cid, fallback) => (mine && cid && localNames.get(cid)) || fallback}
+              reload={() => void loadStats()}
+              back={() => setStatsOpen(false)}
+              backText={LM.statsTeamClose}
+              embedded
+            />
+          ) : (
+            <Btn testID="team-profile-stats" onPress={openStats}>
+              {LM.statsTeamOpen}
+            </Btn>
+          )}
           {/* T-11-290 스쿼드 댓글 — 프로필을 그린 뒤 따로 불러온다(보는 사람마다 달라 프로필 응답에 섞지 않는다). */}
           <TeamComments teamId={team.id} />
           {mine ? null : (

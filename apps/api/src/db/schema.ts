@@ -1459,6 +1459,9 @@ export const cupMatches = sqliteTable(
       table.grp,
       table.slot,
     ),
+    // T-11-358 팀 통계의 컵 전적(팀 id로 합계를 센다).
+    index('cup_matches_home_team_idx').on(table.homeTeamId),
+    index('cup_matches_away_team_idx').on(table.awayTeamId),
   ],
 );
 

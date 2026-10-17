@@ -59,6 +59,8 @@ import {
 } from '../db/repos/ownerTeams.js';
 import { claimReferral, inviteCountsOf } from '../db/repos/referrals.js';
 import type { Db } from '../db/client.js';
+import { purgeEdge } from '../edgeCache.js';
+import { STALE } from '../edgeKeys.js';
 import { profiles } from '../db/schema.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError } from '../errors.js';
@@ -475,6 +477,8 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         },
       },
     );
+    // T-11-358 두 팀 경기 통계의 친선전 전적이 바뀌었다.
+    purgeEdge(c, STALE.teamMatchPlayed(mine.id, theirs.id));
     const gf = result.homeGoals;
     const ga = result.awayGoals;
     const before = h2hOf(link);

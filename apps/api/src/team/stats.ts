@@ -1,13 +1,20 @@
 import type { TeamStatsResponse } from '@offside/contracts';
-import { TEAM_STATS_OPPONENTS_MAX } from '@offside/contracts';
+import { TEAM_STATS_FORM_MAX, TEAM_STATS_OPPONENTS_MAX } from '@offside/contracts';
+import type { TeamForm, TeamStatsMatch } from '@offside/contracts';
 import { kstDay } from '@offside/contracts/kst';
 import type { Db } from '../db/client.js';
-import { publicNamesOf, teamLogosByIds, type MatchDetail } from '../db/repos/ownerTeams.js';
+import {
+  publicNamesOf,
+  teamLogosByIds,
+  type KindTotals,
+  type MatchDetail,
+} from '../db/repos/ownerTeams.js';
 import type { Lang } from '../lang.js';
 import { anonText } from './anon.js';
 
 // T-11-269 시즌 통계 — 저장된 랭크 경기(team_matches)에서 그 자리에서 센다. 따로 쌓는 집계 테이블이 없어 경기마다
 // 쓰기가 늘지 않고, 지난 경기도 그대로 들어간다. 통계 화면을 열 때만 부른다.
+// T-11-358 같은 행에서 최근 흐름 · 연속 기록 · 홈/원정 · 가장 큰 승패를 더 센다(친선전 · 컵은 SQL 합계로 따로).
 
 type Row = {
   homeTeamId: string;
@@ -20,6 +27,7 @@ const NAMES_CHUNK = 90;
 type Wdl = { w: number; d: number; l: number; gf: number; ga: number };
 
 const zero = (): Wdl => ({ w: 0, d: 0, l: 0, gf: 0, ga: 0 });
+const formOf = (gf: number, ga: number): TeamForm => (gf > ga ? 'w' : gf === ga ? 'd' : 'l');
 function add(t: Wdl, gf: number, ga: number) {
   if (gf > ga) t.w++;
   else if (gf === ga) t.d++;
@@ -31,6 +39,16 @@ function add(t: Wdl, gf: number, ga: number) {
 /** 경기들을 우리 팀 쪽에서 센다. 선수 이름 · 상대 로고는 붙이지 않은 중간 결과(테스트하기 쉽게 DB 없이). */
 export function tallyTeamStats(rows: readonly Row[], teamId: string) {
   const total = zero();
+  const venue = { home: zero(), away: zero() };
+  /** 시간순(오래된 것부터) 결과 — 연속 기록용. */
+  const timeline: { at: string; r: TeamForm }[] = [];
+  let biggestWin: (TeamStatsMatch & { m: number }) | null = null;
+  let biggestLoss: (TeamStatsMatch & { m: number }) | null = null;
+  /** 차이가 크고, 같으면 골이 많고, 그래도 같으면 최근 경기. */
+  const bigger = (a: TeamStatsMatch & { m: number }, b: (TeamStatsMatch & { m: number }) | null) =>
+    !b ||
+    a.m > b.m ||
+    (a.m === b.m && (a.gf + a.ga > b.gf + b.ga || (a.gf + a.ga === b.gf + b.ga && a.at > b.at)));
   const players = new Map<
     string,
     { careerId: string | null; anon: string; goals: number; assists: number }
@@ -51,6 +69,8 @@ export function tallyTeamStats(rows: readonly Row[], teamId: string) {
     const ga = mine === 'home' ? r.awayGoals : r.homeGoals;
     const d = JSON.parse(r.detailJson) as MatchDetail;
     add(total, gf, ga);
+    add(venue[mine], gf, ga);
+    timeline.push({ at: r.createdAt, r: formOf(gf, ga) });
     const day = kstDay(r.createdAt);
     let dt = days.get(day);
     if (!dt) days.set(day, (dt = zero()));
@@ -65,14 +85,45 @@ export function tallyTeamStats(rows: readonly Row[], teamId: string) {
     add(o, gf, ga);
     o.n++;
     if (r.createdAt > o.at) Object.assign(o, { name: opp.name, owner: opp.owner, at: r.createdAt });
+    const big = { opponent: opp.name, gf, ga, at: r.createdAt, m: Math.abs(gf - ga) };
+    if (gf > ga && bigger(big, biggestWin)) biggestWin = big;
+    if (gf < ga && bigger(big, biggestLoss)) biggestLoss = big;
     for (const e of d.events) {
       if (e.side !== mine) continue;
       player(e.scorer).goals++;
       if (e.assist) player(e.assist).assists++;
     }
   }
+  timeline.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+  let best = 0;
+  let run = 0;
+  for (const t of timeline) {
+    run = t.r === 'w' ? run + 1 : 0;
+    best = Math.max(best, run);
+  }
+  const last = timeline.at(-1);
+  let streak: { kind: TeamForm; n: number } | null = null;
+  if (last) {
+    let k = 0;
+    while (k < timeline.length && timeline[timeline.length - 1 - k]!.r === last.r) k++;
+    streak = { kind: last.r, n: k };
+  }
+  const strip = (b: (TeamStatsMatch & { m: number }) | null): TeamStatsMatch | null =>
+    b && { opponent: b.opponent, gf: b.gf, ga: b.ga, at: b.at };
   return {
     total,
+    flow: {
+      form: timeline
+        .slice(-TEAM_STATS_FORM_MAX)
+        .reverse()
+        .map((t) => t.r),
+      streak,
+      bestWinStreak: best,
+      home: venue.home,
+      away: venue.away,
+      biggestWin: strip(biggestWin),
+      biggestLoss: strip(biggestLoss),
+    },
     players: [...players.values()].sort(
       (a, b) => b.goals + b.assists - (a.goals + a.assists) || b.goals - a.goals,
     ),
@@ -101,6 +152,7 @@ export async function teamStatsView(
   rows: readonly Row[],
   capped: boolean,
   lang: Lang,
+  kinds: KindTotals,
 ): Promise<TeamStatsResponse> {
   const t = tallyTeamStats(rows, teamId);
   const ids = t.players.flatMap((p) => (p.careerId ? [p.careerId] : []));
@@ -129,5 +181,6 @@ export async function teamStatsView(
     })),
     days: t.days,
     opponents: t.opponents.map((o) => ({ ...o, logo: logos.get(o.teamId) ?? null })),
+    summary: { ...t.flow, ...kinds },
   };
 }

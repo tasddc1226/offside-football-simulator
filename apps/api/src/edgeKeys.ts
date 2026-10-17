@@ -48,6 +48,8 @@ export const EDGE = {
     `/v1/teams?season=${season}&sort=${sort}&page=${page}&form=5&logo=1`,
   /** T-11-262 업적 랭킹에 오른 구단주 수(클럽하우스 순위의 분모). 모두에게 같다. */
   achRanked: (season: number) => `/_count/ach-ranked?season=${season}`,
+  /** T-11-358 한 팀의 경기 통계(팀 프로필). 언어와 상관없이 한 벌만 담는다. */
+  teamStats: (teamId: string) => `/v1/teams/${teamId}/stats`,
   /** T-11-028 업적 랭킹(기록실). TTL로만 새로 읽는다. */
   achRank: (season: number, page: number) =>
     `/v1/achievements/ranking?season=${season}&page=${page}&logo=1`,
@@ -98,6 +100,11 @@ export const STALE = {
     EDGE.teamRank(season, 'rating', 1),
     EDGE.teamRank(season, 'ovr', 1),
     EDGE.achRank(season, 1),
+  ],
+  /** T-11-358 랭크 경기 · 친선전을 치렀다 — 두 팀의 경기 통계(컵 경기는 TTL로만). */
+  teamMatchPlayed: (homeTeamId: string, awayTeamId: string) => [
+    EDGE.teamStats(homeTeamId),
+    EDGE.teamStats(awayTeamId),
   ],
   profileDeleted: (careerIds: string[], hadComments: boolean) => [
     EDGE.cupHome,

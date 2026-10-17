@@ -43,6 +43,8 @@ import {
   careerSeasons,
   marketListings,
   careers,
+  cupMatches,
+  friendMatches,
   ownerTeams,
   profiles,
   retiredNumbers,
@@ -855,6 +857,76 @@ export async function listStatsMatches(db: Db, teamId: string, limit: number) {
       .limit(limit);
   const [home, away] = await db.batch([leg(teamMatches.homeTeamId), leg(teamMatches.awayTeamId)]);
   return { rows: [...home, ...away], capped: home.length >= limit || away.length >= limit };
+}
+
+type Wdl = { w: number; d: number; l: number; gf: number; ga: number };
+export type KindTotals = { friendly: Wdl; cup: Wdl };
+/** 팀이 없을 때(경기 0). */
+export const NO_KIND_TOTALS: KindTotals = {
+  friendly: { w: 0, d: 0, l: 0, gf: 0, ga: 0 },
+  cup: { w: 0, d: 0, l: 0, gf: 0, ga: 0 },
+};
+
+/**
+ * T-11-358 한 팀의 친선전 · 컵 경기 전적을 SQL 합계로 센다(행을 읽어 오지 않는다). 홈 · 원정 쪽을 따로 세는 쿼리 4개를
+ * batch 하나로 보낸다 — 각각 팀 id 인덱스(friend_matches_home/away_team_idx, cup_matches_home/away_team_idx)를 탄다.
+ * 컵은 승부차기까지 이긴 쪽(winner_team_id)으로 승패를 매기고, 기권 경기와 아직 치르지 않은 경기는 세지 않는다.
+ */
+export async function otherKindTotals(db: Db, teamId: string): Promise<KindTotals> {
+  const n = (expr: ReturnType<typeof sql>) => sql`coalesce(sum(${expr}), 0)`.mapWith(Number);
+  const friendlyLeg = (mine: 'home' | 'away') => {
+    const [gf, ga] =
+      mine === 'home'
+        ? [friendMatches.homeGoals, friendMatches.awayGoals]
+        : [friendMatches.awayGoals, friendMatches.homeGoals];
+    return db
+      .select({
+        w: n(sql`${gf} > ${ga}`),
+        d: n(sql`${gf} = ${ga}`),
+        l: n(sql`${gf} < ${ga}`),
+        gf: n(sql`${gf}`),
+        ga: n(sql`${ga}`),
+      })
+      .from(friendMatches)
+      .where(eq(mine === 'home' ? friendMatches.homeTeamId : friendMatches.awayTeamId, teamId));
+  };
+  const cupLeg = (mine: 'home' | 'away') => {
+    const [gf, ga] =
+      mine === 'home'
+        ? [cupMatches.homeGoals, cupMatches.awayGoals]
+        : [cupMatches.awayGoals, cupMatches.homeGoals];
+    return db
+      .select({
+        w: n(sql`${cupMatches.winnerTeamId} = ${teamId}`),
+        d: n(sql`${cupMatches.winnerTeamId} is null`),
+        l: n(sql`${cupMatches.winnerTeamId} <> ${teamId}`),
+        gf: n(sql`${gf}`),
+        ga: n(sql`${ga}`),
+      })
+      .from(cupMatches)
+      .where(
+        and(
+          eq(mine === 'home' ? cupMatches.homeTeamId : cupMatches.awayTeamId, teamId),
+          isNotNull(cupMatches.playedAt),
+          eq(cupMatches.forfeit, 0),
+        ),
+      );
+  };
+  const [fh, fa, ch, ca] = await db.batch([
+    friendlyLeg('home'),
+    friendlyLeg('away'),
+    cupLeg('home'),
+    cupLeg('away'),
+  ]);
+  const zero = NO_KIND_TOTALS.cup;
+  const sum = (a: Wdl = zero, b: Wdl = zero): Wdl => ({
+    w: a.w + b.w,
+    d: a.d + b.d,
+    l: a.l + b.l,
+    gf: a.gf + b.gf,
+    ga: a.ga + b.ga,
+  });
+  return { friendly: sum(fh[0], fa[0]), cup: sum(ch[0], ca[0]) };
 }
 
 /** 경기 기록에 나온 커리어의 지금 공개 이름. */
