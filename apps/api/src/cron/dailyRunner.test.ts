@@ -70,6 +70,17 @@ it('overlapping ticks execute a stage only once', async () => {
   await first;
   expect(execute).toHaveBeenCalledTimes(1);
 });
+
+it('passes a partial stage cursor back to the next claimed execution', async () => {
+  const cursor = { at: 'same-timestamp', id: 'last-id' };
+  const execute = vi
+    .fn<DailyStep>()
+    .mockResolvedValueOnce({ done: false, result: { cursor } })
+    .mockResolvedValue({ done: true, result: {} });
+  await runDailyStep(ctx.env, NOW, execute);
+  await runDailyStep(ctx.env, NOW, execute);
+  expect(execute.mock.calls[1]![3]).toEqual({ cursor });
+});
 it('an expired owner cannot commit a checkpoint after another execution took over', async () => {
   const execute: DailyStep = async () => {
     const state = await read();

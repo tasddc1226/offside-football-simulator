@@ -60,7 +60,7 @@ const CAPPED_BELOW_AGE = 18 + OVR_CAP_BY_AGE.length;
 const LOWEST_CAP = OVR_CAP_BY_AGE[0]!;
 
 /** since(ISO) 이후 시즌이 올라온 커리어만 훑는다(빈 문자열 = 전부, 숨긴 커리어 포함). 은퇴 레전드 점수는 전부 훑을 때만 본다. */
-async function findAnomalies(d1: D1Database, since: string): Promise<Found> {
+async function findAnomalies(d1: D1Database, since: string, ids?: string[]): Promise<Found> {
   const found: Found = new Map();
   const note = (info: Info, reason: AnomalyReason) => {
     const f = found.get(info.id) ?? { info, reasons: new Set() };
@@ -74,20 +74,25 @@ async function findAnomalies(d1: D1Database, since: string): Promise<Found> {
         `WITH s AS (
            SELECT career_id, age, ovr, ovr - LAG(ovr) OVER (PARTITION BY career_id ORDER BY year) AS jump
            FROM career_seasons
-           ${since ? `WHERE career_id IN (SELECT DISTINCT career_id FROM career_seasons WHERE created_at >= ?)` : ''}
+           ${ids ? `WHERE career_id IN (SELECT value FROM json_each(?))` : since ? `WHERE career_id IN (SELECT DISTINCT career_id FROM career_seasons WHERE created_at >= ?)` : ''}
          )
          SELECT ${columns}, s.age, s.ovr, s.jump FROM s JOIN careers c ON c.id = s.career_id
          WHERE s.jump >= ? OR (s.age < ? AND s.ovr > ?)`,
       )
-      .bind(...(since ? [since] : []), ANOMALY.jump, CAPPED_BELOW_AGE, LOWEST_CAP)
+      .bind(
+        ...(ids ? [JSON.stringify(ids)] : since ? [since] : []),
+        ANOMALY.jump,
+        CAPPED_BELOW_AGE,
+        LOWEST_CAP,
+      )
       .all<Info & { age: number; ovr: number; jump: number | null }>(),
-    since
+    since && !ids
       ? undefined
       : d1
           .prepare(
-            `SELECT ${columns} FROM careers c WHERE c.status = 'retired' AND c.legend_score >= ?`,
+            `SELECT ${columns} FROM careers c WHERE ${ids ? 'c.id IN (SELECT value FROM json_each(?)) AND ' : ''}c.status = 'retired' AND c.legend_score >= ?`,
           )
-          .bind(ANOMALY.legend)
+          .bind(...(ids ? [JSON.stringify(ids)] : []), ANOMALY.legend)
           .all<Info>(),
   ]);
   for (const r of seasons.results)
@@ -147,6 +152,58 @@ export function growthTampered(
 
 /** cron 한 번의 D1 batch에 담는 커리어 수(커리어마다 문장 4개). */
 const HIDE_CHUNK = 20;
+
+export type AnomalyCursor = { since: string; through: string; at: string; id: string };
+/** The daily checkpoint owns this cursor. Every SQL window sees at most 100 careers. */
+export async function sweepAnomaliesPage(d1: D1Database, now: number, cursor?: AnomalyCursor) {
+  if (!cursor) {
+    const last = await d1
+      .prepare('SELECT value FROM app_meta WHERE key=?')
+      .bind(SWEPT_AT_KEY)
+      .first<{ value: string }>();
+    const since = last ? new Date(Date.parse(last.value) - HOUR_MS).toISOString() : '';
+    cursor = { since, through: new Date(now).toISOString(), at: since, id: '' };
+  }
+  const { results: rows } = await d1
+    .prepare(
+      `SELECT id, updated_at FROM careers INDEXED BY careers_automation_updated_idx
+     WHERE updated_at >= ?1 AND updated_at <= ?2
+       AND (updated_at > ?3 OR (updated_at = ?3 AND id > ?4))
+     ORDER BY updated_at, id LIMIT 100`,
+    )
+    .bind(cursor.since, cursor.through, cursor.at, cursor.id)
+    .all<{ id: string; updated_at: string }>();
+  const found = rows.length
+    ? await findAnomalies(
+        d1,
+        '',
+        rows.map((r) => r.id),
+      )
+    : new Map();
+  const open = openOnly(found, await clearedIds(d1));
+  const hidden = open.filter(
+    (f) =>
+      f.reasons.has('ovrFar') ||
+      f.reasons.has('jump') ||
+      (f.reasons.has('legend') && (f.info.legend_score ?? 0) >= ANOMALY.legendHide),
+  );
+  const db = createDb(d1);
+  for (let i = 0; i < hidden.length; i += HIDE_CHUNK)
+    await runBatch(
+      db,
+      hidden.slice(i, i + HIDE_CHUNK).flatMap((f) => hideCareerStatements(db, f.info.id)),
+    );
+  const done = rows.length < 100;
+  if (done) await setMeta(db, SWEPT_AT_KEY, cursor.through);
+  const tail = rows.at(-1);
+  return {
+    done,
+    checked: rows.length,
+    hidden: hidden.length,
+    review: open.length - hidden.length,
+    cursor: done ? null : { ...cursor, at: tail!.updated_at, id: tail!.id },
+  };
+}
 
 /** 마지막 점검(app_meta) 이후 시즌이 올라온 커리어를 점검해 확실한 것은 숨긴다. 처음 도는 날은 전부 훑는다. */
 export async function sweepAnomalies(d1: D1Database, now: number): Promise<SweepResult> {
