@@ -34,7 +34,7 @@ export async function edgeCached<T>(
   const cache = edge();
   if (!cache) return load();
   const key = edgeKey(c, path);
-  const hit = await cache.match(key);
+  const hit = await cache.match(key).catch(() => undefined);
   if (hit) return (await hit.json()) as T;
   const data = await load();
   if (data === undefined || !store()) return data; // 없는 대상(404)은 담지 않는다.

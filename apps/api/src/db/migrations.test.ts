@@ -415,6 +415,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'club_id',
     'signals_json',
     'growth_json',
+    'upload_hash',
+    'upload_revision',
   ],
   club_customs: ['profile_id', 'clubs_json', 'updated_at'],
   friend_matches: [

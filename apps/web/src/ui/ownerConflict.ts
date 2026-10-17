@@ -3,14 +3,14 @@ import { createOwnerConflicts } from '@offside/app-core/ownerConflict';
 import type { OutboxItem } from '../sync/outbox.js';
 import { OWNER_CONFLICT_EVENT } from '../sync/syncEvents.js';
 import { appState } from './state.svelte.js';
-import { enqueueAllSeasons, save, toast } from './helpers.js';
+import { save, toast } from './helpers.js';
 
 export const { onOwnerConflict, adoptCareer, keepOnDevice } = createOwnerConflicts({
   state: appState,
   save,
   toast,
   enqueueAllSeasons: (G, eventsOf) =>
-    void import('../sync/outbox.js').then((m) => enqueueAllSeasons(m, G, eventsOf)),
+    void import('./uploads.js').then((m) => m.restoreAllSeasons(G, eventsOf)),
 });
 
 export function watchOwnerConflicts() {

@@ -64,10 +64,12 @@ const puts = (m: ReturnType<typeof vi.fn>) =>
     .map(([url]) => String(url).replace(/^.*\/v1\/careers\//, ''));
 
 beforeEach(() => {
+  vi.spyOn(Math, 'random').mockReturnValue(0);
   (globalThis as unknown as { localStorage: MemoryStorage }).localStorage = new MemoryStorage();
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.resetModules();
 });
@@ -375,14 +377,14 @@ describe('T-10-045 재시도·버림·한도', () => {
     expect(queue()).toEqual([]);
   });
 
-  it('큐는 100개까지만 두고 오래된 항목부터 지운다', async () => {
+  it('미전송 기록은 100개를 넘어도 버리지 않는다', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
     seed(Array.from({ length: 100 }, (_, i) => season(CID, 1900 + i)));
     const { enqueueSeason } = await import('./outbox.js');
     enqueueSeason(CID, 2026, seasonBody);
     const years = (queue() as { year: number }[]).map((x) => x.year);
-    expect(years).toHaveLength(100);
-    expect(years[0]).toBe(1901);
+    expect(years).toHaveLength(101);
+    expect(years[0]).toBe(1900);
     expect(years.at(-1)).toBe(2026);
   });
 });

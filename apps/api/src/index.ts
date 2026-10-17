@@ -5,7 +5,7 @@ import { app } from './app.js';
 import { updateClubStrength } from './clubStrength/update.js';
 import { runBackupStep } from './cron/backup.js';
 import { runSnapshotOffload } from './careerSnapshots.js';
-import { runDaily } from './cron/daily.js';
+import { runDailyTick } from './cron/dailyRunner.js';
 import { runSeasonEventsArchive } from './cron/seasonEventsArchive.js';
 import { runSeasonTelemetryArchive } from './cron/seasonTelemetryArchive.js';
 import { runSeasonGauge } from './cron/seasonGauge.js';
@@ -25,7 +25,7 @@ import { consumeCommunityPush } from './push/communityQueue.js';
 import { runCup } from './team/cup.js';
 import { runCupAutopilot } from './team/cupAutopilot.js';
 import { purgeEdgeOrigin } from './edgeCache.js';
-import { EDGE } from './edgeKeys.js';
+import { STALE } from './edgeKeys.js';
 import { runSeasonClose } from './team/seasonClose.js';
 import { logErrorText } from './logError.js';
 
@@ -59,7 +59,7 @@ export default {
     // 시즌 일정(게이지가 확정한 마감·다음 시즌)을 먼저 입힌다 — 아래 결산·보존·게이지가 같은 일정을 본다.
     await loadSeasonSchedule(env.DB, true).catch(logged('season-schedule'));
     if (controller.cron === '0 19 * * *')
-      await runDaily(env, controller.scheduledTime).finally(() =>
+      await runDailyTick(env, controller.scheduledTime).finally(() =>
         runInfraHealth(env, controller.scheduledTime).catch(logged('infra-health')),
       );
     else {
@@ -101,9 +101,17 @@ export default {
       await runCupAutopilot(env, controller.scheduledTime).catch(logged('cup-autopilot'));
       // A cron round can commit before a later step fails; purge even on a partial run.
       if (env.PUBLIC_API_ORIGIN)
-        await purgeEdgeOrigin(env.PUBLIC_API_ORIGIN, [EDGE.cupHome]).catch((e) =>
+        await purgeEdgeOrigin(env.PUBLIC_API_ORIGIN, STALE.cupChanged()).catch((e) =>
           console.log(JSON.stringify({ level: 'error', job: 'cup-cache', error: logErrorText(e) })),
         );
+      // Daily work has its own durable cursor and precedes bulk backup/archive work.
+      const daily = await runDailyTick(env, controller.scheduledTime).catch((e: unknown) => {
+        logged('daily-step')(e);
+        return null;
+      });
+      // Yield bulk work when the primary is already rejecting maintenance requests.
+      if (daily?.status === 'retry' && /overloaded|Network connection lost/.test(daily.error ?? ''))
+        return;
       await runSeasonEventsArchive(env, controller.scheduledTime)
         .then(
           (r) =>
@@ -119,7 +127,8 @@ export default {
         .catch(logged('season-telemetry-archive'));
       // T-11-274 D1 → R2 백업을 5분마다 한 조각씩. UTC 19:00(KST 04:00) 뒤 첫 틱에 시작해 끝까지 이어받는다.
       // 15분 상한 안에 들게 한 조각은 45초만 읽고, 실패하면 다음 틱이 같은 조각을 다시 만든다.
-      if (env.BACKUP)
+      // Keep backup reads away from the hourly archive/reminder burst.
+      if (env.BACKUP && new Date(controller.scheduledTime).getUTCMinutes() !== 0)
         await runBackupStep(env.DB, env.BACKUP, env.ENVIRONMENT, controller.scheduledTime)
           .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'backup', ...r })))
           .catch(logged('backup'));
@@ -132,7 +141,9 @@ export default {
       if (env.AUTOMATION_HIDE_DISABLED !== '1')
         await sweepAutomation(env.DB, controller.scheduledTime, true).catch(logged('automation'));
       await updateClubStrength(env, controller.scheduledTime).catch(logged('club-strength'));
-      await runInfraHealth(env, controller.scheduledTime).catch(logged('infra-health'));
+      await runInfraHealth(env, controller.scheduledTime, daily?.status === 'complete').catch(
+        logged('infra-health'),
+      );
       // T-11-156 서버 최초 기록 전체 재계산을 몰아서 훑는다 — 공개 목록 조회가 조각을 기다리지 않게. 시간 한도까지
       // 돌 수 있어 앞 단계를 밀지 않게 맨 끝에 둔다.
       await runFirstsRescan(createDb(env.DB))

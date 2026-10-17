@@ -684,6 +684,9 @@ export const careerSeasons = sqliteTable(
     signalsJson: text('signals_json'),
     /** T-11-048 시즌 성장 기록(SeasonGrowth JSON: 시즌 시작·종료 능력치·세부 능력치, 구간별 OVR, 잠재력). 관찰 전용. */
     growthJson: text('growth_json'),
+    /** Last accepted upload, committed with the season and telemetry. Old saves need no migration. */
+    uploadHash: text('upload_hash'),
+    uploadRevision: integer('upload_revision').notNull().default(0),
     createdAt: text('created_at').notNull(),
   },
   (table) => [

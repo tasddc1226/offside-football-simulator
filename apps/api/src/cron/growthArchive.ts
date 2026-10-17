@@ -40,6 +40,7 @@ export async function archiveGrowth(
   bucket: R2Bucket,
   env: string,
   now: number,
+  budget: { maxRows?: number; suffix?: string } = {},
 ): Promise<GrowthArchiveResult> {
   const cutoff = new Date(now - KEEP_DAYS * DAY_MS).toISOString();
   // 비운 행은 부분 인덱스(career_seasons_growth_created_idx)에서 빠지므로 매번 남은 것만 읽는다 — 옮긴 뒤 다시 채워진
@@ -57,7 +58,10 @@ export async function archiveGrowth(
   let data = (await page('', 0)).results;
   if (!data.length) return { key: null, rows: 0, bytes: 0 };
 
-  const key = archiveKey(env, now);
+  const key = archiveKey(env, now).replace(
+    '.ndjson.gz',
+    `${budget.suffix ? '-' + budget.suffix : ''}.ndjson.gz`,
+  );
   /** 페이지마다 옮긴 행의 rowid(JSON 배열) — 올린 행만 정확히 비운다. */
   const pages: string[] = [];
   let rows = 0;
@@ -75,7 +79,7 @@ export async function archiveGrowth(
       pages.push(JSON.stringify(data.map((r) => r.rowid)));
       rows += data.length;
       const tail = data[data.length - 1]!;
-      if (data.length < PAGE || rows >= MAX_ROWS) return;
+      if (data.length < PAGE || rows >= Math.min(budget.maxRows ?? MAX_ROWS, MAX_ROWS)) return;
       data = (await page(tail.created_at, tail.rowid)).results;
       if (!data.length) return;
     }

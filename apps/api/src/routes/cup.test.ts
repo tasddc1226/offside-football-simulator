@@ -177,6 +177,33 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
     }
   });
 
+  it('current cup reuses the shared cache without session reads, and entry writes invalidate it', async () => {
+    const fake = installFakeEdgeCache();
+    try {
+      const a = await owner(8);
+      await enter(a.cookie);
+      const spy = spyDb(ctx.env.DB);
+      const read = async () => {
+        const res = await callJson({ ...ctx.env, DB: spy.DB }, 'GET', '/v1/cups/current', {
+          cookie: a.cookie,
+        });
+        expect(res.status).toBe(200);
+        return CupRes.parse(await res.json()).data;
+      };
+      expect((await read()).entries).toBe(1);
+      expect(spy.seen.join(' ')).not.toMatch(/sessions|FROM .profiles./);
+      await flushEdge();
+      spy.seen.length = 0;
+      expect((await read()).entries).toBe(1);
+      expect(spy.seen).toEqual([]);
+      await call('DELETE', `/v1/cups/${CUP.id}/entries/me`, { cookie: a.cookie });
+      await flushEdge();
+      expect((await read()).entries).toBe(0);
+    } finally {
+      fake.uninstall();
+    }
+  });
+
   it('T-11-290 우승 팝업 대회: 결승 뒤 일주일 안에 끝난 가장 최근 대회, 다음 대회 접수가 열려도 남는다', () => {
     // 제2회는 제1회 결승 10분 뒤 접수를 연다(T-11-251).
     const next = { ...planNextCup(CUP), id: 's1-2', season: 1 };
