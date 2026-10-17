@@ -287,6 +287,7 @@ export const authAttempts = sqliteTable(
         'PUSH_TEST',
         'FRIEND_REQUEST',
         'TRANSLATE',
+        'ACQUISITION',
         'CAREER_ACTIVITY',
       ],
     }).notNull(),
@@ -1633,12 +1634,28 @@ export const iapPurchases = sqliteTable(
     refundedAt: text('refunded_at'),
     /** T-11-215 환불로 회수한 장수. 이미 쓴 만큼은 회수하지 못해 qty보다 작을 수 있다. */
     revokedQty: integer('revoked_qty').notNull().default(0),
+    purchasedAt: text('purchased_at'),
+    priceMilliunits: integer('price_milliunits'),
+    currency: text('currency'),
+    storefront: text('storefront'),
+    firstTouchId: text('first_touch_id').references(() => acquisitionSessions.id, {
+      onDelete: 'set null',
+    }),
+    lastTouchId: text('last_touch_id').references(() => acquisitionSessions.id, {
+      onDelete: 'set null',
+    }),
   },
   (table) => [
     primaryKey({ columns: [table.store, table.transactionId] }),
     index('iap_purchases_profile_idx').on(table.profileId, table.createdAt),
     // T-11-263 운영 도구 매출(기간 합 · 최근 결제).
     index('iap_purchases_created_idx').on(table.createdAt),
+    index('iap_purchases_effective_time_idx').on(
+      sql`coalesce(${table.purchasedAt}, ${table.createdAt})`,
+    ),
+    index('iap_purchases_refunded_idx').on(table.refundedAt),
+    index('iap_purchases_first_touch_idx').on(table.firstTouchId),
+    index('iap_purchases_last_touch_idx').on(table.lastTouchId),
   ],
 );
 
@@ -1815,4 +1832,75 @@ export const managerCareers = sqliteTable(
     uniqueIndex('manager_careers_card_unique').on(t.careerId),
     index('manager_careers_profile_idx').on(t.profileId, t.status, t.finishedAt),
   ],
+);
+
+/** Optional account acquisition consent. Never exported to advertising SDKs. */
+export const acquisitionConsents = sqliteTable('acquisition_consents', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  version: text('version').notNull(),
+  grantedAt: text('granted_at'),
+  revokedAt: text('revoked_at'),
+  revision: text('revision').notNull(),
+});
+export const acquisitionSessions = sqliteTable(
+  'acquisition_sessions',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    campaign: text('campaign').notNull(),
+    receivedAt: text('received_at').notNull(),
+    linkedAt: text('linked_at'),
+    startedAt: text('started_at'),
+    storeClickedAt: text('store_clicked_at'),
+  },
+  (t) => [
+    index('acquisition_sessions_profile_time_idx').on(t.profileId, t.receivedAt),
+    index('acquisition_sessions_time_idx').on(t.receivedAt),
+  ],
+);
+
+export const iapAdFreePurchases = sqliteTable(
+  'iap_ad_free_purchases',
+  {
+    store: text('store').notNull(),
+    transactionId: text('transaction_id').notNull(),
+    profileId: text('profile_id').references(() => profiles.id, { onDelete: 'cascade' }),
+    productId: text('product_id').notNull(),
+    test: integer('test', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('created_at').notNull(),
+    purchasedAt: text('purchased_at'),
+    priceMilliunits: integer('price_milliunits'),
+    currency: text('currency'),
+    storefront: text('storefront'),
+    refundedAt: text('refunded_at'),
+    firstTouchId: text('first_touch_id').references(() => acquisitionSessions.id, {
+      onDelete: 'set null',
+    }),
+    lastTouchId: text('last_touch_id').references(() => acquisitionSessions.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.store, t.transactionId] }),
+    index('iap_ad_free_profile_idx').on(t.profileId, t.createdAt),
+    index('iap_ad_free_created_idx').on(t.createdAt),
+    index('iap_ad_free_refunded_idx').on(t.refundedAt),
+    index('iap_ad_free_first_idx').on(t.firstTouchId),
+    index('iap_ad_free_last_idx').on(t.lastTouchId),
+  ],
+);
+
+/** Verified refund arriving before the optional ad-free record. No fabricated purchase row. */
+export const iapRefundMarkers = sqliteTable(
+  'iap_refund_markers',
+  {
+    store: text('store').notNull(),
+    transactionId: text('transaction_id').notNull(),
+    refundedAt: text('refunded_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.store, t.transactionId] })],
 );

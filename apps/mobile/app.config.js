@@ -72,6 +72,7 @@ module.exports = ({ config }) => {
     plugins,
     extra: {
       ...config.extra,
+      accountPurchaseRecording: process.env.OFFSIDE_ACCOUNT_PURCHASES_ENABLED === 'true',
       nativeAnalytics: {
         enabled: requested,
         environment: environment ?? 'disabled',

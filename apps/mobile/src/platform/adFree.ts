@@ -1,3 +1,5 @@
+import { adFreeAccount, recordAdFree, flushAdFreeRecords } from './adFreeRecording';
+import { REMOVE_ADS_PRODUCT_ID } from '@offside/contracts/cup';
 // T-11-069 광고 제거(한 번 사면 평생인 비소모성 인앱 상품, ₩3,300). 서버 없이 스토어 구매 기록으로만 판단한다.
 // 같은 스토어 계정이면 기기를 바꿔도 '구매 복원'으로 되살아난다. 구매 여부는 이 기기에도 남겨 시작하자마자 광고 칸을 끈다.
 // 환불로 스토어 기록이 사라져도 자동으로 되돌리지 않는다(오프라인·로그아웃 상태를 환불로 잘못 읽지 않게).
@@ -16,7 +18,7 @@ import { connectStore, onStoreError, onStorePurchase, STORE_SUPPORTED } from './
 import { adText as L } from '@offside/app-core/i18n/ko/ad';
 
 /** App Store Connect·Play Console에 같은 ID로 만든 비소모성 상품. */
-export const REMOVE_ADS = 'com.offsidelab.app.remove_ads';
+export const REMOVE_ADS = REMOVE_ADS_PRODUCT_ID;
 const OWNED = 'offside_ad_free';
 export const SUPPORTED = STORE_SUPPORTED;
 
@@ -36,6 +38,11 @@ function grant() {
 const owns = (purchases: Purchase[]) =>
   purchases.some((p) => p.productId === REMOVE_ADS && p.purchaseState === 'purchased');
 
+async function finishOwnedPurchase(p: Purchase) {
+  // Starts the independent durable analytics queue; network/API failure never delays acknowledgement.
+  void recordAdFree(p).catch(() => {});
+  await finishTransaction({ purchase: p, isConsumable: false }).catch(() => {});
+}
 async function onPurchase(p: Purchase) {
   if (p.productId !== REMOVE_ADS) return;
   if (p.purchaseState === 'pending') {
@@ -48,7 +55,7 @@ async function onPurchase(p: Purchase) {
   grant();
   adFree.busy = false;
   adFree.message = L.done;
-  await finishTransaction({ purchase: p, isConsumable: false }).catch(() => {});
+  await finishOwnedPurchase(p);
 }
 
 onStorePurchase((p) => void onPurchase(p));
@@ -61,14 +68,20 @@ onStoreError((e) => {
 
 /** 앱 시작 때: 가격을 받아 두고, 이 스토어 계정에 구매 기록이 있으면 광고를 끈다. 창은 띄우지 않는다. */
 export async function syncAdFree() {
+  void flushAdFreeRecords();
   if (!SUPPORTED || !(await connectStore())) return;
   try {
-    const [products, purchases] = await Promise.all([
-      fetchProducts({ skus: [REMOVE_ADS], type: 'in-app' }),
-      adFree.owned ? Promise.resolve([]) : getAvailablePurchases(),
-    ]);
-    adFree.price = products?.find((p) => p.id === REMOVE_ADS)?.displayPrice ?? '';
+    // Price availability is optional; it must not gate acknowledgement retries.
+    void fetchProducts({ skus: [REMOVE_ADS], type: 'in-app' })
+      .then((products) => {
+        adFree.price = products?.find((p) => p.id === REMOVE_ADS)?.displayPrice ?? '';
+      })
+      .catch(() => {});
+    const purchases = await getAvailablePurchases();
     if (owns(purchases)) grant();
+    for (const p of purchases)
+      if (p.productId === REMOVE_ADS && p.purchaseState === 'purchased')
+        await finishOwnedPurchase(p);
   } catch {
     // 스토어에 닿지 못하면 이번 실행은 그대로 둔다.
   }
@@ -84,8 +97,12 @@ export async function buyAdFree() {
     adFree.message = L.storeFail;
     return;
   }
+  const account = await adFreeAccount();
   await requestPurchase({
-    request: { apple: { sku: REMOVE_ADS }, google: { skus: [REMOVE_ADS] } },
+    request: {
+      apple: { sku: REMOVE_ADS, ...(account ? { appAccountToken: account } : {}) },
+      google: { skus: [REMOVE_ADS], ...(account ? { obfuscatedAccountId: account } : {}) },
+    },
     type: 'in-app',
   }).catch(() => {
     adFree.busy = false;
@@ -102,16 +119,21 @@ export async function restoreAdFree() {
     if (!(await connectStore())) throw new Error('connect');
     // 기기에 남은 구매 기록부터 본다. 없을 때만 스토어와 다시 맞추는데, 로그인 창을 닫거나
     // 계정이 없으면 끝나지 않을 수 있어 30초에서 끊는다.
-    let found = owns(await getAvailablePurchases());
+    let restored = await getAvailablePurchases();
+    let found = owns(restored);
     if (!found) {
       await Promise.race([
         restorePurchases(),
         new Promise((resolve) => setTimeout(resolve, 30_000)),
       ]);
-      found = owns(await getAvailablePurchases());
+      restored = await getAvailablePurchases();
+      found = owns(restored);
     }
     if (found) {
       grant();
+      for (const p of restored)
+        if (p.productId === REMOVE_ADS && p.purchaseState === 'purchased')
+          await finishOwnedPurchase(p);
       adFree.message = L.restored;
     } else {
       adFree.message = L.noPurchase;

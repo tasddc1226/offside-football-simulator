@@ -60,6 +60,13 @@ export default {
     // 시즌 일정(게이지가 확정한 마감·다음 시즌)을 먼저 입힌다 — 아래 결산·보존·게이지가 같은 일정을 본다.
     await loadSeasonSchedule(env.DB, true).catch(logged('season-schedule'));
     if (controller.cron === '0 19 * * *') {
+      // Bounded daily retention; FK SET NULL removes stale purchase attribution too.
+      await env.DB.prepare(
+        `DELETE FROM acquisition_sessions WHERE id IN (SELECT id FROM acquisition_sessions WHERE received_at < ? ORDER BY received_at LIMIT 1000)`,
+      )
+        .bind(new Date(controller.scheduledTime - 90 * 86400_000).toISOString())
+        .run()
+        .catch(logged('acquisition-retention'));
       let completed = false;
       await runDailyTick(env, controller.scheduledTime)
         .then((daily) => {
