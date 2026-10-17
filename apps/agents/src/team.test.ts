@@ -401,8 +401,8 @@ describe('주장', () => {
     );
     const s = setup();
     await s.order({
-      title: '문구 a@b.com',
-      goal: 'a@b.com 유저 화면',
+      title: '문구 a@example.com',
+      goal: 'a@example.com 유저 화면',
       scope: ['docs/a.md'],
       done: 'd',
     });
