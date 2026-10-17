@@ -1632,3 +1632,44 @@ for (const width of [320, 390, 1280]) {
     expect(calls).toBe(1);
   });
 }
+
+test('T-11-323 감독 칸에 감독이 있으면 줄 힘에 감독 보정을 더해 보이고 칸 아래에 감독 몫을 붙인다', async ({
+  page,
+}) => {
+  await stubOwner(page, true);
+  const coach = {
+    careerId: '00000000-0000-4000-8000-000000000099',
+    publicName: '명감독',
+    number: 8,
+    pos: 'MF',
+    mastery: { '4-3-3': 'S', '4-4-2': 'C', '3-5-2': 'C' },
+    style: 'attack',
+    specials: [],
+    grade: 'A',
+    ending: 'steady',
+  };
+  const team = {
+    ...teamFrom({ name: '우리 동네 FC', formation: '4-3-3', slots: [] }),
+    season: 1,
+    coach,
+  };
+  await page.route(ownerTeamUrl, (route) =>
+    route.fulfill(ownerTeam({ season: 1, current: 1, seasons: SEASONS, team })),
+  );
+  await page.route(`${API}/v1/owner-team/opponents`, (route) => route.fulfill(ok({ items: [] })));
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  const lines = page.locator('[data-team-lines]');
+  // 4-3-3 숙련 S(+1.0)에 공격 성향(공격 +1 · 수비 −0.6): 공격 +2.0 · 중원 +1.0 · 수비 +0.4, 골문은 그대로.
+  await expect(lines.locator('[data-coach-line="atk"]')).toHaveText('감독 +2.0');
+  await expect(lines.locator('[data-coach-line="mid"]')).toHaveText('감독 +1.0');
+  await expect(lines.locator('[data-coach-line="def"]')).toHaveText('감독 +0.4');
+  await expect(lines.locator('[data-coach-line="gk"]')).toHaveCount(0);
+  // 4-4-2(숙련 C)로 바꾸면 성향만 남는다.
+  await page.locator('[data-formation="4-4-2"]').click();
+  await expect(lines.locator('[data-coach-line="atk"]')).toHaveText('감독 +1.0');
+  await expect(lines.locator('[data-coach-line="def"]')).toHaveText('감독 −0.6');
+  await expect(lines.locator('[data-coach-line="mid"]')).toHaveCount(0);
+  await expectNoA11yViolations(page);
+});

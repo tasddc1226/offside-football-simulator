@@ -181,8 +181,23 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'released_value',
     'bonus_value',
     'locked',
+    // T-11-310 감독으로 분류된 카드.
+    'manager',
     'created_at',
     'updated_at',
+  ],
+  // T-11-310 감독 커리어(진행 중 하나 · 끝낸 감독 카드).
+  manager_careers: [
+    'id',
+    'profile_id',
+    'career_id',
+    'status',
+    'seed',
+    'origin_json',
+    'result_json',
+    'service_season',
+    'created_at',
+    'finished_at',
   ],
   market_daily: [
     'season',
@@ -514,6 +529,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'views',
     'friendly_json',
     'presets_json',
+    // T-11-310 감독 칸(끝낸 감독 카드).
+    'coach_id',
   ],
   team_likes: ['team_id', 'profile_id', 'created_at'],
   // T-11-290 팀 프로필 스쿼드 댓글(게시판 댓글과 같은 열, 글 대신 팀에 달린다).

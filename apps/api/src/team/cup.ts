@@ -372,7 +372,10 @@ export async function playCupMatch(
   let detail: string | null = null;
   if (home && away) {
     const lineups = await lineupsOf(db, cup.season, home, away);
-    const result = simulateMatch(m.id, lineups.home, lineups.away, cup.season, { neutral: true });
+    const result = simulateMatch(m.id, lineups.home, lineups.away, cup.season, {
+      neutral: true,
+      coaches: lineups.coaches,
+    });
     hg = result.homeGoals;
     ag = result.awayGoals;
     if (ko && hg === ag) pens = penaltyShootout(m.id, lineups.home, lineups.away);

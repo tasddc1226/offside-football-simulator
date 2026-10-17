@@ -7,6 +7,8 @@ import {
   PlayTeamMatchResponseSchema,
   PutOwnerTeamBodySchema,
   PutOwnerTeamResponseSchema,
+  PutTeamCoachBodySchema,
+  PutTeamCoachResponseSchema,
   PutTeamPresetsBodySchema,
   PutTeamPresetsResponseSchema,
   TEAM_MATCHES_FIRST_PAGE,
@@ -74,8 +76,11 @@ import {
   type OwnerTeamRow,
 } from '../db/repos/ownerTeams.js';
 import { achievementRankOf } from '../db/repos/ownerAchievements.js';
+import { coachesByIds } from '../db/repos/managers.js';
+import type { Db } from '../db/client.js';
 import { getProfile, hasAccount, type ProfileRecord } from '../db/repos/profiles.js';
 import { ownerTeams } from '../db/schema.js';
+import { and, eq } from 'drizzle-orm';
 import { edgeCached, purgeEdge, waitUntil } from '../edgeCache.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -103,6 +108,8 @@ const OPPONENTS_SHOWN = 5;
 const ACH_RANKED_TTL = 300;
 
 const teamRequired = () => conflictError('먼저 이번 시즌 팀을 만들어 주세요.', 'TEAM_REQUIRED');
+const coachNotEligible = () =>
+  conflictError('감독 커리어를 끝낸 감독만 감독 칸에 넣을 수 있어요.', 'COACH_NOT_ELIGIBLE');
 
 /** 구글 로그인한(삭제되지 않은) 프로필만 구단주다. 익명 프로필은 403 GOOGLE_LOGIN_REQUIRED — 웹이 로그인 안내를 띄운다. */
 export async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
@@ -164,11 +171,21 @@ export const kstTodayStart = (now: string) => kstDays(new Date(now), 1).startIso
 /** 재대결 감쇠를 세는 기간의 시작(오늘 포함 TEAM_REPEAT_WINDOW_DAYS일, 한국 시각 자정 기준). */
 const repeatWindowStart = (now: string) => kstDays(new Date(now), TEAM_REPEAT_WINDOW_DAYS).startIso;
 
+/** T-11-310 감독 칸에 든 내 감독(끝낸 감독만, 없으면 null). */
+async function coachOf(db: Db, row: Pick<OwnerTeamRow, 'coachId' | 'profileId'>) {
+  if (!row.coachId) return null;
+  const c = (await coachesByIds(db, [row.coachId])).get(row.coachId);
+  if (!c) return null;
+  const { profileId, ...coach } = c;
+  return profileId === row.profileId ? coach : null;
+}
+
 function toOwnerTeam(
   row: OwnerTeamRow,
   lineup: LineupSlot[],
   players: ReadonlyMap<string, { nation?: string | null }>,
   lang: Lang,
+  coach: OwnerTeam['coach'] = null,
 ): OwnerTeam {
   return {
     id: row.id,
@@ -186,6 +203,7 @@ function toOwnerTeam(
     likes: row.likes,
     views: row.views,
     presets: presetsOf(row),
+    coach,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -227,6 +245,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       ))
         eligible.set(id, career);
     }
+    const coach = team ? await coachOf(db, team) : null;
     return ok(
       c,
       OwnerTeamResponseSchema,
@@ -240,6 +259,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
               buildLineup(team.formation as FormationId, slotIdsOf(team), eligible, layoutOf(team)),
               eligible,
               reqLang(c),
+              coach,
             )
           : null,
         players: picks.map(({ p, card }) => ({
@@ -309,8 +329,14 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     // 이전 클라이언트가 좌표를 보내지 않으면 기존 자유 편성을 보존한다.
     // 포메이션을 바꾼 요청만 새 기본 배치로 돌아간다.
     const [stored] =
-      friendly || input.layout === undefined ? await myTeamIn(db, me.id, season) : [];
+      friendly || input.layout === undefined || input.coach === undefined
+        ? await myTeamIn(db, me.id, season)
+        : [];
     const previous = stored ? friendlyTeamOf(stored) : null;
+    // T-11-310 감독 칸: 보내지 않으면(옛 클라이언트) 그대로 둔다. 끝낸 내 감독만 넣는다.
+    const coachId = input.coach === undefined ? (previous?.coachId ?? null) : input.coach;
+    const coach = coachId ? await coachOf(db, { coachId, profileId: me.id }) : null;
+    if (input.coach && !coach) throw coachNotEligible();
     const layout =
       input.layout === undefined
         ? previous?.formation === input.formation
@@ -331,6 +357,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         : {}),
       filled: filledCount(lineup),
       ovr: lineupOvr(lineup),
+      coachId: coach ? coachId : null,
     };
     if (friendly) {
       const lineupJson = JSON.stringify({
@@ -359,7 +386,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         })
         .returning();
       return ok(c, PutOwnerTeamResponseSchema, {
-        team: toOwnerTeam(friendlyTeamOf(row!), lineup, eligible, reqLang(c)),
+        team: toOwnerTeam(friendlyTeamOf(row!), lineup, eligible, reqLang(c), coach),
       });
     }
     const [row] = await db
@@ -380,8 +407,32 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     purgeEdge(c, STALE.teamSaved(season));
     waitUntil(c, refreshAfterChange(db, me.id, season));
     return ok(c, PutOwnerTeamResponseSchema, {
-      team: toOwnerTeam(row!, lineup, eligible, reqLang(c)),
+      team: toOwnerTeam(row!, lineup, eligible, reqLang(c), coach),
     });
+  });
+
+  // T-11-310 감독 칸만 바꾸기(지금 시즌 팀). 컵 명단이 잠긴 동안은 선발과 같이 잠긴다. 끝낸 내 감독만 넣는다.
+  app.put('/v1/owner-team/coach', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const input = readBody(c, PutTeamCoachBodySchema);
+    const now = nowIso();
+    const season = currentSeasonOrThrow(now);
+    const [team] = await myTeamIn(db, me.id, season);
+    if (!team) throw teamRequired();
+    const coach = input.coach
+      ? await coachOf(db, { coachId: input.coach, profileId: me.id })
+      : null;
+    if (input.coach && !coach) throw coachNotEligible();
+    const ids = slotIdsOf(team).filter((x): x is string => x !== null);
+    await checkCupLineup(db, me.id, season, ids, team.filled, now);
+    await db
+      .update(ownerTeams)
+      .set({ coachId: coach ? input.coach : null, updatedAt: now })
+      .where(and(eq(ownerTeams.id, team.id), eq(ownerTeams.profileId, me.id)));
+    purgeEdge(c, STALE.teamSaved(season));
+    waitUntil(c, refreshAfterChange(db, me.id, season));
+    return ok(c, PutTeamCoachResponseSchema, { coach }, 200, NO_STORE);
   });
 
   // T-11-217 팀 프리셋 목록 통째 교체. 팀을 한 번 저장한 뒤에만(시즌 팀 행에 둔다). 프리셋은 편성 초안만 채우고,
@@ -477,7 +528,9 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     if (filledCount(lineups.away) === 0) throw teamNotFound();
 
     const id = newId('mat');
-    const result = simulateMatch(id, lineups.home, lineups.away, season);
+    const result = simulateMatch(id, lineups.home, lineups.away, season, {
+      coaches: lineups.coaches,
+    });
     const score = matchScore(result.homeGoals, result.awayGoals);
     // 기대 승률에 홈 이점을 넣고, 최근 TEAM_REPEAT_WINDOW_DAYS일 안에 이미 만난 횟수만큼 변화를 줄인다.
     const delta = ratingChange(mine.rating, opp.team.rating, score, Number(met?.n ?? 0));

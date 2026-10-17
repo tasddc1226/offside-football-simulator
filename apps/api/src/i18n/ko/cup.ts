@@ -50,6 +50,7 @@ export const CUP_KO = {
   minFilled: '오프사이드 컵 참가 중에는 선발에 내 은퇴 선수를 {n}명 이상 두어야 해요.',
   cardListed: '오프사이드 컵 참가 중에는 이적시장에 내놓은 선수를 선발에 넣을 수 없어요.',
   cardLocked: '오프사이드 컵에 참가 중인 선발 선수는 내놓을 수 없어요.',
+  cardManager: '오프사이드 컵에 참가 중인 선발 선수는 감독 커리어를 시작할 수 없어요.',
   droppedTitle: '{cup} 참가가 취소됐어요',
   droppedBody: '추첨 시각에 선발 선수가 {n}명보다 적어 참가할 수 없었어요.',
   cancelledTitle: '{cup}이 열리지 않아요',

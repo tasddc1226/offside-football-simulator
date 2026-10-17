@@ -54,6 +54,8 @@ export const CUP_EN: Record<CupTextKey, string> = {
     'While in the OFFSIDE Cup, keep at least {n} of your retired players in your starting XI.',
   cardListed: "While in the OFFSIDE Cup, you can't start a player listed on the transfer market.",
   cardLocked: "You can't list a starting player while your club is in the OFFSIDE Cup.",
+  cardManager:
+    "A starting player can't begin a manager career while your club is in the OFFSIDE Cup.",
   droppedTitle: 'Your {cup} entry was cancelled',
   droppedBody: 'You had fewer than {n} starting players at the draw, so you couldn’t take part.',
   cancelledTitle: "The {cup} won't take place",

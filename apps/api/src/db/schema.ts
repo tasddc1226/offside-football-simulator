@@ -562,6 +562,9 @@ export const cards = sqliteTable(
     bonusValue: integer('bonus_value'),
     // T-11-188 구단주가 잠근 선수(1). 잠기면 내놓거나 방출할 수 없고, 판매 중인 선수는 잠글 수 없다(판매 중 카드는 늘 0).
     locked: integer('locked', { mode: 'boolean' }).notNull().default(false),
+    // T-11-310 감독으로 분류된 카드(1). 감독 커리어를 시작하면 켜지고 포기하면 꺼진다. 켜진 카드는 선발 · 판매 · 방출 · 잠금에서
+    // 빠진다(manager_careers가 진행 · 완료 상태를 가진다).
+    manager: integer('manager', { mode: 'boolean' }).notNull().default(false),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -1084,6 +1087,8 @@ export const ownerTeams = sqliteTable(
     friendlyJson: text('friendly_json'),
     /** T-11-217 팀 프리셋(포메이션 · 선발 · 배치, 최대 5개) JSON 배열. 없으면 null. */
     presetsJson: text('presets_json'),
+    /** T-11-310 감독 칸(끝낸 감독 카드의 career_id). 비었으면 null — 지금과 같은 결과. */
+    coachId: text('coach_id'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -1674,5 +1679,35 @@ export const billingAlerts = sqliteTable(
   (t) => [
     index('billing_alerts_pending_idx').on(t.sentAt, t.leaseUntil, t.createdAt),
     index('billing_alerts_daily_idx').on(t.test, t.createdAt),
+  ],
+);
+
+/**
+ * T-11-310 감독 커리어. 은퇴 카드 한 장으로 시작해 기기에서 8~10시즌을 돈다. 서버는 시작값(origin · 시드)과 끝낸 결과
+ * (감독 카드)만 가진다. active는 구단주마다 하나, 끝낸(done) 커리어는 카드마다 하나다. 포기하면 행을 지운다.
+ */
+export const managerCareers = sqliteTable(
+  'manager_careers',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    careerId: text('career_id').notNull(),
+    status: text('status', { enum: ['active', 'done'] }).notNull(),
+    seed: integer('seed').notNull(),
+    originJson: text('origin_json').notNull(),
+    resultJson: text('result_json'),
+    // 끝낸 시각의 서비스 시즌(감독 업적). 진행 중이면 NULL.
+    serviceSeason: integer('service_season'),
+    createdAt: text('created_at').notNull(),
+    finishedAt: text('finished_at'),
+  },
+  (t) => [
+    uniqueIndex('manager_careers_active_unique')
+      .on(t.profileId)
+      .where(sql`${t.status} = 'active'`),
+    uniqueIndex('manager_careers_card_unique').on(t.careerId),
+    index('manager_careers_profile_idx').on(t.profileId, t.status, t.finishedAt),
   ],
 );

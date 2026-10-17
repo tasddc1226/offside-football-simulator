@@ -276,3 +276,49 @@ describe('T-11-105 시너지', () => {
     expect(youthTeam().every((s) => s.syn === null)).toBe(true);
   });
 });
+
+// T-11-310 감독 칸 보정. 같은 전력이면 가장 센 감독이라도 승률을 5%p 넘게 올리지 않고, 감독이 없으면 결과가 그대로다.
+describe('감독 보정', () => {
+  const poissonP = (l: number, k: number) => {
+    let p = Math.exp(-l);
+    for (let i = 1; i <= k; i++) p *= l / i;
+    return p;
+  };
+  /** 기대 득점 두 개로 본 홈 승리 확률(9골까지). */
+  const winP = (h: number, a: number) => {
+    let w = 0;
+    for (let i = 0; i <= 9; i++) for (let j = 0; j < i; j++) w += poissonP(h, i) * poissonP(a, j);
+    return w;
+  };
+  const best = {
+    card: {
+      mastery: { '4-3-3': 'S', '4-4-2': 'S', '3-5-2': 'S' } as const,
+      style: 'attack' as const,
+      specials: ['wing', 'counter'] as const,
+    },
+    formation: '4-3-3' as const,
+  };
+
+  it('감독이 없으면 지금과 같은 결과다', () => {
+    const home = fullTeam('h', 80);
+    const away = fullTeam('a', 80);
+    expect(simulateMatch('m1', home, away, 1, { coaches: { home: null, away: null } })).toEqual(
+      simulateMatch('m1', home, away, 1),
+    );
+  });
+
+  it('가장 센 감독도 같은 전력 승률을 5%p 안쪽으로만 올린다', async () => {
+    const { managerLines, addLines } = await import('@offside/contracts/manager-rules');
+    const team = fullTeam('h', 80);
+    const base = lineupLines(team);
+    // 특기 대상 시너지가 모두 켜진 경우(가장 큰 보정).
+    const boosted = addLines(
+      base,
+      managerLines(best.card, best.formation, ['cross', 'overlap', 'counter', 'killpass']),
+    );
+    const before = winP(expectedGoals(base, base, false), expectedGoals(base, base, false));
+    const after = winP(expectedGoals(boosted, base, false), expectedGoals(base, boosted, false));
+    expect(after).toBeGreaterThan(before);
+    expect(after - before).toBeLessThanOrEqual(0.05);
+  });
+});

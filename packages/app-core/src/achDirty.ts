@@ -32,7 +32,9 @@ export const achCheckable = (screen: string, teamView: string, sheetOpen: boolea
 
 /** 업적이 바뀔 수 있는 API 쓰기 경로(api/client가 성공한 쓰기마다 묻는다). 은퇴는 업로드 큐가 따로 표시한다. */
 export const touchesAchievements = (path: string): boolean =>
-  /^\/v1\/(owner-team(?:\/matches)?|teams\/[^/]+\/like|profile\/nickname)(?:\?|$)/.test(path);
+  /^\/v1\/(owner-team(?:\/matches|\/coach)?|managers\/[^/]+\/finish|teams\/[^/]+\/like|profile\/nickname)(?:\?|$)/.test(
+    path,
+  );
 
 /** 업적 탭에서 아직 보지 않은 새 업적 수(앱을 열 때 하단 점을 되살린다). */
 export const achUnseenCount = (): number =>

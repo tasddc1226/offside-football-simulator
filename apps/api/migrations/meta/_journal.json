@@ -729,6 +729,13 @@
       "when": 1792155011626,
       "tag": "0103_api_status_buckets",
       "breakpoints": true
+    },
+    {
+      "idx": 104,
+      "version": "6",
+      "when": 1792171144480,
+      "tag": "0104_manager_careers",
+      "breakpoints": true
     }
   ]
 }
