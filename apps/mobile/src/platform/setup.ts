@@ -11,6 +11,7 @@ import { startSeasonSchedule } from '@offside/app-core/seasonSchedule';
 import { API_BASE_URL } from './config';
 import { authHeaders, renewSession } from './session';
 import { bootLocale } from './locale';
+import { installErrorReport } from './errorReport';
 
 const g = globalThis as { crypto?: { randomUUID?: () => string } };
 g.crypto ??= {};
@@ -31,6 +32,9 @@ configureApi({
   auth: () => ({ credentials: 'omit', headers: authHeaders() }),
   renewSession,
 });
+
+// T-11-331 잡히지 않은 오류 모으기(서버 주소 · 인증을 정한 뒤).
+installErrorReport();
 
 configureLive({
   visible: () => AppState.currentState === 'active',

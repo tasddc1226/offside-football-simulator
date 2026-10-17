@@ -1061,6 +1061,33 @@ export const apiStatusBuckets = sqliteTable('api_status_buckets', {
   errors: integer('errors').notNull().default(0),
 });
 
+/**
+ * T-11-331 앱·웹 오류. (KST 날짜 × 지문)마다 한 행이고 같은 오류는 count만 늘린다(status/clientErrors.ts).
+ * 지문은 플랫폼 · 종류 · 숫자를 지운 문구 · 첫 코드 위치로 만든다. 세션 · 프로필은 남기지 않는다.
+ */
+export const clientErrors = sqliteTable(
+  'client_errors',
+  {
+    day: text('day').notNull(),
+    fingerprint: text('fingerprint').notNull(),
+    platform: text('platform').notNull(),
+    kind: text('kind').notNull(),
+    message: text('message').notNull(),
+    frame: text('frame').notNull(),
+    place: text('place').notNull(),
+    stack: text('stack').notNull(),
+    firstVersion: text('first_version').notNull(),
+    lastVersion: text('last_version').notNull(),
+    count: integer('count').notNull().default(0),
+    firstAt: text('first_at').notNull(),
+    lastAt: text('last_at').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.day, t.fingerprint] }),
+    index('client_errors_last_at_idx').on(t.lastAt),
+  ],
+);
+
 export const appMeta = sqliteTable('app_meta', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),

@@ -55,7 +55,7 @@ export const ascReady = (env: Env) =>
   Boolean(env.ASC_KEY_ID && env.ASC_ISSUER_ID && env.ASC_PRIVATE_KEY && env.ASC_APP_ID);
 
 /** Play는 전용 서비스 계정이 없으면 GA4 서비스 계정을 쓴다(Play Console에 그 계정을 초대해 둔 경우). */
-const playAccount = (env: Env) =>
+export const playAccount = (env: Env) =>
   env.PLAY_SA_EMAIL && env.PLAY_SA_KEY
     ? { email: env.PLAY_SA_EMAIL, key: env.PLAY_SA_KEY, keyId: env.PLAY_KEY_ID }
     : env.GA4_SA_EMAIL && env.GA4_SA_KEY

@@ -1,5 +1,5 @@
 {
-  "id": "t-11-331-infra-reliability",
+  "id": "t-11-337-infra-reliability",
   "title": "기록 동기화와 대회 조회 개선",
   "items": [
     "연결이 불안정할 때 기록을 다시 올리는 처리를 개선했어요",

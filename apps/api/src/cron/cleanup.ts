@@ -35,6 +35,8 @@ const TARGETS: readonly { table: string; column: string; keepMs: number }[] = [
   { table: 'translations', column: 'created_at', keepMs: 30 * DAY_MS },
   // T-11-321 서버 상태 화면(최근 30일만 보여 준다).
   { table: 'api_status_buckets', column: 'bucket', keepMs: 35 * DAY_MS },
+  // T-11-331 앱·웹 오류(마지막으로 본 지 35일 지난 것).
+  { table: 'client_errors', column: 'last_at', keepMs: 35 * DAY_MS },
 ];
 
 export type CleanupResult = Record<string, number>;
