@@ -30,10 +30,17 @@ export default defineConfig({
     locale: 'ko-KR',
     trace: 'retain-on-failure',
     // T-11-355 처음 안내 카드는 기기마다 닫을 때까지 홈 맨 위에 뜬다. 다른 화면 테스트가 그 카드를 밟지 않게 닫은 채로 시작한다.
+    // T-11-371 공개 연출은 "연출 짧게"를 켠 채로 시작한다(결과만 바로). 연출은 reveal.spec이 켜고 본다.
     storageState: {
       cookies: [],
       origins: [
-        { origin: BASE_URL, localStorage: [{ name: 'ft_first_guide', value: '["home","items"]' }] },
+        {
+          origin: BASE_URL,
+          localStorage: [
+            { name: 'ft_first_guide', value: '["home","items"]' },
+            { name: 'ft_reveal_short', value: 'true' },
+          ],
+        },
       ],
     },
   },
