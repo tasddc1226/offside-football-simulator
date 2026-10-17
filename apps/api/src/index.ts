@@ -144,7 +144,9 @@ export default {
       if (env.AUTOMATION_HIDE_DISABLED !== '1')
         await sweepAutomation(env.DB, controller.scheduledTime, true).catch(logged('automation'));
       await updateClubStrength(env, controller.scheduledTime).catch(logged('club-strength'));
-      await runInfraHealth(env, controller.scheduledTime).catch(logged('infra-health'));
+      await runInfraHealth(env, controller.scheduledTime, daily?.status === 'complete').catch(
+        logged('infra-health'),
+      );
       // T-11-156 서버 최초 기록 전체 재계산을 몰아서 훑는다 — 공개 목록 조회가 조각을 기다리지 않게. 시간 한도까지
       // 돌 수 있어 앞 단계를 밀지 않게 맨 끝에 둔다.
       await runFirstsRescan(createDb(env.DB))

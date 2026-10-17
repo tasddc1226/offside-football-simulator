@@ -118,3 +118,36 @@ it('a tick advances at most three completed stages and yields a partial page imm
   expect((await runDailyTick(ctx.env, NOW, execute))?.stage).toBe(3);
   expect(execute).toHaveBeenCalledTimes(1);
 });
+
+it('a busy retention lease does not count as a completed daily step', async () => {
+  const state: DailyState = {
+    day: '2026-10-16',
+    stage: 4,
+    status: 'pending',
+    token: '',
+    leaseUntil: 0,
+    nextAttemptAt: 0,
+    attempts: 0,
+    startedAt: Date.now(),
+    updatedAt: Date.now(),
+    results: {},
+  };
+  await ctx.env.DB.prepare('INSERT INTO app_meta(key,value) VALUES (?,?)')
+    .bind(DAILY_STATE_KEY, JSON.stringify(state))
+    .run();
+  await ctx.env.DB.prepare('INSERT INTO app_meta(key,value) VALUES (?,?)')
+    .bind(
+      'cron:career-retention:lease',
+      JSON.stringify({ token: 'other', expiresAt: Date.now() + 60_000 }),
+    )
+    .run();
+  try {
+    expect(await runDailyStep(ctx.env, NOW)).toMatchObject({
+      stage: 4,
+      status: 'pending',
+      results: { careerRetention: { mode: 'busy' } },
+    });
+  } finally {
+    await ctx.env.DB.prepare("DELETE FROM app_meta WHERE key='cron:career-retention:lease'").run();
+  }
+});

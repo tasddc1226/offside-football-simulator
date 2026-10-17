@@ -71,8 +71,10 @@ function steps(env: Bindings): DailyStep {
           : 'skipped';
         return { done: result === 'skipped' || result.rows < 10_000, result };
       }
-      case 'careerRetention':
-        return { done: true, result: await runCareerRetention(env, at) };
+      case 'careerRetention': {
+        const result = await runCareerRetention(env, at);
+        return { done: result.mode !== 'busy', result };
+      }
       case 'achievements': {
         const result = await rebuildStaleAchievements(db, new Date(at).toISOString(), 20);
         return { done: result.refreshed < 20, result };
@@ -194,6 +196,7 @@ export async function runDailyStep(
     ).bind(DAILY_STATE_KEY, claimedJson, Date.now(), JSON.stringify(next)),
   ]);
   if (!committed[1]!.meta.changes) return null;
+  if (next.status === 'complete') console.log(completed);
   console.log(
     JSON.stringify({
       level: next.status === 'retry' ? 'error' : 'info',
