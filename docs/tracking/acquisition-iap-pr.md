@@ -24,7 +24,7 @@ main `94c76a835b051e502b8ccafdbcefdd6b39762c09`를 읽기 전용 fetch로 반영
 
 ## 원격 게시와 활성화 조건
 
-기존 CLI 읽기 확인: tasddc1226(keyring) 인증 정상, 대상 repo permissions는 admin/maintain/pull/push/triage=true이며 fetch가 성공했다. 앞선 제한 환경 연결 실패와 collaborator-permission 조회403으로 push 불가를 단정하지 않는다. 과거 실제 쓰기403의 정확한 동작 증거는 아직 미확인이다. 다른 설치/자격증명으로 우회하거나 재인증하지 않았다. 부모 최신 지시가 읽기 전용이므로 push/PR 생성은 미시도이며 원격 SHA/PR/CI는 없다.
+기존 CLI 읽기 확인: tasddc1226(keyring) 인증 정상, 대상 repo permissions는 admin/maintain/pull/push/triage=true이며 fetch가 성공했다. 앞선 제한 환경 연결 실패와 collaborator-permission 조회403으로 push 불가를 단정하지 않는다. 과거 실제 쓰기403의 정확한 동작 증거는 아직 미확인이다. 다른 설치/자격증명으로 우회하거나 재인증하지 않았다. 진단용 읽기 전용 제한은 해제됐다. 게시 범위는 기존 동일 인증·동일 원격·독립 브랜치의 non-force push와 draft PR 생성이다. 병합·배포·권한 확대는 승인 범위가 아니다.
 
 활성화 전에는 현재 공식 provider 대조, 같은 pt를 웹/worker에 설정, 동의 on/off 실제 앱 스트림·StoreKit Sandbox·Safari 검증이 필요하다. 테스트 계정·실행 가능한 개발 앱·GA4 테스트 스트림 접근이 필요하다. 새 계정/OAuth 생성이나 운영 접근 확대는 별도 승인 범위다. 병합·운영 배포·새 바이너리 출시·Meta/MMP·ATT/스토어 신고 및 개인정보 전송 확장은 별도 승인 범위다.
 
