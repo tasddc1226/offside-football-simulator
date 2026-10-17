@@ -838,6 +838,18 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
           rank: 1,
           manager: '라이벌 감독',
           ownerNickname: '라이벌 구단주',
+          // T-11-335 감독 칸에 앉힌 감독.
+          coach: {
+            careerId: '00000000-0000-4000-8000-0000000000c1',
+            publicName: '명장',
+            number: 10,
+            pos: 'MF',
+            mastery: { '4-3-3': 'B', '4-4-2': 'S', '3-5-2': 'C' },
+            style: 'attack',
+            specials: ['wing'],
+            grade: 'S',
+            ending: 'legend',
+          },
           rating: 1100,
           record: { w: 9, d: 0, l: 1 },
           goals: { for: 31, against: 8 },
@@ -895,6 +907,9 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
   await expect(prof).toContainText('라이벌 FC');
   await expect(prof).toContainText('감독 라이벌 감독');
   await expect(prof).toContainText('RANK #1');
+  await expect(page.locator('[data-team-profile-coach]')).toContainText('앉힌 감독');
+  await expect(page.locator('[data-team-profile-coach]')).toContainText('명장');
+  await expect(page.locator('[data-coach-line]').first()).toBeVisible();
   await expect(page.locator('[data-team-history]')).toContainText('시즌 우승');
   await expect(page.locator('[data-team-history]')).toContainText('5연승');
   await expect(page.getByText('조회수 42')).toBeVisible();

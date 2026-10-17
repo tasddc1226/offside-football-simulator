@@ -304,3 +304,15 @@ export async function seasonManagersOf(db: Db, profileId: string, season: number
     return res ? [{ ...res, finishedAt: r.finishedAt! }] : [];
   });
 }
+
+/** T-11-310 · T-11-335 팀 감독 칸에 든 그 구단주의 감독(끝낸 감독만, 없거나 남의 카드면 null). 내 팀 · 남의 팀 프로필이 같이 쓴다. */
+export async function teamCoachOf(
+  db: Db,
+  row: { coachId: string | null; profileId: string },
+): Promise<TeamCoach | null> {
+  if (!row.coachId) return null;
+  const c = (await coachesByIds(db, [row.coachId])).get(row.coachId);
+  if (!c) return null;
+  const { profileId, ...coach } = c;
+  return profileId === row.profileId ? coach : null;
+}

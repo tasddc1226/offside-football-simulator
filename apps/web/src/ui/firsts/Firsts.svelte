@@ -3,6 +3,8 @@
   // 최근 기록 탭은 날짜별 연대기, 분류 탭은 규칙 전체(아직 아무도 못 세운 기록 포함)를 보여 준다. 끝없는 단계는
   // 누가 넘을 때마다 다음 목표가 열린다. 서버 기록 탭은 더 큰 기록이 나오면 주인이 바뀌는 최다·최고 기록(T-10-056).
   // T-11-029 기록은 시즌마다 따로 겨룬다 — 개막한 시즌이 둘 이상이면 시즌 탭을 보인다(기본은 지금 시즌).
+  // T-11-335 분류 탭은 단계 기록을 한 줄로 묶고(가장 높은 단계 · 다음 목표 · 진행, 펼치면 단계 전부), 최근 기록은 그날 한 선수가
+  // 한 번에 넘은 단계를 한 줄로 묶는다. 최근 기록 위에 이 시즌 기록을 가장 많이 세운 선수를 보인다.
   import type { FirstsResponse, ServerFirst } from '@offside/contracts';
   import { displaySeasonAt, openTeamSeasons } from '@offside/contracts/service-seasons';
   import { getFirsts } from '@offside/app-core/api/client';
@@ -11,7 +13,13 @@
   import Topbar from '../Topbar.svelte';
   import { kstParts } from '@offside/app-core/boardText';
   import { seasonNow } from '../seasonNow.svelte.js';
-  import { achievedList, byDay, firstsTabs, holderLabel, type FirstsTab } from '@offside/app-core/firsts';
+  import {
+    achievedList,
+    firstsTabs,
+    holderLabel,
+    type FirstsTab,
+  } from '@offside/app-core/firsts';
+  import { recentDays, seriesList, topHolders } from '@offside/app-core/firstsSeries';
   import { firstsText as L } from '@offside/app-core/i18n/ko/firsts';
   import { tn } from '@offside/game/i18n/names';
   import { intlLocale } from '@offside/contracts/i18n';
@@ -46,8 +54,11 @@
   const total = $derived(data?.items.length ?? 0);
   const achieved = $derived(data ? achievedList(data.items) : []);
   const done = $derived(achieved.length);
-  const days = $derived(byDay(achieved));
-  const list = $derived(data ? data.items.filter((x) => x.cat === tab) : []);
+  const days = $derived(recentDays(achieved));
+  const top = $derived(topHolders(achieved));
+  const series = $derived(data ? seriesList(data.items.filter((x) => x.cat === tab)) : []);
+  let open = $state<string[]>([]);
+  const toggle = (k: string) => (open = open.includes(k) ? open.filter((x) => x !== k) : [...open, k]);
 </script>
 
 {#snippet who(h: NonNullable<ServerFirst['holder']>)}
@@ -86,12 +97,24 @@
     {:else if !data}
       <p class="empty">{L.loading}</p>
     {:else if tab === 'recent'}
+      {#if top.length && top[0]!.count > 1}
+        <h2 class="first-day first-top-title">{L.topTitle}</h2>
+        <ol class="first-top" data-firsts-top>
+          {#each top as t, i (t.holder.careerId)}
+            <li>
+              <span class="first-rank num">{i + 1}</span>
+              {@render who(t.holder)}
+              <b class="num">{L.topCount({ n: t.count })}</b>
+            </li>
+          {/each}
+        </ol>
+      {/if}
       {#each days as d (d.day)}
         <h2 class="first-day num">{d.day}</h2>
         <ul class="first-list">
-          {#each d.items as x (x.id)}
+          {#each d.items as { item: x, steps } (x.id)}
             <li class="first-row" data-first={x.id}>
-              <b class="first-label">{tn(x.label)}</b>
+              <b class="first-label">{tn(x.label)}{#if steps > 1}<span class="pill first-burst">{L.burst({ n: steps })}</span>{/if}</b>
               <span class="first-time num">{kstParts(x.achievedAt).time}</span>
               {@render who(x.holder)}
             </li>
@@ -117,14 +140,40 @@
       </ul>
     {:else}
       <ul class="first-list">
-        {#each list as x (x.id)}
-          <li class="first-row" class:locked={!x.holder} data-first={x.id}>
-            <b class="first-label">{tn(x.label)}</b>
-            {#if x.holder && x.achievedAt}
-              <span class="first-time num">{kstParts(x.achievedAt).day}</span>
-              {@render who(x.holder)}
+        {#each series as sr (sr.key)}
+          {@const head = sr.top ?? sr.steps[0]!}
+          {@const many = sr.steps.length > 1}
+          {@const shown = open.includes(sr.key)}
+          <li class="first-row" class:locked={!sr.top} data-first={many ? undefined : head.id} data-series={many ? sr.key : undefined}>
+            <b class="first-label">{tn(head.label)}</b>
+            {#if sr.top}
+              <span class="first-time num">{kstParts(sr.top.achievedAt).day}</span>
+              {@render who(sr.top.holder)}
             {:else}
               <span class="first-who">{L.locked}</span>
+            {/if}
+            {#if many}
+              <div class="first-series">
+                {#if sr.top}<span class="first-next">{sr.next ? L.next({ label: tn(sr.next.label) }) : L.allDone}</span>{/if}
+                <button class="link-btn first-toggle" aria-expanded={shown} onclick={() => toggle(sr.key)}>
+                  <span class="num">{L.steps({ done: sr.done, total: sr.steps.length })}</span> · {shown ? L.hideSteps : L.showSteps}
+                </button>
+              </div>
+              {#if shown}
+                <ul class="first-steps">
+                  {#each sr.steps as x (x.id)}
+                    <li class:locked={!x.holder} data-first={x.id}>
+                      <span class="first-step-label">{tn(x.label)}</span>
+                      {#if x.holder && x.achievedAt}
+                        <span class="first-time num">{kstParts(x.achievedAt).day}</span>
+                        {@render who(x.holder)}
+                      {:else}
+                        <span class="first-who">{L.locked}</span>
+                      {/if}
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
             {/if}
           </li>
         {/each}
