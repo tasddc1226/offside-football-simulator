@@ -41,17 +41,24 @@ import { POS_LABEL } from '@offside/game/pos-label';
 import { localCareerNames } from '@offside/game/hof-store';
 import {
   abandonManager,
+  choiceOddsLabels,
   clearManagerState,
   coachEffectText,
+  eventOutcome,
   fetchManagers,
   finishManager,
   loadManagerState,
+  managerBar,
   managerName,
+  managerStats,
+  managerSteps,
   masteryUpLine,
   seasonBadges,
   seasonChips,
   statChips,
+  statDelta,
   type Chip,
+  type ManagerStatKey,
   saveManagerState,
   setTeamCoach,
   startConfirmLines,
@@ -60,7 +67,9 @@ import {
 import { managerText as M } from '@offside/app-core/i18n/ko/manager';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
-import { Btn, Card, Opt, Press, Screen, Topbar, Txt } from '../../ui';
+import { ActionBar, Btn, Card, Opt, Press, Screen, Topbar, Txt } from '../../ui';
+import { DISPLAY } from '../../theme/type';
+import { ProgBar } from '../../sheets/parts';
 import { useRefresh } from '../../ui/refresh';
 import { LoginButtons } from './LoginButtons';
 import { ManagerLive } from './ManagerLive';
@@ -184,6 +193,13 @@ export default function Manager() {
   // 방금 답한 이벤트가 바꾼 상태(변화 칩), 경기 중계 중인 시즌 번호(다시 열면 중계 없이 결산).
   const [evChips, setEvChips] = useState<Chip[]>([]);
   const [live, setLive] = useState<number | null>(null);
+  // T-11-329 방금 바뀐 상단 상태 칸(+3 · −2)과 그 표시를 다시 띄우는 번호. 숫자는 처음 그린 뒤부터 바뀔 때만 차오른다.
+  const [delta, setDelta] = useState<{ d: Partial<Record<ManagerStatKey, number>>; n: number }>({
+    d: {},
+    n: 0,
+  });
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
   const [pick, setPick] = useState<{
     formation: FormationId;
     style: ManagerStyle;
@@ -227,6 +243,7 @@ export default function Manager() {
     fn(next);
     saveManagerState(next);
     if (next.phase === 'setup') resetPick(next);
+    setDelta((x) => ({ d: statDelta(snapshot(st), snapshot(next)), n: x.n + 1 }));
     setSt(next);
     return next;
   }
@@ -236,6 +253,7 @@ export default function Manager() {
     setAnswered(id);
     const next = act((s) => answerEvent(s, i));
     setEvChips(next ? statChips(before, snapshot(next)) : []);
+    buzz();
   }
   function playSeason() {
     const h = act(closeEvents)?.history.at(-1);
@@ -305,6 +323,26 @@ export default function Manager() {
   const result = st && st.phase === 'done' ? managerResult(st) : null;
   const targets = st && st.phase === 'setup' ? targetOptions(st) : [];
   const minTarget = st && st.phase === 'setup' ? boardMinimum(st) : null;
+  const steps = st ? managerSteps(st) : null;
+  const bar =
+    st && data?.active
+      ? managerBar(st, {
+          answered: !!answered,
+          live: st.phase === 'result' && !!lastSeason?.club && live === lastSeason.n,
+        })
+      : null;
+  /** T-11-329 아래 고정 버튼이 하는 일(전에는 각 카드 맨 아래 버튼이 했다). */
+  function onBar() {
+    if (!bar) return;
+    if (bar.act === 'manager-rest') act(restSeason);
+    else if (bar.act === 'manager-season') act((s) => setupSeason(s, pick));
+    else if (bar.act === 'manager-next') {
+      setAnswered(null);
+      setEvChips([]);
+    } else if (bar.act === 'manager-result') playSeason();
+    else if (bar.act === 'manager-continue') act(continueAfterResult);
+    else void finish();
+  }
   const errLine = error ? (
     <Txt tone="bad" bold accessibilityRole="alert">
       {error}
@@ -329,18 +367,10 @@ export default function Manager() {
             </Txt>
           </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-            {(
-              [
-                [M.statFame, st.fame],
-                [M.statTrust, st.trust],
-                [M.statMorale, st.morale],
-                [M.statFans, st.fans],
-                [M.statControl, st.control],
-                [M.statAdapt, st.adapt],
-              ] as const
-            ).map(([k, v]) => (
+            {managerStats(st).map(({ k, label, v }) => (
               <View
                 key={k}
+                testID={`manager-stat-${k}`}
                 style={{
                   width: '31.5%',
                   paddingVertical: 8,
@@ -350,11 +380,26 @@ export default function Manager() {
                 }}
               >
                 <Txt tone="muted" style={tiny}>
-                  {k}
+                  {label}
                 </Txt>
-                <Txt bold num>
-                  {String(v)}
-                </Txt>
+                {/* T-11-329 선수 OVR처럼 값이 바뀌면 차오르고, 방금 바뀐 칸 옆에 +3 · −2가 뜬다. */}
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
+                  <Txt bold num>
+                    <CountUp value={v} animate={ready} ms={600} />
+                  </Txt>
+                  {delta.d[k] ? (
+                    <Pop key={delta.n}>
+                      <Txt
+                        bold
+                        tone={delta.d[k]! < 0 ? 'bad' : 'good'}
+                        style={tiny}
+                        testID="manager-delta"
+                      >
+                        {delta.d[k]! > 0 ? `+${delta.d[k]}` : `−${-delta.d[k]!}`}
+                      </Txt>
+                    </Pop>
+                  ) : null}
+                </View>
               </View>
             ))}
           </View>
@@ -370,6 +415,29 @@ export default function Manager() {
               {line}
             </Txt>
           ))}
+          {steps ? (
+            // T-11-329 선수 커리어 진행 막대처럼 이번 시즌이 어디까지 왔는지
+            <View style={{ gap: 6 }} testID={`manager-steps-${steps.active}`}>
+              <ProgBar progress={steps.progress} fill={300} />
+              <View
+                style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 4 }}
+                accessibilityLabel={`${M.stepsLabel}: ${steps.steps[steps.active]}`}
+              >
+                {steps.steps.map((t, i) => (
+                  <Txt
+                    key={i}
+                    tone={i === steps.active ? 'ink' : 'muted'}
+                    bold={i === steps.active}
+                    style={tiny}
+                  >
+                    {i === steps.active ? <Txt style={{ color: c.accent }}>{'▸ '}</Txt> : null}
+                    {i < steps.active ? <Txt style={{ color: c.good }}>{'✓ '}</Txt> : null}
+                    {t}
+                  </Txt>
+                ))}
+              </View>
+            </View>
+          ) : null}
         </Card>
 
         {st.phase === 'offers' ? (
@@ -408,9 +476,6 @@ export default function Manager() {
                 <Txt tone="muted" style={small}>
                   {M.restLead}
                 </Txt>
-                <Btn testID="manager-rest" onPress={() => act(restSeason)}>
-                  {M.rest}
-                </Btn>
               </>
             )}
           </Card>
@@ -476,14 +541,6 @@ export default function Manager() {
             <Txt tone="muted" style={small}>
               {M.targetLead}
             </Txt>
-            <Btn
-              block
-              kind="primary"
-              testID="manager-season"
-              onPress={() => act((s) => setupSeason(s, pick))}
-            >
-              {M.startSeason}
-            </Btn>
           </Card>
         ) : st.phase === 'transfer' ? (
           <Card gap={10} testID="manager-transfer">
@@ -527,43 +584,86 @@ export default function Manager() {
                     <Txt>{t.b}</Txt>
                     {shownEv.result !== null ? (
                       <>
+                        {(() => {
+                          const out = eventOutcome(shownEv);
+                          return out ? (
+                            <>
+                              <Txt v="eyebrow">
+                                {M.eventResult({ label: t.choices[shownEv.choice ?? 0] ?? '' })}
+                              </Txt>
+                              <Pop>
+                                <Txt
+                                  testID={`manager-outcome-${out.ok ? 'ok' : 'fail'}`}
+                                  style={{
+                                    fontFamily: DISPLAY[700],
+                                    fontSize: rem(2.5),
+                                    lineHeight: rem(2.5),
+                                    color: out.ok ? c.good : c.bad,
+                                  }}
+                                >
+                                  {out.label}
+                                </Txt>
+                              </Pop>
+                            </>
+                          ) : null;
+                        })()}
                         <View
                           style={{ padding: 12, borderRadius: 10, backgroundColor: c.surface2 }}
                         >
                           <Txt testID="manager-event-result">{shownEv.result}</Txt>
                         </View>
                         <Chips chips={evChips} pop />
-                        <Btn
-                          block
-                          kind="primary"
-                          testID="manager-next"
-                          onPress={() => {
-                            setAnswered(null);
-                            setEvChips([]);
-                          }}
-                        >
-                          {M.next}
-                        </Btn>
                       </>
                     ) : (
-                      t.choices.map((label, i) => (
-                        <Btn
-                          key={i}
-                          block
-                          testID="manager-choice"
-                          onPress={() => answer(shownEv.id, i)}
-                        >
-                          {label}
-                        </Btn>
-                      ))
+                      <View style={{ gap: 10 }}>
+                        {t.choices.map((label, i) => {
+                          const odds = choiceOddsLabels(shownEv.id)[i] ?? '';
+                          return (
+                            <Press
+                              key={i}
+                              testID="manager-choice"
+                              accessibilityRole="button"
+                              accessibilityLabel={M.oddsLabel({ label, odds })}
+                              onPress={() => answer(shownEv.id, i)}
+                              style={{
+                                borderWidth: 1.5,
+                                borderColor: c.line,
+                                backgroundColor: c.surface,
+                                borderRadius: 12,
+                                paddingVertical: 12,
+                                paddingHorizontal: 14,
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                gap: 10,
+                              }}
+                            >
+                              <Txt style={{ flex: 1, fontWeight: '600' }}>{label}</Txt>
+                              <View
+                                style={{
+                                  paddingVertical: 2,
+                                  paddingHorizontal: 8,
+                                  borderRadius: 8,
+                                  backgroundColor: c.surface2,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(0.9375) }}>
+                                  {odds}
+                                </Txt>
+                              </View>
+                            </Press>
+                          );
+                        })}
+                      </View>
                     )}
                   </>
                 );
               })()
             ) : (
-              <Btn block kind="primary" testID="manager-result" onPress={playSeason}>
-                {M.toResult}
-              </Btn>
+              <Txt tone="muted" style={small}>
+                {M.liveEyebrow({ n: st.season + 1 })}
+              </Txt>
             )}
           </Card>
         ) : st.phase === 'result' && lastSeason && live === lastSeason.n && lastSeason.club ? (
@@ -625,14 +725,6 @@ export default function Manager() {
                 ) : null}
               </View>
             ) : null}
-            <Btn
-              block
-              kind="primary"
-              testID="manager-continue"
-              onPress={() => act(continueAfterResult)}
-            >
-              {M.nextSeason}
-            </Btn>
           </Card>
         ) : st.phase === 'done' && result ? (
           <Card gap={10} testID="manager-done">
@@ -683,15 +775,6 @@ export default function Manager() {
               {M.doneLead}
             </Txt>
             {errLine}
-            <Btn
-              block
-              kind="primary"
-              testID="manager-finish"
-              disabled={busy}
-              onPress={() => void finish()}
-            >
-              {M.finish}
-            </Btn>
           </Card>
         ) : null}
 
@@ -716,7 +799,18 @@ export default function Manager() {
     ) : null;
 
   return (
-    <Screen>
+    <Screen
+      footer={
+        bar ? (
+          // T-11-329 선수 커리어의 '다음 →'처럼 진행 버튼은 화면 아래에 고정한다.
+          <ActionBar>
+            <Btn block kind="primary" testID={bar.act} disabled={busy} onPress={onBar}>
+              {`${bar.label} →`}
+            </Btn>
+          </ActionBar>
+        ) : undefined
+      }
+    >
       <Topbar />
       <View style={{ gap: 2, paddingHorizontal: 4 }}>
         <Txt v="eyebrow">{M.eyebrow}</Txt>

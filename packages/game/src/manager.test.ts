@@ -7,6 +7,7 @@ import {
   closeEvents,
   continueAfterResult,
   currentEvent,
+  managerChoiceOdds,
   managerEventText,
   managerMatchday,
   managerResult,
@@ -166,5 +167,30 @@ describe('감독 커리어', () => {
       expect(h.end!.fame).toBeGreaterThanOrEqual(0);
     }
     expect(s.seasonStart).toBeUndefined();
+  });
+
+  it('T-11-329 선택지 확률을 보여 주고, 실패할 수 있는 선택만 성공 여부를 남긴다', () => {
+    for (const e of MANAGER_EVENTS) {
+      expect(managerChoiceOdds(e.id)).toHaveLength(managerEventText(e.id).choices.length);
+    }
+    const risky = MANAGER_EVENTS.find((e) => e.choices.some((c) => c.p !== undefined))!;
+    const ri = risky.choices.findIndex((c) => c.p !== undefined);
+    expect(managerChoiceOdds(risky.id)[ri]).toBe(risky.choices[ri]!.p);
+    const sure = risky.choices.findIndex((c) => c.p === undefined);
+    expect(managerChoiceOdds(risky.id)[sure]).toBeNull();
+    const oks = new Set<boolean | undefined>();
+    for (let seed = 1; seed <= 30; seed++) {
+      const s = start(seed);
+      s.phase = 'event';
+      s.events = [{ id: risky.id, choice: null, result: null }];
+      answerEvent(s, ri);
+      oks.add(s.events[0]!.ok);
+      const t = start(seed);
+      t.phase = 'event';
+      t.events = [{ id: risky.id, choice: null, result: null }];
+      answerEvent(t, sure);
+      expect(t.events[0]!.ok).toBeUndefined();
+    }
+    expect(oks).toEqual(new Set([true, false]));
   });
 });

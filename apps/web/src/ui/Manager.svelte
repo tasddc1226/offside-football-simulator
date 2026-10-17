@@ -47,20 +47,27 @@
   import { localCareerNames } from '@offside/game/hof-store';
   import {
     abandonManager,
+    choiceOddsLabels,
     clearManagerState,
     coachEffectText,
+    eventOutcome,
     fetchManagers,
     finishManager,
     loadManagerState,
+    managerBar,
     managerName,
+    managerStats,
+    managerSteps,
     masteryUpLine,
     seasonBadges,
     seasonChips,
     statChips,
+    statDelta,
     saveManagerState,
     setTeamCoach,
     startConfirmLines,
     startManager,
+    type ManagerStatKey,
   } from '@offside/app-core/manager';
   import { managerText as M } from '@offside/app-core/i18n/ko/manager';
 
@@ -79,6 +86,9 @@
   let evChips = $state<Chip[]>([]);
   // 경기 중계 중인 시즌 번호(새로 고치면 중계 없이 결산을 바로 보인다).
   let live = $state<number | null>(null);
+  // T-11-329 방금 바뀐 상단 상태 칸(+3 · −2)과 그 표시를 다시 띄우는 번호.
+  let delta = $state<Partial<Record<ManagerStatKey, number>>>({});
+  let deltaN = $state(0);
   let pick = $state<{ formation: FormationId; style: ManagerStyle; target: BoardTarget }>({
     formation: '4-3-3',
     style: 'balance',
@@ -114,6 +124,8 @@
     const next = structuredClone(st);
     fn(next);
     saveManagerState(next);
+    delta = statDelta(snapshot(st), snapshot(next));
+    deltaN++;
     if (next.phase === 'setup') resetPick(next);
     st = next;
   }
@@ -162,6 +174,8 @@
       answerEvent(s, i);
     });
     evChips = st ? statChips(before, snapshot(st)) : [];
+    const done = st?.events.find((e) => e.id === id);
+    buzz(done && eventOutcome(done)?.ok === false ? 30 : 10);
   }
   function playSeason() {
     act(closeEvents);
@@ -181,13 +195,34 @@
   const result = $derived(st && st.phase === 'done' ? managerResult(st) : null);
   const targets = $derived(st && st.phase === 'setup' ? targetOptions(st) : []);
   const minTarget = $derived(st && st.phase === 'setup' ? boardMinimum(st) : null);
+  const steps = $derived(st ? managerSteps(st) : null);
+  const bar = $derived(
+    st && data?.active
+      ? managerBar(st, {
+          answered: !!answered,
+          live: st.phase === 'result' && !!lastSeason?.club && live === lastSeason.n,
+        })
+      : null,
+  );
+  /** 아래 고정 버튼이 하는 일(전에는 각 카드 맨 아래 버튼이 했다). */
+  function onBar() {
+    if (!bar) return;
+    if (bar.act === 'manager-rest') act(restSeason);
+    else if (bar.act === 'manager-season') act((s) => setupSeason(s, pick));
+    else if (bar.act === 'manager-next') {
+      answered = null;
+      evChips = [];
+    } else if (bar.act === 'manager-result') playSeason();
+    else if (bar.act === 'manager-continue') act(continueAfterResult);
+    else void finish();
+  }
   const RANK: Record<string, number> = { S: 3, A: 2, B: 1, C: 0 };
   /** 숙련이 가장 높은 포메이션(효과 미리보기 기준). */
   const bestFormation = (m: { mastery: Record<FormationId, string> }): FormationId =>
     FORMATION_IDS.reduce((a, f) => (RANK[m.mastery[f]!]! > RANK[m.mastery[a]!]! ? f : a));
 </script>
 
-<div class="wrap manager" data-manager>
+<div class="wrap manager" class:has-actionbar={!!bar} data-manager>
   <Topbar />
   <header class="settings-head">
     <div class="eyebrow">{M.eyebrow}</div>
@@ -214,16 +249,30 @@
         <span class="muted fs-sm">{M.progress({ season: Math.min(st.season + (st.phase === 'done' ? 0 : 1), st.seasonsTotal), total: st.seasonsTotal, age: st.age })}</span>
         <span class="fs-sm">{st.club ? `${tn(st.club.name)} · ${leagueName(st.club.leagueId)}` : M.noClub}</span>
       </div>
+      <!-- T-11-329 선수 OVR처럼 값이 바뀌면 차오르고, 방금 바뀐 칸 옆에 +3 · −2가 뜬다. -->
       <dl class="mg-stats">
-        <div><dt>{M.statFame}</dt><dd>{st.fame}</dd></div>
-        <div><dt>{M.statTrust}</dt><dd>{st.trust}</dd></div>
-        <div><dt>{M.statMorale}</dt><dd>{st.morale}</dd></div>
-        <div><dt>{M.statFans}</dt><dd>{st.fans}</dd></div>
-        <div><dt>{M.statControl}</dt><dd>{st.control}</dd></div>
-        <div><dt>{M.statAdapt}</dt><dd>{st.adapt}</dd></div>
+        {#each managerStats(st) as x (x.k)}
+          {@const d = delta[x.k]}
+          <div data-manager-stat={x.k}>
+            <dt>{x.label}</dt>
+            <dd>
+              <CountUp value={x.v} animate={false} ms={600} />
+              {#if d}{#key deltaN}<small class="mg-delta" class:neg={d < 0} data-manager-delta>{d > 0 ? `+${d}` : `−${-d}`}</small>{/key}{/if}
+            </dd>
+          </div>
+        {/each}
       </dl>
       <p class="muted fs-sm">{M.record({ w: st.wins, d: st.draws, l: st.losses })} · {M.honors({ titles: st.titles, cups: st.cups, promotions: st.promotions })}</p>
       {#each st.log as line, i (i)}<p class="mg-log">{line}</p>{/each}
+      {#if steps}
+        <!-- T-11-329 선수 커리어 진행 막대처럼 이번 시즌이 어디까지 왔는지 -->
+        <div class="mg-progress" data-manager-steps={steps.active}>
+          <div class="prog" role="progressbar" aria-label={M.stepsLabel} aria-valuemin={0} aria-valuemax={steps.steps.length} aria-valuenow={steps.active + 1}><i style:width="{steps.progress * 100}%"></i></div>
+          <ol class="mg-steps">
+            {#each steps.steps as t, i (i)}<li class:on={i === steps.active} class:done={i < steps.active} aria-current={i === steps.active ? 'step' : undefined}>{t}</li>{/each}
+          </ol>
+        </div>
+      {/if}
     </section>
 
     {#if st.phase === 'offers'}
@@ -240,7 +289,6 @@
           {#if st.club}<button class="btn" data-act="manager-stay" onclick={() => act(stayAtClub)}>{M.stay}</button>{/if}
         {:else}
           <p class="muted fs-sm">{M.restLead}</p>
-          <button class="btn" data-act="manager-rest" onclick={() => act(restSeason)}>{M.rest}</button>
         {/if}
       </section>
     {:else if st.phase === 'setup'}
@@ -270,7 +318,6 @@
           {/each}
         </div>
         <p class="muted fs-sm">{M.targetLead}</p>
-        <button class="btn btn-primary btn-block" data-act="manager-season" onclick={() => act((s) => setupSeason(s, pick))}>{M.startSeason}</button>
       </section>
     {:else if st.phase === 'transfer'}
       <section class="card mg-col" data-manager-transfer>
@@ -292,16 +339,23 @@
           <h2>{t.t}</h2>
           <p>{t.b}</p>
           {#if shownEv.result !== null}
+            {@const out = eventOutcome(shownEv)}
+            {#if out}
+              <div class="eyebrow">{M.eventResult({ label: t.choices[shownEv.choice ?? 0] ?? '' })}</div>
+              <div class="result-big pop {out.ok ? 'ok' : 'ng'}" data-manager-outcome={out.ok ? 'ok' : 'fail'}>{out.label}</div>
+            {/if}
             <p class="mg-result" data-manager-event-result>{shownEv.result}</p>
             <Chips chips={evChips} pop />
-            <button class="btn btn-primary btn-block" data-act="manager-next" onclick={() => ((answered = null), (evChips = []))}>{M.next}</button>
           {:else}
-            {#each t.choices as c, i (i)}
-              <button class="btn btn-block mg-choice" data-act="manager-choice" onclick={() => answer(shownEv.id, i)}>{c}</button>
-            {/each}
+            {@const odds = choiceOddsLabels(shownEv.id)}
+            <div class="stack">
+              {#each t.choices as c, i (i)}
+                <button class="choice" data-act="manager-choice" aria-label={M.oddsLabel({ label: c, odds: odds[i] ?? '' })} onclick={() => answer(shownEv.id, i)}><span>{c}</span><span class="odds" aria-hidden="true">{odds[i]}</span></button>
+              {/each}
+            </div>
           {/if}
         {:else}
-          <button class="btn btn-primary btn-block" data-act="manager-result" onclick={playSeason}>{M.toResult}</button>
+          <p class="muted fs-sm">{M.liveEyebrow({ n: st.season + 1 })}</p>
         {/if}
       </section>
     {:else if st.phase === 'result' && lastSeason && live === lastSeason.n && lastSeason.club}
@@ -326,7 +380,6 @@
             {#if up}<p class="mg-up">{up}</p>{/if}
           </div>
         {/if}
-        <button class="btn btn-primary btn-block" data-act="manager-continue" onclick={() => act(continueAfterResult)}>{M.nextSeason}</button>
       </section>
     {:else if st.phase === 'done' && result}
       <section class="card mg-col" data-manager-done>
@@ -345,7 +398,6 @@
         </div>
         <p class="muted fs-sm">{M.doneLead}</p>
         {#if error}<p class="mg-err" role="alert">{error}</p>{/if}
-        <button class="btn btn-primary btn-block" data-act="manager-finish" disabled={busy} onclick={() => void finish()}>{M.finish}</button>
       </section>
     {/if}
 
@@ -419,6 +471,15 @@
   <span class="fs-sm">{M.effect} ({M.effectFor({ formation: f })}) {coachEffectText(r as never, f)}</span>
 {/snippet}
 
+{#if bar}
+  <!-- T-11-329 선수 커리어의 '다음 →'처럼 진행 버튼은 화면 아래에 고정한다(카드 맨 아래까지 내리지 않게). -->
+  <div class="action-bar" data-manager-bar>
+    <div class="action-bar-inner">
+      <button class="btn btn-primary btn-block" data-act={bar.act} disabled={busy} onclick={onBar}>{bar.label} →</button>
+    </div>
+  </div>
+{/if}
+
 {#if confirm}
   <button class="mg-scrim" aria-label={M.cancel} onclick={() => (confirm = null)}></button>
   <div class="mg-sheet" role="dialog" aria-modal="true" aria-label={M.confirmTitle({ name: managerName(confirm, local) })} data-manager-confirm>
@@ -447,6 +508,47 @@
 {/if}
 
 <style>
+  .mg-delta {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--good);
+    animation: pop 0.32s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+  }
+  .mg-delta.neg {
+    color: var(--bad);
+  }
+  .mg-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .mg-steps {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .mg-steps li.on {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .mg-steps li.on::before {
+    content: '▸ ';
+    color: var(--accent);
+  }
+  .mg-steps li.done::before {
+    content: '✓ ';
+    color: var(--good);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mg-delta {
+      animation: none;
+    }
+  }
   .manager {
     display: flex;
     flex-direction: column;
@@ -493,6 +595,9 @@
     color: var(--muted);
   }
   .mg-stats dd {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
     margin: 0;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
@@ -610,10 +715,6 @@
     .mg-grade-pop {
       animation: none;
     }
-  }
-  .mg-choice {
-    text-align: left;
-    justify-content: flex-start;
   }
   .mg-card {
     display: flex;

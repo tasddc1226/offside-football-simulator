@@ -186,9 +186,14 @@ test('은퇴 선수로 감독 커리어를 끝까지 하고 감독 칸에 앉힌
   await expect.poll(() => s.started).toEqual([A]);
   await expect(page.locator('[data-manager-play]')).toHaveAttribute('data-manager-play', 'offers');
 
+  // T-11-329 시즌 단계 막대가 보인다(제의 → 준비).
+  await expect(page.locator('[data-manager-steps]')).toHaveAttribute('data-manager-steps', '0');
   // 첫 시즌 준비까지 간 뒤 새로 고쳐도 기기 세이브로 이어 한다.
   await page.locator('[data-act="manager-accept"]').first().click();
   await expect(page.locator('[data-manager-setup]')).toBeVisible();
+  await expect(page.locator('[data-manager-steps]')).toHaveAttribute('data-manager-steps', '1');
+  // T-11-329 진행 버튼은 화면 아래 고정 바에 있다.
+  await expect(page.locator('[data-manager-bar] [data-act="manager-season"]')).toBeInViewport();
   await page.reload();
   if (!(await page.locator('[data-manager]').isVisible())) {
     await page.locator('[data-act="owner"]').click();
@@ -197,6 +202,14 @@ test('은퇴 선수로 감독 커리어를 끝까지 하고 감독 칸에 앉힌
   await expect(page.locator('[data-manager-setup]')).toBeVisible();
 
   // 첫 시즌: 이벤트를 다 보면 경기 중계가 한 경기씩 올라오고, 결산에 이번 시즌 변화가 칩으로 나온다.
+  // T-11-329 이벤트 선택지에 선수 이벤트처럼 확률 칸이 붙고, 고르면 바뀐 상단 칸 옆에 변화가 뜬다.
+  for (
+    let i = 0;
+    i < 10 && !(await page.locator('[data-act="manager-choice"]').first().isVisible());
+    i++
+  )
+    await step(page);
+  await expect(page.locator('[data-act="manager-choice"] .odds').first()).toHaveText(/%|확정/);
   const liveBox = page.locator('[data-manager-live]');
   for (let i = 0; i < 20 && !(await liveBox.isVisible()); i++) await step(page);
   await expect(liveBox.locator('.ticker div').first()).toBeVisible();
