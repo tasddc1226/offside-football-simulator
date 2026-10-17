@@ -121,6 +121,18 @@ const ko = {
   teamCoachManage: '감독 고르기',
   /** T-11-323 줄 힘 칸 아래 감독 보정(+1.0). */
   teamCoachLine: (p: { v: string }) => `감독 ${p.v}`,
+  // T-11-329 선수 커리어와 같은 진행 연출(선택지 확률 · 성공/실패 · 시즌 단계)
+  oddsSure: '확정',
+  oddsLabel: (p: { label: string; odds: string }) => `${p.label}, 성공 확률 ${p.odds}`,
+  outcomeOk: '성공',
+  outcomeFail: '실패',
+  eventResult: (p: { label: string }) => `결과 · ${p.label}`,
+  stepsLabel: '이번 시즌 진행',
+  stepOffers: '제의',
+  stepSetup: '준비',
+  stepTransfer: '영입',
+  stepEvent: '이야기',
+  stepResult: '결산',
 };
 
 export type ManagerMsgs = typeof ko;

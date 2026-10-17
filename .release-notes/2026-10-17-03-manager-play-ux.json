@@ -1,0 +1,26 @@
+{
+  "id": "t-11-329-manager-play-ux",
+  "title": "감독 커리어 진행 화면 개선",
+  "items": [
+    "진행 버튼이 화면 아래에 고정돼 내리지 않고 바로 누를 수 있어요",
+    "이벤트 선택지마다 성공 확률이 보이고, 결과가 성공인지 실패인지 크게 보여요",
+    "이번 시즌이 어느 단계인지 막대로 보이고, 감독 능력치가 바뀌면 그 칸에 변화가 떠요"
+  ],
+  "en": {
+    "title": "Manager career play screen update",
+    "items": [
+      "The progress button now stays at the bottom of the screen, so you can tap it without scrolling.",
+      "Event choices show their success chance, and the result shows clearly whether it worked.",
+      "A bar shows where you are in the season, and changed manager stats show the difference."
+    ]
+  },
+  "ja": {
+    "title": "監督キャリアの進行画面を改善",
+    "items": [
+      "進行ボタンが画面下に固定され、スクロールせずに押せます。",
+      "イベントの選択肢に成功確率が表示され、結果が成功か失敗かを大きく表示します。",
+      "今シーズンの段階がバーで分かり、監督能力値が変わるとその欄に変化が出ます。"
+    ]
+  },
+  "availability": "web-app"
+}

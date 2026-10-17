@@ -12,9 +12,12 @@ import type {
 import { loadKey, saveKey } from '@offside/game/storage';
 import {
   MANAGER_SAVE_KEY,
+  currentEvent,
+  managerChoiceOdds,
   migrateManagerSave,
   newManagerCareer,
   type ManagerState,
+  type MgrEvent,
   type MgrSeason,
   type MgrSnapshot,
 } from '@offside/game/manager';
@@ -90,6 +93,20 @@ const STAT_LABEL = {
   adapt: () => M.statAdapt,
 } as const;
 
+export type ManagerStatKey = (typeof STAT_KEYS)[number];
+
+/** T-11-329 상단 감독 상태 여섯 칸(이름 · 값). */
+export const managerStats = (s: Omit<MgrSnapshot, 'mastery'>) =>
+  STAT_KEYS.map((k) => ({ k, label: STAT_LABEL[k](), v: s[k] }));
+
+/** T-11-329 두 상태 사이에 바뀐 칸과 그 차이(상단 칸 옆 +3 · −2 표시). */
+export function statDelta(
+  a: Omit<MgrSnapshot, 'mastery'>,
+  b: Omit<MgrSnapshot, 'mastery'>,
+): Partial<Record<ManagerStatKey, number>> {
+  return Object.fromEntries(STAT_KEYS.filter((k) => b[k] !== a[k]).map((k) => [k, b[k] - a[k]]));
+}
+
 /** 두 상태 사이 변화 칩(0인 값은 뺀다). */
 export function statChips(
   a: Omit<MgrSnapshot, 'mastery'>,
@@ -132,4 +149,55 @@ export function liveTally(rows: readonly { res: 'W' | 'D' | 'L' }[]) {
   const w = rows.filter((r) => r.res === 'W').length;
   const d = rows.filter((r) => r.res === 'D').length;
   return { w, d, l: rows.length - w - d, pts: w * 3 + d };
+}
+
+// ───────── T-11-329 선수 커리어와 같은 진행 화면(선택지 확률 · 성공/실패 · 시즌 단계 · 아래 고정 버튼) ─────────
+
+/** 이벤트 선택지 오른쪽 확률 칸(선수 이벤트처럼 '50%', 실패할 수 없으면 '확정'). */
+export const choiceOddsLabels = (id: string): string[] =>
+  managerChoiceOdds(id).map((p) => (p === null ? M.oddsSure : `${Math.round(p * 100)}%`));
+
+/** 답한 이벤트의 성공/실패(확정 선택 · 옛 세이브는 null). */
+export const eventOutcome = (ev: MgrEvent): { label: string; ok: boolean } | null =>
+  ev.ok === undefined ? null : { label: ev.ok ? M.outcomeOk : M.outcomeFail, ok: ev.ok };
+
+const STEP_PHASES = ['offers', 'setup', 'transfer', 'event', 'result'] as const;
+
+/** 이번 시즌 진행 단계(제의 → 준비 → 영입 → 이야기 → 결산). 커리어를 끝냈으면 null. */
+export function managerSteps(s: Pick<ManagerState, 'phase'>) {
+  const active = STEP_PHASES.indexOf(s.phase as (typeof STEP_PHASES)[number]);
+  if (active < 0) return null;
+  return {
+    steps: [M.stepOffers, M.stepSetup, M.stepTransfer, M.stepEvent, M.stepResult],
+    active,
+    progress: (active + 1) / STEP_PHASES.length,
+  };
+}
+
+export type ManagerBarAct =
+  | 'manager-rest'
+  | 'manager-season'
+  | 'manager-next'
+  | 'manager-result'
+  | 'manager-continue'
+  | 'manager-finish';
+
+/**
+ * 화면 아래 고정 버튼(선수 커리어의 '다음 →'처럼 스크롤하지 않고 누른다). 여럿 중 고르는 단계(제의 · 영입 · 이벤트
+ * 선택지)와 경기 중계 중에는 없다. answered는 결과를 보여 주고 있는 이벤트가 있는지, live는 경기 중계 중인지.
+ */
+export function managerBar(
+  s: ManagerState,
+  o: { answered: boolean; live: boolean },
+): { act: ManagerBarAct; label: string } | null {
+  if (s.phase === 'offers')
+    return s.offers.length || s.club ? null : { act: 'manager-rest', label: M.rest };
+  if (s.phase === 'setup') return { act: 'manager-season', label: M.startSeason };
+  if (s.phase === 'event') {
+    if (o.answered) return { act: 'manager-next', label: M.next };
+    return currentEvent(s) ? null : { act: 'manager-result', label: M.toResult };
+  }
+  if (s.phase === 'result') return o.live ? null : { act: 'manager-continue', label: M.nextSeason };
+  if (s.phase === 'done') return { act: 'manager-finish', label: M.finish };
+  return null;
 }

@@ -62,6 +62,8 @@ export interface MgrEvent {
   /** 고른 선택지(아직이면 null)와 결과 문장. */
   choice: number | null;
   result: string | null;
+  /** T-11-329 실패할 수 있는 선택을 골랐을 때 성공했는지(확정 선택 · 옛 세이브는 없다). */
+  ok?: boolean;
 }
 export interface MgrSeason {
   n: number;
@@ -636,6 +638,10 @@ export function managerEventText(id: string): EvText {
   };
 }
 
+/** T-11-329 이벤트 선택지마다 성공 확률(실패할 수 없는 선택은 null). */
+export const managerChoiceOdds = (id: string): (number | null)[] =>
+  (EVENT_BY_ID.get(id)?.choices ?? []).map((c) => c.p ?? null);
+
 /** 지금 답할 이벤트(없으면 null). */
 export const currentEvent = (s: ManagerState): MgrEvent | null =>
   s.phase === 'event' ? (s.events.find((e) => e.choice === null) ?? null) : null;
@@ -661,6 +667,7 @@ export function answerEvent(s: ManagerState, choice: number): string | null {
   const ok = c.p === undefined || withRng(s, (r) => r.next() < c.p!);
   applyEffect(s, ok ? c.ok : (c.fail ?? {}));
   ev.choice = choice;
+  if (c.p !== undefined) ev.ok = ok;
   ev.result =
     (ok ? evStr(ev.id, `r${choice}`) : evStr(ev.id, `f${choice}`)) || evStr(ev.id, `r${choice}`);
   return ev.result;
