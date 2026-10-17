@@ -3,6 +3,7 @@ import { createMiddleware } from 'hono/factory';
 import { AppError } from '../errors.js';
 import type { AppEnv } from '../env.js';
 import { countable, flushTallies, recordRequest } from '../status/metrics.js';
+import { flushClientErrors, takeClientErrors } from '../status/clientErrors.js';
 
 /** T-2-015: 응답 본문에는 고정 문구만 나가므로(errors.ts) 원문 메시지는 여기서만 남긴다. */
 const MAX_ERROR_MESSAGE_LENGTH = 500;
@@ -64,15 +65,11 @@ function recordStatus(c: Context<AppEnv>, status: number, durationMs: number) {
   }
   const due = recordRequest(Date.now(), durationMs, status);
   if (!due) return;
-  ctx.waitUntil(
-    flushTallies(db, due).catch((error: unknown) =>
-      console.log(
-        JSON.stringify({
-          level: 'warn',
-          msg: 'status-flush-failed',
-          error: String(error).slice(0, 200),
-        }),
-      ),
-    ),
-  );
+  const warn = (msg: string) => (error: unknown) =>
+    console.log(JSON.stringify({ level: 'warn', msg, error: String(error).slice(0, 200) }));
+  ctx.waitUntil(flushTallies(db, due).catch(warn('status-flush-failed')));
+  // T-11-331 앱·웹 오류도 같은 1분 주기에 더한다.
+  const errors = takeClientErrors();
+  if (errors.length)
+    ctx.waitUntil(flushClientErrors(db, errors).catch(warn('client-errors-flush-failed')));
 }

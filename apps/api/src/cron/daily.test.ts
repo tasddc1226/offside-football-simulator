@@ -105,6 +105,7 @@ describe('T-10-070 매일 정리', () => {
       chat_mutes: 1,
       translations: 1,
       api_status_buckets: 0,
+      client_errors: 0,
     });
     expect(await count('translations')).toBe(1);
     expect(await count('chat_reports')).toBe(1);
