@@ -4,6 +4,7 @@
   import Topbar from './Topbar.svelte';
   import LoginButtons from './LoginButtons.svelte';
   import ManagerLive from './ManagerLive.svelte';
+  import PopSheet from './PopSheet.svelte';
   import Chips from './sheets/Chips.svelte';
   import CountUp from './CountUp.svelte';
   import { buzz } from './motion.js';
@@ -57,6 +58,7 @@
     managerBar,
     managerName,
     managerStats,
+    managerSheetLabel,
     managerSteps,
     masteryUpLine,
     seasonBadges,
@@ -196,6 +198,9 @@
   const targets = $derived(st && st.phase === 'setup' ? targetOptions(st) : []);
   const minTarget = $derived(st && st.phase === 'setup' ? boardMinimum(st) : null);
   const steps = $derived(st ? managerSteps(st) : null);
+  // T-11-330 지금 단계가 창으로 뜨면 그 창 이름(창이 아니면 null). step이 바뀌면 창 맨 위 · 첫 버튼으로 돌아간다.
+  const sheetLabel = $derived(st && data?.active ? managerSheetLabel(st, live !== null) : null);
+  const sheetStep = $derived(st ? `${st.season}:${st.phase}:${shownEv?.id ?? ''}:${answered ?? ''}:${live ?? ''}` : '');
   const bar = $derived(
     st && data?.active
       ? managerBar(st, {
@@ -222,7 +227,7 @@
     FORMATION_IDS.reduce((a, f) => (RANK[m.mastery[f]!]! > RANK[m.mastery[a]!]! ? f : a));
 </script>
 
-<div class="wrap manager" class:has-actionbar={!!bar} data-manager>
+<div class="wrap manager" class:has-actionbar={!!bar && !sheetLabel} data-manager>
   <Topbar />
   <header class="settings-head">
     <div class="eyebrow">{M.eyebrow}</div>
@@ -275,23 +280,7 @@
       {/if}
     </section>
 
-    {#if st.phase === 'offers'}
-      <section class="card mg-col" data-manager-offers>
-        <h2>{M.offersHeading}</h2>
-        {#if st.offers.length}
-          <p class="muted fs-sm">{M.offersLead}</p>
-          {#each st.offers as o, i (o.clubId)}
-            <div class="mg-row">
-              <span class="mg-info"><b>{tn(o.name)}</b><small>{leagueName(o.leagueId)}</small></span>
-              <button class="btn btn-sm btn-primary" data-act="manager-accept" onclick={() => act((s) => acceptOffer(s, i))}>{M.accept}</button>
-            </div>
-          {/each}
-          {#if st.club}<button class="btn" data-act="manager-stay" onclick={() => act(stayAtClub)}>{M.stay}</button>{/if}
-        {:else}
-          <p class="muted fs-sm">{M.restLead}</p>
-        {/if}
-      </section>
-    {:else if st.phase === 'setup'}
+    {#if st.phase === 'setup'}
       <section class="card mg-col" data-manager-setup>
         <h2>{M.setupHeading}</h2>
         <h3>{M.formation}</h3>
@@ -319,68 +308,6 @@
         </div>
         <p class="muted fs-sm">{M.targetLead}</p>
       </section>
-    {:else if st.phase === 'transfer'}
-      <section class="card mg-col" data-manager-transfer>
-        <h2>{M.transferHeading}</h2>
-        <p class="muted fs-sm">{M.transferLead}</p>
-        {#each st.transfers as t, i (i)}
-          <button class="mg-row mg-pick" data-act="manager-transfer" onclick={() => act((s) => pickTransfer(s, i))}>
-            <span class="mg-info"><b>{transferName(t.kind)}</b><small>{M.transferSpec({ pos: tn(POS_LABEL[t.pos]), ovr: t.ovr, age: t.age })}</small><small class="muted">{transferDesc(t.kind)}</small></span>
-            <span class="tap-go" aria-hidden="true">›</span>
-          </button>
-        {/each}
-        <button class="btn" data-act="manager-skip" onclick={() => act((s) => pickTransfer(s, -1))}>{M.skip}</button>
-      </section>
-    {:else if st.phase === 'event'}
-      <section class="card mg-col" data-manager-event>
-        {#if shownEv}
-          {@const t = managerEventText(shownEv.id)}
-          <span class="eyebrow">{M.eventHeading({ n: evIndex, total: st.events.length })}</span>
-          <h2>{t.t}</h2>
-          <p>{t.b}</p>
-          {#if shownEv.result !== null}
-            {@const out = eventOutcome(shownEv)}
-            {#if out}
-              <div class="eyebrow">{M.eventResult({ label: t.choices[shownEv.choice ?? 0] ?? '' })}</div>
-              <div class="result-big pop {out.ok ? 'ok' : 'ng'}" data-manager-outcome={out.ok ? 'ok' : 'fail'}>{out.label}</div>
-            {/if}
-            <p class="mg-result" data-manager-event-result>{shownEv.result}</p>
-            <Chips chips={evChips} pop />
-          {:else}
-            {@const odds = choiceOddsLabels(shownEv.id)}
-            <div class="stack">
-              {#each t.choices as c, i (i)}
-                <button class="choice" data-act="manager-choice" aria-label={M.oddsLabel({ label: c, odds: odds[i] ?? '' })} onclick={() => answer(shownEv.id, i)}><span>{c}</span><span class="odds" aria-hidden="true">{odds[i]}</span></button>
-              {/each}
-            </div>
-          {/if}
-        {:else}
-          <p class="muted fs-sm">{M.liveEyebrow({ n: st.season + 1 })}</p>
-        {/if}
-      </section>
-    {:else if st.phase === 'result' && lastSeason && live === lastSeason.n && lastSeason.club}
-      <ManagerLive n={lastSeason.n} club={tn(lastSeason.club)} matches={managerMatchday(st.id, lastSeason)} ondone={liveDone} />
-    {:else if st.phase === 'result' && lastSeason}
-      {@const badges = seasonBadges(lastSeason)}
-      {@const chips = seasonChips(lastSeason)}
-      {@const up = masteryUpLine(lastSeason)}
-      <section class="card mg-col" data-manager-result>
-        <h2>{M.resultHeading({ n: lastSeason.n })}</h2>
-        {#if badges.length}
-          <div class="mg-badges" data-manager-badges>
-            {#each badges as b, i (b.k)}<span class="mg-trophy" class:bad={b.bad} style="--d:{i * 120}ms">{b.label}</span>{/each}
-          </div>
-        {/if}
-        {#if lastSeason.clubId}<p class="muted fs-sm">{M.record({ w: lastSeason.w, d: lastSeason.d, l: lastSeason.l })}</p>{/if}
-        {#each lastSeason.lines as line, i (i)}<p class="mg-log">{line}</p>{/each}
-        {#if chips.length || up}
-          <div class="mg-change" data-manager-change>
-            <h3>{M.seasonChange}</h3>
-            <Chips {chips} pop split />
-            {#if up}<p class="mg-up">{up}</p>{/if}
-          </div>
-        {/if}
-      </section>
     {:else if st.phase === 'done' && result}
       <section class="card mg-col" data-manager-done>
         <h2>{M.doneHeading}</h2>
@@ -401,6 +328,98 @@
       </section>
     {/if}
 
+    <!-- T-11-330 선수 플레이처럼 고르거나 결과를 보는 단계(제의 · 영입 · 이벤트 · 경기 · 결산)는 아래에서 올라오는 창으로 띄운다. -->
+    {#if sheetLabel}
+      <PopSheet label={sheetLabel} step={sheetStep}>
+        {#if st.phase === 'offers'}
+          <section class="mg-col" data-manager-offers>
+            <h2>{M.offersHeading}</h2>
+            {#if st.offers.length}
+              <p class="muted fs-sm">{M.offersLead}</p>
+              {#each st.offers as o, i (o.clubId)}
+                <div class="mg-row">
+                  <span class="mg-info"><b>{tn(o.name)}</b><small>{leagueName(o.leagueId)}</small></span>
+                  <button class="btn btn-sm btn-primary" data-act="manager-accept" onclick={() => act((s) => acceptOffer(s, i))}>{M.accept}</button>
+                </div>
+              {/each}
+              {#if st.club}<button class="btn" data-act="manager-stay" onclick={() => act(stayAtClub)}>{M.stay}</button>{/if}
+            {:else}
+              <p class="muted fs-sm">{M.restLead}</p>
+            {/if}
+            {#if bar}<button class="btn btn-primary btn-block" data-act={bar.act} disabled={busy} onclick={onBar}>{bar.label}</button>{/if}
+          </section>
+        {:else if st.phase === 'transfer'}
+          <section class="mg-col" data-manager-transfer>
+            <h2>{M.transferHeading}</h2>
+            <p class="muted fs-sm">{M.transferLead}</p>
+            {#each st.transfers as t, i (i)}
+              <button class="mg-row mg-pick" data-act="manager-transfer" onclick={() => act((s) => pickTransfer(s, i))}>
+                <span class="mg-info"><b>{transferName(t.kind)}</b><small>{M.transferSpec({ pos: tn(POS_LABEL[t.pos]), ovr: t.ovr, age: t.age })}</small><small class="muted">{transferDesc(t.kind)}</small></span>
+                <span class="tap-go" aria-hidden="true">›</span>
+              </button>
+            {/each}
+            <button class="btn" data-act="manager-skip" onclick={() => act((s) => pickTransfer(s, -1))}>{M.skip}</button>
+          </section>
+        {:else if st.phase === 'event'}
+          <section class="mg-col" data-manager-event>
+            {#if shownEv}
+              {@const t = managerEventText(shownEv.id)}
+              <span class="eyebrow">{M.eventHeading({ n: evIndex, total: st.events.length })}</span>
+              <h2>{t.t}</h2>
+              <p>{t.b}</p>
+              {#if shownEv.result !== null}
+                {@const out = eventOutcome(shownEv)}
+                {#if out}
+                  <div class="eyebrow">{M.eventResult({ label: t.choices[shownEv.choice ?? 0] ?? '' })}</div>
+                  <div class="result-big pop {out.ok ? 'ok' : 'ng'}" data-manager-outcome={out.ok ? 'ok' : 'fail'}>{out.label}</div>
+                {/if}
+                <p class="mg-result" data-manager-event-result>{shownEv.result}</p>
+                <Chips chips={evChips} pop />
+              {:else}
+                {@const odds = choiceOddsLabels(shownEv.id)}
+                <div class="stack">
+                  {#each t.choices as c, i (i)}
+                    <button class="choice" data-act="manager-choice" aria-label={M.oddsLabel({ label: c, odds: odds[i] ?? '' })} onclick={() => answer(shownEv.id, i)}><span>{c}</span><span class="odds" aria-hidden="true">{odds[i]}</span></button>
+                  {/each}
+                </div>
+              {/if}
+            {:else}
+              <p class="muted fs-sm">{M.liveEyebrow({ n: st.season + 1 })}</p>
+            {/if}
+            {#if bar}<button class="btn btn-primary btn-block" data-act={bar.act} disabled={busy} onclick={onBar}>{bar.label}</button>{/if}
+          </section>
+        {:else if st.phase === 'result' && lastSeason && live === lastSeason.n && lastSeason.club}
+          <ManagerLive n={lastSeason.n} club={tn(lastSeason.club)} matches={managerMatchday(st.id, lastSeason)} ondone={liveDone} />
+        {:else if st.phase === 'result' && lastSeason}
+          {@const badges = seasonBadges(lastSeason)}
+          {@const chips = seasonChips(lastSeason)}
+          {@const up = masteryUpLine(lastSeason)}
+          <section class="mg-col" data-manager-result>
+            <h2>{M.resultHeading({ n: lastSeason.n })}</h2>
+            {#if badges.length}
+              <div class="mg-badges" data-manager-badges>
+                {#each badges as b, i (b.k)}<span class="mg-trophy" class:bad={b.bad} style="--d:{i * 120}ms">{b.label}</span>{/each}
+              </div>
+            {/if}
+            {#if lastSeason.clubId}<p class="muted fs-sm">{M.record({ w: lastSeason.w, d: lastSeason.d, l: lastSeason.l })}</p>{/if}
+            {#each lastSeason.lines as line, i (i)}<p class="mg-log">{line}</p>{/each}
+            {#if chips.length || up}
+              <div class="mg-change" data-manager-change>
+                <h3>{M.seasonChange}</h3>
+                <Chips {chips} pop split />
+                {#if up}<p class="mg-up">{up}</p>{/if}
+              </div>
+            {/if}
+            {#if bar}<button class="btn btn-primary btn-block" data-act={bar.act} disabled={busy} onclick={onBar}>{bar.label}</button>{/if}
+          </section>
+        {/if}
+        {#if !(st.phase === 'result' && live !== null)}
+          <!-- 창이 떠 있는 동안에도 포기할 수 있게(화면의 포기 버튼은 창 뒤에 가린다). -->
+          <button class="link-btn mg-abandon-link" data-act="manager-abandon" onclick={() => ((confirmAbandon = true), (error = null))}>{M.abandon}</button>
+        {/if}
+      </PopSheet>
+    {/if}
+
     {#if st.history.length}
       <details class="card" data-manager-history>
         <summary class="disc-row">{M.history}<span class="disc-chev" aria-hidden="true"></span></summary>
@@ -411,7 +430,7 @@
         </ul>
       </details>
     {/if}
-    {#if st.phase !== 'done'}
+    {#if st.phase !== 'done' && !sheetLabel}
       <button class="btn mg-abandon" data-act="manager-abandon" onclick={() => ((confirmAbandon = true), (error = null))}>{M.abandon}</button>
     {/if}
   {:else}
@@ -471,7 +490,7 @@
   <span class="fs-sm">{M.effect} ({M.effectFor({ formation: f })}) {coachEffectText(r as never, f)}</span>
 {/snippet}
 
-{#if bar}
+{#if bar && !sheetLabel}
   <!-- T-11-329 선수 커리어의 '다음 →'처럼 진행 버튼은 화면 아래에 고정한다(카드 맨 아래까지 내리지 않게). -->
   <div class="action-bar" data-manager-bar>
     <div class="action-bar-inner">
@@ -548,6 +567,11 @@
     .mg-delta {
       animation: none;
     }
+  }
+  .mg-abandon-link {
+    align-self: center;
+    color: var(--muted);
+    font-size: 0.8125rem;
   }
   .manager {
     display: flex;

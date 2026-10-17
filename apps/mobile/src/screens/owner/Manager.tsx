@@ -51,6 +51,7 @@ import {
   managerBar,
   managerName,
   managerStats,
+  managerSheetLabel,
   managerSteps,
   masteryUpLine,
   seasonBadges,
@@ -70,6 +71,7 @@ import { useColors } from '../../theme/useColors';
 import { ActionBar, Btn, Card, Opt, Press, Screen, Topbar, Txt } from '../../ui';
 import { DISPLAY } from '../../theme/type';
 import { ProgBar } from '../../sheets/parts';
+import { PopSheet } from '../../ui/PopSheet';
 import { useRefresh } from '../../ui/refresh';
 import { LoginButtons } from './LoginButtons';
 import { ManagerLive } from './ManagerLive';
@@ -324,6 +326,11 @@ export default function Manager() {
   const targets = st && st.phase === 'setup' ? targetOptions(st) : [];
   const minTarget = st && st.phase === 'setup' ? boardMinimum(st) : null;
   const steps = st ? managerSteps(st) : null;
+  // T-11-330 지금 단계가 창으로 뜨면 그 창 이름(창이 아니면 null). step이 바뀌면 창 맨 위로 돌아간다.
+  const sheetLabel = st && data?.active ? managerSheetLabel(st, live !== null) : null;
+  const sheetStep = st
+    ? `${st.season}:${st.phase}:${shownEv?.id ?? ''}:${answered ?? ''}:${live ?? ''}`
+    : '';
   const bar =
     st && data?.active
       ? managerBar(st, {
@@ -440,46 +447,7 @@ export default function Manager() {
           ) : null}
         </Card>
 
-        {st.phase === 'offers' ? (
-          <Card gap={10} testID="manager-offers">
-            <Txt v="h2">{M.offersHeading}</Txt>
-            {st.offers.length ? (
-              <>
-                <Txt tone="muted" style={small}>
-                  {M.offersLead}
-                </Txt>
-                {st.offers.map((o, i) => (
-                  <Row
-                    key={o.clubId}
-                    title={tn(o.name)}
-                    sub={leagueName(o.leagueId)}
-                    action={
-                      <Btn
-                        sm
-                        kind="primary"
-                        testID="manager-accept"
-                        onPress={() => act((s) => acceptOffer(s, i))}
-                      >
-                        {M.accept}
-                      </Btn>
-                    }
-                  />
-                ))}
-                {st.club ? (
-                  <Btn testID="manager-stay" onPress={() => act(stayAtClub)}>
-                    {M.stay}
-                  </Btn>
-                ) : null}
-              </>
-            ) : (
-              <>
-                <Txt tone="muted" style={small}>
-                  {M.restLead}
-                </Txt>
-              </>
-            )}
-          </Card>
-        ) : st.phase === 'setup' ? (
+        {st.phase === 'setup' ? (
           <Card gap={10} testID="manager-setup">
             <Txt v="h2">{M.setupHeading}</Txt>
             <Txt tone="muted" bold style={tiny}>
@@ -542,190 +510,6 @@ export default function Manager() {
               {M.targetLead}
             </Txt>
           </Card>
-        ) : st.phase === 'transfer' ? (
-          <Card gap={10} testID="manager-transfer">
-            <Txt v="h2">{M.transferHeading}</Txt>
-            <Txt tone="muted" style={small}>
-              {M.transferLead}
-            </Txt>
-            {st.transfers.map((t, i) => (
-              <Press
-                key={i}
-                testID="manager-transfer-pick"
-                onPress={() => act((s) => pickTransfer(s, i))}
-                scale={0.98}
-              >
-                <Row
-                  title={transferName(t.kind)}
-                  sub={M.transferSpec({ pos: tn(POS_LABEL[t.pos]), ovr: t.ovr, age: t.age })}
-                  note={transferDesc(t.kind)}
-                  action={<Txt tone="muted">›</Txt>}
-                />
-              </Press>
-            ))}
-            <Btn testID="manager-skip" onPress={() => act((s) => pickTransfer(s, -1))}>
-              {M.skip}
-            </Btn>
-          </Card>
-        ) : st.phase === 'event' ? (
-          <Card gap={10} testID="manager-event">
-            {shownEv ? (
-              (() => {
-                const t = managerEventText(shownEv.id);
-                return (
-                  <>
-                    <Txt v="eyebrow">
-                      {M.eventHeading({
-                        n: st.events.indexOf(shownEv) + 1,
-                        total: st.events.length,
-                      })}
-                    </Txt>
-                    <Txt v="h2">{t.t}</Txt>
-                    <Txt>{t.b}</Txt>
-                    {shownEv.result !== null ? (
-                      <>
-                        {(() => {
-                          const out = eventOutcome(shownEv);
-                          return out ? (
-                            <>
-                              <Txt v="eyebrow">
-                                {M.eventResult({ label: t.choices[shownEv.choice ?? 0] ?? '' })}
-                              </Txt>
-                              <Pop>
-                                <Txt
-                                  testID={`manager-outcome-${out.ok ? 'ok' : 'fail'}`}
-                                  style={{
-                                    fontFamily: DISPLAY[700],
-                                    fontSize: rem(2.5),
-                                    lineHeight: rem(2.5),
-                                    color: out.ok ? c.good : c.bad,
-                                  }}
-                                >
-                                  {out.label}
-                                </Txt>
-                              </Pop>
-                            </>
-                          ) : null;
-                        })()}
-                        <View
-                          style={{ padding: 12, borderRadius: 10, backgroundColor: c.surface2 }}
-                        >
-                          <Txt testID="manager-event-result">{shownEv.result}</Txt>
-                        </View>
-                        <Chips chips={evChips} pop />
-                      </>
-                    ) : (
-                      <View style={{ gap: 10 }}>
-                        {t.choices.map((label, i) => {
-                          const odds = choiceOddsLabels(shownEv.id)[i] ?? '';
-                          return (
-                            <Press
-                              key={i}
-                              testID="manager-choice"
-                              accessibilityRole="button"
-                              accessibilityLabel={M.oddsLabel({ label, odds })}
-                              onPress={() => answer(shownEv.id, i)}
-                              style={{
-                                borderWidth: 1.5,
-                                borderColor: c.line,
-                                backgroundColor: c.surface,
-                                borderRadius: 12,
-                                paddingVertical: 12,
-                                paddingHorizontal: 14,
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                gap: 10,
-                              }}
-                            >
-                              <Txt style={{ flex: 1, fontWeight: '600' }}>{label}</Txt>
-                              <View
-                                style={{
-                                  paddingVertical: 2,
-                                  paddingHorizontal: 8,
-                                  borderRadius: 8,
-                                  backgroundColor: c.surface2,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(0.9375) }}>
-                                  {odds}
-                                </Txt>
-                              </View>
-                            </Press>
-                          );
-                        })}
-                      </View>
-                    )}
-                  </>
-                );
-              })()
-            ) : (
-              <Txt tone="muted" style={small}>
-                {M.liveEyebrow({ n: st.season + 1 })}
-              </Txt>
-            )}
-          </Card>
-        ) : st.phase === 'result' && lastSeason && live === lastSeason.n && lastSeason.club ? (
-          <ManagerLive
-            n={lastSeason.n}
-            club={tn(lastSeason.club)}
-            matches={managerMatchday(st.id, lastSeason)}
-            onDone={liveDone}
-          />
-        ) : st.phase === 'result' && lastSeason ? (
-          <Card gap={10} testID="manager-result-card">
-            <Txt v="h2">{M.resultHeading({ n: lastSeason.n })}</Txt>
-            {seasonBadges(lastSeason).length ? (
-              <View
-                style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}
-                testID="manager-badges"
-              >
-                {seasonBadges(lastSeason).map((b, i) => (
-                  <Pop key={b.k} delay={i * 120}>
-                    <View
-                      style={{
-                        paddingVertical: 4,
-                        paddingHorizontal: 12,
-                        borderRadius: 999,
-                        backgroundColor: b.bad ? c.bad : c.pitch,
-                      }}
-                    >
-                      <Txt bold tone="onPitch" style={small}>
-                        {b.label}
-                      </Txt>
-                    </View>
-                  </Pop>
-                ))}
-              </View>
-            ) : null}
-            {lastSeason.clubId ? (
-              <Txt tone="muted" style={small}>
-                {M.record({ w: lastSeason.w, d: lastSeason.d, l: lastSeason.l })}
-              </Txt>
-            ) : null}
-            {lastSeason.lines.map((line, i) => (
-              <Txt key={i} style={small}>
-                {line}
-              </Txt>
-            ))}
-            {seasonChips(lastSeason).length || masteryUpLine(lastSeason) ? (
-              <View
-                testID="manager-change"
-                style={{ gap: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: c.line }}
-              >
-                <Txt tone="muted" bold style={tiny}>
-                  {M.seasonChange}
-                </Txt>
-                <Chips chips={seasonChips(lastSeason)} pop split />
-                {masteryUpLine(lastSeason) ? (
-                  <Txt bold tone="accent">
-                    {masteryUpLine(lastSeason)}
-                  </Txt>
-                ) : null}
-              </View>
-            ) : null}
-          </Card>
         ) : st.phase === 'done' && result ? (
           <Card gap={10} testID="manager-done">
             <Txt v="h2">{M.doneHeading}</Txt>
@@ -778,6 +562,268 @@ export default function Manager() {
           </Card>
         ) : null}
 
+        {/* T-11-330 선수 플레이처럼 고르거나 결과를 보는 단계(제의 · 영입 · 이벤트 · 경기 · 결산)는 아래에서 올라오는 창으로 띄운다. */}
+        {sheetLabel ? (
+          <PopSheet label={sheetLabel} step={sheetStep} testID="manager-sheet">
+            {st.phase === 'offers' ? (
+              <View style={{ gap: 10 }} testID="manager-offers">
+                <Txt v="h2">{M.offersHeading}</Txt>
+                {st.offers.length ? (
+                  <>
+                    <Txt tone="muted" style={small}>
+                      {M.offersLead}
+                    </Txt>
+                    {st.offers.map((o, i) => (
+                      <Row
+                        key={o.clubId}
+                        title={tn(o.name)}
+                        sub={leagueName(o.leagueId)}
+                        action={
+                          <Btn
+                            sm
+                            kind="primary"
+                            testID="manager-accept"
+                            onPress={() => act((s) => acceptOffer(s, i))}
+                          >
+                            {M.accept}
+                          </Btn>
+                        }
+                      />
+                    ))}
+                    {st.club ? (
+                      <Btn testID="manager-stay" onPress={() => act(stayAtClub)}>
+                        {M.stay}
+                      </Btn>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    <Txt tone="muted" style={small}>
+                      {M.restLead}
+                    </Txt>
+                  </>
+                )}
+                {bar ? (
+                  <Btn block kind="primary" testID={bar.act} disabled={busy} onPress={onBar}>
+                    {bar.label}
+                  </Btn>
+                ) : null}
+              </View>
+            ) : st.phase === 'transfer' ? (
+              <View style={{ gap: 10 }} testID="manager-transfer">
+                <Txt v="h2">{M.transferHeading}</Txt>
+                <Txt tone="muted" style={small}>
+                  {M.transferLead}
+                </Txt>
+                {st.transfers.map((t, i) => (
+                  <Press
+                    key={i}
+                    testID="manager-transfer-pick"
+                    onPress={() => act((s) => pickTransfer(s, i))}
+                    scale={0.98}
+                  >
+                    <Row
+                      title={transferName(t.kind)}
+                      sub={M.transferSpec({ pos: tn(POS_LABEL[t.pos]), ovr: t.ovr, age: t.age })}
+                      note={transferDesc(t.kind)}
+                      action={<Txt tone="muted">›</Txt>}
+                    />
+                  </Press>
+                ))}
+                <Btn testID="manager-skip" onPress={() => act((s) => pickTransfer(s, -1))}>
+                  {M.skip}
+                </Btn>
+              </View>
+            ) : st.phase === 'event' ? (
+              <View style={{ gap: 10 }} testID="manager-event">
+                {shownEv ? (
+                  (() => {
+                    const t = managerEventText(shownEv.id);
+                    return (
+                      <>
+                        <Txt v="eyebrow">
+                          {M.eventHeading({
+                            n: st.events.indexOf(shownEv) + 1,
+                            total: st.events.length,
+                          })}
+                        </Txt>
+                        <Txt v="h2">{t.t}</Txt>
+                        <Txt>{t.b}</Txt>
+                        {shownEv.result !== null ? (
+                          <>
+                            {(() => {
+                              const out = eventOutcome(shownEv);
+                              return out ? (
+                                <>
+                                  <Txt v="eyebrow">
+                                    {M.eventResult({ label: t.choices[shownEv.choice ?? 0] ?? '' })}
+                                  </Txt>
+                                  <Pop>
+                                    <Txt
+                                      testID={`manager-outcome-${out.ok ? 'ok' : 'fail'}`}
+                                      style={{
+                                        fontFamily: DISPLAY[700],
+                                        fontSize: rem(2.5),
+                                        lineHeight: rem(2.5),
+                                        color: out.ok ? c.good : c.bad,
+                                      }}
+                                    >
+                                      {out.label}
+                                    </Txt>
+                                  </Pop>
+                                </>
+                              ) : null;
+                            })()}
+                            <View
+                              style={{ padding: 12, borderRadius: 10, backgroundColor: c.surface2 }}
+                            >
+                              <Txt testID="manager-event-result">{shownEv.result}</Txt>
+                            </View>
+                            <Chips chips={evChips} pop />
+                          </>
+                        ) : (
+                          <View style={{ gap: 10 }}>
+                            {t.choices.map((label, i) => {
+                              const odds = choiceOddsLabels(shownEv.id)[i] ?? '';
+                              return (
+                                <Press
+                                  key={i}
+                                  testID="manager-choice"
+                                  accessibilityRole="button"
+                                  accessibilityLabel={M.oddsLabel({ label, odds })}
+                                  onPress={() => answer(shownEv.id, i)}
+                                  style={{
+                                    borderWidth: 1.5,
+                                    borderColor: c.line,
+                                    backgroundColor: c.surface,
+                                    borderRadius: 12,
+                                    paddingVertical: 12,
+                                    paddingHorizontal: 14,
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    gap: 10,
+                                  }}
+                                >
+                                  <Txt style={{ flex: 1, fontWeight: '600' }}>{label}</Txt>
+                                  <View
+                                    style={{
+                                      paddingVertical: 2,
+                                      paddingHorizontal: 8,
+                                      borderRadius: 8,
+                                      backgroundColor: c.surface2,
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    <Txt
+                                      style={{ fontFamily: DISPLAY[700], fontSize: rem(0.9375) }}
+                                    >
+                                      {odds}
+                                    </Txt>
+                                  </View>
+                                </Press>
+                              );
+                            })}
+                          </View>
+                        )}
+                      </>
+                    );
+                  })()
+                ) : (
+                  <Txt tone="muted" style={small}>
+                    {M.liveEyebrow({ n: st.season + 1 })}
+                  </Txt>
+                )}
+                {bar ? (
+                  <Btn block kind="primary" testID={bar.act} disabled={busy} onPress={onBar}>
+                    {bar.label}
+                  </Btn>
+                ) : null}
+              </View>
+            ) : st.phase === 'result' && lastSeason && live === lastSeason.n && lastSeason.club ? (
+              <ManagerLive
+                n={lastSeason.n}
+                club={tn(lastSeason.club)}
+                matches={managerMatchday(st.id, lastSeason)}
+                onDone={liveDone}
+              />
+            ) : st.phase === 'result' && lastSeason ? (
+              <View style={{ gap: 10 }} testID="manager-result-card">
+                <Txt v="h2">{M.resultHeading({ n: lastSeason.n })}</Txt>
+                {seasonBadges(lastSeason).length ? (
+                  <View
+                    style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}
+                    testID="manager-badges"
+                  >
+                    {seasonBadges(lastSeason).map((b, i) => (
+                      <Pop key={b.k} delay={i * 120}>
+                        <View
+                          style={{
+                            paddingVertical: 4,
+                            paddingHorizontal: 12,
+                            borderRadius: 999,
+                            backgroundColor: b.bad ? c.bad : c.pitch,
+                          }}
+                        >
+                          <Txt bold tone="onPitch" style={small}>
+                            {b.label}
+                          </Txt>
+                        </View>
+                      </Pop>
+                    ))}
+                  </View>
+                ) : null}
+                {lastSeason.clubId ? (
+                  <Txt tone="muted" style={small}>
+                    {M.record({ w: lastSeason.w, d: lastSeason.d, l: lastSeason.l })}
+                  </Txt>
+                ) : null}
+                {lastSeason.lines.map((line, i) => (
+                  <Txt key={i} style={small}>
+                    {line}
+                  </Txt>
+                ))}
+                {seasonChips(lastSeason).length || masteryUpLine(lastSeason) ? (
+                  <View
+                    testID="manager-change"
+                    style={{ gap: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: c.line }}
+                  >
+                    <Txt tone="muted" bold style={tiny}>
+                      {M.seasonChange}
+                    </Txt>
+                    <Chips chips={seasonChips(lastSeason)} pop split />
+                    {masteryUpLine(lastSeason) ? (
+                      <Txt bold tone="accent">
+                        {masteryUpLine(lastSeason)}
+                      </Txt>
+                    ) : null}
+                  </View>
+                ) : null}
+                {bar ? (
+                  <Btn block kind="primary" testID={bar.act} disabled={busy} onPress={onBar}>
+                    {bar.label}
+                  </Btn>
+                ) : null}
+              </View>
+            ) : null}
+            {!(st.phase === 'result' && live !== null) ? (
+              // 창이 떠 있는 동안에도 포기할 수 있게(화면의 포기 버튼은 창 뒤에 가린다).
+              <Press
+                testID="manager-abandon"
+                onPress={askAbandon}
+                style={{ alignSelf: 'center', paddingVertical: 6 }}
+              >
+                <Txt
+                  tone="muted"
+                  style={{ fontSize: rem(0.8125), textDecorationLine: 'underline' }}
+                >
+                  {M.abandon}
+                </Txt>
+              </Press>
+            ) : null}
+          </PopSheet>
+        ) : null}
+
         {st.history.length ? (
           <Card gap={4} testID="manager-history">
             <Txt v="h2">{M.history}</Txt>
@@ -790,7 +836,7 @@ export default function Manager() {
             ))}
           </Card>
         ) : null}
-        {st.phase !== 'done' ? (
+        {st.phase !== 'done' && !sheetLabel ? (
           <Btn kind="danger" testID="manager-abandon" onPress={askAbandon}>
             {M.abandon}
           </Btn>
@@ -801,7 +847,7 @@ export default function Manager() {
   return (
     <Screen
       footer={
-        bar ? (
+        bar && !sheetLabel ? (
           // T-11-329 선수 커리어의 '다음 →'처럼 진행 버튼은 화면 아래에 고정한다.
           <ActionBar>
             <Btn block kind="primary" testID={bar.act} disabled={busy} onPress={onBar}>

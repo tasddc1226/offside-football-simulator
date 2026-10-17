@@ -201,3 +201,16 @@ export function managerBar(
   if (s.phase === 'done') return { act: 'manager-finish', label: M.finish };
   return null;
 }
+
+/**
+ * T-11-330 선수 플레이처럼 아래에서 올라오는 창으로 띄우는 단계(제의 · 영입 · 이벤트 · 경기 중계 · 결산)면 그 창 이름,
+ * 화면에 그대로 두는 단계(시즌 준비 · 커리어 끝)면 null. live는 경기 중계 중인지.
+ */
+export function managerSheetLabel(s: ManagerState, live: boolean): string | null {
+  const n = s.history.at(-1)?.n ?? s.season;
+  if (s.phase === 'offers') return M.offersHeading;
+  if (s.phase === 'transfer') return M.transferHeading;
+  if (s.phase === 'event') return M.sheetEvent({ n: s.season + 1 });
+  if (s.phase === 'result') return live ? M.liveEyebrow({ n }) : M.resultHeading({ n });
+  return null;
+}

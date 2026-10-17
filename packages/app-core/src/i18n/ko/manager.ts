@@ -133,6 +133,7 @@ const ko = {
   stepTransfer: '영입',
   stepEvent: '이야기',
   stepResult: '결산',
+  sheetEvent: (p: { n: number }) => `${p.n}시즌 이야기`,
 };
 
 export type ManagerMsgs = typeof ko;
