@@ -58,11 +58,14 @@ export default {
       console.error(JSON.stringify({ level: 'error', job, error: logErrorText(e) }));
     // 시즌 일정(게이지가 확정한 마감·다음 시즌)을 먼저 입힌다 — 아래 결산·보존·게이지가 같은 일정을 본다.
     await loadSeasonSchedule(env.DB, true).catch(logged('season-schedule'));
-    if (controller.cron === '0 19 * * *')
-      await runDailyTick(env, controller.scheduledTime).finally(() =>
-        runInfraHealth(env, controller.scheduledTime).catch(logged('infra-health')),
-      );
-    else {
+    if (controller.cron === '0 19 * * *') {
+      let completed = false;
+      await runDailyTick(env, controller.scheduledTime)
+        .then((daily) => {
+          completed = daily?.status === 'complete';
+        })
+        .finally(() => runInfraHealth(env, Date.now(), completed).catch(logged('infra-health')));
+    } else {
       // 푸시 단계가 실패해도 뒤의 시즌 결산·컵 진행은 돈다(다음 5분에 다시 보낸다).
       await recoverBillingAlerts(env, controller.scheduledTime).catch(logged('billing-recovery'));
       await runNewsPush(env).catch(logged('news-push'));
@@ -141,7 +144,8 @@ export default {
       if (env.AUTOMATION_HIDE_DISABLED !== '1')
         await sweepAutomation(env.DB, controller.scheduledTime, true).catch(logged('automation'));
       await updateClubStrength(env, controller.scheduledTime).catch(logged('club-strength'));
-      await runInfraHealth(env, controller.scheduledTime, daily?.status === 'complete').catch(
+      // Health samples describe the database now, after the preceding cron work has finished.
+      await runInfraHealth(env, Date.now(), daily?.status === 'complete').catch(
         logged('infra-health'),
       );
       // T-11-156 서버 최초 기록 전체 재계산을 몰아서 훑는다 — 공개 목록 조회가 조각을 기다리지 않게. 시간 한도까지
