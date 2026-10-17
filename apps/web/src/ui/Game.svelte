@@ -32,6 +32,7 @@
   import { avatarLookText as LK } from '@offside/app-core/i18n/ko/avatarLook';
   import { lookSeen, markLookSeen } from '@offside/app-core/lookSeen';
   import PixelAvatar from './PixelAvatar.svelte';
+  import { renameText as RN } from '@offside/app-core/i18n/ko/rename';
 
   let actionHeight = $state(0);
   $effect(() => {
@@ -62,6 +63,8 @@
   const avatar = $derived(avatarSpec(s));
   // T-11-191 도트 선수를 누르면 꾸미기(선수 자금으로 산다, 은퇴 후 외형 편집은 별도 경로). 시트는 따로 불러온다.
   let lookOpen = $state(false);
+  // T-11-377 이름 옆 연필을 누르면 이름 변경권 창. 창은 따로 불러온다.
+  let renameOpen = $state(false);
   // 꾸미기를 한 번도 안 열었으면 도트 선수 둘레 고리를 깜빡여 누를 수 있다고 알린다.
   let lookSeenNow = $state(lookSeen());
   function openLook() {
@@ -118,7 +121,7 @@
     <div>
       <div class="shirt">No.{s.number} · {posLabel(s)}</div>
       {#if title}<button class="card-title r{title.rarity}" data-act="titles" aria-label={T.titleOpen({ name: tn(title.name) })} onclick={openTitles}>{tn(title.name)}</button>{/if}
-      <h1>{s.name}</h1>
+      <div class="name-row"><h1>{s.name}</h1><button class="name-edit" data-act="rename-open" aria-label={RN.entryLabel({ name: s.name })} onclick={() => (renameOpen = true)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z" /></svg></button></div>
       <div class="meta">{T.age({ n: s.age })} · <ClubBadge club={s.club} size={16} /> {tn(s.club.name)}<br />{tn(L.name)}{contract ? ` · ${contract}` : ''}</div>
     </div>
     <div class="ovr"><div class="n num">{Math.round(ovrTween.current)}</div><div class="l">OVR</div></div>
@@ -178,3 +181,4 @@
 </nav>
 
 {#if lookOpen}{#await import('./AvatarLook.svelte') then { default: AvatarLook }}<AvatarLook {s} onclose={() => (lookOpen = false)} />{/await}{/if}
+{#if renameOpen}{#await import('./RenameSheet.svelte') then { default: RenameSheet }}<RenameSheet careerId={s.cid} name={s.name} onclose={() => (renameOpen = false)} />{/await}{/if}

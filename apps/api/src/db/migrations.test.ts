@@ -173,6 +173,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'updated_at',
   ],
   owner_attendance_days: ['profile_id', 'day', 'checked_at'],
+  career_renames: ['id', 'career_id', 'profile_id', 'old_name', 'new_name', 'created_at'],
   owner_item_purchases: ['id', 'profile_id', 'item', 'qty', 'price', 'created_at'],
   scout_pity: ['profile_id', 'used', 'streak', 'elites', 'mode', 'updated_at'],
   reroll_mileage: ['profile_id', 'used', 'progress', 'rewarded', 'updated_at'],
