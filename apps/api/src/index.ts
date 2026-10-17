@@ -107,7 +107,7 @@ export default {
       // Daily work has its own durable cursor and precedes bulk backup/archive work.
       const daily = await runDailyTick(env, controller.scheduledTime).catch((e: unknown) => {
         logged('daily-step')(e);
-        return null;
+        return { status: 'retry' as const, error: logErrorText(e) };
       });
       // Yield bulk work when the primary is already rejecting maintenance requests.
       if (daily?.status === 'retry' && /overloaded|Network connection lost/.test(daily.error ?? ''))

@@ -71,6 +71,47 @@ it('overlapping ticks execute a stage only once', async () => {
   expect(execute).toHaveBeenCalledTimes(1);
 });
 
+it('retains a nested overload cause when a checkpoint read fails, without claiming completion', async () => {
+  const error = Object.assign(
+    new Error('query failed params: private-value', {
+      cause: new Error('D1 DB is overloaded. Requests queued for too long.'),
+    }),
+    { query: 'SELECT value FROM app_meta WHERE key=?' },
+  );
+  const DB = new Proxy(ctx.env.DB, {
+    get(target, key) {
+      if (key === 'prepare')
+        return () => {
+          throw error;
+        };
+      const v = Reflect.get(target, key);
+      return typeof v === 'function' ? v.bind(target) : v;
+    },
+  });
+  const result = await runDailyTick({ ...ctx.env, DB }, NOW);
+  expect(result).toMatchObject({
+    status: 'retry',
+    error: expect.stringContaining('D1 DB is overloaded'),
+  });
+  expect(result?.error).not.toContain('private-value');
+  expect(
+    await ctx.env.DB.prepare('SELECT value FROM app_meta WHERE key=?')
+      .bind(DAILY_STATE_KEY)
+      .first(),
+  ).toBeNull();
+});
+
+it('retains a nested stage failure cause in the durable retry checkpoint', async () => {
+  const execute: DailyStep = async () => {
+    throw new Error('wrapped failure', { cause: new Error('D1_ERROR: Network connection lost.') });
+  };
+  expect(await runDailyStep(ctx.env, NOW, execute)).toMatchObject({
+    status: 'retry',
+    error: expect.stringContaining('Network connection lost'),
+  });
+  expect((await read()).attempts).toBe(1);
+});
+
 it('passes a partial stage cursor back to the next claimed execution', async () => {
   const cursor = { at: 'same-timestamp', id: 'last-id' };
   const execute = vi
