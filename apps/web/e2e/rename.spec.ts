@@ -19,6 +19,8 @@ test('이름 변경권: 1장 써서 진행 중 선수 이름을 바꾸고 세이
   });
   await resumeWithSave(page, {});
   const cid = await page.evaluate(() => JSON.parse(localStorage.getItem('ft_save')!).cid);
+  // 시작 화면(선수 생성)이 리롤권 장수를 물은 것은 빼고, 창을 연 뒤부터 센다.
+  calls.items = 0;
   await page.locator('[data-act="rename-open"]').click();
   const dialog = page.getByRole('dialog', { name: '선수 이름 바꾸기' });
   await expect(dialog.locator('[data-rename-have]')).toHaveText('가진 변경권 1장');

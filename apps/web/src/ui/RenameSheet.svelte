@@ -2,6 +2,7 @@
   // T-11-377 선수 이름 변경권 창 — 진행 중 선수(Game.svelte 이름 옆)와 내 선수 목록(owner/PlayerRelease.svelte)에서 연다.
   // 로그인한 구단주는 변경권 1장으로 이름을 바꾸고, 로그인하지 않은 기기는 로그인 버튼을 본다. 웹은 변경권을 팔지 않아
   // 없으면 출석 보상 안내만 한다(사기는 앱). 첫 화면 번들 밖 지연 청크(여는 쪽이 import()로 부른다).
+  import { untrack } from 'svelte';
   import { fetchItems } from '@offside/app-core/api/cup';
   import { hasSessionHint } from '@offside/app-core/api/client';
   import { PLAYER_NAME_MAX, applyRename, renameDraft, renamePlayer } from '@offside/app-core/rename';
@@ -28,7 +29,7 @@
   let key = crypto.randomUUID();
 
   $effect(() => {
-    if (have === null) return;
+    if (untrack(() => have) === null) return;
     void fetchItems().then((r) => {
       have = r.ok ? (r.data.rename ?? 0) : r.error.reason === 'GOOGLE_LOGIN_REQUIRED' ? null : 0;
     });
