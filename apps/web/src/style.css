@@ -1653,6 +1653,10 @@ a.tile-link {
   padding-left: 18px;
   line-height: 1.6;
 }
+/* T-11-333 코드 업데이트 패치의 릴리즈 노트 링크 */
+.fair-open {
+  margin-top: 6px;
+}
 /* T-10-011 소식(게시판) */
 textarea {
   resize: vertical;

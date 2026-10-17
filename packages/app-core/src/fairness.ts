@@ -1,6 +1,7 @@
 // T-11-141 확률 도감의 '확률과 공정성' — 잠재력 등급·강화 확률을 게임 코드의 값에서 바로 계산한다(웹 Fairness.svelte · 앱
 // screens/hof/Fairness.tsx는 이 결과를 그리기만 한다). 경기 중 화면에는 숫자를 내지 않고 이 표만 정확한 값을 보여 준다.
-import type { BalanceHistory } from '@offside/contracts';
+import type { BalanceHistory, BalancePatch } from '@offside/contracts';
+import { getLocale } from '@offside/contracts/i18n';
 import { REROLL_MILEAGE } from '@offside/contracts/cup';
 import {
   BALANCE_KEYS,
@@ -89,39 +90,76 @@ export function fairnessView(): FairnessView {
   };
 }
 
-// ───────── T-11-141 공개 밸런스 이력 ─────────
+// ───────── T-11-141 공개 밸런스 이력 (T-11-333 코드 배포 패치 포함) ─────────
 const num = (v: number) => String(Math.round(v * 1000) / 1000);
 function fmt(k: BalanceKey, v: number): string {
   const unit = (BALANCE_SPEC[k] as BalanceKnob).unit;
   if (unit === 'man') return fmtValue(v);
   return unit === 'pct' ? `${num(v * 100)}%` : unit === 'x' ? `×${num(v)}` : num(v);
 }
+const diff = (k: BalanceKey, before: number, after: number) =>
+  [K[k], `${fmt(k, before)} → ${fmt(k, after)}`] as const;
 const mapDiff = (a: Record<string, number>, b: Record<string, number>) =>
   new Set([...Object.keys(a), ...Object.keys(b)].filter((k) => a[k] !== b[k])).size;
+/** 한국어 원문과 번역 중 지금 언어(없으면 한국어). */
+const pick = <T>(t: { ko: T; en?: T | undefined; ja?: T | undefined }): T => t[getLocale()] ?? t.ko;
 
-export interface HistoryRow {
-  version: number;
-  activatedAt: string;
-  active: boolean;
-  /** 바로 앞(먼저 적용된) 버전과 달라진 항목 — [이름, 이전 → 이후]. 맨 처음 버전은 기본값과 비교한다. */
+export type HistoryRow = {
+  /** 목록 key — 버전은 `v<번호>`, 패치는 릴리즈 노트 항목 id. */
+  id: string;
+  appliedAt: string;
+  /** 바뀐 밸런스 항목 — [이름, 이전 → 이후]. 버전은 바로 앞(먼저 적용된) 버전과, 맨 처음 버전은 기본값과 비교한다. */
   changes: (readonly [string, string])[];
-}
+} & (
+  | { kind: 'version'; version: number; active: boolean }
+  | {
+      /** T-11-333 코드 배포로 적용된 패치(산식·규칙 변경). 문구는 릴리즈 노트 항목과 같다. */
+      kind: 'patch';
+      title: string;
+      items: string[];
+      /** 패치를 알린 릴리즈 노트 글(소식 → 업데이트). 없으면 null. */
+      postId: string | null;
+    }
+);
 
-/** 서버 이력(최근 적용 순)을 화면 줄로 바꾼다. */
-export function historyRows(h: BalanceHistory): HistoryRow[] {
+function versionRows(h: BalanceHistory): HistoryRow[] {
   // 맨 끝에 기본값을 붙여 버전마다 바로 뒤(먼저 적용된) 값과 비교한다.
   const resolved = [...h.versions.map((v) => resolveBalance(v.values)), resolveBalance()];
   return h.versions.map((v, i) => {
     const [after, before] = [resolved[i]!, resolved[i + 1]!];
     const changes: (readonly [string, string])[] = BALANCE_KEYS.filter(
       (k) => before[k] !== after[k],
-    ).map((k) => [K[k], `${fmt(k, before[k])} → ${fmt(k, after[k])}`] as const);
+    ).map((k) => diff(k, before[k], after[k]));
     for (const m of ['eventWeight', 'choiceBonus'] as const) {
       const n = mapDiff(before[m], after[m]);
       if (n) changes.push([K[m]({ n }), '']);
     }
-    return { version: v.version, activatedAt: v.activatedAt, active: v.active, changes };
+    return {
+      kind: 'version',
+      id: `v${v.version}`,
+      version: v.version,
+      appliedAt: v.activatedAt,
+      active: v.active,
+      changes,
+    };
   });
+}
+
+const patchRow = (p: BalancePatch): HistoryRow => ({
+  kind: 'patch',
+  id: p.id,
+  appliedAt: p.appliedAt,
+  title: pick(p.title),
+  items: pick(p.items),
+  postId: p.postId,
+  changes: p.changes.map((c) => diff(c.key, c.from, c.to)),
+});
+
+/** 서버 이력(버전 + 코드 배포 패치)을 최근 적용 순 화면 줄로 바꾼다. */
+export function historyRows(h: BalanceHistory): HistoryRow[] {
+  return [...versionRows(h), ...(h.patches ?? []).map(patchRow)].sort((a, b) =>
+    b.appliedAt.localeCompare(a.appliedAt),
+  );
 }
 
 /** 확률 도감에서 이력을 펼칠 때만 부른다(10분 메모, 서버는 엣지 캐시). 실패는 메모하지 않아 다시 펼치면 다시 부른다. */

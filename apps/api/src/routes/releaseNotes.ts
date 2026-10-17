@@ -24,7 +24,11 @@ export function registerReleaseNoteRoutes(app: Hono<AppEnv>): void {
     }
     const result = await publishReleaseNotes(c.env.DB, input, nowIso());
     if (result.updated) {
-      purgeEdge(c, STALE.boardChanged('release'));
+      purgeEdge(c, [
+        ...STALE.boardChanged('release'),
+        // T-11-333 밸런스 패치를 쌓았으면 공개 이력 캐시도 지운다.
+        ...(result.balancePatchIds?.length ? STALE.balancePatched() : []),
+      ]);
       kickNewsPush(c);
     }
     return ok(c, PublishedReleaseNotesSchema, result, 200, NO_STORE);
