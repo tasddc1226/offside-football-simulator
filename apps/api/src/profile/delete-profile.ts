@@ -23,6 +23,7 @@ import {
   ownerAttendance,
   ownerAttendanceDays,
   ownerItems,
+  cardExchangeClaims,
   scoutPity,
   rerollMileage,
   ownerTitleAwards,
@@ -160,6 +161,8 @@ export async function executeProfileDeletion(
     db.delete(ownerTitleProgress).where(eq(ownerTitleProgress.profileId, input.profileId)),
     db.delete(cupPredictions).where(eq(cupPredictions.profileId, input.profileId)),
     db.delete(ownerItems).where(eq(ownerItems.profileId, input.profileId)),
+    // T-11-374 카드 과제 낸 기록.
+    db.delete(cardExchangeClaims).where(eq(cardExchangeClaims.profileId, input.profileId)),
     db.delete(scoutPity).where(eq(scoutPity.profileId, input.profileId)),
     db.delete(giftClaims).where(eq(giftClaims.profileId, input.profileId)),
     db.delete(ownerAttendance).where(eq(ownerAttendance.profileId, input.profileId)),
