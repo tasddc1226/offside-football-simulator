@@ -98,6 +98,11 @@ export function SeasonGauge() {
           {lines.endDate}
         </Txt>
       ) : null}
+      {lines.why ? (
+        <Txt testID="season-gauge-why" style={{ fontSize: rem(0.8125), color: c.muted }}>
+          {lines.why}
+        </Txt>
+      ) : null}
     </Card>
   );
 }
