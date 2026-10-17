@@ -17,8 +17,8 @@ main `94c76a835b051e502b8ccafdbcefdd6b39762c09`를 읽기 전용 fetch로 반영
 ## 검증
 
 - 최신 main 전체 API 직렬 재실행 중: 작업자1, 파일 병렬 off, hook/test timeout90초. 완료 후 아래 결과로 확정한다.
-- 이전 main: 공용820, contracts154, game453(1 skip), 모바일 설정8, SEO10, 웹78, 브라우저 E2E7 통과. API 결제·동의·서명·migration28 및 광고 제거2 통과; 이후 리뷰 회귀가 추가되어 최신 main 실행으로 검증한다.
-- 이전 main 활성화 합성 빌드144.53KB gzip/145KB 통과. 실제 Apple token 기본값은 비어 있다.
+- 최신 main: 공용828, contracts161, game453(1 skip), 모바일 설정8, SEO10, 웹79(네이티브 모의7 포함), 브라우저 E2E14 통과. API·web·e2e·mobile 타입 검사, Svelte 오류0(기존경고5), 변경 ESLint·i18n·dependency 검사 통과. API 리뷰 회귀는 전체 실행에 포함된다.
+- 최신 main 활성화 합성 빌드144.66KB gzip/145KB 통과. 실제 Apple token 기본값은 비어 있다.
 - 이전 API 병렬 실행은 Miniflare ECONNRESET/poisoned stub 후 중단. 이어진 이전 main 직렬 실행은 main 이동 확인으로 중단했다. 두 실행 모두 전체 통과로 보지 않는다.
 - 실제 구매·StoreKit/GA4 실기기·운영 데이터 변경·배포·원격 CI는 미실행이다.
 
@@ -33,3 +33,5 @@ pt=128166757은 사용자가 제공한 과거 공식 Threads 링크의 근거가
 release-notes: none
 
 기본 off인 기능의 활성화 전 사용자 안내는 `release-notes-drafts/acquisition-iap.json`에 보관한다.
+
+모바일 비동기 동의 재검사와 모의 회귀도 독립 재검토 완료. 고유 결제자는 first-party 프로필 단위이며 서로 미연결된 계정을 같은 사람으로 추정하지 않는다.

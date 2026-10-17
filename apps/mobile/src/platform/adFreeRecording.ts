@@ -26,9 +26,10 @@ export async function adFreeAccount(): Promise<string | undefined> {
       '/v1/acquisition/consent',
       30_000,
     );
-    if (!consent.ok || !consent.data.granted) return undefined;
+    if (!consent.ok || !consent.data.granted || !adFreeRecordingEnabled()) return undefined;
     const result = await getProfile();
-    if (!result.ok || result.data.id !== consent.data.profileId) return undefined;
+    if (!result.ok || result.data.id !== consent.data.profileId || !adFreeRecordingEnabled())
+      return undefined;
     const id = result.ok ? result.data.id.replace(/^prf_/, '') : '';
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
       ? id
@@ -43,6 +44,7 @@ export async function recordAdFree(p: Purchase): Promise<boolean> {
   if (!p.purchaseToken || p.purchaseState !== 'purchased') return false;
   try {
     const choice = await acquisitionChoice();
+    if (!adFreeRecordingEnabled()) return true;
     if (choice === 'denied') return true;
     if (choice === 'unavailable') return false;
     return (

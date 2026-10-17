@@ -34,10 +34,7 @@ vi.mock('../../mobile/node_modules/expo-iap', () => ({
   restorePurchases: async () => {},
 }));
 vi.mock('@offside/app-core/api/client', () => ({
-  cachedGet: async () => ({
-    ok: true,
-    data: { granted: h.serverConsent, profileId: 'prf_11111111-1111-4111-8111-111111111111' },
-  }),
+  cachedGet: h.get,
   getProfile: h.profile,
   apiFetch: h.record,
 }));
@@ -62,6 +59,10 @@ beforeEach(() => {
   h.enabled = false;
   h.consent = 'granted';
   h.serverConsent = true;
+  h.get.mockImplementation(async () => ({
+    ok: true,
+    data: { granted: h.serverConsent, profileId: profile },
+  }));
   h.profile.mockResolvedValue({ ok: true, data: { id: profile } });
   h.record.mockResolvedValue({ ok: true });
   h.available.mockResolvedValue([]);
@@ -70,6 +71,19 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 describe('native ad removal recording lifecycle', () => {
+  it('rechecks native consent after an awaited server lookup before account lookup or upload', async () => {
+    h.enabled = true;
+    h.get.mockImplementation(async () => {
+      h.consent = 'denied';
+      return { ok: true, data: { granted: true, profileId: profile } };
+    });
+    const a = await import('../../mobile/src/platform/adFreeRecording');
+    expect(await a.adFreeAccount()).toBeUndefined();
+    expect(h.profile).not.toHaveBeenCalled();
+    h.consent = 'granted';
+    expect(await a.recordAdFree(purchase)).toBe(true);
+    expect(h.record).not.toHaveBeenCalled();
+  });
   it('does not apply a cached acquisition consent to a switched profile', async () => {
     h.enabled = true;
     h.profile.mockResolvedValue({
