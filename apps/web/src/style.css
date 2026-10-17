@@ -7346,8 +7346,34 @@ button.what {
 .chat-more[aria-expanded='true'] {
   color: var(--ink);
 }
-.chat-msg .report-panel {
-  width: 100%;
+/* T-11-344 프로필 사진·이름을 누르면 그 사람 창이 뜬다(⋯과 같은 창). 생김새는 그대로 두고 누르는 자리만 만든다. */
+.chat-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.chat-who:hover b {
+  text-decoration: underline;
+}
+.chat-user-head {
+  gap: 12px;
+  align-items: center;
+}
+.chat-user-name {
+  font-size: 1.0625rem;
+  overflow-wrap: anywhere;
+}
+.chat-user-profile {
+  margin-left: auto;
+  flex: none;
 }
 .chat-empty {
   margin: auto;

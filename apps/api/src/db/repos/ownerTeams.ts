@@ -249,6 +249,17 @@ export function listMyTeams(db: Db, profileId: string) {
     .orderBy(asc(ownerTeams.season));
 }
 
+/** T-11-344 그 구단주의 가장 최근 시즌 팀 id — (구단주, 시즌) 유니크 인덱스로 한 행만 읽는다. 팀이 없으면 null. */
+export async function latestTeamIdOf(db: Db, profileId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ id: ownerTeams.id })
+    .from(ownerTeams)
+    .where(eq(ownerTeams.profileId, profileId))
+    .orderBy(desc(ownerTeams.season))
+    .limit(1);
+  return row?.id ?? null;
+}
+
 /** 그 시즌 내 팀(없으면 빈 배열) — (구단주, 시즌) 유니크 인덱스로 한 행만 읽는다. batch에 넣을 수 있게 쿼리로 돌려준다. */
 export const myTeamIn = (db: Db, profileId: string, season: number) =>
   db

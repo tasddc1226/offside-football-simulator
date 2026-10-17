@@ -7,6 +7,7 @@ import {
   ChatBlockResponseSchema,
   ChatMessageIdSchema,
   ChatMuteInputSchema,
+  ChatOwnerResponseSchema,
   ChatTicketResponseSchema,
   CommentReportInputSchema,
 } from '@offside/contracts';
@@ -24,6 +25,7 @@ import {
   reportedMessageIds,
   resolveChatReports,
 } from '../db/repos/chat.js';
+import { latestTeamIdOf } from '../db/repos/ownerTeams.js';
 import { ownerTierOfProfile } from '../db/repos/ownerTiers.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
@@ -158,6 +160,13 @@ export function registerChatRoutes(app: Hono<AppEnv>) {
       })),
     );
     return ok(c, ChatBlockListResponseSchema, { blocks }, 200, NO_STORE);
+  });
+
+  // T-11-344 사용자 창의 '프로필 보기'를 누를 때만 부른다. 구단주 프로필은 공개라 로그인 없이 열고, 세션은 보지 않는다.
+  app.get('/v1/chat/messages/:messageId/owner', async (c) => {
+    const { m } = await findMessage(c);
+    const teamId = await latestTeamIdOf(getDb(c), m.profileId);
+    return ok(c, ChatOwnerResponseSchema, { teamId });
   });
 
   app.post('/v1/chat/messages/:messageId/report', requireProfile, async (c) => {
