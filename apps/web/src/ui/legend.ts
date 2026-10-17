@@ -2,7 +2,7 @@
 // 상세 뷰 만들기·열기는 app-core/legend가 맡는다. 웹은 공유 링크 경로만 따로 둔다.
 import { createLegends } from '@offside/app-core/legend';
 import { appState } from './state.svelte.js';
-import { toast, uploadRetirement } from './helpers.js';
+import { toast } from './helpers.js';
 import { SHARE_PATH } from '../share-path.js';
 import { rnOf } from './retiredNumber.svelte.js';
 
@@ -18,7 +18,8 @@ export const {
   state: appState,
   rnOf,
   toast,
-  uploadRetirement,
+  uploadRetirement: (...args) =>
+    void import('./uploads.js').then((m) => m.uploadRetirement(...args)),
   scrollTop: () => window.scrollTo(0, 0),
 });
 

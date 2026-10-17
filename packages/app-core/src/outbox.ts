@@ -14,8 +14,9 @@ import { loadKey, saveKey } from '@offside/game/storage';
 import { OUTBOX_KEY, markAchDirty } from './achDirty.js';
 import { apiAuth, apiBaseUrl, clearApiCache, fetchWithTimeout, noteSession } from './api/client.js';
 import { retiredNumberProgressSynced } from './api/retiredNumberProgress.js';
+import { loadOutbox, saveOutbox, persistUpload, type OutboxItem } from './outboxStore.js';
+export type { OutboxItem } from './outboxStore.js';
 
-const OUTBOX_CAP = 100;
 /** T-11-182 못 보낸 항목이 남으면 앱이 켜져 있는 동안 이 간격으로 다시 보낸다(마지막 값에서 멈춘다). */
 const RETRY_MS = [30_000, 60_000, 120_000, 300_000] as const;
 /** T-11-301 업로드 요청 하나가 응답 없이 매달릴 수 있는 최대 시간(시즌 이벤트 로그는 수십 KB라 API 기본값보다 길다). */
@@ -36,10 +37,6 @@ export type RetiredNumberEvent = {
   miss?: RetiredNumberMiss;
 };
 
-export type OutboxItem =
-  | { kind: 'season'; careerId: string; year: number; body: PutCareerSeasonBody }
-  | { kind: 'retirement'; careerId: string; body: PutRetirementBody };
-
 /** 클라이언트가 넣는 UI 알림(서버 주소·인증은 api/client의 configureApi를 따른다). */
 export interface OutboxHost {
   /** T-10-013 다른 계정 소유라 서버가 거절한 항목. */
@@ -59,10 +56,6 @@ export function onRetirementSynced(fn: () => void): () => void {
   retiredListeners.add(fn);
   return () => void retiredListeners.delete(fn);
 }
-
-const loadOutbox = (): OutboxItem[] => loadKey<OutboxItem[]>(OUTBOX_KEY) ?? [];
-/* 저장 실패(쿼터 등)는 무시한다 — 다음 enqueue에서 다시 시도된다. */
-const saveOutbox = (items: OutboxItem[]): void => void saveKey(OUTBOX_KEY, items);
 
 function pathFor(item: OutboxItem): string {
   return item.kind === 'season'
@@ -118,14 +111,22 @@ type SendResult = 'ok' | 'retry' | 'abort' | 'drop' | 'conflict';
 async function sendItem(item: OutboxItem): Promise<SendResult> {
   try {
     const { headers, ...auth } = apiAuth();
+    const body = JSON.stringify(item.body);
     const res = await fetchWithTimeout(
       `${apiBaseUrl()}${pathFor(item)}`,
       {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify(item.body),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(item.kind === 'season' && item.revision
+            ? { 'X-Upload-Revision': String(item.revision) }
+            : {}),
+          ...headers,
+        },
+        body,
         ...auth,
-        keepalive: true,
+        // Browsers reject keepalive bodies above 64 KiB. The durable queue survives closure.
+        keepalive: new TextEncoder().encode(body).byteLength <= 60_000,
       },
       UPLOAD_TIMEOUT_MS,
     );
@@ -218,7 +219,8 @@ function scheduleRetry(): void {
     return;
   }
   if (retryTimer) return;
-  const ms = RETRY_MS[Math.min(retryStep++, RETRY_MS.length - 1)];
+  const base = RETRY_MS[Math.min(retryStep++, RETRY_MS.length - 1)]!;
+  const ms = Math.round(base * (1 + Math.random() * 0.2));
   retryTimer = setTimeout(() => {
     retryTimer = null;
     void flushOutbox();
@@ -229,6 +231,8 @@ async function flushOnce(syncedSeasons: Set<string>): Promise<void> {
   try {
     const items = loadOutbox();
     if (!items.length) return;
+    // Retry the durable write before attempting delivery. A reload must not lose a new item.
+    if (!saveOutbox(items)) return;
     const profileOk = await ensureProfile();
     if (!profileOk) return; // 세션 확인 실패 — 큐는 그대로 두고 다음 기회에 다시 시도한다.
 
@@ -246,12 +250,20 @@ async function flushOnce(syncedSeasons: Set<string>): Promise<void> {
         blocked.add(item.careerId);
         continue;
       }
+      if (result === 'drop') {
+        const rejected = loadKey<OutboxItem[]>(`${OUTBOX_KEY}:rejected`) ?? [];
+        if (!rejected.some((i) => JSON.stringify(i) === JSON.stringify(item))) rejected.push(item);
+        if (!saveKey(`${OUTBOX_KEY}:rejected`, rejected)) continue;
+      }
       settled.add(JSON.stringify(item));
-      if (result === 'conflict') conflicts.push(item);
-      else if (result === 'ok' && item.kind === 'retirement') retired = true;
+      if (result === 'conflict') {
+        const conflict = { ...item };
+        delete conflict.revision;
+        conflicts.push(conflict);
+      } else if (result === 'ok' && item.kind === 'retirement') retired = true;
       else if (result === 'ok' && item.kind === 'season') syncedSeasons.add(item.careerId);
       else if (result === 'drop')
-        console.warn('[outbox] 4xx 응답으로 항목을 버립니다', item.kind, item.careerId);
+        console.warn('[outbox] validation failed; record quarantined', item.kind, item.careerId);
     }
     // T-10-034: 시작할 때 읽은 목록으로 큐를 덮어쓰면 전송 중에 enqueue된 항목이 지워진다 — 지금 큐에서
     // 이번 회차에 끝낸(보냄·버림·충돌) 항목만 뺀다.
@@ -264,17 +276,10 @@ async function flushOnce(syncedSeasons: Set<string>): Promise<void> {
   }
 }
 
-function enqueue(item: OutboxItem): void {
-  try {
-    const items = loadOutbox();
-    items.push(item);
-    while (items.length > OUTBOX_CAP) items.shift();
-    saveOutbox(items);
-  } catch (err) {
-    console.error('[outbox] enqueue 실패', err);
-    return;
-  }
+function enqueue(item: OutboxItem): boolean {
+  const saved = persistUpload(item);
   void flushOutbox();
+  return saved;
 }
 
 /** T-10-013. 아직 서버에 못 보낸 은퇴 기록의 커리어 ID(명예의 전당 '내 선수'가 계정 목록에 잠깐 더한다). */
@@ -282,10 +287,10 @@ export function pendingRetirementIds(): Set<string> {
   return new Set(loadOutbox().flatMap((i) => (i.kind === 'retirement' ? [i.careerId] : [])));
 }
 
-export function enqueueSeason(careerId: string, year: number, body: PutCareerSeasonBody): void {
-  enqueue({ kind: 'season', careerId, year, body });
+export function enqueueSeason(careerId: string, year: number, body: PutCareerSeasonBody): boolean {
+  return enqueue({ kind: 'season', careerId, year, body });
 }
 
-export function enqueueRetirement(careerId: string, body: PutRetirementBody): void {
-  enqueue({ kind: 'retirement', careerId, body });
+export function enqueueRetirement(careerId: string, body: PutRetirementBody): boolean {
+  return enqueue({ kind: 'retirement', careerId, body });
 }

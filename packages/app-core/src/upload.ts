@@ -11,6 +11,7 @@ import type {
 import { toPublicName } from '@offside/contracts/content-filter';
 import type { CareerRecord, GameState, HofEntry } from '@offside/game/types';
 import { publicNameOf } from './namePublic.js';
+import { persistUpload } from './outboxStore.js';
 import type * as Outbox from './outbox.js';
 
 /** 시즌 한 줄(`CareerRecord`) → 업로드 페이로드. T-10-006부터 시즌 상세(무실점·리그 기록·A매치·
@@ -87,19 +88,29 @@ export function createUploader(host: UploaderHost) {
   // T-9-009: 시즌 종료 직후(RNG 소모 없는 지점) 커리어 요약 + 버퍼링된 선택 로그를 업로드 큐에 넣는다.
   function uploadSeason(s: GameState, rec: CareerRecord, growth?: SeasonGrowth) {
     const events = (s.evBuf || []).slice();
-    s.evBuf = [];
     const signals = host.signals?.();
-    void host.outbox().then((m) =>
-      m.enqueueSeason(s.cid, rec.year, {
-        ...seasonBody(s, rec, events, growth),
-        ...(signals && { signals }),
-      }),
-    );
+    const body = { ...seasonBody(s, rec, events, growth), ...(signals && { signals }) };
+    const release = () => {
+      if (events.every((event, i) => s.evBuf?.[i] === event)) s.evBuf?.splice(0, events.length);
+    };
+    // Persist before returning to the game/save loop, even if the network module has not loaded.
+    if (persistUpload({ kind: 'season', careerId: s.cid, year: rec.year, body })) release();
+    void host
+      .outbox()
+      .then((m) => {
+        if (m.enqueueSeason(s.cid, rec.year, body) !== false) release();
+      })
+      .catch(() => console.error('[upload] queue unavailable; events retained'));
   }
 
   /** 은퇴 요약 + 상세 스냅샷을 서버 명예의 전당으로 보낸다. 이름은 `entry.public`일 때만 보낸다(은퇴 때 환경설정 '선수 이름 공개'를 따름, T-10-065). */
   function uploadRetirement(careerId: string, entry: HofEntry) {
-    void host.outbox().then((m) => m.enqueueRetirement(careerId, retirementBody(entry)));
+    const body = retirementBody(entry);
+    persistUpload({ kind: 'retirement', careerId, body });
+    void host
+      .outbox()
+      .then((m) => m.enqueueRetirement(careerId, body))
+      .catch(() => console.error('[upload] sender unavailable; retirement retained'));
   }
 
   /** 커리어의 모든 시즌을 지금 cid로 업로드 큐에 넣는다. eventsOf: 연도별 선택 로그(남아 있는 것만). */

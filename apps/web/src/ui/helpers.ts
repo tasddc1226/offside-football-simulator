@@ -1,8 +1,6 @@
 // ───────── 저장 · 업로드 · 토스트 (ui.ts 43~142줄 포트) ─────────
 // 업로드 본문·순서는 웹·앱 공용(@offside/app-core/upload, T-11-002). 큐 모듈은 동적 import로 메인 청크와 분리한다.
-import { createUploader } from '@offside/app-core/upload';
 import { appState, toastState } from './state.svelte.js';
-import { takePlaySignals } from '../sync/playSignals.js';
 
 import { saveGame } from '@offside/app-core/career';
 import { shellText as L } from '@offside/app-core/i18n/ko/shell';
@@ -42,14 +40,6 @@ export function keepStorage() {
     // 지원하지 않는 브라우저
   }
 }
-
-const uploader = createUploader({
-  outbox: () => import('../sync/outbox.js'),
-  appVersion: APP_VERSION,
-  signals: takePlaySignals,
-});
-export const { uploadSeason, uploadRetirement, uploadLegacyRetirement, enqueueAllSeasons } =
-  uploader;
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 export function toast(t: string) {

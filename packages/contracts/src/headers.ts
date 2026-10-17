@@ -11,6 +11,7 @@ export const CORS_ALLOWED_HEADERS = [
   IDEMPOTENCY_KEY_HEADER,
   CONTENT_TYPE_HEADER,
   REQUEST_ID_HEADER,
+  'X-Upload-Revision',
 ] as const;
 
 /** Access-Control-Expose-Headers. 클라이언트가 응답에서 읽어야 하는 커스텀 헤더. */

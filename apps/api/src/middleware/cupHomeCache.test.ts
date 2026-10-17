@@ -26,12 +26,15 @@ describe('cup summary invalidation', () => {
       app.delete('/v1/cups/test/entries/me', (c) => c.json({}, 403));
       await app.request('https://api.example/v1/admin/cups', { method: 'POST' });
       await flushEdge();
-      expect(fake.purged).toEqual(['https://api.example/v1/cups/home']);
+      expect(fake.purged).toEqual([
+        'https://api.example/v1/cups/home',
+        'https://api.example/v1/cups/current',
+      ]);
       await app.request('https://api.example/v1/cups/test/entries/me', { method: 'DELETE' });
       await flushEdge();
-      expect(fake.purged).toHaveLength(1);
-      await purgeEdgeOrigin('https://api.example', ['/v1/cups/home']);
       expect(fake.purged).toHaveLength(2);
+      await purgeEdgeOrigin('https://api.example', ['/v1/cups/home', '/v1/cups/current']);
+      expect(fake.purged).toHaveLength(4);
     } finally {
       fake.uninstall();
     }

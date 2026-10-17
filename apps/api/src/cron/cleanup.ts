@@ -40,19 +40,25 @@ const TARGETS: readonly { table: string; column: string; keepMs: number }[] = [
 export type CleanupResult = Record<string, number>;
 
 /** 표마다 지운 행 수. */
-export async function cleanupExpired(db: D1Database, now: number): Promise<CleanupResult> {
+export async function cleanupExpired(
+  db: D1Database,
+  now: number,
+  budget: { chunk?: number; maxChunks?: number } = {},
+): Promise<CleanupResult> {
+  const chunk = Math.min(budget.chunk ?? CHUNK, CHUNK);
+  const maxChunks = Math.min(budget.maxChunks ?? MAX_CHUNKS, MAX_CHUNKS);
   const out: CleanupResult = {};
   for (const t of TARGETS) {
     const stmt = db
       .prepare(
-        `DELETE FROM ${t.table} WHERE rowid IN (SELECT rowid FROM ${t.table} WHERE ${t.column} < ?1 LIMIT ${CHUNK})`,
+        `DELETE FROM ${t.table} WHERE rowid IN (SELECT rowid FROM ${t.table} WHERE ${t.column} < ?1 LIMIT ${chunk})`,
       )
       .bind(new Date(now - t.keepMs).toISOString());
     let deleted = 0;
-    for (let i = 0; i < MAX_CHUNKS; i++) {
+    for (let i = 0; i < maxChunks; i++) {
       const { meta } = await stmt.run();
       deleted += meta.changes;
-      if (meta.changes < CHUNK) break;
+      if (meta.changes < chunk) break;
     }
     out[t.table] = deleted;
   }

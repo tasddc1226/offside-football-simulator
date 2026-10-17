@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { edgeCached, purgeEdge } from './edgeCache.js';
 import type { AppEnv } from './env.js';
 import { flushEdge, installFakeEdgeCache } from './test/edgeCache.js';
@@ -33,6 +33,12 @@ describe('edgeCached (T-10-015)', () => {
 
   const read = async (q: string) =>
     (await (await app.request(`http://api.test/v1/x?${q}`)).json()) as { n: number };
+
+  it('cache read failure falls back to the authoritative loader', async () => {
+    const edge = (globalThis as unknown as { caches: { default: Cache } }).caches.default;
+    vi.spyOn(edge, 'match').mockRejectedValueOnce(new Error('cache unavailable'));
+    expect(await read('k=a')).toEqual({ n: 1 });
+  });
 
   it('같은 키는 한 번만 읽고, 모르는 쿼리를 붙여도 정규화한 키로 캐시를 탄다', async () => {
     expect(await read('k=a')).toEqual({ n: 1 });
