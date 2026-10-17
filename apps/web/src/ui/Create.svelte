@@ -39,6 +39,13 @@
   import NationPicker from './NationPicker.svelte';
   import { doneOnEnter } from './inputDone.js';
   import ScoutScan from './ScoutScan.svelte';
+  import RevealFx from './RevealFx.svelte';
+  import CountUp from './CountUp.svelte';
+  import { candidateTiers, gradeTier, revealTiming, revealTotal, REVEAL_BUZZ, type RevealTier } from '@offside/app-core/reveal';
+  import { revealText as R } from '@offside/app-core/i18n/ko/reveal';
+  import { buzz, motionOK } from './motion.js';
+  import { sheetOn } from './skin.svelte.js';
+  import { revealShort, revealTone } from './revealPrefs.js';
 
   const C = appState.C;
   const posKeys = Object.keys(POS) as Pos[];
@@ -207,11 +214,15 @@
     appState.candidates = null;
   }
   function openAll() {
+    appState.candidatesOpen.forEach((_, i) => stage(i));
     appState.candidatesOpen = appState.candidatesOpen.map(() => true);
   }
   // 카드를 누르면(닫혀 있든 열려 있든) 바로 열리면서 그 후보가 선택된다 — 한 번의 탭으로
   // "오픈 + 선택"이 끝나는 모바일 우선 상호작용. "모두 오픈"은 선택 없이 전부 펼쳐만 준다.
   function pick(i: number) {
+    // 연출 중인 카드를 다시 누르면 바로 결과로 간다.
+    if (fx[i] && !fx[i].done) land(i);
+    stage(i);
     appState.candidatesOpen[i] = true;
     appState.candidatePick = i;
   }
@@ -219,9 +230,50 @@
     if (!picked) return;
     startCareer(C.name, C.number, picked.attrs, picked.potential);
   }
-  // 카드가 세로축으로 뒤집히며 열린다. 감속 모션이면 duration 0(즉시 표시).
-  function flipIn(_node: Element) {
-    return { duration: dur(360), easing: cubicOut, css: (t: number) => `transform: perspective(800px) rotateY(${(1 - t) * 90}deg); opacity: ${Math.min(1, t * 2)}` };
+  // T-11-371 팩 오픈식 공개: 열 때 보이는 값(OVR · 보장 · 천장)으로만 강도를 정한다. 이 화면에서 연 카드만 연출하고,
+  // 같은 화면의 두 번째 카드부터는 짧게. 감속 모션 · 업무 모드 · "연출 짧게"면 결과만.
+  const tiers = $derived<RevealTier[]>(appState.candidates ? candidateTiers(appState.candidates.map((c) => ({ ovr: startOvr(C.pos, c.attrs), guaranteed: c.guaranteed, pity: c.pity }))) : []);
+  const fxOff = !motionOK || sheetOn() || revealShort();
+  // 카드 번호 → 이번에 열며 볼 연출(뒷면 · 단서 · 멈춤 시간). 화면에 처음 들어올 때 이미 열린 카드는 연출하지 않는다.
+  let fx = $state<Record<number, { back: number; hint: number; hold: number; done: boolean }>>({});
+  let opened = 0;
+  // 다시 뽑기 · 프리미엄 스카우트로 후보가 바뀌면 새 카드로 다시 센다.
+  $effect(() => {
+    void appState.candidates;
+    fx = {};
+    opened = 0;
+  });
+  function stage(i: number) {
+    if (appState.candidatesOpen[i] || fx[i]) return;
+    const t = revealTiming(tiers[i] ?? 'normal', { off: fxOff, repeat: opened++ > 0 });
+    fx[i] = { ...t, done: revealTotal(t) === 0 };
+    if (fx[i].done) return land(i);
+    setTimeout(() => land(i), revealTotal(t));
+  }
+  function land(i: number) {
+    const f = fx[i];
+    if (!f || (f.done && revealTotal(f) > 0)) return;
+    f.done = true;
+    const tier = tiers[i] ?? 'normal';
+    buzz(REVEAL_BUZZ[tier]);
+    revealTone(tier);
+    if (tier === 'jackpot' && revealTotal(f) > 0) {
+      edge = true;
+      setTimeout(() => (edge = false), 1400);
+    }
+  }
+  let edge = $state(false);
+  // 잠재력 범위를 이 화면에서 새로 열었을 때만 등급 연출(다시 들어온 화면 · 킵하며 이미 본 후보는 그대로).
+  let potFresh = $state(false);
+  let potWas = appState.candidatePotentialOpen;
+  $effect(() => {
+    const open = appState.candidatePotentialOpen;
+    if (open && !potWas) potFresh = true;
+    potWas = open;
+  });
+  // 카드가 세로축으로 뒤집히며 열린다. 감속 모션이면 duration 0(즉시 표시). 대박은 뒷면에서 한 박자 쉬고 뒤집힌다.
+  function flipIn(_node: Element, delay = 0) {
+    return { delay, duration: dur(360), easing: cubicOut, css: (t: number) => `transform: perspective(800px) rotateY(${(1 - t) * 90}deg); opacity: ${Math.min(1, t * 2)}` };
   }
 </script>
 {#snippet ovrGuide(showTitle = true)}
@@ -398,15 +450,27 @@
     <div class="cand-list">
       {#each appState.candidates as cand, i (i)}
         {#if appState.candidatesOpen[i]}
-          <button class="cand-card open" class:picked={appState.candidatePick === i} data-cand={i} data-cand-open="true" aria-pressed={appState.candidatePick === i} onclick={() => pick(i)} in:flipIn>
+          {@const f = fx[i]}
+          {@const tier = tiers[i] ?? 'normal'}
+          <button class="cand-card open rv-card rv-{tier}" class:rv-run={f && !f.done} class:rv-land={f?.done && revealTotal(f) > 0} class:picked={appState.candidatePick === i} data-cand={i} data-cand-open="true" data-reveal={f ? (f.done ? 'done' : 'hint') : 'static'} data-reveal-tier={tier} style:--rv-hint="{f && !f.done ? f.hint : 0}ms" style:--rv-delay="{f && !f.done ? f.back : 0}ms" aria-pressed={appState.candidatePick === i} onclick={() => pick(i)} in:flipIn={f?.back ?? 0}>
+            {#if f?.done && revealTotal(f) > 0}<span class="sr-only" aria-live="polite">{R.candLive({ n: i + 1, ovr: startOvr(C.pos, cand.attrs), tier: tier === 'jackpot' ? R.jackpot : tier === 'good' ? R.good : '' })}</span>{/if}
             <span class="cc-head">
               <span class="cc-no">{L.candNo({ n: i + 1 })}</span>
-              <span class="cc-ovr">OVR <b class="num">{startOvr(C.pos, cand.attrs)}</b></span>
+              <span class="cc-ovr">OVR <b class="num">{#if f && f.hint > 0 && !f.done}<CountUp value={startOvr(C.pos, cand.attrs)} ms={f.back + f.hint} />{:else}{startOvr(C.pos, cand.attrs)}{/if}</b></span>
               {#if cand.pity}<span class="pill good" data-cand-pity={cand.pity}>{cand.pity === 'elite' ? SL.pillElite : SL.pillSure}</span>{:else if cand.guaranteed}<span class="pill" data-cand-sure>{SL.sure}</span>{/if}
               {#if cand.kept}<span class="pill" data-cand-kept>{L.kept}</span>{/if}
               {#if appState.candidatePick === i}<span class="pill good">{L.picked}</span>{/if}
             </span>
-            <span class="muted">{appState.candidatePotentialOpen || cand.kept?.revealed ? L.potentialRange(candidatePotentialGrades(cand.potential)) : L.potentialLocked}</span>
+            {#if appState.candidatePotentialOpen || cand.kept?.revealed}
+              {@const g = candidatePotentialGrades(cand.potential)}
+              {#if potFresh && !cand.kept?.revealed}
+                <span class="muted" data-cand-potential={i}><RevealFx grade={`${g.min}~${g.max}`} text={L.potentialRange(g)} tier={gradeTier(g.max)} /></span>
+              {:else}
+                <span class="muted" data-cand-potential={i}>{L.potentialRange(g)}</span>
+              {/if}
+            {:else}
+              <span class="muted" data-cand-potential={i}>{L.potentialLocked}</span>
+            {/if}
             <span class="cc-scout">“{scoutLine(C.pos, cand.attrs)}”</span>
             <span class="cc-body">
               <MiniRadar pos={C.pos} attrs={cand.attrs} size={84} />
@@ -485,6 +549,7 @@
   {/if}
 </div>
 {#if scouting}<ScoutScan pos={C.pos} steps={scoutSteps} onDone={scouted} />{/if}
+{#if edge}<span class="rv-edge" aria-hidden="true"></span>{/if}
 
 <style>
 .ovr-guide-box, .position-guide-box { padding-block: 0; }
@@ -493,4 +558,14 @@
 .ovr-guide { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 12px 0; font-size: .8125rem; line-height: 1.5; }
 .ovr-guide p { margin: 4px 0 0; overflow-wrap: anywhere; }
 .cc-bar .ovr-core { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+/* T-11-371 공개 연출: 단서 단계에 능력치 막대가 0부터 차오르고, 결과에 강도별 테두리 빛. */
+.rv-run .cc-bar em { animation: rv-fill var(--rv-hint) cubic-bezier(.22,.61,.36,1) var(--rv-delay) both; }
+.rv-good.rv-land, .rv-jackpot.rv-land { box-shadow: 0 0 0 2px var(--accent), 0 0 18px 2px color-mix(in srgb, var(--accent) 45%, transparent); animation: rv-land .5s ease-out; }
+.rv-jackpot.rv-run { box-shadow: 0 0 0 2px var(--accent); animation: rv-charge .45s ease-in-out infinite alternate; }
+.rv-edge { position: fixed; inset: 0; z-index: 60; pointer-events: none; box-shadow: inset 0 0 0 4px var(--accent), inset 0 0 48px 8px color-mix(in srgb, var(--accent) 55%, transparent); animation: rv-edge 1.4s ease-out forwards; }
+@keyframes rv-fill { from { width: 0; } }
+@keyframes rv-land { 0% { transform: scale(.96); } 60% { transform: scale(1.02); } 100% { transform: scale(1); } }
+@keyframes rv-charge { to { box-shadow: 0 0 0 2px var(--accent), 0 0 16px 4px color-mix(in srgb, var(--accent) 50%, transparent); } }
+@keyframes rv-edge { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .rv-run .cc-bar em, .rv-land, .rv-run, .rv-edge { animation: none; } }
 </style>

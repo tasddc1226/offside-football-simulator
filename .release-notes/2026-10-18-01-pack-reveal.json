@@ -1,0 +1,29 @@
+{
+  "id": "t-11-371-pack-reveal",
+  "title": "선수 후보와 잠재력을 하나씩 공개해요",
+  "items": [
+    "후보 카드를 열면 능력치가 차오르고 OVR이 올라가며 공개돼요",
+    "후보 잠재력 · 시즌 평가 · 은퇴 잠재력은 등급이 아래부터 훑고 올라가요",
+    "좋은 결과는 금빛으로, S급은 화면 가장자리까지 빛나요",
+    "눌러서 바로 결과를 볼 수 있고, 설정의 연출 짧게로 끌 수 있어요"
+  ],
+  "en": {
+    "title": "Candidates and potential are revealed step by step",
+    "items": [
+      "Opening a candidate card fills the stat bars and counts up the OVR.",
+      "Candidate potential, season ratings, and retirement potential climb up through the grades.",
+      "Great results glow gold, and an S grade lights up the edge of the screen.",
+      "Tap to jump to the result, or turn on Short reveals in Settings."
+    ]
+  },
+  "ja": {
+    "title": "選手候補とポテンシャルを一つずつ公開します",
+    "items": [
+      "候補カードを開くと能力値のバーが伸び、OVRが上がりながら公開されます。",
+      "候補のポテンシャル・シーズン評価・引退時のポテンシャルは、等級が下から順に上がっていきます。",
+      "好結果は金色に、S級は画面の縁まで光ります。",
+      "タップですぐ結果を見られ、設定の「演出を短く」でオフにできます。"
+    ]
+  },
+  "availability": "web-app"
+}
