@@ -25,6 +25,7 @@
   import TierBadge from './TierBadge.svelte';
   import TitleBadge from './cup/TitleBadge.svelte';
   import OwnerAvatar from './OwnerAvatar.svelte';
+  import PopSheet from './PopSheet.svelte';
 
   /** 채팅 티어는 보낸 때의 지난 시즌 티어 — 시즌 이름(툴팁)은 지금 기준 지난 시즌으로 보인다. */
   const tierSeason = lastClosedSeason(new Date().toISOString()) ?? 0;
@@ -33,7 +34,8 @@
   import { createTranslations } from './translations.svelte.js';
   import { canTranslate } from '@offside/app-core/userTranslate';
   import { getLocale } from '@offside/contracts/i18n';
-  import { goHome } from './nav.js';
+  import { go, goHome } from './nav.js';
+  import { appState, hofStart } from './state.svelte.js';
   import { trackViewport } from './viewport.js';
   import { chatSession, listenChat, markChatRead } from './chat-state.svelte.js';
 
@@ -49,6 +51,10 @@
   let input: HTMLTextAreaElement | undefined = $state();
 
   const mine = (m: ChatMessage) => !!view.me && m.author === view.me.author;
+  /** T-11-344 남의 줄이면 프로필 사진·이름·⋯을 눌러 그 사람 창(신고·차단, 운영자는 가리기·정지)을 연다. */
+  const canAct = (m: ChatMessage) => !mine(m) && (!m.admin || !!view.me?.admin);
+  const picked = $derived(selected ? view.messages.find((m) => m.id === selected) : undefined);
+  const toggle = (m: ChatMessage) => (selected = selected === m.id ? null : m.id);
   /** 맨 아래 가까이 보고 있을 때만 새 줄을 따라 내려간다(위로 올려 읽는 중이면 그대로 둔다). */
   const nearBottom = () => !list || list.scrollHeight - list.scrollTop - list.clientHeight < 80;
 
@@ -160,6 +166,17 @@
     if (Array.isArray(blocks)) blocks = blocks.filter((x) => x.id !== b.id);
     toast(L.unblockedToast({ nick: b.nickname }));
   }
+  /** T-11-344 작성자의 구단주 프로필(가장 최근 팀)을 기록실에서 연다. 팀이 없으면 알리기만 한다. */
+  async function openProfile(m: ChatMessage) {
+    busy = true;
+    const r = await api.fetchChatOwner(m.id);
+    busy = false;
+    if (!r.ok) return toast(r.error.message);
+    if (!r.data.teamId) return toast(L.noProfile);
+    selected = null;
+    appState.hof = { ...hofStart(), tab: 'teams', team: r.data.teamId, owner: true };
+    go('hof');
+  }
   const hide = (m: ChatMessage) => run(api.adminHideChat(m.id), L.hiddenToast);
   function mute(m: ChatMessage, days: (typeof CHAT_MUTE_DAYS)[number]) {
     if (!confirm(`${L.muteTitle({ nick: m.nickname, days })} ${L.muteBody}`)) return;
@@ -213,9 +230,12 @@
       {#each view.messages as m (m.id)}
         <li class="chat-msg" class:mine={mine(m)} data-chat-msg={m.id}>
           <div class="chat-meta">
-            <OwnerAvatar avatarId={m.avatarId} name={m.nickname} />{#if m.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{m.nickname}</b>{#if m.tier}<TierBadge tag={{ tier: m.tier, season: tierSeason }} />{/if}{#if m.title}<TitleBadge title={m.title} size="sm" />{/if}{/if}
-            {#if !mine(m) && (!m.admin || view.me?.admin)}
-              <button class="chat-more" aria-expanded={selected === m.id} aria-label={L.moreLabel({ nick: m.nickname })} data-act="chat-more" onclick={() => (selected = selected === m.id ? null : m.id)}>
+            {#snippet who()}<OwnerAvatar avatarId={m.avatarId} name={m.nickname} />{#if m.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{m.nickname}</b>{/if}{/snippet}
+            {#if canAct(m)}
+              <button class="chat-who" aria-haspopup="dialog" aria-label={L.moreLabel({ nick: m.nickname })} data-act="chat-who" onclick={() => toggle(m)}>{@render who()}</button>
+            {:else}{@render who()}{/if}{#if !m.admin}{#if m.tier}<TierBadge tag={{ tier: m.tier, season: tierSeason }} />{/if}{#if m.title}<TitleBadge title={m.title} size="sm" />{/if}{/if}
+            {#if canAct(m)}
+              <button class="chat-more" aria-haspopup="dialog" aria-expanded={selected === m.id} aria-label={L.moreLabel({ nick: m.nickname })} data-act="chat-more" onclick={() => toggle(m)}>
                 <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
               </button>
             {/if}
@@ -227,33 +247,6 @@
           </div>
           {#if !mine(m) && canTranslate(m.body)}
             <button class="translate-btn" data-act="translate" disabled={tr.busy(m.id)} onclick={() => void tr.toggle(m.id, m.body)}>{tr.label(m.id)}</button>
-          {/if}
-          {#if selected === m.id}
-            <div class="report-panel stack" style="gap:8px" data-report-panel>
-              {#if view.me?.admin}
-                <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">
-                  <span class="fs-sm">{L.adminLabel}</span>
-                  <button class="btn btn-sm" data-act="chat-hide" disabled={busy} onclick={() => hide(m)}>{L.hide}</button>
-                  {#if !m.admin}
-                    {#each CHAT_MUTE_DAYS as d (d)}
-                      <button class="btn btn-sm" data-act="chat-mute" disabled={busy} onclick={() => mute(m, d)}>{L.muteDays({ days: d })}</button>
-                    {/each}
-                  {/if}
-                </div>
-              {/if}
-              {#if !m.admin}
-                <span class="fs-sm">{L.reportPrompt}</span>
-                <div class="row" style="gap:6px;flex-wrap:wrap">
-                  {#each COMMENT_REPORT_REASONS as reason (reason)}
-                    <button class="btn btn-sm" data-report-reason={reason} disabled={busy} onclick={() => report(m, reason)}>{REPORT_REASON_LABEL[reason]}</button>
-                  {/each}
-                </div>
-                <div class="row" style="gap:8px;justify-content:space-between;align-items:center">
-                  <span class="muted fs-xs">{L.blockHint({ nick: m.nickname })}</span>
-                  <button class="btn btn-sm" data-act="chat-block" disabled={busy} onclick={() => block(m)}>{L.blockAuthor}</button>
-                </div>
-              {/if}
-            </div>
           {/if}
         </li>
       {:else}
@@ -306,3 +299,46 @@
     </div>
   </section>
 </div>
+
+{#if picked}
+  <PopSheet label={L.userLabel({ nick: picked.nickname })} onclose={() => (selected = null)}>
+    <div class="stack chat-user" style="gap:12px" data-report-panel>
+      <div class="row chat-user-head">
+        <OwnerAvatar avatarId={picked.avatarId} name={picked.nickname} size={44} />
+        <div class="stack" style="gap:4px;min-width:0">
+          {#if picked.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b class="chat-user-name">{picked.nickname}</b>{/if}
+          {#if !picked.admin && (picked.tier || picked.title)}
+            <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">{#if picked.tier}<TierBadge tag={{ tier: picked.tier, season: tierSeason }} />{/if}{#if picked.title}<TitleBadge title={picked.title} size="sm" />{/if}</div>
+          {/if}
+        </div>
+        {#if !picked.admin}
+          <button class="btn btn-sm chat-user-profile" data-act="chat-profile" disabled={busy} onclick={() => openProfile(picked)}>{L.viewProfile}</button>
+        {/if}
+      </div>
+      {#if view.me?.admin}
+        <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">
+          <span class="fs-sm">{L.adminLabel}</span>
+          <button class="btn btn-sm" data-act="chat-hide" disabled={busy} onclick={() => hide(picked)}>{L.hide}</button>
+          {#if !picked.admin}
+            {#each CHAT_MUTE_DAYS as d (d)}
+              <button class="btn btn-sm" data-act="chat-mute" disabled={busy} onclick={() => mute(picked, d)}>{L.muteDays({ days: d })}</button>
+            {/each}
+          {/if}
+        </div>
+      {/if}
+      {#if !picked.admin}
+        <span class="fs-sm">{L.reportPrompt}</span>
+        <div class="row" style="gap:6px;flex-wrap:wrap">
+          {#each COMMENT_REPORT_REASONS as reason (reason)}
+            <button class="btn btn-sm" data-report-reason={reason} disabled={busy} onclick={() => report(picked, reason)}>{REPORT_REASON_LABEL[reason]}</button>
+          {/each}
+        </div>
+        <div class="row" style="gap:8px;justify-content:space-between;align-items:center">
+          <span class="muted fs-xs">{L.blockHint({ nick: picked.nickname })}</span>
+          <button class="btn btn-sm" data-act="chat-block" disabled={busy} onclick={() => block(picked)}>{L.blockAuthor}</button>
+        </div>
+      {/if}
+      <button class="btn" data-act="chat-user-close" onclick={() => (selected = null)}>{L.close}</button>
+    </div>
+  </PopSheet>
+{/if}

@@ -1,5 +1,5 @@
-/** Only call for writes whose whole transaction is safe to replay after an uncertain commit. */
-export async function retryTransientWrite<T>(write: () => Promise<T>): Promise<T> {
+/** Callers explicitly identify replay-safe work; never wrap a whole HTTP handler. */
+async function retryTransient<T>(write: () => Promise<T>): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await write();
@@ -20,3 +20,8 @@ export async function retryTransientWrite<T>(write: () => Promise<T>): Promise<T
     }
   }
 }
+
+/** Only for transactions safe to replay after an uncertain commit. */
+export const retryTransientWrite = retryTransient;
+/** Only for side-effect-free SELECTs, not arbitrary .first()/.all() statements. */
+export const retryTransientRead = retryTransient;

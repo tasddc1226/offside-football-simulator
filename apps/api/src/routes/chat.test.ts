@@ -1,7 +1,7 @@
 import { CHAT_REPORT_HIDE, CHAT_SOCKET_PATH, type ChatServerEvent } from '@offside/contracts/chat';
 import type { AdminChatReport, ChatTicketResponse } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { chatReports } from '../db/schema.js';
+import { chatReports, ownerTeams } from '../db/schema.js';
 import worker from '../index.js';
 import { fakeRoom, type FakeSocket } from '../test/chatRoom.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
@@ -119,6 +119,31 @@ describe('T-11-015 채팅 /v1/chat', () => {
       nickname: '밥',
       body: '안녕하세요',
     });
+  });
+
+  it('T-11-344 프로필 보기는 작성자의 가장 최근 시즌 팀 id를 로그인 없이 준다(팀이 없으면 null)', async () => {
+    const bob = await speak('밥');
+    const owner = (id = bob.id) => call('GET', `/v1/chat/messages/${id}/owner`);
+    const teamIdOf = async (id?: string) =>
+      ((await (await owner(id)).json()) as { data: { teamId: string | null } }).data.teamId;
+    expect(await teamIdOf()).toBeNull();
+    const now = new Date().toISOString();
+    const team = (id: string, season: number) => ({
+      id,
+      profileId: bob.profileId,
+      season,
+      name: `밥 FC ${season}`,
+      formation: '4-3-3',
+      slotsJson: '[]',
+      filled: 0,
+      ovr: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await ctx.db.insert(ownerTeams).values([team('team_s1', 1), team('team_s2', 2)]);
+    expect(await teamIdOf()).toBe('team_s2');
+    expect((await owner('nope')).status).toBe(400);
+    expect((await owner(crypto.randomUUID())).status).toBe(404);
   });
 
   it('차단하면 작성자 키를 돌려주고 다음 입장권의 차단 목록에 든다. 운영자는 차단하지 않는다', async () => {
