@@ -41,6 +41,15 @@ async function stubProfile(page: Page) {
   );
 }
 
+/** 기록실 라커를 연다. 처음 열린 칸(명패)이 자리를 잡은 뒤 눌러야 명패 목록이 버튼을 가리지 않는다. */
+async function openArchive(page: Page) {
+  await page.locator('[data-act="open-owner-hall"]').click();
+  await expect(page.locator('[data-room-zone="1"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.locator('[data-room-zone="0"]').click();
+  await expect(page.locator('[data-room-zone="0"]')).toHaveAttribute('aria-pressed', 'true');
+}
+
 test('특별 카드는 라커룸 카드에 표식 띠를 달고, 표식이 없는 카드는 그대로다', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 900 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -128,8 +137,7 @@ test('결산 화면은 그 시즌 특별 카드를 개인상 · 베스트 11 순
   });
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await page.locator('[data-act="open-owner-hall"]').click();
-  await page.locator('[data-room-zone="0"]').click();
+  await openArchive(page);
   await page.locator('[data-archive-season="1"]').click();
   await page.locator('[data-act="archive-details"]').click();
   const sec = page.locator('[data-recap-section="specials"]');
@@ -152,6 +160,7 @@ test('결산 화면은 그 시즌 특별 카드를 개인상 · 베스트 11 순
 
 test('표식이 없는 결산(프리시즌)에는 특별 카드 칸이 없다', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 900 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await stubProfile(page);
   await page.route(`${API}/v1/owner/archive`, (r) => r.fulfill(ok(archiveFixture)));
   await page.route(`${API}/v1/owner/season-recap?season=0`, (r) =>
@@ -159,8 +168,7 @@ test('표식이 없는 결산(프리시즌)에는 특별 카드 칸이 없다', 
   );
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await page.locator('[data-act="open-owner-hall"]').click();
-  await page.locator('[data-room-zone="0"]').click();
+  await openArchive(page);
   await page.locator('[data-archive-season="0"]').click();
   await page.locator('[data-act="archive-details"]').click();
   await expect(page.locator('[data-recap-section="team"]')).toBeVisible();
