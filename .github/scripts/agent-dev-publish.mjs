@@ -114,7 +114,8 @@ async function main() {
     return fail(`브랜치 ${branch}는 올렸는데 PR을 열지 못했어요`);
   }
   const pr = Number(/\/pull\/(\d+)/.exec(url)?.[1] ?? 0);
-  await report({ ...base, ok: true, pr, branch, title, files: files.length });
+  // T-11-325 Worker가 실제 바뀐 경로로 위험도를 다시 판정한다(승인 카드 경고).
+  await report({ ...base, ok: true, pr, branch, title, files: files.slice(0, 300) });
 }
 
 if (resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {

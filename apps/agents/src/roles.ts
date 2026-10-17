@@ -9,6 +9,9 @@ import mkt from '../roles/mkt.md';
 import ops from '../roles/ops.md';
 import plan from '../roles/plan.md';
 import team from '../roles/team.md';
+import captain from '../roles/captain.md';
+import baseline from '../knowledge/ops-baseline.md';
+import { captainTools } from './captain.ts';
 import { devTools } from './dev.ts';
 import { repoReadToken } from './github.ts';
 import { ga4Tools } from './ga4.ts';
@@ -43,7 +46,7 @@ const handoffPrompt = (t: Task) =>
 export const modelFor = (kind: Task['kind']): Model =>
   kind === 'triage' || kind === 'alert'
     ? MODELS.haiku
-    : kind === 'report' || kind === 'support' || kind === 'release'
+    : kind === 'report' || kind === 'support' || kind === 'release' || kind === 'verify'
       ? MODELS.sonnet
       : MODELS.opus;
 
@@ -57,17 +60,23 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
     repo: env.GITHUB_REPO,
     githubToken: gh,
   });
+  // 저장소 읽기 · 찾기와 PR 목록은 모든 역할이 쓴다(경로를 짐작하지 않게).
+  const REPO = new Set(['repo_file', 'repo_find', 'repo_grep', 'pr_list']);
+  const repo = tools.filter((t) => REPO.has(t.name));
   if (role === 'plan')
     return {
-      system: `${plan}\n\n${team}\n\n${glossary}`,
+      system: `${plan}\n\n${captain}\n\n${team}\n\n${glossary}\n\n${baseline}`,
       model,
       // 기획은 규칙 · 보드 확인과 비슷한 댓글 찾기만 한다. Actions · Cloudflare 로그는 @ops에게 넘긴다.
       // 고객 문의 정리 · 운영자 지시에는 문의 메일 도구(읽기 · 초안 + 승인 카드)를 더한다.
+      // T-11-325 주장: 운영자 지시 · 답글 · 넘겨받은 일에는 작업 카드 · 작업 명세 도구를 더한다.
       tools: [
-        ...tools.filter((t) => t.name === 'repo_file' || t.name === 'd1_query'),
+        ...repo,
+        ...tools.filter((t) => t.name === 'd1_query'),
         ...supportTools(env, task),
+        ...captainTools(env, task),
       ],
-      maxTurns: task.kind === 'support' ? 14 : 8,
+      maxTurns: task.kind === 'support' ? 14 : 10,
       mcpServers: [],
       prompt: (t) =>
         t.kind === 'triage' || t.kind === 'support'
@@ -81,8 +90,13 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
       system: `${dev}\n\n${team}`,
       model,
       // 개발은 저장소 · PR을 읽고, 운영자가 맡긴 일이면 Actions 작업을 띄운다(start_work). 고치는 건 Actions의 Claude Code가 한다.
-      tools: [...tools.filter((t) => t.name === 'repo_file'), ...devTools(env, task)],
-      maxTurns: 8,
+      tools: [
+        ...repo,
+        ...tools.filter((t) => t.name === 'github_runs' || t.name === 'github_run_jobs'),
+        ...devTools(env, task),
+      ],
+      // 파일 찾기 · 나눠 읽기에 턴이 더 든다(8턴에서 "앞부분만 봤다"로 끝나던 문제).
+      maxTurns: 12,
       mcpServers: [],
       prompt: (t) =>
         t.kind === 'handoff'
@@ -96,23 +110,21 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
       system: `${mkt}\n\n${team}\n\n${glossary}`,
       model,
       // 마케팅은 저장소 · 배포 기록을 읽고 드림보트 요약 초안만 올린다(보내기는 운영자 승인 버튼).
-      tools: [
-        ...tools.filter((t) => t.name === 'repo_file'),
-        ...mktTools(env, task),
-        ...ga4Tools(env, task.kind),
-      ],
-      maxTurns: task.kind === 'release' ? 5 : 8,
+      tools: [...repo, ...mktTools(env, task), ...ga4Tools(env, task.kind)],
+      maxTurns: task.kind === 'release' ? 5 : task.kind === 'report' ? 7 : 8,
       mcpServers: [],
       prompt: (t) =>
         t.kind === 'release'
           ? `지금 KST ${kstNow()}. ${t.text}\n역할 설명의 "배포 뒤 업데이트 요약" 순서대로 해 주세요. 먼저 \`release_changes\`를 한 번 불러요.`
-          : t.kind === 'handoff'
-            ? handoffPrompt(t)
-            : `지금 KST ${kstNow()}. 운영자 지시:\n${t.text}`,
+          : t.kind === 'report'
+            ? `지금 KST ${kstNow()}. 월요일 주간 유입 리포트를 써 주세요. 역할 설명의 "주간 유입 리포트" 순서대로, \`ga4_report\`는 4번 안쪽으로 불러요.`
+            : t.kind === 'handoff'
+              ? handoffPrompt(t)
+              : `지금 KST ${kstNow()}. 운영자 지시:\n${t.text}`,
     };
   if (role !== 'ops') throw new Error(`role ${role} is not open yet`);
   return {
-    system: `${ops}\n\n${team}\n\n${glossary}`,
+    system: `${ops}\n\n${team}\n\n${glossary}\n\n${baseline}`,
     model,
     tools: [
       ...tools,
@@ -133,7 +145,8 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
       }),
     ],
     // 경보 첫 정리 · 아침 보고는 짧게 끝낸다(report_digest가 자료를 한 번에 모은다).
-    maxTurns: task.kind === 'alert' || task.kind === 'report' ? 6 : 15,
+    maxTurns:
+      task.kind === 'alert' || task.kind === 'report' ? 6 : task.kind === 'verify' ? 10 : 15,
     // Cloudflare API MCP(읽기 권한만 있는 토큰): Workers 로그 · 분석 · 설정 조회.
     mcpServers: env.CF_MCP_TOKEN
       ? [{ name: 'cloudflare', url: 'https://mcp.cloudflare.com/mcp', token: env.CF_MCP_TOKEN }]
@@ -144,7 +157,11 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
         : t.kind === 'report'
           ? `지금 KST ${kstNow()}. 아침 주기 작업 보고를 써 주세요(지난 24시간 결과와 앞으로 24시간 예정). 먼저 \`report_digest\`를 한 번 부르고, 그 결과로 모자란 것만 더 조회해요.`
           : t.kind === 'alert'
-            ? `지금 KST ${kstNow()}. #offside-alerts에 경보가 올라왔어요. 첫 정리예요: 조회는 4번 안쪽으로, 확인한 것까지만 정리해 주세요. 원인이 분명하지 않으면 "더 보려면 이 스레드에서 불러 주세요"라고 끝내요.\n\n<alert>\n${t.text}\n</alert>`
-            : `지금 KST ${kstNow()}. 운영자 지시:\n${t.text}`,
+            ? `지금 KST ${kstNow()}. #offside-alerts에 경보가 올라왔어요. 첫 정리예요: 조회는 4번 안쪽으로, 확인한 것까지만 정리해 주세요. 원인이 분명하지 않으면 "더 보려면 이 스레드에서 불러 주세요"라고 끝내요. 역할 설명의 "사건 판정"에 맞으면 첫 줄을 \`사건: <한 줄>\`로 써요.\n\n<alert>\n${t.text}\n</alert>`
+            : t.kind === 'incident'
+              ? `지금 KST ${kstNow()}. 사건이에요. 역할 설명의 "사건 조사" 순서대로 원인을 확정해 주세요. 첫 줄은 무슨 일인지 한 줄로 써요(작업 카드 목표가 돼요).\n\n<signal>\n${t.text}\n</signal>`
+              : t.kind === 'verify'
+                ? `지금 KST ${kstNow()}. ${t.text}`
+                : `지금 KST ${kstNow()}. 운영자 지시:\n${t.text}`,
   };
 }

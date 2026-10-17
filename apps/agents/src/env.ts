@@ -1,4 +1,5 @@
 // ADR-015 Worker 바인딩 · 비밀값. 비밀값은 `wrangler secret put`으로만 넣는다(공개 저장소).
+import type { WorkCard } from './card.ts';
 import type { AgentLedger } from './ledger.ts';
 import type { AgentThread } from './thread.ts';
 
@@ -8,6 +9,8 @@ export type Role = (typeof ROLES)[number];
 export interface Env {
   THREAD: DurableObjectNamespace<AgentThread>;
   LEDGER: DurableObjectNamespace<AgentLedger>;
+  /** T-11-325 스레드마다 작업 카드 하나. */
+  CARD: DurableObjectNamespace<WorkCard>;
   ENABLED_ROLES: string;
   OPERATOR_USER_ID: string;
   AGENT_APP_IDS: string;

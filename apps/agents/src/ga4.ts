@@ -117,7 +117,7 @@ type Report = {
 
 /** @mkt GA4 도구. 운영자 지시 · 그 스레드 답글 · 넘겨받은 일에서만 연다. */
 export function ga4Tools(env: Env, kind: string, fetcher: typeof fetch = fetch): Tool[] {
-  if (!ga4Ready(env) || !['mention', 'reply', 'handoff'].includes(kind)) return [];
+  if (!ga4Ready(env) || !['mention', 'reply', 'handoff', 'report'].includes(kind)) return [];
   return [
     {
       name: 'ga4_report',
