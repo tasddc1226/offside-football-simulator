@@ -8,6 +8,7 @@ import type {
   ChatBlockListResponse,
   ChatBlockResponse,
   ChatMuteInput,
+  ChatOwnerResponse,
   ChatTicketResponse,
   CommentReportInput,
 } from '@offside/contracts';
@@ -49,6 +50,9 @@ export const blockChatAuthor = (id: string) =>
 /** T-11-167 내가 차단한 사람 — 채팅의 차단 목록을 열 때만 부른다. 푸는 건 게시판과 같은 unblock(boards.ts)이다. */
 export const fetchChatBlocks = () =>
   withProfile(() => cachedGet<ChatBlockListResponse>('/v1/chat/blocks', 60_000));
+/** T-11-344 작성자의 구단주 프로필(가장 최근 팀 id) — 사용자 창에서 '프로필 보기'를 누를 때만 부른다. */
+export const fetchChatOwner = (id: string) =>
+  cachedGet<ChatOwnerResponse>(`/v1/chat/messages/${id}/owner`, 600_000);
 export const adminHideChat = (id: string) =>
   apiFetch<undefined>(`/v1/admin/chat/messages/${id}/hide`, { method: 'POST', keepCache: true });
 export const adminMuteChat = (id: string, input: ChatMuteInput) =>

@@ -46,6 +46,10 @@ export const ChatBlockListResponseSchema = z.strictObject({
 });
 export type ChatBlockListResponse = z.infer<typeof ChatBlockListResponseSchema>;
 
+/** T-11-344 채팅 사용자 창의 '프로필 보기' — 작성자의 가장 최근 시즌 팀(구단주 프로필을 팀 id로 연다). 팀이 없으면 null. */
+export const ChatOwnerResponseSchema = z.strictObject({ teamId: z.string().nullable() });
+export type ChatOwnerResponse = z.infer<typeof ChatOwnerResponseSchema>;
+
 /** T-11-015 운영자 채팅 신고 목록 — 처리하지 않은 신고를 메시지마다 모은다. 본문은 신고할 때 남긴 사본이다. */
 export const AdminChatReportSchema = z.object({
   messageId: z.string(),

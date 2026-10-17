@@ -32,7 +32,9 @@ import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { TierBadge } from '../../components/TierBadge';
 import { TitleBadge } from '../../components/TitleBadge';
 import { toast } from '../../game/host';
-import { goBack, goHome } from '../../game/nav';
+import { go, goBack, goHome } from '../../game/nav';
+import { hofStart } from '@offside/app-core/state';
+import { appState } from '../../store';
 import { startAppleLogin, startGoogleLogin } from '../../platform/auth';
 import { openWeb } from '../../platform/openWeb';
 import { chatText as L } from '@offside/app-core/i18n/ko/chat';
@@ -41,6 +43,7 @@ import { useColors } from '../../theme/useColors';
 import { AppleLoginButton, useAppleLogin } from '../../ui/AppleLoginButton';
 import { Btn } from '../../ui/Btn';
 import { Pill } from '../../ui/bits';
+import { PopSheet } from '../../ui/PopSheet';
 import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
 import { useTranslations } from '../../ui/Translate';
@@ -188,6 +191,10 @@ export default function Chat() {
   }, []);
 
   const mine = (m: ChatMessage) => !!view.me && m.author === view.me.author;
+  /** T-11-344 남의 줄이면 프로필 사진·이름·⋯을 눌러 그 사람 창(신고·차단, 운영자는 가리기·정지)을 연다. */
+  const canAct = (m: ChatMessage) => !mine(m) && (!m.admin || !!view.me?.admin);
+  const picked = selected ? view.messages.find((m) => m.id === selected) : undefined;
+  const toggle = (m: ChatMessage) => setSelected(selected === m.id ? null : m.id);
   /** T-11-146 번역 보기. */
   const tr = useTranslations();
   function send(body: string) {
@@ -228,19 +235,22 @@ export default function Chat() {
     setBlocks((list) => (Array.isArray(list) ? list.filter((x) => x.id !== b.id) : list));
     toast(L.unblockedToast({ nick: b.nickname }));
   }
+  /** T-11-344 작성자의 구단주 프로필(가장 최근 팀)을 기록실에서 연다. 팀이 없으면 알리기만 한다. */
+  async function openProfile(m: ChatMessage) {
+    setBusy(true);
+    const r = await api.fetchChatOwner(m.id);
+    setBusy(false);
+    if (!r.ok) return toast(r.error.message);
+    if (!r.data.teamId) return toast(L.noProfile);
+    setSelected(null);
+    appState.hof = { ...hofStart(), tab: 'teams', team: r.data.teamId, owner: true };
+    go('hof');
+  }
   async function mute(m: ChatMessage, days: (typeof CHAT_MUTE_DAYS)[number]) {
     const ok = await confirmAsync(L.muteTitle({ nick: m.nickname, days }), L.muteBody, L.muteOk);
     if (ok) await run(api.adminMuteChat(m.id, { days }), L.mutedToast({ nick: m.nickname, days }));
   }
 
-  const panel = {
-    marginTop: 8,
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    backgroundColor: c.surface2,
-  } as const;
   const gate = {
     gap: 8,
     padding: 12,
@@ -424,23 +434,35 @@ export default function Chat() {
                 <View
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 5 }}
                 >
-                  <OwnerAvatar avatarId={m.avatarId} name={m.nickname} />
-                  {m.admin ? (
-                    <Pill tone="good">{ADMIN_NICKNAME}</Pill>
-                  ) : (
-                    <>
+                  <Press
+                    testID="chat-who"
+                    disabled={!canAct(m)}
+                    accessibilityRole={canAct(m) ? 'button' : undefined}
+                    accessibilityLabel={canAct(m) ? L.moreLabel({ nick: m.nickname }) : undefined}
+                    onPress={() => toggle(m)}
+                    hitSlop={6}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}
+                  >
+                    <OwnerAvatar avatarId={m.avatarId} name={m.nickname} />
+                    {m.admin ? (
+                      <Pill tone="good">{ADMIN_NICKNAME}</Pill>
+                    ) : (
                       <Txt bold tone={mine(m) ? 'accent' : 'ink'}>
                         {m.nickname}
                       </Txt>
+                    )}
+                  </Press>
+                  {m.admin ? null : (
+                    <>
                       {m.tier ? <TierBadge tag={{ tier: m.tier, season: tierSeason }} /> : null}
                       {m.title ? <TitleBadge title={m.title} size="sm" /> : null}
                     </>
                   )}
-                  {!mine(m) && (!m.admin || me?.admin) ? (
+                  {canAct(m) ? (
                     <Press
                       testID="chat-more"
                       accessibilityLabel={L.moreLabel({ nick: m.nickname })}
-                      onPress={() => setSelected(selected === m.id ? null : m.id)}
+                      onPress={() => toggle(m)}
                       hitSlop={12}
                       style={{
                         width: 24,
@@ -489,76 +511,6 @@ export default function Chat() {
                   </Txt>
                 </View>
                 {!mine(m) ? tr.button(m.id, m.body) : null}
-                {selected === m.id ? (
-                  <View testID="report-panel" style={panel}>
-                    {me?.admin ? (
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          flexWrap: 'wrap',
-                          gap: 6,
-                          alignItems: 'center',
-                        }}
-                      >
-                        <Txt style={{ fontSize: rem(0.8125) }}>{L.adminLabel}</Txt>
-                        <Btn
-                          sm
-                          testID="chat-hide"
-                          disabled={busy}
-                          onPress={() => void run(api.adminHideChat(m.id), L.hiddenToast)}
-                        >
-                          {L.hide}
-                        </Btn>
-                        {!m.admin
-                          ? CHAT_MUTE_DAYS.map((d) => (
-                              <Btn
-                                key={d}
-                                sm
-                                testID={`chat-mute-${d}`}
-                                disabled={busy}
-                                onPress={() => void mute(m, d)}
-                              >
-                                {L.muteDays({ days: d })}
-                              </Btn>
-                            ))
-                          : null}
-                      </View>
-                    ) : null}
-                    {!m.admin ? (
-                      <>
-                        <Txt style={{ fontSize: rem(0.8125) }}>{L.reportPrompt}</Txt>
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                          {COMMENT_REPORT_REASONS.map((reason) => (
-                            <Btn
-                              key={reason}
-                              sm
-                              testID={`report-${reason}`}
-                              disabled={busy}
-                              onPress={() => void report(m, reason)}
-                            >
-                              {REPORT_REASON_LABEL[reason]}
-                            </Btn>
-                          ))}
-                        </View>
-                        <View
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: 8,
-                          }}
-                        >
-                          <Txt tone="muted" style={[small, { flex: 1 }]}>
-                            {L.blockHint({ nick: m.nickname })}
-                          </Txt>
-                          <Btn sm testID="chat-block" disabled={busy} onPress={() => void block(m)}>
-                            {L.blockAuthor}
-                          </Btn>
-                        </View>
-                      </>
-                    ) : null}
-                  </View>
-                ) : null}
               </View>
             ))
           ) : (
@@ -621,6 +573,115 @@ export default function Chat() {
           )}
         </View>
       </View>
+      {picked ? (
+        <PopSheet
+          label={L.userLabel({ nick: picked.nickname })}
+          testID="report-panel"
+          onClose={() => setSelected(null)}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <OwnerAvatar avatarId={picked.avatarId} name={picked.nickname} size={44} />
+            <View style={{ flex: 1, gap: 4 }}>
+              {picked.admin ? (
+                <Pill tone="good">{ADMIN_NICKNAME}</Pill>
+              ) : (
+                <Txt bold style={{ fontSize: rem(1.0625) }}>
+                  {picked.nickname}
+                </Txt>
+              )}
+              {!picked.admin && (picked.tier || picked.title) ? (
+                <View
+                  style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}
+                >
+                  {picked.tier ? (
+                    <TierBadge tag={{ tier: picked.tier, season: tierSeason }} />
+                  ) : null}
+                  {picked.title ? <TitleBadge title={picked.title} size="sm" /> : null}
+                </View>
+              ) : null}
+            </View>
+            {!picked.admin ? (
+              <Btn
+                sm
+                testID="chat-profile"
+                disabled={busy}
+                onPress={() => void openProfile(picked)}
+              >
+                {L.viewProfile}
+              </Btn>
+            ) : null}
+          </View>
+          {me?.admin ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: 6,
+                alignItems: 'center',
+              }}
+            >
+              <Txt style={{ fontSize: rem(0.8125) }}>{L.adminLabel}</Txt>
+              <Btn
+                sm
+                testID="chat-hide"
+                disabled={busy}
+                onPress={() => void run(api.adminHideChat(picked.id), L.hiddenToast)}
+              >
+                {L.hide}
+              </Btn>
+              {!picked.admin
+                ? CHAT_MUTE_DAYS.map((d) => (
+                    <Btn
+                      key={d}
+                      sm
+                      testID={`chat-mute-${d}`}
+                      disabled={busy}
+                      onPress={() => void mute(picked, d)}
+                    >
+                      {L.muteDays({ days: d })}
+                    </Btn>
+                  ))
+                : null}
+            </View>
+          ) : null}
+          {!picked.admin ? (
+            <>
+              <Txt style={{ fontSize: rem(0.8125) }}>{L.reportPrompt}</Txt>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {COMMENT_REPORT_REASONS.map((reason) => (
+                  <Btn
+                    key={reason}
+                    sm
+                    testID={`report-${reason}`}
+                    disabled={busy}
+                    onPress={() => void report(picked, reason)}
+                  >
+                    {REPORT_REASON_LABEL[reason]}
+                  </Btn>
+                ))}
+              </View>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                }}
+              >
+                <Txt tone="muted" style={[small, { flex: 1 }]}>
+                  {L.blockHint({ nick: picked.nickname })}
+                </Txt>
+                <Btn sm testID="chat-block" disabled={busy} onPress={() => void block(picked)}>
+                  {L.blockAuthor}
+                </Btn>
+              </View>
+            </>
+          ) : null}
+          <Btn testID="chat-user-close" onPress={() => setSelected(null)}>
+            {L.close}
+          </Btn>
+        </PopSheet>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
