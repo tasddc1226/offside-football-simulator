@@ -38,6 +38,7 @@
       <i style:width="{lines.pct}%"></i><span class="sg-lock" aria-hidden="true"></span>
     </div>
     {#if lines.endDate}<p class="sg-date" data-season-gauge-date>{lines.endDate}</p>{/if}
+    {#if lines.why}<p class="sg-date" data-season-gauge-why>{lines.why}</p>{/if}
   </section>
 {/if}
 
