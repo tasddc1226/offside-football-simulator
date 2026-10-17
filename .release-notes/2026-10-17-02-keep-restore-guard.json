@@ -1,0 +1,23 @@
+{
+  "id": "t-11-327-keep-restore-guard",
+  "title": "선수 만들기 플레이스타일 오류 수정",
+  "items": [
+    "후보를 띄운 뒤 화면을 다시 열면 고른 플레이스타일이 킵한 후보 조건으로 바뀌어 시작되던 문제를 고쳤어요",
+    "킵한 후보 조건으로 자동으로 맞추는 건 앱을 연 뒤 처음 한 번만 해요"
+  ],
+  "en": {
+    "title": "Fixed play style in player creation",
+    "items": [
+      "Fixed a bug where reopening the screen with candidates shown switched your chosen play style to the kept candidate's conditions.",
+      "Inputs now match the kept candidate automatically only once after you open the app."
+    ]
+  },
+  "ja": {
+    "title": "選手作成のプレースタイル不具合を修正",
+    "items": [
+      "候補を表示したまま画面を開き直すと、選んだプレースタイルがキープした候補の条件に変わって始まる不具合を直しました。",
+      "キープした候補の条件への自動合わせは、アプリを開いて最初の1回だけ行います。"
+    ]
+  },
+  "availability": "web-app"
+}

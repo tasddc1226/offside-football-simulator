@@ -861,11 +861,14 @@ export function createGameActions(host: GameHost) {
     const finalNumber = clamp(+number || randomNumber(), 1, 99);
     const seed = freshSeed();
     setActiveRng(createRng(seed));
+    // T-11-327 후보로 시작하면 그 후보를 뽑은 입력(포지션 · 세부 포지션 · 주력)을 쓴다. 뽑은 뒤 입력이 바뀌어도 고른
+    // 후보와 같은 플레이스타일로 시작한다.
+    const C = presetAttrs && rolled ? { ...appState.C, ...rolled } : appState.C;
     appState.G = newGame(
       {
-        ...appState.C,
-        ...draftCareerRules(appState.C),
-        body: draftBody(appState.C),
+        ...C,
+        ...draftCareerRules(C),
+        body: draftBody(C),
         name: finalName,
         number: finalNumber,
       },
@@ -880,6 +883,7 @@ export function createGameActions(host: GameHost) {
     saveKey(DRAFT_IDENTITY_KEY, { name: finalName, number: finalNumber });
     appState.tab = 'season';
     appState.candidates = null;
+    rolled = null;
     // T-11-234 킵한 후보로 시작했을 때만 킵을 푼다. 다른 후보로 시작하면 다음 커리어 후보에도 그대로 남는다.
     const k = loadKey<KeptCandidate>(SCOUT_KEEP);
     if (k && presetAttrs && JSON.stringify(k.cand.attrs) === JSON.stringify(presetAttrs))
@@ -911,8 +915,20 @@ export function createGameActions(host: GameHost) {
     };
   }
 
-  /** T-11-294 입력을 킵한 후보의 조건으로 맞춘다. 맞출 것이 없으면 false. */
-  function restoreKeptDraft(): boolean {
+  /** T-11-327 화면에 들어올 때 하는 자동 맞추기는 앱을 연 뒤 한 번만 한다(고른 입력을 들어올 때마다 되돌리지 않게). */
+  let autoRestored = false;
+
+  /**
+   * T-11-294 입력을 킵한 후보의 조건으로 맞춘다. 맞출 것이 없으면 false. T-11-327 후보가 떠 있으면 맞추지 않는다 — 후보는
+   * 지금 입력으로 뽑았고, 커리어는 시작할 때의 입력으로 플레이스타일을 정하므로 입력만 바뀌면 고른 것과 다른 선수가 나온다.
+   * opts.auto(화면 진입)는 앱을 연 뒤 첫 번째만 맞춘다.
+   */
+  function restoreKeptDraft(opts?: { auto?: boolean }): boolean {
+    if (appState.candidates) return false;
+    if (opts?.auto === true) {
+      if (autoRestored) return false;
+      autoRestored = true;
+    }
     const d = keptDraft();
     if (!d) return false;
     appState.C.pos = d.pos;
@@ -920,6 +936,9 @@ export function createGameActions(host: GameHost) {
     appState.C.focus = d.focus;
     return true;
   }
+
+  /** T-11-327 지금 떠 있는 후보를 뽑은 입력. 후보로 시작하면 이 입력으로 커리어를 만든다. */
+  let rolled: Pick<typeof appState.C, 'pos' | 'dpos' | 'focus'> | null = null;
 
   function rollCandidates() {
     applyLatestBalance();
@@ -942,6 +961,11 @@ export function createGameActions(host: GameHost) {
     appState.candidates = batch;
     appState.candidatesOpen = open;
     appState.candidatePick = null;
+    rolled = {
+      pos: appState.C.pos,
+      dpos: appState.C.dpos ?? null,
+      focus: [...appState.C.focus],
+    };
   }
 
   /** 킵한 후보가 이 후보 묶음에서 덮을 자리(없으면 -1). 프리미엄 스카우트의 보장 후보 자리는 덮지 않는다. */

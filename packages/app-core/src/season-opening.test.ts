@@ -13,7 +13,7 @@ import { createGameActions, type GameHost } from './game-actions.js';
 import { createSheetController, initialSheetState } from './sheet-controller.js';
 import { watchDetailOpening, watchSeasonClock, watchSeasonNow } from './season-opening.js';
 import { draftCareerRules, initialAppState } from './state.js';
-import { DETAILS_OF, DPOS } from '@offside/game/data';
+import { DETAILS_OF, DPOS, typeForFocus } from '@offside/game/data';
 
 const BEFORE = '2026-10-05T14:59:59.999Z';
 const OPEN = '2026-10-05T15:00:00.000Z';
@@ -256,6 +256,8 @@ describe('candidate reveal and retirement minimum', () => {
     b.actions.rollCandidates();
     expect(b.state.candidates!.some((c) => c.kept)).toBe(false);
     expect(b.actions.keptDraft()).toEqual({ pos: 'DF', dpos: d, focus: [...DPOS[d].focus] });
+    // 맞추기 버튼은 입력 화면(후보를 닫은 뒤)에 있다.
+    b.state.candidates = null;
     expect(b.actions.restoreKeptDraft()).toBe(true);
     expect(b.actions.keptDraft()).toBeNull();
     b.actions.rollCandidates();
@@ -265,6 +267,32 @@ describe('candidate reveal and retirement minimum', () => {
     b.actions.rollCandidates();
     expect(b.state.candidates![0]!.attrs).toEqual(kept.attrs);
     expect(b.actions.restoreKeptDraft()).toBe(false);
+  });
+  it('T-11-327 후보가 떠 있으면 킵 조건으로 되돌리지 않고, 후보로 시작하면 뽑은 입력의 플레이스타일이다', () => {
+    vi.setSystemTime(new Date(OPEN));
+    // 센터백 스토퍼 후보를 킵해 둔다.
+    const a = harness();
+    Object.assign(a.state.C, { pos: 'DF', dpos: 'CB', focus: ['def', 'phy'] });
+    a.actions.rollCandidates();
+    a.actions.keepCandidate(0);
+    // 앱을 다시 열면 처음 한 번은 킵 조건으로 맞춘다.
+    const b = harness();
+    expect(b.actions.restoreKeptDraft({ auto: true })).toBe(true);
+    expect(b.state.C.dpos).toBe('CB');
+    // 왼쪽 풀백 · 공격형 풀백으로 바꿔 후보를 띄운다.
+    Object.assign(b.state.C, { dpos: 'LB', focus: ['pac', 'pas'] });
+    b.actions.rollCandidates();
+    // 화면에 다시 들어와도(자동) · 버튼으로도 후보가 떠 있는 동안은 입력을 바꾸지 않는다.
+    expect(b.actions.restoreKeptDraft({ auto: true })).toBe(false);
+    expect(b.actions.restoreKeptDraft()).toBe(false);
+    expect(b.state.C).toMatchObject({ dpos: 'LB', focus: ['pac', 'pas'] });
+    // 다른 길로 입력이 바뀌어도 후보로 시작하면 그 후보를 뽑은 입력으로 만든다.
+    b.state.C.focus = ['def', 'phy'];
+    b.state.C.dpos = 'CB';
+    b.actions.startCareer('T', 3, b.state.candidates![1]!.attrs);
+    expect(b.state.G).toMatchObject({ dpos: 'LB', type: typeForFocus('DF', ['pac', 'pas']) });
+    // 자동 맞추기는 앱을 연 뒤 한 번뿐이다.
+    expect(b.actions.restoreKeptDraft({ auto: true })).toBe(false);
   });
   it('T-11-244 천장 S 여부(hit)는 킵한 후보가 덮을 자리를 세지 않는다', () => {
     const { state, actions } = harness();
