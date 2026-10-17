@@ -32,6 +32,11 @@ export const CUP_EN: Record<CupTextKey, string> = {
   noReroll: "You don't have any rerolls.",
   noBoost: "You don't have any boost tickets.",
   noScout: "You don't have any premium scout tickets.",
+  noRename: "You don't have any player rename tickets.",
+  renameNotMine: 'You can only rename your own players.',
+  renameHidden: "A player hidden after a report can't be renamed.",
+  renameName: "That name can't be used. Try another one.",
+  renameSame: 'That is already the current name.',
   giftClaimed: 'You have already claimed this gift.',
   attendanceChecked: 'You have already checked in today.',
   iapInvalid: "We couldn't verify this purchase.",
@@ -87,4 +92,5 @@ export const CUP_EN: Record<CupTextKey, string> = {
   grantReroll: 'The OFFSIDE team sent you {n} player reroll ticket(s).',
   grantBoost: 'The OFFSIDE team sent you {n} potential boost ticket(s).',
   grantScout: 'The OFFSIDE team sent you {n} premium scout ticket(s).',
+  grantRename: 'The OFFSIDE team sent you {n} player rename ticket(s).',
 };
