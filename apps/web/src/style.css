@@ -5885,6 +5885,74 @@ button.title-item:hover {
   color: var(--muted);
   font-weight: 600;
 }
+/* T-11-335 단계 묶음 · 한 번에 넘은 단계 · 많이 세운 선수 */
+.first-burst {
+  margin-left: 6px;
+  vertical-align: 2px;
+}
+.first-series {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 10px;
+  margin-top: 4px;
+  font-size: 0.8125rem;
+}
+.first-next {
+  color: var(--ink);
+}
+.first-toggle {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  text-decoration: underline;
+}
+.first-steps {
+  grid-column: 1 / -1;
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0 0 0 10px;
+  border-left: 2px solid var(--line);
+}
+.first-steps li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 10px;
+  align-items: baseline;
+  padding-block: 5px;
+}
+.first-step-label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+.first-steps li.locked .first-step-label {
+  color: var(--muted);
+  font-weight: 600;
+}
+.first-top {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0;
+}
+.first-top li {
+  display: grid;
+  grid-template-columns: 1.5rem 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding-block: 6px;
+  border-top: 1px solid var(--line);
+}
+.first-top li:first-child {
+  border-top: 0;
+}
+.first-top .first-who {
+  grid-column: auto;
+}
+.first-rank {
+  font-weight: 800;
+  color: var(--accent-text);
+}
 
 /* ───────── 은퇴 크레딧 (T-10-029 → T-10-062) ─────────
    장면이 아래에서 크게 떠오르고, 등급 배지가 점수 카운트업 뒤에 튀어나온다.

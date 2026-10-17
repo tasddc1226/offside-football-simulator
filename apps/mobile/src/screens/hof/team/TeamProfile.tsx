@@ -22,6 +22,8 @@ import { PlayerPeek, pitchPeekOrigin, type PeekOrigin } from '../../../component
 import { presetLayout, shapeOf } from '@offside/contracts/owner-team';
 import { friendRequestText } from '@offside/app-core/friendText';
 import { synergyFocus } from '@offside/app-core/teamOwner';
+import { coachLineBonus, coachSummary } from '@offside/app-core/managerCard';
+import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
 import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
 import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
 import { ownerProfileText as LO } from '@offside/app-core/i18n/ko/ownerProfile';
@@ -325,7 +327,23 @@ export default function TeamProfile({ id }: { id: string }) {
           ) : null}
 
           <Card gap={12}>
-            <TeamLines lines={team.lines} />
+            {/* T-11-335 감독 칸에 앉힌 감독과 줄 힘의 감독 보정(내 팀 화면과 같다). */}
+            {team.coach ? (
+              <View testID="team-profile-coach" style={{ gap: 2 }}>
+                <Txt bold>{MG.profileCoach}</Txt>
+                <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                  {coachSummary(team.coach, team.formation, localNames)}
+                </Txt>
+              </View>
+            ) : null}
+            <TeamLines
+              lines={team.lines}
+              coach={
+                team.coach
+                  ? coachLineBonus(team.coach, team.formation, team.synergy ?? null, team.season)
+                  : null
+              }
+            />
             {team.synergy ? (
               <TeamSynergy
                 synergy={team.synergy}

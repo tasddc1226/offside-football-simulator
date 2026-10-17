@@ -110,6 +110,7 @@ export const manager: Translation<ManagerMsgs> = {
   teamCoach: 'Manager slot',
   teamCoachEmpty: 'Empty',
   teamCoachManage: 'Choose manager',
+  profileCoach: 'Seated manager',
   teamCoachLine: (p: { v: string }) => `Manager ${p.v}`,
   oddsSure: 'Certain',
   oddsLabel: (p) => `${p.label}, success chance ${p.odds}`,

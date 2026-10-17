@@ -3,6 +3,7 @@
   import { shapeOf } from '@offside/contracts/owner-team';
   // T-10-092 팀 프로필(라이브 랭킹에서 연다) — 시즌 순위 · 감독 · 레이팅 · 선발 그라운드 · 줄 힘 · 좋아요/조회수 · 팀 히스토리
   // 배지. 누구나 본다. 남의 팀을 열면 조회수를 한 번 올린다(내 팀은 세지 않는다).
+  // T-11-335 감독 칸에 앉힌 감독(이름 · 등급 · 포메이션 효과)과 줄 힘의 감독 보정을 내 팀 화면처럼 보인다.
   import { onMount } from 'svelte';
   import {
     fetchTeamProfile,
@@ -20,6 +21,8 @@
   import TeamLines from './TeamLines.svelte';
   import TeamSynergy from './TeamSynergy.svelte';
   import { synergyFocus } from '@offside/app-core/teamOwner';
+  import { coachLineBonus, coachSummary } from '@offside/app-core/managerCard';
+  import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
   import TeamPitch from './TeamPitch.svelte';
   import TeamLogo from './TeamLogo.svelte';
   import CupHonors from '../cup/CupHonors.svelte';
@@ -45,6 +48,9 @@
   // T-11-290 시너지 표에서 고른 항목 — 그라운드에서 그 선수들을 잇는다(내 팀 TeamLineup과 같은 동작, 읽기 전용).
   let synFocus = $state<string | null>(null);
   const syn = $derived(team?.synergy ? synergyFocus(team.synergy, synFocus) : null);
+  const coachBonus = $derived(
+    team?.coach ? coachLineBonus(team.coach, team.formation, team.synergy ?? null, team.season) : null,
+  );
   // T-11-029 끝난 시즌의 팀은 좋아요가 굳는다(서버가 409로 거절한다).
   const closed = $derived(!!team && teamSeasonClosed(team.season, new Date().toISOString()));
 
@@ -147,7 +153,13 @@
     <TeamPitch formation={team.formation} layout={team.layout} {cells} links={syn?.links ?? []} focus={syn?.members ?? null} applied={syn?.applied ?? []} caption={syn ? syn.caption : null} />
 
     <section class="card stack" style="gap:12px">
-      <TeamLines lines={team.lines} />
+      {#if team.coach}
+        <div class="tp-coach" data-team-profile-coach>
+          <b>{MG.profileCoach}</b>
+          <span class="muted fs-sm">{coachSummary(team.coach, team.formation, localNames)}</span>
+        </div>
+      {/if}
+      <TeamLines lines={team.lines} coach={coachBonus} />
       {#if team.synergy}<div class="tp-syn" data-team-profile-synergy><TeamSynergy synergy={team.synergy} season={team.season} bind:focus={synFocus} /></div>{/if}
       <div class="tp-social">
         <button class="tp-like" aria-pressed={liked} disabled={mine || liking || closed} onclick={toggleLike} data-act="team-like" aria-label={L.profLikeAria({ n: team.likes })}>
@@ -290,6 +302,11 @@
     font-weight: 700;
   }
   /* 시너지 표는 자체 안쪽 여백·밑줄을 가지는데(편성 카드용) 프로필 카드 안에서는 카드 여백을 쓴다. */
+  .tp-coach {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
   .tp-syn :global(.syn) {
     padding: 0;
     border-bottom: 0;

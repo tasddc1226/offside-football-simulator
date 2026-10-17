@@ -16,7 +16,7 @@ export const firstsTabs = (): { id: FirstsTab; label: string }[] => [
   { id: 'honor', label: firstsTabText.tabHonor },
 ];
 
-type Holder = NonNullable<ServerFirst['holder']>;
+export type Holder = NonNullable<ServerFirst['holder']>;
 export type AchievedFirst = ServerFirst & { achievedAt: string; holder: Holder };
 
 /** 달성된 기록만, 최근 것부터. */

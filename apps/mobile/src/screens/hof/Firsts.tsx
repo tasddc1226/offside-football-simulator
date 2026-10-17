@@ -1,6 +1,8 @@
 // T-10-027 서버 최초 기록(웹 firsts/Firsts.svelte) — 모든 플레이어를 통틀어 처음 세운 기록. 로그인 없이 누구나 본다.
 // 최근 기록 탭은 날짜별 연대기, 분류 탭은 규칙 전체(아직 아무도 못 세운 기록 포함)를 보여 준다. 끝없는 단계는
 // 누가 넘을 때마다 다음 목표가 열린다. 서버 기록 탭은 더 큰 기록이 나오면 주인이 바뀌는 최다·최고 기록(T-10-056).
+// T-11-335 분류 탭은 단계 기록을 한 줄로 묶고(가장 높은 단계 · 다음 목표 · 진행, 누르면 단계 전부), 최근 기록은 그날 한 선수가
+// 한 번에 넘은 단계를 한 줄로 묶는다. 최근 기록 위에 이 시즌 기록을 가장 많이 세운 선수를 보인다.
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import type { FirstsResponse, ServerFirst } from '@offside/contracts';
@@ -10,19 +12,20 @@ import { kstParts } from '@offside/app-core/boardText';
 import { firstsText as L } from '@offside/app-core/i18n/ko/firsts';
 import {
   achievedList,
-  byDay,
   firstLabel,
   firstUnit,
   firstsTabs,
   holderLabel,
   type FirstsTab,
 } from '@offside/app-core/firsts';
+import { recentDays, seriesList, topHolders } from '@offside/app-core/firstsSeries';
 import { localCareerNames } from '@offside/game/hof-store';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Card } from '../../ui/Card';
 import { Pill } from '../../ui/bits';
+import { Press } from '../../ui/Press';
 import { Screen } from '../../ui/Screen';
 import { Topbar } from '../../ui/Topbar';
 import { Txt } from '../../ui/Txt';
@@ -140,8 +143,12 @@ export default function Firsts() {
   const total = data?.items.length ?? 0;
   const achieved = data ? achievedList(data.items) : [];
   const done = achieved.length;
-  const days = byDay(achieved);
-  const list = data ? data.items.filter((x) => x.cat === tab) : [];
+  const days = recentDays(achieved);
+  const top = topHolders(achieved);
+  const series = data ? seriesList(data.items.filter((x) => x.cat === tab)) : [];
+  const [open, setOpen] = useState<string[]>([]);
+  const toggle = (k: string) =>
+    setOpen((o) => (o.includes(k) ? o.filter((x) => x !== k) : [...o, k]));
 
   const who = (h: Holder) => {
     const w = holderLabel(h, mine);
@@ -227,28 +234,72 @@ export default function Firsts() {
           </Txt>
         ) : tab === 'recent' ? (
           days.length ? (
-            days.map((d) => (
-              <View key={d.day}>
-                <Txt
-                  num
-                  accessibilityRole="header"
-                  tone="muted"
-                  style={{ fontSize: rem(0.8125), marginTop: 14, marginBottom: 2 }}
-                >
-                  {d.day}
-                </Txt>
-                {d.items.map((x, i) => (
-                  <FirstRow
-                    key={x.id}
-                    testID={`first-${x.id}`}
-                    first={i === 0}
-                    label={firstLabel(x.label)}
-                    topRight={<TimeText>{kstParts(x.achievedAt).time}</TimeText>}
-                    who={who(x.holder)}
-                  />
-                ))}
-              </View>
-            ))
+            <View>
+              {top.length && top[0]!.count > 1 ? (
+                <View testID="firsts-top">
+                  <Txt
+                    accessibilityRole="header"
+                    tone="muted"
+                    style={{
+                      fontSize: rem(0.8125),
+                      fontWeight: '700',
+                      marginTop: 14,
+                      marginBottom: 2,
+                    }}
+                  >
+                    {L.topTitle}
+                  </Txt>
+                  {top.map((t, i) => (
+                    <View
+                      key={t.holder.careerId}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                        paddingVertical: 6,
+                        borderTopWidth: i ? 1 : 0,
+                        borderTopColor: c.line,
+                      }}
+                    >
+                      <Txt num style={{ width: 20, fontWeight: '800', color: c.accentText }}>
+                        {String(i + 1)}
+                      </Txt>
+                      <View style={{ flex: 1 }}>{who(t.holder)}</View>
+                      <Txt num style={{ fontWeight: '800' }}>
+                        {L.topCount({ n: t.count })}
+                      </Txt>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+              {days.map((d) => (
+                <View key={d.day}>
+                  <Txt
+                    num
+                    accessibilityRole="header"
+                    tone="muted"
+                    style={{ fontSize: rem(0.8125), marginTop: 14, marginBottom: 2 }}
+                  >
+                    {d.day}
+                  </Txt>
+                  {d.items.map(({ item: x, steps }, i) => (
+                    <FirstRow
+                      key={x.id}
+                      testID={`first-${x.id}`}
+                      first={i === 0}
+                      label={firstLabel(x.label)}
+                      topRight={
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          {steps > 1 ? <Pill>{L.burst({ n: steps })}</Pill> : null}
+                          <TimeText>{kstParts(x.achievedAt).time}</TimeText>
+                        </View>
+                      }
+                      who={who(x.holder)}
+                    />
+                  ))}
+                </View>
+              ))}
+            </View>
           ) : (
             empty(L.empty)
           )
@@ -285,21 +336,91 @@ export default function Firsts() {
           </View>
         ) : (
           <View>
-            {list.map((x, i) => (
-              <FirstRow
-                key={x.id}
-                testID={`first-${x.id}`}
-                first={i === 0}
-                locked={!x.holder}
-                label={firstLabel(x.label)}
-                topRight={
-                  x.holder && x.achievedAt ? (
-                    <TimeText>{kstParts(x.achievedAt).day}</TimeText>
-                  ) : undefined
-                }
-                who={x.holder && x.achievedAt ? who(x.holder) : <WhoText>{L.locked}</WhoText>}
-              />
-            ))}
+            {series.map((sr, i) => {
+              const head = sr.top ?? sr.steps[0]!;
+              const many = sr.steps.length > 1;
+              const shown = open.includes(sr.key);
+              return (
+                <View key={sr.key}>
+                  <FirstRow
+                    testID={many ? `first-series-${sr.key}` : `first-${head.id}`}
+                    first={i === 0}
+                    locked={!sr.top}
+                    label={firstLabel(head.label)}
+                    topRight={
+                      sr.top ? <TimeText>{kstParts(sr.top.achievedAt).day}</TimeText> : undefined
+                    }
+                    who={sr.top ? who(sr.top.holder) : <WhoText>{L.locked}</WhoText>}
+                  />
+                  {many ? (
+                    <View style={{ gap: 4, marginTop: -4, paddingBottom: 10 }}>
+                      {sr.top ? (
+                        <Txt style={{ fontSize: rem(0.8125) }}>
+                          {sr.next ? L.next({ label: firstLabel(sr.next.label) }) : L.allDone}
+                        </Txt>
+                      ) : null}
+                      <Press
+                        testID={`first-toggle-${sr.key}`}
+                        accessibilityRole="button"
+                        accessibilityState={{ expanded: shown }}
+                        onPress={() => toggle(sr.key)}
+                        hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                        style={{ alignSelf: 'flex-start' }}
+                      >
+                        <Txt
+                          tone="muted"
+                          style={{ fontSize: rem(0.8125), textDecorationLine: 'underline' }}
+                        >
+                          {`${L.steps({ done: sr.done, total: sr.steps.length })} · ${shown ? L.hideSteps : L.showSteps}`}
+                        </Txt>
+                      </Press>
+                      {shown ? (
+                        <View
+                          style={{
+                            marginTop: 4,
+                            paddingLeft: 10,
+                            borderLeftWidth: 2,
+                            borderLeftColor: c.line,
+                          }}
+                        >
+                          {sr.steps.map((x) => (
+                            <View
+                              key={x.id}
+                              testID={`first-${x.id}`}
+                              style={{ paddingVertical: 5 }}
+                            >
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'baseline',
+                                  gap: 10,
+                                }}
+                              >
+                                <Txt
+                                  tone={x.holder ? 'ink' : 'muted'}
+                                  style={{
+                                    flex: 1,
+                                    fontSize: rem(0.8125),
+                                    fontWeight: x.holder ? '700' : '600',
+                                  }}
+                                >
+                                  {firstLabel(x.label)}
+                                </Txt>
+                                {x.holder && x.achievedAt ? (
+                                  <TimeText>{kstParts(x.achievedAt).day}</TimeText>
+                                ) : null}
+                              </View>
+                              {x.holder ? who(x.holder) : <WhoText>{L.locked}</WhoText>}
+                            </View>
+                          ))}
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })}
           </View>
         )}
       </Card>
