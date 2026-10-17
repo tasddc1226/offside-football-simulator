@@ -196,7 +196,16 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
             {L.scoutHint}
           </Txt>
           <Txt>{`“${s.scoutHint}”`}</Txt>
+          {s.seasonTrend ? (
+            <Txt tone="muted" style={{ fontSize: rem(0.8125), marginTop: 4 }}>
+              {s.seasonTrend}
+            </Txt>
+          ) : null}
         </View>
+      ) : s.seasonTrend ? (
+        <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+          {s.seasonTrend}
+        </Txt>
       ) : null}
       <View>
         <Txt v="eyebrow" style={{ marginBottom: 6 }}>

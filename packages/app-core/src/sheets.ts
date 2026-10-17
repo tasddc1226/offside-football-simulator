@@ -184,6 +184,8 @@ export type SheetView =
       scout?: string | null;
       /** 스카우트 한마디(scoutHint). 잠재력 등급 대신 수준만 문장으로 알려 준다. */
       scoutHint?: string | null;
+      /** T-11-353 지난 시즌과 견준 흐름(평점·출전)과 나이 한 줄. 견줄 시즌이 없으면 null. */
+      seasonTrend?: string | null;
       fans: string[];
       age: number;
     }

@@ -24,14 +24,15 @@
   <div class="stat-list">
     {#each d.groups as g (g.key)}
       <div class="stat-grp">
-        <div class="stat-head"><span><small>{g.abbr}</small>{g.labelKr}</span><b class="num {g.tier}">{g.value}</b></div>
+        <div class="stat-head"><span><small>{g.abbr}</small>{g.labelKr}{#if g.ovrPct} <em class="ovr-pct" data-ovr-share>{L.shareLabel({ pct: g.ovrPct })}</em>{/if}</span><b class="num {g.tier}">{g.value}</b></div>
         <ul>
           {#each g.rows as row (row.key)}
-            <li class={row.bold ? 'key' : ''}><span>{row.name}</span><b class="num {row.tier}">{row.value}</b></li>
+            <li class={row.bold ? 'key' : ''}><span>{row.name}</span><span class="sv">{#if row.ovrPct}<em class="ovr-pct">{row.ovrPct}%</em>{/if}<b class="num {row.tier}">{row.value}</b></span></li>
           {/each}
         </ul>
       </div>
     {/each}
   </div>
-  <p class="muted stat-note"><b>{L.noteBold}</b>{L.noteRest({ role: d.roleName ?? '' })}</p>
+  <p class="muted stat-note"><b>{L.noteBold}</b>{L.noteRest({ role: d.roleName ?? '' })} {L.shareNote}</p>
+  {#if d.growthNote}<p class="stat-note growth-slow" data-growth-slow><b>{L.growthTitle}</b> · {d.growthNote}</p>{/if}
 </section>

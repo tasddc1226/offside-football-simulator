@@ -8,4 +8,7 @@ export const gameAttr: Translation<GameAttrMsgs> = {
   roleOvr: 'OVR by position',
   noteBold: 'Bold',
   noteRest: (p) => ` attributes decide your ${p.role} OVR.`,
+  shareLabel: (p) => `${p.pct}% of OVR`,
+  shareNote: 'The % shows how much each attribute counts toward OVR in your current position.',
+  growthTitle: 'Why growth is slow',
 };

@@ -81,7 +81,10 @@
   <div>
     <div class="eyebrow" style="margin-bottom:6px">{L.scoutHint}</div>
     <p>“{v.scoutHint}”</p>
+    {#if v.seasonTrend}<p class="muted fs-sm" data-season-trend>{v.seasonTrend}</p>{/if}
   </div>
+{:else if v.seasonTrend}
+  <p class="muted fs-sm" data-season-trend>{v.seasonTrend}</p>
 {/if}
 <div>
   <div class="eyebrow" style="margin-bottom:6px">{L.fans}</div>
