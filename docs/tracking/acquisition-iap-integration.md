@@ -16,7 +16,7 @@ main `5acbeb1e`에서 분리한 뒤 최신 main `14d35d31`을 반영한 구현�
 
 ## App Store 링크
 
-`VITE_APPLE_PROVIDER_TOKEN`은 **이 앱 계정의 공식 App Store Connect 캠페인 링크에서 검증한 pt 값만** 설정한다. 앱 ID·팀 ID·계정 숫자를 대입하지 않는다. 없거나 비정상이면 기존 일반 App Store 링크로 안전하게 보낸다. 홈·안내 시트·설정·상점 이동 함수와 AppConversion의 앵커가 공용 링크 함수를 사용한다. Safari 시스템 Smart App Banner는 현재 정적 app-id 메타이므로 캠페인 전달은 미완료이며, 공식 token 확보 뒤 초기 HTML 단계의 별도 검증이 필요하다.
+`VITE_APPLE_PROVIDER_TOKEN`은 **이 앱 계정의 공식 App Store Connect 캠페인 링크에서 검증한 pt 값만** 설정한다. 앱 ID·팀 ID·계정 숫자를 대입하지 않는다. 없거나 비정상이면 기존 일반 App Store 링크로 안전하게 보낸다. 홈·안내 시트·설정·상점 이동 함수와 AppConversion의 앵커가 공용 링크 함수를 사용한다. Safari Smart App Banner는 edge worker가 최초 HTML의 apple-itunes-app 메타에 같은 pt/ct를 넣는다. worker의 APPLE_PROVIDER_TOKEN과 웹 빌드 VITE_APPLE_PROVIDER_TOKEN은 같은 검증값을 설정해야 한다. 캠페인 HTML은 private/no-store이고 ETag·Content-Length·Content-Encoding을 제거한다. 변환 오류·토큰 누락 때 일반 배너를 유지한다. 실제 Safari 시스템 배너는 실기기 확인이 남아 있다.
 
 ct=`os1.<source>.<medium>.<campaign>.<content>`는 공유 allowlist 각 값의 (0부터 시작한 위치+1)을 base36으로 표시한다. 누락은 0, 최대 30자 이하다. allowlist 순서는 append-only이며 기존 위치를 재정렬하지 않는다. 예시 테스트의 pt는 합성값으로 운영 설정이 아니다.
 
@@ -32,7 +32,13 @@ Apple 서명 JWS의 `purchaseDate`, `price`(milliunits), `currency`, `storefront
 
 검증된 구매시각 이전 30일의 같은 연결 프로필 세션에서 최초와 최종을 각각 snapshot한다. 거래 저장 후 새 접점이나 재전송으로 재귀속하지 않는다. 구매시각이 없거나 연동/동의가 없으면 미귀속이다. 익명 세션의 연결이 구매 후 발생했다면 해당 과거 구매에 소급 연결하지 않는다.
 
-중요한 **미포함 경로**: `apps/mobile/src/platform/adFree.ts`의 비소모성 광고 제거는 현재 서버 없이 스토어 기록으로 지급되고 요청에 appAccountToken이 없다. 기존 App Store 사용자 복원도 프로필 소유를 검증할 수 없다. 이 경로를 소모성 원장에 가짜 qty로 끼우지 않는다. 전체 IAP 수익·고유 결제자 완료로 표시하면 안 된다. 후속은 별도 공통 검증 거래 원장, 새 구매의 선택적 account token 연결, 기존 복원의 미귀속 유지, 영구 권한을 바꾸지 않는 백필 없는 기록·환불 테스트가 필요하다. #649 미병합 구독도 집계하지 않는다.
+광고 제거 비소모성 상품도 `iap_ad_free_purchases` 원장에 기록한다. 아이템 qty를 만들거나 기존 영구 광고 제거 권한을 바꾸지 않는다. 새 Apple 구매는 검증된 프로필 UUID를 appAccountToken으로 붙이고, Google은 obfuscatedAccountId를 사용한다. 로그인 강제는 없다. 토큰 없는 과거 복원은 profile_id=NULL로 미귀속이며 나중에 임의로 계정을 붙이지 않는다. Apple 비소모성은 originalTransactionId와 originalPurchaseDate를 우선해 복원 시 새 transactionId가 와도 최초 구매 한 건으로 센다. Family Sharing은 추가 구매로 기록하지 않는다.
+
+네이티브 활성화는 `OFFSIDE_ACCOUNT_PURCHASES_ENABLED=true`, 앱 분석 동의 granted, 해당 프로필의 서버 연결 동의가 모두 필요하다. 하나라도 거절이면 추가 계정/거래 요청을 보내지 않거나 서버에서 기록하지 않는다. 연결 동의 조회는 cachedGet을 쓴다. 동의 여부 조회/기록이 일시 실패하면 기존 광고 제거 권한은 즉시 제공하면서 거래 마무리를 미뤄 다음 StoreKit 동기화 때 같은 거래를 재전송한다. 복원은 새 매출이 아니다. 앱 config와 fingerprint가 바뀌므로 실제 스토어 앱에는 별도 바이너리/런타임 검증 후 출시 승인이 필요하다. 이번 작업에서 빌드·제출·OTA·판매 설정 변경은 하지 않았다.
+
+두 상품 원장을 동일한 명시적 열의 UNION ALL로 투영해 계정별 최초 구매 순서를 한 번만 계산한다. 같은 서명 거래가 서로 다른 상품 원장으로 들어가려는 요청은 검증 상품 ID/type이 막는다. 익명 거래는 고유 결제자에 추정 합산하지 않고 unknown_account_transactions로 표시한다. 새 비소모성 데이터는 동의된 구매·복원만 수신하므로 전체 App Store 매출과 동일한 coverage를 주장하지 않는다. #649 미병합 구독도 포함하지 않는다.
+
+검증된 환불이 기록보다 먼저 오면 iap_refund_markers에 거래 키를 먼저 남기고, 나중에 수신한 광고 제거 거래가 이를 읽는다. 환불 알림 재전송은 같은 키 하나이며 가짜 구매 행을 만들지 않는다. 원장에 연결된 환불 거래 수·그 거래의 구매가격 합계만 보고한다. purchase_value_of_refunded_transactions_milliunits는 실제 현금 환불액이 아니며 부분 환불/수수료/순수익으로 해석하거나 차감하지 않는다.
 
 ## GA4/StoreKit 확인과 추가 승인
 
@@ -46,6 +52,22 @@ expo-iap 5.8.2는 StoreKit 2 경로이며 앱 코드에 Firebase `logTransaction
 
 통화별 transactions·unique_purchasers·가격 검증된 unique_payers·신규 결제자·반복 거래·금액 합계·환불·가격 누락·0원·sandbox를 분리한다. 신규 결제자는 모든 운영 소모성 거래의 최초 행이며 검증 금액이 양수인 경우에만 센다. 과거 금액 미확인 거래가 먼저 있으면 신규로 추정하지 않으므로 보수적 하한이다. 미확인 가격 거래를 유료 결제자로 확정하지 않는다. `repeat_transactions`는 모든 운영 소모성 반복 거래이며 유료 확인 여부는 가격 coverage와 함께 해석한다. 통화끼리 합산하지 않는다. 직접 유입은 빈 campaign, 연결 없는 구매는 `unattributed`다.
 
-Migration 0109와 snapshot 0109는 열린 PR 772/774의 0108과 파일명이 겹치지 않게 생성했다. journal index도 109로 예약했다. 그 PR을 수정하지 않았다. 병합 순서에 따라 최신 main으로 재생성·충돌 검증을 다시 해야 한다. 작업 중 #774가 main에 병합되어 해당 0108까지 반영한 뒤 0109를 다시 생성했다. 현재 schema generate는 변경 없음이다.
+Migration은 PR782의 0109를 피한 0110이며 journal index와 snapshot도 110/0110이다. 현재 main 14d35d31 기준 schema generate 추가 변경 없음이다. PR782 병합 후 snapshot 재생성 조건은 마지막 절을 따른다.
 
 Drizzle 0.31.10이 coalesce 식 인덱스의 쉼표를 열 구분으로 잘못 직렬화한 SQL을 로컬 테스트에서 발견해 표현식 SQL만 바로잡았다. ADD COLUMN FK의 ON DELETE SET NULL도 명시했다. schema/snapshot은 생성본을 유지하며 재생성 drift 없음과 빈 D1 전체 적용을 다시 검증한다.
+
+## 2026-10-17 추가 검증 및 활성화 조건
+
+사용자가 이전에 검증한 Threads 링크를 제공했다: [기존 캠페인 링크](https://apps.apple.com/app/apple-store/id6817463687?pt=128166757&ct=threads_s1_bio&mt=8). pt=128166757은 과거 검증 근거이며 추측한 값이 아니다. 앞서 공식 로그인 화면에서 동일 앱 ID와 현재 계정의 앱 소유는 확인했지만 provider 번호 자체의 현재 계정 일치는 확인하지 못했다. 기존 로컬 저장소·Codex 세션 검색에도 추가 증거가 없어 현재 검증된 운영 기본값으로 설정하지 않았다. 거절된 새 캠페인 폼 입력은 재시도하거나 우회하지 않았다.
+
+활성화 전: (1) 기존 공식 기록으로 현재 provider 일치 검증, (2) 웹 VITE_APPLE_PROVIDER_TOKEN과 worker APPLE_PROVIDER_TOKEN 같은 값 적용, (3) 웹/API 동시 acquisition 플래그, (4) 별도 연결 동의, (5) 모바일 설정 플래그와 사용자 분석 동의·서버 연결 동의, (6) 같은 runtime/새 바이너리의 실제 StoreKit·Safari 검증. 서버·빌드 플래그는 모두 기본 off/미설정이며 이번 작업에서 운영 값을 변경하지 않았다.
+
+실제 Sandbox 검증은 테스트 Apple/Google 계정 로그인, StoreKit 구매·보류·취소·복원·환불, GA4 테스트 앱 스트림 DebugView 접근, 필요한 개발 바이너리 실행이 필요하다. 이 계정 동작은 현재 승인되지 않았고 실행하지 않았다. 운영 계정/거래/광고 설정은 대상이 아니다. 원격 쓰기403도 해소 증거가 없어 push/PR 우회는 하지 않는다.
+
+회귀 검증 결과는 acquisition-iap-pr.md의 추가 구현과 최종 검증을 따른다. API 전체 병렬 실행은 Miniflare 런타임 오류 후 중단했으므로 전체 통과로 보지 않는다. 0110은 기능 off여도 환불 경로에서 필요하므로 코드 배포 전 적용이 필수다.
+
+### PR782 충돌 재검증
+
+2026-10-17 읽기 확인: 최신 main은 14d35d31이다. PR782(head b999bdd8)는 열림/미병합이며 0109_owner_attendance, journal idx109, meta/0109_snapshot.json을 추가한다. PR772는 현재 closed/미병합으로 확인됐다. 기존 "여전히 열림" 기록보다 이 상태가 최신이다. 다른 PR은 수정하지 않았다.
+
+우리 migration을 0110_acquisition_iap.sql, journal idx110, meta/0110_snapshot.json으로 옮겼다. 현재 main 기준 drizzle generate 추가 변경 없음이며 번호·파일명은 PR782와 겹치지 않는다. 아직 PR782가 main에 없으므로 0110 snapshot은 현재 main 0108을 부모로 가진다. **PR782가 먼저 병합되면 반드시 최신 main을 반영해 0110 snapshot/journal을 다시 생성하고 전체 schema drift·migration·번들을 재검증해야 한다.** 파일 번호 변경만으로 미래 snapshot 병합까지 완료됐다고 보지 않는다. 이 조건을 충족하기 전 운영 배포하지 않는다.

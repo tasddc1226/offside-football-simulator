@@ -14,6 +14,9 @@ const INTERMEDIATE_OID = '1.2.840.113635.100.6.2.1';
 
 export interface AppleTransaction {
   transactionId: string;
+  originalTransactionId?: string;
+  originalPurchaseDate?: number;
+  inAppOwnershipType?: string;
   bundleId: string;
   productId: string;
   type?: string;

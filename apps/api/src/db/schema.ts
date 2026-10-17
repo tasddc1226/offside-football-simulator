@@ -1807,3 +1807,45 @@ export const acquisitionSessions = sqliteTable(
     index('acquisition_sessions_time_idx').on(t.receivedAt),
   ],
 );
+
+export const iapAdFreePurchases = sqliteTable(
+  'iap_ad_free_purchases',
+  {
+    store: text('store').notNull(),
+    transactionId: text('transaction_id').notNull(),
+    profileId: text('profile_id').references(() => profiles.id, { onDelete: 'cascade' }),
+    productId: text('product_id').notNull(),
+    test: integer('test', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('created_at').notNull(),
+    purchasedAt: text('purchased_at'),
+    priceMilliunits: integer('price_milliunits'),
+    currency: text('currency'),
+    storefront: text('storefront'),
+    refundedAt: text('refunded_at'),
+    firstTouchId: text('first_touch_id').references(() => acquisitionSessions.id, {
+      onDelete: 'set null',
+    }),
+    lastTouchId: text('last_touch_id').references(() => acquisitionSessions.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.store, t.transactionId] }),
+    index('iap_ad_free_profile_idx').on(t.profileId, t.createdAt),
+    index('iap_ad_free_created_idx').on(t.createdAt),
+    index('iap_ad_free_refunded_idx').on(t.refundedAt),
+    index('iap_ad_free_first_idx').on(t.firstTouchId),
+    index('iap_ad_free_last_idx').on(t.lastTouchId),
+  ],
+);
+
+/** Verified refund arriving before the optional ad-free record. No fabricated purchase row. */
+export const iapRefundMarkers = sqliteTable(
+  'iap_refund_markers',
+  {
+    store: text('store').notNull(),
+    transactionId: text('transaction_id').notNull(),
+    refundedAt: text('refunded_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.store, t.transactionId] })],
+);

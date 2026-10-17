@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "90b782fc-9ff3-42f9-af98-b40a34beae4a",
+  "id": "dccbba9a-f242-43fa-9748-ca731fd791da",
   "prevId": "53d792d0-3106-42de-80e6-77526e752ba4",
   "tables": {
     "acquisition_consents": {
@@ -3353,6 +3353,193 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "iap_ad_free_purchases": {
+      "name": "iap_ad_free_purchases",
+      "columns": {
+        "store": {
+          "name": "store",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "transaction_id": {
+          "name": "transaction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "profile_id": {
+          "name": "profile_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "product_id": {
+          "name": "product_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "test": {
+          "name": "test",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "purchased_at": {
+          "name": "purchased_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "price_milliunits": {
+          "name": "price_milliunits",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "storefront": {
+          "name": "storefront",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "refunded_at": {
+          "name": "refunded_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "first_touch_id": {
+          "name": "first_touch_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_touch_id": {
+          "name": "last_touch_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "iap_ad_free_profile_idx": {
+          "name": "iap_ad_free_profile_idx",
+          "columns": [
+            "profile_id",
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "iap_ad_free_created_idx": {
+          "name": "iap_ad_free_created_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "iap_ad_free_refunded_idx": {
+          "name": "iap_ad_free_refunded_idx",
+          "columns": [
+            "refunded_at"
+          ],
+          "isUnique": false
+        },
+        "iap_ad_free_first_idx": {
+          "name": "iap_ad_free_first_idx",
+          "columns": [
+            "first_touch_id"
+          ],
+          "isUnique": false
+        },
+        "iap_ad_free_last_idx": {
+          "name": "iap_ad_free_last_idx",
+          "columns": [
+            "last_touch_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "iap_ad_free_purchases_profile_id_profiles_id_fk": {
+          "name": "iap_ad_free_purchases_profile_id_profiles_id_fk",
+          "tableFrom": "iap_ad_free_purchases",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "profile_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "iap_ad_free_purchases_first_touch_id_acquisition_sessions_id_fk": {
+          "name": "iap_ad_free_purchases_first_touch_id_acquisition_sessions_id_fk",
+          "tableFrom": "iap_ad_free_purchases",
+          "tableTo": "acquisition_sessions",
+          "columnsFrom": [
+            "first_touch_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "iap_ad_free_purchases_last_touch_id_acquisition_sessions_id_fk": {
+          "name": "iap_ad_free_purchases_last_touch_id_acquisition_sessions_id_fk",
+          "tableFrom": "iap_ad_free_purchases",
+          "tableTo": "acquisition_sessions",
+          "columnsFrom": [
+            "last_touch_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "iap_ad_free_purchases_store_transaction_id_pk": {
+          "columns": [
+            "store",
+            "transaction_id"
+          ],
+          "name": "iap_ad_free_purchases_store_transaction_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "iap_purchases": {
       "name": "iap_purchases",
       "columns": {
@@ -3564,6 +3751,45 @@
             "transaction_id"
           ],
           "name": "iap_purchases_store_transaction_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "iap_refund_markers": {
+      "name": "iap_refund_markers",
+      "columns": {
+        "store": {
+          "name": "store",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "transaction_id": {
+          "name": "transaction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "refunded_at": {
+          "name": "refunded_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "iap_refund_markers_store_transaction_id_pk": {
+          "columns": [
+            "store",
+            "transaction_id"
+          ],
+          "name": "iap_refund_markers_store_transaction_id_pk"
         }
       },
       "uniqueConstraints": {},

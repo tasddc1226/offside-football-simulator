@@ -109,7 +109,7 @@ describe('optional first-party acquisition and authoritative transactions', () =
     await revokeIapPurchase(ctx.db, 'apple', 'verified-1', purchaseTime);
     expect((await acquisitionReport(ctx.env.DB, from, to, 'last')).refunds[0]).toMatchObject({
       refunds: 1,
-      refunded_milliunits: 4990000,
+      purchase_value_of_refunded_transactions_milliunits: 4990000,
     });
     await post(a.cookie, { action: 'revoke', profileId: a.profileId });
     expect(
