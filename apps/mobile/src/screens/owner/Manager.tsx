@@ -995,28 +995,38 @@ export default function Manager() {
                       })}`}
                     </Txt>
                     <CardBody r={r} />
-                    {data.hasTeam ? (
+                    {/* 감독 칸 버튼은 왼쪽, T-11-345 경질은 오른쪽 끝에 한 줄로. */}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 8,
+                        marginTop: 4,
+                      }}
+                    >
+                      {data.hasTeam ? (
+                        <Btn
+                          sm
+                          kind={seated ? 'default' : 'primary'}
+                          testID={seated ? 'manager-unseat' : 'manager-seat'}
+                          disabled={busy}
+                          onPress={() => void seat(seated ? null : m.careerId)}
+                        >
+                          {seated ? M.unseat : M.seat}
+                        </Btn>
+                      ) : null}
                       <Btn
                         sm
-                        kind={seated ? 'default' : 'primary'}
-                        testID={seated ? 'manager-unseat' : 'manager-seat'}
+                        kind="danger"
+                        testID="manager-release"
                         disabled={busy}
-                        style={{ alignSelf: 'flex-start' }}
-                        onPress={() => void seat(seated ? null : m.careerId)}
+                        style={{ marginLeft: 'auto' }}
+                        onPress={() => askRelease(m)}
                       >
-                        {seated ? M.unseat : M.seat}
+                        {M.release}
                       </Btn>
-                    ) : null}
-                    <Btn
-                      sm
-                      kind="danger"
-                      testID="manager-release"
-                      disabled={busy}
-                      style={{ alignSelf: 'flex-start' }}
-                      onPress={() => askRelease(m)}
-                    >
-                      {M.release}
-                    </Btn>
+                    </View>
                   </View>
                 );
               })

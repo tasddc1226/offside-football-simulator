@@ -483,11 +483,13 @@
           </div>
           <span class="fs-sm">{endingName(r.ending)} · {M.seasons({ n: r.seasons })} · {M.honors({ titles: r.titles, cups: r.cups, promotions: r.promotions })}</span>
           {@render cardBody(r)}
-          {#if data.hasTeam}
-            <button class="btn btn-sm self-start {seated ? '' : 'btn-primary'}" data-act={seated ? 'manager-unseat' : 'manager-seat'} disabled={busy} onclick={() => void seat(seated ? null : m.careerId)}>{seated ? M.unseat : M.seat}</button>
-          {/if}
-          <!-- T-11-345 끝낸 감독 경질(확인 창에서 받을 자금 · 되돌릴 수 없음을 보인다). -->
-          <button class="btn btn-sm self-start mg-release" data-act="manager-release" disabled={busy} onclick={() => ((confirmRelease = m), (error = null))}>{M.release}</button>
+          <!-- 감독 칸 버튼은 왼쪽, T-11-345 경질(확인 창에서 받을 자금 · 되돌릴 수 없음을 보인다)은 오른쪽 끝에 한 줄로. -->
+          <div class="mg-card-actions">
+            {#if data.hasTeam}
+              <button class="btn btn-sm {seated ? '' : 'btn-primary'}" data-act={seated ? 'manager-unseat' : 'manager-seat'} disabled={busy} onclick={() => void seat(seated ? null : m.careerId)}>{seated ? M.unseat : M.seat}</button>
+            {/if}
+            <button class="btn btn-sm mg-release" data-act="manager-release" disabled={busy} onclick={() => ((confirmRelease = m), (error = null))}>{M.release}</button>
+          </div>
         </div>
       {:else}
         <p class="muted fs-sm">{M.noManagers}</p>
@@ -863,7 +865,15 @@
   .mg-actions .btn {
     min-height: 50px;
   }
+  .mg-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
   .mg-release {
+    margin-left: auto;
     color: var(--bad);
   }
   .mg-danger {
