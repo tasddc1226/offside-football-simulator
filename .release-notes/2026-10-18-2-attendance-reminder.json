@@ -1,0 +1,23 @@
+{
+  "id": "t-11-378-attendance-reminder",
+  "title": "출석 도장판과 출석 알림",
+  "items": [
+    "출석 도장판이 동그라미 도장 모양으로 바뀌었어요.",
+    "앱에서 출석을 잊은 날 저녁 7시쯤 알림을 보내요."
+  ],
+  "en": {
+    "title": "Check-in board and reminder",
+    "items": [
+      "The check-in board now uses round stamps.",
+      "The app reminds you around 7 PM on days you haven't checked in."
+    ]
+  },
+  "ja": {
+    "title": "出席スタンプ帳と出席通知",
+    "items": [
+      "出席スタンプ帳が丸いスタンプになりました。",
+      "アプリで出席を忘れた日は夜7時ごろに通知します。"
+    ]
+  },
+  "availability": "web-app"
+}
