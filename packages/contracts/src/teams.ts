@@ -24,6 +24,7 @@ import {
   TEAM_STATS_MATCHES_MAX,
 } from './owner-team.js';
 import { IsoUtcSchema } from './primitives.js';
+import { CARD_SPECIAL_KINDS } from './card-special.js';
 import { TeamCoachSchema } from './manager.js';
 import { TEAM_LOGO_IMG_MAX, TEAM_LOGO_PATTERNS, TEAM_LOGO_SHAPES } from './team-logo.js';
 
@@ -106,6 +107,14 @@ const count = z.number().int().min(0);
 export const TeamRecordSchema = z.strictObject({ w: count, d: count, l: count });
 export type TeamRecord = z.infer<typeof TeamRecordSchema>;
 
+/** T-11-372 시즌 특별 카드 표식(시즌 베스트 11 · 득점왕 · 도움왕 · MVP). 카드를 따라가고 능력치는 더하지 않는다. */
+export const CardSpecialSchema = z.strictObject({
+  season: z.number().int().min(1),
+  kind: z.enum(CARD_SPECIAL_KINDS),
+  rank: z.number().int().min(1),
+});
+export type CardSpecial = z.infer<typeof CardSpecialSchema>;
+
 /** 팀에 넣을 수 있는 내 은퇴 선수. 서버에는 선수 이름이 없다 — 공개한 이름(publicName)만 있다. */
 export const TeamPlayerSchema = z.strictObject({
   careerId: z.string(),
@@ -140,6 +149,8 @@ export const TeamPlayerSchema = z.strictObject({
   weight: z.number().int().optional(),
   /** T-11-188 구단주가 잠근 선수(이적시장에 내놓거나 방출할 수 없다). 구버전 응답에는 없다. */
   locked: z.boolean().optional(),
+  /** T-11-372 이 카드가 받은 시즌 표식(없으면 빠진다). 배포 전 응답엔 없다. */
+  specials: z.array(CardSpecialSchema).optional(),
   /** T-11-080 판매 등록 중이면 그 등록. */
   listing: z.strictObject({ id: z.string(), price: z.number().int() }).nullable().optional(),
 });

@@ -116,6 +116,12 @@ export const seasonRecap: Translation<SeasonRecapMsgs> = {
   cardTagline: 'Live a footballer’s whole career',
   secSquad: 'The squad of the season',
   squadLead: (p) => `${p.n} players you raised, together in one shot`,
+  secSpecials: 'Season special cards',
+  specialsLead:
+    "From every club owner's players who retired this season, we picked a Best XI by position plus the top scorer, top assists and MVP. The mark stays on the card for good.",
+  specialsMine: 'Mine',
+  specialsMineCount: (p) =>
+    p.n === 1 ? '1 of your players made it' : `${p.n} of your players made it`,
   photoCaption: (p) => `${p.season} squad`,
   photoMore: (p) => `+${p.n} more`,
   photoAria: (p) => `${p.season} squad photo: ${p.names}`,

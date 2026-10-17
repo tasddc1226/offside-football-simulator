@@ -4,11 +4,22 @@ import {
   TeamLogoSchema,
   TeamPresetsSchema,
 } from '@offside/contracts';
-import type { TeamPlayer, TeamPreset, TeamRankItem, TeamRankSort } from '@offside/contracts';
+import type {
+  CardSpecial,
+  TeamPlayer,
+  TeamPreset,
+  TeamRankItem,
+  TeamRankSort,
+} from '@offside/contracts';
 import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import { defaultClubIds, isAmateurClubId } from '@offside/contracts/club-names';
 import { CARD_VALUE_FLOOR } from '@offside/contracts/market-value';
+import {
+  CARD_SPECIAL_KINDS,
+  sortSpecials,
+  type CardSpecialKind,
+} from '@offside/contracts/card-special';
 import { teamSeasonClosed } from '@offside/contracts/service-seasons';
 import {
   LEGACY_DETAIL_POSITIONS,
@@ -33,6 +44,8 @@ import {
   notInArray,
   or,
   sql,
+  type AnyColumn,
+  type SQL,
 } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { readInChunks } from '../chunk.js';
@@ -168,6 +181,30 @@ export type LiveTeam = Pick<OwnerTeamRow, 'id' | 'season' | 'name' | 'manager' |
   logo: ReturnType<typeof logoOf>;
 };
 
+/**
+ * T-11-372 카드가 받은 시즌 표식(JSON 배열 문자열). card_specials PK 앞자리(career_id)로 카드마다 몇 줄만 읽는다 — 카드를 고르는
+ * 쿼리의 select에 넣어 목록 응답과 한 번에 싣는다(표식만 따로 부르지 않는다).
+ */
+export const specialsJsonOf = (careerId: AnyColumn | SQL) =>
+  sql<string>`(select json_group_array(json_object('season', s.season, 'kind', s.kind, 'rank', s.rank)) from card_specials s where s.career_id = ${careerId})`;
+
+const SPECIAL_KINDS = new Set<string>(CARD_SPECIAL_KINDS);
+
+/** specialsJsonOf 결과 → 표식 목록(띠 순서). 없거나 깨졌으면 빈 배열. */
+export function parseSpecials(json: string | null | undefined): CardSpecial[] {
+  if (!json) return [];
+  try {
+    const rows = JSON.parse(json) as { season: number; kind: string; rank: number }[];
+    return sortSpecials(
+      rows
+        .filter((r) => SPECIAL_KINDS.has(r.kind) && r.season >= 1 && r.rank >= 1)
+        .map((r) => ({ season: r.season, kind: r.kind as CardSpecialKind, rank: r.rank })),
+    );
+  } catch {
+    return [];
+  }
+}
+
 /** 선발 맵에 넣는 커리어 모양(careers 행 → 팀 선수). */
 type LineupRow = {
   look?: string | null;
@@ -187,6 +224,8 @@ type LineupRow = {
   /** T-11-180 키·몸무게(옛 커리어는 NULL). */
   height?: number | null;
   weight?: number | null;
+  /** T-11-372 specialsJsonOf 결과(표식을 싣는 쿼리만). */
+  specialsJson?: string | null;
 };
 export const toLineupCareer = (
   r: LineupRow,
@@ -235,8 +274,15 @@ export function teamPlayerCard(
     ...(career.foot ? { foot: career.foot } : {}),
     season: career.season,
     ...bodyOf(r),
+    ...specialsOf(r.specialsJson),
   };
 }
+
+/** 표식이 있을 때만 싣는다(없는 카드의 응답 모양은 그대로). */
+const specialsOf = (json: string | null | undefined) => {
+  const specials = parseSpecials(json);
+  return specials.length ? { specials } : {};
+};
 
 /** T-11-180 카드에 싣는 키·몸무게 — 둘 다 있을 때만(체격 기능 전 커리어는 없다). */
 export const bodyOf = (r: { height?: number | null; weight?: number | null }) =>
@@ -298,6 +344,7 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       raised: sql<number>`${careers.profileId} = ${profileId}`,
       listingId: marketListings.id,
       listPrice: marketListings.price,
+      specialsJson: specialsJsonOf(cards.careerId),
     })
     .from(cards)
     .leftJoin(careers, eq(careers.id, cards.careerId))
@@ -413,6 +460,7 @@ export async function careersByIds(db: Db, ids: string[]) {
       caps: careers.caps,
       ballon: careers.ballon,
       rn: retiredNumbers.careerId,
+      specialsJson: specialsJsonOf(cards.careerId),
     })
     .from(cards)
     .leftJoin(careers, eq(careers.id, cards.careerId))
