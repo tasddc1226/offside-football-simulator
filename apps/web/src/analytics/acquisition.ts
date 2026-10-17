@@ -1,0 +1,176 @@
+import {
+  apiAuth,
+  apiBaseUrl,
+  getProfile,
+  hasSessionHint,
+  cachedGet,
+  invalidateApiCache,
+} from '@offside/app-core/api/client';
+import { CONSENT_KEY, campaignQuery } from '@offside/app-core/analytics-model';
+import {
+  ACQUISITION_CONSENT_VERSION as version,
+  ACQUISITION_SESSION_MS,
+} from '@offside/contracts/acquisition';
+const SESSION_KEY = 'offside_acquisition_session_v1';
+const REVOKE_KEY = 'offside_acquisition_revoke_v1';
+const CHOICE_KEY = 'offside_acquisition_choice_v1';
+const landing = typeof location === 'undefined' ? '' : campaignQuery(location.href);
+export const acquisitionEnabled = () => import.meta.env.VITE_ACQUISITION_ENABLED === 'true';
+let profileId: string | null = null;
+let granted = false;
+let blocked = false;
+let epoch = 0;
+let queue = Promise.resolve();
+let wireQueue = Promise.resolve();
+function analyticsAllowed() {
+  try {
+    return localStorage.getItem(CONSENT_KEY) === 'granted';
+  } catch {
+    return false;
+  }
+}
+async function request(action?: Record<string, unknown>) {
+  const auth = apiAuth();
+  const perform = () =>
+    fetch(`${apiBaseUrl()}/v1/acquisition${action ? '' : '/consent'}`, {
+      ...auth,
+      method: action ? 'POST' : 'GET',
+      headers: { ...auth.headers, 'Content-Type': 'application/json' },
+      ...(action ? { body: JSON.stringify({ version, ...action }) } : {}),
+    });
+  if (!action) {
+    const result = await cachedGet<{ profileId: string; granted: boolean }>(
+      '/v1/acquisition/consent',
+      30_000,
+    );
+    return result.ok ? Response.json(result.data) : new Response(null, { status: 503 });
+  }
+  const result = wireQueue.then(perform).then((response) => {
+    if (response.ok) invalidateApiCache('/v1/acquisition/consent');
+    return response;
+  });
+  wireQueue = result.then(
+    () => {},
+    () => {},
+  );
+  return result;
+}
+export function acquisitionGranted() {
+  return granted && !blocked && analyticsAllowed();
+}
+export async function acquisitionStatus(): Promise<'granted' | 'denied' | 'unknown'> {
+  if (!acquisitionEnabled()) return 'denied';
+  const generation = epoch;
+  try {
+    const pending = localStorage.getItem(REVOKE_KEY);
+    if (pending) {
+      blocked = true;
+      if (!(await request({ action: 'revoke', profileId: pending })).ok) return 'denied';
+      localStorage.removeItem(REVOKE_KEY);
+      blocked = false;
+    }
+    if (!analyticsAllowed() || localStorage.getItem(CHOICE_KEY) === 'denied') return 'denied';
+    if (!hasSessionHint()) return 'unknown';
+    const response = await request();
+    if (!response.ok) {
+      granted = false;
+      return 'unknown';
+    }
+    const state = (await response.json()) as { profileId: string; granted: boolean };
+    if (generation !== epoch || !analyticsAllowed()) return 'denied';
+    if (profileId && profileId !== state.profileId) sessionStorage.removeItem(SESSION_KEY);
+    profileId = state.profileId;
+    granted = state.granted;
+    if (granted) recordAcquisition('session');
+    return granted
+      ? 'granted'
+      : localStorage.getItem(CHOICE_KEY) === 'denied'
+        ? 'denied'
+        : 'unknown';
+  } catch {
+    granted = false;
+    return 'unknown';
+  }
+}
+export async function setAcquisitionConsent(value: 'granted' | 'denied'): Promise<boolean> {
+  const generation = ++epoch;
+  granted = false;
+  try {
+    if (value === 'denied') {
+      blocked = true;
+      localStorage.setItem(CHOICE_KEY, 'denied');
+      sessionStorage.removeItem(SESSION_KEY);
+      if (!profileId) {
+        if (!hasSessionHint()) return true;
+        const res = await request();
+        if (!res.ok) return false;
+        profileId = ((await res.json()) as { profileId: string }).profileId;
+      }
+      localStorage.setItem(REVOKE_KEY, profileId!);
+      await queue;
+      if (!(await request({ action: 'revoke', profileId })).ok) return false;
+      localStorage.removeItem(REVOKE_KEY);
+      return true;
+    }
+    if (!acquisitionEnabled() || !analyticsAllowed()) return false;
+    // Only an explicit choice can create a profile. No forced login.
+    if (!(await getProfile()).ok) return false;
+    const pending = localStorage.getItem(REVOKE_KEY);
+    if (pending) {
+      if (!(await request({ action: 'revoke', profileId: pending })).ok) return false;
+      localStorage.removeItem(REVOKE_KEY);
+    }
+    const response = await request({ action: 'grant' });
+    if (!response.ok || generation !== epoch || !analyticsAllowed()) return false;
+    profileId = ((await response.json()) as { profileId: string }).profileId;
+    localStorage.removeItem(REVOKE_KEY);
+    localStorage.setItem(CHOICE_KEY, 'granted');
+    blocked = false;
+    granted = true;
+    recordAcquisition('session');
+    return true;
+  } catch {
+    return false;
+  }
+}
+export function recordAcquisition(action: 'session' | 'start' | 'store_click') {
+  if (!acquisitionEnabled() || !acquisitionGranted()) return;
+  const generation = epoch;
+  queue = queue.then(async () => {
+    if (generation !== epoch || !acquisitionGranted()) return;
+    try {
+      const now = Date.now();
+      let session = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? 'null') as {
+        id: string;
+        profile: string;
+        campaign: string;
+        at: number;
+      } | null;
+      if (
+        !session ||
+        session.profile !== profileId ||
+        now - session.at >= ACQUISITION_SESSION_MS ||
+        session.at > now ||
+        (landing && session.campaign !== landing)
+      ) {
+        session = { id: crypto.randomUUID(), profile: profileId!, campaign: landing, at: now };
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      }
+      const res = await request({ action, sessionId: session.id, campaign: session.campaign });
+      if (res.status === 409 || res.status === 401) {
+        granted = false;
+        sessionStorage.removeItem(SESSION_KEY);
+      }
+    } catch {
+      /* Retry only on the next real action. Never block play. */
+    }
+  });
+}
+if (typeof window !== 'undefined' && acquisitionEnabled())
+  window.addEventListener('storage', (e) => {
+    if (e.key === CONSENT_KEY || e.key === REVOKE_KEY || e.key === CHOICE_KEY || e.key === null) {
+      epoch++;
+      granted = false;
+      if (!analyticsAllowed() || localStorage.getItem(CHOICE_KEY) === 'denied') blocked = true;
+    }
+  });

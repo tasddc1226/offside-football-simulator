@@ -75,6 +75,8 @@ export function registerIapRoutes(app: Hono<AppEnv>) {
       item: product.item,
       qty: product.qty * verdict.quantity,
       test: verdict.test,
+      metadata: verdict.metadata,
+      acquisitionEnabled: c.env.ACQUISITION_ENABLED === '1',
       now: nowIso(),
       ...(c.env.BILLING_ALERTS_ENABLED === '1'
         ? {

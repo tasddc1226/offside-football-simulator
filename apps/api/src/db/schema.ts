@@ -287,6 +287,7 @@ export const authAttempts = sqliteTable(
         'PUSH_TEST',
         'FRIEND_REQUEST',
         'TRANSLATE',
+        'ACQUISITION',
         'CAREER_ACTIVITY',
       ],
     }).notNull(),
@@ -1580,12 +1581,28 @@ export const iapPurchases = sqliteTable(
     refundedAt: text('refunded_at'),
     /** T-11-215 환불로 회수한 장수. 이미 쓴 만큼은 회수하지 못해 qty보다 작을 수 있다. */
     revokedQty: integer('revoked_qty').notNull().default(0),
+    purchasedAt: text('purchased_at'),
+    priceMilliunits: integer('price_milliunits'),
+    currency: text('currency'),
+    storefront: text('storefront'),
+    firstTouchId: text('first_touch_id').references(() => acquisitionSessions.id, {
+      onDelete: 'set null',
+    }),
+    lastTouchId: text('last_touch_id').references(() => acquisitionSessions.id, {
+      onDelete: 'set null',
+    }),
   },
   (table) => [
     primaryKey({ columns: [table.store, table.transactionId] }),
     index('iap_purchases_profile_idx').on(table.profileId, table.createdAt),
     // T-11-263 운영 도구 매출(기간 합 · 최근 결제).
     index('iap_purchases_created_idx').on(table.createdAt),
+    index('iap_purchases_effective_time_idx').on(
+      sql`coalesce(${table.purchasedAt}, ${table.createdAt})`,
+    ),
+    index('iap_purchases_refunded_idx').on(table.refundedAt),
+    index('iap_purchases_first_touch_idx').on(table.firstTouchId),
+    index('iap_purchases_last_touch_idx').on(table.lastTouchId),
   ],
 );
 
@@ -1761,5 +1778,32 @@ export const managerCareers = sqliteTable(
       .where(sql`${t.status} = 'active'`),
     uniqueIndex('manager_careers_card_unique').on(t.careerId),
     index('manager_careers_profile_idx').on(t.profileId, t.status, t.finishedAt),
+  ],
+);
+
+/** Optional account acquisition consent. Never exported to advertising SDKs. */
+export const acquisitionConsents = sqliteTable('acquisition_consents', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  version: text('version').notNull(),
+  grantedAt: text('granted_at').notNull(),
+});
+export const acquisitionSessions = sqliteTable(
+  'acquisition_sessions',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    campaign: text('campaign').notNull(),
+    receivedAt: text('received_at').notNull(),
+    linkedAt: text('linked_at'),
+    startedAt: text('started_at'),
+    storeClickedAt: text('store_clicked_at'),
+  },
+  (t) => [
+    index('acquisition_sessions_profile_time_idx').on(t.profileId, t.receivedAt),
+    index('acquisition_sessions_time_idx').on(t.receivedAt),
   ],
 );

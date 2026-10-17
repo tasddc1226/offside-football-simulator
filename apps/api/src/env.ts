@@ -5,6 +5,7 @@ import type { ChatRoom } from './chat/room.js';
 import type { LiveHub } from './live/hub.js';
 
 export type Bindings = {
+  ACQUISITION_ENABLED?: string;
   CLUB_STRENGTH_ENABLED?: string;
   /** Reviewed provider league/team-id mappings. No secrets in this JSON. */
   CLUB_STRENGTH_SOURCES?: string;

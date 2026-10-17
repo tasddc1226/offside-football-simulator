@@ -9,6 +9,8 @@ import {
   type ScoutMode,
   type ScoutPity,
 } from '@offside/contracts';
+import type { VerifiedPurchaseMetadata } from '../../iap/metadata.js';
+import { ACQUISITION_WINDOW_MS } from '@offside/contracts/acquisition';
 import type { Db } from '../client.js';
 import { grantItemStatement } from './itemShop.js';
 
@@ -154,14 +156,24 @@ export async function grantIapPurchase(
     test: boolean;
     now: string;
     alertId?: string;
+    metadata?: VerifiedPurchaseMetadata;
+    acquisitionEnabled?: boolean;
   },
 ): Promise<Items | null> {
   const d1 = db.$client;
   const [, , owner, items] = await d1.batch<{ profileId?: string; item: string; qty: number }>([
     d1
       .prepare(
-        `INSERT INTO iap_purchases (store, transaction_id, profile_id, product_id, item, qty, test, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`,
+        `INSERT INTO iap_purchases (store, transaction_id, profile_id, product_id, item, qty, test, created_at,
+          purchased_at, price_milliunits, currency, storefront, first_touch_id, last_touch_id)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12,
+          (SELECT s.id FROM acquisition_sessions s JOIN acquisition_consents c ON c.profile_id=s.profile_id
+           WHERE ?13=1 AND s.profile_id=?3 AND s.linked_at IS NOT NULL AND s.linked_at<=?9
+             AND s.received_at>=?14 AND s.received_at<=?9 ORDER BY s.received_at, s.id LIMIT 1),
+          (SELECT s.id FROM acquisition_sessions s JOIN acquisition_consents c ON c.profile_id=s.profile_id
+           WHERE ?13=1 AND s.profile_id=?3 AND s.linked_at IS NOT NULL AND s.linked_at<=?9
+             AND s.received_at>=?14 AND s.received_at<=?9 ORDER BY s.received_at DESC, s.id DESC LIMIT 1))
+         ON CONFLICT DO NOTHING`,
       )
       .bind(
         p.store,
@@ -172,6 +184,14 @@ export async function grantIapPurchase(
         p.qty,
         p.test ? 1 : 0,
         p.now,
+        p.metadata?.purchasedAt ?? null,
+        p.metadata?.priceMilliunits ?? null,
+        p.metadata?.currency ?? null,
+        p.metadata?.storefront ?? null,
+        p.acquisitionEnabled ? 1 : 0,
+        p.metadata?.purchasedAt
+          ? new Date(Date.parse(p.metadata.purchasedAt) - ACQUISITION_WINDOW_MS).toISOString()
+          : null,
       ),
     grantItemStatement(d1, p.profileId, p.item, p.qty, p.now, { sql: 'changes() = 1' }),
     d1.prepare(OWNER_SQL).bind(p.store, p.transactionId),

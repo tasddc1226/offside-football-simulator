@@ -2,6 +2,7 @@
 // 앱이 보낸 스토어 거래를 스토어 기준으로 확인한다. 상품 · 앱 · 구단주 표시(account)가 맞고 결제가 끝난 거래만 통과한다.
 import type { IapClaimBody, IapStore } from '@offside/contracts';
 import { DEFAULT_BUNDLE_ID } from '../auth/apple-id-token.js';
+import { verifiedPurchaseMetadata, type VerifiedPurchaseMetadata } from './metadata.js';
 import type { Bindings } from '../env.js';
 import { APPLE_ROOT_G3_SHA256, verifyAppleTransaction } from './apple.js';
 import { acknowledgeGooglePurchase, getGooglePurchase } from './google.js';
@@ -16,6 +17,7 @@ export type IapVerdict =
       quantity: number;
       /** Apple Sandbox · Google 테스트 구매. */
       test: boolean;
+      metadata: VerifiedPurchaseMetadata;
       /** 아이템을 준 뒤 스토어에 알릴 일(Google 승인). 없으면 undefined. */
       after?: () => Promise<void>;
     }
@@ -61,6 +63,7 @@ export async function verifyIapClaim(
       transactionId: String(tx.transactionId),
       quantity: quantityOf(tx.quantity),
       test: tx.environment !== 'Production',
+      metadata: verifiedPurchaseMetadata(tx),
     };
   }
   const sa = env.GOOGLE_PLAY_SA_JSON;
@@ -76,6 +79,13 @@ export async function verifyIapClaim(
     transactionId: input.token,
     quantity: quantityOf(p.quantity),
     test: p.purchaseType === 0,
+    // products.get has no verified price/currency. Never use the catalogue display price.
+    metadata: verifiedPurchaseMetadata({
+      purchaseDate:
+        p.purchaseTimeMillis && /^[0-9]+$/.test(p.purchaseTimeMillis)
+          ? Number(p.purchaseTimeMillis)
+          : undefined,
+    }),
     ...(p.acknowledgementState === 0
       ? { after: () => acknowledgeGooglePurchase(sa, input.productId, input.token, opts) }
       : {}),

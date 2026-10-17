@@ -21,6 +21,10 @@ export interface AppleTransaction {
   environment?: string;
   quantity?: number;
   revocationDate?: number;
+  purchaseDate?: number;
+  price?: number;
+  currency?: string;
+  storefront?: string;
 }
 
 const hex = (buf: ArrayBuffer) =>
