@@ -377,9 +377,9 @@ export default function Create() {
 
   // 세부 포지션은 시즌 1 개막부터 고른다. 프리시즌엔 선택지를 보이지 않고, 저장된 선택도 쓰지 않는다.
   const [detailOpen, setDetailOpen] = useState(() => detailOpenNow());
-  // T-11-294 입력은 저장하지 않아 다시 열면 기본값이다. 킵한 후보가 있으면 그 조건으로 맞춰 바로 다시 나오게 한다.
+  // T-11-294 입력은 저장하지 않아 다시 열면 기본값이다. 킵한 후보가 있으면 그 조건으로 맞춰 바로 다시 나오게 한다(T-11-327 앱을 연 뒤 한 번).
   useEffect(() => {
-    restoreKeptDraft();
+    restoreKeptDraft({ auto: true });
   }, []);
   useEffect(() => {
     if (detailOpen && !draftDpos(appState.C)) pickDetail(DETAILS_OF[appState.C.pos][0]!);
@@ -797,7 +797,7 @@ export default function Create() {
                 </Txt>
                 <Btn
                   testID="restore-kept"
-                  onPress={restoreKeptDraft}
+                  onPress={() => restoreKeptDraft()}
                   style={{ alignSelf: 'flex-start' }}
                 >
                   {L.keptRestore}

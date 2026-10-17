@@ -45,8 +45,8 @@
   const growthPct = Math.round((FOCUS_GROWTH - 1) * 100);
   // T-10-091 세부 포지션은 시즌 1 개막부터 고른다. 프리시즌엔 선택지를 보이지 않고, 저장된 선택도 쓰지 않는다.
   let detailOpen = $state(detailOpenNow());
-  // T-11-294 입력은 저장하지 않아 다시 열면 기본값이다. 킵한 후보가 있으면 그 조건으로 맞춰 바로 다시 나오게 한다.
-  restoreKeptDraft();
+  // T-11-294 입력은 저장하지 않아 다시 열면 기본값이다. 킵한 후보가 있으면 그 조건으로 맞춰 바로 다시 나오게 한다(T-11-327 앱을 연 뒤 한 번).
+  restoreKeptDraft({ auto: true });
   if (detailOpenNow() && !draftDpos(C)) pickDetail(DETAILS_OF[C.pos][0]!);
   onMount(() => watchDetailOpening(() => {
     detailOpen = true;
@@ -374,7 +374,7 @@
     {#if kept}
       <section class="card stack" data-kept-elsewhere>
         <p class="fs-sm">{L.keptElsewhere({ pos: posLabel(kept), focus: kept.focus.map((k) => labels[k]).join('·') })}</p>
-        <button class="btn btn-sm self-start" data-act="restore-kept" onclick={restoreKeptDraft}>{L.keptRestore}</button>
+        <button class="btn btn-sm self-start" data-act="restore-kept" onclick={() => restoreKeptDraft()}>{L.keptRestore}</button>
       </section>
     {/if}
 
