@@ -30,7 +30,8 @@ const itemColor = (c: Colors, item: OwnerItem) =>
   item === 'scout' ? c.r2 : item === 'boost' ? c.r4 : c.muted;
 const ITEMS = ['reroll', 'boost', 'scout'] as const;
 
-export function HomeAttendance() {
+/** auto: 앱을 연 뒤 처음 그린 홈일 때만(Home.tsx가 정한다). 로그아웃 뒤 · 다른 화면에서 돌아올 때는 띄우지 않는다. */
+export function HomeAttendance({ auto = false }: { auto?: boolean }) {
   const c = useColors();
   const [card, setCard] = useState<AttendanceCard | null>(null);
   const [open, setOpen] = useState(false);
@@ -46,7 +47,8 @@ export function HomeAttendance() {
     }
   }, []);
   useEffect(() => {
-    void reload(true);
+    void reload(auto);
+    // 처음 그릴 때 한 번만 묻는다(auto는 마운트 때 값만 쓴다).
   }, [reload]);
   useOnPull(reload);
   if (!card) return null;

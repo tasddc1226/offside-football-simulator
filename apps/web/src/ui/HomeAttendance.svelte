@@ -25,11 +25,14 @@
   const board = $derived(att ? attendanceBoard(att.stamps, att.checkedIn) : attendanceBoard(0, false));
   const ITEM = { reroll: L.itemReroll, boost: L.itemBoost, scout: L.itemScout };
 
+  // auto: 페이지를 연 뒤 처음 그린 홈일 때만(Home.svelte가 정한다). 로그아웃 뒤 · 다른 화면에서 돌아올 때는 띄우지 않는다.
+  const { auto = false }: { auto?: boolean } = $props();
+
   $effect(() => {
     void fetchAttendance().then((c) => {
       card = c;
       // 컵 우승 팝업 같은 다른 창이 떠 있으면 오늘은 저절로 띄우지 않는다(다음에 홈에 올 때 뜬다).
-      if (c && attendancePopupDue(c) && !document.querySelector('[aria-modal="true"]')) {
+      if (auto && c && attendancePopupDue(c) && !document.querySelector('[aria-modal="true"]')) {
         markAttendancePopup();
         open = true;
       }
@@ -55,7 +58,10 @@
   }
 </script>
 
-{#if card}
+{#if !card}
+  <!-- 불러오는 동안도 같은 높이를 차지해 아래 홈이 밀리지 않게 한다(CLS). -->
+  <div class="card home-att-entry" aria-hidden="true"><span class="hae-title"><b>{L.title}</b></span></div>
+{:else}
   <button class="card home-att-entry" data-act="attendance-open" data-home-attendance={card.kind} aria-label={L.entryLabel} onclick={() => (open = true)}>
     <span class="hae-title"><b>{L.title}</b>{#if att && att.streak > 0}<span class="hae-streak num">🔥 {L.streak({ n: att.streak })}</span>{/if}</span>
     <span class="hae-sub fs-sm" class:done={att?.checkedIn}>
@@ -106,6 +112,8 @@
 
 <style>
   .home-att-entry {
+    box-sizing: border-box;
+    min-height: 52px;
     display: flex;
     align-items: center;
     gap: 10px;
