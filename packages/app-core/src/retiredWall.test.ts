@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rnByLeague, rnClubName, rnDay } from './retiredWall.js';
+import { rnByLeague, rnClubName, rnDay, rnFreeNumbers } from './retiredWall.js';
 
 describe('영구결번 벽', () => {
   it('구단 이름은 게임 기본 이름을 먼저 쓰고, 모르는 구단이면 기록된 이름', () => {
@@ -26,5 +26,21 @@ describe('rnByLeague (T-11-101)', () => {
       [1, ['zz-0']],
     ]);
     expect(groups.at(-1)!.league).toBe('기타');
+  });
+});
+
+describe('rnFreeNumbers (T-11-356)', () => {
+  it('결번이 없으면 1~99 전부', () => {
+    const free = rnFreeNumbers([]);
+    expect(free).toHaveLength(99);
+    expect([free[0], free.at(-1)]).toEqual([1, 99]);
+  });
+  it('결번을 빼고 작은 번호 먼저, 범위 밖 번호는 무시', () => {
+    const free = rnFreeNumbers([{ number: 7 }, { number: 1 }, { number: 0 }, { number: 7 }]);
+    expect(free).toHaveLength(97);
+    expect(free.slice(0, 6)).toEqual([2, 3, 4, 5, 6, 8]);
+  });
+  it('모두 결번이면 빈 목록', () => {
+    expect(rnFreeNumbers(Array.from({ length: 99 }, (_, i) => ({ number: i + 1 })))).toEqual([]);
   });
 });

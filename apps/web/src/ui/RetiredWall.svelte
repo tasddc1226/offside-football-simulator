@@ -27,7 +27,7 @@
   import { openPublicLegendById } from './legend.js';
   import { rnStyle } from '@offside/app-core/rnStyle';
   import RnFrame from './RnFrame.svelte';
-  import { rnByLeague, rnClubName, rnDay as day, rnLeagueName } from '@offside/app-core/retiredWall';
+  import { rnByLeague, rnClubName, rnDay as day, rnFreeNumbers, rnLeagueName } from '@offside/app-core/retiredWall';
 
   import { hofRnText as L } from '@offside/app-core/i18n/ko/hofRn';
   import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
@@ -94,6 +94,7 @@
   const myIds = new Set(loadHOF().map((h) => h.id).filter(Boolean));
   // 구단 화면 머리(이름·결번 수)는 받은 목록에서 — 서버가 그 구단 결번을 모두 준다.
   const pickedClub = $derived(items?.[0] && view.screen === 'club' ? { clubId: items[0].clubId, club: items[0].club, count: items.length } : undefined);
+  const free = $derived(rnFreeNumbers(items ?? []));
   const shown = $derived((items ?? []).filter((it) => (!view.pos || it.pos === view.pos) && (!view.dpos || it.dpos === view.dpos)));
   const leagues = $derived(rnByLeague(summary?.clubs ?? []));
   // T-11-121 명예의 벽은 요약에 다 실려 온다 — 구단 화면은 그중 그 구단 몫만.
@@ -228,6 +229,18 @@
           <span class="num rn-club-count">{pickedClub.count}</span>
         {/if}
       </div>
+      {#if items !== null && !listFailed}
+        <!-- T-11-356 이 구단에서 아직 결번되지 않은 번호. 받은 결번 목록에서 센다(따로 묻지 않는다). -->
+        <div class="rn-free" data-rn-free={free.length}>
+          <h2 class="rn-recent-title">{L.freeTitle({ n: free.length })}</h2>
+          <p class="muted fs-xs">{free.length ? L.freeLead : L.freeNone}</p>
+          {#if free.length}
+            <ul class="rn-free-list" aria-label={L.freeLabel({ n: free.length })}>
+              {#each free as n (n)}<li class="num">{n}</li>{/each}
+            </ul>
+          {/if}
+        </div>
+      {/if}
       <div class="hof-sorts" role="group" aria-label={L.positionLabel}>
         <button class="hof-sort" aria-pressed={view.pos === null} data-rn-pos="all" onclick={() => { view.pos = null; view.dpos = null; }}>{L.all}</button>
         {#each POS_GROUPS as pos (pos)}<button class="hof-sort" aria-pressed={view.pos === pos} data-rn-pos={pos} onclick={() => { view.pos = pos; view.dpos = null; }}>{POS[pos].label}</button>{/each}
