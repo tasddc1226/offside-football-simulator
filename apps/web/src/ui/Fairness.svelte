@@ -3,6 +3,7 @@
   import { fairnessView, loadHistoryRows, type HistoryRow } from '@offside/app-core/fairness';
   import { kstParts } from '@offside/app-core/boardText';
   import { fairnessText as L } from '@offside/app-core/i18n/ko/fairness';
+  import { openBoard } from './nav.js';
 
   let { open = false }: { open?: boolean } = $props();
 
@@ -65,20 +66,34 @@
       <p class="muted fs-sm">{L.historyEmpty}</p>
     {:else}
       <ul class="fair-versions">
-        {#each history as h (h.version)}
-          <li>
+        {#each history as h (h.id)}
+          <li data-fair-row={h.kind}>
             <div class="row" style="justify-content:space-between;gap:8px">
-              <b>{L.historyVersion({ v: h.version, day: kstParts(h.activatedAt).day })}</b>
-              {#if h.active}<span class="pill">{L.historyActive}</span>{/if}
+              {#if h.kind === 'version'}
+                <b>{L.historyVersion({ v: h.version, day: kstParts(h.appliedAt).day })}</b>
+                {#if h.active}<span class="pill">{L.historyActive}</span>{/if}
+              {:else}
+                <b>{h.title}</b>
+                <span class="pill">{L.historyPatch}</span>
+              {/if}
             </div>
+            {#if h.kind === 'patch'}
+              <p class="muted fs-xs" style="margin:2px 0 0">{L.historyPatchDay({ day: kstParts(h.appliedAt).day })}</p>
+              <ul class="fs-sm">
+                {#each h.items as item (item)}<li>{item}</li>{/each}
+              </ul>
+            {/if}
             {#if h.changes.length}
               <ul class="fs-sm">
                 {#each h.changes as [name, diff] (name)}
                   <li>{name}{#if diff}<span class="muted fair-diff">{diff}</span>{/if}</li>
                 {/each}
               </ul>
-            {:else}
+            {:else if h.kind === 'version'}
               <p class="muted fs-sm" style="margin:2px 0 0">{L.historySame}</p>
+            {/if}
+            {#if h.kind === 'patch' && h.postId}
+              <button class="link-btn fs-sm fair-open" data-act="fair-patch-note" onclick={() => openBoard('release', h.postId ?? null)}>{L.historyOpenNote}</button>
             {/if}
           </li>
         {/each}

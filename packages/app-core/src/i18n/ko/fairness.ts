@@ -51,7 +51,11 @@ const ko = {
   historyVersion: (p: { v: number; day: string }) => `버전 ${p.v} · ${p.day}`,
   historyActive: '지금 적용 중',
   historySame: '바뀐 항목이 없어요.',
-  historyNote: '항목 이름 옆은 바로 앞 버전 값에서 바뀐 값이에요. 날짜는 한국 시간 기준이에요.',
+  historyNote:
+    '항목 이름 옆은 바로 앞 버전 값에서 바뀐 값이에요. 코드 업데이트 패치는 산식·규칙을 고친 배포예요. 날짜는 한국 시간 기준이에요.',
+  historyPatch: '코드 업데이트',
+  historyPatchDay: (p: { day: string }) => `${p.day} 적용`,
+  historyOpenNote: '업데이트 소식에서 보기',
   version: (p: { v: number }) =>
     p.v
       ? `지금 새 커리어에는 밸런스 버전 ${p.v}${iGa(String(p.v))} 적용돼요.`

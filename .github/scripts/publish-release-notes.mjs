@@ -21,6 +21,26 @@ const textOk = (t) =>
   t.items.every((s) => typeof s === 'string' && !!s.trim() && s.length <= 500 && !/[\r\n]/.test(s));
 /** 영어·일본어 문구: 제목·항목만(ReleaseNoteTextSchema와 같다). */
 const validText = (t) => textOk(t) && Object.keys(t).every((k) => k === 'title' || k === 'items');
+/** T-11-333 밸런스 패치 표시: `true` 또는 `{ changes: [{ key, from, to }] }`(ReleaseNoteSchema.balance와 같다). */
+const validBalance = (b) =>
+  b === undefined ||
+  b === true ||
+  (!!b &&
+    typeof b === 'object' &&
+    Object.keys(b).every((k) => k === 'changes') &&
+    Array.isArray(b.changes) &&
+    b.changes.length >= 1 &&
+    b.changes.length <= 20 &&
+    b.changes.every(
+      (ch) =>
+        !!ch &&
+        typeof ch === 'object' &&
+        typeof ch.key === 'string' &&
+        /^[a-zA-Z][a-zA-Z0-9]*$/.test(ch.key) &&
+        Number.isFinite(ch.from) &&
+        Number.isFinite(ch.to) &&
+        Object.keys(ch).every((k) => ['key', 'from', 'to'].includes(k)),
+    ));
 
 /** 사용자 공지는 PR에서 검토한 JSON만 읽는다. 커밋 제목·AI 출력·PR 본문은 게시하지 않는다. */
 export function readEntries(directory) {
@@ -41,8 +61,12 @@ export function readEntries(directory) {
       (e.appVersion !== undefined && !/^\d+\.\d+\.\d+$/.test(e.appVersion)) ||
       (e.availability === 'web-app-pending' && !e.appVersion) ||
       ['en', 'ja'].some((l) => e[l] !== undefined && !validText(e[l])) ||
+      !validBalance(e.balance) ||
       Object.keys(e).some(
-        (k) => !['id', 'title', 'items', 'en', 'ja', 'availability', 'appVersion'].includes(k),
+        (k) =>
+          !['id', 'title', 'items', 'en', 'ja', 'availability', 'appVersion', 'balance'].includes(
+            k,
+          ),
       ) ||
       ids.has(e.id)
     )

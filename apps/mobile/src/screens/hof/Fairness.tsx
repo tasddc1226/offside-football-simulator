@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { fairnessView, loadHistoryRows, type HistoryRow } from '@offside/app-core/fairness';
 import { kstParts } from '@offside/app-core/boardText';
 import { fairnessText as L } from '@offside/app-core/i18n/ko/fairness';
+import { openBoard } from '../../game/nav';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Pill } from '../../ui/bits';
@@ -81,15 +82,34 @@ function History() {
           <View style={{ gap: 10 }}>
             {rows.map((h) => (
               <View
-                key={h.version}
+                key={h.id}
+                testID={`fair-row-${h.kind}`}
                 style={{ padding: 10, borderRadius: 10, backgroundColor: c.surface2, gap: 4 }}
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
-                  <Txt bold style={line}>
-                    {L.historyVersion({ v: h.version, day: kstParts(h.activatedAt).day })}
+                  <Txt bold style={[line, { flex: 1 }]}>
+                    {h.kind === 'version'
+                      ? L.historyVersion({ v: h.version, day: kstParts(h.appliedAt).day })
+                      : h.title}
                   </Txt>
-                  {h.active ? <Pill>{L.historyActive}</Pill> : null}
+                  {h.kind === 'patch' ? (
+                    <Pill>{L.historyPatch}</Pill>
+                  ) : h.active ? (
+                    <Pill>{L.historyActive}</Pill>
+                  ) : null}
                 </View>
+                {h.kind === 'patch' ? (
+                  <>
+                    <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                      {L.historyPatchDay({ day: kstParts(h.appliedAt).day })}
+                    </Txt>
+                    {h.items.map((item) => (
+                      <Txt key={item} style={line}>
+                        {`· ${item}`}
+                      </Txt>
+                    ))}
+                  </>
+                ) : null}
                 {h.changes.length ? (
                   h.changes.map(([name, diff]) => (
                     <Txt key={name} style={line}>
@@ -101,11 +121,22 @@ function History() {
                       ) : null}
                     </Txt>
                   ))
-                ) : (
+                ) : h.kind === 'version' ? (
                   <Txt tone="muted" style={line}>
                     {L.historySame}
                   </Txt>
-                )}
+                ) : null}
+                {h.kind === 'patch' && h.postId ? (
+                  <Txt
+                    tone="muted"
+                    style={[line, { textDecorationLine: 'underline', marginTop: 2 }]}
+                    accessibilityRole="link"
+                    testID="fair-patch-note"
+                    onPress={() => openBoard('release', h.postId ?? null)}
+                  >
+                    {L.historyOpenNote}
+                  </Txt>
+                ) : null}
               </View>
             ))}
             <Note>{L.historyNote}</Note>

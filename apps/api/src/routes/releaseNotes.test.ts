@@ -101,4 +101,68 @@ describe('배포 전용 릴리즈 노트 경로', () => {
       edge.uninstall();
     }
   });
+  it('T-11-333: balance를 단 항목은 공개 밸런스 이력에 함께 쌓고 이력 캐시를 지운다', async () => {
+    const edge = installFakeEdgeCache();
+    const env = { ...ctx.env, ENVIRONMENT: 'production' };
+    const entry = {
+      id: 'route-balance',
+      title: '성장 하한 조정',
+      items: ['잠재력 근처에서도 조금씩 자라요'],
+      en: { title: 'Growth floor', items: ['Players keep growing near potential.'] },
+      availability: 'web-app',
+      balance: { changes: [{ key: 'potGrowthFloor', from: 0.04, to: 0.15 }] },
+    };
+    const patches = () =>
+      ctx.env.DB.prepare(
+        "SELECT id, post_id, title_json, items_json, changes_json FROM balance_patches WHERE id LIKE 'route-%'",
+      ).all<Record<string, string | null>>();
+    try {
+      vi.mocked(verifyGithubRelease).mockResolvedValue(undefined);
+      const headers = { Authorization: 'Bearer valid' };
+      const dry = await callJson(env, 'POST', path, {
+        body: { ...body, entries: [entry], dryRun: true },
+        headers,
+      });
+      expect(dry.status).toBe(200);
+      expect((await patches()).results).toEqual([]);
+      const r = await callJson(env, 'POST', path, { body: { ...body, entries: [entry] }, headers });
+      expect(r.status).toBe(200);
+      expect(((await r.json()) as { data: { balancePatchIds: string[] } }).data).toMatchObject({
+        updated: true,
+        balancePatchIds: ['route-balance'],
+      });
+      await flushEdge();
+      expect(edge.purged).toContain(`http://localhost${STALE.balancePatched()[0]}`);
+      const rows = (await patches()).results;
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        id: 'route-balance',
+        post_id: expect.stringMatching(/^pst_/),
+      });
+      expect(JSON.parse(rows[0]!.title_json!)).toEqual({
+        ko: '성장 하한 조정',
+        en: 'Growth floor',
+      });
+      expect(JSON.parse(rows[0]!.items_json!)).toEqual({
+        ko: ['잠재력 근처에서도 조금씩 자라요'],
+        en: ['Players keep growing near potential.'],
+      });
+      expect(JSON.parse(rows[0]!.changes_json!)).toEqual([
+        { key: 'potGrowthFloor', from: 0.04, to: 0.15 },
+      ]);
+      // 재실행은 다시 쌓지 않는다.
+      const again = await callJson(env, 'POST', path, {
+        body: { ...body, entries: [entry] },
+        headers,
+      });
+      expect(((await again.json()) as { data: { updated: boolean } }).data.updated).toBe(false);
+      expect((await patches()).results).toHaveLength(1);
+      // 공개 이력에도 보인다.
+      const history = await callJson(ctx.env, 'GET', '/v1/balance/history');
+      const h = (await history.json()) as { data: { patches: { id: string }[] } };
+      expect(h.data.patches.some((p) => p.id === 'route-balance')).toBe(true);
+    } finally {
+      edge.uninstall();
+    }
+  });
 });
