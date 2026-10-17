@@ -21,8 +21,8 @@ describe('시즌 진행 게이지', () => {
     expect(b.participants).toBe(3_000);
   });
 
-  it('게이지가 느려도 최대 기간(28일)에 맞춰 시간으로 찬다', () => {
-    const s = stepSeasonGauge(null, season, { contributed: 0, participants: 0 }, at(14));
+  it('게이지가 느려도 최대 기간(25일)에 맞춰 시간으로 찬다', () => {
+    const s = stepSeasonGauge(null, season, { contributed: 0, participants: 0 }, at(12.5));
     expect(s.peak).toBeCloseTo(0.5);
     expect(s.lockedAt).toBeNull();
   });
@@ -36,9 +36,9 @@ describe('시즌 진행 게이지', () => {
     expect(t.endsAt).toBe(s.endsAt);
   });
 
-  it('너무 빨리 차도 최소 14일, 늦게 차도 최대 28일을 지킨다', () => {
+  it('너무 빨리 차도 최소 14일, 늦게 차도 최대 25일을 지킨다', () => {
     expect(seasonDeadline(season.startsAt, at(1))).toBe(at(14));
-    expect(seasonDeadline(season.startsAt, at(27))).toBe(at(28));
+    expect(seasonDeadline(season.startsAt, at(24))).toBe(at(25));
   });
 
   it('끝나지 않은 컵이 있으면 마감을 컵 마지막 경기 다음 00:00 KST로 미룬다(최대 기간보다 컵이 먼저)', () => {
@@ -47,7 +47,7 @@ describe('시즌 진행 게이지', () => {
     // 컵이 마감 전에 끝나면 그대로.
     expect(seasonDeadline(season.startsAt, at(12.5), at(13.5))).toBe(at(15));
     // 최대 기간을 넘어도 컵 결승 뒤로.
-    expect(seasonDeadline(season.startsAt, at(27), at(28.5))).toBe(at(29));
+    expect(seasonDeadline(season.startsAt, at(24), at(26.5))).toBe(at(27));
   });
 
   it('확정 뒤 컵 일정이 늦춰지면 마감을 늦추기만 하고, 당겨져도 마감은 그대로다', () => {
@@ -71,7 +71,7 @@ describe('시즌 진행 게이지', () => {
     expect(seasonGaugeProgress(locked, season.startsAt, at(8))).toBeCloseTo(0.9);
     expect(seasonGaugeProgress(locked, season.startsAt, locked.endsAt!)).toBe(1);
     const view = seasonGaugeView(locked, season.startsAt, at(8));
-    expect(view).toMatchObject({ target: 12_000, minEndsAt: at(14), maxEndsAt: at(28) });
+    expect(view).toMatchObject({ target: 12_000, minEndsAt: at(14), maxEndsAt: at(25) });
   });
 
   it('00:00 KST 올림', () => {

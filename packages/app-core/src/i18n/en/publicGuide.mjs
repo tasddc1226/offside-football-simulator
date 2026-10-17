@@ -28,7 +28,7 @@ export default {
   paidOdds:
     'Rewarded ads, club funds used instead of ads, and regular reroll tickets do not change candidate potential odds. Potential Boost tickets use the same success chance as career funds at the same stage and accumulated failure count. Premium Scout tickets are a separate product with different odds: one of three candidates is guaranteed A potential or above, and every candidate has twice the normal S chance. Current grade odds are shown in the Premium Scout shop and in-game Probability & Fairness. Remove Ads, account linking and language settings do not change gameplay odds.',
   seasonLength:
-    'A service season normally lasts two to four weeks. Careers retired at age 35 or older fill the shared progress gauge. At 90%, a closing time is set and a countdown appears on Home. Even with slow progress, the normal deadline is four weeks. If that season’s Offside Cup is still running, the season continues until midnight KST on the day after the final.',
+    'A service season normally lasts two weeks to 25 days. Careers retired at age 35 or older fill the shared progress gauge. At 90%, a closing time is set and a countdown appears on Home. Even with slow progress, the normal deadline is 25 days. If that season’s Offside Cup is still running, the season continues until midnight KST on the day after the final.',
   publicRetirement:
     'Records of players retired at age 30 or older appear in the Hall of Fame. Earlier retirements remain in My Players only.',
   hub: 'My Club',
