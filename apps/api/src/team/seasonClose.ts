@@ -6,6 +6,7 @@ import { grantPioneerTitles } from '../db/repos/ownerTitles.js';
 // ach:     업적 점수는 마감 뒤에 점수가 바뀐 구단주만 마감 시각 기준으로 다시 센다(한 번에 ACH_CHUNK명).
 // ranks:   팀 레이팅 · 업적 · 명예의 전당 순위를 매긴다.
 // honors:  순위와 보유 기록으로 휘장을 준다.
+// specials: T-11-372 그 시즌 특별 카드(포지션별 베스트 11 · 득점왕 · 도움왕 · MVP) 표식을 카드에 붙인다(시즌 1부터).
 import { HONOR_BANDS, type RankedHonorKind } from '@offside/contracts';
 import {
   CARD_ELITE_PEAK,
@@ -14,6 +15,12 @@ import {
   CARD_LEGEND_SCORE,
   CARD_SILVER_PEAK,
 } from '@offside/contracts/card-tier';
+import {
+  BEST11_SLOTS,
+  CARD_SPECIAL_FIRST_SEASON,
+  CARD_SPECIAL_RULE,
+  type CardSpecialKind,
+} from '@offside/contracts/card-special';
 import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
 import {
   openTeamSeasons,
@@ -31,7 +38,7 @@ import { logErrorText } from '../logError.js';
 /** 업적 다시 세기 한 번에 몇 명(구단주마다 D1을 7번쯤 부른다). */
 const ACH_CHUNK = 40;
 
-export type CloseStep = 'records' | 'ach' | 'ranks' | 'honors' | 'done';
+export type CloseStep = 'records' | 'ach' | 'ranks' | 'honors' | 'specials' | 'done';
 export type CloseState = {
   step: CloseStep;
   cutoff: string;
@@ -303,6 +310,39 @@ async function closeHonors(db: Db, season: number, now: string) {
   ]);
 }
 
+/**
+ * T-11-372 그 시즌 특별 카드 표식. 후보는 그 시즌 명예의 전당과 같은 기준(마감 전 은퇴 · 숨김 아님 · 은퇴 나이)에 로그인한 구단주의
+ * 선수다. 베스트 11은 포지션 묶음별 레전드 점수 순, 득점왕 · 도움왕은 통산 득점 · 도움 순(같으면 레전드 점수), MVP는 레전드 점수 1위.
+ * 같으면 먼저 은퇴한 선수 · id 순(명예의 전당 정렬). 묶음마다 인덱스 순서로 LIMIT 몇 건만 읽는다. insert or ignore라 다시 돌려도 같다.
+ */
+async function closeSpecials(db: Db, season: number, cutoff: string, now: string) {
+  if (season < CARD_SPECIAL_FIRST_SEASON) return;
+  // service_season을 coalesce 없이 비교해야 시즌 · 레전드 점수 인덱스(careers_hof_season_score_order_idx)를 탄다.
+  const eligible = sql`
+    c.status = 'retired' and c.hidden = 0 and c.service_season = ${season} and c.legend_score is not null
+    and c.retire_age >= ${HOF_MIN_RETIRE_AGE} and c.retired_at <= ${cutoff}`;
+  const byScore = sql.raw('ls desc, ra, id');
+  const byStat = sql.raw('v desc, ls desc, ra, id');
+  const pick = (kind: CardSpecialKind, where: SQL, value: SQL, order: SQL, limit: number) => sql`
+    insert or ignore into card_specials (career_id, season, kind, rank, rule_version, created_at)
+    select id, ${season}, ${kind}, row_number() over (order by ${order}), ${CARD_SPECIAL_RULE}, ${now}
+    from (
+      select c.id as id, c.legend_score as ls, c.retired_at as ra, ${value} as v
+      from careers c join profiles p on p.id = c.profile_id
+      where ${eligible} and ${LINKED} and ${where}
+      order by ${order} limit ${limit}
+    )`;
+  const score = sql`c.legend_score`;
+  await runEach(db, [
+    pick('mvp', sql`1 = 1`, score, byScore, 1),
+    pick('top_scorer', sql`c.goals > 0`, sql`c.goals`, byStat, 1),
+    pick('top_assist', sql`c.assists > 0`, sql`c.assists`, byStat, 1),
+    ...Object.entries(BEST11_SLOTS).map(([pos, n]) =>
+      pick('best11', sql`c.pos = ${pos}`, score, byScore, n),
+    ),
+  ]);
+}
+
 /** 끝났는데 아직 굳히지 않은 가장 오래된 시즌의 다음 단계를 하나 돈다. 할 일이 없으면 null. */
 export async function runSeasonClose(db: Db, now: string) {
   const closed = openTeamSeasons(now).filter((s) => teamSeasonClosed(s, now));
@@ -327,9 +367,12 @@ export async function runSeasonClose(db: Db, now: string) {
     } else if (state.step === 'ranks') {
       state.ranked = await closeRanks(db, season, cutoff);
       state.step = 'honors';
-    } else {
+    } else if (state.step === 'honors') {
       await closeHonors(db, season, now);
       await grantPioneerTitles(db, now);
+      state.step = 'specials';
+    } else {
+      await closeSpecials(db, season, state.cutoff, now);
       state.step = 'done';
       state.closedAt = now;
     }

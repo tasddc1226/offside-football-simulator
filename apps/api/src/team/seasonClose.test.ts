@@ -127,7 +127,7 @@ describe('T-11-128 시즌 결산', () => {
     );
     expect(pending.data.status).toBe('pending');
 
-    expect(await closeAll()).toEqual(['records', 'ach', 'ranks', 'honors']);
+    expect(await closeAll()).toEqual(['records', 'ach', 'ranks', 'honors', 'specials']);
     expect(await closeStateOf(ctx.db, 0)).toMatchObject({
       step: 'done',
       cutoff: CUTOFF,

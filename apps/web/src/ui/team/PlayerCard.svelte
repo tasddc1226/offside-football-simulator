@@ -11,6 +11,7 @@
   import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
   import { cardBody, cardFootNote, cardSeasonBadge, cardSeasonColor, cardTier, isLegendTier } from '@offside/app-core/format';
   import { teamSeasonLabel } from '@offside/app-core/seasonName';
+  import { SPECIAL_COLORS, specialRibbon } from '@offside/app-core/cardSpecial';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
   let { player, name, rating, role, nation, season, compact = false, mini = false, youth = false, deploymentRating, ratingLabel = L.peakOvr }:
@@ -20,6 +21,9 @@
   const cardSeason = $derived(youth ? undefined : (season ?? player?.season));
   const country = $derived(!youth ? NATION_BY_CODE.get(nation ?? player?.nation ?? DEFAULT_NATION) : undefined);
   const tier = $derived(youth ? 'youth' : cardTier(player?.legendScore, player?.peak ?? rating));
+  // T-11-372 시즌 특별 카드 띠(가장 최근 시즌 · 높은 표식 하나).
+  const special = $derived(youth ? null : specialRibbon(player?.specials));
+  const specialColor = $derived(special ? SPECIAL_COLORS[special.kind] : null);
   const statKeys = $derived(player?.pos === 'GK' ? ['def', 'phy', 'pas', 'pac', 'sho', 'dri'] as const : ['pac', 'sho', 'dri', 'pas', 'def', 'phy'] as const);
   const statLabels = $derived(player?.pos === 'GK' ? GK_ABBR : FACE_ABBR);
   // 플레이스타일(커리어 유형 — 시너지 듀오의 기준). 자리가 좁은 compact 카드에는 넣지 않는다.
@@ -42,11 +46,12 @@
   const deployed = $derived(deploymentRating !== undefined && deploymentRating !== rating);
 </script>
 
-<div class="player-card" class:compact class:mini class:youth class:deployed data-tier={tier}>
+<div class="player-card" class:compact class:mini class:youth class:deployed class:special={!!special} data-tier={tier} data-special={special?.kind} style:--special-bg={specialColor?.bg} style:--special-ink={specialColor?.ink} style:--special-glow={specialColor?.glow}>
   <div class="card-face">
     <div class="card-rating" title="{ratingLabel} {rating}"><b>{rating}</b><span>{role}</span></div>
     {#if cardSeason !== undefined}<span class="card-season" data-card-season={cardSeason} style:--season-bg={cardSeasonColor(cardSeason)} title={teamSeasonLabel(cardSeason)}>{cardSeasonBadge(cardSeason)}</span>{/if}
     {#if country}<span class="card-nation" role="img" aria-label={L.nationAria({ name: tn(country.ko) })} title={tn(country.ko)}>{flagOf(country.code)}</span>{/if}
+    {#if special && compact}<span class="card-special" data-card-special={special.kind} data-card-special-season={special.season} role="img" aria-label={special.aria} title={special.text}>{special.text}</span>{/if}
     {#if player?.locked && !youth}<span class="card-lock" data-card-locked role="img" aria-label={L.lockedAria} title={L.lockedAria}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></svg></span>{/if}
     <div class="card-art" class:has-portrait={!!portrait} aria-hidden="true">
       {#if portrait}
@@ -72,6 +77,7 @@
           <div><dt>{statLabels[key]}</dt><dd>{player?.attrs ? Math.round(player.attrs[key]) : '—'}</dd></div>
         {/each}
       </dl>
+      {#if special}<div class="card-special-foot" data-card-special={special.kind} data-card-special-season={special.season} role="img" aria-label={special.aria}>{special.text}</div>{/if}
       <div class="card-foot">{cardFootNote(player ?? {}) ?? (isLegendTier(tier) ? L.footLegend : L.footMine)}</div>
     {/if}
   </div>
@@ -95,6 +101,13 @@
   .compact .card-lock {top:32px;right:5px;width:16px;height:16px;} .compact .card-lock svg {width:10px;height:10px;}
   .card-season {position:absolute;top:9px;left:50%;transform:translateX(-50%);z-index:1;padding:2px 5px 1px;border-radius:3px;background:var(--season-bg);color:#fff;font:800 9px/1.1 system-ui,sans-serif;letter-spacing:.06em;box-shadow:0 0 0 1px #ffffff55 inset;}
   .compact .card-season {top:4px;padding:1px 3px 0;font-size:7px;}
+  /* T-11-372 시즌 특별 카드: 테두리를 표식 색으로 바꾸고 빛을 두르며, 아래쪽에 띠를 단다. */
+  .player-card.special { --card-line:var(--special-bg); filter:drop-shadow(0 0 5px var(--special-glow)) drop-shadow(0 4px 5px #0003); }
+  .card-special {position:absolute;left:50%;bottom:6px;transform:translateX(-50%);z-index:2;max-width:86%;padding:2px 7px 1px;border-radius:3px;background:var(--special-bg);color:var(--special-ink);font:800 9px/1.2 system-ui,sans-serif;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 0 0 1px #ffffff88 inset,0 1px 3px #0005;}
+  .compact .card-special {bottom:4px;padding:1px 4px 0;font-size:7px;}
+  .mini .card-special {display:none;}
+  .card-special-foot {width:max-content;max-width:92%;margin:7px auto 0;padding:2px 8px 1px;border-radius:3px;background:var(--special-bg);color:var(--special-ink);font:800 .62rem/1.3 system-ui,sans-serif;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 0 0 1px #ffffff88 inset;}
+  .card-special-foot + .card-foot {margin-top:4px;}
   .card-deployment {display:flex;flex-direction:column;align-items:center;font-size:8px;line-height:10px;}
   .card-deployment b {font-family:var(--display);font-size:12px;line-height:13px;}
   .card-art { position:relative; height:72px; margin-left:26px; }

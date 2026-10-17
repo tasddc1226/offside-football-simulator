@@ -2,8 +2,10 @@
 import {
   OwnerHonorsResponseSchema,
   RECAP_SQUAD_MAX,
+  SEASON_BEST_MAX,
   SeasonPickQuerySchema,
   SeasonRecapResponseSchema,
+  type CardSpecial,
   type OwnerHonor,
   type SeasonRecap,
   type SeasonRecapStats,
@@ -12,8 +14,9 @@ import { openTeamSeasons, teamSeasonClosed } from '@offside/contracts/service-se
 import { and, asc, desc, eq, isNotNull, lte, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import type { Db } from '../db/client.js';
-import { teamPlayerCard } from '../db/repos/ownerTeams.js';
-import { careers, ownerHonors, ownerSeasonRecords } from '../db/schema.js';
+import { specialsJsonOf, teamPlayerCard } from '../db/repos/ownerTeams.js';
+import { CARD_SPECIAL_KINDS } from '@offside/contracts/card-special';
+import { cardSpecials, careers, ownerHonors, ownerSeasonRecords } from '../db/schema.js';
 import { getDb, type AppEnv } from '../env.js';
 import { parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
@@ -77,6 +80,49 @@ async function recapStats(db: Db, stored: StoredStats | null): Promise<SeasonRec
   };
 }
 
+/**
+ * T-11-372 그 시즌 특별 카드(모든 구단주, 표식마다 한 줄). card_specials 시즌 인덱스로 14줄 안팎만 읽는다. 표식을 받은 뒤 숨긴 선수는 뺀다.
+ * 카드 그림은 결산 선수단(squadOf)과 같은 careers 값으로 그린다.
+ */
+export async function seasonBestOf(db: Db, season: number, profileId: string) {
+  const rows = await db
+    .select({
+      special: { season: cardSpecials.season, kind: cardSpecials.kind, rank: cardSpecials.rank },
+      ownerId: careers.profileId,
+      id: careers.id,
+      pos: careers.pos,
+      nation: careers.nation,
+      dpos: careers.dpos,
+      peak: careers.peak,
+      number: careers.shirtNumber,
+      publicName: careers.publicName,
+      peakProfile: careers.peakProfile,
+      cardAttrsJson: careers.cardAttrsJson,
+      height: careers.height,
+      weight: careers.weight,
+      foot: careers.foot,
+      type: careers.type,
+      serviceSeason: careers.serviceSeason,
+      legendScore: careers.legendScore,
+      look: careers.look,
+      specialsJson: specialsJsonOf(careers.id),
+    })
+    .from(cardSpecials)
+    .innerJoin(careers, eq(careers.id, cardSpecials.careerId))
+    .where(and(eq(cardSpecials.season, season), eq(careers.hidden, 0)))
+    .limit(SEASON_BEST_MAX);
+  const order = (k: string) => CARD_SPECIAL_KINDS.indexOf(k as CardSpecial['kind']);
+  return rows
+    .sort(
+      (a, b) => order(a.special.kind) - order(b.special.kind) || a.special.rank - b.special.rank,
+    )
+    .map(({ special, ownerId, ...r }) => ({
+      special: special as CardSpecial,
+      card: teamPlayerCard(r),
+      mine: ownerId === profileId,
+    }));
+}
+
 /** 그 시즌에 키워 마감 전에 은퇴한 내 선수(결산 기록과 같은 기준 — team/seasonClose.ts), 레전드 점수 순. */
 // SQL-wrapped fields retain column decoders with the explicit INDEXED BY source.
 export const squadOf = (db: Db, profileId: string, season: number, cutoff: string) =>
@@ -99,6 +145,7 @@ export const squadOf = (db: Db, profileId: string, season: number, cutoff: strin
       lastClub: sql`${careers.lastClub}`.mapWith(careers.lastClub),
       lastClubId: sql`${careers.lastClubId}`.mapWith(careers.lastClubId),
       look: sql`${careers.look}`.mapWith(careers.look),
+      specialsJson: specialsJsonOf(careers.id),
     })
     // The cutoff index scans every owner's retired careers. Keep this owner-scoped
     // even when SQLite estimates that the global retirement index is cheaper.
@@ -133,7 +180,7 @@ export function registerSeasonRecapRoutes(app: Hono<AppEnv>): void {
     ) =>
       ok(c, SeasonRecapResponseSchema, { season, status, recap, honors }, 200, 'private, no-store');
     if (state?.step !== 'done') return reply('pending', null, []);
-    const [[row], honors, squad] = await Promise.all([
+    const [[row], honors, squad, seasonBest] = await Promise.all([
       db
         .select({
           r: ownerSeasonRecords,
@@ -150,6 +197,7 @@ export function registerSeasonRecapRoutes(app: Hono<AppEnv>): void {
         ),
       honorsOf(db, profileId, season),
       squadOf(db, profileId, season, state.cutoff),
+      seasonBestOf(db, season, profileId),
     ]);
     if (!row) return reply('none', null, []);
     const { r } = row;
@@ -208,6 +256,7 @@ export function registerSeasonRecapRoutes(app: Hono<AppEnv>): void {
           : null,
       stats,
       squad: cards,
+      seasonBest,
     };
     return reply('ready', recap, honors);
   });

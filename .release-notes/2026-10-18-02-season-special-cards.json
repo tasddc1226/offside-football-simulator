@@ -1,0 +1,26 @@
+{
+  "id": "t-11-372-season-special-cards",
+  "title": "시즌 특별 카드가 생겨요",
+  "items": [
+    "시즌이 끝나면 포지션별 베스트 11과 득점왕 · 도움왕 · MVP를 뽑아요",
+    "뽑힌 카드에는 시즌 표식이 영구히 남고 팔려도 따라가요",
+    "시즌 결산 화면에서 그 시즌 특별 카드를 모두 볼 수 있어요"
+  ],
+  "en": {
+    "title": "Season special cards",
+    "items": [
+      "When a season ends, we pick a Best XI by position plus the top scorer, top assists and MVP.",
+      "Chosen cards keep a season mark for good, even after they are sold.",
+      "See every special card of the season on the season recap."
+    ]
+  },
+  "ja": {
+    "title": "シーズン特別カードが登場します",
+    "items": [
+      "シーズンが終わると、ポジション別ベストイレブンと得点王・アシスト王・MVPを選びます。",
+      "選ばれたカードにはシーズンマークがずっと残り、売られても付いていきます。",
+      "シーズン決算画面でそのシーズンの特別カードをすべて見られます。"
+    ]
+  },
+  "availability": "web-app"
+}
