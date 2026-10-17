@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "fcc403e0-09f8-4b48-974f-ca05aae56016",
+  "id": "7baa9c59-9439-4769-a74e-ce618c71ca5e",
   "prevId": "53d792d0-3106-42de-80e6-77526e752ba4",
   "tables": {
     "api_status_buckets": {
@@ -906,93 +906,6 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "card_exchange_claims": {
-      "name": "card_exchange_claims",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "profile_id": {
-          "name": "profile_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "exchange_id": {
-          "name": "exchange_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "need": {
-          "name": "need",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "cards": {
-          "name": "cards",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "reward_json": {
-          "name": "reward_json",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "card_exchange_claims_profile_idx": {
-          "name": "card_exchange_claims_profile_idx",
-          "columns": [
-            "profile_id",
-            "exchange_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "card_exchange_claims_profile_id_profiles_id_fk": {
-          "name": "card_exchange_claims_profile_id_profiles_id_fk",
-          "tableFrom": "card_exchange_claims",
-          "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {
-        "card_exchange_claims_cards_check": {
-          "name": "card_exchange_claims_cards_check",
-          "value": "\"card_exchange_claims\".\"cards\" IS NULL OR \"card_exchange_claims\".\"cards\" = \"card_exchange_claims\".\"need\""
-        }
-      }
-    },
     "cards": {
       "name": "cards",
       "columns": {
@@ -1124,13 +1037,6 @@
           "notNull": true,
           "autoincrement": false,
           "default": false
-        },
-        "consumed_in": {
-          "name": "consumed_in",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         },
         "created_at": {
           "name": "created_at",
@@ -4210,6 +4116,142 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "owner_attendance": {
+      "name": "owner_attendance",
+      "columns": {
+        "profile_id": {
+          "name": "profile_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "stamps": {
+          "name": "stamps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "streak": {
+          "name": "streak",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "best_streak": {
+          "name": "best_streak",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "last_day": {
+          "name": "last_day",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "grace_week": {
+          "name": "grace_week",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "claim_id": {
+          "name": "claim_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "owner_attendance_profile_id_profiles_id_fk": {
+          "name": "owner_attendance_profile_id_profiles_id_fk",
+          "tableFrom": "owner_attendance",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "profile_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "owner_attendance_days": {
+      "name": "owner_attendance_days",
+      "columns": {
+        "profile_id": {
+          "name": "profile_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "day": {
+          "name": "day",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "checked_at": {
+          "name": "checked_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "owner_attendance_days_profile_id_profiles_id_fk": {
+          "name": "owner_attendance_days_profile_id_profiles_id_fk",
+          "tableFrom": "owner_attendance_days",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "profile_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "owner_attendance_days_profile_id_day_pk": {
+          "columns": [
+            "profile_id",
+            "day"
+          ],
+          "name": "owner_attendance_days_profile_id_day_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "owner_funds": {
       "name": "owner_funds",
       "columns": {
@@ -5146,14 +5188,6 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "exchanges": {
-          "name": "exchanges",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
         },
         "updated_at": {
           "name": "updated_at",
