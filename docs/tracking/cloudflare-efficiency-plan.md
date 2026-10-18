@@ -52,5 +52,6 @@ PR #798은 `77d0adcf`로 머지했고 `v2026.10.18.11`의 배포·OTA 4개·릴�
 ## 지연 후속 실행
 
 - [x] 기존 트레이스로 D1 위치 SIN·APAC 호출 왕복과 SQL 실행 시간을 분리 확인. Smart Placement `SUCCESS`도 확인.
-- [ ] API production fetch에 SIN 근접 지역 힌트 적용, Wrangler dry-run·필수 CI 후 배포.
-- [ ] 배치 상태·동일 10분 API/트레이스·인증/공개/WebSocket 스모크 확인. 악화 시 placement만 smart로 복원.
+- [x] API production fetch에 SIN 근접 지역 힌트 시험 (#803, v2026.10.18.14), Wrangler dry-run·필수 CI·운영 배포 성공.
+- [x] 첫 10분 API/연결 트레이스와 스모크 확인. 기존 실제 실행 위치도 SIN이어서 지역 힌트의 실질 이점 미확정.
+- [ ] 불필요한 지역 힌트를 smart로 복원·배포하고 두 번째 관측 및 복원 후 동작 확인. API 지연의 전체 원인은 미확정으로 유지.
