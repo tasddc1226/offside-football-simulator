@@ -1,0 +1,1 @@
+CREATE INDEX `notifications_source_key_idx` ON `notifications` (`source_key`);

@@ -26,3 +26,42 @@ export async function addAppPushDevice(ctx: TestD1, profileId: string) {
   });
   return id;
 }
+
+/** Explicit Queue boundary for API/consumer integration tests; publishing never runs the consumer. */
+export function capturePushQueue(env: import('../env.js').Bindings) {
+  const jobs: import('../push/queuePublish.js').PushWork[] = [];
+  env.PUSH_QUEUE = {
+    async metrics() {
+      return { backlogCount: jobs.length, backlogBytes: 0 };
+    },
+    async send(body) {
+      jobs.push(body);
+      return { metadata: { metrics: { backlogCount: jobs.length, backlogBytes: 0 } } };
+    },
+    async sendBatch(messages) {
+      jobs.push(...Array.from(messages, (m) => m.body));
+      return { metadata: { metrics: { backlogCount: jobs.length, backlogBytes: 0 } } };
+    },
+  };
+  return {
+    jobs,
+    async consumeTestJobs(now = Date.now()) {
+      const { consumePushWork } = await import('../push/queue.js');
+      for (const body of jobs.splice(0).filter((j) => j.kind === 'test')) {
+        await consumePushWork(
+          {
+            queue: 'offside-push-production',
+            metadata: { metrics: { backlogCount: 0, backlogBytes: 0 } },
+            messages: [
+              { id: 'test', timestamp: new Date(now), attempts: 1, body, ack() {}, retry() {} },
+            ],
+            ackAll() {},
+            retryAll() {},
+          },
+          env,
+          now,
+        );
+      }
+    },
+  };
+}

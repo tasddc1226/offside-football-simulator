@@ -313,9 +313,12 @@ export async function runPersonalPush(
   now = Date.now(),
   transport: typeof fetch = fetch,
   communitySourceKey?: string | { retentionBatch: string } | { cupResult: string },
+  ids?: string[],
 ) {
   if (env.ENVIRONMENT !== 'production' || env.PERSONAL_PUSH_ENABLED !== '1')
     return { enabled: false };
+  if (ids && !ids.length) return { enabled: true, states: {} };
+  const idScope = ids ? ` AND id IN (${ids.map(() => '?').join(',')})` : '';
   const lease = crypto.randomUUID();
   // Bound source key and kind keep Queue messages away from ordinary user notifications.
   const retentionBatch =
@@ -350,12 +353,14 @@ export async function runPersonalPush(
   await env.DB.batch([
     env.DB.prepare(
       "UPDATE push_deliveries SET state = 'unknown', token = '', lease_id = NULL, updated_at = ? WHERE state = 'sending' AND due_at <= ?" +
-        scope,
-    ).bind(iso(now), iso(now), ...scopeParams),
+        scope +
+        idScope,
+    ).bind(iso(now), iso(now), ...scopeParams, ...(ids ?? [])),
     env.DB.prepare(
       "UPDATE push_deliveries SET state = 'accepted', lease_id = NULL WHERE state = 'checking' AND due_at <= ?" +
-        scope,
-    ).bind(iso(now), ...scopeParams),
+        scope +
+        idScope,
+    ).bind(iso(now), ...scopeParams, ...(ids ?? [])),
   ]);
   const states: Partial<Record<Outcome['state'], number>> = {};
   const hour = new Date(now + 9 * 3600_000).getUTCHours();
@@ -369,8 +374,10 @@ export async function runPersonalPush(
     if (!checking && (hour < 11 || hour >= 19))
       only += ` AND NOT EXISTS
       (SELECT 1 FROM notifications WHERE id=push_deliveries.notification_id AND source_key LIKE 'career-reminder:%')`;
-    const onlyParams = [...scopeParams];
-    if (!checking && communitySourceKey === undefined) {
+    only += idScope;
+    const onlyParams = [...scopeParams, ...(ids ?? [])];
+    if (!checking) only += " AND id NOT LIKE 'test:%'";
+    if (!checking && communitySourceKey === undefined && ids === undefined) {
       // Give Queue first delivery; cron repairs missed publishes after five minutes.
       only += ` AND NOT EXISTS (SELECT 1 FROM notifications WHERE id=push_deliveries.notification_id
         AND (source_key LIKE 'career-reminder:%' OR source_key LIKE 'cup-complete:%') AND created_at > ?)`;

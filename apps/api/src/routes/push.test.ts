@@ -4,6 +4,7 @@ import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
 import { issueCookie, callJson } from '../test/http.js';
 import { sha256Hex } from '../db/hash.js';
 import { ownPushDevice, rememberPushTestTicket } from '../db/repos/pushDevices.js';
+import { capturePushQueue } from '../test/push.js';
 import { reservePushTest } from '../push/testLimit.js';
 import { cleanupExpired } from '../cron/cleanup.js';
 import type { SessionContext } from '../env.js';
@@ -18,8 +19,9 @@ const INPUT = {
   appVersion: '1.0.2',
 };
 let ctx: TestD1;
-function call(token: string, method: string, path: string, body: unknown) {
-  return createApp().request(
+let pushQueue: ReturnType<typeof capturePushQueue>;
+async function call(token: string, method: string, path: string, body: unknown) {
+  const response = await createApp().request(
     path,
     {
       method,
@@ -28,6 +30,9 @@ function call(token: string, method: string, path: string, body: unknown) {
     },
     ctx.env,
   );
+  if (method === 'POST' && path.startsWith('/v1/push/test') && response.status === 200)
+    await pushQueue.consumeTestJobs();
+  return response;
 }
 async function identity() {
   const res = await createApp().request(
@@ -47,6 +52,8 @@ async function identity() {
 }
 beforeEach(async () => {
   ctx = await createTestD1();
+  ctx.env.ENVIRONMENT = 'production';
+  pushQueue = capturePushQueue(ctx.env);
 });
 afterEach(async () => {
   vi.unstubAllGlobals();
@@ -169,7 +176,7 @@ describe('app push registration and own-device test', () => {
       token: 'ExpoPushToken[new_session_token]',
     });
     finish(Response.json({ data: { status: 'error', details: { error: 'DeviceNotRegistered' } } }));
-    expect((await pending).status).toBe(503);
+    expect((await pending).status).toBe(200);
     expect(await ownPushDevice(ctx.env.DB, b.session, INSTALL, new Date().toISOString())).toEqual({
       token: 'ExpoPushToken[new_session_token]',
     });
@@ -397,7 +404,7 @@ describe('app push registration and own-device test', () => {
     const send = vi.fn<typeof fetch>().mockRejectedValue(new Error('timeout'));
     vi.stubGlobal('fetch', send);
     expect((await call(a.token, 'POST', '/v1/push/test', { installationId: INSTALL })).status).toBe(
-      503,
+      200,
     );
     expect((await call(a.token, 'POST', '/v1/push/test', { installationId: INSTALL })).status).toBe(
       429,
@@ -419,7 +426,7 @@ describe('app push registration and own-device test', () => {
         ),
     );
     expect((await call(a.token, 'POST', '/v1/push/test', { installationId: INSTALL })).status).toBe(
-      503,
+      200,
     );
     expect(
       await ownPushDevice(ctx.env.DB, a.session, INSTALL, new Date().toISOString()),
