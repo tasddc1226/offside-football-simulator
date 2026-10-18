@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   import ManagerResume from './ManagerResume.svelte';
   import AppConversion from './AppConversion.svelte';
   import { shellInstallText as Install } from '@offside/app-core/i18n/ko/shellInstall';
@@ -172,9 +173,11 @@
         </div>
         {#if card.playHint}<p class="muted fs-sm">{card.playHint}</p>{/if}
       {:else}
-        <p class="muted fs-sm">
-          {card ? ownerTeamEmptyText(card) : cardFailed ? L.teamFailed : L.loading}
-        </p>
+        {#if card || cardFailed}
+          <p class="muted fs-sm">{card ? ownerTeamEmptyText(card) : L.teamFailed}</p>
+        {:else}
+          <Skeleton rows={2} />
+        {/if}
         <button class="btn {card && card.players > 0 ? 'btn-primary' : ''} btn-block" data-act="team" onclick={openMyTeam}>
           {card && card.players > 0 ? L.buildTeam : L.myTeam}{@render achDot()}
         </button>
