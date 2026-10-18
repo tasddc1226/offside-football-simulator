@@ -18,6 +18,7 @@ import { HonorEmblem } from '../../components/HonorEmblem';
 import { CupHonors } from '../../components/CupHonors';
 import { Btn, Card, Press, Txt } from '../../ui';
 import SeasonRecap from './SeasonRecap';
+import { Skeleton } from '../../ui/Skeleton';
 
 export function OwnerArchive() {
   const [archive] = useState(() => new Archive());
@@ -58,12 +59,7 @@ export function OwnerArchive() {
     await archive.expand(retry);
     if (archive.state.detail?.status === 'ready') appState.recapNew = false;
   };
-  if (state.loading)
-    return (
-      <Txt tone="muted" accessibilityLiveRegion="polite">
-        {L.archiveLoading}
-      </Txt>
-    );
+  if (state.loading) return <Skeleton rows={4} />;
   if (state.error)
     return (
       <Card gap={12} testID="archive-error">
@@ -304,9 +300,7 @@ export function OwnerArchive() {
               {state.expanded ? (
                 <View style={{ gap: 14 }}>
                   {state.detailLoading ? (
-                    <Txt tone="muted" accessibilityLiveRegion="polite">
-                      {L.archiveLoading}
-                    </Txt>
+                    <Skeleton rows={4} />
                   ) : state.detailError ? (
                     <>
                       <Txt>{L.archiveError}</Txt>

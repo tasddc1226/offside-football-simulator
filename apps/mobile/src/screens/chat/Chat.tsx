@@ -48,6 +48,7 @@ import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
 import { useTranslations } from '../../ui/Translate';
 import { TextBox, confirmAsync } from '../board/parts';
+import { Skeleton } from '../../ui/Skeleton';
 
 const small = { fontSize: rem(0.75) } as const;
 /** 채팅 티어는 보낸 때의 지난 시즌 티어 — 시즌 이름(접근성 글자)은 지금 기준 지난 시즌으로 읽힌다. */
@@ -353,9 +354,7 @@ export default function Chat() {
               </Btn>
             </View>
             {blocks === null ? (
-              <Txt tone="muted" style={small}>
-                {L.loading}
-              </Txt>
+              <Skeleton rows={2} />
             ) : blocks === 'error' ? (
               <Txt tone="muted" style={small}>
                 {L.blockedLoadFail}
@@ -513,10 +512,12 @@ export default function Chat() {
                 {!mine(m) ? tr.button(m.id, m.body) : null}
               </View>
             ))
-          ) : (
+          ) : view.status === 'open' ? (
             <Txt tone="muted" style={{ margin: 'auto', fontSize: rem(0.8125) }}>
-              {view.status === 'open' ? L.emptyOpen : L.loading}
+              {L.emptyOpen}
             </Txt>
+          ) : (
+            <Skeleton rows={4} />
           )}
         </ScrollView>
 

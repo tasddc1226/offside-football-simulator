@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   // T-11-310 감독 커리어 — 구단주 화면의 '감독 커리어' 카드로 연다. 지금 가진 선수 카드로 감독 커리어를 시작하고(한 번에
   // 하나), 기기에서 시즌을 돌린 뒤 감독 카드로 확정해 우리 팀 감독 칸에 앉힌다. 화면을 열 때 목록을 한 번 받는다(메모 1분).
   import Topbar from './Topbar.svelte';
@@ -260,7 +261,7 @@
       <button class="btn self-start" data-act="manager-retry" onclick={() => void load()}>{M.retry}</button>
     </section>
   {:else if !data}
-    <section class="card"><p class="muted" aria-live="polite">{M.loading}</p></section>
+    <Skeleton height={240} />
   {:else if st && data.active}
     <!-- 진행 중 감독 커리어 -->
     <section class="card mg-col" data-manager-play={st.phase}>
