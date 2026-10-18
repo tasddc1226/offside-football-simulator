@@ -1,6 +1,5 @@
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 const h = vi.hoisted(() => ({
-  enabled: false,
   consent: 'granted',
   serverConsent: true,
   owned: false,
@@ -17,17 +16,6 @@ const h = vi.hoisted(() => ({
   products: vi.fn(),
   profile: vi.fn(),
   get: vi.fn(),
-}));
-vi.mock('../../mobile/node_modules/expo-constants', () => ({
-  default: {
-    expoConfig: {
-      extra: {
-        get accountPurchaseRecording() {
-          return h.enabled;
-        },
-      },
-    },
-  },
 }));
 vi.mock('../../mobile/node_modules/react-native', () => ({
   Platform: {
@@ -83,7 +71,7 @@ const purchase = {
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
-  h.enabled = false;
+  vi.stubEnv('EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED', 'false');
   h.platform = 'ios';
   h.storage.clear();
   h.consentListeners = [];
@@ -101,10 +89,13 @@ beforeEach(() => {
   h.finish.mockResolvedValue(undefined);
   h.request.mockResolvedValue(undefined);
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
 describe('native ad removal recording lifecycle', () => {
   it('rechecks native consent after an awaited server lookup before account lookup or upload', async () => {
-    h.enabled = true;
+    vi.stubEnv('EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED', 'true');
     h.get.mockImplementation(async () => {
       h.consent = 'denied';
       return { ok: true, data: { granted: true, profileId: profile } };
@@ -117,7 +108,7 @@ describe('native ad removal recording lifecycle', () => {
     expect(h.record).not.toHaveBeenCalled();
   });
   it('does not apply a cached acquisition consent to a switched profile', async () => {
-    h.enabled = true;
+    vi.stubEnv('EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED', 'true');
     h.profile.mockResolvedValue({
       ok: true,
       data: { id: 'prf_22222222-2222-4222-8222-222222222222' },
@@ -127,7 +118,7 @@ describe('native ad removal recording lifecycle', () => {
     expect(h.request.mock.calls[0][0].request.apple.appAccountToken).toBeUndefined();
   });
   it('server acquisition refusal prevents optional upload even with native analytics consent', async () => {
-    h.enabled = true;
+    vi.stubEnv('EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED', 'true');
     h.serverConsent = false;
     const a = await import('../../mobile/src/platform/adFree');
     await a.buyAdFree();
@@ -137,7 +128,7 @@ describe('native ad removal recording lifecycle', () => {
     expect(h.record).not.toHaveBeenCalled();
   });
   it('native consent off prevents both account lookup and optional transaction upload', async () => {
-    h.enabled = true;
+    vi.stubEnv('EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED', 'true');
     h.consent = 'denied';
     const a = await import('../../mobile/src/platform/adFree');
     await a.buyAdFree();
@@ -156,7 +147,7 @@ describe('native ad removal recording lifecycle', () => {
     expect(a.adFree.owned).toBe(true);
   });
   it('attaches a valid existing account without forcing login; offline analytics is durable without delaying native acknowledgement', async () => {
-    h.enabled = true;
+    vi.stubEnv('EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED', 'true');
     h.record.mockResolvedValueOnce({ ok: false });
     const a = await import('../../mobile/src/platform/adFree');
     await a.buyAdFree();
@@ -177,7 +168,7 @@ describe('native ad removal recording lifecycle', () => {
   });
   it('Android acknowledgement proceeds while optional consent lookup hangs', async () => {
     h.platform = 'android';
-    h.enabled = true;
+    vi.stubEnv('EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED', 'true');
     const a = await import('../../mobile/src/platform/adFree');
     await a.buyAdFree();
     h.get.mockReturnValue(new Promise(() => {}));
@@ -189,7 +180,7 @@ describe('native ad removal recording lifecycle', () => {
   });
   it('Android analytics 409 never blocks acknowledgement; account change drops pending tokens', async () => {
     h.platform = 'android';
-    h.enabled = true;
+    vi.stubEnv('EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED', 'true');
     h.record.mockResolvedValue({ ok: false, error: { code: 'CONFLICT' } });
     const a = await import('../../mobile/src/platform/adFree');
     await a.buyAdFree();
@@ -202,7 +193,7 @@ describe('native ad removal recording lifecycle', () => {
   });
   it('retries native acknowledgement during sync even when optional recording is off', async () => {
     h.platform = 'android';
-    h.enabled = false;
+    vi.stubEnv('EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED', 'false');
     h.available.mockResolvedValue([purchase]);
     h.storage.set('offside_ad_free', true);
     const a = await import('../../mobile/src/platform/adFree');
@@ -225,7 +216,7 @@ describe('native ad removal recording lifecycle', () => {
     },
   );
   it('expired analytics is discarded locally without a lookup or upload', async () => {
-    h.enabled = true;
+    vi.stubEnv('EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED', 'true');
     h.storage.set(
       'offside_ad_free_records_v1',
       JSON.stringify([
@@ -245,7 +236,7 @@ describe('native ad removal recording lifecycle', () => {
   });
   it('Android cancelled/pending/failed transactions are never acknowledged or granted', async () => {
     h.platform = 'android';
-    h.enabled = true;
+    vi.stubEnv('EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED', 'true');
     const a = await import('../../mobile/src/platform/adFree');
     await a.buyAdFree();
     h.error({ code: 'cancel' });
@@ -256,7 +247,7 @@ describe('native ad removal recording lifecycle', () => {
     expect(a.adFree.owned).toBe(false);
   });
   it('native withdrawal clears durable analytics without uploading it', async () => {
-    h.enabled = true;
+    vi.stubEnv('EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED', 'true');
     h.record.mockResolvedValue({ ok: false });
     const a = await import('../../mobile/src/platform/adFree');
     await a.buyAdFree();
@@ -270,7 +261,7 @@ describe('native ad removal recording lifecycle', () => {
     expect(h.record).toHaveBeenCalledOnce();
   });
   it('pending and failed purchases create no record; restored legacy purchase is sent without inventing account/price', async () => {
-    h.enabled = true;
+    vi.stubEnv('EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED', 'true');
     const a = await import('../../mobile/src/platform/adFree');
     h.callback({ ...purchase, purchaseState: 'pending' });
     expect(h.record).not.toHaveBeenCalled();
