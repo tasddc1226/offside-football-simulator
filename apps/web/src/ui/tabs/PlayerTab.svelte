@@ -22,6 +22,8 @@
   import { boostHidden, boostView, doBoost, type BoostOutcome } from '@offside/app-core/boost-view';
   import { boostFreeOpen, boostTicketOpen } from '@offside/game/boost';
   import BoostFx from '../BoostFx.svelte';
+  import RevealFx from '../RevealFx.svelte';
+  import { gradeTier } from '@offside/app-core/reveal';
   import { retireAsk } from '../actions.js';
   import { save } from '../helpers.js';
   import { clubOffer, loadClubShop, payWithClub, payWithTicket } from '@offside/app-core/club-reward';
@@ -44,12 +46,15 @@
   // T-11-133 자금을 내고 이번 시즌 스카우트 평가 보기(앱은 보상형 광고).
   let peek = $state(loadPeek());
   const pot = $derived(peekView(s, peek, 'pay'));
+  // T-11-371 이번에 연 평가만 등급 공개 연출(저장한 뒤 보여 준다). 다시 들어오면 그대로 글자.
+  let peekFx = $state(false);
   function onPeek() {
     const p = buyPeek(s);
     if (!p) return;
     save();
     savePeek(p);
     peek = p;
+    peekFx = true;
   }
   // T-11-083 잠재력 강화. 자금을 쓰는 시도라 버튼을 한 번 더 눌러야 한다.
   let arming = $state(false);
@@ -89,6 +94,7 @@
       const p = peekOf(s);
       savePeek(p);
       peek = p;
+      peekFx = true;
     });
     clubBusy = false;
     if (!r) return;
@@ -146,7 +152,7 @@
     <dt>{L.body}</dt><dd data-body>{body.h}cm · {body.w}kg</dd>
     <dt>{L.foot}</dt><dd>{C.foot({ v: s.foot })}</dd>
     <dt>{L.trait}</dt><dd>{traitName}</dd>
-    <dt>{L.potential}</dt><dd data-pot>{pot.kind === 'shown' ? pot.text : potentialNotice()}</dd>
+    <dt>{L.potential}</dt><dd data-pot>{#if pot.kind === 'shown' && peekFx}<RevealFx grade={pot.grade} text={pot.text} tier={gradeTier(pot.grade)} />{:else}{pot.kind === 'shown' ? pot.text : potentialNotice()}{/if}</dd>
     <dt>{L.peakOvr}</dt><dd>{Math.max(s.peak, ovr(s))}</dd>
     <dt>{L.trust}</dt><dd>{s.trust >= 2 ? L.trustHigh : s.trust >= 0 ? L.trustMid : L.trustLow}</dd>
     <dt>{L.contract}</dt><dd>{s.contract ? L.contractLeft({ years: s.contract.years, salary: fmtMoney(s.contract.salary) }) : lg.amateur ? L.amateur : '-'}</dd>

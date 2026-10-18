@@ -73,6 +73,7 @@ import { rename } from './rename';
 import { retention } from './retention';
 import { retired } from './retired';
 import { retiredLook } from './retiredLook';
+import { reveal } from './reveal';
 import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
 import { seasonRecap } from './seasonRecap';
@@ -174,6 +175,7 @@ export const en = {
   retention,
   retired,
   retiredLook,
+  reveal,
   scout,
   seasonGauge,
   seasonRecap,

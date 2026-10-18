@@ -5,6 +5,8 @@
   import AnalyticsConsent from './AnalyticsConsent.svelte';
   import Topbar from './Topbar.svelte';
   import { setSfxEnabled, sfxEnabled } from './sfx.js';
+  import { revealShort, setRevealShort } from './revealPrefs.js';
+  import { revealText as RV } from '@offside/app-core/i18n/ko/reveal';
   import { bgm, setBgm, setBgmVolume } from './bgm.svelte.js';
   import { volumeAdjustable } from './bgmEngine.js';
   import { isDark, setDark } from './theme.js';
@@ -26,6 +28,8 @@
   let textSize = $state(getTextSize());
   const textSizeLabel = (size: TextSize) => ({ small: L.textSizeSmall, standard: L.textSizeStandard, large: L.textSizeLarge, extraLarge: L.textSizeExtraLarge })[size];
   let sfx = $state(sfxEnabled());
+  // T-11-371 공개 연출 짧게(이 기기에만).
+  let rvShort = $state(revealShort());
   let dark = $state(isDark());
   let namePublic = $state(namePublicEnabled());
 
@@ -88,6 +92,13 @@
         <span class="muted">{L.sfxBody}</span>
       </div>
       <button class="switch" role="switch" aria-checked={sfx} aria-labelledby="sfx-label" data-setting="sfx" onclick={() => setSfxEnabled((sfx = !sfx))}></button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">
+        <strong id="reveal-short-label">{RV.shortTitle}</strong>
+        <span class="muted">{RV.shortBody}</span>
+      </div>
+      <button class="switch" role="switch" aria-checked={rvShort} aria-labelledby="reveal-short-label" data-setting="reveal-short" onclick={() => setRevealShort((rvShort = !rvShort))}></button>
     </div>
     <div class="settings-row">
       <div class="settings-label">

@@ -1,6 +1,6 @@
 import { MIN_RETIRE_AGE, marketValue } from '@offside/game/season';
 // 선수 탭(웹 tabs/PlayerTab.svelte): 능력치 카드 · 선수 정보 · 국가대표 · 은퇴 선언(32세부터).
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { potentialNotice } from '@offside/app-core/potential-view';
@@ -8,6 +8,8 @@ import { gamePlayerText as L } from '@offside/app-core/i18n/ko/gamePlayer';
 import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
 import { boostHidden, boostView, doBoost, type BoostOutcome } from '@offside/app-core/boost-view';
 import { peekView } from '@offside/app-core/potential-peek';
+import { gradeTier } from '@offside/app-core/reveal';
+import { RevealGrade } from '../../components/RevealFx';
 import { TRAITS } from '@offside/game/data';
 import { boostFreeOpen, boostTicketOpen, type BoostPay } from '@offside/game/boost';
 import { ovr } from '@offside/game/attributes';
@@ -267,6 +269,12 @@ export function PlayerTab({ s }: { s: GameState }) {
   // T-11-079 보상형 광고로 이번 시즌 스카우트 평가 보기. 광고 단위도 광고 제거도 없으면 예전 안내만 둔다.
   const owned = useSnapshot(adFree).owned;
   const peek = useSnapshot(potPeek);
+  useEffect(
+    () => () => {
+      potPeek.fresh = false;
+    },
+    [],
+  );
   const pot = peekView(s, peek.peek, owned ? 'free' : 'ad');
   const canAd = peekAvailable();
   // T-11-153 광고 대신 구단 자금으로 평가 보기(로그인한 구단주). 광고 제거 구매자는 이미 광고 없이 본다.
@@ -279,7 +287,21 @@ export function PlayerTab({ s }: { s: GameState }) {
     { k: L.body, testID: 'body', v: `${body.h}cm · ${body.w}kg` },
     { k: L.foot, v: tn(s.foot) },
     { k: L.trait, v: traitName },
-    { k: L.potential, testID: 'pot', v: pot.kind === 'shown' ? pot.text : potentialNotice() },
+    {
+      k: L.potential,
+      testID: 'pot',
+      // T-11-371 이번에 연 평가만 등급 공개 연출(저장한 뒤 보여 준다).
+      v:
+        pot.kind === 'shown' ? (
+          peek.fresh ? (
+            <RevealGrade grade={pot.grade} text={pot.text} tier={gradeTier(pot.grade)} />
+          ) : (
+            pot.text
+          )
+        ) : (
+          potentialNotice()
+        ),
+    },
     { k: L.peakOvr, v: String(Math.max(s.peak, ovr(s))) },
     { k: L.trust, v: s.trust >= 2 ? L.trustHigh : s.trust >= 0 ? L.trustMid : L.trustLow },
     {
