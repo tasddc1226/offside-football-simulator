@@ -4,12 +4,12 @@ T-11-385. 설정 정본은 [정책 파일](../../tooling/cloudflare-infra-policy
 
 ## 정기 점검
 
-기존 `Production infrastructure health`가 매시간 UTC 17분에 실행된다. 기존 D1 건강 상태·완료 백업 확인 뒤 `infra-health.mjs --resources`로 큐 목록 1회, DLQ 지표 4회, R2 최근 저장량 GraphQL 1회를 읽는다. D1/R2/큐에 쓰거나 메시지를 꺼내지 않는다. 이 GitHub Actions 점검은 별도 로컬 MCP 모니터의 승인 도구 목록을 바꾸지 않는다.
+기존 `Production infrastructure health`가 매시간 UTC 17분에 실행된다. 기존 D1 건강 상태·완료 백업 확인 뒤 `infra-health.mjs --resources`로 큐 목록 1회, DLQ 지표 4회, R2 최근 저장량 GraphQL 1회, 공개 DNS의 DS·A 검증 2회를 읽는다. D1/R2/큐에 쓰거나 메시지를 꺼내지 않는다. 이 GitHub Actions 점검은 별도 로컬 MCP 모니터의 승인 도구 목록을 바꾸지 않는다.
 
 - DLQ 적체가 1건 이상이거나 14일 보존 정책이 달라지거나 조회가 불가능하면 잡이 실패한다. `0`은 지표 API에서 실제 0을 받은 경우에만 표시한다.
 - R2 현재 payload가 9GB(10GB 참조량의 90%) 이상이면 저장 정책 검토 경고를 남긴다. 최근 2시간 관측이 없거나 Analytics 권한이 없으면 `unknown` 경고다. 실제 월 GB-month 청구량이나 서비스 장애로 해석하지 않는다.
 - 기존 D1 건강 상태가 5GB 포함량 참조의 90%를 넘으면 경고한다. 계정 전체 저장량과 실제 청구 주기는 별도로 확인한다. 예산 알림은 지출 상한이 아니다.
-- 알림 발송 도구나 새 Slack 목적지는 추가하지 않는다. GitHub 잡 실패·경고와 summary에서 확인한다. 기존 Cloudflare 예산·실시간 오류 알림은 유지한다.
+- 알림 발송 도구나 새 Slack 목적지는 추가하지 않는다. GitHub 잡 실패·경고와 summary에서 확인한다. 기존 Cloudflare 예산·실시간 오류 알림은 유지한다. DNSSEC는 상위 DS와 주소 응답의 AD 검증이 모두 확인돼야 validated로 표시하며, 전파·조회 대기는 경고로 남긴다.
 
 수동 실행: `gh workflow run infra-health.yml --ref main`. 로컬 실행은 기존 Cloudflare 자격 증명을 환경변수로 제공하고 `node tooling/scripts/infra-health.mjs --resources`를 실행한다. 토큰을 명령 인자나 저장소에 쓰지 않는다. 큐 읽기 및 Analytics 읽기 권한이 필요하다.
 

@@ -5,6 +5,7 @@ import {
   inspectQueueHealth,
   inspectR2Storage,
   checkResourceHealth,
+  inspectDnssec,
 } from './infra-health.mjs';
 
 const NOW = Date.parse('2026-10-08T01:17:00Z');
@@ -15,6 +16,13 @@ const queues = ['admin-push', 'billing', 'career-push', 'cup-push'].map((kind) =
   retention: 1209600,
 }));
 describe('read-only infrastructure monitoring', () => {
+  it('requires parent DS and a validated address before declaring DNSSEC complete', () => {
+    const ds = { Status: 0, Answer: [{ type: 43 }] };
+    expect(inspectDnssec(ds, { Status: 0, AD: true }).warning).toBe(false);
+    expect(inspectDnssec({ Status: 0, Answer: [] }, { Status: 0, AD: true }).warning).toBe(true);
+    expect(inspectDnssec(ds, { Status: 0, AD: false }).warning).toBe(true);
+    expect(inspectDnssec(null, null).warning).toBe(true);
+  });
   it('fails on missing DLQ observations, retention drift and any backlog', () => {
     expect(inspectQueueHealth(queues).failed).toBe(false);
     expect(inspectQueueHealth(queues.slice(1)).failed).toBe(true);
@@ -55,9 +63,16 @@ describe('read-only infrastructure monitoring', () => {
         { CLOUDFLARE_ACCOUNT_ID: 'test', CLOUDFLARE_API_TOKEN: 'private-token' },
         fetcher,
       );
-      expect(calls).toHaveLength(6);
+      expect(calls).toHaveLength(8);
       expect(calls.filter((c) => c.init.method === 'POST')).toHaveLength(1);
-      expect(JSON.parse(calls.at(-1).init.body).query).not.toContain('mutation');
+      expect(JSON.parse(calls.find((c) => c.init.method === 'POST').init.body).query).not.toContain(
+        'mutation',
+      );
+      expect(
+        calls
+          .filter((c) => c.url.startsWith('https://cloudflare-dns.com/'))
+          .every((c) => !c.init.headers.Authorization),
+      ).toBe(true);
       const output = log.mock.calls.flat().join('');
       expect(output).toContain('unknown');
       expect(output).not.toContain('private');

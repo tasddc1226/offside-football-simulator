@@ -50,6 +50,18 @@ export function inspectR2Storage(row, now = Date.now()) {
   };
 }
 
+export function inspectDnssec(ds, address) {
+  const validated =
+    ds?.Status === 0 &&
+    ds?.Answer?.some((a) => a.type === 43) &&
+    address?.Status === 0 &&
+    address?.AD === true;
+  return {
+    warning: !validated,
+    summary: `DNSSEC parent DS and signed address: ${validated ? 'validated' : 'pending or unavailable'}.\n`,
+  };
+}
+
 export async function checkResourceHealth(env = process.env, fetcher = fetch) {
   const account = env.CLOUDFLARE_ACCOUNT_ID;
   const token = env.CLOUDFLARE_API_TOKEN;
@@ -100,11 +112,31 @@ export async function checkResourceHealth(env = process.env, fetcher = fetch) {
       warning: true,
     };
   }
-  const summary = `${report.summary}${r2.summary}`;
+  let dnssec;
+  try {
+    const readDns = async (type) => {
+      // Public resolver requests must never receive the Cloudflare account token.
+      const response = await fetcher(
+        `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(policy.zone)}&type=${type}`,
+        { headers: { Accept: 'application/dns-json' }, signal: AbortSignal.timeout(30_000) },
+      );
+      if (!response.ok) throw new Error('DNS observation unavailable.');
+      return response.json();
+    };
+    const [ds, address] = await Promise.all([readDns('DS'), readDns('A')]);
+    dnssec = inspectDnssec(ds, address);
+  } catch {
+    dnssec = inspectDnssec(null, null);
+  }
+  const summary = `${report.summary}${r2.summary}${dnssec.summary}`;
   if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, summary);
   console.log(summary);
   if (r2.warning && env.GITHUB_ACTIONS === 'true')
     console.log('::warning::R2 storage review required; see infrastructure summary.');
+  if (dnssec.warning && env.GITHUB_ACTIONS === 'true')
+    console.log(
+      '::warning::DNSSEC DS propagation or validation pending; see infrastructure summary.',
+    );
   if (report.failed) throw new Error('Dead-letter queue check failed; see job summary.');
 }
 
