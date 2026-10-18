@@ -1966,6 +1966,39 @@ textarea {
   margin-top: 2px;
   line-height: inherit;
 }
+/* T-11-377 이름 옆 연필(이름 변경권). */
+.player .name-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.player .name-row h1 {
+  overflow-wrap: anywhere;
+}
+.player .name-edit {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+}
+.player .name-edit svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
 .player .meta {
   font-size: 0.8125rem;
   opacity: 0.85;

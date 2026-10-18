@@ -82,6 +82,7 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
       reroll: 0,
       boost: 0,
       scout: 0,
+      rename: 0,
       iap: { account: accountOf(me.profileId), stores: ['apple'] },
     });
     ctx.env.GOOGLE_PLAY_SA_JSON = '{}';
@@ -106,10 +107,20 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     const body = { store: 'apple', productId: REROLL_5, token: 'jws' };
     let res = await claim(me.cookie, body);
     expect(res.status).toBe(200);
-    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 5, boost: 0, scout: 0 });
+    expect(ItemsRes.parse(await res.json()).data).toEqual({
+      reroll: 5,
+      boost: 0,
+      scout: 0,
+      rename: 0,
+    });
     // 같은 거래를 다시 보내도(앱이 응답을 못 받아 재전송) 그대로다.
     res = await claim(me.cookie, body);
-    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 5, boost: 0, scout: 0 });
+    expect(ItemsRes.parse(await res.json()).data).toEqual({
+      reroll: 5,
+      boost: 0,
+      scout: 0,
+      rename: 0,
+    });
     expect((await ctx.env.DB.prepare('SELECT * FROM billing_alerts').all()).results).toHaveLength(
       1,
     );
@@ -142,13 +153,23 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     const me = await issueGoogleCookie(ctx);
     appleTx.current = appleFor(me.profileId, { productId: BOOST_3, environment: 'Production' });
     const res = await claim(me.cookie, { store: 'apple', productId: BOOST_3, token: 'jws' });
-    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 0, boost: 3, scout: 0 });
+    expect(ItemsRes.parse(await res.json()).data).toEqual({
+      reroll: 0,
+      boost: 3,
+      scout: 0,
+      rename: 0,
+    });
     for (const left of [2, 1, 0]) {
       const used = await call('POST', '/v1/items/boost/use', {
         cookie: me.cookie,
         headers: { 'Idempotency-Key': crypto.randomUUID() },
       });
-      expect(ItemsRes.parse(await used.json()).data).toEqual({ reroll: 0, boost: left, scout: 0 });
+      expect(ItemsRes.parse(await used.json()).data).toEqual({
+        reroll: 0,
+        boost: left,
+        scout: 0,
+        rename: 0,
+      });
     }
     const empty = await call('POST', '/v1/items/boost/use', {
       cookie: me.cookie,
@@ -164,7 +185,12 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     const SCOUT_1 = 'com.offsidelab.app.scout_1';
     appleTx.current = appleFor(me.profileId, { productId: SCOUT_1, environment: 'Production' });
     const res = await claim(me.cookie, { store: 'apple', productId: SCOUT_1, token: 'jws' });
-    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 0, boost: 0, scout: 1 });
+    expect(ItemsRes.parse(await res.json()).data).toEqual({
+      reroll: 0,
+      boost: 0,
+      scout: 1,
+      rename: 0,
+    });
     const use = () =>
       call('POST', '/v1/items/scout/use', {
         cookie: me.cookie,
@@ -175,6 +201,7 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
       reroll: 0,
       boost: 0,
       scout: 0,
+      rename: 0,
       pity: { used: 1, streak: 1, elites: 0 },
       scoutMode: 'normal',
     });
@@ -240,14 +267,21 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
       ).data;
     for (let i = 1; i <= 29; i++) {
       const r = await use();
-      expect(r).toEqual({ reroll: 61 - i, boost: 0, scout: 0, mileage: i });
+      expect(r).toEqual({ reroll: 61 - i, boost: 0, scout: 0, rename: 0, mileage: i });
     }
     // 같은 멱등 키로 다시 보내도 한 장만 쓰고 한 장만 받는다.
     const again = key();
     const full = await use(again);
-    expect(full).toEqual({ reroll: 31, boost: 0, scout: 1, mileage: 0, mileageScout: true });
+    expect(full).toEqual({
+      reroll: 31,
+      boost: 0,
+      scout: 1,
+      rename: 0,
+      mileage: 0,
+      mileageScout: true,
+    });
     expect(await use(again)).toEqual(full);
-    expect(await use()).toEqual({ reroll: 30, boost: 0, scout: 1, mileage: 1 });
+    expect(await use()).toEqual({ reroll: 30, boost: 0, scout: 1, rename: 0, mileage: 1 });
     for (let i = 0; i < 28; i++) await use();
     expect(await use()).toMatchObject({ scout: 2, mileage: 0, mileageScout: true });
     const row = await ctx.env.DB.prepare(
@@ -297,7 +331,7 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     // 같은 멱등 키로 다시 보내면 같은 응답, 새 키로 다시 누르면 409이고 장수는 그대로다.
     const first = key();
     const got = ItemsRes.parse(await (await claim(first)).json()).data;
-    expect(got).toEqual({ reroll: 0, boost: 20, scout: 5 });
+    expect(got).toEqual({ reroll: 0, boost: 20, scout: 5, rename: 0 });
     expect(ItemsRes.parse(await (await claim(first)).json()).data).toEqual(got);
     const again = await claim();
     expect(again.status).toBe(409);
@@ -350,7 +384,12 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     );
     let res = await claim(me.cookie, body);
     expect(res.status).toBe(200);
-    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 5, boost: 0, scout: 0 });
+    expect(ItemsRes.parse(await res.json()).data).toEqual({
+      reroll: 5,
+      boost: 0,
+      scout: 0,
+      rename: 0,
+    });
     expect(calls).toEqual([
       'POST https://oauth2.googleapis.com/token',
       'GET https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.offsidelab.app/purchases/products/com.offsidelab.app.reroll_5/tokens/tok-1',

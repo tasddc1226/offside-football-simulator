@@ -19,6 +19,6 @@ export type Attendance = z.infer<typeof AttendanceSchema>;
 /** POST /v1/attendance/check-in — 출석한 뒤 상태와 이번 출석으로 받은 아이템. */
 export const AttendanceCheckInResponseSchema = z.strictObject({
   attendance: AttendanceSchema,
-  granted: z.strictObject({ reroll: Count, boost: Count, scout: Count }),
+  granted: z.strictObject({ reroll: Count, boost: Count, scout: Count, rename: Count }),
 });
 export type AttendanceCheckInResponse = z.infer<typeof AttendanceCheckInResponseSchema>;

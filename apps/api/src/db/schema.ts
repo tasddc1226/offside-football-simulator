@@ -1557,6 +1557,28 @@ export const ownerAttendance = sqliteTable('owner_attendance', {
   updatedAt: text('updated_at').notNull(),
 });
 
+/**
+ * T-11-377 선수 이름 변경권으로 바꾼 이름 기록(운영 검토 · 신고 대응). 서버에 아직 올라가지 않은 진행 중 커리어도 남기므로
+ * career_id는 careers를 참조하지 않는다. old_name은 바꾸기 전 공개 이름(없으면 null).
+ */
+export const careerRenames = sqliteTable(
+  'career_renames',
+  {
+    id: text('id').primaryKey(),
+    careerId: text('career_id').notNull(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    oldName: text('old_name'),
+    newName: text('new_name').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    index('career_renames_career_idx').on(table.careerId, table.createdAt),
+    index('career_renames_profile_idx').on(table.profileId, table.createdAt),
+  ],
+);
+
 /** T-11-360 출석한 날(KST 날짜). 구단주 · 날짜마다 한 줄 — 출석 뒤 플레이 전환 같은 측정과 2단계 일일 미션이 쓴다. */
 export const ownerAttendanceDays = sqliteTable(
   'owner_attendance_days',

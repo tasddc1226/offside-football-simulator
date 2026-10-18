@@ -832,7 +832,13 @@ export async function updateRetired(
     .update(careers)
     .set({
       updatedAt: now,
-      ...publicNameSet(publicName),
+      // T-11-377 이미 공개한 이름은 은퇴 기록을 다시 보내도 다른 이름으로 바뀌지 않는다(이름 변경권으로만 바꾼다). 비우기 ·
+      // 비어 있던 이름 처음 붙이기는 그대로 된다.
+      ...(publicName === undefined
+        ? {}
+        : {
+            publicName: sql`case when ${careers.nameHiddenAt} is not null or (${careers.publicName} is not null and ${publicName} is not null) then ${careers.publicName} else ${publicName} end`,
+          }),
       ...(title
         ? {
             title: sql`case when (${title} = ${WALL_OF_HONOR_TITLE_ID} and ${careers.wallOfHonorJson} is not null) or (${title} <> ${WALL_OF_HONOR_TITLE_ID} and (exists (select 1 from json_each(${careers.snapshotJson}, '$.titles') where json_extract(value, '$.id') = ${title}) or ${title} in (select value from json_each(${JSON.stringify(snapshotTitleIds)})))) then ${title} else ${careers.title} end`,

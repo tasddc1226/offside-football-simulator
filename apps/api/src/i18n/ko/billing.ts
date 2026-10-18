@@ -16,6 +16,11 @@ export const billing = {
   testNotice: '테스트 알림입니다. 실제 매출에 포함하지 마세요.',
   testProduct: '스토어 알림 연결 확인',
   removeAds: '광고 제거',
-  items: { reroll: '리롤권', boost: '잠재력 강화권', scout: '프리미엄 스카우트권' },
+  items: {
+    reroll: '리롤권',
+    boost: '잠재력 강화권',
+    scout: '프리미엄 스카우트권',
+    rename: '선수 이름 변경권',
+  },
   quantity: (name: string, qty: number) => `${name} ${qty}장`,
 };
