@@ -5,8 +5,6 @@ import { appState, toastState } from './state.svelte.js';
 import { saveGame } from '@offside/app-core/career';
 import { shellText as L } from '@offside/app-core/i18n/ko/shell';
 
-export { pushEvLog, seasonLabel } from '@offside/app-core/career';
-
 // T-9-009: 빌드 시 vite define으로 커밋 SHA가 들어온다(vite.config.ts). 테스트 등 define이 없는
 // 환경은 'dev'.
 declare const __APP_VERSION__: string | undefined;

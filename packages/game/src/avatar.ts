@@ -9,7 +9,6 @@ import { LOOK_BEARDS, LOOK_EXPRS, LOOK_STYLES, parseLookCode } from './look.js';
 import type { GameState, LookState } from './types.js';
 
 export const AVATAR_W = 24;
-export const AVATAR_H = 32;
 
 const AVATAR_SKINS = [
   { s: '#f7d3b3', S: '#dcaa84' },
