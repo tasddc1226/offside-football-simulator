@@ -41,3 +41,7 @@ T-11-385. 설정 정본은 [정책 파일](../../tooling/cloudflare-infra-policy
 - 코드 롤백: 이전 릴리즈 또는 `run_worker_first=true`. Worker 코드 롤백이 존 설정·큐 보존을 되돌리지는 않는다.
 
 [DNSSEC 반영·롤백](https://developers.cloudflare.com/dns/dnssec/), [Queues 보존·과금](https://developers.cloudflare.com/queues/platform/pricing/), [관측 과금 변경](https://developers.cloudflare.com/observability/pricing/).
+
+## 정상 시즌 업로드의 이름 인덱스 쓰기
+
+기존 부모 upsert는 공개 이름이 같거나 익명이 계속 유지돼도 `public_name`을 SET하여 HOF covering 인덱스 2개를 다시 썼다. 같은 트랜잭션에서 부모 메타·활동 시각은 갱신하고, 공개 이름은 값이 실제로 다르며 active·이름 숨김 미설정·허용 revision인 경우에만 별도 UPDATE한다. 이름을 변경하지 않은 로컬 D1 사례는 부모 upsert 6→4행, 조건부 이름 UPDATE 0행이었다. 이는 부모 문장의 비용이며 전체 API·월 청구량 33% 절감을 의미하지 않는다. 이름이 실제로 바뀌는 요청에는 UPDATE가 하나 더 생기지만 D1 왕복은 기존 한 batch로 유지한다. 옛 클라이언트의 undefined·익명 null, 운영 숨김, 은퇴, 중복·과거 revision과 원자적 롤백을 보존한다. 새 마이그레이션은 없다.
