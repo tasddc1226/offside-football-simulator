@@ -1,11 +1,11 @@
-// T-11-357 업적 달성 보상 — 새로 달성하면 한 번만 주고, 다시 불리거나 겹쳐 불려도 두 번 주지 않으며, 보상을 연 시즌에
-// 이미 달성해 둔 업적에는 주지 않는다. 한 시즌에 받는 양은 상한까지다.
+// T-11-357 업적 달성 보상 — 새로 달성하면 한 번만 주고, 다시 불리거나 겹쳐 불려도 두 번 주지 않으며, 보상을 주기 전
+// 시즌(시즌 1)에는 주지도 적지도 않는다. 한 시즌에 받는 양은 상한까지다.
 import {
-  ACH_REWARD_BASELINE_SEASON,
+  ACH_REWARD_FIRST_SEASON,
   ACH_REWARD_SEASON_CAP,
   achRewardOf,
 } from '@offside/contracts/owner-team';
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { giftClaims, ownerItems } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
@@ -107,7 +107,7 @@ describe('settleAchievementRewards (gift_claims · owner_items)', () => {
     legendScore: 100_000,
     ballon: 100,
   });
-  const SEASON = ACH_REWARD_BASELINE_SEASON + 1;
+  const SEASON = ACH_REWARD_FIRST_SEASON;
 
   it('새로 달성한 업적에 한 번만 주고, 다시 불러도 더 주지 않는다', async () => {
     const me = await issueGoogleCookie(ctx);
@@ -166,40 +166,23 @@ describe('settleAchievementRewards (gift_claims · owner_items)', () => {
     expect(sum).toEqual({ ...ACH_REWARD_SEASON_CAP });
   });
 
-  it('보상을 연 시즌에는 처음 셀 때 이미 달성한 업적을 주지 않고, 그 뒤 달성한 것만 준다', async () => {
+  it('보상을 주기 전 시즌에는 주지도 적지도 않고, 다음 시즌은 첫 달성부터 준다', async () => {
     const me = await issueGoogleCookie(ctx);
-    const base = ACH_REWARD_BASELINE_SEASON;
-    const first = await settleAchievementRewards(ctx.db, me.profileId, base, groupsOf([feat]), NOW);
-    expect(first.got.size).toBe(0);
-    expect(await items(me.profileId)).toEqual({});
-    const claims = await ctx.db
-      .select()
-      .from(giftClaims)
-      .where(and(eq(giftClaims.profileId, me.profileId)));
-    expect(claims.map((c) => c.giftId).sort()).toEqual([
-      `ach:${base}:#base`,
-      `ach:${base}:legend-3000`,
-    ]);
-    // 다시 세도 기준선 업적은 주지 않는다.
-    await settleAchievementRewards(ctx.db, me.profileId, base, groupsOf([feat]), NOW);
-    expect(await items(me.profileId)).toEqual({});
-    // 기준선 뒤에 새로 달성한 업적은 준다.
-    const after = await settleAchievementRewards(
+    const before = ACH_REWARD_FIRST_SEASON - 1;
+    const first = await settleAchievementRewards(
       ctx.db,
       me.profileId,
-      base,
-      groupsOf([feat, star]),
+      before,
+      groupsOf([star]),
       NOW,
     );
-    expect(await items(me.profileId)).toEqual({ boost: 3, scout: 2 });
-    expect([...after.got.keys()]).toEqual(['goals', 'goals-800', 'goals-1000']);
-  });
-
-  it('기준선 시즌에 아무것도 달성하지 않았어도 표시를 남겨, 처음 달성한 업적을 준다', async () => {
-    const me = await issueGoogleCookie(ctx);
-    const base = ACH_REWARD_BASELINE_SEASON;
-    await settleAchievementRewards(ctx.db, me.profileId, base, groupsOf([]), NOW);
-    await settleAchievementRewards(ctx.db, me.profileId, base, groupsOf([star]), NOW);
+    expect(first).toEqual({ got: new Map(), full: { boost: false, scout: false } });
+    expect(await items(me.profileId)).toEqual({});
+    expect(
+      await ctx.db.select().from(giftClaims).where(eq(giftClaims.profileId, me.profileId)),
+    ).toEqual([]);
+    // 시즌 1에 이미 달성해 둔 업적도 시즌 2에는 첫 달성으로 받는다(시즌마다 새로 센다).
+    await settleAchievementRewards(ctx.db, me.profileId, SEASON, groupsOf([star]), NOW);
     expect(await items(me.profileId)).toEqual({ boost: 3, scout: 2 });
   });
 });

@@ -457,10 +457,10 @@ export function achRewardOf(points: number): AchReward | null {
   return null;
 }
 /**
- * 업적 보상을 처음 연 시즌. 이 시즌까지는 보상을 처음 셀 때 이미 달성해 둔 업적을 기준선으로 적고 주지 않는다(소급 지급
- * 없음). 다음 시즌부터는 시즌 첫 달성부터 준다.
+ * 업적 보상을 처음 주는 시즌. 시즌 중에는 경제를 바꾸지 않으므로 그 앞 시즌(시즌 1)에는 주지도 표시하지도 않는다 — 개막
+ * 전에 배포해도 시즌 1 달성에는 주지 않고, 시즌 2는 첫 달성부터(개막 뒤 배포면 그 사이 달성도 다음에 셀 때) 준다.
  */
-export const ACH_REWARD_BASELINE_SEASON = 1;
+export const ACH_REWARD_FIRST_SEASON = 2;
 
 /** 업적 랭킹 한 페이지의 구단주 수. */
 export const ACH_RANK_PER_PAGE = 20;

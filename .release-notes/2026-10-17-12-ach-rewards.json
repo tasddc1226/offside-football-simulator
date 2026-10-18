@@ -2,14 +2,14 @@
   "id": "t-11-357-ach-rewards",
   "title": "업적 달성 보상",
   "items": [
-    "어려운 시즌 업적을 달성하면 잠재력 강화권이나 프리미엄 스카우트권을 받아요",
+    "시즌 2부터 어려운 시즌 업적을 달성하면 잠재력 강화권이나 프리미엄 스카우트권을 받아요",
     "한 시즌에 강화권 10장, 스카우트권 3장까지 받아요",
     "업적 목록과 달성 알림에서 받은 보상과 다음 달성 보상을 볼 수 있어요"
   ],
   "en": {
     "title": "Achievement rewards",
     "items": [
-      "Harder season achievements now give a potential boost ticket or a premium scout ticket.",
+      "From season 2, harder season achievements give a potential boost ticket or a premium scout ticket.",
       "You can get up to 10 boost tickets and 3 scout tickets per season.",
       "The achievement list and unlock alert show what you received and what the next completion gives."
     ]
@@ -17,7 +17,7 @@
   "ja": {
     "title": "実績達成報酬",
     "items": [
-      "難しいシーズン実績を達成するとポテンシャル強化券かプレミアムスカウト券がもらえます。",
+      "シーズン2から、難しいシーズン実績を達成するとポテンシャル強化券かプレミアムスカウト券がもらえます。",
       "1シーズンに強化券10枚、スカウト券3枚まで受け取れます。",
       "実績一覧と達成通知で、受け取った報酬と次の達成報酬を確認できます。"
     ]
