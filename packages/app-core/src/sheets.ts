@@ -7,6 +7,8 @@ import type { ResolveResult } from '@offside/game/event-runner';
 import type { MgKind } from '@offside/game/minigame';
 import type { DragPoint, ShotResult } from '@offside/game/dragShot';
 import type { FlightMap } from './flight.js';
+import type { GrowthDirInfo } from './ratingReport.js';
+import type { MatchGame } from '@offside/game/match';
 import { shellText } from './i18n/ko/shell.js';
 
 export type { Chip };
@@ -117,6 +119,8 @@ export type SheetView =
       ticker: TickerRow[];
       extras: { text: string; done: boolean }[];
       skip: (() => void) | null;
+      /** T-11-379 평점 구성을 보일 구간 경기(ratingReport ratingBreakdown). 경기가 다 나온 뒤에 채운다. */
+      rated?: MatchGame[] | null;
     }
   | { kind: 'judge'; label: string; p: number; pos: number }
   | {
@@ -186,6 +190,8 @@ export type SheetView =
       scoutHint?: string | null;
       /** T-11-353 지난 시즌과 견준 흐름(평점·출전)과 나이 한 줄. 견줄 시즌이 없으면 null. */
       seasonTrend?: string | null;
+      /** T-11-379 성장 방향 원자료(골 · 도움 · 수비 능력치, 문장은 ratingReport growthDirectionText). */
+      growthDir?: GrowthDirInfo | null;
       fans: string[];
       age: number;
     }

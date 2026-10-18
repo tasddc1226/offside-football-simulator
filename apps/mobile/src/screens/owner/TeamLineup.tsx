@@ -51,6 +51,8 @@ export function TeamLineup({
   synApplied,
   synCaption,
   onLock,
+  focusSlot = null,
+  onFocused,
 }: {
   formation: FormationId;
   layout: TeamPosition[];
@@ -71,6 +73,9 @@ export function TeamLineup({
   synCaption: string | null;
   /** T-11-188 선수 잠금·풀기. */
   onLock?: ((p: TeamPlayer) => void) | undefined;
+  /** T-11-379 경기 리포트 '고칠 곳'으로 고른 자리 — 골라 두고 맞는 선수 순으로 라커룸을 정렬한다. */
+  focusSlot?: number | null;
+  onFocused?: () => void;
 }) {
   const c = useColors();
   const { height } = useWindowDimensions();
@@ -89,6 +94,12 @@ export function TeamLineup({
   const [limit, setLimit] = useState(24);
   useEffect(() => setLimit(24), [query, position, sort, starters]);
   const [focus, setFocus] = useState<number | null>(null);
+  useEffect(() => {
+    if (focusSlot === null || !editable) return;
+    setFocus(focusSlot);
+    setSort('fit');
+    onFocused?.();
+  }, [focusSlot, editable]);
   // 카드 팝업 — 짧게 누른 자리만 연다. 드래그(길게 눌러 끌기)가 시작·끝난 직후의 누름은 무시한다.
   const [peek, setPeek] = useState<{ i: number; origin: PeekOrigin } | null>(null);
   const dragAt = useRef(0);

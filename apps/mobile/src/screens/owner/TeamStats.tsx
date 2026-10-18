@@ -23,6 +23,7 @@ import { DISPLAY, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Txt } from '../../ui';
 import { Seg, TabOpt } from '../board/parts';
+import { TeamSeasonReport } from './TeamReport';
 
 type Tab = 'players' | 'days' | 'opponents';
 
@@ -202,6 +203,7 @@ export function TeamStats({
             </View>
             {s.summary ? flow(s.summary) : null}
             {kindList(statsKindRows(s))}
+            <TeamSeasonReport report={s.report} />
             <Seg cols={3} label={L.statsTabLabel}>
               {(
                 [

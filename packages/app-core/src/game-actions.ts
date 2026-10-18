@@ -75,7 +75,7 @@ import { pushEvLog, seasonLabel } from './career.js';
 import { scoutHint, seasonTrend, seasonTrendLine } from './scoutHint.js';
 import { recordPhaseOvr, takeSeasonGrowth } from './growth.js';
 import { publicNameOf } from './namePublic.js';
-import { fmtValue, seasonLabelOf } from './format.js';
+import { fmtValue, growthDirFor, seasonLabelOf } from './format.js';
 import { crossesBorder, flightHours, hubOf } from './flight.js';
 import { gameActionsText as L } from './i18n/ko/gameActions';
 import { tn } from '@offside/game/i18n/names';
@@ -532,6 +532,7 @@ export function createGameActions(host: GameHost) {
         notes,
         scoutHint: scoutHint(s, rec.year),
         seasonTrend: seasonTrendLine(s, rec.year),
+        growthDir: growthDirFor(s),
         fans,
         age: s.age,
       },

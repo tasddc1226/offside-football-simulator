@@ -12,6 +12,8 @@ import { Card } from '../../ui/Card';
 import { Pill } from '../../ui/bits';
 import { Txt } from '../../ui/Txt';
 import { Radar } from './Radar';
+import { growthDirectionText } from '@offside/app-core/ratingReport';
+import { ratingReportText as R } from '@offside/app-core/i18n/ko/ratingReport';
 
 type Data = ReturnType<typeof attrData>;
 
@@ -216,6 +218,10 @@ export function AttrCard({ s }: { s: GameState }) {
           {` · ${d.growthNote}`}
         </Txt>
       ) : null}
+      <Txt style={{ fontSize: rem(0.75), marginTop: 6 }} testID="growth-dir">
+        <Txt style={{ fontSize: rem(0.75), fontWeight: '700' }}>{R.dirTitle}</Txt>
+        {` · ${growthDirectionText(d.growthDir.d, d.growthDir.attr)}`}
+      </Txt>
     </Card>
   );
 }
