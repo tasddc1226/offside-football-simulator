@@ -418,6 +418,18 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       code: 'RATE_LIMITED',
       retryable: true,
     });
+    // Rejected retries must not keep rewriting the exhausted D1 counter.
+    const rejected = await Promise.all(
+      Array.from({ length: 4 }, () => put(heavy.cookie, CAREER_ID)),
+    );
+    expect(rejected.every((res) => res.status === 429)).toBe(true);
+    const counter = await ctx.db
+      .select({ count: authAttempts.count })
+      .from(authAttempts)
+      .where(
+        and(eq(authAttempts.kind, 'CAREER_SEASON'), eq(authAttempts.subject, heavy.profileId)),
+      );
+    expect(counter[0]!.count).toBe(UPLOAD_LIMIT.CAREER_SEASON);
     const otherId = '7a1c9b1a-6f0f-4a4b-9c3a-1e2f3a4b5c6e';
     expect((await put(other.cookie, otherId)).status).toBe(200);
   });
