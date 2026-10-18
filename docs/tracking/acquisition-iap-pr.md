@@ -49,3 +49,5 @@ Android 승인 지연 P1 수정: 선택적 기록 요청의 실패·hang·409와
 
 
 2026-10-18 후속: main319aa9b5(#778) 반영·보드 양쪽 행 보존. staging/production의 신규 공개 설정 전달과 deploy 전 검증을 연결했다. 기본false/0/빈provider, worker별 명시적 var 전달, provider 일치·플래그 검증, 배포 모의검사 포함. 운영 환경 변수 변경·병합·배포는 실행하지 않았다. 별도 릴리스 노트 없이 공식 release-notes:none 면제를 유지한다. Apple 폼은 승인 후에도 authResult=FAILED 로그인 화면에 막혀 도달하지 못했으며 입력/생성을 시도하지 않았다. 기존 계정 로그인 복구가 필요하다.
+
+CI39087673328이 head7fc5fee8에서 전체 성공한 뒤 main7297a213(#790)이 추가되어 보드를 다시 양쪽 행 보존으로 병합했다. migration은0110 그대로이며 일일 실행/이상기록 코드를 보존했다. 새 merge head는 별도 CI로 확인한다.

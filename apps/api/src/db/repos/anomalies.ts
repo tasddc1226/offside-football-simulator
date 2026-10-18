@@ -71,6 +71,7 @@ async function findAnomalies(d1: D1Database, since: string, ids?: string[]): Pro
       .bind(JSON.stringify(ids), since)
       .all<{ career_id: string }>();
     ids = changed.results.map((r) => r.career_id);
+    if (!ids.length) return new Map();
   }
   const found: Found = new Map();
   const note = (info: Info, reason: AnomalyReason) => {
@@ -191,7 +192,7 @@ export async function sweepAnomaliesPage(d1: D1Database, now: number, cursor?: A
         rows.map((r) => r.id),
       )
     : new Map();
-  const open = openOnly(found, await clearedIds(d1));
+  const open = found.size ? openOnly(found, await clearedIds(d1)) : [];
   const hidden = open.filter(
     (f) =>
       f.reasons.has('ovrFar') ||

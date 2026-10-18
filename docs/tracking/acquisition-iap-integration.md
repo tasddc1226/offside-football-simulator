@@ -102,3 +102,5 @@ staging/production workflow가 환경별 공개 변수 VITE_ACQUISITION_ENABLED,
 Apple 확인용 offside_link_check 폼 작업이 승인된 뒤 기존 브라우저로 App Store Connect에 접근했지만 authResult=FAILED 로그인 화면에서 내용이 로딩되지 않았다. 한 번 새로고침 후에도 동일해 폼에 도달하지 못했다. 폼 입력/링크 생성은 이번 실행에서 미시도이며 새 거절이나 불확실한 생성 결과는 없다. 기존 계정 로그인 화면 복구/로그인이 필요하다. pt128166757은 여전히 과거 공식 링크 근거이며 현재 provider 일치 검증값으로 설정하지 않았다. StoreKit Sandbox·GA4 앱 스트림·Safari 시스템 배너도 아직 미검증이다.
 
 CI의 별도 합성 동의 검사에는 analytics.spec과 acquisition.spec을 함께 포함했다. 테스트 전용GA4 tag·localhost·합성provider123456을 쓰며 운영 설정을 읽거나 변경하지 않는다. 로컬 스크립트40개, 배포 호환성14개, 유입/설치/출석E2E14개와 운영모양 활성화 번들144.86KB/145KB가 통과했다.
+
+CI39087673328이 head7fc5fee8에서 전체 성공한 뒤 main7297a213(#790)이 추가되어 보드를 다시 양쪽 행 보존으로 병합했다. migration은0110 그대로이며 일일 실행/이상기록 코드를 보존했다. 새 merge head는 별도 CI로 확인한다.
