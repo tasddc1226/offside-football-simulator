@@ -14,10 +14,13 @@ import type { GameState } from './types.js';
 // T-11-390 결정적 장면 — 맡기면 장면이 없던 때와 같고, 고르면 그 장면만 바뀌며, 보여 준 확률이 실제 성공률과 맞는지 본다.
 const start = (pos: Pos, seed: number) => {
   setActiveRng(createRng(seed));
-  return newGame(
+  const s = newGame(
     { name: 'a', number: 9, pos, foot: '오른발', type: TYPES[pos][0]!.id, trait: 'late' },
     seed,
   );
+  // 장면 몫 난수는 cid로 시드를 잡는다. newGame의 cid는 무작위라 테스트마다 고정한다.
+  s.cid = `moments-${pos}-${seed}`;
+  return s;
 };
 
 /** 구간 전 상태 · 난수에서 picks로 한 구간을 진행한다(화면이 다시 진행하는 방식과 같다). null이면 장면 자리 없이. */
@@ -125,7 +128,7 @@ describe('T-11-390 결정적 장면', () => {
         okPick = 0;
       const poses: Pos[] = kind === 'chance' ? ['FW', 'MF'] : ['DF', 'GK'];
       for (const pos of poses)
-        for (let seed = 1; seed <= 25; seed++)
+        for (let seed = 1; seed <= 80; seed++)
           walk(pos, 1000 + seed, 4, (s, rng) => {
             const a = replay(s, rng);
             const m = a.r.block?.moment;
@@ -138,7 +141,7 @@ describe('T-11-390 결정적 장면', () => {
             expPick += c.pct;
             okPick += b.r.block!.moment!.ok ? 1 : 0;
           });
-      expect(n).toBeGreaterThan(300);
+      expect(n).toBeGreaterThan(1000);
       expect(Math.abs(okAuto - expAuto) / n).toBeLessThan(0.05);
       expect(Math.abs(okPick - expPick) / n).toBeLessThan(0.05);
     }
