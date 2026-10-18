@@ -330,21 +330,8 @@ export function simBlock(s: GameState, mo?: MomentHooks): BlockResult {
       let lg: number, la: number;
       ({ g, a, lg, la } = rollScoring(s, power, perf, L.avg, mins));
       // T-11-390 찬스 장면: 이 경기 골(미드필더는 골 · 도움)이 났는지에 묶은 장면 난수 u를 성공 기준선과 비교한다.
-      if (mo && !moment && !isKeeperLine(s) && mo.due(i, n)) {
-        const fw = s.pos === 'FW';
-        const scored = fw ? g > 0 : g + a > 0;
-        moment = mo.chance(at(), 1 - Math.exp(-(fw ? lg : lg + la)), scored);
-        const { shot } = moment;
-        if (moment.ok && !scored) {
-          moment.gain = fw || shot ? 'g' : 'a';
-          if (moment.gain === 'g') g++;
-          else a++;
-        } else if (!moment.ok && scored) {
-          moment.loss = !fw && a > 0 && !shot ? 'a' : g > 0 ? 'g' : 'a';
-          if (moment.loss === 'g') g--;
-          else a--;
-        }
-      }
+      if (mo && !moment && !isKeeperLine(s) && mo.due(i, n))
+        ({ moment, g, a } = mo.chance(at(), lg, la, g, a));
     }
     // T-11-134 이번 라운드 상대 구단의 시즌 전력. 상대가 정해지지 않은 옛 시즌은 리그 평균 팀을 상대한다.
     const opp = matchOpp(s, S.played, L);
@@ -363,11 +350,9 @@ export function simBlock(s: GameState, mo?: MomentHooks): BlockResult {
         cs = true;
       // T-11-390 위기 장면: 결과 난수 x를 '지지 않을' 기준선(승 + 무)과 비교한다. 고른 선택지는 기준선만 옮긴다.
       if (mo && !moment && isKeeperLine(s) && mo.due(i, n)) {
-        const base = odds.wp + odds.dp;
-        moment = mo.open(at(), base);
-        res = resOf(x, odds, moment.pct - base);
-        moment.ok = res !== 'L';
-        if (!moment.ok) cs = false;
+        moment = mo.open(at(), odds.wp + odds.dp);
+        res = resOf(x, odds, moment.pct - moment.base);
+        if (!(moment.ok = res !== 'L')) cs = false;
       }
       if (cs) {
         r.cs++;

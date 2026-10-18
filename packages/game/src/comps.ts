@@ -307,8 +307,7 @@ export type CompGame = {
   /** T-11-261 대륙 대회 녹아웃 상대 구단 id(clubNameOf로 이름). 컵·리그 페이즈엔 없다. */
   opp?: string;
 };
-/** comp는 대회 저장 이름(T-11-390 결승 장면을 이 줄에 붙인다). */
-export type CompLine = { t: string; k: string; games: CompGame[]; comp?: string };
+export type CompLine = { t: string; k: string; games: CompGame[] };
 
 function tie(
   s: GameState,
@@ -369,7 +368,6 @@ export function compsPhase(s: GameState, mo?: MomentHooks): CompLine[] {
         t: M.compLine({ name: tn(c.name), stage: won ? '우승' : '준우승' }),
         k: won ? 'good' : '',
         games,
-        comp: c.name,
       });
     } else if (c.type === 'cup' && CUP_PLAN[s.phase]) {
       for (const r of CUP_PLAN[s.phase]!) {
@@ -389,11 +387,10 @@ export function compsPhase(s: GameState, mo?: MomentHooks): CompLine[] {
         t: M.compLine({ name: tn(c.name), stage: c.stage }),
         k: c.stage === '우승' ? 'good' : c.alive ? '' : 'bad',
         games,
-        comp: c.name,
       });
     } else if (c.type === 'cont' && s.phase >= 1) {
       const line = contPhase(s, c, games, mo);
-      lines.push({ ...line, games, comp: c.name });
+      lines.push({ ...line, games });
     }
   }
   return lines;

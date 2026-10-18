@@ -293,14 +293,9 @@ export function createGameActions(host: GameHost) {
           first: r,
           rows: games,
           extras,
-          rerun: (picks) => {
-            for (const k of Object.keys(s)) delete (s as unknown as Record<string, unknown>)[k];
-            Object.assign(s, JSON.parse(pre) as GameState);
-            setActiveRng(createRng(rngPre));
-            const x = playPhase(s, km.momentHooks(s, picks));
-            settle(x);
-            return x;
-          },
+          pre,
+          rng: rngPre,
+          settle,
           lines,
         });
         await sheet.playBlock(

@@ -48,8 +48,17 @@ export interface MomentHooks {
   moments: CareerMoment[];
   /** 리그 구간(n경기)의 i번째 경기에서 장면을 열 차례인지(뛴 경기에서만 부른다). */
   due(i: number, n: number): boolean;
-  /** 리그 찬스: 이 경기 골(이 났는지 scored)에 묶은 장면 난수로 성공을 정한다. */
-  chance(at: At, base: number, scored: boolean): CareerMoment;
+  /**
+   * 리그 찬스: 이 경기 골(미드필더는 골 · 도움, 기대값 lg · la)이 났는지에 묶은 장면 난수로 성공을 정하고, 바뀐 골 · 도움을 돌려준다.
+   * 성공했는데 기록이 없으면 하나 더하고(공격수 · 슈팅 선택지는 골, 아니면 도움), 실패했는데 기록이 있으면 하나 뺀다.
+   */
+  chance(
+    at: At,
+    lg: number,
+    la: number,
+    g: number,
+    a: number,
+  ): { moment: CareerMoment; g: number; a: number };
   /** 리그 위기 · 결승: 장면만 연다(성공은 그 경기 난수와 m.pct로 엔진이 정한다). */
   open(at: At, base: number, final?: boolean): CareerMoment;
 }
@@ -87,11 +96,23 @@ export function momentHooks(s: GameState, picks: MomentPicks = {}): MomentHooks 
       if (target < 0) target = Math.floor(n * (0.3 + league() * 0.5));
       return i >= target && !moments.some((m) => m.key === 'league');
     },
-    chance(at, base, scored) {
+    chance(at, lg, la, g, a) {
+      const fw = s.pos === 'FW';
+      const base = 1 - Math.exp(-(fw ? lg : lg + la));
+      const scored = fw ? g > 0 : g + a > 0;
       const m = make('league', league, at, base);
       const v = league();
       m.ok = (scored ? v * base : base + v * (1 - base)) < m.pct;
-      return m;
+      if (m.ok && !scored) {
+        m.gain = fw || m.shot ? 'g' : 'a';
+        if (m.gain === 'g') g++;
+        else a++;
+      } else if (!m.ok && scored) {
+        m.loss = !fw && a > 0 && !m.shot ? 'a' : g > 0 ? 'g' : 'a';
+        if (m.loss === 'g') g--;
+        else a--;
+      }
+      return { moment: m, g, a };
     },
     open(at, base, final) {
       const key = final ? `final:${at.comp}` : 'league';

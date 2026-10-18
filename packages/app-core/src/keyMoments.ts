@@ -12,12 +12,17 @@ import {
   type CareerMomentChoice,
 } from '@offside/game/moment-choices';
 import type { CareerMoment, MomentPicks } from '@offside/game/moments';
-export { momentHooks } from '@offside/game/moments';
+import { momentHooks } from '@offside/game/moments';
+import { createRng, setActiveRng } from '@offside/game/rng';
+import { playPhase } from '@offside/game/turn';
+export { momentHooks };
+import type { CompLine } from '@offside/game/comps';
 import type { PhaseResult } from '@offside/game/turn';
 import type { GameState } from '@offside/game/types';
 import { keyMomentText as K } from './i18n/ko/keyMoment.js';
 import type { MomentCard, MomentDriver, MomentView, TickerRow } from './sheets.js';
 
+const playedFinal = (l: CompLine) => l.games.some((g) => g.stage === '결승' && g.mins > 0); // i18n-ignore 저장값
 /** 선택 제한 시간(초)과 고른 뒤 결과 줄이 머무는 시간. */
 const SECONDS = 15;
 const RESULT_MS = 1800;
@@ -88,7 +93,7 @@ export function momentResult(
 }
 
 /**
- * 구간 중계가 쓰는 장면 진행. rerun은 구간 전 상태로 되돌려 picks로 다시 진행하고(게임 상태가 바뀐다),
+ * 구간 중계가 쓰는 장면 진행. 고르면 구간 전 상태(pre · rng)로 되돌려 다시 진행하고(게임 상태가 바뀐다, settle이 저장),
  * lines는 그 결과의 경기 줄 · 부가 줄을 만든다. cur · rows는 마지막으로 정한 결과다(리포트가 쓴다).
  */
 export function createMomentDriver(o: {
@@ -96,7 +101,10 @@ export function createMomentDriver(o: {
   first: PhaseResult;
   rows: TickerRow[];
   extras: string[];
-  rerun: (picks: MomentPicks) => PhaseResult;
+  /** 구간 전 상태(JSON)와 난수 상태. */
+  pre: string;
+  rng: number;
+  settle: (r: PhaseResult) => void;
   lines: (r: PhaseResult) => { rows: TickerRow[]; extras: string[] };
 }): MomentDriver & {
   cur: PhaseResult;
@@ -123,12 +131,10 @@ export function createMomentDriver(o: {
       return m?.game === i ? ask(m, i) : null;
     },
     atExtra(j: number) {
-      const line = d.cur.comp[j];
-      if (!line?.comp) return null;
-      return ask(
-        d.cur.moments.find((x) => x.at === 'final' && x.comp === line.comp),
-        j,
-      );
+      // 결승 장면은 내가 뛴 결승이 있는 대회 줄 순서대로 열린다(엔진 compsPhase 순서).
+      const lines = d.cur.comp.slice(0, j + 1).filter(playedFinal);
+      if (!d.cur.comp[j] || !playedFinal(d.cur.comp[j]!)) return null;
+      return ask(d.cur.moments.filter((x) => x.at === 'final')[lines.length - 1], j);
     },
     async pause(
       v: { moment?: MomentView | null; skip: (() => void) | null },
@@ -164,7 +170,12 @@ export function createMomentDriver(o: {
       const c = choice ? q.card.raw.find((x) => x.id === choice) : undefined;
       if (c) {
         picks[key] = momentPick(c);
-        const r = o.rerun(picks);
+        const s = o.s as unknown as Record<string, unknown>;
+        for (const k of Object.keys(s)) delete s[k];
+        Object.assign(s, JSON.parse(o.pre));
+        setActiveRng(createRng(o.rng));
+        const r = playPhase(o.s, momentHooks(o.s, picks));
+        o.settle(r);
         const next = o.lines(r);
         // 이미 보여 준 줄은 그대로 둔다: 리그 장면이면 그 경기 앞까지, 결승이면 경기 전부와 그 대회 줄 앞까지.
         const final = key !== 'league';
