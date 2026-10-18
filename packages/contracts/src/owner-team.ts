@@ -18,6 +18,7 @@ import {
 import type { TeamSynergy } from './team-synergy.js';
 
 export * from './team-synergy.js';
+export * from './match-report.js';
 
 /** 팀 이름 길이(앞뒤 공백 제외). */
 export const TEAM_NAME_MIN = 2;

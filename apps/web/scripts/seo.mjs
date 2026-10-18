@@ -216,6 +216,7 @@ const GUIDE_SECTIONS = [
     [
       '한 시즌은 프리시즌, 전반기, 후반기로 진행됩니다. 구간마다 훈련 방향(능력치 훈련, 휴식·회복, 개인 코치, 미디어 활동)을 고르면 경기 결과가 한 번에 계산되고 출전·골·도움·평점·리그 순위가 기록됩니다.',
       guideCopy.investment,
+      guideCopy.ratingParts,
     ],
   ],
   [
@@ -284,6 +285,7 @@ const GUIDE_SECTIONS = [
       guideCopy.teamAssembly,
       guideCopy.ownerRecords,
       guideCopy.teamSynergy,
+      guideCopy.matchReport,
       '선수를 맞는 자리에 둘수록 적합도가 높아지고, 선수 유형 조합·주발·직접 키운 선수로 팀 시너지가 켜지면 경기에서 힘이 오릅니다. 다른 구단주의 팀과 하루 10경기까지 치를 수 있고(같은 상대는 하루 한 번), 결과에 따라 팀 레이팅이 오르내립니다. 선수·팀·구단주·감독 업적을 모아 구단주 랭킹에 도전하고(선수 업적은 0~6단계, 팀 업적에는 드림팀 편성과 오프사이드 컵 성적도 있습니다), 팀 로고를 꾸며 팀 소개 이미지를 공유할 수 있습니다.',
     ],
   ],
@@ -349,6 +351,8 @@ const guideBody = `<div class="os-screen"><header><p class="os-eyebrow">HOW TO P
 const FAQ_ITEMS = [
   ['이적 제의에 표시되는 예상 순위가 현재 순위인가요?', guideCopy.transferPreview],
   ['연애설 이벤트는 언제 나오나요?', guideCopy.datingRumor],
+  ['경기 리포트의 기대 득점(xG)은 무엇인가요?', guideCopy.matchReport],
+  ['경기 평점은 어떻게 정해지나요?', guideCopy.ratingParts],
   ['임대를 갈 수 있나요?', guideCopy.loan],
   ['국가대표에서만 은퇴할 수 있나요?', guideCopy.ntRetirement],
   [

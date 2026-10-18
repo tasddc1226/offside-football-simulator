@@ -67,6 +67,8 @@
   import { friendsUi } from '../friendInvite.svelte.js';
   import { shellText as S } from '@offside/app-core/i18n/ko/shell';
   import { achNudge } from '../achNudge.js';
+  import { fixSlot, slotName } from '@offside/app-core/matchReport';
+  import type { ReportLine } from '@offside/contracts/owner-team';
   import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, tooManyWildcards, wildcardFullText, wildcardLabel } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
@@ -531,6 +533,14 @@
     if (v in LOAD) untrack(() => void LOAD[v as keyof typeof LOAD]());
   });
   const navOn = $derived(view === 'result' ? resultOrigin : view === 'stats' ? 'history' : view);
+  /** T-11-379 리포트 '고칠 곳'으로 고른 자리 — 편성 화면이 그 자리를 골라 둔 채 열린다. */
+  let focusSlot = $state<number | null>(null);
+  function reportFix(line: ReportLine): { pos: string; go: () => void } | null {
+    if (!editable || season !== current) return null;
+    const i = fixSlot(slotCodes, ratings, line, YOUTH_OVR);
+    if (i === null) return null;
+    return { pos: slotName(slotCodes[i]!), go: () => ((focusSlot = i), switchView('team')) };
+  }
   /** 탭을 바꾸면 맨 위에서 시작하고, 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다(게임 화면 탭과 같다). */
   function switchView(v: TeamView) {
     if (view === v) return window.scrollTo({ top: 0, behavior: dur(1) ? 'smooth' : 'instant' });
@@ -624,6 +634,7 @@
         onsave={save}
         onlock={toggleLock}
         onpresets={() => (presetsOpen = true)}
+        bind:focusSlot
       />
       {#if team && season === current}
         <!-- T-11-310 감독 칸: 감독은 감독 커리어 화면에서 고른다. -->
@@ -674,6 +685,7 @@
           onagain={() => open('opponents')}
           onhistory={resultOrigin === 'history' ? () => switchView('history') : undefined}
           onplayer={(id) => openStats(id)}
+          fix={reportFix}
         />
       {/if}
     {:else if view === 'history'}

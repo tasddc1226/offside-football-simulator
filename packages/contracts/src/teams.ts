@@ -296,6 +296,10 @@ export const TeamMatchSideSchema = z.strictObject({
   goals: z.number().int().min(0),
   /** 이 경기로 바뀐 그 팀 레이팅(T-10-095 전에 치른 경기는 기록이 없어 null). */
   ratingChange: z.number().int().nullable(),
+  /** T-11-379 기대 득점(소수 한 자리). 이 기능 전에 치른 경기에는 없다. */
+  xg: z.number().min(0).optional(),
+  /** T-11-379 그 경기 줄 힘(시너지 · 감독 보정 뒤, 반올림). 이 기능 전에 치른 경기에는 없다. */
+  lines: TeamLinesSchema.optional(),
 });
 export type TeamMatchSide = z.infer<typeof TeamMatchSideSchema>;
 
@@ -422,6 +426,41 @@ export const TeamStatsSummarySchema = z.strictObject({
 });
 export type TeamStatsSummary = z.infer<typeof TeamStatsSummarySchema>;
 
+/** T-11-379 줄 비교 세 가지(공격 대 상대 수비벽 · 중원 대 상대 중원 · 내 수비벽 대 상대 공격). */
+export const TeamReportLineSchema = z.enum(['atk', 'mid', 'def']);
+export type TeamReportLine = z.infer<typeof TeamReportLineSchema>;
+const lineEdges = z.strictObject({ atk: z.number(), mid: z.number(), def: z.number() });
+
+/** T-11-379 포메이션 하나의 전적과 기대 득점 합. */
+export const TeamReportFormationSchema = z.strictObject({
+  formation: FormationIdSchema,
+  ...winDrawLoss,
+  xgFor: z.number().min(0),
+  xgAgainst: z.number().min(0),
+});
+export type TeamReportFormation = z.infer<typeof TeamReportFormationSchema>;
+
+/** T-11-379 경기 리포트(기대 득점이 남은 랭크 경기만 센다). */
+export const TeamStatsReportSchema = z.strictObject({
+  /** 기대 득점이 남은 경기 수. 0이면 화면이 리포트를 그리지 않는다. */
+  matches: z.number().int().min(0),
+  /** 기대 득점 · 기대 실점 합(소수 한 자리)과 그 경기들의 실제 득실. */
+  xgFor: z.number().min(0),
+  xgAgainst: z.number().min(0),
+  gf: z.number().int().min(0),
+  ga: z.number().int().min(0),
+  /** 줄 비교 평균(내 쪽 − 상대 쪽, 소수 한 자리). */
+  edges: lineEdges,
+  /** 줄마다 상대보다 약했던 경기 수. */
+  behind: z.strictObject({
+    atk: z.number().int().min(0),
+    mid: z.number().int().min(0),
+    def: z.number().int().min(0),
+  }),
+  formations: z.array(TeamReportFormationSchema),
+});
+export type TeamStatsReport = z.infer<typeof TeamStatsReportSchema>;
+
 /** 내 팀(그 시즌)의 랭크 경기 통계. T-11-358부터 summary에 친선전 · 컵 전적과 흐름 요약을 함께 준다. */
 export const TeamStatsResponseSchema = z.strictObject({
   season: z.number().int().min(0),
@@ -434,6 +473,8 @@ export const TeamStatsResponseSchema = z.strictObject({
   opponents: z.array(TeamStatsOpponentSchema),
   /** T-11-358 전 응답에는 없다. */
   summary: TeamStatsSummarySchema.optional(),
+  /** T-11-379 전 응답에는 없다. */
+  report: TeamStatsReportSchema.optional(),
 });
 export type TeamStatsResponse = z.infer<typeof TeamStatsResponseSchema>;
 

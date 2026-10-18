@@ -1,0 +1,38 @@
+import type { Translation } from '../core';
+import type { MatchReportMsgs } from '../ko/matchReport';
+
+export const matchReport: Translation<MatchReportMsgs> = {
+  title: '試合レポート',
+  xgLine: (p) => `期待得点(xG) ${p.mine} : ${p.opp}`,
+  xgHint: '両チームのライン力から決めた得点の期待値です。1.0なら平均1ゴールです。',
+  compareOpen: 'ライン比較を見る',
+  compareClose: 'ライン比較を閉じる',
+  lineAtk: '自分の攻撃 vs 相手の守備壁',
+  lineMid: '自分の中盤 vs 相手の中盤',
+  lineDef: '自分の守備壁 vs 相手の攻撃',
+  lineAria: (p) => `${p.line}: ${p.mine} 対 ${p.opp}`,
+  wallNote: '守備壁は守備70%にGK30%を足した値です。',
+  dLuckWin: '期待得点では押されましたが、結果をつかみました。',
+  dLuckLoss: '期待得点では上回りましたが、ゴールがついてきませんでした。',
+  dEven: '3つのラインはどれも互角でした。結果はその日の流れで決まりました。',
+  dAtkUp: (p) => `攻撃が相手の守備壁を${p.n}上回り、チャンスを多く作りました。`,
+  dAtkDown: (p) => `攻撃が相手の守備壁に${p.n}及ばず、チャンスが少なくなりました。`,
+  dMidUp: (p) => `中盤で${p.n}上回り、試合を支配しました。`,
+  dMidDown: (p) => `中盤で${p.n}押され、相手にボールを多く渡しました。`,
+  dDefUp: (p) => `守備壁が相手の攻撃より${p.n}堅く、チャンスをあまり与えませんでした。`,
+  dDefDown: (p) => `守備壁が相手の攻撃より${p.n}弱く、チャンスを多く与えました。`,
+  fix: (p) => `直すところ · ${p.pos}`,
+  fixAria: (p) => `${p.pos}の枠に入れる選手を選ぶ`,
+  seasonTitle: '試合レポート',
+  seasonEmpty: '期待得点はこのアップデート以降の試合から集まります。',
+  seasonXg: (p) =>
+    `${p.n}試合 · 期待得点 ${p.xgFor} → 実際 ${p.gf}点 · 期待失点 ${p.xgAgainst} → 実際 ${p.ga}点`,
+  seasonFinishUp: (p) => `期待より${p.n}点多く決めました。`,
+  seasonFinishDown: (p) => `期待より${p.n}点少なくなりました。`,
+  seasonFinishEven: '期待どおりに決めました。',
+  seasonBehind: (p) => `いちばん多く押された比較は${p.line}です(${p.k}/${p.n}試合)。`,
+  seasonNoBehind: '3つのライン比較で押された試合はありません。',
+  seasonEdges: '平均ライン比較',
+  seasonFormations: 'フォーメーション別',
+  seasonFormationRow: (p) => `${p.w}勝${p.d}分${p.l}敗 · 期待得点 ${p.xgFor} : ${p.xgAgainst}`,
+};

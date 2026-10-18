@@ -75,7 +75,29 @@ export interface MatchGame {
   inj?: boolean;
   /** T-11-134 상대 구단 id(옛 시즌은 없다). */
   opp?: string;
+  /** T-11-379 평점 구성(뛴 경기만). 화면 설명용이라 세이브에 남지 않는다(BlockResult는 저장하지 않는다). */
+  parts?: RatingParts;
 }
+/**
+ * T-11-379 경기 평점을 이룬 몫(반올림 · 상한 전). 경기력(perf × 0.35)은 OVR 우위 · 컨디션 · 사기 · 그날 흐름으로 나눈다.
+ * 이미 굴린 값을 그대로 담을 뿐 난수를 더 쓰지 않는다.
+ */
+export interface RatingParts {
+  goals: number;
+  assists: number;
+  ovrEdge: number;
+  cond: number;
+  morale: number;
+  form: number;
+  cs: number;
+  def: number;
+  result: number;
+  luck: number;
+}
+/** 평점 기본값(모든 몫이 0일 때). */
+export const RATING_BASE = 6.2;
+/** 경기력이 평점에 들어가는 배율. */
+const PERF_RATING_K = 0.35;
 export interface BlockResult {
   n: number;
   apps: number;
@@ -141,24 +163,70 @@ function rollResult(s: GameState, oppStr: number, mins: number, perf: number, g:
   return x < wp ? 'W' : x < wp + dp ? 'D' : 'L';
 }
 
-/** 경기 평점(4.5~10, 0.1 단위). */
+/** 경기력을 이룬 몫(simBlock이 더한 순서 그대로 — 합이 perf와 비트까지 같다). */
+interface PerfParts {
+  ovrEdge: number;
+  form: number;
+  cond: number;
+  morale: number;
+}
+
+/** 경기 평점(4.5~10, 0.1 단위)과 그 구성. 식 · 난수 순서는 T-11-379 전과 같다. */
 function rateMatch(
   s: GameState,
   avg: number,
-  m: { g: number; a: number; perf: number; cs: boolean; res: Res },
-): number {
+  m: { g: number; a: number; perf: number; pp: PerfParts; cs: boolean; res: Res },
+): { rating: number; parts: RatingParts } {
+  const cs = m.cs ? 0.45 : 0;
+  const keeper = isKeeperLine(s) ? (s.attrs.def - avg) / 25 : 0;
+  // T-10-091 수비형 미드필더는 수비 기여를 평점에 절반만큼 받는다(골·도움이 적은 몫).
+  const dm = s.dpos === 'DM' ? (s.attrs.def - avg) / 50 : 0;
+  const result = m.res === 'W' ? 0.2 : m.res === 'L' ? -0.2 : 0;
+  const luck = gauss() * 0.25;
   const rating =
-    6.2 +
-    m.g * 0.9 +
-    m.a * 0.5 +
-    m.perf * 0.35 +
-    (m.cs ? 0.45 : 0) +
-    (isKeeperLine(s) ? (s.attrs.def - avg) / 25 : 0) +
-    // T-10-091 수비형 미드필더는 수비 기여를 평점에 절반만큼 받는다(골·도움이 적은 몫).
-    (s.dpos === 'DM' ? (s.attrs.def - avg) / 50 : 0) +
-    (m.res === 'W' ? 0.2 : m.res === 'L' ? -0.2 : 0) +
-    gauss() * 0.25;
-  return clamp(Math.round(rating * 10) / 10, 4.5, 10);
+    RATING_BASE + m.g * 0.9 + m.a * 0.5 + m.perf * PERF_RATING_K + cs + keeper + dm + result + luck;
+  return {
+    rating: clamp(Math.round(rating * 10) / 10, 4.5, 10),
+    parts: {
+      goals: m.g * 0.9,
+      assists: m.a * 0.5,
+      ovrEdge: m.pp.ovrEdge * PERF_RATING_K,
+      cond: m.pp.cond * PERF_RATING_K,
+      morale: m.pp.morale * PERF_RATING_K,
+      form: m.pp.form * PERF_RATING_K,
+      cs,
+      def: keeper + dm,
+      result,
+      luck,
+    },
+  };
+}
+
+/**
+ * T-11-379 성장 방향(표시만, 난수 · 상태를 건드리지 않는다). 골키퍼 · 수비수는 평점에 더해지는 수비 능력치,
+ * 그 밖에는 골(공격수) 또는 도움(미드필더)을 정하는 능력치 가중합에서 가장 크게 쓰이는 능력치와 리그 평균과의 차이.
+ * knee는 공격(창의) 능력치가 리그 평균보다 ATTACK_KNEE 넘게 높아 더 올려도 조금씩만 늘어나는 구간이다.
+ */
+export type GrowthDirection =
+  | { kind: 'def'; gap: number }
+  | { kind: 'goal' | 'assist'; attr: AttrKey; pct: number; gap: number; knee: boolean };
+export function growthDirection(s: GameState): GrowthDirection {
+  const avg = leagueOf(s.leagueId).avg;
+  if (isKeeperLine(s)) return { kind: 'def', gap: s.attrs.def - avg };
+  const goal = s.pos === 'FW';
+  // 미드필더의 도움은 창의 능력치(패스 0.7 · 드리블 0.3, creOf)로 정해진다.
+  const w: Partial<Record<AttrKey, number>> = goal ? POS[s.pos].atk : { pas: 0.7, dri: 0.3 };
+  const top = (Object.entries(w) as [AttrKey, number][]).sort(
+    (a, b) => b[1] - a[1] || ATTR_KEYS.indexOf(a[0]) - ATTR_KEYS.indexOf(b[0]),
+  )[0]!;
+  const power = goal ? atkOf(s) : creOf(s);
+  return {
+    kind: goal ? 'goal' : 'assist',
+    attr: top[0],
+    pct: Math.round(top[1] * 100),
+    gap: s.attrs[top[0]] - avg,
+    knee: power - avg > ATTACK_KNEE,
+  };
 }
 
 /** 그 경기의 하이라이트 줄(해트트릭·멀티골·MOM·GK 슈퍼 세이브). */
@@ -239,8 +307,13 @@ export function simBlock(s: GameState): BlockResult {
       g = 0,
       a = 0,
       cs = false;
+    const pp: PerfParts = { ovrEdge: 0, form: 0, cond: 0, morale: 0 };
     if (mins > 0) {
-      perf = (o - L.avg) / 10 + gauss() * 0.8 + (s.cond - 70) / 60 + (s.morale - 60) / 90;
+      pp.ovrEdge = (o - L.avg) / 10;
+      pp.form = gauss() * 0.8;
+      pp.cond = (s.cond - 70) / 60;
+      pp.morale = (s.morale - 60) / 90;
+      perf = pp.ovrEdge + pp.form + pp.cond + pp.morale;
       ({ g, a } = rollScoring(s, power, perf, L.avg, mins));
     }
     // T-11-134 이번 라운드 상대 구단의 시즌 전력. 상대가 정해지지 않은 옛 시즌은 리그 평균 팀을 상대한다.
@@ -262,7 +335,7 @@ export function simBlock(s: GameState): BlockResult {
         r.cs++;
         S.cs++;
       }
-      const rating = rateMatch(s, L.avg, { g, a, perf, cs, res });
+      const { rating, parts } = rateMatch(s, L.avg, { g, a, perf, pp, cs, res });
       S.apps++;
       S.mins += mins;
       S.goals += g;
@@ -274,7 +347,7 @@ export function simBlock(s: GameState): BlockResult {
       r.rs += rating;
       r.hl.push(...matchHighlights(s, S.played, g, rating, cs));
       addStat(s, 'cond', -(mins / 90) * 3.2);
-      r.games.push({ rd: S.played, res, mins, g, a, rating, cs, ...oppTag });
+      r.games.push({ rd: S.played, res, mins, g, a, rating, cs, ...oppTag, parts });
       const hurt = rollInjury(s, S.played);
       if (hurt) {
         r.injured = true;
