@@ -53,9 +53,11 @@ export function inspectR2Storage(row, now = Date.now()) {
 export function inspectDnssec(ds, address) {
   const validated =
     ds?.Status === 0 &&
+    ds?.AD === true &&
     ds?.Answer?.some((a) => a.type === 43) &&
     address?.Status === 0 &&
-    address?.AD === true;
+    address?.AD === true &&
+    address?.Answer?.some((a) => a.type === 1);
   return {
     warning: !validated,
     summary: `DNSSEC parent DS and signed address: ${validated ? 'validated' : 'pending or unavailable'}.\n`,

@@ -420,7 +420,7 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     });
     // Rejected retries must not keep rewriting the exhausted D1 counter.
     const rejected = await Promise.all(
-      Array.from({ length: 4 }, () => put(heavy.cookie, CAREER_ID)),
+      Array.from({ length: 4 }, async () => put(heavy.cookie, CAREER_ID)),
     );
     expect(rejected.every((res) => res.status === 429)).toBe(true);
     const counter = await ctx.db

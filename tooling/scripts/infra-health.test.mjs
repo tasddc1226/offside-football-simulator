@@ -17,8 +17,8 @@ const queues = ['admin-push', 'billing', 'career-push', 'cup-push'].map((kind) =
 }));
 describe('read-only infrastructure monitoring', () => {
   it('requires parent DS and a validated address before declaring DNSSEC complete', () => {
-    const ds = { Status: 0, Answer: [{ type: 43 }] };
-    expect(inspectDnssec(ds, { Status: 0, AD: true }).warning).toBe(false);
+    const ds = { Status: 0, AD: true, Answer: [{ type: 43 }] };
+    expect(inspectDnssec(ds, { Status: 0, AD: true, Answer: [{ type: 1 }] }).warning).toBe(false);
     expect(inspectDnssec({ Status: 0, Answer: [] }, { Status: 0, AD: true }).warning).toBe(true);
     expect(inspectDnssec(ds, { Status: 0, AD: false }).warning).toBe(true);
     expect(inspectDnssec(null, null).warning).toBe(true);
