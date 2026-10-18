@@ -1,5 +1,6 @@
 <script lang="ts">
   import TeamLogo from './TeamLogo.svelte';
+  import PopSheet from '../PopSheet.svelte';
   import { teamLiveText as L } from '@offside/app-core/i18n/ko/teamLive';
   import { teamMomentsText as M } from '@offside/app-core/i18n/ko/teamMoments';
   // T-10-097 팀 경기 문자중계 — 한 화면에서 시계가 0'부터 90'+까지 흐르며 중계 줄이 하나씩 올라온다. 골이 가까우면
@@ -231,22 +232,29 @@
   </div>
 
   {#if active}
-    <div class="tl-moment" class:crisis={active.m.kind === 'crisis'} role="group" aria-labelledby="tl-m-title" data-moment={active.m.situation}>
-      <p class="tl-m-head"><b id="tl-m-title">{momentTitle(active.m)}</b><span>{active.m.minute}'</span></p>
-      <p class="tl-m-scene">{momentScene(active.m, name)}</p>
-      <p class="tl-m-ask">{M.ask} <small>{active.m.kind === 'chance' ? M.chancePct : M.crisisPct}</small></p>
-      <div class="tl-m-choices">
-        {#each choices as c (c.id)}
-          <button class="tl-m-choice" disabled={sending} onclick={() => pick?.(c.id)} data-moment-choice={c.id}>
-            <span class="tl-m-label">{c.label}</span>
-            <b class="tl-m-pct">{M.pct({ p: c.pct })}</b>
-            {#if c.tags.length}<small class="tl-m-tags">{c.tags.join(' · ')}</small>{/if}
-          </button>
-        {/each}
+    <!-- T-11-387 고를 장면은 아래에서 올라오는 시트로 띄운다. 고르거나 시간이 다 돼야 닫힌다(배경 누르기로 닫지 않는다). -->
+    <PopSheet label={momentTitle(active.m)} step={`${active.m.index}`}>
+      <div class="tl-moment" class:crisis={active.m.kind === 'crisis'} data-moment={active.m.situation}>
+        <p class="tl-m-head">
+          <b>{momentTitle(active.m)}</b>
+          <span class="tl-m-score">{active.m.minute}' · {score[0]} : {score[1]}</span>
+        </p>
+        <p class="tl-m-scene">{momentScene(active.m, name)}</p>
+        <p class="tl-m-ask">{M.ask} <small>{active.m.kind === 'chance' ? M.chancePct : M.crisisPct}</small></p>
+        <div class="tl-m-choices">
+          {#each choices as c (c.id)}
+            <button class="tl-m-choice" disabled={sending} onclick={() => pick?.(c.id)} data-moment-choice={c.id}>
+              <span class="tl-m-label">{c.label}</span>
+              <b class="tl-m-pct">{M.pct({ p: c.pct })}</b>
+              {#if c.tags.length}<small class="tl-m-tags">{c.tags.join(' · ')}</small>{/if}
+            </button>
+          {/each}
+        </div>
+        <div class="tl-m-timer" aria-hidden="true"><i style:width="{(active.left / choiceSec) * 100}%"></i></div>
+        <p class="tl-m-hint" aria-live="polite">{sending ? M.sending : M.timer({ s: active.left })}</p>
+        <button class="btn tl-m-skip" disabled={sending} onclick={() => void finish()} data-act="moment-skip">{L.skip}</button>
       </div>
-      <div class="tl-m-timer" aria-hidden="true"><i style:width="{(active.left / choiceSec) * 100}%"></i></div>
-      <p class="tl-m-hint" aria-live="polite">{sending ? M.sending : M.timer({ s: active.left })}</p>
-    </div>
+    </PopSheet>
   {/if}
 
   <ol class="tl-feed">
@@ -486,15 +494,15 @@
   }
   .tl-moment {
     display: grid;
-    gap: 8px;
-    padding: 14px;
-    border-radius: 14px;
-    background: var(--surface);
-    border: 2px solid var(--pitch-2);
-    animation: tl-in 0.35s ease-out;
+    gap: 10px;
   }
-  .tl-moment.crisis {
-    border-color: var(--bad);
+  .tl-m-score {
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+  }
+  .tl-m-skip {
+    justify-self: center;
+    min-height: 44px;
   }
   .tl-m-head {
     display: flex;
@@ -624,7 +632,6 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .tl-moment,
     .tl-board.flash,
     .tl-board.flash .tl-goals,
     .tl-feed li,

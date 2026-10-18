@@ -548,7 +548,8 @@ test('T-11-387 랭크 경기 중 결정적 장면을 고르면 결과가 중계�
   await expect.poll(() => started).toEqual({ opponentTeamId: RIVAL, live: true });
 
   const live = page.locator('[data-team-live]');
-  const card = live.locator('[data-moment="st-1v1"]');
+  // 고를 장면은 중계 위로 올라오는 시트(대화상자)로 뜬다.
+  const card = page.getByRole('dialog').locator('[data-moment="st-1v1"]');
   await expect(card).toContainText('결정적 찬스');
   await expect(card).toContainText('공개 골잡이');
   await expect(card.locator('[data-moment-choice]')).toHaveCount(3);
@@ -563,8 +564,8 @@ test('T-11-387 랭크 경기 중 결정적 장면을 고르면 결과가 중계�
   await expect(live.locator('[data-live-score]')).toContainText('1');
 
   // 두 번째 장면에서 결과 바로 보기 — 고르지 않은 장면은 감독에게 맡기고 서버가 마감한다.
-  await expect(live.locator('[data-moment="gk-1v1"]')).toBeVisible();
-  await live.locator('[data-act="live-skip"]').click();
+  await expect(page.getByRole('dialog').locator('[data-moment="gk-1v1"]')).toBeVisible();
+  await page.locator('[data-act="moment-skip"]').click();
   await expect(live).toHaveCount(0);
   expect(finished).toBe(1);
   const result = page.locator('[data-team-result]');

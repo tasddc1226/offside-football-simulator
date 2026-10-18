@@ -44,6 +44,7 @@ import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { Grid2 } from './TeamParts';
 import { TeamLogo } from '../../components/TeamLogo';
+import { PopSheet } from '../../ui/PopSheet';
 
 /** 중계 줄 하나 — 나타날 때 위에서 살짝 내려앉는다(웹 tl-in). */
 function FeedRow({ l, motionOK }: { l: LiveLine; motionOK: boolean }) {
@@ -637,109 +638,106 @@ export function TeamLive({
         ) : null}
       </View>
 
-      {/* T-11-387 결정적 장면 카드. 시계가 멈추고 선택지를 고른다. */}
+      {/* T-11-387 결정적 장면은 아래에서 올라오는 시트로 띄운다. 고르거나 시간이 다 돼야 닫힌다(웹 PopSheet와 같다). */}
       {active ? (
-        <View
-          testID="live-moment"
-          style={{
-            gap: 8,
-            padding: 14,
-            borderRadius: 14,
-            backgroundColor: c.surface,
-            borderWidth: 2,
-            borderColor: active.m.kind === 'crisis' ? c.bad : c.pitch2,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'baseline',
-            }}
-          >
-            <Txt
-              accessibilityRole="header"
+        <PopSheet label={momentTitle(active.m)} step={`${active.m.index}`}>
+          <View testID="live-moment" style={{ gap: 10 }}>
+            <View
               style={{
-                ...disp,
-                fontSize: rem(1.125),
-                color: active.m.kind === 'crisis' ? c.bad : c.pitch2,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
               }}
             >
-              {momentTitle(active.m)}
-            </Txt>
-            <Txt style={disp}>{`${active.m.minute}'`}</Txt>
-          </View>
-          <Txt style={{ lineHeight: rem(1) * 1.5 }}>{momentScene(active.m, name)}</Txt>
-          <Txt style={{ lineHeight: rem(1) * 1.5 }}>
-            {`${M.ask} `}
-            <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-              {active.m.kind === 'chance' ? M.chancePct : M.crisisPct}
-            </Txt>
-          </Txt>
-          <View style={{ gap: 6 }}>
-            {choices.map((ch) => (
-              <Press
-                key={ch.id}
-                testID={`live-moment-choice-${ch.id}`}
-                disabled={sending}
-                onPress={() => pickRef.current?.(ch.id)}
-                accessibilityLabel={`${ch.label} ${M.pct({ p: ch.pct })}${ch.tags.length ? `, ${ch.tags.join(' · ')}` : ''}`}
-                accessibilityState={{ disabled: sending }}
+              <Txt
+                accessibilityRole="header"
                 style={{
-                  flexDirection: 'row',
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                  columnGap: 10,
-                  rowGap: 2,
-                  minHeight: 48,
-                  paddingVertical: 8,
-                  paddingHorizontal: 12,
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor: c.line,
-                  backgroundColor: c.surface2,
-                  opacity: sending ? 0.6 : 1,
+                  ...disp,
+                  fontSize: rem(1.125),
+                  color: active.m.kind === 'crisis' ? c.bad : c.pitch2,
                 }}
               >
-                <Txt bold style={{ flex: 1, minWidth: 0 }}>
-                  {ch.label}
-                </Txt>
-                <Txt style={{ ...disp, fontSize: rem(1.125), fontVariant: ['tabular-nums'] }}>
-                  {M.pct({ p: ch.pct })}
-                </Txt>
-                {ch.tags.length ? (
-                  <Txt tone="muted" style={{ width: '100%', fontSize: rem(0.75) }}>
-                    {ch.tags.join(' · ')}
+                {momentTitle(active.m)}
+              </Txt>
+              <Txt tone="muted" style={{ ...disp, fontVariant: ['tabular-nums'] }}>
+                {`${active.m.minute}' · ${score[0]} : ${score[1]}`}
+              </Txt>
+            </View>
+            <Txt style={{ lineHeight: rem(1) * 1.5 }}>{momentScene(active.m, name)}</Txt>
+            <Txt style={{ lineHeight: rem(1) * 1.5 }}>
+              {`${M.ask} `}
+              <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                {active.m.kind === 'chance' ? M.chancePct : M.crisisPct}
+              </Txt>
+            </Txt>
+            <View style={{ gap: 6 }}>
+              {choices.map((ch) => (
+                <Press
+                  key={ch.id}
+                  testID={`live-moment-choice-${ch.id}`}
+                  disabled={sending}
+                  onPress={() => pickRef.current?.(ch.id)}
+                  accessibilityLabel={`${ch.label} ${M.pct({ p: ch.pct })}${ch.tags.length ? `, ${ch.tags.join(' · ')}` : ''}`}
+                  accessibilityState={{ disabled: sending }}
+                  style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    columnGap: 10,
+                    rowGap: 2,
+                    minHeight: 48,
+                    paddingVertical: 8,
+                    paddingHorizontal: 12,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: c.line,
+                    backgroundColor: c.surface2,
+                    opacity: sending ? 0.6 : 1,
+                  }}
+                >
+                  <Txt bold style={{ flex: 1, minWidth: 0 }}>
+                    {ch.label}
                   </Txt>
-                ) : null}
-              </Press>
-            ))}
+                  <Txt style={{ ...disp, fontSize: rem(1.125), fontVariant: ['tabular-nums'] }}>
+                    {M.pct({ p: ch.pct })}
+                  </Txt>
+                  {ch.tags.length ? (
+                    <Txt tone="muted" style={{ width: '100%', fontSize: rem(0.75) }}>
+                      {ch.tags.join(' · ')}
+                    </Txt>
+                  ) : null}
+                </Press>
+              ))}
+            </View>
+            <View
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={{ height: 4, borderRadius: 2, backgroundColor: c.line, overflow: 'hidden' }}
+            >
+              <Animated.View
+                style={{
+                  height: '100%',
+                  backgroundColor: c.pitch2,
+                  width: timer.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0%', '100%'],
+                    extrapolate: 'clamp',
+                  }),
+                }}
+              />
+            </View>
+            <Txt
+              tone="muted"
+              accessibilityLiveRegion="polite"
+              style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5 }}
+            >
+              {sending ? M.sending : M.timer({ s: active.left })}
+            </Txt>
+            <Btn testID="live-moment-skip" disabled={sending} onPress={() => void finish()}>
+              {L.skip}
+            </Btn>
           </View>
-          <View
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-            style={{ height: 4, borderRadius: 2, backgroundColor: c.line, overflow: 'hidden' }}
-          >
-            <Animated.View
-              style={{
-                height: '100%',
-                backgroundColor: c.pitch2,
-                width: timer.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['0%', '100%'],
-                  extrapolate: 'clamp',
-                }),
-              }}
-            />
-          </View>
-          <Txt
-            tone="muted"
-            accessibilityLiveRegion="polite"
-            style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5 }}
-          >
-            {sending ? M.sending : M.timer({ s: active.left })}
-          </Txt>
-        </View>
+        </PopSheet>
       ) : null}
 
       {/* 중계 줄(새 줄이 맨 위) */}
