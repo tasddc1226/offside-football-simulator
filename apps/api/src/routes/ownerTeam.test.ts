@@ -457,6 +457,9 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       ).json(),
     ).data.match;
     expect(match.home.ovr).toBe(team.ovr);
+    // T-11-379 방금 치른 경기에는 두 팀 기대 득점과 줄 힘이 붙는다.
+    expect(match.home.xg).toBeGreaterThan(0);
+    expect(match.away.lines).toMatchObject({ atk: expect.any(Number), gk: expect.any(Number) });
     expect(match.home.logo).toEqual(logo);
     expect(match.away.logo).toEqual(rivalLogo);
     // 로고를 저장하지 않았던 옛 경기에도 현재 로고를 붙인다. 경기 원본은 덮어쓰지 않는다.
@@ -594,6 +597,8 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       cup: { w: 0, d: 0, l: 0, gf: 0, ga: 0 },
     });
     expect(theirs.summary).toMatchObject({ form: ['w', 'l', 'l'], streak: { kind: 'w', n: 1 } });
+    // T-11-379 기대 득점이 없는 옛 경기는 리포트에 세지 않는다.
+    expect(stats.report).toMatchObject({ matches: 0, xgFor: 0, formations: [] });
     // 친선전(받은 경기 0:2 패 · 건 경기 1:1 무)과 컵(승부차기 승 · 패 · 기권 · 아직 안 치른 경기)은 합계로 센다.
     const friendly = (id: string, home: typeof me, away: typeof me, hg: number, ag: number) =>
       ctx.db.insert(friendMatches).values({

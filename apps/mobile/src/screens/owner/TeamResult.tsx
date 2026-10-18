@@ -9,6 +9,8 @@ import { recordText, signedNum } from '@offside/app-core/teamText';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { Grid2 } from './TeamParts';
+import { TeamReport } from './TeamReport';
+import type { ReportLine } from '@offside/contracts/owner-team';
 
 export function TeamResult({
   m,
@@ -20,6 +22,7 @@ export function TeamResult({
   again,
   backLabel = L.backDefaultApp,
   onPlayer,
+  fix,
 }: {
   m: TeamMatch;
   team: OwnerTeam | null;
@@ -31,6 +34,8 @@ export function TeamResult({
   backLabel?: string;
   /** T-11-269 우리 선수 이름을 누르면 시즌 통계의 그 선수 줄로(랭크 경기만, 웹 TeamResult onplayer). */
   onPlayer?: (careerId: string) => void;
+  /** T-11-379 리포트 '고칠 곳' — 내 편성을 고칠 수 있을 때만(웹 TeamResult fix). */
+  fix?: ((line: ReportLine) => { pos: string; go: () => void } | null) | undefined;
 }) {
   const friendly = !!m.friendly;
   const linkable = (id: string | null): id is string => !!onPlayer && !friendly && !!id;
@@ -142,6 +147,7 @@ export function TeamResult({
       ) : (
         <Txt tone="muted">{L.noGoals}</Txt>
       )}
+      <TeamReport m={m} fix={fix} />
       <Txt tone="muted" v="sm">
         {`${kstMonthDayTime(m.createdAt)}${team && !friendly && m.mine === 'home' ? L.resultRecord({ record: recordText(team.record) }) : ''}`}
       </Txt>

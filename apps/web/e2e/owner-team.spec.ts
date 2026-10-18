@@ -247,6 +247,8 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
               ovr: 56,
               goals: 2,
               ratingChange: 16,
+              xg: 1.6,
+              lines: { atk: 62, mid: 50, def: 57, gk: 55 },
             },
             away: {
               teamId: 'tem_00000000-0000-4000-8000-000000000002',
@@ -256,6 +258,8 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
               ovr: 55,
               goals: 1,
               ratingChange: -8,
+              xg: 0.9,
+              lines: { atk: 55, mid: 56, def: 54, gk: 55 },
             },
             events: [
               {
@@ -375,7 +379,22 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await expect(result).toContainText('익명의 공격수 No.7');
   await expect(result).toContainText('1승 0무 0패');
   await expect(result.locator('[data-rating-change]')).toContainText('내 팀 레이팅 +16');
+  // T-11-379 경기 리포트 — 기대 득점 · 진단 한 줄은 바로, 줄 비교는 눌러야 펼친다. 펼쳐도 API를 더 부르지 않는다.
+  const report = result.locator('[data-team-report]');
+  await expect(report.locator('[data-report-xg]')).toHaveText('기대 득점(xG) 1.6 : 0.9');
+  await expect(report.locator('[data-report-diagnosis]')).toHaveText(
+    '공격이 상대 수비벽보다 8 앞서 기회를 많이 만들었어요.',
+  );
+  await expect(report.locator('[data-report-rows]')).toHaveCount(0);
+  let apiCalls = 0;
+  const countApi = (r: { url(): string }) => void (r.url().startsWith(API) && apiCalls++);
+  page.on('request', countApi);
+  await report.locator('[data-act="team-report-compare"]').click();
+  await expect(report.locator('[data-report-line="mid"]')).toHaveClass(/weak/);
   await expectNoA11yViolations(page);
+  page.off('request', countApi);
+  expect(apiCalls).toBe(0);
+  await expect(report.locator('[data-act="team-report-fix"]')).toContainText('고칠 곳 · ');
   await result.locator('[data-act="team-replay"]').click();
   await expect(live.locator('[data-live-line="kickoff"]')).toContainText('킥오프');
   await live.locator('[data-act="live-skip"]').click();
@@ -466,6 +485,19 @@ test('T-11-269 기록 탭 — 더 보기로 지난 경기를 잇고, 통계 카�
             ga: 5,
           },
         ],
+        report: {
+          matches: 9,
+          xgFor: 13.2,
+          xgAgainst: 8.1,
+          gf: 16,
+          ga: 7,
+          edges: { atk: 4.2, mid: -2.6, def: 1.3 },
+          behind: { atk: 1, mid: 6, def: 3 },
+          formations: [
+            { formation: '4-3-3', w: 5, d: 1, l: 1, gf: 13, ga: 5, xgFor: 10.1, xgAgainst: 6.2 },
+            { formation: '4-4-2', w: 1, d: 0, l: 1, gf: 3, ga: 2, xgFor: 3.1, xgAgainst: 1.9 },
+          ],
+        },
       }),
     );
   });
@@ -490,6 +522,16 @@ test('T-11-269 기록 탭 — 더 보기로 지난 경기를 잇고, 통계 카�
   await expect(stats.locator(`[data-stats-player="${STRIKER}"]`)).toContainText('공개 골잡이');
   await expect(stats.locator(`[data-stats-player="${STRIKER}"]`)).toContainText('12');
   await expect(stats).toContainText('유스 선수');
+  // T-11-379 시즌 경기 리포트 — 기대 득점 대비 실제 · 가장 자주 밀린 비교 · 포메이션별.
+  const seasonReport = stats.locator('[data-season-report]');
+  await expect(seasonReport.locator('[data-season-report-xg]')).toHaveText(
+    '9경기 · 기대 득점 13.2 → 실제 16골 · 기대 실점 8.1 → 실제 7골',
+  );
+  await expect(seasonReport).toContainText('기대보다 2.8골 더 넣었어요.');
+  await expect(seasonReport).toContainText(
+    '가장 자주 밀린 비교는 내 중원 vs 상대 중원이에요(6/9경기).',
+  );
+  await expect(seasonReport.locator('[data-season-formations] div')).toHaveCount(2);
   await expectNoA11yViolations(page);
   await stats.locator('[data-stats-tab="days"]').click();
   await expect(stats.locator('[data-stats-day="2026-09-30"]')).toContainText('9/30');

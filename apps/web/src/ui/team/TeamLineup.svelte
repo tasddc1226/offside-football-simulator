@@ -20,10 +20,10 @@
   import { dur } from '../motion.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
-  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, wildcards, onassign, onauto, onsave, onlock, onpresets }:
+  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, wildcards, onassign, onauto, onsave, onlock, onpresets, focusSlot = $bindable(null) }:
     { team: OwnerTeam | null; editable: boolean; formation: FormationId; layout: TeamPosition[] | null; slots: (string | null)[]; lines: Lines; synergy: Synergy; season: number;
       cells: { rating: number; name: string; youth: boolean; player?: TeamPlayer | undefined }[]; players: TeamPlayer[]; nameOf: (p: TeamPlayer) => string;
-      teamName: string; managerName: string; teamLogo: TeamLogo | null; seasonName: string; filled: number; saving: boolean; nameOk: boolean; dirty: boolean; wildcards: string | null; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void; onlock?: ((p: TeamPlayer) => void) | undefined; onpresets?: (() => void) | undefined } = $props();
+      teamName: string; managerName: string; teamLogo: TeamLogo | null; seasonName: string; filled: number; saving: boolean; nameOk: boolean; dirty: boolean; wildcards: string | null; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void; onlock?: ((p: TeamPlayer) => void) | undefined; onpresets?: (() => void) | undefined; focusSlot?: number | null } = $props();
   let shareData = $state<TeamShareData | null>(null);
   let pitch = $state<HTMLElement>();
   let search = $state('');
@@ -54,6 +54,14 @@
         : sort === 'fit' && selectedSlot !== null ? slotRating(positions[selectedSlot]!.slot, b) - slotRating(positions[selectedSlot]!.slot, a) || b.peak - a.peak : b.peak - a.peak || (b.legendScore ?? 0) - (a.legendScore ?? 0));
   });
 
+  // T-11-379 경기 리포트 '고칠 곳': 그 자리를 골라 두고 맞는 선수 순으로 라커룸을 연다.
+  $effect(() => {
+    if (focusSlot === null || !editable) return;
+    selectedSlot = focusSlot;
+    sort = 'fit';
+    focusSlot = null;
+    requestAnimationFrame(() => pitch?.querySelectorAll<HTMLButtonElement>('[data-slot]')[selectedSlot ?? 0]?.scrollIntoView({ block: 'center', behavior: dur(1) ? 'smooth' : 'instant' }));
+  });
   function preset(f: FormationId) { formation = f; layout = null; selectedSlot = null; announcement = L.presetAnnounce({ f }); }
   // T-11-216 시즌 1 배치 프리셋(세부 포지션 자리). 프리시즌 팀은 옛 세 가지만.
   function shape(id: ShapeId) { formation = shapeBase(id); layout = shapeLayout(id); selectedSlot = null; announcement = L.presetAnnounce({ f: id }); }

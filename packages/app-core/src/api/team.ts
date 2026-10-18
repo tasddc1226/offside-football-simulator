@@ -48,6 +48,7 @@ export type {
   TeamStatsMatch,
   TeamStatsOpponent,
   TeamStatsPlayer,
+  TeamStatsReport,
   TeamStatsResponse,
   TeamStatsSummary,
 } from '@offside/contracts';

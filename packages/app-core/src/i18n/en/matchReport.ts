@@ -1,0 +1,38 @@
+import type { Translation } from '../core';
+import type { MatchReportMsgs } from '../ko/matchReport';
+
+export const matchReport: Translation<MatchReportMsgs> = {
+  title: 'Match report',
+  xgLine: (p) => `Expected goals (xG) ${p.mine} : ${p.opp}`,
+  xgHint: 'Expected goals from both teams’ line strength. 1.0 means one goal on average.',
+  compareOpen: 'Show line comparison',
+  compareClose: 'Hide line comparison',
+  lineAtk: 'My attack vs their wall',
+  lineMid: 'My midfield vs their midfield',
+  lineDef: 'My wall vs their attack',
+  lineAria: (p) => `${p.line}: ${p.mine} vs ${p.opp}`,
+  wallNote: 'The wall is 70% defense plus 30% goalkeeper.',
+  dLuckWin: 'You trailed on expected goals but still took the result.',
+  dLuckLoss: 'You led on expected goals, but the goals didn’t come.',
+  dEven: 'All three lines were close. The flow of the day decided it.',
+  dAtkUp: (p) => `Your attack beat their wall by ${p.n} and made plenty of chances.`,
+  dAtkDown: (p) => `Your attack trailed their wall by ${p.n} and found few chances.`,
+  dMidUp: (p) => `You led the midfield by ${p.n} and controlled the game.`,
+  dMidDown: (p) => `You trailed in midfield by ${p.n} and gave them more of the ball.`,
+  dDefUp: (p) => `Your wall was ${p.n} stronger than their attack and gave up few chances.`,
+  dDefDown: (p) => `Your wall was ${p.n} weaker than their attack and gave up many chances.`,
+  fix: (p) => `Fix · ${p.pos}`,
+  fixAria: (p) => `Pick a player for the ${p.pos} slot`,
+  seasonTitle: 'Match report',
+  seasonEmpty: 'Expected goals are collected from matches played after this update.',
+  seasonXg: (p) =>
+    `${p.n} ${p.n === 1 ? 'match' : 'matches'} · xG ${p.xgFor} → ${p.gf} scored · xGA ${p.xgAgainst} → ${p.ga} conceded`,
+  seasonFinishUp: (p) => `You scored ${p.n} more than expected.`,
+  seasonFinishDown: (p) => `You scored ${p.n} fewer than expected.`,
+  seasonFinishEven: 'You scored about as many as expected.',
+  seasonBehind: (p) => `You trailed most often in ${p.line} (${p.k}/${p.n} matches).`,
+  seasonNoBehind: 'You haven’t trailed in any line comparison.',
+  seasonEdges: 'Average line comparison',
+  seasonFormations: 'By formation',
+  seasonFormationRow: (p) => `${p.w}W ${p.d}D ${p.l}L · xG ${p.xgFor} : ${p.xgAgainst}`,
+};
