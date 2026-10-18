@@ -89,6 +89,22 @@ describe('T-10-092 자리별 실력·줄 무게', () => {
     // roles가 null이면 옛 적합도 규칙.
     expect(slotRating('W', { peak: 86, pos: 'MF', dpos: 'AM', roles: null })).toBe(65);
   });
+  it('T-11-383 윙어 유형은 좌·우 미드필더 자리에서 중앙 미드필더 · 윙어 역할 중 높은 쪽으로 뛴다', () => {
+    // 스피드로 키운 측면 미드필더 윙어(최고 OVR = 윙어 역할 80): 예전엔 LM 자리를 중앙 미드필더 역할(70)로 쟀다.
+    const wr = { GK: 20, CB: 50, FB: 62, DM: 58, CM: 70, AM: 72, W: 80, ST: 66 } as const;
+    const winger = { peak: 80, pos: 'MF', dpos: 'LM', roles: wr, type: 'winger' } as const;
+    expect(slotRating('LM', winger)).toBe(80);
+    expect(slotRating('RM', winger)).toBe(80);
+    expect(slotFit('LM', winger)).toBe(1);
+    // W · LW · RW 자리는 원래 윙어 역할이고, 중앙 자리는 그대로다.
+    expect(slotRating('LW', winger)).toBe(80);
+    expect(slotRating('CM', winger)).toBe(70);
+    // 중앙 미드필더 역할이 더 높으면 그쪽, 윙어 유형이 아니면 예전처럼 중앙 미드필더 역할만.
+    expect(slotRating('LM', { ...winger, roles: { ...wr, CM: 82 } })).toBe(82);
+    expect(slotRating('LM', { ...winger, type: 'maker' })).toBe(70);
+    // 최고 OVR + 2를 넘지 않는다.
+    expect(slotRating('LM', { ...winger, peak: 75 })).toBe(77);
+  });
   it('줄 기준 인원의 합은 필드 10명이라 포메이션은 무게만 옮긴다', () => {
     expect(LINES.reduce((t, l) => t + LINE_BASE[l], 0)).toBeCloseTo(10);
     for (const id of FORMATION_IDS) {
