@@ -217,6 +217,7 @@ const GUIDE_SECTIONS = [
       '한 시즌은 프리시즌, 전반기, 후반기로 진행됩니다. 구간마다 훈련 방향(능력치 훈련, 휴식·회복, 개인 코치, 미디어 활동)을 고르면 경기 결과가 한 번에 계산되고 출전·골·도움·평점·리그 순위가 기록됩니다.',
       guideCopy.investment,
       guideCopy.ratingParts,
+      guideCopy.keyMoment,
     ],
   ],
   [
@@ -353,6 +354,7 @@ const FAQ_ITEMS = [
   ['연애설 이벤트는 언제 나오나요?', guideCopy.datingRumor],
   ['경기 리포트의 기대 득점(xG)은 무엇인가요?', guideCopy.matchReport],
   ['경기 평점은 어떻게 정해지나요?', guideCopy.ratingParts],
+  ['경기 중계 중에 뜨는 선택지는 무엇인가요?', guideCopy.keyMoment],
   ['임대를 갈 수 있나요?', guideCopy.loan],
   ['국가대표에서만 은퇴할 수 있나요?', guideCopy.ntRetirement],
   [
