@@ -19,7 +19,6 @@ import { captainTools } from './captain.ts';
 import { devTools } from './dev.ts';
 import { repoReadToken } from './github.ts';
 import { ga4Tools } from './ga4.ts';
-import { mktTools } from './mkt.ts';
 import { supportTools } from './support.ts';
 import { reviewTools } from './reviews.ts';
 import { opsTools } from './tools/ops.ts';
@@ -57,11 +56,7 @@ const handoffPrompt = (t: Task) =>
 export const modelFor = (kind: Task['kind']): Model =>
   kind === 'triage' || kind === 'alert'
     ? MODELS.haiku
-    : kind === 'report' ||
-        kind === 'support' ||
-        kind === 'reviews' ||
-        kind === 'release' ||
-        kind === 'verify'
+    : kind === 'report' || kind === 'support' || kind === 'reviews' || kind === 'verify'
       ? MODELS.sonnet
       : MODELS.opus;
 
@@ -132,26 +127,23 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
     return {
       system: `${mkt}\n\n${team}\n\n${glossary}`,
       model,
-      // 마케팅은 저장소 · 배포 기록을 읽고 드림보트 요약 초안만 올린다(보내기는 운영자 승인 버튼).
+      // 마케팅은 저장소 · GA4 · 광고 성과를 읽고 초안을 쓴다(게시 · 집행은 운영자).
       tools: [
         ...repo,
         ...web,
-        ...mktTools(env, task),
         ...ga4Tools(env, task.kind),
         ...marketingTools(env, task.kind),
         ...appStatusTools(env),
         ...memoryTools(env, 'mkt', task),
       ],
-      maxTurns: task.kind === 'release' ? 5 : task.kind === 'report' ? 7 : 8,
+      maxTurns: task.kind === 'report' ? 7 : 8,
       mcpServers: [],
       prompt: (t) =>
-        t.kind === 'release'
-          ? `지금 KST ${kstNow()}. ${t.text}\n역할 설명의 "배포 뒤 업데이트 요약" 순서대로 해 주세요. 먼저 \`release_changes\`를 한 번 불러요.`
-          : t.kind === 'report'
-            ? `지금 KST ${kstNow()}. 월요일 주간 유입 리포트를 써 주세요. 역할 설명의 "주간 유입 리포트" 순서대로, \`ga4_report\`는 4번 안쪽으로 불러요.`
-            : t.kind === 'handoff'
-              ? handoffPrompt(t)
-              : directive(t),
+        t.kind === 'report'
+          ? `지금 KST ${kstNow()}. 월요일 주간 유입 리포트를 써 주세요. 역할 설명의 "주간 유입 리포트" 순서대로, \`ga4_report\`는 4번 안쪽으로 불러요.`
+          : t.kind === 'handoff'
+            ? handoffPrompt(t)
+            : directive(t),
     };
   if (role !== 'ops') throw new Error(`role ${role} is not open yet`);
   return {
