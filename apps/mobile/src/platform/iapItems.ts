@@ -36,7 +36,7 @@ export const iapItems = proxy({
   /** 결제 중인 상품. */
   busy: null as IapProductId | null,
   /** 서버가 마지막으로 알려 준 장수. 받은 뒤 화면이 바로 고친다. */
-  items: null as Pick<OwnerItemsResponse, 'reroll' | 'boost' | 'scout'> | null,
+  items: null as Pick<OwnerItemsResponse, 'reroll' | 'boost' | 'scout' | 'rename'> | null,
 });
 
 /** 이 아이템의 묶음 중 지금 살 수 있는(스토어가 가격을 알려 준) 상품. 스토어를 열 수 없으면 빈 목록. */
@@ -56,7 +56,12 @@ async function claim(p: Purchase, quiet: boolean) {
     if (!quiet) toast(r.error.retryable ? L.claimFail : r.error.message || L.claimFail);
     return;
   }
-  iapItems.items = { reroll: r.data.reroll, boost: r.data.boost, scout: r.data.scout };
+  iapItems.items = {
+    reroll: r.data.reroll,
+    boost: r.data.boost,
+    scout: r.data.scout,
+    rename: r.data.rename ?? 0,
+  };
   await finishTransaction({ purchase: p, isConsumable: true }).catch(() => {});
   const { item } = IAP_PRODUCTS[productId];
   toast(
@@ -64,7 +69,9 @@ async function claim(p: Purchase, quiet: boolean) {
       ? L.boostDone({ n: r.data.boost })
       : item === 'scout'
         ? SL.got({ n: r.data.scout })
-        : L.rerollDone({ n: r.data.reroll }),
+        : item === 'rename'
+          ? L.renameDone({ n: r.data.rename ?? 0 })
+          : L.rerollDone({ n: r.data.reroll }),
   );
 }
 
@@ -96,7 +103,12 @@ export async function syncIapItems() {
     return;
   }
   account = r.data.iap.account;
-  iapItems.items = { reroll: r.data.reroll, boost: r.data.boost, scout: r.data.scout };
+  iapItems.items = {
+    reroll: r.data.reroll,
+    boost: r.data.boost,
+    scout: r.data.scout,
+    rename: r.data.rename ?? 0,
+  };
   if (!(await connectStore())) return;
   try {
     const [products, pending] = await Promise.all([

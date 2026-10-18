@@ -584,14 +584,18 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
     boost: ['noBoost', 'NO_BOOST'],
     scout: ['noScout', 'NO_SCOUT'],
   } as const;
-  for (const item of OWNER_ITEMS)
+  // T-11-377 이름 변경권은 이름 변경 API(POST /v1/careers/:careerId/rename)로만 쓴다.
+  for (const item of OWNER_ITEMS.filter((k) => k !== 'rename'))
     app.post(`/v1/items/${item}/use`, requireProfile, idempotency, async (c) => {
       const me = await requireOwner(c);
       // T-11-244 스카우트권은 천장 카운트를 같이 센다. 본문(hit)이 없으면 천장을 모르는 옛 앱이다.
       const body = item === 'scout' ? readBody(c, ScoutUseBodySchema) : {};
       const scout = { pity: body.hit !== undefined, hit: body.hit === true };
       const items = await spendItem(getDb(c), me.id, item, nowIso(), scout);
-      if (!items) throw conflictError(cupKo(EMPTY[item][0]), EMPTY[item][1]);
+      if (!items) {
+        const [key, code] = EMPTY[item as keyof typeof EMPTY];
+        throw conflictError(cupKo(key), code);
+      }
       return ok(c, OwnerItemsResponseSchema, items, 200, NO_STORE);
     });
 
