@@ -6,7 +6,8 @@ import {
   cachedGet,
   invalidateApiCache,
 } from '@offside/app-core/api/client';
-import { CONSENT_KEY, campaignQuery } from '@offside/app-core/analytics-model';
+import { CONSENT_KEY } from '@offside/app-core/analytics-model';
+import { entryCampaign as landing } from './entry-campaign.js';
 import {
   ACQUISITION_CONSENT_VERSION as version,
   ACQUISITION_SESSION_MS,
@@ -16,7 +17,6 @@ const REVOKE_KEY = 'offside_acquisition_revoke_v1';
 const PROFILE_KEY = 'offside_acquisition_profile_v1';
 const UNRESOLVED = 'unresolved';
 const CHOICE_KEY = 'offside_acquisition_choice_v1';
-const landing = typeof location === 'undefined' ? '' : campaignQuery(location.href);
 export const acquisitionEnabled = () => import.meta.env.VITE_ACQUISITION_ENABLED === 'true';
 let profileId: string | null = null;
 let granted = false;
