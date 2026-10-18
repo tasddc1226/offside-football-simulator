@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from '../Skeleton.svelte';
   import { onMount } from 'svelte';
   import { createCupAdmin, emptyCupAdmin } from '@offside/app-core/admin/cupPredictions';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
@@ -27,7 +28,7 @@
     <button class="btn" disabled={s.loading||s.busy} onclick={()=>model.refresh()}>{L.adminRefresh}</button>
   </div>
   {#if s.error}<p role="alert">{s.error}</p>{/if}
-  {#if s.loading}<p role="status">{L.loading}</p>
+  {#if s.loading}<Skeleton rows={3} />
   {:else if s.report}
     <div class="summary"><span>{L.adminPeople} <b>{s.report.participants}</b></span>{#each [['total',L.adminTotal],['hits',L.adminHits],['granted',L.adminGranted]] as [key,label] (key)}<span>{label} <b>{s.report.items.reduce((n,x)=>n+x[key as 'total'|'hits'|'granted'],0)}</b></span>{/each}</div>
     {#each s.report.items as x (x.match.id)}
@@ -42,7 +43,7 @@
         {#if s.matchId===m.id}
           <div class="detail" data-admin-prediction-detail>
             <button class="btn" disabled={s.busy} onclick={model.close}>{L.adminClose}</button>
-            {#if s.detailLoading}<p role="status">{L.loading}</p>{/if}
+            {#if s.detailLoading}<Skeleton rows={2} />{/if}
             {#if s.rows && !s.rows.items.length}<p class="muted">{L.predictionEmpty}</p>{/if}
             {#each s.rows?.items??[] as r (r.profileId)}
               <div class="person"><b>{r.nickname}</b><small>{r.profileId}</small><span>{r.pick==='home'?L.predictionHome:r.pick==='away'?L.predictionAway:L.predictionDraw} · {r.correct===null?(m.played?L.adminPending:L.predictionSelected):r.correct?L.predictionHit:L.predictionMiss}{r.rewardedAt?` · ${L.predictionRewarded}`:r.correct?` · ${L.adminUnpaid}`:''}</span><small class="muted">{kst(r.updatedAt)}</small></div>

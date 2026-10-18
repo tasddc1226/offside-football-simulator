@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from '../Skeleton.svelte';
   import { onMount } from 'svelte';
   import { fetchOwnerArchive, type OwnerArchiveResponse } from '@offside/app-core/api/ownerProfile';
   import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
@@ -100,7 +101,7 @@
     {#if visited.titles}<div hidden={panel !== 'titles'}><OwnerHall onpick={(title) => { if (data) data = { ...data, owner: { ...data.owner, title } }; }} /></div>{/if}
     {#if panel === 'trophies'}
       <div class="trophy-gallery" data-trophy-gallery>
-        {#if !data}<p class="muted">{failed ? L.archiveError : L.archiveLoading}</p>{#if failed}<button class="btn" onclick={() => void load()}>{L.retry}</button>{/if}
+        {#if !data}{#if failed}<p class="muted">{L.archiveError}</p>{:else}<Skeleton rows={4} />{/if}{#if failed}<button class="btn" onclick={() => void load()}>{L.retry}</button>{/if}
         {:else if !awards}<p class="muted">{L.roomEmptyAwards}</p>
         {:else}
           {#if badges.length}<h2>{L.roomBadgeCount} <span>{badges.length}</span></h2><div class="gallery-badges">{#each badges as h (`${h.season}-${h.kind}`)}<div class="gallery-badge medal {h.medal}"><div><HonorEmblem {h} /></div><b>{h.title}</b><small>{teamSeasonLabel(h.season)}</small><p>{h.detail}</p></div>{/each}</div>{/if}

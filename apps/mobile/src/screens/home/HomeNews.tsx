@@ -10,8 +10,8 @@ import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { Card, MoreLink, Pill, Press, Row, Txt } from '../../ui';
 import { homeText as L } from '@offside/app-core/i18n/ko/home';
-import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import { useRefresh } from '../../ui/refresh';
+import { Skeleton } from '../../ui/Skeleton';
 
 const SHOWN = 3;
 
@@ -60,7 +60,7 @@ export function HomeNews({
         {failed ? (
           <Empty>{L.newsFailed}</Empty>
         ) : !posts ? (
-          <Empty>{S.loading}</Empty>
+          <Skeleton rows={3} />
         ) : !posts.length ? (
           <Empty>{L.newsEmpty}</Empty>
         ) : (
