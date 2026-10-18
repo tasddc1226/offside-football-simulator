@@ -1,4 +1,5 @@
 // 홈(웹 Home.svelte — ui.ts renderHome() 포트): 전광판 · 히어로 · 라이브 현황 · 타일 · 명예의 전당 TOP 3 · 소식 · 푸터.
+import { useState } from 'react';
 import { Linking, Platform, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
@@ -21,6 +22,8 @@ import { CupChampionPopup } from './CupChampionPopup';
 import { HomeClubValue } from './HomeClubValue';
 import { HomeFirsts } from './HomeFirsts';
 import { HomeGift } from './HomeGift';
+import { HomeAttendance } from './HomeAttendance';
+import { FirstGuide } from './FirstGuide';
 import { HomeLive } from './HomeLive';
 import { HomeNews } from './HomeNews';
 import { HomeTicker } from './HomeTicker';
@@ -34,7 +37,15 @@ import { INVITE_REROLLS, INVITE_SCOUTS } from '@offside/contracts/owner-team';
 import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
 import { tn } from '@offside/game/i18n/names';
 
+// T-11-360 출석 창은 앱을 연 뒤 처음 그린 홈에서만 저절로 띄운다(로그아웃 뒤 · 다른 화면에서 돌아올 때는 아니다).
+let homeShown = false;
+
 export default function Home() {
+  const [firstHome] = useState(() => {
+    const first = !homeShown;
+    homeShown = true;
+    return first;
+  });
   const s = useSnapshot(appState);
   const c = useColors();
   const G = s.G && !s.G.retired ? s.G : null;
@@ -173,6 +184,9 @@ export default function Home() {
         <CupChampionPopup />
         {/* T-11-275 구단주 선물(로그인한 구단주가 한 번 받으면 사라진다). 컵 배너 바로 아래. */}
         <HomeGift />
+        <HomeAttendance auto={firstHome} />
+        {/* T-11-355 처음 안내 카드(기기마다 닫을 때까지). */}
+        <FirstGuide />
         <HomeLive />
         {/* T-11-080f 구단주 화면을 거치지 않고 이적시장으로 바로 간다(뒤로 가기는 홈으로). 홈에서는 서버를 부르지 않는다. */}
         <Tile

@@ -29,6 +29,20 @@ export default defineConfig({
     // T-11-106 기기 언어 자동 감지가 켜져 있다 — 한국어 문구로 화면을 찾는 테스트는 한국어 브라우저로 돈다(locale.spec만 영어).
     locale: 'ko-KR',
     trace: 'retain-on-failure',
+    // T-11-355 처음 안내 카드는 기기마다 닫을 때까지 홈 맨 위에 뜬다. 다른 화면 테스트가 그 카드를 밟지 않게 닫은 채로 시작한다.
+    // T-11-371 공개 연출은 "연출 짧게"를 켠 채로 시작한다(결과만 바로). 연출은 reveal.spec이 켜고 본다.
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: BASE_URL,
+          localStorage: [
+            { name: 'ft_first_guide', value: '["home","items"]' },
+            { name: 'ft_reveal_short', value: 'true' },
+          ],
+        },
+      ],
+    },
   },
   projects: [
     {

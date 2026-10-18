@@ -42,6 +42,7 @@
     marketTabs,
     buyBlock,
     cardMeta,
+    cardStyle,
     fundsText,
     lineupOf,
     marketEmptyText,
@@ -216,6 +217,12 @@
   const asPlayer = (c: MarketCard): TeamPlayer => ({ ...c, roles: null });
 </script>
 
+<!-- T-11-356 선수 유형(스피드스터 등) 띠 — 카드 상세의 유형 띠와 같은 이름. 없으면 그리지 않는다. -->
+{#snippet styleTag(c: MarketCard)}
+  {@const style = cardStyle(c)}
+  {#if style}<em class="mk-style" data-card-type={c.type}>{style}</em>{/if}
+{/snippet}
+
 {#snippet mini(p: TeamPlayer, name: string, dim = false)}
   <span class="mk-card" class:dim aria-hidden="true">
     <PlayerCard compact mini player={p} {name} rating={p.peak} role={detailPosOf(p)} />
@@ -334,7 +341,7 @@
                     {@render mini(asPlayer(s.card), marketName(s.card, local))}
                     <span class="mk-info">
                       <span class="mk-name">{marketName(s.card, local)}</span>
-                      <small>{L.liveBase({ ago: agoKo(Date.now() - Date.parse(s.soldAt)), value: fmtValue(s.card.cardValue) })}</small>
+                      <small>{@render styleTag(s.card)}{L.liveBase({ ago: agoKo(Date.now() - Date.parse(s.soldAt)), value: fmtValue(s.card.cardValue) })}</small>
                     </span>
                     <b>{fmtValue(s.price)}</b>
                   </li>
@@ -370,7 +377,7 @@
                   {@render mini(asPlayer(l.card), marketName(l.card, local))}
                   <span class="mk-info">
                     <span class="mk-name">{marketName(l.card, local)}{#if myListingIds.has(l.id)}<em class="mk-tag">{L.myListing}</em>{/if}</span>
-                    <small>{cardMeta(l.card)}</small>
+                    <small>{@render styleTag(l.card)}{cardMeta(l.card)}</small>
                   </span>
                   <span class="mk-price"><b>{fmtValue(l.price)}</b><small class="mk-{diff.tone}">{diff.text}</small></span>
                 </button>
@@ -443,7 +450,7 @@
                 {@render mini(asPlayer(l.card), marketName(l.card, local))}
                 <span class="mk-info">
                   <span class="mk-name">{marketName(l.card, local)}</span>
-                  <small>{L.listedAgo({ price: fmtValue(l.price), ago: agoKo(Date.now() - Date.parse(l.createdAt)) })}</small>
+                  <small>{@render styleTag(l.card)}{L.listedAgo({ price: fmtValue(l.price), ago: agoKo(Date.now() - Date.parse(l.createdAt)) })}</small>
                 </span>
                 <button class="icon-btn" disabled={busy} data-act="cancel-listing" onclick={() => run(() => cancelListing(l.id), MARKET_TOAST.unlisted)}>{L.unlistBtn}</button>
               </li>
@@ -866,6 +873,15 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .mk-style {
+    margin-right: 6px;
+    padding: 0 6px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink);
+    font-style: normal;
+    font-weight: 700;
   }
   .mk-tag {
     margin-left: 6px;

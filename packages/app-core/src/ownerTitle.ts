@@ -7,12 +7,7 @@ import {
 } from '@offside/contracts/owner-title';
 import { ownerProfileText as L } from './i18n/ko/ownerProfile.js';
 
-export {
-  parseTitle,
-  TITLE_NONE,
-  TITLE_GRADES,
-  permanentTitleOf,
-} from '@offside/contracts/owner-title';
+export { parseTitle, TITLE_NONE, permanentTitleOf } from '@offside/contracts/owner-title';
 
 const LABEL: Record<TitleStage, (p: { n: number }) => string> = {
   champion: (p) => L.titleChampion(p),
@@ -285,8 +280,6 @@ export const titleGradeLabel = (grade: TitleGrade): string =>
   ({ entry: L.gradeEntry, skilled: L.gradeSkilled, honor: L.gradeHonor, legend: L.gradeLegend })[
     grade
   ];
-export const titleGradeNote = (grade: TitleGrade): string =>
-  ({ entry: L.noteEntry, skilled: L.noteSkilled, honor: L.noteHonor, legend: L.noteLegend })[grade];
 export const titleRelated = (id: string): string | null => {
   const t = permanentTitleOf(id);
   return t

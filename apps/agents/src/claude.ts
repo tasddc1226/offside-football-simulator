@@ -17,7 +17,6 @@ export const PRICES: Record<Model, Price> = {
 };
 /** Haiku 5.5는 프롬프트가 10만 토큰을 넘으면 모든 단가가 5배다. */
 const HAIKU_LONG = 100_000;
-export const PRICE = PRICES[MODEL];
 
 export const MODEL_LABEL: Record<Model, string> = {
   'claude-opus-5-5': 'Opus 5.5',

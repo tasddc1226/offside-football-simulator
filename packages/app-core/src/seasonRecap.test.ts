@@ -8,7 +8,6 @@ import {
   rankText,
   recapRanks,
   recapShareCells,
-  recapCardView,
   recapCutoffText,
   recapHeadline,
   recapHighlights,
@@ -53,18 +52,6 @@ describe('T-11-128 시즌 결산 문구', () => {
     expect(recapCutoffText({ cutoff: '2026-10-05T15:00:00.000Z' })).toBe(
       '2026년 10월 5일까지의 기록이에요',
     );
-  });
-
-  it('결산 카드: 상태 한 줄과 기록 배지 수, 알약은 3개까지', () => {
-    const honors = ['pioneer', 'hof', 'team', 'first'].map((kind) =>
-      honor({ kind: kind as OwnerHonor['kind'], value: 1 }),
-    );
-    const ready = recapCardView({ season: 0, status: 'ready', recap: null, honors });
-    expect(ready.line).toBe('프리시즌 결산이 나왔어요 · 기록 배지 4개를 받았어요');
-    expect(ready.chips).toHaveLength(3);
-    const pending = recapCardView({ season: 0, status: 'pending', recap: null, honors: [] });
-    expect(pending.isNew).toBe(false);
-    expect(pending.line).not.toContain('·');
   });
 
   describe('결산 화면 · 공유 카드', () => {

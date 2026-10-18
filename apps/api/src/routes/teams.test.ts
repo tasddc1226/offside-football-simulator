@@ -5,8 +5,10 @@ import {
   TeamLikeResponseSchema,
   TeamProfileResponseSchema,
   TeamRankResponseSchema,
+  TeamStatsResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
+import { createApp } from '../app.js';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cards, careers, ownerTeams, profiles, teamLikes, teamMatches } from '../db/schema.js';
@@ -25,6 +27,7 @@ const PlayRes = successEnvelope(PlayTeamMatchResponseSchema);
 const RankRes = successEnvelope(TeamRankResponseSchema);
 const ProfileRes = successEnvelope(TeamProfileResponseSchema);
 const LikeRes = successEnvelope(TeamLikeResponseSchema);
+const StatsRes = successEnvelope(TeamStatsResponseSchema);
 
 let seq = 0;
 
@@ -483,5 +486,92 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     // 좋아요는 굳은 채 그대로다.
     expect((await profile(a.team.id, fan.cookie)).team.likes).toBe(1);
     expect((await profile(a.team.id, fan.cookie)).liked).toBe(true);
+  });
+  it('T-11-358: 팀 경기 통계는 누구나 보고(세션 · 프로필 조회 없이), 엣지에 한 벌 담고, 경기를 치르면 두 팀 키를 지운다', async () => {
+    const a = await team(2, 85, '통계감독');
+    const b = await team(1, 70);
+    const c = await team(1, 70);
+    // 경기 전: 빈 통계.
+    const empty = StatsRes.parse(
+      await (await call('GET', `/v1/teams/${c.team.id}/stats`)).json(),
+    ).data;
+    expect(empty).toMatchObject({
+      season: 0,
+      matches: 0,
+      capped: false,
+      players: [],
+      opponents: [],
+    });
+    expect(empty.summary).toMatchObject({
+      form: [],
+      streak: null,
+      bestWinStreak: 0,
+      biggestWin: null,
+    });
+    // 없는 팀은 404.
+    const missing = await call('GET', `/v1/teams/tem_${crypto.randomUUID()}/stats`);
+    expect(missing.status).toBe(404);
+
+    const play = await call('POST', '/v1/owner-team/matches', {
+      cookie: a.cookie,
+      headers: { 'Idempotency-Key': `teams-stats-${++seq}-key` },
+      body: { opponentTeamId: b.team.id },
+    });
+    const { match } = PlayRes.parse(await play.json()).data;
+    const { DB, seen } = spyDb(ctx.env.DB);
+    const res = await createApp().request(
+      `/v1/teams/${a.team.id}/stats`,
+      { headers: { Cookie: b.cookie } },
+      { ...ctx.env, DB },
+    );
+    expect(res.status).toBe(200);
+    expect(seen.filter((q) => /"sessions"|from "profiles"|"profiles"\."id" = \?/.test(q))).toEqual(
+      [],
+    );
+    const data = StatsRes.parse(await res.json()).data;
+    const gf = match.home.goals;
+    const ga = match.away.goals;
+    expect(data).toMatchObject({ season: 0, matches: 1 });
+    expect(data.total).toEqual({
+      w: gf > ga ? 1 : 0,
+      d: gf === ga ? 1 : 0,
+      l: gf < ga ? 1 : 0,
+      gf,
+      ga,
+    });
+    expect(data.summary?.form).toEqual([gf > ga ? 'w' : gf === ga ? 'd' : 'l']);
+    expect(data.opponents.map((o) => o.teamId)).toEqual([b.team.id]);
+    // 상대 쪽에서는 거꾸로 센다.
+    const theirs = StatsRes.parse(
+      await (await call('GET', `/v1/teams/${b.team.id}/stats`)).json(),
+    ).data;
+    expect(theirs.total).toMatchObject({ gf: ga, ga: gf });
+
+    const edge = installFakeEdgeCache();
+    try {
+      const key = `http://localhost/v1/teams/${a.team.id}/stats`;
+      await call('GET', `/v1/teams/${a.team.id}/stats`);
+      await call('GET', `/v1/teams/${a.team.id}/stats?lang=en`);
+      await flushEdge();
+      expect([...edge.store.keys()]).toEqual([key]);
+      expect(edge.controls.get(key)).toBe('public, max-age=300');
+      // 없는 팀은 담지 않는다.
+      await call('GET', `/v1/teams/tem_${crypto.randomUUID()}/stats`);
+      await flushEdge();
+      expect(edge.store.size).toBe(1);
+      // 경기를 치르면 두 팀 통계 키를 지운다.
+      await call('POST', '/v1/owner-team/matches', {
+        cookie: a.cookie,
+        headers: { 'Idempotency-Key': `teams-stats-${++seq}-key` },
+        body: { opponentTeamId: c.team.id },
+      });
+      await flushEdge();
+      expect(edge.purged).toEqual(
+        expect.arrayContaining([key, `http://localhost/v1/teams/${c.team.id}/stats`]),
+      );
+      expect(edge.store.has(key)).toBe(false);
+    } finally {
+      edge.uninstall();
+    }
   });
 });

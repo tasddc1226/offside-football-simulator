@@ -1,4 +1,4 @@
-// 능력치 카드(웹 AttrCard.svelte): 레이더 · 범례 · 포지션별 OVR · 세부 능력치 목록(2단) · 안내.
+// 능력치 카드(웹 AttrCard.svelte): 레이더 · 범례 · 포지션별 OVR · 세부 능력치 목록(2단, T-11-353 OVR 반영 %) · 안내 · 성장이 느린 이유.
 import { Text, View, useWindowDimensions } from 'react-native';
 import { attrData } from '@offside/app-core/format';
 import { gameAttrText as L } from '@offside/app-core/i18n/ko/gameAttr';
@@ -12,6 +12,8 @@ import { Card } from '../../ui/Card';
 import { Pill } from '../../ui/bits';
 import { Txt } from '../../ui/Txt';
 import { Radar } from './Radar';
+import { growthDirectionText } from '@offside/app-core/ratingReport';
+import { ratingReportText as R } from '@offside/app-core/i18n/ko/ratingReport';
 
 type Data = ReturnType<typeof attrData>;
 
@@ -60,6 +62,11 @@ function Group({ g }: { g: Data['groups'][number] }) {
             }}
           >{`${g.abbr}  `}</Txt>
           {g.labelKr}
+          {g.ovrPct ? (
+            <Txt tone="muted" style={{ fontSize: rem(0.6875), fontWeight: '400' }}>
+              {`  ${L.shareLabel({ pct: g.ovrPct })}`}
+            </Txt>
+          ) : null}
         </Txt>
         <Txt
           style={[
@@ -87,9 +94,14 @@ function Group({ g }: { g: Data['groups'][number] }) {
           >
             {row.name}
           </Txt>
-          <Txt style={[num(700), { fontSize: rem(1), color: tierColor(c, row.tier) }]}>
-            {row.value}
-          </Txt>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+            {row.ovrPct ? (
+              <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>{`${row.ovrPct}%`}</Txt>
+            ) : null}
+            <Txt style={[num(700), { fontSize: rem(1), color: tierColor(c, row.tier) }]}>
+              {row.value}
+            </Txt>
+          </View>
         </View>
       ))}
     </View>
@@ -196,7 +208,19 @@ export function AttrCard({ s }: { s: GameState }) {
       </View>
       <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
         <Txt style={{ fontSize: rem(0.75), fontWeight: '700' }}>{L.noteBold}</Txt>
-        {L.noteRest({ role: d.roleName })}
+        {`${L.noteRest({ role: d.roleName })} ${L.shareNote}`}
+      </Txt>
+      {d.growthNote ? (
+        <Txt style={{ fontSize: rem(0.75), marginTop: 6, color: c.warn }}>
+          <Txt style={{ fontSize: rem(0.75), fontWeight: '700', color: c.warn }}>
+            {L.growthTitle}
+          </Txt>
+          {` · ${d.growthNote}`}
+        </Txt>
+      ) : null}
+      <Txt style={{ fontSize: rem(0.75), marginTop: 6 }} testID="growth-dir">
+        <Txt style={{ fontSize: rem(0.75), fontWeight: '700' }}>{R.dirTitle}</Txt>
+        {` · ${growthDirectionText(d.growthDir.d, d.growthDir.attr)}`}
       </Txt>
     </Card>
   );

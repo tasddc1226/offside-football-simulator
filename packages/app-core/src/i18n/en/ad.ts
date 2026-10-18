@@ -3,7 +3,7 @@ import type { AdMsgs } from '../ko/ad';
 
 export const ad: Translation<AdMsgs> = {
   title: 'Remove ads',
-  body: 'Turns off the ads at the bottom of Records, News and Legends for good. You can restore your purchase on other devices with the same store account.',
+  body: 'Turns off the ads at the bottom of Records, News and Legends for good. Rewarded ads for candidate rerolls, potential peeks, season reviews and potential boosts are granted right away without an ad. Odds and limits stay the same, and no rerolls, scout tickets or boost tickets are included. You can restore your purchase on other devices with the same store account.',
   owned: 'Remove ads purchased. Thank you.',
   checking: 'Checking the store…',
   buyPrice: (p) => `Remove ads ${p.price}`,

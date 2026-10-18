@@ -19,7 +19,7 @@ export function go(screen: Screen) {
 
 // 다른 화면에서 들어올 때 한 칸을 펼쳐 둔다(한 번만 읽힌다). T-11-141 설정 '확률과 공정성' → 확률 도감의 그 칸,
 // T-11-152 후보 화면 '리롤권 상점 가기' → 구단주 화면의 리롤권 상점.
-type Focus = 'fairness' | 'rerollShop';
+type Focus = 'fairness' | 'rerollShop' | 'types';
 let pending: Focus | null = null;
 function goFocus(screen: Screen, focus: Focus) {
   go(screen);
@@ -27,6 +27,8 @@ function goFocus(screen: Screen, focus: Focus) {
 }
 export const goFairness = () => goFocus('dex', 'fairness');
 export const goRerollShop = () => goFocus('owner', 'rerollShop');
+// T-11-355 처음 안내 카드 · 설정 → 확률 도감의 선수 유형 도감을 펼친 채로.
+export const goTypeDex = () => goFocus('dex', 'types');
 export function takeFocus(focus: Focus): boolean {
   const hit = pending === focus;
   if (hit) pending = null;

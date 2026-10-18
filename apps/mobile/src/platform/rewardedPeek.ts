@@ -13,6 +13,8 @@ export const potPeek = proxy({
   peek: parsePeek(kv.getString(KEY)) as PotentialPeek | null,
   busy: false,
   message: '',
+  /** T-11-371 이번 접속에서 방금 연 평가 — 선수 탭이 등급 공개 연출을 한 번 보인다(탭을 떠나면 끈다). */
+  fresh: false,
 });
 
 /** 광고를 볼 수 있거나(단위 있음) 광고 없이 열 수 있으면(광고 제거) 버튼을 보인다. */
@@ -22,6 +24,7 @@ function open(s: GameState) {
   const peek = peekOf(s);
   kv.set(KEY, JSON.stringify(peek));
   potPeek.peek = peek;
+  potPeek.fresh = true;
 }
 
 /** '이번 시즌 평가 보기' 버튼. */

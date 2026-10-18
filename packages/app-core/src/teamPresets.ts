@@ -8,7 +8,7 @@ import {
   type TeamPosition,
 } from '@offside/contracts/owner-team';
 
-export { TEAM_PRESET_MAX, TEAM_PRESET_NAME_MAX } from '@offside/contracts/owner-team';
+export { TEAM_PRESET_NAME_MAX } from '@offside/contracts/owner-team';
 export type { TeamPreset };
 
 /** 지금 편성 초안으로 만든 프리셋. */

@@ -45,6 +45,17 @@ import {
   type ScoutPity,
 } from '@offside/contracts/cup';
 import { ScoutOdds } from '../owner/ScoutOdds';
+import {
+  candidateTiers,
+  gradeTier,
+  revealTiming,
+  revealTotal,
+  type RevealTier,
+  type RevealTiming,
+} from '@offside/app-core/reveal';
+import { revealText as RV } from '@offside/app-core/i18n/ko/reveal';
+import { CountUp } from '../../components/CountUp';
+import { flashEdge, revealBuzz, RevealGrade } from '../../components/RevealFx';
 import { fundsText } from '@offside/app-core/funds';
 import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
 import { useClubReward } from '../../platform/clubShop';
@@ -89,6 +100,7 @@ import { MiniRadar } from './MiniRadar';
 import { NationPicker } from './NationPicker';
 import { ScoutScan } from './ScoutScan';
 import { PositionGuide } from '../game/PositionGuide';
+import { ItemsHint } from '../../components/ItemsHint';
 import { BodyInput, Field, Seg, SegCell, mixHex, useInputStyle } from './parts';
 import { tn } from '@offside/game/i18n/names';
 
@@ -135,16 +147,19 @@ function confirmPick() {
 }
 
 /** 카드가 세로축으로 뒤집히며 열린다. 동작 줄이기면 바로 표시. */
-function FlipIn({ children }: { children: ReactNode }) {
+function FlipIn({ children, delay = 0 }: { children: ReactNode; delay?: number }) {
   const [v] = useState(() => new Animated.Value(prefs.motionOK ? 0 : 1));
   useEffect(() => {
     if (prefs.motionOK)
       Animated.timing(v, {
         toValue: 1,
+        // T-11-371 대박은 뒷면에서 한 박자 쉬고 뒤집힌다.
+        delay,
         duration: 360,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }).start();
+    // 마운트 때 한 번만 뒤집는다.
   }, [v]);
   return (
     <Animated.View
@@ -195,6 +210,65 @@ export default function Create() {
   const [rewardBusy, setRewardBusy] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [rewardMessage, setRewardMessage] = useState('');
+  // T-11-371 팩 오픈식 공개: 열 때 보이는 값(OVR · 보장 · 천장)으로만 강도를 정한다. 이 화면에서 연 카드만 연출하고,
+  // 두 번째 카드부터는 짧게. 동작 줄이기 · "연출 짧게"면 결과만.
+  const tiers: RevealTier[] = s.candidates
+    ? candidateTiers(
+        s.candidates.map((c) => ({
+          ovr: startOvr(C.pos, c.attrs),
+          guaranteed: c.guaranteed,
+          pity: c.pity,
+        })),
+      )
+    : [];
+  const [fx, setFx] = useState<Record<number, RevealTiming & { done: boolean }>>({});
+  const opened = useRef(0);
+  const fxTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => {
+    // 다시 뽑기 · 프리미엄 스카우트로 후보가 바뀌면 새 카드로 다시 센다.
+    setFx({});
+    opened.current = 0;
+  }, [s.candidates]);
+  useEffect(() => () => fxTimers.current.forEach(clearTimeout), []);
+  const land = (i: number) =>
+    setFx((m) => {
+      const f = m[i];
+      if (!f || f.done) return m;
+      const tier = tiers[i] ?? 'normal';
+      revealBuzz(tier);
+      if (tier === 'jackpot') flashEdge();
+      return { ...m, [i]: { ...f, done: true } };
+    });
+  const stage = (i: number) => {
+    if (appState.candidatesOpen[i] || fx[i]) return;
+    const tier = tiers[i] ?? 'normal';
+    const t = revealTiming(tier, {
+      off: !prefs.motionOK,
+      short: prefs.revealShort,
+      repeat: opened.current++ > 0,
+    });
+    const total = revealTotal(t);
+    if (total === 0) revealBuzz(tier);
+    else fxTimers.current.push(setTimeout(() => land(i), total));
+    setFx((m) => ({ ...m, [i]: { ...t, done: total === 0 } }));
+  };
+  const pickCard = (i: number) => {
+    // 연출 중인 카드를 다시 누르면 바로 결과로 간다.
+    if (fx[i] && !fx[i].done) land(i);
+    stage(i);
+    pick(i);
+  };
+  const openAllCards = () => {
+    appState.candidatesOpen.forEach((_, i) => stage(i));
+    openAll();
+  };
+  // 잠재력 범위를 이 화면에서 새로 열었을 때만 등급 연출.
+  const potWas = useRef(s.candidatePotentialOpen);
+  const [potFresh, setPotFresh] = useState(false);
+  useEffect(() => {
+    if (s.candidatePotentialOpen && !potWas.current) setPotFresh(true);
+    potWas.current = s.candidatePotentialOpen;
+  }, [s.candidatePotentialOpen]);
   const reveal = async () => {
     if (rewardLock.current || appState.candidatePotentialOpen) return;
     rewardLock.current = true;
@@ -812,7 +886,7 @@ export default function Create() {
                 {L.candIntro}
               </Txt>
               {s.candidatesOpen.some((o) => !o) ? (
-                <Btn sm testID="open-all" onPress={openAll}>
+                <Btn sm testID="open-all" onPress={openAllCards}>
                   {L.openAll}
                 </Btn>
               ) : null}
@@ -821,25 +895,33 @@ export default function Create() {
               {s.candidates.map((cand, i) => {
                 const isOpen = s.candidatesOpen[i];
                 const isPicked = s.candidatePick === i;
+                const f = fx[i];
+                const tier = tiers[i] ?? 'normal';
+                const running = !!f && !f.done;
+                const landed = !!f && f.done && revealTotal(f) > 0;
+                const glow = tier !== 'normal' && (landed || (running && tier === 'jackpot'));
                 if (isOpen)
                   return (
-                    <FlipIn key={`open-${i}`}>
+                    <FlipIn key={`open-${i}`} delay={running ? f.back : 0}>
                       <Press
                         scale={0.985}
+                        accessibilityLabel={`${landed && tier !== 'normal' ? `${tier === 'jackpot' ? RV.jackpot : RV.good}! ` : ''}${L.candOpenA11y(
+                          {
+                            n: i + 1,
+                            ovr: startOvr(C.pos, cand.attrs),
+                            line: scoutLine(C.pos, cand.attrs),
+                          },
+                        )}`}
                         testID={`cand-${i}`}
-                        accessibilityLabel={L.candOpenA11y({
-                          n: i + 1,
-                          ovr: startOvr(C.pos, cand.attrs),
-                          line: scoutLine(C.pos, cand.attrs),
-                        })}
+                        {...(landed ? { accessibilityLiveRegion: 'polite' as const } : {})}
                         accessibilityState={{ selected: isPicked }}
-                        onPress={() => pick(i)}
+                        onPress={() => pickCard(i)}
                         style={[
                           {
                             gap: 8,
                             borderRadius: 16,
                             backgroundColor: c.surface,
-                            borderColor: isPicked ? c.accent : c.line,
+                            borderColor: isPicked || glow ? c.accent : c.line,
                             // 고른 카드는 안쪽으로 한 겹 더 두른다(웹 inset 1.5px)
                             borderWidth: isPicked ? 3 : 1.5,
                             padding: isPicked ? 14.5 : 16,
@@ -867,7 +949,11 @@ export default function Create() {
                           >
                             OVR{' '}
                             <Txt num style={{ fontSize: rem(1.375) }}>
-                              {startOvr(C.pos, cand.attrs)}
+                              {running && f.hint > 0 ? (
+                                <CountUp value={startOvr(C.pos, cand.attrs)} ms={f.back + f.hint} />
+                              ) : (
+                                startOvr(C.pos, cand.attrs)
+                              )}
                             </Txt>
                           </Txt>
                           {cand.pity ? (
@@ -887,9 +973,19 @@ export default function Create() {
                           }
                           testID={`candidate-potential-${i}`}
                         >
-                          {s.candidatePotentialOpen || cand.kept?.revealed
-                            ? L.potentialRange(candidatePotentialGrades(cand.potential))
-                            : L.potentialLocked}
+                          {s.candidatePotentialOpen || cand.kept?.revealed ? (
+                            potFresh && !cand.kept?.revealed ? (
+                              <RevealGrade
+                                grade={`${candidatePotentialGrades(cand.potential).min}~${candidatePotentialGrades(cand.potential).max}`}
+                                text={L.potentialRange(candidatePotentialGrades(cand.potential))}
+                                tier={gradeTier(candidatePotentialGrades(cand.potential).max)}
+                              />
+                            ) : (
+                              L.potentialRange(candidatePotentialGrades(cand.potential))
+                            )
+                          ) : (
+                            L.potentialLocked
+                          )}
                         </Txt>
                         <Txt
                           tone="accent"
@@ -970,7 +1066,7 @@ export default function Create() {
                         n: i + 1,
                         k: labels[hiddenStrength(cand.attrs, C.focus)],
                       })}
-                      onPress={() => pick(i)}
+                      onPress={() => pickCard(i)}
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
@@ -1099,6 +1195,8 @@ export default function Create() {
                 </Btn>
               </View>
             ) : null}
+            {/* T-11-355 상품 위치 안내(설정과 같은 카드, 기기마다 닫을 때까지) */}
+            <ItemsHint />
             {/* T-11-221 광고 두 개(다시 뽑기 · 잠재력 보기)는 후보 카드 아래 반폭 톤 버튼 한 줄로. 전에는 카드 위에 전폭으로 쌓여
                 첫 화면에 후보가 보이지 않았다. 접근성 이름은 전체 문구. */}
             {(offer && adLeft > 0) || (offer && !s.candidatePotentialOpen) ? (

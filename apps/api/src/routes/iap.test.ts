@@ -82,6 +82,7 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
       reroll: 0,
       boost: 0,
       scout: 0,
+      rename: 0,
       iap: { account: accountOf(me.profileId), stores: ['apple'] },
     });
     ctx.env.GOOGLE_PLAY_SA_JSON = '{}';
@@ -106,10 +107,20 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     const body = { store: 'apple', productId: REROLL_5, token: 'jws' };
     let res = await claim(me.cookie, body);
     expect(res.status).toBe(200);
-    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 5, boost: 0, scout: 0 });
+    expect(ItemsRes.parse(await res.json()).data).toEqual({
+      reroll: 5,
+      boost: 0,
+      scout: 0,
+      rename: 0,
+    });
     // 같은 거래를 다시 보내도(앱이 응답을 못 받아 재전송) 그대로다.
     res = await claim(me.cookie, body);
-    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 5, boost: 0, scout: 0 });
+    expect(ItemsRes.parse(await res.json()).data).toEqual({
+      reroll: 5,
+      boost: 0,
+      scout: 0,
+      rename: 0,
+    });
     expect((await ctx.env.DB.prepare('SELECT * FROM billing_alerts').all()).results).toHaveLength(
       1,
     );
@@ -142,13 +153,23 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     const me = await issueGoogleCookie(ctx);
     appleTx.current = appleFor(me.profileId, { productId: BOOST_3, environment: 'Production' });
     const res = await claim(me.cookie, { store: 'apple', productId: BOOST_3, token: 'jws' });
-    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 0, boost: 3, scout: 0 });
+    expect(ItemsRes.parse(await res.json()).data).toEqual({
+      reroll: 0,
+      boost: 3,
+      scout: 0,
+      rename: 0,
+    });
     for (const left of [2, 1, 0]) {
       const used = await call('POST', '/v1/items/boost/use', {
         cookie: me.cookie,
         headers: { 'Idempotency-Key': crypto.randomUUID() },
       });
-      expect(ItemsRes.parse(await used.json()).data).toEqual({ reroll: 0, boost: left, scout: 0 });
+      expect(ItemsRes.parse(await used.json()).data).toEqual({
+        reroll: 0,
+        boost: left,
+        scout: 0,
+        rename: 0,
+      });
     }
     const empty = await call('POST', '/v1/items/boost/use', {
       cookie: me.cookie,
@@ -164,7 +185,12 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     const SCOUT_1 = 'com.offsidelab.app.scout_1';
     appleTx.current = appleFor(me.profileId, { productId: SCOUT_1, environment: 'Production' });
     const res = await claim(me.cookie, { store: 'apple', productId: SCOUT_1, token: 'jws' });
-    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 0, boost: 0, scout: 1 });
+    expect(ItemsRes.parse(await res.json()).data).toEqual({
+      reroll: 0,
+      boost: 0,
+      scout: 1,
+      rename: 0,
+    });
     const use = () =>
       call('POST', '/v1/items/scout/use', {
         cookie: me.cookie,
@@ -175,6 +201,7 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
       reroll: 0,
       boost: 0,
       scout: 0,
+      rename: 0,
       pity: { used: 1, streak: 1, elites: 0 },
       scoutMode: 'normal',
     });
@@ -240,14 +267,21 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
       ).data;
     for (let i = 1; i <= 29; i++) {
       const r = await use();
-      expect(r).toEqual({ reroll: 61 - i, boost: 0, scout: 0, mileage: i });
+      expect(r).toEqual({ reroll: 61 - i, boost: 0, scout: 0, rename: 0, mileage: i });
     }
     // 같은 멱등 키로 다시 보내도 한 장만 쓰고 한 장만 받는다.
     const again = key();
     const full = await use(again);
-    expect(full).toEqual({ reroll: 31, boost: 0, scout: 1, mileage: 0, mileageScout: true });
+    expect(full).toEqual({
+      reroll: 31,
+      boost: 0,
+      scout: 1,
+      rename: 0,
+      mileage: 0,
+      mileageScout: true,
+    });
     expect(await use(again)).toEqual(full);
-    expect(await use()).toEqual({ reroll: 30, boost: 0, scout: 1, mileage: 1 });
+    expect(await use()).toEqual({ reroll: 30, boost: 0, scout: 1, rename: 0, mileage: 1 });
     for (let i = 0; i < 28; i++) await use();
     expect(await use()).toMatchObject({ scout: 2, mileage: 0, mileageScout: true });
     const row = await ctx.env.DB.prepare(
@@ -297,7 +331,7 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     // 같은 멱등 키로 다시 보내면 같은 응답, 새 키로 다시 누르면 409이고 장수는 그대로다.
     const first = key();
     const got = ItemsRes.parse(await (await claim(first)).json()).data;
-    expect(got).toEqual({ reroll: 0, boost: 20, scout: 5 });
+    expect(got).toEqual({ reroll: 0, boost: 20, scout: 5, rename: 0 });
     expect(ItemsRes.parse(await (await claim(first)).json()).data).toEqual(got);
     const again = await claim();
     expect(again.status).toBe(409);
@@ -350,7 +384,12 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     );
     let res = await claim(me.cookie, body);
     expect(res.status).toBe(200);
-    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 5, boost: 0, scout: 0 });
+    expect(ItemsRes.parse(await res.json()).data).toEqual({
+      reroll: 5,
+      boost: 0,
+      scout: 0,
+      rename: 0,
+    });
     expect(calls).toEqual([
       'POST https://oauth2.googleapis.com/token',
       'GET https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.offsidelab.app/purchases/products/com.offsidelab.app.reroll_5/tokens/tok-1',
@@ -417,6 +456,49 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     // 우리가 모르는 거래도 200.
     appleTx.current = appleFor(me.profileId, { transactionId: '999' });
     expect((await notify()).status).toBe(200);
+  });
+
+  it('authenticates delayed refund recovery with wall time while preserving its business window', async () => {
+    const wall = Date.now();
+    const logical = wall - 2 * 24 * 3600 * 1000;
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(wall);
+    try {
+      ctx.env.GOOGLE_PLAY_SA_JSON = await serviceAccountJson();
+      let tokenCalls = 0;
+      let listCalls = 0;
+      const fetcher = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+        const target = String(url);
+        if (target.startsWith('https://oauth2.googleapis.com/token')) {
+          tokenCalls++;
+          const assertion = new URLSearchParams(String(init?.body)).get('assertion')!;
+          const claims = JSON.parse(
+            atob(assertion.split('.')[1]!.replace(/-/g, '+').replace(/_/g, '/')),
+          ) as { iat: number; exp: number };
+          if (claims.iat < Math.floor(wall / 1000) - 60) return new Response(null, { status: 400 });
+          expect(claims.iat).toBe(Math.floor(wall / 1000));
+          expect(claims.exp).toBe(claims.iat + 3600);
+          return Response.json({ access_token: 'current-token', expires_in: 3600 });
+        }
+        expect(target).toContain('/voidedpurchases');
+        listCalls++;
+        expect(new URL(target).searchParams.get('startTime')).toBe(
+          String(logical - 7 * 24 * 3600 * 1000),
+        );
+        expect(new Headers(init?.headers).get('authorization')).toBe('Bearer current-token');
+        return Response.json({ voidedPurchases: [] });
+      }) as typeof fetch;
+      await expect(
+        syncGoogleVoided(ctx.env, createDb(ctx.env.DB), logical, fetcher),
+      ).resolves.toEqual({
+        seen: 0,
+        revoked: 0,
+        unknown: 0,
+      });
+      expect(tokenCalls).toBe(1);
+      expect(listCalls).toBe(1);
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   it('T-11-215 Google이 무효화한 구매를 매일 읽어 회수한다', async () => {

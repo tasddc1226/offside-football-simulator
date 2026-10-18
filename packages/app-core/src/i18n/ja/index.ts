@@ -6,6 +6,7 @@ import { ad } from './ad';
 import { appFlight } from './appFlight';
 import { appFormat } from './appFormat';
 import { appScout } from './appScout';
+import { attendance } from './attendance';
 import { automationModeration } from './automationModeration';
 import { avatarLook } from './avatarLook';
 import { avatarRecord } from './avatarRecord';
@@ -26,6 +27,7 @@ import { cupApp } from './cupApp';
 import { cupPush } from './cupPush';
 import { dex } from './dex';
 import { fairness } from './fairness';
+import { firstGuide } from './firstGuide';
 import { firsts } from './firsts';
 import { firstsTab } from './firstsTab';
 import { friend } from './friend';
@@ -60,6 +62,7 @@ import { manager } from './manager';
 import { market } from './market';
 import { marketChart } from './marketChart';
 import { marketValueChart } from './marketValueChart';
+import { matchReport } from './matchReport';
 import { owner } from './owner';
 import { ownerConflict } from './ownerConflict';
 import { ownerPlayers } from './ownerPlayers';
@@ -67,9 +70,12 @@ import { ownerProfile } from './ownerProfile';
 import { playerNudge } from './playerNudge';
 import { publicLegends } from './publicLegends';
 import { push } from './push';
+import { ratingReport } from './ratingReport';
+import { rename } from './rename';
 import { retention } from './retention';
 import { retired } from './retired';
 import { retiredLook } from './retiredLook';
+import { reveal } from './reveal';
 import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
 import { seasonRecap } from './seasonRecap';
@@ -104,6 +110,7 @@ export const ja = {
   appFlight,
   appFormat,
   appScout,
+  attendance,
   automationModeration,
   avatarLook,
   avatarRecord,
@@ -124,6 +131,7 @@ export const ja = {
   cupPush,
   dex,
   fairness,
+  firstGuide,
   firsts,
   firstsTab,
   friend,
@@ -158,6 +166,7 @@ export const ja = {
   market,
   marketChart,
   marketValueChart,
+  matchReport,
   owner,
   ownerConflict,
   ownerPlayers,
@@ -165,9 +174,12 @@ export const ja = {
   playerNudge,
   publicLegends,
   push,
+  ratingReport,
+  rename,
   retention,
   retired,
   retiredLook,
+  reveal,
   scout,
   seasonGauge,
   seasonRecap,

@@ -1,0 +1,23 @@
+{
+  "id": "t-11-356-free-numbers-market-style",
+  "title": "남은 결번 번호와 매물 선수 유형을 보여 줘요",
+  "items": [
+    "기록실 영구결번에서 구단을 고르면 아직 결번되지 않은 번호가 보여요",
+    "이적시장 매물 줄에 스피드스터 같은 선수 유형이 띠로 보여요"
+  ],
+  "en": {
+    "title": "See free retired numbers and player types on the market",
+    "items": [
+      "Pick a club in Retired Numbers to see which numbers are still free.",
+      "Market listings show the player type, such as Speedster, as a tag."
+    ]
+  },
+  "ja": {
+    "title": "残っている欠番候補と出品選手のタイプを表示します",
+    "items": [
+      "記録室の永久欠番でクラブを選ぶと、まだ永久欠番になっていない番号が見られます。",
+      "移籍市場の出品一覧に、スピードスターなどの選手タイプがタグで表示されます。"
+    ]
+  },
+  "availability": "web-app"
+}

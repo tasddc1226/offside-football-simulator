@@ -5,13 +5,17 @@
   import AnalyticsConsent from './AnalyticsConsent.svelte';
   import Topbar from './Topbar.svelte';
   import { setSfxEnabled, sfxEnabled } from './sfx.js';
+  import { revealShort, setRevealShort } from './revealPrefs.js';
+  import { revealText as RV } from '@offside/app-core/i18n/ko/reveal';
   import { bgm, setBgm, setBgmVolume } from './bgm.svelte.js';
   import { volumeAdjustable } from './bgmEngine.js';
   import { isDark, setDark } from './theme.js';
   import { setSheetSkin, skin } from './skin.svelte.js';
   import SiteFooter from './SiteFooter.svelte';
   import { showInstallGuide } from './install.js';
-  import { goFairness } from './nav.js';
+  import { goFairness, goTypeDex } from './nav.js';
+  import ItemsHint from './ItemsHint.svelte';
+  import { firstGuideText as FG } from '@offside/app-core/i18n/ko/firstGuide';
   import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
   import ClubCustomSettings from './ClubCustomSettings.svelte';
   import BackupSettings from './BackupSettings.svelte';
@@ -24,6 +28,8 @@
   let textSize = $state(getTextSize());
   const textSizeLabel = (size: TextSize) => ({ small: L.textSizeSmall, standard: L.textSizeStandard, large: L.textSizeLarge, extraLarge: L.textSizeExtraLarge })[size];
   let sfx = $state(sfxEnabled());
+  // T-11-371 공개 연출 짧게(이 기기에만).
+  let rvShort = $state(revealShort());
   let dark = $state(isDark());
   let namePublic = $state(namePublicEnabled());
 
@@ -35,6 +41,8 @@
     <div class="eyebrow">Settings</div>
     <h1>{L.title}</h1>
   </header>
+  <!-- T-11-355 상품 위치 안내(기기마다 닫을 때까지) -->
+  <ItemsHint />
 
   <section class="card settings-card">
     <div class="settings-row">
@@ -84,6 +92,13 @@
         <span class="muted">{L.sfxBody}</span>
       </div>
       <button class="switch" role="switch" aria-checked={sfx} aria-labelledby="sfx-label" data-setting="sfx" onclick={() => setSfxEnabled((sfx = !sfx))}></button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">
+        <strong id="reveal-short-label">{RV.shortTitle}</strong>
+        <span class="muted">{RV.shortBody}</span>
+      </div>
+      <button class="switch" role="switch" aria-checked={rvShort} aria-labelledby="reveal-short-label" data-setting="reveal-short" onclick={() => setRevealShort((rvShort = !rvShort))}></button>
     </div>
     <div class="settings-row">
       <div class="settings-label">
@@ -141,6 +156,7 @@
       <a href="/guide/">{L.guide} <span aria-hidden="true">›</span></a>
       <a href="/faq/">{L.faq} <span aria-hidden="true">›</span></a>
       <button data-act="fairness" onclick={goFairness}>{L.fairness} <span aria-hidden="true">›</span></button>
+      <button data-act="type-dex" onclick={goTypeDex}>{FG.typeDex} <span aria-hidden="true">›</span></button>
     </nav>
     <!-- T-11-321 서버 상태(펼칠 때만 불러온다) -->
     <ServerStatus />

@@ -73,7 +73,8 @@ import { toast } from '../../game/host';
 import { setCardLock } from '@offside/app-core/api/market';
 import { go } from '../../game/nav';
 import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
-import { coachLineBonus, coachSummary } from '@offside/app-core/managerCard';
+import { DisclosureRow } from '../../ui/Disclosure';
+import { coachBreakdown, coachLineBonus, coachSummary } from '@offside/app-core/managerCard';
 import { rem } from '../../theme/type';
 import { achNudge } from '../../game/achNudge';
 import { accountCache, appState, prefs } from '../../store';
@@ -107,6 +108,8 @@ import { CupLockNotice, useCup } from './TeamCup';
 import { TeamPresets } from './TeamPresets';
 import { loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPresets';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
+import { fixSlot, slotName } from '@offside/app-core/matchReport';
+import type { ReportLine } from '@offside/contracts/owner-team';
 
 const between = (v: string, min: number, max: number) =>
   v.trim().length >= min && v.trim().length <= max;
@@ -265,8 +268,26 @@ export default function Team() {
   const syn = synergyFocus(synergy, synFocus);
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
   const lines = draftLines(slotCodes, ratings, synergy, season);
+  // T-11-379 리포트 '고칠 곳' — 지금 편성에서 약한 줄을 가장 많이 올릴 자리를 골라 둔 채 편성 화면으로.
+  const [focusSlot, setFocusSlot] = useState<number | null>(null);
+  const reportFix = (line: ReportLine) => {
+    if (!editable || season !== current) return null;
+    const i = fixSlot(slotCodes, ratings, line, YOUTH_OVR);
+    if (i === null) return null;
+    return {
+      pos: slotName(slotCodes[i]!),
+      go: () => {
+        setFocusSlot(i);
+        show('team');
+        scrollTo(0);
+      },
+    };
+  };
   // T-11-323 감독 칸 보정(경기 계산과 같은 값) — 줄 힘 칸에 더해 보인다.
+  const [coachOpen, setCoachOpen] = useState(false);
   const coachBonus = team?.coach ? coachLineBonus(team.coach, formation, synergy, season) : null;
+  // T-11-382 줄 칸의 감독 보정이 어디서 왔는지(갈래별 값 · 상한에 잘린 몫 · 꺼진 특기).
+  const coachDetail = team?.coach ? coachBreakdown(team.coach, formation, synergy, season) : null;
   const filled = slots.filter((s) => s !== null).length;
   const dirty =
     !team ||
@@ -942,6 +963,41 @@ export default function Team() {
                     {MG.teamCoachManage}
                   </Btn>
                 </View>
+                {coachDetail ? (
+                  <>
+                    <DisclosureRow
+                      open={coachOpen}
+                      onToggle={() => setCoachOpen((v) => !v)}
+                      label={MG.breakdown}
+                      testID="team-coach-breakdown"
+                    />
+                    {coachOpen ? (
+                      <View style={{ gap: 8 }}>
+                        {coachDetail.rows.map((r) => (
+                          <View key={r.line} style={{ gap: 2 }} testID={`coach-line-${r.line}`}>
+                            <Txt bold>
+                              {r.label} {r.total}
+                            </Txt>
+                            <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                              {r.parts}
+                            </Txt>
+                            {r.capped ? (
+                              <Txt style={{ fontSize: rem(0.8125) }}>{r.capped}</Txt>
+                            ) : null}
+                          </View>
+                        ))}
+                        {coachDetail.off.length ? (
+                          <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                            {MG.breakdownOff({ names: coachDetail.off.join(' · ') })}
+                          </Txt>
+                        ) : null}
+                        <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                          {MG.breakdownNote}
+                        </Txt>
+                      </View>
+                    ) : null}
+                  </>
+                ) : null}
               </Card>
             ) : null}
             <TeamLineup
@@ -961,6 +1017,8 @@ export default function Team() {
               synApplied={syn.applied}
               synCaption={synergyApplies(season) ? syn.caption : null}
               onLock={(p) => void toggleLock(p)}
+              focusSlot={focusSlot}
+              onFocused={() => setFocusSlot(null)}
               change={(nextSlots, nextLayout) => {
                 // T-11-114 지난 시즌 선수는 와일드카드 상한까지만.
                 if (tooManyWildcards(nextSlots, byId, season)) return toast(wildcardFullText());
@@ -1028,6 +1086,7 @@ export default function Team() {
         toTeam={() => show(resultOrigin === 'history' ? 'history' : 'team')}
         backLabel={resultOrigin === 'history' ? L.backToHistoryApp : L.backToLineupApp}
         onPlayer={(id) => openStats(id)}
+        fix={reportFix}
         replay={() => setLive(true)}
         again={() => {
           if (result.friendly) {

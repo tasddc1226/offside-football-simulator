@@ -201,12 +201,16 @@ export const needsOwnerLogin = (e: { code: string; reason?: string }) =>
   e.code === 'PROFILE_REQUIRED' || e.reason === 'GOOGLE_LOGIN_REQUIRED';
 
 /** 시장 줄 아래 한 줄(레전드 점수 · 이적 횟수). */
-export function cardMeta(c: Pick<MarketCard, 'pos' | 'type' | 'legendScore' | 'transfers'>) {
-  const meta = L.cardMeta({
+export function cardMeta(c: Pick<MarketCard, 'legendScore' | 'transfers'>) {
+  return L.cardMeta({
     score: c.legendScore.toLocaleString(intlLocale()),
     transfers: c.transfers,
   });
-  // T-11-164 유형(스피드스터·윙어 등)을 앞에 붙인다 — 카드 상세(PlayerCard)의 유형 띠와 같은 이름.
-  const style = typeName(c.pos, c.type);
-  return style ? `${style} · ${meta}` : meta;
 }
+
+/**
+ * T-11-164 · T-11-356 선수 유형(스피드스터·플레이메이커 등) — 카드 상세(PlayerCard)의 유형 띠와 같은 이름.
+ * 시장 줄·내 등록·방금 이적 줄에 따로 띠로 그린다. 유형이 없거나 모르는 id면 null.
+ */
+export const cardStyle = (c: Pick<MarketCard, 'pos' | 'type'>): string | null =>
+  typeName(c.pos, c.type);

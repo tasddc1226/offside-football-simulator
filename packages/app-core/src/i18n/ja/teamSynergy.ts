@@ -63,7 +63,7 @@ export const teamSynergy: Translation<TeamSynergyMsgs> = {
   fitEffect: (p) => `ポジション適性 ${p.v}`,
   fitEffectBoth: (p) => `ポジション適性 ${p.v}（両足 ${p.both}）`,
   requirementsHint:
-    '連携には選手タイプと配置位置の両方が必要です。括弧内は配置位置です。カードをタップしてタイプを確認できます。W・LW・RWのスピードスターはウインガー型の条件を満たしません。',
+    '連携には選手タイプと配置位置の両方が必要です。括弧内は配置位置です。カードをタップしてタイプを確認できます。W・LW・RWのスピードスターはウインガー型の条件を満たしません。W・LW・RWの位置はウインガーの役割の実力で出場するため、攻撃的・中央MFとして育てたウインガー型はスピード・クロスが足りないとOVRより低くなります。',
   title: 'チームシナジー',
   chipApplied: '適用中',
   chipViewing: '表示中',

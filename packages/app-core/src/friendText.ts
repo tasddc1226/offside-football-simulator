@@ -71,9 +71,6 @@ export function h2hText(r: { w: number; d: number; l: number }): string | null {
   return teamCoreText.record(r);
 }
 
-/** T-11-113 프리시즌에 은퇴 선수를 남긴 구단주 표시. 읽을 때 지금 언어로 고른다. */
-export const founderLabel = () => L.founder;
-
 type FriendsView = Pick<FriendsResponse, 'canPlay' | 'canPlayPreseason' | 'matchesLeft'>;
 type FriendTeams = Pick<FriendPerson, 'team' | 'preseasonTeam'>;
 

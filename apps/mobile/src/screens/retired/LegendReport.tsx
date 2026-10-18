@@ -54,13 +54,49 @@ import { ClubMark } from '../../ui/ClubBadge';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pop, POP, Reveal, useProgress, useRevealed } from './credit';
 import { FilmBackdrop, FilmPill, FText, H2, Kicker, useFilm } from './film';
+import { gradeTier } from '@offside/app-core/reveal';
+import { loadKey, saveKey } from '@offside/game/storage';
+import { RevealGrade } from '../../components/RevealFx';
 import { LateCredits } from './LateCredits';
 import { tn } from '@offside/game/i18n/names';
 import { NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
 import { avatarWidth, retiredAvatarSpec } from '@offside/game/avatar';
 
 // end: 리포트 맨 아래(다음 행동 버튼 등).
-export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
+/** T-11-371 은퇴 때 실제 잠재력 공개 연출 — 장면이 화면에 올라온 뒤 시작한다. */
+function PotGrade({ real }: { real: string }) {
+  const f = useFilm();
+  const run = useRevealed();
+  return (
+    <RevealGrade
+      grade={real}
+      text={real}
+      tier={gradeTier(real)}
+      run={run}
+      testID="legend-pot-grade"
+      hotColor={f.gold}
+      style={{ color: f.gold, fontFamily: DISPLAY[700], fontSize: rem(4), lineHeight: rem(4) }}
+    />
+  );
+}
+
+const POT_SEEN = 'ft_reveal_pot';
+
+/** fresh: 은퇴 직후 화면의 커리어 id — 그 커리어를 처음 볼 때만 실제 잠재력 공개 연출(T-11-371). */
+export function LegendReport({
+  v,
+  end,
+  fresh,
+}: {
+  v: LegendView;
+  end?: ReactNode;
+  fresh?: string | undefined;
+}) {
+  const [potFx] = useState(() => {
+    const on = !!fresh && loadKey<string>(POT_SEEN) !== fresh;
+    if (on) saveKey(POT_SEEN, fresh);
+    return on;
+  });
   const c = useColors();
   const f = useFilm();
   const { width, height } = useWindowDimensions();
@@ -568,9 +604,13 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
               <FText tone="muted" size={0.9375} center>
                 {L.potTitle}
               </FText>
-              <FText tone="gold" display={700} size={4} lh={1}>
-                {v.pot.real}
-              </FText>
+              {potFx ? (
+                <PotGrade real={v.pot.real} />
+              ) : (
+                <FText tone="gold" display={700} size={4} lh={1}>
+                  {v.pot.real}
+                </FText>
+              )}
               <FText tone="muted" size={0.9375} center>
                 {L.potLine({ value: v.pot.value })}
               </FText>

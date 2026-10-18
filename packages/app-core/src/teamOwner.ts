@@ -18,7 +18,6 @@ import {
   nationStyle,
   TEAM_RULES,
   lineStrength,
-  slotFit,
   slotRating,
   synergyApplies,
   teamSynergy,
@@ -44,47 +43,6 @@ import { num, signedNum } from './teamText.js';
 import { teamCoreText as L } from './i18n/ko/teamCore.js';
 import { teamHomeText as TH } from './i18n/ko/teamHome.js';
 import { teamSynergyText as SY } from './i18n/ko/teamSynergy.js';
-
-/** 선수 고르기 정렬 — 그 자리 실력 · 레전드 점수 · 최고 OVR. */
-export type PickSort = 'fit' | 'score' | 'peak';
-export const pickSorts = (): readonly (readonly [PickSort, string])[] => [
-  ['fit', L.sortFit],
-  ['score', L.sortScore],
-  ['peak', L.sortPeak],
-];
-
-export type PickCandidate = {
-  p: TeamPlayer;
-  /** 그 자리에서의 실력. */
-  rating: number;
-  /** 그 자리 적합도(0~1). */
-  fit: number;
-  /** 이미 편성된 자리(없으면 -1). */
-  at: number;
-};
-
-/** 고른 자리(picking)에 넣을 수 있는 선수 목록을 정렬해 돌려준다. */
-export function pickCandidates(
-  slotCodes: readonly DetailPos[],
-  picking: number,
-  players: readonly TeamPlayer[],
-  slots: readonly (string | null)[],
-  sort: PickSort,
-): PickCandidate[] {
-  const slot = slotCodes[picking]!;
-  return players
-    .map((p) => {
-      const rating = slotRating(slot, p);
-      return { p, rating, fit: slotFit(slot, p, rating), at: slots.indexOf(p.careerId) };
-    })
-    .sort((a, b) =>
-      sort === 'score'
-        ? (b.p.legendScore ?? 0) - (a.p.legendScore ?? 0) || b.rating - a.rating
-        : sort === 'peak'
-          ? b.p.peak - a.p.peak || b.rating - a.rating
-          : b.rating - a.rating || b.p.peak - a.p.peak,
-    );
-}
 
 /** 최고 시점 대표 능력치 한 줄(골키퍼는 골키퍼 능력치 이름). */
 export const attrLine = (p: TeamPlayer): string | null =>
@@ -525,7 +483,6 @@ export const OUTCOME_TITLE = {
 /** 결과 한 글자(승 · 무 · 패). Outcome 값 자체는 식별자라 한국어 그대로 두고 화면에만 이 표기를 쓴다. */
 export const outcomeLabel = (o: Outcome): string =>
   o === '승' ? L.outWin : o === '패' ? L.outLoss : L.outDraw;
-export const pct = (f: number) => `${Math.round(f * 100)}%`;
 
 /** 업적 분류의 짧은 이름(탭 글자) — 선수 · 팀 · 구단주 · 감독. */
 export const achCatShort = (id: AchCategory): string =>

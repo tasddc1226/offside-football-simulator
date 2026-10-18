@@ -81,3 +81,30 @@ function veteranPool(s: GameState, year: number): string {
   const trend = rec ? seasonTrend(rec, prev) : null;
   return trend === 'up' ? 'vetUp' : trend === 'down' ? 'vetDown' : 'vetSteady';
 }
+
+/** T-11-353 결산 코멘트 나이 구간(결산 뒤 s.age 기준): 한창 클 나이 · 전성기 · 몸 관리가 중요한 나이. */
+export function ageStage(age: number): 'young' | 'prime' | 'vet' {
+  return age <= 23 ? 'young' : age <= 29 ? 'prime' : 'vet';
+}
+
+/**
+ * T-11-353 시즌 결산 코멘트 아래 한 줄: 지난(군 복무 아닌) 시즌과 견준 흐름(seasonTrend)과 나이.
+ * 견줄 시즌이 없거나 이번 시즌에 뛰지 않았으면 null(나이는 결산 아래 줄이 이미 알려 준다). 표시만, 게임 RNG를 쓰지 않는다.
+ */
+export function seasonTrendLine(s: Pick<GameState, 'career' | 'age'>, year: number): string | null {
+  const { rec, prev } = seasonPair(s, year);
+  if (!rec || !prev) return null;
+  const trend = seasonTrend(rec, prev);
+  if (!trend) return null;
+  const r = { prev: prev.rating.toFixed(2), now: rec.rating.toFixed(2) };
+  const head =
+    trend === 'up'
+      ? L.trendUp(r)
+      : trend === 'steady'
+        ? L.trendSteady(r)
+        : rec.rating - prev.rating <= -TREND_RATING
+          ? L.trendDown(r)
+          : L.trendDownApps({ prev: prev.apps, now: rec.apps });
+  const stage = ageStage(s.age);
+  return `${head} ${stage === 'young' ? L.ageYoung : stage === 'prime' ? L.agePrime : L.ageVet}`;
+}

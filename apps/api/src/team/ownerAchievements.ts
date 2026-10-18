@@ -4,7 +4,11 @@ import type { FormationId } from '@offside/contracts/owner-team';
 import { detailPosInSeason } from '@offside/contracts/positions';
 import { retireAtOf, teamSeasonAt, teamSeasonEndsAt } from '@offside/contracts/service-seasons';
 import type { Db } from '../db/client.js';
-import { ACH_REWARD_BASELINE_SEASON, type AchReward } from '@offside/contracts/owner-team';
+import {
+  ACH_REWARD_BASELINE_SEASON,
+  ACH_REWARD_SEASON_CAP,
+  type AchReward,
+} from '@offside/contracts/owner-team';
 import type { ClubAchievementGroup } from '@offside/contracts';
 import {
   ACH_BASE_KEY,
@@ -38,6 +42,9 @@ import {
 import { buildLineup } from './sim.js';
 import { cupBestOf } from './cup.js';
 import { kstDay } from '../time.js';
+
+type AchFull = { boost: boolean; scout: boolean };
+const NOT_FULL: AchFull = { boost: false, scout: false };
 
 /** 적어 둔 팀 업적 기록(team_kept). 없거나 깨졌으면 빈 기록. */
 function keptOf(json: string | null | undefined): TeamKept {
@@ -163,17 +170,19 @@ export async function refreshOwnerAchievements(
     touch,
   );
   // T-11-357 지금 시즌이면 새로 달성한 업적의 보상을 준다(지난 시즌은 보상이 끝났다).
-  const shown =
-    season === teamSeasonAt(now)
-      ? withAchRewards(groups, await settleAchievementRewards(db, owner.id, season, groups, now))
-      : groups;
+  let shown = groups;
+  if (season === teamSeasonAt(now)) {
+    const { got, full } = await settleAchievementRewards(db, owner.id, season, groups, now);
+    shown = withAchRewards(groups, got, full);
+  }
   return { groups: shown, row, players };
 }
 
 /**
  * T-11-357 업적 달성 보상을 맞춘다 — 받은 기록에 없는 달성 업적·단계에 보상을 주고, 업적별로 이 시즌에 받은 보상을
  * 돌려준다. ACH_REWARD_BASELINE_SEASON까지는 처음 셀 때 이미 달성해 둔 것을 기준선으로 적고 주지 않는다(소급 없음).
- * 보상 칸이 없으면 읽지 않는다(기준선 시즌은 표시를 한 번 남기려고 읽는다).
+ * 보상 칸이 없으면 읽지 않는다(기준선 시즌은 표시를 한 번 남기려고 읽는다). 시즌 상한(ACH_REWARD_SEASON_CAP)을 넘는
+ * 칸은 적지도 주지도 않는다 — full은 상한에 닿은 아이템(다음 달성 보상을 감춘다).
  */
 export async function settleAchievementRewards(
   db: Db,
@@ -181,13 +190,30 @@ export async function settleAchievementRewards(
   season: number,
   groups: readonly ClubAchievementGroup[],
   now: string,
-): Promise<Map<string, AchReward>> {
+): Promise<{ got: Map<string, AchReward>; full: AchFull }> {
   const steps = achRewardSteps(groups);
   const baselineSeason = season <= ACH_REWARD_BASELINE_SEASON;
-  if (!steps.length && !baselineSeason) return new Map();
+  if (!steps.length && !baselineSeason) return { got: new Map(), full: NOT_FULL };
   const claims = await achievementClaimsOf(db, profileId, season);
   const baseline = baselineSeason && !claims.has(ACH_BASE_KEY);
-  const fresh = steps.filter((s) => !claims.has(s.key));
+  // 이미 받은 만큼을 세고, 새 칸은 상한 안에서 앞에서부터 준다(기준선은 주지 않으니 상한과 무관하다).
+  const used = { boost: 0, scout: 0 };
+  for (const s of steps) {
+    const claim = claims.get(s.key);
+    if (claim && !isBaseClaim(claim)) {
+      used.boost += s.boost;
+      used.scout += s.scout;
+    }
+  }
+  const fresh = steps.filter((s) => {
+    if (claims.has(s.key)) return false;
+    if (baseline) return true;
+    const cap = ACH_REWARD_SEASON_CAP;
+    if (used.boost + s.boost > cap.boost || used.scout + s.scout > cap.scout) return false;
+    used.boost += s.boost;
+    used.scout += s.scout;
+    return true;
+  });
   const granted = new Set(
     baseline || fresh.length
       ? await claimAchievementRewards(db, profileId, season, fresh, now, baseline)
@@ -200,7 +226,11 @@ export async function settleAchievementRewards(
     const g = got.get(s.id) ?? { boost: 0, scout: 0 };
     got.set(s.id, { boost: g.boost + s.boost, scout: g.scout + s.scout });
   }
-  return got;
+  const full = {
+    boost: used.boost >= ACH_REWARD_SEASON_CAP.boost,
+    scout: used.scout >= ACH_REWARD_SEASON_CAP.scout,
+  };
+  return { got, full };
 }
 
 /**

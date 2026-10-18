@@ -247,6 +247,8 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
               ovr: 56,
               goals: 2,
               ratingChange: 16,
+              xg: 1.6,
+              lines: { atk: 62, mid: 50, def: 57, gk: 55 },
             },
             away: {
               teamId: 'tem_00000000-0000-4000-8000-000000000002',
@@ -256,6 +258,8 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
               ovr: 55,
               goals: 1,
               ratingChange: -8,
+              xg: 0.9,
+              lines: { atk: 55, mid: 56, def: 54, gk: 55 },
             },
             events: [
               {
@@ -375,7 +379,24 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await expect(result).toContainText('익명의 공격수 No.7');
   await expect(result).toContainText('1승 0무 0패');
   await expect(result.locator('[data-rating-change]')).toContainText('내 팀 레이팅 +16');
+  // T-11-379 경기 리포트 — 기대 득점 · 진단 한 줄은 바로, 줄 비교는 눌러야 펼친다. 펼쳐도 API를 더 부르지 않는다.
+  const report = result.locator('[data-team-report]');
+  await expect(report.locator('[data-report-xg]')).toHaveText('기대 득점(xG) 1.6 : 0.9');
+  await expect(report.locator('[data-report-diagnosis]')).toHaveText(
+    '공격이 상대 수비벽보다 8 앞서 기회를 많이 만들었어요.',
+  );
+  await expect(report.locator('[data-report-rows]')).toHaveCount(0);
+  let apiCalls = 0;
+  // 라운지 채팅 접속(/v1/chat/ticket)은 화면을 연 뒤 시간차로 나가 리포트와 무관하다.
+  const countApi = (r: { url(): string }) =>
+    void (r.url().startsWith(API) && !r.url().startsWith(`${API}/v1/chat/`) && apiCalls++);
+  page.on('request', countApi);
+  await report.locator('[data-act="team-report-compare"]').click();
+  await expect(report.locator('[data-report-line="mid"]')).toHaveClass(/weak/);
   await expectNoA11yViolations(page);
+  page.off('request', countApi);
+  expect(apiCalls).toBe(0);
+  await expect(report.locator('[data-act="team-report-fix"]')).toContainText('고칠 곳 · ');
   await result.locator('[data-act="team-replay"]').click();
   await expect(live.locator('[data-live-line="kickoff"]')).toContainText('킥오프');
   await live.locator('[data-act="live-skip"]').click();
@@ -466,6 +487,19 @@ test('T-11-269 기록 탭 — 더 보기로 지난 경기를 잇고, 통계 카�
             ga: 5,
           },
         ],
+        report: {
+          matches: 9,
+          xgFor: 13.2,
+          xgAgainst: 8.1,
+          gf: 16,
+          ga: 7,
+          edges: { atk: 4.2, mid: -2.6, def: 1.3 },
+          behind: { atk: 1, mid: 6, def: 3 },
+          formations: [
+            { formation: '4-3-3', w: 5, d: 1, l: 1, gf: 13, ga: 5, xgFor: 10.1, xgAgainst: 6.2 },
+            { formation: '4-4-2', w: 1, d: 0, l: 1, gf: 3, ga: 2, xgFor: 3.1, xgAgainst: 1.9 },
+          ],
+        },
       }),
     );
   });
@@ -490,6 +524,16 @@ test('T-11-269 기록 탭 — 더 보기로 지난 경기를 잇고, 통계 카�
   await expect(stats.locator(`[data-stats-player="${STRIKER}"]`)).toContainText('공개 골잡이');
   await expect(stats.locator(`[data-stats-player="${STRIKER}"]`)).toContainText('12');
   await expect(stats).toContainText('유스 선수');
+  // T-11-379 시즌 경기 리포트 — 기대 득점 대비 실제 · 가장 자주 밀린 비교 · 포메이션별.
+  const seasonReport = stats.locator('[data-season-report]');
+  await expect(seasonReport.locator('[data-season-report-xg]')).toHaveText(
+    '9경기 · 기대 득점 13.2 → 실제 16골 · 기대 실점 8.1 → 실제 7골',
+  );
+  await expect(seasonReport).toContainText('기대보다 2.8골 더 넣었어요.');
+  await expect(seasonReport).toContainText(
+    '가장 자주 밀린 비교는 내 중원 vs 상대 중원이에요(6/9경기).',
+  );
+  await expect(seasonReport.locator('[data-season-formations] div')).toHaveCount(2);
   await expectNoA11yViolations(page);
   await stats.locator('[data-stats-tab="days"]').click();
   await expect(stats.locator('[data-stats-day="2026-09-30"]')).toContainText('9/30');
@@ -1659,7 +1703,7 @@ test('T-11-323 감독 칸에 감독이 있으면 줄 힘에 감독 보정을 더
     pos: 'MF',
     mastery: { '4-3-3': 'S', '4-4-2': 'C', '3-5-2': 'C' },
     style: 'attack',
-    specials: [],
+    specials: ['counter'],
     grade: 'A',
     ending: 'steady',
   };
@@ -1681,10 +1725,135 @@ test('T-11-323 감독 칸에 감독이 있으면 줄 힘에 감독 보정을 더
   await expect(lines.locator('[data-coach-line="mid"]')).toHaveText('감독 +1.0');
   await expect(lines.locator('[data-coach-line="def"]')).toHaveText('감독 +0.4');
   await expect(lines.locator('[data-coach-line="gk"]')).toHaveCount(0);
+  // T-11-382 감독 칸의 보정 내역: 갈래별 값과, 짝 시너지가 꺼져 더하지 않은 특기.
+  const detail = page.locator('[data-coach-breakdown]');
+  await detail.locator('summary').click();
+  await expect(detail.locator('[data-coach-row="atk"]')).toContainText('공격 +2.0');
+  await expect(detail.locator('[data-coach-row="atk"]')).toContainText(
+    '숙련 S +1.0 · 공격 성향 +1.0',
+  );
+  await expect(detail.locator('[data-coach-capped]')).toHaveCount(0);
+  await expect(detail.locator('[data-coach-off]')).toHaveText(
+    '역습 전개: 짝이 되는 팀 시너지가 꺼져 있어 더하지 않아요.',
+  );
   // 4-4-2(숙련 C)로 바꾸면 성향만 남는다.
   await page.locator('[data-formation="4-4-2"]').click();
   await expect(lines.locator('[data-coach-line="atk"]')).toHaveText('감독 +1.0');
   await expect(lines.locator('[data-coach-line="def"]')).toHaveText('감독 −0.6');
   await expect(lines.locator('[data-coach-line="mid"]')).toHaveCount(0);
   await expectNoA11yViolations(page);
+});
+
+// T-11-358 남의 팀 프로필의 경기 통계 — 버튼을 누를 때만 받고, 닫았다 다시 열거나 프로필을 다시 들어와도 다시 묻지 않는다.
+test('T-11-358 팀 프로필에서 경기 통계를 열면 흐름 요약과 경기 종류별 전적을 보이고 한 번만 받는다', async ({
+  page,
+}) => {
+  await stubOwner(page, true);
+  await page.route(`${API}/v1/teams?*`, (route) =>
+    route.fulfill(
+      ok({
+        season: 0,
+        seasons: SEASONS,
+        sort: 'rating',
+        page: 1,
+        total: 1,
+        items: [
+          {
+            rank: 1,
+            teamId: RIVAL,
+            name: '라이벌 FC',
+            manager: '라이벌 감독',
+            formation: '4-4-2',
+            ovr: 70,
+            rating: 1100,
+            record: { w: 2, d: 0, l: 1 },
+            likes: 0,
+            createdAt: '2026-09-29T00:00:00.000Z',
+          },
+        ],
+      }),
+    ),
+  );
+  let statsAsked = 0;
+  await page.route(`${API}/v1/teams/${RIVAL}**`, (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/views')) return route.fulfill({ status: 204, body: '' });
+    if (path.endsWith('/comments')) return route.fulfill(ok({ comments: [], blocks: [] }));
+    if (path.endsWith('/stats')) {
+      statsAsked++;
+      const zero = { w: 0, d: 0, l: 0, gf: 0, ga: 0 };
+      return route.fulfill(
+        ok({
+          season: 0,
+          matches: 3,
+          capped: false,
+          total: { w: 2, d: 0, l: 1, gf: 7, ga: 2 },
+          players: [{ careerId: null, name: '유스 선수', goals: 7, assists: 0 }],
+          days: [{ day: '2026-09-29', w: 2, d: 0, l: 1, gf: 7, ga: 2 }],
+          opponents: [],
+          summary: {
+            form: ['w', 'w', 'l'],
+            streak: { kind: 'w', n: 2 },
+            bestWinStreak: 2,
+            home: { w: 2, d: 0, l: 0, gf: 6, ga: 0 },
+            away: { w: 0, d: 0, l: 1, gf: 1, ga: 2 },
+            biggestWin: { opponent: '약체 FC', gf: 5, ga: 0, at: '2026-09-29T03:00:00.000Z' },
+            biggestLoss: { opponent: '강호 FC', gf: 1, ga: 2, at: '2026-09-28T03:00:00.000Z' },
+            friendly: { w: 1, d: 1, l: 0, gf: 3, ga: 2 },
+            cup: zero,
+          },
+        }),
+      );
+    }
+    return route.fulfill(
+      ok({
+        team: {
+          ...teamFrom({ name: '라이벌 FC', formation: '4-4-2', slots: Array(11).fill(null) }),
+          id: RIVAL,
+          season: 0,
+          seasonName: '프리시즌',
+          rank: 1,
+          manager: '라이벌 감독',
+          rating: 1100,
+          record: { w: 2, d: 0, l: 1 },
+          goals: { for: 7, against: 2 },
+          likes: 0,
+          views: 1,
+          badges: [],
+        },
+        liked: false,
+        mine: false,
+        friend: null,
+      }),
+    );
+  });
+
+  await page.goto('/');
+  await page.locator('[data-act="hof"]').click();
+  await page.locator('[data-hof-tab="teams"]').click();
+  const list = page.locator('[data-team-ranking]');
+  await list.locator(`[data-rank-team="${RIVAL}"]`).click();
+  await expect(page.locator(`[data-team-profile="${RIVAL}"]`)).toContainText('라이벌 FC');
+  // 프로필만 열었을 때는 통계를 묻지 않는다.
+  expect(statsAsked).toBe(0);
+  await page.locator('[data-act="team-profile-stats"]').click();
+  const stats = page.locator('[data-team-stats]');
+  await expect(stats.locator('[data-stats-total]')).toHaveText('2승 0무 1패');
+  await expect(stats.locator('[data-stats-form="wwl"]')).toBeVisible();
+  await expect(stats.locator('[data-stats-flow]')).toContainText('2연승 중');
+  await expect(stats.locator('[data-stats-big="win"]')).toContainText('5 : 0 · 약체 FC · 9/29');
+  await expect(stats.locator('[data-stats-kind="friendly"]')).toContainText('1승 1무 0패');
+  await expect(stats.locator('[data-stats-kind="cup"]')).toContainText('기록 없음');
+  await expectNoA11yViolations(page);
+  // 닫고 다시 열기 · 랭킹으로 나갔다 다시 들어오기 — 메모에서 꺼낸다.
+  await page.locator('[data-act="team-stats-back"]').click();
+  await expect(stats).toHaveCount(0);
+  await page.locator('[data-act="team-profile-stats"]').click();
+  await expect(stats.locator('[data-stats-total]')).toBeVisible();
+  await page.goBack();
+  await expect(list).toBeVisible();
+  await list.locator(`[data-rank-team="${RIVAL}"]`).click();
+  await page.locator('[data-act="team-profile-stats"]').click();
+  await expect(stats.locator('[data-stats-total]')).toBeVisible();
+  expect(statsAsked).toBe(1);
 });

@@ -24,6 +24,7 @@ import {
   rnByLeague,
   rnClubName as clubName,
   rnDay as day,
+  rnFreeNumbers,
   rnLeagueName as leagueOf,
 } from '@offside/app-core/retiredWall';
 import { scrollTo } from '../../ui/scroll';
@@ -534,6 +535,44 @@ function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> })
   );
 }
 
+/** T-11-356 이 구단에서 아직 결번되지 않은 번호(웹 .rn-free). 받은 결번 목록에서 센다(따로 묻지 않는다). */
+function FreeNumbers({ c, items }: { c: Colors; items: Item[] }) {
+  const free = useMemo(() => rnFreeNumbers(items), [items]);
+  return (
+    <View testID="rn-free" style={{ marginBottom: 12 }}>
+      <SectionTitle>{L.freeTitle({ n: free.length })}</SectionTitle>
+      <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+        {free.length ? L.freeLead : L.freeNone}
+      </Txt>
+      {free.length ? (
+        <View
+          accessible
+          accessibilityLabel={L.freeLabel({ n: free.length })}
+          style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 8 }}
+        >
+          {free.map((n) => (
+            <View
+              key={n}
+              style={{
+                width: 34,
+                paddingVertical: 3,
+                borderWidth: 1,
+                borderColor: c.line,
+                borderRadius: 8,
+                alignItems: 'center',
+              }}
+            >
+              <Txt num={400} style={{ fontSize: rem(0.8125) }}>
+                {n}
+              </Txt>
+            </View>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 /** 구단 화면 — 그 구단의 결번만 받는다(서버가 번호 순으로). 포지션은 받은 목록에서 거른다. */
 function ClubScreen({
   season,
@@ -603,6 +642,7 @@ function ClubScreen({
           </View>
         </View>
       ) : null}
+      {items !== null && !failed ? <FreeNumbers c={c} items={items} /> : null}
       <RecordsChips
         label={L.positionLabel}
         testIDPrefix="rn-pos"

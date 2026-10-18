@@ -1,5 +1,5 @@
 // ───────── 순수 포맷/집계 헬퍼 (ui.ts의 문자열 템플릿 함수들을 컴포넌트가 쓰기 좋은 형태로 분리) ─────────
-import { labelOf } from '@offside/game/engine';
+import { growthDirection, growthSlowNote, labelOf } from '@offside/game/engine';
 import { LEAGUES } from '@offside/game/data';
 import type { AttrKey } from '@offside/game/data';
 import {
@@ -13,6 +13,7 @@ import {
   FACE_ABBR,
   GK_ABBR,
   SUBS,
+  GROUP_W,
 } from '@offside/game/attributes';
 import type { CareerRecord, GameState } from '@offside/game/types';
 import { homeLiveText as L } from './i18n/ko/homeLive.js';
@@ -170,6 +171,8 @@ export interface AttrGroupRow {
   value: number;
   tier: 't1' | 't2' | 't3' | 't4';
   bold: boolean;
+  /** T-11-353 지금 포지션 OVR에 반영되는 비율(%, 반올림). 반영되지 않으면 0. */
+  ovrPct: number;
 }
 export interface AttrGroup {
   key: AttrKey;
@@ -178,6 +181,8 @@ export interface AttrGroup {
   value: number;
   tier: 't1' | 't2' | 't3' | 't4';
   rows: AttrGroupRow[];
+  /** T-11-353 이 항목 세부 능력치가 지금 포지션 OVR에 반영되는 비율의 합(%, 반올림). */
+  ovrPct: number;
 }
 export function attrData(s: GameState) {
   const role = mainRole(s),
@@ -198,7 +203,14 @@ export function attrData(s: GameState) {
       .sort((x, y) => (W[y] || 0) - (W[x] || 0) || s.sub[y]! - s.sub[x]!)
       .map((k) => {
         const v = Math.round(s.sub[k]!);
-        return { key: k, name: SUBS[k]!, value: v, tier: tier(v), bold: (W[k] || 0) >= 0.05 };
+        return {
+          key: k,
+          name: SUBS[k]!,
+          value: v,
+          tier: tier(v),
+          bold: (W[k] || 0) >= 0.05,
+          ovrPct: Math.round((W[k] || 0) * 100),
+        };
       });
     return {
       key: g,
@@ -207,9 +219,25 @@ export function attrData(s: GameState) {
       value: Math.round(s.attrs[g]),
       tier: tier(s.attrs[g]),
       rows,
+      ovrPct: Math.round((GROUP_W[role]![g] ?? 0) * 100),
     };
   });
-  return { role, roleName: ROLE_NAME[role], roles, groups };
+  // T-11-353 "몇 년째 안 올라요" 제보: 성장을 가장 크게 깎는 이유 한 줄(없으면 빈 문자열).
+  return {
+    role,
+    roleName: ROLE_NAME[role],
+    roles,
+    groups,
+    growthNote: growthSlowNote(s),
+    // T-11-379 골 · 도움(또는 수비 평점)에 가장 크게 쓰이는 능력치(문장은 ratingReport growthDirectionText).
+    growthDir: growthDirFor(s),
+  };
+}
+
+/** T-11-379 성장 방향 원자료(ratingReport의 GrowthDirInfo와 같은 모양). */
+export function growthDirFor(s: GameState) {
+  const d = growthDirection(s);
+  return { d, attr: d.kind === 'def' ? '' : labelOf(s, d.attr) };
 }
 
 /** 레이더 다각형 좌표. 0~100 값을 중심 c, 반지름 r에 매핑하고 12시 방향부터 시계 방향으로 돈다. */

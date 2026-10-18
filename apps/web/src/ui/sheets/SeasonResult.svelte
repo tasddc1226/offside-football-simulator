@@ -81,8 +81,17 @@
   <div>
     <div class="eyebrow" style="margin-bottom:6px">{L.scoutHint}</div>
     <p>“{v.scoutHint}”</p>
+    {#if v.seasonTrend}<p class="muted fs-sm" data-season-trend>{v.seasonTrend}</p>{/if}
+    {@render growthDir()}
   </div>
+{:else if v.seasonTrend || v.growthDir}
+  {#if v.seasonTrend}<p class="muted fs-sm" data-season-trend>{v.seasonTrend}</p>{/if}
+  {@render growthDir()}
 {/if}
+{#snippet growthDir()}
+  <!-- T-11-379 성장 방향 한 줄(지연 청크). -->
+  {#if v.growthDir}{#await import('../GrowthDir.svelte') then M}<M.default info={v.growthDir} cls="muted fs-sm" title={false} />{/await}{/if}
+{/snippet}
 <div>
   <div class="eyebrow" style="margin-bottom:6px">{L.fans}</div>
   <div class="fan-feed">

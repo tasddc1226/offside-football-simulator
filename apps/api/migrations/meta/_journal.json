@@ -757,6 +757,27 @@
       "when": 1792231180642,
       "tag": "0107_last_maestro",
       "breakpoints": true
+    },
+    {
+      "idx": 108,
+      "version": "6",
+      "when": 1792241773826,
+      "tag": "0108_team_stats_cup_idx",
+      "breakpoints": true
+    },
+    {
+      "idx": 109,
+      "version": "6",
+      "when": 1792247243903,
+      "tag": "0109_owner_attendance",
+      "breakpoints": true
+    },
+    {
+      "idx": 110,
+      "version": "6",
+      "when": 1792249590391,
+      "tag": "0110_career_renames",
+      "breakpoints": true
     }
   ]
 }

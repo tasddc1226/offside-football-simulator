@@ -120,9 +120,6 @@ export const draftDpos = (
   now = new Date().toISOString(),
 ): DetailPos | undefined => (detailPosOpen(now) && dposFor(c.pos, c.dpos)) || undefined;
 
-/** T-11-045 새 커리어의 은퇴 나이 — 지금 시즌(개막 전이면 프리시즌)의 값으로 정해져 커리어에 고정된다. */
-export const draftRetireAt = (): number => retireAtNow(new Date().toISOString());
-
 /** 생성 확정 시각을 한 번만 읽는다. 자정을 넘긴 초안도 화면과 같은 기본 세부 포지션을 받는다. */
 export function draftCareerRules(
   c: Pick<DraftCharacter, 'pos' | 'dpos'>,
