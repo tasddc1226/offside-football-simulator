@@ -7452,6 +7452,10 @@ button.what {
 .chat-empty {
   margin: auto;
 }
+/* T-11-391 처음 불러오는 동안의 뼈대는 줄 너비를 다 쓴다. */
+.chat-wait {
+  align-self: stretch;
+}
 .chat-older {
   text-align: center;
 }
@@ -8031,4 +8035,69 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
 .legends-dl dd {
   margin: 0;
   font-weight: 600;
+}
+
+/* ───────── 뼈대 (T-11-389) ─────────
+   서버 데이터 · 화면 코드를 기다리는 동안. 0.2초 뒤에 나타나고(자리는 처음부터 잡는다) 천천히 옅어졌다 짙어진다.
+   .sk-wait는 화면 코드를 받는 동안(App.svelte, 제목 · 카드 두 장), .sk-list는 목록(Skeleton.svelte, 줄마다 동그라미 + 두 줄), .sk-block은 카드 한 장(Skeleton height).
+   둘 다 요소 하나의 배경으로 그려 첫 화면 번들을 거의 늘리지 않는다. */
+@keyframes sk-in {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sk-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.sk-wait {
+  --sk: linear-gradient(var(--line), var(--line));
+  max-width: 480px;
+  height: 296px;
+  margin: 16px auto 0;
+  padding-inline: var(--pad-l) var(--pad-r);
+  background:
+    var(--sk) 0 0 / 44% 22px no-repeat,
+    var(--sk) 0 40px / 100% 120px no-repeat,
+    var(--sk) 0 176px / 100% 120px no-repeat;
+  background-origin: content-box;
+  background-clip: content-box;
+  opacity: 0;
+  animation:
+    sk-in 0.2s ease-out 0.2s forwards,
+    sk-pulse 1.4s ease-in-out 0.4s infinite;
+}
+.sk-list {
+  margin-block: 4px;
+  background:
+    radial-gradient(circle 16px at 16px 16px, var(--line) 98%, transparent) 0 0 / 32px 46px repeat-y,
+    linear-gradient(transparent 4px, var(--line) 4px 16px, transparent 16px) 44px 0 / 60% 46px
+      repeat-y,
+    linear-gradient(transparent 22px, var(--line) 22px 32px, transparent 32px) 44px 0 / 32% 46px
+      repeat-y;
+  opacity: 0;
+  animation:
+    sk-in 0.2s ease-out 0.2s forwards,
+    sk-pulse 1.4s ease-in-out 0.4s infinite;
+}
+.sk-block {
+  margin-block: 4px;
+  border-radius: 14px;
+  background: var(--line);
+  opacity: 0;
+  animation:
+    sk-in 0.2s ease-out 0.2s forwards,
+    sk-pulse 1.4s ease-in-out 0.4s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sk-wait,
+  .sk-list,
+  .sk-block {
+    animation: sk-in 0.2s ease-out 0.2s forwards;
+  }
 }

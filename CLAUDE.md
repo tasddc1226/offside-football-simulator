@@ -160,6 +160,13 @@ pnpm --filter @offside/fulltime-sim analyze
 - 게임 규칙·수치가 바뀌면 공개 가이드(`apps/web/scripts/seo.mjs`의 `GUIDE_SECTIONS`, 웹 `/guide/`·앱 설정의 게임 가이드)와 FAQ도 같은 PR에서 고친다(T-11-112).
 - 결제(IAP)·푸시·보상형 광고만 앱 전용이다. 배경과 축소 검토 기준은 [결정 로그](docs/tracking/decision-log.md)(2026-10-04)를 본다.
 
+## 로딩 표시 규칙 (2026-10-18, T-11-389)
+
+- 서버 데이터를 기다리는 자리는 글자("불러오는 중…") 대신 뼈대를 그린다. 웹은 `LoadState`(`rows`로 줄 수)나 `Skeleton.svelte`, 앱은
+  `components/LoadState`나 `ui/Skeleton`(`height`를 주면 카드 한 장, T-11-391). 뼈대는 0.2초 뒤에 나타나고(메모에서 바로 오는 재방문이 번쩍이지 않게) 움직임 줄이기를 따른다.
+- 기기 안 데이터로 바로 그리는 화면(커리어 진행 · 만들기 · 세이브 · 설정)에는 넣지 않는다.
+- 웹 뼈대는 첫 화면 번들에 실리므로 요소 하나의 CSS 배경으로 그린다(`style.css` `.sk-list` · `.sk-wait`). 화면 모양 뼈대를 새로 만들면 그 화면 청크 안에 둔다.
+
 ## 문서 정본 우선순위
 
 문서 충돌 시: [`docs/adr/`](docs/adr/README.md)(ADR-001~015) >

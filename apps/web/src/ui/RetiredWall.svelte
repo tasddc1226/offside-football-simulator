@@ -7,6 +7,7 @@
 </script>
 
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   import { tick } from 'svelte';
   import { hofText as H } from '@offside/app-core/i18n/ko/hof';
   import { tn } from '@offside/game/i18n/names';
@@ -181,7 +182,7 @@
     <p class="empty">{L.loadFailed}</p>
   {:else if view.screen === 'home'}
     {#if summary === null}
-      <p class="empty">{L.loading}</p>
+      <Skeleton rows={5} />
     {:else if summary.total}
       <div class="rn-wall-sum">
         <div><b class="num">{summary.total}</b><small>{L.sumRetired}</small></div>
@@ -258,7 +259,7 @@
       <h2 class="rn-recent-title">{L.recentAll}</h2>
     {/if}
     {#if items === null}
-      <p class="empty">{L.loading}</p>
+      <Skeleton rows={5} />
     {:else if shown.length}
       <div class="rn-tiles">
         {#each shown as it (it.seq)}{@render tile(it, view.screen === 'recent')}{/each}

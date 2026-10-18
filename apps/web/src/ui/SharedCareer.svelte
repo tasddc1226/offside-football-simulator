@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   // T-10-029 공유 링크(/career/<id>)로 들어온 보기 전용 은퇴 리포트. 크레딧 연출로 보여 주고, 끝나면
   // 내 커리어를 시작하도록 권한다. 이름 공개·공유 같은 선수 주인 기능은 없다.
   import { onMount } from 'svelte';
@@ -29,7 +30,7 @@
 <div class="wrap">
   <Topbar />
   {#if v === null}
-    <section class="card"><p class="muted">{L.loading}</p></section>
+    <section class="card"><Skeleton rows={4} /></section>
   {:else if typeof v === 'string'}
     <section class="card stack" data-shared="unavailable">
       <div><div class="eyebrow">Shared Career</div><h2>{v === 'missing' ? L.missingTitle : L.errorTitle}</h2></div>

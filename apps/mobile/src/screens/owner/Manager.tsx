@@ -81,6 +81,7 @@ import { buzz } from '../../game/host';
 import { CountUp } from '../../components/CountUp';
 import { Chips } from '../../sheets/Chips';
 import { Pop } from '../../sheets/anim';
+import { Skeleton } from '../../ui/Skeleton';
 
 type CardRules = {
   mastery: Record<FormationId, string>;
@@ -913,9 +914,7 @@ export default function Manager() {
           </Btn>
         </Card>
       ) : !data ? (
-        <Card>
-          <Txt tone="muted">{M.loading}</Txt>
-        </Card>
+        <Skeleton height={240} />
       ) : (
         <>
           {play ?? (

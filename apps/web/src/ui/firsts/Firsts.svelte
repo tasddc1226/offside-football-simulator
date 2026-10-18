@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from '../Skeleton.svelte';
   // T-10-027 서버 최초 기록 — 모든 플레이어를 통틀어 처음 세운 기록. 로그인 없이 누구나 본다.
   // 최근 기록 탭은 날짜별 연대기, 분류 탭은 규칙 전체(아직 아무도 못 세운 기록 포함)를 보여 준다. 끝없는 단계는
   // 누가 넘을 때마다 다음 목표가 열린다. 서버 기록 탭은 더 큰 기록이 나오면 주인이 바뀌는 최다·최고 기록(T-10-056).
@@ -95,7 +96,7 @@
     {#if failed}
       <p class="empty">{L.loadFailed}</p>
     {:else if !data}
-      <p class="empty">{L.loading}</p>
+      <Skeleton rows={5} />
     {:else if tab === 'recent'}
       {#if top.length && top[0]!.count > 1}
         <h2 class="first-day first-top-title">{L.topTitle}</h2>

@@ -14,6 +14,7 @@ import { rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
 import { Btn } from '../../../ui/Btn';
 import { Card } from '../../../ui/Card';
+import { Skeleton } from '../../../ui/Skeleton';
 import { Press } from '../../../ui/Press';
 import { scrollTo } from '../../../ui/scroll';
 import { Txt } from '../../../ui/Txt';
@@ -100,13 +101,7 @@ export default function AchievementRanking() {
       {failed ? (
         empty(L.rankFail)
       ) : loading || !data ? (
-        <Txt
-          tone="muted"
-          accessibilityLiveRegion="polite"
-          style={{ fontSize: rem(0.875), paddingVertical: 8 }}
-        >
-          {L.loading}
-        </Txt>
+        <Skeleton rows={6} />
       ) : data.items.length ? (
         <>
           <View
