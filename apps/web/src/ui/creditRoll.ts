@@ -4,8 +4,8 @@
 // 처음엔 서서히 빨라지고 마지막 휘슬(finale)이 가운데쯤 오면 서서히 멈춘다. 끝에서 다시 누르면 처음부터.
 // 휠·터치·키·클릭(재생 버튼 말고)이 들어오면 그 자리에서 멈춘다.
 
-import { ROLL_SPEED, rollEnd, rollSpeed } from '@offside/app-core/creditRoll';
-export { ROLL_SPEED, rollEnd, rollSpeed };
+import { rollEnd, rollSpeed } from '@offside/app-core/creditRoll';
+export { rollEnd, rollSpeed };
 
 /** 재생을 시작하고 멈추는 함수를 돌려준다. 끝까지 가거나 사용자가 손대거나 stop을 부르면 onStop이 한 번 불린다. */
 export function rollCredits(root: HTMLElement, onStop: () => void): () => void {

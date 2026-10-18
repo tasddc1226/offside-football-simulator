@@ -70,14 +70,6 @@ export function verifiedSnapshot(snapshot: LegendSnapshot, granted: boolean): Le
 
 export type CareerRow = typeof careers.$inferSelect;
 
-export async function getCareerOwner(db: Db, careerId: string): Promise<string | undefined> {
-  const [row] = await db
-    .select({ profileId: careers.profileId })
-    .from(careers)
-    .where(eq(careers.id, careerId));
-  return row?.profileId;
-}
-
 /** 공개 이름 갱신(upsert·update의 set). undefined(옛 클라이언트)면 그대로 두고, 운영자가 가린 이름(이름 신고,
  *  name_hidden_at)은 다시 채우지 않는다. keepRetired면 은퇴한 커리어의 이름도 그대로 둔다. */
 function publicNameSet(
@@ -111,7 +103,7 @@ export type PutCareerSeasonInput = {
 /**
  * `PUT /v1/careers/:careerId/seasons/:year`. `careers` upsert는 `status`를 `set`에서 빼서 이미
  * `retired`인 행을 다시 `active`로 되돌리지 않는다(브리프: "NEVER downgrade retired→active"). 두 upsert를
- * D1 batch(단일 트랜잭션)로 묶어 원자적으로 반영한다. 호출 전 소유권은 라우트가 `getCareerOwner`로
+ * D1 batch(단일 트랜잭션)로 묶어 원자적으로 반영한다. 호출 전 소유권은 라우트가 batch로 읽은 커리어 헤더로
  * 이미 확인했다고 가정한다.
  */
 export async function putCareerSeason(
@@ -972,11 +964,6 @@ export const seasonOvrQuery = (db: Db, careerId: string, year: number) =>
     .select({ ovr: careerSeasons.ovr })
     .from(careerSeasons)
     .where(and(eq(careerSeasons.careerId, careerId), eq(careerSeasons.year, year)));
-
-export async function storedSeasonOvr(db: Db, careerId: string, year: number) {
-  const [row] = await seasonOvrQuery(db, careerId, year);
-  return row?.ovr ?? null;
-}
 
 /** 은퇴 PUT이 보는 커리어의 소유자·상태·포지션(스냅샷 JSON까지 읽지 않는다). 조회문 — 다른 읽기와 한 batch로 보낼 수 있다. */
 export const careerHeadQuery = (db: Db, careerId: string) =>

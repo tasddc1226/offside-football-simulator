@@ -15,7 +15,7 @@ import { clubById, clubByName } from '@offside/game/clubs';
 import { crestOf, crestSvg } from '@offside/game/crests';
 import { drawJersey } from './jerseyCanvas.js';
 
-export { CARD_H, CARD_W, shareCardData, type ShareCardData } from '@offside/app-core/shareCard';
+export { shareCardData, type ShareCardData } from '@offside/app-core/shareCard';
 
 // ───────── 그리기 ─────────
 const C = {

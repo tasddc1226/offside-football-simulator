@@ -14,7 +14,6 @@ export interface PlayerNudge {
 type Record = { key: string; at: number };
 const KEY = 'ft_player_nudge';
 export const PLAYER_NUDGE_DELAY = 6000;
-export const PLAYER_NUDGE_MS = 12000;
 export const PLAYER_NUDGE_COOLDOWN = 10 * 60 * 1000;
 
 export function playerNudge(s: GameState, canPeek = false): PlayerNudge | null {
