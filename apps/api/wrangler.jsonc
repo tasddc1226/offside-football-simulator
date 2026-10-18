@@ -71,9 +71,9 @@
     "production": {
       "name": "offside-api",
       "workers_dev": true,
-      // T-11-320 요청은 서울(ICN)에서 받지만 D1 주 DB는 다른 APAC 지점에 있어, 쿼리 실행은 0.2ms인데 한 번 오갈 때마다
-      // 약 100ms가 든다. 로그인 요청은 세션·프로필·본문 조회를 차례로 부르니 그만큼 쌓인다(시즌 저장 약 620ms).
-      // Smart Placement가 워커를 D1 가까이에서 돌려 사용자↔워커 한 번만 멀리 오가게 한다.
+      // T-11-385 invocation metrics already showed most fetches in SIN with Smart Placement.
+      // An explicit Singapore-region trial did not establish a material D1 round-trip benefit.
+      // Keep automatic placement so this does not pin compute if the D1 primary changes.
       "placement": { "mode": "smart" },
       "ai": { "binding": "AI" },
       "routes": [{ "pattern": "api.offside-lab.com", "custom_domain": true }],
