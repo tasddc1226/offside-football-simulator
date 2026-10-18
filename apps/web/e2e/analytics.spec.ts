@@ -136,6 +136,8 @@ test('actual play measures first action, milestones and a resumed career without
   expect(await events('career_resume')).toHaveLength(0);
   expect(await events('play_complete')).toHaveLength(0); // preseason has no league block
   await page.reload();
+  // Analytics loads independently of gameplay; wait for its ready marker after every reload.
+  await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
   await page.locator('[data-act="continue"]').click();
   expect(await events('career_resume')).toHaveLength(0);
 
@@ -174,7 +176,8 @@ test('actual play measures first action, milestones and a resumed career without
     test_marker: 'qa',
     client_platform: 'web',
   });
-  expect((await events('play_complete')).length).toBeGreaterThanOrEqual(6);
+  // Player metrics run through the async Web Locks queue; the season milestone is synchronous.
+  await expect.poll(async () => (await events('play_complete')).length).toBeGreaterThanOrEqual(6);
   expect(
     (await events('game_operation')).every(
       (x) => (x[2] as { outcome: string }).outcome !== 'failed',
