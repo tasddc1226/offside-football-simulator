@@ -550,10 +550,19 @@
   }
 </script>
 
+<!-- T-11-392 팀을 불러오는 동안: 팀 이름 줄 + 4-3-3 자리 점이 찍힌 그라운드(요소 하나의 배경). -->
+{#snippet pitchSkeleton()}
+  <div class="tm-sk" role="status" aria-busy="true" data-skeleton>
+    <span class="sr-only">{S.loading}</span>
+    <div class="tm-sk-title"></div>
+    <div class="tm-sk-pitch"></div>
+  </div>
+{/snippet}
+
 <div class="wrap" class:has-tabbar={!needLogin}>
   <Topbar />
 
-  <LoadState {status} failText={L.loadFail} retry={load}>
+  <LoadState {status} failText={L.loadFail} retry={load} skeleton={pitchSkeleton}>
     {#if needLogin}
       <section class="card stack" style="gap:10px">
         <div class="eyebrow">My team</div>
@@ -735,6 +744,28 @@
 {/if}
 
 <style>
+  .tm-sk {display:grid;gap:14px;padding-block:4px;opacity:0;animation:sk-in .2s ease-out .2s forwards;}
+  .tm-sk-title,.tm-sk-pitch {animation:sk-pulse 1.4s ease-in-out .4s infinite;}
+  .tm-sk-title {width:52%;height:24px;border-radius:8px;background:var(--line);}
+  .tm-sk-pitch {
+    --d:var(--line);
+    width:100%;max-width:640px;aspect-ratio:5/6;margin:0 auto;border-radius:12px;border:1px solid var(--line);
+    background:
+      radial-gradient(circle 16px at 50% 90%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 14% 70%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 38% 73%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 62% 73%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 86% 70%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 25% 48%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 50% 51%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 75% 48%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 20% 22%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 50% 18%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 80% 22%,var(--d) 98%,transparent),
+      var(--surface-2);
+  }
+  @media(max-width:440px) { .tm-sk-pitch {aspect-ratio:2/3;} }
+  @media(prefers-reduced-motion:reduce) { .tm-sk-title,.tm-sk-pitch {animation:none;} }
   .tm-mode { margin-bottom: 12px; }
   .draft-notice {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 16px;}
   .draft-notice p {margin:0;font-size:13px;flex:1 1 200px;}

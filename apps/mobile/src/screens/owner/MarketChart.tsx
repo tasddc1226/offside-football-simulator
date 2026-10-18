@@ -239,7 +239,7 @@ export function MarketChart({ card }: { card: MarketCard }) {
         </View>
       </View>
       {points === null ? (
-        empty(L.loading)
+        <Skeleton height={PLOT_H} />
       ) : failed ? (
         empty(CHART_COPY.failed)
       ) : !model ? (

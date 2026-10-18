@@ -325,9 +325,13 @@ export default function Owner() {
               </>
             ) : (
               <>
-                <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                  {card ? ownerTeamEmptyText(card) : cardFailed ? L.teamFailed : L.loading}
-                </Txt>
+                {card || cardFailed ? (
+                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                    {card ? ownerTeamEmptyText(card) : L.teamFailed}
+                  </Txt>
+                ) : (
+                  <Skeleton rows={2} />
+                )}
                 <Btn
                   kind={card && card.players > 0 ? 'primary' : 'default'}
                   block

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   import { tn } from '@offside/game/i18n/names';
   // T-11-080f 카드 상세 시세 차트: 같은 포지션군 · OVR대 하루 평균 선, 최저~최고 띠, 기준가 점선, 이 선수 거래 점.
   // 영입 시트를 열 때만 부르고(1분 메모), 기간(1주 · 1달 · 시즌)을 바꾸면 그 기간만 새로 받는다. 점을 누르면 그날 값을 보여 준다.
@@ -49,7 +50,7 @@
     </div>
   </div>
   {#if points === null}
-    <p class="mc-empty">{L.loading}</p>
+    <Skeleton height={132} />
   {:else if failed}
     <p class="mc-empty">{CHART_COPY.failed}</p>
   {:else if !model}
