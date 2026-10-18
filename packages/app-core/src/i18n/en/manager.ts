@@ -34,7 +34,7 @@ export const manager: Translation<ManagerMsgs> = {
   confirmValue: (p) => `Club value drops by ${p.value}.`,
   confirmLocked: 'A player who becomes a manager can’t be sold, released or locked.',
   confirmAbandon:
-    'If you give up midway, they return as a player. You have to put them back in the lineup yourself.',
+    'If you give up midway, they return as a player. You have to put them back in the lineup yourself. Once confirmed as a manager card, they can’t go back to being a player.',
   confirmOk: 'Start as manager',
   cancel: 'Cancel',
   progress: (p) => `Season ${p.season} / ${p.total} · Age ${p.age}`,
@@ -72,7 +72,8 @@ export const manager: Translation<ManagerMsgs> = {
   resultHeading: (p) => `Season ${p.n} results`,
   nextSeason: 'Continue',
   doneHeading: 'Manager career over',
-  doneLead: 'Confirm the manager card to seat them in your team’s manager slot.',
+  doneLead:
+    'Confirm the manager card to seat them in your team’s manager slot. Once confirmed, they can’t go back to being a player.',
   finish: 'Confirm manager card',
   finishFail: 'Could not confirm. Try again in a moment.',
   abandon: 'Give up manager career',
