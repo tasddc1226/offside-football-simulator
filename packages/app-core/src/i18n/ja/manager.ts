@@ -33,7 +33,8 @@ export const manager: Translation<ManagerMsgs> = {
   confirmListed: '移籍市場の出品が取り下げられます。',
   confirmValue: (p) => `クラブ価値が${p.value}下がります。`,
   confirmLocked: '監督になった選手は売却・放出・ロックができません。',
-  confirmAbandon: '途中で諦めると元の選手に戻ります。スタメンには自分で入れ直してください。',
+  confirmAbandon:
+    '途中で諦めると元の選手に戻ります。スタメンには自分で入れ直してください。監督カードに確定した後は選手に戻せません。',
   confirmOk: '監督として始める',
   cancel: 'キャンセル',
   progress: (p) => `${p.season} / ${p.total}シーズン · ${p.age}歳`,
@@ -72,7 +73,8 @@ export const manager: Translation<ManagerMsgs> = {
   resultHeading: (p) => `${p.n}シーズンの結果`,
   nextSeason: '次へ進む',
   doneHeading: '監督キャリア終了',
-  doneLead: '監督カードに確定すると、自分のチームの監督枠に据えられます。',
+  doneLead:
+    '監督カードに確定すると、自分のチームの監督枠に据えられます。確定した後は選手に戻せません。',
   finish: '監督カードに確定',
   finishFail: '確定できませんでした。しばらくしてからもう一度お試しください。',
   abandon: '監督キャリアを諦める',

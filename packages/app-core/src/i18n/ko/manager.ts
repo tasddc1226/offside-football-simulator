@@ -38,7 +38,8 @@ const ko = {
   confirmListed: '이적시장 판매 등록이 내려가요.',
   confirmValue: (p: { value: string }) => `구단 가치가 ${p.value} 줄어요.`,
   confirmLocked: '감독이 된 선수는 팔거나 방출하거나 잠글 수 없어요.',
-  confirmAbandon: '도중에 포기하면 원래 선수로 돌아와요. 선발에는 직접 다시 넣어야 해요.',
+  confirmAbandon:
+    '도중에 포기하면 원래 선수로 돌아와요. 선발에는 직접 다시 넣어야 해요. 감독 카드로 확정한 뒤에는 선수로 돌릴 수 없어요.',
   confirmOk: '감독으로 시작',
   cancel: '취소',
   // 진행
@@ -80,7 +81,8 @@ const ko = {
   resultHeading: (p: { n: number }) => `${p.n}시즌 결산`,
   nextSeason: '다음으로',
   doneHeading: '감독 커리어 끝',
-  doneLead: '감독 카드로 확정하면 우리 팀 감독 칸에 앉힐 수 있어요.',
+  doneLead:
+    '감독 카드로 확정하면 우리 팀 감독 칸에 앉힐 수 있어요. 확정한 뒤에는 다시 선수로 돌릴 수 없어요.',
   finish: '감독 카드로 확정',
   finishFail: '확정하지 못했어요. 잠시 뒤 다시 시도해 주세요.',
   abandon: '감독 커리어 포기',
