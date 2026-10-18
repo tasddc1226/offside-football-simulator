@@ -35,6 +35,16 @@ export const fairness: Translation<FairnessMsgs> = {
   boostLv: (p) => `Step +${p.lv}`,
   boostNote: (p) =>
     `Each failure at the same step raises the next chance by ${p.pity}. Trying with an ad or club funds uses the same odds.`,
+  enhanceTitle: 'Card upgrade odds',
+  enhanceColTry: 'Try',
+  enhanceColRate: 'First-try odds',
+  enhanceColCost: 'Cost',
+  enhanceColFail: 'On failure',
+  enhanceTry: (p) => `+${p.from} → +${p.to}`,
+  enhanceStay: 'Stays',
+  enhanceDrop: (p) => `Drops to +${p.lv}`,
+  enhanceNote: (p) =>
+    `Owners upgrade their retired player cards with club funds. Each failure in a row on the same card raises the next try's odds by ${p.pity} of the base, and a success resets them. Card upgrades are an owner feature, so the server decides the result.`,
   hiddenTitle: 'What stays hidden and why',
   hiddenPotTerm: 'Real potential',
   hiddenPot: 'Revealed when you retire. Scouting ratings can differ a little from the real value.',

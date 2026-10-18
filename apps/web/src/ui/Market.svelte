@@ -16,6 +16,9 @@
   // T-11-080d 시안(이적시장 모바일 시안)대로: 초록 머리에 구단 자금과 '자금 만들기', 탭 셋(선수 사기 · 팔기 · 내 거래),
   // 카드 모양 목록, 카드 상세 영입 시트, 카드 고르기 + 슬라이더 판매, 방출 화면. 각 화면은 처음 열 때만 불러온다.
   import type { CareerPos } from '@offside/contracts';
+  import { tradeValue } from '@offside/contracts/market-value';
+  import { enhanceValue } from '@offside/contracts/card-enhance';
+  import { cardEnhanceText as CE } from '@offside/app-core/i18n/ko/cardEnhance';
   import {
     buyListing,
     cancelListing,
@@ -169,8 +172,9 @@
   // 팔기 — 고른 선수와 판매가(기준가의 %).
   let selling = $state<TeamPlayer | null>(null);
   let pct = $state(100);
-  const sellPrice = $derived(selling?.cardValue && me ? priceAtPct(selling.cardValue, pct, me.rules) : 0);
-  const quote = $derived(selling?.cardValue && me ? sellQuote(selling.cardValue, sellPrice, me.rules) : null);
+  const sellValue = $derived(selling?.cardValue ? tradeValue(selling.cardValue, selling.enhance) : 0);
+  const sellPrice = $derived(sellValue && me ? priceAtPct(sellValue, pct, me.rules) : 0);
+  const quote = $derived(sellValue && me ? sellQuote(sellValue, sellPrice, me.rules) : null);
   function pickSell(p: TeamPlayer) {
     selling = p;
     pct = 100;
@@ -413,12 +417,12 @@
           </div>
         {/if}
         {#if selling && quote && me}
-          {@const diff = priceDiff(sellPrice, selling.cardValue!)}
+          {@const diff = priceDiff(sellPrice, sellValue)}
           {@const range = sellSlider(me.rules)}
           <div class="mk-price-box">
             <h2 class="mk-step">{L.sellStep2({ name: nameOfPlayer(selling), pos: detailPosOf(selling), peak: selling.peak })}</h2>
             <div class="mk-presets">
-              <button aria-pressed={pct === 100} onclick={() => (pct = 100)}><span>{L.presetBase}</span><b>{fmtValue(selling.cardValue!)}</b></button>
+              <button aria-pressed={pct === 100} onclick={() => (pct = 100)}><span>{L.presetBase}</span><b>{fmtValue(sellValue)}</b></button>
               <button aria-pressed={pct !== 100} onclick={() => (pct = pct === 100 ? 110 : pct)}><span>{L.presetCustom}</span><b>{pct === 100 ? L.presetSlider : fmtValue(sellPrice)}</b></button>
             </div>
             <label class="mk-slider">
@@ -431,6 +435,7 @@
               <div class="strong"><dt>{L.gets}</dt><dd>{fmtValue(quote.gets)}</dd></div>
             </dl>
             <p class="muted fs-sm">{L.sellHelp}</p>
+            {#if selling.enhance}<p class="muted fs-sm" data-sell-enhance>{CE.sellNote({ lv: selling.enhance, value: fmtValue(enhanceValue(selling.enhance)) })}</p>{/if}
             {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
             <button class="btn btn-primary btn-block" data-act="list" disabled={busy || !!quote.error} onclick={() => run(() => createListing(selling!.careerId, sellPrice), MARKET_TOAST.listed)}>
               {L.listFor({ price: fmtValue(sellPrice) })}

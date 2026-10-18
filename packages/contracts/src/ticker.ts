@@ -37,10 +37,19 @@ export const TickerFirstSchema = z.strictObject({
 });
 export type TickerFirst = z.infer<typeof TickerFirstSchema>;
 
-/** `GET /v1/ticker`. 두 목록 모두 최신순 — 섞는 건 웹이 한다. */
+/** T-11-373 고단계(+8 이상) 카드 강화 성공 하나. 이름은 공개 이름만(익명이면 null). */
+export const TickerEnhanceSchema = z.strictObject({
+  at: z.string(),
+  ...holder,
+  level: z.number().int().min(1).max(10),
+});
+export type TickerEnhance = z.infer<typeof TickerEnhanceSchema>;
+
+/** `GET /v1/ticker`. 목록 모두 최신순 — 섞는 건 웹이 한다. enhances는 옛 앱이 모르는 칸이라 읽지 않아도 된다. */
 export const TickerResponseSchema = z.strictObject({
   now: z.string(),
   transfers: z.array(TickerTransferSchema),
   firsts: z.array(TickerFirstSchema),
+  enhances: z.array(TickerEnhanceSchema).optional(),
 });
 export type TickerResponse = z.infer<typeof TickerResponseSchema>;

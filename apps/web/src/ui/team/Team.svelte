@@ -67,7 +67,7 @@
   import { friendsUi } from '../friendInvite.svelte.js';
   import { shellText as S } from '@offside/app-core/i18n/ko/shell';
   import { achNudge } from '../achNudge.js';
-  import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, tooManyWildcards, wildcardFullText, wildcardLabel } from '@offside/app-core/teamOwner';
+  import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, slotBoosts, matchHintOf, slotsSynergy, teamEditableIn, tooManyWildcards, wildcardFullText, wildcardLabel } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
@@ -114,6 +114,9 @@
   /** T-11-217 팀 프리셋(서버에 있는 목록)과 시트. */
   let presets = $state<TeamPreset[]>([]);
   let presetsOpen = $state(false);
+  // T-11-373 카드 강화 창(지연 청크).
+  let enhancing = $state<TeamPlayer | null>(null);
+  let boostScale = $state<number | undefined>(undefined);
 
   let opponents = $state<TeamOpponent[]>([]);
   let oppStatus = $state<LoadStatus>('loading');
@@ -179,7 +182,8 @@
   // T-11-105 선발 시너지 — 늘 보여 주고, 반영 시즌부터 줄 힘에도 더한다.
   const synergy = $derived(slotsSynergy(previewLayout, slots, byId));
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
-  const lines = $derived(draftLines(slotCodes, ratings, synergy, season));
+  // T-11-373 카드 강화 보정도 서버 경기 계산처럼 줄 힘에 더한다.
+  const lines = $derived(draftLines(slotCodes, ratings, synergy, season, slotBoosts(slots, byId, boostScale)));
   const filled = $derived(slots.filter((s) => s !== null).length);
   const dirty = $derived(
     !team ||
@@ -287,6 +291,7 @@
     }
     ({ season, current, seasons, lastManager, players, matchesLeft } = r.data);
     perDay = r.data.matchesPerDay;
+    boostScale = r.data.enhanceEffectScale;
     needLogin = false;
     applyTeam(r.data.team);
     const account = accountCache.value;
@@ -623,6 +628,7 @@
         onauto={autoFill}
         onsave={save}
         onlock={toggleLock}
+        onenhance={editable ? (p) => (enhancing = p) : undefined}
         onpresets={() => (presetsOpen = true)}
       />
       {#if team && season === current}
@@ -631,6 +637,11 @@
           <span class="tm-coach-info"><b>{MG.teamCoach}</b><span class="muted fs-sm">{team.coach ? coachSummary(team.coach, formation, localNames) : MG.teamCoachEmpty}</span></span>
           <button class="btn btn-sm" data-act="team-coach" onclick={() => go('manager')}>{MG.teamCoachManage}</button>
         </section>
+      {/if}
+      {#if enhancing}
+        {#await import('./EnhanceSheet.svelte') then { default: EnhanceSheet }}
+          <EnhanceSheet player={enhancing} name={nameOf(enhancing)} onclose={() => (enhancing = null)} onresult={(r) => { const id = enhancing?.careerId; players = players.map((x) => (x.careerId === id ? { ...x, enhance: r.to || undefined, enhanceFails: r.fails || undefined } : x)); }} />
+        {/await}
       {/if}
       <TeamPresets bind:open={presetsOpen} {presets} hasTeam={!!team} locked={!!cupBand?.locked} draft={presetDraft} persist={persistPresets} onload={applyPreset} />
     {:else if view === 'opponents'}

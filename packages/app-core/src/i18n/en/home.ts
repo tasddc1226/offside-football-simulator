@@ -46,6 +46,8 @@ export const home: Translation<HomeMsgs> = {
   tagDebut: 'Turned pro',
   tagFirst: 'Server first',
   tagRecord: 'Server record',
+  tagEnhance: 'Card upgrade',
+  tickerEnhance: (p) => `Upgraded to +${p.lv}`,
   tickerAria: 'Transfer and server record news',
   tickerIdle: 'Transfer news and server firsts show up here',
   tickerAge: (p) => `(age ${p.age})`,

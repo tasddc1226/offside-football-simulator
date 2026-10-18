@@ -1,4 +1,5 @@
 import { teamCoachOf } from '../db/repos/managers.js';
+import { enhanceEffectScale } from '../db/repos/cardEnhance.js';
 import { cupHonorsOf } from '../team/cup.js';
 import {
   AchRankQuerySchema,
@@ -158,7 +159,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     const ids = slotIdsOf(t);
     const other = session && session.profileId !== t.profileId ? session.profileId : null;
     const { ownerNickname } = found;
-    const [rows, rank, liked, friend, cupHonors, coach] = await Promise.all([
+    const [rows, rank, liked, friend, cupHonors, coach, boostScale] = await Promise.all([
       careersByIds(
         db,
         ids.filter((x): x is string => !!x),
@@ -169,10 +170,12 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       cupHonorsOf(db, t.profileId),
       // T-11-335 감독 칸에 앉힌 감독(카드 id 고유 인덱스 한 줄).
       teamCoachOf(db, t),
+      // T-11-373 카드 강화 효과 배율(줄 힘을 경기와 같게).
+      enhanceEffectScale(db),
     ]);
     const now = nowIso();
     const eligible = eligibleMap(rows, t.profileId, t.season, t.season === teamSeasonAt(now));
-    const lineup = buildLineup(t.formation as FormationId, ids, eligible, layoutOf(t));
+    const lineup = buildLineup(t.formation as FormationId, ids, eligible, layoutOf(t), boostScale);
     const lang = reqLang(c);
     const seasonName = teamSeasonName(t.season, lang);
     return ok(

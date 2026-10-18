@@ -57,6 +57,8 @@ const ko = {
   tagDebut: '프로 입단',
   tagFirst: '서버 최초',
   tagRecord: '서버 신기록',
+  tagEnhance: '카드 강화',
+  tickerEnhance: (p: { lv: number }) => `+${p.lv} 강화 성공`,
   tickerAria: '이적·서버 기록 소식',
   tickerIdle: '이적 소식과 서버 최초 기록이 여기로 흘러요',
   tickerAge: (p: { age: number }) => `(${p.age}세)`,

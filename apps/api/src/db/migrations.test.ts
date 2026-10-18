@@ -212,6 +212,22 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'manager',
     'created_at',
     'updated_at',
+    // T-11-373 카드 강화 단계 · 연속 실패 수.
+    'enhance',
+    'enhance_fails',
+  ],
+  // T-11-373 카드 강화 시도 기록(구단 자금 지출 원장).
+  card_enhance_log: [
+    'id',
+    'profile_id',
+    'career_id',
+    'from_level',
+    'to_level',
+    'success',
+    'rate_bp',
+    'roll',
+    'cost',
+    'created_at',
   ],
   // T-11-310 감독 커리어(진행 중 하나 · 끝낸 감독 카드).
   manager_careers: [

@@ -1,0 +1,36 @@
+import type { Translation } from '../core';
+import type { CardEnhanceMsgs } from '../ko/cardEnhance';
+
+export const cardEnhance: Translation<CardEnhanceMsgs> = {
+  title: 'Card upgrade',
+  open: 'Upgrade',
+  openAria: (p) => `Upgrade ${p.name}'s card`,
+  now: 'Now',
+  next: 'On success',
+  rate: 'Success chance',
+  cost: 'Cost',
+  balance: 'Club funds',
+  left: (p) => `${p.n} more today`,
+  failStay: 'A failure keeps the current step.',
+  failDrop: (p) => `A failure drops the card to +${p.lv}.`,
+  pity: (p) => `${p.n} failures in a row, so the chance went up.`,
+  effect: (p) => `Match position rating +${p.now} → +${p.next}`,
+  effectNote:
+    "Upgrades only add to position ratings in owner team matches. The card OVR and team OVR shown don't change.",
+  go: 'Upgrade',
+  going: 'Upgrading…',
+  skip: 'Skip',
+  close: 'Close',
+  success: (p) => `Upgraded to +${p.lv}.`,
+  failKeep: (p) => `The upgrade failed. The card stays at +${p.lv}.`,
+  failDropped: (p) => `The upgrade failed and the card dropped to +${p.lv}.`,
+  max: 'This is the highest step.',
+  short: 'Not enough club funds.',
+  limit: "You've used all of today's upgrades.",
+  closed: 'Card upgrades are paused for now.',
+  listed: "Players listed for sale can't be upgraded.",
+  loadFail: "Couldn't load upgrade info.",
+  retry: 'Try again',
+  tryFail: "Couldn't upgrade. Please try again in a moment.",
+  sellNote: (p) => `The +${p.lv} upgrade value of ${p.value} is added to the price range.`,
+};

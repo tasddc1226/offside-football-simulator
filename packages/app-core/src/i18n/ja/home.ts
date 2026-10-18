@@ -44,6 +44,8 @@ export const home: Translation<HomeMsgs> = {
   tagDebut: 'プロ入り',
   tagFirst: 'サーバー初',
   tagRecord: 'サーバー新記録',
+  tagEnhance: 'カード強化',
+  tickerEnhance: (p) => `+${p.lv}強化に成功`,
   tickerAria: '移籍・サーバー記録のニュース',
   tickerIdle: '移籍ニュースとサーバー初記録がここに流れます',
   tickerAge: (p) => `（${p.age}歳）`,

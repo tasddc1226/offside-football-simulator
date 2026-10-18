@@ -142,6 +142,9 @@ export const TeamPlayerSchema = z.strictObject({
   locked: z.boolean().optional(),
   /** T-11-080 판매 등록 중이면 그 등록. */
   listing: z.strictObject({ id: z.string(), price: z.number().int() }).nullable().optional(),
+  /** T-11-373 카드 강화 단계(1~10)와 연속 실패 수(천장). 강화하지 않은 카드 · 구버전 응답에는 없다. */
+  enhance: z.number().int().min(1).max(10).optional(),
+  enhanceFails: z.number().int().min(1).optional(),
 });
 export type TeamPlayer = z.infer<typeof TeamPlayerSchema>;
 
@@ -222,6 +225,8 @@ export const OwnerTeamResponseSchema = z.strictObject({
   matchesPerDay: z.number().int().min(1),
   /** T-11-113 창단 멤버(프리시즌에 은퇴 선수를 남긴 구단주). 배포 전 응답엔 없다. */
   founder: z.boolean().optional(),
+  /** T-11-373 카드 강화 경기 효과 배율(편성 화면 줄 힘 계산용). 구버전 응답에는 없다(1로 읽는다). */
+  enhanceEffectScale: z.number().optional(),
   /** T-11-150 내 대표 칭호(구단주 탭 닉네임 옆). 달지 않았으면 null, 배포 전 응답엔 없다. */
   ownerTitle: titleField,
 });

@@ -264,6 +264,42 @@ export const BALANCE_SPEC = {
     max: 7,
     step: 1,
   },
+  // T-11-373 카드 강화(card-enhance.ts). 단계별 확률 · 비용의 모양은 contracts 표에 고정하고 배율 · 천장 · 하루 한도 · 경기 효과
+  // 배율만 연다. enhanceDailyCap = 0이면 강화를 닫는다(배포 없이 끄는 스위치).
+  enhanceCostScale: {
+    def: 1,
+    min: 0.1,
+    max: 10,
+    step: 0.05,
+    unit: 'x',
+  },
+  enhanceRateScale: {
+    def: 1,
+    min: 0.5,
+    max: 1.5,
+    step: 0.01,
+    unit: 'x',
+  },
+  enhancePity: {
+    def: 0.1,
+    min: 0,
+    max: 0.5,
+    step: 0.01,
+    unit: 'pct',
+  },
+  enhanceDailyCap: {
+    def: 30,
+    min: 0,
+    max: 200,
+    step: 1,
+  },
+  enhanceEffectScale: {
+    def: 0.8,
+    min: 0,
+    max: 2,
+    step: 0.05,
+    unit: 'x',
+  },
   // T-11-153 앱의 보상형 광고 자리(후보 잠재력 · 시즌 평가 보기 · 자금이 모자란 시즌의 강화)를 광고 대신 구단 자금으로
   // 받는다. 웹은 광고가 없어 후보 잠재력 · 강화만 구단 자금으로 받는다.
   rewardPriceCandidates: {

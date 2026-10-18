@@ -4,6 +4,7 @@ import { displaySeasonAt } from '@offside/contracts/service-seasons';
 import type { Hono } from 'hono';
 import { ok } from './shared.js';
 import { tickerFirsts, tickerTransfers } from '../db/repos/ticker.js';
+import { tickerEnhances } from '../db/repos/cardEnhance.js';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -20,11 +21,13 @@ export function registerTickerRoutes(app: Hono<AppEnv>): void {
       const now = Date.now();
       // T-11-029 최초 기록·신기록 줄은 지금 시즌 것만(개막 전이면 프리시즌).
       const season = displaySeasonAt(new Date(now).toISOString());
-      const [transfers, firsts] = await Promise.all([
+      const [transfers, firsts, enhances] = await Promise.all([
         tickerTransfers(db, now),
         tickerFirsts(db, season),
+        // T-11-373 +8 이상 카드 강화 성공(부분 인덱스 한 번).
+        tickerEnhances(db, now),
       ]);
-      return { now: new Date(now).toISOString(), transfers, firsts };
+      return { now: new Date(now).toISOString(), transfers, firsts, enhances };
     });
     const lang = reqLang(c);
     const data =

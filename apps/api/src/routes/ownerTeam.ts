@@ -18,6 +18,7 @@ import {
   TeamMatchesResponseSchema,
   TeamOpponentsResponseSchema,
   TeamStatsResponseSchema,
+  resolveBalance,
   type OwnerTeam,
   type TeamOpponent,
 } from '@offside/contracts';
@@ -79,6 +80,8 @@ import {
 } from '../db/repos/ownerTeams.js';
 import { achievementRankOf } from '../db/repos/ownerAchievements.js';
 import { teamCoachOf } from '../db/repos/managers.js';
+import { activeBalanceQuery, balanceVersionOf } from '../db/repos/balance.js';
+import { enhanceEffectScale } from '../db/repos/cardEnhance.js';
 import { getProfile, hasAccount, type ProfileRecord } from '../db/repos/profiles.js';
 import { ownerTeams } from '../db/schema.js';
 import { and, eq } from 'drizzle-orm';
@@ -211,12 +214,17 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const season = seasonQuery(c, now);
-    const [teams, players, [played], founder] = await db.batch([
+    const [teams, players, [played], founder, [balance]] = await db.batch([
       listMyTeams(db, me.id),
       listEligibleCareers(db, me.id, season),
       countMatchesSince(db, me.id, kstTodayStart(now)),
       foundersOf(db, [me.id]),
+      activeBalanceQuery(db),
     ]);
+    // T-11-373 카드 강화 경기 효과 배율 — 편성 화면의 줄 힘이 경기와 같게 같은 batch에서 읽는다.
+    const boostScale = resolveBalance(
+      balance ? balanceVersionOf(balance).values : undefined,
+    ).enhanceEffectScale;
     // T-11-113 개막 뒤의 프리시즌 팀은 친선전용 편성을 보이고 고친다(지금 가진 선수만).
     const editableSeason = season === teamSeasonAt(now) || season === 0;
     const found = teams.find((t) => t.season === season);
@@ -251,7 +259,13 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         team: team
           ? toOwnerTeam(
               team,
-              buildLineup(team.formation as FormationId, slotIdsOf(team), eligible, layoutOf(team)),
+              buildLineup(
+                team.formation as FormationId,
+                slotIdsOf(team),
+                eligible,
+                layoutOf(team),
+                boostScale,
+              ),
               eligible,
               reqLang(c),
               coach,
@@ -263,7 +277,9 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           raised: !!p.raised,
           locked: p.locked,
           listing: p.listingId ? { id: p.listingId, price: p.listPrice! } : null,
+          ...(p.enhanceFails ? { enhanceFails: p.enhanceFails } : {}),
         })),
+        enhanceEffectScale: boostScale,
         lastManager: teams.findLast((t) => t.manager)?.manager ?? null,
         matchesLeft: Math.max(0, TEAM_MATCHES_PER_DAY - Number(played?.n ?? 0)),
         matchesPerDay: TEAM_MATCHES_PER_DAY,
@@ -338,7 +354,13 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           ? layoutOf(previous)
           : null
         : input.layout;
-    const lineup = buildLineup(input.formation, input.slots, eligible, layout);
+    const lineup = buildLineup(
+      input.formation,
+      input.slots,
+      eligible,
+      layout,
+      await enhanceEffectScale(db),
+    );
     if (!friendly) await checkCupLineup(db, me.id, season, ids, filledCount(lineup), now);
     const values = {
       name: input.name,

@@ -1,5 +1,6 @@
 import { expandDetailRoles } from '@offside/contracts/positions';
 import { addLines, managerLines, type ManagerCardRules } from '@offside/contracts/manager-rules';
+import { enhanceBoost } from '@offside/contracts/card-enhance';
 // T-10-092 구단주 팀 경기 시뮬레이션. 서버만 돌리는 순수 함수다 — 같은 경기 id(시드)와 같은 선발이면 결과가 늘 같다.
 import {
   FORMATIONS,
@@ -43,6 +44,8 @@ export type LineupCareer = {
   raised?: boolean;
   /** T-11-114 카드 시즌(0 = 프리시즌). 팀 시즌보다 앞이면 와일드카드. */
   season?: number;
+  /** T-11-373 카드 강화 단계(0 = 강화 전). */
+  enhance?: number;
 };
 
 /** 경기 기록에 남기는 선수. 공개 이름은 담지 않는다 — 읽을 때 커리어의 지금 공개 이름을 붙인다. */
@@ -58,17 +61,21 @@ export type LineupSlot = {
   publicName: string | null;
   /** T-11-105 시너지를 따질 선수 정보(유스 선수 자리는 null). */
   syn: SynergyPlayer | null;
+  /** T-11-373 카드 강화 보정(줄 힘 계산에만 더한다. rating · 팀 OVR 표시는 그대로). */
+  boost: number;
 };
 
 /**
  * 포메이션 11자리에 선수를 놓는다. eligible에 없는 커리어(남의 선수·아직 뛰는 선수·지워진 선수)와 빈 자리는
- * 유스 선수(YOUTH_OVR, 적합도 1)가 채운다.
+ * 유스 선수(YOUTH_OVR, 적합도 1)가 채운다. T-11-373 boostScale은 카드 강화 경기 효과 배율(밸런스 enhanceEffectScale) —
+ * 강화하지 않은 카드만 있으면 결과가 그대로다.
  */
 export function buildLineup(
   formation: FormationId,
   slotIds: readonly (string | null)[],
   eligible: ReadonlyMap<string, LineupCareer>,
   layout?: TeamLayout | null,
+  boostScale = 1,
 ): LineupSlot[] {
   const xs = (layout ?? presetLayout(formation)).map((p) => p.x);
   return (layout?.map((p) => p.slot) ?? FORMATIONS[formation]).map((slot, i) => {
@@ -84,6 +91,7 @@ export function buildLineup(
         ref: { careerId: null, anon: YOUTH_NAME },
         publicName: null,
         syn: null,
+        boost: 0,
       };
     }
     const rating = slotRating(slot, c);
@@ -96,6 +104,7 @@ export function buildLineup(
       ref: { careerId: c.id, anon: anonName(c.pos, c.number) },
       publicName: c.publicName,
       syn: toSynergyPlayer(slot, xs[i] ?? 50, c),
+      boost: enhanceBoost(c.enhance ?? 0, boostScale),
     };
   });
 }
@@ -118,7 +127,7 @@ export const lineupLines = (
 ): LineStrength =>
   lineStrength(
     lineup.map((s) => s.slot),
-    lineup.map((s) => s.rating),
+    lineup.map((s) => s.rating + s.boost),
     synergy,
   );
 

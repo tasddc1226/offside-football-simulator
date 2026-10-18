@@ -35,6 +35,16 @@ export const fairness: Translation<FairnessMsgs> = {
   boostLv: (p) => `+${p.lv}段階`,
   boostNote: (p) =>
     `同じ段階で失敗するたびに、次の挑戦の確率が${p.pity}ずつ上がります。広告やクラブ資金で挑戦しても確率は同じです。`,
+  enhanceTitle: 'カード強化の確率',
+  enhanceColTry: '挑戦',
+  enhanceColRate: '初回の確率',
+  enhanceColCost: '費用',
+  enhanceColFail: '失敗すると',
+  enhanceTry: (p) => `+${p.from} → +${p.to}`,
+  enhanceStay: 'そのまま',
+  enhanceDrop: (p) => `+${p.lv}に下がる`,
+  enhanceNote: (p) =>
+    `オーナーは引退選手のカードをクラブ資金で強化できます。同じカードで続けて失敗するたびに次の確率が基本の${p.pity}ずつ上がり、成功すると元に戻ります。カード強化はオーナー機能なので、判定はサーバーで行います。`,
   hiddenTitle: '隠しているものと理由',
   hiddenPotTerm: '実際のポテンシャル',
   hiddenPot: '引退するときに公開します。スカウト評価は実際の値と少し違うことがあります。',
