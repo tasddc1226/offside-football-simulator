@@ -17,6 +17,7 @@ import type { NatTourResult } from './national.js';
 import { confPoty, federationPoty } from './nation.js';
 import { gCompsText as M } from './i18n/ko/gComps.js';
 import { tn } from './i18n/names.js';
+import type { MomentHooks } from './moments.js';
 
 export const CUPS: Record<string, string[]> = {
   hs: ['전국고교축구선수권'],
@@ -306,7 +307,8 @@ export type CompGame = {
   /** T-11-261 대륙 대회 녹아웃 상대 구단 id(clubNameOf로 이름). 컵·리그 페이즈엔 없다. */
   opp?: string;
 };
-export type CompLine = { t: string; k: string; games: CompGame[] };
+/** comp는 대회 저장 이름(T-11-390 결승 장면을 이 줄에 붙인다). */
+export type CompLine = { t: string; k: string; games: CompGame[]; comp?: string };
 
 function tie(
   s: GameState,
@@ -316,6 +318,7 @@ function tie(
   stage: string,
   out: CompGame[],
   opp?: string,
+  mo?: MomentHooks,
 ): boolean {
   let edge = 0;
   for (let i = 0; i < legs; i++) {
@@ -331,14 +334,24 @@ function tie(
       ...(opp ? { opp } : {}),
     });
   }
-  const won = chance(clamp(0.5 + edge / legs, 0.08, 0.92));
-  out[out.length - 1]!.won = won;
+  const p = clamp(0.5 + edge / legs, 0.08, 0.92);
+  const x = rnd();
+  let won = x < p;
+  const last = out[out.length - 1]!;
+  // T-11-390 컵 · 대륙 대회 결승(내가 뛴 경기)은 승부 난수 x를 결정적 장면의 성공 기준선과 비교한다. 맡기면 기준선이 p 그대로다.
+  const final = stage === '결승'; // i18n-ignore 저장값
+  if (mo && final && c.type !== 'super' && last.mins > 0) {
+    const m = mo.open({ comp: c.name, ...(opp ? { opp } : {}) }, p, true);
+    won = m.ok = x < m.pct;
+  }
+  last.won = won;
   return won;
 }
 
 const CUP_PLAN: Record<number, string[]> = { 1: ['32강', '16강'], 2: ['8강', '4강', '결승'] };
 const CUP_OPP: Record<string, number> = { '32강': -6, '16강': -2, '8강': 1, '4강': 3, 결승: 5 };
-export function compsPhase(s: GameState): CompLine[] {
+/** mo는 T-11-390 결정적 장면 자리(화면 진행만 넘긴다 — 시뮬레이터 · 골든은 없이 같은 결과). */
+export function compsPhase(s: GameState, mo?: MomentHooks): CompLine[] {
   const S = s.season,
     L = leagueOf(s.leagueId),
     lines: CompLine[] = [];
@@ -356,10 +369,11 @@ export function compsPhase(s: GameState): CompLine[] {
         t: M.compLine({ name: tn(c.name), stage: won ? '우승' : '준우승' }),
         k: won ? 'good' : '',
         games,
+        comp: c.name,
       });
     } else if (c.type === 'cup' && CUP_PLAN[s.phase]) {
       for (const r of CUP_PLAN[s.phase]!) {
-        const won = tie(s, c, L.avg + (CUP_OPP[r] ?? 0) + gauss() * 3, 1, r, games);
+        const won = tie(s, c, L.avg + (CUP_OPP[r] ?? 0) + gauss() * 3, 1, r, games, undefined, mo);
         if (!won) {
           c.alive = false;
           c.stage = r === '결승' ? '준우승' : `${r} 탈락`;
@@ -375,10 +389,11 @@ export function compsPhase(s: GameState): CompLine[] {
         t: M.compLine({ name: tn(c.name), stage: c.stage }),
         k: c.stage === '우승' ? 'good' : c.alive ? '' : 'bad',
         games,
+        comp: c.name,
       });
     } else if (c.type === 'cont' && s.phase >= 1) {
-      const line = contPhase(s, c, games);
-      lines.push({ ...line, games });
+      const line = contPhase(s, c, games, mo);
+      lines.push({ ...line, games, comp: c.name });
     }
   }
   return lines;
@@ -399,11 +414,12 @@ function koTie(
   legs: number,
   stage: string,
   games: CompGame[],
+  mo?: MomentHooks,
 ): boolean {
   const b = (c.bracket ??= { path: [] });
   const opp = b.next?.stage === stage ? b.next.opp : drawOpponent(s, c, stage, oppStr);
   b.next = undefined;
-  const won = tie(s, c, oppStr, legs, stage, games, opp || undefined);
+  const won = tie(s, c, oppStr, legs, stage, games, opp || undefined, mo);
   b.path.push({ stage, opp, legs, won });
   return won;
 }
@@ -413,7 +429,12 @@ function drawNext(s: GameState, c: SeasonComp, stage: string, legs: number) {
   const opp = drawOpponent(s, c, stage, CONT[c.key!]!.avg + (KO_BONUS[stage] ?? 0));
   b.next = opp ? { stage, opp, legs } : undefined;
 }
-function contPhase(s: GameState, c: SeasonComp, games: CompGame[]): { t: string; k: string } {
+function contPhase(
+  s: GameState,
+  c: SeasonComp,
+  games: CompGame[],
+  mo?: MomentHooks,
+): { t: string; k: string } {
   const C = CONT[c.key!]!,
     S = s.season;
   if (s.phase === 1 && C.ko) {
@@ -456,7 +477,7 @@ function contPhase(s: GameState, c: SeasonComp, games: CompGame[]): { t: string;
   const asia = c.key!.startsWith('ACL');
   for (const r of rounds) {
     const opp = C.avg + KO_BONUS[r]! + gauss() * 2;
-    const won = koTie(s, c, opp, r === '결승' || (asia && r !== '16강') ? 1 : 2, r, games);
+    const won = koTie(s, c, opp, r === '결승' || (asia && r !== '16강') ? 1 : 2, r, games, mo);
     if (!won) {
       c.alive = false;
       c.stage = r === '결승' ? '준우승' : `${r} 탈락`;

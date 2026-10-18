@@ -23,6 +23,13 @@ test('progress popup has no running player; skip and confirmation keep the resul
   const saved = await page.evaluate(() => localStorage.getItem('ft_save'));
   await page.clock.runFor(600);
   await page.locator('#an-skip').click();
+  // T-11-390 건너뛰기도 결정적 장면에서는 멈춘다 — 맡기고 결과 줄이 지나가게 시계를 돌린다.
+  const auto = page.locator('#sheet [data-key-moment-choice="auto"]');
+  await expect(page.locator('#sheet [data-sheet="0"]').or(auto)).toBeVisible();
+  if (await auto.isVisible()) {
+    await auto.click();
+    await page.clock.runFor(2_000);
+  }
   await expect(page.locator('#sheet [data-sheet="0"]')).toBeInViewport();
   await expect(page.locator('[data-block-wdl]')).not.toBeEmpty();
   expect(await page.evaluate(() => localStorage.getItem('ft_save'))).toBe(saved);
