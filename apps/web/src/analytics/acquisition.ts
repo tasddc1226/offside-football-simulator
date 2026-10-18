@@ -7,11 +7,7 @@ import {
   invalidateApiCache,
 } from '@offside/app-core/api/client';
 import { CONSENT_KEY } from '@offside/app-core/analytics-model';
-import {
-  entryCampaign as landing,
-  restoreEntryCampaign,
-  resetEntryCampaign,
-} from './entry-campaign.js';
+import { entryCampaign as landing } from './entry-campaign.js';
 import {
   clearOAuthCampaign,
   oauthMeasurementAllowed,
@@ -19,6 +15,9 @@ import {
   withdrawOAuthCampaign,
   rememberOAuthCampaign,
   takeOAuthCampaign,
+  oauthEntryCampaign,
+  restoreOAuthEntry,
+  resetOAuthEntry,
   type OAuthProvider,
 } from './oauth-campaign.js';
 import {
@@ -46,7 +45,7 @@ function clearContinuation() {
   clearOAuthCampaign();
   continuationCancelled = true;
   continuationProfile = null;
-  resetEntryCampaign();
+  resetOAuthEntry();
 }
 function checkContinuation(account: string) {
   if (
@@ -70,7 +69,7 @@ async function resolveOAuthCampaign() {
     // A continuation is a new visit, never a transfer/replay of the old profile's touch/events.
     sessionStorage.removeItem(SESSION_KEY);
     continuationProfile = me.data.id;
-    restoreEntryCampaign(oauthContext.campaign);
+    restoreOAuthEntry(oauthContext.campaign);
     invalidateApiCache('/v1/acquisition/consent');
   })().catch(() => {});
   await oauthResolution;
@@ -87,7 +86,7 @@ export async function prepareAcquisitionOAuth(provider: OAuthProvider, account: 
       : null;
     rememberOAuthCampaign(
       provider,
-      landing,
+      oauthEntryCampaign(landing),
       !!state?.granted &&
         state.profileId === account &&
         generation === epoch &&
@@ -265,6 +264,7 @@ export function recordAcquisition(action: 'session' | 'start' | 'store_click') {
     if (generation !== epoch || !acquisitionGranted()) return;
     try {
       checkContinuation(profileId!);
+      const campaign = oauthEntryCampaign(landing);
       const now = Date.now();
       let session = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? 'null') as {
         id: string;
@@ -277,9 +277,9 @@ export function recordAcquisition(action: 'session' | 'start' | 'store_click') {
         session.profile !== profileId ||
         now - session.at >= ACQUISITION_SESSION_MS ||
         session.at > now ||
-        (landing && session.campaign !== landing)
+        (campaign && session.campaign !== campaign)
       ) {
-        session = { id: crypto.randomUUID(), profile: profileId!, campaign: landing, at: now };
+        session = { id: crypto.randomUUID(), profile: profileId!, campaign, at: now };
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
       }
       const res = await request({

@@ -6,6 +6,15 @@ const WITHDRAWN_KEY = 'offside_acquisition_oauth_withdrawn_v1';
 export const OAUTH_CAMPAIGN_MS = 10 * 60_000;
 export type OAuthProvider = 'google' | 'apple';
 type Context = { provider: OAuthProvider; campaign: string; at: number };
+// Keep mutable continuation state in this lazy module, outside the first-screen entry snapshot.
+let restoredCampaign: string | null = null;
+export const oauthEntryCampaign = (entry: string) => restoredCampaign ?? entry;
+export function restoreOAuthEntry(campaign: string) {
+  restoredCampaign = campaignQuery(`https://offside.invalid/${campaign}`);
+}
+export function resetOAuthEntry() {
+  restoredCampaign = null;
+}
 
 export function oauthMeasurementAllowed() {
   try {

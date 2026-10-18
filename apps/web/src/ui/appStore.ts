@@ -2,9 +2,10 @@
 // 인앱 브라우저(카톡 등)도 기기 OS를 따른다. 홈 화면에 추가한 웹 앱(standalone)도 같은 안내를 받는다.
 import { appStoreCampaignUrl } from '@offside/app-core/app-store-campaign';
 import { entryCampaign } from '../analytics/entry-campaign.js';
+import { oauthEntryCampaign } from '../analytics/oauth-campaign.js';
 export const appStoreUrl = () =>
   appStoreCampaignUrl(
-    `https://offside.invalid/${entryCampaign}`,
+    `https://offside.invalid/${oauthEntryCampaign(entryCampaign)}`,
     import.meta.env.VITE_APPLE_PROVIDER_TOKEN,
   );
 import { trackAppStoreClick, type AppStorePlace } from '../analytics/index.js';

@@ -139,7 +139,7 @@ it('restores only after server confirms the callback provider is linked', async 
   await a.acquisitionStatus();
   await tick();
   expect(bodies.length).toBe(n);
-  expect((await import('./entry-campaign.js')).entryCampaign).toBe('');
+  expect((await import('./oauth-campaign.js')).oauthEntryCampaign('')).toBe('');
 });
 it('a target account with its own prior server grant can record, without copying the source grant', async () => {
   let a = await import(source);
@@ -182,7 +182,7 @@ it('withdrawal while callback identity is being checked cannot restore or transm
   });
   expect(await status).toBe('denied');
   expect(bodies.slice(n).every((b) => b.action === 'revoke' && b.profileId === 'guest')).toBe(true);
-  expect((await import('./entry-campaign.js')).entryCampaign).toBe('');
+  expect((await import('./oauth-campaign.js')).oauthEntryCampaign('')).toBe('');
 });
 it('another account replacing the verified callback target cannot inherit its campaign', async () => {
   let a = await import(source);
@@ -248,7 +248,7 @@ it('withdrawal followed by re-consent cannot revive an identity check already in
     data: { id: 'target', linked: { google: true, apple: false, toss: false } },
   });
   expect(await status).toBe('denied');
-  expect((await import('./entry-campaign.js')).entryCampaign).toBe('');
+  expect((await import('./oauth-campaign.js')).oauthEntryCampaign('')).toBe('');
   await a.setAcquisitionConsent('granted');
   await tick();
   expect(bodies.at(-1)).toMatchObject({ profileId: 'target', campaign: '' });
@@ -286,5 +286,28 @@ it('uses the queued storage event withdrawal even if storage already holds a lat
     data: { id: 'target', linked: { google: true, apple: false, toss: false } },
   });
   expect(await status).toBe('denied');
+  expect((await import('./oauth-campaign.js')).oauthEntryCampaign('')).toBe('');
+});
+
+it('App Store buttons use the verified continuation while the eager boot snapshot remains unchanged', async () => {
+  let a = await import(source);
+  await a.setAcquisitionConsent('granted');
+  await tick();
+  api.status.mockResolvedValue({
+    ok: true,
+    data: { profileId: 'guest', granted: true, revision: null },
+  });
+  await a.prepareAcquisitionOAuth('google', 'guest');
+  a = await callback('target', false);
+  await a.acquisitionStatus();
+  await a.setAcquisitionConsent('granted');
+  await tick();
   expect((await import('./entry-campaign.js')).entryCampaign).toBe('');
+  vi.stubEnv('VITE_APPLE_PROVIDER_TOKEN', '123456');
+  const { appStoreUrl } = await import('../ui/appStore.js');
+  const url = new URL(appStoreUrl());
+  expect(url.searchParams.get('pt')).toBe('123456');
+  expect(url.searchParams.get('ct')).toBe('os1.b.3.4.e');
+  await a.setAcquisitionConsent('denied');
+  expect(new URL(appStoreUrl()).searchParams.has('ct')).toBe(false);
 });
