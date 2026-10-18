@@ -387,7 +387,9 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   );
   await expect(report.locator('[data-report-rows]')).toHaveCount(0);
   let apiCalls = 0;
-  const countApi = (r: { url(): string }) => void (r.url().startsWith(API) && apiCalls++);
+  // 라운지 채팅 접속(/v1/chat/ticket)은 화면을 연 뒤 시간차로 나가 리포트와 무관하다.
+  const countApi = (r: { url(): string }) =>
+    void (r.url().startsWith(API) && !r.url().startsWith(`${API}/v1/chat/`) && apiCalls++);
   page.on('request', countApi);
   await report.locator('[data-act="team-report-compare"]').click();
   await expect(report.locator('[data-report-line="mid"]')).toHaveClass(/weak/);
