@@ -1,16 +1,27 @@
 <script lang="ts">
   import TeamLogo from './TeamLogo.svelte';
   import { teamLiveText as L } from '@offside/app-core/i18n/ko/teamLive';
+  import { teamMomentsText as M } from '@offside/app-core/i18n/ko/teamMoments';
   // T-10-097 팀 경기 문자중계 — 한 화면에서 시계가 0'부터 90'+까지 흐르며 중계 줄이 하나씩 올라온다. 골이 가까우면
   // 시계가 느려지고, 골이 들어가면 전광판이 번쩍인다. 결과는 이미 서버가 정했고 여기서는 보여 주기만 한다.
   // 감속 모션이어도 진행 템포는 그대로 두고(읽는 시간) 움직임 효과만 뺀다. '결과 바로 보기'로 언제든 끝낼 수 있다.
+  // T-11-387 장면 경기(live)면 장면 분에 시계를 멈추고 선택지 카드를 띄운다. 고르면 서버가 결과를 정하고, 그 골이 중계에
+  // 끼어든다. 제한 시간이 지나거나 '결과 바로 보기'를 누르면 남은 장면은 감독에게 맡긴다.
   import { onDestroy, onMount } from 'svelte';
-  import type { TeamMatch } from '@offside/app-core/api/team';
+  import {
+    chooseMoment,
+    finishLiveMatch,
+    type PlayTeamMatchResponse,
+    type TeamLive,
+    type TeamMatch,
+    type TeamMoment,
+  } from '@offside/app-core/api/team';
   import {
     FLASH_MS,
     MOMENTUM_START,
     PHASE_LABEL,
     clockText,
+    lineWaitMs,
     liveScript,
     momentumAfter,
     momentumDecay,
@@ -19,26 +30,49 @@
     type LiveLine,
     type LivePhase,
   } from '@offside/app-core/teamLive';
+  import {
+    LiveScore,
+    momentChoices,
+    momentLines,
+    momentScene,
+    momentTitle,
+  } from '@offside/app-core/teamMoments';
 
   let {
     match,
     name,
     onend,
     neutral = false,
+    live,
+    onfinal,
   }: {
     match: TeamMatch;
     name: (id: string | null, fallback: string) => string;
     onend: () => void;
     /** 내 팀이 없는 경기(컵 공개 경기) — 내 팀 강조 없이 그린다. */
     neutral?: boolean;
+    /** T-11-387 고를 장면(장면 경기를 막 시작했을 때만). */
+    live?: TeamLive | undefined;
+    /** 장면 경기가 끝났을 때의 결과(스코어 · 기록 · 레이팅). */
+    onfinal?: ((r: PlayTeamMatchResponse) => void) | undefined;
   } = $props();
 
   // 경기 하나에 한 번 만든다(부모가 경기마다 {#key}로 새로 그린다).
   // svelte-ignore state_referenced_locally
   const script = liveScript(match, name, { neutral });
-  const plan = playbackPlan(script);
+  // svelte-ignore state_referenced_locally
+  const moments: TeamMoment[] = live?.moments ?? [];
+  // svelte-ignore state_referenced_locally
+  const choiceSec = live?.choiceSec ?? 15;
+  const plan = playbackPlan(
+    script,
+    moments.map((m) => m.minute),
+  );
+  // svelte-ignore state_referenced_locally
+  const tally = live ? new LiveScore(match, neutral) : null;
 
-  let shown = $state<number[]>([]);
+  let shown = $state<{ k: number; l: LiveLine }[]>([]);
+  let seq = 0;
   let clock = $state(0);
   let extra = $state(0);
   let phase = $state<LivePhase>('1st');
@@ -50,17 +84,26 @@
   let alive = true;
   let flashTimer: ReturnType<typeof setTimeout> | undefined;
 
+  /** 지금 고르는 장면과 남은 초. */
+  let active = $state<{ m: TeamMoment; left: number } | null>(null);
+  let sending = $state(false);
+  let pick: ((choice: string | null) => void) | null = null;
+  let countdown: ReturnType<typeof setInterval> | undefined;
+  let final: PlayTeamMatchResponse | null = null;
+  /** 판정을 받지 못하면 남은 장면은 건너뛰고 끝에서 마감한다. */
+  let broken = false;
+
   const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, waitMs(ms, fast)));
 
   const scored = $derived(
-    shown.map((i) => script[i]!).filter((l): l is LiveLine & { side: 'home' | 'away' } => l.kind === 'goal' && !!l.side),
+    shown.map((x) => x.l).filter((l): l is LiveLine & { side: 'home' | 'away' } => l.kind === 'goal' && !!l.side),
   );
   const clockLabel = $derived(extra ? `${clock}+${extra}'` : `${clock}'`);
   const phaseLabel = $derived(PHASE_LABEL[phase]);
+  const choices = $derived(active ? momentChoices(active.m, name) : []);
 
-  function show(i: number) {
-    const l = script[i]!;
-    shown = [i, ...shown];
+  function push(l: LiveLine) {
+    shown = [{ k: seq++, l }, ...shown];
     momentum = momentumAfter(momentum, l);
     if (l.kind === 'goal' && l.score) {
       score = l.score;
@@ -70,23 +113,77 @@
     }
   }
 
+  function show(i: number) {
+    const l = script[i]!;
+    push(tally ? tally.line(l) : l);
+  }
+
+  /** 장면 카드를 띄우고 고른 선택지(시간이 지나면 'auto', 경기를 끝내면 null)를 기다린다. */
+  function ask(m: TeamMoment): Promise<string | null> {
+    return new Promise((resolve) => {
+      active = { m, left: choiceSec };
+      pick = (choice) => {
+        pick = null;
+        clearInterval(countdown);
+        resolve(choice);
+      };
+      countdown = setInterval(() => {
+        if (!active) return;
+        active = { ...active, left: active.left - 1 };
+        if (active.left <= 0) pick?.('auto');
+      }, 1000);
+    });
+  }
+
+  async function moment(k: number) {
+    const m = moments[k];
+    if (!m || broken || !alive) return;
+    const choice = await ask(m);
+    if (choice === null || !alive) return;
+    sending = true;
+    const r = await chooseMoment(match.id, m.index, choice);
+    sending = false;
+    active = null;
+    if (!r.ok) {
+      broken = true;
+      push({ minute: m.minute, kind: 'moment', text: M.failed });
+      return;
+    }
+    if (r.data.final) final = r.data.final;
+    for (const l of momentLines(r.data.moment, r.data.goals, name, tally!)) {
+      if (!alive) return;
+      push(l);
+      await sleep(lineWaitMs(l.kind));
+    }
+  }
+
   // 순서·대기 시간은 app-core playbackPlan이 정한다. 여기서는 단계마다 상태를 반영하고 기다린다.
   async function run() {
     for (const step of plan) {
       if (!alive) return;
       if (step.clock !== undefined) clock = step.clock;
       if (step.extra !== undefined) extra = step.extra;
+      if (step.moment !== undefined) await moment(step.moment);
       if (step.show !== undefined) show(step.show);
       if (step.phase) phase = step.phase;
       if (step.decay) momentum = momentumDecay(momentum);
       if (step.wait > 0) await sleep(step.wait);
     }
-    finish();
+    void finish();
   }
 
-  function finish() {
+  async function finish() {
     if (!alive) return;
     alive = false;
+    pick?.(null);
+    active = null;
+    if (live && !final) {
+      sending = true;
+      const r = await finishLiveMatch(match.id);
+      sending = false;
+      if (r.ok) final = r.data;
+    }
+    if (final) onfinal?.(final);
     onend();
   }
 
@@ -94,6 +191,7 @@
   onDestroy(() => {
     alive = false;
     clearTimeout(flashTimer);
+    clearInterval(countdown);
   });
 </script>
 
@@ -132,9 +230,28 @@
     {/if}
   </div>
 
+  {#if active}
+    <div class="tl-moment" class:crisis={active.m.kind === 'crisis'} role="group" aria-labelledby="tl-m-title" data-moment={active.m.situation}>
+      <p class="tl-m-head"><b id="tl-m-title">{momentTitle(active.m)}</b><span>{active.m.minute}'</span></p>
+      <p class="tl-m-scene">{momentScene(active.m, name)}</p>
+      <p class="tl-m-ask">{M.ask} <small>{active.m.kind === 'chance' ? M.chancePct : M.crisisPct}</small></p>
+      <div class="tl-m-choices">
+        {#each choices as c (c.id)}
+          <button class="tl-m-choice" disabled={sending} onclick={() => pick?.(c.id)} data-moment-choice={c.id}>
+            <span class="tl-m-label">{c.label}</span>
+            <b class="tl-m-pct">{M.pct({ p: c.pct })}</b>
+            {#if c.tags.length}<small class="tl-m-tags">{c.tags.join(' · ')}</small>{/if}
+          </button>
+        {/each}
+      </div>
+      <div class="tl-m-timer" aria-hidden="true"><i style:width="{(active.left / choiceSec) * 100}%"></i></div>
+      <p class="tl-m-hint" aria-live="polite">{sending ? M.sending : M.timer({ s: active.left })}</p>
+    </div>
+  {/if}
+
   <ol class="tl-feed">
-    {#each shown as i (i)}
-      {@const l = script[i]!}
+    {#each shown as x (x.k)}
+      {@const l = x.l}
       <li class="k-{l.kind}" class:away={l.side === 'away'} class:home={l.side === 'home'} data-live-line={l.kind}>
         <span class="tl-min">{clockText(l)}</span>
         <span>{l.text}</span>
@@ -144,7 +261,7 @@
 
   <div class="tm-actions">
     <button class="btn" aria-pressed={fast} onclick={() => (fast = !fast)} data-act="live-fast">{fast ? L.speedNormal : L.speedFast}</button>
-    <button class="btn btn-primary" onclick={finish} data-act="live-skip">{L.skip}</button>
+    <button class="btn btn-primary" disabled={sending} onclick={() => void finish()} data-act="live-skip">{L.skip}</button>
   </div>
 </section>
 
@@ -362,6 +479,101 @@
     background: transparent;
     border: 1px dashed var(--line);
   }
+  .tl-feed li.k-moment {
+    font-weight: 700;
+    background: var(--surface);
+    border: 1px solid var(--pitch-accent);
+  }
+  .tl-moment {
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+    border-radius: 14px;
+    background: var(--surface);
+    border: 2px solid var(--pitch-2);
+    animation: tl-in 0.35s ease-out;
+  }
+  .tl-moment.crisis {
+    border-color: var(--bad);
+  }
+  .tl-m-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 0;
+    font-family: var(--display);
+    letter-spacing: 0.04em;
+  }
+  .tl-m-head b {
+    font-size: 1.125rem;
+    color: var(--pitch-2);
+  }
+  .tl-moment.crisis .tl-m-head b {
+    color: var(--bad);
+  }
+  .tl-m-scene,
+  .tl-m-ask,
+  .tl-m-hint {
+    margin: 0;
+    line-height: 1.5;
+  }
+  .tl-m-ask small,
+  .tl-m-hint {
+    color: var(--muted);
+    font-size: 0.8125rem;
+  }
+  .tl-m-choices {
+    display: grid;
+    gap: 6px;
+  }
+  .tl-m-choice {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 2px 10px;
+    min-height: 48px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .tl-m-choice:hover:not(:disabled),
+  .tl-m-choice:focus-visible {
+    border-color: var(--pitch-2);
+  }
+  .tl-m-choice:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .tl-m-label {
+    font-weight: 700;
+  }
+  .tl-m-pct {
+    font-family: var(--display);
+    font-size: 1.125rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .tl-m-tags {
+    grid-column: 1 / -1;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+  .tl-m-timer {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+    overflow: hidden;
+  }
+  .tl-m-timer i {
+    display: block;
+    height: 100%;
+    background: var(--pitch-2);
+    transition: width 1s linear;
+  }
   .tl-min {
     font-family: var(--display);
     font-weight: 700;
@@ -412,6 +624,7 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
+    .tl-moment,
     .tl-board.flash,
     .tl-board.flash .tl-goals,
     .tl-feed li,
@@ -421,6 +634,7 @@
     }
     .tl-team,
     .tl-fill,
+    .tl-m-timer i,
     .tl-mom-fill {
       transition: none;
     }

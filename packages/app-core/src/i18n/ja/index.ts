@@ -98,6 +98,7 @@ import { teamCore } from './teamCore';
 import { teamHome } from './teamHome';
 import { teamLive } from './teamLive';
 import { teamMatch } from './teamMatch';
+import { teamMoments } from './teamMoments';
 import { teamSynergy } from './teamSynergy';
 import { title } from './title';
 import { titleTag } from './titleTag';
@@ -202,6 +203,7 @@ export const ja = {
   teamHome,
   teamLive,
   teamMatch,
+  teamMoments,
   teamSynergy,
   title,
   titleTag,

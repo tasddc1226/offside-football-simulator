@@ -43,7 +43,8 @@
     "./club-strength-fallback": "./src/club-strength-fallback.json",
     "./club-strength-provider": "./src/club-strength-provider.ts",
     "./avatar-look": "./src/avatar-look.ts",
-    "./manager-rules": "./src/manager-rules.ts"
+    "./manager-rules": "./src/manager-rules.ts",
+    "./team-moments": "./src/team-moments.ts"
   },
   "scripts": {
     "test": "vitest run",

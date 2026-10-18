@@ -29,13 +29,15 @@
     fetchOwnerTeam,
     fetchTeamMatches,
     fetchTeamStats,
-    playMatch,
+    playLiveMatch,
     saveOwnerTeam,
     saveTeamPresets,
     type ClubAchievementsResponse,
     type TeamStatsResponse,
     type OwnerTeam,
     type OwnerTeamResponse,
+    type PlayTeamMatchResponse,
+    type TeamLive as TeamLiveData,
     type TeamMatch,
     type TeamOpponent,
     type TeamPlayer,
@@ -124,6 +126,8 @@
   let resultOrigin = $state<'opponents' | 'history'>('opponents');
   /** 방금 치른 경기(또는 '다시 보기')를 문자중계로 보여 주는 중(T-10-097). */
   let live = $state(false);
+  /** T-11-387 방금 시작한 장면 경기의 고를 장면(중계가 끝나면 비운다). */
+  let liveMoments = $state<TeamLiveData | undefined>();
   /** T-11-098 오늘 남은 친선전(친선전 결과 화면의 '다시 경기하기'). */
   let friendlyLeft = $state(0);
   // T-10-130 팀 안의 화면은 appState.teamView — 뒤로 가기로 오간다. 결과는 이 화면에만 있어 다시 들어왔을 때(앞으로 가기)
@@ -428,7 +432,8 @@
   async function challenge(o: TeamOpponent) {
     if (playing) return;
     playing = true;
-    const r = await playMatch(o.teamId);
+    // T-11-387 랭크 경기는 문자중계 도중 장면을 고르는 경기로 시작한다(결과는 중계가 끝날 때 onfinal로 온다).
+    const r = await playLiveMatch(o.teamId);
     playing = false;
     if (!r.ok) {
       if (r.error.reason === 'TEAM_MATCH_DAILY_LIMIT') matchesLeft = 0;
@@ -437,15 +442,28 @@
       return toast(r.error.message);
     }
     result = r.data.match;
+    liveMoments = r.data.live;
     resultOrigin = 'opponents';
     live = true;
     matchesLeft = r.data.matchesLeft;
-    if (team) {
-      team.record = r.data.record;
-      team.rating = r.data.rating;
-    }
+    applyPlayed(r.data);
     show('result');
     window.scrollTo(0, 0);
+  }
+
+  /** 경기 결과의 기록 · 레이팅을 내 팀에 반영한다(장면 경기는 시작 때 경기 전 값, 끝날 때 결과 값이 온다). */
+  function applyPlayed(r: PlayTeamMatchResponse) {
+    if (!team) return;
+    team.record = r.record;
+    team.rating = r.rating;
+  }
+
+  /** 장면 경기가 끝났다 — 결과 화면을 마감한 경기로 바꾼다. */
+  function liveFinal(r: PlayTeamMatchResponse) {
+    result = r.match;
+    liveMoments = undefined;
+    matchesLeft = r.matchesLeft;
+    applyPlayed(r);
   }
 
   // T-11-098 친선전 결과(방금 치른 경기는 중계부터, 최근 친선전은 결과부터). 결과에서 돌아가면 '경기' 탭의 친구 쪽이다.
@@ -686,7 +704,13 @@
     {:else if view === 'result' && result}
       {#if live}
         {#key result.id}
-          <TeamLive match={result} name={eventName} onend={() => ((live = false), window.scrollTo(0, 0))} />
+          <TeamLive
+            match={result}
+            name={eventName}
+            live={liveMoments}
+            onfinal={liveFinal}
+            onend={() => ((live = false), (liveMoments = undefined), window.scrollTo(0, 0))}
+          />
         {/key}
       {:else}
         <TeamResult

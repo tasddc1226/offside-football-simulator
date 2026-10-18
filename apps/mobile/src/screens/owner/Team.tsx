@@ -33,12 +33,14 @@ import {
   fetchOwnerTeam,
   fetchTeamMatches,
   fetchTeamStats,
-  playMatch,
+  playLiveMatch,
   saveOwnerTeam,
   saveTeamPresets,
   type ClubAchievementsResponse,
   type OwnerTeam,
   type OwnerTeamResponse,
+  type PlayTeamMatchResponse,
+  type TeamLive as TeamLiveData,
   type TeamMatch,
   type TeamStatsResponse,
   type TeamOpponent,
@@ -193,6 +195,8 @@ export default function Team() {
   const [result, setResult] = useState<TeamMatch | null>(null);
   /** 방금 치른 경기(또는 '다시 보기')를 문자중계로 보여 주는 중(T-10-097). */
   const [live, setLive] = useState(false);
+  /** T-11-387 방금 시작한 장면 경기의 고를 장면(중계가 끝나면 비운다). */
+  const [liveMoments, setLiveMoments] = useState<TeamLiveData | undefined>();
   const [resultOrigin, setResultOrigin] = useState<'opponents' | 'history'>('opponents');
   const [history, setHistory] = useState<TeamMatch[]>([]);
   const [histStatus, setHistStatus] = useState<LoadStatus>('loading');
@@ -527,7 +531,8 @@ export default function Team() {
   async function challenge(o: TeamOpponent) {
     if (playing) return;
     setPlaying(true);
-    const r = await playMatch(o.teamId);
+    // T-11-387 랭크 경기는 문자중계 도중 장면을 고르는 경기로 시작한다(결과는 중계가 끝날 때 onfinal로 온다).
+    const r = await playLiveMatch(o.teamId);
     setPlaying(false);
     if (!r.ok) {
       if (r.error.reason === 'TEAM_MATCH_DAILY_LIMIT') setMatchesLeft(0);
@@ -537,17 +542,32 @@ export default function Team() {
     }
     setResultOrigin('opponents');
     setResult(r.data.match);
+    setLiveMoments(r.data.live);
     setLive(true);
     setMatchesLeft(r.data.matchesLeft);
-    setTeam((t) => (t ? { ...t, record: r.data.record, rating: r.data.rating } : t));
+    applyPlayed(r.data);
     show('result');
     scrollTo(0);
+  }
+
+  /** 경기 결과의 기록 · 레이팅을 내 팀에 반영한다(장면 경기는 시작 때 경기 전 값, 끝날 때 결과 값이 온다). */
+  function applyPlayed(r: PlayTeamMatchResponse) {
+    setTeam((t) => (t ? { ...t, record: r.record, rating: r.rating } : t));
+  }
+
+  /** 장면 경기가 끝났어요. 결과 화면을 마감한 경기로 바꾼다. */
+  function liveFinal(r: PlayTeamMatchResponse) {
+    setResult(r.match);
+    setLiveMoments(undefined);
+    setMatchesLeft(r.matchesLeft);
+    applyPlayed(r);
   }
 
   /** 친구 칸에서 친선전을 치렀거나(중계부터) 최근 친선전을 열 때(결과부터). 친선전은 레이팅·전적을 건드리지 않는다. */
   function showFriendly(m: TeamMatch, withLive: boolean) {
     setResultOrigin('opponents');
     setResult(m);
+    setLiveMoments(undefined);
     setLive(withLive);
     show('result');
     scrollTo(0);
@@ -1072,8 +1092,11 @@ export default function Team() {
         key={result.id}
         match={result}
         name={eventName}
+        live={liveMoments}
+        onfinal={liveFinal}
         onend={() => {
           setLive(false);
+          setLiveMoments(undefined);
           scrollTo(0);
         }}
       />
@@ -1087,7 +1110,10 @@ export default function Team() {
         backLabel={resultOrigin === 'history' ? L.backToHistoryApp : L.backToLineupApp}
         onPlayer={(id) => openStats(id)}
         fix={reportFix}
-        replay={() => setLive(true)}
+        replay={() => {
+          setLiveMoments(undefined);
+          setLive(true);
+        }}
         again={() => {
           if (result.friendly) {
             setOppTab('friends');
@@ -1109,6 +1135,7 @@ export default function Team() {
         open={(m) => {
           setResultOrigin('history');
           setResult(m);
+          setLiveMoments(undefined);
           setLive(false);
           show('result');
         }}
