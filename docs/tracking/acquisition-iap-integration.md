@@ -87,3 +87,18 @@ GitHub 권한 재확인: 제한 환경 밖의 승인된 읽기 전용 gh auth st
 최종 main ae3cf3ab(#786) 반영: 보드 충돌을 양쪽 행 보존으로 해결했고 index/env/SEO/출석 UI 변경을 유지했다. 0111 snapshot 부모는0109로 여전히 일치한다. Android 선택적 분석 승인 종속 P1은 native finish와 내구적 analytics outbox를 분리해 수정했으며 서버는 큐의 expected profile을 대조한다.
 
 최신 migration 재생성: 게시 중 main be92d4d1(#785)이0110을 추가하여 다시 병합했다. 0111을 병합 schema에서 재생성했고 snapshot 부모0110, journal109→110→111 및 career_renames 보존을 확인했다. Drizzle 재실행 추가 변경 없음. 생성기의 알려진 coalesce 인덱스·ON DELETE SET NULL SQL 교정만 재적용했으며 운영 DB 적용은 하지 않았다. 앞선0109 부모 기록은 당시 검사 이력이다.
+
+
+## 2026-10-18 배포 경로 보완과 현재 차단
+
+main319aa9b5(#778)을 반영하고 보드의 양쪽 작업 행을 보존했다. main migration은0110까지라 0111 부모0110은 그대로 유효하다. 이 실행에서는 새 migration을 생성하거나 원격 DB에 적용하지 않았다.
+
+staging/production workflow가 환경별 공개 변수 VITE_ACQUISITION_ENABLED, VITE_APPLE_PROVIDER_TOKEN, ACQUISITION_ENABLED, APPLE_PROVIDER_TOKEN을 전달한다. 빈 플래그는 각각 false/0, provider는 빈 값이다. Vite 빌드는 웹 변수, API worker는 ACQUISITION_ENABLED, 웹 worker만 APPLE_PROVIDER_TOKEN을 받는다. OG worker에는 provider를 넣지 않는다. `.github/scripts/acquisition-release.mjs validate`가 잘못된 플래그와 웹/worker provider 불일치를 원격 쓰기 전에 막으며, deploy 하위 명령은 기존 환경/배포 순서를 유지하고 shell 보간 없이 argv로 전달한다. 비어 있는 provider도 명시적으로 전달해 오래된 값을 유지하지 않는다. 숫자 형식 검사는 소유권 검증을 대신하지 않는다.
+
+이 코드는 향후 승인된 배포의 설정 전달을 준비한다. 저장소/환경 변수를 등록하거나 켜지 않았고, deploy 하위 명령·병합·migration·배포·바이너리 빌드/출시를 실행하지 않았다. 기존 동의·광고 동의 false·기능 기본 off는 유지한다. 운영 모양 번들 검사는 합성 provider123456 및 활성화 경로를 포함하며 실제 운영 트래픽을 보내지 않는다.
+
+새 릴리스 노트는 작성하지 않는다. 저장소 AGENTS 및 `.release-notes/README.md`의 공식 면제인 PR 본문 `release-notes: none`을 사용하고 필수 guard는 유지한다.
+
+Apple 확인용 offside_link_check 폼 작업이 승인된 뒤 기존 브라우저로 App Store Connect에 접근했지만 authResult=FAILED 로그인 화면에서 내용이 로딩되지 않았다. 한 번 새로고침 후에도 동일해 폼에 도달하지 못했다. 폼 입력/링크 생성은 이번 실행에서 미시도이며 새 거절이나 불확실한 생성 결과는 없다. 기존 계정 로그인 화면 복구/로그인이 필요하다. pt128166757은 여전히 과거 공식 링크 근거이며 현재 provider 일치 검증값으로 설정하지 않았다. StoreKit Sandbox·GA4 앱 스트림·Safari 시스템 배너도 아직 미검증이다.
+
+CI의 별도 합성 동의 검사에는 analytics.spec과 acquisition.spec을 함께 포함했다. 테스트 전용GA4 tag·localhost·합성provider123456을 쓰며 운영 설정을 읽거나 변경하지 않는다. 로컬 스크립트40개, 배포 호환성14개, 유입/설치/출석E2E14개와 운영모양 활성화 번들144.86KB/145KB가 통과했다.

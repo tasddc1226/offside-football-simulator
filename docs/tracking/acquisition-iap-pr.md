@@ -46,3 +46,6 @@ release-notes: none
 Android 승인 지연 P1 수정: 선택적 기록 요청의 실패·hang·409와 finishTransaction을 분리했다. 동의된 프로필의 토큰은 최대16건·논리7일 MMKV 대기열로 재전송하며 계정 변경/동의 철회 시 즉시 삭제한다. native 승인은 분석 off에서도 재시도하고 가격 조회 실패·hang에도 진행한다. 서버는 업로드 expected profile을 대조한다. 독립 재검토에서 추가 차단 문제 없음(리뷰어는 테스트 미실행). 실제 native 검증은 여전히 미완료다.
 
 최신 migration 재생성: 게시 중 main be92d4d1(#785)이0110을 추가하여 다시 병합했다. 0111을 병합 schema에서 재생성했고 snapshot 부모0110, journal109→110→111 및 career_renames 보존을 확인했다. Drizzle 재실행 추가 변경 없음. 생성기의 알려진 coalesce 인덱스·ON DELETE SET NULL SQL 교정만 재적용했으며 운영 DB 적용은 하지 않았다. 앞선0109 부모 기록은 당시 검사 이력이다.
+
+
+2026-10-18 후속: main319aa9b5(#778) 반영·보드 양쪽 행 보존. staging/production의 신규 공개 설정 전달과 deploy 전 검증을 연결했다. 기본false/0/빈provider, worker별 명시적 var 전달, provider 일치·플래그 검증, 배포 모의검사 포함. 운영 환경 변수 변경·병합·배포는 실행하지 않았다. 별도 릴리스 노트 없이 공식 release-notes:none 면제를 유지한다. Apple 폼은 승인 후에도 authResult=FAILED 로그인 화면에 막혀 도달하지 못했으며 입력/생성을 시도하지 않았다. 기존 계정 로그인 복구가 필요하다.
