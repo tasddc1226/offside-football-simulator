@@ -16,8 +16,16 @@ import { shellText as L } from '@offside/app-core/i18n/ko/shell';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 
-/** rows: 목록 줄 수(내용과 비슷하게). */
-export function Skeleton({ rows = 3, testID }: { rows?: number; testID?: string }) {
+/** rows: 목록 줄 수(내용과 비슷하게). height를 주면 줄 대신 그 높이의 카드 한 장(T-11-391). */
+export function Skeleton({
+  rows = 3,
+  height,
+  testID,
+}: {
+  rows?: number;
+  height?: number;
+  testID?: string;
+}) {
   const c = useColors();
   const { motionOK } = useSnapshot(prefs);
   const shown = useSharedValue(0);
@@ -48,7 +56,8 @@ export function Skeleton({ rows = 3, testID }: { rows?: number; testID?: string 
       accessibilityLiveRegion="polite"
       style={[{ gap: 14, paddingVertical: 4 }, style]}
     >
-      {Array.from({ length: rows }, (_, i) => (
+      {height ? <View style={[block, { height, borderRadius: 14 }]} /> : null}
+      {Array.from({ length: height ? 0 : rows }, (_, i) => (
         <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <View style={[block, { width: 32, height: 32, borderRadius: 16 }]} />
           <View style={{ flex: 1, gap: 6 }}>

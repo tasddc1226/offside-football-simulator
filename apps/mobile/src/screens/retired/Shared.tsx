@@ -16,6 +16,7 @@ import { Txt } from '../../ui/Txt';
 import { CreditScreen } from './credit';
 import { LegendReport } from './LegendReport';
 import { shareText as L } from '@offside/app-core/i18n/ko/share';
+import { Skeleton } from '../../ui/Skeleton';
 
 export default function Shared() {
   const snap = useSnapshot(appState);
@@ -42,9 +43,7 @@ export default function Shared() {
       <Topbar />
       {v === null ? (
         <Card>
-          <Txt tone="muted" accessibilityLiveRegion="polite">
-            {L.loading}
-          </Txt>
+          <Skeleton rows={4} />
         </Card>
       ) : typeof v === 'string' ? (
         <Card>
