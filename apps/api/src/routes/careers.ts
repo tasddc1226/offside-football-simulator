@@ -16,6 +16,8 @@ import {
   RetiredLookResponseSchema,
   RetiredLookPolicySchema,
   RetirementResponseSchema,
+  RenameCareerBodySchema,
+  RenameCareerResponseSchema,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
 import {
@@ -69,6 +71,17 @@ import { legendScoreOfRecord } from '@offside/contracts/hof-rules';
 import { resolveBalance } from '@offside/contracts';
 import { activeBalanceQuery, balanceVersionOf } from '../db/repos/balance.js';
 import { completeInvite } from '../db/repos/referrals.js';
+import { renameCareer } from '../db/repos/careerRename.js';
+import { idempotency } from '../middleware/idempotency.js';
+import { cupKo } from '../cupText.js';
+import { requireOwner } from './ownerTeam.js';
+
+const RENAME_ERROR = {
+  NOT_MINE: 'renameNotMine',
+  HIDDEN: 'renameHidden',
+  SAME: 'renameSame',
+  NO_RENAME: 'noRename',
+} as const;
 
 /** 프로필당 시간당 업로드 한도. 정상 플레이는 시즌당 PUT 1회, 오프라인 큐 상한은 100이다.
  * T-11-182 시즌 한도 120은 빠르게 여러 커리어를 도는 이용자가 넘겨(한 커리어 최대 약 28시즌) 은퇴 기록이 한 시간까지 밀렸다. */
@@ -142,6 +155,26 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       c,
       PutCareerNamesResponseSchema,
       { updated: updated.length },
+      200,
+      'private, no-store',
+    );
+  });
+
+  // T-11-377 선수 이름 변경권 한 장으로 내 선수(진행 중 · 은퇴 · 이적시장에서 산 선수)의 이름을 바꾼다. 로그인한 구단주만
+  // (아이템이 구단주 것이라). 재시도가 두 장을 쓰지 않게 멱등 키를 쓴다. 바뀐 이름은 명예의 전당 상세 · 첫 기록 캐시를 지우고,
+  // 나머지 목록은 TTL로 따라온다.
+  app.post('/v1/careers/:careerId/rename', requireProfile, idempotency, async (c) => {
+    const careerId = parseWithAppError(CareerIdParamSchema, c.req.param('careerId'));
+    const me = await requireOwner(c);
+    const name = toPublicName(readBody(c, RenameCareerBodySchema).name);
+    if (!name) throw conflictError(cupKo('renameName'), 'PUBLIC_NAME_REJECTED');
+    const r = await renameCareer(getDb(c), { careerId, profileId: me.id, name, now: nowIso() });
+    if (!r.ok) throw conflictError(cupKo(RENAME_ERROR[r.reason]), r.reason);
+    purgeEdge(c, STALE.retirementPut(careerId));
+    return ok(
+      c,
+      RenameCareerResponseSchema,
+      { careerId, name, rename: r.rename },
       200,
       'private, no-store',
     );

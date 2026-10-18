@@ -8,7 +8,12 @@ import { buyIapItem, sellablePacks, useIapItems } from '../../platform/iapItems'
 import { rem } from '../../theme/type';
 import { Btn, Txt } from '../../ui';
 
-const PACK = { reroll: L.rerollPack, boost: L.boostPack, scout: SL.pack } as const;
+const PACK = {
+  reroll: L.rerollPack,
+  boost: L.boostPack,
+  scout: SL.pack,
+  rename: L.renamePack,
+} as const;
 
 export function IapPacks({ item, note }: { item: OwnerItem; note?: string }) {
   const iap = useIapItems(true);

@@ -17,6 +17,7 @@ export const IAP_PRICE_KRW: Record<IapProductId | typeof REMOVE_ADS_PRODUCT, num
   'com.offsidelab.app.boost_10': 2200,
   'com.offsidelab.app.scout_1': 1100,
   'com.offsidelab.app.scout_5': 4400,
+  'com.offsidelab.app.rename_5': 1100,
   [REMOVE_ADS_PRODUCT]: 3300,
 };
 export const iapProduct = (productId: string) =>

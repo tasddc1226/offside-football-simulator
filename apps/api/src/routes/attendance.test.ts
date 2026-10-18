@@ -64,7 +64,7 @@ describe('T-11-360 출석 체크', () => {
     const got = CheckRes.parse(await (await check(first)).json()).data;
     expect(got).toEqual({
       attendance: { today: '2026-10-17', checkedIn: true, stamps: 1, streak: 1, bestStreak: 1 },
-      granted: { reroll: 1, boost: 0, scout: 0 },
+      granted: { reroll: 1, boost: 0, scout: 0, rename: 0 },
     });
     expect(CheckRes.parse(await (await check(first)).json()).data).toEqual(got);
     const again = await check();
@@ -93,7 +93,7 @@ describe('T-11-360 출석 체크', () => {
     for (const d of ['12', '13', '14', '15', '16', '17']) await checkOn(`2026-10-${d}`);
     const seventh = await checkOn('2026-10-19');
     expect(seventh.attendance).toMatchObject({ stamps: 7, streak: 7, bestStreak: 7 });
-    expect(seventh.granted).toEqual({ reroll: 0, boost: 2, scout: 0 });
+    expect(seventh.granted).toEqual({ reroll: 0, boost: 2, scout: 0, rename: 0 });
     const items = ItemsRes.parse(
       await (await call('GET', '/v1/items', { cookie: me.cookie })).json(),
     ).data;

@@ -243,9 +243,10 @@ export const CUP_POINTS = { win: 3, draw: 1, loss: 0 } as const;
 
 /**
  * 소모성 아이템. reroll = 선수 후보 리롤권(새 선수를 만들 때 후보 3명을 다시 뽑는다), boost = 잠재력 강화권(T-11-174,
- * 자금이 모자란 시즌의 강화 한 번을 광고·구단 자금 대신 받는다).
+ * 자금이 모자란 시즌의 강화 한 번을 광고·구단 자금 대신 받는다), rename = 선수 이름 변경권(T-11-377, 내 선수 이름을 한 번
+ * 바꾼다 — 서버 이름 변경 API가 장수를 빼고 이름을 함께 바꾼다).
  */
-export const OWNER_ITEMS = ['reroll', 'boost', 'scout'] as const;
+export const OWNER_ITEMS = ['reroll', 'boost', 'scout', 'rename'] as const;
 export type OwnerItem = (typeof OWNER_ITEMS)[number];
 
 /**
@@ -297,6 +298,8 @@ export const IAP_PRODUCTS = {
   // T-11-196 프리미엄 스카우트권(후보 3명 중 1명 A 이상 보장 · S 확률 2배 · 잠재력 공개).
   'com.offsidelab.app.scout_1': { item: 'scout', qty: 1 },
   'com.offsidelab.app.scout_5': { item: 'scout', qty: 5 },
+  // T-11-377 선수 이름 변경권.
+  'com.offsidelab.app.rename_5': { item: 'rename', qty: 5 },
 } as const satisfies Record<string, { item: OwnerItem; qty: number }>;
 export type IapProductId = keyof typeof IAP_PRODUCTS;
 export const IAP_PRODUCT_IDS = Object.keys(IAP_PRODUCTS) as [IapProductId, ...IapProductId[]];

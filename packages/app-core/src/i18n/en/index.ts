@@ -69,6 +69,7 @@ import { ownerProfile } from './ownerProfile';
 import { playerNudge } from './playerNudge';
 import { publicLegends } from './publicLegends';
 import { push } from './push';
+import { rename } from './rename';
 import { retention } from './retention';
 import { retired } from './retired';
 import { retiredLook } from './retiredLook';
@@ -169,6 +170,7 @@ export const en = {
   playerNudge,
   publicLegends,
   push,
+  rename,
   retention,
   retired,
   retiredLook,

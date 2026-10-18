@@ -1,0 +1,23 @@
+{
+  "id": "t-11-377-player-rename",
+  "title": "선수 이름 변경권",
+  "items": [
+    "선수 이름 변경권이 생겼어요. 진행 중인 선수, 은퇴한 선수, 영입한 선수의 이름을 바꿀 수 있어요.",
+    "출석 체크 28칸째에 변경권 1장을 받아요. 앱에서는 5장 묶음으로 살 수 있어요."
+  ],
+  "en": {
+    "title": "Player rename tickets",
+    "items": [
+      "Player rename tickets are here. Rename your current, retired or signed players.",
+      "Get 1 ticket on day 28 of daily check-in. In the app you can also buy a pack of 5."
+    ]
+  },
+  "ja": {
+    "title": "選手名変更券",
+    "items": [
+      "選手名変更券ができました。現役・引退・獲得した選手の名前を変えられます。",
+      "出席チェック28マス目に変更券を1枚もらえます。アプリでは5枚セットで購入できます。"
+    ]
+  },
+  "availability": "web-app"
+}
