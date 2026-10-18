@@ -35,7 +35,7 @@ import type { Bindings } from '../../env.js';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { sha256Hex } from '../hash.js';
-import { retryTransientWrite } from '../retry.js';
+import { retryTransientRead, retryTransientWrite } from '../retry.js';
 import { kstDay } from '../../time.js';
 import { honorsOf, hideCareerStatements } from './firsts.js';
 import {
@@ -653,31 +653,37 @@ export async function listPublicHof(
     .limit(limit)
     .offset((page - 1) * limit)
     .as('hof_page');
-  const query = db
-    .select({ ...publicColumns, ...raiserColumns })
-    .from(careers)
-    .leftJoin(retiredNumbers, withRetiredNumber)
-    .leftJoin(profiles, withRaiserProfile)
-    .leftJoin(ownerTeams, withRaiserTeam)
-    .$dynamic();
-  const rows = await (sort === 'score'
-    ? query.innerJoin(pageIds, eq(careers.id, sql`"hof_page"."hof_career_id"`)).orderBy(...order)
-    : query
-        .where(where)
-        .orderBy(...order)
-        .limit(limit)
-        .offset((page - 1) * limit));
+  // Retry only a failed, side-effect-free SELECT, never the route/backfills/cache loader.
+  const rows = await retryTransientRead(async () => {
+    // Build afresh: adding the page join twice to one mutable builder is invalid.
+    const query = db
+      .select({ ...publicColumns, ...raiserColumns })
+      .from(careers)
+      .leftJoin(retiredNumbers, withRetiredNumber)
+      .leftJoin(profiles, withRaiserProfile)
+      .leftJoin(ownerTeams, withRaiserTeam)
+      .$dynamic();
+    return sort === 'score'
+      ? query.innerJoin(pageIds, eq(careers.id, sql`"hof_page"."hof_career_id"`)).orderBy(...order)
+      : query
+          .where(where)
+          .orderBy(...order)
+          .limit(limit)
+          .offset((page - 1) * limit);
+  });
   const total = await cachedTotal(async () => {
-    const [count] = await db
-      .select({ n: sql<number>`count(*)` })
-      .from(
-        q
-          ? rankSource
-          : dpos
-            ? sql`${careers} INDEXED BY careers_hof_dpos_idx`
-            : sql`${careers} INDEXED BY careers_hof_count_idx`,
-      )
-      .where(where);
+    const [count] = await retryTransientRead(async () =>
+      db
+        .select({ n: sql<number>`count(*)` })
+        .from(
+          q
+            ? rankSource
+            : dpos
+              ? sql`${careers} INDEXED BY careers_hof_dpos_idx`
+              : sql`${careers} INDEXED BY careers_hof_count_idx`,
+        )
+        .where(where),
+    );
     return Number(count?.n ?? 0);
   });
   const entries = rows.map(toPublicEntry);
@@ -691,15 +697,17 @@ export async function listPublicHof(
       .from(rankSource)
       .where(ranked)
       .as('ranked');
-    const ranks = await db
-      .select({ id: all.id, rk: all.rk })
-      .from(all)
-      .where(
-        inArray(
-          all.id,
-          entries.map((e) => e.id),
+    const ranks = await retryTransientRead(async () =>
+      db
+        .select({ id: all.id, rk: all.rk })
+        .from(all)
+        .where(
+          inArray(
+            all.id,
+            entries.map((e) => e.id),
+          ),
         ),
-      );
+    );
     const at = new Map(ranks.map((r) => [r.id, Number(r.rk)]));
     for (const e of entries) e.rank = at.get(e.id);
   }

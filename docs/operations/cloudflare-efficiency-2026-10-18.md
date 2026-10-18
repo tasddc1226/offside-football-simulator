@@ -103,3 +103,13 @@ API와 시즌 저장 지연은 낮아졌지만 주요 조회 p95는 높아졌고
 [17:47 KST 인프라 점검](https://github.com/tasddc1226/offside-football-simulator/actions/runs/39112783276)도 통과했다. D1 4.05GiB·기존 건강 이슈 없음, DLQ 각 0건·14일, R2 payload 9.024GB로 저장 정책 검토 경고가 유지됐다. DNSSEC는 아직 parent DS·AD 검증 대기다. 이 점검은 API 지연 회귀 테스트나 다음 일일 작업 실행 증거를 대신하지 않는다.
 
 추가 GraphQL에서 `coloCode`의 스키마 설명은 “스크립트가 실행된 데이터센터의 IATA 코드”임을 확인했다. 변경 전 상위 집계는 SIN 10,039건·ICN 110건·DXB 81건 등으로 이미 SIN 중심이었고, 변경 후도 SIN 10,734건 등이다. 이는 트레이스의 입구 `cloudflare.colo`와 다른 지표다. 지역 힌트가 실제 실행 위치를 실질적으로 바꿨다는 근거가 없으므로 `mode: smart`로 복원하기로 했다. 첫 창의 API p95 감소를 이 힌트의 효과로 설명하지 않는다. D1 쓰기 절감·정적 자산 우회·DLQ·WAF/TLS 변경과 #800은 유지한다.
+
+두 번째 지역 힌트 창(17:48–17:58 KST)은 HTTP 200 추정 777표본·p95 398ms·p99 624ms로 회복했다. 시즌 업로드 123표본·553/627ms, 주요 조회 묶음 83표본·325/605ms였다. 연결한 HTTP root 102개(상한 미도달)의 D1 child span은 추정 315개·106/277ms, SQL 평균 0.409ms였다. 지역 힌트 이전에도 실제 실행 위치가 SIN이었기 때문에 이 회복의 원인을 지역 변경으로 단정하지 않는다.
+
+이 창에는 17:56 KST `GET /v1/hof`의 **503 1건**이 있었다(5,180ms). 원본 cause는 인원 집계 SELECT의 `D1_ERROR: Network connection lost`였으며, 쓰기·업로드 실패나 SQL 문법 오류로 확인된 것은 아니다. 따라서 해당 창을 오류 0건으로 보고하지 않는다. [#805](https://github.com/tasddc1226/offside-football-simulator/pull/805)의 [필수 CI](https://github.com/tasddc1226/offside-football-simulator/actions/runs/39113286128)가 통과했고 자동 배치 복원 코드 `a96acba`가 [운영 배포](https://github.com/tasddc1226/offside-football-simulator/actions/runs/39113570858), `v2026.10.18.15`로 반영됐다.
+
+## 관측한 HOF 읽기 실패 복구
+
+공개 목록의 페이지·인원·검색 순위 SELECT 각각에 기존 제한 재시도를 적용한다. 실패한 SELECT만 다시 실행하고 성공한 페이지나 소급 보정·캐시 loader·쓰기를 재실행하지 않는다. 정상 쿼리 수·인덱스·북마크 순서·검색 순위는 유지한다. 영구 연결 실패는 최대 3회 뒤 기존 오류로 종료하며 과부하·SQL 오류는 재시도하지 않는다.
+
+실제 로컬 D1과 `first-primary` Sessions에서 SELECT 응답을 잃게 한 회귀 테스트는 수정 전 4개 실패를 재현했고 수정 뒤 7개가 통과했다. 기존 조회 비용·결과 테스트를 합쳐 17개가 통과했고 타입·린트·i18n도 확인했다. 이 테스트는 기반 D1 네트워크 문제가 제거됐다는 증거는 아니며, 운영에서 인위적인 오류를 주입하지 않는다. 짧은 ko/en/ja 릴리즈 노트는 웹·앱 공통 API 개선으로 작성했다. 필수 CI·운영 반영과 후속 관측을 확인한다.
