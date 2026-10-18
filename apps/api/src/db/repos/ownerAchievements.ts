@@ -59,7 +59,9 @@ export async function saveAchievementScore(
     prev.teamKept === next.teamKept;
   if (same && !touch) return prev;
   const reachedAt = prev && prev.score === next.score ? prev.reachedAt : now;
-  const row = { ...key, ...next, reachedAt, updatedAt: now };
+  // T-11-386 시즌 업적 보상 장수는 점수와 따로 적는다(saveSeasonGift) — 여기서는 옛 값을 그대로 둔다.
+  const reward = { rewardBoost: prev?.rewardBoost ?? null, rewardScout: prev?.rewardScout ?? null };
+  const row = { ...key, ...next, ...reward, reachedAt, updatedAt: now };
   await db
     .insert(ownerAchievements)
     .values(row)

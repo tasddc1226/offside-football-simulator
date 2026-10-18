@@ -461,6 +461,15 @@ export function achRewardOf(points: number): AchReward | null {
  * 전에 배포해도 시즌 1 달성에는 주지 않고, 시즌 2는 첫 달성부터(개막 뒤 배포면 그 사이 달성도 다음에 셀 때) 준다.
  */
 export const ACH_REWARD_FIRST_SEASON = 2;
+/**
+ * T-11-386 시즌 1 업적 보상 — 시즌 1에 달성한 업적을 시즌 2 보상 표(achRewardOf · 시즌 상한)로 세어 시즌 2 동안 홈 선물
+ * 카드의 받기 버튼으로 한 번 준다. 시즌 1 기록은 마감 뒤 바뀌지 않아 처음 셀 때 장수를 적어 두고 그 값으로 준다.
+ */
+export const ACH_SEASON_GIFT = {
+  id: 'ach-season-1',
+  season: ACH_REWARD_FIRST_SEASON - 1,
+  openSeason: ACH_REWARD_FIRST_SEASON,
+} as const;
 
 /** 업적 랭킹 한 페이지의 구단주 수. */
 export const ACH_RANK_PER_PAGE = 20;

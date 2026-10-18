@@ -232,16 +232,23 @@ export type RerollShopResponse = z.infer<typeof RerollShopResponseSchema>;
  * T-11-244 POST /v1/items/scout/use 본문. hit = 기기가 이번 시드로 뽑은 일반 프리미엄 후보에 S가 있는지(천장 카운트를
  * 0으로 돌린다). 본문이 없으면(천장을 모르는 옛 앱) 확정 모드를 주지 않고 장수만 센다.
  */
-/** T-11-275 GET /v1/items/gift — 받을 수 있는 홈 선물. 받았으면 null. */
+/**
+ * T-11-275 GET /v1/items/gift — 받을 수 있는 홈 선물. 받았으면 null. T-11-386 홈 선물을 받았으면 시즌 업적 보상
+ * (kind 'achSeason', season = 업적을 센 시즌)을 같은 칸으로 준다. kind가 없으면 홈 선물(옛 서버).
+ */
 export const HomeGiftResponseSchema = z.strictObject({
   gift: z
     .strictObject({
       id: z.string(),
+      kind: z.enum(['home', 'achSeason']).optional(),
+      season: z.number().int().min(1).optional(),
       boost: z.number().int().min(0),
       scout: z.number().int().min(0),
     })
     .nullable(),
 });
+/** T-11-386 POST /v1/items/gift/claim 본문. id = 화면에 보인 선물(없으면 지금 받을 수 있는 첫 선물 — 옛 앱). */
+export const GiftClaimBodySchema = z.strictObject({ id: z.string().max(64).optional() });
 export type HomeGiftResponse = z.infer<typeof HomeGiftResponseSchema>;
 
 export const ScoutUseBodySchema = z.strictObject({ hit: z.boolean().optional() });

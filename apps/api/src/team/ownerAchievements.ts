@@ -5,8 +5,10 @@ import { detailPosInSeason } from '@offside/contracts/positions';
 import { retireAtOf, teamSeasonAt, teamSeasonEndsAt } from '@offside/contracts/service-seasons';
 import type { Db } from '../db/client.js';
 import {
+  ACH_REWARD_BOOST_MIN,
   ACH_REWARD_FIRST_SEASON,
   ACH_REWARD_SEASON_CAP,
+  ACH_SEASON_GIFT,
   type AchReward,
 } from '@offside/contracts/owner-team';
 import type { ClubAchievementGroup } from '@offside/contracts';
@@ -27,10 +29,12 @@ import {
   seasonCareersOf,
   slotIdsOf,
 } from '../db/repos/ownerTeams.js';
+import { saveSeasonGift, seasonGiftRowOf } from '../db/repos/iap.js';
 import { getProfile, hasAccount } from '../db/repos/profiles.js';
 import { seasonManagersOf } from '../db/repos/managers.js';
 import {
   achRewardSteps,
+  type AchRewardStep,
   achievementScore,
   clubAchievements,
   teamKeptOf,
@@ -43,6 +47,17 @@ import { kstDay } from '../time.js';
 
 type AchFull = { boost: boolean; scout: boolean };
 const NOT_FULL: AchFull = { boost: false, scout: false };
+
+/** 시즌 상한(ACH_REWARD_SEASON_CAP) 안에 드는 칸만 앞에서부터 고른다. used(이미 받은 만큼)를 고른 만큼 늘린다. */
+function withinCap(steps: readonly AchRewardStep[], used: AchReward): AchRewardStep[] {
+  const cap = ACH_REWARD_SEASON_CAP;
+  return steps.filter((s) => {
+    if (used.boost + s.boost > cap.boost || used.scout + s.scout > cap.scout) return false;
+    used.boost += s.boost;
+    used.scout += s.scout;
+    return true;
+  });
+}
 
 /** 적어 둔 팀 업적 기록(team_kept). 없거나 깨졌으면 빈 기록. */
 function keptOf(json: string | null | undefined): TeamKept {
@@ -192,20 +207,16 @@ export async function settleAchievementRewards(
   if (season < ACH_REWARD_FIRST_SEASON || !steps.length) return { got: new Map(), full: NOT_FULL };
   const claims = await achievementClaimsOf(db, profileId, season);
   // 이미 받은 만큼을 세고, 새 칸은 상한 안에서 앞에서부터 준다.
-  const cap = ACH_REWARD_SEASON_CAP;
   const used = { boost: 0, scout: 0 };
   for (const s of steps) {
     if (!claims.has(s.key)) continue;
     used.boost += s.boost;
     used.scout += s.scout;
   }
-  const fresh = steps.filter((s) => {
-    if (claims.has(s.key)) return false;
-    if (used.boost + s.boost > cap.boost || used.scout + s.scout > cap.scout) return false;
-    used.boost += s.boost;
-    used.scout += s.scout;
-    return true;
-  });
+  const fresh = withinCap(
+    steps.filter((s) => !claims.has(s.key)),
+    used,
+  );
   const granted = new Set(
     fresh.length ? await claimAchievementRewards(db, profileId, season, fresh, now) : [],
   );
@@ -215,8 +226,40 @@ export async function settleAchievementRewards(
     const g = got.get(s.id) ?? { boost: 0, scout: 0 };
     got.set(s.id, { boost: g.boost + s.boost, scout: g.scout + s.scout });
   }
+  const cap = ACH_REWARD_SEASON_CAP;
   const full = { boost: used.boost >= cap.boost, scout: used.scout >= cap.scout };
   return { got, full };
+}
+
+/** T-11-386 달성한 업적으로 받을 시즌 업적 보상 합(시즌 2 실시간 보상과 같은 표 · 시즌 상한). */
+export function seasonGiftAmount(groups: readonly ClubAchievementGroup[]): AchReward {
+  const used = { boost: 0, scout: 0 };
+  withinCap(achRewardSteps(groups), used);
+  return used;
+}
+
+/**
+ * T-11-386 받을 수 있는 시즌 1 업적 보상(ACH_SEASON_GIFT). 시즌 2 동안 · 아직 받지 않았고 1장 이상일 때만. 장수는 처음
+ * 물을 때 시즌 1 업적을 한 번 세어 업적 행에 적고, 다음부터는 그 값을 읽는다(시즌 1 기록은 마감 뒤 바뀌지 않는다).
+ * 점수가 강화권 문턱보다 낮으면 보상 칸이 있을 수 없어 세지 않는다.
+ */
+export async function seasonAchGiftOf(
+  db: Db,
+  owner: { id: string; nickname: string | null },
+  now: string,
+): Promise<AchReward | null> {
+  const g = ACH_SEASON_GIFT;
+  if (teamSeasonAt(now) !== g.openSeason) return null;
+  const row = await seasonGiftRowOf(db, owner.id, g.season, g.id);
+  if (!row || row.claimed || row.score < ACH_REWARD_BOOST_MIN) return null;
+  let r: AchReward;
+  if (row.boost !== null && row.scout !== null) r = { boost: row.boost, scout: row.scout };
+  else {
+    const { groups } = await computeOwnerAchievements(db, owner, g.season, now);
+    r = seasonGiftAmount(groups);
+    await saveSeasonGift(db, owner.id, g.season, r);
+  }
+  return r.boost + r.scout > 0 ? r : null;
 }
 
 /**

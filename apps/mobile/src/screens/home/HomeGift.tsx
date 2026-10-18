@@ -2,7 +2,12 @@
 // 묻는 조건 · 메모는 app-core api/gift.ts.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
-import { claimHomeGift, fetchHomeGift, type HomeGift as Gift } from '@offside/app-core/api/gift';
+import {
+  claimHomeGift,
+  fetchHomeGift,
+  giftCopy,
+  type HomeGift as Gift,
+} from '@offside/app-core/api/gift';
 import { giftText as L } from '@offside/app-core/i18n/ko/gift';
 import { toast } from '../../game/host';
 import { alpha } from '../../theme/colors';
@@ -14,7 +19,8 @@ export function HomeGift() {
   const c = useColors();
   const [gift, setGift] = useState<Gift | null>(null);
   const [busy, setBusy] = useState(false);
-  // 응답을 못 받아 다시 누르면 같은 키로 보내 서버가 두 번 주지 않는다(서버는 성공 · 409만 기억한다).
+  // 응답을 못 받아 다시 누르면 같은 키로 보내 서버가 두 번 주지 않는다(서버는 성공 · 409만 기억한다). 받은 뒤 다음
+  // 선물(T-11-386)은 새 키로 받는다.
   const key = useRef(crypto.randomUUID());
   const reload = useCallback(async () => setGift(await fetchHomeGift()), []);
   useEffect(() => {
@@ -22,14 +28,16 @@ export function HomeGift() {
   }, [reload]);
   useOnPull(reload);
   if (!gift) return null;
+  const copy = giftCopy(gift);
 
   const claim = async () => {
     if (busy) return;
     setBusy(true);
-    const r = await claimHomeGift(key.current);
+    const r = await claimHomeGift(gift.id, key.current);
     setBusy(false);
     if (r.ok) {
-      toast(L.done({ boost: gift.boost, scout: gift.scout }));
+      toast(copy.done);
+      key.current = crypto.randomUUID();
       setGift(null);
     } else if (r.error.reason === 'GIFT_CLAIMED' || r.error.reason === 'GOOGLE_LOGIN_REQUIRED') {
       setGift(null);
@@ -47,10 +55,10 @@ export function HomeGift() {
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
         <Txt v="eyebrow">Gift</Txt>
         <Txt bold accessibilityRole="header">
-          {L.title}
+          {copy.title}
         </Txt>
         <Txt v="sm" tone="muted">
-          {L.sub({ boost: gift.boost, scout: gift.scout })}
+          {copy.sub}
         </Txt>
       </View>
       <View style={{ justifyContent: 'center' }}>

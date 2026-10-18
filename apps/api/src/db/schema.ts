@@ -1269,6 +1269,9 @@ export const ownerAchievements = sqliteTable(
     players: integer('players').notNull(),
     // T-11-103 그 시즌에 닿은 팀 업적(JSON {id: 값}). 선발이 바뀌어도 팀 업적을 남긴다. NULL이면 아직 없다.
     teamKept: text('team_kept'),
+    // T-11-386 그 시즌 업적으로 받을 시즌 업적 보상 장수(ACH_SEASON_GIFT). 처음 셀 때 적는다. NULL이면 아직 안 셌다.
+    rewardBoost: integer('reward_boost'),
+    rewardScout: integer('reward_scout'),
     reachedAt: text('reached_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
