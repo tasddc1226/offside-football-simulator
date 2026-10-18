@@ -1,0 +1,26 @@
+{
+  "id": "t-11-379-match-report",
+  "title": "경기 리포트와 평점 구성",
+  "items": [
+    "팀 경기 결과에 기대 득점과 결과를 가른 이유 한 줄이 붙어요.",
+    "약한 줄을 고칠 자리를 골라 편성 화면으로 바로 가요.",
+    "구간 결과에 평점 구성, 능력치 카드에 성장 방향이 나와요."
+  ],
+  "en": {
+    "title": "Match report and rating breakdown",
+    "items": [
+      "Team results now show expected goals and one line on what decided the match.",
+      "Jump straight to your lineup with the slot that fixes your weakest line.",
+      "Block results show a rating breakdown, and the attribute card shows a growth direction."
+    ]
+  },
+  "ja": {
+    "title": "試合レポートと評価点の内訳",
+    "items": [
+      "チームの試合結果に期待得点と、結果を分けた理由が1行付きます。",
+      "弱いラインを直す枠を選んで、そのまま編成画面に移れます。",
+      "区間結果に評価点の内訳、能力カードに成長の方向が表示されます。"
+    ]
+  },
+  "availability": "web-app"
+}

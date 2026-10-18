@@ -7,6 +7,7 @@
   import type { TeamStatsResponse } from '@offside/app-core/api/team';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import TeamLogo from './TeamLogo.svelte';
+  import TeamSeasonReport from './TeamSeasonReport.svelte';
   import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
   import { teamCoreText as C } from '@offside/app-core/i18n/ko/teamCore';
   import { statsDayLabel } from '@offside/app-core/teamText';
@@ -117,6 +118,7 @@
         </div>
         {@render kindList(kinds)}
       {/if}
+      <TeamSeasonReport report={s.report} />
       <div class="seg three" role="group" aria-label={L.statsTabLabel}>
         {#each tabs() as [k, label] (k)}
           <button class="hof-sort" aria-pressed={tab === k} onclick={() => (tab = k)} data-stats-tab={k}>{label}</button>

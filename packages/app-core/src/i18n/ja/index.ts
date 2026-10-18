@@ -62,6 +62,7 @@ import { manager } from './manager';
 import { market } from './market';
 import { marketChart } from './marketChart';
 import { marketValueChart } from './marketValueChart';
+import { matchReport } from './matchReport';
 import { owner } from './owner';
 import { ownerConflict } from './ownerConflict';
 import { ownerPlayers } from './ownerPlayers';
@@ -69,6 +70,7 @@ import { ownerProfile } from './ownerProfile';
 import { playerNudge } from './playerNudge';
 import { publicLegends } from './publicLegends';
 import { push } from './push';
+import { ratingReport } from './ratingReport';
 import { rename } from './rename';
 import { retention } from './retention';
 import { retired } from './retired';
@@ -163,6 +165,7 @@ export const ja = {
   market,
   marketChart,
   marketValueChart,
+  matchReport,
   owner,
   ownerConflict,
   ownerPlayers,
@@ -170,6 +173,7 @@ export const ja = {
   playerNudge,
   publicLegends,
   push,
+  ratingReport,
   rename,
   retention,
   retired,

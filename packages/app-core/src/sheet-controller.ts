@@ -211,6 +211,7 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
         done = true;
         if (timer) clearTimeout(timer);
         v.skip = null;
+        v.rated = b.games;
         if (skipped) {
           v.fill = SKIP_FILL_MS;
           while (i < n) playNext();
