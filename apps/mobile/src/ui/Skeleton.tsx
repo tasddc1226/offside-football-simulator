@@ -1,6 +1,6 @@
 // T-11-389 서버 데이터를 기다리는 동안의 뼈대(웹 Skeleton.svelte). 0.2초 안에 끝나면 보이지 않고(자리는 그대로 잡는다), 그 뒤
 // 천천히 옅어졌다 짙어진다. 움직임 줄이기면 반짝이지 않는다. 화면 읽기 도구에는 '불러오는 중'을 알린다.
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { View } from 'react-native';
 import Animated, {
   Easing,
@@ -16,17 +16,9 @@ import { shellText as L } from '@offside/app-core/i18n/ko/shell';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 
-/** rows: 목록 줄 수(내용과 비슷하게). height를 주면 줄 대신 그 높이의 카드 한 장(T-11-391). */
-export function Skeleton({
-  rows = 3,
-  height,
-  testID,
-}: {
-  rows?: number;
-  height?: number;
-  testID?: string;
-}) {
-  const c = useColors();
+/** 뼈대 틀: 0.2초 뒤 나타나 천천히 숨 쉬고, 화면 읽기 도구에 '불러오는 중'을 알린다. 화면 모양 뼈대(T-11-392 팀 그라운드 등)는
+ *  이 틀 안에 skeletonBlock 색의 View를 놓는다. */
+export function SkeletonFrame({ testID, children }: { testID?: string; children: ReactNode }) {
   const { motionOK } = useSnapshot(prefs);
   const shown = useSharedValue(0);
   useEffect(() => {
@@ -45,8 +37,6 @@ export function Skeleton({
       : appear;
   }, [motionOK, shown]);
   const style = useAnimatedStyle(() => ({ opacity: shown.value }));
-  const block = { backgroundColor: c.surface2, borderColor: c.line, borderWidth: 1 } as const;
-
   return (
     <Animated.View
       testID={testID ?? 'skeleton'}
@@ -56,6 +46,31 @@ export function Skeleton({
       accessibilityLiveRegion="polite"
       style={[{ gap: 14, paddingVertical: 4 }, style]}
     >
+      {children}
+    </Animated.View>
+  );
+}
+
+/** 뼈대 조각의 색(면 · 테두리). */
+export function useSkeletonBlock() {
+  const c = useColors();
+  return { backgroundColor: c.surface2, borderColor: c.line, borderWidth: 1 } as const;
+}
+
+/** rows: 목록 줄 수(내용과 비슷하게). height를 주면 줄 대신 그 높이의 카드 한 장(T-11-391). */
+export function Skeleton({
+  rows = 3,
+  height,
+  testID,
+}: {
+  rows?: number;
+  height?: number;
+  testID?: string;
+}) {
+  const block = useSkeletonBlock();
+
+  return (
+    <SkeletonFrame testID={testID}>
       {height ? <View style={[block, { height, borderRadius: 14 }]} /> : null}
       {Array.from({ length: height ? 0 : rows }, (_, i) => (
         <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -68,6 +83,6 @@ export function Skeleton({
           </View>
         </View>
       ))}
-    </Animated.View>
+    </SkeletonFrame>
   );
 }
