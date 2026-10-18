@@ -35,7 +35,7 @@ T-11-385. 설정 정본은 [정책 파일](../../tooling/cloudflare-infra-policy
 
 - 최소 TLS: 1.0 → 1.2. 문제 시 존의 `min_tls_version`을 원래 1.0으로 복원한다. 정상 웹·API TLS 1.2 스모크를 확인한다.
 - DNSSEC: Cloudflare Registrar가 DS를 자동 등록한다. 존의 `pending`은 완료가 아니다. 상위 `.com` DS와 검증 리졸버의 AD 플래그까지 확인한다. 전파에 1~2일이 걸릴 수 있다. 롤백은 등록기관 DS 제거·캐시 만료 후 존 서명 해제 순서다.
-- 속도 제한: 비밀번호 유출 검사 규칙을 복구/복구 코드 경로만 IP·데이터센터별 10초 100회로 교체한다. 정상 앱·OAuth 콜백·결제 웹훅·시즌 저장은 이 규칙의 대상이 아니다. 이는 보수적인 초기 버스트 한도이며 앱의 계정별 제한을 대체하지 않는다. 이전 식은 `(cf.waf.credential_check.password_leaked)`, 한도는 10초 5회·차단 10초였다.
+- 속도 제한: 비밀번호 유출 검사 규칙을 복구/복구 코드 경로만 IP·데이터센터별 10초 100회로 교체한다. 정상 앱·OAuth 콜백·결제 웹훅·시즌 저장은 이 규칙의 대상이 아니다. 이는 보수적인 초기 버스트 한도이며 앱의 계정별 제한을 대체하지 않는다. 존 WAF는 커스텀 도메인에만 적용되며 기존 workers.dev 보조 호스트는 OAuth 호스트 쌍 계약 때문에 유지한다. 그 호스트에는 앱의 계정별 제한이 계속 적용된다. 보조 호스트 종료는 OAuth·접속량을 검토하는 별도 이전 작업이다. 이전 식은 `(cf.waf.credential_check.password_leaked)`, 한도는 10초 5회·차단 10초였다.
 - 맞춤 WAF: 사용하지 않는 WordPress 및 `.git`·`.env` 경로 1개 규칙만 추가한다. 필요하면 `offside_unused_stack_scans` ref만 비활성화한다. 전체 Bot Fight Mode나 API Challenge는 켜지 않는다.
 - DLQ 롤백: billing DLQ 345600초, 나머지 DLQ 86400초. 보존 기간 단축은 오래된 실패 메시지를 만료시킬 수 있으므로 먼저 적체를 확인한다.
 - 코드 롤백: 이전 릴리즈 또는 `run_worker_first=true`. Worker 코드 롤백이 존 설정·큐 보존을 되돌리지는 않는다.
