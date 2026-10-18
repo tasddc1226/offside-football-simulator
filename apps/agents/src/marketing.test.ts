@@ -68,9 +68,36 @@ describe('마케팅 읽기 도구 (T-11-332)', () => {
       );
     const tool = marketingTools(env, 'report', fetcher as unknown as typeof fetch)[0]!;
     expect(await tool.run({})).toBe(
-      '캠페인 | 지출 | 노출 | 클릭 | 랜딩 페이지 조회\nJP | 3.1 | 900 | 20 | 8',
+      'campaign | 지출 | 노출 | 도달 | 클릭 | 랜딩 페이지 조회 | 조회당 비용\nJP | 3.1 | 900 | - | 20 | 8 | 0',
     );
     expect(String(fetcher.mock.calls[0]![0])).toContain('act_9/insights');
+    expect(String(fetcher.mock.calls[0]![0])).toContain('level=campaign');
     expect(await tool.run({ days: 30 })).toBe('Meta 광고 읽기 실패 400 expired');
+  });
+
+  it('광고 세트 단위로 어제 성과를 묻고 조회당 비용을 계산한다 (T-11-395)', async () => {
+    const env = { META_ADS_ACCESS_TOKEN: 't', META_AD_ACCOUNT_ID: '9' } as unknown as Env;
+    const fetcher = vi.fn(async (_url: string) =>
+      ok({
+        data: [
+          {
+            adset_name: 'JP 18-44',
+            spend: '7000',
+            impressions: '1600',
+            reach: '1000',
+            clicks: '60',
+            actions: [{ action_type: 'landing_page_view', value: '50' }],
+          },
+        ],
+      }),
+    );
+    const tool = marketingTools(env, 'mention', fetcher as unknown as typeof fetch)[0]!;
+    expect(await tool.run({ days: 1, level: 'adset' })).toBe(
+      'adset | 지출 | 노출 | 도달 | 클릭 | 랜딩 페이지 조회 | 조회당 비용\nJP 18-44 | 7000 | 1600 | 1000 | 60 | 50 | 140',
+    );
+    const url = String(fetcher.mock.calls[0]![0]);
+    expect(url).toContain('level=adset');
+    expect(url).toContain('date_preset=yesterday');
+    expect(url).toContain('adset_name');
   });
 });

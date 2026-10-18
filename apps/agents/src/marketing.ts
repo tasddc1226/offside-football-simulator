@@ -9,6 +9,7 @@ const GSC_SCOPE = 'https://www.googleapis.com/auth/webmasters.readonly';
 export const GSC_SITE = 'sc-domain:offside-lab.com';
 const META_GRAPH = 'https://graph.facebook.com/v21.0';
 const DIMENSIONS = ['query', 'page', 'country', 'device', 'date'] as const;
+const LEVELS = ['campaign', 'adset', 'ad'] as const;
 
 const day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 const kinds = ['mention', 'reply', 'handoff', 'report'];
@@ -83,40 +84,50 @@ export function marketingTools(
     tools.push({
       name: 'meta_ads',
       description:
-        'Meta(페이스북 · 인스타그램) 광고 성과. days(7 · 14 · 30 중 가까운 쪽, 기본 7) 동안 캠페인별 지출 · 노출 · 클릭 · 랜딩 페이지 조회. 광고를 바꾸지는 못한다.',
-      input_schema: { type: 'object', properties: { days: { type: 'number' } } },
+        'Meta(페이스북 · 인스타그램) 광고 성과. days(1 · 7 · 14 · 30 중 가까운 쪽, 기본 7, 1은 어제) 동안 level(campaign · adset · ad, 기본 campaign)별 지출 · 노출 · 도달 · 클릭 · 랜딩 페이지 조회와 조회당 비용(광고 계정 통화). 광고를 바꾸지는 못한다.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          days: { type: 'number' },
+          level: { type: 'string', enum: [...LEVELS] },
+        },
+      },
       run: async (input) => {
         const days = Math.min(30, Math.max(1, Number(input.days) || 7));
+        const level = LEVELS.includes(input.level as never) ? String(input.level) : 'campaign';
         const u = new URL(`${META_GRAPH}/act_${env.META_AD_ACCOUNT_ID}/insights`);
-        u.searchParams.set('fields', 'campaign_name,spend,impressions,clicks,actions');
-        u.searchParams.set('level', 'campaign');
+        u.searchParams.set('fields', `${level}_name,spend,impressions,reach,clicks,actions`);
+        u.searchParams.set('level', level);
         u.searchParams.set(
           'date_preset',
-          days <= 7 ? 'last_7d' : days <= 14 ? 'last_14d' : 'last_30d',
+          days <= 1 ? 'yesterday' : days <= 7 ? 'last_7d' : days <= 14 ? 'last_14d' : 'last_30d',
         );
         u.searchParams.set('limit', '50');
         const r = await fetcher(u.toString(), {
           headers: { Authorization: `Bearer ${env.META_ADS_ACCESS_TOKEN}` },
         });
         const data = (await r.json().catch(() => ({}))) as {
-          data?: {
-            campaign_name: string;
+          data?: (Record<`${(typeof LEVELS)[number]}_name`, string | undefined> & {
             spend: string;
             impressions: string;
+            reach?: string;
             clicks: string;
             actions?: { action_type: string; value: string }[];
-          }[];
+          })[];
           error?: { message?: string };
         };
         if (!r.ok || data.error)
           return `Meta 광고 읽기 실패 ${r.status} ${data.error?.message ?? ''}`.slice(0, 300);
         if (!data.data?.length) return '기간 안 광고 성과 없음';
         return [
-          '캠페인 | 지출 | 노출 | 클릭 | 랜딩 페이지 조회',
-          ...data.data.map(
-            (c) =>
-              `${c.campaign_name.slice(0, 80)} | ${c.spend} | ${c.impressions} | ${c.clicks} | ${(c.actions ?? []).filter((a) => a.action_type === 'landing_page_view').reduce((n, a) => n + Number(a.value), 0)}`,
-          ),
+          `${level} | 지출 | 노출 | 도달 | 클릭 | 랜딩 페이지 조회 | 조회당 비용`,
+          ...data.data.map((c) => {
+            const views = (c.actions ?? [])
+              .filter((a) => a.action_type === 'landing_page_view')
+              .reduce((n, a) => n + Number(a.value), 0);
+            const per = views ? (Number(c.spend) / views).toFixed(0) : '-';
+            return `${(c[`${level}_name` as `${(typeof LEVELS)[number]}_name`] ?? '').slice(0, 80)} | ${c.spend} | ${c.impressions} | ${c.reach ?? '-'} | ${c.clicks} | ${views} | ${per}`;
+          }),
         ].join('\n');
       },
     });

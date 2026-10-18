@@ -1,4 +1,5 @@
 // ADR-015 슬랙 에이전트 Worker. 슬랙 이벤트를 받아 서명을 확인하고 3초 안에 200을 돌려준 뒤, 일은 스레드 객체에 넘긴다.
+import { refreshThreadsToken } from './social.ts';
 import {
   calledRoles,
   enabled,
@@ -158,6 +159,13 @@ export default {
         ctx.waitUntil(captainMorning(env, ev.scheduledTime).catch(log('captain morning')));
       if (enabled(env, 'mkt') && isMonday(ev.scheduledTime))
         ctx.waitUntil(mktWeekly(env, ev.scheduledTime).catch(log('mkt weekly')));
+      // T-11-395 Threads 토큰은 60일이면 끝나니 하루 한 번 보고 7일마다 갱신한다.
+      ctx.waitUntil(
+        refreshThreadsToken(env, ev.scheduledTime).then(
+          (r) => r === 'refreshed' && console.log('threads token refreshed'),
+          log('threads token'),
+        ),
+      );
       return;
     }
     if (ev.cron === WATCH_CRON) {

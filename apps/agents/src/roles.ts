@@ -12,6 +12,7 @@ import team from '../roles/team.md';
 import { appStatusTools } from './appStatus.ts';
 import { memoryTools } from './memory.ts';
 import { marketingTools } from './marketing.ts';
+import { socialTools } from './social.ts';
 import { webTools } from './tools/web.ts';
 import captain from '../roles/captain.md';
 import baseline from '../knowledge/ops-baseline.md';
@@ -92,7 +93,7 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
         ...reviewTools(env, task),
         ...captainTools(env, task),
       ],
-      maxTurns: task.kind === 'support' ? 14 : task.kind === 'reviews' ? 12 : 10,
+      maxTurns: task.kind === 'support' ? 18 : task.kind === 'reviews' ? 16 : 16,
       mcpServers: [],
       prompt: (t) =>
         t.kind === 'triage' || t.kind === 'support' || t.kind === 'reviews'
@@ -114,7 +115,7 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
         ...memoryTools(env, 'dev', task),
       ],
       // 파일 찾기 · 나눠 읽기에 턴이 더 든다(8턴에서 "앞부분만 봤다"로 끝나던 문제).
-      maxTurns: 12,
+      maxTurns: 18,
       mcpServers: [],
       prompt: (t) =>
         t.kind === 'handoff'
@@ -133,10 +134,11 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
         ...web,
         ...ga4Tools(env, task.kind),
         ...marketingTools(env, task.kind),
+        ...socialTools(env, task.kind),
         ...appStatusTools(env),
         ...memoryTools(env, 'mkt', task),
       ],
-      maxTurns: task.kind === 'report' ? 7 : 8,
+      maxTurns: task.kind === 'report' ? 10 : 14,
       mcpServers: [],
       prompt: (t) =>
         t.kind === 'report'
@@ -172,7 +174,7 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
     ],
     // 경보 첫 정리 · 아침 보고는 짧게 끝낸다(report_digest가 자료를 한 번에 모은다).
     maxTurns:
-      task.kind === 'alert' || task.kind === 'report' ? 6 : task.kind === 'verify' ? 10 : 15,
+      task.kind === 'alert' || task.kind === 'report' ? 8 : task.kind === 'verify' ? 12 : 20,
     // Cloudflare API MCP(읽기 권한만 있는 토큰): Workers 로그 · 분석 · 설정 조회.
     mcpServers: env.CF_MCP_TOKEN
       ? [{ name: 'cloudflare', url: 'https://mcp.cloudflare.com/mcp', token: env.CF_MCP_TOKEN }]

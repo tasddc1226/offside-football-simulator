@@ -6,6 +6,7 @@ import type { MailDraft } from './support.ts';
 import type { ReviewDraft } from './reviews.ts';
 import type { CardSummary } from './card.ts';
 import type { Risk } from './risk.ts';
+import type { ThreadsToken } from './social.ts';
 
 export const kstDay = (now = Date.now()) => new Date(now + 9 * 3600_000).toISOString().slice(0, 10);
 
@@ -314,6 +315,13 @@ export class AgentLedger extends DurableObject<Env> {
     return rankMemories(all, query, limit);
   }
   /** 한도 초과 안내는 하루 한 번만 한다. 처음이면 true. */
+  /** T-11-395 Threads 장기 토큰(60일)을 갱신한 값. */
+  async threadsToken(): Promise<ThreadsToken | undefined> {
+    return this.ctx.storage.get<ThreadsToken>('threads:token');
+  }
+  async setThreadsToken(v: ThreadsToken): Promise<void> {
+    await this.ctx.storage.put('threads:token', v);
+  }
   async warnOnce(role: Role, day = kstDay()): Promise<boolean> {
     const d = await this.day(role, day);
     if (d.warned) return false;

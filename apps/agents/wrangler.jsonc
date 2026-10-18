@@ -38,6 +38,8 @@
     "PLAY_PACKAGE": "com.offsidelab.app",
     // T-11-332 Meta 광고 계정(OFFSIDE Global). 토큰은 비밀값 META_ADS_ACCESS_TOKEN(없으면 meta_ads 도구가 없다).
     "META_AD_ACCOUNT_ID": "943240728441057",
+    // T-11-395 인스타그램 @offside.lab.kr. 토큰은 비밀값 META_GRAPH_TOKEN, Threads는 THREADS_ACCESS_TOKEN.
+    "META_IG_USER_ID": "17841417364785110",
     "OPERATOR_USER_ID": "U0C9BAYGT8Q",
     // 에이전트 봇 4개(자기 · 서로의 메시지에 반응하지 않는다).
     "AGENT_APP_IDS": "A0C987NV8HZ,A0C9CFUM98E,A0C996C6R3P,A0C9E9PELTC",
