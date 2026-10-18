@@ -50,7 +50,7 @@ import {
 import { clubsJsonMap, clubsJsonQuery } from '../db/repos/retiredNumbers.js';
 import { boundProfile, boundRetirement, sanitizeSeason } from '../plausibility.js';
 import { getProfile, isLinked } from '../db/repos/profiles.js';
-import { recordAttempt } from '../db/repos/authAttempts.js';
+import { tryAttempt } from '../db/repos/authAttempts.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
@@ -99,7 +99,8 @@ async function limitUpload(
   kind: keyof typeof UPLOAD_LIMIT,
   profileId: string,
 ): Promise<void> {
-  if ((await recordAttempt(db, kind, profileId, nowIso())) > UPLOAD_LIMIT[kind]) {
+  // Once exhausted, reject atomically without rewriting the same counter on every retry.
+  if (!(await tryAttempt(db, kind, profileId, UPLOAD_LIMIT[kind], nowIso()))) {
     throw rateLimited('기록을 너무 자주 올리고 있어요. 잠시 뒤에 다시 시도해 주세요.');
   }
 }
