@@ -1,0 +1,23 @@
+{
+  "id": "t-11-382-manager-breakdown",
+  "title": "감독 보정 내역",
+  "items": [
+    "팀 화면 감독 칸에서 줄마다 감독 보정이 어디서 왔는지 볼 수 있어요.",
+    "합이 줄마다 최대 +3.0을 넘으면 잘린 몫도 알려 줘요."
+  ],
+  "en": {
+    "title": "Manager bonus breakdown",
+    "items": [
+      "The manager seat on the team screen now shows where each line's manager bonus comes from.",
+      "If the sum goes over the +3.0 per-line limit, it shows how much was cut."
+    ]
+  },
+  "ja": {
+    "title": "監督補正の内訳",
+    "items": [
+      "チーム画面の監督枠で、ラインごとの監督補正の内訳を見られます。",
+      "合計がラインごとの上限+3.0を超えると、切り捨てた分も表示します。"
+    ]
+  },
+  "availability": "web-app"
+}
