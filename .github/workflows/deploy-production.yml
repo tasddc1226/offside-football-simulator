@@ -212,7 +212,11 @@ jobs:
         if: inputs.mode == 'deploy'
         run: |
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_API_URL/v1/health" >/dev/null
-          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_API_URL/v1/profile" >/dev/null
+          # An unauthenticated profile GET creates a profile. Verify rejection without creating smoke data.
+          PROFILE_STATUS="$(curl --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
+            --output /dev/null --write-out '%{http_code}' --header 'Authorization: Bearer release-smoke-invalid' \
+            "$PRODUCTION_API_URL/v1/profile")"
+          test "$PROFILE_STATUS" = '401' || { echo "Expected read-only profile rejection, got $PROFILE_STATUS." >&2; exit 1; }
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_WEB_URL/" | grep -qF '오프사이드'
 
       - name: Inspect announcement push outbox counts
