@@ -157,6 +157,24 @@ export const SeasonGrowthSchema = z.strictObject({
         .max(4),
     })
     .optional(),
+  /**
+   * T-11-394 결정적 장면 기록(game moments.ts MomentLog). 리그 구간마다 하나 · 뛴 결승마다 하나라 시즌에 몇 개뿐이다.
+   * c는 고른 선택지 id · 'auto'(맡기기) · 'to'(시간 초과). b · p는 맡겼을 때 · 이번에 쓴 성공 확률(%).
+   */
+  km: z
+    .array(
+      z.strictObject({
+        ph: z.number().int().min(0).max(4),
+        at: z.enum(['l', 'f']),
+        sit: z.string().max(24),
+        c: z.string().max(24),
+        b: z.number().int().min(0).max(100),
+        p: z.number().int().min(0).max(100),
+        ok: z.boolean(),
+      }),
+    )
+    .max(8)
+    .optional(),
 });
 export type SeasonGrowth = z.infer<typeof SeasonGrowthSchema>;
 

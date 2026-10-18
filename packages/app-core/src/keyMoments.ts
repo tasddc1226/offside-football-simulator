@@ -11,7 +11,7 @@ import {
   situationOf,
   type CareerMomentChoice,
 } from '@offside/game/moment-choices';
-import type { CareerMoment, MomentPicks } from '@offside/game/moments';
+import type { CareerMoment, MomentLog, MomentPicks } from '@offside/game/moments';
 import { momentHooks } from '@offside/game/moments';
 import { clamp, createRng, setActiveRng } from '@offside/game/rng';
 import { playPhase } from '@offside/game/turn';
@@ -119,6 +119,9 @@ export function createMomentDriver(o: {
 } {
   const asked = new Map<string, { at: number; card: ReturnType<typeof momentCard> }>();
   const picks: MomentPicks = {};
+  // T-11-394 이 구간에서 고른 장면 기록. 다시 진행하면 구간 전 상태로 돌아가므로 구간 전 기록 뒤에 매번 다시 붙인다.
+  const before = (JSON.parse(o.pre) as GameState).momentBuf ?? [];
+  const logged: MomentLog[] = [];
   const ask = (m: CareerMoment | undefined, at: number) => {
     if (!m || asked.has(m.key)) return null;
     const card = momentCard(o.s, m, d.cur);
@@ -171,6 +174,21 @@ export function createMomentDriver(o: {
     decide(key: string, choice: string | null) {
       const q = asked.get(key)!;
       const c = choice ? q.card.raw.find((x) => x.id === choice) : undefined;
+      // T-11-394 장면 기록을 남긴다. 맡기면(auto · 시간 초과) 상태가 그대로라 다음 저장 때 함께 저장된다 — 여기서 저장하면
+      // 중계 줄(점수)이 쓴 난수까지 세이브에 들어가 구간 결과 저장이 달라진다.
+      const log = (r: PhaseResult) => {
+        const m = r.moments.find((x) => x.key === key)!;
+        logged.push({
+          ph: o.s.phase - 1,
+          at: m.at === 'final' ? 'f' : 'l',
+          sit: situationOf(m, o.s.pos),
+          c: c ? c.id : (choice ?? 'to'),
+          b: Math.round(m.base * 100),
+          p: Math.round(m.pct * 100),
+          ok: m.ok,
+        });
+        o.s.momentBuf = [...before, ...logged];
+      };
       if (c) {
         picks[key] = momentPick(c);
         const s = o.s as unknown as Record<string, unknown>;
@@ -178,6 +196,7 @@ export function createMomentDriver(o: {
         Object.assign(s, JSON.parse(o.pre));
         setActiveRng(createRng(o.rng));
         const r = playPhase(o.s, momentHooks(o.s, picks));
+        log(r);
         o.settle(r);
         const next = o.lines(r);
         // 이미 보여 준 줄은 그대로 둔다: 리그 장면이면 그 경기 앞까지, 결승이면 경기 전부와 그 대회 줄 앞까지.
@@ -187,7 +206,7 @@ export function createMomentDriver(o: {
         d.rows = [...d.rows.slice(0, keepRows), ...next.rows.slice(keepRows)];
         d.extras = [...d.extras.slice(0, keepExtras), ...next.extras.slice(keepExtras)];
         d.cur = r;
-      }
+      } else log(d.cur);
       const m = d.cur.moments.find((x) => x.key === key)!;
       const label = c ? q.card.choices.find((x) => x.id === c.id)!.label : null;
       return momentResult(o.s, m, d.cur, label);

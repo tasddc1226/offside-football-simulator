@@ -38,7 +38,7 @@
     margin: 12px 0 4px;
     padding: 14px;
     border-radius: 14px;
-    border: 1px solid var(--pitch-2);
+    border: 1px solid var(--good);
     background: var(--surface-2);
   }
   .km.crisis {
@@ -55,7 +55,7 @@
   }
   .km-head b {
     font-size: 1.125rem;
-    color: var(--pitch-2);
+    color: var(--good);
   }
   .km.crisis .km-head b {
     color: var(--bad);
@@ -95,7 +95,7 @@
   }
   .km-choice:hover,
   .km-choice:focus-visible {
-    border-color: var(--pitch-2);
+    border-color: var(--good);
   }
   .km-label {
     font-weight: 700;
@@ -119,7 +119,7 @@
   .km-timer i {
     display: block;
     height: 100%;
-    background: var(--pitch-2);
+    background: var(--good);
     transition: width 1s linear;
   }
   .km-auto {
@@ -139,7 +139,7 @@
     color: var(--bad);
   }
   .km-result.ok b {
-    color: var(--pitch-2);
+    color: var(--good);
   }
   @media (prefers-reduced-motion: reduce) {
     .km-timer i {
