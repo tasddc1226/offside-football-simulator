@@ -27,6 +27,7 @@ Smart Placement·D1 자동 읽기 복제·HTTP/3·Brotli·Early Hints·Tiered Ca
 - [x] 최신 main에서 전용 워크트리 생성 (기준 5b33c2d).
 - [x] 목표와 실행·검증·롤백 계획 작성.
 - [x] D1 쓰기 상위 원인 확인. 정상 저장·보관은 유지하고 업로드 한도 초과 재시도의 카운터 쓰기 제거.
+- [ ] 추가 검증: 같은 공개 이름이 정상 시즌마다 HOF 인덱스 2개를 다시 쓰는 경로를 같은 D1 batch 안의 조건부 갱신으로 분리. 로컬 부모 upsert 비용 6→4행, 변경 없는 이름 갱신 0행. 공개·익명·숨김·은퇴·옛 클라이언트·동시 revision·실패 롤백 8개 테스트 통과. 운영 반영 전 CI 필요.
 - [x] 정적 자산 직접 제공 구현. 로컬 Workers 추적 5건 중 정적 2건 우회·동적 3건 실행, 헤더·빌드·번들·dry-run 확인.
 - [x] DLQ 4개 14일 보존 적용·재조회, 적체 각 0건. 시간별 관측·복구 절차 구현.
 - [ ] TLS 1.2·복구 경로 속도 제한·스캔 차단 적용, 웹·API 200 및 스캔 403 확인. DNSSEC pending으로 DS 전파 검증 대기.
@@ -40,3 +41,7 @@ Smart Placement·D1 자동 읽기 복제·HTTP/3·Brotli·Early Hints·Tiered Ca
 - [Queues 과금·보존](https://developers.cloudflare.com/queues/platform/pricing/)
 - [WAF Free 제한](https://developers.cloudflare.com/waf/rate-limiting-rules/)
 - [Observability 2026-12-01 전환](https://developers.cloudflare.com/observability/pricing/)
+
+## 첫 운영 반영
+
+PR #798은 `77d0adcf`로 머지했고 `v2026.10.18.11`의 배포·OTA 4개·릴리즈 노트 게시 7개 잡이 모두 성공했다. 운영 점검 수동 실행에서 D1 이상 없음, DLQ 각 0건·14일, R2 약 8.996GB를 확인했다. DNSSEC는 아직 상위 DS 전파 대기다. 웹 정적 자산·버전·공개/설정 페이지의 상태와 캐시·검색 헤더도 확인했다.
