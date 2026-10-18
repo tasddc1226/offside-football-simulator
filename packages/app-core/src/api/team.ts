@@ -19,6 +19,7 @@ import type {
   TeamRankResponse,
   TeamRankSort,
   TeamStatsResponse,
+  TeamDivisionsResponse,
 } from '@offside/contracts';
 import { apiFetch, cachedGet, ownerCachedGet } from './client.js';
 import { withOwnerHint } from './friendPending.js';
@@ -50,6 +51,7 @@ export type {
   TeamStatsPlayer,
   TeamStatsResponse,
   TeamStatsSummary,
+  TeamDivisionsResponse,
 } from '@offside/contracts';
 
 /** `?season=` 꼬리(없으면 지금 시즌). */
@@ -98,11 +100,19 @@ export const fetchAchievementNotifications = () =>
   ownerCachedGet<ClubAchievementNotifications>('/v1/owner-team/achievement-notifications', 60_000);
 
 /** 라이브 랭킹(팀 랭킹). 서버가 5분마다 새로 센다. */
-export const fetchTeamRanking = (season: number | undefined, sort: TeamRankSort, page: number) =>
+export const fetchTeamRanking = (
+  season: number | undefined,
+  sort: TeamRankSort,
+  page: number,
+  division?: number,
+) =>
   cachedGet<TeamRankResponse>(
-    `/v1/teams?${season === undefined ? '' : `season=${season}&`}sort=${sort}&page=${page}`,
+    `/v1/teams?${season === undefined ? '' : `season=${season}&`}sort=${sort}&page=${page}${division === undefined ? '' : `&division=${division}`}`,
     60_000,
   );
+/** T-11-375 디비전별 팀 수 · 경계(랭킹 디비전 탭). 서버가 5분마다 새로 센다. */
+export const fetchTeamDivisions = (season?: number) =>
+  cachedGet<TeamDivisionsResponse>(`/v1/teams/divisions${seasonQ(season)}`, 60_000);
 /** T-11-028 업적 랭킹(기록실). 서버가 5분마다 새로 센다. */
 export const fetchAchRanking = (season: number | undefined, page: number) =>
   cachedGet<AchRankResponse>(

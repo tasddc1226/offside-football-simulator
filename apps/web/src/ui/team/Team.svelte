@@ -78,6 +78,7 @@
   import CupLineupBand from '../cup/CupLineupBand.svelte';
   import { involves, lockAtOf, lockWhen } from '../cup/cupView.js';
   import { readTeamDraft, teamDraftBase, writeTeamDraft, type TeamDraft } from './teamDraft.js';
+  import { markDivisionSeen, takeDivisionChange, type DivisionShift } from '@offside/app-core/teamDivision';
 
   let status = $state<LoadStatus>('loading');
   let needLogin = $state(false);
@@ -119,6 +120,9 @@
   let oppStatus = $state<LoadStatus>('loading');
   let playing = $state(false);
   let result = $state<TeamMatch | null>(null);
+  /** T-11-375 방금 치른 경기의 내 디비전 전후(결과 창 승격 · 강등), 받은 경기로 바뀐 디비전 알림. */
+  let divisionShift = $state<DivisionShift | null>(null);
+  let divisionNotice = $state<string | null>(null);
   let resultOrigin = $state<'opponents' | 'history'>('opponents');
   /** 방금 치른 경기(또는 '다시 보기')를 문자중계로 보여 주는 중(T-10-097). */
   let live = $state(false);
@@ -289,6 +293,8 @@
     perDay = r.data.matchesPerDay;
     needLogin = false;
     applyTeam(r.data.team);
+    divisionNotice =
+      editable && team && season === current ? (takeDivisionChange(season, team.division)?.text ?? null) : null;
     const account = accountCache.value;
     draftKey = team?.id ?? (account && account !== 'error' ? `${account.id}:${season}` : null);
     pendingDraft = null;
@@ -437,9 +443,15 @@
     resultOrigin = 'opponents';
     live = true;
     matchesLeft = r.data.matchesLeft;
+    divisionShift = r.data.division ?? null;
+    divisionNotice = null;
     if (team) {
       team.record = r.data.record;
       team.rating = r.data.rating;
+      if (r.data.division) {
+        team.division = r.data.division.to;
+        markDivisionSeen(season, r.data.division.to);
+      }
     }
     show('result');
     window.scrollTo(0, 0);
@@ -448,6 +460,7 @@
   // T-11-098 친선전 결과(방금 치른 경기는 중계부터, 최근 친선전은 결과부터). 결과에서 돌아가면 '경기' 탭의 친구 쪽이다.
   function openFriendly(m: TeamMatch, left: number, fresh: boolean) {
     result = m;
+    divisionShift = null;
     resultOrigin = 'opponents';
     live = fresh;
     friendlyLeft = left;
@@ -579,6 +592,7 @@
         bind:manager
         bind:renaming
         onseason={pickSeason}
+        {divisionNotice}
       />
       {#if retireSyncing && editable}
         <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap" data-retire-syncing>
@@ -667,6 +681,7 @@
         <TeamResult
           m={result}
           {team}
+          shift={divisionShift}
           {eventName}
           matchesLeft={result.friendly ? friendlyLeft : matchesLeft}
           ontoTeam={() => switchView('team')}
@@ -685,7 +700,7 @@
         more={!!histNext}
         {moreStatus}
         onreload={() => void loadHistory()}
-        onopen={(m) => { result = m; resultOrigin = 'history'; live = false; switchView('result'); }}
+        onopen={(m) => { result = m; divisionShift = null; resultOrigin = 'history'; live = false; switchView('result'); }}
         onmore={() => void loadMore()}
         onstats={() => openStats()}
       />

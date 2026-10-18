@@ -5,10 +5,15 @@ import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { TEAM_RANK_PER_PAGE } from '@offside/contracts/owner-team';
 import {
+  fetchTeamDivisions,
   fetchTeamRanking,
+  type TeamDivisionsResponse,
   type TeamRankResponse,
   type TeamRankSort,
 } from '@offside/app-core/api/team';
+import { divisionName, TEAM_DIVISION_KEYS } from '@offside/app-core/teamDivision';
+import { teamDivisionText as LD } from '@offside/app-core/i18n/ko/teamDivision';
+import { DivisionEmblem } from '../../../components/DivisionEmblem';
 import { num as n } from '@offside/app-core/teamText';
 import { fmtValue } from '@offside/app-core/format';
 import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
@@ -72,6 +77,9 @@ export default function TeamRanking() {
   const [season, setSeason] = useState<number | undefined>(undefined);
   const [sort, setSort] = useState<TeamRankSort>(appState.hof.teamSort ?? 'rating');
   const [page, setPage] = useState(1);
+  /** T-11-375 디비전 탭(레이팅순에만, undefined = 전체). */
+  const [division, setDivision] = useState<number | undefined>(undefined);
+  const [divisions, setDivisions] = useState<TeamDivisionsResponse | null>(null);
   const [data, setData] = useState<TeamRankResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -86,16 +94,30 @@ export default function TeamRanking() {
     setFailed(false);
     if (!pulled) setLoading(true);
     let live = true; // 더 늦게 고른 조건의 응답만 쓴다.
-    void track(fetchTeamRanking(season, sort, page)).then((r) => {
-      if (!live) return;
-      setLoading(false);
-      if (r.ok) setData(r.data);
-      else setFailed(true);
+    void track(fetchTeamRanking(season, sort, page, sort === 'rating' ? division : undefined)).then(
+      (r) => {
+        if (!live) return;
+        setLoading(false);
+        if (r.ok) setData(r.data);
+        else setFailed(true);
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [season, sort, page, division, shownSeason, tick, track]);
+
+  // 디비전별 팀 수는 레이팅순을 볼 때만 받는다(5분 엣지 캐시 · 1분 메모).
+  useEffect(() => {
+    if (sort !== 'rating') return;
+    let live = true;
+    void fetchTeamDivisions(season).then((r) => {
+      if (live && r.ok) setDivisions(r.data);
     });
     return () => {
       live = false;
     };
-  }, [season, sort, page, shownSeason, tick, track]);
+  }, [season, sort, shownSeason]);
 
   const pages = data ? Math.max(1, Math.ceil(data.total / TEAM_RANK_PER_PAGE)) : 1;
   const metric = METRIC[sort];
@@ -159,6 +181,29 @@ export default function TeamRanking() {
           setPage(1);
         }}
       />
+      {sort === 'rating' ? (
+        <View style={{ marginTop: 8 }} testID="rank-divisions">
+          <RecordsChips
+            label={LD.tabsAria}
+            testIDPrefix="rank-division"
+            scroll
+            value={division === undefined ? 'all' : String(division)}
+            items={[
+              { key: 'all', label: LD.tabAll },
+              ...TEAM_DIVISION_KEYS.map((_, i) => TEAM_DIVISION_KEYS.length - 1 - i).map((d) => ({
+                key: String(d),
+                label: divisions
+                  ? `${divisionName(d)} ${n(divisions.counts[d] ?? 0)}`
+                  : divisionName(d),
+              })),
+            ]}
+            onPick={(key) => {
+              setDivision(key === 'all' ? undefined : Number(key));
+              setPage(1);
+            }}
+          />
+        </View>
+      ) : null}
       <Txt tone="muted" style={{ fontSize: 12, marginVertical: 8 }}>
         {L.formGuide}
       </Txt>
@@ -251,6 +296,9 @@ export default function TeamRanking() {
                       </View>
                     ) : null}
                   </View>
+                  {t.division !== undefined ? (
+                    <DivisionEmblem division={t.division} size={14} />
+                  ) : null}
                   <Txt bold numberOfLines={1} style={{ flex: 1, fontSize: 13 }}>
                     {t.name}
                   </Txt>
@@ -333,7 +381,7 @@ export default function TeamRanking() {
           ) : null}
         </>
       ) : (
-        empty(L.teamsEmpty)
+        empty(division !== undefined && sort === 'rating' ? LD.emptyDivision : L.teamsEmpty)
       )}
       <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: 10 }}>
         {sort === 'value' ? L.valueFoot : L.teamsFoot}
