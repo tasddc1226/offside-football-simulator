@@ -18,7 +18,7 @@ export function KeyMoment({
   choose: (id: string) => void;
 }) {
   const c = useColors();
-  const tone = m.kind === 'crisis' ? c.bad : c.pitch2;
+  const tone = m.kind === 'crisis' ? c.bad : c.good;
   return (
     <View
       testID="key-moment"
@@ -56,7 +56,7 @@ export function KeyMoment({
             style={{
               fontWeight: '700',
               fontSize: rem(1.0625),
-              color: m.result.ok ? c.pitch2 : c.bad,
+              color: m.result.ok ? c.good : c.bad,
             }}
           >
             {m.result.text}
@@ -115,7 +115,7 @@ export function KeyMoment({
               style={{
                 height: '100%',
                 width: `${(m.left / m.secs) * 100}%`,
-                backgroundColor: c.pitch2,
+                backgroundColor: c.good,
               }}
             />
           </View>
