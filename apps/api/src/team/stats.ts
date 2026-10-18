@@ -1,6 +1,7 @@
 import type { TeamStatsResponse } from '@offside/contracts';
 import { TEAM_STATS_FORM_MAX, TEAM_STATS_OPPONENTS_MAX } from '@offside/contracts';
-import type { TeamForm, TeamStatsMatch } from '@offside/contracts';
+import type { TeamForm, TeamStatsMatch, TeamStatsReport } from '@offside/contracts';
+import { lineEdges, REPORT_LINES, type FormationId } from '@offside/contracts/owner-team';
 import { kstDay } from '@offside/contracts/kst';
 import type { Db } from '../db/client.js';
 import {
@@ -55,6 +56,17 @@ export function tallyTeamStats(rows: readonly Row[], teamId: string) {
   >();
   const days = new Map<string, Wdl>();
   const opponents = new Map<string, Wdl & { name: string; owner: string; at: string; n: number }>();
+  // T-11-379 경기 리포트 — 기대 득점이 남은 경기만 센다(그 전 경기는 다시 계산할 수 없다).
+  const rep = {
+    matches: 0,
+    xgFor: 0,
+    xgAgainst: 0,
+    gf: 0,
+    ga: 0,
+    edges: { atk: 0, mid: 0, def: 0 },
+    behind: { atk: 0, mid: 0, def: 0 },
+  };
+  const formations = new Map<FormationId, Wdl & { xgFor: number; xgAgainst: number }>();
   const player = (ref: { careerId: string | null; anon: string }) => {
     const key = ref.careerId ?? `anon:${ref.anon}`;
     let p = players.get(key);
@@ -88,6 +100,24 @@ export function tallyTeamStats(rows: readonly Row[], teamId: string) {
     const big = { opponent: opp.name, gf, ga, at: r.createdAt, m: Math.abs(gf - ga) };
     if (gf > ga && bigger(big, biggestWin)) biggestWin = big;
     if (gf < ga && bigger(big, biggestLoss)) biggestLoss = big;
+    const me = d[mine];
+    if (me.xg !== undefined && me.lines && opp.xg !== undefined && opp.lines) {
+      rep.matches++;
+      rep.xgFor += me.xg;
+      rep.xgAgainst += opp.xg;
+      rep.gf += gf;
+      rep.ga += ga;
+      const e = lineEdges(me.lines, opp.lines);
+      for (const l of REPORT_LINES) {
+        rep.edges[l] += e[l];
+        if (e[l] < 0) rep.behind[l]++;
+      }
+      let f = formations.get(me.formation);
+      if (!f) formations.set(me.formation, (f = { ...zero(), xgFor: 0, xgAgainst: 0 }));
+      add(f, gf, ga);
+      f.xgFor += me.xg;
+      f.xgAgainst += opp.xg;
+    }
     for (const e of d.events) {
       if (e.side !== mine) continue;
       player(e.scorer).goals++;
@@ -108,10 +138,30 @@ export function tallyTeamStats(rows: readonly Row[], teamId: string) {
     while (k < timeline.length && timeline[timeline.length - 1 - k]!.r === last.r) k++;
     streak = { kind: last.r, n: k };
   }
+  const one = (x: number) => Math.round(x * 10) / 10;
+  const avg = (x: number) => (rep.matches ? one(x / rep.matches) : 0);
+  const report: TeamStatsReport = {
+    matches: rep.matches,
+    xgFor: one(rep.xgFor),
+    xgAgainst: one(rep.xgAgainst),
+    gf: rep.gf,
+    ga: rep.ga,
+    edges: { atk: avg(rep.edges.atk), mid: avg(rep.edges.mid), def: avg(rep.edges.def) },
+    behind: rep.behind,
+    formations: [...formations]
+      .sort((a, b) => b[1].w + b[1].d + b[1].l - (a[1].w + a[1].d + a[1].l))
+      .map(([formation, f]) => ({
+        formation,
+        ...f,
+        xgFor: one(f.xgFor),
+        xgAgainst: one(f.xgAgainst),
+      })),
+  };
   const strip = (b: (TeamStatsMatch & { m: number }) | null): TeamStatsMatch | null =>
     b && { opponent: b.opponent, gf: b.gf, ga: b.ga, at: b.at };
   return {
     total,
+    report,
     flow: {
       form: timeline
         .slice(-TEAM_STATS_FORM_MAX)
@@ -182,5 +232,6 @@ export async function teamStatsView(
     days: t.days,
     opponents: t.opponents.map((o) => ({ ...o, logo: logos.get(o.teamId) ?? null })),
     summary: { ...t.flow, ...kinds },
+    report: t.report,
   };
 }

@@ -735,6 +735,9 @@ export type TeamSnapshot = {
   ratingChange?: number;
   /** 이 경기에 반영된 시너지 id(T-11-105, 반영 시즌 경기만). */
   synergy?: string[];
+  /** T-11-379 기대 득점(소수 한 자리)과 줄 힘(반올림). 이 기능 전 경기에는 없다. */
+  xg?: number;
+  lines?: { atk: number; mid: number; def: number; gk: number };
 };
 export type StoredEvent = {
   minute: number;

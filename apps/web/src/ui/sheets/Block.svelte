@@ -27,6 +27,10 @@
     <TickerLine {m} />
   {/each}
 </div>
+{#if v.rated}
+  <!-- T-11-379 평점 구성(뛴 경기 평균) — 경기가 다 나온 뒤에 지연 청크로 붙는다. -->
+  {#await import('../RatingParts.svelte') then M}<M.default games={v.rated} />{/await}
+{/if}
 <div class="steps">
   {#each v.extras as x, i (i)}
     <div class:on={!x.done} class:done={x.done}>{x.text}</div>
