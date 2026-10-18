@@ -73,7 +73,8 @@ import { toast } from '../../game/host';
 import { setCardLock } from '@offside/app-core/api/market';
 import { go } from '../../game/nav';
 import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
-import { coachLineBonus, coachSummary } from '@offside/app-core/managerCard';
+import { DisclosureRow } from '../../ui/Disclosure';
+import { coachBreakdown, coachLineBonus, coachSummary } from '@offside/app-core/managerCard';
 import { rem } from '../../theme/type';
 import { achNudge } from '../../game/achNudge';
 import { accountCache, appState, prefs } from '../../store';
@@ -283,7 +284,10 @@ export default function Team() {
     };
   };
   // T-11-323 감독 칸 보정(경기 계산과 같은 값) — 줄 힘 칸에 더해 보인다.
+  const [coachOpen, setCoachOpen] = useState(false);
   const coachBonus = team?.coach ? coachLineBonus(team.coach, formation, synergy, season) : null;
+  // T-11-382 줄 칸의 감독 보정이 어디서 왔는지(갈래별 값 · 상한에 잘린 몫 · 꺼진 특기).
+  const coachDetail = team?.coach ? coachBreakdown(team.coach, formation, synergy, season) : null;
   const filled = slots.filter((s) => s !== null).length;
   const dirty =
     !team ||
@@ -959,6 +963,41 @@ export default function Team() {
                     {MG.teamCoachManage}
                   </Btn>
                 </View>
+                {coachDetail ? (
+                  <>
+                    <DisclosureRow
+                      open={coachOpen}
+                      onToggle={() => setCoachOpen((v) => !v)}
+                      label={MG.breakdown}
+                      testID="team-coach-breakdown"
+                    />
+                    {coachOpen ? (
+                      <View style={{ gap: 8 }}>
+                        {coachDetail.rows.map((r) => (
+                          <View key={r.line} style={{ gap: 2 }} testID={`coach-line-${r.line}`}>
+                            <Txt bold>
+                              {r.label} {r.total}
+                            </Txt>
+                            <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                              {r.parts}
+                            </Txt>
+                            {r.capped ? (
+                              <Txt style={{ fontSize: rem(0.8125) }}>{r.capped}</Txt>
+                            ) : null}
+                          </View>
+                        ))}
+                        {coachDetail.off.length ? (
+                          <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                            {MG.breakdownOff({ names: coachDetail.off.join(' · ') })}
+                          </Txt>
+                        ) : null}
+                        <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                          {MG.breakdownNote}
+                        </Txt>
+                      </View>
+                    ) : null}
+                  </>
+                ) : null}
               </Card>
             ) : null}
             <TeamLineup

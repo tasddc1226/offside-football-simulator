@@ -82,29 +82,56 @@ const LINES = ['atk', 'mid', 'def', 'gk'] as const;
 const clampLine = (v: number) =>
   Math.round(Math.min(MANAGER_LINE_MAX, Math.max(MANAGER_LINE_MIN, v)) * 100) / 100;
 
+/** 감독 보정 한 갈래(숙련 · 성향 · 특기). 특기는 짝 시너지가 꺼져 있으면 on=false이고 더하지 않는다. */
+export type ManagerPart =
+  | { src: 'mastery'; grade: MasteryGrade; lines: SynergyLines }
+  | { src: 'style'; style: ManagerStyle; lines: SynergyLines }
+  | { src: 'special'; special: ManagerSpecial; on: boolean; lines: SynergyLines };
+
+/** T-11-382 감독 보정 내역: 갈래별 값, 상한 전 합(raw), 줄마다 −1.5~+3으로 자른 값(total). */
+export type ManagerBreakdown = { parts: ManagerPart[]; raw: SynergyLines; total: SynergyLines };
+
+const zero = (): SynergyLines => ({ atk: 0, mid: 0, def: 0, gk: 0 });
+const lines = (v: Partial<SynergyLines>): SynergyLines => ({ ...zero(), ...v });
+
+export function managerBreakdown(
+  card: ManagerCardRules | null | undefined,
+  formation: FormationId,
+  synergies: readonly string[],
+): ManagerBreakdown {
+  if (!card) return { parts: [], raw: zero(), total: zero() };
+  const grade = card.mastery[formation] ?? 'C';
+  const m = MASTERY_BONUS[grade];
+  const parts: ManagerPart[] = [
+    { src: 'mastery', grade, lines: lines({ atk: m, mid: m, def: m }) },
+    { src: 'style', style: card.style, lines: lines(STYLE_EFFECT[card.style]) },
+    // 한 특기에 짝 시너지가 여럿 켜져도 한 번만 더한다.
+    ...card.specials.slice(0, MANAGER_SPECIALS_MAX).map((special) => ({
+      src: 'special' as const,
+      special,
+      on: SPECIAL_SYNERGIES[special].some((id) => synergies.includes(id)),
+      lines: lines(SPECIAL_EFFECT[special]),
+    })),
+  ];
+  const raw = zero();
+  for (const part of parts) {
+    if (part.src === 'special' && !part.on) continue;
+    for (const l of LINES) raw[l] += part.lines[l];
+  }
+  const total = zero();
+  for (const l of LINES) total[l] = clampLine(raw[l]);
+  return { parts, raw, total };
+}
+
 /**
  * 감독이 그 팀 줄 힘에 더하는 값. formation은 팀 포메이션, synergies는 그 경기에서 켜진 시너지 id(시너지를 반영하지
  * 않는 시즌이면 빈 배열이라 특기는 효과가 없다). 감독이 없으면 null을 넘긴다 — 결과는 0이다.
  */
-export function managerLines(
+export const managerLines = (
   card: ManagerCardRules | null | undefined,
   formation: FormationId,
   synergies: readonly string[],
-): SynergyLines {
-  const out: SynergyLines = { atk: 0, mid: 0, def: 0, gk: 0 };
-  if (!card) return out;
-  const m = MASTERY_BONUS[card.mastery[formation] ?? 'C'];
-  out.atk += m;
-  out.mid += m;
-  out.def += m;
-  for (const l of LINES) out[l] += STYLE_EFFECT[card.style][l] ?? 0;
-  for (const sp of card.specials.slice(0, MANAGER_SPECIALS_MAX)) {
-    if (!SPECIAL_SYNERGIES[sp].some((id) => synergies.includes(id))) continue;
-    for (const l of LINES) out[l] += SPECIAL_EFFECT[sp][l] ?? 0;
-  }
-  for (const l of LINES) out[l] = clampLine(out[l]);
-  return out;
-}
+): SynergyLines => managerBreakdown(card, formation, synergies).total;
 
 /** 줄 힘 두 개를 더한다(시너지 보정 + 감독 보정). */
 export const addLines = (a: SynergyLines, b: SynergyLines): SynergyLines => ({
