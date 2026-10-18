@@ -88,12 +88,21 @@
       "triggers": { "crons": ["0 19 * * *", "*/5 * * * *"] },
       "queues": {
         "producers": [
+          { "binding": "PUSH_QUEUE", "queue": "offside-push-production" },
           { "binding": "BILLING_QUEUE", "queue": "offside-billing-production" },
           { "binding": "CUP_PUSH_QUEUE", "queue": "offside-cup-push-production" },
           { "binding": "ADMIN_PUSH_QUEUE", "queue": "offside-admin-push-production" },
           { "binding": "CAREER_PUSH_QUEUE", "queue": "offside-career-push-production" },
         ],
         "consumers": [
+          {
+            "queue": "offside-push-production",
+            "max_batch_size": 1,
+            "max_batch_timeout": 1,
+            "max_concurrency": 1,
+            "max_retries": 3,
+            "dead_letter_queue": "offside-push-production-dlq",
+          },
           {
             "queue": "offside-billing-production",
             "max_batch_size": 1,
