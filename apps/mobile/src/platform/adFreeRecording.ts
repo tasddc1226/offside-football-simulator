@@ -1,4 +1,3 @@
-import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { apiFetch, getProfile, cachedGet } from '@offside/app-core/api/client';
 import { CONSENT_KEY, parseConsent } from '@offside/app-core/analytics-model';
@@ -19,7 +18,7 @@ export function adFreeRecordingEnabled() {
   try {
     return (
       (Platform.OS === 'ios' || Platform.OS === 'android') &&
-      Constants.expoConfig?.extra?.accountPurchaseRecording === true &&
+      process.env.EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED === 'true' &&
       parseConsent(kv.getString(CONSENT_KEY)) === 'granted'
     );
   } catch {

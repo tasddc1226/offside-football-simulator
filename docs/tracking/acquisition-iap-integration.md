@@ -58,7 +58,7 @@ Apple 서명 JWS의 `purchaseDate`, `price`(milliunits), `currency`, `storefront
 
 광고 제거 비소모성 상품도 `iap_ad_free_purchases` 원장에 기록한다. 아이템 qty를 만들거나 기존 영구 광고 제거 권한을 바꾸지 않는다. 새 Apple 구매는 검증된 프로필 UUID를 appAccountToken으로 붙이고, Google은 obfuscatedAccountId를 사용한다. 로그인 강제는 없다. 토큰 없는 과거 복원은 profile_id=NULL로 미귀속이며 나중에 임의로 계정을 붙이지 않는다. Apple 비소모성은 originalTransactionId와 originalPurchaseDate를 우선해 복원 시 새 transactionId가 와도 최초 구매 한 건으로 센다. Family Sharing은 추가 구매로 기록하지 않는다.
 
-네이티브 활성화는 `OFFSIDE_ACCOUNT_PURCHASES_ENABLED=true`, 앱 분석 동의 granted, 해당 프로필의 서버 연결 동의가 모두 필요하다. 하나라도 거절이면 추가 계정/거래 요청을 보내지 않거나 서버에서 기록하지 않는다. 연결 동의 조회는 cachedGet을 쓴다. 동의/기록 조회 실패·hang·409가 native finishTransaction을 막지 않는다. PURCHASED 광고 제거의 권한과 승인 처리는 독립 실행한다. 명시적 연결 동의가 확인된 프로필의 선택적 토큰만 MMKV 대기열(16건, 논리7일)에 보관해 다음 앱/스토어 활동 때 별도 재전송한다. 만료는 다음 활동 때 삭제하며 동의 철회·앱 세션 변경은 대기열을 즉시 비운다. preflight가 끝난 구매는 첫 await 전에 대기열을 동기 저장한다. 복원에서 아직 동의를 확인하지 못했다면 native finish를 먼저 진행하고, 완료된 비소모성 상품은 다음 getAvailablePurchases에서 다시 발견할 수 있다. 가격 조회 실패나 지연도 승인 재시도를 막지 않는다. 복원은 새 매출이 아니다. 앱 config와 fingerprint가 바뀌므로 실제 스토어 앱에는 별도 바이너리/런타임 검증 후 출시 승인이 필요하다. 이번 작업에서 빌드·제출·OTA·판매 설정 변경은 하지 않았다.
+네이티브 활성화는 `EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED=true`, 앱 분석 동의 granted, 해당 프로필의 서버 연결 동의가 모두 필요하다. 하나라도 거절이면 추가 계정/거래 요청을 보내지 않거나 서버에서 기록하지 않는다. 연결 동의 조회는 cachedGet을 쓴다. 동의/기록 조회 실패·hang·409가 native finishTransaction을 막지 않는다. PURCHASED 광고 제거의 권한과 승인 처리는 독립 실행한다. 명시적 연결 동의가 확인된 프로필의 선택적 토큰만 MMKV 대기열(16건, 논리7일)에 보관해 다음 앱/스토어 활동 때 별도 재전송한다. 만료는 다음 활동 때 삭제하며 동의 철회·앱 세션 변경은 대기열을 즉시 비운다. preflight가 끝난 구매는 첫 await 전에 대기열을 동기 저장한다. 복원에서 아직 동의를 확인하지 못했다면 native finish를 먼저 진행하고, 완료된 비소모성 상품은 다음 getAvailablePurchases에서 다시 발견할 수 있다. 가격 조회 실패나 지연도 승인 재시도를 막지 않는다. 복원은 새 매출이 아니다. 플래그는 JS 번들에만 주입하며 native Expo config에 넣지 않는다. 실제 스토어 앱과 계산된 fingerprint가 일치하는지 production preflight에서 검증하고, 대응 빌드가 없으면 게시하지 않는다. 유료 빌드·제출·판매 설정 변경은 이 경로에 없다.
 
 두 상품 원장을 동일한 명시적 열의 UNION ALL로 투영해 계정별 최초 구매 순서를 한 번만 계산한다. 같은 서명 거래가 서로 다른 상품 원장으로 들어가려는 요청은 검증 상품 ID/type이 막는다. 익명 거래는 고유 결제자에 추정 합산하지 않고 unknown_account_transactions로 표시한다. 새 비소모성 데이터는 동의된 구매·복원만 수신하므로 전체 App Store 매출과 동일한 coverage를 주장하지 않는다. #649 미병합 구독도 포함하지 않는다.
 
@@ -143,3 +143,14 @@ CI39087673328이 head7fc5fee8에서 전체 성공한 뒤 main7297a213(#790)이 �
 최초 허용 UTM은 main의 첫 import인 entry-campaign에서 한 번 캡처한다. App Store와 first-party가 같은 정규화된 snapshot을 사용해 SPA 이동 뒤 생성기 로드가 늦어져도 최초 유입을 유지한다. raw URL·fbclid·이메일을 새 저장소에 보관하지 않으며 API/제3자 전송과 동의·철회 정책은 바뀌지 않는다. 해당 초기 snapshot만 이미 eager인 game/contracts 그룹과 묶고, $initial 및 재귀 캡처 금지를 유지했다. 예산·카운터·검사 fixture는 완화하지 않았다.
 
 #794 LM/RM 역할과 #793 감독 상세 표시는 main 코드를 그대로 보존했다. 보드 양쪽 행과 SEO의 main 변경/기존 acquisition 개인정보 본문을 각각 대조했다. migration/schema 변경은 없고 0111 부모0110/journal109→110→111을 유지한다. 로컬 웹94개(지연 초기화/개인정보/OS 회귀3개 포함), owner-team 계약20개, managerCard8개, 웹/e2e 타입·Svelte오류0(기존경고5)·변경 ESLint 검사를 통과했다. 브라우저/원격 CI 결과는 새 head에서 별도로 기록한다. 운영 활성화·병합·배포·환경 설정·개발앱 설치·실제 구매는 실행하지 않았다.
+
+
+## 2026-10-18 명시적 활성화 승인 후 OTA 호환 수정
+
+사용자가 새 명시적 동의를 받은 동일 계정에 한해 first-party 유입·검증 구매 연결 활성화와 호환 OTA 검증·게시를 승인했다. 기존 GA4 동의를 연결 동의로 승격하지 않으며 GA4 구매·Meta·MMP 전송은 추가하지 않는다. provider128166757은 공식 App Store Connect 읽기로 현재 앱과 대조했다. 과거 미검증 기록은 당시 상태다.
+
+공식 EAS fingerprint 비교에서 기존1.1.3 스토어 빌드와 #787 current OTA의 유일한 source 차이는 Expo config의 extra.accountPurchaseRecording(없음→false)이었다. 이를 제거하고 선택적 광고 제거 구매 기록 플래그만 EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED로 옮겼다. 앱 분석 동의·서버 동일 프로필 연결 동의·expectedProfile·철회/계정전환 대기열 삭제는 유지한다. Consumable 검증 원장은 선택적 기록 플래그와 독립이다.
+
+preflight는 실제 production 환경으로 iOS5493303a029b8c9943bb72166e91ffb14a5f1a6b / Androidbdab3b94672d81e85bba4b2a98ca7a8b825d8a66과 완료 production 빌드의 일치를 요구한다.1.1.2 호환 경로의 별도 지문 검증도 유지한다. 해시를 강제 설정하지 않는다. 운영 JS 공개 플래그의 명시적 true도 검증하며 OTA 게시 단계는 deploy에만 열린다.
+
+로컬 타입·활성화 합성 웹 빌드/번들138.20KB(예산145KB), 관련 회귀 및 독립 리뷰는 통과했다. 원격 preflight·필수 CI·실제 게시 결과는 후속 실행 증거로 확인한다. 실제 기기 OTA 적용·복원·환불·크래시 재전송·GA4 앱 스트림은 이 검사로 입증하지 않는다. 새 유료 구매나 운영 프로필/동의 생성은 테스트하지 않는다.
