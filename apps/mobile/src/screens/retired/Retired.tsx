@@ -25,6 +25,7 @@ export default function Retired() {
       {/* T-10-029: 명예의 전당 공개·다음 버튼은 크레딧 맨 아래에, 공유 버튼은 화면 아래에 고정된다(T-10-067). */}
       <LegendReport
         v={v}
+        fresh={appState.G?.cid}
         end={
           <>
             {v.own?.id ? <OwnHofCards v={v} /> : null}

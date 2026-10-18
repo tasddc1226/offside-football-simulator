@@ -11,6 +11,7 @@ import { initialNewsState } from '@offside/app-core/news';
 import type { RnAlert, RnMisses, RnResults } from '@offside/app-core/retiredNumber';
 import type { Profile } from '@offside/app-core/api/client';
 import { loadKey } from '@offside/game/storage';
+import { REVEAL_SHORT_KEY } from '@offside/app-core/reveal';
 import { getLocale, type Locale } from '@offside/app-core/i18n/core';
 
 export const appState = proxy<AppState>(initialAppState());
@@ -45,10 +46,13 @@ export const prefs = proxy<{
   theme: 'light' | 'dark' | null;
   motionOK: boolean;
   haptics: boolean;
+  /** T-11-371 공개 연출 짧게(설정, 기본 끔). */
+  revealShort: boolean;
   lang: Locale;
 }>({
   theme: loadKey<'light' | 'dark'>('ft_theme'),
   motionOK: true,
   haptics: loadKey<boolean>('ft_haptics') !== false,
+  revealShort: loadKey<boolean>(REVEAL_SHORT_KEY) === true,
   lang: getLocale(),
 });

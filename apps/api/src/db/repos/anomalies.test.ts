@@ -129,6 +129,45 @@ describe('비정상 기록 정기 점검', () => {
     await ctx.dispose();
   });
 
+  function traceQueries() {
+    const statements: string[] = [];
+    const d1 = new Proxy(ctx.env.DB, {
+      get(target, key) {
+        if (key === 'prepare')
+          return (sql: string) => {
+            statements.push(sql);
+            return target.prepare(sql);
+          };
+        const value = Reflect.get(target, key);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    return { d1, statements };
+  }
+
+  it('does not load administrator overrides when the page has no anomaly candidates', async () => {
+    await career('normal-page', [[18, 60]]);
+    const { d1, statements } = traceQueries();
+    expect(await sweepAnomaliesPage(d1, NOW)).toMatchObject({ done: true, checked: 1, hidden: 0 });
+    expect(statements.some((sql) => sql.includes('key LIKE'))).toBe(false);
+  });
+
+  it('does not scan old seasons again when no selected career has an eligible incremental season', async () => {
+    await career('old-season-page', [[18, 99]], { updatedAt: iso(-DAY) });
+    // The season predates the last sweep; changing only the career must not make it eligible.
+    await ctx.env.DB.prepare('UPDATE career_seasons SET created_at=? WHERE career_id=?')
+      .bind(iso(-2 * DAY), 'old-season-page')
+      .run();
+    await ctx.env.DB.prepare('INSERT INTO app_meta(key,value) VALUES (?,?)')
+      .bind(SWEPT_AT_KEY, iso(-DAY))
+      .run();
+    const { d1, statements } = traceQueries();
+    expect(await sweepAnomaliesPage(d1, NOW)).toMatchObject({ done: true, checked: 1, hidden: 0 });
+    expect(statements.some((sql) => sql.includes('WITH s AS'))).toBe(false);
+    expect(statements.some((sql) => sql.includes('key LIKE'))).toBe(false);
+    expect(await hiddenOf('old-season-page')).toBe(0);
+  });
+
   it('pages equal timestamps without skipping the next career or committing the completion watermark early', async () => {
     await ctx.env.DB.prepare(
       `WITH RECURSIVE n(i) AS (VALUES(0) UNION ALL SELECT i+1 FROM n WHERE i<100)
