@@ -48,3 +48,9 @@ Smart Placement·D1 자동 읽기 복제·HTTP/3·Brotli·Early Hints·Tiered Ca
 ## 첫 운영 반영
 
 PR #798은 `77d0adcf`로 머지했고 `v2026.10.18.11`의 배포·OTA 4개·릴리즈 노트 게시 7개 잡이 모두 성공했다. 운영 점검 수동 실행에서 D1 이상 없음, DLQ 각 0건·14일, R2 약 8.996GB를 확인했다. DNSSEC는 아직 상위 DS 전파 대기다. 웹 정적 자산·버전·공개/설정 페이지의 상태와 캐시·검색 헤더도 확인했다.
+
+## 지연 후속 실행
+
+- [x] 기존 트레이스로 D1 위치 SIN·APAC 호출 왕복과 SQL 실행 시간을 분리 확인. Smart Placement `SUCCESS`도 확인.
+- [ ] API production fetch에 SIN 근접 지역 힌트 적용, Wrangler dry-run·필수 CI 후 배포.
+- [ ] 배치 상태·동일 10분 API/트레이스·인증/공개/WebSocket 스모크 확인. 악화 시 placement만 smart로 복원.
