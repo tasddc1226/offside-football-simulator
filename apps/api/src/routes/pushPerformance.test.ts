@@ -8,12 +8,15 @@ import { registerPushDevice, unregisterPushDevice } from '../db/repos/pushDevice
 import { getPushPerformance, recordPushInteraction } from '../db/repos/pushPerformance.js';
 import { runPersonalPush } from '../push/personal.js';
 import { createPost } from '../db/repos/boards.js';
+import { capturePushQueue } from '../test/push.js';
 import { PushPerformanceSchema } from '@offside/contracts';
 
 let ctx: TestD1;
+let pushQueue: ReturnType<typeof capturePushQueue>;
 const now = () => new Date().toISOString();
 beforeEach(async () => {
   ctx = await createTestD1();
+  pushQueue = capturePushQueue(ctx.env);
 });
 afterEach(async () => {
   vi.unstubAllGlobals();
@@ -37,8 +40,8 @@ async function identity(admin = false) {
   }
   return { token: data.token, session: { ...session!, channel: 'app' as const } };
 }
-function call(a: Awaited<ReturnType<typeof identity>>, path: string, body?: unknown) {
-  return createApp().request(
+async function call(a: Awaited<ReturnType<typeof identity>>, path: string, body?: unknown) {
+  const response = await createApp().request(
     path,
     {
       method: body ? 'POST' : 'GET',
@@ -47,6 +50,8 @@ function call(a: Awaited<ReturnType<typeof identity>>, path: string, body?: unkn
     },
     ctx.env,
   );
+  if (path === '/v1/push/test' && response.status === 200) await pushQueue.consumeTestJobs();
+  return response;
 }
 async function device(a: Awaited<ReturnType<typeof identity>>, n = 1) {
   const installationId = `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -320,7 +325,7 @@ describe('push performance and private interactions', () => {
           Response.json({ data: { status: 'error', details: { error: 'DeviceNotRegistered' } } }),
         ),
     );
-    expect((await call(b, '/v1/push/test', { installationId: next })).status).toBe(503);
+    expect((await call(b, '/v1/push/test', { installationId: next })).status).toBe(200);
     expect(
       (await getPushPerformance(ctx.env.DB, { days: '7', tests: '1', page: 0 })).totals.failed,
     ).toBe(1);

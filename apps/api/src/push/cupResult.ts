@@ -2,6 +2,7 @@ import type { CupDef } from '@offside/contracts/cup';
 import type { Bindings } from '../env.js';
 import { cupKo, cupTitle } from '../cupText.js';
 import { runPersonalPush } from './personal.js';
+import { publishPushWork } from './queuePublish.js';
 
 export const cupResultSource = (cupId: string) => `cup-complete:${cupId}`;
 const validCup = (id: unknown): id is string =>
@@ -68,13 +69,22 @@ export function cupResultStatements(db: D1Database, cup: CupDef, now: string) {
 
 /** D1 is the outbox; missed Queue publishes are recovered by the existing cron dispatcher. */
 export async function publishCupResults(env: Bindings, cupIds: string[]) {
-  if (env.ENVIRONMENT !== 'production' || env.PERSONAL_PUSH_ENABLED !== '1' || !env.CUP_PUSH_QUEUE)
+  if (
+    env.ENVIRONMENT !== 'production' ||
+    env.PERSONAL_PUSH_ENABLED !== '1' ||
+    (!env.PUSH_QUEUE && !env.CUP_PUSH_QUEUE)
+  )
     return;
   const ids = [...new Set(cupIds)].filter(validCup);
   if (!ids.length) return;
   try {
+    if (env.PUSH_QUEUE) {
+      for (const id of ids)
+        await publishPushWork(env, 'personal', Date.now(), { key: cupResultSource(id) });
+      return;
+    }
     for (let i = 0; i < ids.length; i += 100)
-      await env.CUP_PUSH_QUEUE.sendBatch(
+      await env.CUP_PUSH_QUEUE!.sendBatch(
         ids
           .slice(i, i + 100)
           .map((cupId) => ({ body: { version: 1 as const, cupId }, contentType: 'json' as const })),

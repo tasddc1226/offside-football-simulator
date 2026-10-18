@@ -5,6 +5,8 @@ import type { ChatRoom } from './chat/room.js';
 import type { LiveHub } from './live/hub.js';
 
 export type Bindings = {
+  /** All app push sends and receipt checks execute in Queue consumers. */
+  PUSH_QUEUE?: Queue<import('./push/queuePublish.js').PushWork>;
   CLUB_STRENGTH_ENABLED?: string;
   /** Reviewed provider league/team-id mappings. No secrets in this JSON. */
   CLUB_STRENGTH_SOURCES?: string;

@@ -107,6 +107,7 @@ export const notifications = sqliteTable(
   },
   (t) => [
     uniqueIndex('notifications_source_unique').on(t.profileId, t.sourceKey),
+    index('notifications_source_key_idx').on(t.sourceKey),
     index('notifications_profile_created_idx').on(t.profileId, t.createdAt, t.id),
     index('notifications_profile_read_created_idx').on(t.profileId, t.readAt, t.createdAt, t.id),
     index('notifications_expires_idx').on(t.expiresAt),
