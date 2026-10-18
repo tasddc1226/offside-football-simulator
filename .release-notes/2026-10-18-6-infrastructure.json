@@ -1,0 +1,8 @@
+{
+  "id": "t-11-385-infrastructure",
+  "title": "웹 로딩 개선",
+  "items": ["웹 파일을 불러오는 경로를 개선했어요."],
+  "en": { "title": "Web loading improvements", "items": ["Improved how web files are delivered."] },
+  "ja": { "title": "ウェブ読み込みの改善", "items": ["ウェブファイルの配信経路を改善しました。"] },
+  "availability": "web"
+}

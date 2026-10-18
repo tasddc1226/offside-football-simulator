@@ -1,0 +1,34 @@
+{
+  "zone": "offside-lab.com",
+  "minimumTlsVersion": "1.2",
+  "dnssec": "active",
+  "dlqRetentionSeconds": 1209600,
+  "deadLetterQueues": [
+    "offside-admin-push-production-dlq",
+    "offside-billing-production-dlq",
+    "offside-career-push-production-dlq",
+    "offside-cup-push-production-dlq"
+  ],
+  "recoveryRateLimit": {
+    "description": "OFFSIDE recovery burst protection",
+    "expression": "(http.request.uri.path in {\"/v1/profile/recover\" \"/v1/profile/recovery-code\"})",
+    "action": "block",
+    "enabled": true,
+    "ratelimit": {
+      "characteristics": ["ip.src", "cf.colo.id"],
+      "period": 10,
+      "requests_per_period": 100,
+      "mitigation_timeout": 10
+    }
+  },
+  "scannerRule": {
+    "ref": "offside_unused_stack_scans",
+    "description": "OFFSIDE unused stack and secret-file scans",
+    "expression": "(http.request.uri.path in {\"/.env\" \"/wp-login.php\" \"/xmlrpc.php\"} or starts_with(http.request.uri.path, \"/.git/\") or starts_with(http.request.uri.path, \"/wp-admin/\"))",
+    "action": "block",
+    "enabled": true
+  },
+  "storageWarningFraction": 0.9,
+  "d1IncludedStorageBytes": 5000000000,
+  "r2StandardIncludedStorageBytes": 10000000000
+}

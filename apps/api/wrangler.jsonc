@@ -71,10 +71,11 @@
     "production": {
       "name": "offside-api",
       "workers_dev": true,
-      // T-11-320 요청은 서울(ICN)에서 받지만 D1 주 DB는 다른 APAC 지점에 있어, 쿼리 실행은 0.2ms인데 한 번 오갈 때마다
-      // 약 100ms가 든다. 로그인 요청은 세션·프로필·본문 조회를 차례로 부르니 그만큼 쌓인다(시즌 저장 약 620ms).
-      // Smart Placement가 워커를 D1 가까이에서 돌려 사용자↔워커 한 번만 멀리 오가게 한다.
-      "placement": { "mode": "smart" },
+      // T-11-385 traces show D1 primary responses from SIN; repeated cross-region D1 round trips
+      // dominate authenticated request latency. Place fetch handlers near Singapore, then verify
+      // API duration and D1 span latency. Restore { "mode": "smart" } if this regresses.
+      // This is a Cloudflare placement hint, not an AWS deployment or a D1 data migration.
+      "placement": { "region": "aws:ap-southeast-1" },
       "ai": { "binding": "AI" },
       "routes": [{ "pattern": "api.offside-lab.com", "custom_domain": true }],
       "observability": {
@@ -158,6 +159,7 @@
         "CAREER_REMINDER_ENABLED": "1",
         "REENGAGEMENT_PUSH_ENABLED": "1",
         "ATTENDANCE_REMINDER_ENABLED": "1",
+        "GIFT_REMINDER_ENABLED": "1",
         "ALLOWED_ORIGINS": "https://offside-lab.com,https://offside-web.tasddc1569.workers.dev",
         "WEB_APP_URL": "https://offside-web.tasddc1569.workers.dev",
         "GOOGLE_REDIRECT_URI": "https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback",

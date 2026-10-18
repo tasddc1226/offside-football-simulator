@@ -2,6 +2,7 @@
 // 묻는 조건 · 메모는 app-core api/gift.ts.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
+import { useSnapshot } from 'valtio';
 import {
   claimHomeGift,
   fetchHomeGift,
@@ -10,6 +11,7 @@ import {
 } from '@offside/app-core/api/gift';
 import { giftText as L } from '@offside/app-core/i18n/ko/gift';
 import { toast } from '../../game/host';
+import { notificationDestination } from '../../platform/notificationDestination';
 import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Txt } from '../../ui';
@@ -23,9 +25,11 @@ export function HomeGift() {
   // 선물(T-11-386)은 새 키로 받는다.
   const key = useRef(crypto.randomUUID());
   const reload = useCallback(async () => setGift(await fetchHomeGift()), []);
+  // 알림으로 홈을 열면(home이 늘면) 이미 홈에 있어도 다시 묻는다(T-11-388).
+  const { home } = useSnapshot(notificationDestination);
   useEffect(() => {
     void reload();
-  }, [reload]);
+  }, [reload, home]);
   useOnPull(reload);
   if (!gift) return null;
   const copy = giftCopy(gift);
