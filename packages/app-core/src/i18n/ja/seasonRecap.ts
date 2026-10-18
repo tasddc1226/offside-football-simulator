@@ -115,6 +115,11 @@ export const seasonRecap: Translation<SeasonRecapMsgs> = {
   cardTagline: '高校3年のサッカー選手の一生を育てるゲーム',
   secSquad: 'このシーズンの選手団',
   squadLead: (p) => `育てた選手${p.n}人が一堂に集まりました`,
+  secSpecials: 'シーズン特別カード',
+  specialsLead:
+    '全オーナーの今シーズン引退選手から、ポジション別ベストイレブンと得点王・アシスト王・MVPを選びました。マークはカードにずっと残ります。',
+  specialsMine: '自分の選手',
+  specialsMineCount: (p) => `自分の選手が${p.n}人選ばれました`,
   photoCaption: (p) => `${p.season} 選手団`,
   photoMore: (p) => `ほか${p.n}人`,
   photoAria: (p) => `${p.season} 選手団の集合写真: ${p.names}`,

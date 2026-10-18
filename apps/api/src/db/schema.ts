@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { COMMENT_REPORT_REASONS, NAME_REPORT_KINDS } from '@offside/contracts/board-limits';
+import { CARD_SPECIAL_KINDS } from '@offside/contracts/card-special';
 import {
   check,
   index,
@@ -1814,5 +1815,26 @@ export const managerCareers = sqliteTable(
       .where(sql`${t.status} = 'active'`),
     uniqueIndex('manager_careers_card_unique').on(t.careerId),
     index('manager_careers_profile_idx').on(t.profileId, t.status, t.finishedAt),
+  ],
+);
+
+/**
+ * T-11-372 시즌 특별 카드 표식. 시즌 결산(team/seasonClose.ts specials 단계)이 마감 시각 기준으로 한 번 매긴다 — 카드(career_id)를
+ * 따라가서 팔려도 남고, 기준이 바뀌어도 지난 시즌 표식은 다시 매기지 않는다(rule_version). 능력치는 더하지 않는다.
+ * 카드 응답은 career_id 앞자리(PK)로 붙이고, 결산 화면의 그 시즌 목록은 season 인덱스로 읽는다.
+ */
+export const cardSpecials = sqliteTable(
+  'card_specials',
+  {
+    careerId: text('career_id').notNull(),
+    season: integer('season').notNull(),
+    kind: text('kind', { enum: CARD_SPECIAL_KINDS }).notNull(),
+    rank: integer('rank').notNull(),
+    ruleVersion: integer('rule_version').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.careerId, table.season, table.kind] }),
+    index('card_specials_season_idx').on(table.season, table.kind, table.rank),
   ],
 );

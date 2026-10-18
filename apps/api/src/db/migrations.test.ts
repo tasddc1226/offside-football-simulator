@@ -190,6 +190,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'refunded_at',
     'revoked_qty',
   ],
+  card_specials: ['career_id', 'season', 'kind', 'rank', 'rule_version', 'created_at'],
   cards: [
     'career_id',
     'owner_id',

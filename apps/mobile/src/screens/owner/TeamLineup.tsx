@@ -422,6 +422,7 @@ export function TeamLineup({
                           rating: p.peak,
                           number: p.number,
                           legendScore: p.legendScore,
+                          specials: p.specials,
                           attrs: p.attrs,
                           attrsEstimated: p.attrsEstimated,
                           height: p.height,

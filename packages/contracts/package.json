@@ -30,6 +30,7 @@
     "./owner-tier": "./src/owner-tier.ts",
     "./owner-title": "./src/owner-title.ts",
     "./card-tier": "./src/card-tier.ts",
+    "./card-special": "./src/card-special.ts",
     "./friend-code": "./src/friend-code.ts",
     "./team-logo": "./src/team-logo.ts",
     "./nations": "./src/nations.ts",
