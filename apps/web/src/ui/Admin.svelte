@@ -42,7 +42,7 @@
   });
 </script>
 
-<div class="wrap">
+<div class="wrap" class:push-wide={tab === 'push'}>
   <Topbar />
   <section class="card stack" style="gap:14px">
     <div>
@@ -76,6 +76,7 @@
 </div>
 
 <style>
+  @media (min-width: 900px) { .wrap.push-wide { max-width: 960px; } }
   .admin-tabs { grid-template-columns:repeat(2,minmax(0,1fr)); }
   @media (min-width:360px) { .admin-tabs { grid-template-columns:repeat(3,minmax(0,1fr)); } }
   .admin-tabs button { min-height:44px; }
