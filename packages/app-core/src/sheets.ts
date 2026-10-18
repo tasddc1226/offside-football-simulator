@@ -8,7 +8,7 @@ import type { MgKind } from '@offside/game/minigame';
 import type { DragPoint, ShotResult } from '@offside/game/dragShot';
 import type { FlightMap } from './flight.js';
 import type { GrowthDirInfo } from './ratingReport.js';
-import type { MatchGame } from '@offside/game/match';
+import type { BlockResult, MatchGame } from '@offside/game/match';
 import { shellText } from './i18n/ko/shell.js';
 
 export type { Chip };
@@ -94,6 +94,38 @@ export function sheetLabel(v: SheetView): string {
   }
 }
 
+/** T-11-390 결정적 장면 카드(문구는 지금 언어로 만든 것). */
+export type MomentCard = {
+  key: string;
+  kind: 'chance' | 'crisis';
+  final: boolean;
+  title: string;
+  head: string;
+  scene: string;
+  choices: { id: string; label: string; pct: number; attr: string }[];
+  /** 감독에게 맡겼을 때 성공 확률(%). */
+  auto: number;
+};
+export type MomentView = MomentCard & {
+  /** 남은 초 · 제한 시간(초). */
+  left: number;
+  secs: number;
+  /** 고른 뒤 결과 줄. */
+  result: { text: string; ok: boolean; picked: string } | null;
+  choose: (id: string) => void;
+};
+/** T-11-390 구간 중계가 장면에서 멈추고, 고른 결과로 남은 경기를 바꾸는 쪽(keyMoments.ts, 구간 진행 때 불러온다). */
+export interface MomentDriver {
+  /**
+   * game번째 경기 · extra번째 부가 줄(대회 결과)을 보여 주기 전에 장면이 걸려 있으면 v.moment에 카드를 띄우고, 고르거나 제한 시간이
+   * 지나면 구간을 다시 진행한 결과(이미 보여 준 줄은 그대로)를 돌려준다. 장면이 없으면 null.
+   */
+  pause(
+    v: { moment?: MomentView | null; skip: (() => void) | null },
+    at: { game: number } | { extra: number },
+  ): Promise<{ b: BlockResult; rows: TickerRow[]; extras: string[] } | null>;
+}
+
 export type SheetView =
   | {
       kind: 'steps';
@@ -121,6 +153,8 @@ export type SheetView =
       skip: (() => void) | null;
       /** T-11-379 평점 구성을 보일 구간 경기(ratingReport ratingBreakdown). 경기가 다 나온 뒤에 채운다. */
       rated?: MatchGame[] | null;
+      /** T-11-390 지금 멈춰 고르는 결정적 장면 카드. */
+      moment?: MomentView | null;
     }
   | { kind: 'judge'; label: string; p: number; pos: number }
   | {

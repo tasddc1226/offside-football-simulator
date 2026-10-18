@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { clearPendingEvent, startCareer } from './helpers.js';
+import { clearPendingEvent, settleBlock, startCareer } from './helpers.js';
 
 // T-10-034: 순위표가 구단 이름을 {#each} 키로 써서, 유저가 두 구단 이름을 같게 바꾸면 each_key_duplicate로 시즌 탭이 깨졌다.
 test('구단 이름이 겹쳐도 순위표가 그려진다', async ({ page }) => {
@@ -22,6 +22,7 @@ test('구단 이름이 겹쳐도 순위표가 그려진다', async ({ page }) =>
   await clearPendingEvent(page);
   await page.locator('[data-act="advance"]').click(); // 전반기 경기
   await page.locator('#an-skip').click();
+  await settleBlock(page);
   await sheet.locator('[data-sheet="0"]').click();
   await expect(sheet).toBeHidden();
   const table = page.locator('[data-league-table]');

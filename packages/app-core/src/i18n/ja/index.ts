@@ -55,6 +55,7 @@ import { homeLive } from './homeLive';
 import { homeMore } from './homeMore';
 import { iap } from './iap';
 import { inbox } from './inbox';
+import { keyMoment } from './keyMoment';
 import { legend } from './legend';
 import { legendRn } from './legendRn';
 import { legendStyle } from './legendStyle';
@@ -160,6 +161,7 @@ export const ja = {
   homeMore,
   iap,
   inbox,
+  keyMoment,
   legend,
   legendRn,
   legendStyle,
