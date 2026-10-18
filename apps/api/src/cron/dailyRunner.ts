@@ -230,7 +230,7 @@ export async function runDailyStep(
 
 const TICK_BUDGET_MS = 5000;
 const ANOMALY_PAGES_PER_TICK = 10;
-const ANOMALY_PAGE_SLOW_MS = 500;
+const ANOMALY_PAGE_SLOW_MS = 2000;
 const ANOMALY_PAGE_PAUSE_MS = 50;
 
 /** Checkpoint each small page; allow a bounded burst only for the read-heavy anomaly scan. */

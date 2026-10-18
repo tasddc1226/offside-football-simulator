@@ -233,7 +233,7 @@ it('yields after a slow anomaly page, retaining its cursor instead of starting a
   let clock = Date.now();
   vi.spyOn(Date, 'now').mockImplementation(() => clock);
   const execute = vi.fn<DailyStep>().mockImplementation(async () => {
-    clock += 500;
+    clock += 2000;
     return { done: false, result: { cursor: { page: 1 } } };
   });
   const log = vi.spyOn(console, 'log');
@@ -241,6 +241,20 @@ it('yields after a slow anomaly page, retaining its cursor instead of starting a
   expect(execute).toHaveBeenCalledTimes(1);
   expect(await read()).toMatchObject({ results: { anomalies: { cursor: { page: 1 } } } });
   expect(log).toHaveBeenCalledWith(expect.stringContaining('"yieldReason":"slow-page"'));
+});
+
+it('makes multiple pages of progress at the observed 1.2-second production round-trip latency', async () => {
+  await beginAnomalies();
+  let clock = Date.now();
+  vi.spyOn(Date, 'now').mockImplementation(() => clock);
+  let page = 0;
+  const execute = vi.fn<DailyStep>().mockImplementation(async () => {
+    clock += 1250;
+    return { done: false, result: { cursor: { page: ++page } } };
+  });
+  await runDailyTick(ctx.env, NOW, execute);
+  expect(execute).toHaveBeenCalledTimes(4);
+  expect(await read()).toMatchObject({ results: { anomalies: { cursor: { page: 4 } } } });
 });
 
 it('checks the shared time budget before pausing for another anomaly page', async () => {
