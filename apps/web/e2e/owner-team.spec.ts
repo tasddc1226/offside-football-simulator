@@ -1659,7 +1659,7 @@ test('T-11-323 감독 칸에 감독이 있으면 줄 힘에 감독 보정을 더
     pos: 'MF',
     mastery: { '4-3-3': 'S', '4-4-2': 'C', '3-5-2': 'C' },
     style: 'attack',
-    specials: [],
+    specials: ['counter'],
     grade: 'A',
     ending: 'steady',
   };
@@ -1681,6 +1681,17 @@ test('T-11-323 감독 칸에 감독이 있으면 줄 힘에 감독 보정을 더
   await expect(lines.locator('[data-coach-line="mid"]')).toHaveText('감독 +1.0');
   await expect(lines.locator('[data-coach-line="def"]')).toHaveText('감독 +0.4');
   await expect(lines.locator('[data-coach-line="gk"]')).toHaveCount(0);
+  // T-11-382 감독 칸의 보정 내역: 갈래별 값과, 짝 시너지가 꺼져 더하지 않은 특기.
+  const detail = page.locator('[data-coach-breakdown]');
+  await detail.locator('summary').click();
+  await expect(detail.locator('[data-coach-row="atk"]')).toContainText('공격 +2.0');
+  await expect(detail.locator('[data-coach-row="atk"]')).toContainText(
+    '숙련 S +1.0 · 공격 성향 +1.0',
+  );
+  await expect(detail.locator('[data-coach-capped]')).toHaveCount(0);
+  await expect(detail.locator('[data-coach-off]')).toHaveText(
+    '역습 전개: 짝이 되는 팀 시너지가 꺼져 있어 더하지 않아요.',
+  );
   // 4-4-2(숙련 C)로 바꾸면 성향만 남는다.
   await page.locator('[data-formation="4-4-2"]').click();
   await expect(lines.locator('[data-coach-line="atk"]')).toHaveText('감독 +1.0');

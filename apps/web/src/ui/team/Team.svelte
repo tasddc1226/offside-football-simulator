@@ -71,7 +71,7 @@
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
-  import { coachSummary } from '@offside/app-core/managerCard';
+  import { coachBreakdown, coachSummary } from '@offside/app-core/managerCard';
   import { hofOwnText as HO } from '@offside/app-core/i18n/ko/hofOwn';
   import { loadAnonNames, publishAnonNames, type AnonName } from '@offside/app-core/cardNames';
   import { fetchCup, fetchCupMe } from '@offside/app-core/api/cup';
@@ -178,6 +178,7 @@
   const ovr = $derived(teamOvr(ratings));
   // T-11-105 선발 시너지 — 늘 보여 주고, 반영 시즌부터 줄 힘에도 더한다.
   const synergy = $derived(slotsSynergy(previewLayout, slots, byId));
+  const coachDetail = $derived(team?.coach ? coachBreakdown(team.coach, formation, synergy, season) : null);
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
   const lines = $derived(draftLines(slotCodes, ratings, synergy, season));
   const filled = $derived(slots.filter((s) => s !== null).length);
@@ -630,6 +631,19 @@
         <section class="card tm-coach" data-team-coach>
           <span class="tm-coach-info"><b>{MG.teamCoach}</b><span class="muted fs-sm">{team.coach ? coachSummary(team.coach, formation, localNames) : MG.teamCoachEmpty}</span></span>
           <button class="btn btn-sm" data-act="team-coach" onclick={() => go('manager')}>{MG.teamCoachManage}</button>
+          <!-- T-11-382 줄 칸의 "감독 +3.0"이 어디서 왔는지(갈래별 값 · 상한에 잘린 몫 · 꺼진 특기). -->
+          {#if coachDetail}
+            <details class="tm-coach-detail" data-coach-breakdown>
+              <summary>{MG.breakdown}</summary>
+              <ul>
+                {#each coachDetail.rows as r (r.line)}
+                  <li data-coach-row={r.line}><b>{r.label} {r.total}</b><span class="muted fs-sm">{r.parts}</span>{#if r.capped}<span class="fs-sm" data-coach-capped>{r.capped}</span>{/if}</li>
+                {/each}
+              </ul>
+              {#if coachDetail.off.length}<p class="muted fs-sm" data-coach-off>{MG.breakdownOff({ names: coachDetail.off.join(' · ') })}</p>{/if}
+              <p class="muted fs-sm">{MG.breakdownNote}</p>
+            </details>
+          {/if}
         </section>
       {/if}
       <TeamPresets bind:open={presetsOpen} {presets} hasTeam={!!team} locked={!!cupBand?.locked} draft={presetDraft} persist={persistPresets} onload={applyPreset} />
@@ -719,8 +733,34 @@
   .anon-names .btn {min-height:44px;}
   .tm-coach {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 10px;
+  }
+  .tm-coach-detail {
+    flex: 1 1 100%;
+  }
+  .tm-coach-detail summary {
+    cursor: pointer;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+  }
+  .tm-coach-detail ul {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+  }
+  .tm-coach-detail li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .tm-coach-detail p {
+    margin: 0 0 6px;
   }
   .tm-coach-info {
     display: flex;

@@ -100,7 +100,7 @@ const ko = {
   effect: '감독 칸 효과',
   effectFor: (p: { formation: string }) => `${p.formation}일 때`,
   effectNote:
-    '특기는 짝이 되는 팀 시너지가 켜질 때만 더해져요. 4-2-3-1 같은 변형 배치는 바탕 포메이션(4-3-3 · 4-4-2 · 3-5-2) 숙련을 써요.',
+    '특기는 짝이 되는 팀 시너지가 켜질 때만 더해져요. 4-2-3-1 같은 변형 배치는 바탕 포메이션(4-3-3 · 4-4-2 · 3-5-2) 숙련을 써요. 감독 보정은 줄(공격 · 중원 · 수비)마다 −1.5부터 +3.0까지예요.',
   coachNow: '우리 팀 감독',
   seat: '우리 팀 감독으로',
   unseat: '감독 칸 비우기',
@@ -141,6 +141,17 @@ const ko = {
   teamCoach: '감독 칸',
   teamCoachEmpty: '비어 있어요',
   teamCoachManage: '감독 고르기',
+  /** T-11-382 감독 칸 보정 내역. */
+  breakdown: '보정 내역',
+  partStyle: (p: { name: string }) => `${p.name} 성향`,
+  breakdownCapped: (p: { raw: string; max: string }) =>
+    `합은 ${p.raw}이지만 줄마다 최대 ${p.max}까지만 더해요.`,
+  breakdownFloor: (p: { raw: string; min: string }) =>
+    `합은 ${p.raw}이지만 줄마다 ${p.min}보다 낮아지지 않아요.`,
+  breakdownOff: (p: { names: string }) =>
+    `${p.names}: 짝이 되는 팀 시너지가 꺼져 있어 더하지 않아요.`,
+  breakdownNote:
+    '감독 보정은 줄마다 −1.5부터 +3.0까지예요. 특기는 짝 시너지가 여러 개 켜져도 한 번만 더해요.',
   /** T-11-335 남의 팀 프로필의 감독 칸. */
   profileCoach: '앉힌 감독',
   /** T-11-323 줄 힘 칸 아래 감독 보정(+1.0). */
