@@ -1,4 +1,5 @@
 import type { Bindings } from '../env.js';
+import { HOME_GIFT } from '@offside/contracts/cup';
 import { pushText } from './text.js';
 import { postExpo } from './transport.js';
 import { kstDay } from '@offside/contracts/kst';
@@ -156,6 +157,8 @@ async function claim(
         AND NOT EXISTS (SELECT 1 FROM notifications other WHERE other.profile_id=q.profile_id AND other.id<>n.id AND other.created_at > ?)
         WHEN n.source_key LIKE 'attendance-reminder:%' THEN NOT EXISTS (SELECT 1 FROM owner_attendance o
           WHERE o.profile_id=q.profile_id AND o.last_day = substr(n.source_key, 21, 10))
+        WHEN n.source_key LIKE 'gift-reminder:%' THEN NOT EXISTS (SELECT 1 FROM gift_claims g
+          WHERE g.profile_id=q.profile_id AND g.gift_id = '${HOME_GIFT.id}')
         ELSE NOT EXISTS (SELECT 1 FROM career_activity a WHERE a.profile_id=q.profile_id)
           AND NOT EXISTS (SELECT 1 FROM push_devices active WHERE active.profile_id = q.profile_id AND active.updated_at > ?) END)
       THEN 1 ELSE 0 END AS eligible

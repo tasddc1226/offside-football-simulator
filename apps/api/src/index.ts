@@ -21,6 +21,7 @@ import { runPersonalPush } from './push/personal.js';
 import { queueReengagement } from './push/reengagement.js';
 import { consumeCareerReminders, queueCareerReminders } from './push/careerReminder.js';
 import { queueAttendanceReminders } from './push/attendanceReminder.js';
+import { queueGiftReminders } from './push/giftReminder.js';
 import { consumeCupResults, publishCupResults } from './push/cupResult.js';
 import { consumeCommunityPush } from './push/communityQueue.js';
 import { runCup } from './team/cup.js';
@@ -76,6 +77,7 @@ export default {
       await queueAttendanceReminders(env, controller.scheduledTime).catch(
         logged('attendance-reminder'),
       );
+      await queueGiftReminders(env, controller.scheduledTime).catch(logged('gift-reminder'));
       await runPersonalPush(env, controller.scheduledTime).catch(logged('personal-push'));
       // 시즌 진행 게이지: 30분마다 세어 굳히고, 90%에 닿으면 마감 시각을 확정해 시즌 일정에
       // 다음 시즌과 함께 적는다. 결산보다 먼저 돈다.
