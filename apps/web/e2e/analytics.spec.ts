@@ -143,6 +143,8 @@ test('actual play measures first action, milestones and a resumed career without
   async function step() {
     for (const selector of [
       '#an-skip',
+      // T-11-390 결정적 장면 카드는 감독에게 맡긴다.
+      '#sheet [data-key-moment-choice="auto"]:visible',
       '.choice:visible',
       '[data-opt]:visible',
       // T-11-039 오퍼를 고르면 계약서가 뜬다 — 이름 사인을 넣고 확정한다.

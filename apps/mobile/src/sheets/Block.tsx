@@ -12,6 +12,7 @@ import { Txt } from '../ui/Txt';
 import { Enter } from './anim';
 import { ProgBar, SkipLink, StatGrid } from './parts';
 import { TickerLine } from './TickerLine';
+import { KeyMoment } from './KeyMoment';
 import { partsText, ratingBreakdown } from '@offside/app-core/ratingReport';
 import { ratingReportText as R } from '@offside/app-core/i18n/ko/ratingReport';
 
@@ -100,8 +101,10 @@ export function Block({
         </Txt>
       </View>
       <StatGrid items={tally.map((t) => ({ key: t.key, l: t.l, v: <Bump value={t.k} /> }))} />
+      {/* T-11-390 결정적 장면에서 멈추면 경기 줄 대신 선택 카드를 띄운다. */}
+      {s.moment ? <KeyMoment m={s.moment} choose={(id) => v.moment?.choose(id)} /> : null}
       {/* 새 경기 줄이 위에 붙고, 지난 줄은 muted로 누른다. */}
-      <View style={{ minHeight: 124, gap: 4 }}>
+      <View style={{ minHeight: 124, gap: 4, display: s.moment ? 'none' : 'flex' }}>
         {s.ticker.map((m, i) => (
           <Enter key={m.key} kind="translateY" from={-6} ms={250}>
             <TickerLine m={m} muted={i > 0} bold={i === 0} />
