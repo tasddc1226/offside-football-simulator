@@ -50,8 +50,10 @@ T-11-385. 설정 정본은 [정책 파일](../../tooling/cloudflare-infra-policy
 
 T-11-385 후속 관측에서 Smart Placement는 `SUCCESS`였지만 D1 추적의 APAC→SIN 호출 p95가 배포 전 103ms(추정 438개)에서 후속 176ms(148개)로 늘었다. 같은 표본의 SQL 평균 실행 시간은 0.49→0.73ms였다. 1% 트레이스·적응형 추정이고 API 요청 표본과 일대일 대응하지 않으며, 이것만으로 지연 원인을 확정하지 않는다.
 
-운영 fetch handler에 `placement.region = "aws:ap-southeast-1"`을 사용해 SIN에 가까운 Cloudflare 실행 위치를 지정한다. AWS에 자원을 만들거나 D1을 이전하지 않는다. cron·queue·Durable Objects의 위치나 처리 순서, 인증·세션·저장 로직은 바꾸지 않는다. [Placement Hints](https://developers.cloudflare.com/workers/configuration/placement/)는 지정한 클라우드 지역과 지연이 낮은 Cloudflare 데이터센터를 선택하므로 SIN 고정을 보장하는 설정은 아니다.
+운영 fetch handler는 기존 `placement.mode = "smart"`를 유지한다. 싱가포르 근접 지역 힌트 `aws:ap-southeast-1`를 운영에서 시험했지만, GraphQL `workersInvocationsAdaptive.dimensions.coloCode`(스크립트 실제 실행 위치)를 확인하니 기존 Smart Placement도 대부분 SIN에서 실행 중이었다. 트레이스의 입구 `cloudflare.colo`를 실제 실행 위치로 해석하지 않는다. HTTP 연결 D1 span p95 170→164ms만으로 지역 힌트의 실질적인 이점을 입증하지 못해 복원한다. 자동 배치를 불필요하게 제한하지 않는다.
+
+[Placement Hints](https://developers.cloudflare.com/workers/configuration/placement/)는 지정한 클라우드 지역과 지연이 낮은 Cloudflare 데이터센터를 선택한다. D1 이전·AWS 자원 생성 기능이 아니며, cron·queue·Durable Objects 위치를 바꾸지 않는다. 재검토하려면 먼저 실제 Worker 실행 위치와 D1 응답 위치가 떨어져 있는지, HTTP 전체 지연과 호출 span을 함께 확인한다.
 
 배포 뒤 버전과 배치 상태를 확인하고, 수집 지연을 둔 동일 10분 창에서 HTTP 200 `durationMs` p95/p99·관측 5xx·D1 span `durationMS`와 `sql_duration_ms`를 비교한다. 시즌 업로드와 조회 경로 묶음은 ID별 quantile을 평균하지 않고 묶어서 계산한다. 요청 구성·트레이스 표본 차이를 명시한다. 정상 인증·공개 API·WebSocket 스모크도 확인한다.
 
-5xx·인증/저장 계약 오류가 새로 생기거나, 비슷한 부하의 연속 두 창에서 지연이 개선되지 않고 더 나빠지면 `placement`만 `{ "mode": "smart" }`로 복원한다. 다른 작업과 쓰기 절감을 함께 롤백하지 않는다. D1 응답 위치가 SIN에서 달라지면 이 지역 힌트를 재평가한다. 결과는 [운영 관측 기록](cloudflare-efficiency-2026-10-18.md)에 남긴다.
+실험에서 5xx·인증/저장 계약 오류가 새로 생기거나 비슷한 부하의 연속 두 창에서 지연이 악화되면 `placement`만 `{ "mode": "smart" }`로 복원한다. 지연 감소의 근거가 없는 경우에도 불필요한 지역 고정을 제거한다. 다른 작업과 쓰기 절감을 함께 롤백하지 않는다. D1 응답 위치가 SIN에서 달라지면 이 지역 힌트를 재평가한다. 결과는 [운영 관측 기록](cloudflare-efficiency-2026-10-18.md)에 남긴다.
