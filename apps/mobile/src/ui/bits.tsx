@@ -148,8 +148,3 @@ export function Opt({
     </Press>
   );
 }
-
-export function Divider({ style }: { style?: StyleProp<ViewStyle> }) {
-  const c = useColors();
-  return <View style={[{ height: 1, backgroundColor: c.line }, style]} />;
-}

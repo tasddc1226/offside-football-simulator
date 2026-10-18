@@ -26,7 +26,7 @@ import { playerName } from '@offside/app-core/format';
 import { fillGranted, openLocalLegend, openPublicLegend } from '../../game/host';
 import { HofRow, type RowStats } from '../../components/HofRow';
 import { rem } from '../../theme/type';
-import { Opt, Card, Press, Txt } from '../../ui';
+import { Opt, Card, Press, Txt, Skeleton } from '../../ui';
 import { SelectField } from '../settings/parts';
 import { ownerPlayersText as L } from '@offside/app-core/i18n/ko/ownerPlayers';
 import { useRefresh } from '../../ui/refresh';
@@ -173,9 +173,7 @@ export function MyPlayers() {
         {L.title}
       </Txt>
       {source === 'loading' ? (
-        <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
-          {L.loading}
-        </Txt>
+        <Skeleton rows={5} />
       ) : (
         <>
           <Txt

@@ -1,0 +1,14 @@
+{
+  "id": "t-11-384-team-edit-stability",
+  "title": "팀 편집 안정성 개선",
+  "items": ["웹과 앱에서 팀 편집 내용을 이어서 불러오는 처리를 다듬었어요."],
+  "en": {
+    "title": "Team editing stability",
+    "items": ["Refined how team edits are restored on web and in the app."]
+  },
+  "ja": {
+    "title": "チーム編集の安定性改善",
+    "items": ["ウェブとアプリで、編集中のチームを復元する処理を整えました。"]
+  },
+  "availability": "web-app"
+}

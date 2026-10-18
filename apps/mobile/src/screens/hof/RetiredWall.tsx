@@ -40,6 +40,7 @@ import { type Colors } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { Btn } from '../../ui/Btn';
 import { Card } from '../../ui/Card';
+import { Skeleton } from '../../ui/Skeleton';
 import { ClubMark } from '../../ui/ClubBadge';
 import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
@@ -454,7 +455,7 @@ function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> })
   const groups = useMemo(() => (summary ? rnByLeague(summary.clubs) : []), [summary]);
 
   if (failed) return <Message text={L.loadFailed} />;
-  if (!summary) return <Message live text={L.loading} />;
+  if (!summary) return <Skeleton rows={5} />;
   if (!summary.total) return <Message text={L.empty({ season: teamSeasonLabel(season) })} />;
   return (
     <View onLayout={onLayout}>
@@ -673,7 +674,7 @@ function ClubScreen({
       {failed ? (
         <Message text={L.loadFailed} />
       ) : items === null ? (
-        <Message live text={L.loading} />
+        <Skeleton rows={5} />
       ) : filtered.length ? (
         <View onLayout={onLayout} style={{ marginTop: 6 }}>
           {ready ? <Tiles items={filtered} withClub={false} {...opts} /> : null}
@@ -741,7 +742,7 @@ function RecentScreen({ season, myIds }: { season: number; myIds: ReadonlySet<st
       {failed ? (
         <Message text={L.loadFailed} />
       ) : items === null ? (
-        <Message live text={L.loading} />
+        <Skeleton rows={5} />
       ) : items.length ? (
         <View onLayout={onLayout}>
           {ready ? <Tiles items={items} withClub {...opts} /> : null}

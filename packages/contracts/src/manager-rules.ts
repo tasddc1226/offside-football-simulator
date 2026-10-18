@@ -5,7 +5,7 @@
  * 끝까지 마치면 감독 카드가 된다(거래 불가). 감독 카드는 팀마다 하나 있는 감독 칸에 넣어 줄 힘을 조금 보정한다.
  * 감독 칸이 비면 지금과 같은 결과다.
  */
-import { FORMATION_IDS, type FormationId } from './owner-team.js';
+import type { FormationId } from './owner-team.js';
 import type { SynergyLines } from './team-synergy.js';
 import type { DetailPos, PosGroup } from './positions.js';
 
@@ -163,7 +163,3 @@ export type ManagerOrigin = {
 /** 표시용 감독 등급. */
 export const MANAGER_GRADES = ['C', 'B', 'A', 'S'] as const;
 export type ManagerGrade = (typeof MANAGER_GRADES)[number];
-
-/** 모든 포메이션이 C인 숙련(새 감독 · 기본값). */
-export const baseMastery = (): Record<FormationId, MasteryGrade> =>
-  Object.fromEntries(FORMATION_IDS.map((f) => [f, 'C'])) as Record<FormationId, MasteryGrade>;

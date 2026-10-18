@@ -7,7 +7,7 @@ import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 // (읽을 때는 JSON이든 base64든 받는다).
 // 담는 키: `ft_save`(필수)와 `ft_hof`(이 기기 은퇴 선수 기록, 있으면). `ft_scout_seed`는 선수 생성 후보의 시드라
 // 커리어가 시작된 세이브에는 쓸모가 없어 뺐다. 로그인·세션·프로필·설정 키는 절대 담지 않는다.
-// 가져올 때는 아래 WRITE_KEYS 두 개만 쓴다 — 백업에 다른 키가 있어도 무시한다.
+// 가져올 때는 ft_save·ft_hof 두 키만 쓴다 — 백업에 다른 키가 있어도 무시한다.
 import { measureOperation } from './measurement.js';
 import { SAVE_VERSION } from '@offside/game/data';
 import { getActiveRng, setActiveRng } from '@offside/game/rng';
@@ -17,8 +17,6 @@ import { saveKey, storage } from '@offside/game/storage';
 import type { GameState, HofEntry } from '@offside/game/types';
 
 export const BACKUP_VERSION = 1;
-/** 가져오기가 쓸 수 있는 localStorage 키(화이트리스트). */
-export const WRITE_KEYS = ['ft_save', 'ft_hof'] as const;
 /** 붙여넣은 글이 이보다 길면 세이브가 아니다(메모리 보호). */
 const MAX_TEXT = 12_000_000;
 
@@ -155,7 +153,7 @@ export function mergeHof(mine: HofEntry[], incoming: HofEntry[]): HofEntry[] {
   return [...mine, ...add].sort((a, b) => b.score - a.score).slice(0, HOF_LOCAL_MAX);
 }
 
-/** 검증된 백업을 화이트리스트 키(WRITE_KEYS)에만 쓴다. 세이브를 못 쓰면(용량) 원래대로 되돌리고 false. */
+/** 검증된 백업을 화이트리스트 키(ft_save·ft_hof)에만 쓴다. 세이브를 못 쓰면(용량) 원래대로 되돌리고 false. */
 function applyBackupValue(b: Backup, currentHof: HofEntry[]): boolean {
   let prev: string | null;
   try {

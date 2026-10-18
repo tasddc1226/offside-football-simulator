@@ -118,4 +118,3 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
 }
 
 export const app = createApp();
-export default app;

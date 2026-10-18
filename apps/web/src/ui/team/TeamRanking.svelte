@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from '../Skeleton.svelte';
   import { seasonLabel } from '@offside/app-core/seasonName';
   // T-10-092 라이브 랭킹(팀 랭킹) — 기록실 탭. 선수가 한 명 이상 있는 구단주 팀을 시즌별로 레이팅(경기 결과) 또는 팀 OVR
   // 순으로 보여 주고, 줄을 누르면 팀 프로필(appState.hof.team)을 연다. 서버가 5분마다 새로 센다.
@@ -98,7 +99,7 @@
     {#if failed}
       <p class="empty">{L.rankFail}</p>
     {:else if loading || !data}
-      <p class="empty" role="status">{L.loading}</p>
+      <Skeleton rows={6} />
     {:else if data.items.length}
       {#if rows.length}
         <div class="team-standings" class:by-value={sort === 'value'}>
