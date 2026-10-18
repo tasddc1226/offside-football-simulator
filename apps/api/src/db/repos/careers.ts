@@ -70,17 +70,12 @@ export function verifiedSnapshot(snapshot: LegendSnapshot, granted: boolean): Le
 
 export type CareerRow = typeof careers.$inferSelect;
 
-/** 공개 이름 갱신(upsert·update의 set). undefined(옛 클라이언트)면 그대로 두고, 운영자가 가린 이름(이름 신고,
- *  name_hidden_at)은 다시 채우지 않는다. keepRetired면 은퇴한 커리어의 이름도 그대로 둔다. */
-function publicNameSet(
-  publicName: string | null | undefined,
-  opts: { keepRetired?: boolean } = {},
-) {
+/** 은퇴 공개 이름 갱신. 옛 클라이언트·운영자가 가린 이름은 그대로 둔다. */
+function publicNameSet(publicName: string | null | undefined) {
   if (publicName === undefined) return {};
-  const locked = opts.keepRetired
-    ? sql`${careers.nameHiddenAt} is not null or ${careers.status} = 'retired'`
-    : sql`${careers.nameHiddenAt} is not null`;
-  return { publicName: sql`case when ${locked} then ${careers.publicName} else ${publicName} end` };
+  return {
+    publicName: sql`case when ${careers.nameHiddenAt} is not null then ${careers.publicName} else ${publicName} end`,
+  };
 }
 
 export type PutCareerSeasonInput = {
@@ -184,13 +179,28 @@ export async function putCareerSeason(
             appVersion: meta.appVersion,
             // 처음 스카우트 평가는 비어 있을 때만 채운다(첫 시즌 업로드가 늦게 와도 한 번만).
             ...(meta.pot !== undefined && { pot: sql`coalesce(${careers.pot}, ${meta.pot})` }),
-            // 은퇴한 커리어의 공개 이름은 은퇴 PUT(명예의 전당 토글)만 바꾼다 — 늦게 도착한 시즌 업로드가 되돌리지 않게.
-            ...publicNameSet(publicName, { keepRetired: true }),
+            // Public names have two HOF indexes. Update them separately only when changed.
             updatedAt: now,
             // status는 의도적으로 뺀다 — 이미 retired인 커리어가 이 라우트로 다시 active가 되지 않는다.
           },
         })
         .returning({ status: careers.status }),
+      ...(publicName !== undefined
+        ? [
+            db
+              .update(careers)
+              .set({ publicName })
+              .where(
+                and(
+                  eq(careers.id, careerId),
+                  accept,
+                  eq(careers.status, 'active'),
+                  isNull(careers.nameHiddenAt),
+                  sql`${careers.publicName} is not ${publicName}`,
+                ),
+              ),
+          ]
+        : []),
       ...(events !== null || growthJson !== null
         ? [
             db.insert(seasonTelemetry).select(sql`select null, ${careerId}, ${year},
