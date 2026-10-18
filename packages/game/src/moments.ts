@@ -42,6 +42,23 @@ export interface CareerMoment {
   loss?: 'g' | 'a';
 }
 
+/**
+ * T-11-394 장면 기록 한 줄(GameState.momentBuf → 시즌 업로드 성장 기록 km). 확률은 % 정수.
+ * c: 고른 선택지 id, 'auto'(감독에게 맡기기), 'to'(시간 초과로 맡김).
+ */
+export interface MomentLog {
+  /** 구간(1 전반기 · 2 후반기). */
+  ph: number;
+  at: 'l' | 'f';
+  /** 장면(moment-choices CAREER_SITUATIONS 키). */
+  sit: string;
+  c: string;
+  /** 맡겼을 때 확률 · 이번에 쓴 확률. */
+  b: number;
+  p: number;
+  ok: boolean;
+}
+
 type At = Pick<CareerMoment, 'game' | 'rd' | 'comp' | 'opp'>;
 /** 엔진이 장면을 여는 자리. moments에 연 순서(리그 → 결승)로 쌓인다. */
 export interface MomentHooks {

@@ -143,6 +143,12 @@ test('actual play measures first action, milestones and a resumed career without
 
   // Natural UI play, never patching the save or invoking the analytics adapter directly.
   async function step() {
+    // T-11-390 장면 결과 줄이 머무는 동안(1.8초)은 누를 게 없다 — 반복 횟수를 쓰지 않게 사라질 때까지 기다린다.
+    const result = page.locator('#sheet [data-key-moment-result]');
+    if (await result.isVisible()) {
+      await expect(result).toBeHidden({ timeout: 5_000 });
+      return;
+    }
     for (const selector of [
       '#an-skip',
       // T-11-390 결정적 장면 카드는 감독에게 맡긴다.
