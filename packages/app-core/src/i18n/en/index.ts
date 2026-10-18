@@ -6,6 +6,7 @@ import { ad } from './ad';
 import { appFlight } from './appFlight';
 import { appFormat } from './appFormat';
 import { appScout } from './appScout';
+import { attendance } from './attendance';
 import { automationModeration } from './automationModeration';
 import { avatarLook } from './avatarLook';
 import { avatarRecord } from './avatarRecord';
@@ -68,6 +69,7 @@ import { ownerProfile } from './ownerProfile';
 import { playerNudge } from './playerNudge';
 import { publicLegends } from './publicLegends';
 import { push } from './push';
+import { rename } from './rename';
 import { retention } from './retention';
 import { retired } from './retired';
 import { retiredLook } from './retiredLook';
@@ -106,6 +108,7 @@ export const en = {
   appFlight,
   appFormat,
   appScout,
+  attendance,
   automationModeration,
   avatarLook,
   avatarRecord,
@@ -168,6 +171,7 @@ export const en = {
   playerNudge,
   publicLegends,
   push,
+  rename,
   retention,
   retired,
   retiredLook,

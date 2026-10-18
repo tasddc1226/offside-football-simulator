@@ -5,6 +5,7 @@ export const iap: Translation<IapMsgs> = {
   packsTitle: 'ストアで購入',
   rerollPack: (p) => `リロール券${p.n}枚`,
   boostPack: (p) => `ポテンシャル強化券${p.n}枚`,
+  renamePack: (p) => `選手名変更券${p.n}枚`,
   busy: '決済中…',
   loading: 'ストアを確認中…',
   storeFail: 'ストアに接続できませんでした。しばらくしてからもう一度お試しください。',
@@ -13,6 +14,7 @@ export const iap: Translation<IapMsgs> = {
   pending: '決済の承認を待っています。承認されると自動で受け取れます。',
   rerollDone: (p) => `リロール券を受け取りました。現在${p.n}枚です。`,
   boostDone: (p) => `ポテンシャル強化券を受け取りました。現在${p.n}枚です。`,
+  renameDone: (p) => `選手名変更券を受け取りました。現在${p.n}枚です。`,
   claimFail:
     '決済は完了しました。受け取り中に問題が起きたため、次にアプリを開いたときに受け取ります。',
   rerollNote:

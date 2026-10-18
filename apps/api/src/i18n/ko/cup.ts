@@ -30,7 +30,15 @@ export const CUP_KO = {
   noReroll: '리롤권이 없어요.',
   noBoost: '잠재력 강화권이 없어요.',
   noScout: '프리미엄 스카우트권이 없어요.',
+  // T-11-377 선수 이름 변경권.
+  noRename: '선수 이름 변경권이 없어요.',
+  renameNotMine: '내 선수만 이름을 바꿀 수 있어요.',
+  renameHidden: '신고로 가려진 선수는 이름을 바꿀 수 없어요.',
+  renameName: '쓸 수 없는 이름이에요. 다른 이름을 넣어 주세요.',
+  renameSame: '지금 이름과 같아요.',
   giftClaimed: '이미 받은 선물이에요.',
+  // T-11-360 출석 체크.
+  attendanceChecked: '오늘은 이미 출석했어요.',
   // T-11-174 인앱 상품 구매 확인.
   iapInvalid: '구매를 확인하지 못했어요.',
   iapPending: '결제가 아직 끝나지 않았어요. 결제가 끝나면 자동으로 받아요.',
@@ -81,6 +89,7 @@ export const CUP_KO = {
   grantReroll: '운영팀이 선수 후보 리롤권 {n}장을 보냈어요.',
   grantBoost: '운영팀이 잠재력 강화권 {n}장을 보냈어요.',
   grantScout: '운영팀이 프리미엄 스카우트권 {n}장을 보냈어요.',
+  grantRename: '운영팀이 선수 이름 변경권 {n}장을 보냈어요.',
 } as const;
 
 export type CupTextKey = keyof typeof CUP_KO;

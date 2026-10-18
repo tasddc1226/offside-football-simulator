@@ -1,0 +1,23 @@
+{
+  "id": "t-11-360-daily-attendance",
+  "title": "출석 체크",
+  "items": [
+    "홈에 출석 체크가 생겼어요. 로그인하면 하루 한 번 도장을 찍고 그날 칸의 보상을 받아요.",
+    "28칸 도장판은 빠진 날이 있어도 사라지지 않아요. 7 · 14 · 21 · 28칸에는 큰 보상이 있어요."
+  ],
+  "en": {
+    "title": "Daily check-in",
+    "items": [
+      "Daily check-in is here. Sign in, stamp once a day and get that day's reward.",
+      "Your 28-day board keeps every stamp even if you miss a day. Days 7, 14, 21 and 28 have bigger rewards."
+    ]
+  },
+  "ja": {
+    "title": "出席チェック",
+    "items": [
+      "ホームに出席チェックができました。ログインすると1日1回スタンプを押して、その日のマスの報酬がもらえます。",
+      "28マスのスタンプ台は休んだ日があっても消えません。7・14・21・28マス目は大きな報酬です。"
+    ]
+  },
+  "availability": "web-app"
+}

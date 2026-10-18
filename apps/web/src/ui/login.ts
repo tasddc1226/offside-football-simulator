@@ -2,6 +2,7 @@
 // 시작(startGoogleLogin · startAppleLogin), 로그인 뒤 돌아올 곳 기억, OAuth 콜백(/settings?google|apple=linked|switched|error) 처리.
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { appleStartUrl, getProfile, googleStartUrl } from '@offside/app-core/api/client';
+import { noteOwner } from '@offside/app-core/api/friendPending';
 import {
   appleFailText,
   loginOfflineText,
@@ -24,7 +25,9 @@ export type LoginReturn =
   | { market: true }
   | { cup: true }
   /** T-11-290 팀 프로필(스쿼드 댓글)에서 로그인했으면 그 팀 프로필로 돌아온다. */
-  | { team: string };
+  | { team: string }
+  /** T-11-360 홈 출석 체크에서 로그인했으면 홈으로 돌아와 바로 출석한다. */
+  | { home: true };
 const LOGIN_RETURN_KEY = 'ft_board_return';
 /** null이면 기록을 지운다(설정에서 로그인할 때). */
 function rememberLoginReturn(to: LoginReturn | null) {
@@ -74,12 +77,15 @@ export function handleOAuthReturn() {
         : googleFailText(reason),
   );
   window.history.replaceState({}, '', '/');
+  // T-11-360 로그인에 성공했으면 구단주 표시를 남긴다(홈 카드가 구단주 화면을 거치지 않고 바로 출석 상태를 묻게).
+  if (google !== 'error') noteOwner(true);
   const back = takeLoginReturn();
   if (back && google !== 'error') {
     if ('board' in back) return openBoard(back.board, back.postId);
     if ('chat' in back) return void (appState.screen = 'chat');
     if ('market' in back) return void (appState.screen = 'market');
     if ('cup' in back) return void (appState.screen = 'cup');
+    if ('home' in back) return void (appState.screen = 'home');
     if ('team' in back) {
       appState.hof = { ...hofStart(), tab: 'teams', team: back.team };
       return void (appState.screen = 'hof');

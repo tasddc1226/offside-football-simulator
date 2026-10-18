@@ -1,0 +1,26 @@
+import type { Translation } from '../core';
+import type { RenameMsgs } from '../ko/rename';
+
+export const rename: Translation<RenameMsgs> = {
+  title: '選手名を変える',
+  entry: '名前を変える',
+  entryLabel: (p) => `${p.name}の名前を変える`,
+  lead: '変更券1枚で名前を変えます。新しい名前は殿堂・移籍市場・クラブの試合に公開されます。',
+  label: '新しい名前',
+  have: (p) => `持っている変更券 ${p.n}枚`,
+  btn: '1枚使って変える',
+  busy: '変更中…',
+  done: (p) => `名前を${p.name}に変えました。`,
+  fail: '名前を変えられませんでした。しばらくしてからもう一度押してください。',
+  empty: '名前を入れてください。',
+  invalid: 'この名前は使えません。別の名前を入れてください。',
+  same: '今の名前と同じです。',
+  none: '変更券がありません。出席チェック28日目に1枚もらえます。',
+  noneApp: '変更券がありません。出席チェック28日目に1枚もらうか、下から購入できます。',
+  guest: 'ログインすると変更券で選手名を変えられます。',
+  close: '閉じる',
+  shopTitle: '選手名変更券',
+  shopHave: (p) => `持っている変更券 ${p.n}枚`,
+  shopWeb: '変更券はアプリで購入できます。',
+  shopNote: '現役の選手は選手画面の名前の横、引退・獲得した選手はマイ選手一覧から変えます。',
+};

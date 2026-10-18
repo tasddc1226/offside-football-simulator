@@ -5,6 +5,7 @@ const ko = {
   packsTitle: '스토어에서 사기',
   rerollPack: (p: { n: number }) => `리롤권 ${p.n}장`,
   boostPack: (p: { n: number }) => `잠재력 강화권 ${p.n}장`,
+  renamePack: (p: { n: number }) => `선수 이름 변경권 ${p.n}장`,
   busy: '결제 중…',
   loading: '스토어 확인 중…',
   storeFail: '스토어에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요.',
@@ -13,6 +14,7 @@ const ko = {
   pending: '결제 승인을 기다리고 있어요. 승인되면 자동으로 받아요.',
   rerollDone: (p: { n: number }) => `리롤권을 받았어요. 이제 ${p.n}장이에요.`,
   boostDone: (p: { n: number }) => `잠재력 강화권을 받았어요. 이제 ${p.n}장이에요.`,
+  renameDone: (p: { n: number }) => `선수 이름 변경권을 받았어요. 이제 ${p.n}장이에요.`,
   claimFail: '결제는 끝났어요. 받는 중에 문제가 생겨 다음에 앱을 열 때 다시 받아요.',
   rerollNote:
     '리롤권은 새 선수를 만들 때 후보 3명을 다시 뽑는 데 써요. 결제는 스토어 계정으로 하고, 이 구단주 계정에 들어와요.',

@@ -32,6 +32,8 @@ import { PixelAvatar } from '../../ui/PixelAvatar';
 import { ClubBadge } from '../../ui/ClubBadge';
 import { Press } from '../../ui/Press';
 import { AvatarLook } from './AvatarLook';
+import { RenameSheet } from '../rename/RenameSheet';
+import { renameText as RN } from '@offside/app-core/i18n/ko/rename';
 import { avatarLookText as LK } from '@offside/app-core/i18n/ko/avatarLook';
 import { lookSeen, markLookSeen } from '@offside/app-core/lookSeen';
 import { AvatarHint } from './AvatarHint';
@@ -105,6 +107,7 @@ export default function Game() {
   const [playerHint, setPlayerHint] = useState(false);
   // T-11-191 도트 선수를 누르면 꾸미기.
   const [lookOpen, setLookOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
   const [lookSeenNow, setLookSeenNow] = useState(lookSeen);
   const openLook = () => {
     setLookOpen(true);
@@ -247,6 +250,9 @@ export default function Game() {
         >
           <Topbar />
           {lookOpen ? <AvatarLook close={() => setLookOpen(false)} /> : null}
+          {renameOpen ? (
+            <RenameSheet careerId={s.cid} name={s.name} close={() => setRenameOpen(false)} />
+          ) : null}
           <PitchCard gap={12} style={{ paddingTop: 18, paddingHorizontal: 18, paddingBottom: 16 }}>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <Press
@@ -281,18 +287,32 @@ export default function Game() {
                     >{`‘${title.name}’`}</Txt>
                   </Press>
                 ) : null}
-                <Txt
-                  v="h1"
-                  accessibilityRole="header"
-                  style={{
-                    fontSize: rem(1.5),
-                    lineHeight: rem(1.5) * 1.55,
-                    marginTop: 2,
-                    color: c.onPitch,
-                  }}
-                >
-                  {s.name}
-                </Txt>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Txt
+                    v="h1"
+                    accessibilityRole="header"
+                    style={{
+                      flexShrink: 1,
+                      fontSize: rem(1.5),
+                      lineHeight: rem(1.5) * 1.55,
+                      marginTop: 2,
+                      color: c.onPitch,
+                    }}
+                  >
+                    {s.name}
+                  </Txt>
+                  {/* T-11-377 이름 옆 연필을 누르면 이름 변경권 창. */}
+                  <Press
+                    testID="rename-open"
+                    accessibilityRole="button"
+                    accessibilityLabel={RN.entryLabel({ name: s.name })}
+                    hitSlop={8}
+                    onPress={() => setRenameOpen(true)}
+                    style={{ padding: 6, opacity: 0.7 }}
+                  >
+                    <Txt style={{ fontSize: rem(1), color: c.onPitch }}>✎</Txt>
+                  </Press>
+                </View>
                 <View style={{ marginTop: 4, opacity: 0.85 }}>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
                     <Txt
