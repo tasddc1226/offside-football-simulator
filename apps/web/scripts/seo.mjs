@@ -189,7 +189,7 @@ export function createHeaders({ indexingEnabled }) {
   const publicHeaders = PUBLIC_PATHS.map(
     (path) => `${path}\n  X-Robots-Tag: ${indexingEnabled ? 'index, follow' : 'noindex, nofollow'}`,
   ).join('\n\n');
-  return `/*\n  X-Robots-Tag: noindex, nofollow\n\n${publicHeaders}\n`;
+  return `/*\n  X-Robots-Tag: noindex, nofollow\n\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n  X-Content-Type-Options: nosniff\n\n${publicHeaders}\n`;
 }
 
 // T-10-065 선수 이름 공개 정책(가이드·FAQ·약관·개인정보처리방침이 같은 문장을 쓴다).

@@ -34,6 +34,17 @@ export function noteOwner(on: boolean) {
   }
 }
 
+/** T-11-388 '로그인 필요'로 남은 표시를 '모름'으로 되돌려 홈 선물 · 출석을 한 번 다시 묻게 한다. 구단주에게만 가는 푸시로
+ *  홈을 열었을 때 부른다(로그인 전에 남은 표시가 로그인한 뒤에도 카드를 막지 않게). */
+export function recheckOwner() {
+  if (ownerHintState() !== false) return;
+  try {
+    storage().setItem(OWNER_HINT, '');
+  } catch {
+    // 저장소를 못 쓰면 그대로 둔다.
+  }
+}
+
 /** 구단주 화면 응답(팀·친구)을 보고 표시를 남긴 뒤 그대로 돌려준다. */
 export async function withOwnerHint<T>(p: Promise<ApiResult<T>>): Promise<ApiResult<T>> {
   const r = await p;
