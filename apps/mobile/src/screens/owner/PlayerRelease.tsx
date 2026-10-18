@@ -15,11 +15,16 @@ import { ownerPlayersText as L } from '@offside/app-core/i18n/ko/ownerPlayers';
 import { openPublicLegendById } from '../../game/host';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { useColors } from '../../theme/useColors';
+import { renameText as RN } from '@offside/app-core/i18n/ko/rename';
+import { RenameSheet } from '../rename/RenameSheet';
 
 export function PlayerRelease({ season }: { season: number }) {
   const manager = useMemo(() => new PlayerManagement(), []);
   const [state, setState] = useState(manager.state);
   const local = useMemo(() => localCareerNames(), []);
+  // T-11-377 이름 변경권으로 바꾼 이름(목록을 다시 받기 전까지 바로 보인다)과 열린 창의 선수.
+  const [renamed, setRenamed] = useState<Record<string, string>>({});
+  const [renaming, setRenaming] = useState<{ careerId: string; name: string } | null>(null);
   const c = useColors();
   useEffect(() => {
     const unsub = manager.subscribe(setState);
@@ -32,7 +37,7 @@ export function PlayerRelease({ season }: { season: number }) {
   const selected = manager.selectedPlayers;
   const amount = releaseAmount(selected, state.rate);
   const nameOf = (p: (typeof state.players)[number]) =>
-    local.get(p.careerId) ?? playerName(p.publicName, p.pos, p.number);
+    renamed[p.careerId] ?? local.get(p.careerId) ?? playerName(p.publicName, p.pos, p.number);
   return (
     <View style={{ gap: 12 }} testID="player-management">
       <Txt tone="muted">{M.releaseIntro}</Txt>
@@ -109,6 +114,15 @@ export function PlayerRelease({ season }: { season: number }) {
                   >
                     {L.viewRecord}
                   </Btn>
+                  <Btn
+                    sm
+                    testID={`player-rename-${p.careerId}`}
+                    accessibilityLabel={RN.entryLabel({ name: nameOf(p) })}
+                    disabled={state.busy}
+                    onPress={() => setRenaming({ careerId: p.careerId, name: nameOf(p) })}
+                  >
+                    {RN.entry}
+                  </Btn>
                 </View>
               );
             })
@@ -152,6 +166,14 @@ export function PlayerRelease({ season }: { season: number }) {
           ) : null}
         </>
       )}
+      {renaming ? (
+        <RenameSheet
+          careerId={renaming.careerId}
+          name={renaming.name}
+          close={() => setRenaming(null)}
+          onDone={(n) => setRenamed((m) => ({ ...m, [renaming.careerId]: n }))}
+        />
+      ) : null}
     </View>
   );
 }

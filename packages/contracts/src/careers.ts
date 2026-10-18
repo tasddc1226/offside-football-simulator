@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { bodyError } from './body.js';
 import type { RnMiss } from './retired-numbers.js';
 import { NATION_BY_CODE } from './nations.js';
-import { PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
+import { PLAYER_NAME_MAX, PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
 import { STYLE_COUNTERS, STYLE_COUNT_MAX, type StyleCounter } from './play-style.js';
 import { isDefaultClubId } from './club-names.js';
 import { seasonById } from './service-seasons.js';
@@ -244,6 +244,22 @@ export const PlaySignalsSchema = z.strictObject({
   webdriver: z.boolean(),
 });
 export type PlaySignals = z.infer<typeof PlaySignalsSchema>;
+
+/**
+ * T-11-377 POST /v1/careers/:careerId/rename — 선수 이름 변경권 1장으로 내 선수(진행 중 · 은퇴 · 이적시장에서 산 선수)
+ * 이름을 바꾼다. 서버에 기록이 아직 없는 진행 중 커리어(첫 시즌 전)는 장수만 빼고 이름은 기기 세이브가 바꾼다.
+ */
+export const RenameCareerBodySchema = z.strictObject({
+  name: PublicNameSchema.max(PLAYER_NAME_MAX),
+});
+export type RenameCareerBody = z.infer<typeof RenameCareerBodySchema>;
+export const RenameCareerResponseSchema = z.strictObject({
+  careerId: z.uuid(),
+  name: z.string(),
+  /** 남은 이름 변경권. */
+  rename: z.number().int().min(0),
+});
+export type RenameCareerResponse = z.infer<typeof RenameCareerResponseSchema>;
 
 export const PutCareerSeasonBodySchema = z.strictObject({
   career: CareerMetaSchema,

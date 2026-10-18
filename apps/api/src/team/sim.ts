@@ -232,7 +232,11 @@ export type SimResult = {
   events: SimEvent[];
   /** 반영한 시너지 id(T-11-105, 반영 시즌 경기만). 시너지별 사용률·승률 측정용 기록. */
   synergy?: { home: string[]; away: string[] };
+  /** T-11-379 경기 리포트 — 골 수를 뽑은 두 팀 기대 득점과 시너지 · 감독 보정 뒤 줄 힘(이미 계산한 값, 난수를 더 쓰지 않는다). */
+  report: { home: SideReport; away: SideReport };
 };
+/** 한 팀 쪽 기대 득점과 줄 힘. */
+export type SideReport = { xg: number; lines: LineStrength };
 
 const synergyIds = (s: TeamSynergy) => s.active.filter((a) => a.kind !== 'badge').map((a) => a.id);
 
@@ -267,8 +271,10 @@ export function simulateMatch(
   const hs = withCoach(lineupLines(home, hSyn), opts.coaches?.home, hSyn);
   const as = withCoach(lineupLines(away, aSyn), opts.coaches?.away, aSyn);
   // T-11-145 컵은 중립 경기 — 홈 이점을 주지 않는다.
-  const homeGoals = poisson(expectedGoals(hs, as, !opts.neutral), rng);
-  const awayGoals = poisson(expectedGoals(as, hs, false), rng);
+  const homeXg = expectedGoals(hs, as, !opts.neutral);
+  const awayXg = expectedGoals(as, hs, false);
+  const homeGoals = poisson(homeXg, rng);
+  const awayGoals = poisson(awayXg, rng);
   const events: SimEvent[] = [];
   const add = (side: 'home' | 'away', lineup: readonly LineupSlot[], n: number) => {
     for (let g = 0; g < n; g++) {
@@ -293,6 +299,7 @@ export function simulateMatch(
     awayGoals,
     events,
     ...(hSyn && aSyn ? { synergy: { home: synergyIds(hSyn), away: synergyIds(aSyn) } } : {}),
+    report: { home: { xg: homeXg, lines: hs }, away: { xg: awayXg, lines: as } },
   };
 }
 

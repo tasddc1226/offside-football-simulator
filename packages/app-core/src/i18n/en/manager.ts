@@ -34,7 +34,7 @@ export const manager: Translation<ManagerMsgs> = {
   confirmValue: (p) => `Club value drops by ${p.value}.`,
   confirmLocked: 'A player who becomes a manager can’t be sold, released or locked.',
   confirmAbandon:
-    'If you give up midway, they return as a player. You have to put them back in the lineup yourself.',
+    'If you give up midway, they return as a player. You have to put them back in the lineup yourself. Once confirmed as a manager card, they can’t go back to being a player.',
   confirmOk: 'Start as manager',
   cancel: 'Cancel',
   progress: (p) => `Season ${p.season} / ${p.total} · Age ${p.age}`,
@@ -72,7 +72,8 @@ export const manager: Translation<ManagerMsgs> = {
   resultHeading: (p) => `Season ${p.n} results`,
   nextSeason: 'Continue',
   doneHeading: 'Manager career over',
-  doneLead: 'Confirm the manager card to seat them in your team’s manager slot.',
+  doneLead:
+    'Confirm the manager card to seat them in your team’s manager slot. Once confirmed, they can’t go back to being a player.',
   finish: 'Confirm manager card',
   finishFail: 'Could not confirm. Try again in a moment.',
   abandon: 'Give up manager career',
@@ -90,7 +91,7 @@ export const manager: Translation<ManagerMsgs> = {
   effect: 'Manager slot effect',
   effectFor: (p) => `With ${p.formation}`,
   effectNote:
-    'A specialty only adds its bonus when the matching team synergy is active. Variant shapes such as 4-2-3-1 use the mastery of their base formation (4-3-3, 4-4-2 or 3-5-2).',
+    'A specialty only adds its bonus when the matching team synergy is active. Variant shapes such as 4-2-3-1 use the mastery of their base formation (4-3-3, 4-4-2 or 3-5-2). The manager bonus is between −1.5 and +3.0 for each line (attack, midfield, defense).',
   coachNow: 'Your team manager',
   seat: 'Make team manager',
   unseat: 'Empty manager slot',
@@ -129,6 +130,17 @@ export const manager: Translation<ManagerMsgs> = {
   teamCoach: 'Manager slot',
   teamCoachEmpty: 'Empty',
   teamCoachManage: 'Choose manager',
+  /** T-11-382 manager seat bonus breakdown. */
+  breakdown: 'Bonus breakdown',
+  partStyle: (p: { name: string }) => `${p.name} style`,
+  breakdownCapped: (p: { raw: string; max: string }) =>
+    `The sum is ${p.raw}, but each line gets at most ${p.max}.`,
+  breakdownFloor: (p: { raw: string; min: string }) =>
+    `The sum is ${p.raw}, but no line goes below ${p.min}.`,
+  breakdownOff: (p: { names: string }) =>
+    `${p.names}: its paired team synergy is off, so it adds nothing.`,
+  breakdownNote:
+    'The manager bonus is between −1.5 and +3.0 per line. A specialty counts once even if several paired synergies are on.',
   profileCoach: 'Seated manager',
   teamCoachLine: (p: { v: string }) => `Manager ${p.v}`,
   oddsSure: 'Certain',

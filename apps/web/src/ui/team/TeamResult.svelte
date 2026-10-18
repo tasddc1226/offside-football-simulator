@@ -6,6 +6,8 @@
   import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
   import { recordText, signedNum } from '@offside/app-core/teamText';
   import TeamLogo from './TeamLogo.svelte';
+  import TeamReport from './TeamReport.svelte';
+  import type { ReportLine } from '@offside/contracts/owner-team';
 
   let {
     m,
@@ -17,6 +19,7 @@
     onagain,
     onhistory,
     onplayer,
+    fix,
   }: {
     m: TeamMatch;
     team: OwnerTeam | null;
@@ -28,6 +31,8 @@
     onhistory?: (() => void) | undefined;
     /** T-11-269 우리 선수 이름을 누르면 시즌 통계의 그 선수 줄로(랭크 경기만 — 친선전은 통계에 없다). */
     onplayer?: ((careerId: string) => void) | undefined;
+    /** T-11-379 리포트 '고칠 곳' — 내 편성을 고칠 수 있을 때만 준다(다른 팀 경기 · 지난 시즌에는 없다). */
+    fix?: ((line: ReportLine) => { pos: string; go: () => void } | null) | undefined;
   } = $props();
   const link = (id: string | null) => (onplayer && !m.friendly && id ? id : null);
 
@@ -71,6 +76,7 @@
   {:else}
     <p class="muted">{L.noGoals}</p>
   {/if}
+  <TeamReport {m} {fix} />
   <p class="muted fs-sm">{kstMonthDayTime(m.createdAt)}{team && m.mine === 'home' && !m.friendly ? L.resultRecord({ record: recordText(team.record) }) : ''}</p>
   {#if gain != null}
     <p class="fs-sm" data-rating-change>{L.ratingChange}<b>{signedNum(gain)}</b></p>

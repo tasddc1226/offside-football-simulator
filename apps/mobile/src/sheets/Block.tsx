@@ -12,6 +12,8 @@ import { Txt } from '../ui/Txt';
 import { Enter } from './anim';
 import { ProgBar, SkipLink, StatGrid } from './parts';
 import { TickerLine } from './TickerLine';
+import { partsText, ratingBreakdown } from '@offside/app-core/ratingReport';
+import { ratingReportText as R } from '@offside/app-core/i18n/ko/ratingReport';
 
 /** 값이 바뀔 때마다 커졌다 돌아오는 숫자(웹 tally b.bump: 40%에서 1.25배 + 금색). 0·'-'은 그대로. */
 export function Bump({ value }: { value: number | string }) {
@@ -72,6 +74,8 @@ export function Block({
     },
     { key: 'rating', k: s.tally.rating, l: sheetCoreText.tallyRating },
   ];
+  // T-11-379 평점 구성(뛴 경기 평균) — 경기가 다 나온 뒤에 채워진다.
+  const parts = s.rated ? ratingBreakdown(v.rated ?? []) : null;
   return (
     <>
       {!compact ? (
@@ -104,6 +108,12 @@ export function Block({
           </Enter>
         ))}
       </View>
+      {parts ? (
+        <Txt tone="muted" style={{ fontSize: rem(0.75) }} testID="rating-parts">
+          <Txt style={{ fontSize: rem(0.75), fontWeight: '700' }}>{R.partsTitle}</Txt>
+          {` · ${partsText(parts)}`}
+        </Txt>
+      ) : null}
       <View style={{ gap: 6 }}>
         {s.extras.map((x, i) => (
           <Txt

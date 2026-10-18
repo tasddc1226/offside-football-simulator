@@ -5,6 +5,7 @@ export const iap: Translation<IapMsgs> = {
   packsTitle: 'Buy in the store',
   rerollPack: (p) => `${p.n} reroll tickets`,
   boostPack: (p) => `${p.n} boost tickets`,
+  renamePack: (p) => `${p.n} player rename tickets`,
   busy: 'Processing…',
   loading: 'Checking the store…',
   storeFail: "Couldn't connect to the store. Please try again in a moment.",
@@ -13,6 +14,7 @@ export const iap: Translation<IapMsgs> = {
   pending: "Waiting for payment approval. You'll get it automatically once approved.",
   rerollDone: (p) => `Reroll tickets added. You now have ${p.n}.`,
   boostDone: (p) => `Boost tickets added. You now have ${p.n}.`,
+  renameDone: (p) => `Player rename tickets added. You now have ${p.n}.`,
   claimFail:
     "Your payment went through, but something went wrong while adding it. You'll get it the next time you open the app.",
   rerollNote:

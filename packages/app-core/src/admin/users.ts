@@ -16,6 +16,7 @@ export const ITEM_NAME: Record<OwnerItem, string> = {
   reroll: '리롤권',
   boost: '잠재력 강화권',
   scout: '프리미엄 스카우트권',
+  rename: '선수 이름 변경권',
 };
 export const GRANT_ITEMS = Object.keys(ITEM_NAME) as OwnerItem[];
 const itemName = (item: string) => ITEM_NAME[item as OwnerItem] ?? item;

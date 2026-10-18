@@ -2,6 +2,8 @@
 // 구단 이름·엠블럼, 도움말·서비스 정책 링크. 이 설정들은 이 기기에만 저장된다. 계정·운영 도구는 구단주 화면에 있다.
 // 앱에서 뺀 것(웹 전용): 효과음·배경음악·음량·음악 출처, '홈 화면에 추가하기' 안내.
 import { setTextSize, TEXT_SIZES } from '@offside/app-core/textSize';
+import { REVEAL_SHORT_KEY } from '@offside/app-core/reveal';
+import { revealText as RV } from '@offside/app-core/i18n/ko/reveal';
 import { useTextSize } from '../../theme/useTextSize';
 import { nativeAnalytics } from '../../analytics';
 import { useState, useSyncExternalStore } from 'react';
@@ -109,7 +111,7 @@ export default function Settings() {
   const textSize = useTextSize();
   const consent = useSyncExternalStore(nativeAnalytics.onConsent, nativeAnalytics.getConsent);
   const [namePublic, setNamePublicState] = useState(namePublicEnabled());
-  const { lang, haptics } = useSnapshot(prefs);
+  const { lang, haptics, revealShort } = useSnapshot(prefs);
 
   /** 언어: 이 기기에 저장하고 루트를 다시 그린다(_layout의 key). */
   const setLang = (l: Locale) => {
@@ -122,6 +124,12 @@ export default function Settings() {
     const theme = on ? 'dark' : 'light';
     prefs.theme = theme;
     saveKey('ft_theme', theme);
+  };
+
+  /** T-11-371 공개 연출 짧게: 이 기기에 저장한다. */
+  const setRevealShort = (on: boolean) => {
+    prefs.revealShort = on;
+    saveKey(REVEAL_SHORT_KEY, on);
   };
 
   /** 진동: 이 기기에 저장한다. 켤 때 한 번 울려 어떤 느낌인지 보여 준다. */
@@ -183,6 +191,15 @@ export default function Settings() {
             onChange={setHaptics}
             label={L.hapticsTitleApp}
             testID="haptics"
+          />
+        </SettingsRow>
+        <SettingsRow first={false}>
+          <SettingsLabel title={RV.shortTitle} muted={RV.shortBody} />
+          <Switch
+            value={revealShort}
+            onChange={setRevealShort}
+            label={RV.shortTitle}
+            testID="reveal-short"
           />
         </SettingsRow>
       </SettingsCard>

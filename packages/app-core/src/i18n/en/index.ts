@@ -6,6 +6,7 @@ import { ad } from './ad';
 import { appFlight } from './appFlight';
 import { appFormat } from './appFormat';
 import { appScout } from './appScout';
+import { attendance } from './attendance';
 import { automationModeration } from './automationModeration';
 import { avatarLook } from './avatarLook';
 import { avatarRecord } from './avatarRecord';
@@ -61,6 +62,7 @@ import { manager } from './manager';
 import { market } from './market';
 import { marketChart } from './marketChart';
 import { marketValueChart } from './marketValueChart';
+import { matchReport } from './matchReport';
 import { owner } from './owner';
 import { ownerConflict } from './ownerConflict';
 import { ownerPlayers } from './ownerPlayers';
@@ -68,9 +70,12 @@ import { ownerProfile } from './ownerProfile';
 import { playerNudge } from './playerNudge';
 import { publicLegends } from './publicLegends';
 import { push } from './push';
+import { ratingReport } from './ratingReport';
+import { rename } from './rename';
 import { retention } from './retention';
 import { retired } from './retired';
 import { retiredLook } from './retiredLook';
+import { reveal } from './reveal';
 import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
 import { seasonRecap } from './seasonRecap';
@@ -105,6 +110,7 @@ export const en = {
   appFlight,
   appFormat,
   appScout,
+  attendance,
   automationModeration,
   avatarLook,
   avatarRecord,
@@ -160,6 +166,7 @@ export const en = {
   market,
   marketChart,
   marketValueChart,
+  matchReport,
   owner,
   ownerConflict,
   ownerPlayers,
@@ -167,9 +174,12 @@ export const en = {
   playerNudge,
   publicLegends,
   push,
+  ratingReport,
+  rename,
   retention,
   retired,
   retiredLook,
+  reveal,
   scout,
   seasonGauge,
   seasonRecap,

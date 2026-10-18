@@ -67,11 +67,13 @@
   import { friendsUi } from '../friendInvite.svelte.js';
   import { shellText as S } from '@offside/app-core/i18n/ko/shell';
   import { achNudge } from '../achNudge.js';
+  import { fixSlot, slotName } from '@offside/app-core/matchReport';
+  import type { ReportLine } from '@offside/contracts/owner-team';
   import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, tooManyWildcards, wildcardFullText, wildcardLabel } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
-  import { coachSummary } from '@offside/app-core/managerCard';
+  import { coachBreakdown, coachSummary } from '@offside/app-core/managerCard';
   import { hofOwnText as HO } from '@offside/app-core/i18n/ko/hofOwn';
   import { loadAnonNames, publishAnonNames, type AnonName } from '@offside/app-core/cardNames';
   import { fetchCup, fetchCupMe } from '@offside/app-core/api/cup';
@@ -178,6 +180,7 @@
   const ovr = $derived(teamOvr(ratings));
   // T-11-105 선발 시너지 — 늘 보여 주고, 반영 시즌부터 줄 힘에도 더한다.
   const synergy = $derived(slotsSynergy(previewLayout, slots, byId));
+  const coachDetail = $derived(team?.coach ? coachBreakdown(team.coach, formation, synergy, season) : null);
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
   const lines = $derived(draftLines(slotCodes, ratings, synergy, season));
   const filled = $derived(slots.filter((s) => s !== null).length);
@@ -531,6 +534,14 @@
     if (v in LOAD) untrack(() => void LOAD[v as keyof typeof LOAD]());
   });
   const navOn = $derived(view === 'result' ? resultOrigin : view === 'stats' ? 'history' : view);
+  /** T-11-379 리포트 '고칠 곳'으로 고른 자리 — 편성 화면이 그 자리를 골라 둔 채 열린다. */
+  let focusSlot = $state<number | null>(null);
+  function reportFix(line: ReportLine): { pos: string; go: () => void } | null {
+    if (!editable || season !== current) return null;
+    const i = fixSlot(slotCodes, ratings, line, YOUTH_OVR);
+    if (i === null) return null;
+    return { pos: slotName(slotCodes[i]!), go: () => ((focusSlot = i), switchView('team')) };
+  }
   /** 탭을 바꾸면 맨 위에서 시작하고, 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다(게임 화면 탭과 같다). */
   function switchView(v: TeamView) {
     if (view === v) return window.scrollTo({ top: 0, behavior: dur(1) ? 'smooth' : 'instant' });
@@ -624,12 +635,26 @@
         onsave={save}
         onlock={toggleLock}
         onpresets={() => (presetsOpen = true)}
+        bind:focusSlot
       />
       {#if team && season === current}
         <!-- T-11-310 감독 칸: 감독은 감독 커리어 화면에서 고른다. -->
         <section class="card tm-coach" data-team-coach>
           <span class="tm-coach-info"><b>{MG.teamCoach}</b><span class="muted fs-sm">{team.coach ? coachSummary(team.coach, formation, localNames) : MG.teamCoachEmpty}</span></span>
           <button class="btn btn-sm" data-act="team-coach" onclick={() => go('manager')}>{MG.teamCoachManage}</button>
+          <!-- T-11-382 줄 칸의 "감독 +3.0"이 어디서 왔는지(갈래별 값 · 상한에 잘린 몫 · 꺼진 특기). -->
+          {#if coachDetail}
+            <details class="tm-coach-detail" data-coach-breakdown>
+              <summary>{MG.breakdown}</summary>
+              <ul>
+                {#each coachDetail.rows as r (r.line)}
+                  <li data-coach-row={r.line}><b>{r.label} {r.total}</b><span class="muted fs-sm">{r.parts}</span>{#if r.capped}<span class="fs-sm" data-coach-capped>{r.capped}</span>{/if}</li>
+                {/each}
+              </ul>
+              {#if coachDetail.off.length}<p class="muted fs-sm" data-coach-off>{MG.breakdownOff({ names: coachDetail.off.join(' · ') })}</p>{/if}
+              <p class="muted fs-sm">{MG.breakdownNote}</p>
+            </details>
+          {/if}
         </section>
       {/if}
       <TeamPresets bind:open={presetsOpen} {presets} hasTeam={!!team} locked={!!cupBand?.locked} draft={presetDraft} persist={persistPresets} onload={applyPreset} />
@@ -674,6 +699,7 @@
           onagain={() => open('opponents')}
           onhistory={resultOrigin === 'history' ? () => switchView('history') : undefined}
           onplayer={(id) => openStats(id)}
+          fix={reportFix}
         />
       {/if}
     {:else if view === 'history'}
@@ -719,8 +745,34 @@
   .anon-names .btn {min-height:44px;}
   .tm-coach {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 10px;
+  }
+  .tm-coach-detail {
+    flex: 1 1 100%;
+  }
+  .tm-coach-detail summary {
+    cursor: pointer;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+  }
+  .tm-coach-detail ul {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+  }
+  .tm-coach-detail li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .tm-coach-detail p {
+    margin: 0 0 6px;
   }
   .tm-coach-info {
     display: flex;

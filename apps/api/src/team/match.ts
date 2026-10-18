@@ -15,7 +15,14 @@ import {
 } from '../db/repos/ownerTeams.js';
 import type { Lang } from '../lang.js';
 import { anonText } from './anon.js';
-import { buildLineup, lineupOvr, type MatchCoach, type PlayerRef, type SimResult } from './sim.js';
+import {
+  buildLineup,
+  lineupOvr,
+  type MatchCoach,
+  type PlayerRef,
+  type SideReport,
+  type SimResult,
+} from './sim.js';
 import { coachesByIds } from '../db/repos/managers.js';
 
 // 랭크 경기(T-10-092)와 친선전(T-11-098)이 함께 쓰는 경기 한 판 준비 · 저장할 상세 · 화면 모양 변환.
@@ -73,6 +80,7 @@ export function matchDetailOf(
     lineup: Lineups['home'],
     change: number | undefined,
     synergy: string[] | undefined,
+    report: SideReport,
   ) => ({
     teamId: t.id,
     name: t.name,
@@ -81,10 +89,17 @@ export function matchDetailOf(
     ovr: lineupOvr(lineup),
     ...(change === undefined ? {} : { ratingChange: change }),
     ...(synergy === undefined ? {} : { synergy }),
+    xg: Math.round(report.xg * 10) / 10,
+    lines: {
+      atk: Math.round(report.lines.atk),
+      mid: Math.round(report.lines.mid),
+      def: Math.round(report.lines.def),
+      gk: Math.round(report.lines.gk),
+    },
   });
   return {
-    home: side(home, lineups.home, delta?.home, result.synergy?.home),
-    away: side(away, lineups.away, delta?.away, result.synergy?.away),
+    home: side(home, lineups.home, delta?.home, result.synergy?.home, result.report.home),
+    away: side(away, lineups.away, delta?.away, result.synergy?.away, result.report.away),
     events: result.events.map((e) => ({
       minute: e.minute,
       side: e.side,
@@ -112,6 +127,8 @@ export function toMatch(
     owner: side.owner,
     formation: side.formation,
     ovr: side.ovr,
+    ...(side.xg === undefined ? {} : { xg: side.xg }),
+    ...(side.lines === undefined ? {} : { lines: side.lines }),
   });
   return {
     id: row.id,

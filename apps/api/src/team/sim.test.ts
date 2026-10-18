@@ -1,4 +1,11 @@
-import { FORMATIONS, YOUTH_NAME, YOUTH_OVR, type PosGroup } from '@offside/contracts/owner-team';
+import { createHash } from 'node:crypto';
+import {
+  FORMATIONS,
+  REPORT_LINE_WEIGHT,
+  YOUTH_NAME,
+  YOUTH_OVR,
+  type PosGroup,
+} from '@offside/contracts/owner-team';
 import { describe, expect, it } from 'vitest';
 import {
   buildLineup,
@@ -7,6 +14,7 @@ import {
   lineupLines,
   lineupOvr,
   lineupSynergy,
+  SIM,
   simulateMatch,
   type LineupCareer,
 } from './sim.js';
@@ -320,5 +328,58 @@ describe('감독 보정', () => {
     const after = winP(expectedGoals(boosted, base, false), expectedGoals(base, boosted, false));
     expect(after).toBeGreaterThan(before);
     expect(after - before).toBeLessThanOrEqual(0.05);
+  });
+});
+
+describe('T-11-379 경기 리포트', () => {
+  const varied = (p: string, peak: number, f: keyof typeof FORMATIONS) => {
+    const cs = FORMATIONS[f].map((slot, i): LineupCareer => ({
+      id: `${p}-${i}`,
+      pos: GROUP_OF_SLOT[slot]!,
+      dpos: null,
+      peak: peak + (i % 4),
+      roles: null,
+      number: i + 1,
+      publicName: null,
+    }));
+    return buildLineup(
+      f,
+      cs.map((c) => c.id),
+      new Map(cs.map((c) => [c.id, c])),
+    );
+  };
+
+  it('리포트를 더해도 같은 시드의 골 · 이벤트는 기능 전과 같다(난수를 더 쓰지 않는다)', () => {
+    const h = createHash('sha256');
+    for (let i = 0; i < 400; i++) {
+      const r = simulateMatch(
+        `m${i}`,
+        varied('a', 70 + (i % 15), '4-3-3'),
+        varied('b', 72, i % 2 ? '4-4-2' : '3-5-2'),
+        i % 3,
+        { neutral: i % 5 === 0 },
+      );
+      h.update(JSON.stringify([r.homeGoals, r.awayGoals, r.events, r.synergy ?? null]));
+    }
+    // 기능 전 코드로 같은 400판을 돌려 얻은 값.
+    expect(h.digest('hex')).toBe(
+      'e53c8404ce188a9a51ffbc2e549d9431d77f7af23417964d5087b8366297c1e3',
+    );
+  });
+
+  it('리포트의 기대 득점은 골을 뽑은 기대 득점, 줄 힘은 경기에 쓴 줄 힘이다', () => {
+    const home = varied('a', 80, '4-3-3');
+    const away = varied('b', 74, '4-4-2');
+    const r = simulateMatch('rep', home, away, 0);
+    const hl = lineupLines(home);
+    const al = lineupLines(away);
+    expect(r.report.home.lines).toEqual(hl);
+    expect(r.report.away.lines).toEqual(al);
+    expect(r.report.home.xg).toBe(expectedGoals(hl, al, true));
+    expect(r.report.away.xg).toBe(expectedGoals(al, hl, false));
+  });
+
+  it('리포트의 줄 무게는 기대 득점 식의 무게와 같다', () => {
+    expect(REPORT_LINE_WEIGHT).toEqual({ atk: SIM.atkK, mid: 2 * SIM.midK, def: SIM.atkK });
   });
 });

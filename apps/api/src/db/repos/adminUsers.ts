@@ -150,10 +150,11 @@ export async function adminUser(db: Db, q: string, now: Date): Promise<AdminUser
   };
 }
 
-const GRANT_BODY: Record<OwnerItem, 'grantReroll' | 'grantBoost' | 'grantScout'> = {
+const GRANT_BODY: Record<OwnerItem, 'grantReroll' | 'grantBoost' | 'grantScout' | 'grantRename'> = {
   reroll: 'grantReroll',
   boost: 'grantBoost',
   scout: 'grantScout',
+  rename: 'grantRename',
 };
 
 /**
