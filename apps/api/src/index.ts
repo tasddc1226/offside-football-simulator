@@ -16,8 +16,8 @@ import { runFirstsRescan } from './db/repos/firsts.js';
 import type { Bindings } from './env.js';
 import { chatSocket } from './chat/socket.js';
 import { liveSocket } from './live/socket.js';
-import { runNewsPush } from './push/dispatch.js';
-import { runPersonalPush } from './push/personal.js';
+import { publishPushWork } from './push/queuePublish.js';
+import { consumePushWork } from './push/queue.js';
 import { queueReengagement } from './push/reengagement.js';
 import { consumeCareerReminders, queueCareerReminders } from './push/careerReminder.js';
 import { queueAttendanceReminders } from './push/attendanceReminder.js';
@@ -38,6 +38,7 @@ export { LiveHub } from './live/hub.js';
 export { ChatRoom } from './chat/room.js';
 export default {
   queue(batch: MessageBatch<unknown>, env: Bindings) {
+    if (batch.queue === 'offside-push-production') return consumePushWork(batch, env);
     if (batch.queue === 'offside-billing-production') return consumeBillingAlerts(batch, env);
     if (batch.queue === 'offside-cup-push-production') return consumeCupResults(batch, env);
     return batch.queue === 'offside-career-push-production'
@@ -77,7 +78,9 @@ export default {
     } else {
       // 푸시 단계가 실패해도 뒤의 시즌 결산·컵 진행은 돈다(다음 5분에 다시 보낸다).
       await recoverBillingAlerts(env, controller.scheduledTime).catch(logged('billing-recovery'));
-      await runNewsPush(env).catch(logged('news-push'));
+      await publishPushWork(env, 'news', controller.scheduledTime).catch(
+        logged('news-push-publish'),
+      );
       if (new Date(controller.scheduledTime).getUTCMinutes() === 0)
         await queueCareerReminders(env, controller.scheduledTime).catch(logged('career-reminder'));
       await queueReengagement(env, controller.scheduledTime).catch(logged('reengagement'));
@@ -85,7 +88,9 @@ export default {
         logged('attendance-reminder'),
       );
       await queueGiftReminders(env, controller.scheduledTime).catch(logged('gift-reminder'));
-      await runPersonalPush(env, controller.scheduledTime).catch(logged('personal-push'));
+      await publishPushWork(env, 'personal', controller.scheduledTime).catch(
+        logged('personal-push-publish'),
+      );
       // 시즌 진행 게이지: 30분마다 세어 굳히고, 90%에 닿으면 마감 시각을 확정해 시즌 일정에
       // 다음 시즌과 함께 적는다. 결산보다 먼저 돈다.
       await runSeasonGauge(env.DB, new Date(controller.scheduledTime).toISOString())

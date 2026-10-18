@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "8dbcb088-bacf-47ff-898d-e3d560ebea8e",
-  "prevId": "acca5a2d-28a6-4186-88b2-6293d0c412a5",
+  "id": "86ccdf6c-a6db-45a5-bcf7-d63d9d64461d",
+  "prevId": "5b6bdc75-fe55-47ca-8d2e-f9fdd68d4dae",
   "tables": {
     "acquisition_consents": {
       "name": "acquisition_consents",
@@ -4509,6 +4509,13 @@
             "source_key"
           ],
           "isUnique": true
+        },
+        "notifications_source_key_idx": {
+          "name": "notifications_source_key_idx",
+          "columns": [
+            "source_key"
+          ],
+          "isUnique": false
         },
         "notifications_profile_created_idx": {
           "name": "notifications_profile_created_idx",

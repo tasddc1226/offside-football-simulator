@@ -5,12 +5,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 프로젝트 개요
 
 OFFSIDE — 부제 "풀타임: 휘슬이 울릴 때까지". 확률/이벤트 기반 축구 선수 커리어
-시뮬레이션 웹 게임. `apps/web`은 Svelte 5 SPA(Vite)이고 게임 로직은
-`packages/game/src/*`(순수 TS), 화면은 `apps/web/src/ui/*`에 있다. 게임은 전부
-브라우저에서 돌고 세이브는 `localStorage`에 있다. `apps/api`(Hono on Cloudflare
-Workers + D1)는 게임을 시뮬레이션하지 않고 익명 프로필·Google 로그인·복구 코드,
-커리어·시즌 요약 적재, 명예의 전당, 공지·업데이트 게시판, 구단명 커스텀, 서버
-밸런스 설정, 운영 도구를 다룬다. 계정 병합 플로우는 없다.
+시뮬레이션 게임. 웹(`apps/web`, Svelte 5 SPA · Vite, offside-lab.com)과 앱(`apps/mobile`,
+Expo · React Native, 안드로이드 · iOS)이 같은 게임 로직 `packages/game/src/*`(순수 TS)과
+화면 규칙 · 문구 `packages/app-core`를 함께 쓴다. 커리어 진행은 전부 기기에서 돌고 세이브는
+웹 `localStorage` · 앱 기기 저장소에 있다. `apps/api`(Hono on Cloudflare Workers + D1)는
+게임을 시뮬레이션하지 않고 익명 프로필 · Google/Apple 로그인 · 복구 코드, 커리어 · 시즌 요약
+적재, 명예의 전당 · 기록실, 구단주 팀 · 이적시장 · 감독, 컵 대회 · 승부 예측, 라운지 채팅 ·
+친구, 공지 · 업데이트 게시판, 출석 · 선물, 앱 결제(IAP) · 푸시, 구단명 커스텀, 서버 밸런스
+설정, 운영 도구를 다룬다. `apps/agents`는 운영을 돕는 슬랙 에이전트 Worker다(ADR-015).
+계정 병합 플로우는 없다.
 
 pnpm workspaces + Turborepo 모노레포. Node ≥22.13, TypeScript strict. 게임 엔진은 웹·앱이 함께 쓰는 `packages/game`(ADR-014)이다.
 
@@ -67,6 +70,9 @@ pnpm --filter @offside/fulltime-sim analyze
   `0016`~ 에서 커리어·명예의 전당·게시판·구단명·밸런스 테이블을 다시 쌓았다. 운영 배포가
   기대하는 테이블 목록은 `tooling/scripts/production-release.mjs`의 `EXPECTED_TABLES`).
   마이그레이션은 drizzle-kit generate 산출물을 커밋한다(`db:check`로 검증).
+- **`apps/mobile`**: Expo · React Native 앱. 화면은 `src/screens`, 상태는 valtio(`src/store`).
+  JS만 바뀐 변경은 운영 배포 때 EAS OTA로 나가고, 네이티브 변경은 스토어 빌드가 필요하다.
+- **`packages/app-core`**: 웹 · 앱 공통 화면 로직과 다국어 사전(`src/i18n/{ko,en,ja}`).
 - **`packages/contracts`**: API 요청·응답 Zod 스키마와 밸런스 스펙
   (`@offside/contracts/balance`, zod 없는 서브패스).
 - **`tooling/fulltime-sim`**: 헤드리스 밸런스 시뮬레이터. `packages/game/src/*`

@@ -1,7 +1,7 @@
-# ADR-015 슬랙 에이전트 안정환(`@Ahn Jung-hwan`) — 4단계(T-11-296): 멘션 · 채널 메시지와 드림보트 승인 버튼을 apps/agents Worker로 받는다
+# ADR-015 슬랙 에이전트 안정환(`@Ahn Jung-hwan`) — 4단계(T-11-296): 멘션 · 채널 메시지를 apps/agents Worker로 받는다(드림보트 승인 버튼은 T-11-393에서 없앴다)
 display_information:
   name: 안정환 · 마케팅
-  description: OFFSIDE 마케팅 담당. 공지와 업데이트 소식을 전해요. 게시는 승인 뒤에만 해요.
+  description: OFFSIDE 마케팅 담당. 공지와 광고 문구 초안을 쓰고 유입을 살펴요. 게시는 운영자가 해요.
   background_color: '#c0532b'
 features:
   bot_user:

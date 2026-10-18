@@ -49,9 +49,6 @@ export type MailApproval = {
   result: string;
 };
 
-export type MktDraft = { id: string; notes: string; at: number; done?: boolean };
-export type MktApproval = MailApproval;
-
 /**
  * T-11-325 고치기 작업 명세. 주장(@plan)의 work_order나 운영자의 start_work가 남긴다. PR 뒤 실제 경로로 다시 판정한
  * 위험도와 견줄 때 쓴다. by가 operator면 운영자가 직접 맡긴 일이라 위험도 경고를 붙이지 않는다.
@@ -209,16 +206,6 @@ export class AgentLedger extends DurableObject<Env> {
   async recordReviewApproval(a: MailApproval): Promise<void> {
     await this.ctx.storage.put(`reviewapproval:${a.draft}:${a.at}`, a);
   }
-  /** @mkt 드림보트 요약 초안 · 승인 기록(T-11-296). */
-  async mktDraft(id: string): Promise<MktDraft | undefined> {
-    return this.ctx.storage.get<MktDraft>(`mktdraft:${id}`);
-  }
-  async setMktDraft(d: MktDraft): Promise<void> {
-    await this.ctx.storage.put(`mktdraft:${d.id}`, d);
-  }
-  async recordMktApproval(a: MktApproval): Promise<void> {
-    await this.ctx.storage.put(`mktapproval:${a.draft}:${a.at}`, a);
-  }
   /** T-11-325 작업 카드 요약. 닫힌 지 35일 넘은 카드는 목록에서 지운다. */
   async trackCard(key: string, s: CardSummary): Promise<void> {
     await this.ctx.storage.put(`card:${key}`, s);
@@ -289,10 +276,10 @@ export class AgentLedger extends DurableObject<Env> {
   async waits(): Promise<{ at: number; ms: number }[]> {
     return (await this.ctx.storage.get<{ at: number; ms: number }[]>('waits')) ?? [];
   }
-  /** 승인 · 거절 기록 수(머지 · 배포 · 메일 · 드림보트). since 뒤만. */
+  /** 승인 · 거절 기록 수(머지 · 배포 · 메일). since 뒤만. */
   async approvalCount(since: number): Promise<number> {
     let n = 0;
-    for (const prefix of ['approval:', 'mailapproval:', 'mktapproval:']) {
+    for (const prefix of ['approval:', 'mailapproval:']) {
       const all = await this.ctx.storage.list<{ at: number }>({ prefix });
       for (const v of all.values()) if (v.at >= since) n++;
     }

@@ -13,7 +13,7 @@ import { slackClient, threadReply } from './slack.ts';
 export type Task = {
   eventId: string;
   /**
-   * triage: 유저 반응 살피기, report: 아침 주기 작업 보고, support: 고객 문의 메일, reviews: 스토어 리뷰(T-11-328), release: 운영 배포 뒤 드림보트 요약(넷 다 새 글로
+   * triage: 유저 반응 살피기, report: 아침 주기 작업 보고, support: 고객 문의 메일, reviews: 스토어 리뷰(T-11-328)(넷 다 새 글로
    * 올린다). handoff: 다른 에이전트가 넘긴 일. incident: 사건 조사(@ops, Opus. 서버 상태 감시가 연 사건은 새 글, 경보에서 넘어온
    * 사건은 그 스레드). verify: 배포 뒤 30 · 60분 지표 비교(@ops, 작업 카드 알람).
    */
@@ -25,7 +25,6 @@ export type Task = {
     | 'report'
     | 'support'
     | 'reviews'
-    | 'release'
     | 'handoff'
     | 'incident'
     | 'verify';
@@ -58,7 +57,6 @@ const isNewPost = (t: Task) =>
   t.kind === 'report' ||
   t.kind === 'support' ||
   t.kind === 'reviews' ||
-  t.kind === 'release' ||
   (t.kind === 'incident' && !t.threadTs);
 
 export const threadOf = (env: Env, role: Role, channel: string, threadTs: string) =>

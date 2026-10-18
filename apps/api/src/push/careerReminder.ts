@@ -1,6 +1,7 @@
 import type { Bindings } from '../env.js';
 import { careerReminderText as text } from '../i18n/ko/careerReminder.js';
 import { runPersonalPush } from './personal.js';
+import { publishPushWork } from './queuePublish.js';
 
 const DAY = 86400_000;
 const iso = (time: number) => new Date(time).toISOString();
@@ -91,9 +92,14 @@ export async function queueCareerReminders(env: Bindings, time = Date.now()) {
     ).bind(now, iso(time + DAY), now, batchId, now, iso(time - 90 * DAY), batchId),
   ]);
   const created = results[1]!.meta.changes;
-  if (created && env.CAREER_PUSH_QUEUE) {
+  if (created && (env.PUSH_QUEUE || env.CAREER_PUSH_QUEUE)) {
     try {
-      await env.CAREER_PUSH_QUEUE.send({ version: 1, batchId });
+      if (env.PUSH_QUEUE)
+        await publishPushWork(env, 'personal', time, {
+          key: `career-reminder:${batchId}:`,
+          prefix: true,
+        });
+      else await env.CAREER_PUSH_QUEUE!.send({ version: 1, batchId });
     } catch {
       console.error(JSON.stringify({ job: 'career-reminder-publish', fallback: 'cron' }));
     }

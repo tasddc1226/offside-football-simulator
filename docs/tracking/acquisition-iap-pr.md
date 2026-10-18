@@ -82,3 +82,13 @@ CI39087673328이 head7fc5fee8에서 전체 성공한 뒤 main7297a213(#790)이 �
 최초 허용 UTM은 main의 첫 import인 entry-campaign에서 한 번 캡처한다. App Store와 first-party가 같은 정규화된 snapshot을 사용해 SPA 이동 뒤 생성기 로드가 늦어져도 최초 유입을 유지한다. raw URL·fbclid·이메일을 새 저장소에 보관하지 않으며 API/제3자 전송과 동의·철회 정책은 바뀌지 않는다. 해당 초기 snapshot만 이미 eager인 game/contracts 그룹과 묶고, $initial 및 재귀 캡처 금지를 유지했다. 예산·카운터·검사 fixture는 완화하지 않았다.
 
 #794 LM/RM 역할과 #793 감독 상세 표시는 main 코드를 그대로 보존했다. 보드 양쪽 행과 SEO의 main 변경/기존 acquisition 개인정보 본문을 각각 대조했다. migration/schema 변경은 없고 0111 부모0110/journal109→110→111을 유지한다. 로컬 웹94개(지연 초기화/개인정보/OS 회귀3개 포함), owner-team 계약20개, managerCard8개, 웹/e2e 타입·Svelte오류0(기존경고5)·변경 ESLint 검사를 통과했다. 브라우저/원격 CI 결과는 새 head에서 별도로 기록한다. 운영 활성화·병합·배포·환경 설정·개발앱 설치·실제 구매는 실행하지 않았다.
+
+## 2026-10-18 운영 배포 전 통합 검증
+
+최신 main6cf38413(#811~#814)을 통합했다. main의 Queue 경로와 환경 binding을 보존하고 acquisition binding을 함께 유지했다. 작업 보드는 main의 모든 행을 그대로 두고 이 작업 행만 추가했다. 새 릴리스 노트는 사용자 지시에 따라 생략하며 공식 `release-notes: none` 면제를 유지한다.
+
+Migration0115를 새 main의0111 snapshot 기준으로 재생성했다. journal109→110→111→115, snapshot 부모0111, 빈 SQLite 전체113개 적용과 FK 검사가 통과했다. SQL은 이전 검증본과 같고 알려진 Drizzle 표현식 인덱스 및 SET NULL 생성 오류 교정만 유지했다. 열린 PR 대조에서0115 중복은 없었다. Drizzle 재실행은 추가 변경 없음이다.
+
+로컬 API·웹·모바일 타입과 합성 운영 설정 빌드·번들 검사가 통과했다(138.18KB/145KB). 필수 원격 CI는 새 통합 head에서 확인한다. 독립 읽기 전용 리뷰는 배포 차단 P1/P2를 발견하지 않았다. 운영 repository/production acquisition 변수는 미등록으로 기본 off이며 새 동의나 GA4 구매 이벤트를 활성화하지 않는다.
+
+실기기 귀속 성공은 b09d73bf의 Sandbox 증거다. 최신 통합판의 실제 복원·환불·크래시 재전송·GA4 앱 스트림 검증을 뜻하지 않는다. OTA 게시와 스토어 바이너리 적용도 구분하며 runtime 대응 여부를 실제 배포 결과로 확인한다. Sandbox는 운영 매출 집계에서 제외한다.
