@@ -37,6 +37,7 @@ import { rem } from '../theme/type';
 import { useColors } from '../theme/useColors';
 import { Btn } from '../ui/Btn';
 import { Card } from '../ui/Card';
+import { Skeleton } from '../ui/Skeleton';
 import { MoreLink } from '../ui/MoreLink';
 import { Press } from '../ui/Press';
 import { scrollTo } from '../ui/scroll';
@@ -332,13 +333,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
           </Txt>
         </View>
       ) : all === null && !failed ? (
-        <Txt
-          tone="muted"
-          accessibilityLiveRegion="polite"
-          style={{ fontSize: rem(0.875), paddingVertical: 8 }}
-        >
-          {L.loading}
-        </Txt>
+        <Skeleton rows={6} />
       ) : failed ? (
         empty(L.loadFailed)
       ) : all && all.length ? (
