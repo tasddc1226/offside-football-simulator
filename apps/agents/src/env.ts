@@ -68,6 +68,11 @@ export interface Env {
   /** T-11-332 Meta 광고 성과 읽기(없으면 meta_ads 도구가 없다). */
   META_ADS_ACCESS_TOKEN?: string;
   META_AD_ACCOUNT_ID?: string;
+  /** T-11-395 인스타그램 읽기: 비즈니스 시스템 사용자 토큰(없으면 META_ADS_ACCESS_TOKEN)과 IG 사용자 ID. */
+  META_GRAPH_TOKEN?: string;
+  META_IG_USER_ID?: string;
+  /** T-11-395 Threads 읽기: 장기 사용자 토큰. 60일 안에 Worker가 갱신해 원장에 둔다. */
+  THREADS_ACCESS_TOKEN?: string;
   CF_D1_READ_TOKEN: string;
   CF_MCP_TOKEN?: string;
   GITHUB_TOKEN?: string;

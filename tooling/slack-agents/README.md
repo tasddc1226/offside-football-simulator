@@ -104,6 +104,14 @@ Worker는 `apps/agents`(`agents.offside-lab.com`)다. `manifests/ops.yaml`에 �
 - **배포 뒤 알림.** 운영 배포(`deploy-production.yml`, 워크플로 이름 Production Release)가 `mode=deploy`로 성공하면 `agent-release.yml`이 Worker(`/internal/run?job=release`)에 커밋을 알리고, Worker는 배포 상태 카드를 닫거나 30 · 60분 확인을 예약한다(T-11-325).
 - **드림보트 요약은 없앴다(2026-10-18, T-11-393).** 처음엔 배포 뒤 `@mkt`가 드림보트 업데이트 요약 초안을 승인 카드로 올렸지만, 운영자가 드림보트 요약을 더 보내지 않기로 해 도구 · 승인 버튼 · 비밀값 `DREAMBOAT_URL`을 지웠다.
 
+## `@mkt` 인스타그램 · Threads · 광고 읽기 (2026-10-18, T-11-395)
+
+- **도구.** `instagram`(계정 · 게시물 · 댓글), `threads`(계정 · 글 · 답글), `meta_ads`(캠페인 · 광고 세트 · 광고 단위, 어제 · 7 · 14 · 30일). 전부 읽기만 한다. 게시 · 답글 · 광고 변경은 나중에 `#agent-approvals` 승인 카드로 더한다.
+- **비밀값.** `META_GRAPH_TOKEN`(비즈니스 Offside-lab 시스템 사용자 토큰, 만료 없음, `ads_read` · `instagram_basic` · `instagram_manage_insights` · `pages_read_engagement` · `pages_show_list`, 자산은 광고 계정 · 인스타그램 · 페이지를 보기 권한으로만). 없으면 인스타그램은 `META_ADS_ACCESS_TOKEN`을 쓴다. `THREADS_ACCESS_TOKEN`(Threads 장기 사용자 토큰, `threads_basic` · `threads_read_replies` · `threads_manage_insights`). Threads 토큰은 60일이면 끝나서 Worker가 아침 cron에서 7일마다 갱신해 원장(`threads:token`)에 둔다. 비밀값을 새로 넣으면 그 값이 이긴다.
+- **변수.** `META_IG_USER_ID`(17841417364785110, `wrangler.jsonc`).
+- **막힌 것(10-18).** 운영자 페이스북 계정이 Meta 개발자 등록의 이메일 단계에서 "평소에 사용하지 않는 기기" 보호에 걸려 앱을 아직 못 만들었다. 토큰이 없으면 세 도구는 숨는다.
+- **턴 상한.** 도구가 늘어 "조회 횟수 한도"에 자주 닿아 역할마다 1.5배쯤 올렸다(@mkt 8→14, 주간 리포트 7→10, @plan 10→16 · 문의 18 · 리뷰 16, @dev 12→18, @ops 15→20 · 경보 · 아침 8 · 배포 확인 12). 비용은 작업당 금액 상한이 그대로 막는다.
+
 ## `@mkt` GA4 읽기 (2026-10-16, T-11-299)
 
 - **하는 일.** 운영자 지시 · 그 스레드 답글 · 넘겨받은 일에서 `ga4_report`(Analytics Data API `runReport`, 측정항목 6개 · 측정기준 4개 · 50줄까지)와 `ga4_fields`(맞춤 측정기준 이름)를 쓴다. 속성은 `OFFSIDE - Production`(`556515567`, 웹 · 앱).
