@@ -13,6 +13,7 @@ import {
   LINEUP_SIZE,
   MANAGER_NAME_MAX,
   MANAGER_NAME_MIN,
+  PAST_SALARY_BUDGET,
   TEAM_NAME_MAX,
   TEAM_NAME_MIN,
   TEAM_RATING_START,
@@ -52,9 +53,10 @@ import { loadAnonNames, publishAnonNames, type AnonName } from '@offside/app-cor
 import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import {
   autoFillSlots,
-  tooManyWildcards,
-  wildcardFullText,
-  wildcardLabel,
+  budgetOf,
+  salaryBar,
+  salaryBlocks,
+  salaryFullText,
   draftLines,
   isPreseasonLegacy,
   matchHintOf,
@@ -95,6 +97,8 @@ import { TeamLive } from './TeamLive';
 import { TeamOpponents } from './TeamOpponents';
 import { OvrBadge } from './TeamParts';
 import { TeamLineup } from './TeamLineup';
+import { SalaryBar } from './SalaryGuide';
+import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import { TeamLogo } from '../../components/TeamLogo';
 import { TeamLogoEditor } from './TeamLogoEditor';
 import { TeamShare, type TeamShareData } from './TeamShare';
@@ -133,6 +137,7 @@ export default function Team() {
   const [perDay, setPerDay] = useState(0);
   /** 보고 있는 시즌 · 지금 고치고 겨루는 시즌(휴식기면 null) · 고를 수 있는 시즌. */
   const [season, setSeason] = useState(0);
+  const [budget, setBudget] = useState(PAST_SALARY_BUDGET);
   const [synFocus, setSynFocus] = useState<string | null>(null);
   const [current, setCurrent] = useState<number | null>(null);
   const [seasons, setSeasons] = useState<OwnerTeamResponse['seasons']>([]);
@@ -219,7 +224,8 @@ export default function Team() {
   // 서버에는 비공개 이름이 없다 — 이 기기에서 은퇴한 선수는 이 기기에 남은 이름을 쓴다.
   const localNames = useMemo(() => localCareerNames(), []);
   const byId = new Map(players.map((p) => [p.careerId, p]));
-  const wildcards = wildcardLabel(slots, byId, season);
+  // T-11-376 지난 시즌 선수 급여 예산(서버 밸런스 값, 옛 응답이면 기본 60).
+  const salary = salaryBar(slots, byId, season, budget);
   const nameOf = (p: TeamPlayer) => marketName(p, localNames);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
   // T-11-266 익명으로 은퇴한 내 선수 중 이 기기가 이름을 아는 카드(이적시장에 팔린 선수 포함) — 한꺼번에 이름을 공개할 수 있다.
@@ -388,6 +394,7 @@ export default function Team() {
     setPlayers(d.players);
     setMatchesLeft(d.matchesLeft);
     setPerDay(d.matchesPerDay);
+    setBudget(budgetOf(d));
     if (silent) {
       if (JSON.stringify(d.team) !== JSON.stringify(teamNow.current)) {
         if (dirtyNow.current) setTeam(d.team);
@@ -444,6 +451,10 @@ export default function Team() {
   // ───────── 편성 ─────────
   async function save(): Promise<boolean> {
     if (savingRef.current || !nameOk) return false;
+    if (salary?.state === 'over') {
+      toast(TC.salaryOverSave({ n: salary.sum, max: salary.budget }));
+      return false;
+    }
     savingRef.current = true;
     setSaving(true);
     const snapshot = JSON.stringify(draftNow.current);
@@ -886,7 +897,7 @@ export default function Team() {
                     testID="team-auto"
                     disabled={!players.length}
                     style={{ flex: 1 }}
-                    onPress={() => setSlots(autoFillSlots(slotCodes, players, season))}
+                    onPress={() => setSlots(autoFillSlots(slotCodes, players, season, budget))}
                   >
                     {L.autoPlace}
                   </Btn>
@@ -913,11 +924,7 @@ export default function Team() {
                   {L.shareImageApp}
                 </Btn>
               </View>
-              {wildcards ? (
-                <Txt v="xs" tone="muted" testID="team-wildcards">
-                  {wildcards}
-                </Txt>
-              ) : null}
+              {salary ? <SalaryBar salary={salary} /> : null}
               {editable ? (
                 <Txt v="xs" tone="muted">
                   {L.dragHintApp}
@@ -1019,9 +1026,14 @@ export default function Team() {
               onLock={(p) => void toggleLock(p)}
               focusSlot={focusSlot}
               onFocused={() => setFocusSlot(null)}
+              season={season}
+              salary={salary}
               change={(nextSlots, nextLayout) => {
-                // T-11-114 지난 시즌 선수는 와일드카드 상한까지만.
-                if (tooManyWildcards(nextSlots, byId, season)) return toast(wildcardFullText());
+                // T-11-376 지난 시즌 선수는 급여 예산 안에서만.
+                if (salaryBlocks(slots, nextSlots, byId, season, budget)) {
+                  const added = nextSlots.find((id) => id !== null && !slots.includes(id)) ?? null;
+                  return toast(salaryFullText(nextSlots, added, byId, season, budget));
+                }
                 setSlots(nextSlots);
                 setLayout(nextLayout);
               }}

@@ -29,6 +29,8 @@ import {
   type OwnerTeamResponse,
   type TeamPlayer,
 } from '@offside/app-core/api/team';
+import { marketSalaryText } from '@offside/app-core/salary';
+import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import {
   MARKET_POS_FILTERS,
   MARKET_SORT_LABEL,
@@ -1459,6 +1461,12 @@ export default function Market() {
                   </View>
                 ))}
               </View>
+              <Txt
+                testID="market-salary"
+                style={{ fontSize: rem(0.75), fontWeight: '600', color: c.onPitch, opacity: 0.85 }}
+              >
+                {`${TC.salaryLabel} · ${marketSalaryText(buying.card, season)}`}
+              </Txt>
             </View>
             <View
               style={{

@@ -57,8 +57,17 @@ const ko = {
   preseasonTeamNote:
     '프리시즌에 키운 선수 중 지금 가진 선수로 꾸려요. 이 팀은 친구와 하는 친선전에만 나가고, 프리시즌 랭킹과 업적은 그대로예요.',
   hintPreseason: '프리시즌 팀은 친구와 하는 친선전에만 나가요. 랭크 경기는 지금 시즌 팀으로 해요.',
-  wildcardLabel: (p: { n: number; max: number }) => `와일드카드 ${p.n}/${p.max}`,
-  wildcardFull: (p: { max: number }) => `지난 시즌 선수는 선발에 ${p.max}명까지 넣을 수 있어요.`,
+  salaryBar: (p: { n: number; max: number }) => `지난 시즌 선수 급여 ${p.n} / ${p.max}`,
+  salaryFull: (p: { salary: number; left: number }) =>
+    `이 선수 급여(${p.salary})가 남은 예산(${p.left})보다 커요. 지난 시즌 선수를 빼거나 이번 시즌 선수로 채워 주세요.`,
+  salaryChip: (p: { n: number }) => `급여 ${p.n}`,
+  salaryOver: '예산 초과',
+  salaryLeft: (p: { n: number }) => `남은 예산 ${p.n}`,
+  salaryOpen: '급여 안내 보기',
+  salaryOverSave: (p: { n: number; max: number }) =>
+    `지난 시즌 선수 급여가 예산을 넘어 저장할 수 없어요(${p.n}/${p.max}). 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요.`,
+  salaryLabel: '급여',
+  salaryLater: (p: { n: number }) => `이번 시즌은 없음 · 다음 시즌부터 ${p.n}`,
 };
 
 export type TeamCoreMsgs = typeof ko;

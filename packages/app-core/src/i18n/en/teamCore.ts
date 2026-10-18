@@ -54,6 +54,15 @@ export const teamCore: Translation<TeamCoreMsgs> = {
     'Built from the preseason players you still own. This team only plays friendlies with friends, and your preseason ranking and achievements stay as they are.',
   hintPreseason:
     'Your preseason team only plays friendlies with friends. Use your current season team for ranked matches.',
-  wildcardLabel: (p) => `Wildcards ${p.n}/${p.max}`,
-  wildcardFull: (p) => `You can start up to ${p.max} players from past seasons.`,
+  salaryBar: (p) => `Past-season salaries ${p.n} / ${p.max}`,
+  salaryFull: (p) =>
+    `This player's salary (${p.salary}) is more than your remaining budget (${p.left}). Bench a past-season player or use this season's players.`,
+  salaryChip: (p) => `Salary ${p.n}`,
+  salaryOver: 'Over budget',
+  salaryLeft: (p) => `${p.n} left`,
+  salaryOpen: 'Open salary guide',
+  salaryOverSave: (p) =>
+    `Past-season salaries are over budget (${p.n}/${p.max}), so the team can't be saved. Swap in lower-salary or this-season players.`,
+  salaryLabel: 'Salary',
+  salaryLater: (p) => `None this season · ${p.n} from next season`,
 };

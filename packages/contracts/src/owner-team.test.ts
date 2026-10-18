@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { BALANCE_SPEC } from './balance-spec.js';
 import {
+  PAST_SALARY_BUDGET,
+  PAST_SALARY_TABLE,
+  pastSalarySum,
+  salaryOf,
+  seasonSalaryOf,
   ACH_GRADES,
   DETAIL_GROUP,
   FORMATION_IDS,
@@ -244,5 +250,53 @@ describe('T-11-244 프리미엄 스카우트 천장 · 컵 스카우트권', () 
     expect(cupReward(2, 'qf')).toMatchObject({ boosts: 0, trophy: false });
     expect(cupScouts(2, 'r16')).toBe(0);
     expect([cupPredictionCap(1), cupPredictionCap(2)]).toEqual([null, 10]);
+  });
+});
+
+describe('T-11-376 지난 시즌 선수 급여', () => {
+  it('급여표 경계값', () => {
+    const cases: [number, number][] = [
+      [50, 1],
+      [74, 1],
+      [75, 2],
+      [79, 2],
+      [80, 4],
+      [84, 4],
+      [85, 6],
+      [87, 6],
+      [88, 8],
+      [89, 8],
+      [90, 10],
+      [91, 10],
+      [92, 13],
+      [93, 13],
+      [94, 16],
+      [95, 16],
+      [96, 20],
+      [99, 20],
+    ];
+    for (const [peak, salary] of cases) expect([peak, salaryOf(peak)]).toEqual([peak, salary]);
+  });
+
+  it('이번 시즌 선수는 급여가 없고, 시즌을 모르는 옛 카드도 이번 시즌 선수로 본다', () => {
+    expect(seasonSalaryOf({ peak: 99, season: 2 }, 2)).toBe(0);
+    expect(seasonSalaryOf({ peak: 99 }, 2)).toBe(0);
+    expect(seasonSalaryOf({ peak: 99, season: 1 }, 2)).toBe(20);
+    expect(
+      pastSalarySum(
+        [{ peak: 96, season: 0 }, null, { peak: 85, season: 0 }, { peak: 99, season: 1 }],
+        1,
+      ),
+    ).toBe(26);
+  });
+
+  it('예산 기본값 60 = 밸런스 기본값, 예전 와일드카드 3명(급여 최대 20)은 늘 예산 안', () => {
+    expect(BALANCE_SPEC.pastSalaryBudget.def).toBe(PAST_SALARY_BUDGET);
+    const max = Math.max(...PAST_SALARY_TABLE.map((t) => t.salary));
+    expect(max * 3).toBeLessThanOrEqual(PAST_SALARY_BUDGET);
+    // 예산 정확히 60은 되고 61은 넘는다.
+    const sixty = [...Array(3)].map(() => ({ peak: 96, season: 0 }));
+    expect(pastSalarySum(sixty, 1)).toBe(60);
+    expect(pastSalarySum([...sixty, { peak: 70, season: 0 }], 1)).toBe(61);
   });
 });

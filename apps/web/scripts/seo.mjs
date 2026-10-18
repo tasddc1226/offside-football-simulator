@@ -283,6 +283,7 @@ const GUIDE_SECTIONS = [
     [
       '직접 키운 선수의 업적은 은퇴 후 해당 서비스 시즌에서 판정합니다. 장기근속은 한 일반 프로 구단의 누적 재적 10시즌 이상으로, 이적 후 복귀한 기간도 합산하고 상무·현역 복무는 제외합니다. 원클럽맨은 총 프로 10시즌 이상과 일반 구단 한 곳이 조건이며, 상무·현역 복무는 구단 수에서 제외합니다. 고교·대학 시즌은 두 업적에 포함하지 않습니다.',
       guideCopy.teamAssembly,
+      guideCopy.salaryBudget,
       guideCopy.ownerRecords,
       guideCopy.teamSynergy,
       guideCopy.matchReport,
@@ -351,6 +352,7 @@ const guideBody = `<div class="os-screen"><header><p class="os-eyebrow">HOW TO P
 const FAQ_ITEMS = [
   ['이적 제의에 표시되는 예상 순위가 현재 순위인가요?', guideCopy.transferPreview],
   ['연애설 이벤트는 언제 나오나요?', guideCopy.datingRumor],
+  ['지난 시즌 선수 급여는 어떻게 정해지나요?', guideCopy.salaryBudget],
   ['경기 리포트의 기대 득점(xG)은 무엇인가요?', guideCopy.matchReport],
   ['경기 평점은 어떻게 정해지나요?', guideCopy.ratingParts],
   ['임대를 갈 수 있나요?', guideCopy.loan],

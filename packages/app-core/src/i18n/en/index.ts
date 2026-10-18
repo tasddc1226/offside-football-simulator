@@ -76,6 +76,7 @@ import { retention } from './retention';
 import { retired } from './retired';
 import { retiredLook } from './retiredLook';
 import { reveal } from './reveal';
+import { salary } from './salary';
 import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
 import { seasonRecap } from './seasonRecap';
@@ -180,6 +181,7 @@ export const en = {
   retired,
   retiredLook,
   reveal,
+  salary,
   scout,
   seasonGauge,
   seasonRecap,
