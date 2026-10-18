@@ -7,7 +7,20 @@ import {
   invalidateApiCache,
 } from '@offside/app-core/api/client';
 import { CONSENT_KEY } from '@offside/app-core/analytics-model';
-import { entryCampaign as landing } from './entry-campaign.js';
+import {
+  entryCampaign as landing,
+  restoreEntryCampaign,
+  resetEntryCampaign,
+} from './entry-campaign.js';
+import {
+  clearOAuthCampaign,
+  oauthMeasurementAllowed,
+  oauthCampaignCurrent,
+  withdrawOAuthCampaign,
+  rememberOAuthCampaign,
+  takeOAuthCampaign,
+  type OAuthProvider,
+} from './oauth-campaign.js';
 import {
   ACQUISITION_CONSENT_VERSION as version,
   ACQUISITION_SESSION_MS,
@@ -24,6 +37,66 @@ let blocked = false;
 let epoch = 0;
 let queue = Promise.resolve();
 let wireQueue = Promise.resolve();
+const oauthContext =
+  acquisitionEnabled() && typeof location !== 'undefined' ? takeOAuthCampaign(location.href) : null;
+let oauthResolution: Promise<void> | undefined;
+let continuationProfile: string | null = null;
+let continuationCancelled = false;
+function clearContinuation() {
+  clearOAuthCampaign();
+  continuationCancelled = true;
+  continuationProfile = null;
+  resetEntryCampaign();
+}
+function checkContinuation(account: string) {
+  if (
+    continuationProfile &&
+    (continuationProfile !== account || !oauthContext || !oauthCampaignCurrent(oauthContext.at))
+  )
+    clearContinuation();
+}
+async function resolveOAuthCampaign() {
+  if (!oauthContext) return;
+  oauthResolution ??= (async () => {
+    // URL flags alone never prove a login. Read the current authenticated server profile.
+    const me = await getProfile();
+    if (
+      !me.ok ||
+      continuationCancelled ||
+      !me.data.linked[oauthContext.provider] ||
+      !oauthCampaignCurrent(oauthContext.at)
+    )
+      return;
+    // A continuation is a new visit, never a transfer/replay of the old profile's touch/events.
+    sessionStorage.removeItem(SESSION_KEY);
+    continuationProfile = me.data.id;
+    restoreEntryCampaign(oauthContext.campaign);
+    invalidateApiCache('/v1/acquisition/consent');
+  })().catch(() => {});
+  await oauthResolution;
+}
+/** Called only at an explicit web login action, after its current profile was read. */
+export async function prepareAcquisitionOAuth(provider: OAuthProvider, account: string) {
+  clearOAuthCampaign();
+  if (!acquisitionEnabled() || !acquisitionGranted()) return;
+  try {
+    const generation = epoch;
+    const response = await request();
+    const state = response.ok
+      ? ((await response.json()) as { profileId: string; granted: boolean })
+      : null;
+    rememberOAuthCampaign(
+      provider,
+      landing,
+      !!state?.granted &&
+        state.profileId === account &&
+        generation === epoch &&
+        acquisitionGranted(),
+    );
+  } catch {
+    clearOAuthCampaign();
+  } // Optional measurement must never prevent login.
+}
 function analyticsAllowed() {
   try {
     return localStorage.getItem(CONSENT_KEY) === 'granted';
@@ -78,6 +151,7 @@ export async function acquisitionStatus(): Promise<'granted' | 'denied' | 'unkno
   if (!acquisitionEnabled()) return 'denied';
   const generation = epoch;
   try {
+    if (oauthContext) await resolveOAuthCampaign();
     const pending = localStorage.getItem(REVOKE_KEY);
     if (pending) {
       blocked = true;
@@ -97,6 +171,7 @@ export async function acquisitionStatus(): Promise<'granted' | 'denied' | 'unkno
     }
     const state = (await response.json()) as { profileId: string; granted: boolean };
     if (generation !== epoch || !analyticsAllowed()) return 'denied';
+    checkContinuation(state.profileId);
     if (profileId && profileId !== state.profileId) sessionStorage.removeItem(SESSION_KEY);
     profileId = state.profileId;
     localStorage.setItem(PROFILE_KEY, profileId);
@@ -115,6 +190,10 @@ export async function acquisitionStatus(): Promise<'granted' | 'denied' | 'unkno
 export async function setAcquisitionConsent(value: 'granted' | 'denied'): Promise<boolean> {
   const generation = ++epoch;
   granted = false;
+  if (value === 'denied') {
+    withdrawOAuthCampaign();
+    clearContinuation();
+  }
   try {
     if (value === 'denied') {
       blocked = true;
@@ -142,10 +221,13 @@ export async function setAcquisitionConsent(value: 'granted' | 'denied'): Promis
       return true;
     }
     if (!acquisitionEnabled() || !analyticsAllowed()) return false;
+    if (oauthContext) await resolveOAuthCampaign();
+    if (generation !== epoch || !analyticsAllowed()) return false;
     // Only an explicit choice can create a profile. No forced login.
     const me = await getProfile();
     if (!me.ok || generation !== epoch || !analyticsAllowed()) return false;
     const expectedProfile = me.data.id;
+    checkContinuation(expectedProfile);
     const pending = localStorage.getItem(REVOKE_KEY);
     if (pending) {
       if (pending === UNRESOLVED) return false;
@@ -182,6 +264,7 @@ export function recordAcquisition(action: 'session' | 'start' | 'store_click') {
   queue = queue.then(async () => {
     if (generation !== epoch || !acquisitionGranted()) return;
     try {
+      checkContinuation(profileId!);
       const now = Date.now();
       let session = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? 'null') as {
         id: string;
@@ -219,6 +302,14 @@ if (typeof window !== 'undefined' && acquisitionEnabled())
     if (e.key === CONSENT_KEY || e.key === REVOKE_KEY || e.key === CHOICE_KEY || e.key === null) {
       epoch++;
       granted = false;
-      if (!analyticsAllowed() || localStorage.getItem(CHOICE_KEY) === 'denied') blocked = true;
+      // A denied→granted pair can queue before this tab runs. Keep the event's withdrawal,
+      // even when localStorage already contains the later grant by the time we handle it.
+      const withdrawal =
+        e.key === null ||
+        ((e.key === CONSENT_KEY || e.key === CHOICE_KEY) && e.newValue !== 'granted') ||
+        (e.key === REVOKE_KEY && e.newValue !== null);
+      if (withdrawal || !analyticsAllowed() || localStorage.getItem(CHOICE_KEY) === 'denied')
+        blocked = true;
+      if (withdrawal || !oauthMeasurementAllowed()) clearContinuation();
     }
   });
