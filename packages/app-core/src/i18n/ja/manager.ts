@@ -90,7 +90,7 @@ export const manager: Translation<ManagerMsgs> = {
   effect: '監督枠の効果',
   effectFor: (p) => `${p.formation}のとき`,
   effectNote:
-    '特技は、対応するチームシナジーが発動しているときだけ加算されます。4-2-3-1などの変形配置は、元のフォーメーション（4-3-3・4-4-2・3-5-2）の熟練度を使います。',
+    '特技は、対応するチームシナジーが発動しているときだけ加算されます。4-2-3-1などの変形配置は、元のフォーメーション（4-3-3・4-4-2・3-5-2）の熟練度を使います。監督補正はライン（攻撃・中盤・守備）ごとに−1.5から+3.0までです。',
   coachNow: '自分のチームの監督',
   seat: 'チームの監督にする',
   unseat: '監督枠を空ける',
@@ -129,6 +129,17 @@ export const manager: Translation<ManagerMsgs> = {
   teamCoach: '監督枠',
   teamCoachEmpty: '空いています',
   teamCoachManage: '監督を選ぶ',
+  /** T-11-382 監督枠の補正内訳。 */
+  breakdown: '補正の内訳',
+  partStyle: (p: { name: string }) => `${p.name}志向`,
+  breakdownCapped: (p: { raw: string; max: string }) =>
+    `合計は${p.raw}ですが、ラインごとに最大${p.max}までしか加わりません。`,
+  breakdownFloor: (p: { raw: string; min: string }) =>
+    `合計は${p.raw}ですが、ラインごとに${p.min}より下がりません。`,
+  breakdownOff: (p: { names: string }) =>
+    `${p.names}：対になるチームシナジーがオフなので加わりません。`,
+  breakdownNote:
+    '監督補正はラインごとに−1.5から+3.0までです。特技は対のシナジーが複数オンでも一度だけ加わります。',
   profileCoach: '就任中の監督',
   teamCoachLine: (p: { v: string }) => `監督 ${p.v}`,
   oddsSure: '確定',
