@@ -137,17 +137,17 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
               const tint = itemColor(c, cell.item);
               return (
                 <View key={cell.n} style={{ width: `${100 / 7}%`, padding: 2 }}>
-                  {/* 글자는 기본 글자색, 아이템은 칸 바탕 · 아래 막대 색으로만 보인다(색 글자는 옅은 바탕에서 대비가 모자란다). */}
+                  {/* T-11-378 동그라미 도장. 글자는 기본 글자색, 아이템은 칸 바탕 · 테두리 고리 색으로만 보인다(색 글자는
+                      옅은 바탕에서 대비가 모자란다). 큰 보상 칸은 고리가 두껍고, 오늘 칸은 점선이다. */}
                   <View
                     style={{
-                      aspectRatio: 1.15,
-                      borderRadius: 6,
-                      overflow: 'hidden',
+                      aspectRatio: 1,
+                      borderRadius: 999,
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: 1,
                       backgroundColor: cell.on ? c.accent : alpha(tint, cell.big ? 0.16 : 0.08),
-                      borderWidth: cell.today ? 2 : cell.big && !cell.on ? 1 : 0,
+                      borderWidth: cell.on ? 0 : cell.today || !cell.big ? 2 : 3,
                       borderStyle: cell.today ? 'dashed' : 'solid',
                       borderColor: cell.today ? c.accent : tint,
                     }}
@@ -161,18 +161,6 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
                     <Txt v="xs" bold num style={{ color: cell.on ? c.accentInk : c.ink }}>
                       {cell.on ? '✓' : cell.big ? '🎁' : `+${cell.qty}`}
                     </Txt>
-                    {cell.on ? null : (
-                      <View
-                        style={{
-                          position: 'absolute',
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          height: 3,
-                          backgroundColor: tint,
-                        }}
-                      />
-                    )}
                   </View>
                 </View>
               );
@@ -186,7 +174,7 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
             {ITEMS.map((k) => (
               <Row key={k} style={{ gap: 4, alignItems: 'center' }}>
                 <View
-                  style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: itemColor(c, k) }}
+                  style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: itemColor(c, k) }}
                 />
                 <Txt v="xs" tone="muted">
                   {ITEM[k]}

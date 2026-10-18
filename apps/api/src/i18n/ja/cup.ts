@@ -32,6 +32,11 @@ export const CUP_JA: Record<CupTextKey, string> = {
   noReroll: 'リロール券がありません。',
   noBoost: 'ポテンシャル強化券がありません。',
   noScout: 'プレミアムスカウト券がありません。',
+  noRename: '選手名変更券がありません。',
+  renameNotMine: '自分の選手だけ名前を変えられます。',
+  renameHidden: '通報で非表示になった選手は名前を変えられません。',
+  renameName: 'この名前は使えません。別の名前を入れてください。',
+  renameSame: '今の名前と同じです。',
   giftClaimed: 'このプレゼントはすでに受け取りました。',
   attendanceChecked: '今日はすでに出席しました。',
   iapInvalid: '購入を確認できませんでした。',
@@ -82,4 +87,5 @@ export const CUP_JA: Record<CupTextKey, string> = {
   grantReroll: '運営チームから選手候補リロール券が{n}枚届きました。',
   grantBoost: '運営チームからポテンシャル強化券が{n}枚届きました。',
   grantScout: '運営チームからプレミアムスカウト券が{n}枚届きました。',
+  grantRename: '運営チームから選手名変更券が{n}枚届きました。',
 };

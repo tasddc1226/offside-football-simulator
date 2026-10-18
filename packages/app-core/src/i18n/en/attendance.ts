@@ -19,6 +19,7 @@ export const attendance: Translation<AttendanceMsgs> = {
   reroll: (p) => `${p.n} reroll ${tickets(p.n)}`,
   boost: (p) => `${p.n} boost ${tickets(p.n)}`,
   scout: (p) => `${p.n} premium scout ${tickets(p.n)}`,
+  rename: (p) => `${p.n} player rename ${tickets(p.n)}`,
   itemReroll: 'Reroll ticket',
   itemBoost: 'Boost ticket',
   itemScout: 'Premium scout ticket',

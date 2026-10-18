@@ -35,6 +35,7 @@ import { TitleBadge } from '../../components/TitleBadge';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { ownerProfileText as H } from '@offside/app-core/i18n/ko/ownerProfile';
 import { BoostShop } from './BoostShop';
+import { RenameShop } from './RenameShop';
 import { ScoutShop } from './ScoutShop';
 import { RerollShop } from './RerollShop';
 import { GRADE_COLOR, Grid2, OvrBadge, Stats, type StatPress } from './TeamParts';
@@ -488,6 +489,7 @@ export default function Owner() {
             }
           />
           <BoostShop />
+          <RenameShop />
           <ScoutShop
             onBought={(balance, spent) =>
               setMarket((m) => m && { balance, clubValue: m.clubValue - spent })

@@ -1,6 +1,9 @@
 import { careerReminderText as reminderKo } from '../i18n/ko/careerReminder.js';
 import { careerReminderText as reminderEn } from '../i18n/en/careerReminder.js';
 import { careerReminderText as reminderJa } from '../i18n/ja/careerReminder.js';
+import { attendanceReminderText as attendanceKo } from '../i18n/ko/attendanceReminder.js';
+import { attendanceReminderText as attendanceEn } from '../i18n/en/attendanceReminder.js';
+import { attendanceReminderText as attendanceJa } from '../i18n/ja/attendanceReminder.js';
 import { RETIRED_NUMBER_SCOUTS } from '@offside/contracts/cup';
 import { INVITE_REROLLS, INVITE_SCOUTS } from '@offside/contracts/owner-team';
 import { OLD_INVITEE, OLD_INVITER, PUSH_JA, PUSH_TAIL_JA } from '../i18n/ja/push.js';
@@ -68,6 +71,10 @@ export function pushText(ko: string, lang: Lang): string {
     if (ko === reminderKo[i]!.title) return reminders[i]!.title;
     if (ko === reminderKo[i]!.body) return reminders[i]!.body;
   }
+  // T-11-378 출석 독려.
+  const attendance = lang === 'en' ? attendanceEn : attendanceJa;
+  if (ko === attendanceKo.title) return attendance.title;
+  if (ko === attendanceKo.body) return attendance.body;
   const T = TABLES[lang];
   const hit = T.exact[ko];
   if (hit) return hit;
