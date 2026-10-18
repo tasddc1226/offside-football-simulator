@@ -24,7 +24,7 @@ import { isMember } from '@offside/app-core/account';
 import { go, takeFocus } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
-import { Btn, Card, Pill, Press, Row, Screen, Topbar, Txt } from '../../ui';
+import { Btn, Card, Pill, Press, Row, Screen, Topbar, Txt, Skeleton } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 import { Account } from './Account';
 import { OwnerProfileEditor } from './OwnerProfileEditor';
@@ -325,9 +325,13 @@ export default function Owner() {
               </>
             ) : (
               <>
-                <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                  {card ? ownerTeamEmptyText(card) : cardFailed ? L.teamFailed : L.loading}
-                </Txt>
+                {card || cardFailed ? (
+                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                    {card ? ownerTeamEmptyText(card) : L.teamFailed}
+                  </Txt>
+                ) : (
+                  <Skeleton rows={2} />
+                )}
                 <Btn
                   kind={card && card.players > 0 ? 'primary' : 'default'}
                   block

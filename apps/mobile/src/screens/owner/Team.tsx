@@ -82,6 +82,7 @@ import { notificationDestination } from '../../platform/notificationDestination'
 import { useColors } from '../../theme/useColors';
 import { BackBar, Btn, Card, Screen, Topbar, Txt, scrollTo } from '../../ui';
 import { BarBelow } from '../../ui/Screen';
+import { SkeletonFrame, useSkeletonBlock } from '../../ui/Skeleton';
 import { useOnPull } from '../../ui/refresh';
 import { TabBar, type TabItem } from '../../ui/TabBar';
 import type { TabIconName } from '../../ui/TabIcon';
@@ -1195,7 +1196,12 @@ export default function Team() {
             }
           >
             <Topbar />
-            <LoadState status={status} failText={L.loadFail} retry={() => void load()}>
+            <LoadState
+              status={status}
+              failText={L.loadFail}
+              retry={() => void load()}
+              skeleton={<PitchSkeleton />}
+            >
               {body}
             </LoadState>
           </Screen>
@@ -1248,5 +1254,46 @@ export default function Team() {
       ) : null}
       {share ? <TeamShare data={share} close={() => setShare(null)} /> : null}
     </>
+  );
+}
+
+// T-11-392 팀을 불러오는 동안: 팀 이름 줄 + 4-3-3 자리 점이 찍힌 그라운드(웹 Team.svelte .tm-sk).
+const SK_DOTS = [
+  [50, 90],
+  [14, 70],
+  [38, 73],
+  [62, 73],
+  [86, 70],
+  [25, 48],
+  [50, 51],
+  [75, 48],
+  [20, 22],
+  [50, 18],
+  [80, 22],
+] as const;
+function PitchSkeleton() {
+  const block = useSkeletonBlock();
+  return (
+    <SkeletonFrame testID="team-skeleton">
+      <View style={[block, { width: '52%', height: 24, borderRadius: 8 }]} />
+      <View style={[block, { width: '100%', aspectRatio: 2 / 3, borderRadius: 12 }]}>
+        {SK_DOTS.map(([x, y], i) => (
+          <View
+            key={i}
+            style={{
+              position: 'absolute',
+              left: `${x}%`,
+              top: `${y}%`,
+              width: 32,
+              height: 32,
+              marginLeft: -16,
+              marginTop: -16,
+              borderRadius: 16,
+              backgroundColor: block.borderColor,
+            }}
+          />
+        ))}
+      </View>
+    </SkeletonFrame>
   );
 }

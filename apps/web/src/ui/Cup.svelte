@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   import LoginButtons from './LoginButtons.svelte';
   // T-11-145 오프사이드 컵 화면 — 구단주 화면의 컵 배너로 연다. 내 상태(신청·다음 경기), 토너먼트 대진, 조별 순위표와 경기,
   // 일정·보상·규칙. 치른 경기를 누르면 같은 화면에서 상세(득점·승부차기)를 연다. 처음 열 때 불러오는 지연 청크다.
@@ -134,6 +135,9 @@
   }
 </script>
 
+<!-- T-11-392 컵을 불러오는 동안: 대회 현황 카드 + 대진 카드. -->
+{#snippet cupSkeleton()}<div class="stack"><Skeleton height={120} /><Skeleton height={260} /></div>{/snippet}
+
 <div class="wrap">
   <Topbar />
   {#if detail && data}
@@ -146,7 +150,7 @@
       <div class="eyebrow">Offside Cup</div>
       <h1>{data ? L.fullTitle({ n: data.cup.edition }) : L.title}</h1>
     </header>
-    <LoadState {status} failText={L.loadFail} retry={load}>
+    <LoadState {status} failText={L.loadFail} retry={load} skeleton={cupSkeleton}>
       {#if data}
         {#if accountCache.value && accountCache.value !== 'error' && !linked}
           <section class="card stack cup-login" data-cup-login>
