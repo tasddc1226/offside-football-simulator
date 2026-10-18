@@ -165,8 +165,11 @@ test('actual play measures first action, milestones and a resumed career without
     }
     await page.waitForTimeout(50);
   }
-  for (let i = 0; i < 300 && (await events('career_progress_milestone')).length === 0; i++)
+  // Moment/result cards can spend many steps waiting; bound wall time, not no-op step count.
+  const progressDeadline = Date.now() + 90_000;
+  while (Date.now() < progressDeadline && (await events('career_progress_milestone')).length === 0)
     await step();
+  expect(await events('career_progress_milestone')).toHaveLength(1);
   expect(await events('first_action_complete')).toHaveLength(0);
   expect(await events('first_season_complete')).toHaveLength(1);
   expect(await events('player_first_play')).toHaveLength(1);
@@ -183,7 +186,6 @@ test('actual play measures first action, milestones and a resumed career without
       (x) => (x[2] as { outcome: string }).outcome !== 'failed',
     ),
   ).toBe(true);
-  expect(await events('career_progress_milestone')).toHaveLength(1);
   expect((await events('career_progress_milestone'))[0]?.[2]).toMatchObject({
     milestone_seasons: 3,
   });
