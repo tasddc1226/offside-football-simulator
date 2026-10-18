@@ -4,7 +4,7 @@ T-11-385. 설정 정본은 [정책 파일](../../tooling/cloudflare-infra-policy
 
 ## 정기 점검
 
-기존 `Production infrastructure health`가 매시간 UTC 17분에 실행된다. 기존 D1 건강 상태·완료 백업 확인 뒤 `infra-health.mjs --resources`로 큐 목록 1회, DLQ 지표 4회, R2 최근 저장량 GraphQL 1회, 공개 DNS의 DS·A 검증 2회를 읽는다. D1/R2/큐에 쓰거나 메시지를 꺼내지 않는다. 이 GitHub Actions 점검은 별도 로컬 MCP 모니터의 승인 도구 목록을 바꾸지 않는다.
+기존 `Production infrastructure health`는 매시간 UTC 17분에 실행하도록 예약돼 있다. GitHub 예약은 실제 시작이 지연되거나 누락될 수 있으므로 마지막 `event=schedule` 실행 시각과 수동 실행을 구분해 확인한다. 기존 D1 건강 상태·완료 백업 확인 뒤 `infra-health.mjs --resources`로 큐 목록 1회, DLQ 지표 4회, R2 최근 저장량 GraphQL 1회, 공개 DNS의 DS·A 검증 2회를 읽는다. D1/R2/큐에 쓰거나 메시지를 꺼내지 않는다. 이 GitHub Actions 점검은 별도 로컬 MCP 모니터의 승인 도구 목록을 바꾸지 않는다.
 
 - DLQ 적체가 1건 이상이거나 14일 보존 정책이 달라지거나 조회가 불가능하면 잡이 실패한다. `0`은 지표 API에서 실제 0을 받은 경우에만 표시한다.
 - R2 현재 payload가 9GB(10GB 참조량의 90%) 이상이면 저장 정책 검토 경고를 남긴다. 최근 2시간 관측이 없거나 Analytics 권한이 없으면 `unknown` 경고다. 실제 월 GB-month 청구량이나 서비스 장애로 해석하지 않는다.
