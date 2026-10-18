@@ -331,3 +331,86 @@ describe('push performance and private interactions', () => {
     ).toBe(1);
   });
 });
+
+describe('admin push operations filters', () => {
+  it('splits pre-send and receipt states without changing historical accepted counts', async () => {
+    const a = await identity();
+    await device(a);
+    for (const state of [
+      'pending',
+      'sending',
+      'accepted',
+      'checking',
+      'failed',
+      'unknown',
+      'cancelled',
+    ]) {
+      const id = await queue(a, `state:${state}`);
+      await ctx.env.DB.prepare(
+        'UPDATE push_results SET state = ?, accepted_at = ? WHERE notification_id = ?',
+      )
+        .bind(state, ['accepted', 'checking'].includes(state) ? now() : null, id)
+        .run();
+    }
+    expect((await report()).totals).toMatchObject({
+      pending: 4,
+      waiting: 1,
+      sending: 1,
+      checking: 2,
+      accepted: 2,
+      failed: 1,
+      unknown: 1,
+      cancelled: 1,
+    });
+  });
+  it('filters problems before pagination and keeps full-cohort summary for comparison', async () => {
+    const a = await identity(true);
+    await device(a);
+    const old = new Date(Date.now() - 86400_000).toISOString();
+    const failed = await queue(a, 'older-failed', 'team', old);
+    await ctx.env.DB.prepare("UPDATE push_results SET state = 'failed' WHERE notification_id = ?")
+      .bind(failed)
+      .run();
+    for (let n = 0; n < 23; n++) await queue(a, `healthy:${n}`);
+    const r = await getPushPerformance(ctx.env.DB, {
+      days: '7',
+      page: 0,
+      category: 'team',
+      issues: '1',
+    });
+    expect(r.campaigns.map((c) => c.id)).toEqual([failed]);
+    expect(r.totals.queued).toBe(24);
+    expect(r.hasMore).toBe(false);
+    expect(
+      (await getPushPerformance(ctx.env.DB, { days: '7', page: 0, category: 'notice' })).totals
+        .queued,
+    ).toBe(0);
+    expect((await call(a, '/v1/admin/push-performance?category=invalid')).status).toBe(400);
+  });
+  it('uses KST today/yesterday boundaries and preserves yesterday through midnight pagination', async () => {
+    const a = await identity();
+    await device(a);
+    const at = new Date('2026-10-18T15:00:00.000Z');
+    await queue(a, 'before-midnight', 'team', '2026-10-18T14:59:59.999Z');
+    await queue(a, 'midnight', 'team', at.toISOString());
+    const today = await getPushPerformance(ctx.env.DB, { days: '1', page: 0 }, at);
+    expect(today.totals.queued).toBe(1);
+    expect(today.from).toBe('2026-10-18T15:00:00.000Z');
+    const yesterday = await getPushPerformance(
+      ctx.env.DB,
+      { days: '1', page: 0, previous: '1' },
+      at,
+    );
+    expect(yesterday.totals.queued).toBe(1);
+    expect(yesterday.from).toBe('2026-10-17T15:00:00.000Z');
+    expect(yesterday.cohortThrough).toBe('2026-10-18T14:59:59.999Z');
+    const next = await getPushPerformance(
+      ctx.env.DB,
+      { days: '1', page: 1, previous: '1', through: yesterday.cohortThrough },
+      new Date('2026-10-19T16:00:00.000Z'),
+    );
+    expect(next.from).toBe(yesterday.from);
+    expect(next.cohortThrough).toBe(yesterday.cohortThrough);
+    expect(next.totals).toEqual(yesterday.totals);
+  });
+});

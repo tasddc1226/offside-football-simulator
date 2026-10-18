@@ -3,6 +3,7 @@
 import { en as gameEngine } from '@offside/game/i18n/en/index';
 import { account } from './account';
 import { ad } from './ad';
+import { adminPush } from './adminPush';
 import { appFlight } from './appFlight';
 import { appFormat } from './appFormat';
 import { appScout } from './appScout';
@@ -107,6 +108,7 @@ export const en = {
   ...gameEngine,
   account,
   ad,
+  adminPush,
   appFlight,
   appFormat,
   appScout,
