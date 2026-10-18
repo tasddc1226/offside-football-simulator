@@ -327,7 +327,14 @@ export const slotRating = (slot: DetailPos, p: SlotPlayer): number => {
   const role = p.roles[slot] ?? p.roles[BASE_DETAIL[slot]];
   // T-11-237 타겟맨 유형은 최고 OVR을 스트라이커·타겟맨 역할 중 높은 쪽으로 잰다(T-11-229). 자리별 실력의 ST는 스트라이커
   // 역할로만 저장돼 헤딩·몸싸움으로 키운 타겟맨이 스트라이커 자리에서도 최고 OVR보다 낮게 뛰었다 — 스트라이커 자리는 최고 OVR 아래로 내리지 않는다.
-  const own = p.type === 'target' && BASE_DETAIL[slot] === 'ST' ? Math.max(role, p.peak) : role;
+  const own =
+    p.type === 'target' && BASE_DETAIL[slot] === 'ST'
+      ? Math.max(role, p.peak)
+      : // T-11-383 윙어 유형은 좌·우 미드필더 자리에서 중앙 미드필더 · 윙어 역할 중 높은 쪽으로 뛴다. 선수 커리어 OVR(T-11-236
+        // wingerRole)과 같은 규칙인데 팀 자리만 중앙 미드필더 역할로 재서 측면 미드필더 윙어가 제자리에서 크게 떨어졌다.
+        p.type === 'winger' && (slot === 'LM' || slot === 'RM')
+        ? Math.max(role, p.roles.W)
+        : role;
   return Math.min(own, p.peak + SLOT_OVER_PEAK);
 };
 
