@@ -186,12 +186,15 @@ jobs:
           CI: 'true'
           E2E_PREBUILT: '1'
           E2E_SCOPE: ${{ needs.pr-plan.outputs.web_e2e_scope }}
-      - name: Verify consent-gated analytics with a test tag
+      - name: Verify consent-gated analytics and acquisition with test settings
         if: needs.pr-plan.outputs.web_e2e_scope != 'admin' && matrix.shard == strategy.job-total
-        run: pnpm --filter @offside/web exec playwright test analytics.spec.ts --workers=1
+        run: pnpm --filter @offside/web exec playwright test analytics.spec.ts acquisition.spec.ts --workers=1
         env:
           CI: 'true'
           E2E_ANALYTICS: '1'
+          E2E_ACQUISITION: '1'
+          VITE_ACQUISITION_ENABLED: 'true'
+          VITE_APPLE_PROVIDER_TOKEN: '123456'
           VITE_GA4_MEASUREMENT_ID: G-TEST123456
           VITE_GA4_HOSTNAME: localhost
       - uses: actions/upload-artifact@v4
@@ -214,6 +217,12 @@ jobs:
       # Serialize staging migrations and deployments against the shared staging environment.
       group: cloudflare-staging
       cancel-in-progress: false
+    env:
+      # Public first-party acquisition settings; empty flags stay off. No environment values are changed here.
+      VITE_ACQUISITION_ENABLED: ${{ vars.VITE_ACQUISITION_ENABLED || 'false' }}
+      VITE_APPLE_PROVIDER_TOKEN: ${{ vars.VITE_APPLE_PROVIDER_TOKEN }}
+      ACQUISITION_ENABLED: ${{ vars.ACQUISITION_ENABLED || '0' }}
+      APPLE_PROVIDER_TOKEN: ${{ vars.APPLE_PROVIDER_TOKEN }}
     environment:
       name: staging
       url: https://offside-web-staging.tasddc1569.workers.dev
@@ -257,6 +266,9 @@ jobs:
       - if: steps.scope.outputs.code_changed == 'true'
         run: pnpm install --frozen-lockfile
       # 검사·테스트·e2e는 PR에서 이미 돌았다(T-10-061). 여기서는 staging에 올릴 빌드만 만든다.
+      - name: Validate acquisition deployment configuration
+        if: steps.scope.outputs.code_changed == 'true'
+        run: node .github/scripts/acquisition-release.mjs validate
       - name: Build before remote writes
         if: steps.scope.outputs.code_changed == 'true'
         run: |
@@ -270,8 +282,8 @@ jobs:
         if: steps.scope.outputs.code_changed == 'true' && vars.STAGING_ENABLED == 'true'
         run: |
           pnpm --filter @offside/api db:migrate:staging
-          pnpm --filter @offside/api deploy:staging
-          pnpm --filter @offside/web deploy:staging
+          node .github/scripts/acquisition-release.mjs deploy-api staging
+          node .github/scripts/acquisition-release.mjs deploy-web staging
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

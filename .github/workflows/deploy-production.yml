@@ -37,6 +37,11 @@ jobs:
       PRODUCTION_API_URL: https://api.offside-lab.com
       PRODUCTION_WEB_URL: https://offside-lab.com
       # 공개 VITE_ 설정을 더하거나 빼면 apps/web/scripts/check-bundle-prod.mjs(PR CI 첫 화면 예산 검사)도 맞춘다.
+      # Public first-party acquisition settings; empty flags stay off. No environment values are changed here.
+      VITE_ACQUISITION_ENABLED: ${{ vars.VITE_ACQUISITION_ENABLED || 'false' }}
+      VITE_APPLE_PROVIDER_TOKEN: ${{ vars.VITE_APPLE_PROVIDER_TOKEN }}
+      ACQUISITION_ENABLED: ${{ vars.ACQUISITION_ENABLED || '0' }}
+      APPLE_PROVIDER_TOKEN: ${{ vars.APPLE_PROVIDER_TOKEN }}
       VITE_PUBLIC_SITE_URL: https://offside-lab.com
       VITE_ENABLE_SEARCH_INDEXING: 'true'
       # Empty until the consent notice and GA4 console setup are approved for release.
@@ -109,6 +114,9 @@ jobs:
           pnpm --filter @offside/api typecheck
           pnpm --filter @offside/web typecheck
 
+      - name: Validate acquisition deployment configuration
+        run: node .github/scripts/acquisition-release.mjs validate
+
       - name: Build production web before remote writes
         if: inputs.mode == 'deploy'
         run: |
@@ -163,7 +171,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: pnpm --filter @offside/api deploy:production
+        run: node .github/scripts/acquisition-release.mjs deploy-api production
 
       - name: Sync Google OIDC secrets
         if: inputs.mode == 'deploy' && steps.google-secrets.outputs.sync == 'true'
@@ -194,7 +202,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: pnpm --filter @offside/web deploy:production
+        run: node .github/scripts/acquisition-release.mjs deploy-web production
 
       - name: Verify candidate web assets before read-back
         if: inputs.mode == 'deploy'
@@ -204,7 +212,11 @@ jobs:
         if: inputs.mode == 'deploy'
         run: |
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_API_URL/v1/health" >/dev/null
-          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_API_URL/v1/profile" >/dev/null
+          # An unauthenticated profile GET creates a profile. Verify rejection without creating smoke data.
+          PROFILE_STATUS="$(curl --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
+            --output /dev/null --write-out '%{http_code}' --header 'Authorization: Bearer release-smoke-invalid' \
+            "$PRODUCTION_API_URL/v1/profile")"
+          test "$PROFILE_STATUS" = '401' || { echo "Expected read-only profile rejection, got $PROFILE_STATUS." >&2; exit 1; }
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_WEB_URL/" | grep -qF '오프사이드'
 
       - name: Inspect announcement push outbox counts
