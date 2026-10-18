@@ -1,0 +1,17 @@
+{
+  "id": "t-11-383-winger-wide-slot",
+  "title": "측면 미드필더 자리의 윙어",
+  "items": ["윙어 유형이 팀의 왼쪽·오른쪽 미드필더 자리에서 제 실력대로 뛰어요."],
+  "en": {
+    "title": "Wingers in wide midfield slots",
+    "items": [
+      "Winger-type players now play at their real level in the team's left and right midfield slots."
+    ]
+  },
+  "ja": {
+    "title": "サイドMFのウインガー",
+    "items": ["ウインガー型の選手がチームの左右MFの位置で本来の実力どおりに出場します。"]
+  },
+  "availability": "web-app",
+  "balance": true
+}

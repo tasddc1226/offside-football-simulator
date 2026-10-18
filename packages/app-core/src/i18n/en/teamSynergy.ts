@@ -63,7 +63,7 @@ export const teamSynergy: Translation<TeamSynergyMsgs> = {
   fitEffect: (p) => `Position rating ${p.v}`,
   fitEffectBoth: (p) => `Position rating ${p.v} (two-footed ${p.both})`,
   requirementsHint:
-    'Duos need both the player type and a listed position. Tap a player card to check the type. A Speedster at W / LW / RW does not meet the Winger type requirement.',
+    'Duos need both the player type and a listed position. Tap a player card to check the type. A Speedster at W / LW / RW does not meet the Winger type requirement. W / LW / RW slots use the winger role rating, so a Winger type developed as an attacking or central midfielder plays below its OVR there if its pace and crossing lag.',
   title: 'Team synergy',
   chipApplied: 'Active',
   chipViewing: 'Showing',
