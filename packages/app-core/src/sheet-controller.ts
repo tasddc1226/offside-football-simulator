@@ -192,13 +192,10 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
     /** ms 동안 쉬되 건너뛰기를 누르면 바로 깬다. */
     const sleep = (ms: number) =>
       new Promise<void>((r) => {
-        const t = setTimeout(() => {
-          wake = null;
-          r();
-        }, ms);
+        const t = setTimeout(r, ms);
+        // 이미 깬 뒤에 다시 불러도 끝난 타이머 · 약속이라 아무 일도 없다.
         wake = () => {
           clearTimeout(t);
-          wake = null;
           r();
         };
       });
