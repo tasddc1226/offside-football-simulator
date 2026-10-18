@@ -298,7 +298,8 @@ export function createGameActions(host: GameHost) {
           settle,
           lines,
         });
-        await sheet.playBlock(
+        await km.playBlock(
+          sheet,
           {
             eyebrow: L.phaseRunning({ year: s.year, phase: PHASES[ph]! }),
             title: L.blockTitle({ range, n: r.block.n }),

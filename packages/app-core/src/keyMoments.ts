@@ -13,14 +13,17 @@ import {
 } from '@offside/game/moment-choices';
 import type { CareerMoment, MomentPicks } from '@offside/game/moments';
 import { momentHooks } from '@offside/game/moments';
-import { createRng, setActiveRng } from '@offside/game/rng';
+import { clamp, createRng, setActiveRng } from '@offside/game/rng';
 import { playPhase } from '@offside/game/turn';
 export { momentHooks };
 import type { CompLine } from '@offside/game/comps';
 import type { PhaseResult } from '@offside/game/turn';
 import type { GameState } from '@offside/game/types';
 import { keyMomentText as K } from './i18n/ko/keyMoment.js';
-import type { MomentCard, MomentDriver, MomentView, TickerRow } from './sheets.js';
+import type { MomentCard, MomentDriver, MomentView, SheetView, TickerRow } from './sheets.js';
+import { STEP_MS, type SheetController } from './sheet-controller.js';
+import { shellText as L } from './i18n/ko/shell.js';
+import type { BlockResult } from '@offside/game/match';
 
 const playedFinal = (l: CompLine) => l.games.some((g) => g.stage === '결승' && g.mins > 0); // i18n-ignore 저장값
 /** 선택 제한 시간(초)과 고른 뒤 결과 줄이 머무는 시간. */
@@ -191,4 +194,133 @@ export function createMomentDriver(o: {
     },
   };
   return d;
+}
+
+type ViewOf<K extends SheetView['kind']> = Extract<SheetView, { kind: K }>;
+/** 한 구간(시즌 절반) 문자중계 총 길이 목표와 경기당 간격 범위. */
+const BLOCK_TOTAL_MS = 3600;
+const BLOCK_STEP_MIN = 120;
+const BLOCK_STEP_MAX = 260;
+/** 건너뛰기로 남은 경기를 한 번에 채울 때 막대가 끝까지 차는 시간. */
+const SKIP_FILL_MS = 240;
+
+/**
+ * T-10-028: 구간 경기를 한 경기씩 문자중계처럼 흘려보내며 승무패·출전 기록을 쌓는다(T-10-024에서 뺐던
+ * 연출을 되살림). rows는 리포트와 같은 줄이라 스코어가 두 화면에서 같다.
+ * T-10-029: 다 나온 뒤엔 바로 닫지 않고 '확인' 버튼을 눌러야 끝난다(결과를 읽을 시간). 건너뛰기는 남은
+ * 경기를 한 번에 채워 최종 기록을 보여 주고 같은 확인 버튼을 띄운다.
+ * 리그 구간은 늘 이 모듈과 함께 불러오므로 첫 화면 청크에서 빼 여기 둔다(T-11-390).
+ * T-11-390 mo가 있으면 결정적 장면이 걸린 경기 · 결승 줄 앞에서 멈추고 선택 카드를 띄운다(건너뛰기도 장면에서는 멈춘다).
+ * 고르면 mo.decide가 구간을 다시 진행한 결과로 남은 경기 · 줄을 바꾼다.
+ */
+export async function playBlock(
+  c: Pick<SheetController, 'state' | 'ui' | 'showSheet'>,
+  head: { eyebrow: string; title: string; back: boolean; matches: number },
+  b: BlockResult,
+  rows: TickerRow[],
+  extras: string[],
+  mo?: MomentDriver,
+): Promise<void> {
+  c.state.busy = true;
+  const n = rows.length,
+    step = clamp(BLOCK_TOTAL_MS / Math.max(1, n), BLOCK_STEP_MIN, BLOCK_STEP_MAX);
+  let i = 0,
+    rs = 0,
+    fast = false,
+    wake: (() => void) | null = null;
+  /** ms 동안 쉬되 건너뛰기를 누르면 바로 깬다. */
+  const sleep = (ms: number) =>
+    new Promise<void>((r) => {
+      const t = setTimeout(r, ms);
+      // 이미 깬 뒤에 다시 불러도 끝난 타이머 · 약속이라 아무 일도 없다.
+      wake = () => {
+        clearTimeout(t);
+        r();
+      };
+    });
+  const skip = () => {
+    fast = true;
+    v.skip = null;
+    v.fill = SKIP_FILL_MS;
+    wake?.();
+  };
+  const v = c.showSheet<ViewOf<'block'>>({
+    kind: 'block',
+    eyebrow: head.eyebrow,
+    title: head.title,
+    back: head.back,
+    progress: 0,
+    fill: step,
+    round: L.kickoff,
+    wdl: { w: 0, d: 0, l: 0 },
+    tally: { apps: 0, g: 0, a: 0, cs: 0, rating: '-' },
+    ticker: [],
+    extras: [],
+    skip,
+    moment: null,
+  });
+  // 시트가 다른 내용으로 바뀌었거나 닫혔으면 확인 없이 끝낸다.
+  const gone = () => c.state.view !== v;
+  /** T-11-390 장면이 걸린 곳이면 멈춰 고르게 하고, 고른 결과로 남은 경기 · 줄을 바꾼다. */
+  const pause = async (at: { game: number } | { extra: number }) => {
+    const hit = await mo?.pause(v, at);
+    if (!hit) return;
+    ({ b, rows, extras } = hit);
+    if (!fast) v.skip = skip;
+  };
+  /** 다음 경기 하나를 기록에 더한다. */
+  const playNext = () => {
+    const m = b.games[i]!,
+      row = rows[i]!;
+    i++;
+    v.wdl[m.res === 'W' ? 'w' : m.res === 'D' ? 'd' : 'l']++;
+    if (m.mins) {
+      v.tally.apps++;
+      v.tally.g += m.g ?? 0;
+      v.tally.a += m.a ?? 0;
+      rs += m.rating ?? 0;
+      if (m.cs) v.tally.cs++;
+      v.tally.rating = (rs / v.tally.apps).toFixed(2);
+    }
+    v.ticker.unshift(row);
+    if (v.ticker.length > 5) v.ticker.length = 5;
+    v.progress = i / n;
+    v.round = `${m.rd}R / ${head.matches}R`;
+  };
+  await c.ui.tick();
+  await c.ui.painted();
+  while (i < n) {
+    if (gone()) break;
+    await pause({ game: i });
+    playNext();
+    if (!fast) await sleep(step);
+  }
+  if (gone()) {
+    c.state.busy = false;
+    return;
+  }
+  v.skip = null;
+  v.rated = b.games;
+  for (let j = 0; j < extras.length; j++) {
+    await pause({ extra: j });
+    v.extras.push({ text: extras[j]!, done: fast });
+    if (!fast) {
+      await wait(STEP_MS);
+      v.extras[v.extras.length - 1]!.done = true;
+    }
+  }
+  // 확인을 누를 때까지 busy로 두어 배경 클릭·스와이프로 닫히지 않게 한다.
+  await new Promise<void>((resolve) => {
+    c.state.buttons = [
+      {
+        label: L.confirm,
+        cls: 'btn-primary',
+        fn: () => {
+          c.state.busy = false;
+          resolve();
+        },
+      },
+    ];
+    void c.ui.tick().then(() => c.ui.focusFirstButton?.());
+  });
 }

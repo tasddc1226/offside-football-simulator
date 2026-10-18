@@ -2,7 +2,7 @@
 // 아래에서 올라오는 시트 하나에 뷰 모델(sheets.ts)을 띄우고, 진행 단계·경기 중계·판정 바늘·미니게임을 시간에 맞춰
 // 채운다. 상태 객체는 클라이언트가 반응형으로 감싸 넘긴다(웹 Svelte `$state`, 앱 스토어) — 여기서는 그 객체를
 // 고치기만 한다. 띄운 뷰는 showSheet이 돌려준 것(state.view를 다시 읽은 반응형 프록시)을 고쳐야 화면이 바뀐다.
-import { clamp, ri } from '@offside/game/rng';
+import { ri } from '@offside/game/rng';
 import { clubsIn } from '@offside/game/engine';
 import { tn } from '@offside/game/i18n/names';
 import { clubById } from '@offside/game/clubs';
@@ -12,7 +12,7 @@ import type { GameState } from '@offside/game/types';
 import type { MgKind } from '@offside/game/minigame';
 import type { DragPoint, ShotResult } from '@offside/game/dragShot';
 import { FLIGHT_MS, FLIGHT_STILL_MS } from './flight-time.js';
-import type { MomentDriver, SheetButton, SheetView, TickerRow } from './sheets.js';
+import type { SheetButton, SheetView, TickerRow } from './sheets.js';
 import { shellText as L } from './i18n/ko/shell.js';
 
 type ViewOf<K extends SheetView['kind']> = Extract<SheetView, { kind: K }>;
@@ -65,11 +65,7 @@ export interface SheetUi {
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 // 템포 값(ms). 원래 값(단계 380·구간 2.6s)이 결과를 읽기엔 빠르다는 피드백으로 약 1.4배 늘렸다.
 /** 프리시즌 단계·구간 뒤 부가 줄(컵 결과·A매치 소집 등) 하나가 머무는 시간. */
-const STEP_MS = 520;
-/** 한 구간(시즌 절반) 문자중계 총 길이 목표와 경기당 간격 범위. */
-const BLOCK_TOTAL_MS = 3600;
-const BLOCK_STEP_MIN = 120;
-const BLOCK_STEP_MAX = 260;
+export const STEP_MS = 520;
 
 function fakeScore(m: MatchGame): string {
   let gf = Math.max(m.g || 0, m.res === 'W' ? ri(1, 3) : ri(0, 2));
@@ -86,8 +82,6 @@ function fakeScore(m: MatchGame): string {
 const MG_SCENE_MS = 1300;
 /** 비행 장면이 끝나고(또는 건너뛴 뒤) 도착 표시를 보여 주는 시간. */
 const ARRIVE_MS = 450;
-/** 건너뛰기로 남은 경기를 한 번에 채울 때 막대가 끝까지 차는 시간. */
-const SKIP_FILL_MS = 240;
 
 /** T-11-134 엔진이 정한 상대 구단 이름. 옛 시즌 경기(상대 없음)는 null — 예전처럼 리그 클럽을 차례로 붙인다. */
 function oppName(m: MatchGame): string | null {
@@ -165,125 +159,6 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
     v.active = steps.length;
     await wait(150);
     state.busy = false;
-  }
-
-  /**
-   * T-10-028: 구간 경기를 한 경기씩 문자중계처럼 흘려보내며 승무패·출전 기록을 쌓는다(T-10-024에서 뺐던
-   * 연출을 되살림). rows는 리포트와 같은 줄이라 스코어가 두 화면에서 같다.
-   * T-10-029: 다 나온 뒤엔 바로 닫지 않고 '확인' 버튼을 눌러야 끝난다(결과를 읽을 시간). 건너뛰기는 남은
-   * 경기를 한 번에 채워 최종 기록을 보여 주고 같은 확인 버튼을 띄운다.
-   * T-11-390 mo가 있으면 결정적 장면이 걸린 경기 · 결승 줄 앞에서 멈추고 선택 카드를 띄운다(건너뛰기도 장면에서는 멈춘다).
-   * 고르면 mo.decide가 구간을 다시 진행한 결과로 남은 경기 · 줄을 바꾼다.
-   */
-  async function playBlock(
-    head: { eyebrow: string; title: string; back: boolean; matches: number },
-    b: BlockResult,
-    rows: TickerRow[],
-    extras: string[],
-    mo?: MomentDriver,
-  ): Promise<void> {
-    state.busy = true;
-    const n = rows.length,
-      step = clamp(BLOCK_TOTAL_MS / Math.max(1, n), BLOCK_STEP_MIN, BLOCK_STEP_MAX);
-    let i = 0,
-      rs = 0,
-      fast = false,
-      wake: (() => void) | null = null;
-    /** ms 동안 쉬되 건너뛰기를 누르면 바로 깬다. */
-    const sleep = (ms: number) =>
-      new Promise<void>((r) => {
-        const t = setTimeout(r, ms);
-        // 이미 깬 뒤에 다시 불러도 끝난 타이머 · 약속이라 아무 일도 없다.
-        wake = () => {
-          clearTimeout(t);
-          r();
-        };
-      });
-    const skip = () => {
-      fast = true;
-      v.skip = null;
-      v.fill = SKIP_FILL_MS;
-      wake?.();
-    };
-    const v = showSheet<ViewOf<'block'>>({
-      kind: 'block',
-      eyebrow: head.eyebrow,
-      title: head.title,
-      back: head.back,
-      progress: 0,
-      fill: step,
-      round: L.kickoff,
-      wdl: { w: 0, d: 0, l: 0 },
-      tally: { apps: 0, g: 0, a: 0, cs: 0, rating: '-' },
-      ticker: [],
-      extras: [],
-      skip,
-      moment: null,
-    });
-    // 시트가 다른 내용으로 바뀌었거나 닫혔으면 확인 없이 끝낸다.
-    const gone = () => state.view !== v;
-    /** T-11-390 장면이 걸린 곳이면 멈춰 고르게 하고, 고른 결과로 남은 경기 · 줄을 바꾼다. */
-    const pause = async (at: { game: number } | { extra: number }) => {
-      const hit = await mo?.pause(v, at);
-      if (!hit) return;
-      ({ b, rows, extras } = hit);
-      if (!fast) v.skip = skip;
-    };
-    /** 다음 경기 하나를 기록에 더한다. */
-    const playNext = () => {
-      const m = b.games[i]!,
-        row = rows[i]!;
-      i++;
-      v.wdl[m.res === 'W' ? 'w' : m.res === 'D' ? 'd' : 'l']++;
-      if (m.mins) {
-        v.tally.apps++;
-        v.tally.g += m.g ?? 0;
-        v.tally.a += m.a ?? 0;
-        rs += m.rating ?? 0;
-        if (m.cs) v.tally.cs++;
-        v.tally.rating = (rs / v.tally.apps).toFixed(2);
-      }
-      v.ticker.unshift(row);
-      if (v.ticker.length > 5) v.ticker.length = 5;
-      v.progress = i / n;
-      v.round = `${m.rd}R / ${head.matches}R`;
-    };
-    await ui.tick();
-    await ui.painted();
-    while (i < n) {
-      if (gone()) break;
-      await pause({ game: i });
-      playNext();
-      if (!fast) await sleep(step);
-    }
-    if (gone()) {
-      state.busy = false;
-      return;
-    }
-    v.skip = null;
-    v.rated = b.games;
-    for (let j = 0; j < extras.length; j++) {
-      await pause({ extra: j });
-      v.extras.push({ text: extras[j]!, done: fast });
-      if (!fast) {
-        await wait(STEP_MS);
-        v.extras[v.extras.length - 1]!.done = true;
-      }
-    }
-    // 확인을 누를 때까지 busy로 두어 배경 클릭·스와이프로 닫히지 않게 한다.
-    await new Promise<void>((resolve) => {
-      state.buttons = [
-        {
-          label: L.confirm,
-          cls: 'btn-primary',
-          fn: () => {
-            state.busy = false;
-            resolve();
-          },
-        },
-      ];
-      void ui.tick().then(() => ui.focusFirstButton?.());
-    });
   }
 
   type SceneKind = 'minigame' | 'dragShot';
@@ -433,7 +308,7 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
     closeSheet,
     dismissSheet,
     playSteps,
-    playBlock,
+    ui,
     playMinigame,
     playDragShot,
     playJudge,
