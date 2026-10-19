@@ -292,7 +292,11 @@ describe('사건', () => {
         }),
       },
     } as unknown as Env;
-    expect(await afterDeploy(env, 'a'.repeat(40), NOW)).toEqual({ checks: 1, closed: 1 });
+    expect(await afterDeploy(env, 'a'.repeat(40), NOW)).toEqual({
+      checks: 1,
+      closed: 1,
+      replies: 0,
+    });
     expect(calls[0]).toEqual(['C1:a', 'checks', 'a'.repeat(40)]);
     expect(calls[1]![0]).toBe('C1:b');
     expect(calls[1]![2]).toMatchObject({ status: '닫힘' });

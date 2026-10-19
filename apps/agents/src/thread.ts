@@ -9,13 +9,15 @@ import { kstDay, ledger } from './ledger.ts';
 import { mcpTools, type McpServer } from './mcp.ts';
 import { roleSpec } from './roles.ts';
 import { slackClient, threadReply } from './slack.ts';
+import { openSupportCases } from './supportCase.ts';
 
 export type Task = {
   eventId: string;
   /**
    * triage: 유저 반응 살피기, report: 아침 주기 작업 보고, support: 고객 문의 메일, reviews: 스토어 리뷰(T-11-328)(넷 다 새 글로
    * 올린다). handoff: 다른 에이전트가 넘긴 일. incident: 사건 조사(@ops, Opus. 서버 상태 감시가 연 사건은 새 글, 경보에서 넘어온
-   * 사건은 그 스레드). verify: 배포 뒤 30 · 60분 지표 비교(@ops, 작업 카드 알람).
+   * 사건은 그 스레드). verify: 배포 뒤 30 · 60분 지표 비교(@ops, 작업 카드 알람). followup: 문의 작업이 배포되거나
+   * "고칠 것 없음"으로 끝났을 때 그 문의에 답장 초안 만들기(@plan, T-11-400).
    */
   kind:
     | 'alert'
@@ -27,7 +29,8 @@ export type Task = {
     | 'reviews'
     | 'handoff'
     | 'incident'
-    | 'verify';
+    | 'verify'
+    | 'followup';
   role: Role;
   channel: string;
   /** 답을 달 스레드(첫 메시지 ts). 새 글(triage · report)은 아직 없다(올린 글이 스레드가 된다). */
@@ -42,6 +45,8 @@ export type Task = {
   back?: boolean;
   /** verify: 마지막(60분) 확인. 끝나면 주장에게 결과를 넘긴다. */
   final?: boolean;
+  /** followup: 답장을 만들 수 있는 문의 메일 스레드(Gmail threadId). */
+  mail?: string;
 };
 
 /** owner: 이 역할이 연 스레드인지. 넘겨받기만 한 스레드에선 운영자 답글을 받지 않는다(한 답글에 두 봇이 답하지 않게). */
@@ -125,7 +130,7 @@ export class AgentThread extends DurableObject<Env> {
       history: [],
       costUsd: 0,
       runs: 0,
-      owner: task.kind !== 'handoff',
+      owner: task.kind !== 'handoff' && task.kind !== 'followup',
     };
     const spec = roleSpec(env, task.role, task);
     const prompt = spec.prompt(task);
@@ -205,6 +210,8 @@ export class AgentThread extends DurableObject<Env> {
   /** T-11-325 사건 · 배포 뒤 확인의 다음 걸음. 넘기기 줄과 달리 Worker가 정해서 넘긴다(넘기기 횟수에 세지 않는다). */
   private async follow(task: Task, threadTs: string, reply: string) {
     const env = this.env;
+    // T-11-400 문의 정리가 남긴 작업 후보는 정리 글이 올라간 뒤 스레드 · 카드 · 시작 카드로 만든다.
+    if (task.kind === 'support') await openSupportCases(env, task.eventId, task.channel, threadTs);
     // 경보 첫 정리(Haiku)가 사건이라고 보면 같은 스레드에서 Opus로 다시 본다.
     if (task.kind === 'alert' && isIncident(reply))
       await threadOf(env, 'ops', task.channel, threadTs).enqueue({

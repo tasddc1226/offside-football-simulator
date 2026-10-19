@@ -21,6 +21,7 @@ import { devTools } from './dev.ts';
 import { repoReadToken } from './github.ts';
 import { ga4Tools } from './ga4.ts';
 import { supportTools } from './support.ts';
+import { supportCaseTools } from './supportCase.ts';
 import { reviewTools } from './reviews.ts';
 import { opsTools } from './tools/ops.ts';
 import { digestTools } from './tools/digest.ts';
@@ -49,6 +50,10 @@ const handoffPrompt = (t: Task) =>
   t.back
     ? `지금 KST ${kstNow()}. 내가 넘긴 일을 @${t.from}가 끝내고 결과를 돌려줬어요.\n\n${t.text}\n\n<context>\n${t.context ?? ''}\n</context>\n\n${ANSWER_RULE}`
     : `지금 KST ${kstNow()}. @${t.from}가 같은 스레드에서 일을 넘겼어요.\n\n요청: ${t.text}\n\n<context>\n${t.context ?? ''}\n</context>\n\n${ANSWER_RULE}`;
+
+/** T-11-400 문의 작업의 마무리 답장(역할 설명의 "문의 마무리 답장"). 근거는 @dev 답(자료)이다. */
+const followupPrompt = (t: Task) =>
+  `지금 KST ${kstNow()}. ${t.text}\n문의 메일 스레드: ${t.mail ?? ''}\n${t.context ? `\n<context>\n${t.context}\n</context>\n` : ''}\n${ANSWER_RULE}`;
 
 /**
  * 일에 맞는 모델(T-11-289 비용 절감). 유저 반응 분류 · 경보 첫 정리는 Haiku, 아침 보고는 Sonnet, 운영자 지시 ·
@@ -90,6 +95,7 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
         ...appStatusTools(env),
         ...memoryTools(env, 'plan', task),
         ...supportTools(env, task),
+        ...supportCaseTools(env, task),
         ...reviewTools(env, task),
         ...captainTools(env, task),
       ],
@@ -100,7 +106,9 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
           ? t.text
           : t.kind === 'handoff'
             ? handoffPrompt(t)
-            : directive(t),
+            : t.kind === 'followup'
+              ? followupPrompt(t)
+              : directive(t),
     };
   if (role === 'dev')
     return {
