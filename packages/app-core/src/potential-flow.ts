@@ -12,7 +12,15 @@ export function potentialFlowLines(
   return [
     ...(f.start ? [P.flowStart(f.start)] : []),
     ...(f.drift !== undefined ? [P.flowDrift({ d: sign(f.drift) })] : []),
-    ...(f.boost ? [P.flowBoost({ n: f.boost })] : []),
+    // T-11-408 강화와 이벤트(트레이너 · 스토리)를 나눠 보인다. 나눈 값이 없는 옛 기록은 합만.
+    ...(f.boostLv === undefined
+      ? f.boost
+        ? [P.flowBoostAll({ n: f.boost })]
+        : []
+      : [
+          ...(f.boostLv ? [P.flowBoost({ n: f.boostLv })] : []),
+          ...(f.boost - f.boostLv ? [P.flowEvent({ n: f.boost - f.boostLv })] : []),
+        ]),
     P.flowEnd({ grade: end.real, value: end.value }),
   ];
 }
