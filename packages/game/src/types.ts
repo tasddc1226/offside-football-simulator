@@ -10,6 +10,7 @@ import type {
   RetiredNumberResult,
 } from '@offside/contracts';
 import type { PeakProfile } from '@offside/contracts/positions';
+import type { MomentLog } from './moments.js';
 import type { CareerBalance } from './balance.js';
 import type { CareerClubStrength } from './clubStrength.js';
 import type { AttrKey, Pos, Club, SAVE_VERSION, DetailPos } from './data.js';
@@ -417,6 +418,9 @@ export interface GameState {
   /** T-11-048. 이번 시즌 구간(프리시즌·전반기·후반기)에 들어갈 때의 OVR. 시즌 종료 업로드(`takeSeasonGrowth`)가
    * 옮겨 가고 비운다. 관찰용 기록이라 게임 진행에는 쓰이지 않고 RNG도 쓰지 않는다. */
   ovrBuf?: number[];
+  /** T-11-394. 이번 시즌 결정적 장면 기록(moments.ts MomentLog). 화면이 장면을 고를 때마다 남기고 시즌 종료 업로드
+   * (`takeSeasonGrowth`)가 옮겨 가고 비운다. 관찰용이라 게임 진행에는 쓰이지 않는다. */
+  momentBuf?: MomentLog[];
 }
 
 export interface HofEntry {

@@ -26,7 +26,7 @@ import { POS } from '@offside/game/data';
 import { useColors } from '../../theme/useColors';
 import type { Colors } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
-import { Press, Txt } from '../../ui';
+import { Press, Skeleton, Txt } from '../../ui';
 import { marketChartText as L } from '@offside/app-core/i18n/ko/marketChart';
 import { useRefresh } from '../../ui/refresh';
 
@@ -239,7 +239,7 @@ export function MarketChart({ card }: { card: MarketCard }) {
         </View>
       </View>
       {points === null ? (
-        empty(L.loading)
+        <Skeleton height={PLOT_H} />
       ) : failed ? (
         empty(CHART_COPY.failed)
       ) : !model ? (

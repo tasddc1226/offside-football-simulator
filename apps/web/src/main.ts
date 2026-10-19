@@ -1,3 +1,4 @@
+import './analytics/entry-campaign.js';
 import './api/setup.js';
 import { initializeAnalytics } from './analytics/index.js';
 import { appState, randomName, savedDraftIdentity } from './ui/state.svelte.js';

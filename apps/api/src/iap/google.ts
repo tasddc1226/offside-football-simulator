@@ -11,6 +11,7 @@ const API = `https://androidpublisher.googleapis.com/androidpublisher/v3/applica
 
 export interface GoogleProductPurchase {
   orderId?: string;
+  purchaseTimeMillis?: string;
   /** 0 구매됨 · 1 취소 · 2 대기. */
   purchaseState?: number;
   /** 0 아직 승인 전 · 1 승인됨. */
@@ -124,6 +125,7 @@ export async function acknowledgeGooglePurchase(
 export interface GoogleVoidedPurchase {
   purchaseToken: string;
   orderId?: string;
+  purchaseTimeMillis?: string;
   voidedTimeMillis?: string;
 }
 

@@ -3,14 +3,6 @@ import { z } from 'zod';
 export const PushInteractionSchema = z
   .object({ event: z.enum(['click', 'target_open']), occurredAt: z.iso.datetime().optional() })
   .strict();
-export const PushPerformanceQuerySchema = z
-  .object({
-    days: z.enum(['7', '30', '90']).default('7'),
-    tests: z.enum(['1']).optional(),
-    page: z.coerce.number().int().min(0).max(500).default(0),
-    through: z.iso.datetime().optional(),
-  })
-  .strict();
 export const PushCategorySchema = z.enum([
   'notice',
   'release',
@@ -24,10 +16,24 @@ export const PushCategorySchema = z.enum([
   'return',
   'test',
 ]);
+export const PushPerformanceQuerySchema = z
+  .object({
+    days: z.enum(['1', '7', '30', '90']).default('7'),
+    previous: z.enum(['1']).optional(),
+    category: PushCategorySchema.optional(),
+    issues: z.enum(['1']).optional(),
+    tests: z.enum(['1']).optional(),
+    page: z.coerce.number().int().min(0).max(500).default(0),
+    through: z.iso.datetime().optional(),
+  })
+  .strict();
 const count = z.number().int().nonnegative();
 export const PushMetricsSchema = z.object({
   queued: count,
   pending: count,
+  waiting: count.optional(),
+  sending: count.optional(),
+  checking: count.optional(),
   accepted: count,
   confirmed: count,
   failed: count,

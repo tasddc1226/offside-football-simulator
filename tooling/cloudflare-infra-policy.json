@@ -7,7 +7,8 @@
     "offside-admin-push-production-dlq",
     "offside-billing-production-dlq",
     "offside-career-push-production-dlq",
-    "offside-cup-push-production-dlq"
+    "offside-cup-push-production-dlq",
+    "offside-push-production-dlq"
   ],
   "recoveryRateLimit": {
     "description": "OFFSIDE recovery burst protection",

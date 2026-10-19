@@ -46,8 +46,6 @@ export interface Env {
   GMAIL_CLIENT_ID?: string;
   GMAIL_CLIENT_SECRET?: string;
   GMAIL_REFRESH_TOKEN?: string;
-  /** 드림보트 받기 · 보내기 주소(키가 들어 있어 비밀값, T-11-296). 없으면 @mkt 요약을 돌리지 않는다. */
-  DREAMBOAT_URL?: string;
   /** @mkt GA4 읽기(T-11-299): 서비스 계정 비공개 키(PKCS#8 PEM) · 계정 메일(둘 다 비밀값) · 키 ID · 속성 ID. */
   GA4_SA_KEY?: string;
   GA4_SA_EMAIL?: string;
@@ -70,6 +68,11 @@ export interface Env {
   /** T-11-332 Meta 광고 성과 읽기(없으면 meta_ads 도구가 없다). */
   META_ADS_ACCESS_TOKEN?: string;
   META_AD_ACCOUNT_ID?: string;
+  /** T-11-395 인스타그램 읽기: 비즈니스 시스템 사용자 토큰(없으면 META_ADS_ACCESS_TOKEN)과 IG 사용자 ID. */
+  META_GRAPH_TOKEN?: string;
+  META_IG_USER_ID?: string;
+  /** T-11-395 Threads 읽기: 장기 사용자 토큰. 60일 안에 Worker가 갱신해 원장에 둔다. */
+  THREADS_ACCESS_TOKEN?: string;
   CF_D1_READ_TOKEN: string;
   CF_MCP_TOKEN?: string;
   GITHUB_TOKEN?: string;

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "ca157711-cac0-4e71-ba32-377d20a47876",
+  "id": "5b6bdc75-fe55-47ca-8d2e-f9fdd68d4dae",
   "prevId": "acca5a2d-28a6-4186-88b2-6293d0c412a5",
   "tables": {
     "api_status_buckets": {
@@ -4040,6 +4040,13 @@
           ],
           "isUnique": true
         },
+        "notifications_source_key_idx": {
+          "name": "notifications_source_key_idx",
+          "columns": [
+            "source_key"
+          ],
+          "isUnique": false
+        },
         "notifications_profile_created_idx": {
           "name": "notifications_profile_created_idx",
           "columns": [
@@ -7235,124 +7242,6 @@
           "name": "team_likes_team_id_profile_id_pk"
         }
       },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "team_live_matches": {
-      "name": "team_live_matches",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "profile_id": {
-          "name": "profile_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "home_team_id": {
-          "name": "home_team_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "away_team_id": {
-          "name": "away_team_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "state_json": {
-          "name": "state_json",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "rev": {
-          "name": "rev",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "done_at": {
-          "name": "done_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "result_json": {
-          "name": "result_json",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "team_live_matches_profile_idx": {
-          "name": "team_live_matches_profile_idx",
-          "columns": [
-            "profile_id",
-            "created_at"
-          ],
-          "isUnique": false
-        },
-        "team_live_matches_open_idx": {
-          "name": "team_live_matches_open_idx",
-          "columns": [
-            "done_at",
-            "created_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "team_live_matches_home_team_id_owner_teams_id_fk": {
-          "name": "team_live_matches_home_team_id_owner_teams_id_fk",
-          "tableFrom": "team_live_matches",
-          "tableTo": "owner_teams",
-          "columnsFrom": [
-            "home_team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "team_live_matches_away_team_id_owner_teams_id_fk": {
-          "name": "team_live_matches_away_team_id_owner_teams_id_fk",
-          "tableFrom": "team_live_matches",
-          "tableTo": "owner_teams",
-          "columnsFrom": [
-            "away_team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
     },

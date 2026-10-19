@@ -75,6 +75,7 @@ import { MarketChart, MarketIndex } from './MarketChart';
 import { marketText as L } from '@offside/app-core/i18n/ko/market';
 import { intlLocale } from '@offside/app-core/i18n/core';
 import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
+import { Skeleton } from '../../ui/Skeleton';
 
 type Sent<T> = Promise<
   { ok: true; data: T } | { ok: false; error: { message: string; reason?: string | undefined } }
@@ -910,9 +911,13 @@ export default function Market() {
               ) : null}
             </View>
             {!team ? (
-              <Txt tone="muted" style={small}>
-                {teamFailed ? L.playersFailed : L.loading}
-              </Txt>
+              teamFailed ? (
+                <Txt tone="muted" style={small}>
+                  {L.playersFailed}
+                </Txt>
+              ) : (
+                <Skeleton rows={4} />
+              )
             ) : team.players.length ? (
               team.players.map((p) => {
                 const lock = releaseLock(p, lineup);
@@ -1056,9 +1061,7 @@ export default function Market() {
                   </View>
                 </View>
                 {listStatus === 'loading' ? (
-                  <Txt tone="muted" style={small}>
-                    {L.loading}
-                  </Txt>
+                  <Skeleton rows={5} />
                 ) : listStatus === 'error' ? (
                   <View style={{ gap: 8 }}>
                     <Txt tone="muted" style={small}>
@@ -1149,9 +1152,13 @@ export default function Market() {
                   </Txt>
                 </Txt>
                 {!team ? (
-                  <Txt tone="muted" style={small}>
-                    {teamFailed ? L.playersFailed : L.loading}
-                  </Txt>
+                  teamFailed ? (
+                    <Txt tone="muted" style={small}>
+                      {L.playersFailed}
+                    </Txt>
+                  ) : (
+                    <Skeleton rows={4} />
+                  )
                 ) : !isCurrent || team.players.length === 0 ? (
                   <Txt tone="muted" style={small}>
                     {L.sellNone}
@@ -1333,9 +1340,13 @@ export default function Market() {
             ) : (
               <View testID="market-trades" style={{ gap: 10 }}>
                 {!me ? (
-                  <Txt tone="muted" style={small}>
-                    {meFailed ?? L.loading}
-                  </Txt>
+                  meFailed ? (
+                    <Txt tone="muted" style={small}>
+                      {meFailed}
+                    </Txt>
+                  ) : (
+                    <Skeleton rows={4} />
+                  )
                 ) : (
                   <>
                     <Txt bold accessibilityRole="header" style={small}>

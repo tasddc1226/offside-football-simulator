@@ -13,6 +13,7 @@ import { appState } from '../../store';
 import { rem } from '../../theme/type';
 import { Card, MoreLink, Press, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
+import { Skeleton } from '../../ui/Skeleton';
 
 const TOP = 3;
 
@@ -66,46 +67,48 @@ export function HomeClubValue() {
         </View>
         <MoreLink testID="club-value-all" what={L.homeValueTitle} onPress={() => openRanking()} />
       </View>
-      {failed
-        ? note(L.rankFail)
-        : rows === null
-          ? note(L.loading)
-          : rows.length === 0
-            ? note(L.homeValueEmpty)
-            : rows.map((t, i) => {
-                const value = fmtValue(t.value);
-                return (
-                  <Press
-                    key={t.teamId}
-                    scale={0.985}
-                    testID={`club-value-${t.teamId}`}
-                    accessibilityLabel={L.homeValueRowAria({
-                      rank: i + 1,
-                      name: t.name,
-                      manager: t.manager,
-                      value,
-                    })}
-                    onPress={() => openRanking(t.teamId)}
-                  >
-                    <RowFrame rank={i}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 10 }}>
-                        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <TeamLogo logo={t.logo} name={t.name} size={20} decorative />
-                            <Txt bold numberOfLines={1} style={{ flexShrink: 1 }}>
-                              {t.name}
-                            </Txt>
-                          </View>
-                          <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(0.75) }}>
-                            {`${L.profManager}${t.manager} · OVR ${t.ovr}`}
-                          </Txt>
-                        </View>
-                        <Value value={value} unit="" />
-                      </View>
-                    </RowFrame>
-                  </Press>
-                );
+      {failed ? (
+        note(L.rankFail)
+      ) : rows === null ? (
+        <Skeleton rows={3} />
+      ) : rows.length === 0 ? (
+        note(L.homeValueEmpty)
+      ) : (
+        rows.map((t, i) => {
+          const value = fmtValue(t.value);
+          return (
+            <Press
+              key={t.teamId}
+              scale={0.985}
+              testID={`club-value-${t.teamId}`}
+              accessibilityLabel={L.homeValueRowAria({
+                rank: i + 1,
+                name: t.name,
+                manager: t.manager,
+                value,
               })}
+              onPress={() => openRanking(t.teamId)}
+            >
+              <RowFrame rank={i}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 10 }}>
+                  <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <TeamLogo logo={t.logo} name={t.name} size={20} decorative />
+                      <Txt bold numberOfLines={1} style={{ flexShrink: 1 }}>
+                        {t.name}
+                      </Txt>
+                    </View>
+                    <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(0.75) }}>
+                      {`${L.profManager}${t.manager} · OVR ${t.ovr}`}
+                    </Txt>
+                  </View>
+                  <Value value={value} unit="" />
+                </View>
+              </RowFrame>
+            </Press>
+          );
+        })
+      )}
     </Card>
   );
 }
