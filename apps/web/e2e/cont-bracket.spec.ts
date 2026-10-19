@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { resumeWithSave } from './helpers.js';
+import { resumeWithSave, settleBlock } from './helpers.js';
 
 // T-11-261 대륙 대회 녹아웃 대진: 리그 페이즈를 통과한 뒤 시즌 탭에 다음 상대가 보이고, 후반기를 치르면 내 팀 경로가
 // 남는다. 화면은 엔진이 저장한 상대·결과만 그린다 — 새로고침·언어 전환에도 같은 상대다.
@@ -54,7 +54,8 @@ async function playSecondHalf(page: Page) {
   await page.locator('[data-act="advance"]').click();
   const sheet = page.locator('#sheet');
   const ok = sheet.locator('[data-sheet="0"]');
-  await expect(ok).toHaveText('확인', { timeout: 20_000 });
+  // T-11-390 결정적 장면이 뜨면 감독에게 맡긴다(결과는 장면이 없을 때와 같다).
+  await settleBlock(page, 20_000);
   await ok.click();
   const toMarket = sheet.getByRole('button', { name: /이적 시장으로/ });
   const resume = page.locator('[data-act="resume"]').filter({ hasText: '이벤트 확인' });

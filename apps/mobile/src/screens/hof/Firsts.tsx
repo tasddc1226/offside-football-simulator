@@ -24,6 +24,7 @@ import { appState } from '../../store';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Card } from '../../ui/Card';
+import { Skeleton } from '../../ui/Skeleton';
 import { Pill } from '../../ui/bits';
 import { Press } from '../../ui/Press';
 import { Screen } from '../../ui/Screen';
@@ -225,13 +226,7 @@ export default function Firsts() {
         {failed ? (
           empty(L.loadFailed)
         ) : !data ? (
-          <Txt
-            tone="muted"
-            accessibilityLiveRegion="polite"
-            style={{ fontSize: rem(0.875), paddingVertical: 8 }}
-          >
-            {L.loading}
-          </Txt>
+          <Skeleton rows={5} />
         ) : tab === 'recent' ? (
           days.length ? (
             <View>

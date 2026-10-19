@@ -17,6 +17,7 @@ import { Btn, Card, Press, Txt } from '../../ui';
 import { useColors } from '../../theme/useColors';
 import { renameText as RN } from '@offside/app-core/i18n/ko/rename';
 import { RenameSheet } from '../rename/RenameSheet';
+import { Skeleton } from '../../ui/Skeleton';
 
 export function PlayerRelease({ season }: { season: number }) {
   const manager = useMemo(() => new PlayerManagement(), []);
@@ -55,7 +56,7 @@ export function PlayerRelease({ season }: { season: number }) {
         </>
       ) : null}
       {state.loading ? (
-        <Txt>{L.loading}</Txt>
+        <Skeleton rows={5} />
       ) : (
         <>
           <Btn

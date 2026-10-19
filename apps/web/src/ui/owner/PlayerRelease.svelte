@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from '../Skeleton.svelte';
   import { onMount } from 'svelte';
   import { PlayerManagement } from '@offside/app-core/playerManagement';
   import { releaseLock, releaseAmount, releaseValue, releaseConfirmText, fundsText } from '@offside/app-core/market';
@@ -26,7 +27,7 @@
   <p class="muted fs-sm">{M.releaseIntro}</p>
   {#if pm.notice}<p role="status" class="good">{pm.notice}</p>{/if}
   {#if pm.error}<p role="alert">{pm.error}</p><button class="btn" disabled={pm.busy} onclick={() => manager.load(season)}>{L.retry}</button>{/if}
-  {#if pm.loading}<p role="status">{L.loading}</p>{:else}
+  {#if pm.loading}<Skeleton rows={5} />{:else}
     <button class="btn" data-act="players-pick-all" disabled={pm.busy || pm.confirm || !manager.eligible.length} onclick={() => manager.selectAll()}>{pm.selected.size ? M.pickNone : L.pickLimit}</button>
     {#each pm.players as p (p.careerId)}
       {@const locked = releaseLock(p, pm.lineup)}

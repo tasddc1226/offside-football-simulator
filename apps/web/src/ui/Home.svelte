@@ -20,7 +20,7 @@
   import HomeTicker from './HomeTicker.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
   import { ANDROID_TESTER_FORM_URL, DC_GALLERY_URL } from '@offside/app-core/links';
-  import { appTarget } from './appStore.js';
+  import { appTarget } from './inapp.js';
   import { adLanded } from './adLanding.js';
   import { homeText as L } from '@offside/app-core/i18n/ko/home';
   import FirstGuide from './FirstGuide.svelte';

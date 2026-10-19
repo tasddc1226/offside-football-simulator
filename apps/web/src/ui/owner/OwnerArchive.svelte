@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from '../Skeleton.svelte';
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
   import { OwnerArchive } from '@offside/app-core/ownerArchive';
@@ -46,7 +47,7 @@
 
 <div class="archive" data-owner-archive>
   {#if view.loading}
-    <p class="muted" role="status">{L.archiveLoading}</p>
+    <Skeleton rows={4} />
   {:else if view.error}
     <section class="card stack" data-archive-error><p role="status">{L.archiveError}</p><button class="btn" onclick={() => archive.load(appState.honorsSeason)}>{L.retry}</button></section>
   {:else if owner}
@@ -97,7 +98,7 @@
             </button>
             {#if view.expanded}
               <div id="archive-detail" class="archive-detail" in:fade={{ duration: dur(160) }}>
-                {#if view.detailLoading}<p class="muted" role="status">{L.archiveLoading}</p>
+                {#if view.detailLoading}<Skeleton rows={4} />
                 {:else if view.detailError}<p role="status">{L.archiveError}</p><button class="btn" data-act="archive-retry" onclick={() => expand(true)}>{L.retry}</button>
                 {:else if view.detail && Detail}<Detail embedded record={view.detail} />{/if}
               </div>

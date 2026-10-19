@@ -6,6 +6,7 @@ import { View } from 'react-native';
 import { useColors } from '../../theme/useColors';
 import { Txt } from '../../ui';
 import { SettingsCard, SettingsLabel, SettingsTrigger } from './parts';
+import { Skeleton } from '../../ui/Skeleton';
 
 export function ServerStatus() {
   const c = useColors();
@@ -75,9 +76,7 @@ export function ServerStatus() {
       {open ? (
         <View style={{ gap: 12, marginTop: 12 }}>
           {view === null ? (
-            <Txt v="sm" tone="muted" accessibilityLiveRegion="polite">
-              {L.loading}
-            </Txt>
+            <Skeleton rows={2} />
           ) : view === 'error' ? (
             <Txt v="sm" tone="muted">
               {L.error}

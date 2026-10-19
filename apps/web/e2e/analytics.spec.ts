@@ -136,13 +136,23 @@ test('actual play measures first action, milestones and a resumed career without
   expect(await events('career_resume')).toHaveLength(0);
   expect(await events('play_complete')).toHaveLength(0); // preseason has no league block
   await page.reload();
+  // Analytics loads independently of gameplay; wait for its ready marker after every reload.
+  await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
   await page.locator('[data-act="continue"]').click();
   expect(await events('career_resume')).toHaveLength(0);
 
   // Natural UI play, never patching the save or invoking the analytics adapter directly.
   async function step() {
+    // T-11-390 장면 결과 줄이 머무는 동안(1.8초)은 누를 게 없다 — 반복 횟수를 쓰지 않게 사라질 때까지 기다린다.
+    const result = page.locator('#sheet [data-key-moment-result]');
+    if (await result.isVisible()) {
+      await expect(result).toBeHidden({ timeout: 5_000 });
+      return;
+    }
     for (const selector of [
       '#an-skip',
+      // T-11-390 결정적 장면 카드는 감독에게 맡긴다.
+      '#sheet [data-key-moment-choice="auto"]:visible',
       '.choice:visible',
       '[data-opt]:visible',
       // T-11-039 오퍼를 고르면 계약서가 뜬다 — 이름 사인을 넣고 확정한다.
@@ -161,8 +171,11 @@ test('actual play measures first action, milestones and a resumed career without
     }
     await page.waitForTimeout(50);
   }
-  for (let i = 0; i < 300 && (await events('career_progress_milestone')).length === 0; i++)
+  // Moment/result cards can spend many steps waiting; bound wall time, not no-op step count.
+  const progressDeadline = Date.now() + 90_000;
+  while (Date.now() < progressDeadline && (await events('career_progress_milestone')).length === 0)
     await step();
+  expect(await events('career_progress_milestone')).toHaveLength(1);
   expect(await events('first_action_complete')).toHaveLength(0);
   expect(await events('first_season_complete')).toHaveLength(1);
   expect(await events('player_first_play')).toHaveLength(1);
@@ -172,13 +185,13 @@ test('actual play measures first action, milestones and a resumed career without
     test_marker: 'qa',
     client_platform: 'web',
   });
-  expect((await events('play_complete')).length).toBeGreaterThanOrEqual(6);
+  // Player metrics run through the async Web Locks queue; the season milestone is synchronous.
+  await expect.poll(async () => (await events('play_complete')).length).toBeGreaterThanOrEqual(6);
   expect(
     (await events('game_operation')).every(
       (x) => (x[2] as { outcome: string }).outcome !== 'failed',
     ),
   ).toBe(true);
-  expect(await events('career_progress_milestone')).toHaveLength(1);
   expect((await events('career_progress_milestone'))[0]?.[2]).toMatchObject({
     milestone_seasons: 3,
   });

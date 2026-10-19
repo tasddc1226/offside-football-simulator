@@ -3,6 +3,7 @@
 import { en as gameEngine } from '@offside/game/i18n/en/index';
 import { account } from './account';
 import { ad } from './ad';
+import { adminPush } from './adminPush';
 import { appFlight } from './appFlight';
 import { appFormat } from './appFormat';
 import { appScout } from './appScout';
@@ -54,6 +55,7 @@ import { homeLive } from './homeLive';
 import { homeMore } from './homeMore';
 import { iap } from './iap';
 import { inbox } from './inbox';
+import { keyMoment } from './keyMoment';
 import { legend } from './legend';
 import { legendRn } from './legendRn';
 import { legendStyle } from './legendStyle';
@@ -107,6 +109,7 @@ export const en = {
   ...gameEngine,
   account,
   ad,
+  adminPush,
   appFlight,
   appFormat,
   appScout,
@@ -158,6 +161,7 @@ export const en = {
   homeMore,
   iap,
   inbox,
+  keyMoment,
   legend,
   legendRn,
   legendStyle,

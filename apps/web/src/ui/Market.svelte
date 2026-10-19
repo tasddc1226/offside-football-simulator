@@ -9,6 +9,7 @@
 </script>
 
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   import LoginButtons from './LoginButtons.svelte';
   import { intlLocale } from '@offside/contracts/i18n';
   import { tn } from '@offside/game/i18n/names';
@@ -271,7 +272,7 @@
         {#if releasable.length > 0}<button class="mk-link" data-act="pick-all" onclick={pickAll}>{allPicked ? L.pickNone : L.pickAll}</button>{/if}
       </div>
       {#if !team}
-        <p class="muted">{teamFailed ? L.playersFailed : L.loading}</p>
+        {#if teamFailed}<p class="muted">{L.playersFailed}</p>{:else}<Skeleton rows={4} />{/if}
       {:else}
         <ul class="mk-rel-list">
           {#each team.players as p (p.careerId)}
@@ -364,7 +365,7 @@
           </label>
         </div>
         {#if listStatus === 'loading'}
-          <p class="muted">{L.loading}</p>
+          <Skeleton rows={5} />
         {:else if listStatus === 'error'}
           <p class="muted">{L.listFailed}</p>
           <button class="btn btn-block" onclick={() => loadList(0)}>{L.reload}</button>
@@ -393,7 +394,7 @@
       <section class="mk-pane" aria-label={L.tabSell}>
         <h2 class="mk-step">{L.sellStep1} <small>{L.sellSeasonOnly({ season: seasonName || L.thisSeason })}</small></h2>
         {#if !team}
-          <p class="muted">{teamFailed ? L.playersFailed : L.loading}</p>
+          {#if teamFailed}<p class="muted">{L.playersFailed}</p>{:else}<Skeleton rows={4} />{/if}
         {:else if !isCurrent || team.players.length === 0}
           <p class="muted">{L.sellNone}</p>
         {:else}
@@ -441,7 +442,7 @@
     {:else}
       <section class="mk-pane" aria-label={L.tabTrades}>
         {#if !me}
-          <p class="muted">{meFailed ?? L.loading}</p>
+          {#if meFailed}<p class="muted">{meFailed}</p>{:else}<Skeleton rows={4} />{/if}
         {:else}
           <h2 class="mk-step">{L.tradesListed}</h2>
           <ul class="mk-rows">

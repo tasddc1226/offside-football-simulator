@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from '../Skeleton.svelte';
   import { seasonLabel } from '@offside/app-core/seasonName';
   import TeamLogo from './TeamLogo.svelte';
   // T-11-028 구단주 랭킹 — 기록실 탭. 구단주의 시즌 업적 점수 순(같은 점수면 먼저 닿은 구단주가 앞선다). 구단주는 공개
@@ -103,7 +104,7 @@
   {#if failed}
     <p class="empty">{L.rankFail}</p>
   {:else if loading || !data}
-    <p class="empty" role="status">{L.loading}</p>
+    <Skeleton rows={6} />
   {:else if data.items.length}
     <div class="achievement-columns achievement-header" aria-hidden="true">
       <span class="achievement-heading">{L.hdrOwner}</span><span>{L.hdrGrade}</span><span title={L.hdrDoneTitle}>{L.hdrDone}</span><b>{L.hdrScore}</b>
