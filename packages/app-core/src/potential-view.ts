@@ -19,8 +19,10 @@ export interface PotentialFlow {
   start?: { grade: string; value: number };
   /** 성장기(25세까지) 실제 잠재력이 오르내린 합. */
   drift?: number;
-  /** 잠재력 강화로 오른 값. */
+  /** 잠재력 강화와 이벤트(트레이너 · 스토리)로 오른 값의 합. */
   boost: number;
+  /** T-11-408 그중 잠재력 강화 성공 단계. 없으면(옛 기록) 나눠 보이지 않는다. */
+  boostLv?: number;
   seed?: number;
   /** 마지막 시즌에 적용된 밸런스 버전(0 = 기본값). */
   bal: number;
@@ -35,6 +37,7 @@ function flowOf(pot: number, f: NonNullable<HofEntry['potFlow']>): PotentialFlow
       seed: o.seed,
     }),
     boost: f.boost,
+    ...(f.lv !== undefined && { boostLv: Math.min(f.lv, f.boost) }),
     bal: f.bal,
   };
 }
@@ -45,6 +48,7 @@ export function potentialFlow(s: GameState): PotentialFlow | undefined {
   return flowOf(Math.round(truePot(s)), {
     ...(s.origin && { origin: s.origin }),
     boost: s.flags.potBonus ?? 0,
+    lv: s.boost?.lv ?? 0,
     bal: s.bal?.v ?? 0,
   });
 }

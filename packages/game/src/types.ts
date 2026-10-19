@@ -438,7 +438,15 @@ export interface HofEntry {
   /** T-11-030 은퇴 때 기록한 실제 잠재력(반올림). 리포트·기록실·서버 관찰에 쓰며 옛 기록엔 없다. */
   pot?: number | undefined;
   /** T-11-141 은퇴 리포트 '잠재력이 바뀐 과정'의 재료(시작 시드·잠재력, 강화, 밸런스 버전). 옛 기록엔 없다. */
-  potFlow?: { origin?: { seed: number; pot: number }; boost: number; bal: number } | undefined;
+  potFlow?:
+    | {
+        origin?: { seed: number; pot: number };
+        boost: number;
+        /** T-11-408 boost 중 잠재력 강화 성공 단계(나머지는 이벤트). 기능 전 은퇴 기록엔 없다. */
+        lv?: number;
+        bal: number;
+      }
+    | undefined;
   age: number;
   apps: number;
   goals: number;
