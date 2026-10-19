@@ -586,9 +586,10 @@ button.what:active {
   color: var(--bad);
   background: color-mix(in srgb, var(--bad) 12%, var(--surface));
 }
+/* warn은 12% 면에서 대비가 4.49라 10%로 둔다. */
 .pill.warn {
   color: var(--warn);
-  background: color-mix(in srgb, var(--warn) 12%, var(--surface));
+  background: color-mix(in srgb, var(--warn) 10%, var(--surface));
 }
 
 /* home */
