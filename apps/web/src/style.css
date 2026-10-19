@@ -635,6 +635,35 @@ button.what:active {
   font-size: 2rem;
   font-weight: 700;
 }
+/* T-11-412 오른쪽 위 선수 그림(HeroFigure)은 이름 줄까지만 내려오므로 이름만 그 폭을 비켜 둔다.
+   소속 · 시즌 두 줄은 전폭 한 줄(넘치면 말줄임). 이어하기 버튼 줄도 전폭 그대로. */
+.hero-current > h1 {
+  padding-right: 92px;
+}
+.hero-current > p {
+  max-width: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hero-current > .hero-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hero-line > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hero-line .club-badge {
+  flex: none;
+}
+@media (max-width: 359px) {
+  .hero-current > h1 {
+    padding-right: 60px;
+  }
+}
 .hero-current .hero-meta {
   font-size: var(--fs-label);
   opacity: 0.65;
