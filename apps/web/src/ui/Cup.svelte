@@ -251,6 +251,7 @@
 
         <section class="card cup-sec" class:cup-bracket={scheduleTab === 'knockout' && !bracketList} data-cup-fixtures tabindex="-1" aria-label={L.scheduleMatches}>
           <h2>{L.scheduleMatches}</h2>
+          <p class="muted fs-xs" data-cup-odds-note>{L.matchOddsPending}</p>
           <nav class="schedule-tabs" aria-label={L.scheduleMatches}>
             {#each [['groups', L.secGroups], ['knockout', L.secBracket]] as [tab, label] (tab)}
               <button aria-pressed={scheduleTab === tab} class:active={scheduleTab === tab} onclick={() => scheduleChoice = tab as CupScheduleTab}>{label}</button>

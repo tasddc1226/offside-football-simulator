@@ -1,0 +1,26 @@
+{
+  "id": "t-11-407-cup-odds-all",
+  "title": "오프사이드 컵 모든 경기 예상",
+  "items": [
+    "컵 경기 일정의 모든 경기에 예상 승·무·패 막대가 나와요. 참가하지 않아도 볼 수 있어요",
+    "예상은 경기 1시간 전, 두 팀 명단이 잠기면 실제 경기와 같은 계산으로 한 번 정해져요",
+    "끝난 경기에도 경기 전 예상이 남아서 결과와 비교해 볼 수 있어요"
+  ],
+  "en": {
+    "title": "OFFSIDE Cup odds for every match",
+    "items": [
+      "Every match in the Cup schedule now shows a win, draw, and loss odds bar. You can see it even if you didn't enter.",
+      "The odds are set once, 1 hour before kickoff when both lineups lock, using the same calculation as the match itself.",
+      "Finished matches keep their pre-match odds so you can compare them with the result."
+    ]
+  },
+  "ja": {
+    "title": "オフサイドカップ 全試合の予想",
+    "items": [
+      "カップの日程にあるすべての試合に、勝ち・引き分け・負けの予想バーが表示されます。参加していなくても見られます。",
+      "予想は試合の1時間前、両チームのメンバーが締め切られた時点で、実際の試合と同じ計算で一度だけ決まります。",
+      "終わった試合にも試合前の予想が残るので、結果と比べられます。"
+    ]
+  },
+  "availability": "web-app"
+}
