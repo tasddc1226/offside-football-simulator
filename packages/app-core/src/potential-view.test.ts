@@ -90,15 +90,33 @@ describe('은퇴 잠재력 표시', () => {
       start: { grade: 'C', value: 77 },
       drift: 4,
       boost: 2,
+      boostLv: 0,
       seed: 1234,
       bal: 0,
     });
-    expect(potentialFlowLines(v.flow!, v.pot!)).toHaveLength(4);
+    // T-11-408 강화 단계가 없으면 2는 모두 이벤트 몫이다.
+    expect(potentialFlowLines(v.flow!, v.pot!)).toEqual([
+      '처음 실제 잠재력 C (77)',
+      '25세까지 성장기 변동(무작위) +4',
+      '트레이너 · 스토리 이벤트 +2',
+      '은퇴 시 실제 잠재력 B (83)',
+    ]);
     expect(potentialSeedLines(v.flow!)[0]).toContain('1234');
+    // 강화 4단계 + 23세 이하 트레이너 +2 = 6이면 두 줄로 나눈다.
+    expect(potentialFlowLines({ ...v.flow!, boost: 6, boostLv: 4 }, v.pot!)).toContain(
+      '잠재력 강화 +4',
+    );
+    expect(potentialFlowLines({ ...v.flow!, boost: 6, boostLv: 4 }, v.pot!)).toContain(
+      '트레이너 · 스토리 이벤트 +2',
+    );
     delete s.origin;
     const old = legends.viewFromGame(s).flow!;
-    expect(old).toEqual({ boost: 2, bal: 0 });
-    expect(potentialFlowLines(old, v.pot!)).toHaveLength(2);
+    expect(old).toEqual({ boost: 2, boostLv: 0, bal: 0 });
+    // 나눈 값이 없는 옛 은퇴 기록은 합만 보인다.
+    expect(potentialFlowLines({ boost: 2, bal: 0 }, v.pot!)).toEqual([
+      '잠재력 강화 · 이벤트 +2',
+      '은퇴 시 실제 잠재력 B (83)',
+    ]);
   });
 
   it('진행 중 세이브에서는 공개하지 않고, 없는 옛 은퇴 값은 최고 OVR로 추정하지 않는다', () => {
