@@ -362,6 +362,7 @@ function MatchLine({
         </Txt>
         {mine ? <Pill tone="good">{L.mineTag}</Pill> : null}
       </View>
+      {m.odds ? <MatchOdds m={m} home={home?.name ?? L.tbd} away={away?.name ?? L.tbd} /> : null}
     </>
   );
   const style = {
@@ -395,6 +396,37 @@ function MatchLine({
     <View>
       {row}
       <CupPrediction m={m} prediction={prediction} />
+    </View>
+  );
+}
+
+/** T-11-407 명단이 잠긴 경기(1시간 전부터)의 홈 · 무 · 원정 예상 막대. 끝난 경기는 '경기 전 예상'으로 남긴다. */
+function MatchOdds({ m, home, away }: { m: CupMatch; home: string; away: string }) {
+  const c = useColors();
+  const o = m.odds!;
+  const label = m.played ? L.matchOddsBefore : L.matchOddsLabel;
+  return (
+    <View
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={L.matchOddsAria({ label, home, away, h: o.home, d: o.draw, a: o.away })}
+      testID={`cup-match-odds-${m.id}`}
+      style={{ gap: 3, marginTop: 4 }}
+    >
+      <View
+        style={{ flexDirection: 'row', gap: 2, height: 6, borderRadius: 3, overflow: 'hidden' }}
+      >
+        <View style={{ flex: Math.max(o.home, 1), backgroundColor: c.accent }} />
+        <View style={{ flex: Math.max(o.draw, 1), backgroundColor: c.line }} />
+        <View style={{ flex: Math.max(o.away, 1), backgroundColor: c.muted }} />
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+        <Txt v="xs" bold num>{`${o.home}%`}</Txt>
+        <Txt v="xs" tone="muted" numberOfLines={1} style={{ flexShrink: 1 }}>
+          {`${label} · ${L.matchOddsDraw({ n: o.draw })}`}
+        </Txt>
+        <Txt v="xs" bold num>{`${o.away}%`}</Txt>
+      </View>
     </View>
   );
 }
@@ -791,6 +823,9 @@ function CupBody({
         <Card gap={10} testID="cup-fixtures">
           <Txt v="h2" accessibilityRole="header">
             {L.scheduleMatches}
+          </Txt>
+          <Txt v="xs" tone="muted">
+            {L.matchOddsPending}
           </Txt>
           <View style={{ flexDirection: 'row', gap: 16 }}>
             {(

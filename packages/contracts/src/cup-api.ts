@@ -49,6 +49,14 @@ export const CupGroupSchema = z.strictObject({
   standings: z.array(CupStandingSchema),
 });
 
+/** T-11-407 경기 전 예상 승 · 무 · 패(홈 기준 정수 %, 합 100). */
+export const CupMatchOddsSchema = z.strictObject({
+  home: z.number().int().min(0).max(100),
+  draw: z.number().int().min(0).max(100),
+  away: z.number().int().min(0).max(100),
+});
+export type CupMatchOdds = z.infer<typeof CupMatchOddsSchema>;
+
 export const CupMatchSchema = z.strictObject({
   id: z.string(),
   round: CupRoundSchema,
@@ -66,6 +74,8 @@ export const CupMatchSchema = z.strictObject({
   winnerTeamId: z.string().nullable(),
   /** 한 팀이 나오지 못해 0:3으로 끝난 경기. */
   forfeit: z.boolean(),
+  /** T-11-407 경기 전 예상(명단이 잠긴 경기 1시간 전부터). 잠금 전 · 몰수 경기는 null, 옛 서버 응답에는 없다. */
+  odds: CupMatchOddsSchema.nullable().optional(),
 });
 export type CupMatch = z.infer<typeof CupMatchSchema>;
 

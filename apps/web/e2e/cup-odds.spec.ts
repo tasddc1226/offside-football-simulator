@@ -112,3 +112,62 @@ test('토너먼트 경기: 비기면 승부차기 안내를 붙인다', async ({
   await open(page, 'r64', null);
   await expect(page.locator('[data-cup-odds]')).toContainText('승부차기로 가려요');
 });
+
+// T-11-407 모든 경기: 참가하지 않은 사람도 명단이 잠긴 경기의 예상 막대를 보고, 끝난 경기는 '경기 전 예상'으로 남는다.
+test('참가하지 않아도 경기 일정에 예상 승 · 무 · 패가 보인다', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-19T11:30:00.000Z'));
+  const played = {
+    ...match('g1', 1),
+    id: 'm0',
+    at: '2026-10-18T12:00:00.000Z',
+    played: true,
+    homeGoals: 0,
+    awayGoals: 1,
+    winnerTeamId: 'tem_b',
+    odds: { home: 62, draw: 21, away: 17 },
+  };
+  const next = { ...match('g2', 1), odds: { home: 47, draw: 26, away: 27 } };
+  const later = { ...match('g3', 1), id: 'm2', at: '2026-10-20T12:00:00.000Z', odds: null };
+  const requests: string[] = [];
+  await page.route(`${API}/**`, (r) => {
+    const path = new URL(r.request().url()).pathname;
+    requests.push(path);
+    const data =
+      path === '/v1/cups/home'
+        ? {
+            cup,
+            phase: 'group',
+            entries: 2,
+            teamCount: 2,
+            round: null,
+            championName: null,
+            champion: null,
+          }
+        : path === '/v1/cups/current'
+          ? {
+              cup,
+              phase: 'group',
+              entries: 2,
+              teams: [team('tem_a', '우리팀', 88), team('tem_b', '상대팀', 92)],
+              groups: [{ no: 1, standings: [] }],
+              matches: [played, next, later],
+              championTeamId: null,
+            }
+          : null;
+    return data ? r.fulfill(ok(data)) : r.fulfill({ status: 503, body: '' });
+  });
+  await page.goto('/');
+  await page.locator('[data-act="cup-open"]').click();
+  await expect(page.locator('[data-cup-odds-note]')).toContainText('경기 1시간 전');
+  const row = (id: string) => page.locator(`[data-cup-match="${id}"] [data-cup-match-odds]`);
+  await expect(row('m1')).toContainText('47%');
+  await expect(row('m1')).toContainText('무 26%');
+  await expect(row('m1')).toHaveAttribute('aria-label', /우리팀 승 47%, 무승부 26%, 상대팀 승 27%/);
+  await expect(row('m0')).toContainText('경기 전 예상');
+  await expect(row('m2')).toHaveCount(0);
+  // 예상은 대회 응답에 들어 있어 따로 부르지 않고, 내 상태(/me)도 로그인 전에는 부르지 않는다.
+  expect(requests.filter((p) => p.includes('odds'))).toEqual([]);
+  expect(requests).not.toContain('/v1/cups/current/me');
+  const width = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(width).toBeLessThanOrEqual(360);
+});

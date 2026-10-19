@@ -126,6 +126,12 @@ export const cup: Translation<CupMsgs> = {
   oddsLine: (p) => `予想 勝ち ${p.win}% · 引き分け ${p.draw}% · 負け ${p.loss}%`,
   oddsNote: '今の両チームのメンバーで計算しています。メンバーは試合の1時間前に締め切られます。',
   oddsKoNote: 'トーナメントで引き分けるとPK戦で決めます。',
+  matchOddsLabel: '予想',
+  matchOddsBefore: '試合前の予想',
+  matchOddsDraw: (p) => `引き分け ${p.n}%`,
+  matchOddsAria: (p) =>
+    `${p.label}: ${p.home} 勝ち ${p.h}%、引き分け ${p.d}%、${p.away} 勝ち ${p.a}%`,
+  matchOddsPending: '勝ち · 引き分け · 負けの予想は、メンバーが締め切られる試合の1時間前に出ます。',
   lockedNow: 'メンバーがロックされています。試合が終わるとまた変更できます。',
   myResult: (p) => `自分の成績 ${p.stage}`,
   youWon: '優勝しました！',

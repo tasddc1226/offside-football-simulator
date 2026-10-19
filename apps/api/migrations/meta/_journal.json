@@ -799,6 +799,13 @@
       "when": 1792372301560,
       "tag": "0116_team_live_matches",
       "breakpoints": true
+    },
+    {
+      "idx": 117,
+      "version": "6",
+      "when": 1792416061893,
+      "tag": "0117_cup_match_odds",
+      "breakpoints": true
     }
   ]
 }
