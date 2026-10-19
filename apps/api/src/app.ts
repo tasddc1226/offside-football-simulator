@@ -9,6 +9,7 @@ import { logger } from './middleware/logger.js';
 import { cupHomeCache } from './middleware/cupHomeCache.js';
 import { originGuard } from './middleware/originGuard.js';
 import { requestId } from './middleware/requestId.js';
+import { securityHeaders } from './middleware/securityHeaders.js';
 import { seasonScheduleMiddleware } from './seasonSchedule.js';
 import { registerAdminRoutes } from './routes/admin.js';
 import { registerAppAuthRoutes } from './routes/appAuth.js';
@@ -56,6 +57,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
 
   app.use('*', requestId);
   app.use('*', logger);
+  app.use('*', securityHeaders);
   app.use('*', cupHomeCache);
   app.use('*', cors);
   app.use('*', originGuard);

@@ -2,6 +2,12 @@ packages:
   - 'apps/*'
   - 'packages/*'
   - 'tooling/*'
+overrides:
+  # Security patches within the existing major versions; review remaining Expo advisories separately.
+  'shell-quote@>=1.8.4 <1.11.0': 1.11.0
+  'source-map-js@>=1.0.0 <1.2.2': 1.2.2
+  '@grpc/grpc-js@<1.13.6': 1.13.6
+  'brace-expansion@>=5.0.0 <5.0.12': 5.0.12
 allowBuilds:
   esbuild: true
   workerd: true
