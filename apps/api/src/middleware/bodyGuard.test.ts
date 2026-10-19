@@ -3,14 +3,13 @@ import { Hono } from 'hono';
 import { describe, expect, it, vi } from 'vitest';
 import type { AppEnv } from '../env.js';
 import { errorHandler } from '../errors.js';
+import { readJson } from '../routes/shared.js';
 import { bodyGuard } from './bodyGuard.js';
 
 function app() {
   const server = new Hono<AppEnv>();
   server.use('*', bodyGuard);
-  server.post('/read-json', async (c) =>
-    c.json({ parsed: await c.req.json(), text: await c.req.text() }),
-  );
+  server.post('/read-json', (c) => c.json({ parsed: readJson(c), text: c.get('rawBody') }));
   server.post('*', (c) => c.text(c.get('rawBody') ?? ''));
   server.onError(errorHandler);
   return server;
@@ -39,7 +38,7 @@ function streamed(chunks: Uint8Array[], headers: Record<string, string> = {}, pa
 }
 
 describe('bounded request bodies', () => {
-  it('preserves Hono body caching for downstream store notification parsers', async () => {
+  it('shares the bounded JSON body with downstream store notification parsers', async () => {
     const body = JSON.stringify({ signedPayload: 'test-signed-payload' });
     const input = streamed([new TextEncoder().encode(body)], {}, '/read-json');
     const response = await app().request(input.request);
