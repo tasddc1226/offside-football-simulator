@@ -86,3 +86,25 @@ test(
     ]);
   },
 );
+
+test(
+  'the compatibility overlay restores resolution settings with the reviewed lockfile',
+  { skip: !hasSource },
+  () => {
+    const root = mkdtempSync(join(tmpdir(), 'ota-resolution-'));
+    try {
+      execFileSync('git', ['clone', '--shared', '--quiet', process.cwd(), root]);
+      const game = readFileSync(join(root, 'packages/game/src/index.ts'), 'utf8');
+      prepare(root);
+      for (const file of ['pnpm-lock.yaml', 'pnpm-workspace.yaml', 'apps/api/package.json']) {
+        const expected = execFileSync('git', ['show', `${source}:${file}`], {
+          encoding: 'utf8',
+        });
+        assert.equal(readFileSync(join(root, file), 'utf8'), expected);
+      }
+      assert.equal(readFileSync(join(root, 'packages/game/src/index.ts'), 'utf8'), game);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  },
+);
