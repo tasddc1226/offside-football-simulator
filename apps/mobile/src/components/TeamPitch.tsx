@@ -1,3 +1,4 @@
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useState, type RefObject } from 'react';
 import { Pressable, View } from 'react-native';
 import Svg, { Line } from 'react-native-svg';
@@ -68,11 +69,11 @@ export function TeamPitch({
     <View
       testID="team-pitch"
       onLayout={fixedHeight ? undefined : (e) => setWidth(e.nativeEvent.layout.width)}
-      style={{ height, borderRadius: 16, backgroundColor: c.pitch }}
+      style={{ height, borderRadius: RADIUS.lg, backgroundColor: c.pitch }}
     >
       <View
         pointerEvents="none"
-        style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: 16 }}
+        style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: RADIUS.lg }}
       >
         {Array.from({ length: 5 }, (_, i) => (
           <View
@@ -200,7 +201,7 @@ export function TeamPitch({
                   })}
                   accessibilityState={{ selected: selected === i }}
                   style={{
-                    borderRadius: 10,
+                    borderRadius: RADIUS.sm,
                     borderWidth: selected === i || focus?.includes(i) ? 2 : 0,
                     borderColor: selected === i ? c.pitchAccent : c.accent,
                   }}
@@ -218,7 +219,7 @@ export function TeamPitch({
                     bottom: -6,
                     width: 10,
                     height: 10,
-                    borderRadius: 5,
+                    borderRadius: RADIUS.xs,
                     borderWidth: 2,
                     borderColor: c.pitch,
                     backgroundColor: c.accent,
@@ -247,7 +248,7 @@ export function TeamPitch({
           maxWidth: '100%',
           paddingVertical: 4,
           paddingHorizontal: 10,
-          borderRadius: 999,
+          borderRadius: RADIUS.pill,
           backgroundColor: c.surface2,
         }}
       >
@@ -288,16 +289,23 @@ export function TeamLines({ lines, coach = null }: { lines: Lines; coach?: Syner
               flex: 1,
               alignItems: 'center',
               paddingVertical: 6,
-              borderRadius: 10,
+              borderRadius: RADIUS.sm,
               backgroundColor: c.surface2,
             }}
           >
-            <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.5 }}>
+            <Txt
+              tone="muted"
+              style={{ fontSize: rem(FONT.caption), lineHeight: rem(FONT.caption) * 1.5 }}
+            >
               {label}
             </Txt>
             <Txt
               num
-              style={{ fontSize: rem(1.25), lineHeight: rem(1.25) * 1.3, fontWeight: '700' }}
+              style={{
+                fontSize: rem(FONT.title2),
+                lineHeight: rem(FONT.title2) * 1.3,
+                fontWeight: '700',
+              }}
             >
               {v}
             </Txt>
@@ -305,7 +313,7 @@ export function TeamLines({ lines, coach = null }: { lines: Lines; coach?: Syner
               <Txt
                 testID={`coach-line-${k}`}
                 style={{
-                  fontSize: rem(0.6875),
+                  fontSize: rem(FONT.caption2),
                   fontWeight: '600',
                   color: coach![k] < 0 ? c.bad : c.good,
                 }}

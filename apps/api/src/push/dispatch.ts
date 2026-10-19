@@ -2,6 +2,7 @@ import type { Context } from 'hono';
 import type { AppEnv, Bindings } from '../env.js';
 import { postExpo } from './transport.js';
 import { latePushResult } from './result.js';
+import { publishPushWork } from './queuePublish.js';
 
 const BATCH = 100;
 const MINUTE = 60_000;
@@ -27,14 +28,21 @@ type Ticket = { status?: string; id?: string; details?: { error?: string } };
 type Result = { state: State; due: number; ticket?: string; remove?: boolean };
 
 /** 유효 기기만 다시 확인한다. 로그아웃·동의 철회·계정/토큰 전환·삭제된 글에는 보내지 않는다. */
-async function claim(db: D1Database, receipts: boolean, now: number, lease: string) {
+async function claim(
+  db: D1Database,
+  receipts: boolean,
+  now: number,
+  lease: string,
+  ids?: string[],
+) {
+  const scope = ids ? ` AND id IN (${ids.map(() => '?').join(',')})` : '';
   const from = receipts ? 'accepted' : 'pending';
   const to = receipts ? 'checking' : 'sending';
   await db
     .prepare(
       `UPDATE push_news_deliveries SET state = ?, lease_id = ?, due_at = ?, updated_at = ?,
       attempts = attempts + ?, receipt_attempts = receipt_attempts + ?
-    WHERE id IN (SELECT id FROM push_news_deliveries WHERE state = ? AND due_at <= ? ORDER BY due_at LIMIT ${BATCH})`,
+    WHERE id IN (SELECT id FROM push_news_deliveries WHERE state = ? AND due_at <= ?${scope} ORDER BY due_at LIMIT ${BATCH})`,
     )
     .bind(
       to,
@@ -45,6 +53,7 @@ async function claim(db: D1Database, receipts: boolean, now: number, lease: stri
       receipts ? 1 : 0,
       from,
       iso(now),
+      ...(ids ?? []),
     )
     .run();
   const rows = await db
@@ -212,8 +221,11 @@ export async function runNewsPush(
   now = Date.now(),
   transport: typeof fetch = fetch,
   sendBatches: 1 | 3 = 3,
+  ids?: string[],
 ) {
   if (env.ENVIRONMENT !== 'production' || env.NEWS_PUSH_ENABLED !== '1') return { enabled: false };
+  if (ids && !ids.length) return { enabled: true, states: {} };
+  const scope = ids ? ` AND id IN (${ids.map(() => '?').join(',')})` : '';
   const lease = crypto.randomUUID();
   const db = env.DB;
   // Worker 중단 이후 sending은 재발송하지 않는다. receipt 조회는 안전하게 다시 할 수 있다.
@@ -221,20 +233,20 @@ export async function runNewsPush(
     db
       .prepare(
         `UPDATE push_news_deliveries SET state = 'unknown', token = '', lease_id = NULL, updated_at = ?
-      WHERE state = 'sending' AND due_at <= ?`,
+      WHERE state = 'sending' AND due_at <= ?${scope}`,
       )
-      .bind(iso(now), iso(now)),
+      .bind(iso(now), iso(now), ...(ids ?? [])),
     db
       .prepare(
         `UPDATE push_news_deliveries SET state = 'accepted', lease_id = NULL
-      WHERE state = 'checking' AND due_at <= ?`,
+      WHERE state = 'checking' AND due_at <= ?${scope}`,
       )
-      .bind(iso(now)),
+      .bind(iso(now), ...(ids ?? [])),
   ]);
   const states: Partial<Record<State, number>> = {};
   // 영수증 100건 + 발송 최대 300건. 요청·cron 한 번의 부하를 제한하며 남은 큐는 다음 cron이 잇는다.
   for (const checking of [true, ...Array.from({ length: sendBatches }, () => false)]) {
-    const rows = await claim(db, checking, now, lease);
+    const rows = await claim(db, checking, now, lease, ids);
     const active = checking ? rows : rows.filter((r) => r.eligible === 1);
     const outcomes = active.length
       ? await (checking ? receipts : send)(env, active, now, transport)
@@ -253,8 +265,8 @@ export async function runNewsPush(
 export function kickNewsPush(c: Context<AppEnv>) {
   if (c.env.NEWS_PUSH_ENABLED !== '1' || c.env.ENVIRONMENT !== 'production') return;
   c.executionCtx.waitUntil(
-    // 요청 종료 후 waitUntil은 30초 한도. 외부 요청 최대 두 번(각 10초)으로 제한한다.
-    runNewsPush(c.env, Date.now(), fetch, 1).catch(() => {
+    // Publish IDs only. Expo sends and receipt checks belong to the Queue consumer.
+    publishPushWork(c.env, 'news').catch(() => {
       console.error(JSON.stringify({ job: 'news-push', error: 'DISPATCH_FAILED' }));
     }),
   );

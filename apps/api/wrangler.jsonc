@@ -71,11 +71,10 @@
     "production": {
       "name": "offside-api",
       "workers_dev": true,
-      // T-11-385 traces show D1 primary responses from SIN; repeated cross-region D1 round trips
-      // dominate authenticated request latency. Place fetch handlers near Singapore, then verify
-      // API duration and D1 span latency. Restore { "mode": "smart" } if this regresses.
-      // This is a Cloudflare placement hint, not an AWS deployment or a D1 data migration.
-      "placement": { "region": "aws:ap-southeast-1" },
+      // T-11-385 invocation metrics already showed most fetches in SIN with Smart Placement.
+      // An explicit Singapore-region trial did not establish a material D1 round-trip benefit.
+      // Keep automatic placement so this does not pin compute if the D1 primary changes.
+      "placement": { "mode": "smart" },
       "ai": { "binding": "AI" },
       "routes": [{ "pattern": "api.offside-lab.com", "custom_domain": true }],
       "observability": {
@@ -89,12 +88,21 @@
       "triggers": { "crons": ["0 19 * * *", "*/5 * * * *"] },
       "queues": {
         "producers": [
+          { "binding": "PUSH_QUEUE", "queue": "offside-push-production" },
           { "binding": "BILLING_QUEUE", "queue": "offside-billing-production" },
           { "binding": "CUP_PUSH_QUEUE", "queue": "offside-cup-push-production" },
           { "binding": "ADMIN_PUSH_QUEUE", "queue": "offside-admin-push-production" },
           { "binding": "CAREER_PUSH_QUEUE", "queue": "offside-career-push-production" },
         ],
         "consumers": [
+          {
+            "queue": "offside-push-production",
+            "max_batch_size": 1,
+            "max_batch_timeout": 1,
+            "max_concurrency": 1,
+            "max_retries": 3,
+            "dead_letter_queue": "offside-push-production-dlq",
+          },
           {
             "queue": "offside-billing-production",
             "max_batch_size": 1,

@@ -1,0 +1,20 @@
+{
+  "id": "t-11-363-acquisition-iap",
+  "title": "유입과 앱 결제 연결 선택 동의",
+  "items": [
+    "같은 계정의 방문 경로와 앱 구매를 연결하는 별도 동의를 선택할 수 있어요. 거절해도 게임은 그대로 이용할 수 있어요."
+  ],
+  "en": {
+    "title": "Optional connection of visits and app purchases",
+    "items": [
+      "A separate consent can connect visits and app purchases on the same account. Declining does not affect the game."
+    ]
+  },
+  "ja": {
+    "title": "流入とアプリ購入の関連付けを選択",
+    "items": [
+      "同じアカウントの流入とアプリ購入の関連付けに、別途同意できます。同意しなくてもゲームを利用できます。"
+    ]
+  },
+  "availability": "web"
+}

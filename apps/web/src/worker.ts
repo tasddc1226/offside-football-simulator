@@ -1,3 +1,4 @@
+import { withCampaignBanner } from './app-banner.js';
 import { serveNews, newsSitemap } from './public-news.js';
 import {
   LEGENDS_TTL,
@@ -16,6 +17,7 @@ interface Fetcher {
 }
 interface Env {
   ASSETS: Fetcher;
+  APPLE_PROVIDER_TOKEN?: string;
   /** T-10-068 공유 미리보기 카드 워커(서비스 바인딩). 로컬 개발에선 없다. */
   OG?: Fetcher;
 }
@@ -99,7 +101,7 @@ function withPreconnect(response: Response, url: URL): Response {
   const result = new Response(response.body, response);
   result.headers.append(
     'Link',
-    `<https://fonts.gstatic.com>; rel=preconnect; crossorigin, <${resolveApiBaseUrl(undefined, url.hostname)}>; rel=preconnect`,
+    `<https://fonts.gstatic.com>; rel=preconnect; crossorigin, <https://cdn.jsdelivr.net>; rel=preconnect; crossorigin, <${resolveApiBaseUrl(undefined, url.hostname)}>; rel=preconnect`,
   );
   return result;
 }
@@ -114,7 +116,10 @@ export default {
   async fetch(request: Request, env: Env, ctx: Ctx): Promise<Response> {
     const url = new URL(request.url);
     if (OG_CARD_PATH.test(url.pathname)) return careerCard(request, env, ctx);
-    return withPreconnect(await route(request, env, url, ctx), url);
+    return withPreconnect(
+      await withCampaignBanner(await route(request, env, url, ctx), url, env.APPLE_PROVIDER_TOKEN),
+      url,
+    );
   },
 };
 

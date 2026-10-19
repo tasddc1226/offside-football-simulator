@@ -75,15 +75,15 @@
 </div>
 <style>
   .profile-editor{flex:none;align-self:flex-start;margin-left:auto;}
-  .edit-button{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:0;border-radius:10px;background:transparent;color:var(--muted);cursor:pointer;}
+  .edit-button{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--muted);cursor:pointer;}
   .edit-button:hover{background:var(--surface-2);color:var(--ink);}
   .edit-button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
-  dialog{position:fixed;inset:0;max-width:100%;width:min(100% - 24px,440px);max-height:85dvh;box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;margin:auto;padding:20px;border:1px solid var(--line);border-radius:18px;background:var(--surface);color:var(--ink);box-shadow:0 16px 64px #0008;}
+  dialog{position:fixed;inset:0;max-width:100%;width:min(100% - 24px,440px);max-height:85dvh;box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;margin:auto;padding:20px;border: 1px solid transparent;border-radius:var(--radius-lg);background:var(--surface);color:var(--ink);box-shadow:0 16px 64px #0008;}
   dialog::backdrop{background:#0009;}
   header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;}
   h2{font-size:20px;margin:0;}
-  .close-button{display:grid;place-items:center;flex:none;width:44px;height:44px;border:0;border-radius:10px;background:transparent;color:inherit;font-size:28px;cursor:pointer;}
+  .close-button{display:grid;place-items:center;flex:none;width:44px;height:44px;border:0;border-radius:var(--radius-sm);background:transparent;color:inherit;font-size:28px;cursor:pointer;}
   button:focus-visible{outline:2px solid var(--accent, #d4b66a);outline-offset:3px;}
-  @media(max-width:600px){dialog{width:100%;max-height:90dvh;margin:auto 0 0;border-radius:20px 20px 0 0;padding:18px 18px max(24px,env(safe-area-inset-bottom));}}
+  @media(max-width:600px){dialog{width:100%;max-height:90dvh;margin:auto 0 0;border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:18px 18px max(24px,env(safe-area-inset-bottom));}}
 .editor-body{display:flex;flex-direction:column;gap:12px;padding:4px 0 16px;}.hint{font-size:12px;line-height:1.6;margin:0;}.photo-row{display:flex;gap:14px;align-items:center;}.preview{border-radius:50%;object-fit:cover;flex:none;}.photo-actions{display:flex;flex:1;flex-wrap:wrap;gap:8px;}.photo-actions .btn{min-height:44px;font-size:13px;}.draft-actions{display:flex;gap:8px;}.draft-actions .btn{flex:1;min-height:44px;}.name-edit{display:flex;flex-direction:column;gap:8px;}.name-label{font-size:13px;font-weight:700;}.error{color:var(--bad);font-size:13px;margin:0;}
 </style>

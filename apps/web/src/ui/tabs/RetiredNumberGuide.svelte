@@ -74,7 +74,7 @@
   .rn-trigger { display: flex; align-items: center; gap: 12px; padding: 16px; width: 100%; min-height: 80px; color: var(--ink); background: transparent; border: 0; text-align: left; cursor: pointer; }
   .rn-trigger:hover { background: var(--surface2); }
   .rn-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
-  .rn-shirt { display: grid; place-items: center; width: 44px; min-height: 48px; flex-shrink: 0; background: var(--surface2); border: 1px solid var(--line); border-radius: 6px; font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .rn-shirt { display: grid; place-items: center; width: 44px; min-height: 48px; flex-shrink: 0; background: var(--surface2); border: 1px solid var(--line); border-radius: var(--radius-xs); font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .rn-heading { flex: 1; min-width: 0; display: grid; gap: 4px; overflow-wrap: anywhere; }
   .rn-body { display: grid; gap: 12px; padding: 0 16px 16px; }
   .rn-clubs { display: grid; gap: 16px; }

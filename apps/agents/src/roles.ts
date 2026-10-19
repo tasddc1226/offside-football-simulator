@@ -12,6 +12,7 @@ import team from '../roles/team.md';
 import { appStatusTools } from './appStatus.ts';
 import { memoryTools } from './memory.ts';
 import { marketingTools } from './marketing.ts';
+import { socialTools } from './social.ts';
 import { webTools } from './tools/web.ts';
 import captain from '../roles/captain.md';
 import baseline from '../knowledge/ops-baseline.md';
@@ -19,8 +20,8 @@ import { captainTools } from './captain.ts';
 import { devTools } from './dev.ts';
 import { repoReadToken } from './github.ts';
 import { ga4Tools } from './ga4.ts';
-import { mktTools } from './mkt.ts';
 import { supportTools } from './support.ts';
+import { supportCaseTools } from './supportCase.ts';
 import { reviewTools } from './reviews.ts';
 import { opsTools } from './tools/ops.ts';
 import { digestTools } from './tools/digest.ts';
@@ -50,6 +51,10 @@ const handoffPrompt = (t: Task) =>
     ? `지금 KST ${kstNow()}. 내가 넘긴 일을 @${t.from}가 끝내고 결과를 돌려줬어요.\n\n${t.text}\n\n<context>\n${t.context ?? ''}\n</context>\n\n${ANSWER_RULE}`
     : `지금 KST ${kstNow()}. @${t.from}가 같은 스레드에서 일을 넘겼어요.\n\n요청: ${t.text}\n\n<context>\n${t.context ?? ''}\n</context>\n\n${ANSWER_RULE}`;
 
+/** T-11-400 문의 작업의 마무리 답장(역할 설명의 "문의 마무리 답장"). 근거는 @dev 답(자료)이다. */
+const followupPrompt = (t: Task) =>
+  `지금 KST ${kstNow()}. ${t.text}\n문의 메일 스레드: ${t.mail ?? ''}\n${t.context ? `\n<context>\n${t.context}\n</context>\n` : ''}\n${ANSWER_RULE}`;
+
 /**
  * 일에 맞는 모델(T-11-289 비용 절감). 유저 반응 분류 · 경보 첫 정리는 Haiku, 아침 보고는 Sonnet, 운영자 지시 ·
  * 넘겨받은 일(원인 분석 · 기획 · 코드)은 Opus. 경보 스레드에서 운영자가 다시 부르면 Opus로 깊게 본다.
@@ -57,11 +62,7 @@ const handoffPrompt = (t: Task) =>
 export const modelFor = (kind: Task['kind']): Model =>
   kind === 'triage' || kind === 'alert'
     ? MODELS.haiku
-    : kind === 'report' ||
-        kind === 'support' ||
-        kind === 'reviews' ||
-        kind === 'release' ||
-        kind === 'verify'
+    : kind === 'report' || kind === 'support' || kind === 'reviews' || kind === 'verify'
       ? MODELS.sonnet
       : MODELS.opus;
 
@@ -94,17 +95,20 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
         ...appStatusTools(env),
         ...memoryTools(env, 'plan', task),
         ...supportTools(env, task),
+        ...supportCaseTools(env, task),
         ...reviewTools(env, task),
         ...captainTools(env, task),
       ],
-      maxTurns: task.kind === 'support' ? 14 : task.kind === 'reviews' ? 12 : 10,
+      maxTurns: task.kind === 'support' ? 18 : task.kind === 'reviews' ? 16 : 16,
       mcpServers: [],
       prompt: (t) =>
         t.kind === 'triage' || t.kind === 'support' || t.kind === 'reviews'
           ? t.text
           : t.kind === 'handoff'
             ? handoffPrompt(t)
-            : directive(t),
+            : t.kind === 'followup'
+              ? followupPrompt(t)
+              : directive(t),
     };
   if (role === 'dev')
     return {
@@ -119,7 +123,7 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
         ...memoryTools(env, 'dev', task),
       ],
       // 파일 찾기 · 나눠 읽기에 턴이 더 든다(8턴에서 "앞부분만 봤다"로 끝나던 문제).
-      maxTurns: 12,
+      maxTurns: 18,
       mcpServers: [],
       prompt: (t) =>
         t.kind === 'handoff'
@@ -132,26 +136,24 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
     return {
       system: `${mkt}\n\n${team}\n\n${glossary}`,
       model,
-      // 마케팅은 저장소 · 배포 기록을 읽고 드림보트 요약 초안만 올린다(보내기는 운영자 승인 버튼).
+      // 마케팅은 저장소 · GA4 · 광고 성과를 읽고 초안을 쓴다(게시 · 집행은 운영자).
       tools: [
         ...repo,
         ...web,
-        ...mktTools(env, task),
         ...ga4Tools(env, task.kind),
         ...marketingTools(env, task.kind),
+        ...socialTools(env, task.kind),
         ...appStatusTools(env),
         ...memoryTools(env, 'mkt', task),
       ],
-      maxTurns: task.kind === 'release' ? 5 : task.kind === 'report' ? 7 : 8,
+      maxTurns: task.kind === 'report' ? 10 : 14,
       mcpServers: [],
       prompt: (t) =>
-        t.kind === 'release'
-          ? `지금 KST ${kstNow()}. ${t.text}\n역할 설명의 "배포 뒤 업데이트 요약" 순서대로 해 주세요. 먼저 \`release_changes\`를 한 번 불러요.`
-          : t.kind === 'report'
-            ? `지금 KST ${kstNow()}. 월요일 주간 유입 리포트를 써 주세요. 역할 설명의 "주간 유입 리포트" 순서대로, \`ga4_report\`는 4번 안쪽으로 불러요.`
-            : t.kind === 'handoff'
-              ? handoffPrompt(t)
-              : directive(t),
+        t.kind === 'report'
+          ? `지금 KST ${kstNow()}. 월요일 주간 유입 리포트를 써 주세요. 역할 설명의 "주간 유입 리포트" 순서대로, \`ga4_report\`는 4번 안쪽으로 불러요.`
+          : t.kind === 'handoff'
+            ? handoffPrompt(t)
+            : directive(t),
     };
   if (role !== 'ops') throw new Error(`role ${role} is not open yet`);
   return {
@@ -180,7 +182,7 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
     ],
     // 경보 첫 정리 · 아침 보고는 짧게 끝낸다(report_digest가 자료를 한 번에 모은다).
     maxTurns:
-      task.kind === 'alert' || task.kind === 'report' ? 6 : task.kind === 'verify' ? 10 : 15,
+      task.kind === 'alert' || task.kind === 'report' ? 8 : task.kind === 'verify' ? 12 : 20,
     // Cloudflare API MCP(읽기 권한만 있는 토큰): Workers 로그 · 분석 · 설정 조회.
     mcpServers: env.CF_MCP_TOKEN
       ? [{ name: 'cloudflare', url: 'https://mcp.cloudflare.com/mcp', token: env.CF_MCP_TOKEN }]

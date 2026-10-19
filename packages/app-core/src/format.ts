@@ -5,6 +5,7 @@ import type { AttrKey } from '@offside/game/data';
 import {
   ovrRole,
   mainRole,
+  roleChoices,
   ROLES,
   ROLE_NAME,
   POS_ROLES,
@@ -192,7 +193,8 @@ export function attrData(s: GameState) {
   const abbr = s.pos === 'GK' ? GK_ABBR : FACE_ABBR;
   const tier = (v: number): 't1' | 't2' | 't3' | 't4' =>
     v >= 80 ? 't4' : v >= 70 ? 't3' : v >= 50 ? 't2' : 't1';
-  const roles = [...new Set([role, ...POS_ROLES[s.pos]])].map((r) => ({
+  // T-11-399 두 역할 중 높은 쪽으로 재는 선수는 다른 역할도 늘 보인다(스트라이커로 잡힌 타깃맨이 타깃맨 OVR을 보게).
+  const roles = [...new Set([role, ...roleChoices(s), ...POS_ROLES[s.pos]])].map((r) => ({
     role: r,
     on: r === role,
     title: ROLE_NAME[r],

@@ -1,6 +1,7 @@
 // T-11-290 팀 프로필의 스쿼드 댓글(웹 team/TeamComments.svelte) — 소식 글 댓글(screens/board/Board.tsx)과 같은 규칙·모양.
 // 읽기는 누구나, 쓰기는 구글(iOS는 Apple도)로 로그인하고 닉네임을 정한 사람만. 남의 댓글은 신고하고 작성자를 차단한다
 // (앱스토어 UGC 정책) — 신고한 댓글·차단한 사람의 댓글은 서버가 빼고 준다. 지우기·신고·차단·차단 해제는 게시판 댓글 API 그대로.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import {
@@ -36,7 +37,7 @@ import { Txt } from '../../../ui/Txt';
 import { useTranslations } from '../../../ui/Translate';
 import { TextBox, confirmAsync } from '../../board/parts';
 
-const small = { fontSize: rem(0.75) } as const;
+const small = { fontSize: rem(FONT.caption) } as const;
 
 function CommentAct({
   label,
@@ -61,13 +62,13 @@ function CommentAct({
         justifyContent: 'center',
         paddingVertical: 2,
         paddingHorizontal: 8,
-        borderRadius: 12,
+        borderRadius: RADIUS.md,
         borderWidth: 1,
-        borderColor: c.line,
-        backgroundColor: c.surface,
+        borderColor: 'transparent',
+        backgroundColor: c.surface2,
       }}
     >
-      <Txt style={{ fontSize: rem(0.75), fontWeight: '600' }}>{label}</Txt>
+      <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '600' }}>{label}</Txt>
     </Press>
   );
 }
@@ -150,7 +151,7 @@ export function TeamComments({ teamId }: { teamId: string }) {
   const gate = {
     gap: 8,
     padding: 12,
-    borderRadius: 10,
+    borderRadius: RADIUS.sm,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: c.line,
@@ -165,18 +166,18 @@ export function TeamComments({ teamId }: { teamId: string }) {
             {L.profCommentsTitle}
           </Txt>
           {comments?.length ? (
-            <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
               {boardLabelText.commentCount({ n: comments.length })}
             </Txt>
           ) : null}
         </View>
-        <Txt tone="muted" style={{ fontSize: rem(0.8125), marginTop: 4 }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.label), marginTop: 4 }}>
           {L.profCommentsHint}
         </Txt>
       </View>
       {failed ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
             {L.profCommentsFail}
           </Txt>
           <Btn sm onPress={() => void load()}>
@@ -232,11 +233,11 @@ export function TeamComments({ teamId }: { teamId: string }) {
                       gap: 8,
                       paddingVertical: 10,
                       paddingHorizontal: 12,
-                      borderRadius: 10,
+                      borderRadius: RADIUS.sm,
                       backgroundColor: c.surface2,
                     }}
                   >
-                    <Txt style={{ fontSize: rem(0.8125) }}>{LB.reportPrompt}</Txt>
+                    <Txt style={{ fontSize: rem(FONT.label) }}>{LB.reportPrompt}</Txt>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                       {COMMENT_REPORT_REASONS.map((reason) => (
                         <Btn
@@ -270,13 +271,13 @@ export function TeamComments({ teamId }: { teamId: string }) {
               </View>
             ))
           ) : (
-            <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.body2), paddingVertical: 8 }}>
               {L.profCommentsEmpty}
             </Txt>
           )}
           {blocks.length ? (
             <View testID="board-blocks" style={{ gap: 4 }}>
-              <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                 {LB.blockedUsers({ n: blocks.length })}
               </Txt>
               {blocks.map((b) => (
@@ -293,7 +294,7 @@ export function TeamComments({ teamId }: { teamId: string }) {
       ) : null}
       {!viewer ? null : !viewer.google ? (
         <View testID="comment-gate-login" style={gate}>
-          <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
             {apple ? LB.loginGateApple : LB.loginGate}
           </Txt>
           <GoogleLoginButton testID="comment-login" onPress={() => void startGoogleLogin(back())} />
@@ -306,7 +307,7 @@ export function TeamComments({ teamId }: { teamId: string }) {
         </View>
       ) : !viewer.nickname ? (
         <View testID="comment-gate-nickname" style={gate}>
-          <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
             {LB.nicknameGate}
           </Txt>
           <NicknameForm onsaved={(n) => setViewer((v) => (v ? { ...v, nickname: n } : v))} />

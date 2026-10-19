@@ -1,6 +1,7 @@
 // T-11-028 구단주 랭킹(웹 team/AchievementRanking.svelte) — 기록실 탭. 구단주의 시즌 업적 점수 순(같은 점수면 먼저 닿은 구단주가
 // 앞선다). 구단주는 공개 닉네임과 그 시즌 팀 이름으로만 보이고, 팀이 있으면 줄을 눌러 팀 프로필(appState.hof.team)을 연다.
 // 서버가 5분마다 새로 센다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { ACH_GRADES, ACH_RANK_PER_PAGE, achGradeOf } from '@offside/contracts/owner-team';
@@ -14,6 +15,7 @@ import { rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
 import { Btn } from '../../../ui/Btn';
 import { Card } from '../../../ui/Card';
+import { Skeleton } from '../../../ui/Skeleton';
 import { Press } from '../../../ui/Press';
 import { scrollTo } from '../../../ui/scroll';
 import { Txt } from '../../../ui/Txt';
@@ -67,7 +69,7 @@ export default function AchievementRanking() {
   }
 
   const empty = (text: string) => (
-    <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
+    <Txt tone="muted" style={{ fontSize: rem(FONT.body2), paddingVertical: 8 }}>
       {text}
     </Txt>
   );
@@ -100,13 +102,7 @@ export default function AchievementRanking() {
       {failed ? (
         empty(L.rankFail)
       ) : loading || !data ? (
-        <Txt
-          tone="muted"
-          accessibilityLiveRegion="polite"
-          style={{ fontSize: rem(0.875), paddingVertical: 8 }}
-        >
-          {L.loading}
-        </Txt>
+        <Skeleton rows={6} />
       ) : data.items.length ? (
         <>
           <View
@@ -265,12 +261,12 @@ export default function AchievementRanking() {
                   gap: 8,
                   paddingVertical: 6,
                   paddingHorizontal: 10,
-                  borderRadius: 10,
+                  borderRadius: RADIUS.sm,
                   backgroundColor: c.surface2,
                 }}
               >
                 <AchGradeBadge grade={g} />
-                <Txt num={400} tone="muted" style={{ fontSize: rem(0.8125) }}>
+                <Txt num={400} tone="muted" style={{ fontSize: rem(FONT.label) }}>
                   {L.gradeFrom({ n: n(g.min) })}
                 </Txt>
               </View>
@@ -278,7 +274,7 @@ export default function AchievementRanking() {
           </View>
         ) : null}
       </View>
-      <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: 10 }}>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 10 }}>
         {L.noteApp}
       </Txt>
     </Card>

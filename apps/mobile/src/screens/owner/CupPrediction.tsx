@@ -1,3 +1,4 @@
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import type { CupMatch } from '@offside/app-core/api/cup';
@@ -157,7 +158,7 @@ export function CupPrediction({
                     padding: 10,
                     borderWidth: 1,
                     borderColor: selected ? c.accent : c.line,
-                    borderRadius: 12,
+                    borderRadius: RADIUS.md,
                     backgroundColor: selected ? c.accent : c.surface2,
                   }}
                 >
@@ -177,7 +178,7 @@ export function CupPrediction({
                       style={{
                         width: 14,
                         height: 14,
-                        borderRadius: 7,
+                        borderRadius: RADIUS.xs,
                         borderWidth: 1,
                         borderColor: selected ? ink : c.muted,
                         backgroundColor: selected ? ink : 'transparent',
@@ -193,7 +194,7 @@ export function CupPrediction({
                   <Txt
                     num
                     bold
-                    style={{ fontFamily: DISPLAY[700], fontSize: rem(1.75), color: ink }}
+                    style={{ fontFamily: DISPLAY[700], fontSize: rem(FONT.title1), color: ink }}
                   >
                     {shares[k]}
                     <Txt v="xs" style={{ color: ink }}>

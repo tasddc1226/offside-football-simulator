@@ -151,9 +151,9 @@
     display: grid;
     gap: 6px;
     padding: 10px 12px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
   }
   .tm-ach-perks ul {
     margin: 0;
@@ -184,17 +184,17 @@
     min-height: 44px;
     justify-content: center;
     padding: 4px 10px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--surface);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
     color: var(--ink);
     font: inherit;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     font-weight: 700;
     cursor: pointer;
   }
   .tm-ach-rank small {
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     font-weight: 600;
   }
   .tm-ach-cats {
@@ -208,17 +208,17 @@
     gap: 1px;
     min-height: 48px;
     padding: 6px 4px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--surface);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
     color: var(--ink);
     font: inherit;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     font-weight: 700;
     cursor: pointer;
   }
   .tm-ach-cats button small {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .tm-ach-cats button[aria-selected='true'] {
@@ -242,19 +242,19 @@
     background: var(--bad, #e5484d);
     color: #fff;
     font-style: normal;
-    font-size: 0.625rem;
+    font-size: var(--fs-caption2);
     font-weight: 800;
     letter-spacing: 0.04em;
     vertical-align: 1px;
   }
   .tm-ach-txt small {
     color: var(--muted);
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
   }
   .tm-ach-txt .tm-ach-missing,
   .tm-ach-txt .tm-ach-reward,
   .tm-ach-txt .tm-ach-desc {
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
   }
   .tm-ach-txt .tm-ach-reward {
     color: var(--accent-text);
@@ -262,7 +262,7 @@
   .tm-pts {
     flex: none;
     font-family: var(--display);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     font-weight: 700;
     color: var(--muted);
     font-variant-numeric: tabular-nums;
@@ -280,7 +280,7 @@
   .tm-bar {
     display: block;
     height: 8px;
-    border-radius: 99px;
+    border-radius: var(--radius-pill);
     background: var(--surface-2);
     overflow: hidden;
   }
@@ -309,7 +309,7 @@
     align-items: start;
     gap: 6px 10px;
     padding: 8px 10px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
   }
   .tm-near-txt {
@@ -324,16 +324,16 @@
     max-width: 45%;
     min-height: 40px;
     padding: 0 8px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--surface);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
     color: var(--ink);
     font: inherit;
   }
   .tm-ach {
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: var(--surface);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: var(--surface-2);
   }
   .tm-ach summary {
     display: flex;
@@ -346,8 +346,8 @@
   .tm-ach-stage {
     flex: none;
     padding: 2px 6px;
-    border-radius: 6px;
-    font-size: 0.6875rem;
+    border-radius: var(--radius-xs);
+    font-size: var(--fs-caption2);
     font-weight: 700;
     background: var(--surface-2);
     color: var(--accent-text);
@@ -376,7 +376,7 @@
     align-items: center;
     gap: 10px;
     padding: 8px 10px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
   }
   .tm-ach li.done .tm-ach-txt small {

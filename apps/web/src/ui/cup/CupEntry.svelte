@@ -135,7 +135,7 @@
     flex-direction: column;
     gap: 6px;
     padding: 10px 12px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--surface-2);
     overflow-wrap: anywhere;
   }
@@ -146,7 +146,7 @@
   .ce-win {
     margin: 0;
     padding: 10px 12px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--pitch);
     color: var(--pitch-accent);
   }

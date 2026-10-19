@@ -115,12 +115,12 @@
     gap: 2px;
   }
   .fh-balance span {
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     color: var(--muted);
   }
   .fh-balance b {
     font-family: var(--display);
-    font-size: 1.75rem;
+    font-size: var(--fs-title1);
     color: var(--accent-text);
     font-variant-numeric: tabular-nums;
   }
@@ -135,18 +135,18 @@
     flex-direction: column;
     gap: 2px;
     padding: 10px 12px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--surface-2);
     min-width: 0;
   }
   .fh-totals dt {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .fh-totals dd {
     margin: 0 0 2px;
     font-family: var(--display);
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
@@ -158,15 +158,15 @@
   }
   .fh-day {
     margin: 6px 0 0;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     color: var(--muted);
   }
   .fh-rows {
     list-style: none;
     margin: 0;
     padding: 0;
-    border: 1px solid var(--line);
-    border-radius: 14px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
     background: var(--surface);
   }
   .fh-rows li {
@@ -192,12 +192,12 @@
     white-space: nowrap;
   }
   .fh-info small {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .fh-rows b {
     flex: none;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
   }

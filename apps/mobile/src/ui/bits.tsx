@@ -1,4 +1,5 @@
 // 작은 조각들: 줄·쌓기(웹 .row · .stack), 알약(.pill), 칩(.chip), 선택 버튼(.opt), 구분선.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import type { ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { alpha } from '../theme/colors';
@@ -52,7 +53,7 @@ export function Pill({ children, tone }: { children: ReactNode; tone?: Tone | un
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        borderRadius: 999,
+        borderRadius: RADIUS.pill,
         paddingVertical: 2,
         paddingHorizontal: 9,
         backgroundColor: c.surface2,
@@ -61,7 +62,7 @@ export function Pill({ children, tone }: { children: ReactNode; tone?: Tone | un
       }}
     >
       {typeof children === 'string' ? (
-        <Txt style={{ fontSize: rem(0.75), fontWeight: '600', color: fg }}>{children}</Txt>
+        <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '600', color: fg }}>{children}</Txt>
       ) : (
         children
       )}
@@ -75,17 +76,17 @@ export function Chip({ text, dir }: { text: string; dir?: 'up' | 'down' | '' | u
   return (
     <View
       style={{
-        borderRadius: 999,
+        borderRadius: RADIUS.pill,
         paddingVertical: 3,
         paddingHorizontal: 9,
         backgroundColor: c.surface2,
         borderWidth: 1,
-        borderColor: c.line,
+        borderColor: 'transparent',
       }}
     >
       <Txt
         style={{
-          fontSize: rem(0.75),
+          fontSize: rem(FONT.caption),
           fontWeight: '600',
           color: dir === 'up' ? c.good : dir === 'down' ? c.bad : c.ink,
         }}
@@ -133,7 +134,7 @@ export function Opt({
           borderWidth: selected ? 2 : 1.5,
           borderColor: selected ? on : c.line,
           backgroundColor: selected ? alpha(c.pitch, 0.08) : c.surface,
-          borderRadius: 12,
+          borderRadius: RADIUS.md,
           paddingVertical: selected ? 9.5 : 10,
           paddingHorizontal: selected ? 11.5 : 12,
           minHeight: 44,

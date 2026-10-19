@@ -25,6 +25,6 @@
     margin-top: 10px;
     gap: 4px;
     color: var(--muted);
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
   }
 </style>

@@ -29,13 +29,15 @@
     fetchOwnerTeam,
     fetchTeamMatches,
     fetchTeamStats,
-    playMatch,
+    playLiveMatch,
     saveOwnerTeam,
     saveTeamPresets,
     type ClubAchievementsResponse,
     type TeamStatsResponse,
     type OwnerTeam,
     type OwnerTeamResponse,
+    type PlayTeamMatchResponse,
+    type TeamLive as TeamLiveData,
     type TeamMatch,
     type TeamOpponent,
     type TeamPlayer,
@@ -124,6 +126,8 @@
   let resultOrigin = $state<'opponents' | 'history'>('opponents');
   /** 방금 치른 경기(또는 '다시 보기')를 문자중계로 보여 주는 중(T-10-097). */
   let live = $state(false);
+  /** T-11-387 방금 시작한 장면 경기의 고를 장면(중계가 끝나면 비운다). */
+  let liveMoments = $state<TeamLiveData | undefined>();
   /** T-11-098 오늘 남은 친선전(친선전 결과 화면의 '다시 경기하기'). */
   let friendlyLeft = $state(0);
   // T-10-130 팀 안의 화면은 appState.teamView — 뒤로 가기로 오간다. 결과는 이 화면에만 있어 다시 들어왔을 때(앞으로 가기)
@@ -428,7 +432,8 @@
   async function challenge(o: TeamOpponent) {
     if (playing) return;
     playing = true;
-    const r = await playMatch(o.teamId);
+    // T-11-387 랭크 경기는 문자중계 도중 장면을 고르는 경기로 시작한다(결과는 중계가 끝날 때 onfinal로 온다).
+    const r = await playLiveMatch(o.teamId);
     playing = false;
     if (!r.ok) {
       if (r.error.reason === 'TEAM_MATCH_DAILY_LIMIT') matchesLeft = 0;
@@ -437,15 +442,28 @@
       return toast(r.error.message);
     }
     result = r.data.match;
+    liveMoments = r.data.live;
     resultOrigin = 'opponents';
     live = true;
     matchesLeft = r.data.matchesLeft;
-    if (team) {
-      team.record = r.data.record;
-      team.rating = r.data.rating;
-    }
+    applyPlayed(r.data);
     show('result');
     window.scrollTo(0, 0);
+  }
+
+  /** 경기 결과의 기록 · 레이팅을 내 팀에 반영한다(장면 경기는 시작 때 경기 전 값, 끝날 때 결과 값이 온다). */
+  function applyPlayed(r: PlayTeamMatchResponse) {
+    if (!team) return;
+    team.record = r.record;
+    team.rating = r.rating;
+  }
+
+  /** 장면 경기가 끝났다 — 결과 화면을 마감한 경기로 바꾼다. */
+  function liveFinal(r: PlayTeamMatchResponse) {
+    result = r.match;
+    liveMoments = undefined;
+    matchesLeft = r.matchesLeft;
+    applyPlayed(r);
   }
 
   // T-11-098 친선전 결과(방금 치른 경기는 중계부터, 최근 친선전은 결과부터). 결과에서 돌아가면 '경기' 탭의 친구 쪽이다.
@@ -550,10 +568,19 @@
   }
 </script>
 
+<!-- T-11-392 팀을 불러오는 동안: 팀 이름 줄 + 4-3-3 자리 점이 찍힌 그라운드(요소 하나의 배경). -->
+{#snippet pitchSkeleton()}
+  <div class="tm-sk" role="status" aria-busy="true" data-skeleton>
+    <span class="sr-only">{S.loading}</span>
+    <div class="tm-sk-title"></div>
+    <div class="tm-sk-pitch"></div>
+  </div>
+{/snippet}
+
 <div class="wrap" class:has-tabbar={!needLogin}>
   <Topbar />
 
-  <LoadState {status} failText={L.loadFail} retry={load}>
+  <LoadState {status} failText={L.loadFail} retry={load} skeleton={pitchSkeleton}>
     {#if needLogin}
       <section class="card stack" style="gap:10px">
         <div class="eyebrow">My team</div>
@@ -686,7 +713,13 @@
     {:else if view === 'result' && result}
       {#if live}
         {#key result.id}
-          <TeamLive match={result} name={eventName} onend={() => ((live = false), window.scrollTo(0, 0))} />
+          <TeamLive
+            match={result}
+            name={eventName}
+            live={liveMoments}
+            onfinal={liveFinal}
+            onend={() => ((live = false), (liveMoments = undefined), window.scrollTo(0, 0))}
+          />
         {/key}
       {:else}
         <TeamResult
@@ -735,6 +768,28 @@
 {/if}
 
 <style>
+  .tm-sk {display:grid;gap:14px;padding-block:4px;opacity:0;animation:sk-in .2s ease-out .2s forwards;}
+  .tm-sk-title,.tm-sk-pitch {animation:sk-pulse 1.4s ease-in-out .4s infinite;}
+  .tm-sk-title {width:52%;height:24px;border-radius:var(--radius-sm);background:var(--line);}
+  .tm-sk-pitch {
+    --d:var(--line);
+    width:100%;max-width:640px;aspect-ratio:5/6;margin:0 auto;border-radius:var(--radius-md);border:1px solid var(--line);
+    background:
+      radial-gradient(circle 16px at 50% 90%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 14% 70%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 38% 73%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 62% 73%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 86% 70%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 25% 48%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 50% 51%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 75% 48%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 20% 22%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 50% 18%,var(--d) 98%,transparent),
+      radial-gradient(circle 16px at 80% 22%,var(--d) 98%,transparent),
+      var(--surface-2);
+  }
+  @media(max-width:440px) { .tm-sk-pitch {aspect-ratio:2/3;} }
+  @media(prefers-reduced-motion:reduce) { .tm-sk-title,.tm-sk-pitch {animation:none;} }
   .tm-mode { margin-bottom: 12px; }
   .draft-notice {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 16px;}
   .draft-notice p {margin:0;font-size:13px;flex:1 1 200px;}

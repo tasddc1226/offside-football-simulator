@@ -29,7 +29,7 @@ const C = {
   chip: 'rgba(238, 244, 239, 0.08)',
 };
 const DISPLAY = "'Barlow Condensed', 'Arial Narrow', sans-serif";
-const BODY = "'IBM Plex Sans KR', system-ui, sans-serif";
+const BODY = "'Pretendard Variable', system-ui, sans-serif";
 /** 카드에 쓰는 글꼴 전부 — 그리기 전에 이 목록 그대로 불러온다(loadCardFonts). */
 const F = {
   kicker: `600 34px ${DISPLAY}`,

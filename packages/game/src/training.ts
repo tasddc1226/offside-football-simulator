@@ -8,7 +8,18 @@ import {
   type AttrKey,
   type Pos,
 } from './data.js';
-import { ovr, wOf, mainRole, ROLES, faceOf, SUBS, maxedShare } from './attributes.js';
+import {
+  ovr,
+  wOf,
+  mainRole,
+  roleChoices,
+  ROLES,
+  ROLE_NAME,
+  GROUP_W,
+  faceOf,
+  SUBS,
+  maxedShare,
+} from './attributes.js';
 import { clamp, ri, pick, chance, rnd } from './rng.js';
 import { baseline } from './candidates.js';
 import { BAL } from './balance.js';
@@ -175,7 +186,12 @@ export function growthSlowNote(s: GameState): string {
 /** Selected attribute's existing positional OVR weight; presentation only. */
 export function trainingOvrNote(s: GameState, t: TrainingDef): string {
   if (!t.attr) return '';
-  return L.helpWeight({ attr: labelOf(s, t.attr), pct: pct(wOf(s)[t.attr]) });
+  const now = pct(wOf(s)[t.attr]);
+  const line = L.helpWeight({ attr: labelOf(s, t.attr), pct: now });
+  // T-11-399 두 역할 중 높은 쪽으로 재는 선수는 다른 역할의 비중도 알린다(타깃맨 피지컬 5% → 23%).
+  const other = roleChoices(s).find((r) => r !== mainRole(s));
+  const alt = other ? pct(GROUP_W[other]![t.attr]) : now;
+  return alt === now ? line : `${line} ${L.helpWeightAlt({ role: ROLE_NAME[other!]!, pct: alt })}`;
 }
 /** T-10-074 고른 훈련의 자세한 설명(카드 아래). 숨은 잠재력 값은 드러내지 않는다. */
 export function trainingHelp(s: GameState, t: TrainingDef): string {
@@ -336,8 +352,9 @@ export const investCost = (s: GameState, d: InvestDef): number =>
   salaryCost(s, d.rate, d.min, BAL.investCost);
 /** 특훈이 올릴 능력치 — 지금 포지션의 핵심 능력치(가중치 0.1 이상) 중 가장 낮은 것 / 가장 높은 것. */
 export function investTarget(s: GameState, id: 'weak' | 'best'): AttrKey {
-  const w = wOf(s);
-  const core = ATTR_KEYS.filter((k) => (w[k] ?? 0) >= 0.1);
+  // T-11-399 두 역할 중 높은 쪽으로 재는 선수는 두 역할의 핵심 능력치에서 고른다(스트라이커로 잡힌 타깃맨의 피지컬).
+  const ws = roleChoices(s).map((r) => GROUP_W[r]!);
+  const core = ATTR_KEYS.filter((k) => ws.some((w) => (w[k] ?? 0) >= 0.1));
   return core.reduce((a, b) =>
     (id === 'weak' ? s.attrs[b] < s.attrs[a] : s.attrs[b] >= s.attrs[a]) ? b : a,
   );

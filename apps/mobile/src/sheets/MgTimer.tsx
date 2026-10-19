@@ -1,5 +1,6 @@
 // 미니게임 제한 시간(웹 sheets/MgTimer.svelte, T-10-089). 장면이 뜨면 줄어드는 막대와 남은 초를 보여 주고, 시간이 다 되면
 // onexpire를 부른다(부른 쪽이 실패로 처리). 누르거나 차면(stopped) 그 자리에서 멈춘다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, View } from 'react-native';
 import { MG_TIME_MS } from '@offside/game/minigame';
@@ -75,7 +76,7 @@ export function MgTimer({ stopped, onexpire }: { stopped: boolean; onexpire: () 
           minWidth: rem(0.9375) * 1.6,
           paddingVertical: 1,
           paddingHorizontal: 6,
-          borderRadius: 999,
+          borderRadius: RADIUS.pill,
           backgroundColor: hurry ? c.bad : 'rgba(0,0,0,0.35)',
           opacity: stopped ? 0 : 1,
         }}
@@ -83,8 +84,8 @@ export function MgTimer({ stopped, onexpire }: { stopped: boolean; onexpire: () 
         <Txt
           style={{
             fontFamily: DISPLAY[800],
-            fontSize: rem(0.9375),
-            lineHeight: rem(0.9375) * 1.3,
+            fontSize: rem(FONT.body1),
+            lineHeight: rem(FONT.body1) * 1.3,
             textAlign: 'center',
             color: c.chalk,
           }}

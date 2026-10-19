@@ -1,6 +1,7 @@
 // T-10-016 밸런스 설정(웹 admin/AdminBalance.svelte). 초안을 만들어 수치를 고치고, 활성화하면 GET /v1/balance로 퍼진다 — 진행 중인
 // 커리어는 다음 시즌 시작부터, 새 커리어는 바로 적용된다. 되돌리기는 옛 버전을 다시 활성화한다.
 // 값 고치기·차이 계산은 웹과 같은 app-core/balanceEdit를 쓴다. <select>는 PickerField(목록 창)로 바꿨다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, View, useWindowDimensions } from 'react-native';
 import {
@@ -70,7 +71,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
         paddingHorizontal: 12,
         borderWidth: 1,
         borderColor: c.line,
-        borderRadius: 12,
+        borderRadius: RADIUS.md,
       }}
     >
       <Txt bold>{title}</Txt>
@@ -211,7 +212,7 @@ export default function AdminBalance() {
     await load();
   }
 
-  const small = { fontSize: rem(0.75) } as const;
+  const small = { fontSize: rem(FONT.caption) } as const;
   /** 이름·설명 칸 + 오른쪽 입력 칸(웹 .admin-knob: 좁은 화면에선 세로로 쌓는다). */
   const knob = (key: string, changed: boolean, left: React.ReactNode, right: React.ReactNode) => (
     <View
@@ -223,7 +224,7 @@ export default function AdminBalance() {
         gap: 8,
         paddingVertical: 4,
         paddingHorizontal: 6,
-        borderRadius: 8,
+        borderRadius: RADIUS.sm,
         backgroundColor: changed ? alpha(c.warn, 0.12) : 'transparent',
       }}
     >
@@ -238,17 +239,21 @@ export default function AdminBalance() {
         <Txt v="h2" accessibilityRole="header">
           밸런스 설정
         </Txt>
-        <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
           {active ? (
             <>
               {'적용 중: '}
-              <Txt bold tone="muted" style={{ fontSize: rem(0.8125) }}>{`v${active.version}`}</Txt>
+              <Txt
+                bold
+                tone="muted"
+                style={{ fontSize: rem(FONT.label) }}
+              >{`v${active.version}`}</Txt>
               {` · ${dateOf(active.activatedAt)}`}
             </>
           ) : (
             <>
               {'적용 중: '}
-              <Txt bold tone="muted" style={{ fontSize: rem(0.8125) }}>
+              <Txt bold tone="muted" style={{ fontSize: rem(FONT.label) }}>
                 기본값
               </Txt>
               {' (서버 설정 없음)'}
@@ -277,7 +282,7 @@ export default function AdminBalance() {
         <ScrollView
           nestedScrollEnabled
           accessibilityLabel="버전 목록"
-          style={{ maxHeight: 260, borderWidth: 1, borderColor: c.line, borderRadius: 12 }}
+          style={{ maxHeight: 260, borderWidth: 1, borderColor: c.line, borderRadius: RADIUS.md }}
         >
           {versions.length ? (
             versions.map((v, i) => (
@@ -300,7 +305,7 @@ export default function AdminBalance() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Txt bold>{`v${v.version}`}</Txt>
                   <Pill tone={STATUS[v.status][1]}>{STATUS[v.status][0]}</Pill>
-                  <Txt numberOfLines={1} style={{ flex: 1, fontSize: rem(0.8125) }}>
+                  <Txt numberOfLines={1} style={{ flex: 1, fontSize: rem(FONT.label) }}>
                     {v.note || '메모 없음'}
                   </Txt>
                 </View>
@@ -537,7 +542,7 @@ export default function AdminBalance() {
             >
               <Txt
                 bold
-                style={{ fontSize: rem(0.8125) }}
+                style={{ fontSize: rem(FONT.label) }}
               >{`적용 중인 버전과 다른 값 ${changes.length}개`}</Txt>
               {changes.map((line, i) => (
                 <Txt key={i} style={small}>

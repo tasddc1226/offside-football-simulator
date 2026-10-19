@@ -1,4 +1,5 @@
 // 홈(웹 Home.svelte — ui.ts renderHome() 포트): 전광판 · 히어로 · 라이브 현황 · 타일 · 명예의 전당 TOP 3 · 소식 · 푸터.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { Linking, Platform, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
@@ -76,8 +77,8 @@ export default function Home() {
                 style={[
                   num(700),
                   {
-                    fontSize: rem(0.8125),
-                    lineHeight: rem(0.8125) * 1.5,
+                    fontSize: rem(FONT.label),
+                    lineHeight: rem(FONT.label) * 1.5,
                     marginTop: 2,
                     color: alpha(c.onPitch, 0.65),
                   },
@@ -124,7 +125,7 @@ export default function Home() {
                     paddingHorizontal: 12,
                   }}
                 >
-                  <Txt style={{ ...btnText(c.onPitch), fontSize: rem(0.875), opacity: 0.85 }}>
+                  <Txt style={{ ...btnText(c.onPitch), fontSize: rem(FONT.body2), opacity: 0.85 }}>
                     {L.newCareer}
                   </Txt>
                 </Press>
@@ -277,7 +278,7 @@ function ChatFab() {
         justifyContent: 'center',
         paddingVertical: 10,
         paddingHorizontal: 16,
-        borderRadius: 999,
+        borderRadius: RADIUS.pill,
         backgroundColor: c.accent,
         shadowColor: '#000',
         shadowOpacity: 0.35,
@@ -297,17 +298,22 @@ function ChatFab() {
 }
 
 // 웹 .hero-home p · .hero-current h1 (span · b · strong)
-const p = { fontSize: rem(1), lineHeight: rem(1) * 1.55, marginTop: 6, maxWidth: 250 };
+const p = {
+  fontSize: rem(FONT.body),
+  lineHeight: rem(FONT.body) * 1.55,
+  marginTop: 6,
+  maxWidth: 250,
+};
 const heroSub = {
-  fontSize: rem(1.0625),
-  lineHeight: rem(1.0625) * 1.25,
+  fontSize: rem(FONT.title3),
+  lineHeight: rem(FONT.title3) * 1.25,
   fontWeight: '600' as const,
 };
-const heroB = { fontSize: rem(1.375), lineHeight: rem(2) * 1.25, fontWeight: '600' as const };
+const heroB = { fontSize: rem(FONT.title2), lineHeight: rem(2) * 1.25, fontWeight: '600' as const };
 const heroName = { fontSize: rem(2), lineHeight: rem(2) * 1.25, fontWeight: '700' as const };
 const btnText = (color: string) => ({
   color,
-  fontSize: rem(0.9375),
+  fontSize: rem(FONT.body1),
   fontWeight: '600' as const,
-  lineHeight: rem(0.9375) * 1.25,
+  lineHeight: rem(FONT.body1) * 1.25,
 });

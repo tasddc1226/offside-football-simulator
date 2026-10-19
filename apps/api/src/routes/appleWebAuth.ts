@@ -91,10 +91,10 @@ export function registerAppleWebAuthRoutes(app: Hono<AppEnv>): void {
   });
 
   app.post(APPLE_WEB_CALLBACK_PATH, async (c) => {
-    const form = await c.req.parseBody();
+    const form = new URLSearchParams(c.get('rawBody') ?? '');
     const query = new URLSearchParams();
     for (const key of FORWARD_FIELDS) {
-      const v = form[key];
+      const v = form.get(key);
       if (typeof v === 'string' && v.length <= 4096) query.set(key, v);
     }
     return c.redirect(`${APPLE_WEB_CALLBACK_PATH}?${query}`, 303);

@@ -3,6 +3,7 @@
 // 돈다. 새로 받은 소식은 한 바퀴가 끝날 때 바꿔 끼워 흐르던 글이 튀지 않게 한다. 누르고 있으면 멈춘다. 동작 줄이기면
 // 흐르지 않고 한 줄씩 바꿔 보여 준다.
 // 첫 화면이 밀리지 않게 응답 전·실패·빈 목록에도 같은 높이의 줄을 그린다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, AppState, Easing, ScrollView, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -167,7 +168,7 @@ export function HomeTicker() {
           <Txt style={tk}>— {k.who}</Txt>
         </>
       )}
-      <Txt style={{ color: c.muted, fontSize: rem(0.75) }}>{ago(k.at)}</Txt>
+      <Txt style={{ color: c.muted, fontSize: rem(FONT.caption) }}>{ago(k.at)}</Txt>
     </View>
   );
 
@@ -182,10 +183,10 @@ export function HomeTicker() {
         height: 34,
         justifyContent: 'center',
         overflow: 'hidden',
-        borderRadius: 12,
+        borderRadius: RADIUS.md,
         backgroundColor: c.surface,
         borderWidth: 1,
-        borderColor: c.line,
+        borderColor: 'transparent',
       }}
     >
       {!items.length ? (
@@ -230,7 +231,7 @@ export function HomeTicker() {
   );
 }
 
-const tk = { fontSize: rem(0.8125) } as const;
+const tk = { fontSize: rem(FONT.label) } as const;
 
 function Fade({ side, color }: { side: 'left' | 'right'; color: string }) {
   const clear = alpha(color, 0);
@@ -253,7 +254,7 @@ function TickTag({ kind, label }: { kind?: TickerItem['kind']; label?: string })
   return (
     <View
       style={{
-        borderRadius: 999,
+        borderRadius: RADIUS.pill,
         paddingVertical: 2,
         paddingHorizontal: 7,
         backgroundColor: gold
@@ -265,8 +266,8 @@ function TickTag({ kind, label }: { kind?: TickerItem['kind']; label?: string })
     >
       <Txt
         style={{
-          fontSize: rem(0.6875),
-          lineHeight: rem(0.6875) * 1.4,
+          fontSize: rem(FONT.caption2),
+          lineHeight: rem(FONT.caption2) * 1.4,
           fontWeight: '700',
           letterSpacing: rem(0.6875) * 0.02,
           color: gold ? c.accentText : warm ? c.ink : c.muted,

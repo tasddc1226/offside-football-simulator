@@ -1,3 +1,4 @@
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { GoogleLoginButton } from '../../ui/GoogleLoginButton';
 // T-10-011 소식 화면(웹 Board.svelte) — 공지사항·릴리즈 노트 게시판. 읽기는 누구나, 글은 관리자만(수정·삭제 포함),
 // 댓글은 로그인하고 닉네임을 정한 사람만(T-10-028). 글 본문은 app-core/boardText의 약속("## 소제목", "- 목록", 줄바꿈)만 읽는다.
@@ -106,13 +107,13 @@ function CommentAct({
         justifyContent: 'center',
         paddingVertical: 2,
         paddingHorizontal: 8,
-        borderRadius: 12,
+        borderRadius: RADIUS.md,
         borderWidth: 1,
-        borderColor: c.line,
-        backgroundColor: c.surface,
+        borderColor: 'transparent',
+        backgroundColor: c.surface2,
       }}
     >
-      <Txt style={{ fontSize: rem(0.75), fontWeight: '600' }}>{label}</Txt>
+      <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '600' }}>{label}</Txt>
     </Press>
   );
 }
@@ -362,7 +363,7 @@ export default function Board() {
     await reloadPost(postId);
   }
 
-  const small = { fontSize: rem(0.75) } as const;
+  const small = { fontSize: rem(FONT.caption) } as const;
   const comments = detail ? shownComments(detail.comments) : [];
   const listed = posts.filter((p) => !hiddenPost(p));
 
@@ -425,7 +426,7 @@ export default function Board() {
                         style={{
                           marginTop: 14,
                           marginBottom: 4,
-                          fontSize: rem(1),
+                          fontSize: rem(FONT.body),
                           fontWeight: '700',
                         }}
                       >
@@ -435,13 +436,13 @@ export default function Board() {
                       <View key={i} style={{ marginBottom: 10, paddingLeft: 6, gap: 0 }}>
                         {b.items.map((it, j) => (
                           <View key={j} style={{ flexDirection: 'row', gap: 8 }}>
-                            <Txt style={{ lineHeight: rem(1) * 1.6 }}>•</Txt>
-                            <Txt style={{ flex: 1, lineHeight: rem(1) * 1.6 }}>{it}</Txt>
+                            <Txt style={{ lineHeight: rem(FONT.body) * 1.6 }}>•</Txt>
+                            <Txt style={{ flex: 1, lineHeight: rem(FONT.body) * 1.6 }}>{it}</Txt>
                           </View>
                         ))}
                       </View>
                     ) : (
-                      <Txt key={i} style={{ marginBottom: 10, lineHeight: rem(1) * 1.6 }}>
+                      <Txt key={i} style={{ marginBottom: 10, lineHeight: rem(FONT.body) * 1.6 }}>
                         {b.lines.join('\n')}
                       </Txt>
                     ),
@@ -462,10 +463,10 @@ export default function Board() {
                     gap: 6,
                     paddingVertical: 9,
                     paddingHorizontal: 14,
-                    borderRadius: 999,
+                    borderRadius: RADIUS.pill,
                     borderWidth: 1,
-                    borderColor: c.line,
-                    backgroundColor: c.surface,
+                    borderColor: 'transparent',
+                    backgroundColor: c.surface2,
                   }}
                 >
                   <Heart color={detail.liked ? c.bad : c.ink} filled={detail.liked} />
@@ -473,7 +474,7 @@ export default function Board() {
                     num
                     testID="like-count"
                     style={{
-                      fontSize: rem(0.875),
+                      fontSize: rem(FONT.body2),
                       fontWeight: '600',
                       color: detail.liked ? c.bad : c.ink,
                     }}
@@ -544,11 +545,11 @@ export default function Board() {
                             gap: 8,
                             paddingVertical: 10,
                             paddingHorizontal: 12,
-                            borderRadius: 10,
+                            borderRadius: RADIUS.sm,
                             backgroundColor: c.surface2,
                           }}
                         >
-                          <Txt style={{ fontSize: rem(0.8125) }}>{L.reportPrompt}</Txt>
+                          <Txt style={{ fontSize: rem(FONT.label) }}>{L.reportPrompt}</Txt>
                           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                             {COMMENT_REPORT_REASONS.map((reason) => (
                               <Btn
@@ -587,13 +588,13 @@ export default function Board() {
                     </View>
                   ))
                 ) : (
-                  <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                     {L.noComments}
                   </Txt>
                 )}
                 {detail.blocks.length ? (
                   <View testID="board-blocks" style={{ gap: 4 }}>
-                    <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                    <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                       {L.blockedUsers({ n: detail.blocks.length })}
                     </Txt>
                     {detail.blocks.map((b) => (
@@ -616,13 +617,13 @@ export default function Board() {
                     style={{
                       gap: 8,
                       padding: 12,
-                      borderRadius: 10,
+                      borderRadius: RADIUS.sm,
                       borderWidth: 1,
                       borderStyle: 'dashed',
                       borderColor: c.line,
                     }}
                   >
-                    <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                    <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                       {apple ? L.loginGateApple : L.loginGate}
                     </Txt>
                     <GoogleLoginButton testID="comment-login" onPress={login} />
@@ -636,13 +637,13 @@ export default function Board() {
                     style={{
                       gap: 8,
                       padding: 12,
-                      borderRadius: 10,
+                      borderRadius: RADIUS.sm,
                       borderWidth: 1,
                       borderStyle: 'dashed',
                       borderColor: c.line,
                     }}
                   >
-                    <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                    <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                       {L.nicknameGate}
                     </Txt>
                     <NicknameForm

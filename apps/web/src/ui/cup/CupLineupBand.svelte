@@ -23,11 +23,11 @@
     border-left-color: var(--warn);
   }
   .cb-title {
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
   }
   .cup-band p {
     margin: 0;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     color: var(--muted);
     overflow-wrap: anywhere;
   }

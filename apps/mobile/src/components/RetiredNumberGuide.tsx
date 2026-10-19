@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import type { GameState } from '@offside/game/types';
@@ -70,9 +71,9 @@ export function RetiredNumberGuide({ s }: { s: GameState }) {
             minHeight: 48,
             alignItems: 'center',
             justifyContent: 'center',
-            borderRadius: 6,
+            borderRadius: RADIUS.xs,
             borderWidth: 1,
-            borderColor: c.line,
+            borderColor: 'transparent',
             backgroundColor: c.surface2,
           }}
         >

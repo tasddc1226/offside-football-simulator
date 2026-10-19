@@ -1,4 +1,5 @@
 // ADR-015 슬랙 에이전트 Worker. 슬랙 이벤트를 받아 서명을 확인하고 3초 안에 200을 돌려준 뒤, 일은 스레드 객체에 넘긴다.
+import { refreshSocialToken } from './social.ts';
 import {
   calledRoles,
   enabled,
@@ -13,7 +14,6 @@ import { alertSignature, kstDay, ledger } from './ledger.ts';
 import { collect, triagePrompt, type DcCursor, type Reaction } from './reactions.ts';
 import { devCi, devInteraction, devResult, type DevCi, type DevResult } from './dev.ts';
 import { verifySlack } from './slack.ts';
-import { mktInteraction, releaseTask } from './mkt.ts';
 import { scanSupport, supportInteraction } from './support.ts';
 import { REVIEW_ACTIONS, reviewInteraction, scanReviews } from './reviews.ts';
 import { threadOf, type Task } from './thread.ts';
@@ -159,6 +159,14 @@ export default {
         ctx.waitUntil(captainMorning(env, ev.scheduledTime).catch(log('captain morning')));
       if (enabled(env, 'mkt') && isMonday(ev.scheduledTime))
         ctx.waitUntil(mktWeekly(env, ev.scheduledTime).catch(log('mkt weekly')));
+      // T-11-395 · T-11-397 Threads · Instagram 토큰은 60일이면 끝나니 하루 한 번 보고 7일마다 갱신한다.
+      for (const kind of ['threads', 'instagram'] as const)
+        ctx.waitUntil(
+          refreshSocialToken(kind, env, ev.scheduledTime).then(
+            (r) => r === 'refreshed' && console.log(`${kind} token refreshed`),
+            log(`${kind} token`),
+          ),
+        );
       return;
     }
     if (ev.cron === WATCH_CRON) {
@@ -260,14 +268,13 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
   }
   if (job === 'dev-ci')
     return Response.json({ result: await devCi(env, (await req.json()) as DevCi) });
-  // @mkt: 운영 배포가 성공하면(agent-release.yml) 드림보트 요약을 맡긴다. 배포 상태 카드도 이때 넘긴다(T-11-325).
+  // 운영 배포가 성공하면(agent-release.yml) 배포 상태 카드를 넘긴다(T-11-325).
   if (job === 'release') {
-    const body = (await req.json()) as { sha: string; url?: string };
+    const body = (await req.json()) as { sha: string };
     const cards = /^[0-9a-f]{40}$/.test(body.sha ?? '')
       ? await afterDeploy(env, body.sha).catch((e: unknown) => String(e).slice(0, 200))
       : 'bad sha';
-    if (!enabled(env, 'mkt')) return Response.json({ result: 'mkt disabled', cards });
-    return Response.json({ result: await releaseTask(env, body), cards });
+    return Response.json({ cards });
   }
   // T-11-325 시험용: 서버 상태 감시 한 번 · 아침 카드 목록 · 승인 대기 묶음.
   if (job === 'watch') return Response.json({ result: await watchStatus(env) });
@@ -301,7 +308,7 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
   return Response.json(await scanReactions(env));
 }
 
-/** 슬랙 버튼(@dev 머지 승인 · @plan 답장 승인 · @mkt 드림보트 승인 카드). 서명을 확인하고 3초 안에 200을 돌려준 뒤 일은 뒤에서 한다. */
+/** 슬랙 버튼(@dev 머지 승인 · @plan 답장 승인). 서명을 확인하고 3초 안에 200을 돌려준 뒤 일은 뒤에서 한다. */
 async function interactive(
   req: Request,
   env: Env,
@@ -329,7 +336,12 @@ async function interactive(
       ? startInteraction
       : role === 'plan' && REVIEW_ACTIONS.includes(action)
         ? reviewInteraction
-        : { dev: devInteraction, plan: supportInteraction, mkt: mktInteraction }[role];
+        : role === 'dev'
+          ? devInteraction
+          : role === 'plan'
+            ? supportInteraction
+            : null;
+  if (!handle) return new Response('');
   ctx.waitUntil(
     handle(env, JSON.parse(raw))
       .then(async (r) => {

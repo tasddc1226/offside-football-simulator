@@ -1,3 +1,4 @@
+import { recordAcquisition, setAcquisitionConsent, acquisitionEnabled } from './acquisition.js';
 import {
   createPlayerMetrics,
   PLAYER_METRICS_KEY,
@@ -231,7 +232,10 @@ export function setConsent(value: 'granted' | 'denied') {
     } catch {
       /* analytics is optional */
     }
-  } else stop();
+  } else {
+    stop();
+    if (acquisitionEnabled()) void setAcquisitionConsent('denied');
+  }
   for (const fn of listeners) fn();
 }
 export function initializeAnalytics(initialScreen: string, restoredCareerId: string | null = null) {
@@ -287,6 +291,7 @@ export const analytics = {
       /* cohort origin stays unknown */
     }
     tracker?.start(s, previous);
+    recordAcquisition('start');
     trackMeta('CareerStart');
     const { cid } = s;
     const year = s.year;
@@ -312,6 +317,7 @@ export const analytics = {
 /** T-11-092 웹 → App Store 링크를 누름(어느 안내에서 눌렀는지). */
 export const trackAppStoreClick = (place: AppStorePlace) => {
   try {
+    recordAcquisition('store_click');
     send('app_store_click', { place });
     trackMeta('AppStoreClick');
   } catch {

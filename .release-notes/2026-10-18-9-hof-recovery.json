@@ -1,0 +1,16 @@
+{
+  "id": "t-11-385-hof-recovery",
+  "title": "명예의 전당 조회 개선",
+  "items": ["일시적인 연결 오류로 명예의 전당을 못 여는 경우를 줄였어요."],
+  "en": {
+    "title": "Hall of Fame loading",
+    "items": [
+      "Reduced failures when opening the Hall of Fame during brief connection interruptions."
+    ]
+  },
+  "ja": {
+    "title": "殿堂の読み込み改善",
+    "items": ["一時的な接続エラーで殿堂を開けないケースを減らしました。"]
+  },
+  "availability": "web-app"
+}

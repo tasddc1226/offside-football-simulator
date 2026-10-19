@@ -64,7 +64,7 @@
     justify-content: flex-end;
     min-height: 168px;
     padding: 34px 6px 14px;
-    border-radius: 14px;
+    border-radius: var(--radius-md);
     background:
       radial-gradient(circle at 20% 18%, #ffffff14 0 1px, transparent 2px) 0 0 / 9px 9px,
       linear-gradient(180deg, #1b2a3a 0, #22374a 42%, transparent 42%),
@@ -81,7 +81,7 @@
     background: #f0b437;
     color: #231700;
     font-family: var(--display);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     font-weight: 800;
     letter-spacing: 0.06em;
     white-space: nowrap;
@@ -119,7 +119,7 @@
     justify-content: center;
     gap: 6px;
     margin-top: 8px;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
   }
   figcaption span { color: var(--muted); }
   @keyframes flash { 0% { opacity: 0.9; } 100% { opacity: 0; } }

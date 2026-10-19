@@ -1,5 +1,6 @@
 // T-11-034 업적 달성 알림 본문(웹 sheets/Achieve.svelte) — 등급 엠블럼(올랐으면 크게, 이전 → 지금), 새 업적과 얻은 점수,
 // 지금 점수·다음 등급까지.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import type { SheetView } from '@offside/app-core/sheets';
@@ -34,14 +35,14 @@ export function Achieve({ v }: { v: Extract<SheetView, { kind: 'achieve' }> }) {
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
           >
             <GradeEmblem id={s.from.id} size={20} />
-            <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
               {s.from.name}
             </Txt>
-            <Txt tone="muted" style={{ fontSize: rem(0.875), marginHorizontal: 4 }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.body2), marginHorizontal: 4 }}>
               →
             </Txt>
             <GradeEmblem id={s.grade.id} size={20} />
-            <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>{s.grade.name}</Txt>
+            <Txt style={{ fontSize: rem(FONT.body2), fontWeight: '700' }}>{s.grade.name}</Txt>
           </View>
         ) : null}
       </View>
@@ -55,12 +56,12 @@ export function Achieve({ v }: { v: Extract<SheetView, { kind: 'achieve' }> }) {
               gap: 12,
               paddingVertical: 8,
               paddingHorizontal: 12,
-              borderRadius: 10,
+              borderRadius: RADIUS.sm,
               backgroundColor: c.surface2,
             }}
           >
-            <Txt style={{ flexShrink: 1, fontSize: rem(0.875) }}>{it.label}</Txt>
-            <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>+{n(it.gained)}</Txt>
+            <Txt style={{ flexShrink: 1, fontSize: rem(FONT.body2) }}>{it.label}</Txt>
+            <Txt style={{ fontSize: rem(FONT.body2), fontWeight: '700' }}>+{n(it.gained)}</Txt>
           </View>
         ))}
         {s.more > 0 ? (
@@ -68,11 +69,11 @@ export function Achieve({ v }: { v: Extract<SheetView, { kind: 'achieve' }> }) {
             style={{
               paddingVertical: 8,
               paddingHorizontal: 12,
-              borderRadius: 10,
+              borderRadius: RADIUS.sm,
               backgroundColor: c.surface2,
             }}
           >
-            <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
               {L.more({ n: s.more })}
             </Txt>
           </View>
@@ -85,7 +86,7 @@ export function Achieve({ v }: { v: Extract<SheetView, { kind: 'achieve' }> }) {
             marginTop: 10,
             paddingVertical: 8,
             paddingHorizontal: 12,
-            borderRadius: 10,
+            borderRadius: RADIUS.sm,
             borderWidth: 1,
             borderColor: c.accent,
             backgroundColor: c.surface2,
@@ -93,14 +94,14 @@ export function Achieve({ v }: { v: Extract<SheetView, { kind: 'achieve' }> }) {
         >
           <Txt
             tone="accent"
-            style={{ fontSize: rem(0.875), fontWeight: '700', textAlign: 'center' }}
+            style={{ fontSize: rem(FONT.body2), fontWeight: '700', textAlign: 'center' }}
           >
             {s.reward}
           </Txt>
         </View>
       ) : null}
-      <Txt tone="muted" style={{ fontSize: rem(0.8125), textAlign: 'center', marginTop: 8 }}>
-        <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.label), textAlign: 'center', marginTop: 8 }}>
+        <Txt style={{ fontSize: rem(FONT.label), fontWeight: '700' }}>
           {L.gainedPts({ n: n(s.gained) })}
         </Txt>
         {` · ${L.nowPts({ n: n(s.score) })}${s.next ? ` · ${s.next}` : ''}`}

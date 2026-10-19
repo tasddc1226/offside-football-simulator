@@ -123,10 +123,11 @@ export const fetchPushPerformance = (
   page = 0,
   fresh = false,
   through?: string,
+  filters: { previous?: boolean; category?: string | undefined; issues?: boolean } = {},
 ) => {
   if (fresh) invalidateApiCache('/v1/admin/push-performance');
   return cachedGet<PushPerformance>(
-    `/v1/admin/push-performance?days=${days}&page=${page}${tests ? '&tests=1' : ''}${through ? `&through=${encodeURIComponent(through)}` : ''}`,
+    `/v1/admin/push-performance?days=${days}&page=${page}${tests ? '&tests=1' : ''}${through ? `&through=${encodeURIComponent(through)}` : ''}${filters.previous ? '&previous=1' : ''}${filters.category ? `&category=${encodeURIComponent(filters.category)}` : ''}${filters.issues ? '&issues=1' : ''}`,
     60_000,
   );
 };

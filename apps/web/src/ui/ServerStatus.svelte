@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   // T-11-321 설정의 '서버 상태'(앱 screens/settings/ServerStatus.tsx). 값은 app-core serverStatusView, 펼칠 때만 불러온다.
   import { loadServerStatus, type ServerStatusView } from '@offside/app-core/serverStatus';
   import { serverStatusText as L } from '@offside/app-core/i18n/ko/serverStatus';
@@ -16,7 +17,7 @@
   <summary><b>{L.title}</b></summary>
   <p class="muted fs-sm">{L.intro}</p>
   {#if view === null}
-    <p class="muted fs-sm" aria-live="polite">{L.loading}</p>
+    <Skeleton rows={2} />
   {:else if view === 'error'}
     <p class="muted fs-sm">{L.error}</p>
   {:else}
@@ -94,7 +95,7 @@
     background: #d64545;
   }
   .status-h {
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     margin: 16px 0 6px;
   }
   .status-recent {

@@ -80,9 +80,9 @@
   }
   .sf-facts li {
     padding: 6px 10px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     font-variant-numeric: tabular-nums;
   }
 </style>

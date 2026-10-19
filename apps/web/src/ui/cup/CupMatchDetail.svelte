@@ -126,7 +126,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
   }
   .cmd-events {
     list-style: none;

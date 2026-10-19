@@ -68,10 +68,10 @@
 </div>
 
 <style>
-  .sums { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 0.8125rem; }
+  .sums { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: var(--fs-label); }
   .sums dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
   .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-  .list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 0.8125rem; }
+  .list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); font-size: var(--fs-label); }
   .list small { display: block; }
   .list b { text-align: right; font-variant-numeric: tabular-nums; }
   .good { color: var(--good); }

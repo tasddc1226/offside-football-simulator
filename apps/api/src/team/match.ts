@@ -1,4 +1,4 @@
-import type { TeamMatch } from '@offside/contracts';
+import type { TeamMatch, TeamMoment } from '@offside/contracts';
 import type { FormationId } from '@offside/contracts/owner-team';
 import type { Db } from '../db/client.js';
 import {
@@ -11,10 +11,12 @@ import {
   teamLogosByIds,
   type MatchDetail,
   type OwnerTeamRow,
+  type StoredMomentView,
   type TeamMatchRow,
 } from '../db/repos/ownerTeams.js';
 import type { Lang } from '../lang.js';
 import { anonText } from './anon.js';
+import type { MomentActor } from './moments.js';
 import {
   buildLineup,
   lineupOvr,
@@ -100,14 +102,17 @@ export function matchDetailOf(
   return {
     home: side(home, lineups.home, delta?.home, result.synergy?.home, result.report.home),
     away: side(away, lineups.away, delta?.away, result.synergy?.away, result.report.away),
-    events: result.events.map((e) => ({
-      minute: e.minute,
-      side: e.side,
-      scorer: e.scorer,
-      assist: e.assist,
-    })),
+    events: result.events.map(storedEvent),
   };
 }
+
+export const storedEvent = (e: SimResult['events'][number]): MatchDetail['events'][number] => ({
+  minute: e.minute,
+  side: e.side,
+  scorer: e.scorer,
+  assist: e.assist,
+  slot: e.slot,
+});
 
 export function toMatch(
   row: MatchHead,
@@ -151,9 +156,44 @@ export function toMatch(
       assist: e.assist ? label(e.assist) : null,
       scorerId: e.side === mine ? e.scorer.careerId : null,
       assistId: e.side === mine ? (e.assist?.careerId ?? null) : null,
+      ...(e.slot ? { slot: e.slot } : {}),
     })),
     mine,
+    ...(d.moments?.length
+      ? { moments: d.moments.map((m, i) => momentView(m, i, mine === 'home', label)) }
+      : {}),
     createdAt: row.createdAt,
+  };
+}
+
+/** 장면 하나를 화면 모양으로. 장면은 늘 경기를 건 쪽(home)의 것이라, 조회한 쪽이 home일 때만 커리어 id를 준다. */
+export function momentView(
+  m: StoredMomentView,
+  index: number,
+  mineIsHome: boolean,
+  label: (p: PlayerRef) => string,
+): TeamMoment {
+  const who = (a: MomentActor, mineSide: boolean) => ({
+    name: label(a.ref),
+    id: mineSide ? a.ref.careerId : null,
+    slot: a.slot,
+  });
+  return {
+    index,
+    minute: m.minute,
+    kind: m.kind,
+    situation: m.situation,
+    actor: who(m.actor, mineIsHome),
+    mate: who(m.mate, mineIsHome),
+    opp: who(m.opp, !mineIsHome),
+    choices: m.choices.map((c) => ({
+      id: c.id,
+      pct: c.pct,
+      mate: c.mate,
+      risk: Math.round(c.risk * 100),
+      gain: Math.round(c.gain * 100),
+    })),
+    ...(m.picked === undefined ? {} : { picked: m.picked, ok: !!m.ok }),
   };
 }
 
@@ -185,9 +225,10 @@ export function playedMatch(
 const careerIdsIn = (details: readonly MatchDetail[]) => [
   ...new Set(
     details.flatMap((d) =>
-      d.events.flatMap((e) =>
-        [e.scorer.careerId, e.assist?.careerId].filter((x): x is string => !!x),
-      ),
+      [
+        ...d.events.flatMap((e) => [e.scorer.careerId, e.assist?.careerId]),
+        ...(d.moments ?? []).flatMap((m) => [m.actor, m.mate, m.opp].map((a) => a.ref.careerId)),
+      ].filter((x): x is string => !!x),
     ),
   ),
 ];
@@ -209,3 +250,23 @@ export async function matchViews<R extends MatchHead & { detailJson: string }>(
   ]);
   return rows.map((r, i) => toMatch(r, details[i]!, myTeamIdOf(r), names, logos, lang));
 }
+
+/** 경기를 받은 구단주에게 보내는 알림(랭크 경기 · 장면 경기 마감). */
+export const matchNotice = (
+  id: string,
+  home: Pick<OwnerTeamRow, 'name'>,
+  away: Pick<OwnerTeamRow, 'name' | 'profileId'>,
+  homeGoals: number,
+  awayGoals: number,
+  now: string,
+) => ({
+  profileId: away.profileId,
+  sourceKey: `team-match:${id}`,
+  now,
+  content: {
+    kind: 'team' as const,
+    title: '내 팀에 새 경기 결과가 있어요',
+    body: `${away.name} ${awayGoals} : ${homeGoals} ${home.name}. 최근 경기에서 결과를 확인해 주세요.`,
+    target: { type: 'screen' as const, screen: 'team' as const },
+  },
+});

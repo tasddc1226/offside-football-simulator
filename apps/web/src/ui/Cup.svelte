@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   import LoginButtons from './LoginButtons.svelte';
   // T-11-145 오프사이드 컵 화면 — 구단주 화면의 컵 배너로 연다. 내 상태(신청·다음 경기), 토너먼트 대진, 조별 순위표와 경기,
   // 일정·보상·규칙. 치른 경기를 누르면 같은 화면에서 상세(득점·승부차기)를 연다. 처음 열 때 불러오는 지연 청크다.
@@ -134,6 +135,9 @@
   }
 </script>
 
+<!-- T-11-392 컵을 불러오는 동안: 대회 현황 카드 + 대진 카드. -->
+{#snippet cupSkeleton()}<div class="stack"><Skeleton height={120} /><Skeleton height={260} /></div>{/snippet}
+
 <div class="wrap">
   <Topbar />
   {#if detail && data}
@@ -146,7 +150,7 @@
       <div class="eyebrow">Offside Cup</div>
       <h1>{data ? L.fullTitle({ n: data.cup.edition }) : L.title}</h1>
     </header>
-    <LoadState {status} failText={L.loadFail} retry={load}>
+    <LoadState {status} failText={L.loadFail} retry={load} skeleton={cupSkeleton}>
       {#if data}
         {#if accountCache.value && accountCache.value !== 'error' && !linked}
           <section class="card stack cup-login" data-cup-login>
@@ -288,11 +292,11 @@
   .schedule-tabs button {background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);font:inherit;font-weight:700;min-height:48px;padding:8px 0;cursor:pointer;}
   .schedule-tabs button.active {border-bottom-color:var(--accent);color:var(--ink);}
   .schedule-chips {display:flex;gap:6px;overflow-x:auto;padding:8px 0 12px;max-width:100%;}
-  .schedule-chips button {flex:none;border:1px solid var(--line);border-radius:10px;min-height:44px;padding:6px 10px;background:var(--bg);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;}
+  .schedule-chips button {flex:none;border: 1px solid transparent;border-radius:var(--radius-sm);min-height:44px;padding:6px 10px;background:var(--bg);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;}
   .schedule-chips button.active {border-color:var(--accent);color:var(--accent-text);font-weight:700;}
   [data-cup-bracket]:not([hidden]) {display:flex;flex-direction:column;gap:10px;}
-  .bracket-tabs { display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border:1px solid var(--line);border-radius:14px;background:var(--bg); }
-  .bracket-tabs button { min-width:0;min-height:44px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-size:.875rem;font-weight:600;padding:8px 12px;cursor:pointer; }
+  .bracket-tabs { display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border: 1px solid transparent;border-radius:var(--radius-md);background:var(--bg); }
+  .bracket-tabs button { min-width:0;min-height:44px;border:1px solid transparent;border-radius:var(--radius-sm);background:transparent;color:var(--muted);font:inherit;font-size:var(--fs-body2);font-weight:600;padding:8px 12px;cursor:pointer; }
   .bracket-tabs button.chosen { background:var(--surface);border-color:var(--line);color:var(--ink);box-shadow:0 1px 3px #0002; }
   .bracket-tabs button:focus-visible { outline:2px solid var(--accent);outline-offset:2px; }
   .cup-login { gap: 10px; border-color: var(--accent); }
@@ -310,7 +314,7 @@
   }
   .cup-sec h3 {
     margin: 0;
-    font-size: 1rem;
+    font-size: var(--fs-body);
   }
   .cup-sec p {
     margin: 0;
@@ -335,7 +339,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px;
-    border-radius: 14px;
+    border-radius: var(--radius-md);
     background: var(--pitch);
     color: var(--on-pitch);
   }
@@ -352,7 +356,7 @@
     overflow-wrap: anywhere;
   }
   .cup-champ-who b {
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
     color: var(--pitch-accent);
   }
   .cup-champ-who small {
@@ -410,7 +414,7 @@
   .cup-rewards {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     margin-bottom: 8px;
   }
   .cup-rewards th,
@@ -422,7 +426,7 @@
   }
   .cup-rewards thead th {
     border-top: 0;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .cup-rewards th:last-child,
@@ -456,7 +460,7 @@
     flex: none;
     text-align: right;
     color: var(--muted);
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     font-variant-numeric: tabular-nums;
   }
   .cup-entrant-who {
@@ -469,7 +473,7 @@
   }
   .cup-entrant-ovr {
     flex: none;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     font-variant-numeric: tabular-nums;
   }
   .cup-rules {
@@ -478,7 +482,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    font-size: 0.9375rem;
+    font-size: var(--fs-body1);
     line-height: 1.5;
   }
 </style>

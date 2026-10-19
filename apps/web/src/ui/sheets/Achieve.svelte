@@ -59,7 +59,7 @@
     align-items: center;
     gap: 4px;
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     color: var(--muted);
   }
   .ach-up-from span {
@@ -80,9 +80,9 @@
     justify-content: space-between;
     gap: 12px;
     padding: 8px 12px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
   }
   .ach-up-reward {
     margin: 10px 0 0;

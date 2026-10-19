@@ -1,5 +1,6 @@
 // T-11-310 감독 커리어(웹 Manager.svelte) — 구단주 화면의 '감독 커리어' 카드로 연다. 지금 가진 선수 카드로 감독 커리어를
 // 시작하고(한 번에 하나), 기기에서 시즌을 돌린 뒤 감독 카드로 확정해 우리 팀 감독 칸에 앉힌다. 화면을 열 때 목록을 한 번 받는다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, View } from 'react-native';
 import type { ManagerCandidate, ManagerCareer, ManagersResponse } from '@offside/contracts';
@@ -81,6 +82,7 @@ import { buzz } from '../../game/host';
 import { CountUp } from '../../components/CountUp';
 import { Chips } from '../../sheets/Chips';
 import { Pop } from '../../sheets/anim';
+import { Skeleton } from '../../ui/Skeleton';
 
 type CardRules = {
   mastery: Record<FormationId, string>;
@@ -90,8 +92,8 @@ type CardRules = {
 const RANK: Record<string, number> = { S: 3, A: 2, B: 1, C: 0 };
 const bestFormation = (m: CardRules): FormationId =>
   FORMATION_IDS.reduce((a, f) => (RANK[m.mastery[f]!]! > RANK[m.mastery[a]!]! ? f : a));
-const small = { fontSize: rem(0.875) } as const;
-const tiny = { fontSize: rem(0.75) } as const;
+const small = { fontSize: rem(FONT.body2) } as const;
+const tiny = { fontSize: rem(FONT.caption) } as const;
 
 /** 감독 카드 몸통(숙련 · 성향 · 특기 · 감독 칸 효과). */
 function CardBody({ r }: { r: CardRules }) {
@@ -127,7 +129,7 @@ function Chip({ title, sub }: { title: string; sub?: string | undefined }) {
         minWidth: 56,
         paddingVertical: 6,
         paddingHorizontal: 10,
-        borderRadius: 10,
+        borderRadius: RADIUS.sm,
         borderWidth: 1,
         borderColor: c.line,
       }}
@@ -136,7 +138,7 @@ function Chip({ title, sub }: { title: string; sub?: string | undefined }) {
         {title}
       </Txt>
       {sub ? (
-        <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
           {sub}
         </Txt>
       ) : null}
@@ -164,10 +166,10 @@ function Row({
         gap: 10,
         paddingVertical: 10,
         paddingHorizontal: 12,
-        borderRadius: 12,
+        borderRadius: RADIUS.md,
         borderWidth: 1,
-        borderColor: c.line,
-        backgroundColor: c.surface,
+        borderColor: 'transparent',
+        backgroundColor: c.surface2,
       }}
     >
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
@@ -417,7 +419,7 @@ export default function Manager() {
                   width: '31.5%',
                   paddingVertical: 8,
                   paddingHorizontal: 10,
-                  borderRadius: 10,
+                  borderRadius: RADIUS.sm,
                   backgroundColor: c.surface2,
                 }}
               >
@@ -497,7 +499,7 @@ export default function Manager() {
                   onPress={() => setPick((p) => ({ ...p, formation: f }))}
                 >
                   <Txt bold>{f}</Txt>
-                  <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
                     {M.mastery({ grade: masteryGrade(st.masteryXp[f]) })}
                   </Txt>
                 </Opt>
@@ -534,7 +536,7 @@ export default function Manager() {
                 >
                   <Txt bold>{targetName(t)}</Txt>
                   {t === minTarget ? (
-                    <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+                    <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
                       {M.targetMin}
                     </Txt>
                   ) : null}
@@ -563,11 +565,11 @@ export default function Manager() {
                     flex: 1,
                     alignItems: 'center',
                     paddingVertical: 8,
-                    borderRadius: 10,
+                    borderRadius: RADIUS.sm,
                     backgroundColor: c.surface2,
                   }}
                 >
-                  <Txt bold style={{ fontSize: rem(1.25), fontVariant: ['tabular-nums'] }}>
+                  <Txt bold style={{ fontSize: rem(FONT.title2), fontVariant: ['tabular-nums'] }}>
                     <CountUp value={v} />
                   </Txt>
                   <Txt tone="muted" style={tiny}>
@@ -577,10 +579,16 @@ export default function Manager() {
               ))}
             </View>
             <View
-              style={{ gap: 6, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: c.line }}
+              style={{
+                gap: 6,
+                padding: 12,
+                borderRadius: RADIUS.md,
+                borderWidth: 1,
+                borderColor: c.line,
+              }}
             >
               <Pop delay={300} style={{ alignSelf: 'flex-start' }}>
-                <Txt bold tone="accent" style={{ fontSize: rem(1.25) }}>
+                <Txt bold tone="accent" style={{ fontSize: rem(FONT.title2) }}>
                   {M.grade({ grade: result.grade })}
                 </Txt>
               </Pop>
@@ -710,7 +718,11 @@ export default function Manager() {
                               ) : null;
                             })()}
                             <View
-                              style={{ padding: 12, borderRadius: 10, backgroundColor: c.surface2 }}
+                              style={{
+                                padding: 12,
+                                borderRadius: RADIUS.sm,
+                                backgroundColor: c.surface2,
+                              }}
                             >
                               <Txt testID="manager-event-result">{shownEv.result}</Txt>
                             </View>
@@ -729,9 +741,9 @@ export default function Manager() {
                                   onPress={() => answer(shownEv.id, i)}
                                   style={{
                                     borderWidth: 1.5,
-                                    borderColor: c.line,
-                                    backgroundColor: c.surface,
-                                    borderRadius: 12,
+                                    borderColor: 'transparent',
+                                    backgroundColor: c.surface2,
+                                    borderRadius: RADIUS.md,
                                     paddingVertical: 12,
                                     paddingHorizontal: 14,
                                     flexDirection: 'row',
@@ -745,13 +757,16 @@ export default function Manager() {
                                     style={{
                                       paddingVertical: 2,
                                       paddingHorizontal: 8,
-                                      borderRadius: 8,
+                                      borderRadius: RADIUS.sm,
                                       backgroundColor: c.surface2,
                                       flexShrink: 0,
                                     }}
                                   >
                                     <Txt
-                                      style={{ fontFamily: DISPLAY[700], fontSize: rem(0.9375) }}
+                                      style={{
+                                        fontFamily: DISPLAY[700],
+                                        fontSize: rem(FONT.body1),
+                                      }}
                                     >
                                       {odds}
                                     </Txt>
@@ -796,7 +811,7 @@ export default function Manager() {
                           style={{
                             paddingVertical: 4,
                             paddingHorizontal: 12,
-                            borderRadius: 999,
+                            borderRadius: RADIUS.pill,
                             backgroundColor: b.bad ? c.bad : c.pitch,
                           }}
                         >
@@ -850,7 +865,7 @@ export default function Manager() {
               >
                 <Txt
                   tone="muted"
-                  style={{ fontSize: rem(0.8125), textDecorationLine: 'underline' }}
+                  style={{ fontSize: rem(FONT.label), textDecorationLine: 'underline' }}
                 >
                   {M.abandon}
                 </Txt>
@@ -913,9 +928,7 @@ export default function Manager() {
           </Btn>
         </Card>
       ) : !data ? (
-        <Card>
-          <Txt tone="muted">{M.loading}</Txt>
-        </Card>
+        <Skeleton height={240} />
       ) : (
         <>
           {play ?? (
@@ -971,7 +984,7 @@ export default function Manager() {
                     style={{
                       gap: 6,
                       padding: 12,
-                      borderRadius: 12,
+                      borderRadius: RADIUS.md,
                       borderWidth: 1,
                       borderColor: c.line,
                     }}

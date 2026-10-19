@@ -222,13 +222,21 @@ export const POS_ROLES: Record<Pos, string[]> = {
 export function mainRole(
   s: Pick<GameState, 'pos' | 'type' | 'dpos'> & { sub?: GameState['sub'] },
 ): string {
+  const [base, alt] = roleChoices(s);
+  return alt ? better(s, base!, alt) : base!;
+}
+/**
+ * OVR을 잴 후보 역할(기본 역할 먼저). 보통은 하나고, 두 역할 중 높은 쪽으로 재는 선수만 둘이다.
+ * T-11-399 화면 · 특훈이 지금 역할만 보면 다른 역할로 키우는 길(타깃맨의 피지컬 등)이 안 보여 함께 쓴다.
+ */
+export function roleChoices(s: Pick<GameState, 'pos' | 'type' | 'dpos'>): string[] {
   const role = s.dpos ? DPOS[s.dpos].role : (TYPE_ROLE[s.type] ?? POS_ROLES[s.pos][0]!);
-  if (role === 'ST' && s.type === 'target' && BAL.targetManRole) return better(s, 'ST', 'TM');
+  if (role === 'ST' && s.type === 'target' && BAL.targetManRole) return ['ST', 'TM'];
   // T-11-236 좌·우 미드필더는 중앙 미드필더 역할로 재 스피드가 OVR에 들어가지 않았다. 윙어 유형은 미드필더에만 있어
   // 윙어 시너지를 노리면 스피드를 키울수록 손해였다 — 타겟맨처럼 중앙 미드필더·윙어 역할 중 높은 쪽으로 잰다.
   if ((s.dpos === 'LM' || s.dpos === 'RM') && s.type === 'winger' && BAL.wingerRole)
-    return better(s, role, 'RW');
-  return role;
+    return [role, 'RW'];
+  return [role];
 }
 /** 기본 역할과 대안 역할 중 OVR이 높은 쪽. 같거나 세부 능력치가 없으면(생성 화면·첫 분배) 기본 역할. */
 function better(s: { sub?: GameState['sub'] }, base: string, alt: string): string {

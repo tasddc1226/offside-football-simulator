@@ -77,3 +77,13 @@ export function usePreseason(): void {
     await page.clock.setFixedTime(PRESEASON);
   });
 }
+
+/** T-11-390 구간 중계가 결정적 장면에서 멈추면 감독에게 맡기고, 확인 버튼이 뜰 때까지 기다린다(장면이 없으면 그대로 기다린다). */
+export async function settleBlock(page: Page, timeout = 30_000): Promise<void> {
+  const ok = page.locator('#sheet [data-sheet="0"]');
+  const auto = page.locator('#sheet [data-key-moment-choice="auto"]');
+  await expect(async () => {
+    if (await auto.isVisible()) await auto.click();
+    await expect(ok).toHaveText('확인', { timeout: 1_000 });
+  }).toPass({ timeout });
+}

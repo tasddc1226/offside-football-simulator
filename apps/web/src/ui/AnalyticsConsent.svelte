@@ -1,4 +1,6 @@
 <script lang="ts">
+  import AcquisitionConsent from './AcquisitionConsent.svelte';
+  import { acquisitionEnabled } from '../analytics/acquisition.js';
   import { onMount } from 'svelte';
   import { enabled, getConsent, onConsent, setConsent } from '../analytics/browser.js';
   import { getAdConsent, metaEnabled } from '../analytics/meta.js';
@@ -36,6 +38,8 @@
     {#if settings}<p class="muted">{L.consentRevokeNote}</p>{/if}
   </section>
 {/if}
+
+{#if acquisitionEnabled()}<AcquisitionConsent {settings} />{/if}
 
 <style>
   .analytics-consent { padding: 16px; margin: 12px auto; max-width: 640px; }
