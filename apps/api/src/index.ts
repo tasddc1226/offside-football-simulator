@@ -25,6 +25,7 @@ import { queueGiftReminders } from './push/giftReminder.js';
 import { consumeCupResults, publishCupResults } from './push/cupResult.js';
 import { consumeCommunityPush } from './push/communityQueue.js';
 import { runCup } from './team/cup.js';
+import { finishStaleLive } from './team/liveMatch.js';
 import { runCupAutopilot } from './team/cupAutopilot.js';
 import { purgeEdgeOrigin } from './edgeCache.js';
 import { STALE } from './edgeKeys.js';
@@ -105,6 +106,12 @@ export default {
             JSON.stringify({ level: 'error', job: 'season-close', error: logErrorText(e) }),
           ),
         );
+      // T-11-387 고르지 않고 떠난 장면 경기를 자동 선택으로 마감한다.
+      await finishStaleLive(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
+        .then(
+          (r) => r.done && console.log(JSON.stringify({ level: 'info', job: 'team-live', ...r })),
+        )
+        .catch(logged('team-live'));
       // T-11-145 오프사이드 컵: 추첨 → 시각이 된 경기 → 진출·보상. 실패하면 다음 5분에 이어서 한다.
       await runCup(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
         .then(async (r) => {

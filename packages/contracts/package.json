@@ -44,7 +44,8 @@
     "./club-strength-provider": "./src/club-strength-provider.ts",
     "./avatar-look": "./src/avatar-look.ts",
     "./manager-rules": "./src/manager-rules.ts",
-    "./acquisition": "./src/acquisition.ts"
+    "./acquisition": "./src/acquisition.ts",
+    "./team-moments": "./src/team-moments.ts"
   },
   "scripts": {
     "test": "vitest run",

@@ -1198,6 +1198,35 @@ export const teamMatches = sqliteTable(
 );
 
 /**
+ * T-11-387 장면 경기(문자중계 중 선택지)가 끝나기 전 상태. 경기를 시작하면 한 줄을 넣고, 장면을 고를 때마다 state_json을 고치며
+ * (rev로 동시 수정을 막는다), 마지막 장면을 판정하면 team_matches에 같은 id로 경기를 남기고 done_at을 적는다. 고르지 않고 떠난
+ * 경기는 5분 cron이 자동 선택으로 마감한다. 마감한 줄은 하루 뒤 지운다.
+ */
+export const teamLiveMatches = sqliteTable(
+  'team_live_matches',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id').notNull(),
+    homeTeamId: text('home_team_id')
+      .notNull()
+      .references(() => ownerTeams.id, { onDelete: 'cascade' }),
+    awayTeamId: text('away_team_id')
+      .notNull()
+      .references(() => ownerTeams.id, { onDelete: 'cascade' }),
+    stateJson: text('state_json').notNull(),
+    rev: integer('rev').notNull().default(0),
+    createdAt: text('created_at').notNull(),
+    doneAt: text('done_at'),
+    /** 마감 응답(내 팀 기록 · 레이팅 · 남은 경기). 같은 마감 요청을 다시 받으면 그대로 돌려준다. */
+    resultJson: text('result_json'),
+  },
+  (table) => [
+    index('team_live_matches_profile_idx').on(table.profileId, table.createdAt),
+    index('team_live_matches_open_idx').on(table.doneAt, table.createdAt),
+  ],
+);
+
+/**
  * T-11-098 친구. 한 쌍을 두 줄(내 쪽·상대 쪽)로 적어 내 친구 목록을 profile_id 하나로 읽는다. state는 그 줄 주인 기준 —
  * 신청하면 보낸 쪽 'sent'·받은 쪽 'received', 수락하면 둘 다 'accepted'. 거절·취소·친구 끊기는 두 줄을 지운다.
  * wins·draws·losses는 그 줄 주인 쪽에서 본 친선전 상대 전적이다(친구를 끊으면 함께 사라진다).

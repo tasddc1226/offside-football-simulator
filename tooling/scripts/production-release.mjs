@@ -80,6 +80,7 @@ export const EXPECTED_TABLES = Object.freeze([
   'team_comment_reports',
   'team_comments',
   'team_likes',
+  'team_live_matches',
   'team_matches',
   'translations',
 ]);

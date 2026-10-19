@@ -5,7 +5,7 @@ import type { TeamMatch } from './api/team.js';
 import { teamLiveText as L } from './i18n/ko/teamLive.js';
 
 export type LiveKind =
-  'kickoff' | 'chance' | 'save' | 'miss' | 'corner' | 'build' | 'goal' | 'ht' | 'ft';
+  'kickoff' | 'chance' | 'save' | 'miss' | 'corner' | 'build' | 'goal' | 'ht' | 'ft' | 'moment';
 export type LiveLine = {
   /** 경기 시계(1~90). 추가시간 줄은 45·90에 extra를 붙인다. 킥오프는 0. */
   minute: number;
@@ -15,7 +15,70 @@ export type LiveLine = {
   text: string;
   /** 골 줄 — 그 골이 들어간 뒤 스코어(홈, 원정). */
   score?: [number, number];
+  /** T-11-387 골 줄의 재료(장면 경기는 장면 골이 끼어 스코어가 달라지므로 보여 줄 때 문구를 다시 만든다). */
+  goal?: { scorer: string; assist: string | null; key: string };
 };
+
+/** 골 줄 문구. before는 골 전 스코어, n은 그 선수의 이 경기 몇 번째 골. */
+export function goalLineText(
+  t: string,
+  side: 'home' | 'away',
+  minute: number,
+  scorer: string,
+  assist: string | null,
+  before: readonly [number, number],
+  n: number,
+): string {
+  const after: [number, number] =
+    side === 'home' ? [before[0] + 1, before[1]] : [before[0], before[1] + 1];
+  const mine = side === 'home' ? after[0] : after[1];
+  const theirs = side === 'home' ? after[1] : after[0];
+  const wasBehind = (side === 'home' ? before[0] - before[1] : before[1] - before[0]) < 0;
+  const flavor =
+    n === 3
+      ? L.flavorHat
+      : minute >= 85 && mine === theirs
+        ? L.flavorLateEq
+        : minute >= 85 && mine === theirs + 1
+          ? L.flavorLateWin
+          : wasBehind && mine === theirs
+            ? L.flavorEq
+            : wasBehind && mine > theirs
+              ? L.flavorLead
+              : '';
+  return `${L.goal({ t, scorer })}${assist ? L.goalAssist({ assist }) : ''}${flavor}`;
+}
+
+/** 하프타임 줄 문구. */
+export const halfTimeText = (m: Pick<TeamMatch, 'home' | 'away'>, hs: number, as: number) =>
+  L.halfTime({ home: m.home.name, away: m.away.name, hs, as });
+
+/** 경기 종료 줄 문구. */
+export function fullTimeText(
+  m: Pick<TeamMatch, 'home' | 'away' | 'mine'>,
+  h: number,
+  a: number,
+  neutral = false,
+): string {
+  const my = m.mine === 'home' ? h : a;
+  const their = m.mine === 'home' ? a : h;
+  return L.fullTime({
+    home: m.home.name,
+    away: m.away.name,
+    h,
+    a,
+    // 남의 경기(컵 공개 경기)는 이긴 팀 이름으로 끝낸다.
+    result: neutral
+      ? h === a
+        ? L.resultDraw
+        : L.resultTeamWin({ t: h > a ? m.home.name : m.away.name })
+      : my > their
+        ? L.resultWin
+        : my < their
+          ? L.resultLoss
+          : L.resultDraw,
+  });
+}
 
 /** 문자열 → 32비트 시드(FNV-1a) → mulberry32. */
 function rngOf(seed: string): () => number {
@@ -106,27 +169,13 @@ export function liveScript(
       side: e.side,
       text: pick(rnd, build())({ t }),
     });
-    const mine = e.side === 'home' ? h : a;
-    const theirs = e.side === 'home' ? a : h;
-    const wasBehind = (e.side === 'home' ? before[0] - before[1] : before[1] - before[0]) < 0;
-    const flavor =
-      n === 3
-        ? L.flavorHat
-        : e.minute >= 85 && mine === theirs
-          ? L.flavorLateEq
-          : e.minute >= 85 && mine === theirs + 1
-            ? L.flavorLateWin
-            : wasBehind && mine === theirs
-              ? L.flavorEq
-              : wasBehind && mine > theirs
-                ? L.flavorLead
-                : '';
     lines.push({
       minute: e.minute,
       kind: 'goal',
       side: e.side,
-      text: `${L.goal({ t, scorer })}${assist ? L.goalAssist({ assist }) : ''}${flavor}`,
+      text: goalLineText(t, e.side, e.minute, scorer, assist, before, n),
       score: [h, a],
+      goal: { scorer, assist, key },
     });
   }
 
@@ -136,30 +185,13 @@ export function liveScript(
     minute: 45,
     extra: 1 + Math.floor(rnd() * 3),
     kind: 'ht',
-    text: L.halfTime({ home: team.home, away: team.away, hs: htScore[0], as: htScore[1] }),
+    text: halfTimeText(m, htScore[0], htScore[1]),
   });
-  const my = m.mine === 'home' ? h : a;
-  const their = m.mine === 'home' ? a : h;
   lines.push({
     minute: 90,
     extra: 2 + Math.floor(rnd() * 4),
     kind: 'ft',
-    text: L.fullTime({
-      home: team.home,
-      away: team.away,
-      h,
-      a,
-      // 남의 경기(컵 공개 경기)는 이긴 팀 이름으로 끝낸다.
-      result: opts.neutral
-        ? h === a
-          ? L.resultDraw
-          : L.resultTeamWin({ t: h > a ? team.home : team.away })
-        : my > their
-          ? L.resultWin
-          : my < their
-            ? L.resultLoss
-            : L.resultDraw,
-    }),
+    text: fullTimeText(m, h, a, opts.neutral),
   });
 
   // 시계 순서(같은 분이면 빌드업 → 골 → 나머지, 추가시간 줄은 그 분의 맨 뒤).
@@ -171,6 +203,7 @@ export function liveScript(
     save: 3,
     miss: 3,
     corner: 3,
+    moment: 3,
     ht: 9,
     ft: 9,
   };
@@ -246,9 +279,9 @@ export const momentumDecay = (momentum: number) => momentum + (MOMENTUM_START - 
 export const goalMinutesOf = (script: readonly LiveLine[]) =>
   script.filter((l) => l.kind === 'goal').map((l) => l.minute);
 
-/** 그 줄을 보여 준 뒤 기다리는 시간(ms) — 골 1700, 빌드업 900, 나머지 520. */
+/** 그 줄을 보여 준 뒤 기다리는 시간(ms) — 골 1700, 빌드업 · 장면 900, 나머지 520. */
 export const lineWaitMs = (kind: LiveKind) =>
-  kind === 'goal' ? 1700 : kind === 'build' ? 900 : 520;
+  kind === 'goal' ? 1700 : kind === 'build' || kind === 'moment' ? 900 : 520;
 
 /** 추가시간 시계가 1씩 올라가는 간격(ms). */
 export const EXTRA_TICK_MS = 260;
@@ -266,6 +299,8 @@ export type PlayStep = {
   extra?: number;
   phase?: LivePhase;
   show?: number;
+  /** T-11-387 장면 경기 — 이 단계에서 멈추고 장면(moments의 인덱스)을 고르게 한다. */
+  moment?: number;
   decay?: boolean;
   wait: number;
 };
@@ -275,12 +310,18 @@ export type PlayStep = {
  * 줄이 나온다) → 흐름 복귀와 대기. 46분에 후반으로 넘어가고, 하프타임 줄에서 멈췄다 이어진다. 끝나면(마지막 단계 뒤)
  * 앱이 경기 종료를 알린다. 앱은 단계마다 '아직 보고 있는지'를 확인하면 된다.
  */
-export function playbackPlan(script: readonly LiveLine[]): PlayStep[] {
-  const goalMinutes = goalMinutesOf(script);
+export function playbackPlan(
+  script: readonly LiveLine[],
+  momentMinutes: readonly number[] = [],
+): PlayStep[] {
+  const goalMinutes = [...goalMinutesOf(script), ...momentMinutes];
   const steps: PlayStep[] = [];
   let i = 0;
   for (let min = 0; min <= 90; min++) {
     steps.push({ clock: min, extra: 0, ...(min === 46 ? { phase: '2nd' as const } : {}), wait: 0 });
+    momentMinutes.forEach((m, k) => {
+      if (m === min) steps.push({ moment: k, wait: 0 });
+    });
     while (i < script.length && script[i]!.minute === min && !script[i]!.extra) {
       const k = script[i]!.kind;
       steps.push({ show: i++, wait: lineWaitMs(k) });

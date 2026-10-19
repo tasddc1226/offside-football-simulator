@@ -7,6 +7,8 @@
   import { recordText, signedNum } from '@offside/app-core/teamText';
   import TeamLogo from './TeamLogo.svelte';
   import TeamReport from './TeamReport.svelte';
+  import { teamMomentsText as M } from '@offside/app-core/i18n/ko/teamMoments';
+  import { momentTitle, pickedLabel } from '@offside/app-core/teamMoments';
   import type { ReportLine } from '@offside/contracts/owner-team';
 
   let {
@@ -64,6 +66,7 @@
             {#if link(e.scorerId)}
               <button class="tm-player" onclick={() => onplayer!(e.scorerId!)} aria-label={L.playerStatsAria({ name: eventName(e.scorerId, e.scorer) })} data-act="team-player-stats"><b>{eventName(e.scorerId, e.scorer)}</b></button>
             {:else}<b>{eventName(e.scorerId, e.scorer)}</b>{/if}
+            {#if e.slot}<small class="muted tm-slot">{e.slot}</small>{/if}
             {#if e.assist}
               {#if link(e.assistId)}
                 <button class="tm-player muted fs-sm" onclick={() => onplayer!(e.assistId!)} aria-label={L.playerStatsAria({ name: eventName(e.assistId, e.assist) })}>{L.assist({ name: eventName(e.assistId, e.assist) })}</button>
@@ -75,6 +78,19 @@
     </ol>
   {:else}
     <p class="muted">{L.noGoals}</p>
+  {/if}
+  {#if m.moments?.length}
+    <div class="tm-moments" data-team-moments>
+      <h2 class="eyebrow">{M.recordTitle}</h2>
+      <ul>
+        {#each m.moments as x (x.index)}
+          <li class:fail={!x.ok}>
+            <b>{momentTitle(x)}</b>
+            <span>{M.recordLine({ minute: x.minute, name: `${eventName(x.actor.id, x.actor.name)}(${x.actor.slot})`, choice: pickedLabel(x, eventName), ok: !!x.ok })}</span>
+          </li>
+        {/each}
+      </ul>
+    </div>
   {/if}
   <TeamReport {m} {fix} />
   <p class="muted fs-sm">{kstMonthDayTime(m.createdAt)}{team && m.mine === 'home' && !m.friendly ? L.resultRecord({ record: recordText(team.record) }) : ''}</p>
@@ -142,6 +158,28 @@
   .tm-events li > span:last-child {
     display: flex;
     flex-direction: column;
+  }
+  .tm-slot {
+    font-size: 0.75rem;
+  }
+  .tm-moments ul {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+  .tm-moments li {
+    display: grid;
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    box-shadow: inset 3px 0 0 var(--pitch-2);
+    font-size: 0.875rem;
+  }
+  .tm-moments li.fail {
+    box-shadow: inset 3px 0 0 var(--line);
   }
   .tm-player {
     all: unset;

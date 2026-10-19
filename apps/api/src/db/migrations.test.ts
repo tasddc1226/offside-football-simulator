@@ -665,6 +665,17 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'detail_json',
     'created_at',
   ],
+  team_live_matches: [
+    'id',
+    'profile_id',
+    'home_team_id',
+    'away_team_id',
+    'state_json',
+    'rev',
+    'created_at',
+    'done_at',
+    'result_json',
+  ],
 };
 
 describe('migrations', () => {
