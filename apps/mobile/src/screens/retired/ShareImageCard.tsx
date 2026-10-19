@@ -3,6 +3,7 @@
 // 이미지 저장은 시트에서 고른다. 웹은 캔버스 1080×1350, 앱은 같은 카드를 0.5배로 줄여 그린 뷰를 찍어 1080×1350으로 뽑는다
 // (기기 화소 비율만큼 큰 비트맵을 만들지 않으려고). 카드 내용은 위 은퇴 리포트와 같은 LegendView(v)에서 뽑는다 —
 // 영구결번도 리포트처럼 이번 접속의 심사 결과를 먼저 본다.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { Image } from 'expo-image';
@@ -84,7 +85,7 @@ export function ShareImageCard({ v }: { v: LegendView }) {
             source={{ uri: shot }}
             testID="share-image-preview"
             accessibilityLabel={L.imageAlt({ name: h.name })}
-            style={{ width: '100%', aspectRatio: CARD_W / CARD_H, borderRadius: 12 }}
+            style={{ width: '100%', aspectRatio: CARD_W / CARD_H, borderRadius: RADIUS.md }}
           />
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Btn

@@ -2,6 +2,7 @@
 // 화면에 들어오면 선이 왼쪽부터 그려지고 점이 차례로 올라온다(동작 줄이기면 처음부터 다 보인다).
 // 시즌마다 세로 한 칸이 버튼이라, 칸을 누르면 그 시즌 값을 위에 보여 준다.
 // go: 그려도 되는가 — 은퇴 크레딧은 장면이 올라오면 true를 준다. 안 주면(커리어 탭) 화면 아래쪽 15%를 넘어 들어올 때 스스로 잰다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, Easing, Pressable, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -312,12 +313,12 @@ function PeakTag({
         style={{
           paddingVertical: 1,
           paddingHorizontal: 6,
-          borderRadius: 999,
+          borderRadius: RADIUS.pill,
           backgroundColor: color,
           transform: [{ scale }],
         }}
       >
-        <Txt style={{ fontSize: rem(0.6875), fontWeight: '700', color: c.accentInk }}>
+        <Txt style={{ fontSize: rem(FONT.caption2), fontWeight: '700', color: c.accentInk }}>
           {fmtValue(p.v)}
         </Txt>
       </Animated.View>

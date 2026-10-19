@@ -48,7 +48,7 @@
     align-items: center;
     gap: 10px;
     padding: 10px 12px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--surface-2);
   }
   .ch.trophy {

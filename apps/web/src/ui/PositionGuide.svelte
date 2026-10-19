@@ -32,6 +32,6 @@
   .guide-body {padding:0 0 12px;gap:12px;}
   .guide-tabs {display:flex;flex-wrap:wrap;gap:8px;}
   .guide-tabs button {min-height:44px;}
-  article {padding:10px;border:1px solid var(--line);border-radius:8px;}
+  article {padding:10px;border:1px solid var(--line);border-radius:var(--radius-sm);}
   p {margin:4px 0 0;overflow-wrap:anywhere;}
 </style>

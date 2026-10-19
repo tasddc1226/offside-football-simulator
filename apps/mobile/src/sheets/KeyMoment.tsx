@@ -1,4 +1,5 @@
 // T-11-390 구간 중계가 멈추고 뜨는 결정적 장면 카드(웹 sheets/KeyMoment.svelte). 선택지를 고르거나 15초가 지나면 감독에게 맡긴다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import type { Snapshot } from 'valtio';
 import type { MomentView } from '@offside/app-core/sheets';
@@ -26,7 +27,7 @@ export function KeyMoment({
       style={{
         gap: 10,
         padding: 14,
-        borderRadius: 14,
+        borderRadius: RADIUS.md,
         borderWidth: 1,
         borderColor: tone,
         backgroundColor: c.surface2,
@@ -40,22 +41,24 @@ export function KeyMoment({
           gap: 8,
         }}
       >
-        <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(1.125), color: tone }}>{m.title}</Txt>
-        <Txt tone="muted" style={{ fontSize: rem(0.8125), flexShrink: 1, textAlign: 'right' }}>
+        <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(FONT.title3), color: tone }}>
+          {m.title}
+        </Txt>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.label), flexShrink: 1, textAlign: 'right' }}>
           {m.head}
         </Txt>
       </View>
-      <Txt style={{ lineHeight: rem(1) * 1.5 }}>{m.scene}</Txt>
+      <Txt style={{ lineHeight: rem(FONT.body) * 1.5 }}>{m.scene}</Txt>
       {m.result ? (
         <View style={{ gap: 4 }} testID={`key-moment-result-${m.result.ok ? 'ok' : 'fail'}`}>
-          <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
             {m.result.picked}
           </Txt>
           <Txt
             accessibilityLiveRegion="polite"
             style={{
               fontWeight: '700',
-              fontSize: rem(1.0625),
+              fontSize: rem(FONT.title3),
               color: m.result.ok ? c.good : c.bad,
             }}
           >
@@ -77,9 +80,9 @@ export function KeyMoment({
                 style={{
                   minHeight: 48,
                   borderWidth: 1,
-                  borderColor: c.line,
-                  backgroundColor: c.surface,
-                  borderRadius: 10,
+                  borderColor: 'transparent',
+                  backgroundColor: c.surface2,
+                  borderRadius: RADIUS.sm,
                   paddingVertical: 8,
                   paddingHorizontal: 12,
                   gap: 2,
@@ -97,14 +100,14 @@ export function KeyMoment({
                   <Txt
                     style={{
                       fontFamily: DISPLAY[700],
-                      fontSize: rem(1.125),
+                      fontSize: rem(FONT.title3),
                       fontVariant: ['tabular-nums'],
                     }}
                   >
                     {K.pct({ p: ch.pct })}
                   </Txt>
                 </View>
-                <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                   {K.attr({ attr: ch.attr })}
                 </Txt>
               </Press>
@@ -119,7 +122,7 @@ export function KeyMoment({
               }}
             />
           </View>
-          <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
             {K.timer({ n: m.left })}
           </Txt>
           <Btn

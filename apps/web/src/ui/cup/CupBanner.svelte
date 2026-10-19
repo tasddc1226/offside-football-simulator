@@ -47,7 +47,7 @@
     background: color-mix(in srgb, var(--accent) 6%, var(--surface));
   }
   .cb-title {
-    font-size: 1.25rem;
+    font-size: var(--fs-title2);
     line-height: 1.3;
     margin: 0;
     overflow-wrap: anywhere;

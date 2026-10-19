@@ -102,8 +102,8 @@
 
 <style>
   .season-trophies { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 10px; margin: 14px 0; }
-  .season-trophy { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--accent-text); min-width: 0; }
-  .season-trophy b { font-size: .875rem; overflow-wrap: anywhere; }
+  .season-trophy { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid transparent; border-radius: var(--radius-md); background: var(--surface-2); color: var(--accent-text); min-width: 0; }
+  .season-trophy b { font-size: var(--fs-body2); overflow-wrap: anywhere; }
   .trophy-reveal { display: flex; flex-shrink: 0; color: var(--gold, var(--accent)); animation: trophy-lift 480ms ease-out both; }
   @keyframes trophy-lift { from { transform: translateY(10px) scale(.86); } to { transform: translateY(0) scale(1); } }
   @media (prefers-reduced-motion: reduce) { .trophy-reveal { animation: none; } }

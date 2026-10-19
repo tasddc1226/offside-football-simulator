@@ -283,7 +283,7 @@
     display: grid;
     gap: 10px;
     padding: 14px;
-    border-radius: 14px;
+    border-radius: var(--radius-md);
     background: var(--pitch);
     color: var(--on-pitch);
     overflow: hidden;
@@ -303,11 +303,11 @@
     align-items: center;
     gap: 6px;
     padding: 1px 8px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--bad);
     color: #fff;
     font-weight: 700;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
   }
   .tl-live::before {
     content: '';
@@ -324,7 +324,7 @@
     display: none;
   }
   .tl-clock {
-    font-size: 1.5rem;
+    font-size: var(--fs-title1);
     font-weight: 700;
     color: var(--pitch-accent);
     font-variant-numeric: tabular-nums;
@@ -332,7 +332,7 @@
   }
   .tl-phase {
     margin-left: auto;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     opacity: 0.85;
   }
   .tl-score {
@@ -357,7 +357,7 @@
   }
   .tl-team small {
     opacity: 0.75;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
   }
   .tl-team.mine b {
     color: var(--pitch-accent);
@@ -417,7 +417,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     opacity: 0.85;
   }
   .tl-mom-track {
@@ -460,9 +460,9 @@
     grid-template-columns: 3.4em 1fr;
     gap: 8px;
     padding: 6px 10px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     line-height: 1.45;
     animation: tl-in 0.35s ease-out;
   }
@@ -513,7 +513,7 @@
     letter-spacing: 0.04em;
   }
   .tl-m-head b {
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
     color: var(--pitch-2);
   }
   .tl-moment.crisis .tl-m-head b {
@@ -528,7 +528,7 @@
   .tl-m-ask small,
   .tl-m-hint {
     color: var(--muted);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
   }
   .tl-m-choices {
     display: grid;
@@ -541,8 +541,8 @@
     gap: 2px 10px;
     min-height: 48px;
     padding: 8px 12px;
-    border-radius: 10px;
-    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
     background: var(--surface-2);
     color: inherit;
     font: inherit;
@@ -562,13 +562,13 @@
   }
   .tl-m-pct {
     font-family: var(--display);
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
     font-variant-numeric: tabular-nums;
   }
   .tl-m-tags {
     grid-column: 1 / -1;
     color: var(--muted);
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
   }
   .tl-m-timer {
     height: 4px;

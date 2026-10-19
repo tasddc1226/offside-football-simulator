@@ -2,6 +2,7 @@
 // (편성·경기·구단주·업적·기록, T-11-026)가 같은 모양.
 // T-11-031 세 벌이 같은 모양이라 바뀐 걸 알아보게: 메뉴가 새로 붙으면 칸들이 왼쪽부터 차례로 올라오고, 게임·내 팀
 // 메뉴(sub)는 위쪽 강조선으로 메인 메뉴와 구분하며, 처음 볼 때 한 번 말풍선을 띄운다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, Easing, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -80,7 +81,7 @@ function NavIntro({ kind, onShow }: { kind: SubNav; onShow: (on: boolean) => voi
           style={{
             paddingVertical: 9,
             paddingHorizontal: 12,
-            borderRadius: 12,
+            borderRadius: RADIUS.md,
             backgroundColor: c.ink,
             shadowColor: '#000',
             shadowOpacity: 0.25,
@@ -89,7 +90,7 @@ function NavIntro({ kind, onShow }: { kind: SubNav; onShow: (on: boolean) => voi
             elevation: 10,
           }}
         >
-          <Txt center style={{ fontSize: rem(0.8125), fontWeight: '600', color: c.bg }}>
+          <Txt center style={{ fontSize: rem(FONT.label), fontWeight: '600', color: c.bg }}>
             {text}
           </Txt>
         </View>
@@ -139,7 +140,7 @@ function IconChip({ ping, on, children }: { ping: boolean; on: boolean; children
             position: 'absolute',
             width: 28,
             height: 28,
-            borderRadius: 14,
+            borderRadius: RADIUS.md,
             borderWidth: 2,
             borderColor: c.accent,
             opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.8, 0] }),
@@ -150,7 +151,7 @@ function IconChip({ ping, on, children }: { ping: boolean; on: boolean; children
       <View
         style={{
           padding: 4,
-          borderRadius: 999,
+          borderRadius: RADIUS.pill,
           backgroundColor: on ? alpha(c.accent, 0.22) : 'transparent',
         }}
       >
@@ -212,7 +213,7 @@ export function TabBar({ items, label, sub }: { items: TabItem[]; label: string;
               style={(pressed) => ({
                 flex: 1,
                 minHeight: 44,
-                borderRadius: 9,
+                borderRadius: RADIUS.sm,
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 3,
@@ -241,7 +242,7 @@ export function TabBar({ items, label, sub }: { items: TabItem[]; label: string;
                       right: -8,
                       width: 12,
                       height: 12,
-                      borderRadius: 6,
+                      borderRadius: RADIUS.xs,
                       backgroundColor: c.bad,
                       borderWidth: 2,
                       borderColor: c.surface,
@@ -255,8 +256,8 @@ export function TabBar({ items, label, sub }: { items: TabItem[]; label: string;
                 maxFontSizeMultiplier={1.3}
                 adjustsFontSizeToFit
                 style={{
-                  fontSize: rem(0.6875),
-                  lineHeight: rem(0.6875) * 1.3,
+                  fontSize: rem(FONT.caption2),
+                  lineHeight: rem(FONT.caption2) * 1.3,
                   fontWeight: '600',
                   color,
                 }}

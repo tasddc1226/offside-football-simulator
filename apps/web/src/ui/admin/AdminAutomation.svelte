@@ -113,7 +113,7 @@
   .bots,
   .bot-careers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
   .bots { gap: 10px; }
-  .bot { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
-  .bot-careers li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid var(--line); font-size: 0.8125rem; }
+  .bot { border: 1px solid var(--line); border-radius: var(--radius-md); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .bot-careers li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid var(--line); font-size: var(--fs-label); }
   .bot-careers small { display: block; }
 </style>

@@ -1,3 +1,4 @@
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useTextSize } from '../../theme/useTextSize';
 import { TEXT_SIZE_SCALE } from '@offside/app-core/textSize';
 // 설정·구단주 화면이 함께 쓰는 작은 부품(웹 .settings-* · .switch · .field · .link-btn · <select> 자리).
@@ -56,15 +57,24 @@ export function SettingsLabel({
   return (
     <View style={{ flex: 1, minWidth: 0, gap: 3 }} testID={titleId}>
       {eyebrow ? (
-        <Txt tone="accent" style={{ fontSize: rem(0.6875), lineHeight: rem(0.6875) * 1.5 }}>
+        <Txt
+          tone="accent"
+          style={{ fontSize: rem(FONT.caption2), lineHeight: rem(FONT.caption2) * 1.5 }}
+        >
           {eyebrow.toUpperCase()}
         </Txt>
       ) : null}
-      <Txt style={{ fontSize: rem(1.0625), lineHeight: rem(1.0625) * 1.4, fontWeight: '700' }}>
+      <Txt
+        style={{
+          fontSize: rem(FONT.title3),
+          lineHeight: rem(FONT.title3) * 1.4,
+          fontWeight: '700',
+        }}
+      >
         {title}
       </Txt>
       {muted ? (
-        <Txt tone="muted" style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5 }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.label), lineHeight: rem(FONT.label) * 1.5 }}>
           {muted}
         </Txt>
       ) : null}
@@ -124,7 +134,7 @@ export function SettingsTrigger({
         style={{
           width: 34,
           height: 34,
-          borderRadius: 10,
+          borderRadius: RADIUS.sm,
           backgroundColor: c.surface2,
           alignItems: 'center',
           justifyContent: 'center',
@@ -134,8 +144,8 @@ export function SettingsTrigger({
           tone="accent"
           accessible={false}
           style={{
-            fontSize: rem(0.75),
-            lineHeight: rem(0.75) * 1.2,
+            fontSize: rem(FONT.caption),
+            lineHeight: rem(FONT.caption) * 1.2,
             transform: [{ rotate: expanded ? '180deg' : '0deg' }],
           }}
         >
@@ -190,7 +200,7 @@ export function Switch({
         style={{
           width: 48,
           height: 28,
-          borderRadius: 999,
+          borderRadius: RADIUS.pill,
           backgroundColor: value ? c.good : c.line,
         }}
       >
@@ -201,7 +211,7 @@ export function Switch({
             left: 3,
             width: 22,
             height: 22,
-            borderRadius: 11,
+            borderRadius: RADIUS.sm,
             backgroundColor: '#fff',
             shadowColor: '#000',
             shadowOpacity: 0.3,
@@ -242,7 +252,7 @@ export function TextField({
           borderWidth: 1,
           borderColor: c.line,
           backgroundColor: c.surface2,
-          borderRadius: 10,
+          borderRadius: RADIUS.sm,
           paddingVertical: 11,
           paddingHorizontal: 12,
           fontSize: 16 * textScale,
@@ -268,7 +278,7 @@ export function Field({
 }) {
   return (
     <View style={[{ gap: 6 }, style]}>
-      <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '600' }}>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.label), fontWeight: '600' }}>
         {label}
       </Txt>
       {children}
@@ -298,7 +308,7 @@ export function LinkBtn({
     >
       <Txt
         style={{
-          fontSize: rem(0.75),
+          fontSize: rem(FONT.caption),
           color: bad ? c.bad : c.muted,
           textDecorationLine: 'underline',
         }}
@@ -356,9 +366,9 @@ export function SelectField<V extends string | number>({
             minHeight: compact && Platform.OS === 'android' ? 48 : 44,
             paddingHorizontal: 12,
             borderWidth: 1,
-            borderColor: c.line,
-            borderRadius: 10,
-            backgroundColor: c.surface,
+            borderColor: 'transparent',
+            borderRadius: RADIUS.sm,
+            backgroundColor: c.surface2,
           },
           style,
         ]}
@@ -366,7 +376,7 @@ export function SelectField<V extends string | number>({
         <Txt numberOfLines={1} style={{ flexShrink: 1, ...(compact ? { fontSize: 13 } : {}) }}>
           {cur?.label ?? ''}
         </Txt>
-        <Txt tone="muted" accessible={false} style={{ fontSize: rem(0.75) }}>
+        <Txt tone="muted" accessible={false} style={{ fontSize: rem(FONT.caption) }}>
           ▼
         </Txt>
       </Press>

@@ -106,6 +106,6 @@
   .admin-comments { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
   .admin-comments li { display: flex; flex-direction: column; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--line); }
   .admin-comments p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .author-filter { padding: 8px 10px; border-radius: 10px; background: var(--surface-2); justify-content: space-between; }
+  .author-filter { padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface-2); justify-content: space-between; }
   .icon-btn { white-space: nowrap; }
 </style>

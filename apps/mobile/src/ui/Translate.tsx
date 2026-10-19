@@ -1,5 +1,6 @@
 // T-11-146 댓글·채팅 "번역 보기"(앱, 웹 translations.svelte.ts). 번역을 펼친 글만 기억하고, 서버 호출·세션 메모는
 // app-core userTranslate가 한다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { canTranslate, translateLabel, translateUserText } from '@offside/app-core/userTranslate';
 import { toast } from '../game/host';
@@ -37,7 +38,10 @@ export function useTranslations() {
             paddingHorizontal: 2,
           }}
         >
-          <Txt tone="muted" style={{ fontSize: rem(0.75), textDecorationLine: 'underline' }}>
+          <Txt
+            tone="muted"
+            style={{ fontSize: rem(FONT.caption), textDecorationLine: 'underline' }}
+          >
             {translateLabel(id in shown, busy === id)}
           </Txt>
         </Press>

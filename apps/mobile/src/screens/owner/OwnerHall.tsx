@@ -1,3 +1,4 @@
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import {
@@ -63,7 +64,7 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
   const picked = hall.pinned ? (hall.title ?? TITLE_NONE) : null;
   const collection = titleCollection(hall);
   const shown = filter ?? (collection.earned.length ? 'earned' : 'locked');
-  const small = { fontSize: rem(0.8), lineHeight: rem(1.25) };
+  const small = { fontSize: rem(FONT.label), lineHeight: rem(FONT.title2) };
   async function pick(title: string | null) {
     if (!hall || saving || title === picked) return;
     setSaving(true);
@@ -89,7 +90,7 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
           style={{
             width: 36,
             height: 36,
-            borderRadius: 10,
+            borderRadius: RADIUS.sm,
             backgroundColor: c.surface2,
             alignItems: 'center',
             justifyContent: 'center',
@@ -98,7 +99,7 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
           <TitleBadge title={id} size="icon" />
         </View>
         <View style={{ flex: 1, gap: 4 }}>
-          <Txt bold style={{ fontSize: rem(1) }}>
+          <Txt bold style={{ fontSize: rem(FONT.body) }}>
             {titleLabel(id)}
           </Txt>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -114,9 +115,9 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
   const itemStyle = {
     padding: 16,
     gap: 12,
-    borderRadius: 14,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: c.line,
+    borderColor: 'transparent',
     backgroundColor: c.surface,
   };
   return (
@@ -169,7 +170,7 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
               alignItems: 'center',
               minHeight: 48,
               paddingHorizontal: 14,
-              borderRadius: 24,
+              borderRadius: RADIUS.lg,
               borderWidth: 1,
               borderColor: shown === key ? c.accent : c.line,
               backgroundColor: shown === key ? c.surface2 : 'transparent',
@@ -235,7 +236,7 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
                   style={{
                     flex: 1,
                     height: 5,
-                    borderRadius: 6,
+                    borderRadius: RADIUS.xs,
                     overflow: 'hidden',
                     backgroundColor: c.surface2,
                   }}
@@ -252,7 +253,7 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
                   {L.progress(t)}
                 </Txt>
               </View>
-              <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                 {titleRelated(t.id)}
               </Txt>
             </View>

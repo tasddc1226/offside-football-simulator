@@ -95,7 +95,7 @@
     background: #d64545;
   }
   .status-h {
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     margin: 16px 0 6px;
   }
   .status-recent {

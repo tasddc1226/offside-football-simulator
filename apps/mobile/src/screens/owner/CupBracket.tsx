@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { alpha } from '../../theme/colors';
 import { useSnapshot } from 'valtio';
 import { prefs } from '../../store';
@@ -76,7 +77,7 @@ export default function CupBracket({
               paddingHorizontal: 10,
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: 24,
+              borderRadius: RADIUS.lg,
               borderWidth: 1,
               borderColor: i === active ? c.accent : c.line,
               backgroundColor: i === active ? alpha(c.accent, 0.12) : 'transparent',
@@ -120,7 +121,7 @@ export default function CupBracket({
           height: Math.min(window.height * 0.65, tree.viewportHeight),
           borderWidth: 1,
           borderColor: c.line,
-          borderRadius: 12,
+          borderRadius: RADIUS.md,
         }}
       >
         <ScrollView
@@ -174,7 +175,7 @@ export default function CupBracket({
                     height: n.height,
                     padding: n.compact ? 4 : 8,
                     gap: n.compact ? 2 : 4,
-                    borderRadius: 10,
+                    borderRadius: RADIUS.sm,
                     borderWidth: mine ? 2 : 1,
                     borderColor: mine ? c.accent : c.line,
                     backgroundColor: c.surface,

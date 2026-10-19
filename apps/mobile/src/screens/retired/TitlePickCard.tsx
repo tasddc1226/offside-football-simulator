@@ -1,3 +1,4 @@
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { retiredTitleOf } from '@offside/app-core/retiredTitle';
 // 은퇴한 내 선수의 대표 칭호 고르기(웹 titles/TitlePickCard.svelte; 은퇴 화면·내 선수 상세 아래). 받은 칭호 목록은 접어
 // 두고, 펼쳐서 고르면 선수 카드·명예의 전당·공유 링크의 대표 칭호가 바뀐다. 이 기기 기록(ft_hof)에 남기고 서버에 다시
@@ -57,7 +58,7 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
         {current ? (
           <TitleTag name={current.name} rarity={current.rarity} />
         ) : (
-          <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
             {L.none}
           </Txt>
         )}
@@ -69,7 +70,7 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
         accessibilityState={{ expanded: open }}
         style={{ paddingVertical: 4 }}
       >
-        <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '600' }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.label), fontWeight: '600' }}>
           {`${open ? '▾' : '▸'} ${L.pickOpen({ n: earned.length })}`}
         </Txt>
       </Press>
@@ -90,7 +91,7 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
                   gap: 10,
                   paddingVertical: on ? 7.5 : 8,
                   paddingHorizontal: on ? 9 : 10,
-                  borderRadius: 10,
+                  borderRadius: RADIUS.sm,
                   borderWidth: on ? 2.5 : 1.5,
                   borderColor: on ? c.accent : c.line,
                   backgroundColor: c.surface,
@@ -99,11 +100,15 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
                 <TitleTag name={x.d.name} rarity={x.d.rarity} />
                 <Txt
                   tone="muted"
-                  style={{ flex: 1, fontSize: rem(0.75), lineHeight: rem(0.75) * 1.5 }}
+                  style={{
+                    flex: 1,
+                    fontSize: rem(FONT.caption),
+                    lineHeight: rem(FONT.caption) * 1.5,
+                  }}
                 >
                   {x.d.desc}
                 </Txt>
-                <Txt tone="muted" style={{ fontFamily: DISPLAY[700], fontSize: rem(0.75) }}>
+                <Txt tone="muted" style={{ fontFamily: DISPLAY[700], fontSize: rem(FONT.caption) }}>
                   {x.d.id === WALL_OF_HONOR_TITLE_ID ? L.retiredYear : x.year ? x.year : L.earlier}
                 </Txt>
               </Press>

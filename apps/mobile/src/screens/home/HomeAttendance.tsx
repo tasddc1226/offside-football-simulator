@@ -1,6 +1,7 @@
 // T-11-360 홈 출석 체크(웹 HomeAttendance.svelte) — 오프사이드 컵 배너 · 구단주 선물 아래의 한 줄 입구와, 하루(KST) 한 번
 // 저절로 뜨는 출석 창. 로그인한 구단주는 창에서 하루 한 번 출석해 그날 칸의 보상을 받고, 로그인하지 않은 기기는 같은 도장판과
 // 로그인 버튼을 본다(로그인하면 홈에서 바로 출석). 묻는 조건 · 메모는 app-core api/attendance.ts, 띄우는 날은 attendance-view.ts.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import {
@@ -142,7 +143,7 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
                   <View
                     style={{
                       aspectRatio: 1,
-                      borderRadius: 999,
+                      borderRadius: RADIUS.pill,
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: 1,

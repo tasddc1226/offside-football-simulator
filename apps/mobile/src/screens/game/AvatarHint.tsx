@@ -1,5 +1,6 @@
 // T-11-191 커리어 화면 도트 선수가 누를 수 있다는 표시(웹 .avatar-chip · .avatar-btn.fresh).
 // 오른쪽 아래 '✎ 꾸미기' 칩, 꾸미기를 한 번도 안 열었으면 둘레 고리가 깜빡인다('동작 줄이기'면 고리만 고정).
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { Animated, Easing, View } from 'react-native';
 import { avatarLookText as LK } from '@offside/app-core/i18n/ko/avatarLook';
@@ -35,7 +36,7 @@ export function AvatarHint({ fresh }: { fresh: boolean }) {
             left: -6,
             right: -6,
             bottom: -6,
-            borderRadius: 14,
+            borderRadius: RADIUS.md,
             borderWidth: 2,
             borderColor: c.accent,
             opacity: prefs.motionOK
@@ -57,11 +58,11 @@ export function AvatarHint({ fresh }: { fresh: boolean }) {
           bottom: -6,
           paddingHorizontal: 6,
           paddingVertical: 1,
-          borderRadius: 999,
+          borderRadius: RADIUS.pill,
           backgroundColor: c.accent,
         }}
       >
-        <Txt bold style={{ fontSize: rem(0.6875), color: c.accentInk }}>
+        <Txt bold style={{ fontSize: rem(FONT.caption2), color: c.accentInk }}>
           {`✎ ${LK.chip}`}
         </Txt>
       </View>

@@ -107,10 +107,10 @@
     display: flex;
     align-items: center;
     overflow: hidden;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--surface);
-    border: 1px solid var(--line);
-    font-size: 0.8125rem;
+    border: 1px solid transparent;
+    font-size: var(--fs-label);
     white-space: nowrap;
     /* 양 끝이 흐려지며 들어오고 나간다. */
     mask-image: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent);
@@ -144,11 +144,11 @@
     color: var(--muted);
   }
   .tk-tag {
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     font-weight: 700;
     letter-spacing: 0.02em;
     padding: 2px 7px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     color: var(--muted);
     background: color-mix(in srgb, var(--ink) 8%, transparent);
   }
@@ -176,6 +176,6 @@
   }
   .tk-ago {
     color: var(--muted);
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
   }
 </style>

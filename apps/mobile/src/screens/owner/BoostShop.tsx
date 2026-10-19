@@ -1,6 +1,7 @@
 // T-11-178 잠재력 강화권 상점(웹 cup/BoostShop.svelte) — 구단주 화면 리롤권 상점 아래. 강화권은 스토어에서만 사서, 이 스토어
 // 상품이 보이거나 가진 강화권이 있을 때만 보인다(T-11-184 광고 제거 구매자에게도 판다). 접힌 카드에는 가진 장수만,
 // 펼치면 스토어 묶음(IapPacks)을 보인다. 쓰는 곳은 선수 탭 잠재력 강화 카드다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
@@ -30,13 +31,13 @@ export function BoostShop() {
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
           <Txt v="eyebrow">Boost shop</Txt>
           <Txt v="h2">{L.shopTitle}</Txt>
-          <Txt tone="muted" style={{ fontSize: rem(0.875) }} testID="boost-shop-sub">
+          <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }} testID="boost-shop-sub">
             {have ? L.shopSubHave({ n: have }) : L.shopSub}
           </Txt>
         </View>
         <Txt
           tone="muted"
-          style={{ fontSize: rem(1.5), transform: [{ rotate: open ? '-90deg' : '90deg' }] }}
+          style={{ fontSize: rem(FONT.title1), transform: [{ rotate: open ? '-90deg' : '90deg' }] }}
         >
           ›
         </Txt>
@@ -45,7 +46,7 @@ export function BoostShop() {
         sells ? (
           <IapPacks item="boost" note={L.shopNote} />
         ) : (
-          <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
             {L.shopNote}
           </Txt>
         )

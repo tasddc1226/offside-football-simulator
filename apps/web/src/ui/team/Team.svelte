@@ -770,10 +770,10 @@
 <style>
   .tm-sk {display:grid;gap:14px;padding-block:4px;opacity:0;animation:sk-in .2s ease-out .2s forwards;}
   .tm-sk-title,.tm-sk-pitch {animation:sk-pulse 1.4s ease-in-out .4s infinite;}
-  .tm-sk-title {width:52%;height:24px;border-radius:8px;background:var(--line);}
+  .tm-sk-title {width:52%;height:24px;border-radius:var(--radius-sm);background:var(--line);}
   .tm-sk-pitch {
     --d:var(--line);
-    width:100%;max-width:640px;aspect-ratio:5/6;margin:0 auto;border-radius:12px;border:1px solid var(--line);
+    width:100%;max-width:640px;aspect-ratio:5/6;margin:0 auto;border-radius:var(--radius-md);border:1px solid var(--line);
     background:
       radial-gradient(circle 16px at 50% 90%,var(--d) 98%,transparent),
       radial-gradient(circle 16px at 14% 70%,var(--d) 98%,transparent),

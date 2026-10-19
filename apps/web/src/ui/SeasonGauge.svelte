@@ -45,11 +45,11 @@
 <style>
   .season-gauge {display:flex;flex-direction:column;gap:8px;}
   .sg-head {display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
-  .sg-pct {font-family:var(--display);font-size:1.5rem;line-height:1;color:var(--accent-text);}
-  .sg-title {margin:0;font-size:1.0625rem;}
+  .sg-pct {font-family:var(--display);font-size:var(--fs-title1);line-height:1;color:var(--accent-text);}
+  .sg-title {margin:0;font-size:var(--fs-title3);}
   .locked .sg-title {color:var(--accent-text);}
-  .sg-date {margin:0;font-size:.8125rem;color:var(--muted);}
-  .sg-bar {position:relative;height:12px;border-radius:999px;background:var(--surface-2);overflow:hidden;}
+  .sg-date {margin:0;font-size:var(--fs-label);color:var(--muted);}
+  .sg-bar {position:relative;height:12px;border-radius:var(--radius-pill);background:var(--surface-2);overflow:hidden;}
   .sg-bar i {position:absolute;inset:0 auto 0 0;border-radius:inherit;background:linear-gradient(90deg,color-mix(in srgb,var(--accent),transparent 35%),var(--accent));transition:width .6s ease-out;}
   /* 90%(마감이 정해지는 자리) 눈금 */
   .sg-lock {position:absolute;top:0;bottom:0;left:90%;width:2px;background:color-mix(in srgb,var(--ink),transparent 60%);}

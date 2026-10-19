@@ -136,19 +136,19 @@
     flex-direction: column;
     gap: 10px;
     padding: 18px 16px 14px;
-    border-radius: 16px;
+    border-radius: var(--radius-lg);
     background: var(--surface);
-    border: 1px solid var(--line);
+    border: 1px solid transparent;
     box-shadow: var(--shadow);
   }
   h2 {
     margin: 0;
-    font-size: 1.15rem;
+    font-size: var(--fs-title3);
   }
   .ss-pitch {
     position: relative;
     aspect-ratio: 16 / 10;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     overflow: hidden;
     background: repeating-linear-gradient(90deg, var(--pitch) 0 10%, var(--pitch-2) 10% 20%);
   }
@@ -216,11 +216,11 @@
   .ss-count {
     display: flex;
     justify-content: space-between;
-    font-size: 0.85rem;
+    font-size: var(--fs-body2);
     color: var(--muted);
   }
   .ss-count b {
-    font-size: 1.05rem;
+    font-size: var(--fs-title3);
     color: var(--ink);
   }
   .ss-bar {
@@ -241,7 +241,7 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    font-size: 0.88rem;
+    font-size: var(--fs-body2);
   }
   .ss-steps li {
     display: flex;
@@ -263,7 +263,7 @@
     flex: none;
     display: grid;
     place-items: center;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
   }
   .now .ss-mark {
     border: 2px solid var(--accent);
@@ -274,7 +274,7 @@
   .ss-skip {
     margin: 2px 0 0;
     text-align: center;
-    font-size: 0.8rem;
+    font-size: var(--fs-label);
     color: var(--muted);
   }
   @keyframes ss-spin {

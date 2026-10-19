@@ -2,6 +2,7 @@
 // 게임 데이터는 전부 기기에 남고, 여기서 다루는 건 로그인 상태뿐이다. 오프라인/서버 오류에도 게임 자체는 그대로
 // 플레이할 수 있어야 하므로, 실패 시 조용히 '연결할 수 없어요'로 두고 게임 화면을 막지 않는다.
 // 앱은 세션 쿠키 대신 기기 보안 저장소의 세션 토큰을 쓴다 — 로그아웃·탈퇴 뒤에는 토큰도 지운다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect } from 'react';
 import { Alert, View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -98,8 +99,8 @@ export function Account() {
     justifyContent: 'space-between',
     gap: 12,
   } as const;
-  const bTitle = { fontSize: rem(1), fontWeight: '700' } as const;
-  const bMuted = { fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5 } as const;
+  const bTitle = { fontSize: rem(FONT.body), fontWeight: '700' } as const;
+  const bMuted = { fontSize: rem(FONT.label), lineHeight: rem(FONT.label) * 1.5 } as const;
 
   if (profile === undefined)
     return (
@@ -158,7 +159,7 @@ export function Account() {
             <LinkBtn onPress={() => void doUnlink()} testID="account-unlink">
               {L.unlinkGoogle}
             </LinkBtn>
-            <Txt tone="muted" accessible={false} style={{ fontSize: rem(0.75) }}>
+            <Txt tone="muted" accessible={false} style={{ fontSize: rem(FONT.caption) }}>
               ·
             </Txt>
           </>

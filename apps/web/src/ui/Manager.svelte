@@ -569,7 +569,7 @@
 
 <style>
   .mg-delta {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     font-weight: 700;
     color: var(--good);
     animation: pop 0.32s cubic-bezier(0.3, 1.6, 0.5, 1) both;
@@ -589,7 +589,7 @@
     margin: 0;
     padding: 0;
     list-style: none;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .mg-steps li.on {
@@ -612,7 +612,7 @@
   .mg-abandon-link {
     align-self: center;
     color: var(--muted);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
   }
   .manager {
     display: flex;
@@ -630,10 +630,10 @@
     margin: 0;
   }
   .mg-col h2 {
-    font-size: 1.0625rem;
+    font-size: var(--fs-title3);
   }
   .mg-col h3 {
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     color: var(--muted);
   }
   .mg-head {
@@ -642,7 +642,7 @@
     gap: 2px;
   }
   .mg-head b {
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
   }
   .mg-stats {
     display: grid;
@@ -652,11 +652,11 @@
   }
   .mg-stats div {
     padding: 8px 10px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
   }
   .mg-stats dt {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .mg-stats dd {
@@ -668,7 +668,7 @@
     font-variant-numeric: tabular-nums;
   }
   .mg-log {
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     line-height: 1.5;
   }
   .mg-row {
@@ -676,9 +676,9 @@
     align-items: center;
     gap: 10px;
     padding: 10px 12px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: var(--surface);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: var(--surface-2);
     color: var(--ink);
     text-align: left;
     font: inherit;
@@ -695,7 +695,7 @@
     gap: 2px;
   }
   .mg-info small {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
   }
   .mg-chips {
     display: flex;
@@ -708,16 +708,16 @@
     align-items: center;
     min-width: 64px;
     padding: 8px 12px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--surface);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
     color: var(--ink);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
   }
   .mg-chip small {
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     font-weight: 500;
     color: var(--muted);
   }
@@ -732,7 +732,7 @@
   }
   .mg-result {
     padding: 10px 12px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
     line-height: 1.5;
   }
@@ -743,11 +743,11 @@
   }
   .mg-trophy {
     padding: 4px 12px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--pitch);
     color: var(--on-pitch);
     font-weight: 700;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     animation: mg-pop 0.42s cubic-bezier(0.2, 1.4, 0.4, 1) var(--d, 0ms) both;
   }
   .mg-trophy.bad {
@@ -767,7 +767,7 @@
   }
   .mg-grade-pop {
     display: inline-block;
-    font-size: 1.25rem;
+    font-size: var(--fs-title2);
     animation: mg-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) 0.3s both;
   }
   @keyframes mg-pop {
@@ -787,7 +787,7 @@
     gap: 6px;
     padding: 12px;
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: var(--radius-md);
   }
   .mg-card-head {
     display: flex;
@@ -800,15 +800,15 @@
   }
   .mg-badge {
     padding: 2px 8px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--surface-2);
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     font-weight: 600;
   }
   .mg-hist {
     margin: 8px 0 0;
     padding-left: 18px;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     line-height: 1.6;
   }
   .mg-abandon {
@@ -840,7 +840,7 @@
     flex-direction: column;
     gap: 12px;
     padding: 16px 20px calc(16px + var(--safe-b));
-    border-radius: 22px 22px 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     background: var(--surface);
     color: var(--ink);
     box-shadow: var(--shadow);
@@ -850,12 +850,12 @@
     margin: 0;
   }
   .mg-sheet h2 {
-    font-size: 1.0625rem;
+    font-size: var(--fs-title3);
   }
   .mg-lines {
     margin: 0;
     padding-left: 18px;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     line-height: 1.6;
   }
   .mg-actions {

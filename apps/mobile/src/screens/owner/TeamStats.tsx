@@ -2,6 +2,7 @@
 // 선수별 골 · 도움, 날짜별 전적, 상대별 전적을 탭으로 나눠 보여 준다. 랭크 경기만 센다(친선전은 저장하지 않는다).
 // T-11-358 흐름 요약(최근 흐름 · 연속 기록 · 도전/도전받음 · 가장 큰 승패)과 경기 종류별 전적(랭크 · 친선 · 컵)을 위에 둔다.
 // 남의 팀 프로필에서도 같은 화면을 쓴다(embedded: 제목을 h2로, 돌아가기 대신 닫기).
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import type { TeamStatsResponse } from '@offside/app-core/api/team';
@@ -136,7 +137,7 @@ export function TeamStats({
                     minWidth: rem(1.6),
                     height: rem(1.6),
                     paddingHorizontal: 3,
-                    borderRadius: 6,
+                    borderRadius: RADIUS.xs,
                     borderWidth: 1,
                     borderColor: formColor(r),
                     alignItems: 'center',
@@ -193,7 +194,7 @@ export function TeamStats({
             >
               <Txt
                 testID="team-stats-total"
-                style={{ fontFamily: DISPLAY[700], fontSize: rem(1.5) }}
+                style={{ fontFamily: DISPLAY[700], fontSize: rem(FONT.title1) }}
               >
                 {record(s.total)}
               </Txt>
@@ -230,7 +231,7 @@ export function TeamStats({
                       testID="team-stats-focus"
                       style={{
                         padding: 10,
-                        borderRadius: 10,
+                        borderRadius: RADIUS.sm,
                         backgroundColor: c.surface2,
                         gap: 2,
                         marginBottom: 6,
@@ -259,7 +260,7 @@ export function TeamStats({
                       key={p.careerId ?? `anon:${p.name}`}
                       style={[
                         row,
-                        i === focused && { backgroundColor: c.surface2, borderRadius: 8 },
+                        i === focused && { backgroundColor: c.surface2, borderRadius: RADIUS.sm },
                       ]}
                     >
                       <Txt style={{ flex: 1, minWidth: 0 }}>

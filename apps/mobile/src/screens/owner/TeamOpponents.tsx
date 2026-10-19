@@ -1,5 +1,6 @@
 // 상대 고르기(웹 team/Team.svelte 의 view === 'opponents') — 내 팀 OVR과 비슷한 다른 구단주의 팀에 도전한다.
 // 경기할 수 없으면(hint) 목록 대신 이유를 보여 준다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import { TeamLogo } from '../../components/TeamLogo';
 import { TitleBadge } from '../../components/TitleBadge';
@@ -121,8 +122,8 @@ export function TeamOpponents({
                     tone="accent"
                     style={{
                       fontFamily: DISPLAY[700],
-                      fontSize: rem(1.375),
-                      lineHeight: rem(1.375) * 1.15,
+                      fontSize: rem(FONT.title2),
+                      lineHeight: rem(FONT.title2) * 1.15,
                     }}
                   >
                     {o.rating}

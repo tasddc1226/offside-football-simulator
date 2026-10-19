@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -318,7 +319,7 @@ export default function OwnerHonors() {
                   style={{
                     width: zone === i ? 20 : 6,
                     height: 6,
-                    borderRadius: 5,
+                    borderRadius: RADIUS.xs,
                     backgroundColor: zone === i ? room.gold : room.line,
                   }}
                 />
@@ -395,7 +396,7 @@ export default function OwnerHonors() {
                               alignItems: 'center',
                               gap: 6,
                               padding: 12,
-                              borderRadius: 10,
+                              borderRadius: RADIUS.sm,
                               backgroundColor: c.surface,
                             }}
                           >
@@ -512,7 +513,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: room.line,
-    borderRadius: 8,
+    borderRadius: RADIUS.sm,
   },
   arrowText: { color: room.gold, fontSize: 30 },
   dots: { flexDirection: 'row', justifyContent: 'center' },

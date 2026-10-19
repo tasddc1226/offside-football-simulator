@@ -1,6 +1,7 @@
 // 환경설정 화면(웹 Settings.svelte, T-10-009 · T-10-021) — 다크 모드 · 선수 이름 공개(T-10-065) 켜기/끄기, 백업,
 // 구단 이름·엠블럼, 도움말·서비스 정책 링크. 이 설정들은 이 기기에만 저장된다. 계정·운영 도구는 구단주 화면에 있다.
 // 앱에서 뺀 것(웹 전용): 효과음·배경음악·음량·음악 출처, '홈 화면에 추가하기' 안내.
+import { FONT } from '@offside/app-core/design-tokens';
 import { setTextSize, TEXT_SIZES } from '@offside/app-core/textSize';
 import { REVEAL_SHORT_KEY } from '@offside/app-core/reveal';
 import { revealText as RV } from '@offside/app-core/i18n/ko/reveal';
@@ -57,7 +58,7 @@ function LinkList({ label, items }: { label: string; items: LinkItem[] }) {
               borderTopColor: c.line,
             }}
           >
-            <Txt style={{ fontSize: rem(0.9375), fontWeight: '600' }}>{it.text}</Txt>
+            <Txt style={{ fontSize: rem(FONT.body1), fontWeight: '600' }}>{it.text}</Txt>
             <Txt tone="accent" accessible={false}>
               ›
             </Txt>
@@ -98,7 +99,7 @@ function BuildInfo() {
       tone="muted"
       selectable
       testID="build-info"
-      style={{ fontSize: rem(0.75), textAlign: 'center', paddingTop: 8 }}
+      style={{ fontSize: rem(FONT.caption), textAlign: 'center', paddingTop: 8 }}
     >
       {L.appVersion({ version, build })} ·{' '}
       {updateId ? L.updateId({ id: updateId }) : L.updateEmbedded}

@@ -109,19 +109,19 @@
 </dialog>
 
 <style>
-  dialog {width:100%;max-width:480px;max-height:92dvh;margin:auto auto 0;padding:0;border:1px solid var(--line);border-radius:18px 18px 0 0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow);overflow:hidden;}
+  dialog {width:100%;max-width:480px;max-height:92dvh;margin:auto auto 0;padding:0;border: 1px solid transparent;border-radius:var(--radius-lg) var(--radius-lg) 0 0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow);overflow:hidden;}
   dialog[open] {display:flex;flex-direction:column;}
   dialog::backdrop {background:#0009;}
   header {display:flex;align-items:center;justify-content:space-between;gap:8px;padding:16px;flex:none;}
   h2 {margin:0;font-size:18px;}
   header p,.note,.error {margin:5px 0 0;font-size:12px;line-height:1.6;color:var(--muted);}
-  .close {width:44px;height:44px;flex:none;border:0;border-radius:8px;background:none;color:var(--ink);}
+  .close {width:44px;height:44px;flex:none;border:0;border-radius:var(--radius-sm);background:none;color:var(--ink);}
   .close svg {width:20px;height:20px;stroke:currentColor;stroke-width:1.5;fill:none;}
   .preview-body {padding:0 16px 16px;overflow:auto;overscroll-behavior:contain;min-height:0;}
-  img {display:block;width:100%;height:auto;border-radius:10px;}
-  .making {display:grid;place-items:center;aspect-ratio:4/5;background:var(--surface-2);border-radius:10px;font-size:13px;}
+  img {display:block;width:100%;height:auto;border-radius:var(--radius-sm);}
+  .making {display:grid;place-items:center;aspect-ratio:4/5;background:var(--surface-2);border-radius:var(--radius-sm);font-size:13px;}
   .error {color:var(--bad);}
   footer {display:flex;gap:8px;padding:12px 16px calc(12px + var(--safe-b));flex:none;}
   footer .btn {flex:1;min-height:44px;font-size:14px;}
-  @media(min-width:600px) {dialog {margin:auto;border-radius:18px;}}
+  @media(min-width:600px) {dialog {margin:auto;border-radius:var(--radius-lg);}}
 </style>
