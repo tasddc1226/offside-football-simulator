@@ -1482,6 +1482,8 @@ export const cupMatches = sqliteTable(
     winnerTeamId: text('winner_team_id'),
     forfeit: integer('forfeit').notNull().default(0),
     detailJson: text('detail_json'),
+    /** T-11-407 경기 전 예상(홈 기준 승 · 무 · 패 정수 % · 기대 득점). 명단이 잠긴 뒤 한 번 계산한다(team/cupOdds.ts). */
+    oddsJson: text('odds_json'),
   },
   (table) => [
     uniqueIndex('cup_matches_cup_round_slot_unique').on(

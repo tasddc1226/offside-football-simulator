@@ -137,6 +137,19 @@ const ko = {
     `예상 승 ${p.win}% · 무 ${p.draw}% · 패 ${p.loss}%`,
   oddsNote: '지금 두 팀 명단으로 계산했어요. 명단은 경기 1시간 전에 잠겨요.',
   oddsKoNote: '토너먼트에서 비기면 승부차기로 가려요.',
+  // T-11-407 모든 경기 예상(경기 줄 아래 막대).
+  matchOddsLabel: '예상',
+  matchOddsBefore: '경기 전 예상',
+  matchOddsDraw: (p: { n: number }) => `무 ${p.n}%`,
+  matchOddsAria: (p: {
+    label: string;
+    home: string;
+    away: string;
+    h: number;
+    d: number;
+    a: number;
+  }) => `${p.label}: ${p.home} 승 ${p.h}%, 무승부 ${p.d}%, ${p.away} 승 ${p.a}%`,
+  matchOddsPending: '예상 승 · 무 · 패는 경기 1시간 전, 명단이 잠기면 나와요.',
   lockedNow: '명단이 잠겼어요. 경기가 끝나면 다시 바꿀 수 있어요.',
   myResult: (p: { stage: string }) => `내 성적 ${p.stage}`,
   youWon: '우승했어요!',
