@@ -62,6 +62,8 @@ export const bodyGuard = createMiddleware<AppEnv>(async (c, next) => {
     }
 
     const rawBody = await readBoundedBody(c.req.raw);
+    // Match HonoRequest.text()'s cache contract: store notifications call req.json() later.
+    c.req.bodyCache.text = Promise.resolve(rawBody);
     c.set('rawBody', rawBody);
   }
   await next();

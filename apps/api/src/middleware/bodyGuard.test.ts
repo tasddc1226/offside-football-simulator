@@ -8,6 +8,9 @@ import { bodyGuard } from './bodyGuard.js';
 function app() {
   const server = new Hono<AppEnv>();
   server.use('*', bodyGuard);
+  server.post('/read-json', async (c) =>
+    c.json({ parsed: await c.req.json(), text: await c.req.text() }),
+  );
   server.post('*', (c) => c.text(c.get('rawBody') ?? ''));
   server.onError(errorHandler);
   return server;
@@ -36,6 +39,13 @@ function streamed(chunks: Uint8Array[], headers: Record<string, string> = {}, pa
 }
 
 describe('bounded request bodies', () => {
+  it('preserves Hono body caching for downstream store notification parsers', async () => {
+    const body = JSON.stringify({ signedPayload: 'test-signed-payload' });
+    const input = streamed([new TextEncoder().encode(body)], {}, '/read-json');
+    const response = await app().request(input.request);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ parsed: JSON.parse(body), text: body });
+  });
   it.each([undefined, '1'])(
     'cancels oversized streams without trusting Content-Length %s',
     async (length) => {
