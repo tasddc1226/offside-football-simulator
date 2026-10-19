@@ -842,6 +842,8 @@ export function retire(s: GameState, isPublic = false): HofEntry {
     potFlow: {
       ...(s.origin && { origin: s.origin }),
       boost: s.flags.potBonus ?? 0,
+      // T-11-408 강화로 오른 몫(나머지는 트레이너 · 스토리 이벤트).
+      lv: s.boost?.lv ?? 0,
       bal: s.bal?.v ?? 0,
     },
     public: isPublic,
