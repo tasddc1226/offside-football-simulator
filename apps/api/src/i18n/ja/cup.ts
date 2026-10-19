@@ -9,6 +9,19 @@ export const CUP_JA: Record<CupTextKey, string> = {
   predictionNotFinished: '終了した試合のみ集計できます。',
   predictionClosed: '試合が開始されたか、現在は予想できない試合です。',
   title: 'シーズン{season} 第{edition}回オフサイドカップ',
+  titleDivision: 'シーズン{season} 第{edition}回オフサイドカップ {division}',
+  junior: 'ジュニア',
+  senior: 'シニア',
+  master: 'マスター',
+  overCap: 'チームOVRがこの部門の上限（{n}）を超えています。上の部門に申し込んでください。',
+  enteredOther: '今回の別の部門にすでに申し込んでいます。その申し込みを取り消すと移れます。',
+  ovrCap: 'オフサイドカップ {division} 参加中は、チームOVRが{n}を超えるメンバーに変えられません。',
+  movedTitle: '{cup}に移りました',
+  movedUpBody:
+    '組み合わせ抽選の時点でチームOVRが申し込んだ部門の上限を超えていたため、上の部門に移りました。',
+  mergedBody: '申し込んだ部門のチームが{n}チームより少なかったため、上の部門と一緒に戦います。',
+  adminCapOpen: '受付が始まった大会の上限は変えられません。',
+  adminCapMaster: 'マスター・単一大会には上限がありません。',
   g1: 'グループ第1節',
   g2: 'グループ第2節',
   g3: 'グループ第3節',
@@ -78,6 +91,8 @@ export const CUP_JA: Record<CupTextKey, string> = {
   earlyBody: '組み合わせ抽選 {draw}、初戦 {first}(韓国時間)です。',
   rewardBody: '最終成績 {stage}。選手候補リロール券を{n}枚受け取りました。',
   openTitle: '{cup}の受付が始まりました',
+  openBodyDivision:
+    'チームOVRに合う部門（ジュニア・シニア・マスター）を選んで申し込んでください。各部門{n}チームまでです。',
   openBody: '先着{n}チームです。ホームのカップバナーから申し込めます。',
   rewardBodyBoost:
     '最終成績 {stage}。選手候補リロール券を{n}枚、プレミアムスカウト券を{s}枚、ポテンシャル強化券を{b}枚受け取りました。',

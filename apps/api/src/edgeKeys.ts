@@ -8,6 +8,8 @@ import { BOARD_KEYS, BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
 export const EDGE = {
   cupHome: '/v1/cups/home',
   cupCurrent: '/v1/cups/current',
+  /** T-11-410 구간 대회 한 개(회차마다 3개). */
+  cupById: (id: string) => `/v1/cups/${id}`,
   balance: '/v1/balance',
   /** T-11-141 공개 밸런스 이력. */
   balanceHistory: '/v1/balance/history',

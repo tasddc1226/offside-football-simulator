@@ -9,6 +9,9 @@ describe('대표 칭호 (T-11-150)', () => {
   it('칭호 id를 지금 언어 문구로 읽는다', () => {
     expect(titleLabel('cup-3-champion')).toBe('제3회 챔피언');
     expect(titleLabel('cup-12-runnerup')).toBe('제12회 준우승');
+    // T-11-410 구간 대회 칭호.
+    expect(titleLabel('cup-3-junior-champion')).toBe('제3회 주니어 챔피언');
+    expect(titleLabel('cup-4-master-sf')).toBe('제4회 마스터 4강');
     expect(titleLabel('cup-1-sf')).toBe('제1회 4강');
     expect(titleLabel('cup-1-qf')).toBeNull();
     expect(titleLabel(null)).toBeNull();

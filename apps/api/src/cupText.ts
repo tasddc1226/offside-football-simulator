@@ -1,4 +1,4 @@
-import type { CupDef } from '@offside/contracts/cup';
+import { CUP_DIVISIONS, type CupDef } from '@offside/contracts/cup';
 import { CUP_EN } from './i18n/en/cup.js';
 import { CUP_JA } from './i18n/ja/cup.js';
 import { CUP_KO, type CupTextKey } from './i18n/ko/cup.js';
@@ -16,10 +16,16 @@ export const cupKo = (key: CupTextKey, vars: Record<string, string | number> = {
   fill(CUP_KO[key], vars);
 
 export const cupTitle = (cup: CupDef) =>
-  cupKo('title', { season: cup.season, edition: cup.edition });
+  cup.division
+    ? cupKo('titleDivision', {
+        season: cup.season,
+        edition: cup.edition,
+        division: cupKo(cup.division),
+      })
+    : cupKo('title', { season: cup.season, edition: cup.edition });
 
 /** 자리 안에 다시 컵 문구가 들어가는 자리(대회 이름·라운드·결과). 팀 이름은 구단주가 지은 이름이라 옮기지 않는다. */
-const NESTED = new Set(['cup', 'round', 'result', 'stage']);
+const NESTED = new Set(['cup', 'round', 'result', 'stage', 'division']);
 const SENTENCES = (Object.keys(CUP_KO) as CupTextKey[]).map((key) => {
   const names: string[] = [];
   const src = CUP_KO[key]
@@ -28,7 +34,8 @@ const SENTENCES = (Object.keys(CUP_KO) as CupTextKey[]).map((key) => {
       const m = /^\{(\w+)\}$/.exec(part);
       if (!m) return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       names.push(m[1]!);
-      return '(.+?)';
+      // T-11-410 구간 이름은 세 낱말 중 하나다(아니면 '{cup} 조 추첨 결과'가 구간 대회 이름으로 잡힌다).
+      return m[1] === 'division' ? `(${CUP_DIVISIONS.map((d) => CUP_KO[d]).join('|')})` : '(.+?)';
     })
     .join('');
   return { key, names, re: new RegExp(`^${src}$`) };

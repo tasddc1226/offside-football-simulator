@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { CUP_ROUNDS, CUP_STAGES, IAP_PRODUCT_IDS, REWARD_KINDS, SCOUT_MODES } from './cup.js';
+import {
+  CUP_DIVISIONS,
+  CUP_ROUNDS,
+  CUP_STAGES,
+  IAP_PRODUCT_IDS,
+  REWARD_KINDS,
+  SCOUT_MODES,
+} from './cup.js';
 import { IsoUtcSchema } from './primitives.js';
 import { TeamIdSchema, TeamLogoSchema, TeamMatchSchema } from './teams.js';
 
@@ -7,7 +14,9 @@ import { TeamIdSchema, TeamLogoSchema, TeamMatchSchema } from './teams.js';
 
 // ───────── API 모양 ─────────
 
-export const CupIdSchema = z.string().regex(/^s\d+-\d+$/);
+export const CupIdSchema = z.string().regex(/^s\d+-\d+(?:-(?:junior|senior|master))?$/);
+/** T-11-410 OVR 구간. */
+export const CupDivisionSchema = z.enum(CUP_DIVISIONS);
 export const CupRoundSchema = z.enum(CUP_ROUNDS);
 export const CupStageSchema = z.enum(CUP_STAGES);
 export const CupPhaseSchema = z.enum([
@@ -91,8 +100,21 @@ export const CupInfoSchema = z.strictObject({
   ),
   capacity: z.number().int(),
   minFilled: z.number().int(),
+  /** T-11-410 구간(통합 대회 · 옛 응답에는 없다). */
+  division: CupDivisionSchema.optional(),
+  /** T-11-410 팀 OVR 상한(마스터 · 접수 전 아랫 구간은 null). */
+  ovrMax: z.number().int().nullable().optional(),
 });
 export type CupInfo = z.infer<typeof CupInfoSchema>;
+
+/** T-11-410 회차 안 구간 하나(탭 · 배너). entries는 신청(취소 제외) 팀 수. */
+export const CupDivisionInfoSchema = z.strictObject({
+  id: CupIdSchema,
+  division: CupDivisionSchema,
+  ovrMax: z.number().int().nullable(),
+  entries: z.number().int(),
+});
+export type CupDivisionInfo = z.infer<typeof CupDivisionInfoSchema>;
 
 export const CupResponseSchema = z.strictObject({
   cup: CupInfoSchema,
@@ -104,6 +126,8 @@ export const CupResponseSchema = z.strictObject({
   matches: z.array(CupMatchSchema),
   /** 우승 팀(끝났을 때). */
   championTeamId: z.string().nullable(),
+  /** T-11-410 같은 회차의 구간들(아래에서 위). 통합 대회 · 옛 응답에는 없다. */
+  divisions: z.array(CupDivisionInfoSchema).optional(),
 });
 export type CupResponse = z.infer<typeof CupResponseSchema>;
 
@@ -112,6 +136,8 @@ export const CupChampionSchema = z.strictObject({
   cupId: CupIdSchema,
   season: z.number().int(),
   edition: z.number().int(),
+  /** T-11-410 구간 대회 우승이면 그 구간. */
+  division: CupDivisionSchema.optional(),
   teamId: z.string(),
   name: z.string(),
   owner: z.string(),
@@ -131,13 +157,18 @@ export const CupHomeResponseSchema = z.strictObject({
   championName: z.string().nullable(),
   /** T-11-290 결승 뒤 CUP_HOME_AFTER_MS 안에 끝난 가장 최근 대회의 우승 팀. 다음 대회 접수가 열려 cup이 바뀌어도 남는다. */
   champion: CupChampionSchema.nullable(),
+  /** T-11-410 구간들(entries · teamCount는 구간을 합한 값). 통합 대회 · 옛 응답에는 없다. */
+  divisions: z.array(CupDivisionInfoSchema).optional(),
 });
 export type CupHomeResponse = z.infer<typeof CupHomeResponseSchema>;
 
 /** 신청 자격 검사 결과. ok가 아니면 reason으로 안내한다. */
 export const CupEligibilitySchema = z.strictObject({
   ok: z.boolean(),
-  reason: z.enum(['no-team', 'not-enough', 'listed', 'closed', 'full']).nullable(),
+  // T-11-410 over-cap = 팀 OVR이 구간 상한보다 높다, entered-other = 같은 회차 다른 구간에 신청했다.
+  reason: z
+    .enum(['no-team', 'not-enough', 'listed', 'closed', 'full', 'over-cap', 'entered-other'])
+    .nullable(),
   filled: z.number().int(),
 });
 
@@ -156,6 +187,10 @@ export const CupOddsSchema = z.strictObject({
 export type CupOdds = z.infer<typeof CupOddsSchema>;
 
 export const CupMeResponseSchema = z.strictObject({
+  /** T-11-410 이 응답이 본 대회. 'current'로 물으면 내가 신청한 구간(없으면 내 OVR로 들어갈 가장 낮은 구간). */
+  cupId: CupIdSchema.optional(),
+  /** T-11-410 내 팀 OVR(팀이 없으면 null). 구간 탭에서 들어갈 수 있는 구간을 고른다. */
+  ovr: z.number().int().nullable().optional(),
   entry: z
     .strictObject({
       teamId: TeamIdSchema,
@@ -314,6 +349,8 @@ export const AdminCupCreateSchema = z
     matchHour: z.number().int().min(0).max(23).optional(),
     capacity: z.number().int().min(4).max(128).optional(),
     minFilled: z.number().int().min(1).max(11).optional(),
+    /** T-11-410 OVR 구간별로 연다(구간마다 대회 하나). 상한은 접수가 열릴 때 시즌 팀 분포로 정한다. */
+    divisions: z.boolean().optional(),
   })
   // 추첨은 첫 경기 2시간 전보다 앞서야 한다.
   .refine((v) => (v.matchHour ?? 21) - (v.drawHour ?? 12) >= 2, { path: ['drawHour'] });
@@ -327,6 +364,16 @@ export const AdminCupSchema = z.strictObject({
   entries: z.number().int(),
 });
 export type AdminCup = z.infer<typeof AdminCupSchema>;
+/** T-11-410 PUT /v1/admin/cups/:cupId/cap — 아랫 구간 상한(접수가 열리기 전만). */
+export const AdminCupCapSchema = z.strictObject({ ovrMax: z.number().int().min(1).max(120) });
+export type AdminCupCap = z.infer<typeof AdminCupCapSchema>;
+/** T-11-410 GET /v1/admin/cups/caps — 지금 시즌 팀 분포로 낸 상한 제안. */
+export const AdminCupCapsSuggestSchema = z.strictObject({
+  season: z.number().int(),
+  teams: z.number().int(),
+  caps: z.array(z.number().int()),
+});
+export type AdminCupCapsSuggest = z.infer<typeof AdminCupCapsSuggestSchema>;
 export const AdminCupListSchema = z.strictObject({ items: z.array(AdminCupSchema) });
 export type AdminCupList = z.infer<typeof AdminCupListSchema>;
 

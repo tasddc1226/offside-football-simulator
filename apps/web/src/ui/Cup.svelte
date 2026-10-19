@@ -12,6 +12,7 @@
   import { cupRewardText } from '@offside/app-core/cupReward';
   import { createCupPredictionController, emptyCupPredictions, type CupPredictionContext } from '@offside/app-core/cupPredictions';
   import { cupFolds, rememberCupFolds, type CupScheduleTab } from '@offside/app-core/cupFolds';
+  import { divisionCapLabel, divisionLabel } from '@offside/app-core/cupDivision';
   import Topbar from './Topbar.svelte';
   import LoadState, { type LoadStatus } from './LoadState.svelte';
   import TeamLogo from './team/TeamLogo.svelte';
@@ -40,6 +41,9 @@
   let bracketMatch = $state<CupMatch | null>(null);
   let bracket = $state<ReturnType<typeof CupBracket>>();
   let bracketRestored = false;
+  // T-11-410 구간 대회: 보고 있는 대회 id('current' = 마스터)와 내가 신청한 구간.
+  let cupId = $state('current');
+  let myDivision = $state<string | null>(null);
 
   const linked = $derived.by(() => {
     const acct = accountCache.value;
@@ -63,18 +67,42 @@
   });
 
   async function loadMe() {
-    const r = await fetchCupMe();
+    const id = cupId;
+    const r = await fetchCupMe(id);
+    if (id !== cupId) return;
     me = r.ok ? r.data : null;
+    // '내 구간' 표시: 이 구간에 신청이 살아 있으면 여기, 이 구간 신청을 취소했으면 지운다.
+    const at = r.ok ? (r.data.cupId ?? id) : null;
+    if (r.ok && at) {
+      if (r.data.entry && r.data.entry.status !== 'withdrawn') myDivision = at;
+      else if (myDivision === at) myDivision = null;
+    }
+    // 처음에는 서버가 'current'를 내 구간(신청한 곳, 없으면 들어갈 수 있는 가장 낮은 곳)으로 풀어 준다 — 그 구간을 연다.
+    if (id === 'current' && r.ok && r.data.cupId) {
+      cupId = r.data.cupId;
+      if (data?.cup.id !== r.data.cupId) void load();
+    }
   }
   async function load() {
-    status = 'loading';
-    const r = await fetchCup();
+    const id = cupId;
+    if (!data) status = 'loading';
+    const r = await fetchCup(id);
+    if (id !== cupId) return;
     if (!r.ok) {
       status = 'error';
       return;
     }
     data = r.data;
     status = 'ready';
+  }
+  function pickDivision(id: string) {
+    if (id === data?.cup.id) return;
+    cupId = id;
+    detail = null;
+    bracketMatch = null;
+    groupChoice = null;
+    void load();
+    if (linked) void loadMe();
   }
   const reload = () => void Promise.all([load(), linked ? loadMe() : undefined]);
 
@@ -158,8 +186,19 @@
   <div bind:this={content} hidden={!!detail} class="cup-content">
     <header class="settings-head">
       <div class="eyebrow">Offside Cup</div>
-      <h1>{data ? L.fullTitle({ n: data.cup.edition }) : L.title}</h1>
+      <h1>{data ? L.fullTitle({ n: data.cup.edition, d: divisionLabel(data.cup.division) }) : L.title}</h1>
     </header>
+    {#if data?.divisions}
+      <nav class="cup-divisions" aria-label={L.divisionTabs} data-cup-divisions>
+        {#each data.divisions as d (d.id)}
+          <button aria-pressed={d.id === data.cup.id} class:active={d.id === data.cup.id} onclick={() => pickDivision(d.id)} data-cup-division={d.division}>
+            <b>{divisionLabel(d.division)}{#if d.id === myDivision}<span class="pill good">{L.divisionMine}</span>{/if}</b>
+            <small>{divisionCapLabel(d)}</small>
+            <small class="muted">{L.divisionEntries({ n: d.entries })}</small>
+          </button>
+        {/each}
+      </nav>
+    {/if}
     <LoadState {status} failText={L.loadFail} retry={load} skeleton={cupSkeleton}>
       {#if data}
         {#if accountCache.value && accountCache.value !== 'error' && !linked}
@@ -177,7 +216,7 @@
             <div class="cup-champ" data-cup-champion-team>
               <span class="cup-laurel medal gold"><Laurel /></span>
               <TeamLogo logo={champion.logo} name={champion.name} size={44} decorative />
-              <div class="cup-champ-who"><small>{L.champTitle({ n: data.cup.edition })}</small><b>{champion.name}</b><small>{champion.owner}</small></div>
+              <div class="cup-champ-who"><small>{L.champTitle({ n: data.cup.edition, d: divisionLabel(data.cup.division) })}</small><b>{champion.name}</b><small>{champion.owner}</small></div>
             </div>
           {/if}
           {#if linked}<CupEntry {data} {me} {linked} onchanged={reload} />{/if}
@@ -222,6 +261,7 @@
             <li>{L.ruleDaily({ time: matchTime })}</li>
             <li>{L.ruleLock({ time: lockTime })}</li>
             <li>{L.ruleForfeit}</li>
+            {#if data.divisions}<li data-cup-rule-divisions>{L.ruleDivisions}</li><li>{L.ruleDivisionMove}</li>{/if}
           </ul>
         </section>
         <section class="card cup-sec cup-info" data-cup-schedule>
@@ -299,6 +339,12 @@
 
 <style>
   @media (min-width: 900px) { .cup-bracket { width:min(1400px, calc(100vw - 48px)); align-self:center; box-sizing:border-box; } }
+  .cup-divisions {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+  .cup-divisions button {display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;min-height:64px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer;}
+  .cup-divisions button.active {border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
+  .cup-divisions b {display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:var(--fs-body);}
+  .cup-divisions small {font-size:12px;overflow-wrap:anywhere;}
+  .cup-divisions .pill {font-size:11px;padding:1px 6px;}
   .schedule-tabs {display:flex;gap:16px;border-bottom:1px solid var(--line);}
   .schedule-tabs button {background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);font:inherit;font-weight:700;min-height:48px;padding:8px 0;cursor:pointer;}
   .schedule-tabs button.active {border-bottom-color:var(--accent);color:var(--ink);}

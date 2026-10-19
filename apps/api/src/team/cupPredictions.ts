@@ -1,7 +1,10 @@
 // T-11-249 대회 상한(cap): 이미 리롤권을 받은 예측이 cap개면 더 주지 않고 rewarded_at도 비워 둔다(받지 않은 것으로 보인다).
 // 한 사람은 경기마다 예측이 하나라 정산 한 번에 한 장까지 늘어난다. null이면 상한 없음(제1회).
+// T-11-410 구간 대회는 회차 전체(같은 시즌 · 회차의 구간 대회 모두)에서 cap장까지.
 const UNDER_CAP = `(?3 IS NULL OR (SELECT count(*) FROM cup_predictions q
-  WHERE q.cup_id = cup_predictions.cup_id AND q.profile_id = cup_predictions.profile_id
+  WHERE q.cup_id IN (SELECT s.id FROM cups s JOIN cups c ON c.id = cup_predictions.cup_id
+      WHERE s.season = c.season AND s.edition = c.edition)
+    AND q.profile_id = cup_predictions.profile_id
     AND q.rewarded_at IS NOT NULL) < ?3)`;
 
 /** Append to the match result batch: outcome, inventory and grant marker commit together. */

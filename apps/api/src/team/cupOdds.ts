@@ -68,7 +68,7 @@ export async function cupTeamsOf(db: Db, cup: CupDef, ids: readonly string[]) {
 }
 
 /** 명단이 잠겼고 아직 치르지 않았으며 예상이 없는 경기(경기 시각이 된 경기는 playCupMatch가 함께 채운다). */
-export const oddsDue = (matches: readonly CupMatchRow[], now: string) =>
+export const oddsDue = (matches: readonly CupMatchRow[], now: string, limit = CUP_ODDS_PER_TICK) =>
   matches
     .filter(
       (m) =>
@@ -86,7 +86,7 @@ export const oddsDue = (matches: readonly CupMatchRow[], now: string) =>
         a.grp - b.grp ||
         a.slot - b.slot,
     )
-    .slice(0, CUP_ODDS_PER_TICK);
+    .slice(0, limit);
 
 /** 잠긴 경기의 예상을 계산해 둔다. 쓴 경기 수를 돌려준다. 쓰기는 odds_json IS NULL일 때만이라 두 번 써도 같다. */
 export async function fillCupOdds(
@@ -94,8 +94,9 @@ export async function fillCupOdds(
   cup: CupDef,
   matches: readonly CupMatchRow[],
   now: string,
+  limit = CUP_ODDS_PER_TICK,
 ) {
-  const due = oddsDue(matches, now);
+  const due = oddsDue(matches, now, limit);
   if (!due.length) return 0;
   const team = await cupTeamsOf(db, cup, [
     ...new Set(due.flatMap((m) => [m.homeTeamId!, m.awayTeamId!])),

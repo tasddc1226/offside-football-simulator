@@ -1424,8 +1424,18 @@ export const cups = sqliteTable(
     capacity: integer('capacity').notNull(),
     minFilled: integer('min_filled').notNull(),
     createdAt: text('created_at').notNull(),
+    /** T-11-410 OVR 구간(junior · senior · master). NULL = 통합 대회(제1 · 2회). */
+    division: text('division'),
+    /** T-11-410 팀 OVR 상한. 마스터 · 통합 대회는 NULL, 아랫 구간은 접수가 열릴 때 채운다. */
+    ovrMax: integer('ovr_max'),
   },
-  (table) => [uniqueIndex('cups_edition_unique').on(table.edition)],
+  // 한 회차에 구간마다 한 대회(통합 대회는 회차에 하나).
+  (table) => [
+    uniqueIndex('cups_edition_division_unique').on(
+      table.edition,
+      sql`coalesce(${table.division}, '')`,
+    ),
+  ],
 );
 
 /**

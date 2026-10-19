@@ -5,11 +5,12 @@ import {
   type TitleGrade,
   type TitleStage,
 } from '@offside/contracts/owner-title';
+import { divisionLabel } from './cupDivision.js';
 import { ownerProfileText as L } from './i18n/ko/ownerProfile.js';
 
 export { parseTitle, TITLE_NONE, permanentTitleOf } from '@offside/contracts/owner-title';
 
-const LABEL: Record<TitleStage, (p: { n: number }) => string> = {
+const LABEL: Record<TitleStage, (p: { n: number; d?: string | undefined }) => string> = {
   champion: (p) => L.titleChampion(p),
   runnerup: (p) => L.titleRunnerup(p),
   sf: (p) => L.titleSf(p),
@@ -20,7 +21,7 @@ export function titleLabel(id: string | null | undefined): string | null {
   const t = parseTitle(id);
   const permanent = permanentTitleOf(id);
   return t
-    ? LABEL[t.stage]({ n: t.edition })
+    ? LABEL[t.stage]({ n: t.edition, d: divisionLabel(t.division) })
     : permanent
       ? {
           'owner-founder': L.titleFounder,
