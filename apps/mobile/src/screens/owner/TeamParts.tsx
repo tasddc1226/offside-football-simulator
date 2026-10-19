@@ -1,4 +1,5 @@
 // 내 팀 화면들이 함께 쓰는 작은 부품(웹 team/Team.svelte 의 .seg · .opt · .tm-title · .tm-actions · .tm-ovr-badge).
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useState, type ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import type { AchGrade } from '@offside/contracts/owner-team';
@@ -44,7 +45,7 @@ export function SegBtn({
         borderWidth: selected ? 2 : 1.5,
         borderColor: selected ? on : c.line,
         backgroundColor: selected ? alpha(c.pitch, 0.08) : c.surface,
-        borderRadius: 12,
+        borderRadius: RADIUS.md,
         paddingVertical: selected ? 9.5 : 10,
         paddingHorizontal: selected ? 11.5 : 12,
         minHeight: 44,
@@ -112,7 +113,7 @@ export function OvrBadge({ ovr }: { ovr: number }) {
         minWidth: 58,
         paddingVertical: 6,
         paddingHorizontal: 8,
-        borderRadius: 12,
+        borderRadius: RADIUS.md,
         backgroundColor: c.pitch,
         alignItems: 'center',
       }}
@@ -120,8 +121,8 @@ export function OvrBadge({ ovr }: { ovr: number }) {
       <Txt
         style={{
           fontFamily: DISPLAY[400],
-          fontSize: rem(0.6875),
-          lineHeight: rem(0.6875) * 1.1,
+          fontSize: rem(FONT.caption2),
+          lineHeight: rem(FONT.caption2) * 1.1,
           letterSpacing: 0.12 * rem(0.6875),
           color: c.onPitch,
         }}
@@ -131,8 +132,8 @@ export function OvrBadge({ ovr }: { ovr: number }) {
       <Txt
         style={{
           fontFamily: DISPLAY[700],
-          fontSize: rem(1.625),
-          lineHeight: rem(1.625) * 1.1,
+          fontSize: rem(FONT.title1),
+          lineHeight: rem(FONT.title1) * 1.1,
           color: c.pitchAccent,
         }}
       >
@@ -192,14 +193,14 @@ export function Stats({
           gap: 2,
           paddingVertical: 10,
           paddingHorizontal: small || items.length > 2 ? 6 : 12,
-          borderRadius: 12,
+          borderRadius: RADIUS.md,
           backgroundColor: c.surface2,
         };
         const body = (
           <>
             <Txt
               tone="muted"
-              style={{ fontSize: rem(0.75), ...(press?.info ? { paddingRight: 24 } : {}) }}
+              style={{ fontSize: rem(FONT.caption), ...(press?.info ? { paddingRight: 24 } : {}) }}
             >
               {press && !press.info ? `${k} ›` : k}
             </Txt>
@@ -240,7 +241,7 @@ export function Stats({
                     height: 16,
                     lineHeight: 14,
                     textAlign: 'center',
-                    borderRadius: 8,
+                    borderRadius: RADIUS.sm,
                     borderWidth: 1,
                     borderColor: c.muted,
                     fontSize: 11,

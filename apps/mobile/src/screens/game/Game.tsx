@@ -1,5 +1,6 @@
 // 게임 화면(웹 Game.svelte, ui.ts renderGame() 포트): 선수 카드 + 시즌·선수·커리어·트로피 탭 + 아래 고정 진행 바와 탭바.
 // 탭바(시즌·선수·홈·커리어·트로피 — 홈은 가운데)가 아래 안전 영역을 채우고, 진행 바는 그 바로 위에 붙는다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -68,7 +69,7 @@ function HeroPill({
   return (
     <View
       style={{
-        borderRadius: 999,
+        borderRadius: RADIUS.pill,
         paddingVertical: 2,
         paddingHorizontal: 9,
         backgroundColor: bg,
@@ -76,7 +77,7 @@ function HeroPill({
         borderColor: border,
       }}
     >
-      <Txt style={{ fontSize: rem(0.75), fontWeight: '600', color: fg }}>{children}</Txt>
+      <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '600', color: fg }}>{children}</Txt>
     </View>
   );
 }
@@ -230,12 +231,12 @@ export default function Game() {
                   {act.kind === 'advance' ? (
                     // T-11-221 준비 요약(훈련 · 자기 투자 · 컨디션)은 버튼 둘째 줄에 둔다. 전에는 바 위의 작은 글자 링크였다.
                     <>
-                      <Txt bold style={{ color: c.onPitch, fontSize: rem(0.9375) }}>
+                      <Txt bold style={{ color: c.onPitch, fontSize: rem(FONT.body1) }}>
                         {`${act.label} →`}
                       </Txt>
                       <Txt
                         numberOfLines={1}
-                        style={{ color: c.onPitch, opacity: 0.8, fontSize: rem(0.75) }}
+                        style={{ color: c.onPitch, opacity: 0.8, fontSize: rem(FONT.caption) }}
                       >
                         {act.prep}
                       </Txt>
@@ -268,7 +269,7 @@ export default function Game() {
                 <Txt
                   style={{
                     fontFamily: DISPLAY[600],
-                    fontSize: rem(0.9375),
+                    fontSize: rem(FONT.body1),
                     letterSpacing: rem(0.9375) * 0.06,
                     color: c.onPitch,
                     opacity: 0.75,
@@ -283,7 +284,7 @@ export default function Game() {
                     style={{ alignSelf: 'flex-start', marginTop: 4 }}
                   >
                     <Txt
-                      style={{ fontSize: rem(0.8125), fontWeight: '700', color: c.pitchAccent }}
+                      style={{ fontSize: rem(FONT.label), fontWeight: '700', color: c.pitchAccent }}
                     >{`‘${title.name}’`}</Txt>
                   </Press>
                 ) : null}
@@ -293,8 +294,8 @@ export default function Game() {
                     accessibilityRole="header"
                     style={{
                       flexShrink: 1,
-                      fontSize: rem(1.5),
-                      lineHeight: rem(1.5) * 1.55,
+                      fontSize: rem(FONT.title1),
+                      lineHeight: rem(FONT.title1) * 1.55,
                       marginTop: 2,
                       color: c.onPitch,
                     }}
@@ -310,15 +311,15 @@ export default function Game() {
                     onPress={() => setRenameOpen(true)}
                     style={{ padding: 6, opacity: 0.7 }}
                   >
-                    <Txt style={{ fontSize: rem(1), color: c.onPitch }}>✎</Txt>
+                    <Txt style={{ fontSize: rem(FONT.body), color: c.onPitch }}>✎</Txt>
                   </Press>
                 </View>
                 <View style={{ marginTop: 4, opacity: 0.85 }}>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
                     <Txt
                       style={{
-                        fontSize: rem(0.8125),
-                        lineHeight: rem(0.8125) * 1.55,
+                        fontSize: rem(FONT.label),
+                        lineHeight: rem(FONT.label) * 1.55,
                         color: c.onPitch,
                       }}
                     >
@@ -327,8 +328,8 @@ export default function Game() {
                     <ClubBadge club={s.club} size={16} />
                     <Txt
                       style={{
-                        fontSize: rem(0.8125),
-                        lineHeight: rem(0.8125) * 1.55,
+                        fontSize: rem(FONT.label),
+                        lineHeight: rem(FONT.label) * 1.55,
                         color: c.onPitch,
                       }}
                     >
@@ -337,8 +338,8 @@ export default function Game() {
                   </View>
                   <Txt
                     style={{
-                      fontSize: rem(0.8125),
-                      lineHeight: rem(0.8125) * 1.55,
+                      fontSize: rem(FONT.label),
+                      lineHeight: rem(FONT.label) * 1.55,
                       color: c.onPitch,
                     }}
                   >
@@ -365,7 +366,7 @@ export default function Game() {
                 <Txt
                   style={{
                     fontFamily: DISPLAY[400],
-                    fontSize: rem(0.75),
+                    fontSize: rem(FONT.caption),
                     letterSpacing: rem(0.75) * 0.18,
                     color: c.onPitch,
                     opacity: 0.8,

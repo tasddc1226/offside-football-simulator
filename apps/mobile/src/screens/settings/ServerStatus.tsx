@@ -1,4 +1,5 @@
 // T-11-321 설정의 '서버 상태'(웹 ServerStatus.svelte). 값은 app-core serverStatusView, 펼칠 때만 불러온다.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { loadServerStatus, type ServerStatusView } from '@offside/app-core/serverStatus';
 import { serverStatusText as L } from '@offside/app-core/i18n/ko/serverStatus';
 import { useState } from 'react';
@@ -6,6 +7,7 @@ import { View } from 'react-native';
 import { useColors } from '../../theme/useColors';
 import { Txt } from '../../ui';
 import { SettingsCard, SettingsLabel, SettingsTrigger } from './parts';
+import { Skeleton } from '../../ui/Skeleton';
 
 export function ServerStatus() {
   const c = useColors();
@@ -75,9 +77,7 @@ export function ServerStatus() {
       {open ? (
         <View style={{ gap: 12, marginTop: 12 }}>
           {view === null ? (
-            <Txt v="sm" tone="muted" accessibilityLiveRegion="polite">
-              {L.loading}
-            </Txt>
+            <Skeleton rows={2} />
           ) : view === 'error' ? (
             <Txt v="sm" tone="muted">
               {L.error}
@@ -89,7 +89,7 @@ export function ServerStatus() {
                   style={{
                     width: 10,
                     height: 10,
-                    borderRadius: 5,
+                    borderRadius: RADIUS.xs,
                     backgroundColor: dot[view.level],
                   }}
                 />

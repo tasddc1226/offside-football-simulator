@@ -89,7 +89,7 @@
   }
   .rename h2 {
     margin: 0;
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
   }
   .rename p {
     margin: 0;
@@ -101,7 +101,7 @@
   }
   .rn-field input {
     min-height: 44px;
-    font-size: 1rem;
+    font-size: var(--fs-body);
   }
   .rn-msg {
     color: var(--bad);

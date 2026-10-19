@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   import { tn } from '@offside/game/i18n/names';
   // T-11-080f 카드 상세 시세 차트: 같은 포지션군 · OVR대 하루 평균 선, 최저~최고 띠, 기준가 점선, 이 선수 거래 점.
   // 영입 시트를 열 때만 부르고(1분 메모), 기간(1주 · 1달 · 시즌)을 바꾸면 그 기간만 새로 받는다. 점을 누르면 그날 값을 보여 준다.
@@ -49,7 +50,7 @@
     </div>
   </div>
   {#if points === null}
-    <p class="mc-empty">{L.loading}</p>
+    <Skeleton height={132} />
   {:else if failed}
     <p class="mc-empty">{CHART_COPY.failed}</p>
   {:else if !model}
@@ -96,17 +97,17 @@
   }
   .mc-head h3 {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
   }
   .mc-head small {
     color: var(--muted);
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
   }
   .mc-ranges {
     display: flex;
     gap: 2px;
     background: var(--surface-2);
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     padding: 2px;
   }
   .mc-ranges button {
@@ -114,10 +115,10 @@
     background: transparent;
     color: var(--muted);
     font: inherit;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     font-weight: 600;
     padding: 4px 9px;
-    border-radius: 6px;
+    border-radius: var(--radius-xs);
     min-height: 28px;
     cursor: pointer;
   }
@@ -128,7 +129,7 @@
   }
   .mc-empty {
     color: var(--muted);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     text-align: center;
     padding: 28px 0;
     margin: 0;
@@ -136,7 +137,7 @@
   .mc-pick {
     margin: 6px 0 2px;
     min-height: 1.2em;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     font-weight: 600;
     color: var(--ink);
     white-space: pre;
@@ -182,7 +183,7 @@
   .mc-base-label {
     position: absolute;
     right: -34px;
-    font-size: 0.625rem;
+    font-size: var(--fs-caption2);
     color: var(--muted);
     transform: translateY(-50%);
   }
@@ -230,7 +231,7 @@
     justify-content: space-between;
     gap: 8px;
     margin: 6px 34px 0 0;
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     color: var(--muted);
   }
   .mc-legend {

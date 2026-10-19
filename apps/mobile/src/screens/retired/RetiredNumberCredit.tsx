@@ -1,5 +1,6 @@
 // 은퇴 리포트의 영구결번 장면(웹 RetiredNumberCredit.svelte, T-10-076) — 결번 세리머니 · 명예의 벽 헌정 · 이름 공개 안내.
 // 판정 기준(점수·시즌 수)은 서버만 안다 — 앱은 서버가 준 결과만 그린다. 결번 액자는 RnFrame(웹과 같은 도트 액자).
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef } from 'react';
 import { useSnapshot } from 'valtio';
 import { rnMisses, rnResults } from '../../store';
@@ -197,7 +198,7 @@ export function RetiredNumberCredit({
                         style={{
                           flex: 1,
                           height: 6,
-                          borderRadius: 999,
+                          borderRadius: RADIUS.pill,
                           backgroundColor: 'rgba(255,255,255,0.18)',
                           overflow: 'hidden',
                         }}
@@ -206,7 +207,7 @@ export function RetiredNumberCredit({
                           style={{
                             width: `${st.pct}%`,
                             height: '100%',
-                            borderRadius: 999,
+                            borderRadius: RADIUS.pill,
                             backgroundColor: st.met ? '#4fb27d' : '#e5ad2e',
                           }}
                         />

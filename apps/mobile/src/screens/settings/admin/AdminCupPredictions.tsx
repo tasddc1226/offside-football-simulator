@@ -10,6 +10,7 @@ import { Btn } from '../../../ui/Btn';
 import { Txt } from '../../../ui/Txt';
 import { useColors } from '../../../theme/useColors';
 import { TextBox, confirmAsync } from '../../board/parts';
+import { Skeleton } from '../../../ui/Skeleton';
 
 export default function AdminCupPredictions() {
   const [s, setS] = useState(emptyCupAdmin);
@@ -64,7 +65,7 @@ export default function AdminCupPredictions() {
       </Btn>
       {s.error ? <Txt accessibilityRole="alert">{s.error}</Txt> : null}
       {s.loading ? (
-        <Txt>{L.loading}</Txt>
+        <Skeleton rows={3} />
       ) : s.report ? (
         <>
           <Txt>
@@ -121,7 +122,7 @@ export default function AdminCupPredictions() {
                     <Btn disabled={s.busy} onPress={model.close}>
                       {L.adminClose}
                     </Btn>
-                    {s.detailLoading ? <Txt>{L.loading}</Txt> : null}
+                    {s.detailLoading ? <Skeleton rows={3} /> : null}
                     {(s.rows?.items ?? []).map((r) => (
                       <View key={r.profileId} style={{ gap: 4 }}>
                         <Txt bold>{r.nickname}</Txt>

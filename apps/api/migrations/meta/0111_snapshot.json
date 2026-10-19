@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "149153c8-1fe8-4025-b2ac-938ff47a0a69",
+  "id": "5b6bdc75-fe55-47ca-8d2e-f9fdd68d4dae",
   "prevId": "acca5a2d-28a6-4186-88b2-6293d0c412a5",
   "tables": {
     "api_status_buckets": {
@@ -4040,6 +4040,13 @@
           ],
           "isUnique": true
         },
+        "notifications_source_key_idx": {
+          "name": "notifications_source_key_idx",
+          "columns": [
+            "source_key"
+          ],
+          "isUnique": false
+        },
         "notifications_profile_created_idx": {
           "name": "notifications_profile_created_idx",
           "columns": [
@@ -4142,20 +4149,6 @@
         "team_kept": {
           "name": "team_kept",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "reward_boost": {
-          "name": "reward_boost",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "reward_scout": {
-          "name": "reward_scout",
-          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

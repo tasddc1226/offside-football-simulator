@@ -145,6 +145,8 @@ const EXACT: Record<string, string> = {
   '감독 칸에서 내린 뒤 경질할 수 있어요.':
     'That manager is in the manager slot. Clear the slot before sacking them.',
   '이미 감독인 선수예요.': 'That player is already a manager.',
+  '진행 중인 경기를 찾지 못했어요.': 'We couldn’t find a match in progress.',
+  '고를 수 없는 선택지예요.': 'That option isn’t available.',
   '진행 중인 감독 커리어를 먼저 마치거나 포기해 주세요.':
     'Finish or give up your current manager career first.',
   '감독 커리어를 끝낸 감독만 감독 칸에 넣을 수 있어요.':

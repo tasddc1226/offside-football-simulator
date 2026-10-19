@@ -550,7 +550,7 @@
 .ovr-guide-box, .position-guide-box { padding-block: 0; }
 .position-guide-box :global(.position-guide) { border-top: 0; }
 .ovr-guide-box .ovr-guide { margin-top: 0; }
-.ovr-guide { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 12px 0; font-size: .8125rem; line-height: 1.5; }
+.ovr-guide { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 12px 0; font-size: var(--fs-label); line-height: 1.5; }
 .ovr-guide p { margin: 4px 0 0; overflow-wrap: anywhere; }
 .cc-bar .ovr-core { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 /* T-11-371 공개 연출: 단서 단계에 능력치 막대가 0부터 차오르고, 결과에 강도별 테두리 빛. */

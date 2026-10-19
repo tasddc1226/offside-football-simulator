@@ -39,7 +39,7 @@
 <style>
   .tm-stats-sub {
     margin: 0;
-    font-size: 0.95rem;
+    font-size: var(--fs-body1);
   }
   .tm-season-pairs {
     margin: 0;
@@ -51,7 +51,7 @@
     display: flex;
     justify-content: space-between;
     gap: 8px;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
   }
   .tm-season-pairs dd {
     margin: 0;

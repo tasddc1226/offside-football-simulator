@@ -2,15 +2,26 @@
 // 올라온다. 골이 가까우면 시계가 느려지고, 골이 들어가면 전광판이 번쩍인다. 결과는 이미 서버가 정했고 여기서는 보여
 // 주기만 한다. 동작 줄이기여도 진행 템포는 그대로 두고(읽는 시간) 움직임 효과만 뺀다. '결과 바로 보기'로 언제든 끝낸다.
 // 대본(liveScript)·시계 표기는 웹과 같은 @offside/app-core/teamLive.
+// T-11-387 장면 경기(live)면 장면 분에 시계를 멈추고 선택지 카드를 띄운다. 고르면 서버가 결과를 정하고, 그 골이 중계에
+// 끼어든다. 제한 시간이 지나거나 '결과 바로 보기'를 누르면 남은 장면은 감독에게 맡긴다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, ScrollView, View } from 'react-native';
+import { Animated, Easing, ScrollView, View } from 'react-native';
 import { useSnapshot } from 'valtio';
-import type { TeamMatch } from '@offside/app-core/api/team';
+import {
+  chooseMoment,
+  finishLiveMatch,
+  type PlayTeamMatchResponse,
+  type TeamLive as TeamLiveData,
+  type TeamMatch,
+  type TeamMoment,
+} from '@offside/app-core/api/team';
 import {
   FLASH_MS,
   MOMENTUM_START,
   PHASE_LABEL,
   clockText,
+  lineWaitMs,
   liveScript,
   momentumAfter,
   momentumDecay,
@@ -19,13 +30,22 @@ import {
   type LiveLine,
   type LivePhase,
 } from '@offside/app-core/teamLive';
+import {
+  LiveScore,
+  momentChoices,
+  momentLines,
+  momentScene,
+  momentTitle,
+} from '@offside/app-core/teamMoments';
 import { teamLiveText as L } from '@offside/app-core/i18n/ko/teamLive';
+import { teamMomentsText as M } from '@offside/app-core/i18n/ko/teamMoments';
 import { prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
-import { Btn, Card, Txt } from '../../ui';
+import { Btn, Card, Press, Txt } from '../../ui';
 import { Grid2 } from './TeamParts';
 import { TeamLogo } from '../../components/TeamLogo';
+import { PopSheet } from '../../ui/PopSheet';
 
 /** 중계 줄 하나 — 나타날 때 위에서 살짝 내려앉는다(웹 tl-in). */
 function FeedRow({ l, motionOK }: { l: LiveLine; motionOK: boolean }) {
@@ -36,6 +56,8 @@ function FeedRow({ l, motionOK }: { l: LiveLine; motionOK: boolean }) {
   }, [a, motionOK]);
   const goal = l.kind === 'goal';
   const marker = l.kind === 'ht' || l.kind === 'ft' || l.kind === 'kickoff';
+  // T-11-387 고른 장면 줄은 눈에 띄게(웹 k-moment).
+  const moment = l.kind === 'moment';
   return (
     <Animated.View
       testID={`live-line-${l.kind}`}
@@ -49,9 +71,10 @@ function FeedRow({ l, motionOK }: { l: LiveLine; motionOK: boolean }) {
         gap: 8,
         paddingVertical: 6,
         paddingHorizontal: 10,
-        borderRadius: 10,
-        backgroundColor: goal ? c.pitch : marker ? 'transparent' : c.surface2,
+        borderRadius: RADIUS.sm,
+        backgroundColor: goal ? c.pitch : marker ? 'transparent' : moment ? c.surface : c.surface2,
         ...(marker ? { borderWidth: 1, borderStyle: 'dashed' as const, borderColor: c.line } : {}),
+        ...(moment ? { borderWidth: 1, borderColor: c.pitchAccent } : {}),
         overflow: 'hidden',
       }}
     >
@@ -82,8 +105,8 @@ function FeedRow({ l, motionOK }: { l: LiveLine; motionOK: boolean }) {
         num
         style={{
           width: rem(0.875) * 3.4,
-          fontSize: rem(0.875),
-          lineHeight: rem(0.875) * 1.45,
+          fontSize: rem(FONT.body2),
+          lineHeight: rem(FONT.body2) * 1.45,
           color: goal ? c.pitchAccent : c.muted,
         }}
       >
@@ -92,9 +115,9 @@ function FeedRow({ l, motionOK }: { l: LiveLine; motionOK: boolean }) {
       <Txt
         style={{
           flex: 1,
-          fontSize: rem(0.875),
-          lineHeight: rem(0.875) * 1.45,
-          fontWeight: goal || marker ? '700' : '400',
+          fontSize: rem(FONT.body2),
+          lineHeight: rem(FONT.body2) * 1.45,
+          fontWeight: goal || marker || moment ? '700' : '400',
           color: goal ? c.onPitch : c.ink,
         }}
       >
@@ -109,20 +132,36 @@ export function TeamLive({
   name,
   onend,
   neutral = false,
+  live,
+  onfinal,
 }: {
   match: TeamMatch;
   name: (id: string | null, fallback: string) => string;
   onend: () => void;
   /** 내 팀이 없는 경기(컵 공개 경기) — 내 팀 강조 없이 그린다. */
   neutral?: boolean;
+  /** T-11-387 고를 장면(장면 경기를 막 시작했을 때만). */
+  live?: TeamLiveData | undefined;
+  /** 장면 경기가 끝났을 때의 결과(스코어 · 기록 · 레이팅). */
+  onfinal?: ((r: PlayTeamMatchResponse) => void) | undefined;
 }) {
   const c = useColors();
   const { motionOK } = useSnapshot(prefs);
   // 경기 하나에 한 번 만든다(부모가 경기마다 key로 새로 그린다).
   const [script] = useState(() => liveScript(match, name, { neutral }));
-  const [plan] = useState(() => playbackPlan(script));
+  const [moments] = useState<TeamMoment[]>(() => live?.moments ?? []);
+  const [choiceSec] = useState(() => live?.choiceSec ?? 15);
+  const [plan] = useState(() =>
+    playbackPlan(
+      script,
+      moments.map((m) => m.minute),
+    ),
+  );
+  const [tally] = useState(() => (live ? new LiveScore(match, neutral) : null));
 
-  const [shown, setShown] = useState<number[]>([]);
+  // 중계 줄은 장면 줄이 끼어들므로 대본 인덱스가 아니라 고정 키로 센다.
+  const [shown, setShown] = useState<{ k: number; l: LiveLine }[]>([]);
+  const seq = useRef(0);
   const [clock, setClock] = useState(0);
   const [extra, setExtra] = useState(0);
   const [phase, setPhase] = useState<LivePhase>('1st');
@@ -135,9 +174,21 @@ export function TeamLive({
   const runRef = useRef({ alive: true });
   const flashTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const onendRef = useRef(onend);
+  const onfinalRef = useRef(onfinal);
   useEffect(() => {
     onendRef.current = onend;
+    onfinalRef.current = onfinal;
   });
+
+  /** 지금 고르는 장면과 남은 초. */
+  const [active, setActive] = useState<{ m: TeamMoment; left: number } | null>(null);
+  const [sending, setSending] = useState(false);
+  const pickRef = useRef<((choice: string | null) => void) | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const finalRef = useRef<PlayTeamMatchResponse | null>(null);
+  /** 판정을 받지 못하면 남은 장면은 건너뛰고 끝에서 마감한다. */
+  const brokenRef = useRef(false);
+  const timer = useRef(new Animated.Value(1)).current;
 
   // 골 배너 · 점수 튀어 오름 · 흐름 막대
   const banner = useRef(new Animated.Value(0)).current;
@@ -180,14 +231,25 @@ export function TeamLive({
   }, [flash, motionOK, banner, bump]);
 
   useEffect(() => {
+    if (!active) return;
+    if (!motionOK || active.left >= choiceSec) return timer.setValue(active.left / choiceSec);
+    Animated.timing(timer, {
+      toValue: active.left / choiceSec,
+      duration: 1000,
+      easing: Easing.linear,
+      useNativeDriver: false,
+    }).start();
+  }, [active, choiceSec, motionOK, timer]);
+
+  useEffect(() => {
     const run = { alive: true };
     runRef.current = run;
     const sleep = (ms: number) =>
       new Promise<void>((r) => setTimeout(r, waitMs(ms, fastRef.current)));
 
-    function show(i: number) {
-      const l = script[i]!;
-      setShown((prev) => [i, ...prev]);
+    function push(l: LiveLine) {
+      const k = seq.current++;
+      setShown((prev) => [{ k, l }, ...prev]);
       setMomentum((m) => momentumAfter(m, l));
       if (l.kind === 'goal' && l.score) {
         setScore(l.score);
@@ -197,37 +259,98 @@ export function TeamLive({
       }
     }
 
+    function show(i: number) {
+      const l = script[i]!;
+      push(tally ? tally.line(l) : l);
+    }
+
+    /** 장면 카드를 띄우고 고른 선택지(시간이 지나면 'auto', 경기를 끝내면 null)를 기다린다. */
+    function ask(m: TeamMoment): Promise<string | null> {
+      return new Promise((resolve) => {
+        let left = choiceSec;
+        setActive({ m, left });
+        pickRef.current = (choice) => {
+          pickRef.current = null;
+          clearInterval(countdownRef.current);
+          resolve(choice);
+        };
+        countdownRef.current = setInterval(() => {
+          left -= 1;
+          setActive({ m, left });
+          if (left <= 0) pickRef.current?.('auto');
+        }, 1000);
+      });
+    }
+
+    async function moment(k: number) {
+      const m = moments[k];
+      if (!m || brokenRef.current || !run.alive) return;
+      const choice = await ask(m);
+      if (choice === null || !run.alive) return;
+      setSending(true);
+      const r = await chooseMoment(match.id, m.index, choice);
+      setSending(false);
+      setActive(null);
+      if (!r.ok) {
+        brokenRef.current = true;
+        push({ minute: m.minute, kind: 'moment', text: M.failed });
+        return;
+      }
+      if (r.data.final) finalRef.current = r.data.final;
+      for (const l of momentLines(r.data.moment, r.data.goals, name, tally!)) {
+        if (!run.alive) return;
+        push(l);
+        await sleep(lineWaitMs(l.kind));
+      }
+    }
+
     // 순서·대기 시간은 app-core playbackPlan이 정한다. 여기서는 단계마다 상태를 반영하고 기다린다.
     async function loop() {
       for (const step of plan) {
         if (!run.alive) return;
         if (step.clock !== undefined) setClock(step.clock);
         if (step.extra !== undefined) setExtra(step.extra);
+        if (step.moment !== undefined) {
+          await moment(step.moment);
+          if (!run.alive) return;
+        }
         if (step.show !== undefined) show(step.show);
         if (step.phase) setPhase(step.phase);
         if (step.decay) setMomentum(momentumDecay);
         if (step.wait > 0) await sleep(step.wait);
       }
-      finish();
+      void finish();
     }
 
     void loop();
     return () => {
       run.alive = false;
+      pickRef.current?.(null);
       clearTimeout(flashTimer.current);
+      clearInterval(countdownRef.current);
     };
     // 경기 하나에 한 번만 돈다.
   }, []);
 
-  function finish() {
+  async function finish() {
     const run = runRef.current;
     if (!run.alive) return;
     run.alive = false;
+    pickRef.current?.(null);
+    setActive(null);
+    if (live && !finalRef.current) {
+      setSending(true);
+      const r = await finishLiveMatch(match.id);
+      setSending(false);
+      if (r.ok) finalRef.current = r.data;
+    }
+    if (finalRef.current) onfinalRef.current?.(finalRef.current);
     onendRef.current();
   }
 
+  const choices = active ? momentChoices(active.m, name) : [];
   const scored = shown
-    .map((i) => script[i]!)
+    .map((x) => x.l)
     .filter((l): l is LiveLine & { side: 'home' | 'away' } => l.kind === 'goal' && !!l.side);
   const clockLabel = extra ? `${clock}+${extra}'` : `${clock}'`;
   const done = phase === 'ft';
@@ -246,7 +369,7 @@ export function TeamLive({
         style={{
           gap: 10,
           padding: 14,
-          borderRadius: 14,
+          borderRadius: RADIUS.md,
           backgroundColor: c.pitch,
           overflow: 'hidden',
         }}
@@ -262,7 +385,7 @@ export function TeamLive({
               right: 0,
               bottom: 0,
               borderWidth: 4,
-              borderRadius: 14,
+              borderRadius: RADIUS.md,
               borderColor: c.pitchAccent,
             }}
           />
@@ -275,7 +398,7 @@ export function TeamLive({
               gap: 6,
               paddingVertical: 1,
               paddingHorizontal: 8,
-              borderRadius: 999,
+              borderRadius: RADIUS.pill,
               backgroundColor: done ? c.chalk : c.bad,
             }}
           >
@@ -291,7 +414,12 @@ export function TeamLive({
               />
             )}
             <Txt
-              style={{ ...disp, fontSize: rem(0.8125), color: '#fff', letterSpacing: 0.06 * 13 }}
+              style={{
+                ...disp,
+                fontSize: rem(FONT.label),
+                color: '#fff',
+                letterSpacing: 0.06 * 13,
+              }}
             >
               {done ? 'FT' : 'LIVE'}
             </Txt>
@@ -300,8 +428,8 @@ export function TeamLive({
             testID="live-clock"
             style={{
               ...disp,
-              fontSize: rem(1.5),
-              lineHeight: rem(1.5) * 1.2,
+              fontSize: rem(FONT.title1),
+              lineHeight: rem(FONT.title1) * 1.2,
               color: c.pitchAccent,
               minWidth: rem(1.5) * 3.4 * 0.5,
               fontVariant: ['tabular-nums'],
@@ -310,7 +438,12 @@ export function TeamLive({
             {clockLabel}
           </Txt>
           <Txt
-            style={{ marginLeft: 'auto', fontSize: rem(0.875), color: c.onPitch, opacity: 0.85 }}
+            style={{
+              marginLeft: 'auto',
+              fontSize: rem(FONT.body2),
+              color: c.onPitch,
+              opacity: 0.85,
+            }}
           >
             {PHASE_LABEL[phase]}
           </Txt>
@@ -334,7 +467,7 @@ export function TeamLive({
             >
               {match.home.name}
             </Txt>
-            <Txt style={{ fontSize: rem(0.75), color: c.onPitch, opacity: 0.75 }}>
+            <Txt style={{ fontSize: rem(FONT.caption), color: c.onPitch, opacity: 0.75 }}>
               {match.home.owner}
             </Txt>
           </View>
@@ -402,7 +535,7 @@ export function TeamLive({
             >
               {match.away.name}
             </Txt>
-            <Txt style={{ fontSize: rem(0.75), color: c.onPitch, opacity: 0.75 }}>
+            <Txt style={{ fontSize: rem(FONT.caption), color: c.onPitch, opacity: 0.75 }}>
               {match.away.owner}
             </Txt>
           </View>
@@ -442,7 +575,7 @@ export function TeamLive({
                 width: 10,
                 height: 10,
                 marginLeft: -5,
-                borderRadius: 5,
+                borderRadius: RADIUS.xs,
                 backgroundColor: g.side === 'away' ? c.pitchAccent : c.onPitch,
                 borderWidth: 2,
                 borderColor: c.pitch,
@@ -455,7 +588,7 @@ export function TeamLive({
           importantForAccessibility="no-hide-descendants"
           style={{ flexDirection: 'row', alignItems: 'center', gap: 8, opacity: 0.85 }}
         >
-          <Txt style={{ fontSize: rem(0.75), color: c.onPitch }}>{L.flow}</Txt>
+          <Txt style={{ fontSize: rem(FONT.caption), color: c.onPitch }}>{L.flow}</Txt>
           <View
             style={{
               flex: 1,
@@ -516,14 +649,118 @@ export function TeamLive({
         ) : null}
       </View>
 
+      {/* T-11-387 결정적 장면은 아래에서 올라오는 시트로 띄운다. 고르거나 시간이 다 돼야 닫힌다(웹 PopSheet와 같다). */}
+      {active ? (
+        <PopSheet label={momentTitle(active.m)} step={`${active.m.index}`}>
+          <View testID="live-moment" style={{ gap: 10 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+              }}
+            >
+              <Txt
+                accessibilityRole="header"
+                style={{
+                  ...disp,
+                  fontSize: rem(FONT.title3),
+                  color: active.m.kind === 'crisis' ? c.bad : c.pitch2,
+                }}
+              >
+                {momentTitle(active.m)}
+              </Txt>
+              <Txt tone="muted" style={{ ...disp, fontVariant: ['tabular-nums'] }}>
+                {`${active.m.minute}' · ${score[0]} : ${score[1]}`}
+              </Txt>
+            </View>
+            <Txt style={{ lineHeight: rem(FONT.body) * 1.5 }}>{momentScene(active.m, name)}</Txt>
+            <Txt style={{ lineHeight: rem(FONT.body) * 1.5 }}>
+              {`${M.ask} `}
+              <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
+                {active.m.kind === 'chance' ? M.chancePct : M.crisisPct}
+              </Txt>
+            </Txt>
+            <View style={{ gap: 6 }}>
+              {choices.map((ch) => (
+                <Press
+                  key={ch.id}
+                  testID={`live-moment-choice-${ch.id}`}
+                  disabled={sending}
+                  onPress={() => pickRef.current?.(ch.id)}
+                  accessibilityLabel={`${ch.label} ${M.pct({ p: ch.pct })}${ch.tags.length ? `, ${ch.tags.join(' · ')}` : ''}`}
+                  accessibilityState={{ disabled: sending }}
+                  style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    columnGap: 10,
+                    rowGap: 2,
+                    minHeight: 48,
+                    paddingVertical: 8,
+                    paddingHorizontal: 12,
+                    borderRadius: RADIUS.sm,
+                    borderWidth: 1,
+                    borderColor: 'transparent',
+                    backgroundColor: c.surface2,
+                    opacity: sending ? 0.6 : 1,
+                  }}
+                >
+                  <Txt bold style={{ flex: 1, minWidth: 0 }}>
+                    {ch.label}
+                  </Txt>
+                  <Txt
+                    style={{ ...disp, fontSize: rem(FONT.title3), fontVariant: ['tabular-nums'] }}
+                  >
+                    {M.pct({ p: ch.pct })}
+                  </Txt>
+                  {ch.tags.length ? (
+                    <Txt tone="muted" style={{ width: '100%', fontSize: rem(FONT.caption) }}>
+                      {ch.tags.join(' · ')}
+                    </Txt>
+                  ) : null}
+                </Press>
+              ))}
+            </View>
+            <View
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={{ height: 4, borderRadius: 2, backgroundColor: c.line, overflow: 'hidden' }}
+            >
+              <Animated.View
+                style={{
+                  height: '100%',
+                  backgroundColor: c.pitch2,
+                  width: timer.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0%', '100%'],
+                    extrapolate: 'clamp',
+                  }),
+                }}
+              />
+            </View>
+            <Txt
+              tone="muted"
+              accessibilityLiveRegion="polite"
+              style={{ fontSize: rem(FONT.label), lineHeight: rem(FONT.label) * 1.5 }}
+            >
+              {sending ? M.sending : M.timer({ s: active.left })}
+            </Txt>
+            <Btn testID="live-moment-skip" disabled={sending} onPress={() => void finish()}>
+              {L.skip}
+            </Btn>
+          </View>
+        </PopSheet>
+      ) : null}
+
       {/* 중계 줄(새 줄이 맨 위) */}
       <ScrollView
         nestedScrollEnabled
         style={{ maxHeight: rem(22) }}
         contentContainerStyle={{ gap: 6 }}
       >
-        {shown.map((i) => (
-          <FeedRow key={i} l={script[i]!} motionOK={motionOK} />
+        {shown.map((x) => (
+          <FeedRow key={x.k} l={x.l} motionOK={motionOK} />
         ))}
       </ScrollView>
 
@@ -539,8 +776,14 @@ export function TeamLive({
         >
           {fast ? L.speedNormal : L.speedFast}
         </Btn>
-        <Btn block kind="primary" testID="live-skip" onPress={finish}>
-          {L.skip}
+        <Btn
+          block
+          kind="primary"
+          testID="live-skip"
+          disabled={sending}
+          onPress={() => void finish()}
+        >
+          {sending ? M.sending : L.skip}
         </Btn>
       </Grid2>
     </Card>

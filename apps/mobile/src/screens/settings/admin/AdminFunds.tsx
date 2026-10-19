@@ -1,5 +1,6 @@
 // T-11-153 구단 자금 대조(웹 admin/AdminFunds.svelte). 잔액 = 방출 + 판매(수수료 뺀) − 영입 − 구단 자금으로 산 것.
 // 기록 밖에서 바뀐 잔액(차이)이 있는 구단주를 보여 주고, 프로필 id나 닉네임으로 한 명의 출처별 합과 최근 움직임을 본다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import * as api from '@offside/app-core/api/admin';
@@ -48,8 +49,8 @@ export default function AdminFunds() {
     if (!r.ok) setOwnerMsg(r.error.message || '구단주를 찾지 못했어요.');
   }
 
-  const small = { fontSize: rem(0.8125) } as const;
-  const tiny = { fontSize: rem(0.75) } as const;
+  const small = { fontSize: rem(FONT.label) } as const;
+  const tiny = { fontSize: rem(FONT.caption) } as const;
   const row = {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -153,7 +154,7 @@ export default function AdminFunds() {
             paddingHorizontal: 12,
             borderWidth: 1,
             borderColor: c.line,
-            borderRadius: 12,
+            borderRadius: RADIUS.md,
           }}
         >
           <Txt bold style={small}>

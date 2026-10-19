@@ -47,7 +47,12 @@ export function prepare(root) {
     // #651 added Android build properties and a config plugin here; both change the native fingerprint.
     'apps/mobile/app.config.js',
     'apps/mobile/package.json',
+    // pnpm frozen installation also checks this excluded server workspace's manifest.
+    // This disposable mobile overlay is never used to deploy the API.
+    'apps/api/package.json',
     'pnpm-lock.yaml',
+    // The frozen reviewed lock must use its reviewed resolution settings too.
+    'pnpm-workspace.yaml',
     'apps/mobile/src/components/AdSlot.tsx',
     'apps/mobile/src/platform/rewarded.ts',
     'apps/mobile/src/platform/rewarded.test.mjs',

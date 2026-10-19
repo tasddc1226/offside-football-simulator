@@ -479,6 +479,14 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect((await send({ growth: { ...growth, o0: 53 } })).status).toBe(200);
     expect((await growths()).at(-1)!.o0).toBe(53);
 
+    // T-11-394 결정적 장면 기록(km)도 성장 기록에 실려 그대로 쌓인다.
+    const km = [
+      { ph: 1, at: 'l', sit: 'c-1v1', c: 'chip', b: 34, p: 31, ok: true },
+      { ph: 2, at: 'f', sit: 'g-cross', c: 'to', b: 58, p: 58, ok: false },
+    ];
+    expect((await send({ growth: { ...growth, km } })).status).toBe(200);
+    expect((await growths()).at(-1)).toEqual({ ...growth, km });
+
     const [season] = await ctx.db
       .select()
       .from(careerSeasons)

@@ -1,5 +1,6 @@
 // T-11-379 경기 리포트(웹 team/TeamReport.svelte · TeamSeasonReport.svelte) — 경기 결과의 기대 득점 · 진단 한 줄 ·
 // 접어 둔 줄 비교 · 고칠 곳, 시즌 통계의 리포트 묶음.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { View } from 'react-native';
 import type { TeamMatch, TeamStatsReport } from '@offside/app-core/api/team';
@@ -44,7 +45,7 @@ export function TeamReport({
   );
   return (
     <View
-      style={{ gap: 8, padding: 12, borderRadius: 12, backgroundColor: c.surface2 }}
+      style={{ gap: 8, padding: 12, borderRadius: RADIUS.md, backgroundColor: c.surface2 }}
       testID="team-report"
     >
       <View
@@ -130,7 +131,7 @@ export function TeamSeasonReport({ report }: { report: TeamStatsReport | undefin
   );
   return (
     <View style={{ gap: 8 }} testID="team-season-report">
-      <Txt bold style={{ fontSize: rem(0.95) }}>
+      <Txt bold style={{ fontSize: rem(FONT.body1) }}>
         {L.seasonTitle}
       </Txt>
       {v ? (

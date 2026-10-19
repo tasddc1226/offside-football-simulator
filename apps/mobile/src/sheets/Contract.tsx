@@ -4,6 +4,7 @@
 // 웹은 canvas에 그렸지만 앱은 획마다 점을 모아 react-native-svg Path로 그린다. 터치는 패드 위에 덮은 투명 View 하나가
 // PanResponder로 잡는다(DragShot과 같다 — 터치 대상이 늘 그 View라 locationX/Y가 패드 기준으로 일정하고, 바깥 스크롤이
 // 제스처를 가져가지 못한다).
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Easing, PanResponder, StyleSheet, View, type GestureResponderEvent } from 'react-native';
 import Svg, { ClipPath, Defs, G, Path, Rect, Text as SvgText } from 'react-native-svg';
@@ -62,7 +63,7 @@ const Terms = memo(function Terms({
         gap: 12,
         paddingVertical: 10,
         paddingHorizontal: 12,
-        borderRadius: 12,
+        borderRadius: RADIUS.md,
         backgroundColor: c.surface2,
       }}
     >
@@ -70,10 +71,13 @@ const Terms = memo(function Terms({
       <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', rowGap: 4, columnGap: 16 }}>
         {terms.map((t) => (
           <View key={t.label}>
-            <Txt tone="muted" style={{ fontSize: rem(0.6875), lineHeight: rem(0.6875) * 1.4 }}>
+            <Txt
+              tone="muted"
+              style={{ fontSize: rem(FONT.caption2), lineHeight: rem(FONT.caption2) * 1.4 }}
+            >
               {t.label}
             </Txt>
-            <Txt bold style={{ fontSize: rem(0.875), lineHeight: rem(0.875) * 1.4 }}>
+            <Txt bold style={{ fontSize: rem(FONT.body2), lineHeight: rem(FONT.body2) * 1.4 }}>
               {t.value}
             </Txt>
           </View>
@@ -237,18 +241,18 @@ export function Contract({ v }: { v: ContractView }) {
           right: -4,
           width: 40,
           height: 40,
-          borderRadius: 20,
+          borderRadius: RADIUS.lg,
           backgroundColor: c.surface2,
           alignItems: 'center',
           justifyContent: 'center',
           opacity: sealed ? 0.45 : 1,
         }}
       >
-        <Txt tone="muted" style={{ fontSize: rem(1.375), lineHeight: rem(1.375) }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.title2), lineHeight: rem(FONT.title2) }}>
           ×
         </Txt>
       </Press>
-      <Txt tone="muted" style={{ marginTop: -4, fontSize: rem(0.9375) }}>
+      <Txt tone="muted" style={{ marginTop: -4, fontSize: rem(FONT.body1) }}>
         {s.text}
       </Txt>
       <Terms club={s.club} terms={s.terms} />
@@ -270,7 +274,7 @@ export function Contract({ v }: { v: ContractView }) {
             onPress={fn}
             style={{ minHeight: 40, justifyContent: 'center', opacity: sealed ? 0.45 : 1 }}
           >
-            <Txt bold style={{ fontSize: rem(0.8125), color: c.accentText }}>
+            <Txt bold style={{ fontSize: rem(FONT.label), color: c.accentText }}>
               {label}
             </Txt>
           </Press>
@@ -288,9 +292,9 @@ export function Contract({ v }: { v: ContractView }) {
           height: 150,
           borderWidth: 1.5,
           borderStyle: 'dashed',
-          borderColor: c.line,
-          borderRadius: 14,
-          backgroundColor: c.surface,
+          borderColor: 'transparent',
+          borderRadius: RADIUS.md,
+          backgroundColor: c.surface2,
           overflow: 'hidden',
         }}
       >
@@ -336,7 +340,7 @@ export function Contract({ v }: { v: ContractView }) {
             pointerEvents="none"
             style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}
           >
-            <Txt tone="muted" style={{ fontSize: rem(0.9375) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.body1) }}>
               {L.signHint}
             </Txt>
           </View>
@@ -359,8 +363,8 @@ export function Contract({ v }: { v: ContractView }) {
               position: 'absolute',
               left: 0,
               bottom: 2,
-              fontSize: rem(0.875),
-              lineHeight: rem(0.875),
+              fontSize: rem(FONT.body2),
+              lineHeight: rem(FONT.body2),
             }}
           >
             ×
@@ -381,7 +385,7 @@ export function Contract({ v }: { v: ContractView }) {
       <Txt
         tone="muted"
         center
-        style={{ marginTop: -6, fontSize: rem(0.75), lineHeight: rem(0.75) * 1.5 }}
+        style={{ marginTop: -6, fontSize: rem(FONT.caption), lineHeight: rem(FONT.caption) * 1.5 }}
       >
         {L.signNote}
       </Txt>
@@ -421,8 +425,8 @@ function Stamp({ name }: { name: string }) {
         <Txt
           style={{
             fontFamily: DISPLAY[700],
-            fontSize: rem(1.25),
-            lineHeight: rem(1.25),
+            fontSize: rem(FONT.title2),
+            lineHeight: rem(FONT.title2),
             letterSpacing: rem(1.25) * 0.06,
             color: c.bad,
           }}
@@ -434,8 +438,8 @@ function Stamp({ name }: { name: string }) {
           style={{
             maxWidth: 62,
             marginTop: 3,
-            fontSize: rem(0.5625),
-            lineHeight: rem(0.5625) * 1.3,
+            fontSize: rem(FONT.caption2),
+            lineHeight: rem(FONT.caption2) * 1.3,
             fontWeight: '700',
             color: c.bad,
           }}

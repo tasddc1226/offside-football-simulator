@@ -283,7 +283,11 @@ export type TeamOpponent = z.infer<typeof TeamOpponentSchema>;
 export const TeamOpponentsResponseSchema = z.strictObject({ items: z.array(TeamOpponentSchema) });
 export type TeamOpponentsResponse = z.infer<typeof TeamOpponentsResponseSchema>;
 
-export const PlayTeamMatchBodySchema = z.strictObject({ opponentTeamId: TeamIdSchema });
+/** T-11-387 live: true면 문자중계 도중 장면을 고르는 경기로 시작한다(옛 앱은 보내지 않아 한 번에 끝난다). */
+export const PlayTeamMatchBodySchema = z.strictObject({
+  opponentTeamId: TeamIdSchema,
+  live: z.boolean().optional(),
+});
 export type PlayTeamMatchBody = z.infer<typeof PlayTeamMatchBodySchema>;
 
 export const TeamMatchSideSchema = z.strictObject({
@@ -311,8 +315,58 @@ export const TeamMatchEventSchema = z.strictObject({
   /** 조회한 구단주 쪽 선수의 커리어 id — 웹이 이 기기에 있는 (비공개) 이름으로 바꿔 보여 준다. 상대 쪽은 늘 null. */
   scorerId: z.string().nullable(),
   assistId: z.string().nullable(),
+  /** T-11-387 득점자 자리. 이 기능 전에 치른 경기에는 없다. */
+  slot: DetailPosSchema.optional(),
 });
 export type TeamMatchEvent = z.infer<typeof TeamMatchEventSchema>;
+
+// ───────── 장면 경기(T-11-387) ─────────
+// 장면 · 선택지 id와 규칙은 `@offside/contracts/team-moments`. 확률은 서버가 그 선수로 계산한 정수 %다(찬스는 골, 위기는 막을 확률).
+
+export const TeamMomentChoiceSchema = z.strictObject({
+  id: z.string().max(32),
+  pct: z.number().int().min(0).max(100),
+  /** 동료가 마무리한다. */
+  mate: z.boolean(),
+  /** 실패하면 상대 역습 골 확률(%). */
+  risk: z.number().int().min(0).max(100),
+  /** 막아 내면 우리 역습 골 확률(%). */
+  gain: z.number().int().min(0).max(100),
+});
+export type TeamMomentChoice = z.infer<typeof TeamMomentChoiceSchema>;
+
+/** 장면 한 사람. id는 조회한 구단주 쪽 선수의 커리어 id(웹 · 앱이 기기 안 이름으로 바꾼다). */
+export const TeamMomentActorSchema = z.strictObject({
+  name: z.string(),
+  id: z.string().nullable(),
+  slot: DetailPosSchema,
+});
+export type TeamMomentActor = z.infer<typeof TeamMomentActorSchema>;
+
+export const TeamMomentSchema = z.strictObject({
+  index: z.number().int().min(0),
+  minute: z.number().int().min(1).max(90),
+  kind: z.enum(['chance', 'crisis']),
+  situation: z.string().max(32),
+  actor: TeamMomentActorSchema,
+  mate: TeamMomentActorSchema,
+  opp: TeamMomentActorSchema,
+  choices: z.array(TeamMomentChoiceSchema).min(1).max(3),
+  /** 판정한 장면이면 고른 선택지('auto' = 자동 선택)와 결과. */
+  picked: z.string().max(32).optional(),
+  ok: z.boolean().optional(),
+});
+export type TeamMoment = z.infer<typeof TeamMomentSchema>;
+
+/** 진행 중인 장면 경기. moments는 아직 고르지 않은 장면이다. choiceSec 안에 안 고르면 자동 선택한다. */
+export const TeamLiveSchema = z.strictObject({
+  moments: z.array(TeamMomentSchema),
+  choiceSec: z.number().int().min(1),
+});
+export type TeamLive = z.infer<typeof TeamLiveSchema>;
+
+export const TeamMomentBodySchema = z.strictObject({ choice: z.string().min(1).max(32) });
+export type TeamMomentBody = z.infer<typeof TeamMomentBodySchema>;
 
 /** 한 경기. home은 경기를 건 팀이다. mine은 조회한 구단주 팀의 쪽. */
 export const TeamMatchSchema = z.strictObject({
@@ -323,6 +377,8 @@ export const TeamMatchSchema = z.strictObject({
   mine: z.enum(['home', 'away']),
   /** T-11-098 친구와 치른 친선전(레이팅·전적에 들어가지 않는다). 랭크 경기와 구버전 응답에는 없다. */
   friendly: z.boolean().optional(),
+  /** T-11-387 화면에서 고른 장면과 결과(장면 경기만). */
+  moments: z.array(TeamMomentSchema).optional(),
   createdAt: IsoUtcSchema,
 });
 export type TeamMatch = z.infer<typeof TeamMatchSchema>;
@@ -332,8 +388,21 @@ export const PlayTeamMatchResponseSchema = z.strictObject({
   record: TeamRecordSchema,
   rating: z.number().int(),
   matchesLeft: z.number().int().min(0),
+  /**
+   * T-11-387 장면 경기를 시작했으면 고를 장면들. 이때 match는 장면을 뺀 지금까지의 골만 담고, record · rating은 경기 전
+   * 값이다. 마지막 장면을 고르거나 마감하면 TeamMomentResponse.final로 결과가 온다.
+   */
+  live: TeamLiveSchema.optional(),
 });
 export type PlayTeamMatchResponse = z.infer<typeof PlayTeamMatchResponseSchema>;
+
+/** 장면 하나를 고른 결과. goals는 이 장면에서 난 골, final은 경기가 끝났을 때의 경기 결과다. */
+export const TeamMomentResponseSchema = z.strictObject({
+  moment: TeamMomentSchema,
+  goals: z.array(TeamMatchEventSchema),
+  final: PlayTeamMatchResponseSchema.optional(),
+});
+export type TeamMomentResponse = z.infer<typeof TeamMomentResponseSchema>;
 
 /** T-11-269 경기 기록 다음 쪽 커서(`<createdAt>_<경기 id>`). 첫 쪽에는 붙이지 않는다. */
 export const TeamMatchCursorSchema = z

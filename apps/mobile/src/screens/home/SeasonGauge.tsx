@@ -1,5 +1,6 @@
 // 시즌 진행 게이지(웹 SeasonGauge.svelte). 시즌은 정한 날짜가 아니라 유저들이 끝까지 뛴 커리어로 찬다
 // (contracts season-gauge.ts). 90%에 닿아 마감이 정해지면 카운트다운으로 바뀐다. 진행 중인 시즌이 없으면 그리지 않는다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { AppState, View } from 'react-native';
 import { seasonGaugeLines, type SeasonGauge as Gauge } from '@offside/app-core/seasonGauge';
@@ -54,7 +55,7 @@ export function SeasonGauge() {
         <Txt v="eyebrow">Season progress</Txt>
         <Txt
           testID="season-gauge-pct"
-          style={[num(700), { fontSize: rem(1.5), color: c.accentText }]}
+          style={[num(700), { fontSize: rem(FONT.title1), color: c.accentText }]}
         >
           {`${lines.pct}%`}
         </Txt>
@@ -62,7 +63,7 @@ export function SeasonGauge() {
       <Txt
         v="h2"
         accessibilityRole="header"
-        style={{ fontSize: rem(1.0625), ...(locked ? { color: c.accentText } : null) }}
+        style={{ fontSize: rem(FONT.title3), ...(locked ? { color: c.accentText } : null) }}
       >
         {lines.countdown ?? lines.title}
       </Txt>
@@ -71,13 +72,18 @@ export function SeasonGauge() {
         accessibilityRole="progressbar"
         accessibilityLabel={lines.aria}
         accessibilityValue={{ min: 0, max: 100, now: lines.pct }}
-        style={{ height: 12, borderRadius: 999, backgroundColor: c.surface2, overflow: 'hidden' }}
+        style={{
+          height: 12,
+          borderRadius: RADIUS.pill,
+          backgroundColor: c.surface2,
+          overflow: 'hidden',
+        }}
       >
         <View
           style={{
             width: `${lines.pct}%`,
             height: '100%',
-            borderRadius: 999,
+            borderRadius: RADIUS.pill,
             backgroundColor: c.accent,
           }}
         />
@@ -94,12 +100,12 @@ export function SeasonGauge() {
         />
       </View>
       {lines.endDate ? (
-        <Txt testID="season-gauge-date" style={{ fontSize: rem(0.8125), color: c.muted }}>
+        <Txt testID="season-gauge-date" style={{ fontSize: rem(FONT.label), color: c.muted }}>
           {lines.endDate}
         </Txt>
       ) : null}
       {lines.why ? (
-        <Txt testID="season-gauge-why" style={{ fontSize: rem(0.8125), color: c.muted }}>
+        <Txt testID="season-gauge-why" style={{ fontSize: rem(FONT.label), color: c.muted }}>
           {lines.why}
         </Txt>
       ) : null}

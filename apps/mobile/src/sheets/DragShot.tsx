@@ -3,6 +3,7 @@
 // 장면 전체 크기 기준). 판정은 game/dragShot.ts, 결과는 sheet-controller가 v.shot에 채운다.
 // 끄는 동안 손가락이 장면을 벗어나도 끝까지 받도록, 장면 위에 덮은 투명 View 하나가 PanResponder로 터치를 잡는다
 // (터치 대상이 늘 그 View라 locationX/Y가 장면 기준으로 일정하다).
+import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PanResponder, StyleSheet, View, type GestureResponderEvent } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -177,8 +178,8 @@ export function DragShot({ v }: { v: Extract<SheetView, { kind: 'dragShot' }> })
               <Txt
                 style={{
                   fontFamily: DISPLAY[800],
-                  fontSize: rem(1.75),
-                  lineHeight: rem(1.75) * 1.3,
+                  fontSize: rem(FONT.title1),
+                  lineHeight: rem(FONT.title1) * 1.3,
                   color: c.chalk,
                   textShadowColor: 'rgba(0,0,0,0.45)',
                   textShadowOffset: { width: 0, height: 2 },
@@ -195,7 +196,7 @@ export function DragShot({ v }: { v: Extract<SheetView, { kind: 'dragShot' }> })
           style={{
             minHeight: rem(0.8125) * 1.4,
             marginTop: 10,
-            fontSize: rem(0.8125),
+            fontSize: rem(FONT.label),
             fontWeight: '700',
             color: c.onPitch,
             opacity: 0.9,

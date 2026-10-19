@@ -1,4 +1,5 @@
 // 밸런스 편집 화면의 입력 부품 — 숫자 입력 칸(웹 input[type=number])과 고르기 칸(웹 <select>).
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { FlatList, Keyboard, Modal, View } from 'react-native';
 import { alpha } from '../../../theme/colors';
@@ -97,8 +98,8 @@ export function PickerField({
           paddingVertical: 11,
           paddingHorizontal: 12,
           borderWidth: 1,
-          borderColor: c.line,
-          borderRadius: 10,
+          borderColor: 'transparent',
+          borderRadius: RADIUS.sm,
           backgroundColor: c.surface2,
           opacity: disabled ? 0.5 : 1,
         }}
@@ -151,7 +152,7 @@ export function PickerField({
                 >
                   <Txt
                     style={{
-                      fontSize: rem(0.9375),
+                      fontSize: rem(FONT.body1),
                       color: item.value === '' ? c.muted : c.ink,
                       fontWeight: item.value === value ? '700' : '400',
                     }}

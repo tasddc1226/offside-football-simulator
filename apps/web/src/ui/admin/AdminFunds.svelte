@@ -104,14 +104,14 @@
 </div>
 
 <style>
-  .sums { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 0.8125rem; }
+  .sums { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: var(--fs-label); }
   .sums dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
   .bad-list,
   .moves { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
   .bad-list li,
-  .moves li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 0.8125rem; }
+  .moves li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); font-size: var(--fs-label); }
   .bad-list small,
   .moves small { display: block; }
-  .owner { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .owner { border: 1px solid var(--line); border-radius: var(--radius-md); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
   .bad { color: var(--bad); }
 </style>

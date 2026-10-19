@@ -1,4 +1,5 @@
 // 이벤트 결과 시트(웹 sheets/EventResult.svelte): 큰 결과 · 탭 타이밍 · 본문 · 변화 칩 · 반전 · 도감 새 항목 · 스토리.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import type { SheetView } from '@offside/app-core/sheets';
@@ -33,7 +34,7 @@ export function EventResult({ v }: { v: Extract<SheetView, { kind: 'eventResult'
         <Txt
           testID="mg-timing"
           tone="muted"
-          style={{ marginTop: -6, fontSize: rem(0.8125), fontWeight: '700' }}
+          style={{ marginTop: -6, fontSize: rem(FONT.label), fontWeight: '700' }}
         >
           {s.timing}
         </Txt>
@@ -45,14 +46,14 @@ export function EventResult({ v }: { v: Extract<SheetView, { kind: 'eventResult'
           style={{
             paddingVertical: 6,
             paddingHorizontal: 10,
-            borderRadius: 8,
+            borderRadius: RADIUS.sm,
             backgroundColor: c.surface2,
             borderWidth: 1,
             borderStyle: 'dashed',
-            borderColor: c.line,
+            borderColor: 'transparent',
           }}
         >
-          <Txt style={{ fontSize: rem(0.8125) }}>{s.twist}</Txt>
+          <Txt style={{ fontSize: rem(FONT.label) }}>{s.twist}</Txt>
         </View>
       ) : null}
       {s.dexNew ? (
@@ -61,16 +62,16 @@ export function EventResult({ v }: { v: Extract<SheetView, { kind: 'eventResult'
           style={{
             paddingVertical: 6,
             paddingHorizontal: 10,
-            borderRadius: 8,
+            borderRadius: RADIUS.sm,
             backgroundColor: mixColor(c.accent, c.surface, 12),
             borderWidth: 1,
             borderColor: alpha(c.accent, 0.45),
           }}
         >
-          <Txt style={{ fontSize: rem(0.8125) }}>
+          <Txt style={{ fontSize: rem(FONT.label) }}>
             {`${L.dexNew} · `}
-            <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>{s.dexNew}</Txt>
-            <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+            <Txt style={{ fontSize: rem(FONT.label), fontWeight: '700' }}>{s.dexNew}</Txt>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
               {` · ${L.dexNote}`}
             </Txt>
           </Txt>
@@ -83,32 +84,32 @@ export function EventResult({ v }: { v: Extract<SheetView, { kind: 'eventResult'
               gap: 2,
               paddingVertical: 12,
               paddingHorizontal: 14,
-              borderRadius: 12,
+              borderRadius: RADIUS.md,
               backgroundColor: mixColor(c.accent, c.surface, 12),
               borderWidth: 1,
               borderColor: alpha(c.accent, 0.5),
             }}
           >
             <Txt v="eyebrow">{L.storyEnd({ name: s.story.name })}</Txt>
-            <Txt style={{ fontSize: rem(1.0625), fontWeight: '700' }}>{s.story.ending}</Txt>
+            <Txt style={{ fontSize: rem(FONT.title3), fontWeight: '700' }}>{s.story.ending}</Txt>
           </View>
         ) : (
           <View
             style={{
               paddingVertical: 10,
               paddingHorizontal: 12,
-              borderRadius: 10,
+              borderRadius: RADIUS.sm,
               backgroundColor: c.surface2,
               borderWidth: 1,
               borderStyle: 'dashed',
-              borderColor: c.line,
+              borderColor: 'transparent',
             }}
           >
-            <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
               {s.story.started ? (
                 <>
                   {`${L.storyStarted} `}
-                  <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '700' }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.label), fontWeight: '700' }}>
                     {s.story.name}
                   </Txt>
                   {'. '}

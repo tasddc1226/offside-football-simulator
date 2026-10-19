@@ -1,5 +1,6 @@
 // 칭호 도감(웹 titles/TitleDex.svelte, T-10-026, 트로피 탭). 얻은 칭호는 눌러서 대표 칭호로 고르고(다시 누르면 자동
 // 선택으로), 못 얻은 칭호는 접힌 목록에서 조건·진행도를 본다. 숨김 칭호는 얻기 전까지 이름을 가린다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { View } from 'react-native';
 import {
@@ -62,21 +63,21 @@ export function TitleDex({ s }: { s: GameState }) {
         <Txt
           tone="muted"
           num
-          style={{ fontSize: rem(0.8125) }}
+          style={{ fontSize: rem(FONT.label) }}
         >{`${earned.length} / ${pool.length}`}</Txt>
       </View>
       {main ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-          <Txt style={{ fontSize: rem(0.875) }}>{L.mainTitle}</Txt>
+          <Txt style={{ fontSize: rem(FONT.body2) }}>{L.mainTitle}</Txt>
           <TitleTag name={main.name} rarity={main.rarity} />
-          <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
             {s.titleSel ? L.selManual : L.selAuto}
           </Txt>
         </View>
       ) : null}
       {earned.length ? (
         <>
-          <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
             {L.pickHint}
           </Txt>
           <View style={{ gap: 6 }}>
@@ -103,14 +104,14 @@ export function TitleDex({ s }: { s: GameState }) {
                     gap: 10,
                     paddingVertical: on ? 7.5 : 8,
                     paddingHorizontal: on ? 9.5 : 10,
-                    borderRadius: 10,
+                    borderRadius: RADIUS.sm,
                     borderWidth: on ? 2 : 1.5,
                     borderColor: on ? selColor : c.line,
                     backgroundColor: on ? alpha(c.pitch, 0.08) : c.surface,
                   }}
                 >
                   <TitleTag name={x.d.name} rarity={x.d.rarity} />
-                  <Txt tone="muted" style={{ flex: 1, fontSize: rem(0.75) }}>
+                  <Txt tone="muted" style={{ flex: 1, fontSize: rem(FONT.caption) }}>
                     {x.d.desc}
                   </Txt>
                   {on ? (
@@ -122,12 +123,12 @@ export function TitleDex({ s }: { s: GameState }) {
                         backgroundColor: c.pitch,
                       }}
                     >
-                      <Txt bold style={{ fontSize: rem(0.6875), color: c.onPitch }}>
+                      <Txt bold style={{ fontSize: rem(FONT.caption2), color: c.onPitch }}>
                         {L.mainBadge}
                       </Txt>
                     </View>
                   ) : null}
-                  <Txt tone="muted" num style={{ fontSize: rem(0.75) }}>
+                  <Txt tone="muted" num style={{ fontSize: rem(FONT.caption) }}>
                     {x.year ? x.year : L.earlier}
                   </Txt>
                 </Press>
@@ -136,7 +137,7 @@ export function TitleDex({ s }: { s: GameState }) {
           </View>
         </>
       ) : (
-        <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.body2), paddingVertical: 8 }}>
           {L.emptyEarned}
         </Txt>
       )}
@@ -165,28 +166,31 @@ export function TitleDex({ s }: { s: GameState }) {
                             gap: 2,
                             paddingVertical: 6,
                             paddingHorizontal: 10,
-                            borderRadius: 10,
+                            borderRadius: RADIUS.sm,
                             borderWidth: 1,
                             borderStyle: 'dashed',
-                            borderColor: c.line,
+                            borderColor: 'transparent',
                             backgroundColor: c.surface2,
                           }}
                         >
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '700' }}>
+                            <Txt
+                              tone="muted"
+                              style={{ fontSize: rem(FONT.label), fontWeight: '700' }}
+                            >
                               {d.hidden ? '???' : d.name}
                             </Txt>
                             <Txt
                               tone="muted"
                               numberOfLines={1}
-                              style={{ flex: 1, fontSize: rem(0.75) }}
+                              style={{ flex: 1, fontSize: rem(FONT.caption) }}
                             >
                               {`${d.hidden ? L.hiddenDesc : d.desc} · ${RARITY_LABEL[d.rarity]}`}
                             </Txt>
                             {p && !d.hidden ? (
                               <Txt
                                 tone="muted"
-                                style={[num(400), { fontSize: rem(0.75) }]}
+                                style={[num(400), { fontSize: rem(FONT.caption) }]}
                               >{`${p[0]}/${p[1]}`}</Txt>
                             ) : null}
                           </View>

@@ -1,12 +1,13 @@
 # ADR-015 4단계(T-11-296): 운영 배포(Production Release, mode=deploy)가 성공하면 Worker에 알린다.
-# Worker의 @mkt가 드림보트 업데이트 요약 초안을 #agent-approvals 승인 카드로 올린다. preflight · 실패한 실행은 건너뛴다.
-name: Agent release report
+# Worker는 배포 상태 카드를 닫거나 30 · 60분 확인을 예약한다(T-11-325). preflight · 실패한 실행은 건너뛴다.
+# 드림보트 요약은 T-11-393에서 없앴다.
+name: Agent deploy report
 
 on:
   workflow_run:
     workflows: ['Production Release']
     types: [completed]
-  # 시험 · 다시 보내기: 이미 운영에 나간 main 커밋으로 요약을 다시 맡긴다.
+  # 시험 · 다시 보내기: 이미 운영에 나간 main 커밋으로 배포 상태 카드를 다시 넘긴다.
   workflow_dispatch:
     inputs:
       sha:

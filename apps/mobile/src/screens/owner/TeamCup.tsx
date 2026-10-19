@@ -1,5 +1,6 @@
 // T-11-145 오프사이드 컵 — 홈의 컵 배너 · 신청/취소 · 편성 화면의 명단 마감 안내. 컵 전체 화면은 CupScreen.
 // 서버가 대회를 치르므로 앱은 fetchCup(누구나) · fetchCupMe(내 참가·자격·다음 경기·명단 잠금)를 보여 주기만 한다.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
 import {
@@ -360,7 +361,7 @@ export function CupLockNotice({ state }: { state: CupState }) {
         borderWidth: 1,
         borderColor: alpha(c.warn, 0.5),
         backgroundColor: alpha(c.warn, 0.1),
-        borderRadius: 12,
+        borderRadius: RADIUS.md,
         padding: 12,
       }}
     >

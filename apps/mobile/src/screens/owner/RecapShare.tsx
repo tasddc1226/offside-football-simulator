@@ -1,5 +1,6 @@
 // T-11-128 시즌 결산 SNS 공유 이미지(웹 recapShareCard.ts) — 4:5 한 장을 화면 밖에 그려 두었다가 PNG로 찍어 공유 시트로 연다.
 // 같은 값(app-core seasonRecap.ts)을 쓰고 좌표는 웹 1080×1350의 절반(540×675)이다 — 캡처 때 2배로 키운다.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useId, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { Image } from 'expo-image';
@@ -103,7 +104,7 @@ function ShareCard({ recap }: { recap: SeasonRecap }) {
         top: 0,
         width: 234,
         height: 88,
-        borderRadius: 9,
+        borderRadius: RADIUS.sm,
         backgroundColor: C.cell,
         borderWidth: 1,
         borderColor: C.cellLine,
@@ -232,7 +233,7 @@ function ShareCard({ recap }: { recap: SeasonRecap }) {
             top: 328 + Math.floor(i / 3) * (64 + 12),
             width: 152,
             height: 64,
-            borderRadius: 9,
+            borderRadius: RADIUS.sm,
             backgroundColor: C.cell,
             borderWidth: 1,
             borderColor: C.cellLine,
@@ -304,7 +305,7 @@ function ShareCard({ recap }: { recap: SeasonRecap }) {
             style={{
               height: 27,
               paddingHorizontal: 11,
-              borderRadius: 14,
+              borderRadius: RADIUS.md,
               borderWidth: 1,
               borderColor: `${palette.light}88`,
               backgroundColor: `${palette.base}33`,
@@ -439,7 +440,7 @@ export function RecapShare({ recap, close }: { recap: SeasonRecap; close: () => 
           source={{ uri: shot }}
           testID="recap-share-preview"
           accessibilityLabel={L.shareAlt({ season })}
-          style={{ width: '100%', aspectRatio: 4 / 5, borderRadius: 12 }}
+          style={{ width: '100%', aspectRatio: 4 / 5, borderRadius: RADIUS.md }}
         />
       ) : busy ? (
         <Txt tone="muted" accessibilityLiveRegion="polite">

@@ -119,6 +119,7 @@
     gap: 10px;
     width: 100%;
     padding-block: 12px;
+    border: 0;
     text-align: left;
     font: inherit;
     color: inherit;
@@ -131,7 +132,7 @@
     flex: none;
   }
   .hae-streak {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     font-weight: 700;
     color: var(--accent-text);
   }
@@ -174,12 +175,12 @@
   }
   .ha-title h2 {
     margin: 0;
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
   }
   .ha-streak {
     flex: none;
     font-weight: 700;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     color: var(--accent-text);
   }
   /* 아이템 색: 리롤권 = 기본, 강화권 = 금(--r4), 스카우트권 = 파랑(--r2). 칭호 등급 색이라 두 테마 모두 대비가 맞다. */
@@ -217,11 +218,11 @@
     box-shadow: inset 0 0 0 3px var(--it);
   }
   .ha-day {
-    font-size: 0.625rem;
+    font-size: var(--fs-caption2);
   }
   .ha-qty,
   .ha-mark {
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
   }
   .ha-cell.on {
     background: var(--accent);

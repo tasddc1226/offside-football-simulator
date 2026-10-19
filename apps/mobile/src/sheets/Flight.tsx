@@ -2,6 +2,7 @@
 // 비행기가 날아가고, 지나간 경로가 그려진다. 도착하면 도착 공항에 고리가 퍼진다. 동작 줄이기면 경로·비행기를 도착한
 // 모습으로만 그린다. 진행률 p는 requestAnimationFrame으로 올리고, 매 프레임 바뀌는 건 경로·비행기·진행 막대뿐이라
 // 육지 점·점선 밑그림은 따로 겹친 Svg(memo)에 그려 프레임마다 다시 그리지 않는다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { memo, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, G, Path, Text as SvgText } from 'react-native-svg';
@@ -113,7 +114,7 @@ export function Flight({ v }: { v: Extract<SheetView, { kind: 'flight' }> }) {
         accessibilityRole="image"
         accessibilityLabel={L.flightA11y({ from: s.from.city, to: s.to.city })}
         style={{
-          borderRadius: 16,
+          borderRadius: RADIUS.lg,
           overflow: 'hidden',
           backgroundColor: c.pitch,
           aspectRatio: 320 / 190,
@@ -208,14 +209,17 @@ const Airport = memo(function Airport({
       <Txt
         style={{
           fontFamily: DISPLAY[700],
-          fontSize: rem(1.5),
-          lineHeight: rem(1.5) * 1.1,
+          fontSize: rem(FONT.title1),
+          lineHeight: rem(FONT.title1) * 1.1,
           letterSpacing: rem(1.5) * 0.03,
         }}
       >
         {code}
       </Txt>
-      <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.1 }}>
+      <Txt
+        tone="muted"
+        style={{ fontSize: rem(FONT.caption), lineHeight: rem(FONT.caption) * 1.1 }}
+      >
         {city}
       </Txt>
     </View>

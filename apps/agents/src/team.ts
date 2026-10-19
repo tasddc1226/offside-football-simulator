@@ -1,12 +1,13 @@
 // ADR-015 5 · 7단계 · 측정(T-11-325). 모델을 부르지 않는 정기 글과 사건 감지:
 // - 매일 08:50 KST 열린 카드 목록(주장), 월요일엔 주간 회고(카드 · 리드타임 · 개입 · 승인 대기 · 비용)
 // - 10:00 · 18:00 KST 승인 대기 묶음(1시간 넘게 안 눌린 카드)
-// - 운영 배포 성공: 배포 상태 카드 → 사건이면 30 · 60분 확인 예약, 아니면 닫기
+// - 운영 배포 성공: 배포 상태 카드 → 사건이면 30 · 60분 확인 예약, 아니면 닫기(문의 작업이면 마무리 답장 초안, T-11-400)
 // - 5분마다 공개 서버 상태(GET /v1/status, 엣지 60초 캐시라 운영 D1을 건드리지 않는다) → 두 칸 이어 나쁘면 @ops 사건
 import { cardOf, kstClock, type CardSummary } from './card.ts';
 import { botToken, ROLE_NAMES, ROLES, type Env, type Role } from './env.ts';
 import { kstDay, ledger, type PendingApproval } from './ledger.ts';
 import { slackClient, threadLink } from './slack.ts';
+import { supportFollowup } from './supportCase.ts';
 import { threadOf } from './thread.ts';
 
 const HOUR = 3600_000;
@@ -149,11 +150,16 @@ export async function approvalsBundle(env: Env, now = Date.now()) {
 
 const md = (text: string) => [{ type: 'markdown', text }];
 
-/** 운영 배포 성공(agent-release.yml): 배포 상태 카드를 사건이면 확인 중(30 · 60분 확인 예약), 아니면 닫는다. */
+/**
+ * 운영 배포 성공(agent-release.yml): 배포 상태 카드를 사건이면 확인 중(30 · 60분 확인 예약), 아니면 닫는다.
+ * T-11-400 문의에서 온 작업이면 그 문의 메일에 마무리 답장 초안을 @plan에게 맡긴다.
+ */
 export async function afterDeploy(env: Env, sha: string, now = Date.now()) {
-  const cards = (await ledger(env).cards(now)).filter((c) => c.status === '배포');
+  const book = ledger(env);
+  const cards = (await book.cards(now)).filter((c) => c.status === '배포');
   let checks = 0;
   let closed = 0;
+  let replies = 0;
   for (const c of cards) {
     const card = cardOf(env, c.channel, c.threadTs);
     if (c.source === 'incident') {
@@ -166,9 +172,13 @@ export async function afterDeploy(env: Env, sha: string, now = Date.now()) {
         note: `운영 배포 ${sha.slice(0, 7)}로 나갔어요`,
       });
       closed++;
+      if (c.source !== 'support') continue;
+      const order = await book.orderOf(`${c.channel}:${c.threadTs}`);
+      if (order && (await supportFollowup(env, order, 'deployed', `\`${sha.slice(0, 7)}\``)))
+        replies++;
     }
   }
-  return { checks, closed };
+  return { checks, closed, replies };
 }
 
 /** 5분 칸 하나의 판정(app-core serverStatus.ts levelOf와 같은 기준). 요청이 적은 칸은 판정하지 않는다. */

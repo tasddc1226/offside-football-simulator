@@ -1,5 +1,6 @@
 // T-11-145 컵 기록 카드(웹 cup/CupHonors.svelte) — 우승·준우승·4강은 트로피(금·은·동)와 함께, 그 밖은 기록 한 줄. 팀 프로필 ·
 // 구단주 프로필(T-11-150)이 같이 쓴다. 서버가 최근 대회부터 보낸다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import type { CupHonor } from '@offside/app-core/api/cup';
 import { cupTrophy, plateText, trophyStage } from '@offside/app-core/cupTrophy';
@@ -35,7 +36,7 @@ export function CupHonors({ honors }: { honors: readonly CupHonor[] }) {
                 gap: 10,
                 paddingVertical: trophy ? 8 : 10,
                 paddingHorizontal: trophy ? 10 : 12,
-                borderRadius: 12,
+                borderRadius: RADIUS.md,
                 backgroundColor: c.surface2,
                 borderWidth: trophy ? 2 : 0,
                 borderColor: trophy ? cupTrophy(trophy).palette.base : c.pitchAccent,
@@ -55,7 +56,7 @@ export function CupHonors({ honors }: { honors: readonly CupHonor[] }) {
                     ? CL.champTitle({ n: h.edition })
                     : CL.honorResult({ edition: h.edition, stage: stageLabel(h.stage) })}
                 </Txt>
-                <Txt tone="muted" style={{ fontSize: rem(0.8333) }}>
+                <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                   {CL.honorTeam({ team: h.teamName })}
                 </Txt>
               </View>

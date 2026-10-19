@@ -36,7 +36,7 @@
   }
   .inapp-hint p {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     line-height: 1.5;
   }
   .inapp-close {

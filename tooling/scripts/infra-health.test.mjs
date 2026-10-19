@@ -10,7 +10,7 @@ import {
 
 const NOW = Date.parse('2026-10-08T01:17:00Z');
 const healthy = { at: NOW - 17 * 60_000, sizeBytes: 1024 ** 3, issues: [] };
-const queues = ['admin-push', 'billing', 'career-push', 'cup-push'].map((kind) => ({
+const queues = ['admin-push', 'billing', 'career-push', 'cup-push', 'push'].map((kind) => ({
   name: `offside-${kind}-production-dlq`,
   backlog: 0,
   retention: 1209600,
@@ -63,7 +63,7 @@ describe('read-only infrastructure monitoring', () => {
         { CLOUDFLARE_ACCOUNT_ID: 'test', CLOUDFLARE_API_TOKEN: 'private-token' },
         fetcher,
       );
-      expect(calls).toHaveLength(8);
+      expect(calls).toHaveLength(9);
       expect(calls.filter((c) => c.init.method === 'POST')).toHaveLength(1);
       expect(JSON.parse(calls.find((c) => c.init.method === 'POST').init.body).query).not.toContain(
         'mutation',

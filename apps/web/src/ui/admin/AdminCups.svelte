@@ -109,7 +109,7 @@
 
 <style>
   .cup-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
-  .cup-form label { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-sm, 13px); }
+  .cup-form label { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-label, 13px); }
   .cup-plan { margin: 0; display: flex; flex-direction: column; gap: 4px; }
   .cup-plan div { display: flex; gap: 8px; }
   .cup-plan dt { min-width: 36px; color: var(--muted); }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   // 내 선수 전용 화면 — 시즌별 전체 기록과 보유 선수 관리.
   // T-10-013: 계정에 연결돼 있으면 계정 기록(서버), 아니면 이 기기 기록(ft_hof)이다. 서버에는 선수 이름이
   // 없어(공개를 고른 경우만) 같은 기기의 기록이 있으면 그 이름·공개 설정을 쓴다.
@@ -133,7 +134,7 @@
   <div class="eyebrow">My players</div>
   <h1 id="my-players-title" style="margin-bottom:8px">{L.title}</h1>
   {#if source === 'loading'}
-    <p class="empty">{L.loading}</p>
+    <Skeleton rows={5} />
   {:else}
     <p class="muted hof-source" data-my-source={source}>
       {source === 'account'

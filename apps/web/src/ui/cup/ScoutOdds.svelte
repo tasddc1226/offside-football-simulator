@@ -33,7 +33,7 @@
     flex-direction: column;
     gap: 8px;
     padding: 12px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
   }
   .odds-row {

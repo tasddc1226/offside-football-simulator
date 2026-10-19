@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { Image } from 'expo-image';
@@ -92,7 +93,7 @@ export function TeamShare({ data, close }: { data: TeamShareData; close: () => v
             source={{ uri: shot }}
             testID="team-share-preview"
             accessibilityLabel={L.shareAltApp({ name: data.name })}
-            style={{ width: '100%', aspectRatio: 4 / 5, borderRadius: 12 }}
+            style={{ width: '100%', aspectRatio: 4 / 5, borderRadius: RADIUS.md }}
           />
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Btn style={{ flex: 1 }} onPress={() => void share(L.saveImage)}>

@@ -107,6 +107,7 @@ export const notifications = sqliteTable(
   },
   (t) => [
     uniqueIndex('notifications_source_unique').on(t.profileId, t.sourceKey),
+    index('notifications_source_key_idx').on(t.sourceKey),
     index('notifications_profile_created_idx').on(t.profileId, t.createdAt, t.id),
     index('notifications_profile_read_created_idx').on(t.profileId, t.readAt, t.createdAt, t.id),
     index('notifications_expires_idx').on(t.expiresAt),
@@ -287,6 +288,7 @@ export const authAttempts = sqliteTable(
         'PUSH_TEST',
         'FRIEND_REQUEST',
         'TRANSLATE',
+        'ACQUISITION',
         'CAREER_ACTIVITY',
       ],
     }).notNull(),
@@ -1196,6 +1198,35 @@ export const teamMatches = sqliteTable(
 );
 
 /**
+ * T-11-387 장면 경기(문자중계 중 선택지)가 끝나기 전 상태. 경기를 시작하면 한 줄을 넣고, 장면을 고를 때마다 state_json을 고치며
+ * (rev로 동시 수정을 막는다), 마지막 장면을 판정하면 team_matches에 같은 id로 경기를 남기고 done_at을 적는다. 고르지 않고 떠난
+ * 경기는 5분 cron이 자동 선택으로 마감한다. 마감한 줄은 하루 뒤 지운다.
+ */
+export const teamLiveMatches = sqliteTable(
+  'team_live_matches',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id').notNull(),
+    homeTeamId: text('home_team_id')
+      .notNull()
+      .references(() => ownerTeams.id, { onDelete: 'cascade' }),
+    awayTeamId: text('away_team_id')
+      .notNull()
+      .references(() => ownerTeams.id, { onDelete: 'cascade' }),
+    stateJson: text('state_json').notNull(),
+    rev: integer('rev').notNull().default(0),
+    createdAt: text('created_at').notNull(),
+    doneAt: text('done_at'),
+    /** 마감 응답(내 팀 기록 · 레이팅 · 남은 경기). 같은 마감 요청을 다시 받으면 그대로 돌려준다. */
+    resultJson: text('result_json'),
+  },
+  (table) => [
+    index('team_live_matches_profile_idx').on(table.profileId, table.createdAt),
+    index('team_live_matches_open_idx').on(table.doneAt, table.createdAt),
+  ],
+);
+
+/**
  * T-11-098 친구. 한 쌍을 두 줄(내 쪽·상대 쪽)로 적어 내 친구 목록을 profile_id 하나로 읽는다. state는 그 줄 주인 기준 —
  * 신청하면 보낸 쪽 'sent'·받은 쪽 'received', 수락하면 둘 다 'accepted'. 거절·취소·친구 끊기는 두 줄을 지운다.
  * wins·draws·losses는 그 줄 주인 쪽에서 본 친선전 상대 전적이다(친구를 끊으면 함께 사라진다).
@@ -1636,12 +1667,28 @@ export const iapPurchases = sqliteTable(
     refundedAt: text('refunded_at'),
     /** T-11-215 환불로 회수한 장수. 이미 쓴 만큼은 회수하지 못해 qty보다 작을 수 있다. */
     revokedQty: integer('revoked_qty').notNull().default(0),
+    purchasedAt: text('purchased_at'),
+    priceMilliunits: integer('price_milliunits'),
+    currency: text('currency'),
+    storefront: text('storefront'),
+    firstTouchId: text('first_touch_id').references(() => acquisitionSessions.id, {
+      onDelete: 'set null',
+    }),
+    lastTouchId: text('last_touch_id').references(() => acquisitionSessions.id, {
+      onDelete: 'set null',
+    }),
   },
   (table) => [
     primaryKey({ columns: [table.store, table.transactionId] }),
     index('iap_purchases_profile_idx').on(table.profileId, table.createdAt),
     // T-11-263 운영 도구 매출(기간 합 · 최근 결제).
     index('iap_purchases_created_idx').on(table.createdAt),
+    index('iap_purchases_effective_time_idx').on(
+      sql`coalesce(${table.purchasedAt}, ${table.createdAt})`,
+    ),
+    index('iap_purchases_refunded_idx').on(table.refundedAt),
+    index('iap_purchases_first_touch_idx').on(table.firstTouchId),
+    index('iap_purchases_last_touch_idx').on(table.lastTouchId),
   ],
 );
 
@@ -1818,4 +1865,75 @@ export const managerCareers = sqliteTable(
     uniqueIndex('manager_careers_card_unique').on(t.careerId),
     index('manager_careers_profile_idx').on(t.profileId, t.status, t.finishedAt),
   ],
+);
+
+/** Optional account acquisition consent. Never exported to advertising SDKs. */
+export const acquisitionConsents = sqliteTable('acquisition_consents', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  version: text('version').notNull(),
+  grantedAt: text('granted_at'),
+  revokedAt: text('revoked_at'),
+  revision: text('revision').notNull(),
+});
+export const acquisitionSessions = sqliteTable(
+  'acquisition_sessions',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    campaign: text('campaign').notNull(),
+    receivedAt: text('received_at').notNull(),
+    linkedAt: text('linked_at'),
+    startedAt: text('started_at'),
+    storeClickedAt: text('store_clicked_at'),
+  },
+  (t) => [
+    index('acquisition_sessions_profile_time_idx').on(t.profileId, t.receivedAt),
+    index('acquisition_sessions_time_idx').on(t.receivedAt),
+  ],
+);
+
+export const iapAdFreePurchases = sqliteTable(
+  'iap_ad_free_purchases',
+  {
+    store: text('store').notNull(),
+    transactionId: text('transaction_id').notNull(),
+    profileId: text('profile_id').references(() => profiles.id, { onDelete: 'cascade' }),
+    productId: text('product_id').notNull(),
+    test: integer('test', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('created_at').notNull(),
+    purchasedAt: text('purchased_at'),
+    priceMilliunits: integer('price_milliunits'),
+    currency: text('currency'),
+    storefront: text('storefront'),
+    refundedAt: text('refunded_at'),
+    firstTouchId: text('first_touch_id').references(() => acquisitionSessions.id, {
+      onDelete: 'set null',
+    }),
+    lastTouchId: text('last_touch_id').references(() => acquisitionSessions.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.store, t.transactionId] }),
+    index('iap_ad_free_profile_idx').on(t.profileId, t.createdAt),
+    index('iap_ad_free_created_idx').on(t.createdAt),
+    index('iap_ad_free_refunded_idx').on(t.refundedAt),
+    index('iap_ad_free_first_idx').on(t.firstTouchId),
+    index('iap_ad_free_last_idx').on(t.lastTouchId),
+  ],
+);
+
+/** Verified refund arriving before the optional ad-free record. No fabricated purchase row. */
+export const iapRefundMarkers = sqliteTable(
+  'iap_refund_markers',
+  {
+    store: text('store').notNull(),
+    transactionId: text('transaction_id').notNull(),
+    refundedAt: text('refunded_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.store, t.transactionId] })],
 );

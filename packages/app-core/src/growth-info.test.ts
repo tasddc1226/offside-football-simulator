@@ -36,6 +36,26 @@ describe('attrData OVR 반영 비율', () => {
     }
   });
 
+  it('스트라이커로 잡힌 타깃맨도 포지션별 OVR에 타깃맨이 보인다(T-11-399)', () => {
+    setActiveRng(createRng(7));
+    const s = newGame(
+      {
+        name: '테스트',
+        number: 9,
+        pos: 'FW',
+        dpos: 'ST',
+        foot: '오른발',
+        focus: ['phy', 'sho'],
+        trait: 'normal',
+      },
+      7,
+    );
+    const d = attrData(s);
+    expect(d.role).toBe('ST');
+    expect(d.roles.map((r) => r.role)).toEqual(['ST', 'TM', 'CF', 'RW']);
+    expect(d.roles.find((r) => r.role === 'TM')!.on).toBe(false);
+  });
+
   it('OVR에 반영되지 않는 세부 능력치는 0이다', () => {
     const d = attrData(fw());
     const zero = d.groups.flatMap((g) => g.rows).filter((r) => r.ovrPct === 0);

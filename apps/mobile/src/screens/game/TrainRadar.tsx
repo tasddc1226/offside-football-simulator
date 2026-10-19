@@ -2,6 +2,7 @@
 // 그 축을 눌러 키운다. 고른 훈련이 올리는 축(피지컬은 피지컬·스피드, 개인 코치는 전부)에 바깥 화살표를 그리고, 주력 능력치는 ★,
 // 자기 투자 특훈의 축은 점선 화살표.
 // 현재 능력치 폴리곤은 시즌 시작 대비 값에서 순간 이동하지 않고 부드럽게 모핑한다(T-10-003). 좌표 계산은 app-core/format(radarData).
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { View } from 'react-native';
 import Svg, { Circle, Line, Polygon } from 'react-native-svg';
@@ -145,7 +146,7 @@ export function TrainRadar({ s, onPick }: { s: GameState; onPick: (id: string) =
                   height: BTN_H,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  borderRadius: 12,
+                  borderRadius: RADIUS.md,
                   borderWidth: 1.5,
                   // T-11-212 고르지 않은 축도 누를 수 있는 버튼으로 보이게 옅은 테두리·바탕(웹 .tr-axis).
                   borderColor: sel ? c.accent : c.line,
@@ -155,22 +156,24 @@ export function TrainRadar({ s, onPick }: { s: GameState; onPick: (id: string) =
                 <Txt
                   numberOfLines={1}
                   style={{
-                    fontSize: rem(0.75),
+                    fontSize: rem(FONT.caption),
                     fontWeight: '600',
                     color: sel ? c.accentText : c.muted,
                   }}
                 >
                   {p.labelKr}
                   {focus.includes(p.key) ? (
-                    <Txt style={{ fontSize: rem(0.75), color: c.accentText }}>{' ★'}</Txt>
+                    <Txt style={{ fontSize: rem(FONT.caption), color: c.accentText }}>{' ★'}</Txt>
                   ) : null}
                 </Txt>
-                <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(1.125), color: c.ink }}>
+                <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(FONT.title3), color: c.ink }}>
                   {String(p.value)}
                   {p.delta > 0 ? (
-                    <Txt style={{ fontSize: rem(0.75), color: c.good }}>{` +${p.delta}`}</Txt>
+                    <Txt
+                      style={{ fontSize: rem(FONT.caption), color: c.good }}
+                    >{` +${p.delta}`}</Txt>
                   ) : p.delta < 0 ? (
-                    <Txt style={{ fontSize: rem(0.75), color: c.bad }}>{` ${p.delta}`}</Txt>
+                    <Txt style={{ fontSize: rem(FONT.caption), color: c.bad }}>{` ${p.delta}`}</Txt>
                   ) : null}
                 </Txt>
               </Press>

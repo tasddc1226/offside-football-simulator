@@ -37,6 +37,11 @@ jobs:
       PRODUCTION_API_URL: https://api.offside-lab.com
       PRODUCTION_WEB_URL: https://offside-lab.com
       # 공개 VITE_ 설정을 더하거나 빼면 apps/web/scripts/check-bundle-prod.mjs(PR CI 첫 화면 예산 검사)도 맞춘다.
+      # Public first-party acquisition settings; empty flags stay off. No environment values are changed here.
+      VITE_ACQUISITION_ENABLED: ${{ vars.VITE_ACQUISITION_ENABLED || 'false' }}
+      VITE_APPLE_PROVIDER_TOKEN: ${{ vars.VITE_APPLE_PROVIDER_TOKEN }}
+      ACQUISITION_ENABLED: ${{ vars.ACQUISITION_ENABLED || '0' }}
+      APPLE_PROVIDER_TOKEN: ${{ vars.APPLE_PROVIDER_TOKEN }}
       VITE_PUBLIC_SITE_URL: https://offside-lab.com
       VITE_ENABLE_SEARCH_INDEXING: 'true'
       # Empty until the consent notice and GA4 console setup are approved for release.
@@ -109,6 +114,9 @@ jobs:
           pnpm --filter @offside/api typecheck
           pnpm --filter @offside/web typecheck
 
+      - name: Validate acquisition deployment configuration
+        run: node .github/scripts/acquisition-release.mjs validate
+
       - name: Build production web before remote writes
         if: inputs.mode == 'deploy'
         run: |
@@ -163,7 +171,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: pnpm --filter @offside/api deploy:production
+        run: node .github/scripts/acquisition-release.mjs deploy-api production
 
       - name: Sync Google OIDC secrets
         if: inputs.mode == 'deploy' && steps.google-secrets.outputs.sync == 'true'
@@ -194,7 +202,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: pnpm --filter @offside/web deploy:production
+        run: node .github/scripts/acquisition-release.mjs deploy-web production
 
       - name: Verify candidate web assets before read-back
         if: inputs.mode == 'deploy'
@@ -204,7 +212,11 @@ jobs:
         if: inputs.mode == 'deploy'
         run: |
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_API_URL/v1/health" >/dev/null
-          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_API_URL/v1/profile" >/dev/null
+          # An unauthenticated profile GET creates a profile. Verify rejection without creating smoke data.
+          PROFILE_STATUS="$(curl --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
+            --output /dev/null --write-out '%{http_code}' --header 'Authorization: Bearer release-smoke-invalid' \
+            "$PRODUCTION_API_URL/v1/profile")"
+          test "$PROFILE_STATUS" = '401' || { echo "Expected read-only profile rejection, got $PROFILE_STATUS." >&2; exit 1; }
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_WEB_URL/" | grep -qF '오프사이드'
 
       - name: Inspect announcement push outbox counts
@@ -243,8 +255,8 @@ jobs:
   # T-11-010 웹·API 배포가 끝까지 성공하면 같은 커밋의 앱 JS 번들을 EAS Update production 채널로 내보낸다.
   # 스토어 앱은 다음 실행 때(또는 '다시 시작' 배너로) 받는다. 직전 OTA 이후 앱이 쓰는 코드(apps/mobile·packages·lockfile)가
   # 그대로면 게시하지 않는다(새 버전 배너가 괜히 뜨지 않게). runtimeVersion(fingerprint)이 맞는 빌드에만 내려가므로
-  # 네이티브가 바뀐 커밋은 새 스토어 빌드가 나올 때까지 기존 앱에 적용되지 않는다 — 그런 런타임이면 게시 전에 경고를 남긴다.
-  # EXPO_TOKEN이 없으면 경고만 남기고 건너뛴다.
+  # 네이티브가 바뀐 커밋은 새 스토어 빌드가 나올 때까지 기존 앱에 적용되지 않는다 — 대응 스토어 빌드가 없으면 게시 전에 실패한다.
+  # EXPO_TOKEN이 없으면 호환성을 검증할 수 없으므로 실패한다.
   app-update:
     name: OTA ${{ matrix.target }} / ${{ matrix.platform }}
     strategy:
@@ -253,7 +265,8 @@ jobs:
         target: [current, '1.1.2']
         platform: [ios, android]
     needs: production-release
-    if: inputs.mode == 'deploy'
+    # Preflight computes real production fingerprints without publishing any update.
+    if: inputs.mode == 'deploy' || inputs.mode == 'preflight'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
@@ -267,8 +280,8 @@ jobs:
       - name: Require EXPO_TOKEN
         if: env.EXPO_TOKEN == ''
         run: |
-          echo "::warning::EXPO_TOKEN secret not set; app OTA update was NOT published."
-          echo "⚠️ EXPO_TOKEN이 없어 앱 OTA를 게시하지 않았어요." >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::EXPO_TOKEN is required to verify store runtime compatibility."
+          exit 1
       - uses: actions/checkout@v6
         if: env.EXPO_TOKEN != ''
         with:
@@ -304,7 +317,10 @@ jobs:
         working-directory: apps/mobile
         run: |
           eas env:pull production --non-interactive --path "$RUNNER_TEMP/eas-production.env"
-          grep -E '^OFFSIDE_[A-Z_]+=' "$RUNNER_TEMP/eas-production.env" >> "$GITHUB_ENV" || true
+          grep -E '^(OFFSIDE_[A-Z_]+|EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED)=' "$RUNNER_TEMP/eas-production.env" >> "$GITHUB_ENV" || true
+      - name: Require approved purchase recording bundle flag
+        run: |
+          node -e "if (process.env.EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED !== 'true') throw new Error('Production purchase recording bundle flag must be explicitly true')"
       - name: Verify runtime and skip unchanged updates for this platform
         id: changed
         if: env.EXPO_TOKEN != ''
@@ -315,12 +331,14 @@ jobs:
           FP="$(eas fingerprint:generate --platform "$PLATFORM" --environment production --json --non-interactive | json | jq -er '.hash')"
           if [ "$OTA_TARGET" = '1.1.2' ]; then
             node ../../.github/scripts/prepare-ota-112.mjs check "$PLATFORM" "$FP"
+          else
+            node ../../.github/scripts/ota-store-runtime.mjs "$PLATFORM" "$FP"
           fi
           BUILDS="$(eas build:list --json --non-interactive --status finished --build-profile production \
             --platform "$PLATFORM" --runtime-version "$FP" --limit 1 | json)"
           if [ "$(echo "$BUILDS" | jq -r 'length')" = '0' ]; then
-            echo "::warning::$OTA_TARGET / $PLATFORM: no completed production build matches $FP"
-            if [ "$OTA_TARGET" = '1.1.2' ]; then exit 1; fi
+            echo "::error::$OTA_TARGET / $PLATFORM: no completed production build matches $FP"
+            exit 1
           fi
           echo "$OTA_TARGET / $PLATFORM runtime: $FP" >> "$GITHUB_STEP_SUMMARY"
           # Never let an update for another native runtime/platform suppress this lane.
@@ -341,7 +359,7 @@ jobs:
           fi
       # eas update는 eas.json 빌드 프로필의 env를 쓰지 않는다 — 번들에 들어갈 주소를 여기서 넣는다(eas.json production과 같은 값).
       - name: Publish production update
-        if: steps.changed.outputs.publish == 'true'
+        if: inputs.mode == 'deploy' && steps.changed.outputs.publish == 'true'
         working-directory: apps/mobile
         # bash explicitly enables pipefail, so tee cannot hide an EAS export/upload failure.
         shell: bash

@@ -1,5 +1,6 @@
 // 명예의 전당 · 구단주 '내 선수'가 함께 쓰는 은퇴 선수 한 줄(웹 HofRow.svelte) — 순위 · 이름 · 기록 요약 · 오른쪽 값.
 // 누르는 버튼은 부르는 쪽이 감싼다(<Press>). 웹 .hof-row(위 구분선 · 1~3위 메달 빛)도 이 줄이 그린다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Animated, Easing, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -107,13 +108,13 @@ function StatsLine({ text, flow }: { text: string; flow: boolean }) {
   // 흐르지 않는 줄: 넘치면 말줄임.
   if (!flow || !motionOK)
     return (
-      <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(0.75) }}>
+      <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(FONT.caption) }}>
         {text}
       </Txt>
     );
   const line = {
-    fontSize: rem(0.75),
-    lineHeight: rem(0.75) * 1.5,
+    fontSize: rem(FONT.caption),
+    lineHeight: rem(FONT.caption) * 1.5,
     paddingRight: FLOW_GAP,
   };
   return (
@@ -153,8 +154,8 @@ export function Value({ value, unit }: { value: number | string; unit: string })
   const small = (s: string) => (
     <Txt
       style={{
-        fontSize: rem(0.75),
-        lineHeight: rem(0.75) * 1.4,
+        fontSize: rem(FONT.caption),
+        lineHeight: rem(FONT.caption) * 1.4,
         fontWeight: '600',
         color: c.muted,
         marginLeft: 2,
@@ -169,7 +170,11 @@ export function Value({ value, unit }: { value: number | string; unit: string })
         <Txt
           num
           numberOfLines={1}
-          style={{ fontSize: rem(1.0625), lineHeight: rem(1.0625) * 1.15, textAlign: 'right' }}
+          style={{
+            fontSize: rem(FONT.title3),
+            lineHeight: rem(FONT.title3) * 1.15,
+            textAlign: 'right',
+          }}
         >
           {sub ? head : value}
         </Txt>
@@ -186,7 +191,7 @@ export function Value({ value, unit }: { value: number | string; unit: string })
     <Txt
       num
       numberOfLines={1}
-      style={{ fontSize: rem(1.375), lineHeight: rem(1.375) * 1.2, textAlign: 'right' }}
+      style={{ fontSize: rem(FONT.title2), lineHeight: rem(FONT.title2) * 1.2, textAlign: 'right' }}
     >
       {value}
       {unit ? small(unit) : null}
@@ -239,7 +244,14 @@ export function RowFrame({
           locations={[0, 0.7, 1]}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
-          style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: 10 }}
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0,
+            borderRadius: RADIUS.sm,
+          }}
         />
       ) : null}
       {plain ? (
@@ -343,7 +355,7 @@ export function HofRow({
                   accessibilityRole="image"
                   accessibilityLabel={tn(country.ko)}
                   testID={`hof-nation-${country.code}`}
-                  style={{ fontSize: rem(1) }}
+                  style={{ fontSize: rem(FONT.body) }}
                 >
                   {flagOf(country.code)}
                 </Txt>
@@ -368,7 +380,7 @@ export function HofRow({
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  borderRadius: 999,
+                  borderRadius: RADIUS.pill,
                   paddingVertical: 2,
                   paddingHorizontal: 9,
                   backgroundColor: c.surface2,
@@ -376,7 +388,7 @@ export function HofRow({
                   borderColor: c.accent,
                 }}
               >
-                <Txt style={{ fontSize: rem(0.75), fontWeight: '700', color: c.muted }}>
+                <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '700', color: c.muted }}>
                   {L.rnChip({ number: rn })}
                 </Txt>
               </View>
@@ -388,7 +400,7 @@ export function HofRow({
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  borderRadius: 999,
+                  borderRadius: RADIUS.pill,
                   paddingVertical: 2,
                   paddingHorizontal: 9,
                   backgroundColor: c.surface2,
@@ -396,7 +408,7 @@ export function HofRow({
                   borderColor: c.accent,
                 }}
               >
-                <Txt style={{ fontSize: rem(0.75), fontWeight: '700', color: c.muted }}>
+                <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '700', color: c.muted }}>
                   {L.wallChip({ number: wall })}
                 </Txt>
               </View>

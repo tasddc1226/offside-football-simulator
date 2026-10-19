@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { GoogleLoginButton } from '../../ui/GoogleLoginButton';
 import CupBracket from './CupBracket';
 import { scrollToView } from '../../ui/scroll';
@@ -34,7 +35,7 @@ import { hofStart } from '@offside/app-core/state';
 import { alpha } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
-import { Btn, Card, Pill, Press, Screen, Topbar, Txt, scrollTo } from '../../ui';
+import { Btn, Card, Pill, Press, Screen, Skeleton, Topbar, Txt, scrollTo } from '../../ui';
 import { dayTimeText, roundLabel, stageLabel, timeText } from './cupText';
 import { CupCard, useCup, type CupState } from './TeamCup';
 
@@ -211,7 +212,7 @@ function Standings({
                     gap: 4,
                     paddingVertical: 6,
                     paddingHorizontal: 6,
-                    borderRadius: 8,
+                    borderRadius: RADIUS.sm,
                     backgroundColor: up ? alpha(c.good, 0.14) : 'transparent',
                   }}
                 >
@@ -663,13 +664,19 @@ function CupBody({
   const [matchId, setMatchId] = useState<string | null>(null);
   const [openGroups, setOpenGroups] = useState<Record<number, boolean> | null>(null);
   const [openRounds, setOpenRounds] = useState<Record<string, boolean> | null>(null);
+  // T-11-392 불러오는 동안은 대회 현황 · 대진 카드 모양 뼈대, 실패는 카드 안 다시 시도.
   if (!data)
-    return (
+    return state.status === 'error' ? (
       <Card gap={10}>
         <LoadState status={state.status} failText={L.loadFail} retry={() => void state.reload()}>
           {null}
         </LoadState>
       </Card>
+    ) : (
+      <View style={{ gap: 12 }}>
+        <Skeleton height={120} />
+        <Skeleton height={260} />
+      </View>
     );
   const mineId = me?.entry && me.entry.status !== 'withdrawn' ? me.entry.teamId : null;
   if (matchId)
@@ -890,7 +897,7 @@ function CupBody({
                   padding: 4,
                   borderWidth: 1,
                   borderColor: c.line,
-                  borderRadius: 14,
+                  borderRadius: RADIUS.md,
                   backgroundColor: c.bg,
                   marginBottom: 10,
                 }}
@@ -906,7 +913,7 @@ function CupBody({
                       padding: 8,
                       justifyContent: 'center',
                       alignItems: 'center',
-                      borderRadius: 10,
+                      borderRadius: RADIUS.sm,
                       borderWidth: 1,
                       borderColor: bracketList === list ? c.line : 'transparent',
                       backgroundColor: bracketList === list ? c.surface : 'transparent',

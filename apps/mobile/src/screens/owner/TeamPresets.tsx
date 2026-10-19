@@ -1,5 +1,6 @@
 // T-11-217 팀 프리셋 시트(웹 team/TeamPresets.svelte) — 지금 편성 저장 · 불러오기 · 덮어쓰기 · 이름 바꾸기 · 삭제.
 // 불러오기는 편성 초안만 채운다.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
@@ -88,7 +89,7 @@ export function TeamPresets({
                 style={{
                   borderWidth: 1,
                   borderColor: c.line,
-                  borderRadius: 12,
+                  borderRadius: RADIUS.md,
                   padding: 12,
                   gap: 10,
                 }}

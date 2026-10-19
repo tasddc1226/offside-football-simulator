@@ -16,6 +16,8 @@ import { openFriends, pendingInvite } from './friendInvite.svelte.js';
 import { openLocalLegend } from './legend.js';
 import { openBoard } from './nav.js';
 import { appState, hofStart } from './state.svelte.js';
+import { prepareAcquisitionOAuth } from '../analytics/acquisition.js';
+import { clearOAuthCampaign } from '../analytics/oauth-campaign.js';
 
 /** 로그인을 마치고 돌아와 다시 열 곳. T-10-028 소식 글(댓글), T-10-029 내 은퇴 선수(공유), T-11-015 채팅. */
 export type LoginReturn =
@@ -50,17 +52,23 @@ function takeLoginReturn(): LoginReturn | null {
 /** 구글 로그인을 시작한다. 로그인은 프로필 세션이 있어야 시작된다 — 없으면 GET /v1/profile이 익명
  * 프로필을 만든다. */
 export async function startGoogleLogin(back: LoginReturn | null) {
+  clearOAuthCampaign();
   // T-10-115 인앱 브라우저에서는 구글이 로그인을 막는다(403 disallowed_useragent) — 구글로 보내지 않고 안내한다.
   const inApp = currentInApp();
   if (inApp) return showInAppLoginNotice(inApp);
   rememberLoginReturn(back);
-  if (!(await getProfile()).ok) return toast(loginOfflineText());
+  const me = await getProfile();
+  if (!me.ok) return toast(loginOfflineText());
+  await prepareAcquisitionOAuth('google', me.data.id);
   window.location.assign(googleStartUrl());
 }
 /** T-11-204 Apple 로그인을 시작한다(주소창으로 Apple에 갔다가 /settings?apple=...로 돌아온다). */
 export async function startAppleLogin(back: LoginReturn | null) {
+  clearOAuthCampaign();
   rememberLoginReturn(back);
-  if (!(await getProfile()).ok) return toast(loginOfflineText());
+  const me = await getProfile();
+  if (!me.ok) return toast(loginOfflineText());
+  await prepareAcquisitionOAuth('apple', me.data.id);
   window.location.assign(appleStartUrl());
 }
 export function handleOAuthReturn() {

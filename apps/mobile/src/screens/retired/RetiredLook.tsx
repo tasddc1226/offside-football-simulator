@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { Modal, View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -135,9 +136,9 @@ export default function RetiredLook({ v, close }: { v: LegendView; close: () => 
               maxWidth: 340,
               gap: 10,
               padding: 20,
-              borderRadius: 16,
+              borderRadius: RADIUS.lg,
               borderWidth: 1,
-              borderColor: c.line,
+              borderColor: 'transparent',
               backgroundColor: c.surface,
             }}
           >
@@ -145,7 +146,7 @@ export default function RetiredLook({ v, close }: { v: LegendView; close: () => 
               style={{
                 alignItems: 'center',
                 padding: 10,
-                borderRadius: 12,
+                borderRadius: RADIUS.md,
                 backgroundColor: c.pitch,
               }}
             >
@@ -234,7 +235,7 @@ export default function RetiredLook({ v, close }: { v: LegendView; close: () => 
                       alignItems: 'center',
                       borderWidth: r.current === o.value ? 3 : 1,
                       borderColor: r.current === o.value ? c.accent : c.line,
-                      borderRadius: 24,
+                      borderRadius: RADIUS.lg,
                     }}
                   >
                     {o.swatch ? (
@@ -242,7 +243,7 @@ export default function RetiredLook({ v, close }: { v: LegendView; close: () => 
                         style={{
                           width: 28,
                           height: 28,
-                          borderRadius: 14,
+                          borderRadius: RADIUS.md,
                           backgroundColor: o.swatch,
                           borderColor: c.line,
                           borderWidth: 1,

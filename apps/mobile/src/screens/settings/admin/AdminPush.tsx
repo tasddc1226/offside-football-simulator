@@ -1,16 +1,16 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AdminCupPush from './AdminCupPush';
 import { View } from 'react-native';
-import type { PushPerformance, PushMetrics } from '@offside/contracts';
+import type { PushPerformance, PushMetrics, PushCategory } from '@offside/contracts';
 import { fetchPushPerformance } from '@offside/app-core/api/admin';
 import { kstDateTime as kst } from '@offside/app-core/boardText';
 import {
   PUSH_CATEGORY_LABELS as labels,
   PUSH_METRIC_LABELS,
   pushClickRate,
-  PUSH_METRICS_HELP,
-  PUSH_TARGET_HELP,
-  PUSH_RECEIPT_HELP,
+  pushStatus,
+  pushAdminText as L,
   retentionText as R,
   RETENTION_METRICS,
 } from '@offside/app-core/pushPerformance';
@@ -18,7 +18,6 @@ import { Txt as BaseTxt, type TxtProps } from '../../../ui/Txt';
 import { Btn } from '../../../ui/Btn';
 import { Press } from '../../../ui/Press';
 import { useColors } from '../../../theme/useColors';
-import { Seg, TabOpt } from '../../board/parts';
 
 function Txt({ style, ...props }: TxtProps) {
   return <BaseTxt {...props} style={[{ lineHeight: undefined }, style]} />;
@@ -37,15 +36,18 @@ function ResultRow({
   return (
     <View style={{ borderTopWidth: 1, borderTopColor: c.line }}>
       <Press
-        accessibilityLabel={`${title}, 클릭률 ${pushClickRate(item)}, 상세 결과 ${expanded ? '접기' : '보기'}`}
+        accessibilityLabel={`${title}, ${L.details}`}
         accessibilityState={{ expanded }}
         onPress={() => setExpanded(!expanded)}
         style={{ paddingVertical: 12, gap: 8, minHeight: 48 }}
       >
         <Txt bold>{title}</Txt>
         {subtitle ? <Txt tone="muted">{subtitle}</Txt> : null}
-        <Txt>{`클릭률 ${pushClickRate(item)} · 클릭 ${item.clicked.toLocaleString()} · 이동 ${item.targetOpened.toLocaleString()}`}</Txt>
-        <Txt tone="muted">{`접수 ${item.accepted.toLocaleString()} · 전달 확인 ${item.confirmed.toLocaleString()} · ${expanded ? '접기' : '상세 보기'}`}</Txt>
+        <Txt>{`${L.deviceAccepted} ${item.accepted.toLocaleString()}`}</Txt>
+        {pushStatus(item) ? (
+          <Txt tone={item.failed + item.unknown > 0 ? 'bad' : 'muted'}>{pushStatus(item)}</Txt>
+        ) : null}
+        <Txt tone="muted">{expanded ? L.collapse : L.details}</Txt>
       </Press>
       {expanded ? (
         <View style={{ gap: 8, paddingBottom: 12 }}>
@@ -63,7 +65,11 @@ function ResultRow({
               <Txt>{item[metric.key].toLocaleString()}</Txt>
             </View>
           ))}
-          <Txt tone="muted">{`접수된 알림 ${item.acceptedRecipients.toLocaleString()} · 클릭한 알림 ${item.clicked.toLocaleString()}`}</Txt>
+          <Txt>{`${L.clickRate} ${pushClickRate(item)}`}</Txt>
+          <Txt tone="muted">{`${L.acceptedNotifications} ${item.acceptedRecipients.toLocaleString()} · ${L.clicked} ${item.clicked.toLocaleString()} · ${L.targetOpened} ${item.targetOpened.toLocaleString()}`}</Txt>
+          {item.failed + item.unknown + item.cancelled > 0 ? (
+            <Txt tone="muted">{L.failureHelp}</Txt>
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -72,13 +78,16 @@ function ResultRow({
 
 export default function AdminPush() {
   const c = useColors();
-  const [days, setDays] = useState(7);
+  const [period, setPeriod] = useState('7');
+  const [category, setCategory] = useState<PushCategory | undefined>();
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [issues, setIssues] = useState(false);
   const [tests, setTests] = useState(false);
   const [data, setData] = useState<PushPerformance | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [help, setHelp] = useState(false);
-  const [daily, setDaily] = useState(false);
+  const [analysis, setAnalysis] = useState(false);
   const revision = useRef(0);
   const page = useRef(0);
   const through = useRef<string | undefined>(undefined);
@@ -89,11 +98,12 @@ export default function AdminPush() {
       setError('');
       const next = more ? page.current + 1 : 0;
       const result = await fetchPushPerformance(
-        days,
+        period === 'yesterday' ? 1 : Number(period),
         tests,
         next,
         fresh,
         more ? through.current : undefined,
+        { previous: period === 'yesterday', category, issues },
       );
       if (rev !== revision.current) return;
       setBusy(false);
@@ -113,7 +123,7 @@ export default function AdminPush() {
           : result.data,
       );
     },
-    [days, tests],
+    [period, tests, category, issues],
   );
   useEffect(() => {
     setData(null);
@@ -125,20 +135,14 @@ export default function AdminPush() {
   const stats = data
     ? [
         [
-          '발송 접수',
+          L.deviceAccepted,
           data.totals.accepted.toLocaleString(),
-          `전달 확인 ${data.totals.confirmed.toLocaleString()}`,
+          `${L.providerConfirmed} ${data.totals.confirmed.toLocaleString()}`,
         ],
         [
-          '클릭률',
-          pushClickRate(data.totals),
-          `클릭 ${data.totals.clicked} / 접수 알림 ${data.totals.acceptedRecipients}`,
-        ],
-        ['연결 화면 이동', data.totals.targetOpened.toLocaleString(), '클릭 후 24시간'],
-        [
-          '실패 / 결과 불명',
+          `${L.failed} / ${L.unknown}`,
           `${data.totals.failed} / ${data.totals.unknown}`,
-          `취소 ${data.totals.cancelled} · 진행 중 ${data.totals.pending}`,
+          `${L.cancelled} ${data.totals.cancelled}`,
         ],
       ]
     : [];
@@ -154,37 +158,75 @@ export default function AdminPush() {
         }}
       >
         <Txt v="h2" accessibilityRole="header">
-          앱 푸시
+          {L.title}
         </Txt>
         <Btn sm disabled={busy} onPress={() => void load(true)}>
-          {busy ? '불러오는 중…' : '새로고침'}
+          {busy ? L.loading : L.refresh}
         </Btn>
       </View>
-      <Seg cols={3} label="푸시 집계 기간">
-        {[7, 30, 90].map((n) => (
-          <TabOpt
-            key={n}
-            testID={`push-period-${n}`}
-            title={`최근 ${n}일`}
-            selected={days === n}
-            onPress={() => setDays(n)}
-          />
+      <View
+        accessibilityLabel={L.period}
+        style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
+      >
+        {(
+          [
+            ['1', L.today],
+            ['yesterday', L.yesterday],
+            ['7', L.week],
+            ['30', L.month],
+            ['90', L.quarter],
+          ] as const
+        ).map(([value, label]) => (
+          <Press
+            key={value}
+            testID={`push-period-${value}`}
+            accessibilityState={{ selected: period === value, disabled: busy }}
+            disabled={busy}
+            onPress={() => setPeriod(value)}
+            style={{
+              minHeight: 48,
+              minWidth: 48,
+              padding: 10,
+              borderWidth: 1,
+              borderColor: period === value ? c.ink : c.line,
+              borderRadius: RADIUS.sm,
+              justifyContent: 'center',
+            }}
+          >
+            <Txt>{label}</Txt>
+          </Press>
         ))}
-      </Seg>
+      </View>
+      <Btn
+        disabled={busy}
+        onPress={() => setCategoryOpen(!categoryOpen)}
+      >{`${L.category}: ${category ? labels[category] : L.all}`}</Btn>
+      {categoryOpen ? (
+        <View style={{ gap: 8 }}>
+          {(['', ...Object.keys(labels)] as const).map((value) => (
+            <Press
+              key={value}
+              accessibilityState={{ selected: (category ?? '') === value, disabled: busy }}
+              disabled={busy}
+              onPress={() => {
+                setCategory(value ? (value as PushCategory) : undefined);
+                setCategoryOpen(false);
+              }}
+              style={{ minHeight: 48, justifyContent: 'center', padding: 8 }}
+            >
+              <Txt>{value ? labels[value as PushCategory] : L.all}</Txt>
+            </Press>
+          ))}
+        </View>
+      ) : null}
       <Press
-        accessibilityState={{ selected: tests, disabled: busy }}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: tests, disabled: busy }}
         disabled={busy}
         onPress={() => setTests(!tests)}
-        style={{
-          minHeight: 48,
-          justifyContent: 'center',
-          borderWidth: 1,
-          borderColor: c.line,
-          borderRadius: 10,
-          padding: 12,
-        }}
+        style={{ minHeight: 48, justifyContent: 'center' }}
       >
-        <Txt>{`테스트 푸시 ${tests ? '포함' : '제외'}`}</Txt>
+        <Txt>{`${tests ? '☑' : '☐'} ${L.tests}`}</Txt>
       </Press>
       {error ? (
         <>
@@ -192,29 +234,31 @@ export default function AdminPush() {
             {error}
           </Txt>
           <Btn disabled={busy} onPress={() => void load(true)}>
-            다시 시도
+            {L.retry}
           </Btn>
         </>
       ) : null}
       {busy && !data ? (
         <Txt tone="muted" accessibilityLiveRegion="polite">
-          발송 결과를 불러오는 중…
+          {L.loading}
         </Txt>
       ) : null}
       {data ? (
         <>
-          <Txt tone="muted">{`${kst(data.generatedAt)} 기준 · KST · 1분 캐시`}</Txt>
-          <Txt tone="muted">
-            클릭·이동은 업데이트된 앱에서 수집해요. 업데이트 전 클릭은 포함되지 않아요.
+          <Txt tone="muted">{`${kst(data.generatedAt)} ${L.asOf}\n${L.range}: ${kst(data.from)} – ${kst(data.cohortThrough)}`}</Txt>
+          <Txt v="h3" accessibilityRole="header">
+            {L.summary}
           </Txt>
-          <View style={{ gap: 10 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {stats.map(([label, value, sub]) => (
               <View
                 key={label}
                 style={{
+                  flex: 1,
+                  minWidth: 110,
                   borderWidth: 1,
                   borderColor: c.line,
-                  borderRadius: 12,
+                  borderRadius: RADIUS.md,
                   padding: 12,
                   gap: 4,
                 }}
@@ -227,95 +271,39 @@ export default function AdminPush() {
               </View>
             ))}
           </View>
+          <Txt>
+            {pushStatus({ ...data.totals, failed: 0, unknown: 0, cancelled: 0 }) ||
+              `${L.pending} 0`}
+          </Txt>
           <Press
             accessibilityState={{ expanded: help }}
             onPress={() => setHelp(!help)}
             style={{ minHeight: 48, justifyContent: 'center' }}
           >
-            <Txt bold>집계 기준 {help ? '접기' : '보기'}</Txt>
+            <Txt bold>{`${L.help} ${help ? L.collapse : L.expand}`}</Txt>
           </Press>
           {help ? (
             <View style={{ gap: 8 }}>
-              <Txt tone="muted">{PUSH_METRICS_HELP}</Txt>
-              <Txt tone="muted">{PUSH_RECEIPT_HELP}</Txt>
-              <Txt tone="muted">{PUSH_TARGET_HELP}</Txt>
-              <Txt tone="muted">{`알림 생성일을 기준으로 묶어요. 추적 시작: ${kst(data.trackingStartedAt)}. 이전 발송은 남아 있는 결과만 보여요. 클릭 추적은 업데이트된 앱에서 시작돼요. 기록은 90일 보관하며, 계정을 삭제하면 함께 지워져요.`}</Txt>
+              <Txt tone="muted">{L.queueHelp}</Txt>
+              <Txt tone="muted">{L.receiptHelp}</Txt>
+              <Txt tone="muted">{L.metricsHelp}</Txt>
+              <Txt tone="muted">{L.failureHelp}</Txt>
             </View>
           ) : null}
-          <AdminCupPush items={data.cups} />
-          <View
-            testID="career-retention-performance"
-            style={{ gap: 12, borderTopWidth: 1, borderTopColor: c.line, paddingTop: 16 }}
+          <Txt v="h3" accessibilityRole="header">
+            {L.recent}
+          </Txt>
+          <Press
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: issues, disabled: busy }}
+            disabled={busy}
+            onPress={() => setIssues(!issues)}
+            style={{ minHeight: 48, justifyContent: 'center' }}
           >
-            <Txt v="h3" accessibilityRole="header">
-              {R.title}
-            </Txt>
-            <Txt tone="muted">{R.policy}</Txt>
-            {(data.retention ?? []).length ? (
-              data.retention!.map((item) => (
-                <View
-                  key={item.stage}
-                  style={{ gap: 8, borderTopWidth: 1, borderTopColor: c.line, paddingTop: 12 }}
-                >
-                  <Txt bold>
-                    {R[item.stage === 1 ? 'stage1' : item.stage === 2 ? 'stage2' : 'stage3']}
-                  </Txt>
-                  {RETENTION_METRICS.map((key) => (
-                    <View
-                      key={key}
-                      style={{
-                        flexDirection: 'row',
-                        flexWrap: 'wrap',
-                        justifyContent: 'space-between',
-                        gap: 8,
-                      }}
-                    >
-                      <Txt tone="muted" style={{ flexShrink: 1 }}>
-                        {R[key]}
-                      </Txt>
-                      <Txt>{item[key].toLocaleString()}</Txt>
-                    </View>
-                  ))}
-                </View>
-              ))
-            ) : (
-              <Txt tone="muted">{R.empty}</Txt>
-            )}
-            <Txt tone="muted">{R.help}</Txt>
-          </View>
-          <Txt v="h3" accessibilityRole="header">
-            종류별 성과
-          </Txt>
-          {data.categories.length ? (
-            data.categories.map((item) => (
-              <ResultRow key={item.category} item={item} title={labels[item.category]} />
-            ))
-          ) : (
-            <Txt tone="muted">이 기간에 발송된 푸시가 없어요.</Txt>
-          )}
-          {data.daily.length ? (
-            <>
-              <Press
-                accessibilityState={{ expanded: daily }}
-                onPress={() => setDaily(!daily)}
-                style={{ minHeight: 48, justifyContent: 'center' }}
-              >
-                <Txt bold>일별 추이 {daily ? '접기' : '보기'}</Txt>
-              </Press>
-              {daily
-                ? data.daily.map((day) => (
-                    <View key={day.day} style={{ gap: 4 }}>
-                      <Txt bold>{day.day}</Txt>
-                      <Txt tone="muted">{`접수 ${day.accepted} · 클릭 ${day.clicked} · 이동 ${day.targetOpened}`}</Txt>
-                    </View>
-                  ))
-                : null}
-            </>
-          ) : null}
-          <Txt v="h3" accessibilityRole="header">
-            발송별 결과
-          </Txt>
-          <Txt tone="muted">최근 발송부터 보여요. 각 항목을 누르면 전체 결과를 볼 수 있어요.</Txt>
+            <Txt>{`${issues ? '☑' : '☐'} ${L.issues}`}</Txt>
+          </Press>
+          {issues ? <Txt tone="muted">{L.issuesHelp}</Txt> : null}
+          <Txt tone="muted">{L.recentHelp}</Txt>
           {data.campaigns.length ? (
             data.campaigns.map((item) => (
               <ResultRow
@@ -326,12 +314,88 @@ export default function AdminPush() {
               />
             ))
           ) : (
-            <Txt tone="muted">발송 기록이 없어요.</Txt>
+            <Txt tone="muted">{L.empty}</Txt>
           )}
           {data.hasMore ? (
             <Btn block disabled={busy} onPress={() => void load(false, true)}>
-              더 보기
+              {L.more}
             </Btn>
+          ) : null}
+          <Press
+            accessibilityState={{ expanded: analysis }}
+            onPress={() => setAnalysis(!analysis)}
+            style={{
+              minHeight: 48,
+              justifyContent: 'center',
+              borderTopWidth: 1,
+              borderTopColor: c.line,
+            }}
+          >
+            <Txt bold>{`${L.analysis} ${analysis ? L.collapse : L.expand}`}</Txt>
+          </Press>
+          {analysis ? (
+            <View style={{ gap: 16 }}>
+              <Txt>{`${L.clickRate} ${pushClickRate(data.totals)} · ${L.targetOpened} ${data.totals.targetOpened}`}</Txt>
+              <AdminCupPush items={data.cups} />
+              <View
+                testID="career-retention-performance"
+                style={{ gap: 12, borderTopWidth: 1, borderTopColor: c.line, paddingTop: 16 }}
+              >
+                <Txt v="h3" accessibilityRole="header">
+                  {R.title}
+                </Txt>
+                <Txt tone="muted">{R.policy}</Txt>
+                {(data.retention ?? []).length ? (
+                  data.retention!.map((item) => (
+                    <View
+                      key={item.stage}
+                      style={{ gap: 8, borderTopWidth: 1, borderTopColor: c.line, paddingTop: 12 }}
+                    >
+                      <Txt bold>
+                        {R[item.stage === 1 ? 'stage1' : item.stage === 2 ? 'stage2' : 'stage3']}
+                      </Txt>
+                      {RETENTION_METRICS.map((key) => (
+                        <View
+                          key={key}
+                          style={{
+                            flexDirection: 'row',
+                            flexWrap: 'wrap',
+                            justifyContent: 'space-between',
+                            gap: 8,
+                          }}
+                        >
+                          <Txt tone="muted" style={{ flexShrink: 1 }}>
+                            {R[key]}
+                          </Txt>
+                          <Txt>{item[key].toLocaleString()}</Txt>
+                        </View>
+                      ))}
+                    </View>
+                  ))
+                ) : (
+                  <Txt tone="muted">{R.empty}</Txt>
+                )}
+                <Txt tone="muted">{R.help}</Txt>
+              </View>
+
+              <Txt v="h3" accessibilityRole="header">
+                {L.categories}
+              </Txt>
+              {data.categories.map((item) => (
+                <ResultRow key={item.category} item={item} title={labels[item.category]} />
+              ))}
+              <Txt v="h3" accessibilityRole="header">
+                {L.daily}
+              </Txt>
+              {data.daily.map((day) => (
+                <View key={day.day}>
+                  <Txt bold>{day.day}</Txt>
+                  <Txt tone="muted">{`${L.deviceAccepted} ${day.accepted} · ${L.clicked} ${day.clicked} · ${L.targetOpened} ${day.targetOpened}`}</Txt>
+                </View>
+              ))}
+              <Txt tone="muted">{L.targetHelp}</Txt>
+              <Txt tone="muted">{`${L.trackingHelp} ${L.trackingStart}: ${kst(data.trackingStartedAt)}`}</Txt>
+            </View>
           ) : null}
         </>
       ) : null}
