@@ -32,6 +32,8 @@
     const other = next.homeTeamId === entry.teamId ? next.awayTeamId : next.homeTeamId;
     return teamName(names, other);
   });
+  // T-11-405 다음 경기 예상(지금 두 팀 명단 기준). 토너먼트(조 없음)면 무승부 뒤 승부차기 안내를 붙인다.
+  const odds = $derived(next ? (me?.nextOdds ?? null) : null);
   const nextLock = $derived.by(() => {
     if (!next) return null;
     const at = lockAtOf(data.cup, next.round);
@@ -100,6 +102,17 @@
   {:else if next}
     <div class="ce-next" data-cup-next>
       <b>{L.nextMatch({ round: roundLabel(next.round), vs: nextVs, at: whenText(next.at) })}</b>
+      {#if odds}
+        <div class="ce-odds" data-cup-odds>
+          <span class="fs-sm num">{L.oddsLine(odds)}</span>
+          <div class="ce-odds-bar" aria-hidden="true">
+            <span class="w" style:width="{odds.win}%"></span>
+            <span class="d" style:width="{odds.draw}%"></span>
+            <span class="l" style:width="{odds.loss}%"></span>
+          </div>
+          <small class="muted">{L.oddsNote}{next.group === null ? ` ${L.oddsKoNote}` : ''}</small>
+        </div>
+      {/if}
       {#if me.locked}
         <span class="pill warn" data-cup-locked>{L.lockedNow}</span>
       {:else if nextLock}
@@ -130,6 +143,17 @@
     gap: 10px;
     flex-wrap: wrap;
   }
+  .ce-odds { display: flex; flex-direction: column; gap: 4px; }
+  .ce-odds-bar {
+    display: flex;
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: var(--line);
+  }
+  .ce-odds-bar .w { background: var(--good); }
+  .ce-odds-bar .d { background: var(--muted); }
+  .ce-odds-bar .l { background: var(--bad); }
   .ce-next {
     display: flex;
     flex-direction: column;

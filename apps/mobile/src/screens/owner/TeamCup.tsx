@@ -142,6 +142,15 @@ function linesOf(state: CupState): Line[] {
             }),
             bold: true,
           });
+          // T-11-405 다음 경기 예상(지금 두 팀 명단 기준). 토너먼트면 무승부 뒤 승부차기 안내를 붙인다.
+          const odds = me?.nextOdds;
+          if (odds) {
+            lines.push({ text: L.oddsLine(odds) });
+            lines.push({
+              text: next.group === null ? `${L.oddsNote} ${L.oddsKoNote}` : L.oddsNote,
+              tone: 'muted',
+            });
+          }
           const lock = lockAtOf(data, next.round);
           if (me?.locked) lines.push({ text: L.lockedNow, tone: 'warn' });
           else if (lock)

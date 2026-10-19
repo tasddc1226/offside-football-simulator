@@ -132,6 +132,11 @@ const ko = {
     `다음 경기 ${p.round} · ${p.vs} · ${p.at}`,
   nextPending: '다음 경기 상대가 정해지는 중이에요.',
   lockNote: (p: { when: string }) => `${p.when} 명단 마감`,
+  // T-11-405 다음 경기 예상(지금 두 팀 명단 기준, 90분)
+  oddsLine: (p: { win: number; draw: number; loss: number }) =>
+    `예상 승 ${p.win}% · 무 ${p.draw}% · 패 ${p.loss}%`,
+  oddsNote: '지금 두 팀 명단으로 계산했어요. 명단은 경기 1시간 전에 잠겨요.',
+  oddsKoNote: '토너먼트에서 비기면 승부차기로 가려요.',
   lockedNow: '명단이 잠겼어요. 경기가 끝나면 다시 바꿀 수 있어요.',
   myResult: (p: { stage: string }) => `내 성적 ${p.stage}`,
   youWon: '우승했어요!',

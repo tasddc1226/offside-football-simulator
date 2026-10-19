@@ -275,6 +275,49 @@ export function matchSetup(
   };
 }
 
+/** 골 수 분포 — poisson()과 같이 maxGoals에서 자른다(그 위 몫은 maxGoals에 모인다). */
+function goalDist(lambda: number): number[] {
+  const out: number[] = [];
+  let p = Math.exp(-lambda);
+  let left = 1;
+  for (let k = 0; k < SIM.maxGoals; k++) {
+    out.push(p);
+    left -= p;
+    p *= lambda / (k + 1);
+  }
+  out.push(Math.max(0, left));
+  return out;
+}
+
+/** 기대 득점 두 개로 90분 승 · 무 · 패 확률(홈 쪽 기준, 합 1). */
+export function oddsOfXg(homeXg: number, awayXg: number) {
+  const h = goalDist(homeXg);
+  const a = goalDist(awayXg);
+  let win = 0;
+  let draw = 0;
+  for (let i = 0; i < h.length; i++)
+    for (let j = 0; j < a.length; j++) {
+      const p = h[i]! * a[j]!;
+      if (i > j) win += p;
+      else if (i === j) draw += p;
+    }
+  return { win, draw, loss: Math.max(0, 1 - win - draw) };
+}
+
+/**
+ * T-11-405 경기 전 예상 — 경기 한 판(simulateMatch)과 같은 줄 힘 · 기대 득점으로 90분 승 · 무 · 패 확률을 계산한다.
+ * 난수를 쓰지 않는다. 지금 두 팀 명단 기준이라 명단이 바뀌면 달라진다.
+ */
+export function matchOdds(
+  home: readonly LineupSlot[],
+  away: readonly LineupSlot[],
+  season: number,
+  opts: { neutral?: boolean; coaches?: MatchCoaches } = {},
+) {
+  const { homeXg, awayXg } = matchSetup(home, away, season, opts);
+  return { ...oddsOfXg(homeXg, awayXg), homeXg, awayXg };
+}
+
 /** 골 n개의 분 · 득점자 · 도움을 굴려 events에 더한다. */
 export function addGoalEvents(
   events: SimEvent[],
