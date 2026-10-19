@@ -67,12 +67,18 @@ const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 /** 프리시즌 단계·구간 뒤 부가 줄(컵 결과·A매치 소집 등) 하나가 머무는 시간. */
 export const STEP_MS = 520;
 
-function fakeScore(m: MatchGame): string {
+// T-11-414 수비수 · 골키퍼가 뛴 경기는 무실점 기록(cs)과 스코어가 맞아야 한다. 무실점이 아니면 상대가 한 골 이상
+// 넣은 스코어로 그린다(예전에는 1-0 · 0-0이 나와도 무실점에 세지 않아 개수가 어긋나 보였다).
+export function fakeScore(m: MatchGame, keeper = false): string {
+  const conceded = keeper && m.mins > 0 && !m.cs;
   let gf = Math.max(m.g || 0, m.res === 'W' ? ri(1, 3) : ri(0, 2));
   let ga: number;
-  if (m.res === 'W') ga = m.cs ? 0 : ri(0, gf - 1);
-  else if (m.res === 'D') {
+  if (m.res === 'W') {
+    if (conceded) gf = Math.max(gf, 2);
+    ga = m.cs ? 0 : ri(conceded ? 1 : 0, gf - 1);
+  } else if (m.res === 'D') {
     if (m.cs) gf = 0;
+    else if (conceded) gf = Math.max(gf, 1);
     ga = gf;
   } else ga = gf + ri(1, 2);
   return `${gf}-${ga}`;
@@ -96,12 +102,13 @@ export function matchRows(s: GameState, b: BlockResult): TickerRow[] {
     opps ??= clubsIn(s.leagueId, s).filter((c) => c.id !== s.club.id);
     return opps.length ? tn(opps[rd % opps.length]!.name) : L.opponent;
   };
+  const keeper = s.pos === 'DF' || s.pos === 'GK';
   return b.games.map((m, i) => ({
     key: i,
     rd: m.rd,
     res: m.res,
     opp: oppName(m) ?? legacyOpp(m.rd),
-    score: fakeScore(m),
+    score: fakeScore(m, keeper),
     mins: m.mins,
     g: m.g,
     a: m.a,
