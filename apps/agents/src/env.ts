@@ -71,6 +71,8 @@ export interface Env {
   /** T-11-395 인스타그램 읽기: 비즈니스 시스템 사용자 토큰(없으면 META_ADS_ACCESS_TOKEN)과 IG 사용자 ID. */
   META_GRAPH_TOKEN?: string;
   META_IG_USER_ID?: string;
+  /** T-11-397 인스타그램 읽기: Instagram 로그인 장기 사용자 토큰(먼저 쓴다). 60일 안에 Worker가 갱신해 원장에 둔다. */
+  INSTAGRAM_ACCESS_TOKEN?: string;
   /** T-11-395 Threads 읽기: 장기 사용자 토큰. 60일 안에 Worker가 갱신해 원장에 둔다. */
   THREADS_ACCESS_TOKEN?: string;
   CF_D1_READ_TOKEN: string;
