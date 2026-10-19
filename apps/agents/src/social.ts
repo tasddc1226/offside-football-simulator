@@ -1,20 +1,34 @@
-// T-11-395 SNS 읽기 도구(@mkt). 인스타그램(Graph API, 비즈니스 시스템 사용자 토큰)과 Threads(Threads API, 사용자 토큰).
+// T-11-395 SNS 읽기 도구(@mkt). 인스타그램(Graph API)과 Threads(Threads API, 사용자 토큰).
+// T-11-397 인스타그램은 Instagram 로그인 토큰(INSTAGRAM_ACCESS_TOKEN, graph.instagram.com)을 먼저 쓰고, 없으면 비즈니스 토큰을 쓴다.
 // 둘 다 읽기만 한다. 게시 · 답글 · 숨기기는 나중에 승인 카드로 더한다. 토큰이 없으면 도구가 없다.
 import type { Tool } from './claude.ts';
 import type { Env } from './env.ts';
 import { ledger } from './ledger.ts';
 
 export const IG_GRAPH = 'https://graph.facebook.com/v21.0';
+export const IG_LOGIN_GRAPH = 'https://graph.instagram.com/v21.0';
 export const THREADS_GRAPH = 'https://graph.threads.net/v1.0';
 const DAY = 86_400_000;
 const kinds = ['mention', 'reply', 'handoff', 'report'];
 
-export type ThreadsToken = { token: string; at: number; from: string };
-type Store = { threadsToken(): Promise<ThreadsToken | undefined> };
+/** 60일짜리 사용자 토큰(Threads · Instagram 로그인)을 Worker가 갱신해 원장에 둔 값. */
+export type SocialToken = { token: string; at: number; from: string };
+export type SocialKind = 'threads' | 'instagram';
+type Store = { socialToken(kind: SocialKind): Promise<SocialToken | undefined> };
+const SECRET = { threads: 'THREADS_ACCESS_TOKEN', instagram: 'INSTAGRAM_ACCESS_TOKEN' } as const;
+const REFRESH = {
+  threads: ['https://graph.threads.net/refresh_access_token', 'th_refresh_token'],
+  instagram: ['https://graph.instagram.com/refresh_access_token', 'ig_refresh_token'],
+} as const;
+const secretOf = (env: Env, kind: SocialKind) => env[SECRET[kind]];
 /** 비밀값을 새로 넣으면 원장에 둔 갱신 토큰보다 그 값을 쓴다(끝 8자로 구별). */
-const fromSecret = (env: Env) => env.THREADS_ACCESS_TOKEN!.slice(-8);
-const current = (env: Env, saved: ThreadsToken | undefined) =>
-  saved && saved.from === fromSecret(env) ? saved : undefined;
+const fromSecret = (env: Env, kind: SocialKind) => secretOf(env, kind)!.slice(-8);
+const current = (env: Env, kind: SocialKind, saved: SocialToken | undefined) =>
+  saved && saved.from === fromSecret(env, kind) ? saved : undefined;
+const liveToken = async (env: Env, kind: SocialKind, store?: Store) => {
+  const saved = await (store ?? ledger(env)).socialToken(kind).catch(() => undefined);
+  return current(env, kind, saved)?.token ?? secretOf(env, kind)!;
+};
 
 const short = (s: string | undefined, n = 80) => (s ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
 const kst = (iso: string | undefined) =>
@@ -48,13 +62,16 @@ export function socialTools(
 ): Tool[] {
   if (!kinds.includes(kind)) return [];
   const tools: Tool[] = [];
-  const igToken = env.META_GRAPH_TOKEN ?? env.META_ADS_ACCESS_TOKEN;
-  if (igToken && env.META_IG_USER_ID) {
-    const ig = env.META_IG_USER_ID;
+  const igLogin = env.INSTAGRAM_ACCESS_TOKEN;
+  const igBiz = env.META_GRAPH_TOKEN ?? env.META_ADS_ACCESS_TOKEN;
+  if (igLogin || (igBiz && env.META_IG_USER_ID)) {
+    const base = igLogin ? IG_LOGIN_GRAPH : IG_GRAPH;
+    const ig = igLogin ? 'me' : env.META_IG_USER_ID!;
+    const igToken = async () => (igLogin ? liveToken(env, 'instagram', store) : igBiz!);
     tools.push({
       name: 'instagram',
       description:
-        '인스타그램 @offside.lab.kr 읽기. view: account(팔로워 · 게시물 수와 days 동안 도달 · 조회 · 프로필 방문 · 반응), posts(최근 게시물 limit개의 좋아요 · 댓글 · 도달 · 조회 · 저장 · 공유), comments(media_id 게시물의 댓글). 게시 · 답글은 못 한다.',
+        '인스타그램 @offside.lab.kr 읽기. view: account(팔로워 · 게시물 수와 days 동안 도달 · 조회 · 프로필 방문 · 반응), posts(최근 게시물 limit개의 좋아요 · 댓글 · 도달 · 조회 · 저장 · 공유), comments(media_id 게시물의 댓글, 권한이 없으면 실패한다). 게시 · 답글은 못 한다.',
       input_schema: {
         type: 'object',
         properties: {
@@ -67,13 +84,14 @@ export function socialTools(
       },
       run: async (input) => {
         try {
+          const t = await igToken();
           if (input.view === 'comments') {
             const id = String(input.media_id ?? '');
             if (!/^\d{5,25}$/.test(id)) return 'media_id가 필요해요(posts에서 받은 숫자 ID).';
-            const u = new URL(`${IG_GRAPH}/${id}/comments`);
+            const u = new URL(`${base}/${id}/comments`);
             u.searchParams.set('fields', 'username,text,timestamp,like_count');
             u.searchParams.set('limit', '30');
-            const d = (await getJson(fetcher, u, igToken)) as {
+            const d = (await getJson(fetcher, u, t)) as {
               data?: {
                 username?: string;
                 text?: string;
@@ -91,13 +109,13 @@ export function socialTools(
           }
           if (input.view === 'posts') {
             const limit = clamp(input.limit, 1, 12, 6);
-            const u = new URL(`${IG_GRAPH}/${ig}/media`);
+            const u = new URL(`${base}/${ig}/media`);
             u.searchParams.set(
               'fields',
               'id,caption,media_type,timestamp,permalink,like_count,comments_count,insights.metric(reach,views,saved,shares)',
             );
             u.searchParams.set('limit', String(limit));
-            const d = (await getJson(fetcher, u, igToken)) as {
+            const d = (await getJson(fetcher, u, t)) as {
               data?: {
                 id: string;
                 caption?: string;
@@ -119,14 +137,14 @@ export function socialTools(
             ].join('\n');
           }
           const days = clamp(input.days, 1, 30, 7);
-          const p = new URL(`${IG_GRAPH}/${ig}`);
+          const p = new URL(`${base}/${ig}`);
           p.searchParams.set('fields', 'username,followers_count,follows_count,media_count');
-          const profile = (await getJson(fetcher, p, igToken)) as {
+          const profile = (await getJson(fetcher, p, t)) as {
             username?: string;
             followers_count?: number;
             media_count?: number;
           };
-          const u = new URL(`${IG_GRAPH}/${ig}/insights`);
+          const u = new URL(`${base}/${ig}/insights`);
           u.searchParams.set(
             'metric',
             'reach,views,profile_views,accounts_engaged,total_interactions',
@@ -135,7 +153,7 @@ export function socialTools(
           u.searchParams.set('period', 'day');
           u.searchParams.set('since', String(Math.floor((now() - days * DAY) / 1000)));
           u.searchParams.set('until', String(Math.floor(now() / 1000)));
-          const insights = await getJson(fetcher, u, igToken).catch((e: unknown) => ({
+          const insights = await getJson(fetcher, u, t).catch((e: unknown) => ({
             failed: String(e),
           }));
           return [
@@ -149,10 +167,6 @@ export function socialTools(
     });
   }
   if (env.THREADS_ACCESS_TOKEN) {
-    const token = async () => {
-      const saved = await (store ?? ledger(env)).threadsToken().catch(() => undefined);
-      return current(env, saved)?.token ?? env.THREADS_ACCESS_TOKEN!;
-    };
     tools.push({
       name: 'threads',
       description:
@@ -169,7 +183,7 @@ export function socialTools(
       },
       run: async (input) => {
         try {
-          const t = await token();
+          const t = await liveToken(env, 'threads', store);
           if (input.view === 'replies') {
             const id = String(input.post_id ?? '');
             if (!/^\d{5,25}$/.test(id)) return 'post_id가 필요해요(posts에서 받은 숫자 ID).';
@@ -223,21 +237,24 @@ export function socialTools(
 }
 
 /**
- * Threads 장기 토큰은 60일이면 끝난다. 하루 한 번(아침 보고 cron) 보고, 마지막 갱신이 7일 넘었으면 새 토큰으로 바꿔
- * 원장에 둔다. 처음 토큰은 비밀값 THREADS_ACCESS_TOKEN이다.
+ * Threads · Instagram 로그인 장기 토큰은 60일이면 끝난다. 하루 한 번(아침 보고 cron) 보고, 마지막 갱신이 7일 넘었으면
+ * 새 토큰으로 바꿔 원장에 둔다. 처음 토큰은 비밀값(THREADS_ACCESS_TOKEN · INSTAGRAM_ACCESS_TOKEN)이다.
  */
-export async function refreshThreadsToken(
+export async function refreshSocialToken(
+  kind: SocialKind,
   env: Env,
   at = Date.now(),
   fetcher: typeof fetch = fetch,
-  store: Store & { setThreadsToken(v: ThreadsToken): Promise<void> } = ledger(env),
+  store: Store & { setSocialToken(kind: SocialKind, v: SocialToken): Promise<void> } = ledger(env),
 ): Promise<string> {
-  if (!env.THREADS_ACCESS_TOKEN) return 'no token';
-  const saved = current(env, await store.threadsToken());
+  const secret = secretOf(env, kind);
+  if (!secret) return 'no token';
+  const saved = current(env, kind, await store.socialToken(kind));
   if (saved && at - saved.at < 7 * DAY) return 'fresh';
-  const u = new URL('https://graph.threads.net/refresh_access_token');
-  u.searchParams.set('grant_type', 'th_refresh_token');
-  u.searchParams.set('access_token', saved?.token ?? env.THREADS_ACCESS_TOKEN);
+  const [endpoint, grant] = REFRESH[kind];
+  const u = new URL(endpoint);
+  u.searchParams.set('grant_type', grant);
+  u.searchParams.set('access_token', saved?.token ?? secret);
   const r = await fetcher(u.toString());
   const data = (await r.json().catch(() => ({}))) as {
     access_token?: string;
@@ -245,6 +262,6 @@ export async function refreshThreadsToken(
   };
   if (!r.ok || !data.access_token)
     return `refresh failed ${r.status} ${data.error?.message ?? ''}`.slice(0, 200);
-  await store.setThreadsToken({ token: data.access_token, at, from: fromSecret(env) });
+  await store.setSocialToken(kind, { token: data.access_token, at, from: fromSecret(env, kind) });
   return 'refreshed';
 }

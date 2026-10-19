@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Env } from './env.ts';
-import { refreshThreadsToken, socialTools, type ThreadsToken } from './social.ts';
+import { refreshSocialToken, socialTools, type SocialToken } from './social.ts';
 
 const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
 const NOW = Date.parse('2026-10-18T03:00:00Z');
-const noStore = { threadsToken: async () => undefined };
+const noStore = { socialToken: async () => undefined };
 
 describe('SNS 읽기 도구 (T-11-395)', () => {
   it('토큰이 있는 도구만, 마케팅이 쓰는 일에만 준다', () => {
@@ -102,8 +102,8 @@ describe('SNS 읽기 도구 (T-11-395)', () => {
 
   it('Threads는 원장의 갱신 토큰을 쓰되, 비밀값이 바뀌면 새 비밀값을 쓴다', async () => {
     const fetcher = vi.fn(async (_url: string, _init?: RequestInit) => ok({ data: [] }));
-    const saved: ThreadsToken = { token: 'refreshed', at: NOW, from: 'secret01' };
-    const store = { threadsToken: async () => saved };
+    const saved: SocialToken = { token: 'refreshed', at: NOW, from: 'secret01' };
+    const store = { socialToken: async () => saved };
     const auth = () =>
       (fetcher.mock.calls.at(-1)![1] as unknown as { headers: Record<string, string> }).headers
         .Authorization;
@@ -123,26 +123,76 @@ describe('SNS 읽기 도구 (T-11-395)', () => {
 
   it('Threads 토큰은 7일마다 갱신해 원장에 둔다', async () => {
     const env = { THREADS_ACCESS_TOKEN: 'th-secret1' } as unknown as Env;
-    let saved: ThreadsToken | undefined;
+    let saved: SocialToken | undefined;
     const store = {
-      threadsToken: async () => saved,
-      setThreadsToken: async (v: ThreadsToken) => {
+      socialToken: async () => saved,
+      setSocialToken: async (_kind: string, v: SocialToken) => {
         saved = v;
       },
     };
     const fetcher = vi.fn(async (_url: string) =>
       ok({ access_token: 'new', expires_in: 5_184_000 }),
     );
-    expect(await refreshThreadsToken({} as Env, NOW, fetcher as never, store)).toBe('no token');
-    expect(await refreshThreadsToken(env, NOW, fetcher as never, store)).toBe('refreshed');
-    expect(String(fetcher.mock.calls[0]![0])).toContain('access_token=th-secret1');
-    expect(saved).toEqual({ token: 'new', at: NOW, from: 'h-secret1'.slice(-8) });
-    expect(await refreshThreadsToken(env, NOW + 6 * 86_400_000, fetcher as never, store)).toBe(
-      'fresh',
+    expect(await refreshSocialToken('threads', {} as Env, NOW, fetcher as never, store)).toBe(
+      'no token',
     );
-    expect(await refreshThreadsToken(env, NOW + 8 * 86_400_000, fetcher as never, store)).toBe(
+    expect(await refreshSocialToken('threads', env, NOW, fetcher as never, store)).toBe(
       'refreshed',
     );
+    expect(String(fetcher.mock.calls[0]![0])).toContain('access_token=th-secret1');
+    expect(saved).toEqual({ token: 'new', at: NOW, from: 'h-secret1'.slice(-8) });
+    expect(
+      await refreshSocialToken('threads', env, NOW + 6 * 86_400_000, fetcher as never, store),
+    ).toBe('fresh');
+    expect(
+      await refreshSocialToken('threads', env, NOW + 8 * 86_400_000, fetcher as never, store),
+    ).toBe('refreshed');
     expect(String(fetcher.mock.calls[1]![0])).toContain('access_token=new');
+  });
+
+  it('Instagram 로그인 토큰이 있으면 graph.instagram.com의 me로 읽고 원장의 갱신 토큰을 쓴다 (T-11-397)', async () => {
+    const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
+      expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer ig-new');
+      if (url.includes('/insights'))
+        return ok({ data: [{ name: 'reach', total_value: { value: 42 } }] });
+      return ok({ username: 'offside.lab.kr', followers_count: 15, media_count: 13 });
+    });
+    const env = {
+      INSTAGRAM_ACCESS_TOKEN: 'ig-secret01',
+      META_GRAPH_TOKEN: 'g',
+      META_IG_USER_ID: '178',
+    } as unknown as Env;
+    const store = {
+      socialToken: async (kind: string) =>
+        kind === 'instagram' ? { token: 'ig-new', at: NOW, from: 'secret01' } : undefined,
+    };
+    const [ig] = socialTools(env, 'mention', fetcher as unknown as typeof fetch, () => NOW, store);
+    expect(await ig!.run({ view: 'account', days: 7 })).toBe(
+      '@offside.lab.kr 팔로워 15 · 게시물 13\n지난 7일: reach 42',
+    );
+    expect(String(fetcher.mock.calls[0]![0])).toMatch(
+      /^https:\/\/graph\.instagram\.com\/v21\.0\/me\?/,
+    );
+    expect(String(fetcher.mock.calls[1]![0])).toContain('graph.instagram.com/v21.0/me/insights');
+  });
+
+  it('Instagram 로그인 토큰은 ig_refresh_token으로 갱신해 instagram 칸에 둔다', async () => {
+    const env = { INSTAGRAM_ACCESS_TOKEN: 'ig-secret01' } as unknown as Env;
+    const writes: [string, SocialToken][] = [];
+    const store = {
+      socialToken: async () => undefined,
+      setSocialToken: async (kind: string, v: SocialToken) => {
+        writes.push([kind, v]);
+      },
+    };
+    const fetcher = vi.fn(async (_url: string) => ok({ access_token: 'ig-new' }));
+    expect(await refreshSocialToken('instagram', env, NOW, fetcher as never, store)).toBe(
+      'refreshed',
+    );
+    const url = String(fetcher.mock.calls[0]![0]);
+    expect(url).toContain('graph.instagram.com/refresh_access_token');
+    expect(url).toContain('grant_type=ig_refresh_token');
+    expect(writes).toEqual([['instagram', { token: 'ig-new', at: NOW, from: 'secret01' }]]);
+    expect(await refreshSocialToken('threads', env, NOW, fetcher as never, store)).toBe('no token');
   });
 });

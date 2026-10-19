@@ -6,7 +6,7 @@ import type { MailDraft } from './support.ts';
 import type { ReviewDraft } from './reviews.ts';
 import type { CardSummary } from './card.ts';
 import type { Risk } from './risk.ts';
-import type { ThreadsToken } from './social.ts';
+import type { SocialKind, SocialToken } from './social.ts';
 
 export const kstDay = (now = Date.now()) => new Date(now + 9 * 3600_000).toISOString().slice(0, 10);
 
@@ -315,12 +315,12 @@ export class AgentLedger extends DurableObject<Env> {
     return rankMemories(all, query, limit);
   }
   /** 한도 초과 안내는 하루 한 번만 한다. 처음이면 true. */
-  /** T-11-395 Threads 장기 토큰(60일)을 갱신한 값. */
-  async threadsToken(): Promise<ThreadsToken | undefined> {
-    return this.ctx.storage.get<ThreadsToken>('threads:token');
+  /** T-11-395 · T-11-397 Threads · Instagram 장기 토큰(60일)을 갱신한 값. */
+  async socialToken(kind: SocialKind): Promise<SocialToken | undefined> {
+    return this.ctx.storage.get<SocialToken>(`${kind}:token`);
   }
-  async setThreadsToken(v: ThreadsToken): Promise<void> {
-    await this.ctx.storage.put('threads:token', v);
+  async setSocialToken(kind: SocialKind, v: SocialToken): Promise<void> {
+    await this.ctx.storage.put(`${kind}:token`, v);
   }
   async warnOnce(role: Role, day = kstDay()): Promise<boolean> {
     const d = await this.day(role, day);
