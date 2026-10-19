@@ -1,0 +1,26 @@
+{
+  "id": "t-11-412-home-hero-sign",
+  "title": "홈 커리어 카드 선수 그림 · 계약 사인",
+  "items": [
+    "홈의 진행 중인 커리어 카드에 내 선수 그림이 나와요",
+    "마지막으로 계약서에 한 사인이 선수 그림 옆에 다시 그려져요. 사인은 이 기기에만 남아요",
+    "소속팀 이름 앞에 구단 엠블럼이 붙고, 소속과 시즌 줄이 한 줄로 나와요"
+  ],
+  "en": {
+    "title": "Player art and contract signature on the home career card",
+    "items": [
+      "The current career card on Home now shows your player.",
+      "Your last contract signature is drawn again next to the player. The signature is kept on this device only.",
+      "The club crest now appears before the club name, and the club and season lines stay on one line."
+    ]
+  },
+  "ja": {
+    "title": "ホームのキャリアカードに選手イラストと契約サイン",
+    "items": [
+      "ホームの進行中のキャリアカードに自分の選手のイラストが表示されます。",
+      "最後に契約書に書いたサインが選手イラストの横にもう一度描かれます。サインはこの端末にだけ保存されます。",
+      "所属クラブ名の前にエンブレムが付き、所属とシーズンの行が1行で表示されます。"
+    ]
+  },
+  "availability": "web-app-pending"
+}
