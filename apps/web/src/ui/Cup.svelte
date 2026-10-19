@@ -38,6 +38,8 @@
   let scheduleChoice = $state<CupScheduleTab | null>(null);
   let groupChoice = $state<number | null>(null);
   let bracketMatch = $state<CupMatch | null>(null);
+  let bracket = $state<ReturnType<typeof CupBracket>>();
+  let bracketRestored = false;
 
   const linked = $derived.by(() => {
     const acct = accountCache.value;
@@ -102,6 +104,13 @@
   const matchTime = $derived(data ? kstParts(data.cup.rounds[0]?.at ?? data.cup.opensAt).time : '');
   const lockTime = $derived(data ? kstParts(data.cup.rounds[0]?.lockAt ?? data.cup.opensAt).time : '');
   const stages = CUP_STAGES;
+  // T-11-406 팀 프로필에서 돌아오면 대진표에서 골랐던 경기를 다시 연다(스크롤 자리는 history가 되돌린다).
+  $effect(() => {
+    if (!data || bracketRestored) return;
+    bracketRestored = true;
+    const id = folds?.bracket?.match;
+    if (id) bracketMatch = data.matches.find((m) => m.id === id) ?? null;
+  });
   const predictionCap = $derived(data ? cupPredictionCap(data.cup.edition) : null);
 
   // T-11-290 owner면 그 팀 구단주의 프로필(승부예측 줄의 구단주 이름). 뒤로 가면 팀 프로필.
@@ -114,6 +123,7 @@
         groups: states('[data-cup-group]', 'data-cup-group'),
         rounds: states('[data-cup-round]', 'data-cup-round'),
         schedule: { tab: scheduleTab, group: selectedGroup, bracketList },
+        ...(bracket ? { bracket: { match: bracketMatch?.id ?? null, ...bracket.view() } } : {}),
       });
     }
     appState.hof = { ...hofStart(), tab: 'teams', team: id, season: data?.cup.season ?? null, owner };
@@ -265,7 +275,7 @@
               <button class:chosen={bracketList} aria-pressed={bracketList} onclick={() => bracketListChoice = true}>{L.bracketList}</button>
             </div>
             <div hidden={bracketList}>
-              <CupBracket matches={data.matches} teams={names} {mineId} {now} onselect={async m => { bracketMatch = m; await tick(); content.querySelector('[data-bracket-selected]')?.scrollIntoView({block:'center'}); }} />
+              <CupBracket bind:this={bracket} start={folds?.bracket ?? null} matches={data.matches} teams={names} {mineId} {now} onselect={async m => { bracketMatch = m; await tick(); content.querySelector('[data-bracket-selected]')?.scrollIntoView({block:'center'}); }} />
               {#if bracketMatch}<div data-bracket-selected><CupMatchRow {prediction} m={bracketMatch} teams={names} {mineId} onopen={openMatch} /></div>{/if}
             </div>
             <div hidden={!bracketList}>
