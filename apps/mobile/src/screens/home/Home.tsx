@@ -1,11 +1,12 @@
 // 홈(웹 Home.svelte — ui.ts renderHome() 포트): 전광판 · 히어로 · 라이브 현황 · 타일 · 명예의 전당 TOP 3 · 소식 · 푸터.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
-import { Linking, Platform, View } from 'react-native';
+import { Linking, Platform, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import { PHASES, LAST_PHASE, posLabel } from '@offside/game/data';
 import { ovr } from '@offside/game/attributes';
+import type { GameState } from '@offside/game/types';
 import { homeText as L } from '@offside/app-core/i18n/ko/home';
 import { homeMoreText } from '@offside/app-core/i18n/ko/homeMore';
 import { ANDROID_TESTER_FORM_URL, DC_GALLERY_URL } from '@offside/app-core/links';
@@ -18,6 +19,8 @@ import { alpha } from '../../theme/colors';
 import { num, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, PitchCard, Press, Row, Screen, Topbar, Txt } from '../../ui';
+import { ClubBadge } from '../../ui/ClubBadge';
+import { HeroFigure } from './HeroFigure';
 import { CupBanner } from '../owner/TeamCup';
 import { CupChampionPopup } from './CupChampionPopup';
 import { HomeClubValue } from './HomeClubValue';
@@ -50,6 +53,7 @@ export default function Home() {
   const s = useSnapshot(appState);
   const c = useColors();
   const G = s.G && !s.G.retired ? s.G : null;
+  const narrow = useWindowDimensions().width < 360;
 
   return (
     <View style={{ flex: 1 }}>
@@ -60,20 +64,40 @@ export default function Home() {
         {G ? (
           // 진행 중인 커리어가 있으면 첫 카드를 '이번 커리어'로 바꿔 이어하기를 가장 먼저 보여 준다.
           <PitchCard>
+            {/* T-11-412 오른쪽 위 선수 그림 · 마지막 계약 사인. 이름 줄까지만 내려오므로 제목만 그 폭을 비켜 둔다. */}
+            <HeroFigure G={G as GameState} />
             <View testID="home-current">
               <Txt v="eyebrow" style={{ color: alpha(c.onPitch, 0.7) }}>
                 Current career
               </Txt>
-              <View style={{ marginTop: 6, gap: 2 }} accessible accessibilityRole="header">
+              <View
+                style={{ marginTop: 6, gap: 2, paddingRight: narrow ? 60 : 92 }}
+                accessible
+                accessibilityRole="header"
+              >
                 <Txt style={{ ...heroSub, color: alpha(c.onPitch, 0.8) }}>{L.currentSub}</Txt>
                 <Txt style={{ ...heroB, color: c.onPitch }}>
                   <Txt style={{ ...heroName, color: c.onPitch }}>{G.name}</Txt>
                 </Txt>
               </View>
-              <Txt style={{ ...p, color: alpha(c.onPitch, 0.8) }}>
-                {L.currentLine({ club: tn(G.club.name), age: G.age, pos: posLabel(G) })}
-              </Txt>
+              {/* 소속 · 시즌 줄은 한 줄로(넘치면 말줄임), 소속 앞에 구단 엠블럼. */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                <ClubBadge club={G.club} size={18} />
+                <Txt
+                  numberOfLines={1}
+                  style={{
+                    ...p,
+                    flexShrink: 1,
+                    marginTop: 0,
+                    maxWidth: undefined,
+                    color: alpha(c.onPitch, 0.8),
+                  }}
+                >
+                  {L.currentLine({ club: tn(G.club.name), age: G.age, pos: posLabel(G) })}
+                </Txt>
+              </View>
               <Txt
+                numberOfLines={1}
                 style={[
                   num(700),
                   {

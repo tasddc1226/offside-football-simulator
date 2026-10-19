@@ -1,6 +1,6 @@
 // 계약서 사인 시트(웹 sheets/Contract.svelte, T-11-039): 이적시장에서 고른 구단과의 계약. 손가락으로 사인하거나
-// '이름 사인 사용'으로 선수 이름을 흘려 쓴 사인을 넣으면 확정 버튼이 켜진다. 누르면 도장이 찍히고 onSign. 사인은 화면
-// 연출이라 저장하지 않는다.
+// '이름 사인 사용'으로 선수 이름을 흘려 쓴 사인을 넣으면 확정 버튼이 켜진다. 누르면 도장이 찍히고 onSign. 확정한 사인은
+// 홈 카드에서 다시 그리려고 이 기기에만 하나 남긴다(T-11-412, platform/lastSign.ts).
 // 웹은 canvas에 그렸지만 앱은 획마다 점을 모아 react-native-svg Path로 그린다. 터치는 패드 위에 덮은 투명 View 하나가
 // PanResponder로 잡는다(DragShot과 같다 — 터치 대상이 늘 그 View라 locationX/Y가 패드 기준으로 일정하고, 바깥 스크롤이
 // 제스처를 가져가지 못한다).
@@ -19,7 +19,9 @@ import {
   STAMP_MS,
   signFlourish,
 } from '@offside/app-core/signature';
-import { prefs } from '../store';
+import { packInk } from '@offside/app-core/lastSign';
+import { saveLastSign } from '../platform/lastSign';
+import { appState, prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { DISPLAY, rem } from '../theme/type';
 import { Btn } from '../ui/Btn';
@@ -126,6 +128,8 @@ export function Contract({ v }: { v: ContractView }) {
   const body = useRef('');
   const lastPt = useRef<Pt | null>(null);
   const ink = useRef(0);
+  /** 그은 점들(획마다) — 확정하면 줄여서 남긴다. */
+  const pts = useRef<Pt[][]>([]);
   const sealedRef = useRef(false);
   const namedRef = useRef(false);
   const raf = useRef(0);
@@ -136,6 +140,7 @@ export function Contract({ v }: { v: ContractView }) {
     body.current = '';
     lastPt.current = null;
     ink.current = 0;
+    pts.current = [];
     namedRef.current = false;
     setDone([]);
     setCur('');
@@ -166,6 +171,7 @@ export function Contract({ v }: { v: ContractView }) {
         if (namedRef.current) clear();
         const p = at(e);
         lastPt.current = p;
+        pts.current.push([p]);
         body.current = `M${p.x},${p.y}`;
         setCur(`${body.current}l0.01,0`);
         setInked(true);
@@ -178,6 +184,7 @@ export function Contract({ v }: { v: ContractView }) {
         if (d < 1) return;
         body.current += `Q${a.x},${a.y} ${(a.x + p.x) / 2},${(a.y + p.y) / 2}`;
         lastPt.current = p;
+        pts.current[pts.current.length - 1]?.push(p);
         setCur(`${body.current}L${p.x},${p.y}`);
         ink.current += d;
         if (ink.current >= MIN_INK) setEnough(true);
@@ -220,6 +227,15 @@ export function Contract({ v }: { v: ContractView }) {
     cancelAnimationFrame(raf.current);
     setReveal(1);
     setSealed(true);
+    const cid = appState.G?.cid;
+    if (cid)
+      saveLastSign({
+        cid,
+        club: v.club.name,
+        mark: namedRef.current
+          ? { kind: 'name', name: v.name }
+          : packInk(size.w, size.h, pts.current),
+      });
     setTimeout(() => v.onSign(), motionOK ? STAMP_MS : 0);
   }
 
