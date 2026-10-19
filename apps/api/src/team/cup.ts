@@ -6,8 +6,11 @@ import {
   cupReward,
   CUP_ROUNDS,
   CUP_STAGES,
+  CUP_DIVISION_MIN,
   cupById,
   cupGroupCount,
+  editionCups,
+  fitsDivision,
   firstKoRound,
   lockAt,
   pullCupForward,
@@ -28,7 +31,7 @@ import { cupResultStatements } from '../push/cupResult.js';
 import { eventNotificationStatements } from '../push/events.js';
 import { lineupsOf, matchDetailOf } from './match.js';
 import { penaltyShootout, simulateMatch } from './sim.js';
-import { fillCupOdds, oddsOfLineups } from './cupOdds.js';
+import { CUP_ODDS_PER_TICK, fillCupOdds, oddsOfLineups } from './cupOdds.js';
 import {
   drawGroups,
   firstKoPairs,
@@ -114,7 +117,7 @@ function autoTitle(d1: D1Database, cup: CupDef, profileId: string, stage: CupSta
         `UPDATE profiles SET title = ? WHERE id = ? AND title_pinned = 0
          AND (title IS NULL OR ${below.map(() => 'title LIKE ?').join(' OR ')})`,
       )
-      .bind(titleIdOf(cup.edition, t), profileId, ...below.map((b) => `%-${b}`)),
+      .bind(titleIdOf(cup.edition, t, cup.division), profileId, ...below.map((b) => `%-${b}`)),
   ];
 }
 
@@ -196,6 +199,8 @@ const kstWhen = (iso: string) => {
  * source_key가 겹친 요청을 막는다. 신청한 구단주 모두에게 새 일정을 알린다. 당겼으면 새 일정을 돌려준다.
  */
 export async function pullCupIfFull(db: Db, cup: CupDef, now: string) {
+  // T-11-410 구간 대회는 같은 회차 구간끼리 일정이 같아야 해서 당기지 않는다.
+  if (cup.division) return null;
   const active = (await cupEntriesOf(db, cup.id)).filter((e) => e.status === 'active');
   if (active.length < cup.capacity) return null;
   const next = pullCupForward(cup, now);
@@ -214,6 +219,74 @@ export async function pullCupIfFull(db: Db, cup: CupDef, now: string) {
     active.flatMap((e) => notify(d1, e.profileId, `cup:${cup.id}:early`, title, body, now)),
   );
   return next;
+}
+
+/**
+ * T-11-410 구간 대회 추첨 전 회차 정리(한 번). 1) 지금 팀 OVR이 신청한 구간 상한을 넘으면 들어갈 수 있는 가장 낮은 윗
+ * 구간으로, 2) CUP_DIVISION_MIN팀보다 적은 구간은 바로 윗 구간으로, 3) 마스터가 모자라면 바로 아랫 구간을 마스터로 옮긴다.
+ * 늘 위로만 옮긴다. 옮긴 팀에는 알림 1건. 한 번 했으면 app_meta 표시로 건너뛴다.
+ */
+export async function settleDivisions(db: Db, siblings: readonly CupDef[], now: string) {
+  const d1 = db.$client;
+  const head = siblings.at(-1)!;
+  const key = `cup-settle:${head.id}`;
+  if (await d1.prepare('SELECT 1 FROM app_meta WHERE key = ?').bind(key).first()) return null;
+  const ids = siblings.map((c) => c.id);
+  const { results } = await d1
+    .prepare(
+      `SELECT e.cup_id AS cupId, e.team_id AS teamId, e.profile_id AS profileId, t.ovr AS ovr
+       FROM cup_entries e LEFT JOIN owner_teams t ON t.id = e.team_id
+       WHERE e.cup_id IN (${ids.map(() => '?').join(', ')}) AND e.status = 'active'`,
+    )
+    .bind(...ids)
+    .all<{ cupId: string; teamId: string; profileId: string; ovr: number | null }>();
+  const rows = results.map((r) => ({
+    ...r,
+    at: ids.indexOf(r.cupId),
+    why: '' as '' | 'up' | 'merged',
+  }));
+  for (const r of rows) {
+    if (r.ovr === null || fitsDivision(siblings[r.at]!, r.ovr)) continue;
+    const up = siblings.findIndex((c, i) => i > r.at && fitsDivision(c, r.ovr!));
+    r.at = up < 0 ? siblings.length - 1 : up;
+    r.why = 'up';
+  }
+  const count = (i: number) => rows.filter((r) => r.at === i).length;
+  const merge = (from: number, to: number) => {
+    for (const r of rows.filter((x) => x.at === from)) {
+      r.at = to;
+      r.why ||= 'merged';
+    }
+  };
+  const last = siblings.length - 1;
+  for (let i = 0; i < last; i++) if (count(i) > 0 && count(i) < CUP_DIVISION_MIN) merge(i, i + 1);
+  for (let i = last - 1; i >= 0 && count(last) > 0 && count(last) < CUP_DIVISION_MIN; i--)
+    if (count(i) > 0) merge(i, last);
+  const stmts: D1PreparedStatement[] = [
+    d1.prepare('INSERT OR IGNORE INTO app_meta (key, value) VALUES (?, ?)').bind(key, now),
+  ];
+  const moved = rows.filter((r) => ids[r.at] !== r.cupId);
+  for (const r of moved) {
+    const to = siblings[r.at]!;
+    stmts.push(
+      // 같은 회차 다른 구간에 예전에 취소한 행이 있으면 그 행을 덮는다.
+      d1
+        .prepare(
+          `UPDATE OR REPLACE cup_entries SET cup_id = ?, updated_at = ? WHERE cup_id = ? AND team_id = ?`,
+        )
+        .bind(to.id, now, r.cupId, r.teamId),
+      ...notify(
+        d1,
+        r.profileId,
+        `cup:${to.id}:moved`,
+        cupKo('movedTitle', { cup: cupTitle(to) }),
+        r.why === 'up' ? cupKo('movedUpBody') : cupKo('mergedBody', { n: CUP_DIVISION_MIN }),
+        now,
+      ),
+    );
+  }
+  await d1.batch(stmts);
+  return { moved: moved.length };
 }
 
 /** 추첨: 자격을 다시 보고, 조를 나누고, 조별 3라운드 경기를 만든다. 한 batch(트랜잭션). */
@@ -508,14 +581,32 @@ export async function advanceRound(
   if (stmts.length) await d1.batch(stmts);
 }
 
-/** cron 한 번에 치르는 경기 수 상한. 128팀 조별 라운드(64경기)는 cron 4번(15분)에 나눠 치른다. */
-export const CUP_MATCHES_PER_TICK = 16;
+/**
+ * cron 한 번에 치르는 경기 수 상한(모든 대회 합). 128팀 조별 라운드(64경기)는 cron 2번(5분)에 나눠 치른다. T-11-410 구간
+ * 대회가 함께 돌아도 이 예산을 나눠 쓰고, 라운드 만들기(보상 · 다음 대진)도 cron마다 하나만 한다 — D1 호출당 쿼리
+ * 상한(1000) 안에 둔다.
+ */
+export const CUP_MATCHES_PER_TICK = 32;
 
 /** cron 한 번: 대회마다 추첨 → 시각이 된 경기 → 끝난 라운드 정리. */
 export async function runCup(db: Db, now: string, cups?: readonly CupDef[]) {
   const log: Record<string, unknown>[] = [];
-  for (const cup of cups ?? (await cupSchedule(db))) {
+  const all = cups ?? (await cupSchedule(db));
+  let budget = CUP_MATCHES_PER_TICK;
+  let oddsBudget = CUP_ODDS_PER_TICK;
+  let advanced = false;
+  const settled = new Set<string>();
+  for (const cup of all) {
     if (now < cup.drawAt) continue;
+    if (cup.division) {
+      const siblings = editionCups(cup, all);
+      const head = siblings.at(-1)!.id;
+      if (!settled.has(head)) {
+        settled.add(head);
+        const r = await settleDivisions(db, siblings, now);
+        if (r) log.push({ cup: head, step: 'settle', ...r });
+      }
+    }
     let [state] = await cupStateOf(db, cup.id);
     if (!state) {
       log.push({ cup: cup.id, step: 'draw', ...(await drawCup(db, cup, now)) });
@@ -530,9 +621,10 @@ export async function runCup(db: Db, now: string, cups?: readonly CupDef[]) {
         cupMatchesOf(db, cup.id),
       ]);
       // T-11-407 명단이 잠긴 경기의 예상을 cron마다 한 번 채운다(이미 읽은 경기 목록으로, 남은 건 다음 cron이).
-      if (!oddsChecked) {
+      if (!oddsChecked && oddsBudget > 0) {
         oddsChecked = true;
-        const n = await fillCupOdds(db, cup, matches, now);
+        const n = await fillCupOdds(db, cup, matches, now, oddsBudget);
+        oddsBudget -= n;
         if (n) log.push({ cup: cup.id, step: 'odds', n });
       }
       const due = matches
@@ -540,10 +632,12 @@ export async function runCup(db: Db, now: string, cups?: readonly CupDef[]) {
         .sort((a, b) => roundIdx(a.round) - roundIdx(b.round) || a.grp - b.grp || a.slot - b.slot);
       const entryMap = new Map(entries.map((e) => [e.teamId, e]));
       if (due.length) {
+        if (budget <= 0) break;
         const round = due[0]!.round;
         // 한 라운드가 CUP_MATCHES_PER_TICK경기를 넘으면 나머지는 다음 cron(5분 뒤)이 이어서 치른다. 명단 잠금·승부예측
         // 마감은 경기 시각(at) 기준이라 늦게 치른 경기도 같은 조건이다.
-        const batch = due.filter((x) => x.round === round).slice(0, CUP_MATCHES_PER_TICK);
+        const batch = due.filter((x) => x.round === round).slice(0, budget);
+        budget -= batch.length;
         for (const m of batch) await playCupMatch(db, cup, m, entryMap, now);
         log.push({ cup: cup.id, step: 'play', round, n: batch.length });
         // T-11-246 128팀이면 조별 3차전(64경기)과 64강 만들기·조별 탈락 보상을 한 번에 하면 D1 쿼리 상한(호출당 1000)에
@@ -561,6 +655,8 @@ export async function runCup(db: Db, now: string, cups?: readonly CupDef[]) {
         if (now < roundAt(cup, 'g3')) break;
       }
       const round: CupRound = CUP_GROUP_ROUNDS.includes(last) ? 'g3' : last;
+      if (advanced) break;
+      advanced = true;
       await advanceRound(db, cup, state, round, entries, matches, now);
       log.push({ cup: cup.id, step: 'advance', round });
       const [after] = await cupStateOf(db, cup.id);
@@ -619,6 +715,7 @@ export async function cupHonorsOf(db: Db, profileId: string) {
       cupId: cup.id,
       season: cup.season,
       edition: cup.edition,
+      ...(cup.division ? { division: cup.division } : {}),
       stage: e.stage as CupStage,
       teamName: e.name,
       owner,

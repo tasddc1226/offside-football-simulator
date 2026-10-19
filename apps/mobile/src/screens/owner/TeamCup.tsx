@@ -17,6 +17,7 @@ import { cupText as L } from '@offside/app-core/i18n/ko/cup';
 import { cupRewardText } from '@offside/app-core/cupReward';
 import { cupAppText as A } from '@offside/app-core/i18n/ko/cupApp';
 import { cupOnHome } from '@offside/app-core/cupHome';
+import { divisionLabel } from '@offside/app-core/cupDivision';
 import { type LoadStatus } from '../../components/LoadState';
 import { toast } from '../../game/host';
 import { alpha } from '../../theme/colors';
@@ -33,6 +34,9 @@ export interface CupState {
   status: LoadStatus;
   /** silent: 화면을 비우지 않고 값만 바꾼다(당겨서 새로고침). */
   reload: (silent?: boolean) => Promise<void>;
+  /** T-11-410 구간 대회: 다른 구간 보기. 내가 신청한 구간 id(없으면 null). */
+  pick: (cupId: string) => void;
+  myDivision: string | null;
 }
 
 /**
@@ -43,29 +47,45 @@ export function useCup(active: boolean, linked = true): CupState {
   const [cup, setCup] = useState<CupResponse | null>(null);
   const [me, setMe] = useState<CupMeResponse | null>(null);
   const [status, setStatus] = useState<LoadStatus>('loading');
+  // T-11-410 보고 있는 대회('current' = 서버가 내 구간으로 풀어 준다). 고른 뒤에는 그 id로 부른다.
+  const [cupId, setCupId] = useState('current');
+  const [myDivision, setMyDivision] = useState<string | null>(null);
   const sequence = useRef(0);
   const reload = useCallback(
     async (silent = false) => {
       const n = ++sequence.current;
       if (!silent) setStatus('loading');
-      const [a, b] = await Promise.all([fetchCup(), linked ? fetchCupMe() : null]);
+      const [first, b] = await Promise.all([fetchCup(cupId), linked ? fetchCupMe(cupId) : null]);
+      let a = first;
       if (n !== sequence.current) return;
+      // 'current'는 대회 조회에선 마스터, 내 상태에선 내 구간이라 둘이 다르면 내 구간 대회를 다시 부른다.
+      const mine = b?.ok ? b.data.cupId : undefined;
+      if (cupId === 'current' && mine && a.ok && a.data.cup.id !== mine) {
+        a = await fetchCup(mine);
+        if (n !== sequence.current) return;
+      }
       if (!a.ok) {
         if (!silent) setStatus('error');
         return;
       }
       setCup(a.data);
-      if (b?.ok) setMe(b.data);
-      else if (!silent || !linked) setMe(null);
+      if (b?.ok) {
+        setMe(b.data);
+        // '내 구간' 표시: 이 구간에 신청이 살아 있으면 여기, 이 구간 신청을 취소했으면 지운다.
+        const at = b.data.cupId ?? a.data.cup.id;
+        if (b.data.entry && b.data.entry.status !== 'withdrawn') setMyDivision(at);
+        else setMyDivision((d) => (d === at ? null : d));
+      } else if (!silent || !linked) setMe(null);
       setStatus('ready');
     },
-    [linked],
+    [linked, cupId],
   );
   useEffect(() => {
     if (active) void reload();
   }, [active, reload]);
   useOnPull(() => (active ? reload(true) : undefined));
-  return { cup, me, status, reload };
+  const pick = useCallback((id: string) => setCupId(id), []);
+  return { cup, me, status, reload, pick, myDivision };
 }
 
 /** 대회에서 팀 이름 찾기. 추첨 전이거나 대진이 안 정해졌으면 '미정'. */
@@ -209,6 +229,11 @@ function CupEntry({ state }: { state: CupState }) {
         <Txt v="sm" tone="muted">
           {L.enterLockNote}
         </Txt>
+        {data.cup.ovrMax != null ? (
+          <Txt v="sm" tone="muted">
+            {L.divisionLockNote({ cap: data.cup.ovrMax })}
+          </Txt>
+        ) : null}
         <Btn
           sm
           kind="ghost"
@@ -222,12 +247,23 @@ function CupEntry({ state }: { state: CupState }) {
       </View>
     );
   if (!me) return null;
-  const reason = me.eligibility.ok ? null : reasonText(me.eligibility, data.cup.minFilled);
+  const reason = me.eligibility.ok
+    ? null
+    : reasonText(me.eligibility, data.cup.minFilled, me.ovr ?? undefined, data.cup.ovrMax);
+  const fit = divisionFitText(data, me);
+  const capNote = data.cup.ovrMax != null ? L.divisionLockNote({ cap: data.cup.ovrMax }) : null;
   if (reason)
     return (
-      <Txt v="sm" tone="warn" testID="cup-ineligible">
-        {reason}
-      </Txt>
+      <View style={{ gap: 6 }}>
+        <Txt v="sm" tone="warn" testID="cup-ineligible">
+          {reason}
+        </Txt>
+        {fit && !me.eligibility.ok && me.eligibility.reason === 'over-cap' ? (
+          <Txt v="sm" tone="muted" testID="cup-fit">
+            {fit}
+          </Txt>
+        ) : null}
+      </View>
     );
   return (
     <View style={{ gap: 6 }}>
@@ -242,8 +278,29 @@ function CupEntry({ state }: { state: CupState }) {
       <Txt v="sm" tone="muted">
         {L.enterLockNote}
       </Txt>
+      {capNote ? (
+        <Txt v="sm" tone="muted">
+          {capNote}
+        </Txt>
+      ) : null}
+      {fit ? (
+        <Txt v="sm" tone="muted" testID="cup-fit">
+          {fit}
+        </Txt>
+      ) : null}
     </View>
   );
+}
+
+/** T-11-410 내 OVR로 들어갈 가장 낮은 구간 안내(구간 대회만). */
+function divisionFitText(data: CupResponse, me: CupMeResponse): string | null {
+  const ovr = me.ovr;
+  if (!data.divisions || ovr == null) return null;
+  const lowest = data.divisions.find(
+    (d) => d.division === 'master' || (d.ovrMax != null && ovr <= d.ovrMax),
+  );
+  const name = lowest && divisionLabel(lowest.division);
+  return name ? L.divisionFit({ ovr, division: name }) : null;
 }
 
 /** 컵 화면 맨 위 카드 · 홈 배너. onOpen이 있으면(홈) 첫 안내 한 줄과 '대회 보기'만 — 신청은 대회 화면에서 한다. */

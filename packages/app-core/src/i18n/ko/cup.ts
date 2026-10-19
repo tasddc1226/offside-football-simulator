@@ -66,8 +66,11 @@ const ko = {
   predictionLoading: '승부예측을 불러오는 중…',
   title: '오프사이드 컵',
   edition: (p: { n: number }) => `제${p.n}회`,
-  fullTitle: (p: { n: number }) => `제${p.n}회 오프사이드 컵`,
-  champTitle: (p: { n: number }) => `제${p.n}회 오프사이드 컵 챔피언`,
+  // T-11-410 d = 구간 이름(구간 대회만).
+  fullTitle: (p: { n: number; d?: string | undefined }) =>
+    `제${p.n}회 오프사이드 컵${p.d ? ` ${p.d}` : ''}`,
+  champTitle: (p: { n: number; d?: string | undefined }) =>
+    `제${p.n}회 오프사이드 컵${p.d ? ` ${p.d}` : ''} 챔피언`,
   open: '대회 보기',
   loadFail: '대회 정보를 불러오지 못했어요.',
   loading: '불러오는 중…',
@@ -127,6 +130,27 @@ const ko = {
   reasonListed: '이적시장에 올린 선수가 선발에 있어요. 선발에서 빼거나 판매를 취소해 주세요.',
   reasonFull: '정원이 다 찼어요.',
   reasonClosed: '지금은 신청 기간이 아니에요.',
+  // T-11-410 OVR 구간별 대회
+  reasonOverCap: (p: { ovr: number; cap: number }) =>
+    `팀 OVR ${p.ovr}은(는) 이 구간 상한 ${p.cap}보다 높아요. 윗 구간에 신청할 수 있어요.`,
+  reasonEnteredOther: '이번 회차 다른 구간에 신청했어요. 그 신청을 취소하면 옮길 수 있어요.',
+  divisionJunior: '주니어',
+  divisionSenior: '시니어',
+  divisionMaster: '마스터',
+  divisionTabs: 'OVR 구간',
+  divisionCap: (p: { n: number }) => `OVR ${p.n} 이하`,
+  divisionNoCap: 'OVR 제한 없음',
+  divisionCapPending: '상한은 접수가 열리면 정해져요',
+  divisionEntries: (p: { n: number }) => `${p.n}팀 신청`,
+  divisionMine: '내 구간',
+  divisionFit: (p: { ovr: number; division: string }) =>
+    `내 팀 OVR ${p.ovr}이라 ${p.division}부터 신청할 수 있어요. 윗 구간에 도전해도 돼요.`,
+  divisionLockNote: (p: { cap: number }) =>
+    `조 추첨부터 탈락할 때까지 팀 OVR ${p.cap}을 넘는 명단으로 바꿀 수 없어요.`,
+  ruleDivisions:
+    '팀 OVR 구간(주니어 · 시니어 · 마스터)마다 따로 대회를 열어요. 내 OVR이 상한 이하인 구간에 신청할 수 있고, 윗 구간에 도전해도 돼요. 한 회차에 한 구간만 참가해요.',
+  ruleDivisionMove:
+    '조 추첨 때 팀 OVR이 상한을 넘었으면 윗 구간으로 옮기고, 8팀보다 적은 구간은 윗 구간과 함께 치러요.',
   notEntered: '이번 대회에는 신청하지 않았어요.',
   nextMatch: (p: { round: string; vs: string; at: string }) =>
     `다음 경기 ${p.round} · ${p.vs} · ${p.at}`,
@@ -199,7 +223,8 @@ const ko = {
   // T-11-290 우승 팝업(앱·웹을 열 때 한 번)
   championPopupAria: '오프사이드 컵 우승 소식',
   championPopupEyebrow: (p: { n: number }) => `Offside Cup · 제${p.n}회`,
-  championPopupTitle: (p: { n: number }) => `제${p.n}회 오프사이드 컵 우승`,
+  championPopupTitle: (p: { n: number; d?: string | undefined }) =>
+    `제${p.n}회 오프사이드 컵${p.d ? ` ${p.d}` : ''} 우승`,
   championPopupBody: '결승에서 이기고 트로피를 들었어요.',
   championPopupOwner: (p: { owner: string }) => `구단주 ${p.owner}`,
   championPopupTeam: '우승 팀 보기',
@@ -237,8 +262,8 @@ const ko = {
   forfeitNote: '한 팀이 나오지 못해 0:3 몰수패로 끝났어요.',
   // 팀 프로필 컵 기록
   honorsTitle: '컵 기록',
-  honorResult: (p: { edition: number; stage: string }) =>
-    `제${p.edition}회 오프사이드 컵 ${p.stage}`,
+  honorResult: (p: { edition: number; stage: string; d?: string | undefined }) =>
+    `제${p.edition}회 오프사이드 컵${p.d ? ` ${p.d}` : ''} ${p.stage}`,
   honorTeam: (p: { team: string }) => `참가 팀 ${p.team}`,
   // 선수 만들기 리롤권
   rerollBtn: (p: { n: number }) => `후보 다시 뽑기 (리롤권 ${p.n}장)`,

@@ -8,6 +8,7 @@ import { useSnapshot } from 'valtio';
 import { fetchCupHome, type CupChampion } from '@offside/app-core/api/cup';
 import { cupChampionToShow, dismissCupChampion } from '@offside/app-core/cupHome';
 import { cupText as L } from '@offside/app-core/i18n/ko/cup';
+import { divisionLabel } from '@offside/app-core/cupDivision';
 import { hofStart } from '@offside/app-core/state';
 import { TeamLogo } from '../../components/TeamLogo';
 import { go } from '../../game/nav';
@@ -258,7 +259,7 @@ function Body({
           </Animated.View>
           <Animated.View style={[{ alignItems: 'center', gap: 10, width: '100%' }, rise(text)]}>
             <Txt v="h2" center>
-              {L.championPopupTitle({ n: champion.edition })}
+              {L.championPopupTitle({ n: champion.edition, d: divisionLabel(champion.division) })}
             </Txt>
             <View
               testID={`cup-champion-team-${champion.teamId}`}

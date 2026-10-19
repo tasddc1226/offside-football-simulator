@@ -40,10 +40,61 @@ import { dayTimeText, roundLabel, stageLabel, timeText } from './cupText';
 import { CupCard, useCup, type CupState } from './TeamCup';
 
 import { cupFolds, rememberCupFolds, type CupScheduleTab } from '@offside/app-core/cupFolds';
+import { divisionCapLabel, divisionLabel } from '@offside/app-core/cupDivision';
 import { CupPrediction, PredictionIntro, usePredictions } from './CupPrediction';
 import type { CupPredictionContext } from '@offside/app-core/cupPredictions';
 
 const KO_ROUNDS: readonly CupRound[] = CUP_KO_ROUNDS;
+
+/** T-11-410 OVR 구간 탭(구간 대회만). 고르면 그 구간 대회를 다시 부른다. */
+function DivisionTabs({ state }: { state: CupState }) {
+  const c = useColors();
+  const list = state.cup?.divisions;
+  if (!list) return null;
+  const at = state.cup!.cup.id;
+  return (
+    <View
+      accessibilityRole="tablist"
+      accessibilityLabel={L.divisionTabs}
+      style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}
+    >
+      {list.map((d) => {
+        const on = d.id === at;
+        return (
+          <Press
+            key={d.id}
+            testID={`cup-division-${d.division}`}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: on }}
+            onPress={() => (on ? undefined : state.pick(d.id))}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              minHeight: 64,
+              gap: 2,
+              paddingVertical: 8,
+              paddingHorizontal: 10,
+              borderRadius: RADIUS.md,
+              borderWidth: on ? 2 : 1,
+              borderColor: on ? c.accent : c.line,
+              backgroundColor: c.surface,
+            }}
+          >
+            <Txt bold numberOfLines={1}>
+              {divisionLabel(d.division)}
+            </Txt>
+            <Txt v="xs" tone="muted">
+              {divisionCapLabel(d)}
+            </Txt>
+            <Txt v="xs" tone={d.id === state.myDivision ? 'good' : 'muted'}>
+              {d.id === state.myDivision ? L.divisionMine : L.divisionEntries({ n: d.entries })}
+            </Txt>
+          </Press>
+        );
+      })}
+    </View>
+  );
+}
 
 function Bullet({ children }: { children: string }) {
   return (
@@ -797,6 +848,8 @@ function CupBody({
         {first ? <Bullet>{L.ruleDaily({ time: timeText(first.at) })}</Bullet> : null}
         {first ? <Bullet>{L.ruleLock({ time: timeText(first.lockAt) })}</Bullet> : null}
         <Bullet>{L.ruleForfeit}</Bullet>
+        {data.divisions ? <Bullet>{L.ruleDivisions}</Bullet> : null}
+        {data.divisions ? <Bullet>{L.ruleDivisionMove}</Bullet> : null}
       </Card>
 
       <Card gap={6} testID="cup-schedule">
@@ -1061,9 +1114,12 @@ export default function Cup() {
       <View style={{ paddingHorizontal: 2, paddingTop: 4 }}>
         <Txt v="eyebrow">Offside Cup</Txt>
         <Txt v="h1" accessibilityRole="header" style={{ marginTop: 2 }}>
-          {state.cup ? L.fullTitle({ n: state.cup.cup.edition }) : L.title}
+          {state.cup
+            ? L.fullTitle({ n: state.cup.cup.edition, d: divisionLabel(state.cup.cup.division) })
+            : L.title}
         </Txt>
       </View>
+      <DivisionTabs state={state} />
       <CupBody
         key={`${state.cup?.cup.id ?? 'loading'}:${linked ? acct.id : 'guest'}`}
         state={state}

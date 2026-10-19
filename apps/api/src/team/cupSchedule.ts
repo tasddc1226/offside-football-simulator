@@ -1,4 +1,4 @@
-import type { CupDef } from '@offside/contracts/cup';
+import { divisionRank, type CupDef, type CupDivision } from '@offside/contracts/cup';
 import { asc } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { cups } from '../db/schema.js';
@@ -16,8 +16,16 @@ export const toCupDef = (r: CupRow): CupDef => ({
   rounds: JSON.parse(r.roundsJson) as string[],
   capacity: r.capacity,
   minFilled: r.minFilled,
+  ...(r.division ? { division: r.division as CupDivision, ovrMax: r.ovrMax } : {}),
 });
 
-/** 모든 대회(접수 시작 순). */
+/** 모든 대회(접수 시작 순, 같은 회차 구간은 아래에서 위). */
 export const cupSchedule = async (db: Db): Promise<CupDef[]> =>
-  (await db.select().from(cups).orderBy(asc(cups.opensAt))).map(toCupDef);
+  (await db.select().from(cups).orderBy(asc(cups.opensAt)))
+    .map(toCupDef)
+    .sort(
+      (a, b) =>
+        a.opensAt.localeCompare(b.opensAt) ||
+        a.edition - b.edition ||
+        divisionRank(a.division) - divisionRank(b.division),
+    );

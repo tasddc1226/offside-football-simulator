@@ -373,7 +373,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           : null
         : input.layout;
     const lineup = buildLineup(input.formation, input.slots, eligible, layout);
-    if (!friendly) await checkCupLineup(db, me.id, season, ids, filledCount(lineup), now);
+    if (!friendly)
+      await checkCupLineup(db, me.id, season, ids, filledCount(lineup), now, lineupOvr(lineup));
     const values = {
       name: input.name,
       manager: input.manager,
@@ -454,7 +455,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       : null;
     if (input.coach && !coach) throw coachNotEligible();
     const ids = slotIdsOf(team).filter((x): x is string => x !== null);
-    await checkCupLineup(db, me.id, season, ids, team.filled, now);
+    await checkCupLineup(db, me.id, season, ids, team.filled, now, team.ovr);
     await db
       .update(ownerTeams)
       .set({ coachId: coach ? input.coach : null, updatedAt: now })
