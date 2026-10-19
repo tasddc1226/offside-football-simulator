@@ -84,16 +84,16 @@
 </dialog>
 
 <style>
-  dialog {width:100%;max-width:480px;max-height:92dvh;margin:auto auto 0;padding:0;border:1px solid var(--line);border-radius:18px 18px 0 0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow);overflow:hidden;}
+  dialog {width:100%;max-width:480px;max-height:92dvh;margin:auto auto 0;padding:0;border: 1px solid transparent;border-radius:var(--radius-lg) var(--radius-lg) 0 0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow);overflow:hidden;}
   dialog[open] {display:flex;flex-direction:column;}
   dialog::backdrop {background:#0009;}
   header {display:flex;align-items:center;justify-content:space-between;padding:10px 16px;flex:none;}
   h2 {margin:0;font-size:18px;}
-  .close {width:44px;height:44px;flex:none;border:0;border-radius:8px;background:none;color:var(--ink);}
+  .close {width:44px;height:44px;flex:none;border:0;border-radius:var(--radius-sm);background:none;color:var(--ink);}
   .close svg {width:20px;height:20px;stroke:currentColor;stroke-width:1.5;fill:none;}
   .body {display:flex;flex-direction:column;gap:16px;padding:0 16px 16px;overflow:auto;overscroll-behavior:contain;min-height:0;}
   .body > * {flex-shrink:0;}
-  .preview {display:flex;align-items:center;gap:16px;padding:12px;border-radius:12px;background:var(--surface-2);}
+  .preview {display:flex;align-items:center;gap:16px;padding:12px;border-radius:var(--radius-md);background:var(--surface-2);}
   .preview > div {min-width:0;}
   .preview b {font-size:16px;overflow-wrap:anywhere;}
   .preview p,.hint,.error {font-size:12px;line-height:1.6;color:var(--muted);margin:6px 0 0;}
@@ -102,19 +102,19 @@
   .control {display:flex;flex-direction:column;gap:8px;}
   .lbl {font-size:12px;font-weight:600;color:var(--muted);}
   .shapes {display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
-  .shapes button {display:flex;align-items:center;justify-content:center;min-height:56px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer;}
+  .shapes button {display:flex;align-items:center;justify-content:center;min-height:56px;border: 1px solid transparent;border-radius:var(--radius-sm);background:var(--surface-2);cursor:pointer;}
   .shapes button.chosen,.colors button.chosen {border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
   .colors {display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
-  .colors button {display:flex;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer;}
+  .colors button {display:flex;align-items:center;justify-content:center;min-height:44px;border: 1px solid transparent;border-radius:var(--radius-sm);background:var(--surface-2);cursor:pointer;}
   .colors span {display:grid;place-items:center;width:30px;height:30px;border-radius:50%;font-family:var(--display);font-weight:700;font-size:15px;}
   .custom {display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:end;}
   .custom input[type='text'] {min-height:44px;width:100%;min-width:0;}
   .color-label {display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
-  input[type='color'] {width:44px;height:44px;padding:3px;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer;}
+  input[type='color'] {width:44px;height:44px;padding:3px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;}
   .upload {width:100%;min-height:44px;}
   .hint {margin:0;}
   .error {color:var(--bad);}
   footer {display:flex;gap:8px;padding:12px 16px calc(12px + var(--safe-b));flex:none;}
   footer .btn {flex:1;min-height:44px;font-size:14px;}
-  @media(min-width:600px) {dialog {margin:auto;border-radius:18px;}}
+  @media(min-width:600px) {dialog {margin:auto;border-radius:var(--radius-lg);}}
 </style>

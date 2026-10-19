@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { Keyboard, View, useWindowDimensions } from 'react-native';
 import {
@@ -418,7 +419,7 @@ export function TeamLineup({
                       accessibilityState={{ selected: selected === p.careerId }}
                       onPress={() => select(selected === p.careerId ? null : p.careerId)}
                       style={{
-                        borderRadius: 12,
+                        borderRadius: RADIUS.md,
                         borderWidth: selected === p.careerId ? 2 : 0,
                         borderColor: c.accent,
                       }}
@@ -473,7 +474,7 @@ export function TeamLineup({
                         style={{
                           minHeight: 28,
                           paddingHorizontal: 8,
-                          borderRadius: 999,
+                          borderRadius: RADIUS.pill,
                           borderWidth: 1,
                           borderColor: p.locked ? c.accent : c.line,
                           justifyContent: 'center',

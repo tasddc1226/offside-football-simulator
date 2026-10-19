@@ -292,11 +292,11 @@
   .schedule-tabs button {background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);font:inherit;font-weight:700;min-height:48px;padding:8px 0;cursor:pointer;}
   .schedule-tabs button.active {border-bottom-color:var(--accent);color:var(--ink);}
   .schedule-chips {display:flex;gap:6px;overflow-x:auto;padding:8px 0 12px;max-width:100%;}
-  .schedule-chips button {flex:none;border:1px solid var(--line);border-radius:10px;min-height:44px;padding:6px 10px;background:var(--bg);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;}
+  .schedule-chips button {flex:none;border: 1px solid transparent;border-radius:var(--radius-sm);min-height:44px;padding:6px 10px;background:var(--bg);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;}
   .schedule-chips button.active {border-color:var(--accent);color:var(--accent-text);font-weight:700;}
   [data-cup-bracket]:not([hidden]) {display:flex;flex-direction:column;gap:10px;}
-  .bracket-tabs { display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border:1px solid var(--line);border-radius:14px;background:var(--bg); }
-  .bracket-tabs button { min-width:0;min-height:44px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-size:.875rem;font-weight:600;padding:8px 12px;cursor:pointer; }
+  .bracket-tabs { display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border: 1px solid transparent;border-radius:var(--radius-md);background:var(--bg); }
+  .bracket-tabs button { min-width:0;min-height:44px;border:1px solid transparent;border-radius:var(--radius-sm);background:transparent;color:var(--muted);font:inherit;font-size:var(--fs-body2);font-weight:600;padding:8px 12px;cursor:pointer; }
   .bracket-tabs button.chosen { background:var(--surface);border-color:var(--line);color:var(--ink);box-shadow:0 1px 3px #0002; }
   .bracket-tabs button:focus-visible { outline:2px solid var(--accent);outline-offset:2px; }
   .cup-login { gap: 10px; border-color: var(--accent); }
@@ -314,7 +314,7 @@
   }
   .cup-sec h3 {
     margin: 0;
-    font-size: 1rem;
+    font-size: var(--fs-body);
   }
   .cup-sec p {
     margin: 0;
@@ -339,7 +339,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px;
-    border-radius: 14px;
+    border-radius: var(--radius-md);
     background: var(--pitch);
     color: var(--on-pitch);
   }
@@ -356,7 +356,7 @@
     overflow-wrap: anywhere;
   }
   .cup-champ-who b {
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
     color: var(--pitch-accent);
   }
   .cup-champ-who small {
@@ -414,7 +414,7 @@
   .cup-rewards {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     margin-bottom: 8px;
   }
   .cup-rewards th,
@@ -426,7 +426,7 @@
   }
   .cup-rewards thead th {
     border-top: 0;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .cup-rewards th:last-child,
@@ -460,7 +460,7 @@
     flex: none;
     text-align: right;
     color: var(--muted);
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     font-variant-numeric: tabular-nums;
   }
   .cup-entrant-who {
@@ -473,7 +473,7 @@
   }
   .cup-entrant-ovr {
     flex: none;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     font-variant-numeric: tabular-nums;
   }
   .cup-rules {
@@ -482,7 +482,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    font-size: 0.9375rem;
+    font-size: var(--fs-body1);
     line-height: 1.5;
   }
 </style>

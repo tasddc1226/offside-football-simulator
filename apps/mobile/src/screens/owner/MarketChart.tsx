@@ -1,6 +1,7 @@
 // T-11-080f 시세 차트(웹 ui/MarketChart.svelte · 시장 지수는 웹 Market.svelte .mk-index).
 // 카드 상세: 같은 포지션군 · OVR대 하루 평균 선, 최저~최고 띠, 기준가 점선, 이 선수 거래 점. 영입 시트를 열 때만 부르고(1분 메모),
 // 기간을 바꾸면 그 기간만 새로 받는다. 점을 누르면 그날 값을 위에 보여 준다. 색은 국내 증권 관례대로 오름 빨강 · 내림 파랑.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, View, type ViewStyle } from 'react-native';
 import Svg, { Line as SvgLine, Path } from 'react-native-svg';
@@ -67,7 +68,7 @@ function Hit({
         justifyContent: 'center',
       }}
     >
-      <View style={{ borderRadius: 5, borderWidth: 2, ...dot }} />
+      <View style={{ borderRadius: RADIUS.xs, borderWidth: 2, ...dot }} />
     </Pressable>
   );
 }
@@ -90,17 +91,17 @@ export function MarketIndex({ points }: { points: readonly MarketChartPoint[] })
         paddingVertical: 10,
         paddingHorizontal: 12,
         borderWidth: 1,
-        borderColor: c.line,
-        borderRadius: 14,
+        borderColor: 'transparent',
+        borderRadius: RADIUS.md,
         backgroundColor: c.surface,
       }}
     >
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-        <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
           {CHART_COPY.index}
         </Txt>
-        <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(1.375) }}>{index.pct}</Txt>
-        <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(0.6875) }}>
+        <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(FONT.title2) }}>{index.pct}</Txt>
+        <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(FONT.caption2) }}>
           {CHART_COPY.indexSub(index.trades)}
         </Txt>
       </View>
@@ -126,7 +127,9 @@ export function MarketIndex({ points }: { points: readonly MarketChartPoint[] })
           />
         </Svg>
       ) : null}
-      <Txt style={{ fontSize: rem(0.75), fontWeight: '700', color: tone }}>{index.change}</Txt>
+      <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '700', color: tone }}>
+        {index.change}
+      </Txt>
     </View>
   );
 }
@@ -182,7 +185,10 @@ export function MarketChart({ card }: { card: MarketCard }) {
   const at = (x: number, y: number) => ({ left: (x / 100) * plotW, top: (y / 100) * PLOT_H });
 
   const empty = (text: string) => (
-    <Txt tone="muted" style={{ fontSize: rem(0.8125), textAlign: 'center', paddingVertical: 28 }}>
+    <Txt
+      tone="muted"
+      style={{ fontSize: rem(FONT.label), textAlign: 'center', paddingVertical: 28 }}
+    >
       {text}
     </Txt>
   );
@@ -194,10 +200,10 @@ export function MarketChart({ card }: { card: MarketCard }) {
     >
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
         <View style={{ flexShrink: 1 }}>
-          <Txt bold style={{ fontSize: rem(0.875) }} accessibilityRole="header">
+          <Txt bold style={{ fontSize: rem(FONT.body2) }} accessibilityRole="header">
             {CHART_COPY.title}
           </Txt>
-          <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
             {CHART_COPY.group(POS[card.pos].label, band)}
           </Txt>
         </View>
@@ -208,7 +214,7 @@ export function MarketChart({ card }: { card: MarketCard }) {
             flexDirection: 'row',
             gap: 2,
             padding: 2,
-            borderRadius: 8,
+            borderRadius: RADIUS.sm,
             backgroundColor: c.surface2,
             alignSelf: 'flex-start',
           }}
@@ -224,13 +230,13 @@ export function MarketChart({ card }: { card: MarketCard }) {
                 minHeight: 30,
                 paddingHorizontal: 10,
                 justifyContent: 'center',
-                borderRadius: 6,
+                borderRadius: RADIUS.xs,
                 backgroundColor: range === k ? c.surface : 'transparent',
               }}
             >
               <Txt
                 tone={range === k ? 'ink' : 'muted'}
-                style={{ fontSize: rem(0.75), fontWeight: '600' }}
+                style={{ fontSize: rem(FONT.caption), fontWeight: '600' }}
               >
                 {label}
               </Txt>
@@ -246,7 +252,10 @@ export function MarketChart({ card }: { card: MarketCard }) {
         empty(CHART_COPY.empty)
       ) : (
         <>
-          <Txt accessibilityLiveRegion="polite" style={{ fontSize: rem(0.75), fontWeight: '600' }}>
+          <Txt
+            accessibilityLiveRegion="polite"
+            style={{ fontSize: rem(FONT.caption), fontWeight: '600' }}
+          >
             {pick ?? ' '}
           </Txt>
           <View style={{ height: PLOT_H }} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
@@ -296,7 +305,7 @@ export function MarketChart({ card }: { card: MarketCard }) {
                       position: 'absolute',
                       left: plotW + 6,
                       top: (y / 100) * PLOT_H - 7,
-                      fontSize: rem(0.625),
+                      fontSize: rem(FONT.caption2),
                     }}
                   >
                     {label}
@@ -338,14 +347,14 @@ export function MarketChart({ card }: { card: MarketCard }) {
               gap: 6,
             }}
           >
-            <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
               {model.from}
             </Txt>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }}>
               {model.line ? (
                 <>
                   <View style={{ width: 12, height: 2, backgroundColor: c.muted }} />
-                  <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
                     {CHART_COPY.legendLine}
                   </Txt>
                 </>
@@ -361,13 +370,13 @@ export function MarketChart({ card }: { card: MarketCard }) {
                       marginLeft: 6,
                     }}
                   />
-                  <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
                     {CHART_COPY.legendDot}
                   </Txt>
                 </>
               ) : null}
             </View>
-            <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
               {model.to}
             </Txt>
           </View>

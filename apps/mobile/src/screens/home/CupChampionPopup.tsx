@@ -1,6 +1,7 @@
 // T-11-290 오프사이드 컵 우승 팝업(웹 cup/CupChampionPopup.svelte) — 앱을 켜 홈에 왔을 때 한 번, 가장 최근에 끝난 대회의
 // 우승 팀(결승 뒤 일주일, 서버 champion). 홈 컵 배너와 같은 공개 응답(30초 메모)이라 요청이 늘지 않는다. '다시 보지 않기'는
 // 대회 id로 기억한다(cupHome.ts). '우승 팀 보기'는 기록실 팀 프로필로 간다. 움직임 줄이기를 켰으면 바로 그린다.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Modal, Pressable, View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -179,7 +180,7 @@ function Body({
             gap: 10,
             padding: 20,
             paddingTop: 22,
-            borderRadius: 20,
+            borderRadius: RADIUS.lg,
             backgroundColor: c.surface,
             opacity: card,
             transform: [
@@ -195,7 +196,7 @@ function Body({
               top: -60,
               width: 320,
               height: 320,
-              borderRadius: 160,
+              borderRadius: RADIUS.pill,
               backgroundColor: alpha('#f0b437', 0.18),
               opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0.9] }),
               transform: [
@@ -269,8 +270,8 @@ function Body({
                 paddingVertical: 8,
                 paddingHorizontal: 14,
                 borderWidth: 1,
-                borderColor: c.line,
-                borderRadius: 14,
+                borderColor: 'transparent',
+                borderRadius: RADIUS.md,
                 backgroundColor: c.surface2,
               }}
             >

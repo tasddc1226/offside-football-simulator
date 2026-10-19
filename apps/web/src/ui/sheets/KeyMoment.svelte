@@ -37,7 +37,7 @@
     gap: 10px;
     margin: 12px 0 4px;
     padding: 14px;
-    border-radius: 14px;
+    border-radius: var(--radius-md);
     border: 1px solid var(--good);
     background: var(--surface-2);
   }
@@ -54,7 +54,7 @@
     letter-spacing: 0.04em;
   }
   .km-head b {
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
     color: var(--good);
   }
   .km.crisis .km-head b {
@@ -62,7 +62,7 @@
   }
   .km-head span {
     color: var(--muted);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     text-align: right;
   }
   .km-scene,
@@ -72,7 +72,7 @@
   }
   .km-hint {
     color: var(--muted);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
   }
   .km-choices {
     display: grid;
@@ -85,9 +85,9 @@
     gap: 2px 10px;
     min-height: 48px;
     padding: 8px 12px;
-    border-radius: 10px;
-    border: 1px solid var(--line);
-    background: var(--surface);
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background: var(--surface-2);
     color: inherit;
     font: inherit;
     text-align: left;
@@ -102,13 +102,13 @@
   }
   .km-pct {
     font-family: var(--display);
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
     font-variant-numeric: tabular-nums;
   }
   .km-attr {
     grid-column: 1 / -1;
     color: var(--muted);
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
   }
   .km-timer {
     height: 4px;
@@ -135,7 +135,7 @@
     color: var(--muted);
   }
   .km-result b {
-    font-size: 1.0625rem;
+    font-size: var(--fs-title3);
     color: var(--bad);
   }
   .km-result.ok b {

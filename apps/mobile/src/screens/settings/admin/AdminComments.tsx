@@ -1,5 +1,6 @@
 // T-10-016 댓글 관리(웹 admin/AdminComments.svelte): 전체 게시판의 최근 댓글을 보고 지운다. 도배·욕설은 작성자(프로필) 단위로
 // 모아 보고 한 번에 지울 수 있다(감사 로그가 남는다). 신고받은 댓글은 신고 수가 붙고, '신고된 댓글'로 모아 본다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import * as api from '@offside/app-core/api/admin';
@@ -108,7 +109,7 @@ export default function AdminComments() {
             gap: 8,
             paddingVertical: 8,
             paddingHorizontal: 10,
-            borderRadius: 10,
+            borderRadius: RADIUS.sm,
             backgroundColor: c.surface2,
           }}
         >
@@ -143,12 +144,12 @@ export default function AdminComments() {
                   <Txt bold>{cm.nickname}</Txt>
                   {cm.admin ? <Pill tone="good">운영자</Pill> : null}
                   {cm.reports ? <Pill tone="warn">{`신고 ${cm.reports}`}</Pill> : null}
-                  <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                     {`${short(cm.profileId)} · ${kst(cm.createdAt)}`}
                   </Txt>
                 </View>
                 <Txt>{cm.body}</Txt>
-                <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                   {`[${commentSourceLabel(cm.board)}] ${cm.postTitle}`}
                 </Txt>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>

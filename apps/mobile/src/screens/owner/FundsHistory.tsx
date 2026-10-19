@@ -1,5 +1,6 @@
 // 구단 자금 내역(웹 FundsHistory.svelte) — 구단주 화면의 '구단 자금' 칸으로 연다. 지금 자금, 들어온·나간 자금 합(출처별),
 // 그리고 방출·판매·영입·구단 자금 사용을 한국 시각 날짜로 묶어 최근 순으로 보여 준다(30줄씩 더 보기).
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import type { FundsHistoryEntry, FundsHistoryResponse } from '@offside/contracts';
@@ -40,21 +41,25 @@ function TotalBox({
         gap: 2,
         paddingVertical: 10,
         paddingHorizontal: 12,
-        borderRadius: 12,
+        borderRadius: RADIUS.md,
         backgroundColor: c.surface2,
       }}
     >
-      <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
         {label}
       </Txt>
       <Txt
         tone={plus ? 'good' : 'ink'}
-        style={{ fontFamily: DISPLAY[700], fontSize: rem(1.125), fontVariant: ['tabular-nums'] }}
+        style={{
+          fontFamily: DISPLAY[700],
+          fontSize: rem(FONT.title3),
+          fontVariant: ['tabular-nums'],
+        }}
       >
         {t.total}
       </Txt>
       {t.lines.map((l) => (
-        <Txt key={l.label} tone="muted" style={{ fontSize: rem(0.8125) }}>
+        <Txt key={l.label} tone="muted" style={{ fontSize: rem(FONT.label) }}>
           {`${l.label} ${l.value}`}
         </Txt>
       ))}
@@ -92,7 +97,7 @@ export default function FundsHistory() {
   const totals = res ? fundsHistoryTotals(res.totals) : null;
   const badge = (kind: FundsHistoryEntry['kind']) =>
     kind === 'sold' || kind === 'bonus' ? c.accentText : kind === 'released' ? c.bad : c.ink;
-  const small = { fontSize: rem(0.875) } as const;
+  const small = { fontSize: rem(FONT.body2) } as const;
 
   return (
     <Screen>
@@ -119,14 +124,14 @@ export default function FundsHistory() {
         <>
           <Card gap={12} testID="funds-summary">
             <View style={{ gap: 2 }}>
-              <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                 {H.balance}
               </Txt>
               <Txt
                 testID="funds-balance"
                 style={{
                   fontFamily: DISPLAY[700],
-                  fontSize: rem(1.75),
+                  fontSize: rem(FONT.title1),
                   color: c.accentText,
                   fontVariant: ['tabular-nums'],
                 }}
@@ -147,15 +152,15 @@ export default function FundsHistory() {
                   <Txt
                     tone="muted"
                     bold
-                    style={{ fontSize: rem(0.8125), marginTop: 6, paddingHorizontal: 4 }}
+                    style={{ fontSize: rem(FONT.label), marginTop: 6, paddingHorizontal: 4 }}
                   >
                     {g.label}
                   </Txt>
                   <View
                     style={{
                       borderWidth: 1,
-                      borderColor: c.line,
-                      borderRadius: 14,
+                      borderColor: 'transparent',
+                      borderRadius: RADIUS.md,
                       backgroundColor: c.surface,
                     }}
                   >
@@ -178,14 +183,14 @@ export default function FundsHistory() {
                             minWidth: 36,
                             paddingVertical: 3,
                             paddingHorizontal: 6,
-                            borderRadius: 6,
+                            borderRadius: RADIUS.xs,
                             alignItems: 'center',
                             backgroundColor: c.surface2,
                           }}
                         >
                           <Txt
                             style={{
-                              fontSize: rem(0.6875),
+                              fontSize: rem(FONT.caption2),
                               fontWeight: '700',
                               color: badge(r.kind),
                             }}
@@ -197,7 +202,7 @@ export default function FundsHistory() {
                           <Txt numberOfLines={1} style={small}>
                             {r.title}
                           </Txt>
-                          <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                          <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                             {r.sub}
                           </Txt>
                         </View>

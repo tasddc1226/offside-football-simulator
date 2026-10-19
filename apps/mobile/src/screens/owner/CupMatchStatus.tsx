@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import type { CupMatch } from '@offside/app-core/api/cup';
 import { cupText as L } from '@offside/app-core/i18n/ko/cup';
@@ -10,7 +11,7 @@ export default function CupMatchStatus({ m }: { m: CupMatch }) {
     <View
       style={{
         alignSelf: 'center',
-        borderRadius: 999,
+        borderRadius: RADIUS.pill,
         paddingVertical: 3,
         paddingHorizontal: 9,
         borderWidth: 1,

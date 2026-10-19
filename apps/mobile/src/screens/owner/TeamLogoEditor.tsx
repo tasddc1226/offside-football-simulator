@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
@@ -138,7 +139,7 @@ export function TeamLogoEditor({
                   borderWidth: value.bg === color.bg ? 2 : 0,
                   borderColor: color.fg,
                   backgroundColor: color.bg,
-                  borderRadius: 24,
+                  borderRadius: RADIUS.lg,
                 }}
               >
                 <Txt style={{ color: color.fg }}>FC</Txt>

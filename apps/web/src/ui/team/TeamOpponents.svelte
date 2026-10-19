@@ -103,11 +103,11 @@
   }
   .tm-opp-score b {
     font-family: var(--display);
-    font-size: 1.375rem;
+    font-size: var(--fs-title2);
     font-weight: 700;
     color: var(--accent-text);
   }
   .tm-opp-score small {
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
   }
 </style>

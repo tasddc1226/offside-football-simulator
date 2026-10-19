@@ -1,4 +1,5 @@
 // Shared compact records controls. The selection sheet keeps native safe areas and touch targets.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import type { ReactNode } from 'react';
 import { Platform, ScrollView, View } from 'react-native';
 import { useColors } from '../../theme/useColors';
@@ -77,8 +78,8 @@ export function RecordsFilters({
                 gap: 4,
                 minHeight: RECORDS_TOUCH,
                 borderWidth: 1,
-                borderColor: c.line,
-                borderRadius: 10,
+                borderColor: 'transparent',
+                borderRadius: RADIUS.sm,
                 paddingHorizontal: 10,
                 backgroundColor: c.surface2,
               }}
@@ -142,7 +143,7 @@ export function RecordsChips({
               style={{
                 minHeight: 32,
                 justifyContent: 'center',
-                borderRadius: 999,
+                borderRadius: RADIUS.pill,
                 paddingHorizontal: 12,
                 paddingVertical: 4,
                 borderWidth: 1,

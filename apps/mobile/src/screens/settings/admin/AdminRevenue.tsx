@@ -1,4 +1,5 @@
 // T-11-263 매출(웹 admin/AdminRevenue.svelte): 기간(오늘 · 7일 · 30일 · 90일) 합 · 날짜별 · 상품별 · 스토어별 · 최근 결제.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import * as api from '@offside/app-core/api/admin';
@@ -42,8 +43,8 @@ export default function AdminRevenue() {
   }
   useEffect(() => void load(), []);
 
-  const small = { fontSize: rem(0.8125) } as const;
-  const tiny = { fontSize: rem(0.75) } as const;
+  const small = { fontSize: rem(FONT.label) } as const;
+  const tiny = { fontSize: rem(FONT.caption) } as const;
   const row = {
     flexDirection: 'row',
     justifyContent: 'space-between',

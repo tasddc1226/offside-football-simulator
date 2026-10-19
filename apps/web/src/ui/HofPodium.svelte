@@ -80,7 +80,7 @@
   .hof-podium-player:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 3px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
   }
   .hof-podium-profile {
     position: relative;

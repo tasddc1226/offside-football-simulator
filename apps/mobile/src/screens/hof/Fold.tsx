@@ -1,4 +1,5 @@
 // 확률 도감의 접고 펴는 칸(웹 <details>)과 [용어, 설명] 목록 — 공통 규칙(Dex)·확률과 공정성(Fairness)이 같이 쓴다.
+import { FONT } from '@offside/app-core/design-tokens';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { rem } from '../../theme/type';
@@ -30,7 +31,7 @@ export function Fold({
         style={{ minHeight: 32, justifyContent: 'center' }}
       >
         <Txt bold>
-          <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
             {open ? '▾ ' : '▸ '}
           </Txt>
           {title}

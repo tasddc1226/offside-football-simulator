@@ -1,4 +1,5 @@
 // 선수 생성 화면 안에서만 쓰는 작은 부품 — 입력 칸·격자·두 색 섞기.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useState, type ReactNode } from 'react';
 import { TextInput, View, type TextStyle } from 'react-native';
 import { revealFocusedInput } from '../../ui/scroll';
@@ -57,9 +58,9 @@ export function useInputStyle(): TextStyle {
   const c = useColors();
   return {
     borderWidth: 1,
-    borderColor: c.line,
+    borderColor: 'transparent',
     backgroundColor: c.surface2,
-    borderRadius: 10,
+    borderRadius: RADIUS.sm,
     paddingVertical: 11,
     paddingHorizontal: 12,
     // iOS는 16px보다 작은 입력 칸에 초점이 가면 화면을 확대한다.

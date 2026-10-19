@@ -1,5 +1,6 @@
 // 커리어 탭(웹 tabs/CareerTab.svelte, ui.ts careerTab 포트): 통산 기록 + 몸값 그래프 · 다음 목표 · 시즌별 기록 표 · 여정.
 // 게임 화면의 커리어 탭과 은퇴 리포트 '자세히 보기'가 같이 쓴다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Animated, Easing, ScrollView, View, type TextStyle } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -54,7 +55,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
               style={{
                 flex: 1,
                 backgroundColor: c.surface2,
-                borderRadius: 10,
+                borderRadius: RADIUS.sm,
                 padding: 8,
                 alignItems: 'center',
               }}
@@ -62,13 +63,16 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
               <Txt
                 style={{
                   ...num(700),
-                  fontSize: rem(1.625),
-                  lineHeight: rem(1.625) * 1.1,
+                  fontSize: rem(FONT.title1),
+                  lineHeight: rem(FONT.title1) * 1.1,
                 }}
               >
                 {n}
               </Txt>
-              <Txt tone="muted" style={{ fontSize: rem(0.6875), lineHeight: rem(0.6875) * 1.5 }}>
+              <Txt
+                tone="muted"
+                style={{ fontSize: rem(FONT.caption2), lineHeight: rem(FONT.caption2) * 1.5 }}
+              >
                 {label}
               </Txt>
             </View>
@@ -157,7 +161,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
                         <View
                           style={{
                             alignSelf: 'flex-start',
-                            borderRadius: 999,
+                            borderRadius: RADIUS.pill,
                             paddingVertical: 2,
                             paddingHorizontal: 6,
                             backgroundColor: alpha(c.accent, 0.22),
@@ -167,7 +171,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
                         >
                           <Txt
                             style={{
-                              fontSize: rem(0.625),
+                              fontSize: rem(FONT.caption2),
                               fontWeight: '700',
                               letterSpacing: rem(0.625) * 0.04,
                               color: c.accentText,
@@ -185,13 +189,16 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
                       </View>
                       <Txt
                         tone="muted"
-                        style={{ fontSize: rem(0.6875), lineHeight: rem(0.6875) * 1.5 }}
+                        style={{
+                          fontSize: rem(FONT.caption2),
+                          lineHeight: rem(FONT.caption2) * 1.5,
+                        }}
                       >
                         {tn(r.league)}
                         {r.loan ? ` · ${L.loanTag}` : ''}
                         {sv ? ' · ' : ''}
                         {sv ? (
-                          <Txt style={{ fontSize: rem(0.6875), fontWeight: '600' }}>
+                          <Txt style={{ fontSize: rem(FONT.caption2), fontWeight: '600' }}>
                             {L.seasonValue({ value: fmtValue(sv) })}
                           </Txt>
                         ) : null}
@@ -199,7 +206,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
                         {r.honors.length ? (
                           <Txt
                             style={{
-                              fontSize: rem(0.6875),
+                              fontSize: rem(FONT.caption2),
                               fontWeight: '600',
                               color: c.accentText,
                             }}
@@ -233,7 +240,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
             </View>
           </ScrollView>
         ) : (
-          <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.body2), paddingVertical: 8 }}>
             {L.emptyRecords}
           </Txt>
         )}
@@ -264,7 +271,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
                 style={{
                   width: 44,
                   fontFamily: DISPLAY[600],
-                  fontSize: rem(1.125),
+                  fontSize: rem(FONT.title3),
                 }}
               >
                 {m.year}
@@ -273,7 +280,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
             </View>
           ))
         ) : (
-          <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.body2), paddingVertical: 8 }}>
             {L.emptyJourney}
           </Txt>
         )}
@@ -282,7 +289,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
   );
 }
 
-const cell: TextStyle = { fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.4 };
+const cell: TextStyle = { fontSize: rem(FONT.label), lineHeight: rem(FONT.label) * 1.4 };
 const numCell: TextStyle = { ...cell, textAlign: 'right', fontVariant: ['tabular-nums'] };
 
 function Th({ w, n, children }: { w: number; n?: boolean; children: string }) {
@@ -292,7 +299,7 @@ function Th({ w, n, children }: { w: number; n?: boolean; children: string }) {
       <Txt
         tone="muted"
         style={{
-          fontSize: rem(0.75),
+          fontSize: rem(FONT.caption),
           fontWeight: '600',
           textAlign: n ? 'right' : 'left',
         }}

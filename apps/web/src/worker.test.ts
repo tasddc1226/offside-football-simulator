@@ -25,6 +25,7 @@ describe('T-10-037 preconnect 헤더', () => {
     for (const path of ['/', '/settings']) {
       const link = (await get(path)).headers.get('Link');
       expect(link, path).toContain('<https://fonts.gstatic.com>; rel=preconnect; crossorigin');
+      expect(link, path).toContain('<https://cdn.jsdelivr.net>; rel=preconnect; crossorigin');
       expect(link, path).toContain('<https://api.offside-lab.com>; rel=preconnect');
     }
   });

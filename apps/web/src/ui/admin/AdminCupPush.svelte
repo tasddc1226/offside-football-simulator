@@ -40,7 +40,7 @@
   .cup-row { border-top: 1px solid var(--line); min-width: 0; }
   summary { display: grid; gap: 8px; padding-block: 14px; min-height: 48px; cursor: pointer; overflow-wrap: anywhere; }
   summary:focus-visible { outline: 2px solid var(--good); outline-offset: 3px; }
-  .summary-metrics { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: .875rem; }
+  .summary-metrics { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: var(--fs-body2); }
   .summary-metrics b { font-variant-numeric: tabular-nums; }
   dl { display: grid; gap: 10px; padding-block: 12px; }
   dl div { display: flex; gap: 12px; justify-content: space-between; align-items: baseline; }

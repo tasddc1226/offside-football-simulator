@@ -1,6 +1,7 @@
 // T-10-092 구단주 팀(웹 team/Team.svelte) — 시즌마다 그 시즌에 뛰고 은퇴한 내 선수로 11명을 꾸려(빈 자리는 유스 선수가
 // 채운다) 같은 시즌 다른 구단주의 팀과 겨룬다. 지난 시즌 팀은 보기만 한다. 경기 결과는 서버가 정한다(앱은 보여 주기만).
 // 편성·후보·업적 표기 같은 순수 계산은 웹과 같은 @offside/app-core/teamOwner.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { teamNameIssues } from '@offside/app-core/careerGuide';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
@@ -974,7 +975,7 @@ export default function Team() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                     <Txt bold>{MG.teamCoach}</Txt>
-                    <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                    <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                       {team.coach
                         ? coachSummary(team.coach, formation, localNames)
                         : MG.teamCoachEmpty}
@@ -999,20 +1000,20 @@ export default function Team() {
                             <Txt bold>
                               {r.label} {r.total}
                             </Txt>
-                            <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                            <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                               {r.parts}
                             </Txt>
                             {r.capped ? (
-                              <Txt style={{ fontSize: rem(0.8125) }}>{r.capped}</Txt>
+                              <Txt style={{ fontSize: rem(FONT.label) }}>{r.capped}</Txt>
                             ) : null}
                           </View>
                         ))}
                         {coachDetail.off.length ? (
-                          <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                          <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                             {MG.breakdownOff({ names: coachDetail.off.join(' · ') })}
                           </Txt>
                         ) : null}
-                        <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                        <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                           {MG.breakdownNote}
                         </Txt>
                       </View>
@@ -1302,8 +1303,8 @@ function PitchSkeleton() {
   const block = useSkeletonBlock();
   return (
     <SkeletonFrame testID="team-skeleton">
-      <View style={[block, { width: '52%', height: 24, borderRadius: 8 }]} />
-      <View style={[block, { width: '100%', aspectRatio: 2 / 3, borderRadius: 12 }]}>
+      <View style={[block, { width: '52%', height: 24, borderRadius: RADIUS.sm }]} />
+      <View style={[block, { width: '100%', aspectRatio: 2 / 3, borderRadius: RADIUS.md }]}>
         {SK_DOTS.map(([x, y], i) => (
           <View
             key={i}
@@ -1315,7 +1316,7 @@ function PitchSkeleton() {
               height: 32,
               marginLeft: -16,
               marginTop: -16,
-              borderRadius: 16,
+              borderRadius: RADIUS.lg,
               backgroundColor: block.borderColor,
             }}
           />

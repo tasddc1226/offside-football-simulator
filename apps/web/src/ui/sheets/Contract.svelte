@@ -215,24 +215,24 @@
     right: -4px;
     width: 40px;
     height: 40px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     border: 0;
     background: var(--surface-2);
     color: var(--muted);
-    font-size: 1.375rem;
+    font-size: var(--fs-title2);
     line-height: 1;
   }
   .contract-text {
     margin: -4px 0 0;
     color: var(--muted);
-    font-size: 0.9375rem;
+    font-size: var(--fs-body1);
   }
   .contract-club {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 10px 12px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--surface-2);
   }
   .contract-club dl {
@@ -243,19 +243,19 @@
     margin: 0;
   }
   .contract-club dt {
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     color: var(--muted);
   }
   .contract-club dd {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     font-weight: 700;
   }
   .sign-pad {
     position: relative;
     height: 150px;
     border: 1.5px dashed var(--line);
-    border-radius: 14px;
+    border-radius: var(--radius-md);
     background: var(--surface);
     overflow: hidden;
   }
@@ -275,7 +275,7 @@
     display: grid;
     place-items: center;
     color: var(--muted);
-    font-size: 0.9375rem;
+    font-size: var(--fs-body1);
     pointer-events: none;
   }
   .sign-pad.inked .sign-hint {
@@ -296,7 +296,7 @@
     left: 0;
     bottom: 2px;
     color: var(--muted);
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     font-style: normal;
   }
   .stamp {
@@ -317,7 +317,7 @@
   }
   .stamp b {
     font-family: var(--display);
-    font-size: 1.25rem;
+    font-size: var(--fs-title2);
     letter-spacing: 0.06em;
     line-height: 1;
     align-self: end;
@@ -325,7 +325,7 @@
   .stamp span {
     align-self: start;
     max-width: 70px;
-    font-size: 0.5625rem;
+    font-size: var(--fs-caption2);
     font-weight: 700;
     overflow: hidden;
     white-space: nowrap;
@@ -344,7 +344,7 @@
   .sign-note {
     margin: -6px 0 0;
     text-align: center;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .sign-tools {
@@ -355,7 +355,7 @@
   }
   .sign-tools .link-btn {
     min-height: 40px;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
   }
   .sign-tools .link-btn:disabled {
     opacity: 0.45;

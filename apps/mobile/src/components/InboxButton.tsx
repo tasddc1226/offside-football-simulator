@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import Svg, { Path } from 'react-native-svg';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -22,7 +23,7 @@ export function InboxButton() {
         justifyContent: 'center',
         borderWidth: 1,
         borderColor: c.line,
-        borderRadius: 12,
+        borderRadius: RADIUS.md,
       }}
     >
       <Svg width={22} height={22} viewBox="0 0 24 24" accessible={false}>
@@ -43,7 +44,7 @@ export function InboxButton() {
             top: -4,
             right: -4,
             backgroundColor: c.accent,
-            borderRadius: 10,
+            borderRadius: RADIUS.sm,
             minWidth: 20,
             paddingHorizontal: 4,
             alignItems: 'center',

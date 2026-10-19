@@ -101,7 +101,7 @@ function withPreconnect(response: Response, url: URL): Response {
   const result = new Response(response.body, response);
   result.headers.append(
     'Link',
-    `<https://fonts.gstatic.com>; rel=preconnect; crossorigin, <${resolveApiBaseUrl(undefined, url.hostname)}>; rel=preconnect`,
+    `<https://fonts.gstatic.com>; rel=preconnect; crossorigin, <https://cdn.jsdelivr.net>; rel=preconnect; crossorigin, <${resolveApiBaseUrl(undefined, url.hostname)}>; rel=preconnect`,
   );
   return result;
 }

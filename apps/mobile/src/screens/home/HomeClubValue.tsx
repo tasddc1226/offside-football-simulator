@@ -1,5 +1,6 @@
 // T-11-129 홈의 구단 가치 TOP 3(웹 HomeClubValue.svelte). 선발 11명 카드 기준가 합으로 센 라이브 랭킹 첫 페이지(sort=value)를
 // 그대로 쓰고(기록실 팀 랭킹과 같은 메모), 줄을 누르면 기록실 팀 랭킹에서 그 팀 프로필을 연다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { fetchTeamRanking, type TeamRankResponse } from '@offside/app-core/api/team';
@@ -41,7 +42,7 @@ export function HomeClubValue() {
   }, [tick, track]);
 
   const note = (text: string) => (
-    <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
+    <Txt tone="muted" style={{ fontSize: rem(FONT.body2), paddingVertical: 8 }}>
       {text}
     </Txt>
   );
@@ -61,7 +62,7 @@ export function HomeClubValue() {
           <Txt v="h2" accessibilityRole="header">
             {L.homeValueTitle}
           </Txt>
-          <Txt tone="muted" style={{ fontSize: rem(0.8125), marginBottom: 8 }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.label), marginBottom: 8 }}>
             {L.homeValueSub}
           </Txt>
         </View>
@@ -98,7 +99,7 @@ export function HomeClubValue() {
                         {t.name}
                       </Txt>
                     </View>
-                    <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(0.75) }}>
+                    <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(FONT.caption) }}>
                       {`${L.profManager}${t.manager} · OVR ${t.ovr}`}
                     </Txt>
                   </View>

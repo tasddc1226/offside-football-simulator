@@ -56,7 +56,7 @@
     place-items: center;
     width: 32px;
     height: 32px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     font-weight: 700;
     background: var(--surface-2);
   }

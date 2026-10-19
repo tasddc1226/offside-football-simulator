@@ -1,4 +1,5 @@
 // 경기 결과(웹 team/Team.svelte 의 view === 'result', 중계가 끝난 뒤) — 스코어 · 득점 · 레이팅 변화.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import { useColors } from '../../theme/useColors';
 import { TeamLogo } from '../../components/TeamLogo';
@@ -176,7 +177,7 @@ export function TeamResult({
                 gap: 2,
                 paddingVertical: 8,
                 paddingHorizontal: 10,
-                borderRadius: 10,
+                borderRadius: RADIUS.sm,
                 backgroundColor: c.surface2,
                 borderLeftWidth: 3,
                 borderLeftColor: x.ok ? c.pitch2 : c.line,

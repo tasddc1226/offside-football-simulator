@@ -2,6 +2,7 @@
 // 로그인하지 않아도 보기 전용 공유 링크(/career/<id>)를 공유한다 — 링크는 공개 명예의 전당 상세라 로그인과 무관하다.
 // T-10-069 이 기기에 없는 계정의 내 선수도 띄운다 — 띄울지는 LegendView.shareId(legend.ts)가 정한다. 왼쪽 반은 홈으로.
 // T-11-213 선수 상세(하단 메뉴가 있는 화면)에서는 홈 버튼 없이 공유 버튼만 둔다(home={false}).
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { Platform, Share, TextInput, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -86,10 +87,10 @@ export function ShareBar({
           // 읽기 전용: 값은 바꾸지 못하고 선택·복사만 된다.
           onChangeText={() => {}}
           style={{
-            fontSize: rem(0.8125),
+            fontSize: rem(FONT.label),
             paddingVertical: 10,
             paddingHorizontal: 12,
-            borderRadius: 10,
+            borderRadius: RADIUS.sm,
             borderWidth: 1,
             borderColor: c.line,
             backgroundColor: c.bg,

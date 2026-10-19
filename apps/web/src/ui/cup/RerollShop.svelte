@@ -123,7 +123,7 @@
   }
   .rs-head .tap-cover.open {
     inset: -18px -18px -5px;
-    border-radius: 16px 16px 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
   .rs-go {
     transform: rotate(90deg);
@@ -156,15 +156,15 @@
   }
   .rs-facts li {
     padding: 6px 10px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     font-variant-numeric: tabular-nums;
   }
   .rs-price {
     margin: 0;
     font-family: var(--display);
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
   }

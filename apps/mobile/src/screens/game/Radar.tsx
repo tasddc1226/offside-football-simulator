@@ -1,5 +1,6 @@
 // 능력치 레이더(웹 Radar.svelte). 현재 능력치 폴리곤(rd-now)은 시즌 시작 대비 값에서 순간 이동하지 않고 부드럽게
 // 모핑한다(T-10-003). 점(dot)은 웹처럼 목표 위치에 바로 찍는다. 좌표 계산은 app-core/format(radarData).
+import { FONT } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import Svg, { Circle, Line, Polygon, Text as SvgText, TSpan } from 'react-native-svg';
 import { radarData, type RadarPoint } from '@offside/app-core/format';
@@ -103,13 +104,13 @@ export function Radar({ s }: { s: GameState }) {
             textAnchor={p.anchor}
             fill={c.ink}
             fontFamily={DISPLAY[700]}
-            fontSize={rem(1.25)}
+            fontSize={rem(FONT.title2)}
           >
             {String(p.value)}
             {p.delta > 0 ? (
-              <TSpan fill={c.good} fontSize={rem(0.8125)}>{` +${p.delta}`}</TSpan>
+              <TSpan fill={c.good} fontSize={rem(FONT.label)}>{` +${p.delta}`}</TSpan>
             ) : p.delta < 0 ? (
-              <TSpan fill={c.bad} fontSize={rem(0.8125)}>{` ${p.delta}`}</TSpan>
+              <TSpan fill={c.bad} fontSize={rem(FONT.label)}>{` ${p.delta}`}</TSpan>
             ) : null}
           </SvgText>
         ))}

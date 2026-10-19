@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AdminCupPush from './AdminCupPush';
 import { View } from 'react-native';
@@ -188,7 +189,7 @@ export default function AdminPush() {
               padding: 10,
               borderWidth: 1,
               borderColor: period === value ? c.ink : c.line,
-              borderRadius: 8,
+              borderRadius: RADIUS.sm,
               justifyContent: 'center',
             }}
           >
@@ -257,7 +258,7 @@ export default function AdminPush() {
                   minWidth: 110,
                   borderWidth: 1,
                   borderColor: c.line,
-                  borderRadius: 12,
+                  borderRadius: RADIUS.md,
                   padding: 12,
                   gap: 4,
                 }}

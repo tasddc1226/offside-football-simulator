@@ -86,7 +86,7 @@
     min-width: 0;
   }
   .tm-stats-go {
-    font-size: 1.5rem;
+    font-size: var(--fs-title1);
     color: var(--muted);
   }
 </style>

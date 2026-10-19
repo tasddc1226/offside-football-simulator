@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { GoogleLoginButton } from '../../ui/GoogleLoginButton';
 import CupBracket from './CupBracket';
 import { scrollToView } from '../../ui/scroll';
@@ -211,7 +212,7 @@ function Standings({
                     gap: 4,
                     paddingVertical: 6,
                     paddingHorizontal: 6,
-                    borderRadius: 8,
+                    borderRadius: RADIUS.sm,
                     backgroundColor: up ? alpha(c.good, 0.14) : 'transparent',
                   }}
                 >
@@ -896,7 +897,7 @@ function CupBody({
                   padding: 4,
                   borderWidth: 1,
                   borderColor: c.line,
-                  borderRadius: 14,
+                  borderRadius: RADIUS.md,
                   backgroundColor: c.bg,
                   marginBottom: 10,
                 }}
@@ -912,7 +913,7 @@ function CupBody({
                       padding: 8,
                       justifyContent: 'center',
                       alignItems: 'center',
-                      borderRadius: 10,
+                      borderRadius: RADIUS.sm,
                       borderWidth: 1,
                       borderColor: bracketList === list ? c.line : 'transparent',
                       backgroundColor: bracketList === list ? c.surface : 'transparent',

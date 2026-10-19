@@ -101,14 +101,14 @@
     font: inherit;
     text-align: inherit;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: var(--radius-xs);
   }
   .home .cm-team-btn {
     flex-direction: row-reverse;
   }
   .cm-owner {
     color: var(--muted);
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     min-height: 20px;
     text-decoration: underline dotted;
     text-underline-offset: 3px;
@@ -129,7 +129,7 @@
     flex: 1;
     min-width: 0;
     overflow-wrap: anywhere;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
   }
   .cm-team.own { color: var(--accent); }
   .cm-team.win {
@@ -143,20 +143,20 @@
     gap: 5px;
     min-width: 56px;
     font-family: var(--display);
-    font-size: 1.25rem;
+    font-size: var(--fs-title2);
     font-variant-numeric: tabular-nums;
     color: inherit;
   }
   .cm-open {
     min-height: 40px;
     padding: 0 10px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
     cursor: pointer;
     font: inherit;
     font-family: var(--display);
-    font-size: 1.25rem;
+    font-size: var(--fs-title2);
   }
   @media (hover: hover) {
     .cm-open:hover {

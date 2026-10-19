@@ -1,5 +1,6 @@
 // T-11-244 프리미엄 스카우트권을 구단 자금으로 사기(한 주 상한, 웹 cup/ScoutFunds.svelte). 누를 때만 상점 값을 묻고(리롤권
 // 상점과 같은 30초 메모), 사면 서버가 돌려준 값으로 바꾼다. onBought로 가진 장수와 구단주 화면의 자금 줄을 고친다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
 import {
@@ -30,7 +31,7 @@ export function ScoutFunds({
   const lock = useRef(false);
   const buyKey = useRef<string | null>(null);
   const view = shop ? scoutShopState(shop) : null;
-  const small = { fontSize: rem(0.875) } as const;
+  const small = { fontSize: rem(FONT.body2) } as const;
 
   async function load() {
     const r = await fetchRerollShop();
@@ -94,11 +95,13 @@ export function ScoutFunds({
                   style={{
                     paddingVertical: 6,
                     paddingHorizontal: 10,
-                    borderRadius: 10,
+                    borderRadius: RADIUS.sm,
                     backgroundColor: c.surface2,
                   }}
                 >
-                  <Txt style={{ fontSize: rem(0.8125), fontVariant: ['tabular-nums'] }}>{t}</Txt>
+                  <Txt style={{ fontSize: rem(FONT.label), fontVariant: ['tabular-nums'] }}>
+                    {t}
+                  </Txt>
                 </View>
               ))}
             </View>

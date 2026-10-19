@@ -160,7 +160,7 @@
     flex-direction: column;
   }
   .tm-slot {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
   }
   .tm-moments ul {
     list-style: none;
@@ -173,10 +173,10 @@
     display: grid;
     gap: 2px;
     padding: 8px 10px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
     box-shadow: inset 3px 0 0 var(--pitch-2);
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
   }
   .tm-moments li.fail {
     box-shadow: inset 3px 0 0 var(--line);

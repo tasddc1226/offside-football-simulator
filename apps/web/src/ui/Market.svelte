@@ -537,13 +537,13 @@
     flex-direction: column;
     gap: 12px;
     padding: 16px;
-    border-radius: 18px;
+    border-radius: var(--radius-lg);
     background: var(--pitch);
     color: var(--on-pitch);
   }
   .mk-hero-head h1 {
     margin: 0;
-    font-size: 1.375rem;
+    font-size: var(--fs-title2);
   }
   .mk-hero-head .eyebrow {
     color: var(--on-pitch);
@@ -555,7 +555,7 @@
     justify-content: space-between;
     gap: 12px;
     padding: 12px 14px;
-    border-radius: 14px;
+    border-radius: var(--radius-md);
     background: rgb(255 255 255 / 0.08);
     border: 1px solid rgb(255 255 255 / 0.16);
   }
@@ -566,7 +566,7 @@
     min-width: 0;
   }
   .mk-wallet-sum span {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     opacity: 0.8;
   }
   .mk-wallet-sum b {
@@ -581,11 +581,11 @@
     min-height: 40px;
     padding: 0 14px;
     border: 0;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--pitch-accent);
     color: var(--accent-ink);
     font: inherit;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     font-weight: 700;
     cursor: pointer;
   }
@@ -598,24 +598,24 @@
   }
   .mk-hero-stats div {
     padding: 8px 4px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: rgb(255 255 255 / 0.08);
     min-width: 0;
   }
   .mk-hero-stats dt {
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     opacity: 0.8;
   }
   .mk-hero-stats dd {
     margin: 2px 0 0;
     font-family: var(--display);
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
     font-weight: 700;
     overflow-wrap: anywhere;
   }
   .mk-hero-note {
     margin: 0;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     opacity: 0.85;
   }
 
@@ -624,7 +624,7 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     margin: 12px 0 0;
-    border-radius: 14px 14px 0 0;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
     background: var(--surface);
     border-bottom: 1px solid var(--line);
   }
@@ -635,7 +635,7 @@
     background: none;
     color: var(--muted);
     font: inherit;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     cursor: pointer;
   }
   .mk-tabs button[aria-pressed='true'] {
@@ -659,7 +659,7 @@
   .mk-pane-head h2,
   .mk-step {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     font-weight: 700;
   }
   .mk-step small {
@@ -676,15 +676,15 @@
     background: none;
     color: var(--accent-text);
     font: inherit;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     font-weight: 600;
     cursor: pointer;
   }
 
   /* 방금 이적 — 살아 있는 점 + 한 줄씩 넘어가는 최근 거래 */
   .mk-live {
-    border: 1px solid var(--line);
-    border-radius: 14px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
     background: var(--surface);
     overflow: hidden;
   }
@@ -699,19 +699,19 @@
     background: none;
     color: var(--ink);
     font: inherit;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     text-align: left;
     cursor: pointer;
   }
   .mk-live-bar b {
     flex: none;
     color: var(--bad);
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
   }
   .mk-live-bar small {
     flex: none;
     color: var(--muted);
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
   }
   .mk-live-dot {
     flex: none;
@@ -767,7 +767,7 @@
   }
   .mk-live-list li > b {
     flex: none;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
   }
 
   /* 칩 · 정렬 */
@@ -785,12 +785,12 @@
   .mk-chip {
     min-height: 34px;
     padding: 0 13px;
-    border-radius: 999px;
-    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    border: 1px solid transparent;
     background: var(--surface);
     color: var(--ink);
     font: inherit;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     cursor: pointer;
   }
   .mk-chip[aria-pressed='true'] {
@@ -817,7 +817,7 @@
     font: inherit;
     color: var(--ink);
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     background: var(--surface);
     padding: 4px 6px;
   }
@@ -848,8 +848,8 @@
     gap: 12px;
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid var(--line);
-    border-radius: 14px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
     background: var(--surface);
     color: inherit;
     font: inherit;
@@ -866,7 +866,7 @@
     min-width: 0;
   }
   .mk-info small {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .mk-name {
@@ -879,7 +879,7 @@
     margin-right: 6px;
     padding: 0 6px;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     color: var(--ink);
     font-style: normal;
     font-weight: 700;
@@ -887,10 +887,10 @@
   .mk-tag {
     margin-left: 6px;
     padding: 1px 6px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--surface-2);
     color: var(--muted);
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     font-style: normal;
     font-weight: 700;
   }
@@ -903,13 +903,13 @@
   }
   .mk-price b {
     font-family: var(--display);
-    font-size: 1.1875rem;
+    font-size: var(--fs-title2);
     line-height: 1.1;
   }
   .mk-price small,
   .mk-slider small,
   .mk-lines small {
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     font-weight: 600;
   }
   /* 시장 지수 한 줄(T-11-080f). 국내 증권 관례대로 오름 빨강 · 내림 파랑. */
@@ -920,8 +920,8 @@
     gap: 12px;
     padding: 10px 12px;
     margin-bottom: 10px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
     background: var(--surface);
   }
   .mk-idx-up {
@@ -932,17 +932,17 @@
   }
   .mk-index b {
     font-family: var(--display);
-    font-size: 1.375rem;
+    font-size: var(--fs-title2);
     line-height: 1.1;
   }
   .mk-index small {
     color: var(--muted);
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
   }
   .mk-index em {
     font-style: normal;
     font-weight: 700;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--tone);
     white-space: nowrap;
   }
@@ -989,7 +989,7 @@
   }
   .mk-pick-cell .mk-link {
     min-height: 32px;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
   }
   .mk-pick {
     min-height: 104px;
@@ -999,8 +999,8 @@
     justify-content: center;
     gap: 3px;
     padding: 6px 4px;
-    border-radius: 12px;
-    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
     background: var(--surface);
     color: var(--ink);
     font: inherit;
@@ -1016,14 +1016,14 @@
   }
   .mk-pick-name {
     max-width: 100%;
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .mk-pick small {
     min-height: 13px;
-    font-size: 0.625rem;
+    font-size: var(--fs-caption2);
     font-weight: 600;
     color: var(--muted);
   }
@@ -1035,8 +1035,8 @@
     flex-direction: column;
     gap: 12px;
     padding: 14px;
-    border: 1px solid var(--line);
-    border-radius: 16px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
     background: var(--surface);
   }
   .mk-presets {
@@ -1051,9 +1051,9 @@
     align-items: center;
     justify-content: center;
     gap: 2px;
-    border-radius: 12px;
-    border: 1px solid var(--line);
-    background: var(--surface);
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    background: var(--surface-2);
     color: var(--ink);
     font: inherit;
     cursor: pointer;
@@ -1063,17 +1063,17 @@
     background: color-mix(in srgb, var(--accent) 10%, var(--surface));
   }
   .mk-presets span {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .mk-presets b {
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
   }
   .mk-slider {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
   }
   .mk-slider-top {
     display: flex;
@@ -1082,7 +1082,7 @@
   }
   .mk-slider-top b {
     font-family: var(--display);
-    font-size: 1.375rem;
+    font-size: var(--fs-title2);
   }
   .mk-slider input {
     width: 100%;
@@ -1093,7 +1093,7 @@
   .mk-slider-ends {
     display: flex;
     justify-content: space-between;
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     color: var(--muted);
   }
   .mk-lines {
@@ -1101,7 +1101,7 @@
     flex-direction: column;
     gap: 8px;
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
   }
   .mk-lines div {
     display: flex;
@@ -1124,7 +1124,7 @@
   }
   .mk-lines .big dd {
     font-family: var(--display);
-    font-size: 1.5rem;
+    font-size: var(--fs-title1);
     font-weight: 700;
   }
   .mk-lines .rule {
@@ -1155,8 +1155,8 @@
     gap: 10px;
     min-height: 64px;
     padding: 6px 12px;
-    border-radius: 12px;
-    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
     background: var(--surface);
     cursor: pointer;
   }
@@ -1179,7 +1179,7 @@
   }
   .mk-rel-value {
     flex: none;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     white-space: nowrap;
   }
   .mk-dock {
@@ -1189,8 +1189,8 @@
     flex-direction: column;
     gap: 8px;
     padding: 14px 16px;
-    border: 1px solid var(--line);
-    border-radius: 16px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
     background: var(--surface);
     box-shadow: var(--shadow);
   }
@@ -1199,16 +1199,16 @@
     justify-content: space-between;
     align-items: baseline;
     gap: 8px;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
   }
   .mk-dock-sum b {
     font-family: var(--display);
-    font-size: 1.75rem;
+    font-size: var(--fs-title1);
     color: var(--accent-text);
   }
   .mk-warn {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--bad);
   }
   .mk-danger {
@@ -1242,7 +1242,7 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    border-radius: 22px 22px 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     background: var(--surface);
     color: var(--ink);
     box-shadow: var(--shadow);
@@ -1270,16 +1270,16 @@
   }
   .mk-detail-stats div {
     padding: 8px 4px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: rgb(255 255 255 / 0.08);
   }
   .mk-detail-stats dt {
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     opacity: 0.8;
   }
   .mk-detail-stats dd {
     margin: 2px 0 0;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     font-weight: 600;
   }
   .mk-confirm {
@@ -1290,17 +1290,17 @@
   }
   .mk-confirm h2 {
     margin: 0;
-    font-size: 1.0625rem;
+    font-size: var(--fs-title3);
   }
   .mk-confirm p {
     margin: 0;
   }
   .mk-note {
     padding: 10px 12px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
     color: var(--muted);
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     line-height: 1.5;
   }
   .mk-actions {

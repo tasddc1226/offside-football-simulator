@@ -1,5 +1,6 @@
 // T-11-015 채팅 신고 처리(웹 admin/AdminChatReports.svelte): 처리하지 않은 신고를 메시지마다 모아 본다. 본문은 신고할 때
 // 남긴 사본이라 메시지가 방에서 지워진 뒤(7일)에도 보이고, 작성자를 정지할 수 있다. 여럿이 신고한 메시지는 이미 가려져 있다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { CHAT_MUTE_DAYS } from '@offside/contracts/chat';
@@ -86,7 +87,7 @@ export default function AdminChatReports() {
                   ))}
                 </View>
                 <Txt>{it.body}</Txt>
-                <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                   {`마지막 신고 ${kst(it.lastReportedAt)}`}
                 </Txt>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>

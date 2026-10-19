@@ -75,9 +75,9 @@
   .bf-card {
     width: min(360px, 100%);
     padding: 22px 20px 18px;
-    border-radius: 18px;
+    border-radius: var(--radius-lg);
     background: var(--surface);
-    border: 1px solid var(--line);
+    border: 1px solid transparent;
     text-align: center;
     display: grid;
     gap: 10px;
@@ -102,7 +102,7 @@
   }
   .bf-gauge {
     height: 10px;
-    border-radius: 99px;
+    border-radius: var(--radius-pill);
     background: var(--line);
     overflow: hidden;
   }

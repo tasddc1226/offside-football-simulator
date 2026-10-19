@@ -4,6 +4,7 @@
 // 대본(liveScript)·시계 표기는 웹과 같은 @offside/app-core/teamLive.
 // T-11-387 장면 경기(live)면 장면 분에 시계를 멈추고 선택지 카드를 띄운다. 고르면 서버가 결과를 정하고, 그 골이 중계에
 // 끼어든다. 제한 시간이 지나거나 '결과 바로 보기'를 누르면 남은 장면은 감독에게 맡긴다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, ScrollView, View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -70,7 +71,7 @@ function FeedRow({ l, motionOK }: { l: LiveLine; motionOK: boolean }) {
         gap: 8,
         paddingVertical: 6,
         paddingHorizontal: 10,
-        borderRadius: 10,
+        borderRadius: RADIUS.sm,
         backgroundColor: goal ? c.pitch : marker ? 'transparent' : moment ? c.surface : c.surface2,
         ...(marker ? { borderWidth: 1, borderStyle: 'dashed' as const, borderColor: c.line } : {}),
         ...(moment ? { borderWidth: 1, borderColor: c.pitchAccent } : {}),
@@ -104,8 +105,8 @@ function FeedRow({ l, motionOK }: { l: LiveLine; motionOK: boolean }) {
         num
         style={{
           width: rem(0.875) * 3.4,
-          fontSize: rem(0.875),
-          lineHeight: rem(0.875) * 1.45,
+          fontSize: rem(FONT.body2),
+          lineHeight: rem(FONT.body2) * 1.45,
           color: goal ? c.pitchAccent : c.muted,
         }}
       >
@@ -114,8 +115,8 @@ function FeedRow({ l, motionOK }: { l: LiveLine; motionOK: boolean }) {
       <Txt
         style={{
           flex: 1,
-          fontSize: rem(0.875),
-          lineHeight: rem(0.875) * 1.45,
+          fontSize: rem(FONT.body2),
+          lineHeight: rem(FONT.body2) * 1.45,
           fontWeight: goal || marker || moment ? '700' : '400',
           color: goal ? c.onPitch : c.ink,
         }}
@@ -368,7 +369,7 @@ export function TeamLive({
         style={{
           gap: 10,
           padding: 14,
-          borderRadius: 14,
+          borderRadius: RADIUS.md,
           backgroundColor: c.pitch,
           overflow: 'hidden',
         }}
@@ -384,7 +385,7 @@ export function TeamLive({
               right: 0,
               bottom: 0,
               borderWidth: 4,
-              borderRadius: 14,
+              borderRadius: RADIUS.md,
               borderColor: c.pitchAccent,
             }}
           />
@@ -397,7 +398,7 @@ export function TeamLive({
               gap: 6,
               paddingVertical: 1,
               paddingHorizontal: 8,
-              borderRadius: 999,
+              borderRadius: RADIUS.pill,
               backgroundColor: done ? c.chalk : c.bad,
             }}
           >
@@ -413,7 +414,12 @@ export function TeamLive({
               />
             )}
             <Txt
-              style={{ ...disp, fontSize: rem(0.8125), color: '#fff', letterSpacing: 0.06 * 13 }}
+              style={{
+                ...disp,
+                fontSize: rem(FONT.label),
+                color: '#fff',
+                letterSpacing: 0.06 * 13,
+              }}
             >
               {done ? 'FT' : 'LIVE'}
             </Txt>
@@ -422,8 +428,8 @@ export function TeamLive({
             testID="live-clock"
             style={{
               ...disp,
-              fontSize: rem(1.5),
-              lineHeight: rem(1.5) * 1.2,
+              fontSize: rem(FONT.title1),
+              lineHeight: rem(FONT.title1) * 1.2,
               color: c.pitchAccent,
               minWidth: rem(1.5) * 3.4 * 0.5,
               fontVariant: ['tabular-nums'],
@@ -432,7 +438,12 @@ export function TeamLive({
             {clockLabel}
           </Txt>
           <Txt
-            style={{ marginLeft: 'auto', fontSize: rem(0.875), color: c.onPitch, opacity: 0.85 }}
+            style={{
+              marginLeft: 'auto',
+              fontSize: rem(FONT.body2),
+              color: c.onPitch,
+              opacity: 0.85,
+            }}
           >
             {PHASE_LABEL[phase]}
           </Txt>
@@ -456,7 +467,7 @@ export function TeamLive({
             >
               {match.home.name}
             </Txt>
-            <Txt style={{ fontSize: rem(0.75), color: c.onPitch, opacity: 0.75 }}>
+            <Txt style={{ fontSize: rem(FONT.caption), color: c.onPitch, opacity: 0.75 }}>
               {match.home.owner}
             </Txt>
           </View>
@@ -524,7 +535,7 @@ export function TeamLive({
             >
               {match.away.name}
             </Txt>
-            <Txt style={{ fontSize: rem(0.75), color: c.onPitch, opacity: 0.75 }}>
+            <Txt style={{ fontSize: rem(FONT.caption), color: c.onPitch, opacity: 0.75 }}>
               {match.away.owner}
             </Txt>
           </View>
@@ -564,7 +575,7 @@ export function TeamLive({
                 width: 10,
                 height: 10,
                 marginLeft: -5,
-                borderRadius: 5,
+                borderRadius: RADIUS.xs,
                 backgroundColor: g.side === 'away' ? c.pitchAccent : c.onPitch,
                 borderWidth: 2,
                 borderColor: c.pitch,
@@ -577,7 +588,7 @@ export function TeamLive({
           importantForAccessibility="no-hide-descendants"
           style={{ flexDirection: 'row', alignItems: 'center', gap: 8, opacity: 0.85 }}
         >
-          <Txt style={{ fontSize: rem(0.75), color: c.onPitch }}>{L.flow}</Txt>
+          <Txt style={{ fontSize: rem(FONT.caption), color: c.onPitch }}>{L.flow}</Txt>
           <View
             style={{
               flex: 1,
@@ -653,7 +664,7 @@ export function TeamLive({
                 accessibilityRole="header"
                 style={{
                   ...disp,
-                  fontSize: rem(1.125),
+                  fontSize: rem(FONT.title3),
                   color: active.m.kind === 'crisis' ? c.bad : c.pitch2,
                 }}
               >
@@ -663,10 +674,10 @@ export function TeamLive({
                 {`${active.m.minute}' · ${score[0]} : ${score[1]}`}
               </Txt>
             </View>
-            <Txt style={{ lineHeight: rem(1) * 1.5 }}>{momentScene(active.m, name)}</Txt>
-            <Txt style={{ lineHeight: rem(1) * 1.5 }}>
+            <Txt style={{ lineHeight: rem(FONT.body) * 1.5 }}>{momentScene(active.m, name)}</Txt>
+            <Txt style={{ lineHeight: rem(FONT.body) * 1.5 }}>
               {`${M.ask} `}
-              <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                 {active.m.kind === 'chance' ? M.chancePct : M.crisisPct}
               </Txt>
             </Txt>
@@ -688,9 +699,9 @@ export function TeamLive({
                     minHeight: 48,
                     paddingVertical: 8,
                     paddingHorizontal: 12,
-                    borderRadius: 10,
+                    borderRadius: RADIUS.sm,
                     borderWidth: 1,
-                    borderColor: c.line,
+                    borderColor: 'transparent',
                     backgroundColor: c.surface2,
                     opacity: sending ? 0.6 : 1,
                   }}
@@ -698,11 +709,13 @@ export function TeamLive({
                   <Txt bold style={{ flex: 1, minWidth: 0 }}>
                     {ch.label}
                   </Txt>
-                  <Txt style={{ ...disp, fontSize: rem(1.125), fontVariant: ['tabular-nums'] }}>
+                  <Txt
+                    style={{ ...disp, fontSize: rem(FONT.title3), fontVariant: ['tabular-nums'] }}
+                  >
                     {M.pct({ p: ch.pct })}
                   </Txt>
                   {ch.tags.length ? (
-                    <Txt tone="muted" style={{ width: '100%', fontSize: rem(0.75) }}>
+                    <Txt tone="muted" style={{ width: '100%', fontSize: rem(FONT.caption) }}>
                       {ch.tags.join(' · ')}
                     </Txt>
                   ) : null}
@@ -729,7 +742,7 @@ export function TeamLive({
             <Txt
               tone="muted"
               accessibilityLiveRegion="polite"
-              style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5 }}
+              style={{ fontSize: rem(FONT.label), lineHeight: rem(FONT.label) * 1.5 }}
             >
               {sending ? M.sending : M.timer({ s: active.left })}
             </Txt>
