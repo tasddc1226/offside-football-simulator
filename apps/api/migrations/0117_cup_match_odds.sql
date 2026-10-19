@@ -1,0 +1,1 @@
+ALTER TABLE `cup_matches` ADD `odds_json` text;
