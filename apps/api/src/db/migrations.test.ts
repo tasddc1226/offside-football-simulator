@@ -135,6 +135,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'winner_team_id',
     'forfeit',
     'detail_json',
+    'odds_json',
   ],
   cup_predictions: [
     'cup_id',

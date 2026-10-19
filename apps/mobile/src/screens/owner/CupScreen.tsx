@@ -362,6 +362,7 @@ function MatchLine({
         </Txt>
         {mine ? <Pill tone="good">{L.mineTag}</Pill> : null}
       </View>
+      {m.odds ? <MatchOdds m={m} home={home?.name ?? L.tbd} away={away?.name ?? L.tbd} /> : null}
     </>
   );
   const style = {
@@ -395,6 +396,37 @@ function MatchLine({
     <View>
       {row}
       <CupPrediction m={m} prediction={prediction} />
+    </View>
+  );
+}
+
+/** T-11-407 명단이 잠긴 경기(1시간 전부터)의 홈 · 무 · 원정 예상 막대. 끝난 경기는 '경기 전 예상'으로 남긴다. */
+function MatchOdds({ m, home, away }: { m: CupMatch; home: string; away: string }) {
+  const c = useColors();
+  const o = m.odds!;
+  const label = m.played ? L.matchOddsBefore : L.matchOddsLabel;
+  return (
+    <View
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={L.matchOddsAria({ label, home, away, h: o.home, d: o.draw, a: o.away })}
+      testID={`cup-match-odds-${m.id}`}
+      style={{ gap: 3, marginTop: 4 }}
+    >
+      <View
+        style={{ flexDirection: 'row', gap: 2, height: 6, borderRadius: 3, overflow: 'hidden' }}
+      >
+        <View style={{ flex: Math.max(o.home, 1), backgroundColor: c.accent }} />
+        <View style={{ flex: Math.max(o.draw, 1), backgroundColor: c.line }} />
+        <View style={{ flex: Math.max(o.away, 1), backgroundColor: c.muted }} />
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+        <Txt v="xs" bold num>{`${o.home}%`}</Txt>
+        <Txt v="xs" tone="muted" numberOfLines={1} style={{ flexShrink: 1 }}>
+          {`${label} · ${L.matchOddsDraw({ n: o.draw })}`}
+        </Txt>
+        <Txt v="xs" bold num>{`${o.away}%`}</Txt>
+      </View>
     </View>
   );
 }
@@ -639,6 +671,7 @@ function CupBody({
         groups: Object.fromEntries(data.groups.map((g) => [g.no, groupOpen(g.no)])),
         rounds: Object.fromEntries(KO_ROUNDS.map((r) => [r, roundOpen(r)])),
         schedule: { tab: scheduleTab, group: selectedGroup, bracketList },
+        bracket: { match: bracketMatch?.id ?? null, ...bracketView.current },
       });
     appState.hof = {
       ...hofStart(),
@@ -660,7 +693,17 @@ function CupBody({
   const [bracketListChoice, setBracketList] = useState<boolean | null>(null);
   const [scheduleChoice, setScheduleChoice] = useState<CupScheduleTab | null>(null);
   const [groupChoice, setGroupChoice] = useState<number | null>(null);
+  // T-11-406 팀 프로필에서 돌아오면 대진표에서 골랐던 경기 · 보던 자리를 다시 연다.
   const [bracketMatch, setBracketMatch] = useState<CupMatch | null>(null);
+  const bracketView = useRef({ column: 0, y: 0 });
+  const bracketRestored = useRef(false);
+  useEffect(() => {
+    if (!data || bracketRestored.current) return;
+    bracketRestored.current = true;
+    const id = cupFolds(data.cup.id, accountId)?.bracket?.match;
+    const m = id ? data.matches.find((x) => x.id === id) : undefined;
+    if (m) setBracketMatch(m);
+  }, [data, accountId]);
   const [matchId, setMatchId] = useState<string | null>(null);
   const [openGroups, setOpenGroups] = useState<Record<number, boolean> | null>(null);
   const [openRounds, setOpenRounds] = useState<Record<string, boolean> | null>(null);
@@ -791,6 +834,9 @@ function CupBody({
         <Card gap={10} testID="cup-fixtures">
           <Txt v="h2" accessibilityRole="header">
             {L.scheduleMatches}
+          </Txt>
+          <Txt v="xs" tone="muted">
+            {L.matchOddsPending}
           </Txt>
           <View style={{ flexDirection: 'row', gap: 16 }}>
             {(
@@ -929,7 +975,14 @@ function CupBody({
             {koRounds.length ? (
               <View style={bracketList ? { display: 'none' } : undefined}>
                 <View style={bracketMatch ? { display: 'none' } : undefined}>
-                  <CupBracket cup={data} mineId={mineId} now={now} onselect={setBracketMatch} />
+                  <CupBracket
+                    cup={data}
+                    mineId={mineId}
+                    now={now}
+                    onselect={setBracketMatch}
+                    start={folds?.bracket ?? null}
+                    view={bracketView}
+                  />
                 </View>
                 {bracketMatch ? (
                   <Btn onPress={() => setBracketMatch(null)}>{L.bracketView}</Btn>

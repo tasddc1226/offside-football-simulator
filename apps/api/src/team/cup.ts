@@ -28,6 +28,7 @@ import { cupResultStatements } from '../push/cupResult.js';
 import { eventNotificationStatements } from '../push/events.js';
 import { lineupsOf, matchDetailOf } from './match.js';
 import { penaltyShootout, simulateMatch } from './sim.js';
+import { fillCupOdds, oddsOfLineups } from './cupOdds.js';
 import {
   drawGroups,
   firstKoPairs,
@@ -370,8 +371,11 @@ export async function playCupMatch(
   let pens: { home: number; away: number } | null = null;
   let forfeit = 0;
   let detail: string | null = null;
+  // T-11-407 cron이 늦어 잠금 뒤 예상을 아직 못 채웠으면 같은 명단으로 여기서 채운다(끝난 경기에도 경기 전 예상이 남는다).
+  let odds: string | null = null;
   if (home && away) {
     const lineups = await lineupsOf(db, cup.season, home, away);
+    if (!m.oddsJson) odds = JSON.stringify(oddsOfLineups(lineups, cup.season));
     const result = simulateMatch(m.id, lineups.home, lineups.away, cup.season, {
       neutral: true,
       coaches: lineups.coaches,
@@ -397,9 +401,21 @@ export async function playCupMatch(
     d1
       .prepare(
         `UPDATE cup_matches SET played_at = ?, home_goals = ?, away_goals = ?, pens_home = ?, pens_away = ?,
-           winner_team_id = ?, forfeit = ?, detail_json = ? WHERE id = ? AND played_at IS NULL`,
+           winner_team_id = ?, forfeit = ?, detail_json = ?, odds_json = COALESCE(odds_json, ?)
+         WHERE id = ? AND played_at IS NULL`,
       )
-      .bind(now, hg, ag, pens?.home ?? null, pens?.away ?? null, winner, forfeit, detail, m.id),
+      .bind(
+        now,
+        hg,
+        ag,
+        pens?.home ?? null,
+        pens?.away ?? null,
+        winner,
+        forfeit,
+        detail,
+        odds,
+        m.id,
+      ),
   ];
   const round = cupKo(m.round as CupRound);
   // T-11-228 알림도 이 경기를 치른 지금 팀 이름으로(팀이 없으면 신청 때 이름).
@@ -507,11 +523,18 @@ export async function runCup(db: Db, now: string, cups?: readonly CupDef[]) {
     }
     if (!state || state.doneAt) continue;
     // 시각이 된 라운드를 앞에서부터 하나씩: 경기를 치르고, 다 끝났으면 다음 라운드를 만든다.
+    let oddsChecked = false;
     for (;;) {
       const [entries, matches] = await Promise.all([
         cupEntriesOf(db, cup.id),
         cupMatchesOf(db, cup.id),
       ]);
+      // T-11-407 명단이 잠긴 경기의 예상을 cron마다 한 번 채운다(이미 읽은 경기 목록으로, 남은 건 다음 cron이).
+      if (!oddsChecked) {
+        oddsChecked = true;
+        const n = await fillCupOdds(db, cup, matches, now);
+        if (n) log.push({ cup: cup.id, step: 'odds', n });
+      }
       const due = matches
         .filter((m) => !m.playedAt && m.at <= now)
         .sort((a, b) => roundIdx(a.round) - roundIdx(b.round) || a.grp - b.grp || a.slot - b.slot);

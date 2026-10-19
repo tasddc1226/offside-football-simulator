@@ -1,6 +1,7 @@
 <script lang="ts">
   // T-11-145 컵 경기 한 줄 — 홈 · 점수(또는 경기 시각) · 원정. 치른 경기는 점수를 눌러 상세를 연다. 승부차기·몰수를 함께 적는다.
   // T-11-290 팀(로고·이름)을 누르면 팀 프로필, 그 아래 구단주 이름을 누르면 구단주 프로필(승부예측 줄에서 상대를 살핀다).
+  // T-11-407 명단이 잠긴 경기(1시간 전부터)는 홈 · 무 · 원정 예상 막대를 붙이고, 끝난 경기는 '경기 전 예상'으로 남긴다.
   import type { CupMatch, CupTeam } from '@offside/app-core/api/cup';
   import { kstMonthDayTime } from '@offside/app-core/boardText';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
@@ -54,6 +55,13 @@
     {#if m.pens}<span class="pill" data-cup-pens>{L.pens(m.pens)}</span>{/if}
     {#if m.forfeit}<span class="pill warn" data-cup-forfeit>{L.forfeit}</span>{/if}
   </span>
+  {#if m.odds}
+    {@const label = m.played ? L.matchOddsBefore : L.matchOddsLabel}
+    <span class="cm-odds" role="img" data-cup-match-odds aria-label={L.matchOddsAria({ label, home, away, h: m.odds.home, d: m.odds.draw, a: m.odds.away })}>
+      <span class="cm-odds-bar" aria-hidden="true"><i class="h" style:flex-grow={m.odds.home}></i><i class="d" style:flex-grow={m.odds.draw}></i><i class="a" style:flex-grow={m.odds.away}></i></span>
+      <span class="cm-odds-nums fs-xs" aria-hidden="true"><b>{m.odds.home}%</b><span class="muted">{label} · {L.matchOddsDraw({ n: m.odds.draw })}</span><b>{m.odds.away}%</b></span>
+    </span>
+  {/if}
 </div>
 
 <CupPrediction {m} {prediction} />
@@ -162,6 +170,29 @@
     .cm-open:hover {
       border-color: var(--accent);
     }
+  }
+  .cm-odds {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .cm-odds-bar {
+    display: flex;
+    gap: 2px;
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .cm-odds-bar i { flex-basis: 0; min-width: 2px; }
+  .cm-odds-bar .h { background: var(--accent); }
+  .cm-odds-bar .d { background: var(--line); }
+  .cm-odds-bar .a { background: var(--muted); }
+  .cm-odds-nums {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-variant-numeric: tabular-nums;
   }
   .cm-tags {
     grid-column: 1 / -1;
