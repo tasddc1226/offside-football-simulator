@@ -3,6 +3,7 @@ import { DurableObject } from 'cloudflare:workers';
 import type { Env, Role } from './env.ts';
 import type { Cursors, DcCursor, Reaction } from './reactions.ts';
 import type { MailDraft } from './support.ts';
+import type { SupportCase } from './supportCase.ts';
 import type { ReviewDraft } from './reviews.ts';
 import type { CardSummary } from './card.ts';
 import type { Risk } from './risk.ts';
@@ -64,6 +65,8 @@ export type WorkOrder = {
   by: 'plan' | 'operator';
   at: number;
   started?: boolean;
+  /** T-11-400 고객 문의에서 온 작업이면 그 문의 메일 스레드(Gmail threadId). 배포 뒤 마무리 답장에 쓴다. */
+  mail?: string;
 };
 
 /** 승인 대기 카드(승인 묶음 · 대기 시간 측정). ts는 #agent-approvals 카드 메시지 ts. */
@@ -181,6 +184,27 @@ export class AgentLedger extends DurableObject<Env> {
   }
   async setSupportCursor(at: number): Promise<void> {
     await this.ctx.storage.put('support:cursor', at);
+  }
+  /** T-11-400 문의 정리 한 번(eventId)에 넘긴 메일 스레드와, 그 정리가 남긴 작업 후보. */
+  async setSupportBatch(eventId: string, threads: string[]): Promise<void> {
+    await this.ctx.storage.put(`support:batch:${eventId}`, threads);
+  }
+  async supportBatch(eventId: string): Promise<string[]> {
+    return (await this.ctx.storage.get<string[]>(`support:batch:${eventId}`)) ?? [];
+  }
+  async addCase(eventId: string, c: SupportCase): Promise<void> {
+    const key = `support:cases:${eventId}`;
+    await this.ctx.storage.put(key, [
+      ...((await this.ctx.storage.get<SupportCase[]>(key)) ?? []),
+      c,
+    ]);
+  }
+  /** 남긴 작업 후보를 꺼내고 지운다(정리 묶음 기록도 함께). */
+  async takeCases(eventId: string): Promise<SupportCase[]> {
+    const key = `support:cases:${eventId}`;
+    const cases = (await this.ctx.storage.get<SupportCase[]>(key)) ?? [];
+    await this.ctx.storage.delete([key, `support:batch:${eventId}`]);
+    return cases;
   }
   async mailDraft(id: string): Promise<MailDraft | undefined> {
     return this.ctx.storage.get<MailDraft>(`maildraft:${id}`);

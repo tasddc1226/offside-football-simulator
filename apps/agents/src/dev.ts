@@ -8,6 +8,7 @@ import { cardOf } from './card.ts';
 import { DEPLOY_ACTIONS, deployInteraction, postDeployCard } from './deploy.ts';
 import { above, RISK_LABEL, riskOf } from './risk.ts';
 import { slackClient, threadLink, threadReply } from './slack.ts';
+import { supportFollowup } from './supportCase.ts';
 import type { Task } from './thread.ts';
 
 const WORKFLOW = 'agent-dev.yml';
@@ -147,8 +148,11 @@ export function devTools(env: Env, task: Task, gh: () => Promise<Gh> = () => app
       const why = await dispatchWork(env, await gh(), { title, request, thread });
       if (why) return why;
       started = true;
+      // T-11-400 문의 작업 스레드에서 운영자가 직접 맡겨도 그 문의 메일과의 연결(마무리 답장)은 이어 간다.
+      const mail = (await ledger(env).orderOf(thread))?.mail;
       // T-11-325 운영자가 직접 맡긴 일: 위험도 경고 없이 승인 카드로 간다. 카드는 담당 @dev · 수정으로 연다(있으면 고친다).
       await ledger(env).setOrder({
+        ...(mail ? { mail } : {}),
         id: crypto.randomUUID(),
         title,
         request,
@@ -242,11 +246,26 @@ export async function devResult(env: Env, r: DevResult) {
       .patch({ link: `<${prUrl}|PR #${r.pr}>`, ...(risk ? { risk } : {}) })
       .catch(() => undefined);
     text = `${said || '고쳐서 PR을 올렸어요.'}\n\n**PR #${r.pr}** ${prUrl}\nCI가 끝나면 결과를 여기 알려 드릴게요. 통과하면 #agent-approvals에 머지 승인 요청을 올려요.`;
+  } else if (isNoFix(said)) {
+    // T-11-400 문의 작업을 "고칠 것 없음"으로 판정했다(커밋 없음). 카드는 닫고, 문의면 설명 답장 초안을 맡긴다.
+    text = said;
+    const order = await ledger(env).orderOf(r.thread);
+    await cardOfThread(env, r.thread)
+      .patch({ status: '닫힘', note: '판정: 고칠 것 없음' })
+      .catch(() => undefined);
+    if (order?.mail) {
+      await supportFollowup(env, order, 'no-fix', said);
+      text += '\n\n문의 메일에 보낼 설명 답장 초안을 @plan에게 맡겼어요.';
+    }
   } else {
     text = `작업을 끝까지 넣지 못했어요. ${r.reason ?? ''}${said ? `\n\n${said}` : ''}`;
   }
   await devSlack(env)('chat.postMessage', threadReply(channel, threadTs, text, footer));
 }
+
+/** @dev 마지막 답이 "판정: 고칠 것 없음"으로 시작하는지(문의 작업, roles/dev-runner.md). */
+export const isNoFix = (said: string) =>
+  /^\s*(?:\*\*)?판정\s*[:：]\s*고칠 것 없음/.test(said.split('\n').find((l) => l.trim()) ?? '');
 
 export type DevCi = { branch: string; sha: string; conclusion: string; url: string };
 
