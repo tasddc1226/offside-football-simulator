@@ -671,6 +671,7 @@ function CupBody({
         groups: Object.fromEntries(data.groups.map((g) => [g.no, groupOpen(g.no)])),
         rounds: Object.fromEntries(KO_ROUNDS.map((r) => [r, roundOpen(r)])),
         schedule: { tab: scheduleTab, group: selectedGroup, bracketList },
+        bracket: { match: bracketMatch?.id ?? null, ...bracketView.current },
       });
     appState.hof = {
       ...hofStart(),
@@ -692,7 +693,17 @@ function CupBody({
   const [bracketListChoice, setBracketList] = useState<boolean | null>(null);
   const [scheduleChoice, setScheduleChoice] = useState<CupScheduleTab | null>(null);
   const [groupChoice, setGroupChoice] = useState<number | null>(null);
+  // T-11-406 팀 프로필에서 돌아오면 대진표에서 골랐던 경기 · 보던 자리를 다시 연다.
   const [bracketMatch, setBracketMatch] = useState<CupMatch | null>(null);
+  const bracketView = useRef({ column: 0, y: 0 });
+  const bracketRestored = useRef(false);
+  useEffect(() => {
+    if (!data || bracketRestored.current) return;
+    bracketRestored.current = true;
+    const id = cupFolds(data.cup.id, accountId)?.bracket?.match;
+    const m = id ? data.matches.find((x) => x.id === id) : undefined;
+    if (m) setBracketMatch(m);
+  }, [data, accountId]);
   const [matchId, setMatchId] = useState<string | null>(null);
   const [openGroups, setOpenGroups] = useState<Record<number, boolean> | null>(null);
   const [openRounds, setOpenRounds] = useState<Record<string, boolean> | null>(null);
@@ -964,7 +975,14 @@ function CupBody({
             {koRounds.length ? (
               <View style={bracketList ? { display: 'none' } : undefined}>
                 <View style={bracketMatch ? { display: 'none' } : undefined}>
-                  <CupBracket cup={data} mineId={mineId} now={now} onselect={setBracketMatch} />
+                  <CupBracket
+                    cup={data}
+                    mineId={mineId}
+                    now={now}
+                    onselect={setBracketMatch}
+                    start={folds?.bracket ?? null}
+                    view={bracketView}
+                  />
                 </View>
                 {bracketMatch ? (
                   <Btn onPress={() => setBracketMatch(null)}>{L.bracketView}</Btn>
