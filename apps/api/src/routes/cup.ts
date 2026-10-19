@@ -12,6 +12,7 @@ import {
   RewardShopResponseSchema,
   REWARD_KINDS,
   type CupMatch,
+  type CupOdds,
   type RewardShopResponse,
   type CupPhase,
   type CupResponse,
@@ -35,12 +36,12 @@ import {
   type RewardKind,
   type CupRound,
 } from '@offside/contracts/cup';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import type { Context, Hono } from 'hono';
 import type { Db } from '../db/client.js';
-import { cupEntries, cupMatches } from '../db/schema.js';
+import { cupEntries, cupMatches, ownerTeams } from '../db/schema.js';
 import {
   myTeamIn,
   publicNamesOf,
@@ -81,7 +82,7 @@ import {
 } from '../team/cup.js';
 import { cupSchedule } from '../team/cupSchedule.js';
 import { lineupsOf, toMatch } from '../team/match.js';
-import { filledCount } from '../team/sim.js';
+import { filledCount, matchOdds } from '../team/sim.js';
 import { kstTodayStart, requireOwner } from './ownerTeam.js';
 import { kstWeekStart } from '../time.js';
 import {
@@ -202,6 +203,48 @@ async function cupView(db: Db, cup: CupDef, now: string): Promise<CupResponse> {
       )
       .map(toCupMatch),
     championTeamId: final?.winnerTeamId ?? null,
+  };
+}
+
+/**
+ * T-11-405 내 다음 경기 예상 — 컵 경기(playCupMatch)와 같이 지금 두 팀 명단으로 중립 경기 줄 힘 · 기대 득점을 내고 90분
+ * 승 · 무 · 패를 계산한다. 상대가 아직 없거나 어느 팀이 이번 시즌 팀이 아니면 null. 쿼리 3번(팀 1번 + 선발 · 감독 2번).
+ */
+export async function nextOddsOf(
+  db: Db,
+  cup: CupDef,
+  next: CupMatchRow,
+  mine: string,
+): Promise<CupOdds | null> {
+  if (!next.homeTeamId || !next.awayTeamId) return null;
+  const rows = await db
+    .select()
+    .from(ownerTeams)
+    .where(inArray(ownerTeams.id, [next.homeTeamId, next.awayTeamId]));
+  const team = (id: string) => rows.find((t) => t.id === id && t.season === cup.season);
+  const home = team(next.homeTeamId);
+  const away = team(next.awayTeamId);
+  if (!home || !away) return null;
+  const lineups = await lineupsOf(db, cup.season, home, away);
+  const o = matchOdds(lineups.home, lineups.away, cup.season, {
+    neutral: true,
+    coaches: lineups.coaches,
+  });
+  const homeMine = home.id === mine;
+  const win = homeMine ? o.win : o.loss;
+  const loss = homeMine ? o.loss : o.win;
+  // 정수 %로 반올림하고 합이 100이 되게 무승부로 맞춘다.
+  const w = Math.round(win * 100);
+  const l = Math.round(loss * 100);
+  const round1 = (x: number) => Math.round(x * 10) / 10;
+  return {
+    win: w,
+    loss: l,
+    draw: Math.max(0, 100 - w - l),
+    xg: {
+      mine: round1(homeMine ? o.homeXg : o.awayXg),
+      opp: round1(homeMine ? o.awayXg : o.homeXg),
+    },
   };
 }
 
@@ -452,6 +495,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
           filled: el.filled,
         },
         next: next ? toCupMatch(next) : null,
+        nextOdds: next && mine ? await nextOddsOf(db, cup, next, mine.teamId) : null,
         locked: mine?.status === 'active' ? lineupLocked(matches, mine.teamId, now) : false,
         rerolls,
       },
