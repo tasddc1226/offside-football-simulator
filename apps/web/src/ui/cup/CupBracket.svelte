@@ -1,13 +1,19 @@
 <script lang="ts">
-  import { tick } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import type { CupMatch, CupTeam } from '@offside/app-core/api/cup';
   import { BRACKET as B, cupBracket, type BracketNode } from '@offside/app-core/cupBracket';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
   import { roundLabel, whenText } from './cupView';
   import TeamLogo from '../team/TeamLogo.svelte';
-  let { matches, teams, mineId, now, onselect }: { matches: readonly CupMatch[]; teams: ReadonlyMap<string, CupTeam>; mineId: string | null; now: number; onselect: (m: CupMatch) => void } = $props();
+  import type { CupBracketView } from '@offside/app-core/cupFolds';
+  let { matches, teams, mineId, now, onselect, start = null }: { matches: readonly CupMatch[]; teams: ReadonlyMap<string, CupTeam>; mineId: string | null; now: number; onselect: (m: CupMatch) => void; start?: CupBracketView | null } = $props();
   let viewport: HTMLDivElement;
-  let active = $state(0);
+  // T-11-406 팀 프로필에서 돌아오면 보던 라운드 · 세로 위치에서 다시 연다.
+  // svelte-ignore state_referenced_locally
+  let active = $state(start?.column ?? 0);
+  onMount(() => { if (start) viewport.scrollTop = start.y; });
+  /** 지금 보는 라운드와 세로 위치(Cup이 팀 프로필로 가기 전에 기억한다). */
+  export const view = (): Omit<CupBracketView, 'match'> => ({ column: active, y: viewport?.scrollTop ?? 0 });
   const tree = $derived(cupBracket(matches, active));
   let viewWidth = $state(0);
   let offset = $derived(Math.min(active * B.column, Math.max(0, tree.width + 24 - viewWidth)));

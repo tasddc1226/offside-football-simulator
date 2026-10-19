@@ -61,12 +61,25 @@ function restore(e: Entry) {
   scrollBack(entries[cur]!.y);
 }
 
-/** 화면이 다 그려질 때까지(지연 로딩·목록 조회) 몇 프레임 기다리며 스크롤을 되돌린다. */
-function scrollBack(y: number, tries = 30) {
-  requestAnimationFrame(() => {
-    window.scrollTo(0, y);
-    if (Math.abs(window.scrollY - y) > 2 && tries > 0) scrollBack(y, tries - 1);
-  });
+/**
+ * 화면이 다 그려질 때까지(지연 로딩·목록 조회) 기다리며 스크롤을 되돌린다. T-11-406 컵 화면처럼 조회가 0.5초를 넘으면
+ * 30프레임 안에 자리가 생기지 않아 맨 위에 남았다 — 4초쯤(240프레임)까지 기다리고, 그 사이 손으로 움직이면 멈춘다.
+ */
+const SCROLL_EVENTS = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const;
+let scrollBackId = 0;
+function scrollBack(y: number, tries = 240) {
+  const id = ++scrollBackId;
+  const quit = () => void (scrollBackId === id && scrollBackId++);
+  const done = () => SCROLL_EVENTS.forEach((ev) => removeEventListener(ev, quit));
+  SCROLL_EVENTS.forEach((ev) => addEventListener(ev, quit, { passive: true }));
+  const step = (left: number) =>
+    requestAnimationFrame(() => {
+      if (scrollBackId !== id) return done();
+      window.scrollTo(0, y);
+      if (Math.abs(window.scrollY - y) > 2 && left > 0) step(left - 1);
+      else done();
+    });
+  step(tries);
 }
 
 /** 브라우저 기록을 i번으로 옮긴다(화면은 그대로). */
