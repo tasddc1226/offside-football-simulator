@@ -133,6 +133,18 @@ export const CupEligibilitySchema = z.strictObject({
 
 export const CupEntryStatusSchema = z.enum(['active', 'out', 'champion', 'withdrawn']);
 
+/**
+ * T-11-405 내 다음 경기의 예상(지금 두 팀 명단 기준, 내 쪽에서 본 90분 승 · 무 · 패 %). 경기와 같은 줄 힘 · 기대 득점으로
+ * 계산한다. 토너먼트에서 비기면 승부차기로 가린다.
+ */
+export const CupOddsSchema = z.strictObject({
+  win: z.number().int().min(0).max(100),
+  draw: z.number().int().min(0).max(100),
+  loss: z.number().int().min(0).max(100),
+  xg: z.strictObject({ mine: z.number(), opp: z.number() }),
+});
+export type CupOdds = z.infer<typeof CupOddsSchema>;
+
 export const CupMeResponseSchema = z.strictObject({
   entry: z
     .strictObject({
@@ -146,6 +158,8 @@ export const CupMeResponseSchema = z.strictObject({
   eligibility: CupEligibilitySchema,
   /** 다음 내 경기(있으면). */
   next: CupMatchSchema.nullable(),
+  /** T-11-405 다음 경기 예상(두 팀이 다 정해졌고 지금 팀이 있을 때만). 옛 서버 응답에는 없다. */
+  nextOdds: CupOddsSchema.nullable().optional(),
   /** 지금 명단이 잠겨 있는가(경기 1시간 전 ~ 그 경기가 끝날 때까지). */
   locked: z.boolean(),
   rerolls: z.number().int().min(0),

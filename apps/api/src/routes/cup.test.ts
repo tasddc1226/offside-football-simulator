@@ -267,6 +267,46 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
     });
   });
 
+  it('T-11-405 내 다음 경기 예상: 지금 두 팀 명단 기준 승 · 무 · 패 %, 상대가 없으면 null', async () => {
+    const a = await owner(11);
+    const b = await owner(8);
+    await enter(a.cookie);
+    await enter(b.cookie);
+    const [ea, eb] = await Promise.all([me(a.cookie), me(b.cookie)]);
+    await ctx.db.update(cupEntries).set({ grp: 1 }).where(eq(cupEntries.cupId, CUP.id));
+    await ctx.db
+      .insert(cupState)
+      .values({ cupId: CUP.id, seed: 'test', groups: 1, drawnAt: CUP.drawAt });
+    await ctx.db.insert(cupMatches).values({
+      id: 'odds-g1',
+      cupId: CUP.id,
+      round: 'g1',
+      grp: 1,
+      slot: 0,
+      at: CUP.rounds[0]!,
+      homeTeamId: eb.entry!.teamId,
+      awayTeamId: ea.entry!.teamId,
+    });
+    const strong = (await me(a.cookie)).nextOdds!;
+    const weak = (await me(b.cookie)).nextOdds!;
+    // 11명이 다 찬 팀이 유스 3명 섞인 팀보다 유리하고, 두 쪽에서 본 확률은 서로 뒤집힌다.
+    expect(strong.win + strong.draw + strong.loss).toBe(100);
+    expect(strong.win).toBeGreaterThan(strong.loss);
+    expect(weak).toMatchObject({ win: strong.loss, loss: strong.win, draw: strong.draw });
+    expect(weak.xg).toEqual({ mine: strong.xg.opp, opp: strong.xg.mine });
+    // 상대가 아직 정해지지 않은 토너먼트 경기면 예상이 없다.
+    await ctx.db.delete(cupMatches);
+    await ctx.db.insert(cupMatches).values({
+      id: 'odds-sf',
+      cupId: CUP.id,
+      round: 'sf',
+      slot: 0,
+      at: CUP.rounds[0]!,
+      homeTeamId: ea.entry!.teamId,
+    });
+    expect(await me(a.cookie)).toMatchObject({ next: { id: 'odds-sf' }, nextOdds: null });
+  });
+
   it('선발 7명이면 신청할 수 없다', async () => {
     const a = await owner(7);
     expect((await me(a.cookie)).eligibility).toMatchObject({ ok: false, reason: 'not-enough' });
