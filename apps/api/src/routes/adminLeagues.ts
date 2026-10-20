@@ -4,6 +4,8 @@ import { eq } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { requireAdmin } from '../auth/admin.js';
 import { cupKo } from '../cupText.js';
+import { purgeEdge } from '../edgeCache.js';
+import { EDGE } from '../edgeKeys.js';
 import type { Db } from '../db/client.js';
 import { leagueSeasons } from '../db/schema.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -99,6 +101,8 @@ export function registerAdminLeagueRoutes(app: Hono<AppEnv>): void {
       .insert(leagueSeasons)
       .values({ season: league.season, ...values, createdAt: now })
       .onConflictDoUpdate({ target: leagueSeasons.season, set: values });
+    // 공개 일정(엣지 30초)도 바로 새 일정을 보게 한다.
+    purgeEdge(c, [EDGE.leagueCurrent]);
     const next = await currentLeague(db, now);
     return ok(c, AdminLeagueSchema, await adminView(db, next!, now), 200, NO_STORE);
   });
