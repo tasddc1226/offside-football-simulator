@@ -90,6 +90,11 @@ jobs:
             offside-web-staging.tasddc1569.workers.dev offside-web-expanded.tasddc1569.workers.dev; do
             printf '0.0.0.0 %s\n:: %s\n' "$h" "$h"
           done | sudo tee -a /etc/hosts > /dev/null
+          # 다음 스텝의 CLAUDE_CODE_SUBPROCESS_ENV_SCRUB은 리눅스에서 bubblewrap으로 하위 프로세스를 가둔다. sudo를 없애기 전에
+          # 설치하고, Ubuntu 24.04가 막는 비특권 사용자 네임스페이스를 연다. 안 되면 Claude가 시작하자마자 멈추니 여기서 먼저 실패한다.
+          command -v bwrap > /dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq bubblewrap > /dev/null; }
+          sudo sysctl -qw kernel.apparmor_restrict_unprivileged_userns=0 2> /dev/null || true
+          bwrap --ro-bind / / --dev /dev --proc /proc --unshare-all true || { echo '::error::bubblewrap이 동작하지 않아요'; exit 1; }
           sudo rm -f /etc/sudoers.d/runner
           if sudo -n true 2>/dev/null; then echo '::error::sudo가 아직 돼요'; exit 1; fi
           if curl -sS -m 5 -o /dev/null https://api.offside-lab.com/v1/status 2>/dev/null; then
