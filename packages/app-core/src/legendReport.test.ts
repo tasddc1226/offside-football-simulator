@@ -9,10 +9,13 @@ import {
   luckText,
   pct,
   rnClubStats,
+  rnMissStats,
+  rnMissText,
   rnSlotOf,
   valuePoints,
   yearsOf,
 } from './legendReport.js';
+import { retiredNumberNext, type RnProgressClub } from './retiredNumberGuide.js';
 import type { LegendView } from './state.js';
 
 const rec = (over: Partial<CareerRecord> = {}): CareerRecord => ({
@@ -188,5 +191,35 @@ describe('earnedTitles', () => {
   it('상세나 칭호가 없으면 빈 목록', () => {
     expect(earnedTitles(entry(undefined))).toEqual([]);
     expect(earnedTitles({} as HofEntry)).toEqual([]);
+  });
+});
+
+describe('T-11-429 영구결번 표시', () => {
+  const miss = {
+    reason: 'score' as const,
+    club: '마드리드 로스 블랑코스',
+    seasons: 14,
+    need: 6,
+    pct: 90,
+  };
+  it('10% 단위 내림 점수는 구간으로, 기준 바로 아래는 따로 말한다', () => {
+    expect(rnMissText(miss)).toContain('기준의 90%대였어요');
+    expect(rnMissStats(miss).find((x) => x.key === 'score')?.value).toBe('기준의 90%대');
+    const close = { ...miss, close: true };
+    expect(rnMissText(close)).toContain('아주 조금 못 미쳤어요');
+    expect(rnMissStats(close).find((x) => x.key === 'score')?.value).toBe('기준 바로 아래');
+  });
+  it('지금 구단에서 은퇴해야 기준을 넘으면 이적 위험을 먼저 알린다', () => {
+    const club: RnProgressClub = {
+      clubId: 'll-0',
+      club: '마드리드 로스 블랑코스',
+      seasons: 14,
+      progress: 100,
+      eligible: true,
+      candidate: true,
+      availability: 'open',
+    };
+    expect(retiredNumberNext(club, 6)).toContain('은퇴 시 최종 심사');
+    expect(retiredNumberNext({ ...club, leaveRisk: true }, 6)).toContain('이 구단을 떠나면');
   });
 });

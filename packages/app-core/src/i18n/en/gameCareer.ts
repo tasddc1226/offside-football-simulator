@@ -21,12 +21,14 @@ export const gameCareer: Translation<GameCareerMsgs> = {
   rnBuild:
     'Build contribution with regular appearances, strong positional performances, club trophies and individual awards.',
   rnReady: 'Your current records meet the criteria. Final review is at retirement.',
+  rnLeaveRisk:
+    'You are over the bar now, but leaving this club removes the retire-here bonus and drops you below it.',
   rnOutside: 'Criteria met, but clubs with greater contributions are reviewed first.',
   rnTakenHint: 'This club has already retired your number. Check your other candidate clubs.',
   rnRules:
     'Each club’s numbers are shared by all users within a service season. You can receive one at one of your top two qualifying clubs.',
   rnNote:
-    'Contribution is a guide in 10% steps and may change after transfers. Numbers are not reserved. Final awards are decided at retirement with the player’s name made public.',
+    'Contribution is a guide in 10% steps that assumes you retire at your current club. It can drop if you move to another club. Numbers are not reserved. Final awards are decided at retirement with the player’s name made public.',
   totalsTitle: 'Career totals',
   apps: 'Apps',
   goals: 'Goals',

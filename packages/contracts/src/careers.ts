@@ -377,6 +377,7 @@ export const RetiredNumberMissSchema = z
     seasons: z.number().int().optional(),
     need: z.number().int().optional(),
     pct: z.number().int().optional(),
+    close: z.boolean().optional(),
   })
   // 옛 응답 보정. 6 = retired-numbers.ts RN_MIN_SEASONS(기준값 모듈을 값으로 끌어오지 않는다).
   .transform((m) => ({ ...m, seasons: m.seasons ?? 0, need: m.need ?? 6 })) satisfies z.ZodType<
@@ -806,6 +807,8 @@ export const RetiredNumberProgressSchema = z.strictObject({
       eligible: z.boolean(),
       candidate: z.boolean(),
       availability: z.enum(['open', 'taken', 'unknown']),
+      /** T-11-429 지금은 기준을 넘지만 이 구단을 떠나면 기준 아래로 내려간다. 그 전 응답엔 없다. */
+      leaveRisk: z.boolean().optional(),
     }),
   ),
 });
