@@ -113,7 +113,7 @@ jobs:
 
           결과 파일: PR 제목 · 본문은 $out/pr.md 에 쓴다.
 
-          $( [ -n "$BRANCH" ] && echo "CI 고치기: 이 체크아웃은 @dev PR 브랜치 $BRANCH 다. 실패한 CI 로그 끝부분은 $RUNNER_TEMP/ci-failed.log 에 있다." )
+          $( [ -z "$BRANCH" ] || echo "CI 고치기: 이 체크아웃은 @dev PR 브랜치 $BRANCH 다. 실패한 CI 로그 끝부분은 $RUNNER_TEMP/ci-failed.log 에 있다." )
 
           <request>
           제목: $TITLE
