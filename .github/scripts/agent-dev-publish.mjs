@@ -5,6 +5,10 @@ import { fileURLToPath } from 'node:url';
 
 // ADR-015 3단계: agent-dev.yml publish 잡. Claude가 만든 커밋(patch)을 main 위에 얹어 브랜치를 올리고 PR을 연 뒤
 // Worker에 결과를 알린다. 이 스크립트는 main에 있는 그대로 돈다(patch가 .github을 건드리면 거절한다).
+// CI 고치기(BRANCH)면 그 @dev PR 브랜치 위에 얹어 같은 브랜치로 올리고 PR을 새로 열지 않는다.
+
+/** CI 고치기로 올릴 수 있는 브랜치(@dev가 연 것만). */
+export const isAgentBranch = (b) => /^agent-dev\/\d+$/.test(b ?? '');
 
 const BLOCKED = [
   /^\.github\//,
@@ -55,7 +59,7 @@ async function report(payload) {
 }
 
 async function main() {
-  const { OUT, TITLE, THREAD, WORK_RESULT, RUN_URL, RUN_ID } = process.env;
+  const { OUT, TITLE, THREAD, WORK_RESULT, RUN_URL, RUN_ID, BRANCH } = process.env;
   const read = (f) => (existsSync(join(OUT, f)) ? readFileSync(join(OUT, f), 'utf8') : '');
   let claude = {};
   try {
@@ -75,18 +79,34 @@ async function main() {
   const files = patchFiles(patch);
   const blocked = blockedFiles(files);
   if (blocked.length) return fail(`막힌 경로를 바꿔서 올리지 않았어요: ${blocked.join(', ')}`);
+  if (BRANCH && !isAgentBranch(BRANCH)) return fail(`@dev가 연 브랜치가 아니에요: ${BRANCH}`);
 
   sh('git', ['config', 'user.name', 'offside-dev-agent']);
   sh('git', ['config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com']);
   try {
     sh('git', ['am', '--3way', join(OUT, 'change.patch')]);
   } catch {
-    return fail('커밋을 main 위에 얹지 못했어요(git am 실패)');
+    return fail(`커밋을 ${BRANCH || 'main'} 위에 얹지 못했어요(git am 실패)`);
   }
   try {
     sh('node', ['.github/scripts/public-hygiene.mjs']);
   } catch {
     return fail('공개 저장소 점검(public-hygiene)에 걸려서 올리지 않았어요');
+  }
+  if (BRANCH) {
+    sh('git', ['push', 'origin', `HEAD:refs/heads/${BRANCH}`]);
+    const view = JSON.parse(sh('gh', ['pr', 'view', BRANCH, '--json', 'number,title']));
+    // 위험도는 고친 커밋만이 아니라 PR 전체에서 다시 판정한다.
+    const all = sh('git', ['diff', '--name-only', 'origin/main...HEAD']).split('\n').filter(Boolean);
+    return report({
+      ...base,
+      ok: true,
+      fix: true,
+      pr: Number(view.number),
+      branch: BRANCH,
+      title: view.title,
+      files: all.slice(0, 300),
+    });
   }
   const branch = `agent-dev/${RUN_ID}`;
   sh('git', ['push', 'origin', `HEAD:refs/heads/${branch}`]);

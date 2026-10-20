@@ -19,7 +19,7 @@ import {
   watchStatus,
 } from './team.ts';
 import type { Gh } from './github.ts';
-import type { Task } from './thread.ts';
+import { alertOperator, type Task } from './thread.ts';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -177,6 +177,13 @@ describe('정기 글', () => {
 });
 
 describe('사건', () => {
+  it('사건 조사 글만 운영자를 멘션한다', () => {
+    const env = { OPERATOR_USER_ID: 'UOP' } as Env;
+    expect(alertOperator(env, { kind: 'incident' }, '사건: 5xx')).toBe('<@UOP> 사건: 5xx');
+    for (const kind of ['alert', 'verify', 'mention', 'report'] as const)
+      expect(alertOperator(env, { kind }, '정리')).toBe('정리');
+  });
+
   it('첫 줄이 `사건:`일 때만 사건으로 본다', () => {
     expect(isIncident('사건: 5xx가 3%예요\n…')).toBe(true);
     expect(isIncident('**사건**: 느려요')).toBe(true);

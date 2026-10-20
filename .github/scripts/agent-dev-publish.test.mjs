@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { blockedFiles, parsePrFile, patchFiles } from './agent-dev-publish.mjs';
+import { blockedFiles, isAgentBranch, parsePrFile, patchFiles } from './agent-dev-publish.mjs';
 
 test('patch가 바꾸는 파일을 읽고 .github · 비밀 파일은 막는다', () => {
   const patch = [
@@ -20,4 +20,10 @@ test('pr.md 첫 줄은 제목, 나머지는 본문', () => {
     body: '본문\nrelease-notes: none',
   });
   assert.equal(parsePrFile('', '대신 제목').title, '대신 제목');
+});
+
+test('CI 고치기는 @dev가 연 브랜치에만 올린다', () => {
+  assert.equal(isAgentBranch('agent-dev/38925860138'), true);
+  for (const b of ['main', 'agent-dev/', 'agent-dev/1/../main', 'feature/agent-dev/1', '', undefined])
+    assert.equal(isAgentBranch(b), false);
 });

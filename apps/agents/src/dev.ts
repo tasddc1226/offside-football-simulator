@@ -7,11 +7,14 @@ import { ledger, type DevJob } from './ledger.ts';
 import { cardOf } from './card.ts';
 import { DEPLOY_ACTIONS, deployInteraction, postDeployCard } from './deploy.ts';
 import { above, RISK_LABEL, riskOf } from './risk.ts';
+import { reviewPr } from './review.ts';
 import { slackClient, threadLink, threadReply } from './slack.ts';
 import { supportFollowup } from './supportCase.ts';
 import type { Task } from './thread.ts';
 
 const WORKFLOW = 'agent-dev.yml';
+/** CI가 실패한 PR을 실패 로그를 붙여 다시 고치게 하는 횟수. 넘으면 운영자에게 넘긴다. */
+export const MAX_FIXES = 1;
 /** 머지해도 되는 검사 결론. */
 const PASSING = new Set(['success', 'skipped', 'neutral']);
 
@@ -45,7 +48,7 @@ const cardOfThread = (env: Env, thread: string) => {
 export async function dispatchWork(
   env: Env,
   g: Gh,
-  w: { title: string; request: string; thread: string },
+  w: { title: string; request: string; thread: string; branch?: string; ciRun?: string },
 ): Promise<string | null> {
   const today = await ledger(env).day('dev');
   const left = dailyBudget(env, 'dev') - today.costUsd;
@@ -59,10 +62,30 @@ export async function dispatchWork(
         title: w.title.slice(0, 120),
         request: w.request.slice(0, 20_000),
         thread: w.thread,
+        ...(w.branch && w.ciRun ? { branch: w.branch, ci_run: w.ciRun } : {}),
       },
     },
   });
   return r.status === 204 ? null : `작업을 띄우지 못했어요 (GitHub ${r.status})`;
+}
+
+/**
+ * 운영자 멈춤(stop.ts): 이 스레드가 띄운 agent-dev 실행 중 끝나지 않은 것을 취소한다. 실행 이름 끝의 `[채널:ts]`로
+ * 스레드를 가린다(agent-dev.yml run-name). 취소한 실행 번호들.
+ */
+export async function cancelDevRuns(g: Gh, thread: string): Promise<number[]> {
+  const { data } = await g<{
+    workflow_runs?: { id: number; status: string; display_title?: string }[];
+  }>(`/actions/workflows/${WORKFLOW}/runs?per_page=30`);
+  const mine = (data.workflow_runs ?? []).filter(
+    (r) => r.status !== 'completed' && (r.display_title ?? '').endsWith(`[${thread}]`),
+  );
+  const cancelled: number[] = [];
+  for (const r of mine) {
+    const c = await g(`/actions/runs/${r.id}/cancel`, { method: 'POST' });
+    if (c.status === 202) cancelled.push(r.id);
+  }
+  return cancelled;
 }
 
 export const workRunsUrl = (env: Env) =>
@@ -184,6 +207,7 @@ type PullRequest = {
   state: string;
   merged?: boolean;
   html_url: string;
+  body?: string | null;
   head: { sha: string; ref: string };
   base: { ref: string };
   mergeable?: boolean | null;
@@ -218,6 +242,8 @@ export type DevResult = {
   title?: string;
   /** T-11-325 실제 바뀐 파일 경로(agent-dev-publish.mjs). 위험도를 다시 판정한다. 옛 스크립트는 개수를 보냈다. */
   files?: string[] | number;
+  /** CI 고치기: 이미 있는 PR 브랜치에 커밋을 얹었다(PR을 새로 열지 않았다). */
+  fix?: boolean;
 };
 
 /** agent-dev.yml publish 잡이 보낸 결과를 스레드에 올린다. 비용은 @dev 하루 사용액에 더한다. */
@@ -233,7 +259,10 @@ export async function devResult(env: Env, r: DevResult) {
     const risk = files.length ? riskOf(files) : undefined;
     const order = await ledger(env).orderOf(r.thread);
     const expected = !order || order.by === 'operator' ? 'operator' : order.risk;
+    // CI 고치기는 고친 횟수를 이어 가고, 리뷰는 diff가 바뀌었으니 다시 받는다.
+    const prev = r.fix ? await ledger(env).devJob(r.branch) : undefined;
     await ledger(env).setDevJob(r.branch, {
+      ...(prev?.fixes ? { fixes: prev.fixes } : {}),
       channel,
       threadTs,
       pr: r.pr,
@@ -245,7 +274,9 @@ export async function devResult(env: Env, r: DevResult) {
     await cardOfThread(env, r.thread)
       .patch({ link: `<${prUrl}|PR #${r.pr}>`, ...(risk ? { risk } : {}) })
       .catch(() => undefined);
-    text = `${said || '고쳐서 PR을 올렸어요.'}\n\n**PR #${r.pr}** ${prUrl}\nCI가 끝나면 결과를 여기 알려 드릴게요. 통과하면 #agent-approvals에 머지 승인 요청을 올려요.`;
+    text = r.fix
+      ? `${said || 'CI 실패를 고쳤어요.'}\n\n**PR #${r.pr}**에 고친 커밋을 올렸어요. ${prUrl}\nCI가 다시 돌고, 통과하면 #agent-approvals에 머지 승인 요청을 올려요.`
+      : `${said || '고쳐서 PR을 올렸어요.'}\n\n**PR #${r.pr}** ${prUrl}\nCI가 끝나면 결과를 여기 알려 드릴게요. 통과하면 #agent-approvals에 머지 승인 요청을 올려요.`;
   } else if (isNoFix(said)) {
     // T-11-400 문의 작업을 "고칠 것 없음"으로 판정했다(커밋 없음). 카드는 닫고, 문의면 설명 답장 초안을 맡긴다.
     text = said;
@@ -276,12 +307,27 @@ export async function devCi(env: Env, c: DevCi, gh: () => Promise<Gh> = () => ap
   if (c.conclusion === 'cancelled' || c.conclusion === 'skipped') return 'ignored';
   const slack = devSlack(env);
   if (c.conclusion !== 'success') {
+    const g = await gh();
+    const { data: pr } = await g<PullRequest>(`/pulls/${job.pr}`);
+    if (pr.state !== 'open' || pr.head?.sha !== c.sha) return 'stale';
+    const why = await startFix(env, g, c, job);
+    if (!why) {
+      await slack(
+        'chat.postMessage',
+        threadReply(
+          job.channel,
+          job.threadTs,
+          `PR #${job.pr} CI가 실패했어요(${c.conclusion}). <${c.url}|실패 로그>를 붙여 한 번 고치게 했어요. 결과는 이 스레드에 올라와요.`,
+        ),
+      );
+      return 'fixing';
+    }
     await slack(
       'chat.postMessage',
       threadReply(
         job.channel,
         job.threadTs,
-        `PR #${job.pr} CI가 실패했어요(${c.conclusion}). <${c.url}|CI 기록>을 보고 다시 지시해 주세요.`,
+        `PR #${job.pr} CI가 실패했어요(${c.conclusion}). ${why} <${c.url}|CI 기록>을 보고 다시 지시해 주세요.`,
       ),
     );
     return 'failed';
@@ -289,6 +335,31 @@ export async function devCi(env: Env, c: DevCi, gh: () => Promise<Gh> = () => ap
   const g = await gh();
   const { data: pr } = await g<PullRequest>(`/pulls/${job.pr}`);
   if (pr.state !== 'open' || pr.head?.sha !== c.sha) return 'stale';
+  // 다른 모델 리뷰. 실패해도 카드는 올린다(카드에 "리뷰 못 함"이 붙는다).
+  if (!job.review) {
+    const order = await ledger(env).orderOf(`${job.channel}:${job.threadTs}`);
+    const review = await reviewPr(env, g, pr, order?.request).catch((e: unknown) => {
+      console.error('pr review failed', String(e).slice(0, 200));
+      return undefined;
+    });
+    if (review) {
+      job.review = review;
+      await ledger(env).setDevJob(c.branch, job);
+      await ledger(env).add('dev', review.costUsd);
+      await cardOf(env, job.channel, job.threadTs)
+        .addCost('dev', review.costUsd)
+        .catch(() => undefined);
+      await slack(
+        'chat.postMessage',
+        threadReply(
+          job.channel,
+          job.threadTs,
+          review.text,
+          `${review.model} 리뷰 · $${review.costUsd.toFixed(3)}`,
+        ),
+      );
+    }
+  }
   const card = await slack('chat.postMessage', approvalCard(env, job, c));
   if (card.ts)
     await ledger(env).pendingAdd({
@@ -311,6 +382,41 @@ export async function devCi(env: Env, c: DevCi, gh: () => Promise<Gh> = () => ap
   return 'card';
 }
 
+/**
+ * CI가 실패한 @dev PR을 같은 브랜치에서 한 번 더 고치게 띄운다(agent-dev.yml branch · ci_run). 띄웠으면 null, 아니면 이유.
+ * 횟수는 띄우기 전에 올려 둔다(같은 실패 알림이 두 번 와도 한 번만 띄운다).
+ */
+export async function startFix(env: Env, g: Gh, c: DevCi, job: DevJob): Promise<string | null> {
+  if ((job.fixes ?? 0) >= MAX_FIXES) return `이미 ${MAX_FIXES}번 고치게 했어요.`;
+  if (!/^agent-dev\/\d+$/.test(c.branch)) return '@dev가 연 브랜치가 아니에요.';
+  const ciRun = /\/actions\/runs\/(\d+)/.exec(c.url)?.[1];
+  if (!ciRun) return 'CI 실행 번호를 읽지 못했어요.';
+  await ledger(env).setDevJob(c.branch, { ...job, fixes: (job.fixes ?? 0) + 1 });
+  const thread = `${job.channel}:${job.threadTs}`;
+  const order = await ledger(env).orderOf(thread);
+  const request = [
+    `PR #${job.pr}(${job.title})의 CI가 실패했다(${c.conclusion}). 실패 로그를 보고 CI가 통과하게 고친다.`,
+    '- 실패를 고치는 데 필요한 것만 바꾼다. 원래 지시 범위를 넘지 않고, 테스트를 지우거나 건너뛰게 만들어 통과시키지 않는다.',
+    '- 실패가 이 PR과 무관하면(main에서 온 실패 · 일시 오류 · 러너 문제) 고치지 말고 커밋 없이 결과에 그렇게 적는다.',
+    '',
+    '원래 지시:',
+    order?.request ?? '(기록 없음)',
+  ].join('\n');
+  const why = await dispatchWork(env, g, {
+    title: `CI 고치기 PR #${job.pr}`,
+    request,
+    thread,
+    branch: c.branch,
+    ciRun,
+  });
+  if (why) await ledger(env).setDevJob(c.branch, job);
+  else
+    await cardOf(env, job.channel, job.threadTs)
+      .patch({ status: '수정', note: `PR #${job.pr} CI 실패 고치기` })
+      .catch(() => undefined);
+  return why;
+}
+
 export function approvalCard(env: Env, job: DevJob, c: DevCi) {
   const prUrl = `https://github.com/${env.GITHUB_REPO}/pull/${job.pr}`;
   const value = JSON.stringify({ pr: job.pr, sha: c.sha, branch: c.branch });
@@ -320,6 +426,7 @@ export function approvalCard(env: Env, job: DevJob, c: DevCi) {
     `• 왜: 운영자 지시(<${threadLink(job.channel, job.threadTs)}|스레드>)`,
     `• 검사: <${c.url}|CI 통과> · 커밋 \`${c.sha.slice(0, 7)}\``,
     ...riskLines(job),
+    ...reviewLines(job),
     `• 되돌리기: main에서 이 PR을 revert. 운영 배포는 머지 뒤 배포 승인 카드로 따로 받아요.`,
   ].join('\n');
   return {
@@ -348,6 +455,20 @@ export function approvalCard(env: Env, job: DevJob, c: DevCi) {
       },
     ],
   };
+}
+
+/** 승인 카드의 다른 모델 리뷰 줄. 확인 필요면 문제 줄을 그대로 붙인다. */
+export function reviewLines(job: Pick<DevJob, 'review'>): string[] {
+  const r = job.review;
+  if (!r) return ['• 리뷰: 못 받았어요. 바뀐 파일을 직접 확인해 주세요.'];
+  if (r.verdict === 'ok') return [`• 리뷰(${r.model}): 문제 없음`];
+  const issues = r.text
+    .split('\n')
+    .slice(1)
+    .filter((l) => l.trim())
+    .slice(0, 4)
+    .map((l) => `   ${l.trim()}`);
+  return [`• ⚠️ 리뷰(${r.model}): 확인 필요`, ...issues];
 }
 
 /** T-11-325 승인 카드의 위험도 줄. 실제 경로가 시작할 때 예상보다 높으면 경고를 붙인다. */
