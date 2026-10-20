@@ -46,11 +46,9 @@ test('320px optional consent, one session/start, campaign new tab and withdrawal
     '/?utm_source=meta&utm_medium=paid&utm_campaign=global_test&utm_content=jp_a&fbclid=PRIVATE',
   );
   expect(sent).toHaveLength(0);
+  // T-11-417 이용 분석과 유입 · 결제 연결을 한 창에서 '모두 동의'로 함께 고른다.
+  await expect(page.locator('[data-analytics="pick-acquisition"]')).not.toBeChecked();
   await page.locator('[data-analytics="accept"]').click();
-  const consent = page.locator('section[aria-label="유입과 앱 결제 연결"]');
-  await expect(consent).toBeVisible();
-  expect(sent).toHaveLength(0);
-  await consent.getByRole('button', { name: '유입·결제 연결에 동의' }).click();
   await expect.poll(() => sent.filter((v) => v.action === 'session').length).toBe(1);
   const link = page.locator('[data-app-conversion="home"] [data-act="app-store"]');
   const href = await link.getAttribute('href');
@@ -69,8 +67,10 @@ test('320px optional consent, one session/start, campaign new tab and withdrawal
   expect(new Set(sent.filter((v) => v.sessionId).map((v) => v.sessionId)).size).toBe(1);
   await page.goto('/');
   await page.locator('[data-act="settings"]').click();
-  await expect(consent).toBeVisible();
-  await consent.getByRole('button', { name: '분석 동의 철회' }).click();
+  const consent = page.locator('section[data-analytics="consent"]');
+  await expect(consent.locator('[data-analytics="pick-acquisition"]')).toBeChecked();
+  await consent.locator('[data-analytics="pick-analytics"]').uncheck();
+  await consent.locator('[data-analytics="deny"]').click();
   await expect.poll(() => sent.filter((v) => v.action === 'revoke').length).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
@@ -98,14 +98,14 @@ test('settings keeps pending withdrawal available with analytics off and never t
   });
   await page.goto('/');
   await page.locator('[data-act="settings"]').click();
-  const consent = page.locator('section[aria-label="유입과 앱 결제 연결"]');
+  const consent = page.locator('section[data-analytics="consent"]');
   await expect(consent).toBeVisible();
   await expect(consent.getByRole('alert')).toContainText('원래 계정');
-  await expect(consent.getByRole('button', { name: '유입·결제 연결에 동의' })).toBeDisabled();
+  await expect(consent.getByRole('button', { name: '모두 동의' })).toBeDisabled();
   expect(sent.every((b) => b.profileId === 'profile-a' && b.action === 'revoke')).toBe(true);
   originalAccount = true;
   await consent.getByRole('button', { name: '동의 안 함', exact: true }).click();
-  await expect(consent).not.toBeVisible();
+  await expect(consent.getByRole('alert')).not.toBeVisible();
   expect(
     await page.evaluate(() => localStorage.getItem('offside_acquisition_revoke_v1')),
   ).toBeNull();
