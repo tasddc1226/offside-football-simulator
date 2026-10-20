@@ -1,5 +1,5 @@
-// T-11-418 오프사이드 리그 화면(홈의 리그 배너로 연다, 웹 League.svelte) — 일정 · 규칙 · 내 신청. 1차는 접수만 연다.
-// 배치 · 순위표 · 경기는 다음 배포에서 더한다. 리그 한눈에는 누구나, 내 신청은 로그인한 구단주만 묻는다.
+// T-11-418 오프사이드 리그 화면(홈의 리그 배너로 연다, 웹 League.svelte) — 일정 · 규칙 · 내 신청. T-11-418b 배치 뒤에는
+// 내 배치 · 리그 고르기 · 순위표 · 라운드 경기 · 경기 상세. 리그 한눈에는 누구나, 내 신청은 로그인한 구단주만 묻는다.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -9,14 +9,21 @@ import {
   fetchLeague,
   fetchLeagueMe,
   withdrawLeague,
+  type LeagueMatch,
   type LeagueMeResponse,
   type LeagueResponse,
+  type LeagueTableResponse,
 } from '@offside/app-core/api/league';
 import { cupAppText as A } from '@offside/app-core/i18n/ko/cupApp';
 import { leagueText as L } from '@offside/app-core/i18n/ko/league';
 import {
+  leagueChoices,
+  leagueDefaultPick,
+  leagueDefaultRound,
   leagueLine,
   leagueOnHome,
+  leaguePlacementLine,
+  type LeaguePick,
   leaguePhaseLabel,
   leaguePresign,
   leagueReadiness,
@@ -29,9 +36,10 @@ import { refreshAccount, toast } from '../../game/host';
 import { go } from '../../game/nav';
 import { startGoogleLogin } from '../../platform/auth';
 import { accountCache } from '../../store';
-import { Btn, Card, Pill, Press, Screen, Skeleton, Topbar, Txt } from '../../ui';
+import { Btn, Card, Pill, Press, Screen, Skeleton, Topbar, Txt, scrollTo } from '../../ui';
 import { GoogleLoginButton } from '../../ui/GoogleLoginButton';
 import { useOnPull } from '../../ui/refresh';
+import { LeagueBoard, LeagueMatchDetail, LeaguePicker } from './LeagueBoard';
 
 /** 홈의 리그 배너(누구나 보는 리그 소식). 리그가 끝났거나 불러오지 못하면 그리지 않는다. */
 export function LeagueBanner() {
@@ -150,6 +158,7 @@ function EntryCard({
   if (!me) return null;
   const entry = me.entry;
   const ready = leagueReadiness(data, me);
+  const placement = leaguePlacementLine(me);
   const drawAt = leagueWhen(league.drawAt);
   return (
     <Card gap={10} testID="league-entry">
@@ -171,9 +180,15 @@ function EntryCard({
               </Btn>
             ) : null}
           </View>
-          <Txt v="sm" tone="muted">
-            {phase === 'open' || phase === 'closed' ? L.enteredNote({ at: drawAt }) : L.drawPending}
-          </Txt>
+          {phase === 'open' || phase === 'closed' ? (
+            <Txt v="sm" tone="muted">
+              {L.enteredNote({ at: drawAt })}
+            </Txt>
+          ) : !placement ? (
+            <Txt v="sm" tone="muted">
+              {L.drawPending}
+            </Txt>
+          ) : null}
         </>
       ) : me.canEnter ? (
         <Btn
@@ -204,6 +219,11 @@ function EntryCard({
           {L.myOvr({ ovr: me.team.ovr })}
         </Txt>
       ) : null}
+      {placement ? (
+        <Txt v="sm" bold tone={placement.ok ? 'ink' : 'warn'} testID="league-placement">
+          {placement.text}
+        </Txt>
+      ) : null}
     </Card>
   );
 }
@@ -216,6 +236,11 @@ export default function League() {
   const [me, setMe] = useState<LeagueMeResponse | null>(null);
   const [status, setStatus] = useState<LoadStatus>('loading');
   const seq = useRef(0);
+  // 배치 뒤: 고른 리그(처음엔 내 리그) · 라운드 · 연 경기.
+  const [pick, setPick] = useState<LeaguePick | null>(null);
+  const [round, setRound] = useState(1);
+  const picked = useRef(false);
+  const [detail, setDetail] = useState<{ m: LeagueMatch; table: LeagueTableResponse } | null>(null);
   // 홈을 거치지 않고 들어와도(되돌아가기 등) 로그인 상태를 알아야 내 신청을 묻는다.
   useEffect(() => {
     if (accountCache.value === undefined) void refreshAccount();
@@ -231,7 +256,12 @@ export default function League() {
         return;
       }
       setData(a.data);
-      setMe(b?.ok ? b.data : null);
+      const mine = b?.ok ? b.data : null;
+      setMe(mine);
+      if (!picked.current && a.data.tiers) {
+        setPick(leagueDefaultPick(a.data, mine));
+        setRound(leagueDefaultRound(a.data));
+      }
       setStatus('ready');
     },
     [linked],
@@ -240,6 +270,23 @@ export default function League() {
     void reload();
   }, [reload]);
   useOnPull(() => reload(true));
+  const mineId = me?.placement?.teamId ?? null;
+  const p = me?.placement;
+  const mine = p && p.tier && p.league ? { tier: p.tier, league: p.league } : null;
+
+  if (detail && data)
+    return (
+      <Screen>
+        <Topbar />
+        <LeagueMatchDetail
+          season={data.league.season}
+          matchId={detail.m.id}
+          table={detail.table}
+          mineId={mineId}
+          back={() => setDetail(null)}
+        />
+      </Screen>
+    );
 
   return (
     <Screen>
@@ -285,6 +332,31 @@ export default function League() {
             ) : null}
           </Card>
           <EntryCard data={data} me={me} linked={linked} reload={() => reload(true)} />
+          {pick && data.tiers ? (
+            <>
+              <LeaguePicker
+                choices={leagueChoices(data)}
+                pick={pick}
+                mine={mine}
+                onpick={(x) => {
+                  picked.current = true;
+                  setPick(x);
+                }}
+              />
+              <LeagueBoard
+                season={data.league.season}
+                pick={pick}
+                bottomTier={data.tiers.at(-1)?.tier ?? 1}
+                mineId={mineId}
+                round={round}
+                setRound={setRound}
+                onopen={(m, table) => {
+                  setDetail({ m, table });
+                  scrollTo(0);
+                }}
+              />
+            </>
+          ) : null}
           <Card gap={8} testID="league-schedule">
             <Txt v="h3" bold accessibilityRole="header">
               {L.scheduleTitle}

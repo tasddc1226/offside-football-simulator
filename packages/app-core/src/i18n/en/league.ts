@@ -32,9 +32,9 @@ export const league: Translation<LeagueMsgs> = {
   ruleEntry:
     'You can enter from 7 days before the season opens. At the draw, teams with fewer than 8 of your retired players in that season’s starting XI are left out.',
   ruleTiers:
-    'Tier 1 has one league, tier 2 has two, and each tier below doubles. In the first season, tiers fill from the top by team OVR at the entry deadline.',
+    'Tier 1 has one league, tier 2 has two, and each tier below doubles. In the first season, tiers fill from the top by team OVR at the entry deadline. Some leagues have 7 teams depending on entries, and in those one team rests each round.',
   rulePoints:
-    'A win is 3 points and a draw is 1. Ties are broken by goal difference, goals scored, then head-to-head.',
+    'The home team has a small advantage. A win is 3 points and a draw is 1. Ties are broken by goal difference, goals scored, then head-to-head.',
   ruleMove: 'In every league, 1st place goes up a tier next season and 7th and 8th go down a tier.',
   ruleLock:
     "You can't change your squad from 1 hour before a match until it ends. The transfer market stays open.",
@@ -63,4 +63,23 @@ export const league: Translation<LeagueMsgs> = {
     `You don't have a Season ${p.season} club yet. Build one and start ${p.min} of your retired players before the draw to join the league.`,
   notEntered: "You didn't enter this season's league.",
   drawPending: 'Tiers and fixtures appear here after the draw.',
+  runningRounds: (p) => `${p.n} of ${p.total} rounds played.`,
+  leagueName: (p) => `Tier ${p.tier}, League ${p.league}`,
+  placedLine: (p) => `Tier ${p.tier}, League ${p.league} · Position ${p.rank}`,
+  droppedLine:
+    "You didn't have enough of your retired players in the starting XI at the draw, so you're not in this season's league.",
+  forfeitedLine: 'After 3 forfeits, all remaining matches are recorded as 0:3 losses.',
+  myLeague: 'My league',
+  pickLeague: 'Choose a league',
+  standingsTitle: 'Table',
+  zoneUp: 'Promotion',
+  zoneDown: 'Relegation',
+  forfeitsTag: (p) => `${p.n} forfeit${p.n === 1 ? '' : 's'}`,
+  roundsTitle: 'Rounds',
+  roundName: (p) => `Round ${p.n}`,
+  restTeam: (p) => `Bye · ${p.team}`,
+  forfeitScore: 'Forfeit',
+  tableFail: "We couldn't load the table.",
+  detailTitle: (p) => `Tier ${p.tier}, League ${p.league} · Round ${p.round}`,
+  detailBack: 'Back to the league',
 };

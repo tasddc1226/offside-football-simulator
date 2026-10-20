@@ -139,6 +139,18 @@
 - API: `GET /v1/leagues/current`(공개, 엣지 30초) · `GET /v1/leagues/current/me` · `POST /v1/leagues/current/entries` · `DELETE /v1/leagues/current/entries/me`. 오류 문구는 컵 서버 문구를 같이 쓴다.
 - 접수 시작 알림은 1차에 자동 푸시를 만들지 않고, 10-31 개막 때 운영 도구 푸시 · 공지로 보낸다.
 
+### 8.2 2차 구현 메모 (2026-10-20, T-11-418b)
+
+- 잠정 개막(T-11-418c): 다음 시즌은 지금 시즌 게이지가 마감을 확정해야 일정에 오른다. 그 전에는 지금 시즌 최대 기간 끝을 잠정 개막으로 써서 사전 신청을 연다. 마감이 당겨지면 리그 일정도 같이 당겨진다.
+- 배치(`team/league.ts` `drawLeague`, 5분 cron): 그 시즌 팀 선발 실카드가 8명 이상인 신청을 OVR 순으로 부에 나누고(`leaguePyramid`: 1 · 2 · 4 …개 리그, 리그는 7 ~ 8팀, 8팀 리그를 위로), 부 안에서는 컵 조 추첨처럼 OVR 포트로 리그를 고른다. 42팀 미만의 일부는 7 ~ 8팀으로 나눌 수 없어 OVR 낮은 팀이 빠지고, 7팀 미만이면 열지 않는다. 대진은 원형 방식 두 바퀴(`leagueFixtures`, 7팀 리그는 라운드마다 한 팀 휴식).
+- 테이블: `league_state`(시즌 · 시드 · 부별 리그 수), `league_matches`(배치 때 14라운드를 한 번에), `league_entries`에 tier · league_no · forfeits · notified_round(마이그레이션 0120).
+- 경기: 시각이 된 경기를 cron마다 40경기씩 홈 이점(`SIM.homeAdv`, 중립 아님)으로 치른다. 자격은 경기 때 실제 선발로 다시 본다(팔린 카드 자리는 유스). 팀이 없거나 실카드 8명 미만이면 0:3 기권패, 3번이면 forfeited(남은 경기 모두 기권패).
+- 알림: 배치 하루 전 자격 미달 신청자 안내, 배치 결과(배치 · 빠짐 · 열리지 않음), 라운드가 다 끝나면 결과 · 지금 순위, 마지막 라운드는 최종 순위 · 우승. cron마다 100명씩, 늦으면 가장 최근 라운드만.
+- 명단 잠금: 리그 경기 1시간 전부터 끝날 때까지 팀 저장을 막는다(`LEAGUE_LINEUP_LOCKED`). 이적시장은 막지 않는다.
+- 시즌 마감: 리그가 끝나지 않았으면 컵처럼 마감을 마지막 라운드 뒤로 미룬다(`openLeagueEndsAt`).
+- API: `GET /v1/leagues/current`에 tiers · playedRounds, `/me`에 placement, `GET /v1/leagues/:season/tables/:tier/:league`(공개, 엣지 60초), `GET /v1/leagues/:season/matches/:id`. 운영 도구: `GET /v1/admin/leagues/current`(상태), `POST /v1/admin/leagues/current/delay`(배치 전 1 ~ 7일 미루기, 쌓인다).
+- 첫 시즌이라 지난 부가 없어 OVR로만 나눈다. 승강 · 다음 시즌 부 저장 · 보상은 3 · 4차.
+
 ## 9. 결정 필요
 
 | 항목                   | 상태 · 추천                                      | 대안                               |

@@ -123,7 +123,12 @@ describe('/v1/leagues (T-11-418)', () => {
     expect(soon.league.rounds.at(-1)).toBe('2026-11-18T04:00:00.000Z');
     // 사전 신청 전에는 신청할 수 없다.
     const a = await owner(null);
-    expect(await me(a.cookie)).toEqual({ entry: null, canEnter: false, team: null });
+    expect(await me(a.cookie)).toEqual({
+      entry: null,
+      canEnter: false,
+      team: null,
+      placement: null,
+    });
     const r = await enter(a.cookie);
     expect([r.status, await reason(r)]).toEqual([409, 'LEAGUE_CLOSED']);
   });
@@ -132,7 +137,12 @@ describe('/v1/leagues (T-11-418)', () => {
     vi.setSystemTime(new Date(PRESIGN));
     expect((await view()).phase).toBe('open');
     const a = await owner(null);
-    expect(await me(a.cookie)).toEqual({ entry: null, canEnter: true, team: null });
+    expect(await me(a.cookie)).toEqual({
+      entry: null,
+      canEnter: true,
+      team: null,
+      placement: null,
+    });
     expect((await enter(a.cookie)).status).toBe(204);
     expect(await me(a.cookie)).toMatchObject({ entry: { createdAt: PRESIGN }, canEnter: false });
   });
