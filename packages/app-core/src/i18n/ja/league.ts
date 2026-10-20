@@ -30,8 +30,9 @@ export const league: Translation<LeagueMsgs> = {
   ruleEntry:
     'シーズン開幕の7日前から申し込めます。組分け時にそのシーズンのチームのスタメンに自分の引退選手が8人未満なら、リーグから外れます。',
   ruleTiers:
-    '1部はリーグ1つ、2部は2つのように下の部ほどリーグが2倍に増えます。最初のシーズンは受付締切時のチームOVR順に上の部から埋めます。',
-  rulePoints: '勝ち3点、引き分け1点です。勝点が同じなら得失点差、総得点、直接対決の順で決めます。',
+    '1部はリーグ1つ、2部は2つのように下の部ほどリーグが2倍に増えます。最初のシーズンは受付締切時のチームOVR順に上の部から埋めます。参加数によって7チームのリーグもあり、その場合は毎節1チームが休みます。',
+  rulePoints:
+    'ホームチームが少し有利です。勝ち3点、引き分け1点です。勝点が同じなら得失点差、総得点、直接対決の順で決めます。',
   ruleMove: '各リーグの1位は次のシーズン1つ上の部へ、7・8位は1つ下の部へ移ります。',
   ruleLock: '試合1時間前から試合終了までチームのメンバーを変更できません。移籍市場は止めません。',
   ruleForfeit:
@@ -59,4 +60,22 @@ export const league: Translation<LeagueMsgs> = {
     `シーズン${p.season}のチームがまだありません。組分けまでにチームを作り、スタメンに自分の引退選手を${p.min}人そろえるとリーグに入れます。`,
   notEntered: '今シーズンのリーグには申し込んでいません。',
   drawPending: '組分け・対戦は発表後にこの画面に表示されます。',
+  runningRounds: (p) => `全${p.total}節のうち${p.n}節を終えました。`,
+  leagueName: (p) => `${p.tier}部${p.league}リーグ`,
+  placedLine: (p) => `${p.tier}部${p.league}リーグ · 現在${p.rank}位`,
+  droppedLine: '組分け時にスタメンの自分の引退選手が足りず、今シーズンのリーグに入れませんでした。',
+  forfeitedLine: '棄権が3回になったため、残り試合はすべて0-3の負けとして記録されます。',
+  myLeague: '自分のリーグ',
+  pickLeague: 'リーグを選ぶ',
+  standingsTitle: '順位表',
+  zoneUp: '昇格圏',
+  zoneDown: '降格圏',
+  forfeitsTag: (p) => `棄権${p.n}`,
+  roundsTitle: '節',
+  roundName: (p) => `第${p.n}節`,
+  restTeam: (p) => `お休み · ${p.team}`,
+  forfeitScore: '棄権',
+  tableFail: '順位表を読み込めませんでした。',
+  detailTitle: (p) => `${p.tier}部${p.league}リーグ 第${p.round}節`,
+  detailBack: 'リーグに戻る',
 };

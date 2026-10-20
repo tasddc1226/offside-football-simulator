@@ -1,0 +1,23 @@
+{
+  "id": "t-11-418b-offside-league-matches",
+  "title": "오프사이드 리그 배치 · 경기",
+  "items": [
+    "11월 5일 09:00에 신청한 팀을 부와 리그에 배치하고, 그날부터 매일 13:00에 한 라운드씩 치러요. 리그 화면에서 순위표 · 라운드 경기 · 경기 기록을 볼 수 있고, 다른 리그도 골라 볼 수 있어요.",
+    "배치 하루 전에 선발이 아직 모자란 신청자에게 알려 드려요. 배치 결과와 라운드마다 결과 · 지금 순위를 알림으로 받아요."
+  ],
+  "en": {
+    "title": "OFFSIDE League placement and matches",
+    "items": [
+      "Entered clubs are placed into tiers and leagues at 09:00 on Nov 5, and a round is played every day at 13:00 from that day. The league screen shows the table, each round's matches and match records, and you can look at other leagues too.",
+      "Entrants whose starting XI is still short get a reminder the day before placement. You'll be notified of your placement and of each round's result and your current position."
+    ]
+  },
+  "ja": {
+    "title": "オフサイドリーグの組分け・試合",
+    "items": [
+      "11月5日09:00に申し込んだチームを部とリーグに組分けし、その日から毎日13:00に1節ずつ戦います。リーグ画面で順位表・節ごとの試合・試合記録を見られ、ほかのリーグも選んで見られます。",
+      "組分けの前日に、スタメンがまだ足りない申込者にお知らせします。組分け結果と、節ごとの結果・現在の順位を通知で受け取れます。"
+    ]
+  },
+  "availability": "web-app"
+}

@@ -114,3 +114,141 @@ test('사전 신청: 시즌 2 팀이 없어도 신청할 수 있고, 개막 뒤�
   await expect(page.locator('[data-league-presign]')).toHaveCount(0);
   await expect(page.locator('[data-act="league-enter"]')).toBeVisible();
 });
+
+test('T-11-418b 배치 뒤: 내 배치 · 순위표 · 라운드 경기 · 경기 상세, 다른 리그 고르기', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date('2026-11-07T06:00:00.000Z'));
+  const hits: Record<string, number> = {};
+  const ids = Array.from({ length: 8 }, (_, i) => `tem_${i + 1}`);
+  const team = (id: string, i: number) => ({
+    teamId: id,
+    name: `리그팀${i + 1}`,
+    owner: `감독${i + 1}`,
+    logo: null,
+    ovr: 90 - i,
+  });
+  const standing = (id: string, i: number) => ({
+    teamId: id,
+    p: 3,
+    w: 3 - Math.min(3, i),
+    d: 0,
+    l: Math.min(3, i),
+    gf: 6 - i,
+    ga: i,
+    pts: (3 - Math.min(3, i)) * 3,
+    rank: i + 1,
+    forfeits: i === 7 ? 1 : 0,
+  });
+  const match = (round: number, slot: number, played: boolean) => ({
+    id: `lgm_${round}_${slot}`,
+    round,
+    homeTeamId: ids[slot]!,
+    awayTeamId: ids[7 - slot]!,
+    at: `2026-11-${String(4 + round).padStart(2, '0')}T04:00:00.000Z`,
+    played,
+    homeGoals: played ? 2 : null,
+    awayGoals: played ? 1 : null,
+    forfeit: false,
+  });
+  const table = (tier: number, no: number) => ({
+    season: 2,
+    tier,
+    league: no,
+    teams: ids.map(team),
+    standings: ids.map(standing),
+    matches: Array.from({ length: 14 }, (_, r) =>
+      Array.from({ length: 4 }, (_, s) => match(r + 1, s, r < 3)),
+    ).flat(),
+  });
+  await page.route(`${API}/**`, async (r) => {
+    const path = new URL(r.request().url()).pathname;
+    hits[path] = (hits[path] ?? 0) + 1;
+    if (path === '/v1/profile')
+      return r.fulfill(
+        ok({
+          id: 'u1',
+          linked: { google: true },
+          googleEmailMasked: 'u***@example.com',
+          recoveryCodeIssuedAt: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+        }),
+      );
+    if (path === '/v1/leagues/current')
+      return r.fulfill(
+        ok({
+          league,
+          phase: 'running',
+          entries: 24,
+          tiers: [
+            { tier: 1, leagues: 1, teams: 8 },
+            { tier: 2, leagues: 2, teams: 16 },
+          ],
+          playedRounds: 3,
+        }),
+      );
+    if (path === '/v1/leagues/current/me')
+      return r.fulfill(
+        ok({
+          entry: { createdAt: '2026-11-01T03:00:00.000Z' },
+          canEnter: false,
+          team: { teamId: 'tem_3', filled: 9, ovr: 88 },
+          placement: { status: 'placed', tier: 1, league: 1, teamId: 'tem_3', rank: 3 },
+        }),
+      );
+    const t = /^\/v1\/leagues\/2\/tables\/(\d+)\/(\d+)$/.exec(path);
+    if (t) return r.fulfill(ok(table(Number(t[1]), Number(t[2]))));
+    if (path === '/v1/leagues/2/matches/lgm_3_2')
+      return r.fulfill(
+        ok({
+          match: {
+            id: 'lgm_3_2',
+            home: {
+              teamId: 'tem_3',
+              name: '리그팀3',
+              owner: '감독3',
+              formation: '4-3-3',
+              ovr: 88,
+              goals: 2,
+              ratingChange: null,
+            },
+            away: {
+              teamId: 'tem_6',
+              name: '리그팀6',
+              owner: '감독6',
+              formation: '4-3-3',
+              ovr: 85,
+              goals: 1,
+              ratingChange: null,
+            },
+            events: [],
+            mine: 'home',
+            createdAt: '2026-11-07T04:00:00.000Z',
+          },
+          league: { tier: 1, league: 1, round: 3, forfeit: false },
+        }),
+      );
+    return r.fulfill({ status: 503, body: '' });
+  });
+  await page.goto('/');
+  await page.locator('[data-league-banner]').click();
+  await expect(page.locator('[data-league-placement="placed"]')).toHaveText('1부 1리그 · 지금 3위');
+  const board = page.locator('[data-league-table="1-1"]');
+  await expect(board.locator('tbody tr')).toHaveCount(8);
+  await expect(board.locator('tr.down')).toHaveCount(2);
+  await expect(board).toContainText('기권 1');
+  // 다음 라운드(4라운드)가 먼저 보이고, 3라운드를 고르면 끝난 경기를 연다.
+  await expect(page.locator('[data-league-round]')).toHaveValue('4');
+  await page.locator('[data-league-round]').selectOption('3');
+  await page.locator('[data-league-match="lgm_3_2"] [data-act="league-match-open"]').click();
+  await expect(page.locator('[data-act="league-detail-back"]')).toBeVisible();
+  await page.locator('[data-act="league-detail-back"]').click();
+  await expect(board).toBeVisible();
+  await page.locator('[data-league-pick]').selectOption('2-2');
+  await expect(page.locator('[data-league-table="2-2"] tr.up')).toHaveCount(1);
+  // 같은 리그를 다시 골라도 메모(60초)로 한 번만 부른다.
+  await page.locator('[data-league-pick]').selectOption('1-1');
+  await expect(page.locator('[data-league-table="1-1"]')).toBeVisible();
+  expect(hits['/v1/leagues/2/tables/1/1']).toBe(1);
+  expect(hits['/v1/leagues/2/matches/lgm_3_2']).toBe(1);
+});

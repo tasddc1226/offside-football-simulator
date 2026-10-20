@@ -108,3 +108,64 @@ export function leaguePhase(l: LeagueDef, now: string): LeaguePhase {
   if (Date.parse(now) < Date.parse(leagueFinalAt(l)) + LEAGUE_AFTERGLOW_MS) return 'running';
   return 'done';
 }
+
+// ───────── 2차: 배치 · 대진 (T-11-418b) ─────────
+
+/** 한 리그의 가장 적은 팀 수. 7팀 리그는 라운드마다 한 팀이 쉬어 12경기를 치른다(14라운드 그대로). */
+export const LEAGUE_MIN_SIZE = LEAGUE_SIZE - 1;
+/** 기권이 이만큼 쌓이면 남은 경기는 모두 0:3 패로 친다. */
+export const LEAGUE_FORFEIT_LIMIT = 3;
+/** 기권 경기 스코어. */
+export const LEAGUE_FORFEIT_GOALS = 3;
+
+/**
+ * 참가 팀 수 → 부별 리그 수와 팀 수. 리그는 7~8팀이고, 1부 1개 · 2부 2개 · 3부 4개 … 위 부부터 채운다(8팀 리그를 위로).
+ * 7~8팀으로 나눌 수 없는 적은 수(42팀 미만의 일부)면 리그 수를 줄이고 남는 팀(OVR 낮은 쪽)을 dropped로 센다. 7팀 미만이면 리그 없음.
+ */
+export function leaguePyramid(n: number): {
+  tiers: { tier: number; leagues: number; teams: number }[];
+  dropped: number;
+} {
+  let k = Math.ceil(n / LEAGUE_SIZE);
+  if (k * LEAGUE_MIN_SIZE > n) k = Math.floor(n / LEAGUE_SIZE);
+  if (k <= 0) return { tiers: [], dropped: n };
+  const used = Math.min(n, k * LEAGUE_SIZE);
+  const eights = used - k * LEAGUE_MIN_SIZE;
+  // 리그 순서(1부 1리그, 2부 1 · 2리그 …)대로 앞의 eights개가 8팀.
+  const tiers: { tier: number; leagues: number; teams: number }[] = [];
+  let i = 0;
+  for (let tier = 1; i < k; tier++) {
+    const leagues = Math.min(2 ** (tier - 1), k - i);
+    let teams = 0;
+    for (let j = 0; j < leagues; j++, i++) teams += i < eights ? LEAGUE_SIZE : LEAGUE_MIN_SIZE;
+    tiers.push({ tier, leagues, teams });
+  }
+  return { tiers, dropped: n - used };
+}
+
+/**
+ * 한 리그의 홈 · 원정 두 바퀴 일정(LEAGUE_ROUNDS라운드). 원형 방식: 첫 팀을 고정하고 나머지를 돌린다. 7팀이면 빈 자리와 짝이 된
+ * 팀이 그 라운드에 쉰다. 둘째 바퀴는 첫 바퀴를 홈 · 원정만 바꿔 되풀이한다. 돌려주는 값: 라운드 0..13별 [홈, 원정] 쌍.
+ */
+export function leagueFixtures<T>(ids: readonly T[]): [T, T][][] {
+  const slots: (T | null)[] = [...ids];
+  while (slots.length < LEAGUE_SIZE) slots.push(null);
+  const n = slots.length;
+  const first: [T, T][][] = [];
+  let rot = slots.slice(1);
+  for (let r = 0; r < n - 1; r++) {
+    const ring = [slots[0]!, ...rot];
+    const pairs: [T, T][] = [];
+    for (let p = 0; p < n / 2; p++) {
+      const a = ring[p]!;
+      const b = ring[n - 1 - p]!;
+      if (a === null || b === null) continue;
+      // 고정 팀은 라운드마다 홈 · 원정을 번갈아, 나머지는 자리 순으로 번갈아 홈이 몰리지 않게.
+      const swap = p === 0 ? r % 2 === 1 : (r + p) % 2 === 1;
+      pairs.push(swap ? [b, a] : [a, b]);
+    }
+    first.push(pairs);
+    rot = [rot.at(-1)!, ...rot.slice(0, -1)];
+  }
+  return [...first, ...first.map((pairs) => pairs.map(([h, a]) => [a, h] as [T, T]))];
+}

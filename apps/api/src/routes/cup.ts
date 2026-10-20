@@ -20,6 +20,7 @@ import {
   type CupChampion,
   type CupDivisionInfo,
 } from '@offside/contracts';
+import { leagueLineupLocked } from '../team/league.js';
 import {
   CUP_GROUP_ROUNDS,
   CUP_KO_ROUNDS,
@@ -942,6 +943,9 @@ export async function checkCupLineup(
   now: string,
   ovr: number,
 ) {
+  // T-11-418b 리그 경기도 1시간 전부터 끝날 때까지 명단을 잠근다.
+  if (await leagueLineupLocked(db, profileId, season, now))
+    throw conflictError(cupKo('leagueLocked'), 'LEAGUE_LINEUP_LOCKED');
   for (const { cup, entry, matches } of await activeCups(db, profileId, season)) {
     // T-11-410 구간 대회는 추첨 뒤 탈락 전까지 상한을 넘는 명단으로 바꿀 수 없다(접수 중에는 신청을 옮기면 된다).
     if (now >= cup.drawAt && !fitsDivision(cup, ovr))
