@@ -179,6 +179,27 @@ describe('API query counts without changing eligibility or response data', () =>
     );
   });
 
+  it('deleting a future cup purges fixed-id caches so a warmed prediction URL returns 404', async () => {
+    vi.setSystemTime(new Date('2026-10-07T03:00:00.000Z'));
+    edge = installFakeEdgeCache();
+    const path = `/v1/cups/${defs[0]!.id}/predictions`;
+    expect((await callJson(ctx.env, 'GET', path)).status).toBe(200);
+    await flushEdge();
+    const { cookie } = await issueAdminCookie(ctx);
+    expect(
+      (
+        await callJson(
+          { ...ctx.env, ADMIN_EMAILS: ADMIN_EMAIL },
+          'DELETE',
+          `/v1/admin/cups/${defs[0]!.id}`,
+          { cookie },
+        )
+      ).status,
+    ).toBe(204);
+    await flushEdge();
+    expect((await callJson(ctx.env, 'GET', path)).status).toBe(404);
+  });
+
   it('a stable prediction cache hit reads neither schedule, predictions nor session; a vote purges it', async () => {
     edge = installFakeEdgeCache();
     const { cookie } = await issueGoogleCookie(ctx);

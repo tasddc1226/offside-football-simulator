@@ -22,6 +22,8 @@ import { requireAdmin } from '../auth/admin.js';
 import { cupKo } from '../cupText.js';
 import type { Db } from '../db/client.js';
 import { cupEntries, cupState, cups } from '../db/schema.js';
+import { purgeEdge } from '../edgeCache.js';
+import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
 import { cupSchedule } from '../team/cupSchedule.js';
 import { cupInfo } from './cup.js';
@@ -159,14 +161,20 @@ export function registerAdminCupRoutes(app: Hono<AppEnv>): void {
     if (!row) throw notFoundError(cupKo('notFound'), 'CUP_NOT_FOUND');
     if (row.opensAt <= now) throw conflictError(cupKo('adminStarted'), 'CUP_STARTED');
     // T-11-410 구간 대회는 회차를 통째로 지운다(한 구간만 남으면 일정이 깨진다).
-    await db
+    const deleted = await db
       .delete(cups)
       .where(
         and(
           row.division ? eq(cups.edition, row.edition) : eq(cups.id, row.id),
           sql`${cups.opensAt} > ${now}`,
         ),
-      );
+      )
+      .returning({ id: cups.id });
+    // Fixed-id prediction caches can now skip the schedule read. Remove them when a cup disappears.
+    purgeEdge(
+      c,
+      deleted.flatMap(({ id }) => [EDGE.cupById(id), `/v1/cups/${id}/predictions`]),
+    );
     return c.body(null, 204);
   });
 }
