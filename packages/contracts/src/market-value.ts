@@ -68,12 +68,14 @@ export function retireValue(career: ValueRow[], legendScore: number): number {
 export const CARD_VALUE_FLOOR = 10_000;
 
 /**
- * T-11-080 카드 기준가(만 원): 최고 OVR을 찍은 시즌 중 마지막 시즌의 몸값. 카드 능력치가 같은 OVR이면 나중 시즌을
- * 남기는 것과 맞춘다. 그 시즌이 대학·현역 복무라 0이면 가장 비쌌던 프로 시즌, 프로 경력이 없으면 CARD_VALUE_FLOOR.
+ * T-11-080 카드 기준가(만 원): 최고 OVR을 찍은 시즌 중 몸값이 가장 높았던 시즌의 몸값. 그 시즌들이 모두 대학·현역
+ * 복무라 0이면 가장 비쌌던 프로 시즌, 프로 경력이 없으면 CARD_VALUE_FLOOR.
+ * T-11-422 예전에는 최고 OVR 마지막 시즌이라, 같은 OVR로 30세를 넘겨 뛰면 나이 배수가 반으로 줄어 30세에 바로 은퇴한
+ * 카드가 오래 뛴 카드보다 두 배 비쌌다.
  */
 export function cardValue(career: ValueRow[], peak: number): number {
-  const last = career.findLast((r) => r.ovr === peak);
-  return (last && seasonValue(last)) || peakValue(career)?.value || CARD_VALUE_FLOOR;
+  const best = Math.max(0, ...career.filter((r) => r.ovr === peak).map(seasonValue));
+  return best || peakValue(career)?.value || CARD_VALUE_FLOOR;
 }
 
 /**
