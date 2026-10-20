@@ -135,8 +135,11 @@ function nextYear(s: GameState, o: number): string | null {
   s.age++;
   s.year++;
   const scout = bloomTick(s);
+  // T-11-428 커브 2는 조기 성장 30 · 대기만성 31세까지 버틴다(기본과 1년 차이).
+  const v2 = (s.gcv ?? 1) >= 2;
   const peakEnd =
-    (s.trait === 'early' ? 29 : s.trait === 'late' ? 32 : 30) + (s.pos === 'GK' ? 3 : 0);
+    (s.trait === 'early' ? (v2 ? 30 : 29) : s.trait === 'late' ? (v2 ? 31 : 32) : 30) +
+    (s.pos === 'GK' ? 3 : 0);
   if (s.age > peakEnd) {
     const d = s.age - peakEnd;
     addAttr(s, 'pac', -(1 + rnd() * 2) * d * 0.5);
