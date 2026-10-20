@@ -1,5 +1,6 @@
 import {
   BalancePatchSchema,
+  resolveBalance,
   sanitizeBalance,
   type BalanceHistory,
   type BalancePatch,
@@ -33,6 +34,14 @@ export const activeBalanceQuery = (db: Db) =>
 export async function getActiveBalance(db: Db): Promise<BalanceVersion | undefined> {
   const [row] = await activeBalanceQuery(db);
   return row && toVersion(row);
+}
+
+/** T-11-376 활성 버전의 지난 시즌 선수 급여 예산(없으면 기본값). 활성 행을 batch로 읽었으면 그 행을 넘긴다. */
+export const pastSalaryBudgetFrom = (row: Row | undefined) =>
+  resolveBalance(row && toVersion(row).values).pastSalaryBudget;
+export async function pastSalaryBudgetOf(db: Db): Promise<number> {
+  const [row] = await activeBalanceQuery(db);
+  return pastSalaryBudgetFrom(row);
 }
 
 export async function getBalanceVersion(

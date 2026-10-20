@@ -229,6 +229,13 @@ export const BALANCE_SPEC = {
     max: 100,
     step: 1,
   },
+  // T-11-376 지난 시즌 선수 급여 예산(구단 팀 선발). 기본 60 = 급여 최대 20 × 예전 와일드카드 3명.
+  pastSalaryBudget: {
+    def: 60,
+    min: 20,
+    max: 300,
+    step: 1,
+  },
   // T-11-152 구단 자금으로 사는 선수 후보 리롤권. 쌓이기만 하는 구단 자금을 없애려고 비싸게 판다.
   rerollPrice: {
     def: 1_000_000,

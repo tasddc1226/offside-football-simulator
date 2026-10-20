@@ -27,10 +27,9 @@ import { isAcceptablePublicName, isReservedNickname } from '@offside/contracts/c
 import {
   TEAM_MATCHES_PER_DAY,
   TEAM_REPEAT_WINDOW_DAYS,
-  TEAM_WILDCARD_MAX,
-  WILDCARD_FULL_TEXT,
-  isWildcardSeason,
   matchScore,
+  pastSalaryOverText,
+  pastSalarySum,
   ratingChange,
   shapeOf,
   type FormationId,
@@ -82,6 +81,11 @@ import {
 } from '../db/repos/ownerTeams.js';
 import { achievementRankOf } from '../db/repos/ownerAchievements.js';
 import { teamCoachOf } from '../db/repos/managers.js';
+import {
+  activeBalanceQuery,
+  pastSalaryBudgetFrom,
+  pastSalaryBudgetOf,
+} from '../db/repos/balance.js';
 import { getProfile, hasAccount, type ProfileRecord } from '../db/repos/profiles.js';
 import { ownerTeams } from '../db/schema.js';
 import { and, eq } from 'drizzle-orm';
@@ -245,11 +249,12 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const season = seasonQuery(c, now);
-    const [teams, players, [played], founder] = await db.batch([
+    const [teams, players, [played], founder, [balance]] = await db.batch([
       listMyTeams(db, me.id),
       listEligibleCareers(db, me.id, season),
       countMatchesSince(db, me.id, kstTodayStart(now)),
       foundersOf(db, [me.id]),
+      activeBalanceQuery(db),
     ]);
     // T-11-113 개막 뒤의 프리시즌 팀은 친선전용 편성을 보이고 고친다(지금 가진 선수만).
     const editableSeason = season === teamSeasonAt(now) || season === 0;
@@ -301,6 +306,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         lastManager: teams.findLast((t) => t.manager)?.manager ?? null,
         matchesLeft: Math.max(0, TEAM_MATCHES_PER_DAY - Number(played?.n ?? 0)),
         matchesPerDay: TEAM_MATCHES_PER_DAY,
+        pastSalaryBudget: pastSalaryBudgetFrom(balance),
         founder: founder.length > 0,
         // 컵 성적은 최근 대회부터 온다 — 첫 우승이 가장 최근 우승.
         ownerTitle: me.title,
@@ -344,16 +350,20 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         details: { reason: 'PLAYER_NOT_ELIGIBLE' },
       });
     }
-    // T-11-114 지난 시즌 선수(와일드카드)는 선발에 정해진 수까지만.
-    if (
-      ids.filter((id) => isWildcardSeason(eligible.get(id)?.season, season)).length >
-      TEAM_WILDCARD_MAX
-    ) {
-      throw new AppError({
-        code: 'VALIDATION_FAILED',
-        message: WILDCARD_FULL_TEXT,
-        details: { reason: 'WILDCARD_LIMIT' },
-      });
+    // T-11-376 지난 시즌 선수는 급여(최고 OVR) 합이 예산 안에서만. 지난 시즌 선수가 없으면 밸런스를 읽지 않는다.
+    const salary = pastSalarySum(
+      ids.map((id) => eligible.get(id)),
+      season,
+    );
+    if (salary > 0) {
+      const budget = await pastSalaryBudgetOf(db);
+      if (salary > budget) {
+        throw new AppError({
+          code: 'VALIDATION_FAILED',
+          message: pastSalaryOverText(salary, budget),
+          details: { reason: 'PAST_SALARY_BUDGET', salary, budget },
+        });
+      }
     }
     // 이전 클라이언트가 좌표를 보내지 않으면 기존 자유 편성을 보존한다.
     // 포메이션을 바꾼 요청만 새 기본 배치로 돌아간다.

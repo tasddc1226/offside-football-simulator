@@ -220,6 +220,8 @@ export const OwnerTeamResponseSchema = z.strictObject({
   /** 오늘(한국 시각) 남은 경기 수. */
   matchesLeft: z.number().int().min(0),
   matchesPerDay: z.number().int().min(1),
+  /** T-11-376 지난 시즌 선수 급여 예산(운영 도구 밸런스 활성 값). 배포 전 응답엔 없다 — 화면은 PAST_SALARY_BUDGET을 쓴다. */
+  pastSalaryBudget: z.number().int().min(0).optional(),
   /** T-11-113 창단 멤버(프리시즌에 은퇴 선수를 남긴 구단주). 배포 전 응답엔 없다. */
   founder: z.boolean().optional(),
   /** T-11-150 내 대표 칭호(구단주 탭 닉네임 옆). 달지 않았으면 null, 배포 전 응답엔 없다. */
