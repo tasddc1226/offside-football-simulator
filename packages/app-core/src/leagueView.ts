@@ -1,6 +1,12 @@
 // T-11-418 오프사이드 리그 화면 규칙(웹 · 앱 공통): 단계 이름, 배너 한 줄, 일정 줄, 신청 불가 이유. 날짜는 한국 시간이다.
 import { KST_MS } from '@offside/contracts/kst';
-import type { LeagueMeResponse, LeagueResponse } from './api/league.js';
+import { LEAGUE_ROUNDS, LEAGUE_SIZE } from '@offside/contracts/league';
+import type {
+  LeagueMatch,
+  LeagueMeResponse,
+  LeagueResponse,
+  LeagueTableResponse,
+} from './api/league.js';
 import { cupText as C } from './i18n/ko/cup';
 import { leagueText as L } from './i18n/ko/league';
 
@@ -41,7 +47,9 @@ export function leagueLine(data: LeagueResponse): string {
     case 'closed':
       return L.closedLine({ at: leagueWhen(l.drawAt) });
     case 'running':
-      return L.runningLine;
+      return data.playedRounds
+        ? L.runningRounds({ n: data.playedRounds, total: LEAGUE_ROUNDS })
+        : L.runningLine;
     case 'done':
       return L.doneLine;
   }
@@ -103,3 +111,68 @@ export function leagueReadiness(
     ? { ok: true, text: L.readyOk({ filled: me.team.filled }) }
     : { ok: false, text: L.readyShort({ filled: me.team.filled, min }) };
 }
+
+// ───────── T-11-418b 배치 뒤 ─────────
+
+/** 내 배치 한 줄(배치 전 · 신청 없음은 null). */
+export function leaguePlacementLine(
+  me: LeagueMeResponse | null,
+): { ok: boolean; text: string } | null {
+  const p = me?.placement;
+  if (!p) return null;
+  if (p.status === 'dropped') return { ok: false, text: L.droppedLine };
+  if (p.status === 'forfeited') return { ok: false, text: L.forfeitedLine };
+  const at = { tier: p.tier ?? 1, league: p.league ?? 1 };
+  return {
+    ok: true,
+    text: p.rank ? L.placedLine({ ...at, rank: p.rank }) : L.leagueName(at),
+  };
+}
+
+export type LeaguePick = { tier: number; league: number };
+
+/** 고를 수 있는 리그(1부 1리그부터). */
+export const leagueChoices = (data: Pick<LeagueResponse, 'tiers'>): LeaguePick[] =>
+  (data.tiers ?? []).flatMap((t) =>
+    Array.from({ length: t.leagues }, (_, i) => ({ tier: t.tier, league: i + 1 })),
+  );
+
+/** 처음 보여 줄 리그: 내 리그, 없으면 1부 1리그. 배치 전이면 null. */
+export function leagueDefaultPick(
+  data: Pick<LeagueResponse, 'tiers'>,
+  me: LeagueMeResponse | null,
+): LeaguePick | null {
+  const p = me?.placement;
+  if (p && p.status !== 'dropped' && p.tier && p.league) return { tier: p.tier, league: p.league };
+  return leagueChoices(data)[0] ?? null;
+}
+
+/**
+ * 순위 칸의 표시: 1위는 승격권(1부는 우승), 7 · 8위는 강등권(맨 아래 부는 내려갈 곳이 없다). 7팀 리그는 7위만 강등권.
+ * 승강 확정 규칙은 시즌 결산(4차)에서 정한다 — 여기선 지금 순위로 칠만 한다.
+ */
+export function leagueZone(
+  rank: number,
+  size: number,
+  tier: number,
+  bottomTier: number,
+): 'up' | 'down' | null {
+  if (rank === 1 && tier > 1) return 'up';
+  if (tier < bottomTier && rank >= LEAGUE_SIZE - 1 && rank <= size) return 'down';
+  return null;
+}
+
+/** 처음 보여 줄 라운드: 다음에 치를 라운드(다 끝났으면 마지막). */
+export const leagueDefaultRound = (data: Pick<LeagueResponse, 'playedRounds'>) =>
+  Math.min(LEAGUE_ROUNDS, (data.playedRounds ?? 0) + 1);
+
+/** 한 라운드의 경기와 쉬는 팀(7팀 리그). */
+export function leagueRound(table: LeagueTableResponse, round: number) {
+  const matches = table.matches.filter((m) => m.round === round);
+  const playing = new Set(matches.flatMap((m) => [m.homeTeamId, m.awayTeamId]));
+  return { matches, resting: table.teams.filter((t) => !playing.has(t.teamId)) };
+}
+
+/** 경기 줄의 가운데: 끝났으면 스코어, 아니면 시각(KST HH:MM). */
+export const leagueMatchMid = (m: LeagueMatch) =>
+  m.played ? `${m.homeGoals ?? 0} : ${m.awayGoals ?? 0}` : kst(m.at).time;

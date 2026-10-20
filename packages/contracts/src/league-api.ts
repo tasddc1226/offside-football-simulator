@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { IsoUtcSchema } from './primitives.js';
-import { TeamIdSchema } from './teams.js';
+import { CupStandingSchema, CupTeamSchema } from './cup-api.js';
+import { TeamIdSchema, TeamMatchSchema } from './teams.js';
 
 // T-11-418 오프사이드 리그 API 모양. 값 · 일정 계산은 zod 없는 league.ts.
 
@@ -23,8 +24,20 @@ export type LeagueInfo = z.infer<typeof LeagueInfoSchema>;
 export const LeagueResponseSchema = z.strictObject({
   league: LeagueInfoSchema,
   phase: LeaguePhaseSchema,
-  /** 신청한 구단주 수(취소한 신청 빼고). */
+  /** 신청한 구단주 수(취소한 신청 빼고). 배치 뒤에는 리그에 든 팀 수. */
   entries: z.number().int().min(0),
+  /** T-11-418b 배치 뒤 부별 리그 수 · 팀 수(1부부터). 배치 전 · 옛 응답에는 없다. */
+  tiers: z
+    .array(
+      z.strictObject({
+        tier: z.number().int().min(1),
+        leagues: z.number().int().min(1),
+        teams: z.number().int().min(0),
+      }),
+    )
+    .optional(),
+  /** 마지막으로 끝난 라운드(1부터, 아직 없으면 0). 배치 전에는 없다. */
+  playedRounds: z.number().int().min(0).optional(),
 });
 export type LeagueResponse = z.infer<typeof LeagueResponseSchema>;
 
@@ -44,5 +57,92 @@ export const LeagueMeResponseSchema = z.strictObject({
       ovr: z.number().int(),
     })
     .nullable(),
+  /**
+   * T-11-418b 배치 결과. placed: 리그에 들어감, dropped: 배치 때 자격(선발 실카드)이 모자라 빠짐, forfeited: 기권이 쌓여 남은 경기를
+   * 모두 기권패로 치름. 배치 전 · 옛 응답에는 없다.
+   */
+  placement: z
+    .strictObject({
+      status: z.enum(['placed', 'dropped', 'forfeited']),
+      tier: z.number().int().nullable(),
+      league: z.number().int().nullable(),
+      teamId: TeamIdSchema.nullable(),
+      rank: z.number().int().nullable(),
+    })
+    .nullable()
+    .optional(),
 });
 export type LeagueMeResponse = z.infer<typeof LeagueMeResponseSchema>;
+
+/** T-11-418b 리그 한 팀(순위표 줄의 팀 정보). 컵 팀과 같은 모양. */
+export const LeagueTeamSchema = CupTeamSchema;
+export type LeagueTeam = z.infer<typeof LeagueTeamSchema>;
+
+export const LeagueStandingSchema = CupStandingSchema.extend({
+  /** 기권 수(LEAGUE_FORFEIT_LIMIT에 닿으면 남은 경기는 모두 기권패). */
+  forfeits: z.number().int().min(0),
+});
+export type LeagueStanding = z.infer<typeof LeagueStandingSchema>;
+
+export const LeagueMatchSchema = z.strictObject({
+  id: z.string(),
+  /** 라운드(1부터). */
+  round: z.number().int().min(1),
+  homeTeamId: z.string(),
+  awayTeamId: z.string(),
+  at: IsoUtcSchema,
+  played: z.boolean(),
+  homeGoals: z.number().int().nullable(),
+  awayGoals: z.number().int().nullable(),
+  /** 기권으로 끝난 경기(나오지 못한 쪽이 0:3 패, 둘 다면 둘 다 패). */
+  forfeit: z.boolean(),
+});
+export type LeagueMatch = z.infer<typeof LeagueMatchSchema>;
+
+/** T-11-418b 리그 하나(누구나): 팀 · 순위표 · 14라운드 경기. */
+export const LeagueTableResponseSchema = z.strictObject({
+  season: z.number().int(),
+  tier: z.number().int().min(1),
+  league: z.number().int().min(1),
+  teams: z.array(LeagueTeamSchema),
+  standings: z.array(LeagueStandingSchema),
+  matches: z.array(LeagueMatchSchema),
+});
+export type LeagueTableResponse = z.infer<typeof LeagueTableResponseSchema>;
+
+/** T-11-418b 리그 경기 상세(누구나). */
+export const LeagueMatchResponseSchema = z.strictObject({
+  match: TeamMatchSchema,
+  league: z.strictObject({
+    tier: z.number().int(),
+    league: z.number().int(),
+    round: z.number().int(),
+    forfeit: z.boolean(),
+  }),
+});
+export type LeagueMatchResponse = z.infer<typeof LeagueMatchResponseSchema>;
+
+/** T-11-418b 운영 도구: 지금 리그 상태(GET /v1/admin/leagues/current). */
+export const AdminLeagueSchema = z.strictObject({
+  league: LeagueInfoSchema,
+  phase: LeaguePhaseSchema,
+  /** 운영 도구로 일정을 미뤘는가(league_seasons 행이 있다). */
+  delayed: z.boolean(),
+  /** 신청 수(취소 제외) · 배치된 팀 수 · 자격이 모자라 빠진 수 · 기권 처리된 수. */
+  counts: z.strictObject({
+    entries: z.number().int(),
+    placed: z.number().int(),
+    dropped: z.number().int(),
+    forfeited: z.number().int(),
+  }),
+  drawnAt: IsoUtcSchema.nullable(),
+  doneAt: IsoUtcSchema.nullable(),
+  playedRounds: z.number().int(),
+  /** 시각이 지났는데 아직 치르지 않은 경기 수(cron이 밀렸는지). */
+  overdue: z.number().int(),
+});
+export type AdminLeague = z.infer<typeof AdminLeagueSchema>;
+
+/** T-11-418b 운영 도구: 배치 전 일정 미루기(접수 마감 · 배치 · 모든 라운드를 days일 뒤로). */
+export const AdminLeagueDelaySchema = z.strictObject({ days: z.number().int().min(1).max(7) });
+export type AdminLeagueDelay = z.infer<typeof AdminLeagueDelaySchema>;

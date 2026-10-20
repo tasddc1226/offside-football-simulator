@@ -123,7 +123,12 @@ describe('/v1/leagues (T-11-418)', () => {
     expect(soon.league.rounds.at(-1)).toBe('2026-11-18T04:00:00.000Z');
     // 사전 신청 전에는 신청할 수 없다.
     const a = await owner(null);
-    expect(await me(a.cookie)).toEqual({ entry: null, canEnter: false, team: null });
+    expect(await me(a.cookie)).toEqual({
+      entry: null,
+      canEnter: false,
+      team: null,
+      placement: null,
+    });
     const r = await enter(a.cookie);
     expect([r.status, await reason(r)]).toEqual([409, 'LEAGUE_CLOSED']);
   });
@@ -132,7 +137,12 @@ describe('/v1/leagues (T-11-418)', () => {
     vi.setSystemTime(new Date(PRESIGN));
     expect((await view()).phase).toBe('open');
     const a = await owner(null);
-    expect(await me(a.cookie)).toEqual({ entry: null, canEnter: true, team: null });
+    expect(await me(a.cookie)).toEqual({
+      entry: null,
+      canEnter: true,
+      team: null,
+      placement: null,
+    });
     expect((await enter(a.cookie)).status).toBe(204);
     expect(await me(a.cookie)).toMatchObject({ entry: { createdAt: PRESIGN }, canEnter: false });
   });
@@ -196,13 +206,19 @@ describe('/v1/leagues (T-11-418)', () => {
     ]);
   });
 
-  it('리그를 여는 시즌이 일정에 없으면 404', async () => {
+  it('T-11-418c 시즌 1 마감이 아직 없으면 최대 기간 끝(10/31 00:00)을 시즌 2 잠정 개막으로 사전 신청을 연다', async () => {
     applySeasonSchedule([]);
     await ctx.env.DB.prepare("DELETE FROM app_meta WHERE key = 'season_schedule'").run();
     forgetSeasonSchedule();
+    vi.setSystemTime(new Date(BEFORE));
+    expect(await view()).toMatchObject({
+      phase: 'soon',
+      league: { season: 2, startsAt: S2, opensAt: '2026-10-23T15:00:00.000Z' },
+    });
     vi.setSystemTime(new Date(PRESIGN));
-    const res = await call('GET', '/v1/leagues/current');
-    expect([res.status, await reason(res)]).toEqual([404, 'LEAGUE_NOT_FOUND']);
+    expect((await view()).phase).toBe('open');
+    const a = await owner(null);
+    expect((await enter(a.cookie)).status).toBe(204);
   });
 
   it('공개 조회는 쿠키가 있어도 세션 · 프로필을 읽지 않는다', async () => {

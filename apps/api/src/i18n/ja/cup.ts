@@ -103,4 +103,26 @@ export const CUP_JA: Record<CupTextKey, string> = {
   grantBoost: '運営チームからポテンシャル強化券が{n}枚届きました。',
   grantScout: '運営チームからプレミアムスカウト券が{n}枚届きました。',
   grantRename: '運営チームから選手名変更券が{n}枚届きました。',
+  // T-11-418b オフサイドリーグ。
+  leagueDrawn: '組分け後のリーグは日程を延期できません。',
+  leagueLocked: 'オフサイドリーグの試合1時間前から試合終了まで、メンバーを変更できません。',
+  leagueRemindTitle: 'オフサイドリーグの組分けは明日です',
+  leagueRemindBody:
+    '組分け時にシーズン{season}チームのスタメンに選手が{n}人いれば参加できます。今は{filled}人です。',
+  leaguePlacedTitle: 'シーズン{season} オフサイドリーグ組分け結果',
+  leaguePlacedBody: '{team}は{tier}部{league}リーグです。第1節は今日{time}に始まります。',
+  leagueDroppedTitle: 'シーズン{season} オフサイドリーグの参加が取り消されました',
+  leagueDroppedBody: '組分け時刻にシーズン{season}チームのスタメン選手が{n}人に届きませんでした。',
+  leagueLeftBody: '参加チーム数がリーグ編成に合わず、OVRが低いチームから{n}チームが外れました。',
+  leagueCancelledTitle: 'シーズン{season} オフサイドリーグは開催されません',
+  leagueRoundTitle: 'オフサイドリーグ第{round}節・{result}',
+  leagueRoundBody: '{score}・現在{rank}位です',
+  leagueRest: 'お休み',
+  leagueRestBody: '今節はお休みでした・現在{rank}位です',
+  leagueEndTitle: 'シーズン{season} オフサイドリーグが終わりました',
+  leagueEndBody: '{tier}部{league}リーグ最終{rank}位です。',
+  leagueChampionTitle: 'シーズン{season} オフサイドリーグ{tier}部{league}リーグ優勝！',
+  leagueForfeitedTitle: 'オフサイドリーグの残り試合は不戦敗になります',
+  leagueForfeitedBody:
+    '試合に{n}回出場できませんでした。残り試合はすべて0-3の負けとして記録されます。',
 };

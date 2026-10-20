@@ -4,6 +4,8 @@
 import { FONT } from '@offside/app-core/design-tokens';
 import { setTextSize, TEXT_SIZES } from '@offside/app-core/textSize';
 import { REVEAL_SHORT_KEY } from '@offside/app-core/reveal';
+import { keyMomentsOn, setKeyMomentsOn } from '@offside/app-core/keyMomentPref';
+import { keyMomentText as KM } from '@offside/app-core/i18n/ko/keyMoment';
 import { revealText as RV } from '@offside/app-core/i18n/ko/reveal';
 import { useTextSize } from '../../theme/useTextSize';
 import { nativeAnalytics } from '../../analytics';
@@ -127,6 +129,13 @@ export default function Settings() {
     saveKey('ft_theme', theme);
   };
 
+  /** T-11-426 결정적 장면 켜기 · 끄기: 이 기기에 저장한다(기본 켬). */
+  const [keyMoments, setKeyMomentsState] = useState(keyMomentsOn());
+  const setKeyMoments = (on: boolean) => {
+    setKeyMomentsState(on);
+    setKeyMomentsOn(on);
+  };
+
   /** T-11-371 공개 연출 짧게: 이 기기에 저장한다. */
   const setRevealShort = (on: boolean) => {
     prefs.revealShort = on;
@@ -201,6 +210,15 @@ export default function Settings() {
             onChange={setRevealShort}
             label={RV.shortTitle}
             testID="reveal-short"
+          />
+        </SettingsRow>
+        <SettingsRow first={false}>
+          <SettingsLabel title={KM.settingTitle} muted={KM.settingBody} />
+          <Switch
+            value={keyMoments}
+            onChange={setKeyMoments}
+            label={KM.settingTitle}
+            testID="key-moments"
           />
         </SettingsRow>
       </SettingsCard>

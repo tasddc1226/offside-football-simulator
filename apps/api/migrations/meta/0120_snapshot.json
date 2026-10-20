@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "a0c75c12-aaf7-44cb-b8c6-a0ccdd86b24c",
+  "id": "3217eb32-f41a-494f-a5f7-13f519a44768",
   "prevId": "3e400760-646b-4d88-b93d-a65a9f0f9d64",
   "tables": {
     "acquisition_consents": {
@@ -4056,6 +4056,36 @@
           "notNull": false,
           "autoincrement": false
         },
+        "tier": {
+          "name": "tier",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "league_no": {
+          "name": "league_no",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "forfeits": {
+          "name": "forfeits",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "notified_round": {
+          "name": "notified_round",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
         "created_at": {
           "name": "created_at",
           "type": "text",
@@ -4086,6 +4116,15 @@
             "status"
           ],
           "isUnique": false
+        },
+        "league_entries_season_league_idx": {
+          "name": "league_entries_season_league_idx",
+          "columns": [
+            "season",
+            "tier",
+            "league_no"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -4112,6 +4151,149 @@
           "name": "league_entries_season_profile_id_pk"
         }
       },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "league_matches": {
+      "name": "league_matches",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "season": {
+          "name": "season",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tier": {
+          "name": "tier",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "league_no": {
+          "name": "league_no",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "round": {
+          "name": "round",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "slot": {
+          "name": "slot",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "home_team_id": {
+          "name": "home_team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "away_team_id": {
+          "name": "away_team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "at": {
+          "name": "at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "played_at": {
+          "name": "played_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "home_goals": {
+          "name": "home_goals",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "away_goals": {
+          "name": "away_goals",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "forfeit": {
+          "name": "forfeit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "detail_json": {
+          "name": "detail_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "league_matches_slot_unique": {
+          "name": "league_matches_slot_unique",
+          "columns": [
+            "season",
+            "tier",
+            "league_no",
+            "round",
+            "slot"
+          ],
+          "isUnique": true
+        },
+        "league_matches_season_at_idx": {
+          "name": "league_matches_season_at_idx",
+          "columns": [
+            "season",
+            "at"
+          ],
+          "isUnique": false
+        },
+        "league_matches_home_team_idx": {
+          "name": "league_matches_home_team_idx",
+          "columns": [
+            "home_team_id"
+          ],
+          "isUnique": false
+        },
+        "league_matches_away_team_idx": {
+          "name": "league_matches_away_team_idx",
+          "columns": [
+            "away_team_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
@@ -4179,6 +4361,51 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "league_state": {
+      "name": "league_state",
+      "columns": {
+        "season": {
+          "name": "season",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "seed": {
+          "name": "seed",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tiers_json": {
+          "name": "tiers_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "drawn_at": {
+          "name": "drawn_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "done_at": {
+          "name": "done_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         }
       },
@@ -4494,6 +4721,7 @@
           "name": "market_listings_new_idx",
           "columns": [
             "status",
+            "season",
             "created_at"
           ],
           "isUnique": false
@@ -4502,6 +4730,7 @@
           "name": "market_listings_price_idx",
           "columns": [
             "status",
+            "season",
             "price",
             "created_at"
           ],
@@ -4528,6 +4757,7 @@
           "name": "market_listings_sold_idx",
           "columns": [
             "status",
+            "season",
             "closed_at"
           ],
           "isUnique": false
