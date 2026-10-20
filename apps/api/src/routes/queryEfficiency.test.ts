@@ -162,15 +162,21 @@ describe('API query counts without changing eligibility or response data', () =>
     ).rejects.toMatchObject({ details: { reason: 'CUP_MIN_FILLED' } });
   });
 
-  it('active-cup reads stay within D1 binding limits beyond 100 cup ids', async () => {
+  it('active-cup reads stay within D1 binding limits beyond 100 cup ids and use the cup index', async () => {
     const traced = spyDb(ctx.env.DB);
-    expect(
-      await cupMatchesIn(
-        createDb(traced.DB),
-        Array.from({ length: 128 }, (_, i) => `s1-${i}`),
-      ),
-    ).toEqual([]);
+    const query = cupMatchesIn(
+      createDb(traced.DB),
+      Array.from({ length: 128 }, (_, i) => `s1-${i}`),
+    );
+    const sql = query.toSQL();
+    expect(await query).toEqual([]);
     expect(traced.trips.n).toBe(1);
+    const plan = await ctx.env.DB.prepare(`EXPLAIN QUERY PLAN ${sql.sql}`)
+      .bind(...sql.params)
+      .all<{ detail: string }>();
+    expect(plan.results.map((row) => row.detail).join(' ')).toContain(
+      'cup_matches_cup_round_slot_unique',
+    );
   });
 
   it('a stable prediction cache hit reads neither schedule, predictions nor session; a vote purges it', async () => {
