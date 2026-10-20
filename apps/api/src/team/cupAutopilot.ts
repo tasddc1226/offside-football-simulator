@@ -1,4 +1,14 @@
-import { cupFinalAt, planNextCup, type CupDef } from '@offside/contracts/cup';
+import {
+  CUP_DIVISIONS,
+  CUP_DIVISIONS_FROM,
+  CUP_SEASON_OPEN_DAYS,
+  cupFinalAt,
+  cupIdOf,
+  divisionCaps,
+  editionCups,
+  planNextCup,
+  type CupDef,
+} from '@offside/contracts/cup';
 import { SERVICE_SEASONS, teamSeasonAt } from '@offside/contracts/service-seasons';
 import { createDb, type Db } from '../db/client.js';
 import { cupKo, cupTitle } from '../cupText.js';
@@ -9,6 +19,8 @@ import { cupSchedule } from './cupSchedule.js';
 // 1) 마지막 대회 결승이 끝나면 다음 회차를 만든다(접수는 결승 10분 뒤). app_meta `cup:autopilot` = 'off'면 만들지 않는다.
 // 2) 접수가 열리면 참가 자격이 있는 구단주에게 한 번 알린다(source_key cup-open:<id>, 컵 알림이라 22시까지 푸시).
 // 3) 추첨·경기·종료·다음 회차가 30분 넘게 밀리면 운영 슬랙에 한 번 알린다.
+// T-11-410 제3회부터는 회차마다 OVR 구간 대회(주니어 · 시니어 · 마스터)를 함께 만들고, 접수가 열릴 때 그 시즌 팀
+// OVR 분포로 아랫 구간 상한을 채운다(운영 도구에서 먼저 정했으면 그 값).
 
 export const CUP_AUTOPILOT_KEY = 'cup:autopilot';
 const MIN = 60_000;
@@ -23,7 +35,22 @@ const STALL_TEXT = {
   head: ':warning: 오프사이드 컵 자동 진행 점검', // i18n-ignore
 };
 
-/** 다음 회차 일정과 시즌. 결승 뒤 접수가 앞 대회 시즌 안에 다 들어가지 않으면 다음 시즌 개막일 21:10으로 미룬다. */
+/**
+ * 다음 회차 일정과 시즌. 결승 뒤 접수가 앞 대회 시즌 안에 다 들어가지 않으면 다음 시즌 개막일 21:10으로 미룬다.
+ * T-11-410 구간 대회 회차면 개막 CUP_SEASON_OPEN_DAYS일 뒤 21:10(팀 OVR 분포가 생긴 뒤)으로 미루고, 구간마다 대회를 낸다.
+ */
+export function nextCupsFor(prev: CupDef): CupDef[] {
+  const head = nextCupFor(prev);
+  if (!head) return [];
+  if (head.edition < CUP_DIVISIONS_FROM) return [head];
+  return CUP_DIVISIONS.map((division) => ({
+    ...head,
+    id: cupIdOf(head.season, head.edition, division),
+    division,
+    ovrMax: null,
+  }));
+}
+
 export function nextCupFor(prev: CupDef): CupDef | null {
   const fit = (draft: CupDef) => {
     const season = teamSeasonAt(draft.opensAt);
@@ -37,52 +64,91 @@ export function nextCupFor(prev: CupDef): CupDef | null {
   const next = SERVICE_SEASONS.find((s) => s.startsAt > draft.opensAt);
   if (!next) return null;
   const day = new Date(Date.parse(next.startsAt) + 9 * 3600_000).toISOString().slice(0, 10);
-  let opensAt = new Date(`${day}T21:10:00+09:00`).toISOString();
+  const delay = prev.edition + 1 >= CUP_DIVISIONS_FROM ? CUP_SEASON_OPEN_DAYS : 0;
+  let opensAt = new Date(Date.parse(`${day}T21:10:00+09:00`) + delay * 24 * 60 * MIN).toISOString();
   if (opensAt < next.startsAt)
     opensAt = new Date(Date.parse(opensAt) + 24 * 60 * MIN).toISOString();
   return fit(planNextCup(prev, opensAt));
 }
 
-/** 마지막 대회가 끝났고 다음 회차가 없으면 만든다. 만든 대회를 돌려준다. */
+/** 마지막 회차(구간이 여럿이면 모두)가 끝났고 다음 회차가 없으면 만든다. 만든 대회들을 돌려준다. */
 export async function scheduleNextCup(db: Db, now: string, all?: CupDef[]) {
   const cups = all ?? (await cupSchedule(db));
   const last = cups.at(-1);
-  if (!last || now < cupFinalAt(last)) return null;
+  if (!last || now < cupFinalAt(last)) return [];
+  const lastEdition = editionCups(last, cups);
   const d1 = db.$client;
   const done = await d1
     .prepare(
-      `SELECT (SELECT done_at FROM cup_state WHERE cup_id = ?) AS done,
+      `SELECT (SELECT count(*) FROM cup_state WHERE cup_id IN (${lastEdition.map(() => '?').join(', ')})
+          AND done_at IS NOT NULL) AS done,
         (SELECT value FROM app_meta WHERE key = ?) AS mode`,
     )
-    .bind(last.id, CUP_AUTOPILOT_KEY)
-    .first<{ done: string | null; mode: string | null }>();
-  if (!done?.done || done.mode === 'off') return null;
-  const cup = nextCupFor(last);
-  if (!cup) return null;
-  // 겹친 cron·관리자 생성은 id(PK)와 '더 늦은 대회 없음' 조건이 막는다.
-  const res = await d1
-    .prepare(
-      `INSERT OR IGNORE INTO cups
-        (id, season, edition, opens_at, closes_at, draw_at, rounds_json, capacity, min_filled, created_at)
-       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-       WHERE NOT EXISTS (SELECT 1 FROM cups WHERE opens_at > ? OR edition >= ?)`,
-    )
-    .bind(
-      cup.id,
-      cup.season,
-      cup.edition,
-      cup.opensAt,
-      cup.closesAt,
-      cup.drawAt,
-      JSON.stringify(cup.rounds),
-      cup.capacity,
-      cup.minFilled,
-      now,
-      last.opensAt,
-      cup.edition,
-    )
-    .run();
-  return res.meta.changes ? cup : null;
+    .bind(...lastEdition.map((c) => c.id), CUP_AUTOPILOT_KEY)
+    .first<{ done: number; mode: string | null }>();
+  if (!done || done.done < lastEdition.length || done.mode === 'off') return [];
+  const next = nextCupsFor(last);
+  if (!next.length) return [];
+  // 겹친 cron·관리자 생성은 id(PK)와 '더 늦은 회차 없음' 조건이 막는다(같은 회차 구간끼리는 서로 막지 않는다).
+  const res = await d1.batch(
+    next.map((cup) =>
+      d1
+        .prepare(
+          `INSERT OR IGNORE INTO cups
+        (id, season, edition, opens_at, closes_at, draw_at, rounds_json, capacity, min_filled, created_at,
+         division, ovr_max)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+       WHERE NOT EXISTS (SELECT 1 FROM cups WHERE (opens_at > ? OR edition >= ?) AND edition <> ?)`,
+        )
+        .bind(
+          cup.id,
+          cup.season,
+          cup.edition,
+          cup.opensAt,
+          cup.closesAt,
+          cup.drawAt,
+          JSON.stringify(cup.rounds),
+          cup.capacity,
+          cup.minFilled,
+          now,
+          cup.division ?? null,
+          cup.ovrMax ?? null,
+          last.opensAt,
+          cup.edition,
+          cup.edition,
+        ),
+    ),
+  );
+  return next.filter((_, i) => res[i]!.meta.changes);
+}
+
+/**
+ * T-11-410 접수가 열린 구간 대회 중 상한이 비어 있는 아랫 구간을 채운다 — 그 시즌 자격이 되는 팀(선발 minFilled자리
+ * 이상) OVR의 1/3 · 2/3 지점(contracts divisionCaps). 운영 도구에서 미리 정했으면 그대로 둔다. 채운 대회 id를 돌려준다.
+ */
+export async function fillDivisionCaps(db: Db, now: string, all: CupDef[]) {
+  const open = all.filter(
+    (c) => c.division && c.division !== 'master' && c.ovrMax == null && c.opensAt <= now,
+  );
+  if (!open.length) return [];
+  const d1 = db.$client;
+  const head = open[0]!;
+  const { results } = await d1
+    .prepare('SELECT ovr FROM owner_teams WHERE season = ? AND filled >= ?')
+    .bind(head.season, head.minFilled)
+    .all<{ ovr: number }>();
+  const caps = divisionCaps(results.map((r) => r.ovr));
+  const filled: string[] = [];
+  for (const cup of open) {
+    const cap = caps[CUP_DIVISIONS.indexOf(cup.division!)]!;
+    const res = await d1
+      .prepare('UPDATE cups SET ovr_max = ? WHERE id = ? AND ovr_max IS NULL')
+      .bind(cap, cup.id)
+      .run();
+    cup.ovrMax = cap;
+    if (res.meta.changes) filled.push(`${cup.id}:${cap}`);
+  }
+  return filled;
 }
 
 export const cupOpenSource = (cupId: string) => `cup-open:${cupId}`;
@@ -92,8 +158,10 @@ export const cupOpenSource = (cupId: string) => `cup-open:${cupId}`;
  * 알림·푸시 대기열을 만든다(한 batch). 푸시는 5분 cron의 개인 푸시 발송이 보낸다.
  */
 export async function announceCupOpen(db: Db, now: string, all?: CupDef[]) {
+  // T-11-410 구간 대회는 회차에 한 번(마스터 대회 id로) 알린다.
   const cups = (all ?? (await cupSchedule(db))).filter(
     (c) =>
+      (!c.division || c.division === 'master') &&
       c.opensAt <= now &&
       now < c.closesAt &&
       Date.parse(now) - Date.parse(c.opensAt) < OPEN_NOTICE_WINDOW_MS,
@@ -115,8 +183,8 @@ export async function announceCupOpen(db: Db, now: string, all?: CupDef[]) {
         )
         .bind(
           source,
-          cupKo('openTitle', { cup: cupTitle(cup) }),
-          cupKo('openBody', { n: cup.capacity }),
+          cupKo('openTitle', { cup: cupTitle({ ...cup, division: null }) }),
+          cupKo(cup.division ? 'openBodyDivision' : 'openBody', { n: cup.capacity }),
           now,
           cup.closesAt,
           cup.season,
@@ -177,7 +245,7 @@ export async function cupStalls(db: Db, now: string, all?: CupDef[]) {
       out.push({ key: `done:${cup.id}`, text: STALL_TEXT.done(cup.id) });
   }
   const last = cups.at(-1);
-  if (last && cupFinalAt(last) <= late && stateOf.get(last.id))
+  if (last && cupFinalAt(last) <= late && editionCups(last, cups).every((c) => stateOf.get(c.id)))
     out.push({ key: `next:${last.id}`, text: STALL_TEXT.next(last.id) });
   return out;
 }
@@ -215,21 +283,23 @@ export async function runCupAutopilot(env: Bindings, scheduledTime: number) {
   const now = new Date(scheduledTime).toISOString();
   const all = await cupSchedule(db);
   const created = await scheduleNextCup(db, now, all);
-  if (created) all.push(created);
+  all.push(...created);
+  const capped = await fillDivisionCaps(db, now, all);
   const opened = await announceCupOpen(db, now, all);
   const alerted =
     new Date(scheduledTime).getUTCMinutes() % 15 === 0
       ? await alertCupStalls(env, db, now, all)
       : [];
-  if (created || opened.length || alerted.length)
+  if (created.length || capped.length || opened.length || alerted.length)
     console.log(
       JSON.stringify({
         level: 'info',
         job: 'cup-autopilot',
-        created: created?.id ?? null,
+        created: created.map((c) => c.id),
+        capped,
         opened,
         alerted: alerted.length,
       }),
     );
-  return { created, opened, alerted };
+  return { created, capped, opened, alerted };
 }

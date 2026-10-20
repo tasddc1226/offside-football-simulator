@@ -26,6 +26,7 @@ import {
 } from './host';
 
 let booted = false;
+let activity: typeof import('@offside/app-core/careerActivity') | undefined;
 
 /** 세이브·세션을 읽고 서버와 맞추기 시작한다. 첫 화면을 그리기 전에 한 번. */
 export async function boot(): Promise<void> {
@@ -34,10 +35,12 @@ export async function boot(): Promise<void> {
   await loadSession();
   void import('@offside/app-core/careerActivity')
     .then((m) => {
+      activity = m;
+      m.setCareerActivityActive(AppState.currentState === 'active');
       configureCareerActivityReporter((input) => {
         void m.reportCareerActivity(input);
       });
-      if (appState.G) noteCareerActivity(appState.G);
+      noteCareerActivity(appState.G);
     })
     .catch(() => {});
   // 유저 클럽 이름을 먼저 CLUBS에 반영해야 세이브를 읽을 때 현재 소속 이름이 커스텀 이름을 읽는다.
@@ -62,8 +65,9 @@ export async function boot(): Promise<void> {
   void checkNews();
   void checkStoreUpdate();
   AppState.addEventListener('change', (st) => {
+    activity?.setCareerActivityActive(st === 'active');
     if (st !== 'active') return;
-    if (appState.G) noteCareerActivity(appState.G);
+    noteCareerActivity(appState.G);
     syncClubStrength();
     void checkNews();
     void flushOutbox();

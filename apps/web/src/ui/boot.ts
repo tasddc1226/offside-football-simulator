@@ -40,13 +40,16 @@ export function loadGame() {
     activityReady = true;
     void import('@offside/app-core/careerActivity')
       .then((m) => {
+        m.setCareerActivityActive(document.visibilityState !== 'hidden');
         configureCareerActivityReporter((input) => {
           void m.reportCareerActivity(input);
         });
-        if (appState.G) noteCareerActivity(appState.G);
+        noteCareerActivity(appState.G);
         document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible' && appState.G) noteCareerActivity(appState.G);
+          m.setCareerActivityActive(document.visibilityState !== 'hidden');
+          if (document.visibilityState === 'visible') noteCareerActivity(appState.G);
         });
+        window.addEventListener('online', () => void m.flushCareerActivity());
       })
       .catch(() => {
         activityReady = false;

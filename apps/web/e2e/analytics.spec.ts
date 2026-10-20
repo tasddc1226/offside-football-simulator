@@ -14,6 +14,13 @@ async function commands(page: Page): Promise<unknown[][]> {
     ),
   );
 }
+// T-11-417 유입 · 결제 연결을 아직 고르지 않았으면 동의 창이 다시 뜨므로, 이용 분석만 동의한 상태로 시작한다.
+async function grantAnalytics(page: Page) {
+  await page.addInitScript((key) => {
+    localStorage.setItem(key, 'granted');
+    localStorage.setItem('offside_acquisition_choice_v1', 'denied');
+  }, consentKey);
+}
 async function prepare(page: Page) {
   await page.route(`${API}/**`, (r) => r.fulfill({ status: 503, body: '' }));
   await page.route('https://www.googletagmanager.com/**', (r) =>
@@ -51,7 +58,9 @@ test('opt-in normalizes URL, tracks once per screen and new career, withdraws ac
   await page.goto(
     '/?code=PRIVATE_CODE&email=PRIVATE_EMAIL&utm_source=threads&utm_medium=social&utm_campaign=season1_launch&utm_content=s1_story_01&unknown=PRIVATE#PRIVATE_HASH',
   );
-  await page.locator('[data-analytics="accept"]').click();
+  // 이용 분석만 고른다(유입 · 결제 연결 거절도 함께 저장돼 다시 열어도 동의 창이 뜨지 않는다).
+  await page.locator('[data-analytics="pick-analytics"]').check();
+  await page.locator('[data-analytics="deny"]').click();
   await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
   const first = await commands(page);
   const wire = JSON.stringify(first);
@@ -87,6 +96,7 @@ test('opt-in normalizes URL, tracks once per screen and new career, withdraws ac
   await prepare(tab);
   await tab.goto('/');
   await tab.locator('[data-act="settings"]').click();
+  await tab.locator('[data-analytics="pick-analytics"]').uncheck();
   await tab.locator('[data-analytics="deny"]').click();
   await expect
     .poll(() => page.evaluate((key) => localStorage.getItem(key), consentKey))
@@ -109,7 +119,7 @@ test('opt-in normalizes URL, tracks once per screen and new career, withdraws ac
 });
 test('shared URLs and player names never enter GA commands', async ({ page }) => {
   await prepare(page);
-  await page.addInitScript((key) => localStorage.setItem(key, 'granted'), consentKey);
+  await grantAnalytics(page);
   await page.goto('/career/00000000-0000-4000-8000-000000000000?secret=PRIVATE#PRIVATE');
   await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
   const wire = JSON.stringify(await commands(page));
@@ -123,7 +133,7 @@ test('actual play measures first action, milestones and a resumed career without
 }) => {
   test.setTimeout(120_000);
   await prepare(page);
-  await page.addInitScript((key) => localStorage.setItem(key, 'granted'), consentKey);
+  await grantAnalytics(page);
   await startCareer(page);
   await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
   const events = async (name: string) =>
@@ -221,7 +231,7 @@ test('two tabs completing the same half and repeated clicks emit one player mile
   context,
 }) => {
   await prepare(page);
-  await page.addInitScript((key) => localStorage.setItem(key, 'granted'), consentKey);
+  await grantAnalytics(page);
   await startCareer(page);
   await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
   await page.locator('[data-act="advance"]').click();

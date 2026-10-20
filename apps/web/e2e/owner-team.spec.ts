@@ -409,6 +409,7 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
 test('T-11-387 랭크 경기 중 결정적 장면을 고르면 결과가 중계와 결과 화면에 남는다', async ({
   page,
 }) => {
+  await page.clock.install();
   await stubOwner(page, true);
   const team = teamFrom({
     name: '우리 동네 FC',
@@ -556,9 +557,15 @@ test('T-11-387 랭크 경기 중 결정적 장면을 고르면 결과가 중계�
   await expect(card.locator('[data-moment-choice="round"]')).toContainText('58%');
   await expect(card.locator('[data-moment-choice="round"]')).toContainText('역습 20%');
   await expectNoA11yViolations(page);
+  // Freeze after the accessibility scan; browser/CI work must not spend the choice budget.
+  const now = await page.evaluate(() => Date.now());
+  await page.clock.pauseAt(new Date(now + 100));
   await card.locator('[data-moment-choice="round"]').click();
   await expect.poll(() => picks).toEqual([{ choice: 'round' }]);
   await expect(card).toHaveCount(0);
+  // Play the commentary and goal holds through minute 6 without waiting on wall-clock timers.
+  // This stays inside the next choice's 15-second budget.
+  await page.clock.runFor(8_000);
   await expect(live.locator('[data-live-line="moment"]')).toContainText('키퍼 제치기');
   await expect(live.locator('[data-live-line="goal"]')).toContainText('공개 골잡이');
   await expect(live.locator('[data-live-score]')).toContainText('1');
@@ -577,6 +584,7 @@ test('T-11-387 랭크 경기 중 결정적 장면을 고르면 결과가 중계�
   await expect(moments.locator('li').first()).toContainText('키퍼 제치기');
   await expect(moments.locator('li').nth(1)).toContainText('감독');
   await expect(result.locator('[data-rating-change]')).toContainText('내 팀 레이팅 +9');
+  await page.clock.resume();
   await expectNoA11yViolations(page);
 });
 

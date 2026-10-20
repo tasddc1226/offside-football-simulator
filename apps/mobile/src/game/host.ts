@@ -33,7 +33,7 @@ import {
   sheetState,
   toastState,
 } from '../store';
-import { scrollTo, scrollY } from '../ui/scroll';
+import { scrollBackTo, scrollTo, scrollY } from '../ui/scroll';
 
 // ───────── 저장 · 토스트 ─────────
 let saveWarned = false;
@@ -168,4 +168,4 @@ export async function refreshAccount() {
 
 // ───────── 뒤로 가기 ─────────
 /** 화면 방문 기록 — 화면이 바뀔 때 track(), Android 뒤로 버튼·'← 이전으로'가 back(). */
-export const navStack = createNavStack(appState, { closeSheet, scrollY, scrollTo });
+export const navStack = createNavStack(appState, { closeSheet, scrollY, scrollTo: scrollBackTo });

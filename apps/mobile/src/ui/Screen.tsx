@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '../theme/useColors';
-import { noteScrollY, noteViewH, revealFocusedInput } from './scroll';
+import { dropScrollBack, noteContentH, noteScrollY, noteViewH, revealFocusedInput } from './scroll';
 import { useFormKeyboardScroll } from './useFormKeyboardScroll';
 import { useRefreshControl } from './refresh';
 
@@ -75,7 +75,11 @@ export function Screen({
           noteViewH(e.nativeEvent.layout.height);
           keyboardScroll.onLayout();
         }}
-        onContentSizeChange={revealFocusedInput}
+        onContentSizeChange={(_w, contentH) => {
+          revealFocusedInput();
+          noteContentH(contentH);
+        }}
+        onScrollBeginDrag={dropScrollBack}
         scrollEventThrottle={64}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"

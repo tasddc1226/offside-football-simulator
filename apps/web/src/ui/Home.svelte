@@ -17,6 +17,7 @@
   import HomeNews from './HomeNews.svelte';
   import HomeFirsts from './firsts/HomeFirsts.svelte';
   import HomeLive from './HomeLive.svelte';
+  import ClubBadge from './ClubBadge.svelte';
   import HomeTicker from './HomeTicker.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
   import { ANDROID_TESTER_FORM_URL, DC_GALLERY_URL } from '@offside/app-core/links';
@@ -44,9 +45,12 @@
     <!-- 진행 중인 커리어가 있으면 첫 카드를 '이번 커리어'로 바꿔 이어하기를 가장 먼저 보여 준다. -->
     <section class="hero-home hero-current" data-home-current>
       <div class="chalk"></div>
+      <!-- T-11-412 오른쪽에 선수 그림과 마지막 계약서 사인(첫 화면 번들 밖 지연 청크). -->
+      {#await import('./HeroFigure.svelte') then { default: HeroFigure }}<HeroFigure {G} />{/await}
       <div class="eyebrow">Current career</div>
       <h1><span>{L.currentSub}</span><b><strong>{G.name}</strong></b></h1>
-      <p>{L.currentLine({ club: tn(G.club.name), age: G.age, pos: posLabel(G) })}</p>
+      <!-- T-11-412 소속 앞에 구단 엠블럼. 두 줄은 한 줄로 두고 넘치면 말줄임(오른쪽 선수 그림은 이 줄 위에서 끝난다). -->
+      <p class="hero-line"><ClubBadge club={G.club} size={18} /><span>{L.currentLine({ club: tn(G.club.name), age: G.age, pos: posLabel(G) })}</span></p>
       <p class="hero-meta num">{L.currentMeta({ year: G.year, phase: tn(PHASES[Math.min(G.phase, LAST_PHASE + 1)] ?? ''), ovr: ovr(G) })}</p>
       <!-- T-11-221 이어하기를 전폭 한 줄로(이름은 위 제목에 있어 버튼에서 뺀다 — 긴 이름이 잘리지 않게), 새 커리어는 아래 글자 버튼. -->
       <div class="hero-actions">

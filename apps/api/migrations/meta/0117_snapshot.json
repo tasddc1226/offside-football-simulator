@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b8ce303f-a7a8-4ac7-bde7-42c259eb2e43",
+  "id": "b33f5190-0248-4cb4-bd2e-70281efe5050",
   "prevId": "80c2a919-a44a-4a67-bb0b-0428540debbb",
   "tables": {
     "acquisition_consents": {
@@ -2850,6 +2850,13 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "odds_json": {
+          "name": "odds_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -4619,20 +4626,6 @@
         "team_kept": {
           "name": "team_kept",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "reward_boost": {
-          "name": "reward_boost",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "reward_scout": {
-          "name": "reward_scout",
-          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

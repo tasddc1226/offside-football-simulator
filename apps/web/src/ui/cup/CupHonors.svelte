@@ -3,6 +3,7 @@
   // 넘어 쌓인다(서버가 최근 대회부터 보낸다).
   import type { CupHonor } from '@offside/app-core/api/cup';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
+  import { divisionLabel } from '@offside/app-core/cupDivision';
   import { plateText, trophyStage } from '@offside/app-core/cupTrophy';
   import CupTrophy from './CupTrophy.svelte';
   import { stageLabel } from './cupView.js';
@@ -25,7 +26,7 @@
         <li class="ch {medal ? `medal ${medal}` : ''}" class:trophy={!!medal} data-cup-honor={h.stage}>
           {#if trophy}<CupTrophy stage={trophy} edition={h.edition} name={plateText(h.owner, h.season, h.edition)} size={60} />{/if}
           <span class="ch-text">
-            <b>{h.stage === 'champion' ? L.champTitle({ n: h.edition }) : L.honorResult({ edition: h.edition, stage: stageLabel(h.stage) })}</b>
+            <b>{h.stage === 'champion' ? L.champTitle({ n: h.edition, d: divisionLabel(h.division) }) : L.honorResult({ edition: h.edition, stage: stageLabel(h.stage), d: divisionLabel(h.division) })}</b>
             <small class="muted">{L.honorTeam({ team: h.teamName })}</small>
           </span>
         </li>

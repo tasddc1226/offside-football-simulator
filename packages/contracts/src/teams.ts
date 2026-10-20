@@ -7,7 +7,7 @@ import {
   PeakProfileSchema,
 } from './careers.js';
 import { PUBLIC_NAME_CHARS } from './content-filter.js';
-import { CUP_STAGES } from './cup.js';
+import { CUP_DIVISIONS, CUP_STAGES } from './cup.js';
 import { isOwnerTitle } from './owner-title.js';
 import {
   ACH_CATEGORIES,
@@ -711,6 +711,8 @@ export const CupHonorSchema = z.strictObject({
   cupId: z.string(),
   season: z.number().int(),
   edition: z.number().int(),
+  /** T-11-410 구간 대회 성적이면 그 구간. */
+  division: z.enum(CUP_DIVISIONS).optional(),
   stage: z.enum(CUP_STAGES),
   teamName: z.string(),
   /** 트로피 받침대에 새기는 구단주 닉네임(지금 닉네임, 없으면 null). 배포 전 응답엔 없다. */

@@ -39,13 +39,9 @@ import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as CA } from '@offside/app-core/i18n/ko/cupApp';
 import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
 import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
-import {
-  REROLL_MILEAGE,
-  rerollMileageLeft,
-  scoutPityView,
-  type ScoutPity,
-} from '@offside/contracts/cup';
+import { REROLL_MILEAGE, rerollMileageLeft, type ScoutPity } from '@offside/contracts/cup';
 import { ScoutOdds } from '../owner/ScoutOdds';
+import { ScoutPityGauge } from './ScoutPityGauge';
 import {
   candidateTiers,
   gradeTier,
@@ -310,7 +306,6 @@ export default function Create() {
   // T-11-244 천장 카운트. 다시 보낼 때는 같은 시드 계획을 같은 멱등 키와 함께 쓴다.
   const [pity, setPity] = useState<ScoutPity>(NO_PITY);
   const scoutPlan = useRef<{ seed: number; hit: boolean } | null>(null);
-  const pityView = scoutPityView(pity);
   const premium = !!s.candidates?.some((x) => x.guaranteed);
   useEffect(() => {
     if (!hasCandidates) return;
@@ -432,12 +427,16 @@ export default function Create() {
       premiumScoutCandidates(plan.seed, mode);
       setRewardMessage('');
       const n = r.data.scout;
+      // T-11-415 S가 그냥 나와 S 확정 칸이 0으로 돌아가면 그렇다고 알린다.
+      const reset = mode === 'normal' && r.data.pity?.streak === 0;
       toast(
         mode === 'elite'
           ? SL.doneElite({ n })
           : mode === 'sure'
             ? SL.doneSure({ n })
-            : SL.done({ n }),
+            : reset
+              ? SL.doneReset({ n })
+              : SL.done({ n }),
       );
     } finally {
       rerollLock.current = false;
@@ -1158,18 +1157,19 @@ export default function Create() {
                 >
                   {rerolling ? SL.busy : SL.btn({ n: scouts })}
                 </Btn>
-                <Txt v="sm" testID="candidate-scout-pity">
-                  {`${SL.pitySure({ n: pityView.sureIn })} · ${SL.pityElite({ n: pityView.eliteIn })}`}
-                </Txt>
                 <Txt v="sm" tone="muted">
-                  {`${SL.what} ${SL.pityHelp}`}
+                  {SL.what}
                 </Txt>
+                <ScoutPityGauge pity={pity} />
                 <ScoutOdds />
               </View>
             ) : owner ? (
-              <Btn sm kind="ghost" testID="premium-scout-go" onPress={goRerollShop}>
-                {SL.shopGo}
-              </Btn>
+              <View style={{ gap: 6 }}>
+                {pity.used > 0 ? <ScoutPityGauge pity={pity} empty /> : null}
+                <Btn sm kind="ghost" testID="premium-scout-go" onPress={goRerollShop}>
+                  {SL.shopGo}
+                </Btn>
+              </View>
             ) : null}
             {premium ? (
               <Txt v="sm" tone="muted" testID="premium-note">

@@ -18,6 +18,7 @@ import { scanSupport, supportInteraction } from './support.ts';
 import { REVIEW_ACTIONS, reviewInteraction, scanReviews } from './reviews.ts';
 import { threadOf, type Task } from './thread.ts';
 import { START_ACTIONS, startInteraction } from './captain.ts';
+import { isStopCommand, stopThread } from './stop.ts';
 import { afterDeploy, approvalsBundle, captainMorning, watchStatus } from './team.ts';
 
 export { AgentThread } from './thread.ts';
@@ -132,6 +133,13 @@ export default {
     if (payload.type === 'url_verification') return Response.json({ challenge: payload.challenge });
     if (payload.type === 'event_callback' && payload.event && payload.event_id) {
       const task = decide(env, role, payload.event_id, payload.event, botUserOf(env, role));
+      // 운영자 멈춤은 모델을 거치지 않고 바로 처리한다(stop.ts).
+      if (task?.kind === 'mention' && isStopCommand(task.text)) {
+        ctx.waitUntil(
+          stopThread(env, task).catch((e: unknown) => console.error('stop failed', String(e))),
+        );
+        return new Response('');
+      }
       if (task) {
         const stub = threadOf(env, role, task.channel, task.threadTs);
         const run = async () => {

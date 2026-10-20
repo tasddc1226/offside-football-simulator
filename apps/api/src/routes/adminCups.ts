@@ -1,6 +1,20 @@
 import { registerAdminCupPredictionRoutes } from './adminCupPredictions.js';
-import { AdminCupCreateSchema, AdminCupListSchema, AdminCupSchema } from '@offside/contracts';
-import { cupFinalAt, planCup, type CupDef } from '@offside/contracts/cup';
+import {
+  AdminCupCapSchema,
+  AdminCupCapsSuggestSchema,
+  AdminCupCreateSchema,
+  AdminCupListSchema,
+  AdminCupSchema,
+} from '@offside/contracts';
+import {
+  CUP_DIVISIONS,
+  CUP_PLAN_DEFAULTS,
+  cupFinalAt,
+  cupIdOf,
+  divisionCaps,
+  planCup,
+  type CupDef,
+} from '@offside/contracts/cup';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import { and, eq, ne, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
@@ -15,6 +29,8 @@ import { conflictError, NO_STORE, notFoundError, nowIso, ok, readBody } from './
 
 // T-11-145 오프사이드 컵을 코드 배포 없이 여는 관리자 API. 시작일만 받아 표준 일정(planCup)을 만들고, 시즌·회차·id는
 // 서버가 정한다. 다른 대회와 기간(접수 시작 ~ 결승 다음 날)이 겹치면 안 된다. 접수가 열리기 전에는 지울 수 있다.
+// T-11-410 divisions면 OVR 구간마다 대회를 만든다(일정 같음). 아랫 구간 상한은 접수 전까지 고칠 수 있고, 비워 두면 접수가
+// 열릴 때 자동 운영이 그 시즌 팀 분포로 채운다(GET /v1/admin/cups/caps가 같은 계산의 지금 값).
 
 async function adminView(db: Db, cup: CupDef, now: string) {
   const [[state], [count]] = await Promise.all([
@@ -56,20 +72,68 @@ export function registerAdminCupRoutes(app: Hono<AppEnv>): void {
     const clash = all.find((x) => draft.opensAt <= cupFinalAt(x) && x.opensAt <= cupFinalAt(draft));
     if (clash)
       throw conflictError(cupKo('adminOverlap', { edition: clash.edition }), 'CUP_OVERLAP');
-    const cup: CupDef = { ...draft, id: `s${season}-${edition}`, season };
-    await db.insert(cups).values({
-      id: cup.id,
-      season: cup.season,
-      edition: cup.edition,
-      opensAt: cup.opensAt,
-      closesAt: cup.closesAt,
-      drawAt: cup.drawAt,
-      roundsJson: JSON.stringify(cup.rounds),
-      capacity: cup.capacity,
-      minFilled: cup.minFilled,
-      createdAt: now,
-    });
-    return ok(c, AdminCupSchema, await adminView(db, cup, now), 201, NO_STORE);
+    const made: CupDef[] = input.divisions
+      ? CUP_DIVISIONS.map((division) => ({
+          ...draft,
+          id: cupIdOf(season, edition, division),
+          season,
+          division,
+          ovrMax: null,
+        }))
+      : [{ ...draft, id: cupIdOf(season, edition), season }];
+    await db.insert(cups).values(
+      made.map((cup) => ({
+        id: cup.id,
+        season: cup.season,
+        edition: cup.edition,
+        opensAt: cup.opensAt,
+        closesAt: cup.closesAt,
+        drawAt: cup.drawAt,
+        roundsJson: JSON.stringify(cup.rounds),
+        capacity: cup.capacity,
+        minFilled: cup.minFilled,
+        createdAt: now,
+        division: cup.division ?? null,
+        ovrMax: cup.ovrMax ?? null,
+      })),
+    );
+    return ok(c, AdminCupSchema, await adminView(db, made.at(-1)!, now), 201, NO_STORE);
+  });
+
+  // T-11-410 지금 시즌 팀 분포로 낸 아랫 구간 상한(자동 운영이 접수를 열 때 쓰는 계산과 같다). 운영 도구를 열 때만 부른다.
+  app.get('/v1/admin/cups/caps', async (c) => {
+    await requireAdmin(c);
+    const db = getDb(c);
+    const now = nowIso();
+    const season = teamSeasonAt(now) ?? 0;
+    const { results } = await db.$client
+      .prepare('SELECT ovr FROM owner_teams WHERE season = ? AND filled >= ?')
+      .bind(season, CUP_PLAN_DEFAULTS.minFilled)
+      .all<{ ovr: number }>();
+    const caps = divisionCaps(results.map((r) => r.ovr));
+    return ok(c, AdminCupCapsSuggestSchema, { season, teams: results.length, caps }, 200, NO_STORE);
+  });
+
+  // T-11-410 아랫 구간 상한 고치기(접수가 열리기 전만).
+  app.put('/v1/admin/cups/:cupId/cap', async (c) => {
+    await requireAdmin(c);
+    const input = readBody(c, AdminCupCapSchema);
+    const db = getDb(c);
+    const now = nowIso();
+    const [row] = await db
+      .select()
+      .from(cups)
+      .where(eq(cups.id, c.req.param('cupId')));
+    if (!row) throw notFoundError(cupKo('notFound'), 'CUP_NOT_FOUND');
+    if (!row.division || row.division === 'master')
+      throw conflictError(cupKo('adminCapMaster'), 'CUP_NO_CAP');
+    if (row.opensAt <= now) throw conflictError(cupKo('adminCapOpen'), 'CUP_STARTED');
+    await db
+      .update(cups)
+      .set({ ovrMax: input.ovrMax })
+      .where(and(eq(cups.id, row.id), sql`${cups.opensAt} > ${now}`));
+    const [cup] = (await cupSchedule(db)).filter((x) => x.id === row.id);
+    return ok(c, AdminCupSchema, await adminView(db, cup!, now), 200, NO_STORE);
   });
 
   app.delete('/v1/admin/cups/:cupId', async (c) => {
@@ -82,7 +146,15 @@ export function registerAdminCupRoutes(app: Hono<AppEnv>): void {
       .where(eq(cups.id, c.req.param('cupId')));
     if (!row) throw notFoundError(cupKo('notFound'), 'CUP_NOT_FOUND');
     if (row.opensAt <= now) throw conflictError(cupKo('adminStarted'), 'CUP_STARTED');
-    await db.delete(cups).where(and(eq(cups.id, row.id), sql`${cups.opensAt} > ${now}`));
+    // T-11-410 구간 대회는 회차를 통째로 지운다(한 구간만 남으면 일정이 깨진다).
+    await db
+      .delete(cups)
+      .where(
+        and(
+          row.division ? eq(cups.edition, row.edition) : eq(cups.id, row.id),
+          sql`${cups.opensAt} > ${now}`,
+        ),
+      );
     return c.body(null, 204);
   });
 }

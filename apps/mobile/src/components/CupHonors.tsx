@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import type { CupHonor } from '@offside/app-core/api/cup';
 import { cupTrophy, plateText, trophyStage } from '@offside/app-core/cupTrophy';
 import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
+import { divisionLabel } from '@offside/app-core/cupDivision';
 import { stageLabel } from '../screens/owner/cupText';
 import { rem } from '../theme/type';
 import { useColors } from '../theme/useColors';
@@ -53,8 +54,12 @@ export function CupHonors({ honors }: { honors: readonly CupHonor[] }) {
               <View style={{ gap: 2, flexShrink: 1 }}>
                 <Txt bold>
                   {h.stage === 'champion'
-                    ? CL.champTitle({ n: h.edition })
-                    : CL.honorResult({ edition: h.edition, stage: stageLabel(h.stage) })}
+                    ? CL.champTitle({ n: h.edition, d: divisionLabel(h.division) })
+                    : CL.honorResult({
+                        edition: h.edition,
+                        stage: stageLabel(h.stage),
+                        d: divisionLabel(h.division),
+                      })}
                 </Txt>
                 <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                   {CL.honorTeam({ team: h.teamName })}

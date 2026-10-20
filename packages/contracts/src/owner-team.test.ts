@@ -24,7 +24,7 @@ import {
   teamOvr,
   achGradeOf,
 } from './owner-team.js';
-import { cupPredictionCap, cupReward, cupScouts, scoutPityView } from './cup.js';
+import { cupPredictionCap, cupReward, cupScouts, scoutPityGauge, scoutPityView } from './cup.js';
 import {
   ManagerNameSchema,
   PutOwnerTeamBodySchema,
@@ -235,6 +235,23 @@ describe('T-11-244 프리미엄 스카우트 천장 · 컵 스카우트권', () 
       next: 'normal',
       eliteIn: 70,
     });
+  });
+
+  it('T-11-415 막대는 쌓인 장수, 특급이 먼저 오면 S 확정 칸은 다음이 아니다', () => {
+    expect(scoutPityGauge({ used: 12, streak: 12, elites: 0 })).toEqual({
+      sure: { have: 12, need: 30, next: false },
+      elite: { have: 12, need: 100, next: false },
+    });
+    expect(scoutPityGauge({ used: 29, streak: 29, elites: 0 }).sure).toEqual({
+      have: 29,
+      need: 30,
+      next: true,
+    });
+    expect(scoutPityGauge({ used: 99, streak: 29, elites: 0 })).toMatchObject({
+      sure: { have: 29, next: false },
+      elite: { have: 99, next: true },
+    });
+    expect(scoutPityGauge({ used: 230, streak: 0, elites: 2 }).elite.have).toBe(30);
   });
 
   it('제1회 컵은 리롤권만, 제2회부터 8강 이상 스카우트권·4강 이상 강화권', () => {
