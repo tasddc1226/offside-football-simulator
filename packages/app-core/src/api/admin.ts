@@ -15,6 +15,7 @@ import type {
   AdminFundsReport,
   AdminInviteReport,
   AdminItemGrantInput,
+  AdminLeague,
   AdminItemGrantResult,
   AdminRevenue,
   AdminStats,
@@ -38,12 +39,21 @@ export type {
   AdminInviteReport,
   AdminCup,
   AdminCupCreate,
+  AdminLeague,
   AdminNameReport,
   AdminStats,
   AutomationReport,
   AutomationEnforcement,
   BalanceVersion,
 };
+
+// T-11-427 오프사이드 리그 상태 · 배치 전 일정 미루기(T-11-418b). 늘 최신을 본다.
+export const fetchAdminLeague = () => apiFetch<AdminLeague>('/v1/admin/leagues/current');
+export const delayLeague = (days: number) =>
+  apiFetch<AdminLeague>('/v1/admin/leagues/current/delay', {
+    method: 'POST',
+    body: JSON.stringify({ days }),
+  });
 
 // T-11-145 오프사이드 컵 열기: 시작일만 주면 서버가 표준 일정·회차를 정한다. 접수 전 대회만 지운다.
 export const fetchAdminCups = () => apiFetch<AdminCupList>('/v1/admin/cups');

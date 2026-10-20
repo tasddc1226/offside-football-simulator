@@ -242,7 +242,7 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     }>();
     expect(state?.done_at).not.toBeNull();
     expect(await openLeagueEndsAt(ctx.env.DB, { id: 2, startsAt: S2 })).toBeNull();
-  });
+  }, 60_000); // 14라운드를 다 치러 보는 흐름이라 혼자 돌려도 10초 넘게 걸린다(전체 실행 부하에서 20초 기본값을 넘는다).
 
   it('팀이 없어지면 0:3 기권패, 3번 쌓이면 남은 경기는 모두 기권패(forfeited)', async () => {
     const teams = [];
