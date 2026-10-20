@@ -20,7 +20,7 @@ export const home: Translation<HomeMsgs> = {
   conflictAdopt: 'Record under this account',
   conflictKeep: 'Keep on this device only',
   marketTitle: 'Transfer window',
-  marketSub: 'Buy and sell players this season · prices →',
+  marketSub: 'Buy and sell players · prices →',
   inviteSub: (p) =>
     `You and your friend each get ${p.n} reroll tickets + ${p.s} premium scout ticket →`,
   dexTitle: 'Event odds',

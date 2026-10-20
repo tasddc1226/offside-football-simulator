@@ -61,7 +61,7 @@ export const owner: Translation<OwnerMsgs> = {
   buildTeam: 'チームを作る',
   teamBtnApp: 'マイチーム · シーズン実績',
   marketTitle: '移籍市場',
-  marketSub: (p) => `クラブ資金 ${p.funds} · 今シーズンの選手を売り買いできます`,
+  marketSub: (p) => `クラブ資金 ${p.funds} · 選手を売り買いできます`,
   open: '開く',
   lockBadge: '\u{1F512}︎ ログインすると開きます',
   accountSection: 'アカウント',

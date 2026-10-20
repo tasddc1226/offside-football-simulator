@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "082f4da6-85e3-4603-b7ae-386543cc384e",
+  "id": "6f3cf953-ff81-441b-a903-f490fcd42568",
   "prevId": "3217eb32-f41a-494f-a5f7-13f519a44768",
   "tables": {
     "acquisition_consents": {
@@ -4721,7 +4721,6 @@
           "name": "market_listings_new_idx",
           "columns": [
             "status",
-            "season",
             "created_at"
           ],
           "isUnique": false
@@ -4730,7 +4729,6 @@
           "name": "market_listings_price_idx",
           "columns": [
             "status",
-            "season",
             "price",
             "created_at"
           ],
@@ -4757,7 +4755,6 @@
           "name": "market_listings_sold_idx",
           "columns": [
             "status",
-            "season",
             "closed_at"
           ],
           "isUnique": false
@@ -5053,20 +5050,6 @@
         "team_kept": {
           "name": "team_kept",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "reward_boost": {
-          "name": "reward_boost",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "reward_scout": {
-          "name": "reward_scout",
-          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

@@ -831,8 +831,15 @@
     {
       "idx": 121,
       "version": "6",
-      "when": 1792497822741,
-      "tag": "0121_owner_achievement_gift",
+      "when": 1792498971001,
+      "tag": "0121_market_all_seasons",
+      "breakpoints": true
+    },
+    {
+      "idx": 122,
+      "version": "6",
+      "when": 1792499574856,
+      "tag": "0122_owner_achievement_gift",
       "breakpoints": true
     }
   ]

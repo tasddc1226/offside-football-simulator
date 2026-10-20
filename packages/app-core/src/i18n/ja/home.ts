@@ -19,7 +19,7 @@ export const home: Translation<HomeMsgs> = {
   conflictAdopt: 'いまのアカウントで続けて記録',
   conflictKeep: 'この端末だけに残す',
   marketTitle: '移籍市場',
-  marketSub: '今シーズンの選手売買 · 相場 →',
+  marketSub: '選手売買 · 相場 →',
   inviteSub: (p) => `友だちと一緒にリロール券${p.n}枚＋プレミアムスカウト券${p.s}枚ずつ →`,
   dexTitle: '確率イベント',
   dexSubWeb: '選択肢ごとの成功確率を見る →',

@@ -615,7 +615,7 @@ export default function Market() {
   }, [view, loadIndex]);
   const myListingIds = useMemo(() => new Set(me?.listings.map((l) => l.id) ?? []), [me]);
 
-  // 팔기는 지금 시즌 선수, 방출은 시즌을 골라 본다(기본은 지금 시즌).
+  // 팔기는 지금 가진 모든 시즌 선수(T-11-425), 방출은 시즌을 골라 본다(기본은 지금 시즌).
   const [team, setTeam] = useState<OwnerTeamResponse | null>(null);
   const [teamSeason, setTeamSeason] = useState<number | undefined>(undefined);
   const [teamFailed, setTeamFailed] = useState(false);
@@ -1059,7 +1059,7 @@ export default function Market() {
                   }}
                 >
                   <Txt tone="muted" style={small}>
-                    {season === null ? '' : L.seasonCount({ n: items.length, more: hasMore })}
+                    {season === null ? '' : L.listCount({ n: items.length, more: hasMore })}
                   </Txt>
                   <View style={{ flexDirection: 'row', gap: 4 }}>
                     {SORT_KEYS.map((k) => (
@@ -1132,7 +1132,7 @@ export default function Market() {
                               </Txt>
                               <Txt tone="muted" style={tiny}>
                                 <StyleTag card={l.card} />
-                                {cardMeta(l.card)}
+                                {cardMeta(l.card, season)}
                               </Txt>
                             </View>
                             <View style={{ alignItems: 'flex-end', gap: 2 }}>
@@ -1171,10 +1171,7 @@ export default function Market() {
             ) : view === 'sell' ? (
               <View testID="market-sell" style={{ gap: 10 }}>
                 <Txt bold accessibilityRole="header" style={small}>
-                  {`${L.sellStep1} `}
-                  <Txt tone="muted" style={small}>
-                    {L.sellSeasonOnly({ season: seasonName || L.thisSeason })}
-                  </Txt>
+                  {L.sellStep1}
                 </Txt>
                 {!team ? (
                   teamFailed ? (
