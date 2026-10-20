@@ -8,6 +8,8 @@ import { BOARD_KEYS, BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
 export const EDGE = {
   cupHome: '/v1/cups/home',
   cupCurrent: '/v1/cups/current',
+  /** T-11-418 오프사이드 리그(일정 · 신청 수). TTL로만 새로 읽는다. */
+  leagueCurrent: '/v1/leagues/current',
   /** T-11-410 구간 대회 한 개(회차마다 3개). */
   cupById: (id: string) => `/v1/cups/${id}`,
   balance: '/v1/balance',

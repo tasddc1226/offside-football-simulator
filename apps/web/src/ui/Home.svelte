@@ -87,6 +87,8 @@
   {#await import('./SeasonGauge.svelte') then { default: SeasonGauge }}<SeasonGauge />{/await}
   <!-- T-11-145 오프사이드 컵 소식은 모두가 먼저 보는 홈에서(신청은 대회 화면). 트로피 그림까지 끌고 와서 첫 화면 번들 밖 지연 청크로. -->
   {#await import('./cup/CupBanner.svelte') then { default: CupBanner }}<CupBanner onopen={() => go('cup')} />{/await}
+  <!-- T-11-418 오프사이드 리그 소식(신청은 리그 화면). 첫 화면 번들 밖 지연 청크. -->
+  {#await import('./league/LeagueBanner.svelte') then { default: LeagueBanner }}<LeagueBanner onopen={() => go('league')} />{/await}
   <!-- T-11-290 오프사이드 컵 우승 팝업 — 웹을 열어 홈에 왔을 때 한 번(결승 뒤 일주일, 기기마다 '다시 보지 않기'). 배너와 같은 응답. -->
   {#await import('./cup/CupChampionPopup.svelte') then { default: CupChampionPopup }}<CupChampionPopup />{/await}
   <!-- T-11-275 구단주 선물(로그인한 구단주가 한 번 받으면 사라진다). 컵 배너 바로 아래, 첫 화면 번들 밖 지연 청크. -->

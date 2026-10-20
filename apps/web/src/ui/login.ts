@@ -26,6 +26,8 @@ export type LoginReturn =
   | { chat: true }
   | { market: true }
   | { cup: true }
+  /** T-11-418 리그 화면에서 로그인했으면 리그 화면으로 돌아온다. */
+  | { league: true }
   /** T-11-290 팀 프로필(스쿼드 댓글)에서 로그인했으면 그 팀 프로필로 돌아온다. */
   | { team: string }
   /** T-11-360 홈 출석 체크에서 로그인했으면 홈으로 돌아와 바로 출석한다. */
@@ -93,6 +95,7 @@ export function handleOAuthReturn() {
     if ('chat' in back) return void (appState.screen = 'chat');
     if ('market' in back) return void (appState.screen = 'market');
     if ('cup' in back) return void (appState.screen = 'cup');
+    if ('league' in back) return void (appState.screen = 'league');
     if ('home' in back) return void (appState.screen = 'home');
     if ('team' in back) {
       appState.hof = { ...hofStart(), tab: 'teams', team: back.team };
