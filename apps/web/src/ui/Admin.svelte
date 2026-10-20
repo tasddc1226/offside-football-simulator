@@ -12,6 +12,7 @@
   import AdminAutomation from './admin/AdminAutomation.svelte';
   import AdminPush from './admin/AdminPush.svelte';
   import AdminCups from './admin/AdminCups.svelte';
+  import AdminLeague from './admin/AdminLeague.svelte';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
   import AdminFunds from './admin/AdminFunds.svelte';
   import AdminInvites from './admin/AdminInvites.svelte';
@@ -63,7 +64,7 @@
       {:else if tab === 'users'}<AdminUsers />
       {:else if tab === 'revenue'}<AdminRevenue />
       {:else if tab === 'push'}<AdminPush />
-      {:else if tab === 'cup'}<AdminCups />
+      {:else if tab === 'cup'}<AdminLeague /><AdminCups />
       {:else if tab === 'comments'}<AdminChatReports /><AdminNameReports /><AdminComments />
       {:else if tab === 'automation'}<AdminAutomation />
       {:else if tab === 'funds'}<AdminFunds />
