@@ -1,5207 +1,601 @@
 {
-  "baseSha": "c66b5911ab79476baa9208dcfb5712ddd12c7a82",
-  "scope": "HTTP app route registration templates and network/cache/poll call sites. Registration templates are not expanded endpoint counts. Direct call flags do not establish final auth/cache behavior.",
-  "routes": [
-    {
-      "file": "apps/api/src/app.ts",
-      "line": 67,
-      "method": "get",
-      "path": "'/v1/health'",
-      "auth": false,
-      "edge": false,
-      "calls": ["get"]
-    },
-    {
-      "file": "apps/api/src/app.ts",
-      "line": 111,
-      "method": "get",
-      "path": "'/v1/test/throw'",
-      "auth": false,
-      "edge": false,
-      "calls": ["get", "Error"]
-    },
-    {
-      "file": "apps/api/src/routes/acquisition.ts",
-      "line": 15,
-      "method": "get",
-      "path": "'/v1/acquisition/consent'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "header", "getSessionOrThrow", "prepare", "bind", "json"]
-    },
-    {
-      "file": "apps/api/src/routes/acquisition.ts",
-      "line": 32,
-      "method": "post",
-      "path": "'/v1/acquisition'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "header",
-        "parse",
-        "get",
-        "body",
-        "getSessionOrThrow",
-        "nowIso",
-        "batch",
-        "prepare",
-        "CONFLICT",
-        "bind",
-        "randomUUID",
-        "test",
-        "EXISTS",
-        "first",
-        "json",
-        "includes",
-        "String",
-        "campaignQuery",
-        "enforceLimit",
-        "getDb",
-        "clientIp",
-        "Date",
-        "toISOString",
-        "coalesce"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/acquisition.ts",
-      "line": 123,
-      "method": "get",
-      "path": "'/v1/admin/acquisition'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireAdmin",
-        "header",
-        "query",
-        "test",
-        "isFinite",
-        "parse",
-        "Date",
-        "toISOString",
-        "iso",
-        "body",
-        "json",
-        "acquisitionReport"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/admin.ts",
-      "line": 54,
-      "method": "get",
-      "path": "'/v1/admin/push-performance'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "requireAdmin", "parseWithAppError", "query", "getPushPerformance"]
-    },
-    {
-      "file": "apps/api/src/routes/admin.ts",
-      "line": 67,
-      "method": "get",
-      "path": "EDGE.adminStats",
-      "auth": true,
-      "edge": true,
-      "calls": [
-        "get",
-        "requireAdmin",
-        "getDb",
-        "all",
-        "edgeCached",
-        "getAdminStats",
-        "Date",
-        "getActiveBalance"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/admin.ts",
-      "line": 82,
-      "method": "get",
-      "path": "'/v1/admin/automation'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireAdmin",
-        "parseWithAppError",
-        "query",
-        "automationReport",
-        "getDb",
-        "Date"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/admin.ts",
-      "line": 89,
-      "method": "get",
-      "path": "'/v1/admin/automation/enforcement'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireAdmin",
-        "parseWithAppError",
-        "query",
-        "automationEnforcement",
-        "getDb"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/admin.ts",
-      "line": 102,
-      "method": "get",
-      "path": "'/v1/admin/funds'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "requireAdmin", "fundsReport", "getDb", "Date"]
-    },
-    {
-      "file": "apps/api/src/routes/admin.ts",
-      "line": 107,
-      "method": "get",
-      "path": "'/v1/admin/funds/owner'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireAdmin",
-        "parseWithAppError",
-        "query",
-        "fundsOwner",
-        "getDb",
-        "notFoundError"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/admin.ts",
-      "line": 116,
-      "method": "get",
-      "path": "'/v1/admin/users'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireAdmin",
-        "parseWithAppError",
-        "query",
-        "adminUser",
-        "getDb",
-        "Date",
-        "notFoundError"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/admin.ts",
-      "line": 126,
-      "method": "post",
-      "path": "'/v1/admin/users/:profileId/items'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireAdmin",
-        "parseWithAppError",
-        "param",
-        "readBody",
-        "grantOwnerItem",
-        "getDb",
-        "nowIso",
-        "notFoundError",
-        "conflictError"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/admin.ts",
-      "line": 145,
-      "method": "get",
-      "path": "'/v1/admin/revenue'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireAdmin",
-        "parseWithAppError",
-        "query",
-        "revenueReport",
-        "getDb",
-        "Date"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/admin.ts",
-      "line": 153,
-      "method": "get",
-      "path": "'/v1/admin/invites'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "requireAdmin", "inviteReport", "getDb", "Date"]
-    },
-    {
-      "file": "apps/api/src/routes/admin.ts",
-      "line": 160,
-      "method": "get",
-      "path": "'/v1/admin/anomalies'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "requireAdmin", "anomalyReport", "now"]
-    },
-    {
-      "file": "apps/api/src/routes/admin.ts",
-      "line": 167,
-      "method": "post",
-      "path": "'/v1/admin/careers/hidden'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireAdmin",
-        "readBody",
-        "setCareerHidden",
-        "now",
-        "notFoundError",
-        "purgeEdge",
-        "retirementPut",
-        "body"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/admin.ts",
-      "line": 176,
-      "method": "get",
-      "path": "'/v1/admin/comments'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "requireAdmin", "parseWithAppError", "query", "listRecentComments", "getDb"]
-    },
-    {
-      "file": "apps/api/src/routes/admin.ts",
-      "line": 183,
-      "method": "post",
-      "path": "'/v1/admin/comments/purge'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireAdmin",
-        "readBody",
-        "purgeCommentsBy",
-        "getDb",
-        "nowIso",
-        "purgeEdge",
-        "commentsPurged"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/admin.ts",
-      "line": 191,
-      "method": "get",
-      "path": "'/v1/admin/name-reports'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "requireAdmin", "listOpenNameReports", "getDb"]
-    },
-    {
-      "file": "apps/api/src/routes/admin.ts",
-      "line": 197,
-      "method": "post",
-      "path": "'/v1/admin/name-reports/resolve'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireAdmin",
-        "readBody",
-        "resolveNameReports",
-        "getDb",
-        "nowIso",
-        "notFoundError",
-        "purgeEdge",
-        "retirementPut",
-        "teamSaved",
-        "body"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/adminCupPredictions.ts",
-      "line": 40,
-      "method": "get",
-      "path": "'/v1/admin/cups/:cupId/predictions'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireAdmin",
-        "cupExists",
-        "getDb",
-        "all",
-        "cupMatchesOf",
-        "select",
-        "from",
-        "where",
-        "eq",
-        "prepare",
-        "count",
-        "sum",
-        "bind",
-        "Map",
-        "sort",
-        "localeCompare",
-        "toCupMatch"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/adminCupPredictions.ts",
-      "line": 107,
-      "method": "get",
-      "path": "'/v1/admin/cups/:cupId/matches/:matchId/predictions'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireAdmin",
-        "matchOf",
-        "PK",
-        "query",
-        "slice",
-        "getDb",
-        "prepare",
-        "coalesce",
-        "bind"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/adminCupPredictions.ts",
-      "line": 143,
-      "method": "post",
-      "path": "'/v1/admin/cups/:cupId/matches/:matchId/predictions/settle'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireAdmin",
-        "readBody",
-        "matchOf",
-        "conflictError",
-        "cupKo",
-        "nowIso",
-        "getDb",
-        "select",
-        "from",
-        "where",
-        "eq",
-        "batch",
-        "predictionSettlementStatements",
-        "cupPredictionCap",
-        "prepare",
-        "bind",
-        "newId",
-        "stringify"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/adminCups.ts",
-      "line": 50,
-      "method": "get",
-      "path": "'/v1/admin/cups'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireAdmin",
-        "getDb",
-        "nowIso",
-        "cupSchedule",
-        "all",
-        "reverse",
-        "adminView"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/adminCups.ts",
-      "line": 59,
-      "method": "post",
-      "path": "'/v1/admin/cups'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireAdmin",
-        "readBody",
-        "getDb",
-        "nowIso",
-        "cupSchedule",
-        "max",
-        "planCup",
-        "conflictError",
-        "cupKo",
-        "teamSeasonAt",
-        "at",
-        "cupFinalAt",
-        "cupIdOf",
-        "insert",
-        "values",
-        "stringify",
-        "adminView"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/adminCups.ts",
-      "line": 104,
-      "method": "get",
-      "path": "'/v1/admin/cups/caps'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireAdmin",
-        "getDb",
-        "nowIso",
-        "teamSeasonAt",
-        "prepare",
-        "bind",
-        "divisionCaps"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/adminCups.ts",
-      "line": 118,
-      "method": "put",
-      "path": "'/v1/admin/cups/:cupId/cap'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "put",
-        "requireAdmin",
-        "readBody",
-        "getDb",
-        "nowIso",
-        "select",
-        "from",
-        "where",
-        "eq",
-        "param",
-        "notFoundError",
-        "cupKo",
-        "conflictError",
-        "update",
-        "set",
-        "and",
-        "cupSchedule",
-        "adminView"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/adminCups.ts",
-      "line": 139,
-      "method": "delete",
-      "path": "'/v1/admin/cups/:cupId'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "delete",
-        "requireAdmin",
-        "getDb",
-        "nowIso",
-        "select",
-        "from",
-        "where",
-        "eq",
-        "param",
-        "notFoundError",
-        "cupKo",
-        "conflictError",
-        "and",
-        "body"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/appAuth.ts",
-      "line": 70,
-      "method": "post",
-      "path": "'/v1/app/session'",
-      "auth": false,
-      "edge": false,
-      "calls": ["post", "nowIso", "limitByIp", "getDb", "createProfile", "issueSession"]
-    },
-    {
-      "file": "apps/api/src/routes/appAuth.ts",
-      "line": 80,
-      "method": "post",
-      "path": "'/v1/auth/app/google'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "appSession",
-        "readBody",
-        "resolveRequestHostPair",
-        "selectGoogleOidc",
-        "AppError",
-        "nowIso",
-        "limitByIp",
-        "randomToken",
-        "createAppAuthTicket",
-        "getDb",
-        "createAuthorizationUrl",
-        "toString"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/appAuth.ts",
-      "line": 107,
-      "method": "post",
-      "path": "'/v1/auth/app/exchange'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "appSession",
-        "readBody",
-        "nowIso",
-        "takeReadyTicket",
-        "getDb",
-        "pkceChallenge",
-        "loginFailed",
-        "finishAppLogin"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/appAuth.ts",
-      "line": 123,
-      "method": "post",
-      "path": "'/v1/auth/apple'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "appSession",
-        "readBody",
-        "nowIso",
-        "limitByIp",
-        "verifyApple",
-        "loginFailed",
-        "resolveAppleSignIn",
-        "getDb",
-        "finishAppLogin"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/appVersion.ts",
-      "line": 22,
-      "method": "get",
-      "path": "'/v1/app/version'",
-      "auth": false,
-      "edge": false,
-      "calls": ["get"]
-    },
-    {
-      "file": "apps/api/src/routes/appleWebAuth.ts",
-      "line": 45,
-      "method": "get",
-      "path": "'/v1/auth/apple/start'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "resolveRequestHostPair",
-        "unavailable",
-        "redirect",
-        "settingsUrl",
-        "resolveSession",
-        "fail",
-        "isLocalEnv",
-        "nowIso",
-        "tryAttempt",
-        "getDb",
-        "clientIp",
-        "generateOauthToken",
-        "header",
-        "oauthCookie",
-        "encodeOauthCookieValue",
-        "URLSearchParams",
-        "URL",
-        "set",
-        "sha256Hex",
-        "toString"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/appleWebAuth.ts",
-      "line": 93,
-      "method": "post",
-      "path": "APPLE_WEB_CALLBACK_PATH",
-      "auth": false,
-      "edge": false,
-      "calls": ["post", "URLSearchParams", "get", "set", "redirect"]
-    },
-    {
-      "file": "apps/api/src/routes/appleWebAuth.ts",
-      "line": 103,
-      "method": "get",
-      "path": "APPLE_WEB_CALLBACK_PATH",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "nowIso",
-        "isLocalEnv",
-        "resolveRequestHostPair",
-        "unavailable",
-        "getDb",
-        "header",
-        "clearOauthCookie",
-        "sessionCookie",
-        "redirect",
-        "settingsUrl",
-        "resolveSession",
-        "readOauthCookie",
-        "decodeOauthCookieValue",
-        "query",
-        "back",
-        "verifyApple",
-        "resolveAppleSignIn",
-        "rotateSession"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/attendance.ts",
-      "line": 14,
-      "method": "get",
-      "path": "'/v1/attendance'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "requireOwner", "attendanceOf", "getDb", "nowIso"]
-    },
-    {
-      "file": "apps/api/src/routes/attendance.ts",
-      "line": 19,
-      "method": "post",
-      "path": "'/v1/attendance/check-in'",
-      "auth": true,
-      "edge": false,
-      "calls": ["post", "requireOwner", "checkIn", "getDb", "nowIso", "conflictError", "cupKo"]
-    },
-    {
-      "file": "apps/api/src/routes/auth.ts",
-      "line": 104,
-      "method": "post",
-      "path": "'/v1/auth/logout'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "getDb",
-        "getSessionOrThrow",
-        "nowIso",
-        "revokeSession",
-        "toss",
-        "header",
-        "clearSessionCookie",
-        "body"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/auth.ts",
-      "line": 119,
-      "method": "get",
-      "path": "'/v1/auth/google/start'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "resolveRequestHostPair",
-        "AppError",
-        "redirect",
-        "settingsUrl",
-        "resolveSession",
-        "fail",
-        "selectGoogleOidc",
-        "getDb",
-        "nowIso",
-        "tryAttempt",
-        "clientIp",
-        "generateOauthToken",
-        "createAuthorizationUrl",
-        "header",
-        "oauthCookie",
-        "encodeOauthCookieValue",
-        "isLocalEnv",
-        "toString"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/auth.ts",
-      "line": 153,
-      "method": "get",
-      "path": "'/v1/auth/google/callback'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "nowIso",
-        "isLocalEnv",
-        "resolveRequestHostPair",
-        "AppError",
-        "getDb",
-        "query",
-        "findPendingTicket",
-        "appGoogleCallback",
-        "redirectToSettings",
-        "header",
-        "clearOauthCookie",
-        "sessionCookie",
-        "redirect",
-        "settingsUrl",
-        "resolveSession",
-        "readOauthCookie",
-        "decodeOauthCookieValue",
-        "googleSignIn",
-        "rotateSession"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/auth.ts",
-      "line": 215,
-      "method": "post",
-      "path": "'/v1/auth/google/unlink'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "getDb",
-        "getSessionOrThrow",
-        "nowIso",
-        "unlinkGoogleAccount",
-        "insertAuditLog",
-        "body"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/balance.ts",
-      "line": 59,
-      "method": "get",
-      "path": "EDGE.balance",
-      "auth": false,
-      "edge": true,
-      "calls": ["get", "edgeCached", "getActiveBalance", "getDb"]
-    },
-    {
-      "file": "apps/api/src/routes/balance.ts",
-      "line": 70,
-      "method": "get",
-      "path": "EDGE.balanceHistory",
-      "auth": false,
-      "edge": true,
-      "calls": ["get", "edgeCached", "listAppliedBalanceVersions", "getDb"]
-    },
-    {
-      "file": "apps/api/src/routes/balance.ts",
-      "line": 77,
-      "method": "get",
-      "path": "'/v1/admin/balance'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "requireAdmin", "listBalanceVersions", "getDb"]
-    },
-    {
-      "file": "apps/api/src/routes/balance.ts",
-      "line": 83,
-      "method": "post",
-      "path": "'/v1/admin/balance'",
-      "auth": true,
-      "edge": false,
-      "calls": ["post", "requireAdmin", "draftInput", "createBalanceDraft", "getDb", "nowIso"]
-    },
-    {
-      "file": "apps/api/src/routes/balance.ts",
-      "line": 90,
-      "method": "put",
-      "path": "'/v1/admin/balance/:version'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "put",
-        "versionParam",
-        "requireAdmin",
-        "draftInput",
-        "updateBalanceDraft",
-        "getDb",
-        "nowIso",
-        "versionOr404",
-        "notDraft"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/balance.ts",
-      "line": 102,
-      "method": "delete",
-      "path": "'/v1/admin/balance/:version'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "delete",
-        "versionParam",
-        "requireAdmin",
-        "deleteBalanceDraft",
-        "getDb",
-        "versionOr404",
-        "notDraft",
-        "body"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/balance.ts",
-      "line": 112,
-      "method": "post",
-      "path": "'/v1/admin/balance/:version/activate'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "versionParam",
-        "requireAdmin",
-        "getDb",
-        "all",
-        "versionOr404",
-        "getActiveBalance",
-        "nowIso",
-        "activeSeason",
-        "query",
-        "seasonLocked",
-        "activateBalance",
-        "purgeEdge",
-        "balanceActivated"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/boards.ts",
-      "line": 96,
-      "method": "get",
-      "path": "'/v1/public-news/:board'",
-      "auth": false,
-      "edge": true,
-      "calls": [
-        "get",
-        "parseWithAppError",
-        "param",
-        "edgeCached",
-        "publicNews",
-        "publicNewsIndex",
-        "getDb",
-        "header"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/boards.ts",
-      "line": 104,
-      "method": "get",
-      "path": "'/v1/public-news/posts/:postId'",
-      "auth": false,
-      "edge": false,
-      "calls": ["get", "header", "param", "pst_", "test", "notFoundPost", "publicNewsPost", "getDb"]
-    },
-    {
-      "file": "apps/api/src/routes/boards.ts",
-      "line": 114,
-      "method": "get",
-      "path": "'/v1/boards/viewer'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "getViewer"]
-    },
-    {
-      "file": "apps/api/src/routes/boards.ts",
-      "line": 119,
-      "method": "get",
-      "path": "'/v1/boards/:board/posts'",
-      "auth": false,
-      "edge": true,
-      "calls": [
-        "get",
-        "parseWithAppError",
-        "param",
-        "query",
-        "listPosts",
-        "getDb",
-        "edgeCached",
-        "boardFirstPage",
-        "load",
-        "localizeList",
-        "reqLang"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/boards.ts",
-      "line": 130,
-      "method": "get",
-      "path": "'/v1/boards/posts/:postId'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "idParam",
-        "getDb",
-        "resolveSession",
-        "all",
-        "postOr404",
-        "listComments",
-        "getViewer",
-        "then",
-        "isLiked",
-        "getHiddenFor",
-        "has",
-        "ownerTiersOf",
-        "nowIso",
-        "localizePost",
-        "reqLang",
-        "parseI18n"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/boards.ts",
-      "line": 163,
-      "method": "post",
-      "path": "'/v1/boards/posts/:postId/views'",
-      "auth": false,
-      "edge": false,
-      "calls": ["post", "addView", "getDb", "idParam", "notFoundPost", "body"]
-    },
-    {
-      "file": "apps/api/src/routes/boards.ts",
-      "line": 181,
-      "method": "post",
-      "path": "'/v1/boards/:board/posts'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "parseWithAppError",
-        "param",
-        "requireAdmin",
-        "readBody",
-        "createPost",
-        "getDb",
-        "nowIso",
-        "purgeList",
-        "kickNewsPush",
-        "localizePost",
-        "postOr404",
-        "reqLang"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/boards.ts",
-      "line": 192,
-      "method": "post",
-      "path": "'/v1/boards/translate'",
-      "auth": true,
-      "edge": false,
-      "calls": ["post", "requireAdmin", "readBody", "draftTranslations"]
-    },
-    {
-      "file": "apps/api/src/routes/boards.ts",
-      "line": 198,
-      "method": "put",
-      "path": "'/v1/boards/posts/:postId'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "put",
-        "idParam",
-        "requireAdmin",
-        "readBody",
-        "updatePost",
-        "getDb",
-        "nowIso",
-        "notFoundPost",
-        "postOr404",
-        "purgeList",
-        "localizePost",
-        "reqLang"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/boards.ts",
-      "line": 208,
-      "method": "delete",
-      "path": "'/v1/boards/posts/:postId'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "delete",
-        "idParam",
-        "requireAdmin",
-        "postOr404",
-        "deletePost",
-        "getDb",
-        "nowIso",
-        "notFoundPost",
-        "purgeList",
-        "body"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/boards.ts",
-      "line": 217,
-      "method": "post",
-      "path": "'/v1/boards/posts/:postId/comments'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "idParam",
-        "getDb",
-        "readBody",
-        "nowIso",
-        "all",
-        "assertCanComment",
-        "postOr404",
-        "createComment",
-        "purgeList",
-        "ownerTierOfProfile"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/boards.ts",
-      "line": 247,
-      "method": "delete",
-      "path": "'/v1/boards/comments/:commentId'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "delete",
-        "idParam",
-        "isTeamCommentId",
-        "deleteTeamCommentById",
-        "body",
-        "getDb",
-        "all",
-        "getCommentOwner",
-        "getViewer",
-        "notFound",
-        "AppError",
-        "deleteComment",
-        "nowIso",
-        "purgeList"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/boards.ts",
-      "line": 275,
-      "method": "post",
-      "path": "'/v1/boards/comments/:commentId/report'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "idParam",
-        "isTeamCommentId",
-        "reportTeamCommentById",
-        "readBody",
-        "othersComment",
-        "reportComment",
-        "nowIso",
-        "body"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/boards.ts",
-      "line": 284,
-      "method": "post",
-      "path": "'/v1/boards/comments/:commentId/block'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "idParam",
-        "isTeamCommentId",
-        "blockTeamCommentAuthor",
-        "othersComment",
-        "AppError",
-        "blockAuthor",
-        "nowIso"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/boards.ts",
-      "line": 298,
-      "method": "delete",
-      "path": "'/v1/boards/blocks/:blockId'",
-      "auth": true,
-      "edge": false,
-      "calls": ["delete", "idParam", "unblock", "getDb", "getSessionOrThrow", "notFound", "body"]
-    },
-    {
-      "file": "apps/api/src/routes/careerActivity.ts",
-      "line": 13,
-      "method": "put",
-      "path": "'/v1/career-activity'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "put",
-        "readBody",
-        "getSessionOrThrow",
-        "nowIso",
-        "enforceLimit",
-        "getDb",
-        "prepare",
-        "bind",
-        "retryTransientRead",
-        "careerOwnerMismatch",
-        "CONFLICT",
-        "max",
-        "COALESCE",
-        "reqLang",
-        "retryTransientWrite",
-        "run",
-        "recordCareerReminderOutcome",
-        "body"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/careers.ts",
-      "line": 121,
-      "method": "get",
-      "path": "'/v1/careers/mine'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "getDb", "getSessionOrThrow", "getProfile", "isLinked", "listOwnHof"]
-    },
-    {
-      "file": "apps/api/src/routes/careers.ts",
-      "line": 131,
-      "method": "get",
-      "path": "'/v1/careers/mine/anonymous'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "getSessionOrThrow", "listAnonRetiredIds", "getDb"]
-    },
-    {
-      "file": "apps/api/src/routes/careers.ts",
-      "line": 139,
-      "method": "put",
-      "path": "'/v1/careers/public-names'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "put",
-        "getDb",
-        "getSessionOrThrow",
-        "readBody",
-        "some",
-        "isAcceptablePublicName",
-        "AppError",
-        "limitUpload",
-        "publishCareerNames",
-        "nowIso",
-        "purgeEdge",
-        "retirementPut"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/careers.ts",
-      "line": 167,
-      "method": "post",
-      "path": "'/v1/careers/:careerId/rename'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "parseWithAppError",
-        "param",
-        "requireOwner",
-        "toPublicName",
-        "readBody",
-        "conflictError",
-        "cupKo",
-        "renameCareer",
-        "getDb",
-        "nowIso",
-        "purgeEdge",
-        "retirementPut"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/careers.ts",
-      "line": 185,
-      "method": "get",
-      "path": "'/v1/careers/:careerId/look'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "getDb",
-        "parseWithAppError",
-        "param",
-        "getCareerHead",
-        "retiredLookErrors",
-        "reqLang",
-        "notFoundError",
-        "getSessionOrThrow",
-        "careerOwnerMismatch",
-        "conflictError",
-        "retiredLookPolicy"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/careers.ts",
-      "line": 199,
-      "method": "put",
-      "path": "'/v1/careers/:careerId/look'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "put",
-        "getDb",
-        "getSessionOrThrow",
-        "parseWithAppError",
-        "param",
-        "readBody",
-        "retiredLookErrors",
-        "reqLang",
-        "getCareer",
-        "notFoundError",
-        "careerOwnerMismatch",
-        "conflictError",
-        "retiredLookPolicy",
-        "titleIdsOf",
-        "readSnapshotJson",
-        "appearanceUnlocked",
-        "limitUpload",
-        "updateRetiredLook",
-        "purgeEdge",
-        "hofDetail"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/careers.ts",
-      "line": 241,
-      "method": "put",
-      "path": "'/v1/careers/:careerId/seasons/:year'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "put",
-        "getDb",
-        "getSessionOrThrow",
-        "parseWithAppError",
-        "param",
-        "readBody",
-        "batch",
-        "careerHeadQuery",
-        "seasonOvrQuery",
-        "assertOwnable",
-        "limitUpload",
-        "nowIso",
-        "resumeCareerDetails",
-        "exceedsOvrCap",
-        "growthTampered",
-        "Number",
-        "header",
-        "isSafeInteger",
-        "now",
-        "putCareerSeason",
-        "sanitizeSeason",
-        "stringify",
-        "toPublicName",
-        "isHeadless",
-        "purgeEdge",
-        "firstsChanged",
-        "recordFirsts",
-        "publishLive"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/careers.ts",
-      "line": 304,
-      "method": "put",
-      "path": "'/v1/careers/:careerId/retirement'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "put",
-        "getDb",
-        "getSessionOrThrow",
-        "parseWithAppError",
-        "param",
-        "batch",
-        "careerHeadQuery",
-        "storedSeasonsQuery",
-        "activeBalanceQuery",
-        "clubsJsonQuery",
-        "AppError",
-        "careerOwnerMismatch",
-        "readBody",
-        "isAcceptablePublicName",
-        "limitUpload",
-        "nowIso",
-        "all",
-        "putSnapshot",
-        "stringify",
-        "verifiedSnapshot",
-        "readSnapshotJson",
-        "then",
-        "resumeCareerDetails",
-        "groupStoredSeasons",
-        "get",
-        "updateRetired",
-        "legendScoreOfRecord",
-        "boundRetirement",
-        "retireAtOf",
-        "resolveBalance",
-        "balanceVersionOf",
-        "putRetirement",
-        "boundProfile",
-        "judgeRetirement",
-        "clubsJsonMap",
-        "recordFirsts",
-        "completeInvite",
-        "purgeEdge",
-        "retirementPut",
-        "publishLive",
-        "waitUntil",
-        "refreshAfterChange",
-        "refreshOwnerTitles",
-        "verifiedRetiredTitle"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/chat.ts",
-      "line": 102,
-      "method": "post",
-      "path": "'/v1/chat/ticket'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "room",
-        "getSessionOrThrow",
-        "getDb",
-        "now",
-        "all",
-        "getViewer",
-        "chatAuthor",
-        "blockedProfileIds",
-        "then",
-        "reportedMessageIds",
-        "Date",
-        "toISOString",
-        "getMutedUntil",
-        "issueTicket",
-        "ownerTierOfProfile"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/chat.ts",
-      "line": 153,
-      "method": "get",
-      "path": "'/v1/chat/blocks'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "getSessionOrThrow", "listBlocks", "getDb", "limit", "all", "chatAuthor"]
-    },
-    {
-      "file": "apps/api/src/routes/chat.ts",
-      "line": 166,
-      "method": "get",
-      "path": "'/v1/chat/messages/:messageId/owner'",
-      "auth": false,
-      "edge": false,
-      "calls": ["get", "findMessage", "latestTeamIdOf", "getDb"]
-    },
-    {
-      "file": "apps/api/src/routes/chat.ts",
-      "line": 172,
-      "method": "post",
-      "path": "'/v1/chat/messages/:messageId/report'",
-      "auth": true,
-      "edge": false,
-      "calls": ["post", "readBody", "othersMessage", "reportChat", "nowIso", "hide", "body"]
-    },
-    {
-      "file": "apps/api/src/routes/chat.ts",
-      "line": 191,
-      "method": "post",
-      "path": "'/v1/chat/messages/:messageId/block'",
-      "auth": true,
-      "edge": false,
-      "calls": ["post", "othersMessage", "blockAuthor", "nowIso"]
-    },
-    {
-      "file": "apps/api/src/routes/chat.ts",
-      "line": 203,
-      "method": "get",
-      "path": "'/v1/internal/agents/chat'",
-      "auth": false,
-      "edge": false,
-      "calls": [
-        "get",
-        "sameSecret",
-        "header",
-        "body",
-        "now",
-        "max",
-        "Number",
-        "query",
-        "min",
-        "room",
-        "recent",
-        "all",
-        "pseudonym",
-        "json"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/chat.ts",
-      "line": 222,
-      "method": "post",
-      "path": "'/v1/admin/chat/messages/:messageId/hide'",
-      "auth": true,
-      "edge": false,
-      "calls": ["post", "requireAdmin", "findMessage", "hide", "body"]
-    },
-    {
-      "file": "apps/api/src/routes/chat.ts",
-      "line": 229,
-      "method": "post",
-      "path": "'/v1/admin/chat/messages/:messageId/mute'",
-      "auth": true,
-      "edge": false,
-      "calls": ["post", "requireAdmin", "readBody", "findMessage", "AppError", "muteAuthor", "body"]
-    },
-    {
-      "file": "apps/api/src/routes/chat.ts",
-      "line": 238,
-      "method": "get",
-      "path": "'/v1/admin/chat/reports'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "requireAdmin", "listOpenChatReports", "getDb"]
-    },
-    {
-      "file": "apps/api/src/routes/chat.ts",
-      "line": 245,
-      "method": "post",
-      "path": "'/v1/admin/chat/reports/resolve'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireAdmin",
-        "readBody",
-        "room",
-        "resolveChatReports",
-        "getDb",
-        "nowIso",
-        "notFoundError",
-        "hide",
-        "muteAuthor",
-        "body"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/clientErrors.ts",
-      "line": 10,
-      "method": "post",
-      "path": "'/v1/client-errors'",
-      "auth": false,
-      "edge": false,
-      "calls": ["post", "readBody", "recordClientErrors", "now", "log", "stringify", "body"]
-    },
-    {
-      "file": "apps/api/src/routes/clubCustom.ts",
-      "line": 10,
-      "method": "get",
-      "path": "'/v1/club-custom'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "query", "getClubCustom", "getDb", "getSessionOrThrow"]
-    },
-    {
-      "file": "apps/api/src/routes/clubCustom.ts",
-      "line": 17,
-      "method": "put",
-      "path": "'/v1/club-custom'",
-      "auth": true,
-      "edge": false,
-      "calls": ["put", "readBody", "putClubCustom", "getDb", "getSessionOrThrow"]
-    },
-    {
-      "file": "apps/api/src/routes/clubStrength.ts",
-      "line": 20,
-      "method": "get",
-      "path": "STRENGTH_PATH",
-      "auth": false,
-      "edge": true,
-      "calls": ["get", "edgeCached", "readStrengthState"]
-    },
-    {
-      "file": "apps/api/src/routes/clubStrength.ts",
-      "line": 29,
-      "method": "get",
-      "path": "'/v1/admin/club-strength'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireAdmin",
-        "split",
-        "trim",
-        "getProfile",
-        "getDb",
-        "includes",
-        "isAdminEmail",
-        "AppError",
-        "reqLang",
-        "parseWithAppError",
-        "query",
-        "readStrengthHistory"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/cup.ts",
-      "line": 521,
-      "method": "get",
-      "path": "'/v1/cups/home'",
-      "auth": false,
-      "edge": true,
-      "calls": [
-        "get",
-        "edgeCached",
-        "getDb",
-        "nowIso",
-        "cupSchedule",
-        "currentCup",
-        "notFoundError",
-        "cupKo",
-        "recentCupFor",
-        "all",
-        "cupHomeView",
-        "cupChampionView",
-        "divisionsOf",
-        "reduce",
-        "max"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/cup.ts",
-      "line": 549,
-      "method": "get",
-      "path": "'/v1/cups/:cupId'",
-      "auth": false,
-      "edge": true,
-      "calls": [
-        "get",
-        "cupAndAll",
-        "cupView",
-        "getDb",
-        "nowIso",
-        "id",
-        "param",
-        "edgeCached",
-        "test",
-        "cupById",
-        "load"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/cup.ts",
-      "line": 567,
-      "method": "get",
-      "path": "'/v1/cups/:cupId/me'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireOwner",
-        "getDb",
-        "cupAndAll",
-        "myDivision",
-        "param",
-        "nowIso",
-        "all",
-        "cupEntriesOf",
-        "cupMatchesOf",
-        "ownerItemsOf",
-        "then",
-        "eligibility",
-        "sort",
-        "localeCompare",
-        "toCupMatch",
-        "nextOddsOf",
-        "lineupLocked"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/cup.ts",
-      "line": 619,
-      "method": "post",
-      "path": "'/v1/cups/:cupId/entries'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "getDb",
-        "cupAndAll",
-        "myDivision",
-        "param",
-        "nowIso",
-        "cupEntriesOf",
-        "some",
-        "body",
-        "eligibility",
-        "cupKo",
-        "conflictError",
-        "toUpperCase",
-        "replaceAll",
-        "prepare",
-        "count",
-        "bind",
-        "run",
-        "pullCupIfFull"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/cup.ts",
-      "line": 665,
-      "method": "delete",
-      "path": "'/v1/cups/:cupId/entries/me'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "delete",
-        "requireOwner",
-        "getDb",
-        "cupAndAll",
-        "myDivision",
-        "param",
-        "nowIso",
-        "conflictError",
-        "cupKo",
-        "update",
-        "set",
-        "where",
-        "and",
-        "eq",
-        "body"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/cup.ts",
-      "line": 686,
-      "method": "get",
-      "path": "'/v1/cups/:cupId/matches/:matchId'",
-      "auth": false,
-      "edge": false,
-      "calls": [
-        "get",
-        "getDb",
-        "cupOf",
-        "select",
-        "from",
-        "where",
-        "and",
-        "eq",
-        "param",
-        "notFoundError",
-        "cupKo",
-        "parse",
-        "flatMap",
-        "all",
-        "publicNamesOf",
-        "Set",
-        "teamLogosByIds",
-        "toMatch",
-        "reqLang"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/cup.ts",
-      "line": 740,
-      "method": "get",
-      "path": "'/v1/items'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "requireOwner", "ownerItemsOf", "getDb", "iapAccount", "iapStores"]
-    },
-    {
-      "file": "apps/api/src/routes/cup.ts",
-      "line": 756,
-      "method": "post",
-      "path": "`/v1/items/${item}/use`",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "readBody",
-        "spendItem",
-        "getDb",
-        "nowIso",
-        "conflictError",
-        "cupKo"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/cup.ts",
-      "line": 771,
-      "method": "get",
-      "path": "'/v1/items/gift'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "requireOwner", "homeGiftClaimed", "getDb"]
-    },
-    {
-      "file": "apps/api/src/routes/cup.ts",
-      "line": 783,
-      "method": "post",
-      "path": "'/v1/items/gift/claim'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "claimHomeGift",
-        "getDb",
-        "nowIso",
-        "conflictError",
-        "cupKo"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/cup.ts",
-      "line": 792,
-      "method": "get",
-      "path": "'/v1/items/shop'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireOwner",
-        "getDb",
-        "nowIso",
-        "all",
-        "shopSnapshot",
-        "kstTodayStart",
-        "kstWeekStart",
-        "rerollShopRules",
-        "shopView"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/cup.ts",
-      "line": 806,
-      "method": "post",
-      "path": "`/v1/items/${item}/buy`",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "getDb",
-        "readBody",
-        "nowIso",
-        "kstTodayStart",
-        "kstWeekStart",
-        "all",
-        "shopSnapshot",
-        "rerollShopRules",
-        "shopPriceAt",
-        "conflictError",
-        "cupKo",
-        "fundsShort",
-        "buy",
-        "newId",
-        "isFundsCheck",
-        "shopView"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/cup.ts",
-      "line": 852,
-      "method": "get",
-      "path": "'/v1/items/rewards'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireOwner",
-        "getDb",
-        "all",
-        "rewardSnapshot",
-        "kstTodayStart",
-        "nowIso",
-        "rewardShopRules",
-        "rewardShop"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/cup.ts",
-      "line": 864,
-      "method": "post",
-      "path": "'/v1/items/rewards/buy'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "getDb",
-        "readBody",
-        "nowIso",
-        "kstTodayStart",
-        "all",
-        "rewardSnapshot",
-        "rewardShopRules",
-        "shopPriceAt",
-        "conflictError",
-        "cupKo",
-        "fundsShort",
-        "buyRewardWithFunds",
-        "newId",
-        "isFundsCheck",
-        "rewardShop"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/cupPredictions.ts",
-      "line": 23,
-      "method": "get",
-      "path": "'/v1/cups/:cupId/predictions'",
-      "auth": false,
-      "edge": true,
-      "calls": ["get", "cupOf", "edgeCached", "getDb", "prepare", "sum", "bind"]
-    },
-    {
-      "file": "apps/api/src/routes/cupPredictions.ts",
-      "line": 39,
-      "method": "get",
-      "path": "'/v1/cups/:cupId/predictions/me'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "requireOwner", "cupOf", "getDb", "select", "from", "where", "and", "eq"]
-    },
-    {
-      "file": "apps/api/src/routes/cupPredictions.ts",
-      "line": 62,
-      "method": "put",
-      "path": "'/v1/cups/:cupId/matches/:matchId/prediction'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "put",
-        "requireOwner",
-        "cupOf",
-        "readBody",
-        "nowIso",
-        "getDb",
-        "prepare",
-        "bind",
-        "param",
-        "run",
-        "conflictError",
-        "cupKo",
-        "purgeEdge",
-        "coalesce",
-        "sum"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/firsts.ts",
-      "line": 42,
-      "method": "get",
-      "path": "'/v1/firsts'",
-      "auth": false,
-      "edge": true,
-      "calls": [
-        "get",
-        "parseWithAppError",
-        "query",
-        "displaySeasonAt",
-        "nowIso",
-        "cron",
-        "edgeCached",
-        "firsts",
-        "getDb",
-        "ensureFirstsBackfilled",
-        "listFirsts",
-        "localizeFirsts",
-        "reqLang"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/friends.ts",
-      "line": 175,
-      "method": "get",
-      "path": "'/v1/friends'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireOwner",
-        "getDb",
-        "nowIso",
-        "teamSeasonAt",
-        "all",
-        "ensureFriendCode",
-        "batch",
-        "listFriendRows",
-        "countFriendliesSince",
-        "kstTodayStart",
-        "teamsOfOwners",
-        "listRecentFriendlies",
-        "inviteCountsOf",
-        "peopleOf",
-        "reqLang",
-        "matchViews",
-        "latestManagersOf",
-        "byState",
-        "max",
-        "Number",
-        "friendlyTeamOf",
-        "nameOf"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/friends.ts",
-      "line": 253,
-      "method": "get",
-      "path": "'/v1/friends/pending'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "receivedCountOf", "getDb", "getSessionOrThrow", "Number"]
-    },
-    {
-      "file": "apps/api/src/routes/friends.ts",
-      "line": 260,
-      "method": "post",
-      "path": "'/v1/friends/requests'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "getDb",
-        "readBody",
-        "nowIso",
-        "enforceLimit",
-        "ownerOfCode",
-        "liveTeam",
-        "teamNotFound",
-        "AppError",
-        "batch",
-        "friendRowOf",
-        "blockBetween",
-        "friendCountOf",
-        "select",
-        "from",
-        "where",
-        "eq",
-        "commitNotifiedEvent",
-        "acceptStatements",
-        "randomUUID",
-        "Number",
-        "conflictError",
-        "requestStatements",
-        "claimReferral",
-        "all",
-        "ensureFriendCode",
-        "personOf",
-        "reqLang"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/friends.ts",
-      "line": 362,
-      "method": "post",
-      "path": "'/v1/friends/:code/accept'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "getDb",
-        "ownerOfCodeParam",
-        "nowIso",
-        "friendRowOf",
-        "notFoundError",
-        "commitNotifiedEvent",
-        "acceptStatements",
-        "randomUUID",
-        "personOf",
-        "reqLang"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/friends.ts",
-      "line": 393,
-      "method": "delete",
-      "path": "'/v1/friends/:code'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "delete",
-        "requireOwner",
-        "getDb",
-        "ownerOfCodeParam",
-        "runBatch",
-        "unfriendStatements"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/friends.ts",
-      "line": 407,
-      "method": "post",
-      "path": "'/v1/friends/:code/matches'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "getDb",
-        "ownerOfCodeParam",
-        "nowIso",
-        "query",
-        "currentSeasonOrThrow",
-        "batch",
-        "friendRowOf",
-        "myTeamIn",
-        "countFriendliesSince",
-        "kstTodayStart",
-        "friendlyTeamOf",
-        "asPlayed",
-        "notFoundError",
-        "Number",
-        "rateLimited",
-        "conflictError",
-        "lineupsOf",
-        "filledCount",
-        "newId",
-        "simulateMatch",
-        "matchDetailOf",
-        "commitNotifiedEvent",
-        "recordFriendlyStatements",
-        "purgeEdge",
-        "teamMatchPlayed",
-        "h2hOf",
-        "playedMatch",
-        "reqLang",
-        "max"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/hof.ts",
-      "line": 34,
-      "method": "get",
-      "path": "'/v1/hof'",
-      "auth": false,
-      "edge": true,
-      "calls": [
-        "get",
-        "parseWithAppError",
-        "query",
-        "edgeCached",
-        "hofList",
-        "getDb",
-        "all",
-        "ensureClubIdsBackfilled",
-        "ensureCareerValuesBackfilled",
-        "ensureCardValuesBackfilled",
-        "some",
-        "listPublicHof",
-        "getPublicReadDb",
-        "load",
-        "hofCount"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/hof.ts",
-      "line": 86,
-      "method": "get",
-      "path": "'/v1/hof/:careerId'",
-      "auth": false,
-      "edge": true,
-      "calls": [
-        "get",
-        "parseWithAppError",
-        "param",
-        "edgeCached",
-        "hofDetail",
-        "getPublicHof",
-        "getDb",
-        "notFoundError"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/iap.ts",
-      "line": 36,
-      "method": "post",
-      "path": "'/v1/iap/ad-free/record'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "header",
-        "body",
-        "parse",
-        "get",
-        "getSessionOrThrow",
-        "prepare",
-        "bind",
-        "enforceLimit",
-        "getDb",
-        "nowIso",
-        "verifyIapClaim",
-        "iapAccount",
-        "floor",
-        "now",
-        "catch",
-        "unavailable",
-        "reject",
-        "recordAdFreePurchase"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/iap.ts",
-      "line": 83,
-      "method": "post",
-      "path": "'/v1/iap/google/notifications'",
-      "auth": false,
-      "edge": false,
-      "calls": [
-        "post",
-        "body",
-        "verifyPubsubToken",
-        "header",
-        "handleGoogleRtdn",
-        "readJson",
-        "nowIso"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/iap.ts",
-      "line": 91,
-      "method": "post",
-      "path": "APPLE_IAP_NOTIFY_PATH",
-      "auth": false,
-      "edge": false,
-      "calls": ["post", "readJson", "handleAppleNotification", "getDb", "nowIso", "body"]
-    },
-    {
-      "file": "apps/api/src/routes/iap.ts",
-      "line": 98,
-      "method": "post",
-      "path": "'/v1/items/iap'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "readBody",
-        "iapStores",
-        "includes",
-        "unavailable",
-        "getDb",
-        "iapOwnerOf",
-        "ownerItemsOf",
-        "reject",
-        "verifyIapClaim",
-        "iapAccount",
-        "floor",
-        "now",
-        "catch",
-        "error",
-        "stringify",
-        "String",
-        "slice",
-        "grantIapPurchase",
-        "nowIso",
-        "billingAlertId",
-        "waitUntil",
-        "send",
-        "after"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/live.ts",
-      "line": 15,
-      "method": "get",
-      "path": "EDGE.live",
-      "auth": false,
-      "edge": true,
-      "calls": [
-        "get",
-        "edgeCached",
-        "getDb",
-        "now",
-        "all",
-        "liveStats",
-        "liveFeed",
-        "Date",
-        "toISOString"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/managers.ts",
-      "line": 112,
-      "method": "get",
-      "path": "'/v1/managers'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireOwner",
-        "getDb",
-        "nowIso",
-        "teamSeasonAt",
-        "all",
-        "listManagers",
-        "marketRules",
-        "then",
-        "listEligibleCareers",
-        "listMyTeams",
-        "Set",
-        "slotIdsOf",
-        "has"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/managers.ts",
-      "line": 156,
-      "method": "post",
-      "path": "'/v1/managers'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "getDb",
-        "readBody",
-        "nowIso",
-        "cardForManager",
-        "notFoundError",
-        "conflictError",
-        "teamSeasonAt",
-        "checkCupManager",
-        "managerOriginOf",
-        "startManagerCareer",
-        "newSeed",
-        "isActiveConflict",
-        "stripFromTeams",
-        "purgeEdge",
-        "teamSaved",
-        "waitUntil",
-        "refreshAfterChange",
-        "managerCareerOf"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/managers.ts",
-      "line": 197,
-      "method": "post",
-      "path": "'/v1/managers/:managerId/abandon'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "abandonManagerCareer",
-        "getDb",
-        "managerIdOf",
-        "nowIso",
-        "managerGone",
-        "body"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/managers.ts",
-      "line": 212,
-      "method": "post",
-      "path": "'/v1/managers/:managerId/release'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "getDb",
-        "managerIdOf",
-        "nowIso",
-        "managerCareerOf",
-        "managerGone",
-        "teamSeasonAt",
-        "listMyTeams",
-        "some",
-        "conflictError",
-        "releaseManagerCard",
-        "marketRules"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/managers.ts",
-      "line": 235,
-      "method": "post",
-      "path": "'/v1/managers/:managerId/finish'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "getDb",
-        "managerIdOf",
-        "readBody",
-        "nowIso",
-        "teamSeasonAt",
-        "finishManagerCareer",
-        "managerCareerOf",
-        "managerGone",
-        "waitUntil",
-        "refreshAfterChange"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/market.ts",
-      "line": 100,
-      "method": "get",
-      "path": "'/v1/market'",
-      "auth": false,
-      "edge": true,
-      "calls": [
-        "get",
-        "parseWithAppError",
-        "query",
-        "teamSeasonAt",
-        "nowIso",
-        "getDb",
-        "all",
-        "listOpenListings",
-        "recentSales",
-        "resolve",
-        "edgeCached",
-        "marketList",
-        "load"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/market.ts",
-      "line": 133,
-      "method": "get",
-      "path": "'/v1/market/chart'",
-      "auth": false,
-      "edge": true,
-      "calls": [
-        "get",
-        "parseWithAppError",
-        "query",
-        "nowIso",
-        "teamSeasonAt",
-        "kstDays",
-        "Date",
-        "edgeCached",
-        "marketChart",
-        "getDb"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/market.ts",
-      "line": 156,
-      "method": "get",
-      "path": "'/v1/market/cards/:careerId/trades'",
-      "auth": false,
-      "edge": false,
-      "calls": ["get", "parseWithAppError", "param", "cardTrades", "getDb"]
-    },
-    {
-      "file": "apps/api/src/routes/market.ts",
-      "line": 168,
-      "method": "get",
-      "path": "'/v1/market/funds'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "requireOwner", "marketFunds", "getDb"]
-    },
-    {
-      "file": "apps/api/src/routes/market.ts",
-      "line": 174,
-      "method": "get",
-      "path": "'/v1/market/funds/history'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "requireOwner", "parseWithAppError", "query", "fundsHistory", "getDb"]
-    },
-    {
-      "file": "apps/api/src/routes/market.ts",
-      "line": 189,
-      "method": "get",
-      "path": "'/v1/market/me'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireOwner",
-        "getDb",
-        "nowIso",
-        "all",
-        "marketFunds",
-        "countBuysSince",
-        "kstTodayStart",
-        "myOpenListings",
-        "myTrades",
-        "myFundsSpends",
-        "marketRules",
-        "teamSeasonAt",
-        "max"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/market.ts",
-      "line": 219,
-      "method": "post",
-      "path": "'/v1/market/listings'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "getDb",
-        "readBody",
-        "nowIso",
-        "seasonOrThrow",
-        "all",
-        "cardForListing",
-        "countOpenListingsOf",
-        "marketRules",
-        "notFoundError",
-        "conflictError",
-        "cardManager",
-        "cardLocked",
-        "checkCupListing",
-        "priceBand",
-        "newId",
-        "insertListing",
-        "getListing"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/market.ts",
-      "line": 262,
-      "method": "delete",
-      "path": "'/v1/market/listings/:listingId'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "delete",
-        "requireOwner",
-        "cancelListing",
-        "getDb",
-        "listingIdOf",
-        "nowIso",
-        "listingGone",
-        "body"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/market.ts",
-      "line": 269,
-      "method": "post",
-      "path": "'/v1/market/listings/:listingId/buy'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "getDb",
-        "listingIdOf",
-        "readBody",
-        "nowIso",
-        "seasonOrThrow",
-        "all",
-        "getListing",
-        "fundsOf",
-        "countBuysSince",
-        "kstTodayStart",
-        "marketRules",
-        "listingGone",
-        "conflictError",
-        "fundsShort",
-        "buyListing",
-        "marketFee",
-        "ovrBand",
-        "kstDay",
-        "marketRatio",
-        "isFundsCheck"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/market.ts",
-      "line": 322,
-      "method": "post",
-      "path": "'/v1/cards/release'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "getDb",
-        "readBody",
-        "nowIso",
-        "teamSeasonAt",
-        "all",
-        "resolve",
-        "myTeamIn",
-        "marketRules",
-        "Set",
-        "slotIdsOf",
-        "some",
-        "has",
-        "conflictError",
-        "releaseCards"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/market.ts",
-      "line": 347,
-      "method": "post",
-      "path": "'/v1/cards/lock'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "getDb",
-        "readBody",
-        "setCardLocked",
-        "nowIso",
-        "cardForListing",
-        "notFoundError",
-        "cardManager",
-        "conflictError"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/notifications.ts",
-      "line": 28,
-      "method": "post",
-      "path": "'/v1/notifications/:id/interaction'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "getSessionOrThrow",
-        "AppError",
-        "parseWithAppError",
-        "param",
-        "readBody",
-        "nowIso",
-        "parse",
-        "recordPushInteraction",
-        "header",
-        "body"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/notifications.ts",
-      "line": 44,
-      "method": "get",
-      "path": "'/v1/notifications'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "parseWithAppError",
-        "queryWithoutLang",
-        "listNotifications",
-        "getSessionOrThrow",
-        "nowIso",
-        "reqLang",
-        "localizeNotification"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/notifications.ts",
-      "line": 56,
-      "method": "post",
-      "path": "'/v1/notifications/read-all'",
-      "auth": true,
-      "edge": false,
-      "calls": ["post", "readBody", "nowIso", "readAllNotifications", "getSessionOrThrow"]
-    },
-    {
-      "file": "apps/api/src/routes/notifications.ts",
-      "line": 67,
-      "method": "get",
-      "path": "'/v1/notifications/:id'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "parseWithAppError",
-        "param",
-        "ownNotification",
-        "getSessionOrThrow",
-        "nowIso",
-        "notFoundError",
-        "localizeNotification",
-        "reqLang"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/notifications.ts",
-      "line": 73,
-      "method": "post",
-      "path": "'/v1/notifications/:id/read'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "parseWithAppError",
-        "param",
-        "readNotification",
-        "getSessionOrThrow",
-        "nowIso",
-        "notFoundError"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/ownerProfile.ts",
-      "line": 45,
-      "method": "get",
-      "path": "'/v1/owner/archive'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireOwner",
-        "getDb",
-        "nowIso",
-        "reqLang",
-        "openTeamSeasons",
-        "teamSeasonClosed",
-        "all",
-        "ownerProfileOf",
-        "honorsOf",
-        "select",
-        "from",
-        "where",
-        "inArray",
-        "Set",
-        "flatMap",
-        "parse",
-        "has",
-        "closeMetaKey",
-        "teamSeasonAt",
-        "some",
-        "push",
-        "teamSeasonName",
-        "includes"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/ownerProfile.ts",
-      "line": 101,
-      "method": "get",
-      "path": "'/v1/owners/by-team/:teamId'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "parseWithAppError",
-        "param",
-        "getDb",
-        "all",
-        "liveTeam",
-        "resolveSession",
-        "teamNotFound",
-        "ownerProfileOf",
-        "nowIso",
-        "reqLang"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/ownerProfile.ts",
-      "line": 128,
-      "method": "post",
-      "path": "'/v1/admin/owner-titles/backfill'",
-      "auth": true,
-      "edge": false,
-      "calls": ["post", "requireAdmin", "readBody", "backfillOwnerTitles", "getDb", "nowIso"]
-    },
-    {
-      "file": "apps/api/src/routes/ownerProfile.ts",
-      "line": 136,
-      "method": "get",
-      "path": "'/v1/owner/title'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireOwner",
-        "getDb",
-        "all",
-        "cupHonorsOf",
-        "permanentTitlesOf",
-        "nowIso",
-        "select",
-        "from",
-        "where",
-        "eq",
-        "orderBy",
-        "desc",
-        "limit",
-        "titlesOf"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/ownerProfile.ts",
-      "line": 165,
-      "method": "put",
-      "path": "'/v1/owner/title'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "put",
-        "requireOwner",
-        "getDb",
-        "readBody",
-        "all",
-        "cupHonorsOf",
-        "permanentTitlesOf",
-        "nowIso",
-        "titlesOf",
-        "includes",
-        "conflictError",
-        "cupKo",
-        "update",
-        "set",
-        "where",
-        "eq",
-        "select",
-        "from",
-        "purgeEdge",
-        "flatMap",
-        "teamRank",
-        "achRank",
-        "and"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/ownerSummary.ts",
-      "line": 13,
-      "method": "get",
-      "path": "'/v1/owner/recap-status'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "ownerTierOfProfile", "getDb", "getSessionOrThrow", "nowIso"]
-    },
-    {
-      "file": "apps/api/src/routes/ownerSummary.ts",
-      "line": 17,
-      "method": "get",
-      "path": "'/v1/owner/summary'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "getDb",
-        "getSessionOrThrow",
-        "getProfile",
-        "isLinked",
-        "nowIso",
-        "all",
-        "listOwnSummary",
-        "ownerTierHistoryOfProfile",
-        "lastClosedSeason",
-        "commentIdentity"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/ownerTeam.ts",
-      "line": 247,
-      "method": "get",
-      "path": "'/v1/owner-team'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireOwner",
-        "getDb",
-        "nowIso",
-        "seasonQuery",
-        "batch",
-        "listMyTeams",
-        "listEligibleCareers",
-        "countMatchesSince",
-        "kstTodayStart",
-        "foundersOf",
-        "activeBalanceQuery",
-        "teamSeasonAt",
-        "friendlyTeamOf",
-        "peakOf",
-        "toLineupCareer",
-        "teamPlayerCard",
-        "Map",
-        "slotIdsOf",
-        "has",
-        "eligibleMap",
-        "careersByIds",
-        "set",
-        "coachOf",
-        "seasonOptions",
-        "reqLang",
-        "toOwnerTeam",
-        "buildLineup",
-        "layoutOf",
-        "findLast",
-        "max",
-        "Number",
-        "pastSalaryBudgetFrom"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/ownerTeam.ts",
-      "line": 322,
-      "method": "put",
-      "path": "'/v1/owner-team'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "put",
-        "requireOwner",
-        "getDb",
-        "readBody",
-        "nowIso",
-        "teamSeasonAt",
-        "currentSeasonOrThrow",
-        "checkEditableSeason",
-        "checkName",
-        "Set",
-        "AppError",
-        "eligibleMap",
-        "careersByIds",
-        "some",
-        "has",
-        "pastSalarySum",
-        "get",
-        "pastSalaryBudgetOf",
-        "pastSalaryOverText",
-        "myTeamIn",
-        "friendlyTeamOf",
-        "coachOf",
-        "coachNotEligible",
-        "layoutOf",
-        "buildLineup",
-        "checkCupLineup",
-        "filledCount",
-        "lineupOvr",
-        "stringify",
-        "insert",
-        "values",
-        "newId",
-        "onConflictDoUpdate",
-        "returning",
-        "toOwnerTeam",
-        "reqLang",
-        "purgeEdge",
-        "teamSaved",
-        "waitUntil",
-        "refreshAfterChange"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/ownerTeam.ts",
-      "line": 455,
-      "method": "put",
-      "path": "'/v1/owner-team/coach'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "put",
-        "requireOwner",
-        "getDb",
-        "readBody",
-        "nowIso",
-        "currentSeasonOrThrow",
-        "myTeamIn",
-        "teamRequired",
-        "coachOf",
-        "coachNotEligible",
-        "slotIdsOf",
-        "checkCupLineup",
-        "update",
-        "set",
-        "where",
-        "and",
-        "eq",
-        "purgeEdge",
-        "teamSaved",
-        "waitUntil",
-        "refreshAfterChange"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/ownerTeam.ts",
-      "line": 480,
-      "method": "put",
-      "path": "'/v1/owner-team/presets'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "put",
-        "requireOwner",
-        "readBody",
-        "nowIso",
-        "teamSeasonAt",
-        "currentSeasonOrThrow",
-        "checkEditableSeason",
-        "setTeamPresets",
-        "getDb",
-        "teamNotFound"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/ownerTeam.ts",
-      "line": 494,
-      "method": "get",
-      "path": "'/v1/owner-team/opponents'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireOwner",
-        "getDb",
-        "nowIso",
-        "currentSeasonOrThrow",
-        "myTeamIn",
-        "teamRequired",
-        "listOpponentCandidates",
-        "kstTodayStart",
-        "floor",
-        "random",
-        "slice",
-        "sort",
-        "logoOf",
-        "shapeOf",
-        "layoutOf",
-        "recordOf"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/ownerTeam.ts",
-      "line": 533,
-      "method": "post",
-      "path": "'/v1/owner-team/matches'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "getDb",
-        "readBody",
-        "nowIso",
-        "currentSeasonOrThrow",
-        "batch",
-        "myTeamIn",
-        "challengedSince",
-        "kstTodayStart",
-        "openLiveSince",
-        "liveTeam",
-        "teamRequired",
-        "waitUntil",
-        "finishOpenLive",
-        "reqLang",
-        "rateLimited",
-        "teamNotFound",
-        "some",
-        "all",
-        "lineupsOf",
-        "meetingsSince",
-        "repeatWindowStart",
-        "filledCount",
-        "conflictError",
-        "newId",
-        "startLiveMatch",
-        "matchDetailOf",
-        "liveResult",
-        "livePayload",
-        "Number",
-        "max",
-        "stringify",
-        "liveDone",
-        "insertLive",
-        "finalizeLive",
-        "afterLiveFinal",
-        "liveStartResponse",
-        "simulateMatch",
-        "matchScore",
-        "ratingChange",
-        "commitNotifiedEvent",
-        "recordMatchStatements",
-        "matchNotice",
-        "purgeEdge",
-        "teamMatchPlayed",
-        "refreshAfterChange",
-        "playedMatch"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/ownerTeam.ts",
-      "line": 698,
-      "method": "post",
-      "path": "'/v1/owner-team/matches/:id/moments/:index'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "getDb",
-        "reqLang",
-        "readBody",
-        "Number",
-        "param",
-        "liveById",
-        "liveNotFound",
-        "parse",
-        "isInteger",
-        "resolveMoment",
-        "AppError",
-        "liveMomentView",
-        "momentGoals",
-        "liveDone",
-        "finalizeLive",
-        "stringify",
-        "nowIso",
-        "afterLiveFinal",
-        "saveLiveState",
-        "conflictError"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/ownerTeam.ts",
-      "line": 743,
-      "method": "post",
-      "path": "'/v1/owner-team/matches/:id/finish'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "requireOwner",
-        "getDb",
-        "liveById",
-        "param",
-        "liveNotFound",
-        "finalizeLive",
-        "nowIso",
-        "reqLang",
-        "afterLiveFinal"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/ownerTeam.ts",
-      "line": 756,
-      "method": "get",
-      "path": "'/v1/owner-team/achievement-notifications'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireOwner",
-        "nowIso",
-        "seasonQuery",
-        "refreshOwnerAchievements",
-        "getDb",
-        "localizeAchievements",
-        "reqLang"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/ownerTeam.ts",
-      "line": 774,
-      "method": "get",
-      "path": "'/v1/owner-team/achievements'",
-      "auth": true,
-      "edge": true,
-      "calls": [
-        "get",
-        "requireOwner",
-        "getDb",
-        "nowIso",
-        "seasonQuery",
-        "refreshOwnerAchievements",
-        "achievementRankOf",
-        "edgeCached",
-        "achRanked",
-        "reqLang",
-        "seasonOptions",
-        "localizeAchievements"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/ownerTeam.ts",
-      "line": 804,
-      "method": "get",
-      "path": "'/v1/owner-team/matches'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireOwner",
-        "getDb",
-        "seasonQuery",
-        "nowIso",
-        "query",
-        "parseWithAppError",
-        "myTeamIn",
-        "lastIndexOf",
-        "listMatchesPage",
-        "slice",
-        "matchViews",
-        "reqLang"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/ownerTeam.ts",
-      "line": 826,
-      "method": "get",
-      "path": "'/v1/owner-team/stats'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "requireOwner",
-        "getDb",
-        "seasonQuery",
-        "nowIso",
-        "myTeamIn",
-        "all",
-        "listStatsMatches",
-        "otherKindTotals",
-        "teamStatsView",
-        "reqLang"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/profile.ts",
-      "line": 73,
-      "method": "get",
-      "path": "'/v1/profile'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "getDb",
-        "nowIso",
-        "resolveSession",
-        "Boolean",
-        "header",
-        "AppError",
-        "getProfile",
-        "revokeSession",
-        "enforceLimit",
-        "clientIp",
-        "createProfile",
-        "issueSession",
-        "sessionCookie",
-        "now",
-        "parse",
-        "touchLastSeen",
-        "buildProfileResponse"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/profile.ts",
-      "line": 118,
-      "method": "get",
-      "path": "'/v1/avatars/:id'",
-      "auth": false,
-      "edge": true,
-      "calls": [
-        "get",
-        "param",
-        "test",
-        "notFound",
-        "edgeCached",
-        "getDb",
-        "select",
-        "from",
-        "where",
-        "eq",
-        "header",
-        "split",
-        "atob",
-        "charCodeAt",
-        "includes",
-        "body"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/profile.ts",
-      "line": 141,
-      "method": "put",
-      "path": "'/v1/profile/avatar'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "put",
-        "getDb",
-        "getSessionOrThrow",
-        "getProfile",
-        "commentIdentity",
-        "AppError",
-        "avatarText",
-        "reqLang",
-        "readBody",
-        "validateAvatarImage",
-        "enforceLimit",
-        "nowIso",
-        "randomUUID",
-        "batch",
-        "insert",
-        "values",
-        "onConflictDoUpdate",
-        "delete",
-        "where",
-        "eq",
-        "update",
-        "set",
-        "purgeEdge",
-        "waitUntil",
-        "chatRoom",
-        "updateAvatar",
-        "buildProfileResponse"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/profile.ts",
-      "line": 168,
-      "method": "patch",
-      "path": "'/v1/profile/settings'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "patch",
-        "getDb",
-        "getSessionOrThrow",
-        "readBody",
-        "partial",
-        "fromEntries",
-        "entries",
-        "updateSettings",
-        "buildProfileResponse"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/profile.ts",
-      "line": 183,
-      "method": "put",
-      "path": "'/v1/profile/nickname'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "put",
-        "getDb",
-        "getSessionOrThrow",
-        "readBody",
-        "getProfile",
-        "commentIdentity",
-        "AppError",
-        "isReservedNickname",
-        "isAcceptablePublicName",
-        "setNickname",
-        "conflictError",
-        "buildProfileResponse"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/profile.ts",
-      "line": 224,
-      "method": "post",
-      "path": "'/v1/profile/recovery-code'",
-      "auth": true,
-      "edge": false,
-      "calls": ["post", "getDb", "getSessionOrThrow", "nowIso", "issueRecoveryCode"]
-    },
-    {
-      "file": "apps/api/src/routes/profile.ts",
-      "line": 234,
-      "method": "post",
-      "path": "'/v1/profile/recover'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "getDb",
-        "getSessionOrThrow",
-        "readBody",
-        "nowIso",
-        "clientIp",
-        "recoverProfile"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/profile.ts",
-      "line": 252,
-      "method": "post",
-      "path": "'/v1/profile/delete'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "getDb",
-        "getSessionOrThrow",
-        "parseDeleteBody",
-        "readJson",
-        "nowIso",
-        "readSessionToken",
-        "AppError",
-        "sha256Hex",
-        "issueDeleteConfirmToken",
-        "select",
-        "from",
-        "where",
-        "eq",
-        "executeProfileDeletion",
-        "purgeEdge",
-        "waitUntil",
-        "chatRoom",
-        "updateAvatar",
-        "deleteSnapshots",
-        "firstsChanged",
-        "profileDeleted",
-        "revokeAppleAuthorization",
-        "floor",
-        "now",
-        "then",
-        "warn",
-        "stringify",
-        "error",
-        "String",
-        "slice",
-        "body"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/push.ts",
-      "line": 36,
-      "method": "get",
-      "path": "'/v1/push/preferences'",
-      "auth": true,
-      "edge": false,
-      "calls": ["get", "appSession", "getPushPreferences", "getDb"]
-    },
-    {
-      "file": "apps/api/src/routes/push.ts",
-      "line": 46,
-      "method": "put",
-      "path": "'/v1/push/preferences'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "put",
-        "appSession",
-        "readBody",
-        "enforceLimit",
-        "getDb",
-        "nowIso",
-        "putPushPreferences"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/push.ts",
-      "line": 65,
-      "method": "put",
-      "path": "'/v1/push/device'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "put",
-        "appSession",
-        "readBody",
-        "nowIso",
-        "enforceLimit",
-        "getDb",
-        "registerPushDevice"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/push.ts",
-      "line": 80,
-      "method": "delete",
-      "path": "'/v1/push/device'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "delete",
-        "appSession",
-        "readBody",
-        "enforceLimit",
-        "getDb",
-        "nowIso",
-        "unregisterPushDevice"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/push.ts",
-      "line": 94,
-      "method": "post",
-      "path": "'/v1/push/test'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "appSession",
-        "readBody",
-        "AppError",
-        "nowIso",
-        "ownPushDevice",
-        "notFoundError",
-        "reservePushTest",
-        "queueNotification",
-        "prepare",
-        "bind",
-        "sha256Hex",
-        "Date",
-        "parse",
-        "toISOString",
-        "run",
-        "reqLang",
-        "send"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/releaseNotes.ts",
-      "line": 13,
-      "method": "post",
-      "path": "'/v1/internal/release-notes'",
-      "auth": false,
-      "edge": false,
-      "calls": [
-        "post",
-        "readBody",
-        "exec",
-        "header",
-        "Error",
-        "verifyGithubRelease",
-        "AppError",
-        "publishReleaseNotes",
-        "nowIso",
-        "purgeEdge",
-        "boardChanged",
-        "balancePatched",
-        "kickNewsPush"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/reports.ts",
-      "line": 12,
-      "method": "post",
-      "path": "'/v1/reports/names'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "readBody",
-        "getDb",
-        "getNameTarget",
-        "notFoundError",
-        "getSessionOrThrow",
-        "AppError",
-        "reportName",
-        "nowIso",
-        "body"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/retiredNumbers.ts",
-      "line": 85,
-      "method": "get",
-      "path": "'/v1/careers/:careerId/retired-number-progress'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "parseWithAppError",
-        "param",
-        "query",
-        "getDb",
-        "getCareerHead",
-        "getSessionOrThrow",
-        "careerOwnerMismatch",
-        "retiredNumberProgress"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/retiredNumbers.ts",
-      "line": 102,
-      "method": "get",
-      "path": "'/v1/careers/:careerId/retired-number'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "parseWithAppError",
-        "param",
-        "getCareerHead",
-        "getDb",
-        "getSessionOrThrow",
-        "careerOwnerMismatch",
-        "judgeRetirement",
-        "nowIso",
-        "verifiedRetiredTitle"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/retiredNumbers.ts",
-      "line": 136,
-      "method": "get",
-      "path": "'/v1/retired-numbers/summary'",
-      "auth": false,
-      "edge": false,
-      "calls": ["get", "seasonOf", "cachedRead", "retiredNumbersSummary", "summarizeRetiredNumbers"]
-    },
-    {
-      "file": "apps/api/src/routes/retiredNumbers.ts",
-      "line": 145,
-      "method": "get",
-      "path": "'/v1/retired-numbers'",
-      "auth": false,
-      "edge": false,
-      "calls": [
-        "get",
-        "seasonOf",
-        "parseWithAppError",
-        "query",
-        "retiredNumbersClub",
-        "listRetiredNumbers",
-        "retiredNumbersPage",
-        "pageRetiredNumbers",
-        "retiredNumbers",
-        "cachedRead"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/seasonGauge.ts",
-      "line": 17,
-      "method": "get",
-      "path": "EDGE.seasonGauge",
-      "auth": false,
-      "edge": true,
-      "calls": [
-        "get",
-        "nowIso",
-        "activeSeason",
-        "edgeCached",
-        "readSeasonGauge",
-        "seasonGaugeView",
-        "seasonSchedule"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/seasonRecap.ts",
-      "line": 121,
-      "method": "get",
-      "path": "'/v1/owner/season-recap'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "getDb",
-        "getSessionOrThrow",
-        "nowIso",
-        "openTeamSeasons",
-        "teamSeasonClosed",
-        "parseWithAppError",
-        "query",
-        "at",
-        "includes",
-        "closeStateOf",
-        "reply",
-        "all",
-        "select",
-        "from",
-        "leftJoin",
-        "eq",
-        "where",
-        "and",
-        "honorsOf",
-        "squadOf",
-        "parseStats",
-        "recapStats",
-        "teamPlayerCard"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/seasonRecap.ts",
-      "line": 216,
-      "method": "get",
-      "path": "'/v1/owner/honors'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "nowIso",
-        "honorsOf",
-        "getDb",
-        "getSessionOrThrow",
-        "openTeamSeasons",
-        "teamSeasonClosed"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/serverStatus.ts",
-      "line": 54,
-      "method": "get",
-      "path": "EDGE.serverStatus",
-      "auth": false,
-      "edge": true,
-      "calls": ["get", "edgeCached", "loadServerStatus", "now"]
-    },
-    {
-      "file": "apps/api/src/routes/teamComments.ts",
-      "line": 36,
-      "method": "get",
-      "path": "'/v1/teams/:teamId/comments'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "teamParam",
-        "getDb",
-        "resolveSession",
-        "all",
-        "liveTeam",
-        "listTeamComments",
-        "getViewer",
-        "then",
-        "hiddenTeamCommentsFor",
-        "teamNotFound",
-        "has",
-        "ownerTiersOf",
-        "nowIso"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/teamComments.ts",
-      "line": 69,
-      "method": "post",
-      "path": "'/v1/teams/:teamId/comments'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "teamParam",
-        "getDb",
-        "readBody",
-        "nowIso",
-        "all",
-        "assertCanComment",
-        "liveTeam",
-        "teamNotFound",
-        "createTeamComment",
-        "ownerTierOfProfile"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/teams.ts",
-      "line": 77,
-      "method": "get",
-      "path": "'/v1/teams'",
-      "auth": false,
-      "edge": true,
-      "calls": [
-        "get",
-        "nowIso",
-        "parseWithAppError",
-        "queryWithoutLang",
-        "teamSeasonParam",
-        "edgeCached",
-        "teamRank",
-        "listTeamRanking",
-        "getDb",
-        "listTeamRecentForm",
-        "logoOf",
-        "recordOf",
-        "withSeasons",
-        "reqLang"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/teams.ts",
-      "line": 119,
-      "method": "get",
-      "path": "'/v1/achievements/ranking'",
-      "auth": false,
-      "edge": true,
-      "calls": [
-        "get",
-        "nowIso",
-        "parseWithAppError",
-        "queryWithoutLang",
-        "teamSeasonParam",
-        "edgeCached",
-        "achRank",
-        "listAchievementRanking",
-        "getDb",
-        "logoOf",
-        "withSeasons",
-        "reqLang"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/teams.ts",
-      "line": 152,
-      "method": "get",
-      "path": "'/v1/teams/:teamId'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "get",
-        "teamParam",
-        "getDb",
-        "all",
-        "liveTeam",
-        "resolveSession",
-        "teamNotFound",
-        "slotIdsOf",
-        "careersByIds",
-        "ratingRankOf",
-        "isTeamLiked",
-        "friendStateOf",
-        "cupHonorsOf",
-        "teamCoachOf",
-        "nowIso",
-        "eligibleMap",
-        "teamSeasonAt",
-        "buildLineup",
-        "layoutOf",
-        "reqLang",
-        "teamSeasonName",
-        "slotsOf",
-        "logoOf",
-        "lineupOvr",
-        "linesOf",
-        "recordOf",
-        "teamBadges",
-        "teamSeasonClosed",
-        "has",
-        "teamPlayerCard",
-        "lineupSynergy"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/teams.ts",
-      "line": 222,
-      "method": "get",
-      "path": "'/v1/teams/:teamId/stats'",
-      "auth": false,
-      "edge": true,
-      "calls": [
-        "get",
-        "teamParam",
-        "getDb",
-        "edgeCached",
-        "teamStats",
-        "liveTeam",
-        "all",
-        "listStatsMatches",
-        "otherKindTotals",
-        "teamStatsView",
-        "teamNotFound",
-        "reqLang",
-        "anonText"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/teams.ts",
-      "line": 244,
-      "method": "post",
-      "path": "'/v1/teams/:teamId/views'",
-      "auth": false,
-      "edge": false,
-      "calls": ["post", "addTeamView", "getDb", "teamParam", "teamNotFound", "body"]
-    },
-    {
-      "file": "apps/api/src/routes/ticker.ts",
-      "line": 16,
-      "method": "get",
-      "path": "EDGE.ticker",
-      "auth": false,
-      "edge": true,
-      "calls": [
-        "get",
-        "edgeCached",
-        "getDb",
-        "now",
-        "displaySeasonAt",
-        "Date",
-        "toISOString",
-        "all",
-        "tickerTransfers",
-        "tickerFirsts",
-        "reqLang",
-        "localizeTickerFirsts"
-      ]
-    },
-    {
-      "file": "apps/api/src/routes/translate.ts",
-      "line": 15,
-      "method": "post",
-      "path": "'/v1/translate'",
-      "auth": true,
-      "edge": false,
-      "calls": [
-        "post",
-        "readBody",
-        "translationKey",
-        "getTranslation",
-        "nowIso",
-        "enforceLimit",
-        "getDb",
-        "getSessionOrThrow",
-        "translateText",
-        "waitUntil",
-        "putTranslation"
-      ]
-    }
-  ],
-  "computedMethodRegistrations": [
-    {
-      "file": "apps/api/src/routes/boards.ts",
-      "methods": ["PUT", "DELETE"],
-      "path": "/v1/boards/posts/:postId/like"
-    },
-    {
-      "file": "apps/api/src/routes/teams.ts",
-      "methods": ["PUT", "DELETE"],
-      "path": "/v1/teams/:teamId/like"
-    }
-  ],
-  "clientCallSites": [
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 49,
-      "call": "apiFetch",
-      "args": "'/v1/admin/cups'"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 51,
-      "call": "apiFetch",
-      "args": "'/v1/admin/cups', { method: 'POST', body: JSON.stringify(input) }"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 53,
-      "call": "apiFetch",
-      "args": "`/v1/admin/cups/${id}`, { method: 'DELETE' }"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 55,
-      "call": "apiFetch",
-      "args": "'/v1/admin/cups/caps'"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 57,
-      "call": "apiFetch",
-      "args": "`/v1/admin/cups/${id}/cap`, {\n    method: 'PUT',\n    body: JSON.stringify({ ovrMax }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 62,
-      "call": "apiFetch",
-      "args": "'/v1/admin/balance'"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 64,
-      "call": "apiFetch",
-      "args": "'/v1/admin/balance', { method: 'POST', body: JSON.stringify(draft) }"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 66,
-      "call": "apiFetch",
-      "args": "`/v1/admin/balance/${version}`, {\n    method: 'PUT',\n    body: JSON.stringify(draft),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 71,
-      "call": "apiFetch",
-      "args": "`/v1/admin/balance/${version}`, { method: 'DELETE' }"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 73,
-      "call": "apiFetch",
-      "args": "`/v1/admin/balance/${version}/activate`, { method: 'POST' }"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 77,
-      "call": "apiFetch",
-      "args": "'/v1/admin/stats'"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 78,
-      "call": "cachedGet",
-      "args": "'/v1/admin/stats', 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 88,
-      "call": "apiFetch",
-      "args": "`/v1/admin/comments${qs ? `?${qs}` : ''}`"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 91,
-      "call": "apiFetch",
-      "args": "'/v1/admin/comments/purge', {\n    method: 'POST',\n    body: JSON.stringify({ profileId }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 97,
-      "call": "apiFetch",
-      "args": "'/v1/admin/name-reports'"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 99,
-      "call": "apiFetch",
-      "args": "'/v1/admin/name-reports/resolve', {\n    method: 'POST',\n    body: JSON.stringify(input),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 106,
-      "call": "apiFetch",
-      "args": "`/v1/admin/automation?hours=${hours}`"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 109,
-      "call": "apiFetch",
-      "args": "'/v1/admin/funds'"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 112,
-      "call": "apiFetch",
-      "args": "`/v1/admin/funds/owner?q=${encodeURIComponent(q)}`"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 116,
-      "call": "apiFetch",
-      "args": "`/v1/admin/users?q=${encodeURIComponent(q)}`"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 118,
-      "call": "apiFetch",
-      "args": "`/v1/admin/users/${profileId}/items`, {\n    method: 'POST',\n    body: JSON.stringify(input),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 123,
-      "call": "apiFetch",
-      "args": "`/v1/admin/revenue?days=${days}`"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 126,
-      "call": "apiFetch",
-      "args": "'/v1/admin/invites'"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 137,
-      "call": "cachedGet",
-      "args": "`/v1/admin/push-performance?days=${days}&page=${page}${tests ? '&tests=1' : ''}${through ? `&through=${encodeURIComponent(through)}` : ''}${filters.previous ? '&previous=1' : ''}${filters.category ? `&category=${encodeURIComponent(filters.category)}` : ''}${filters.issues ? '&issues=1' : ''}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 145,
-      "call": "cachedGet",
-      "args": "`/v1/admin/automation/enforcement${before ? `?before=${encodeURIComponent(before)}` : ''}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 151,
-      "call": "apiFetch",
-      "args": "'/v1/admin/careers/hidden', {\n    method: 'POST',\n    body: JSON.stringify({ careerId, hidden }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 164,
-      "call": "cachedGet",
-      "args": "path, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 167,
-      "call": "cachedGet",
-      "args": "`/v1/admin/cups/${encodeURIComponent(cupId)}/matches/${encodeURIComponent(matchId)}/predictions?after=${encodeURIComponent(after)}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/admin.ts",
-      "line": 172,
-      "call": "apiFetch",
-      "args": "`/v1/admin/cups/${encodeURIComponent(cupId)}/matches/${encodeURIComponent(matchId)}/predictions/settle`, { method: 'POST', body: JSON.stringify({ reason }) }"
-    },
-    {
-      "file": "packages/app-core/src/api/appVersion.ts",
-      "line": 6,
-      "call": "cachedGet",
-      "args": "'/v1/app/version', 5 * 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/attendance.ts",
-      "line": 20,
-      "call": "ownerCachedGet",
-      "args": "PATH, 5 * 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/attendance.ts",
-      "line": 36,
-      "call": "apiFetch",
-      "args": "`${PATH}/check-in`, {\n    method: 'POST',\n    headers: { [IDEMPOTENCY_KEY_HEADER]: key },\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/boards.ts",
-      "line": 31,
-      "call": "cachedGet",
-      "args": "'/v1/boards/viewer', 600_000"
-    },
-    {
-      "file": "packages/app-core/src/api/boards.ts",
-      "line": 33,
-      "call": "cachedGet",
-      "args": "`/v1/boards/${board}/posts${before ? `?before=${encodeURIComponent(before)}` : ''}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/boards.ts",
-      "line": 37,
-      "call": "apiFetch",
-      "args": "`/v1/boards/posts/${id}`"
-    },
-    {
-      "file": "packages/app-core/src/api/boards.ts",
-      "line": 39,
-      "call": "apiFetch",
-      "args": "`/v1/boards/${board}/posts`, { method: 'POST', body: JSON.stringify(input) }"
-    },
-    {
-      "file": "packages/app-core/src/api/boards.ts",
-      "line": 41,
-      "call": "apiFetch",
-      "args": "`/v1/boards/posts/${id}`, { method: 'PUT', body: JSON.stringify(input) }"
-    },
-    {
-      "file": "packages/app-core/src/api/boards.ts",
-      "line": 44,
-      "call": "apiFetch",
-      "args": "'/v1/boards/translate', {\n    method: 'POST',\n    body: JSON.stringify(input),\n    keepCache: true,\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/boards.ts",
-      "line": 50,
-      "call": "apiFetch",
-      "args": "`/v1/boards/posts/${id}`, { method: 'DELETE' }"
-    },
-    {
-      "file": "packages/app-core/src/api/boards.ts",
-      "line": 52,
-      "call": "apiFetch",
-      "args": "`/v1/boards/posts/${postId}/comments`, {\n    method: 'POST',\n    body: JSON.stringify(input),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/boards.ts",
-      "line": 57,
-      "call": "apiFetch",
-      "args": "`/v1/boards/comments/${id}`, { method: 'DELETE' }"
-    },
-    {
-      "file": "packages/app-core/src/api/boards.ts",
-      "line": 62,
-      "call": "apiFetch",
-      "args": "`/v1/boards/comments/${id}/report`, {\n      method: 'POST',\n      body: JSON.stringify(input),\n    }"
-    },
-    {
-      "file": "packages/app-core/src/api/boards.ts",
-      "line": 70,
-      "call": "apiFetch",
-      "args": "`/v1/boards/comments/${commentId}/block`, { method: 'POST' }"
-    },
-    {
-      "file": "packages/app-core/src/api/boards.ts",
-      "line": 73,
-      "call": "apiFetch",
-      "args": "`/v1/boards/blocks/${id}`, { method: 'DELETE' }"
-    },
-    {
-      "file": "packages/app-core/src/api/boards.ts",
-      "line": 77,
-      "call": "apiFetch",
-      "args": "`/v1/boards/posts/${id}/views`, { method: 'POST', keepCache: true }"
-    },
-    {
-      "file": "packages/app-core/src/api/boards.ts",
-      "line": 81,
-      "call": "apiFetch",
-      "args": "`/v1/boards/posts/${id}/like`, { method: like ? 'PUT' : 'DELETE' }"
-    },
-    {
-      "file": "packages/app-core/src/api/chat.ts",
-      "line": 34,
-      "call": "apiFetch",
-      "args": "'/v1/chat/ticket', { method: 'POST', keepCache: true }"
-    },
-    {
-      "file": "packages/app-core/src/api/chat.ts",
-      "line": 39,
-      "call": "apiFetch",
-      "args": "`/v1/chat/messages/${id}/report`, {\n      method: 'POST',\n      body: JSON.stringify(input),\n      keepCache: true,\n    }"
-    },
-    {
-      "file": "packages/app-core/src/api/chat.ts",
-      "line": 48,
-      "call": "apiFetch",
-      "args": "`/v1/chat/messages/${id}/block`, { method: 'POST' }"
-    },
-    {
-      "file": "packages/app-core/src/api/chat.ts",
-      "line": 52,
-      "call": "cachedGet",
-      "args": "'/v1/chat/blocks', 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/chat.ts",
-      "line": 55,
-      "call": "cachedGet",
-      "args": "`/v1/chat/messages/${id}/owner`, 600_000"
-    },
-    {
-      "file": "packages/app-core/src/api/chat.ts",
-      "line": 57,
-      "call": "apiFetch",
-      "args": "`/v1/admin/chat/messages/${id}/hide`, { method: 'POST', keepCache: true }"
-    },
-    {
-      "file": "packages/app-core/src/api/chat.ts",
-      "line": 59,
-      "call": "apiFetch",
-      "args": "`/v1/admin/chat/messages/${id}/mute`, {\n    method: 'POST',\n    body: JSON.stringify(input),\n    keepCache: true,\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/chat.ts",
-      "line": 66,
-      "call": "apiFetch",
-      "args": "'/v1/admin/chat/reports'"
-    },
-    {
-      "file": "packages/app-core/src/api/chat.ts",
-      "line": 68,
-      "call": "apiFetch",
-      "args": "'/v1/admin/chat/reports/resolve', {\n    method: 'POST',\n    body: JSON.stringify(input),\n    keepCache: true,\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/chat.ts",
-      "line": 262,
-      "call": "setInterval",
-      "args": "() => sock.send(LIVE_PING), LIVE_PING_SEC * 1000"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 90,
-      "call": "cachedGet",
-      "args": "path, ttlMs"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 121,
-      "call": "apiFetch",
-      "args": "path, { method: 'GET' }"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 143,
-      "call": "fetch",
-      "args": "input, init"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 150,
-      "call": "fetch",
-      "args": "input, { ...init, signal: ctl.signal }"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 178,
-      "call": "fetchWithTimeout",
-      "args": "`${host.baseUrl}${withLang(path)}`, {\n      ...init,\n      method,\n      headers,\n      ...(body !== undefined ? { body } : {}),\n      ...auth,\n    }"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 238,
-      "call": "apiFetch",
-      "args": "'/v1/profile', { method: 'GET' }"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 280,
-      "call": "apiFetch",
-      "args": "'/v1/auth/google/unlink', { method: 'POST' }"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 283,
-      "call": "apiFetch",
-      "args": "'/v1/auth/logout', { method: 'POST' }"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 288,
-      "call": "apiFetch",
-      "args": "'/v1/profile/delete', { method: 'POST' }"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 295,
-      "call": "apiFetch",
-      "args": "'/v1/profile/delete', {\n    method: 'POST',\n    body: JSON.stringify({\n      confirmToken,\n      appleAuthorizationCode,\n    }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 305,
-      "call": "apiFetch",
-      "args": "'/v1/profile/nickname', { method: 'PUT', body: JSON.stringify({ nickname }) }"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 308,
-      "call": "apiFetch",
-      "args": "'/v1/profile/avatar', { method: 'PUT', body: JSON.stringify({ image }) }"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 331,
-      "call": "cachedGet",
-      "args": "`/v1/hof?${q}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 335,
-      "call": "cachedGet",
-      "args": "'/v1/careers/mine', 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 338,
-      "call": "cachedGet",
-      "args": "`/v1/hof/${encodeURIComponent(careerId)}`, 300_000"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 345,
-      "call": "cachedGet",
-      "args": "`/v1/retired-numbers${season === undefined ? '' : `?season=${season}`}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 354,
-      "call": "cachedGet",
-      "args": "`/v1/retired-numbers/summary?season=${season}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 361,
-      "call": "cachedGet",
-      "args": "`/v1/retired-numbers?season=${season}&club=${encodeURIComponent(clubId)}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 371,
-      "call": "cachedGet",
-      "args": "`/v1/retired-numbers?season=${season}&before=${before}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 392,
-      "call": "cachedGet",
-      "args": "`/v1/careers/${encodeURIComponent(careerId)}/retired-number`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 399,
-      "call": "cachedGet",
-      "args": "`/v1/firsts${season === undefined ? '' : `?season=${season}`}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 407,
-      "call": "cachedGet",
-      "args": "'/v1/live', LIVE_POLL_SEC * 1000 - 5_000"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 411,
-      "call": "cachedGet",
-      "args": "'/v1/season/gauge', 300_000"
-    },
-    {
-      "file": "packages/app-core/src/api/client.ts",
-      "line": 415,
-      "call": "cachedGet",
-      "args": "'/v1/ticker', TICKER_POLL_SEC * 1000 - 5_000"
-    },
-    {
-      "file": "packages/app-core/src/api/club-strength.ts",
-      "line": 7,
-      "call": "cachedGet",
-      "args": "path, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 33,
-      "call": "cachedGet",
-      "args": "`/v1/cups/${cupId}`, 30_000"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 34,
-      "call": "cachedGet",
-      "args": "'/v1/cups/home', 30_000"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 36,
-      "call": "apiFetch",
-      "args": "`/v1/cups/${cupId}/me`"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 38,
-      "call": "cachedGet",
-      "args": "`/v1/cups/${cupId}/matches/${matchId}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 42,
-      "call": "apiFetch",
-      "args": "`/v1/cups/${cupId}/entries`, { method: 'POST' }"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 44,
-      "call": "apiFetch",
-      "args": "`/v1/cups/${cupId}/entries/me`, { method: 'DELETE' }"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 47,
-      "call": "ownerCachedGet",
-      "args": "'/v1/items', 30_000"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 53,
-      "call": "apiFetch",
-      "args": "'/v1/items/reroll/use', {\n    method: 'POST',\n    headers: { [IDEMPOTENCY_KEY_HEADER]: key },\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 60,
-      "call": "apiFetch",
-      "args": "'/v1/items/boost/use', {\n    method: 'POST',\n    headers: { [IDEMPOTENCY_KEY_HEADER]: key },\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 70,
-      "call": "apiFetch",
-      "args": "'/v1/items/scout/use', {\n    method: 'POST',\n    headers: { [IDEMPOTENCY_KEY_HEADER]: key },\n    body: JSON.stringify({ hit }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 78,
-      "call": "apiFetch",
-      "args": "'/v1/items/iap', { method: 'POST', body: JSON.stringify(body) }"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 81,
-      "call": "ownerCachedGet",
-      "args": "'/v1/items/shop', 30_000"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 87,
-      "call": "apiFetch",
-      "args": "'/v1/items/reroll/buy', {\n    method: 'POST',\n    body: JSON.stringify({ price }),\n    headers: { [IDEMPOTENCY_KEY_HEADER]: key },\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 98,
-      "call": "ownerCachedGet",
-      "args": "'/v1/items/rewards', 30_000"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 101,
-      "call": "apiFetch",
-      "args": "'/v1/items/rewards/buy', {\n    method: 'POST',\n    body: JSON.stringify({ kind, price }),\n    headers: { [IDEMPOTENCY_KEY_HEADER]: key },\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 120,
-      "call": "cachedGet",
-      "args": "`/v1/cups/${cupId}/predictions`, 30_000"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 122,
-      "call": "cachedGet",
-      "args": "`/v1/cups/${cupId}/predictions/me`, 30_000"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 124,
-      "call": "apiFetch",
-      "args": "`/v1/cups/${cupId}/matches/${matchId}/prediction`, {\n    method: 'PUT',\n    body: JSON.stringify({ pick }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/cup.ts",
-      "line": 131,
-      "call": "apiFetch",
-      "args": "'/v1/items/scout/buy', {\n    method: 'POST',\n    headers: { [IDEMPOTENCY_KEY_HEADER]: key },\n    body: JSON.stringify({ price }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/friendPending.ts",
-      "line": 62,
-      "call": "cachedGet",
-      "args": "PATH, FRIEND_PENDING_MS"
-    },
-    {
-      "file": "packages/app-core/src/api/friends.ts",
-      "line": 22,
-      "call": "cachedGet",
-      "args": "'/v1/friends', 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/friends.ts",
-      "line": 26,
-      "call": "apiFetch",
-      "args": "'/v1/friends/requests', {\n    method: 'POST',\n    body: JSON.stringify(body),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/friends.ts",
-      "line": 32,
-      "call": "apiFetch",
-      "args": "`/v1/friends/${encodeURIComponent(code)}/accept`, {\n    method: 'POST',\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/friends.ts",
-      "line": 38,
-      "call": "apiFetch",
-      "args": "`/v1/friends/${encodeURIComponent(code)}`, { method: 'DELETE' }"
-    },
-    {
-      "file": "packages/app-core/src/api/friends.ts",
-      "line": 42,
-      "call": "apiFetch",
-      "args": "`/v1/friends/${encodeURIComponent(code)}/matches${preseason ? '?season=0' : ''}`, { method: 'POST' }"
-    },
-    {
-      "file": "packages/app-core/src/api/gift.ts",
-      "line": 30,
-      "call": "ownerCachedGet",
-      "args": "'/v1/items/gift', 10 * 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/gift.ts",
-      "line": 38,
-      "call": "apiFetch",
-      "args": "'/v1/items/gift/claim', {\n    method: 'POST',\n    headers: { [IDEMPOTENCY_KEY_HEADER]: key },\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/liveSocket.ts",
-      "line": 93,
-      "call": "setInterval",
-      "args": "() => sock.send(LIVE_PING), LIVE_PING_SEC * 1000"
-    },
-    {
-      "file": "packages/app-core/src/api/market.ts",
-      "line": 34,
-      "call": "cachedGet",
-      "args": "`/v1/market?sort=${sort}${pos ? `&pos=${pos}` : ''}${page ? `&page=${page}` : ''}`, 30_000"
-    },
-    {
-      "file": "packages/app-core/src/api/market.ts",
-      "line": 43,
-      "call": "cachedGet",
-      "args": "`/v1/market/chart?range=${range}${group ? `&pos=${group.pos}&band=${group.band}` : ''}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/market.ts",
-      "line": 49,
-      "call": "cachedGet",
-      "args": "`/v1/market/cards/${careerId}/trades`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/market.ts",
-      "line": 51,
-      "call": "cachedGet",
-      "args": "'/v1/market/funds', 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/market.ts",
-      "line": 53,
-      "call": "cachedGet",
-      "args": "'/v1/market/me', 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/market.ts",
-      "line": 55,
-      "call": "apiFetch",
-      "args": "'/v1/market/listings', {\n    method: 'POST',\n    body: JSON.stringify({ careerId, price }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/market.ts",
-      "line": 68,
-      "call": "apiFetch",
-      "args": "`/v1/market/listings/${id}`, { method: 'DELETE' }"
-    },
-    {
-      "file": "packages/app-core/src/api/market.ts",
-      "line": 71,
-      "call": "apiFetch",
-      "args": "`/v1/market/listings/${id}/buy`, {\n    method: 'POST',\n    body: JSON.stringify({ price }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/market.ts",
-      "line": 76,
-      "call": "apiFetch",
-      "args": "'/v1/cards/release', {\n    method: 'POST',\n    body: JSON.stringify({ careerIds }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/market.ts",
-      "line": 82,
-      "call": "apiFetch",
-      "args": "'/v1/cards/lock', {\n    method: 'POST',\n    body: JSON.stringify({ careerId, locked }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/ownerProfile.ts",
-      "line": 21,
-      "call": "cachedGet",
-      "args": "`/v1/owners/by-team/${teamId}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/ownerProfile.ts",
-      "line": 23,
-      "call": "cachedGet",
-      "args": "'/v1/owner/title', 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/ownerProfile.ts",
-      "line": 26,
-      "call": "apiFetch",
-      "args": "'/v1/owner/title', {\n    method: 'PUT',\n    body: JSON.stringify({ title }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/ownerProfile.ts",
-      "line": 32,
-      "call": "cachedGet",
-      "args": "'/v1/owner/archive', 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/ownerSummary.ts",
-      "line": 5,
-      "call": "cachedGet",
-      "args": "'/v1/owner/summary', 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/reports.ts",
-      "line": 8,
-      "call": "apiFetch",
-      "args": "'/v1/reports/names', { method: 'POST', body: JSON.stringify(input) }"
-    },
-    {
-      "file": "packages/app-core/src/api/retiredNumberProgress.ts",
-      "line": 27,
-      "call": "cachedGet",
-      "args": "`${progressPath(careerId)}?number=${number}`, 5 * 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/seasonRecap.ts",
-      "line": 20,
-      "call": "cachedGet",
-      "args": "`/v1/owner/season-recap${season === undefined ? '' : `?season=${season}`}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/seasonRecap.ts",
-      "line": 25,
-      "call": "cachedGet",
-      "args": "'/v1/owner/honors', 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/seasonRecap.ts",
-      "line": 31,
-      "call": "cachedGet",
-      "args": "'/v1/owner/recap-status', 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 68,
-      "call": "cachedGet",
-      "args": "`/v1/owner-team${seasonQ(season)}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 70,
-      "call": "apiFetch",
-      "args": "'/v1/owner-team', { method: 'PUT', body: JSON.stringify(body) }"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 73,
-      "call": "apiFetch",
-      "args": "'/v1/owner-team/presets', {\n    method: 'PUT',\n    body: JSON.stringify(body),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 78,
-      "call": "apiFetch",
-      "args": "'/v1/owner-team/opponents'"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 80,
-      "call": "apiFetch",
-      "args": "'/v1/owner-team/matches', {\n    method: 'POST',\n    body: JSON.stringify({ opponentTeamId }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 90,
-      "call": "cachedGet",
-      "args": "`/v1/owner-team/matches${q.length ? `?${q.join('&')}` : ''}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 97,
-      "call": "cachedGet",
-      "args": "`/v1/owner-team/stats${seasonQ(season)}`, 5 * 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 100,
-      "call": "cachedGet",
-      "args": "`/v1/teams/${encodeURIComponent(teamId)}/stats`, 5 * 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 103,
-      "call": "cachedGet",
-      "args": "`/v1/owner-team/achievements${seasonQ(season)}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 106,
-      "call": "ownerCachedGet",
-      "args": "'/v1/owner-team/achievement-notifications', 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 110,
-      "call": "cachedGet",
-      "args": "`/v1/teams?${season === undefined ? '' : `season=${season}&`}sort=${sort}&page=${page}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 116,
-      "call": "cachedGet",
-      "args": "`/v1/achievements/ranking?${season === undefined ? '' : `season=${season}&`}page=${page}`, 60_000"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 121,
-      "call": "apiFetch",
-      "args": "`/v1/teams/${id}`"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 124,
-      "call": "apiFetch",
-      "args": "`/v1/teams/${id}/comments`"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 126,
-      "call": "apiFetch",
-      "args": "`/v1/teams/${id}/comments`, { method: 'POST', body: JSON.stringify(input) }"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 128,
-      "call": "apiFetch",
-      "args": "`/v1/teams/${id}/views`, { method: 'POST', keepCache: true }"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 130,
-      "call": "apiFetch",
-      "args": "`/v1/teams/${id}/like`, { method: like ? 'PUT' : 'DELETE' }"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 134,
-      "call": "apiFetch",
-      "args": "'/v1/owner-team/matches', {\n    method: 'POST',\n    body: JSON.stringify({ opponentTeamId, live: true }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 140,
-      "call": "apiFetch",
-      "args": "`/v1/owner-team/matches/${encodeURIComponent(matchId)}/moments/${index}`, { method: 'POST', body: JSON.stringify({ choice }) }"
-    },
-    {
-      "file": "packages/app-core/src/api/team.ts",
-      "line": 146,
-      "call": "apiFetch",
-      "args": "`/v1/owner-team/matches/${encodeURIComponent(matchId)}/finish`, {\n    method: 'POST',\n  }"
-    },
-    {
-      "file": "packages/app-core/src/api/translate.ts",
-      "line": 9,
-      "call": "apiFetch",
-      "args": "'/v1/translate', {\n      method: 'POST',\n      body: JSON.stringify({ text, to }),\n      keepCache: true,\n    }"
-    },
-    {
-      "file": "packages/app-core/src/cardNames.ts",
-      "line": 34,
-      "call": "cachedGet",
-      "args": "'/v1/careers/mine/anonymous', 10 * 60_000"
-    },
-    {
-      "file": "packages/app-core/src/cardNames.ts",
-      "line": 42,
-      "call": "apiFetch",
-      "args": "'/v1/careers/public-names', {\n      method: 'PUT',\n      body: JSON.stringify({ items: items.slice(i, i + CHUNK) }),\n    }"
-    },
-    {
-      "file": "packages/app-core/src/careerActivity.ts",
-      "line": 127,
-      "call": "apiFetch",
-      "args": "'/v1/career-activity', {\n      method: 'PUT',\n      body: JSON.stringify(input),\n      keepCache: true,\n      signal: controller.signal,\n    }"
-    },
-    {
-      "file": "packages/app-core/src/club-strength-sync.ts",
-      "line": 7,
-      "call": "cachedGet",
-      "args": "'/v1/club-strength', 3_600_000"
-    },
-    {
-      "file": "packages/app-core/src/clubCustom.ts",
-      "line": 163,
-      "call": "apiFetch",
-      "args": "'/v1/club-custom', {\n      method: 'PUT',\n      body: JSON.stringify({ clubs: clubCustom.map, updatedAt: sent }),\n    }"
-    },
-    {
-      "file": "packages/app-core/src/clubCustom.ts",
-      "line": 179,
-      "call": "apiFetch",
-      "args": "`/v1/club-custom${since}`, { method: 'GET' }"
-    },
-    {
-      "file": "packages/app-core/src/errorReport.ts",
-      "line": 99,
-      "call": "fetch",
-      "args": "`${apiBaseUrl()}/v1/client-errors`, {\n      method: 'POST',\n      keepalive: true,\n      credentials: 'omit',\n      headers: { 'Content-Type': 'application/json', ...apiAuth().headers },\n      body: JSON.stringify(body),\n    }"
-    },
-    {
-      "file": "packages/app-core/src/fairness.ts",
-      "line": 167,
-      "call": "cachedGet",
-      "args": "'/v1/balance/history', 600_000"
-    },
-    {
-      "file": "packages/app-core/src/fundsHistory.ts",
-      "line": 16,
-      "call": "apiFetch",
-      "args": "`/v1/market/funds/history?page=${page}`"
-    },
-    {
-      "file": "packages/app-core/src/keyMoments.ts",
-      "line": 158,
-      "call": "setInterval",
-      "args": "() => {\n          left--;\n          if (v.moment) v.moment.left = left;\n          if (left <= 0) done(null);\n        }, 1000"
-    },
-    {
-      "file": "packages/app-core/src/manager.ts",
-      "line": 34,
-      "call": "ownerCachedGet",
-      "args": "'/v1/managers', 60_000"
-    },
-    {
-      "file": "packages/app-core/src/manager.ts",
-      "line": 36,
-      "call": "apiFetch",
-      "args": "'/v1/managers', {\n    method: 'POST',\n    body: JSON.stringify({ careerId }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/manager.ts",
-      "line": 41,
-      "call": "apiFetch",
-      "args": "`/v1/managers/${id}/abandon`, { method: 'POST' }"
-    },
-    {
-      "file": "packages/app-core/src/manager.ts",
-      "line": 43,
-      "call": "apiFetch",
-      "args": "`/v1/managers/${id}/finish`, {\n    method: 'POST',\n    body: JSON.stringify({ result }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/manager.ts",
-      "line": 50,
-      "call": "apiFetch",
-      "args": "`/v1/managers/${id}/release`, { method: 'POST' }"
-    },
-    {
-      "file": "packages/app-core/src/manager.ts",
-      "line": 52,
-      "call": "apiFetch",
-      "args": "'/v1/owner-team/coach', {\n    method: 'PUT',\n    body: JSON.stringify({ coach }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/notification-inbox.ts",
-      "line": 98,
-      "call": "apiFetch",
-      "args": "`/v1/notifications${query ? `?${query}` : ''}`"
-    },
-    {
-      "file": "packages/app-core/src/notification-inbox.ts",
-      "line": 122,
-      "call": "apiFetch",
-      "args": "`/v1/notifications/${id}`"
-    },
-    {
-      "file": "packages/app-core/src/notification-inbox.ts",
-      "line": 138,
-      "call": "apiFetch",
-      "args": "`/v1/notifications/${id}/read`, {\n        method: 'POST',\n      }"
-    },
-    {
-      "file": "packages/app-core/src/notification-inbox.ts",
-      "line": 159,
-      "call": "apiFetch",
-      "args": "'/v1/notifications/read-all', {\n        method: 'POST',\n        body: JSON.stringify({ through }),\n      }"
-    },
-    {
-      "file": "packages/app-core/src/outbox.ts",
-      "line": 74,
-      "call": "fetchWithTimeout",
-      "args": "`${apiBaseUrl()}/v1/profile`, {\n      method: 'GET',\n      ...apiAuth(),\n    }"
-    },
-    {
-      "file": "packages/app-core/src/outbox.ts",
-      "line": 115,
-      "call": "fetchWithTimeout",
-      "args": "`${apiBaseUrl()}${pathFor(item)}`, {\n        method: 'PUT',\n        headers: {\n          'Content-Type': 'application/json',\n          ...(item.kind === 'season' && item.revision\n            ? { 'X-Upload-Revision': String(item.revision) }\n            : {}),\n          ...headers,\n        },\n        body,\n        ...auth,\n        // Browsers reject keepalive bodies above 64 KiB. The durable queue s"
-    },
-    {
-      "file": "packages/app-core/src/rename.ts",
-      "line": 32,
-      "call": "apiFetch",
-      "args": "`/v1/careers/${careerId}/rename`, {\n    method: 'POST',\n    headers: { [IDEMPOTENCY_KEY_HEADER]: key },\n    body: JSON.stringify({ name }),\n  }"
-    },
-    {
-      "file": "packages/app-core/src/retiredLook.ts",
-      "line": 93,
-      "call": "apiFetch",
-      "args": "`/v1/careers/${encodeURIComponent(v.avatarId)}/look`"
-    },
-    {
-      "file": "packages/app-core/src/retiredLook.ts",
-      "line": 157,
-      "call": "apiFetch",
-      "args": "`/v1/careers/${encodeURIComponent(v.avatarId)}/look`, {\n      method: 'PUT',\n      body: JSON.stringify({ look: code }),\n    }"
-    },
-    {
-      "file": "packages/app-core/src/serverStatus.ts",
-      "line": 130,
-      "call": "cachedGet",
-      "args": "'/v1/status', 60_000"
-    },
-    {
-      "file": "apps/web/src/analytics/acquisition.ts",
-      "line": 111,
-      "call": "fetch",
-      "args": "`${apiBaseUrl()}/v1/acquisition${action ? '' : '/consent'}`, {\n      ...auth,\n      method: action ? 'POST' : 'GET',\n      signal: AbortSignal.timeout(10_000),\n      headers: { ...auth.headers, 'Content-Type': 'application/json' },\n      ...(action ? { body: JSON.stringify({ version, ...action }) } : {}),\n    }"
-    },
-    {
-      "file": "apps/web/src/analytics/acquisition.ts",
-      "line": 120,
-      "call": "cachedGet",
-      "args": "'/v1/acquisition/consent', 30_000"
-    },
-    {
-      "file": "apps/web/src/hof-entry.ts",
-      "line": 8,
-      "call": "fetch",
-      "args": "`${resolveApiBaseUrl(undefined, hostname)}/v1/hof/${id}`, {\n      signal: AbortSignal.timeout(2000),\n      cf: { cacheTtl: 300, cacheEverything: true },\n    } as RequestInit"
-    },
-    {
-      "file": "apps/web/src/og-render.ts",
-      "line": 28,
-      "call": "fetch",
-      "args": "`https://fonts.googleapis.com/css2?family=${family.replaceAll(' ', '+')}:wght@700&text=${encodeURIComponent(text)}`, FONT_REQ()"
-    },
-    {
-      "file": "apps/web/src/og-render.ts",
-      "line": 34,
-      "call": "fetch",
-      "args": "src, FONT_REQ()"
-    },
-    {
-      "file": "apps/web/src/public-legends.ts",
-      "line": 90,
-      "call": "fetch",
-      "args": "`${resolveApiBaseUrl(undefined, hostname)}${path}`, {\n    signal: AbortSignal.timeout(4000),\n    redirect: 'manual',\n    credentials: 'omit',\n    headers: { Accept: 'application/json' },\n  }"
-    },
-    {
-      "file": "apps/web/src/public-news.ts",
-      "line": 33,
-      "call": "fetch",
-      "args": "`${resolveApiBaseUrl(undefined, hostname)}${path}`, {\n    signal: AbortSignal.timeout(3000),\n    // Workers 런타임은 redirect: 'error'를 지원하지 않아 fetch가 바로 예외로 끝난다(운영 /news/ 503). manual로 받으면\n    // 3xx는 ok가 아니라 아래에서 실패로 처리된다 — 리디렉션을 따라가지 않는 건 같다.\n    redirect: 'manual',\n    credentials: 'omit',\n    headers: { Accept: 'application/json' },\n  }"
-    },
-    {
-      "file": "apps/web/src/ui/HomeLive.svelte",
-      "line": 91,
-      "call": "setInterval",
-      "args": "loadIfVisible, POLL_MS"
-    },
-    {
-      "file": "apps/web/src/ui/HomeLive.svelte",
-      "line": 92,
-      "call": "setInterval",
-      "args": "() => {\n      now = Date.now();\n      if (rolling && !paused && !holding && document.visibilityState === 'visible') shifting = true;\n    }, STEP_MS"
-    },
-    {
-      "file": "apps/web/src/ui/HomeTicker.svelte",
-      "line": 59,
-      "call": "setInterval",
-      "args": "loadIfVisible, TICKER_POLL_SEC * 1000"
-    },
-    {
-      "file": "apps/web/src/ui/HomeTicker.svelte",
-      "line": 60,
-      "call": "setInterval",
-      "args": "() => (still = (still + 1) % Math.max(1, items.length)), STILL_STEP_MS"
-    },
-    {
-      "file": "apps/web/src/ui/ManagerLive.svelte",
-      "line": 19,
-      "call": "setInterval",
-      "args": "() => {\n        shown++;\n        if (shown >= matches.length) stop();\n      }, step"
-    },
-    {
-      "file": "apps/web/src/ui/SeasonGauge.svelte",
-      "line": 21,
-      "call": "setInterval",
-      "args": "() => void load(), 5 * 60_000"
-    },
-    {
-      "file": "apps/web/src/ui/SeasonGauge.svelte",
-      "line": 22,
-      "call": "setInterval",
-      "args": "() => (now = Date.now()), 30_000"
-    },
-    {
-      "file": "apps/web/src/ui/bgmEngine.ts",
-      "line": 54,
-      "call": "setInterval",
-      "args": "() => {\n      const k = Math.min(1, (performance.now() - t0) / FADE_MS);\n      el.volume = from + (to - from) * k;\n      if (k < 1) return;\n      clearInterval(id);\n      fading.delete(el);\n      done?.();\n    }, 30"
-    },
-    {
-      "file": "apps/web/src/ui/boot.ts",
-      "line": 64,
-      "call": "cachedGet",
-      "args": "'/v1/balance', 3_600_000"
-    },
-    {
-      "file": "apps/web/src/ui/news.svelte.ts",
-      "line": 18,
-      "call": "setInterval",
-      "args": "checkIfVisible, NEWS_GAP_MS"
-    },
-    {
-      "file": "apps/web/src/ui/team/TeamLive.svelte",
-      "line": 131,
-      "call": "setInterval",
-      "args": "() => {\n        if (!active) return;\n        active = { ...active, left: active.left - 1 };\n        if (active.left <= 0) pick?.('auto');\n      }, 1000"
-    },
-    {
-      "file": "apps/web/src/ui/update.svelte.ts",
-      "line": 17,
-      "call": "fetch",
-      "args": "'/version.json', { cache: 'no-store' }"
-    },
-    {
-      "file": "apps/web/src/ui/update.svelte.ts",
-      "line": 34,
-      "call": "setInterval",
-      "args": "checkIfVisible, INTERVAL_MS"
-    },
-    {
-      "file": "apps/mobile/src/components/ValueChart.tsx",
-      "line": 59,
-      "call": "setInterval",
-      "args": "() => {\n      box.current?.measureInWindow((_x, y, _w, h) => {\n        if (y < Dimensions.get('window').height * 0.85 && y + h > 0) setGoSelf(true);\n      });\n    }, 150"
-    },
-    {
-      "file": "apps/mobile/src/game/boot.ts",
-      "line": 56,
-      "call": "cachedGet",
-      "args": "'/v1/balance', 3_600_000"
-    },
-    {
-      "file": "apps/mobile/src/game/boot.ts",
-      "line": 77,
-      "call": "setInterval",
-      "args": "() => AppState.currentState === 'active' && void checkNews(), NEWS_GAP_MS"
-    },
-    {
-      "file": "apps/mobile/src/platform/adFreeRecording.ts",
-      "line": 77,
-      "call": "cachedGet",
-      "args": "'/v1/acquisition/consent', 30_000"
-    },
-    {
-      "file": "apps/mobile/src/platform/adFreeRecording.ts",
-      "line": 134,
-      "call": "apiFetch",
-      "args": "'/v1/iap/ad-free/record', {\n        method: 'POST',\n        keepCache: true,\n        body: JSON.stringify({ store: e.store, token: e.token, profileId: e.profileId }),\n      }"
-    },
-    {
-      "file": "apps/mobile/src/platform/auth.ts",
-      "line": 60,
-      "call": "apiFetch",
-      "args": "'/v1/auth/app/google', {\n      method: 'POST',\n      body: JSON.stringify({ challenge }),\n    }"
-    },
-    {
-      "file": "apps/mobile/src/platform/auth.ts",
-      "line": 74,
-      "call": "apiFetch",
-      "args": "'/v1/auth/app/exchange', {\n      method: 'POST',\n      body: JSON.stringify({ ticket, verifier }),\n    }"
-    },
-    {
-      "file": "apps/mobile/src/platform/auth.ts",
-      "line": 126,
-      "call": "apiFetch",
-      "args": "'/v1/auth/apple', {\n      method: 'POST',\n      body: JSON.stringify({ identityToken, nonce }),\n    }"
-    },
-    {
-      "file": "apps/mobile/src/platform/push.ts",
-      "line": 98,
-      "call": "apiFetch",
-      "args": "'/v1/push/device', {\n    method: 'PUT',\n    body: JSON.stringify({\n      installationId: await installationId(),\n      token: deviceToken,\n      platform: Platform.OS,\n      appVersion,\n    }),\n  }"
-    },
-    {
-      "file": "apps/mobile/src/platform/push.ts",
-      "line": 133,
-      "call": "apiFetch",
-      "args": "'/v1/push/device', {\n      method: 'DELETE',\n      body: JSON.stringify({ installationId: await installationId() }),\n    }"
-    },
-    {
-      "file": "apps/mobile/src/platform/push.ts",
-      "line": 275,
-      "call": "apiFetch",
-      "args": "'/v1/push/test', {\n      method: 'POST',\n      body: JSON.stringify({ installationId: await installationId() }),\n    }"
-    },
-    {
-      "file": "apps/mobile/src/platform/pushPreferences.ts",
-      "line": 48,
-      "call": "apiFetch",
-      "args": "'/v1/push/preferences'"
-    },
-    {
-      "file": "apps/mobile/src/platform/pushPreferences.ts",
-      "line": 76,
-      "call": "apiFetch",
-      "args": "'/v1/push/preferences', {\n      method: 'PUT',\n      body: JSON.stringify({ [key]: enabled }),\n    }"
-    },
-    {
-      "file": "apps/mobile/src/platform/pushTracking.ts",
-      "line": 78,
-      "call": "apiFetch",
-      "args": "`/v1/notifications/${entry.id}/interaction`, {\n        method: 'POST',\n        keepCache: true,\n        body: JSON.stringify({ event: entry.event, occurredAt: entry.occurredAt }),\n      }"
-    },
-    {
-      "file": "apps/mobile/src/platform/session.ts",
-      "line": 50,
-      "call": "apiFetch",
-      "args": "'/v1/app/session', { method: 'POST' }"
-    },
-    {
-      "file": "apps/mobile/src/screens/home/HomeLive.tsx",
-      "line": 100,
-      "call": "setInterval",
-      "args": "() => {\n      if (AppState.currentState === 'active') void load();\n    }, POLL_MS"
-    },
-    {
-      "file": "apps/mobile/src/screens/home/HomeLive.tsx",
-      "line": 120,
-      "call": "setInterval",
-      "args": "() => {\n      setNow(Date.now());\n      if (!rolling || paused || holding || AppState.currentState !== 'active') return;\n      setShifting(true);\n      const anim = Animated.timing(shiftY, {\n        toValue: -ROW,\n        duration: 550,\n        easing: Easing.bezier(0.3, 0.7, 0.3, 1),\n        useNativeDriver: true,\n      });\n      shiftAnim.current = anim;\n      anim.start(({ finished }) => {\n    "
-    },
-    {
-      "file": "apps/mobile/src/screens/home/HomeTicker.tsx",
-      "line": 76,
-      "call": "setInterval",
-      "args": "loadIfActive, TICKER_POLL_SEC * 1000"
-    },
-    {
-      "file": "apps/mobile/src/screens/home/HomeTicker.tsx",
-      "line": 88,
-      "call": "setInterval",
-      "args": "() => setStill((v) => (v + 1) % Math.max(1, items.length)), STILL_STEP_MS"
-    },
-    {
-      "file": "apps/mobile/src/screens/home/SeasonGauge.tsx",
-      "line": 32,
-      "call": "setInterval",
-      "args": "() => {\n      if (AppState.currentState === 'active') void load();\n    }, 5 * 60_000"
-    },
-    {
-      "file": "apps/mobile/src/screens/home/SeasonGauge.tsx",
-      "line": 35,
-      "call": "setInterval",
-      "args": "() => setNow(Date.now()), 30_000"
-    },
-    {
-      "file": "apps/mobile/src/screens/owner/ManagerLive.tsx",
-      "line": 36,
-      "call": "setInterval",
-      "args": "() => setShown((x) => Math.min(matches.length, x + 1)), step"
-    },
-    {
-      "file": "apps/mobile/src/screens/owner/Market.tsx",
-      "line": 405,
-      "call": "setInterval",
-      "args": "() => setTick((n) => n + 1), MARKET_TICKER_MS"
-    },
-    {
-      "file": "apps/mobile/src/screens/owner/TeamLineup.tsx",
-      "line": 154,
-      "call": "setInterval",
-      "args": "() => {\n      const d = active.current;\n      if (!d) return;\n      const bottom = Math.min(height - 160, viewH());\n      const delta = d.y < 130 ? -14 : d.y > bottom - 65 ? 14 : 0;\n      if (delta) {\n        scrollTo(Math.max(0, scrollY() + delta));\n        update(d.x, d.y);\n      }\n    }, 60"
-    },
-    {
-      "file": "apps/mobile/src/screens/owner/TeamLive.tsx",
-      "line": 277,
-      "call": "setInterval",
-      "args": "() => {\n          left -= 1;\n          setActive({ m, left });\n          if (left <= 0) pickRef.current?.('auto');\n        }, 1000"
-    }
-  ]
+  "baseSha": "5ecf7794",
+  "scope": "Static registration/call-site inventory of audited worktree against baseSha. Templates/constants/dynamic loops are not expanded endpoint counts. Line numbers refer to this audit snapshot. Test-only route included and identified.",
+  "registrationSitesByFile": {
+    "apps/api/src/app.ts": ["L68 GET '/v1/health'", "L113 GET '/v1/test/throw'"],
+    "apps/api/src/routes/acquisition.ts": [
+      "L15 GET '/v1/acquisition/consent'",
+      "L32 POST '/v1/acquisition'",
+      "L123 GET '/v1/admin/acquisition'"
+    ],
+    "apps/api/src/routes/admin.ts": [
+      "L54 GET '/v1/admin/push-performance'",
+      "L67 GET EDGE.adminStats",
+      "L82 GET '/v1/admin/automation'",
+      "L89 GET '/v1/admin/automation/enforcement'",
+      "L102 GET '/v1/admin/funds'",
+      "L107 GET '/v1/admin/funds/owner'",
+      "L116 GET '/v1/admin/users'",
+      "L126 POST '/v1/admin/users/:profileId/items'",
+      "L145 GET '/v1/admin/revenue'",
+      "L153 GET '/v1/admin/invites'",
+      "L160 GET '/v1/admin/anomalies'",
+      "L167 POST '/v1/admin/careers/hidden'",
+      "L176 GET '/v1/admin/comments'",
+      "L183 POST '/v1/admin/comments/purge'",
+      "L191 GET '/v1/admin/name-reports'",
+      "L197 POST '/v1/admin/name-reports/resolve'"
+    ],
+    "apps/api/src/routes/adminCupPredictions.ts": [
+      "L40 GET '/v1/admin/cups/:cupId/predictions'",
+      "L107 GET '/v1/admin/cups/:cupId/matches/:matchId/predictions'",
+      "L143 POST '/v1/admin/cups/:cupId/matches/:matchId/predictions/settle'"
+    ],
+    "apps/api/src/routes/adminCups.ts": [
+      "L62 GET '/v1/admin/cups'",
+      "L71 POST '/v1/admin/cups'",
+      "L116 GET '/v1/admin/cups/caps'",
+      "L130 PUT '/v1/admin/cups/:cupId/cap'",
+      "L151 DELETE '/v1/admin/cups/:cupId'"
+    ],
+    "apps/api/src/routes/appAuth.ts": [
+      "L70 POST '/v1/app/session'",
+      "L80 POST '/v1/auth/app/google'",
+      "L107 POST '/v1/auth/app/exchange'",
+      "L123 POST '/v1/auth/apple'"
+    ],
+    "apps/api/src/routes/appVersion.ts": ["L22 GET '/v1/app/version'"],
+    "apps/api/src/routes/appleWebAuth.ts": [
+      "L45 GET '/v1/auth/apple/start'",
+      "L93 POST APPLE_WEB_CALLBACK_PATH",
+      "L103 GET APPLE_WEB_CALLBACK_PATH"
+    ],
+    "apps/api/src/routes/attendance.ts": [
+      "L14 GET '/v1/attendance'",
+      "L19 POST '/v1/attendance/check-in'"
+    ],
+    "apps/api/src/routes/auth.ts": [
+      "L104 POST '/v1/auth/logout'",
+      "L119 GET '/v1/auth/google/start'",
+      "L153 GET '/v1/auth/google/callback'",
+      "L215 POST '/v1/auth/google/unlink'"
+    ],
+    "apps/api/src/routes/balance.ts": [
+      "L59 GET EDGE.balance",
+      "L70 GET EDGE.balanceHistory",
+      "L77 GET '/v1/admin/balance'",
+      "L83 POST '/v1/admin/balance'",
+      "L90 PUT '/v1/admin/balance/:version'",
+      "L102 DELETE '/v1/admin/balance/:version'",
+      "L112 POST '/v1/admin/balance/:version/activate'"
+    ],
+    "apps/api/src/routes/boards.ts": [
+      "L96 GET '/v1/public-news/:board'",
+      "L104 GET '/v1/public-news/posts/:postId'",
+      "L114 GET '/v1/boards/viewer'",
+      "L119 GET '/v1/boards/:board/posts'",
+      "L130 GET '/v1/boards/posts/:postId'",
+      "L163 POST '/v1/boards/posts/:postId/views'",
+      "L181 POST '/v1/boards/:board/posts'",
+      "L192 POST '/v1/boards/translate'",
+      "L198 PUT '/v1/boards/posts/:postId'",
+      "L208 DELETE '/v1/boards/posts/:postId'",
+      "L217 POST '/v1/boards/posts/:postId/comments'",
+      "L247 DELETE '/v1/boards/comments/:commentId'",
+      "L275 POST '/v1/boards/comments/:commentId/report'",
+      "L284 POST '/v1/boards/comments/:commentId/block'",
+      "L298 DELETE '/v1/boards/blocks/:blockId'"
+    ],
+    "apps/api/src/routes/careerActivity.ts": ["L13 PUT '/v1/career-activity'"],
+    "apps/api/src/routes/careers.ts": [
+      "L121 GET '/v1/careers/mine'",
+      "L131 GET '/v1/careers/mine/anonymous'",
+      "L139 PUT '/v1/careers/public-names'",
+      "L167 POST '/v1/careers/:careerId/rename'",
+      "L185 GET '/v1/careers/:careerId/look'",
+      "L199 PUT '/v1/careers/:careerId/look'",
+      "L241 PUT '/v1/careers/:careerId/seasons/:year'",
+      "L304 PUT '/v1/careers/:careerId/retirement'"
+    ],
+    "apps/api/src/routes/chat.ts": [
+      "L102 POST '/v1/chat/ticket'",
+      "L153 GET '/v1/chat/blocks'",
+      "L166 GET '/v1/chat/messages/:messageId/owner'",
+      "L172 POST '/v1/chat/messages/:messageId/report'",
+      "L191 POST '/v1/chat/messages/:messageId/block'",
+      "L203 GET '/v1/internal/agents/chat'",
+      "L222 POST '/v1/admin/chat/messages/:messageId/hide'",
+      "L229 POST '/v1/admin/chat/messages/:messageId/mute'",
+      "L238 GET '/v1/admin/chat/reports'",
+      "L245 POST '/v1/admin/chat/reports/resolve'"
+    ],
+    "apps/api/src/routes/clientErrors.ts": ["L10 POST '/v1/client-errors'"],
+    "apps/api/src/routes/clubCustom.ts": ["L10 GET '/v1/club-custom'", "L17 PUT '/v1/club-custom'"],
+    "apps/api/src/routes/clubStrength.ts": [
+      "L20 GET STRENGTH_PATH",
+      "L29 GET '/v1/admin/club-strength'"
+    ],
+    "apps/api/src/routes/cup.ts": [
+      "L522 GET '/v1/cups/home'",
+      "L550 GET '/v1/cups/:cupId'",
+      "L568 GET '/v1/cups/:cupId/me'",
+      "L620 POST '/v1/cups/:cupId/entries'",
+      "L666 DELETE '/v1/cups/:cupId/entries/me'",
+      "L687 GET '/v1/cups/:cupId/matches/:matchId'",
+      "L741 GET '/v1/items'",
+      "L757 POST `/v1/items/${item}/use`",
+      "L772 GET '/v1/items/gift'",
+      "L784 POST '/v1/items/gift/claim'",
+      "L793 GET '/v1/items/shop'",
+      "L807 POST `/v1/items/${item}/buy`",
+      "L853 GET '/v1/items/rewards'",
+      "L865 POST '/v1/items/rewards/buy'"
+    ],
+    "apps/api/src/routes/cupPredictions.ts": [
+      "L23 GET '/v1/cups/:cupId/predictions'",
+      "L42 GET '/v1/cups/:cupId/predictions/me'",
+      "L65 PUT '/v1/cups/:cupId/matches/:matchId/prediction'"
+    ],
+    "apps/api/src/routes/firsts.ts": ["L42 GET '/v1/firsts'"],
+    "apps/api/src/routes/friends.ts": [
+      "L175 GET '/v1/friends'",
+      "L253 GET '/v1/friends/pending'",
+      "L260 POST '/v1/friends/requests'",
+      "L362 POST '/v1/friends/:code/accept'",
+      "L393 DELETE '/v1/friends/:code'",
+      "L407 POST '/v1/friends/:code/matches'"
+    ],
+    "apps/api/src/routes/hof.ts": ["L32 GET '/v1/hof'", "L79 GET '/v1/hof/:careerId'"],
+    "apps/api/src/routes/iap.ts": [
+      "L36 POST '/v1/iap/ad-free/record'",
+      "L83 POST '/v1/iap/google/notifications'",
+      "L91 POST APPLE_IAP_NOTIFY_PATH",
+      "L98 POST '/v1/items/iap'"
+    ],
+    "apps/api/src/routes/league.ts": [
+      "L71 GET '/v1/leagues/current'",
+      "L85 GET '/v1/leagues/current/me'",
+      "L109 POST '/v1/leagues/current/entries'",
+      "L134 DELETE '/v1/leagues/current/entries/me'"
+    ],
+    "apps/api/src/routes/live.ts": ["L15 GET EDGE.live"],
+    "apps/api/src/routes/managers.ts": [
+      "L112 GET '/v1/managers'",
+      "L156 POST '/v1/managers'",
+      "L197 POST '/v1/managers/:managerId/abandon'",
+      "L212 POST '/v1/managers/:managerId/release'",
+      "L235 POST '/v1/managers/:managerId/finish'"
+    ],
+    "apps/api/src/routes/market.ts": [
+      "L100 GET '/v1/market'",
+      "L133 GET '/v1/market/chart'",
+      "L156 GET '/v1/market/cards/:careerId/trades'",
+      "L168 GET '/v1/market/funds'",
+      "L174 GET '/v1/market/funds/history'",
+      "L189 GET '/v1/market/me'",
+      "L219 POST '/v1/market/listings'",
+      "L262 DELETE '/v1/market/listings/:listingId'",
+      "L269 POST '/v1/market/listings/:listingId/buy'",
+      "L322 POST '/v1/cards/release'",
+      "L347 POST '/v1/cards/lock'"
+    ],
+    "apps/api/src/routes/notifications.ts": [
+      "L28 POST '/v1/notifications/:id/interaction'",
+      "L44 GET '/v1/notifications'",
+      "L56 POST '/v1/notifications/read-all'",
+      "L67 GET '/v1/notifications/:id'",
+      "L73 POST '/v1/notifications/:id/read'"
+    ],
+    "apps/api/src/routes/ownerProfile.ts": [
+      "L45 GET '/v1/owner/archive'",
+      "L101 GET '/v1/owners/by-team/:teamId'",
+      "L128 POST '/v1/admin/owner-titles/backfill'",
+      "L136 GET '/v1/owner/title'",
+      "L165 PUT '/v1/owner/title'"
+    ],
+    "apps/api/src/routes/ownerSummary.ts": [
+      "L13 GET '/v1/owner/recap-status'",
+      "L17 GET '/v1/owner/summary'"
+    ],
+    "apps/api/src/routes/ownerTeam.ts": [
+      "L247 GET '/v1/owner-team'",
+      "L322 PUT '/v1/owner-team'",
+      "L455 PUT '/v1/owner-team/coach'",
+      "L480 PUT '/v1/owner-team/presets'",
+      "L494 GET '/v1/owner-team/opponents'",
+      "L533 POST '/v1/owner-team/matches'",
+      "L698 POST '/v1/owner-team/matches/:id/moments/:index'",
+      "L743 POST '/v1/owner-team/matches/:id/finish'",
+      "L756 GET '/v1/owner-team/achievement-notifications'",
+      "L774 GET '/v1/owner-team/achievements'",
+      "L804 GET '/v1/owner-team/matches'",
+      "L826 GET '/v1/owner-team/stats'"
+    ],
+    "apps/api/src/routes/profile.ts": [
+      "L73 GET '/v1/profile'",
+      "L118 GET '/v1/avatars/:id'",
+      "L141 PUT '/v1/profile/avatar'",
+      "L168 PATCH '/v1/profile/settings'",
+      "L183 PUT '/v1/profile/nickname'",
+      "L224 POST '/v1/profile/recovery-code'",
+      "L234 POST '/v1/profile/recover'",
+      "L252 POST '/v1/profile/delete'"
+    ],
+    "apps/api/src/routes/push.ts": [
+      "L36 GET '/v1/push/preferences'",
+      "L46 PUT '/v1/push/preferences'",
+      "L65 PUT '/v1/push/device'",
+      "L80 DELETE '/v1/push/device'",
+      "L94 POST '/v1/push/test'"
+    ],
+    "apps/api/src/routes/releaseNotes.ts": ["L13 POST '/v1/internal/release-notes'"],
+    "apps/api/src/routes/reports.ts": ["L12 POST '/v1/reports/names'"],
+    "apps/api/src/routes/retiredNumbers.ts": [
+      "L85 GET '/v1/careers/:careerId/retired-number-progress'",
+      "L102 GET '/v1/careers/:careerId/retired-number'",
+      "L136 GET '/v1/retired-numbers/summary'",
+      "L145 GET '/v1/retired-numbers'"
+    ],
+    "apps/api/src/routes/seasonGauge.ts": ["L17 GET EDGE.seasonGauge"],
+    "apps/api/src/routes/seasonRecap.ts": [
+      "L121 GET '/v1/owner/season-recap'",
+      "L216 GET '/v1/owner/honors'"
+    ],
+    "apps/api/src/routes/serverStatus.ts": ["L54 GET EDGE.serverStatus"],
+    "apps/api/src/routes/teamComments.ts": [
+      "L36 GET '/v1/teams/:teamId/comments'",
+      "L69 POST '/v1/teams/:teamId/comments'"
+    ],
+    "apps/api/src/routes/teams.ts": [
+      "L77 GET '/v1/teams'",
+      "L119 GET '/v1/achievements/ranking'",
+      "L152 GET '/v1/teams/:teamId'",
+      "L222 GET '/v1/teams/:teamId/stats'",
+      "L244 POST '/v1/teams/:teamId/views'"
+    ],
+    "apps/api/src/routes/ticker.ts": ["L16 GET EDGE.ticker"],
+    "apps/api/src/routes/translate.ts": ["L15 POST '/v1/translate'"]
+  },
+  "computedMethodRegistrations": {
+    "apps/api/src/routes/boards.ts": [
+      "PUT /v1/boards/posts/:postId/like",
+      "DELETE /v1/boards/posts/:postId/like"
+    ],
+    "apps/api/src/routes/teams.ts": ["PUT /v1/teams/:teamId/like", "DELETE /v1/teams/:teamId/like"]
+  },
+  "networkCachePollCallSitesByFile": {
+    "packages/app-core/src/api/admin.ts": [
+      "L49 apiFetch('/v1/admin/cups')",
+      "L51 apiFetch('/v1/admin/cups', { method: 'POST', body: JSON.stringify(input) })",
+      "L53 apiFetch(`/v1/admin/cups/${id}`, { method: 'DELETE' })",
+      "L55 apiFetch('/v1/admin/cups/caps')",
+      "L57 apiFetch(`/v1/admin/cups/${id}/cap`, { method: 'PUT', body: JSON.stringify({ ovrMax }), })",
+      "L62 apiFetch('/v1/admin/balance')",
+      "L64 apiFetch('/v1/admin/balance', { method: 'POST', body: JSON.stringify(draft) })",
+      "L66 apiFetch(`/v1/admin/balance/${version}`, { method: 'PUT', body: JSON.stringify(draft), })",
+      "L71 apiFetch(`/v1/admin/balance/${version}`, { method: 'DELETE' })",
+      "L73 apiFetch(`/v1/admin/balance/${version}/activate`, { method: 'POST' })",
+      "L77 apiFetch('/v1/admin/stats')",
+      "L78 cachedGet('/v1/admin/stats', 60_000)",
+      "L88 apiFetch(`/v1/admin/comments${qs ? `?${qs}` : ''}`)",
+      "L91 apiFetch('/v1/admin/comments/purge', { method: 'POST', body: JSON.stringify({ profileId }), })",
+      "L97 apiFetch('/v1/admin/name-reports')",
+      "L99 apiFetch('/v1/admin/name-reports/resolve', { method: 'POST', body: JSON.stringify(input), })",
+      "L106 apiFetch(`/v1/admin/automation?hours=${hours}`)",
+      "L109 apiFetch('/v1/admin/funds')",
+      "L112 apiFetch(`/v1/admin/funds/owner?q=${encodeURIComponent(q)}`)",
+      "L116 apiFetch(`/v1/admin/users?q=${encodeURIComponent(q)}`)",
+      "L118 apiFetch(`/v1/admin/users/${profileId}/items`, { method: 'POST', body: JSON.stringify(input), })",
+      "L123 apiFetch(`/v1/admin/revenue?days=${days}`)",
+      "L126 apiFetch('/v1/admin/invites')",
+      "L137 cachedGet(`/v1/admin/push-performance?days=${days}&page=${page}${tests ? '&tests=1' : ''}${through ? `&through=${encodeURIComponent(through)}` : ''}${filters.previous ? '&previous=1' : ''}${filters.category ? `&category=${encodeUR ...)",
+      "L145 cachedGet(`/v1/admin/automation/enforcement${before ? `?before=${encodeURIComponent(before)}` : ''}`, 60_000)",
+      "L151 apiFetch('/v1/admin/careers/hidden', { method: 'POST', body: JSON.stringify({ careerId, hidden }), })",
+      "L164 cachedGet(path, 60_000)",
+      "L167 cachedGet(`/v1/admin/cups/${encodeURIComponent(cupId)}/matches/${encodeURIComponent(matchId)}/predictions?after=${encodeURIComponent(after)}`, 60_000)",
+      "L172 apiFetch(`/v1/admin/cups/${encodeURIComponent(cupId)}/matches/${encodeURIComponent(matchId)}/predictions/settle`, { method: 'POST', body: JSON.stringify({ reason }) })"
+    ],
+    "packages/app-core/src/api/appVersion.ts": ["L6 cachedGet('/v1/app/version', 5 * 60_000)"],
+    "packages/app-core/src/api/attendance.ts": [
+      "L20 ownerCachedGet(PATH, 5 * 60_000)",
+      "L36 apiFetch(`${PATH}/check-in`, { method: 'POST', headers: { [IDEMPOTENCY_KEY_HEADER]: key }, })"
+    ],
+    "packages/app-core/src/api/boards.ts": [
+      "L31 cachedGet('/v1/boards/viewer', 600_000)",
+      "L33 cachedGet(`/v1/boards/${board}/posts${before ? `?before=${encodeURIComponent(before)}` : ''}`, 60_000)",
+      "L37 apiFetch(`/v1/boards/posts/${id}`)",
+      "L39 apiFetch(`/v1/boards/${board}/posts`, { method: 'POST', body: JSON.stringify(input) })",
+      "L41 apiFetch(`/v1/boards/posts/${id}`, { method: 'PUT', body: JSON.stringify(input) })",
+      "L44 apiFetch('/v1/boards/translate', { method: 'POST', body: JSON.stringify(input), keepCache: true, })",
+      "L50 apiFetch(`/v1/boards/posts/${id}`, { method: 'DELETE' })",
+      "L52 apiFetch(`/v1/boards/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify(input), })",
+      "L57 apiFetch(`/v1/boards/comments/${id}`, { method: 'DELETE' })",
+      "L62 apiFetch(`/v1/boards/comments/${id}/report`, { method: 'POST', body: JSON.stringify(input), })",
+      "L70 apiFetch(`/v1/boards/comments/${commentId}/block`, { method: 'POST' })",
+      "L73 apiFetch(`/v1/boards/blocks/${id}`, { method: 'DELETE' })",
+      "L77 apiFetch(`/v1/boards/posts/${id}/views`, { method: 'POST', keepCache: true })",
+      "L81 apiFetch(`/v1/boards/posts/${id}/like`, { method: like ? 'PUT' : 'DELETE' })"
+    ],
+    "packages/app-core/src/api/chat.ts": [
+      "L34 apiFetch('/v1/chat/ticket', { method: 'POST', keepCache: true })",
+      "L39 apiFetch(`/v1/chat/messages/${id}/report`, { method: 'POST', body: JSON.stringify(input), keepCache: true, })",
+      "L48 apiFetch(`/v1/chat/messages/${id}/block`, { method: 'POST' })",
+      "L52 cachedGet('/v1/chat/blocks', 60_000)",
+      "L55 cachedGet(`/v1/chat/messages/${id}/owner`, 600_000)",
+      "L57 apiFetch(`/v1/admin/chat/messages/${id}/hide`, { method: 'POST', keepCache: true })",
+      "L59 apiFetch(`/v1/admin/chat/messages/${id}/mute`, { method: 'POST', body: JSON.stringify(input), keepCache: true, })",
+      "L66 apiFetch('/v1/admin/chat/reports')",
+      "L68 apiFetch('/v1/admin/chat/reports/resolve', { method: 'POST', body: JSON.stringify(input), keepCache: true, })",
+      "L262 setInterval(() => sock.send(LIVE_PING), LIVE_PING_SEC * 1000)"
+    ],
+    "packages/app-core/src/api/client.ts": [
+      "L90 cachedGet(path, ttlMs)",
+      "L121 apiFetch(path, { method: 'GET' })",
+      "L143 fetch(input, init)",
+      "L150 fetch(input, { ...init, signal: ctl.signal })",
+      "L178 fetchWithTimeout(`${host.baseUrl}${withLang(path)}`, { ...init, method, headers, ...(body !== undefined ? { body } : {}), ...auth, })",
+      "L238 apiFetch('/v1/profile', { method: 'GET' })",
+      "L280 apiFetch('/v1/auth/google/unlink', { method: 'POST' })",
+      "L283 apiFetch('/v1/auth/logout', { method: 'POST' })",
+      "L288 apiFetch('/v1/profile/delete', { method: 'POST' })",
+      "L295 apiFetch('/v1/profile/delete', { method: 'POST', body: JSON.stringify({ confirmToken, appleAuthorizationCode, }), })",
+      "L305 apiFetch('/v1/profile/nickname', { method: 'PUT', body: JSON.stringify({ nickname }) })",
+      "L308 apiFetch('/v1/profile/avatar', { method: 'PUT', body: JSON.stringify({ image }) })",
+      "L331 cachedGet(`/v1/hof?${q}`, 60_000)",
+      "L335 cachedGet('/v1/careers/mine', 60_000)",
+      "L338 cachedGet(`/v1/hof/${encodeURIComponent(careerId)}`, 300_000)",
+      "L345 cachedGet(`/v1/retired-numbers${season === undefined ? '' : `?season=${season}`}`, 60_000)",
+      "L354 cachedGet(`/v1/retired-numbers/summary?season=${season}`, 60_000)",
+      "L361 cachedGet(`/v1/retired-numbers?season=${season}&club=${encodeURIComponent(clubId)}`, 60_000)",
+      "L371 cachedGet(`/v1/retired-numbers?season=${season}&before=${before}`, 60_000)",
+      "L392 cachedGet(`/v1/careers/${encodeURIComponent(careerId)}/retired-number`, 60_000)",
+      "L399 cachedGet(`/v1/firsts${season === undefined ? '' : `?season=${season}`}`, 60_000)",
+      "L407 cachedGet('/v1/live', LIVE_POLL_SEC * 1000 - 5_000)",
+      "L411 cachedGet('/v1/season/gauge', 300_000)",
+      "L415 cachedGet('/v1/ticker', TICKER_POLL_SEC * 1000 - 5_000)"
+    ],
+    "packages/app-core/src/api/club-strength.ts": ["L7 cachedGet(path, 60_000)"],
+    "packages/app-core/src/api/cup.ts": [
+      "L33 cachedGet(`/v1/cups/${cupId}`, 30_000)",
+      "L34 cachedGet('/v1/cups/home', 30_000)",
+      "L36 apiFetch(`/v1/cups/${cupId}/me`)",
+      "L38 cachedGet(`/v1/cups/${cupId}/matches/${matchId}`, 60_000)",
+      "L42 apiFetch(`/v1/cups/${cupId}/entries`, { method: 'POST' })",
+      "L44 apiFetch(`/v1/cups/${cupId}/entries/me`, { method: 'DELETE' })",
+      "L47 ownerCachedGet('/v1/items', 30_000)",
+      "L53 apiFetch('/v1/items/reroll/use', { method: 'POST', headers: { [IDEMPOTENCY_KEY_HEADER]: key }, })",
+      "L60 apiFetch('/v1/items/boost/use', { method: 'POST', headers: { [IDEMPOTENCY_KEY_HEADER]: key }, })",
+      "L70 apiFetch('/v1/items/scout/use', { method: 'POST', headers: { [IDEMPOTENCY_KEY_HEADER]: key }, body: JSON.stringify({ hit }), })",
+      "L78 apiFetch('/v1/items/iap', { method: 'POST', body: JSON.stringify(body) })",
+      "L81 ownerCachedGet('/v1/items/shop', 30_000)",
+      "L87 apiFetch('/v1/items/reroll/buy', { method: 'POST', body: JSON.stringify({ price }), headers: { [IDEMPOTENCY_KEY_HEADER]: key }, })",
+      "L98 ownerCachedGet('/v1/items/rewards', 30_000)",
+      "L101 apiFetch('/v1/items/rewards/buy', { method: 'POST', body: JSON.stringify({ kind, price }), headers: { [IDEMPOTENCY_KEY_HEADER]: key }, })",
+      "L120 cachedGet(`/v1/cups/${cupId}/predictions`, 30_000)",
+      "L122 cachedGet(`/v1/cups/${cupId}/predictions/me`, 30_000)",
+      "L124 apiFetch(`/v1/cups/${cupId}/matches/${matchId}/prediction`, { method: 'PUT', body: JSON.stringify({ pick }), })",
+      "L131 apiFetch('/v1/items/scout/buy', { method: 'POST', headers: { [IDEMPOTENCY_KEY_HEADER]: key }, body: JSON.stringify({ price }), })"
+    ],
+    "packages/app-core/src/api/friendPending.ts": ["L62 cachedGet(PATH, FRIEND_PENDING_MS)"],
+    "packages/app-core/src/api/friends.ts": [
+      "L22 cachedGet('/v1/friends', 60_000)",
+      "L26 apiFetch('/v1/friends/requests', { method: 'POST', body: JSON.stringify(body), })",
+      "L32 apiFetch(`/v1/friends/${encodeURIComponent(code)}/accept`, { method: 'POST', })",
+      "L38 apiFetch(`/v1/friends/${encodeURIComponent(code)}`, { method: 'DELETE' })",
+      "L42 apiFetch(`/v1/friends/${encodeURIComponent(code)}/matches${preseason ? '?season=0' : ''}`, { method: 'POST' })"
+    ],
+    "packages/app-core/src/api/gift.ts": [
+      "L30 ownerCachedGet('/v1/items/gift', 10 * 60_000)",
+      "L38 apiFetch('/v1/items/gift/claim', { method: 'POST', headers: { [IDEMPOTENCY_KEY_HEADER]: key }, })"
+    ],
+    "packages/app-core/src/api/league.ts": [
+      "L8 cachedGet('/v1/leagues/current', 30_000)",
+      "L10 apiFetch('/v1/leagues/current/me')",
+      "L14 apiFetch('/v1/leagues/current/entries', { method: 'POST' })",
+      "L16 apiFetch('/v1/leagues/current/entries/me', { method: 'DELETE' })"
+    ],
+    "packages/app-core/src/api/liveSocket.ts": [
+      "L93 setInterval(() => sock.send(LIVE_PING), LIVE_PING_SEC * 1000)"
+    ],
+    "packages/app-core/src/api/market.ts": [
+      "L34 cachedGet(`/v1/market?sort=${sort}${pos ? `&pos=${pos}` : ''}${page ? `&page=${page}` : ''}`, 30_000)",
+      "L43 cachedGet(`/v1/market/chart?range=${range}${group ? `&pos=${group.pos}&band=${group.band}` : ''}`, 60_000)",
+      "L49 cachedGet(`/v1/market/cards/${careerId}/trades`, 60_000)",
+      "L51 cachedGet('/v1/market/funds', 60_000)",
+      "L53 cachedGet('/v1/market/me', 60_000)",
+      "L55 apiFetch('/v1/market/listings', { method: 'POST', body: JSON.stringify({ careerId, price }), })",
+      "L68 apiFetch(`/v1/market/listings/${id}`, { method: 'DELETE' })",
+      "L71 apiFetch(`/v1/market/listings/${id}/buy`, { method: 'POST', body: JSON.stringify({ price }), })",
+      "L76 apiFetch('/v1/cards/release', { method: 'POST', body: JSON.stringify({ careerIds }), })",
+      "L82 apiFetch('/v1/cards/lock', { method: 'POST', body: JSON.stringify({ careerId, locked }), })"
+    ],
+    "packages/app-core/src/api/ownerProfile.ts": [
+      "L21 cachedGet(`/v1/owners/by-team/${teamId}`, 60_000)",
+      "L23 cachedGet('/v1/owner/title', 60_000)",
+      "L26 apiFetch('/v1/owner/title', { method: 'PUT', body: JSON.stringify({ title }), })",
+      "L32 cachedGet('/v1/owner/archive', 60_000)"
+    ],
+    "packages/app-core/src/api/ownerSummary.ts": ["L5 cachedGet('/v1/owner/summary', 60_000)"],
+    "packages/app-core/src/api/reports.ts": [
+      "L8 apiFetch('/v1/reports/names', { method: 'POST', body: JSON.stringify(input) })"
+    ],
+    "packages/app-core/src/api/retiredNumberProgress.ts": [
+      "L27 cachedGet(`${progressPath(careerId)}?number=${number}`, 5 * 60_000)"
+    ],
+    "packages/app-core/src/api/seasonRecap.ts": [
+      "L20 cachedGet(`/v1/owner/season-recap${season === undefined ? '' : `?season=${season}`}`, 60_000)",
+      "L25 cachedGet('/v1/owner/honors', 60_000)",
+      "L31 cachedGet('/v1/owner/recap-status', 60_000)"
+    ],
+    "packages/app-core/src/api/team.ts": [
+      "L68 cachedGet(`/v1/owner-team${seasonQ(season)}`, 60_000)",
+      "L70 apiFetch('/v1/owner-team', { method: 'PUT', body: JSON.stringify(body) })",
+      "L73 apiFetch('/v1/owner-team/presets', { method: 'PUT', body: JSON.stringify(body), })",
+      "L78 apiFetch('/v1/owner-team/opponents')",
+      "L80 apiFetch('/v1/owner-team/matches', { method: 'POST', body: JSON.stringify({ opponentTeamId }), })",
+      "L90 cachedGet(`/v1/owner-team/matches${q.length ? `?${q.join('&')}` : ''}`, 60_000)",
+      "L97 cachedGet(`/v1/owner-team/stats${seasonQ(season)}`, 5 * 60_000)",
+      "L100 cachedGet(`/v1/teams/${encodeURIComponent(teamId)}/stats`, 5 * 60_000)",
+      "L103 cachedGet(`/v1/owner-team/achievements${seasonQ(season)}`, 60_000)",
+      "L106 ownerCachedGet('/v1/owner-team/achievement-notifications', 60_000)",
+      "L110 cachedGet(`/v1/teams?${season === undefined ? '' : `season=${season}&`}sort=${sort}&page=${page}`, 60_000)",
+      "L116 cachedGet(`/v1/achievements/ranking?${season === undefined ? '' : `season=${season}&`}page=${page}`, 60_000)",
+      "L121 apiFetch(`/v1/teams/${id}`)",
+      "L124 apiFetch(`/v1/teams/${id}/comments`)",
+      "L126 apiFetch(`/v1/teams/${id}/comments`, { method: 'POST', body: JSON.stringify(input) })",
+      "L128 apiFetch(`/v1/teams/${id}/views`, { method: 'POST', keepCache: true })",
+      "L130 apiFetch(`/v1/teams/${id}/like`, { method: like ? 'PUT' : 'DELETE' })",
+      "L134 apiFetch('/v1/owner-team/matches', { method: 'POST', body: JSON.stringify({ opponentTeamId, live: true }), })",
+      "L140 apiFetch(`/v1/owner-team/matches/${encodeURIComponent(matchId)}/moments/${index}`, { method: 'POST', body: JSON.stringify({ choice }) })",
+      "L146 apiFetch(`/v1/owner-team/matches/${encodeURIComponent(matchId)}/finish`, { method: 'POST', })"
+    ],
+    "packages/app-core/src/api/translate.ts": [
+      "L9 apiFetch('/v1/translate', { method: 'POST', body: JSON.stringify({ text, to }), keepCache: true, })"
+    ],
+    "packages/app-core/src/cardNames.ts": [
+      "L34 cachedGet('/v1/careers/mine/anonymous', 10 * 60_000)",
+      "L42 apiFetch('/v1/careers/public-names', { method: 'PUT', body: JSON.stringify({ items: items.slice(i, i + CHUNK) }), })"
+    ],
+    "packages/app-core/src/careerActivity.ts": [
+      "L127 apiFetch('/v1/career-activity', { method: 'PUT', body: JSON.stringify(input), keepCache: true, signal: controller.signal, })"
+    ],
+    "packages/app-core/src/club-strength-sync.ts": ["L7 cachedGet('/v1/club-strength', 3_600_000)"],
+    "packages/app-core/src/clubCustom.ts": [
+      "L163 apiFetch('/v1/club-custom', { method: 'PUT', body: JSON.stringify({ clubs: clubCustom.map, updatedAt: sent }), })",
+      "L179 apiFetch(`/v1/club-custom${since}`, { method: 'GET' })"
+    ],
+    "packages/app-core/src/errorReport.ts": [
+      "L99 fetch(`${apiBaseUrl()}/v1/client-errors`, { method: 'POST', keepalive: true, credentials: 'omit', headers: { 'Content-Type': 'application/json', ...apiAuth().headers }, body: JSON.stringify(body), })"
+    ],
+    "packages/app-core/src/fairness.ts": ["L167 cachedGet('/v1/balance/history', 600_000)"],
+    "packages/app-core/src/fundsHistory.ts": [
+      "L16 apiFetch(`/v1/market/funds/history?page=${page}`)"
+    ],
+    "packages/app-core/src/keyMoments.ts": [
+      "L158 setInterval(() => { left--; if (v.moment) v.moment.left = left; if (left <= 0) done(null); }, 1000)"
+    ],
+    "packages/app-core/src/manager.ts": [
+      "L34 ownerCachedGet('/v1/managers', 60_000)",
+      "L36 apiFetch('/v1/managers', { method: 'POST', body: JSON.stringify({ careerId }), })",
+      "L41 apiFetch(`/v1/managers/${id}/abandon`, { method: 'POST' })",
+      "L43 apiFetch(`/v1/managers/${id}/finish`, { method: 'POST', body: JSON.stringify({ result }), })",
+      "L50 apiFetch(`/v1/managers/${id}/release`, { method: 'POST' })",
+      "L52 apiFetch('/v1/owner-team/coach', { method: 'PUT', body: JSON.stringify({ coach }), })"
+    ],
+    "packages/app-core/src/notification-inbox.ts": [
+      "L98 apiFetch(`/v1/notifications${query ? `?${query}` : ''}`)",
+      "L122 apiFetch(`/v1/notifications/${id}`)",
+      "L138 apiFetch(`/v1/notifications/${id}/read`, { method: 'POST', })",
+      "L159 apiFetch('/v1/notifications/read-all', { method: 'POST', body: JSON.stringify({ through }), })"
+    ],
+    "packages/app-core/src/outbox.ts": [
+      "L74 fetchWithTimeout(`${apiBaseUrl()}/v1/profile`, { method: 'GET', ...apiAuth(), })",
+      "L115 fetchWithTimeout(`${apiBaseUrl()}${pathFor(item)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...(item.kind === 'season' && item.revision ? { 'X-Upload-Revision': String(item.revision) } : {}), ...headers, }, body,  ...)"
+    ],
+    "packages/app-core/src/rename.ts": [
+      "L32 apiFetch(`/v1/careers/${careerId}/rename`, { method: 'POST', headers: { [IDEMPOTENCY_KEY_HEADER]: key }, body: JSON.stringify({ name }), })"
+    ],
+    "packages/app-core/src/retiredLook.ts": [
+      "L93 apiFetch(`/v1/careers/${encodeURIComponent(v.avatarId)}/look`)",
+      "L157 apiFetch(`/v1/careers/${encodeURIComponent(v.avatarId)}/look`, { method: 'PUT', body: JSON.stringify({ look: code }), })"
+    ],
+    "packages/app-core/src/serverStatus.ts": ["L130 cachedGet('/v1/status', 60_000)"],
+    "apps/web/src/analytics/acquisition.ts": [
+      "L111 fetch(`${apiBaseUrl()}/v1/acquisition${action ? '' : '/consent'}`, { ...auth, method: action ? 'POST' : 'GET', signal: AbortSignal.timeout(10_000), headers: { ...auth.headers, 'Content-Type': 'application/json' }, ...(action ? ...)",
+      "L120 cachedGet('/v1/acquisition/consent', 30_000)"
+    ],
+    "apps/web/src/hof-entry.ts": [
+      "L8 fetch(`${resolveApiBaseUrl(undefined, hostname)}/v1/hof/${id}`, { signal: AbortSignal.timeout(2000), cf: { cacheTtl: 300, cacheEverything: true }, } as RequestInit)"
+    ],
+    "apps/web/src/og-render.ts": [
+      "L28 fetch(`https://fonts.googleapis.com/css2?family=${family.replaceAll(' ', '+')}:wght@700&text=${encodeURIComponent(text)}`, FONT_REQ())",
+      "L34 fetch(src, FONT_REQ())"
+    ],
+    "apps/web/src/public-legends.ts": [
+      "L90 fetch(`${resolveApiBaseUrl(undefined, hostname)}${path}`, { signal: AbortSignal.timeout(4000), redirect: 'manual', credentials: 'omit', headers: { Accept: 'application/json' }, })"
+    ],
+    "apps/web/src/public-news.ts": [
+      "L33 fetch(`${resolveApiBaseUrl(undefined, hostname)}${path}`, { signal: AbortSignal.timeout(3000), // Workers 런타임은 redirect: 'error'를 지원하지 않아 fetch가 바로 예외로 끝난다(운영 /news/ 503). manual로 받으면 // 3xx는 ok가 아니라 아래에서 실패로 처리된다 — 리디렉션을 따라가지 ...)"
+    ],
+    "apps/web/src/ui/HomeLive.svelte": [
+      "L91 setInterval(loadIfVisible, POLL_MS)",
+      "L92 setInterval(() => { now = Date.now(); if (rolling && !paused && !holding && document.visibilityState === 'visible') shifting = true; }, STEP_MS)"
+    ],
+    "apps/web/src/ui/HomeTicker.svelte": [
+      "L59 setInterval(loadIfVisible, TICKER_POLL_SEC * 1000)",
+      "L60 setInterval(() => (still = (still + 1) % Math.max(1, items.length)), STILL_STEP_MS)"
+    ],
+    "apps/web/src/ui/ManagerLive.svelte": [
+      "L19 setInterval(() => { shown++; if (shown >= matches.length) stop(); }, step)"
+    ],
+    "apps/web/src/ui/SeasonGauge.svelte": [
+      "L21 setInterval(() => void load(), 5 * 60_000)",
+      "L22 setInterval(() => (now = Date.now()), 30_000)"
+    ],
+    "apps/web/src/ui/bgmEngine.ts": [
+      "L54 setInterval(() => { const k = Math.min(1, (performance.now() - t0) / FADE_MS); el.volume = from + (to - from) * k; if (k < 1) return; clearInterval(id); fading.delete(el); done?.(); }, 30)"
+    ],
+    "apps/web/src/ui/boot.ts": ["L64 cachedGet('/v1/balance', 3_600_000)"],
+    "apps/web/src/ui/news.svelte.ts": ["L18 setInterval(checkIfVisible, NEWS_GAP_MS)"],
+    "apps/web/src/ui/team/TeamLive.svelte": [
+      "L131 setInterval(() => { if (!active) return; active = { ...active, left: active.left - 1 }; if (active.left <= 0) pick?.('auto'); }, 1000)"
+    ],
+    "apps/web/src/ui/update.svelte.ts": [
+      "L17 fetch('/version.json', { cache: 'no-store' })",
+      "L34 setInterval(checkIfVisible, INTERVAL_MS)"
+    ],
+    "apps/mobile/src/components/ValueChart.tsx": [
+      "L59 setInterval(() => { box.current?.measureInWindow((_x, y, _w, h) => { if (y < Dimensions.get('window').height * 0.85 && y + h > 0) setGoSelf(true); }); }, 150)"
+    ],
+    "apps/mobile/src/game/boot.ts": [
+      "L56 cachedGet('/v1/balance', 3_600_000)",
+      "L77 setInterval(() => AppState.currentState === 'active' && void checkNews(), NEWS_GAP_MS)"
+    ],
+    "apps/mobile/src/platform/adFreeRecording.ts": [
+      "L77 cachedGet('/v1/acquisition/consent', 30_000)",
+      "L134 apiFetch('/v1/iap/ad-free/record', { method: 'POST', keepCache: true, body: JSON.stringify({ store: e.store, token: e.token, profileId: e.profileId }), })"
+    ],
+    "apps/mobile/src/platform/auth.ts": [
+      "L62 apiFetch('/v1/auth/app/google', { method: 'POST', body: JSON.stringify({ challenge }), })",
+      "L76 apiFetch('/v1/auth/app/exchange', { method: 'POST', body: JSON.stringify({ ticket, verifier }), })",
+      "L128 apiFetch('/v1/auth/apple', { method: 'POST', body: JSON.stringify({ identityToken, nonce }), })"
+    ],
+    "apps/mobile/src/platform/push.ts": [
+      "L98 apiFetch('/v1/push/device', { method: 'PUT', body: JSON.stringify({ installationId: await installationId(), token: deviceToken, platform: Platform.OS, appVersion, }), })",
+      "L133 apiFetch('/v1/push/device', { method: 'DELETE', body: JSON.stringify({ installationId: await installationId() }), })",
+      "L275 apiFetch('/v1/push/test', { method: 'POST', body: JSON.stringify({ installationId: await installationId() }), })"
+    ],
+    "apps/mobile/src/platform/pushPreferences.ts": [
+      "L48 apiFetch('/v1/push/preferences')",
+      "L76 apiFetch('/v1/push/preferences', { method: 'PUT', body: JSON.stringify({ [key]: enabled }), })"
+    ],
+    "apps/mobile/src/platform/pushTracking.ts": [
+      "L78 apiFetch(`/v1/notifications/${entry.id}/interaction`, { method: 'POST', keepCache: true, body: JSON.stringify({ event: entry.event, occurredAt: entry.occurredAt }), })"
+    ],
+    "apps/mobile/src/platform/session.ts": ["L50 apiFetch('/v1/app/session', { method: 'POST' })"],
+    "apps/mobile/src/screens/home/HomeLive.tsx": [
+      "L100 setInterval(() => { if (AppState.currentState === 'active') void load(); }, POLL_MS)",
+      "L120 setInterval(() => { setNow(Date.now()); if (!rolling || paused || holding || AppState.currentState !== 'active') return; setShifting(true); const anim = Animated.timing(shiftY, { toValue: -ROW, duration: 550, easing: Easing.bezier(0 ...)"
+    ],
+    "apps/mobile/src/screens/home/HomeTicker.tsx": [
+      "L76 setInterval(loadIfActive, TICKER_POLL_SEC * 1000)",
+      "L88 setInterval(() => setStill((v) => (v + 1) % Math.max(1, items.length)), STILL_STEP_MS)"
+    ],
+    "apps/mobile/src/screens/home/SeasonGauge.tsx": [
+      "L32 setInterval(() => { if (AppState.currentState === 'active') void load(); }, 5 * 60_000)",
+      "L35 setInterval(() => setNow(Date.now()), 30_000)"
+    ],
+    "apps/mobile/src/screens/owner/ManagerLive.tsx": [
+      "L36 setInterval(() => setShown((x) => Math.min(matches.length, x + 1)), step)"
+    ],
+    "apps/mobile/src/screens/owner/Market.tsx": [
+      "L405 setInterval(() => setTick((n) => n + 1), MARKET_TICKER_MS)"
+    ],
+    "apps/mobile/src/screens/owner/TeamLineup.tsx": [
+      "L154 setInterval(() => { const d = active.current; if (!d) return; const bottom = Math.min(height - 160, viewH()); const delta = d.y < 130 ? -14 : d.y > bottom - 65 ? 14 : 0; if (delta) { scrollTo(Math.max(0, scrollY() + delta)); update( ...)"
+    ],
+    "apps/mobile/src/screens/owner/TeamLive.tsx": [
+      "L277 setInterval(() => { left -= 1; setActive({ m, left }); if (left <= 0) pickRef.current?.('auto'); }, 1000)"
+    ]
+  }
 }

@@ -1,5 +1,6 @@
 import { planCup } from '@offside/contracts/cup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cupMatchesIn } from '../team/cup.js';
 import { createDb } from '../db/client.js';
 import { cups, cupEntries, cupMatches, cupState, ownerTeams } from '../db/schema.js';
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
@@ -159,6 +160,17 @@ describe('API query counts without changing eligibility or response data', () =>
     await expect(
       checkCupLineup(db, who.profileId, 1, ['starter'], 7, NOW, 60),
     ).rejects.toMatchObject({ details: { reason: 'CUP_MIN_FILLED' } });
+  });
+
+  it('active-cup reads stay within D1 binding limits beyond 100 cup ids', async () => {
+    const traced = spyDb(ctx.env.DB);
+    expect(
+      await cupMatchesIn(
+        createDb(traced.DB),
+        Array.from({ length: 128 }, (_, i) => `s1-${i}`),
+      ),
+    ).toEqual([]);
+    expect(traced.trips.n).toBe(1);
   });
 
   it('a stable prediction cache hit reads neither schedule, predictions nor session; a vote purges it', async () => {

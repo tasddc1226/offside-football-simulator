@@ -38,14 +38,23 @@ export type MatchHead = Pick<
  * 두 팀(그 시즌)의 선발. 각 팀은 자기 구단주의 그 시즌 은퇴 선수만 뛴다. T-11-310 감독 칸의 감독도 함께 읽는다(그 팀
  * 구단주가 끝낸 감독만). 쿼리 2번(나란히).
  */
-export async function lineupsOf(db: Db, season: number, home: OwnerTeamRow, away: OwnerTeamRow) {
+export async function lineupsOf(
+  db: Db,
+  season: number,
+  home: OwnerTeamRow,
+  away: OwnerTeamRow,
+  options: { coaches?: boolean } = {},
+) {
   const homeSlots = slotIdsOf(home);
   const awaySlots = slotIdsOf(away);
   const [rows, coachRows] = await Promise.all([
     careersByIds(db, [
       ...new Set([...homeSlots, ...awaySlots].filter((x): x is string => x !== null)),
     ]),
-    coachesByIds(db, [home.coachId, away.coachId]),
+    // Eligibility only counts real players; it does not use coach modifiers.
+    options.coaches === false
+      ? new Map<string, never>()
+      : coachesByIds(db, [home.coachId, away.coachId]),
   ]);
   const coach = (t: OwnerTeamRow): MatchCoach => {
     const c = t.coachId ? coachRows.get(t.coachId) : undefined;

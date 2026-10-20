@@ -474,7 +474,7 @@ async function eligibility(
         )
         .limit(1)
     : [];
-  const lineups = await lineupsOf(db, cup.season, team, team);
+  const lineups = await lineupsOf(db, cup.season, team, team, { coaches: false });
   const filled = filledCount(lineups.home);
   const ids = slotIdsOf(team).filter((x): x is string => !!x);
   const listed = await countOpenListingsAmong(db, ids);

@@ -47,7 +47,9 @@ const toInfo = (l: LeagueDef): LeagueResponse['league'] => ({
 async function teamNow(db: Db, league: LeagueDef, profileId: string) {
   const [team] = await myTeamIn(db, profileId, league.season);
   if (!team) return null;
-  const filled = filledCount((await lineupsOf(db, league.season, team, team)).home);
+  const filled = filledCount(
+    (await lineupsOf(db, league.season, team, team, { coaches: false })).home,
+  );
   return { teamId: team.id, filled, ovr: team.ovr };
 }
 
