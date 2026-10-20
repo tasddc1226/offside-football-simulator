@@ -7,6 +7,8 @@
   import { setSfxEnabled, sfxEnabled } from './sfx.js';
   import { revealShort, setRevealShort } from './revealPrefs.js';
   import { revealText as RV } from '@offside/app-core/i18n/ko/reveal';
+  import { keyMomentsOn, setKeyMomentsOn } from '@offside/app-core/keyMomentPref';
+  import { keyMomentText as KM } from '@offside/app-core/i18n/ko/keyMoment';
   import { bgm, setBgm, setBgmVolume } from './bgm.svelte.js';
   import { volumeAdjustable } from './bgmEngine.js';
   import { isDark, setDark } from './theme.js';
@@ -30,6 +32,8 @@
   let sfx = $state(sfxEnabled());
   // T-11-371 공개 연출 짧게(이 기기에만).
   let rvShort = $state(revealShort());
+  // T-11-426 결정적 장면 켜기 · 끄기(이 기기에만, 기본 켬).
+  let keyMoments = $state(keyMomentsOn());
   let dark = $state(isDark());
   let namePublic = $state(namePublicEnabled());
 
@@ -99,6 +103,13 @@
         <span class="muted">{RV.shortBody}</span>
       </div>
       <button class="switch" role="switch" aria-checked={rvShort} aria-labelledby="reveal-short-label" data-setting="reveal-short" onclick={() => setRevealShort((rvShort = !rvShort))}></button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">
+        <strong id="key-moments-label">{KM.settingTitle}</strong>
+        <span class="muted">{KM.settingBody}</span>
+      </div>
+      <button class="switch" role="switch" aria-checked={keyMoments} aria-labelledby="key-moments-label" data-setting="key-moments" onclick={() => setKeyMomentsOn((keyMoments = !keyMoments))}></button>
     </div>
     <div class="settings-row">
       <div class="settings-label">

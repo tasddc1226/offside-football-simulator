@@ -56,6 +56,7 @@ import { homeMore } from './homeMore';
 import { iap } from './iap';
 import { inbox } from './inbox';
 import { keyMoment } from './keyMoment';
+import { league } from './league';
 import { legend } from './legend';
 import { legendRn } from './legendRn';
 import { legendStyle } from './legendStyle';
@@ -78,6 +79,7 @@ import { retention } from './retention';
 import { retired } from './retired';
 import { retiredLook } from './retiredLook';
 import { reveal } from './reveal';
+import { salary } from './salary';
 import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
 import { seasonRecap } from './seasonRecap';
@@ -163,6 +165,7 @@ export const ja = {
   iap,
   inbox,
   keyMoment,
+  league,
   legend,
   legendRn,
   legendStyle,
@@ -185,6 +188,7 @@ export const ja = {
   retired,
   retiredLook,
   reveal,
+  salary,
   scout,
   seasonGauge,
   seasonRecap,

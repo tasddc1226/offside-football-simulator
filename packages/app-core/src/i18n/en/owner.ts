@@ -13,7 +13,7 @@ export const owner: Translation<OwnerMsgs> = {
   valueInfoFormula: 'Club value = club funds + the total base value of owned player cards',
   valueInfoOwned: 'Includes players you developed and signed, across all seasons.',
   valueInfoPrice:
-    'A card uses the market value of the last season in which the player reached their peak OVR. Market value depends on league wealth, OVR and age.',
+    'A card uses the highest market value among the seasons in which the player reached their peak OVR. Market value depends on league wealth, OVR and age, so playing on after the peak never lowers it.',
   valueInfoFallback:
     'If that season has no market value, the most valuable professional season is used. Without professional records, the base value is ₩100 million.',
   valueInfoExcluded: 'Listing prices and legend scores are not added directly.',

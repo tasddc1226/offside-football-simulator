@@ -78,6 +78,8 @@ export type Screen =
   | 'recap'
   /** T-11-145 오프사이드 컵(구단주 화면의 컵 배너로 연다). */
   | 'cup'
+  /** T-11-418 오프사이드 리그(홈의 리그 배너로 연다). */
+  | 'league'
   | 'board'
   | 'dex'
   | 'hof'

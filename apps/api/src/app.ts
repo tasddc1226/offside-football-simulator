@@ -45,9 +45,11 @@ import { registerTeamCommentRoutes } from './routes/teamComments.js';
 import { registerMarketRoutes } from './routes/market.js';
 import { registerManagerRoutes } from './routes/managers.js';
 import { registerCupRoutes } from './routes/cup.js';
+import { registerLeagueRoutes } from './routes/league.js';
 import { registerIapRoutes } from './routes/iap.js';
 import { registerAttendanceRoutes } from './routes/attendance.js';
 import { registerAdminCupRoutes } from './routes/adminCups.js';
+import { registerAdminLeagueRoutes } from './routes/adminLeagues.js';
 import { registerOwnerProfileRoutes } from './routes/ownerProfile.js';
 import { registerProfileRoutes } from './routes/profile.js';
 import { ok } from './routes/shared.js';
@@ -92,6 +94,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerMarketRoutes(app);
   registerManagerRoutes(app);
   registerCupRoutes(app);
+  registerLeagueRoutes(app);
   registerIapRoutes(app);
   registerAcquisitionRoutes(app);
   registerAttendanceRoutes(app);
@@ -106,6 +109,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerClubStrengthRoutes(app);
   registerAdminRoutes(app);
   registerAdminCupRoutes(app);
+  registerAdminLeagueRoutes(app);
 
   if (options.testRoutes) {
     app.get('/v1/test/throw', () => {

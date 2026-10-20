@@ -14,6 +14,10 @@ const ko = {
   auto: '감독에게 맡기기',
   timer: (p: { n: number }) => `${p.n}초 뒤 감독에게 맡겨요`,
   picked: (p: { label: string }) => `선택: ${p.label}`,
+  // T-11-426 설정
+  settingTitle: '결정적 장면',
+  settingBody:
+    '커리어 경기 중계 중 내 선수의 찬스 · 위기에서 멈추고 직접 고르게 해요. 끄면 늘 감독에게 맡겨요.',
   // 결과
   goal: (p: N) => `골! ${p.name}의 마무리예요.`,
   assist: (p: N) => `${p.name}의 패스가 골로 이어졌어요.`,

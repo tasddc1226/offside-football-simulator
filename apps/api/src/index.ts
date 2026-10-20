@@ -5,6 +5,7 @@ import { app } from './app.js';
 import { updateClubStrength } from './clubStrength/update.js';
 import { runBackupStep } from './cron/backup.js';
 import { runSnapshotOffload } from './careerSnapshots.js';
+import { runCardValueRescan } from './db/repos/cardValues.js';
 import { runDailyTick } from './cron/dailyRunner.js';
 import { runSeasonEventsArchive } from './cron/seasonEventsArchive.js';
 import { runSeasonTelemetryArchive } from './cron/seasonTelemetryArchive.js';
@@ -27,6 +28,7 @@ import { consumeCommunityPush } from './push/communityQueue.js';
 import { runCup } from './team/cup.js';
 import { finishStaleLive } from './team/liveMatch.js';
 import { runCupAutopilot } from './team/cupAutopilot.js';
+import { runLeague } from './team/league.js';
 import { purgeEdgeOrigin } from './edgeCache.js';
 import { STALE } from './edgeKeys.js';
 import { runSeasonClose } from './team/seasonClose.js';
@@ -125,6 +127,10 @@ export default {
         .catch((e: unknown) =>
           console.error(JSON.stringify({ level: 'error', job: 'cup', error: logErrorText(e) })),
         );
+      // T-11-418b 오프사이드 리그: 배치 안내 → 배치 → 시각이 된 경기 → 알림. 공개 조회는 엣지 캐시가 짧아(30 · 60초) 지우지 않는다.
+      await runLeague(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
+        .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'league', ...r })))
+        .catch(logged('league'));
       // T-11-251 다음 회차 만들기 → 접수 시작 알림 → 밀린 단계 슬랙 경보(15분마다).
       await runCupAutopilot(env, controller.scheduledTime).catch(logged('cup-autopilot'));
       // A cron round can commit before a later step fails; purge even on a partial run.
@@ -166,6 +172,22 @@ export default {
           (r) => r && console.log(JSON.stringify({ level: 'info', job: 'snapshot-offload', ...r })),
         )
         .catch(logged('snapshot-offload'));
+      // T-11-422 바뀐 카드 기준가로 이미 생긴 카드를 다시 매긴다(틱마다 10초까지, 다 훑으면 멈춘다). 피크(KST 19~24시)는 쉰다.
+      const utcHour = new Date(controller.scheduledTime).getUTCHours();
+      if (utcHour < 10 || utcHour >= 15)
+        await (async () => {
+          const until = Date.now() + 10_000;
+          const sum = { scanned: 0, raised: 0, done: false };
+          while (Date.now() < until && !sum.done) {
+            const r = await runCardValueRescan(env.DB);
+            if (!r) break;
+            sum.scanned += r.scanned;
+            sum.raised += r.raised;
+            sum.done = r.done;
+          }
+          if (sum.scanned)
+            console.log(JSON.stringify({ level: 'info', job: 'card-value-rescan', ...sum }));
+        })().catch(logged('card-value-rescan'));
       if (env.AUTOMATION_HIDE_DISABLED !== '1')
         await sweepAutomation(env.DB, controller.scheduledTime, true).catch(logged('automation'));
       await updateClubStrength(env, controller.scheduledTime).catch(logged('club-strength'));

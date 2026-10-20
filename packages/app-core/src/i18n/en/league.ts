@@ -1,0 +1,85 @@
+import type { Translation } from '../core';
+import type { LeagueMsgs } from '../ko/league';
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+export const league: Translation<LeagueMsgs> = {
+  title: 'OFFSIDE League',
+  seasonTitle: (p) => `Season ${p.season} OFFSIDE League`,
+  open: 'View league',
+  loadFail: "We couldn't load the league.",
+  pitch:
+    'Eight teams in a league play each other home and away over 14 rounds. Your finish decides your tier next season.',
+  phaseSoon: 'Opening soon',
+  phaseOpen: 'Entries open',
+  phaseClosed: 'Awaiting draw',
+  phaseRunning: 'In progress',
+  phaseDone: 'Finished',
+  soonLine: (p) => `Entries open ${p.at}.`,
+  openLine: (p) => `${p.entries} teams entered · until ${p.until}`,
+  closedLine: (p) => `Tiers and leagues are announced ${p.at}.`,
+  runningLine: 'League matches are under way.',
+  doneLine: "This season's league has finished.",
+  scheduleTitle: 'Schedule',
+  scheduleEntry: 'Entries',
+  scheduleSeason: (p) => `Season ${p.season} opens`,
+  scheduleDraw: 'Draw and fixtures',
+  scheduleRounds: 'Rounds 1–14',
+  date: (p) => `${MONTHS[p.month - 1]} ${p.day}`,
+  range: (p) => `${p.from} – ${p.to}`,
+  daily: (p) => `${p.from} – ${p.to}, daily at ${p.time}`,
+  rulesTitle: 'Rules',
+  ruleEntry:
+    'You can enter from 7 days before the season opens. At the draw, teams with fewer than 8 of your retired players in that season’s starting XI are left out.',
+  ruleTiers:
+    'Tier 1 has one league, tier 2 has two, and each tier below doubles. In the first season, tiers fill from the top by team OVR at the entry deadline. Some leagues have 7 teams depending on entries, and in those one team rests each round.',
+  rulePoints:
+    'The home team has a small advantage. A win is 3 points and a draw is 1. Ties are broken by goal difference, goals scored, then head-to-head.',
+  ruleMove: 'In every league, 1st place goes up a tier next season and 7th and 8th go down a tier.',
+  ruleLock:
+    "You can't change your squad from 1 hour before a match until it ends. The transfer market stays open.",
+  ruleForfeit:
+    'A team with fewer than 8 of your retired players in the starting XI forfeits 0–3. After 3 forfeits, every remaining match is a 0–3 loss and you start next season in the bottom tier.',
+  ruleReward:
+    'Rewards are trophies, titles and items, not club funds. They arrive when the season ends.',
+  entries: (p) => `${p.n} teams entered`,
+  loginToEnter: 'Log in to enter the league.',
+  enter: 'Enter league',
+  entering: 'Entering…',
+  entered: 'Entered',
+  withdraw: 'Withdraw',
+  withdrawing: 'Withdrawing…',
+  withdrawConfirm: 'Withdraw from the league? You can enter again while entries are open.',
+  toastEntered: "You've entered the league.",
+  toastWithdrawn: "You've withdrawn from the league.",
+  enteredNote: (p) => `The draw is ${p.at}. Your team OVR then decides your tier and league.`,
+  myOvr: (p) => `Your team OVR now: ${p.ovr}`,
+  presignNote: (p) =>
+    `You can enter before Season ${p.season} opens. Season ${p.season} clubs can be built from the opening on ${p.at}.`,
+  readyOk: (p) => `Ready · ${p.filled} of your retired players in the starting XI`,
+  readyShort: (p) =>
+    `You have ${p.filled}/${p.min} of your retired players in the starting XI. Fill ${p.min} before the draw to join the league.`,
+  readyNoTeam: (p) =>
+    `You don't have a Season ${p.season} club yet. Build one and start ${p.min} of your retired players before the draw to join the league.`,
+  notEntered: "You didn't enter this season's league.",
+  drawPending: 'Tiers and fixtures appear here after the draw.',
+  runningRounds: (p) => `${p.n} of ${p.total} rounds played.`,
+  leagueName: (p) => `Tier ${p.tier}, League ${p.league}`,
+  placedLine: (p) => `Tier ${p.tier}, League ${p.league} · Position ${p.rank}`,
+  droppedLine:
+    "You didn't have enough of your retired players in the starting XI at the draw, so you're not in this season's league.",
+  forfeitedLine: 'After 3 forfeits, all remaining matches are recorded as 0:3 losses.',
+  myLeague: 'My league',
+  pickLeague: 'Choose a league',
+  standingsTitle: 'Table',
+  zoneUp: 'Promotion',
+  zoneDown: 'Relegation',
+  forfeitsTag: (p) => `${p.n} forfeit${p.n === 1 ? '' : 's'}`,
+  roundsTitle: 'Rounds',
+  roundName: (p) => `Round ${p.n}`,
+  restTeam: (p) => `Bye · ${p.team}`,
+  forfeitScore: 'Forfeit',
+  tableFail: "We couldn't load the table.",
+  detailTitle: (p) => `Tier ${p.tier}, League ${p.league} · Round ${p.round}`,
+  detailBack: 'Back to the league',
+};

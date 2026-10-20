@@ -68,6 +68,8 @@
   import { detailPosOf } from '@offside/contracts/positions';
   import Topbar from './Topbar.svelte';
   import PlayerCard from './team/PlayerCard.svelte';
+  import { marketSalaryText } from '@offside/app-core/salary';
+  import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
   import MarketChart from './MarketChart.svelte';
   import { CHART_COPY, marketIndex } from '@offside/app-core/marketChart';
   import { go } from './nav.js';
@@ -483,6 +485,7 @@
         <div><dt>{L.detailTransfers}</dt><dd>{L.transferTimes({ n: buying.card.transfers })}</dd></div>
         <div><dt>{L.position}</dt><dd>{tn(POS_LABEL[buying.card.pos])}</dd></div>
       </dl>
+      <p class="mk-salary" data-market-salary>{TC.salaryLabel} · {marketSalaryText(buying.card, season)}</p>
     </div>
     <div class="mk-confirm">
       <h2>{me ? L.buyTitle : L.loginTitle}</h2>
@@ -531,6 +534,7 @@
 {/if}
 
 <style>
+  .mk-salary {margin:6px 0 0;font-size:12px;font-weight:600;text-align:center;opacity:.85;}
   /* 초록 머리 — 구단 자금 · 자금 만들기 · 요약 셋 */
   .mk-hero {
     display: flex;

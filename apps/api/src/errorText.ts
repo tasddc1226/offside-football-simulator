@@ -180,8 +180,9 @@ const PATTERNS: [RegExp, (m: RegExpExecArray) => string][] = [
     (m) => `You've played all of today's matches (${m[1]} a day). They reopen at midnight KST.`,
   ],
   [
-    /^지난 시즌 선수는 선발에 (\d+)명까지 넣을 수 있어요\.$/,
-    (m) => `You can start up to ${m[1]} players from past seasons.`,
+    /^지난 시즌 선수 급여가 예산을 넘어요\((\d+)\/(\d+)\)\. 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요\.$/,
+    (m) =>
+      `Past-season player salaries are over budget (${m[1]}/${m[2]}). Swap in lower-salary or this-season players.`,
   ],
   [
     /^한 번에 (\d+)명까지 내놓을 수 있어요\.$/,

@@ -41,6 +41,7 @@ import Market from '../screens/owner/Market';
 import FundsHistory from '../screens/owner/FundsHistory';
 import Manager from '../screens/owner/Manager';
 import Cup from '../screens/owner/CupScreen';
+import League from '../screens/league/LeagueScreen';
 import Settings from '../screens/settings/Settings';
 import Admin from '../screens/settings/Admin';
 import { ReviewNudge } from '../components/ReviewNudge';
@@ -70,6 +71,8 @@ const SCREENS: Record<Screen, ComponentType> = {
   recap: OwnerHonors,
   // T-11-145 오프사이드 컵(구단주 화면의 컵 배너로 연다).
   cup: Cup,
+  // T-11-418 오프사이드 리그(홈의 리그 배너로 연다).
+  league: League,
   settings: Settings,
   admin: Admin,
 };
