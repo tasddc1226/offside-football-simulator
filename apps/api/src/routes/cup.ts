@@ -76,6 +76,7 @@ import { requireProfile } from '../middleware/requireProfile.js';
 import {
   cupEntriesOf,
   cupMatchesOf,
+  cupMatchesIn,
   cupStateOf,
   groupTable,
   activeEntriesOf,
@@ -915,16 +916,16 @@ function rewardShop(
   return { balance: snap.balance, offers };
 }
 
-/** 컵에 참가 중인(탈락 전) 이 시즌 대회와 그 경기들. 없으면 빈 배열. */
+/** 컵에 참가 중인(탈락 전) 이 시즌 대회. 경기 목록은 명단 잠금 검사에서만 읽는다. */
 async function activeCups(db: Db, profileId: string, season: number) {
   const rows = await activeEntriesOf(db, profileId);
   if (!rows.length) return [];
   const all = await cupSchedule(db);
-  const out: { cup: CupDef; entry: CupEntryRow; matches: CupMatchRow[] }[] = [];
+  const out: { cup: CupDef; entry: CupEntryRow }[] = [];
   for (const entry of rows) {
     const cup = cupById(entry.cupId, all);
     if (!cup || cup.season !== season) continue;
-    out.push({ cup, entry, matches: await cupMatchesOf(db, cup.id) });
+    out.push({ cup, entry });
   }
   return out;
 }
@@ -942,18 +943,31 @@ export async function checkCupLineup(
   now: string,
   ovr: number,
 ) {
-  for (const { cup, entry, matches } of await activeCups(db, profileId, season)) {
+  const active = await activeCups(db, profileId, season);
+  if (!active.length) return;
+  const matches = await cupMatchesIn(
+    db,
+    active.map(({ cup }) => cup.id),
+  );
+  let listed: Promise<number> | undefined;
+  for (const { cup, entry } of active) {
     // T-11-410 구간 대회는 추첨 뒤 탈락 전까지 상한을 넘는 명단으로 바꿀 수 없다(접수 중에는 신청을 옮기면 된다).
     if (now >= cup.drawAt && !fitsDivision(cup, ovr))
       throw conflictError(
         cupKo('ovrCap', { division: cupKo(cup.division!), n: cup.ovrMax ?? 0 }),
         'CUP_OVR_CAP',
       );
-    if (lineupLocked(matches, entry.teamId, now))
+    if (
+      lineupLocked(
+        matches.filter((m) => m.cupId === cup.id),
+        entry.teamId,
+        now,
+      )
+    )
       throw conflictError(cupKo('lineupLocked'), 'CUP_LINEUP_LOCKED');
     if (filled < cup.minFilled)
       throw conflictError(cupKo('minFilled', { n: cup.minFilled }), 'CUP_MIN_FILLED');
-    if ((await countOpenListingsAmong(db, ids)) > 0)
+    if ((await (listed ??= countOpenListingsAmong(db, ids))) > 0)
       throw conflictError(cupKo('cardListed'), 'CUP_CARD_LISTED');
   }
 }

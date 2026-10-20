@@ -186,7 +186,15 @@ export async function apiFetch<T>(
     return failure('NETWORK_ERROR', L.network, true);
   }
 
-  if (isMutation && response.ok && !keepCache) clearApiCache();
+  if (isMutation && response.ok && !keepCache) {
+    // Delivery bookkeeping and inbox read markers do not change careers, funds or public lists.
+    // Unknown/domain mutations retain full invalidation (including account changes).
+    const pathname = path.split('?')[0]!;
+    if (pathname === '/v1/push/device') invalidateApiCache('/v1/push');
+    else if (/^\/v1\/notifications\/(?:read-all|[^/]+\/(?:read|interaction))$/.test(pathname))
+      invalidateApiCache('/v1/notifications');
+    else clearApiCache();
+  }
   // T-11-034 업적이 바뀌었을 수 있는 쓰기 — 다음 화면에서 업적을 한 번 받아 새 업적을 알린다.
   if (isMutation && response.ok && touchesAchievements(path)) markAchDirty();
   if (response.status === 204) return { ok: true, data: undefined as T };
