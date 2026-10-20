@@ -16,6 +16,7 @@ import { appState, prefs } from '../../store';
 import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { CupTrophy } from '../../ui/CupTrophy';
+import { analyticsAskPending } from '../../components/AnalyticsAsk';
 import { Btn, Press, Txt } from '../../ui';
 
 // 한 번 띄운 뒤에는 앱을 다시 켤 때까지 홈에 다시 와도 띄우지 않는다(닫기만 눌렀으면 다음에 다시 켤 때 보인다).
@@ -36,7 +37,8 @@ export function CupChampionPopup() {
     if (shownThisLaunch) return;
     let alive = true;
     void fetchCupHome().then((r) => {
-      if (!alive || !r.ok || shownThisLaunch) return;
+      // T-11-417 이용 분석 동의 창이 떠 있으면 이번 실행에는 띄우지 않는다(iOS는 창 두 개를 함께 띄우지 못한다).
+      if (!alive || !r.ok || shownThisLaunch || analyticsAskPending()) return;
       const next = cupChampionToShow(r.data);
       if (next) {
         shownThisLaunch = true;
