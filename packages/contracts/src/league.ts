@@ -2,6 +2,7 @@
 // 시즌 부(1부 · 2부 …)가 오르내린다. 기획은 docs/tracking/offside-league-plan.md. 시각은 모두 UTC ISO.
 // zod 없는 서브패스(`@offside/contracts/league`) — API 모양은 league-api.ts.
 import { DAY_MS, KST_MS, kstDay } from './kst.js';
+import { SEASON_GAUGE } from './season-gauge.js';
 import { SERVICE_SEASONS, type ServiceSeason } from './service-seasons.js';
 
 /** 리그를 여는 첫 시즌. */
@@ -62,15 +63,34 @@ export function planLeague(season: number, startsAt: string): LeagueDef {
 }
 
 /**
- * now에 보여 줄 리그의 시즌: 개막한 시즌 중 가장 최근(리그를 여는 시즌부터), 아직 없으면 일정에 오른 다음 시즌.
- * 리그를 여는 시즌이 일정에 아직 없으면 null.
+ * T-11-418c 아직 시즌 일정에 오르지 않은 다음 시즌(잠정). 다음 시즌은 지금 시즌 게이지가 마감을 확정해야 일정에 오르는데,
+ * 사전 신청은 그 전에 열어야 한다 — 마감이 아직 없으면 지금 시즌의 최대 기간 끝(개막 + maxDays)을 잠정 개막으로 쓴다.
+ * 게이지가 먼저 차 마감이 당겨지면 일정에 오른 실제 개막으로 리그 일정도 함께 당겨진다(신청은 시즌 번호로 남는다).
+ */
+export function provisionalNextSeason(started: ServiceSeason | undefined): ServiceSeason | null {
+  if (!started) return null;
+  const startsAt =
+    started.endsAt ??
+    new Date(Date.parse(started.startsAt) + SEASON_GAUGE.maxDays * DAY_MS).toISOString();
+  // 이름은 화면에 쓰지 않는다(리그 일정 계산에만 쓴다).
+  return { ...started, id: started.id + 1, name: '', startsAt, endsAt: null };
+}
+
+/**
+ * now에 보여 줄 리그의 시즌: 개막한 시즌 중 가장 최근(리그를 여는 시즌부터)의 리그가 아직 끝나지 않았으면 그 시즌, 아니면
+ * 다음 시즌(일정에 없으면 잠정 다음 시즌). 리그를 여는 시즌이 아직 없으면 null.
  */
 export function leagueSeasonAt(
   now: string,
   seasons: readonly ServiceSeason[] = SERVICE_SEASONS,
 ): ServiceSeason | null {
-  const open = seasons.filter((s) => s.id >= LEAGUE_FROM_SEASON);
-  return open.filter((s) => s.startsAt <= now).at(-1) ?? open.find((s) => s.startsAt > now) ?? null;
+  const started = seasons.filter((s) => s.startsAt <= now).at(-1);
+  const next = seasons.find((s) => s.startsAt > now) ?? provisionalNextSeason(started);
+  const cur = started && started.id >= LEAGUE_FROM_SEASON ? started : null;
+  const upcoming = next && next.id >= LEAGUE_FROM_SEASON ? next : null;
+  if (cur && (!upcoming || leaguePhase(planLeague(cur.id, cur.startsAt), now) !== 'done'))
+    return cur;
+  return upcoming;
 }
 
 export const leagueFinalAt = (l: LeagueDef) => l.rounds.at(-1)!;
