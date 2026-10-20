@@ -1469,6 +1469,48 @@ export const cupEntries = sqliteTable(
 );
 
 /**
+ * T-11-418 오프사이드 리그 일정(시즌마다 한 행). 행이 없으면 서버가 시즌 개막으로 기본 일정(contracts planLeague)을
+ * 쓴다 — 이 행은 운영 도구로 배치 · 첫 라운드를 미룰 때만 생긴다. rounds_json은 1라운드부터의 경기 시각(UTC ISO) 배열.
+ */
+export const leagueSeasons = sqliteTable('league_seasons', {
+  season: integer('season').primaryKey(),
+  startsAt: text('starts_at').notNull(),
+  opensAt: text('opens_at').notNull(),
+  closesAt: text('closes_at').notNull(),
+  drawAt: text('draw_at').notNull(),
+  roundsJson: text('rounds_json').notNull(),
+  minFilled: integer('min_filled').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+/**
+ * T-11-418 오프사이드 리그 신청. 시즌마다 구단주당 한 행. 신청은 참가 의사만 남긴다 — 개막 전 사전 신청은 그 시즌 팀이
+ * 아직 없다. 팀 · 이름 · 감독 · OVR은 배치 때 그 시즌 팀으로 채운다(2차). status: active(신청) · withdrawn(접수 중 취소).
+ */
+export const leagueEntries = sqliteTable(
+  'league_entries',
+  {
+    season: integer('season').notNull(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('active'),
+    teamId: text('team_id'),
+    name: text('name'),
+    manager: text('manager'),
+    ovr: integer('ovr'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.season, table.profileId] }),
+    index('league_entries_profile_idx').on(table.profileId),
+    index('league_entries_season_status_idx').on(table.season, table.status),
+  ],
+);
+
+/**
  * T-11-145 컵 경기. 조별은 grp(1부터)·slot(그 라운드 조 안 순서), 토너먼트는 grp 0·slot(대진 순서). 추첨 때 조별 경기를,
  * 앞 라운드가 끝나면 다음 라운드를 만든다(INSERT OR IGNORE — 같은 자리는 한 번만). played_at이 차면 끝난 경기다.
  * 상대가 없거나(조 2팀) 한 팀이 못 나오면 forfeit. detail_json은 팀 경기와 같은 MatchDetail.
