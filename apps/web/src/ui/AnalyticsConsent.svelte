@@ -138,12 +138,16 @@
 {#if card}
   <section class="card analytics-consent" aria-label={L.consentAria} data-analytics="consent">{@render body()}</section>
 {:else if ask}
-  <PopSheet label={L.consentAria}>
-    <div class="analytics-consent" data-analytics="consent">{@render body()}</div>
-  </PopSheet>
+  <!-- 컵 우승 창(z-index 11) · 출석 창보다 위에 둬서 동의부터 고르게 한다. -->
+  <div class="consent-layer">
+    <PopSheet label={L.consentAria}>
+      <div class="analytics-consent" data-analytics="consent">{@render body()}</div>
+    </PopSheet>
+  </div>
 {/if}
 
 <style>
+  .consent-layer { position: relative; z-index: 12; }
   section.analytics-consent { padding: 16px; margin: 12px auto; max-width: 640px; }
   .analytics-consent { display: flex; flex-direction: column; gap: 12px; }
   .consent-item { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
