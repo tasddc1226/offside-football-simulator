@@ -23,10 +23,11 @@
   import { fundsText } from '@offside/app-core/funds';
   import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
   import type { RewardShopResponse } from '@offside/contracts';
-  import { REROLL_MILEAGE, rerollMileageLeft, scoutPityView, type ScoutPity } from '@offside/contracts/cup';
+  import { REROLL_MILEAGE, rerollMileageLeft, type ScoutPity } from '@offside/contracts/cup';
   import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
   import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
   import ScoutOdds from './cup/ScoutOdds.svelte';
+  import ScoutPityGauge from './ScoutPityGauge.svelte';
   import { hasSessionHint } from '@offside/app-core/api/client';
   import { toast } from './helpers.js';
   import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
@@ -147,7 +148,6 @@
   const NO_PITY: ScoutPity = { used: 0, streak: 0, elites: 0 };
   let pity = $state<ScoutPity>(NO_PITY);
   let scoutPlan: { seed: number; hit: boolean } | null = null;
-  const pityView = $derived(scoutPityView(pity));
   const premium = $derived(!!appState.candidates?.some((c) => c.guaranteed));
   async function premiumScout() {
     if (scoutBusy || scouts < 1 || !confirm(SL.confirm({ n: scouts - 1 }))) return;
@@ -169,7 +169,9 @@
     if (r.data.pity) pity = r.data.pity;
     const mode = r.data.scoutMode ?? 'normal';
     premiumScoutCandidates(plan.seed, mode);
-    toast(mode === 'elite' ? SL.doneElite({ n: scouts }) : mode === 'sure' ? SL.doneSure({ n: scouts }) : SL.done({ n: scouts }));
+    // T-11-415 S가 그냥 나와 S 확정 칸이 0으로 돌아가면 그렇다고 알린다.
+    const reset = mode === 'normal' && r.data.pity?.streak === 0;
+    toast(mode === 'elite' ? SL.doneElite({ n: scouts }) : mode === 'sure' ? SL.doneSure({ n: scouts }) : reset ? SL.doneReset({ n: scouts }) : SL.done({ n: scouts }));
   }
   async function reroll() {
     if (rerolling || rerolls < 1 || !confirm(CL.rerollConfirm({ n: rerolls - 1 }))) return;
@@ -503,9 +505,11 @@
     {/if}
     {#if scouts > 0}
       <button class="btn btn-sm btn-primary self-start" data-act="premium-scout" disabled={scoutBusy || rerolling} onclick={premiumScout}>{scoutBusy ? SL.busy : SL.btn({ n: scouts })}</button>
-      <p class="fs-sm" data-scout-pity>{SL.pitySure({ n: pityView.sureIn })} · {SL.pityElite({ n: pityView.eliteIn })}</p>
-      <p class="muted fs-sm">{SL.what} {SL.pityHelp}</p>
+      <p class="muted fs-sm">{SL.what}</p>
+      <ScoutPityGauge {pity} />
       <ScoutOdds />
+    {:else if pity.used > 0}
+      <ScoutPityGauge {pity} empty />
     {/if}
     {#if premium}<p class="muted fs-sm" data-premium-note>{SL.premiumNote}</p>{/if}
     {#if rerolls > 0}

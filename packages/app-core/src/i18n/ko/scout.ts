@@ -36,7 +36,15 @@ const ko = {
   pitySure: (p: { n: number }) => (p.n <= 1 ? '다음 장은 S 확정' : `S 확정까지 ${p.n}장`),
   pityElite: (p: { n: number }) => (p.n <= 1 ? '다음 장은 특급 S 확정' : `특급 S까지 ${p.n}장`),
   pityHelp:
-    'S 후보가 안 나오면 30장째에는 S 후보가 확정돼요. 그리고 누적 100장째마다 잠재력 최고치(96) S 후보가 확정돼요.',
+    'S 확정 칸은 S 후보 없이 30장째에 차요. 중간에 S 후보가 나오면 처음부터 다시 세요. 특급 S 칸은 누적 100장째마다 차고 다시 세지 않아요.',
+  // T-11-415 천장 막대.
+  pityTitle: '천장',
+  gaugeElite: '특급 S (잠재력 96)',
+  gaugeCount: (p: { have: number; need: number }) => `${p.have} / ${p.need}장`,
+  gaugeNext: '다음 장 확정',
+  pityKeep: '스카우트권을 다시 얻으면 여기서부터 이어서 세요.',
+  doneReset: (p: { n: number }) =>
+    `S 후보가 나와서 S 확정 칸을 처음부터 다시 세요. 프리미엄 스카우트권이 ${p.n}장 남았어요.`,
   pillSure: 'S 확정',
   pillElite: '특급 S',
   doneSure: (p: { n: number }) =>
@@ -55,7 +63,7 @@ const ko = {
   fundsDone: (p: { n: number }) => `프리미엄 스카우트권을 샀어요. 이제 ${p.n}장 있어요.`,
   fundsFail: '프리미엄 스카우트권을 사지 못했어요.',
   oddsPity:
-    '천장: S 후보 없이 29장을 쓰면 30장째 보장 후보는 S예요. 누적 100장째마다 보장 후보의 잠재력은 최고치(96)예요.',
+    '천장: S 후보 없이 29장을 쓰면 30장째 보장 후보는 S예요. 중간에 S 후보가 나오면 처음부터 다시 세요. 누적 100장째마다 보장 후보의 잠재력은 최고치(96)예요.',
 };
 
 export type ScoutMsgs = typeof ko;
