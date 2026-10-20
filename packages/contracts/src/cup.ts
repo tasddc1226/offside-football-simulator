@@ -334,6 +334,18 @@ export function scoutPityView(p: ScoutPity) {
 }
 
 /**
+ * T-11-415 천장 막대. have = 이번 칸에 쌓인 장수(need - 남은 장수), next = 다음 장이 그 칸의 확정인지.
+ * S 확정 칸은 S 후보가 나오면 0으로 돌아가고, 특급 칸은 돌아가지 않는다.
+ */
+export function scoutPityGauge(p: ScoutPity) {
+  const v = scoutPityView(p);
+  return {
+    sure: { have: SCOUT_PITY_SURE - v.sureIn, need: SCOUT_PITY_SURE, next: v.next === 'sure' },
+    elite: { have: SCOUT_PITY_ELITE - v.eliteIn, need: SCOUT_PITY_ELITE, next: v.next === 'elite' },
+  };
+}
+
+/**
  * T-11-248 리롤권 마일리지. 서버가 차감한 리롤권(구매 · 구단 자금 · 보상으로 받은 것 모두)을 REROLL_MILEAGE장 쓸 때마다
  * 프리미엄 스카우트권 1장을 준다. 광고로 다시 뽑기는 기기에서만 세므로 들어가지 않는다. progress = 마지막 지급 뒤 쓴 장수.
  */
