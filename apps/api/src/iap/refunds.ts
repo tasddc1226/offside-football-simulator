@@ -1,3 +1,5 @@
+import { REMOVE_ADS_PRODUCT_ID } from '@offside/contracts/cup';
+import { markPurchaseRefund } from '../db/repos/adFreePurchases.js';
 // ───────── 인앱 상품 환불 회수 (T-11-215) ─────────
 // 소모성 상품을 환불받고도 아이템을 계속 쓰지 못하게, 스토어가 알려 준 환불 거래의 아이템을 회수한다(이용약관 1항).
 // Apple은 App Store 서버 알림(REFUND)을 바로 받고, Google은 매일 cron이 무효화된 구매 목록을 읽는다. 회수는 거래마다 한 번이고
@@ -86,6 +88,16 @@ export async function handleAppleNotification(
   }
   const tx = await verifyAppleTransaction(note.data.signedTransactionInfo, appleRoot);
   if (!tx?.transactionId) return 'invalid';
+  await markPurchaseRefund(
+    db.$client,
+    'apple',
+    String(
+      tx.productId === REMOVE_ADS_PRODUCT_ID
+        ? (tx.originalTransactionId ?? tx.transactionId)
+        : tx.transactionId,
+    ),
+    now,
+  );
   const r = await revokeIapPurchase(db, 'apple', String(tx.transactionId), now);
   log('iap-refund', { store: 'apple', tx: String(tx.transactionId).slice(-6), ...summary(r) });
   return 'revoked';
@@ -112,6 +124,7 @@ export async function syncGoogleVoided(
   let revoked = 0;
   let unknown = 0;
   for (const v of list) {
+    await markPurchaseRefund(env.DB, 'google', v.purchaseToken, now);
     const r = await revokeIapPurchase(db, 'google', v.purchaseToken, now);
     if (env.BILLING_ALERTS_ENABLED === '1' && r.found) {
       const row = await env.DB.prepare(

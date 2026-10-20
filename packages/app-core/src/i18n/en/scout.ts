@@ -34,7 +34,14 @@ export const scout: Translation<ScoutMsgs> = {
   pitySure: (p) => (p.n <= 1 ? 'Next ticket: S guaranteed' : `S guaranteed in ${p.n}`),
   pityElite: (p) => (p.n <= 1 ? 'Next ticket: elite S guaranteed' : `Elite S in ${p.n}`),
   pityHelp:
-    'If no S candidate shows up, your 30th ticket guarantees one. Every 100th ticket you use guarantees an S candidate with top potential (96).',
+    'The S bar fills on your 30th ticket without an S candidate. If an S candidate shows up first, it starts over. The elite S bar fills on every 100th ticket and never starts over.',
+  pityTitle: 'Pity',
+  gaugeElite: 'Elite S (potential 96)',
+  gaugeCount: (p) => `${p.have} / ${p.need}`,
+  gaugeNext: 'Next ticket',
+  pityKeep: 'Your count carries on when you get more tickets.',
+  doneReset: (p) =>
+    `You got an S candidate, so the S bar starts over. ${p.n} premium scout tickets left.`,
   pillSure: 'S guaranteed',
   pillElite: 'Elite S',
   doneSure: (p) => `You hit the pity and got an S candidate. ${p.n} premium scout tickets left.`,
@@ -50,5 +57,5 @@ export const scout: Translation<ScoutMsgs> = {
   fundsDone: (p) => `Premium scout ticket bought. You now have ${p.n}.`,
   fundsFail: "Couldn't buy the premium scout ticket.",
   oddsPity:
-    'Pity: after 29 tickets with no S, the guaranteed candidate on the 30th is S. On every 100th ticket, the guaranteed candidate has top potential (96).',
+    'Pity: after 29 tickets with no S, the guaranteed candidate on the 30th is S. An S candidate along the way starts the count over. On every 100th ticket, the guaranteed candidate has top potential (96).',
 };

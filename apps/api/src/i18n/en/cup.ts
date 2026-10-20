@@ -9,6 +9,21 @@ export const CUP_EN: Record<CupTextKey, string> = {
   predictionNotFinished: 'Only finished matches can be settled.',
   predictionClosed: 'This match has started or is not available for predictions.',
   title: 'Season {season} OFFSIDE Cup #{edition}',
+  titleDivision: 'Season {season} OFFSIDE Cup #{edition} {division}',
+  junior: 'Junior',
+  senior: 'Senior',
+  master: 'Master',
+  overCap: "Your team OVR is above this division's cap ({n}). Enter a higher division.",
+  enteredOther:
+    'You already entered another division of this cup. Withdraw that entry first to switch.',
+  ovrCap: "While you are in the OFFSIDE Cup {division}, your lineup can't go above team OVR {n}.",
+  movedTitle: 'Moved to {cup}',
+  movedUpBody:
+    'At the draw your team OVR was above the cap of the division you entered, so you moved up a division.',
+  mergedBody:
+    'Your division had fewer than {n} teams, so it plays together with the division above.',
+  adminCapOpen: "Entries are open, so the cap can't change.",
+  adminCapMaster: 'Master and single-division cups have no cap.',
   g1: 'Group matchday 1',
   g2: 'Group matchday 2',
   g3: 'Group matchday 3',
@@ -83,6 +98,8 @@ export const CUP_EN: Record<CupTextKey, string> = {
   earlyBody: 'Group draw {draw}, first match {first} (KST).',
   rewardBody: 'Final result: {stage}. You received {n} player reroll ticket(s).',
   openTitle: '{cup} registration is open',
+  openBodyDivision:
+    'Pick the division that fits your team OVR (Junior, Senior or Master). Up to {n} teams per division.',
   openBody: 'First come, first served for {n} teams. Enter from the cup banner on Home.',
   rewardBodyBoost:
     'Final result: {stage}. You received {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s).',

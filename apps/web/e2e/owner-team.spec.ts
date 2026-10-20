@@ -365,7 +365,7 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await page.locator('[data-act="team-challenge"]').click();
   await expect
     .poll(() => played)
-    .toEqual({ opponentTeamId: 'tem_00000000-0000-4000-8000-000000000002' });
+    .toEqual({ opponentTeamId: 'tem_00000000-0000-4000-8000-000000000002', live: true });
   // T-10-097 결과 전에 문자중계가 먼저 흐른다 — 킥오프 줄로 시작하고, 건너뛰면 결과 화면.
   const live = page.locator('[data-team-live]');
   await expect(live.locator('[data-live-line="kickoff"]')).toContainText('킥오프');
@@ -402,6 +402,190 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await live.locator('[data-act="live-skip"]').click();
   await result.getByRole('button', { name: '편성으로' }).click();
   await expect(page.locator('[data-team-record] dd').nth(1)).toHaveText('1,016');
+});
+
+// T-11-387 랭크 경기 결정적 장면 — 중계가 장면 분에 멈추고 선택지 카드를 띄운다. 고르면 서버 판정 골이 중계에 끼어들고,
+// 다음 장면에서 결과 바로 보기를 누르면 남은 장면을 감독에게 맡겨 마감한 결과(결정적 장면 · 득점자 자리)를 보인다.
+test('T-11-387 랭크 경기 중 결정적 장면을 고르면 결과가 중계와 결과 화면에 남는다', async ({
+  page,
+}) => {
+  await page.clock.install();
+  await stubOwner(page, true);
+  const team = teamFrom({
+    name: '우리 동네 FC',
+    formation: '4-3-3',
+    slots: [
+      PLAYERS[1]!.careerId,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      PLAYERS[0]!.careerId,
+    ],
+  });
+  await page.route(ownerTeamUrl, (route) => route.fulfill(ownerTeam({ team })));
+  await page.route(`${API}/v1/owner-team/opponents`, (route) =>
+    route.fulfill(
+      ok({
+        items: [
+          {
+            teamId: RIVAL,
+            name: '라이벌 FC',
+            owner: '라이벌 감독',
+            formation: '4-4-2',
+            ovr: 55,
+            rating: 1012,
+            record: REC,
+          },
+        ],
+      }),
+    ),
+  );
+  const STRIKER = PLAYERS[0]!.careerId;
+  const side = (teamId: string, name: string, goals: number, ratingChange: number | null) => ({
+    teamId,
+    name,
+    owner: '감독',
+    formation: '4-3-3',
+    ovr: 56,
+    goals,
+    ratingChange,
+  });
+  const chance = {
+    index: 0,
+    minute: 3,
+    kind: 'chance',
+    situation: 'st-1v1',
+    actor: { name: '공개 골잡이', id: STRIKER, slot: 'ST' },
+    mate: { name: '유스 선수', id: null, slot: 'W' },
+    opp: { name: '익명의 수비수 No.4', id: null, slot: 'CB' },
+    choices: [
+      { id: 'drive', pct: 40, mate: false, risk: 0, gain: 0 },
+      { id: 'square', pct: 44, mate: true, risk: 10, gain: 0 },
+      { id: 'round', pct: 58, mate: false, risk: 20, gain: 0 },
+    ],
+  };
+  const crisis = {
+    index: 1,
+    minute: 6,
+    kind: 'crisis',
+    situation: 'gk-1v1',
+    actor: { name: 'No.1', id: null, slot: 'GK' },
+    mate: { name: '유스 선수', id: null, slot: 'CB' },
+    opp: { name: '익명의 공격수 No.9', id: null, slot: 'ST' },
+    choices: [
+      { id: 'wait', pct: 62, mate: false, risk: 0, gain: 0 },
+      { id: 'rush', pct: 55, mate: false, risk: 0, gain: 8 },
+    ],
+  };
+  const goal = {
+    minute: 3,
+    side: 'home',
+    scorer: '공개 골잡이',
+    assist: null,
+    scorerId: STRIKER,
+    assistId: null,
+    slot: 'ST',
+  };
+  const final = {
+    match: {
+      id: 'mat_live',
+      home: side(MY_TEAM, '우리 동네 FC', 1, 9),
+      away: side(RIVAL, '라이벌 FC', 0, -9),
+      events: [goal],
+      moments: [
+        { ...chance, picked: 'round', ok: true },
+        { ...crisis, picked: 'auto', ok: true },
+      ],
+      mine: 'home',
+      createdAt: '2026-09-29T03:00:00.000Z',
+    },
+    record: { w: 1, d: 0, l: 0 },
+    rating: 1009,
+    matchesLeft: 9,
+  };
+  let started: unknown = null;
+  const picks: unknown[] = [];
+  let finished = 0;
+  await page.route(`${API}/v1/owner-team/matches`, (route) => {
+    started = route.request().postDataJSON();
+    return route.fulfill(
+      ok(
+        {
+          match: {
+            ...final.match,
+            home: side(MY_TEAM, '우리 동네 FC', 0, null),
+            away: side(RIVAL, '라이벌 FC', 0, null),
+            events: [],
+            moments: undefined,
+          },
+          record: REC,
+          rating: 1000,
+          matchesLeft: 9,
+          live: { moments: [chance, crisis], choiceSec: 15 },
+        },
+        201,
+      ),
+    );
+  });
+  await page.route(`${API}/v1/owner-team/matches/mat_live/moments/0`, (route) => {
+    picks.push(route.request().postDataJSON());
+    return route.fulfill(ok({ moment: { ...chance, picked: 'round', ok: true }, goals: [goal] }));
+  });
+  await page.route(`${API}/v1/owner-team/matches/mat_live/finish`, (route) => {
+    finished++;
+    return route.fulfill(ok(final));
+  });
+
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await page.locator('[data-team-tab="opponents"]').click();
+  await page.locator('[data-act="team-challenge"]').click();
+  await expect.poll(() => started).toEqual({ opponentTeamId: RIVAL, live: true });
+
+  const live = page.locator('[data-team-live]');
+  // 고를 장면은 중계 위로 올라오는 시트(대화상자)로 뜬다.
+  const card = page.getByRole('dialog').locator('[data-moment="st-1v1"]');
+  await expect(card).toContainText('결정적 찬스');
+  await expect(card).toContainText('공개 골잡이');
+  await expect(card.locator('[data-moment-choice]')).toHaveCount(3);
+  await expect(card.locator('[data-moment-choice="round"]')).toContainText('58%');
+  await expect(card.locator('[data-moment-choice="round"]')).toContainText('역습 20%');
+  await expectNoA11yViolations(page);
+  // Freeze after the accessibility scan; browser/CI work must not spend the choice budget.
+  const now = await page.evaluate(() => Date.now());
+  await page.clock.pauseAt(new Date(now + 100));
+  await card.locator('[data-moment-choice="round"]').click();
+  await expect.poll(() => picks).toEqual([{ choice: 'round' }]);
+  await expect(card).toHaveCount(0);
+  // Play the commentary and goal holds through minute 6 without waiting on wall-clock timers.
+  // This stays inside the next choice's 15-second budget.
+  await page.clock.runFor(8_000);
+  await expect(live.locator('[data-live-line="moment"]')).toContainText('키퍼 제치기');
+  await expect(live.locator('[data-live-line="goal"]')).toContainText('공개 골잡이');
+  await expect(live.locator('[data-live-score]')).toContainText('1');
+
+  // 두 번째 장면에서 결과 바로 보기 — 고르지 않은 장면은 감독에게 맡기고 서버가 마감한다.
+  await expect(page.getByRole('dialog').locator('[data-moment="gk-1v1"]')).toBeVisible();
+  await page.locator('[data-act="moment-skip"]').click();
+  await expect(live).toHaveCount(0);
+  expect(finished).toBe(1);
+  const result = page.locator('[data-team-result]');
+  await expect(result.locator('h1')).toHaveText('승리');
+  await expect(result.locator('.tm-goals')).toContainText('1:0');
+  await expect(result.locator('.tm-slot')).toHaveText('ST');
+  const moments = result.locator('[data-team-moments]');
+  await expect(moments.locator('li')).toHaveCount(2);
+  await expect(moments.locator('li').first()).toContainText('키퍼 제치기');
+  await expect(moments.locator('li').nth(1)).toContainText('감독');
+  await expect(result.locator('[data-rating-change]')).toContainText('내 팀 레이팅 +9');
+  await page.clock.resume();
+  await expectNoA11yViolations(page);
 });
 
 test('T-11-269 기록 탭 — 더 보기로 지난 경기를 잇고, 통계 카드와 득점자 이름으로 시즌 통계를 연다', async ({

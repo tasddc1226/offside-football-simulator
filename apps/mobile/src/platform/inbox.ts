@@ -13,6 +13,7 @@ import { inboxText as L } from '@offside/app-core/i18n/ko/inbox';
 import { appState } from '../store';
 import { notificationDestination } from './notificationDestination';
 import { invalidateApiCache } from '@offside/app-core/api/client';
+import { recheckOwner } from '@offside/app-core/api/friendPending';
 import { trackPushInteraction } from './pushTracking';
 
 export const inboxState = proxy(initialInboxState());
@@ -55,6 +56,10 @@ export function openInboxTarget(
       if (kind === 'social') invalidateApiCache('/v1/friends');
       if (kind === 'social') appState.teamView = 'opponents';
       else if (kind === 'team') appState.teamView = 'history';
+    }
+    if (parsed.data.screen === 'home') {
+      recheckOwner();
+      notificationDestination.home++;
     }
     if (parsed.data.screen === 'market' && kind === 'market') {
       invalidateApiCache('/v1/market');

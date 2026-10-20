@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   import { tn } from '@offside/game/i18n/names';
   // T-10-005 명예의 전당: 모든 유저의 은퇴 선수(서버). 행을 누르면 상세로. 이 기기에서 은퇴한 선수에는
   // '내 선수' 표시를 단다. 내 선수 목록은 구단주 화면으로 옮겼다(T-10-058, MyPlayers).
@@ -263,7 +264,7 @@
       <p>{L.opensNote}</p>
     </div>
   {:else if all === null && !failed}
-    <p class="empty">{L.loading}</p>
+    <Skeleton rows={6} />
   {:else if failed}
     <p class="empty">{L.loadFailed}</p>
   {:else if all && all.length}

@@ -1,4 +1,5 @@
 // 새 버전 알림(웹 UpdateBanner.svelte). 받아 둔 OTA 번들이 있으면 '다시 시작'으로 바로 적용한다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { rem } from '../theme/type';
 import { useColors } from '../theme/useColors';
 import { applyUpdate } from '../platform/updates';
@@ -16,7 +17,12 @@ export function UpdateBanner() {
   return (
     <TopBanner testID="update-banner" label={L.updateAlert} style={style}>
       <Txt
-        style={{ flex: 1, fontSize: rem(0.875), lineHeight: rem(0.875) * 1.4, color: c.onPitch }}
+        style={{
+          flex: 1,
+          fontSize: rem(FONT.body2),
+          lineHeight: rem(FONT.body2) * 1.4,
+          color: c.onPitch,
+        }}
       >
         {shellMoreText.updateBodyApp}
       </Txt>

@@ -2,7 +2,8 @@
 import type { ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { useColors, useIsDark } from '../theme/useColors';
-import { alpha } from '../theme/colors';
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
+import { alpha, mix } from '../theme/colors';
 import { rem } from '../theme/type';
 import { Txt } from './Txt';
 import { Press } from './Press';
@@ -53,7 +54,8 @@ export function Btn({
   const k = kind ?? kindFromCls(cls);
   const small = sm ?? !!cls?.includes('btn-sm');
   const palette = {
-    default: { bg: c.surface, border: c.line, fg: c.ink },
+    // T-11-396 기본은 테두리 없는 옅은 면(웹 .btn), 주요 동작은 초록(primary) · 금색(accent) 하나.
+    default: { bg: mix(c.ink, c.surface, 0.06), border: 'transparent', fg: c.ink },
     primary: { bg: c.pitch, border: c.pitch, fg: c.onPitch },
     accent: { bg: c.accent, border: c.accent, fg: c.accentInk },
     ghost: { bg: 'transparent', border: c.line, fg: c.ink },
@@ -74,7 +76,7 @@ export function Btn({
           backgroundColor: palette.bg,
           borderColor: palette.border,
           borderWidth: 1,
-          borderRadius: 12,
+          borderRadius: small ? RADIUS.sm : RADIUS.md,
           minHeight: small ? 44 : 48,
           paddingVertical: small ? 9 : 12,
           paddingHorizontal: small ? 14 : 16,
@@ -94,7 +96,7 @@ export function Btn({
           style={{
             color: palette.fg,
             fontSize: rem(small ? 0.875 : 0.9375),
-            fontWeight: '600',
+            fontWeight: '700',
             lineHeight: rem(small ? 0.875 : 0.9375) * 1.25,
             textAlign: 'center',
             flexShrink: 1,
@@ -111,11 +113,11 @@ export function Btn({
           style={{
             paddingHorizontal: 6,
             paddingVertical: 1,
-            borderRadius: 5,
+            borderRadius: RADIUS.xs,
             backgroundColor: c.surface,
           }}
         >
-          <Txt num style={{ fontSize: rem(0.75), fontWeight: '700', color: c.accentText }}>
+          <Txt num style={{ fontSize: rem(FONT.caption), fontWeight: '700', color: c.accentText }}>
             {badge}
           </Txt>
         </View>
@@ -129,7 +131,7 @@ export function Btn({
             right: 8,
             width: 10,
             height: 10,
-            borderRadius: 5,
+            borderRadius: RADIUS.xs,
             backgroundColor: c.bad,
             borderWidth: 2,
             borderColor: palette.bg === 'transparent' ? c.surface : palette.bg,

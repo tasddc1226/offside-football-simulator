@@ -105,6 +105,10 @@ test('production discovery files contain the public pages', () => {
   assert.match(createHeaders(config), /\/\*\n[ ]{2}X-Robots-Tag: noindex/);
   assert.match(createHeaders(config), /\/\n[ ]{2}X-Robots-Tag: index, follow/);
   assert.match(
+    createHeaders(config),
+    /\/assets\/\*\n[ ]{2}Cache-Control: public, max-age=31536000, immutable\n[ ]{2}X-Content-Type-Options: nosniff/,
+  );
+  assert.match(
     createSitemapXml(config.origin),
     /<loc>https:\/\/play\.example\.com\/guide\/<\/loc>/,
   );

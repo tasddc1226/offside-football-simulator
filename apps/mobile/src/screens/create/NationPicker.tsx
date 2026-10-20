@@ -1,6 +1,7 @@
 // 국적 고르기(웹 NationPicker.svelte): 한글·초성으로 찾는 목록. 연맹별로 묶어 가나다순, 대한민국은 맨 위.
 // 웹은 입력 칸 아래 콤보박스를 펼치지만, 앱은 키보드가 아래 목록을 가리므로 입력 칸을 누르면 아래에서 올라오는
 // 창(Modal)에 검색 칸 + 목록을 띄우고 KeyboardAvoidingView로 키보드 위에 맞춘다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useMemo, useState } from 'react';
 import {
   Keyboard,
@@ -73,12 +74,12 @@ export function NationPicker({
           minHeight: 48,
           paddingHorizontal: 13,
           borderWidth: 1,
-          borderColor: c.line,
-          borderRadius: 10,
+          borderColor: 'transparent',
+          borderRadius: RADIUS.sm,
           backgroundColor: c.surface2,
         }}
       >
-        <Txt style={{ fontSize: rem(1.125) }} accessibilityElementsHidden>
+        <Txt style={{ fontSize: rem(FONT.title3) }} accessibilityElementsHidden>
           {flagOf(selected.code)}
         </Txt>
         <Txt numberOfLines={1} style={{ flex: 1, fontSize: 16 }}>
@@ -143,8 +144,8 @@ export function NationPicker({
                 style={{
                   flex: 1,
                   borderWidth: 1,
-                  borderColor: c.line,
-                  borderRadius: 10,
+                  borderColor: 'transparent',
+                  borderRadius: RADIUS.sm,
                   backgroundColor: c.surface2,
                   paddingVertical: 11,
                   paddingHorizontal: 12,
@@ -190,7 +191,7 @@ export function NationPicker({
                 >
                   <Txt
                     accessibilityRole="header"
-                    style={{ color: c.muted, fontSize: rem(0.75), fontWeight: '600' }}
+                    style={{ color: c.muted, fontSize: rem(FONT.caption), fontWeight: '600' }}
                   >
                     {section.label}
                   </Txt>
@@ -210,7 +211,7 @@ export function NationPicker({
                       alignItems: 'center',
                       gap: 8,
                       padding: 10,
-                      borderRadius: 8,
+                      borderRadius: RADIUS.sm,
                       backgroundColor: pressed ? alpha(c.ink, 0.06) : 'transparent',
                     })}
                   >

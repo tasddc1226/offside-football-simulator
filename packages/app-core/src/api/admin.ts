@@ -3,6 +3,7 @@
 // (서버도 1분 엣지 캐시). 쓰기가 성공하면 메모는 전부 비워진다.
 import type {
   AdminCup,
+  AdminCupCapsSuggest,
   AdminCupCreate,
   AdminCupList,
   AdminComment,
@@ -50,6 +51,13 @@ export const createCup = (input: AdminCupCreate) =>
   apiFetch<AdminCup>('/v1/admin/cups', { method: 'POST', body: JSON.stringify(input) });
 export const deleteCup = (id: string) =>
   apiFetch<undefined>(`/v1/admin/cups/${id}`, { method: 'DELETE' });
+// T-11-410 아랫 구간 상한: 지금 시즌 팀 분포로 낸 제안과 고치기(접수 전만).
+export const fetchCupCapsSuggest = () => apiFetch<AdminCupCapsSuggest>('/v1/admin/cups/caps');
+export const setCupCap = (id: string, ovrMax: number) =>
+  apiFetch<AdminCup>(`/v1/admin/cups/${id}/cap`, {
+    method: 'PUT',
+    body: JSON.stringify({ ovrMax }),
+  });
 
 export const fetchBalanceVersions = () => apiFetch<BalanceVersionList>('/v1/admin/balance');
 export const createBalanceDraft = (draft: BalanceDraftInput) =>
@@ -123,10 +131,11 @@ export const fetchPushPerformance = (
   page = 0,
   fresh = false,
   through?: string,
+  filters: { previous?: boolean; category?: string | undefined; issues?: boolean } = {},
 ) => {
   if (fresh) invalidateApiCache('/v1/admin/push-performance');
   return cachedGet<PushPerformance>(
-    `/v1/admin/push-performance?days=${days}&page=${page}${tests ? '&tests=1' : ''}${through ? `&through=${encodeURIComponent(through)}` : ''}`,
+    `/v1/admin/push-performance?days=${days}&page=${page}${tests ? '&tests=1' : ''}${through ? `&through=${encodeURIComponent(through)}` : ''}${filters.previous ? '&previous=1' : ''}${filters.category ? `&category=${encodeURIComponent(filters.category)}` : ''}${filters.issues ? '&issues=1' : ''}`,
     60_000,
   );
 };

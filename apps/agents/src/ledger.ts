@@ -3,9 +3,11 @@ import { DurableObject } from 'cloudflare:workers';
 import type { Env, Role } from './env.ts';
 import type { Cursors, DcCursor, Reaction } from './reactions.ts';
 import type { MailDraft } from './support.ts';
+import type { SupportCase } from './supportCase.ts';
 import type { ReviewDraft } from './reviews.ts';
 import type { CardSummary } from './card.ts';
 import type { Risk } from './risk.ts';
+import type { SocialKind, SocialToken } from './social.ts';
 
 export const kstDay = (now = Date.now()) => new Date(now + 9 * 3600_000).toISOString().slice(0, 10);
 
@@ -30,6 +32,10 @@ export type DevJob = {
   /** T-11-325 실제 바뀐 경로로 판정한 위험도와, 시작할 때 예상한 위험도(운영자가 직접 맡긴 일이면 operator). */
   risk?: Risk;
   expected?: Risk | 'operator';
+  /** 다른 모델의 PR 리뷰(review.ts). PR마다 한 번만 받는다(main 맞추기로 CI가 다시 돌아도 다시 받지 않는다). */
+  review?: { verdict: 'ok' | 'check'; text: string; costUsd: number; model: string };
+  /** CI 고치기를 띄운 횟수(dev.ts MAX_FIXES까지). */
+  fixes?: number;
 };
 export type Approval = {
   /** 운영 배포 승인(T-11-312)은 0. */
@@ -49,9 +55,6 @@ export type MailApproval = {
   result: string;
 };
 
-export type MktDraft = { id: string; notes: string; at: number; done?: boolean };
-export type MktApproval = MailApproval;
-
 /**
  * T-11-325 고치기 작업 명세. 주장(@plan)의 work_order나 운영자의 start_work가 남긴다. PR 뒤 실제 경로로 다시 판정한
  * 위험도와 견줄 때 쓴다. by가 operator면 운영자가 직접 맡긴 일이라 위험도 경고를 붙이지 않는다.
@@ -66,6 +69,8 @@ export type WorkOrder = {
   by: 'plan' | 'operator';
   at: number;
   started?: boolean;
+  /** T-11-400 고객 문의에서 온 작업이면 그 문의 메일 스레드(Gmail threadId). 배포 뒤 마무리 답장에 쓴다. */
+  mail?: string;
 };
 
 /** 승인 대기 카드(승인 묶음 · 대기 시간 측정). ts는 #agent-approvals 카드 메시지 ts. */
@@ -184,6 +189,27 @@ export class AgentLedger extends DurableObject<Env> {
   async setSupportCursor(at: number): Promise<void> {
     await this.ctx.storage.put('support:cursor', at);
   }
+  /** T-11-400 문의 정리 한 번(eventId)에 넘긴 메일 스레드와, 그 정리가 남긴 작업 후보. */
+  async setSupportBatch(eventId: string, threads: string[]): Promise<void> {
+    await this.ctx.storage.put(`support:batch:${eventId}`, threads);
+  }
+  async supportBatch(eventId: string): Promise<string[]> {
+    return (await this.ctx.storage.get<string[]>(`support:batch:${eventId}`)) ?? [];
+  }
+  async addCase(eventId: string, c: SupportCase): Promise<void> {
+    const key = `support:cases:${eventId}`;
+    await this.ctx.storage.put(key, [
+      ...((await this.ctx.storage.get<SupportCase[]>(key)) ?? []),
+      c,
+    ]);
+  }
+  /** 남긴 작업 후보를 꺼내고 지운다(정리 묶음 기록도 함께). */
+  async takeCases(eventId: string): Promise<SupportCase[]> {
+    const key = `support:cases:${eventId}`;
+    const cases = (await this.ctx.storage.get<SupportCase[]>(key)) ?? [];
+    await this.ctx.storage.delete([key, `support:batch:${eventId}`]);
+    return cases;
+  }
   async mailDraft(id: string): Promise<MailDraft | undefined> {
     return this.ctx.storage.get<MailDraft>(`maildraft:${id}`);
   }
@@ -208,16 +234,6 @@ export class AgentLedger extends DurableObject<Env> {
   }
   async recordReviewApproval(a: MailApproval): Promise<void> {
     await this.ctx.storage.put(`reviewapproval:${a.draft}:${a.at}`, a);
-  }
-  /** @mkt 드림보트 요약 초안 · 승인 기록(T-11-296). */
-  async mktDraft(id: string): Promise<MktDraft | undefined> {
-    return this.ctx.storage.get<MktDraft>(`mktdraft:${id}`);
-  }
-  async setMktDraft(d: MktDraft): Promise<void> {
-    await this.ctx.storage.put(`mktdraft:${d.id}`, d);
-  }
-  async recordMktApproval(a: MktApproval): Promise<void> {
-    await this.ctx.storage.put(`mktapproval:${a.draft}:${a.at}`, a);
   }
   /** T-11-325 작업 카드 요약. 닫힌 지 35일 넘은 카드는 목록에서 지운다. */
   async trackCard(key: string, s: CardSummary): Promise<void> {
@@ -289,10 +305,10 @@ export class AgentLedger extends DurableObject<Env> {
   async waits(): Promise<{ at: number; ms: number }[]> {
     return (await this.ctx.storage.get<{ at: number; ms: number }[]>('waits')) ?? [];
   }
-  /** 승인 · 거절 기록 수(머지 · 배포 · 메일 · 드림보트). since 뒤만. */
+  /** 승인 · 거절 기록 수(머지 · 배포 · 메일). since 뒤만. */
   async approvalCount(since: number): Promise<number> {
     let n = 0;
-    for (const prefix of ['approval:', 'mailapproval:', 'mktapproval:']) {
+    for (const prefix of ['approval:', 'mailapproval:']) {
       const all = await this.ctx.storage.list<{ at: number }>({ prefix });
       for (const v of all.values()) if (v.at >= since) n++;
     }
@@ -303,6 +319,13 @@ export class AgentLedger extends DurableObject<Env> {
   }
   async setWatch(w: WatchState): Promise<void> {
     await this.ctx.storage.put('watch', w);
+  }
+  /** 운영자 멈춤: 여러 봇을 같이 멘션해도 한 번만 처리한다. 처음이면 true. */
+  async claimStop(sourceTs: string): Promise<boolean> {
+    const key = `stop:${sourceTs}`;
+    if (await this.ctx.storage.get(key)) return false;
+    await this.ctx.storage.put(key, Date.now());
+    return true;
   }
   /** 서버 상태 사건은 6시간에 한 번만 연다. 처음이면 true. */
   async claimIncident(now = Date.now()): Promise<boolean> {
@@ -327,6 +350,13 @@ export class AgentLedger extends DurableObject<Env> {
     return rankMemories(all, query, limit);
   }
   /** 한도 초과 안내는 하루 한 번만 한다. 처음이면 true. */
+  /** T-11-395 · T-11-397 Threads · Instagram 장기 토큰(60일)을 갱신한 값. */
+  async socialToken(kind: SocialKind): Promise<SocialToken | undefined> {
+    return this.ctx.storage.get<SocialToken>(`${kind}:token`);
+  }
+  async setSocialToken(kind: SocialKind, v: SocialToken): Promise<void> {
+    await this.ctx.storage.put(`${kind}:token`, v);
+  }
   async warnOnce(role: Role, day = kstDay()): Promise<boolean> {
     const d = await this.day(role, day);
     if (d.warned) return false;

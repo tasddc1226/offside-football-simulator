@@ -15,8 +15,6 @@ import {
   matchHintOf,
   outcomeOf,
   teamEditableIn,
-  pct,
-  pickCandidates,
   playHintOf,
 } from './teamOwner.js';
 import {
@@ -179,40 +177,6 @@ describe('autoFillSlots', () => {
   });
 });
 
-describe('pickCandidates', () => {
-  const players = [
-    player('a', { peak: 70, legendScore: 100 }),
-    player('b', { peak: 80, legendScore: null }),
-    player('c', { peak: 80, legendScore: 300 }),
-  ];
-  const ids = (sort: Parameters<typeof pickCandidates>[4]) =>
-    pickCandidates(slots433, slots433.indexOf('ST'), players, [], sort).map((c) => c.p.careerId);
-
-  it('자리 실력 순 — 같으면 최고 OVR 순(안정 정렬)', () => {
-    expect(ids('fit')).toEqual(['b', 'c', 'a']);
-  });
-  it('최고 OVR 순 — 같으면 자리 실력 순', () => {
-    expect(ids('peak')).toEqual(['b', 'c', 'a']);
-  });
-  it('레전드 점수 순 — 점수가 없으면 0 으로 센다', () => {
-    expect(ids('score')).toEqual(['c', 'a', 'b']);
-  });
-  it('이미 편성된 자리(at)와 없을 때(-1)를 알려 준다', () => {
-    const slots = Array<string | null>(11).fill(null);
-    slots[3] = 'a';
-    const list = pickCandidates(slots433, 9, players, slots, 'fit');
-    expect(list.find((c) => c.p.careerId === 'a')!.at).toBe(3);
-    expect(list.find((c) => c.p.careerId === 'b')!.at).toBe(-1);
-  });
-  it('자리 실력과 적합도를 그 자리 기준으로 계산한다', () => {
-    const gk = pickCandidates(slots433, 0, [player('f', { peak: 80 })], [], 'fit')[0]!;
-    expect(gk).toMatchObject({ rating: 24, fit: 0.3 });
-  });
-  it('선수가 없으면 빈 목록이다', () => {
-    expect(pickCandidates(slots433, 0, [], [], 'fit')).toEqual([]);
-  });
-});
-
 describe('attrLine', () => {
   const attrs = { pac: 80, sho: 70, pas: 60, dri: 75, def: 50, phy: 65 };
   it('능력치가 없으면 null', () => {
@@ -305,11 +269,6 @@ describe('경기 결과', () => {
     expect(outcomeOf(match('away', 2, 1))).toBe('패');
     expect(outcomeOf(match('away', 0, 3))).toBe('승');
     expect(outcomeOf(match('home', 1, 1))).toBe('무');
-  });
-  it('pct 는 반올림한 퍼센트', () => {
-    expect(pct(0)).toBe('0%');
-    expect(pct(0.456)).toBe('46%');
-    expect(pct(1)).toBe('100%');
   });
 });
 

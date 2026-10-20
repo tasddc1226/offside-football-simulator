@@ -22,7 +22,10 @@
     <div>{#key t.k}<b class:bump={t.k !== 0 && t.k !== '-'}>{t.k}</b>{/key}<span>{t.l}</span></div>
   {/each}
 </div>
-<div class="ticker live">
+{#if v.moment}
+  {#await import('./KeyMoment.svelte') then K}<K.default m={v.moment} />{/await}
+{/if}
+<div class="ticker live" hidden={!!v.moment}>
   {#each v.ticker as m (m.key)}
     <TickerLine {m} />
   {/each}

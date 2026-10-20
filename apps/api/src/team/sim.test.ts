@@ -14,6 +14,8 @@ import {
   lineupLines,
   lineupOvr,
   lineupSynergy,
+  matchOdds,
+  oddsOfXg,
   SIM,
   simulateMatch,
   type LineupCareer,
@@ -381,5 +383,32 @@ describe('T-11-379 경기 리포트', () => {
 
   it('리포트의 줄 무게는 기대 득점 식의 무게와 같다', () => {
     expect(REPORT_LINE_WEIGHT).toEqual({ atk: SIM.atkK, mid: 2 * SIM.midK, def: SIM.atkK });
+  });
+});
+
+describe('T-11-405 경기 전 예상', () => {
+  it('기대 득점이 같으면 승 · 패가 같고, 합은 1이다', () => {
+    const o = oddsOfXg(1.3, 1.3);
+    expect(o.win).toBeCloseTo(o.loss, 10);
+    expect(o.win + o.draw + o.loss).toBeCloseTo(1, 10);
+    expect(o.draw).toBeCloseTo(0.264, 3);
+    // 줄 힘 10점 우위(1.94 : 0.87)면 대략 6할을 이긴다.
+    expect(oddsOfXg(1.94, 0.87).win).toBeCloseTo(0.624, 2);
+  });
+
+  it('경기 한 판과 같은 기대 득점을 쓰고, 여러 판 굴린 결과와 맞는다', () => {
+    const a = fullTeam('A', 82);
+    const b = fullTeam('B', 74, '3-5-2');
+    const o = matchOdds(a, b, 1, { neutral: true });
+    const r = simulateMatch('mat_odds', a, b, 1, { neutral: true });
+    expect(o.homeXg).toBe(r.report.home.xg);
+    expect(o.awayXg).toBe(r.report.away.xg);
+    const n = 4000;
+    let win = 0;
+    for (let i = 0; i < n; i++) {
+      const m = simulateMatch(`mat_odds_${i}`, a, b, 1, { neutral: true });
+      if (m.homeGoals > m.awayGoals) win++;
+    }
+    expect(Math.abs(win / n - o.win)).toBeLessThan(0.03);
   });
 });

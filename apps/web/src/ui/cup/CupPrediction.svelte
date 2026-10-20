@@ -41,16 +41,16 @@
 <style>
   .cp { padding: 2px 0 18px; display: grid; gap: 10px; }
   .cp-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 8px; }
-  .cp-head b { font-size: .8125rem; }
+  .cp-head b { font-size: var(--fs-label); }
   .cp-choices { display: flex; gap: 6px; }
-  .cp-choice { display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 0; min-height: 112px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: background-color 120ms, border-color 120ms; }
-  .cp-outcome { display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: .75rem; font-weight: 600; }
+  .cp-choice { display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 0; min-height: 112px; padding: 10px; border: 1px solid transparent; border-radius: var(--radius-md); background: var(--surface-2); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: background-color 120ms, border-color 120ms; }
+  .cp-outcome { display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: var(--fs-caption); font-weight: 600; }
   .cp-check { display: grid; place-items: center; width: 14px; height: 14px; flex: none; border: 1px solid var(--muted); border-radius: 50%; font-size: 10px; }
-  .cp-share { font-family: var(--display); font-size: 1.75rem; line-height: 1; font-variant-numeric: tabular-nums; }
-  .cp-share small { font-family: inherit; font-size: .875rem; margin-left: 2px; }
+  .cp-share { font-family: var(--display); font-size: var(--fs-title1); line-height: 1; font-variant-numeric: tabular-nums; }
+  .cp-share small { font-family: inherit; font-size: var(--fs-body2); margin-left: 2px; }
   .cp-track { display: block; height: 4px; overflow: hidden; background: var(--line); border-radius: 3px; }
   .cp-track > span { display: block; height: 100%; background: var(--muted); border-radius: inherit; }
-  .cp-action { color: var(--muted); font-size: .6875rem; font-weight: 600; }
+  .cp-action { color: var(--muted); font-size: var(--fs-caption2); font-weight: 600; }
   .cp-choice.selected { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
   .cp-choice.selected .cp-action { color: inherit; }
   .cp-choice.selected .cp-check { background: var(--accent-ink); border-color: var(--accent-ink); color: var(--accent); }

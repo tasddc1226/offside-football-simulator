@@ -90,14 +90,14 @@
 </div>
 
 <style>
-  .sums { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 0.8125rem; }
+  .sums { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: var(--fs-label); }
   .sums dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
   .lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-  .lines li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 0.8125rem; }
+  .lines li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); font-size: var(--fs-label); }
   .lines small { display: block; }
   .daily { margin: 0; display: flex; flex-direction: column; gap: 6px; }
   .bars { display: flex; align-items: flex-end; gap: 2px; height: 80px; }
   .bar { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; min-width: 0; }
   .bar i { display: block; width: 100%; background: var(--accent); border-radius: 2px 2px 0 0; min-height: 1px; }
-  .bar small { font-size: 0.625rem; color: var(--muted); }
+  .bar small { font-size: var(--fs-caption2); color: var(--muted); }
 </style>

@@ -1,6 +1,7 @@
 // T-11-377 선수 이름 변경권(웹 cup/RenameShop.svelte) — 구단주 화면 강화권 상점 아래. 변경권은 스토어에서 사거나 출석 28일째에
 // 받는다. 이 스토어 상품이 보이거나 가진 변경권이 있을 때만 보인다. 접힌 카드에는 가진 장수만, 펼치면 스토어 묶음(IapPacks)과
 // 쓰는 곳을 보인다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
@@ -30,13 +31,13 @@ export function RenameShop() {
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
           <Txt v="eyebrow">Rename</Txt>
           <Txt v="h2">{L.shopTitle}</Txt>
-          <Txt tone="muted" style={{ fontSize: rem(0.875) }} testID="rename-shop-sub">
+          <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }} testID="rename-shop-sub">
             {L.shopHave({ n: have })}
           </Txt>
         </View>
         <Txt
           tone="muted"
-          style={{ fontSize: rem(1.5), transform: [{ rotate: open ? '-90deg' : '90deg' }] }}
+          style={{ fontSize: rem(FONT.title1), transform: [{ rotate: open ? '-90deg' : '90deg' }] }}
         >
           ›
         </Txt>
@@ -45,7 +46,7 @@ export function RenameShop() {
         sells ? (
           <IapPacks item="rename" note={L.shopNote} />
         ) : (
-          <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
             {L.shopNote}
           </Txt>
         )

@@ -16,14 +16,16 @@ import { runFirstsRescan } from './db/repos/firsts.js';
 import type { Bindings } from './env.js';
 import { chatSocket } from './chat/socket.js';
 import { liveSocket } from './live/socket.js';
-import { runNewsPush } from './push/dispatch.js';
-import { runPersonalPush } from './push/personal.js';
+import { publishPushWork } from './push/queuePublish.js';
+import { consumePushWork } from './push/queue.js';
 import { queueReengagement } from './push/reengagement.js';
 import { consumeCareerReminders, queueCareerReminders } from './push/careerReminder.js';
 import { queueAttendanceReminders } from './push/attendanceReminder.js';
+import { queueGiftReminders } from './push/giftReminder.js';
 import { consumeCupResults, publishCupResults } from './push/cupResult.js';
 import { consumeCommunityPush } from './push/communityQueue.js';
 import { runCup } from './team/cup.js';
+import { finishStaleLive } from './team/liveMatch.js';
 import { runCupAutopilot } from './team/cupAutopilot.js';
 import { purgeEdgeOrigin } from './edgeCache.js';
 import { STALE } from './edgeKeys.js';
@@ -37,6 +39,7 @@ export { LiveHub } from './live/hub.js';
 export { ChatRoom } from './chat/room.js';
 export default {
   queue(batch: MessageBatch<unknown>, env: Bindings) {
+    if (batch.queue === 'offside-push-production') return consumePushWork(batch, env);
     if (batch.queue === 'offside-billing-production') return consumeBillingAlerts(batch, env);
     if (batch.queue === 'offside-cup-push-production') return consumeCupResults(batch, env);
     return batch.queue === 'offside-career-push-production'
@@ -60,6 +63,13 @@ export default {
     // 시즌 일정(게이지가 확정한 마감·다음 시즌)을 먼저 입힌다 — 아래 결산·보존·게이지가 같은 일정을 본다.
     await loadSeasonSchedule(env.DB, true).catch(logged('season-schedule'));
     if (controller.cron === '0 19 * * *') {
+      // Bounded daily retention; FK SET NULL removes stale purchase attribution too.
+      await env.DB.prepare(
+        `DELETE FROM acquisition_sessions WHERE id IN (SELECT id FROM acquisition_sessions WHERE received_at < ? ORDER BY received_at LIMIT 1000)`,
+      )
+        .bind(new Date(controller.scheduledTime - 90 * 86400_000).toISOString())
+        .run()
+        .catch(logged('acquisition-retention'));
       let completed = false;
       await runDailyTick(env, controller.scheduledTime)
         .then((daily) => {
@@ -69,14 +79,19 @@ export default {
     } else {
       // 푸시 단계가 실패해도 뒤의 시즌 결산·컵 진행은 돈다(다음 5분에 다시 보낸다).
       await recoverBillingAlerts(env, controller.scheduledTime).catch(logged('billing-recovery'));
-      await runNewsPush(env).catch(logged('news-push'));
+      await publishPushWork(env, 'news', controller.scheduledTime).catch(
+        logged('news-push-publish'),
+      );
       if (new Date(controller.scheduledTime).getUTCMinutes() === 0)
         await queueCareerReminders(env, controller.scheduledTime).catch(logged('career-reminder'));
       await queueReengagement(env, controller.scheduledTime).catch(logged('reengagement'));
       await queueAttendanceReminders(env, controller.scheduledTime).catch(
         logged('attendance-reminder'),
       );
-      await runPersonalPush(env, controller.scheduledTime).catch(logged('personal-push'));
+      await queueGiftReminders(env, controller.scheduledTime).catch(logged('gift-reminder'));
+      await publishPushWork(env, 'personal', controller.scheduledTime).catch(
+        logged('personal-push-publish'),
+      );
       // 시즌 진행 게이지: 30분마다 세어 굳히고, 90%에 닿으면 마감 시각을 확정해 시즌 일정에
       // 다음 시즌과 함께 적는다. 결산보다 먼저 돈다.
       await runSeasonGauge(env.DB, new Date(controller.scheduledTime).toISOString())
@@ -91,6 +106,12 @@ export default {
             JSON.stringify({ level: 'error', job: 'season-close', error: logErrorText(e) }),
           ),
         );
+      // T-11-387 고르지 않고 떠난 장면 경기를 자동 선택으로 마감한다.
+      await finishStaleLive(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
+        .then(
+          (r) => r.done && console.log(JSON.stringify({ level: 'info', job: 'team-live', ...r })),
+        )
+        .catch(logged('team-live'));
       // T-11-145 오프사이드 컵: 추첨 → 시각이 된 경기 → 진출·보상. 실패하면 다음 5분에 이어서 한다.
       await runCup(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
         .then(async (r) => {

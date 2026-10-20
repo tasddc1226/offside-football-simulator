@@ -68,7 +68,7 @@
   }
   .flight-map {
     position: relative;
-    border-radius: 16px;
+    border-radius: var(--radius-lg);
     overflow: hidden;
     background: var(--pitch);
     aspect-ratio: 320 / 190;
@@ -154,11 +154,11 @@
   }
   .flight-pass b {
     font-family: var(--display);
-    font-size: 1.5rem;
+    font-size: var(--fs-title1);
     letter-spacing: 0.03em;
   }
   .flight-pass span {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .flight-bar {

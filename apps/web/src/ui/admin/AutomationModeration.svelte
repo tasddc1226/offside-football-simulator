@@ -64,8 +64,8 @@
   .moderation { border-bottom:1px solid var(--line);padding-bottom:16px;min-width:0; }
   .moderation p {margin:0;}
   .heading {justify-content:space-between;gap:8px;flex-wrap:wrap;}
-  .action {border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0;}
+  .action {border:1px solid var(--line);border-radius:var(--radius-md);padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0;}
   .diagnostic { overflow-wrap:anywhere; }
-  code {overflow-wrap:anywhere;font-size:0.75rem;}
+  code {overflow-wrap:anywhere;font-size:var(--fs-caption);}
   button {min-height:44px;}
 </style>

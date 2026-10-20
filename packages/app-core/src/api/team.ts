@@ -19,6 +19,7 @@ import type {
   TeamRankResponse,
   TeamRankSort,
   TeamStatsResponse,
+  TeamMomentResponse,
 } from '@offside/contracts';
 import { apiFetch, cachedGet, ownerCachedGet } from './client.js';
 import { withOwnerHint } from './friendPending.js';
@@ -32,7 +33,13 @@ export type {
   ClubAchievementNotifications,
   OwnerTeam,
   OwnerTeamResponse,
+  PlayTeamMatchResponse,
   TeamMatch,
+  TeamMatchEvent,
+  TeamMoment,
+  TeamMomentChoice,
+  TeamMomentResponse,
+  TeamLive,
   TeamOpponent,
   TeamPlayer,
   TeamPreset,
@@ -121,3 +128,21 @@ export const viewTeam = (id: string) =>
   apiFetch<undefined>(`/v1/teams/${id}/views`, { method: 'POST', keepCache: true });
 export const likeTeam = (id: string, like: boolean) =>
   apiFetch<TeamLikeResponse>(`/v1/teams/${id}/like`, { method: like ? 'PUT' : 'DELETE' });
+
+/** T-11-387 장면 경기로 시작한다(문자중계 도중 장면을 고른다). 마지막 장면을 고르면 결과가 온다. */
+export const playLiveMatch = (opponentTeamId: string) =>
+  apiFetch<PlayTeamMatchResponse>('/v1/owner-team/matches', {
+    method: 'POST',
+    body: JSON.stringify({ opponentTeamId, live: true }),
+  });
+/** 장면 하나를 고른다(choice는 선택지 id, 'auto'면 감독에게 맡긴다). */
+export const chooseMoment = (matchId: string, index: number, choice: string) =>
+  apiFetch<TeamMomentResponse>(
+    `/v1/owner-team/matches/${encodeURIComponent(matchId)}/moments/${index}`,
+    { method: 'POST', body: JSON.stringify({ choice }) },
+  );
+/** 남은 장면을 감독에게 맡기고 경기를 끝낸다('결과 바로 보기'). */
+export const finishLiveMatch = (matchId: string) =>
+  apiFetch<PlayTeamMatchResponse>(`/v1/owner-team/matches/${encodeURIComponent(matchId)}/finish`, {
+    method: 'POST',
+  });

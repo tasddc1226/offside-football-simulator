@@ -1,5 +1,6 @@
 // T-11-196 프리미엄 스카우트권 상점(웹 cup/ScoutShop.svelte) — 구단주 화면 잠재력 강화권 상점 아래. 펼치면 설명 · 스토어
 // 묶음(IapPacks) · T-11-244 구단 자금으로 한 주 1장 · 확률 공개표를 보인다. 쓰는 곳은 선수 만들기 후보 단계다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
@@ -17,7 +18,7 @@ export function ScoutShop({ onBought }: { onBought?: (balance: number, spent: nu
   const [funded, setFunded] = useState<number | null>(null);
   const have = funded ?? iap.items?.scout ?? 0;
   const sells = sellablePacks('scout', iap).length > 0;
-  const small = { fontSize: rem(0.8125) };
+  const small = { fontSize: rem(FONT.label) };
   return (
     <Card gap={12} testID="scout-shop">
       <Press
@@ -32,13 +33,13 @@ export function ScoutShop({ onBought }: { onBought?: (balance: number, spent: nu
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
           <Txt v="eyebrow">Premium scout</Txt>
           <Txt v="h2">{L.title}</Txt>
-          <Txt tone="muted" style={{ fontSize: rem(0.875) }} testID="scout-shop-sub">
+          <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }} testID="scout-shop-sub">
             {have ? L.shopSubHave({ n: have }) : L.shopSub}
           </Txt>
         </View>
         <Txt
           tone="muted"
-          style={{ fontSize: rem(1.5), transform: [{ rotate: open ? '-90deg' : '90deg' }] }}
+          style={{ fontSize: rem(FONT.title1), transform: [{ rotate: open ? '-90deg' : '90deg' }] }}
         >
           ›
         </Txt>

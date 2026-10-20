@@ -79,7 +79,7 @@
   
   .peek-slot {margin:0;display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;color:#fff;font-size:12px;line-height:1.5;opacity:.9;}
   .peek-slot b {font-size:14px;}
-  .peek-close {min-width:120px;min-height:44px;padding:0 18px;border:1px solid #ffffff55;border-radius:999px;background:#0006;color:#fff;font:inherit;font-weight:600;cursor:pointer;animation:peek-fade .25s ease-out;}
+  .peek-close {min-width:120px;min-height:44px;padding:0 18px;border:1px solid #ffffff55;border-radius:var(--radius-pill);background:#0006;color:#fff;font:inherit;font-weight:600;cursor:pointer;animation:peek-fade .25s ease-out;}
   .peek-close:focus-visible {outline:3px solid var(--accent);outline-offset:3px;}
   @keyframes peek-fade {from {opacity:0;}}
   @media(prefers-reduced-motion:reduce) { .peek-backdrop,.peek-close {animation:none;} }

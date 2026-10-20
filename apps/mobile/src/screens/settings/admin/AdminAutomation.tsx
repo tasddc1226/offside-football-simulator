@@ -1,3 +1,4 @@
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import AutomationModeration from './AutomationModeration';
 import { automationModerationText as L } from '@offside/app-core/i18n/ko/automationModeration';
 // 자동 플레이 탐지(웹 admin/AdminAutomation.svelte, 관찰 전용). 최근 N시간 동안 시즌을 올린 프로필 중 사람답지 않은 흐름이
@@ -56,7 +57,7 @@ export default function AdminAutomation() {
     void load(h);
   }
 
-  const small = { fontSize: rem(0.75) } as const;
+  const small = { fontSize: rem(FONT.caption) } as const;
   const r = report;
   return (
     <View testID="admin-automation" style={{ gap: 14 }}>
@@ -91,13 +92,13 @@ export default function AdminAutomation() {
       >
         {r ? (
           <>
-            <Txt testID="automation-summary" style={{ fontSize: rem(0.8125) }}>
+            <Txt testID="automation-summary" style={{ fontSize: rem(FONT.label) }}>
               {`${kst(r.generatedAt)} 기준 · 최근 ${r.hours}시간 동안 시즌을 올린 `}
-              <Txt bold style={{ fontSize: rem(0.8125) }}>
+              <Txt bold style={{ fontSize: rem(FONT.label) }}>
                 {r.profiles.toLocaleString()}
               </Txt>
               {'개 프로필 중 '}
-              <Txt bold style={{ fontSize: rem(0.8125) }}>
+              <Txt bold style={{ fontSize: rem(FONT.label) }}>
                 {r.suspects.length}
               </Txt>
               {'곳'}
@@ -114,7 +115,7 @@ export default function AdminAutomation() {
                       paddingHorizontal: 12,
                       borderWidth: 1,
                       borderColor: c.line,
-                      borderRadius: 12,
+                      borderRadius: RADIUS.md,
                     }}
                   >
                     <View
@@ -167,8 +168,8 @@ export default function AdminAutomation() {
                           }}
                         >
                           <View style={{ flex: 1 }}>
-                            <Txt style={{ fontSize: rem(0.8125) }}>{cr.name ?? '익명'}</Txt>
-                            <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                            <Txt style={{ fontSize: rem(FONT.label) }}>{cr.name ?? '익명'}</Txt>
+                            <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                               {`${cr.status === 'retired' ? '은퇴' : '진행'} · ${cr.seasons}시즌${cr.medianGapSec !== null ? ` · 간격 ${cr.medianGapSec}초` : ''}${cr.cv !== null ? ` · 변동 ${cr.cv}` : ''}`}
                             </Txt>
                           </View>

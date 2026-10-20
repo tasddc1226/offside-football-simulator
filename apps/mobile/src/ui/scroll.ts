@@ -27,6 +27,23 @@ export const viewH = () => h;
 export function scrollTo(next: number, animated = false) {
   view?.scrollTo({ y: next, animated });
 }
+
+// T-11-406 뒤로 가기로 돌아온 화면은 ScrollView가 새로 붙고 내용이 늦게 차서(조회) 바로 옮기면 맨 위에 남았다. 목표를
+// 들고 있다가 내용 높이가 닿으면(Screen onContentSizeChange) 옮긴다. 손으로 끌거나 4초가 지나면 버린다.
+let back: { y: number; until: number } | null = null;
+export function scrollBackTo(next: number) {
+  back = next > 0 ? { y: next, until: Date.now() + 4000 } : null;
+  scrollTo(next);
+}
+export function noteContentH(contentH: number) {
+  if (!back) return;
+  if (Date.now() > back.until) return void (back = null);
+  if (contentH - h < back.y - 2) return;
+  const target = back.y;
+  back = null;
+  view?.scrollTo({ y: target, animated: false });
+}
+export const dropScrollBack = () => void (back = null);
 /** 화면 안의 한 칸이 스크롤 창 안에 보이는 비율(0~1)을 잰다(T-11-162). */
 export function measureShown(target: View | null, cb: (share: number) => void) {
   const viewport = view?.getNativeScrollRef();

@@ -448,13 +448,6 @@ export function teamOvr(ratings: readonly (number | null)[]): number {
 // 점수 합이 그 시즌 구단주 등급이 된다. 시즌마다 처음부터 다시 쌓으므로 등급도 시즌마다 새로 오른다.
 export const ACH_CATEGORIES = ['player', 'team', 'owner', 'manager'] as const;
 export type AchCategory = (typeof ACH_CATEGORIES)[number];
-export const ACH_CATEGORY_NAME: Record<AchCategory, string> = {
-  player: '선수 업적',
-  team: '팀 업적',
-  owner: '구단주 업적',
-  manager: '감독 업적',
-};
-
 /**
  * 시즌 등급(오름차순 min = 그 등급에 필요한 점수). 프리시즌 구단주 297명의 점수(2026-10-01)로 잡았다 — 중앙값 실버,
  * 상위 25% 골드, 상위 5% 플래티넘, 상위 1% 다이아. 레전드는 팀·구단주 업적까지 시즌 내내 채워야 닿는다.

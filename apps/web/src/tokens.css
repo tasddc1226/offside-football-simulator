@@ -1,0 +1,114 @@
+/* T-11-396 packages/app-core/src/design-tokens.ts가 만든 파일이에요. 손으로 고치지 말고 그 파일을 고친 뒤
+   pnpm --filter @offside/app-core exec vitest run design-tokens -u 로 다시 만들어요. */
+:root {
+  --bg: #e9eee8;
+  --surface: #ffffff;
+  --surface-2: #f3f6f2;
+  --ink: #14201a;
+  --muted: #5c6b62;
+  --faint: #8d9a92;
+  --line: #d5ddd6;
+  --pitch: #1c4a35;
+  --pitch-2: #245c43;
+  --chalk: rgba(255,255,255,0.22);
+  --on-pitch: #f2f6f1;
+  --pitch-accent: #f0b437;
+  --accent: #d99a12;
+  --accent-text: #8a5c0a;
+  --accent-ink: #2a1c00;
+  --good: #1e7a50;
+  --bad: #c0392f;
+  --warn: #96600a;
+  --up: #c0392f;
+  --down: #1f63a8;
+  --crest-halo: rgba(20,32,26,0.16);
+  --tab-on: #1c4a35;
+  --scrim: rgba(8,14,11,0.55);
+  --r2: #1f63a8;
+  --r3: #7336b0;
+  --r4: #8a5c0a;
+  --shadow: 0 1px 2px rgba(20, 32, 26, 0.05);
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --fs-caption2: 0.6875rem;
+  --fs-caption: 0.75rem;
+  --fs-label: 0.8125rem;
+  --fs-body2: 0.875rem;
+  --fs-body1: 0.9375rem;
+  --fs-body: 1rem;
+  --fs-title3: 1.125rem;
+  --fs-title2: 1.25rem;
+  --fs-title1: 1.625rem;
+  --fs-display: 2.25rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #0d1511;
+    --surface: #152019;
+    --surface-2: #1a271f;
+    --ink: #e6ede7;
+    --muted: #8fa096;
+    --faint: #617168;
+    --line: #26352c;
+    --pitch: #1a4331;
+    --pitch-2: #215540;
+    --chalk: rgba(255,255,255,0.22);
+    --on-pitch: #eef4ef;
+    --pitch-accent: #f0b437;
+    --accent: #f0b437;
+    --accent-text: #f0b437;
+    --accent-ink: #231700;
+    --good: #4cc08a;
+    --bad: #ef6b5f;
+    --warn: #e9a83a;
+    --up: #ef6b5f;
+    --down: #72b4f2;
+    --crest-halo: rgba(238,244,239,0.3);
+    --tab-on: #f0b437;
+    --scrim: rgba(8,14,11,0.55);
+    --r2: #72b4f2;
+    --r3: #c8a0f7;
+    --r4: #f0b437;
+    --shadow: none;
+  }
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0d1511;
+  --surface: #152019;
+  --surface-2: #1a271f;
+  --ink: #e6ede7;
+  --muted: #8fa096;
+  --faint: #617168;
+  --line: #26352c;
+  --pitch: #1a4331;
+  --pitch-2: #215540;
+  --chalk: rgba(255,255,255,0.22);
+  --on-pitch: #eef4ef;
+  --pitch-accent: #f0b437;
+  --accent: #f0b437;
+  --accent-text: #f0b437;
+  --accent-ink: #231700;
+  --good: #4cc08a;
+  --bad: #ef6b5f;
+  --warn: #e9a83a;
+  --up: #ef6b5f;
+  --down: #72b4f2;
+  --crest-halo: rgba(238,244,239,0.3);
+  --tab-on: #f0b437;
+  --scrim: rgba(8,14,11,0.55);
+  --r2: #72b4f2;
+  --r3: #c8a0f7;
+  --r4: #f0b437;
+  --shadow: none;
+}

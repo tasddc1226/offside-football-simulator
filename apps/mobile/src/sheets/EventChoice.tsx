@@ -1,4 +1,5 @@
 // 이벤트 선택 시트(웹 sheets/EventChoice.svelte): 스토리 표시 · 눈썹 · 제목 · 본문 · 선택지(확률 표시).
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import type { SheetView } from '@offside/app-core/sheets';
@@ -22,18 +23,18 @@ export function EventChoice({ v }: { v: Extract<SheetView, { kind: 'event' }> })
             alignSelf: 'flex-start',
             paddingVertical: 4,
             paddingHorizontal: 10,
-            borderRadius: 999,
+            borderRadius: RADIUS.pill,
             backgroundColor: mixColor(c.accent, c.surface, 16),
             borderWidth: 1,
             borderColor: alpha(c.accent, 0.55),
           }}
         >
-          <Txt style={{ fontSize: rem(0.75), fontWeight: '600' }}>
+          <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '600' }}>
             {`${L.storyTag({ name: s.story.name })} `}
             <Txt
               style={{
                 fontFamily: DISPLAY[700],
-                fontSize: rem(0.875),
+                fontSize: rem(FONT.body2),
                 color: c.accent,
               }}
             >{`${s.story.stage}/${s.story.total}`}</Txt>
@@ -57,9 +58,9 @@ export function EventChoice({ v }: { v: Extract<SheetView, { kind: 'event' }> })
             }}
             style={{
               borderWidth: 1.5,
-              borderColor: c.line,
-              backgroundColor: c.surface,
-              borderRadius: 12,
+              borderColor: 'transparent',
+              backgroundColor: c.surface2,
+              borderRadius: RADIUS.md,
               paddingVertical: 12,
               paddingHorizontal: 14,
               flexDirection: 'row',
@@ -73,12 +74,12 @@ export function EventChoice({ v }: { v: Extract<SheetView, { kind: 'event' }> })
               style={{
                 paddingVertical: 2,
                 paddingHorizontal: 8,
-                borderRadius: 8,
+                borderRadius: RADIUS.sm,
                 backgroundColor: c.surface2,
                 flexShrink: 0,
               }}
             >
-              <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(0.9375) }}>{ch.odds}</Txt>
+              <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(FONT.body1) }}>{ch.odds}</Txt>
             </View>
           </Press>
         ))}

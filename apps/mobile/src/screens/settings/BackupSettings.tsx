@@ -2,6 +2,7 @@
 // 다시 불러온다. 기기를 바꿀 때 쓴다. 형식·검증·쓰는 키는 웹과 같은 @offside/app-core/backup.
 // 앱은 파일을 직접 쓰거나 고르지 못한다(expo-file-system 없음) — 내보내기는 시스템 공유 시트(JSON 글)·클립보드 복사,
 // 가져오기는 붙여넣기(칸 · '클립보드에서 붙여넣기')로 바꿨다.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { nativeAnalytics } from '../../analytics';
 import { useState } from 'react';
 import { Alert, Platform, Share, View } from 'react-native';
@@ -144,9 +145,9 @@ export function BackupSettings() {
           <View
             style={{
               borderWidth: 1,
-              borderColor: c.line,
+              borderColor: 'transparent',
               backgroundColor: c.surface2,
-              borderRadius: 10,
+              borderRadius: RADIUS.sm,
               padding: 12,
               maxHeight: 96,
               overflow: 'hidden',

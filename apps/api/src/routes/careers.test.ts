@@ -418,6 +418,18 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       code: 'RATE_LIMITED',
       retryable: true,
     });
+    // Rejected retries must not keep rewriting the exhausted D1 counter.
+    const rejected = await Promise.all(
+      Array.from({ length: 4 }, async () => put(heavy.cookie, CAREER_ID)),
+    );
+    expect(rejected.every((res) => res.status === 429)).toBe(true);
+    const counter = await ctx.db
+      .select({ count: authAttempts.count })
+      .from(authAttempts)
+      .where(
+        and(eq(authAttempts.kind, 'CAREER_SEASON'), eq(authAttempts.subject, heavy.profileId)),
+      );
+    expect(counter[0]!.count).toBe(UPLOAD_LIMIT.CAREER_SEASON);
     const otherId = '7a1c9b1a-6f0f-4a4b-9c3a-1e2f3a4b5c6e';
     expect((await put(other.cookie, otherId)).status).toBe(200);
   });
@@ -466,6 +478,14 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     // 새 성장 기록은 새 행으로 쌓인다.
     expect((await send({ growth: { ...growth, o0: 53 } })).status).toBe(200);
     expect((await growths()).at(-1)!.o0).toBe(53);
+
+    // T-11-394 결정적 장면 기록(km)도 성장 기록에 실려 그대로 쌓인다.
+    const km = [
+      { ph: 1, at: 'l', sit: 'c-1v1', c: 'chip', b: 34, p: 31, ok: true },
+      { ph: 2, at: 'f', sit: 'g-cross', c: 'to', b: 58, p: 58, ok: false },
+    ];
+    expect((await send({ growth: { ...growth, km } })).status).toBe(200);
+    expect((await growths()).at(-1)).toEqual({ ...growth, km });
 
     const [season] = await ctx.db
       .select()

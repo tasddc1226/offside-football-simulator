@@ -1,5 +1,6 @@
 // T-10-029 공유 링크(/career/<id>)로 들어온 보기 전용 은퇴 리포트(웹 SharedCareer.svelte). 크레딧 연출로 보여 주고, 끝나면
 // 내 커리어를 시작하도록 권한다. 이름 공개·공유 같은 선수 주인 기능은 없다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -16,6 +17,7 @@ import { Txt } from '../../ui/Txt';
 import { CreditScreen } from './credit';
 import { LegendReport } from './LegendReport';
 import { shareText as L } from '@offside/app-core/i18n/ko/share';
+import { Skeleton } from '../../ui/Skeleton';
 
 export default function Shared() {
   const snap = useSnapshot(appState);
@@ -42,9 +44,7 @@ export default function Shared() {
       <Topbar />
       {v === null ? (
         <Card>
-          <Txt tone="muted" accessibilityLiveRegion="polite">
-            {L.loading}
-          </Txt>
+          <Skeleton rows={4} />
         </Card>
       ) : typeof v === 'string' ? (
         <Card>
@@ -74,7 +74,7 @@ export default function Shared() {
             testID="shared-view"
             style={{
               marginBottom: 10,
-              fontSize: rem(0.75),
+              fontSize: rem(FONT.caption),
               fontWeight: '700',
               letterSpacing: rem(0.75) * 0.02,
             }}

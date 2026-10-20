@@ -11,7 +11,7 @@ import { marketFeedback, offerFeedback } from './career-feedback.js';
 import type { SeasonGrowth } from '@offside/contracts';
 import { isHofEligible, SHORT_CAREER_NOTE } from '@offside/contracts/hof-rules';
 import { PHASES, LAST_PHASE, type AttrKey, type DetailPos, type Pos } from '@offside/game/data';
-import { clamp, createRng, freshSeed, setActiveRng } from '@offside/game/rng';
+import { clamp, createRng, freshSeed, getActiveRng, setActiveRng } from '@offside/game/rng';
 import {
   generateCandidates,
   type Candidate,
@@ -246,50 +246,72 @@ export function createGameActions(host: GameHost) {
       const rankBefore = teamRank(s);
       // T-10-046: 한 구간의 게임 로직(훈련 → 경기 → 대회 → A매치 → 이벤트 추첨 → 칭호)은 game/turn.ts가 진행한다.
       recordPhaseOvr(s); // T-11-048 구간에 들어갈 때의 OVR(성장 기록).
+      // T-11-390 결정적 장면을 고르면 구간 전 상태 · 난수로 되돌려 다시 진행한다(고르기 전 결과도 먼저 저장해 둔다).
+      const pre = JSON.stringify(s);
+      const rngPre = getActiveRng().getState().seed;
+      // 장면 판정 · 문구는 첫 화면 청크에 넣지 않는다(리그 구간을 진행할 때 불러온다).
+      const km = ph > 0 ? await import('./keyMoments.js') : null;
       let r: PhaseResult;
       try {
-        r = playPhase(s);
+        r = playPhase(s, km?.momentHooks(s));
         measureOperation('progress', 'success');
       } catch (error) {
         measureOperation('progress', 'failed', 'progress_blocked');
         throw error;
       }
       host.analytics.complete?.({ cid: s.cid, year: s.year, phase: ph, matches: r.block?.n ?? 0 });
-      const { block: b, comp, nt, ev } = r;
-      // 부상 소식은 로그 문장이 아니라 엔진이 알려 주는 신호로 기록한다(언어가 달라도 같다).
-      if (b?.injured) s.flags.injuredYear = s.year;
-      const chips = diffChips(s, before, r.after);
-      const titles = r.titles.map(titleView);
-      const title = ph === 0 ? L.preseasonDone : L.phaseResult({ phase: PHASES[ph]! });
-      s.pending = ev
-        ? { type: 'event', id: ev, then: s.phase > LAST_PHASE ? 'seasonEnd' : null }
-        : s.phase > LAST_PHASE
-          ? { type: 'seasonEnd' }
-          : null;
-      host.save();
+      const settle = (x: PhaseResult) => {
+        // 부상 소식은 로그 문장이 아니라 엔진이 알려 주는 신호로 기록한다(언어가 달라도 같다).
+        if (x.block?.injured) s.flags.injuredYear = s.year;
+        s.pending = x.ev
+          ? { type: 'event', id: x.ev, then: s.phase > LAST_PHASE ? 'seasonEnd' : null }
+          : s.phase > LAST_PHASE
+            ? { type: 'seasonEnd' }
+            : null;
+        host.save();
+      };
+      settle(r);
       host.analytics.play(s, ph === 0 && s.career.length === 0);
-      const extras = [
-        // T-11-186 대회 결과를 묶음 문구 대신 대회마다 한 줄로 띄운다.
-        ...comp.map((c) => c.t),
-        ...(nt ? [L.stepNat] : []),
-        ...(ev ? [L.stepEvent] : []),
-      ];
-      const games = b ? matchRows(s, b) : [];
-      const range = b ? roundRange(s, ph) : '';
+      const lines = (x: PhaseResult) => ({
+        rows: x.block ? matchRows(s, x.block) : [],
+        extras: [
+          // T-11-186 대회 결과를 묶음 문구 대신 대회마다 한 줄로 띄운다.
+          ...x.comp.map((c) => c.t),
+          ...(x.nt ? [L.stepNat] : []),
+          ...(x.ev ? [L.stepEvent] : []),
+        ],
+      });
+      const first = lines(r);
+      const extras = first.extras;
+      let games = first.rows;
+      const range = r.block ? roundRange(s, ph) : '';
       const back = s.pos === 'DF' || s.pos === 'GK';
       // T-10-028: 경기는 중계 시트로 한 경기씩 보여 주고(승무패·스코어가 쌓이는 맛), 끝나면 리포트로 넘어간다.
-      if (b) {
-        await sheet.playBlock(
+      if (r.block && km) {
+        const mo = km.createMomentDriver({
+          s,
+          first: r,
+          rows: games,
+          extras,
+          pre,
+          rng: rngPre,
+          settle,
+          lines,
+        });
+        await km.playBlock(
+          sheet,
           {
             eyebrow: L.phaseRunning({ year: s.year, phase: PHASES[ph]! }),
-            title: L.blockTitle({ range, n: b.n }),
+            title: L.blockTitle({ range, n: r.block.n }),
             back,
             matches: leagueOf(s.leagueId).matches,
           },
-          b,
+          r.block,
           games,
           extras,
+          mo,
         );
+        ({ cur: r, rows: games } = mo);
       } else
         await sheet.playSteps(L.preseasonRunning({ year: s.year }), [
           isPro(s) ? L.stepCampPro : L.stepCampAmateur,
@@ -298,6 +320,10 @@ export function createGameActions(host: GameHost) {
           L.stepFriendly,
           ...extras,
         ]);
+      const { block: b, comp, nt } = r;
+      const chips = diffChips(s, before, r.after);
+      const titles = r.titles.map(titleView);
+      const title = ph === 0 ? L.preseasonDone : L.phaseResult({ phase: PHASES[ph]! });
       sheet.closeSheet();
       appState.report = {
         key: Date.now(),

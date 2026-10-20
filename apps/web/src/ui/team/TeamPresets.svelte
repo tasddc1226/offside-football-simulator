@@ -97,14 +97,14 @@
 </dialog>
 
 <style>
-  dialog{box-sizing:border-box;width:min(440px,calc(100% - 24px));max-width:100%;max-height:85dvh;overflow:auto;overscroll-behavior:contain;border:1px solid var(--line);border-radius:18px;padding:20px;background:var(--surface);color:var(--ink);}
+  dialog{box-sizing:border-box;width:min(440px,calc(100% - 24px));max-width:100%;max-height:85dvh;overflow:auto;overscroll-behavior:contain;border: 1px solid transparent;border-radius:var(--radius-lg);padding:20px;background:var(--surface);color:var(--ink);}
   dialog::backdrop{background:#0009;}
   header{display:flex;align-items:center;justify-content:space-between;gap:8px;}
   h2{font-size:18px;margin:0;}
   .close{flex:none;width:44px;height:44px;border:0;background:transparent;color:inherit;font-size:28px;cursor:pointer;}
-  .note{padding:12px;border-radius:10px;background:var(--surface-2);font-size:13px;line-height:1.6;}
+  .note{padding:12px;border-radius:var(--radius-sm);background:var(--surface-2);font-size:13px;line-height:1.6;}
   ul{list-style:none;padding:0;margin:12px 0;display:grid;gap:10px;}
-  li{border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:10px;}
+  li{border:1px solid var(--line);border-radius:var(--radius-md);padding:12px;display:grid;gap:10px;}
   .head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;}
   .head strong{word-break:keep-all;overflow-wrap:anywhere;}
   .acts{display:flex;flex-wrap:wrap;gap:6px;}

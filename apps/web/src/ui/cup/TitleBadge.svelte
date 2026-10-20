@@ -28,8 +28,8 @@
     align-items: center;
     gap: 4px;
     padding: 2px 10px 2px 4px;
-    border-radius: 999px;
-    font-size: var(--fs-xs, 12px);
+    border-radius: var(--radius-pill);
+    font-size: var(--fs-caption, 12px);
     font-weight: 800;
     color: var(--ink);
     white-space: nowrap;

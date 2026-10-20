@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   import ManagerResume from './ManagerResume.svelte';
   import AppConversion from './AppConversion.svelte';
   import { shellInstallText as Install } from '@offside/app-core/i18n/ko/shellInstall';
@@ -172,9 +173,11 @@
         </div>
         {#if card.playHint}<p class="muted fs-sm">{card.playHint}</p>{/if}
       {:else}
-        <p class="muted fs-sm">
-          {card ? ownerTeamEmptyText(card) : cardFailed ? L.teamFailed : L.loading}
-        </p>
+        {#if card || cardFailed}
+          <p class="muted fs-sm">{card ? ownerTeamEmptyText(card) : L.teamFailed}</p>
+        {:else}
+          <Skeleton rows={2} />
+        {/if}
         <button class="btn {card && card.players > 0 ? 'btn-primary' : ''} btn-block" data-act="team" onclick={openMyTeam}>
           {card && card.players > 0 ? L.buildTeam : L.myTeam}{@render achDot()}
         </button>
@@ -289,8 +292,8 @@
 </div>
 
 <style>
-  .hub-section-title {margin:8px 2px 0;font-size:1rem;}
-  .hub-card-title {margin:0;font-size:1rem;}
+  .hub-section-title {margin:8px 2px 0;font-size:var(--fs-body);}
+  .hub-card-title {margin:0;font-size:var(--fs-body);}
   .owner-hall-entry {display:flex;flex-direction:column;gap:12px;}
   .owner-hall-entry > .owner-who {padding-right:24px;}
   .owner-hall-entry > .tap-go {position:absolute;right:18px;top:20px;}
@@ -313,7 +316,7 @@
     margin-right: 4px;
   }
   .owner-tier-history {display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none;}
-  .owner-tier-history li {display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);font-size:11px;font-weight:600;line-height:1.4;}
+  .owner-tier-history li {display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:5px 8px;border: 1px solid transparent;border-radius:var(--radius-xs);background:var(--surface-2);font-size:11px;font-weight:600;line-height:1.4;}
   .owner-who {
     display: flex;
     flex-direction: column;
@@ -321,7 +324,7 @@
     min-width: 0;
   }
   .owner-who b {
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
     overflow-wrap: anywhere;
   }
   .owner-who h2 {
@@ -340,19 +343,19 @@
     flex-direction: column;
     gap: 2px;
     padding: 10px 12px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--surface-2);
     min-width: 0;
     grid-column: span 2;
   }
   .owner-stats dt {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .owner-stats dd {
     margin: 0;
     font-family: var(--display);
-    font-size: 1.25rem;
+    font-size: var(--fs-title2);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
@@ -374,7 +377,7 @@
     margin-left: 4px;
   }
   .owner-stats .owner-value dd {
-    font-size: 1.75rem;
+    font-size: var(--fs-title1);
     color: var(--accent-text);
   }
   .owner-empty {
@@ -384,7 +387,7 @@
     padding-inline: 6px;
   }
   .owner-team-stats dd {
-    font-size: 1.0625rem;
+    font-size: var(--fs-title3);
   }
   .owner-team {
     display: flex;
@@ -407,19 +410,19 @@
     place-items: center;
     min-width: 58px;
     padding: 6px 8px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--pitch);
     color: var(--on-pitch);
     line-height: 1.1;
   }
   .owner-ovr small {
     font-family: var(--display);
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     letter-spacing: 0.12em;
   }
   .owner-ovr b {
     font-family: var(--display);
-    font-size: 1.625rem;
+    font-size: var(--fs-title1);
     color: var(--pitch-accent);
   }
   .owner-actions {
@@ -438,7 +441,7 @@
     justify-content: space-around;
     gap: 10px;
     padding: 14px 10px;
-    border-radius: 14px;
+    border-radius: var(--radius-md);
     background: repeating-linear-gradient(0deg, var(--pitch) 0 22px, var(--pitch-2) 22px 44px);
     overflow: hidden;
   }
@@ -458,10 +461,10 @@
     inset: 50% auto auto 50%;
     transform: translate(-50%, -50%);
     padding: 6px 12px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--surface);
     color: var(--ink);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     font-weight: 700;
     white-space: nowrap;
     box-shadow: 0 2px 10px rgb(0 0 0 / 0.2);

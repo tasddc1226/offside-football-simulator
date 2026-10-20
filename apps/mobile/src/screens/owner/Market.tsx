@@ -1,6 +1,7 @@
 // 이적시장(웹 ui/Market.svelte, T-11-080) — 지금 시즌 은퇴 선수 카드를 구단 자금으로 사고판다. 구단주 화면의 '이적시장'으로 연다.
 // T-11-080d 시안대로: 초록 머리에 구단 자금과 '자금 만들기', 탭 셋(선수 사기 · 팔기 · 내 거래), 카드 모양 목록,
 // 카드 상세 영입 시트, 카드 고르기 + 슬라이더 판매, 방출 화면. 각 화면은 처음 열 때만 불러온다(미리 받기·폴링 없음).
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Animated, Modal, PanResponder, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -77,6 +78,7 @@ import { MarketChart, MarketIndex } from './MarketChart';
 import { marketText as L } from '@offside/app-core/i18n/ko/market';
 import { intlLocale } from '@offside/app-core/i18n/core';
 import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
+import { Skeleton } from '../../ui/Skeleton';
 
 type Sent<T> = Promise<
   { ok: true; data: T } | { ok: false; error: { message: string; reason?: string | undefined } }
@@ -218,7 +220,7 @@ function Line({
     >
       <Txt
         tone={strong ? 'ink' : 'muted'}
-        style={{ fontSize: rem(0.875), fontWeight: strong ? '700' : '400' }}
+        style={{ fontSize: rem(FONT.body2), fontWeight: strong ? '700' : '400' }}
       >
         {label}
       </Txt>
@@ -226,8 +228,8 @@ function Line({
         num
         style={
           big
-            ? { fontFamily: DISPLAY[700], fontSize: rem(1.5) }
-            : { fontSize: rem(0.875), fontWeight: strong ? '700' : '400' }
+            ? { fontFamily: DISPLAY[700], fontSize: rem(FONT.title1) }
+            : { fontSize: rem(FONT.body2), fontWeight: strong ? '700' : '400' }
         }
       >
         {value}
@@ -310,7 +312,7 @@ function PctSlider({
           marginLeft: -11,
           width: 22,
           height: 22,
-          borderRadius: 11,
+          borderRadius: RADIUS.sm,
           backgroundColor: c.surface,
           borderWidth: 3,
           borderColor: c.accent,
@@ -341,7 +343,7 @@ function FilterChip({
       style={{
         minHeight: 34,
         paddingHorizontal: 13,
-        borderRadius: 999,
+        borderRadius: RADIUS.pill,
         borderWidth: 1,
         borderColor: on ? c.ink : c.line,
         backgroundColor: on ? c.ink : c.surface,
@@ -350,7 +352,7 @@ function FilterChip({
     >
       <Txt
         style={{
-          fontSize: rem(0.8125),
+          fontSize: rem(FONT.label),
           fontWeight: on ? '600' : '400',
           color: on ? c.surface : c.ink,
         }}
@@ -369,7 +371,7 @@ function Check({ on, disabled }: { on: boolean; disabled?: boolean }) {
       style={{
         width: 22,
         height: 22,
-        borderRadius: 6,
+        borderRadius: RADIUS.xs,
         borderWidth: 2,
         borderColor: on ? c.bad : c.line,
         backgroundColor: on ? c.bad : disabled ? c.surface2 : c.surface,
@@ -377,7 +379,9 @@ function Check({ on, disabled }: { on: boolean; disabled?: boolean }) {
         justifyContent: 'center',
       }}
     >
-      {on ? <Txt style={{ color: '#fff', fontSize: rem(0.75), fontWeight: '700' }}>✓</Txt> : null}
+      {on ? (
+        <Txt style={{ color: '#fff', fontSize: rem(FONT.caption), fontWeight: '700' }}>✓</Txt>
+      ) : null}
     </View>
   );
 }
@@ -419,7 +423,12 @@ function LiveStrip({
   return (
     <View
       testID="market-live"
-      style={{ borderWidth: 1, borderColor: c.line, borderRadius: 14, backgroundColor: c.surface }}
+      style={{
+        borderWidth: 1,
+        borderColor: 'transparent',
+        borderRadius: RADIUS.md,
+        backgroundColor: c.surface,
+      }}
     >
       <Press
         scale={0.99}
@@ -451,7 +460,9 @@ function LiveStrip({
           />
           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c.bad }} />
         </View>
-        <Txt style={{ fontSize: rem(0.75), fontWeight: '700', color: c.bad }}>{L.justSold}</Txt>
+        <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '700', color: c.bad }}>
+          {L.justSold}
+        </Txt>
         <Animated.View
           style={{
             flex: 1,
@@ -462,11 +473,11 @@ function LiveStrip({
             ],
           }}
         >
-          <Txt numberOfLines={1} style={{ fontSize: rem(0.8125) }}>
+          <Txt numberOfLines={1} style={{ fontSize: rem(FONT.label) }}>
             {saleText(live, local)}
           </Txt>
         </Animated.View>
-        <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
           {agoKo(Date.now() - Date.parse(live.soldAt))}
         </Txt>
       </Press>
@@ -489,7 +500,7 @@ function LiveStrip({
                 <Txt bold numberOfLines={1}>
                   {marketName(s.card, local)}
                 </Txt>
-                <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                   <StyleTag card={s.card} />
                   {L.liveBase({
                     ago: agoKo(Date.now() - Date.parse(s.soldAt)),
@@ -497,7 +508,7 @@ function LiveStrip({
                   })}
                 </Txt>
               </View>
-              <Txt bold num style={{ fontSize: rem(0.875) }}>
+              <Txt bold num style={{ fontSize: rem(FONT.body2) }}>
                 {fmtValue(s.price)}
               </Txt>
             </View>
@@ -508,8 +519,8 @@ function LiveStrip({
   );
 }
 
-const small = { fontSize: rem(0.875) } as const;
-const tiny = { fontSize: rem(0.75) } as const;
+const small = { fontSize: rem(FONT.body2) } as const;
+const tiny = { fontSize: rem(FONT.caption) } as const;
 
 /** T-11-356 선수 유형(스피드스터 등) — 줄 아래 한 줄 앞에 굵게(카드 상세의 유형 띠와 같은 이름). 없으면 그리지 않는다. */
 function StyleTag({ card }: { card: MarketCard }) {
@@ -701,7 +712,7 @@ export default function Market() {
       onPress={() => void run(() => setCardLock(p.careerId, false), MARKET_TOAST.unlocked)}
       style={{ minHeight: 32, alignItems: 'center', justifyContent: 'center' }}
     >
-      <Txt style={{ fontSize: rem(0.75), fontWeight: '600', color: c.accentText }}>
+      <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '600', color: c.accentText }}>
         {L.playerUnlock}
       </Txt>
     </Press>
@@ -723,11 +734,11 @@ export default function Market() {
       : null;
   const box = {
     borderWidth: 1,
-    borderColor: c.line,
-    borderRadius: 14,
+    borderColor: 'transparent',
+    borderRadius: RADIUS.md,
     backgroundColor: c.surface,
   } as const;
-  const glass = { borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.08)' } as const;
+  const glass = { borderRadius: RADIUS.md, backgroundColor: 'rgba(255,255,255,0.08)' } as const;
 
   return (
     <>
@@ -748,7 +759,7 @@ export default function Market() {
                     <Txt
                       style={{
                         fontFamily: DISPLAY[700],
-                        fontSize: rem(1.625),
+                        fontSize: rem(FONT.title1),
                         color: c.accentText,
                       }}
                     >
@@ -780,7 +791,7 @@ export default function Market() {
         {/* 초록 머리 — 구단 자금 · 자금 만들기 · 요약 셋 */}
         <View
           testID="market-funds"
-          style={{ gap: 12, padding: 16, borderRadius: 18, backgroundColor: c.pitch }}
+          style={{ gap: 12, padding: 16, borderRadius: RADIUS.lg, backgroundColor: c.pitch }}
         >
           <View>
             <Txt v="eyebrow" style={{ color: c.onPitch, opacity: 0.75 }}>
@@ -798,7 +809,7 @@ export default function Market() {
               gap: 12,
               paddingVertical: 12,
               paddingHorizontal: 14,
-              borderRadius: 14,
+              borderRadius: RADIUS.md,
               borderWidth: 1,
               borderColor: 'rgba(255,255,255,0.16)',
               backgroundColor: 'rgba(255,255,255,0.08)',
@@ -818,12 +829,12 @@ export default function Market() {
               style={{
                 minHeight: 40,
                 paddingHorizontal: 14,
-                borderRadius: 999,
+                borderRadius: RADIUS.pill,
                 backgroundColor: c.pitchAccent,
                 justifyContent: 'center',
               }}
             >
-              <Txt style={{ fontSize: rem(0.8125), fontWeight: '700', color: c.accentInk }}>
+              <Txt style={{ fontSize: rem(FONT.label), fontWeight: '700', color: c.accentInk }}>
                 {L.makeFunds}
               </Txt>
             </Press>
@@ -847,15 +858,25 @@ export default function Market() {
                     alignItems: 'center',
                   }}
                 >
-                  <Txt style={{ fontSize: rem(0.6875), color: c.onPitch, opacity: 0.8 }}>{k}</Txt>
-                  <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(1.125), color: c.onPitch }}>
+                  <Txt style={{ fontSize: rem(FONT.caption2), color: c.onPitch, opacity: 0.8 }}>
+                    {k}
+                  </Txt>
+                  <Txt
+                    style={{
+                      fontFamily: DISPLAY[700],
+                      fontSize: rem(FONT.title3),
+                      color: c.onPitch,
+                    }}
+                  >
                     {v}
                   </Txt>
                 </View>
               ))}
             </View>
           ) : meFailed ? (
-            <Txt style={{ fontSize: rem(0.8125), color: c.onPitch, opacity: 0.85 }}>{meFailed}</Txt>
+            <Txt style={{ fontSize: rem(FONT.label), color: c.onPitch, opacity: 0.85 }}>
+              {meFailed}
+            </Txt>
           ) : null}
         </View>
 
@@ -912,9 +933,13 @@ export default function Market() {
               ) : null}
             </View>
             {!team ? (
-              <Txt tone="muted" style={small}>
-                {teamFailed ? L.playersFailed : L.loading}
-              </Txt>
+              teamFailed ? (
+                <Txt tone="muted" style={small}>
+                  {L.playersFailed}
+                </Txt>
+              ) : (
+                <Skeleton rows={4} />
+              )
             ) : team.players.length ? (
               team.players.map((p) => {
                 const lock = releaseLock(p, lineup);
@@ -931,7 +956,7 @@ export default function Market() {
                     onPress={() => togglePick(p.careerId)}
                     style={{
                       ...box,
-                      borderRadius: 12,
+                      borderRadius: RADIUS.md,
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 10,
@@ -1058,9 +1083,7 @@ export default function Market() {
                   </View>
                 </View>
                 {listStatus === 'loading' ? (
-                  <Txt tone="muted" style={small}>
-                    {L.loading}
-                  </Txt>
+                  <Skeleton rows={5} />
                 ) : listStatus === 'error' ? (
                   <View style={{ gap: 8 }}>
                     <Txt tone="muted" style={small}>
@@ -1101,7 +1124,7 @@ export default function Market() {
                                 {myListingIds.has(l.id) ? (
                                   <Txt
                                     tone="muted"
-                                    style={{ fontSize: rem(0.6875), fontWeight: '700' }}
+                                    style={{ fontSize: rem(FONT.caption2), fontWeight: '700' }}
                                   >
                                     {`  ${L.myListing}`}
                                   </Txt>
@@ -1113,12 +1136,15 @@ export default function Market() {
                               </Txt>
                             </View>
                             <View style={{ alignItems: 'flex-end', gap: 2 }}>
-                              <Txt num style={{ fontFamily: DISPLAY[700], fontSize: rem(1.1875) }}>
+                              <Txt
+                                num
+                                style={{ fontFamily: DISPLAY[700], fontSize: rem(FONT.title2) }}
+                              >
                                 {fmtValue(l.price)}
                               </Txt>
                               <Txt
                                 style={{
-                                  fontSize: rem(0.6875),
+                                  fontSize: rem(FONT.caption2),
                                   fontWeight: '600',
                                   color: toneColor(c, diff.tone),
                                 }}
@@ -1151,9 +1177,13 @@ export default function Market() {
                   </Txt>
                 </Txt>
                 {!team ? (
-                  <Txt tone="muted" style={small}>
-                    {teamFailed ? L.playersFailed : L.loading}
-                  </Txt>
+                  teamFailed ? (
+                    <Txt tone="muted" style={small}>
+                      {L.playersFailed}
+                    </Txt>
+                  ) : (
+                    <Skeleton rows={4} />
+                  )
                 ) : !isCurrent || team.players.length === 0 ? (
                   <Txt tone="muted" style={small}>
                     {L.sellNone}
@@ -1186,19 +1216,19 @@ export default function Market() {
                               gap: 3,
                               paddingVertical: 6,
                               paddingHorizontal: 4,
-                              borderRadius: 12,
+                              borderRadius: RADIUS.md,
                               borderWidth: on ? 2 : 1,
                               borderColor: on ? c.accent : c.line,
                               backgroundColor: on ? c.surface2 : c.surface,
                             }}
                           >
                             <MiniCard c={p} name={nameOfPlayer(p)} dim={off} />
-                            <Txt numberOfLines={1} style={{ fontSize: rem(0.6875) }}>
+                            <Txt numberOfLines={1} style={{ fontSize: rem(FONT.caption2) }}>
                               {nameOfPlayer(p)}
                             </Txt>
                             <Txt
                               style={{
-                                fontSize: rem(0.625),
+                                fontSize: rem(FONT.caption2),
                                 fontWeight: '600',
                                 color: on ? c.accentText : c.muted,
                               }}
@@ -1213,7 +1243,7 @@ export default function Market() {
                   </View>
                 )}
                 {selling && quote && me ? (
-                  <View style={{ ...box, borderRadius: 16, gap: 12, padding: 14 }}>
+                  <View style={{ ...box, borderRadius: RADIUS.lg, gap: 12, padding: 14 }}>
                     <Txt bold style={small}>
                       {L.sellStep2({
                         name: nameOfPlayer(selling),
@@ -1249,7 +1279,7 @@ export default function Market() {
                             alignItems: 'center',
                             justifyContent: 'center',
                             gap: 2,
-                            borderRadius: 12,
+                            borderRadius: RADIUS.md,
                             borderWidth: on ? 2 : 1,
                             borderColor: on ? c.accent : c.line,
                             backgroundColor: on ? c.surface2 : c.surface,
@@ -1272,12 +1302,12 @@ export default function Market() {
                           alignItems: 'baseline',
                         }}
                       >
-                        <Txt style={{ fontSize: rem(0.8125) }}>{L.price}</Txt>
-                        <Txt num style={{ fontFamily: DISPLAY[700], fontSize: rem(1.375) }}>
+                        <Txt style={{ fontSize: rem(FONT.label) }}>{L.price}</Txt>
+                        <Txt num style={{ fontFamily: DISPLAY[700], fontSize: rem(FONT.title2) }}>
                           {`${fmtValue(sellPrice)} `}
                           <Txt
                             style={{
-                              fontSize: rem(0.6875),
+                              fontSize: rem(FONT.caption2),
                               fontWeight: '600',
                               color: toneColor(c, sellDiff!.tone),
                             }}
@@ -1294,10 +1324,10 @@ export default function Market() {
                         onChange={setPct}
                       />
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                        <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+                        <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
                           {`${fmtValue(quote.band.min)} (${range!.minPct}%)`}
                         </Txt>
-                        <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+                        <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
                           {`${fmtValue(quote.band.max)} (${range!.maxPct}%)`}
                         </Txt>
                       </View>
@@ -1335,9 +1365,13 @@ export default function Market() {
             ) : (
               <View testID="market-trades" style={{ gap: 10 }}>
                 {!me ? (
-                  <Txt tone="muted" style={small}>
-                    {meFailed ?? L.loading}
-                  </Txt>
+                  meFailed ? (
+                    <Txt tone="muted" style={small}>
+                      {meFailed}
+                    </Txt>
+                  ) : (
+                    <Skeleton rows={4} />
+                  )
                 ) : (
                   <>
                     <Txt bold accessibilityRole="header" style={small}>
@@ -1454,8 +1488,10 @@ export default function Market() {
                     accessibilityLabel={`${k} ${v}`}
                     style={{ ...glass, flex: 1, paddingVertical: 8, alignItems: 'center' }}
                   >
-                    <Txt style={{ fontSize: rem(0.6875), color: c.onPitch, opacity: 0.8 }}>{k}</Txt>
-                    <Txt style={{ fontSize: rem(0.8125), fontWeight: '600', color: c.onPitch }}>
+                    <Txt style={{ fontSize: rem(FONT.caption2), color: c.onPitch, opacity: 0.8 }}>
+                      {k}
+                    </Txt>
+                    <Txt style={{ fontSize: rem(FONT.label), fontWeight: '600', color: c.onPitch }}>
                       {v}
                     </Txt>
                   </View>
@@ -1488,7 +1524,7 @@ export default function Market() {
                   extra={
                     <Txt
                       style={{
-                        fontSize: rem(0.6875),
+                        fontSize: rem(FONT.caption2),
                         fontWeight: '600',
                         color: toneColor(c, buyDiff!.tone),
                       }}
@@ -1516,7 +1552,9 @@ export default function Market() {
               <MarketChart card={buying.card} />
               {!me ? (
                 <View testID="market-login" style={{ gap: 10 }}>
-                  <View style={{ padding: 12, borderRadius: 10, backgroundColor: c.surface2 }}>
+                  <View
+                    style={{ padding: 12, borderRadius: RADIUS.sm, backgroundColor: c.surface2 }}
+                  >
                     <Txt style={small}>{L.loginToBuy}</Txt>
                   </View>
                   <LoginButtons back={{ market: true }} onDone={() => void loadMe()} />
@@ -1526,7 +1564,9 @@ export default function Market() {
                 </View>
               ) : (
                 <>
-                  <View style={{ padding: 12, borderRadius: 10, backgroundColor: c.surface2 }}>
+                  <View
+                    style={{ padding: 12, borderRadius: RADIUS.sm, backgroundColor: c.surface2 }}
+                  >
                     <Txt tone="muted" style={tiny}>
                       {L.buyNote}
                     </Txt>

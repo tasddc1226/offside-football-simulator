@@ -264,7 +264,7 @@
 <style>
   .fr-h {
     margin: 6px 0 0;
-    font-size: 0.9375rem;
+    font-size: var(--fs-body1);
   }
   .fr-invite {
     display: flex;
@@ -272,18 +272,18 @@
     gap: 8px;
     padding: 12px;
     border: 1.5px solid var(--accent-text);
-    border-radius: 12px;
+    border-radius: var(--radius-md);
   }
   .fr-invite p {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
   }
   .fr-event {
     display: flex;
     flex-direction: column;
     gap: 4px;
     padding: 12px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: color-mix(in srgb, var(--accent) 10%, transparent);
   }
   .fr-event p {
@@ -296,7 +296,7 @@
   }
   .fr-code-value {
     font-family: var(--display);
-    font-size: 1.5rem;
+    font-size: var(--fs-title1);
     letter-spacing: 0.06em;
   }
   .fr-add {
@@ -305,7 +305,7 @@
     gap: 6px;
   }
   .fr-add-label {
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     color: var(--muted);
   }
   .fr-add-row {

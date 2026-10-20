@@ -1,5 +1,6 @@
 // T-11-338 진행 중인 감독 커리어 이어 하기(홈 · 내 구단 맨 위, 웹 ui/ManagerResume.svelte). 기기 세이브만 읽고 서버는
 // 부르지 않는다. 세이브가 없으면 아무것도 그리지 않는다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useMemo } from 'react';
 import { View } from 'react-native';
 import { managerResume } from '@offside/app-core/managerResume';
@@ -32,11 +33,11 @@ export function ManagerResume() {
           <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
             <Txt v="eyebrow">{MG.resumeEyebrow}</Txt>
             <Txt v="h2">{MG.resumeTitle}</Txt>
-            <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
               {r.name ? `${r.name} · ${line}` : line}
             </Txt>
           </View>
-          <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.title1) }}>
             ›
           </Txt>
         </View>

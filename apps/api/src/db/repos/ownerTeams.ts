@@ -5,7 +5,11 @@ import {
   TeamPresetsSchema,
 } from '@offside/contracts';
 import type { TeamPlayer, TeamPreset, TeamRankItem, TeamRankSort } from '@offside/contracts';
-import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
+import {
+  TEAM_RANK_PER_PAGE,
+  type DetailPos,
+  type FormationId,
+} from '@offside/contracts/owner-team';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import { defaultClubIds, isAmateurClubId } from '@offside/contracts/club-names';
 import { CARD_VALUE_FLOOR } from '@offside/contracts/market-value';
@@ -54,6 +58,7 @@ import {
 import { accountLinkedSql } from './profiles.js';
 import type { AchievementSeason } from '../../team/achievements.js';
 import type { LineupCareer, PlayerRef } from '../../team/sim.js';
+import type { StoredMoment } from '../../team/moments.js';
 
 // T-10-092 구단주 팀(시즌마다 한 팀)·팀 경기·라이브 랭킹.
 
@@ -744,9 +749,21 @@ export type StoredEvent = {
   side: 'home' | 'away';
   scorer: PlayerRef;
   assist: PlayerRef | null;
+  /** T-11-387 득점자 자리. 이 기능 전 경기에는 없다. */
+  slot?: DetailPos;
 };
-/** team_matches.detail_json. 시너지 반영 시즌 경기는 TeamSnapshot.synergy에 켜진 시너지 id를 남긴다(T-11-105). */
-export type MatchDetail = { home: TeamSnapshot; away: TeamSnapshot; events: StoredEvent[] };
+/** T-11-387 장면 경기에서 화면에 띄운 장면(판정값은 남기지 않는다). */
+export type StoredMomentView = Omit<StoredMoment, 'roll' | 'counterRoll' | 'shown' | 'goals'>;
+/**
+ * team_matches.detail_json. 시너지 반영 시즌 경기는 TeamSnapshot.synergy에 켜진 시너지 id를 남긴다(T-11-105). 장면 경기는
+ * 띄운 장면과 고른 결과를 moments에 남긴다(T-11-387).
+ */
+export type MatchDetail = {
+  home: TeamSnapshot;
+  away: TeamSnapshot;
+  events: StoredEvent[];
+  moments?: StoredMomentView[];
+};
 
 /** 경기 한 판이 팀 행에 더하는 것(득실·레이팅 변화). */
 type Side = { teamId: string; filled: number; ovr: number; goals: number; rating: number };

@@ -1,6 +1,6 @@
 # ADR-009. 앱인토스 미니앱 대응 구조와 출시 준비
 
-- 상태: Amended by ADR-013 (2026-09-24, 출시 보류 유지, `packages/platform` 채널 어댑터는 코드에서 제거됨 — 필요 시 git 이력에서 복원). 확정 (2026-09-02, 같은 날 범위 조정). 구조 결정은 지금 적용한다. 출시 준비 항목은 사용자가 미니앱 출시를 결정한 뒤 착수한다
+- 상태: 2026-10-19 디자인 시스템 행 개정(T-11-396, 앱인토스 출시 안 함 · TDS 원칙만 자체 시스템에 반영, [디자인 시스템](../operations/design-system.md)). Amended by ADR-013 (2026-09-24, 출시 보류 유지, `packages/platform` 채널 어댑터는 코드에서 제거됨 — 필요 시 git 이력에서 복원). 확정 (2026-09-02, 같은 날 범위 조정). 구조 결정은 지금 적용한다. 출시 준비 항목은 사용자가 미니앱 출시를 결정한 뒤 착수한다
 - 관련: [ADR-001](ADR-001-web-framework.md), [ADR-002](ADR-002-persistence-and-identity.md), [ADR-007](ADR-007-hosting-and-infra.md), [ADR-008](ADR-008-auth-and-account-merge.md), [배포·운영](../archive/offside/development/09-deployment-and-operations.md)
 - 근거 문서: 앱인토스 개발자센터(2026-09-02 열람). 정책은 수시로 개정되므로 검토 요청 전에 [서비스 오픈 정책](https://developers-apps-in-toss.toss.im/intro/guide)과 [게임 출시 가이드](https://developers-apps-in-toss.toss.im/checklist/app-game)를 다시 확인한다.
 
@@ -33,7 +33,7 @@
 | 서버 통신     | 미니앱 origin `https://<appName>.web.tossmini.com`·`private-web`·`apps`·`private-apps` 4종을 API와 Static Assets `/content/*` CORS에 허용. HTTPS만. 앱인토스 서버 API는 Workers `mtls_certificates` 바인딩으로 호출             |
 | 수익화        | 인앱 결제·인앱 광고·토스 포인트 프로모션은 넣지 않는다. 따라서 사업자 등록 없이 출시 가능하다(정책: "사업자 등록은 필수가 아니지만 인앱 결제·토스페이·프로모션·비즈 월렛·토스 로그인을 사용하려면 필수")                        |
 | 성장 기능     | Phase 7에서 토스 게임센터 리더보드(미니앱당 1개, Legacy Score), `Share.createLink`, `Analytics`, `Review.request`. 리더보드는 클라이언트 제출값을 토스가 검증하지 않으므로 서버 리플레이 검증을 통과한 Archive만 제출한다       |
-| 디자인 시스템 | TDS를 쓰지 않는다. 방송 그래픽 방향 유지. toss 채널은 시스템 테마 감지를 끄고 고정 팔레트를 쓴다(아래 위험 참조)                                                                                                                |
+| 디자인 시스템 | TDS를 쓰지 않는다(라이선스가 앱인토스 안 사용만 허락). 2026-10-19부터 TDS 원칙을 참고한 자체 시스템([디자인 시스템](../operations/design-system.md)). toss 채널은 시스템 테마 감지를 끄고 고정 팔레트를 쓴다(아래 위험 참조)                                                                                                                |
 | 오류 추적     | Sentry JS SDK 그대로. 출시 후 `ait sentry upload-sourcemap --deployment-id`로 소스맵 업로드                                                                                                                                     |
 | 테스트        | 로컬은 `@apps-in-toss/devtools` Vite 플러그인으로 브라우저에서 SDK 모킹(3.x는 샌드박스 앱 미지원). 실기기는 콘솔 QR(`intoss-private://…?_deploymentId=`), 워크스페이스 멤버·만 19세·토스 로그인 필요                            |
 

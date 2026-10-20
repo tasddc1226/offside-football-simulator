@@ -1,5 +1,6 @@
 // 트로피 탭(웹 tabs/TrophyTab.svelte): 우승 연혁 · 개인 수상 · 발롱도르 순위 · 완결된 스토리.
 // 선수 상세(은퇴 화면)도 같은 카드를 쓸 수 있게 LegendSource를 받는다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { CareerTrophy } from '../../ui/CareerTrophy';
 import { careerTrophy, type CareerTrophy as TrophyArt } from '@offside/app-core/career-trophy';
 import type { ReactNode } from 'react';
@@ -42,7 +43,7 @@ export function TrophyRow({
         style={{
           width: 44,
           fontFamily: DISPLAY[600],
-          fontSize: rem(1.125),
+          fontSize: rem(FONT.title3),
           fontVariant: ['tabular-nums'],
         }}
       >
@@ -56,7 +57,7 @@ export function TrophyRow({
 
 /** 카드 안 빈 목록 문구(웹 .empty). */
 const Empty = () => (
-  <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
+  <Txt tone="muted" style={{ fontSize: rem(FONT.body2), paddingVertical: 8 }}>
     {L.empty}
   </Txt>
 );
@@ -79,7 +80,7 @@ export function TrophyTab({ s }: { s: LegendSource }) {
               <Txt style={{ fontWeight: '700' }}>{tn(x.t)}</Txt>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <ClubMark name={x.club} id={x.clubId} size={14} />
-                <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                   {tn(x.club)}
                 </Txt>
               </View>
@@ -118,7 +119,7 @@ export function TrophyTab({ s }: { s: LegendSource }) {
                 <Txt style={{ fontWeight: '700' }}>
                   {b.rank === 1 ? L.ballonWon : L.ballonRank({ n: b.rank })}
                 </Txt>
-                <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                   {` ${L.nominees}`}
                 </Txt>
               </Txt>
@@ -136,7 +137,7 @@ export function TrophyTab({ s }: { s: LegendSource }) {
           stories.map((x, i) => (
             <TrophyRow key={i} year={x.year}>
               <Txt style={{ fontWeight: '700' }}>{tn(x.ending)}</Txt>
-              <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                 {tn(x.name)}
               </Txt>
             </TrophyRow>

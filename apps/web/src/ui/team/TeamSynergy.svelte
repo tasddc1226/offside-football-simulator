@@ -50,11 +50,11 @@
   h3 b {color:var(--accent-text);font-family:var(--display);}
   .note {font-size:12px;color:var(--muted);}
   .hint, .cap {margin:0;font-size:11px;}
-  .more {justify-self:center;display:flex;align-items:center;gap:5px;min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--accent-text);font:inherit;font-size:12px;font-weight:600;cursor:pointer;}
+  .more {justify-self:center;display:flex;align-items:center;gap:5px;min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:var(--radius-pill);background:transparent;color:var(--accent-text);font:inherit;font-size:12px;font-weight:600;cursor:pointer;}
   .more svg {width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.6;transition:transform .2s;}
   .more[aria-expanded='true'] svg {transform:rotate(180deg);}
   .rows {list-style:none;margin:0;padding:0;display:grid;gap:6px;}
-  .row {width:100%;display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:inherit;font:inherit;}
+  .row {width:100%;display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;padding:8px 10px;border-radius:var(--radius-sm);border: 1px solid transparent;background:var(--surface-2);color:inherit;font:inherit;}
   button.row {cursor:pointer;}
   .mark {width:16px;height:16px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);}
   .mark svg {width:11px;height:11px;fill:none;stroke:var(--accent-ink);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
@@ -63,7 +63,7 @@
   .desc {font-size:11px;color:var(--muted);overflow-wrap:anywhere;}
   .side {display:grid;justify-items:end;gap:3px;}
   .side small {font-size:11px;color:var(--muted);white-space:nowrap;}
-  .state {font-style:normal;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap;}
+  .state {font-style:normal;font-size:10px;font-weight:700;padding:1px 7px;border-radius:var(--radius-pill);border:1px solid var(--line);color:var(--muted);white-space:nowrap;}
   /* 적용 중은 모두 같은 모습. 누른 줄은 고른 것처럼 보이지 않게 배경만 바꾸고 '보는 중'을 단다. */
   .row[data-state='applied'] {border-color:color-mix(in srgb,var(--accent),transparent 55%);}
   .row[data-state='applied'] .mark {background:var(--accent);border-color:var(--accent);}

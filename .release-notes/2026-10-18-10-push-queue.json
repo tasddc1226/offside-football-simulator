@@ -1,0 +1,14 @@
+{
+  "id": "app-push-queue-unification-20261018",
+  "title": "앱 알림 처리 개선",
+  "items": ["앱 알림의 발송과 결과 확인 처리를 정리했어요."],
+  "en": {
+    "title": "App notification improvements",
+    "items": ["Refined how app notifications are sent and their results checked."]
+  },
+  "ja": {
+    "title": "アプリ通知の改善",
+    "items": ["アプリ通知の送信と結果確認の処理を整えました。"]
+  },
+  "availability": "app"
+}

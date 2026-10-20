@@ -1,5 +1,6 @@
 // 선수 생성(웹 Create.svelte): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
 // 1단계(프로필 입력) → 2단계(후보 카드 비교·선택). appState.candidates가 있으면 2단계.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { careerGuideText as CG } from '@offside/app-core/i18n/ko/careerGuide';
 import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { Alert, Animated, Easing, ScrollView, TextInput, View } from 'react-native';
@@ -38,13 +39,9 @@ import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as CA } from '@offside/app-core/i18n/ko/cupApp';
 import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
 import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
-import {
-  REROLL_MILEAGE,
-  rerollMileageLeft,
-  scoutPityView,
-  type ScoutPity,
-} from '@offside/contracts/cup';
+import { REROLL_MILEAGE, rerollMileageLeft, type ScoutPity } from '@offside/contracts/cup';
 import { ScoutOdds } from '../owner/ScoutOdds';
+import { ScoutPityGauge } from './ScoutPityGauge';
 import {
   candidateTiers,
   gradeTier,
@@ -309,7 +306,6 @@ export default function Create() {
   // T-11-244 천장 카운트. 다시 보낼 때는 같은 시드 계획을 같은 멱등 키와 함께 쓴다.
   const [pity, setPity] = useState<ScoutPity>(NO_PITY);
   const scoutPlan = useRef<{ seed: number; hit: boolean } | null>(null);
-  const pityView = scoutPityView(pity);
   const premium = !!s.candidates?.some((x) => x.guaranteed);
   useEffect(() => {
     if (!hasCandidates) return;
@@ -431,12 +427,16 @@ export default function Create() {
       premiumScoutCandidates(plan.seed, mode);
       setRewardMessage('');
       const n = r.data.scout;
+      // T-11-415 S가 그냥 나와 S 확정 칸이 0으로 돌아가면 그렇다고 알린다.
+      const reset = mode === 'normal' && r.data.pity?.streak === 0;
       toast(
         mode === 'elite'
           ? SL.doneElite({ n })
           : mode === 'sure'
             ? SL.doneSure({ n })
-            : SL.done({ n }),
+            : reset
+              ? SL.doneReset({ n })
+              : SL.done({ n }),
       );
     } finally {
       rerollLock.current = false;
@@ -505,7 +505,7 @@ export default function Create() {
   };
 
   const onPitch = c.onPitch;
-  const small = { fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 };
+  const small = { fontSize: rem(FONT.caption), lineHeight: rem(FONT.caption) * 1.35 };
 
   const ovrGuideBody = (showTitle: boolean) => (
     <View
@@ -572,7 +572,7 @@ export default function Create() {
                 alignItems: 'center',
                 gap: 14,
                 backgroundColor: c.pitch,
-                borderRadius: 18,
+                borderRadius: RADIUS.lg,
                 paddingVertical: 14,
                 paddingHorizontal: 16,
                 shadowColor: '#000',
@@ -598,7 +598,7 @@ export default function Create() {
               <Txt
                 style={{
                   fontFamily: DISPLAY[700],
-                  fontSize: rem(0.8125),
+                  fontSize: rem(FONT.label),
                   letterSpacing: rem(0.8125) * 0.12,
                   color: c.pitchAccent,
                 }}
@@ -610,18 +610,22 @@ export default function Create() {
               <Txt
                 bold
                 numberOfLines={1}
-                style={{ fontSize: rem(1.25), lineHeight: rem(1.25) * 1.2, color: onPitch }}
+                style={{
+                  fontSize: rem(FONT.title2),
+                  lineHeight: rem(FONT.title2) * 1.2,
+                  color: onPitch,
+                }}
               >
                 {C.name.trim() || L.noName}
               </Txt>
               <Txt
                 style={{
-                  fontSize: rem(0.8125),
-                  lineHeight: rem(0.8125) * 1.5,
+                  fontSize: rem(FONT.label),
+                  lineHeight: rem(FONT.label) * 1.5,
                   color: alpha(onPitch, 0.75),
                 }}
               >
-                <Txt accessibilityElementsHidden style={{ fontSize: rem(0.8125) }}>
+                <Txt accessibilityElementsHidden style={{ fontSize: rem(FONT.label) }}>
                   {flagOf(nation.code)}
                 </Txt>{' '}
                 {tn(nation.ko)} · {posLabel({ pos: C.pos, dpos })} · {L.foot({ v: C.foot })}
@@ -636,9 +640,9 @@ export default function Create() {
             </View>
             <View style={{ alignItems: 'center', gap: 2 }}>
               <MiniRadar pos={C.pos} attrs={cardAttrs} size={72} onPitch />
-              <Txt style={{ fontSize: rem(0.6875), color: alpha(onPitch, 0.85) }}>
+              <Txt style={{ fontSize: rem(FONT.caption2), color: alpha(onPitch, 0.85) }}>
                 {picked ? L.ovrStart : L.ovrEst} OVR{' '}
-                <Txt num style={{ fontSize: rem(1.0625), color: c.pitchAccent }}>
+                <Txt num style={{ fontSize: rem(FONT.title3), color: c.pitchAccent }}>
                   {startOvr(C.pos, cardAttrs)}
                 </Txt>
               </Txt>
@@ -679,7 +683,7 @@ export default function Create() {
                         justifyContent: 'center',
                       }}
                     >
-                      <Txt style={{ fontSize: rem(1.25) }}>🎲</Txt>
+                      <Txt style={{ fontSize: rem(FONT.title2) }}>🎲</Txt>
                     </Press>
                   </View>
                 </Field>
@@ -919,7 +923,7 @@ export default function Create() {
                         style={[
                           {
                             gap: 8,
-                            borderRadius: 16,
+                            borderRadius: RADIUS.lg,
                             backgroundColor: c.surface,
                             borderColor: isPicked || glow ? c.accent : c.line,
                             // 고른 카드는 안쪽으로 한 겹 더 두른다(웹 inset 1.5px)
@@ -933,7 +937,7 @@ export default function Create() {
                           <Txt
                             style={{
                               fontFamily: DISPLAY[700],
-                              fontSize: rem(1.125),
+                              fontSize: rem(FONT.title3),
                               letterSpacing: rem(1.125) * 0.02,
                             }}
                           >
@@ -943,12 +947,12 @@ export default function Create() {
                             tone="muted"
                             style={{
                               marginLeft: 'auto',
-                              fontSize: rem(0.75),
-                              lineHeight: rem(1.6),
+                              fontSize: rem(FONT.caption),
+                              lineHeight: rem(FONT.title1),
                             }}
                           >
                             OVR{' '}
-                            <Txt num style={{ fontSize: rem(1.375) }}>
+                            <Txt num style={{ fontSize: rem(FONT.title2) }}>
                               {running && f.hint > 0 ? (
                                 <CountUp value={startOvr(C.pos, cand.attrs)} ms={f.back + f.hint} />
                               ) : (
@@ -989,7 +993,7 @@ export default function Create() {
                         </Txt>
                         <Txt
                           tone="accent"
-                          style={{ fontSize: rem(0.875), fontWeight: '600' }}
+                          style={{ fontSize: rem(FONT.body2), fontWeight: '600' }}
                         >{`“${scoutLine(C.pos, cand.attrs)}”`}</Txt>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                           <MiniRadar pos={C.pos} attrs={cand.attrs} size={84} />
@@ -1006,7 +1010,7 @@ export default function Create() {
                                     numberOfLines={1}
                                     style={{
                                       width: 56,
-                                      fontSize: rem(0.75),
+                                      fontSize: rem(FONT.caption),
                                       color: hi ? c.ink : c.muted,
                                       ...(hi ? { fontWeight: '600' as const } : {}),
                                       ...(ovrFocus.keys.includes(k)
@@ -1042,7 +1046,7 @@ export default function Create() {
                                       {
                                         width: 26,
                                         textAlign: 'right',
-                                        fontSize: rem(0.9375),
+                                        fontSize: rem(FONT.body1),
                                         color: c.ink,
                                       },
                                     ]}
@@ -1073,7 +1077,7 @@ export default function Create() {
                         gap: 14,
                         borderWidth: 1.5,
                         borderColor: c.line,
-                        borderRadius: 16,
+                        borderRadius: RADIUS.lg,
                         backgroundColor: c.pitch,
                         padding: 16,
                       }}
@@ -1082,7 +1086,7 @@ export default function Create() {
                         style={{
                           width: 48,
                           height: 48,
-                          borderRadius: 24,
+                          borderRadius: RADIUS.lg,
                           alignItems: 'center',
                           justifyContent: 'center',
                           borderWidth: 2,
@@ -1093,8 +1097,8 @@ export default function Create() {
                         <Txt
                           style={{
                             fontFamily: DISPLAY[700],
-                            fontSize: rem(1.625),
-                            lineHeight: rem(1.625) * 1.15,
+                            fontSize: rem(FONT.title1),
+                            lineHeight: rem(FONT.title1) * 1.15,
                             color: onPitch,
                           }}
                         >
@@ -1102,17 +1106,17 @@ export default function Create() {
                         </Txt>
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Txt bold style={{ fontSize: rem(1), color: onPitch }}>
+                        <Txt bold style={{ fontSize: rem(FONT.body), color: onPitch }}>
                           {L.candNo({ n: i + 1 })}
                         </Txt>
-                        <Txt style={{ fontSize: rem(0.75), color: alpha(onPitch, 0.75) }}>
+                        <Txt style={{ fontSize: rem(FONT.caption), color: alpha(onPitch, 0.75) }}>
                           {L.scoutMemo({ k: labels[hiddenStrength(cand.attrs, C.focus)] })}
                         </Txt>
                       </View>
                       <Txt
                         accessibilityElementsHidden
                         style={{
-                          fontSize: rem(0.6875),
+                          fontSize: rem(FONT.caption2),
                           fontWeight: '600',
                           color: alpha(onPitch, 0.7),
                         }}
@@ -1153,18 +1157,19 @@ export default function Create() {
                 >
                   {rerolling ? SL.busy : SL.btn({ n: scouts })}
                 </Btn>
-                <Txt v="sm" testID="candidate-scout-pity">
-                  {`${SL.pitySure({ n: pityView.sureIn })} · ${SL.pityElite({ n: pityView.eliteIn })}`}
-                </Txt>
                 <Txt v="sm" tone="muted">
-                  {`${SL.what} ${SL.pityHelp}`}
+                  {SL.what}
                 </Txt>
+                <ScoutPityGauge pity={pity} />
                 <ScoutOdds />
               </View>
             ) : owner ? (
-              <Btn sm kind="ghost" testID="premium-scout-go" onPress={goRerollShop}>
-                {SL.shopGo}
-              </Btn>
+              <View style={{ gap: 6 }}>
+                {pity.used > 0 ? <ScoutPityGauge pity={pity} empty /> : null}
+                <Btn sm kind="ghost" testID="premium-scout-go" onPress={goRerollShop}>
+                  {SL.shopGo}
+                </Btn>
+              </View>
             ) : null}
             {premium ? (
               <Txt v="sm" tone="muted" testID="premium-note">
@@ -1340,7 +1345,7 @@ function LiveTag({ children }: { children: string }) {
   return (
     <View
       style={{
-        borderRadius: 999,
+        borderRadius: RADIUS.pill,
         borderWidth: 1,
         borderColor: alpha(c.onPitch, 0.3),
         paddingVertical: 1,
@@ -1349,8 +1354,8 @@ function LiveTag({ children }: { children: string }) {
     >
       <Txt
         style={{
-          fontSize: rem(0.6875),
-          lineHeight: rem(0.6875) * 1.5,
+          fontSize: rem(FONT.caption2),
+          lineHeight: rem(FONT.caption2) * 1.5,
           fontWeight: '600',
           color: c.onPitch,
         }}
@@ -1384,7 +1389,7 @@ function PosOpt({
           position: 'absolute',
           right: 10,
           top: 8,
-          fontSize: rem(0.9375),
+          fontSize: rem(FONT.body1),
           letterSpacing: rem(0.9375) * 0.06,
           color: selected ? c.accentText : c.muted,
         }}
@@ -1392,7 +1397,10 @@ function PosOpt({
         {code}
       </Txt>
       <Txt bold>{title}</Txt>
-      <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 }}>
+      <Txt
+        tone="muted"
+        style={{ fontSize: rem(FONT.caption), lineHeight: rem(FONT.caption) * 1.35 }}
+      >
         {blurb}
       </Txt>
     </Opt>

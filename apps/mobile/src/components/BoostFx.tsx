@@ -1,6 +1,7 @@
 // T-11-083 잠재력 강화 연출(웹 BoostFx.svelte). 결과는 이미 정해져 저장된 뒤에 연다 — 연출은 보여 주기만 한다.
 // 1) 강화 중: 게이지가 차오른다(끝으로 갈수록 느려진다). 2) 결과: 성공이면 새 단계 칸이 튀어 오르고, 실패면 카드가 흔들린다.
 // 결과 화면은 '확인'이나 Android 뒤로로 닫는다. 감속 모션이면 게이지 없이 짧게 결과로 넘어간다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Modal, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -81,7 +82,7 @@ export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void
             width: '100%',
             maxWidth: 360,
             padding: 20,
-            borderRadius: 18,
+            borderRadius: RADIUS.lg,
             borderWidth: 1,
             borderColor: c.line,
             backgroundColor: c.surface,
@@ -101,7 +102,7 @@ export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void
                   style={{
                     width: 18,
                     height: 18,
-                    borderRadius: 9,
+                    borderRadius: RADIUS.sm,
                     borderWidth: 2,
                     borderColor: on ? c.accent : c.line,
                     backgroundColor: on ? c.accent : 'transparent',
@@ -120,7 +121,7 @@ export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void
                 style={{
                   alignSelf: 'stretch',
                   height: 10,
-                  borderRadius: 99,
+                  borderRadius: RADIUS.pill,
                   backgroundColor: c.line,
                   overflow: 'hidden',
                 }}
@@ -133,7 +134,7 @@ export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void
                   }}
                 />
               </View>
-              <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
                 {L.chance({ n: out.chance })}
               </Txt>
             </>

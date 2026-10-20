@@ -1,4 +1,5 @@
 // My club: shared owner identity and operations, with team-specific play in the team card.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { shapeOf } from '@offside/contracts/owner-team';
 import { Alert, View } from 'react-native';
@@ -24,7 +25,7 @@ import { isMember } from '@offside/app-core/account';
 import { go, takeFocus } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
-import { Btn, Card, Pill, Press, Row, Screen, Topbar, Txt } from '../../ui';
+import { Btn, Card, Pill, Press, Row, Screen, Topbar, Txt, Skeleton } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 import { Account } from './Account';
 import { OwnerProfileEditor } from './OwnerProfileEditor';
@@ -70,7 +71,7 @@ function LockedPitch() {
         gap: 10,
         paddingVertical: 14,
         paddingHorizontal: 10,
-        borderRadius: 14,
+        borderRadius: RADIUS.md,
         backgroundColor: c.pitch,
         overflow: 'hidden',
       }}
@@ -86,7 +87,7 @@ function LockedPitch() {
               style={{
                 width: 22,
                 height: 22,
-                borderRadius: 11,
+                borderRadius: RADIUS.sm,
                 borderWidth: 2,
                 borderStyle: 'dashed',
                 borderColor: c.onPitch,
@@ -110,11 +111,11 @@ function LockedPitch() {
           style={{
             paddingVertical: 6,
             paddingHorizontal: 12,
-            borderRadius: 999,
+            borderRadius: RADIUS.pill,
             backgroundColor: c.surface,
           }}
         >
-          <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>{L.lockBadge}</Txt>
+          <Txt style={{ fontSize: rem(FONT.label), fontWeight: '700' }}>{L.lockBadge}</Txt>
         </View>
       </View>
     </View>
@@ -240,12 +241,12 @@ export default function Owner() {
                     <GradeEmblem id={tierTag.tier} size={24} />
                   </View>
                 ) : null}
-                <Txt style={{ fontSize: rem(1.125), fontWeight: '700' }}>
+                <Txt style={{ fontSize: rem(FONT.title3), fontWeight: '700' }}>
                   {guest ? L.guestName : (nickname ?? L.title)}
                 </Txt>
                 {card?.title ? <TitleBadge title={card.title} /> : null}
               </Row>
-              <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
                 {sub}
               </Txt>
             </View>
@@ -282,7 +283,7 @@ export default function Owner() {
                   {team?.name ?? L.myTeam}
                 </Txt>
                 {team ? (
-                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
                     {L.manager({
                       manager: team.manager,
                       formation: shapeOf(team.formation, team.layout),
@@ -318,16 +319,20 @@ export default function Owner() {
                   </Btn>
                 </Grid2>
                 {card.playHint ? (
-                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
                     {card.playHint}
                   </Txt>
                 ) : null}
               </>
             ) : (
               <>
-                <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                  {card ? ownerTeamEmptyText(card) : cardFailed ? L.teamFailed : L.loading}
-                </Txt>
+                {card || cardFailed ? (
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
+                    {card ? ownerTeamEmptyText(card) : L.teamFailed}
+                  </Txt>
+                ) : (
+                  <Skeleton rows={2} />
+                )}
                 <Btn
                   kind={card && card.players > 0 ? 'primary' : 'default'}
                   block
@@ -353,11 +358,11 @@ export default function Owner() {
                     <Txt v="h2">{MG.entryTitle}</Txt>
                     <Pill tone="good">{MG.entryNew}</Pill>
                   </View>
-                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
                     {MG.entrySub}
                   </Txt>
                 </View>
-                <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+                <Txt tone="muted" style={{ fontSize: rem(FONT.title1) }}>
                   ›
                 </Txt>
               </View>
@@ -373,7 +378,7 @@ export default function Owner() {
               </Txt>
             </View>
             <LockedPitch />
-            <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
               {ownerLockedText(localCount)}
             </Txt>
             {/* 로그아웃·탈퇴 직후엔 세션이 없으므로 startGoogleLogin이 새 익명 세션부터 받는다. */}
@@ -396,11 +401,11 @@ export default function Owner() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                 <Txt v="h2">{P.title}</Txt>
-                <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
                   {P.entryLead}
                 </Txt>
               </View>
-              <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.title1) }}>
                 ›
               </Txt>
             </View>
@@ -467,11 +472,11 @@ export default function Owner() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                   <Txt v="h2">{L.marketTitle}</Txt>
-                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
                     {L.marketSub({ funds })}
                   </Txt>
                 </View>
-                <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+                <Txt tone="muted" style={{ fontSize: rem(FONT.title1) }}>
                   ›
                 </Txt>
               </View>
@@ -516,11 +521,11 @@ export default function Owner() {
                     <Pill tone="good">{H.hallNew}</Pill>
                   </View>
                 </View>
-                <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
                   {H.hallSummary}
                 </Txt>
               </View>
-              <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.title1) }}>
                 ›
               </Txt>
             </View>
@@ -540,15 +545,15 @@ export default function Owner() {
                       paddingHorizontal: 8,
                       paddingVertical: 5,
                       borderWidth: 1,
-                      borderColor: c.line,
-                      borderRadius: 6,
+                      borderColor: 'transparent',
+                      borderRadius: RADIUS.xs,
                       backgroundColor: c.surface2,
                     }}
                   >
                     <GradeEmblem id={tier.tier} size={16} />
                     <Txt
                       style={{
-                        fontSize: rem(0.75),
+                        fontSize: rem(FONT.caption),
                         fontWeight: '600',
                         color: mix(GRADE_COLOR[tier.tier] ?? GRADE_COLOR.rookie!, c.ink, 0.65),
                       }}
@@ -559,7 +564,7 @@ export default function Owner() {
                 ))}
               </View>
             ) : null}
-            <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
               {card?.season ?? L.currentSeason}
             </Txt>
             <Stats

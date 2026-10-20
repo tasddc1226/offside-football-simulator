@@ -1,6 +1,7 @@
 // T-10-092 구단주 팀(웹 team/Team.svelte) — 시즌마다 그 시즌에 뛰고 은퇴한 내 선수로 11명을 꾸려(빈 자리는 유스 선수가
 // 채운다) 같은 시즌 다른 구단주의 팀과 겨룬다. 지난 시즌 팀은 보기만 한다. 경기 결과는 서버가 정한다(앱은 보여 주기만).
 // 편성·후보·업적 표기 같은 순수 계산은 웹과 같은 @offside/app-core/teamOwner.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { teamNameIssues } from '@offside/app-core/careerGuide';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
@@ -34,12 +35,14 @@ import {
   fetchOwnerTeam,
   fetchTeamMatches,
   fetchTeamStats,
-  playMatch,
+  playLiveMatch,
   saveOwnerTeam,
   saveTeamPresets,
   type ClubAchievementsResponse,
   type OwnerTeam,
   type OwnerTeamResponse,
+  type PlayTeamMatchResponse,
+  type TeamLive as TeamLiveData,
   type TeamMatch,
   type TeamStatsResponse,
   type TeamOpponent,
@@ -84,6 +87,7 @@ import { notificationDestination } from '../../platform/notificationDestination'
 import { useColors } from '../../theme/useColors';
 import { BackBar, Btn, Card, Screen, Topbar, Txt, scrollTo } from '../../ui';
 import { BarBelow } from '../../ui/Screen';
+import { SkeletonFrame, useSkeletonBlock } from '../../ui/Skeleton';
 import { useOnPull } from '../../ui/refresh';
 import { TabBar, type TabItem } from '../../ui/TabBar';
 import type { TabIconName } from '../../ui/TabIcon';
@@ -198,6 +202,8 @@ export default function Team() {
   const [result, setResult] = useState<TeamMatch | null>(null);
   /** 방금 치른 경기(또는 '다시 보기')를 문자중계로 보여 주는 중(T-10-097). */
   const [live, setLive] = useState(false);
+  /** T-11-387 방금 시작한 장면 경기의 고를 장면(중계가 끝나면 비운다). */
+  const [liveMoments, setLiveMoments] = useState<TeamLiveData | undefined>();
   const [resultOrigin, setResultOrigin] = useState<'opponents' | 'history'>('opponents');
   const [history, setHistory] = useState<TeamMatch[]>([]);
   const [histStatus, setHistStatus] = useState<LoadStatus>('loading');
@@ -538,7 +544,8 @@ export default function Team() {
   async function challenge(o: TeamOpponent) {
     if (playing) return;
     setPlaying(true);
-    const r = await playMatch(o.teamId);
+    // T-11-387 랭크 경기는 문자중계 도중 장면을 고르는 경기로 시작한다(결과는 중계가 끝날 때 onfinal로 온다).
+    const r = await playLiveMatch(o.teamId);
     setPlaying(false);
     if (!r.ok) {
       if (r.error.reason === 'TEAM_MATCH_DAILY_LIMIT') setMatchesLeft(0);
@@ -548,17 +555,32 @@ export default function Team() {
     }
     setResultOrigin('opponents');
     setResult(r.data.match);
+    setLiveMoments(r.data.live);
     setLive(true);
     setMatchesLeft(r.data.matchesLeft);
-    setTeam((t) => (t ? { ...t, record: r.data.record, rating: r.data.rating } : t));
+    applyPlayed(r.data);
     show('result');
     scrollTo(0);
+  }
+
+  /** 경기 결과의 기록 · 레이팅을 내 팀에 반영한다(장면 경기는 시작 때 경기 전 값, 끝날 때 결과 값이 온다). */
+  function applyPlayed(r: PlayTeamMatchResponse) {
+    setTeam((t) => (t ? { ...t, record: r.record, rating: r.rating } : t));
+  }
+
+  /** 장면 경기가 끝났어요. 결과 화면을 마감한 경기로 바꾼다. */
+  function liveFinal(r: PlayTeamMatchResponse) {
+    setResult(r.match);
+    setLiveMoments(undefined);
+    setMatchesLeft(r.matchesLeft);
+    applyPlayed(r);
   }
 
   /** 친구 칸에서 친선전을 치렀거나(중계부터) 최근 친선전을 열 때(결과부터). 친선전은 레이팅·전적을 건드리지 않는다. */
   function showFriendly(m: TeamMatch, withLive: boolean) {
     setResultOrigin('opponents');
     setResult(m);
+    setLiveMoments(undefined);
     setLive(withLive);
     show('result');
     scrollTo(0);
@@ -960,7 +982,7 @@ export default function Team() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                     <Txt bold>{MG.teamCoach}</Txt>
-                    <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                    <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                       {team.coach
                         ? coachSummary(team.coach, formation, localNames)
                         : MG.teamCoachEmpty}
@@ -985,20 +1007,20 @@ export default function Team() {
                             <Txt bold>
                               {r.label} {r.total}
                             </Txt>
-                            <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                            <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                               {r.parts}
                             </Txt>
                             {r.capped ? (
-                              <Txt style={{ fontSize: rem(0.8125) }}>{r.capped}</Txt>
+                              <Txt style={{ fontSize: rem(FONT.label) }}>{r.capped}</Txt>
                             ) : null}
                           </View>
                         ))}
                         {coachDetail.off.length ? (
-                          <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                          <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                             {MG.breakdownOff({ names: coachDetail.off.join(' · ') })}
                           </Txt>
                         ) : null}
-                        <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                        <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                           {MG.breakdownNote}
                         </Txt>
                       </View>
@@ -1084,8 +1106,11 @@ export default function Team() {
         key={result.id}
         match={result}
         name={eventName}
+        live={liveMoments}
+        onfinal={liveFinal}
         onend={() => {
           setLive(false);
+          setLiveMoments(undefined);
           scrollTo(0);
         }}
       />
@@ -1099,7 +1124,10 @@ export default function Team() {
         backLabel={resultOrigin === 'history' ? L.backToHistoryApp : L.backToLineupApp}
         onPlayer={(id) => openStats(id)}
         fix={reportFix}
-        replay={() => setLive(true)}
+        replay={() => {
+          setLiveMoments(undefined);
+          setLive(true);
+        }}
         again={() => {
           if (result.friendly) {
             setOppTab('friends');
@@ -1121,6 +1149,7 @@ export default function Team() {
         open={(m) => {
           setResultOrigin('history');
           setResult(m);
+          setLiveMoments(undefined);
           setLive(false);
           show('result');
         }}
@@ -1207,7 +1236,12 @@ export default function Team() {
             }
           >
             <Topbar />
-            <LoadState status={status} failText={L.loadFail} retry={() => void load()}>
+            <LoadState
+              status={status}
+              failText={L.loadFail}
+              retry={() => void load()}
+              skeleton={<PitchSkeleton />}
+            >
               {body}
             </LoadState>
           </Screen>
@@ -1260,5 +1294,46 @@ export default function Team() {
       ) : null}
       {share ? <TeamShare data={share} close={() => setShare(null)} /> : null}
     </>
+  );
+}
+
+// T-11-392 팀을 불러오는 동안: 팀 이름 줄 + 4-3-3 자리 점이 찍힌 그라운드(웹 Team.svelte .tm-sk).
+const SK_DOTS = [
+  [50, 90],
+  [14, 70],
+  [38, 73],
+  [62, 73],
+  [86, 70],
+  [25, 48],
+  [50, 51],
+  [75, 48],
+  [20, 22],
+  [50, 18],
+  [80, 22],
+] as const;
+function PitchSkeleton() {
+  const block = useSkeletonBlock();
+  return (
+    <SkeletonFrame testID="team-skeleton">
+      <View style={[block, { width: '52%', height: 24, borderRadius: RADIUS.sm }]} />
+      <View style={[block, { width: '100%', aspectRatio: 2 / 3, borderRadius: RADIUS.md }]}>
+        {SK_DOTS.map(([x, y], i) => (
+          <View
+            key={i}
+            style={{
+              position: 'absolute',
+              left: `${x}%`,
+              top: `${y}%`,
+              width: 32,
+              height: 32,
+              marginLeft: -16,
+              marginTop: -16,
+              borderRadius: RADIUS.lg,
+              backgroundColor: block.borderColor,
+            }}
+          />
+        ))}
+      </View>
+    </SkeletonFrame>
   );
 }

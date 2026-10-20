@@ -1,0 +1,27 @@
+{
+  "id": "t-11-387-key-moments",
+  "title": "랭크 경기 결정적 장면",
+  "items": [
+    "랭크 경기 중계 중 내 팀의 결정적 찬스나 실점 위기가 오면 직접 선택지를 골라요.",
+    "한 경기에 최대 3번, 선택지마다 성공 확률이 보여요. 15초 안에 고르지 않으면 감독이 맡아요.",
+    "경기 결과에 결정적 장면과 득점자 포지션이 남아요."
+  ],
+  "en": {
+    "title": "Key moments in ranked matches",
+    "items": [
+      "When your team gets a decisive chance or faces a goal threat during ranked commentary, you pick what happens.",
+      "Up to 3 times per match, each option shows its success chance. If you don't pick within 15 seconds, your manager decides.",
+      "Match results now list key moments and each scorer's position."
+    ]
+  },
+  "ja": {
+    "title": "ランク戦の決定的な場面",
+    "items": [
+      "ランク戦の中継中に自チームの決定機や失点の危機が来ると、自分で選択肢を選べます。",
+      "1試合に最大3回、選択肢ごとに成功確率が表示されます。15秒以内に選ばないと監督に任せます。",
+      "試合結果に決定的な場面と得点者のポジションが残ります。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

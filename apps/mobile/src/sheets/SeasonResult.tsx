@@ -1,5 +1,6 @@
 // 시즌 결산 시트(웹 sheets/SeasonResult.svelte): 기록·수상·대회·국가대표·시상식·여정·새 칭호·팬 반응.
 // 모션(CH 배지 팝, 스카우트 카드 팝, 팬 반응 순차 등장)은 웹 CSS 애니메이션 자리 — 동작 줄이기면 바로 보인다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { CareerTrophy } from '../ui/CareerTrophy';
 import { careerMomentText as CM } from '@offside/app-core/i18n/ko/careerMoment';
 import { View } from 'react-native';
@@ -35,7 +36,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
                 style={{
                   paddingVertical: 2,
                   paddingHorizontal: 6,
-                  borderRadius: 999,
+                  borderRadius: RADIUS.pill,
                   backgroundColor: mixColor(c.accent, c.surface, 22),
                   borderWidth: 1,
                   borderColor: alpha(c.accent, 0.55),
@@ -43,7 +44,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
               >
                 <Txt
                   style={{
-                    fontSize: rem(0.625),
+                    fontSize: rem(FONT.caption2),
                     fontWeight: '700',
                     letterSpacing: rem(0.625) * 0.04,
                     color: c.accentText,
@@ -78,15 +79,15 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
                 gap: 10,
                 padding: 12,
                 borderWidth: 1,
-                borderColor: c.line,
-                borderRadius: 12,
-                backgroundColor: c.surface,
+                borderColor: 'transparent',
+                borderRadius: RADIUS.md,
+                backgroundColor: c.surface2,
               }}
             >
               <Enter kind="translateY" from={10} ms={480}>
                 <CareerTrophy art={t.art} color={c.accent} />
               </Enter>
-              <Txt bold style={{ flex: 1, fontSize: rem(0.875), color: c.accentText }}>
+              <Txt bold style={{ flex: 1, fontSize: rem(FONT.body2), color: c.accentText }}>
                 {t.name}
               </Txt>
             </View>
@@ -97,7 +98,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
         <View style={{ gap: 10 }}>
           {s.honors.map((t, i) => (
             <Hl key={i}>
-              <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>{t}</Txt>
+              <Txt style={{ fontSize: rem(FONT.body2), fontWeight: '700' }}>{t}</Txt>
             </Hl>
           ))}
         </View>
@@ -110,7 +111,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
             style={{
               gap: 4,
               padding: 12,
-              borderRadius: 12,
+              borderRadius: RADIUS.md,
               backgroundColor: mixColor(c.accent, c.surface, 14),
               borderWidth: 1,
               borderColor: alpha(c.accent, 0.55),
@@ -174,7 +175,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
           </Txt>
           {s.gala.map((g, i) => (
             <Hl key={i}>
-              <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>{g}</Txt>
+              <Txt style={{ fontSize: rem(FONT.body2), fontWeight: '700' }}>{g}</Txt>
             </Hl>
           ))}
         </View>
@@ -198,18 +199,18 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
           </Txt>
           <Txt>{`“${s.scoutHint}”`}</Txt>
           {s.seasonTrend ? (
-            <Txt tone="muted" style={{ fontSize: rem(0.8125), marginTop: 4 }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.label), marginTop: 4 }}>
               {s.seasonTrend}
             </Txt>
           ) : null}
         </View>
       ) : s.seasonTrend ? (
-        <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
           {s.seasonTrend}
         </Txt>
       ) : null}
       {s.growthDir ? (
-        <Txt tone="muted" style={{ fontSize: rem(0.8125) }} testID="season-growth-dir">
+        <Txt tone="muted" style={{ fontSize: rem(FONT.label) }} testID="season-growth-dir">
           {growthDirectionText(s.growthDir.d, s.growthDir.attr)}
         </Txt>
       ) : null}
@@ -229,8 +230,8 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
                   borderLeftColor: alpha(c.accent, 0.45),
                 }}
               >
-                <Txt style={{ fontSize: rem(0.8125) }}>
-                  <Txt accessibilityElementsHidden style={{ fontSize: rem(0.8125) }}>
+                <Txt style={{ fontSize: rem(FONT.label) }}>
+                  <Txt accessibilityElementsHidden style={{ fontSize: rem(FONT.label) }}>
                     {'💗 '}
                   </Txt>
                   {f}

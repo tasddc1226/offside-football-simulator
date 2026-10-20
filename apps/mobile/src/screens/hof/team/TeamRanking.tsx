@@ -1,5 +1,6 @@
 // T-10-092 라이브 랭킹(팀 랭킹, 웹 team/TeamRanking.svelte) — 기록실 탭. 선수가 한 명 이상 있는 구단주 팀을 시즌별로
 // 레이팅(경기 결과) 또는 팀 OVR 순으로 보여 주고, 줄을 누르면 팀 프로필(appState.hof.team)을 연다. 서버가 5분마다 새로 센다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -18,6 +19,7 @@ import { rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
 import { Btn } from '../../../ui/Btn';
 import { Card } from '../../../ui/Card';
+import { Skeleton } from '../../../ui/Skeleton';
 import { Press } from '../../../ui/Press';
 import { scrollTo } from '../../../ui/scroll';
 import { Txt } from '../../../ui/Txt';
@@ -119,7 +121,7 @@ export default function TeamRanking() {
     );
 
   const empty = (text: string) => (
-    <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
+    <Txt tone="muted" style={{ fontSize: rem(FONT.body2), paddingVertical: 8 }}>
       {text}
     </Txt>
   );
@@ -165,13 +167,7 @@ export default function TeamRanking() {
       {failed ? (
         empty(L.rankFail)
       ) : loading || !data ? (
-        <Txt
-          tone="muted"
-          accessibilityLiveRegion="polite"
-          style={{ fontSize: rem(0.875), paddingVertical: 8 }}
-        >
-          {L.loading}
-        </Txt>
+        <Skeleton rows={6} />
       ) : data.items.length ? (
         <>
           <View
@@ -285,7 +281,7 @@ export default function TeamRanking() {
                         style={{
                           width: 18,
                           height: 18,
-                          borderRadius: 9,
+                          borderRadius: RADIUS.sm,
                           borderWidth: 1,
                           borderColor: result ? color : c.line,
                           alignItems: 'center',
@@ -335,7 +331,7 @@ export default function TeamRanking() {
       ) : (
         empty(L.teamsEmpty)
       )}
-      <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: 10 }}>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 10 }}>
         {sort === 'value' ? L.valueFoot : L.teamsFoot}
       </Txt>
     </Card>

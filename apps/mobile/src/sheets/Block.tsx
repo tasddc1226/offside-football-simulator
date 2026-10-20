@@ -1,5 +1,6 @@
 // 경기 중계 시트(웹 sheets/Block.svelte, T-10-028): 구간 경기가 한 경기씩 올라오며 승무패·출전 기록이 쌓인다.
 // 진행·줄 추가는 sheet-controller가 뷰를 고치며 하고, 여기서는 읽어 그린다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -12,6 +13,7 @@ import { Txt } from '../ui/Txt';
 import { Enter } from './anim';
 import { ProgBar, SkipLink, StatGrid } from './parts';
 import { TickerLine } from './TickerLine';
+import { KeyMoment } from './KeyMoment';
 import { partsText, ratingBreakdown } from '@offside/app-core/ratingReport';
 import { ratingReportText as R } from '@offside/app-core/i18n/ko/ratingReport';
 
@@ -38,8 +40,8 @@ export function Bump({ value }: { value: number | string }) {
       style={[
         fitLine({
           fontFamily: DISPLAY[700],
-          fontSize: rem(1.5),
-          lineHeight: rem(1.5) * 1.1,
+          fontSize: rem(FONT.title1),
+          lineHeight: rem(FONT.title1) * 1.1,
           fontVariant: ['tabular-nums'],
         }),
         {
@@ -88,20 +90,22 @@ export function Block({
       ) : null}
       <ProgBar progress={s.progress} fill={s.fill} />
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: -6 }}>
-        <Txt tone="muted" style={{ fontSize: rem(0.75), fontVariant: ['tabular-nums'] }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.caption), fontVariant: ['tabular-nums'] }}>
           {s.round}
         </Txt>
         <Txt
           tone="muted"
           testID="block-wdl"
-          style={{ fontSize: rem(0.75), fontVariant: ['tabular-nums'] }}
+          style={{ fontSize: rem(FONT.caption), fontVariant: ['tabular-nums'] }}
         >
           {sheetCoreText.wdl(s.wdl)}
         </Txt>
       </View>
       <StatGrid items={tally.map((t) => ({ key: t.key, l: t.l, v: <Bump value={t.k} /> }))} />
+      {/* T-11-390 결정적 장면에서 멈추면 경기 줄 대신 선택 카드를 띄운다. */}
+      {s.moment ? <KeyMoment m={s.moment} choose={(id) => v.moment?.choose(id)} /> : null}
       {/* 새 경기 줄이 위에 붙고, 지난 줄은 muted로 누른다. */}
-      <View style={{ minHeight: 124, gap: 4 }}>
+      <View style={{ minHeight: 124, gap: 4, display: s.moment ? 'none' : 'flex' }}>
         {s.ticker.map((m, i) => (
           <Enter key={m.key} kind="translateY" from={-6} ms={250}>
             <TickerLine m={m} muted={i > 0} bold={i === 0} />
@@ -109,8 +113,8 @@ export function Block({
         ))}
       </View>
       {parts ? (
-        <Txt tone="muted" style={{ fontSize: rem(0.75) }} testID="rating-parts">
-          <Txt style={{ fontSize: rem(0.75), fontWeight: '700' }}>{R.partsTitle}</Txt>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }} testID="rating-parts">
+          <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '700' }}>{R.partsTitle}</Txt>
           {` · ${partsText(parts)}`}
         </Txt>
       ) : null}
@@ -119,7 +123,7 @@ export function Block({
           <Txt
             key={i}
             tone={x.done ? 'muted' : 'ink'}
-            style={{ fontSize: rem(0.875), lineHeight: rem(0.875) * 1.55 }}
+            style={{ fontSize: rem(FONT.body2), lineHeight: rem(FONT.body2) * 1.55 }}
           >
             {x.done ? (
               <Txt style={{ color: c.good }}>{'✓ '}</Txt>

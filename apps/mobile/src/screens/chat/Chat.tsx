@@ -1,3 +1,4 @@
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { GoogleLoginButton } from '../../ui/GoogleLoginButton';
 // T-11-015 라운지 채팅(웹 Chat.svelte) — 모두가 보는 실시간 공개 채팅. 누구나 읽고, 로그인하고 닉네임을 정하면 쓴다.
 // 남의 메시지는 신고하고 작성자를 차단한다(앱스토어 UGC 정책) — 여럿이 신고하면 모두의 화면에서 가려진다.
@@ -48,8 +49,9 @@ import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
 import { useTranslations } from '../../ui/Translate';
 import { TextBox, confirmAsync } from '../board/parts';
+import { Skeleton } from '../../ui/Skeleton';
 
-const small = { fontSize: rem(0.75) } as const;
+const small = { fontSize: rem(FONT.caption) } as const;
 /** 채팅 티어는 보낸 때의 지난 시즌 티어 — 시즌 이름(접근성 글자)은 지금 기준 지난 시즌으로 읽힌다. */
 const tierSeason = lastClosedSeason(new Date().toISOString()) ?? 0;
 
@@ -94,7 +96,7 @@ function ChatInput(props: {
           height: !text ? 48 : Platform.OS === 'ios' ? undefined : height,
           minHeight: 48,
           maxHeight: 112,
-          borderRadius: 22,
+          borderRadius: RADIUS.lg,
         }}
       />
       <Press
@@ -106,7 +108,7 @@ function ChatInput(props: {
         style={{
           width: 48,
           height: 48,
-          borderRadius: 24,
+          borderRadius: RADIUS.lg,
           backgroundColor: c.pitch,
           opacity: text.trim() ? 1 : 0.45,
           alignItems: 'center',
@@ -254,7 +256,7 @@ export default function Chat() {
   const gate = {
     gap: 8,
     padding: 12,
-    borderRadius: 10,
+    borderRadius: RADIUS.sm,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: c.line,
@@ -303,7 +305,7 @@ export default function Chat() {
             </Svg>
           </Press>
           <View style={{ flex: 1 }}>
-            <Txt bold accessibilityRole="header" style={{ fontSize: rem(1.125) }}>
+            <Txt bold accessibilityRole="header" style={{ fontSize: rem(FONT.title3) }}>
               {L.title}
             </Txt>
             <Txt tone="muted" style={small} testID="chat-status">
@@ -345,7 +347,7 @@ export default function Chat() {
                 justifyContent: 'space-between',
               }}
             >
-              <Txt bold style={{ fontSize: rem(0.875) }}>
+              <Txt bold style={{ fontSize: rem(FONT.body2) }}>
                 {L.blockedTitle}
               </Txt>
               <Btn sm testID="chat-blocks-close" onPress={() => setBlocks(undefined)}>
@@ -353,9 +355,7 @@ export default function Chat() {
               </Btn>
             </View>
             {blocks === null ? (
-              <Txt tone="muted" style={small}>
-                {L.loading}
-              </Txt>
+              <Skeleton rows={2} />
             ) : blocks === 'error' ? (
               <Txt tone="muted" style={small}>
                 {L.blockedLoadFail}
@@ -370,7 +370,7 @@ export default function Chat() {
                     justifyContent: 'space-between',
                   }}
                 >
-                  <Txt style={{ fontSize: rem(0.875) }}>{b.nickname}</Txt>
+                  <Txt style={{ fontSize: rem(FONT.body2) }}>{b.nickname}</Txt>
                   <Btn sm testID="chat-unblock" onPress={() => void unblock(b)}>
                     {L.unblock}
                   </Btn>
@@ -416,7 +416,7 @@ export default function Chat() {
           scrollEventThrottle={64}
         >
           {view.loadingOlder ? (
-            <Txt tone="muted" style={{ textAlign: 'center', fontSize: rem(0.8125) }}>
+            <Txt tone="muted" style={{ textAlign: 'center', fontSize: rem(FONT.label) }}>
               {L.loadingOlder}
             </Txt>
           ) : null}
@@ -473,7 +473,7 @@ export default function Chat() {
                     >
                       <Txt
                         tone={selected === m.id ? 'ink' : 'muted'}
-                        style={{ fontSize: rem(0.875), fontWeight: '700' }}
+                        style={{ fontSize: rem(FONT.body2), fontWeight: '700' }}
                       >
                         ⋯
                       </Txt>
@@ -497,12 +497,12 @@ export default function Chat() {
                       borderWidth: 1,
                       borderColor: mine(m) ? c.pitch : c.line,
                       backgroundColor: mine(m) ? c.pitch : c.surface2,
-                      borderRadius: 16,
+                      borderRadius: RADIUS.lg,
                       borderTopLeftRadius: mine(m) ? 16 : 4,
                       borderTopRightRadius: mine(m) ? 4 : 16,
                     }}
                   >
-                    <Txt style={{ color: mine(m) ? c.onPitch : c.ink, fontSize: rem(0.9375) }}>
+                    <Txt style={{ color: mine(m) ? c.onPitch : c.ink, fontSize: rem(FONT.body1) }}>
                       {tr.text(m.id, m.body)}
                     </Txt>
                   </View>
@@ -513,10 +513,12 @@ export default function Chat() {
                 {!mine(m) ? tr.button(m.id, m.body) : null}
               </View>
             ))
-          ) : (
-            <Txt tone="muted" style={{ margin: 'auto', fontSize: rem(0.8125) }}>
-              {view.status === 'open' ? L.emptyOpen : L.loading}
+          ) : view.status === 'open' ? (
+            <Txt tone="muted" style={{ margin: 'auto', fontSize: rem(FONT.label) }}>
+              {L.emptyOpen}
             </Txt>
+          ) : (
+            <Skeleton rows={4} />
           )}
         </ScrollView>
 
@@ -545,7 +547,7 @@ export default function Chat() {
             />
           ) : view.status !== 'open' ? null : !me || me.reason === 'login' ? (
             <View testID="chat-gate-login" style={gate}>
-              <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                 {apple ? L.gateLoginApple : L.gateLogin}
               </Txt>
               <GoogleLoginButton
@@ -561,13 +563,13 @@ export default function Chat() {
             </View>
           ) : me.reason === 'nickname' ? (
             <View testID="chat-gate-nickname" style={gate}>
-              <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                 {L.gateNicknameApp}
               </Txt>
               <NicknameForm onsaved={connect} />
             </View>
           ) : (
-            <Txt tone="muted" style={{ fontSize: rem(0.8125) }} testID="chat-gate-muted">
+            <Txt tone="muted" style={{ fontSize: rem(FONT.label) }} testID="chat-gate-muted">
               {chatMutedText(me.mutedUntil)}
             </Txt>
           )}
@@ -585,7 +587,7 @@ export default function Chat() {
               {picked.admin ? (
                 <Pill tone="good">{ADMIN_NICKNAME}</Pill>
               ) : (
-                <Txt bold style={{ fontSize: rem(1.0625) }}>
+                <Txt bold style={{ fontSize: rem(FONT.title3) }}>
                   {picked.nickname}
                 </Txt>
               )}
@@ -620,7 +622,7 @@ export default function Chat() {
                 alignItems: 'center',
               }}
             >
-              <Txt style={{ fontSize: rem(0.8125) }}>{L.adminLabel}</Txt>
+              <Txt style={{ fontSize: rem(FONT.label) }}>{L.adminLabel}</Txt>
               <Btn
                 sm
                 testID="chat-hide"
@@ -646,7 +648,7 @@ export default function Chat() {
           ) : null}
           {!picked.admin ? (
             <>
-              <Txt style={{ fontSize: rem(0.8125) }}>{L.reportPrompt}</Txt>
+              <Txt style={{ fontSize: rem(FONT.label) }}>{L.reportPrompt}</Txt>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 {COMMENT_REPORT_REASONS.map((reason) => (
                   <Btn

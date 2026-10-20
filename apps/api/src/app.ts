@@ -1,3 +1,4 @@
+import { registerAcquisitionRoutes } from './routes/acquisition.js';
 import { HealthDataSchema } from '@offside/contracts';
 import { Hono } from 'hono';
 import type { AppEnv } from './env.js';
@@ -8,6 +9,7 @@ import { logger } from './middleware/logger.js';
 import { cupHomeCache } from './middleware/cupHomeCache.js';
 import { originGuard } from './middleware/originGuard.js';
 import { requestId } from './middleware/requestId.js';
+import { securityHeaders } from './middleware/securityHeaders.js';
 import { seasonScheduleMiddleware } from './seasonSchedule.js';
 import { registerAdminRoutes } from './routes/admin.js';
 import { registerAppAuthRoutes } from './routes/appAuth.js';
@@ -55,6 +57,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
 
   app.use('*', requestId);
   app.use('*', logger);
+  app.use('*', securityHeaders);
   app.use('*', cupHomeCache);
   app.use('*', cors);
   app.use('*', originGuard);
@@ -90,6 +93,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerManagerRoutes(app);
   registerCupRoutes(app);
   registerIapRoutes(app);
+  registerAcquisitionRoutes(app);
   registerAttendanceRoutes(app);
   registerBoardRoutes(app);
   registerTranslateRoutes(app);
@@ -116,4 +120,3 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
 }
 
 export const app = createApp();
-export default app;

@@ -18,7 +18,7 @@ import { cardFile } from './share/shareCard.js';
 const W = 1080;
 const H = 1350;
 const PAD = 60;
-const BODY = "'IBM Plex Sans KR', 'Apple SD Gothic Neo', sans-serif";
+const BODY = "'Pretendard Variable', 'Apple SD Gothic Neo', sans-serif";
 const DISPLAY = "'Barlow Condensed', 'Arial Narrow', sans-serif";
 const C = {
   bg: '#0b120e',

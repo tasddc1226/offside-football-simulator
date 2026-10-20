@@ -1,6 +1,7 @@
 // T-11-152 리롤권 상점(웹 cup/RerollShop.svelte) — 구단주 화면에서 구단 자금으로 선수 후보 리롤권을 산다. 펼칠 때만 상점을
 // 묻고(30초 메모), 사면 서버가 돌려준 상점 값으로 바꾼 뒤 onBought로 구단주 화면의 자금 줄을 새 잔액으로 고친다. 접힌 카드에는
 // 가진 장수만 보이고(후보 화면과 같은 30초 메모), focus면(후보 화면 '리롤권 상점 가기') 펼친 채로 열고 카드로 내려간다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -108,7 +109,7 @@ export function RerollShop({
       ],
     );
   };
-  const small = { fontSize: rem(0.875) } as const;
+  const small = { fontSize: rem(FONT.body2) } as const;
 
   return (
     <View
@@ -139,7 +140,10 @@ export function RerollShop({
           </View>
           <Txt
             tone="muted"
-            style={{ fontSize: rem(1.5), transform: [{ rotate: open ? '-90deg' : '90deg' }] }}
+            style={{
+              fontSize: rem(FONT.title1),
+              transform: [{ rotate: open ? '-90deg' : '90deg' }],
+            }}
           >
             ›
           </Txt>
@@ -158,11 +162,13 @@ export function RerollShop({
                     style={{
                       paddingVertical: 6,
                       paddingHorizontal: 10,
-                      borderRadius: 10,
+                      borderRadius: RADIUS.sm,
                       backgroundColor: c.surface2,
                     }}
                   >
-                    <Txt style={{ fontSize: rem(0.8125), fontVariant: ['tabular-nums'] }}>{t}</Txt>
+                    <Txt style={{ fontSize: rem(FONT.label), fontVariant: ['tabular-nums'] }}>
+                      {t}
+                    </Txt>
                   </View>
                 ))}
               </View>
@@ -176,7 +182,7 @@ export function RerollShop({
                 </Txt>
               ) : (
                 <>
-                  <Txt style={{ ...num(700), fontSize: rem(1.125) }} testID="reroll-price">
+                  <Txt style={{ ...num(700), fontSize: rem(FONT.title3) }} testID="reroll-price">
                     {L.shopPrice({ price: fundsText(shop.price!) })}
                   </Txt>
                   {view === 'short' ? (

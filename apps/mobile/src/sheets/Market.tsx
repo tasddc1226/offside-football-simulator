@@ -1,4 +1,5 @@
 // 이적시장 시트(웹 sheets/Market.svelte): 다음 시즌 뛸 곳을 고른다. 선택은 pickOption이 이어서 처리한다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { careerMomentText as CM } from '@offside/app-core/i18n/ko/careerMoment';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -42,13 +43,13 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
               right: -4,
               width: 44,
               height: 44,
-              borderRadius: 22,
+              borderRadius: RADIUS.lg,
               backgroundColor: c.surface2,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Txt tone="muted" style={{ fontSize: rem(1.375), lineHeight: rem(1.375) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.title2), lineHeight: rem(FONT.title2) }}>
               ×
             </Txt>
           </Press>
@@ -86,11 +87,11 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
             }}
             style={{
               borderWidth: 1.5,
-              borderColor: c.line,
-              borderRadius: 14,
+              borderColor: 'transparent',
+              borderRadius: RADIUS.md,
               paddingVertical: 12,
               paddingHorizontal: 14,
-              backgroundColor: c.surface,
+              backgroundColor: c.surface2,
               gap: 4,
             }}
           >
@@ -98,8 +99,8 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 {o.clubId ? <ClubBadge club={{ id: o.clubId, name: o.name }} size={30} /> : null}
                 <View style={{ flex: 1 }}>
-                  <Txt style={{ fontSize: rem(1), fontWeight: '700' }}>{o.name}</Txt>
-                  <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                  <Txt style={{ fontSize: rem(FONT.body), fontWeight: '700' }}>{o.name}</Txt>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                     {o.lg}
                   </Txt>
                 </View>
@@ -107,21 +108,25 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
               {o.salary !== null ? (
                 <View>
                   <Txt
-                    style={{ fontFamily: DISPLAY[700], fontSize: rem(1.25), textAlign: 'right' }}
+                    style={{
+                      fontFamily: DISPLAY[700],
+                      fontSize: rem(FONT.title2),
+                      textAlign: 'right',
+                    }}
                   >
                     {o.salary}
                   </Txt>
-                  <Txt tone="muted" style={{ fontSize: rem(0.75), textAlign: 'right' }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.caption), textAlign: 'right' }}>
                     {L.salary}
                   </Txt>
                 </View>
               ) : null}
-              <Txt accessibilityElementsHidden tone="muted" style={{ fontSize: rem(1.5) }}>
+              <Txt accessibilityElementsHidden tone="muted" style={{ fontSize: rem(FONT.title1) }}>
                 ›
               </Txt>
             </View>
             {o.sub ? (
-              <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                 {o.sub}
               </Txt>
             ) : null}

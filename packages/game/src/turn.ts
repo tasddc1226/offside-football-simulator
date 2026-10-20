@@ -13,6 +13,7 @@ import {
   type Snapshot,
 } from './engine.js';
 import { compsPhase } from './comps.js';
+import type { CareerMoment, MomentHooks } from './moments.js';
 // 구간을 진행하는 모든 경로(화면·시뮬·골든 테스트)가 이 모듈을 거치므로 이벤트 정의 등록을 여기서 보장한다.
 import './event-registry.js';
 import { natWindow } from './national.js';
@@ -33,14 +34,20 @@ export interface PhaseResult {
   /** 추첨된 이벤트 id(선택은 호출한 쪽이 resolveChoice로). */
   ev: string | null;
   titles: TitleDef[];
+  /** T-11-390 이번 구간의 결정적 장면(리그 → 결승 순). */
+  moments: CareerMoment[];
 }
 
-export function playPhase(s: GameState): PhaseResult {
+/**
+ * mo는 T-11-390 결정적 장면 자리(moments.ts momentHooks). 화면은 구간 전 상태로 되돌려 고른 선택지를 넣은 자리로 다시 진행한다.
+ * 장면은 게임 RNG를 더 쓰지 않으므로 mo가 없거나 맡기면 장면이 없던 때와 결과가 같다.
+ */
+export function playPhase(s: GameState, mo?: MomentHooks): PhaseResult {
   applyTraining(s);
   applyInvest(s);
   const condBeforeMatches = s.cond;
-  const block = s.phase > 0 ? simBlock(s) : null;
-  const comp = compsPhase(s);
+  const block = s.phase > 0 ? simBlock(s, mo) : null;
+  const comp = compsPhase(s, mo);
   comp.forEach((c) => log(s, c.t, c.k));
   const nt = natWindow(s);
   const after = snapshot(s);
@@ -64,5 +71,5 @@ export function playPhase(s: GameState): PhaseResult {
     block.hl.forEach((h) => log(s, h, 'good'));
   }
   s.phase++;
-  return { block, comp, nt, condBeforeMatches, after, ev, titles };
+  return { block, comp, nt, condBeforeMatches, after, ev, titles, moments: mo?.moments ?? [] };
 }

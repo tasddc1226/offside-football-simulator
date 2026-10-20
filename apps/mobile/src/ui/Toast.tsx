@@ -1,4 +1,5 @@
 // 토스트(웹 Toast.svelte · .toast): 화면 아래 가운데 잉크색 알약, 2.2초.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
@@ -27,12 +28,12 @@ export function Toast({ lift = 0 }: { lift?: number }) {
         accessibilityLiveRegion="polite"
         style={{
           backgroundColor: c.ink,
-          borderRadius: 10,
+          borderRadius: RADIUS.sm,
           paddingVertical: 10,
           paddingHorizontal: 16,
         }}
       >
-        <Txt style={{ color: c.bg, fontSize: rem(0.875), textAlign: 'center' }}>{t.text}</Txt>
+        <Txt style={{ color: c.bg, fontSize: rem(FONT.body2), textAlign: 'center' }}>{t.text}</Txt>
       </View>
     </View>
   );

@@ -91,12 +91,12 @@
 </section>
 
 <style>
-  .pitch-frame {position:relative;isolation:isolate;width:100%;max-width:640px;aspect-ratio:5/6;margin:0 auto;padding:50px 8px;border-radius:12px;overflow:hidden;background:repeating-linear-gradient(180deg,var(--pitch) 0 10%,color-mix(in srgb,var(--pitch) 70%,var(--pitch-2)) 10% 20%);border:1px solid color-mix(in srgb,var(--chalk),transparent 30%);}
+  .pitch-frame {position:relative;isolation:isolate;width:100%;max-width:640px;aspect-ratio:5/6;margin:0 auto;padding:50px 8px;border-radius:var(--radius-md);overflow:hidden;background:repeating-linear-gradient(180deg,var(--pitch) 0 10%,color-mix(in srgb,var(--pitch) 70%,var(--pitch-2)) 10% 20%);border:1px solid color-mix(in srgb,var(--chalk),transparent 30%);}
   .tm-pitch {position:relative;width:100%;height:100%;pointer-events:none;}
   .pitch-lines { position:absolute; inset:0; width:100%; height:100%; fill:none; stroke:var(--chalk); stroke-width:.4; pointer-events:none; }
   .pitch-dot { fill:var(--chalk); } .pitch-space { position:absolute; inset:0; width:100%; height:100%; border:0; background:transparent; cursor:crosshair; }
   .attack-direction { position:absolute; top:14px; left:50%; transform:translateX(-50%); color:var(--on-pitch); opacity:.7; font-size:11px; pointer-events:none; }
-  .tm-slot { position:absolute; width:clamp(58px,15%,86px); transform:translate(-50%,-50%); padding:0; border:0; background:none; color:inherit; font:inherit; z-index:1; border-radius:12px;pointer-events:auto; }
+  .tm-slot { position:absolute; width:clamp(58px,15%,86px); transform:translate(-50%,-50%); padding:0; border:0; background:none; color:inherit; font:inherit; z-index:1; border-radius:var(--radius-md);pointer-events:auto; }
   .tm-slot[data-slot='0'] {z-index:2;}
   button.tm-slot.peekable {cursor:zoom-in;touch-action:manipulation;}
   button.tm-slot:not(.peekable) { cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
@@ -107,8 +107,8 @@
   /* 시너지 — 효과가 들어가는 선수는 늘 카드 아래 점으로, 칩으로 고른 시너지의 선수만 테두리로 더 강조한다. */
   .syn-pip {display:block;width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--pitch),transparent 20%),0 0 8px var(--accent);}
   .tm-slot > .syn-pip {position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);pointer-events:none;}
-  .tm-slot > .salary-pip {position:absolute;left:-4px;bottom:8px;z-index:2;padding:1px 4px;border-radius:999px;background:#000c;color:#ffd76a;font:700 8px/1.3 system-ui,sans-serif;white-space:nowrap;pointer-events:none;box-shadow:0 0 0 1px #ffd76a66 inset;}
-  .syn-caption {position:absolute;left:50%;bottom:14px;transform:translateX(-50%);margin:0;display:flex;align-items:center;gap:7px;max-width:calc(100% - 24px);padding:5px 12px;border-radius:999px;background:color-mix(in srgb,#000,transparent 55%);color:var(--on-pitch);font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;}
+  .tm-slot > .salary-pip {position:absolute;left:-4px;bottom:8px;z-index:2;padding:1px 4px;border-radius:var(--radius-pill);background:#000c;color:#ffd76a;font:700 8px/1.3 system-ui,sans-serif;white-space:nowrap;pointer-events:none;box-shadow:0 0 0 1px #ffd76a66 inset;}
+  .syn-caption {position:absolute;left:50%;bottom:14px;transform:translateX(-50%);margin:0;display:flex;align-items:center;gap:7px;max-width:calc(100% - 24px);padding:5px 12px;border-radius:var(--radius-pill);background:color-mix(in srgb,#000,transparent 55%);color:var(--on-pitch);font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;}
   .syn-caption .syn-pip {flex:none;width:7px;height:7px;box-shadow:0 0 6px var(--accent);}
   .syn-links {position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;}
   .syn-links line {stroke:var(--accent);stroke-width:2px;stroke-dasharray:6 5;opacity:.55;vector-effect:non-scaling-stroke;}

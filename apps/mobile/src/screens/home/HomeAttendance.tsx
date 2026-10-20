@@ -1,6 +1,7 @@
 // T-11-360 홈 출석 체크(웹 HomeAttendance.svelte) — 오프사이드 컵 배너 · 구단주 선물 아래의 한 줄 입구와, 하루(KST) 한 번
 // 저절로 뜨는 출석 창. 로그인한 구단주는 창에서 하루 한 번 출석해 그날 칸의 보상을 받고, 로그인하지 않은 기기는 같은 도장판과
 // 로그인 버튼을 본다(로그인하면 홈에서 바로 출석). 묻는 조건 · 메모는 app-core api/attendance.ts, 띄우는 날은 attendance-view.ts.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import {
@@ -24,6 +25,7 @@ import { Btn, Card, Press, Row, Txt } from '../../ui';
 import { PopSheet } from '../../ui/PopSheet';
 import { useOnPull } from '../../ui/refresh';
 import { LoginButtons } from '../owner/LoginButtons';
+import { analyticsAskPending } from '../../components/AnalyticsAsk';
 
 // 아이템 색: 리롤권 = 기본, 강화권 = 금(r4), 스카우트권 = 파랑(r2). 칭호 등급 색이라 두 테마 모두 대비가 맞다.
 const itemColor = (c: Colors, item: OwnerItem) =>
@@ -41,7 +43,8 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
   const reload = useCallback(async (auto = false) => {
     const next = await fetchAttendance();
     setCard(next);
-    if (auto && next && attendancePopupDue(next)) {
+    // T-11-417 이용 분석 동의 창이 떠 있으면 오늘은 저절로 띄우지 않는다(iOS는 창 두 개를 함께 띄우지 못한다).
+    if (auto && next && attendancePopupDue(next) && !analyticsAskPending()) {
       markAttendancePopup();
       setOpen(true);
     }
@@ -142,7 +145,7 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
                   <View
                     style={{
                       aspectRatio: 1,
-                      borderRadius: 999,
+                      borderRadius: RADIUS.pill,
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: 1,

@@ -1,5 +1,6 @@
 // T-11-191 도트 선수 꾸미기(웹 AvatarLook.svelte와 같다). 커리어 화면의 도트 선수를 누르면 열린다. 항목을 선수 자금으로
 // 한 번 사면 이 커리어 동안 언제든 바꿀 수 있고(무료), 은퇴 뒤에는 전용 외형 편집 화면을 쓴다. 사기 전에는 고른 모양을 미리보기로만 보여 준다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -77,14 +78,14 @@ export function AvatarLook({ close }: { close: () => void }) {
   return (
     <TeamDialog title={L.title} close={close}>
       <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }} testID="avatar-look">
-        <View style={{ padding: 8, borderRadius: 14, backgroundColor: c.pitch }}>
+        <View style={{ padding: 8, borderRadius: RADIUS.md, backgroundColor: c.pitch }}>
           <PixelAvatar spec={avatarSpec(shown)} width={72} />
         </View>
         <View style={{ flex: 1, gap: 4 }}>
           <Txt bold testID="look-money">
             {L.money({ money: W.won({ v: fmtMoney(s.money) }) })}
           </Txt>
-          <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
             {editable ? L.intro : L.locked}
           </Txt>
         </View>
@@ -93,13 +94,19 @@ export function AvatarLook({ close }: { close: () => void }) {
         <View
           key={r.item}
           testID={`look-${r.item}`}
-          style={{ gap: 8, padding: 12, borderWidth: 1, borderColor: c.line, borderRadius: 14 }}
+          style={{
+            gap: 8,
+            padding: 12,
+            borderWidth: 1,
+            borderColor: c.line,
+            borderRadius: RADIUS.md,
+          }}
         >
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <Txt bold>{r.name}</Txt>
             <Txt
               style={{
-                fontSize: rem(0.8),
+                fontSize: rem(FONT.label),
                 fontWeight: '600',
                 color: r.owned ? c.good : c.muted,
               }}
@@ -128,7 +135,7 @@ export function AvatarLook({ close }: { close: () => void }) {
                     minHeight: 36,
                     minWidth: 36,
                     paddingHorizontal: o.swatch ? 4 : 10,
-                    borderRadius: 999,
+                    borderRadius: RADIUS.pill,
                     borderWidth: on ? 2 : 1,
                     borderColor: on ? c.accent : c.line,
                     alignItems: 'center',
@@ -141,14 +148,14 @@ export function AvatarLook({ close }: { close: () => void }) {
                       style={{
                         width: 24,
                         height: 24,
-                        borderRadius: 12,
+                        borderRadius: RADIUS.md,
                         backgroundColor: o.swatch,
                         borderWidth: 1,
                         borderColor: '#00000033',
                       }}
                     />
                   ) : (
-                    <Txt style={{ fontSize: rem(0.8), fontWeight: on ? '700' : '400' }}>
+                    <Txt style={{ fontSize: rem(FONT.label), fontWeight: on ? '700' : '400' }}>
                       {o.label}
                     </Txt>
                   )}
@@ -171,10 +178,16 @@ export function AvatarLook({ close }: { close: () => void }) {
       ))}
       <View
         testID="look-records"
-        style={{ gap: 8, padding: 12, borderWidth: 1, borderColor: c.line, borderRadius: 14 }}
+        style={{
+          gap: 8,
+          padding: 12,
+          borderWidth: 1,
+          borderColor: c.line,
+          borderRadius: RADIUS.md,
+        }}
       >
         <Txt bold>{R.recTitle}</Txt>
-        <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
           {R.recIntro}
         </Txt>
         {recRows.map((x) => {
@@ -193,7 +206,7 @@ export function AvatarLook({ close }: { close: () => void }) {
                   gap: 10,
                   paddingVertical: 8,
                   paddingHorizontal: 10,
-                  borderRadius: 12,
+                  borderRadius: RADIUS.md,
                   borderWidth: on ? 2 : 1,
                   borderColor: on ? c.accent : c.line,
                   opacity: x.open ? 1 : 0.7,
@@ -203,22 +216,24 @@ export function AvatarLook({ close }: { close: () => void }) {
                   style={{
                     width: 28,
                     height: 28,
-                    borderRadius: 14,
+                    borderRadius: RADIUS.md,
                     backgroundColor: x.swatch ?? c.line,
                     borderWidth: 1,
                     borderColor: '#00000033',
                   }}
                 />
                 <View style={{ flex: 1 }}>
-                  <Txt bold style={{ fontSize: rem(0.85) }}>
+                  <Txt bold style={{ fontSize: rem(FONT.body2) }}>
                     {x.name}
                   </Txt>
-                  <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                     {x.owned ? (x.worn ? R.recWorn : L.owned) : x.open ? x.costText : x.need}
                   </Txt>
                 </View>
                 {x.owned ? (
-                  <Txt style={{ fontSize: rem(0.8), fontWeight: '700', color: c.accentText }}>
+                  <Txt
+                    style={{ fontSize: rem(FONT.label), fontWeight: '700', color: c.accentText }}
+                  >
                     {x.worn ? R.recOff : R.recWear}
                   </Txt>
                 ) : !x.open ? (

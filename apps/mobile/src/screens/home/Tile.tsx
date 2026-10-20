@@ -1,4 +1,5 @@
 // 홈 타일(웹 .tile.tile-link): 눈썹 · 굵은 제목 · 작은 설명. 서버 최초 기록·확률 이벤트가 한 줄에 둘씩 놓인다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
@@ -35,7 +36,7 @@ export function Tile({
         {
           ...(wide ? null : { flex: 1 }),
           backgroundColor: c.surface,
-          borderRadius: 14,
+          borderRadius: RADIUS.md,
           padding: 14,
         },
         shadow,
@@ -43,7 +44,7 @@ export function Tile({
     >
       <View style={{ gap: 2 }}>
         <Txt v="eyebrow">{eyebrow}</Txt>
-        <Txt bold style={{ fontSize: rem(0.9375) }}>
+        <Txt bold style={{ fontSize: rem(FONT.body1) }}>
           {title}
         </Txt>
         <Txt v="sm" tone="muted" {...(subNum ? { num: true } : {})}>

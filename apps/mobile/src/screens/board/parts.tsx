@@ -1,5 +1,6 @@
 // T-11-005 기록실·소식·운영 도구가 함께 쓰는 작은 부품 — 입력 칸(웹 input·textarea·.field), 두 칸·세 칸 선택 줄(.seg),
 // 가로 칩 줄(.hof-sorts), 확인 창(웹 confirm). 키트에 없는 것만 여기 둔다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { Children, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Alert,
@@ -36,9 +37,9 @@ export function TextBox({ style, multiline, onFocus, ...rest }: TextInputProps) 
       style={[
         {
           borderWidth: 1,
-          borderColor: c.line,
+          borderColor: 'transparent',
           backgroundColor: c.surface2,
-          borderRadius: 10,
+          borderRadius: RADIUS.sm,
           paddingVertical: 11,
           paddingHorizontal: 12,
           fontSize: 16,
@@ -56,7 +57,7 @@ export function TextBox({ style, multiline, onFocus, ...rest }: TextInputProps) 
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <View style={{ gap: 6 }}>
-      <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '600' }}>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.label), fontWeight: '600' }}>
         {label}
       </Txt>
       {children}
@@ -172,7 +173,7 @@ export function SortChips({
                 minHeight: 34,
                 paddingVertical: 6,
                 paddingHorizontal: 12,
-                borderRadius: 999,
+                borderRadius: RADIUS.pill,
                 backgroundColor: on ? c.ink : c.surface2,
                 borderWidth: 1,
                 borderColor: on ? c.ink : c.line,
@@ -180,8 +181,8 @@ export function SortChips({
             >
               <Txt
                 style={{
-                  fontSize: rem(0.8125),
-                  lineHeight: rem(0.8125) * 1.4,
+                  fontSize: rem(FONT.label),
+                  lineHeight: rem(FONT.label) * 1.4,
                   fontWeight: '600',
                   color: on ? c.surface : c.ink,
                 }}
@@ -195,14 +196,14 @@ export function SortChips({
                     marginLeft: 4,
                     paddingVertical: 1,
                     paddingHorizontal: 5,
-                    borderRadius: 999,
+                    borderRadius: RADIUS.pill,
                     backgroundColor: c.accent,
                   }}
                 >
                   <Txt
                     style={{
-                      fontSize: rem(0.5625),
-                      lineHeight: rem(0.5625) * 1.3,
+                      fontSize: rem(FONT.caption2),
+                      lineHeight: rem(FONT.caption2) * 1.3,
                       fontWeight: '800',
                       letterSpacing: 0.04 * rem(0.5625),
                       color: c.accentInk,
@@ -323,7 +324,7 @@ export function TabOpt({
           maxFontSizeMultiplier={1.3}
           adjustsFontSizeToFit
           minimumFontScale={0.6}
-          style={{ fontWeight: '600', ...(fit ? { fontSize: rem(0.8125) } : null) }}
+          style={{ fontWeight: '600', ...(fit ? { fontSize: rem(FONT.label) } : null) }}
         >
           {title}
         </Txt>
