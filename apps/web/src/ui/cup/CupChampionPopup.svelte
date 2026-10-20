@@ -11,6 +11,7 @@
   import { fetchCupHome, type CupChampion } from '@offside/app-core/api/cup';
   import { cupChampionToShow, dismissCupChampion } from '@offside/app-core/cupHome';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
+  import { divisionLabel } from '@offside/app-core/cupDivision';
   import CupTrophy from './CupTrophy.svelte';
   import TeamLogo from '../team/TeamLogo.svelte';
   import { appState, hofStart } from '../state.svelte.js';
@@ -99,7 +100,7 @@
       <div class="ccp-trophy">
         <CupTrophy stage="champion" edition={champion.edition} name={champion.owner} size={140} />
       </div>
-      <h2 class="ccp-title">{L.championPopupTitle({ n: champion.edition })}</h2>
+      <h2 class="ccp-title">{L.championPopupTitle({ n: champion.edition, d: divisionLabel(champion.division) })}</h2>
       <div class="ccp-team" data-cup-champion-team={champion.teamId}>
         <TeamLogo logo={champion.logo} name={champion.name} size={40} decorative />
         <span class="ccp-who">

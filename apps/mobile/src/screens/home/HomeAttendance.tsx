@@ -25,6 +25,7 @@ import { Btn, Card, Press, Row, Txt } from '../../ui';
 import { PopSheet } from '../../ui/PopSheet';
 import { useOnPull } from '../../ui/refresh';
 import { LoginButtons } from '../owner/LoginButtons';
+import { analyticsAskPending } from '../../components/AnalyticsAsk';
 
 // 아이템 색: 리롤권 = 기본, 강화권 = 금(r4), 스카우트권 = 파랑(r2). 칭호 등급 색이라 두 테마 모두 대비가 맞다.
 const itemColor = (c: Colors, item: OwnerItem) =>
@@ -42,7 +43,8 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
   const reload = useCallback(async (auto = false) => {
     const next = await fetchAttendance();
     setCard(next);
-    if (auto && next && attendancePopupDue(next)) {
+    // T-11-417 이용 분석 동의 창이 떠 있으면 오늘은 저절로 띄우지 않는다(iOS는 창 두 개를 함께 띄우지 못한다).
+    if (auto && next && attendancePopupDue(next) && !analyticsAskPending()) {
       markAttendancePopup();
       setOpen(true);
     }

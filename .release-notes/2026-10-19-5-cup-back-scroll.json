@@ -1,0 +1,23 @@
+{
+  "id": "t-11-406-cup-back-scroll",
+  "title": "컵 대진에서 돌아올 때 보던 자리 유지",
+  "items": [
+    "컵 대진에서 경기를 골라 팀 프로필을 봤다가 돌아오면, 고른 경기와 보던 자리가 그대로 남아요",
+    "앱에서 뒤로 가면 맨 위가 아니라 보던 자리로 돌아가요"
+  ],
+  "en": {
+    "title": "Cup bracket keeps your place",
+    "items": [
+      "If you open a team profile from a match in the Cup bracket and come back, the match you picked and your scroll position stay as they were.",
+      "Going back in the app now returns you to where you were instead of the top of the screen."
+    ]
+  },
+  "ja": {
+    "title": "カップの組み合わせで見ていた場所を保持",
+    "items": [
+      "カップの組み合わせで試合を選んでチームプロフィールを見てから戻ると、選んだ試合と見ていた場所がそのまま残ります。",
+      "アプリで戻ると、画面の一番上ではなく見ていた場所に戻ります。"
+    ]
+  },
+  "availability": "web-app"
+}

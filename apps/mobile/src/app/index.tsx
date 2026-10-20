@@ -44,6 +44,7 @@ import Cup from '../screens/owner/CupScreen';
 import Settings from '../screens/settings/Settings';
 import Admin from '../screens/settings/Admin';
 import { ReviewNudge } from '../components/ReviewNudge';
+import { AnalyticsAsk } from '../components/AnalyticsAsk';
 
 const SCREENS: Record<Screen, ComponentType> = {
   home: Home,
@@ -125,6 +126,7 @@ export default function App() {
       <NewsBanner />
       <RetiredNumberAlert />
       <ReviewNudge />
+      <AnalyticsAsk />
       <Sheet />
       {/* 아래 탭 막대(메인·게임)가 있으면 그 위로 띄운다(웹 body:has(nav.tabs) .toast). */}
       <Toast lift={main || snap.screen === 'game' ? TABBAR_H : 0} />

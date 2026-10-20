@@ -364,14 +364,14 @@ describe('T-11-145 컵 진행(cron)', () => {
     await addAppPushDevice(ctx, teams[0]!.profileId);
     const final = cupFinalAt(CUP);
     // 결승 전에는 만들지 않는다. 밀린 단계도 없다.
-    expect(await scheduleNextCup(ctx.db, CUP.drawAt, [CUP])).toBeNull();
+    expect(await scheduleNextCup(ctx.db, CUP.drawAt, [CUP])).toEqual([]);
     expect(await cupStalls(ctx.db, CUP.opensAt, [CUP])).toEqual([]);
     // 추첨이 30분 넘게 안 되면 경보 대상.
     const lateDraw = new Date(Date.parse(CUP.drawAt) + 31 * 60_000).toISOString();
     expect((await cupStalls(ctx.db, lateDraw, [CUP])).map((s) => s.key)).toEqual(['draw:s1-1']);
     await runAll();
     const after = new Date(Date.parse(final) + 5 * 60_000).toISOString();
-    const next = await scheduleNextCup(ctx.db, after, [CUP]);
+    const [next] = await scheduleNextCup(ctx.db, after, [CUP]);
     expect(next).toMatchObject({
       id: 's1-2',
       season: 1,
@@ -381,7 +381,7 @@ describe('T-11-145 컵 진행(cron)', () => {
     });
     expect(next!.rounds).toHaveLength(cupRoundsOf(next!).length);
     // 두 번째 cron·관리자가 이미 만든 경우는 그대로 둔다.
-    expect(await scheduleNextCup(ctx.db, after, [CUP])).toBeNull();
+    expect(await scheduleNextCup(ctx.db, after, [CUP])).toEqual([]);
     // 다음 회차가 없으면 경보, 있으면 조용하다.
     const late = new Date(Date.parse(final) + 31 * 60_000).toISOString();
     expect((await cupStalls(ctx.db, late, [CUP])).map((s) => s.key)).toEqual(['next:s1-1']);
@@ -414,7 +414,7 @@ describe('T-11-145 컵 진행(cron)', () => {
       "INSERT INTO app_meta (key, value) VALUES ('cup:autopilot', 'off')",
     ).run();
     const after = new Date(Date.parse(cupFinalAt(CUP)) + 5 * 60_000).toISOString();
-    expect(await scheduleNextCup(ctx.db, after, [CUP])).toBeNull();
+    expect(await scheduleNextCup(ctx.db, after, [CUP])).toEqual([]);
   });
 
   it.each([64, 40, 20, 5])(
@@ -530,12 +530,16 @@ describe('T-11-145 컵 진행(cron)', () => {
     expect(lineupLocked(matches, a!.teamId, before)).toBe(false);
     expect(lineupLocked(matches, a!.teamId, during)).toBe(true);
     // 명단 저장도 같은 판정으로 막고, 잠기기 전에는 통과한다.
-    await expect(checkCupLineup(ctx.db, a!.profileId, 1, [], 11, during)).rejects.toMatchObject({
-      details: { reason: 'CUP_LINEUP_LOCKED' },
-    });
-    await expect(checkCupLineup(ctx.db, a!.profileId, 1, [], 11, before)).resolves.toBeUndefined();
+    await expect(checkCupLineup(ctx.db, a!.profileId, 1, [], 11, during, 70)).rejects.toMatchObject(
+      {
+        details: { reason: 'CUP_LINEUP_LOCKED' },
+      },
+    );
+    await expect(
+      checkCupLineup(ctx.db, a!.profileId, 1, [], 11, before, 70),
+    ).resolves.toBeUndefined();
     // 실제 카드가 8명보다 적으면 대회 중에는 저장할 수 없다.
-    await expect(checkCupLineup(ctx.db, a!.profileId, 1, [], 7, before)).rejects.toMatchObject({
+    await expect(checkCupLineup(ctx.db, a!.profileId, 1, [], 7, before, 70)).rejects.toMatchObject({
       details: { reason: 'CUP_MIN_FILLED' },
     });
     await runCup(ctx.db, at, [CUP]);

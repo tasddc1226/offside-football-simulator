@@ -28,7 +28,7 @@ export const fairness: Translation<FairnessMsgs> = {
   premium: (p) =>
     `With a premium scout ticket, 1 of the 3 candidates is guaranteed grade A or higher. Every candidate's chance of S is doubled: ${p.season} mid-season and ${p.pre} in preseason. The other candidates keep the A–D ratios in the table above.`,
   premiumPity:
-    'Pity: after 29 premium scout tickets with no S candidate, the guaranteed candidate on the 30th is S. On every 100th ticket you use, the guaranteed candidate has top potential (96). The candidate screen shows how many are left.',
+    'Pity: after 29 premium scout tickets with no S candidate, the guaranteed candidate on the 30th is S. An S candidate along the way starts the count over. On every 100th ticket you use, the guaranteed candidate has top potential (96). The candidate screen shows how many are left.',
   rerollMileage: (p) =>
     `Reroll tickets don't change candidate potential odds. Every ${p.need} reroll tickets you use earn 1 premium scout ticket. Ad rerolls don't count.`,
   boostTitle: 'Potential boost odds',
@@ -40,7 +40,7 @@ export const fairness: Translation<FairnessMsgs> = {
   hiddenPot: 'Revealed when you retire. Scouting ratings can differ a little from the real value.',
   hiddenBloomTerm: 'Late bloomers',
   hiddenBloom:
-    'Real potential drifts up or down until age 25 and is applied at the re-evaluations at 21 and 24. The rule is the same for every player.',
+    'Real potential drifts randomly up or down each season until age 25 and is applied at the re-evaluations at 21 and 24. Your choices do not affect it, and the rule is the same for every player.',
   hiddenStoryTerm: 'Story and special events',
   hiddenStory:
     'They unlock in the guide only after you experience them, to avoid spoilers. Their odds follow the same rules.',

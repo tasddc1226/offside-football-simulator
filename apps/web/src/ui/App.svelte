@@ -184,7 +184,6 @@
 {#snippet waiting()}<div class="sk-wait" role="status" aria-busy="true"><span class="sr-only">{shellText.loading}</span></div>{/snippet}
 {#key screenKey}
   <main in:screenIn={{ dir: enter.dir }}>
-    {#if AnalyticsConsent && appState.screen !== 'settings'}<AnalyticsConsent />{/if}
     {#if appState.screen === 'home'}
       <Home />
     {:else if appState.screen === 'create'}
@@ -232,6 +231,8 @@
     {/if}
   </main>
 {/key}
+<!-- T-11-417 동의를 묻는 창은 화면이 바뀌어도 다시 그리지 않게 화면 밖에 둔다(환경설정에서는 그 화면 카드가 대신한다). -->
+{#if AnalyticsConsent && appState.screen !== 'settings'}<AnalyticsConsent />{/if}
 <!-- 홈 하단 메뉴는 화면 전환 래퍼 밖에 둬 화면이 바뀔 때 다시 그려지지 않게 한다. -->
 {#if hasMainNav(appState.screen)}<MainNav />{/if}
 <UpdateBanner />

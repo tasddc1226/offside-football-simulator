@@ -1,43 +1,55 @@
 // T-11-150 컵 성적과 여러 시즌의 육성 이력을 담는 대표 칭호. zod 없는 공통 서브패스.
-import type { CupStage } from './cup.js';
+import { divisionRank, type CupDivision, type CupStage } from './cup.js';
 
 export const TITLE_STAGES = ['champion', 'runnerup', 'sf'] as const;
 export type TitleStage = (typeof TITLE_STAGES)[number];
-/** 'cup-1-champion' 같은 칭호 id. */
+/** 'cup-1-champion' 같은 칭호 id. T-11-410 구간 대회는 'cup-3-master-champion'. */
 export type OwnerTitle = string;
 
 /** 칭호를 받는 성적(우승·준우승·4강)인가. */
 export const isTitleStage = (stage: string): stage is TitleStage =>
   (TITLE_STAGES as readonly string[]).includes(stage);
 
-export const TITLE_RE = /^cup-([1-9]\d{0,3})-(champion|runnerup|sf)$/;
+export const TITLE_RE = /^cup-([1-9]\d{0,3})(?:-(junior|senior|master))?-(champion|runnerup|sf)$/;
 /** 칭호를 달지 않기로 고른 상태(대표 칭호 PUT 본문). */
 export const TITLE_NONE = 'none';
 
-export const titleIdOf = (edition: number, stage: TitleStage): OwnerTitle =>
-  `cup-${edition}-${stage}`;
+export const titleIdOf = (
+  edition: number,
+  stage: TitleStage,
+  division?: CupDivision | null,
+): OwnerTitle => `cup-${edition}${division ? `-${division}` : ''}-${stage}`;
 
 export function parseTitle(
   id: string | null | undefined,
-): { edition: number; stage: TitleStage } | null {
+): { edition: number; stage: TitleStage; division?: CupDivision } | null {
   const m = id ? TITLE_RE.exec(id) : null;
-  return m ? { edition: Number(m[1]), stage: m[2] as TitleStage } : null;
+  if (!m) return null;
+  const division = m[2] as CupDivision | undefined;
+  return { edition: Number(m[1]), stage: m[3] as TitleStage, ...(division ? { division } : {}) };
 }
 
 const STAGE_RANK: Record<TitleStage, number> = { champion: 0, runnerup: 1, sf: 2 };
 
-/** 칭호 순서: 우승 > 준우승 > 4강, 같은 단계면 최근 회차 먼저. 진열장·자동 대표 칭호가 같이 쓴다. */
+/**
+ * 칭호 순서: 우승 > 준우승 > 4강, 같은 단계면 윗 구간(통합 대회는 마스터와 같은 줄) 먼저, 그다음 최근 회차 먼저.
+ * 진열장·자동 대표 칭호가 같이 쓴다.
+ */
 function compareTitles(a: OwnerTitle, b: OwnerTitle): number {
   const x = parseTitle(a);
   const y = parseTitle(b);
   if (!x || !y) return x ? -1 : y ? 1 : 0;
-  return STAGE_RANK[x.stage] - STAGE_RANK[y.stage] || y.edition - x.edition;
+  const tier = (t: { division?: CupDivision }) =>
+    Math.min(divisionRank(t.division), divisionRank('master'));
+  return STAGE_RANK[x.stage] - STAGE_RANK[y.stage] || tier(y) - tier(x) || y.edition - x.edition;
 }
 
 /** 컵 성적에서 받은 칭호(좋은 순). 8강 이하는 칭호가 아니다. */
-export function titlesOf(honors: readonly { edition: number; stage: CupStage }[]): OwnerTitle[] {
+export function titlesOf(
+  honors: readonly { edition: number; stage: CupStage; division?: CupDivision | null }[],
+): OwnerTitle[] {
   return honors
-    .flatMap((h) => (isTitleStage(h.stage) ? [titleIdOf(h.edition, h.stage)] : []))
+    .flatMap((h) => (isTitleStage(h.stage) ? [titleIdOf(h.edition, h.stage, h.division)] : []))
     .sort(compareTitles);
 }
 

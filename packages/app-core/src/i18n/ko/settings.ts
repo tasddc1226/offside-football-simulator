@@ -42,6 +42,11 @@ const ko = {
   privacy: '개인정보 처리방침',
   tapToChange: '눌러서 바꿔요',
   close: '닫기',
+  consentCardTitle: '이용 분석과 측정 동의',
+  consentAll: '모두 동의',
+  consentPick: '선택한 항목만 동의',
+  consentSave: '선택한 대로 저장',
+  consentFailToast: '유입·결제 연결을 서버에 반영하지 못했어요. 환경설정에서 다시 골라 주세요.',
   consentAria: '선택적 이용 분석',
   consentTitle: '게임 개선을 위한 이용 분석',
   consentOptional: '(선택)',
@@ -54,7 +59,6 @@ const ko = {
   acquisitionTitle: '유입과 앱 결제 연결',
   acquisitionBody:
     '동의하면 방문한 광고, 게임 시작, 앱 이동을 오프사이드 서버에 기록해요. 같은 Google·Apple 계정으로 로그인하면 30일 안의 유입과 검증된 앱 결제를 연결해요. 로그인은 선택이고, 90일이 지난 유입 기록은 매일 순차 삭제해요. 광고 회사나 Google Analytics에는 계정 정보를 보내지 않아요. 철회하면 연결 기록을 삭제해요. 오래된 동의 요청을 막는 철회 표식은 계정 삭제까지 보관해요. 앱 결제 전송 대기는 7일이 지나면 다음 앱 활동 때 지워요.',
-  acquisitionAgree: '유입·결제 연결에 동의',
   acquisitionRetry:
     '서버에 반영하지 못했어요. 다시 눌러 주세요. 철회 중에는 이 기기에서 새 기록을 보내지 않아요. 원래 계정에서 환경설정의 이 버튼으로 다시 철회해 주세요. 계정이 바뀐 경우 원래 계정에 먼저 로그인해 주세요.',
   consentMore: '자세히 보기',
@@ -62,7 +66,6 @@ const ko = {
   consentGranted: '동의',
   consentDenied: '동의 안 함',
   consentUnset: '선택 전',
-  consentRevoke: '분석 동의 철회',
   consentAgree: '분석에 동의',
   consentRevokeNote:
     '철회하면 이후 수집이 중단되고 이 브라우저의 분석용 쿠키·기록을 지워요. 이미 전송된 정보가 자동 삭제되지는 않아요.',

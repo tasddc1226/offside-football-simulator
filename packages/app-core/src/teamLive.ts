@@ -1,6 +1,7 @@
 // T-10-097 팀 경기 문자중계 대본. 서버가 정한 결과(스코어·골 분·득점자·도움)는 그대로 두고, 그 사이를 채우는 중계 문구만
 // 경기 id를 시드로 만든다 — 같은 경기는 다시 봐도 같은 중계가 나온다. 골이 아닌 줄(슈팅·선방·코너킥)은 연출이라 기록에
 // 남지 않는다.
+import type { DetailPos } from '@offside/contracts/positions';
 import type { TeamMatch } from './api/team.js';
 import { teamLiveText as L } from './i18n/ko/teamLive.js';
 
@@ -109,6 +110,43 @@ const corner = (): readonly Say[] => [L.corner1, L.corner2];
 const build = (): readonly Say[] => [L.build1, L.build2, L.build3];
 
 /**
+ * T-11-408 골 직전 장면을 득점자 자리로 고른다 — 측면 선수는 측면 돌파 · 크로스(왼쪽 · 오른쪽 자리면 그 쪽), 최전방은 침투 ·
+ * 일대일, 2선은 중거리 · 늦은 침투, 수비수 · 골키퍼는 세트피스. 문전 혼전은 도움 없는 최전방 골에만. 자리가 없는 옛 경기는
+ * 예전 목록 그대로. 어느 쪽이든 rnd를 한 번만 써서 뒤 줄(추가시간)의 순서가 바뀌지 않는다.
+ */
+export function buildLines(slot: DetailPos | undefined, assisted: boolean): readonly Say[] {
+  switch (slot) {
+    case 'LW':
+    case 'LM':
+    case 'LB':
+    case 'LWB':
+      return [L.buildLeft, L.buildWide1, L.buildWide2];
+    case 'RW':
+    case 'RM':
+    case 'RB':
+    case 'RWB':
+      return [L.buildRight, L.buildWide1, L.buildWide2];
+    case 'W':
+    case 'FB':
+      return [L.buildWide1, L.buildWide2];
+    case 'ST':
+    case 'CF':
+    case 'SS':
+      return assisted ? [L.build2, L.buildFwd1, L.buildFwd2] : [L.buildFwd1, L.buildFwd2, L.build3];
+    case 'AM':
+    case 'CM':
+    case 'DM':
+      return [L.buildMid1, L.buildMid2, L.build1];
+    case 'CB':
+    case 'SW':
+    case 'GK':
+      return [L.buildSet1, L.buildSet2];
+    default:
+      return build();
+  }
+}
+
+/**
  * 한 경기의 중계 대본. name(careerId, fallback)은 선수 표시 이름(내 선수는 이 기기에 남은 이름). 줄은 시계 순서이고,
  * 골 줄의 score를 따라가면 마지막 스코어가 서버 결과와 같다.
  */
@@ -167,7 +205,7 @@ export function liveScript(
       minute: Math.max(1, e.minute - 1),
       kind: 'build',
       side: e.side,
-      text: pick(rnd, build())({ t }),
+      text: pick(rnd, buildLines(e.slot, !!e.assist))({ t }),
     });
     lines.push({
       minute: e.minute,

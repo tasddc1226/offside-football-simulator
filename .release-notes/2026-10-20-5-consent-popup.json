@@ -1,0 +1,23 @@
+{
+  "id": "t-11-417-consent-popup",
+  "title": "이용 분석 동의를 한 창에서",
+  "items": [
+    "웹의 이용 분석 · 유입과 앱 결제 연결 동의를 창 하나로 합쳤어요. 항목마다 따로 고를 수 있어요.",
+    "앱도 처음 한 번 이용 분석 동의를 물어요. 고른 뒤에는 설정에서 바꿀 수 있어요."
+  ],
+  "en": {
+    "title": "Analytics consent in one window",
+    "items": [
+      "On the web, analytics and the visit and app purchase connection are now asked in one window. You can choose each item separately.",
+      "The app now asks about analytics once. You can change it later in Settings."
+    ]
+  },
+  "ja": {
+    "title": "利用分析の同意をひとつの画面に",
+    "items": [
+      "Webの利用分析と流入・アプリ購入の関連付けへの同意をひとつの画面にまとめました。項目ごとに選べます。",
+      "アプリでも最初に一度だけ利用分析への同意を確認します。あとから設定で変更できます。"
+    ]
+  },
+  "availability": "web-app"
+}

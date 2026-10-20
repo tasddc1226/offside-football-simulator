@@ -32,6 +32,10 @@ export type DevJob = {
   /** T-11-325 실제 바뀐 경로로 판정한 위험도와, 시작할 때 예상한 위험도(운영자가 직접 맡긴 일이면 operator). */
   risk?: Risk;
   expected?: Risk | 'operator';
+  /** 다른 모델의 PR 리뷰(review.ts). PR마다 한 번만 받는다(main 맞추기로 CI가 다시 돌아도 다시 받지 않는다). */
+  review?: { verdict: 'ok' | 'check'; text: string; costUsd: number; model: string };
+  /** CI 고치기를 띄운 횟수(dev.ts MAX_FIXES까지). */
+  fixes?: number;
 };
 export type Approval = {
   /** 운영 배포 승인(T-11-312)은 0. */
@@ -315,6 +319,13 @@ export class AgentLedger extends DurableObject<Env> {
   }
   async setWatch(w: WatchState): Promise<void> {
     await this.ctx.storage.put('watch', w);
+  }
+  /** 운영자 멈춤: 여러 봇을 같이 멘션해도 한 번만 처리한다. 처음이면 true. */
+  async claimStop(sourceTs: string): Promise<boolean> {
+    const key = `stop:${sourceTs}`;
+    if (await this.ctx.storage.get(key)) return false;
+    await this.ctx.storage.put(key, Date.now());
+    return true;
   }
   /** 서버 상태 사건은 6시간에 한 번만 연다. 처음이면 true. */
   async claimIncident(now = Date.now()): Promise<boolean> {

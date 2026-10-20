@@ -43,6 +43,12 @@ export const settings: Translation<SettingsMsgs> = {
   privacy: 'Privacy policy',
   tapToChange: 'Tap to change',
   close: 'Close',
+  consentCardTitle: 'Analytics and measurement',
+  consentAll: 'Agree to all',
+  consentPick: 'Agree to selected only',
+  consentSave: 'Save choices',
+  consentFailToast:
+    'The server could not save your visit and purchase choice. Please choose again in Settings.',
   consentAria: 'Optional usage analytics',
   consentTitle: 'Usage analytics to improve the game',
   consentOptional: '(optional)',
@@ -55,7 +61,6 @@ export const settings: Translation<SettingsMsgs> = {
   acquisitionTitle: 'Connect visits and app purchases',
   acquisitionBody:
     'If you agree, OFFSIDE records campaign visits, game starts and app links on its server. Signing in with the same Google or Apple account connects visits within 30 days to verified app purchases. Sign-in is optional. Visit records older than 90 days are deleted in daily batches. Account details are not sent to ad companies or Google Analytics. Withdrawing deletes the connection records. A withdrawal marker blocks old consent requests until account deletion. Queued app purchase records older than 7 days are removed on the next app activity.',
-  acquisitionAgree: 'Agree to connect visits and purchases',
   acquisitionRetry:
     'The server could not save your choice. Please try again. This device stops sending new records while withdrawal is pending. Retry withdrawal with this Settings button in the original account. If you switched accounts, sign back into the original one first.',
   consentMore: 'Learn more',
@@ -63,7 +68,6 @@ export const settings: Translation<SettingsMsgs> = {
   consentGranted: 'Agreed',
   consentDenied: 'Declined',
   consentUnset: 'Not chosen yet',
-  consentRevoke: 'Withdraw analytics consent',
   consentAgree: 'Agree to analytics',
   consentRevokeNote:
     "If you withdraw, collection stops and this browser's analytics cookies and records are cleared. Data already sent is not deleted automatically.",
