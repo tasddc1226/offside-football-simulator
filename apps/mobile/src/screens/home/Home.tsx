@@ -22,6 +22,7 @@ import { Btn, Card, PitchCard, Press, Row, Screen, Topbar, Txt } from '../../ui'
 import { ClubBadge } from '../../ui/ClubBadge';
 import { HeroFigure } from './HeroFigure';
 import { CupBanner } from '../owner/TeamCup';
+import { LeagueBanner } from '../league/LeagueScreen';
 import { CupChampionPopup } from './CupChampionPopup';
 import { HomeClubValue } from './HomeClubValue';
 import { HomeFirsts } from './HomeFirsts';
@@ -205,6 +206,8 @@ export default function Home() {
         {/* T-11-145 오프사이드 컵 소식은 모두가 먼저 보는 홈에서. 신청은 대회 화면에서 한다. */}
         <SeasonGauge />
         <CupBanner onOpen={() => go('cup')} />
+        {/* T-11-418 오프사이드 리그 소식(신청은 리그 화면에서). */}
+        <LeagueBanner />
         {/* T-11-290 오프사이드 컵 우승 팝업 — 앱을 켜 홈에 왔을 때 한 번(결승 뒤 일주일, 기기마다 '다시 보지 않기'). 배너와 같은 응답. */}
         <CupChampionPopup />
         {/* T-11-275 구단주 선물(로그인한 구단주가 한 번 받으면 사라진다). 컵 배너 바로 아래. */}

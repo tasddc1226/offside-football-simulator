@@ -249,6 +249,28 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'updated_at',
   ],
   // T-11-310 감독 커리어(진행 중 하나 · 끝낸 감독 카드).
+  league_entries: [
+    'season',
+    'profile_id',
+    'status',
+    'team_id',
+    'name',
+    'manager',
+    'ovr',
+    'created_at',
+    'updated_at',
+  ],
+  league_seasons: [
+    'season',
+    'starts_at',
+    'opens_at',
+    'closes_at',
+    'draw_at',
+    'rounds_json',
+    'min_filled',
+    'created_at',
+    'updated_at',
+  ],
   manager_careers: [
     'id',
     'profile_id',

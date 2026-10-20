@@ -23,6 +23,7 @@
     "./service-seasons": "./src/service-seasons.ts",
     "./season-gauge": "./src/season-gauge.ts",
     "./cup": "./src/cup.ts",
+    "./league": "./src/league.ts",
     "./attendance": "./src/attendance-rules.ts",
     "./admin-items": "./src/admin-items.ts",
     "./positions": "./src/positions.ts",

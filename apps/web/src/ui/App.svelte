@@ -126,6 +126,11 @@
   $effect(() => {
     if (appState.screen === 'cup' && !Cup) void import('./Cup.svelte').then((m) => (Cup = m.default));
   });
+  // T-11-418: 오프사이드 리그도 처음 열 때 불러온다.
+  let League = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'league' && !League) void import('./League.svelte').then((m) => (League = m.default));
+  });
   // T-10-090: 기록실(전체 명예의 전당·영구결번 벽)도 처음 열 때 불러온다. 홈의 TOP 3는 그대로 첫 화면에 있다.
   let Hof = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
@@ -214,6 +219,8 @@
       {#if OwnerHonors}<OwnerHonors />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'cup'}
       {#if Cup}<Cup />{:else}{@render waiting()}{/if}
+    {:else if appState.screen === 'league'}
+      {#if League}<League />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'dex'}
       {#if Dex}<Dex />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'board'}
