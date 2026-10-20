@@ -7,7 +7,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { legendScoreOfRecord } from '@offside/contracts/hof-rules';
 import { createApp } from '../app.js';
 import { cards, careers, ownerFunds } from '../db/schema.js';
-import { ensureCardValuesBackfilled } from '../db/repos/cardValues.js';
 import { eq, inArray } from 'drizzle-orm';
 import { cardValue, releasePayout, retireValue, valueFor } from '@offside/contracts/market-value';
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
@@ -724,7 +723,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect((await read('sort=score')).entries.find((e) => e.id === rows[2]!.id)?.value).toBe(0);
   });
 
-  it('T-11-080: 은퇴하면 카드가 한 장 생기고, 기존 카드의 기준가는 명예의 전당 조회 때 스냅샷으로 소급한다', async () => {
+  it('T-11-080: 은퇴하면 카드가 한 장 생기고 기준가 · 은퇴 가치 · 장려금이 붙는다', async () => {
     // 이 기능 전 기록은 상세가 D1(snapshot_json)에 있다 — T-11-311 전처럼 R2를 끄고 올린다.
     ctx.env.SNAPSHOT_R2_DISABLED = '1';
     const pro = (ovr: number, age: number) => ({ ...snapshot.career[0]!, ovr, age });
@@ -777,13 +776,6 @@ describe('공개 명예의 전당 /v1/hof', () => {
     });
     expect(await cardRows()).toHaveLength(3);
     expect(await funds()).toBe(bonuses[0]! + bonuses[2]!);
-
-    // 마이그레이션이 만든 기존 카드: 기준가 null·은퇴 가치 0. 스냅샷 있는 카드만 한 장씩 채운다(없는 카드는 null로 남는다).
-    await ctx.db.update(cards).set({ cardValue: null, retireValue: 0 });
-    for (let i = 0; i < 2; i++) expect(await ensureCardValuesBackfilled(ctx.db, 1)).toBe(true);
-    expect(await ensureCardValuesBackfilled(ctx.db, 1)).toBe(true); // 빈 조각 → 끝 표시
-    expect(await ensureCardValuesBackfilled(ctx.db, 1)).toBe(false);
-    expect(await cardRows()).toEqual(want);
   });
 
   it('T-10-100: 이 기능 전 은퇴 기록(value 없음)은 명예의 전당 조회 때 스냅샷으로 소급한다', async () => {

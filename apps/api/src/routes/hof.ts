@@ -14,7 +14,6 @@ import type { Hono } from 'hono';
 import { notFoundError, ok } from './shared.js';
 import { getPublicHof, listPublicHof } from '../db/repos/careers.js';
 import { ensureClubIdsBackfilled } from '../db/repos/clubIds.js';
-import { ensureCardValuesBackfilled } from '../db/repos/cardValues.js';
 import { ensureCareerValuesBackfilled } from '../db/repos/careerValues.js';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
@@ -54,7 +53,6 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
         const filled = await Promise.all([
           ensureClubIdsBackfilled(db),
           ensureCareerValuesBackfilled(db),
-          ensureCardValuesBackfilled(db),
         ]);
         filling = filled.some(Boolean);
         return listPublicHof(
