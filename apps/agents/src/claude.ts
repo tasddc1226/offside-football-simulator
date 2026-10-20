@@ -92,7 +92,8 @@ export type RunResult = {
   text: string;
   costUsd: number;
   turns: number;
-  stopped?: 'budget' | 'turns';
+  /** operator: 운영자가 스레드에서 멈추라고 했다(stop.ts). */
+  stopped?: 'budget' | 'turns' | 'operator';
 };
 
 export async function runAgent(opts: {
@@ -104,6 +105,8 @@ export async function runAgent(opts: {
   budgetUsd: number;
   model?: Model;
   fetcher?: typeof fetch;
+  /** 턴마다 API를 부르기 전에 본다. true면 도구를 더 부르지 않고 지금까지 쓴 글로 끝낸다. */
+  shouldStop?: () => Promise<boolean>;
 }): Promise<RunResult> {
   const fetcher = opts.fetcher ?? fetch;
   const model = opts.model ?? MODEL;
@@ -115,7 +118,10 @@ export async function runAgent(opts: {
   );
   let costUsd = 0;
   let stopped: RunResult['stopped'];
+  let said = '';
   for (let turn = 1; ; turn++) {
+    if (opts.shouldStop && (await opts.shouldStop()))
+      return { text: said, costUsd, turns: turn - 1, stopped: 'operator' };
     // 마지막 턴(턴 · 금액 한도)은 도구 없이 지금까지 확인한 것으로 답을 쓰게 한다(빈손으로 끝나지 않게).
     if (!stopped && (turn >= opts.maxTurns || costUsd >= opts.budgetUsd * FINAL_AT)) {
       stopped = turn >= opts.maxTurns ? 'turns' : 'budget';
@@ -136,7 +142,8 @@ export async function runAgent(opts: {
         model,
         max_tokens: 8000,
         system: [{ type: 'text', text: opts.system, cache_control: { type: 'ephemeral' } }],
-        tools,
+        // 도구 없는 한 번 읽기(review.ts)는 빈 tools를 보내지 않는다.
+        ...(tools.length ? { tools } : {}),
         ...(stopped ? { tool_choice: { type: 'none' } } : {}),
         messages: withCacheTail(messages),
       }),
@@ -164,6 +171,7 @@ export async function runAgent(opts: {
       .map((b) => b.text)
       .join('\n')
       .trim();
+    if (text) said = text;
     if (data.stop_reason !== 'tool_use' || stopped)
       return { text, costUsd, turns: turn, ...(stopped ? { stopped } : {}) };
     const results: ToolResult[] = [];
