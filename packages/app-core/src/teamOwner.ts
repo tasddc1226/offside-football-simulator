@@ -6,9 +6,9 @@ import { ATTR_KEYS } from '@offside/game/data';
 import {
   ACH_CATEGORIES,
   LINEUP_SIZE,
-  TEAM_WILDCARD_MAX,
+  PAST_SALARY_BUDGET,
   YOUTH_OVR,
-  isWildcardSeason,
+  seasonSalaryOf,
   achGradeOf,
   DUOS,
   FOOT_BONUS,
@@ -66,65 +66,148 @@ export function assignSlot(
   return next;
 }
 
-/** 와일드카드가 가득 찼을 때 안내(서버 오류 문구 WILDCARD_FULL_TEXT의 화면 쪽). */
-export const wildcardFullText = () => L.wildcardFull({ max: TEAM_WILDCARD_MAX });
-/** T-11-114 선발에 든 와일드카드(지난 시즌 선수) 수. */
-export const wildcardsIn = (
+// T-11-376 지난 시즌 선수 급여 예산(docs/tracking/salary-cap-plan.md). 이번 시즌 선수는 급여가 없고, 지난 시즌 선수는 카드
+// 최고 OVR로 정한 급여(1~20)의 합이 예산 안이어야 한다. 예산은 서버 응답(pastSalaryBudget), 없으면 기본값.
+export const budgetOf = (res: { pastSalaryBudget?: number | undefined } | null | undefined) =>
+  res?.pastSalaryBudget ?? PAST_SALARY_BUDGET;
+/** 이 팀 시즌에서 카드가 받는 급여(이번 시즌 선수는 0). */
+export const salaryIn = (p: Pick<TeamPlayer, 'peak' | 'season'>, season: number) =>
+  seasonSalaryOf(p, season);
+/** 선발에 든 지난 시즌 선수 급여 합. */
+export const pastSalaryIn = (
   slots: readonly (string | null)[],
   byId: ReadonlyMap<string, TeamPlayer>,
   season: number,
-) => slots.filter((id) => id !== null && isWildcardSeason(byId.get(id)?.season, season)).length;
-/** 와일드카드 상한을 넘는 선발인지(자리 바꾸기는 수가 그대로라 괜찮다). */
-export const tooManyWildcards = (
+) =>
+  slots.reduce((sum, id) => {
+    const p = id ? byId.get(id) : undefined;
+    return sum + (p ? salaryIn(p, season) : 0);
+  }, 0);
+/** 예산을 넘는 선발인지(자리 바꾸기는 합이 그대로라 괜찮다). */
+export const overSalaryBudget = (
   slots: readonly (string | null)[],
   byId: ReadonlyMap<string, TeamPlayer>,
   season: number,
-) => wildcardsIn(slots, byId, season) > TEAM_WILDCARD_MAX;
-/** 편성 화면 와일드카드 표기 — '와일드카드 2/3'. 앞 시즌이 없는 프리시즌은 null. */
-export const wildcardLabel = (
+  budget: number,
+) => pastSalaryIn(slots, byId, season) > budget;
+/** 편성을 바꿀 때 막을지: 바꾼 뒤 예산을 넘고 급여 합이 늘어날 때만(예산을 내린 뒤의 옛 선발도 줄이는 쪽은 허용). */
+export const salaryBlocks = (
+  prev: readonly (string | null)[],
+  next: readonly (string | null)[],
+  byId: ReadonlyMap<string, TeamPlayer>,
+  season: number,
+  budget: number,
+) => {
+  const after = pastSalaryIn(next, byId, season);
+  return after > budget && after > pastSalaryIn(prev, byId, season);
+};
+export type SalaryState = 'ok' | 'near' | 'full' | 'over';
+/** 급여 막대 색: 80% 이상이면 near, 딱 맞으면 full, 넘으면 over(예산을 내린 뒤의 옛 선발). */
+export const salaryState = (sum: number, budget: number): SalaryState =>
+  sum > budget ? 'over' : sum === budget ? 'full' : sum >= budget * 0.8 ? 'near' : 'ok';
+/** 편성 화면 급여 막대 — 앞 시즌이 없는 프리시즌은 null. */
+export function salaryBar(
   slots: readonly (string | null)[],
   byId: ReadonlyMap<string, TeamPlayer>,
   season: number,
-): string | null =>
-  season > 0
-    ? L.wildcardLabel({ n: wildcardsIn(slots, byId, season), max: TEAM_WILDCARD_MAX })
-    : null;
+  budget: number,
+): { sum: number; budget: number; left: number; state: SalaryState; label: string } | null {
+  if (season <= 0) return null;
+  const sum = pastSalaryIn(slots, byId, season);
+  return {
+    sum,
+    budget,
+    left: Math.max(0, budget - sum),
+    state: salaryState(sum, budget),
+    label: L.salaryBar({ n: sum, max: budget }),
+  };
+}
+/** 고르기 목록에서 이 선수를 빈 자리에 더하면 예산을 넘는지(선발에 이미 든 선수 · 이번 시즌 선수는 false). */
+export const salaryWontFit = (
+  p: TeamPlayer,
+  slots: readonly (string | null)[],
+  byId: ReadonlyMap<string, TeamPlayer>,
+  season: number,
+  budget: number,
+) =>
+  !slots.includes(p.careerId) && pastSalaryIn(slots, byId, season) + salaryIn(p, season) > budget;
+/** 넣으면 예산을 넘을 때 안내 — 넣으려던 선수의 급여와 그 자리를 뺀 남은 예산. */
+export function salaryFullText(
+  next: readonly (string | null)[],
+  id: string | null,
+  byId: ReadonlyMap<string, TeamPlayer>,
+  season: number,
+  budget: number,
+) {
+  const p = id ? byId.get(id) : undefined;
+  const salary = p ? salaryIn(p, season) : 0;
+  const left = budget - (pastSalaryIn(next, byId, season) - salary);
+  return L.salaryFull({ salary, left: Math.max(0, left) });
+}
 
 /** 실력이 같으면 먼저 채울 자리(스트라이커·골키퍼·센터백 …). */
 const FILL_ORDER = ['ST', 'GK', 'CB', 'CM', 'AM', 'DM', 'W', 'FB'];
+/** 예산이 빠듯할 때 지난 시즌 선수 급여에 매기는 벌점(OVR / 급여 1). 0이면 예산 안에서 가장 센 선수부터 채운다. */
+const SALARY_PENALTIES = [0, 0.1, 0.2, 0.3, 0.5, 0.75, 1, 1.5, 2, 3, 5, 10];
 
-/** 자리마다 가장 잘 맞는 선수부터 채운다(유스 선수보다 나을 때만). 지난 시즌 선수는 와일드카드 상한까지만. */
-export function autoFillSlots(
-  slotCodes: readonly DetailPos[],
+/** 자리마다 점수(자리 OVR - 벌점 × 급여)가 가장 높은 선수부터 채운다(유스 선수보다 나을 때만, 남은 예산 안에서만). */
+function greedyFill(
+  order: readonly { slot: DetailPos; i: number }[],
   players: readonly TeamPlayer[],
-  season: number,
-): (string | null)[] {
+  salaries: ReadonlyMap<string, number>,
+  budget: number,
+  penalty: number,
+): { slots: (string | null)[]; total: number } {
   const next: (string | null)[] = Array(LINEUP_SIZE).fill(null);
-  const order = slotCodes
-    .map((slot, i) => ({ slot, i }))
-    .sort((a, b) => FILL_ORDER.indexOf(a.slot) - FILL_ORDER.indexOf(b.slot));
-  const wildIds = new Set(
-    players.filter((p) => isWildcardSeason(p.season, season)).map((p) => p.careerId),
-  );
   const used = new Set<string>();
-  let wild = 0;
+  let spent = 0;
   for (;;) {
-    let best: { i: number; id: string; r: number } | null = null;
+    let best: { i: number; id: string; r: number; score: number } | null = null;
     for (const { slot, i } of order) {
       if (next[i] !== null) continue;
       for (const p of players) {
         if (used.has(p.careerId)) continue;
-        if (wild >= TEAM_WILDCARD_MAX && wildIds.has(p.careerId)) continue;
+        const salary = salaries.get(p.careerId) ?? 0;
+        if (spent + salary > budget) continue;
         const r = slotRating(slot, p);
-        if (r > YOUTH_OVR && (!best || r > best.r)) best = { i, id: p.careerId, r };
+        const score = r - penalty * salary;
+        if (r > YOUTH_OVR && score > YOUTH_OVR && (!best || score > best.score))
+          best = { i, id: p.careerId, r, score };
       }
     }
     if (!best) break;
     next[best.i] = best.id;
     used.add(best.id);
-    if (wildIds.has(best.id)) wild++;
+    spent += salaries.get(best.id) ?? 0;
   }
-  return next;
+  const total = order.reduce((sum, { slot, i }) => {
+    const p = next[i] ? players.find((x) => x.careerId === next[i]) : undefined;
+    return sum + (p ? slotRating(slot, p) : YOUTH_OVR);
+  }, 0);
+  return { slots: next, total };
+}
+
+/**
+ * 자리마다 가장 잘 맞는 선수부터 채운다(유스 선수보다 나을 때만). T-11-376 지난 시즌 선수는 급여 합이 예산 안에서만 —
+ * 급여 벌점을 몇 단계로 바꿔 가며 채워 보고 자리 OVR 합이 가장 높은 선발을 고른다. 예산이 넉넉하면 벌점 0(제한 없음)과 같다.
+ */
+export function autoFillSlots(
+  slotCodes: readonly DetailPos[],
+  players: readonly TeamPlayer[],
+  season: number,
+  budget = PAST_SALARY_BUDGET,
+): (string | null)[] {
+  const order = slotCodes
+    .map((slot, i) => ({ slot, i }))
+    .sort((a, b) => FILL_ORDER.indexOf(a.slot) - FILL_ORDER.indexOf(b.slot));
+  const salaries = new Map(players.map((p) => [p.careerId, salaryIn(p, season)]));
+  const anyPast = [...salaries.values()].some((s) => s > 0);
+  let best: { slots: (string | null)[]; total: number } | null = null;
+  for (const penalty of anyPast ? SALARY_PENALTIES : [0]) {
+    const run = greedyFill(order, players, salaries, budget, penalty);
+    if (!best || run.total > best.total) best = run;
+  }
+  return best!.slots;
 }
 
 /**

@@ -47,8 +47,13 @@ describe('오류 문구 영어(T-11-106)', () => {
       localizeMessage("감독 이름에 '운영자'처럼 운영진으로 보이는 말은 쓸 수 없어요.", 'en'),
     ).toBe("A manager name that looks like staff, such as 'Moderator', isn't allowed.");
     expect(localizeMessage('글 항목을 찾을 수 없어요.', 'en')).toBe("We couldn't find that post.");
-    expect(localizeMessage('지난 시즌 선수는 선발에 3명까지 넣을 수 있어요.', 'en')).toBe(
-      'You can start up to 3 players from past seasons.',
+    expect(
+      localizeMessage(
+        '지난 시즌 선수 급여가 예산을 넘어요(80/60). 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요.',
+        'en',
+      ),
+    ).toBe(
+      'Past-season player salaries are over budget (80/60). Swap in lower-salary or this-season players.',
     );
     expect(localizeMessage('표에 없는 문장', 'en')).toBe('표에 없는 문장');
     expect(localizeMessage('팀을 찾을 수 없어요.', 'ja')).toBe('チームが見つかりません。');

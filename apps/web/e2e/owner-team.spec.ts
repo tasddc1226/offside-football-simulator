@@ -1541,15 +1541,16 @@ test('T-11-113 프리시즌 친선전을 유지하고 자동 창단 멤버 배�
   expect(puts).toMatchObject([{ season: 0, name: '레전드 FC' }]);
 });
 
-test('T-11-114 지난 시즌 선수는 와일드카드로 선발에 3명까지 넣고 카드에 시즌 뱃지가 보인다', async ({
+test('T-11-376 지난 시즌 선수는 급여 예산 60 안에서 넣고, 급여 막대 · 칩 · 안내 · 저장 거절이 보인다', async ({
   page,
 }) => {
   await stubOwner(page, true);
+  // OVR 96 이상은 급여 20 — 세 명이면 예산 60이 다 찬다.
   const old = [1, 2, 3, 4].map((i) => ({
     ...PLAYERS[0]!,
     careerId: `00000000-0000-4000-8000-00000000010${i}`,
     publicName: `프리 ${i}`,
-    peak: 92 - i,
+    peak: 100 - i,
     season: 0,
   }));
   const fresh = {
@@ -1559,35 +1560,90 @@ test('T-11-114 지난 시즌 선수는 와일드카드로 선발에 3명까지 �
     peak: 70,
     season: 1,
   };
-  await page.route(ownerTeamUrl, (route) =>
-    route.fulfill(ownerTeam({ season: 1, current: 1, seasons: SEASONS, players: [...old, fresh] })),
-  );
+  const puts: unknown[] = [];
+  await page.route(ownerTeamUrl, (route) => {
+    if (route.request().method() === 'PUT') {
+      puts.push(route.request().postDataJSON());
+      return route.fulfill(
+        fail(
+          400,
+          'VALIDATION_FAILED',
+          '지난 시즌 선수 급여가 예산을 넘어요(60/40). 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요.',
+        ),
+      );
+    }
+    return route.fulfill(
+      ownerTeam({
+        season: 1,
+        current: 1,
+        seasons: SEASONS,
+        players: [...old, fresh],
+        pastSalaryBudget: 60,
+      }),
+    );
+  });
   await page.route(`${API}/v1/owner-team/opponents`, (route) => route.fulfill(ok({ items: [] })));
 
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-act="team"]').click();
-  await expect(page.locator('[data-team-wildcards]')).toHaveText('와일드카드 0/3');
+  const bar = page.locator('[data-team-salary]');
+  await expect(bar).toContainText('지난 시즌 선수 급여 0 / 60');
+  await expect(bar).toHaveAttribute('data-state', 'ok');
   await expect(
     page.locator(`[data-locker-player="${old[0]!.careerId}"] [data-card-season]`),
   ).toHaveText('PRE');
   await expect(
     page.locator(`[data-locker-player="${fresh.careerId}"] [data-card-season]`),
   ).toHaveText('S1');
+  // 지난 시즌 카드에만 급여 칩, 이번 시즌 카드는 칩이 없다.
+  await expect(
+    page.locator(`[data-locker-player="${old[0]!.careerId}"] [data-salary-chip]`),
+  ).toHaveText('급여 20');
+  await expect(
+    page.locator(`[data-locker-player="${fresh.careerId}"] [data-salary-chip]`),
+  ).toHaveCount(0);
 
   await page.locator('[data-act="team-auto"]').click();
-  await expect(page.locator('[data-team-wildcards]')).toHaveText('와일드카드 3/3');
+  await expect(bar).toContainText('지난 시즌 선수 급여 60 / 60');
+  await expect(bar).toHaveAttribute('data-state', 'full');
   await expect(page.locator('button[data-slot] [data-card-season="0"]')).toHaveCount(3);
   await expect(page.locator('button[data-slot] [data-card-season="1"]')).toHaveCount(1);
+  await expect(page.locator('button[data-slot] [data-salary-chip="20"]')).toHaveCount(3);
+  await expect(page.locator('[data-locker-salary]')).toHaveText('남은 예산 0');
+  const fourth = page.locator(`[data-locker-player="${old[3]!.careerId}"]`);
+  await expect(fourth.locator('[data-salary-over]')).toHaveText('급여 20 · 예산 초과');
   await page
     .locator('.ground-panel')
-    .screenshot({ path: test.info().outputPath('wildcard-ground.png') });
+    .screenshot({ path: test.info().outputPath('salary-ground.png') });
+  await page
+    .locator('[data-team-locker]')
+    .screenshot({ path: test.info().outputPath('salary-locker.png') });
 
   // 네 번째 지난 시즌 선수는 빈 자리에 넣을 수 없다.
-  await page.locator(`[data-locker-player="${old[3]!.careerId}"] .locker-select`).click();
+  await fourth.locator('.locker-select').click();
   await page.locator('button[data-slot]:has(.youth)').first().click();
-  await expect(page.locator('#toast')).toContainText('지난 시즌 선수는 선발에 3명까지');
-  await expect(page.locator('[data-team-wildcards]')).toHaveText('와일드카드 3/3');
+  await expect(page.locator('#toast')).toContainText('남은 예산(0)보다 커요');
+  await expect(bar).toContainText('60 / 60');
+
+  // 막대를 누르면 급여 안내(규칙 · 급여표 · 예).
+  await bar.click();
+  const guide = page.locator('[data-salary-guide]');
+  await expect(guide).toContainText('이번 시즌 선수는 급여가 없어요');
+  await expect(guide.locator('[data-salary-table] tbody tr')).toHaveCount(9);
+  await expect(guide).toContainText('OVR 96 이상 선수 3명 (급여 60)');
+  await expect(guide).toContainText('OVR 85~87 선수 10명 (급여 60)');
+  await page.locator('.sheet').screenshot({ path: test.info().outputPath('salary-guide.png') });
+  await page.locator('[data-act="salary-close"]').click();
+  await expect(guide).toHaveCount(0);
+
+  // 서버가 예산을 넘는다고 거절하면 그 문구를 그대로 알린다(운영 도구에서 예산을 내린 직후 등).
+  await page.locator('[data-team-name]').fill('급여 FC');
+  await page.locator('[data-team-manager]').fill('김감독');
+  await page.locator('[data-act="team-save"]').click();
+  await expect(page.locator('#toast')).toContainText('지난 시즌 선수 급여가 예산을 넘어요(60/40)');
+  expect(puts).toHaveLength(1);
+  await page.screenshot({ path: test.info().outputPath('salary-reject.png') });
 });
 
 // T-11-129 홈의 구단 가치 TOP 3 — 라이브 랭킹 첫 페이지(sort=value)를 한 번만 부르고, 전체 보기는 구단 가치 순 팀 랭킹으로 간다.

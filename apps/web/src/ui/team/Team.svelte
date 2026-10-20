@@ -12,6 +12,7 @@
     MANAGER_NAME_MIN,
     TEAM_NAME_MAX,
     TEAM_NAME_MIN,
+    PAST_SALARY_BUDGET,
     TEAM_RATING_START,
     YOUTH_NAME,
     YOUTH_OVR,
@@ -71,7 +72,8 @@
   import { achNudge } from '../achNudge.js';
   import { fixSlot, slotName } from '@offside/app-core/matchReport';
   import type { ReportLine } from '@offside/contracts/owner-team';
-  import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, tooManyWildcards, wildcardFullText, wildcardLabel } from '@offside/app-core/teamOwner';
+  import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, budgetOf, salaryBar, salaryBlocks, salaryFullText, salaryIn } from '@offside/app-core/teamOwner';
+  import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
@@ -152,6 +154,9 @@
   // 서버에는 비공개 이름이 없다 — 이 기기에서 은퇴한 선수는 이 기기에 남은 이름을 쓴다.
   const localNames = localCareerNames();
   const byId = $derived(new Map(players.map((p) => [p.careerId, p])));
+  // T-11-376 지난 시즌 선수 급여 예산(서버 밸런스 값, 옛 응답이면 기본 60).
+  let budget = $state(PAST_SALARY_BUDGET);
+  const salary = $derived(salaryBar(slots, byId, season, budget));
   const nameOf = (p: TeamPlayer) => marketName(p, localNames);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
   // T-11-266 익명으로 은퇴한 내 선수 중 이 기기가 이름을 아는 카드(이적시장에 팔린 선수 포함) — 한꺼번에 이름을 공개할 수 있다.
@@ -204,7 +209,7 @@
   const cells = $derived(
     slots.map((id, i) => {
       const p = id ? byId.get(id) : undefined;
-      return { rating: ratings[i] ?? YOUTH_OVR, name: p ? nameOf(p) : YOUTH_NAME, youth: !p, player: p };
+      return { rating: ratings[i] ?? YOUTH_OVR, name: p ? nameOf(p) : YOUTH_NAME, youth: !p, player: p, salary: p ? salaryIn(p, season) : 0 };
     }),
   );
   const matchHint = $derived(matchHintOf(team, dirty, matchesLeft, season, current));
@@ -294,6 +299,7 @@
     }
     ({ season, current, seasons, lastManager, players, matchesLeft } = r.data);
     perDay = r.data.matchesPerDay;
+    budget = budgetOf(r.data);
     needLogin = false;
     applyTeam(r.data.team);
     const account = accountCache.value;
@@ -356,20 +362,21 @@
   });
 
   // ───────── 편성 ─────────
-  /** 라커룸에서 넣거나, 이미 선발인 선수의 두 자리를 바꾼다. T-11-114 지난 시즌 선수는 와일드카드 상한까지만. */
+  /** 라커룸에서 넣거나, 이미 선발인 선수의 두 자리를 바꾼다. T-11-376 지난 시즌 선수는 급여 예산 안에서만. */
   function assign(index: number, id: string | null) {
     const next = assignSlot(slots, index, id);
-    if (tooManyWildcards(next, byId, season)) return toast(wildcardFullText());
+    if (salaryBlocks(slots, next, byId, season, budget)) return toast(salaryFullText(next, id, byId, season, budget));
     slots = next;
   }
 
-  /** 자리마다 가장 잘 맞는 선수부터 채운다(유스 선수보다 나을 때만). */
+  /** 자리마다 가장 잘 맞는 선수부터 채운다(유스 선수보다 나을 때만, 급여 예산 안에서). */
   function autoFill() {
-    slots = autoFillSlots(slotCodes, players, season);
+    slots = autoFillSlots(slotCodes, players, season, budget);
   }
 
   async function save(): Promise<boolean> {
     if (saving || !nameOk || !editable || pendingDraft) return false;
+    if (salary && salary.state === 'over') { toast(TC.salaryOverSave({ n: salary.sum, max: salary.budget })); return false; }
     const key = draftKey;
     const sequence = loadSequence;
     const submitted = JSON.parse(JSON.stringify(draftValue())) as ReturnType<typeof draftValue>;
@@ -642,7 +649,8 @@
         teamName={name.trim()}
         managerName={manager.trim()}
         {editable}
-        wildcards={wildcardLabel(slots, byId, season)}
+        {salary}
+        {budget}
         bind:formation
         bind:layout
         {slots}

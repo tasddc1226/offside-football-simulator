@@ -13,6 +13,8 @@ export const BALANCE_GROUPS = {
   military: '병역',
   // T-11-080 이적시장. 게임(웹)은 읽지 않고, 서버가 방출·등록·구매 요청 때 활성 버전을 바로 읽는다(커리어별 고정 아님).
   market: '이적시장',
+  // T-11-376 구단 팀 편성. 서버가 팀 저장·조회 때 활성 버전을 바로 읽는다(커리어별 고정 아님).
+  team: '구단 팀',
 } as const;
 export type BalanceGroup = keyof typeof BALANCE_GROUPS;
 
@@ -177,6 +179,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     group: 'market',
     label: '하루 영입 수',
     desc: '한 구단주가 하루(한국 시각)에 영입할 수 있는 선수 수',
+  },
+  pastSalaryBudget: {
+    group: 'team',
+    label: '지난 시즌 선수 급여 예산',
+    desc: '구단 팀 선발에 넣은 지난 시즌 선수 급여(최고 OVR로 1~20) 합의 상한. 이번 시즌 선수는 급여가 없다',
   },
   rerollPrice: {
     group: 'market',
