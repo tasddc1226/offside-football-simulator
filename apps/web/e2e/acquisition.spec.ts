@@ -83,6 +83,7 @@ test('settings keeps pending withdrawal available with analytics off and never t
   page,
 }) => {
   await page.addInitScript(() => {
+    localStorage.setItem('offside_analytics_consent_v1', 'denied');
     localStorage.setItem('offside_acquisition_choice_v1', 'denied');
     localStorage.setItem('offside_acquisition_revoke_v1', 'profile-a');
     localStorage.setItem('offside_acquisition_profile_v1', 'profile-a');

@@ -36,7 +36,8 @@
     choice = getConsent();
     adChoice = getAdConsent();
     if (!touched) pickA = granted();
-    if (acqOn)
+    // 고르는 중에는 서버에 다시 묻지 않는다(동의 직후 유입 세션이 두 번 기록된다). 고른 결과는 apply가 직접 반영한다.
+    if (acqOn && !busy)
       void acquisitionStatus().then((v) => {
         acq = v;
         pending = acquisitionWithdrawalPending();
@@ -77,6 +78,10 @@
         // 이용 분석을 거두면 browser.ts가 유입 · 결제 연결도 함께 철회한다.
         setConsent('denied');
         acqDone = true;
+        if (acqOn) {
+          acq = 'denied';
+          pending = acquisitionWithdrawalPending();
+        }
       }
     }
     const want = a && q ? 'granted' : 'denied';
@@ -91,7 +96,8 @@
     }
     touched = false;
     busy = false;
-    read();
+    pickA = granted();
+    pickQ = acq === 'granted';
   }
 </script>
 

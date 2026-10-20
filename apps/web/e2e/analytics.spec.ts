@@ -58,7 +58,9 @@ test('opt-in normalizes URL, tracks once per screen and new career, withdraws ac
   await page.goto(
     '/?code=PRIVATE_CODE&email=PRIVATE_EMAIL&utm_source=threads&utm_medium=social&utm_campaign=season1_launch&utm_content=s1_story_01&unknown=PRIVATE#PRIVATE_HASH',
   );
-  await page.locator('[data-analytics="accept"]').click();
+  // 이용 분석만 고른다(유입 · 결제 연결 거절도 함께 저장돼 다시 열어도 동의 창이 뜨지 않는다).
+  await page.locator('[data-analytics="pick-analytics"]').check();
+  await page.locator('[data-analytics="deny"]').click();
   await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
   const first = await commands(page);
   const wire = JSON.stringify(first);
