@@ -135,7 +135,6 @@ const EXACT: Record<string, string> = {
   '이미 팔렸거나 내린 선수예요.': 'That player has already been sold or unlisted.',
   '구단 자금이 모자라요.': "You don't have enough club funds.",
   '내 선수 카드를 찾을 수 없어요.': "We couldn't find your player card.",
-  '이번 시즌 선수만 내놓을 수 있어요.': "You can only list this season's players.",
   '기준가가 없는 선수는 내놓을 수 없어요.': "Players without a base value can't be listed.",
   '이미 내놓은 선수예요.': 'That player is already listed.',
   // T-11-310 감독 커리어

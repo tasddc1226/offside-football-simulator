@@ -141,7 +141,7 @@
   const index = $derived(marketIndex(indexPoints));
   const myListingIds = $derived(new Set(me?.listings.map((l) => l.id) ?? []));
 
-  // 팔기는 지금 시즌 선수, 방출은 시즌을 골라 본다(기본은 지금 시즌).
+  // 팔기는 지금 가진 모든 시즌 선수(T-11-425), 방출은 시즌을 골라 본다(기본은 지금 시즌).
   let team = $state<OwnerTeamResponse | null>(null);
   let teamSeason = $state<number | undefined>(undefined);
   let teamFailed = $state(false);
@@ -359,7 +359,7 @@
           {/each}
         </div>
         <div class="mk-sort">
-          <span class="muted fs-sm">{season === null ? '' : L.seasonCount({ n: items.length, more: hasMore })}</span>
+          <span class="muted fs-sm">{season === null ? '' : L.listCount({ n: items.length, more: hasMore })}</span>
           <label class="fs-sm">{L.sortLabel}
             <select bind:value={sort} data-market-sort>
               {#each Object.entries(MARKET_SORT_LABEL) as [k, label] (k)}<option value={k}>{label}</option>{/each}
@@ -380,7 +380,7 @@
                   {@render mini(asPlayer(l.card), marketName(l.card, local))}
                   <span class="mk-info">
                     <span class="mk-name">{marketName(l.card, local)}{#if myListingIds.has(l.id)}<em class="mk-tag">{L.myListing}</em>{/if}</span>
-                    <small>{@render styleTag(l.card)}{cardMeta(l.card)}</small>
+                    <small>{@render styleTag(l.card)}{cardMeta(l.card, season)}</small>
                   </span>
                   <span class="mk-price"><b>{fmtValue(l.price)}</b><small class="mk-{diff.tone}">{diff.text}</small></span>
                 </button>
@@ -394,7 +394,7 @@
       </section>
     {:else if view === 'sell'}
       <section class="mk-pane" aria-label={L.tabSell}>
-        <h2 class="mk-step">{L.sellStep1} <small>{L.sellSeasonOnly({ season: seasonName || L.thisSeason })}</small></h2>
+        <h2 class="mk-step">{L.sellStep1}</h2>
         {#if !team}
           {#if teamFailed}<p class="muted">{L.playersFailed}</p>{:else}<Skeleton rows={4} />{/if}
         {:else if !isCurrent || team.players.length === 0}
