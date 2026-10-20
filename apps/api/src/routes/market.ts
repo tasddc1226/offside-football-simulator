@@ -96,7 +96,8 @@ const listingIdOf = (c: Context<AppEnv>) =>
   parseWithAppError(ListingIdSchema, c.req.param('listingId'));
 
 export function registerMarketRoutes(app: Hono<AppEnv>): void {
-  // 지금 시즌 열린 등록(공개 · 세션 조회 없음). 첫 페이지만 엣지에 담는다(포지션·정렬별 몇 개뿐).
+  // 열린 등록(공개 · 세션 조회 없음). T-11-425부터 모든 시즌 카드가 함께 오른다. 첫 페이지만 엣지에 담는다(포지션·정렬별 몇 개뿐).
+  // 시즌 사이 휴식기에는 닫는다.
   app.get('/v1/market', async (c) => {
     const q = parseWithAppError(MarketListQuerySchema, {
       pos: c.req.query('pos') || undefined,
@@ -116,8 +117,8 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     const load = async () => {
       const db = getDb(c);
       const [list, recent] = await Promise.all([
-        listOpenListings(db, season, q),
-        q.page === 0 ? recentSales(db, season) : Promise.resolve([]),
+        listOpenListings(db, q),
+        q.page === 0 ? recentSales(db) : Promise.resolve([]),
       ]);
       return { season, ...list, recent };
     };
@@ -215,7 +216,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     );
   });
 
-  // 판매 등록: 지금 시즌의 내 카드 · 기준가 있음 · 숨김 아님 · 열린 등록 없음 · 가격이 범위 안 · 동시 등록 상한 안.
+  // 판매 등록: 내 카드(T-11-425부터 출신 시즌과 상관없이) · 기준가 있음 · 숨김 아님 · 열린 등록 없음 · 가격이 범위 안 · 동시 등록 상한 안.
   app.post('/v1/market/listings', requireProfile, idempotency, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
@@ -229,8 +230,6 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     ]);
     if (!card || card.ownerId !== me.id)
       throw notFoundError('내 선수 카드를 찾을 수 없어요.', 'CARD_NOT_FOUND');
-    if (card.season !== season)
-      throw conflictError('이번 시즌 선수만 내놓을 수 있어요.', 'CARD_OTHER_SEASON');
     if (card.cardValue === null || card.hidden)
       throw conflictError('기준가가 없는 선수는 내놓을 수 없어요.', 'CARD_NOT_TRADABLE');
     if (card.manager) throw cardManager();
@@ -248,7 +247,6 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
         id,
         careerId: input.careerId,
         sellerId: me.id,
-        season,
         price: input.price,
         now,
       }))
@@ -279,8 +277,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
       countBuysSince(db, me.id, kstTodayStart(now)),
       marketRules(db),
     ]);
-    if (!found || found.status !== 'open' || found.hidden || found.listing.card.season !== season)
-      throw listingGone();
+    if (!found || found.status !== 'open' || found.hidden) throw listingGone();
     const card = found.listing.card;
     if (found.sellerId === me.id) throw conflictError('내가 내놓은 선수예요.', 'OWN_LISTING');
     if (found.price !== input.price)

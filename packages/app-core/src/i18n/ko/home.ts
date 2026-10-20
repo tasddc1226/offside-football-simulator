@@ -27,7 +27,7 @@ const ko = {
   conflictKeep: '이 기기에만 두기',
   // 타일
   marketTitle: '이적시장',
-  marketSub: '이번 시즌 선수 사고팔기 · 시세 →',
+  marketSub: '선수 사고팔기 · 시세 →',
   inviteSub: (p: { n: number; s: number }) =>
     `친구와 함께 리롤권 ${p.n}장 + 프리미엄 스카우트권 ${p.s}장씩 받기 →`,
   dexTitle: '확률 이벤트',

@@ -599,11 +599,12 @@ export const marketListings = sqliteTable(
       .on(table.careerId)
       .where(sql`${table.status} = 'open'`),
     index('market_listings_career_idx').on(table.careerId),
-    index('market_listings_new_idx').on(table.status, table.season, table.createdAt),
-    index('market_listings_price_idx').on(table.status, table.season, table.price, table.createdAt),
+    // T-11-425 모든 시즌 카드를 한 시장에서 거래해 목록 · 최근 거래 인덱스에서 시즌을 뺐다.
+    index('market_listings_new_idx').on(table.status, table.createdAt),
+    index('market_listings_price_idx').on(table.status, table.price, table.createdAt),
     index('market_listings_seller_idx').on(table.sellerId, table.status, table.closedAt),
     index('market_listings_buyer_idx').on(table.buyerId, table.closedAt),
-    index('market_listings_sold_idx').on(table.status, table.season, table.closedAt),
+    index('market_listings_sold_idx').on(table.status, table.closedAt),
     // 선수별 판매 기록(시세 차트의 점). 팔린 행만 담아 등록 · 취소 때는 쓰지 않는다.
     index('market_listings_card_idx')
       .on(table.careerId, table.closedAt)

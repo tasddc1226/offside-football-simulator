@@ -62,7 +62,7 @@ const ko = {
   buildTeam: '팀 만들기',
   teamBtnApp: '내 팀 · 시즌 업적',
   marketTitle: '이적시장',
-  marketSub: (p: { funds: string }) => `구단 자금 ${p.funds} · 이번 시즌 선수를 사고팔아요`,
+  marketSub: (p: { funds: string }) => `구단 자금 ${p.funds} · 선수를 사고팔아요`,
   open: '열기',
   /** 잠긴 '내 팀' 카드 가운데 배지. 🔒 뒤 U+FE0E는 글자 모양(이모지 아님) 지정. */
   lockBadge: '\u{1F512}︎ 로그인하면 열려요',
