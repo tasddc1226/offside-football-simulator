@@ -41,8 +41,7 @@ describe('T-11-386 시즌 1 업적 보상(GET /v1/items/gift · POST /v1/items/g
   const key = () => ({ 'Idempotency-Key': crypto.randomUUID() });
 
   /** 시즌 1에 은퇴한 선수 한 명(통산 3만 골 — 강화권 3장 · 스카우트권 2장 칸). */
-  async function addS1Career(profileId: string, goals: number) {
-    const at = '2026-10-15T00:00:00.000Z';
+  async function addS1Career(profileId: string, goals: number, at = '2026-10-15T00:00:00.000Z') {
     await ctx.db.insert(careers).values({
       id: crypto.randomUUID(),
       profileId,
@@ -119,6 +118,14 @@ describe('T-11-386 시즌 1 업적 보상(GET /v1/items/gift · POST /v1/items/g
     const again = await claim(me.cookie, { id: ACH_SEASON_GIFT.id });
     expect(again.status).toBe(409);
     expect(await again.json()).toMatchObject({ error: { details: { reason: 'GIFT_CLAIMED' } } });
+    expect(await gift(me.cookie)).toBeNull();
+  });
+
+  it('시즌 1 출신이라도 마감 뒤에 은퇴한 선수는 세지 않는다(시즌 결산과 같은 기준)', async () => {
+    const me = await owner(300, 600);
+    // 마감 뒤(시즌 2)에 은퇴한 시즌 1 출신 3만 골 선수.
+    await addS1Career(me.profileId, 30_000, '2026-11-01T00:00:00.000Z');
+    vi.setSystemTime(new Date(IN_S2));
     expect(await gift(me.cookie)).toBeNull();
   });
 

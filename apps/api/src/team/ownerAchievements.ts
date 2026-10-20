@@ -240,7 +240,7 @@ export function seasonGiftAmount(groups: readonly ClubAchievementGroup[]): AchRe
 
 /**
  * T-11-386 받을 수 있는 시즌 1 업적 보상(ACH_SEASON_GIFT). 시즌 2 동안 · 아직 받지 않았고 1장 이상일 때만. 장수는 처음
- * 물을 때 시즌 1 업적을 한 번 세어 업적 행에 적고, 다음부터는 그 값을 읽는다(시즌 1 기록은 마감 뒤 바뀌지 않는다).
+ * 물을 때 시즌 1 업적을 마감 시각 기준으로 한 번 세어 업적 행에 적고, 다음부터는 그 값을 읽는다.
  * 점수가 강화권 문턱보다 낮으면 보상 칸이 있을 수 없어 세지 않는다.
  */
 export async function seasonAchGiftOf(
@@ -255,7 +255,9 @@ export async function seasonAchGiftOf(
   let r: AchReward;
   if (row.boost !== null && row.scout !== null) r = { boost: row.boost, scout: row.scout };
   else {
-    const { groups } = await computeOwnerAchievements(db, owner, g.season, now);
+    // 시즌 결산(seasonClose)과 같은 마감 시각 기준 — 마감 뒤 은퇴한 시즌 1 출신 선수 등은 세지 않아 언제 물어도 같다.
+    const cutoff = teamSeasonEndsAt(g.season) ?? now;
+    const { groups } = await computeOwnerAchievements(db, owner, g.season, cutoff, cutoff);
     r = seasonGiftAmount(groups);
     await saveSeasonGift(db, owner.id, g.season, r);
   }
