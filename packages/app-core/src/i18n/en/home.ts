@@ -25,8 +25,6 @@ export const home: Translation<HomeMsgs> = {
     `You and your friend each get ${p.n} reroll tickets + ${p.s} premium scout ticket →`,
   dexTitle: 'Event odds',
   dexSubWeb: 'See the success odds for each choice →',
-  testerTitle: 'Join the testers ↗',
-  testerSub: 'Apply for the Android app closed test',
   galleryTitle: 'Community gallery ↗',
   gallerySub: 'Show off careers, swap tips and make suggestions on DCinside',
   firstsTitle: 'Server firsts',
