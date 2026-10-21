@@ -50,6 +50,20 @@ test('no tag or analytics storage before consent/after denial, gameplay still sa
   expect(await page.evaluate((key) => localStorage.getItem(key), ledgerKey)).toBeNull();
   expect(google).toEqual([]);
 });
+// T-11-437 동의 창은 홈에서만 묻는다. 다른 화면으로 바로 들어오면 고르기 전까지 아무것도 보내지 않고, 홈에 오면 묻는다.
+test('consent sheet waits for home and sends nothing on other screens before a choice', async ({
+  page,
+}) => {
+  await prepare(page);
+  await page.goto('/career/00000000-0000-4000-8000-000000000000');
+  await expect(page.locator('main')).toBeVisible();
+  await expect(page.locator('[data-analytics="consent"]')).toHaveCount(0);
+  expect(await commands(page)).toEqual([]);
+  await page.goto('/');
+  await expect(page.locator('[data-analytics="consent"]')).toBeVisible();
+  await page.locator('[data-analytics="deny"]').click();
+  await expect(page.locator('[data-analytics="consent"]')).toHaveCount(0);
+});
 test('opt-in normalizes URL, tracks once per screen and new career, withdraws across tabs', async ({
   page,
   context,

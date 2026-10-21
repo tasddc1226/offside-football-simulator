@@ -37,6 +37,7 @@ export const settings: Translation<SettingsMsgs> = {
   help: 'ヘルプ',
   installGuide: 'ホーム画面に追加',
   guide: 'ゲームガイド',
+  accountLink: 'アカウント・ニックネーム（マイクラブ）',
   fairness: '確率と公正さ',
   faq: 'よくある質問',
   legal: 'サービスポリシー',

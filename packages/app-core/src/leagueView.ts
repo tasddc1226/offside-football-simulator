@@ -83,8 +83,10 @@ export function leagueSchedule(l: LeagueResponse['league']) {
   ];
 }
 
-/** 규칙 목록(화면 순서). */
+/** 규칙 목록(화면 순서). T-11-444 맨 앞에 부 · 리그 용어 두 줄. */
 export const leagueRules = () => [
+  L.termTier,
+  L.termLeague,
   L.ruleEntry,
   L.ruleTiers,
   L.rulePoints,
@@ -190,18 +192,26 @@ export function leaguePlacementLine(
 export const leagueCancelled = (data: Pick<LeagueResponse, 'tiers'>) =>
   !!data.tiers && data.tiers.length === 0;
 
-/** T-11-418e 내 결산(14라운드 뒤). 결과 알약 · 최종 순위 · 받은 보상 · 다음 시즌 부 · 1부 우승 칭호 줄. 결산 전은 null. */
-export function leagueFinalView(me: LeagueMeResponse | null, season: number) {
-  const p = me?.placement;
-  const f = p?.final;
-  if (!p || !f) return null;
-  const outcome = {
+type Outcome4 = NonNullable<NonNullable<LeagueMeResponse['placement']>['final']>['outcome'];
+const outcomeLabel = (o: Outcome4) =>
+  ({
     champion: L.outcomeChampion,
     promoted: L.outcomePromoted,
     stayed: L.outcomeStayed,
     relegated: L.outcomeRelegated,
     forfeited: L.outcomeForfeited,
-  }[f.outcome];
+  })[o];
+
+/** T-11-444 결산 결과 알약 색(웹 · 앱 공통): 우승 · 승격은 good, 강등 · 기권 퇴출은 warn, 잔류는 기본. */
+export const leagueOutcomeTone = (o: Outcome4): 'good' | 'warn' | null =>
+  o === 'champion' || o === 'promoted' ? 'good' : o === 'stayed' ? null : 'warn';
+
+/** T-11-418e 내 결산(14라운드 뒤). 결과 알약 · 최종 순위 · 받은 보상 · 다음 시즌 부 · 1부 우승 칭호 줄. 결산 전은 null. */
+export function leagueFinalView(me: LeagueMeResponse | null, season: number) {
+  const p = me?.placement;
+  const f = p?.final;
+  if (!p || !f) return null;
+  const outcome = outcomeLabel(f.outcome);
   const reward = [
     ...(f.rerolls ? [L.rewardReroll({ n: f.rerolls })] : []),
     ...(f.scouts ? [L.rewardScout({ n: f.scouts })] : []),
@@ -432,3 +442,113 @@ export function leagueLive(
   }));
   return { scores, rows };
 }
+
+// ───────── T-11-444 신청 카드 단계별 노출 · 신청 확인 · 한국 시간 · 지난 시즌 결산 · 부별 승강 범례 ─────────
+
+/** 단계 알약을 강조할지(접수 중 · 진행 중). 웹 · 앱의 홈 배너와 리그 화면 머리가 같이 쓴다. */
+export const leaguePhaseActive = (phase: Phase) => phase === 'open' || phase === 'running';
+
+/** 계정 상태: 아직 모름(불러오는 중 · 오류) · 로그인하지 않음 · 로그인한 구단주. */
+export type LeagueAccount = 'unknown' | 'guest' | 'member';
+
+export type LeagueEntryCard =
+  | { kind: 'hidden' }
+  | { kind: 'login'; text: string }
+  | { kind: 'error'; text: string }
+  | {
+      kind: 'mine';
+      /** 신청했는가(신청 완료 알약). */
+      entered: boolean;
+      /** 버튼: 신청(확인을 거친다) · 신청 취소(접수 중에만) · 없음. */
+      action: 'enter' | 'withdraw' | null;
+      /** 상태 아래 한 줄(배치 발표 · 마감 뒤 취소 불가 · 배치 대기 · 신청 안 함). */
+      note: string | null;
+      /** 접수 중 지금 내 팀 OVR. */
+      ovr: string | null;
+    };
+
+/**
+ * 신청 카드의 단계별 노출(웹 · 앱 공통). 로그인 안내는 접수 예정 · 접수 중에만, 계정 상태를 모르면 아무것도 그리지 않는다.
+ * 내 신청을 불러오지 못하면 오류(다시 시도)로 막다른 길을 막는다. 신청한 뒤 접수가 끝나면(배치 대기) 취소할 수 없다고 적는다.
+ */
+export function leagueEntryCard(
+  data: LeagueResponse,
+  account: LeagueAccount,
+  me: LeagueMeResponse | null,
+  meFailed = false,
+): LeagueEntryCard {
+  const { phase, league } = data;
+  if (account === 'unknown') return { kind: 'hidden' };
+  if (account === 'guest')
+    return phase === 'soon' || phase === 'open'
+      ? { kind: 'login', text: L.loginToEnter }
+      : { kind: 'hidden' };
+  if (!me) return meFailed ? { kind: 'error', text: L.meFail } : { kind: 'hidden' };
+  const at = leagueWhen(league.drawAt);
+  const ovr = me.team && phase === 'open' ? L.myOvr({ ovr: me.team.ovr }) : null;
+  if (me.entry) {
+    const note =
+      phase === 'open'
+        ? L.enteredNote({ at })
+        : phase === 'closed'
+          ? L.entryLocked({ at })
+          : me.placement
+            ? null
+            : L.drawPending;
+    return { kind: 'mine', entered: true, action: phase === 'open' ? 'withdraw' : null, note, ovr };
+  }
+  if (me.canEnter)
+    return { kind: 'mine', entered: false, action: 'enter', note: L.enteredNote({ at }), ovr };
+  return {
+    kind: 'mine',
+    entered: false,
+    action: null,
+    note: phase === 'soon' ? null : L.notEntered,
+    ovr,
+  };
+}
+
+/** 신청 확인 창: 참가 자격 · 기권 규칙 · 취소 마감. */
+export const leagueEnterAsk = (data: LeagueResponse) => ({
+  title: L.enterAskTitle,
+  lines: [
+    ...leagueEntryRules(data),
+    L.enterAskDeadline({ until: leagueUntil(data.league.closesAt) }),
+  ],
+});
+
+/** 라운드 경기 시각 "11월 7일 13:00 한국 시간"(경기가 없으면 null). */
+export const leagueRoundAt = (matches: readonly Pick<LeagueMatch, 'at'>[]) => {
+  const at = matches[0]?.at;
+  return at ? L.roundAt({ when: leagueWhen(at) }) : null;
+};
+
+/** 지난 시즌 내 결산(다음 시즌 배치 전, 서버가 lastFinal을 실을 때만). */
+export function leagueLastFinalView(me: LeagueMeResponse | null) {
+  const f = me?.lastFinal;
+  if (!f) return null;
+  return {
+    outcome: f.outcome,
+    title: L.lastFinalTitle({ season: f.season }),
+    label: outcomeLabel(f.outcome),
+    line: L.finalLine({ tier: f.tier, league: f.league, rank: f.rank }),
+    next: f.nextTier === null ? L.lastFinalNextBottom : L.lastFinalNext({ tier: f.nextTier }),
+  };
+}
+
+/** 순위표 범례: 이 부에 승격권 · 강등권이 있는지와 이 부에 맞는 승강 한 줄. */
+export function leagueLegend(tier: number, bottomTier: number) {
+  const move =
+    bottomTier <= 1
+      ? L.moveSolo
+      : tier === 1
+        ? L.moveTop({ down: 2 })
+        : tier >= bottomTier
+          ? L.moveBottom({ up: tier - 1 })
+          : L.moveMid({ up: tier - 1, down: tier + 1 });
+  return { up: tier > 1, down: tier < bottomTier, move };
+}
+
+/** 내 줄에 붙이는 자리 이름(승격권 · 강등권). 확정 배지가 있으면 그쪽이 먼저라 null. */
+export const leagueZoneLabel = (zone: 'up' | 'down' | null, clinched: boolean) =>
+  clinched || !zone ? null : zone === 'up' ? L.zoneUp : L.zoneDown;

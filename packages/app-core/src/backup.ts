@@ -9,6 +9,7 @@ import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 // 커리어가 시작된 세이브에는 쓸모가 없어 뺐다. 로그인·세션·프로필·설정 키는 절대 담지 않는다.
 // 가져올 때는 ft_save·ft_hof 두 키만 쓴다 — 백업에 다른 키가 있어도 무시한다.
 import { measureOperation } from './measurement.js';
+import { backupText as L } from './i18n/ko/backup.js';
 import { SAVE_VERSION } from '@offside/game/data';
 import { getActiveRng, setActiveRng } from '@offside/game/rng';
 import { loadSave } from '@offside/game/save';
@@ -183,4 +184,15 @@ export function applyBackup(b: Backup, currentHof: HofEntry[]): boolean {
   const ok = applyBackupValue(b, currentHof);
   measureOperation('load', ok ? 'success' : 'failed', ok ? 'none' : 'save_risk', 'backup');
   return ok;
+}
+
+/** T-11-441 백업을 불러오기 전에 물을 문구. 저장된 커리어가 없으면 null(묻지 않는다).
+ *  은퇴한 커리어도 세이브가 바뀌므로 묻는다(명예의 전당 기록은 합쳐져 남는다). */
+export function replaceConfirmText(
+  cur: Pick<GameState, 'name' | 'retired'> | null | undefined,
+): string | null {
+  if (!cur) return null;
+  return cur.retired
+    ? L.replaceConfirmRetired({ name: cur.name })
+    : L.replaceConfirm({ name: cur.name });
 }

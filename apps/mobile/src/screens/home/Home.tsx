@@ -1,7 +1,7 @@
 // 홈(웹 Home.svelte — ui.ts renderHome() 포트): 전광판 · 히어로 · 라이브 현황 · 타일 · 명예의 전당 TOP 3 · 소식 · 푸터.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Linking, Platform, useWindowDimensions, View } from 'react-native';
+import { Linking, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import { PHASES, LAST_PHASE, posLabel } from '@offside/game/data';
@@ -9,7 +9,7 @@ import { ovr } from '@offside/game/attributes';
 import type { GameState } from '@offside/game/types';
 import { homeText as L } from '@offside/app-core/i18n/ko/home';
 import { homeMoreText } from '@offside/app-core/i18n/ko/homeMore';
-import { ANDROID_TESTER_FORM_URL, DC_GALLERY_URL } from '@offside/app-core/links';
+import { DC_GALLERY_URL } from '@offside/app-core/links';
 import { HallOfFame } from '../../components/HallOfFame';
 import { SiteFooter } from '../../components/SiteFooter';
 import { adoptCareer, keepOnDevice } from '../../game/host';
@@ -50,6 +50,7 @@ import {
 import { loadHomeTodo } from '@offside/app-core/homeTodo';
 import { useOnPull } from '../../ui/refresh';
 import { notificationDestination } from '../../platform/notificationDestination';
+import { chatUnread } from '../../platform/chatUnread';
 
 // T-11-360 출석 창은 앱을 연 뒤 처음 그린 홈에서만 저절로 띄운다(로그아웃 뒤 · 다른 화면에서 돌아올 때는 아니다).
 let homeShown = false;
@@ -275,35 +276,16 @@ export default function Home() {
             onPress={() => go('dex')}
           />
         </View>
-        {/* T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일. T-11-016 안드로이드 앱에선 반으로 나눠 옆에
-            비공개 테스터 모집(구글 폼)을 둔다 — iOS 앱엔 다른 플랫폼 안내를 싣지 않고 두 칸 폭 그대로 둔다. */}
-        {Platform.OS === 'android' ? (
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Tile
-              testID="dc-gallery"
-              eyebrow="Community"
-              title={L.galleryTitle}
-              sub={L.gallerySub}
-              onPress={() => void Linking.openURL(DC_GALLERY_URL)}
-            />
-            <Tile
-              testID="android-tester"
-              eyebrow="Android"
-              title={L.testerTitle}
-              sub={L.testerSub}
-              onPress={() => void Linking.openURL(ANDROID_TESTER_FORM_URL)}
-            />
-          </View>
-        ) : (
-          <Tile
-            wide
-            testID="dc-gallery"
-            eyebrow="Community"
-            title={homeMoreText.galleryWideTitle}
-            sub={homeMoreText.galleryWideSub}
-            onPress={() => void Linking.openURL(DC_GALLERY_URL)}
-          />
-        )}
+        {/* T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일. T-11-440 앱을 이미 쓰는 사람에게 같은 앱 테스트
+            신청(T-11-016)을 권하지 않도록 안드로이드 앱에서도 테스터 모집 타일을 빼고 두 칸 폭으로 둔다. */}
+        <Tile
+          wide
+          testID="dc-gallery"
+          eyebrow="Community"
+          title={homeMoreText.galleryWideTitle}
+          sub={homeMoreText.galleryWideSub}
+          onPress={() => void Linking.openURL(DC_GALLERY_URL)}
+        />
         <HallOfFame />
         <HomeClubValue />
         <HomeNews board="notice" eyebrow="Notice" title={L.noticeTitle} />
@@ -320,11 +302,13 @@ export default function Home() {
 /** T-11-015 라운지 채팅으로 가는 떠 있는 버튼(웹 .chat-fab) — 하단 메뉴 바로 위 오른쪽. */
 function ChatFab() {
   const c = useColors();
+  // T-11-440 안 읽은 채팅 수(웹 .chat-unread와 같다). 앱이 앞에 있을 때 붙는 채팅 소켓이 센다.
+  const { n } = useSnapshot(chatUnread);
   return (
     <Press
       testID="chat-fab"
       accessibilityRole="button"
-      accessibilityLabel={homeMoreText.chatLabelApp}
+      accessibilityLabel={n ? L.chatLabelUnread({ n }) : homeMoreText.chatLabelApp}
       onPress={() => go('chat')}
       style={{
         position: 'absolute',
@@ -332,6 +316,8 @@ function ChatFab() {
         bottom: 16,
         minWidth: 48,
         minHeight: 48,
+        flexDirection: 'row',
+        gap: 6,
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 10,
@@ -351,6 +337,26 @@ function ChatFab() {
           fill={c.accentInk}
         />
       </Svg>
+      {n ? (
+        <View
+          testID="chat-unread"
+          accessible={false}
+          importantForAccessibility="no-hide-descendants"
+          style={{
+            minWidth: 22,
+            height: 22,
+            paddingHorizontal: 5,
+            borderRadius: RADIUS.pill,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: c.ink,
+          }}
+        >
+          <Txt style={[num(700), { color: c.surface, fontSize: rem(FONT.label), lineHeight: 16 }]}>
+            {n > 99 ? '99+' : n}
+          </Txt>
+        </View>
+      ) : null}
     </Press>
   );
 }

@@ -5,7 +5,7 @@ import {
   type ChatView,
   type ChatRejectCode,
 } from '@offside/app-core/api/chat';
-import { createChatUnread } from './chat-unread.js';
+import { createChatUnread } from '@offside/app-core/chatUnread';
 
 export const chatState = $state<{ view: ChatView; unread: number }>({
   view: EMPTY_CHAT,

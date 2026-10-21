@@ -12,7 +12,9 @@ import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as CA } from '@offside/app-core/i18n/ko/cupApp';
 import { scoutText as L } from '@offside/app-core/i18n/ko/scout';
 import { fundsText } from '@offside/app-core/market';
-import { scoutShopState } from '@offside/app-core/rerollShop';
+import { scoutShopState, shopShortText } from '@offside/app-core/rerollShop';
+import { Skeleton } from '../../ui/Skeleton';
+import { FundsShort } from './FundsShort';
 import { toast } from '../../game/host';
 import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
@@ -116,9 +118,7 @@ export function ScoutFunds({
             ) : (
               <>
                 {view === 'short' ? (
-                  <Txt tone="muted" style={small}>
-                    {CL.shopShort}
-                  </Txt>
+                  <FundsShort text={shopShortText(shop.balance, shop.scout.price)} />
                 ) : null}
                 <Btn
                   kind="primary"
@@ -135,10 +135,12 @@ export function ScoutFunds({
               {L.fundsNote}
             </Txt>
           </>
-        ) : (
+        ) : failed ? (
           <Txt tone="muted" style={small}>
-            {failed ? CL.shopLoadFail : '…'}
+            {CL.shopLoadFail}
           </Txt>
+        ) : (
+          <Skeleton height={72} />
         )
       ) : null}
     </View>

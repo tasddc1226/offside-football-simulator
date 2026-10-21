@@ -11,6 +11,7 @@ import {
 } from '@offside/app-core/api/gift';
 import { giftText as L } from '@offside/app-core/i18n/ko/gift';
 import { toast } from '../../game/host';
+import { goRerollShop } from '../../game/nav';
 import { notificationDestination } from '../../platform/notificationDestination';
 import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
@@ -21,6 +22,8 @@ export function HomeGift() {
   const c = useColors();
   const [gift, setGift] = useState<Gift | null>(null);
   const [busy, setBusy] = useState(false);
+  // T-11-440 받은 뒤 결과 줄 · 쓰는 곳 안내 · 내 구단 버튼(토스트 한 번으로 끝내지 않는다). 홈을 떠나면 사라진다.
+  const [done, setDone] = useState<string | null>(null);
   // 응답을 못 받아 다시 누르면 같은 키로 보내 서버가 두 번 주지 않는다(서버는 성공 · 409만 기억한다). 받은 뒤 다음
   // 선물(T-11-386)은 새 키로 받는다.
   const key = useRef(crypto.randomUUID());
@@ -31,6 +34,28 @@ export function HomeGift() {
     void reload();
   }, [reload, home]);
   useOnPull(reload);
+  if (done)
+    return (
+      <Card
+        testID="home-gift-done"
+        gap={10}
+        style={{ borderWidth: 1, borderColor: alpha(c.accent, 0.45) }}
+      >
+        <View style={{ gap: 2 }} accessibilityLiveRegion="polite">
+          <Txt v="eyebrow">Gift</Txt>
+          <Txt bold accessibilityRole="header">
+            {L.doneTitle}
+          </Txt>
+          <Txt v="sm">{done}</Txt>
+          <Txt v="xs" tone="muted">
+            {L.useHint}
+          </Txt>
+        </View>
+        <Btn sm testID="home-gift-owner" onPress={goRerollShop} style={{ alignSelf: 'flex-start' }}>
+          {L.toOwner}
+        </Btn>
+      </Card>
+    );
   if (!gift) return null;
   const copy = giftCopy(gift);
 
@@ -40,7 +65,7 @@ export function HomeGift() {
     const r = await claimHomeGift(gift.id, key.current);
     setBusy(false);
     if (r.ok) {
-      toast(copy.done);
+      setDone(copy.done);
       key.current = crypto.randomUUID();
       setGift(null);
     } else if (r.error.reason === 'GIFT_CLAIMED' || r.error.reason === 'GOOGLE_LOGIN_REQUIRED') {

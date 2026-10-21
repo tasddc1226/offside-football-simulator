@@ -112,6 +112,13 @@ export const cup: Translation<CupMsgs> = {
   toastEntered: 'カップに申し込みました。',
   toastWithdrawn: '申込を取り消しました。',
   loginToEnter: 'Googleでログインすると申し込めます。',
+  loginCardNote: 'ログインするとカップへの申し込みと勝敗予想ができます。',
+  enterAskTitle: 'カップに申し込みますか？',
+  enterAskWithdraw: '受付期間中は申し込みを取り消せます。',
+  enterAskOk: '申し込む',
+  enterAskCancel: 'キャンセル',
+  toLineup: '編成へ',
+  toMakeTeam: 'チームを作りに行く',
   enterLockNote:
     '申し込むと、先発選手は移籍市場への出品も放出もできなくなります。敗退すると解除されます。',
   reasonNoTeam: '今シーズンのクラブがないと申し込めません。',
@@ -271,7 +278,8 @@ export const cup: Translation<CupMsgs> = {
   shopBusy: '購入中…',
   shopSoldOut: '今日買える分はすべて買いました。明日0時(韓国時間)から再び買えます。',
   shopClosed: '現在リロールチケットは販売していません。',
-  shopShort: 'クラブの資金が足りません。',
+  shopShort: (p) => `クラブ資金が${p.short}足りません。育てた選手を放出すると資金ができます。`,
+  shopGoRelease: '放出しに行く',
   shopConfirm: (p) =>
     `リロールチケット1枚を${p.price}で買いますか？購入後のクラブ資金は${p.balance}で、取り消せません。`,
   shopDone: (p) => `リロールチケットを買いました。現在${p.n}枚あります。`,

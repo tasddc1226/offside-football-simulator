@@ -318,7 +318,7 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await page.locator('[data-team-name]').fill('우리 동네 FC');
   // 감독 이름이 비면 저장할 수 없고 이유를 보여 준다.
   await expect(page.locator('[data-act="team-save"]')).toBeDisabled();
-  await expect(page.locator('[data-team-save-reason]')).toContainText('감독 이름');
+  await expect(page.locator('[data-team-save-reason]')).toContainText('팀 대표 이름');
   await page.locator('[data-team-manager]').fill('홍감독');
   await page.locator('[data-act="team-auto"]').click();
   // 스트라이커 자리(9)에 공격수, 골키퍼 자리(0)에 골키퍼가 들어간다.
@@ -362,6 +362,12 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
 
   await page.locator('[data-team-tab="opponents"]').click();
   await expect(page.locator('[data-opponent]')).toContainText('라이벌 FC');
+  // T-11-443 레이팅 아래 내 팀(1,000)과의 차이와 그 뜻을 보인다.
+  await expect(page.locator('[data-opponent-gap="12"]')).toContainText('+12');
+  await expect(page.locator('[data-opponent-gap="12"] .sr-only')).toHaveText(
+    '내 팀보다 12점 높아요',
+  );
+  await expect(page.locator('[data-opponent-gap-note]')).toBeVisible();
   await page.locator('[data-act="team-challenge"]').click();
   await expect
     .poll(() => played)
@@ -556,6 +562,12 @@ test('T-11-387 랭크 경기 중 결정적 장면을 고르면 결과가 중계�
   await expect(card.locator('[data-moment-choice]')).toHaveCount(3);
   await expect(card.locator('[data-moment-choice="round"]')).toContainText('58%');
   await expect(card.locator('[data-moment-choice="round"]')).toContainText('역습 20%');
+  // T-11-443 스크린리더용 남은 시간은 처음 안내 한 줄, 건너뛰기 버튼은 감독에게 맡긴다고 적는다.
+  await expect(page.locator('[data-moment-spoken]')).toHaveText(
+    '15초 안에 고르지 않으면 감독에게 맡겨요',
+  );
+  await expect(page.locator('[data-act="moment-skip"]')).toHaveText('감독에게 맡기고 결과 보기');
+  await expect(live.locator('[data-act="live-skip"]')).toHaveText('감독에게 맡기고 결과 보기');
   await expectNoA11yViolations(page);
   // Freeze after the accessibility scan; browser/CI work must not spend the choice budget.
   const now = await page.evaluate(() => Date.now());

@@ -68,10 +68,19 @@ test('배너 → 리그 화면 신청 · 취소, 다시 들어와도 리그 조�
   await expect(page.locator('[data-act="league-enter"]')).toBeVisible();
   expect(hits['GET /v1/leagues/current']).toBe(1);
 
+  // T-11-444 신청은 확인 창(자격 · 기권 · 취소 마감)을 거친다. 닫으면 신청하지 않는다.
   await page.locator('[data-act="league-enter"]').click();
+  const ask = page.locator('[data-league-ask="enter"]');
+  await expect(ask).toContainText('참가 자격');
+  await expect(ask).toContainText('11월 4일 23:59까지는 신청을 취소할 수 있어요.');
+  await ask.locator('[data-act="league-ask-close"]').click();
+  await expect(ask).toHaveCount(0);
+  expect(hits['POST /v1/leagues/current/entries']).toBeUndefined();
+  await page.locator('[data-act="league-enter"]').click();
+  await page.locator('[data-act="league-enter-confirm"]').click();
   await expect(page.locator('[data-league-entered]')).toBeVisible();
-  page.once('dialog', (d) => void d.accept());
   await page.locator('[data-act="league-withdraw"]').click();
+  await page.locator('[data-act="league-withdraw-confirm"]').click();
   await expect(page.locator('[data-act="league-enter"]')).toBeVisible();
   expect(hits['POST /v1/leagues/current/entries']).toBe(1);
   expect(hits['DELETE /v1/leagues/current/entries/me']).toBe(1);
@@ -345,8 +354,13 @@ test('T-11-418b 배치 뒤: 내 배치 · 순위표 · 라운드 경기 · 경�
   await expect(board).toContainText('기권 1/3');
   // T-11-430 내 줄에는 기권이 없어도 기권 0/3을 보인다.
   await expect(board.locator('[data-league-forfeits="mine"]')).toContainText('기권 0/3');
+  // T-11-444 범례는 이 부(1부)에 맞춘 승강 한 줄, 라운드에는 날짜와 한국 시간.
+  await expect(board.locator('[data-league-legend]')).toHaveText(
+    '1위는 우승, 7 · 8위는 다음 시즌 2부로 내려가요.',
+  );
   // 다음 라운드(4라운드)가 먼저 보이고, 3라운드를 고르면 끝난 경기를 연다.
   await expect(page.locator('[data-league-round]')).toHaveValue('4');
+  await expect(page.locator('[data-league-round-at]')).toHaveText('11월 8일 13:00 한국 시간');
   await page.locator('[data-league-round]').selectOption('3');
   await page.locator('[data-league-match="lgm_3_2"] [data-act="league-match-open"]').click();
   await expect(page.locator('[data-act="league-detail-back"]')).toBeVisible();
@@ -456,4 +470,86 @@ test('T-11-418d 끝난 리그: 확정 배지 · 리그 기록 · 마지막 라�
   await expect(live.locator('[data-league-live-rank="1"]')).toContainText('리그팀1');
   await live.locator('[data-act="league-live-close"]').click();
   await expect(live).toBeHidden();
+});
+
+test('T-11-444 마감 뒤엔 취소할 수 없다고 알리고, 내 신청 조회가 실패하면 다시 시도할 수 있다', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date('2026-11-04T16:00:00.000Z'));
+  let fail = true;
+  await page.route(`${API}/**`, (r) => {
+    const path = new URL(r.request().url()).pathname;
+    if (path === '/v1/profile') return r.fulfill(ok(profile));
+    if (path === '/v1/leagues/current')
+      return r.fulfill(ok({ league, phase: 'closed', entries: 20 }));
+    if (path === '/v1/leagues/current/me') {
+      if (fail) return r.fulfill({ status: 503, body: '' });
+      return r.fulfill(
+        ok({
+          entry: { createdAt: '2026-11-01T03:00:00.000Z' },
+          canEnter: false,
+          team: { teamId: 'tem_1', filled: 8, ovr: 80 },
+          lastTeam: null,
+        }),
+      );
+    }
+    return r.fulfill({ status: 503, body: '' });
+  });
+  await page.goto('/');
+  await page.locator('[data-league-banner]').click();
+  await expect(page.locator('[data-league-me-error]')).toContainText(
+    '내 신청 정보를 불러오지 못했어요.',
+  );
+  fail = false;
+  await page.locator('[data-act="league-me-retry"]').click();
+  await expect(page.locator('[data-league-entered]')).toBeVisible();
+  await expect(page.locator('[data-league-note]')).toContainText(
+    '접수가 끝나 신청을 취소할 수 없어요.',
+  );
+  await expect(page.locator('[data-act="league-withdraw"]')).toHaveCount(0);
+  await expect(page.locator('[data-league-kst]')).toContainText('한국 시간');
+});
+
+test('T-11-444 다음 시즌 접수 중엔 지난 시즌 결산을 보이고, 비회원 로그인 안내는 진행 중에 숨긴다', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date('2026-11-01T03:00:00.000Z'));
+  let phase = 'open';
+  let member = true;
+  await page.route(`${API}/**`, (r) => {
+    const path = new URL(r.request().url()).pathname;
+    if (path === '/v1/profile')
+      return r.fulfill(
+        ok(
+          member
+            ? profile
+            : { ...profile, linked: { google: false, apple: false }, googleEmailMasked: null },
+        ),
+      );
+    if (path === '/v1/leagues/current') return r.fulfill(ok({ league, phase, entries: 20 }));
+    if (path === '/v1/leagues/current/me')
+      return r.fulfill(
+        ok({
+          entry: null,
+          canEnter: true,
+          team: null,
+          lastFinal: { season: 1, tier: 2, league: 1, rank: 1, outcome: 'promoted', nextTier: 1 },
+        }),
+      );
+    return r.fulfill({ status: 503, body: '' });
+  });
+  await page.goto('/');
+  await page.locator('[data-league-banner]').click();
+  const last = page.locator('[data-league-last-final="promoted"]');
+  await expect(last).toContainText('시즌 1 결산');
+  await expect(last).toContainText('2부 1리그 최종 1위');
+  await expect(last).toContainText('이번 시즌에 신청하면 1부에서 시작해요.');
+
+  member = false;
+  phase = 'running';
+  await page.goto('/');
+  await page.locator('[data-league-banner]').click();
+  await expect(page.locator('[data-league-hero]')).toHaveAttribute('data-league-phase', 'running');
+  await expect(page.locator('[data-league-login]')).toHaveCount(0);
+  await expect(page.locator('[data-act="league-login-google"]')).toHaveCount(0);
 });

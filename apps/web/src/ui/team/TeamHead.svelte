@@ -128,8 +128,9 @@
       </label>
       <label class="field">
         <span class="lbl">{L.managerNameLabel}</span>
-        <input type="text" bind:value={manager} minlength={MANAGER_NAME_MIN} maxlength={MANAGER_NAME_MAX} placeholder={L.charsRange({ min: MANAGER_NAME_MIN, max: MANAGER_NAME_MAX })} aria-invalid={!!manager && !!issues.manager} aria-describedby="team-manager-hint" data-team-manager enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter />
+        <input type="text" bind:value={manager} minlength={MANAGER_NAME_MIN} maxlength={MANAGER_NAME_MAX} placeholder={L.charsRange({ min: MANAGER_NAME_MIN, max: MANAGER_NAME_MAX })} aria-invalid={!!manager && !!issues.manager} aria-describedby="team-manager-hint team-manager-note" data-team-manager enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter />
         <small id="team-manager-hint" class="muted">{issues.manager}</small>
+        <small id="team-manager-note" class="muted" data-team-manager-note>{L.managerNameNote}</small>
       </label>
     </div>
   {/if}

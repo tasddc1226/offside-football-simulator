@@ -56,8 +56,8 @@ const ko = {
   menuRename: '이름 바꾸기',
   logoOpen: '팀 로고 설정',
   titleEnterName: '팀 이름 입력',
-  managerEnter: '감독 이름 입력',
-  managerLine: (p: { name: string }) => `${p.name} 감독`,
+  managerEnter: '팀 대표 이름 입력',
+  managerLine: (p: { name: string }) => `대표 ${p.name}`,
   unsaved: '저장 전',
   teamOvr: (p: { n: number }) => `팀 OVR ${p.n}`,
   statRecord: '전적',
@@ -72,11 +72,13 @@ const ko = {
   introNone: (p: { season: string }) => `${p.season}에는 팀을 꾸리지 않았어요.`,
   readonlyNote: '지난 시즌 팀이라 보기만 할 수 있어요.',
   teamNameLabel: '팀 이름',
-  managerNameLabel: '감독 이름',
+  managerNameLabel: '팀 대표 이름',
+  /** T-11-443 팀 대표 이름은 표시용이다(감독 칸 보정과 무관). */
+  managerNameNote: '팀 소개에만 보이는 이름이에요. 경기 보정은 감독 칸에 앉힌 감독이 줘요.',
   charsRange: (p: { min: number; max: number }) => `${p.min}~${p.max}자`,
   // 머리(앱 Team.tsx)
   seasonLabel: '시즌',
-  managerMine: '나의 감독',
+  managerMine: '팀 대표',
   recordLineApp: (p: { record: string; rating: string; tail: string }) =>
     `${p.record} · 레이팅 ${p.rating} · ${p.tail}`,
   todayApp: (p: { left: number; per: number }) => `오늘 ${p.left}/${p.per}경기`,

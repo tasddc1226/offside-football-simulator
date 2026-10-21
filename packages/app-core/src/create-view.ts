@@ -4,6 +4,8 @@
 import {
   ATTR_KEYS,
   attrLabels,
+  FOCUS_GROWTH,
+  OFF_FOCUS_GROWTH,
   typeForFocus,
   type AttrKey,
   type Pos,
@@ -21,6 +23,16 @@ import {
 } from '@offside/game/attributes';
 import type { Body } from '@offside/contracts/body';
 import { createText as L } from './i18n/ko/create.js';
+
+/**
+ * T-11-437 주력 능력치 버튼 아래 한 줄. 주력은 시작 보정과 훈련 성장 가산을, 비주력은 시작 보정(없으면 변화 없음)과
+ * 훈련 성장 감산(OFF_FOCUS_GROWTH)을 함께 보인다. 수치는 data.ts 상수에서 읽어 표시만 한다.
+ */
+export function focusNote(focused: boolean, d: number): string {
+  if (focused) return L.focusUp({ d, pct: Math.round((FOCUS_GROWTH - 1) * 100) });
+  const pct = Math.round((1 - OFF_FOCUS_GROWTH) * 100);
+  return d < 0 ? L.focusDown({ d, pct }) : L.focusNone({ pct });
+}
 
 /** 시작 OVR 추정치 — newGame이 세부 능력치를 맞추는 목표값(legacyOvr)과 같다. */
 export const startOvr = (pos: Pos, attrs: Record<AttrKey, number>): number =>

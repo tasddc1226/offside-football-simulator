@@ -159,6 +159,13 @@ test('static guide correction dictionaries have complete English and Japanese co
   }
 });
 
+test('T-11-441 가이드의 진행 상황 저장은 웹 · 앱을 나눠 적는다', () => {
+  const guide = STATIC_PAGES['/guide/'];
+  assert.ok(guide.includes(`<p>${guideKo.saveWeb}</p>`));
+  assert.ok(guide.includes(`<p>${guideKo.saveApp}</p>`));
+  assert.doesNotMatch(guide, /이 브라우저\(기기\)에만/);
+});
+
 test('T-10-118 maskable 아이콘은 모서리 없는 배경에 서클·글자만 80%로 줄인다', () => {
   const out = brandSvg('light', { rounded: false, artScale: 0.8 });
   assert.doesNotMatch(out, /rx="224"/);

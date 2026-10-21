@@ -9,6 +9,9 @@
   import {
     leagueForfeitsTag,
     leagueClinches,
+    leagueLegend,
+    leagueRoundAt,
+    leagueZoneLabel,
     leagueFinalReady,
     leagueMatchMid,
     leagueRecords,
@@ -56,6 +59,8 @@
     down: { text: L.clinchDown, cls: 'warn' },
   };
   const records = $derived(table ? leagueRecords(table) : null);
+  const legend = $derived(leagueLegend(tier, bottomTier));
+  const roundAt = $derived(day ? leagueRoundAt(day.matches) : null);
   const scorers = $derived(table?.scorers ?? []);
   const finalReady = $derived(!!table && leagueFinalReady(table));
   let live = $state(false);
@@ -75,12 +80,13 @@
               {@const t = teams.get(s.teamId)}
               {@const zone = leagueZone(s.rank, rows.length, tier, bottomTier)}
               {@const cl = clinches.get(s.teamId)}
+              {@const zoneLabel = s.teamId === mineId ? leagueZoneLabel(zone, !!cl) : null}
               <tr class:up={zone === 'up'} class:down={zone === 'down'} class:mine={s.teamId === mineId} data-league-rank={s.rank}>
                 <td class="t">
                   <div class="lg-who">
                     <span class="rk">{s.rank}</span>
                     <TeamLogo logo={t?.logo} name={t?.name ?? C.tbd} size={24} decorative />
-                    <span class="lg-nm"><b>{t?.name ?? C.tbd}{#if cl}<span class="pill lg-clinch {CLINCH[cl].cls}" data-league-clinch={cl}>{CLINCH[cl].text}</span>{/if}</b><small class="muted">{C.teamOwnerLabel} {t?.owner ?? C.tbd}{#if s.forfeits || s.teamId === mineId}&nbsp;· <span data-league-forfeits={s.teamId === mineId ? 'mine' : undefined}>{leagueForfeitsTag(s.forfeits)}</span>{/if}</small></span>
+                    <span class="lg-nm"><b>{t?.name ?? C.tbd}{#if cl}<span class="pill lg-clinch {CLINCH[cl].cls}" data-league-clinch={cl}>{CLINCH[cl].text}</span>{/if}{#if zoneLabel}<span class="pill lg-clinch" class:good={zone === 'up'} class:warn={zone === 'down'} data-league-my-zone={zone}>{zoneLabel}</span>{/if}</b><small class="muted">{C.teamOwnerLabel} {t?.owner ?? C.tbd}{#if s.forfeits || s.teamId === mineId}&nbsp;· <span data-league-forfeits={s.teamId === mineId ? 'mine' : undefined}>{leagueForfeitsTag(s.forfeits)}</span>{/if}</small></span>
                   </div>
                 </td>
                 <td>{s.p}</td><td>{s.w}</td><td>{s.d}</td><td>{s.l}</td><td>{gd(s.gf, s.ga)}</td><td><b>{s.pts}</b></td>
@@ -90,9 +96,9 @@
         </table>
       </div>
       <p class="muted fs-xs lg-legend">
-        {#if tier > 1}<span class="lg-key up"></span>{L.zoneUp}{/if}
-        {#if tier < bottomTier}<span class="lg-key down"></span>{L.zoneDown}{/if}
-        <span>{L.ruleMove}</span>
+        {#if legend.up}<span class="lg-key up"></span>{L.zoneUp}{/if}
+        {#if legend.down}<span class="lg-key down"></span>{L.zoneDown}{/if}
+        <span data-league-legend>{legend.move}</span>
         {#if clinches.size}<span>{L.clinchNote}</span>{/if}
       </p>
     </section>
@@ -107,6 +113,7 @@
           </select>
         </label>
       </div>
+      {#if roundAt}<p class="muted fs-sm lg-at" data-league-round-at>{roundAt}</p>{/if}
       {#if day}
         <ul class="lg-matches">
           {#each day.matches as m (m.id)}
@@ -171,6 +178,7 @@
   .lg-nm { display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
   .lg-nm small { font-size: 11px; font-weight: 400; }
   .lg-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; }
+  .lg-at { margin: 0; }
   .lg-key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
   .lg-key.up { background: var(--good); }
   .lg-key.down { background: var(--warn); }

@@ -35,6 +35,7 @@ export const legendRn: Translation<LegendRnMsgs> = {
   anonTail: 'の永久欠番が確定します。',
   anonNote: '先に名前を公開した選手がその番号を受け取ります。',
   publish: '名前を公開して欠番を受け取る',
+  anonBlocked: 'リンクや不適切な言葉を含む名前は公開できないため、この欠番は受け取れません。',
   alertTitle: (p) => `👑 ${p.name}、${p.number}番が永久欠番に`,
   alertSub: (p) => `${p.club} · サーバー${p.seq}番目の欠番`,
   alertLabel: (p) => `${p.name}、${p.number}番が永久欠番に`,

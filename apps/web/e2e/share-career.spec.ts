@@ -256,3 +256,53 @@ test('T-11-433 서버가 은퇴 기록을 거절하면 이유를 보여 주고, 
   await expect(page.getByText('잠시 후 다시 시도해 주세요.')).toHaveCount(0);
   await expect(page.locator('.share-url')).toHaveCount(0);
 });
+
+test('T-11-439 공유받은 화면은 맨 위에도 시작 버튼이 있고, 공개된 이름은 맨 아래에서 신고할 수 있다', async ({
+  page,
+}) => {
+  const ID = '0d000000-0000-4000-8000-0000000004b8';
+  const calls: string[] = [];
+  page.on('request', (r) => {
+    if (/\/v1\/(reports|profile)/.test(r.url())) calls.push(`${r.method()} ${r.url()}`);
+  });
+  await page.route(new RegExp(`/v1/hof/${ID}$`), (r) =>
+    r.fulfill(
+      json({
+        data: {
+          entry: {
+            id: ID,
+            name: '공유왕',
+            pos: 'FW',
+            number: 9,
+            retireAge: 34,
+            peak: 86,
+            legendScore: 500,
+            apps: 300,
+            goals: 150,
+            assists: 70,
+            trophies: 3,
+            awards: 1,
+            caps: 0,
+            ballon: 0,
+            lastClub: '맨체스터 스카이블루',
+            retiredAt: '2026-09-26T00:00:00.000Z',
+            hasDetail: false,
+            title: null,
+          },
+          snapshot: null,
+        },
+      }),
+    ),
+  );
+  await page.goto(`/career/${ID}`);
+  await expect(page.locator('[data-shared="view"]')).toBeVisible();
+  const top = page.locator('[data-act="shared-start-top"]');
+  await expect(top).toBeInViewport();
+  await expect(top).toHaveText('나도 커리어 시작하기 →');
+  const report = page.locator('[data-act="name-report"]');
+  await expect(report).toHaveText('선수 이름 신고');
+  // 신고 버튼이 있어도 누르기 전에는 프로필 · 신고 API를 부르지 않는다.
+  expect(calls).toEqual([]);
+  await top.click();
+  await expect(page).toHaveURL(/\/$/);
+});

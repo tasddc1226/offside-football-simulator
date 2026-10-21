@@ -5,7 +5,12 @@
   // 순으로 보여 주고, 줄을 누르면 팀 프로필(appState.hof.team)을 연다. 서버가 5분마다 새로 센다.
   import { TEAM_RANK_PER_PAGE } from '@offside/contracts/owner-team';
   import { displaySeasonAt, openTeamSeasons, teamSeasonName } from '@offside/contracts/service-seasons';
-  import { fetchTeamRanking, type TeamRankResponse, type TeamRankSort } from '@offside/app-core/api/team';
+  import { fetchMyTeamRank, fetchTeamRanking, type TeamRankResponse, type TeamRankSort } from '@offside/app-core/api/team';
+  import { canJumpToMyRank, myRankJump } from '@offside/app-core/myRank';
+  import { isMember } from '@offside/app-core/account';
+  import { accountCache } from '../account-state.svelte.js';
+  import { toast } from '../helpers.js';
+  import { tick } from 'svelte';
   import { seasonNow } from '../seasonNow.svelte.js';
   import { appState } from '../state.svelte.js';
   import TeamProfile from './TeamProfile.svelte';
@@ -48,9 +53,39 @@
   const metricOf = $derived(METRIC[sort].of);
   const rows = $derived(data?.items ?? []);
 
+  // T-11-441 '내 순위로' — 로그인한 구단주만, 가치순은 빼고. 누르면 내 팀이 있는 페이지로 가고 그 줄을 강조한다.
+  // 로그인 상태를 아직 묻지 않았으면(구단주 화면을 열지 않음) 버튼을 두고, 누를 때 서버가 판정한다(따로 묻지 않는다).
+  const member = $derived.by(() => {
+    const a = accountCache.value;
+    return a === undefined || (!!a && a !== 'error' && isMember(a));
+  });
+  let myTeam = $state<string | null>(null);
+  let jumping = $state(false);
+  /** 내 순위 응답이 곧 그 페이지다 — 페이지를 옮겨도 다시 받지 않게 한 번 넘겨 둔다. */
+  let preset: TeamRankResponse | null = null;
+  async function jumpToMe() {
+    jumping = true;
+    const j = myRankJump(await fetchMyTeamRank(season, sort), 'team');
+    jumping = false;
+    if (!j.ok) return toast(j.message);
+    myTeam = j.data.me?.teamId ?? null;
+    if (j.data.page !== page) preset = j.data;
+    data = j.data;
+    page = j.data.page;
+    await tick();
+    document.querySelector(`[data-rank-team="${myTeam}"]`)?.scrollIntoView({ block: 'center' });
+  }
+
   $effect(() => {
     const [se, so, p] = [season, sort, page];
     void shownSeason;
+    if (preset && preset.page === p && preset.sort === so) {
+      preset = null;
+      loading = false;
+      failed = false;
+      return;
+    }
+    preset = null;
     let live = true;
     failed = false;
     loading = true;
@@ -89,6 +124,9 @@
       </label>
       {#if data && !loading && !failed}<span class="team-ranking-total muted">{L.teamsBefore}<b class="num">{n(data.total)}</b>{L.teamsAfter}</span>{/if}
     </div>
+    {#if canJumpToMyRank(member, sort)}
+      <button class="btn btn-sm rank-jump" data-act="my-rank" disabled={jumping} onclick={() => void jumpToMe()}>{L.myRank}</button>
+    {/if}
     <p class="hof-filter-label team-sort-label">{L.sortLabel}</p>
     <div class="hof-sorts team-ranking-sorts" role="group" aria-label={L.sortGroupAria}>
       {#each sorts() as [k, label] (k)}
@@ -109,7 +147,7 @@
           <ol class="team-standings-list" start={rows[0]!.rank} aria-label={L.teamListAria({ metric: metricLabel })}>
             {#each rows as t (t.teamId)}
               {@const played = t.record.w + t.record.d + t.record.l}
-              <li value={t.rank}>
+              <li value={t.rank} class:mine={t.teamId === myTeam} aria-current={t.teamId === myTeam ? 'true' : undefined}>
                 <button class="team-standings-columns team-standings-row" data-rank-team={t.teamId} aria-label={L.teamRowAria({ rank: t.rank, name: t.name, played: n(played), w: n(t.record.w), d: n(t.record.d), l: n(t.record.l), metric: metricLabel, value: metricOf(t), form: formText(t.recentForm) })} onclick={() => open(t.teamId)}>
                   <span class="team-standings-team"><span class="team-standings-rank num">{t.rank}</span><span class="team-standings-logo"><TeamLogo logo={t.logo} name={t.name} size={24} decorative />{#if t.title}<span class="team-standings-title"><TitleBadge title={t.title} size="icon" /></span>{/if}</span><b title={t.name}>{t.name}</b></span>
                   <span class="num" title={L.playedTitle({ n: n(played) })}>{n(played)}</span>
@@ -205,6 +243,14 @@
   }
   .team-standings-list > li + li {
     border-top: 1px solid var(--line);
+  }
+  /* T-11-441 내 팀 줄 */
+  .team-standings-list > li.mine {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    border-radius: 8px;
+  }
+  .rank-jump {
+    margin: 0 0 12px;
   }
   .team-standings-row {
     width: 100%;

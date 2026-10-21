@@ -105,11 +105,16 @@ test('홈 선물: 히어로 바로 아래에서 한 번 받으면 사라지고 �
   );
 
   await card.locator('[data-act="home-gift-claim"]').click();
-  await expect(page.locator('.toast')).toContainText('받았어요');
+  // T-11-440 받은 뒤 토스트 대신 같은 자리에 결과 · 쓰는 곳 안내 · 내 구단 버튼이 남는다.
+  const done = page.locator('[data-home-gift-done]');
+  await expect(done).toContainText('잠재력 강화권 20장과 프리미엄 스카우트권 5장을 받았어요');
+  await expect(done).toContainText('선수 탭 잠재력 강화');
   await expect(card).toHaveCount(0);
   expect(calls).toMatchObject({ get: 1, claim: 1, body: [{ id: GIFT.id }] });
+  await done.locator('[data-act="home-gift-owner"]').click();
+  await expect(page.locator('.hero-home')).toHaveCount(0);
 
-  await page.reload();
+  await page.goto('/');
   await expect(page.locator('[data-cup-banner]')).toBeVisible();
   await expect(card).toHaveCount(0);
   expect(calls).toMatchObject({ get: 1, claim: 1 });
@@ -136,7 +141,9 @@ test('T-11-386 시즌 1 업적 보상: 같은 칸에서 받은 장수만 보이�
   await expect(card).toContainText('시즌 1 업적으로 잠재력 강화권 3장을 받을 수 있어요.');
   await expect(card).not.toContainText('스카우트권');
   await card.locator('[data-act="home-gift-claim"]').click();
-  await expect(page.locator('.toast')).toContainText('잠재력 강화권 3장을 받았어요.');
+  await expect(page.locator('[data-home-gift-done]')).toContainText(
+    '잠재력 강화권 3장을 받았어요.',
+  );
   await expect(card).toHaveCount(0);
   expect(calls).toMatchObject({ get: 1, claim: 1, body: [{ id: 'ach-season-1' }] });
 });

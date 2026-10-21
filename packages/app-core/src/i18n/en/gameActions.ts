@@ -54,6 +54,7 @@ export const gameActions: Translation<GameActionsMsgs> = {
   peekSafeCost: 'Small risk of a cost',
   peekAria: (p) => `Effects: ${p.chips}`,
   oddsMinigame: (p) => `One-tap · ${p.zone}`,
+  oddsMinigameTerm: 'One-tap',
   oddsMinigameHint:
     'Tap when the needle is in the green zone to succeed. Your attributes set the zone width',
   outcomeOk: 'Success',

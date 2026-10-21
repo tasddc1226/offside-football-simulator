@@ -70,6 +70,7 @@ const ko = {
   peekSafeCost: '가끔 대가',
   peekAria: (p: { chips: string }) => `득실 ${p.chips}`,
   oddsMinigame: (p: { zone: string }) => `원터치 · ${p.zone}`,
+  oddsMinigameTerm: '원터치',
   oddsMinigameHint: '바늘이 초록 구간에 올 때 탭하면 성공해요. 구간 넓이는 능력치로 정해져요',
   outcomeOk: '성공',
   outcomeFail: '실패',

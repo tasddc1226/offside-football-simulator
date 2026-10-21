@@ -4,7 +4,14 @@ import { SAVE_VERSION } from '@offside/game/data';
 import '@offside/game/event-registry';
 import { createRng, getActiveRng, setActiveRng } from '@offside/game/rng';
 import type { GameState, HofEntry } from '@offside/game/types';
-import { applyBackup, backupFileName, decodeBackup, encodeBackup, mergeHof } from './backup.js';
+import {
+  applyBackup,
+  backupFileName,
+  decodeBackup,
+  encodeBackup,
+  mergeHof,
+  replaceConfirmText,
+} from './backup.js';
 
 // T-10-116: 진행 중 커리어 백업 코드. 형식·검증·화이트리스트 쓰기를 확인한다.
 const save = (): Record<string, unknown> =>
@@ -201,5 +208,18 @@ describe('applyBackup', () => {
 describe('세이브 타입', () => {
   it('fixture가 GameState 모양이다', () => {
     expect((fixture as unknown as GameState).v).toBe(SAVE_VERSION);
+  });
+});
+
+describe('replaceConfirmText (T-11-441)', () => {
+  it('저장된 커리어가 없으면 묻지 않는다', () => {
+    expect(replaceConfirmText(null)).toBeNull();
+    expect(replaceConfirmText(undefined)).toBeNull();
+  });
+  it('진행 중이면 되돌릴 수 없다고, 은퇴했으면 명예의 전당은 남는다고 묻는다', () => {
+    expect(replaceConfirmText({ name: '김민수', retired: false })).toContain('되돌릴 수 없어요');
+    const retired = replaceConfirmText({ name: '김민수', retired: true });
+    expect(retired).toContain('은퇴한 김민수 선수');
+    expect(retired).toContain('명예의 전당 기록은 그대로 남아요');
   });
 });

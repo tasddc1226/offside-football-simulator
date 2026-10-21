@@ -8,7 +8,7 @@ import { eq } from 'drizzle-orm';
 import { closeSeasonSchedule, applySeasonSchedule } from '@offside/contracts/service-seasons';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
-import { cards, careers, leagueSeasons, ownerTeams } from '../db/schema.js';
+import { cards, careers, leagueEntries, leagueSeasons, ownerTeams } from '../db/schema.js';
 import { forgetSeasonSchedule, saveSeasonSchedule } from '../seasonSchedule.js';
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
@@ -261,5 +261,37 @@ describe('/v1/leagues (T-11-418)', () => {
     expect(seen.filter((q) => /"sessions"|from "profiles"|"profiles"\."id" = \?/.test(q))).toEqual(
       [],
     );
+  });
+  it('T-11-444 다음 시즌 배치 전에는 지난 시즌 결산(최종 순위 · 다음 시즌 부)을 함께 돌려준다', async () => {
+    // 시즌 2 리그가 끝나고(11/19 13:00 KST) 시즌 3(잠정 개막 11/25) 사전 신청 기간.
+    vi.setSystemTime(new Date('2026-11-20T03:00:00.000Z'));
+    const v = await view();
+    expect([v.league.season, v.phase]).toEqual([3, 'open']);
+    const a = await owner(null);
+    const b = await owner(null);
+    const at = '2026-11-19T05:00:00.000Z';
+    await ctx.db.insert(leagueEntries).values([
+      {
+        season: 2,
+        profileId: a.profileId,
+        tier: 2,
+        leagueNo: 1,
+        finalRank: 1,
+        outcome: 'promoted',
+        createdAt: at,
+        updatedAt: at,
+      },
+      // 결산 전 행은 싣지 않는다.
+      { season: 2, profileId: b.profileId, tier: 1, leagueNo: 1, createdAt: at, updatedAt: at },
+    ]);
+    expect((await me(a.cookie)).lastFinal).toEqual({
+      season: 2,
+      tier: 2,
+      league: 1,
+      rank: 1,
+      outcome: 'promoted',
+      nextTier: 1,
+    });
+    expect((await me(b.cookie)).lastFinal).toBeUndefined();
   });
 });

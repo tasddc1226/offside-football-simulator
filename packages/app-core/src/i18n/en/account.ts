@@ -33,6 +33,8 @@ export const account: Translation<AccountMsgs> = {
   deleteBody:
     "Delete your account and the player records, teams, comments and chat saved on the server? This can't be undone. Game progress on this device stays.",
   deleteConfirm: 'Delete',
+  deleteDone: 'Your account was deleted. Game progress on this device stays.',
+  deleteFail: "Couldn't delete your account. Try again in a moment.",
   googleTitle: 'Google account',
   googleVia: "You're logged in with your Google account.",
   appleTitle: 'Apple account',

@@ -117,6 +117,13 @@ export const cup: Translation<CupMsgs> = {
   toastEntered: 'You entered the cup.',
   toastWithdrawn: 'Entry withdrawn.',
   loginToEnter: 'Log in with Google to enter.',
+  loginCardNote: 'Log in to enter the cup and make match predictions.',
+  enterAskTitle: 'Enter the cup?',
+  enterAskWithdraw: 'You can withdraw while entries are open.',
+  enterAskOk: 'Enter',
+  enterAskCancel: 'Cancel',
+  toLineup: 'Go to lineup',
+  toMakeTeam: 'Build a team',
   enterLockNote:
     "Once you enter, your starters can't be listed on the market or released. They unlock when you're knocked out.",
   reasonNoTeam: 'You need a team for this season to enter.',
@@ -278,7 +285,9 @@ export const cup: Translation<CupMsgs> = {
   shopBusy: 'Buying…',
   shopSoldOut: "You've bought today's limit. You can buy more from 00:00 (KST) tomorrow.",
   shopClosed: "Reroll tickets aren't on sale right now.",
-  shopShort: "You don't have enough club funds.",
+  shopShort: (p) =>
+    `You need ${p.short} more club funds. Release players you developed to raise funds.`,
+  shopGoRelease: 'Go to release',
   shopConfirm: (p) =>
     `Buy 1 reroll ticket for ${p.price}? You'll have ${p.balance} in club funds left, and this can't be undone.`,
   shopDone: (p) => `Ticket bought. You now have ${plural(p.n, 'reroll ticket')}.`,

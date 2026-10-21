@@ -5,7 +5,9 @@
   import { buyReroll, fetchItems, fetchRerollShop, type RerollShopResponse } from '@offside/app-core/api/cup';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
   import { fundsText } from '@offside/app-core/market';
-  import { rerollShopState } from '@offside/app-core/rerollShop';
+  import { rerollShopState, shopShortText } from '@offside/app-core/rerollShop';
+  import Skeleton from '../Skeleton.svelte';
+  import FundsShort from './FundsShort.svelte';
   import { toast } from '../helpers.js';
 
   let { onbought, focus = false }: { onbought?: (balance: number, spent: number) => void; focus?: boolean } = $props();
@@ -90,14 +92,14 @@
         <p class="muted fs-sm" data-reroll-soldout>{L.shopSoldOut}</p>
       {:else}
         <p class="rs-price" data-reroll-price>{L.shopPrice({ price: fundsText(shop.price!) })}</p>
-        {#if view === 'short'}<p class="muted fs-sm">{L.shopShort}</p>{/if}
+        {#if view === 'short'}<FundsShort text={shopShortText(shop.balance, shop.price)} />{/if}
         <button class="btn btn-primary btn-block" data-act="reroll-buy" disabled={busy || view === 'short'} onclick={buy}>
           {busy ? L.shopBusy : L.shopBuy({ price: fundsText(shop.price!) })}
         </button>
       {/if}
       <p class="muted fs-sm">{L.shopNote}</p>
     {:else}
-      <p class="muted fs-sm">{failed ? L.shopLoadFail : '…'}</p>
+      {#if failed}<p class="muted fs-sm">{L.shopLoadFail}</p>{:else}<Skeleton height={96} />{/if}
     {/if}
   {/if}
 </section>

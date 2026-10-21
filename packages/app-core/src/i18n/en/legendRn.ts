@@ -36,6 +36,8 @@ export const legendRn: Translation<LegendRnMsgs> = {
   anonTail: 'will be retired for you.',
   anonNote: 'The first player to make their name public gets the number.',
   publish: 'Go public and claim the number',
+  anonBlocked:
+    "This name has a link or profanity, so it can't be made public and this number can't be claimed.",
   alertTitle: (p) => `👑 ${p.name}: No. ${p.number} retired`,
   alertSub: (p) => `${p.club} · server retirement No. ${p.seq}`,
   alertLabel: (p) => `${p.name}, No. ${p.number} retired`,

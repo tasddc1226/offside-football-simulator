@@ -8,6 +8,7 @@ import {
   type LeagueResponse,
 } from '@offside/contracts';
 import {
+  LEAGUE_FROM_SEASON,
   LEAGUE_ROUNDS,
   leagueNextTier,
   leaguePhase,
@@ -166,6 +167,27 @@ async function lastTeamOf(db: Db, league: LeagueDef, profileId: string, now: str
   return { season, filled };
 }
 
+/**
+ * T-11-444 지난 시즌 내 결산(이번 시즌 배치 전에만 묻는다). 결산이 끝난 신청 행만(기본 키 한 줄 조회), 없으면 undefined라
+ * 응답에서 빠진다.
+ */
+async function lastFinalOf(db: Db, league: LeagueDef, profileId: string, now: string) {
+  const season = league.season - 1;
+  if (now >= league.drawAt || season < LEAGUE_FROM_SEASON) return undefined;
+  const [row] = await mineOf(db, season, profileId);
+  if (!row?.outcome || row.finalRank === null || row.tier === null || row.leagueNo === null)
+    return undefined;
+  const outcome = row.outcome as LeagueOutcome;
+  return {
+    season,
+    tier: row.tier,
+    league: row.leagueNo,
+    rank: row.finalRank,
+    outcome,
+    nextTier: leagueNextTier(row.tier, outcome),
+  };
+}
+
 const mineOf = (db: Db, season: number, profileId: string) =>
   db
     .select()
@@ -212,9 +234,10 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const league = await leagueOf(c, now);
-    const [[mine], team] = await Promise.all([
+    const [[mine], team, lastFinal] = await Promise.all([
       mineOf(db, league.season, me.id),
       teamNow(db, league, me.id),
+      lastFinalOf(db, league, me.id, now),
     ]);
     return ok(
       c,
@@ -225,6 +248,7 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
         team,
         lastTeam: team || now >= league.closesAt ? null : await lastTeamOf(db, league, me.id, now),
         placement: now < league.drawAt ? null : await placementOf(db, league.season, mine),
+        ...(lastFinal ? { lastFinal } : {}),
       },
       200,
       NO_STORE,

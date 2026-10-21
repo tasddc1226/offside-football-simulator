@@ -50,6 +50,11 @@ const ko = {
   imageSave: '이미지 저장',
   imageSend: '바로 공유하기',
   imageRemake: '다시 만들기',
+  // T-11-439 칭호·결번이 바뀐 뒤 이미 만든 이미지(B2), 앱은 공유 시트 하나로 저장도 한다(B7).
+  imageStale: '칭호나 결번이 바뀌었어요. 다시 만들면 카드에 반영돼요.',
+  imageRefresh: '바뀐 내용 반영하기',
+  imageShareOrSave: '공유하거나 저장하기',
+  imageSheetNote: '저장하려면 공유 창에서 이미지 저장이나 사진 앱을 골라요.',
   imageNote: '인스타그램·카카오톡에 공유할 커리어 카드를 만들어요.',
   imageMaking: '만드는 중…',
   imageMake: '공유 이미지 만들기',

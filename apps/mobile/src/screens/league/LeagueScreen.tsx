@@ -1,6 +1,6 @@
 // T-11-418 오프사이드 리그 화면(홈의 리그 배너로 연다, 웹 League.svelte) — 일정 · 규칙 · 내 신청. T-11-418b 배치 뒤에는
 // 내 배치 · 리그 고르기 · 순위표 · 라운드 경기 · 경기 상세. 리그 한눈에는 누구나, 내 신청은 로그인한 구단주만 묻는다.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { isMember } from '@offside/app-core/account';
@@ -21,10 +21,16 @@ import {
   leagueChoices,
   leagueDefaultPick,
   leagueDefaultRound,
+  leagueEnterAsk,
+  leagueEntryCard,
   leagueEntryRules,
   leagueFinalView,
+  leagueLastFinalView,
   leagueLine,
   leagueOnHome,
+  leagueOutcomeTone,
+  leaguePhaseActive,
+  type LeagueAccount,
   leaguePlacementLine,
   type LeaguePick,
   leaguePhaseLabel,
@@ -72,7 +78,7 @@ export function LeagueBanner() {
               {L.seasonTitle({ season: data.league.season })}
             </Txt>
           </View>
-          <Pill tone={data.phase === 'open' ? 'good' : undefined}>
+          <Pill tone={leaguePhaseActive(data.phase) ? 'good' : undefined}>
             {leaguePhaseLabel(data.phase)}
           </Pill>
         </View>
@@ -108,21 +114,57 @@ function Bullet({ children }: { children: string }) {
   );
 }
 
-/** 내 신청 카드: 로그인 · 신청 · 취소 · 신청할 수 없는 이유. */
+/** 결산 한 덩이(이번 시즌 결산 · 지난 시즌 결산). */
+function FinalBlock({
+  testID,
+  title,
+  label,
+  tone,
+  line,
+  children,
+}: {
+  testID: string;
+  title: string;
+  label: string;
+  tone: 'good' | 'warn' | null;
+  line: string;
+  children: ReactNode;
+}) {
+  return (
+    <View testID={testID} style={{ gap: 4 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Txt v="sm" bold>
+          {title}
+        </Txt>
+        <Pill tone={tone ?? undefined}>{label}</Pill>
+      </View>
+      <Txt v="sm" bold>
+        {line}
+      </Txt>
+      {children}
+    </View>
+  );
+}
+
+/**
+ * 내 신청 카드: 로그인 · 신청(확인) · 취소 · 신청할 수 없는 이유. T-11-444 단계별 노출은 웹과 같은 규칙(leagueEntryCard),
+ * 내 신청을 불러오지 못하면 다시 시도.
+ */
 function EntryCard({
   data,
   me,
-  linked,
+  account,
+  meFailed,
   reload,
 }: {
   data: LeagueResponse;
   me: LeagueMeResponse | null;
-  linked: boolean;
+  account: LeagueAccount;
+  meFailed: boolean;
   reload: () => Promise<void>;
 }) {
   const [busy, setBusy] = useState<'enter' | 'withdraw' | null>(null);
   const lock = useRef(false);
-  const cache = useSnapshot(accountCache);
 
   async function run(kind: 'enter' | 'withdraw') {
     if (lock.current) return;
@@ -143,24 +185,35 @@ function EntryCard({
       { text: A.withdrawKeep, style: 'cancel' },
       { text: L.withdraw, style: 'destructive', onPress: () => void run('withdraw') },
     ]);
+  const askEnter = () => {
+    const ask = leagueEnterAsk(data);
+    Alert.alert(ask.title, ask.lines.join('\n\n'), [
+      { text: L.askClose, style: 'cancel' },
+      { text: L.enter, onPress: () => void run('enter') },
+    ]);
+  };
 
-  const { phase, league } = data;
-  if (!linked) {
-    if (phase !== 'soon' && phase !== 'open') return null;
-    // 계정 상태를 아직 모르면(불러오는 중) 로그인 버튼을 띄우지 않는다.
-    if (!cache.value || cache.value === 'error') return null;
+  const card = leagueEntryCard(data, account, me, meFailed);
+  if (card.kind === 'hidden') return null;
+  if (card.kind === 'login')
     return (
       <Card gap={10} testID="league-login">
-        <Txt v="sm">{L.loginToEnter}</Txt>
+        <Txt v="sm">{card.text}</Txt>
         <GoogleLoginButton
           testID="league-login-google"
           onPress={() => void startGoogleLogin({ league: true })}
         />
       </Card>
     );
-  }
-  if (!me) return null;
-  const entry = me.entry;
+  if (card.kind === 'error' || !me)
+    return (
+      <Card gap={10} testID="league-me-error">
+        <LoadState status="error" failText={L.meFail} retry={() => void reload()}>
+          {null}
+        </LoadState>
+      </Card>
+    );
+  const { league } = data;
   const ready = leagueReadiness(data, me);
   const placement = leaguePlacementLine(me, leagueCancelled(data));
   // T-11-430 배치 전: 참가 자격 · 기권 규칙, 팀 선발 고치기(팀 편성 화면으로).
@@ -171,49 +224,47 @@ function EntryCard({
     go('team');
   };
   const final = leagueFinalView(me, league.season);
-  const drawAt = leagueWhen(league.drawAt);
+  const last = leagueLastFinalView(me);
   return (
     <Card gap={10} testID="league-entry">
-      {entry ? (
-        <>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <View testID="league-entered">
-              <Pill tone="good">{L.entered}</Pill>
-            </View>
-            {phase === 'open' ? (
-              <Btn
-                sm
-                testID="league-withdraw"
-                disabled={busy !== null}
-                onPress={askWithdraw}
-                style={{ marginLeft: 'auto' }}
-              >
-                {busy === 'withdraw' ? L.withdrawing : L.withdraw}
-              </Btn>
-            ) : null}
-          </View>
-          {phase === 'open' || phase === 'closed' ? (
-            <Txt v="sm" tone="muted">
-              {L.enteredNote({ at: drawAt })}
-            </Txt>
-          ) : !placement ? (
-            <Txt v="sm" tone="muted">
-              {L.drawPending}
-            </Txt>
-          ) : null}
-        </>
-      ) : me.canEnter ? (
-        <Btn
-          kind="accent"
-          testID="league-enter"
-          disabled={busy !== null}
-          onPress={() => void run('enter')}
+      {last ? (
+        <FinalBlock
+          testID={`league-last-final-${last.outcome}`}
+          title={last.title}
+          label={last.label}
+          tone={leagueOutcomeTone(last.outcome)}
+          line={last.line}
         >
+          <Txt v="sm" tone="muted">
+            {last.next}
+          </Txt>
+        </FinalBlock>
+      ) : null}
+      {card.entered ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View testID="league-entered">
+            <Pill tone="good">{L.entered}</Pill>
+          </View>
+          {card.action === 'withdraw' ? (
+            <Btn
+              sm
+              testID="league-withdraw"
+              disabled={busy !== null}
+              onPress={askWithdraw}
+              style={{ marginLeft: 'auto' }}
+            >
+              {busy === 'withdraw' ? L.withdrawing : L.withdraw}
+            </Btn>
+          ) : null}
+        </View>
+      ) : card.action === 'enter' ? (
+        <Btn kind="accent" testID="league-enter" disabled={busy !== null} onPress={askEnter}>
           {busy === 'enter' ? L.entering : L.enter}
         </Btn>
-      ) : phase !== 'soon' ? (
-        <Txt v="sm" tone="muted">
-          {L.notEntered}
+      ) : null}
+      {card.note ? (
+        <Txt v="sm" tone="muted" testID="league-note">
+          {card.note}
         </Txt>
       ) : null}
       {leaguePresign(data) ? (
@@ -240,32 +291,19 @@ function EntryCard({
           ))}
         </View>
       ) : null}
-      {me.team && phase === 'open' ? (
+      {card.ovr ? (
         <Txt v="xs" tone="muted">
-          {L.myOvr({ ovr: me.team.ovr })}
+          {card.ovr}
         </Txt>
       ) : null}
       {final ? (
-        <View testID={`league-final-${final.outcome}`} style={{ gap: 4 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Txt v="sm" bold>
-              {L.finalTitle}
-            </Txt>
-            <Pill
-              tone={
-                final.outcome === 'champion' || final.outcome === 'promoted'
-                  ? 'good'
-                  : final.outcome === 'stayed'
-                    ? undefined
-                    : 'warn'
-              }
-            >
-              {final.label}
-            </Pill>
-          </View>
-          <Txt v="sm" bold>
-            {final.line}
-          </Txt>
+        <FinalBlock
+          testID={`league-final-${final.outcome}`}
+          title={L.finalTitle}
+          label={final.label}
+          tone={leagueOutcomeTone(final.outcome)}
+          line={final.line}
+        >
           <Txt v="sm" testID="league-reward">
             {final.reward}
           </Txt>
@@ -273,7 +311,7 @@ function EntryCard({
           <Txt v="sm" tone="muted">
             {final.next}
           </Txt>
-        </View>
+        </FinalBlock>
       ) : placement ? (
         <Txt v="sm" bold tone={placement.ok ? 'ink' : 'warn'} testID="league-placement">
           {placement.text}
@@ -289,6 +327,9 @@ export default function League() {
   const linked = !!acct && acct !== 'error' && isMember(acct);
   const [data, setData] = useState<LeagueResponse | null>(null);
   const [me, setMe] = useState<LeagueMeResponse | null>(null);
+  const [meFailed, setMeFailed] = useState(false);
+  const account: LeagueAccount =
+    !acct || acct === 'error' ? 'unknown' : linked ? 'member' : 'guest';
   const [status, setStatus] = useState<LoadStatus>('loading');
   const seq = useRef(0);
   // 배치 뒤: 고른 리그(처음엔 내 리그) · 라운드 · 연 경기.
@@ -313,6 +354,7 @@ export default function League() {
       setData(a.data);
       const mine = b?.ok ? b.data : null;
       setMe(mine);
+      setMeFailed(!!b && !b.ok);
       if (!picked.current && a.data.tiers) {
         setPick(leagueDefaultPick(a.data, mine));
         setRound(leagueDefaultRound(a.data));
@@ -372,7 +414,7 @@ export default function League() {
               <Txt v="sm" bold style={{ flex: 1 }}>
                 {leagueLine(data)}
               </Txt>
-              <Pill tone={data.phase === 'open' ? 'good' : undefined}>
+              <Pill tone={leaguePhaseActive(data.phase) ? 'good' : undefined}>
                 {leaguePhaseLabel(data.phase)}
               </Pill>
             </View>
@@ -386,7 +428,13 @@ export default function League() {
               </Txt>
             ) : null}
           </Card>
-          <EntryCard data={data} me={me} linked={linked} reload={() => reload(true)} />
+          <EntryCard
+            data={data}
+            me={me}
+            account={account}
+            meFailed={meFailed}
+            reload={() => reload(true)}
+          />
           {pick && data.tiers ? (
             <>
               <LeaguePicker
@@ -415,6 +463,9 @@ export default function League() {
           <Card gap={8} testID="league-schedule">
             <Txt v="h3" bold accessibilityRole="header">
               {L.scheduleTitle}
+            </Txt>
+            <Txt v="xs" tone="muted" testID="league-kst">
+              {L.kstNote}
             </Txt>
             {leagueSchedule(data.league).map((r) => (
               <Kv key={r.label} k={r.label} v={r.text} />
