@@ -222,6 +222,18 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     expect(table.teams).toHaveLength(8);
     expect(table.standings.reduce((a, s) => a + s.p, 0)).toBe(8);
     expect(table.matches).toHaveLength(4 * LEAGUE_ROUNDS);
+    // T-11-418d 득점 순위: 리그 팀 선수만, 많은 순, 3위까지(같은 골 수 포함 5줄 안). 마지막 라운드 전이라 골 시각은 없다.
+    const ids = new Set(table.teams.map((t) => t.teamId));
+    const scored = table.matches.reduce((a, m) => a + (m.homeGoals ?? 0) + (m.awayGoals ?? 0), 0);
+    const sc = table.scorers ?? [];
+    expect(sc.length).toBeLessThanOrEqual(5);
+    expect(sc.reduce((a, x) => a + x.goals, 0)).toBeLessThanOrEqual(scored);
+    for (const x of sc) {
+      expect(ids.has(x.teamId)).toBe(true);
+      expect(x).toMatchObject({ name: null, pos: 'FW', number: 9 });
+    }
+    expect(sc.map((x) => x.goals)).toEqual([...sc.map((x) => x.goals)].sort((a, b) => b - a));
+    expect(table.matches.some((m) => m.goals)).toBe(false);
     const played = table.matches.find((m) => m.played)!;
     const detail = MatchRes.parse(
       await (await call('GET', `/v1/leagues/2/matches/${played.id}`)).json(),
@@ -237,6 +249,18 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     const final = TableRes.parse(await (await call('GET', '/v1/leagues/2/tables/2/1')).json()).data;
     // 7팀 리그는 팀마다 12경기.
     for (const s of final.standings) expect(s.p).toBe(12);
+    // T-11-418d 마지막 라운드 경기에만 골 시각이 실리고, 스코어와 쪽별 골 수가 맞는다.
+    for (const m of final.matches) {
+      if (m.round !== LEAGUE_ROUNDS || m.forfeit) {
+        expect(m.goals).toBeUndefined();
+        continue;
+      }
+      expect(m.goals!.filter((g) => g.side === 'home')).toHaveLength(m.homeGoals!);
+      expect(m.goals!.filter((g) => g.side === 'away')).toHaveLength(m.awayGoals!);
+      expect(m.goals!.map((g) => g.minute)).toEqual(
+        [...m.goals!.map((g) => g.minute)].sort((a, b) => a - b),
+      );
+    }
     const state = await ctx.env.DB.prepare('SELECT done_at FROM league_state').first<{
       done_at: string | null;
     }>();

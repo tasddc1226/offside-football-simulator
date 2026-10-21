@@ -11,7 +11,14 @@ import { and, asc, eq, getTableColumns, inArray, isNull, lte } from 'drizzle-orm
 import { cupKo } from '../cupText.js';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
-import { leagueEntries, leagueMatches, leagueState, ownerTeams, profiles } from '../db/schema.js';
+import {
+  careers,
+  leagueEntries,
+  leagueMatches,
+  leagueState,
+  ownerTeams,
+  profiles,
+} from '../db/schema.js';
 import { eventNotificationStatements } from '../push/events.js';
 import { drawGroups, groupStandings, rngFrom } from './cupRules.js';
 import { currentLeague } from './leagueSchedule.js';
@@ -122,6 +129,75 @@ export function leagueTable(
     played,
     `${seed}:${tier}:${leagueNo}`,
   ).map((s) => ({ ...s, forfeits: forfeits.get(s.teamId) ?? 0 }));
+}
+
+/** 득점 순위에 싣는 줄 수 상한(같은 골 수는 같이 싣되 이만큼까지). */
+export const LEAGUE_SCORERS_MAX = 5;
+/** 득점 순위에 싣는 순위(3위까지, 같은 골 수는 함께). */
+const LEAGUE_SCORERS_TOP = 3;
+
+/**
+ * T-11-418d 리그 하나의 득점 순위(유스 선수 빼고). 경기 기록(detail_json)의 골을 SQL에서 세어 작은 결과만 읽는다. 3위와 골
+ * 수가 같은 선수까지 싣고, LEAGUE_SCORERS_MAX줄에서 자른다. 이름은 공개 이름(비공개면 null) · 포지션 · 등번호.
+ */
+export async function leagueScorers(db: Db, season: number, tier: number, leagueNo: number) {
+  const { results } = await db.$client
+    .prepare(
+      `SELECT json_extract(e.value, '$.scorer.careerId') AS careerId,
+         CASE json_extract(e.value, '$.side') WHEN 'home' THEN m.home_team_id ELSE m.away_team_id END AS teamId,
+         COUNT(*) AS goals
+       FROM league_matches m, json_each(m.detail_json, '$.events') e
+       WHERE m.season = ? AND m.tier = ? AND m.league_no = ? AND m.detail_json IS NOT NULL
+         AND json_extract(e.value, '$.scorer.careerId') IS NOT NULL
+       GROUP BY careerId, teamId ORDER BY goals DESC, careerId LIMIT ?`,
+    )
+    .bind(season, tier, leagueNo, LEAGUE_SCORERS_MAX + 1)
+    .all<{ careerId: string; teamId: string; goals: number }>();
+  const cut = results[LEAGUE_SCORERS_TOP - 1]?.goals ?? 0;
+  const top = results.filter((r) => r.goals >= cut).slice(0, LEAGUE_SCORERS_MAX);
+  if (!top.length) return [];
+  const who = new Map(
+    (
+      await db
+        .select({
+          id: careers.id,
+          publicName: careers.publicName,
+          pos: careers.pos,
+          number: careers.shirtNumber,
+        })
+        .from(careers)
+        .where(
+          inArray(
+            careers.id,
+            top.map((r) => r.careerId),
+          ),
+        )
+    ).map((c) => [c.id, c]),
+  );
+  return top.flatMap((r) => {
+    const c = who.get(r.careerId);
+    // 지워진 커리어는 빼고 싣는다.
+    return c
+      ? [{ name: c.publicName, pos: c.pos, number: c.number, teamId: r.teamId, goals: r.goals }]
+      : [];
+  });
+}
+
+/** T-11-418d 마지막 라운드 동시 중계용 골 시각(경기 id별, 분 순). 기권 경기는 기록이 없어 빠진다. */
+export async function leagueFinalGoals(db: Db, season: number, tier: number, leagueNo: number) {
+  const { results } = await db.$client
+    .prepare(
+      `SELECT m.id AS id, json_extract(e.value, '$.minute') AS minute, json_extract(e.value, '$.side') AS side
+       FROM league_matches m, json_each(m.detail_json, '$.events') e
+       WHERE m.season = ? AND m.tier = ? AND m.league_no = ? AND m.round = ? AND m.detail_json IS NOT NULL`,
+    )
+    .bind(season, tier, leagueNo, LEAGUE_ROUNDS)
+    .all<{ id: string; minute: number; side: 'home' | 'away' }>();
+  const out = new Map<string, { minute: number; side: 'home' | 'away' }[]>();
+  for (const r of results)
+    out.set(r.id, [...(out.get(r.id) ?? []), { minute: r.minute, side: r.side }]);
+  for (const g of out.values()) g.sort((a, b) => a.minute - b.minute);
+  return out;
 }
 
 /** 명단이 잠겨 있는가: 아직 안 끝난 내 리그 경기 중 잠금 시각(경기 1시간 전)이 지난 것이 있다. */

@@ -1,10 +1,16 @@
 // T-11-418 오프사이드 리그 화면 규칙(웹 · 앱 공통): 단계 이름, 배너 한 줄, 일정 줄, 신청 불가 이유. 날짜는 한국 시간이다.
 import { KST_MS } from '@offside/contracts/kst';
-import { LEAGUE_ROUNDS, LEAGUE_SIZE } from '@offside/contracts/league';
+import {
+  LEAGUE_FORFEIT_GOALS,
+  LEAGUE_FORFEIT_LIMIT,
+  LEAGUE_ROUNDS,
+  LEAGUE_SIZE,
+} from '@offside/contracts/league';
 import type {
   LeagueMatch,
   LeagueMeResponse,
   LeagueResponse,
+  LeagueStanding,
   LeagueTableResponse,
 } from './api/league.js';
 import { cupText as C } from './i18n/ko/cup';
@@ -176,3 +182,170 @@ export function leagueRound(table: LeagueTableResponse, round: number) {
 /** 경기 줄의 가운데: 끝났으면 스코어, 아니면 시각(KST HH:MM). */
 export const leagueMatchMid = (m: LeagueMatch) =>
   m.played ? `${m.homeGoals ?? 0} : ${m.awayGoals ?? 0}` : kst(m.at).time;
+
+// ───────── T-11-418d 확정 배지 · 리그 기록 · 마지막 라운드 동시 중계 ─────────
+
+export type LeagueClinch = 'champion' | 'up' | 'safe' | 'down';
+
+/** 강등권이 시작하는 순위(7위). 7팀 리그도 7위 한 팀만 강등권이다. */
+const DOWN_FROM = LEAGUE_SIZE - 1;
+
+/**
+ * 남은 경기로 바뀔 수 없는 자리(우승 · 승격 · 잔류 · 강등 확정). 동률은 가르는 규칙(득실 · 다득점 …)을 미리 알 수 없어 따라잡힐
+ * 수 있는 것으로 친다 — 그래서 확정이 실제보다 늦게 붙을 수는 있어도 틀리게 붙지는 않는다. 남은 경기에서 서로 맞붙는 두 팀이
+ * 둘 다 이기는 경우도 셈에 넣으니 마찬가지로 보수적이다. 기권이 쌓여 남은 경기가 모두 기권패인 팀은 더 오르지 않는다.
+ * 모든 경기가 끝나면 최종 순위대로 붙는다. 잔류는 강등이 있는 부(맨 아래 부가 아닌 곳)에만, 승격은 1부가 아닌 곳에만 붙는다.
+ */
+export function leagueClinches(
+  table: Pick<LeagueTableResponse, 'standings' | 'matches'>,
+  tier: number,
+  bottomTier: number,
+): Map<string, LeagueClinch> {
+  const left = new Map<string, number>();
+  for (const m of table.matches)
+    if (!m.played)
+      for (const id of [m.homeTeamId, m.awayTeamId]) left.set(id, (left.get(id) ?? 0) + 1);
+  const done = left.size === 0;
+  const max = (s: LeagueStanding) =>
+    s.forfeits >= LEAGUE_FORFEIT_LIMIT ? s.pts : s.pts + 3 * (left.get(s.teamId) ?? 0);
+  const relegation = tier < bottomTier;
+  const out = new Map<string, LeagueClinch>();
+  for (const s of table.standings) {
+    const others = table.standings.filter((o) => o.teamId !== s.teamId);
+    // 나보다 위로 끝날 수 있는 팀 수 · 반드시 위로 끝나는 팀 수.
+    const best = done ? s.rank - 1 : others.filter((o) => max(o) >= s.pts).length;
+    const worst = done ? s.rank - 1 : others.filter((o) => o.pts > max(s)).length;
+    if (best === 0) out.set(s.teamId, tier === 1 ? 'champion' : 'up');
+    else if (relegation && worst >= DOWN_FROM - 1) out.set(s.teamId, 'down');
+    else if (relegation && best <= DOWN_FROM - 2) out.set(s.teamId, 'safe');
+  }
+  return out;
+}
+
+type Outcome = 'w' | 'd' | 'l';
+
+/** 한 팀 쪽에서 본 끝난 경기 결과. 둘 다 기권한 경기(0:0으로 남는다)는 둘 다 패다. */
+function outcomeOf(m: LeagueMatch, teamId: string): Outcome {
+  const home = m.homeTeamId === teamId;
+  const mine = (home ? m.homeGoals : m.awayGoals) ?? 0;
+  const theirs = (home ? m.awayGoals : m.homeGoals) ?? 0;
+  if (m.forfeit && mine === theirs) return 'l';
+  return mine > theirs ? 'w' : mine < theirs ? 'l' : 'd';
+}
+
+export type LeagueRun = { teamId: string; n: number };
+
+/**
+ * 리그 기록: 가장 긴 연승 · 가장 긴 무패(라운드 순, 쉬는 라운드는 끊지 않는다). 두 경기 이상일 때만 싣고, 같으면 지금 순위가
+ * 높은 팀.
+ */
+export function leagueRecords(table: Pick<LeagueTableResponse, 'standings' | 'matches'>): {
+  winStreak: LeagueRun | null;
+  unbeaten: LeagueRun | null;
+} {
+  const played = table.matches.filter((m) => m.played).sort((a, b) => a.round - b.round);
+  const byRank = [...table.standings].sort((a, b) => a.rank - b.rank);
+  let winStreak: LeagueRun | null = null;
+  let unbeaten: LeagueRun | null = null;
+  for (const s of byRank) {
+    let w = 0;
+    let u = 0;
+    let bestW = 0;
+    let bestU = 0;
+    for (const m of played) {
+      if (m.homeTeamId !== s.teamId && m.awayTeamId !== s.teamId) continue;
+      const o = outcomeOf(m, s.teamId);
+      w = o === 'w' ? w + 1 : 0;
+      u = o === 'l' ? 0 : u + 1;
+      bestW = Math.max(bestW, w);
+      bestU = Math.max(bestU, u);
+    }
+    if (bestW >= 2 && bestW > (winStreak?.n ?? 0)) winStreak = { teamId: s.teamId, n: bestW };
+    if (bestU >= 2 && bestU > (unbeaten?.n ?? 0)) unbeaten = { teamId: s.teamId, n: bestU };
+  }
+  return { winStreak, unbeaten };
+}
+
+/** 마지막 라운드 동시 중계를 열 수 있는가: 그 라운드를 다 치렀고 골 시각이 실려 있다. */
+export function leagueFinalReady(table: Pick<LeagueTableResponse, 'matches'>) {
+  const last = table.matches.filter((m) => m.round === LEAGUE_ROUNDS);
+  return last.length > 0 && last.every((m) => m.played && (m.forfeit || m.goals));
+}
+
+/** 동시 중계 시계의 끝(분). */
+export const LEAGUE_LIVE_END = 90;
+
+export type LeagueLiveRow = LeagueStanding & { move: number };
+
+/**
+ * 동시 중계의 minute분 상황: 마지막 라운드 경기마다 그때까지의 스코어와, 그 스코어로 다시 센 순위표. 마지막 라운드 전 순위에서
+ * 몇 칸 움직였는지(move, 위로 +)도 붙인다. 기권 경기는 처음부터 결과대로다. 같은 승점은 득실 · 다득점, 그다음은 최종 순위로
+ * 가른다(승자승 · 추첨은 화면에서 다시 세지 않는다).
+ */
+export function leagueLive(
+  table: Pick<LeagueTableResponse, 'standings' | 'matches'>,
+  minute: number,
+) {
+  const last = table.matches.filter((m) => m.round === LEAGUE_ROUNDS);
+  const scores = new Map(
+    last.map((m) => {
+      if (m.forfeit || !m.goals) return [m.id, { home: m.homeGoals ?? 0, away: m.awayGoals ?? 0 }];
+      const upTo = m.goals.filter((g) => g.minute <= minute);
+      return [
+        m.id,
+        {
+          home: upTo.filter((g) => g.side === 'home').length,
+          away: upTo.filter((g) => g.side === 'away').length,
+        },
+      ];
+    }),
+  );
+  const finalRank = new Map(table.standings.map((s) => [s.teamId, s.rank]));
+  const count = (withLast: boolean) => {
+    const rows = new Map(
+      table.standings.map((s) => [
+        s.teamId,
+        { ...s, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, rank: 0 },
+      ]),
+    );
+    for (const m of table.matches) {
+      if (!m.played) continue;
+      const live = m.round === LEAGUE_ROUNDS;
+      if (live && !withLast) continue;
+      const sc = live ? scores.get(m.id)! : { home: m.homeGoals ?? 0, away: m.awayGoals ?? 0 };
+      const view = { ...m, homeGoals: sc.home, awayGoals: sc.away };
+      for (const [id, gf, ga] of [
+        [m.homeTeamId, sc.home, sc.away],
+        [m.awayTeamId, sc.away, sc.home],
+      ] as const) {
+        const r = rows.get(id);
+        if (!r) continue;
+        // 둘 다 기권하면 서로 0:3으로 진 것으로 센다(서버 순위표와 같다).
+        const bothOut = m.forfeit && sc.home === sc.away;
+        const o = outcomeOf(view, id);
+        r.p++;
+        r.gf += bothOut ? 0 : gf;
+        r.ga += bothOut ? LEAGUE_FORFEIT_GOALS : ga;
+        if (o === 'w') r.w++;
+        else if (o === 'd') r.d++;
+        else r.l++;
+        r.pts += o === 'w' ? 3 : o === 'd' ? 1 : 0;
+      }
+    }
+    const sorted = [...rows.values()].sort(
+      (a, b) =>
+        b.pts - a.pts ||
+        b.gf - b.ga - (a.gf - a.ga) ||
+        b.gf - a.gf ||
+        finalRank.get(a.teamId)! - finalRank.get(b.teamId)!,
+    );
+    sorted.forEach((r, i) => (r.rank = i + 1));
+    return sorted;
+  };
+  const before = new Map(count(false).map((r) => [r.teamId, r.rank]));
+  const rows: LeagueLiveRow[] = count(true).map((r) => ({
+    ...r,
+    move: before.get(r.teamId)! - r.rank,
+  }));
+  return { scores, rows };
+}

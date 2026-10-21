@@ -1,9 +1,13 @@
-import { planLeague } from '@offside/contracts/league';
+import { LEAGUE_ROUNDS, planLeague } from '@offside/contracts/league';
 import { describe, expect, it } from 'vitest';
 import type { LeagueResponse } from './api/league.js';
-import type { LeagueTableResponse } from './api/league.js';
+import type { LeagueMatch, LeagueStanding, LeagueTableResponse } from './api/league.js';
 import {
   leagueChoices,
+  leagueClinches,
+  leagueFinalReady,
+  leagueLive,
+  leagueRecords,
   leagueDefaultPick,
   leagueDefaultRound,
   leagueLine,
@@ -111,5 +115,147 @@ describe('leagueView (T-11-418)', () => {
       ],
     } as unknown as LeagueTableResponse;
     expect(leagueRound(table, 1).resting.map((t) => t.teamId)).toEqual(['c']);
+  });
+
+  // T-11-418d 확정 배지 · 기록 · 동시 중계.
+  const ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  const row = (teamId: string, pts: number, rank: number, forfeits = 0): LeagueStanding => ({
+    teamId,
+    p: 12,
+    w: 0,
+    d: 0,
+    l: 0,
+    gf: 0,
+    ga: 0,
+    pts,
+    rank,
+    forfeits,
+  });
+  let mid = 0;
+  const match = (
+    round: number,
+    home: string,
+    away: string,
+    score: [number, number] | null,
+    extra: Partial<LeagueMatch> = {},
+  ): LeagueMatch => ({
+    id: `m${++mid}`,
+    round,
+    homeTeamId: home,
+    awayTeamId: away,
+    at: league.rounds[round - 1]!,
+    played: !!score,
+    homeGoals: score?.[0] ?? null,
+    awayGoals: score?.[1] ?? null,
+    forfeit: false,
+    ...extra,
+  });
+  /** 13 · 14라운드를 아직 치르지 않은 8팀(팀마다 2경기 남음). */
+  const twoLeft = (pts: number[]) => ({
+    standings: ids.map((id, i) => row(id, pts[i]!, i + 1)),
+    matches: [13, 14].flatMap((r) => [0, 2, 4, 6].map((i) => match(r, ids[i]!, ids[i + 1]!, null))),
+  });
+
+  it('T-11-418d 확정 배지: 따라잡힐 수 없을 때만, 동률은 따라잡힐 수 있는 것으로', () => {
+    // a 36 · b 29(최대 35)라 a는 확정. h 4(최대 10)는 위 6팀이 이미 10점보다 많아 강등 확정.
+    // g 5(최대 11)는 f 11과 같아질 수 있어 아직 아니다. e 18은 위로 끝날 수 있는 팀이 a ~ d 4팀뿐(f 최대 17)이라 잔류 확정,
+    // f 11은 g(최대 11)까지 5팀이 같아지거나 앞설 수 있어 아직 아니다.
+    const t = twoLeft([36, 29, 28, 22, 18, 11, 5, 4]);
+    const c2 = leagueClinches(t, 2, 3);
+    expect(Object.fromEntries(c2)).toEqual({
+      a: 'up',
+      b: 'safe',
+      c: 'safe',
+      d: 'safe',
+      e: 'safe',
+      h: 'down',
+    });
+    // 1부 1위는 우승 확정, 맨 아래 부는 강등 · 잔류가 없다.
+    expect(leagueClinches(t, 1, 3).get('a')).toBe('champion');
+    expect(Object.fromEntries(leagueClinches(t, 3, 3))).toEqual({ a: 'up' });
+    // 같은 승점까지 따라올 수 있으면 승격 확정이 아니다(잔류만 확정).
+    expect(leagueClinches(twoLeft([35, 29, 28, 22, 18, 11, 5, 4]), 2, 3).get('a')).toBe('safe');
+    // 기권이 쌓인 팀은 더 오르지 않는다: g(5, 기권 3번)는 h보다 위로 갈 수 없고 f 11보다 아래라 강등 확정.
+    const out = twoLeft([36, 29, 28, 22, 18, 11, 5, 4]);
+    out.standings[6] = row('g', 5, 7, 3);
+    expect(leagueClinches(out, 2, 3).get('g')).toBe('down');
+    // 다 끝나면 최종 순위대로.
+    const done = {
+      standings: ids.map((id, i) => row(id, 30 - i, i + 1)),
+      matches: [match(14, 'a', 'b', [1, 0])],
+    };
+    expect(Object.fromEntries(leagueClinches(done, 2, 3))).toEqual({
+      a: 'up',
+      b: 'safe',
+      c: 'safe',
+      d: 'safe',
+      e: 'safe',
+      f: 'safe',
+      g: 'down',
+      h: 'down',
+    });
+  });
+
+  it('T-11-418d 리그 기록: 가장 긴 연승 · 무패(두 경기 이상), 같으면 순위가 높은 팀', () => {
+    const t = {
+      standings: [row('a', 9, 1), row('b', 5, 2), row('c', 1, 3)],
+      matches: [
+        match(1, 'a', 'b', [2, 0]),
+        match(2, 'c', 'a', [0, 1]),
+        match(3, 'a', 'b', [1, 1]),
+        match(4, 'b', 'c', [3, 0]),
+        match(5, 'b', 'a', [2, 0]),
+        match(6, 'c', 'b', [0, 0], { forfeit: true }),
+        match(7, 'a', 'c', null),
+      ],
+    };
+    // a: 승 승 무 패 → 연승 2 · 무패 3. b: 패 무 승 승 패(0:0 기권은 둘 다 패) → 연승 2지만 a가 순위가 높다.
+    expect(leagueRecords(t)).toEqual({
+      winStreak: { teamId: 'a', n: 2 },
+      unbeaten: { teamId: 'a', n: 3 },
+    });
+    expect(leagueRecords({ standings: [row('a', 0, 1)], matches: [] })).toEqual({
+      winStreak: null,
+      unbeaten: null,
+    });
+  });
+
+  it('T-11-418d 마지막 라운드 동시 중계: 분마다 스코어와 순위가 움직인다', () => {
+    // 13라운드까지 a 3 · b 3 · d 0 · c 0(득실로 a > b > d > c). 14라운드 a-c, b-d. 0분은 0:0 무승부로 센다.
+    const before = [match(13, 'a', 'c', [2, 0]), match(13, 'b', 'd', [1, 0])];
+    const last = [
+      match(LEAGUE_ROUNDS, 'a', 'c', [0, 2], {
+        goals: [
+          { minute: 30, side: 'away' },
+          { minute: 80, side: 'away' },
+        ],
+      }),
+      match(LEAGUE_ROUNDS, 'b', 'd', [1, 0], { goals: [{ minute: 60, side: 'home' }] }),
+    ];
+    const t = {
+      standings: [row('b', 6, 1), row('c', 3, 2), row('a', 3, 3), row('d', 0, 4)],
+      matches: [...before, ...last],
+    };
+    expect(leagueFinalReady(t)).toBe(true);
+    expect(leagueFinalReady({ matches: [{ ...last[0]!, goals: undefined }] })).toBe(false);
+    const at0 = leagueLive(t, 0);
+    expect(at0.rows.map((r) => [r.teamId, r.pts])).toEqual([
+      ['a', 4],
+      ['b', 4],
+      ['d', 1],
+      ['c', 1],
+    ]);
+    const at30 = leagueLive(t, 30);
+    expect(at30.scores.get(last[0]!.id)).toEqual({ home: 0, away: 1 });
+    expect(at30.rows.map((r) => [r.teamId, r.pts])).toEqual([
+      ['b', 4],
+      ['a', 3],
+      ['c', 3],
+      ['d', 1],
+    ]);
+    // 90분: a · c 승점 · 득실 · 다득점이 같아 최종 순위(c 2위)로 가른다.
+    const end = leagueLive(t, 90);
+    expect(end.rows.map((r) => r.teamId)).toEqual(['b', 'c', 'a', 'd']);
+    expect(end.rows.map((r) => r.move)).toEqual([1, 2, -2, -1]);
   });
 });

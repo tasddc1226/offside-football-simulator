@@ -252,3 +252,100 @@ test('T-11-418b 배치 뒤: 내 배치 · 순위표 · 라운드 경기 · 경�
   expect(hits['/v1/leagues/2/tables/1/1']).toBe(1);
   expect(hits['/v1/leagues/2/matches/lgm_3_2']).toBe(1);
 });
+
+test('T-11-418d 끝난 리그: 확정 배지 · 리그 기록 · 마지막 라운드 동시 중계', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.clock.setFixedTime(new Date('2026-11-18T06:00:00.000Z'));
+  const ids = Array.from({ length: 8 }, (_, i) => `tem_${i + 1}`);
+  const finalGoals = [
+    { minute: 10, side: 'home' },
+    { minute: 50, side: 'away' },
+    { minute: 80, side: 'home' },
+  ];
+  const table = {
+    season: 2,
+    tier: 1,
+    league: 1,
+    teams: ids.map((id, i) => ({
+      teamId: id,
+      name: `리그팀${i + 1}`,
+      owner: `감독${i + 1}`,
+      logo: null,
+      ovr: 90 - i,
+    })),
+    standings: ids.map((id, i) => ({
+      teamId: id,
+      p: 14,
+      w: 14 - i,
+      d: 0,
+      l: i,
+      gf: 30 - i,
+      ga: 10 + i,
+      pts: (14 - i) * 3,
+      rank: i + 1,
+      forfeits: 0,
+    })),
+    matches: Array.from({ length: 14 }, (_, r) =>
+      Array.from({ length: 4 }, (_, s) => ({
+        id: `lgm_${r + 1}_${s}`,
+        round: r + 1,
+        homeTeamId: ids[s]!,
+        awayTeamId: ids[7 - s]!,
+        at: `2026-11-${String(5 + r).padStart(2, '0')}T04:00:00.000Z`,
+        played: true,
+        homeGoals: 2,
+        awayGoals: 1,
+        forfeit: false,
+        ...(r === 13 ? { goals: finalGoals } : {}),
+      })),
+    ).flat(),
+    scorers: [
+      { name: '김공격', pos: 'FW', number: 9, teamId: 'tem_1', goals: 12 },
+      { name: null, pos: 'MF', number: 8, teamId: 'tem_2', goals: 9 },
+    ],
+  };
+  await page.route(`${API}/**`, async (r) => {
+    const path = new URL(r.request().url()).pathname;
+    if (path === '/v1/leagues/current')
+      return r.fulfill(
+        ok({
+          league,
+          phase: 'running',
+          entries: 16,
+          tiers: [
+            { tier: 1, leagues: 1, teams: 8 },
+            { tier: 2, leagues: 1, teams: 8 },
+          ],
+          playedRounds: 14,
+        }),
+      );
+    if (path === '/v1/leagues/2/tables/1/1') return r.fulfill(ok(table));
+    return r.fulfill({ status: 503, body: '' });
+  });
+  await page.goto('/');
+  await page.locator('[data-league-banner]').click();
+  const board = page.locator('[data-league-table="1-1"]');
+  // 다 끝났으니 최종 순위대로: 1부 1위는 우승, 7 · 8위는 강등, 나머지는 잔류.
+  await expect(board.locator('[data-league-clinch="champion"]')).toHaveCount(1);
+  await expect(board.locator('[data-league-clinch="safe"]')).toHaveCount(5);
+  await expect(board.locator('[data-league-clinch="down"]')).toHaveCount(2);
+  const records = page.locator('[data-league-records]');
+  await expect(records.locator('[data-league-scorer]')).toHaveCount(2);
+  await expect(records.locator('[data-league-scorer]').first()).toContainText('김공격');
+  await expect(records.locator('[data-league-scorer]').first()).toContainText('12골');
+  await expect(records.locator('[data-league-scorer]').nth(1)).toContainText('No.8');
+  await expect(records.locator('[data-league-run="win"]')).toContainText('리그팀1 · 14경기');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+  await expect(page.locator('[data-league-round]')).toHaveValue('14');
+  await page.locator('[data-act="league-final-live"]').click();
+  const live = page.locator('[data-league-live]');
+  await expect(live).toBeVisible();
+  await expect(live.locator('[data-league-live-rank]')).toHaveCount(8);
+  await live.locator('[data-act="league-live-skip"]').click();
+  await expect(live.locator('[data-league-clock]')).toHaveText('경기 끝');
+  await expect(live.locator('[data-league-live-match="lgm_14_0"]')).toContainText('2 : 1');
+  await expect(live.locator('[data-league-live-rank="1"]')).toContainText('리그팀1');
+  await live.locator('[data-act="league-live-close"]').click();
+  await expect(live).toBeHidden();
+});

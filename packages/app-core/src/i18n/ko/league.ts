@@ -89,6 +89,26 @@ const ko = {
   detailTitle: (p: { tier: number; league: number; round: number }) =>
     `${p.tier}부 ${p.league}리그 ${p.round}라운드`,
   detailBack: '리그로 돌아가기',
+  // T-11-418d 확정 배지 · 리그 기록 · 마지막 라운드 동시 중계.
+  clinchChampion: '우승 확정',
+  clinchUp: '승격 확정',
+  clinchSafe: '잔류 확정',
+  clinchDown: '강등 확정',
+  clinchNote: '남은 경기 결과와 상관없이 바뀌지 않는 자리에 확정 배지가 붙어요.',
+  recordsTitle: '리그 기록',
+  topScorers: '득점 순위',
+  goalsN: (p: { n: number }) => `${p.n}골`,
+  winStreak: '최다 연승',
+  unbeatenRun: '최장 무패',
+  runValue: (p: { team: string; n: number }) => `${p.team} · ${p.n}경기`,
+  finalLive: '마지막 라운드 동시 중계',
+  finalLiveNote: '같은 리그 경기를 한 화면에서 같이 봐요. 골이 들어가면 순위표가 움직여요.',
+  liveTable: '지금 순위',
+  liveSkip: '결과 바로 보기',
+  liveReplay: '다시 보기',
+  liveClose: '닫기',
+  liveFullTime: '경기 끝',
+  liveClock: (p: { minute: number }) => `${p.minute}'`,
 };
 
 export type LeagueMsgs = typeof ko;

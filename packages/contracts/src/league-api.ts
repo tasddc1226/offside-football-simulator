@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CareerPosSchema } from './careers.js';
 import { IsoUtcSchema } from './primitives.js';
 import { CupStandingSchema, CupTeamSchema } from './cup-api.js';
 import { TeamIdSchema, TeamMatchSchema } from './teams.js';
@@ -96,6 +97,13 @@ export const LeagueMatchSchema = z.strictObject({
   awayGoals: z.number().int().nullable(),
   /** 기권으로 끝난 경기(나오지 못한 쪽이 0:3 패, 둘 다면 둘 다 패). */
   forfeit: z.boolean(),
+  /**
+   * T-11-418d 마지막 라운드 동시 중계용 골 시각(분 · 넣은 쪽). 마지막 라운드의 치른 경기에만 있다(기권 경기 · 다른 라운드 ·
+   * 옛 응답에는 없다).
+   */
+  goals: z
+    .array(z.strictObject({ minute: z.number().int(), side: z.enum(['home', 'away']) }))
+    .optional(),
 });
 export type LeagueMatch = z.infer<typeof LeagueMatchSchema>;
 
@@ -107,6 +115,21 @@ export const LeagueTableResponseSchema = z.strictObject({
   teams: z.array(LeagueTeamSchema),
   standings: z.array(LeagueStandingSchema),
   matches: z.array(LeagueMatchSchema),
+  /**
+   * T-11-418d 리그 득점 순위(유스 선수 빼고, 많은 순 · 같으면 같은 순위로 상한까지). name은 공개 이름(비공개면 null이라
+   * 화면이 포지션 · 등번호로 익명 표기를 만든다). 옛 응답에는 없다.
+   */
+  scorers: z
+    .array(
+      z.strictObject({
+        name: z.string().nullable(),
+        pos: CareerPosSchema,
+        number: z.number().int().nullable(),
+        teamId: z.string(),
+        goals: z.number().int().min(1),
+      }),
+    )
+    .optional(),
 });
 export type LeagueTableResponse = z.infer<typeof LeagueTableResponseSchema>;
 
