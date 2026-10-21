@@ -114,6 +114,14 @@ export const BALANCE_SPEC = {
     max: 6,
     step: 0.5,
   },
+  // T-11-450 프리미엄 스카우트 후보의 S 확률 배수(일반 후보 대비). 기본 2 = T-11-196 그대로.
+  premiumSMult: {
+    def: 2,
+    min: 1,
+    max: 5,
+    step: 0.5,
+    unit: 'x',
+  },
   injuryRate: {
     def: 0.012,
     min: 0,

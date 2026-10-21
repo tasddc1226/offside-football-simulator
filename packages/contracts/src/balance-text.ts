@@ -95,6 +95,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '스카우트 평가 오차',
     desc: '화면에 보이는 스카우트 평가가 실제 잠재력에서 벗어나는 표준편차 — 0이면 평가가 정확하다',
   },
+  premiumSMult: {
+    group: 'growth',
+    label: '프리미엄 스카우트 S 배수',
+    desc: '프리미엄 스카우트권 후보 한 명이 S일 확률을 일반 후보의 몇 배로 할지. 확률 공개표도 이 값으로 계산한다',
+  },
   injuryRate: {
     group: 'growth',
     label: '경기당 부상 확률',

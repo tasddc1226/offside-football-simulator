@@ -16,6 +16,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   potMean: 'Potential average',
   potSd: 'Potential spread',
   potScoutSd: 'Scouting rating error',
+  premiumSMult: 'Premium scout S multiplier',
   injuryRate: 'Injury chance per match',
   bigInjuryShare: 'Share of serious injuries',
   mlsYoungPull: 'MLS offer weight under 30',

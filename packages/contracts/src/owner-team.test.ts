@@ -32,7 +32,15 @@ import {
   PAST_SALARY_BUDGET_STEP,
   seasonSalaryBudget,
 } from './owner-team.js';
-import { cupPredictionCap, cupReward, cupScouts, scoutPityGauge, scoutPityView } from './cup.js';
+import {
+  SCOUT_PITY_S2,
+  cupPredictionCap,
+  cupReward,
+  cupScouts,
+  scoutPityGauge,
+  scoutPityOf,
+  scoutPityView,
+} from './cup.js';
 import {
   ManagerNameSchema,
   PutOwnerTeamBodySchema,
@@ -242,6 +250,31 @@ describe('T-11-244 프리미엄 스카우트 천장 · 컵 스카우트권', () 
     expect(scoutPityView({ used: 230, streak: 0, elites: 2 })).toMatchObject({
       next: 'normal',
       eliteIn: 70,
+    });
+  });
+
+  it('T-11-450 시즌 2부터 천장은 S 확정 20장 · 특급 70장(시즌 1 카운트를 그대로 이어 센다)', () => {
+    expect(scoutPityOf(0)).toEqual({ sure: 30, elite: 100 });
+    expect(scoutPityOf(1)).toEqual({ sure: 30, elite: 100 });
+    expect(scoutPityOf(2)).toEqual(SCOUT_PITY_S2);
+    expect(scoutPityOf(3)).toEqual({ sure: 20, elite: 70 });
+    const s2 = scoutPityOf(2);
+    expect(scoutPityView({ used: 0, streak: 0, elites: 0 }, s2)).toEqual({
+      next: 'normal',
+      sureIn: 20,
+      eliteIn: 70,
+    });
+    expect(scoutPityView({ used: 19, streak: 19, elites: 0 }, s2).next).toBe('sure');
+    expect(scoutPityView({ used: 69, streak: 3, elites: 0 }, s2).next).toBe('elite');
+    // 시즌 1에 25장 쌓인 S 확정 칸은 시즌 2 첫 장에 바로 확정, 막대는 넘치지 않는다.
+    expect(scoutPityView({ used: 25, streak: 25, elites: 0 }, s2)).toMatchObject({
+      next: 'sure',
+      sureIn: 1,
+    });
+    expect(scoutPityGauge({ used: 25, streak: 25, elites: 0 }, s2).sure).toEqual({
+      have: 19,
+      need: 20,
+      next: true,
     });
   });
 

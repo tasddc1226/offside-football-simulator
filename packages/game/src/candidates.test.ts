@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { generateCandidates, candidatePotentialGrades } from './candidates.js';
 import { scoutOdds } from './premiumScout.js';
+import { applyBalance } from './balance.js';
 import { newGame } from './engine.js';
 import { rnd, createRng, getActiveRng, setActiveRng } from './rng.js';
 import { ATTR_KEYS, focusMod, focusOfType, typeForFocus, TYPES } from './data.js';
@@ -223,6 +224,22 @@ describe('T-11-196 프리미엄 스카우트', () => {
     }
     // 평균 75, 표준편차 6: P(x ≥ 89.5) = 1 − Φ(2.41667) ≈ 0.00783
     expect(scoutOdds('ST').normal.S).toBeCloseTo(0.00783, 5);
+  });
+
+  it('T-11-450 프리미엄 S 배수(premiumSMult)를 올리면 확률표와 뽑힌 결과가 함께 오른다', () => {
+    applyBalance({ premiumSMult: 3 });
+    try {
+      const o = scoutOdds('ST');
+      expect(o.sure.S).toBeCloseTo(3 * o.normal.S, 12);
+      expect(o.rest.S).toBeCloseTo(3 * o.normal.S, 12);
+      for (const t of [o.normal, o.sure, o.rest])
+        expect(Object.values(t).reduce((a, b) => a + b, 0)).toBeCloseTo(1, 12);
+      const p = o.normal.S;
+      const tol = (q: number) => 4 * Math.sqrt((q * (1 - q)) / (N * 3));
+      expect(Math.abs(sRate(true, 'ST').s - 3 * p)).toBeLessThan(tol(3 * p));
+    } finally {
+      applyBalance();
+    }
   });
 
   it('보장 후보는 세 명 중 한 명이고 늘 A 이상이다', () => {

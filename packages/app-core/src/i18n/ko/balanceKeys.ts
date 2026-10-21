@@ -16,6 +16,7 @@ const ko = {
   potMean: '잠재력 평균',
   potSd: '잠재력 편차',
   potScoutSd: '스카우트 평가 오차',
+  premiumSMult: '프리미엄 스카우트 S 배수',
   injuryRate: '경기당 부상 확률',
   bigInjuryShare: '큰 부상 비율',
   mlsYoungPull: '30세 미만 MLS 오퍼 가중치',

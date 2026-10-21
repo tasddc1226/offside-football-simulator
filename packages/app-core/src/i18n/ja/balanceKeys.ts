@@ -16,6 +16,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   potMean: 'ポテンシャルの平均',
   potSd: 'ポテンシャルのばらつき',
   potScoutSd: 'スカウト評価の誤差',
+  premiumSMult: 'プレミアムスカウトのS倍率',
   injuryRate: '1試合あたりのケガ確率',
   bigInjuryShare: '大ケガの割合',
   mlsYoungPull: '30歳未満へのMLSオファーの重み',
