@@ -18,16 +18,21 @@ import { appMeta, cards, careers } from '../schema.js';
 // 호출을 지운다.
 const VERSION = '1';
 const META_KEY = 'card_values_backfill';
+export const CARD_VALUES_BACKFILL_KEYS = [META_KEY] as const;
 /** 스냅샷 JSON을 읽으므로 Workers CPU 안에 들도록 작게. D1 바인딩 한도(100)보다도 작다. */
 const CHUNK = 60;
 
 /** 채우는 중이면 다음 한 조각을 처리한다. 무언가 했으면 true. */
-export async function ensureCardValuesBackfilled(db: Db, chunk = CHUNK): Promise<boolean> {
-  const [meta] = await db
-    .select({ value: appMeta.value })
-    .from(appMeta)
-    .where(eq(appMeta.key, META_KEY));
-  if (meta?.value === VERSION) return false;
+export async function ensureCardValuesBackfilled(
+  db: Db,
+  chunk = CHUNK,
+  knownMeta?: ReadonlyMap<string, string>,
+): Promise<boolean> {
+  const version = knownMeta
+    ? knownMeta.get(META_KEY)
+    : (await db.select({ value: appMeta.value }).from(appMeta).where(eq(appMeta.key, META_KEY)))[0]
+        ?.value;
+  if (version === VERSION) return false;
   const rows = await db
     .select({
       id: cards.careerId,
