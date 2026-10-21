@@ -29,6 +29,7 @@ import { runCup } from './team/cup.js';
 import { finishStaleLive } from './team/liveMatch.js';
 import { runCupAutopilot } from './team/cupAutopilot.js';
 import { runLeague } from './team/league.js';
+import { alertLeagueStalls } from './team/leagueAlert.js';
 import { purgeEdgeOrigin } from './edgeCache.js';
 import { STALE } from './edgeKeys.js';
 import { runSeasonClose } from './team/seasonClose.js';
@@ -131,6 +132,21 @@ export default {
       await runLeague(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
         .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'league', ...r })))
         .catch(logged('league'));
+      // T-11-445 리그가 밀리면 운영 슬랙에 알린다(15분마다, 문제마다 한 번).
+      if (new Date(controller.scheduledTime).getUTCMinutes() % 15 === 0)
+        await alertLeagueStalls(
+          env,
+          createDb(env.DB),
+          new Date(controller.scheduledTime).toISOString(),
+        )
+          .then(
+            (r) =>
+              r.length &&
+              console.log(
+                JSON.stringify({ level: 'info', job: 'league-alert', alerted: r.length }),
+              ),
+          )
+          .catch(logged('league-alert'));
       // T-11-251 다음 회차 만들기 → 접수 시작 알림 → 밀린 단계 슬랙 경보(15분마다).
       await runCupAutopilot(env, controller.scheduledTime).catch(logged('cup-autopilot'));
       // A cron round can commit before a later step fails; purge even on a partial run.
