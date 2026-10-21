@@ -83,7 +83,12 @@ export const isWildcardSeason = (cardSeason: number | null | undefined, teamSeas
 // 선수는 급여가 없고, 지난 시즌 선수는 카드 최고 OVR로 정한 급여의 합이 예산(밸런스 키 pastSalaryBudget) 안이어야 한다.
 // 급여 최대 20 × 3명 = 60이라 예전 규칙으로 짤 수 있던 선발은 모두 그대로 짤 수 있다.
 /** 지난 시즌 선수 급여 예산의 기본값(BALANCE_SPEC.pastSalaryBudget.def와 같다 — 서버 값이 없는 옛 응답이 쓴다). */
-export const PAST_SALARY_BUDGET = 60;
+export const PAST_SALARY_BUDGET = 80;
+/** T-11-450 팀 시즌이 하나 지날 때마다 늘어나는 예산(BALANCE_SPEC.pastSalaryBudgetStep.def와 같다). */
+export const PAST_SALARY_BUDGET_STEP = 10;
+/** 그 팀 시즌의 급여 예산: 시즌 1이 기준, 시즌마다 step씩 는다(프리시즌 0도 기준). */
+export const seasonSalaryBudget = (base: number, step: number, teamSeason: number) =>
+  base + step * Math.max(0, teamSeason - 1);
 /** 급여표: 최고 OVR이 min 이상이면 그 급여(높은 구간부터). 마지막 줄(min 0)은 74 이하. */
 export const PAST_SALARY_TABLE: readonly { readonly min: number; readonly salary: number }[] = [
   { min: 96, salary: 20 },

@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { detailOpenNow } from '@offside/app-core/state';
 import { scoutOddsRows } from '@offside/app-core/scoutOdds';
 import { scoutText as L } from '@offside/app-core/i18n/ko/scout';
+import { scoutPityAt } from '@offside/contracts/cup';
 import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { Btn, Txt } from '../../ui';
@@ -35,7 +36,7 @@ export function ScoutOdds() {
             </View>
           ))}
           <Txt tone="muted" style={small} testID="scout-odds-pity">
-            {L.oddsPity}
+            {L.oddsPity(scoutPityAt())}
           </Txt>
           <Txt tone="muted" style={small}>
             {L.oddsNote}

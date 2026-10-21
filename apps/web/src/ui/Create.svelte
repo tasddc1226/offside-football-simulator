@@ -23,7 +23,7 @@
   import { fundsText } from '@offside/app-core/funds';
   import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
   import type { RewardShopResponse } from '@offside/contracts';
-  import { REROLL_MILEAGE, rerollMileageLeft, type ScoutPity } from '@offside/contracts/cup';
+  import { REROLL_MILEAGE, rerollMileageLeft, scoutPityAt, type ScoutPity } from '@offside/contracts/cup';
   import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
   import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
   import ScoutOdds from './cup/ScoutOdds.svelte';
@@ -170,7 +170,7 @@
     premiumScoutCandidates(plan.seed, mode);
     // T-11-415 S가 그냥 나와 S 확정 칸이 0으로 돌아가면 그렇다고 알린다.
     const reset = mode === 'normal' && r.data.pity?.streak === 0;
-    toast(mode === 'elite' ? SL.doneElite({ n: scouts }) : mode === 'sure' ? SL.doneSure({ n: scouts }) : reset ? SL.doneReset({ n: scouts }) : SL.done({ n: scouts }));
+    toast(mode === 'elite' ? SL.doneElite({ n: scouts, elite: scoutPityAt().elite }) : mode === 'sure' ? SL.doneSure({ n: scouts }) : reset ? SL.doneReset({ n: scouts }) : SL.done({ n: scouts }));
   }
   async function reroll() {
     if (rerolling || rerolls < 1 || !confirm(CL.rerollConfirm({ n: rerolls - 1 }))) return;

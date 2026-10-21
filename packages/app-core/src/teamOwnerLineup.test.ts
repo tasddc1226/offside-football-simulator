@@ -105,10 +105,10 @@ describe('autoFillSlots', () => {
   });
 
   it('T-11-376 지난 시즌 선수는 급여 합이 예산(60) 안에서만 채우고, 넘는 배치를 알려 준다', () => {
-    // OVR 96 이상은 급여 20 — 예전 와일드카드처럼 3명까지 든다.
+    // OVR 96 이상은 급여 20 — 예산 60이면 예전 와일드카드처럼 3명까지 든다.
     const old = [1, 2, 3, 4].map((i) => player(`old${i}`, { peak: 96, season: 0 }));
     const fresh = player('new', { peak: 75, season: 1 });
-    const next = autoFillSlots(slots433, [...old, fresh], 1);
+    const next = autoFillSlots(slots433, [...old, fresh], 1, 60);
     const byId = new Map([...old, fresh].map((p) => [p.careerId, p]));
     expect(pastSalaryIn(next, byId, 1)).toBe(60);
     expect(next.filter((id) => id?.startsWith('old'))).toHaveLength(3);
@@ -144,7 +144,7 @@ describe('autoFillSlots', () => {
     expect(salaryBlocks(slots, assignSlot(slots, 1, 'b'), byId, 1, 15)).toBe(true);
   });
 
-  it('T-11-376 OVR 85~87(급여 6) 지난 시즌 선수는 10명까지 든다', () => {
+  it('T-11-376 OVR 85~87(급여 6) 지난 시즌 선수는 예산 60이면 10명까지 든다', () => {
     const old = Array.from({ length: 11 }, (_, i) =>
       player(`m${i}`, {
         pos: i === 0 ? 'GK' : i < 5 ? 'DF' : i < 8 ? 'MF' : 'FW',
@@ -153,9 +153,11 @@ describe('autoFillSlots', () => {
       }),
     );
     const byId = new Map(old.map((p) => [p.careerId, p]));
-    const next = autoFillSlots(slots433, old, 1);
+    const next = autoFillSlots(slots433, old, 1, 60);
     expect(next.filter((x) => x !== null)).toHaveLength(10);
     expect(pastSalaryIn(next, byId, 1)).toBe(60);
+    // T-11-450 기본 예산 80이면 11명(급여 66) 모두 든다.
+    expect(autoFillSlots(slots433, old, 1).filter((x) => x !== null)).toHaveLength(11);
   });
 
   it('T-11-376 예산이 넉넉하면 제한 없을 때와 같은 선발, 빠듯하면 급여 대비 센 조합을 고른다', () => {

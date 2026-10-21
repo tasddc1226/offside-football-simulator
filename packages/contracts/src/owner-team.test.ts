@@ -29,8 +29,18 @@ import {
   slotRating,
   teamOvr,
   achGradeOf,
+  PAST_SALARY_BUDGET_STEP,
+  seasonSalaryBudget,
 } from './owner-team.js';
-import { cupPredictionCap, cupReward, cupScouts, scoutPityGauge, scoutPityView } from './cup.js';
+import {
+  SCOUT_PITY_S2,
+  cupPredictionCap,
+  cupReward,
+  cupScouts,
+  scoutPityGauge,
+  scoutPityOf,
+  scoutPityView,
+} from './cup.js';
 import {
   ManagerNameSchema,
   PutOwnerTeamBodySchema,
@@ -243,6 +253,31 @@ describe('T-11-244 프리미엄 스카우트 천장 · 컵 스카우트권', () 
     });
   });
 
+  it('T-11-450 시즌 2부터 천장은 S 확정 20장 · 특급 70장(시즌 1 카운트를 그대로 이어 센다)', () => {
+    expect(scoutPityOf(0)).toEqual({ sure: 30, elite: 100 });
+    expect(scoutPityOf(1)).toEqual({ sure: 30, elite: 100 });
+    expect(scoutPityOf(2)).toEqual(SCOUT_PITY_S2);
+    expect(scoutPityOf(3)).toEqual({ sure: 20, elite: 70 });
+    const s2 = scoutPityOf(2);
+    expect(scoutPityView({ used: 0, streak: 0, elites: 0 }, s2)).toEqual({
+      next: 'normal',
+      sureIn: 20,
+      eliteIn: 70,
+    });
+    expect(scoutPityView({ used: 19, streak: 19, elites: 0 }, s2).next).toBe('sure');
+    expect(scoutPityView({ used: 69, streak: 3, elites: 0 }, s2).next).toBe('elite');
+    // 시즌 1에 25장 쌓인 S 확정 칸은 시즌 2 첫 장에 바로 확정, 막대는 넘치지 않는다.
+    expect(scoutPityView({ used: 25, streak: 25, elites: 0 }, s2)).toMatchObject({
+      next: 'sure',
+      sureIn: 1,
+    });
+    expect(scoutPityGauge({ used: 25, streak: 25, elites: 0 }, s2).sure).toEqual({
+      have: 19,
+      need: 20,
+      next: true,
+    });
+  });
+
   it('T-11-415 막대는 쌓인 장수, 특급이 먼저 오면 S 확정 칸은 다음이 아니다', () => {
     expect(scoutPityGauge({ used: 12, streak: 12, elites: 0 })).toEqual({
       sure: { have: 12, need: 30, next: false },
@@ -307,13 +342,22 @@ describe('T-11-376 지난 시즌 선수 급여', () => {
     ).toBe(26);
   });
 
-  it('예산 기본값 60 = 밸런스 기본값, 예전 와일드카드 3명(급여 최대 20)은 늘 예산 안', () => {
+  it('예산 기본값 80 = 밸런스 기본값, 급여 최대 20 선수 4명까지 예산 안', () => {
     expect(BALANCE_SPEC.pastSalaryBudget.def).toBe(PAST_SALARY_BUDGET);
+    expect(BALANCE_SPEC.pastSalaryBudgetStep.def).toBe(PAST_SALARY_BUDGET_STEP);
     const max = Math.max(...PAST_SALARY_TABLE.map((t) => t.salary));
-    expect(max * 3).toBeLessThanOrEqual(PAST_SALARY_BUDGET);
-    // 예산 정확히 60은 되고 61은 넘는다.
-    const sixty = [...Array(3)].map(() => ({ peak: 96, season: 0 }));
-    expect(pastSalarySum(sixty, 1)).toBe(60);
-    expect(pastSalarySum([...sixty, { peak: 70, season: 0 }], 1)).toBe(61);
+    expect(max * 4).toBeLessThanOrEqual(PAST_SALARY_BUDGET);
+    // 예산 정확히 80은 되고 81은 넘는다.
+    const four = [...Array(4)].map(() => ({ peak: 96, season: 0 }));
+    expect(pastSalarySum(four, 1)).toBe(80);
+    expect(pastSalarySum([...four, { peak: 70, season: 0 }], 1)).toBe(81);
+  });
+
+  it('T-11-450 급여 예산은 시즌 1이 기준이고 시즌마다 step씩 는다', () => {
+    expect(seasonSalaryBudget(80, 10, 0)).toBe(80);
+    expect(seasonSalaryBudget(80, 10, 1)).toBe(80);
+    expect(seasonSalaryBudget(80, 10, 2)).toBe(90);
+    expect(seasonSalaryBudget(80, 10, 4)).toBe(110);
+    expect(seasonSalaryBudget(60, 0, 3)).toBe(60);
   });
 });

@@ -231,7 +231,7 @@ export default function Team() {
   // 서버에는 비공개 이름이 없다 — 이 기기에서 은퇴한 선수는 이 기기에 남은 이름을 쓴다.
   const localNames = useMemo(() => localCareerNames(), []);
   const byId = new Map(players.map((p) => [p.careerId, p]));
-  // T-11-376 지난 시즌 선수 급여 예산(서버 밸런스 값, 옛 응답이면 기본 60).
+  // T-11-376 지난 시즌 선수 급여 예산(서버가 팀 시즌에 맞춰 계산한 값, 옛 응답이면 기본 80).
   const salary = salaryBar(slots, byId, season, budget);
   const nameOf = (p: TeamPlayer) => marketName(p, localNames);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
