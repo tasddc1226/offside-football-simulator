@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { CareerPosSchema } from './careers.js';
 import { IsoUtcSchema } from './primitives.js';
 import { CupStandingSchema, CupTeamSchema } from './cup-api.js';
+import { LEAGUE_OUTCOMES } from './league.js';
 import { TeamIdSchema, TeamMatchSchema } from './teams.js';
 
 // T-11-418 오프사이드 리그 API 모양. 값 · 일정 계산은 zod 없는 league.ts.
@@ -59,6 +60,14 @@ export const LeagueMeResponseSchema = z.strictObject({
     })
     .nullable(),
   /**
+   * T-11-430 그 시즌 팀이 아직 없을 때(사전 신청 기간) 지금 시즌 내 팀의 선발 실카드 수. 자격 안내에 참고로 보인다. 그 시즌
+   * 팀이 있거나 지금 시즌 팀도 없으면 null, 옛 응답에는 없다.
+   */
+  lastTeam: z
+    .strictObject({ season: z.number().int(), filled: z.number().int() })
+    .nullable()
+    .optional(),
+  /**
    * T-11-418b 배치 결과. placed: 리그에 들어감, dropped: 배치 때 자격(선발 실카드)이 모자라 빠짐, forfeited: 기권이 쌓여 남은 경기를
    * 모두 기권패로 치름. 배치 전 · 옛 응답에는 없다.
    */
@@ -69,6 +78,27 @@ export const LeagueMeResponseSchema = z.strictObject({
       league: z.number().int().nullable(),
       teamId: TeamIdSchema.nullable(),
       rank: z.number().int().nullable(),
+      /**
+       * T-11-430 빠진 이유(dropped만): short는 배치 때 자격(선발 실카드)이 모자람, capacity는 자격은 갖췄지만 참가 팀 수에
+       * 맞춰 리그를 꾸리고 남음. 옛 응답에는 없다.
+       */
+      reason: z.enum(['short', 'capacity']).optional(),
+      /** T-11-430 지금까지 쌓인 기권 수(리그에 든 팀만). 옛 응답에는 없다. */
+      forfeits: z.number().int().min(0).optional(),
+      /**
+       * T-11-418e 결산(14라운드 뒤). 최종 순위 · 결과 · 받은 보상 · 다음 시즌에 신청하면 시작하는 부(기권 퇴출은 null = 맨
+       * 아래). 결산 전 · 옛 응답에는 없다.
+       */
+      final: z
+        .strictObject({
+          rank: z.number().int(),
+          outcome: z.enum(LEAGUE_OUTCOMES),
+          rerolls: z.number().int(),
+          scouts: z.number().int(),
+          boosts: z.number().int(),
+          nextTier: z.number().int().nullable(),
+        })
+        .optional(),
     })
     .nullable()
     .optional(),

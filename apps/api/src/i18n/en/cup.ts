@@ -120,17 +120,33 @@ export const CUP_EN: Record<CupTextKey, string> = {
   leaguePlacedTitle: 'Season {season} OFFSIDE League placement',
   leaguePlacedBody: '{team} is in Tier {tier}, League {league}. Round 1 kicks off today at {time}.',
   leagueDroppedTitle: 'Your Season {season} OFFSIDE League entry was cancelled',
-  leagueDroppedBody: 'At placement, your Season {season} starting XI had fewer than {n} players.',
+  leagueDroppedBody:
+    'At placement, your Season {season} starting XI had fewer than {n} players. You can enter again next season.',
   leagueLeftBody:
-    "The number of clubs didn't fit into leagues, so the {n} lowest-OVR clubs were left out.",
+    "The number of clubs didn't fit into leagues, so the {n} lowest-OVR clubs were left out. You can enter again next season.",
   leagueCancelledTitle: "The Season {season} OFFSIDE League won't take place",
   leagueRoundTitle: 'OFFSIDE League Round {round}: {result}',
   leagueRoundBody: '{score} · Position {rank}',
+  leagueRoundForfeitBody:
+    '{score} · Forfeited: not enough players in your starting XI. Forfeits {n}/{limit}. {left} more and every remaining match is a 0:3 loss.',
   leagueRest: 'Bye',
   leagueRestBody: 'Bye this round · Position {rank}',
   leagueEndTitle: 'Your Season {season} OFFSIDE League is over',
   leagueEndBody: 'Tier {tier}, League {league}: finished in position {rank}.',
   leagueChampionTitle: 'Season {season} OFFSIDE League Tier {tier}, League {league}: Champions!',
+  leagueEndBodyChampion:
+    'Tier 1 champions! You earned the Season {season} League Champion title, {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s).',
+  leagueEndBodyAll:
+    'Tier {tier}, League {league}: finished in position {rank}. You received {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s). Sign up next season to start in Tier {next}.',
+  leagueEndBodyReroll:
+    'Tier {tier}, League {league}: finished in position {rank}. You received {n} player reroll ticket(s). Sign up next season to start in Tier {next}.',
+  leagueEndBodyNext:
+    'Tier {tier}, League {league}: finished in position {rank}. Sign up next season to start in Tier {next}.',
+  leagueEndBodyForfeited:
+    'Tier {tier}, League {league}: finished in position {rank}. Too many forfeits, so there is no reward and next season starts in the bottom tier.',
+  leagueFillTitle: 'Promoted in the OFFSIDE League!',
+  leagueFillBody:
+    'A spot opened up above, so you play in Tier {tier} in Season {season}. You received {s} premium scout ticket(s).',
   leagueForfeitedTitle: 'Your remaining OFFSIDE League matches will be forfeited',
   leagueForfeitedBody:
     'Your club missed {n} matches. All remaining matches will be recorded as 0:3 losses.',

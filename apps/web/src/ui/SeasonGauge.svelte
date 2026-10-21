@@ -2,12 +2,16 @@
   // 시즌 진행 게이지(홈). 시즌은 정한 날짜가 아니라 유저들이 끝까지 뛴 커리어로 찬다(contracts season-gauge.ts).
   // 90%에 닿아 마감이 정해지면 카운트다운으로 바뀐다. 진행 중인 시즌이 없으면 아무것도 그리지 않는다.
   import { onMount } from 'svelte';
-  import { seasonGaugeLines, type SeasonGauge } from '@offside/app-core/seasonGauge';
+  import { seasonGaugeInfo, seasonGaugeLines, type SeasonGauge } from '@offside/app-core/seasonGauge';
+  import { seasonGaugeText as T } from '@offside/app-core/i18n/ko/seasonGauge';
+  import PopSheet from './PopSheet.svelte';
   import { loadSeasonGauge } from '@offside/app-core/seasonSchedule';
 
   let gauge = $state.raw<SeasonGauge | null>(null);
   let now = $state(Date.now());
   const lines = $derived(gauge ? seasonGaugeLines(gauge, now) : null);
+  // T-11-435 카드를 누르면 게이지가 무엇을 세는지 · 마감 · 진행 중 커리어 · 보상 위치를 알려 주는 창을 연다.
+  let open = $state(false);
 
   async function load() {
     const r = await loadSeasonGauge();
@@ -29,8 +33,9 @@
 
 {#if gauge && lines}
   <section class="card season-gauge" class:locked={!!gauge.endsAt} data-season-gauge aria-label={lines.aria}>
+    <button class="tap-cover" data-act="season-gauge-info" aria-haspopup="dialog" aria-label={T.openLabel({ aria: lines.aria })} onclick={() => (open = true)}></button>
     <div class="sg-head">
-      <span class="eyebrow">Season progress</span>
+      <span class="eyebrow sg-eyebrow">Season progress<svg class="sg-info" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg></span>
       <b class="sg-pct num" data-season-gauge-pct>{lines.pct}%</b>
     </div>
     <h2 class="sg-title">{lines.countdown ?? lines.title}</h2>
@@ -42,8 +47,32 @@
   </section>
 {/if}
 
+{#if open}
+  <PopSheet label={T.infoTitle} onclose={() => (open = false)}>
+    <div class="sg-info-sheet" data-season-gauge-sheet>
+      <div>
+        <small class="eyebrow">Season progress</small>
+        <h2>{T.infoTitle}</h2>
+      </div>
+      {#each seasonGaugeInfo() as part (part.head)}
+        <section>
+          <h3>{part.head}</h3>
+          <p>{part.body}</p>
+        </section>
+      {/each}
+      <button class="btn btn-block" data-act="season-gauge-info-close" onclick={() => (open = false)}>{T.infoClose}</button>
+    </div>
+  </PopSheet>
+{/if}
+
 <style>
-  .season-gauge {display:flex;flex-direction:column;gap:8px;}
+  .season-gauge {position:relative;display:flex;flex-direction:column;gap:8px;}
+  .sg-eyebrow {display:inline-flex;align-items:center;gap:4px;}
+  .sg-info {width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;}
+  .sg-info-sheet {display:flex;flex-direction:column;gap:12px;}
+  .sg-info-sheet h2 {margin:0;font-size:var(--fs-title3);}
+  .sg-info-sheet h3 {margin:0 0 4px;font-size:var(--fs-body);}
+  .sg-info-sheet p {margin:0;font-size:var(--fs-label);color:var(--muted);line-height:1.55;}
   .sg-head {display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
   .sg-pct {font-family:var(--display);font-size:var(--fs-title1);line-height:1;color:var(--accent-text);}
   .sg-title {margin:0;font-size:var(--fs-title3);}

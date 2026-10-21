@@ -31,6 +31,7 @@ import {
   CUP_HOME_AFTER_MS,
   cupById,
   cupFinalAt,
+  cupLineupVerdict,
   cupRoundsOf,
   currentCup,
   divisionFor,
@@ -976,8 +977,10 @@ export async function checkCupLineup(
   );
   let listed: Promise<number> | undefined;
   for (const { cup, entry } of active) {
-    // T-11-410 구간 대회는 추첨 뒤 탈락 전까지 상한을 넘는 명단으로 바꿀 수 없다(접수 중에는 신청을 옮기면 된다).
-    if (now >= cup.drawAt && !fitsDivision(cup, ovr))
+    // T-11-436 편성 화면 줄과 같은 판정(cupLineupVerdict). T-11-410 구간 대회는 추첨 뒤 탈락 전까지 상한을 넘는 명단으로
+    // 바꿀 수 없다(접수 중에는 신청을 옮기면 된다).
+    const verdict = cupLineupVerdict(cup, { ovr, filled }, now);
+    if (verdict.capBlocks)
       throw conflictError(
         cupKo('ovrCap', { division: cupKo(cup.division!), n: cup.ovrMax ?? 0 }),
         'CUP_OVR_CAP',
@@ -990,7 +993,7 @@ export async function checkCupLineup(
       )
     )
       throw conflictError(cupKo('lineupLocked'), 'CUP_LINEUP_LOCKED');
-    if (filled < cup.minFilled)
+    if (verdict.short)
       throw conflictError(cupKo('minFilled', { n: cup.minFilled }), 'CUP_MIN_FILLED');
     if ((await (listed ??= countOpenListingsAmong(db, ids))) > 0)
       throw conflictError(cupKo('cardListed'), 'CUP_CARD_LISTED');

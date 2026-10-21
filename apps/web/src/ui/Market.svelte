@@ -49,6 +49,7 @@
     marketEmptyText,
     marketName,
     priceAtPct,
+    staleListingNext,
     priceDiff,
     releaseAmount,
     releaseConfirmText,
@@ -114,10 +115,14 @@
     const t = setInterval(() => !document.hidden && tick++, MARKET_TICKER_MS);
     return () => clearInterval(t);
   });
-  async function loadList(next = 0) {
+  /** 받은 목록(첫 페이지면 그 페이지)을 돌려준다. 못 받으면 null. */
+  async function loadList(next = 0): Promise<MarketListing[] | null> {
     if (next === 0) listStatus = 'loading';
     const r = await fetchMarket(sort, pos, next);
-    if (!r.ok) return void (listStatus = 'error');
+    if (!r.ok) {
+      listStatus = 'error';
+      return null;
+    }
     items = next === 0 ? r.data.items : [...items, ...r.data.items];
     // 정렬·포지션을 바꿔도 띠는 이어서 넘긴다(tick을 되돌리지 않는다). 배포 직후 옛 엣지 응답에는 recent가 없다.
     if (next === 0) recent = r.data.recent ?? [];
@@ -125,6 +130,7 @@
     hasMore = r.data.hasMore;
     season = r.data.season;
     listStatus = 'ok';
+    return r.data.items;
   }
   // 정렬·포지션을 바꾸면 첫 페이지부터 다시 받는다(loadList가 둘을 읽어 의존한다).
   $effect(() => {
@@ -202,19 +208,37 @@
   async function run<T>(send: () => Promise<{ ok: true; data: T } | { ok: false; error: { message: string; reason?: string } }>, done: string) {
     busy = true;
     error = null;
+    const sent = buying;
     const r = await send();
-    busy = false;
     if (!r.ok) {
-      error = r.error.message;
-      // 이미 팔렸거나 가격이 바뀌었으면 목록을 새로 받는다.
-      if (isStaleListing(r.error)) void loadList(0);
+      // 이미 팔렸거나 가격이 바뀌었으면 목록을 새로 받고, 영입 시트는 새 가격으로 바꾸거나 닫는다(T-11-434).
+      // 새 목록을 받는 동안에도 버튼을 막아 낡은 가격으로 다시 보내지 않는다.
+      if (isStaleListing(r.error)) await settleStale(sent, r.error);
+      else error = r.error.message;
+      busy = false;
       return;
     }
+    busy = false;
     closeSheets();
     picked = new Set();
     selling = null;
     toast(done);
     await refresh();
+  }
+
+  async function settleStale(sent: MarketListing | null, e: { message: string; reason?: string | undefined }) {
+    const fresh = await loadList(0);
+    // 시트 밖(내 거래 탭의 판매 내리기)이면 오류만 보인다. 그 사이 시트를 닫았거나 다른 매물을 열었으면 시트는 건드리지 않는다.
+    if (!sent) return void (error = e.message);
+    if (buying?.id !== sent.id) return;
+    const next = staleListingNext(sent, e.reason, fresh);
+    if ('listing' in next) {
+      buying = next.listing;
+      error = next.notice;
+    } else {
+      closeSheets();
+      toast(next.toast);
+    }
   }
 
   const asPlayer = (c: MarketCard): TeamPlayer => ({ ...c, roles: null });

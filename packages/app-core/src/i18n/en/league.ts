@@ -56,25 +56,53 @@ export const league: Translation<LeagueMsgs> = {
   myOvr: (p) => `Your team OVR now: ${p.ovr}`,
   presignNote: (p) =>
     `You can enter before Season ${p.season} opens. Season ${p.season} clubs can be built from the opening on ${p.at}.`,
-  readyOk: (p) => `Ready · ${p.filled} of your retired players in the starting XI`,
+  readyOk: (p) =>
+    `Ready · ${p.filled} of your retired players in the starting XI (${p.min} needed)`,
   readyShort: (p) =>
     `You have ${p.filled}/${p.min} of your retired players in the starting XI. Fill ${p.min} before the draw to join the league.`,
   readyNoTeam: (p) =>
     `You don't have a Season ${p.season} club yet. Build one and start ${p.min} of your retired players before the draw to join the league.`,
+  readyPresign: (p) =>
+    `Your Season ${p.season} starting XI has ${p.filled} of your retired players. Build your Season ${p.next} club after the opening and start ${p.min} before the draw to join the league.`,
+  entryRuleEligible: (p) =>
+    `Eligibility: your Season ${p.season} starting XI needs ${p.min} of your retired players at the draw. With fewer, you're left out of the league.`,
+  entryRuleForfeit: (p) =>
+    `Forfeits: with fewer than ${p.min} of your retired players in the starting XI at kick-off, you lose 0:3. After ${p.limit} forfeits, every remaining match is a 0:3 loss and you start next season in the bottom tier.`,
+  fixLineup: 'Fix starting XI',
+  makeTeam: 'Build a club',
   notEntered: "You didn't enter this season's league.",
   drawPending: 'Tiers and fixtures appear here after the draw.',
   runningRounds: (p) => `${p.n} of ${p.total} rounds played.`,
   leagueName: (p) => `Tier ${p.tier}, League ${p.league}`,
   placedLine: (p) => `Tier ${p.tier}, League ${p.league} · Position ${p.rank}`,
-  droppedLine:
-    "You didn't have enough of your retired players in the starting XI at the draw, so you're not in this season's league.",
+  droppedLine: "You're not in this season's league. You can enter again next season.",
+  droppedShortLine:
+    "You didn't have enough of your retired players in the starting XI at the draw, so you're not in this season's league. You can enter again next season.",
+  droppedCapacityLine:
+    'You were eligible, but you were left out when the leagues were formed to fit the number of clubs. You can enter again next season.',
+  droppedCancelledLine:
+    "Not enough clubs entered, so this season's league isn't running. You can enter again next season.",
   forfeitedLine: 'After 3 forfeits, all remaining matches are recorded as 0:3 losses.',
+  finalTitle: 'Season result',
+  finalLine: (p) => `Tier ${p.tier}, League ${p.league} · Final position ${p.rank}`,
+  outcomeChampion: 'Champions',
+  outcomePromoted: 'Promoted',
+  outcomeStayed: 'Stayed up',
+  outcomeRelegated: 'Relegated',
+  outcomeForfeited: 'Removed for forfeits',
+  finalChampionTitle: (p) => `You earned the title 'Season ${p.season} League Champion'.`,
+  rewardReroll: (p) => `${p.n} reroll ticket(s)`,
+  rewardScout: (p) => `${p.n} premium scout ticket(s)`,
+  rewardBoost: (p) => `${p.n} potential boost ticket(s)`,
+  rewardNone: 'No reward',
+  finalNext: (p) => `Sign up next season to start in Tier ${p.tier}.`,
+  finalNextBottom: 'Too many forfeits, so next season starts in the bottom tier.',
   myLeague: 'My league',
   pickLeague: 'Choose a league',
   standingsTitle: 'Table',
   zoneUp: 'Promotion',
   zoneDown: 'Relegation',
-  forfeitsTag: (p) => `${p.n} forfeit${p.n === 1 ? '' : 's'}`,
+  forfeitsTag: (p) => `Forfeits ${p.n}/${p.limit}`,
   roundsTitle: 'Rounds',
   roundName: (p) => `Round ${p.n}`,
   restTeam: (p) => `Bye · ${p.team}`,

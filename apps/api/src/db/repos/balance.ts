@@ -178,3 +178,9 @@ export async function activateBalance(
     }),
   ]);
 }
+
+/** T-11-418e 활성 버전의 리그 홈 이점(없으면 기본값). */
+export async function leagueHomeAdvOf(db: Db): Promise<number> {
+  const [row] = await activeBalanceQuery(db);
+  return resolveBalance(row && toVersion(row).values).leagueHomeAdv;
+}

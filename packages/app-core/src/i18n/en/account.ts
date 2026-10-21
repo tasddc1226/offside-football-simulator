@@ -22,6 +22,13 @@ export const account: Translation<AccountMsgs> = {
   nicknamePrompt: 'Pick a comment nickname to comment on the news board',
   nicknameFixed: (p) => `${p.nickname} · Admin nicknames can't be changed`,
   unlinkGoogle: 'Unlink Google',
+  unlinkTitle: 'Unlink your Google account?',
+  unlinkBodyOnly:
+    "You'll have no way to sign in to this account, so you'll be signed out. Signing in with the same Google account on another device won't bring back this account's player records or team. Sign in with Google again on this device to reconnect. Your game progress on this device stays.",
+  unlinkBodyApple:
+    "You can keep using this account with Sign in with Apple. Signing in with the same Google account on another device won't bring back this account's player records or team. Your game progress on this device stays.",
+  unlinkConfirm: 'Unlink',
+  unlinkFail: "Couldn't unlink your Google account. Try again in a moment.",
   deleteAccount: 'Delete account',
   deleteBody:
     "Delete your account and the player records, teams, comments and chat saved on the server? This can't be undone. Game progress on this device stays.",

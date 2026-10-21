@@ -7,7 +7,14 @@ import {
   type LeagueMeResponse,
   type LeagueResponse,
 } from '@offside/contracts';
-import { LEAGUE_ROUNDS, leaguePhase } from '@offside/contracts/league';
+import {
+  LEAGUE_ROUNDS,
+  leagueNextTier,
+  leaguePhase,
+  leagueReward,
+  type LeagueOutcome,
+} from '@offside/contracts/league';
+import { displaySeasonAt } from '@offside/contracts/service-seasons';
 import { and, count, eq, inArray, ne } from 'drizzle-orm';
 import type { Context, Hono } from 'hono';
 import { cupKo } from '../cupText.js';
@@ -62,9 +69,35 @@ async function placementOf(
   mine: LeagueEntryRow | undefined,
 ): Promise<LeagueMeResponse['placement']> {
   if (!mine || (mine.status === 'active' && mine.tier === null)) return null;
+  // T-11-430 배치가 팀 기록을 남긴 dropped는 자격은 갖췄지만 리그를 꾸리고 남은 신청이다(drawLeague).
   if (mine.status === 'dropped')
-    return { status: 'dropped', tier: null, league: null, teamId: null, rank: null };
+    return {
+      status: 'dropped',
+      tier: null,
+      league: null,
+      teamId: null,
+      rank: null,
+      reason: mine.teamId ? 'capacity' : 'short',
+    };
   if (!inLeague(mine)) return null;
+  // T-11-418e 결산이 끝났으면 저장한 최종 순위 · 결과로(순위표를 다시 세지 않는다).
+  if (mine.outcome && mine.finalRank !== null) {
+    const outcome = mine.outcome as LeagueOutcome;
+    return {
+      status: mine.status === 'forfeited' ? 'forfeited' : 'placed',
+      tier: mine.tier,
+      league: mine.leagueNo,
+      teamId: mine.teamId,
+      rank: mine.finalRank,
+      forfeits: mine.forfeits,
+      final: {
+        rank: mine.finalRank,
+        outcome,
+        ...leagueReward(mine.tier!, mine.finalRank, mine.forfeits, outcome),
+        nextTier: leagueNextTier(mine.tier!, outcome),
+      },
+    };
+  }
   const [[state], entries, matches] = await Promise.all([
     leagueStateOf(db, season),
     db
@@ -90,6 +123,7 @@ async function placementOf(
     league: mine.leagueNo,
     teamId: mine.teamId,
     rank,
+    forfeits: mine.forfeits,
   };
 }
 
@@ -117,6 +151,19 @@ async function teamNow(db: Db, league: LeagueDef, profileId: string) {
     (await lineupsOf(db, league.season, team, team, { coaches: false })).home,
   );
   return { teamId: team.id, filled, ovr: team.ovr };
+}
+
+/**
+ * T-11-430 그 시즌 팀이 아직 없을 때(사전 신청 기간) 지금 시즌 내 팀의 선발 실카드 수. 자격 안내의 참고값이라 그 시즌
+ * 팀이 있으면 묻지 않는다.
+ */
+async function lastTeamOf(db: Db, league: LeagueDef, profileId: string, now: string) {
+  const season = displaySeasonAt(now);
+  if (season >= league.season) return null;
+  const [team] = await myTeamIn(db, profileId, season);
+  if (!team) return null;
+  const filled = filledCount((await lineupsOf(db, season, team, team, { coaches: false })).home);
+  return { season, filled };
 }
 
 const mineOf = (db: Db, season: number, profileId: string) =>
@@ -176,6 +223,7 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
         entry: mine ? { createdAt: mine.createdAt } : null,
         canEnter: !mine && leaguePhase(league, now) === 'open',
         team,
+        lastTeam: team || now >= league.closesAt ? null : await lastTeamOf(db, league, me.id, now),
         placement: now < league.drawAt ? null : await placementOf(db, league.season, mine),
       },
       200,

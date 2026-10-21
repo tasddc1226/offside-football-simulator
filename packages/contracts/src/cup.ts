@@ -192,12 +192,39 @@ export const editionCups = (cup: CupDef, cups: readonly CupDef[]) =>
 /** 같은 회차에서 대표로 보여 줄 대회: 마스터(통합 대회면 그 대회). */
 export const headCup = (cup: CupDef, cups: readonly CupDef[]) => editionCups(cup, cups).at(-1)!;
 
+/** 구간 판정에 쓰는 대회 값(서버 CupDef · 응답 CupInfo · 구간 목록 모두 맞는다). */
+export type CupDivisionRule = {
+  division?: CupDivision | null | undefined;
+  ovrMax?: number | null | undefined;
+};
+
 /** 이 OVR로 들어갈 수 있는가(상한이 아직 없는 아랫 구간은 접수 전이라 아니다). */
-export const fitsDivision = (cup: CupDef, ovr: number) =>
+export const fitsDivision = (cup: CupDivisionRule, ovr: number) =>
   !cup.division || cup.division === 'master' || (cup.ovrMax != null && ovr <= cup.ovrMax);
 
+/** T-11-436 컵 참가 중 팀 저장 판정에 쓰는 대회 값. */
+export type CupLineupRule = CupDivisionRule & { minFilled: number; drawAt: string };
+
+/**
+ * T-11-436 컵에 참가 중인 팀을 저장할 때의 OVR 상한 · 최소 인원 판정. 서버 checkCupLineup과 편성 화면 줄이 같이 쓴다.
+ * overCap: 팀 OVR(teamOvr)이 구간 상한을 넘는다. capBlocks: 조 추첨 뒤라 저장을 막는다(추첨 전에는 추첨 때 윗 구간으로
+ * 옮긴다). short: 선발에 든 실제 선수가 자격 수보다 적다(참가 중이면 늘 저장을 막는다).
+ */
+export function cupLineupVerdict(
+  rule: CupLineupRule,
+  team: { ovr: number; filled: number },
+  now: string,
+) {
+  const overCap = !fitsDivision(rule, team.ovr);
+  return {
+    overCap,
+    capBlocks: overCap && now >= rule.drawAt,
+    short: team.filled < rule.minFilled,
+  };
+}
+
 /** 이 OVR이 들어갈 수 있는 가장 낮은 구간. */
-export const divisionFor = (siblings: readonly CupDef[], ovr: number) =>
+export const divisionFor = <T extends CupDivisionRule>(siblings: readonly T[], ovr: number) =>
   siblings.find((c) => fitsDivision(c, ovr)) ?? siblings.at(-1);
 
 /**

@@ -1,7 +1,13 @@
 // T-11-080 이적시장 화면(웹 ui/market · 앱 screens/owner/Market.tsx 공용) — 그리기 전에 계산하는 것과 문구만 둔다.
 import type { CareerPos } from '@offside/contracts';
 import { fmtValue, playerName } from './format.js';
-import type { MarketCard, MarketRules, MarketSale, MarketTrade } from './api/market.js';
+import type {
+  MarketCard,
+  MarketListing,
+  MarketRules,
+  MarketSale,
+  MarketTrade,
+} from './api/market.js';
 import type { FundsItem } from '@offside/contracts';
 import type { OwnerTeamResponse, TeamPlayer } from './api/team.js';
 import { marketFee, priceBand, releasePayout } from '@offside/contracts/market-value';
@@ -89,6 +95,23 @@ export function buyBlock(price: number, balance: number, buysLeft: number): stri
   if (buysLeft <= 0) return L.buyLimit;
   if (balance < price) return L.buyShort({ short: fmtValue(price - balance) });
   return null;
+}
+
+/**
+ * T-11-434 영입 · 판매 내리기가 낡은 매물(LISTING_GONE · PRICE_CHANGED)이라 실패한 뒤 새로 받은 첫 페이지(fresh, 못 받았으면
+ * null)로 시트를 어떻게 할지 고른다. 새 목록에 다른 가격으로 있으면 그 매물로 시트를 바꾸고 안내를 띄운다. 팔렸거나 내렸거나,
+ * 목록이 아직 같은 가격을 들고 있으면(엣지 캐시) 시트를 닫고 토스트로 알린다. 낡은 가격으로 다시 보내지 않게 하려는 것이다.
+ */
+export function staleListingNext(
+  sent: Pick<MarketListing, 'id' | 'price'>,
+  reason: string | undefined,
+  fresh: readonly MarketListing[] | null,
+): { listing: MarketListing; notice: string } | { toast: string } {
+  if (reason === 'LISTING_GONE') return { toast: L.staleGone };
+  const found = fresh?.find((l) => l.id === sent.id);
+  if (found && found.price !== sent.price)
+    return { listing: found, notice: L.priceMoved({ price: fmtValue(found.price) }) };
+  return { toast: L.staleRecheck };
 }
 
 /** 지금 시즌 선발(방출을 막는다). 지난 시즌 팀은 고칠 수 없어 막지 않는다. */

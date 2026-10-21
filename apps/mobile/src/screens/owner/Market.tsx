@@ -46,6 +46,7 @@ import {
   marketEmptyText,
   marketName,
   priceAtPct,
+  staleListingNext,
   priceDiff,
   releaseAmount,
   releaseConfirmText,
@@ -582,12 +583,16 @@ export default function Market() {
   const listReq = useRef(0);
   // 정렬을 빠르게 바꿀 때 늦게 온 이전 응답이 덮어쓰지 않게 요청 번호를 둔다.
   const loadList = useCallback(
-    async (next = 0, silent = false) => {
+    /** 받은 목록(첫 페이지면 그 페이지)을 돌려준다. 못 받았거나 늦게 온 응답이면 null. */
+    async (next = 0, silent = false): Promise<MarketListing[] | null> => {
       const req = ++listReq.current;
       if (next === 0 && !silent) setListStatus('loading');
       const r = await fetchMarket(sort, pos, next);
-      if (req !== listReq.current) return;
-      if (!r.ok) return silent ? undefined : setListStatus('error');
+      if (req !== listReq.current) return null;
+      if (!r.ok) {
+        if (!silent) setListStatus('error');
+        return null;
+      }
       setItems((prev) => (next === 0 ? r.data.items : [...prev, ...r.data.items]));
       // 배포 직후 옛 엣지 응답에는 recent가 없다.
       if (next === 0) setRecent(r.data.recent ?? []);
@@ -595,6 +600,7 @@ export default function Market() {
       setHasMore(r.data.hasMore);
       setSeason(r.data.season);
       setListStatus('ok');
+      return r.data.items;
     },
     [sort, pos],
   );
@@ -687,19 +693,43 @@ export default function Market() {
   async function run<T>(send: () => Sent<T>, done: string) {
     setBusy(true);
     setError(null);
+    const sent = buying;
     const r = await send();
-    setBusy(false);
     if (!r.ok) {
-      setError(r.error.message);
-      // 이미 팔렸거나 가격이 바뀌었으면 목록을 새로 받는다.
-      if (isStaleListing(r.error)) void loadList(0);
+      // 이미 팔렸거나 가격이 바뀌었으면 목록을 새로 받고, 영입 시트는 새 가격으로 바꾸거나 닫는다(T-11-434).
+      // 새 목록을 받는 동안에도 버튼을 막아 낡은 가격으로 다시 보내지 않는다.
+      if (isStaleListing(r.error)) await settleStale(sent, r.error);
+      else setError(r.error.message);
+      setBusy(false);
       return;
     }
+    setBusy(false);
     closeSheets();
     setPicked(new Set());
     setSelling(null);
     toast(done);
     await refresh();
+  }
+
+  // 지금 열린 영입 시트(그 사이 닫았거나 다른 매물을 열었는지 보려고 ref로도 둔다).
+  const buyingRef = useRef(buying);
+  buyingRef.current = buying;
+  async function settleStale(
+    sent: MarketListing | null,
+    e: { message: string; reason?: string | undefined },
+  ) {
+    const fresh = await loadList(0);
+    // 시트 밖(내 거래 탭의 판매 내리기)이면 오류만 보인다. 그 사이 시트를 닫았거나 다른 매물을 열었으면 시트는 건드리지 않는다.
+    if (!sent) return setError(e.message);
+    if (buyingRef.current?.id !== sent.id) return;
+    const next = staleListingNext(sent, e.reason, fresh);
+    if ('listing' in next) {
+      setBuying(next.listing);
+      setError(next.notice);
+    } else {
+      closeSheets();
+      toast(next.toast);
+    }
   }
 
   // T-11-188 잠금 풀기(팔기 · 방출 화면). 잠그기는 팀 라커룸에서 한다.

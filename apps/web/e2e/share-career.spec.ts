@@ -193,3 +193,66 @@ test('은퇴 기록이 아직 서버에 없으면 연결 오류가 아니라 "�
   ).toBeVisible();
   await expect(page.locator('.share-url')).toHaveCount(0);
 });
+
+test('T-11-433 은퇴 업로드가 대기 중이면 상태 줄과 다시 올리기를 보여 주고, 누르면 올라간다', async ({
+  page,
+}) => {
+  const uploaded = await stubApi(page, { google: true });
+  let down = true;
+  const puts: string[] = [];
+  await page.route(/\/v1\/careers\/[^/]+\/retirement$/, async (r) => {
+    puts.push(r.request().url());
+    if (down)
+      return r.fulfill({
+        status: 503,
+        json: { error: { code: 'SERVICE_UNAVAILABLE', message: '점검 중', retryable: true } },
+      });
+    return r.fallback();
+  });
+  await retireNow(page);
+  const status = page.locator('[data-share="bar"] .upload-status');
+  await expect(status).toHaveAttribute('data-upload', 'pending');
+  await expect(status).toContainText('서버 반영 대기 중이에요.');
+  const tries = puts.length;
+  // 폴링하지 않는다: 버튼을 누르기 전에는 다시 보내지 않는다.
+  await page.waitForTimeout(1500);
+  expect(puts.length).toBe(tries);
+
+  down = false;
+  await status.locator('[data-act="upload-retry"]').click();
+  await expect(page.getByText('기록을 서버에 올렸어요.')).toBeVisible();
+  await expect(status).toHaveCount(0);
+  expect(uploaded.size).toBe(1);
+});
+
+test('T-11-433 서버가 은퇴 기록을 거절하면 이유를 보여 주고, 공유 링크도 잠시 후 대신 이유를 말한다', async ({
+  page,
+}) => {
+  await stubApi(page, { google: true });
+  await page.route(/\/v1\/careers\/[^/]+\/retirement$/, (r) =>
+    r.fulfill({
+      status: 400,
+      json: {
+        error: {
+          code: 'VALIDATION_FAILED',
+          message: '시즌 기록이 있어야 은퇴를 기록할 수 있어요.',
+          retryable: false,
+          details: { reason: 'NO_SEASONS' },
+        },
+      },
+    }),
+  );
+  await retireNow(page);
+  const status = page.locator('[data-share="bar"] .upload-status');
+  await expect(status).toHaveAttribute('data-upload', 'rejected');
+  await expect(status).toContainText(
+    '서버에 올리지 못했어요. 시즌 기록이 서버에 없어서 은퇴 기록을 받지 않았어요.',
+  );
+  await expect(status.locator('[data-act="upload-retry"]')).toHaveCount(0);
+  await page.locator('[data-act="share-career"]').click();
+  await expect(
+    page.getByText('서버에 올리지 못한 기록이라 링크를 만들 수 없어요.', { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByText('잠시 후 다시 시도해 주세요.')).toHaveCount(0);
+  await expect(page.locator('.share-url')).toHaveCount(0);
+});

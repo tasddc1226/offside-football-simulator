@@ -102,38 +102,121 @@ export const leaguePresign = (data: LeagueResponse, now = Date.now()) =>
   data.phase === 'open' && now < Date.parse(data.league.startsAt);
 
 /**
- * 배치 준비 상태 한 줄(배치 때 그 시즌 팀 선발 실카드 수로 자격을 본다). 개막 전이라 그 시즌 팀을 아직 만들 수 없거나,
- * 접수가 끝났으면 null.
+ * 배치 준비 상태 한 줄(배치 때 그 시즌 팀 선발 실카드 수로 자격을 본다). 접수 중이면 누구에게나, 접수 마감 뒤 배치 전(closed)에는
+ * 신청한 구단주에게 보인다. T-11-430 개막 전 사전 신청 기간에는 그 시즌 팀을 아직 만들 수 없어 지금 시즌 팀 선발 수(lastTeam)를
+ * 참고로 보인다(없으면 null). 배치 뒤 · 접수 전은 null.
  */
 export function leagueReadiness(
   data: LeagueResponse,
   me: LeagueMeResponse | null,
   now = Date.now(),
 ): { ok: boolean; text: string } | null {
-  if (!me || data.phase !== 'open' || leaguePresign(data, now)) return null;
+  if (!me) return null;
+  if (data.phase !== 'open' && !(data.phase === 'closed' && me.entry)) return null;
   const min = data.league.minFilled;
-  if (!me.team) return { ok: false, text: L.readyNoTeam({ season: data.league.season, min }) };
+  const season = data.league.season;
+  if (leaguePresign(data, now)) {
+    const last = me.lastTeam;
+    return last
+      ? {
+          ok: last.filled >= min,
+          text: L.readyPresign({ season: last.season, next: season, filled: last.filled, min }),
+        }
+      : null;
+  }
+  if (!me.team) return { ok: false, text: L.readyNoTeam({ season, min }) };
   return me.team.filled >= min
-    ? { ok: true, text: L.readyOk({ filled: me.team.filled }) }
+    ? { ok: true, text: L.readyOk({ filled: me.team.filled, min }) }
     : { ok: false, text: L.readyShort({ filled: me.team.filled, min }) };
 }
 
+/** T-11-430 신청 카드의 참가 자격 · 기권 규칙 두 줄. 배치 전(접수 예정 · 접수 중 · 배치 대기)에만. */
+export function leagueEntryRules(data: LeagueResponse): string[] {
+  if (data.phase !== 'soon' && data.phase !== 'open' && data.phase !== 'closed') return [];
+  const min = data.league.minFilled;
+  return [
+    L.entryRuleEligible({ season: data.league.season, min }),
+    L.entryRuleForfeit({ min, limit: LEAGUE_FORFEIT_LIMIT }),
+  ];
+}
+
+/**
+ * T-11-430 신청 카드의 팀 화면 버튼: 신청했고 배치 전(사전 신청 기간 빼고 접수 중 · 배치 대기)이면 보인다. 그 시즌 팀이 있으면
+ * '팀 선발 고치기', 없으면 '팀 만들기'. 아니면 null.
+ */
+export function leagueTeamAction(
+  data: LeagueResponse,
+  me: LeagueMeResponse | null,
+  now = Date.now(),
+): string | null {
+  if (!me?.entry) return null;
+  if (data.phase === 'open' ? leaguePresign(data, now) : data.phase !== 'closed') return null;
+  return me.team ? L.fixLineup : L.makeTeam;
+}
+
+/** T-11-430 기권 수 표시 "기권 n/3". */
+export const leagueForfeitsTag = (n: number) => L.forfeitsTag({ n, limit: LEAGUE_FORFEIT_LIMIT });
+
 // ───────── T-11-418b 배치 뒤 ─────────
 
-/** 내 배치 한 줄(배치 전 · 신청 없음은 null). */
+/**
+ * 내 배치 한 줄(배치 전 · 신청 없음은 null). T-11-430 빠진 이유를 자격 부족 · 팀 수 조정(리그가 아예 열리지 않음 포함)으로
+ * 나누고, 리그에 든 팀은 기권이 쌓였으면 "기권 n/3"을 붙인다. cancelled는 리그가 열리지 않은 시즌(배치 뒤 부가 하나도 없다).
+ */
 export function leaguePlacementLine(
   me: LeagueMeResponse | null,
+  cancelled = false,
 ): { ok: boolean; text: string } | null {
   const p = me?.placement;
   if (!p) return null;
-  if (p.status === 'dropped') return { ok: false, text: L.droppedLine };
+  if (p.status === 'dropped') {
+    const text =
+      p.reason === 'short'
+        ? L.droppedShortLine
+        : p.reason === 'capacity'
+          ? cancelled
+            ? L.droppedCancelledLine
+            : L.droppedCapacityLine
+          : L.droppedLine;
+    return { ok: false, text };
+  }
   if (p.status === 'forfeited') return { ok: false, text: L.forfeitedLine };
   const at = { tier: p.tier ?? 1, league: p.league ?? 1 };
+  const base = p.rank ? L.placedLine({ ...at, rank: p.rank }) : L.leagueName(at);
+  return { ok: true, text: p.forfeits ? `${base} · ${leagueForfeitsTag(p.forfeits)}` : base };
+}
+
+/** 리그가 열리지 않은 시즌인가(배치했는데 부가 하나도 없다). */
+export const leagueCancelled = (data: Pick<LeagueResponse, 'tiers'>) =>
+  !!data.tiers && data.tiers.length === 0;
+
+/** T-11-418e 내 결산(14라운드 뒤). 결과 알약 · 최종 순위 · 받은 보상 · 다음 시즌 부 · 1부 우승 칭호 줄. 결산 전은 null. */
+export function leagueFinalView(me: LeagueMeResponse | null, season: number) {
+  const p = me?.placement;
+  const f = p?.final;
+  if (!p || !f) return null;
+  const outcome = {
+    champion: L.outcomeChampion,
+    promoted: L.outcomePromoted,
+    stayed: L.outcomeStayed,
+    relegated: L.outcomeRelegated,
+    forfeited: L.outcomeForfeited,
+  }[f.outcome];
+  const reward = [
+    ...(f.rerolls ? [L.rewardReroll({ n: f.rerolls })] : []),
+    ...(f.scouts ? [L.rewardScout({ n: f.scouts })] : []),
+    ...(f.boosts ? [L.rewardBoost({ n: f.boosts })] : []),
+  ];
   return {
-    ok: true,
-    text: p.rank ? L.placedLine({ ...at, rank: p.rank }) : L.leagueName(at),
+    outcome: f.outcome,
+    label: outcome,
+    line: L.finalLine({ tier: p.tier ?? 1, league: p.league ?? 1, rank: f.rank }),
+    reward: reward.length ? reward.join(' · ') : L.rewardNone,
+    next: f.nextTier === null ? L.finalNextBottom : L.finalNext({ tier: f.nextTier }),
+    title: f.outcome === 'champion' ? L.finalChampionTitle({ season }) : null,
   };
 }
+export type LeagueFinalView = NonNullable<ReturnType<typeof leagueFinalView>>;
 
 export type LeaguePick = { tier: number; league: number };
 

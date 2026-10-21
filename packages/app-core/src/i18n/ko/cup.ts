@@ -181,6 +181,20 @@ const ko = {
   lineupLocked: '컵 경기 명단이 잠겼어요. 경기가 끝나면 다시 바꿀 수 있어요.',
   lineupBand: (p: { when: string }) =>
     `${p.when} 컵 명단이 마감돼요. 마감부터 그 경기가 끝날 때까지 바꿀 수 없어요.`,
+  // T-11-436 편성 화면 컵 규칙 줄(팀 OVR · 상한, 선발 인원)
+  barOvrCap: (p: { ovr: number; cap: number; division: string }) =>
+    `팀 OVR ${p.ovr} / 상한 ${p.cap}(${p.division})`,
+  barOvrNoCap: (p: { ovr: number; division: string }) =>
+    `팀 OVR ${p.ovr} · ${p.division}(상한 없음)`,
+  barFilled: (p: { n: number; min: number }) => `선발 ${p.n}/최소 ${p.min}`,
+  barOverCapBlock: (p: { division: string; cap: number }) =>
+    `${p.division} 상한 ${p.cap}을 넘어서 저장할 수 없어요. 팀 OVR을 ${p.cap} 이하로 맞춰 주세요.`,
+  barOverCapMove: (p: { division: string }) =>
+    `${p.division} 상한을 넘었어요. 이대로면 조 추첨 때 윗 구간으로 옮겨져요.`,
+  barShortBlock: (p: { min: number }) =>
+    `컵 참가 중에는 선발에 내 선수가 ${p.min}명 이상 있어야 저장할 수 있어요.`,
+  barShortEntry: (p: { min: number }) =>
+    `컵에 신청하려면 선발에 내 선수가 ${p.min}명 이상 있어야 해요.`,
   // 대회 화면
   secMine: '내 대회',
   secRules: '규칙',

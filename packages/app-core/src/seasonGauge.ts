@@ -56,3 +56,21 @@ export function seasonGaugeLines(g: SeasonGauge, now: number): SeasonGaugeLines 
     why: g.endsAt ? null : L.why({ n: g.participants.toLocaleString('en-US') }),
   };
 }
+
+/** T-11-435 게이지 카드를 누르면 여는 설명 창의 단락(웹 · 앱 같은 내용). 수치는 SEASON_GAUGE에서 가져와 문구와 어긋나지 않는다. */
+export function seasonGaugeInfo(): { head: string; body: string }[] {
+  const G = SEASON_GAUGE;
+  return [
+    { head: L.infoWhatHead, body: L.infoWhat },
+    {
+      head: L.infoFillHead,
+      body: L.infoFill({ age: G.fullAge, cap: G.dailyCap, per: G.perUser }),
+    },
+    {
+      head: L.infoEndHead,
+      body: L.infoEnd({ lock: Math.round(G.lockAt * 100), min: G.minDays, max: G.maxDays }),
+    },
+    { head: L.infoCareerHead, body: L.infoCareer },
+    { head: L.infoWhereHead, body: L.infoWhere },
+  ];
+}

@@ -1510,6 +1510,10 @@ export const leagueEntries = sqliteTable(
     leagueNo: integer('league_no'),
     forfeits: integer('forfeits').notNull().default(0),
     notifiedRound: integer('notified_round').notNull().default(0),
+    // T-11-418e 결산: 최종 순위 · 결과(LeagueOutcome) · 보상을 준 시각(한 번만 준다). 다음 시즌 배치가 읽는다.
+    finalRank: integer('final_rank'),
+    outcome: text('outcome'),
+    rewardedAt: text('rewarded_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

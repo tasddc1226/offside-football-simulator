@@ -7,6 +7,7 @@ import type { ResolveResult } from '@offside/game/event-runner';
 import type { MgKind } from '@offside/game/minigame';
 import type { DragPoint, ShotResult } from '@offside/game/dragShot';
 import type { FlightMap } from './flight.js';
+import type { PeekChip } from './eventPeek.js';
 import type { GrowthDirInfo } from './ratingReport.js';
 import type { BlockResult, MatchGame } from '@offside/game/match';
 import { shellText } from './i18n/ko/shell.js';
@@ -185,7 +186,8 @@ export type SheetView =
       title: string;
       text: string;
       story: StoryTag | null;
-      choices: { label: string; odds: string; hint?: string }[];
+      /** T-11-432 chips: 선택하면 늘 일어나는 득실(최대 2개, 안전한 선택은 가끔 대가까지 3개). 비어 있으면 hint를 화면에 짧게 보인다. */
+      choices: { label: string; odds: string; hint?: string; chips: PeekChip[] }[];
     }
   | {
       kind: 'eventResult';

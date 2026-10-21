@@ -300,6 +300,9 @@ const ko = {
   tpOverwrite: '덮어쓰기',
   tpRename: '이름 바꾸기',
   tpDelete: '삭제',
+  // T-11-431 덮어쓰기 · 삭제 확인
+  tpOverwriteAsk: '지금 편성으로 덮어쓸까요?',
+  tpDeleteAsk: '이 프리셋을 삭제할까요?',
   tpNameLabel: '프리셋 이름',
   tpNameDone: '확인',
   tpSaved: '프리셋을 저장했어요.',

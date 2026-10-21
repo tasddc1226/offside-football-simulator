@@ -60,6 +60,9 @@ export const market: Translation<MarketMsgs> = {
     `You're ${p.short} short on club funds. Release a player you raised to free up funds.`,
   unlist: 'Take down listing',
   buyFor: (p) => `Sign for ${p.price}`,
+  priceMoved: (p) => `The price changed to ${p.price}. Please check it again.`,
+  staleGone: 'This player was already sold or taken down.',
+  staleRecheck: 'The price for this player changed. Please check the list again.',
   sellStep1: '1. Choose a player to list',
   sellNone:
     "You don't have any player cards yet. They appear here when your players retire or you sign one.",

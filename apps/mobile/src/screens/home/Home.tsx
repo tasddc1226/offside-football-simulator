@@ -1,6 +1,6 @@
 // 홈(웹 Home.svelte — ui.ts renderHome() 포트): 전광판 · 히어로 · 라이브 현황 · 타일 · 명예의 전당 TOP 3 · 소식 · 푸터.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
-import { useState } from 'react';
+import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Linking, Platform, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
@@ -41,9 +41,31 @@ import { openFriends } from '../../platform/inbox';
 import { INVITE_REROLLS, INVITE_SCOUTS } from '@offside/contracts/owner-team';
 import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
 import { tn } from '@offside/game/i18n/names';
+import {
+  homeOrder,
+  NO_HOME_TODO,
+  type HomeBlock,
+  type HomeTodo,
+} from '@offside/app-core/homeOrder';
+import { loadHomeTodo } from '@offside/app-core/homeTodo';
+import { useOnPull } from '../../ui/refresh';
+import { notificationDestination } from '../../platform/notificationDestination';
 
 // T-11-360 출석 창은 앱을 연 뒤 처음 그린 홈에서만 저절로 띄운다(로그아웃 뒤 · 다른 화면에서 돌아올 때는 아니다).
 let homeShown = false;
+
+/** T-11-435 받을 선물 · 오늘 출석. 선물 · 출석 블록이 부르는 것과 같은 메모 조회라 새 요청이 없다. 당기면 다시 본다. */
+function useHomeTodo(): HomeTodo {
+  const [todo, setTodo] = useState<HomeTodo>(NO_HOME_TODO);
+  const reload = useCallback(async () => setTodo(await loadHomeTodo()), []);
+  // 알림으로 홈을 열면(home이 늘면) 선물 블록처럼 다시 본다(T-11-388).
+  const { home } = useSnapshot(notificationDestination);
+  useEffect(() => {
+    void reload();
+  }, [reload, home]);
+  useOnPull(reload);
+  return todo;
+}
 
 export default function Home() {
   const [firstHome] = useState(() => {
@@ -55,6 +77,42 @@ export default function Home() {
   const c = useColors();
   const G = s.G && !s.G.retired ? s.G : null;
   const narrow = useWindowDimensions().width < 360;
+  const order = homeOrder(useHomeTodo());
+  const blocks: Record<HomeBlock, ReactNode> = {
+    pushOptIn: <PushOptInCard />,
+    ownerConflict:
+      G && s.ownerConflict ? (
+        <View testID="owner-conflict">
+          <Card gap={8} style={{ borderWidth: 1, borderColor: alpha(c.warn, 0.45) }}>
+            <Txt bold>{L.conflictTitle}</Txt>
+            <Txt v="sm" tone="muted">
+              {L.conflictBody({ name: G.name })}
+            </Txt>
+            <Row gap={8}>
+              <Btn kind="accent" testID="adopt-career" onPress={adoptCareer}>
+                {L.conflictAdopt}
+              </Btn>
+              <Btn sm testID="keep-on-device" onPress={keepOnDevice}>
+                {L.conflictKeep}
+              </Btn>
+            </Row>
+          </Card>
+        </View>
+      ) : null,
+    // T-11-338 진행 중인 감독 커리어 이어 하기(기기 세이브가 있을 때만).
+    managerResume: <ManagerResume />,
+    seasonGauge: <SeasonGauge />,
+    // T-11-145 오프사이드 컵 소식은 모두가 먼저 보는 홈에서. 신청은 대회 화면에서 한다.
+    cup: <CupBanner onOpen={() => go('cup')} />,
+    // T-11-418 오프사이드 리그 소식(신청은 리그 화면에서).
+    league: <LeagueBanner />,
+    // T-11-275 구단주 선물(로그인한 구단주가 한 번 받으면 사라진다).
+    gift: <HomeGift />,
+    attendance: <HomeAttendance auto={firstHome} />,
+    // T-11-355 처음 안내 카드(기기마다 닫을 때까지).
+    firstGuide: <FirstGuide />,
+    live: <HomeLive />,
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -182,40 +240,13 @@ export default function Home() {
             </View>
           </PitchCard>
         )}
-        <PushOptInCard />
-        {G && s.ownerConflict ? (
-          <View testID="owner-conflict">
-            <Card gap={8} style={{ borderWidth: 1, borderColor: alpha(c.warn, 0.45) }}>
-              <Txt bold>{L.conflictTitle}</Txt>
-              <Txt v="sm" tone="muted">
-                {L.conflictBody({ name: G.name })}
-              </Txt>
-              <Row gap={8}>
-                <Btn kind="accent" testID="adopt-career" onPress={adoptCareer}>
-                  {L.conflictAdopt}
-                </Btn>
-                <Btn sm testID="keep-on-device" onPress={keepOnDevice}>
-                  {L.conflictKeep}
-                </Btn>
-              </Row>
-            </Card>
-          </View>
-        ) : null}
-        {/* T-11-338 진행 중인 감독 커리어 이어 하기(기기 세이브가 있을 때만). */}
-        <ManagerResume />
-        {/* T-11-145 오프사이드 컵 소식은 모두가 먼저 보는 홈에서. 신청은 대회 화면에서 한다. */}
-        <SeasonGauge />
-        <CupBanner onOpen={() => go('cup')} />
-        {/* T-11-418 오프사이드 리그 소식(신청은 리그 화면에서). */}
-        <LeagueBanner />
+        {/* T-11-435 히어로 아래 블록 순서는 app-core homeOrder 한 곳에서 정한다(웹과 같다). 받을 선물 · 오늘 출석이 있으면
+            그 블록이 히어로 바로 아래로 올라온다. 키로 그려서 순서가 바뀌어도 블록을 다시 만들지 않고 옮기기만 한다. */}
+        {order.map((b) => (
+          <Fragment key={b}>{blocks[b]}</Fragment>
+        ))}
         {/* T-11-290 오프사이드 컵 우승 팝업 — 앱을 켜 홈에 왔을 때 한 번(결승 뒤 일주일, 기기마다 '다시 보지 않기'). 배너와 같은 응답. */}
         <CupChampionPopup />
-        {/* T-11-275 구단주 선물(로그인한 구단주가 한 번 받으면 사라진다). 컵 배너 바로 아래. */}
-        <HomeGift />
-        <HomeAttendance auto={firstHome} />
-        {/* T-11-355 처음 안내 카드(기기마다 닫을 때까지). */}
-        <FirstGuide />
-        <HomeLive />
         {/* T-11-080f 구단주 화면을 거치지 않고 이적시장으로 바로 간다(뒤로 가기는 홈으로). 홈에서는 서버를 부르지 않는다. */}
         <Tile
           wide

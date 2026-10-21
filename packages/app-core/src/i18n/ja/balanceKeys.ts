@@ -33,6 +33,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   marketPriceMax: '最高販売価格(基準価格の倍率)',
   marketListLimit: '同時に出品できる数',
   marketDailyBuys: '1日の獲得数',
+  leagueHomeAdv: 'リーグのホームアドバンテージ',
   pastSalaryBudget: '過去シーズン選手の年俸予算',
   rerollPrice: 'リロールチケットの価格',
   rerollPriceGrowth: 'リロールチケットの値上がり倍率',

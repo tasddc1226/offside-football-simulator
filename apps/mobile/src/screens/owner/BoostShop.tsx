@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { iapText as L } from '@offside/app-core/i18n/ko/iap';
-import { sellablePacks, useIapItems } from '../../platform/iapItems';
+import { iapNotice, sellablePacks, useIapItems } from '../../platform/iapItems';
 import { rem } from '../../theme/type';
 import { Card, Press, Txt } from '../../ui';
 import { IapPacks } from './IapPacks';
@@ -16,7 +16,8 @@ export function BoostShop() {
   const iap = useIapItems(true);
   const have = iap.items?.boost ?? 0;
   const sells = sellablePacks('boost', iap).length > 0;
-  if (!sells && !have) return null;
+  // T-11-434 상품을 못 불러왔거나 로그인 전이면 묶음이 없어도 카드를 보여 '다시 확인' · 로그인 안내를 둔다.
+  if (!sells && !have && !iapNotice(iap)) return null;
   return (
     <Card gap={12} testID="boost-shop">
       <Press
@@ -46,9 +47,12 @@ export function BoostShop() {
         sells ? (
           <IapPacks item="boost" note={L.shopNote} />
         ) : (
-          <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
-            {L.shopNote}
-          </Txt>
+          <>
+            <IapPacks item="boost" />
+            <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
+              {L.shopNote}
+            </Txt>
+          </>
         )
       ) : null}
     </Card>

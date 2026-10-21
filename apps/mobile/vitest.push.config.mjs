@@ -11,6 +11,7 @@ export default {
       'src/platform/pushPreferences.test.mjs',
       'src/platform/engagement.test.mjs',
       'src/platform/rewarded.test.mjs',
+      'src/platform/iapItems.test.mjs',
     ],
   },
 };

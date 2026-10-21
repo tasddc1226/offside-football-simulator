@@ -7,6 +7,7 @@
   import { leagueText as L } from '@offside/app-core/i18n/ko/league';
   import { playerName } from '@offside/app-core/format';
   import {
+    leagueForfeitsTag,
     leagueClinches,
     leagueFinalReady,
     leagueMatchMid,
@@ -79,7 +80,7 @@
                   <div class="lg-who">
                     <span class="rk">{s.rank}</span>
                     <TeamLogo logo={t?.logo} name={t?.name ?? C.tbd} size={24} decorative />
-                    <span class="lg-nm"><b>{t?.name ?? C.tbd}{#if cl}<span class="pill lg-clinch {CLINCH[cl].cls}" data-league-clinch={cl}>{CLINCH[cl].text}</span>{/if}</b><small class="muted">{C.teamOwnerLabel} {t?.owner ?? C.tbd}{#if s.forfeits} · {L.forfeitsTag({ n: s.forfeits })}{/if}</small></span>
+                    <span class="lg-nm"><b>{t?.name ?? C.tbd}{#if cl}<span class="pill lg-clinch {CLINCH[cl].cls}" data-league-clinch={cl}>{CLINCH[cl].text}</span>{/if}</b><small class="muted">{C.teamOwnerLabel} {t?.owner ?? C.tbd}{#if s.forfeits || s.teamId === mineId}&nbsp;· <span data-league-forfeits={s.teamId === mineId ? 'mine' : undefined}>{leagueForfeitsTag(s.forfeits)}</span>{/if}</small></span>
                   </div>
                 </td>
                 <td>{s.p}</td><td>{s.w}</td><td>{s.d}</td><td>{s.l}</td><td>{gd(s.gf, s.ga)}</td><td><b>{s.pts}</b></td>

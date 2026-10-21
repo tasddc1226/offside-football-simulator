@@ -236,6 +236,14 @@ export const BALANCE_SPEC = {
     max: 300,
     step: 1,
   },
+  // T-11-418e 오프사이드 리그 홈 팀의 기대 득점 배율(랭크 경기 · 친선과 같은 값에서 시작, 컵은 중립이라 없음).
+  leagueHomeAdv: {
+    def: 1.08,
+    min: 1,
+    max: 1.3,
+    step: 0.01,
+    unit: 'x',
+  },
   // T-11-152 구단 자금으로 사는 선수 후보 리롤권. 쌓이기만 하는 구단 자금을 없애려고 비싸게 판다.
   rerollPrice: {
     def: 1_000_000,

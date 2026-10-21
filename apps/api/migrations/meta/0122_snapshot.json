@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "4dd0df22-eec2-4f9e-b3aa-62614bfcfff6",
+  "id": "1fbe5eba-5691-498b-ba0a-53cb34073e80",
   "prevId": "6f3cf953-ff81-441b-a903-f490fcd42568",
   "tables": {
     "acquisition_consents": {
@@ -4086,6 +4086,27 @@
           "autoincrement": false,
           "default": 0
         },
+        "final_rank": {
+          "name": "final_rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "rewarded_at": {
+          "name": "rewarded_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "text",
@@ -5050,20 +5071,6 @@
         "team_kept": {
           "name": "team_kept",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "reward_boost": {
-          "name": "reward_boost",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "reward_scout": {
-          "name": "reward_scout",
-          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

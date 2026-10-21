@@ -838,8 +838,15 @@
     {
       "idx": 122,
       "version": "6",
-      "when": 1792499574856,
-      "tag": "0122_owner_achievement_gift",
+      "when": 1792553631116,
+      "tag": "0122_league_settle",
+      "breakpoints": true
+    },
+    {
+      "idx": 123,
+      "version": "6",
+      "when": 1792565457137,
+      "tag": "0123_owner_achievement_gift",
       "breakpoints": true
     }
   ]

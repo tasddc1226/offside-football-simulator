@@ -17,6 +17,7 @@ import { leagueText as L } from '@offside/app-core/i18n/ko/league';
 import { teamMatchText as TM } from '@offside/app-core/i18n/ko/teamMatch';
 import { playerName } from '@offside/app-core/format';
 import {
+  leagueForfeitsTag,
   LEAGUE_LIVE_END,
   leagueClinches,
   leagueFinalReady,
@@ -216,7 +217,7 @@ function Standings({
                       <ClinchPill clinch={clinches.get(s.teamId)} />
                     </View>
                     <Txt v="xs" tone="muted">
-                      {`${C.teamOwnerLabel} ${team?.owner ?? C.tbd}${s.forfeits ? ` · ${L.forfeitsTag({ n: s.forfeits })}` : ''}`}
+                      {`${C.teamOwnerLabel} ${team?.owner ?? C.tbd}${s.forfeits || mine ? ` · ${leagueForfeitsTag(s.forfeits)}` : ''}`}
                     </Txt>
                   </View>
                 </View>

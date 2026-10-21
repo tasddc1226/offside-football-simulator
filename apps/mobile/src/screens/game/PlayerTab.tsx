@@ -240,7 +240,7 @@ function BoostCard({ s }: { s: GameState }) {
               {B.ticketBoost({ n: tickets, chance: v.chance })}
             </Btn>
           ) : null}
-          <IapPacks item="boost" note={IL.boostNote({ chance: v.chance })} />
+          <IapPacks item="boost" note={IL.boostNote({ chance: v.chance })} login={false} />
         </View>
       ) : null}
       <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 4 }}>

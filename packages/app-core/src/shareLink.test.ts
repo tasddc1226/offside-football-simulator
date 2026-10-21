@@ -37,4 +37,26 @@ describe('공유 링크 확인', () => {
     detail.mockResolvedValueOnce(fail('NETWORK'));
     await expect(checkShareLink('c1', { flush, url })).rejects.toThrow('서버에 연결하지 못했어요');
   });
+
+  it('T-11-433 서버가 거절한 기록이면 잠시 후 대신 이유를 말한다', async () => {
+    const stored = new Map<string, string>([
+      [
+        'ft_outbox:rejected',
+        JSON.stringify([
+          {
+            kind: 'retirement',
+            careerId: 'c1',
+            body: {},
+            rejected: { status: 400, code: 'VALIDATION_FAILED', reason: 'NO_SEASONS', at: 0 },
+          },
+        ]),
+      ],
+    ]);
+    vi.stubGlobal('localStorage', { getItem: (k: string) => stored.get(k) ?? null, setItem() {} });
+    detail.mockResolvedValueOnce(fail('NOT_FOUND', 'HOF_NOT_FOUND'));
+    const err = await checkShareLink('c1', { flush: async () => {}, url }).catch((e: Error) => e);
+    vi.unstubAllGlobals();
+    expect((err as Error).message).toContain('시즌 기록이 서버에 없어서');
+    expect((err as Error).message).not.toContain('잠시 후');
+  });
 });

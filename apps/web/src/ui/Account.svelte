@@ -13,6 +13,7 @@
   import { refreshChatIdentity } from './chat-state.svelte.js';
   import { accountLabel, isMember } from '@offside/app-core/account';
   import { closeSheet, showSheet } from './sheetState.svelte.js';
+  import { toast } from './helpers.js';
   import { accountText as L } from '@offside/app-core/i18n/ko/account';
 
   /** 관리자 계정(설정 화면이 확인한다)은 댓글 닉네임이 '운영자'로 고정돼 바꾸는 칸이 없다. */
@@ -40,12 +41,25 @@
   });
 
   async function doUnlink() {
+    closeSheet();
     const r = await unlinkGoogle();
     if (r.ok) {
       refreshChatIdentity();
       await load();
     }
-    else set('error');
+    // T-11-431 해제 실패는 연결 오류 카드로 덮지 않는다. 계정 카드는 그대로 두고 해제 실패만 알린다.
+    else toast(L.unlinkFail);
+  }
+  /** T-11-431 연동 해제는 로그인 수단을 없애므로 한 번 더 묻는다. */
+  function askUnlink() {
+    const apple = !!profile && profile !== 'error' && profile.linked.apple;
+    showSheet(
+      { kind: 'notice', eyebrow: 'Account', title: L.unlinkTitle, muted: true, text: apple ? L.unlinkBodyApple : L.unlinkBodyOnly },
+      [
+        { label: L.unlinkConfirm, cls: 'btn-primary', fn: () => void doUnlink() },
+        { label: L.cancel, fn: closeSheet },
+      ],
+    );
   }
   async function doLogout() {
     closeSheet();
@@ -94,7 +108,7 @@
   </div>
   <div class="account-more">
     {#if profile.linked.google}
-      <button class="link-btn" onclick={doUnlink}>{L.unlinkGoogle}</button>
+      <button class="link-btn" data-act="unlink" onclick={askUnlink}>{L.unlinkGoogle}</button>
       <span aria-hidden="true">·</span>
     {/if}
     <button class="link-btn bad" onclick={doDeleteFlow}>{L.deleteAccount}</button>

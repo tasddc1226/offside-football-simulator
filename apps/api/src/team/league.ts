@@ -1,12 +1,19 @@
 import { CUP_LOCK_MIN } from '@offside/contracts/cup';
 import {
+  LEAGUE_FILL_PROMOTE_SCOUTS,
   LEAGUE_FORFEIT_GOALS,
   LEAGUE_FORFEIT_LIMIT,
   LEAGUE_ROUNDS,
   leagueFixtures,
+  leagueNextTier,
+  leagueOutcome,
   leaguePyramid,
+  leagueReward,
+  leagueSeedOrder,
   type LeagueDef,
+  type LeagueOutcome,
 } from '@offside/contracts/league';
+import { leagueTitleIdOf, TITLE_STAGES } from '@offside/contracts/owner-title';
 import { and, asc, eq, getTableColumns, inArray, isNull, lte } from 'drizzle-orm';
 import { cupKo } from '../cupText.js';
 import type { Db } from '../db/client.js';
@@ -19,6 +26,8 @@ import {
   ownerTeams,
   profiles,
 } from '../db/schema.js';
+import { leagueHomeAdvOf } from '../db/repos/balance.js';
+import { grantItemStatement } from '../db/repos/itemShop.js';
 import { eventNotificationStatements } from '../push/events.js';
 import { drawGroups, groupStandings, rngFrom } from './cupRules.js';
 import { currentLeague } from './leagueSchedule.js';
@@ -285,10 +294,36 @@ export async function remindLeague(db: Db, league: LeagueDef, now: string) {
   return results.length;
 }
 
+/** T-11-418e 같은 구단주의 지난 시즌 리그 결산(결과가 있는 것만). */
+async function previousResults(db: Db, season: number) {
+  const rows = await db
+    .select({
+      profileId: leagueEntries.profileId,
+      tier: leagueEntries.tier,
+      rank: leagueEntries.finalRank,
+      outcome: leagueEntries.outcome,
+    })
+    .from(leagueEntries)
+    .where(eq(leagueEntries.season, season - 1));
+  return new Map(
+    rows.flatMap((r) =>
+      r.tier !== null && r.rank !== null && r.outcome
+        ? [
+            [
+              r.profileId,
+              { tier: r.tier, rank: r.rank, outcome: r.outcome as LeagueOutcome },
+            ] as const,
+          ]
+        : [],
+    ),
+  );
+}
+
 /**
- * 배치: 그 시즌 팀 선발이 자격 수 이상인 신청을 OVR 높은 순으로 부에 나누고(1부 1리그 · 2부 2리그 …), 부 안에서는 컵 조
- * 추첨처럼 OVR 포트로 리그를 고른다. 리그마다 14라운드 경기를 한 번에 만든다. 첫 시즌이라 지난 부가 없어 OVR로만
- * 나눈다(승강은 다음 시즌부터). 자격이 모자라거나 리그를 꾸리고 남은 신청은 dropped. 알림은 다음 cron들이 나눠 보낸다.
+ * 배치: 그 시즌 팀 선발이 자격 수 이상인 신청을 부에 나누고(1부 1리그 · 2부 2리그 …), 부 안에서는 컵 조 추첨처럼 OVR
+ * 포트로 리그를 고른다. 리그마다 14라운드 경기를 한 번에 만든다. 지난 시즌 결산이 있으면(T-11-418e) 승격 · 잔류 · 강등대로,
+ * 새 팀은 OVR로 3부까지(leagueSeedOrder), 없으면(첫 시즌) OVR 순으로 나눈다. 빈자리를 채우며 위 부로 올라간 팀은 프리미엄
+ * 스카우트권을 받는다. 자격이 모자라거나 리그를 꾸리고 남은 신청은 dropped. 알림은 다음 cron들이 나눠 보낸다.
  */
 export async function drawLeague(db: Db, league: LeagueDef, now: string) {
   const d1 = db.$client;
@@ -303,10 +338,19 @@ export async function drawLeague(db: Db, league: LeagueDef, now: string) {
     .where(and(eq(leagueEntries.season, league.season), eq(leagueEntries.status, 'active')));
   const seed = crypto.randomUUID();
   const lot = rngFrom(`${seed}:order`);
-  const ok = rows
+  const prev = await previousResults(db, league.season);
+  const byOvr = rows
     .filter((r) => r.team && r.team.filled >= league.minFilled)
-    .map((r) => ({ ...r, team: r.team!, lot: lot() }))
+    .map((r) => ({
+      ...r,
+      team: r.team!,
+      lot: lot(),
+      id: r.team!.id,
+      ovr: r.team!.ovr,
+      prev: prev.get(r.entry.profileId) ?? null,
+    }))
     .sort((a, b) => b.team.ovr - a.team.ovr || a.lot - b.lot);
+  const ok = byOvr.some((r) => r.prev) ? leagueSeedOrder(byOvr) : byOvr;
   const pyramid = leaguePyramid(ok.length);
   const used = ok.length - pyramid.dropped;
   const place = new Map<string, { tier: number; leagueNo: number }>();
@@ -373,6 +417,31 @@ export async function drawLeague(db: Db, league: LeagueDef, now: string) {
         )
         .bind(now, JSON.stringify(part), league.season),
     );
+  // 빈자리 승격: 지난 결과로 갈 부(1위는 한 부 위, 나머지는 그 부)보다 위에 배치됐다. 배치 묶음이 한 번만 커밋되므로(league_state
+  // 기본 키) 따로 막을 줄이 필요 없다.
+  for (const r of ok) {
+    const p = place.get(r.team.id);
+    const target = r.prev && (r.prev.outcome === 'promoted' ? r.prev.tier - 1 : r.prev.tier);
+    if (!p || !target || r.prev!.outcome === 'forfeited' || p.tier >= target) continue;
+    stmts.push(
+      grantItemStatement(d1, r.entry.profileId, 'scout', LEAGUE_FILL_PROMOTE_SCOUTS, now, {
+        sql: '1',
+      }),
+      ...notify(
+        d1,
+        r.entry.profileId,
+        `league:${league.season}:fill`,
+        cupKo('leagueFillTitle'),
+        cupKo('leagueFillBody', {
+          season: league.season,
+          tier: p.tier,
+          s: LEAGUE_FILL_PROMOTE_SCOUTS,
+        }),
+        now,
+        false,
+      ),
+    );
+  }
   for (const part of chunks(matches))
     stmts.push(
       d1
@@ -428,6 +497,7 @@ export async function playLeagueMatches(
     ).map((r) => [r.team.id, r.team]),
   );
   const byTeam = new Map(entries.filter(inLeague).map((e) => [e.teamId!, e]));
+  const homeAdv = await leagueHomeAdvOf(db);
   // 이번 cron에서 늘어난 기권(같은 팀이 한 번에 여러 경기를 치르는 따라잡기 때).
   const forfeits = new Map<string, number>();
   const stmts: D1PreparedStatement[] = [];
@@ -463,6 +533,7 @@ export async function playLeagueMatches(
       const result = simulateMatch(m.id, both.home, both.away, league.season, {
         neutral: false,
         coaches: both.coaches,
+        homeAdv,
       });
       hg = result.homeGoals;
       ag = result.awayGoals;
@@ -512,6 +583,101 @@ export async function playLeagueMatches(
   }
   await d1.batch(stmts);
   return due.length;
+}
+
+/**
+ * T-11-418e 결산: 14라운드를 다 치르면 리그마다 최종 순위 · 결과(우승 · 승격 · 잔류 · 강등 · 기권 퇴출)를 저장하고 보상
+ * (leagueReward)을 준다. rewarded_at이 비어 있는 줄만 바꾸고 아이템은 그 줄이 바뀌었을 때만 더한다(cron이 겹쳐도 한 번).
+ * 1부 우승은 리그 챔피언 칭호를 얻고, 구단주가 칭호를 직접 고르지 않았으면 대표 칭호가 된다. 알림은 다음 단계(notifyLeague
+ * 마지막 라운드)가 보상을 담아 보낸다. cron 한 번에 LEAGUE_NOTICES_PER_TICK명씩.
+ */
+export async function settleLeague(
+  db: Db,
+  league: LeagueDef,
+  state: LeagueStateRow,
+  entries: readonly LeagueEntryRow[],
+  now: string,
+) {
+  const pending = entries
+    .filter((e) => inLeague(e) && !e.rewardedAt)
+    .slice(0, LEAGUE_NOTICES_PER_TICK);
+  if (!pending.length) return 0;
+  const d1 = db.$client;
+  const bottomTier = tiersOf(state).at(-1)?.tier ?? 1;
+  const all = await db
+    .select(MATCH_COLS)
+    .from(leagueMatches)
+    .where(eq(leagueMatches.season, league.season));
+  const tables = new Map<string, ReturnType<typeof leagueTable>>();
+  const stmts: D1PreparedStatement[] = [];
+  for (const e of pending) {
+    const k = `${e.tier}:${e.leagueNo}`;
+    let table = tables.get(k);
+    if (!table)
+      tables.set(
+        k,
+        (table = leagueTable(
+          entries,
+          all.filter((m) => m.tier === e.tier && m.leagueNo === e.leagueNo),
+          state.seed,
+          e.tier!,
+          e.leagueNo!,
+        )),
+      );
+    const rank = table.find((x) => x.teamId === e.teamId)?.rank ?? table.length;
+    const outcome = leagueOutcome(e.tier!, rank, bottomTier, e.status === 'forfeited');
+    const { rerolls, scouts, boosts } = leagueReward(e.tier!, rank, e.forfeits, outcome);
+    const granted = {
+      sql: 'EXISTS (SELECT 1 FROM league_entries WHERE season = ? AND profile_id = ? AND rewarded_at = ?)',
+      params: [league.season, e.profileId, now],
+    };
+    stmts.push(
+      d1
+        .prepare(
+          `UPDATE league_entries SET final_rank = ?, outcome = ?, rewarded_at = ?, updated_at = ?
+           WHERE season = ? AND profile_id = ? AND rewarded_at IS NULL`,
+        )
+        .bind(rank, outcome, now, now, league.season, e.profileId),
+      ...(rerolls > 0
+        ? [grantItemStatement(d1, e.profileId, 'reroll', rerolls, now, granted)]
+        : []),
+      ...(scouts > 0 ? [grantItemStatement(d1, e.profileId, 'scout', scouts, now, granted)] : []),
+      ...(boosts > 0 ? [grantItemStatement(d1, e.profileId, 'boost', boosts, now, granted)] : []),
+      // 컵 우승 칭호(autoTitle)와 같은 규칙: 직접 고르지 않았고 지금 칭호가 없거나 컵 성적 칭호면 바꾼다.
+      ...(outcome === 'champion'
+        ? [
+            d1
+              .prepare(
+                `UPDATE profiles SET title = ? WHERE id = ? AND title_pinned = 0
+                 AND (title IS NULL OR ${TITLE_STAGES.map(() => 'title LIKE ?').join(' OR ')})`,
+              )
+              .bind(
+                leagueTitleIdOf(league.season),
+                e.profileId,
+                ...TITLE_STAGES.map((t) => `%-${t}`),
+              ),
+          ]
+        : []),
+    );
+  }
+  await d1.batch(stmts);
+  return pending.length;
+}
+
+/** 마지막 라운드 알림 본문: 최종 순위 · 받은 보상 · 다음 시즌 부. */
+function endBody(e: LeagueEntryRow, rank: number) {
+  const where = { tier: e.tier!, league: e.leagueNo!, rank };
+  const outcome = e.outcome as LeagueOutcome | null;
+  if (!outcome) return cupKo('leagueEndBody', where);
+  if (outcome === 'forfeited') return cupKo('leagueEndBodyForfeited', where);
+  const { rerolls: n, scouts: s, boosts: b } = leagueReward(e.tier!, rank, e.forfeits, outcome);
+  if (outcome === 'champion') return cupKo('leagueEndBodyChampion', { season: e.season, n, s, b });
+  const next = leagueNextTier(e.tier!, outcome)!;
+  return s > 0
+    ? cupKo('leagueEndBodyAll', { ...where, n, s, b, next })
+    : n > 0
+      ? cupKo('leagueEndBodyReroll', { ...where, n, next })
+      : cupKo('leagueEndBodyNext', { ...where, next });
 }
 
 /**
@@ -586,11 +752,13 @@ export async function notifyLeague(
       const rank = table.find((s) => s.teamId === e.teamId)?.rank ?? table.length;
       if (played === LEAGUE_ROUNDS) {
         key = `league:${season}:end`;
+        // 결산(settleLeague)이 저장한 순위 · 결과를 쓴다. 결산 전 줄이면(옛 데이터) 순위표 순위만.
+        const final = e.finalRank ?? rank;
         title =
-          rank === 1
+          final === 1
             ? cupKo('leagueChampionTitle', { season, tier: e.tier!, league: e.leagueNo! })
             : cupKo('leagueEndTitle', { season });
-        body = cupKo('leagueEndBody', { tier: e.tier!, league: e.leagueNo!, rank });
+        body = endBody(e, final);
       } else {
         key = `league:${season}:r${played}`;
         const m = (roundOf.get(`${e.tier}:${e.leagueNo}`) ?? []).find(
@@ -608,7 +776,17 @@ export async function notifyLeague(
           const result = cupKo(lost ? 'loss' : mine > theirs ? 'win' : 'draw');
           title = cupKo('leagueRoundTitle', { round: played, result });
           const score = `${nameOf.get(m.homeTeamId) ?? '-'} ${m.homeGoals ?? 0} : ${m.awayGoals ?? 0} ${nameOf.get(m.awayTeamId) ?? '-'}`;
-          body = cupKo('leagueRoundBody', { score, rank });
+          // T-11-430 내가 기권한 경기면 쌓인 기권 수와 남은 횟수를 알린다(3번째는 기권 퇴출 알림이 따로 간다).
+          const forfeited = !!(m.forfeit & (home ? 1 : 2));
+          body =
+            forfeited && e.status === 'active' && e.forfeits < LEAGUE_FORFEIT_LIMIT
+              ? cupKo('leagueRoundForfeitBody', {
+                  score,
+                  n: e.forfeits,
+                  limit: LEAGUE_FORFEIT_LIMIT,
+                  left: LEAGUE_FORFEIT_LIMIT - e.forfeits,
+                })
+              : cupKo('leagueRoundBody', { score, rank });
         }
       }
     }
@@ -625,7 +803,7 @@ export async function notifyLeague(
   return pending.length;
 }
 
-/** cron 한 번: 배치 안내 → 배치 → 시각이 된 경기 → 알림 → 끝. 한 단계만 하고 끝낸다. */
+/** cron 한 번: 배치 안내 → 배치 → 시각이 된 경기 → 결산(마지막 라운드 뒤) → 알림 → 끝. 한 단계만 하고 끝낸다. */
 export async function runLeague(db: Db, now: string, given?: LeagueDef) {
   const league = given ?? (await currentLeague(db, now));
   if (!league) return null;
@@ -642,6 +820,10 @@ export async function runLeague(db: Db, now: string, given?: LeagueDef) {
   const n = await playLeagueMatches(db, league, entries, now);
   if (n) return { season: league.season, step: 'play', n };
   const played = await playedRounds(db, league.season);
+  if (played === LEAGUE_ROUNDS) {
+    const settled = await settleLeague(db, league, state, entries, now);
+    if (settled) return { season: league.season, step: 'settle', n: settled };
+  }
   const sent = await notifyLeague(db, league, state, entries, played, now);
   if (sent) return { season: league.season, step: 'notify', n: sent, played };
   if (played === LEAGUE_ROUNDS || !tiersOf(state).length) {
@@ -657,3 +839,12 @@ const markDone = (db: Db, season: number, now: string) =>
     .set({ doneAt: now })
     .where(and(eq(leagueState.season, season), isNull(leagueState.doneAt)))
     .run();
+
+/** T-11-418e 리그 1부 우승 시즌(칭호). league_entries_profile_idx로 그 구단주 줄만 읽는다. */
+export async function leagueChampionSeasons(db: Db, profileId: string) {
+  const rows = await db
+    .select({ season: leagueEntries.season })
+    .from(leagueEntries)
+    .where(and(eq(leagueEntries.profileId, profileId), eq(leagueEntries.outcome, 'champion')));
+  return rows.map((r) => r.season);
+}
