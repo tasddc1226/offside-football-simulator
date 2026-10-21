@@ -40,7 +40,7 @@ describe('T-11-386 시즌 1 업적 보상(GET /v1/items/gift · POST /v1/items/g
     callJson(ctx.env, method, path, opts);
   const key = () => ({ 'Idempotency-Key': crypto.randomUUID() });
 
-  /** 시즌 1에 은퇴한 선수 한 명(통산 3만 골 — 강화권 3장 · 스카우트권 2장 칸). */
+  /** 시즌 1에 은퇴한 선수 한 명(통산 3만 골 — 강화권 16장 · 스카우트권 6장 칸). */
   async function addS1Career(profileId: string, goals: number, at = '2026-10-15T00:00:00.000Z') {
     await ctx.db.insert(careers).values({
       id: crypto.randomUUID(),
@@ -97,20 +97,26 @@ describe('T-11-386 시즌 1 업적 보상(GET /v1/items/gift · POST /v1/items/g
 
     vi.setSystemTime(new Date(IN_S2));
     const g = await gift(me.cookie);
-    expect(g).toEqual({ id: ACH_SEASON_GIFT.id, kind: 'achSeason', season: 1, boost: 3, scout: 2 });
+    expect(g).toEqual({
+      id: ACH_SEASON_GIFT.id,
+      kind: 'achSeason',
+      season: 1,
+      boost: 16,
+      scout: 6,
+    });
     // 처음 물을 때 센 장수를 적어 둔다.
     const [row] = await ctx.db
       .select()
       .from(ownerAchievements)
       .where(and(eq(ownerAchievements.profileId, me.profileId), eq(ownerAchievements.season, 1)));
-    expect([row?.rewardBoost, row?.rewardScout]).toEqual([3, 2]);
+    expect([row?.rewardBoost, row?.rewardScout]).toEqual([16, 6]);
 
     // 다른 선물 id로는 받지 못한다.
     expect((await claim(me.cookie, { id: HOME_GIFT.id })).status).toBe(409);
     const first = key();
     const res = await claim(me.cookie, { id: ACH_SEASON_GIFT.id }, first);
     const items = ItemsRes.parse(await res.json()).data;
-    expect(items).toMatchObject({ boost: 23, scout: 7 });
+    expect(items).toMatchObject({ boost: 36, scout: 11 });
     // 같은 키 재시도는 같은 응답, 새로 누르면 409이고 장수는 그대로다.
     expect(
       ItemsRes.parse(await (await claim(me.cookie, { id: ACH_SEASON_GIFT.id }, first)).json()).data,
@@ -133,7 +139,7 @@ describe('T-11-386 시즌 1 업적 보상(GET /v1/items/gift · POST /v1/items/g
     const me = await owner(30_000, 600);
     vi.setSystemTime(new Date(IN_S2));
     const res = await claim(me.cookie);
-    expect(ItemsRes.parse(await res.json()).data).toMatchObject({ boost: 23, scout: 7 });
+    expect(ItemsRes.parse(await res.json()).data).toMatchObject({ boost: 36, scout: 11 });
     expect(
       await ctx.db
         .select()
@@ -154,12 +160,12 @@ describe('T-11-386 시즌 1 업적 보상(GET /v1/items/gift · POST /v1/items/g
     const items = ItemsRes.parse(
       await (await call('GET', '/v1/items', { cookie: me.cookie })).json(),
     );
-    expect(items.data).toMatchObject({ boost: 23, scout: 7 });
+    expect(items.data).toMatchObject({ boost: 36, scout: 11 });
   });
 
   it('받을 칸이 없으면(점수가 문턱 아래 · 작은 업적만) 카드가 없고 받기는 409', async () => {
-    // 점수가 강화권 문턱(80점) 아래면 시즌 1 업적을 세지 않는다.
-    const low = await owner(30_000, 40);
+    // 점수가 보상 문턱(40점) 아래면 시즌 1 업적을 세지 않는다.
+    const low = await owner(30_000, 30);
     vi.setSystemTime(new Date(IN_S2));
     expect(await gift(low.cookie)).toBeNull();
     // 300골은 골 1 · 2단계(10 · 20점)뿐이라 보상 칸이 없다 — 세고 0장을 적는다.
@@ -184,6 +190,6 @@ describe('T-11-386 시즌 1 업적 보상(GET /v1/items/gift · POST /v1/items/g
     vi.setSystemTime(new Date(IN_S2));
     expect(await gift(me.cookie)).toEqual({ id: HOME_GIFT.id, kind: 'home', boost: 20, scout: 5 });
     await claim(me.cookie, { id: HOME_GIFT.id });
-    expect(await gift(me.cookie)).toMatchObject({ id: ACH_SEASON_GIFT.id, boost: 3, scout: 2 });
+    expect(await gift(me.cookie)).toMatchObject({ id: ACH_SEASON_GIFT.id, boost: 16, scout: 6 });
   });
 });

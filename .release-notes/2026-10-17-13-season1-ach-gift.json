@@ -3,23 +3,23 @@
   "title": "시즌 1 업적 보상",
   "items": [
     "시즌 1에 달성한 업적만큼 잠재력 강화권과 프리미엄 스카우트권을 받아요",
-    "시즌 2 동안 홈의 선물 칸에서 받기를 누르면 한 번 받아요",
-    "강화권은 10장, 스카우트권은 3장까지 받아요"
+    "시즌 2 동안 홈의 선물 칸에서 받기를 누르면 한 번에 받아요",
+    "시즌 2 업적 보상과 같은 표로 세고, 상한은 없어요"
   ],
   "en": {
     "title": "Season 1 achievement rewards",
     "items": [
       "Get potential boost tickets and premium scout tickets for the achievements you completed in season 1.",
-      "Tap Claim in the gift card on Home once during season 2.",
-      "You can get up to 10 boost tickets and 3 scout tickets."
+      "Tap Claim in the gift card on Home during season 2 to get them all at once.",
+      "They are counted with the same table as season 2 achievement rewards, with no limit."
     ]
   },
   "ja": {
     "title": "シーズン1の実績報酬",
     "items": [
       "シーズン1に達成した実績に応じてポテンシャル強化券とプレミアムスカウト券がもらえます。",
-      "シーズン2の間にホームのプレゼント欄で受け取るを押すと1回受け取れます。",
-      "強化券は10枚、スカウト券は3枚まで受け取れます。"
+      "シーズン2の間にホームのプレゼント欄で受け取るを押すと、まとめて1回受け取れます。",
+      "シーズン2の実績報酬と同じ表で数え、上限はありません。"
     ]
   },
   "availability": "web-app"

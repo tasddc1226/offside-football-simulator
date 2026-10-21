@@ -388,21 +388,16 @@ export function achRewardSteps(groups: readonly ClubAchievementGroup[]): AchRewa
 
 /**
  * 응답에 보상을 붙인다 — reward = 다음 달성(단계)의 보상, got = 이 시즌에 이 업적으로 받은 보상. 지난 시즌 화면은 붙이지
- * 않는다(그 시즌 보상은 끝났다). full이면 시즌 상한에 닿은 아이템이라 다음 달성 보상을 붙이지 않는다.
+ * 않는다(그 시즌 보상은 끝났다).
  */
 export function withAchRewards(
   groups: readonly ClubAchievementGroup[],
   got: ReadonlyMap<string, AchReward>,
-  full: { boost: boolean; scout: boolean } = { boost: false, scout: false },
 ): ClubAchievementGroup[] {
   return groups.map((g) => ({
     ...g,
     items: g.items.map((i) => {
-      const reward = i.worth > 0 ? achRewardOf(i.worth) : null;
-      const next =
-        reward && !(reward.boost > 0 && full.boost) && !(reward.scout > 0 && full.scout)
-          ? reward
-          : null;
+      const next = i.worth > 0 ? achRewardOf(i.worth) : null;
       const mine = got.get(i.id);
       return {
         ...i,

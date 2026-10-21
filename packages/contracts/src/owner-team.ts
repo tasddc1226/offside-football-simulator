@@ -472,20 +472,24 @@ export function achGradeOf(score: number): { grade: AchGrade; next: AchGrade | n
 
 /**
  * T-11-357 업적 달성 보상(아이템만 · 확률·가격은 그대로). 업적(단계 업적은 단계마다)의 점수로 난이도를 나눈다 —
- * 80점 미만은 없음, 80~249점은 잠재력 강화권 1장, 250점 이상은 프리미엄 스카우트권 1장. 시즌마다 업적이 처음부터 다시
- * 쌓이므로 보상도 시즌마다 업적·단계당 한 번이다(서버 gift_claims 'ach:<시즌>:<업적>[:<단계>]'). 시즌 1 운영 표본
- * (구단주 600명)에서 강화권 중앙값 3장 · 상위 10% 10장, 스카우트권은 2%만 받도록 맞췄다.
+ * 40점 미만은 없음, 40~79점은 잠재력 강화권 1장, 80~149점은 2장, 150~249점은 강화권 3장 + 프리미엄 스카우트권 1장,
+ * 250점 이상은 강화권 3장 + 스카우트권 2장. 시즌마다 업적이 처음부터 다시 쌓이므로 보상도 시즌마다 업적·단계당 한 번이다
+ * (서버 gift_claims 'ach:<시즌>:<업적>[:<단계>]'). 시즌 상한은 없다(10-21 해제). 시즌 1 운영 표본(무작위 600명)에서
+ * 강화권 중앙값 11장 · 상위 10% 36장, 스카우트권은 13%가 받는다.
  */
-export const ACH_REWARD_BOOST_MIN = 80;
-export const ACH_REWARD_SCOUT_MIN = 250;
-/** 한 시즌에 업적으로 받는 보상의 상한. 넘는 달성은 점수만 오른다. */
-export const ACH_REWARD_SEASON_CAP = { boost: 10, scout: 3 } as const;
+export const ACH_REWARD_TIERS: readonly { min: number; boost: number; scout: number }[] = [
+  { min: 250, boost: 3, scout: 2 },
+  { min: 150, boost: 3, scout: 1 },
+  { min: 80, boost: 2, scout: 0 },
+  { min: 40, boost: 1, scout: 0 },
+];
+/** 보상이 있는 가장 낮은 업적 점수. */
+export const ACH_REWARD_MIN = ACH_REWARD_TIERS[ACH_REWARD_TIERS.length - 1]!.min;
 export type AchReward = { boost: number; scout: number };
 /** 한 업적(단계)의 점수로 정하는 보상. 없으면 null. */
 export function achRewardOf(points: number): AchReward | null {
-  if (points >= ACH_REWARD_SCOUT_MIN) return { boost: 0, scout: 1 };
-  if (points >= ACH_REWARD_BOOST_MIN) return { boost: 1, scout: 0 };
-  return null;
+  const t = ACH_REWARD_TIERS.find((x) => points >= x.min);
+  return t ? { boost: t.boost, scout: t.scout } : null;
 }
 /**
  * 업적 보상을 처음 주는 시즌. 시즌 중에는 경제를 바꾸지 않으므로 그 앞 시즌(시즌 1)에는 주지도 표시하지도 않는다 — 개막
@@ -493,7 +497,7 @@ export function achRewardOf(points: number): AchReward | null {
  */
 export const ACH_REWARD_FIRST_SEASON = 2;
 /**
- * T-11-386 시즌 1 업적 보상 — 시즌 1에 달성한 업적을 시즌 2 보상 표(achRewardOf · 시즌 상한)로 세어 시즌 2 동안 홈 선물
+ * T-11-386 시즌 1 업적 보상 — 시즌 1에 달성한 업적을 시즌 2 보상 표(achRewardOf)로 세어 시즌 2 동안 홈 선물
  * 카드의 받기 버튼으로 한 번 준다. 시즌 1 기록은 마감 뒤 바뀌지 않아 처음 셀 때 장수를 적어 두고 그 값으로 준다.
  */
 export const ACH_SEASON_GIFT = {
