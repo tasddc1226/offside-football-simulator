@@ -21,7 +21,9 @@ export function titleLabel(id: string | null | undefined): string | null {
   const t = parseTitle(id);
   const permanent = permanentTitleOf(id);
   return t
-    ? LABEL[t.stage]({ n: t.edition, d: divisionLabel(t.division) })
+    ? t.league
+      ? L.titleLeagueChampion({ n: t.edition })
+      : LABEL[t.stage]({ n: t.edition, d: divisionLabel(t.division) })
     : permanent
       ? {
           'owner-founder': L.titleFounder,

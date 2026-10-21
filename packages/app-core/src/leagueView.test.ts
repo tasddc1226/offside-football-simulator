@@ -1,6 +1,6 @@
 import { LEAGUE_ROUNDS, planLeague } from '@offside/contracts/league';
 import { describe, expect, it } from 'vitest';
-import type { LeagueResponse } from './api/league.js';
+import type { LeagueMeResponse, LeagueResponse } from './api/league.js';
 import type { LeagueMatch, LeagueStanding, LeagueTableResponse } from './api/league.js';
 import {
   leagueChoices,
@@ -10,6 +10,7 @@ import {
   leagueRecords,
   leagueDefaultPick,
   leagueDefaultRound,
+  leagueFinalView,
   leagueLine,
   leaguePlacementLine,
   leagueReadiness,
@@ -257,5 +258,39 @@ describe('leagueView (T-11-418)', () => {
     const end = leagueLive(t, 90);
     expect(end.rows.map((r) => r.teamId)).toEqual(['b', 'c', 'a', 'd']);
     expect(end.rows.map((r) => r.move)).toEqual([1, 2, -2, -1]);
+  });
+
+  it('T-11-418e 결산: 결과 · 최종 순위 · 받은 보상 · 다음 시즌 부', () => {
+    const me = (final: NonNullable<NonNullable<LeagueMeResponse['placement']>['final']>) =>
+      ({
+        entry: { createdAt: league.opensAt },
+        canEnter: false,
+        team: null,
+        placement: { status: 'placed', tier: 2, league: 3, teamId: 't1', rank: final.rank, final },
+      }) as unknown as LeagueMeResponse;
+    expect(leagueFinalView(null, 2)).toBeNull();
+    expect(
+      leagueFinalView(
+        me({ rank: 1, outcome: 'promoted', rerolls: 9, scouts: 1, boosts: 1, nextTier: 1 }),
+        2,
+      ),
+    ).toEqual({
+      outcome: 'promoted',
+      label: '승격',
+      line: '2부 3리그 최종 1위',
+      reward: '리롤권 9장 · 프리미엄 스카우트권 1장 · 잠재력 강화권 1장',
+      next: '다음 시즌에 신청하면 1부에서 시작해요.',
+      title: null,
+    });
+    expect(
+      leagueFinalView(
+        me({ rank: 8, outcome: 'forfeited', rerolls: 0, scouts: 0, boosts: 0, nextTier: null }),
+        2,
+      ),
+    ).toMatchObject({
+      label: '기권 퇴출',
+      reward: '보상 없음',
+      next: expect.stringContaining('맨 아래'),
+    });
   });
 });

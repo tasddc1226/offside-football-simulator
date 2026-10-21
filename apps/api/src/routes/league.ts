@@ -7,7 +7,13 @@ import {
   type LeagueMeResponse,
   type LeagueResponse,
 } from '@offside/contracts';
-import { LEAGUE_ROUNDS, leaguePhase } from '@offside/contracts/league';
+import {
+  LEAGUE_ROUNDS,
+  leagueNextTier,
+  leaguePhase,
+  leagueReward,
+  type LeagueOutcome,
+} from '@offside/contracts/league';
 import { and, count, eq, inArray, ne } from 'drizzle-orm';
 import type { Context, Hono } from 'hono';
 import { cupKo } from '../cupText.js';
@@ -65,6 +71,23 @@ async function placementOf(
   if (mine.status === 'dropped')
     return { status: 'dropped', tier: null, league: null, teamId: null, rank: null };
   if (!inLeague(mine)) return null;
+  // T-11-418e 결산이 끝났으면 저장한 최종 순위 · 결과로(순위표를 다시 세지 않는다).
+  if (mine.outcome && mine.finalRank !== null) {
+    const outcome = mine.outcome as LeagueOutcome;
+    return {
+      status: mine.status === 'forfeited' ? 'forfeited' : 'placed',
+      tier: mine.tier,
+      league: mine.leagueNo,
+      teamId: mine.teamId,
+      rank: mine.finalRank,
+      final: {
+        rank: mine.finalRank,
+        outcome,
+        ...leagueReward(mine.tier!, mine.finalRank, mine.forfeits, outcome),
+        nextTier: leagueNextTier(mine.tier!, outcome),
+      },
+    };
+  }
   const [[state], entries, matches] = await Promise.all([
     leagueStateOf(db, season),
     db

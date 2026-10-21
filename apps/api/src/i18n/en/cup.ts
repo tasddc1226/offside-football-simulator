@@ -131,6 +131,19 @@ export const CUP_EN: Record<CupTextKey, string> = {
   leagueEndTitle: 'Your Season {season} OFFSIDE League is over',
   leagueEndBody: 'Tier {tier}, League {league}: finished in position {rank}.',
   leagueChampionTitle: 'Season {season} OFFSIDE League Tier {tier}, League {league}: Champions!',
+  leagueEndBodyChampion:
+    'Tier 1 champions! You earned the Season {season} League Champion title, {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s).',
+  leagueEndBodyAll:
+    'Tier {tier}, League {league}: finished in position {rank}. You received {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s). Sign up next season to start in Tier {next}.',
+  leagueEndBodyReroll:
+    'Tier {tier}, League {league}: finished in position {rank}. You received {n} player reroll ticket(s). Sign up next season to start in Tier {next}.',
+  leagueEndBodyNext:
+    'Tier {tier}, League {league}: finished in position {rank}. Sign up next season to start in Tier {next}.',
+  leagueEndBodyForfeited:
+    'Tier {tier}, League {league}: finished in position {rank}. Too many forfeits, so there is no reward and next season starts in the bottom tier.',
+  leagueFillTitle: 'Promoted in the OFFSIDE League!',
+  leagueFillBody:
+    'A spot opened up above, so you play in Tier {tier} in Season {season}. You received {s} premium scout ticket(s).',
   leagueForfeitedTitle: 'Your remaining OFFSIDE League matches will be forfeited',
   leagueForfeitedBody:
     'Your club missed {n} matches. All remaining matches will be recorded as 0:3 losses.',

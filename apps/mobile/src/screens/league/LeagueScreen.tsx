@@ -20,6 +20,7 @@ import {
   leagueChoices,
   leagueDefaultPick,
   leagueDefaultRound,
+  leagueFinalView,
   leagueLine,
   leagueOnHome,
   leaguePlacementLine,
@@ -159,6 +160,7 @@ function EntryCard({
   const entry = me.entry;
   const ready = leagueReadiness(data, me);
   const placement = leaguePlacementLine(me);
+  const final = leagueFinalView(me, league.season);
   const drawAt = leagueWhen(league.drawAt);
   return (
     <Card gap={10} testID="league-entry">
@@ -219,7 +221,36 @@ function EntryCard({
           {L.myOvr({ ovr: me.team.ovr })}
         </Txt>
       ) : null}
-      {placement ? (
+      {final ? (
+        <View testID={`league-final-${final.outcome}`} style={{ gap: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Txt v="sm" bold>
+              {L.finalTitle}
+            </Txt>
+            <Pill
+              tone={
+                final.outcome === 'champion' || final.outcome === 'promoted'
+                  ? 'good'
+                  : final.outcome === 'stayed'
+                    ? undefined
+                    : 'warn'
+              }
+            >
+              {final.label}
+            </Pill>
+          </View>
+          <Txt v="sm" bold>
+            {final.line}
+          </Txt>
+          <Txt v="sm" testID="league-reward">
+            {final.reward}
+          </Txt>
+          {final.title ? <Txt v="sm">{final.title}</Txt> : null}
+          <Txt v="sm" tone="muted">
+            {final.next}
+          </Txt>
+        </View>
+      ) : placement ? (
         <Txt v="sm" bold tone={placement.ok ? 'ink' : 'warn'} testID="league-placement">
           {placement.text}
         </Txt>
