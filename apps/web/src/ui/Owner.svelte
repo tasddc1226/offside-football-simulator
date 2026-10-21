@@ -46,8 +46,21 @@
   // T-11-152 후보 화면 '리롤권 상점 가기'로 들어왔으면 리롤권 상점을 펼친 채로 연다(한 번만 읽힌다).
   const shopFocus = takeFocus('rerollShop');
   // T-11-441 설정의 '계정 · 닉네임'으로 들어왔으면 계정 카드로 내려간다(한 번만).
-  if (takeFocus('account'))
-    requestAnimationFrame(() => document.getElementById('account-slot')?.scrollIntoView({ block: 'start' }));
+  // T-11-447 위 카드들이 응답을 받아 늦게 채워지며 계정 카드를 밀어내므로, 화면 높이가 바뀔 때마다 다시 맞춘다.
+  // 2초가 지나거나 유저가 직접 움직이면 멈춘다.
+  if (takeFocus('account')) holdInView('account-slot', 2000);
+
+  function holdInView(id: string, ms: number) {
+    const ro = new ResizeObserver(() => document.getElementById(id)?.scrollIntoView({ block: 'start' }));
+    const quit = ['wheel', 'touchstart', 'keydown'] as const;
+    const stop = () => {
+      ro.disconnect();
+      for (const t of quit) removeEventListener(t, stop);
+    };
+    for (const t of quit) addEventListener(t, stop, { passive: true });
+    ro.observe(document.body);
+    setTimeout(stop, ms);
+  }
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
   // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다). 계정 패널이 로그인 상태를 불러오거나
   // 바꾸면 다시 판단한다.
