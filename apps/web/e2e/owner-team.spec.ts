@@ -1263,6 +1263,58 @@ test('업적 달성 알림 — 쓰기 뒤 홈에서 승급 시트, 업적 보기
   await expect(page.locator('[data-ach-sheet]')).toHaveCount(0);
 });
 
+test('시트를 닫는 동안 늦게 온 본문 청크가 비워진 시트를 읽지 않는다', async ({ page }) => {
+  // T-11-447 닫기는 open · view를 함께 비우고 시트는 220ms 동안 내려가며 사라진다. 그 사이 도착한 지연 청크
+  // (업적 · 경기 평점 · 비행)가 빈 view를 읽다 오류를 냈다(운영 클라이언트 오류 'reading from/rated/done').
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await stubOwner(page, true);
+  await page.route(ownerTeamUrl, (route) =>
+    route.fulfill(ownerTeam({ season: 1, current: 1, seasons: SEASONS })),
+  );
+  await page.route(`${API}/v1/owner-team/achievement*`, (route) =>
+    route.fulfill(
+      ok({
+        season: 1,
+        score: 210,
+        groups: [
+          {
+            id: 'first',
+            category: 'player',
+            stage: '0단계',
+            title: '축구 인생 출발',
+            items: [
+              { id: 'retire-FW', label: '공격수 1명 은퇴', done: true, points: 190, worth: 0 },
+              { id: 'retire-GK', label: '골키퍼 1명 은퇴', done: true, points: 20, worth: 0 },
+            ],
+          },
+        ],
+      }),
+    ),
+  );
+  let release!: () => void;
+  const held = new Promise<void>((r) => (release = r));
+  await page.route(/\/assets\/Achieve-[^/]+\.js$/, async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'ft_ach_seen',
+      JSON.stringify({ season: 1, pts: { 'retire-FW': 190 }, score: 190, unseen: [] }),
+    );
+    localStorage.setItem('ft_ach_dirty', 'true');
+  });
+  await page.goto('/');
+  const close = page.locator('#sheet [data-sheet]').last();
+  await expect(close).toBeVisible();
+  await close.click();
+  release();
+  await expect(page.locator('#sheet')).toHaveCount(0);
+  await page.waitForTimeout(300);
+  expect(errors).toEqual([]);
+});
+
 test('모바일 편성 초안은 화면 왕복·새로고침에도 복원되고 저장 실패에는 남는다', async ({
   page,
 }) => {
