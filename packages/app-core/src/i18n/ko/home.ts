@@ -32,8 +32,6 @@ const ko = {
     `친구와 함께 리롤권 ${p.n}장 + 프리미엄 스카우트권 ${p.s}장씩 받기 →`,
   dexTitle: '확률 이벤트',
   dexSubWeb: '선택지별 성공 확률 보기 →',
-  testerTitle: '테스터 모집 ↗',
-  testerSub: '안드로이드 앱 비공개 테스트 신청하기',
   galleryTitle: '마이너 갤러리 ↗',
   gallerySub: '디시인사이드에서 커리어 자랑 · 공략 · 건의',
   firstsTitle: '서버 최초 기록',

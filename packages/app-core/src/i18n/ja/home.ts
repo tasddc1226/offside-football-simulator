@@ -23,8 +23,6 @@ export const home: Translation<HomeMsgs> = {
   inviteSub: (p) => `友だちと一緒にリロール券${p.n}枚＋プレミアムスカウト券${p.s}枚ずつ →`,
   dexTitle: '確率イベント',
   dexSubWeb: '選択肢ごとの成功確率を見る →',
-  testerTitle: 'テスター募集 ↗',
-  testerSub: 'Androidアプリのクローズドテストに申し込む',
   galleryTitle: 'コミュニティ掲示板 ↗',
   gallerySub: 'DCinsideでキャリア自慢 · 攻略 · 要望',
   firstsTitle: 'サーバー初記録',

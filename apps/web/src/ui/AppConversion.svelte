@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { shellInstallText as L } from '@offside/app-core/i18n/ko/shellInstall';
-  import { ANDROID_TESTER_FORM_URL } from '@offside/app-core/links';
+  import { PLAY_STORE_URL } from '@offside/app-core/links';
   import { trackAppConversion, trackAppStoreClick, type AppConversionPlace } from '../analytics/index.js';
   import { appTarget, appStoreUrl } from './appStore.js';
   import { playedEnough } from './adLanding.js';
@@ -36,7 +36,7 @@
   });
   function click(to: 'ios' | 'android') {
     trackAppConversion('click', context, to);
-    if (to === 'ios') trackAppStoreClick(context);
+    trackAppStoreClick(context, to);
   }
   function dismiss() {
     trackAppConversion('dismiss', context, target);
@@ -51,7 +51,7 @@
     {#if target !== 'ios'}<p class="muted fs-sm">{L.conversionAndroid}</p>{/if}
     <div class="actions">
       {#if target !== 'android'}<a class="btn btn-accent" data-act="app-store" href={appStoreUrl()} target="_blank" rel="noopener noreferrer" onclick={() => click('ios')}>{L.conversionStore}</a>{/if}
-      {#if target !== 'ios'}<a class="btn" data-act="android-tester" href={ANDROID_TESTER_FORM_URL} target="_blank" rel="noopener noreferrer" onclick={() => click('android')}>{L.conversionTest}</a>{/if}
+      {#if target !== 'ios'}<a class="btn btn-accent" data-act="play-store" href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" onclick={() => click('android')}>{L.conversionPlay}</a>{/if}
     </div>
     <p class="muted fs-sm transfer">{L.conversionTransfer}</p>
   </aside>
