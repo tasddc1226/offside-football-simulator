@@ -20,6 +20,7 @@ import {
   type CupChampion,
   type CupDivisionInfo,
 } from '@offside/contracts';
+import { leagueLineupLocked } from '../team/league.js';
 import {
   CUP_GROUP_ROUNDS,
   CUP_KO_ROUNDS,
@@ -943,6 +944,9 @@ export async function checkCupLineup(
   now: string,
   ovr: number,
 ) {
+  // T-11-418b 리그 경기도 1시간 전부터 끝날 때까지 명단을 잠근다.
+  if (await leagueLineupLocked(db, profileId, season, now))
+    throw conflictError(cupKo('leagueLocked'), 'LEAGUE_LINEUP_LOCKED');
   const active = await activeCups(db, profileId, season);
   if (!active.length) return;
   const matches = await cupMatchesIn(

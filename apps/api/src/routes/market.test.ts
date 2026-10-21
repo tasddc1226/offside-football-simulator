@@ -402,10 +402,36 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     ]);
   });
 
-  it('다른 시즌 카드는 내놓을 수 없고, 내 등록은 내릴 수 있다', async () => {
+  it('T-11-425 지난 시즌 카드도 내놓고 사고, 시장에는 모든 시즌 카드가 함께 오른다', async () => {
     const seller = await issueGoogleCookie(ctx);
-    const other = await addCard(seller.profileId, 1);
-    expect(await reason(await list(seller.cookie, other, 1_000_000))).toBe('CARD_OTHER_SEASON');
+    const buyer = await issueGoogleCookie(ctx);
+    const past = await addCard(seller.profileId, 0);
+    const now = await addCard(seller.profileId, 1);
+    await fund(buyer.profileId, 5_000_000);
+    vi.setSystemTime(new Date('2026-10-07T00:00:00.000Z')); // 시즌 1
+    const idOf = async (res: Response) => {
+      expect(res.status).toBe(201);
+      return ((await res.json()) as { data: { listing: { id: string } } }).data.listing.id;
+    };
+    const pastId = await idOf(await list(seller.cookie, past, 1_000_000));
+    const nowId = await idOf(await list(seller.cookie, now, 1_100_000));
+    const market = ListRes.parse(await (await call('GET', '/v1/market?sort=price')).json()).data;
+    expect(market.items.map((l) => [l.id, l.card.season])).toEqual([
+      [pastId, 0],
+      [nowId, 1],
+    ]);
+    const bought = await call('POST', `/v1/market/listings/${pastId}/buy`, {
+      cookie: buyer.cookie,
+      headers: idem(),
+      body: { price: 1_000_000 },
+    });
+    expect(bought.status).toBe(200);
+    const [card] = await ctx.db.select().from(cards).where(eq(cards.careerId, past));
+    expect(card!.ownerId).toBe(buyer.profileId);
+  });
+
+  it('내 등록은 내릴 수 있다', async () => {
+    const seller = await issueGoogleCookie(ctx);
     const card = await addCard(seller.profileId);
     const created = await list(seller.cookie, card, 1_000_000);
     const id = ((await created.json()) as { data: { listing: { id: string } } }).data.listing.id;

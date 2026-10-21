@@ -599,11 +599,12 @@ export const marketListings = sqliteTable(
       .on(table.careerId)
       .where(sql`${table.status} = 'open'`),
     index('market_listings_career_idx').on(table.careerId),
-    index('market_listings_new_idx').on(table.status, table.season, table.createdAt),
-    index('market_listings_price_idx').on(table.status, table.season, table.price, table.createdAt),
+    // T-11-425 모든 시즌 카드를 한 시장에서 거래해 목록 · 최근 거래 인덱스에서 시즌을 뺐다.
+    index('market_listings_new_idx').on(table.status, table.createdAt),
+    index('market_listings_price_idx').on(table.status, table.price, table.createdAt),
     index('market_listings_seller_idx').on(table.sellerId, table.status, table.closedAt),
     index('market_listings_buyer_idx').on(table.buyerId, table.closedAt),
-    index('market_listings_sold_idx').on(table.status, table.season, table.closedAt),
+    index('market_listings_sold_idx').on(table.status, table.closedAt),
     // 선수별 판매 기록(시세 차트의 점). 팔린 행만 담아 등록 · 취소 때는 쓰지 않는다.
     index('market_listings_card_idx')
       .on(table.careerId, table.closedAt)
@@ -1486,7 +1487,9 @@ export const leagueSeasons = sqliteTable('league_seasons', {
 
 /**
  * T-11-418 오프사이드 리그 신청. 시즌마다 구단주당 한 행. 신청은 참가 의사만 남긴다 — 개막 전 사전 신청은 그 시즌 팀이
- * 아직 없다. 팀 · 이름 · 감독 · OVR은 배치 때 그 시즌 팀으로 채운다(2차). status: active(신청) · withdrawn(접수 중 취소).
+ * 아직 없다. 팀 · 이름 · 감독 · OVR은 배치 때 그 시즌 팀으로 채운다(2차). status: active(신청 · 배치됨) · withdrawn(접수 중 취소) ·
+ * dropped(배치 때 자격이 모자람) · forfeited(기권이 쌓여 남은 경기 기권패). T-11-418b 배치 뒤 tier(부) · league_no(부 안 리그
+ * 번호), 기권 수, 라운드 결과 알림을 보낸 마지막 라운드.
  */
 export const leagueEntries = sqliteTable(
   'league_entries',
@@ -1500,6 +1503,10 @@ export const leagueEntries = sqliteTable(
     name: text('name'),
     manager: text('manager'),
     ovr: integer('ovr'),
+    tier: integer('tier'),
+    leagueNo: integer('league_no'),
+    forfeits: integer('forfeits').notNull().default(0),
+    notifiedRound: integer('notified_round').notNull().default(0),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -1507,6 +1514,56 @@ export const leagueEntries = sqliteTable(
     primaryKey({ columns: [table.season, table.profileId] }),
     index('league_entries_profile_idx').on(table.profileId),
     index('league_entries_season_status_idx').on(table.season, table.status),
+    // 리그 하나(순위표) · 라운드 알림.
+    index('league_entries_season_league_idx').on(table.season, table.tier, table.leagueNo),
+  ],
+);
+
+/** T-11-418b 리그 시즌 진행 상태. 행이 있으면 배치가 끝났다. done_at: 마지막 라운드까지 치렀다. */
+export const leagueState = sqliteTable('league_state', {
+  season: integer('season').primaryKey(),
+  seed: text('seed').notNull(),
+  /** 부별 리그 수 · 팀 수 JSON([{ tier, leagues, teams }]). */
+  tiersJson: text('tiers_json').notNull(),
+  drawnAt: text('drawn_at').notNull(),
+  doneAt: text('done_at'),
+});
+
+/**
+ * T-11-418b 리그 경기. 배치 때 리그마다 14라운드를 한 번에 만든다. played_at이 차면 끝난 경기. forfeit: 0 없음 · 1 홈 기권 ·
+ * 2 원정 기권 · 3 둘 다. detail_json은 팀 경기와 같은 MatchDetail(기권 경기는 없음).
+ */
+export const leagueMatches = sqliteTable(
+  'league_matches',
+  {
+    id: text('id').primaryKey(),
+    season: integer('season').notNull(),
+    tier: integer('tier').notNull(),
+    leagueNo: integer('league_no').notNull(),
+    round: integer('round').notNull(),
+    slot: integer('slot').notNull(),
+    homeTeamId: text('home_team_id').notNull(),
+    awayTeamId: text('away_team_id').notNull(),
+    at: text('at').notNull(),
+    playedAt: text('played_at'),
+    homeGoals: integer('home_goals'),
+    awayGoals: integer('away_goals'),
+    forfeit: integer('forfeit').notNull().default(0),
+    detailJson: text('detail_json'),
+  },
+  (table) => [
+    uniqueIndex('league_matches_slot_unique').on(
+      table.season,
+      table.tier,
+      table.leagueNo,
+      table.round,
+      table.slot,
+    ),
+    // 시각이 된 경기(cron).
+    index('league_matches_season_at_idx').on(table.season, table.at),
+    // 명단 잠금 · 팀 통계.
+    index('league_matches_home_team_idx').on(table.homeTeamId),
+    index('league_matches_away_team_idx').on(table.awayTeamId),
   ],
 );
 

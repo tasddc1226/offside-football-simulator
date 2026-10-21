@@ -1,0 +1,20 @@
+{
+  "id": "t-11-426-key-moment-toggle",
+  "title": "결정적 장면을 끌 수 있어요",
+  "items": [
+    "설정에 결정적 장면 스위치가 생겼어요. 끄면 커리어 경기 중계가 멈추지 않고 늘 감독에게 맡겨요. 결과는 감독에게 맡겼을 때와 같아요."
+  ],
+  "en": {
+    "title": "You can turn off key moments",
+    "items": [
+      "Settings now has a Key moments switch. When off, the career match ticker no longer pauses and the manager always decides. Results are the same as leaving it to the manager."
+    ]
+  },
+  "ja": {
+    "title": "決定的な場面をオフにできます",
+    "items": [
+      "設定に「決定的な場面」のスイッチを追加しました。オフにするとキャリアの試合中継が止まらず、常に監督に任せます。結果は監督に任せた場合と同じです。"
+    ]
+  },
+  "availability": "web-app"
+}

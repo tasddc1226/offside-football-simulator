@@ -2,6 +2,7 @@ import { transferOutlook } from '@offside/game/comps';
 import { careerMomentText as CM } from './i18n/ko/careerMoment';
 import { careerTrophy } from './career-trophy';
 import { measureOperation } from './measurement.js';
+import { keyMomentsOn } from './keyMomentPref.js';
 import type { Progress } from './player-metrics.js';
 import { marketFeedback, offerFeedback } from './career-feedback.js';
 // ───────── 게임 진행 액션 (웹·앱 공용, T-11-002) ─────────
@@ -251,9 +252,11 @@ export function createGameActions(host: GameHost) {
       const rngPre = getActiveRng().getState().seed;
       // 장면 판정 · 문구는 첫 화면 청크에 넣지 않는다(리그 구간을 진행할 때 불러온다).
       const km = ph > 0 ? await import('./keyMoments.js') : null;
+      // T-11-426 설정에서 끄면 장면을 열지 않는다(결과는 감독에게 맡겼을 때와 같다).
+      const moOn = keyMomentsOn();
       let r: PhaseResult;
       try {
-        r = playPhase(s, km?.momentHooks(s));
+        r = playPhase(s, moOn ? km?.momentHooks(s) : undefined);
         measureOperation('progress', 'success');
       } catch (error) {
         measureOperation('progress', 'failed', 'progress_blocked');
@@ -288,16 +291,18 @@ export function createGameActions(host: GameHost) {
       const back = s.pos === 'DF' || s.pos === 'GK';
       // T-10-028: 경기는 중계 시트로 한 경기씩 보여 주고(승무패·스코어가 쌓이는 맛), 끝나면 리포트로 넘어간다.
       if (r.block && km) {
-        const mo = km.createMomentDriver({
-          s,
-          first: r,
-          rows: games,
-          extras,
-          pre,
-          rng: rngPre,
-          settle,
-          lines,
-        });
+        const mo = moOn
+          ? km.createMomentDriver({
+              s,
+              first: r,
+              rows: games,
+              extras,
+              pre,
+              rng: rngPre,
+              settle,
+              lines,
+            })
+          : undefined;
         await km.playBlock(
           sheet,
           {
@@ -311,7 +316,7 @@ export function createGameActions(host: GameHost) {
           extras,
           mo,
         );
-        ({ cur: r, rows: games } = mo);
+        if (mo) ({ cur: r, rows: games } = mo);
       } else
         await sheet.playSteps(L.preseasonRunning({ year: s.year }), [
           isPro(s) ? L.stepCampPro : L.stepCampAmateur,

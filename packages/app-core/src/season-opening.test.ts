@@ -221,7 +221,8 @@ describe('candidate reveal and retirement minimum', () => {
     expect(state.candidates![1]!.attrs).toEqual(kept.attrs);
     expect(state.candidates![1]!.kept).toEqual({ revealed: false });
     expect(state.candidatesOpen[1]).toBe(true);
-    expect(state.candidates![0]!.attrs).not.toEqual(kept.attrs);
+    // 0번은 기준 분포라 킵한 후보와 능력치가 우연히 같을 수 있다 — 킵 표시가 그 자리에만 있는지로 본다.
+    expect(state.candidates!.map((c) => !!c.kept)).toEqual([false, true, false]);
     // 킵한 뒤 잠재력을 열면 다음 다시 뽑기에서도 그 후보의 범위는 보인다.
     actions.revealCandidatePotential();
     actions.rerollCandidates();

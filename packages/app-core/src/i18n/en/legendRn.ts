@@ -6,14 +6,18 @@ export const legendRn: Translation<LegendRnMsgs> = {
   missKicker: 'Retired number review',
   missSeasons: (p: { club: string; seasons: number; need: number }) =>
     `You played ${p.seasons} seasons at ${p.club}. A retired number needs ${p.need}+ seasons at one club.`,
-  missScore: (p: { club: string; pct: number }) =>
-    `Your contribution at ${p.club} reached ${p.pct}% of the retired number bar. You need to pass it to have your number retired.`,
+  pctBand: (p) => `${p.pct}–${p.pct + 9}%`,
+  missScore: (p) =>
+    `Your contribution at ${p.club} reached ${p.band} of the retired number bar. You need to pass it to have your number retired.`,
+  missScoreClose: (p) =>
+    `Your contribution at ${p.club} fell just short of the retired number bar. You need to pass it to have your number retired.`,
   missScoreSeasons: (p) =>
-    `Your contribution at ${p.club} reached ${p.pct}% of the retired number bar, and ${plural(p.seasons, 'season')} there fell short of ${p.need}.`,
+    `Your contribution at ${p.club} reached ${p.band} of the retired number bar, and ${plural(p.seasons, 'season')} there fell short of ${p.need}.`,
   missStatSeasons: 'Seasons at one club',
   missStatSeasonsVal: (p) => `${p.seasons} / ${p.need}`,
   missStatScore: 'Contribution',
-  missStatScoreVal: (p) => `${p.pct}% of the bar`,
+  missStatScoreVal: (p) => `${p.band} of the bar`,
+  missStatScoreClose: 'Just below the bar',
   missStatScoreOver: 'Over the bar',
   pending: 'The server is reviewing your retired number. Check the Hall of Fame in a moment.',
   lineNum: (p) => `No. ${p.number}`,

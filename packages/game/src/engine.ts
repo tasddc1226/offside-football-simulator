@@ -108,6 +108,8 @@ export function newGame(
     type: typeId,
     focus,
     trait: o.trait,
+    // T-11-428 새로 만든 선수는 다듬은 성장 특성 커브(2)로 간다.
+    gcv: 2,
     age: 18,
     year: 2026,
     attrs,

@@ -62,7 +62,7 @@ export const owner: Translation<OwnerMsgs> = {
   buildTeam: 'Build a team',
   teamBtnApp: 'My team · season achievements',
   marketTitle: 'Transfer market',
-  marketSub: (p) => `Club funds ${p.funds} · Buy and sell this season's players`,
+  marketSub: (p) => `Club funds ${p.funds} · Buy and sell players`,
   open: 'Open',
   lockBadge: '\u{1F512}︎ Unlocks when you log in',
   accountSection: 'Account',

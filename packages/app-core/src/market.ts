@@ -9,6 +9,8 @@ import { POS_GROUPS, detailPosOf } from '@offside/contracts/positions';
 import { typeName } from '@offside/game/data';
 import { marketText as L } from './i18n/ko/market.js';
 import { intlLocale } from './i18n/core.js';
+import { teamSeasonLabel } from './seasonName.js';
+import { isWildcardSeason, salaryOf } from '@offside/contracts/owner-team';
 
 export { fundsText } from './funds.js';
 
@@ -200,12 +202,21 @@ export const MARKET_TOAST = {
 export const needsOwnerLogin = (e: { code: string; reason?: string }) =>
   e.code === 'PROFILE_REQUIRED' || e.reason === 'GOOGLE_LOGIN_REQUIRED';
 
-/** 시장 줄 아래 한 줄(레전드 점수 · 이적 횟수). */
-export function cardMeta(c: Pick<MarketCard, 'legendScore' | 'transfers'>) {
-  return L.cardMeta({
+/**
+ * 시장 줄 아래 한 줄(레전드 점수 · 이적 횟수). T-11-425 지난 시즌 카드면 출신 시즌과 급여를 앞에 붙인다 — 지금 시즌 팀
+ * 선발에 넣으면 급여 예산을 쓴다.
+ */
+export function cardMeta(
+  c: Pick<MarketCard, 'legendScore' | 'transfers' | 'peak' | 'season'>,
+  current: number | null = null,
+) {
+  const meta = L.cardMeta({
     score: c.legendScore.toLocaleString(intlLocale()),
     transfers: c.transfers,
   });
+  return current !== null && isWildcardSeason(c.season, current)
+    ? L.pastCardMeta({ season: teamSeasonLabel(c.season), salary: salaryOf(c.peak), meta })
+    : meta;
 }
 
 /**

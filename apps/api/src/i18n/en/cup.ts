@@ -110,4 +110,28 @@ export const CUP_EN: Record<CupTextKey, string> = {
   grantBoost: 'The OFFSIDE team sent you {n} potential boost ticket(s).',
   grantScout: 'The OFFSIDE team sent you {n} premium scout ticket(s).',
   grantRename: 'The OFFSIDE team sent you {n} player rename ticket(s).',
+  // T-11-418b OFFSIDE League.
+  leagueDrawn: "You can't delay a league after placement.",
+  leagueLocked:
+    "You can't change your lineup from 1 hour before an OFFSIDE League match until it ends.",
+  leagueRemindTitle: 'The OFFSIDE League placement is tomorrow',
+  leagueRemindBody:
+    'You need {n} players in your Season {season} starting XI at placement to take part. You have {filled} now.',
+  leaguePlacedTitle: 'Season {season} OFFSIDE League placement',
+  leaguePlacedBody: '{team} is in Tier {tier}, League {league}. Round 1 kicks off today at {time}.',
+  leagueDroppedTitle: 'Your Season {season} OFFSIDE League entry was cancelled',
+  leagueDroppedBody: 'At placement, your Season {season} starting XI had fewer than {n} players.',
+  leagueLeftBody:
+    "The number of clubs didn't fit into leagues, so the {n} lowest-OVR clubs were left out.",
+  leagueCancelledTitle: "The Season {season} OFFSIDE League won't take place",
+  leagueRoundTitle: 'OFFSIDE League Round {round}: {result}',
+  leagueRoundBody: '{score} · Position {rank}',
+  leagueRest: 'Bye',
+  leagueRestBody: 'Bye this round · Position {rank}',
+  leagueEndTitle: 'Your Season {season} OFFSIDE League is over',
+  leagueEndBody: 'Tier {tier}, League {league}: finished in position {rank}.',
+  leagueChampionTitle: 'Season {season} OFFSIDE League Tier {tier}, League {league}: Champions!',
+  leagueForfeitedTitle: 'Your remaining OFFSIDE League matches will be forfeited',
+  leagueForfeitedBody:
+    'Your club missed {n} matches. All remaining matches will be recorded as 0:3 losses.',
 };

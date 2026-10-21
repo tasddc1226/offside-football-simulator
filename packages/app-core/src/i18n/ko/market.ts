@@ -24,7 +24,7 @@ const ko = {
   sortOvr: 'OVR 높은 순',
   sortLabel: '정렬',
   posAll: '전체',
-  seasonCount: (p: { n: number; more: boolean }) => `이번 시즌 선수 ${p.n}${p.more ? '+' : ''}명`,
+  listCount: (p: { n: number; more: boolean }) => `선수 ${p.n}${p.more ? '+' : ''}명`,
   // 기준가 대비
   priceSame: '기준가',
   priceUp: (p: { d: number }) => `기준가 +${p.d}%`,
@@ -39,12 +39,14 @@ const ko = {
   openListing: (p: { name: string }) => `${p.name} 영입 보기`,
   cardMeta: (p: { score: string; transfers: number }) =>
     `레전드 ${p.score} · 이적 ${p.transfers}회`,
+  pastCardMeta: (p: { season: string; salary: number; meta: string }) =>
+    `${p.season} · 급여 ${p.salary} · ${p.meta}`,
   listFailed: '시장을 불러오지 못했어요.',
   reload: '다시 불러오기',
   more: '더 보기',
   emptyClosed: '지금은 시즌 사이 휴식기라 이적시장이 닫혀 있어요.',
   emptyFiltered: '이 포지션에는 아직 나온 선수가 없어요.',
-  empty: '아직 시장에 나온 선수가 없어요. 이번 시즌에 은퇴한 선수가 나오면 여기에 올라와요.',
+  empty: '아직 시장에 나온 선수가 없어요. 구단주가 선수를 내놓으면 여기에 올라와요.',
   // 영입 시트
   sheetBuy: '선수 영입',
   detailLegend: '레전드 점수',
@@ -68,10 +70,7 @@ const ko = {
   buyFor: (p: { price: string }) => `${p.price}에 영입하기`,
   // 팔기
   sellStep1: '1. 내놓을 선수',
-  sellSeasonOnly: (p: { season: string }) => `(${p.season} 선수만)`,
-  thisSeason: '이번 시즌',
-  sellNone:
-    '이번 시즌에 은퇴한 내 선수가 없어요. 지난 시즌 선수는 방출해서 자금으로 바꿀 수 있어요.',
+  sellNone: '아직 내 선수 카드가 없어요. 선수가 은퇴하거나 영입하면 여기에 나와요.',
   sellSelected: '선택',
   sellPickLabel: (p: { name: string }) => `${p.name} 내놓을 선수로 고르기`,
   sellStep2: (p: { name: string; pos: string; peak: number }) =>

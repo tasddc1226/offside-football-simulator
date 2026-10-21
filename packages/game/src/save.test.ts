@@ -302,3 +302,13 @@ it('포지션 확장 후에도 FB/W 저장과 옛 역할별 능력치를 그대�
     expect(loaded.attrs).toEqual(attrs);
   }
 });
+
+describe('T-11-428 성장 특성 커브 버전 호환성', () => {
+  it('커브 버전이 없는 옛 저장은 그대로 읽고 버전을 채우지 않는다(예전 커브 유지)', () => {
+    const g = current();
+    expect(g.gcv).toBeUndefined();
+    migrateSave(g);
+    expect(g.gcv).toBeUndefined();
+    expect(loadSave(current())?.G.gcv).toBeUndefined();
+  });
+});
