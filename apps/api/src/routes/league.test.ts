@@ -4,10 +4,11 @@ import {
   LeagueResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
+import { eq } from 'drizzle-orm';
 import { closeSeasonSchedule, applySeasonSchedule } from '@offside/contracts/service-seasons';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
-import { cards, careers, leagueSeasons } from '../db/schema.js';
+import { cards, careers, leagueSeasons, ownerTeams } from '../db/schema.js';
 import { forgetSeasonSchedule, saveSeasonSchedule } from '../seasonSchedule.js';
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
@@ -145,6 +146,21 @@ describe('/v1/leagues (T-11-418)', () => {
     });
     expect((await enter(a.cookie)).status).toBe(204);
     expect(await me(a.cookie)).toMatchObject({ entry: { createdAt: PRESIGN }, canEnter: false });
+  });
+
+  it('준비 인원은 감독 카드 정보를 읽지 않고 실제 선발 수를 유지한다', async () => {
+    const a = await owner(8);
+    await ctx.db
+      .update(ownerTeams)
+      .set({ coachId: 'unused-coach' })
+      .where(eq(ownerTeams.profileId, a.profileId));
+    const traced = spyDb(ctx.env.DB);
+    const res = await callJson({ ...ctx.env, DB: traced.DB }, 'GET', '/v1/leagues/current/me', {
+      cookie: a.cookie,
+    });
+    expect(res.status).toBe(200);
+    expect(MeRes.parse(await res.json()).data.team?.filled).toBe(8);
+    expect(traced.seen.filter((q) => /manager_careers/.test(q))).toEqual([]);
   });
 
   it('신청 · 다시 신청(멱등) · 취소 · 되살리기, 신청 수는 취소한 신청을 뺀다, 준비 상태는 선발 실카드 수', async () => {
