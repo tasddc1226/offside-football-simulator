@@ -54,6 +54,11 @@ export function momentCard(
   const opp = final ? clubName(m.opp) : clubName(r.block?.games[m.game!]?.opp);
   const sit = situationOf(m, s.pos);
   const raw = momentChoices(s, m, leagueOf(s.leagueId).avg);
+  // T-11-438 미드필더 리그 찬스만 슈팅 선택지(결정력)는 골, 나머지는 도움으로 남는다(game/moments.ts chance).
+  const recOf = (attr: string) =>
+    !final && m.kind === 'chance' && s.pos === 'MF'
+      ? { rec: attr === 'sho' ? K.recGoal : K.recAssist }
+      : {};
   return {
     key: m.key,
     kind: m.kind,
@@ -65,11 +70,13 @@ export function momentCard(
         : kindTitle(m)
       : K.leagueHead({ rd: m.rd!, opp: opp ?? '' }),
     scene: say(`s:${sit}`, s.name),
+    stake: final ? K.stakeFinal : m.kind === 'chance' ? K.stakeChance : K.stakeCrisis,
     choices: raw.map((c) => ({
       id: c.id,
       label: choiceLabel(sit, c.id),
       pct: Math.round(c.pct * 100),
       attr: ATTR_LABEL[c.attr],
+      ...recOf(c.attr),
     })),
     auto: Math.round(m.base * 100),
     raw,

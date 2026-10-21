@@ -9,6 +9,10 @@ const ko = {
   publishAnon: '익명으로',
   publishAfter: '표시돼요.',
   publishHint: '이름을 공개하면 다른 유저에게 선수 이름이 보여요. 실명은 쓰지 않는 게 좋아요.',
+  /** T-11-439 공개 상태에서도 보이는 경고(B4)와 공개할 수 없는 이름(B3). */
+  publishWarn: '모든 유저에게 이 이름이 보여요. 실명은 쓰지 않는 게 좋아요.',
+  publishBlocked:
+    '링크나 욕설이 들어간 이름이라 공개할 수 없어요. 명예의 전당에는 익명으로 올라가요.',
   publishRevert: '익명으로 되돌리기',
   publishOn: '이름 공개하기',
   shortTitle: '내 선수에만 남는 기록',

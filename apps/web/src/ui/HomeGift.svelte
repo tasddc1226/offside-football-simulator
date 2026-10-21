@@ -4,10 +4,13 @@
   import { claimHomeGift, fetchHomeGift, giftCopy, type HomeGift } from '@offside/app-core/api/gift';
   import { giftText as L } from '@offside/app-core/i18n/ko/gift';
   import { toast } from './helpers.js';
+  import { goRerollShop } from './nav.js';
 
   let gift = $state<HomeGift | null>(null);
   let busy = $state(false);
   const copy = $derived(gift ? giftCopy(gift) : null);
+  // T-11-440 받은 뒤 결과 줄 · 쓰는 곳 안내 · 내 구단 버튼(토스트 한 번으로 끝내지 않는다). 홈을 떠나면 사라진다.
+  let done = $state<string | null>(null);
   // 응답을 못 받아 다시 누르면 같은 키로 보내 서버가 두 번 주지 않는다(서버는 성공 · 409만 기억한다). 받은 뒤 다음
   // 선물(T-11-386)은 새 키로 받는다.
   let key = crypto.randomUUID();
@@ -22,7 +25,7 @@
     const r = await claimHomeGift(gift.id, key);
     busy = false;
     if (r.ok) {
-      toast(giftCopy(gift).done);
+      done = giftCopy(gift).done;
       key = crypto.randomUUID();
       gift = null;
     } else if (r.error.reason === 'GIFT_CLAIMED' || r.error.reason === 'GOOGLE_LOGIN_REQUIRED') {
@@ -33,7 +36,17 @@
   }
 </script>
 
-{#if gift && copy}
+{#if done}
+  <section class="card home-gift" data-home-gift-done role="status">
+    <div class="hg-text">
+      <small class="eyebrow">Gift</small>
+      <b>{L.doneTitle}</b>
+      <span class="fs-sm">{done}</span>
+      <span class="muted fs-xs">{L.useHint}</span>
+    </div>
+    <button class="btn" onclick={goRerollShop} data-act="home-gift-owner">{L.toOwner}</button>
+  </section>
+{:else if gift && copy}
   <section class="card home-gift" data-home-gift={gift.id}>
     <div class="hg-text">
       <small class="eyebrow">Gift</small>

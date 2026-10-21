@@ -123,6 +123,14 @@ const ko = {
   toastEntered: '컵에 신청했어요.',
   toastWithdrawn: '신청을 취소했어요.',
   loginToEnter: 'Google 로그인하면 신청할 수 있어요.',
+  /** T-11-443 웹 비로그인 대회 화면 로그인 카드 · 신청 확인 · 신청 불가 사유에서 편성으로. */
+  loginCardNote: '로그인하면 컵에 신청하고 승부예측에도 참여할 수 있어요.',
+  enterAskTitle: '컵에 신청할까요?',
+  enterAskWithdraw: '접수 기간 안에는 신청을 취소할 수 있어요.',
+  enterAskOk: '신청하기',
+  enterAskCancel: '취소',
+  toLineup: '편성으로 가기',
+  toMakeTeam: '팀 만들러 가기',
   enterLockNote: '신청하면 선발 선수는 이적시장에 올리거나 방출할 수 없어요. 탈락하면 풀려요.',
   reasonNoTeam: '이번 시즌 구단이 있어야 신청할 수 있어요.',
   reasonNotEnough: (p: { filled: number; min: number }) =>
@@ -309,7 +317,10 @@ const ko = {
   shopBusy: '사는 중…',
   shopSoldOut: '오늘 살 수 있는 만큼 다 샀어요. 내일 0시(한국 시간)에 다시 살 수 있어요.',
   shopClosed: '지금은 리롤권을 팔지 않아요.',
-  shopShort: '구단 자금이 모자라요.',
+  // T-11-442 얼마나 모자라는지와 자금을 만드는 곳(방출)
+  shopShort: (p: { short: string }) =>
+    `구단 자금이 ${p.short} 모자라요. 직접 키운 선수를 방출하면 자금이 생겨요.`,
+  shopGoRelease: '방출하러 가기',
   shopConfirm: (p: { price: string; balance: string }) =>
     `리롤권 1장을 ${p.price}에 살까요? 산 뒤 구단 자금은 ${p.balance} 남고, 되돌릴 수 없어요.`,
   shopDone: (p: { n: number }) => `리롤권을 샀어요. 이제 ${p.n}장 있어요.`,

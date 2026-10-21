@@ -19,4 +19,7 @@ export const gift: Translation<GiftMsgs> = {
   seasonTitle: (p) => `シーズン${p.season}の実績報酬が届きました`,
   seasonSub: (p) => `シーズン${p.season}の実績で${itemsOf(p)}を受け取れます。`,
   seasonDone: (p) => `${itemsOf(p)}を受け取りました。`,
+  doneTitle: 'プレゼントを受け取りました',
+  useHint: '強化券は選手タブのポテンシャル強化で、スカウト券は選手作成の候補選びで使います。',
+  toOwner: 'マイクラブで見る',
 };

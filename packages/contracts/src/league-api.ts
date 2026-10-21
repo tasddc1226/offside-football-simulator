@@ -102,6 +102,20 @@ export const LeagueMeResponseSchema = z.strictObject({
     })
     .nullable()
     .optional(),
+  /**
+   * T-11-444 지난 시즌 내 결산(최종 순위 · 결과 · 다음 시즌에 시작하는 부, 기권 퇴출은 null = 맨 아래). 이번 시즌 배치 전에만,
+   * 지난 시즌 결산이 있을 때만 싣는다. 옛 응답에는 없다.
+   */
+  lastFinal: z
+    .strictObject({
+      season: z.number().int(),
+      tier: z.number().int(),
+      league: z.number().int(),
+      rank: z.number().int(),
+      outcome: z.enum(LEAGUE_OUTCOMES),
+      nextTier: z.number().int().nullable(),
+    })
+    .optional(),
 });
 export type LeagueMeResponse = z.infer<typeof LeagueMeResponseSchema>;
 

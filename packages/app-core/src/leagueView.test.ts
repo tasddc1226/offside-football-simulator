@@ -11,8 +11,17 @@ import {
   leagueCancelled,
   leagueDefaultPick,
   leagueDefaultRound,
+  leagueEnterAsk,
+  leagueEntryCard,
   leagueEntryRules,
   leagueFinalView,
+  leagueLastFinalView,
+  leagueLegend,
+  leagueOutcomeTone,
+  leaguePhaseActive,
+  leagueRoundAt,
+  leagueRules,
+  leagueZoneLabel,
   leagueForfeitsTag,
   leagueLine,
   leaguePlacementLine,
@@ -383,5 +392,159 @@ describe('leagueView (T-11-418)', () => {
       reward: '보상 없음',
       next: expect.stringContaining('맨 아래'),
     });
+  });
+});
+
+describe('leagueView (T-11-444)', () => {
+  const me = (o: Partial<LeagueMeResponse>): LeagueMeResponse => ({
+    entry: null,
+    canEnter: false,
+    team: null,
+    ...o,
+  });
+  const entry = { createdAt: '2026-11-01T00:00:00.000Z' };
+
+  it('신청 카드 단계별 노출: 계정을 모르면 숨기고, 로그인 안내는 접수 예정 · 접수 중에만', () => {
+    expect(leagueEntryCard(data('open'), 'unknown', null)).toEqual({ kind: 'hidden' });
+    expect(leagueEntryCard(data('soon'), 'guest', null).kind).toBe('login');
+    expect(leagueEntryCard(data('open'), 'guest', null).kind).toBe('login');
+    expect(leagueEntryCard(data('running'), 'guest', null)).toEqual({ kind: 'hidden' });
+    expect(leagueEntryCard(data('done'), 'guest', null)).toEqual({ kind: 'hidden' });
+  });
+
+  it('내 신청을 불러오지 못하면 오류(다시 시도), 불러오는 중이면 숨긴다', () => {
+    expect(leagueEntryCard(data('open'), 'member', null, true)).toEqual({
+      kind: 'error',
+      text: '내 신청 정보를 불러오지 못했어요.',
+    });
+    expect(leagueEntryCard(data('open'), 'member', null)).toEqual({ kind: 'hidden' });
+  });
+
+  it('신청 카드: 접수 중엔 신청 · 취소, 마감 뒤엔 취소할 수 없다고 적고, 배치 뒤엔 배치 줄에 맡긴다', () => {
+    expect(leagueEntryCard(data('open'), 'member', me({ canEnter: true }))).toMatchObject({
+      kind: 'mine',
+      entered: false,
+      action: 'enter',
+      note: '11월 5일 09:00에 배치를 발표해요. 그때 팀 OVR로 부와 리그가 정해져요.',
+    });
+    expect(leagueEntryCard(data('open'), 'member', me({ entry }))).toMatchObject({
+      entered: true,
+      action: 'withdraw',
+    });
+    expect(leagueEntryCard(data('closed'), 'member', me({ entry }))).toMatchObject({
+      entered: true,
+      action: null,
+      note: '접수가 끝나 신청을 취소할 수 없어요. 11월 5일 09:00에 부와 리그 배치를 발표해요.',
+    });
+    expect(leagueEntryCard(data('running'), 'member', me({ entry }))).toMatchObject({
+      note: '배치 · 대진은 발표 뒤 이 화면에 올라와요.',
+    });
+    const placed = me({
+      entry,
+      placement: { status: 'placed', tier: 1, league: 1, teamId: 'tem_1', rank: 2 },
+    });
+    expect(leagueEntryCard(data('running'), 'member', placed)).toMatchObject({ note: null });
+    expect(leagueEntryCard(data('soon'), 'member', me({}))).toMatchObject({
+      action: null,
+      note: null,
+    });
+    expect(leagueEntryCard(data('closed'), 'member', me({}))).toMatchObject({
+      note: '이번 시즌 리그에 신청하지 않았어요.',
+    });
+    // 접수 중에만 지금 팀 OVR.
+    const team = { teamId: 'tem_1', filled: 8, ovr: 77 };
+    expect(leagueEntryCard(data('open'), 'member', me({ entry, team }))).toMatchObject({
+      ovr: '지금 내 팀 OVR 77',
+    });
+    expect(leagueEntryCard(data('closed'), 'member', me({ entry, team }))).toMatchObject({
+      ovr: null,
+    });
+  });
+
+  it('단계 알약 강조는 접수 중 · 진행 중', () => {
+    expect((['soon', 'open', 'closed', 'running', 'done'] as const).map(leaguePhaseActive)).toEqual(
+      [false, true, false, true, false],
+    );
+  });
+
+  it('신청 확인: 자격 · 기권 규칙과 취소 마감', () => {
+    const ask = leagueEnterAsk(data('open'));
+    expect(ask.title).toBe('리그에 신청할까요?');
+    expect(ask.lines).toHaveLength(3);
+    expect(ask.lines[0]).toContain('참가 자격');
+    expect(ask.lines[1]).toContain('기권');
+    expect(ask.lines[2]).toBe(
+      '11월 4일 23:59까지는 신청을 취소할 수 있어요. 접수가 끝나면 취소할 수 없어요.',
+    );
+  });
+
+  it('라운드 시각은 날짜와 한국 시간으로', () => {
+    expect(leagueRoundAt([{ at: league.rounds[2]! }])).toBe('11월 7일 13:00 한국 시간');
+    expect(leagueRoundAt([])).toBeNull();
+  });
+
+  it('지난 시즌 결산: 최종 순위 · 결과 · 이번 시즌 시작 부', () => {
+    expect(leagueLastFinalView(me({}))).toBeNull();
+    const v = leagueLastFinalView(
+      me({
+        lastFinal: { season: 2, tier: 2, league: 1, rank: 1, outcome: 'promoted', nextTier: 1 },
+      }),
+    );
+    expect(v).toEqual({
+      outcome: 'promoted',
+      title: '시즌 2 결산',
+      label: '승격',
+      line: '2부 1리그 최종 1위',
+      next: '이번 시즌에 신청하면 1부에서 시작해요.',
+    });
+    expect(
+      leagueLastFinalView(
+        me({
+          lastFinal: {
+            season: 2,
+            tier: 3,
+            league: 2,
+            rank: 8,
+            outcome: 'forfeited',
+            nextTier: null,
+          },
+        }),
+      )?.next,
+    ).toBe('기권이 쌓여 이번 시즌은 맨 아래 부에서 시작해요.');
+    expect(leagueOutcomeTone('champion')).toBe('good');
+    expect(leagueOutcomeTone('stayed')).toBeNull();
+    expect(leagueOutcomeTone('relegated')).toBe('warn');
+  });
+
+  it('범례는 부에 맞춰: 부가 하나 · 1부 · 가운데 부 · 맨 아래 부', () => {
+    expect(leagueLegend(1, 1)).toEqual({
+      up: false,
+      down: false,
+      move: '부가 하나뿐이라 오르내리는 팀은 없어요. 1위가 우승이에요.',
+    });
+    expect(leagueLegend(1, 3)).toEqual({
+      up: false,
+      down: true,
+      move: '1위는 우승, 7 · 8위는 다음 시즌 2부로 내려가요.',
+    });
+    expect(leagueLegend(2, 3).move).toBe(
+      '1위는 다음 시즌 1부로 올라가고, 7 · 8위는 3부로 내려가요.',
+    );
+    expect(leagueLegend(3, 3)).toEqual({
+      up: true,
+      down: false,
+      move: '1위는 다음 시즌 2부로 올라가요. 맨 아래 부라 강등은 없어요.',
+    });
+  });
+
+  it('내 자리 이름은 확정 배지가 없을 때만, 규칙은 부 · 리그 용어로 시작한다', () => {
+    expect(leagueZoneLabel('up', false)).toBe('승격권');
+    expect(leagueZoneLabel('down', false)).toBe('강등권');
+    expect(leagueZoneLabel('down', true)).toBeNull();
+    expect(leagueZoneLabel(null, false)).toBeNull();
+    expect(leagueRules().slice(0, 2)).toEqual([
+      '부: 실력 단계예요. 1부가 가장 높아요.',
+      '리그: 한 부 안에서 7 ~ 8팀씩 나눈 묶음이에요. 아래 부로 갈수록 리그가 많아요.',
+    ]);
   });
 });

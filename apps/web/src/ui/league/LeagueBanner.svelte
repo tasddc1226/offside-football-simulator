@@ -3,7 +3,7 @@
   // 신청 · 내 상태는 리그 화면에서 한다. 리그가 끝났거나 불러오지 못하면 숨긴다.
   import { fetchLeague, type LeagueResponse } from '@offside/app-core/api/league';
   import { leagueText as L } from '@offside/app-core/i18n/ko/league';
-  import { leagueLine, leagueOnHome, leaguePhaseLabel } from '@offside/app-core/leagueView';
+  import { leagueLine, leagueOnHome, leaguePhaseActive, leaguePhaseLabel } from '@offside/app-core/leagueView';
 
   let { onopen }: { onopen: () => void } = $props();
 
@@ -23,7 +23,7 @@
       <strong class="lb-title">{L.seasonTitle({ season: data.league.season })}</strong>
       <span class="muted fs-sm" data-league-line>{leagueLine(data)}</span>
     </div>
-    <span class="pill" class:good={data.phase === 'open' || data.phase === 'running'}>{leaguePhaseLabel(data.phase)}</span>
+    <span class="pill" class:good={leaguePhaseActive(data.phase)}>{leaguePhaseLabel(data.phase)}</span>
   </button>
 {/if}
 

@@ -7,6 +7,12 @@ export const rename: Translation<RenameMsgs> = {
   entryLabel: (p) => `Rename ${p.name}`,
   lead: 'Use 1 ticket to rename this player. The new name shows in the Hall of Fame, the transfer market and club matches.',
   label: 'New name',
+  rule: (p) => `Up to ${p.max} characters. Links, profanity, and < > aren't allowed.`,
+  next: 'Next',
+  confirm: (p) => `Rename to ${p.name}?`,
+  confirmNote:
+    'This uses 1 ticket, and the new name is shown in the Hall of Fame, transfer market, and club matches.',
+  edit: 'Edit again',
   have: (p) => `Rename tickets: ${p.n}`,
   btn: 'Use 1 ticket and rename',
   busy: 'Renaming…',

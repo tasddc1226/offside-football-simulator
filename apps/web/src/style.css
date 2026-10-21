@@ -1430,6 +1430,9 @@ a.tile-link {
   font-size: var(--fs-caption);
   margin: 0 0 6px;
 }
+.hof-basis {
+  margin: 0 0 8px;
+}
 .dex-tabs {
   grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
   gap: 6px;
@@ -2257,6 +2260,13 @@ body:has(.main-nav) .wrap {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+/* T-11-439 공유 시트가 없는 브라우저는 저장 한 칸, 다시 만들기는 가운데 작은 링크 */
+.share-actions.share-actions-one {
+  grid-template-columns: 1fr;
+}
+.share-remake {
+  align-self: center;
 }
 /* 탭바가 없는 화면(선수 생성)에서는 화면 맨 아래에 붙는다 */
 .action-bar.at-bottom {
@@ -6126,8 +6136,14 @@ button.title-item:hover {
 }
 .film-score span {
   font-size: var(--fs-caption2);
-  letter-spacing: 0.24em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  color: var(--film-muted);
+}
+/* T-11-439 점수 구성으로 내려가는 작은 링크 */
+.film-score .link-btn {
+  margin-top: 2px;
+  font-size: var(--fs-caption);
   color: var(--film-muted);
 }
 /* T-10-100 은퇴 가치 */
@@ -6880,6 +6896,12 @@ button.film-raiser:focus-visible {
   letter-spacing: 0.02em;
   color: var(--muted);
   text-align: center;
+}
+/* T-11-439 공유받은 화면 맨 위 작은 시작 버튼 */
+.shared-top {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 12px;
 }
 
 /* T-10-030 홈 라이브 현황 */

@@ -52,6 +52,7 @@ export const gameActions: Translation<GameActionsMsgs> = {
   peekSafeCost: 'まれに代償',
   peekAria: (p) => `得失 ${p.chips}`,
   oddsMinigame: (p) => `ワンタッチ · ${p.zone}`,
+  oddsMinigameTerm: 'ワンタッチ',
   oddsMinigameHint:
     '針が緑のゾーンに来たときにタップすると成功です。ゾーンの広さは能力値で決まります',
   outcomeOk: '成功',

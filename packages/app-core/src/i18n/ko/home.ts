@@ -52,12 +52,17 @@ const ko = {
   newsFailed: '소식을 불러오지 못했어요.',
   newsEmpty: '아직 올라온 글이 없어요.',
   pinned: '고정',
+  // T-11-440 이번에 앱을 연 뒤 아직 열지 않은 새 글 표시
+  postNew: 'NEW',
   // 전광판
   tagTransfer: '이적',
   tagDebut: '프로 입단',
   tagFirst: '서버 최초',
   tagRecord: '서버 신기록',
   tickerAria: '이적·서버 기록 소식',
+  // T-11-440 전광판 멈춤 버튼
+  tickerPause: '전광판 멈추기',
+  tickerPlay: '전광판 다시 흐르게 하기',
   tickerIdle: '이적 소식과 서버 최초 기록이 여기로 흘러요',
   tickerAge: (p: { age: number }) => `(${p.age}세)`,
 };

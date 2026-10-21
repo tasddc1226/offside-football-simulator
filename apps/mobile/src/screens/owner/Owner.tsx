@@ -1,6 +1,6 @@
 // My club: shared owner identity and operations, with team-specific play in the team card.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { shapeOf } from '@offside/contracts/owner-team';
 import { Alert, View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -20,7 +20,8 @@ import type { TeamView } from '@offside/app-core/state';
 import { num, recordText } from '@offside/app-core/teamText';
 import { fmtValue } from '@offside/app-core/format';
 import { loadHOF } from '@offside/game/hof-store';
-import { accountCache, appState } from '../../store';
+import { accountCache, appState, prefs } from '../../store';
+import { scrollToView } from '../../ui/scroll';
 import { isMember } from '@offside/app-core/account';
 import { go, takeFocus } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
@@ -143,6 +144,9 @@ export default function Owner() {
   // 바꾸면 다시 판단한다.
   // T-11-152 후보 화면 '리롤권 상점 가기'로 들어왔으면 리롤권 상점을 펼친 채로 연다(한 번만 읽힌다).
   const [shopFocus] = useState(() => takeFocus('rerollShop'));
+  // T-11-441 설정의 '계정 · 닉네임'으로 들어왔으면 계정 카드로 내려간다(한 번만).
+  const accountBox = useRef<View>(null);
+  const accountScrolled = useRef(!takeFocus('account'));
   const [admin, setAdmin] = useState(false);
   const linked = !!acct && acct !== 'error' && isMember(acct);
   // T-10-103 비로그인으로 확인됐고 이 기기에 은퇴한 선수도 없으면 빈 '내 선수'를 숨긴다(확인 중·연결 실패면 그대로 둔다).
@@ -578,23 +582,32 @@ export default function Owner() {
         </Press>
       ) : null}
 
-      <SettingsCard>
-        <Account />
-        {admin ? (
-          <View
-            style={{
-              marginTop: 12,
-              paddingTop: 4,
-              borderTopWidth: 1,
-              borderTopColor: c.line,
-            }}
-          >
-            <SettingsTrigger testID="admin" label={L.adminTools} onPress={() => go('admin')}>
-              <SettingsLabel title={L.adminTools} />
-            </SettingsTrigger>
-          </View>
-        ) : null}
-      </SettingsCard>
+      <View
+        ref={accountBox}
+        onLayout={() => {
+          if (accountScrolled.current) return;
+          accountScrolled.current = true;
+          scrollToView(accountBox.current, prefs.motionOK);
+        }}
+      >
+        <SettingsCard>
+          <Account />
+          {admin ? (
+            <View
+              style={{
+                marginTop: 12,
+                paddingTop: 4,
+                borderTopWidth: 1,
+                borderTopColor: c.line,
+              }}
+            >
+              <SettingsTrigger testID="admin" label={L.adminTools} onPress={() => go('admin')}>
+                <SettingsLabel title={L.adminTools} />
+              </SettingsTrigger>
+            </View>
+          ) : null}
+        </SettingsCard>
+      </View>
     </Screen>
   );
 }

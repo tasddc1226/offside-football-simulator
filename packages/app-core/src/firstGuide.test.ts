@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { closeGuide, guideOpen } from './firstGuide.js';
+import { closeGuide, guideOpen, saveHintOpen } from './firstGuide.js';
 
 function fakeStorage(opts: { full?: boolean; broken?: boolean } = {}) {
   const m = new Map<string, string>();
@@ -50,5 +50,16 @@ describe('처음 안내 카드', () => {
     expect(guideOpen('home')).toBe(true);
     m.set('ft_first_guide', JSON.stringify(['home', 7]));
     expect(guideOpen('home')).toBe(false);
+  });
+
+  it('T-11-437 저장 위치 안내는 첫 시즌에만, 닫으면 다시 뜨지 않고 다른 카드와 따로 기억한다', () => {
+    fakeStorage();
+    expect(saveHintOpen(0)).toBe(true);
+    expect(saveHintOpen(1)).toBe(false);
+    closeGuide('home');
+    expect(saveHintOpen(0)).toBe(true);
+    closeGuide('save');
+    expect(saveHintOpen(0)).toBe(false);
+    expect(guideOpen('items')).toBe(true);
   });
 });

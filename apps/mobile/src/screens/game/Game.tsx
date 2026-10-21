@@ -49,6 +49,7 @@ import { notePlayerVisit, playerNudge } from '@offside/app-core/player-nudge';
 import { peekOpen } from '@offside/app-core/potential-peek';
 import { peekAvailable, potPeek } from '../../platform/rewardedPeek';
 import { SeasonTab } from './SeasonTab';
+import { SaveHint } from './SaveHint';
 import { TitleDex } from './TitleDex';
 import { TrophyTab } from './TrophyTab';
 
@@ -384,6 +385,9 @@ export default function Game() {
               <HeroPill>{focusName}</HeroPill>
             </View>
           </PitchCard>
+
+          {/* T-11-437 첫 시즌에 한 번 · 기록 저장 위치와 백업 코드 자리 */}
+          {tab === 'season' ? <SaveHint pastSeasons={s.career.length} /> : null}
 
           {/* 탭 전환 모션(T-10-003): 탭이 바뀔 때만 새로 마운트해 들어오는 모션을 건다. 동작 줄이기면 바로. */}
           <TabPanel key={tab} onLayout={(e) => (panelY.current = e.nativeEvent.layout.y)}>

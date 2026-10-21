@@ -80,8 +80,8 @@ export const create: Translation<CreateMsgs> = {
   footLabel: 'Preferred foot',
   focusTitle: (p) => `Focus attributes · pick ${p.n}`,
   focusUp: (p) => `Start +${p.d} · growth +${p.pct}%`,
-  focusDown: (p) => `Start ${p.d}`,
-  focusNone: 'No change',
+  focusDown: (p) => `Start ${p.d} · growth -${p.pct}%`,
+  focusNone: (p) => `Start unchanged · growth -${p.pct}%`,
   trait: 'Growth trait',
   potentialNote: 'Your potential rating is revealed when you retire.',
   cancel: 'Cancel',
@@ -106,6 +106,10 @@ export const create: Translation<CreateMsgs> = {
   potentialSaveFailed: 'Could not save the reveal. Please check your storage.',
   candIntro:
     'All three candidates have the same attribute total, but different distributions and potential. Tap a card to compare.',
+  loginTools:
+    'Log in to reroll candidates with reroll or premium scout tickets, and to reveal potential with club funds.',
+  loginToolsGo: 'Go to login',
+  moreTools: 'More: shop and attribute guide',
   openAll: 'Open all',
   candNo: (p) => `Candidate ${p.n}`,
   picked: '✓ Picked',

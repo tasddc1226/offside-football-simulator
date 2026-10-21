@@ -33,6 +33,8 @@ export const account: Translation<AccountMsgs> = {
   deleteBody:
     'アカウントと、サーバーに保存された選手の記録・チーム・コメント・チャットを削除しますか？元に戻せません。この端末のゲームの進行は残ります。',
   deleteConfirm: '削除',
+  deleteDone: 'アカウントを削除しました。この端末のゲーム進行はそのまま残ります。',
+  deleteFail: 'アカウントを削除できませんでした。少し待ってからもう一度お試しください。',
   googleTitle: 'Googleアカウント',
   googleVia: 'Googleアカウントでログインしています。',
   appleTitle: 'Appleアカウント',

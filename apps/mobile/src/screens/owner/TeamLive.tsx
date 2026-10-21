@@ -6,7 +6,7 @@
 // 끼어든다. 제한 시간이 지나거나 '결과 바로 보기'를 누르면 남은 장면은 감독에게 맡긴다.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, ScrollView, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, ScrollView, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import {
   chooseMoment,
@@ -32,9 +32,11 @@ import {
 } from '@offside/app-core/teamLive';
 import {
   LiveScore,
+  liveSkipLabel,
   momentChoices,
   momentLines,
   momentScene,
+  momentTimerSpoken,
   momentTitle,
 } from '@offside/app-core/teamMoments';
 import { teamLiveText as L } from '@offside/app-core/i18n/ko/teamLive';
@@ -188,6 +190,8 @@ export function TeamLive({
   const finalRef = useRef<PlayTeamMatchResponse | null>(null);
   /** 판정을 받지 못하면 남은 장면은 건너뛰고 끝에서 마감한다. */
   const brokenRef = useRef(false);
+  /** T-11-443 아직 고르지 않은 장면 수('결과 바로 보기'가 감독에게 맡긴다는 걸 버튼에 적는다). */
+  const [pendingMoments, setPendingMoments] = useState(live?.moments?.length ?? 0);
   const timer = useRef(new Animated.Value(1)).current;
 
   // 골 배너 · 점수 튀어 오름 · 흐름 막대
@@ -286,6 +290,7 @@ export function TeamLive({
       const m = moments[k];
       if (!m || brokenRef.current || !run.alive) return;
       const choice = await ask(m);
+      setPendingMoments(moments.length - k - 1);
       if (choice === null || !run.alive) return;
       setSending(true);
       const r = await chooseMoment(match.id, m.index, choice);
@@ -293,6 +298,7 @@ export function TeamLive({
       setActive(null);
       if (!r.ok) {
         brokenRef.current = true;
+        setPendingMoments(0);
         push({ minute: m.minute, kind: 'moment', text: M.failed });
         return;
       }
@@ -349,6 +355,11 @@ export function TeamLive({
   }
 
   const choices = active ? momentChoices(active.m, name) : [];
+  // T-11-443 남은 초는 화면 글자만 매초 바꾸고, 스크린리더에는 처음 안내와 마지막 몇 초만 알린다.
+  const spoken = active && !sending ? momentTimerSpoken(active.left, choiceSec) : null;
+  useEffect(() => {
+    if (spoken) AccessibilityInfo.announceForAccessibility(spoken);
+  }, [spoken]);
   const scored = shown
     .map((x) => x.l)
     .filter((l): l is LiveLine & { side: 'home' | 'away' } => l.kind === 'goal' && !!l.side);
@@ -741,13 +752,12 @@ export function TeamLive({
             </View>
             <Txt
               tone="muted"
-              accessibilityLiveRegion="polite"
               style={{ fontSize: rem(FONT.label), lineHeight: rem(FONT.label) * 1.5 }}
             >
               {sending ? M.sending : M.timer({ s: active.left })}
             </Txt>
             <Btn testID="live-moment-skip" disabled={sending} onPress={() => void finish()}>
-              {L.skip}
+              {M.skipToManager}
             </Btn>
           </View>
         </PopSheet>
@@ -783,7 +793,7 @@ export function TeamLive({
           disabled={sending}
           onPress={() => void finish()}
         >
-          {sending ? M.sending : L.skip}
+          {sending ? M.sending : liveSkipLabel(pendingMoments)}
         </Btn>
       </Grid2>
     </Card>

@@ -9,13 +9,14 @@ import { keyMomentText as KM } from '@offside/app-core/i18n/ko/keyMoment';
 import { revealText as RV } from '@offside/app-core/i18n/ko/reveal';
 import { useTextSize } from '../../theme/useTextSize';
 import { nativeAnalytics } from '../../analytics';
-import { useState, useSyncExternalStore } from 'react';
+import { useRef, useState, useSyncExternalStore } from 'react';
 import { View } from 'react-native';
 import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
 import { saveKey } from '@offside/game/storage';
 import { buzz } from '../../game/host';
 import { SiteFooter } from '../../components/SiteFooter';
-import { goFairness, goTypeDex } from '../../game/nav';
+import { goAccount, goFairness, goTypeDex, takeFocus } from '../../game/nav';
+import { scrollBackTo } from '../../ui/scroll';
 import { ItemsHint } from '../../components/ItemsHint';
 import { firstGuideText as FG } from '@offside/app-core/i18n/ko/firstGuide';
 import { openWeb } from '../../platform/openWeb';
@@ -110,6 +111,8 @@ function BuildInfo() {
 }
 
 export default function Settings() {
+  const [focusBackup] = useState(() => takeFocus('backup'));
+  const backupFocus = useRef(focusBackup);
   const dark = useIsDark();
   const textSize = useTextSize();
   const consent = useSyncExternalStore(nativeAnalytics.onConsent, nativeAnalytics.getConsent);
@@ -252,8 +255,17 @@ export default function Settings() {
         </SettingsCard>
       ) : null}
 
-      {/* T-10-116 진행 중 커리어 백업·불러오기 */}
-      <BackupSettings />
+      {/* T-10-116 진행 중 커리어 백업·불러오기. T-11-437 게임 화면 저장 위치 안내에서 왔으면 이 카드로 내린다. */}
+      <View
+        onLayout={(e) => {
+          if (backupFocus.current) {
+            backupFocus.current = false;
+            scrollBackTo(e.nativeEvent.layout.y);
+          }
+        }}
+      >
+        <BackupSettings />
+      </View>
       <AdFreeSettings />
       <PushSettings />
       <ReviewSettings />
@@ -264,6 +276,7 @@ export default function Settings() {
           label={L.help}
           items={[
             { text: L.guide, path: '/guide/' },
+            { text: L.accountLink, id: 'account', onPress: goAccount },
             { text: L.faq, path: '/faq/' },
             { text: L.fairness, id: 'fairness', onPress: goFairness },
             { text: FG.typeDex, id: 'type-dex', onPress: goTypeDex },

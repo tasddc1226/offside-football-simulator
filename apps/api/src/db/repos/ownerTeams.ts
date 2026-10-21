@@ -673,6 +673,31 @@ export async function ratingRankOf(db: Db, t: OwnerTeamRow): Promise<number | nu
   return Number(row?.n ?? 0) + 1;
 }
 
+/** T-11-441 OVR 순위(OVR순 랭킹과 같은 순서 — OVR · 레이팅 · 먼저 만든 팀). 랭킹에 오르지 않은 팀이면 null. */
+export async function ovrRankOf(db: Db, t: OwnerTeamRow): Promise<number | null> {
+  if (t.filled === 0) return null;
+  const [row] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(ownerTeams)
+    .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
+    .where(
+      and(
+        rankedIn(t.season),
+        or(
+          gt(ownerTeams.ovr, t.ovr),
+          and(
+            eq(ownerTeams.ovr, t.ovr),
+            or(
+              gt(ownerTeams.rating, t.rating),
+              and(eq(ownerTeams.rating, t.rating), lt(ownerTeams.createdAt, t.createdAt)),
+            ),
+          ),
+        ),
+      ),
+    );
+  return Number(row?.n ?? 0) + 1;
+}
+
 // ───────── 좋아요 · 조회수(게시판 글과 같은 방식) ─────────
 
 const likeOf = (teamId: string, profileId: string) =>

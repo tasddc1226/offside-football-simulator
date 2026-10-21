@@ -10,7 +10,7 @@ import type {
 } from './api/market.js';
 import type { FundsItem } from '@offside/contracts';
 import type { OwnerTeamResponse, TeamPlayer } from './api/team.js';
-import { marketFee, priceBand, releasePayout } from '@offside/contracts/market-value';
+import { RELEASE_MAX, marketFee, priceBand, releasePayout } from '@offside/contracts/market-value';
 import { POS_GROUPS, detailPosOf } from '@offside/contracts/positions';
 import { typeName } from '@offside/game/data';
 import { marketText as L } from './i18n/ko/market.js';
@@ -136,6 +136,49 @@ export function sellNote(p: TeamPlayer, lineup: ReadonlySet<string>): string {
 /** T-11-188 잠금 버튼을 누를 수 있나: 판매 중인 선수는 내린 뒤에 잠근다(잠긴 선수는 판매 중일 수 없어 늘 풀 수 있다). */
 export const lockToggleable = (p: TeamPlayer) => !!p.locked || !p.listing;
 
+/** T-11-442 방출 한 번에 고를 수 있는 최대 인원(서버 검증과 같은 값). */
+export { RELEASE_MAX };
+
+/**
+ * T-11-442 방출 '전체 선택'. 서버가 한 번에 RELEASE_MAX명까지만 받으니 앞에서부터 그만큼만 고른다. 이미 다 골랐으면
+ * (또는 한도만큼 골랐으면) 모두 푼다.
+ */
+export function pickAllIds(
+  releasable: readonly { careerId: string }[],
+  picked: ReadonlySet<string>,
+): Set<string> {
+  const ids = releasable.map((p) => p.careerId);
+  const want = Math.min(ids.length, RELEASE_MAX);
+  const chosen = ids.filter((id) => picked.has(id)).length;
+  return want > 0 && chosen >= want ? new Set() : new Set(ids.slice(0, RELEASE_MAX));
+}
+/** 방출 '전체 선택' 버튼 이름. 고를 선수가 한도보다 많으면 '최대 N명 선택'. */
+export function pickAllLabel(releasable: number, allPicked: boolean): string {
+  if (allPicked) return L.pickNone;
+  return releasable > RELEASE_MAX ? L.pickAllMax({ n: RELEASE_MAX }) : L.pickAll;
+}
+/** 방출 '전체 선택'이 끝난 상태인가(한도보다 많으면 한도만큼 골랐을 때). */
+export const allReleasePicked = (releasable: number, picked: number) =>
+  releasable > 0 && picked >= Math.min(releasable, RELEASE_MAX);
+/** 방출할 선수 하나를 넣거나 뺀다. 한도에 닿았는데 더 넣으려 하면 그대로 두고 full을 돌려준다. */
+export function togglePickId(
+  picked: ReadonlySet<string>,
+  id: string,
+): { next: Set<string>; full: boolean } {
+  const next = new Set(picked);
+  if (next.delete(id)) return { next, full: false };
+  if (next.size >= RELEASE_MAX) return { next, full: true };
+  next.add(id);
+  return { next, full: false };
+}
+
+/** T-11-442 로그인 전 기기에서 팔기 · 내 거래 · 방출 화면을 열면 오류 대신 보이는 안내. */
+export function marketGuestText(view: MarketView): string {
+  if (view === 'sell') return L.guestSell;
+  if (view === 'release') return L.guestRelease;
+  return L.guestTrades;
+}
+
 /** 방출 화면에서 고를 수 없는 이유(고를 수 있으면 null). */
 export function releaseLock(p: TeamPlayer, lineup: ReadonlySet<string>): string | null {
   if (!p.raised) return L.lockBought;
@@ -197,6 +240,13 @@ export const marketEmptyText = (season: number | null, filtered: boolean) =>
 /** 한 선수를 방출하면 받을 자금(서버와 같은 releasePayout — 카드 기준가 × 지급률). */
 export const releaseValue = (p: Pick<TeamPlayer, 'cardValue'>, rate: number) =>
   releasePayout(p.cardValue, rate);
+/** T-11-443 내 선수 방출 목록 한 줄: 세부 포지션 · 최고 OVR · 레전드 점수. */
+export const releaseRowInfo = (p: Pick<TeamPlayer, 'pos' | 'dpos' | 'peak' | 'legendScore'>) =>
+  L.releaseRowInfo({
+    pos: detailPosOf(p),
+    peak: p.peak,
+    score: (p.legendScore ?? 0).toLocaleString(intlLocale()),
+  });
 /** 여러 선수를 방출하면 받을 자금. */
 export const releaseAmount = (players: readonly Pick<TeamPlayer, 'cardValue'>[], rate: number) =>
   players.reduce((s, p) => s + releaseValue(p, rate), 0);

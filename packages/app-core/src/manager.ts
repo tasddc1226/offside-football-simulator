@@ -85,6 +85,9 @@ export function startConfirmLines(c: ManagerCandidate): string[] {
   ];
 }
 
+/** T-11-443 '감독 카드로 확정' 확인 창에 보이는 줄(감독 칸에 앉힐 수 있다 · 되돌릴 수 없다). */
+export const finishConfirmLines = (): string[] => [M.finishSeat, M.finishFinal];
+
 // ───────── 진행 연출(선수 커리어의 경기 중계 · 변화 칩과 같은 방식) ─────────
 
 const STAT_KEYS = ['fame', 'trust', 'morale', 'fans', 'control', 'adapt'] as const;

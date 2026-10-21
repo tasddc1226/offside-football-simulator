@@ -21,6 +21,10 @@ const ko = {
   seasonTitle: (p: Season) => `시즌 ${p.season} 업적 보상이 도착했어요`,
   seasonSub: (p: Season) => `시즌 ${p.season} 업적으로 ${itemsOf(p)}을 받을 수 있어요.`,
   seasonDone: (p: Season) => `${itemsOf(p)}을 받았어요.`,
+  // T-11-440 받은 뒤 결과 · 쓰는 곳 안내
+  doneTitle: '선물을 받았어요',
+  useHint: '강화권은 선수 탭 잠재력 강화에서, 스카우트권은 선수 만들기 후보 단계에서 써요.',
+  toOwner: '내 구단에서 보기',
 };
 
 export type GiftMsgs = typeof ko;

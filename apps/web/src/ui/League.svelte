@@ -4,15 +4,18 @@
   import { onMount } from 'svelte';
   import { enterLeague, fetchLeague, fetchLeagueMe, withdrawLeague, type LeagueMeResponse, type LeagueResponse } from '@offside/app-core/api/league';
   import { isMember } from '@offside/app-core/account';
+  import { cupAppText as A } from '@offside/app-core/i18n/ko/cupApp';
   import { leagueText as L } from '@offside/app-core/i18n/ko/league';
-  import { leagueCancelled, leagueChoices, leagueDefaultPick, leagueDefaultRound, leagueEntryRules, leagueFinalView, leagueLine, leaguePhaseLabel, leaguePlacementLine, leaguePresign, leagueReadiness, leagueRules, leagueSchedule, leagueTeamAction, leagueWhen, type LeaguePick } from '@offside/app-core/leagueView';
+  import { leagueCancelled, leagueChoices, leagueDefaultPick, leagueDefaultRound, leagueEnterAsk, leagueEntryCard, leagueEntryRules, leagueFinalView, leagueLastFinalView, leagueLine, leagueOutcomeTone, leaguePhaseActive, leaguePhaseLabel, leaguePlacementLine, leaguePresign, leagueReadiness, leagueRules, leagueSchedule, leagueTeamAction, leagueWhen, type LeagueAccount, type LeaguePick } from '@offside/app-core/leagueView';
   import type { LeagueMatch, LeagueTableResponse } from '@offside/app-core/api/league';
   import LeagueBoard from './league/LeagueBoard.svelte';
   import LeagueMatchDetail from './league/LeagueMatchDetail.svelte';
+  import PopSheet from './PopSheet.svelte';
   import Topbar from './Topbar.svelte';
   import LoadState, { type LoadStatus } from './LoadState.svelte';
   import LoginButtons from './LoginButtons.svelte';
   import Skeleton from './Skeleton.svelte';
+  import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
   import { accountCache, refreshAccount } from './account-state.svelte.js';
   import { toast } from './helpers.js';
   import { go } from './nav.js';
@@ -21,7 +24,10 @@
   let status = $state<LoadStatus>('loading');
   let data = $state<LeagueResponse | null>(null);
   let me = $state<LeagueMeResponse | null>(null);
+  let meFailed = $state(false);
   let busy = $state(false);
+  // T-11-444 신청 · 취소 확인 창(PopSheet).
+  let ask = $state<'enter' | 'withdraw' | null>(null);
   // 배치 뒤: 고른 리그(처음엔 내 리그) · 라운드 · 연 경기.
   let pick = $state<LeaguePick | null>(null);
   let picked = $state(false);
@@ -46,6 +52,7 @@
   async function loadMe() {
     const r = await fetchLeagueMe();
     me = r.ok ? r.data : null;
+    meFailed = !r.ok;
   }
   const reload = () => void Promise.all([load(), linked ? loadMe() : undefined]);
 
@@ -56,7 +63,10 @@
   });
   $effect(() => {
     if (linked) void loadMe();
-    else me = null;
+    else {
+      me = null;
+      meFailed = false;
+    }
   });
 
   $effect(() => {
@@ -79,6 +89,13 @@
     detail = { m, table };
     window.scrollTo(0, 0);
   }
+  const account = $derived<LeagueAccount>(
+    !accountCache.value || accountCache.value === 'error' ? 'unknown' : linked ? 'member' : 'guest',
+  );
+  // T-11-444 신청 카드의 단계별 노출은 앱과 같은 규칙(leagueEntryCard)을 쓴다.
+  const card = $derived(data ? leagueEntryCard(data, account, me, meFailed) : null);
+  const lastFinal = $derived(leagueLastFinalView(me));
+  const enterAsk = $derived(data ? leagueEnterAsk(data) : null);
   const presign = $derived(data ? leaguePresign(data) : false);
   const ready = $derived(data ? leagueReadiness(data, me) : null);
   // T-11-430 배치 전 신청 카드: 참가 자격 · 기권 규칙, 팀 선발 고치기(팀 편성 화면으로).
@@ -91,6 +108,7 @@
 
   async function enter() {
     if (busy) return;
+    ask = null;
     busy = true;
     const r = await enterLeague();
     busy = false;
@@ -98,7 +116,8 @@
     reload();
   }
   async function withdraw() {
-    if (busy || !confirm(L.withdrawConfirm)) return;
+    if (busy) return;
+    ask = null;
     busy = true;
     const r = await withdrawLeague();
     busy = false;
@@ -127,44 +146,52 @@
       <section class="card league-sec" data-league-hero data-league-phase={data.phase}>
         <div class="league-row">
           <span class="muted fs-sm" data-league-line>{leagueLine(data)}</span>
-          <span class="pill" class:good={data.phase === 'open' || data.phase === 'running'}>{leaguePhaseLabel(data.phase)}</span>
+          <span class="pill" class:good={leaguePhaseActive(data.phase)}>{leaguePhaseLabel(data.phase)}</span>
         </div>
         <p class="fs-sm">{L.pitch}</p>
-        {#if accountCache.value && accountCache.value !== 'error' && !linked}
-          {#if data.phase === 'open'}<p class="muted fs-sm" data-league-login>{L.loginToEnter}</p>{/if}
+        {#if card?.kind === 'login'}
+          <p class="muted fs-sm" data-league-login>{card.text}</p>
           <LoginButtons act="league-login-google" back={{ league: true }} />
-        {:else if linked && me}
-          {#if me.entry}
+        {:else if card?.kind === 'error'}
+          <div class="league-row" data-league-me-error>
+            <span class="muted fs-sm">{card.text}</span>
+            <button class="btn btn-sm" data-act="league-me-retry" onclick={() => void loadMe()}>{shellMoreText.retry}</button>
+          </div>
+        {:else if card?.kind === 'mine' && me}
+          {#if lastFinal}
+            <div class="league-final" data-league-last-final={lastFinal.outcome}>
+              <div class="league-row"><b>{lastFinal.title}</b><span class="pill {leagueOutcomeTone(lastFinal.outcome) ?? ''}">{lastFinal.label}</span></div>
+              <p class="fs-sm"><b>{lastFinal.line}</b></p>
+              <p class="muted fs-sm">{lastFinal.next}</p>
+            </div>
+          {/if}
+          {#if card.entered}
             <div class="league-row" data-league-entered>
               <span class="pill good">{L.entered}</span>
-              {#if data.phase === 'open'}<button class="btn btn-sm" data-act="league-withdraw" disabled={busy} onclick={withdraw}>{busy ? L.withdrawing : L.withdraw}</button>{/if}
+              {#if card.action === 'withdraw'}<button class="btn btn-sm" data-act="league-withdraw" disabled={busy} onclick={() => (ask = 'withdraw')}>{busy ? L.withdrawing : L.withdraw}</button>{/if}
             </div>
-            {#if data.phase === 'open'}<p class="muted fs-sm">{L.enteredNote({ at: leagueWhen(data.league.drawAt) })}</p>
-            {:else if !placement}<p class="muted fs-sm">{L.drawPending}</p>{/if}
-          {:else if me.canEnter}
-            <button class="btn btn-primary btn-block" data-act="league-enter" disabled={busy} onclick={enter}>{busy ? L.entering : L.enter}</button>
-            <p class="muted fs-sm">{L.enteredNote({ at: leagueWhen(data.league.drawAt) })}</p>
-          {:else if data.phase !== 'soon'}
-            <p class="muted fs-sm">{L.notEntered}</p>
+          {:else if card.action === 'enter'}
+            <button class="btn btn-primary btn-block" data-act="league-enter" disabled={busy} onclick={() => (ask = 'enter')}>{busy ? L.entering : L.enter}</button>
           {/if}
+          {#if card.note}<p class="muted fs-sm" data-league-note>{card.note}</p>{/if}
           {#if presign}<p class="muted fs-sm" data-league-presign>{L.presignNote({ season: data.league.season, at: leagueWhen(data.league.startsAt) })}</p>{/if}
           {#if ready}<p class="fs-sm" class:muted={ready.ok} class:league-warn={!ready.ok} data-league-ready={ready.ok ? 'ok' : 'short'}>{ready.text}</p>{/if}
           {#if teamAction}<button class="btn btn-sm league-team-btn" data-act="league-team" onclick={openTeam}>{teamAction}</button>{/if}
-          {#if me.team && data.phase === 'open'}<p class="muted fs-sm" data-league-ovr>{L.myOvr({ ovr: me.team.ovr })}</p>{/if}
+          {#if entryRules.length}
+            <ul class="league-entry-rules muted fs-sm" data-league-entry-rules>
+              {#each entryRules as rule (rule)}<li>{rule}</li>{/each}
+            </ul>
+          {/if}
+          {#if card.ovr}<p class="muted fs-sm" data-league-ovr>{card.ovr}</p>{/if}
           {#if final}
             <div class="league-final" data-league-final={final.outcome}>
-              <div class="league-row"><b>{L.finalTitle}</b><span class="pill" class:good={final.outcome === 'champion' || final.outcome === 'promoted'} class:warn={final.outcome === 'relegated' || final.outcome === 'forfeited'}>{final.label}</span></div>
+              <div class="league-row"><b>{L.finalTitle}</b><span class="pill {leagueOutcomeTone(final.outcome) ?? ''}">{final.label}</span></div>
               <p class="fs-sm"><b>{final.line}</b></p>
               <p class="fs-sm" data-league-reward>{final.reward}</p>
               {#if final.title}<p class="fs-sm">{final.title}</p>{/if}
               <p class="muted fs-sm">{final.next}</p>
             </div>
           {:else if placement}<p class="fs-sm" class:league-warn={!placement.ok} data-league-placement={me.placement?.status}><b>{placement.text}</b></p>{/if}
-        {/if}
-        {#if linked && me && entryRules.length}
-          <ul class="league-entry-rules muted fs-sm" data-league-entry-rules>
-            {#each entryRules as rule (rule)}<li>{rule}</li>{/each}
-          </ul>
         {/if}
         <!-- 접수 중에는 위 한 줄에 신청 수가 있다. -->
         {#if data.phase !== 'soon' && data.phase !== 'open'}<p class="muted fs-sm" data-league-entries>{L.entries({ n: data.entries })}</p>{/if}
@@ -189,6 +216,7 @@
 
       <section class="card league-sec" data-league-schedule>
         <h2>{L.scheduleTitle}</h2>
+        <p class="muted fs-sm" data-league-kst>{L.kstNote}</p>
         <dl class="league-sched">
           {#each leagueSchedule(data.league) as row (row.label)}
             <div><dt>{row.label}</dt><dd>{row.text}</dd></div>
@@ -206,6 +234,26 @@
   </LoadState>
   </div>
 </div>
+
+{#if ask && data}
+  <PopSheet label={ask === 'enter' ? L.enterAskTitle : A.withdrawAskTitle} onclose={() => (ask = null)}>
+    <div class="league-ask" data-league-ask={ask}>
+      {#if ask === 'enter' && enterAsk}
+        <h2>{enterAsk.title}</h2>
+        <ul class="league-entry-rules fs-sm">
+          {#each enterAsk.lines as line (line)}<li>{line}</li>{/each}
+        </ul>
+        <button class="btn btn-primary btn-block" data-act="league-enter-confirm" disabled={busy} onclick={enter}>{L.enter}</button>
+        <button class="btn btn-block" data-act="league-ask-close" onclick={() => (ask = null)}>{L.askClose}</button>
+      {:else}
+        <h2>{A.withdrawAskTitle}</h2>
+        <p class="fs-sm">{L.withdrawConfirm}</p>
+        <button class="btn btn-block" data-act="league-withdraw-confirm" disabled={busy} onclick={withdraw}>{L.withdraw}</button>
+        <button class="btn btn-primary btn-block" data-act="league-ask-close" onclick={() => (ask = null)}>{A.withdrawKeep}</button>
+      {/if}
+    </div>
+  </PopSheet>
+{/if}
 
 <style>
   .league-sec {
@@ -246,6 +294,15 @@
     flex-direction: column;
     gap: 4px;
     line-height: 1.5;
+  }
+  .league-ask {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .league-ask h2,
+  .league-ask p {
+    margin: 0;
   }
   .league-final {
     display: flex;

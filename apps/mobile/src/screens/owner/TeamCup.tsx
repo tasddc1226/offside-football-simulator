@@ -17,10 +17,13 @@ import { cupText as L } from '@offside/app-core/i18n/ko/cup';
 import { cupRewardText } from '@offside/app-core/cupReward';
 import { cupAppText as A } from '@offside/app-core/i18n/ko/cupApp';
 import { cupOnHome } from '@offside/app-core/cupHome';
+import { cupEnterConfirmLines, cupEntryTeamAction } from '@offside/app-core/cupEntry';
 import { divisionLabel } from '@offside/app-core/cupDivision';
 import type { CupLineupBar } from '@offside/app-core/cupLineupBar';
 import { type LoadStatus } from '../../components/LoadState';
 import { toast } from '../../game/host';
+import { go } from '../../game/nav';
+import { appState } from '../../store';
 import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Pill, Press, Txt } from '../../ui';
@@ -221,6 +224,24 @@ function CupEntry({ state }: { state: CupState }) {
       { text: L.withdraw, style: 'destructive', onPress: () => void run('withdraw') },
     ]);
 
+  // T-11-443 신청 전 한 번 더 묻는다(선발 잠금 · 구간 상한 · 접수 중 취소 가능).
+  const askEnter = () =>
+    Alert.alert(
+      L.enterAskTitle,
+      cupEnterConfirmLines(data.cup)
+        .map((l) => `· ${l}`)
+        .join('\n'),
+      [
+        { text: L.enterAskCancel, style: 'cancel' },
+        { text: L.enterAskOk, onPress: () => void run('enter') },
+      ],
+    );
+  // T-11-443 편성을 고치면 풀리는 이유면 팀 편성 화면으로.
+  const openTeam = () => {
+    appState.teamView = 'team';
+    go('team');
+  };
+
   if (entry)
     return (
       <View style={{ gap: 6 }}>
@@ -253,6 +274,7 @@ function CupEntry({ state }: { state: CupState }) {
     : reasonText(me.eligibility, data.cup.minFilled, me.ovr ?? undefined, data.cup.ovrMax);
   const fit = divisionFitText(data, me);
   const capNote = data.cup.ovrMax != null ? L.divisionLockNote({ cap: data.cup.ovrMax }) : null;
+  const teamAction = cupEntryTeamAction(me.eligibility);
   if (reason)
     return (
       <View style={{ gap: 6 }}>
@@ -264,16 +286,16 @@ function CupEntry({ state }: { state: CupState }) {
             {fit}
           </Txt>
         ) : null}
+        {teamAction ? (
+          <Btn sm testID="cup-to-lineup" onPress={openTeam} style={{ alignSelf: 'flex-start' }}>
+            {teamAction}
+          </Btn>
+        ) : null}
       </View>
     );
   return (
     <View style={{ gap: 6 }}>
-      <Btn
-        kind="primary"
-        testID="cup-enter"
-        disabled={busy !== null}
-        onPress={() => void run('enter')}
-      >
+      <Btn kind="primary" testID="cup-enter" disabled={busy !== null} onPress={askEnter}>
         {busy === 'enter' ? L.entering : L.enter}
       </Btn>
       <Txt v="sm" tone="muted">

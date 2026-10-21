@@ -20,8 +20,18 @@ export const rewardText = (r: AttendanceReward) =>
     .map((k) => L[k]({ n: r[k]! }))
     .join(', ');
 
+/**
+ * T-11-440 칸 · 범례에 붙이는 아이템 모양 기호. 색만으로 아이템을 가르지 않도록(색각 이상) 모양으로도 구분한다.
+ * 언어마다 같은 기호를 쓴다.
+ */
+export const ITEM_MARK: Record<'reroll' | 'boost' | 'scout', string> = {
+  reroll: '↻',
+  boost: '▲',
+  scout: '★',
+};
+
 /** 칸에 그릴 아이템 하나(가장 비싼 것: 스카우트권 > 강화권 > 리롤권)와 장수. */
-function mainItem(r: AttendanceReward): { item: OwnerItem; qty: number } {
+function mainItem(r: AttendanceReward): { item: keyof typeof ITEM_MARK; qty: number } {
   const item = (['scout', 'boost', 'reroll'] as const).find((k) => r[k])!;
   return { item, qty: r[item]! };
 }
@@ -42,6 +52,8 @@ export function attendanceBoard(stamps: number, checkedIn: boolean) {
       today: !checkedIn && i === filled,
       big: (ATTENDANCE_BIG as readonly number[]).includes(i + 1),
       ...mainItem(dayReward(i + 1)),
+      /** 그날 보상 전체(칸을 누르면 보인다). */
+      reward: rewardText(dayReward(i + 1)),
     })),
     next: { today: !checkedIn, cell: next.cell, text: rewardText(next.reward) },
   };

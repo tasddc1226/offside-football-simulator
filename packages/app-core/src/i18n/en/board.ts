@@ -10,6 +10,8 @@ export const board: Translation<BoardMsgs> = {
   news: 'News',
   tabsLabel: 'Boards',
   pinned: 'Pinned',
+  // T-11-440 이번에 앱을 연 뒤 아직 열지 않은 새 글 표시
+  postNew: 'NEW',
   loadFail: "Couldn't load the news.",
   empty: 'No posts yet.',
   more: 'Show more',
@@ -30,7 +32,8 @@ export const board: Translation<BoardMsgs> = {
   loginGate: 'Log in with Google to comment.',
   loginGateApple: 'Log in with Google or Apple to comment.',
   loginGoogle: 'Log in with Google',
-  nicknameGate: 'Pick a comment nickname first. You can change it under Account in Settings.',
+  nicknameGate:
+    'Pick a comment nickname first. You can set it under Edit profile on the My club screen.',
   commentAsBefore: 'Commenting as ',
   commentAsAfter:
     '. Abusive, insulting or advertising comments are removed and may lead to restrictions (',

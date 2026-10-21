@@ -24,6 +24,9 @@ export const backup: Translation<BackupMsgs> = {
   replaceConfirm: (p) =>
     `進行中の${p.name}選手のキャリアをバックアップに置き換えますか？元に戻せません。`,
   replaceOk: '置き換える',
+  replaceConfirmRetired: (p) =>
+    `引退した${p.name}選手のキャリア画面をバックアップに置き換えますか？殿堂の記録はそのまま残ります。`,
+  exportNone: 'この端末に保存されたキャリアがないため、書き出すバックアップがありません。',
   cancel: 'キャンセル',
   noSpace: '保存容量が足りず、バックアップを読み込めませんでした。今のキャリアはそのままです',
   restored: 'バックアップを読み込みました',

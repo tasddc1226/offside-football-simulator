@@ -9,7 +9,7 @@
   import { watchDetailOpening } from '@offside/app-core/season-opening';
   import { cubicOut } from 'svelte/easing';
   import { fly } from 'svelte/transition';
-  import { POS, DPOS, DETAILS_OF, TRAITS, ATTR_KEYS, FOCUS_PICK, FOCUS_GROWTH, attrLabels, defaultFocus, focusMod, posLabel } from '@offside/game/data';
+  import { POS, DPOS, DETAILS_OF, TRAITS, ATTR_KEYS, FOCUS_PICK, attrLabels, defaultFocus, focusMod, posLabel } from '@offside/game/data';
   import type { AttrKey, DetailPos, Pos } from '@offside/game/data';
   import { baseline, candidatePotentialGrades } from '@offside/game/candidates';
   // T-11-196 프리미엄 후보 식을 등록한다(첫 화면 번들에서 떼어 둠).
@@ -31,8 +31,8 @@
   import { hasSessionHint } from '@offside/app-core/api/client';
   import { toast } from './helpers.js';
   import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
-  import { goHome, goRerollShop } from './nav.js';
-  import { bodyNote, hiddenStrength, scoutLine, startOvr, ovrFocusView } from '@offside/app-core/create-view';
+  import { go, goHome, goRerollShop } from './nav.js';
+  import { bodyNote, focusNote, hiddenStrength, scoutLine, startOvr, ovrFocusView } from '@offside/app-core/create-view';
   import { dur } from './motion.js';
   import { createText as L } from '@offside/app-core/i18n/ko/create';
   import Topbar from './Topbar.svelte';
@@ -51,7 +51,6 @@
   const C = appState.C;
   const posKeys = Object.keys(POS) as Pos[];
   const feet = ['오른발', '왼발', '양발'] as const; // 저장값(화면에는 L.foot으로)
-  const growthPct = Math.round((FOCUS_GROWTH - 1) * 100);
   // T-10-091 세부 포지션은 시즌 1 개막부터 고른다. 프리시즌엔 선택지를 보이지 않고, 저장된 선택도 쓰지 않는다.
   let detailOpen = $state(detailOpenNow());
   // T-11-294 입력은 저장하지 않아 다시 열면 기본값이다. 킵한 후보가 있으면 그 조건으로 맞춰 바로 다시 나오게 한다(T-11-327 앱을 연 뒤 한 번).
@@ -103,10 +102,6 @@
     if (C.focus.includes(k)) C.focus = C.focus.filter((f) => f !== k);
     else C.focus = [...C.focus, k].slice(-FOCUS_PICK);
   }
-  function focusNote(k: AttrKey, d: number): string {
-    if (C.focus.includes(k)) return L.focusUp({ d, pct: growthPct });
-    return d < 0 ? L.focusDown({ d }) : L.focusNone;
-  }
   // T-10-111 후보를 바로 보여 주지 않고 스카우트가 추리는 연출(약 3초)이 끝난 뒤에 뽑는다.
   let scouting = $state(false);
   const scoutSteps = $derived([
@@ -149,6 +144,10 @@
   let pity = $state<ScoutPity>(NO_PITY);
   let scoutPlan: { seed: number; hit: boolean } | null = null;
   const premium = $derived(!!appState.candidates?.some((c) => c.guaranteed));
+  // T-11-437 로그인 흔적이 없으면 아이템을 묻지 않아 도구가 통째로 숨는다. 무엇을 쓸 수 있는지 한 줄로 알린다.
+  const guest = !hasSessionHint();
+  // T-11-437 쓸 도구(리롤권 · 스카우트권 · 천장 기록)가 없으면 상점 안내 · 능력치 설명을 '더 보기'로 접어 후보 고르기에 집중하게 한다.
+  const quiet = $derived(rerolls < 1 && scouts < 1 && pity.used < 1);
   async function premiumScout() {
     if (scoutBusy || scouts < 1 || !confirm(SL.confirm({ n: scouts - 1 }))) return;
     scoutBusy = true;
@@ -403,7 +402,7 @@
           {#each ATTR_KEYS as k (k)}
             {@const d = preview[k] ?? 0}
             <button class="opt focus-opt" data-set="focus" data-val={k} aria-pressed={C.focus.includes(k)} onclick={() => toggleFocus(k)}>
-              <b>{labels[k]}</b><small class:up={d > 0} class:down={d < 0}>{focusNote(k, d)}</small>
+              <b>{labels[k]}</b><small class:up={d > 0} class:down={d < 0}>{focusNote(C.focus.includes(k), d)}</small>
             </button>
           {/each}
         </div>
@@ -444,6 +443,8 @@
         <button class="icon-btn" data-act="open-all" onclick={openAll}>{L.openAll}</button>
       {/if}
     </div>
+    <!-- T-11-437 카드의 OVR이 확정값처럼 보이지 않게 소개 바로 아래에 둔다(앱과 같은 자리). -->
+    <p class="muted fs-sm cand-note" data-candidate-stats-note>{CG.candidateNote}</p>
     <!-- T-11-221 후보 카드를 먼저 보이고, 다시 뽑기 · 잠재력 보기 같은 도구는 카드 아래로. -->
     <div class="cand-list">
       {#each appState.candidates as cand, i (i)}
@@ -520,23 +521,47 @@
         {CL.createShopHint} <button class="link-btn" data-act="reroll-shop-go" onclick={goRerollShop}>{CL.createShopGo}</button>
       </p>
     {/if}
-    <!-- T-11-355 상품 위치 안내(설정과 같은 카드, 기기마다 닫을 때까지) -->
-    <ItemsHint />
-    <p class="muted fs-sm">{appState.candidatePotentialOpen ? (premium ? SL.premiumHelp : L.potentialHelp) : L.potentialWeb}</p>
+    {#if guest}
+      <p class="muted fs-sm" data-login-tools>
+        {L.loginTools} <button class="link-btn" data-act="login-tools-go" onclick={() => go('owner')}>{L.loginToolsGo}</button>
+      </p>
+    {/if}
+    {#if appState.candidatePotentialOpen}
+      <p class="muted fs-sm">{premium ? SL.premiumHelp : L.potentialHelp}</p>
+    {:else if !quiet}
+      <p class="muted fs-sm">{L.potentialWeb}</p>
+    {/if}
+    {#if !quiet}
+      <!-- T-11-355 상품 위치 안내(설정과 같은 카드, 기기마다 닫을 때까지) -->
+      <ItemsHint />
+    {/if}
     {#if clubCand}
       <button class="btn btn-sm self-start" data-act="candidate-potential-club" disabled={clubBusy} onclick={revealWithClub}>
         {clubBusy ? B.clubBusy : B.clubCandidates({ price: fundsText(clubCand.price) })}
       </button>
     {/if}
     {#if clubMsg}<p class="muted fs-sm" aria-live="polite">{clubMsg}</p>{/if}
-    <!-- T-11-221 OVR 주요 능력치 설명은 펼침 행으로 접어 둔다(후보 카드를 아래로 밀지 않게). -->
-    <details class="card ovr-guide-box">
-      <summary class="disc-row" data-act="ovr-guide-toggle">{ovrFocus.title}<span class="disc-chev" aria-hidden="true"></span></summary>
-      {@render ovrGuide(false)}
-      <p class="muted fs-sm">{L.ovrCore}</p>
-    </details>
-    <div class="card position-guide-box"><PositionGuide pos={C.pos} /></div>
-    <p class="muted fs-sm" data-candidate-stats-note>{CG.candidateNote}</p>
+    {#if quiet}
+      <!-- T-11-437 쓸 도구가 없으면 상점 위치 · 능력치 설명을 한 번에 접어 둔다. -->
+      <details class="card more-tools" data-more-tools>
+        <summary class="disc-row" data-act="more-tools-toggle">{L.moreTools}<span class="disc-chev" aria-hidden="true"></span></summary>
+        <div class="stack more-body">
+          {#if !appState.candidatePotentialOpen}<p class="muted fs-sm">{L.potentialWeb}</p>{/if}
+          <ItemsHint />
+          {@render ovrGuide()}
+          <p class="muted fs-sm">{L.ovrCore}</p>
+          <PositionGuide pos={C.pos} />
+        </div>
+      </details>
+    {:else}
+      <!-- T-11-221 OVR 주요 능력치 설명은 펼침 행으로 접어 둔다(후보 카드를 아래로 밀지 않게). -->
+      <details class="card ovr-guide-box">
+        <summary class="disc-row" data-act="ovr-guide-toggle">{ovrFocus.title}<span class="disc-chev" aria-hidden="true"></span></summary>
+        {@render ovrGuide(false)}
+        <p class="muted fs-sm">{L.ovrCore}</p>
+      </details>
+      <div class="card position-guide-box"><PositionGuide pos={C.pos} /></div>
+    {/if}
 
     <div class="action-bar at-bottom">
       <div class="action-bar-inner with-back">
@@ -551,7 +576,9 @@
 {#if scouting}<ScoutScan pos={C.pos} steps={scoutSteps} onDone={scouted} />{/if}
 
 <style>
-.ovr-guide-box, .position-guide-box { padding-block: 0; }
+.ovr-guide-box, .position-guide-box, .more-tools { padding-block: 0; }
+.more-body { padding-bottom: 14px; }
+.cand-note { margin: 0; }
 .position-guide-box :global(.position-guide) { border-top: 0; }
 .ovr-guide-box .ovr-guide { margin-top: 0; }
 .ovr-guide { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 12px 0; font-size: var(--fs-label); line-height: 1.5; }

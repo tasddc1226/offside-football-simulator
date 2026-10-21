@@ -14,7 +14,9 @@ import {
 import { cupText as L } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as CA } from '@offside/app-core/i18n/ko/cupApp';
 import { fundsText } from '@offside/app-core/market';
-import { rerollShopState } from '@offside/app-core/rerollShop';
+import { rerollShopState, shopShortText } from '@offside/app-core/rerollShop';
+import { Skeleton } from '../../ui/Skeleton';
+import { FundsShort } from './FundsShort';
 import { iapText as IL } from '@offside/app-core/i18n/ko/iap';
 import { toast } from '../../game/host';
 import { iapItems } from '../../platform/iapItems';
@@ -186,9 +188,7 @@ export function RerollShop({
                     {L.shopPrice({ price: fundsText(shop.price!) })}
                   </Txt>
                   {view === 'short' ? (
-                    <Txt tone="muted" style={small}>
-                      {L.shopShort}
-                    </Txt>
+                    <FundsShort text={shopShortText(shop.balance, shop.price)} />
                   ) : null}
                   <Btn
                     kind="primary"
@@ -206,10 +206,12 @@ export function RerollShop({
               </Txt>
               <IapPacks item="reroll" note={IL.rerollNote} />
             </View>
-          ) : (
+          ) : failed ? (
             <Txt tone="muted" style={small}>
-              {failed ? L.shopLoadFail : '…'}
+              {L.shopLoadFail}
             </Txt>
+          ) : (
+            <Skeleton height={96} />
           )
         ) : null}
       </Card>

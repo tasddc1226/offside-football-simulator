@@ -8,7 +8,7 @@ export const homeMore: Translation<HomeMoreMsgs> = {
   chatLabelApp: 'Lounge chat',
   pushTitle: 'Get news as notifications?',
   pushBody:
-    "We'll notify you about new announcements and release notes, at most once a day per board. You can turn it off anytime in Settings.",
+    "We'll notify you about new announcements and updates, matches other owners played against your team, sales of players you listed, and friend requests and friendly results. You can turn each type off in Settings.",
   pushBusy: 'Connecting notifications…',
   pushAccept: 'Turn on notifications',
   pushLater: 'Later',

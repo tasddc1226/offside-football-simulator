@@ -38,4 +38,14 @@ test('판정 없는 선택지는 확정 대신 판정 없음으로 보인다', a
   const sure = page.locator('#sheet [data-choice="0"]');
   await expect(sure.locator('.odds')).toHaveText('판정 없음');
   await expect(sure.locator('[data-choice-chips] .chip')).toHaveText(['컨디션 ↓', '인기 ↑']);
+  // T-11-438 '안전' · '원터치' 선택지가 없으면 뜻 줄도 없다.
+  await expect(page.locator('#sheet [data-event-legend]')).toHaveCount(0);
+});
+
+// T-11-438 '안전' 뜻은 터치 화면에서도 보이게 선택지 아래 한 줄로 늘 보인다(이벤트 시트는 닫을 수 없어 도감을 못 연다).
+test("'안전' 선택지가 있으면 그 뜻이 시트에 보인다", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await resumeWithSave(page, { pending: { type: 'event', id: 'bench-talk' } });
+  const legend = page.locator('#sheet [data-event-legend]');
+  await expect(legend).toContainText('안전 결과는 확정이지만 보상이 줄고, 가끔 대가가 따라요');
 });

@@ -204,6 +204,7 @@
         {#if accountCache.value && accountCache.value !== 'error' && !linked}
           <section class="card stack cup-login" data-cup-login>
             <h2>{L.predictionLoginTitle}</h2>
+            <p class="muted fs-sm" data-cup-login-note>{L.loginCardNote}</p>
             <LoginButtons act="cup-login-google" back={{cup:true}} />
           </section>
         {/if}
@@ -219,7 +220,7 @@
               <div class="cup-champ-who"><small>{L.champTitle({ n: data.cup.edition, d: divisionLabel(data.cup.division) })}</small><b>{champion.name}</b><small>{champion.owner}</small></div>
             </div>
           {/if}
-          {#if linked}<CupEntry {data} {me} {linked} onchanged={reload} />{/if}
+          {#if linked}<CupEntry {data} {me} onchanged={reload} />{/if}
         </section>
 
         <section class="card cup-sec cup-info" data-cup-prediction-intro>

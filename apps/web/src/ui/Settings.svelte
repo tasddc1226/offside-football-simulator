@@ -15,7 +15,8 @@
   import { setSheetSkin, skin } from './skin.svelte.js';
   import SiteFooter from './SiteFooter.svelte';
   import { showInstallGuide } from './install.js';
-  import { goFairness, goTypeDex } from './nav.js';
+  import { goAccount, goFairness, goTypeDex, takeFocus } from './nav.js';
+  import { onMount } from 'svelte';
   import ItemsHint from './ItemsHint.svelte';
   import { firstGuideText as FG } from '@offside/app-core/i18n/ko/firstGuide';
   import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
@@ -37,6 +38,10 @@
   let dark = $state(isDark());
   let namePublic = $state(namePublicEnabled());
 
+  // T-11-437 게임 화면 저장 위치 안내에서 왔으면 백업 코드 카드를 보이게 내린다.
+  onMount(() => {
+    if (takeFocus('backup')) document.querySelector('[data-settings="backup"]')?.scrollIntoView({ block: 'start' });
+  });
 </script>
 
 <div class="wrap">
@@ -165,6 +170,7 @@
     <nav class="card settings-links" aria-label={L.help}>
       <button data-act="install-guide" onclick={() => showInstallGuide()}>{L.installGuide} <span aria-hidden="true">›</span></button>
       <a href="/guide/">{L.guide} <span aria-hidden="true">›</span></a>
+      <button data-act="account" onclick={goAccount}>{L.accountLink} <span aria-hidden="true">›</span></button>
       <a href="/faq/">{L.faq} <span aria-hidden="true">›</span></a>
       <button data-act="fairness" onclick={goFairness}>{L.fairness} <span aria-hidden="true">›</span></button>
       <button data-act="type-dex" onclick={goTypeDex}>{FG.typeDex} <span aria-hidden="true">›</span></button>

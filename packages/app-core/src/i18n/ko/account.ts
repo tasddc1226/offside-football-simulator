@@ -35,6 +35,9 @@ const ko = {
   deleteBody:
     '계정과 서버에 저장된 선수 기록·팀·댓글·채팅을 삭제할까요? 되돌릴 수 없어요. 이 기기의 게임 진행은 남아요.',
   deleteConfirm: '삭제',
+  // T-11-441 삭제 결과
+  deleteDone: '계정을 삭제했어요. 이 기기의 게임 진행은 그대로 남아요.',
+  deleteFail: '계정을 삭제하지 못했어요. 잠시 뒤 다시 시도해 주세요.',
   // account.ts — 계정 카드 제목·안내
   googleTitle: '구글 계정',
   googleVia: 'Google 계정으로 로그인했어요.',

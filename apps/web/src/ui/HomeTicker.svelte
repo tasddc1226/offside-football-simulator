@@ -2,7 +2,8 @@
   // T-10-122 홈 전광판. 헤더와 첫 카드 사이에서 이적·프로 입단·서버 최초 기록·신기록 소식이 오른쪽에서 왼쪽으로
   // 천천히 흐른다(서버에 실제로 올라온 기록만 — ticker.ts). 같은 줄을 두 벌 이어 붙여 -50%까지 밀면 끊김 없이
   // 돈다. 새로 받은 소식은 한 바퀴가 끝날 때 바꿔 끼워 흐르던 글이 튀지 않게 한다. 마우스를 올리거나 누르고 있으면
-  // 멈춘다. 감속 모션이면 흐르지 않고 한 줄씩 바꿔 보여 준다.
+  // 멈춘다. 감속 모션이면 흐르지 않고 한 줄씩 바꿔 보여 준다. T-11-440 오른쪽 끝 버튼으로 멈추거나(흐름 · 한 줄씩 바꾸기 모두)
+  // 다시 흐르게 한다. 멈춤은 이 브라우저에 남긴다.
   // 첫 화면이 밀리지 않게(CLS — T-10-038) 응답 전·실패·빈 목록에도 같은 높이의 줄을 그린다.
   import { onMount } from 'svelte';
   import { TICKER_POLL_SEC } from '@offside/contracts/polling';
@@ -25,6 +26,24 @@
   let now = $state(Date.now());
   let copyW = $state(0);
   let still = $state(0);
+  const PAUSE_KEY = 'ft_ticker_paused';
+  let paused = $state(readPaused());
+  function readPaused() {
+    try {
+      return localStorage.getItem(PAUSE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+  function togglePause() {
+    paused = !paused;
+    try {
+      if (paused) localStorage.setItem(PAUSE_KEY, '1');
+      else localStorage.removeItem(PAUSE_KEY);
+    } catch {
+      // 저장하지 못해도 이번 화면에서는 멈춘다.
+    }
+  }
 
   const tag = (kind: TickerItem['kind']): string =>
     ({ transfer: L.tagTransfer, debut: L.tagDebut, first: L.tagFirst, record: L.tagRecord })[kind];
@@ -57,7 +76,11 @@
       if (document.visibilityState === 'visible') void load();
     };
     const poll = setInterval(loadIfVisible, TICKER_POLL_SEC * 1000);
-    const step = motionOK ? 0 : setInterval(() => (still = (still + 1) % Math.max(1, items.length)), STILL_STEP_MS);
+    const step = motionOK
+      ? 0
+      : setInterval(() => {
+          if (!paused) still = (still + 1) % Math.max(1, items.length);
+        }, STILL_STEP_MS);
     document.addEventListener('visibilitychange', loadIfVisible);
     return () => {
       clearInterval(poll);
@@ -83,7 +106,8 @@
   </span>
 {/snippet}
 
-<div class="home-ticker" role="marquee" aria-label={L.tickerAria} data-home-ticker>
+<div class="home-ticker" class:paused data-home-ticker>
+  <div class="tk-view" role="marquee" aria-label={L.tickerAria}>
   {#if !items.length}
     <span class="tk-item tk-idle"><b class="tk-tag">Transfer</b>{L.tickerIdle}</span>
   {:else if !motionOK}
@@ -97,6 +121,20 @@
         {#each items as x (x.key)}{@render line(x)}{/each}
       </div>
     </div>
+  {/if}
+  </div>
+  {#if items.length}
+    <button
+      class="tk-pause"
+      data-act="ticker-pause"
+      aria-pressed={paused}
+      aria-label={paused ? L.tickerPlay : L.tickerPause}
+      onclick={togglePause}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        {#if paused}<path d="M8 5.5v13l10.5-6.5z" />{:else}<path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />{/if}
+      </svg>
+    </button>
   {/if}
 </div>
 
@@ -112,8 +150,36 @@
     border: 1px solid transparent;
     font-size: var(--fs-label);
     white-space: nowrap;
+  }
+  .tk-view {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
     /* 양 끝이 흐려지며 들어오고 나간다. */
     mask-image: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent);
+  }
+  .tk-pause {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .tk-pause svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+  }
+  .home-ticker.paused .tk-track {
+    animation-play-state: paused;
   }
   .tk-track {
     display: flex;

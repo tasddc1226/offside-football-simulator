@@ -2,7 +2,7 @@
   import Skeleton from '../Skeleton.svelte';
   import { onMount } from 'svelte';
   import { PlayerManagement } from '@offside/app-core/playerManagement';
-  import { releaseLock, releaseAmount, releaseValue, releaseConfirmText, fundsText } from '@offside/app-core/market';
+  import { releaseLock, releaseAmount, releaseValue, releaseConfirmText, releaseRowInfo, fundsText } from '@offside/app-core/market';
   import { localCareerNames } from '@offside/game/hof-store';
   import { playerName } from '@offside/app-core/format';
   import { marketText as M } from '@offside/app-core/i18n/ko/market';
@@ -34,7 +34,7 @@
       <div class="pm-row" data-managed-player={p.careerId}>
         <label class="pm-pick">
           <input type="checkbox" checked={pm.selected.has(p.careerId)} disabled={!!locked || pm.busy || pm.confirm} aria-label={M.releasePickLabel({ name: nameOf(p) })} onchange={() => manager.toggle(p.careerId)} />
-          <span class="stack" style="gap:4px;min-width:0"><b>{nameOf(p)}</b><small class="muted">{locked ?? M.releaseInfo({score: String(p.legendScore ?? 0)})}</small>{#if !locked}<small>{fundsText(releaseValue(p, pm.rate))}</small>{/if}</span>
+          <span class="stack" style="gap:4px;min-width:0"><b>{nameOf(p)}</b><small class="muted" data-release-info>{releaseRowInfo(p)}</small>{#if locked}<small class="muted">{locked}</small>{:else}<small data-release-gets>{M.releaseGets({ amount: fundsText(releaseValue(p, pm.rate)) })}</small>{/if}</span>
         </label>
         <button class="btn btn-sm" disabled={pm.busy} data-player-detail={p.careerId} onclick={() => openPublicLegendById(p.careerId)}>{L.viewRecord}</button>
         <button class="btn btn-sm" disabled={pm.busy} data-player-rename={p.careerId} aria-label={RN.entryLabel({ name: nameOf(p) })} onclick={() => (renaming = { careerId: p.careerId, name: nameOf(p) })}>{RN.entry}</button>

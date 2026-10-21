@@ -48,6 +48,8 @@ const ko = {
   anonTail: '영구결번이 확정됩니다.',
   anonNote: '먼저 이름을 공개한 선수가 그 번호를 받아요.',
   publish: '이름 공개하고 결번 받기',
+  /** T-11-439 공개할 수 없는 이름이면 결번 버튼 대신(B3). */
+  anonBlocked: '링크나 욕설이 들어간 이름은 공개할 수 없어서 이 결번은 받을 수 없어요.',
   // 알림 배너
   alertTitle: (p: { name: string; number: number }) => `👑 ${p.name}, ${p.number}번 영구결번`,
   alertSub: (p: { club: string; seq: number }) => `${p.club} · 서버 ${p.seq}번째 결번`,

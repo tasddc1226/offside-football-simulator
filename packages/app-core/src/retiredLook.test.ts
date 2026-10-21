@@ -15,6 +15,7 @@ import {
   retiredLookRows,
   saveRetiredLook,
 } from './retiredLook.js';
+import { retiredLookLockOf } from './retiredLookLock.js';
 
 vi.mock('./api/client.js', () => ({
   apiFetch: vi.fn(),
@@ -233,4 +234,23 @@ it('legacy server-missing fallback persists the limit without bypassing other er
     policy: { remaining: 0, look: 'y6' },
   });
   expect((await saveRetiredLook(state, v, 'y7')).ok).toBe(false);
+});
+
+it('T-11-439 편집기가 연 정책과 저장 결과를 꾸미기 버튼이 다시 묻지 않고 쓴다', async () => {
+  const { state, h, legends } = fixture();
+  h.id = '0e000000-0000-4000-8000-00000000043a';
+  const v = legends.viewFromEntry(h);
+  vi.mocked(apiFetch).mockResolvedValue({
+    ok: true,
+    data: { careerId: v.avatarId, look: null, remaining: 1, lockedReason: null },
+  });
+  await loadRetiredLook(state, v);
+  expect(retiredLookLockOf(v)).toBeNull();
+  // 같은 모습 저장은 기회를 쓰지 않는다.
+  vi.mocked(apiFetch).mockResolvedValue({ ok: true, data: { careerId: v.avatarId, look: null } });
+  expect((await saveRetiredLook(state, v, null)).ok).toBe(true);
+  expect(retiredLookLockOf(v)).toBeNull();
+  vi.mocked(apiFetch).mockResolvedValue({ ok: true, data: { careerId: v.avatarId, look: 'y6' } });
+  expect((await saveRetiredLook(state, v, 'y6')).ok).toBe(true);
+  expect(retiredLookLockOf(v)).toBe('used');
 });
