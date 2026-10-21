@@ -8,7 +8,12 @@ import type {
   RetirementSummary,
 } from '@offside/contracts';
 import { HOF_MIN_RETIRE_AGE, WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
-import { cardValue, releasePayout, retireValue } from '@offside/contracts/market-value';
+import {
+  cardValue,
+  releasePayout,
+  retireValue,
+  type ValueRow,
+} from '@offside/contracts/market-value';
 import { firstUploadSeasonAt, type ServiceSeason } from '@offside/contracts/service-seasons';
 import {
   dposFor,
@@ -281,6 +286,8 @@ export type PutRetirementInput = {
   look?: string | undefined;
   /** T-11-163 은퇴 장려금 비율(밸런스 marketRetireBonusRate). */
   bonusRate: number;
+  /** T-11-448 몸값을 매길 시즌 행 — 스냅샷 시즌을 받아 둔 시즌에 맞춘 것(plausibility.boundValueRows). */
+  valueRows?: ValueRow[] | undefined;
   /** T-11-311 스냅샷을 먼저 R2에 썼으면 그 키(careerSnapshots.putSnapshot). 없으면 snapshot_json에 둔다. */
   snapshotKey?: string | null | undefined;
   now: string;
@@ -313,9 +320,11 @@ export async function putRetirement(
     potReal,
     look,
     bonusRate,
+    valueRows,
     now,
   } = input;
-  const value = snapshot ? cardValue(snapshot.career, summary.peak) : null;
+  const rows = valueRows ?? snapshot?.career ?? [];
+  const value = snapshot ? cardValue(rows, summary.peak) : null;
   // T-11-163 은퇴 장려금: 기준가가 있는 카드만(스냅샷 없는 옛 기록은 거래도 하지 않는다).
   const bonus = value === null ? 0 : releasePayout(value, bonusRate);
   const results = await runBatch(db, [
@@ -365,7 +374,7 @@ export async function putRetirement(
                 ? { snapshotKey, snapshotJson: null }
                 : { snapshotJson: JSON.stringify(verifiedSnapshot(snapshot, false)) }),
               shirtNumber: snapshot.number,
-              value: retireValue(snapshot.career, summary.legendScore),
+              value: retireValue(rows, summary.legendScore),
             }
           : {}),
         ...(profile ? { peakProfile: JSON.stringify(profile) } : {}),

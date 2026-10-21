@@ -680,9 +680,32 @@ describe('공개 명예의 전당 /v1/hof', () => {
     ).first();
     expect(meta).toEqual({ value: '1' });
   });
+  /** 스냅샷 시즌과 같은 해·나이·리그·OVR로 받아 둔 시즌을 덮어쓴다(T-11-448). */
+  const putProSeasons = async (
+    id: string,
+    career: {
+      year: number;
+      age: number;
+      league: string;
+      clubId?: string | undefined;
+      ovr: number;
+    }[],
+  ) => {
+    for (const r of career) {
+      const res = await putJson(
+        ctx,
+        cookie,
+        `/v1/careers/${id}/seasons/${r.year}`,
+        seasonBody({ age: r.age, league: r.league, clubId: r.clubId, ovr: r.ovr }),
+      );
+      expect(res.status).toBe(200);
+    }
+  };
   it('T-10-100: 은퇴 가치를 스냅샷으로 매기고 가치 순으로 정렬한다(옛 기록은 리그 이름으로, 스냅샷 없으면 빠진다)', async () => {
+    // T-11-448 몸값은 받아 둔 시즌으로 매기므로 스냅샷 시즌과 같은 해·나이·리그·OVR로 시즌을 올린다.
     const pro = (ovr: number, age: number, league: string) => ({
       ...snapshot.career[0]!,
+      year: 2008 + age,
       league,
       clubId: undefined,
       ovr,
@@ -703,6 +726,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
     ];
     for (const { id, legendScore, career } of rows) {
       await putSeasonsFor(ctx.env, cookie, id, summary);
+      await putProSeasons(id, career ?? []);
       await putJson(ctx, cookie, `/v1/careers/${id}/retirement`, {
         ...summary,
         legendScore,
@@ -727,7 +751,12 @@ describe('공개 명예의 전당 /v1/hof', () => {
   it('T-11-080: 은퇴하면 카드가 한 장 생기고, 기존 카드의 기준가는 명예의 전당 조회 때 스냅샷으로 소급한다', async () => {
     // 이 기능 전 기록은 상세가 D1(snapshot_json)에 있다 — T-11-311 전처럼 R2를 끄고 올린다.
     ctx.env.SNAPSHOT_R2_DISABLED = '1';
-    const pro = (ovr: number, age: number) => ({ ...snapshot.career[0]!, ovr, age });
+    const pro = (ovr: number, age: number) => ({
+      ...snapshot.career[0]!,
+      year: 2008 + age,
+      ovr,
+      age,
+    });
     const rows = [
       { id: '0c000000-0000-4000-8000-000000000011', career: [pro(summary.peak, 31)] },
       { id: '0c000000-0000-4000-8000-000000000012', career: null }, // 스냅샷 없음
@@ -735,6 +764,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
     ];
     for (const { id, career } of rows) {
       await putSeasonsFor(ctx.env, cookie, id, summary);
+      await putProSeasons(id, career ?? []);
       await putJson(ctx, cookie, `/v1/careers/${id}/retirement`, {
         ...summary,
         ...(career ? { publicName: null, snapshot: { ...snapshot, career } } : {}),
