@@ -29,6 +29,8 @@ import {
   slotRating,
   teamOvr,
   achGradeOf,
+  PAST_SALARY_BUDGET_STEP,
+  seasonSalaryBudget,
 } from './owner-team.js';
 import { cupPredictionCap, cupReward, cupScouts, scoutPityGauge, scoutPityView } from './cup.js';
 import {
@@ -307,13 +309,22 @@ describe('T-11-376 지난 시즌 선수 급여', () => {
     ).toBe(26);
   });
 
-  it('예산 기본값 60 = 밸런스 기본값, 예전 와일드카드 3명(급여 최대 20)은 늘 예산 안', () => {
+  it('예산 기본값 80 = 밸런스 기본값, 급여 최대 20 선수 4명까지 예산 안', () => {
     expect(BALANCE_SPEC.pastSalaryBudget.def).toBe(PAST_SALARY_BUDGET);
+    expect(BALANCE_SPEC.pastSalaryBudgetStep.def).toBe(PAST_SALARY_BUDGET_STEP);
     const max = Math.max(...PAST_SALARY_TABLE.map((t) => t.salary));
-    expect(max * 3).toBeLessThanOrEqual(PAST_SALARY_BUDGET);
-    // 예산 정확히 60은 되고 61은 넘는다.
-    const sixty = [...Array(3)].map(() => ({ peak: 96, season: 0 }));
-    expect(pastSalarySum(sixty, 1)).toBe(60);
-    expect(pastSalarySum([...sixty, { peak: 70, season: 0 }], 1)).toBe(61);
+    expect(max * 4).toBeLessThanOrEqual(PAST_SALARY_BUDGET);
+    // 예산 정확히 80은 되고 81은 넘는다.
+    const four = [...Array(4)].map(() => ({ peak: 96, season: 0 }));
+    expect(pastSalarySum(four, 1)).toBe(80);
+    expect(pastSalarySum([...four, { peak: 70, season: 0 }], 1)).toBe(81);
+  });
+
+  it('T-11-450 급여 예산은 시즌 1이 기준이고 시즌마다 step씩 는다', () => {
+    expect(seasonSalaryBudget(80, 10, 0)).toBe(80);
+    expect(seasonSalaryBudget(80, 10, 1)).toBe(80);
+    expect(seasonSalaryBudget(80, 10, 2)).toBe(90);
+    expect(seasonSalaryBudget(80, 10, 4)).toBe(110);
+    expect(seasonSalaryBudget(60, 0, 3)).toBe(60);
   });
 });

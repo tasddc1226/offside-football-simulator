@@ -35,6 +35,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   marketDailyBuys: 'Signings per day',
   leagueHomeAdv: 'League home advantage',
   pastSalaryBudget: 'Past-season player salary budget',
+  pastSalaryBudgetStep: 'Salary budget increase per season',
   rerollPrice: 'Reroll ticket price',
   rerollPriceGrowth: 'Reroll ticket price growth',
   rerollDailyCap: 'Reroll tickets per day',
