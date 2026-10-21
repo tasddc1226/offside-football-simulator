@@ -7,7 +7,7 @@ import {
   type LeagueMeResponse,
   type LeagueResponse,
 } from '@offside/contracts';
-import { leaguePhase } from '@offside/contracts/league';
+import { LEAGUE_ROUNDS, leaguePhase } from '@offside/contracts/league';
 import { and, count, eq, inArray, ne } from 'drizzle-orm';
 import type { Context, Hono } from 'hono';
 import { cupKo } from '../cupText.js';
@@ -27,7 +27,9 @@ import { idempotency } from '../middleware/idempotency.js';
 import { requireProfile } from '../middleware/requireProfile.js';
 import {
   inLeague,
+  leagueFinalGoals,
   leagueMatchesOf,
+  leagueScorers,
   leagueStateOf,
   leagueTable,
   playedRounds,
@@ -245,6 +247,13 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
       ]);
       const members = entries.filter(inLeague);
       if (!state || !members.length) throw notFoundError(cupKo('notFound'), 'LEAGUE_NOT_FOUND');
+      // T-11-418d 득점 순위는 골이 하나라도 있어야, 마지막 라운드 골 시각은 그 라운드를 치른 뒤에만 읽는다.
+      const anyPlayed = matches.some((m) => m.playedAt && !m.forfeit);
+      const finalPlayed = matches.some((m) => m.round === LEAGUE_ROUNDS && m.playedAt);
+      const [scorers, finalGoals] = await Promise.all([
+        anyPlayed ? leagueScorers(db, season, tier, no) : [],
+        finalPlayed ? leagueFinalGoals(db, season, tier, no) : new Map<string, never[]>(),
+      ]);
       const live = new Map(
         (
           await db
@@ -289,7 +298,11 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
           homeGoals: m.playedAt ? m.homeGoals : null,
           awayGoals: m.playedAt ? m.awayGoals : null,
           forfeit: m.forfeit !== 0,
+          ...(m.round === LEAGUE_ROUNDS && m.playedAt && !m.forfeit
+            ? { goals: finalGoals.get(m.id) ?? [] }
+            : {}),
         })),
+        scorers,
       };
     });
     return ok(c, LeagueTableResponseSchema, data, 200, 'public, max-age=0, s-maxage=60');
