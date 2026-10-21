@@ -5,7 +5,7 @@
   import { enterLeague, fetchLeague, fetchLeagueMe, withdrawLeague, type LeagueMeResponse, type LeagueResponse } from '@offside/app-core/api/league';
   import { isMember } from '@offside/app-core/account';
   import { leagueText as L } from '@offside/app-core/i18n/ko/league';
-  import { leagueChoices, leagueDefaultPick, leagueDefaultRound, leagueLine, leaguePhaseLabel, leaguePlacementLine, leaguePresign, leagueReadiness, leagueRules, leagueSchedule, leagueWhen, type LeaguePick } from '@offside/app-core/leagueView';
+  import { leagueChoices, leagueDefaultPick, leagueDefaultRound, leagueFinalView, leagueLine, leaguePhaseLabel, leaguePlacementLine, leaguePresign, leagueReadiness, leagueRules, leagueSchedule, leagueWhen, type LeaguePick } from '@offside/app-core/leagueView';
   import type { LeagueMatch, LeagueTableResponse } from '@offside/app-core/api/league';
   import LeagueBoard from './league/LeagueBoard.svelte';
   import LeagueMatchDetail from './league/LeagueMatchDetail.svelte';
@@ -64,6 +64,7 @@
   });
   const choices = $derived(data ? leagueChoices(data) : []);
   const placement = $derived(leaguePlacementLine(me));
+  const final = $derived(data ? leagueFinalView(me, data.league.season) : null);
   const mineId = $derived(me?.placement?.teamId ?? null);
   const mineKey = $derived(me?.placement?.tier ? `${me.placement.tier}-${me.placement.league}` : null);
   const pickKey = $derived(pick ? `${pick.tier}-${pick.league}` : '');
@@ -140,7 +141,15 @@
           {#if presign}<p class="muted fs-sm" data-league-presign>{L.presignNote({ season: data.league.season, at: leagueWhen(data.league.startsAt) })}</p>{/if}
           {#if ready}<p class="fs-sm" class:muted={ready.ok} class:league-warn={!ready.ok} data-league-ready={ready.ok ? 'ok' : 'short'}>{ready.text}</p>{/if}
           {#if me.team && data.phase === 'open'}<p class="muted fs-sm" data-league-ovr>{L.myOvr({ ovr: me.team.ovr })}</p>{/if}
-          {#if placement}<p class="fs-sm" class:league-warn={!placement.ok} data-league-placement={me.placement?.status}><b>{placement.text}</b></p>{/if}
+          {#if final}
+            <div class="league-final" data-league-final={final.outcome}>
+              <div class="league-row"><b>{L.finalTitle}</b><span class="pill" class:good={final.outcome === 'champion' || final.outcome === 'promoted'} class:warn={final.outcome === 'relegated' || final.outcome === 'forfeited'}>{final.label}</span></div>
+              <p class="fs-sm"><b>{final.line}</b></p>
+              <p class="fs-sm" data-league-reward>{final.reward}</p>
+              {#if final.title}<p class="fs-sm">{final.title}</p>{/if}
+              <p class="muted fs-sm">{final.next}</p>
+            </div>
+          {:else if placement}<p class="fs-sm" class:league-warn={!placement.ok} data-league-placement={me.placement?.status}><b>{placement.text}</b></p>{/if}
         {/if}
         <!-- 접수 중에는 위 한 줄에 신청 수가 있다. -->
         {#if data.phase !== 'soon' && data.phase !== 'open'}<p class="muted fs-sm" data-league-entries>{L.entries({ n: data.entries })}</p>{/if}
@@ -211,6 +220,17 @@
     justify-content: space-between;
     gap: 10px;
     flex-wrap: wrap;
+  }
+  .league-final {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm, 8px);
+  }
+  .league-final p {
+    margin: 0;
   }
   .league-sched {
     display: flex;

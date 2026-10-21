@@ -135,6 +135,34 @@ export function leaguePlacementLine(
   };
 }
 
+/** T-11-418e 내 결산(14라운드 뒤). 결과 알약 · 최종 순위 · 받은 보상 · 다음 시즌 부 · 1부 우승 칭호 줄. 결산 전은 null. */
+export function leagueFinalView(me: LeagueMeResponse | null, season: number) {
+  const p = me?.placement;
+  const f = p?.final;
+  if (!p || !f) return null;
+  const outcome = {
+    champion: L.outcomeChampion,
+    promoted: L.outcomePromoted,
+    stayed: L.outcomeStayed,
+    relegated: L.outcomeRelegated,
+    forfeited: L.outcomeForfeited,
+  }[f.outcome];
+  const reward = [
+    ...(f.rerolls ? [L.rewardReroll({ n: f.rerolls })] : []),
+    ...(f.scouts ? [L.rewardScout({ n: f.scouts })] : []),
+    ...(f.boosts ? [L.rewardBoost({ n: f.boosts })] : []),
+  ];
+  return {
+    outcome: f.outcome,
+    label: outcome,
+    line: L.finalLine({ tier: p.tier ?? 1, league: p.league ?? 1, rank: f.rank }),
+    reward: reward.length ? reward.join(' · ') : L.rewardNone,
+    next: f.nextTier === null ? L.finalNextBottom : L.finalNext({ tier: f.nextTier }),
+    title: f.outcome === 'champion' ? L.finalChampionTitle({ season }) : null,
+  };
+}
+export type LeagueFinalView = NonNullable<ReturnType<typeof leagueFinalView>>;
+
 export type LeaguePick = { tier: number; league: number };
 
 /** 고를 수 있는 리그(1부 1리그부터). */

@@ -134,13 +134,18 @@ export const SIM = {
   assistChance: 0.75,
 } as const;
 
-/** 한 팀의 기대 득점. 상대 수비는 수비 라인 70% + 골키퍼 30%. */
-export function expectedGoals(att: LineStrength, opp: LineStrength, home: boolean): number {
+/** 한 팀의 기대 득점. 상대 수비는 수비 라인 70% + 골키퍼 30%. homeAdv: 홈 이점 배율(T-11-418e 리그는 밸런스 설정). */
+export function expectedGoals(
+  att: LineStrength,
+  opp: LineStrength,
+  home: boolean,
+  homeAdv: number = SIM.homeAdv,
+): number {
   const wall = 0.7 * opp.def + 0.3 * opp.gk;
   const xg =
     SIM.baseXg *
     Math.exp((SIM.atkK * (att.atk - wall)) / 10 + (SIM.midK * (att.mid - opp.mid)) / 10) *
-    (home ? SIM.homeAdv : 1);
+    (home ? homeAdv : 1);
   return Math.min(SIM.maxXg, Math.max(SIM.minXg, xg));
 }
 
@@ -255,7 +260,7 @@ export function matchSetup(
   home: readonly LineupSlot[],
   away: readonly LineupSlot[],
   season: number,
-  opts: { neutral?: boolean; coaches?: MatchCoaches } = {},
+  opts: { neutral?: boolean; coaches?: MatchCoaches; homeAdv?: number } = {},
 ) {
   if (home.length !== LINEUP_SIZE || away.length !== LINEUP_SIZE)
     throw new Error('선발은 11명이어야 합니다.');
@@ -265,7 +270,7 @@ export function matchSetup(
   const hs = withCoach(lineupLines(home, hSyn), opts.coaches?.home, hSyn);
   const as = withCoach(lineupLines(away, aSyn), opts.coaches?.away, aSyn);
   // T-11-145 컵은 중립 경기 — 홈 이점을 주지 않는다.
-  const homeXg = expectedGoals(hs, as, !opts.neutral);
+  const homeXg = expectedGoals(hs, as, !opts.neutral, opts.homeAdv);
   const awayXg = expectedGoals(as, hs, false);
   return {
     homeXg,
@@ -350,7 +355,7 @@ export function simulateMatch(
   home: readonly LineupSlot[],
   away: readonly LineupSlot[],
   season: number,
-  opts: { neutral?: boolean; coaches?: MatchCoaches } = {},
+  opts: { neutral?: boolean; coaches?: MatchCoaches; homeAdv?: number } = {},
 ): SimResult {
   const setup = matchSetup(home, away, season, opts);
   const rng = rngOf(seedOf(seed));

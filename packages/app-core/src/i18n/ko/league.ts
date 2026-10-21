@@ -75,6 +75,23 @@ const ko = {
     `${p.tier}부 ${p.league}리그 · 지금 ${p.rank}위`,
   droppedLine: '배치 때 선발에 내 은퇴 선수가 모자라 이번 시즌 리그에 들어가지 못했어요.',
   forfeitedLine: '기권이 3번 쌓여 남은 경기는 모두 0:3 패로 기록돼요.',
+  // T-11-418e 결산.
+  finalTitle: '시즌 결산',
+  finalLine: (p: { tier: number; league: number; rank: number }) =>
+    `${p.tier}부 ${p.league}리그 최종 ${p.rank}위`,
+  outcomeChampion: '우승',
+  outcomePromoted: '승격',
+  outcomeStayed: '잔류',
+  outcomeRelegated: '강등',
+  outcomeForfeited: '기권 퇴출',
+  finalChampionTitle: (p: { season: number }) =>
+    `대표 칭호 '시즌 ${p.season} 리그 챔피언'을 받았어요.`,
+  rewardReroll: (p: { n: number }) => `리롤권 ${p.n}장`,
+  rewardScout: (p: { n: number }) => `프리미엄 스카우트권 ${p.n}장`,
+  rewardBoost: (p: { n: number }) => `잠재력 강화권 ${p.n}장`,
+  rewardNone: '보상 없음',
+  finalNext: (p: { tier: number }) => `다음 시즌에 신청하면 ${p.tier}부에서 시작해요.`,
+  finalNextBottom: '기권이 쌓여 다음 시즌은 맨 아래 부에서 시작해요.',
   myLeague: '내 리그',
   pickLeague: '리그 고르기',
   standingsTitle: '순위표',

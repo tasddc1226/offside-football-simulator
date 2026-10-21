@@ -33,6 +33,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   marketPriceMax: 'Maximum sale price (× base)',
   marketListLimit: 'Listings at once',
   marketDailyBuys: 'Signings per day',
+  leagueHomeAdv: 'League home advantage',
   pastSalaryBudget: 'Past-season player salary budget',
   rerollPrice: 'Reroll ticket price',
   rerollPriceGrowth: 'Reroll ticket price growth',

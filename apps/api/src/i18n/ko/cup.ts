@@ -123,6 +123,20 @@ export const CUP_KO = {
   leagueEndTitle: '시즌 {season} 오프사이드 리그를 마쳤어요',
   leagueEndBody: '{tier}부 {league}리그 최종 {rank}위예요.',
   leagueChampionTitle: '시즌 {season} 오프사이드 리그 {tier}부 {league}리그 우승!',
+  // T-11-418e 결산(마지막 라운드 알림 본문 · 빈자리 승격).
+  leagueEndBodyChampion:
+    '1부 우승! 시즌 {season} 리그 챔피언 칭호와 선수 후보 리롤권 {n}장, 프리미엄 스카우트권 {s}장, 잠재력 강화권 {b}장을 받았어요.',
+  leagueEndBodyAll:
+    '{tier}부 {league}리그 최종 {rank}위예요. 선수 후보 리롤권 {n}장, 프리미엄 스카우트권 {s}장, 잠재력 강화권 {b}장을 받았어요. 다음 시즌에 신청하면 {next}부에서 시작해요.',
+  leagueEndBodyReroll:
+    '{tier}부 {league}리그 최종 {rank}위예요. 선수 후보 리롤권 {n}장을 받았어요. 다음 시즌에 신청하면 {next}부에서 시작해요.',
+  leagueEndBodyNext:
+    '{tier}부 {league}리그 최종 {rank}위예요. 다음 시즌에 신청하면 {next}부에서 시작해요.',
+  leagueEndBodyForfeited:
+    '{tier}부 {league}리그 최종 {rank}위예요. 기권이 쌓여 보상은 없고, 다음 시즌은 맨 아래 부에서 시작해요.',
+  leagueFillTitle: '오프사이드 리그 승격!',
+  leagueFillBody:
+    '위 부에 빈자리가 생겨 시즌 {season}에는 {tier}부에서 뛰어요. 프리미엄 스카우트권 {s}장을 받았어요.',
   leagueForfeitedTitle: '오프사이드 리그 남은 경기가 기권패로 처리돼요',
   leagueForfeitedBody: '경기에 {n}번 나오지 못했어요. 남은 경기는 모두 0:3 패로 기록돼요.',
 } as const;

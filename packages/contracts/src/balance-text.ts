@@ -185,6 +185,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '지난 시즌 선수 급여 예산',
     desc: '구단 팀 선발에 넣은 지난 시즌 선수 급여(최고 OVR로 1~20) 합의 상한. 이번 시즌 선수는 급여가 없다',
   },
+  leagueHomeAdv: {
+    group: 'team',
+    label: '리그 홈 이점',
+    desc: '오프사이드 리그 경기에서 홈 팀 기대 득점에 곱하는 배율. 1이면 홈 이점 없음. 랭크 경기 · 친선은 1.08 고정',
+  },
   rerollPrice: {
     group: 'market',
     label: '리롤권 가격',

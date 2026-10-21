@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { CareerPosSchema } from './careers.js';
 import { IsoUtcSchema } from './primitives.js';
 import { CupStandingSchema, CupTeamSchema } from './cup-api.js';
+import { LEAGUE_OUTCOMES } from './league.js';
 import { TeamIdSchema, TeamMatchSchema } from './teams.js';
 
 // T-11-418 오프사이드 리그 API 모양. 값 · 일정 계산은 zod 없는 league.ts.
@@ -69,6 +70,20 @@ export const LeagueMeResponseSchema = z.strictObject({
       league: z.number().int().nullable(),
       teamId: TeamIdSchema.nullable(),
       rank: z.number().int().nullable(),
+      /**
+       * T-11-418e 결산(14라운드 뒤). 최종 순위 · 결과 · 받은 보상 · 다음 시즌에 신청하면 시작하는 부(기권 퇴출은 null = 맨
+       * 아래). 결산 전 · 옛 응답에는 없다.
+       */
+      final: z
+        .strictObject({
+          rank: z.number().int(),
+          outcome: z.enum(LEAGUE_OUTCOMES),
+          rerolls: z.number().int(),
+          scouts: z.number().int(),
+          boosts: z.number().int(),
+          nextTier: z.number().int().nullable(),
+        })
+        .optional(),
     })
     .nullable()
     .optional(),
