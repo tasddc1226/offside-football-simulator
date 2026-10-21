@@ -112,11 +112,15 @@ export const CUP_JA: Record<CupTextKey, string> = {
   leaguePlacedTitle: 'シーズン{season} オフサイドリーグ組分け結果',
   leaguePlacedBody: '{team}は{tier}部{league}リーグです。第1節は今日{time}に始まります。',
   leagueDroppedTitle: 'シーズン{season} オフサイドリーグの参加が取り消されました',
-  leagueDroppedBody: '組分け時刻にシーズン{season}チームのスタメン選手が{n}人に届きませんでした。',
-  leagueLeftBody: '参加チーム数がリーグ編成に合わず、OVRが低いチームから{n}チームが外れました。',
+  leagueDroppedBody:
+    '組分け時刻にシーズン{season}チームのスタメン選手が{n}人に届きませんでした。次のシーズンにまた申し込めます。',
+  leagueLeftBody:
+    '参加チーム数がリーグ編成に合わず、OVRが低いチームから{n}チームが外れました。次のシーズンにまた申し込めます。',
   leagueCancelledTitle: 'シーズン{season} オフサイドリーグは開催されません',
   leagueRoundTitle: 'オフサイドリーグ第{round}節・{result}',
   leagueRoundBody: '{score}・現在{rank}位です',
+  leagueRoundForfeitBody:
+    '{score}・スタメンが足りず不戦敗になりました。棄権{n}/{limit}回、あと{left}回棄権すると残り試合はすべて0:3の負けです。',
   leagueRest: 'お休み',
   leagueRestBody: '今節はお休みでした・現在{rank}位です',
   leagueEndTitle: 'シーズン{season} オフサイドリーグが終わりました',

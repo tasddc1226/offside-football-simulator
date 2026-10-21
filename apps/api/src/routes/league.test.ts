@@ -53,14 +53,14 @@ describe('/v1/leagues (T-11-418)', () => {
   const enter = (cookie: string) =>
     call('POST', '/v1/leagues/current/entries', { cookie, headers: idem() });
 
-  /** 시즌 2 카드 n장으로 선발을 채운 구단주(n이 null이면 팀 없음). */
-  async function owner(n: number | null) {
+  /** 시즌(기본 2) 카드 n장으로 선발을 채운 구단주(n이 null이면 팀 없음). 팀은 지금 시각의 시즌으로 만든다. */
+  async function owner(n: number | null, season = 2) {
     const who = await issueGoogleCookie(ctx, { nickname: `리그${++seq}` });
     if (n === null) return who;
     const ids: string[] = [];
     for (let i = 0; i < n; i++) {
       const id = crypto.randomUUID();
-      const at = '2026-10-31T00:00:00.000Z';
+      const at = season === 1 ? '2026-10-20T00:00:00.000Z' : '2026-10-31T00:00:00.000Z';
       await ctx.db.insert(careers).values({
         id,
         profileId: who.profileId,
@@ -78,12 +78,12 @@ describe('/v1/leagues (T-11-418)', () => {
         peak: 80,
         legendScore: 300,
         shirtNumber: 9,
-        serviceSeason: 2,
+        serviceSeason: season,
       });
       await ctx.db.insert(cards).values({
         careerId: id,
         ownerId: who.profileId,
-        serviceSeason: 2,
+        serviceSeason: season,
         pos: 'FW',
         number: 9,
         peak: 80,
@@ -128,6 +128,7 @@ describe('/v1/leagues (T-11-418)', () => {
       entry: null,
       canEnter: false,
       team: null,
+      lastTeam: null,
       placement: null,
     });
     const r = await enter(a.cookie);
@@ -142,10 +143,21 @@ describe('/v1/leagues (T-11-418)', () => {
       entry: null,
       canEnter: true,
       team: null,
+      lastTeam: null,
       placement: null,
     });
     expect((await enter(a.cookie)).status).toBe(204);
     expect(await me(a.cookie)).toMatchObject({ entry: { createdAt: PRESIGN }, canEnter: false });
+  });
+
+  it('T-11-430 사전 신청: 시즌 2 팀이 없으면 지금 시즌 1 팀 선발 수를 참고로 돌려준다', async () => {
+    vi.setSystemTime(new Date(PRESIGN));
+    const a = await owner(6, 1);
+    expect(await me(a.cookie)).toMatchObject({ team: null, lastTeam: { season: 1, filled: 6 } });
+    // 개막 뒤 시즌 2 팀이 생기면 lastTeam은 묻지 않는다.
+    vi.setSystemTime(new Date(OPEN));
+    const b = await owner(8);
+    expect(await me(b.cookie)).toMatchObject({ team: { filled: 8 }, lastTeam: null });
   });
 
   it('준비 인원은 감독 카드 정보를 읽지 않고 실제 선발 수를 유지한다', async () => {

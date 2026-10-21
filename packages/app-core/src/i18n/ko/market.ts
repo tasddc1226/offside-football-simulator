@@ -68,6 +68,10 @@ const ko = {
     `구단 자금이 ${p.short} 모자라요. 직접 키운 선수를 방출하면 자금이 생겨요.`,
   unlist: '판매 내리기',
   buyFor: (p: { price: string }) => `${p.price}에 영입하기`,
+  // T-11-434 영입 · 판매 내리기가 낡은 매물이라 실패한 뒤
+  priceMoved: (p: { price: string }) => `가격이 ${p.price}으로 바뀌었어요. 다시 확인해 주세요.`,
+  staleGone: '이미 팔렸거나 내려간 선수예요.',
+  staleRecheck: '가격이 바뀐 선수예요. 목록에서 다시 확인해 주세요.',
   // 팔기
   sellStep1: '1. 내놓을 선수',
   sellNone: '아직 내 선수 카드가 없어요. 선수가 은퇴하거나 영입하면 여기에 나와요.',

@@ -776,7 +776,17 @@ export async function notifyLeague(
           const result = cupKo(lost ? 'loss' : mine > theirs ? 'win' : 'draw');
           title = cupKo('leagueRoundTitle', { round: played, result });
           const score = `${nameOf.get(m.homeTeamId) ?? '-'} ${m.homeGoals ?? 0} : ${m.awayGoals ?? 0} ${nameOf.get(m.awayTeamId) ?? '-'}`;
-          body = cupKo('leagueRoundBody', { score, rank });
+          // T-11-430 내가 기권한 경기면 쌓인 기권 수와 남은 횟수를 알린다(3번째는 기권 퇴출 알림이 따로 간다).
+          const forfeited = !!(m.forfeit & (home ? 1 : 2));
+          body =
+            forfeited && e.status === 'active' && e.forfeits < LEAGUE_FORFEIT_LIMIT
+              ? cupKo('leagueRoundForfeitBody', {
+                  score,
+                  n: e.forfeits,
+                  limit: LEAGUE_FORFEIT_LIMIT,
+                  left: LEAGUE_FORFEIT_LIMIT - e.forfeits,
+                })
+              : cupKo('leagueRoundBody', { score, rank });
         }
       }
     }

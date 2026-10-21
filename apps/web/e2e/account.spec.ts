@@ -106,6 +106,44 @@ test('로그아웃은 확인 창에서 한 번 더 확인한다', async ({ page 
   expect(logouts).toBe(1);
 });
 
+test('T-11-431 구글 연동 해제는 확인 시트를 거치고, 실패하면 해제 실패를 알린다', async ({
+  page,
+}) => {
+  await page.route(PROFILE_URL, (route) =>
+    route.fulfill(
+      ok({
+        id: 'u1',
+        linked: { google: true, apple: false, toss: false },
+        googleEmailMasked: 'te***@gmail.com',
+        recoveryCodeIssuedAt: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      }),
+    ),
+  );
+  let unlinks = 0;
+  await page.route(`${API}/v1/auth/google/unlink`, (route) => {
+    unlinks++;
+    return route.fulfill(fail(500, 'INTERNAL', 'boom'));
+  });
+
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  const account = page.locator('#account-slot');
+  await account.locator('[data-act="unlink"]').click();
+  await expect(page.locator('#sheet')).toContainText('구글 연동을 해제할까요?');
+  await expect(page.locator('#sheet')).toContainText('로그인하지 않은 상태가 돼요');
+  await page.locator('#sheet [data-sheet="1"]').click();
+  expect(unlinks).toBe(0);
+
+  await account.locator('[data-act="unlink"]').click();
+  await page.locator('#sheet [data-sheet="0"]').click();
+  await expect(page.locator('#toast')).toContainText('구글 연동을 해제하지 못했어요');
+  expect(unlinks).toBe(1);
+  // 연결 오류 카드로 덮지 않고 계정 카드를 그대로 둔다.
+  await expect(account).toContainText('te***@gmail.com');
+  await expect(account).not.toContainText('연결할 수 없어요');
+});
+
 test('로그아웃 직후 다시 구글로 로그인하면 새 세션부터 받고 시작한다', async ({ page }) => {
   // 로그아웃이 세션 쿠키를 지우므로, 로그인 시작 전에 GET /v1/profile(익명 세션 발급)을 거쳐야 한다.
   let loggedOut = false;

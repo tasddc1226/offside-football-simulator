@@ -45,7 +45,7 @@ import { scoreLine, type NatTourResult } from '@offside/game/national';
 import type { CompGame } from '@offside/game/comps';
 import { clubById } from '@offside/game/clubs';
 import { bracketLine } from './bracket.js';
-import { isMilOption } from '@offside/game/military';
+import { isMilOption, milAbroad, sangmuChance } from '@offside/game/military';
 import {
   endSeason,
   market,
@@ -79,6 +79,7 @@ import { publicNameOf } from './namePublic.js';
 import { fmtValue, growthDirFor, seasonLabelOf } from './format.js';
 import { crossesBorder, flightHours, hubOf } from './flight.js';
 import { gameActionsText as L } from './i18n/ko/gameActions';
+import { choiceChipsFor } from './eventPeek';
 import { tn } from '@offside/game/i18n/names';
 
 /** 비행 지도는 육지 데이터가 커서 해외 이적일 때만 불러온다(계약서를 여는 순간 미리 받아 둔다). */
@@ -406,17 +407,25 @@ export function createGameActions(host: GameHost) {
 
   function choiceView(s: GameState, ev: EventDef, c: Choice, i: number) {
     const label = txt(c.label, s);
-    if (!c.p)
-      return isSafe(ev, c)
-        ? { label, odds: L.oddsSafe, hint: L.oddsSafeHint }
-        : { label, odds: L.oddsSure };
+    // T-11-432 득실 칩은 생성된 표만 읽는다(효과를 미리 돌리지 않는다). 칩이 없으면 hint를 화면에 그대로 보인다.
+    if (!c.p) {
+      const safe = isSafe(ev, c);
+      return {
+        label,
+        odds: safe ? L.oddsSafe : L.oddsSure,
+        ...(safe ? { hint: L.oddsSafeHint } : {}),
+        chips: choiceChipsFor(ev.id, i, safe ? 'safe' : 'sure'),
+      };
+    }
     const odds = choiceOdds(c.p(s), ev.id, i);
+    const chips = choiceChipsFor(ev.id, i, 'roll');
     const mg = activeMg(c);
-    if (!mg) return { label, odds: `${Math.round(odds * 100)}%` };
+    if (!mg) return { label, odds: L.oddsPct({ p: Math.round(odds * 100) }), chips };
     return {
       label,
       odds: L.oddsMinigame({ zone: zoneLabel(zoneWidth(odds, mg.kind)) }),
       hint: L.oddsMinigameHint,
+      chips,
     };
   }
 
@@ -646,7 +655,55 @@ export function createGameActions(host: GameHost) {
     // T-11-039 다른 구단의 오퍼는 계약서에 사인해야 확정된다(×로 닫으면 이적시장으로 돌아온다).
     if (o.kind === 'offer' || (o.kind === 'renew' && o.extension))
       return showContract(i, o, options);
+    if (needsPathConfirm(o, options)) return confirmPath(i, o, options);
     if (settleOption(i, o, options)) startSeason();
+  }
+
+  /**
+   * T-11-431 대학 진학 · 상무 지원 · 현역 입대는 되돌릴 수 없는 진로라 결과를 요약한 확인 시트를 거친다. 다른 길이 없는
+   * 선택(제의 없는 고3의 대학 진학, 입영 통지 뒤 현역 입대)은 묻지 않는다. 확인 시트는 난수를 쓰지 않는다.
+   */
+  const needsPathConfirm = (o: MarketOption, options: MarketOption[]) =>
+    (o.kind === 'uni' || o.kind === 'sangmu' || o.kind === 'army') && options.length > 1;
+
+  function confirmPath(i: number, o: MarketOption, options: MarketOption[]) {
+    const G = appState.G!;
+    const abroad = milAbroad(G);
+    const noTeam = !G.contract || G.contract.years <= 0;
+    const view =
+      o.kind === 'uni'
+        ? { eyebrow: 'University', title: L.pathUniTitle, text: L.pathUniText, cta: L.pathUniCta }
+        : o.kind === 'sangmu'
+          ? {
+              eyebrow: 'Military Service',
+              title: L.pathSangmuTitle,
+              text: L.pathSangmuText({
+                pct: Math.round(sangmuChance(G) * 100),
+                abroad,
+                fail: o.due ? 'army' : noTeam ? 'market' : 'stay',
+              }),
+              cta: L.pathSangmuCta,
+            }
+          : {
+              eyebrow: 'Military Service',
+              title: L.pathArmyTitle,
+              text: L.pathArmyText({ abroad }),
+              cta: L.pathArmyCta,
+            };
+    sheet.showSheet(
+      { kind: 'notice', eyebrow: view.eyebrow, title: view.title, muted: true, text: view.text },
+      [
+        {
+          label: view.cta,
+          cls: 'btn-primary',
+          fn: () => {
+            if (settleOption(i, o, options)) startSeason();
+          },
+        },
+        { label: L.pathBack, fn: nextPending },
+      ],
+      nextPending,
+    );
   }
 
   /** T-11-039 계약서. 아마추어(고교·대학)에서 처음 프로 구단에 가면 입단 계약, 그 밖에는 이적 계약. */
@@ -850,10 +907,9 @@ export function createGameActions(host: GameHost) {
         {
           label: L.newBtn,
           cls: 'btn-primary',
+          // T-11-431 진행 중인 세이브는 새 선수로 킥오프할 때(startCareer) 바꾼다. 만들기 화면에서 취소하거나 새로고침해도
+          // 이어하기할 수 있다.
           fn: () => {
-            host.analytics.replace();
-            appState.G = null;
-            host.save();
             sheet.closeSheet();
             appState.screen = 'create';
             Object.assign(appState.C, draftIdentity());
@@ -890,6 +946,7 @@ export function createGameActions(host: GameHost) {
     presetPotential?: CandidatePotential,
   ) {
     const previous = appState.G;
+    if (previous && !previous.retired) host.analytics.replace();
     const finalName = name.trim() || randomName();
     const finalNumber = clamp(+number || randomNumber(), 1, 99);
     const seed = freshSeed();

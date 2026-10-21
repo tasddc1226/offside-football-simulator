@@ -115,6 +115,112 @@ test('사전 신청: 시즌 2 팀이 없어도 신청할 수 있고, 개막 뒤�
   await expect(page.locator('[data-act="league-enter"]')).toBeVisible();
 });
 
+// T-11-430 신청 · 자격 · 기권 안내.
+const profile = {
+  id: 'u1',
+  linked: { google: true },
+  googleEmailMasked: 'u***@example.com',
+  recoveryCodeIssuedAt: null,
+  createdAt: '2026-01-01T00:00:00.000Z',
+};
+
+test('T-11-430 사전 신청: 지금 시즌 팀 선발 수와 자격 · 기권 규칙을 신청 카드에 보인다', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date('2026-10-27T03:00:00.000Z'));
+  await page.route(`${API}/**`, (r) => {
+    const path = new URL(r.request().url()).pathname;
+    if (path === '/v1/profile') return r.fulfill(ok(profile));
+    if (path === '/v1/leagues/current') return r.fulfill(ok({ league, phase: 'open', entries: 3 }));
+    if (path === '/v1/leagues/current/me')
+      return r.fulfill(
+        ok({ entry: null, canEnter: true, team: null, lastTeam: { season: 1, filled: 6 } }),
+      );
+    return r.fulfill({ status: 503, body: '' });
+  });
+  await page.goto('/');
+  await page.locator('[data-league-banner]').click();
+  await expect(page.locator('[data-league-ready="short"]')).toContainText(
+    '지금 시즌 1 팀 선발에 내 은퇴 선수가 6명이에요',
+  );
+  const rules = page.locator('[data-league-entry-rules] li');
+  await expect(rules).toHaveCount(2);
+  await expect(rules.first()).toContainText('참가 자격');
+  await expect(rules.nth(1)).toContainText('3번 기권하면');
+  // 사전 신청 기간엔 시즌 2 팀을 아직 만들 수 없어 팀 화면 버튼이 없다.
+  await expect(page.locator('[data-act="league-team"]')).toHaveCount(0);
+});
+
+test('T-11-430 접수 마감 뒤 배치 전: 준비 상태 n/8과 팀 선발 고치기로 팀 화면을 연다', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date('2026-11-04T16:00:00.000Z'));
+  await page.route(`${API}/**`, (r) => {
+    const path = new URL(r.request().url()).pathname;
+    if (path === '/v1/profile') return r.fulfill(ok(profile));
+    if (path === '/v1/leagues/current')
+      return r.fulfill(ok({ league, phase: 'closed', entries: 20 }));
+    if (path === '/v1/leagues/current/me')
+      return r.fulfill(
+        ok({
+          entry: { createdAt: '2026-11-01T03:00:00.000Z' },
+          canEnter: false,
+          team: { teamId: 'tem_1', filled: 7, ovr: 80 },
+          lastTeam: null,
+        }),
+      );
+    return r.fulfill({ status: 503, body: '' });
+  });
+  await page.goto('/');
+  await page.locator('[data-league-banner]').click();
+  await expect(page.locator('[data-league-ready="short"]')).toContainText('7/8명');
+  const team = page.waitForRequest((q) => new URL(q.url()).pathname === '/v1/owner-team');
+  await page.locator('[data-act="league-team"]').click();
+  await team;
+  await expect(page.locator('[data-league-hero]')).toHaveCount(0);
+});
+
+test('T-11-430 팀 수 조정으로 빠지면 자격 탓이 아니라고 알린다', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-07T06:00:00.000Z'));
+  await page.route(`${API}/**`, (r) => {
+    const path = new URL(r.request().url()).pathname;
+    if (path === '/v1/profile') return r.fulfill(ok(profile));
+    if (path === '/v1/leagues/current')
+      return r.fulfill(
+        ok({
+          league,
+          phase: 'running',
+          entries: 8,
+          tiers: [{ tier: 1, leagues: 1, teams: 8 }],
+          playedRounds: 0,
+        }),
+      );
+    if (path === '/v1/leagues/current/me')
+      return r.fulfill(
+        ok({
+          entry: { createdAt: '2026-11-01T03:00:00.000Z' },
+          canEnter: false,
+          team: { teamId: 'tem_9', filled: 9, ovr: 60 },
+          placement: {
+            status: 'dropped',
+            tier: null,
+            league: null,
+            teamId: null,
+            rank: null,
+            reason: 'capacity',
+          },
+        }),
+      );
+    return r.fulfill({ status: 503, body: '' });
+  });
+  await page.goto('/');
+  await page.locator('[data-league-banner]').click();
+  const line = page.locator('[data-league-placement="dropped"]');
+  await expect(line).toContainText('자격은 갖췄지만');
+  await expect(line).toContainText('다음 시즌에 다시 신청할 수 있어요');
+  await expect(line).not.toContainText('모자라');
+});
+
 test('T-11-418b 배치 뒤: 내 배치 · 순위표 · 라운드 경기 · 경기 상세, 다른 리그 고르기', async ({
   page,
 }) => {
@@ -236,7 +342,9 @@ test('T-11-418b 배치 뒤: 내 배치 · 순위표 · 라운드 경기 · 경�
   const board = page.locator('[data-league-table="1-1"]');
   await expect(board.locator('tbody tr')).toHaveCount(8);
   await expect(board.locator('tr.down')).toHaveCount(2);
-  await expect(board).toContainText('기권 1');
+  await expect(board).toContainText('기권 1/3');
+  // T-11-430 내 줄에는 기권이 없어도 기권 0/3을 보인다.
+  await expect(board.locator('[data-league-forfeits="mine"]')).toContainText('기권 0/3');
   // 다음 라운드(4라운드)가 먼저 보이고, 3라운드를 고르면 끝난 경기를 연다.
   await expect(page.locator('[data-league-round]')).toHaveValue('4');
   await page.locator('[data-league-round]').selectOption('3');

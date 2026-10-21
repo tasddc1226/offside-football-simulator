@@ -4,7 +4,14 @@
   // T-10-069 이 기기에 없는 계정의 내 선수도 띄운다 — 띄울지는 LegendView.shareId(legend.ts)가 정한다. 왼쪽 반은 홈으로.
   // T-11-213 선수 상세(하단 메뉴가 있는 화면)에서는 홈 버튼 없이 공유 버튼만 둔다(home={false}).
   import { trackShareClick, trackShareSuccess } from '../analytics/index.js';
-  import { checkShareLink, shareLinkText, shareLinkTitle } from '@offside/app-core/shareLink';
+  import {
+    checkShareLink,
+    retryResultText,
+    shareLinkText,
+    shareLinkTitle,
+    uploadStatusLine,
+  } from '@offside/app-core/shareLink';
+  import { onUploadStatus, retirementUploadStatus } from '@offside/app-core/outboxStore';
   import { shareText as L } from '@offside/app-core/i18n/ko/share';
   import { toast } from './helpers.js';
   import { goHome } from './nav.js';
@@ -14,6 +21,28 @@
   const { id, home = true, inline = false }: { id: string; home?: boolean; inline?: boolean } = $props();
   let busy = $state(false);
   let url = $state<string | null>(null);
+
+  // T-11-433 서버 반영 상태. 기기 안 큐 · 거절 기록만 읽는다(서버에 묻지 않는다). 큐가 바뀔 때 다시 읽는다.
+  let tick = $state(0);
+  $effect(() => onUploadStatus(() => tick++));
+  const status = $derived.by(() => {
+    void tick; // 큐가 바뀌면 다시 읽는다
+    return retirementUploadStatus(id);
+  });
+  const line = $derived(uploadStatusLine(status));
+  let retrying = $state(false);
+  async function retryUpload() {
+    if (retrying) return;
+    retrying = true;
+    try {
+      await import('../sync/outbox.js').then((m) => m.retryOutboxNow());
+    } catch {
+      /* 모듈을 못 불러도 아래 안내는 띄운다 */
+    } finally {
+      retrying = false;
+    }
+    toast(retryResultText(retirementUploadStatus(id)));
+  }
 
   // 링크를 서버에 확인한 뒤 공유한다 — T-10-118 네이티브 공유 시트(navigator.share)가 있으면 그걸 먼저 쓰고,
   // 없거나 실패하면 클립보드로 복사한다.
@@ -83,6 +112,16 @@
 </script>
 
 <ActionBar {inline} data-share="bar">
+  {#if line}
+    <div class="upload-status" data-upload={status.state} role="status">
+      <span>{line.text}</span>
+      {#if line.retry}
+        <button class="btn btn-sm" data-act="upload-retry" disabled={retrying} onclick={retryUpload}>
+          {L.uploadRetry}
+        </button>
+      {/if}
+    </div>
+  {/if}
   {#if url}
     <input class="share-url" readonly value={url} aria-label={L.linkLabel} onfocus={(e) => e.currentTarget.select()} />
   {/if}
@@ -95,3 +134,20 @@
     </button>
   </div>
 </ActionBar>
+
+<style>
+  .upload-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: var(--fs-caption);
+    color: var(--muted);
+  }
+  .upload-status[data-upload='rejected'] {
+    color: var(--bad);
+  }
+  .upload-status .btn {
+    flex: none;
+  }
+</style>

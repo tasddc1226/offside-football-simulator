@@ -14,8 +14,46 @@
 <p>{v.text}</p>
 <div class="stack">
   {#each v.choices as c, i (i)}
+    <!-- T-11-432 득실 칩(없으면 hint)을 버튼 안에 보인다. 터치 화면에서는 title이 안 보여서다. -->
     <button class="choice" data-choice={i} onclick={() => void chooseEvent(i)}
-      ><span>{c.label}</span><span class="odds" title={c.hint}>{c.odds}</span></button
+      ><span class="ec-main"
+        ><span>{c.label}</span>
+        {#if c.chips.length}
+          <span class="ec-chips" data-choice-chips
+            >{#each c.chips as ch (ch.text)}<span class="chip {ch.tone}">{ch.text}</span>{/each}</span
+          >
+        {:else if c.hint}
+          <small class="ec-hint">{c.hint}</small>
+        {/if}</span
+      ><span class="odds">{c.odds}</span></button
     >
   {/each}
 </div>
+
+<style>
+  .ec-main {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
+  .ec-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .ec-chips .chip {
+    padding: 1px 7px;
+    background: var(--surface);
+    font-weight: 600;
+  }
+  .ec-chips .chip.risk {
+    color: var(--muted);
+    border-color: var(--line);
+  }
+  .ec-hint {
+    color: var(--muted);
+    font-size: var(--fs-caption);
+    font-weight: 500;
+    line-height: 1.4;
+  }
+</style>

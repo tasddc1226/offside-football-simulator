@@ -24,7 +24,7 @@ test('홈: 진행 중인 커리어가 있으면 첫 카드에서 바로 이어 �
   await expect(page.locator('.player h1')).toHaveText(name);
 });
 
-// T-11-275 홈 선물: 로그인한 구단주는 오프사이드 컵 배너 바로 아래에서 한 번 받고, 받으면 사라진다.
+// T-11-275 홈 선물: 로그인한 구단주는 홈에서 한 번 받고, 받으면 사라진다. T-11-435 받을 선물이 있으면 히어로 바로 아래로 올라온다.
 const CUP_HOME = {
   cup: {
     id: 's1-1',
@@ -77,17 +77,26 @@ async function giftStub(page: Page, owner: '1' | null, gift: 'ok' | 'login') {
   return calls;
 }
 
-test('홈 선물: 컵 배너 아래에서 한 번 받으면 사라지고 다시 묻지 않는다', async ({ page }) => {
+test('홈 선물: 히어로 바로 아래에서 한 번 받으면 사라지고 다시 묻지 않는다', async ({ page }) => {
   const calls = await giftStub(page, '1', 'ok');
   await page.goto('/');
   const card = page.locator('[data-home-gift]');
   await expect(card).toContainText('잠재력 강화권 20장과 프리미엄 스카우트권 5장');
-  const after = await page.evaluate(() => {
-    const cup = document.querySelector('[data-cup-banner]')!;
-    const gift = document.querySelector('[data-home-gift]')!;
-    return cup.nextElementSibling === gift;
-  });
-  expect(after).toBe(true);
+  await expect(page.locator('[data-cup-banner]')).toBeVisible();
+  // 받을 선물은 시즌 게이지 · 컵 배너보다 위, 히어로 바로 다음 칸이다.
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const hero = document.querySelector('.hero-home')!;
+        const gift = document.querySelector('[data-home-gift]')!;
+        const cup = document.querySelector('[data-cup-banner]')!;
+        return (
+          hero.nextElementSibling === gift &&
+          !!(gift.compareDocumentPosition(cup) & Node.DOCUMENT_POSITION_FOLLOWING)
+        );
+      }),
+    )
+    .toBe(true);
   expect((await new AxeBuilder({ page }).include('[data-home-gift]').analyze()).violations).toEqual(
     [],
   );

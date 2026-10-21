@@ -11,6 +11,7 @@ import { LEAGUE_ROUNDS, planLeague } from '@offside/contracts/league';
 import { applySeasonSchedule, closeSeasonSchedule } from '@offside/contracts/service-seasons';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cupKo, cupText } from '../cupText.js';
 import { openLeagueEndsAt } from '../cron/seasonGauge.js';
 import { cards, careers, leagueEntries, ownerTeams } from '../db/schema.js';
 import { forgetSeasonSchedule, saveSeasonSchedule } from '../seasonSchedule.js';
@@ -187,8 +188,16 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
       tier: 1,
       league: 1,
       rank: expect.any(Number),
+      forfeits: 0,
     });
-    expect((await me(short.cookie)).placement).toMatchObject({ status: 'dropped' });
+    // T-11-430 자격이 모자라 빠진 신청은 이유가 short.
+    expect((await me(short.cookie)).placement).toMatchObject({
+      status: 'dropped',
+      reason: 'short',
+    });
+    expect((await notices(short.profileId)).at(-1)?.body).toBe(
+      '배치 시각에 시즌 2 팀 선발 선수가 8명보다 적었어요. 다음 시즌에 다시 신청할 수 있어요.',
+    );
 
     // 1라운드 1시간 전부터 명단이 잠긴다.
     vi.setSystemTime(new Date(at(L.rounds[0]!, -30 * 60_000)));
@@ -325,10 +334,18 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     await drain(at(L.drawAt, 60_000));
     const gone = teams[0]!;
     await ctx.db.delete(ownerTeams).where(eqProfile(gone.profileId));
-    // 3라운드까지 치른다.
-    await drain(L.rounds[2]!);
+    // 3라운드까지 한 라운드씩 치른다(라운드마다 알림).
+    for (const r of [0, 1, 2]) await drain(L.rounds[r]!);
     const [e] = await ctx.db.select().from(leagueEntries).where(eqEntry(gone.profileId));
     expect(e).toMatchObject({ status: 'forfeited', forfeits: 3 });
+    // T-11-430 1 · 2번째 기권패 알림에 쌓인 기권 수와 남은 횟수를 싣는다.
+    const bodies = (await notices(gone.profileId)).map((n) => n.body);
+    expect(bodies.filter((b) => b.includes('기권패했어요'))).toEqual([
+      expect.stringMatching(
+        / · 선발 선수가 모자라 기권패했어요\. 기권 1\/3번, 2번 더 기권하면 남은 경기는 모두 0:3 패예요\.$/,
+      ),
+      expect.stringMatching(/기권 2\/3번, 1번 더 기권하면/),
+    ]);
     expect((await notices(gone.profileId)).map((n) => n.title)).toContain(
       '오프사이드 리그 남은 경기가 기권패로 처리돼요',
     );
@@ -348,7 +365,7 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     });
     const forfeits = table.matches.filter((m) => m.forfeit);
     expect(forfeits).toHaveLength(14);
-  });
+  }, 60_000); // 14라운드를 다 치러 본다.
 
   it('경기 때 선발 실카드가 8명보다 적으면(카드가 팔림) 그 경기만 0:3 기권패', async () => {
     const teams = [];
@@ -388,6 +405,12 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     expect((await notices(few[0]!.profileId)).at(-1)?.title).toBe(
       '시즌 2 오프사이드 리그가 열리지 않아요',
     );
+    // T-11-430 자격은 갖췄지만 리그를 꾸리지 못해 빠진 신청은 이유가 capacity(화면이 리그 무산으로 그린다).
+    vi.setSystemTime(new Date(at(L.drawAt, 90_000)));
+    const mine = MeRes.parse(
+      await (await call('GET', '/v1/leagues/current/me', { cookie: few[0]!.cookie })).json(),
+    ).data;
+    expect(mine.placement).toMatchObject({ status: 'dropped', reason: 'capacity' });
     expect(await run(at(L.drawAt, 120_000))).toEqual({ season: 2, step: 'done' });
     expect(await run(at(L.drawAt, 180_000))).toBeNull();
   });
@@ -517,3 +540,23 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
 
 const eqProfile = (p: string) => eq(ownerTeams.profileId, p);
 const eqEntry = (p: string) => eq(leagueEntries.profileId, p);
+
+describe('T-11-430 리그 알림 문구', () => {
+  it('기권패 알림 · 빠진 이유 알림을 영어 · 일본어로 옮긴다(라운드 결과 문구와 섞이지 않는다)', () => {
+    const ko = cupKo('leagueRoundForfeitBody', { score: 'A 0 : 3 B', n: 1, limit: 3, left: 2 });
+    expect(ko).toBe(
+      'A 0 : 3 B · 선발 선수가 모자라 기권패했어요. 기권 1/3번, 2번 더 기권하면 남은 경기는 모두 0:3 패예요.',
+    );
+    expect(cupText(ko, 'en')).toBe(
+      'A 0 : 3 B · Forfeited: not enough players in your starting XI. Forfeits 1/3. 2 more and every remaining match is a 0:3 loss.',
+    );
+    expect(cupText(ko, 'ja')).toContain('棄権1/3回、あと2回');
+    expect(cupText(cupKo('leagueRoundBody', { score: 'A 1 : 0 B', rank: 2 }), 'en')).toBe(
+      'A 1 : 0 B · Position 2',
+    );
+    expect(cupText(cupKo('leagueLeftBody', { n: 3 }), 'en')).toContain('enter again next season');
+    expect(cupText(cupKo('leagueDroppedBody', { season: 2, n: 8 }), 'ja')).toContain(
+      '次のシーズンにまた申し込めます',
+    );
+  });
+});

@@ -8,14 +8,18 @@ import {
   leagueFinalReady,
   leagueLive,
   leagueRecords,
+  leagueCancelled,
   leagueDefaultPick,
   leagueDefaultRound,
+  leagueEntryRules,
   leagueFinalView,
+  leagueForfeitsTag,
   leagueLine,
   leaguePlacementLine,
   leagueReadiness,
   leagueRound,
   leagueSchedule,
+  leagueTeamAction,
   leagueZone,
 } from './leagueView.js';
 
@@ -53,7 +57,94 @@ describe('leagueView (T-11-418)', () => {
       ok: false,
       text: '선발에 내 은퇴 선수가 6/8명이에요. 배치 전까지 8명을 채워야 리그에 들어가요.',
     });
-    expect(leagueReadiness(data('open'), me({ filled: 9 }), after)?.ok).toBe(true);
+    expect(leagueReadiness(data('open'), me({ filled: 9 }), after)).toEqual({
+      ok: true,
+      text: '준비 완료 · 선발에 내 은퇴 선수 9명(자격 8명)',
+    });
+  });
+
+  it('T-11-430 신청 카드: 사전 신청엔 지금 시즌 팀 n/8, 배치 대기에도 준비 상태, 자격 · 기권 규칙, 팀 선발 고치기', () => {
+    const before = Date.parse('2026-10-28T00:00:00.000Z');
+    const after = Date.parse('2026-11-01T00:00:00.000Z');
+    const closedAt = Date.parse('2026-11-04T16:00:00.000Z');
+    const me = (o: Partial<LeagueMeResponse>): LeagueMeResponse => ({
+      entry: null,
+      canEnter: true,
+      team: null,
+      ...o,
+    });
+    // 사전 신청: 시즌 2 팀은 아직 없어 지금 시즌 1 팀 선발 수를 참고로 보인다.
+    expect(
+      leagueReadiness(data('open'), me({ lastTeam: { season: 1, filled: 6 } }), before),
+    ).toEqual({
+      ok: false,
+      text: '지금 시즌 1 팀 선발에 내 은퇴 선수가 6명이에요. 시즌 2 팀은 개막 뒤에 만들고, 배치 전까지 선발에 8명을 채워야 리그에 들어가요.',
+    });
+    expect(leagueReadiness(data('open'), me({ lastTeam: null }), before)).toBeNull();
+    // 접수 마감 뒤 배치 전: 신청했으면 준비 상태를 그대로 보인다(신청 안 했으면 없음).
+    const entered = { entry: { createdAt: '2026-11-01T00:00:00.000Z' }, canEnter: false };
+    const short = me({ ...entered, team: { teamId: 'tem_1', filled: 7, ovr: 80 } });
+    expect(leagueReadiness(data('closed'), short, closedAt)?.text).toBe(
+      '선발에 내 은퇴 선수가 7/8명이에요. 배치 전까지 8명을 채워야 리그에 들어가요.',
+    );
+    expect(
+      leagueReadiness(data('closed'), { ...short, entry: null, canEnter: false }, closedAt),
+    ).toBeNull();
+    expect(leagueReadiness(data('running'), short, closedAt)).toBeNull();
+    // 팀 화면 버튼: 신청했고 배치 전(사전 신청 기간 빼고). 팀이 없으면 '팀 만들기'.
+    expect(leagueTeamAction(data('closed'), short, closedAt)).toBe('팀 선발 고치기');
+    expect(leagueTeamAction(data('open'), short, after)).toBe('팀 선발 고치기');
+    expect(leagueTeamAction(data('open'), me({ ...entered }), after)).toBe('팀 만들기');
+    expect(leagueTeamAction(data('open'), short, before)).toBeNull();
+    expect(leagueTeamAction(data('open'), me({ team: short.team }), after)).toBeNull();
+    expect(leagueTeamAction(data('running'), short, closedAt)).toBeNull();
+    // 자격 · 기권 규칙은 배치 전에만.
+    expect(leagueEntryRules(data('open'))).toEqual([
+      '참가 자격: 배치 때 시즌 2 팀 선발에 내 은퇴 선수가 8명 있어야 해요. 모자라면 리그에서 빠져요.',
+      '기권: 경기 때 선발에 내 은퇴 선수가 8명보다 적으면 0:3 패예요. 3번 기권하면 남은 경기도 모두 0:3 패가 되고, 다음 시즌은 맨 아래 부에서 시작해요.',
+    ]);
+    expect(leagueEntryRules(data('soon'))).toHaveLength(2);
+    expect(leagueEntryRules(data('running'))).toEqual([]);
+  });
+
+  it('T-11-430 빠진 이유: 자격 부족 · 팀 수 조정 · 리그 무산, 진행 중 내 줄에 기권 n/3', () => {
+    const dropped = (reason?: 'short' | 'capacity') => ({
+      entry: null,
+      canEnter: false,
+      team: null,
+      placement: {
+        status: 'dropped' as const,
+        tier: null,
+        league: null,
+        teamId: null,
+        rank: null,
+        ...(reason ? { reason } : {}),
+      },
+    });
+    expect(leaguePlacementLine(dropped('short'))?.text).toBe(
+      '배치 때 선발에 내 은퇴 선수가 모자라 이번 시즌 리그에 들어가지 못했어요. 다음 시즌에 다시 신청할 수 있어요.',
+    );
+    expect(leaguePlacementLine(dropped('capacity'))?.text).toBe(
+      '자격은 갖췄지만 참가 팀 수에 맞춰 리그를 꾸리면서 빠졌어요. 다음 시즌에 다시 신청할 수 있어요.',
+    );
+    expect(leaguePlacementLine(dropped('capacity'), true)?.text).toBe(
+      '참가 팀이 모자라 이번 시즌 리그가 열리지 않았어요. 다음 시즌에 다시 신청할 수 있어요.',
+    );
+    // 옛 응답(이유 없음)은 자격 탓으로 단정하지 않는다.
+    expect(leaguePlacementLine(dropped())?.text).toBe(
+      '이번 시즌 리그에 들어가지 못했어요. 다음 시즌에 다시 신청할 수 있어요.',
+    );
+    expect(leagueCancelled({ tiers: [] })).toBe(true);
+    expect(leagueCancelled({ tiers: undefined })).toBe(false);
+    const placed = (forfeits?: number) => ({
+      entry: null,
+      canEnter: false,
+      team: null,
+      placement: { status: 'placed' as const, tier: 2, league: 1, teamId: 't', rank: 3, forfeits },
+    });
+    expect(leaguePlacementLine(placed(0))?.text).toBe('2부 1리그 · 지금 3위');
+    expect(leaguePlacementLine(placed(2))?.text).toBe('2부 1리그 · 지금 3위 · 기권 2/3');
+    expect(leagueForfeitsTag(1)).toBe('기권 1/3');
   });
 
   it('T-11-418b 배치 뒤: 진행 한 줄 · 내 배치 · 리그 고르기 · 승강권 · 라운드', () => {

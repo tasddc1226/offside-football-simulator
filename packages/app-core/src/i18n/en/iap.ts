@@ -16,7 +16,13 @@ export const iap: Translation<IapMsgs> = {
   boostDone: (p) => `Boost tickets added. You now have ${p.n}.`,
   renameDone: (p) => `Player rename tickets added. You now have ${p.n}.`,
   claimFail:
-    "Your payment went through, but something went wrong while adding it. You'll get it the next time you open the app.",
+    "Your payment went through, but something went wrong while adding it. Tap 'Check delivery again', or you'll get it the next time you open the app.",
+  loadFail: "Couldn't load the store items.",
+  retry: 'Check again',
+  loginHint: 'Log in to buy from the store.',
+  claimLeft: "You paid for an item that hasn't been added yet.",
+  claimRetry: 'Check delivery again',
+  claimNone: 'No payments are waiting to be added.',
   rerollNote:
     'Reroll tickets redraw the 3 candidates when you create a new player. You pay with your store account, and the tickets go to this owner account.',
   boostBuyLead:

@@ -278,6 +278,8 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   tpOverwrite: '上書き',
   tpRename: '名前を変更',
   tpDelete: '削除',
+  tpOverwriteAsk: '今の編成で上書きしますか？',
+  tpDeleteAsk: 'このプリセットを削除しますか？',
   tpNameLabel: 'プリセット名',
   tpNameDone: '決定',
   tpSaved: 'プリセットを保存しました。',
