@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { scoutText as L } from '@offside/app-core/i18n/ko/scout';
-import { sellablePacks, useIapItems } from '../../platform/iapItems';
+import { useIapItems } from '../../platform/iapItems';
 import { rem } from '../../theme/type';
 import { Card, Press, Txt } from '../../ui';
 import { IapPacks } from './IapPacks';
@@ -17,7 +17,6 @@ export function ScoutShop({ onBought }: { onBought?: (balance: number, spent: nu
   const iap = useIapItems(true);
   const [funded, setFunded] = useState<number | null>(null);
   const have = funded ?? iap.items?.scout ?? 0;
-  const sells = sellablePacks('scout', iap).length > 0;
   const small = { fontSize: rem(FONT.label) };
   return (
     <Card gap={12} testID="scout-shop">
@@ -49,7 +48,8 @@ export function ScoutShop({ onBought }: { onBought?: (balance: number, spent: nu
           <Txt tone="muted" style={small}>
             {`${L.what} ${L.pityHelp}`}
           </Txt>
-          {sells ? <IapPacks item="scout" note={L.shopNote} /> : null}
+          {/* 묶음이 없으면 IapPacks는 '다시 확인' · 로그인 안내 · 받지 못한 결제만 보인다(T-11-434). */}
+          <IapPacks item="scout" note={L.shopNote} />
           <ScoutFunds
             onBought={(n, balance, spent) => {
               setFunded(n);

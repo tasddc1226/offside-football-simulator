@@ -5,7 +5,7 @@
   import { enterLeague, fetchLeague, fetchLeagueMe, withdrawLeague, type LeagueMeResponse, type LeagueResponse } from '@offside/app-core/api/league';
   import { isMember } from '@offside/app-core/account';
   import { leagueText as L } from '@offside/app-core/i18n/ko/league';
-  import { leagueChoices, leagueDefaultPick, leagueDefaultRound, leagueFinalView, leagueLine, leaguePhaseLabel, leaguePlacementLine, leaguePresign, leagueReadiness, leagueRules, leagueSchedule, leagueWhen, type LeaguePick } from '@offside/app-core/leagueView';
+  import { leagueCancelled, leagueChoices, leagueDefaultPick, leagueDefaultRound, leagueEntryRules, leagueFinalView, leagueLine, leaguePhaseLabel, leaguePlacementLine, leaguePresign, leagueReadiness, leagueRules, leagueSchedule, leagueTeamAction, leagueWhen, type LeaguePick } from '@offside/app-core/leagueView';
   import type { LeagueMatch, LeagueTableResponse } from '@offside/app-core/api/league';
   import LeagueBoard from './league/LeagueBoard.svelte';
   import LeagueMatchDetail from './league/LeagueMatchDetail.svelte';
@@ -15,6 +15,8 @@
   import Skeleton from './Skeleton.svelte';
   import { accountCache, refreshAccount } from './account-state.svelte.js';
   import { toast } from './helpers.js';
+  import { go } from './nav.js';
+  import { appState } from './state.svelte.js';
 
   let status = $state<LoadStatus>('loading');
   let data = $state<LeagueResponse | null>(null);
@@ -63,7 +65,7 @@
     round = leagueDefaultRound(data);
   });
   const choices = $derived(data ? leagueChoices(data) : []);
-  const placement = $derived(leaguePlacementLine(me));
+  const placement = $derived(leaguePlacementLine(me, data ? leagueCancelled(data) : false));
   const final = $derived(data ? leagueFinalView(me, data.league.season) : null);
   const mineId = $derived(me?.placement?.teamId ?? null);
   const mineKey = $derived(me?.placement?.tier ? `${me.placement.tier}-${me.placement.league}` : null);
@@ -79,6 +81,13 @@
   }
   const presign = $derived(data ? leaguePresign(data) : false);
   const ready = $derived(data ? leagueReadiness(data, me) : null);
+  // T-11-430 배치 전 신청 카드: 참가 자격 · 기권 규칙, 팀 선발 고치기(팀 편성 화면으로).
+  const entryRules = $derived(data ? leagueEntryRules(data) : []);
+  const teamAction = $derived(data ? leagueTeamAction(data, me) : null);
+  function openTeam() {
+    appState.teamView = 'team';
+    go('team');
+  }
 
   async function enter() {
     if (busy) return;
@@ -140,6 +149,7 @@
           {/if}
           {#if presign}<p class="muted fs-sm" data-league-presign>{L.presignNote({ season: data.league.season, at: leagueWhen(data.league.startsAt) })}</p>{/if}
           {#if ready}<p class="fs-sm" class:muted={ready.ok} class:league-warn={!ready.ok} data-league-ready={ready.ok ? 'ok' : 'short'}>{ready.text}</p>{/if}
+          {#if teamAction}<button class="btn btn-sm league-team-btn" data-act="league-team" onclick={openTeam}>{teamAction}</button>{/if}
           {#if me.team && data.phase === 'open'}<p class="muted fs-sm" data-league-ovr>{L.myOvr({ ovr: me.team.ovr })}</p>{/if}
           {#if final}
             <div class="league-final" data-league-final={final.outcome}>
@@ -150,6 +160,11 @@
               <p class="muted fs-sm">{final.next}</p>
             </div>
           {:else if placement}<p class="fs-sm" class:league-warn={!placement.ok} data-league-placement={me.placement?.status}><b>{placement.text}</b></p>{/if}
+        {/if}
+        {#if linked && me && entryRules.length}
+          <ul class="league-entry-rules muted fs-sm" data-league-entry-rules>
+            {#each entryRules as rule (rule)}<li>{rule}</li>{/each}
+          </ul>
         {/if}
         <!-- 접수 중에는 위 한 줄에 신청 수가 있다. -->
         {#if data.phase !== 'soon' && data.phase !== 'open'}<p class="muted fs-sm" data-league-entries>{L.entries({ n: data.entries })}</p>{/if}
@@ -220,6 +235,17 @@
     justify-content: space-between;
     gap: 10px;
     flex-wrap: wrap;
+  }
+  .league-team-btn {
+    align-self: flex-start;
+  }
+  .league-entry-rules {
+    margin: 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    line-height: 1.5;
   }
   .league-final {
     display: flex;

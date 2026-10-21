@@ -1868,9 +1868,26 @@ test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없
   expect(teamPuts).toBe(0);
 
   await page.locator('[data-act="team-presets"]').click();
+  // T-11-431 덮어쓰기 · 삭제는 한 번 더 묻는다. 취소하면 아무것도 보내지 않는다.
+  await sheet.locator('[data-preset="1"] [data-act="preset-overwrite"]').click();
+  await expect(sheet.locator('[data-preset="1"] [data-preset-ask="overwrite"]')).toContainText(
+    '지금 편성으로 덮어쓸까요?',
+  );
+  await sheet.locator('[data-act="preset-ask-cancel"]').click();
+  await expect(sheet.locator('[data-preset-ask]')).toHaveCount(0);
   await sheet.locator('[data-preset="0"] [data-act="preset-delete"]').click();
+  await expect(sheet.locator('[data-preset="0"] [data-preset-ask="delete"]')).toContainText(
+    '삭제할까요?',
+  );
+  expect(puts.length).toBe(2);
+  await sheet.locator('[data-act="preset-ask-ok"]').click();
   await expect.poll(() => puts.length).toBe(3);
   expect(puts[2]!.presets.map((p) => p.name)).toEqual(['주말 리그']);
+  await expect(sheet.locator('[data-preset-ask]')).toHaveCount(0);
+  await sheet.locator('[data-preset="0"] [data-act="preset-overwrite"]').click();
+  await sheet.locator('[data-act="preset-ask-ok"]').click();
+  await expect.poll(() => puts.length).toBe(4);
+  expect(puts[3]!.presets.map((p) => p.name)).toEqual(['주말 리그']);
 });
 
 for (const width of [320, 390, 1280]) {

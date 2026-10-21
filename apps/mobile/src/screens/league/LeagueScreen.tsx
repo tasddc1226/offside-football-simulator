@@ -17,9 +17,11 @@ import {
 import { cupAppText as A } from '@offside/app-core/i18n/ko/cupApp';
 import { leagueText as L } from '@offside/app-core/i18n/ko/league';
 import {
+  leagueCancelled,
   leagueChoices,
   leagueDefaultPick,
   leagueDefaultRound,
+  leagueEntryRules,
   leagueFinalView,
   leagueLine,
   leagueOnHome,
@@ -30,13 +32,14 @@ import {
   leagueReadiness,
   leagueRules,
   leagueSchedule,
+  leagueTeamAction,
   leagueWhen,
 } from '@offside/app-core/leagueView';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { refreshAccount, toast } from '../../game/host';
 import { go } from '../../game/nav';
 import { startGoogleLogin } from '../../platform/auth';
-import { accountCache } from '../../store';
+import { accountCache, appState } from '../../store';
 import { Btn, Card, Pill, Press, Screen, Skeleton, Topbar, Txt, scrollTo } from '../../ui';
 import { GoogleLoginButton } from '../../ui/GoogleLoginButton';
 import { useOnPull } from '../../ui/refresh';
@@ -159,7 +162,14 @@ function EntryCard({
   if (!me) return null;
   const entry = me.entry;
   const ready = leagueReadiness(data, me);
-  const placement = leaguePlacementLine(me);
+  const placement = leaguePlacementLine(me, leagueCancelled(data));
+  // T-11-430 배치 전: 참가 자격 · 기권 규칙, 팀 선발 고치기(팀 편성 화면으로).
+  const rules = leagueEntryRules(data);
+  const teamAction = leagueTeamAction(data, me);
+  const openTeam = () => {
+    appState.teamView = 'team';
+    go('team');
+  };
   const final = leagueFinalView(me, league.season);
   const drawAt = leagueWhen(league.drawAt);
   return (
@@ -215,6 +225,20 @@ function EntryCard({
         <Txt v="sm" tone={ready.ok ? 'muted' : 'warn'} testID="league-ready">
           {ready.text}
         </Txt>
+      ) : null}
+      {teamAction ? (
+        <Btn sm testID="league-team" onPress={openTeam} style={{ alignSelf: 'flex-start' }}>
+          {teamAction}
+        </Btn>
+      ) : null}
+      {rules.length ? (
+        <View testID="league-entry-rules" style={{ gap: 4 }}>
+          {rules.map((r) => (
+            <Txt key={r} v="xs" tone="muted">
+              {r}
+            </Txt>
+          ))}
+        </View>
       ) : null}
       {me.team && phase === 'open' ? (
         <Txt v="xs" tone="muted">

@@ -158,6 +158,16 @@ export const cup: Translation<CupMsgs> = {
   lineupLocked: 'カップ戦のメンバーがロックされています。試合が終わるとまた変更できます。',
   lineupBand: (p) =>
     `${p.when}にカップのメンバーが締め切られます。締切から試合が終わるまで変更できません。`,
+  barOvrCap: (p) => `チームOVR ${p.ovr} / 上限 ${p.cap}（${p.division}）`,
+  barOvrNoCap: (p) => `チームOVR ${p.ovr} · ${p.division}（上限なし）`,
+  barFilled: (p) => `スタメン ${p.n}/最低 ${p.min}`,
+  barOverCapBlock: (p) =>
+    `${p.division}の上限${p.cap}を超えているため保存できません。チームOVRを${p.cap}以下にしてください。`,
+  barOverCapMove: (p) =>
+    `${p.division}の上限を超えています。このままだと抽選で上の部門に移ります。`,
+  barShortBlock: (p) =>
+    `カップ参加中は、スタメンに自分の選手を${p.min}人以上置かないと保存できません。`,
+  barShortEntry: (p) => `カップに申し込むには、スタメンに自分の選手が${p.min}人以上必要です。`,
   secMine: '自分の大会',
   secRules: 'ルール',
   secSchedule: '日程',

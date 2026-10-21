@@ -60,11 +60,21 @@ const ko = {
   myOvr: (p: { ovr: number }) => `지금 내 팀 OVR ${p.ovr}`,
   presignNote: (p: { season: number; at: string }) =>
     `시즌 ${p.season} 개막 전이라도 미리 신청할 수 있어요. 시즌 ${p.season} 팀은 ${p.at} 개막부터 만들 수 있어요.`,
-  readyOk: (p: { filled: number }) => `준비 완료 · 선발에 내 은퇴 선수 ${p.filled}명`,
+  readyOk: (p: { filled: number; min: number }) =>
+    `준비 완료 · 선발에 내 은퇴 선수 ${p.filled}명(자격 ${p.min}명)`,
   readyShort: (p: { filled: number; min: number }) =>
     `선발에 내 은퇴 선수가 ${p.filled}/${p.min}명이에요. 배치 전까지 ${p.min}명을 채워야 리그에 들어가요.`,
   readyNoTeam: (p: { season: number; min: number }) =>
     `아직 시즌 ${p.season} 팀이 없어요. 배치 전까지 팀을 만들고 선발에 내 은퇴 선수 ${p.min}명을 채워야 리그에 들어가요.`,
+  // T-11-430 신청 카드: 자격 · 기권 안내, 사전 신청 기간의 지금 시즌 팀 선발 수, 팀 선발 고치기.
+  readyPresign: (p: { season: number; next: number; filled: number; min: number }) =>
+    `지금 시즌 ${p.season} 팀 선발에 내 은퇴 선수가 ${p.filled}명이에요. 시즌 ${p.next} 팀은 개막 뒤에 만들고, 배치 전까지 선발에 ${p.min}명을 채워야 리그에 들어가요.`,
+  entryRuleEligible: (p: { season: number; min: number }) =>
+    `참가 자격: 배치 때 시즌 ${p.season} 팀 선발에 내 은퇴 선수가 ${p.min}명 있어야 해요. 모자라면 리그에서 빠져요.`,
+  entryRuleForfeit: (p: { min: number; limit: number }) =>
+    `기권: 경기 때 선발에 내 은퇴 선수가 ${p.min}명보다 적으면 0:3 패예요. ${p.limit}번 기권하면 남은 경기도 모두 0:3 패가 되고, 다음 시즌은 맨 아래 부에서 시작해요.`,
+  fixLineup: '팀 선발 고치기',
+  makeTeam: '팀 만들기',
   notEntered: '이번 시즌 리그에 신청하지 않았어요.',
   drawPending: '배치 · 대진은 발표 뒤 이 화면에 올라와요.',
   // T-11-418b 배치 뒤: 내 배치 · 리그 고르기 · 순위표 · 라운드 경기 · 경기 상세.
@@ -73,7 +83,13 @@ const ko = {
   leagueName: (p: { tier: number; league: number }) => `${p.tier}부 ${p.league}리그`,
   placedLine: (p: { tier: number; league: number; rank: number }) =>
     `${p.tier}부 ${p.league}리그 · 지금 ${p.rank}위`,
-  droppedLine: '배치 때 선발에 내 은퇴 선수가 모자라 이번 시즌 리그에 들어가지 못했어요.',
+  droppedLine: '이번 시즌 리그에 들어가지 못했어요. 다음 시즌에 다시 신청할 수 있어요.',
+  droppedShortLine:
+    '배치 때 선발에 내 은퇴 선수가 모자라 이번 시즌 리그에 들어가지 못했어요. 다음 시즌에 다시 신청할 수 있어요.',
+  droppedCapacityLine:
+    '자격은 갖췄지만 참가 팀 수에 맞춰 리그를 꾸리면서 빠졌어요. 다음 시즌에 다시 신청할 수 있어요.',
+  droppedCancelledLine:
+    '참가 팀이 모자라 이번 시즌 리그가 열리지 않았어요. 다음 시즌에 다시 신청할 수 있어요.',
   forfeitedLine: '기권이 3번 쌓여 남은 경기는 모두 0:3 패로 기록돼요.',
   // T-11-418e 결산.
   finalTitle: '시즌 결산',
@@ -97,7 +113,7 @@ const ko = {
   standingsTitle: '순위표',
   zoneUp: '승격권',
   zoneDown: '강등권',
-  forfeitsTag: (p: { n: number }) => `기권 ${p.n}`,
+  forfeitsTag: (p: { n: number; limit: number }) => `기권 ${p.n}/${p.limit}`,
   roundsTitle: '라운드',
   roundName: (p: { n: number }) => `${p.n}라운드`,
   restTeam: (p: { team: string }) => `쉬는 팀 · ${p.team}`,

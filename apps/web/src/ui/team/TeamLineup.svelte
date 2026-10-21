@@ -21,10 +21,12 @@
   import { dur } from '../motion.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
-  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, salary = null, budget, onassign, onauto, onsave, onlock, onpresets, focusSlot = $bindable(null) }:
+  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, saveBlock = null, salary = null, budget, onassign, onauto, onsave, onlock, onpresets, focusSlot = $bindable(null) }:
     { team: OwnerTeam | null; editable: boolean; formation: FormationId; layout: TeamPosition[] | null; slots: (string | null)[]; lines: Lines; synergy: Synergy; season: number;
       cells: { rating: number; name: string; youth: boolean; player?: TeamPlayer | undefined }[]; players: TeamPlayer[]; nameOf: (p: TeamPlayer) => string;
       teamName: string; managerName: string; teamLogo: TeamLogo | null; seasonName: string; filled: number; saving: boolean; nameOk: boolean; dirty: boolean;
+      /** T-11-436 컵 규칙에 걸려 서버가 거절할 이유(있으면 저장 버튼 옆에 보인다). */
+      saveBlock?: string | null;
       /** T-11-376 지난 시즌 선수 급여 막대(프리시즌은 null). */
       salary?: ReturnType<typeof salaryBar>; budget: number; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void; onlock?: ((p: TeamPlayer) => void) | undefined; onpresets?: (() => void) | undefined; focusSlot?: number | null } = $props();
   let shareData = $state<TeamShareData | null>(null);
@@ -262,7 +264,7 @@
           <button class="close-selection" aria-label={L.deselectAria} onclick={() => (selectedPlayer = null)}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" /></svg></button>
         </div>
       {/if}
-      {#if dirty || saving}<div class="lineup-save"><span class="fs-sm" role="status" data-team-save-reason>{teamNameIssues(teamName, managerName).name || teamNameIssues(teamName, managerName).manager || L.saveNote}</span><button class="btn btn-primary" onclick={onsave} disabled={saving || !nameOk} data-act="team-save">{saving ? L.saving : team ? L.saveChangesWeb : L.createTeam}</button></div>{/if}
+      {#if dirty || saving}<div class="lineup-save"><span class="fs-sm" role="status" data-team-save-reason>{teamNameIssues(teamName, managerName).name || teamNameIssues(teamName, managerName).manager || saveBlock || L.saveNote}</span><button class="btn btn-primary" onclick={onsave} disabled={saving || !nameOk} data-act="team-save">{saving ? L.saving : team ? L.saveChangesWeb : L.createTeam}</button></div>{/if}
     </div>
   {/if}
 {/if}

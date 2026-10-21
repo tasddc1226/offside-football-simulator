@@ -113,11 +113,16 @@ export const CUP_KO = {
   leaguePlacedTitle: '시즌 {season} 오프사이드 리그 배치 결과',
   leaguePlacedBody: '{team}은(는) {tier}부 {league}리그예요. 1라운드는 오늘 {time}에 열려요.',
   leagueDroppedTitle: '시즌 {season} 오프사이드 리그 참가가 취소됐어요',
-  leagueDroppedBody: '배치 시각에 시즌 {season} 팀 선발 선수가 {n}명보다 적었어요.',
-  leagueLeftBody: '참가 팀 수가 리그를 꾸리기에 맞지 않아 OVR이 낮은 팀부터 {n}팀이 빠졌어요.',
+  leagueDroppedBody:
+    '배치 시각에 시즌 {season} 팀 선발 선수가 {n}명보다 적었어요. 다음 시즌에 다시 신청할 수 있어요.',
+  leagueLeftBody:
+    '참가 팀 수가 리그를 꾸리기에 맞지 않아 OVR이 낮은 팀부터 {n}팀이 빠졌어요. 다음 시즌에 다시 신청할 수 있어요.',
   leagueCancelledTitle: '시즌 {season} 오프사이드 리그가 열리지 않아요',
   leagueRoundTitle: '오프사이드 리그 {round}라운드 · {result}',
   leagueRoundBody: '{score} · 지금 {rank}위예요',
+  // T-11-430 1 · 2번째 기권패(3번째는 leagueForfeitedBody가 따로 간다).
+  leagueRoundForfeitBody:
+    '{score} · 선발 선수가 모자라 기권패했어요. 기권 {n}/{limit}번, {left}번 더 기권하면 남은 경기는 모두 0:3 패예요.',
   leagueRest: '휴식',
   leagueRestBody: '이번 라운드는 쉬었어요 · 지금 {rank}위예요',
   leagueEndTitle: '시즌 {season} 오프사이드 리그를 마쳤어요',

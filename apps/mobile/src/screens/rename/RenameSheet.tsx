@@ -118,7 +118,7 @@ export function RenameSheet({
               <Txt v="sm" tone="muted">
                 {L.noneApp}
               </Txt>
-              <IapPacks item="rename" />
+              <IapPacks item="rename" login={false} />
             </>
           ) : null}
           {message ? (

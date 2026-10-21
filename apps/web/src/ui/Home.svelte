@@ -25,6 +25,7 @@
   import { adLanded } from './adLanding.js';
   import { homeText as L } from '@offside/app-core/i18n/ko/home';
   import FirstGuide from './FirstGuide.svelte';
+  import { homeOrder, NO_HOME_TODO, type HomeTodo } from '@offside/app-core/homeOrder';
 
   const firstHome = !homeShown.seen;
   homeShown.seen = true;
@@ -32,6 +33,12 @@
   // T-11-233 안드로이드 비공개 테스터 모집(T-11-016)은 하루 한 번 뜨는 앱 안내 카드와 별개로 타일에 늘 둔다.
   // 아이폰은 App Store 안내만, 광고로 온 방문(대부분 해외)에는 보이지 않는다(T-11-195).
   const tester = appTarget() !== 'ios' && !adLanded();
+  // T-11-435 받을 선물 · 오늘 출석. 선물 · 출석 블록이 부르는 것과 같은 메모 조회라 새 요청이 없다(불러오기는 첫 화면 번들 밖).
+  let todo = $state<HomeTodo>(NO_HOME_TODO);
+  const order = $derived(homeOrder(todo));
+  $effect(() => {
+    void import('@offside/app-core/homeTodo').then(({ loadHomeTodo }) => loadHomeTodo()).then((t) => (todo = t));
+  });
 </script>
 
 <div class="wrap">
@@ -70,34 +77,47 @@
       <button class="btn btn-accent btn-block" data-act="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>{L.kickoffBtn}</button>
     </section>
   {/if}
-  {#if live && appState.G && appState.ownerConflict}
-    <section class="card owner-conflict" data-owner-conflict>
-      <b>{L.conflictTitle}</b>
-      <p class="muted">{L.conflictBody({ name: appState.G.name })}</p>
-      <div class="row" style="gap:8px;flex-wrap:wrap">
-        <button class="btn btn-accent" data-act="adopt-career" onclick={adoptCareer}>{L.conflictAdopt}</button>
-        <button class="icon-btn" data-act="keep-on-device" onclick={keepOnDevice}>{L.conflictKeep}</button>
-      </div>
-    </section>
-  {/if}
-  <!-- T-11-338 진행 중인 감독 커리어 이어 하기(기기 세이브가 있을 때만). 첫 화면 번들 밖 지연 청크. -->
-  {#await import('./ManagerResume.svelte') then { default: ManagerResume }}<ManagerResume />{/await}
-  <!-- 시즌 진행 게이지: 유저들이 끝까지 뛴 커리어로 시즌이 차고, 90%면 마감 카운트다운. -->
-  <!-- 시즌 진행 게이지는 첫 화면 번들 밖(지연 청크). -->
-  {#await import('./SeasonGauge.svelte') then { default: SeasonGauge }}<SeasonGauge />{/await}
-  <!-- T-11-145 오프사이드 컵 소식은 모두가 먼저 보는 홈에서(신청은 대회 화면). 트로피 그림까지 끌고 와서 첫 화면 번들 밖 지연 청크로. -->
-  {#await import('./cup/CupBanner.svelte') then { default: CupBanner }}<CupBanner onopen={() => go('cup')} />{/await}
-  <!-- T-11-418 오프사이드 리그 소식(신청은 리그 화면). 첫 화면 번들 밖 지연 청크. -->
-  {#await import('./league/LeagueBanner.svelte') then { default: LeagueBanner }}<LeagueBanner onopen={() => go('league')} />{/await}
+  <!-- T-11-435 히어로 아래 블록 순서는 app-core homeOrder 한 곳에서 정한다(앱과 같다). 받을 선물 · 오늘 출석이 있으면 그 블록이
+       히어로 바로 아래로 올라온다. 키 있는 each라 순서가 바뀌어도 블록을 다시 만들지 않고 옮기기만 한다. -->
+  {#each order as block (block)}
+    {#if block === 'ownerConflict'}
+      {#if live && appState.G && appState.ownerConflict}
+        <section class="card owner-conflict" data-owner-conflict>
+          <b>{L.conflictTitle}</b>
+          <p class="muted">{L.conflictBody({ name: appState.G.name })}</p>
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            <button class="btn btn-accent" data-act="adopt-career" onclick={adoptCareer}>{L.conflictAdopt}</button>
+            <button class="icon-btn" data-act="keep-on-device" onclick={keepOnDevice}>{L.conflictKeep}</button>
+          </div>
+        </section>
+      {/if}
+    {:else if block === 'managerResume'}
+      <!-- T-11-338 진행 중인 감독 커리어 이어 하기(기기 세이브가 있을 때만). 첫 화면 번들 밖 지연 청크. -->
+      {#await import('./ManagerResume.svelte') then { default: ManagerResume }}<ManagerResume />{/await}
+    {:else if block === 'seasonGauge'}
+      <!-- 시즌 진행 게이지: 유저들이 끝까지 뛴 커리어로 시즌이 차고, 90%면 마감 카운트다운. 첫 화면 번들 밖(지연 청크). -->
+      {#await import('./SeasonGauge.svelte') then { default: SeasonGauge }}<SeasonGauge />{/await}
+    {:else if block === 'cup'}
+      <!-- T-11-145 오프사이드 컵 소식은 모두가 먼저 보는 홈에서(신청은 대회 화면). 트로피 그림까지 끌고 와서 첫 화면 번들 밖 지연 청크로. -->
+      {#await import('./cup/CupBanner.svelte') then { default: CupBanner }}<CupBanner onopen={() => go('cup')} />{/await}
+    {:else if block === 'league'}
+      <!-- T-11-418 오프사이드 리그 소식(신청은 리그 화면). 첫 화면 번들 밖 지연 청크. -->
+      {#await import('./league/LeagueBanner.svelte') then { default: LeagueBanner }}<LeagueBanner onopen={() => go('league')} />{/await}
+    {:else if block === 'gift'}
+      <!-- T-11-275 구단주 선물(로그인한 구단주가 한 번 받으면 사라진다). 첫 화면 번들 밖 지연 청크. -->
+      {#await import('./HomeGift.svelte') then { default: HomeGift }}<HomeGift />{/await}
+    {:else if block === 'attendance'}
+      <!-- T-11-360 출석 체크 한 줄 입구 + 하루 한 번 뜨는 출석 창(보상은 로그인한 구단주만). 첫 화면 번들 밖 지연 청크. -->
+      {#await import('./HomeAttendance.svelte')}<div class="card" style="min-height:52px;box-sizing:border-box" aria-hidden="true"></div>{:then { default: HomeAttendance }}<HomeAttendance auto={firstHome} />{/await}
+    {:else if block === 'firstGuide'}
+      <!-- T-11-355 처음 안내 카드(기기마다 닫을 때까지). 늦게 그리면 아래 홈 전체가 밀려서(CLS) 첫 화면 번들에 둔다. -->
+      <FirstGuide />
+    {:else if block === 'live'}
+      <HomeLive />
+    {/if}
+  {/each}
   <!-- T-11-290 오프사이드 컵 우승 팝업 — 웹을 열어 홈에 왔을 때 한 번(결승 뒤 일주일, 기기마다 '다시 보지 않기'). 배너와 같은 응답. -->
   {#await import('./cup/CupChampionPopup.svelte') then { default: CupChampionPopup }}<CupChampionPopup />{/await}
-  <!-- T-11-275 구단주 선물(로그인한 구단주가 한 번 받으면 사라진다). 컵 배너 바로 아래, 첫 화면 번들 밖 지연 청크. -->
-  {#await import('./HomeGift.svelte') then { default: HomeGift }}<HomeGift />{/await}
-  <!-- T-11-360 출석 체크 한 줄 입구 + 하루 한 번 뜨는 출석 창(보상은 로그인한 구단주만). 선물 아래, 첫 화면 번들 밖 지연 청크. -->
-  {#await import('./HomeAttendance.svelte')}<div class="card" style="min-height:52px;box-sizing:border-box" aria-hidden="true"></div>{:then { default: HomeAttendance }}<HomeAttendance auto={firstHome} />{/await}
-  <!-- T-11-355 처음 안내 카드(기기마다 닫을 때까지). 늦게 그리면 아래 홈 전체가 밀려서(CLS) 첫 화면 번들에 둔다. -->
-  <FirstGuide />
-  <HomeLive />
   <div class="tiles">
     <!-- T-11-080f 구단주 화면을 거치지 않고 이적시장으로 바로 간다(뒤로 가기는 홈으로). 홈에서는 서버를 부르지 않는다. -->
     <button class="tile tile-link tile-wide" data-act="home-market" onclick={() => go('market')}>

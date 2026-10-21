@@ -163,6 +163,17 @@ export const cup: Translation<CupMsgs> = {
   lineupLocked: 'Your lineup is locked for the cup match. You can change it again after the match.',
   lineupBand: (p) =>
     `Your cup lineup locks ${p.when}. From then until the match ends, you can't change it.`,
+  barOvrCap: (p) => `Team OVR ${p.ovr} / cap ${p.cap} (${p.division})`,
+  barOvrNoCap: (p) => `Team OVR ${p.ovr} · ${p.division} (no cap)`,
+  barFilled: (p) => `Starters ${p.n}/min ${p.min}`,
+  barOverCapBlock: (p) =>
+    `Your team is over the ${p.division} cap of ${p.cap}, so you can't save. Bring team OVR down to ${p.cap} or lower.`,
+  barOverCapMove: (p) =>
+    `Your team is over the ${p.division} cap. If it stays this way, you'll move up a division at the draw.`,
+  barShortBlock: (p) =>
+    `While you're in the cup, you need at least ${p.min} of your own players in the starting lineup to save.`,
+  barShortEntry: (p) =>
+    `To enter the cup, you need at least ${p.min} of your own players in the starting lineup.`,
   secMine: 'My cup',
   secRules: 'Rules',
   secSchedule: 'Schedule',

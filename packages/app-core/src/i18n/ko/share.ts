@@ -16,6 +16,21 @@ const ko = {
   linkText: '내 선수의 축구 인생. 오프사이드 offside-lab.com',
   notUploaded: '기록을 아직 서버에 올리지 못했어요. 잠시 후 다시 시도해 주세요.',
   noConnection: '서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.',
+  // T-11-433 서버 반영 상태(공유 바 위 한 줄, outboxStore.retirementUploadStatus)
+  uploadPending: '서버 반영 대기 중이에요.',
+  uploadSending: '기록을 서버에 올리는 중…',
+  uploadRejected: (p: { reason: string }) => `서버에 올리지 못했어요. ${p.reason}`,
+  uploadRetry: '다시 올리기',
+  uploadDone: '기록을 서버에 올렸어요.',
+  uploadStill: '아직 서버에 닿지 않았어요. 연결되면 다시 올려요.',
+  rejectedLink: (p: { reason: string }) =>
+    `서버에 올리지 못한 기록이라 링크를 만들 수 없어요. ${p.reason}`,
+  rejectNoSeasons: '시즌 기록이 서버에 없어서 은퇴 기록을 받지 않았어요.',
+  rejectName: '공개할 수 없는 이름이에요. 이름 공개를 끄면 다시 올려요.',
+  rejectTooLarge: '기록이 너무 커서 서버가 받지 않았어요.',
+  rejectOwner: '다른 계정에 있는 커리어라 이 계정으로 올리지 못했어요.',
+  rejectInvalid: '기록 형식이 맞지 않아 서버가 받지 않았어요.',
+  rejectUnknown: '서버가 이 기록을 받지 않았어요.',
   // 공유받은 커리어
   loading: '기록을 불러오는 중…',
   missingTitle: '기록을 찾을 수 없어요',

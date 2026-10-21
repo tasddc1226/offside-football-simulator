@@ -313,8 +313,61 @@ test('자금이 모자라면 영입 버튼이 잠기고, 이미 팔린 선수는
 
   await page.locator(`[data-listing="${LISTING.slice(0, -1)}2"]`).click();
   await page.locator('[data-act="buy"]').click();
-  await expect(page.getByRole('alert')).toHaveText('이미 팔렸거나 내린 선수예요.');
+  // T-11-434 팔렸거나 내린 매물이면 시트를 닫고 토스트로 알린다.
+  await expect(page.locator('#toast')).toHaveText('이미 팔렸거나 내려간 선수예요.');
+  await expect(page.getByRole('dialog', { name: '선수 영입' })).toHaveCount(0);
   await expect.poll(() => listCalls).toBe(2);
+});
+
+test('가격이 바뀐 매물은 영입 시트를 새 가격으로 바꾸고 새 가격으로만 다시 보낸다(T-11-434)', async ({
+  page,
+}) => {
+  await stub(page);
+  let price = 120_000;
+  const sent: number[] = [];
+  await page.route(`${API}/v1/market/me`, (r) => r.fulfill(me(1_000_000)));
+  await page.route(
+    (u) => u.href.startsWith(API) && u.pathname === '/v1/market',
+    (r) =>
+      r.fulfill(ok({ season: 0, items: [{ ...listing, price }], hasMore: false, rules: RULES })),
+  );
+  await page.route(`${API}/v1/market/listings/**`, (r) => {
+    const body = r.request().postDataJSON() as { price: number };
+    sent.push(body.price);
+    // 화면이 시트를 연 뒤 판매자가 가격을 올렸다.
+    if (body.price !== 150_000) {
+      price = 150_000;
+      return r.fulfill({
+        status: 409,
+        json: {
+          error: {
+            code: 'CONFLICT',
+            message: '판매가가 바뀌었어요. 다시 확인해 주세요.',
+            retryable: false,
+            details: { reason: 'PRICE_CHANGED' },
+          },
+          meta: { requestId: 'req_e2e' },
+        },
+      });
+    }
+    return r.fulfill(ok({ balance: 850_000 }));
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="market"]').click();
+  await page.locator(`[data-listing="${LISTING}"]`).click();
+  const sheet = page.getByRole('dialog', { name: '선수 영입' });
+  await expect(page.locator('[data-act="buy"]')).toHaveText('12억에 영입하기');
+  await page.locator('[data-act="buy"]').click();
+
+  await expect(sheet.getByRole('alert')).toHaveText(
+    '가격이 15억으로 바뀌었어요. 다시 확인해 주세요.',
+  );
+  await expect(page.locator('[data-act="buy"]')).toHaveText('15억에 영입하기');
+  await expect(sheet).toContainText('85억');
+  await page.locator('[data-act="buy"]').click();
+  await expect(page.locator('#toast')).toHaveText('선수를 영입했어요.');
+  expect(sent).toEqual([120_000, 150_000]);
 });
 
 test('팔기 — 이번 시즌 선수를 슬라이더로 값을 정해 내놓고, 자금 만들기에서 직접 키운 선수만 방출한다', async ({

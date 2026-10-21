@@ -15,7 +15,7 @@ import {
 import { accountCache, appState } from '../../store';
 import { noteOwner } from '@offside/app-core/api/friendPending';
 import { accountLabel, isMember } from '@offside/app-core/account';
-import { closeSheet, refreshAccount, showSheet } from '../../game/host';
+import { closeSheet, refreshAccount, showSheet, toast } from '../../game/host';
 import { appleReauthCode } from '../../platform/auth';
 import { setSessionToken } from '../../platform/session';
 import { rem } from '../../theme/type';
@@ -36,9 +36,29 @@ async function load(silent = false) {
 }
 
 async function doUnlink() {
+  closeSheet();
   const r = await unlinkGoogle();
   if (r.ok) await load();
-  else set('error');
+  // T-11-431 해제 실패는 연결 오류 카드로 덮지 않는다. 계정 카드는 그대로 두고 해제 실패만 알린다.
+  else toast(L.unlinkFail);
+}
+/** T-11-431 연동 해제는 로그인 수단을 없애므로 한 번 더 묻는다(로그아웃 확인과 같은 시트). */
+function askUnlink() {
+  const p = accountCache.value;
+  const apple = !!p && p !== 'error' && p.linked.apple;
+  showSheet(
+    {
+      kind: 'notice',
+      eyebrow: 'Account',
+      title: L.unlinkTitle,
+      muted: true,
+      text: apple ? L.unlinkBodyApple : L.unlinkBodyOnly,
+    },
+    [
+      { label: L.unlinkConfirm, cls: 'btn-primary', fn: () => void doUnlink() },
+      { label: L.cancel, fn: closeSheet },
+    ],
+  );
 }
 async function doLogout() {
   closeSheet();
@@ -156,7 +176,7 @@ export function Account() {
       <Row gap={6} wrap={false} style={{ justifyContent: 'flex-end' }}>
         {profile.linked.google ? (
           <>
-            <LinkBtn onPress={() => void doUnlink()} testID="account-unlink">
+            <LinkBtn onPress={askUnlink} testID="account-unlink">
               {L.unlinkGoogle}
             </LinkBtn>
             <Txt tone="muted" accessible={false} style={{ fontSize: rem(FONT.caption) }}>

@@ -281,6 +281,8 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   tpOverwrite: 'Overwrite',
   tpRename: 'Rename',
   tpDelete: 'Delete',
+  tpOverwriteAsk: 'Overwrite with your current lineup?',
+  tpDeleteAsk: 'Delete this preset?',
   tpNameLabel: 'Preset name',
   tpNameDone: 'Done',
   tpSaved: 'Preset saved.',
