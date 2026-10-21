@@ -3,6 +3,7 @@
   // '앱에서 살 수 있어요', 확률 공개표만 보인다. 장수는 강화권 상점과 같은 30초 메모를 쓴다. T-11-244 구단 자금으로 한 주 1장.
   import { fetchItems } from '@offside/app-core/api/cup';
   import { scoutText as L } from '@offside/app-core/i18n/ko/scout';
+  import { scoutPityAt } from '@offside/contracts/cup';
   import ScoutOdds from './ScoutOdds.svelte';
   import ScoutFunds from './ScoutFunds.svelte';
 
@@ -17,7 +18,7 @@
   <h2>{L.title}</h2>
   <span class="muted fs-sm" data-scout-sub>{have ? L.shopSubHave({ n: have }) : L.shopSub}</span>
   <p class="muted fs-sm">{L.what}</p>
-  <p class="muted fs-sm">{L.pityHelp}</p>
+  <p class="muted fs-sm">{L.pityHelp(scoutPityAt())}</p>
   <p class="muted fs-sm">{L.shopWeb}</p>
   <ScoutFunds onbought={(n, balance, spent) => ((have = n), onbought?.(balance, spent))} />
   <ScoutOdds />

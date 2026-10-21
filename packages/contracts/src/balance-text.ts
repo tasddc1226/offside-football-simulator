@@ -95,6 +95,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '스카우트 평가 오차',
     desc: '화면에 보이는 스카우트 평가가 실제 잠재력에서 벗어나는 표준편차 — 0이면 평가가 정확하다',
   },
+  premiumSMult: {
+    group: 'growth',
+    label: '프리미엄 스카우트 S 배수',
+    desc: '프리미엄 스카우트권 후보 한 명이 S일 확률을 일반 후보의 몇 배로 할지. 확률 공개표도 이 값으로 계산한다',
+  },
   injuryRate: {
     group: 'growth',
     label: '경기당 부상 확률',
@@ -183,7 +188,12 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
   pastSalaryBudget: {
     group: 'team',
     label: '지난 시즌 선수 급여 예산',
-    desc: '구단 팀 선발에 넣은 지난 시즌 선수 급여(최고 OVR로 1~20) 합의 상한. 이번 시즌 선수는 급여가 없다',
+    desc: '시즌 1 기준 구단 팀 선발에 넣은 지난 시즌 선수 급여(최고 OVR로 1~20) 합의 상한. 이번 시즌 선수는 급여가 없다',
+  },
+  pastSalaryBudgetStep: {
+    group: 'team',
+    label: '시즌당 급여 예산 증가',
+    desc: '팀 시즌이 하나 지날 때마다 급여 예산에 더하는 값. 시즌 n 예산 = 기준 예산 + 이 값 × (n - 1)',
   },
   leagueHomeAdv: {
     group: 'team',

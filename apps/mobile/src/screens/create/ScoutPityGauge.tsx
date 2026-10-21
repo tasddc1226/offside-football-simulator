@@ -1,7 +1,7 @@
 // T-11-415 프리미엄 스카우트 천장 막대(웹 ui/ScoutPityGauge.svelte). S 확정 · 특급 S 두 칸에 쌓인 장수를 보인다.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { scoutText as L } from '@offside/app-core/i18n/ko/scout';
-import { scoutPityGauge, scoutPityView, type ScoutPity } from '@offside/contracts/cup';
+import { scoutPityAt, scoutPityGauge, scoutPityView, type ScoutPity } from '@offside/contracts/cup';
 import { View } from 'react-native';
 import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
@@ -58,7 +58,7 @@ export function ScoutPityGauge({ pity, empty }: { pity: ScoutPity; empty?: boole
         </View>
       ))}
       <Txt tone="muted" style={small}>
-        {L.pityHelp}
+        {L.pityHelp(scoutPityAt())}
       </Txt>
       {empty ? (
         <Txt tone="muted" style={small} testID="scout-pity-keep">

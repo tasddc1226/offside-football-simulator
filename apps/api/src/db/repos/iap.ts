@@ -2,8 +2,8 @@ import {
   HOME_GIFT,
   OWNER_ITEMS,
   REROLL_MILEAGE,
-  SCOUT_PITY_ELITE,
-  SCOUT_PITY_SURE,
+  scoutPityAt,
+  type ScoutPityCap,
   type IapStore,
   type OwnerItem,
   type ScoutMode,
@@ -51,9 +51,11 @@ const foldItems = (rows: readonly { item: string; qty: number }[]): Items => {
  * 값을 읽는다. pity = 기기가 천장을 아는지(옛 앱은 확정 모드를 받지 못하니 장수만 센다), hit = 기기가 뽑은 일반 후보에
  * S가 있었는지. 규칙은 contracts scoutPityView와 같다.
  */
-const ELITE_DUE = `?2 = 1 AND (used + 1) / ${SCOUT_PITY_ELITE} > elites`;
-const SURE_DUE = `?2 = 1 AND streak >= ${SCOUT_PITY_SURE - 1}`;
-const PITY_SQL = `INSERT INTO scout_pity (profile_id, used, streak, elites, mode, updated_at)
+// T-11-450 천장 장수는 시즌마다 다르다(scoutPityOf). 정수 두 개만 SQL에 넣는다.
+const pitySql = (cap: ScoutPityCap) => {
+  const ELITE_DUE = `?2 = 1 AND (used + 1) / ${Math.trunc(cap.elite)} > elites`;
+  const SURE_DUE = `?2 = 1 AND streak >= ${Math.trunc(cap.sure) - 1}`;
+  return `INSERT INTO scout_pity (profile_id, used, streak, elites, mode, updated_at)
   SELECT ?1, 1, CASE WHEN ?2 = 1 AND ?3 = 1 THEN 0 ELSE 1 END, 0, 'normal', ?4
   WHERE EXISTS (SELECT 1 FROM owner_items WHERE profile_id = ?1 AND item = 'scout' AND updated_at = ?4)
   ON CONFLICT (profile_id) DO UPDATE SET
@@ -63,6 +65,7 @@ const PITY_SQL = `INSERT INTO scout_pity (profile_id, used, streak, elites, mode
     used = used + 1,
     updated_at = excluded.updated_at
   RETURNING mode`;
+};
 
 /**
  * T-11-248 리롤권 한 장의 마일리지를 센다(장수를 뺀 같은 batch, 차감이 됐을 때만). progress가 REROLL_MILEAGE에 닿으면
@@ -111,7 +114,11 @@ export async function spendItem(
       )
       .bind(now, profileId, item),
     ...(item === 'scout'
-      ? [d1.prepare(PITY_SQL).bind(profileId, scout.pity ? 1 : 0, scout.hit ? 1 : 0, now)]
+      ? [
+          d1
+            .prepare(pitySql(scoutPityAt(now)))
+            .bind(profileId, scout.pity ? 1 : 0, scout.hit ? 1 : 0, now),
+        ]
       : []),
     ...(item === 'reroll'
       ? [
