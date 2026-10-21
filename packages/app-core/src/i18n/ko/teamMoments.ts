@@ -10,6 +10,9 @@ const ko = {
   crisisTitle: '실점 위기',
   ask: '어떻게 할까요?',
   timer: (p: { s: number }) => `${p.s}초 안에 고르지 않으면 감독에게 맡겨요`,
+  /** T-11-443 스크린리더는 처음과 마지막 몇 초만 읽는다. */
+  timerLast: (p: { s: number }) => `${p.s}초 남았어요`,
+  skipToManager: '감독에게 맡기고 결과 보기',
   pct: (p: { p: number }) => `${p.p}%`,
   chancePct: '골 확률',
   crisisPct: '막을 확률',

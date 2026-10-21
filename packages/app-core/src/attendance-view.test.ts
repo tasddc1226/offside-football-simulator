@@ -4,6 +4,7 @@ import {
   attendanceBoard,
   attendancePopupDue,
   boardTotal,
+  ITEM_MARK,
   markAttendancePopup,
   rewardText,
 } from './attendance-view';
@@ -27,6 +28,18 @@ describe('T-11-360 출석 카드', () => {
     expect(cells[3]).toMatchObject({ n: 4, item: 'boost', qty: 1, big: false });
     expect(cells[13]).toMatchObject({ n: 14, item: 'scout', qty: 1, big: true });
     expect(cells[27]).toMatchObject({ n: 28, item: 'scout', qty: 2, big: true });
+  });
+
+  it('T-11-440 칸마다 모양 기호가 다른 아이템과 그날 보상 전체 글을 함께 준다(색에만 기대지 않는다)', () => {
+    const { cells } = attendanceBoard(0, false);
+    expect(new Set(Object.values(ITEM_MARK)).size).toBe(3);
+    for (const cell of cells) {
+      expect(ITEM_MARK[cell.item]).toBeTruthy();
+      expect(cell.reward).toContain(`${cell.qty}장`);
+    }
+    // 큰 보상 칸(28일째)은 칸에 그린 대표 아이템 밖의 보상도 글에 남는다.
+    expect(cells[27]!.reward).toContain('프리미엄 스카우트권 2장');
+    expect(cells[27]!.reward.split(', ').length).toBeGreaterThan(1);
   });
 
   it('출석 전이면 오늘 보상, 출석했으면 내일 보상', () => {

@@ -836,6 +836,9 @@ export default function Team() {
                     {nameIssues.manager}
                   </Txt>
                 ) : null}
+                <Txt v="sm" tone="muted" testID="team-manager-note">
+                  {L.managerNameNote}
+                </Txt>
               </Field>
             </View>
           ) : null}

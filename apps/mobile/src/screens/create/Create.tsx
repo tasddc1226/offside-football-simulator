@@ -13,7 +13,6 @@ import {
   TRAITS,
   ATTR_KEYS,
   FOCUS_PICK,
-  FOCUS_GROWTH,
   attrLabels,
   defaultFocus,
   focusMod,
@@ -28,6 +27,7 @@ import { BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
 import { isKorean, nationOf } from '@offside/game/nation';
 import {
   bodyNote,
+  focusNote,
   hiddenStrength,
   scoutLine,
   startOvr,
@@ -106,7 +106,6 @@ const NO_PITY: ScoutPity = { used: 0, streak: 0, elites: 0 };
 
 const posKeys = Object.keys(POS) as Pos[];
 const feet = ['오른발', '왼발', '양발'] as const; // 저장값(화면에는 L.foot으로)
-const growthPct = Math.round((FOCUS_GROWTH - 1) * 100);
 
 // ── 입력을 원본 상태(appState.C)에 쓰는 동작들 ──
 // 세부 포지션을 바꾸면 주력 능력치도 그 포지션의 기본값으로 다시 켠다.
@@ -307,6 +306,8 @@ export default function Create() {
   const [pity, setPity] = useState<ScoutPity>(NO_PITY);
   const scoutPlan = useRef<{ seed: number; hit: boolean } | null>(null);
   const premium = !!s.candidates?.some((x) => x.guaranteed);
+  // T-11-437 쓸 도구(리롤권 · 스카우트권 · 천장 기록)가 없으면 상점 안내 · 능력치 설명을 '더 보기'로 접는다.
+  const quiet = rerolls < 1 && scouts < 1 && pity.used < 1;
   useEffect(() => {
     if (!hasCandidates) return;
     let live = true;
@@ -791,9 +792,6 @@ export default function Create() {
               </Field>
             ) : null}
 
-            <Txt v="sm" tone="muted" testID="candidate-stats-note">
-              {CG.candidateNote}
-            </Txt>
             {ovrGuide}
             {/* T-11-234 유형별 주력 능력치를 생성 중에도 본다(시즌 탭과 같은 안내). */}
             <PositionGuide pos={C.pos} />
@@ -829,11 +827,7 @@ export default function Create() {
                             d > 0 && { fontWeight: '600' },
                           ]}
                         >
-                          {on
-                            ? L.focusUp({ d, pct: growthPct })
-                            : d < 0
-                              ? L.focusDown({ d })
-                              : L.focusNone}
+                          {focusNote(on, d)}
                         </Txt>
                       </Opt>
                     </SegCell>
@@ -895,6 +889,10 @@ export default function Create() {
                 </Btn>
               ) : null}
             </View>
+            {/* T-11-437 카드의 OVR이 확정값처럼 보이지 않게 소개 바로 아래에 둔다(웹과 같은 자리). */}
+            <Txt v="sm" tone="muted" testID="candidate-stats-note">
+              {CG.candidateNote}
+            </Txt>
             <View style={{ gap: 10 }}>
               {s.candidates.map((cand, i) => {
                 const isOpen = s.candidatesOpen[i];
@@ -1200,8 +1198,8 @@ export default function Create() {
                 </Btn>
               </View>
             ) : null}
-            {/* T-11-355 상품 위치 안내(설정과 같은 카드, 기기마다 닫을 때까지) */}
-            <ItemsHint />
+            {/* T-11-355 상품 위치 안내(설정과 같은 카드, 기기마다 닫을 때까지). T-11-437 쓸 도구가 없으면 아래 '더 보기'로 접는다. */}
+            {quiet ? null : <ItemsHint />}
             {/* T-11-221 광고 두 개(다시 뽑기 · 잠재력 보기)는 후보 카드 아래 반폭 톤 버튼 한 줄로. 전에는 카드 위에 전폭으로 쌓여
                 첫 화면에 후보가 보이지 않았다. 접근성 이름은 전체 문구. */}
             {(offer && adLeft > 0) || (offer && !s.candidatePotentialOpen) ? (
@@ -1274,27 +1272,52 @@ export default function Create() {
                 </Txt>
               ) : null}
             </View>
-            {/* T-11-221 OVR 주요 능력치 설명은 펼침 행으로 접어 둔다. */}
-            <Card gap={0} style={{ paddingVertical: 0 }}>
-              <DisclosureRow
-                border={false}
-                open={guideOpen}
-                onToggle={() => setGuideOpen(!guideOpen)}
-                label={ovrFocus.title}
-                testID="ovr-guide-toggle"
-              />
-              {guideOpen ? (
-                <View style={{ paddingBottom: 14, gap: 8 }}>
-                  {ovrGuideBody(false)}
-                  <Txt v="sm" tone="muted">
-                    {L.ovrCore}
-                  </Txt>
-                </View>
-              ) : null}
-            </Card>
-            <Card gap={0} style={{ paddingVertical: 0 }}>
-              <PositionGuide pos={C.pos} />
-            </Card>
+            {quiet ? (
+              // T-11-437 쓸 도구(리롤권 · 스카우트권 · 천장 기록)가 없으면 상점 위치 · 능력치 설명을 한 번에 접어 둔다.
+              <Card gap={0} style={{ paddingVertical: 0 }}>
+                <DisclosureRow
+                  border={false}
+                  open={guideOpen}
+                  onToggle={() => setGuideOpen(!guideOpen)}
+                  label={L.moreTools}
+                  testID="more-tools-toggle"
+                />
+                {guideOpen ? (
+                  <View style={{ paddingBottom: 14, gap: 8 }}>
+                    <ItemsHint />
+                    {ovrGuideBody(true)}
+                    <Txt v="sm" tone="muted">
+                      {L.ovrCore}
+                    </Txt>
+                    <PositionGuide pos={C.pos} />
+                  </View>
+                ) : null}
+              </Card>
+            ) : (
+              <>
+                {/* T-11-221 OVR 주요 능력치 설명은 펼침 행으로 접어 둔다. */}
+                <Card gap={0} style={{ paddingVertical: 0 }}>
+                  <DisclosureRow
+                    border={false}
+                    open={guideOpen}
+                    onToggle={() => setGuideOpen(!guideOpen)}
+                    label={ovrFocus.title}
+                    testID="ovr-guide-toggle"
+                  />
+                  {guideOpen ? (
+                    <View style={{ paddingBottom: 14, gap: 8 }}>
+                      {ovrGuideBody(false)}
+                      <Txt v="sm" tone="muted">
+                        {L.ovrCore}
+                      </Txt>
+                    </View>
+                  ) : null}
+                </Card>
+                <Card gap={0} style={{ paddingVertical: 0 }}>
+                  <PositionGuide pos={C.pos} />
+                </Card>
+              </>
+            )}
           </>
         ) : null}
       </ScrollView>

@@ -2,6 +2,7 @@
 // 결과는 서버가 정한다(api/team chooseMoment). 여기서는 장면 문구 · 선택지 표시 · 지금 스코어로 다시 쓴 중계 줄만 만든다.
 import type { TeamMatch, TeamMatchEvent, TeamMoment } from './api/team.js';
 import { teamMomentsText as M } from './i18n/ko/teamMoments.js';
+import { teamLiveText as TL } from './i18n/ko/teamLive.js';
 import { fullTimeText, goalLineText, halfTimeText, type LiveLine } from './teamLive.js';
 
 /** 선수 표시 이름(내 선수는 이 기기에 남은 이름). */
@@ -147,3 +148,17 @@ export function momentLines(
   for (const e of goals) out.push(score.event(e, name));
   return out;
 }
+
+/** T-11-443 스크린리더가 마지막 몇 초만 세도록 읽을 남은 초의 기준. */
+export const MOMENT_SPEAK_LAST = 3;
+
+/**
+ * 장면 카드 남은 시간을 스크린리더에 읽힐 문장. 처음부터 마지막 몇 초 전까지는 같은 문장(처음 안내)을 돌려줘 다시 읽히지
+ * 않게 하고, 마지막 몇 초만 바뀌는 문장을 준다. 화면 글자는 매초 바뀌어도 된다(M.timer).
+ */
+export function momentTimerSpoken(left: number, total: number): string {
+  return left > MOMENT_SPEAK_LAST ? M.timer({ s: total }) : M.timerLast({ s: Math.max(0, left) });
+}
+
+/** 중계 아래 '결과 바로 보기' 버튼 문구. 남은 장면이 있으면 감독에게 맡긴다는 점을 버튼에 적는다. */
+export const liveSkipLabel = (remaining: number) => (remaining > 0 ? M.skipToManager : TL.skip);

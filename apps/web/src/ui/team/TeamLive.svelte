@@ -33,9 +33,11 @@
   } from '@offside/app-core/teamLive';
   import {
     LiveScore,
+    liveSkipLabel,
     momentChoices,
     momentLines,
     momentScene,
+    momentTimerSpoken,
     momentTitle,
   } from '@offside/app-core/teamMoments';
 
@@ -93,6 +95,8 @@
   let final: PlayTeamMatchResponse | null = null;
   /** 판정을 받지 못하면 남은 장면은 건너뛰고 끝에서 마감한다. */
   let broken = false;
+  /** T-11-443 아직 고르지 않은 장면 수('결과 바로 보기'가 감독에게 맡긴다는 걸 버튼에 적는다). */
+  let pendingMoments = $state(moments.length);
 
   const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, waitMs(ms, fast)));
 
@@ -140,6 +144,7 @@
     const m = moments[k];
     if (!m || broken || !alive) return;
     const choice = await ask(m);
+    pendingMoments = moments.length - k - 1;
     if (choice === null || !alive) return;
     sending = true;
     const r = await chooseMoment(match.id, m.index, choice);
@@ -147,6 +152,7 @@
     active = null;
     if (!r.ok) {
       broken = true;
+      pendingMoments = 0;
       push({ minute: m.minute, kind: 'moment', text: M.failed });
       return;
     }
@@ -251,8 +257,10 @@
           {/each}
         </div>
         <div class="tl-m-timer" aria-hidden="true"><i style:width="{(active.left / choiceSec) * 100}%"></i></div>
-        <p class="tl-m-hint" aria-live="polite">{sending ? M.sending : M.timer({ s: active.left })}</p>
-        <button class="btn tl-m-skip" disabled={sending} onclick={() => void finish()} data-act="moment-skip">{L.skip}</button>
+        <!-- T-11-443 화면 글자는 매초 바뀌고, 스크린리더는 처음 안내와 마지막 몇 초만 읽는다. -->
+        <p class="tl-m-hint" aria-hidden="true">{sending ? M.sending : M.timer({ s: active.left })}</p>
+        <p class="sr-only" aria-live="polite" data-moment-spoken>{sending ? M.sending : momentTimerSpoken(active.left, choiceSec)}</p>
+        <button class="btn tl-m-skip" disabled={sending} onclick={() => void finish()} data-act="moment-skip">{M.skipToManager}</button>
       </div>
     </PopSheet>
   {/if}
@@ -269,7 +277,7 @@
 
   <div class="tm-actions">
     <button class="btn" aria-pressed={fast} onclick={() => (fast = !fast)} data-act="live-fast">{fast ? L.speedNormal : L.speedFast}</button>
-    <button class="btn btn-primary" disabled={sending} onclick={() => void finish()} data-act="live-skip">{L.skip}</button>
+    <button class="btn btn-primary" disabled={sending} onclick={() => void finish()} data-act="live-skip">{liveSkipLabel(pendingMoments)}</button>
   </div>
 </section>
 

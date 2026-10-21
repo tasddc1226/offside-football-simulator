@@ -103,7 +103,10 @@ export type MomentCard = {
   title: string;
   head: string;
   scene: string;
-  choices: { id: string; label: string; pct: number; attr: string }[];
+  /** T-11-438 실패하면 무엇을 잃는지 한 줄(리그 찬스: 기록이 줄 수 있음, 위기: 실점 · 패배, 결승: 준우승). */
+  stake: string;
+  /** rec: T-11-438 미드필더 리그 찬스에서 성공하면 남는 기록(골 · 도움). 선택지마다 다른 성격을 보인다. */
+  choices: { id: string; label: string; pct: number; attr: string; rec?: string }[];
   /** 감독에게 맡겼을 때 성공 확률(%). */
   auto: number;
 };
@@ -186,8 +189,10 @@ export type SheetView =
       title: string;
       text: string;
       story: StoryTag | null;
-      /** T-11-432 chips: 선택하면 늘 일어나는 득실(최대 2개, 안전한 선택은 가끔 대가까지 3개). 비어 있으면 hint를 화면에 짧게 보인다. */
-      choices: { label: string; odds: string; hint?: string; chips: PeekChip[] }[];
+      /** T-11-432 chips: 선택하면 늘 일어나는 득실(최대 2개, 안전한 선택은 가끔 대가까지 3개). */
+      choices: { label: string; odds: string; chips: PeekChip[] }[];
+      /** T-11-438 선택지 표기('안전' · '원터치') 뜻. 그런 선택지가 있을 때만 선택지 아래 한 줄씩 보인다. */
+      legend: { term: string; text: string }[];
     }
   | {
       kind: 'eventResult';

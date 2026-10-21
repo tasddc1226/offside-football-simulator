@@ -162,6 +162,8 @@ async function step(page: Page): Promise<boolean> {
 }
 
 test('은퇴 선수로 감독 커리어를 끝까지 하고 감독 칸에 앉힌다', async ({ page }) => {
+  // 열 시즌을 넘기고 확정 확인(T-11-443)까지 거쳐 기본 30초가 빠듯하다.
+  test.slow();
   await stubOwner(page);
   const { s, install } = server();
   await install(page);
@@ -244,6 +246,14 @@ test('은퇴 선수로 감독 커리어를 끝까지 하고 감독 칸에 앉힌
   await expect(page.locator('[data-manager-totals]')).toBeVisible();
   await expect(page.locator('[data-manager-done]')).toContainText('등급');
   await page.locator('[data-act="manager-finish"]').click();
+  // T-11-443 되돌릴 수 없으니 확인 창을 거친다. 취소하면 서버에 보내지 않는다.
+  const finishSheet = page.locator('[data-manager-finish]');
+  await expect(finishSheet).toContainText('선수로 돌릴 수 없어요');
+  await finishSheet.getByRole('button', { name: '취소' }).click();
+  await expect(finishSheet).toHaveCount(0);
+  expect(s.finished).toBeFalsy();
+  await page.locator('[data-act="manager-finish"]').click();
+  await page.locator('[data-act="manager-finish-confirm"]').click();
   await expect
     .poll(() => s.finished)
     .toMatchObject({ seasons: expect.any(Number), grade: expect.any(String) });

@@ -129,4 +129,23 @@ export const league: Translation<LeagueMsgs> = {
   liveClose: 'Close',
   liveFullTime: 'Full time',
   liveClock: (p) => `${p.minute}'`,
+  enterAskTitle: 'Enter the league?',
+  enterAskDeadline: (p) => `You can cancel until ${p.until}. Once entries close, you can't cancel.`,
+  askClose: 'Close',
+  entryLocked: (p) =>
+    `Entries are closed, so you can't cancel. Tiers and leagues are announced ${p.at}.`,
+  meFail: "We couldn't load your entry.",
+  kstNote: 'All times are Korea Standard Time (KST).',
+  roundAt: (p) => `${p.when} KST`,
+  lastFinalTitle: (p) => `Season ${p.season} result`,
+  lastFinalNext: (p) => `Enter this season to start in Tier ${p.tier}.`,
+  lastFinalNextBottom: 'Too many forfeits, so this season starts in the bottom tier.',
+  termTier: 'Tier: the skill level. Tier 1 is the top.',
+  termLeague: 'League: a group of 7 or 8 teams within a tier. Lower tiers have more leagues.',
+  moveSolo: "There's only one tier, so no one moves up or down. 1st place wins the title.",
+  moveTop: (p) => `1st place wins the title. 7th and 8th drop to Tier ${p.down} next season.`,
+  moveBottom: (p) =>
+    `1st place goes up to Tier ${p.up} next season. This is the bottom tier, so there's no relegation.`,
+  moveMid: (p) =>
+    `1st place goes up to Tier ${p.up} next season. 7th and 8th drop to Tier ${p.down}.`,
 };

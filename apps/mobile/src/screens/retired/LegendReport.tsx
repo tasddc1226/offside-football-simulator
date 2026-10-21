@@ -10,7 +10,7 @@ import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { retirementPotentialNote } from '@offside/app-core/potential-view';
 import { potentialFlowLines, potentialSeedLines } from '@offside/app-core/potential-flow';
 import { gamePotentialText as P } from '@offside/app-core/i18n/ko/gamePotential';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   Animated,
   Easing,
@@ -50,6 +50,7 @@ import { DISPLAY, rem } from '../../theme/type';
 import { Card } from '../../ui/Card';
 import { PixelAvatar } from '../../ui/PixelAvatar';
 import { Press } from '../../ui/Press';
+import { scrollToView } from '../../ui/scroll';
 import { Txt } from '../../ui/Txt';
 import { ClubMark } from '../../ui/ClubBadge';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -156,6 +157,12 @@ export function LegendReport({
   const [seen, setSeen] = useState({ highlights: false, national: false, journey: false });
   const see = (key: keyof typeof seen) => () => setSeen((s) => ({ ...s, [key]: true }));
   const [more, setMore] = useState(false);
+  // T-11-439 점수 아래 자세히: 맨 아래 접힌 점수 구성을 펼치고 그리로 내려간다.
+  const moreRef = useRef<View>(null);
+  function openMore() {
+    setMore(true);
+    requestAnimationFrame(() => scrollToView(moreRef.current, motionOK));
+  }
 
   // ───────── T-10-076 영구결번 ─────────
   // 결번 배지만 여기서 그린다(세리머니는 LateCredits → RetiredNumberCredit). 내 선수는 이번 접속에서 받은 심사 결과
@@ -258,12 +265,25 @@ export function LegendReport({
               <FText
                 tone="muted"
                 size={0.6875}
-                ls={0.24}
+                ls={0.08}
                 style={{ textTransform: 'uppercase' }}
                 importantForAccessibility="no"
               >
-                Legend Score
+                {L.scoreTitle}
               </FText>
+              {d ? (
+                <Press
+                  testID="legend-score-more"
+                  accessibilityRole="button"
+                  accessibilityLabel={L.scoreMoreLabel}
+                  onPress={openMore}
+                  style={{ paddingVertical: 8, paddingHorizontal: 12 }}
+                >
+                  <FText tone="muted" size={0.8125} style={{ textDecorationLine: 'underline' }}>
+                    {L.scoreMore}
+                  </FText>
+                </Press>
+              ) : null}
             </View>
             {worth > 0 ? (
               <Pop
@@ -668,73 +688,75 @@ export function LegendReport({
 
       {d ? (
         // 펼칠 때만 그린다(시즌별 표가 길다).
-        <Card>
-          <Press
-            scale={0.985}
-            onPress={() => setMore(!more)}
-            accessibilityState={{ expanded: more }}
-            style={{ paddingVertical: 4 }}
-          >
-            <Txt style={{ fontWeight: '600', fontSize: rem(FONT.body2) }}>
-              {more ? '▾' : '▸'} {L.moreSummary}
-            </Txt>
-          </Press>
-          {more && breakdown ? (
-            <View style={{ gap: 10, marginBottom: 18 }}>
-              <Txt v="h2" accessibilityRole="header">
-                {L.breakdownTitle}
+        <View ref={moreRef} collapsable={false}>
+          <Card>
+            <Press
+              scale={0.985}
+              onPress={() => setMore(!more)}
+              accessibilityState={{ expanded: more }}
+              style={{ paddingVertical: 4 }}
+            >
+              <Txt style={{ fontWeight: '600', fontSize: rem(FONT.body2) }}>
+                {more ? '▾' : '▸'} {L.moreSummary}
               </Txt>
-              <Txt v="xs" tone="muted">
-                {L.breakdownNote}
-              </Txt>
-              <View style={{ gap: 6 }}>
-                {breakdown.items.map((it, i) => (
-                  <View key={it.key}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        paddingVertical: 6,
-                        borderTopWidth: i ? 1 : 0,
-                        borderTopColor: c.line,
-                      }}
-                    >
-                      <Txt v="sm">{it.label}</Txt>
-                      <Txt
-                        style={{
-                          fontFamily: DISPLAY[700],
-                          fontSize: rem(FONT.body),
-                          fontVariant: ['tabular-nums'],
-                        }}
-                      >
-                        {Math.round(it.value)}
-                      </Txt>
-                    </View>
-                    <View
-                      style={{
-                        height: 6,
-                        borderRadius: 3,
-                        backgroundColor: c.surface2,
-                        overflow: 'hidden',
-                        marginTop: -2,
-                      }}
-                    >
+            </Press>
+            {more && breakdown ? (
+              <View style={{ gap: 10, marginBottom: 18 }}>
+                <Txt v="h2" accessibilityRole="header">
+                  {L.breakdownTitle}
+                </Txt>
+                <Txt v="xs" tone="muted">
+                  {L.breakdownNote}
+                </Txt>
+                <View style={{ gap: 6 }}>
+                  {breakdown.items.map((it, i) => (
+                    <View key={it.key}>
                       <View
                         style={{
-                          height: '100%',
-                          backgroundColor: c.accent,
-                          width: `${Math.round((Math.abs(it.value) / maxAbs) * 100)}%`,
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          paddingVertical: 6,
+                          borderTopWidth: i ? 1 : 0,
+                          borderTopColor: c.line,
                         }}
-                      />
+                      >
+                        <Txt v="sm">{it.label}</Txt>
+                        <Txt
+                          style={{
+                            fontFamily: DISPLAY[700],
+                            fontSize: rem(FONT.body),
+                            fontVariant: ['tabular-nums'],
+                          }}
+                        >
+                          {Math.round(it.value)}
+                        </Txt>
+                      </View>
+                      <View
+                        style={{
+                          height: 6,
+                          borderRadius: 3,
+                          backgroundColor: c.surface2,
+                          overflow: 'hidden',
+                          marginTop: -2,
+                        }}
+                      >
+                        <View
+                          style={{
+                            height: '100%',
+                            backgroundColor: c.accent,
+                            width: `${Math.round((Math.abs(it.value) / maxAbs) * 100)}%`,
+                          }}
+                        />
+                      </View>
                     </View>
-                  </View>
-                ))}
+                  ))}
+                </View>
               </View>
-            </View>
-          ) : null}
-          {more ? <CareerTab s={d} chart={false} /> : null}
-        </Card>
+            ) : null}
+            {more ? <CareerTab s={d} chart={false} /> : null}
+          </Card>
+        </View>
       ) : null}
       {end ? <View style={{ gap: 14 }}>{end}</View> : null}
     </>

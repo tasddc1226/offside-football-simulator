@@ -34,6 +34,10 @@ test('리그 구간 중계가 결정적 장면에서 멈추고, 고른 결과가
   const choices = card.locator('[data-key-moment-choice]');
   expect(await choices.count()).toBeGreaterThanOrEqual(3); // 선택지 2~3개 + 맡기기
   await expect(choices.first()).toContainText(/성공 \d+%/);
+  // T-11-438 실패하면 무엇을 잃는지 한 줄로 보인다.
+  await expect(card.locator('[data-key-moment-stake]')).toHaveText(
+    /실패하면 하나 줄 수 있어요|막지 못하면 실점/,
+  );
   const a11y = await new AxeBuilder({ page }).include('#sheet').analyze();
   expect(a11y.violations).toEqual([]);
 
@@ -77,4 +81,20 @@ test('장면에서 고르지 않으면 15초 뒤 감독에게 맡기고 이어�
   await expect(sheet.locator('[data-sheet="0"]')).toHaveText('확인');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ft_save')!));
   expect(saved.phase).toBe(2);
+});
+
+// T-11-438 구간 결과는 중계 전에 저장된다. 중계 도중 새로고침(앱 종료)해도 그 구간 리포트를 다시 보여 준다.
+test('중계 도중 새로고침해도 구간 리포트가 시즌 탭에 남는다', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openLeague(page);
+  await page.locator('[data-act="advance"]').click();
+  await expect(page.locator('#sheet [data-key-moment="league"]')).toBeVisible({ timeout: 10_000 });
+  await page.reload();
+  // 이어 하기는 대기 중인 이벤트 시트를 띄울 수 있다. 리포트는 그 뒤 시즌 탭 맨 위에 있다.
+  await page.locator('[data-act="continue"]').click();
+  const report = page.locator('[data-report]');
+  await expect(report).toBeVisible();
+  await expect(report).toContainText('전반기');
+  // 한 번 보여 준 뒤에는 보관을 지운다.
+  expect(await page.evaluate(() => localStorage.getItem('ft_phase_report'))).toBe('null');
 });

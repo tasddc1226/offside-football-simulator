@@ -2,6 +2,7 @@
   // 구단 자금 내역 — 구단주 화면의 '구단 자금' 칸으로 연다. 지금 자금, 들어온·나간 자금 합(출처별), 그리고 방출·판매·
   // 영입·구단 자금 사용을 한국 시각 날짜로 묶어 최근 순으로 보여 준다(30줄씩 더 보기).
   import Topbar from './Topbar.svelte';
+  import Skeleton from './Skeleton.svelte';
   import type { FundsHistoryEntry, FundsHistoryResponse } from '@offside/contracts';
   import { fetchFundsHistory, fundsHistoryDays, fundsHistoryTotals } from '@offside/app-core/fundsHistory';
   import { fundsText } from '@offside/app-core/market';
@@ -43,7 +44,8 @@
       <button class="btn" data-act="funds-retry" onclick={() => void load(0)}>{H.retry}</button>
     </section>
   {:else if !res || !totals}
-    <section class="card"><p class="muted" aria-live="polite">…</p></section>
+    <!-- T-11-442 기다리는 동안 자금 요약 카드와 내역 줄 모양 뼈대(로딩 표시 규칙). -->
+    <div class="stack" data-funds-loading><Skeleton height={150} /><Skeleton rows={5} /></div>
   {:else}
     <section class="card fh-sum" aria-label={H.balance}>
       <div class="fh-balance">

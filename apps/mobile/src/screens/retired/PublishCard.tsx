@@ -1,4 +1,6 @@
 // 명예의 전당 이름 공개 토글(웹 PublishCard.svelte, T-10-005). 은퇴 때는 환경설정 '선수 이름 공개'(T-10-065, 기본 켜짐)를 따른다.
+// T-11-439 공개 중에도 실명 경고를 한 줄 두고(B4), 서버가 받지 않을 이름이면 누르기 전에 알리고 버튼을 막는다(B3).
+import { canPublishName } from '@offside/app-core/namePublic';
 import { useState } from 'react';
 import { View } from 'react-native';
 import type { HofEntry } from '@offside/game/types';
@@ -18,6 +20,8 @@ export function PublishCard({ h }: { h: HofEntry }) {
     setOn(!!h.public);
   }
 
+  const blocked = !on && !canPublishName(h.name);
+
   function toggle() {
     if (setLegendPublic(liveEntry(h), !on)) setOn(!on);
   }
@@ -36,11 +40,22 @@ export function PublishCard({ h }: { h: HofEntry }) {
           {on ? L.publishNamed({ name: h.name }) : L.publishAnon}
         </Txt>{' '}
         {L.publishAfter}
-        {!on ? ` ${L.publishHint}` : ''}
+        {!on && !blocked ? ` ${L.publishHint}` : ''}
       </Txt>
+      {on ? (
+        <Txt v="sm" testID="publish-warn">
+          {L.publishWarn}
+        </Txt>
+      ) : null}
+      {blocked ? (
+        <Txt v="sm" testID="publish-blocked">
+          {L.publishBlocked}
+        </Txt>
+      ) : null}
       <Btn
         block
         testID="hof-public"
+        disabled={blocked}
         accessibilityLabel={on ? L.publishRevert : L.publishOn}
         onPress={toggle}
       >

@@ -37,7 +37,7 @@ export default defineConfig({
         {
           origin: BASE_URL,
           localStorage: [
-            { name: 'ft_first_guide', value: '["home","items"]' },
+            { name: 'ft_first_guide', value: '["home","items","save"]' },
             { name: 'ft_reveal_short', value: 'true' },
           ],
         },

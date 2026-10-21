@@ -134,6 +134,11 @@ test('내 선수: 320px 별도 화면, 시즌 기록과 방출 관리 및 캐시
   await page.selectOption('[data-my-season-select]', '1');
   await page.locator('[data-act="players-manage"]').click();
   await expect(page.locator('[data-managed-player]')).toHaveCount(6);
+  // T-11-443 행마다 포지션 · 최고 OVR · 레전드, 방출하면 받는 자금을 보인다(잠긴 선수는 잠긴 이유).
+  const first = page.locator(`[data-managed-player="${id(1)}"]`);
+  await expect(first.locator('[data-release-info]')).toHaveText('ST · 최고 OVR 80 · 레전드 500');
+  await expect(first.locator('[data-release-gets]')).toContainText('방출하면 받는 자금');
+  await expect(page.locator(`[data-managed-player="${id(4)}"] [data-release-gets]`)).toHaveCount(0);
   for (const n of [3, 4, 5, 6])
     await expect(page.locator(`[data-managed-player="${id(n)}"] input`)).toBeDisabled();
   await page.locator('[data-act="players-pick-all"]').click();

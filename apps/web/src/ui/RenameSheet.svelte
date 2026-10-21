@@ -25,6 +25,8 @@
   let input = $state(name);
   let busy = $state(false);
   let message = $state('');
+  // T-11-442 변경권을 쓰기 전에 바꿀 이름을 한 번 더 보인다. 보낼 이름이 정해지면 확인 단계.
+  let confirming = $state<string | null>(null);
   // 응답을 못 받아 다시 누르면 같은 키로 보내 서버가 두 장을 쓰지 않는다. 성공하거나 거절되면 새 키.
   let key = crypto.randomUUID();
 
@@ -43,12 +45,18 @@
       message = d.message;
       return;
     }
+    if (confirming !== d.name) {
+      confirming = d.name;
+      message = '';
+      return;
+    }
     busy = true;
     message = '';
     const r = await renamePlayer(careerId, d.name, key);
     busy = false;
     if (!r.ok) {
       if (!r.error.retryable) key = crypto.randomUUID();
+      confirming = null;
       if (r.error.reason === 'GOOGLE_LOGIN_REQUIRED') have = null;
       else message = r.error.message || L.fail;
       return;
@@ -70,12 +78,22 @@
       <p class="muted fs-sm">{L.lead}</p>
       <label class="rn-field">
         <span class="fs-sm">{L.label}</span>
-        <input type="text" maxlength={PLAYER_NAME_MAX} autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" bind:value={input} disabled={busy || !have} data-rename-input />
+        <input type="text" maxlength={PLAYER_NAME_MAX} autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" bind:value={input} disabled={busy || !have || confirming !== null} aria-describedby="rn-rule" data-rename-input />
+        <small id="rn-rule" class="muted" data-rename-rule>{L.rule({ max: PLAYER_NAME_MAX })}</small>
       </label>
       {#if have !== undefined}<p class="fs-sm num" data-rename-have={have}>{L.have({ n: have })}</p>{/if}
       {#if have === 0}<p class="muted fs-sm" data-rename-none>{L.none}</p>{/if}
       {#if message}<p class="rn-msg fs-sm" role="alert">{message}</p>{/if}
-      <button type="submit" class="btn btn-accent btn-block" disabled={busy || !have} data-act="rename-submit">{busy ? L.busy : L.btn}</button>
+      {#if confirming !== null}
+        <div class="rn-confirm" role="group" aria-label={L.confirm({ name: confirming })} data-rename-confirm>
+          <p class="fs-sm"><b>{L.confirm({ name: confirming })}</b></p>
+          <p class="muted fs-sm">{L.confirmNote}</p>
+        </div>
+        <button type="submit" class="btn btn-accent btn-block" disabled={busy || !have} data-act="rename-submit">{busy ? L.busy : L.btn}</button>
+        <button type="button" class="btn btn-block" disabled={busy} data-act="rename-edit" onclick={() => (confirming = null)}>{L.edit}</button>
+      {:else}
+        <button type="submit" class="btn btn-accent btn-block" disabled={busy || !have} data-act="rename-next">{L.next}</button>
+      {/if}
     {/if}
     <button type="button" class="btn btn-block" data-act="rename-close" onclick={onclose}>{L.close}</button>
   </form>
@@ -102,6 +120,14 @@
   .rn-field input {
     min-height: 44px;
     font-size: var(--fs-body);
+  }
+  .rn-confirm {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    background: var(--surface-2);
   }
   .rn-msg {
     color: var(--bad);

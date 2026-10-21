@@ -151,3 +151,31 @@ describe('markNewsSeen · dismissNews', () => {
     expect(store.has(SEEN)).toBe(false);
   });
 });
+
+describe('isNewPost (T-11-440 목록 NEW 표시)', () => {
+  it('앱을 연 때까지 본 시각보다 새 글이면 알림을 닫아도 이번 실행 동안 NEW로 남고, 연 글만 빠진다', async () => {
+    store.set(SEEN, JSON.stringify(T1));
+    const a = post('a', T2);
+    const b = post('b', T3);
+    serve([a, b, post('old', T1)], []);
+    const st = initialNewsState();
+    const news = createNews(st);
+    await news.checkNews();
+    expect(st.count).toBe(2);
+    news.dismissNews();
+    expect(JSON.parse(store.get(SEEN)!)).toBe(T3);
+    expect(news.isNewPost(a)).toBe(true);
+    expect(news.isNewPost(b)).toBe(true);
+    expect(news.isNewPost(post('old', T1))).toBe(false);
+    news.markNewsSeen(touchedAt(a), a.id);
+    expect(news.isNewPost(a)).toBe(false);
+    expect(news.isNewPost(b)).toBe(true);
+  });
+  it('처음 온 기기(본 기록 없음)는 NEW를 붙이지 않는다', async () => {
+    serve([post('a', T2)], []);
+    const news = createNews(initialNewsState());
+    expect(news.isNewPost(post('a', T2))).toBe(false);
+    await news.checkNews();
+    expect(news.isNewPost(post('a', T2))).toBe(false);
+  });
+});

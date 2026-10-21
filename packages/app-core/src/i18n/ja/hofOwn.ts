@@ -9,6 +9,8 @@ export const hofOwn: Translation<HofOwnMsgs> = {
   publishAfter: '表示されています。',
   publishHint:
     '名前を公開すると、ほかのユーザーに選手名が表示されます。本名は使わないことをおすすめします。',
+  publishWarn: 'この名前はすべてのユーザーに表示されます。実名は使わないほうがいいです。',
+  publishBlocked: 'リンクや不適切な言葉を含む名前なので公開できません。殿堂には匿名で載ります。',
   publishRevert: '匿名に戻す',
   publishOn: '名前を公開する',
   shortTitle: '自分の選手にだけ残る記録',

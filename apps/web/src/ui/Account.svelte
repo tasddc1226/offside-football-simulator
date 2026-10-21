@@ -11,7 +11,7 @@
   } from '@offside/app-core/api/client';
   import { accountCache, refreshAccount } from './account-state.svelte.js';
   import { refreshChatIdentity } from './chat-state.svelte.js';
-  import { accountLabel, isMember } from '@offside/app-core/account';
+  import { accountLabel, isMember, runProfileDeletion } from '@offside/app-core/account';
   import { closeSheet, showSheet } from './sheetState.svelte.js';
   import { toast } from './helpers.js';
   import { accountText as L } from '@offside/app-core/i18n/ko/account';
@@ -78,13 +78,29 @@
       ],
     );
   }
-  async function doDeleteFlow() {
-    if (!window.confirm(L.deleteBody)) return;
-    const start = await startProfileDeletion();
-    if (!start.ok) return set('error');
-    const confirmResult = await confirmProfileDeletion(start.data.confirmToken);
-    if (confirmResult.ok) refreshChatIdentity();
-    set(confirmResult.ok ? null : 'error');
+  /** T-11-441 계정 삭제도 연동 해제와 같은 확인 시트를 거치고, 끝나면 결과를 토스트로 알린다.
+   *  실패는 연결 오류 카드로 덮지 않고 계정 카드를 그대로 둔다. */
+  async function doDelete() {
+    closeSheet();
+    const done = await runProfileDeletion({
+      start: startProfileDeletion,
+      confirm: (t) => confirmProfileDeletion(t),
+    });
+    if (!done) return toast(L.deleteFail);
+    noteOwner(false);
+    appState.friendReq = 0;
+    refreshChatIdentity();
+    set(null);
+    toast(L.deleteDone);
+  }
+  function askDelete() {
+    showSheet(
+      { kind: 'notice', eyebrow: 'Account', title: L.deleteAccount, muted: true, text: L.deleteBody },
+      [
+        { label: L.deleteConfirm, cls: 'btn-primary', fn: () => void doDelete() },
+        { label: L.cancel, fn: closeSheet },
+      ],
+    );
   }
 </script>
 
@@ -111,6 +127,6 @@
       <button class="link-btn" data-act="unlink" onclick={askUnlink}>{L.unlinkGoogle}</button>
       <span aria-hidden="true">·</span>
     {/if}
-    <button class="link-btn bad" onclick={doDeleteFlow}>{L.deleteAccount}</button>
+    <button class="link-btn bad" data-act="delete-account" onclick={askDelete}>{L.deleteAccount}</button>
   </div>
 {/if}

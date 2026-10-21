@@ -29,7 +29,7 @@
   import { doneOnEnter } from './inputDone.js';
   import { screenIn } from './motion.js';
   import { uaSwiped } from './history.svelte.js';
-  import { markNewsSeen, touchedAt } from './news.svelte.js';
+  import { isNewPost, markNewsSeen, touchedAt } from './news.svelte.js';
   import { loadKey, saveKey } from '@offside/game/storage';
   import { BOARD_LABEL, REPORT_REASON_LABEL, dateOf, parseBody, postDetailMeta, postMeta } from '@offside/app-core/boardText';
   import { boardText as L } from '@offside/app-core/i18n/ko/board';
@@ -96,7 +96,7 @@
     }
     detail = { ...r.data, liked: !!r.data.liked, blocks: r.data.blocks ?? [] }; // 옛 서버 응답엔 liked·blocks가 없다.
     reporting = null;
-    markNewsSeen(touchedAt(r.data.post));
+    markNewsSeen(touchedAt(r.data.post), r.data.post.id);
     if (firstView(id)) {
       detail.post.viewCount++;
       void api.addView(id);
@@ -176,7 +176,7 @@
     const r = e.id ? await api.updatePost(e.id, input) : await api.createPost(board, input);
     busy = false;
     if (!r.ok) return toast(r.error.message);
-    markNewsSeen(touchedAt(r.data)); // 내가 쓰거나 고친 글은 알리지 않는다.
+    markNewsSeen(touchedAt(r.data), r.data.id); // 내가 쓰거나 고친 글은 알리지 않는다.
     editing = null;
     toast(e.id ? L.postEdited : L.postCreated);
     await open(r.data.id);
@@ -247,6 +247,7 @@
 {#snippet tags(p: PostSummary)}
   {#if p.pinned}<span class="pill warn">{L.pinned}</span>{/if}
   {#if p.version}<span class="pill">{p.version}</span>{/if}
+  {#if isNewPost(p)}<span class="pill good" data-post-new>{L.postNew}</span>{/if}
 {/snippet}
 
 <!-- T-10-119 글을 열면 화면 전체가 오른쪽에서, 목록으로 돌아오면 왼쪽에서 들어온다. -->

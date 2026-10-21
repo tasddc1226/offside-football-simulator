@@ -12,6 +12,11 @@ export const keyMoment: Translation<KeyMomentMsgs> = {
   auto: 'Leave it to the manager',
   timer: (p) => `The manager decides in ${p.n}s`,
   picked: (p) => `Chosen: ${p.label}`,
+  stakeChance: 'Succeed and you may add a goal or assist in this match. Fail and you may lose one.',
+  stakeCrisis: 'If you fail to stop it, you concede and lose this match.',
+  stakeFinal: 'This moment decides between the title and runner-up.',
+  recGoal: 'Goal if it works',
+  recAssist: 'Assist if it works',
   settingTitle: 'Key moments',
   settingBody:
     "Pause your career match feed at your player's big chances and danger moments so you can choose. When off, the manager always decides.",

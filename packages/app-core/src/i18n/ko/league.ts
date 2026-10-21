@@ -142,6 +142,27 @@ const ko = {
   liveClose: '닫기',
   liveFullTime: '경기 끝',
   liveClock: (p: { minute: number }) => `${p.minute}'`,
+  // T-11-444 신청 확인 · 마감 뒤 취소 불가 · 내 신청 조회 실패 · 한국 시간 · 지난 시즌 결산 · 용어 · 부별 승강 범례.
+  enterAskTitle: '리그에 신청할까요?',
+  enterAskDeadline: (p: { until: string }) =>
+    `${p.until}까지는 신청을 취소할 수 있어요. 접수가 끝나면 취소할 수 없어요.`,
+  askClose: '닫기',
+  entryLocked: (p: { at: string }) =>
+    `접수가 끝나 신청을 취소할 수 없어요. ${p.at}에 부와 리그 배치를 발표해요.`,
+  meFail: '내 신청 정보를 불러오지 못했어요.',
+  kstNote: '시간은 모두 한국 시간(KST)이에요.',
+  roundAt: (p: { when: string }) => `${p.when} 한국 시간`,
+  lastFinalTitle: (p: { season: number }) => `시즌 ${p.season} 결산`,
+  lastFinalNext: (p: { tier: number }) => `이번 시즌에 신청하면 ${p.tier}부에서 시작해요.`,
+  lastFinalNextBottom: '기권이 쌓여 이번 시즌은 맨 아래 부에서 시작해요.',
+  termTier: '부: 실력 단계예요. 1부가 가장 높아요.',
+  termLeague: '리그: 한 부 안에서 7 ~ 8팀씩 나눈 묶음이에요. 아래 부로 갈수록 리그가 많아요.',
+  moveSolo: '부가 하나뿐이라 오르내리는 팀은 없어요. 1위가 우승이에요.',
+  moveTop: (p: { down: number }) => `1위는 우승, 7 · 8위는 다음 시즌 ${p.down}부로 내려가요.`,
+  moveBottom: (p: { up: number }) =>
+    `1위는 다음 시즌 ${p.up}부로 올라가요. 맨 아래 부라 강등은 없어요.`,
+  moveMid: (p: { up: number; down: number }) =>
+    `1위는 다음 시즌 ${p.up}부로 올라가고, 7 · 8위는 ${p.down}부로 내려가요.`,
 };
 
 export type LeagueMsgs = typeof ko;

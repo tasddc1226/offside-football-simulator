@@ -22,7 +22,10 @@ import {
   leagueClinches,
   leagueFinalReady,
   leagueLive,
+  leagueLegend,
   leagueMatchMid,
+  leagueRoundAt,
+  leagueZoneLabel,
   leagueRecords,
   leagueRound,
   leagueZone,
@@ -138,6 +141,7 @@ function Standings({
   );
   const rows = [...table.standings].sort((a, b) => a.rank - b.rank);
   const clinches = leagueClinches(table, table.tier, bottomTier);
+  const legend = leagueLegend(table.tier, bottomTier);
   return (
     <Card gap={8} testID={`league-table-${table.tier}-${table.league}`}>
       <Txt v="h3" bold accessibilityRole="header">
@@ -163,6 +167,7 @@ function Standings({
             const team = table.teams.find((t) => t.teamId === s.teamId);
             const mine = s.teamId === mineId;
             const zone = leagueZone(s.rank, rows.length, table.tier, bottomTier);
+            const zoneLabel = mine ? leagueZoneLabel(zone, clinches.has(s.teamId)) : null;
             const cell = (value: string | number, w: number, bold = false) => (
               <Txt v="sm" bold={bold || mine} num style={num(w)}>
                 {String(value)}
@@ -215,6 +220,11 @@ function Standings({
                         {team?.name ?? C.tbd}
                       </Txt>
                       <ClinchPill clinch={clinches.get(s.teamId)} />
+                      {zoneLabel ? (
+                        <View testID="league-my-zone">
+                          <Pill tone={zone === 'up' ? 'good' : 'warn'}>{zoneLabel}</Pill>
+                        </View>
+                      ) : null}
                     </View>
                     <Txt v="xs" tone="muted">
                       {`${C.teamOwnerLabel} ${team?.owner ?? C.tbd}${s.forfeits || mine ? ` · ${leagueForfeitsTag(s.forfeits)}` : ''}`}
@@ -233,7 +243,7 @@ function Standings({
         </View>
       </ScrollView>
       <Txt v="xs" tone="muted">
-        {[table.tier > 1 ? L.zoneUp : null, table.tier < bottomTier ? L.zoneDown : null, L.ruleMove]
+        {[legend.up ? L.zoneUp : null, legend.down ? L.zoneDown : null, legend.move]
           .filter(Boolean)
           .join(' · ')}
       </Txt>
@@ -488,6 +498,7 @@ function Rounds({
 }) {
   const c = useColors();
   const day = leagueRound(table, round);
+  const roundAt = leagueRoundAt(day.matches);
   const name = (id: string) => table.teams.find((t) => t.teamId === id)?.name ?? C.tbd;
   return (
     <Card gap={8} testID="league-rounds">
@@ -502,6 +513,11 @@ function Rounds({
         pick={setRound}
         testID="league-round"
       />
+      {roundAt ? (
+        <Txt v="xs" tone="muted" testID="league-round-at">
+          {roundAt}
+        </Txt>
+      ) : null}
       {day.matches.map((m) => {
         const mine = m.homeTeamId === mineId || m.awayTeamId === mineId;
         const open = m.played && !m.forfeit;

@@ -7,6 +7,7 @@ import { rnMisses, rnResults } from '../../store';
 import { View } from 'react-native';
 import type { RetiredNumberResult } from '@offside/contracts';
 import { pendingRetirementIds } from '@offside/app-core/outbox';
+import { canPublishName } from '@offside/app-core/namePublic';
 import { checkRetiredNumber } from '@offside/app-core/api/client';
 import { rnClubStats, rnMissStats, rnMissText, rnSlotOf } from '@offside/app-core/legendReport';
 import type { LegendView } from '@offside/app-core/state';
@@ -163,10 +164,17 @@ export function RetiredNumberCredit({
               </FText>{' '}
               {L.anonTail}
             </FText>
-            <FText tone="muted" size={0.875} lh={1.5} center>
-              {L.anonNote}
-            </FText>
-            {v.own ? (
+            {v.own && !canPublishName(v.own.name) ? (
+              // T-11-439 공개할 수 없는 이름이면 누르기 전에 알린다(눌러도 막힌다).
+              <FText tone="muted" size={0.875} lh={1.5} center testID="rn-blocked">
+                {L.anonBlocked}
+              </FText>
+            ) : (
+              <FText tone="muted" size={0.875} lh={1.5} center>
+                {L.anonNote}
+              </FText>
+            )}
+            {v.own && canPublishName(v.own.name) ? (
               <Btn
                 kind="primary"
                 testID="rn-public"

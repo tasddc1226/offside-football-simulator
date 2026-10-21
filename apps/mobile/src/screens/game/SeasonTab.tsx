@@ -866,123 +866,126 @@ export function SeasonTab({ s }: { s: GameState }) {
         </Spotlight>
       )}
 
-      <Spotlight reg={reg('invest')} on={spot === 'invest'}>
-        <Card gap={10}>
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 10,
-            }}
-          >
-            <View style={{ flex: 1 }}>
-              <Txt v="eyebrow">Invest</Txt>
-              <Txt v="h2" accessibilityRole="header">
-                {L.investTitle}
-              </Txt>
+      {/* T-11-438 시즌이 끝난 화면(이적시장 대기)에서는 웹처럼 투자 카드를 숨긴다. */}
+      {ended ? null : (
+        <Spotlight reg={reg('invest')} on={spot === 'invest'}>
+          <Card gap={10}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 10,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Txt v="eyebrow">Invest</Txt>
+                <Txt v="h2" accessibilityRole="header">
+                  {L.investTitle}
+                </Txt>
+              </View>
+              <Pill>
+                {spend
+                  ? L.fundsAfter({
+                      v: appFormatText.won({ v: fmtMoney(s.money) }),
+                      after: appFormatText.won({ v: fmtMoney(Math.max(0, s.money - spend)) }),
+                    })
+                  : L.funds({ v: appFormatText.won({ v: fmtMoney(s.money) }) })}
+              </Pill>
             </View>
-            <Pill>
-              {spend
-                ? L.fundsAfter({
-                    v: appFormatText.won({ v: fmtMoney(s.money) }),
-                    after: appFormatText.won({ v: fmtMoney(Math.max(0, s.money - spend)) }),
-                  })
-                : L.funds({ v: appFormatText.won({ v: fmtMoney(s.money) }) })}
-            </Pill>
-          </View>
-          {wait === 'invest' ? <TourHint>{L.investHint}</TourHint> : null}
-          {/* T-11-219 드롭다운 대신 칸을 늘 보여 주고(한 번 눌러 고른다), 고른 투자의 설명은 아래 HelpBox에.
+            {wait === 'invest' ? <TourHint>{L.investHint}</TourHint> : null}
+            {/* T-11-219 드롭다운 대신 칸을 늘 보여 주고(한 번 눌러 고른다), 고른 투자의 설명은 아래 HelpBox에.
               T-11-221 '투자 안 함' 칸은 없애고 2×2만 둔다. 고른 칸을 다시 누르거나 '선택 해제'로 되돌린다. */}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {INVESTS.filter((d) => d.id !== 'none').map((d) => {
-              const cd = investCards.get(d.id)!;
-              const cost = investCost(s, d);
-              const note = investNote(d);
-              const sel = invest.id === d.id;
-              return (
-                <View
-                  key={d.id}
-                  testID={`invest-${d.id}`}
-                  style={{ flexGrow: 1, flexBasis: '45%' }}
-                >
-                  <PickPop on={popped?.g === 'invest' && popped.id === d.id}>
-                    <Opt
-                      selected={sel}
-                      disabled={!cd.affordable}
-                      onPress={() => setInvest(sel ? 'none' : d.id)}
-                      style={{
-                        flex: 1,
-                        minHeight: 44,
-                        paddingVertical: sel ? 7.5 : 9,
-                        paddingHorizontal: sel ? 10.5 : 12,
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Txt
-                          style={{ flexShrink: 1, fontSize: rem(FONT.body2), fontWeight: '700' }}
-                        >
-                          {investName(s, d)}
-                        </Txt>
-                        {note ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {INVESTS.filter((d) => d.id !== 'none').map((d) => {
+                const cd = investCards.get(d.id)!;
+                const cost = investCost(s, d);
+                const note = investNote(d);
+                const sel = invest.id === d.id;
+                return (
+                  <View
+                    key={d.id}
+                    testID={`invest-${d.id}`}
+                    style={{ flexGrow: 1, flexBasis: '45%' }}
+                  >
+                    <PickPop on={popped?.g === 'invest' && popped.id === d.id}>
+                      <Opt
+                        selected={sel}
+                        disabled={!cd.affordable}
+                        onPress={() => setInvest(sel ? 'none' : d.id)}
+                        style={{
+                          flex: 1,
+                          minHeight: 44,
+                          paddingVertical: sel ? 7.5 : 9,
+                          paddingHorizontal: sel ? 10.5 : 12,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <Txt
-                            tone="muted"
+                            style={{ flexShrink: 1, fontSize: rem(FONT.body2), fontWeight: '700' }}
+                          >
+                            {investName(s, d)}
+                          </Txt>
+                          {note ? (
+                            <Txt
+                              tone="muted"
+                              style={{
+                                fontSize: rem(FONT.caption2),
+                                fontWeight: '600',
+                                paddingHorizontal: 6,
+                                paddingVertical: 1,
+                                borderRadius: RADIUS.pill,
+                                overflow: 'hidden',
+                                backgroundColor: c.surface2,
+                              }}
+                            >
+                              {note}
+                            </Txt>
+                          ) : null}
+                        </View>
+                        {cost ? (
+                          <Txt
                             style={{
-                              fontSize: rem(FONT.caption2),
-                              fontWeight: '600',
-                              paddingHorizontal: 6,
-                              paddingVertical: 1,
-                              borderRadius: RADIUS.pill,
-                              overflow: 'hidden',
-                              backgroundColor: c.surface2,
+                              fontFamily: DISPLAY[700],
+                              fontSize: rem(FONT.label),
+                              color: c.accentText,
                             }}
                           >
-                            {note}
+                            {cd.affordable
+                              ? appFormatText.won({ v: fmtMoney(cost) })
+                              : cd.tag.split(' · ')[0]}
                           </Txt>
                         ) : null}
-                      </View>
-                      {cost ? (
-                        <Txt
-                          style={{
-                            fontFamily: DISPLAY[700],
-                            fontSize: rem(FONT.label),
-                            color: c.accentText,
-                          }}
-                        >
-                          {cd.affordable
-                            ? appFormatText.won({ v: fmtMoney(cost) })
-                            : cd.tag.split(' · ')[0]}
-                        </Txt>
-                      ) : null}
-                    </Opt>
-                  </PickPop>
-                </View>
-              );
-            })}
-          </View>
-          <HelpBox
-            testID="invest-help"
-            title={investName(s, invest)}
-            effect={investCards.get(invest.id)!.effect}
-            body={investHelp(s, invest)}
-            action={
-              invest.id !== 'none' || wait === 'invest' ? (
-                <Press
-                  testID="invest-none"
-                  accessibilityRole="button"
-                  onPress={() => setInvest('none')}
-                  hitSlop={{ top: 6, bottom: 6 }}
-                  style={{ minHeight: 32, justifyContent: 'center', paddingHorizontal: 4 }}
-                >
-                  <Txt bold style={{ fontSize: rem(FONT.label), color: c.accentText }}>
-                    {invest.id !== 'none' ? L.investClear : investName(s, invest)}
-                  </Txt>
-                </Press>
-              ) : null
-            }
-          />
-        </Card>
-      </Spotlight>
+                      </Opt>
+                    </PickPop>
+                  </View>
+                );
+              })}
+            </View>
+            <HelpBox
+              testID="invest-help"
+              title={investName(s, invest)}
+              effect={investCards.get(invest.id)!.effect}
+              body={investHelp(s, invest)}
+              action={
+                invest.id !== 'none' || wait === 'invest' ? (
+                  <Press
+                    testID="invest-none"
+                    accessibilityRole="button"
+                    onPress={() => setInvest('none')}
+                    hitSlop={{ top: 6, bottom: 6 }}
+                    style={{ minHeight: 32, justifyContent: 'center', paddingHorizontal: 4 }}
+                  >
+                    <Txt bold style={{ fontSize: rem(FONT.label), color: c.accentText }}>
+                      {invest.id !== 'none' ? L.investClear : investName(s, invest)}
+                    </Txt>
+                  </Press>
+                ) : null
+              }
+            />
+          </Card>
+        </Spotlight>
+      )}
 
       {activeStories.length ? (
         <Spotlight reg={reg('stories')} on={spot === 'stories'}>

@@ -6,7 +6,7 @@ export { touchedAt } from '@offside/app-core/news';
 
 export const newsState = $state(initialNewsState());
 
-export const { markNewsSeen, dismissNews, checkNews } = createNews(newsState);
+export const { markNewsSeen, dismissNews, checkNews, isNewPost } = createNews(newsState);
 
 const checkIfVisible = () => {
   if (document.visibilityState === 'visible') void checkNews();

@@ -15,6 +15,12 @@ const ko = {
   timer: (p: { n: number }) => `${p.n}초 뒤 감독에게 맡겨요`,
   picked: (p: { label: string }) => `선택: ${p.label}`,
   // T-11-426 설정
+  // T-11-438 실패하면 잃는 것 · 선택지별 기록
+  stakeChance: '성공하면 이 경기 골이나 도움이 하나 늘 수 있고, 실패하면 하나 줄 수 있어요.',
+  stakeCrisis: '막지 못하면 실점하고 이 경기를 내줘요.',
+  stakeFinal: '이 장면 결과로 우승과 준우승이 갈려요.',
+  recGoal: '성공하면 골',
+  recAssist: '성공하면 도움',
   settingTitle: '결정적 장면',
   settingBody:
     '커리어 경기 중계 중 내 선수의 찬스 · 위기에서 멈추고 직접 고르게 해요. 끄면 늘 감독에게 맡겨요.',

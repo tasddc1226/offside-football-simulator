@@ -51,6 +51,25 @@ test('출석 체크: 출석 창이 하루 한 번 뜨고, 출석하면 그날 �
   );
   await expect(sheet.locator('[data-attendance-done]')).toBeVisible();
   await expect(sheet.locator('[data-attendance-next]')).toContainText('내일 보상 · 리롤권 1장');
+  // T-11-440 받은 아이템과 쓰는 곳을 창 안에 남기고, 내 구단으로 가는 버튼을 둔다.
+  await expect(sheet.locator('[data-attendance-got]')).toContainText(
+    '받은 아이템: 잠재력 강화권 2장',
+  );
+  await expect(sheet.locator('[data-attendance-got]')).toContainText('선수 탭 잠재력 강화');
+  await expect(sheet.locator('[data-act="attendance-to-owner"]')).toBeVisible();
+  // T-11-440 칸에는 모양 기호와 장수를 적고, 누르면 그날 보상을 글로 보인다.
+  await expect(sheet.locator('[data-attendance-cell="14"]')).toContainText('★1');
+  await sheet.locator('[data-attendance-cell="14"]').click();
+  await expect(sheet.locator('[data-attendance-pick]')).toContainText(
+    '14일째 보상 · 프리미엄 스카우트권 1장',
+  );
+  await expect(sheet.locator('[data-attendance-cell="14"]')).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect((await new AxeBuilder({ page }).include('[role="dialog"]').analyze()).violations).toEqual(
+    [],
+  );
   await sheet.locator('[data-act="attendance-close"]').click();
   await expect(sheet).toHaveCount(0);
 
@@ -187,4 +206,23 @@ test('출석 체크: 받을 출석이 있으면 히어로 바로 아래, 출석�
     )
     .toBe(true);
   expect(calls.post).toBe(1);
+});
+
+test('출석 체크: 불러오지 못하면 누를 수 없는 빈 입구를 남기지 않는다', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('ft_session', '1');
+    localStorage.setItem('ft_owner', '1');
+  });
+  let calls = 0;
+  await page.route(`${API}/v1/attendance`, (r) => {
+    calls++;
+    return r.fulfill({
+      status: 500,
+      json: { error: { code: 'INTERNAL', message: 'x', retryable: true } },
+    });
+  });
+  await page.goto('/');
+  await expect.poll(() => calls).toBeGreaterThan(0);
+  await expect(page.locator('[data-home-live], [data-home-live-pending]').first()).toBeVisible();
+  await expect(page.locator('.home-att-entry')).toHaveCount(0);
 });

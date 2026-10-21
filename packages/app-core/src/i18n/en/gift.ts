@@ -19,4 +19,8 @@ export const gift: Translation<GiftMsgs> = {
   seasonTitle: (p) => `Season ${p.season} achievement rewards are here`,
   seasonSub: (p) => `Your season ${p.season} achievements earned ${itemsOf(p)}.`,
   seasonDone: (p) => `You got ${itemsOf(p)}.`,
+  doneTitle: 'Gift claimed',
+  useHint:
+    'Use boost tickets in Potential Boost on the Player tab, and scout tickets at the candidate step when creating a player.',
+  toOwner: 'View in my club',
 };

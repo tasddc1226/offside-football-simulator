@@ -1,5 +1,5 @@
 // 이벤트 선택 시트(웹 sheets/EventChoice.svelte): 스토리 표시 · 눈썹 · 제목 · 본문 · 선택지(확률 · 득실 칩 표시).
-// T-11-432 득실 칩(없으면 hint)을 버튼 안에 그린다. 전엔 hint가 accessibilityLabel에만 있어 화면에서 볼 수 없었다.
+// T-11-432 득실 칩을 버튼 안에 그린다. T-11-438 '안전' · '원터치' 뜻은 선택지 아래 한 줄씩(legend) 늘 보인다.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -53,11 +53,7 @@ export function EventChoice({ v }: { v: Extract<SheetView, { kind: 'event' }> })
           <Press
             key={i}
             testID={`choice-${i}`}
-            accessibilityLabel={[
-              ch.label,
-              ch.odds,
-              ...(ch.chips.length ? ch.chips.map((x) => x.text) : ch.hint ? [ch.hint] : []),
-            ].join(', ')}
+            accessibilityLabel={[ch.label, ch.odds, ...ch.chips.map((x) => x.text)].join(', ')}
             onPress={() => {
               buzz();
               void chooseEvent(i);
@@ -86,16 +82,6 @@ export function EventChoice({ v }: { v: Extract<SheetView, { kind: 'event' }> })
                     <PeekPill key={x.text} chip={x} />
                   ))}
                 </View>
-              ) : ch.hint ? (
-                <Txt
-                  style={{
-                    fontSize: rem(FONT.caption),
-                    color: c.muted,
-                    lineHeight: rem(FONT.caption) * 1.4,
-                  }}
-                >
-                  {ch.hint}
-                </Txt>
               ) : null}
             </View>
             <View
@@ -112,6 +98,23 @@ export function EventChoice({ v }: { v: Extract<SheetView, { kind: 'event' }> })
           </Press>
         ))}
       </View>
+      {s.legend.length ? (
+        <View testID="event-legend" style={{ gap: 2 }}>
+          {s.legend.map((l) => (
+            <Txt
+              key={l.term}
+              style={{
+                fontSize: rem(FONT.caption),
+                color: c.muted,
+                lineHeight: rem(FONT.caption) * 1.45,
+              }}
+            >
+              <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '700' }}>{l.term}</Txt>
+              {` ${l.text}`}
+            </Txt>
+          ))}
+        </View>
+      ) : null}
     </>
   );
 }

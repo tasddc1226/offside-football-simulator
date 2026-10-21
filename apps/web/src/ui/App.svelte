@@ -17,6 +17,7 @@
   import { achCheckable, achUnseenCount, isAchDirty, onAchDirty } from '@offside/app-core/achDirty';
   import { pendingFriendRequests } from '@offside/app-core/api/friendPending';
   import { sheetState } from './sheetState.svelte.js';
+  import { consentHere } from './consentPlace.js';
   import type { Component } from 'svelte';
 
   // T-10-119 화면 전환 방향. 선수 생성은 1·2단계를 다른 화면으로 친다(상태는 appState에 있어 다시 그려도 된다).
@@ -238,8 +239,10 @@
     {/if}
   </main>
 {/key}
-<!-- T-11-417 동의를 묻는 창은 화면이 바뀌어도 다시 그리지 않게 화면 밖에 둔다(환경설정에서는 그 화면 카드가 대신한다). -->
-{#if AnalyticsConsent && appState.screen !== 'settings'}<AnalyticsConsent />{/if}
+<!-- T-11-417 동의를 묻는 창은 화면이 바뀌어도 다시 그리지 않게 화면 밖에 둔다(환경설정에서는 그 화면 카드가 대신한다).
+     T-11-437 선수 생성 · 게임 등 다른 화면에서는 띄우지 않고 홈으로 돌아올 때까지 미룬다. 고르기 전에는 동의하지 않은 것과
+     같아 이용 분석 · 유입 연결을 하나도 보내지 않는다(analytics/browser.ts · acquisition.ts가 동의를 확인한다). -->
+{#if AnalyticsConsent && consentHere(appState.screen)}<AnalyticsConsent />{/if}
 <!-- 홈 하단 메뉴는 화면 전환 래퍼 밖에 둬 화면이 바뀔 때 다시 그려지지 않게 한다. -->
 {#if hasMainNav(appState.screen)}<MainNav />{/if}
 <UpdateBanner />

@@ -59,12 +59,19 @@ import {
   sellQuote,
   type MarketView,
   needsOwnerLogin,
+  allReleasePicked,
+  marketGuestText,
+  pickAllIds,
+  pickAllLabel,
+  togglePickId,
+  RELEASE_MAX,
 } from '@offside/app-core/market';
 import { agoKo, fmtValue } from '@offside/app-core/format';
 import { localCareerNames } from '@offside/game/hof-store';
 import { POS } from '@offside/game/data';
 import { prefs } from '../../store';
-import { go } from '../../game/nav';
+import { go, takeFocus } from '../../game/nav';
+import { measureShown, scrollToView } from '../../ui/scroll';
 import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { notificationDestination } from '../../platform/notificationDestination';
 import { toast } from '../../game/host';
@@ -540,6 +547,8 @@ export default function Market() {
   const [view, setView] = useState<MarketView>(() => {
     const back = backToTrades;
     backToTrades = false;
+    // T-11-442 상점의 '방출하러 가기'로 오면 방출 화면부터 연다.
+    if (takeFocus('marketRelease')) return 'release';
     return destination.market || back ? 'trades' : 'market';
   });
   const [error, setError] = useState<string | null>(null);
@@ -633,8 +642,9 @@ export default function Market() {
     } else setTeamFailed(true);
   }, [view, teamSeason]);
   useEffect(() => {
-    if (view === 'sell' || view === 'release') void loadTeam();
-  }, [view, loadTeam]);
+    // 로그인 전이면 내 선수를 묻지 않고 로그인 안내만 보인다(T-11-442).
+    if ((view === 'sell' || view === 'release') && !guest) void loadTeam();
+  }, [view, loadTeam, guest]);
   const lineup = useMemo(() => (team ? lineupOf(team) : new Set<string>()), [team]);
   const isCurrent = !!team && team.season === team.current;
   const nameOfPlayer = (p: TeamPlayer) => marketName(p, local);
@@ -647,19 +657,33 @@ export default function Market() {
   const releasable = team?.players.filter((p) => !releaseLock(p, lineup)) ?? [];
   const pickedPlayers = releasable.filter((p) => picked.has(p.careerId));
   const pickedAmount = me ? releaseAmount(pickedPlayers, me.rules.releaseRate) : 0;
-  const allPicked = releasable.length > 0 && pickedPlayers.length === releasable.length;
-  const togglePick = (id: string) =>
-    setPicked((prev) => {
-      const next = new Set(prev);
-      if (!next.delete(id)) next.add(id);
-      return next;
-    });
+  // T-11-442 서버는 한 번에 RELEASE_MAX명까지 받는다. 전체 선택도 그만큼만 고르고, 더 넣으려 하면 알린다.
+  const allPicked = allReleasePicked(releasable.length, pickedPlayers.length);
+  const togglePick = (id: string) => {
+    const r = togglePickId(picked, id);
+    if (r.full) return toast(L.pickLimit({ n: RELEASE_MAX }));
+    setPicked(r.next);
+  };
 
   // 팔기 — 고른 선수와 판매가(기준가의 %).
   const [selling, setSelling] = useState<TeamPlayer | null>(null);
   const [pct, setPct] = useState(100);
   const sellPrice = selling?.cardValue && me ? priceAtPct(selling.cardValue, pct, me.rules) : 0;
   const quote = selling?.cardValue && me ? sellQuote(selling.cardValue, sellPrice, me.rules) : null;
+  // T-11-442 카드를 고르면 아래 가격 칸이 화면 밖일 수 있어, 다 보이지 않으면 그 칸이 위에 오게 내린다.
+  const priceBox = useRef<View>(null);
+  const [sellPick, setSellPick] = useState(0);
+  useEffect(() => {
+    if (!sellPick) return;
+    const t = setTimeout(
+      () =>
+        measureShown(priceBox.current, (share) => {
+          if (share < 0.99) scrollToView(priceBox.current, prefs.motionOK);
+        }),
+      50,
+    );
+    return () => clearTimeout(t);
+  }, [sellPick]);
 
   // 시트: 영입 · 방출 확인.
   const [buying, setBuying] = useState<MarketListing | null>(null);
@@ -746,6 +770,14 @@ export default function Market() {
         {L.playerUnlock}
       </Txt>
     </Press>
+  );
+
+  // T-11-442 로그인 전 기기 — 팔기 · 내 거래 · 방출은 오류 대신 이 탭에서 할 수 있는 일과 로그인 버튼을 보인다.
+  const guestPane = (v: MarketView) => (
+    <View testID={`market-guest-${v}`} style={{ gap: 10 }}>
+      <Txt style={small}>{marketGuestText(v)}</Txt>
+      <LoginButtons back={{ market: true }} onDone={() => void loadMe()} />
+    </View>
   );
 
   const errText = error ? (
@@ -903,6 +935,13 @@ export default function Market() {
                 </View>
               ))}
             </View>
+          ) : guest ? (
+            <Txt
+              testID="market-guest-note"
+              style={{ fontSize: rem(FONT.label), color: c.onPitch, opacity: 0.85 }}
+            >
+              {L.guestHero}
+            </Txt>
           ) : meFailed ? (
             <Txt style={{ fontSize: rem(FONT.label), color: c.onPitch, opacity: 0.85 }}>
               {meFailed}
@@ -952,17 +991,17 @@ export default function Market() {
                   testID="market-pick-all"
                   accessibilityRole="button"
                   hitSlop={8}
-                  onPress={() =>
-                    setPicked(allPicked ? new Set() : new Set(releasable.map((p) => p.careerId)))
-                  }
+                  onPress={() => setPicked(pickAllIds(releasable, picked))}
                 >
                   <Txt style={{ ...small, fontWeight: '600', color: c.accentText }}>
-                    {allPicked ? L.pickNone : L.pickAll}
+                    {pickAllLabel(releasable.length, allPicked)}
                   </Txt>
                 </Press>
               ) : null}
             </View>
-            {!team ? (
+            {guest ? (
+              guestPane('release')
+            ) : !team ? (
               teamFailed ? (
                 <Txt tone="muted" style={small}>
                   {L.playersFailed}
@@ -1203,7 +1242,9 @@ export default function Market() {
                 <Txt bold accessibilityRole="header" style={small}>
                   {L.sellStep1}
                 </Txt>
-                {!team ? (
+                {guest ? (
+                  guestPane('sell')
+                ) : !team ? (
                   teamFailed ? (
                     <Txt tone="muted" style={small}>
                       {L.playersFailed}
@@ -1235,6 +1276,7 @@ export default function Market() {
                               setSelling(p);
                               setPct(100);
                               setError(null);
+                              setSellPick((n) => n + 1);
                             }}
                             style={{
                               minHeight: 104,
@@ -1270,7 +1312,12 @@ export default function Market() {
                   </View>
                 )}
                 {selling && quote && me ? (
-                  <View style={{ ...box, borderRadius: RADIUS.lg, gap: 12, padding: 14 }}>
+                  <View
+                    ref={priceBox}
+                    collapsable={false}
+                    testID="market-price-box"
+                    style={{ ...box, borderRadius: RADIUS.lg, gap: 12, padding: 14 }}
+                  >
                     <Txt bold style={small}>
                       {L.sellStep2({
                         name: nameOfPlayer(selling),
@@ -1391,7 +1438,9 @@ export default function Market() {
               </View>
             ) : (
               <View testID="market-trades" style={{ gap: 10 }}>
-                {!me ? (
+                {guest ? (
+                  guestPane('trades')
+                ) : !me ? (
                   meFailed ? (
                     <Txt tone="muted" style={small}>
                       {meFailed}

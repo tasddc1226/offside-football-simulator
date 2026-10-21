@@ -40,11 +40,16 @@ export const home: Translation<HomeMsgs> = {
   newsFailed: 'お知らせを読み込めませんでした。',
   newsEmpty: 'まだ投稿はありません。',
   pinned: '固定',
+  // T-11-440 이번에 앱을 연 뒤 아직 열지 않은 새 글 표시
+  postNew: 'NEW',
   tagTransfer: '移籍',
   tagDebut: 'プロ入り',
   tagFirst: 'サーバー初',
   tagRecord: 'サーバー新記録',
   tickerAria: '移籍・サーバー記録のニュース',
+  // T-11-440 전광판 멈춤 버튼
+  tickerPause: '電光掲示板を止める',
+  tickerPlay: '電光掲示板を再開する',
   tickerIdle: '移籍ニュースとサーバー初記録がここに流れます',
   tickerAge: (p) => `（${p.age}歳）`,
 };
