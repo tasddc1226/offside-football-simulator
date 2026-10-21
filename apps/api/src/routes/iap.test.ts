@@ -325,7 +325,7 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     const gift = async () =>
       GiftRes.parse(await (await call('GET', '/v1/items/gift', { cookie: me.cookie })).json()).data
         .gift;
-    expect(await gift()).toEqual({ id: HOME_GIFT.id, boost: 20, scout: 5 });
+    expect(await gift()).toEqual({ id: HOME_GIFT.id, kind: 'home', boost: 20, scout: 5 });
     const claim = (headers = key()) =>
       call('POST', '/v1/items/gift/claim', { cookie: me.cookie, headers });
     // 같은 멱등 키로 다시 보내면 같은 응답, 새 키로 다시 누르면 409이고 장수는 그대로다.

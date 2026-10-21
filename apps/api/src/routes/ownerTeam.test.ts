@@ -43,6 +43,7 @@ import {
   notifications,
   pushDeliveries,
   friends,
+  ownerItems,
   ownerTeams,
   teamMatches,
 } from '../db/schema.js';
@@ -862,6 +863,15 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     const after = await read();
     expect(feats(after).map((i) => i.done)).toEqual([true, true]);
     expect(feats(after).map((i) => i.points)).toEqual([50, 50]);
+    // T-11-357 50점 위업은 보상 문턱(80점) 아래라 점수만 오른다 — 다시 읽어도 아이템이 생기지 않는다.
+    expect(feats(after).map((i) => i.got)).toEqual([undefined, undefined]);
+    const boosts = async () =>
+      (await ctx.db.select().from(ownerItems).where(eq(ownerItems.profileId, me.profileId))).find(
+        (r) => r.item === 'boost',
+      )?.qty;
+    expect(await boosts()).toBeUndefined();
+    await read();
+    expect(await boosts()).toBeUndefined();
     // 판매해도 원 육성자의 선수 업적은 기존처럼 남는다.
     await ctx.db
       .update(cards)

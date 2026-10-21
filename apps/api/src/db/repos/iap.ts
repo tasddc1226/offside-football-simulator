@@ -311,3 +311,71 @@ export async function claimHomeGift(db: Db, profileId: string, now: string): Pro
   if (!results[0]?.meta.changes) return null;
   return foldItems(results.at(-1)?.results ?? []);
 }
+
+/**
+ * T-11-386 시즌 업적 보상 한 번 읽기 — 그 시즌 업적 행의 점수 · 적어 둔 보상 장수와 받았는지(giftId 받은 기록). 행이 없으면
+ * null(그 시즌에 업적을 센 적 없음). 장수가 null이면 아직 세지 않았다.
+ */
+export async function seasonGiftRowOf(
+  db: Db,
+  profileId: string,
+  season: number,
+  giftId: string,
+): Promise<{ score: number; boost: number | null; scout: number | null; claimed: boolean } | null> {
+  const row = await db.$client
+    .prepare(
+      `SELECT score, reward_boost AS boost, reward_scout AS scout,
+              EXISTS (SELECT 1 FROM gift_claims WHERE profile_id = ?1 AND gift_id = ?3) AS claimed
+         FROM owner_achievements WHERE profile_id = ?1 AND season = ?2`,
+    )
+    .bind(profileId, season, giftId)
+    .first<{ score: number; boost: number | null; scout: number | null; claimed: number }>();
+  return row ? { ...row, claimed: row.claimed === 1 } : null;
+}
+
+/** T-11-386 센 시즌 업적 보상 장수를 적는다. 이미 적었으면 그대로 둔다(겹쳐 세도 먼저 적은 값). */
+export async function saveSeasonGift(
+  db: Db,
+  profileId: string,
+  season: number,
+  r: { boost: number; scout: number },
+) {
+  await db.$client
+    .prepare(
+      `UPDATE owner_achievements SET reward_boost = ?, reward_scout = ?
+        WHERE profile_id = ? AND season = ? AND reward_boost IS NULL`,
+    )
+    .bind(r.boost, r.scout, profileId, season)
+    .run();
+}
+
+/**
+ * T-11-386 시즌 업적 보상 받기 — 홈 선물(claimHomeGift)과 같은 방식: 받은 기록을 넣고, 그 줄을 이 batch가 새로 넣었을
+ * 때만 적어 둔 장수만큼 더한다. 이미 받았으면 null, 아니면 받은 뒤 장수.
+ */
+export async function claimSeasonGift(
+  db: Db,
+  profileId: string,
+  giftId: string,
+  r: { boost: number; scout: number },
+  now: string,
+): Promise<Items | null> {
+  const d1 = db.$client;
+  const claimId = crypto.randomUUID();
+  const guard = {
+    sql: `EXISTS (SELECT 1 FROM gift_claims WHERE profile_id = ? AND gift_id = ? AND claim_id = ?)`,
+    params: [profileId, giftId, claimId],
+  };
+  const results = await d1.batch<{ item: string; qty: number }>([
+    d1
+      .prepare(
+        `INSERT OR IGNORE INTO gift_claims (profile_id, gift_id, claim_id, claimed_at) VALUES (?, ?, ?, ?)`,
+      )
+      .bind(profileId, giftId, claimId, now),
+    ...(r.boost > 0 ? [grantItemStatement(d1, profileId, 'boost', r.boost, now, guard)] : []),
+    ...(r.scout > 0 ? [grantItemStatement(d1, profileId, 'scout', r.scout, now, guard)] : []),
+    d1.prepare(ITEMS_SQL).bind(profileId),
+  ]);
+  if (!results[0]?.meta.changes) return null;
+  return foldItems(results.at(-1)?.results ?? []);
+}

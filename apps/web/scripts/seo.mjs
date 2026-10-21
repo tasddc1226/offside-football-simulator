@@ -286,6 +286,7 @@ const GUIDE_SECTIONS = [
       guideCopy.teamAssembly,
       guideCopy.salaryBudget,
       guideCopy.ownerRecords,
+      guideCopy.achRewards,
       guideCopy.teamSynergy,
       guideCopy.matchReport,
       guideCopy.teamMoments,

@@ -426,6 +426,24 @@ export function achNear(groups: readonly ClubAchievementGroup[], n = 3): AchNear
 export const achPoints = (i: ClubAchievement): string =>
   i.points > 0 ? L.achPointsGot({ n: num(i.points) }) : L.achPointsWorth({ n: num(i.worth) });
 
+/** T-11-357 업적 보상 아이템 이름(잠재력 강화권 · 프리미엄 스카우트권). 없으면 빈 문자열. */
+export const achRewardItems = (r: { boost: number; scout: number }): string =>
+  [
+    r.boost > 0 ? L.achRewardBoost({ n: r.boost }) : '',
+    r.scout > 0 ? L.achRewardScout({ n: r.scout }) : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+/** T-11-357 업적 한 줄의 보상 표시 — 받은 보상과 다음 달성 보상(지금 시즌만 붙는다). 없으면 null. */
+export function achReward(i: ClubAchievement): string | null {
+  const parts = [
+    i.got ? L.achRewardGot({ items: achRewardItems(i.got) }) : '',
+    i.reward ? L.achRewardNext({ items: achRewardItems(i.reward) }) : '',
+  ].filter(Boolean);
+  return parts.length ? parts.join(' · ') : null;
+}
+
 // T-11-028 업적 분류(선수·팀·구단주·감독)와 시즌 등급.
 /** 업적 분류 이름(contracts의 한국어 이름 대신 지금 언어로). */
 export const achCatName = (id: AchCategory): string =>

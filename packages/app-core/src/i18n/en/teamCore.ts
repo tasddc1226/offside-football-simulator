@@ -1,5 +1,6 @@
 import type { Translation } from '../core';
 import type { TeamCoreMsgs } from '../ko/teamCore';
+import { plural } from './_util';
 
 export const teamCore: Translation<TeamCoreMsgs> = {
   record: (p) => `${p.w}W ${p.d}D ${p.l}L`,
@@ -33,6 +34,10 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   achUndoneHint: (p) => `Not yet · ${p.hint}`,
   achPointsGot: (p) => `+${p.n} pts`,
   achPointsWorth: (p) => `${p.n} pts`,
+  achRewardNext: (p) => `Reward: ${p.items}`,
+  achRewardGot: (p) => `Received: ${p.items}`,
+  achRewardBoost: (p) => plural(p.n, 'potential boost ticket'),
+  achRewardScout: (p) => plural(p.n, 'premium scout ticket'),
   achRankNone: 'Complete an achievement to join the ranking',
   achRank: (p) => `#${p.rank} of ${p.ranked}`,
   achCatPlayer: 'Player achievements',

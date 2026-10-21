@@ -10,6 +10,7 @@ export const sheetAchieve: Translation<SheetAchieveMsgs> = {
   more: (p) => `+${p.n} more`,
   gainedPts: (p) => `+${p.n} pts`,
   nowPts: (p) => `${p.n} pts now`,
+  reward: (p) => `You received ${p.items} as a reward`,
   viewAch: 'View achievements',
   close: 'Close',
 };

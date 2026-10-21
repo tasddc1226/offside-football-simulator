@@ -672,6 +672,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'done',
     'players',
     'team_kept',
+    'reward_boost',
+    'reward_scout',
     'reached_at',
     'updated_at',
   ],
