@@ -68,6 +68,12 @@ describe('privacy allowlists', () => {
       ),
     ).toBe('?utm_campaign=season1_launch');
   });
+  it('keeps the amachuggu partner popup campaign', () => {
+    for (const content of ['bs_a', 'bs_b']) {
+      const query = `?utm_source=amachuggu&utm_medium=partner&utm_campaign=amachuggu_collab&utm_content=${content}`;
+      expect(campaignQuery(`https://offside-lab.com/${query}&uid=PRIVATE`)).toBe(query);
+    }
+  });
   it.each(['launch', 'retirement_share'])(
     'preserves existing campaign %s and content',
     (campaign) => {

@@ -13,9 +13,11 @@ export const CAMPAIGNS: Record<string, readonly string[]> = {
     // T-11-195 해외 유입 메타 광고(페이스북·인스타그램).
     'meta',
     'facebook',
+    // T-11-423 아마축구(아마추어 축구팀 운영 서비스) 상호 홈 팝업 협업.
+    'amachuggu',
   ],
-  utm_medium: ['social', 'community', 'paid'],
-  utm_campaign: ['launch', 'retirement_share', 'season1_launch', 'global_test'],
+  utm_medium: ['social', 'community', 'paid', 'partner'],
+  utm_campaign: ['launch', 'retirement_share', 'season1_launch', 'global_test', 'amachuggu_collab'],
   utm_content: [
     'career',
     'retirement',
@@ -40,6 +42,9 @@ export const CAMPAIGNS: Record<string, readonly string[]> = {
     'us_a',
     'us_b',
     'us_c',
+    // T-11-423 아마축구 바텀시트 팝업 소재 A(선수 뽑기)·B(평행세계).
+    'bs_a',
+    'bs_b',
   ],
 };
 export function campaignQuery(href: string): string {

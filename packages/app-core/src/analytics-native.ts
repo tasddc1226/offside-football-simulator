@@ -164,6 +164,10 @@ export function createNativeAnalytics(io: IO) {
       });
       return true;
     },
+    /** T-11-423 제휴 홈 팝업(웹 partner_popup_*과 같은 이름). 소재 a·b만 보낸다. */
+    partnerPopup(action: 'view' | 'click' | 'close' | 'hide_today', variant: 'a' | 'b') {
+      send('partner_popup_' + action, { partner: 'amachuggu', variant });
+    },
     analytics: {
       replace: () => tracker?.replace(),
       start: (s: Career, previous: Career | null) => tracker?.start(s, previous),
