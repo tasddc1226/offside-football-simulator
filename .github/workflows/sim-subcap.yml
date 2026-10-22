@@ -1,0 +1,103 @@
+# SIM ONLY (sim/subcap-100k 브랜치 전용, 머지 금지): 세부 능력치 상한 실험 10만 커리어 × 변형 4 × 훈련 정책 4.
+name: Sim subcap experiment
+
+on:
+  push:
+    branches: [sim/subcap-100k]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sim-subcap
+  cancel-in-progress: true
+
+jobs:
+  sim:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 16
+      matrix:
+        variant: [cap99, cap105, cap110, nocap]
+        policy: [random, smart, focus, mono]
+        shard: [0, 1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile --filter @offside/fulltime-sim...
+      - name: Simulate 20,000 careers (4 processes x 5,000)
+        working-directory: tooling/fulltime-sim
+        env:
+          VARIANT: ${{ matrix.variant }}
+          POLICY: ${{ matrix.policy }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          case "$VARIANT" in
+            cap99) ;;
+            cap105) export SUBCAP=105 SUBTAPER=0.5 ;;
+            cap110) export SUBCAP=110 SUBTAPER=0.5 ;;
+            nocap) export SUBCAP=999 SUBTAPER=1 ;;
+          esac
+          export DPOS=1 BALANCE=subcap-balance.json
+          for p in 0 1 2 3; do
+            SEED=$((1000 + SHARD * 4 + p)) pnpm -s sim 5000 "$POLICY" "part$p" &
+          done
+          wait
+          mkdir -p ../../out
+          node -e '
+            const fs = require("fs");
+            const keep = ["pos","dpos","type","trait","peak","legend","maxSub","n99","ballon","money","trophies"];
+            let out = [keep.join(",")];
+            for (let p = 0; p < 4; p++) {
+              const [h, ...ls] = fs.readFileSync(`results/part${p}/careers-${process.env.POLICY}.csv`, "utf8").trim().split("\n");
+              const c = h.split(",");
+              const idx = keep.map((k) => c.indexOf(k));
+              for (const l of ls) { const v = l.split(","); out.push(idx.map((i) => v[i]).join(",")); }
+            }
+            fs.writeFileSync(`../../out/${process.env.VARIANT}_${process.env.POLICY}_${process.env.SHARD}.csv`, out.join("\n"));
+            console.log("rows", out.length - 1);
+          '
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rows-${{ matrix.variant }}-${{ matrix.policy }}-${{ matrix.shard }}
+          path: out/*.csv
+          retention-days: 7
+
+  report:
+    needs: sim
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: rows-*
+          merge-multiple: true
+          path: rows
+      - run: node tooling/fulltime-sim/subcap-report.mjs rows | tee report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: subcap-report
+          path: |
+            report.md
+            rows/report.json
+          retention-days: 14

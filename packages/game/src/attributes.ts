@@ -304,18 +304,25 @@ function spreadShares(s: GameState, k: AttrKey, up: boolean) {
   return { F, sh, norm };
 }
 
+// SIM ONLY (sim/subcap-100k 브랜치, 머지 금지): 세부 능력치 상한·99 초과 성장 효율 실험.
+const ENV = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
+const SUB_CAP = ENV.SUBCAP ? +ENV.SUBCAP : 99;
+const SUB_TAPER = ENV.SUBTAPER ? +ENV.SUBTAPER : 1;
 /** T-11-183 오를 성장 중 최고치(99)에 닿은 세부 능력치 몫으로 버려지는 비율(0~1). 1이면 이 능력치는 더 오르지 않는다. */
 export function maxedShare(s: GameState, k: AttrKey): number {
   const { F, sh, norm } = spreadShares(s, k, true);
   let lost = 0;
-  for (const [i, f] of Object.entries(F)) if ((s.sub[i] ?? 0) >= 99) lost += f * sh[i]!;
+  for (const [i, f] of Object.entries(F)) if ((s.sub[i] ?? 0) >= SUB_CAP) lost += f * sh[i]!;
   return norm ? lost / norm : 0;
 }
 
 export function spreadAttr(s: GameState, k: AttrKey, v: number) {
   const { F, sh, norm } = spreadShares(s, k, v > 0);
-  for (const i in F)
-    s.sub[i] = clamp(Math.round((s.sub[i]! + (v * sh[i]!) / norm) * 10) / 10, 1, 99);
+  for (const i in F) {
+    let d = (v * sh[i]!) / norm;
+    if (d > 0 && s.sub[i]! >= 99) d *= SUB_TAPER;
+    s.sub[i] = clamp(Math.round((s.sub[i]! + d) * 10) / 10, 1, Math.max(SUB_CAP, s.sub[i]!));
+  }
   syncFace(s);
 }
 

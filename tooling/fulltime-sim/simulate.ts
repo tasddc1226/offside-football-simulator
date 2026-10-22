@@ -30,6 +30,7 @@ import {
   playPhase,
   investCost,
   INVESTS,
+  maxedShare,
 } from '@offside/game/index';
 import { pick, ri, rnd, createRng, setActiveRng, freshSeed } from '@offside/game/rng';
 import { setLatestBalance } from '@offside/game/balance';
@@ -152,7 +153,8 @@ interface Row {
   [k: string]: string | number;
 }
 
-function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
+type Policy = 'random' | 'smart' | 'focus' | 'mono';
+function run(N: number, policy: Policy): { rows: Row[]; agg: Agg } {
   const smart = policy === 'smart';
   const A = newAgg();
   const rows: Row[] = [];
@@ -190,6 +192,8 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
     let proDebutAge: number | null = null,
       euAge: number | null = null,
       retireReason = 'age35';
+    let maxSub = 0,
+      n99 = 0;
     const clubs = new Set<string>();
 
     try {
@@ -254,6 +258,11 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
             );
         });
         s_cur = s;
+        {
+          const v = Object.values(s.sub) as number[];
+          maxSub = Math.max(maxSub, ...v);
+          n99 = Math.max(n99, v.filter((x) => x >= 99).length);
+        }
         let m = market(s),
           g = 0;
         while (true) {
@@ -395,12 +404,24 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
       legend: score,
       title,
       retireReason,
+      maxSub: Math.round(maxSub * 10) / 10,
+      n99,
     });
   }
   return { rows, agg: A };
 
   // ── 정책 (analysis/simulate.js 의 pickTraining / value / pickChoice / pickOption / anyJob / realJob 그대로 이식) ──
   function pickTraining(s: GameState): string {
+    // focus: 세부 포지션 주력 능력치 중 낮은 것부터 / mono: 포지션 가중치 1위 능력치만(다 차면 다음)
+    if (policy === 'focus' || policy === 'mono') {
+      if (s.cond < 55) return 'rest';
+      if (policy === 'focus') {
+        const f = (s.focus ?? []).filter((k) => maxedShare(s, k) < 0.999);
+        if (f.length) return [...f].sort((a, b) => s.attrs[a] - s.attrs[b])[0]!;
+      }
+      const byW = [...ATTR_KEYS].sort((a, b) => (POS[s.pos].w[b] ?? 0) - (POS[s.pos].w[a] ?? 0));
+      return byW.find((k) => maxedShare(s, k) < 0.999) ?? byW[0]!;
+    }
     if (!smart) return s.cond < 45 ? 'rest' : pick(ATTR_KEYS);
     if (s.cond < 55) return 'rest';
     return [...ATTR_KEYS]
@@ -488,7 +509,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
 
 async function main() {
   const N = +(process.argv[2] || 20000);
-  const policy = (process.argv[3] || 'random') as 'random' | 'smart';
+  const policy = (process.argv[3] || 'random') as Policy;
   const tag = process.argv[4] || 'ts-port';
   const outDir = path.join(__dirname, 'results', tag);
   fs.mkdirSync(outDir, { recursive: true });
