@@ -7,6 +7,7 @@ import { Screen } from '../../ui/Screen';
 import { Topbar } from '../../ui/Topbar';
 import { Txt } from '../../ui/Txt';
 import { Seg, TabOpt } from '../board/parts';
+import AdminAdInspector from './admin/AdminAdInspector';
 import AdminAutomation from './admin/AdminAutomation';
 import AdminBalance from './admin/AdminBalance';
 import AdminComments from './admin/AdminComments';
@@ -93,7 +94,10 @@ export default function Admin() {
             ) : tab === 'users' ? (
               <AdminUsers />
             ) : tab === 'revenue' ? (
-              <AdminRevenue />
+              <>
+                <AdminAdInspector />
+                <AdminRevenue />
+              </>
             ) : tab === 'cup' ? (
               <AdminCupPredictions />
             ) : tab === 'push' ? (
