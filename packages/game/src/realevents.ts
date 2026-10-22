@@ -17,13 +17,19 @@ const DERBY: Record<string, string> = {
   sa: '밀라노 더비',
   ll: '엘 클라시코',
   pl: '맨체스터 더비',
+  csl: '상하이 더비',
+  spl: '리야드 더비',
+  bra: '플라-플루',
+  por: '오 클라시코',
 };
 const CAMP = (s: GameState) =>
   s.leagueId === 'mls'
     ? pick(['미국 플로리다', '미국 애리조나', '멕시코 칸쿤'])
-    : leagueOf(s.leagueId).tier <= 3
-      ? pick(['튀르키예 안탈리아', '태국 치앙마이', '일본 가고시마', '제주 서귀포'])
-      : pick(['스페인 마르베야', 'UAE 두바이', '미국 플로리다']);
+    : s.leagueId === 'bra'
+      ? pick(['미국 플로리다', '브라질 아치바이아'])
+      : leagueOf(s.leagueId).tier <= 3
+        ? pick(['튀르키예 안탈리아', '태국 치앙마이', '일본 가고시마', '제주 서귀포'])
+        : pick(['스페인 마르베야', 'UAE 두바이', '미국 플로리다']);
 
 // 아시안게임·올림픽 남자축구는 의무 차출 대회가 아니다 — 해외 구단 소속이면 차출을 협상해야 한다.
 // 결과는 national.ts RELEASE[key].flag + 연도 플래그로 남아 대표팀 명단 선발에 쓰인다.
