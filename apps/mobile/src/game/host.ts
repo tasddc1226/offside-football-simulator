@@ -19,6 +19,7 @@ import { noteOwner } from '@offside/app-core/api/friendPending';
 import { isMember } from '@offside/app-core/account';
 import { gameText as T } from '@offside/app-core/i18n/ko/game';
 import { APP_VERSION, WEB_ORIGIN } from '../platform/config';
+import { showRetireAd } from '../platform/interstitial';
 import { ensureSession, renewSession, sessionToken } from '../platform/session';
 import {
   accountCache,
@@ -103,6 +104,7 @@ export const {
   uploadRetirement,
   analytics,
   trackPage,
+  retired: () => void showRetireAd(),
 });
 
 // ───────── 클럽 커스텀 · 선수 상세 · 영구결번 · 새 소식 · 소유권 충돌 ─────────

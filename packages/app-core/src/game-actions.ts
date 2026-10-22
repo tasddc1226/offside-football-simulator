@@ -123,6 +123,8 @@ export interface GameHost {
     retire(s: GameState): void;
   };
   trackPage(screen: Screen): void;
+  /** T-11-455 은퇴 화면으로 넘어간 직후(앱은 여기서 전면광고를 띄운다). */
+  retired?(): void;
 }
 
 /** T-11-186 컵·대륙 대회 경기 줄 — 리그 페이즈는 승무패, 승부는 차전과 마지막 경기의 통과 여부. 상대·스코어는 엔진이 정하지 않는다. */
@@ -926,6 +928,7 @@ export function createGameActions(host: GameHost) {
     saveKey(DRAFT_IDENTITY_KEY, null);
     Object.assign(appState.C, draftIdentity());
     host.scrollTop(false);
+    host.retired?.();
   }
 
   function confirmNew() {
