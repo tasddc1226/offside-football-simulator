@@ -23,6 +23,8 @@ module.exports = ({ config }) => {
     ...(config.plugins ?? []),
     ['@react-native-firebase/analytics', { ios: { withoutAdIdSupport: true } }],
     './plugins/withAndroidOptimization',
+    // T-11-453 AdMob 미디에이션 어댑터(1.1.4부터, 네이티브라 스토어 빌드가 필요하다).
+    './plugins/withAdMediation',
     [
       'expo-build-properties',
       {

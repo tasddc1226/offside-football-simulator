@@ -155,6 +155,10 @@ const LEAGUE_WIN = [
   'J1리그',
   'MLS',
   '에레디비시',
+  '중국 슈퍼리그',
+  '사우디 프로리그',
+  '브라질레이랑',
+  '프리메이라 리가',
 ].map((l) => `${l} 우승`);
 const CUP_WIN = [
   '코리아컵',
@@ -169,10 +173,18 @@ const CUP_WIN = [
   '코파 델 레이',
   'FA컵',
   'EFL컵',
+  '중국 FA컵',
+  '킹스컵',
+  '코파 두 브라질',
+  '타사 드 포르투갈',
+  '타사 다 리가',
 ].map((c) => `${c} 우승`);
-const TOP_CONT_WIN = ['UEFA 챔피언스리그', 'AFC 챔피언스리그 엘리트', 'CONCACAF 챔피언스컵'].map(
-  (c) => `${c} 우승`,
-);
+const TOP_CONT_WIN = [
+  'UEFA 챔피언스리그',
+  'AFC 챔피언스리그 엘리트',
+  'CONCACAF 챔피언스컵',
+  '코파 리베르타도레스',
+].map((c) => `${c} 우승`);
 const hasAny = (honors: string[], names: string[]) => honors.some((h) => names.includes(h));
 
 /**

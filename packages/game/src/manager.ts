@@ -165,7 +165,8 @@ export interface ManagerState {
 }
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
-const PRO_LEAGUES: League[] = LEAGUES.filter((l) => !l.amateur);
+// T-11-457 감독 모드는 예전 리그만 쓴다(시즌 2에 연 리그는 선수 커리어 전용).
+const PRO_LEAGUES: League[] = LEAGUES.filter((l) => !l.amateur && !l.added);
 const leagueById = (id: string) => PRO_LEAGUES.find((l) => l.id === id)!;
 const clubsIn = (leagueId: string) => CLUBS.filter((c) => c.leagueId === leagueId);
 /** 한 단계 위 · 아래 리그(한국 리그만 승강이 있다). */
