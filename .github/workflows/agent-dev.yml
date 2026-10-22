@@ -1,7 +1,11 @@
 # ADR-015 3단계 @dev(손흥민) 작업. Worker가 운영자 지시를 받아 workflow_dispatch로 띄운다.
 # work: Claude Code가 읽기 권한 토큰만 가진 채 고치고 커밋한다(push 권한 없음).
 # publish: Claude가 손댈 수 없는 고정 스크립트가 커밋을 main 위에 얹어 브랜치를 올리고 PR을 연다. 머지는 슬랙 승인 버튼으로만.
+# CI 고치기(branch · ci_run): @dev PR의 CI가 실패하면 Worker가 한 번 더 띄운다. 그 PR 브랜치에서 실패 로그를 보고 고친 커밋을
+# 같은 브랜치에 얹는다(새 PR을 열지 않는다).
 name: Agent dev task
+# 끝의 [채널:ts]로 운영자 멈춤이 이 스레드의 실행을 찾아 취소한다(apps/agents/src/dev.ts cancelDevRuns).
+run-name: '${{ inputs.title }} [${{ inputs.thread }}]'
 
 on:
   workflow_dispatch:
@@ -18,6 +22,16 @@ on:
         description: 결과를 올릴 슬랙 스레드(channel:ts)
         required: true
         type: string
+      branch:
+        description: CI 고치기 대상 @dev PR 브랜치(agent-dev/…). 비우면 main에서 새 작업
+        required: false
+        type: string
+        default: ''
+      ci_run:
+        description: CI 고치기에서 실패한 CI 실행 번호
+        required: false
+        type: string
+        default: ''
 
 concurrency:
   group: agent-dev
@@ -31,10 +45,30 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
+      actions: read
     steps:
+      - name: Check fix target
+        if: inputs.branch != ''
+        env:
+          BRANCH: ${{ inputs.branch }}
+          CI_RUN: ${{ inputs.ci_run }}
+        run: |
+          [[ "$BRANCH" =~ ^agent-dev/[0-9]+$ ]] || { echo "::error::@dev 브랜치가 아니에요: $BRANCH"; exit 1; }
+          [[ "$CI_RUN" =~ ^[0-9]+$ ]] || { echo "::error::CI 실행 번호가 아니에요: $CI_RUN"; exit 1; }
       - uses: actions/checkout@v6
         with:
+          ref: ${{ inputs.branch || github.sha }}
+          fetch-depth: ${{ inputs.branch && '0' || '1' }}
           persist-credentials: false
+      # CI 고치기: 실패한 잡의 로그 끝부분을 파일로 둔다. 토큰은 이 스텝에만 있고 Claude 스텝에는 없다.
+      - name: Failed CI log
+        if: inputs.branch != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_RUN: ${{ inputs.ci_run }}
+        run: |
+          gh run view "$CI_RUN" --repo "$GITHUB_REPOSITORY" --log-failed 2>&1 | tail -c 30000 > "$RUNNER_TEMP/ci-failed.log" || true
+          wc -c "$RUNNER_TEMP/ci-failed.log"
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
@@ -46,19 +80,45 @@ jobs:
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: pnpm-store-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
+      # 프롬프트(dev-runner.md)의 "운영 서비스에 요청하지 않는다"를 러너에서 막는다: 운영 · 스테이징 주소를 막고,
+      # sudo를 없애 Claude가 막은 것을 되돌리지 못하게 한다(이 잡의 다음 스텝은 sudo를 쓰지 않는다).
+      - name: Block production hosts
+        run: |
+          for h in offside-lab.com www.offside-lab.com api.offside-lab.com agents.offside-lab.com \
+            offside-api.tasddc1569.workers.dev offside-api-staging.tasddc1569.workers.dev \
+            offside-api-expanded.tasddc1569.workers.dev offside-web.tasddc1569.workers.dev \
+            offside-web-staging.tasddc1569.workers.dev offside-web-expanded.tasddc1569.workers.dev; do
+            printf '0.0.0.0 %s\n:: %s\n' "$h" "$h"
+          done | sudo tee -a /etc/hosts > /dev/null
+          # 다음 스텝의 CLAUDE_CODE_SUBPROCESS_ENV_SCRUB은 리눅스에서 bubblewrap으로 하위 프로세스를 가둔다. sudo를 없애기 전에
+          # 설치하고, Ubuntu 24.04가 막는 비특권 사용자 네임스페이스를 연다. 안 되면 Claude가 시작하자마자 멈추니 여기서 먼저 실패한다.
+          command -v bwrap > /dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq bubblewrap > /dev/null; }
+          sudo sysctl -qw kernel.apparmor_restrict_unprivileged_userns=0 2> /dev/null || true
+          bwrap --ro-bind / / --dev /dev --proc /proc --unshare-all true || { echo '::error::bubblewrap이 동작하지 않아요'; exit 1; }
+          sudo rm -f /etc/sudoers.d/runner
+          if sudo -n true 2>/dev/null; then echo '::error::sudo가 아직 돼요'; exit 1; fi
+          if curl -sS -m 5 -o /dev/null https://api.offside-lab.com/v1/status 2>/dev/null; then
+            echo '::error::운영 API가 아직 열려 있어요'; exit 1
+          fi
       - name: Claude Code
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_DEV_API_KEY }}
+          # Bash 같은 하위 프로세스 환경에서 API 키를 지운다(Claude가 키를 읽거나 내보내지 못하게).
+          CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: '1'
           TITLE: ${{ inputs.title }}
           REQUEST: ${{ inputs.request }}
+          BRANCH: ${{ inputs.branch }}
         run: |
           git config user.name 'offside-dev-agent'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           echo "BASE=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           out="$RUNNER_TEMP/out"; mkdir -p "$out"
-          prompt="$(cat apps/agents/roles/dev-runner.md)
+          # 지시서는 main(띄운 시점)의 것을 읽는다. CI 고치기의 PR 브랜치가 지시서를 바꿨어도 따르지 않게.
+          prompt="$(git show "$GITHUB_SHA:apps/agents/roles/dev-runner.md")
 
           결과 파일: PR 제목 · 본문은 $out/pr.md 에 쓴다.
+
+          $( [ -z "$BRANCH" ] || echo "CI 고치기: 이 체크아웃은 @dev PR 브랜치 $BRANCH 다. 실패한 CI 로그 끝부분은 $RUNNER_TEMP/ci-failed.log 에 있다." )
 
           <request>
           제목: $TITLE
@@ -67,6 +127,7 @@ jobs:
           </request>"
           npx -y @anthropic-ai/claude-code@2.1.300 -p "$prompt" \
             --model claude-opus-5-5 --max-budget-usd 5 --max-turns 80 \
+            --disallowedTools WebFetch WebSearch \
             --output-format json --dangerously-skip-permissions \
             > "$out/claude.json" || echo "claude exited $?"
       - name: Collect result
@@ -97,7 +158,8 @@ jobs:
           private-key: ${{ secrets.AGENT_APP_PRIVATE_KEY }}
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.branch || github.sha }}
+          fetch-depth: ${{ inputs.branch && '0' || '1' }}
           token: ${{ steps.app.outputs.token }}
       - uses: actions/setup-node@v6
         with:
@@ -115,6 +177,7 @@ jobs:
           OUT: ${{ runner.temp }}/out
           TITLE: ${{ inputs.title }}
           THREAD: ${{ inputs.thread }}
+          BRANCH: ${{ inputs.branch }}
           WORK_RESULT: ${{ needs.work.result }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           RUN_ID: ${{ github.run_id }}

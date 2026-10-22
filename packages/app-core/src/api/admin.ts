@@ -3,6 +3,7 @@
 // (서버도 1분 엣지 캐시). 쓰기가 성공하면 메모는 전부 비워진다.
 import type {
   AdminCup,
+  AdminCupCapsSuggest,
   AdminCupCreate,
   AdminCupList,
   AdminComment,
@@ -14,6 +15,7 @@ import type {
   AdminFundsReport,
   AdminInviteReport,
   AdminItemGrantInput,
+  AdminLeague,
   AdminItemGrantResult,
   AdminRevenue,
   AdminStats,
@@ -37,6 +39,7 @@ export type {
   AdminInviteReport,
   AdminCup,
   AdminCupCreate,
+  AdminLeague,
   AdminNameReport,
   AdminStats,
   AutomationReport,
@@ -44,12 +47,27 @@ export type {
   BalanceVersion,
 };
 
+// T-11-427 오프사이드 리그 상태 · 배치 전 일정 미루기(T-11-418b). 늘 최신을 본다.
+export const fetchAdminLeague = () => apiFetch<AdminLeague>('/v1/admin/leagues/current');
+export const delayLeague = (days: number) =>
+  apiFetch<AdminLeague>('/v1/admin/leagues/current/delay', {
+    method: 'POST',
+    body: JSON.stringify({ days }),
+  });
+
 // T-11-145 오프사이드 컵 열기: 시작일만 주면 서버가 표준 일정·회차를 정한다. 접수 전 대회만 지운다.
 export const fetchAdminCups = () => apiFetch<AdminCupList>('/v1/admin/cups');
 export const createCup = (input: AdminCupCreate) =>
   apiFetch<AdminCup>('/v1/admin/cups', { method: 'POST', body: JSON.stringify(input) });
 export const deleteCup = (id: string) =>
   apiFetch<undefined>(`/v1/admin/cups/${id}`, { method: 'DELETE' });
+// T-11-410 아랫 구간 상한: 지금 시즌 팀 분포로 낸 제안과 고치기(접수 전만).
+export const fetchCupCapsSuggest = () => apiFetch<AdminCupCapsSuggest>('/v1/admin/cups/caps');
+export const setCupCap = (id: string, ovrMax: number) =>
+  apiFetch<AdminCup>(`/v1/admin/cups/${id}/cap`, {
+    method: 'PUT',
+    body: JSON.stringify({ ovrMax }),
+  });
 
 export const fetchBalanceVersions = () => apiFetch<BalanceVersionList>('/v1/admin/balance');
 export const createBalanceDraft = (draft: BalanceDraftInput) =>

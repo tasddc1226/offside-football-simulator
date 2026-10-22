@@ -15,6 +15,7 @@ import {
   rnCut,
   rnMissOf,
   rnQualifies,
+  rnLeaveRisk,
   RN_MIN_SEASONS,
   type RnClub,
   type RnMiss,
@@ -90,15 +91,19 @@ function contributionsOf(
   row: JudgeRow,
   seasons: StoredSeasonRow[] | undefined,
   clubsJson: string | undefined,
-): { number: number; all: RnClub[]; cut: number } | null {
+): { number: number; all: RnClub[]; cut: number; leaveRisk: () => Set<string> } | null {
   const number = row.shirtNumber;
   if (number === null || !(number >= 1) || !seasons) return null;
   const renamed = renamedIds(clubsJson);
   const life = lifeSeasons(seasons, row.retireAge);
+  const resolve = (n: string) => renamed.get(n) ?? DEFAULT_IDS.get(n);
+  const cut = rnCut(row.pos, seasonOf(row));
   return {
     number,
-    all: clubContributions(row.pos, life, (n) => renamed.get(n) ?? DEFAULT_IDS.get(n)),
-    cut: rnCut(row.pos, seasonOf(row)),
+    all: clubContributions(row.pos, life, resolve),
+    cut,
+    // T-11-429 진행률 안내에서만 쓴다(은퇴 심사는 실제 마지막 구단 그대로).
+    leaveRisk: () => rnLeaveRisk(row.pos, life, cut, resolve),
   };
 }
 
@@ -559,6 +564,7 @@ export async function retiredNumberProgress(
     : [];
   const taken = new Set(occupied.map((slot) => slot.clubId));
   const candidates = new Set(rnCandidates(k.all, k.cut).map((club) => club.clubId));
+  const leaveRisk = k.leaveRisk();
   return {
     season,
     number,
@@ -572,6 +578,7 @@ export async function retiredNumberProgress(
       eligible: rnQualifies(club, k.cut),
       candidate: candidates.has(club.clubId),
       availability: taken.has(club.clubId!) ? 'taken' : backfilled(meta) ? 'open' : 'unknown',
+      leaveRisk: leaveRisk.has(club.clubId!),
     })),
   };
 }

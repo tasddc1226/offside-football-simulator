@@ -2,7 +2,7 @@
 // screens/hof/Fairness.tsx는 이 결과를 그리기만 한다). 경기 중 화면에는 숫자를 내지 않고 이 표만 정확한 값을 보여 준다.
 import type { BalanceHistory, BalancePatch } from '@offside/contracts';
 import { getLocale } from '@offside/contracts/i18n';
-import { REROLL_MILEAGE } from '@offside/contracts/cup';
+import { REROLL_MILEAGE, scoutPityAt } from '@offside/contracts/cup';
 import {
   BALANCE_KEYS,
   BALANCE_SPEC,
@@ -72,10 +72,14 @@ export function fairnessView(): FairnessView {
         season: oddsPct(atLeastOneOf3(season.S)),
         pre: oddsPct(atLeastOneOf3(pre.S)),
       }),
-      // T-11-196 프리미엄 스카우트권: 모든 후보의 S 확률 2배 · 1명 A 이상 보장(candidates.ts scoutOdds와 같은 식).
-      L.premium({ season: oddsPct(2 * season.S), pre: oddsPct(2 * pre.S) }),
+      // T-11-196 프리미엄 스카우트권: 모든 후보의 S 확률 premiumSMult배 · 1명 A 이상 보장(premiumScout.ts scoutOdds와 같은 식).
+      L.premium({
+        season: oddsPct(Math.min(1, values.premiumSMult * season.S)),
+        pre: oddsPct(Math.min(1, values.premiumSMult * pre.S)),
+        mult: values.premiumSMult,
+      }),
       // T-11-244 프리미엄 스카우트 천장(contracts SCOUT_PITY_*).
-      L.premiumPity,
+      L.premiumPity(scoutPityAt()),
       // T-11-248 리롤권 마일리지(contracts REROLL_MILEAGE).
       L.rerollMileage({ need: REROLL_MILEAGE }),
       `${L.potNote} ${L.version({ v })}`,

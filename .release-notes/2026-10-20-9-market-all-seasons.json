@@ -1,0 +1,24 @@
+{
+  "id": "t-11-425-market-all-seasons",
+  "title": "이적시장 모든 시즌 선수 거래",
+  "items": [
+    "이적시장에서 지난 시즌 선수 카드도 내놓고 영입할 수 있어요. 시즌 2가 열려도 시즌 1 선수를 계속 사고팔 수 있어요.",
+    "지난 시즌 선수는 시장 목록에 출신 시즌과 급여가 함께 보여요. 내 팀 선발에 넣으면 급여 예산을 써요."
+  ],
+  "en": {
+    "title": "Trade players from every season",
+    "items": [
+      "You can now list and sign past-season player cards on the transfer market. Season 1 players stay tradable after Season 2 opens.",
+      "Past-season players show their season and salary in the market list. They use your salary budget when you put them in your starting XI."
+    ]
+  },
+  "ja": {
+    "title": "全シーズンの選手を取引",
+    "items": [
+      "移籍市場で前シーズンの選手カードも出品・獲得できます。シーズン2が始まっても、シーズン1の選手を引き続き売買できます。",
+      "前シーズンの選手は、市場の一覧に出身シーズンと年俸が表示されます。自分のチームのスタメンに入れると年俸予算を使います。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

@@ -14,6 +14,9 @@ const INTERMEDIATE_OID = '1.2.840.113635.100.6.2.1';
 
 export interface AppleTransaction {
   transactionId: string;
+  originalTransactionId?: string;
+  originalPurchaseDate?: number;
+  inAppOwnershipType?: string;
   bundleId: string;
   productId: string;
   type?: string;
@@ -21,6 +24,10 @@ export interface AppleTransaction {
   environment?: string;
   quantity?: number;
   revocationDate?: number;
+  purchaseDate?: number;
+  price?: number;
+  currency?: string;
+  storefront?: string;
 }
 
 const hex = (buf: ArrayBuffer) =>

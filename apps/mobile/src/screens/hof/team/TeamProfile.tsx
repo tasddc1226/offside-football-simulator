@@ -1,6 +1,7 @@
 // T-10-092 팀 프로필(웹 team/TeamProfile.svelte, 라이브 랭킹에서 연다) — 시즌 순위 · 감독 · 레이팅 · 선발 그라운드 · 줄 힘 ·
 // 좋아요/조회수 · 팀 히스토리 배지. 누구나 본다. 남의 팀을 열면 조회수를 한 번 올린다(내 팀은 세지 않는다).
 // 웹의 '← 랭킹'(BackBar)은 화면(Hof)이 아래 고정 막대로 그린다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { requestFriend, type FriendState } from '@offside/app-core/api/friends';
@@ -190,7 +191,7 @@ export default function TeamProfile({ id }: { id: string }) {
                 <Txt v="h1" accessibilityRole="header">
                   {team.name}
                 </Txt>
-                <Txt tone="muted" style={{ fontSize: rem(0.8333) }}>
+                <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                   {`${team.seasonName}${team.rank ? ` · RANK #${team.rank}` : ''} · ${shapeOf(team.formation, team.layout)}`}
                 </Txt>
               </View>
@@ -202,15 +203,15 @@ export default function TeamProfile({ id }: { id: string }) {
                   alignItems: 'center',
                   paddingVertical: 6,
                   paddingHorizontal: 10,
-                  borderRadius: 12,
+                  borderRadius: RADIUS.md,
                   backgroundColor: c.pitch,
                 }}
               >
                 <Txt
                   style={{
                     fontFamily: DISPLAY[400],
-                    fontSize: rem(0.6875),
-                    lineHeight: rem(0.6875) * 1.1 * 1.3,
+                    fontSize: rem(FONT.caption2),
+                    lineHeight: rem(FONT.caption2) * 1.1 * 1.3,
                     letterSpacing: 0.12 * rem(0.6875),
                     color: c.onPitch,
                   }}
@@ -221,8 +222,8 @@ export default function TeamProfile({ id }: { id: string }) {
                   style={{
                     fontFamily: DISPLAY[700],
                     fontVariant: ['tabular-nums'],
-                    fontSize: rem(1.5),
-                    lineHeight: rem(1.5) * 1.1,
+                    fontSize: rem(FONT.title1),
+                    lineHeight: rem(FONT.title1) * 1.1,
                     color: c.pitchAccent,
                   }}
                 >
@@ -244,8 +245,8 @@ export default function TeamProfile({ id }: { id: string }) {
                 paddingVertical: 6,
                 paddingHorizontal: 12,
                 borderWidth: 1,
-                borderColor: c.line,
-                borderRadius: 12,
+                borderColor: 'transparent',
+                borderRadius: RADIUS.md,
                 backgroundColor: c.surface2,
               }}
             >
@@ -261,26 +262,26 @@ export default function TeamProfile({ id }: { id: string }) {
                 }}
               >
                 {team.ownerNickname && team.ownerNickname === team.manager ? (
-                  <Txt tone="muted" style={{ fontSize: rem(0.8125) }} testID="team-owner">
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.label) }} testID="team-owner">
                     {L.profManagerOwner}
-                    <Txt bold style={{ fontSize: rem(0.8125) }}>
+                    <Txt bold style={{ fontSize: rem(FONT.label) }}>
                       {team.manager}
                     </Txt>
                     {mine ? L.profMine : ''}
                   </Txt>
                 ) : (
                   <>
-                    <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                    <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                       {L.profManager}
-                      <Txt bold style={{ fontSize: rem(0.8125) }}>
+                      <Txt bold style={{ fontSize: rem(FONT.label) }}>
                         {team.manager}
                       </Txt>
                       {mine ? L.profMine : ''}
                     </Txt>
                     {team.ownerNickname ? (
-                      <Txt tone="muted" style={{ fontSize: rem(0.8125) }} testID="team-owner">
+                      <Txt tone="muted" style={{ fontSize: rem(FONT.label) }} testID="team-owner">
                         {L.profOwner}
-                        <Txt bold style={{ fontSize: rem(0.8125) }}>
+                        <Txt bold style={{ fontSize: rem(FONT.label) }}>
                           {team.ownerNickname}
                         </Txt>
                       </Txt>
@@ -289,7 +290,7 @@ export default function TeamProfile({ id }: { id: string }) {
                 )}
                 {team.ownerTitle ? <TitleBadge title={team.ownerTitle} size="sm" /> : null}
               </View>
-              <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                 {`${LO.open} ›`}
               </Txt>
             </Press>
@@ -310,11 +311,11 @@ export default function TeamProfile({ id }: { id: string }) {
                     alignItems: 'center',
                     paddingVertical: 6,
                     paddingHorizontal: 2,
-                    borderRadius: 10,
+                    borderRadius: RADIUS.sm,
                     backgroundColor: c.surface2,
                   }}
                 >
-                  <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                     {dt}
                   </Txt>
                   <Txt bold style={{ textAlign: 'center' }}>
@@ -352,7 +353,7 @@ export default function TeamProfile({ id }: { id: string }) {
             {team.coach ? (
               <View testID="team-profile-coach" style={{ gap: 2 }}>
                 <Txt bold>{MG.profileCoach}</Txt>
-                <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                   {coachSummary(team.coach, team.formation, localNames)}
                 </Txt>
               </View>
@@ -387,9 +388,9 @@ export default function TeamProfile({ id }: { id: string }) {
                   alignItems: 'center',
                   gap: 4,
                   borderWidth: 1,
-                  borderColor: c.line,
-                  borderRadius: 999,
-                  backgroundColor: c.surface,
+                  borderColor: 'transparent',
+                  borderRadius: RADIUS.pill,
+                  backgroundColor: c.surface2,
                   opacity: mine || liking || closed ? 0.7 : 1,
                 }}
               >
@@ -443,7 +444,7 @@ export default function TeamProfile({ id }: { id: string }) {
                       gap: 2,
                       paddingVertical: b.id.startsWith('final-') ? 8 : 10,
                       paddingHorizontal: b.id.startsWith('final-') ? 10 : 12,
-                      borderRadius: 12,
+                      borderRadius: RADIUS.md,
                       backgroundColor: c.surface2,
                       borderWidth: b.id.startsWith('final-') ? 2 : 0,
                       borderColor: c.pitchAccent,
@@ -451,14 +452,14 @@ export default function TeamProfile({ id }: { id: string }) {
                     }}
                   >
                     <Txt bold>{b.label}</Txt>
-                    <Txt tone="muted" style={{ fontSize: rem(0.8333) }}>
+                    <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                       {b.desc}
                     </Txt>
                   </View>
                 ))}
               />
             ) : (
-              <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.body2), paddingVertical: 8 }}>
                 {L.profHistoryEmpty}
               </Txt>
             )}

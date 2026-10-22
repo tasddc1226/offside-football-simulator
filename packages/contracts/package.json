@@ -23,6 +23,7 @@
     "./service-seasons": "./src/service-seasons.ts",
     "./season-gauge": "./src/season-gauge.ts",
     "./cup": "./src/cup.ts",
+    "./league": "./src/league.ts",
     "./attendance": "./src/attendance-rules.ts",
     "./admin-items": "./src/admin-items.ts",
     "./positions": "./src/positions.ts",
@@ -43,7 +44,9 @@
     "./club-strength-fallback": "./src/club-strength-fallback.json",
     "./club-strength-provider": "./src/club-strength-provider.ts",
     "./avatar-look": "./src/avatar-look.ts",
-    "./manager-rules": "./src/manager-rules.ts"
+    "./manager-rules": "./src/manager-rules.ts",
+    "./acquisition": "./src/acquisition.ts",
+    "./team-moments": "./src/team-moments.ts"
   },
   "scripts": {
     "test": "vitest run",

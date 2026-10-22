@@ -42,7 +42,7 @@
     border: 0;
     background: none;
     font: inherit;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     color: var(--muted);
     cursor: pointer;
   }

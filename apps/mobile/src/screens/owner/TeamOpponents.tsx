@@ -1,11 +1,12 @@
 // 상대 고르기(웹 team/Team.svelte 의 view === 'opponents') — 내 팀 OVR과 비슷한 다른 구단주의 팀에 도전한다.
 // 경기할 수 없으면(hint) 목록 대신 이유를 보여 준다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import { TeamLogo } from '../../components/TeamLogo';
 import { TitleBadge } from '../../components/TitleBadge';
 import { TEAM_REPEAT_WINDOW_DAYS } from '@offside/contracts/owner-team';
 import type { TeamOpponent } from '@offside/app-core/api/team';
-import { recordText } from '@offside/app-core/teamText';
+import { ratingGap, recordText } from '@offside/app-core/teamText';
 import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { useColors } from '../../theme/useColors';
@@ -58,6 +59,11 @@ export function TeamOpponents({
         <Txt tone="muted" v="xs">
           {L.oppRuleApp({ days: TEAM_REPEAT_WINDOW_DAYS })}
         </Txt>
+        {!hint && opponents.length ? (
+          <Txt tone="muted" v="xs" testID="opponent-gap-note">
+            {L.oppGapNote}
+          </Txt>
+        ) : null}
       </View>
       {hint ? (
         <>
@@ -83,66 +89,77 @@ export function TeamOpponents({
       ) : (
         <LoadState status={status} failText={L.oppLoadFail} retry={reload}>
           {opponents.length ? (
-            opponents.map((o) => (
-              <View
-                key={o.teamId}
-                testID={`opponent-${o.teamId}`}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 10,
-                  paddingVertical: 10,
-                  borderTopWidth: 1,
-                  borderTopColor: c.line,
-                }}
-              >
-                <TeamLogo logo={o.logo} name={o.name} size={32} decorative />
-                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Txt bold style={{ flexShrink: 1 }}>
-                      {o.name}
-                    </Txt>
-                    {o.title ? <TitleBadge title={o.title} size="icon" /> : null}
-                  </View>
-                  <Txt
-                    tone="muted"
-                    v="sm"
-                  >{`${o.owner} · ${o.shape ?? o.formation} · ${recordText(o.record)}`}</Txt>
-                </View>
+            opponents.map((o) => {
+              const gap = ratingGap(rating, o.rating);
+              return (
                 <View
-                  accessible
-                  accessibilityLabel={`${L.oppRating} ${o.rating} · ${L.oppOvr({ n: o.ovr })}`}
-                  style={{ alignItems: 'center', minWidth: rem(1.375) * 2.2 }}
+                  key={o.teamId}
+                  testID={`opponent-${o.teamId}`}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
+                    paddingVertical: 10,
+                    borderTopWidth: 1,
+                    borderTopColor: c.line,
+                  }}
                 >
-                  <Txt tone="muted" style={{ fontSize: 11, lineHeight: 13 }}>
-                    {L.oppRating}
-                  </Txt>
-                  <Txt
-                    tone="accent"
-                    style={{
-                      fontFamily: DISPLAY[700],
-                      fontSize: rem(1.375),
-                      lineHeight: rem(1.375) * 1.15,
-                    }}
+                  <TeamLogo logo={o.logo} name={o.name} size={32} decorative />
+                  <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Txt bold style={{ flexShrink: 1 }}>
+                        {o.name}
+                      </Txt>
+                      {o.title ? <TitleBadge title={o.title} size="icon" /> : null}
+                    </View>
+                    <Txt
+                      tone="muted"
+                      v="sm"
+                    >{`${o.owner} · ${o.shape ?? o.formation} · ${recordText(o.record)}`}</Txt>
+                  </View>
+                  <View
+                    accessible
+                    accessibilityLabel={`${L.oppRating} ${o.rating} · ${gap.aria} · ${L.oppOvr({ n: o.ovr })}`}
+                    style={{ alignItems: 'center', minWidth: rem(1.375) * 2.2 }}
                   >
-                    {o.rating}
-                  </Txt>
-                  <Txt tone="muted" style={{ fontSize: 11, lineHeight: 13 }}>
-                    {L.oppOvr({ n: o.ovr })}
-                  </Txt>
+                    <Txt tone="muted" style={{ fontSize: 11, lineHeight: 13 }}>
+                      {L.oppRating}
+                    </Txt>
+                    <Txt
+                      tone="accent"
+                      style={{
+                        fontFamily: DISPLAY[700],
+                        fontSize: rem(FONT.title2),
+                        lineHeight: rem(FONT.title2) * 1.15,
+                      }}
+                    >
+                      {o.rating}
+                    </Txt>
+                    <Txt
+                      bold
+                      tone="muted"
+                      testID={`opponent-gap-${o.teamId}`}
+                      style={{ fontSize: 11, lineHeight: 13, fontVariant: ['tabular-nums'] }}
+                    >
+                      {gap.text}
+                    </Txt>
+                    <Txt tone="muted" style={{ fontSize: 11, lineHeight: 13 }}>
+                      {L.oppOvr({ n: o.ovr })}
+                    </Txt>
+                  </View>
+                  <Btn
+                    kind="primary"
+                    sm
+                    testID="team-challenge"
+                    accessibilityLabel={L.challengeAria({ name: o.name })}
+                    disabled={playing || matchesLeft === 0}
+                    onPress={() => challenge(o)}
+                  >
+                    {L.challenge}
+                  </Btn>
                 </View>
-                <Btn
-                  kind="primary"
-                  sm
-                  testID="team-challenge"
-                  accessibilityLabel={L.challengeAria({ name: o.name })}
-                  disabled={playing || matchesLeft === 0}
-                  onPress={() => challenge(o)}
-                >
-                  {L.challenge}
-                </Btn>
-              </View>
-            ))
+              );
+            })
           ) : (
             <Txt tone="muted">{L.noOpponents}</Txt>
           )}

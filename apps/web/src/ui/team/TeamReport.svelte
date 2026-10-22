@@ -47,7 +47,7 @@
 <style>
   .tm-report {
     padding: 12px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--surface-2);
   }
   .tm-report-head {

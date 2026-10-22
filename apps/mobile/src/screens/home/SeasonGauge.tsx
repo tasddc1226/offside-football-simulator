@@ -1,19 +1,28 @@
 // 시즌 진행 게이지(웹 SeasonGauge.svelte). 시즌은 정한 날짜가 아니라 유저들이 끝까지 뛴 커리어로 찬다
 // (contracts season-gauge.ts). 90%에 닿아 마감이 정해지면 카운트다운으로 바뀐다. 진행 중인 시즌이 없으면 그리지 않는다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { AppState, View } from 'react-native';
-import { seasonGaugeLines, type SeasonGauge as Gauge } from '@offside/app-core/seasonGauge';
+import {
+  seasonGaugeInfo,
+  seasonGaugeLines,
+  type SeasonGauge as Gauge,
+} from '@offside/app-core/seasonGauge';
+import { seasonGaugeText as T } from '@offside/app-core/i18n/ko/seasonGauge';
 import { loadSeasonGauge } from '@offside/app-core/seasonSchedule';
 import { alpha } from '../../theme/colors';
 import { num, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
-import { Card, Txt } from '../../ui';
+import { Btn, Card, Press, Txt } from '../../ui';
+import { PopSheet } from '../../ui/PopSheet';
 import { useOnPull } from '../../ui/refresh';
 
 export function SeasonGauge() {
   const c = useColors();
   const [gauge, setGauge] = useState<Gauge | null>(null);
   const [now, setNow] = useState(Date.now());
+  // T-11-435 카드를 누르면 게이지가 무엇을 세는지 · 마감 · 진행 중 커리어 · 보상 위치를 알려 주는 창을 연다.
+  const [open, setOpen] = useState(false);
   const reload = useRef<() => Promise<void>>(async () => {});
   useOnPull(() => reload.current());
 
@@ -47,62 +56,103 @@ export function SeasonGauge() {
   const lines = seasonGaugeLines(gauge, now);
   const locked = !!gauge.endsAt;
   return (
-    <Card gap={8} testID="season-gauge">
-      <View
-        style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}
+    <>
+      <Press
+        testID="season-gauge-info"
+        accessibilityRole="button"
+        accessibilityLabel={T.openLabel({ aria: lines.aria })}
+        onPress={() => setOpen(true)}
       >
-        <Txt v="eyebrow">Season progress</Txt>
-        <Txt
-          testID="season-gauge-pct"
-          style={[num(700), { fontSize: rem(1.5), color: c.accentText }]}
-        >
-          {`${lines.pct}%`}
-        </Txt>
-      </View>
-      <Txt
-        v="h2"
-        accessibilityRole="header"
-        style={{ fontSize: rem(1.0625), ...(locked ? { color: c.accentText } : null) }}
-      >
-        {lines.countdown ?? lines.title}
-      </Txt>
-      <View
-        accessible
-        accessibilityRole="progressbar"
-        accessibilityLabel={lines.aria}
-        accessibilityValue={{ min: 0, max: 100, now: lines.pct }}
-        style={{ height: 12, borderRadius: 999, backgroundColor: c.surface2, overflow: 'hidden' }}
-      >
-        <View
-          style={{
-            width: `${lines.pct}%`,
-            height: '100%',
-            borderRadius: 999,
-            backgroundColor: c.accent,
-          }}
-        />
-        {/* 90%(마감이 정해지는 자리) 눈금 */}
-        <View
-          style={{
-            position: 'absolute',
-            top: 0,
-            bottom: 0,
-            left: '90%',
-            width: 2,
-            backgroundColor: alpha(c.ink, 0.4),
-          }}
-        />
-      </View>
-      {lines.endDate ? (
-        <Txt testID="season-gauge-date" style={{ fontSize: rem(0.8125), color: c.muted }}>
-          {lines.endDate}
-        </Txt>
+        <Card gap={8} testID="season-gauge">
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'baseline',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Txt v="eyebrow">Season progress ⓘ</Txt>
+            <Txt
+              testID="season-gauge-pct"
+              style={[num(700), { fontSize: rem(FONT.title1), color: c.accentText }]}
+            >
+              {`${lines.pct}%`}
+            </Txt>
+          </View>
+          <Txt
+            v="h2"
+            accessibilityRole="header"
+            style={{ fontSize: rem(FONT.title3), ...(locked ? { color: c.accentText } : null) }}
+          >
+            {lines.countdown ?? lines.title}
+          </Txt>
+          <View
+            accessible
+            accessibilityRole="progressbar"
+            accessibilityLabel={lines.aria}
+            accessibilityValue={{ min: 0, max: 100, now: lines.pct }}
+            style={{
+              height: 12,
+              borderRadius: RADIUS.pill,
+              backgroundColor: c.surface2,
+              overflow: 'hidden',
+            }}
+          >
+            <View
+              style={{
+                width: `${lines.pct}%`,
+                height: '100%',
+                borderRadius: RADIUS.pill,
+                backgroundColor: c.accent,
+              }}
+            />
+            {/* 90%(마감이 정해지는 자리) 눈금 */}
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                left: '90%',
+                width: 2,
+                backgroundColor: alpha(c.ink, 0.4),
+              }}
+            />
+          </View>
+          {lines.endDate ? (
+            <Txt testID="season-gauge-date" style={{ fontSize: rem(FONT.label), color: c.muted }}>
+              {lines.endDate}
+            </Txt>
+          ) : null}
+          {lines.why ? (
+            <Txt testID="season-gauge-why" style={{ fontSize: rem(FONT.label), color: c.muted }}>
+              {lines.why}
+            </Txt>
+          ) : null}
+        </Card>
+      </Press>
+      {open ? (
+        <PopSheet label={T.infoTitle} testID="season-gauge-sheet" onClose={() => setOpen(false)}>
+          <View style={{ gap: 2 }}>
+            <Txt v="eyebrow">Season progress</Txt>
+            <Txt v="h3" bold accessibilityRole="header">
+              {T.infoTitle}
+            </Txt>
+          </View>
+          {seasonGaugeInfo().map((part) => (
+            <View key={part.head} style={{ gap: 4 }}>
+              <Txt bold accessibilityRole="header">
+                {part.head}
+              </Txt>
+              <Txt v="sm" tone="muted">
+                {part.body}
+              </Txt>
+            </View>
+          ))}
+          <Btn block testID="season-gauge-info-close" onPress={() => setOpen(false)}>
+            {T.infoClose}
+          </Btn>
+        </PopSheet>
       ) : null}
-      {lines.why ? (
-        <Txt testID="season-gauge-why" style={{ fontSize: rem(0.8125), color: c.muted }}>
-          {lines.why}
-        </Txt>
-      ) : null}
-    </Card>
+    </>
   );
 }

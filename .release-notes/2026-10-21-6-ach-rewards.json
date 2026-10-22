@@ -1,0 +1,26 @@
+{
+  "id": "t-11-357-ach-rewards",
+  "title": "업적 달성 보상",
+  "items": [
+    "시즌 2부터 40점 이상인 시즌 업적을 달성하면 잠재력 강화권을 받고, 150점 이상이면 프리미엄 스카우트권도 함께 받아요",
+    "업적이 어려울수록 많이 받아요. 강화권은 1~3장, 스카우트권은 1~2장이고 한 시즌에 받는 양에는 상한이 없어요",
+    "업적 목록과 달성 알림에서 받은 보상과 다음 달성 보상을 볼 수 있어요"
+  ],
+  "en": {
+    "title": "Achievement rewards",
+    "items": [
+      "From season 2, season achievements worth 40 points or more give potential boost tickets, and 150 points or more add premium scout tickets.",
+      "Harder achievements give more: 1–3 boost tickets and 1–2 scout tickets, with no limit per season.",
+      "The achievement list and unlock alert show what you received and what the next completion gives."
+    ]
+  },
+  "ja": {
+    "title": "実績達成報酬",
+    "items": [
+      "シーズン2から、40点以上のシーズン実績を達成するとポテンシャル強化券、150点以上ならプレミアムスカウト券ももらえます。",
+      "難しい実績ほど多くもらえます。強化券は1〜3枚、スカウト券は1〜2枚で、1シーズンに受け取れる量に上限はありません。",
+      "実績一覧と達成通知で、受け取った報酬と次の達成報酬を確認できます。"
+    ]
+  },
+  "availability": "web-app"
+}

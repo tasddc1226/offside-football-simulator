@@ -1,4 +1,5 @@
 // 은퇴 리포트 '필름' 바탕의 색·글자(웹 .film): 두 테마 모두 어두운 스크린 위 밝은 글자·금색 강조.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import type { ReactNode } from 'react';
 import {
   Text,
@@ -86,8 +87,8 @@ export function Kicker({ children, style }: { children: ReactNode; style?: Style
       style={[
         {
           fontFamily: DISPLAY[600],
-          fontSize: rem(0.75),
-          lineHeight: rem(0.75) * 1.5,
+          fontSize: rem(FONT.caption),
+          lineHeight: rem(FONT.caption) * 1.5,
           letterSpacing: rem(0.75) * 0.32,
           textTransform: 'uppercase',
           color: f.gold,
@@ -145,7 +146,7 @@ export function FilmPill({
       accessibilityLabel={label}
       testID={testID}
       style={{
-        borderRadius: 999,
+        borderRadius: RADIUS.pill,
         paddingVertical: 2,
         paddingHorizontal: 9,
         backgroundColor: gold ? f.gold : 'rgba(238,244,239,0.08)',
@@ -155,8 +156,8 @@ export function FilmPill({
     >
       <Text
         style={{
-          fontSize: rem(0.75),
-          lineHeight: rem(0.75) * 1.5,
+          fontSize: rem(FONT.caption),
+          lineHeight: rem(FONT.caption) * 1.5,
           fontWeight: gold || rn ? '700' : '600',
           color: gold ? f.onGold : f.ink,
         }}
@@ -181,7 +182,7 @@ export function FilmBackdrop({
       style={[
         {
           backgroundColor: f.bg,
-          borderRadius: 20,
+          borderRadius: RADIUS.lg,
           overflow: 'hidden',
           paddingTop: 40,
           paddingHorizontal: 20,

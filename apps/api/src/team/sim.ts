@@ -134,13 +134,18 @@ export const SIM = {
   assistChance: 0.75,
 } as const;
 
-/** 한 팀의 기대 득점. 상대 수비는 수비 라인 70% + 골키퍼 30%. */
-export function expectedGoals(att: LineStrength, opp: LineStrength, home: boolean): number {
+/** 한 팀의 기대 득점. 상대 수비는 수비 라인 70% + 골키퍼 30%. homeAdv: 홈 이점 배율(T-11-418e 리그는 밸런스 설정). */
+export function expectedGoals(
+  att: LineStrength,
+  opp: LineStrength,
+  home: boolean,
+  homeAdv: number = SIM.homeAdv,
+): number {
   const wall = 0.7 * opp.def + 0.3 * opp.gk;
   const xg =
     SIM.baseXg *
     Math.exp((SIM.atkK * (att.atk - wall)) / 10 + (SIM.midK * (att.mid - opp.mid)) / 10) *
-    (home ? SIM.homeAdv : 1);
+    (home ? homeAdv : 1);
   return Math.min(SIM.maxXg, Math.max(SIM.minXg, xg));
 }
 
@@ -166,7 +171,7 @@ export function rngOf(seed: number): () => number {
   };
 }
 
-function poisson(lambda: number, rng: () => number): number {
+export function poisson(lambda: number, rng: () => number): number {
   const L = Math.exp(-lambda);
   let k = 0;
   let p = rng();
@@ -178,7 +183,7 @@ function poisson(lambda: number, rng: () => number): number {
 }
 
 /** 득점 가중치 — 골키퍼는 넣지 않는다. */
-const SCORE_W: Record<DetailPos, number> = expandDetailRoles({
+export const SCORE_W: Record<DetailPos, number> = expandDetailRoles({
   ST: 5,
   W: 3,
   AM: 2.5,
@@ -201,7 +206,7 @@ const ASSIST_W: Record<DetailPos, number> = expandDetailRoles({
 });
 
 /** 가중치 × 실력으로 한 명을 고른다(except는 뺀다). 고를 사람이 없으면 -1. */
-function pick(
+export function pick(
   lineup: readonly LineupSlot[],
   w: Record<DetailPos, number>,
   rng: () => number,
@@ -250,6 +255,96 @@ const withCoach = (lines: LineStrength, coach: MatchCoach | undefined, syn: Team
     ? addLines(lines, managerLines(coach.card, coach.formation, syn ? synergyIds(syn) : []))
     : lines;
 
+/** 경기 한 판의 두 팀 줄 힘 · 기대 득점 · 시너지(난수를 쓰지 않는다). 일반 경기와 장면 경기(moments.ts)가 같이 쓴다. */
+export function matchSetup(
+  home: readonly LineupSlot[],
+  away: readonly LineupSlot[],
+  season: number,
+  opts: { neutral?: boolean; coaches?: MatchCoaches; homeAdv?: number } = {},
+) {
+  if (home.length !== LINEUP_SIZE || away.length !== LINEUP_SIZE)
+    throw new Error('선발은 11명이어야 합니다.');
+  const on = synergyApplies(season);
+  const hSyn = on ? lineupSynergy(home) : null;
+  const aSyn = on ? lineupSynergy(away) : null;
+  const hs = withCoach(lineupLines(home, hSyn), opts.coaches?.home, hSyn);
+  const as = withCoach(lineupLines(away, aSyn), opts.coaches?.away, aSyn);
+  // T-11-145 컵은 중립 경기 — 홈 이점을 주지 않는다.
+  const homeXg = expectedGoals(hs, as, !opts.neutral, opts.homeAdv);
+  const awayXg = expectedGoals(as, hs, false);
+  return {
+    homeXg,
+    awayXg,
+    ...(hSyn && aSyn ? { synergy: { home: synergyIds(hSyn), away: synergyIds(aSyn) } } : {}),
+    report: { home: { xg: homeXg, lines: hs }, away: { xg: awayXg, lines: as } },
+  };
+}
+
+/** 골 수 분포 — poisson()과 같이 maxGoals에서 자른다(그 위 몫은 maxGoals에 모인다). */
+function goalDist(lambda: number): number[] {
+  const out: number[] = [];
+  let p = Math.exp(-lambda);
+  let left = 1;
+  for (let k = 0; k < SIM.maxGoals; k++) {
+    out.push(p);
+    left -= p;
+    p *= lambda / (k + 1);
+  }
+  out.push(Math.max(0, left));
+  return out;
+}
+
+/** 기대 득점 두 개로 90분 승 · 무 · 패 확률(홈 쪽 기준, 합 1). */
+export function oddsOfXg(homeXg: number, awayXg: number) {
+  const h = goalDist(homeXg);
+  const a = goalDist(awayXg);
+  let win = 0;
+  let draw = 0;
+  for (let i = 0; i < h.length; i++)
+    for (let j = 0; j < a.length; j++) {
+      const p = h[i]! * a[j]!;
+      if (i > j) win += p;
+      else if (i === j) draw += p;
+    }
+  return { win, draw, loss: Math.max(0, 1 - win - draw) };
+}
+
+/**
+ * T-11-405 경기 전 예상 — 경기 한 판(simulateMatch)과 같은 줄 힘 · 기대 득점으로 90분 승 · 무 · 패 확률을 계산한다.
+ * 난수를 쓰지 않는다. 지금 두 팀 명단 기준이라 명단이 바뀌면 달라진다.
+ */
+export function matchOdds(
+  home: readonly LineupSlot[],
+  away: readonly LineupSlot[],
+  season: number,
+  opts: { neutral?: boolean; coaches?: MatchCoaches } = {},
+) {
+  const { homeXg, awayXg } = matchSetup(home, away, season, opts);
+  return { ...oddsOfXg(homeXg, awayXg), homeXg, awayXg };
+}
+
+/** 골 n개의 분 · 득점자 · 도움을 굴려 events에 더한다. */
+export function addGoalEvents(
+  events: SimEvent[],
+  side: 'home' | 'away',
+  lineup: readonly LineupSlot[],
+  n: number,
+  rng: () => number,
+) {
+  for (let g = 0; g < n; g++) {
+    const minute = 1 + Math.floor(rng() * 90);
+    const si = pick(lineup, SCORE_W, rng);
+    const ai = rng() < SIM.assistChance ? pick(lineup, ASSIST_W, rng, si) : -1;
+    events.push({
+      minute,
+      side,
+      slot: lineup[si]!.slot,
+      scorer: lineup[si]!.ref,
+      assist: ai >= 0 ? lineup[ai]!.ref : null,
+    });
+  }
+}
+
 /**
  * 경기 한 판. seed는 경기 id — 같은 id·같은 선발이면 같은 결과다. season이 시너지 반영 시즌(T-11-105,
  * SYNERGY_FROM_SEASON)부터면 두 팀 줄 힘에 시너지 보정을 더한다. 그 전 시즌은 지금까지와 같은 결과다. T-11-310 coaches를 주면
@@ -260,46 +355,23 @@ export function simulateMatch(
   home: readonly LineupSlot[],
   away: readonly LineupSlot[],
   season: number,
-  opts: { neutral?: boolean; coaches?: MatchCoaches } = {},
+  opts: { neutral?: boolean; coaches?: MatchCoaches; homeAdv?: number } = {},
 ): SimResult {
-  if (home.length !== LINEUP_SIZE || away.length !== LINEUP_SIZE)
-    throw new Error('선발은 11명이어야 합니다.');
+  const setup = matchSetup(home, away, season, opts);
   const rng = rngOf(seedOf(seed));
-  const on = synergyApplies(season);
-  const hSyn = on ? lineupSynergy(home) : null;
-  const aSyn = on ? lineupSynergy(away) : null;
-  const hs = withCoach(lineupLines(home, hSyn), opts.coaches?.home, hSyn);
-  const as = withCoach(lineupLines(away, aSyn), opts.coaches?.away, aSyn);
-  // T-11-145 컵은 중립 경기 — 홈 이점을 주지 않는다.
-  const homeXg = expectedGoals(hs, as, !opts.neutral);
-  const awayXg = expectedGoals(as, hs, false);
-  const homeGoals = poisson(homeXg, rng);
-  const awayGoals = poisson(awayXg, rng);
+  const homeGoals = poisson(setup.homeXg, rng);
+  const awayGoals = poisson(setup.awayXg, rng);
   const events: SimEvent[] = [];
-  const add = (side: 'home' | 'away', lineup: readonly LineupSlot[], n: number) => {
-    for (let g = 0; g < n; g++) {
-      const minute = 1 + Math.floor(rng() * 90);
-      const si = pick(lineup, SCORE_W, rng);
-      const ai = rng() < SIM.assistChance ? pick(lineup, ASSIST_W, rng, si) : -1;
-      events.push({
-        minute,
-        side,
-        slot: lineup[si]!.slot,
-        scorer: lineup[si]!.ref,
-        assist: ai >= 0 ? lineup[ai]!.ref : null,
-      });
-    }
-  };
-  add('home', home, homeGoals);
-  add('away', away, awayGoals);
+  addGoalEvents(events, 'home', home, homeGoals, rng);
+  addGoalEvents(events, 'away', away, awayGoals, rng);
   // 같은 분이면 만든 순서(안정 정렬).
   events.sort((a, b) => a.minute - b.minute);
   return {
     homeGoals,
     awayGoals,
     events,
-    ...(hSyn && aSyn ? { synergy: { home: synergyIds(hSyn), away: synergyIds(aSyn) } } : {}),
-    report: { home: { xg: homeXg, lines: hs }, away: { xg: awayXg, lines: as } },
+    ...(setup.synergy ? { synergy: setup.synergy } : {}),
+    report: setup.report,
   };
 }
 

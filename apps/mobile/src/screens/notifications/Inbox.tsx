@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -271,10 +272,10 @@ export default function Inbox() {
           flexDirection: 'row',
           gap: 8,
           padding: 4,
-          borderRadius: 16,
+          borderRadius: RADIUS.lg,
           backgroundColor: c.surface2,
           borderWidth: 1,
-          borderColor: c.line,
+          borderColor: 'transparent',
         }}
       >
         {[false, true].map((unread) => (
@@ -291,7 +292,7 @@ export default function Inbox() {
               flex: 1,
               minHeight: 48,
               padding: 10,
-              borderRadius: 12,
+              borderRadius: RADIUS.md,
               alignItems: 'center',
               justifyContent: 'center',
               backgroundColor: state.onlyUnread === unread ? c.pitch : 'transparent',
@@ -401,7 +402,7 @@ export default function Inbox() {
                   padding: 16,
                   gap: 8,
                   marginBottom: 8,
-                  borderRadius: 16,
+                  borderRadius: RADIUS.lg,
                   borderWidth: 1,
                   borderColor: c.line,
                   backgroundColor: item.readAt ? c.surface2 : c.surface,
@@ -443,7 +444,7 @@ export default function Inbox() {
             <View
               style={{ alignItems: 'center', gap: 12, paddingHorizontal: 24, paddingVertical: 48 }}
             >
-              <View style={{ padding: 20, borderRadius: 24, backgroundColor: c.surface }}>
+              <View style={{ padding: 20, borderRadius: RADIUS.lg, backgroundColor: c.surface }}>
                 <Icon name={state.onlyUnread ? 'check' : 'bell'} size={32} />
               </View>
               <InboxText v="h2" center>

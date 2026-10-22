@@ -25,7 +25,10 @@ import { queueGiftReminders } from './push/giftReminder.js';
 import { consumeCupResults, publishCupResults } from './push/cupResult.js';
 import { consumeCommunityPush } from './push/communityQueue.js';
 import { runCup } from './team/cup.js';
+import { finishStaleLive } from './team/liveMatch.js';
 import { runCupAutopilot } from './team/cupAutopilot.js';
+import { runLeague } from './team/league.js';
+import { alertLeagueStalls } from './team/leagueAlert.js';
 import { purgeEdgeOrigin } from './edgeCache.js';
 import { STALE } from './edgeKeys.js';
 import { runSeasonClose } from './team/seasonClose.js';
@@ -62,6 +65,13 @@ export default {
     // 시즌 일정(게이지가 확정한 마감·다음 시즌)을 먼저 입힌다 — 아래 결산·보존·게이지가 같은 일정을 본다.
     await loadSeasonSchedule(env.DB, true).catch(logged('season-schedule'));
     if (controller.cron === '0 19 * * *') {
+      // Bounded daily retention; FK SET NULL removes stale purchase attribution too.
+      await env.DB.prepare(
+        `DELETE FROM acquisition_sessions WHERE id IN (SELECT id FROM acquisition_sessions WHERE received_at < ? ORDER BY received_at LIMIT 1000)`,
+      )
+        .bind(new Date(controller.scheduledTime - 90 * 86400_000).toISOString())
+        .run()
+        .catch(logged('acquisition-retention'));
       let completed = false;
       await runDailyTick(env, controller.scheduledTime)
         .then((daily) => {
@@ -98,6 +108,12 @@ export default {
             JSON.stringify({ level: 'error', job: 'season-close', error: logErrorText(e) }),
           ),
         );
+      // T-11-387 고르지 않고 떠난 장면 경기를 자동 선택으로 마감한다.
+      await finishStaleLive(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
+        .then(
+          (r) => r.done && console.log(JSON.stringify({ level: 'info', job: 'team-live', ...r })),
+        )
+        .catch(logged('team-live'));
       // T-11-145 오프사이드 컵: 추첨 → 시각이 된 경기 → 진출·보상. 실패하면 다음 5분에 이어서 한다.
       await runCup(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
         .then(async (r) => {
@@ -111,6 +127,25 @@ export default {
         .catch((e: unknown) =>
           console.error(JSON.stringify({ level: 'error', job: 'cup', error: logErrorText(e) })),
         );
+      // T-11-418b 오프사이드 리그: 배치 안내 → 배치 → 시각이 된 경기 → 알림. 공개 조회는 엣지 캐시가 짧아(30 · 60초) 지우지 않는다.
+      await runLeague(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
+        .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'league', ...r })))
+        .catch(logged('league'));
+      // T-11-445 리그가 밀리면 운영 슬랙에 알린다(15분마다, 문제마다 한 번).
+      if (new Date(controller.scheduledTime).getUTCMinutes() % 15 === 0)
+        await alertLeagueStalls(
+          env,
+          createDb(env.DB),
+          new Date(controller.scheduledTime).toISOString(),
+        )
+          .then(
+            (r) =>
+              r.length &&
+              console.log(
+                JSON.stringify({ level: 'info', job: 'league-alert', alerted: r.length }),
+              ),
+          )
+          .catch(logged('league-alert'));
       // T-11-251 다음 회차 만들기 → 접수 시작 알림 → 밀린 단계 슬랙 경보(15분마다).
       await runCupAutopilot(env, controller.scheduledTime).catch(logged('cup-autopilot'));
       // A cron round can commit before a later step fails; purge even on a partial run.

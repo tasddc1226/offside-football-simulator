@@ -1,0 +1,41 @@
+{
+  "id": "t-11-430-ux-high-fixes",
+  "title": "헷갈리던 화면을 손봤어요",
+  "items": [
+    "리그 신청 카드에 참가 자격과 기권 규칙이 보여요. 접수가 끝난 뒤에도 준비 상태와 '팀 선발 고치기' 버튼이 남고, 순위표에서 기권 횟수를 n/3으로 볼 수 있어요.",
+    "리그에서 빠지면 자격이 모자랐는지, 팀 수를 맞추다 빠졌는지 따로 알려 줘요.",
+    "새 커리어를 시작해도 새 선수로 킥오프하기 전까지는 기존 커리어가 남아요. 대학 진학 · 상무 지원 · 현역 입대는 한 번 더 확인해요.",
+    "이벤트 선택지에 컨디션 · 신뢰처럼 바뀌는 것을 미리 보여 줘요. 확률은 '성공 N%'로 적어요.",
+    "은퇴 기록이 서버에 올라가지 않았으면 은퇴 화면에서 이유를 보고 다시 올릴 수 있어요.",
+    "이적시장에서 가격이 바뀐 선수는 새 가격으로 다시 확인해요. 앱 상점 상품을 불러오지 못하면 '다시 확인'으로 다시 불러와요.",
+    "받을 선물이나 오늘 출석이 있으면 홈 위쪽에 보여요. 시즌 게이지를 누르면 설명이 나와요.",
+    "컵 편성 화면에 팀 OVR 상한과 최소 인원이 늘 보여요. Google 연동 해제와 팀 프리셋 덮어쓰기 · 삭제도 한 번 더 확인해요."
+  ],
+  "en": {
+    "title": "Clearer screens",
+    "items": [
+      "The league entry card now shows the entry requirement and forfeit rules. After entries close you still see your readiness and a 'Fix team lineup' button, and the table shows forfeits as n/3.",
+      "If you are left out of the league, we now tell you whether you were short of players or cut when the teams were balanced.",
+      "Starting a new career keeps your current one until you kick off with the new player. University, Sangmu and active-duty choices now ask you to confirm.",
+      "Event choices now preview what changes, such as condition or trust. Odds read as 'N% to succeed'.",
+      "If your retirement record did not reach the server, the retirement screen shows why and lets you upload it again.",
+      "In the transfer market, a player whose price changed asks you to confirm the new price. If the app shop fails to load, tap 'Check again'.",
+      "Gifts to claim and today's attendance now appear near the top of Home. Tap the season gauge to see how it works.",
+      "The cup lineup screen always shows the team OVR cap and minimum players. Unlinking Google and overwriting or deleting a team preset now ask you to confirm."
+    ]
+  },
+  "ja": {
+    "title": "分かりにくかった画面を改善しました",
+    "items": [
+      "リーグ申込カードに参加資格と棄権ルールが表示されます。締切後も準備状況と「チームの先発を直す」ボタンが残り、順位表で棄権回数を n/3 で確認できます。",
+      "リーグから外れたとき、資格が足りなかったのか、チーム数の調整で外れたのかを分けてお知らせします。",
+      "新しいキャリアを始めても、新しい選手でキックオフするまで今のキャリアは残ります。大学進学・尚武志願・現役入隊はもう一度確認します。",
+      "イベントの選択肢に、コンディションや信頼など変わるものを先に表示します。確率は「成功 N%」と表記します。",
+      "引退記録がサーバーに届いていない場合、引退画面で理由を確認してもう一度アップロードできます。",
+      "移籍市場で価格が変わった選手は新しい価格で確認し直します。アプリのショップが読み込めないときは「もう一度確認」で読み込み直せます。",
+      "受け取れるプレゼントや今日の出席があるとホームの上の方に表示されます。シーズンゲージをタップすると説明が出ます。",
+      "カップの編成画面にチームOVRの上限と最少人数が常に表示されます。Google連携の解除とチームプリセットの上書き・削除ももう一度確認します。"
+    ]
+  },
+  "availability": "web-app"
+}

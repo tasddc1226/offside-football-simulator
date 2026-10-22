@@ -21,8 +21,11 @@ export function registerCupPredictionRoutes(
   cupOf: (c: Context<AppEnv>) => Promise<CupDef>,
 ) {
   app.get('/v1/cups/:cupId/predictions', async (c) => {
-    const cup = await cupOf(c);
-    const data = await edgeCached(c, `/v1/cups/${cup.id}/predictions`, 30, async () => {
+    // Resolve the moving alias before caching; stable ids need no schedule query on a cache hit.
+    const id = c.req.param('cupId');
+    const current = id === 'current' ? await cupOf(c) : undefined;
+    const data = await edgeCached(c, `/v1/cups/${current?.id ?? id}/predictions`, 30, async () => {
+      const cup = current ?? (await cupOf(c));
       const { results } = await getDb(c)
         .$client.prepare(
           `SELECT match_id AS matchId,

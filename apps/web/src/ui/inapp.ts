@@ -62,3 +62,9 @@ export function manualOpenGuide(info: InAppInfo, copied: boolean): string {
   const menu = info.os === 'ios' ? L.manualIos : L.manualAndroid;
   return copied ? L.manualCopied({ menu }) : menu;
 }
+
+/** Store routing needs only OS detection; keep campaign generation out of eager Home imports. */
+export function appTarget(ua = navigator.userAgent): 'ios' | 'android' | 'both' {
+  const os = osOf(ua);
+  return os === 'other' ? 'both' : os;
+}

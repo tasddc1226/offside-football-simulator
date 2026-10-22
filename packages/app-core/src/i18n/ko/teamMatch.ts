@@ -9,6 +9,11 @@ const ko = {
     `내 팀 레이팅 ${p.rating}점 근처의 팀이에요 · 오늘 남은 경기 ${p.left}/${p.per}`,
   oppRating: '레이팅',
   oppOvr: (p: { n: number }) => `OVR ${p.n}`,
+  /** T-11-443 상대 레이팅과 내 팀 레이팅의 차이(레이팅 아래 +N · −N). */
+  oppGapUp: (p: { n: string }) => `내 팀보다 ${p.n}점 높아요`,
+  oppGapDown: (p: { n: string }) => `내 팀보다 ${p.n}점 낮아요`,
+  oppGapEven: '내 팀과 같아요',
+  oppGapNote: '레이팅 아래 숫자는 내 팀과의 차이예요. 레이팅이 높은 팀을 이기면 더 많이 올라요.',
   oppRuleWeb: (p: { days: number }) =>
     `같은 팀에는 하루 한 번 도전할 수 있어요. 최근 ${p.days}일 안에 다시 만난 팀이면 레이팅이 덜 움직여요.`,
   oppRuleApp: (p: { days: number }) =>

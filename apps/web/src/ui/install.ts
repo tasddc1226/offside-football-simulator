@@ -1,4 +1,5 @@
 // 설정에서 직접 여는 홈 화면 추가 안내. 자동 설치 팝업 대신 홈의 제한된 카드 안내를 사용한다.
+// T-11-092 휴대폰은 스토어 앱(T-11-449 App Store · Google Play)을 먼저 권한다.
 import { saveKey } from '@offside/game/storage';
 import { closeSheet, showSheet } from './sheetState.svelte.js';
 import { currentInApp, isStandalone, openExternal } from './inapp-open.js';
@@ -33,24 +34,25 @@ export function showInstallGuide(withOptOut = false) {
     );
     return;
   }
-  // T-11-092 아이폰은 App Store 앱을 먼저 권하고, 원하면 홈 화면 추가 단계로 넘어간다.
-  if (platform === 'ios-safari' || platform === 'ios-chrome') {
+  // T-11-092 휴대폰은 스토어 앱을 먼저 권하고(T-11-449 Android는 Google Play), 원하면 홈 화면 추가 단계로 넘어간다.
+  const os = platform.startsWith('ios') ? 'ios' : platform === 'android' ? 'android' : null;
+  if (os) {
     showSheet(
       {
         kind: 'notice',
-        eyebrow: APP_PROMO.sheet.eyebrow,
-        title: APP_PROMO.sheet.title,
+        eyebrow: APP_PROMO.sheet.eyebrow(os),
+        title: APP_PROMO.sheet.title(os),
         text: APP_PROMO.sheet.text,
         muted: true,
         ...optOutCheck(withOptOut),
       },
       [
         {
-          label: APP_PROMO.sheet.store,
+          label: APP_PROMO.getApp(os),
           cls: 'btn-primary',
           fn: () => {
             closeSheet();
-            openAppStore('sheet');
+            openAppStore(os, 'sheet');
           },
         },
         // 다시 보지 않기는 앞 시트에서 이미 물었다.

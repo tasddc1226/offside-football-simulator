@@ -5,7 +5,11 @@ import {
   TeamPresetsSchema,
 } from '@offside/contracts';
 import type { TeamPlayer, TeamPreset, TeamRankItem, TeamRankSort } from '@offside/contracts';
-import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
+import {
+  TEAM_RANK_PER_PAGE,
+  type DetailPos,
+  type FormationId,
+} from '@offside/contracts/owner-team';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import { defaultClubIds, isAmateurClubId } from '@offside/contracts/club-names';
 import { CARD_VALUE_FLOOR } from '@offside/contracts/market-value';
@@ -54,6 +58,7 @@ import {
 import { accountLinkedSql } from './profiles.js';
 import type { AchievementSeason } from '../../team/achievements.js';
 import type { LineupCareer, PlayerRef } from '../../team/sim.js';
+import type { StoredMoment } from '../../team/moments.js';
 
 // T-10-092 구단주 팀(시즌마다 한 팀)·팀 경기·라이브 랭킹.
 
@@ -270,8 +275,8 @@ export const myTeamIn = (db: Db, profileId: string, season: number) =>
     .where(and(eq(ownerTeams.profileId, profileId), eq(ownerTeams.season, season)));
 
 /**
- * 그 시즌에 넣을 수 있는 내 선수 카드(그 시즌까지 올라온 선수, 최고 OVR 순). T-11-114 지난 시즌 선수는 와일드카드로
- * 선발에 TEAM_WILDCARD_MAX명까지만 넣는다(PUT이 센다). T-11-080부터 직접 키운 선수 + 영입한
+ * 그 시즌에 넣을 수 있는 내 선수 카드(그 시즌까지 올라온 선수, 최고 OVR 순). T-11-376 지난 시즌 선수는 급여 합이
+ * 예산(pastSalaryBudget) 안에서만 선발에 넣는다(PUT이 센다). T-11-080부터 직접 키운 선수 + 영입한
  * 선수 — 소유는 cards.owner_id다. 공개 이름·숨김·옛 추정 능력치·키운 사람은 careers에서 붙인다(기록이 지워졌으면 익명).
  */
 export function listEligibleCareers(db: Db, profileId: string, season: number, limit = 300) {
@@ -668,6 +673,31 @@ export async function ratingRankOf(db: Db, t: OwnerTeamRow): Promise<number | nu
   return Number(row?.n ?? 0) + 1;
 }
 
+/** T-11-441 OVR 순위(OVR순 랭킹과 같은 순서 — OVR · 레이팅 · 먼저 만든 팀). 랭킹에 오르지 않은 팀이면 null. */
+export async function ovrRankOf(db: Db, t: OwnerTeamRow): Promise<number | null> {
+  if (t.filled === 0) return null;
+  const [row] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(ownerTeams)
+    .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
+    .where(
+      and(
+        rankedIn(t.season),
+        or(
+          gt(ownerTeams.ovr, t.ovr),
+          and(
+            eq(ownerTeams.ovr, t.ovr),
+            or(
+              gt(ownerTeams.rating, t.rating),
+              and(eq(ownerTeams.rating, t.rating), lt(ownerTeams.createdAt, t.createdAt)),
+            ),
+          ),
+        ),
+      ),
+    );
+  return Number(row?.n ?? 0) + 1;
+}
+
 // ───────── 좋아요 · 조회수(게시판 글과 같은 방식) ─────────
 
 const likeOf = (teamId: string, profileId: string) =>
@@ -744,9 +774,21 @@ export type StoredEvent = {
   side: 'home' | 'away';
   scorer: PlayerRef;
   assist: PlayerRef | null;
+  /** T-11-387 득점자 자리. 이 기능 전 경기에는 없다. */
+  slot?: DetailPos;
 };
-/** team_matches.detail_json. 시너지 반영 시즌 경기는 TeamSnapshot.synergy에 켜진 시너지 id를 남긴다(T-11-105). */
-export type MatchDetail = { home: TeamSnapshot; away: TeamSnapshot; events: StoredEvent[] };
+/** T-11-387 장면 경기에서 화면에 띄운 장면(판정값은 남기지 않는다). */
+export type StoredMomentView = Omit<StoredMoment, 'roll' | 'counterRoll' | 'shown' | 'goals'>;
+/**
+ * team_matches.detail_json. 시너지 반영 시즌 경기는 TeamSnapshot.synergy에 켜진 시너지 id를 남긴다(T-11-105). 장면 경기는
+ * 띄운 장면과 고른 결과를 moments에 남긴다(T-11-387).
+ */
+export type MatchDetail = {
+  home: TeamSnapshot;
+  away: TeamSnapshot;
+  events: StoredEvent[];
+  moments?: StoredMomentView[];
+};
 
 /** 경기 한 판이 팀 행에 더하는 것(득실·레이팅 변화). */
 type Side = { teamId: string; filled: number; ovr: number; goals: number; rating: number };

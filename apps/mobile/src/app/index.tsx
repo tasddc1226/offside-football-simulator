@@ -41,9 +41,11 @@ import Market from '../screens/owner/Market';
 import FundsHistory from '../screens/owner/FundsHistory';
 import Manager from '../screens/owner/Manager';
 import Cup from '../screens/owner/CupScreen';
+import League from '../screens/league/LeagueScreen';
 import Settings from '../screens/settings/Settings';
 import Admin from '../screens/settings/Admin';
 import { ReviewNudge } from '../components/ReviewNudge';
+import { AnalyticsAsk } from '../components/AnalyticsAsk';
 
 const SCREENS: Record<Screen, ComponentType> = {
   home: Home,
@@ -69,6 +71,8 @@ const SCREENS: Record<Screen, ComponentType> = {
   recap: OwnerHonors,
   // T-11-145 오프사이드 컵(구단주 화면의 컵 배너로 연다).
   cup: Cup,
+  // T-11-418 오프사이드 리그(홈의 리그 배너로 연다).
+  league: League,
   settings: Settings,
   admin: Admin,
 };
@@ -125,6 +129,7 @@ export default function App() {
       <NewsBanner />
       <RetiredNumberAlert />
       <ReviewNudge />
+      <AnalyticsAsk />
       <Sheet />
       {/* 아래 탭 막대(메인·게임)가 있으면 그 위로 띄운다(웹 body:has(nav.tabs) .toast). */}
       <Toast lift={main || snap.screen === 'game' ? TABBAR_H : 0} />

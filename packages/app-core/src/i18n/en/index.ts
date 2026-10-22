@@ -56,6 +56,7 @@ import { homeMore } from './homeMore';
 import { iap } from './iap';
 import { inbox } from './inbox';
 import { keyMoment } from './keyMoment';
+import { league } from './league';
 import { legend } from './legend';
 import { legendRn } from './legendRn';
 import { legendStyle } from './legendStyle';
@@ -69,6 +70,7 @@ import { owner } from './owner';
 import { ownerConflict } from './ownerConflict';
 import { ownerPlayers } from './ownerPlayers';
 import { ownerProfile } from './ownerProfile';
+import { partner } from './partner';
 import { playerNudge } from './playerNudge';
 import { publicLegends } from './publicLegends';
 import { push } from './push';
@@ -78,6 +80,7 @@ import { retention } from './retention';
 import { retired } from './retired';
 import { retiredLook } from './retiredLook';
 import { reveal } from './reveal';
+import { salary } from './salary';
 import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
 import { seasonRecap } from './seasonRecap';
@@ -100,6 +103,7 @@ import { teamCore } from './teamCore';
 import { teamHome } from './teamHome';
 import { teamLive } from './teamLive';
 import { teamMatch } from './teamMatch';
+import { teamMoments } from './teamMoments';
 import { teamSynergy } from './teamSynergy';
 import { title } from './title';
 import { titleTag } from './titleTag';
@@ -162,6 +166,7 @@ export const en = {
   iap,
   inbox,
   keyMoment,
+  league,
   legend,
   legendRn,
   legendStyle,
@@ -175,6 +180,7 @@ export const en = {
   ownerConflict,
   ownerPlayers,
   ownerProfile,
+  partner,
   playerNudge,
   publicLegends,
   push,
@@ -184,6 +190,7 @@ export const en = {
   retired,
   retiredLook,
   reveal,
+  salary,
   scout,
   seasonGauge,
   seasonRecap,
@@ -206,6 +213,7 @@ export const en = {
   teamHome,
   teamLive,
   teamMatch,
+  teamMoments,
   teamSynergy,
   title,
   titleTag,

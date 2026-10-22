@@ -1,6 +1,7 @@
 // T-11-128 결산 단체사진(웹 RecapTeamPhoto.svelte) — 그 시즌에 키운 선수들을 국가대표 단체사진처럼 세운다.
 // 얼굴은 커리어 ID, 유니폼은 마지막 구단(명예의 전당 시상대와 같은 전성기 도트). 대표 선수(1등)는 가운데에 주장 완장.
 // 도트는 24×32칸의 정수배(48×64)로 그려 칸이 고르다. 처음 그려질 때 플래시가 한 번 터진다(동작 줄이기면 없다).
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useId, useMemo, useRef } from 'react';
 import { Animated, Easing, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Defs, Pattern, Rect } from 'react-native-svg';
@@ -113,7 +114,7 @@ export function RecapTeamPhoto({
           paddingTop: 34,
           paddingBottom: 14,
           paddingHorizontal: 6,
-          borderRadius: 14,
+          borderRadius: RADIUS.md,
         }}
       >
         <Stadium />
@@ -134,7 +135,7 @@ export function RecapTeamPhoto({
               style={{
                 color: '#231700',
                 fontFamily: DISPLAY[800],
-                fontSize: rem(0.8125),
+                fontSize: rem(FONT.label),
                 letterSpacing: 0.06 * 13,
                 includeFontPadding: false,
               }}
@@ -196,11 +197,11 @@ export function RecapTeamPhoto({
         />
       </View>
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
-        <Txt bold style={{ fontSize: rem(0.8125) }}>
+        <Txt bold style={{ fontSize: rem(FONT.label) }}>
           {L.photoCaption({ season })}
         </Txt>
         {more > 0 ? (
-          <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
             {L.photoMore({ n: more })}
           </Txt>
         ) : null}

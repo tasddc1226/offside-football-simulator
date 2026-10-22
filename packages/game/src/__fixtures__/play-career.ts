@@ -25,7 +25,8 @@ function pickOption(s: GameState, options: MarketOption[]): MarketOption {
     : (stay ?? options.find((o) => o.kind !== 'sangmu') ?? options[0]!);
 }
 
-export function playCareer(i: number): GameState {
+/** onPhase: 구간을 진행하기 직전의 상태를 넘긴다(T-11-432 득실 생성기). 상태·RNG를 바꾸면 안 된다. */
+export function playCareer(i: number, onPhase?: (s: GameState) => void): GameState {
   const seed = 0x5eed + i * 7919;
   setActiveRng(createRng(seed));
   const pos = (['FW', 'MF', 'DF', 'GK'] as const)[i % 4]!;
@@ -43,6 +44,7 @@ export function playCareer(i: number): GameState {
   );
   for (let y = 0; y < 30 && !s.retired; y++) {
     for (let ph = 0; ph <= LAST_PHASE; ph++) {
+      onPhase?.(s);
       // advance()
       s.training = s.cond < 45 ? 'rest' : pick(ATTR_KEYS);
       const { ev } = playPhase(s);

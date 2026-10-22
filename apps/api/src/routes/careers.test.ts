@@ -11,6 +11,7 @@ import {
   legendScoreOfRecord,
   legendTermsOfRecord,
 } from '@offside/contracts/hof-rules';
+import { cardValue, retireValue } from '@offside/contracts/market-value';
 import { gzipToR2 } from '../cron/backup.js';
 import { createApp } from '../app.js';
 import { UPLOAD_LIMIT } from './careers.js';
@@ -478,6 +479,14 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     // 새 성장 기록은 새 행으로 쌓인다.
     expect((await send({ growth: { ...growth, o0: 53 } })).status).toBe(200);
     expect((await growths()).at(-1)!.o0).toBe(53);
+
+    // T-11-394 결정적 장면 기록(km)도 성장 기록에 실려 그대로 쌓인다.
+    const km = [
+      { ph: 1, at: 'l', sit: 'c-1v1', c: 'chip', b: 34, p: 31, ok: true },
+      { ph: 2, at: 'f', sit: 'g-cross', c: 'to', b: 58, p: 58, ok: false },
+    ];
+    expect((await send({ growth: { ...growth, km } })).status).toBe(200);
+    expect((await growths()).at(-1)).toEqual({ ...growth, km });
 
     const [season] = await ctx.db
       .select()
@@ -1037,6 +1046,71 @@ describe('조작된 기록 보정', () => {
       expect((await row()).legendScore).toBe(expected);
     },
   );
+
+  it('T-11-448 카드 기준가·은퇴 가치는 스냅샷 시즌이 아니라 받아 둔 시즌으로 매긴다', async () => {
+    const stored = [
+      { year: 2030, age: 22, ovr: 74 },
+      { year: 2031, age: 23, ovr: 80 },
+      { year: 2032, age: 24, ovr: 85 },
+    ];
+    for (const s of stored) {
+      const body = seasonBody();
+      const res = await put(`/v1/careers/${CAREER_ID}/seasons/${s.year}`, {
+        ...body,
+        season: { ...body.season, age: s.age, league: 'K리그1', ovr: s.ovr, honors: [] },
+      });
+      expect(res.status).toBe(200);
+    }
+    const forged = (year: number, age: number) => ({
+      year,
+      age,
+      club: '테스트 FC',
+      league: '프리미어리그',
+      apps: 40,
+      goals: 30,
+      assists: 10,
+      cs: 0,
+      rating: 9,
+      rank: 1,
+      ovr: 200,
+      honors: [],
+    });
+    const snapshot = {
+      number: 10,
+      pos: 'FW',
+      age: 25,
+      peak: 200,
+      lastClub: '테스트 FC',
+      // 받아 둔 세 시즌을 부풀리고, 받아 둔 적 없는 해도 하나 덧붙였다.
+      career: [...stored.map((s) => forged(s.year, s.age)), forged(2029, 18)],
+      trophies: [],
+      awards: [],
+      ballon: [],
+      nat: { caps: 0 },
+      storyLog: [],
+      miles: [],
+    };
+    const res = await put(`/v1/careers/${CAREER_ID}/retirement`, {
+      ...retirementBody(),
+      retireAge: 25,
+      peak: 200,
+      apps: 60,
+      goals: 30,
+      assists: 9,
+      trophies: 0,
+      awards: 0,
+      caps: 0,
+      snapshot,
+    });
+    expect(res.status).toBe(200);
+    const rows = stored.map((s) => ({ league: 'K리그1', age: s.age, ovr: s.ovr }));
+    const r = await row();
+    expect(r.peak).toBe(85);
+    expect(r.value).toBe(retireValue(rows, r.legendScore!));
+    const [card] = await ctx.db.select().from(cards).where(eq(cards.careerId, CAREER_ID));
+    expect(card?.cardValue).toBe(cardValue(rows, 85));
+    expect(card?.cardValue).toBeLessThan(cardValue(snapshot.career, 200));
+  });
 
   it('은퇴를 다시 보내면 공개 이름만 바뀌고 요약은 첫 은퇴 그대로다', async () => {
     await putSeasonsFor(ctx.env, cookie, CAREER_ID, retirementBody());

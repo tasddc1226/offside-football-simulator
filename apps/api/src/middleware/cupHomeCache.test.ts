@@ -14,6 +14,7 @@ describe('cup summary invalidation', () => {
       '/v1/profile/delete',
     ])
       expect(changesCupHome('POST', path)).toBe(true);
+    expect(changesCupHome('PUT', '/v1/cups/s1-1/matches/m1/prediction')).toBe(false);
     expect(changesCupHome('GET', '/v1/cups/home')).toBe(false);
     expect(changesCupHome('PUT', '/v1/careers/id/seasons/2026')).toBe(false);
   });

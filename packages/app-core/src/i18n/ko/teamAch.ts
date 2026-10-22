@@ -44,6 +44,12 @@ const ko = {
   ownersAfter: '명',
   ownersApp: (p: { n: string }) => `구단주 ${p.n}명`,
   rankFail: '랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.',
+  // T-11-441 내 순위로
+  myRank: '내 순위로',
+  myRankTeamNone: '이 시즌 랭킹에 내 팀이 없어요.',
+  myRankAchNone: '이 시즌 업적 랭킹에 내 기록이 없어요.',
+  myRankFail: '내 순위를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.',
+  myRow: '내 순위',
   loading: '불러오는 중…',
   hdrOwner: '구단주',
   hdrGrade: '등급',

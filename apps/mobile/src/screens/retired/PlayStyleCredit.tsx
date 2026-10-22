@@ -1,5 +1,6 @@
 // 은퇴 리포트의 '플레이 성향' 장면(웹 PlayStyleCredit.svelte, T-10-077) — 커리어 내내 유저가 한 선택으로 뽑은 유형 ·
 // 주사위 기록 · 커리어 최고의 한 수. 선택 기록이 없는 옛 은퇴는 그리지 않는다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import { styleReport } from '@offside/game/playStyleReport';
 import type { LegendSource } from '@offside/game/types';
@@ -90,7 +91,7 @@ export function PlayStyleCredit({ d }: { d: LegendSource }) {
               tone="muted"
               center
               style={{
-                fontSize: rem(0.75),
+                fontSize: rem(FONT.caption),
                 letterSpacing: rem(0.75) * 0.16,
                 textTransform: 'uppercase',
               }}

@@ -2,6 +2,7 @@
   // T-11-196 프리미엄 스카우트 확률 공개표(앱 owner/ScoutOdds.tsx). 펼칠 때만 계산한다.
   import { scoutOddsRows } from '@offside/app-core/scoutOdds';
   import { scoutText as L } from '@offside/app-core/i18n/ko/scout';
+  import { scoutPityAt } from '@offside/contracts/cup';
   import { detailOpenNow } from '../state.svelte.js';
 
   let open = $state(false);
@@ -22,7 +23,7 @@
         </span>
       </div>
     {/each}
-    <p class="muted fs-sm" data-odds-pity>{L.oddsPity}</p>
+    <p class="muted fs-sm" data-odds-pity>{L.oddsPity(scoutPityAt())}</p>
     <p class="muted fs-sm">{L.oddsNote}</p>
   </div>
 {/if}
@@ -33,7 +34,7 @@
     flex-direction: column;
     gap: 8px;
     padding: 12px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
   }
   .odds-row {

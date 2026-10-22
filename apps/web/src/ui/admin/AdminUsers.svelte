@@ -101,12 +101,12 @@
 </div>
 
 <style>
-  .card-in { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .card-in { border: 1px solid var(--line); border-radius: var(--radius-md); padding: 10px 12px; }
   .id { display: block; word-break: break-all; }
-  .sums { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 0.8125rem; }
+  .sums { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: var(--fs-label); }
   .sums dd { margin: 0; text-align: right; }
   .lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-  .lines li { padding: 6px 0; border-top: 1px solid var(--line); font-size: 0.8125rem; }
+  .lines li { padding: 6px 0; border-top: 1px solid var(--line); font-size: var(--fs-label); }
   .grant { border-top: 1px solid var(--line); padding-top: 10px; }
   .num { width: 96px; }
   .bad { color: var(--bad); }

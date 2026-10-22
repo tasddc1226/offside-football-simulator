@@ -65,7 +65,11 @@ describe('cardBody (T-11-211)', () => {
 describe('이적시장 줄 유형 (T-11-356)', () => {
   it('유형은 따로 돌려주고 아래 한 줄에는 레전드 점수·이적 횟수만', () => {
     expect(cardStyle({ pos: 'FW', type: 'speed' })).toBe('스피드스터');
-    expect(cardMeta({ legendScore: 1234, transfers: 2 })).toBe('레전드 1,234 · 이적 2회');
+    const c = { legendScore: 1234, transfers: 2, peak: 86, season: 1 };
+    expect(cardMeta(c)).toBe('레전드 1,234 · 이적 2회');
+    expect(cardMeta(c, 1)).toBe('레전드 1,234 · 이적 2회');
+    // T-11-425 지난 시즌 카드는 출신 시즌과 급여(최고 OVR 86 → 6)를 앞에 붙인다.
+    expect(cardMeta(c, 2)).toBe('시즌 1 · 급여 6 · 레전드 1,234 · 이적 2회');
   });
   it('유형이 없거나 모르는 id면 null', () => {
     expect(cardStyle({ pos: 'FW', type: null })).toBeNull();

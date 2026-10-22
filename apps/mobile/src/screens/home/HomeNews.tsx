@@ -1,9 +1,11 @@
 // 홈의 소식 섹션(웹 HomeNews.svelte — 공지사항 · 릴리즈 노트). 최근 글 몇 개만 보여 주고, 글을 누르면 소식 화면에서 본문·댓글을 연다.
 // '전체 보기'는 글이 없어도 보인다 — 관리자의 새 글 쓰기가 소식 화면에 있어서, 숨기면 첫 글을 쓸 길이 없다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { fetchPosts, type BoardKey, type PostSummary } from '@offside/app-core/api/boards';
 import { postMeta } from '@offside/app-core/boardText';
+import { isNewPost } from '../../game/host';
 import { openBoard } from '../../game/nav';
 import { hiddenPost } from '../../platform/storeText';
 import { useColors } from '../../theme/useColors';
@@ -33,8 +35,11 @@ export function HomeNews({
     let alive = true;
     void track(fetchPosts(board)).then((r) => {
       if (!alive) return;
-      if (r.ok) setPosts(r.data.posts.filter((p) => !hiddenPost(p)));
-      else setFailed(true);
+      // T-11-440 한 번 실패한 뒤 당겨서 다시 받으면 오류 문구를 거둔다. 다시 실패해도 받아 둔 글은 그대로 둔다.
+      if (r.ok) {
+        setPosts(r.data.posts.filter((p) => !hiddenPost(p)));
+        setFailed(false);
+      } else setFailed(true);
     });
     return () => {
       alive = false;
@@ -57,7 +62,7 @@ export function HomeNews({
             <MoreLink testID="news-all" what={title} onPress={() => openBoard(board)} />
           ) : null}
         </View>
-        {failed ? (
+        {failed && !posts ? (
           <Empty>{L.newsFailed}</Empty>
         ) : !posts ? (
           <Skeleton rows={3} />
@@ -70,7 +75,7 @@ export function HomeNews({
                 key={p.id}
                 scale={0.985}
                 testID={`post-row-${p.id}`}
-                accessibilityLabel={p.title}
+                accessibilityLabel={isNewPost(p) ? `${L.postNew} ${p.title}` : p.title}
                 onPress={() => openBoard(board, p.id)}
                 style={{
                   gap: 4,
@@ -83,6 +88,7 @@ export function HomeNews({
                 <Row gap={6}>
                   {p.pinned ? <Pill tone="warn">{L.pinned}</Pill> : null}
                   {p.version ? <Pill>{p.version}</Pill> : null}
+                  {isNewPost(p) ? <Pill tone="good">{L.postNew}</Pill> : null}
                   <Txt bold>{p.title}</Txt>
                 </Row>
                 <Txt v="xs" tone="muted">
@@ -99,7 +105,7 @@ export function HomeNews({
 
 function Empty({ children }: { children: string }) {
   return (
-    <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
+    <Txt tone="muted" style={{ fontSize: rem(FONT.body2), paddingVertical: 8 }}>
       {children}
     </Txt>
   );

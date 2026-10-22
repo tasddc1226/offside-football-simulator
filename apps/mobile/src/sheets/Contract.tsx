@@ -1,9 +1,10 @@
 // 계약서 사인 시트(웹 sheets/Contract.svelte, T-11-039): 이적시장에서 고른 구단과의 계약. 손가락으로 사인하거나
-// '이름 사인 사용'으로 선수 이름을 흘려 쓴 사인을 넣으면 확정 버튼이 켜진다. 누르면 도장이 찍히고 onSign. 사인은 화면
-// 연출이라 저장하지 않는다.
+// '이름 사인 사용'으로 선수 이름을 흘려 쓴 사인을 넣으면 확정 버튼이 켜진다. 누르면 도장이 찍히고 onSign. 확정한 사인은
+// 홈 카드에서 다시 그리려고 이 기기에만 하나 남긴다(T-11-412, platform/lastSign.ts).
 // 웹은 canvas에 그렸지만 앱은 획마다 점을 모아 react-native-svg Path로 그린다. 터치는 패드 위에 덮은 투명 View 하나가
 // PanResponder로 잡는다(DragShot과 같다 — 터치 대상이 늘 그 View라 locationX/Y가 패드 기준으로 일정하고, 바깥 스크롤이
 // 제스처를 가져가지 못한다).
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Easing, PanResponder, StyleSheet, View, type GestureResponderEvent } from 'react-native';
 import Svg, { ClipPath, Defs, G, Path, Rect, Text as SvgText } from 'react-native-svg';
@@ -18,7 +19,9 @@ import {
   STAMP_MS,
   signFlourish,
 } from '@offside/app-core/signature';
-import { prefs } from '../store';
+import { packInk } from '@offside/app-core/lastSign';
+import { saveLastSign } from '../platform/lastSign';
+import { appState, prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { DISPLAY, rem } from '../theme/type';
 import { Btn } from '../ui/Btn';
@@ -62,7 +65,7 @@ const Terms = memo(function Terms({
         gap: 12,
         paddingVertical: 10,
         paddingHorizontal: 12,
-        borderRadius: 12,
+        borderRadius: RADIUS.md,
         backgroundColor: c.surface2,
       }}
     >
@@ -70,10 +73,13 @@ const Terms = memo(function Terms({
       <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', rowGap: 4, columnGap: 16 }}>
         {terms.map((t) => (
           <View key={t.label}>
-            <Txt tone="muted" style={{ fontSize: rem(0.6875), lineHeight: rem(0.6875) * 1.4 }}>
+            <Txt
+              tone="muted"
+              style={{ fontSize: rem(FONT.caption2), lineHeight: rem(FONT.caption2) * 1.4 }}
+            >
               {t.label}
             </Txt>
-            <Txt bold style={{ fontSize: rem(0.875), lineHeight: rem(0.875) * 1.4 }}>
+            <Txt bold style={{ fontSize: rem(FONT.body2), lineHeight: rem(FONT.body2) * 1.4 }}>
               {t.value}
             </Txt>
           </View>
@@ -122,6 +128,8 @@ export function Contract({ v }: { v: ContractView }) {
   const body = useRef('');
   const lastPt = useRef<Pt | null>(null);
   const ink = useRef(0);
+  /** 그은 점들(획마다) — 확정하면 줄여서 남긴다. */
+  const pts = useRef<Pt[][]>([]);
   const sealedRef = useRef(false);
   const namedRef = useRef(false);
   const raf = useRef(0);
@@ -132,6 +140,7 @@ export function Contract({ v }: { v: ContractView }) {
     body.current = '';
     lastPt.current = null;
     ink.current = 0;
+    pts.current = [];
     namedRef.current = false;
     setDone([]);
     setCur('');
@@ -162,6 +171,7 @@ export function Contract({ v }: { v: ContractView }) {
         if (namedRef.current) clear();
         const p = at(e);
         lastPt.current = p;
+        pts.current.push([p]);
         body.current = `M${p.x},${p.y}`;
         setCur(`${body.current}l0.01,0`);
         setInked(true);
@@ -174,6 +184,7 @@ export function Contract({ v }: { v: ContractView }) {
         if (d < 1) return;
         body.current += `Q${a.x},${a.y} ${(a.x + p.x) / 2},${(a.y + p.y) / 2}`;
         lastPt.current = p;
+        pts.current[pts.current.length - 1]?.push(p);
         setCur(`${body.current}L${p.x},${p.y}`);
         ink.current += d;
         if (ink.current >= MIN_INK) setEnough(true);
@@ -216,6 +227,15 @@ export function Contract({ v }: { v: ContractView }) {
     cancelAnimationFrame(raf.current);
     setReveal(1);
     setSealed(true);
+    const cid = appState.G?.cid;
+    if (cid)
+      saveLastSign({
+        cid,
+        club: v.club.name,
+        mark: namedRef.current
+          ? { kind: 'name', name: v.name }
+          : packInk(size.w, size.h, pts.current),
+      });
     setTimeout(() => v.onSign(), motionOK ? STAMP_MS : 0);
   }
 
@@ -237,18 +257,18 @@ export function Contract({ v }: { v: ContractView }) {
           right: -4,
           width: 40,
           height: 40,
-          borderRadius: 20,
+          borderRadius: RADIUS.lg,
           backgroundColor: c.surface2,
           alignItems: 'center',
           justifyContent: 'center',
           opacity: sealed ? 0.45 : 1,
         }}
       >
-        <Txt tone="muted" style={{ fontSize: rem(1.375), lineHeight: rem(1.375) }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.title2), lineHeight: rem(FONT.title2) }}>
           ×
         </Txt>
       </Press>
-      <Txt tone="muted" style={{ marginTop: -4, fontSize: rem(0.9375) }}>
+      <Txt tone="muted" style={{ marginTop: -4, fontSize: rem(FONT.body1) }}>
         {s.text}
       </Txt>
       <Terms club={s.club} terms={s.terms} />
@@ -270,7 +290,7 @@ export function Contract({ v }: { v: ContractView }) {
             onPress={fn}
             style={{ minHeight: 40, justifyContent: 'center', opacity: sealed ? 0.45 : 1 }}
           >
-            <Txt bold style={{ fontSize: rem(0.8125), color: c.accentText }}>
+            <Txt bold style={{ fontSize: rem(FONT.label), color: c.accentText }}>
               {label}
             </Txt>
           </Press>
@@ -288,9 +308,9 @@ export function Contract({ v }: { v: ContractView }) {
           height: 150,
           borderWidth: 1.5,
           borderStyle: 'dashed',
-          borderColor: c.line,
-          borderRadius: 14,
-          backgroundColor: c.surface,
+          borderColor: 'transparent',
+          borderRadius: RADIUS.md,
+          backgroundColor: c.surface2,
           overflow: 'hidden',
         }}
       >
@@ -336,7 +356,7 @@ export function Contract({ v }: { v: ContractView }) {
             pointerEvents="none"
             style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}
           >
-            <Txt tone="muted" style={{ fontSize: rem(0.9375) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.body1) }}>
               {L.signHint}
             </Txt>
           </View>
@@ -359,8 +379,8 @@ export function Contract({ v }: { v: ContractView }) {
               position: 'absolute',
               left: 0,
               bottom: 2,
-              fontSize: rem(0.875),
-              lineHeight: rem(0.875),
+              fontSize: rem(FONT.body2),
+              lineHeight: rem(FONT.body2),
             }}
           >
             ×
@@ -381,7 +401,7 @@ export function Contract({ v }: { v: ContractView }) {
       <Txt
         tone="muted"
         center
-        style={{ marginTop: -6, fontSize: rem(0.75), lineHeight: rem(0.75) * 1.5 }}
+        style={{ marginTop: -6, fontSize: rem(FONT.caption), lineHeight: rem(FONT.caption) * 1.5 }}
       >
         {L.signNote}
       </Txt>
@@ -421,8 +441,8 @@ function Stamp({ name }: { name: string }) {
         <Txt
           style={{
             fontFamily: DISPLAY[700],
-            fontSize: rem(1.25),
-            lineHeight: rem(1.25),
+            fontSize: rem(FONT.title2),
+            lineHeight: rem(FONT.title2),
             letterSpacing: rem(1.25) * 0.06,
             color: c.bad,
           }}
@@ -434,8 +454,8 @@ function Stamp({ name }: { name: string }) {
           style={{
             maxWidth: 62,
             marginTop: 3,
-            fontSize: rem(0.5625),
-            lineHeight: rem(0.5625) * 1.3,
+            fontSize: rem(FONT.caption2),
+            lineHeight: rem(FONT.caption2) * 1.3,
             fontWeight: '700',
             color: c.bad,
           }}

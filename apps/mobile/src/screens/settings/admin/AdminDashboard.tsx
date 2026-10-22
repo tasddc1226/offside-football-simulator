@@ -1,5 +1,6 @@
 // T-10-016 운영 대시보드(웹 admin/AdminDashboard.svelte): 가입·활동·커리어·댓글 수와 최근 14일(KST) 추이. 집계는 서버에서 1분 캐시된다.
 // 막대 그림은 웹처럼 막대(View)로 그린다 — 차트 라이브러리 없이 막대 높이만 비율로.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import * as api from '@offside/app-core/api/admin';
@@ -56,24 +57,24 @@ function Stat({
         paddingHorizontal: 12,
         borderWidth: 1,
         borderColor: c.line,
-        borderRadius: 12,
+        borderRadius: RADIUS.md,
         minWidth: 0,
       }}
     >
-      <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
         {label}
       </Txt>
       <Txt
         bold
         style={{
-          fontSize: rem(1.375),
-          lineHeight: rem(1.375) * 1.3,
+          fontSize: rem(FONT.title2),
+          lineHeight: rem(FONT.title2) * 1.3,
           fontVariant: ['tabular-nums'],
         }}
       >
         {value}
       </Txt>
-      <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
         {sub}
       </Txt>
     </View>
@@ -99,7 +100,7 @@ export default function AdminDashboard() {
   );
   useEffect(() => void load(), []);
 
-  const muted = { fontSize: rem(0.75) } as const;
+  const muted = { fontSize: rem(FONT.caption) } as const;
   const s = stats;
   return (
     <View testID="admin-dashboard" style={{ gap: 14 }}>
@@ -175,9 +176,9 @@ export default function AdminDashboard() {
             const max = maxOf(s, ser.key);
             return (
               <View key={ser.key} testID={`series-${ser.key}`} style={{ gap: 6 }}>
-                <Txt style={{ fontSize: rem(0.8125), fontWeight: '600' }}>
+                <Txt style={{ fontSize: rem(FONT.label), fontWeight: '600' }}>
                   {`${ser.label} · 최근 14일 `}
-                  <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                     {`(합계 ${s.daily.reduce((a, d) => a + d[ser.key], 0).toLocaleString()})`}
                   </Txt>
                 </Txt>
@@ -209,8 +210,8 @@ export default function AdminDashboard() {
                       <Txt
                         tone="muted"
                         style={{
-                          fontSize: rem(0.625),
-                          lineHeight: rem(0.625) * 1.5,
+                          fontSize: rem(FONT.caption2),
+                          lineHeight: rem(FONT.caption2) * 1.5,
                           fontVariant: ['tabular-nums'],
                         }}
                       >
@@ -241,10 +242,10 @@ export default function AdminDashboard() {
                       borderBottomColor: c.line,
                     }}
                   >
-                    <Txt style={{ fontSize: rem(0.8125), flexShrink: 1 }}>
+                    <Txt style={{ fontSize: rem(FONT.label), flexShrink: 1 }}>
                       {AUDIT[a.kind] ?? a.kind}
                     </Txt>
-                    <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                    <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                       {kst(a.createdAt)}
                     </Txt>
                   </View>

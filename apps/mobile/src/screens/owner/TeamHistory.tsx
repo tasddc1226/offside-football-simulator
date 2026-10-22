@@ -1,5 +1,6 @@
 // 기록 탭(웹 team/TeamHistory.svelte) — 맨 위 시즌 통계 카드(T-11-269)와 경기 목록. 경기를 누르면 그 경기 결과로,
 // '더 보기'로 지난 경기를 이어 받는다.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import { TeamLogo } from '../../components/TeamLogo';
 import type { TeamMatch, TeamRecord } from '@offside/app-core/api/team';
@@ -35,7 +36,7 @@ export function MatchRow({ m, open }: { m: TeamMatch; open: (m: TeamMatch) => vo
         style={{
           width: 32,
           height: 32,
-          borderRadius: 10,
+          borderRadius: RADIUS.sm,
           backgroundColor: c.surface2,
           alignItems: 'center',
           justifyContent: 'center',

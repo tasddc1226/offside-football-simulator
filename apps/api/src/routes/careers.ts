@@ -48,7 +48,7 @@ import {
   verifiedSnapshot,
 } from '../db/repos/careers.js';
 import { clubsJsonMap, clubsJsonQuery } from '../db/repos/retiredNumbers.js';
-import { boundProfile, boundRetirement, sanitizeSeason } from '../plausibility.js';
+import { boundProfile, boundRetirement, boundValueRows, sanitizeSeason } from '../plausibility.js';
 import { getProfile, isLinked } from '../db/repos/profiles.js';
 import { tryAttempt } from '../db/repos/authAttempts.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -401,6 +401,9 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
         profile: profile && boundProfile(profile, summary.peak),
         potReal: sent.potReal,
         look: sent.look,
+        // T-11-448 카드 기준가·은퇴 가치·장려금은 받아 둔 시즌에 맞춘 행으로 매긴다(보낸 시즌 OVR을 그대로 믿지 않는다).
+        valueRows:
+          snapshot && boundValueRows(snapshot.career, seasons, retireAtOf(career.serviceSeason)),
         now,
       });
     }

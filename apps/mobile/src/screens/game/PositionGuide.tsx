@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { POS, type Pos } from '@offside/game/data';
@@ -35,7 +36,7 @@ export function PositionGuide({ pos, initialOpen = false }: { pos: Pos; initialO
                   paddingHorizontal: 14,
                   paddingVertical: 10,
                   justifyContent: 'center',
-                  borderRadius: 22,
+                  borderRadius: RADIUS.lg,
                   borderWidth: 1,
                   borderColor: c.line,
                   backgroundColor: current === p ? c.pitch : c.surface2,
@@ -53,7 +54,13 @@ export function PositionGuide({ pos, initialOpen = false }: { pos: Pos; initialO
           {positionGuide(current).map((e) => (
             <View
               key={e.id}
-              style={{ padding: 10, gap: 4, borderWidth: 1, borderColor: c.line, borderRadius: 8 }}
+              style={{
+                padding: 10,
+                gap: 4,
+                borderWidth: 1,
+                borderColor: c.line,
+                borderRadius: RADIUS.sm,
+              }}
             >
               <Txt style={{ fontWeight: '700' }}>{e.name}</Txt>
               <Txt v="sm" tone="muted">

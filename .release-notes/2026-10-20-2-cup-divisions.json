@@ -1,0 +1,32 @@
+{
+  "id": "t-11-410-cup-divisions",
+  "title": "오프사이드 컵 OVR 구간별 대회",
+  "items": [
+    "제3회 오프사이드 컵부터 팀 OVR 구간(주니어 · 시니어 · 마스터)마다 따로 대회를 열어요",
+    "주니어 · 시니어 상한은 접수가 열릴 때 그 시즌 팀 OVR 분포로 정하고, 마스터는 제한이 없어요",
+    "내 팀 OVR이 상한 이하인 구간에 신청하고, 윗 구간에 도전해도 돼요. 한 회차에는 한 구간만 참가해요",
+    "조 추첨 때 OVR이 상한을 넘었으면 윗 구간으로 옮기고, 8팀보다 적은 구간은 윗 구간과 함께 치러요",
+    "구간마다 우승 · 준우승 · 4강 칭호와 트로피를 받아요"
+  ],
+  "en": {
+    "title": "Offside Cup OVR divisions",
+    "items": [
+      "From the 3rd Offside Cup, each team OVR division (Junior, Senior, Master) runs its own cup.",
+      "The Junior and Senior caps are set from that season's team OVR spread when entries open. Master has no limit.",
+      "Enter a division whose cap is at or above your team OVR, or play up. You can enter one division per cup.",
+      "If your OVR is above the cap at the draw, you move up a division. Divisions with fewer than 8 teams play with the division above.",
+      "Each division awards its own champion, runner-up and semifinalist titles and trophies."
+    ]
+  },
+  "ja": {
+    "title": "オフサイドカップのOVR部門",
+    "items": [
+      "第3回オフサイドカップから、チームOVRの部門（ジュニア · シニア · マスター）ごとに別の大会を開きます。",
+      "ジュニア · シニアの上限は受付開始時にそのシーズンのチームOVR分布で決まり、マスターは制限なしです。",
+      "チームOVRが上限以下の部門に申し込み、上の部門に挑戦することもできます。1回の大会で1部門だけ参加できます。",
+      "抽選時にOVRが上限を超えていれば上の部門に移り、8チーム未満の部門は上の部門と一緒に戦います。",
+      "部門ごとに優勝 · 準優勝 · ベスト4の称号とトロフィーがもらえます。"
+    ]
+  },
+  "availability": "web-app"
+}

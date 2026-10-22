@@ -7,7 +7,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { legendScoreOfRecord } from '@offside/contracts/hof-rules';
 import { createApp } from '../app.js';
 import { cards, careers, ownerFunds } from '../db/schema.js';
-import { ensureCardValuesBackfilled } from '../db/repos/cardValues.js';
 import { eq, inArray } from 'drizzle-orm';
 import { cardValue, releasePayout, retireValue, valueFor } from '@offside/contracts/market-value';
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
@@ -680,9 +679,32 @@ describe('공개 명예의 전당 /v1/hof', () => {
     ).first();
     expect(meta).toEqual({ value: '1' });
   });
+  /** 스냅샷 시즌과 같은 해·나이·리그·OVR로 받아 둔 시즌을 덮어쓴다(T-11-448). */
+  const putProSeasons = async (
+    id: string,
+    career: {
+      year: number;
+      age: number;
+      league: string;
+      clubId?: string | undefined;
+      ovr: number;
+    }[],
+  ) => {
+    for (const r of career) {
+      const res = await putJson(
+        ctx,
+        cookie,
+        `/v1/careers/${id}/seasons/${r.year}`,
+        seasonBody({ age: r.age, league: r.league, clubId: r.clubId, ovr: r.ovr }),
+      );
+      expect(res.status).toBe(200);
+    }
+  };
   it('T-10-100: 은퇴 가치를 스냅샷으로 매기고 가치 순으로 정렬한다(옛 기록은 리그 이름으로, 스냅샷 없으면 빠진다)', async () => {
+    // T-11-448 몸값은 받아 둔 시즌으로 매기므로 스냅샷 시즌과 같은 해·나이·리그·OVR로 시즌을 올린다.
     const pro = (ovr: number, age: number, league: string) => ({
       ...snapshot.career[0]!,
+      year: 2008 + age,
       league,
       clubId: undefined,
       ovr,
@@ -703,6 +725,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
     ];
     for (const { id, legendScore, career } of rows) {
       await putSeasonsFor(ctx.env, cookie, id, summary);
+      await putProSeasons(id, career ?? []);
       await putJson(ctx, cookie, `/v1/careers/${id}/retirement`, {
         ...summary,
         legendScore,
@@ -724,10 +747,15 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect((await read('sort=score')).entries.find((e) => e.id === rows[2]!.id)?.value).toBe(0);
   });
 
-  it('T-11-080: 은퇴하면 카드가 한 장 생기고, 기존 카드의 기준가는 명예의 전당 조회 때 스냅샷으로 소급한다', async () => {
+  it('T-11-080: 은퇴하면 카드가 한 장 생기고 기준가 · 은퇴 가치 · 장려금이 붙는다', async () => {
     // 이 기능 전 기록은 상세가 D1(snapshot_json)에 있다 — T-11-311 전처럼 R2를 끄고 올린다.
     ctx.env.SNAPSHOT_R2_DISABLED = '1';
-    const pro = (ovr: number, age: number) => ({ ...snapshot.career[0]!, ovr, age });
+    const pro = (ovr: number, age: number) => ({
+      ...snapshot.career[0]!,
+      year: 2008 + age,
+      ovr,
+      age,
+    });
     const rows = [
       { id: '0c000000-0000-4000-8000-000000000011', career: [pro(summary.peak, 31)] },
       { id: '0c000000-0000-4000-8000-000000000012', career: null }, // 스냅샷 없음
@@ -735,6 +763,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
     ];
     for (const { id, career } of rows) {
       await putSeasonsFor(ctx.env, cookie, id, summary);
+      await putProSeasons(id, career ?? []);
       await putJson(ctx, cookie, `/v1/careers/${id}/retirement`, {
         ...summary,
         ...(career ? { publicName: null, snapshot: { ...snapshot, career } } : {}),
@@ -777,13 +806,6 @@ describe('공개 명예의 전당 /v1/hof', () => {
     });
     expect(await cardRows()).toHaveLength(3);
     expect(await funds()).toBe(bonuses[0]! + bonuses[2]!);
-
-    // 마이그레이션이 만든 기존 카드: 기준가 null·은퇴 가치 0. 스냅샷 있는 카드만 한 장씩 채운다(없는 카드는 null로 남는다).
-    await ctx.db.update(cards).set({ cardValue: null, retireValue: 0 });
-    for (let i = 0; i < 2; i++) expect(await ensureCardValuesBackfilled(ctx.db, 1)).toBe(true);
-    expect(await ensureCardValuesBackfilled(ctx.db, 1)).toBe(true); // 빈 조각 → 끝 표시
-    expect(await ensureCardValuesBackfilled(ctx.db, 1)).toBe(false);
-    expect(await cardRows()).toEqual(want);
   });
 
   it('T-10-100: 이 기능 전 은퇴 기록(value 없음)은 명예의 전당 조회 때 스냅샷으로 소급한다', async () => {

@@ -14,12 +14,13 @@
       <b>{m.result.text}</b>
     </p>
   {:else}
+    <p class="km-stake" data-key-moment-stake>{m.stake}</p>
     <div class="km-choices">
       {#each m.choices as c (c.id)}
         <button class="km-choice" onclick={() => m.choose(c.id)} data-key-moment-choice={c.id}>
           <span class="km-label">{c.label}</span>
           <b class="km-pct">{K.pct({ p: c.pct })}</b>
-          <small class="km-attr">{K.attr({ attr: c.attr })}</small>
+          <small class="km-attr">{K.attr({ attr: c.attr })}{#if c.rec} · <b data-key-moment-rec>{c.rec}</b>{/if}</small>
         </button>
       {/each}
     </div>
@@ -37,8 +38,8 @@
     gap: 10px;
     margin: 12px 0 4px;
     padding: 14px;
-    border-radius: 14px;
-    border: 1px solid var(--pitch-2);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--good);
     background: var(--surface-2);
   }
   .km.crisis {
@@ -54,25 +55,31 @@
     letter-spacing: 0.04em;
   }
   .km-head b {
-    font-size: 1.125rem;
-    color: var(--pitch-2);
+    font-size: var(--fs-title3);
+    color: var(--good);
   }
   .km.crisis .km-head b {
     color: var(--bad);
   }
   .km-head span {
     color: var(--muted);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     text-align: right;
   }
   .km-scene,
+  .km-stake,
   .km-hint {
     margin: 0;
     line-height: 1.5;
   }
-  .km-hint {
+  .km-hint,
+  .km-stake {
     color: var(--muted);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
+  }
+  .km-attr b {
+    color: var(--ink);
+    font-weight: 600;
   }
   .km-choices {
     display: grid;
@@ -85,9 +92,9 @@
     gap: 2px 10px;
     min-height: 48px;
     padding: 8px 12px;
-    border-radius: 10px;
-    border: 1px solid var(--line);
-    background: var(--surface);
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background: var(--surface-2);
     color: inherit;
     font: inherit;
     text-align: left;
@@ -95,20 +102,20 @@
   }
   .km-choice:hover,
   .km-choice:focus-visible {
-    border-color: var(--pitch-2);
+    border-color: var(--good);
   }
   .km-label {
     font-weight: 700;
   }
   .km-pct {
     font-family: var(--display);
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
     font-variant-numeric: tabular-nums;
   }
   .km-attr {
     grid-column: 1 / -1;
     color: var(--muted);
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
   }
   .km-timer {
     height: 4px;
@@ -119,7 +126,7 @@
   .km-timer i {
     display: block;
     height: 100%;
-    background: var(--pitch-2);
+    background: var(--good);
     transition: width 1s linear;
   }
   .km-auto {
@@ -135,11 +142,11 @@
     color: var(--muted);
   }
   .km-result b {
-    font-size: 1.0625rem;
+    font-size: var(--fs-title3);
     color: var(--bad);
   }
   .km-result.ok b {
-    color: var(--pitch-2);
+    color: var(--good);
   }
   @media (prefers-reduced-motion: reduce) {
     .km-timer i {

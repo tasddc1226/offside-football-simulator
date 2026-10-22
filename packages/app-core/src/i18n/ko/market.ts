@@ -7,7 +7,9 @@ const ko = {
   title: '이적시장',
   // 머리
   funds: '구단 자금',
-  makeFunds: '자금 만들기',
+  // T-11-442 결제 버튼으로 읽히지 않게 방출로 만든다는 걸 이름에 담는다.
+  makeFunds: '방출해서 자금 만들기',
+  guestHero: '로그인하면 구단주가 되어 구단 자금으로 선수를 사고팔 수 있어요.',
   statClubValue: '구단 가치',
   statBuysToday: '오늘 영입',
   statListed: '내놓은 선수',
@@ -24,7 +26,7 @@ const ko = {
   sortOvr: 'OVR 높은 순',
   sortLabel: '정렬',
   posAll: '전체',
-  seasonCount: (p: { n: number; more: boolean }) => `이번 시즌 선수 ${p.n}${p.more ? '+' : ''}명`,
+  listCount: (p: { n: number; more: boolean }) => `선수 ${p.n}${p.more ? '+' : ''}명`,
   // 기준가 대비
   priceSame: '기준가',
   priceUp: (p: { d: number }) => `기준가 +${p.d}%`,
@@ -39,12 +41,14 @@ const ko = {
   openListing: (p: { name: string }) => `${p.name} 영입 보기`,
   cardMeta: (p: { score: string; transfers: number }) =>
     `레전드 ${p.score} · 이적 ${p.transfers}회`,
+  pastCardMeta: (p: { season: string; salary: number; meta: string }) =>
+    `${p.season} · 급여 ${p.salary} · ${p.meta}`,
   listFailed: '시장을 불러오지 못했어요.',
   reload: '다시 불러오기',
   more: '더 보기',
   emptyClosed: '지금은 시즌 사이 휴식기라 이적시장이 닫혀 있어요.',
   emptyFiltered: '이 포지션에는 아직 나온 선수가 없어요.',
-  empty: '아직 시장에 나온 선수가 없어요. 이번 시즌에 은퇴한 선수가 나오면 여기에 올라와요.',
+  empty: '아직 시장에 나온 선수가 없어요. 구단주가 선수를 내놓으면 여기에 올라와요.',
   // 영입 시트
   sheetBuy: '선수 영입',
   detailLegend: '레전드 점수',
@@ -66,12 +70,13 @@ const ko = {
     `구단 자금이 ${p.short} 모자라요. 직접 키운 선수를 방출하면 자금이 생겨요.`,
   unlist: '판매 내리기',
   buyFor: (p: { price: string }) => `${p.price}에 영입하기`,
+  // T-11-434 영입 · 판매 내리기가 낡은 매물이라 실패한 뒤
+  priceMoved: (p: { price: string }) => `가격이 ${p.price}으로 바뀌었어요. 다시 확인해 주세요.`,
+  staleGone: '이미 팔렸거나 내려간 선수예요.',
+  staleRecheck: '가격이 바뀐 선수예요. 목록에서 다시 확인해 주세요.',
   // 팔기
   sellStep1: '1. 내놓을 선수',
-  sellSeasonOnly: (p: { season: string }) => `(${p.season} 선수만)`,
-  thisSeason: '이번 시즌',
-  sellNone:
-    '이번 시즌에 은퇴한 내 선수가 없어요. 지난 시즌 선수는 방출해서 자금으로 바꿀 수 있어요.',
+  sellNone: '아직 내 선수 카드가 없어요. 선수가 은퇴하거나 영입하면 여기에 나와요.',
   sellSelected: '선택',
   sellPickLabel: (p: { name: string }) => `${p.name} 내놓을 선수로 고르기`,
   sellStep2: (p: { name: string; pos: string; peak: number }) =>
@@ -117,9 +122,19 @@ const ko = {
   seasonChip: (p: { name: string }) => `${p.name} 선수`,
   pickAll: '전체 선택',
   pickNone: '선택 해제',
+  pickAllMax: (p: { n: number }) => `최대 ${p.n}명 선택`,
+  pickLimit: (p: { n: number }) => `한 번에 ${p.n}명까지 방출할 수 있어요.`,
   playersFailed: '내 선수를 불러오지 못했어요.',
+  // T-11-442 로그인 전에 팔기 · 내 거래 · 방출을 열면
+  guestSell: '로그인하면 직접 키운 선수를 이적시장에 내놓을 수 있어요.',
+  guestTrades: '로그인하면 내놓은 선수와 구단 자금 내역을 여기서 볼 수 있어요.',
+  guestRelease: '로그인하면 직접 키운 선수를 방출해서 구단 자금을 만들 수 있어요.',
   releasePickLabel: (p: { name: string }) => `${p.name} 방출할 선수로 고르기`,
-  releaseInfo: (p: { score: string }) => `레전드 ${p.score} · 기준가`,
+  releaseInfo: (p: { score: string }) => `레전드 ${p.score} · 방출하면 받는 자금`,
+  /** T-11-443 내 선수 방출 목록 한 줄(포지션 · 최고 OVR · 레전드)과 방출하면 받는 자금. */
+  releaseRowInfo: (p: { pos: string; peak: number; score: string }) =>
+    `${p.pos} · 최고 OVR ${p.peak} · 레전드 ${p.score}`,
+  releaseGets: (p: { amount: string }) => `방출하면 받는 자금 ${p.amount}`,
   noRetired: (p: { season: string }) => `${p.season}에 은퇴한 내 선수가 없어요.`,
   dockLabel: '방출 확인',
   dockSum: (p: { n: number }) => `${p.n}명 방출 · 받는 자금`,

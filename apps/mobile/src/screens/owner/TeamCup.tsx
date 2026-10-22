@@ -1,5 +1,6 @@
 // T-11-145 오프사이드 컵 — 홈의 컵 배너 · 신청/취소 · 편성 화면의 명단 마감 안내. 컵 전체 화면은 CupScreen.
 // 서버가 대회를 치르므로 앱은 fetchCup(누구나) · fetchCupMe(내 참가·자격·다음 경기·명단 잠금)를 보여 주기만 한다.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
 import {
@@ -16,8 +17,13 @@ import { cupText as L } from '@offside/app-core/i18n/ko/cup';
 import { cupRewardText } from '@offside/app-core/cupReward';
 import { cupAppText as A } from '@offside/app-core/i18n/ko/cupApp';
 import { cupOnHome } from '@offside/app-core/cupHome';
+import { cupEnterConfirmLines, cupEntryTeamAction } from '@offside/app-core/cupEntry';
+import { divisionLabel } from '@offside/app-core/cupDivision';
+import type { CupLineupBar } from '@offside/app-core/cupLineupBar';
 import { type LoadStatus } from '../../components/LoadState';
 import { toast } from '../../game/host';
+import { go } from '../../game/nav';
+import { appState } from '../../store';
 import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Pill, Press, Txt } from '../../ui';
@@ -32,6 +38,9 @@ export interface CupState {
   status: LoadStatus;
   /** silent: 화면을 비우지 않고 값만 바꾼다(당겨서 새로고침). */
   reload: (silent?: boolean) => Promise<void>;
+  /** T-11-410 구간 대회: 다른 구간 보기. 내가 신청한 구간 id(없으면 null). */
+  pick: (cupId: string) => void;
+  myDivision: string | null;
 }
 
 /**
@@ -42,29 +51,45 @@ export function useCup(active: boolean, linked = true): CupState {
   const [cup, setCup] = useState<CupResponse | null>(null);
   const [me, setMe] = useState<CupMeResponse | null>(null);
   const [status, setStatus] = useState<LoadStatus>('loading');
+  // T-11-410 보고 있는 대회('current' = 서버가 내 구간으로 풀어 준다). 고른 뒤에는 그 id로 부른다.
+  const [cupId, setCupId] = useState('current');
+  const [myDivision, setMyDivision] = useState<string | null>(null);
   const sequence = useRef(0);
   const reload = useCallback(
     async (silent = false) => {
       const n = ++sequence.current;
       if (!silent) setStatus('loading');
-      const [a, b] = await Promise.all([fetchCup(), linked ? fetchCupMe() : null]);
+      const [first, b] = await Promise.all([fetchCup(cupId), linked ? fetchCupMe(cupId) : null]);
+      let a = first;
       if (n !== sequence.current) return;
+      // 'current'는 대회 조회에선 마스터, 내 상태에선 내 구간이라 둘이 다르면 내 구간 대회를 다시 부른다.
+      const mine = b?.ok ? b.data.cupId : undefined;
+      if (cupId === 'current' && mine && a.ok && a.data.cup.id !== mine) {
+        a = await fetchCup(mine);
+        if (n !== sequence.current) return;
+      }
       if (!a.ok) {
         if (!silent) setStatus('error');
         return;
       }
       setCup(a.data);
-      if (b?.ok) setMe(b.data);
-      else if (!silent || !linked) setMe(null);
+      if (b?.ok) {
+        setMe(b.data);
+        // '내 구간' 표시: 이 구간에 신청이 살아 있으면 여기, 이 구간 신청을 취소했으면 지운다.
+        const at = b.data.cupId ?? a.data.cup.id;
+        if (b.data.entry && b.data.entry.status !== 'withdrawn') setMyDivision(at);
+        else setMyDivision((d) => (d === at ? null : d));
+      } else if (!silent || !linked) setMe(null);
       setStatus('ready');
     },
-    [linked],
+    [linked, cupId],
   );
   useEffect(() => {
     if (active) void reload();
   }, [active, reload]);
   useOnPull(() => (active ? reload(true) : undefined));
-  return { cup, me, status, reload };
+  const pick = useCallback((id: string) => setCupId(id), []);
+  return { cup, me, status, reload, pick, myDivision };
 }
 
 /** 대회에서 팀 이름 찾기. 추첨 전이거나 대진이 안 정해졌으면 '미정'. */
@@ -141,6 +166,15 @@ function linesOf(state: CupState): Line[] {
             }),
             bold: true,
           });
+          // T-11-405 다음 경기 예상(지금 두 팀 명단 기준). 토너먼트면 무승부 뒤 승부차기 안내를 붙인다.
+          const odds = me?.nextOdds;
+          if (odds) {
+            lines.push({ text: L.oddsLine(odds) });
+            lines.push({
+              text: next.group === null ? `${L.oddsNote} ${L.oddsKoNote}` : L.oddsNote,
+              tone: 'muted',
+            });
+          }
           const lock = lockAtOf(data, next.round);
           if (me?.locked) lines.push({ text: L.lockedNow, tone: 'warn' });
           else if (lock)
@@ -190,6 +224,24 @@ function CupEntry({ state }: { state: CupState }) {
       { text: L.withdraw, style: 'destructive', onPress: () => void run('withdraw') },
     ]);
 
+  // T-11-443 신청 전 한 번 더 묻는다(선발 잠금 · 구간 상한 · 접수 중 취소 가능).
+  const askEnter = () =>
+    Alert.alert(
+      L.enterAskTitle,
+      cupEnterConfirmLines(data.cup)
+        .map((l) => `· ${l}`)
+        .join('\n'),
+      [
+        { text: L.enterAskCancel, style: 'cancel' },
+        { text: L.enterAskOk, onPress: () => void run('enter') },
+      ],
+    );
+  // T-11-443 편성을 고치면 풀리는 이유면 팀 편성 화면으로.
+  const openTeam = () => {
+    appState.teamView = 'team';
+    go('team');
+  };
+
   if (entry)
     return (
       <View style={{ gap: 6 }}>
@@ -199,6 +251,11 @@ function CupEntry({ state }: { state: CupState }) {
         <Txt v="sm" tone="muted">
           {L.enterLockNote}
         </Txt>
+        {data.cup.ovrMax != null ? (
+          <Txt v="sm" tone="muted">
+            {L.divisionLockNote({ cap: data.cup.ovrMax })}
+          </Txt>
+        ) : null}
         <Btn
           sm
           kind="ghost"
@@ -212,28 +269,61 @@ function CupEntry({ state }: { state: CupState }) {
       </View>
     );
   if (!me) return null;
-  const reason = me.eligibility.ok ? null : reasonText(me.eligibility, data.cup.minFilled);
+  const reason = me.eligibility.ok
+    ? null
+    : reasonText(me.eligibility, data.cup.minFilled, me.ovr ?? undefined, data.cup.ovrMax);
+  const fit = divisionFitText(data, me);
+  const capNote = data.cup.ovrMax != null ? L.divisionLockNote({ cap: data.cup.ovrMax }) : null;
+  const teamAction = cupEntryTeamAction(me.eligibility);
   if (reason)
     return (
-      <Txt v="sm" tone="warn" testID="cup-ineligible">
-        {reason}
-      </Txt>
+      <View style={{ gap: 6 }}>
+        <Txt v="sm" tone="warn" testID="cup-ineligible">
+          {reason}
+        </Txt>
+        {fit && !me.eligibility.ok && me.eligibility.reason === 'over-cap' ? (
+          <Txt v="sm" tone="muted" testID="cup-fit">
+            {fit}
+          </Txt>
+        ) : null}
+        {teamAction ? (
+          <Btn sm testID="cup-to-lineup" onPress={openTeam} style={{ alignSelf: 'flex-start' }}>
+            {teamAction}
+          </Btn>
+        ) : null}
+      </View>
     );
   return (
     <View style={{ gap: 6 }}>
-      <Btn
-        kind="primary"
-        testID="cup-enter"
-        disabled={busy !== null}
-        onPress={() => void run('enter')}
-      >
+      <Btn kind="primary" testID="cup-enter" disabled={busy !== null} onPress={askEnter}>
         {busy === 'enter' ? L.entering : L.enter}
       </Btn>
       <Txt v="sm" tone="muted">
         {L.enterLockNote}
       </Txt>
+      {capNote ? (
+        <Txt v="sm" tone="muted">
+          {capNote}
+        </Txt>
+      ) : null}
+      {fit ? (
+        <Txt v="sm" tone="muted" testID="cup-fit">
+          {fit}
+        </Txt>
+      ) : null}
     </View>
   );
+}
+
+/** T-11-410 내 OVR로 들어갈 가장 낮은 구간 안내(구간 대회만). */
+function divisionFitText(data: CupResponse, me: CupMeResponse): string | null {
+  const ovr = me.ovr;
+  if (!data.divisions || ovr == null) return null;
+  const lowest = data.divisions.find(
+    (d) => d.division === 'master' || (d.ovrMax != null && ovr <= d.ovrMax),
+  );
+  const name = lowest && divisionLabel(lowest.division);
+  return name ? L.divisionFit({ ovr, division: name }) : null;
 }
 
 /** 컵 화면 맨 위 카드 · 홈 배너. onOpen이 있으면(홈) 첫 안내 한 줄과 '대회 보기'만 — 신청은 대회 화면에서 한다. */
@@ -340,31 +430,75 @@ export function CupCard({
   );
 }
 
-/** 편성 화면의 명단 마감 띠 — 잠겨 있거나 오늘 안에 잠길 때. */
-export function CupLockNotice({ state }: { state: CupState }) {
+/**
+ * 편성 화면의 명단 마감 띠 — 잠겨 있거나 오늘 안에 잠길 때. T-11-436 참가 중이거나 신청을 받는 중이면 팀 OVR · 구간 상한과
+ * 선발 · 최소 인원 줄(bar)을 늘 보이고, 넘거나 모자라면 이유를 붙인다.
+ */
+export function CupLockNotice({
+  state,
+  bar = null,
+}: {
+  state: CupState;
+  bar?: CupLineupBar | null;
+}) {
   const c = useColors();
   const next = myNext(state);
-  if (!state.cup || !next) return null;
-  const lock = lockAtOf(state.cup, next.round);
+  const lock = state.cup && next ? lockAtOf(state.cup, next.round) : null;
   const now = Date.now();
   let text: string | null = null;
-  if (state.me?.locked) text = L.lineupLocked;
+  if (next && state.me?.locked) text = L.lineupLocked;
   else if (lock && Date.parse(lock) > now && Date.parse(lock) - now < 24 * 3600_000)
     text = L.lineupBand({ when: whenText(lock, now) });
-  if (!text) return null;
+  if (!text && !bar) return null;
+  const warn = !!text || !!bar?.notes.length;
   return (
     <View
       testID="cup-lock-notice"
-      accessibilityRole="alert"
+      accessibilityRole={warn ? 'alert' : undefined}
       style={{
         borderWidth: 1,
-        borderColor: alpha(c.warn, 0.5),
-        backgroundColor: alpha(c.warn, 0.1),
-        borderRadius: 12,
+        borderColor: alpha(warn ? c.warn : c.good, 0.5),
+        backgroundColor: alpha(warn ? c.warn : c.good, 0.1),
+        borderRadius: RADIUS.md,
         padding: 12,
+        gap: 4,
       }}
     >
-      <Txt v="sm">{text}</Txt>
+      {bar ? (
+        <Txt v="xs" bold>
+          {L.title}
+        </Txt>
+      ) : null}
+      {text ? <Txt v="sm">{text}</Txt> : null}
+      {bar ? (
+        <View testID="cup-rule" style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 12 }}>
+          {bar.ovrText ? (
+            <Txt
+              v="sm"
+              num
+              bold={bar.overCap}
+              tone={bar.overCap ? 'bad' : 'ink'}
+              testID="cup-rule-ovr"
+            >
+              {bar.ovrText}
+            </Txt>
+          ) : null}
+          <Txt
+            v="sm"
+            num
+            bold={bar.short}
+            tone={bar.short ? 'bad' : 'ink'}
+            testID="cup-rule-filled"
+          >
+            {bar.filledText}
+          </Txt>
+        </View>
+      ) : null}
+      {bar?.notes.map((note) => (
+        <Txt key={note} v="sm" tone="bad" testID="cup-rule-note">
+          {note}
+        </Txt>
+      ))}
     </View>
   );
 }

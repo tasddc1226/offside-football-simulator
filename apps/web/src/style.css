@@ -1,30 +1,11 @@
 /* ───────── 풀타임 원본 index.html 인라인 CSS를 그대로 옮긴 파일입니다 ───────── */
+/* 색 · 반경 · 간격 · 글자 크기 토큰은 tokens.css(T-11-396, app-core design-tokens.ts에서 생성) */
+@import './tokens.css';
 :root {
-  --bg: #e9eee8;
-  --surface: #ffffff;
-  --surface-2: #f3f6f2;
-  --ink: #14201a;
-  --muted: #5c6b62;
-  --line: #d5ddd6;
-  --pitch: #1c4a35;
-  --pitch-2: #245c43;
-  --chalk: rgba(255, 255, 255, 0.22);
-  --on-pitch: #f2f6f1;
-  --pitch-accent: #f0b437; /* 초록 그라운드 위 금색 글자 — 두 테마 모두 대비 4.5:1 이상 */
-  --accent: #d99a12;
-  --accent-text: #8a5c0a;
-  --accent-ink: #2a1c00;
-  --good: #1e7a50;
-  --bad: #c0392f;
-  --warn: #96600a;
-  /* T-11-080f 시세 오름 · 내림(국내 증권 관례: 빨강 · 파랑) */
-  --up: #c0392f;
-  --down: #1f63a8;
-  --shadow: 0 1px 0 rgba(20, 32, 26, 0.05), 0 8px 24px -14px rgba(20, 32, 26, 0.28);
-  /* T-10-063 기본 엠블럼 바깥선 — 바탕과 같은 색 테두리도 윤곽이 보이게 */
-  --crest-halo: rgba(20, 32, 26, 0.16);
   --display: 'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', sans-serif;
-  --body: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  --body:
+    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+    'Malgun Gothic', system-ui, sans-serif;
 }
 /* T-11-140 일본어는 한자가 한국식 글꼴로 그려지지 않게 일본어 시스템 서체를 먼저 쓴다(웹 서체를 더 받지 않는다). */
 :root:lang(ja) {
@@ -32,59 +13,7 @@
     'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', Meiryo,
     'Noto Sans JP', system-ui, sans-serif;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    color-scheme: dark;
-    --bg: #0d1511;
-    --surface: #152019;
-    --surface-2: #1a271f;
-    --ink: #e6ede7;
-    --muted: #8fa096;
-    --line: #26352c;
-    --pitch: #1a4331;
-    --pitch-2: #215540;
-    --on-pitch: #eef4ef;
-    --accent: #f0b437;
-    --accent-text: #f0b437;
-    --accent-ink: #231700;
-    --good: #4cc08a;
-    --bad: #ef6b5f;
-    --warn: #e9a83a;
-    --up: #ef6b5f;
-    --down: #72b4f2;
-    --shadow: 0 10px 28px -16px rgba(0, 0, 0, 0.7);
-    --crest-halo: rgba(238, 244, 239, 0.3);
-  }
-}
-:root[data-theme='dark'] {
-  color-scheme: dark;
-  --bg: #0d1511;
-  --surface: #152019;
-  --surface-2: #1a271f;
-  --ink: #e6ede7;
-  --muted: #8fa096;
-  --line: #26352c;
-  --pitch: #1a4331;
-  --pitch-2: #215540;
-  --on-pitch: #eef4ef;
-  --accent: #f0b437;
-  --accent-text: #f0b437;
-  --accent-ink: #231700;
-  --good: #4cc08a;
-  --bad: #ef6b5f;
-  --warn: #e9a83a;
-  --up: #ef6b5f;
-  --down: #72b4f2;
-  --shadow: 0 10px 28px -16px rgba(0, 0, 0, 0.7);
-  --crest-halo: rgba(238, 244, 239, 0.3);
-}
 :root {
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
   --tabbar-h: 60px;
   /* T-11-036 게임 화면 고정 진행 바(준비 요약 줄 + 버튼) 높이 */
   --actionbar-h: 96px;
@@ -234,7 +163,7 @@ select:focus-visible {
 .badge {
   width: 38px;
   height: 38px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   display: block;
   object-fit: cover;
 }
@@ -257,14 +186,14 @@ select:focus-visible {
 }
 .brand small {
   display: block;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   letter-spacing: 0.02em;
   color: var(--muted);
   line-height: 1.2;
 }
 .brand b {
   font-family: var(--display);
-  font-size: 1.375rem;
+  font-size: var(--fs-title2);
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1.1;
@@ -276,8 +205,8 @@ select:focus-visible {
 /* generic */
 .card {
   background: var(--surface);
-  border-radius: 16px;
-  padding: 18px;
+  border-radius: var(--radius-lg);
+  padding: 20px;
   box-shadow: var(--shadow);
 }
 /* 자금 내역 배지(이적시장 거래 내역 · 구단 자금 내역) — 영입·사용 파랑, 판매 강조색, 방출 빨강. */
@@ -285,9 +214,9 @@ select:focus-visible {
   flex: none;
   min-width: 36px;
   padding: 3px 6px;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   text-align: center;
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   font-weight: 700;
 }
 .funds-badge-bought,
@@ -329,14 +258,14 @@ select:focus-visible {
 /* 누르면 넘어가는 카드 오른쪽 › */
 .tap-go {
   flex: none;
-  font-size: 1.5rem;
+  font-size: var(--fs-title1);
   line-height: 1;
   color: var(--muted);
 }
 .eyebrow {
   font-family: var(--display);
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--muted);
@@ -354,11 +283,11 @@ h3 {
   letter-spacing: -0.02em;
 }
 h1 {
-  font-size: 1.625rem;
+  font-size: var(--fs-title1);
   line-height: 1.25;
 }
 h2 {
-  font-size: 1.1875rem;
+  font-size: var(--fs-title2);
 }
 p {
   margin: 0;
@@ -368,23 +297,24 @@ p {
 }
 /* 작은 보조 글자(T-10-059). 인라인 style을 대신하므로 둘러싼 규칙보다 앞선다. */
 .fs-xs {
-  font-size: 0.75rem !important;
+  font-size: var(--fs-caption) !important;
 }
 .fs-sm {
-  font-size: 0.8125rem !important;
+  font-size: var(--fs-label) !important;
 }
 /* 버튼은 모두 이 한 벌을 쓴다: .btn(기본) + 색(.btn-primary · .btn-accent) + 크기(.btn-sm) + 폭(.btn-block).
-   .icon-btn은 작은 보조 버튼(.btn.btn-sm)과 같다 — 화면 곳곳에서 쓰던 이름이라 그대로 둔다. */
+   .icon-btn은 작은 보조 버튼(.btn.btn-sm)과 같다 — 화면 곳곳에서 쓰던 이름이라 그대로 둔다.
+   T-11-396 기본 버튼은 테두리 없는 옅은 면, 주요 동작(.btn-primary 초록 · .btn-accent 금색)은 화면에 하나. */
 .btn,
 .icon-btn {
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--ink) 6%, var(--surface));
   color: var(--ink);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 12px 16px;
   min-height: 48px;
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: var(--fs-body1);
+  font-weight: 700;
   line-height: 1.25;
   text-decoration: none; /* <a class="btn">도 버튼처럼 보이게 */
   display: inline-flex;
@@ -396,16 +326,28 @@ p {
 .icon-btn {
   min-height: 44px;
   padding: 9px 14px;
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
   gap: 6px;
+  border-radius: var(--radius-sm);
+}
+.btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 10%, var(--surface));
 }
 .btn-primary {
   background: var(--pitch);
   border-color: var(--pitch);
   color: var(--on-pitch);
 }
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: var(--pitch-2);
+}
+.btn-accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.btn-accent:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, var(--ink));
 }
 /* T-11-221 화면 중간 동작(평가 보기 · 강화)은 옅은 초록 톤 버튼 + 오른쪽 배지(광고 · 비용). 채운 버튼은 화면의 다음 단계에만. */
 .btn-tonal {
@@ -413,7 +355,7 @@ p {
   border-color: transparent;
   color: var(--pitch);
 }
-.btn-tonal:hover {
+.btn-tonal:hover:not(:disabled) {
   background: color-mix(in srgb, var(--pitch) 18%, var(--surface));
 }
 :root[data-theme='dark'] .btn-tonal {
@@ -428,10 +370,10 @@ p {
 }
 .btn-badge {
   padding: 1px 6px;
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
   background: var(--surface);
   color: var(--accent-text);
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -461,11 +403,6 @@ p {
 }
 .login-btns-block {
   flex-direction: column;
-}
-.btn-accent {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-ink);
 }
 .btn-block {
   width: 100%;
@@ -626,17 +563,18 @@ button.what:active {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   font-weight: 600;
-  border-radius: 999px;
-  padding: 2px 9px;
-  background: var(--surface-2);
+  border-radius: var(--radius-xs);
+  padding: 2px 8px;
+  background: color-mix(in srgb, var(--ink) 6%, var(--surface));
   color: var(--muted);
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
 }
+/* T-11-396 상태 칩은 테두리 대신 옅은 같은 색 면. */
 .pill.good {
   color: var(--good);
-  border-color: color-mix(in srgb, var(--good) 40%, transparent);
+  background: color-mix(in srgb, var(--good) 12%, var(--surface));
 }
 .pill.cup-upcoming {
   background: #1d4ed8;
@@ -646,18 +584,19 @@ button.what:active {
 }
 .pill.bad {
   color: var(--bad);
-  border-color: color-mix(in srgb, var(--bad) 40%, transparent);
+  background: color-mix(in srgb, var(--bad) 12%, var(--surface));
 }
+/* warn은 12% 면에서 대비가 4.49라 10%로 둔다. */
 .pill.warn {
   color: var(--warn);
-  border-color: color-mix(in srgb, var(--warn) 40%, transparent);
+  background: color-mix(in srgb, var(--warn) 10%, var(--surface));
 }
 
 /* home */
 .hero-home {
   background: var(--pitch);
   color: var(--on-pitch);
-  border-radius: 20px;
+  border-radius: var(--radius-lg);
   padding: 24px 20px 20px;
   position: relative;
   overflow: hidden;
@@ -684,20 +623,49 @@ button.what:active {
   gap: 2px;
 }
 .hero-current h1 span {
-  font-size: 1.0625rem;
+  font-size: var(--fs-title3);
   font-weight: 600;
   opacity: 0.8;
 }
 .hero-current h1 b {
   font-weight: 600;
-  font-size: 1.375rem;
+  font-size: var(--fs-title2);
 }
 .hero-current h1 strong {
   font-size: 2rem;
   font-weight: 700;
 }
+/* T-11-412 오른쪽 위 선수 그림(HeroFigure)은 이름 줄까지만 내려오므로 이름만 그 폭을 비켜 둔다.
+   소속 · 시즌 두 줄은 전폭 한 줄(넘치면 말줄임). 이어하기 버튼 줄도 전폭 그대로. */
+.hero-current > h1 {
+  padding-right: 92px;
+}
+.hero-current > p {
+  max-width: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hero-current > .hero-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hero-line > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hero-line .club-badge {
+  flex: none;
+}
+@media (max-width: 359px) {
+  .hero-current > h1 {
+    padding-right: 60px;
+  }
+}
 .hero-current .hero-meta {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   opacity: 0.65;
   margin-top: 2px;
 }
@@ -724,7 +692,7 @@ button.what:active {
   border: 0;
   background: transparent;
   color: var(--on-pitch);
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
   font-weight: 600;
   opacity: 0.85;
 }
@@ -774,7 +742,7 @@ button.what:active {
 }
 .tile {
   background: var(--surface);
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   padding: 14px;
   box-shadow: var(--shadow);
   border: 0;
@@ -784,7 +752,7 @@ button.what:active {
   gap: 2px;
 }
 .tile b {
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
 }
 .tile-wide {
   grid-column: 1 / -1;
@@ -973,7 +941,7 @@ button.hof-row {
 }
 .hof-rank.medal span {
   position: relative;
-  font-size: 1.0625rem;
+  font-size: var(--fs-title3);
   line-height: 1;
 }
 .laurel {
@@ -1008,15 +976,15 @@ button.hof-row {
   background: linear-gradient(90deg, color-mix(in srgb, #c27a3e 12%, transparent), transparent 70%);
 }
 .hof-row:has(.medal) {
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
 }
 .hof-value {
-  font-size: 1.375rem;
+  font-size: var(--fs-title2);
   font-weight: 700;
   white-space: nowrap;
 }
 .hof-value-text {
-  font-size: 1.0625rem;
+  font-size: var(--fs-title3);
 }
 
 /* T-11-128 구단주 시즌 결산 — 허브 카드의 휘장 칩, 결산 화면의 휘장 타일·대표 선수 카드. 색은 .medal의 --medal(-text)을 따른다. */
@@ -1076,7 +1044,7 @@ button.hof-row {
   min-width: 0;
 }
 .recap-honor b {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
@@ -1086,7 +1054,7 @@ button.hof-row {
   filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--medal) 35%, transparent));
 }
 .recap-honor-detail {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   color: var(--medal-text);
   font-weight: 600;
 }
@@ -1178,18 +1146,18 @@ button.hof-row {
   flex-direction: column;
   gap: 2px;
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--surface-2);
   min-width: 0;
 }
 .recap-stats dt {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   color: var(--muted);
 }
 .recap-stats dd {
   margin: 0;
   font-family: var(--display);
-  font-size: 1.125rem;
+  font-size: var(--fs-title3);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
@@ -1207,7 +1175,7 @@ button.hof-row {
   margin-left: 0;
 }
 .hof-value small {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   font-weight: 600;
   color: var(--muted);
   margin-left: 2px;
@@ -1220,12 +1188,12 @@ button.hof-row {
 }
 .hof-sort {
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 600;
   padding: 6px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface-2);
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   color: var(--ink);
   cursor: pointer;
 }
@@ -1237,10 +1205,10 @@ button.hof-row {
 .hof-sort .hof-new {
   margin-left: 4px;
   padding: 1px 5px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--accent);
   color: var(--accent-ink);
-  font-size: 0.5625rem;
+  font-size: var(--fs-caption2);
   font-weight: 800;
   letter-spacing: 0.04em;
   vertical-align: 1px;
@@ -1258,8 +1226,8 @@ button.hof-row {
   width: 44px; /* T-10-117 터치 44px */
   height: 44px;
   padding: 0;
-  border-radius: 999px;
-  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
   background: var(--surface-2);
   color: var(--ink);
   cursor: pointer;
@@ -1285,7 +1253,7 @@ button.hof-row {
 }
 .hof-rank {
   font-family: var(--display);
-  font-size: 1.375rem;
+  font-size: var(--fs-title2);
   font-weight: 700;
   color: var(--accent-text);
   text-align: center;
@@ -1299,7 +1267,7 @@ button.hof-row {
 }
 .field label,
 .field .lbl {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 600;
   color: var(--muted);
 }
@@ -1308,10 +1276,11 @@ input[type='search'],
 input[type='number'],
 select,
 textarea {
-  border: 1px solid var(--line);
-  background: var(--surface-2);
-  border-radius: 10px;
-  padding: 11px 12px;
+  /* T-11-396 입력 칸은 테두리 없는 옅은 면, 초점이 오면 강조색 테두리. */
+  border: 1.5px solid transparent;
+  background: color-mix(in srgb, var(--ink) 5%, var(--surface));
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
   font: inherit;
   /* iOS는 16px보다 작은 입력 칸에 초점이 가면 화면을 확대한다. */
   font-size: max(1rem, 16px);
@@ -1350,9 +1319,9 @@ textarea {
   font-weight: 600;
 }
 .opt {
-  border: 1.5px solid var(--line);
-  background: var(--surface);
-  border-radius: 12px;
+  border: 1.5px solid transparent;
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
   padding: 10px 12px;
   min-height: 44px;
   text-align: left;
@@ -1363,7 +1332,7 @@ textarea {
 }
 .opt small {
   color: var(--muted);
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   line-height: 1.35;
 }
 .seg.three {
@@ -1405,9 +1374,9 @@ a.tile-link {
   text-decoration: none;
 }
 .dex-new {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
 }
@@ -1416,7 +1385,7 @@ a.tile-link {
   flex: none;
   width: 48px;
   height: 28px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 0;
   padding: 0;
   background: var(--line);
@@ -1455,11 +1424,14 @@ a.tile-link {
 }
 .owner-conflict p {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .hof-source {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   margin: 0 0 6px;
+}
+.hof-basis {
+  margin: 0 0 8px;
 }
 .dex-tabs {
   grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
@@ -1479,7 +1451,7 @@ a.tile-link {
   margin: 8px 0 0;
   display: grid;
   gap: 4px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   line-height: 1.5;
 }
 .dex-rules dt {
@@ -1505,7 +1477,7 @@ a.tile-link {
 .dex-list > li {
   border: 1px solid transparent;
   border-bottom-color: var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   transition:
     background-color 0.15s,
     border-color 0.15s;
@@ -1526,7 +1498,7 @@ a.tile-link {
   gap: 8px;
   min-height: 48px;
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   font-weight: 600;
   list-style: none;
 }
@@ -1570,7 +1542,7 @@ a.tile-link {
   margin: 0 10px;
   padding-top: 8px;
   border-top: 1px dashed var(--line);
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   font-weight: 700;
   color: var(--muted);
 }
@@ -1582,7 +1554,7 @@ a.tile-link {
   display: flex;
   gap: 8px;
   color: var(--muted);
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
 }
 .dex-choices {
   list-style: none;
@@ -1597,14 +1569,14 @@ a.tile-link {
   flex-direction: column;
   gap: 6px;
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
 }
 .dex-choice-head {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
 }
 .dex-odds {
   white-space: nowrap;
@@ -1614,12 +1586,12 @@ a.tile-link {
   color: var(--good);
 }
 .dex-note {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   margin: -2px 10px 10px;
 }
 /* T-11-141 확률과 공정성 */
 .fair-h {
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
   margin: 16px 0 6px;
 }
 .fair-note {
@@ -1642,7 +1614,7 @@ a.tile-link {
 }
 .fair-versions > li {
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
 }
 .fair-diff {
@@ -1660,6 +1632,13 @@ a.tile-link {
 /* T-10-011 소식(게시판) */
 textarea {
   resize: vertical;
+}
+input[type='text']:focus,
+input[type='search']:focus,
+input[type='number']:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
 }
 .board-list {
   list-style: none;
@@ -1690,7 +1669,7 @@ textarea {
   align-self: center;
   gap: 6px;
   min-width: 72px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 .like-btn svg {
   fill: none;
@@ -1715,7 +1694,7 @@ textarea {
 }
 .board-body h3 {
   margin: 14px 0 4px;
-  font-size: 1rem;
+  font-size: var(--fs-body);
 }
 .board-body p,
 .board-body ul {
@@ -1741,7 +1720,7 @@ textarea {
   background: none;
   color: var(--muted);
   font: inherit;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
@@ -1754,12 +1733,12 @@ textarea {
   margin-left: auto;
   min-height: 0;
   padding: 2px 8px;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
 }
 .report-panel {
   margin-top: 8px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
 }
 .board-blocks ul {
@@ -1780,12 +1759,12 @@ textarea {
 }
 .comment-gate {
   border: 1px dashed var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 12px;
 }
 .comment-gate p {
   margin: 0 0 8px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .club-list {
   list-style: none;
@@ -1797,7 +1776,7 @@ textarea {
 }
 .club-row {
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 8px;
 }
 .club-main {
@@ -1815,7 +1794,7 @@ textarea {
   align-items: center;
   gap: 8px;
   margin-top: 8px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .club-logo-edit label {
   display: inline-flex;
@@ -1837,11 +1816,11 @@ textarea {
 }
 .club-logo-edit input[type='color']::-webkit-color-swatch {
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
 }
 .club-logo-edit input[type='color']::-moz-color-swatch {
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
 }
 .opt[aria-pressed='true'],
 .title-item[aria-pressed='true'] {
@@ -1864,7 +1843,7 @@ textarea {
 .player {
   background: var(--pitch);
   color: var(--on-pitch);
-  border-radius: 20px;
+  border-radius: var(--radius-lg);
   padding: 18px 18px 16px;
   position: relative;
   overflow: hidden;
@@ -1885,7 +1864,7 @@ textarea {
   padding: 0;
   background: none;
   cursor: pointer;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
 }
 .player .avatar-btn {
   position: relative;
@@ -1896,10 +1875,10 @@ textarea {
   right: -8px;
   bottom: -6px;
   padding: 2px 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--accent);
   color: var(--accent-ink);
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   font-weight: 700;
   line-height: 1.4;
   white-space: nowrap;
@@ -1909,7 +1888,7 @@ textarea {
   content: '';
   position: absolute;
   inset: -6px;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   border: 2px solid var(--accent);
   animation: look-ring 1.6s ease-out infinite;
   pointer-events: none;
@@ -1955,14 +1934,14 @@ textarea {
 }
 .player .shirt {
   font-family: var(--display);
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
   font-weight: 600;
   opacity: 0.75;
   letter-spacing: 0.06em;
 }
 /* T-10-004: 선수 이름은 화면의 h1(axe page-has-heading-one) — 크기·행간은 예전 h2 그대로. */
 .player h1 {
-  font-size: 1.5rem;
+  font-size: var(--fs-title1);
   margin-top: 2px;
   line-height: inherit;
 }
@@ -1985,7 +1964,7 @@ textarea {
   margin-top: 2px;
   padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: inherit;
   opacity: 0.7;
@@ -2000,7 +1979,7 @@ textarea {
   stroke-linejoin: round;
 }
 .player .meta {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   opacity: 0.85;
   margin-top: 4px;
 }
@@ -2017,7 +1996,7 @@ textarea {
 .ovr .l {
   font-family: var(--display);
   letter-spacing: 0.18em;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   opacity: 0.8;
 }
 .player .pill {
@@ -2051,7 +2030,6 @@ textarea {
   padding: 6px 4px calc(6px + var(--safe-b));
   padding-inline: max(4px, var(--safe-l)) max(4px, var(--safe-r)); /* T-10-117 */
   height: calc(var(--tabbar-h) + var(--safe-b));
-  box-shadow: 0 -6px 20px -12px rgba(20, 32, 26, 0.25);
 }
 .tabs-inner {
   display: contents;
@@ -2087,16 +2065,16 @@ body:has(.main-nav) .wrap {
     max-width: 560px;
     margin-inline: auto;
     border-inline: 1px solid var(--line);
-    border-radius: 16px 16px 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
 }
 .tabs button {
   border: 0;
   background: none;
   padding: 6px 2px;
-  border-radius: 9px;
+  border-radius: var(--radius-sm);
   font-weight: 600;
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   color: var(--muted);
   display: flex;
   flex-direction: column;
@@ -2111,15 +2089,7 @@ body:has(.main-nav) .wrap {
   transition: transform 0.15s ease;
 }
 .tabs button:is([aria-selected='true'], [aria-current='page']) {
-  color: var(--pitch);
-}
-:root[data-theme='dark'] .tabs button:is([aria-selected='true'], [aria-current='page']) {
-  color: var(--accent);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .tabs button:is([aria-selected='true'], [aria-current='page']) {
-    color: var(--accent);
-  }
+  color: var(--tab-on);
 }
 .tabs button:is([aria-selected='true'], [aria-current='page']) .tab-ic {
   transform: translateY(-1px) scale(1.06);
@@ -2183,7 +2153,7 @@ body:has(.main-nav) .wrap {
   box-sizing: content-box;
   padding: 4px;
   margin: -4px 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 .tabs button:is([aria-selected='true'], [aria-current='page']) .tab-ic {
   background: color-mix(in srgb, var(--accent) 22%, transparent);
@@ -2209,10 +2179,10 @@ body:has(.main-nav) .wrap {
   max-width: min(300px, calc(100vw - 32px));
   margin: 0;
   padding: 9px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--ink);
   color: var(--bg);
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 600;
   line-height: 1.45;
   text-align: center;
@@ -2291,6 +2261,13 @@ body:has(.main-nav) .wrap {
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
+/* T-11-439 공유 시트가 없는 브라우저는 저장 한 칸, 다시 만들기는 가운데 작은 링크 */
+.share-actions.share-actions-one {
+  grid-template-columns: 1fr;
+}
+.share-remake {
+  align-self: center;
+}
 /* 탭바가 없는 화면(선수 생성)에서는 화면 맨 아래에 붙는다 */
 .action-bar.at-bottom {
   bottom: 0;
@@ -2309,7 +2286,7 @@ body:has(.main-nav) .wrap {
 /* season */
 /* T-11-025 카드 안 작은 묶음 제목(훈련 방향·리그 순위·이번 시즌 대회) */
 .sub-title {
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
   font-weight: 700;
 }
 /* T-11-025 결과 안내 스크롤이 지금 비추는 카드(SeasonTab tour) — 테두리 바깥에 강조 색 윤곽을 잠깐 두른다 */
@@ -2325,10 +2302,10 @@ body:has(.main-nav) .wrap {
 .tour-hint {
   margin: 0;
   padding: 6px 10px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--accent) 14%, var(--surface));
   color: var(--accent-text);
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 700;
   animation: tour-hint-in 0.3s ease both;
 }
@@ -2364,7 +2341,7 @@ body:has(.main-nav) .wrap {
 .btn-sub {
   display: block;
   max-width: 100%;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   font-weight: 500;
   opacity: 0.85;
   white-space: nowrap;
@@ -2392,7 +2369,7 @@ body:has(.main-nav) .wrap {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 4px;
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   color: var(--muted);
   margin-top: 4px;
   text-align: center;
@@ -2405,20 +2382,20 @@ body:has(.main-nav) .wrap {
 }
 .stats div {
   background: var(--surface-2);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 8px 4px;
   text-align: center;
 }
 .stats b {
   display: block;
   font-family: var(--display);
-  font-size: 1.5rem;
+  font-size: var(--fs-title1);
   font-weight: 700;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 .stats span {
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   color: var(--muted);
 }
 .meters {
@@ -2430,14 +2407,14 @@ body:has(.main-nav) .wrap {
   grid-template-columns: 72px 1fr 34px;
   gap: 10px;
   align-items: center;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .meter .bar {
   height: 8px;
   background: var(--surface-2);
   border-radius: 4px;
   overflow: hidden;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
 }
 .meter .bar i {
   display: block;
@@ -2458,7 +2435,7 @@ body:has(.main-nav) .wrap {
 .meter .v {
   text-align: right;
   font-family: var(--display);
-  font-size: 1rem;
+  font-size: var(--fs-body);
   font-weight: 600;
 }
 .train {
@@ -2470,7 +2447,7 @@ body:has(.main-nav) .wrap {
   padding: 9px 10px;
 }
 .train .opt b {
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
 }
 .train .nowrap {
   white-space: nowrap;
@@ -2490,15 +2467,15 @@ body:has(.main-nav) .wrap {
   padding: 9px 12px;
 }
 .invest-grid b {
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
 }
 .iv-note {
   margin-left: 6px;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface-2);
   color: var(--muted);
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   font-weight: 600;
 }
 /* T-11-221 펼침 행 공통 — 제목은 왼쪽, 오른쪽 끝에 셰브론(접힘 ⌄, 펼침 ⌃). 행 전체가 눌리고 48px 이상.
@@ -2510,7 +2487,7 @@ body:has(.main-nav) .wrap {
   gap: 8px;
   min-height: 48px;
   cursor: pointer;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 700;
   color: var(--ink);
   list-style: none;
@@ -2559,7 +2536,7 @@ details[open] > summary .disc-chev,
   transform: rotate(180deg);
 }
 .invest-grid .iv-cost {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 700;
   color: var(--accent-text);
 }
@@ -2578,7 +2555,7 @@ details[open] > summary .disc-chev,
   border: 0;
   background: none;
   color: var(--accent-text);
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 700;
 }
 /* T-10-074 고른 훈련의 자세한 설명 */
@@ -2587,9 +2564,9 @@ details[open] > summary .disc-chev,
   flex-direction: column;
   gap: 4px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   line-height: 1.5;
 }
 /* T-11-200 훈련 방향 육각형: 축 이름표가 훈련 버튼이다(TrainRadar.svelte). T-11-219 시즌 탭 육각형 보기. */
@@ -2619,7 +2596,7 @@ details[open] > summary .disc-chev,
   gap: 0;
   /* T-11-212 고르지 않은 축도 누를 수 있는 버튼으로 보이게 옅은 테두리·바탕을 둔다. */
   border: 1.5px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--surface-2);
   line-height: 1.15;
   text-align: center;
@@ -2631,20 +2608,20 @@ details[open] > summary .disc-chev,
   font-weight: 700;
 }
 .tr-axis .rd-abbr {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
 }
 .tr-axis .rd-val {
   color: var(--ink);
-  font-size: 1.125rem;
+  font-size: var(--fs-title3);
   font-variant-numeric: tabular-nums;
 }
 .tr-axis .rd-up {
   color: var(--good);
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
 }
 .tr-axis .rd-down {
   color: var(--bad);
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
 }
 .tr-focus {
   color: var(--accent-text);
@@ -2688,8 +2665,8 @@ details[open] > summary .disc-chev,
   display: flex;
   gap: 2px;
   padding: 2px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
 }
 .train-view button {
@@ -2699,7 +2676,7 @@ details[open] > summary .disc-chev,
   width: 44px;
   height: 34px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--muted);
 }
@@ -2733,7 +2710,7 @@ details[open] > summary .disc-chev,
   display: grid;
   grid-template-columns: 76px 1fr;
   gap: 8px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   padding-block: 8px;
   border-top: 1px solid var(--line);
 }
@@ -2742,7 +2719,7 @@ details[open] > summary .disc-chev,
 }
 .feed time {
   color: var(--muted);
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   font-family: var(--display);
   letter-spacing: 0.03em;
 }
@@ -2763,14 +2740,14 @@ details[open] > summary .disc-chev,
   gap: 10px;
   align-items: center;
   padding-block: 6px;
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
 }
 .attr .bar {
   height: 10px;
   background: var(--surface-2);
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
 }
 .attr .bar i {
   display: block;
@@ -2782,7 +2759,7 @@ details[open] > summary .disc-chev,
 }
 .attr .v {
   font-family: var(--display);
-  font-size: 1.25rem;
+  font-size: var(--fs-title2);
   font-weight: 700;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -2825,7 +2802,7 @@ details[open] > summary .disc-chev,
 }
 .rd-abbr {
   font-family: var(--display);
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   font-weight: 700;
   letter-spacing: 0.08em;
   fill: var(--muted);
@@ -2837,25 +2814,25 @@ details[open] > summary .disc-chev,
 }
 .rd-val {
   font-family: var(--display);
-  font-size: 1.25rem;
+  font-size: var(--fs-title2);
   font-weight: 700;
   fill: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 .rd-up {
   fill: var(--good);
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .rd-down {
   fill: var(--bad);
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .radar-legend {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 6px;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
 }
 .radar-legend i {
   display: inline-block;
@@ -2893,7 +2870,7 @@ details[open] > summary .disc-chev,
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .role-line > span:not(.muted) {
   font-family: var(--display);
@@ -2902,7 +2879,7 @@ details[open] > summary .disc-chev,
   color: var(--muted);
 }
 .role-line b {
-  font-size: 1.125rem;
+  font-size: var(--fs-title3);
   color: var(--ink);
   letter-spacing: 0;
 }
@@ -2927,17 +2904,17 @@ details[open] > summary .disc-chev,
   margin-bottom: 4px;
   border-bottom: 1px solid var(--line);
   font-weight: 700;
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
 }
 .stat-head small {
   font-family: var(--display);
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   letter-spacing: 0.08em;
   color: var(--muted);
   margin-right: 6px;
 }
 .stat-head .num {
-  font-size: 1.375rem;
+  font-size: var(--fs-title2);
   line-height: 1;
 }
 .stat-grp ul {
@@ -2951,7 +2928,7 @@ details[open] > summary .disc-chev,
   align-items: baseline;
   gap: 8px;
   padding-block: 2px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   color: var(--muted);
 }
 .stat-grp li.key {
@@ -2959,11 +2936,11 @@ details[open] > summary .disc-chev,
   font-weight: 600;
 }
 .stat-grp li .num {
-  font-size: 1rem;
+  font-size: var(--fs-body);
   font-weight: 700;
 }
 .stat-note {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
 }
 .stat-note b {
   color: var(--ink);
@@ -2972,7 +2949,7 @@ details[open] > summary .disc-chev,
 .ovr-pct {
   font-style: normal;
   font-weight: 400;
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   color: var(--muted);
   margin-left: 6px;
 }
@@ -2998,7 +2975,7 @@ details[open] > summary .disc-chev,
   /* 라벨은 한 줄로 두고 긴 값(병역 상태 등)이 남은 폭에서 줄바꿈한다. 1fr auto면 값이 라벨을 한 글자 폭까지 눌렀다. */
   grid-template-columns: max-content minmax(0, 1fr);
   gap: 8px 12px;
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
 }
 .kv dt {
   color: var(--muted);
@@ -3018,14 +2995,14 @@ details[open] > summary .disc-chev,
 table {
   border-collapse: collapse;
   width: 100%;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   white-space: nowrap;
 }
 th {
   text-align: left;
   font-weight: 600;
   color: var(--muted);
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   padding: 6px;
   border-bottom: 1px solid var(--line);
 }
@@ -3044,7 +3021,7 @@ th.n {
 }
 /* 커리어 표 소속 칸 아래 줄(리그 · 몸값 · 수상). 수상이 길어도 표가 옆으로 늘지 않게 줄바꿈한다(T-10-100). */
 .season-sub {
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   white-space: normal;
   min-width: 11em;
 }
@@ -3060,19 +3037,19 @@ th.n {
 }
 .totals div {
   background: var(--surface-2);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 8px;
   text-align: center;
 }
 .totals b {
   display: block;
   font-family: var(--display);
-  font-size: 1.625rem;
+  font-size: var(--fs-title1);
   font-weight: 700;
   line-height: 1.1;
 }
 .totals span {
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   color: var(--muted);
 }
 .trophy {
@@ -3088,7 +3065,7 @@ th.n {
 }
 .trophy .y {
   font-family: var(--display);
-  font-size: 1.125rem;
+  font-size: var(--fs-title3);
   font-weight: 600;
   color: var(--muted);
 }
@@ -3097,7 +3074,7 @@ th.n {
 }
 .empty {
   color: var(--muted);
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
   padding-block: 8px;
 }
 
@@ -3136,7 +3113,7 @@ th.n {
 }
 .sheet {
   background: var(--surface);
-  border-radius: 20px 20px 0 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   width: 100%;
   max-width: 460px;
   max-height: 90dvh;
@@ -3152,7 +3129,7 @@ th.n {
 }
 @media (min-width: 720px) {
   .sheet {
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
     max-height: calc(100dvh - 32px);
     padding-top: 22px;
   }
@@ -3185,7 +3162,7 @@ th.n {
   height: 8px;
   border-radius: 4px;
   background: var(--surface-2);
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   overflow: hidden;
 }
 .prog i {
@@ -3205,25 +3182,25 @@ th.n {
 }
 .tally div {
   background: var(--surface-2);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 8px 4px;
 }
 .tally b {
   display: block;
   font-family: var(--display);
-  font-size: 1.5rem;
+  font-size: var(--fs-title1);
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 .tally span {
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   color: var(--muted);
 }
 .ticker {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-variant-numeric: tabular-nums;
 }
 .ticker div {
@@ -3241,7 +3218,7 @@ th.n {
 .prog-meta {
   display: flex;
   justify-content: space-between;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   margin-top: -6px;
@@ -3275,7 +3252,7 @@ th.n {
 }
 .skip {
   align-self: center;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
 }
 /* 글자색을 surface로 두면 라이트(흰 글자)·다크(짙은 글자) 모두 배경색 대비 4.5:1 이상이다. */
 .res {
@@ -3283,8 +3260,8 @@ th.n {
   place-items: center;
   width: 24px;
   height: 20px;
-  border-radius: 5px;
-  font-size: 0.6875rem;
+  border-radius: var(--radius-xs);
+  font-size: var(--fs-caption2);
   font-weight: 700;
   color: var(--surface);
 }
@@ -3301,7 +3278,7 @@ th.n {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
 }
 .steps div {
   color: var(--muted);
@@ -3321,7 +3298,7 @@ th.n {
 .judge {
   position: relative;
   height: 14px;
-  border-radius: 7px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
   display: flex;
 }
@@ -3345,7 +3322,7 @@ th.n {
 .judge-lbl {
   display: flex;
   justify-content: space-between;
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   color: var(--muted);
   margin-top: -8px;
 }
@@ -3532,7 +3509,7 @@ th.n {
   opacity: 0.55;
 }
 .mg-readout {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 700;
   opacity: 0.9;
 }
@@ -3565,11 +3542,11 @@ th.n {
   right: 10px;
   min-width: 1.6em;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgb(0 0 0 / 0.35);
   color: var(--chalk);
   font-family: var(--display);
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
   font-weight: 800;
   text-align: center;
 }
@@ -3590,7 +3567,7 @@ th.n {
   left: 0;
   right: 0;
   font-family: var(--display);
-  font-size: 1.75rem;
+  font-size: var(--fs-title1);
   font-weight: 800;
   text-align: center;
   color: var(--chalk);
@@ -3601,14 +3578,14 @@ th.n {
   display: block;
   height: 16px;
   margin: 10px 14px 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--bad) 55%, var(--pitch));
 }
 .mg-zone {
   position: absolute;
   top: 0;
   bottom: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--good);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--chalk) 60%, transparent);
 }
@@ -3624,13 +3601,13 @@ th.n {
   text-align: center;
   min-height: 1.4em;
   margin-top: 10px;
-  font-size: 1.125rem;
+  font-size: var(--fs-title3);
   font-weight: 800;
   letter-spacing: 0.02em;
 }
 .mg-timing {
   margin-top: -6px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 700;
   color: var(--muted);
 }
@@ -3648,9 +3625,9 @@ th.n {
   animation: pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both;
 }
 .twist {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
   border: 1px dashed var(--line);
 }
@@ -3666,9 +3643,9 @@ th.n {
   }
 }
 .choice {
-  border: 1.5px solid var(--line);
-  background: var(--surface);
-  border-radius: 12px;
+  border: 1.5px solid transparent;
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
   padding: 12px 14px;
   text-align: left;
   display: flex;
@@ -3682,10 +3659,10 @@ th.n {
 }
 .odds {
   font-family: var(--display);
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
   font-weight: 700;
   padding: 2px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
   flex-shrink: 0;
 }
@@ -3695,12 +3672,12 @@ th.n {
   gap: 6px;
 }
 .chip {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   font-weight: 600;
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface-2);
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
 }
 .chip.up {
   color: var(--good);
@@ -3721,14 +3698,14 @@ th.n {
   color: var(--bad);
 }
 .offer {
-  border: 1.5px solid var(--line);
-  border-radius: 14px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-md);
   padding: 12px 14px;
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 4px 10px;
   text-align: left;
-  background: var(--surface);
+  background: var(--surface-2);
 }
 .offer:hover {
   border-color: var(--pitch-2);
@@ -3740,55 +3717,55 @@ th.n {
   gap: 8px;
 }
 .offer-chev {
-  font-size: 1.5rem;
+  font-size: var(--fs-title1);
   line-height: 1;
   color: var(--muted);
 }
 .offer b {
-  font-size: 1rem;
+  font-size: var(--fs-body);
 }
 .offer .lg {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   color: var(--muted);
 }
 .offer .sal {
   font-family: var(--display);
-  font-size: 1.25rem;
+  font-size: var(--fs-title2);
   font-weight: 700;
   text-align: right;
 }
 .offer .sub {
   grid-column: 1 / -1;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   color: var(--muted);
 }
 .hl {
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
   padding-left: 12px;
   border-left: 3px solid var(--accent);
 }
 /* storylines */
 .story-tag {
   align-self: flex-start;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   font-weight: 600;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--accent) 16%, var(--surface));
   color: var(--ink);
   border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
 }
 .story-tag b {
   font-family: var(--display);
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
   margin-left: 2px;
   color: var(--accent);
 }
 .story-next {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   color: var(--muted);
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
   border: 1px dashed var(--line);
 }
@@ -3797,12 +3774,12 @@ th.n {
   flex-direction: column;
   gap: 2px;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
 }
 .story-end b {
-  font-size: 1.0625rem;
+  font-size: var(--fs-title3);
 }
 /* T-10-112 고3 첫 시즌 뒤 스카우트 첫 평가 공개 */
 .scout-card b {
@@ -3824,7 +3801,7 @@ th.n {
   align-items: center;
   padding-block: 9px;
   border-top: 1px solid var(--line);
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
 }
 .story-row:first-of-type {
   border-top: 0;
@@ -3843,7 +3820,7 @@ th.n {
   grid-template-columns: auto 1fr auto auto;
   gap: 8px;
   align-items: baseline;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   min-width: 0;
 }
 .bracket-stage {
@@ -3855,15 +3832,15 @@ th.n {
   overflow-wrap: anywhere;
 }
 .bracket-legs {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   white-space: nowrap;
 }
 .bracket-result {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   font-weight: 700;
   white-space: nowrap;
   padding: 1px 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--line);
 }
 .bracket-row.won .bracket-result,
@@ -3889,7 +3866,7 @@ th.n {
   }
 }
 .story-row .muted {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   min-width: 64px;
   text-align: right;
 }
@@ -3918,8 +3895,8 @@ th.n {
   background: var(--ink);
   color: var(--bg);
   padding: 10px 16px;
-  border-radius: 10px;
-  font-size: 0.875rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-body2);
   z-index: 20;
   /* 알림 문구일 뿐이라 아래 버튼(시즌 탭 맨 아래 진행 버튼 등)을 누르는 걸 막지 않는다. */
   pointer-events: none;
@@ -3955,7 +3932,7 @@ th.n {
   align-items: center;
   gap: 12px;
   margin-top: 12px;
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
 }
 /* 배경음악이 꺼지면 슬라이더만 흐리게 — 글자까지 흐리면 명도 대비가 모자란다(T-10-102 axe). */
 .settings-volume.off input {
@@ -4035,14 +4012,14 @@ th.n {
   text-align: left;
 }
 .settings-label .eyebrow {
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   color: var(--accent-text);
 }
 .settings-label strong {
-  font-size: 1.0625rem;
+  font-size: var(--fs-title3);
 }
 .settings-label .muted {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .settings-trigger {
   border: 0;
@@ -4059,11 +4036,11 @@ th.n {
   place-items: center;
   width: 34px;
   height: 34px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
   color: var(--accent-text);
   font-style: normal;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   transition: transform 0.2s;
 }
 .settings-trigger[aria-expanded='true'] .settings-chev {
@@ -4108,7 +4085,7 @@ th.n {
   color: inherit;
   text-decoration: none;
   font-weight: 600;
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
 }
 .settings-links > * + * {
   border-top: 1px solid var(--line);
@@ -4118,7 +4095,7 @@ th.n {
 }
 .site-foot {
   text-align: center;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   color: var(--muted);
   /* Leave room above the fixed chat button when scrolled to the end. */
   padding: 8px 0 64px;
@@ -4151,11 +4128,11 @@ th.n {
   min-width: 0;
 }
 .account-card .who b {
-  font-size: 1rem;
+  font-size: var(--fs-body);
   overflow-wrap: anywhere;
 }
 .account-card .who .muted {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .account-card .btn {
   flex: none;
@@ -4165,7 +4142,7 @@ th.n {
   flex-direction: column;
   gap: 6px;
   margin-top: 12px;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
 }
 .account-more {
   display: flex;
@@ -4173,7 +4150,7 @@ th.n {
   align-items: center;
   gap: 6px;
   margin-top: 10px;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   color: var(--muted);
 }
 .link-btn {
@@ -4202,14 +4179,14 @@ th.n {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
 }
 .notice-check {
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0 0 12px;
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
   color: var(--muted);
   cursor: pointer;
 }
@@ -4234,7 +4211,7 @@ th.n {
   align-items: center;
   background: var(--pitch);
   color: var(--on-pitch);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   padding: 14px 16px;
   overflow: hidden;
   box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.55);
@@ -4259,7 +4236,7 @@ th.n {
   font-family: var(--display);
   font-weight: 700;
   letter-spacing: 0.12em;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   color: var(--pitch-accent);
 }
 .lc-main {
@@ -4269,14 +4246,14 @@ th.n {
   gap: 2px;
 }
 .lc-name {
-  font-size: 1.25rem;
+  font-size: var(--fs-title2);
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .lc-meta {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   opacity: 0.75;
 }
 .lc-tags {
@@ -4286,10 +4263,10 @@ th.n {
   margin-top: 4px;
 }
 .lc-tag {
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   font-weight: 600;
   padding: 1px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid color-mix(in srgb, var(--on-pitch) 30%, transparent);
   white-space: nowrap;
 }
@@ -4300,12 +4277,12 @@ th.n {
   gap: 2px;
 }
 .lc-ovr {
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   color: color-mix(in srgb, var(--on-pitch) 85%, transparent);
   white-space: nowrap;
 }
 .lc-ovr b {
-  font-size: 1.0625rem;
+  font-size: var(--fs-title3);
   color: var(--pitch-accent);
   margin-left: 2px;
 }
@@ -4342,8 +4319,8 @@ th.n {
   height: 44px;
   border: 0;
   background: transparent;
-  font-size: 1.25rem;
-  border-radius: 10px;
+  font-size: var(--fs-title2);
+  border-radius: var(--radius-sm);
 }
 .name-input .dice:active {
   transform: translateY(-50%) rotate(-25deg) scale(0.92);
@@ -4359,7 +4336,7 @@ th.n {
   position: absolute;
   right: 10px;
   top: 8px;
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--muted);
@@ -4381,7 +4358,7 @@ th.n {
 }
 .cand-intro p {
   flex: 1;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .cand-intro .icon-btn {
   flex: none;
@@ -4394,7 +4371,7 @@ th.n {
 .cand-card {
   width: 100%;
   border: 1.5px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background: var(--pitch);
   color: var(--on-pitch);
   padding: 16px;
@@ -4413,7 +4390,7 @@ th.n {
   place-items: center;
   border: 2px dashed color-mix(in srgb, var(--on-pitch) 40%, transparent);
   font-family: var(--display);
-  font-size: 1.625rem;
+  font-size: var(--fs-title1);
   font-weight: 700;
 }
 .cc-closed {
@@ -4423,14 +4400,14 @@ th.n {
   min-width: 0;
 }
 .cc-closed b {
-  font-size: 1rem;
+  font-size: var(--fs-body);
 }
 .cc-closed small {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   opacity: 0.75;
 }
 .cc-tap {
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   font-weight: 600;
   opacity: 0.7;
   white-space: nowrap;
@@ -4456,21 +4433,21 @@ th.n {
 .cc-no {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 1.125rem;
+  font-size: var(--fs-title3);
   letter-spacing: 0.02em;
 }
 .cc-ovr {
   margin-left: auto;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   color: var(--muted);
 }
 .cc-ovr b {
-  font-size: 1.375rem;
+  font-size: var(--fs-title2);
   color: var(--ink);
   margin-left: 2px;
 }
 .cc-scout {
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
   font-weight: 600;
   color: var(--accent-text);
 }
@@ -4491,7 +4468,7 @@ th.n {
   grid-template-columns: 56px 1fr 26px;
   align-items: center;
   gap: 8px;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   color: var(--muted);
 }
 .cc-bar span {
@@ -4513,7 +4490,7 @@ th.n {
 }
 .cc-bar b {
   text-align: right;
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
   color: var(--ink);
 }
 .cc-bar.hi {
@@ -4529,11 +4506,11 @@ th.n {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 0.625rem;
+  font-size: var(--fs-caption2);
   font-weight: 700;
   letter-spacing: 0.04em;
   padding: 2px 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--accent) 22%, var(--surface));
   color: var(--accent-text, var(--accent));
   border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
@@ -4545,7 +4522,7 @@ th.n {
 }
 /* T-11-221 팬 반응은 읽기만 하는 줄이라 버튼처럼 보이지 않게 테두리 없는 인용 줄로 둔다. */
 .fan-line {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   padding: 3px 0 3px 10px;
   border-left: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
 }
@@ -4610,7 +4587,7 @@ th.n {
 .mile-row .mile-lbl {
   display: flex;
   justify-content: space-between;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .mile-row .mile-lbl b {
   font-weight: 600;
@@ -4630,7 +4607,7 @@ th.n {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   padding-block: 6px;
   border-top: 1px solid var(--line);
 }
@@ -4639,7 +4616,7 @@ th.n {
 }
 .legend-break-row b {
   font-family: var(--display);
-  font-size: 1rem;
+  font-size: var(--fs-body);
   font-variant-numeric: tabular-nums;
 }
 .legend-bar {
@@ -4679,13 +4656,13 @@ th.n {
 .os-eyebrow {
   margin: 0;
   color: var(--muted);
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 750;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .os-panel {
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow);
   padding: 20px;
@@ -4694,7 +4671,7 @@ th.n {
   gap: 8px;
 }
 .os-panel h2 {
-  font-size: 1.0625rem;
+  font-size: var(--fs-title3);
   margin: 10px 0 0;
 }
 .os-panel h2:first-child {
@@ -4703,7 +4680,7 @@ th.n {
 .os-panel p {
   margin: 0;
   color: var(--muted);
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
   line-height: 1.6;
 }
 .os-screen nav a,
@@ -4716,7 +4693,7 @@ th.n {
 /* 모바일: 커리어 표가 가로 스크롤 없이 들어오도록 소속 칸만 줄바꿈하고 여백을 줄인다. */
 @media (max-width: 440px) {
   table {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
   }
   th,
   td {
@@ -4755,10 +4732,10 @@ html:has(.wrap.has-actionbar) {
   gap: 12px;
   background: var(--pitch);
   color: var(--on-pitch);
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   padding: 10px 10px 10px 16px;
   box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.5);
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
   line-height: 1.4;
 }
 .update-banner span {
@@ -4778,7 +4755,7 @@ html:has(.wrap.has-actionbar) {
 }
 .news-text small {
   opacity: 0.85;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4790,10 +4767,10 @@ html:has(.wrap.has-actionbar) {
   height: 36px;
   margin-left: -4px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: none;
   color: inherit;
-  font-size: 1rem;
+  font-size: var(--fs-body);
   cursor: pointer;
 }
 /* T-10-117 보이는 크기(36px)는 그대로 두고 눌리는 자리만 44px로 넓힌다. */
@@ -4907,7 +4884,7 @@ html:has(.wrap.has-actionbar) {
   align-items: center;
   gap: 4px;
   flex: none;
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   font-weight: 800;
   letter-spacing: 0.02em;
   line-height: 1.2;
@@ -4915,7 +4892,7 @@ html:has(.wrap.has-actionbar) {
 }
 .ach-grade.large {
   gap: 8px;
-  font-size: 1rem;
+  font-size: var(--fs-body);
 }
 .grade-emblem {
   flex: none;
@@ -4975,9 +4952,9 @@ html:has(.wrap.has-actionbar) {
   justify-content: space-between;
   gap: 8px;
   padding: 6px 10px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 /* T-10-090 전체 / 시즌 순위 전환과 개막 전 안내. */
 .hof-seasons {
@@ -4993,7 +4970,7 @@ html:has(.wrap.has-actionbar) {
   padding: 6px 2px;
   align-items: center;
   text-align: center;
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
   white-space: nowrap;
 }
 /* T-10-103 개막 전 시즌 버튼에 'Coming soon' — 버튼 높이는 그대로, 오른쪽 위 테두리에 걸친다. */
@@ -5005,10 +4982,10 @@ html:has(.wrap.has-actionbar) {
   top: -9px;
   right: 10px;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--accent);
   color: var(--accent-ink);
-  font-size: 0.625rem;
+  font-size: var(--fs-caption2);
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -5085,7 +5062,7 @@ html:has(.wrap.has-actionbar) {
   min-height: 40px;
   height: 40px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface-2);
   color: var(--ink);
   font: inherit;
@@ -5112,7 +5089,7 @@ html:has(.wrap.has-actionbar) {
 }
 .hof-filter-label {
   flex: none;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 600;
 }
 .hof-filter-current {
@@ -5213,12 +5190,12 @@ html:has(.wrap.has-actionbar) {
   [data-hof='full'] .hof-value {
     align-self: start;
     max-width: 100px;
-    font-size: 1.25rem;
+    font-size: var(--fs-title2);
     text-align: right;
     line-height: 1.3;
   }
   [data-hof='full'] .hof-value-text {
-    font-size: 1rem;
+    font-size: var(--fs-body);
   }
   [data-hof='full'] .hof-source {
     font-size: max(0.75rem, 12px);
@@ -5322,18 +5299,18 @@ html:has(.wrap.has-actionbar) {
   align-items: center;
   gap: 2px;
   padding: 10px 6px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--surface-2);
 }
 .rn-wall-sum b {
-  font-size: 1.25rem;
+  font-size: var(--fs-title2);
 }
 .rn-wall-sum > div:last-child b {
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
   line-height: 1.75rem;
 }
 .rn-wall-sum small {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   color: var(--muted);
 }
 .rn-club-head {
@@ -5351,10 +5328,10 @@ html:has(.wrap.has-actionbar) {
 .rn-club-count {
   margin-left: auto;
   flex: none;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 700;
   padding: 1px 9px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--accent);
   background: color-mix(in srgb, var(--accent) 16%, var(--surface));
 }
@@ -5369,7 +5346,7 @@ html:has(.wrap.has-actionbar) {
 }
 .rn-sec-head h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--fs-body);
 }
 .rn-club-list {
   display: flex;
@@ -5405,13 +5382,13 @@ html:has(.wrap.has-actionbar) {
 .rn-club-go {
   flex: none;
   color: var(--muted);
-  font-size: 1.125rem;
+  font-size: var(--fs-title3);
 }
 .rn-league-head {
   display: flex;
   justify-content: space-between;
   margin: 14px 0 4px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 700;
   color: var(--muted);
 }
@@ -5424,7 +5401,7 @@ html:has(.wrap.has-actionbar) {
 }
 .rn-recent-title {
   margin: 4px 0 12px;
-  font-size: 1rem;
+  font-size: var(--fs-body);
 }
 .rn-free {
   margin-bottom: 14px;
@@ -5443,9 +5420,9 @@ html:has(.wrap.has-actionbar) {
 .rn-free-list li {
   padding: 3px 0;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   text-align: center;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .rn-more {
   margin-top: 4px;
@@ -5468,7 +5445,7 @@ html:has(.wrap.has-actionbar) {
   min-width: 0;
   padding: 10px 4px 8px;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   background:
     radial-gradient(
       90% 60% at 50% 30%,
@@ -5498,12 +5475,12 @@ html:has(.wrap.has-actionbar) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
 }
 .rn-tile-mine,
 .rn-plaque-mine {
   padding: 0 6px;
-  font-size: 0.625rem;
+  font-size: var(--fs-caption2);
 }
 .rn-tile-mine {
   position: absolute;
@@ -5533,7 +5510,7 @@ html:has(.wrap.has-actionbar) {
   min-height: 60px;
   padding: 8px 12px 8px 8px;
   border: 1px solid color-mix(in srgb, var(--medal) 45%, var(--line));
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background:
     linear-gradient(
       100deg,
@@ -5556,7 +5533,7 @@ html:has(.wrap.has-actionbar) {
 }
 .rn-plaque-medal b {
   position: relative;
-  font-size: 1rem;
+  font-size: var(--fs-body);
   color: var(--medal-text);
 }
 .rn-plaque-body {
@@ -5613,7 +5590,7 @@ html:has(.wrap.has-actionbar) {
   animation-delay: calc(var(--i) * 60ms);
 }
 .rp-wdl small {
-  font-size: 1.25rem;
+  font-size: var(--fs-title2);
   color: var(--muted);
   margin-right: 6px;
 }
@@ -5632,7 +5609,7 @@ html:has(.wrap.has-actionbar) {
 }
 .rp-games summary {
   cursor: pointer;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 600;
   color: var(--muted);
   padding: 4px 0;
@@ -5655,7 +5632,7 @@ html:has(.wrap.has-actionbar) {
   gap: 10px;
 }
 .league-table th {
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   text-align: center;
   padding: 4px 2px;
 }
@@ -5673,7 +5650,7 @@ html:has(.wrap.has-actionbar) {
   text-overflow: ellipsis;
 }
 .league-table td.num {
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
   width: 32px;
 }
 .league-table th:not(.lt-team) {
@@ -5712,7 +5689,7 @@ html:has(.wrap.has-actionbar) {
 .league-table td[data-delta]::after {
   content: attr(data-delta);
   margin-left: 3px;
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   font-weight: 700;
   color: var(--good);
 }
@@ -5754,9 +5731,9 @@ html:has(.wrap.has-actionbar) {
 .title-tag {
   display: inline-flex;
   align-items: center;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   font-weight: 700;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 2px 9px;
   background: var(--surface-2);
   color: var(--rc);
@@ -5791,7 +5768,7 @@ html:has(.wrap.has-actionbar) {
   background: none;
   color: var(--pitch-accent);
   font-weight: 700;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   text-align: left;
 }
 .card-title::before {
@@ -5808,7 +5785,7 @@ html:has(.wrap.has-actionbar) {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
 }
 .title-list {
   list-style: none;
@@ -5825,9 +5802,9 @@ html:has(.wrap.has-actionbar) {
   align-items: center;
   gap: 4px 10px;
   padding: 8px 10px;
-  border-radius: 10px;
-  border: 1.5px solid var(--line);
-  background: var(--surface);
+  border-radius: var(--radius-sm);
+  border: 1.5px solid transparent;
+  background: var(--surface-2);
   color: inherit;
   font: inherit;
   text-align: left;
@@ -5841,16 +5818,16 @@ button.title-item:hover {
   border-radius: 4px;
   background: var(--pitch);
   color: var(--on-pitch);
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   font-weight: 700;
 }
 .title-desc {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   color: var(--muted);
   min-width: 0;
 }
 .title-year {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   color: var(--muted);
 }
 .title-list.compact {
@@ -5865,7 +5842,7 @@ button.title-item:hover {
   border-width: 1px;
 }
 .title-item.locked .title-name {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 700;
   color: var(--muted);
 }
@@ -5893,7 +5870,7 @@ button.title-item:hover {
 }
 .title-pick summary {
   cursor: pointer;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 600;
   color: var(--muted);
   padding: 4px 0;
@@ -5910,12 +5887,12 @@ button.title-item:hover {
 /* T-10-027 서버 최초 기록 */
 .first-count {
   font-family: var(--display);
-  font-size: 1.375rem;
+  font-size: var(--fs-title2);
   font-weight: 700;
   color: var(--accent-text);
 }
 .first-day {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 700;
   color: var(--muted);
   margin: 14px 0 2px;
@@ -5937,10 +5914,10 @@ button.title-item:hover {
   border-top: 0;
 }
 .first-label {
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
 }
 .first-time {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   color: var(--muted);
 }
 .first-who {
@@ -5948,11 +5925,11 @@ button.title-item:hover {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   color: var(--muted);
 }
 .first-value {
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
   font-weight: 800;
 }
 .first-row.locked .first-label {
@@ -5972,13 +5949,13 @@ button.title-item:hover {
   justify-content: space-between;
   gap: 4px 10px;
   margin-top: 4px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .first-next {
   color: var(--ink);
 }
 .first-toggle {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   color: var(--muted);
   text-decoration: underline;
 }
@@ -5997,7 +5974,7 @@ button.title-item:hover {
   padding-block: 5px;
 }
 .first-step-label {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   font-weight: 700;
 }
 .first-steps li.locked .first-step-label {
@@ -6077,7 +6054,7 @@ button.title-item:hover {
     radial-gradient(120% 60% at 50% 0%, rgba(240, 180, 55, 0.1), transparent 60%),
     linear-gradient(180deg, #0c1c14, var(--film-bg) 40%);
   color: var(--film-ink);
-  border-radius: 20px;
+  border-radius: var(--radius-lg);
   padding: 40px 20px 48px;
   display: flex;
   flex-direction: column;
@@ -6125,12 +6102,12 @@ button.title-item:hover {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   color: var(--film-muted);
 }
 .film-cue i {
   font-style: normal;
-  font-size: 1.125rem;
+  font-size: var(--fs-title3);
   color: var(--film-gold);
   animation: cue-bob 1.6s ease-in-out infinite;
 }
@@ -6141,7 +6118,7 @@ button.title-item:hover {
 }
 .film-sub {
   color: var(--film-muted);
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
 }
 .film-score {
   display: flex;
@@ -6158,9 +6135,15 @@ button.title-item:hover {
   font-variant-numeric: tabular-nums;
 }
 .film-score span {
-  font-size: 0.6875rem;
-  letter-spacing: 0.24em;
+  font-size: var(--fs-caption2);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  color: var(--film-muted);
+}
+/* T-11-439 점수 구성으로 내려가는 작은 링크 */
+.film-score .link-btn {
+  margin-top: 2px;
+  font-size: var(--fs-caption);
   color: var(--film-muted);
 }
 /* T-10-100 은퇴 가치 */
@@ -6172,17 +6155,17 @@ button.title-item:hover {
   margin-top: 10px;
 }
 .film-worth span {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   color: var(--film-muted);
 }
 .film-worth b {
   font-family: var(--display);
-  font-size: 1.75rem;
+  font-size: var(--fs-title1);
   line-height: 1.1;
   color: var(--film-ink);
 }
 .film-worth small {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   color: var(--film-muted);
 }
 .film-pills {
@@ -6238,7 +6221,7 @@ button.title-item:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   color: var(--film-muted);
 }
 .film-stats {
@@ -6261,7 +6244,7 @@ button.title-item:hover {
   font-variant-numeric: tabular-nums;
 }
 .film-stats span {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   color: var(--film-muted);
 }
 .film-open .film-stats {
@@ -6270,7 +6253,7 @@ button.title-item:hover {
 }
 .film-note {
   color: var(--film-muted);
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   text-align: center;
   margin: 0;
 }
@@ -6283,11 +6266,11 @@ button.title-item:hover {
   margin-top: 2px;
   padding: 2px 12px;
   border: 1px solid var(--film-line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(238, 244, 239, 0.06);
   color: var(--film-ink);
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 button.film-raiser {
   cursor: pointer;
@@ -6303,7 +6286,7 @@ button.film-raiser:focus-visible {
 }
 .film-raiser-label {
   color: var(--film-muted);
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
 }
 .film-raiser b {
   overflow-wrap: anywhere;
@@ -6334,18 +6317,18 @@ button.film-raiser:focus-visible {
   gap: 2px;
   padding: 8px 2px;
   border: 1px solid var(--film-line);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: rgba(238, 244, 239, 0.05);
 }
 .film-attrs dt {
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   letter-spacing: 0.08em;
   color: var(--film-muted);
 }
 .film-attrs dd {
   margin: 0;
   font-family: var(--display);
-  font-size: 1.375rem;
+  font-size: var(--fs-title2);
   line-height: 1.05;
   font-variant-numeric: tabular-nums;
 }
@@ -6368,7 +6351,7 @@ button.film-raiser:focus-visible {
   text-align: center;
 }
 .film h2 {
-  font-size: 1.5rem;
+  font-size: var(--fs-title1);
   margin: 6px 0 0;
 }
 .film-head {
@@ -6434,7 +6417,7 @@ button.film-raiser:focus-visible {
 }
 .ch-years {
   font-family: var(--display);
-  font-size: 1.125rem;
+  font-size: var(--fs-title3);
   font-weight: 600;
   letter-spacing: 0.06em;
   color: var(--film-gold);
@@ -6452,19 +6435,19 @@ button.film-raiser:focus-visible {
 }
 .ch-meta {
   color: var(--film-muted);
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .ch-stats {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 14px;
   margin-top: 8px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   color: var(--film-muted);
 }
 .ch-stats b {
   font-family: var(--display);
-  font-size: 1.125rem;
+  font-size: var(--fs-title3);
   color: var(--film-ink);
   margin-right: 2px;
   font-variant-numeric: tabular-nums;
@@ -6483,19 +6466,19 @@ button.film-raiser:focus-visible {
   grid-template-columns: 20px 1fr;
   gap: 6px;
   align-items: baseline;
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
   line-height: 1.4;
 }
 .ev-ic {
   text-align: center;
   color: var(--film-gold);
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
 }
 .ev-trophy {
   font-weight: 700;
 }
 .ev-trophy .ev-ic {
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
 }
 .ev-story {
   font-style: italic;
@@ -6509,7 +6492,7 @@ button.film-raiser:focus-visible {
   font-family: var(--display);
   font-weight: 500;
   font-style: normal;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   color: var(--film-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -6521,7 +6504,7 @@ button.film-raiser:focus-visible {
 .nat-caps {
   margin-top: 10px;
   color: var(--film-muted);
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
 }
 .nat-caps b {
   font-family: var(--display);
@@ -6532,7 +6515,7 @@ button.film-raiser:focus-visible {
 .nat-ga {
   margin-top: 2px;
   color: var(--film-muted);
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
   font-variant-numeric: tabular-nums;
 }
 /* 우승 연혁: 엔딩 크레딧처럼 가운데 선을 두고 왼쪽엔 이름(오른쪽 정렬), 오른쪽엔 연도. */
@@ -6555,13 +6538,13 @@ button.film-raiser:focus-visible {
 }
 .roll-line b {
   text-align: right;
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
   line-height: 1.35;
 }
 .roll-line span {
   text-align: left;
   font-family: var(--display);
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
   letter-spacing: 0.06em;
   color: var(--film-muted);
   font-variant-numeric: tabular-nums;
@@ -6576,13 +6559,13 @@ button.film-raiser:focus-visible {
 }
 .film-pot p {
   color: var(--film-muted);
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
 }
 .film-pot-ach {
   margin-top: 14px;
   padding: 12px 20px;
   border: 1px solid var(--film-line);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -6591,7 +6574,7 @@ button.film-raiser:focus-visible {
 .film-pot-ach span,
 .film-pot-ach small {
   color: var(--film-muted);
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 /* T-11-141 잠재력이 바뀐 과정 · 시드(은퇴 뒤에만). */
 .film-pot-flow {
@@ -6603,15 +6586,15 @@ button.film-raiser:focus-visible {
 }
 .film-pot-flow span {
   font-weight: 700;
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
 }
 .film-pot-flow p {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
 }
 .film-pot-flow small {
   color: var(--film-muted);
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   line-height: 1.5;
 }
 /* T-10-077 플레이 성향 — 유형 하나 + 주사위 기록 네 칸 + 최고의 한 수. */
@@ -6633,12 +6616,12 @@ button.film-raiser:focus-visible {
   line-height: 1;
 }
 .style-type b {
-  font-size: 1.625rem;
+  font-size: var(--fs-title1);
   color: var(--film-gold);
 }
 .style-type p {
   color: var(--film-muted);
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
   margin: 0 0 4px;
 }
 .style-grid {
@@ -6665,10 +6648,10 @@ button.film-raiser:focus-visible {
   color: var(--film-gold);
 }
 .style-grid span {
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .style-grid small {
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   color: var(--film-muted);
 }
 .style-best {
@@ -6676,7 +6659,7 @@ button.film-raiser:focus-visible {
   flex-direction: column;
   gap: 4px;
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
 }
 .style-best b {
   color: var(--film-gold);
@@ -6748,7 +6731,7 @@ button.film-raiser:focus-visible {
   }
 }
 .rn-line {
-  font-size: 1.1875rem;
+  font-size: var(--fs-title2);
   line-height: 1.55;
   margin: 0;
 }
@@ -6758,7 +6741,7 @@ button.film-raiser:focus-visible {
 .rn-stats,
 .rn-pending {
   color: var(--film-muted);
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
   line-height: 1.5;
   margin: 0;
 }
@@ -6766,7 +6749,7 @@ button.film-raiser:focus-visible {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
   margin: 0;
 }
 /* T-11-264 결번 심사 미달 — 시즌 수·기여 점수 게이지 */
@@ -6779,7 +6762,7 @@ button.film-raiser:focus-visible {
 .rn-miss-stat {
   display: grid;
   gap: 4px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .rn-miss-stat dt {
   color: var(--film-muted);
@@ -6794,7 +6777,7 @@ button.film-raiser:focus-visible {
 .rn-miss-bar {
   display: block;
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--film-muted) 30%, transparent);
   overflow: hidden;
 }
@@ -6826,12 +6809,12 @@ button.film-raiser:focus-visible {
 }
 .film-finale p {
   color: var(--film-muted);
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
   line-height: 1.6;
   margin: 6px 0 0;
 }
 .film-finale h2 {
-  font-size: 1.75rem;
+  font-size: var(--fs-title1);
 }
 .film-end {
   margin-top: 18px;
@@ -6847,7 +6830,7 @@ button.film-raiser:focus-visible {
 .film-more summary {
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
 }
 .film-more[open] summary {
   margin-bottom: 14px;
@@ -6899,20 +6882,26 @@ button.film-raiser:focus-visible {
 .share-url {
   width: 100%;
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
   background: var(--bg);
   color: var(--ink);
 }
 .shared-note {
   margin: 0 0 10px;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--muted);
   text-align: center;
+}
+/* T-11-439 공유받은 화면 맨 위 작은 시작 버튼 */
+.shared-top {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 12px;
 }
 
 /* T-10-030 홈 라이브 현황 */
@@ -6928,7 +6917,7 @@ button.film-raiser:focus-visible {
 }
 .live-head h2 {
   margin: 0;
-  font-size: 1.0625rem;
+  font-size: var(--fs-title3);
 }
 .live-dot {
   position: relative;
@@ -6971,7 +6960,7 @@ button.film-raiser:focus-visible {
 .live-stats div {
   container-type: inline-size;
   background: var(--surface-2);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 8px 10px;
   display: flex;
   flex-direction: column;
@@ -6986,7 +6975,7 @@ button.film-raiser:focus-visible {
   white-space: nowrap;
 }
 .live-stats span {
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   color: var(--muted);
 }
 .live-rows-wrap {
@@ -6998,7 +6987,7 @@ button.film-raiser:focus-visible {
   display: grid;
   place-items: center;
   text-align: center;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .live-rows {
   list-style: none;
@@ -7015,7 +7004,7 @@ button.film-raiser:focus-visible {
   align-items: center;
   gap: 10px;
   border-top: 1px solid var(--line);
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .live-row .what {
   flex: 1;
@@ -7036,7 +7025,7 @@ button.what {
   text-underline-offset: 3px;
 }
 .live-row time {
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   color: var(--muted);
   flex-shrink: 0;
 }
@@ -7072,7 +7061,7 @@ button.what {
 .share-image {
   width: 100%;
   height: auto;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   display: block;
 }
 
@@ -7175,10 +7164,10 @@ button.what {
   top: var(--y);
   translate: calc(var(--x) * -100%) calc(-100% - 10px);
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--vc-line);
   color: var(--accent-ink);
-  font-size: 0.6875rem;
+  font-size: var(--fs-caption2);
   font-weight: 700;
   white-space: nowrap;
   pointer-events: none;
@@ -7246,7 +7235,7 @@ button.what {
   min-width: 0;
 }
 .chat-heading h1 {
-  font-size: 1.125rem;
+  font-size: var(--fs-title3);
   line-height: 1.4;
 }
 .chat-rules {
@@ -7277,8 +7266,8 @@ button.what {
   margin: 4px 0 0;
   padding: 12px;
   background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow);
 }
 /* T-11-015 라운지 채팅. 홈의 떠 있는 버튼은 하단 메뉴 위, 데스크톱에선 본문(560px) 오른쪽 끝에 맞춘다.
@@ -7294,7 +7283,7 @@ button.what {
   gap: 6px;
   padding: 10px 16px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--accent);
   color: var(--accent-ink);
   font-weight: 700;
@@ -7306,10 +7295,10 @@ button.what {
   padding-inline: 5px;
   display: inline-grid;
   place-items: center;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--ink);
   color: var(--surface);
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
   line-height: 1;
 }
 .chat-fab .visually-hidden {
@@ -7353,7 +7342,7 @@ button.what {
   gap: 6px;
   min-height: 24px;
   margin-bottom: 5px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .chat-meta b {
   overflow-wrap: anywhere;
@@ -7375,25 +7364,25 @@ button.what {
   min-width: 0;
   margin: 0;
   padding: 10px 13px;
-  border: 1px solid var(--line);
-  border-radius: 4px 16px 16px;
+  border: 1px solid transparent;
+  border-radius: 4px var(--radius-lg) var(--radius-lg);
   background: var(--surface-2);
   color: var(--ink);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: 0.9375rem;
+  font-size: var(--fs-body1);
   line-height: 1.55;
 }
 .chat-msg.mine .chat-bubble {
   background: var(--pitch);
   color: var(--on-pitch);
   border-color: var(--pitch);
-  border-radius: 16px 4px 16px 16px;
+  border-radius: var(--radius-lg) 4px var(--radius-lg) var(--radius-lg);
 }
 .chat-time {
   flex: none;
   padding-inline: 2px;
-  font-size: 0.75rem;
+  font-size: var(--fs-caption);
   white-space: nowrap;
 }
 /* 더보기는 티어 배지 바로 옆 작은 점 세 개(테두리 없음). 누르는 자리는 ::after로 넓힌다. */
@@ -7406,7 +7395,7 @@ button.what {
   place-items: center;
   padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   background: transparent;
   color: var(--muted);
   cursor: pointer;
@@ -7442,7 +7431,7 @@ button.what {
   align-items: center;
 }
 .chat-user-name {
-  font-size: 1.0625rem;
+  font-size: var(--fs-title3);
   overflow-wrap: anywhere;
 }
 .chat-user-profile {
@@ -7477,7 +7466,7 @@ button.what {
 }
 .chat-composer p {
   margin: 0 0 8px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-label);
 }
 .chat-form {
   display: flex;
@@ -7492,7 +7481,7 @@ button.what {
   margin: 0;
   padding: 10px 12px;
   line-height: 1.5;
-  border-radius: 20px;
+  border-radius: var(--radius-lg);
   resize: none;
   overflow-y: auto;
   scroll-margin-block: 12px;
@@ -7595,10 +7584,10 @@ html:root[data-skin='sheet'] {
   padding: 10px 12px;
 }
 :root[data-skin='sheet'] .hero-home h1 {
-  font-size: 1.15rem;
+  font-size: var(--fs-title3);
 }
 :root[data-skin='sheet'] .player .ovr .n {
-  font-size: 1.6rem;
+  font-size: var(--fs-title1);
   color: var(--ink);
 }
 :root[data-skin='sheet'] :is(.btn-primary, .btn-accent) {
@@ -7617,14 +7606,14 @@ html:root[data-skin='sheet'] {
   z-index: 22;
   padding: 7px 12px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: #444746;
   font-weight: 500;
   box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3);
 }
 :root[data-skin='sheet'] :is(h1, h2, h3) {
-  font-size: 1.08rem;
+  font-size: var(--fs-title3);
   letter-spacing: 0;
   line-height: 1.35;
 }
@@ -7672,7 +7661,7 @@ html:root[data-skin='sheet'] {
   min-height: 0;
   padding: 0 18px;
   border-radius: 0;
-  font-size: 0.875rem;
+  font-size: var(--fs-body2);
   font-weight: 500;
   color: #444746;
 }
@@ -7714,7 +7703,7 @@ html:root[data-skin='sheet'] {
   background: rgba(255, 255, 255, 0.6);
 }
 :root[data-skin='sheet'] .sheet {
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--line);
   box-shadow: 0 4px 16px rgba(60, 64, 67, 0.3);
 }
@@ -7791,7 +7780,7 @@ html:root[data-skin='sheet'] {
 .sx-share {
   background: #c2e7ff;
   color: #001d35;
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   padding: 10px 22px;
   font-size: 14px;
   font-weight: 500;
@@ -7816,7 +7805,7 @@ html:root[data-skin='sheet'] {
   align-items: center;
   gap: 2px;
   padding: 0 8px;
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
   background: #edf2fa;
   overflow: hidden;
   white-space: nowrap;
@@ -8087,7 +8076,7 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
 }
 .sk-block {
   margin-block: 4px;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   background: var(--line);
   opacity: 0;
   animation:

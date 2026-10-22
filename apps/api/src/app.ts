@@ -1,3 +1,4 @@
+import { registerAcquisitionRoutes } from './routes/acquisition.js';
 import { HealthDataSchema } from '@offside/contracts';
 import { Hono } from 'hono';
 import type { AppEnv } from './env.js';
@@ -8,6 +9,7 @@ import { logger } from './middleware/logger.js';
 import { cupHomeCache } from './middleware/cupHomeCache.js';
 import { originGuard } from './middleware/originGuard.js';
 import { requestId } from './middleware/requestId.js';
+import { securityHeaders } from './middleware/securityHeaders.js';
 import { seasonScheduleMiddleware } from './seasonSchedule.js';
 import { registerAdminRoutes } from './routes/admin.js';
 import { registerAppAuthRoutes } from './routes/appAuth.js';
@@ -43,9 +45,11 @@ import { registerTeamCommentRoutes } from './routes/teamComments.js';
 import { registerMarketRoutes } from './routes/market.js';
 import { registerManagerRoutes } from './routes/managers.js';
 import { registerCupRoutes } from './routes/cup.js';
+import { registerLeagueRoutes } from './routes/league.js';
 import { registerIapRoutes } from './routes/iap.js';
 import { registerAttendanceRoutes } from './routes/attendance.js';
 import { registerAdminCupRoutes } from './routes/adminCups.js';
+import { registerAdminLeagueRoutes } from './routes/adminLeagues.js';
 import { registerOwnerProfileRoutes } from './routes/ownerProfile.js';
 import { registerProfileRoutes } from './routes/profile.js';
 import { ok } from './routes/shared.js';
@@ -55,6 +59,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
 
   app.use('*', requestId);
   app.use('*', logger);
+  app.use('*', securityHeaders);
   app.use('*', cupHomeCache);
   app.use('*', cors);
   app.use('*', originGuard);
@@ -89,7 +94,9 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerMarketRoutes(app);
   registerManagerRoutes(app);
   registerCupRoutes(app);
+  registerLeagueRoutes(app);
   registerIapRoutes(app);
+  registerAcquisitionRoutes(app);
   registerAttendanceRoutes(app);
   registerBoardRoutes(app);
   registerTranslateRoutes(app);
@@ -102,6 +109,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerClubStrengthRoutes(app);
   registerAdminRoutes(app);
   registerAdminCupRoutes(app);
+  registerAdminLeagueRoutes(app);
 
   if (options.testRoutes) {
     app.get('/v1/test/throw', () => {

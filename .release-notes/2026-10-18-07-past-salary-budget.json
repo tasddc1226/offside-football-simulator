@@ -1,0 +1,27 @@
+{
+  "id": "t-11-376-past-salary-budget",
+  "title": "지난 시즌 선수 급여 예산",
+  "items": [
+    "지난 시즌 선수는 3명 제한 대신 급여 합 60 안에서 선발에 넣어요.",
+    "이번 시즌 선수는 급여가 없어요. 예전에 짠 선발은 그대로 쓸 수 있어요.",
+    "편성 화면 급여 막대를 누르면 급여표와 남은 예산이 나와요."
+  ],
+  "en": {
+    "title": "Past-season player salary budget",
+    "items": [
+      "Past-season players now fit a salary budget of 60 instead of a three-player limit.",
+      "This season's players have no salary, and lineups you already built still work.",
+      "Tap the salary bar in your lineup to see the salary table and your remaining budget."
+    ]
+  },
+  "ja": {
+    "title": "過去シーズン選手の年俸予算",
+    "items": [
+      "過去シーズンの選手は3人までの制限に代わり、年俸の合計60以内で先発に入れられます。",
+      "今シーズンの選手には年俸がありません。以前組んだ先発はそのまま使えます。",
+      "編成画面の年俸バーをタップすると、年俸表と残り予算が表示されます。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

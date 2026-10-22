@@ -100,7 +100,7 @@
     gap: 8px;
     padding: 2px 10px;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: transparent;
     font: inherit;
     color: inherit;
@@ -115,7 +115,7 @@
     font-variant-numeric: tabular-nums;
   }
   .rv-stage small {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     font-weight: 400;
     font-family: var(--body);
     white-space: nowrap;

@@ -1,0 +1,26 @@
+{
+  "id": "t-11-405-cup-odds",
+  "title": "오프사이드 컵 다음 경기 예상",
+  "items": [
+    "컵 대회 화면의 다음 경기 칸에 지금 두 팀 명단으로 계산한 예상 승·무·패가 나와요",
+    "예상은 실제 컵 경기와 같은 공격·중원·수비 힘과 기대 득점으로 계산해요. 명단을 바꾸면 예상도 바뀌어요",
+    "게임 가이드에 컵 경기가 어떻게 정해지는지 설명을 더했어요"
+  ],
+  "en": {
+    "title": "OFFSIDE Cup next match odds",
+    "items": [
+      "The next match box on the Cup screen now shows win, draw, and loss odds based on both teams' current lineups.",
+      "The odds use the same attack, midfield, and defense strength and expected goals as the actual cup match. Changing your lineup changes the odds.",
+      "The game guide now explains how cup matches are decided."
+    ]
+  },
+  "ja": {
+    "title": "オフサイドカップ 次の試合の予想",
+    "items": [
+      "カップ画面の次の試合欄に、今の両チームのメンバーで計算した勝ち・引き分け・負けの予想が表示されます。",
+      "予想は実際のカップ戦と同じ攻撃・中盤・守備の力と期待得点で計算します。メンバーを変えると予想も変わります。",
+      "ゲームガイドに、カップ戦の勝敗がどう決まるかの説明を追加しました。"
+    ]
+  },
+  "availability": "web-app"
+}

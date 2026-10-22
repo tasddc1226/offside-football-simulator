@@ -1,0 +1,41 @@
+{
+  "id": "t-11-437-ux-mid-fixes",
+  "title": "곳곳의 안내를 더 친절하게 바꿨어요",
+  "items": [
+    "선수 만들기에서 주력이 아닌 능력치는 성장이 10% 느리다고 알려 줘요. 첫 시즌에는 기록이 이 기기에만 저장된다는 안내와 백업 버튼이 한 번 보여요.",
+    "이벤트에서 '안전'의 뜻을 선택지 아래에 적었어요. 결정적 장면은 실패하면 무엇을 잃는지 보여 주고, 중계 중에 앱을 꺼도 그 구간 리포트가 남아요.",
+    "은퇴 화면에서 칭호나 결번이 바뀌면 공유 이미지에 반영하라고 알려 줘요. 공유받은 화면 맨 위에도 시작 버튼이 있고 이름을 신고할 수 있어요.",
+    "출석 칸에 보상 기호와 장수가 보이고, 받은 뒤에는 어디서 쓰는지 알려 줘요. 새 소식이 여러 건이면 게시판 목록으로 가고 NEW가 붙어요. 전광판을 멈출 수 있어요.",
+    "팀 · 구단주 랭킹에서 '내 순위로'를 누르면 내 줄로 이동해요. 기록실 순위 기준에 한 줄 설명이 붙었어요.",
+    "이적시장 이름 변경과 감독 카드 확정, 리그 · 컵 신청은 한 번 더 확인해요. 방출은 한 번에 50명까지 고를 수 있어요.",
+    "랭크 도전 상대에 내 팀과의 레이팅 차이가 보이고, 방출 목록에 포지션과 최고 OVR이 보여요.",
+    "리그 일정은 날짜와 한국 시간으로 적고, 내 자리에 승격권 · 강등권을 표시해요. 지난 시즌 결산도 신청 카드에서 볼 수 있어요."
+  ],
+  "en": {
+    "title": "Friendlier guidance across the game",
+    "items": [
+      "Player creation now says non-focus attributes grow 10% slower. In your first season, a one-time note says records live only on this device, with a backup button.",
+      "Events explain what 'Safe' means under the choices. Key moments show what you lose on failure, and closing the app mid-broadcast no longer loses that stretch's report.",
+      "On the retirement screen, we remind you to refresh the share image after your title or retired number changes. Shared pages have a start button at the top and let you report a name.",
+      "Attendance cells show the reward symbol and count, and after claiming we tell you where to use it. Several new posts open the board list with NEW marks. You can pause the ticker.",
+      "Team and owner rankings have a 'Jump to my rank' button. Hall of Fame sort options now have a one-line explanation.",
+      "Renaming in the market, confirming a manager card, and entering the league or cup now ask you to confirm. You can release up to 50 players at once.",
+      "Ranked opponents show the rating gap to your team, and the release list shows position and peak OVR.",
+      "League rounds show the date and Korea time, your row shows promotion or relegation zones, and the entry card shows last season's result."
+    ]
+  },
+  "ja": {
+    "title": "あちこちの案内を分かりやすくしました",
+    "items": [
+      "選手作成で、得意でない能力値は成長が10%遅いことを表示します。最初のシーズンには、記録がこの端末にだけ保存されるという案内とバックアップボタンが一度表示されます。",
+      "イベントの「安全」の意味を選択肢の下に書きました。決定的な場面は失敗すると何を失うかを表示し、中継中にアプリを閉じてもその区間のレポートが残ります。",
+      "引退画面で称号や永久欠番が変わると、共有画像に反映するようお知らせします。共有された画面の上部にも開始ボタンがあり、名前を通報できます。",
+      "出席マスに報酬の記号と枚数を表示し、受け取った後は使う場所をお知らせします。新しいお知らせが複数あると掲示板の一覧を開き、NEWが付きます。電光掲示板を一時停止できます。",
+      "チーム・オーナーランキングで「自分の順位へ」を押すと自分の行に移動します。殿堂の並び替え基準に一行の説明が付きました。",
+      "移籍市場での名前変更、監督カードの確定、リーグ・カップの申込はもう一度確認します。放出は一度に50人まで選べます。",
+      "ランク戦の相手に自分のチームとのレーティング差を表示し、放出リストにポジションと最高OVRを表示します。",
+      "リーグ日程は日付と韓国時間で表示し、自分の行に昇格圏・降格圏を表示します。前シーズンの結果も申込カードで確認できます。"
+    ]
+  },
+  "availability": "web-app"
+}

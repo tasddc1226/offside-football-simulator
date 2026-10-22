@@ -1,10 +1,10 @@
 export type CareerTrophy = 'continental' | 'league' | 'cup';
 export function careerTrophy(name: string): CareerTrophy {
   // i18n-ignore: canonical saved competition names.
-  if (/챔피언스|유로파|컨퍼런스/.test(name)) return 'continental';
-  // i18n-ignore: canonical saved honor names.
-  if (/리그.*우승|라리가 우승|분데스리가 우승|세리에 A 우승|에레디비시 우승|MLS 우승/.test(name))
-    return 'league';
+  if (/챔피언스|유로파|컨퍼런스|리베르타도레스/.test(name)) return 'continental';
+  const LEAGUE_WIN =
+    /리그.*우승|라리가 우승|분데스리가 우승|세리에 A 우승|에레디비시 우승|MLS 우승|브라질레이랑 우승|프리메이라 리가 우승/; // i18n-ignore 저장값
+  if (LEAGUE_WIN.test(name)) return 'league';
   return 'cup';
 }
 export const CAREER_TROPHY_PATH: Record<CareerTrophy, string> = {

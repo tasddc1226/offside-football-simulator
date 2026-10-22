@@ -6,6 +6,7 @@ import {
   releaseAmount,
   releaseValue,
   releaseConfirmText,
+  releaseRowInfo,
   fundsText,
 } from '@offside/app-core/market';
 import { localCareerNames } from '@offside/game/hof-store';
@@ -100,10 +101,14 @@ export function PlayerRelease({ season }: { season: number }) {
                       />
                       <View style={{ gap: 4, flex: 1, minWidth: 0 }}>
                         <Txt bold>{nameOf(p)}</Txt>
-                        <Txt tone="muted">
-                          {locked ?? M.releaseInfo({ score: String(p.legendScore ?? 0) })}
-                        </Txt>
-                        {!locked ? <Txt>{fundsText(releaseValue(p, state.rate))}</Txt> : null}
+                        <Txt tone="muted">{releaseRowInfo(p)}</Txt>
+                        {locked ? (
+                          <Txt tone="muted">{locked}</Txt>
+                        ) : (
+                          <Txt>
+                            {M.releaseGets({ amount: fundsText(releaseValue(p, state.rate)) })}
+                          </Txt>
+                        )}
                       </View>
                     </View>
                   </Press>

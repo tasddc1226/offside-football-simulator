@@ -7,7 +7,12 @@
   // `$modal.addEventListener` 포트).
   import { canDismissSheet } from '@offside/app-core/sheet-controller';
   import { fly } from 'svelte/transition';
-  import { dismissSheet, registerSheetEl, sheetState } from './sheetState.svelte.js';
+  import {
+    dismissSheet,
+    registerSheetEl,
+    sheetState,
+    type SheetView,
+  } from './sheetState.svelte.js';
   import SheetBody from './sheets/SheetBody.svelte';
   import { sheetLabel } from '@offside/app-core/sheets';
   import { appState } from './state.svelte.js';
@@ -24,6 +29,14 @@
   let sheetEl = $state<HTMLDivElement | null>(null);
   let dragY = $state(0);
   let dragging = $state(false);
+
+  // T-11-447 닫기는 open · view를 함께 비우지만 시트는 SHEET_MS 동안 내려가며 그대로 그려진다. 그 사이 도착한 지연 청크
+  // (업적 · 경기 평점)나 프레임 콜백(비행)이 빈 view를 읽지 않게, 닫히는 동안은 마지막 view를 그대로 넘긴다.
+  let lastView: SheetView | null = null;
+  const view = $derived.by(() => {
+    if (sheetState.view || sheetState.open) lastView = sheetState.view;
+    return lastView;
+  });
 
   // 이벤트·계약 확정은 유지하고, 저장된 이적시장 목록은 잠시 닫을 수 있다.
   // 배경 클릭 닫기 조건(Sheet.svelte 원래 로직)과 동일한 기준을 스와이프-다운에도 그대로 쓴다.
@@ -130,7 +143,7 @@
       ontouchcancel={onTouchEnd}
     >
       <div class="sheet-handle" aria-hidden="true"></div>
-      {#if sheetState.view}<SheetBody v={sheetState.view} />{/if}
+      {#if view}<SheetBody v={view} />{/if}
       {#each sheetState.buttons as b, i (i)}
         <button class="btn {b.cls || ''} btn-block" data-sheet={i} onclick={() => clickButton(b)}>{b.label}</button>
       {/each}

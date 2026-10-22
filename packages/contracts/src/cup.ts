@@ -1,5 +1,6 @@
 // T-11-145 오프사이드 컵. 기간 안에 신청한 구단끼리 조별 예선 → 토너먼트를 하루 한 경기씩 서버가 치른다.
 // 대회 일정은 D1 cups 테이블(관리자 API로 연다), 모양은 planCup이 만든다. 시각은 모두 UTC ISO. zod 없는 서브패스(`@offside/contracts/cup`) — API 모양은 cup-api.ts.
+import { displaySeasonAt } from './service-seasons.js';
 
 // T-11-246 128팀 대회는 64강(r64)부터 토너먼트를 한다. 64팀 이하 대회(제1회)는 r64 없이 8라운드다(cupRoundsOf).
 export const CUP_ROUNDS = ['g1', 'g2', 'g3', 'r64', 'r32', 'r16', 'qf', 'sf', 'f'] as const;
@@ -28,6 +29,26 @@ export const CUP_STAGES = [
 ] as const;
 export type CupStage = (typeof CUP_STAGES)[number];
 
+/**
+ * T-11-410 OVR 구간별 대회(제3회부터). 아래에서 위 순서. 한 회차에 구간마다 대회(cups 행)를 따로 두고 일정은 같다.
+ * 구간마다 팀 OVR 상한(ovrMax)이 있고 마스터는 상한이 없다. 저장값은 키(junior)로 두고 그릴 때 옮긴다.
+ */
+export const CUP_DIVISIONS = ['junior', 'senior', 'master'] as const;
+export type CupDivision = (typeof CUP_DIVISIONS)[number];
+/** 구간으로 여는 첫 회차. */
+export const CUP_DIVISIONS_FROM = 3;
+/** 마감 때 이보다 적은 구간은 바로 윗 구간에 합친다. */
+export const CUP_DIVISION_MIN = 8;
+/** 구간 대회 회차가 다음 시즌으로 넘어가면 개막 며칠 뒤에 접수를 여는가(팀 OVR 분포가 생긴 뒤 상한을 정한다). */
+export const CUP_SEASON_OPEN_DAYS = 2;
+/** 상한을 정할 시즌 팀이 모자랄 때 쓰는 기본 상한(주니어 · 시니어). */
+export const CUP_DIVISION_FALLBACK_CAPS: readonly number[] = [80, 88];
+/** 구간 대회 id: 's2-3-junior'. 통합 대회는 's2-3'. */
+export const cupIdOf = (season: number, edition: number, division?: CupDivision | null) =>
+  `s${season}-${edition}${division ? `-${division}` : ''}`;
+export const divisionRank = (d: CupDivision | null | undefined) =>
+  d ? CUP_DIVISIONS.indexOf(d) : CUP_DIVISIONS.length;
+
 export interface CupDef {
   id: string;
   /** 서비스 시즌(이 시즌 팀만 참가). */
@@ -42,6 +63,10 @@ export interface CupDef {
   capacity: number;
   /** 참가 자격: 선발에 든 실제 선수 수. */
   minFilled: number;
+  /** T-11-410 구간(통합 대회는 없음). */
+  division?: CupDivision | null;
+  /** T-11-410 팀 OVR 상한(마스터 · 통합 대회는 없음). 접수가 열릴 때 정해진다 — 그 전에는 null일 수 있다. */
+  ovrMax?: number | null;
 }
 
 export const CUP_LOCK_MIN = 60;
@@ -159,14 +184,79 @@ export function pullCupForward(cup: CupDef, full: string): CupDef | null {
 
 export const cupById = (id: string, cups: readonly CupDef[]) => cups.find((c) => c.id === id);
 
+/** T-11-410 같은 회차의 대회들(구간 아래에서 위 순서). 통합 대회면 자기 하나. */
+export const editionCups = (cup: CupDef, cups: readonly CupDef[]) =>
+  cups
+    .filter((c) => c.season === cup.season && c.edition === cup.edition)
+    .sort((a, b) => divisionRank(a.division) - divisionRank(b.division));
+
+/** 같은 회차에서 대표로 보여 줄 대회: 마스터(통합 대회면 그 대회). */
+export const headCup = (cup: CupDef, cups: readonly CupDef[]) => editionCups(cup, cups).at(-1)!;
+
+/** 구간 판정에 쓰는 대회 값(서버 CupDef · 응답 CupInfo · 구간 목록 모두 맞는다). */
+export type CupDivisionRule = {
+  division?: CupDivision | null | undefined;
+  ovrMax?: number | null | undefined;
+};
+
+/** 이 OVR로 들어갈 수 있는가(상한이 아직 없는 아랫 구간은 접수 전이라 아니다). */
+export const fitsDivision = (cup: CupDivisionRule, ovr: number) =>
+  !cup.division || cup.division === 'master' || (cup.ovrMax != null && ovr <= cup.ovrMax);
+
+/** T-11-436 컵 참가 중 팀 저장 판정에 쓰는 대회 값. */
+export type CupLineupRule = CupDivisionRule & { minFilled: number; drawAt: string };
+
+/**
+ * T-11-436 컵에 참가 중인 팀을 저장할 때의 OVR 상한 · 최소 인원 판정. 서버 checkCupLineup과 편성 화면 줄이 같이 쓴다.
+ * overCap: 팀 OVR(teamOvr)이 구간 상한을 넘는다. capBlocks: 조 추첨 뒤라 저장을 막는다(추첨 전에는 추첨 때 윗 구간으로
+ * 옮긴다). short: 선발에 든 실제 선수가 자격 수보다 적다(참가 중이면 늘 저장을 막는다).
+ */
+export function cupLineupVerdict(
+  rule: CupLineupRule,
+  team: { ovr: number; filled: number },
+  now: string,
+) {
+  const overCap = !fitsDivision(rule, team.ovr);
+  return {
+    overCap,
+    capBlocks: overCap && now >= rule.drawAt,
+    short: team.filled < rule.minFilled,
+  };
+}
+
+/** 이 OVR이 들어갈 수 있는 가장 낮은 구간. */
+export const divisionFor = <T extends CupDivisionRule>(siblings: readonly T[], ovr: number) =>
+  siblings.find((c) => fitsDivision(c, ovr)) ?? siblings.at(-1);
+
+/**
+ * T-11-410 시즌 팀 OVR(신청 자격이 되는 팀)로 아랫 구간 상한을 정한다: 1/3 · 2/3 지점. 같으면 한 칸씩 띄운다.
+ * 팀이 30개보다 적으면 기본 상한.
+ */
+export function divisionCaps(ovrs: readonly number[]): number[] {
+  const n = CUP_DIVISIONS.length - 1;
+  if (ovrs.length < 30) return [...CUP_DIVISION_FALLBACK_CAPS];
+  const sorted = [...ovrs].sort((a, b) => a - b);
+  const caps: number[] = [];
+  for (let i = 1; i <= n; i++) {
+    const q = sorted[Math.min(sorted.length - 1, Math.floor((sorted.length * i) / (n + 1)))]!;
+    caps.push(Math.max(q, (caps.at(-1) ?? -1) + 1));
+  }
+  return caps;
+}
+
 /**
  * 지금 보여 줄 대회: 진행 중이거나 다가오는 것, 없으면 가장 최근에 끝난 것. 지난 대회를 보여 주는 동안 다음 대회
  * 접수가 열렸으면 다음 대회를 보여 준다.
  */
 export function currentCup(now: string, cups: readonly CupDef[]): CupDef | undefined {
-  const byOpen = [...cups].sort((a, b) => a.opensAt.localeCompare(b.opensAt));
+  const byOpen = [...cups].sort(
+    (a, b) =>
+      a.opensAt.localeCompare(b.opensAt) || divisionRank(a.division) - divisionRank(b.division),
+  );
   const live = byOpen.filter((c) => cupEndsAt(c) > now);
-  return live.findLast((c) => c.opensAt <= now) ?? live[0] ?? byOpen.at(-1);
+  const cup = live.findLast((c) => c.opensAt <= now) ?? live[0] ?? byOpen.at(-1);
+  // T-11-410 구간 대회면 마스터를 대표로.
+  return cup && headCup(cup, cups);
 }
 
 /** 그 라운드 경기 시각. 대회에 없는 라운드(64팀 대회의 r64)면 undefined. */
@@ -250,24 +340,45 @@ export const OWNER_ITEMS = ['reroll', 'boost', 'scout', 'rename'] as const;
 export type OwnerItem = (typeof OWNER_ITEMS)[number];
 
 /**
- * T-11-244 프리미엄 스카우트 천장. S 후보 없이 SCOUT_PITY_SURE - 1장을 쓰면 SCOUT_PITY_SURE장째는 S 확정(sure),
- * 누적 SCOUT_PITY_ELITE장째마다 잠재력 최고치(96) S 확정(elite). 서버가 장수를 세고 이번 장의 모드를 정한다.
+ * T-11-244 프리미엄 스카우트 천장. S 후보 없이 sure - 1장을 쓰면 sure장째는 S 확정(sure),
+ * 누적 elite장째마다 잠재력 최고치(96) S 확정(elite). 서버가 장수를 세고 이번 장의 모드를 정한다.
  * used = 누적 사용, streak = 마지막 S 뒤 S 없이 쓴 장수, elites = 지금까지 받은 특급 S 수.
+ * SCOUT_PITY_SURE · SCOUT_PITY_ELITE는 시즌 1 값이다. T-11-450 시즌 2부터는 SCOUT_PITY_S2(20 · 70)로 낮춘다.
  */
 export const SCOUT_PITY_SURE = 30;
 export const SCOUT_PITY_ELITE = 100;
+export const SCOUT_PITY_S2 = { sure: 20, elite: 70 } as const;
+export type ScoutPityCap = { readonly sure: number; readonly elite: number };
+/** 그 시즌의 천장 장수. */
+export const scoutPityOf = (season: number): ScoutPityCap =>
+  season >= 2 ? SCOUT_PITY_S2 : { sure: SCOUT_PITY_SURE, elite: SCOUT_PITY_ELITE };
+/** now 시점의 천장 장수 — 시즌 사이 휴식기는 마지막으로 개막한 시즌을 따른다. */
+export const scoutPityAt = (now: string = new Date().toISOString()): ScoutPityCap =>
+  scoutPityOf(displaySeasonAt(now));
 export const SCOUT_MODES = ['normal', 'sure', 'elite'] as const;
 export type ScoutMode = (typeof SCOUT_MODES)[number];
 export type ScoutPity = { used: number; streak: number; elites: number };
 
 /** 다음 한 장의 모드와 남은 장수(이번 장 포함 — 1이면 다음 장이 확정). 서버 SQL(spendScout)과 같은 규칙이다. */
-export function scoutPityView(p: ScoutPity) {
-  const eliteDue = Math.floor((p.used + 1) / SCOUT_PITY_ELITE) > p.elites;
-  const sureDue = p.streak >= SCOUT_PITY_SURE - 1;
+export function scoutPityView(p: ScoutPity, cap: ScoutPityCap = scoutPityAt()) {
+  const eliteDue = Math.floor((p.used + 1) / cap.elite) > p.elites;
+  const sureDue = p.streak >= cap.sure - 1;
   return {
     next: (eliteDue ? 'elite' : sureDue ? 'sure' : 'normal') as ScoutMode,
-    sureIn: Math.max(1, SCOUT_PITY_SURE - p.streak),
-    eliteIn: Math.max(1, (p.elites + 1) * SCOUT_PITY_ELITE - p.used),
+    sureIn: Math.max(1, cap.sure - p.streak),
+    eliteIn: Math.max(1, (p.elites + 1) * cap.elite - p.used),
+  };
+}
+
+/**
+ * T-11-415 천장 막대. have = 이번 칸에 쌓인 장수(need - 남은 장수), next = 다음 장이 그 칸의 확정인지.
+ * S 확정 칸은 S 후보가 나오면 0으로 돌아가고, 특급 칸은 돌아가지 않는다.
+ */
+export function scoutPityGauge(p: ScoutPity, cap: ScoutPityCap = scoutPityAt()) {
+  const v = scoutPityView(p, cap);
+  return {
+    sure: { have: Math.max(0, cap.sure - v.sureIn), need: cap.sure, next: v.next === 'sure' },
+    elite: { have: Math.max(0, cap.elite - v.eliteIn), need: cap.elite, next: v.next === 'elite' },
   };
 }
 
@@ -289,6 +400,7 @@ export const RETIRED_NUMBER_SCOUTS = 1;
 export const HOME_GIFT = { id: 'gift-2026-10', boost: 20, scout: 5 } as const;
 
 /** T-11-174 소모성 인앱 상품(App Store Connect·Play Console에 같은 ID로 만든다) — 사면 구단주 아이템이 qty만큼 는다. */
+export const REMOVE_ADS_PRODUCT_ID = 'com.offsidelab.app.remove_ads';
 export const IAP_PRODUCTS = {
   'com.offsidelab.app.reroll_5': { item: 'reroll', qty: 5 },
   'com.offsidelab.app.reroll_15': { item: 'reroll', qty: 15 },

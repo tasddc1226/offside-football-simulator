@@ -1,4 +1,5 @@
 // T-11-390 구간 중계가 멈추고 뜨는 결정적 장면 카드(웹 sheets/KeyMoment.svelte). 선택지를 고르거나 15초가 지나면 감독에게 맡긴다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import type { Snapshot } from 'valtio';
 import type { MomentView } from '@offside/app-core/sheets';
@@ -18,7 +19,7 @@ export function KeyMoment({
   choose: (id: string) => void;
 }) {
   const c = useColors();
-  const tone = m.kind === 'crisis' ? c.bad : c.pitch2;
+  const tone = m.kind === 'crisis' ? c.bad : c.good;
   return (
     <View
       testID="key-moment"
@@ -26,7 +27,7 @@ export function KeyMoment({
       style={{
         gap: 10,
         padding: 14,
-        borderRadius: 14,
+        borderRadius: RADIUS.md,
         borderWidth: 1,
         borderColor: tone,
         backgroundColor: c.surface2,
@@ -40,23 +41,25 @@ export function KeyMoment({
           gap: 8,
         }}
       >
-        <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(1.125), color: tone }}>{m.title}</Txt>
-        <Txt tone="muted" style={{ fontSize: rem(0.8125), flexShrink: 1, textAlign: 'right' }}>
+        <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(FONT.title3), color: tone }}>
+          {m.title}
+        </Txt>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.label), flexShrink: 1, textAlign: 'right' }}>
           {m.head}
         </Txt>
       </View>
-      <Txt style={{ lineHeight: rem(1) * 1.5 }}>{m.scene}</Txt>
+      <Txt style={{ lineHeight: rem(FONT.body) * 1.5 }}>{m.scene}</Txt>
       {m.result ? (
         <View style={{ gap: 4 }} testID={`key-moment-result-${m.result.ok ? 'ok' : 'fail'}`}>
-          <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
             {m.result.picked}
           </Txt>
           <Txt
             accessibilityLiveRegion="polite"
             style={{
               fontWeight: '700',
-              fontSize: rem(1.0625),
-              color: m.result.ok ? c.pitch2 : c.bad,
+              fontSize: rem(FONT.title3),
+              color: m.result.ok ? c.good : c.bad,
             }}
           >
             {m.result.text}
@@ -64,12 +67,26 @@ export function KeyMoment({
         </View>
       ) : (
         <>
+          <Txt
+            testID="key-moment-stake"
+            tone="muted"
+            style={{ fontSize: rem(FONT.label), lineHeight: rem(FONT.label) * 1.5 }}
+          >
+            {m.stake}
+          </Txt>
           <View style={{ gap: 6 }}>
             {m.choices.map((ch) => (
               <Press
                 key={ch.id}
                 testID={`key-moment-choice-${ch.id}`}
-                accessibilityLabel={`${ch.label}, ${K.pct({ p: ch.pct })}, ${K.attr({ attr: ch.attr })}`}
+                accessibilityLabel={[
+                  ch.label,
+                  K.pct({ p: ch.pct }),
+                  K.attr({ attr: ch.attr }),
+                  ch.rec,
+                ]
+                  .filter(Boolean)
+                  .join(', ')}
                 onPress={() => {
                   buzz();
                   choose(ch.id);
@@ -77,9 +94,9 @@ export function KeyMoment({
                 style={{
                   minHeight: 48,
                   borderWidth: 1,
-                  borderColor: c.line,
-                  backgroundColor: c.surface,
-                  borderRadius: 10,
+                  borderColor: 'transparent',
+                  backgroundColor: c.surface2,
+                  borderRadius: RADIUS.sm,
                   paddingVertical: 8,
                   paddingHorizontal: 12,
                   gap: 2,
@@ -97,15 +114,20 @@ export function KeyMoment({
                   <Txt
                     style={{
                       fontFamily: DISPLAY[700],
-                      fontSize: rem(1.125),
+                      fontSize: rem(FONT.title3),
                       fontVariant: ['tabular-nums'],
                     }}
                   >
                     {K.pct({ p: ch.pct })}
                   </Txt>
                 </View>
-                <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                   {K.attr({ attr: ch.attr })}
+                  {ch.rec ? (
+                    <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '600' }}>
+                      {` · ${ch.rec}`}
+                    </Txt>
+                  ) : null}
                 </Txt>
               </Press>
             ))}
@@ -115,11 +137,11 @@ export function KeyMoment({
               style={{
                 height: '100%',
                 width: `${(m.left / m.secs) * 100}%`,
-                backgroundColor: c.pitch2,
+                backgroundColor: c.good,
               }}
             />
           </View>
-          <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
             {K.timer({ n: m.left })}
           </Txt>
           <Btn

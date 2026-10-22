@@ -6,6 +6,11 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   oppNear: (p) => `Teams near your rating of ${p.rating} · Matches left today: ${p.left}/${p.per}`,
   oppRating: 'Rating',
   oppOvr: (p) => `OVR ${p.n}`,
+  oppGapUp: (p) => `${p.n} higher than your team`,
+  oppGapDown: (p) => `${p.n} lower than your team`,
+  oppGapEven: 'Same as your team',
+  oppGapNote:
+    'The number under each rating is the gap to your team. Beating a higher-rated team earns more rating.',
   oppRuleWeb: (p) =>
     `You can challenge the same team once a day. If you've met a team in the last ${p.days} days, your rating moves less.`,
   oppRuleApp: (p) =>

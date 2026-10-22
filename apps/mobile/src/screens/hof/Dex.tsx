@@ -1,5 +1,6 @@
 // T-10-012 확률 도감(웹 EventDex.svelte). 공통 규칙과 이벤트별 선택지 확률(범위·영향 요인)을 게임 코드에서 직접 뽑아 보여
 // 준다. 스토리·특별 이벤트는 한 번 겪어야 열린다(스포일러 보호). 분석 코드와 함께 처음 열 때 불러오는 화면이다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import '@offside/game/index';
@@ -50,16 +51,16 @@ function DexItem({
     borderLeftWidth: 4,
     borderColor: `${c.accent}8c`,
     borderLeftColor: c.accent,
-    borderRadius: 10,
+    borderRadius: RADIUS.sm,
     backgroundColor: `${c.accent}0f`,
   } as const;
   if (locked)
     return (
       <View testID={`dex-${e.ids[0]}`} style={[wrap, { flexDirection: 'row', gap: 8 }]}>
-        <Txt accessibilityElementsHidden style={{ fontSize: rem(0.875) }}>
+        <Txt accessibilityElementsHidden style={{ fontSize: rem(FONT.body2) }}>
           🔒
         </Txt>
-        <Txt tone="muted" style={{ fontSize: rem(0.875), flex: 1 }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.body2), flex: 1 }}>
           {e.group === 'story' ? L.lockedStory({ stage: e.story?.stage ?? '?' }) : L.lockedSpecial}
         </Txt>
       </View>
@@ -120,7 +121,7 @@ function DexItem({
             tone="muted"
             bold
             style={{
-              fontSize: rem(0.75),
+              fontSize: rem(FONT.caption),
               paddingTop: 8,
               borderTopWidth: 1,
               borderStyle: 'dashed',
@@ -136,16 +137,16 @@ function DexItem({
                 gap: 6,
                 paddingVertical: 8,
                 paddingHorizontal: 10,
-                borderRadius: 10,
+                borderRadius: RADIUS.sm,
                 backgroundColor: c.surface2,
               }}
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}>
-                <Txt style={{ flex: 1, fontSize: rem(0.875) }}>{ch.label}</Txt>
+                <Txt style={{ flex: 1, fontSize: rem(FONT.body2) }}>{ch.label}</Txt>
                 <Txt
                   bold
                   style={{
-                    fontSize: rem(0.875),
+                    fontSize: rem(FONT.body2),
                     fontVariant: ['tabular-nums'],
                     color: ch.kind !== 'odds' ? c.good : c.ink,
                   }}
@@ -167,7 +168,7 @@ function DexItem({
             </View>
           ))}
           {e.dependsOnPast ? (
-            <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: -2 }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: -2 }}>
               {L.dependsOnPast}
             </Txt>
           ) : null}
@@ -209,7 +210,7 @@ export default function Dex() {
           <Txt v="h1" accessibilityRole="header">
             {L.title}
           </Txt>
-          <Txt tone="muted" style={{ fontSize: rem(0.8125), marginTop: 6 }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.label), marginTop: 6 }}>
             {L.intro}
           </Txt>
         </View>
@@ -243,7 +244,7 @@ export default function Dex() {
               <Txt v="h2" accessibilityRole="header">
                 {L.events}
               </Txt>
-              <Txt tone="muted" testID="dex-progress" style={{ fontSize: rem(0.8125) }}>
+              <Txt tone="muted" testID="dex-progress" style={{ fontSize: rem(FONT.label) }}>
                 {L.foundCount({ n: foundCount, total: dex.length })}
               </Txt>
             </View>
@@ -271,7 +272,7 @@ export default function Dex() {
                 )),
               ]}
             />
-            <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: -6 }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: -6 }}>
               {L.tapHint}
             </Txt>
             <View>
@@ -279,7 +280,7 @@ export default function Dex() {
                 <DexItem key={e.ids[0]} e={e} found={found(e)} locked={hidden(e)} first={i === 0} />
               ))}
             </View>
-            <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
               {L.noteApp}
             </Txt>
           </>

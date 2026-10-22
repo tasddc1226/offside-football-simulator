@@ -45,7 +45,9 @@ export function NewsBanner() {
   const open = () => {
     const { board, id } = post;
     dismissNews();
-    openBoard(board, id);
+    // T-11-440 여러 건이면 가장 최근 글 하나 대신 게시판 목록을 연다(새 글마다 NEW 표시가 남는다).
+    if (count > 1) openBoard(board);
+    else openBoard(board, id);
   };
 
   return (

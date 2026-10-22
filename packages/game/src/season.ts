@@ -1,7 +1,7 @@
 // ───────── 시즌 종료 · 이적 시장 · 은퇴 · 저장 ─────────
 import { CLUBS, clubRef, sameClub, type Club } from './data.js';
 import { lookCode } from './look-code.js';
-import { BAL } from './balance.js';
+import { BAL, leagueOpen } from './balance.js';
 import { ovr, peakProfileOf } from './attributes.js';
 import { clamp, ri, pick, rnd, weightedIndex, createRng, getActiveRng } from './rng.js';
 import {
@@ -135,8 +135,11 @@ function nextYear(s: GameState, o: number): string | null {
   s.age++;
   s.year++;
   const scout = bloomTick(s);
+  // T-11-428 커브 2는 조기 성장 30 · 대기만성 31세까지 버틴다(기본과 1년 차이).
+  const v2 = (s.gcv ?? 1) >= 2;
   const peakEnd =
-    (s.trait === 'early' ? 29 : s.trait === 'late' ? 32 : 30) + (s.pos === 'GK' ? 3 : 0);
+    (s.trait === 'early' ? (v2 ? 30 : 29) : s.trait === 'late' ? (v2 ? 31 : 32) : 30) +
+    (s.pos === 'GK' ? 3 : 0);
   if (s.age > peakEnd) {
     const d = s.age - peakEnd;
     addAttr(s, 'pac', -(1 + rnd() * 2) * d * 0.5);
@@ -240,7 +243,11 @@ export function endSeason(s: GameState): SeasonEndResult {
 function bestEuropeClub(s: GameState, cap: number, taken: Club[]): Club | undefined {
   const cands = CLUBS.filter(
     (c) =>
-      leagueOf(c.leagueId).tier >= 4 && c.str <= cap && !taken.includes(c) && c.id !== s.club.id,
+      leagueOf(c.leagueId).tier >= 4 &&
+      leagueOpen(leagueOf(c.leagueId)) &&
+      c.str <= cap &&
+      !taken.includes(c) &&
+      c.id !== s.club.id,
   );
   if (!cands.length) return undefined;
   const top = Math.max(...cands.map((c) => c.str));
@@ -261,7 +268,15 @@ const DOWN: Record<string, string> = {
   sa: 'l1',
   ll: 'bl',
   pl: 'sa',
+  csl: 'k2',
+  spl: 'k1',
+  bra: 'k1',
+  por: 'k1',
 };
+/** 고교 · 대학 선수에게는 제의가 오지 않는 먼 리그(T-10-016 MLS, T-11-457 사우디 · 중국 · 브라질). */
+const FAR_FROM_AMATEUR = new Set(['mls', 'spl', 'csl', 'bra']);
+/** T-11-457 사우디 · 중국은 MLS처럼 주로 베테랑에게 제의한다. */
+const RICH = new Set(['spl', 'csl']);
 /** 마지막으로 뛴(군 복무가 아닌) 시즌 기록. */
 const lastPlayed = (s: GameState) => s.career.filter((r) => !r.mil).pop();
 export function makeOffers(s: GameState) {
@@ -277,10 +292,12 @@ export function makeOffers(s: GameState) {
     CLUBS.filter(
       (c) =>
         !clubLeague(c, s).amateur &&
+        leagueOpen(clubLeague(c, s)) &&
         c.id !== s.club.id &&
         c.str <= value + 2 &&
         c.str >= floor &&
-        (!am || (clubLeague(c, s).tier <= (value >= 66 ? 4 : 3) && c.leagueId !== 'mls')) &&
+        (!am ||
+          (clubLeague(c, s).tier <= (value >= 66 ? 4 : 3) && !FAR_FROM_AMATEUR.has(c.leagueId))) &&
         (clubLeague(c, s).tier < 4 || leagueOf(s.leagueId).tier >= 4 || c.str <= value - 3),
     );
   let pool = eligible(value - 14);
@@ -288,7 +305,14 @@ export function makeOffers(s: GameState) {
   // 갈 수 있는 구단 중 센 곳부터 오게 한다(전엔 K3 최약체 입단 테스트로 떨어졌다).
   if (am && !pool.length) pool = eligible(-Infinity);
   // T-10-016 MLS는 팀이 30개라 그대로 두면 오퍼를 쓸어 간다. 실제처럼 주로 30대 베테랑에게 오게 한다.
-  const pull = (c: Club) => (c.leagueId === 'mls' && s.age < 30 ? BAL.mlsYoungPull : 1);
+  const pull = (c: Club) =>
+    c.leagueId === 'mls' && s.age < 30
+      ? BAL.mlsYoungPull
+      : RICH.has(c.leagueId) && s.age < 28
+        ? BAL.richYoungPull
+        : c.leagueId === 'bra'
+          ? BAL.braPull
+          : 1;
   const wt = (c: (typeof CLUBS)[number]) => pull(c) * Math.exp(-((c.str - (value - 3)) ** 2) / 20);
   const n = Math.min(pool.length, value >= 60 ? ri(1, 3) : ri(0, 2));
   const chosen: (typeof CLUBS)[number][] = [];
@@ -312,6 +336,7 @@ export function makeOffers(s: GameState) {
       CLUBS.filter(
         (c) =>
           !clubLeague(c, s).amateur &&
+          leagueOpen(clubLeague(c, s)) &&
           c.id !== s.club.id &&
           !chosen.includes(c) &&
           Math.abs(clubLeague(c, s).tier - tier) <= 1,
@@ -691,8 +716,10 @@ function loanOffers(s: GameState, o: number): OfferOption[] {
   const pool = CLUBS.filter(
     (c) =>
       !clubLeague(c, s).amateur &&
+      leagueOpen(clubLeague(c, s)) &&
       c.id !== s.club.id &&
       c.leagueId !== 'mls' &&
+      !RICH.has(c.leagueId) &&
       clubLeague(c, s).tier <= tier &&
       c.str <= o + 1 &&
       c.str >= o - 8,
@@ -842,6 +869,8 @@ export function retire(s: GameState, isPublic = false): HofEntry {
     potFlow: {
       ...(s.origin && { origin: s.origin }),
       boost: s.flags.potBonus ?? 0,
+      // T-11-408 강화로 오른 몫(나머지는 트레이너 · 스토리 이벤트).
+      lv: s.boost?.lv ?? 0,
       bal: s.bal?.v ?? 0,
     },
     public: isPublic,

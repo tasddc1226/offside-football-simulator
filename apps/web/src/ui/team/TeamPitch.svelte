@@ -6,8 +6,11 @@
   import PlayerPeek from './PlayerPeek.svelte';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { teamSynergyText as SY } from '@offside/app-core/i18n/ko/teamSynergy';
+  import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
   import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
-  type Cell = { rating: number; name: string; youth: boolean; nation?: string | null | undefined; season?: number | undefined; player?: TeamPlayer | undefined };
+  type Cell = { rating: number; name: string; youth: boolean; nation?: string | null | undefined; season?: number | undefined; player?: TeamPlayer | undefined;
+    /** T-11-376 지난 시즌 선수 급여(0이면 칩 없음 — 이번 시즌 선수 · 유스). */
+    salary?: number | undefined };
   let { formation, cells, layout, selected = null, dragging = null, links = [], focus = null, applied = [], caption = null, element = $bindable(), onpick, onstart, onkey, onplace }:
     { formation: FormationId; cells: readonly Cell[]; layout?: TeamLayout | null | undefined; selected?: number | null; dragging?: number | null;
       /** T-11-105 시너지 듀오 — 첫 선수에서 나머지로 잇는다. on이면 굵게. */
@@ -60,17 +63,20 @@
           onpointerdown={(e) => onstart?.(e, i)} onkeydown={(e) => onkey?.(e, i)}>
           <PlayerCard player={c.player} nation={c.nation} season={c.season} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? L.peakOvr : L.posOvrLabel} compact />
           {#if applied.includes(i)}<span class="syn-pip" title={SY.pitchMemberAria}></span>{/if}
+          {#if c.salary}<span class="salary-pip" data-salary-chip={c.salary}>{TC.salaryChip({ n: c.salary })}</span>{/if}
         </button>
       {:else if c.player && !c.youth}
         <button class="tm-slot peekable" class:syn-on={focus?.includes(i)} data-slot={i} style:left="{point.x}%" style:top="{point.y}%" aria-haspopup="dialog"
           aria-label="{tn(DETAIL_LABEL[point.slot])} · {c.name}{country ? ` · ${tn(country.ko)}` : ''} · {ratingLabel}" onclick={(e) => press(e, i)}>
           <PlayerCard player={c.player} nation={c.nation} season={c.season} name={c.name} rating={c.player.peak} deploymentRating={c.rating} role={point.slot} ratingLabel={L.peakOvr} compact />
           {#if applied.includes(i)}<span class="syn-pip" title={SY.pitchMemberAria}></span>{/if}
+          {#if c.salary}<span class="salary-pip" data-salary-chip={c.salary}>{TC.salaryChip({ n: c.salary })}</span>{/if}
         </button>
       {:else}
         <div class="tm-slot" class:syn-on={focus?.includes(i)} data-slot={i} style:left="{point.x}%" style:top="{point.y}%" role="group" aria-label="{tn(DETAIL_LABEL[point.slot])} · {c.name}{country ? ` · ${tn(country.ko)}` : ''} · {ratingLabel}">
           <PlayerCard player={c.player} nation={c.nation} season={c.season} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? L.peakOvr : L.posOvrLabel} compact />
           {#if applied.includes(i)}<span class="syn-pip" title={SY.pitchMemberAria}></span>{/if}
+          {#if c.salary}<span class="salary-pip" data-salary-chip={c.salary}>{TC.salaryChip({ n: c.salary })}</span>{/if}
         </div>
       {/if}
     {/if}
@@ -85,12 +91,12 @@
 </section>
 
 <style>
-  .pitch-frame {position:relative;isolation:isolate;width:100%;max-width:640px;aspect-ratio:5/6;margin:0 auto;padding:50px 8px;border-radius:12px;overflow:hidden;background:repeating-linear-gradient(180deg,var(--pitch) 0 10%,color-mix(in srgb,var(--pitch) 70%,var(--pitch-2)) 10% 20%);border:1px solid color-mix(in srgb,var(--chalk),transparent 30%);}
+  .pitch-frame {position:relative;isolation:isolate;width:100%;max-width:640px;aspect-ratio:5/6;margin:0 auto;padding:50px 8px;border-radius:var(--radius-md);overflow:hidden;background:repeating-linear-gradient(180deg,var(--pitch) 0 10%,color-mix(in srgb,var(--pitch) 70%,var(--pitch-2)) 10% 20%);border:1px solid color-mix(in srgb,var(--chalk),transparent 30%);}
   .tm-pitch {position:relative;width:100%;height:100%;pointer-events:none;}
   .pitch-lines { position:absolute; inset:0; width:100%; height:100%; fill:none; stroke:var(--chalk); stroke-width:.4; pointer-events:none; }
   .pitch-dot { fill:var(--chalk); } .pitch-space { position:absolute; inset:0; width:100%; height:100%; border:0; background:transparent; cursor:crosshair; }
   .attack-direction { position:absolute; top:14px; left:50%; transform:translateX(-50%); color:var(--on-pitch); opacity:.7; font-size:11px; pointer-events:none; }
-  .tm-slot { position:absolute; width:clamp(58px,15%,86px); transform:translate(-50%,-50%); padding:0; border:0; background:none; color:inherit; font:inherit; z-index:1; border-radius:12px;pointer-events:auto; }
+  .tm-slot { position:absolute; width:clamp(58px,15%,86px); transform:translate(-50%,-50%); padding:0; border:0; background:none; color:inherit; font:inherit; z-index:1; border-radius:var(--radius-md);pointer-events:auto; }
   .tm-slot[data-slot='0'] {z-index:2;}
   button.tm-slot.peekable {cursor:zoom-in;touch-action:manipulation;}
   button.tm-slot:not(.peekable) { cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
@@ -101,7 +107,8 @@
   /* 시너지 — 효과가 들어가는 선수는 늘 카드 아래 점으로, 칩으로 고른 시너지의 선수만 테두리로 더 강조한다. */
   .syn-pip {display:block;width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--pitch),transparent 20%),0 0 8px var(--accent);}
   .tm-slot > .syn-pip {position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);pointer-events:none;}
-  .syn-caption {position:absolute;left:50%;bottom:14px;transform:translateX(-50%);margin:0;display:flex;align-items:center;gap:7px;max-width:calc(100% - 24px);padding:5px 12px;border-radius:999px;background:color-mix(in srgb,#000,transparent 55%);color:var(--on-pitch);font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;}
+  .tm-slot > .salary-pip {position:absolute;left:-4px;bottom:8px;z-index:2;padding:1px 4px;border-radius:var(--radius-pill);background:#000c;color:#ffd76a;font:700 8px/1.3 system-ui,sans-serif;white-space:nowrap;pointer-events:none;box-shadow:0 0 0 1px #ffd76a66 inset;}
+  .syn-caption {position:absolute;left:50%;bottom:14px;transform:translateX(-50%);margin:0;display:flex;align-items:center;gap:7px;max-width:calc(100% - 24px);padding:5px 12px;border-radius:var(--radius-pill);background:color-mix(in srgb,#000,transparent 55%);color:var(--on-pitch);font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;}
   .syn-caption .syn-pip {flex:none;width:7px;height:7px;box-shadow:0 0 6px var(--accent);}
   .syn-links {position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;}
   .syn-links line {stroke:var(--accent);stroke-width:2px;stroke-dasharray:6 5;opacity:.55;vector-effect:non-scaling-stroke;}

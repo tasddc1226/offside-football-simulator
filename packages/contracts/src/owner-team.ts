@@ -75,12 +75,48 @@ export const YOUTH_NAME = '유스 선수';
 export const TEAM_MATCHES_PER_DAY = 10;
 /** 한 팀의 선발 인원. */
 export const LINEUP_SIZE = 11;
-/** T-11-114 선발에 넣을 수 있는 지난 시즌 선수(와일드카드) 수. 나머지는 그 시즌 선수다. */
-export const TEAM_WILDCARD_MAX = 3;
-/** 팀 시즌보다 앞 시즌 카드면 와일드카드. 시즌을 모르는 옛 응답은 그 시즌 선수로 본다. */
+/** 팀 시즌보다 앞 시즌 카드면 지난 시즌 선수(T-11-114). 시즌을 모르는 옛 응답은 그 시즌 선수로 본다. */
 export const isWildcardSeason = (cardSeason: number | null | undefined, teamSeason: number) =>
   (cardSeason ?? teamSeason) < teamSeason;
-export const WILDCARD_FULL_TEXT = `지난 시즌 선수는 선발에 ${TEAM_WILDCARD_MAX}명까지 넣을 수 있어요.`;
+
+// T-11-376 지난 시즌 선수 급여 예산(docs/tracking/salary-cap-plan.md). T-11-114 "지난 시즌 선수 3명까지"를 대신한다. 이번 시즌
+// 선수는 급여가 없고, 지난 시즌 선수는 카드 최고 OVR로 정한 급여의 합이 예산(밸런스 키 pastSalaryBudget) 안이어야 한다.
+// 급여 최대 20 × 3명 = 60이라 예전 규칙으로 짤 수 있던 선발은 모두 그대로 짤 수 있다.
+/** 지난 시즌 선수 급여 예산의 기본값(BALANCE_SPEC.pastSalaryBudget.def와 같다 — 서버 값이 없는 옛 응답이 쓴다). */
+export const PAST_SALARY_BUDGET = 80;
+/** T-11-450 팀 시즌이 하나 지날 때마다 늘어나는 예산(BALANCE_SPEC.pastSalaryBudgetStep.def와 같다). */
+export const PAST_SALARY_BUDGET_STEP = 10;
+/** 그 팀 시즌의 급여 예산: 시즌 1이 기준, 시즌마다 step씩 는다(프리시즌 0도 기준). */
+export const seasonSalaryBudget = (base: number, step: number, teamSeason: number) =>
+  base + step * Math.max(0, teamSeason - 1);
+/** 급여표: 최고 OVR이 min 이상이면 그 급여(높은 구간부터). 마지막 줄(min 0)은 74 이하. */
+export const PAST_SALARY_TABLE: readonly { readonly min: number; readonly salary: number }[] = [
+  { min: 96, salary: 20 },
+  { min: 94, salary: 16 },
+  { min: 92, salary: 13 },
+  { min: 90, salary: 10 },
+  { min: 88, salary: 8 },
+  { min: 85, salary: 6 },
+  { min: 80, salary: 4 },
+  { min: 75, salary: 2 },
+  { min: 0, salary: 1 },
+];
+/** 카드 최고 OVR의 급여(지난 시즌 선수일 때만 센다). */
+export const salaryOf = (peak: number): number =>
+  PAST_SALARY_TABLE.find((t) => peak >= t.min)?.salary ?? 1;
+/** 그 팀 시즌에서 이 카드가 받는 급여 — 이번 시즌 선수는 0. */
+export const seasonSalaryOf = (
+  card: { peak: number; season?: number | null | undefined },
+  teamSeason: number,
+) => (isWildcardSeason(card.season, teamSeason) ? salaryOf(card.peak) : 0);
+/** 선발 카드들의 지난 시즌 급여 합. */
+export const pastSalarySum = (
+  cards: readonly ({ peak: number; season?: number | null | undefined } | null | undefined)[],
+  teamSeason: number,
+) => cards.reduce((sum, c) => sum + (c ? seasonSalaryOf(c, teamSeason) : 0), 0);
+/** 예산을 넘는 선발을 저장할 때 서버 오류 문구(영 · 일은 api errorText.ts). */
+export const pastSalaryOverText = (sum: number, budget: number) =>
+  `지난 시즌 선수 급여가 예산을 넘어요(${sum}/${budget}). 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요.`;
 
 // T-11-098 친구 · 친선전. 친선전은 레이팅·전적·업적에 들어가지 않고 친구끼리 상대 전적만 남긴다.
 /** 친구(보낸·받은 신청 포함) 상한. */
@@ -438,6 +474,42 @@ export function achGradeOf(score: number): { grade: AchGrade; next: AchGrade | n
   while (i + 1 < ACH_GRADES.length && score >= ACH_GRADES[i + 1]!.min) i++;
   return { grade: ACH_GRADES[i]!, next: ACH_GRADES[i + 1] ?? null };
 }
+
+/**
+ * T-11-357 업적 달성 보상(아이템만 · 확률·가격은 그대로). 업적(단계 업적은 단계마다)의 점수로 난이도를 나눈다 —
+ * 40점 미만은 없음, 40~79점은 잠재력 강화권 1장, 80~149점은 2장, 150~249점은 강화권 3장 + 프리미엄 스카우트권 1장,
+ * 250점 이상은 강화권 3장 + 스카우트권 2장. 시즌마다 업적이 처음부터 다시 쌓이므로 보상도 시즌마다 업적·단계당 한 번이다
+ * (서버 gift_claims 'ach:<시즌>:<업적>[:<단계>]'). 시즌 상한은 없다(10-21 해제). 시즌 1 운영 표본(무작위 600명)에서
+ * 강화권 중앙값 11장 · 상위 10% 36장, 스카우트권은 13%가 받는다.
+ */
+export const ACH_REWARD_TIERS: readonly { min: number; boost: number; scout: number }[] = [
+  { min: 250, boost: 3, scout: 2 },
+  { min: 150, boost: 3, scout: 1 },
+  { min: 80, boost: 2, scout: 0 },
+  { min: 40, boost: 1, scout: 0 },
+];
+/** 보상이 있는 가장 낮은 업적 점수. */
+export const ACH_REWARD_MIN = ACH_REWARD_TIERS[ACH_REWARD_TIERS.length - 1]!.min;
+export type AchReward = { boost: number; scout: number };
+/** 한 업적(단계)의 점수로 정하는 보상. 없으면 null. */
+export function achRewardOf(points: number): AchReward | null {
+  const t = ACH_REWARD_TIERS.find((x) => points >= x.min);
+  return t ? { boost: t.boost, scout: t.scout } : null;
+}
+/**
+ * 업적 보상을 처음 주는 시즌. 시즌 중에는 경제를 바꾸지 않으므로 그 앞 시즌(시즌 1)에는 주지도 표시하지도 않는다 — 개막
+ * 전에 배포해도 시즌 1 달성에는 주지 않고, 시즌 2는 첫 달성부터(개막 뒤 배포면 그 사이 달성도 다음에 셀 때) 준다.
+ */
+export const ACH_REWARD_FIRST_SEASON = 2;
+/**
+ * T-11-386 시즌 1 업적 보상 — 시즌 1에 달성한 업적을 시즌 2 보상 표(achRewardOf)로 세어 시즌 2 동안 홈 선물
+ * 카드의 받기 버튼으로 한 번 준다. 시즌 1 기록은 마감 뒤 바뀌지 않아 처음 셀 때 장수를 적어 두고 그 값으로 준다.
+ */
+export const ACH_SEASON_GIFT = {
+  id: 'ach-season-1',
+  season: ACH_REWARD_FIRST_SEASON - 1,
+  openSeason: ACH_REWARD_FIRST_SEASON,
+} as const;
 
 /** 업적 랭킹 한 페이지의 구단주 수. */
 export const ACH_RANK_PER_PAGE = 20;

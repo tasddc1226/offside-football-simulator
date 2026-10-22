@@ -1,0 +1,23 @@
+{
+  "id": "t-11-429-retired-number-display",
+  "title": "영구결번 안내 개선",
+  "items": [
+    "영구결번 도전에서 지금 구단을 떠나면 기준 아래로 내려가는 경우 미리 알려 줘요. 기여도는 지금 구단에서 은퇴한다고 보고 계산해요.",
+    "결번을 받지 못했을 때 기여 점수를 90%대처럼 구간으로 보여 주고, 기준에 아주 조금 못 미쳤으면 그렇게 알려 줘요."
+  ],
+  "en": {
+    "title": "Clearer retired number guidance",
+    "items": [
+      "Retired Number Challenge now warns you when leaving your current club would drop you below the bar. Contribution assumes you retire at your current club.",
+      "When you miss a retired number, your contribution shows as a range such as 90–99%, and it tells you when you fell just short of the bar."
+    ]
+  },
+  "ja": {
+    "title": "永久欠番の案内を改善",
+    "items": [
+      "永久欠番チャレンジで、今のクラブを離れると基準を下回る場合は事前にお知らせします。貢献度は今のクラブで引退すると仮定して計算します。",
+      "永久欠番にならなかったとき、貢献ポイントを90%台のように範囲で表示し、基準にわずかに届かなかった場合はそうお知らせします。"
+    ]
+  },
+  "availability": "web-app"
+}

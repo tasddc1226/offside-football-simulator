@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createChatUnread } from './chat-unread.js';
+import { createChatUnread } from './chatUnread.js';
 
 const message = (id: string, at: number, author = 'other') => ({
   id,

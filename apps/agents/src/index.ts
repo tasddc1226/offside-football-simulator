@@ -1,4 +1,5 @@
 // ADR-015 슬랙 에이전트 Worker. 슬랙 이벤트를 받아 서명을 확인하고 3초 안에 200을 돌려준 뒤, 일은 스레드 객체에 넘긴다.
+import { refreshSocialToken } from './social.ts';
 import {
   calledRoles,
   enabled,
@@ -17,6 +18,7 @@ import { scanSupport, supportInteraction } from './support.ts';
 import { REVIEW_ACTIONS, reviewInteraction, scanReviews } from './reviews.ts';
 import { threadOf, type Task } from './thread.ts';
 import { START_ACTIONS, startInteraction } from './captain.ts';
+import { isStopCommand, stopThread } from './stop.ts';
 import { afterDeploy, approvalsBundle, captainMorning, watchStatus } from './team.ts';
 
 export { AgentThread } from './thread.ts';
@@ -131,6 +133,13 @@ export default {
     if (payload.type === 'url_verification') return Response.json({ challenge: payload.challenge });
     if (payload.type === 'event_callback' && payload.event && payload.event_id) {
       const task = decide(env, role, payload.event_id, payload.event, botUserOf(env, role));
+      // 운영자 멈춤은 모델을 거치지 않고 바로 처리한다(stop.ts).
+      if (task?.kind === 'mention' && isStopCommand(task.text)) {
+        ctx.waitUntil(
+          stopThread(env, task).catch((e: unknown) => console.error('stop failed', String(e))),
+        );
+        return new Response('');
+      }
       if (task) {
         const stub = threadOf(env, role, task.channel, task.threadTs);
         const run = async () => {
@@ -158,6 +167,14 @@ export default {
         ctx.waitUntil(captainMorning(env, ev.scheduledTime).catch(log('captain morning')));
       if (enabled(env, 'mkt') && isMonday(ev.scheduledTime))
         ctx.waitUntil(mktWeekly(env, ev.scheduledTime).catch(log('mkt weekly')));
+      // T-11-395 · T-11-397 Threads · Instagram 토큰은 60일이면 끝나니 하루 한 번 보고 7일마다 갱신한다.
+      for (const kind of ['threads', 'instagram'] as const)
+        ctx.waitUntil(
+          refreshSocialToken(kind, env, ev.scheduledTime).then(
+            (r) => r === 'refreshed' && console.log(`${kind} token refreshed`),
+            log(`${kind} token`),
+          ),
+        );
       return;
     }
     if (ev.cron === WATCH_CRON) {

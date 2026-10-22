@@ -1,4 +1,5 @@
 // 상단 브랜드 줄(웹 Topbar.svelte): 앱 아이콘 배지(라이트·다크) + '풀타임: 휘슬이 울릴 때까지 / 오프사이드'. right에 스위치 등을 둔다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import type { ReactNode } from 'react';
 import { Image } from 'expo-image';
 import { View } from 'react-native';
@@ -23,13 +24,17 @@ export function Topbar({ right }: { right?: ReactNode }) {
     >
       <Image
         source={dark ? badgeDark : badgeLight}
-        style={{ width: 38, height: 38, borderRadius: 10 }}
+        style={{ width: 38, height: 38, borderRadius: RADIUS.sm }}
         accessibilityIgnoresInvertColors
       />
       <View style={{ flex: 1 }}>
         <Txt
           tone="muted"
-          style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.2, letterSpacing: 0.2 }}
+          style={{
+            fontSize: rem(FONT.caption),
+            lineHeight: rem(FONT.caption) * 1.2,
+            letterSpacing: 0.2,
+          }}
         >
           {L.brandTag}
         </Txt>
@@ -37,8 +42,8 @@ export function Topbar({ right }: { right?: ReactNode }) {
           accessibilityRole="header"
           style={{
             fontFamily: DISPLAY[700],
-            fontSize: rem(1.375),
-            lineHeight: rem(1.375) * 1.15,
+            fontSize: rem(FONT.title2),
+            lineHeight: rem(FONT.title2) * 1.15,
             letterSpacing: 0.4,
           }}
         >

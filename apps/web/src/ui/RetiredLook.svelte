@@ -120,30 +120,30 @@
 <style>
   .retired-look { position: fixed; inset: 0; z-index: 80; display: flex; align-items: flex-end; justify-content: center; text-align: left; }
   .backdrop { position: absolute; inset: 0; background: rgb(0 0 0 / .65); border: 0; }
-  .body { position: relative; width: min(100%, 520px); max-height: 92dvh; display: flex; flex-direction: column; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 20px 20px 0 0; overflow: hidden; }
+  .body { position: relative; width: min(100%, 520px); max-height: 92dvh; display: flex; flex-direction: column; background: var(--surface); color: var(--ink); border: 1px solid transparent; border-radius: var(--radius-lg) var(--radius-lg) 0 0; overflow: hidden; }
   header { flex-shrink: 0; padding: 18px 18px 10px; }
-  header h2 { color: var(--ink); font-size: 1.125rem; }
-  header p { margin-top: 6px; font-size: .8125rem; color: var(--muted); }
+  header h2 { color: var(--ink); font-size: var(--fs-title3); }
+  header p { margin-top: 6px; font-size: var(--fs-label); color: var(--muted); }
   .scroll { min-height: 0; padding: 0 18px 18px; overflow-y: auto; overscroll-behavior: contain; }
-  .previews { color: var(--on-pitch); display: flex; justify-content: center; gap: 40px; padding: 12px; background: var(--pitch); border-radius: 14px; margin-bottom: 12px; }
+  .previews { color: var(--on-pitch); display: flex; justify-content: center; gap: 40px; padding: 12px; background: var(--pitch); border-radius: var(--radius-md); margin-bottom: 12px; }
   .previews > div { display: flex; flex-direction: column; align-items: center; gap: 6px; }
   section { padding: 14px 0; border-bottom: 1px solid var(--line); }
   .options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-  .option { min-height: 44px; min-width: 44px; max-width: 100%; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; background: var(--surface); color: var(--ink); }
+  .option { min-height: 44px; min-width: 44px; max-width: 100%; border: 1px solid transparent; border-radius: var(--radius-pill); padding: 6px 12px; background: var(--surface-2); color: var(--ink); }
   .option[aria-pressed='true'] { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
   .swatch { padding: 6px; }
   .swatch span { display: block; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line); }
   .scroll > .btn { margin-top: 16px; }
   footer { flex-shrink: 0; padding: 12px 18px max(16px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--surface); }
   .confirm-layer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgb(0 0 0 / .55); }
-  .confirm { width: min(100%, 340px); padding: 20px 18px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; text-align: center; }
-  .confirm-preview { color: var(--on-pitch); display: flex; justify-content: center; padding: 10px; margin-bottom: 12px; background: var(--pitch); border-radius: 12px; }
-  .confirm h3 { font-size: 1.0625rem; color: var(--ink); }
-  .confirm p { margin-top: 8px; font-size: .875rem; color: var(--muted); }
+  .confirm { width: min(100%, 340px); padding: 20px 18px 16px; background: var(--surface); border: 1px solid transparent; border-radius: var(--radius-lg); text-align: center; }
+  .confirm-preview { color: var(--on-pitch); display: flex; justify-content: center; padding: 10px; margin-bottom: 12px; background: var(--pitch); border-radius: var(--radius-md); }
+  .confirm h3 { font-size: var(--fs-title3); color: var(--ink); }
+  .confirm p { margin-top: 8px; font-size: var(--fs-body2); color: var(--muted); }
   .confirm p.confirm-error { color: var(--bad); }
   .confirm > div { display: flex; gap: 8px; margin-top: 16px; }
   .confirm .btn { flex: 1; min-height: 44px; min-width: 0; white-space: normal; }
   footer > div { display: flex; gap: 8px; }
   footer .btn { flex: 1; min-height: 44px; min-width: 0; white-space: normal; }
-  footer p { color: var(--bad); font-size: .8125rem; margin-bottom: 8px; }
+  footer p { color: var(--bad); font-size: var(--fs-label); margin-bottom: 8px; }
 </style>

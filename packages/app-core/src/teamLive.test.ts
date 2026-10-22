@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { TeamMatch } from './api/team.js';
 import {
   FLASH_MS,
+  buildLines,
   MOMENTUM_START,
   PHASE_LABEL,
   clockText,
@@ -56,6 +57,31 @@ const match = (over: Partial<TeamMatch> = {}): TeamMatch => ({
 const plain = (_id: string | null, fallback: string) => fallback;
 
 describe('T-10-097 팀 경기 문자중계 대본', () => {
+  it('T-11-408 골 직전 장면은 득점자 자리를 따른다(측면 · 최전방 · 2선 · 세트피스), 자리 없는 옛 경기는 그대로', () => {
+    const say = (slot: Parameters<typeof buildLines>[0], assisted = true) =>
+      buildLines(slot, assisted).map((f) => f({ t: '우리 FC' }));
+    expect(say('LW').join()).toContain('왼쪽 측면');
+    expect(say('RB').join()).toContain('오른쪽 측면');
+    expect(say('W').join()).not.toMatch(/왼쪽|오른쪽/);
+    expect(say('CB').every((t) => /코너킥|프리킥/.test(t))).toBe(true);
+    expect(say('AM').join()).toContain('박스 밖');
+    // 문전 혼전은 도움 없는 최전방 골에만.
+    expect(say('ST').join()).not.toContain('혼전');
+    expect(say('ST', false).join()).toContain('혼전');
+    expect(say(undefined)).toHaveLength(3);
+    // 같은 경기는 다시 봐도 같고, 자리가 있어도 추가시간(rnd 순서)은 옛 대본과 같다.
+    const old = liveScript(match(), plain);
+    const withSlots = match({
+      events: match().events.map((e, i) => ({ ...e, slot: (['LW', 'ST', 'CB'] as const)[i] })),
+    });
+    const a = liveScript(withSlots, plain);
+    expect(liveScript(withSlots, plain)).toEqual(a);
+    expect(a.map((l) => [l.minute, l.extra, l.kind])).toEqual(
+      old.map((l) => [l.minute, l.extra, l.kind]),
+    );
+    expect(a.filter((l) => l.kind === 'build')[2]!.text).toMatch(/코너킥|프리킥/);
+  });
+
   it('골 줄의 스코어를 따라가면 서버 결과와 같고, 킥오프로 시작해 경기 종료로 끝난다', () => {
     const m = match({ home: side('우리 FC', 2), away: side('라이벌 FC', 1) });
     const lines = liveScript(m, plain);
