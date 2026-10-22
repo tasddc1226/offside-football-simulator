@@ -46,6 +46,8 @@ const PUBLIC_PATHS = new Set([
   '/legal/privacy/',
   '/legal/privacy/index.html',
 ]);
+// T-11-452 가이드 아래 공략 글(/guide/<slug>/). 빌드가 만든 정적 파일이 있을 때만 공개 페이지로 본다.
+const GUIDE_ARTICLE = /^\/guide\/[a-z0-9-]+(\/|\/index\.html)?$/;
 // 앱 셸(오프사이드/풀타임 SPA)로 서빙해야 하는 경로. 게임 자체는 `/`에서 로드되고,
 // `/settings`는 구글 OAuth 콜백(`?google=linked|switched|error&reason=...`)이
 // 돌아오는 목적지라 앱 셸로 떨어져야 한다. `/career/<id>`(T-10-029 공유 링크)는 아래에서 미리보기 메타를 넣어 따로 내린다.
@@ -139,7 +141,8 @@ async function route(request: Request, env: Env, url: URL, ctx: Ctx): Promise<Re
   const isNews = url.pathname === '/news' || url.pathname.startsWith('/news/');
   const isLegends = /^\/legends(\/|$)/i.test(url.pathname);
   const asset = await env.ASSETS.fetch(request);
-  const isPublicPage = PUBLIC_PATHS.has(url.pathname);
+  const isPublicPage =
+    PUBLIC_PATHS.has(url.pathname) || (asset.status === 200 && GUIDE_ARTICLE.test(url.pathname));
   const isDiscovery = url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml';
   // T-10-004: Vite 산출물(/assets/*)은 파일명에 내용 해시가 들어가 내용이 바뀌면 URL도 바뀐다 —
   // 재방문 때 재검증 없이 캐시를 그대로 쓰도록 1년 immutable로 내려 준다.

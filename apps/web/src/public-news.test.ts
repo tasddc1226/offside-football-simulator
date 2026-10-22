@@ -96,10 +96,10 @@ describe('public news responses', () => {
     expect(await (await get('/sitemap.xml')).text()).toContain(
       `<loc>https://offside-lab.com/news/${id}/</loc>`,
     );
-    // T-11-231 사이트맵은 명예의 전당 색인 목록(목록 14번, 엣지에 하루)도 함께 읽는다.
+    // T-11-231 사이트맵은 명예의 전당 색인 목록(T-11-452부터 목록 5번, 엣지에 하루)도 함께 읽는다.
     const urls = vi.mocked(fetch).mock.calls.map(([u]) => String(u));
     expect(urls.filter((u) => u.includes('/v1/public-news/'))).toHaveLength(4);
-    expect(urls.filter((u) => u.includes('/v1/hof?'))).toHaveLength(14);
+    expect(urls.filter((u) => u.includes('/v1/hof?'))).toHaveLength(5);
   });
   it('normalizes all duplicate news URLs before reading data', async () => {
     mock();
