@@ -40,7 +40,7 @@ import { NicknameForm } from '../../components/NicknameForm';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { TierBadge } from '../../components/TierBadge';
 import { TitleBadge } from '../../components/TitleBadge';
-import { markNewsSeen, toast } from '../../game/host';
+import { isNewPost, markNewsSeen, toast } from '../../game/host';
 import { openBoard } from '../../game/nav';
 import { startAppleLogin, startGoogleLogin } from '../../platform/auth';
 import { openWeb } from '../../platform/openWeb';
@@ -123,6 +123,7 @@ function Tags({ p }: { p: PostSummary }) {
     <>
       {p.pinned ? <Pill tone="warn">{L.pinned}</Pill> : null}
       {p.version ? <Pill>{p.version}</Pill> : null}
+      {isNewPost(p) ? <Pill tone="good">{L.postNew}</Pill> : null}
     </>
   );
 }
@@ -212,7 +213,7 @@ export default function Board() {
     // 옛 서버 응답엔 liked·blocks가 없다.
     const d: Detail = { ...r.data, liked: !!r.data.liked, blocks: r.data.blocks ?? [] };
     setReporting(null);
-    markNewsSeen(touchedAt(r.data.post));
+    markNewsSeen(touchedAt(r.data.post), r.data.post.id);
     if (firstView(id)) {
       d.post = { ...d.post, viewCount: d.post.viewCount + 1 };
       void api.addView(id);
@@ -286,7 +287,7 @@ export default function Board() {
     const r = e.id ? await api.updatePost(e.id, input) : await api.createPost(board, input);
     setBusy(false);
     if (!r.ok) return toast(r.error.message);
-    markNewsSeen(touchedAt(r.data)); // 내가 쓰거나 고친 글은 알리지 않는다.
+    markNewsSeen(touchedAt(r.data), r.data.id); // 내가 쓰거나 고친 글은 알리지 않는다.
     setEditing(null);
     toast(e.id ? L.postEdited : L.postCreated);
     await open(r.data.id);

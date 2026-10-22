@@ -15,6 +15,7 @@ import {
   achMissing,
   achNear,
   achPoints,
+  achReward,
   achRankText,
   achSections,
   achState,
@@ -185,6 +186,11 @@ function Group({
                 {i.missing?.length ? (
                   <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
                     {achMissing(i)}
+                  </Txt>
+                ) : null}
+                {achReward(i) ? (
+                  <Txt testID="ach-reward" tone="accent" style={{ fontSize: rem(0.6875) }}>
+                    {achReward(i)}
                   </Txt>
                 ) : null}
               </View>

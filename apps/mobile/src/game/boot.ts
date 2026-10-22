@@ -6,6 +6,7 @@ import { setLatestBalance } from '@offside/game/balance';
 import type { BalanceConfig } from '@offside/contracts';
 import {
   restoreGame,
+  takePhaseReport,
   configureCareerActivityReporter,
   noteCareerActivity,
 } from '@offside/app-core/career';
@@ -13,6 +14,7 @@ import { cachedGet, hasSessionHint } from '@offside/app-core/api/client';
 import { flushOutbox } from '@offside/app-core/outbox';
 import { NEWS_GAP_MS } from '@offside/app-core/news';
 import { ensureSession, loadSession } from '../platform/session';
+import { startChatUnread } from '../platform/chatUnread';
 import { checkStoreUpdate } from '../platform/storeUpdate';
 import { checkForUpdate } from '../platform/updates';
 import { appState, prefs } from '../store';
@@ -46,6 +48,8 @@ export async function boot(): Promise<void> {
   // 유저 클럽 이름을 먼저 CLUBS에 반영해야 세이브를 읽을 때 현재 소속 이름이 커스텀 이름을 읽는다.
   loadClubCustom();
   appState.G = restoreGame({ uploadRetirement, uploadLegacyRetirement });
+  // T-11-438 중계 도중 끊긴 구간 리포트가 있으면 시즌 탭 맨 위에 다시 보여 준다.
+  appState.report = takePhaseReport(appState.G) ?? appState.report;
   nativeAnalytics.initialize(appState.screen, appState.G?.cid ?? null);
 
   void AccessibilityInfo.isReduceMotionEnabled().then((on) => (prefs.motionOK = !on));
@@ -75,5 +79,9 @@ export async function boot(): Promise<void> {
     void checkStoreUpdate();
   });
   setInterval(() => AppState.currentState === 'active' && void checkNews(), NEWS_GAP_MS);
-  void ensureSession().then(() => flushOutbox());
+  void ensureSession().then(() => {
+    void flushOutbox();
+    // T-11-440 홈 채팅 버튼 안 읽음(웹과 같은 소켓 방식, 폴링 없음). 세션을 먼저 잡아 내 줄을 빼고 센다.
+    startChatUnread();
+  });
 }

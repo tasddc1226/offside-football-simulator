@@ -64,6 +64,39 @@ describe('cachedGet', () => {
     expect(calls.filter((c) => c === 'GET /v1/hof')).toHaveLength(1);
   });
 
+  it.each([
+    ['/v1/notifications/ntf_one/read', 'POST'],
+    ['/v1/notifications/read-all', 'POST'],
+    ['/v1/notifications/ntf_one/interaction', 'POST'],
+    ['/v1/push/device', 'PUT'],
+    ['/v1/push/device', 'DELETE'],
+  ])(
+    'bookkeeping %s %s preserves unrelated caches but invalidates its own namespace',
+    async (path, method) => {
+      const own = path.startsWith('/v1/push') ? '/v1/push/preferences' : '/v1/notifications';
+      await cachedGet('/v1/hof', 60_000);
+      await cachedGet('/v1/market/funds', 60_000);
+      await cachedGet(own, 60_000);
+      await apiFetch(path, { method });
+      await cachedGet('/v1/hof', 60_000);
+      await cachedGet('/v1/market/funds', 60_000);
+      await cachedGet(own, 60_000);
+      expect(calls.filter((c) => c === 'GET /v1/hof')).toHaveLength(1);
+      expect(calls.filter((c) => c === 'GET /v1/market/funds')).toHaveLength(1);
+      expect(calls.filter((c) => c === `GET ${own}`)).toHaveLength(2);
+    },
+  );
+
+  it.each(['/v1/auth/logout', '/v1/profile/recover', '/v1/items/reroll/use', '/v1/owner-team'])(
+    'domain/account mutation %s still invalidates all cached reads',
+    async (path) => {
+      await cachedGet('/v1/hof', 60_000);
+      await apiFetch(path, { method: 'POST' });
+      await cachedGet('/v1/hof', 60_000);
+      expect(calls.filter((c) => c === 'GET /v1/hof')).toHaveLength(2);
+    },
+  );
+
   it('쓰기가 성공하면 메모를 비운다', async () => {
     await cachedGet('/v1/boards/notice/posts', 60_000);
     await apiFetch('/v1/boards/posts/x/comments', { method: 'POST', body: '{}' });

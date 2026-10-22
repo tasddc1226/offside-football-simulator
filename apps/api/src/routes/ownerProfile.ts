@@ -29,6 +29,7 @@ import { purgeEdge } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { reqLang } from '../lang.js';
 import { cupHonorsOf } from '../team/cup.js';
+import { leagueChampionSeasons } from '../team/league.js';
 import {
   openTeamSeasons,
   teamSeasonClosed,
@@ -136,8 +137,9 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/owner/title', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
-    const [honors, permanent, [latest]] = await Promise.all([
+    const [honors, leagues, permanent, [latest]] = await Promise.all([
       cupHonorsOf(db, me.id),
+      leagueChampionSeasons(db, me.id),
       permanentTitlesOf(db, me.id, nowIso()),
       db
         .select({ id: ownerTeams.id })
@@ -151,7 +153,10 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
       OwnerTitlesResponseSchema,
       {
         title: me.title,
-        titles: [...titlesOf(honors), ...permanent.filter((t) => t.earnedAt).map((t) => t.id)],
+        titles: [
+          ...titlesOf(honors, leagues),
+          ...permanent.filter((t) => t.earnedAt).map((t) => t.id),
+        ],
         permanent,
         pinned: me.titlePinned,
         teamId: latest?.id ?? null,
@@ -166,11 +171,12 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
     const me = await requireOwner(c);
     const db = getDb(c);
     const { title } = readBody(c, PutOwnerTitleBodySchema);
-    const [honors, permanent] = await Promise.all([
+    const [honors, leagues, permanent] = await Promise.all([
       cupHonorsOf(db, me.id),
+      leagueChampionSeasons(db, me.id),
       permanentTitlesOf(db, me.id, nowIso()),
     ]);
-    const cupTitles = titlesOf(honors);
+    const cupTitles = titlesOf(honors, leagues);
     const titles = [...cupTitles, ...permanent.filter((t) => t.earnedAt).map((t) => t.id)];
     if (title && title !== TITLE_NONE && !titles.includes(title))
       throw conflictError(cupKo('titleNotOwned'), 'TITLE_NOT_OWNED');

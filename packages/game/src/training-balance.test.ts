@@ -17,6 +17,7 @@ import {
   addAttr,
   snapshot,
   diffChips,
+  growthFactor,
 } from './engine.js';
 import { FACE, syncFace } from './attributes.js';
 import { createRng, setActiveRng } from './rng.js';
@@ -119,5 +120,32 @@ describe('최고치 도달·소수 성장 칩 (T-11-183)', () => {
     s.attrs.sho = 70.8;
     const chip = diffChips(s, a, snapshot(s)).find((c) => c.label !== 'OVR');
     expect(chip?.d).toBe(0.4);
+  });
+});
+
+describe('성장 특성 커브 2 (T-11-428)', () => {
+  const at = (trait: string, age: number, gcv?: number) => {
+    const s = fw();
+    s.trait = trait;
+    s.age = age;
+    s.gcv = gcv;
+    return growthFactor(s);
+  };
+  it('커브 버전이 없는 선수(옛 저장)는 예전 커브 그대로다', () => {
+    expect(at('late', 27) / at('late', 23)).toBeCloseTo(0.8 / 1.15);
+    expect(at('early', 25) / at('early', 22)).toBeCloseTo(0.6 / 1.15);
+  });
+  it('커브 2는 대기만성 22~29세 성장을 줄이고 조기 성장 24세+를 덜 꺾는다', () => {
+    expect(at('late', 23, 2) / at('late', 23)).toBeCloseTo(1.1 / 1.15);
+    expect(at('late', 27, 2) / at('late', 27)).toBeCloseTo(0.65 / 0.8);
+    expect(at('early', 25, 2) / at('early', 25)).toBeCloseTo(0.7 / 0.6);
+    expect(at('early', 28, 2) / at('early', 28)).toBeCloseTo(0.2 / 0.14);
+    expect(at('iron', 27, 2)).toBe(at('iron', 27));
+  });
+});
+
+describe('새 커리어의 커브 버전 (T-11-428)', () => {
+  it('새로 만든 선수는 커브 2로 간다', () => {
+    expect(fw().gcv).toBe(2);
   });
 });

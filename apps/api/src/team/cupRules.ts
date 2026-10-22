@@ -71,6 +71,8 @@ export type PlayedGroupMatch = {
   away: string;
   homeGoals: number;
   awayGoals: number;
+  /** T-11-418b 리그: 두 팀 다 나오지 못한 경기(둘 다 0:3 패로 센다). 컵에는 없다. */
+  bothLost?: boolean;
 };
 
 export type Standing = {
@@ -105,6 +107,13 @@ export function groupStandings(
     if (!h || !a) continue;
     h.p++;
     a.p++;
+    if (m.bothLost) {
+      h.l++;
+      a.l++;
+      h.ga += m.awayGoals;
+      a.ga += m.homeGoals;
+      continue;
+    }
     h.gf += m.homeGoals;
     h.ga += m.awayGoals;
     a.gf += m.awayGoals;

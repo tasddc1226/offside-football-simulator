@@ -65,6 +65,7 @@ import {
   saveManagerState,
   setTeamCoach,
   startConfirmLines,
+  finishConfirmLines,
   startManager,
 } from '@offside/app-core/manager';
 import { fundsText } from '@offside/app-core/funds';
@@ -297,11 +298,13 @@ export default function Manager() {
         },
       ],
     );
+  // T-11-451 시즌을 다 마친 뒤에도 확정 전에는 원래 선수로 돌아갈 수 있다(서버는 포기와 같다).
+  const undo = st?.phase === 'done';
   const askAbandon = () =>
-    Alert.alert(M.abandon, M.abandonConfirm, [
+    Alert.alert(undo ? M.undo : M.abandon, undo ? M.undoConfirm : M.abandonConfirm, [
       { text: M.cancel, style: 'cancel' },
       {
-        text: M.abandonOk,
+        text: undo ? M.undoOk : M.abandonOk,
         style: 'destructive',
         onPress: () => {
           if (!st) return;
@@ -323,6 +326,18 @@ export default function Manager() {
       await load();
     }
   }
+  // T-11-443 '감독 카드로 확정'은 되돌릴 수 없어 한 번 더 묻는다.
+  const askFinish = () =>
+    Alert.alert(
+      M.finishTitle,
+      finishConfirmLines()
+        .map((l) => `· ${l}`)
+        .join('\n'),
+      [
+        { text: M.cancel, style: 'cancel' },
+        { text: M.finishOk, onPress: () => void finish() },
+      ],
+    );
   async function seat(id: string | null) {
     setReleased(null);
     if (await run(() => setTeamCoach(id))) await load();
@@ -385,7 +400,7 @@ export default function Manager() {
       setEvChips([]);
     } else if (bar.act === 'manager-result') playSeason();
     else if (bar.act === 'manager-continue') act(continueAfterResult);
-    else void finish();
+    else askFinish();
   }
   const errLine = error ? (
     <Txt tone="bad" bold accessibilityRole="alert">
@@ -886,9 +901,9 @@ export default function Manager() {
             ))}
           </Card>
         ) : null}
-        {st.phase !== 'done' && !sheetLabel ? (
+        {!sheetLabel ? (
           <Btn kind="danger" testID="manager-abandon" onPress={askAbandon}>
-            {M.abandon}
+            {st.phase === 'done' ? M.undo : M.abandon}
           </Btn>
         ) : null}
       </>

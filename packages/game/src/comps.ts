@@ -17,6 +17,7 @@ import type { NatTourResult } from './national.js';
 import { confPoty, federationPoty } from './nation.js';
 import { gCompsText as M } from './i18n/ko/gComps.js';
 import { tn } from './i18n/names.js';
+import { leagueOpen } from './balance.js';
 import type { MomentHooks } from './moments.js';
 
 export const CUPS: Record<string, string[]> = {
@@ -33,6 +34,10 @@ export const CUPS: Record<string, string[]> = {
   sa: ['코파 이탈리아'],
   ll: ['코파 델 레이'],
   pl: ['FA컵', 'EFL컵'],
+  csl: ['중국 FA컵'],
+  spl: ['킹스컵'],
+  bra: ['코파 두 브라질'],
+  por: ['타사 드 포르투갈', '타사 다 리가'],
 };
 const SUPERCUP: Record<string, string> = {
   pl: 'FA 커뮤니티 실드',
@@ -42,6 +47,10 @@ const SUPERCUP: Record<string, string> = {
   l1: '트로페 데 샹피옹',
   ere: '요한 크라위프 스할',
   j1: '재팬 슈퍼컵',
+  csl: '중국 슈퍼컵',
+  spl: '사우디 슈퍼컵',
+  bra: '수페르코파 두 브라질',
+  por: '수페르타사 칸디두 드 올리베이라',
 };
 export const TOP_SCORER: Record<string, string> = {
   pl: '프리미어리그 골든부트',
@@ -55,6 +64,10 @@ export const TOP_SCORER: Record<string, string> = {
   k1: 'K리그1 득점왕',
   k2: 'K리그2 득점왕',
   k3: 'K3리그 득점왕',
+  csl: '중국 슈퍼리그 득점왕',
+  spl: '사우디 프로리그 득점왕',
+  bra: '브라질레이랑 득점왕',
+  por: '프리메이라 리가 득점왕',
 };
 export const POTY: Record<string, string> = {
   pl: 'PFA 올해의 선수',
@@ -68,6 +81,10 @@ export const POTY: Record<string, string> = {
   k1: 'K리그1 MVP',
   k2: 'K리그2 MVP',
   k3: 'K3리그 MVP',
+  csl: '중국 슈퍼리그 MVP',
+  spl: '사우디 프로리그 올해의 선수',
+  bra: '브라질레이랑 올해의 선수',
+  por: '프리메이라 리가 올해의 선수',
 };
 const YOUNG: Record<string, string> = {
   pl: 'PFA 올해의 영플레이어',
@@ -89,18 +106,21 @@ export const CONT: Record<
   ACLE: { name: 'AFC 챔피언스리그 엘리트', avg: 64, games: 8, top: 11, po: null },
   ACL2: { name: 'AFC 챔피언스리그 2', avg: 59, games: 6, top: 10, po: null },
   CCC: { name: 'CONCACAF 챔피언스컵', avg: 63, games: 0, top: 0, po: null, ko: true },
+  // T-11-457 조별리그 6경기(ACL2와 같은 기준) 뒤 16강부터 홈 · 원정, 결승은 단판.
+  LIB: { name: '코파 리베르타도레스', avg: 66, games: 6, top: 10, po: null },
 };
 /**
  * T-11-261 대륙 대회 녹아웃 상대를 고르는 구단 표(리그 id). 상대 이름은 RNG를 쓰지 않고 정한다 — 승부 결과·전력 계산은
  * 그대로고, 그 전력에 가장 가까운 구단 몇 곳 가운데 커리어·연도·대회·단계로 만든 해시로 하나를 고른다.
  */
 const CONT_POOL: Record<string, string[]> = {
-  UCL: ['pl', 'll', 'bl', 'sa', 'l1', 'ere'],
-  UEL: ['pl', 'll', 'bl', 'sa', 'l1', 'ere'],
-  UECL: ['pl', 'll', 'bl', 'sa', 'l1', 'ere'],
-  ACLE: ['k1', 'j1'],
-  ACL2: ['k1', 'j1'],
+  UCL: ['pl', 'll', 'bl', 'sa', 'l1', 'ere', 'por'],
+  UEL: ['pl', 'll', 'bl', 'sa', 'l1', 'ere', 'por'],
+  UECL: ['pl', 'll', 'bl', 'sa', 'l1', 'ere', 'por'],
+  ACLE: ['k1', 'j1', 'spl', 'csl'],
+  ACL2: ['k1', 'j1', 'spl', 'csl'],
   CCC: ['mls'],
+  LIB: ['bra'],
 };
 /** 첫 녹아웃 라운드(16강·PO·1라운드)는 같은 리그 구단을 피한다 — 그 뒤는 만날 수 있다. */
 const FIRST_KO = new Set(['16강', '녹아웃 PO', '1라운드']); // i18n-ignore 저장값
@@ -114,7 +134,8 @@ export function drawOpponent(s: GameState, c: SeasonComp, stage: string, oppStr:
   const used = new Set((c.bracket?.path ?? []).map((t) => t.opp));
   const m = s.leagueMoves ?? {};
   const leagueOfClub = (x: Club) => m[x.id] ?? x.leagueId;
-  const leagues = CONT_POOL[c.key ?? ''] ?? [];
+  // T-11-457 새 리그는 newLeagues가 켜져야 상대로 나온다(꺼져 있으면 예전 대진과 같다).
+  const leagues = (CONT_POOL[c.key ?? ''] ?? []).filter((id) => leagueOpen(leagueOf(id)));
   let pool = CLUBS.filter(
     (x) => leagues.includes(leagueOfClub(x)) && x.id !== s.club.id && !used.has(x.id),
   );
@@ -174,6 +195,20 @@ const CONT_SLOTS: Record<string, [string, number][]> = {
     ['ACL2', 1],
   ],
   mls: [['CCC', 6]],
+  csl: [
+    ['ACLE', 3],
+    ['ACL2', 1],
+  ],
+  spl: [
+    ['ACLE', 3],
+    ['ACL2', 1],
+  ],
+  bra: [['LIB', 6]],
+  por: [
+    ['UCL', 2],
+    ['UEL', 1],
+    ['UECL', 1],
+  ],
 };
 
 // 첫 시즌 예상 순위: 리그 내 전력 순위를 6단계 표(1,3,5,8,11,14)에 비례해 옮긴다 — 클럽 수가 6이면
@@ -601,9 +636,9 @@ export function seasonAwards(
     awards.push(`${L.name} 올해의 ${posAward}`);
   const kfa = s.nat.caps > 0 && (ballonRank <= 30 || (o >= 80 && avg >= 7.2)) && chance(0.5);
   if (kfa) awards.push(federationPoty(s));
-  // AFC 올해의 선수는 아시아 리그 소속, 국제선수상은 아시아 밖(유럽 · MLS)에서 뛰는 선수 몫이다.
+  // AFC 올해의 선수는 아시아 리그 소속, 국제선수상은 아시아 밖(유럽 · MLS · 브라질)에서 뛰는 선수 몫이다.
   // T-10-096 다른 연맹 국적은 같은 조건·확률로 자기 대륙 올해의 선수상을 받는다(이름만 다르다).
-  const outsideAsia = L.tier >= 4 || L.id === 'mls';
+  const outsideAsia = L.tier >= 4 || L.id === 'mls' || L.id === 'bra';
   if (outsideAsia && o >= 80 && enough && avg >= 7.1 && chance(0.35))
     awards.push(confPoty(s, true));
   if (!outsideAsia && o >= 72 && enough && avg >= 7.3 && chance(0.25))
@@ -642,6 +677,9 @@ export function checkMilestones(
   if (L.tier >= 4) add('europe', `유럽 무대 진출 (${L.name})`, 2);
   if (L.tier >= 5) add('big5', `유럽 5대 리그 입성 (${L.name})`, 2);
   if (L.id === 'mls') add('mls', `미국 무대 진출 (${L.name})`, 2);
+  if (L.id === 'bra') add('bra', `남미 무대 진출 (${L.name})`, 2);
+  if (L.id === 'spl') add('spl', `중동 무대 진출 (${L.name})`, 2);
+  if (L.id === 'csl') add('csl', `중국 무대 진출 (${L.name})`, 2);
   const cont = (s.season.comps ?? []).find((c) => c.type === 'cont');
   if (cont && cont.apps) add('cont_' + cont.key, `${cont.name} 데뷔`, 3);
   if (cont && cont.g) add('contG_' + cont.key, `${cont.name} 데뷔골`, 3);

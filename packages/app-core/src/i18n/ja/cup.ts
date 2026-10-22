@@ -112,6 +112,13 @@ export const cup: Translation<CupMsgs> = {
   toastEntered: 'カップに申し込みました。',
   toastWithdrawn: '申込を取り消しました。',
   loginToEnter: 'Googleでログインすると申し込めます。',
+  loginCardNote: 'ログインするとカップへの申し込みと勝敗予想ができます。',
+  enterAskTitle: 'カップに申し込みますか？',
+  enterAskWithdraw: '受付期間中は申し込みを取り消せます。',
+  enterAskOk: '申し込む',
+  enterAskCancel: 'キャンセル',
+  toLineup: '編成へ',
+  toMakeTeam: 'チームを作りに行く',
   enterLockNote:
     '申し込むと、先発選手は移籍市場への出品も放出もできなくなります。敗退すると解除されます。',
   reasonNoTeam: '今シーズンのクラブがないと申し込めません。',
@@ -158,6 +165,16 @@ export const cup: Translation<CupMsgs> = {
   lineupLocked: 'カップ戦のメンバーがロックされています。試合が終わるとまた変更できます。',
   lineupBand: (p) =>
     `${p.when}にカップのメンバーが締め切られます。締切から試合が終わるまで変更できません。`,
+  barOvrCap: (p) => `チームOVR ${p.ovr} / 上限 ${p.cap}（${p.division}）`,
+  barOvrNoCap: (p) => `チームOVR ${p.ovr} · ${p.division}（上限なし）`,
+  barFilled: (p) => `スタメン ${p.n}/最低 ${p.min}`,
+  barOverCapBlock: (p) =>
+    `${p.division}の上限${p.cap}を超えているため保存できません。チームOVRを${p.cap}以下にしてください。`,
+  barOverCapMove: (p) =>
+    `${p.division}の上限を超えています。このままだと抽選で上の部門に移ります。`,
+  barShortBlock: (p) =>
+    `カップ参加中は、スタメンに自分の選手を${p.min}人以上置かないと保存できません。`,
+  barShortEntry: (p) => `カップに申し込むには、スタメンに自分の選手が${p.min}人以上必要です。`,
   secMine: '自分の大会',
   secRules: 'ルール',
   secSchedule: '日程',
@@ -261,7 +278,8 @@ export const cup: Translation<CupMsgs> = {
   shopBusy: '購入中…',
   shopSoldOut: '今日買える分はすべて買いました。明日0時(韓国時間)から再び買えます。',
   shopClosed: '現在リロールチケットは販売していません。',
-  shopShort: 'クラブの資金が足りません。',
+  shopShort: (p) => `クラブ資金が${p.short}足りません。育てた選手を放出すると資金ができます。`,
+  shopGoRelease: '放出しに行く',
   shopConfirm: (p) =>
     `リロールチケット1枚を${p.price}で買いますか？購入後のクラブ資金は${p.balance}で、取り消せません。`,
   shopDone: (p) => `リロールチケットを買いました。現在${p.n}枚あります。`,

@@ -1,6 +1,6 @@
 // ───────── 커리어 공용 헬퍼 (웹·앱 공용, T-11-002) ─────────
 import { measureOperation } from './measurement.js';
-import { storage, saveKey } from '@offside/game/storage';
+import { loadKey, storage, saveKey } from '@offside/game/storage';
 import { leagueOf } from '@offside/game/engine';
 import { createRng, freshSeed, getActiveRng, setActiveRng } from '@offside/game/rng';
 import { legendSnapshot } from '@offside/game/legend';
@@ -9,6 +9,7 @@ import { loadSave } from '@offside/game/save';
 import { useCareerBalance } from '@offside/game/balance';
 import { useCareerClubStrength } from '@offside/game/clubStrength';
 import type { EventLogEntry, GameState, HofEntry } from '@offside/game/types';
+import type { PhaseReport } from './sheets.js';
 
 const EV_BUF_CAP = 300;
 
@@ -31,6 +32,26 @@ export function saveGame(s: GameState | null): boolean {
   measureOperation('save', ok ? 'success' : 'failed', ok ? 'none' : 'save_risk');
   if (ok) noteCareerActivity(s);
   return ok;
+}
+
+// T-11-438 구간 리포트 보관. 구간 결과는 중계(문자중계 시트)를 보여 주기 전에 저장되고 리포트는 중계가 끝나야 만들어져,
+// 중계 도중 앱을 끄면 그 구간 리포트가 사라졌다. 저장 때 리포트도 따로 남기고, 중계가 끝나 화면에 띄우면 지운다.
+// 세이브(ft_save) 형식은 그대로 둔다 — 리포트는 다시 볼 수 없어도 게임이 깨지지 않는 화면 정보라서다.
+const PHASE_REPORT_KEY = 'ft_phase_report';
+type KeptReport = { cid: string; report: PhaseReport };
+
+export function keepPhaseReport(cid: string, report: PhaseReport): void {
+  saveKey(PHASE_REPORT_KEY, { cid, report } satisfies KeptReport);
+}
+export function clearPhaseReport(): void {
+  if (loadKey(PHASE_REPORT_KEY) != null) saveKey(PHASE_REPORT_KEY, null);
+}
+/** 중계 도중 끊긴 구간 리포트를 한 번 꺼낸다(같은 커리어 · 같은 해일 때만). 꺼내면 지운다. */
+export function takePhaseReport(s: GameState | null): PhaseReport | null {
+  const kept = loadKey<KeptReport>(PHASE_REPORT_KEY);
+  if (!kept) return null;
+  clearPhaseReport();
+  return s && !s.retired && kept.cid === s.cid && kept.report?.year === s.year ? kept.report : null;
 }
 
 /**

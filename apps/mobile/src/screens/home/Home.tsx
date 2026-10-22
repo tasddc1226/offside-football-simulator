@@ -1,7 +1,7 @@
 // 홈(웹 Home.svelte — ui.ts renderHome() 포트): 전광판 · 히어로 · 라이브 현황 · 타일 · 명예의 전당 TOP 3 · 소식 · 푸터.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
-import { useState } from 'react';
-import { Linking, Platform, useWindowDimensions, View } from 'react-native';
+import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Linking, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import { PHASES, LAST_PHASE, posLabel } from '@offside/game/data';
@@ -9,7 +9,7 @@ import { ovr } from '@offside/game/attributes';
 import type { GameState } from '@offside/game/types';
 import { homeText as L } from '@offside/app-core/i18n/ko/home';
 import { homeMoreText } from '@offside/app-core/i18n/ko/homeMore';
-import { ANDROID_TESTER_FORM_URL, DC_GALLERY_URL } from '@offside/app-core/links';
+import { DC_GALLERY_URL } from '@offside/app-core/links';
 import { HallOfFame } from '../../components/HallOfFame';
 import { SiteFooter } from '../../components/SiteFooter';
 import { adoptCareer, keepOnDevice } from '../../game/host';
@@ -22,7 +22,9 @@ import { Btn, Card, PitchCard, Press, Row, Screen, Topbar, Txt } from '../../ui'
 import { ClubBadge } from '../../ui/ClubBadge';
 import { HeroFigure } from './HeroFigure';
 import { CupBanner } from '../owner/TeamCup';
+import { LeagueBanner } from '../league/LeagueScreen';
 import { CupChampionPopup } from './CupChampionPopup';
+import { PartnerPopup } from './PartnerPopup';
 import { HomeClubValue } from './HomeClubValue';
 import { HomeFirsts } from './HomeFirsts';
 import { HomeGift } from './HomeGift';
@@ -40,9 +42,32 @@ import { openFriends } from '../../platform/inbox';
 import { INVITE_REROLLS, INVITE_SCOUTS } from '@offside/contracts/owner-team';
 import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
 import { tn } from '@offside/game/i18n/names';
+import {
+  homeOrder,
+  NO_HOME_TODO,
+  type HomeBlock,
+  type HomeTodo,
+} from '@offside/app-core/homeOrder';
+import { loadHomeTodo } from '@offside/app-core/homeTodo';
+import { useOnPull } from '../../ui/refresh';
+import { notificationDestination } from '../../platform/notificationDestination';
+import { chatUnread } from '../../platform/chatUnread';
 
 // T-11-360 출석 창은 앱을 연 뒤 처음 그린 홈에서만 저절로 띄운다(로그아웃 뒤 · 다른 화면에서 돌아올 때는 아니다).
 let homeShown = false;
+
+/** T-11-435 받을 선물 · 오늘 출석. 선물 · 출석 블록이 부르는 것과 같은 메모 조회라 새 요청이 없다. 당기면 다시 본다. */
+function useHomeTodo(): HomeTodo {
+  const [todo, setTodo] = useState<HomeTodo>(NO_HOME_TODO);
+  const reload = useCallback(async () => setTodo(await loadHomeTodo()), []);
+  // 알림으로 홈을 열면(home이 늘면) 선물 블록처럼 다시 본다(T-11-388).
+  const { home } = useSnapshot(notificationDestination);
+  useEffect(() => {
+    void reload();
+  }, [reload, home]);
+  useOnPull(reload);
+  return todo;
+}
 
 export default function Home() {
   const [firstHome] = useState(() => {
@@ -54,6 +79,42 @@ export default function Home() {
   const c = useColors();
   const G = s.G && !s.G.retired ? s.G : null;
   const narrow = useWindowDimensions().width < 360;
+  const order = homeOrder(useHomeTodo());
+  const blocks: Record<HomeBlock, ReactNode> = {
+    pushOptIn: <PushOptInCard />,
+    ownerConflict:
+      G && s.ownerConflict ? (
+        <View testID="owner-conflict">
+          <Card gap={8} style={{ borderWidth: 1, borderColor: alpha(c.warn, 0.45) }}>
+            <Txt bold>{L.conflictTitle}</Txt>
+            <Txt v="sm" tone="muted">
+              {L.conflictBody({ name: G.name })}
+            </Txt>
+            <Row gap={8}>
+              <Btn kind="accent" testID="adopt-career" onPress={adoptCareer}>
+                {L.conflictAdopt}
+              </Btn>
+              <Btn sm testID="keep-on-device" onPress={keepOnDevice}>
+                {L.conflictKeep}
+              </Btn>
+            </Row>
+          </Card>
+        </View>
+      ) : null,
+    // T-11-338 진행 중인 감독 커리어 이어 하기(기기 세이브가 있을 때만).
+    managerResume: <ManagerResume />,
+    seasonGauge: <SeasonGauge />,
+    // T-11-145 오프사이드 컵 소식은 모두가 먼저 보는 홈에서. 신청은 대회 화면에서 한다.
+    cup: <CupBanner onOpen={() => go('cup')} />,
+    // T-11-418 오프사이드 리그 소식(신청은 리그 화면에서).
+    league: <LeagueBanner />,
+    // T-11-275 구단주 선물(로그인한 구단주가 한 번 받으면 사라진다).
+    gift: <HomeGift />,
+    attendance: <HomeAttendance auto={firstHome} />,
+    // T-11-355 처음 안내 카드(기기마다 닫을 때까지).
+    firstGuide: <FirstGuide />,
+    live: <HomeLive />,
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -181,38 +242,15 @@ export default function Home() {
             </View>
           </PitchCard>
         )}
-        <PushOptInCard />
-        {G && s.ownerConflict ? (
-          <View testID="owner-conflict">
-            <Card gap={8} style={{ borderWidth: 1, borderColor: alpha(c.warn, 0.45) }}>
-              <Txt bold>{L.conflictTitle}</Txt>
-              <Txt v="sm" tone="muted">
-                {L.conflictBody({ name: G.name })}
-              </Txt>
-              <Row gap={8}>
-                <Btn kind="accent" testID="adopt-career" onPress={adoptCareer}>
-                  {L.conflictAdopt}
-                </Btn>
-                <Btn sm testID="keep-on-device" onPress={keepOnDevice}>
-                  {L.conflictKeep}
-                </Btn>
-              </Row>
-            </Card>
-          </View>
-        ) : null}
-        {/* T-11-338 진행 중인 감독 커리어 이어 하기(기기 세이브가 있을 때만). */}
-        <ManagerResume />
-        {/* T-11-145 오프사이드 컵 소식은 모두가 먼저 보는 홈에서. 신청은 대회 화면에서 한다. */}
-        <SeasonGauge />
-        <CupBanner onOpen={() => go('cup')} />
+        {/* T-11-435 히어로 아래 블록 순서는 app-core homeOrder 한 곳에서 정한다(웹과 같다). 받을 선물 · 오늘 출석이 있으면
+            그 블록이 히어로 바로 아래로 올라온다. 키로 그려서 순서가 바뀌어도 블록을 다시 만들지 않고 옮기기만 한다. */}
+        {order.map((b) => (
+          <Fragment key={b}>{blocks[b]}</Fragment>
+        ))}
         {/* T-11-290 오프사이드 컵 우승 팝업 — 앱을 켜 홈에 왔을 때 한 번(결승 뒤 일주일, 기기마다 '다시 보지 않기'). 배너와 같은 응답. */}
         <CupChampionPopup />
-        {/* T-11-275 구단주 선물(로그인한 구단주가 한 번 받으면 사라진다). 컵 배너 바로 아래. */}
-        <HomeGift />
-        <HomeAttendance auto={firstHome} />
-        {/* T-11-355 처음 안내 카드(기기마다 닫을 때까지). */}
-        <FirstGuide />
-        <HomeLive />
+        {/* T-11-423 아마축구 상호 홈 팝업 — 약정 기간 · 한국어 · 하루 숨김. 컵 우승 팝업과 한 번에 하나만. */}
+        <PartnerPopup />
         {/* T-11-080f 구단주 화면을 거치지 않고 이적시장으로 바로 간다(뒤로 가기는 홈으로). 홈에서는 서버를 부르지 않는다. */}
         <Tile
           wide
@@ -241,35 +279,16 @@ export default function Home() {
             onPress={() => go('dex')}
           />
         </View>
-        {/* T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일. T-11-016 안드로이드 앱에선 반으로 나눠 옆에
-            비공개 테스터 모집(구글 폼)을 둔다 — iOS 앱엔 다른 플랫폼 안내를 싣지 않고 두 칸 폭 그대로 둔다. */}
-        {Platform.OS === 'android' ? (
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Tile
-              testID="dc-gallery"
-              eyebrow="Community"
-              title={L.galleryTitle}
-              sub={L.gallerySub}
-              onPress={() => void Linking.openURL(DC_GALLERY_URL)}
-            />
-            <Tile
-              testID="android-tester"
-              eyebrow="Android"
-              title={L.testerTitle}
-              sub={L.testerSub}
-              onPress={() => void Linking.openURL(ANDROID_TESTER_FORM_URL)}
-            />
-          </View>
-        ) : (
-          <Tile
-            wide
-            testID="dc-gallery"
-            eyebrow="Community"
-            title={homeMoreText.galleryWideTitle}
-            sub={homeMoreText.galleryWideSub}
-            onPress={() => void Linking.openURL(DC_GALLERY_URL)}
-          />
-        )}
+        {/* T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일. T-11-440 앱을 이미 쓰는 사람에게 같은 앱 테스트
+            신청(T-11-016)을 권하지 않도록 안드로이드 앱에서도 테스터 모집 타일을 빼고 두 칸 폭으로 둔다. */}
+        <Tile
+          wide
+          testID="dc-gallery"
+          eyebrow="Community"
+          title={homeMoreText.galleryWideTitle}
+          sub={homeMoreText.galleryWideSub}
+          onPress={() => void Linking.openURL(DC_GALLERY_URL)}
+        />
         <HallOfFame />
         <HomeClubValue />
         <HomeNews board="notice" eyebrow="Notice" title={L.noticeTitle} />
@@ -286,11 +305,13 @@ export default function Home() {
 /** T-11-015 라운지 채팅으로 가는 떠 있는 버튼(웹 .chat-fab) — 하단 메뉴 바로 위 오른쪽. */
 function ChatFab() {
   const c = useColors();
+  // T-11-440 안 읽은 채팅 수(웹 .chat-unread와 같다). 앱이 앞에 있을 때 붙는 채팅 소켓이 센다.
+  const { n } = useSnapshot(chatUnread);
   return (
     <Press
       testID="chat-fab"
       accessibilityRole="button"
-      accessibilityLabel={homeMoreText.chatLabelApp}
+      accessibilityLabel={n ? L.chatLabelUnread({ n }) : homeMoreText.chatLabelApp}
       onPress={() => go('chat')}
       style={{
         position: 'absolute',
@@ -298,6 +319,8 @@ function ChatFab() {
         bottom: 16,
         minWidth: 48,
         minHeight: 48,
+        flexDirection: 'row',
+        gap: 6,
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 10,
@@ -317,6 +340,26 @@ function ChatFab() {
           fill={c.accentInk}
         />
       </Svg>
+      {n ? (
+        <View
+          testID="chat-unread"
+          accessible={false}
+          importantForAccessibility="no-hide-descendants"
+          style={{
+            minWidth: 22,
+            height: 22,
+            paddingHorizontal: 5,
+            borderRadius: RADIUS.pill,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: c.ink,
+          }}
+        >
+          <Txt style={[num(700), { color: c.surface, fontSize: rem(FONT.label), lineHeight: 16 }]}>
+            {n > 99 ? '99+' : n}
+          </Txt>
+        </View>
+      ) : null}
     </Press>
   );
 }

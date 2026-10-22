@@ -3,11 +3,14 @@ import type { RetiredLookMsgs } from '../ko/retiredLook';
 
 export const retiredLook: Translation<RetiredLookMsgs> = {
   title: 'Customize retired player',
+  button: 'Customize (1x)',
+  buttonUsed: 'Customize (used)',
+  buttonTransferred: 'Customize unavailable',
   intro: 'Basic customization is free. Records, attributes and player funds stay unchanged.',
   policy:
-    'Appearance can be changed once for free after retirement. The player art is new, so players who changed it before get one more change. Players with any transfer history cannot change appearance.',
+    "You can change a retired player's appearance once for free. Players traded on the transfer market cannot change appearance.",
   used: 'This player has already used their appearance change for the new player art.',
-  transferred: 'Players who have transferred cannot change appearance, even after returning.',
+  transferred: 'This player was traded on the transfer market, so the appearance cannot change.',
   checking: 'Checking availability',
   checkFailed: 'Could not check availability. Close and reopen to try again.',
   localPartial:

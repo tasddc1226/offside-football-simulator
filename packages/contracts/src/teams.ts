@@ -220,6 +220,8 @@ export const OwnerTeamResponseSchema = z.strictObject({
   /** 오늘(한국 시각) 남은 경기 수. */
   matchesLeft: z.number().int().min(0),
   matchesPerDay: z.number().int().min(1),
+  /** T-11-376 지난 시즌 선수 급여 예산(운영 도구 밸런스 활성 값). 배포 전 응답엔 없다 — 화면은 PAST_SALARY_BUDGET을 쓴다. */
+  pastSalaryBudget: z.number().int().min(0).optional(),
   /** T-11-113 창단 멤버(프리시즌에 은퇴 선수를 남긴 구단주). 배포 전 응답엔 없다. */
   founder: z.boolean().optional(),
   /** T-11-150 내 대표 칭호(구단주 탭 닉네임 옆). 달지 않았으면 null, 배포 전 응답엔 없다. */
@@ -571,6 +573,10 @@ export const ClubAchievementSchema = z.strictObject({
   points: count,
   /** 다음에 달성하면 더 얻는 점수(끝까지 왔으면 0). */
   worth: count,
+  /** T-11-357 다음에 달성하면 받는 아이템(지금 시즌만, 없으면 생략). */
+  reward: z.strictObject({ boost: count, scout: count }).optional(),
+  /** T-11-357 이 시즌에 이 업적으로 받은 아이템(지금 시즌만, 없으면 생략). */
+  got: z.strictObject({ boost: count, scout: count }).optional(),
 });
 export type ClubAchievement = z.infer<typeof ClubAchievementSchema>;
 
@@ -620,6 +626,8 @@ export const TeamRankQuerySchema = z.strictObject({
   season: TeamSeasonQuerySchema,
   sort: TeamRankSortSchema.default('rating'),
   page: z.coerce.number().int().min(1).max(500).default(1),
+  /** T-11-441 '내 순위로': 내 팀이 있는 페이지를 돌려주고 me를 붙인다(세션을 보고 엣지 캐시에 담지 않는다). */
+  me: z.literal('1').optional(),
 });
 
 /** 랭킹 한 줄. 선수가 한 명 이상 있는 팀만 오른다. */
@@ -654,6 +662,11 @@ export const TeamRankResponseSchema = z.strictObject({
   page: z.number().int().min(1),
   total: count,
   items: z.array(TeamRankItemSchema),
+  /** T-11-441 me=1로 물었을 때만. 그 시즌 랭킹에 내 팀이 없으면 null. 가치순은 세지 않아 없다. */
+  me: z
+    .strictObject({ teamId: TeamIdSchema, rank: z.number().int().min(1) })
+    .nullable()
+    .optional(),
 });
 export type TeamRankResponse = z.infer<typeof TeamRankResponseSchema>;
 
@@ -662,6 +675,8 @@ export type TeamRankResponse = z.infer<typeof TeamRankResponseSchema>;
 export const AchRankQuerySchema = z.strictObject({
   season: TeamSeasonQuerySchema,
   page: z.coerce.number().int().min(1).max(500).default(1),
+  /** T-11-441 '내 순위로'(팀 랭킹과 같다). */
+  me: z.literal('1').optional(),
 });
 
 /** 업적 랭킹 한 줄. 구단주는 공개 닉네임(없으면 null)과 그 시즌 팀 이름으로만 보인다. */
@@ -691,6 +706,11 @@ export const AchRankResponseSchema = z.strictObject({
   page: z.number().int().min(1),
   total: count,
   items: z.array(AchRankItemSchema),
+  /** T-11-441 me=1로 물었을 때만. 그 시즌 랭킹에 내가 없으면 null. */
+  me: z
+    .strictObject({ rank: z.number().int().min(1) })
+    .nullable()
+    .optional(),
 });
 export type AchRankResponse = z.infer<typeof AchRankResponseSchema>;
 

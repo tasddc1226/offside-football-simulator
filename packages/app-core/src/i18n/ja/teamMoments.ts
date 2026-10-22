@@ -6,6 +6,8 @@ export const teamMoments: Translation<TeamMomentsMsgs> = {
   crisisTitle: 'ピンチ',
   ask: 'どうしますか？',
   timer: (p) => `${p.s}秒以内に選ばないと監督に任せます`,
+  timerLast: (p) => `残り${p.s}秒`,
+  skipToManager: '監督に任せて結果を見る',
   pct: (p) => `${p.p}%`,
   chancePct: 'ゴール確率',
   crisisPct: '防ぐ確率',

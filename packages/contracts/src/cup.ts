@@ -1,5 +1,6 @@
 // T-11-145 오프사이드 컵. 기간 안에 신청한 구단끼리 조별 예선 → 토너먼트를 하루 한 경기씩 서버가 치른다.
 // 대회 일정은 D1 cups 테이블(관리자 API로 연다), 모양은 planCup이 만든다. 시각은 모두 UTC ISO. zod 없는 서브패스(`@offside/contracts/cup`) — API 모양은 cup-api.ts.
+import { displaySeasonAt } from './service-seasons.js';
 
 // T-11-246 128팀 대회는 64강(r64)부터 토너먼트를 한다. 64팀 이하 대회(제1회)는 r64 없이 8라운드다(cupRoundsOf).
 export const CUP_ROUNDS = ['g1', 'g2', 'g3', 'r64', 'r32', 'r16', 'qf', 'sf', 'f'] as const;
@@ -192,12 +193,39 @@ export const editionCups = (cup: CupDef, cups: readonly CupDef[]) =>
 /** 같은 회차에서 대표로 보여 줄 대회: 마스터(통합 대회면 그 대회). */
 export const headCup = (cup: CupDef, cups: readonly CupDef[]) => editionCups(cup, cups).at(-1)!;
 
+/** 구간 판정에 쓰는 대회 값(서버 CupDef · 응답 CupInfo · 구간 목록 모두 맞는다). */
+export type CupDivisionRule = {
+  division?: CupDivision | null | undefined;
+  ovrMax?: number | null | undefined;
+};
+
 /** 이 OVR로 들어갈 수 있는가(상한이 아직 없는 아랫 구간은 접수 전이라 아니다). */
-export const fitsDivision = (cup: CupDef, ovr: number) =>
+export const fitsDivision = (cup: CupDivisionRule, ovr: number) =>
   !cup.division || cup.division === 'master' || (cup.ovrMax != null && ovr <= cup.ovrMax);
 
+/** T-11-436 컵 참가 중 팀 저장 판정에 쓰는 대회 값. */
+export type CupLineupRule = CupDivisionRule & { minFilled: number; drawAt: string };
+
+/**
+ * T-11-436 컵에 참가 중인 팀을 저장할 때의 OVR 상한 · 최소 인원 판정. 서버 checkCupLineup과 편성 화면 줄이 같이 쓴다.
+ * overCap: 팀 OVR(teamOvr)이 구간 상한을 넘는다. capBlocks: 조 추첨 뒤라 저장을 막는다(추첨 전에는 추첨 때 윗 구간으로
+ * 옮긴다). short: 선발에 든 실제 선수가 자격 수보다 적다(참가 중이면 늘 저장을 막는다).
+ */
+export function cupLineupVerdict(
+  rule: CupLineupRule,
+  team: { ovr: number; filled: number },
+  now: string,
+) {
+  const overCap = !fitsDivision(rule, team.ovr);
+  return {
+    overCap,
+    capBlocks: overCap && now >= rule.drawAt,
+    short: team.filled < rule.minFilled,
+  };
+}
+
 /** 이 OVR이 들어갈 수 있는 가장 낮은 구간. */
-export const divisionFor = (siblings: readonly CupDef[], ovr: number) =>
+export const divisionFor = <T extends CupDivisionRule>(siblings: readonly T[], ovr: number) =>
   siblings.find((c) => fitsDivision(c, ovr)) ?? siblings.at(-1);
 
 /**
@@ -312,24 +340,33 @@ export const OWNER_ITEMS = ['reroll', 'boost', 'scout', 'rename'] as const;
 export type OwnerItem = (typeof OWNER_ITEMS)[number];
 
 /**
- * T-11-244 프리미엄 스카우트 천장. S 후보 없이 SCOUT_PITY_SURE - 1장을 쓰면 SCOUT_PITY_SURE장째는 S 확정(sure),
- * 누적 SCOUT_PITY_ELITE장째마다 잠재력 최고치(96) S 확정(elite). 서버가 장수를 세고 이번 장의 모드를 정한다.
+ * T-11-244 프리미엄 스카우트 천장. S 후보 없이 sure - 1장을 쓰면 sure장째는 S 확정(sure),
+ * 누적 elite장째마다 잠재력 최고치(96) S 확정(elite). 서버가 장수를 세고 이번 장의 모드를 정한다.
  * used = 누적 사용, streak = 마지막 S 뒤 S 없이 쓴 장수, elites = 지금까지 받은 특급 S 수.
+ * SCOUT_PITY_SURE · SCOUT_PITY_ELITE는 시즌 1 값이다. T-11-450 시즌 2부터는 SCOUT_PITY_S2(20 · 70)로 낮춘다.
  */
 export const SCOUT_PITY_SURE = 30;
 export const SCOUT_PITY_ELITE = 100;
+export const SCOUT_PITY_S2 = { sure: 20, elite: 70 } as const;
+export type ScoutPityCap = { readonly sure: number; readonly elite: number };
+/** 그 시즌의 천장 장수. */
+export const scoutPityOf = (season: number): ScoutPityCap =>
+  season >= 2 ? SCOUT_PITY_S2 : { sure: SCOUT_PITY_SURE, elite: SCOUT_PITY_ELITE };
+/** now 시점의 천장 장수 — 시즌 사이 휴식기는 마지막으로 개막한 시즌을 따른다. */
+export const scoutPityAt = (now: string = new Date().toISOString()): ScoutPityCap =>
+  scoutPityOf(displaySeasonAt(now));
 export const SCOUT_MODES = ['normal', 'sure', 'elite'] as const;
 export type ScoutMode = (typeof SCOUT_MODES)[number];
 export type ScoutPity = { used: number; streak: number; elites: number };
 
 /** 다음 한 장의 모드와 남은 장수(이번 장 포함 — 1이면 다음 장이 확정). 서버 SQL(spendScout)과 같은 규칙이다. */
-export function scoutPityView(p: ScoutPity) {
-  const eliteDue = Math.floor((p.used + 1) / SCOUT_PITY_ELITE) > p.elites;
-  const sureDue = p.streak >= SCOUT_PITY_SURE - 1;
+export function scoutPityView(p: ScoutPity, cap: ScoutPityCap = scoutPityAt()) {
+  const eliteDue = Math.floor((p.used + 1) / cap.elite) > p.elites;
+  const sureDue = p.streak >= cap.sure - 1;
   return {
     next: (eliteDue ? 'elite' : sureDue ? 'sure' : 'normal') as ScoutMode,
-    sureIn: Math.max(1, SCOUT_PITY_SURE - p.streak),
-    eliteIn: Math.max(1, (p.elites + 1) * SCOUT_PITY_ELITE - p.used),
+    sureIn: Math.max(1, cap.sure - p.streak),
+    eliteIn: Math.max(1, (p.elites + 1) * cap.elite - p.used),
   };
 }
 
@@ -337,11 +374,11 @@ export function scoutPityView(p: ScoutPity) {
  * T-11-415 천장 막대. have = 이번 칸에 쌓인 장수(need - 남은 장수), next = 다음 장이 그 칸의 확정인지.
  * S 확정 칸은 S 후보가 나오면 0으로 돌아가고, 특급 칸은 돌아가지 않는다.
  */
-export function scoutPityGauge(p: ScoutPity) {
-  const v = scoutPityView(p);
+export function scoutPityGauge(p: ScoutPity, cap: ScoutPityCap = scoutPityAt()) {
+  const v = scoutPityView(p, cap);
   return {
-    sure: { have: SCOUT_PITY_SURE - v.sureIn, need: SCOUT_PITY_SURE, next: v.next === 'sure' },
-    elite: { have: SCOUT_PITY_ELITE - v.eliteIn, need: SCOUT_PITY_ELITE, next: v.next === 'elite' },
+    sure: { have: Math.max(0, cap.sure - v.sureIn), need: cap.sure, next: v.next === 'sure' },
+    elite: { have: Math.max(0, cap.elite - v.eliteIn), need: cap.elite, next: v.next === 'elite' },
   };
 }
 

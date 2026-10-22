@@ -20,13 +20,11 @@ export const home: Translation<HomeMsgs> = {
   conflictAdopt: 'Record under this account',
   conflictKeep: 'Keep on this device only',
   marketTitle: 'Transfer window',
-  marketSub: 'Buy and sell players this season · prices →',
+  marketSub: 'Buy and sell players · prices →',
   inviteSub: (p) =>
     `You and your friend each get ${p.n} reroll tickets + ${p.s} premium scout ticket →`,
   dexTitle: 'Event odds',
   dexSubWeb: 'See the success odds for each choice →',
-  testerTitle: 'Join the testers ↗',
-  testerSub: 'Apply for the Android app closed test',
   galleryTitle: 'Community gallery ↗',
   gallerySub: 'Show off careers, swap tips and make suggestions on DCinside',
   firstsTitle: 'Server firsts',
@@ -42,11 +40,16 @@ export const home: Translation<HomeMsgs> = {
   newsFailed: "Couldn't load the news.",
   newsEmpty: 'No posts yet.',
   pinned: 'Pinned',
+  // T-11-440 이번에 앱을 연 뒤 아직 열지 않은 새 글 표시
+  postNew: 'NEW',
   tagTransfer: 'Transfer',
   tagDebut: 'Turned pro',
   tagFirst: 'Server first',
   tagRecord: 'Server record',
   tickerAria: 'Transfer and server record news',
+  // T-11-440 전광판 멈춤 버튼
+  tickerPause: 'Pause the ticker',
+  tickerPlay: 'Play the ticker',
   tickerIdle: 'Transfer news and server firsts show up here',
   tickerAge: (p) => `(age ${p.age})`,
 };

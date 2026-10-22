@@ -250,31 +250,51 @@ export async function cupStalls(db: Db, now: string, all?: CupDef[]) {
   return out;
 }
 
-/** 밀린 단계를 운영 슬랙(결제 알림과 같은 채널)에 문제마다 한 번 알린다. 끄려면 app_meta `cup:autopilot` = 'off'. */
-export async function alertCupStalls(env: Bindings, db: Db, now: string, all?: CupDef[]) {
-  const stalls = await cupStalls(db, now, all);
+/**
+ * 밀린 단계를 운영 슬랙(결제 알림과 같은 채널)에 문제마다 한 번 알린다. app_meta `<prefix>:<key>`가 한 번만 보내게 막는다.
+ * T-11-445 리그 경보도 같이 쓴다.
+ */
+export async function postStallAlerts(
+  env: Bindings,
+  d1: D1Database,
+  prefix: string,
+  head: string,
+  stalls: readonly { key: string; text: string }[],
+  now: string,
+) {
   if (!stalls.length || !env.BILLING_SLACK_WEBHOOK || env.ENVIRONMENT !== 'production') return [];
   const url = new URL(env.BILLING_SLACK_WEBHOOK);
   if (url.origin !== 'https://hooks.slack.com' || !url.pathname.startsWith('/services/')) return [];
-  const d1 = db.$client;
   const fresh: string[] = [];
   for (const s of stalls) {
     const res = await d1
       .prepare('INSERT OR IGNORE INTO app_meta (key, value) VALUES (?, ?)')
-      .bind(`cup-alert:${s.key}`, now)
+      .bind(`${prefix}:${s.key}`, now)
       .run();
     if (res.meta.changes) fresh.push(s.text);
   }
   if (!fresh.length) return [];
-  const text = [STALL_TEXT.head, ...fresh.map((t) => `• ${t}`)].join('\n');
+  const text = [head, ...fresh.map((t) => `• ${t}`)].join('\n');
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ text }),
     signal: AbortSignal.timeout(10_000),
   });
-  if (!response.ok) throw new Error(`cup alert rejected ${response.status}`);
+  if (!response.ok) throw new Error(`${prefix} rejected ${response.status}`);
   return fresh;
+}
+
+/** 컵 밀린 단계를 알린다. 끄려면 app_meta `cup:autopilot` = 'off'. */
+export async function alertCupStalls(env: Bindings, db: Db, now: string, all?: CupDef[]) {
+  return postStallAlerts(
+    env,
+    db.$client,
+    'cup-alert',
+    STALL_TEXT.head,
+    await cupStalls(db, now, all),
+    now,
+  );
 }
 
 /** 5분 cron 진입점. 대회 목록은 한 번만 읽고, 다음 회차가 생기면 그 목록으로 접수 알림을 본다. */

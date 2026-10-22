@@ -9,11 +9,10 @@ export const shellInstall: Translation<ShellInstallMsgs> = {
   conversionMilestone: '積み重ねた記録をアプリでも管理',
   conversionIos:
     'アプリではリワード広告でポテンシャルの確認や追加強化の機会を得られます。利用条件や広告の配信状況によって異なります。',
-  conversionAndroid:
-    'Androidはクローズドテスト中です。参加を申し込み、案内に従ってインストールしてください。',
+  conversionAndroid: 'AndroidアプリはGoogle Playで入手できます。',
   conversionTransfer:
     '進行中のキャリアは自動で移行されません。設定でバックアップコードをコピーし、アプリに読み込んでください。',
-  conversionTest: 'Androidクローズドテストに参加',
+  conversionPlay: 'Google Playで入手',
   conversionStore: 'App Storeで入手',
   conversionDismiss: 'アプリの案内を7日間非表示',
 
@@ -32,15 +31,14 @@ export const shellInstall: Translation<ShellInstallMsgs> = {
   loginNoticeBody:
     'Googleはアプリ内ブラウザ（KakaoTalk・Instagramなど）でのログインをブロックしています。外部ブラウザで開いてログインしてください。',
   close: '閉じる',
-  promoTileTitle: 'iPhoneアプリ ↗',
-  promoTileSub: 'App StoreでOFFSIDEを入手',
-  promoSheetTitle: 'iPhoneアプリで続きをプレイ',
+  promoSheetTitle: (p) => `${p.device}アプリで続きをプレイ`,
   promoSheetText:
     'アプリなら、しばらく開かなくても記録が消えず、新着情報を通知で受け取れます。進行中のキャリアは設定のバックアップコードでアプリに移せます。',
-  promoSheetStore: 'App Storeで入手',
+  promoSheetStore: (p) => `${p.store}で入手`,
   promoSheetHomeScreen: 'ホーム画面に追加します',
-  promoMoveTitle: 'iPhoneアプリに移る',
-  promoMoveStep1: 'App StoreでOFFSIDEを入手します。',
+  promoMoveTitle: (p) => `${p.device}アプリに移る`,
+  promoMoveTitleAny: 'アプリに移る',
+  promoMoveStep1: (p) => `${p.stores.join('または')}でOFFSIDEを入手します。`,
   promoMoveStep2:
     'アプリのオーナー画面で同じGoogleアカウントでログインすると、殿堂 · クラブの記録が引き継がれます。',
   promoMoveStep3:

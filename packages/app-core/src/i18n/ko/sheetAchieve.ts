@@ -10,6 +10,8 @@ const ko = {
   more: (p: { n: number }) => `외 ${p.n}개`,
   gainedPts: (p: { n: string }) => `+${p.n}점`,
   nowPts: (p: { n: string }) => `지금 ${p.n}점`,
+  // T-11-357 이번에 받은 업적 보상(아이템 이름은 teamCore achRewardBoost·achRewardScout).
+  reward: (p: { items: string }) => `보상으로 ${p.items}을 받았어요`,
   viewAch: '업적 보기',
   close: '닫기',
 };

@@ -14,8 +14,8 @@ import {
 } from '@offside/app-core/api/client';
 import { accountCache, appState } from '../../store';
 import { noteOwner } from '@offside/app-core/api/friendPending';
-import { accountLabel, isMember } from '@offside/app-core/account';
-import { closeSheet, refreshAccount, showSheet } from '../../game/host';
+import { accountLabel, isMember, runProfileDeletion } from '@offside/app-core/account';
+import { closeSheet, refreshAccount, showSheet, toast } from '../../game/host';
 import { appleReauthCode } from '../../platform/auth';
 import { setSessionToken } from '../../platform/session';
 import { rem } from '../../theme/type';
@@ -36,9 +36,29 @@ async function load(silent = false) {
 }
 
 async function doUnlink() {
+  closeSheet();
   const r = await unlinkGoogle();
   if (r.ok) await load();
-  else set('error');
+  // T-11-431 해제 실패는 연결 오류 카드로 덮지 않는다. 계정 카드는 그대로 두고 해제 실패만 알린다.
+  else toast(L.unlinkFail);
+}
+/** T-11-431 연동 해제는 로그인 수단을 없애므로 한 번 더 묻는다(로그아웃 확인과 같은 시트). */
+function askUnlink() {
+  const p = accountCache.value;
+  const apple = !!p && p !== 'error' && p.linked.apple;
+  showSheet(
+    {
+      kind: 'notice',
+      eyebrow: 'Account',
+      title: L.unlinkTitle,
+      muted: true,
+      text: apple ? L.unlinkBodyApple : L.unlinkBodyOnly,
+    },
+    [
+      { label: L.unlinkConfirm, cls: 'btn-primary', fn: () => void doUnlink() },
+      { label: L.cancel, fn: closeSheet },
+    ],
+  );
 }
 async function doLogout() {
   closeSheet();
@@ -64,16 +84,22 @@ function askLogout() {
   );
 }
 /** 계정 삭제(스토어 심사 필수): 확인 → (Apple 연결이면 Apple 재확인) → 삭제 시작(확인 토큰) → 삭제 확정.
- *  끝나면 세션 토큰도 지운다. Apple 재확인을 취소하면 지우지 않는다. */
+ *  끝나면 세션 토큰도 지우고 결과를 토스트로 알린다. Apple 재확인을 취소하면 지우지 않는다. */
 async function doDeleteFlow() {
   const linked = accountCache.value;
   const code = linked && linked !== 'error' && linked.linked.apple ? await appleReauthCode() : null;
   if (code === 'cancel') return;
-  const start = await startProfileDeletion();
-  if (!start.ok) return set('error');
-  const done = await confirmProfileDeletion(start.data.confirmToken, code ?? undefined);
-  if (done.ok) await setSessionToken(null);
-  set(done.ok ? null : 'error');
+  const done = await runProfileDeletion({
+    start: startProfileDeletion,
+    confirm: (t) => confirmProfileDeletion(t, code ?? undefined),
+  });
+  // T-11-441 실패는 연결 오류 카드로 덮지 않고 계정 카드를 그대로 둔 채 실패만 알린다.
+  if (!done) return toast(L.deleteFail);
+  await setSessionToken(null);
+  noteOwner(false);
+  appState.friendReq = 0;
+  set(null);
+  toast(L.deleteDone);
 }
 function askDelete() {
   Alert.alert(L.deleteAccount, L.deleteBody, [
@@ -156,7 +182,7 @@ export function Account() {
       <Row gap={6} wrap={false} style={{ justifyContent: 'flex-end' }}>
         {profile.linked.google ? (
           <>
-            <LinkBtn onPress={() => void doUnlink()} testID="account-unlink">
+            <LinkBtn onPress={askUnlink} testID="account-unlink">
               {L.unlinkGoogle}
             </LinkBtn>
             <Txt tone="muted" accessible={false} style={{ fontSize: rem(FONT.caption) }}>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AppState, Keyboard, Platform } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { appState, newsState, rnAlert, sheetState, storeUpdate, toastState } from '../store';
+import { interstitial } from '../platform/interstitial';
 import { pushState } from '../platform/push';
 import { reviewPrompt } from '../platform/review';
 import { useTopBanner } from '../banners/useTopBanner';
@@ -13,6 +14,7 @@ export function ReviewNudge() {
   const rn = useSnapshot(rnAlert);
   const toast = useSnapshot(toastState);
   const push = useSnapshot(pushState);
+  const ad = useSnapshot(interstitial);
   const banner = useTopBanner();
   const [active, setActive] = useState(AppState.currentState === 'active');
   const [keyboard, setKeyboard] = useState(Keyboard.isVisible());
@@ -41,6 +43,7 @@ export function ReviewNudge() {
     !rn.item &&
     !toast.visible &&
     !push.busy &&
+    !ad.showing &&
     !banner;
   useEffect(() => {
     if (!careerId || !safe) return;
@@ -60,7 +63,8 @@ export function ReviewNudge() {
           !toastState.visible &&
           !newsState.post &&
           !(storeUpdate.url && !storeUpdate.closed) &&
-          !pushState.busy,
+          !pushState.busy &&
+          !interstitial.showing,
       );
     }, 2000);
     return () => {

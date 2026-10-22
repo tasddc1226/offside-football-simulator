@@ -30,6 +30,8 @@ import {
   type OwnerTeamResponse,
   type TeamPlayer,
 } from '@offside/app-core/api/team';
+import { marketSalaryText } from '@offside/app-core/salary';
+import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import {
   MARKET_POS_FILTERS,
   MARKET_SORT_LABEL,
@@ -44,6 +46,7 @@ import {
   marketEmptyText,
   marketName,
   priceAtPct,
+  staleListingNext,
   priceDiff,
   releaseAmount,
   releaseConfirmText,
@@ -56,12 +59,19 @@ import {
   sellQuote,
   type MarketView,
   needsOwnerLogin,
+  allReleasePicked,
+  marketGuestText,
+  pickAllIds,
+  pickAllLabel,
+  togglePickId,
+  RELEASE_MAX,
 } from '@offside/app-core/market';
 import { agoKo, fmtValue } from '@offside/app-core/format';
 import { localCareerNames } from '@offside/game/hof-store';
 import { POS } from '@offside/game/data';
 import { prefs } from '../../store';
-import { go } from '../../game/nav';
+import { go, takeFocus } from '../../game/nav';
+import { measureShown, scrollToView } from '../../ui/scroll';
 import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { notificationDestination } from '../../platform/notificationDestination';
 import { toast } from '../../game/host';
@@ -537,6 +547,8 @@ export default function Market() {
   const [view, setView] = useState<MarketView>(() => {
     const back = backToTrades;
     backToTrades = false;
+    // T-11-442 상점의 '방출하러 가기'로 오면 방출 화면부터 연다.
+    if (takeFocus('marketRelease')) return 'release';
     return destination.market || back ? 'trades' : 'market';
   });
   const [error, setError] = useState<string | null>(null);
@@ -580,12 +592,16 @@ export default function Market() {
   const listReq = useRef(0);
   // 정렬을 빠르게 바꿀 때 늦게 온 이전 응답이 덮어쓰지 않게 요청 번호를 둔다.
   const loadList = useCallback(
-    async (next = 0, silent = false) => {
+    /** 받은 목록(첫 페이지면 그 페이지)을 돌려준다. 못 받았거나 늦게 온 응답이면 null. */
+    async (next = 0, silent = false): Promise<MarketListing[] | null> => {
       const req = ++listReq.current;
       if (next === 0 && !silent) setListStatus('loading');
       const r = await fetchMarket(sort, pos, next);
-      if (req !== listReq.current) return;
-      if (!r.ok) return silent ? undefined : setListStatus('error');
+      if (req !== listReq.current) return null;
+      if (!r.ok) {
+        if (!silent) setListStatus('error');
+        return null;
+      }
       setItems((prev) => (next === 0 ? r.data.items : [...prev, ...r.data.items]));
       // 배포 직후 옛 엣지 응답에는 recent가 없다.
       if (next === 0) setRecent(r.data.recent ?? []);
@@ -593,6 +609,7 @@ export default function Market() {
       setHasMore(r.data.hasMore);
       setSeason(r.data.season);
       setListStatus('ok');
+      return r.data.items;
     },
     [sort, pos],
   );
@@ -613,7 +630,7 @@ export default function Market() {
   }, [view, loadIndex]);
   const myListingIds = useMemo(() => new Set(me?.listings.map((l) => l.id) ?? []), [me]);
 
-  // 팔기는 지금 시즌 선수, 방출은 시즌을 골라 본다(기본은 지금 시즌).
+  // 팔기는 지금 가진 모든 시즌 선수(T-11-425), 방출은 시즌을 골라 본다(기본은 지금 시즌).
   const [team, setTeam] = useState<OwnerTeamResponse | null>(null);
   const [teamSeason, setTeamSeason] = useState<number | undefined>(undefined);
   const [teamFailed, setTeamFailed] = useState(false);
@@ -625,8 +642,9 @@ export default function Market() {
     } else setTeamFailed(true);
   }, [view, teamSeason]);
   useEffect(() => {
-    if (view === 'sell' || view === 'release') void loadTeam();
-  }, [view, loadTeam]);
+    // 로그인 전이면 내 선수를 묻지 않고 로그인 안내만 보인다(T-11-442).
+    if ((view === 'sell' || view === 'release') && !guest) void loadTeam();
+  }, [view, loadTeam, guest]);
   const lineup = useMemo(() => (team ? lineupOf(team) : new Set<string>()), [team]);
   const isCurrent = !!team && team.season === team.current;
   const nameOfPlayer = (p: TeamPlayer) => marketName(p, local);
@@ -639,19 +657,33 @@ export default function Market() {
   const releasable = team?.players.filter((p) => !releaseLock(p, lineup)) ?? [];
   const pickedPlayers = releasable.filter((p) => picked.has(p.careerId));
   const pickedAmount = me ? releaseAmount(pickedPlayers, me.rules.releaseRate) : 0;
-  const allPicked = releasable.length > 0 && pickedPlayers.length === releasable.length;
-  const togglePick = (id: string) =>
-    setPicked((prev) => {
-      const next = new Set(prev);
-      if (!next.delete(id)) next.add(id);
-      return next;
-    });
+  // T-11-442 서버는 한 번에 RELEASE_MAX명까지 받는다. 전체 선택도 그만큼만 고르고, 더 넣으려 하면 알린다.
+  const allPicked = allReleasePicked(releasable.length, pickedPlayers.length);
+  const togglePick = (id: string) => {
+    const r = togglePickId(picked, id);
+    if (r.full) return toast(L.pickLimit({ n: RELEASE_MAX }));
+    setPicked(r.next);
+  };
 
   // 팔기 — 고른 선수와 판매가(기준가의 %).
   const [selling, setSelling] = useState<TeamPlayer | null>(null);
   const [pct, setPct] = useState(100);
   const sellPrice = selling?.cardValue && me ? priceAtPct(selling.cardValue, pct, me.rules) : 0;
   const quote = selling?.cardValue && me ? sellQuote(selling.cardValue, sellPrice, me.rules) : null;
+  // T-11-442 카드를 고르면 아래 가격 칸이 화면 밖일 수 있어, 다 보이지 않으면 그 칸이 위에 오게 내린다.
+  const priceBox = useRef<View>(null);
+  const [sellPick, setSellPick] = useState(0);
+  useEffect(() => {
+    if (!sellPick) return;
+    const t = setTimeout(
+      () =>
+        measureShown(priceBox.current, (share) => {
+          if (share < 0.99) scrollToView(priceBox.current, prefs.motionOK);
+        }),
+      50,
+    );
+    return () => clearTimeout(t);
+  }, [sellPick]);
 
   // 시트: 영입 · 방출 확인.
   const [buying, setBuying] = useState<MarketListing | null>(null);
@@ -685,19 +717,43 @@ export default function Market() {
   async function run<T>(send: () => Sent<T>, done: string) {
     setBusy(true);
     setError(null);
+    const sent = buying;
     const r = await send();
-    setBusy(false);
     if (!r.ok) {
-      setError(r.error.message);
-      // 이미 팔렸거나 가격이 바뀌었으면 목록을 새로 받는다.
-      if (isStaleListing(r.error)) void loadList(0);
+      // 이미 팔렸거나 가격이 바뀌었으면 목록을 새로 받고, 영입 시트는 새 가격으로 바꾸거나 닫는다(T-11-434).
+      // 새 목록을 받는 동안에도 버튼을 막아 낡은 가격으로 다시 보내지 않는다.
+      if (isStaleListing(r.error)) await settleStale(sent, r.error);
+      else setError(r.error.message);
+      setBusy(false);
       return;
     }
+    setBusy(false);
     closeSheets();
     setPicked(new Set());
     setSelling(null);
     toast(done);
     await refresh();
+  }
+
+  // 지금 열린 영입 시트(그 사이 닫았거나 다른 매물을 열었는지 보려고 ref로도 둔다).
+  const buyingRef = useRef(buying);
+  buyingRef.current = buying;
+  async function settleStale(
+    sent: MarketListing | null,
+    e: { message: string; reason?: string | undefined },
+  ) {
+    const fresh = await loadList(0);
+    // 시트 밖(내 거래 탭의 판매 내리기)이면 오류만 보인다. 그 사이 시트를 닫았거나 다른 매물을 열었으면 시트는 건드리지 않는다.
+    if (!sent) return setError(e.message);
+    if (buyingRef.current?.id !== sent.id) return;
+    const next = staleListingNext(sent, e.reason, fresh);
+    if ('listing' in next) {
+      setBuying(next.listing);
+      setError(next.notice);
+    } else {
+      closeSheets();
+      toast(next.toast);
+    }
   }
 
   // T-11-188 잠금 풀기(팔기 · 방출 화면). 잠그기는 팀 라커룸에서 한다.
@@ -714,6 +770,14 @@ export default function Market() {
         {L.playerUnlock}
       </Txt>
     </Press>
+  );
+
+  // T-11-442 로그인 전 기기 — 팔기 · 내 거래 · 방출은 오류 대신 이 탭에서 할 수 있는 일과 로그인 버튼을 보인다.
+  const guestPane = (v: MarketView) => (
+    <View testID={`market-guest-${v}`} style={{ gap: 10 }}>
+      <Txt style={small}>{marketGuestText(v)}</Txt>
+      <LoginButtons back={{ market: true }} onDone={() => void loadMe()} />
+    </View>
   );
 
   const errText = error ? (
@@ -871,6 +935,13 @@ export default function Market() {
                 </View>
               ))}
             </View>
+          ) : guest ? (
+            <Txt
+              testID="market-guest-note"
+              style={{ fontSize: rem(FONT.label), color: c.onPitch, opacity: 0.85 }}
+            >
+              {L.guestHero}
+            </Txt>
           ) : meFailed ? (
             <Txt style={{ fontSize: rem(FONT.label), color: c.onPitch, opacity: 0.85 }}>
               {meFailed}
@@ -920,17 +991,17 @@ export default function Market() {
                   testID="market-pick-all"
                   accessibilityRole="button"
                   hitSlop={8}
-                  onPress={() =>
-                    setPicked(allPicked ? new Set() : new Set(releasable.map((p) => p.careerId)))
-                  }
+                  onPress={() => setPicked(pickAllIds(releasable, picked))}
                 >
                   <Txt style={{ ...small, fontWeight: '600', color: c.accentText }}>
-                    {allPicked ? L.pickNone : L.pickAll}
+                    {pickAllLabel(releasable.length, allPicked)}
                   </Txt>
                 </Press>
               ) : null}
             </View>
-            {!team ? (
+            {guest ? (
+              guestPane('release')
+            ) : !team ? (
               teamFailed ? (
                 <Txt tone="muted" style={small}>
                   {L.playersFailed}
@@ -1057,7 +1128,7 @@ export default function Market() {
                   }}
                 >
                   <Txt tone="muted" style={small}>
-                    {season === null ? '' : L.seasonCount({ n: items.length, more: hasMore })}
+                    {season === null ? '' : L.listCount({ n: items.length, more: hasMore })}
                   </Txt>
                   <View style={{ flexDirection: 'row', gap: 4 }}>
                     {SORT_KEYS.map((k) => (
@@ -1130,7 +1201,7 @@ export default function Market() {
                               </Txt>
                               <Txt tone="muted" style={tiny}>
                                 <StyleTag card={l.card} />
-                                {cardMeta(l.card)}
+                                {cardMeta(l.card, season)}
                               </Txt>
                             </View>
                             <View style={{ alignItems: 'flex-end', gap: 2 }}>
@@ -1169,12 +1240,11 @@ export default function Market() {
             ) : view === 'sell' ? (
               <View testID="market-sell" style={{ gap: 10 }}>
                 <Txt bold accessibilityRole="header" style={small}>
-                  {`${L.sellStep1} `}
-                  <Txt tone="muted" style={small}>
-                    {L.sellSeasonOnly({ season: seasonName || L.thisSeason })}
-                  </Txt>
+                  {L.sellStep1}
                 </Txt>
-                {!team ? (
+                {guest ? (
+                  guestPane('sell')
+                ) : !team ? (
                   teamFailed ? (
                     <Txt tone="muted" style={small}>
                       {L.playersFailed}
@@ -1206,6 +1276,7 @@ export default function Market() {
                               setSelling(p);
                               setPct(100);
                               setError(null);
+                              setSellPick((n) => n + 1);
                             }}
                             style={{
                               minHeight: 104,
@@ -1241,7 +1312,12 @@ export default function Market() {
                   </View>
                 )}
                 {selling && quote && me ? (
-                  <View style={{ ...box, borderRadius: RADIUS.lg, gap: 12, padding: 14 }}>
+                  <View
+                    ref={priceBox}
+                    collapsable={false}
+                    testID="market-price-box"
+                    style={{ ...box, borderRadius: RADIUS.lg, gap: 12, padding: 14 }}
+                  >
                     <Txt bold style={small}>
                       {L.sellStep2({
                         name: nameOfPlayer(selling),
@@ -1362,7 +1438,9 @@ export default function Market() {
               </View>
             ) : (
               <View testID="market-trades" style={{ gap: 10 }}>
-                {!me ? (
+                {guest ? (
+                  guestPane('trades')
+                ) : !me ? (
                   meFailed ? (
                     <Txt tone="muted" style={small}>
                       {meFailed}
@@ -1495,6 +1573,12 @@ export default function Market() {
                   </View>
                 ))}
               </View>
+              <Txt
+                testID="market-salary"
+                style={{ fontSize: rem(0.75), fontWeight: '600', color: c.onPitch, opacity: 0.85 }}
+              >
+                {`${TC.salaryLabel} · ${marketSalaryText(buying.card, season)}`}
+              </Txt>
             </View>
             <View
               style={{

@@ -1,11 +1,10 @@
 import { RADIUS } from '@offside/app-core/design-tokens';
-import { GoogleLoginButton } from '../../ui/GoogleLoginButton';
+import { LoginButtons } from './LoginButtons';
 import CupBracket from './CupBracket';
 import { scrollToView } from '../../ui/scroll';
 import CupMatchStatus from './CupMatchStatus';
 import { TeamLive } from './TeamLive';
 import { cupLiveMatch, firstLive } from '@offside/app-core/teamLive';
-import { startGoogleLogin } from '../../platform/auth';
 // T-11-145 오프사이드 컵 화면(구단주 화면의 컵 배너로 연다, 웹 Cup.svelte) — 내 상태 · 토너먼트 · 조별 순위 · 일정 · 보상 · 규칙 ·
 // 경기 상세.
 // 경기 상세는 팀 경기 결과(TeamResult)와 같은 모양이지만 공개 시점(홈 기준)이라 레이팅·다시 하기 줄은 없다.
@@ -815,10 +814,11 @@ function CupBody({
       {!linked && accountId === null && accountCache.value && accountCache.value !== 'error' ? (
         <Card gap={10} testID="cup-login">
           <Txt v="h2">{L.predictionLoginTitle}</Txt>
-          <GoogleLoginButton
-            testID="cup-login-google"
-            onPress={() => void startGoogleLogin({ cup: true })}
-          />
+          <Txt v="sm" tone="muted" testID="cup-login-note">
+            {L.loginCardNote}
+          </Txt>
+          {/* T-11-443 iOS에서는 Apple 로그인도 함께(다른 로그인 카드와 같은 LoginButtons). */}
+          <LoginButtons back={{ cup: true }} />
         </Card>
       ) : null}
       <CupCard

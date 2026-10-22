@@ -12,6 +12,7 @@
     MANAGER_NAME_MIN,
     TEAM_NAME_MAX,
     TEAM_NAME_MIN,
+    PAST_SALARY_BUDGET,
     TEAM_RATING_START,
     YOUTH_NAME,
     YOUTH_OVR,
@@ -71,14 +72,16 @@
   import { achNudge } from '../achNudge.js';
   import { fixSlot, slotName } from '@offside/app-core/matchReport';
   import type { ReportLine } from '@offside/contracts/owner-team';
-  import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, tooManyWildcards, wildcardFullText, wildcardLabel } from '@offside/app-core/teamOwner';
+  import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, budgetOf, salaryBar, salaryBlocks, salaryFullText, salaryIn } from '@offside/app-core/teamOwner';
+  import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
   import { coachBreakdown, coachSummary } from '@offside/app-core/managerCard';
   import { hofOwnText as HO } from '@offside/app-core/i18n/ko/hofOwn';
   import { loadAnonNames, publishAnonNames, type AnonName } from '@offside/app-core/cardNames';
-  import { fetchCup, fetchCupMe } from '@offside/app-core/api/cup';
+  import { fetchCup, fetchCupMe, type CupMeResponse, type CupResponse } from '@offside/app-core/api/cup';
+  import { cupLineupBar } from '@offside/app-core/cupLineupBar';
   import CupLineupBand from '../cup/CupLineupBand.svelte';
   import { involves, lockAtOf, lockWhen } from '../cup/cupView.js';
   import { readTeamDraft, teamDraftBase, writeTeamDraft, type TeamDraft } from './teamDraft.js';
@@ -115,6 +118,8 @@
   let loadSequence = 0;
   /** T-11-145 컵에 참가 중이면 편성 화면에 명단 마감 띠(잠겼는지 · 다음 마감 시각). */
   let cupBand = $state<{ locked: boolean; when: string | null } | null>(null);
+  /** T-11-436 컵 규칙 줄(팀 OVR · 상한, 선발 · 최소 인원)에 쓰는 대회 · 내 참가 응답. 참가 중이거나 접수 중일 때만. */
+  let cupRule = $state<{ cup: CupResponse; me: CupMeResponse } | null>(null);
   /** T-11-217 팀 프리셋(서버에 있는 목록)과 시트. */
   let presets = $state<TeamPreset[]>([]);
   let presetsOpen = $state(false);
@@ -152,6 +157,9 @@
   // 서버에는 비공개 이름이 없다 — 이 기기에서 은퇴한 선수는 이 기기에 남은 이름을 쓴다.
   const localNames = localCareerNames();
   const byId = $derived(new Map(players.map((p) => [p.careerId, p])));
+  // T-11-376 지난 시즌 선수 급여 예산(서버가 팀 시즌에 맞춰 계산한 값, 옛 응답이면 기본 80).
+  let budget = $state(PAST_SALARY_BUDGET);
+  const salary = $derived(salaryBar(slots, byId, season, budget));
   const nameOf = (p: TeamPlayer) => marketName(p, localNames);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
   // T-11-266 익명으로 은퇴한 내 선수 중 이 기기가 이름을 아는 카드(이적시장에 팔린 선수 포함) — 한꺼번에 이름을 공개할 수 있다.
@@ -188,6 +196,8 @@
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
   const lines = $derived(draftLines(slotCodes, ratings, synergy, season));
   const filled = $derived(slots.filter((s) => s !== null).length);
+  // T-11-436 서버 저장 검사와 같은 판정. block이 있으면 저장을 막고 이유를 보인다.
+  const cupBar = $derived(editable && cupRule ? cupLineupBar(cupRule.cup, cupRule.me, { ovr, filled }, new Date().toISOString()) : null);
   const dirty = $derived(
     !team ||
       name.trim() !== team.name ||
@@ -204,7 +214,7 @@
   const cells = $derived(
     slots.map((id, i) => {
       const p = id ? byId.get(id) : undefined;
-      return { rating: ratings[i] ?? YOUTH_OVR, name: p ? nameOf(p) : YOUTH_NAME, youth: !p, player: p };
+      return { rating: ratings[i] ?? YOUTH_OVR, name: p ? nameOf(p) : YOUTH_NAME, youth: !p, player: p, salary: p ? salaryIn(p, season) : 0 };
     }),
   );
   const matchHint = $derived(matchHintOf(team, dirty, matchesLeft, season, current));
@@ -264,14 +274,16 @@
     toast(r.missing ? L.tpLoadedMissing({ n: r.missing }) : L.tpLoaded);
   }
 
-  /** 컵이 조별·토너먼트 중일 때만 내 참가 상태를 묻는다(그 밖에는 요청 없음). */
+  /** 컵이 접수 · 추첨 대기 · 조별 · 토너먼트 중일 때만 내 참가 상태를 묻는다(그 밖에는 요청 없음). */
   async function loadCupBand(forSeason: number) {
     const c = await fetchCup();
-    if (!c.ok || c.data.cup.season !== forSeason || (c.data.phase !== 'group' && c.data.phase !== 'knockout')) {
+    if (!c.ok || c.data.cup.season !== forSeason || !['open', 'closed', 'group', 'knockout'].includes(c.data.phase)) {
       cupBand = null;
+      cupRule = null;
       return;
     }
     const m = await fetchCupMe();
+    cupRule = m.ok ? { cup: c.data, me: m.data } : null;
     if (!m.ok || m.data.entry?.status !== 'active') {
       cupBand = null;
       return;
@@ -294,6 +306,7 @@
     }
     ({ season, current, seasons, lastManager, players, matchesLeft } = r.data);
     perDay = r.data.matchesPerDay;
+    budget = budgetOf(r.data);
     needLogin = false;
     applyTeam(r.data.team);
     const account = accountCache.value;
@@ -356,20 +369,22 @@
   });
 
   // ───────── 편성 ─────────
-  /** 라커룸에서 넣거나, 이미 선발인 선수의 두 자리를 바꾼다. T-11-114 지난 시즌 선수는 와일드카드 상한까지만. */
+  /** 라커룸에서 넣거나, 이미 선발인 선수의 두 자리를 바꾼다. T-11-376 지난 시즌 선수는 급여 예산 안에서만. */
   function assign(index: number, id: string | null) {
     const next = assignSlot(slots, index, id);
-    if (tooManyWildcards(next, byId, season)) return toast(wildcardFullText());
+    if (salaryBlocks(slots, next, byId, season, budget)) return toast(salaryFullText(next, id, byId, season, budget));
     slots = next;
   }
 
-  /** 자리마다 가장 잘 맞는 선수부터 채운다(유스 선수보다 나을 때만). */
+  /** 자리마다 가장 잘 맞는 선수부터 채운다(유스 선수보다 나을 때만, 급여 예산 안에서). */
   function autoFill() {
-    slots = autoFillSlots(slotCodes, players, season);
+    slots = autoFillSlots(slotCodes, players, season, budget);
   }
 
   async function save(): Promise<boolean> {
     if (saving || !nameOk || !editable || pendingDraft) return false;
+    if (salary && salary.state === 'over') { toast(TC.salaryOverSave({ n: salary.sum, max: salary.budget })); return false; }
+    if (cupBar?.block) { toast(cupBar.block); return false; }
     const key = draftKey;
     const sequence = loadSequence;
     const submitted = JSON.parse(JSON.stringify(draftValue())) as ReturnType<typeof draftValue>;
@@ -382,7 +397,8 @@
     saving = false;
     if (!r.ok) {
       toast(r.error.message);
-      if (r.error.code === 'CUP_LINEUP_LOCKED') void loadCupBand(season);
+      // 컵 검사에 걸렸으면(잠금 · 상한 · 최소 인원) 띠를 다시 받는다. 서버는 사유를 details.reason에 담는다.
+      if (r.error.reason?.startsWith('CUP_')) void loadCupBand(season);
       return false;
     }
     if (sequence !== loadSequence) { if (key) writeTeamDraft(key, null); return false; }
@@ -599,7 +615,7 @@
       {:else if restoredDraft && dirty}
         <section class="card draft-notice" role="status"><p>{L.draftRestoredWeb}</p><button class="btn btn-sm" onclick={discardDraft} data-act="team-draft-discard">{L.draftDiscardWeb}</button></section>
       {/if}
-      {#if cupBand && editable && (cupBand.locked || cupBand.when)}<CupLineupBand locked={cupBand.locked} when={cupBand.when} />{/if}
+      {#if editable && (cupBar || (cupBand && (cupBand.locked || cupBand.when)))}<CupLineupBand locked={!!cupBand?.locked} when={cupBand?.when ?? null} bar={cupBar} />{/if}
       <TeamHead
         {team}
         {logo}
@@ -642,7 +658,8 @@
         teamName={name.trim()}
         managerName={manager.trim()}
         {editable}
-        wildcards={wildcardLabel(slots, byId, season)}
+        {salary}
+        {budget}
         bind:formation
         bind:layout
         {slots}
@@ -655,7 +672,8 @@
         {seasonName}
         {filled}
         {saving}
-        nameOk={nameOk && !pendingDraft}
+        nameOk={nameOk && !pendingDraft && !cupBar?.block}
+        saveBlock={cupBar?.block ?? null}
         {dirty}
         onassign={assign}
         onauto={autoFill}

@@ -27,13 +27,11 @@ const ko = {
   conflictKeep: '이 기기에만 두기',
   // 타일
   marketTitle: '이적시장',
-  marketSub: '이번 시즌 선수 사고팔기 · 시세 →',
+  marketSub: '선수 사고팔기 · 시세 →',
   inviteSub: (p: { n: number; s: number }) =>
     `친구와 함께 리롤권 ${p.n}장 + 프리미엄 스카우트권 ${p.s}장씩 받기 →`,
   dexTitle: '확률 이벤트',
   dexSubWeb: '선택지별 성공 확률 보기 →',
-  testerTitle: '테스터 모집 ↗',
-  testerSub: '안드로이드 앱 비공개 테스트 신청하기',
   galleryTitle: '마이너 갤러리 ↗',
   gallerySub: '디시인사이드에서 커리어 자랑 · 공략 · 건의',
   firstsTitle: '서버 최초 기록',
@@ -52,12 +50,17 @@ const ko = {
   newsFailed: '소식을 불러오지 못했어요.',
   newsEmpty: '아직 올라온 글이 없어요.',
   pinned: '고정',
+  // T-11-440 이번에 앱을 연 뒤 아직 열지 않은 새 글 표시
+  postNew: 'NEW',
   // 전광판
   tagTransfer: '이적',
   tagDebut: '프로 입단',
   tagFirst: '서버 최초',
   tagRecord: '서버 신기록',
   tickerAria: '이적·서버 기록 소식',
+  // T-11-440 전광판 멈춤 버튼
+  tickerPause: '전광판 멈추기',
+  tickerPlay: '전광판 다시 흐르게 하기',
   tickerIdle: '이적 소식과 서버 최초 기록이 여기로 흘러요',
   tickerAge: (p: { age: number }) => `(${p.age}세)`,
 };

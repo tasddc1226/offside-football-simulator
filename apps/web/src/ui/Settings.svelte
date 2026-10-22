@@ -7,13 +7,16 @@
   import { setSfxEnabled, sfxEnabled } from './sfx.js';
   import { revealShort, setRevealShort } from './revealPrefs.js';
   import { revealText as RV } from '@offside/app-core/i18n/ko/reveal';
+  import { keyMomentsOn, setKeyMomentsOn } from '@offside/app-core/keyMomentPref';
+  import { keyMomentText as KM } from '@offside/app-core/i18n/ko/keyMoment';
   import { bgm, setBgm, setBgmVolume } from './bgm.svelte.js';
   import { volumeAdjustable } from './bgmEngine.js';
   import { isDark, setDark } from './theme.js';
   import { setSheetSkin, skin } from './skin.svelte.js';
   import SiteFooter from './SiteFooter.svelte';
   import { showInstallGuide } from './install.js';
-  import { goFairness, goTypeDex } from './nav.js';
+  import { goAccount, goFairness, goTypeDex, takeFocus } from './nav.js';
+  import { onMount } from 'svelte';
   import ItemsHint from './ItemsHint.svelte';
   import { firstGuideText as FG } from '@offside/app-core/i18n/ko/firstGuide';
   import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
@@ -30,9 +33,15 @@
   let sfx = $state(sfxEnabled());
   // T-11-371 공개 연출 짧게(이 기기에만).
   let rvShort = $state(revealShort());
+  // T-11-426 결정적 장면 켜기 · 끄기(이 기기에만, 기본 켬).
+  let keyMoments = $state(keyMomentsOn());
   let dark = $state(isDark());
   let namePublic = $state(namePublicEnabled());
 
+  // T-11-437 게임 화면 저장 위치 안내에서 왔으면 백업 코드 카드를 보이게 내린다.
+  onMount(() => {
+    if (takeFocus('backup')) document.querySelector('[data-settings="backup"]')?.scrollIntoView({ block: 'start' });
+  });
 </script>
 
 <div class="wrap">
@@ -102,6 +111,13 @@
     </div>
     <div class="settings-row">
       <div class="settings-label">
+        <strong id="key-moments-label">{KM.settingTitle}</strong>
+        <span class="muted">{KM.settingBody}</span>
+      </div>
+      <button class="switch" role="switch" aria-checked={keyMoments} aria-labelledby="key-moments-label" data-setting="key-moments" onclick={() => setKeyMomentsOn((keyMoments = !keyMoments))}></button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">
         <strong id="bgm-label">{L.bgmTitle}</strong>
         <span class="muted">{L.bgmBody}</span>
       </div>
@@ -154,6 +170,7 @@
     <nav class="card settings-links" aria-label={L.help}>
       <button data-act="install-guide" onclick={() => showInstallGuide()}>{L.installGuide} <span aria-hidden="true">›</span></button>
       <a href="/guide/">{L.guide} <span aria-hidden="true">›</span></a>
+      <button data-act="account" onclick={goAccount}>{L.accountLink} <span aria-hidden="true">›</span></button>
       <a href="/faq/">{L.faq} <span aria-hidden="true">›</span></a>
       <button data-act="fairness" onclick={goFairness}>{L.fairness} <span aria-hidden="true">›</span></button>
       <button data-act="type-dex" onclick={goTypeDex}>{FG.typeDex} <span aria-hidden="true">›</span></button>

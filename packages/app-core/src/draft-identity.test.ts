@@ -39,7 +39,7 @@ function harness() {
       retire: vi.fn(),
     },
   };
-  return { state, sheet, actions: createGameActions(host) };
+  return { state, sheet, host, actions: createGameActions(host) };
 }
 
 /** 같은 시드로 무작위 이름·등번호를 뽑았을 때의 값. */
@@ -69,11 +69,37 @@ describe('선수 만들기 이름·등번호 이어 쓰기', () => {
     state.C.number = 30;
     actions.confirmNew();
     sheet.state.buttons[0]!.fn();
-    expect(state.G).toBeNull();
+    // T-11-431 진행 중인 커리어는 새 선수로 킥오프할 때까지 남는다.
+    expect(state.G?.name).toBe('손흥민');
     expect(state.screen).toBe('create');
     expect(state.C).toMatchObject({ name: '손흥민', number: 7 });
     // 앱을 다시 열어도 같다.
     expect(initialAppState().C).toMatchObject({ name: '손흥민', number: 7 });
+  });
+
+  it('T-11-431 새 커리어를 확인해도 킥오프 전에는 세이브를 지우지 않고, 킥오프하면 그때 바꾼다', () => {
+    const { state, sheet, host, actions } = harness();
+    actions.startCareer('이어할선수', 10);
+    const old = state.G!;
+    const saves = vi.mocked(host.save).mock.calls.length;
+    actions.confirmNew();
+    sheet.state.buttons[0]!.fn();
+    expect(state.screen).toBe('create');
+    expect(state.G).toBe(old);
+    expect(host.save).toHaveBeenCalledTimes(saves);
+    expect(host.analytics.replace).not.toHaveBeenCalled();
+    // 만들기 화면을 나가면(취소) 그대로 이어할 수 있다.
+    state.screen = 'home';
+    expect(state.G).toBe(old);
+    // 다시 들어와 킥오프하면 그때 새 커리어로 바꾸고 저장한다.
+    actions.confirmNew();
+    sheet.state.buttons[0]!.fn();
+    actions.startCareer('새선수', 11);
+    expect(state.G!.name).toBe('새선수');
+    expect(state.G!.cid).not.toBe(old.cid);
+    expect(host.save).toHaveBeenCalledTimes(saves + 1);
+    expect(host.analytics.replace).toHaveBeenCalledTimes(1);
+    expect(host.analytics.start).toHaveBeenLastCalledWith(state.G, old);
   });
 
   it('빈 이름·0번으로 시작하면 실제로 쓴 무작위 값을 저장한다', () => {

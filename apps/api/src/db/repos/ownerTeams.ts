@@ -275,8 +275,8 @@ export const myTeamIn = (db: Db, profileId: string, season: number) =>
     .where(and(eq(ownerTeams.profileId, profileId), eq(ownerTeams.season, season)));
 
 /**
- * 그 시즌에 넣을 수 있는 내 선수 카드(그 시즌까지 올라온 선수, 최고 OVR 순). T-11-114 지난 시즌 선수는 와일드카드로
- * 선발에 TEAM_WILDCARD_MAX명까지만 넣는다(PUT이 센다). T-11-080부터 직접 키운 선수 + 영입한
+ * 그 시즌에 넣을 수 있는 내 선수 카드(그 시즌까지 올라온 선수, 최고 OVR 순). T-11-376 지난 시즌 선수는 급여 합이
+ * 예산(pastSalaryBudget) 안에서만 선발에 넣는다(PUT이 센다). T-11-080부터 직접 키운 선수 + 영입한
  * 선수 — 소유는 cards.owner_id다. 공개 이름·숨김·옛 추정 능력치·키운 사람은 careers에서 붙인다(기록이 지워졌으면 익명).
  */
 export function listEligibleCareers(db: Db, profileId: string, season: number, limit = 300) {
@@ -665,6 +665,31 @@ export async function ratingRankOf(db: Db, t: OwnerTeamRow): Promise<number | nu
             or(
               gt(ownerTeams.ovr, t.ovr),
               and(eq(ownerTeams.ovr, t.ovr), lt(ownerTeams.createdAt, t.createdAt)),
+            ),
+          ),
+        ),
+      ),
+    );
+  return Number(row?.n ?? 0) + 1;
+}
+
+/** T-11-441 OVR 순위(OVR순 랭킹과 같은 순서 — OVR · 레이팅 · 먼저 만든 팀). 랭킹에 오르지 않은 팀이면 null. */
+export async function ovrRankOf(db: Db, t: OwnerTeamRow): Promise<number | null> {
+  if (t.filled === 0) return null;
+  const [row] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(ownerTeams)
+    .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
+    .where(
+      and(
+        rankedIn(t.season),
+        or(
+          gt(ownerTeams.ovr, t.ovr),
+          and(
+            eq(ownerTeams.ovr, t.ovr),
+            or(
+              gt(ownerTeams.rating, t.rating),
+              and(eq(ownerTeams.rating, t.rating), lt(ownerTeams.createdAt, t.createdAt)),
             ),
           ),
         ),

@@ -13,8 +13,7 @@ import {
 import type { Hono } from 'hono';
 import { notFoundError, ok } from './shared.js';
 import { getPublicHof, listPublicHof } from '../db/repos/careers.js';
-import { ensureClubIdsBackfilled } from '../db/repos/clubIds.js';
-import { ensureCareerValuesBackfilled } from '../db/repos/careerValues.js';
+import { ensureHofBackfilled } from '../db/repos/hofBackfill.js';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, getPublicReadDb, type AppEnv } from '../env.js';
@@ -50,11 +49,7 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
       async () => {
         const db = getDb(c);
         // 모두 한 번뿐인 소급 — 조회마다 한 조각씩 나아간다(몸값은 리그 이름으로도 매겨 순서에 기대지 않는다).
-        const filled = await Promise.all([
-          ensureClubIdsBackfilled(db),
-          ensureCareerValuesBackfilled(db),
-        ]);
-        filling = filled.some(Boolean);
+        filling = await ensureHofBackfilled(db);
         return listPublicHof(
           filling ? db : getPublicReadDb(c),
           limit,

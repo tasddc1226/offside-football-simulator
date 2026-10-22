@@ -1,0 +1,26 @@
+{
+  "id": "t-11-418d-league-badges-live",
+  "title": "오프사이드 리그 확정 배지 · 동시 중계 · 기록",
+  "items": [
+    "순위표에 우승 · 승격 · 잔류 · 강등 확정 배지가 붙어요. 남은 경기 결과와 상관없이 바뀌지 않는 자리에만 붙어요.",
+    "마지막 라운드는 같은 리그 경기를 한 화면에서 같이 봐요. 골이 들어가면 순위표가 움직여요.",
+    "리그 화면에 득점 순위 · 최다 연승 · 최장 무패 기록이 남아요."
+  ],
+  "en": {
+    "title": "OFFSIDE League clinch badges, live final round and records",
+    "items": [
+      "The table now shows champions, promoted, safe and relegated badges, only once no remaining result can change that place.",
+      "Watch every match of the final round in your league on one screen. The table moves as the goals go in.",
+      "The league screen keeps the top scorers and the longest winning and unbeaten runs."
+    ]
+  },
+  "ja": {
+    "title": "オフサイドリーグの決定バッジ・同時中継・記録",
+    "items": [
+      "順位表に優勝・昇格・残留・降格決定のバッジが付きます。残り試合の結果がどうなっても変わらない順位にだけ付きます。",
+      "最終節は同じリーグの試合をひとつの画面で一緒に見ます。ゴールが入ると順位表が動きます。",
+      "リーグ画面に得点ランキング・最多連勝・最長無敗の記録が残ります。"
+    ]
+  },
+  "availability": "web-app"
+}

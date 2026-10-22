@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { publicNameOf, setNamePublic } from './namePublic.js';
+import { canPublishName, publicNameOf, setNamePublic } from './namePublic.js';
 
 describe('선수 이름 공개 (T-10-065)', () => {
   afterEach(() => setNamePublic(true));
@@ -24,5 +24,15 @@ describe('익명으로 은퇴한 내 선수 이름 공개 (T-11-266)', () => {
       ['d', '이미공개'],
     ]);
     expect(anonOwnNames(['a', 'b', 'e'], local)).toEqual([{ careerId: 'a', publicName: '도하람' }]);
+  });
+});
+
+describe('공개할 수 없는 이름 미리 알리기 (T-11-439)', () => {
+  it('환경설정을 꺼도 이름 자체로만 판단한다', () => {
+    expect(canPublishName('도하람')).toBe(true);
+    expect(canPublishName('시발 FC')).toBe(false);
+    expect(canPublishName('<b>')).toBe(false);
+    setNamePublic(false);
+    expect(canPublishName('도하람')).toBe(true);
   });
 });

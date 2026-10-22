@@ -22,10 +22,19 @@ export const account: Translation<AccountMsgs> = {
   nicknamePrompt: 'コメント用ニックネームを決めると、お知らせ掲示板にコメントできます',
   nicknameFixed: (p) => `${p.nickname} · 運営アカウントは変更できません`,
   unlinkGoogle: 'Google連携を解除',
+  unlinkTitle: 'Google連携を解除しますか？',
+  unlinkBodyOnly:
+    'このアカウントにログインする手段がなくなり、ログインしていない状態になります。別の端末で同じGoogleアカウントでログインしても、このアカウントの選手記録とチームは読み込めません。この端末でもう一度Googleでログインすると再び連携されます。この端末のゲーム進行はそのまま残ります。',
+  unlinkBodyApple:
+    'このアカウントはAppleでのログインで引き続き使えます。別の端末で同じGoogleアカウントでログインしても、このアカウントの選手記録とチームは読み込めません。この端末のゲーム進行はそのまま残ります。',
+  unlinkConfirm: '連携を解除',
+  unlinkFail: 'Google連携を解除できませんでした。少し待ってからもう一度お試しください。',
   deleteAccount: 'アカウント削除',
   deleteBody:
     'アカウントと、サーバーに保存された選手の記録・チーム・コメント・チャットを削除しますか？元に戻せません。この端末のゲームの進行は残ります。',
   deleteConfirm: '削除',
+  deleteDone: 'アカウントを削除しました。この端末のゲーム進行はそのまま残ります。',
+  deleteFail: 'アカウントを削除できませんでした。少し待ってからもう一度お試しください。',
   googleTitle: 'Googleアカウント',
   googleVia: 'Googleアカウントでログインしています。',
   appleTitle: 'Appleアカウント',

@@ -14,12 +14,13 @@
       <b>{m.result.text}</b>
     </p>
   {:else}
+    <p class="km-stake" data-key-moment-stake>{m.stake}</p>
     <div class="km-choices">
       {#each m.choices as c (c.id)}
         <button class="km-choice" onclick={() => m.choose(c.id)} data-key-moment-choice={c.id}>
           <span class="km-label">{c.label}</span>
           <b class="km-pct">{K.pct({ p: c.pct })}</b>
-          <small class="km-attr">{K.attr({ attr: c.attr })}</small>
+          <small class="km-attr">{K.attr({ attr: c.attr })}{#if c.rec} · <b data-key-moment-rec>{c.rec}</b>{/if}</small>
         </button>
       {/each}
     </div>
@@ -66,13 +67,19 @@
     text-align: right;
   }
   .km-scene,
+  .km-stake,
   .km-hint {
     margin: 0;
     line-height: 1.5;
   }
-  .km-hint {
+  .km-hint,
+  .km-stake {
     color: var(--muted);
     font-size: var(--fs-label);
+  }
+  .km-attr b {
+    color: var(--ink);
+    font-weight: 600;
   }
   .km-choices {
     display: grid;

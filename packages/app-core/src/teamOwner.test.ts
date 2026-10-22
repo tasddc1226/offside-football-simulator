@@ -4,6 +4,7 @@ import {
   achGradeView,
   achNear,
   achPoints,
+  achReward,
   achRankText,
   achSections,
   achState,
@@ -72,6 +73,16 @@ describe('시즌 업적 요약', () => {
       ['manager', 0, 0, 0, true],
     ]);
     expect(s[0]!.name).toBe('선수 업적');
+  });
+  it('T-11-357 보상 표시 — 받은 보상과 다음 달성 보상', () => {
+    const base = { id: 'x', label: 'x', done: false, points: 0, worth: 10 };
+    expect(achReward(base)).toBeNull();
+    expect(achReward({ ...base, reward: { boost: 1, scout: 0 } })).toBe(
+      '달성 보상 잠재력 강화권 1장',
+    );
+    expect(
+      achReward({ ...base, got: { boost: 2, scout: 0 }, reward: { boost: 0, scout: 1 } }),
+    ).toBe('받은 보상 잠재력 강화권 2장 · 달성 보상 프리미엄 스카우트권 1장');
   });
   it('점수 표시와 등급 진행', () => {
     expect(achPoints(groups[0]!.items[0]!)).toBe('+10점');

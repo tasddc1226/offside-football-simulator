@@ -1,1 +1,3 @@
 google.com, pub-3797087216173591, DIRECT, f08c47fec0942fa0
+facebook.com, 2083412375610823, DIRECT, c3e20eee3f780d68
+vungle.com, 6ad9e52b5dbcf255c6064cdc, DIRECT, c107d686becd2d77

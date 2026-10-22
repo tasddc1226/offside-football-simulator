@@ -70,6 +70,7 @@
     saveManagerState,
     setTeamCoach,
     startConfirmLines,
+    finishConfirmLines,
     startManager,
     type ManagerStatKey,
   } from '@offside/app-core/manager';
@@ -84,6 +85,8 @@
   let error = $state<string | null>(null);
   let confirm = $state<ManagerCandidate | null>(null);
   let confirmAbandon = $state(false);
+  // T-11-443 '감독 카드로 확정'은 되돌릴 수 없어 한 번 더 묻는다.
+  let confirmFinish = $state(false);
   // T-11-345 경질할지 묻는 끝낸 감독 · 방금 경질한 알림.
   let confirmRelease = $state<ManagerCareer | null>(null);
   let released = $state<string | null>(null);
@@ -168,6 +171,7 @@
     if (!st || !res) return;
     const id = st.id;
     if (await run(() => finishManager(id, res))) {
+      confirmFinish = false;
       clearManagerState();
       await load();
     }
@@ -235,7 +239,10 @@
       evChips = [];
     } else if (bar.act === 'manager-result') playSeason();
     else if (bar.act === 'manager-continue') act(continueAfterResult);
-    else void finish();
+    else {
+      error = null;
+      confirmFinish = true;
+    }
   }
   const RANK: Record<string, number> = { S: 3, A: 2, B: 1, C: 0 };
   /** 숙련이 가장 높은 포메이션(효과 미리보기 기준). */
@@ -340,7 +347,7 @@
           {@render cardBody(result)}
         </div>
         <p class="muted fs-sm">{M.doneLead}</p>
-        {#if error}<p class="mg-err" role="alert">{error}</p>{/if}
+        {#if error && !confirmFinish}<p class="mg-err" role="alert">{error}</p>{/if}
       </section>
     {/if}
 
@@ -446,8 +453,9 @@
         </ul>
       </details>
     {/if}
-    {#if st.phase !== 'done' && !sheetLabel}
-      <button class="btn mg-abandon" data-act="manager-abandon" onclick={() => ((confirmAbandon = true), (error = null))}>{M.abandon}</button>
+    <!-- T-11-451 시즌을 다 마친 뒤에도 확정 전에는 원래 선수로 돌아갈 수 있다(서버는 포기와 같다). -->
+    {#if !sheetLabel}
+      <button class="btn mg-abandon" data-act="manager-abandon" onclick={() => ((confirmAbandon = true), (error = null))}>{st.phase === 'done' ? M.undo : M.abandon}</button>
     {/if}
   {:else}
     <!-- 시작 · 내 감독 -->
@@ -496,7 +504,7 @@
         <p class="muted fs-sm">{M.noManagers}</p>
       {/each}
       {#if released}<p class="muted fs-sm" role="status" data-manager-released>{released}</p>{/if}
-      {#if error && !confirm && !confirmAbandon && !confirmRelease && st?.phase !== 'done'}<p class="mg-err" role="alert">{error}</p>{/if}
+      {#if error && !confirm && !confirmAbandon && !confirmRelease && !confirmFinish && st?.phase !== 'done'}<p class="mg-err" role="alert">{error}</p>{/if}
     </section>
   {/if}
 </div>
@@ -536,13 +544,27 @@
 
 {#if confirmAbandon}
   <button class="mg-scrim" aria-label={M.cancel} onclick={() => (confirmAbandon = false)}></button>
-  <div class="mg-sheet" role="dialog" aria-modal="true" aria-label={M.abandon} data-manager-abandon>
-    <h2>{M.abandon}</h2>
-    <p>{M.abandonConfirm}</p>
+  {@const undo = st?.phase === 'done'}
+  <div class="mg-sheet" role="dialog" aria-modal="true" aria-label={undo ? M.undo : M.abandon} data-manager-abandon>
+    <h2>{undo ? M.undo : M.abandon}</h2>
+    <p>{undo ? M.undoConfirm : M.abandonConfirm}</p>
     {#if error}<p class="mg-err" role="alert">{error}</p>{/if}
     <div class="mg-actions">
       <button class="btn" onclick={() => (confirmAbandon = false)}>{M.cancel}</button>
-      <button class="btn mg-danger" data-act="manager-abandon-confirm" disabled={busy} onclick={() => void abandon()}>{M.abandonOk}</button>
+      <button class="btn mg-danger" data-act="manager-abandon-confirm" disabled={busy} onclick={() => void abandon()}>{undo ? M.undoOk : M.abandonOk}</button>
+    </div>
+  </div>
+{/if}
+
+{#if confirmFinish}
+  <button class="mg-scrim" aria-label={M.cancel} onclick={() => (confirmFinish = false)}></button>
+  <div class="mg-sheet" role="dialog" aria-modal="true" aria-label={M.finishTitle} data-manager-finish>
+    <h2>{M.finishTitle}</h2>
+    <ul class="mg-lines">{#each finishConfirmLines() as line, i (i)}<li>{line}</li>{/each}</ul>
+    {#if error}<p class="mg-err" role="alert">{error}</p>{/if}
+    <div class="mg-actions">
+      <button class="btn" onclick={() => (confirmFinish = false)}>{M.cancel}</button>
+      <button class="btn btn-primary" data-act="manager-finish-confirm" disabled={busy} onclick={() => void finish()}>{M.finishOk}</button>
     </div>
   </div>
 {/if}

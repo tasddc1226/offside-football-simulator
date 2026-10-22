@@ -17,6 +17,8 @@ const IGNORE = [
   /ResizeObserver loop/i,
   /(chrome|moz|safari(-web)?)-extension:\/\//i,
   /^Non-Error promise rejection captured/i,
+  // iOS 앱(인스타그램 등) 안의 브라우저가 자동 완성용으로 심는 스크립트.
+  /_AutofillCallbackHandler/,
 ];
 
 type Target = { platform: ClientErrorReport['platform']; version: string };

@@ -813,6 +813,41 @@
       "when": 1792421159335,
       "tag": "0118_cup_divisions",
       "breakpoints": true
+    },
+    {
+      "idx": 119,
+      "version": "6",
+      "when": 1792478376943,
+      "tag": "0119_league_entries",
+      "breakpoints": true
+    },
+    {
+      "idx": 120,
+      "version": "6",
+      "when": 1792487911151,
+      "tag": "0120_league_matches",
+      "breakpoints": true
+    },
+    {
+      "idx": 121,
+      "version": "6",
+      "when": 1792498971001,
+      "tag": "0121_market_all_seasons",
+      "breakpoints": true
+    },
+    {
+      "idx": 122,
+      "version": "6",
+      "when": 1792553631116,
+      "tag": "0122_league_settle",
+      "breakpoints": true
+    },
+    {
+      "idx": 123,
+      "version": "6",
+      "when": 1792565457137,
+      "tag": "0123_owner_achievement_gift",
+      "breakpoints": true
     }
   ]
 }

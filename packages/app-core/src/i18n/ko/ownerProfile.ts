@@ -117,6 +117,7 @@ const ko = {
   // T-11-410 d = 구간 이름(구간 대회 칭호만).
   titleChampion: (p: { n: number; d?: string | undefined }) =>
     `제${p.n}회${p.d ? ` ${p.d}` : ''} 챔피언`,
+  titleLeagueChampion: (p: { n: number }) => `시즌 ${p.n} 리그 챔피언`,
   titleRunnerup: (p: { n: number; d?: string | undefined }) =>
     `제${p.n}회${p.d ? ` ${p.d}` : ''} 준우승`,
   titleSf: (p: { n: number; d?: string | undefined }) => `제${p.n}회${p.d ? ` ${p.d}` : ''} 4강`,

@@ -12,6 +12,15 @@ export const keyMoment: Translation<KeyMomentMsgs> = {
   auto: '監督に任せる',
   timer: (p) => `${p.n}秒後に監督に任せます`,
   picked: (p) => `選択: ${p.label}`,
+  stakeChance:
+    '成功するとこの試合のゴールかアシストが1つ増えることがあり、失敗すると1つ減ることがあります。',
+  stakeCrisis: '止められないと失点し、この試合に負けます。',
+  stakeFinal: 'この場面の結果で優勝か準優勝かが決まります。',
+  recGoal: '成功でゴール',
+  recAssist: '成功でアシスト',
+  settingTitle: '決定的な場面',
+  settingBody:
+    'キャリアの試合中継を止めて、自分の選手のチャンス・ピンチで選択肢を選べます。オフにすると常に監督に任せます。',
   goal: (p) => `ゴール! ${p.name}が決めました。`,
   assist: (p) => `${p.name}のパスがゴールにつながりました。`,
   chanceOk: (p) => `${p.name}のプレーがゴールにつながりました。`,

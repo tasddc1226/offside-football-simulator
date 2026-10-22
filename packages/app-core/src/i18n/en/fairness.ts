@@ -26,9 +26,9 @@ export const fairness: Translation<FairnessMsgs> = {
   atLeastOne: (p) =>
     `The chance that at least 1 of 3 candidates is grade ${p.grade} is ${p.season} mid-season and ${p.pre} in preseason.`,
   premium: (p) =>
-    `With a premium scout ticket, 1 of the 3 candidates is guaranteed grade A or higher. Every candidate's chance of S is doubled: ${p.season} mid-season and ${p.pre} in preseason. The other candidates keep the A–D ratios in the table above.`,
-  premiumPity:
-    'Pity: after 29 premium scout tickets with no S candidate, the guaranteed candidate on the 30th is S. An S candidate along the way starts the count over. On every 100th ticket you use, the guaranteed candidate has top potential (96). The candidate screen shows how many are left.',
+    `With a premium scout ticket, 1 of the 3 candidates is guaranteed grade A or higher. Every candidate's chance of S is ${p.mult} times the normal chance: ${p.season} mid-season and ${p.pre} in preseason. The other candidates keep the A–D ratios in the table above.`,
+  premiumPity: (p) =>
+    `Pity: after ${p.sure - 1} premium scout tickets with no S candidate, the guaranteed candidate on the ${p.sure}th is S. An S candidate along the way starts the count over. On every ${p.elite}th ticket you use, the guaranteed candidate has top potential (96). The candidate screen shows how many are left.`,
   rerollMileage: (p) =>
     `Reroll tickets don't change candidate potential odds. Every ${p.need} reroll tickets you use earn 1 premium scout ticket. Ad rerolls don't count.`,
   boostTitle: 'Potential boost odds',

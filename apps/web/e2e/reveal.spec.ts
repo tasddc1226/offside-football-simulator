@@ -10,7 +10,7 @@ test.use({
     origins: [
       {
         origin: `http://localhost:${PORT}`,
-        localStorage: [{ name: 'ft_first_guide', value: '["home","items"]' }],
+        localStorage: [{ name: 'ft_first_guide', value: '["home","items","save"]' }],
       },
     ],
   },

@@ -14,6 +14,7 @@ import {
   LINEUP_SIZE,
   MANAGER_NAME_MAX,
   MANAGER_NAME_MIN,
+  PAST_SALARY_BUDGET,
   TEAM_NAME_MAX,
   TEAM_NAME_MIN,
   TEAM_RATING_START,
@@ -55,9 +56,10 @@ import { loadAnonNames, publishAnonNames, type AnonName } from '@offside/app-cor
 import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import {
   autoFillSlots,
-  tooManyWildcards,
-  wildcardFullText,
-  wildcardLabel,
+  budgetOf,
+  salaryBar,
+  salaryBlocks,
+  salaryFullText,
   draftLines,
   isPreseasonLegacy,
   matchHintOf,
@@ -99,6 +101,8 @@ import { TeamLive } from './TeamLive';
 import { TeamOpponents } from './TeamOpponents';
 import { OvrBadge } from './TeamParts';
 import { TeamLineup } from './TeamLineup';
+import { SalaryBar } from './SalaryGuide';
+import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import { TeamLogo } from '../../components/TeamLogo';
 import { TeamLogoEditor } from './TeamLogoEditor';
 import { TeamShare, type TeamShareData } from './TeamShare';
@@ -109,6 +113,7 @@ import { readTeamDraft, writeTeamDraft, teamDraftBase, type TeamDraft } from './
 import { RecordsChips as SortChips } from '../hof/RecordsControls';
 import { TeamResult } from './TeamResult';
 import { CupLockNotice, useCup } from './TeamCup';
+import { cupLineupBar } from '@offside/app-core/cupLineupBar';
 import { TeamPresets } from './TeamPresets';
 import { loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPresets';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
@@ -137,6 +142,7 @@ export default function Team() {
   const [perDay, setPerDay] = useState(0);
   /** 보고 있는 시즌 · 지금 고치고 겨루는 시즌(휴식기면 null) · 고를 수 있는 시즌. */
   const [season, setSeason] = useState(0);
+  const [budget, setBudget] = useState(PAST_SALARY_BUDGET);
   const [synFocus, setSynFocus] = useState<string | null>(null);
   const [current, setCurrent] = useState<number | null>(null);
   const [seasons, setSeasons] = useState<OwnerTeamResponse['seasons']>([]);
@@ -225,7 +231,8 @@ export default function Team() {
   // 서버에는 비공개 이름이 없다 — 이 기기에서 은퇴한 선수는 이 기기에 남은 이름을 쓴다.
   const localNames = useMemo(() => localCareerNames(), []);
   const byId = new Map(players.map((p) => [p.careerId, p]));
-  const wildcards = wildcardLabel(slots, byId, season);
+  // T-11-376 지난 시즌 선수 급여 예산(서버가 팀 시즌에 맞춰 계산한 값, 옛 응답이면 기본 80).
+  const salary = salaryBar(slots, byId, season, budget);
   const nameOf = (p: TeamPlayer) => marketName(p, localNames);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
   // T-11-266 익명으로 은퇴한 내 선수 중 이 기기가 이름을 아는 카드(이적시장에 팔린 선수 포함) — 한꺼번에 이름을 공개할 수 있다.
@@ -295,6 +302,11 @@ export default function Team() {
   // T-11-382 줄 칸의 감독 보정이 어디서 왔는지(갈래별 값 · 상한에 잘린 몫 · 꺼진 특기).
   const coachDetail = team?.coach ? coachBreakdown(team.coach, formation, synergy, season) : null;
   const filled = slots.filter((s) => s !== null).length;
+  // T-11-436 컵 규칙 줄 — 서버 저장 검사와 같은 판정. block이 있으면 저장을 막고 이유를 보인다.
+  const cupBar =
+    editable && !legacy && cupState.cup?.cup.season === season
+      ? cupLineupBar(cupState.cup, cupState.me, { ovr, filled }, new Date().toISOString())
+      : null;
   const dirty =
     !team ||
     name.trim() !== team.name ||
@@ -394,6 +406,7 @@ export default function Team() {
     setPlayers(d.players);
     setMatchesLeft(d.matchesLeft);
     setPerDay(d.matchesPerDay);
+    setBudget(budgetOf(d));
     if (silent) {
       if (JSON.stringify(d.team) !== JSON.stringify(teamNow.current)) {
         if (dirtyNow.current) setTeam(d.team);
@@ -450,6 +463,14 @@ export default function Team() {
   // ───────── 편성 ─────────
   async function save(): Promise<boolean> {
     if (savingRef.current || !nameOk) return false;
+    if (salary?.state === 'over') {
+      toast(TC.salaryOverSave({ n: salary.sum, max: salary.budget }));
+      return false;
+    }
+    if (cupBar?.block) {
+      toast(cupBar.block);
+      return false;
+    }
     savingRef.current = true;
     setSaving(true);
     const snapshot = JSON.stringify(draftNow.current);
@@ -463,6 +484,8 @@ export default function Team() {
       const r = await saveOwnerTeam(legacy ? { ...body, season: 0 } : body);
       if (!r.ok) {
         toast(r.error.message);
+        // 컵 검사(잠금 · 상한 · 최소 인원)에 걸렸으면 띠를 다시 받는다.
+        if (r.error.reason?.startsWith('CUP_')) void cupState.reload(true);
         return false;
       }
       const unchanged = JSON.stringify(draftNow.current) === snapshot;
@@ -813,6 +836,9 @@ export default function Team() {
                     {nameIssues.manager}
                   </Txt>
                 ) : null}
+                <Txt v="sm" tone="muted" testID="team-manager-note">
+                  {L.managerNameNote}
+                </Txt>
               </Field>
             </View>
           ) : null}
@@ -856,7 +882,7 @@ export default function Team() {
         ) : null}
         {editable || team ? (
           <>
-            {editable && !legacy ? <CupLockNotice state={cupState} /> : null}
+            {editable && !legacy ? <CupLockNotice state={cupState} bar={cupBar} /> : null}
             <Card gap={8}>
               <View
                 style={{
@@ -908,7 +934,7 @@ export default function Team() {
                     testID="team-auto"
                     disabled={!players.length}
                     style={{ flex: 1 }}
-                    onPress={() => setSlots(autoFillSlots(slotCodes, players, season))}
+                    onPress={() => setSlots(autoFillSlots(slotCodes, players, season, budget))}
                   >
                     {L.autoPlace}
                   </Btn>
@@ -935,11 +961,7 @@ export default function Team() {
                   {L.shareImageApp}
                 </Btn>
               </View>
-              {wildcards ? (
-                <Txt v="xs" tone="muted" testID="team-wildcards">
-                  {wildcards}
-                </Txt>
-              ) : null}
+              {salary ? <SalaryBar salary={salary} /> : null}
               {editable ? (
                 <Txt v="xs" tone="muted">
                   {L.dragHintApp}
@@ -1041,9 +1063,14 @@ export default function Team() {
               onLock={(p) => void toggleLock(p)}
               focusSlot={focusSlot}
               onFocused={() => setFocusSlot(null)}
+              season={season}
+              salary={salary}
               change={(nextSlots, nextLayout) => {
-                // T-11-114 지난 시즌 선수는 와일드카드 상한까지만.
-                if (tooManyWildcards(nextSlots, byId, season)) return toast(wildcardFullText());
+                // T-11-376 지난 시즌 선수는 급여 예산 안에서만.
+                if (salaryBlocks(slots, nextSlots, byId, season, budget)) {
+                  const added = nextSlots.find((id) => id !== null && !slots.includes(id)) ?? null;
+                  return toast(salaryFullText(nextSlots, added, byId, season, budget));
+                }
                 setSlots(nextSlots);
                 setLayout(nextLayout);
               }}
@@ -1198,14 +1225,14 @@ export default function Team() {
                       </Btn>
                     </View>
                   ) : null}
-                  {dirty && !nameOk ? (
+                  {dirty && (!nameOk || cupBar?.block) ? (
                     <Txt
                       v="sm"
                       tone="muted"
                       accessibilityLiveRegion="polite"
                       testID="team-save-reason"
                     >
-                      {nameIssues.name || nameIssues.manager}
+                      {nameIssues.name || nameIssues.manager || cupBar?.block}
                     </Txt>
                   ) : null}
                   {dirty ? (
@@ -1213,7 +1240,7 @@ export default function Team() {
                       kind="primary"
                       block
                       testID="team-save"
-                      disabled={saving || !nameOk || !!pendingDraft}
+                      disabled={saving || !nameOk || !!pendingDraft || !!cupBar?.block}
                       onPress={() => void save()}
                     >
                       {saving ? L.saving : team ? L.saveLineupApp : L.createTeam}

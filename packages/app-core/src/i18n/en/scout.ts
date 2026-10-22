@@ -33,8 +33,8 @@ export const scout: Translation<ScoutMsgs> = {
     'Calculated from the current game settings. Odds differ before and after the season opens. Grades are based on true potential.',
   pitySure: (p) => (p.n <= 1 ? 'Next ticket: S guaranteed' : `S guaranteed in ${p.n}`),
   pityElite: (p) => (p.n <= 1 ? 'Next ticket: elite S guaranteed' : `Elite S in ${p.n}`),
-  pityHelp:
-    'The S bar fills on your 30th ticket without an S candidate. If an S candidate shows up first, it starts over. The elite S bar fills on every 100th ticket and never starts over.',
+  pityHelp: (p) =>
+    `The S bar fills on your ${p.sure}th ticket without an S candidate. If an S candidate shows up first, it starts over. The elite S bar fills on every ${p.elite}th ticket and never starts over.`,
   pityTitle: 'Pity',
   gaugeElite: 'Elite S (potential 96)',
   gaugeCount: (p) => `${p.have} / ${p.need}`,
@@ -46,7 +46,7 @@ export const scout: Translation<ScoutMsgs> = {
   pillElite: 'Elite S',
   doneSure: (p) => `You hit the pity and got an S candidate. ${p.n} premium scout tickets left.`,
   doneElite: (p) =>
-    `Your 100th ticket brought an elite S candidate. ${p.n} premium scout tickets left.`,
+    `Your ${p.elite}th ticket brought an elite S candidate. ${p.n} premium scout tickets left.`,
   funds: 'Buy with club funds',
   fundsWeek: (p) => `This week ${p.bought}/${p.cap}`,
   fundsNote: 'You can buy 1 ticket a week with club funds. It resets every Monday at 00:00 (KST).',
@@ -56,6 +56,6 @@ export const scout: Translation<ScoutMsgs> = {
     `Buy 1 premium scout ticket for ${p.price}? You'll have ${p.balance} in club funds left, and this can't be undone.`,
   fundsDone: (p) => `Premium scout ticket bought. You now have ${p.n}.`,
   fundsFail: "Couldn't buy the premium scout ticket.",
-  oddsPity:
-    'Pity: after 29 tickets with no S, the guaranteed candidate on the 30th is S. An S candidate along the way starts the count over. On every 100th ticket, the guaranteed candidate has top potential (96).',
+  oddsPity: (p) =>
+    `Pity: after ${p.sure - 1} tickets with no S, the guaranteed candidate on the ${p.sure}th is S. An S candidate along the way starts the count over. On every ${p.elite}th ticket, the guaranteed candidate has top potential (96).`,
 };

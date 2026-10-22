@@ -4,7 +4,7 @@ import {
   retireAtOf,
   SERVICE_SEASONS,
 } from '@offside/contracts/service-seasons';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
 import { forgetSeasonSchedule, readSeasonSchedule, SCHEDULE_KEY } from '../seasonSchedule.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
@@ -96,12 +96,17 @@ describe('시즌 진행 게이지 cron', () => {
     expect(await runSeasonGauge(ctx.env.DB, '2026-10-07T15:10:00.000Z')).toBeNull();
     expect((await readSeasonGauge(ctx.env.DB, 1))?.updatedAt).toBe(NOW);
 
-    const res = await createApp().request('/v1/season/gauge', {}, ctx.env);
+    // 응답 시각을 확정 1시간 뒤로 고정한다 — 실제 지금이 마감(END)을 지나면 시즌 1 게이지가 없어 null이 된다.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.parse(NOW) + 3_600_000);
+    const res = await Promise.resolve(createApp().request('/v1/season/gauge', {}, ctx.env)).finally(
+      () => vi.useRealTimers(),
+    );
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       data: { gauge: { target: number; progress: number; endsAt: string } };
     };
-    // 진행률은 응답 시각(실제 지금)으로 다시 계산한다 — 확정 뒤에는 90%에서 마감 시각 100%로 시간에 따라 찬다.
+    // 진행률은 응답 시각으로 다시 계산한다 — 확정 뒤에는 90%에서 마감 시각 100%로 시간에 따라 찬다.
     expect(body.data.gauge).toMatchObject({ target: 24, endsAt: END });
     expect(body.data.gauge.progress).toBeGreaterThanOrEqual(0.9);
   });

@@ -112,7 +112,7 @@ const CUP_WIN = new Set(
     .flat()
     .map((c) => `${c} 우승`),
 );
-const TOP_CONT_WIN = new Set(['UCL', 'ACLE', 'CCC'].map((k) => `${CONT[k]!.name} 우승`));
+const TOP_CONT_WIN = new Set(['UCL', 'ACLE', 'CCC', 'LIB'].map((k) => `${CONT[k]!.name} 우승`));
 /** 같은 해에 리그·국내 컵·최상위 대륙 대회를 모두 들어 올렸는지. */
 const treble = (s: GameState) =>
   [...new Set(s.trophies.map((t) => t.year))].some((y) => {
