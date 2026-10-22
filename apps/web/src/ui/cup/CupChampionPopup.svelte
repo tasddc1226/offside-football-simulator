@@ -10,6 +10,7 @@
   import { onMount } from 'svelte';
   import { fetchCupHome, type CupChampion } from '@offside/app-core/api/cup';
   import { cupChampionToShow, dismissCupChampion } from '@offside/app-core/cupHome';
+  import { claimHomePopup } from '@offside/app-core/homePopup';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
   import { divisionLabel } from '@offside/app-core/cupDivision';
   import CupTrophy from './CupTrophy.svelte';
@@ -38,8 +39,11 @@
     if (shownThisVisit) return;
     void fetchCupHome().then((r) => {
       if (!r.ok || shownThisVisit) return;
-      champion = cupChampionToShow(r.data);
-      if (champion) shownThisVisit = true;
+      const next = cupChampionToShow(r.data);
+      // T-11-423 제휴 팝업이 먼저 떴으면 이번 방문에는 띄우지 않는다(다음 방문에 보인다).
+      if (!next || !claimHomePopup()) return;
+      shownThisVisit = true;
+      champion = next;
     });
   });
 

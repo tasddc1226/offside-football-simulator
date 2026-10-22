@@ -14,6 +14,8 @@ export type CareerBalance = { v: number; values: BalanceOverrides };
 
 /** 지금 진행 중인 커리어에 적용된 전체 값. */
 export const BAL: BalanceValues = resolveBalance();
+/** T-11-457 시즌 2에 연 리그(contracts LEAGUE_BASE added)는 newLeagues가 켜져야 제의 · 대륙 대회 상대로 나온다. */
+export const leagueOpen = (l: { added?: true }): boolean => !l.added || BAL.newLeagues >= 1;
 let latest: CareerBalance | null = null;
 
 /** 값을 바꿔 끼운다(모자란 키는 기본값). 같은 객체를 유지해 import한 모듈이 새 값을 본다. */

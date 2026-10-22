@@ -59,3 +59,8 @@ export const trackAppConversion = (
   place: AppConversionPlace,
   target: 'ios' | 'android' | 'both',
 ) => adapter?.trackAppConversion(action, place, target);
+
+/** T-11-423 제휴 홈 팝업. 노출 · 이동 · 닫기(오늘 하루 숨김 포함)와 소재(a·b)를 남긴다. */
+export type PartnerPopupAction = 'view' | 'click' | 'close' | 'hide_today';
+export const trackPartnerPopup = (action: PartnerPopupAction, variant: 'a' | 'b') =>
+  adapter?.trackPartnerPopup(action, variant);

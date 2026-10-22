@@ -7,6 +7,7 @@ import { Animated, Easing, Modal, Pressable, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { fetchCupHome, type CupChampion } from '@offside/app-core/api/cup';
 import { cupChampionToShow, dismissCupChampion } from '@offside/app-core/cupHome';
+import { claimHomePopup } from '@offside/app-core/homePopup';
 import { cupText as L } from '@offside/app-core/i18n/ko/cup';
 import { divisionLabel } from '@offside/app-core/cupDivision';
 import { hofStart } from '@offside/app-core/state';
@@ -40,7 +41,8 @@ export function CupChampionPopup() {
       // T-11-417 이용 분석 동의 창이 떠 있으면 이번 실행에는 띄우지 않는다(iOS는 창 두 개를 함께 띄우지 못한다).
       if (!alive || !r.ok || shownThisLaunch || analyticsAskPending()) return;
       const next = cupChampionToShow(r.data);
-      if (next) {
+      // T-11-423 제휴 팝업이 먼저 떴으면 이번 실행에는 띄우지 않는다.
+      if (next && claimHomePopup()) {
         shownThisLaunch = true;
         setChampion(next);
       }
