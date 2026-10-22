@@ -115,6 +115,21 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '30세 미만 MLS 오퍼 가중치',
     desc: '30세 미만 선수에게 MLS 구단이 오퍼를 낼 가중치(30세 이상은 1)',
   },
+  newLeagues: {
+    group: 'transfer',
+    label: '시즌 2 새 리그 열기',
+    desc: '1이면 브라질 · 포르투갈 · 사우디 · 중국 리그 구단이 이적 · 임대 제의를 내고 대륙 대회 상대로 나온다(진행 중 커리어는 다음 시즌부터)',
+  },
+  richYoungPull: {
+    group: 'transfer',
+    label: '28세 미만 사우디 · 중국 오퍼 가중치',
+    desc: '28세 미만 선수에게 사우디 · 중국 구단이 오퍼를 낼 가중치(28세 이상은 1)',
+  },
+  braPull: {
+    group: 'transfer',
+    label: '브라질 오퍼 가중치',
+    desc: '브라질 구단이 오퍼를 낼 가중치(1이면 다른 리그와 같다). 한국 선수의 브라질행은 드물어 낮게 둔다',
+  },
   koreaStr: {
     group: 'national',
     label: 'A대표팀 전력',

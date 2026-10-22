@@ -4,7 +4,7 @@
   import { CLUB_NAME_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '@offside/game/clubs';
   import { CLUB_CUSTOM_IMG_MAX, CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
   import { clubsIn } from '@offside/game/engine';
-  import { CLUB_SYNC_TEXT } from '@offside/app-core/clubCustom';
+  import { CLUB_SYNC_TEXT, customLeagues } from '@offside/app-core/clubCustom';
   import { clubCustom, setClubCustom, resetClubCustom, exportClubCustom, importClubCustom } from './clubCustom.svelte.js';
   import { toast } from './helpers.js';
   import { doneOnEnter } from './inputDone.js';
@@ -99,7 +99,7 @@
       <div class="field">
         <label for="club-league">{T.league}</label>
         <select id="club-league" bind:value={leagueId} onchange={() => (open = null)}>
-          {#each LEAGUES as L (L.id)}
+          {#each customLeagues() as L (L.id)}
             <option value={L.id}>{T.leagueOption({ name: tn(L.name), n: clubsIn(L.id).length })}</option>
           {/each}
         </select>
