@@ -252,6 +252,14 @@ test('은퇴 선수로 감독 커리어를 끝까지 하고 감독 칸에 앉힌
   await finishSheet.getByRole('button', { name: '취소' }).click();
   await expect(finishSheet).toHaveCount(0);
   expect(s.finished).toBeFalsy();
+  // T-11-451 확정 전에는 시즌을 다 마쳤어도 원래 선수로 되돌릴 수 있다(여기서는 취소만 해 본다).
+  await expect(page.locator('[data-act="manager-abandon"]')).toHaveText('선수로 되돌리기');
+  await page.locator('[data-act="manager-abandon"]').click();
+  const undoSheet = page.locator('[data-manager-abandon]');
+  await expect(undoSheet).toContainText('감독 카드는 만들어지지 않고');
+  await undoSheet.getByRole('button', { name: '취소' }).click();
+  await expect(undoSheet).toHaveCount(0);
+  expect(s.abandoned).toBe(0);
   await page.locator('[data-act="manager-finish"]').click();
   await page.locator('[data-act="manager-finish-confirm"]').click();
   await expect

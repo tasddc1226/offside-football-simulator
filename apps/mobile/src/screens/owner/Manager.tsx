@@ -298,11 +298,13 @@ export default function Manager() {
         },
       ],
     );
+  // T-11-451 시즌을 다 마친 뒤에도 확정 전에는 원래 선수로 돌아갈 수 있다(서버는 포기와 같다).
+  const undo = st?.phase === 'done';
   const askAbandon = () =>
-    Alert.alert(M.abandon, M.abandonConfirm, [
+    Alert.alert(undo ? M.undo : M.abandon, undo ? M.undoConfirm : M.abandonConfirm, [
       { text: M.cancel, style: 'cancel' },
       {
-        text: M.abandonOk,
+        text: undo ? M.undoOk : M.abandonOk,
         style: 'destructive',
         onPress: () => {
           if (!st) return;
@@ -899,9 +901,9 @@ export default function Manager() {
             ))}
           </Card>
         ) : null}
-        {st.phase !== 'done' && !sheetLabel ? (
+        {!sheetLabel ? (
           <Btn kind="danger" testID="manager-abandon" onPress={askAbandon}>
-            {M.abandon}
+            {st.phase === 'done' ? M.undo : M.abandon}
           </Btn>
         ) : null}
       </>
