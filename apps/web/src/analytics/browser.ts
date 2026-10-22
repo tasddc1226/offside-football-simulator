@@ -352,3 +352,14 @@ export const trackAppConversion = (
       target === 'android' ? 'closed_test_form' : target === 'ios' ? 'app_store' : 'both',
   });
 };
+
+export const trackPartnerPopup = (
+  action: import('./index.js').PartnerPopupAction,
+  variant: 'a' | 'b',
+) => {
+  try {
+    send('partner_popup_' + action, { partner: 'amachuggu', variant });
+  } catch {
+    /* optional */
+  }
+};

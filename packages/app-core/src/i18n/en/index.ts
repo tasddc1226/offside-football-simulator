@@ -70,6 +70,7 @@ import { owner } from './owner';
 import { ownerConflict } from './ownerConflict';
 import { ownerPlayers } from './ownerPlayers';
 import { ownerProfile } from './ownerProfile';
+import { partner } from './partner';
 import { playerNudge } from './playerNudge';
 import { publicLegends } from './publicLegends';
 import { push } from './push';
@@ -179,6 +180,7 @@ export const en = {
   ownerConflict,
   ownerPlayers,
   ownerProfile,
+  partner,
   playerNudge,
   publicLegends,
   push,
