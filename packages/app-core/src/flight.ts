@@ -114,6 +114,50 @@ const HUBS = {
     lat: 51.47,
     lon: -0.45,
   },
+  PT: {
+    code: 'LIS',
+    get city() {
+      return L.cityPT;
+    },
+    get country() {
+      return L.countryPT;
+    },
+    lat: 38.77,
+    lon: -9.13,
+  },
+  BR: {
+    code: 'GRU',
+    get city() {
+      return L.cityBR;
+    },
+    get country() {
+      return L.countryBR;
+    },
+    lat: -23.43,
+    lon: -46.47,
+  },
+  SA: {
+    code: 'RUH',
+    get city() {
+      return L.citySA;
+    },
+    get country() {
+      return L.countrySA;
+    },
+    lat: 24.96,
+    lon: 46.7,
+  },
+  CN: {
+    code: 'PVG',
+    get city() {
+      return L.cityCN;
+    },
+    get country() {
+      return L.countryCN;
+    },
+    lat: 31.14,
+    lon: 121.81,
+  },
 } satisfies Record<string, Hub>;
 
 /** 리그 → 나라(contracts LEAGUE_BASE의 id). 고교·대학·K리그는 모두 한국. 모르는 리그도 한국으로 본다. */
@@ -126,6 +170,10 @@ const LEAGUE_HUB: Record<string, keyof typeof HUBS> = {
   sa: 'IT',
   ll: 'ES',
   pl: 'GB',
+  por: 'PT',
+  bra: 'BR',
+  spl: 'SA',
+  csl: 'CN',
 };
 
 export const hubOf = (leagueId: string): Hub => HUBS[LEAGUE_HUB[leagueId] ?? 'KR'];
