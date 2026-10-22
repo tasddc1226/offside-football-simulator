@@ -136,7 +136,8 @@ export type TeamKept = Readonly<Record<string, number>>;
 // (POTY·TOP_SCORER·YOUNG) · game/national.ts와 같다.
 const leaguesFrom = (minTier: number) =>
   LEAGUE_BASE.filter((l) => !l.amateur && l.tier >= minTier).map((l) => l.name);
-const LEAGUES = leaguesFrom(0);
+// T-11-457 '전 리그 우승'은 시즌 1까지의 리그로 센다(새 리그가 생겨도 이미 모은 조각이 줄지 않게).
+const LEAGUES = LEAGUE_BASE.filter((l) => !l.amateur && !l.added).map((l) => l.name);
 const EUROPE = leaguesFrom(4);
 const BIG5 = leaguesFrom(5);
 /** T-11-237 저장된 우승 이름(시즌 honors는 한국어로 저장된다). */
@@ -154,6 +155,10 @@ const POTY = [
   'K리그1 MVP',
   'K리그2 MVP',
   'K3리그 MVP',
+  '중국 슈퍼리그 MVP',
+  '사우디 프로리그 올해의 선수',
+  '브라질레이랑 올해의 선수',
+  '프리메이라 리가 올해의 선수',
 ];
 const TOP_SCORER = [
   '프리미어리그 골든부트',
@@ -167,6 +172,10 @@ const TOP_SCORER = [
   'K리그1 득점왕',
   'K리그2 득점왕',
   'K3리그 득점왕',
+  '중국 슈퍼리그 득점왕',
+  '사우디 프로리그 득점왕',
+  '브라질레이랑 득점왕',
+  '프리메이라 리가 득점왕',
 ];
 const YOUNG = [
   'PFA 올해의 영플레이어',
@@ -182,16 +191,18 @@ const CONTINENTAL = [
   'AFC 챔피언스리그 엘리트 우승',
   'CONCACAF 챔피언스컵 우승',
 ];
+/** T-11-457 트레블은 리베르타도레스 우승도 센다('대륙 대회 모두 우승' 조각은 시즌 1까지의 세 대회 그대로). */
+const TREBLE_CONTINENTAL = [...CONTINENTAL, '코파 리베르타도레스 우승'];
 const CONF_CUPS = NATIONAL_WINS.filter(
   (n) => n !== 'FIFA 월드컵 우승' && n !== '아시안게임 금메달' && n !== '올림픽 금메달',
 );
 /** 트레블에서 세지 않는 우승(단판 슈퍼컵 · 대표팀 · 클럽 월드컵). */
-const NOT_TREBLE = /슈퍼컵|수페르코파|실드|샹피옹|클럽 월드컵/;
+const NOT_TREBLE = /슈퍼컵|수페르코파|수페르타사|실드|샹피옹|클럽 월드컵/;
 const NATIONAL = new Set(NATIONAL_WINS);
 /** 한 시즌 트레블 — 그 시즌 리그 우승과 대륙 클럽 대회 우승을 포함해 클럽 우승 3개. */
 const treble = (s: AchievementSeason) =>
   s.honors.includes(`${s.league} 우승`) &&
-  CONTINENTAL.some((h) => s.honors.includes(h)) &&
+  TREBLE_CONTINENTAL.some((h) => s.honors.includes(h)) &&
   s.honors.filter((h) => h.endsWith(' 우승') && !NATIONAL.has(h) && !NOT_TREBLE.test(h)).length >=
     3;
 /** 이름만 있는 옛 기록과 id가 있는 기록은 추정해서 합치지 않는다. */

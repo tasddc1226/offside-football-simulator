@@ -1,0 +1,29 @@
+{
+  "id": "t-11-450-salary-budget-scout-pity",
+  "title": "지난 시즌 선수 급여 예산 확대 · 시즌 2 스카우트 천장",
+  "items": [
+    "지난 시즌 선수 급여 예산이 60에서 80으로 늘었어요. OVR 96 이상 선수도 4명까지 선발에 넣을 수 있어요.",
+    "급여 예산은 시즌이 하나 지날 때마다 10씩 늘어요. 시즌 2는 90이에요.",
+    "시즌 2부터 프리미엄 스카우트 천장이 S 확정 20장째, 특급 S 누적 70장째로 앞당겨져요. 시즌 1에 쌓은 장수는 그대로 이어서 세요."
+  ],
+  "en": {
+    "title": "Bigger past-season salary budget · Season 2 scout pity",
+    "items": [
+      "The past-season player salary budget went up from 60 to 80. You can now start up to four players with OVR 96 or higher.",
+      "The salary budget grows by 10 with each new season. Season 2 is 90.",
+      "From season 2, premium scout pity comes sooner: a guaranteed S on the 20th ticket and an elite S on every 70th. Counts from season 1 carry over."
+    ]
+  },
+  "ja": {
+    "title": "過去シーズン選手の年俸予算拡大・シーズン2のスカウト天井",
+    "items": [
+      "過去シーズン選手の年俸予算が60から80に増えました。OVR96以上の選手も4人まで先発に入れられます。",
+      "年俸予算はシーズンが一つ進むごとに10ずつ増えます。シーズン2は90です。",
+      "シーズン2からプレミアムスカウトの天井が、S確定20枚目、特級S累計70枚目ごとに早まります。シーズン1で貯めた枚数はそのまま引き継がれます。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": {
+    "changes": [{ "key": "pastSalaryBudget", "from": 60, "to": 80 }]
+  }
+}

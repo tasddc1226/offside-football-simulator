@@ -83,6 +83,10 @@ export const manager: Translation<ManagerMsgs> = {
   abandon: 'Give up manager career',
   abandonConfirm: 'If you give up, this manager career is lost and the player returns. Give up?',
   abandonOk: 'Give up',
+  undo: 'Return to player',
+  undoConfirm:
+    'This discards the manager career result and returns the player. No manager card is made, and you need to put the player back in your lineup yourself. Return to player?',
+  undoOk: 'Return',
   history: 'Past seasons',
   historyRow: (p) => `Season ${p.n} · ${p.club} ${p.rank} of ${p.teams}`,
   historyRest: (p) => `Season ${p.n} · Off`,

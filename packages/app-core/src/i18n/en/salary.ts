@@ -28,6 +28,6 @@ export const salary: Translation<SalaryMsgs> = {
   whyTitle: 'Why salaries?',
   why1: "To keep raising new players fun every season. This season's players are always the cheapest strength.",
   why2: 'You used to be able to start only three past-season players. With salaries you can also start several mid-level players instead.',
-  why3: 'The top salary is 20, so three past-season players always fit a budget of 60. Lineups you built before still work.',
+  why3: 'The budget is 80 in season 1 and grows by 10 every season. The top salary is 20, so lineups you built before still work.',
   why4: "Club funds and purchases can't raise the budget.",
 };

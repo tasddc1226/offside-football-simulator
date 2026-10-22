@@ -306,7 +306,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         lastManager: teams.findLast((t) => t.manager)?.manager ?? null,
         matchesLeft: Math.max(0, TEAM_MATCHES_PER_DAY - Number(played?.n ?? 0)),
         matchesPerDay: TEAM_MATCHES_PER_DAY,
-        pastSalaryBudget: pastSalaryBudgetFrom(balance),
+        pastSalaryBudget: pastSalaryBudgetFrom(balance, season),
         founder: founder.length > 0,
         // 컵 성적은 최근 대회부터 온다 — 첫 우승이 가장 최근 우승.
         ownerTitle: me.title,
@@ -356,7 +356,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       season,
     );
     if (salary > 0) {
-      const budget = await pastSalaryBudgetOf(db);
+      const budget = await pastSalaryBudgetOf(db, season);
       if (salary > budget) {
         throw new AppError({
           code: 'VALIDATION_FAILED',

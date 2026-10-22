@@ -453,8 +453,9 @@
         </ul>
       </details>
     {/if}
-    {#if st.phase !== 'done' && !sheetLabel}
-      <button class="btn mg-abandon" data-act="manager-abandon" onclick={() => ((confirmAbandon = true), (error = null))}>{M.abandon}</button>
+    <!-- T-11-451 시즌을 다 마친 뒤에도 확정 전에는 원래 선수로 돌아갈 수 있다(서버는 포기와 같다). -->
+    {#if !sheetLabel}
+      <button class="btn mg-abandon" data-act="manager-abandon" onclick={() => ((confirmAbandon = true), (error = null))}>{st.phase === 'done' ? M.undo : M.abandon}</button>
     {/if}
   {:else}
     <!-- 시작 · 내 감독 -->
@@ -543,13 +544,14 @@
 
 {#if confirmAbandon}
   <button class="mg-scrim" aria-label={M.cancel} onclick={() => (confirmAbandon = false)}></button>
-  <div class="mg-sheet" role="dialog" aria-modal="true" aria-label={M.abandon} data-manager-abandon>
-    <h2>{M.abandon}</h2>
-    <p>{M.abandonConfirm}</p>
+  {@const undo = st?.phase === 'done'}
+  <div class="mg-sheet" role="dialog" aria-modal="true" aria-label={undo ? M.undo : M.abandon} data-manager-abandon>
+    <h2>{undo ? M.undo : M.abandon}</h2>
+    <p>{undo ? M.undoConfirm : M.abandonConfirm}</p>
     {#if error}<p class="mg-err" role="alert">{error}</p>{/if}
     <div class="mg-actions">
       <button class="btn" onclick={() => (confirmAbandon = false)}>{M.cancel}</button>
-      <button class="btn mg-danger" data-act="manager-abandon-confirm" disabled={busy} onclick={() => void abandon()}>{M.abandonOk}</button>
+      <button class="btn mg-danger" data-act="manager-abandon-confirm" disabled={busy} onclick={() => void abandon()}>{undo ? M.undoOk : M.abandonOk}</button>
     </div>
   </div>
 {/if}

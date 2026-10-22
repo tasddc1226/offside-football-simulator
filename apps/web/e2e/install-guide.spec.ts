@@ -19,8 +19,7 @@ test.describe('아이폰 Chrome', () => {
       'href',
       /apps\.apple\.com/,
     );
-    await expect(card.locator('[data-act="android-tester"]')).toHaveCount(0);
-    await expect(page.locator('[data-act="home-android-tester"]')).toHaveCount(0);
+    await expect(card.locator('[data-act="play-store"]')).toHaveCount(0);
     await card.scrollIntoViewIfNeeded();
     await expect
       .poll(() => page.evaluate(() => localStorage.getItem('ft_app_conversion_last_seen')))
@@ -44,17 +43,20 @@ test.describe('아이폰 Chrome', () => {
   });
 });
 
-test('데스크톱 홈 카드에는 iPhone 앱과 Android 비공개 테스트 경로를 둔다', async ({ page }) => {
+test('데스크톱 홈 카드 · 설정에는 App Store와 Google Play를 함께 둔다', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('[data-home-news="notice"]')).toBeVisible();
   await expect(page.locator('#sheet')).toBeHidden();
   await expect(page.locator('[data-act="app-store"]')).toBeVisible();
-  await expect(page.locator('[data-act="android-tester"]')).toBeVisible();
-  // T-11-233 카드를 닫거나 이미 봤어도 홈 타일로 테스터 모집에 들어갈 수 있다.
-  await expect(page.locator('[data-act="home-android-tester"]')).toHaveAttribute(
+  // T-11-449 Android 정식 출시로 테스터 모집 대신 Google Play로 보낸다.
+  await expect(page.locator('[data-act="play-store"]')).toHaveAttribute(
     'href',
-    /docs\.google\.com\/forms/,
+    /play\.google\.com\/store\/apps\/details\?id=com\.offsidelab\.app/,
   );
+  await expect(page.locator('[data-act="home-android-tester"]')).toHaveCount(0);
+  await page.locator('[data-act="settings"]').click();
+  await expect(page.locator('[data-act="app-store-settings-ios"]')).toBeVisible();
+  await expect(page.locator('[data-act="app-store-settings-android"]')).toBeVisible();
 });
 
 test.describe('안드로이드 Chrome', () => {
@@ -63,17 +65,19 @@ test.describe('안드로이드 Chrome', () => {
       'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36',
   });
 
-  test('안드로이드는 비공개 테스트라 App Store 타일 · 앱 옮기기 카드 없이 테스터 모집만 둔다', async ({
+  test('안드로이드는 App Store 없이 Google Play로 보내고 설정에 앱 옮기기 카드를 둔다', async ({
     page,
   }) => {
     await page.goto('/?utm_source=meta&utm_medium=paid');
-    await expect(page.locator('[data-act="android-tester"]')).toBeVisible();
+    await expect(page.locator('[data-act="play-store"]')).toBeVisible();
     await expect(page.locator('[data-act="app-store"]')).toHaveCount(0);
-    // 광고로 온 방문에는 늘 보이는 테스터 타일을 두지 않는다(T-11-195).
-    await expect(page.locator('[data-act="home-android-tester"]')).toHaveCount(0);
     await page.locator('[data-act="settings"]').click();
     await expect(page.locator('[data-settings="backup"]')).toBeVisible();
-    await expect(page.locator('[data-settings="app-move"]')).toHaveCount(0);
+    await expect(page.locator('[data-settings="app-move"]')).toContainText('Android 앱으로 옮기기');
+    await expect(page.locator('[data-act="app-store-settings-android"]')).toHaveText(
+      'Google Play에서 받기',
+    );
+    await expect(page.locator('[data-act="app-store-settings-ios"]')).toHaveCount(0);
   });
 });
 
@@ -91,7 +95,6 @@ test('홈 설치 카드를 닫으면 7일간 숨기고 플레이 화면에 반�
   await page.reload();
   await expect(page.locator('[data-act="new"]')).toBeVisible();
   await expect(card).toHaveCount(0);
-  await expect(page.locator('[data-act="home-android-tester"]')).toBeVisible();
   await page.locator('[data-act="new"]').click();
   await expect(page.locator('[data-app-conversion]')).toHaveCount(0);
 });

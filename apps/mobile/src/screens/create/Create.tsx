@@ -39,7 +39,12 @@ import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as CA } from '@offside/app-core/i18n/ko/cupApp';
 import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
 import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
-import { REROLL_MILEAGE, rerollMileageLeft, type ScoutPity } from '@offside/contracts/cup';
+import {
+  REROLL_MILEAGE,
+  rerollMileageLeft,
+  scoutPityAt,
+  type ScoutPity,
+} from '@offside/contracts/cup';
 import { ScoutOdds } from '../owner/ScoutOdds';
 import { ScoutPityGauge } from './ScoutPityGauge';
 import {
@@ -432,7 +437,7 @@ export default function Create() {
       const reset = mode === 'normal' && r.data.pity?.streak === 0;
       toast(
         mode === 'elite'
-          ? SL.doneElite({ n })
+          ? SL.doneElite({ n, elite: scoutPityAt().elite })
           : mode === 'sure'
             ? SL.doneSure({ n })
             : reset
