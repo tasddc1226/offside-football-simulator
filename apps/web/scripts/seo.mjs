@@ -2,6 +2,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import guideCopy from '../../../packages/app-core/src/i18n/ko/publicGuide.mjs';
+import ARTICLES from '../../../packages/app-core/src/i18n/ko/publicArticles.mjs';
 import { APP_SHELL_MARK } from './app-shell.mjs';
 
 // T-11-073 아이콘 도형은 brand/build-icons.mjs 한 곳에 있다(라이트·다크 두 벌).
@@ -18,6 +19,8 @@ export const CAREER_OG_BANDS = [
 ];
 const BRAND_BG = '#0D1511';
 
+// T-11-452 공략 글(/guide/<slug>/). 가이드 아래 주제별 페이지라 AdSense · 검색이 읽는 원문 글이 된다.
+export const articlePath = (slug) => `/guide/${slug}/`;
 export const PUBLIC_PAGES = {
   '/': {
     title: '오프사이드 | 이번 생은 축구다 — 축구선수 커리어 시뮬레이션',
@@ -29,6 +32,12 @@ export const PUBLIC_PAGES = {
     description:
       '오프사이드(풀타임)의 선수 생성부터 시즌 진행, 성장, 이적, 병역, 은퇴와 명예의 전당, 구단주 팀과 이적시장까지 알아봅니다.',
   },
+  ...Object.fromEntries(
+    ARTICLES.map((a) => [
+      articlePath(a.slug),
+      { title: `${a.title} | 오프사이드`, description: a.description },
+    ]),
+  ),
   '/faq/': {
     title: '자주 묻는 질문 | 오프사이드',
     description:
@@ -117,18 +126,28 @@ export function createStructuredData(origin, path) {
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'KRW' },
       },
     ];
+  const article = ARTICLES.find((a) => articlePath(a.slug) === path);
+  const trail = [
+    { name: '홈', item: home },
+    ...(article ? [{ name: '게임 가이드', item: absoluteUrl(origin, '/guide/') }] : []),
+    { name: PUBLIC_PAGES[path].title.split(' | ')[0], item: url },
+  ];
   const breadcrumb = {
     '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: '홈', item: home },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: PUBLIC_PAGES[path].title.split(' | ')[0],
-        item: url,
-      },
-    ],
+    itemListElement: trail.map((t, i) => ({ '@type': 'ListItem', position: i + 1, ...t })),
   };
+  if (article)
+    return [
+      breadcrumb,
+      {
+        '@type': 'Article',
+        headline: article.title,
+        description: article.description,
+        inLanguage: 'ko',
+        url,
+        author: { '@type': 'Organization', name: 'OFFSIDE', url: home },
+      },
+    ];
   if (path !== '/faq/') return [breadcrumb];
   const text = (html) => html.replace(/<[^>]+>/g, '');
   return [
@@ -183,7 +202,7 @@ export function createSitemapXml(origin) {
 export function createLlmsTxt(origin) {
   const link = (path) =>
     `- [${PUBLIC_PAGES[path].title}](${absoluteUrl(origin, path)}): ${PUBLIC_PAGES[path].description}`;
-  return `# 오프사이드 (OFFSIDE · 풀타임)\n\n> ${PUBLIC_PAGES['/'].description}\n\n웹 브라우저에서 무료로 플레이하는 한국어 축구 선수 커리어 스토리 시뮬레이션 게임이다. 설치나 로그인 없이 바로 시작할 수 있다.\n\n## 문서\n\n${['/guide/', '/faq/', '/fairness/', '/about/'].map(link).join('\n')}\n\n## 정책\n\n${['/legal/terms/', '/legal/privacy/'].map(link).join('\n')}\n`;
+  return `# 오프사이드 (OFFSIDE · 풀타임)\n\n> ${PUBLIC_PAGES['/'].description}\n\n웹 브라우저에서 무료로 플레이하는 한국어 축구 선수 커리어 스토리 시뮬레이션 게임이다. 설치나 로그인 없이 바로 시작할 수 있다.\n\n## 문서\n\n${['/guide/', ...ARTICLES.map((a) => articlePath(a.slug)), '/faq/', '/fairness/', '/about/'].map(link).join('\n')}\n\n## 정책\n\n${['/legal/terms/', '/legal/privacy/'].map(link).join('\n')}\n`;
 }
 export function createHeaders({ indexingEnabled }) {
   const publicHeaders = PUBLIC_PATHS.map(
@@ -352,7 +371,15 @@ const GUIDE_SECTIONS = [
     ],
   ],
 ];
-const guideBody = `<div class="os-screen"><header><p class="os-eyebrow">HOW TO PLAY</p><h1>게임 가이드</h1><p>고교 3학년부터 은퇴까지 한 선수의 커리어를 진행하고, 은퇴한 선수로 구단주 팀을 꾸리는 방법입니다.</p></header>${GUIDE_SECTIONS.map(([h, ps], i) => `<section class="os-panel"><h2>${i + 1}. ${h}</h2>${ps.map((t) => `<p>${t}</p>`).join('')}</section>`).join('')}<section class="os-panel"><h2>진행 상황 저장</h2><p>${guideCopy.saveWeb}</p><p>${guideCopy.saveApp}</p><p>백업 코드는 다른 사람에게 보내지 마세요. 다만 커리어·시즌 요약 기록과 플레이 중 선택 기록은 서비스 개선·밸런스 분석을 위해 익명 프로필 단위로 서버에도 함께 저장됩니다. ${guideCopy.publicRetirement} ${NAME_POLICY} 자세한 내용은 <a href="/legal/privacy/">개인정보처리방침</a>을 확인해 주세요.</p></section><p><a href="/">첫 커리어 시작</a></p><nav><a href="/">홈</a> · <a href="/faq/">자주 묻는 질문</a> · <a href="/fairness/">확률과 공정성</a> · <a href="/legends/">명예의 전당</a></nav></div>`;
+function articleList(except) {
+  const items = ARTICLES.filter((a) => a.slug !== except)
+    .map((a) => `<li><a href="${articlePath(a.slug)}">${a.title}</a><br />${a.description}</li>`)
+    .join('');
+  return `<section class="os-panel"><h2>${except ? '다른 공략 글' : '주제별 공략 글'}</h2><ul>${items}</ul></section>`;
+}
+const articleBody = (a) =>
+  `<div class="os-screen"><header><p class="os-eyebrow">GUIDE</p><h1>${a.title}</h1><p>${a.lead}</p></header>${a.sections.map(([h, ps]) => `<section class="os-panel"><h2>${h}</h2>${ps.map((t) => `<p>${t}</p>`).join('')}</section>`).join('')}${articleList(a.slug)}<p><a href="/">게임 시작</a></p><nav><a href="/">홈</a> · <a href="/guide/">게임 가이드</a> · <a href="/faq/">자주 묻는 질문</a> · <a href="/fairness/">확률과 공정성</a> · <a href="/legends/">명예의 전당</a></nav></div>`;
+const guideBody = `<div class="os-screen"><header><p class="os-eyebrow">HOW TO PLAY</p><h1>게임 가이드</h1><p>고교 3학년부터 은퇴까지 한 선수의 커리어를 진행하고, 은퇴한 선수로 구단주 팀을 꾸리는 방법입니다.</p></header>${articleList()}${GUIDE_SECTIONS.map(([h, ps], i) => `<section class="os-panel"><h2>${i + 1}. ${h}</h2>${ps.map((t) => `<p>${t}</p>`).join('')}</section>`).join('')}<section class="os-panel"><h2>진행 상황 저장</h2><p>${guideCopy.saveWeb}</p><p>${guideCopy.saveApp}</p><p>백업 코드는 다른 사람에게 보내지 마세요. 다만 커리어·시즌 요약 기록과 플레이 중 선택 기록은 서비스 개선·밸런스 분석을 위해 익명 프로필 단위로 서버에도 함께 저장됩니다. ${guideCopy.publicRetirement} ${NAME_POLICY} 자세한 내용은 <a href="/legal/privacy/">개인정보처리방침</a>을 확인해 주세요.</p></section><p><a href="/">첫 커리어 시작</a></p><nav><a href="/">홈</a> · <a href="/faq/">자주 묻는 질문</a> · <a href="/fairness/">확률과 공정성</a> · <a href="/legends/">명예의 전당</a></nav></div>`;
 const FAQ_ITEMS = [
   ['이적 제의에 표시되는 예상 순위가 현재 순위인가요?', guideCopy.transferPreview],
   ['연애설 이벤트는 언제 나오나요?', guideCopy.datingRumor],
@@ -648,6 +675,7 @@ const aboutBody = `<div class="os-screen"><header><p class="os-eyebrow">ABOUT</p
 export const STATIC_PAGES = {
   '/about/': aboutBody,
   '/guide/': guideBody,
+  ...Object.fromEntries(ARTICLES.map((a) => [articlePath(a.slug), articleBody(a)])),
   '/faq/': faqBody,
   '/fairness/': fairnessBody,
   '/legal/terms/': termsBody,
