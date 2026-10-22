@@ -16,6 +16,7 @@ import { DISPLAY, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Screen, Topbar, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
+import { Skeleton } from '../../ui/Skeleton';
 
 type Totals = ReturnType<typeof fundsHistoryTotals>['income'];
 
@@ -117,9 +118,11 @@ export default function FundsHistory() {
           </Btn>
         </Card>
       ) : !res || !totals ? (
-        <Card>
-          <Txt tone="muted">…</Txt>
-        </Card>
+        // T-11-442 기다리는 동안 자금 요약 카드와 내역 줄 모양 뼈대(로딩 표시 규칙).
+        <View testID="funds-loading" style={{ gap: 12 }}>
+          <Skeleton height={150} />
+          <Skeleton rows={5} />
+        </View>
       ) : (
         <>
           <Card gap={12} testID="funds-summary">

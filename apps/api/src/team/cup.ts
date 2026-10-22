@@ -19,7 +19,7 @@ import {
   type CupRound,
   type CupStage,
 } from '@offside/contracts/cup';
-import { and, asc, eq, getTableColumns, inArray, isNotNull } from 'drizzle-orm';
+import { and, asc, eq, getTableColumns, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
 import { cupEntries, cupMatches, cupState, ownerTeams, profiles } from '../db/schema.js';
@@ -63,6 +63,12 @@ const MATCH_COLS = Object.fromEntries(
 ) as Omit<ReturnType<typeof getTableColumns<typeof cupMatches>>, 'detailJson'>;
 export const cupMatchesOf = (db: Db, cupId: string) =>
   db.select(MATCH_COLS).from(cupMatches).where(eq(cupMatches.cupId, cupId));
+/** A single indexed read across active cups, without match detail JSON or a binding per cup. */
+export const cupMatchesIn = (db: Db, ids: readonly string[]) =>
+  db
+    .select(MATCH_COLS)
+    .from(cupMatches)
+    .where(inArray(cupMatches.cupId, sql`(select value from json_each(${JSON.stringify(ids)}))`));
 export const cupStateOf = (db: Db, cupId: string) =>
   db.select().from(cupState).where(eq(cupState.cupId, cupId));
 

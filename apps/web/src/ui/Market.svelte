@@ -9,6 +9,7 @@
 </script>
 
 <script lang="ts">
+  import { tick as flush } from 'svelte';
   import Skeleton from './Skeleton.svelte';
   import LoginButtons from './LoginButtons.svelte';
   import { intlLocale } from '@offside/contracts/i18n';
@@ -49,6 +50,7 @@
     marketEmptyText,
     marketName,
     priceAtPct,
+    staleListingNext,
     priceDiff,
     releaseAmount,
     releaseConfirmText,
@@ -61,6 +63,11 @@
     sellQuote,
     type MarketView,
     needsOwnerLogin,
+    allReleasePicked,
+    marketGuestText,
+    pickAllIds,
+    pickAllLabel,
+    togglePickId,
   } from '@offside/app-core/market';
   import { agoKo, fmtValue } from '@offside/app-core/format';
   import { localCareerNames } from '@offside/game/hof-store';
@@ -72,13 +79,16 @@
   import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
   import MarketChart from './MarketChart.svelte';
   import { CHART_COPY, marketIndex } from '@offside/app-core/marketChart';
-  import { go } from './nav.js';
+  import { go, takeFocus } from './nav.js';
+  import { dur } from './motion.js';
   import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
   import { toast } from './helpers.js';
   import { marketText as L } from '@offside/app-core/i18n/ko/market';
+  import { RELEASE_MAX } from '@offside/contracts/market-value';
 
   const local = localCareerNames();
-  let view = $state<MarketView>(takeBackToTrades() ? 'trades' : 'market');
+  // T-11-442 상점의 '방출하러 가기'로 오면 방출 화면부터 연다.
+  let view = $state<MarketView>(takeFocus('marketRelease') ? 'release' : takeBackToTrades() ? 'trades' : 'market');
   let error = $state<string | null>(null);
   let busy = $state(false);
 
@@ -114,10 +124,14 @@
     const t = setInterval(() => !document.hidden && tick++, MARKET_TICKER_MS);
     return () => clearInterval(t);
   });
-  async function loadList(next = 0) {
+  /** 받은 목록(첫 페이지면 그 페이지)을 돌려준다. 못 받으면 null. */
+  async function loadList(next = 0): Promise<MarketListing[] | null> {
     if (next === 0) listStatus = 'loading';
     const r = await fetchMarket(sort, pos, next);
-    if (!r.ok) return void (listStatus = 'error');
+    if (!r.ok) {
+      listStatus = 'error';
+      return null;
+    }
     items = next === 0 ? r.data.items : [...items, ...r.data.items];
     // 정렬·포지션을 바꿔도 띠는 이어서 넘긴다(tick을 되돌리지 않는다). 배포 직후 옛 엣지 응답에는 recent가 없다.
     if (next === 0) recent = r.data.recent ?? [];
@@ -125,6 +139,7 @@
     hasMore = r.data.hasMore;
     season = r.data.season;
     listStatus = 'ok';
+    return r.data.items;
   }
   // 정렬·포지션을 바꾸면 첫 페이지부터 다시 받는다(loadList가 둘을 읽어 의존한다).
   $effect(() => {
@@ -141,7 +156,7 @@
   const index = $derived(marketIndex(indexPoints));
   const myListingIds = $derived(new Set(me?.listings.map((l) => l.id) ?? []));
 
-  // 팔기는 지금 시즌 선수, 방출은 시즌을 골라 본다(기본은 지금 시즌).
+  // 팔기는 지금 가진 모든 시즌 선수(T-11-425), 방출은 시즌을 골라 본다(기본은 지금 시즌).
   let team = $state<OwnerTeamResponse | null>(null);
   let teamSeason = $state<number | undefined>(undefined);
   let teamFailed = $state(false);
@@ -151,7 +166,8 @@
     if (r.ok) team = r.data;
   }
   $effect(() => {
-    if (view === 'sell' || view === 'release') void loadTeam();
+    // 로그인 전이면 내 선수를 묻지 않고 로그인 안내만 보인다(T-11-442).
+    if ((view === 'sell' || view === 'release') && !guest) void loadTeam();
   });
   const lineup = $derived(team ? lineupOf(team) : new Set<string>());
   const isCurrent = $derived(!!team && team.season === team.current);
@@ -163,21 +179,28 @@
   const releasable = $derived(team?.players.filter((p) => !releaseLock(p, lineup)) ?? []);
   const pickedPlayers = $derived(releasable.filter((p) => picked.has(p.careerId)));
   const pickedAmount = $derived(me ? releaseAmount(pickedPlayers, me.rules.releaseRate) : 0);
-  function togglePick(id: string) {
-    picked = picked.has(id) ? new Set([...picked].filter((x) => x !== id)) : new Set([...picked, id]);
+  // T-11-442 서버는 한 번에 RELEASE_MAX명까지 받는다. 전체 선택도 그만큼만 고르고, 더 넣으려 하면 알린다.
+  function togglePick(id: string, box: HTMLInputElement) {
+    const r = togglePickId(picked, id);
+    // 상태가 그대로면 Svelte가 체크를 되돌리지 않으니 직접 푼다.
+    if (r.full) return void ((box.checked = false), toast(L.pickLimit({ n: RELEASE_MAX })));
+    picked = r.next;
   }
-  const allPicked = $derived(releasable.length > 0 && pickedPlayers.length === releasable.length);
-  const pickAll = () => (picked = allPicked ? new Set() : new Set(releasable.map((p) => p.careerId)));
+  const allPicked = $derived(allReleasePicked(releasable.length, pickedPlayers.length));
+  const pickAll = () => (picked = pickAllIds(releasable, picked));
 
   // 팔기 — 고른 선수와 판매가(기준가의 %).
   let selling = $state<TeamPlayer | null>(null);
   let pct = $state(100);
   const sellPrice = $derived(selling?.cardValue && me ? priceAtPct(selling.cardValue, pct, me.rules) : 0);
   const quote = $derived(selling?.cardValue && me ? sellQuote(selling.cardValue, sellPrice, me.rules) : null);
+  // T-11-442 카드를 고르면 아래 가격 칸이 화면 밖일 수 있어 그 칸이 보이게 내린다(이미 보이면 그대로).
+  let priceBox = $state<HTMLElement | null>(null);
   function pickSell(p: TeamPlayer) {
     selling = p;
     pct = 100;
     error = null;
+    void flush().then(() => priceBox?.scrollIntoView({ block: 'nearest', behavior: dur(1) ? 'smooth' : 'instant' }));
   }
 
   // 시트: 영입 · 방출 확인.
@@ -202,19 +225,37 @@
   async function run<T>(send: () => Promise<{ ok: true; data: T } | { ok: false; error: { message: string; reason?: string } }>, done: string) {
     busy = true;
     error = null;
+    const sent = buying;
     const r = await send();
-    busy = false;
     if (!r.ok) {
-      error = r.error.message;
-      // 이미 팔렸거나 가격이 바뀌었으면 목록을 새로 받는다.
-      if (isStaleListing(r.error)) void loadList(0);
+      // 이미 팔렸거나 가격이 바뀌었으면 목록을 새로 받고, 영입 시트는 새 가격으로 바꾸거나 닫는다(T-11-434).
+      // 새 목록을 받는 동안에도 버튼을 막아 낡은 가격으로 다시 보내지 않는다.
+      if (isStaleListing(r.error)) await settleStale(sent, r.error);
+      else error = r.error.message;
+      busy = false;
       return;
     }
+    busy = false;
     closeSheets();
     picked = new Set();
     selling = null;
     toast(done);
     await refresh();
+  }
+
+  async function settleStale(sent: MarketListing | null, e: { message: string; reason?: string | undefined }) {
+    const fresh = await loadList(0);
+    // 시트 밖(내 거래 탭의 판매 내리기)이면 오류만 보인다. 그 사이 시트를 닫았거나 다른 매물을 열었으면 시트는 건드리지 않는다.
+    if (!sent) return void (error = e.message);
+    if (buying?.id !== sent.id) return;
+    const next = staleListingNext(sent, e.reason, fresh);
+    if ('listing' in next) {
+      buying = next.listing;
+      error = next.notice;
+    } else {
+      closeSheets();
+      toast(next.toast);
+    }
   }
 
   const asPlayer = (c: MarketCard): TeamPlayer => ({ ...c, roles: null });
@@ -224,6 +265,14 @@
 {#snippet styleTag(c: MarketCard)}
   {@const style = cardStyle(c)}
   {#if style}<em class="mk-style" data-card-type={c.type}>{style}</em>{/if}
+{/snippet}
+
+<!-- T-11-442 로그인 전 기기 — 팔기 · 내 거래 · 방출은 오류 대신 이 탭에서 할 수 있는 일과 로그인 버튼을 보인다. -->
+{#snippet guestPane(v: MarketView)}
+  <div class="mk-guest" data-market-guest={v}>
+    <p>{marketGuestText(v)}</p>
+    <LoginButtons act="market-guest-login" back={{ market: true }} />
+  </div>
 {/snippet}
 
 {#snippet mini(p: TeamPlayer, name: string, dim = false)}
@@ -253,6 +302,8 @@
         <div><dt>{L.statBuysToday}</dt><dd>{me.rules.dailyBuys - me.buysLeft} / {me.rules.dailyBuys}</dd></div>
         <div><dt>{L.statListed}</dt><dd>{me.listings.length} / {me.rules.listLimit}</dd></div>
       </dl>
+    {:else if guest}
+      <p class="mk-hero-note" data-market-guest-note>{L.guestHero}</p>
     {:else if meFailed}
       <p class="mk-hero-note">{meFailed}</p>
     {/if}
@@ -271,9 +322,11 @@
             <button class="mk-chip" aria-pressed={team?.season === o.id} onclick={() => ((teamSeason = o.id), (picked = new Set()))}>{L.seasonChip({ name: o.name })}</button>
           {/each}
         </div>
-        {#if releasable.length > 0}<button class="mk-link" data-act="pick-all" onclick={pickAll}>{allPicked ? L.pickNone : L.pickAll}</button>{/if}
+        {#if releasable.length > 0}<button class="mk-link" data-act="pick-all" onclick={pickAll}>{pickAllLabel(releasable.length, allPicked)}</button>{/if}
       </div>
-      {#if !team}
+      {#if guest}
+        {@render guestPane('release')}
+      {:else if !team}
         {#if teamFailed}<p class="muted">{L.playersFailed}</p>{:else}<Skeleton rows={4} />{/if}
       {:else}
         <ul class="mk-rel-list">
@@ -281,7 +334,7 @@
             {@const lock = releaseLock(p, lineup)}
             <li>
               <label class="mk-rel" class:on={picked.has(p.careerId)} class:locked={!!lock} class:unlockable={p.locked && p.raised} data-mine={p.careerId}>
-                <input type="checkbox" checked={picked.has(p.careerId)} disabled={!!lock} aria-label={L.releasePickLabel({ name: nameOfPlayer(p) })} onchange={() => togglePick(p.careerId)} />
+                <input type="checkbox" checked={picked.has(p.careerId)} disabled={!!lock} aria-label={L.releasePickLabel({ name: nameOfPlayer(p) })} onchange={(e) => togglePick(p.careerId, e.currentTarget)} />
                 {@render mini(p, nameOfPlayer(p), !!lock)}
                 <span class="mk-info">
                   <strong class="mk-name">{nameOfPlayer(p)}</strong>
@@ -359,7 +412,7 @@
           {/each}
         </div>
         <div class="mk-sort">
-          <span class="muted fs-sm">{season === null ? '' : L.seasonCount({ n: items.length, more: hasMore })}</span>
+          <span class="muted fs-sm">{season === null ? '' : L.listCount({ n: items.length, more: hasMore })}</span>
           <label class="fs-sm">{L.sortLabel}
             <select bind:value={sort} data-market-sort>
               {#each Object.entries(MARKET_SORT_LABEL) as [k, label] (k)}<option value={k}>{label}</option>{/each}
@@ -380,7 +433,7 @@
                   {@render mini(asPlayer(l.card), marketName(l.card, local))}
                   <span class="mk-info">
                     <span class="mk-name">{marketName(l.card, local)}{#if myListingIds.has(l.id)}<em class="mk-tag">{L.myListing}</em>{/if}</span>
-                    <small>{@render styleTag(l.card)}{cardMeta(l.card)}</small>
+                    <small>{@render styleTag(l.card)}{cardMeta(l.card, season)}</small>
                   </span>
                   <span class="mk-price"><b>{fmtValue(l.price)}</b><small class="mk-{diff.tone}">{diff.text}</small></span>
                 </button>
@@ -394,8 +447,10 @@
       </section>
     {:else if view === 'sell'}
       <section class="mk-pane" aria-label={L.tabSell}>
-        <h2 class="mk-step">{L.sellStep1} <small>{L.sellSeasonOnly({ season: seasonName || L.thisSeason })}</small></h2>
-        {#if !team}
+        <h2 class="mk-step">{L.sellStep1}</h2>
+        {#if guest}
+          {@render guestPane('sell')}
+        {:else if !team}
           {#if teamFailed}<p class="muted">{L.playersFailed}</p>{:else}<Skeleton rows={4} />{/if}
         {:else if !isCurrent || team.players.length === 0}
           <p class="muted">{L.sellNone}</p>
@@ -418,7 +473,7 @@
         {#if selling && quote && me}
           {@const diff = priceDiff(sellPrice, selling.cardValue!)}
           {@const range = sellSlider(me.rules)}
-          <div class="mk-price-box">
+          <div class="mk-price-box" bind:this={priceBox}>
             <h2 class="mk-step">{L.sellStep2({ name: nameOfPlayer(selling), pos: detailPosOf(selling), peak: selling.peak })}</h2>
             <div class="mk-presets">
               <button aria-pressed={pct === 100} onclick={() => (pct = 100)}><span>{L.presetBase}</span><b>{fmtValue(selling.cardValue!)}</b></button>
@@ -443,7 +498,9 @@
       </section>
     {:else}
       <section class="mk-pane" aria-label={L.tabTrades}>
-        {#if !me}
+        {#if guest}
+          {@render guestPane('trades')}
+        {:else if !me}
           {#if meFailed}<p class="muted">{meFailed}</p>{:else}<Skeleton rows={4} />{/if}
         {:else}
           <h2 class="mk-step">{L.tradesListed}</h2>
@@ -534,6 +591,8 @@
 {/if}
 
 <style>
+  .mk-guest {display:flex;flex-direction:column;gap:10px;}
+  .mk-guest p {margin:0;}
   .mk-salary {margin:6px 0 0;font-size:12px;font-weight:600;text-align:center;opacity:.85;}
   /* 초록 머리 — 구단 자금 · 자금 만들기 · 요약 셋 */
   .mk-hero {

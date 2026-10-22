@@ -67,12 +67,26 @@ export function KeyMoment({
         </View>
       ) : (
         <>
+          <Txt
+            testID="key-moment-stake"
+            tone="muted"
+            style={{ fontSize: rem(FONT.label), lineHeight: rem(FONT.label) * 1.5 }}
+          >
+            {m.stake}
+          </Txt>
           <View style={{ gap: 6 }}>
             {m.choices.map((ch) => (
               <Press
                 key={ch.id}
                 testID={`key-moment-choice-${ch.id}`}
-                accessibilityLabel={`${ch.label}, ${K.pct({ p: ch.pct })}, ${K.attr({ attr: ch.attr })}`}
+                accessibilityLabel={[
+                  ch.label,
+                  K.pct({ p: ch.pct }),
+                  K.attr({ attr: ch.attr }),
+                  ch.rec,
+                ]
+                  .filter(Boolean)
+                  .join(', ')}
                 onPress={() => {
                   buzz();
                   choose(ch.id);
@@ -109,6 +123,11 @@ export function KeyMoment({
                 </View>
                 <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                   {K.attr({ attr: ch.attr })}
+                  {ch.rec ? (
+                    <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '600' }}>
+                      {` · ${ch.rec}`}
+                    </Txt>
+                  ) : null}
                 </Txt>
               </Press>
             ))}

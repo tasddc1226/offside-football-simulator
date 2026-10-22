@@ -3,6 +3,7 @@
   import { postMeta } from '@offside/app-core/boardText';
   import { homeText as L } from '@offside/app-core/i18n/ko/home';
   import { openBoard } from './nav.js';
+  import { isNewPost } from './news.svelte.js';
   let { board, posts }: { board: BoardKey; posts: PostSummary[] } = $props();
 </script>
 
@@ -16,6 +17,7 @@
         <span class="row" style="gap:6px;flex-wrap:wrap">
           {#if p.pinned}<span class="pill warn">{L.pinned}</span>{/if}
           {#if p.version}<span class="pill">{p.version}</span>{/if}
+          {#if isNewPost(p)}<span class="pill good" data-post-new>{L.postNew}</span>{/if}
           <b>{p.title}</b>
         </span>
         <span class="muted fs-xs">{postMeta(p)}</span>

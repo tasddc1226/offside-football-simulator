@@ -4,6 +4,7 @@ import {
   PutOwnerTeamResponseSchema,
   TeamLikeResponseSchema,
   TeamProfileResponseSchema,
+  AchRankResponseSchema,
   TeamRankResponseSchema,
   TeamStatsResponseSchema,
   successEnvelope,
@@ -11,7 +12,15 @@ import {
 import { createApp } from '../app.js';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cards, careers, ownerTeams, profiles, teamLikes, teamMatches } from '../db/schema.js';
+import {
+  cards,
+  careers,
+  ownerAchievements,
+  ownerTeams,
+  profiles,
+  teamLikes,
+  teamMatches,
+} from '../db/schema.js';
 import { createTestD1, spyDb, syncCards, type TestD1 } from '../test/d1.js';
 import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
 import {
@@ -25,6 +34,7 @@ import {
 const PutRes = successEnvelope(PutOwnerTeamResponseSchema);
 const PlayRes = successEnvelope(PlayTeamMatchResponseSchema);
 const RankRes = successEnvelope(TeamRankResponseSchema);
+const AchRes = successEnvelope(AchRankResponseSchema);
 const ProfileRes = successEnvelope(TeamProfileResponseSchema);
 const LikeRes = successEnvelope(TeamLikeResponseSchema);
 const StatsRes = successEnvelope(TeamStatsResponseSchema);
@@ -413,6 +423,75 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     } finally {
       edge.uninstall();
     }
+  });
+
+  it('T-11-441: me=1이면 세션의 팀 순위와 그 페이지를 돌려주고, 사람마다 달라 담지 않는다', async () => {
+    const strong = await team(3, 90);
+    const weak = await team(1, 70);
+    await ctx.db.update(ownerTeams).set({ rating: 1040 }).where(eq(ownerTeams.id, weak.team.id));
+    const edge = installFakeEdgeCache();
+    try {
+      const me = async (q: string, cookie?: string) => {
+        const res = await call('GET', `/v1/teams?me=1${q}`, cookie ? { cookie } : {});
+        expect(res.status).toBe(200);
+        if (!q.includes('value'))
+          expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+        return RankRes.parse(await res.json()).data;
+      };
+      const byRating = await me('', strong.cookie);
+      expect(byRating.me).toEqual({ teamId: strong.team.id, rank: 2 });
+      expect(byRating.page).toBe(1);
+      expect(byRating.items.map((i) => i.teamId)).toEqual([weak.team.id, strong.team.id]);
+      expect((await me('&sort=ovr', strong.cookie)).me).toEqual({
+        teamId: strong.team.id,
+        rank: 1,
+      });
+      // 로그인하지 않았으면 null, 가치순은 세지 않는다.
+      expect((await me('')).me).toBeNull();
+      expect((await me('&sort=value', strong.cookie)).me).toBeUndefined();
+      await flushEdge();
+      // 엣지에는 공개 페이지만 담긴다(me 키 없음).
+      expect([...edge.store.keys()].some((k) => k.includes('me'))).toBe(false);
+    } finally {
+      edge.uninstall();
+    }
+  });
+
+  it('T-11-441: 업적 랭킹 me=1은 내 업적 순위를 돌려주고, 기록이 없으면 null', async () => {
+    const a = await issueGoogleCookie(ctx);
+    const b = await issueGoogleCookie(ctx);
+    const none = await issueGoogleCookie(ctx);
+    const at = '2026-09-29T00:00:00.000Z';
+    await ctx.db.insert(ownerAchievements).values([
+      {
+        profileId: a.profileId,
+        season: 0,
+        score: 50,
+        done: 2,
+        players: 1,
+        reachedAt: at,
+        updatedAt: at,
+      },
+      {
+        profileId: b.profileId,
+        season: 0,
+        score: 80,
+        done: 3,
+        players: 2,
+        reachedAt: at,
+        updatedAt: at,
+      },
+    ]);
+    const me = async (cookie: string) => {
+      const res = await call('GET', '/v1/achievements/ranking?me=1', { cookie });
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+      return AchRes.parse(await res.json()).data;
+    };
+    const mine = await me(a.cookie);
+    expect(mine.me).toEqual({ rank: 2 });
+    expect(mine.items.map((i) => i.rank)).toEqual([1, 2]);
+    expect((await me(none.cookie)).me).toBeNull();
   });
 
   it('T-11-268: 가치순 랭킹은 엣지에 30분, 평점·OVR순은 5분 담는다', async () => {

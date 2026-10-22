@@ -17,6 +17,7 @@ const VERSION = '1';
 const META_KEY = 'club_ids_backfill';
 /** 진행 중이면 마지막으로 본 careers rowid. */
 const CURSOR_KEY = 'club_ids_backfill_cursor';
+export const CLUB_IDS_BACKFILL_KEYS = [META_KEY, CURSOR_KEY] as const;
 /** 스냅샷 JSON을 읽고 다시 쓰므로 Workers 무료 플랜 CPU 안에 들도록 작게. D1 바인딩 한도(100)보다도 작다. */
 const CHUNK = 40;
 
@@ -59,12 +60,21 @@ function fillSnapshot(
 }
 
 /** 채우는 중이면 다음 한 조각을 처리한다. 무언가 했으면 true. */
-export async function ensureClubIdsBackfilled(db: Db, chunk = CHUNK): Promise<boolean> {
-  const meta = await db
-    .select({ key: appMeta.key, value: appMeta.value })
-    .from(appMeta)
-    .where(inArray(appMeta.key, [META_KEY, CURSOR_KEY]));
-  const m = new Map(meta.map((r) => [r.key, r.value]));
+export async function ensureClubIdsBackfilled(
+  db: Db,
+  chunk = CHUNK,
+  knownMeta?: ReadonlyMap<string, string>,
+): Promise<boolean> {
+  const m =
+    knownMeta ??
+    new Map(
+      (
+        await db
+          .select({ key: appMeta.key, value: appMeta.value })
+          .from(appMeta)
+          .where(inArray(appMeta.key, [META_KEY, CURSOR_KEY]))
+      ).map((r) => [r.key, r.value]),
+    );
   if (m.get(META_KEY) === VERSION) return false;
   const cursor = Number(m.get(CURSOR_KEY) ?? 0);
   // 구단 꾸미기를 한 유저의 기록만 본다 — 나머지는 기본 이름이라 채울 게 없다.

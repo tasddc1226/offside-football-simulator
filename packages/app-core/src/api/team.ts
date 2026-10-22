@@ -117,6 +117,18 @@ export const fetchAchRanking = (season: number | undefined, page: number) =>
     `/v1/achievements/ranking?${season === undefined ? '' : `season=${season}&`}page=${page}`,
     60_000,
   );
+/** T-11-441 '내 순위로': 내 팀이 있는 페이지와 내 순위(me). 누를 때만 부르고, 1분 메모한다. 가치순은 서버가 세지 않는다. */
+export const fetchMyTeamRank = (season: number | undefined, sort: TeamRankSort) =>
+  cachedGet<TeamRankResponse>(
+    `/v1/teams?${season === undefined ? '' : `season=${season}&`}sort=${sort}&me=1`,
+    60_000,
+  );
+/** T-11-441 업적 랭킹의 '내 순위로'. */
+export const fetchMyAchRank = (season: number | undefined) =>
+  cachedGet<AchRankResponse>(
+    `/v1/achievements/ranking?${season === undefined ? '' : `season=${season}&`}me=1`,
+    60_000,
+  );
 /** 팀 프로필(좋아요 여부가 사람마다 달라 메모하지 않는다). */
 export const fetchTeamProfile = (id: string) => apiFetch<TeamProfileResponse>(`/v1/teams/${id}`);
 /** T-11-290 팀 프로필의 스쿼드 댓글(보는 사람이 신고·차단한 것은 빠진다). 지우기·신고·차단은 api/boards의 함수를 그대로 쓴다. */

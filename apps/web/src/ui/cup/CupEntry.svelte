@@ -3,15 +3,27 @@
   // 명단 마감 안내, 끝났으면 내 성적. 신청·취소가 성공하면 onchanged로 부모가 다시 불러온다.
   import { divisionLabel } from '@offside/app-core/cupDivision';
   import { enterCup, withdrawCup, type CupMeResponse, type CupResponse } from '@offside/app-core/api/cup';
+  import { cupEnterConfirmLines, cupEntryTeamAction } from '@offside/app-core/cupEntry';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
+  import { go } from '../nav.js';
+  import { appState } from '../state.svelte.js';
   import { toast } from '../helpers.js';
   import { lockAtOf, lockWhen, roundLabel, stageLabel, teamMap, teamName, whenText } from './cupView.js';
 
   import TeamLogo from '../team/TeamLogo.svelte';
 
-  let { data, me, linked, onchanged }: { data: CupResponse; me: CupMeResponse | null; linked: boolean; onchanged: () => void } = $props();
+  // 로그인한 구단주에게만 그린다(비로그인 안내는 대회 화면의 로그인 카드가 한다).
+  let { data, me, onchanged }: { data: CupResponse; me: CupMeResponse | null; onchanged: () => void } = $props();
 
   let busy = $state(false);
+  // T-11-443 신청 전 한 번 더 묻는다(선발 잠금 · 구간 상한 안내). 팀 화면 프리셋의 카드 안 확인과 같은 모양.
+  let asking = $state(false);
+  // T-11-443 편성을 고치면 풀리는 이유면 편성 화면으로 가는 버튼.
+  const teamAction = $derived(cupEntryTeamAction(me?.eligibility));
+  function openTeam() {
+    appState.teamView = 'team';
+    go('team');
+  }
   const entry = $derived(me?.entry && me.entry.status !== 'withdrawn' ? me.entry : null);
   const names = $derived(teamMap(data.teams));
   const registeredTeam = $derived(entry ? names.get(entry.teamId) : undefined);
@@ -55,6 +67,7 @@
     busy = true;
     const r = await enterCup(data.cup.id);
     busy = false;
+    asking = false;
     if (!r.ok) {
       toast(r.error.message);
       return onchanged();
@@ -86,9 +99,7 @@
 {/if}
 
 {#if data.phase === 'open'}
-  {#if !linked}
-    <p class="muted fs-sm" data-cup-login>{L.loginToEnter}</p>
-  {:else if entry}
+  {#if entry}
     <div class="ce-row" data-cup-entered>
       <span class="pill good">{L.entered}</span>
       <button class="btn btn-sm" data-act="cup-withdraw" disabled={busy} onclick={withdraw}>{busy ? L.withdrawing : L.withdraw}</button>
@@ -96,15 +107,27 @@
     <p class="muted fs-sm">{L.enterLockNote}</p>
     {#if capNote}<p class="muted fs-sm" data-cup-cap-note>{capNote}</p>{/if}
   {:else if me?.eligibility.ok}
-    <button class="btn btn-primary btn-block" data-act="cup-enter" disabled={busy} onclick={enter}>{busy ? L.entering : L.enter}</button>
-    <p class="muted fs-sm">{L.enterLockNote}</p>
-    {#if capNote}<p class="muted fs-sm" data-cup-cap-note>{capNote}</p>{/if}
+    {#if asking}
+      <div class="ce-ask" role="group" aria-label={L.enterAskTitle} data-cup-enter-ask>
+        <b>{L.enterAskTitle}</b>
+        <ul class="ce-ask-lines">{#each cupEnterConfirmLines(data.cup) as line (line)}<li>{line}</li>{/each}</ul>
+        <div class="ce-row">
+          <button class="btn" disabled={busy} onclick={() => (asking = false)} data-act="cup-enter-cancel">{L.enterAskCancel}</button>
+          <button class="btn btn-primary" disabled={busy} onclick={enter} data-act="cup-enter-confirm">{busy ? L.entering : L.enterAskOk}</button>
+        </div>
+      </div>
+    {:else}
+      <button class="btn btn-primary btn-block" data-act="cup-enter" disabled={busy} onclick={() => (asking = true)}>{L.enter}</button>
+      <p class="muted fs-sm">{L.enterLockNote}</p>
+      {#if capNote}<p class="muted fs-sm" data-cup-cap-note>{capNote}</p>{/if}
+    {/if}
     {#if fit}<p class="muted fs-sm" data-cup-fit>{fit}</p>{/if}
   {:else if reason}
     <p class="muted fs-sm" data-cup-reason={me?.eligibility.reason}>{reason}</p>
     {#if fit && me?.eligibility.reason === 'over-cap'}<p class="muted fs-sm" data-cup-fit>{fit}</p>{/if}
+    {#if teamAction}<button class="btn btn-sm ce-team-btn" data-act="cup-to-lineup" onclick={openTeam}>{teamAction}</button>{/if}
   {/if}
-{:else if data.phase !== 'soon' && data.phase !== 'cancelled' && linked && me}
+{:else if data.phase !== 'soon' && data.phase !== 'cancelled' && me}
   {#if !entry}
     <p class="muted fs-sm">{L.notEntered}</p>
   {:else if entry.status === 'champion'}
@@ -157,6 +180,10 @@
     gap: 10px;
     flex-wrap: wrap;
   }
+  .ce-ask { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: var(--radius-md); background: var(--surface-2); }
+  .ce-ask-lines { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-label); line-height: 1.5; }
+  .ce-ask .ce-row button { flex: 1; min-height: 44px; }
+  .ce-team-btn { align-self: flex-start; }
   .ce-odds { display: flex; flex-direction: column; gap: 4px; }
   .ce-odds-bar {
     display: flex;

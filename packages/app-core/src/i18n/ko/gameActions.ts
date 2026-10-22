@@ -51,8 +51,26 @@ const ko = {
   // 이벤트 선택지·결과
   oddsSafe: '안전',
   oddsSafeHint: '결과는 확정이지만 보상이 줄고, 가끔 대가가 따라요',
-  oddsSure: '확정',
+  // T-11-432 판정 없이 결과가 정해진 선택지('확정'은 좋은 일처럼 읽혀 바꿨다). 확률은 결정적 장면과 같은 '성공 N%'.
+  oddsSure: '판정 없음',
+  oddsPct: (p: { p: number }) => `성공 ${p.p}%`,
+  // T-11-432 선택지 득실 칩
+  peekCond: '컨디션',
+  peekMorale: '사기',
+  peekFame: '인기',
+  peekTrust: '신뢰',
+  peekMoney: '자금',
+  peekAttr: '능력치',
+  peekPot: '잠재력',
+  peekUp: (p: { label: string }) => `${p.label} ↑`,
+  peekDown: (p: { label: string }) => `${p.label} ↓`,
+  peekOut: '결장',
+  peekStory: (p: { name: string }) => `${p.name} 시작`,
+  peekFail: (p: { chip: string }) => `실패 시 ${p.chip}`,
+  peekSafeCost: '가끔 대가',
+  peekAria: (p: { chips: string }) => `득실 ${p.chips}`,
   oddsMinigame: (p: { zone: string }) => `원터치 · ${p.zone}`,
+  oddsMinigameTerm: '원터치',
   oddsMinigameHint: '바늘이 초록 구간에 올 때 탭하면 성공해요. 구간 넓이는 능력치로 정해져요',
   outcomeOk: '성공',
   outcomeFail: '실패',
@@ -115,7 +133,7 @@ const ko = {
   // 새 커리어 · 은퇴 확인
   newTitle: '새로 시작할까요?',
   newText: (p: { name: string }) =>
-    `진행 중인 ${p.name} 선수의 커리어는 사라져요. 명예의 전당에는 은퇴한 선수만 남아요.`,
+    `새 선수로 킥오프하면 ${p.name} 선수의 커리어는 사라져요. 만들기를 취소하면 이어서 할 수 있어요. 명예의 전당에는 은퇴한 선수만 남아요.`,
   newBtn: '새 커리어 시작',
   cancel: '취소',
   retireTitle: '정말 은퇴하시겠어요?',
@@ -124,6 +142,20 @@ const ko = {
   retireYes: '은퇴한다',
   retireStay: '조금 더 뛴다',
   careerStartToast: '고교 마지막 시즌이 시작돼요',
+  // T-11-431 되돌릴 수 없는 진로 확인
+  pathUniTitle: '대학에 진학할까요?',
+  pathUniText:
+    '받은 프로 입단 제의는 모두 사라지고 대학리그에서 뛰어요. 4학년을 마치기 전까지 프로에 다시 도전할 수 있어요. 진학하면 되돌릴 수 없어요.',
+  pathUniCta: '대학 진학',
+  pathSangmuTitle: '상무에 지원할까요?',
+  pathSangmuText: (p: { pct: number; abroad: boolean; fail: 'army' | 'market' | 'stay' }) =>
+    `합격 확률은 ${p.pct}%예요. 합격하면 김천 상무에서 2시즌 복무하며 K리그1에 나가요.${p.abroad ? ' 해외 구단과의 계약은 해지돼요.' : ' 전역하면 원소속팀으로 돌아와요.'} 불합격하면 ${p.fail === 'army' ? '바로 현역으로 입대해요' : p.fail === 'market' ? '이적 시장에서 새 팀을 찾아요' : '지금 팀에 남아요'}. 지원하면 되돌릴 수 없어요.`,
+  pathSangmuCta: '상무 지원',
+  pathArmyTitle: '현역으로 입대할까요?',
+  pathArmyText: (p: { abroad: boolean }) =>
+    `18개월 동안 복무해요. 2시즌 동안 공식전에 나갈 수 없고 능력치와 인지도가 떨어져요.${p.abroad ? ' 해외 구단과의 계약은 해지돼요.' : ''} 입대하면 되돌릴 수 없어요.`,
+  pathArmyCta: '현역 입대',
+  pathBack: '다시 고르기',
 };
 
 export type GameActionsMsgs = typeof ko;

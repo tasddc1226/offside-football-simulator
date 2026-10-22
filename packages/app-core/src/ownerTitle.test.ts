@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { titlesOf, PERMANENT_TITLES, TITLE_GRADES } from '@offside/contracts/owner-title';
 import { setLocale } from './i18n/core.js';
+import { en } from './i18n/en/index.js';
+import { ja } from './i18n/ja/index.js';
 import { titleLabel, titleCondition, titleRelated, titleGradeLabel } from './ownerTitle.js';
 
 describe('대표 칭호 (T-11-150)', () => {
@@ -28,6 +30,24 @@ describe('대표 칭호 (T-11-150)', () => {
         { edition: 6, stage: 'champion' },
       ]),
     ).toEqual(['cup-6-champion', 'cup-2-champion', 'cup-5-runnerup', 'cup-4-sf', 'cup-1-sf']);
+  });
+
+  it('T-11-418e 리그 1부 우승 칭호: 컵 우승과 같은 단계에서 먼저, 세 언어로 읽는다', () => {
+    expect(
+      titlesOf(
+        [
+          { edition: 3, stage: 'champion' },
+          { edition: 2, stage: 'runnerup' },
+        ],
+        [2],
+      ),
+    ).toEqual(['league-2-champion', 'cup-3-champion', 'cup-2-runnerup']);
+    expect(titleLabel('league-2-champion')).toBe('시즌 2 리그 챔피언');
+    setLocale('en', en);
+    expect(titleLabel('league-2-champion')).toBe('Season 2 League Champion');
+    setLocale('ja', ja);
+    expect(titleLabel('league-2-champion')).toBe('シーズン2 リーグ王者');
+    expect(titleLabel('league-0-champion')).toBeNull();
   });
 });
 

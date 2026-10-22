@@ -318,7 +318,7 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await page.locator('[data-team-name]').fill('우리 동네 FC');
   // 감독 이름이 비면 저장할 수 없고 이유를 보여 준다.
   await expect(page.locator('[data-act="team-save"]')).toBeDisabled();
-  await expect(page.locator('[data-team-save-reason]')).toContainText('감독 이름');
+  await expect(page.locator('[data-team-save-reason]')).toContainText('팀 대표 이름');
   await page.locator('[data-team-manager]').fill('홍감독');
   await page.locator('[data-act="team-auto"]').click();
   // 스트라이커 자리(9)에 공격수, 골키퍼 자리(0)에 골키퍼가 들어간다.
@@ -362,6 +362,12 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
 
   await page.locator('[data-team-tab="opponents"]').click();
   await expect(page.locator('[data-opponent]')).toContainText('라이벌 FC');
+  // T-11-443 레이팅 아래 내 팀(1,000)과의 차이와 그 뜻을 보인다.
+  await expect(page.locator('[data-opponent-gap="12"]')).toContainText('+12');
+  await expect(page.locator('[data-opponent-gap="12"] .sr-only')).toHaveText(
+    '내 팀보다 12점 높아요',
+  );
+  await expect(page.locator('[data-opponent-gap-note]')).toBeVisible();
   await page.locator('[data-act="team-challenge"]').click();
   await expect
     .poll(() => played)
@@ -556,6 +562,12 @@ test('T-11-387 랭크 경기 중 결정적 장면을 고르면 결과가 중계�
   await expect(card.locator('[data-moment-choice]')).toHaveCount(3);
   await expect(card.locator('[data-moment-choice="round"]')).toContainText('58%');
   await expect(card.locator('[data-moment-choice="round"]')).toContainText('역습 20%');
+  // T-11-443 스크린리더용 남은 시간은 처음 안내 한 줄, 건너뛰기 버튼은 감독에게 맡긴다고 적는다.
+  await expect(page.locator('[data-moment-spoken]')).toHaveText(
+    '15초 안에 고르지 않으면 감독에게 맡겨요',
+  );
+  await expect(page.locator('[data-act="moment-skip"]')).toHaveText('감독에게 맡기고 결과 보기');
+  await expect(live.locator('[data-act="live-skip"]')).toHaveText('감독에게 맡기고 결과 보기');
   await expectNoA11yViolations(page);
   // Freeze after the accessibility scan; browser/CI work must not spend the choice budget.
   const now = await page.evaluate(() => Date.now());
@@ -1251,6 +1263,58 @@ test('업적 달성 알림 — 쓰기 뒤 홈에서 승급 시트, 업적 보기
   await expect(page.locator('[data-ach-sheet]')).toHaveCount(0);
 });
 
+test('시트를 닫는 동안 늦게 온 본문 청크가 비워진 시트를 읽지 않는다', async ({ page }) => {
+  // T-11-447 닫기는 open · view를 함께 비우고 시트는 220ms 동안 내려가며 사라진다. 그 사이 도착한 지연 청크
+  // (업적 · 경기 평점 · 비행)가 빈 view를 읽다 오류를 냈다(운영 클라이언트 오류 'reading from/rated/done').
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await stubOwner(page, true);
+  await page.route(ownerTeamUrl, (route) =>
+    route.fulfill(ownerTeam({ season: 1, current: 1, seasons: SEASONS })),
+  );
+  await page.route(`${API}/v1/owner-team/achievement*`, (route) =>
+    route.fulfill(
+      ok({
+        season: 1,
+        score: 210,
+        groups: [
+          {
+            id: 'first',
+            category: 'player',
+            stage: '0단계',
+            title: '축구 인생 출발',
+            items: [
+              { id: 'retire-FW', label: '공격수 1명 은퇴', done: true, points: 190, worth: 0 },
+              { id: 'retire-GK', label: '골키퍼 1명 은퇴', done: true, points: 20, worth: 0 },
+            ],
+          },
+        ],
+      }),
+    ),
+  );
+  let release!: () => void;
+  const held = new Promise<void>((r) => (release = r));
+  await page.route(/\/assets\/Achieve-[^/]+\.js$/, async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'ft_ach_seen',
+      JSON.stringify({ season: 1, pts: { 'retire-FW': 190 }, score: 190, unseen: [] }),
+    );
+    localStorage.setItem('ft_ach_dirty', 'true');
+  });
+  await page.goto('/');
+  const close = page.locator('#sheet [data-sheet]').last();
+  await expect(close).toBeVisible();
+  await close.click();
+  release();
+  await expect(page.locator('#sheet')).toHaveCount(0);
+  await page.waitForTimeout(300);
+  expect(errors).toEqual([]);
+});
+
 test('모바일 편성 초안은 화면 왕복·새로고침에도 복원되고 저장 실패에는 남는다', async ({
   page,
 }) => {
@@ -1868,9 +1932,26 @@ test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없
   expect(teamPuts).toBe(0);
 
   await page.locator('[data-act="team-presets"]').click();
+  // T-11-431 덮어쓰기 · 삭제는 한 번 더 묻는다. 취소하면 아무것도 보내지 않는다.
+  await sheet.locator('[data-preset="1"] [data-act="preset-overwrite"]').click();
+  await expect(sheet.locator('[data-preset="1"] [data-preset-ask="overwrite"]')).toContainText(
+    '지금 편성으로 덮어쓸까요?',
+  );
+  await sheet.locator('[data-act="preset-ask-cancel"]').click();
+  await expect(sheet.locator('[data-preset-ask]')).toHaveCount(0);
   await sheet.locator('[data-preset="0"] [data-act="preset-delete"]').click();
+  await expect(sheet.locator('[data-preset="0"] [data-preset-ask="delete"]')).toContainText(
+    '삭제할까요?',
+  );
+  expect(puts.length).toBe(2);
+  await sheet.locator('[data-act="preset-ask-ok"]').click();
   await expect.poll(() => puts.length).toBe(3);
   expect(puts[2]!.presets.map((p) => p.name)).toEqual(['주말 리그']);
+  await expect(sheet.locator('[data-preset-ask]')).toHaveCount(0);
+  await sheet.locator('[data-preset="0"] [data-act="preset-overwrite"]').click();
+  await sheet.locator('[data-act="preset-ask-ok"]').click();
+  await expect.poll(() => puts.length).toBe(4);
+  expect(puts[3]!.presets.map((p) => p.name)).toEqual(['주말 리그']);
 });
 
 for (const width of [320, 390, 1280]) {

@@ -31,6 +31,17 @@ const ko = {
   close: '닫기',
   guestLead: (p: { days: number; reward: string }) =>
     `로그인하면 매일 출석하고 보상을 받아요. ${p.days}일 동안 받는 보상: ${p.reward}`,
+  // T-11-440 출석 뒤 받은 아이템 · 쓰는 곳 안내, 칸을 눌러 그날 보상 보기
+  got: (p: { reward: string }) => `받은 아이템: ${p.reward}`,
+  useHint:
+    '리롤권과 스카우트권은 선수 만들기 후보 단계에서, 강화권은 선수 탭 잠재력 강화에서 써요.',
+  toOwner: '내 구단에서 보기',
+  cellReward: (p: { n: number; reward: string }) => `${p.n}일째 보상 · ${p.reward}`,
+  cellLabel: (p: { n: number; reward: string; state: string }) =>
+    `${p.n}일째, ${p.reward}${p.state ? `, ${p.state}` : ''}`,
+  cellDone: '도장 찍음',
+  cellToday: '오늘 칸',
+  cellHint: '칸을 누르면 그날 보상을 볼 수 있어요.',
 };
 
 export type AttendanceMsgs = typeof ko;

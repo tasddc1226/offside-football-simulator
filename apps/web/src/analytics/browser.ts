@@ -5,6 +5,7 @@ import {
   type Progress,
 } from '@offside/app-core/player-metrics';
 import type { OperationResult } from '@offside/app-core/measurement';
+import type { AppStoreOs } from '@offside/app-core/appPromo';
 import type { AppStorePlace } from './index.js';
 import { loadPixel, setAdConsent, trackMeta } from './meta.js';
 import {
@@ -314,11 +315,11 @@ export const analytics = {
     metric(() => playerMetrics.retire(cid));
   },
 };
-/** T-11-092 웹 → App Store 링크를 누름(어느 안내에서 눌렀는지). */
-export const trackAppStoreClick = (place: AppStorePlace) => {
+/** T-11-092 웹 → 앱 스토어 링크를 누름(어느 안내에서 · T-11-449 어느 스토어로). */
+export const trackAppStoreClick = (place: AppStorePlace, store: AppStoreOs) => {
   try {
     recordAcquisition('store_click');
-    send('app_store_click', { place });
+    send('app_store_click', { place, store });
     trackMeta('AppStoreClick');
   } catch {
     /* optional */

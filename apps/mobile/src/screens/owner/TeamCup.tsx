@@ -17,9 +17,13 @@ import { cupText as L } from '@offside/app-core/i18n/ko/cup';
 import { cupRewardText } from '@offside/app-core/cupReward';
 import { cupAppText as A } from '@offside/app-core/i18n/ko/cupApp';
 import { cupOnHome } from '@offside/app-core/cupHome';
+import { cupEnterConfirmLines, cupEntryTeamAction } from '@offside/app-core/cupEntry';
 import { divisionLabel } from '@offside/app-core/cupDivision';
+import type { CupLineupBar } from '@offside/app-core/cupLineupBar';
 import { type LoadStatus } from '../../components/LoadState';
 import { toast } from '../../game/host';
+import { go } from '../../game/nav';
+import { appState } from '../../store';
 import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Pill, Press, Txt } from '../../ui';
@@ -220,6 +224,24 @@ function CupEntry({ state }: { state: CupState }) {
       { text: L.withdraw, style: 'destructive', onPress: () => void run('withdraw') },
     ]);
 
+  // T-11-443 신청 전 한 번 더 묻는다(선발 잠금 · 구간 상한 · 접수 중 취소 가능).
+  const askEnter = () =>
+    Alert.alert(
+      L.enterAskTitle,
+      cupEnterConfirmLines(data.cup)
+        .map((l) => `· ${l}`)
+        .join('\n'),
+      [
+        { text: L.enterAskCancel, style: 'cancel' },
+        { text: L.enterAskOk, onPress: () => void run('enter') },
+      ],
+    );
+  // T-11-443 편성을 고치면 풀리는 이유면 팀 편성 화면으로.
+  const openTeam = () => {
+    appState.teamView = 'team';
+    go('team');
+  };
+
   if (entry)
     return (
       <View style={{ gap: 6 }}>
@@ -252,6 +274,7 @@ function CupEntry({ state }: { state: CupState }) {
     : reasonText(me.eligibility, data.cup.minFilled, me.ovr ?? undefined, data.cup.ovrMax);
   const fit = divisionFitText(data, me);
   const capNote = data.cup.ovrMax != null ? L.divisionLockNote({ cap: data.cup.ovrMax }) : null;
+  const teamAction = cupEntryTeamAction(me.eligibility);
   if (reason)
     return (
       <View style={{ gap: 6 }}>
@@ -263,16 +286,16 @@ function CupEntry({ state }: { state: CupState }) {
             {fit}
           </Txt>
         ) : null}
+        {teamAction ? (
+          <Btn sm testID="cup-to-lineup" onPress={openTeam} style={{ alignSelf: 'flex-start' }}>
+            {teamAction}
+          </Btn>
+        ) : null}
       </View>
     );
   return (
     <View style={{ gap: 6 }}>
-      <Btn
-        kind="primary"
-        testID="cup-enter"
-        disabled={busy !== null}
-        onPress={() => void run('enter')}
-      >
+      <Btn kind="primary" testID="cup-enter" disabled={busy !== null} onPress={askEnter}>
         {busy === 'enter' ? L.entering : L.enter}
       </Btn>
       <Txt v="sm" tone="muted">
@@ -407,31 +430,75 @@ export function CupCard({
   );
 }
 
-/** 편성 화면의 명단 마감 띠 — 잠겨 있거나 오늘 안에 잠길 때. */
-export function CupLockNotice({ state }: { state: CupState }) {
+/**
+ * 편성 화면의 명단 마감 띠 — 잠겨 있거나 오늘 안에 잠길 때. T-11-436 참가 중이거나 신청을 받는 중이면 팀 OVR · 구간 상한과
+ * 선발 · 최소 인원 줄(bar)을 늘 보이고, 넘거나 모자라면 이유를 붙인다.
+ */
+export function CupLockNotice({
+  state,
+  bar = null,
+}: {
+  state: CupState;
+  bar?: CupLineupBar | null;
+}) {
   const c = useColors();
   const next = myNext(state);
-  if (!state.cup || !next) return null;
-  const lock = lockAtOf(state.cup, next.round);
+  const lock = state.cup && next ? lockAtOf(state.cup, next.round) : null;
   const now = Date.now();
   let text: string | null = null;
-  if (state.me?.locked) text = L.lineupLocked;
+  if (next && state.me?.locked) text = L.lineupLocked;
   else if (lock && Date.parse(lock) > now && Date.parse(lock) - now < 24 * 3600_000)
     text = L.lineupBand({ when: whenText(lock, now) });
-  if (!text) return null;
+  if (!text && !bar) return null;
+  const warn = !!text || !!bar?.notes.length;
   return (
     <View
       testID="cup-lock-notice"
-      accessibilityRole="alert"
+      accessibilityRole={warn ? 'alert' : undefined}
       style={{
         borderWidth: 1,
-        borderColor: alpha(c.warn, 0.5),
-        backgroundColor: alpha(c.warn, 0.1),
+        borderColor: alpha(warn ? c.warn : c.good, 0.5),
+        backgroundColor: alpha(warn ? c.warn : c.good, 0.1),
         borderRadius: RADIUS.md,
         padding: 12,
+        gap: 4,
       }}
     >
-      <Txt v="sm">{text}</Txt>
+      {bar ? (
+        <Txt v="xs" bold>
+          {L.title}
+        </Txt>
+      ) : null}
+      {text ? <Txt v="sm">{text}</Txt> : null}
+      {bar ? (
+        <View testID="cup-rule" style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 12 }}>
+          {bar.ovrText ? (
+            <Txt
+              v="sm"
+              num
+              bold={bar.overCap}
+              tone={bar.overCap ? 'bad' : 'ink'}
+              testID="cup-rule-ovr"
+            >
+              {bar.ovrText}
+            </Txt>
+          ) : null}
+          <Txt
+            v="sm"
+            num
+            bold={bar.short}
+            tone={bar.short ? 'bad' : 'ink'}
+            testID="cup-rule-filled"
+          >
+            {bar.filledText}
+          </Txt>
+        </View>
+      ) : null}
+      {bar?.notes.map((note) => (
+        <Txt key={note} v="sm" tone="bad" testID="cup-rule-note">
+          {note}
+        </Txt>
+      ))}
     </View>
   );
 }

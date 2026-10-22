@@ -38,6 +38,7 @@ import { hofStart } from '@offside/app-core/state';
 import { appState } from '../../store';
 import { startAppleLogin, startGoogleLogin } from '../../platform/auth';
 import { openWeb } from '../../platform/openWeb';
+import { markChatRead } from '../../platform/chatUnread';
 import { chatText as L } from '@offside/app-core/i18n/ko/chat';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
@@ -177,6 +178,8 @@ export default function Chat() {
         const grew = v.messages !== shown.current;
         shown.current = v.messages;
         setView(v);
+        // T-11-440 이 화면에서 받은 줄은 읽은 것으로 남겨 홈 채팅 버튼의 안 읽음 수를 비운다.
+        if (v.status === 'open') markChatRead(v.messages);
         const fromMe = v.messages.at(-1)?.author === v.me?.author;
         if (grew && (entering.current || atBottom.current || fromMe))
           requestAnimationFrame(() => list.current?.scrollToEnd({ animated: false }));

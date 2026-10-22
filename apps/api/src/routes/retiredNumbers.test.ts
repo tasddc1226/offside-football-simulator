@@ -168,6 +168,9 @@ describe('영구결번 (T-10-076)', () => {
       ]),
     );
     expect(data.clubs[0]).not.toHaveProperty('score');
+    // T-11-429 이적 위험은 지금 구단(마지막 시즌의 구단)에만 생긴다 — 이미 떠난 구단은 늘 false.
+    expect(data.clubs.every((club) => typeof club.leaveRisk === 'boolean')).toBe(true);
+    expect(data.clubs.find((club) => club.clubId === 'pl-0')?.leaveRisk).toBe(false);
     expect(await list()).toHaveLength(1);
     expect((await read(0)).status).toBe(400);
     const other = (await issueCookie(ctx)).cookie;

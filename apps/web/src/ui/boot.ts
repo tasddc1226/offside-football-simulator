@@ -3,6 +3,7 @@ import { syncClubStrength } from '@offside/app-core/club-strength-sync';
 import { setLatestBalance } from '@offside/game/balance';
 import {
   restoreGame,
+  takePhaseReport,
   configureCareerActivityReporter,
   noteCareerActivity,
 } from '@offside/app-core/career';
@@ -36,6 +37,8 @@ export function loadGame() {
   loadClubCustom();
   migrateLegacySave();
   appState.G = restoreGame({ uploadRetirement, uploadLegacyRetirement });
+  // T-11-438 중계 도중 끊긴 구간 리포트가 있으면 시즌 탭 맨 위에 다시 보여 준다.
+  appState.report = takePhaseReport(appState.G) ?? appState.report;
   if (!activityReady) {
     activityReady = true;
     void import('@offside/app-core/careerActivity')

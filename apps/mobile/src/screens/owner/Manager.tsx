@@ -65,6 +65,7 @@ import {
   saveManagerState,
   setTeamCoach,
   startConfirmLines,
+  finishConfirmLines,
   startManager,
 } from '@offside/app-core/manager';
 import { fundsText } from '@offside/app-core/funds';
@@ -323,6 +324,18 @@ export default function Manager() {
       await load();
     }
   }
+  // T-11-443 '감독 카드로 확정'은 되돌릴 수 없어 한 번 더 묻는다.
+  const askFinish = () =>
+    Alert.alert(
+      M.finishTitle,
+      finishConfirmLines()
+        .map((l) => `· ${l}`)
+        .join('\n'),
+      [
+        { text: M.cancel, style: 'cancel' },
+        { text: M.finishOk, onPress: () => void finish() },
+      ],
+    );
   async function seat(id: string | null) {
     setReleased(null);
     if (await run(() => setTeamCoach(id))) await load();
@@ -385,7 +398,7 @@ export default function Manager() {
       setEvChips([]);
     } else if (bar.act === 'manager-result') playSeason();
     else if (bar.act === 'manager-continue') act(continueAfterResult);
-    else void finish();
+    else askFinish();
   }
   const errLine = error ? (
     <Txt tone="bad" bold accessibilityRole="alert">

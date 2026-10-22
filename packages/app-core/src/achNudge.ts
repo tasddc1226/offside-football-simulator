@@ -12,7 +12,7 @@ import type { AppState } from './state.js';
 import { num } from './teamText.js';
 import { tn } from '@offside/game/i18n/names';
 import { sheetAchieveText as L } from './i18n/ko/sheetAchieve.js';
-import { achGradeName } from './teamOwner.js';
+import { achGradeName, achRewardItems } from './teamOwner.js';
 
 /** 이 기기에 본 기록이 없을 때(기능이 나오기 전부터 쌓은 구단주) 이보다 많이 새로 보이면 알리지 않고 기준만 잡는다. */
 export const FIRST_RUN_MAX = 3;
@@ -25,6 +25,8 @@ export type AchSeen = {
   pts: Record<string, number>;
   score: number;
   unseen: string[];
+  /** T-11-357 업적별로 이 시즌에 받은 보상 [강화권, 스카우트권]. 옛 기록에는 없다. */
+  got?: Record<string, [number, number]>;
 };
 export type AchFresh = { id: string; label: string; gained: number };
 export type AchNudge = {
@@ -34,6 +36,8 @@ export type AchNudge = {
   /** 등급이 올랐으면 이전 등급. */
   from: AchGrade | null;
   next: AchGrade | null;
+  /** T-11-357 새 업적으로 받은 보상(없으면 null). */
+  reward: { boost: number; scout: number } | null;
 };
 
 const pointsOf = (r: ClubAchievementNotifications): Record<string, number> =>
@@ -60,8 +64,19 @@ export function absorbAch(
     .sort((a, b) => b.gained - a.gained);
   if (!prev && fresh.length > FIRST_RUN_MAX) fresh = [];
   const unseen = [...new Set([...(same ? prev.unseen : []), ...fresh.map((f) => f.id)])];
-  const seen: AchSeen = { season: r.season, pts, score: r.score, unseen };
+  const got = gotOf(r);
+  const seen: AchSeen = { season: r.season, pts, score: r.score, unseen, got };
   if (!fresh.length) return { seen, nudge: null };
+  // 새 업적이 이번에 더 받은 보상(본 기록의 보상을 뺀다).
+  const baseGot = same ? (prev.got ?? {}) : {};
+  const reward = fresh.reduce(
+    (t, f) => {
+      const [b, s] = got[f.id] ?? [0, 0];
+      const [b0, s0] = baseGot[f.id] ?? [0, 0];
+      return { boost: t.boost + Math.max(0, b - b0), scout: t.scout + Math.max(0, s - s0) };
+    },
+    { boost: 0, scout: 0 },
+  );
   const { grade, next } = achGradeOf(r.score);
   const before = achGradeOf(prev ? baseScore : r.score - fresh.reduce((s, f) => s + f.gained, 0));
   return {
@@ -72,9 +87,17 @@ export function absorbAch(
       grade,
       next,
       from: before.grade.id !== grade.id ? before.grade : null,
+      reward: reward.boost + reward.scout > 0 ? reward : null,
     },
   };
 }
+
+const gotOf = (r: ClubAchievementNotifications): Record<string, [number, number]> =>
+  Object.fromEntries(
+    r.groups.flatMap((g) =>
+      g.items.flatMap((i) => (i.got ? [[i.id, [i.got.boost, i.got.scout]] as const] : [])),
+    ),
+  );
 
 const pendingRetirement = () =>
   (loadKey<{ kind: string }[]>(OUTBOX_KEY) ?? []).some((i) => i.kind === 'retirement');
@@ -95,6 +118,7 @@ export function achieveView(n: AchNudge): Extract<SheetView, { kind: 'achieve' }
     next: n.next
       ? L.nextGrade({ name: achGradeName(n.next), pts: num(n.next.min - n.score) })
       : null,
+    reward: n.reward ? L.reward({ items: achRewardItems(n.reward) }) : null,
   };
 }
 

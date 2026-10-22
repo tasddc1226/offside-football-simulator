@@ -6,6 +6,7 @@ import {
   type BalancePatch,
   type BalanceVersion,
 } from '@offside/contracts';
+import { seasonSalaryBudget } from '@offside/contracts/owner-team';
 import { and, desc, eq, isNotNull } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
@@ -36,12 +37,17 @@ export async function getActiveBalance(db: Db): Promise<BalanceVersion | undefin
   return row && toVersion(row);
 }
 
-/** T-11-376 활성 버전의 지난 시즌 선수 급여 예산(없으면 기본값). 활성 행을 batch로 읽었으면 그 행을 넘긴다. */
-export const pastSalaryBudgetFrom = (row: Row | undefined) =>
-  resolveBalance(row && toVersion(row).values).pastSalaryBudget;
-export async function pastSalaryBudgetOf(db: Db): Promise<number> {
+/**
+ * T-11-376 활성 버전의 그 팀 시즌 지난 시즌 선수 급여 예산(없으면 기본값). T-11-450 시즌마다 pastSalaryBudgetStep씩 는다.
+ * 활성 행을 batch로 읽었으면 그 행을 넘긴다.
+ */
+export const pastSalaryBudgetFrom = (row: Row | undefined, teamSeason: number) => {
+  const b = resolveBalance(row && toVersion(row).values);
+  return seasonSalaryBudget(b.pastSalaryBudget, b.pastSalaryBudgetStep, teamSeason);
+};
+export async function pastSalaryBudgetOf(db: Db, teamSeason: number): Promise<number> {
   const [row] = await activeBalanceQuery(db);
-  return pastSalaryBudgetFrom(row);
+  return pastSalaryBudgetFrom(row, teamSeason);
 }
 
 export async function getBalanceVersion(
@@ -177,4 +183,10 @@ export async function activateBalance(
       createdAt: now,
     }),
   ]);
+}
+
+/** T-11-418e 활성 버전의 리그 홈 이점(없으면 기본값). */
+export async function leagueHomeAdvOf(db: Db): Promise<number> {
+  const [row] = await activeBalanceQuery(db);
+  return resolveBalance(row && toVersion(row).values).leagueHomeAdv;
 }

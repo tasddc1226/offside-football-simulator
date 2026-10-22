@@ -8,7 +8,7 @@
   import { retirementPotentialNote } from '@offside/app-core/potential-view';
   import { potentialFlowLines, potentialSeedLines } from '@offside/app-core/potential-flow';
   import { gamePotentialText as P } from '@offside/app-core/i18n/ko/gamePotential';
-  import type { Snippet } from 'svelte';
+  import { tick, type Snippet } from 'svelte';
   import { legendScoreBreakdown, legendTitle } from '@offside/game/season';
   import { careerChapters, careerClubs, nationalEvents, honoursRoll, type ChapterEvent, type HonourLine } from '@offside/game/retirement-report';
   import { POS_LABEL } from '@offside/game/pos-label';
@@ -112,6 +112,12 @@
     return { destroy: () => io.unobserve(el) };
   }
   let more = $state(false);
+  let moreEl = $state<HTMLDetailsElement>();
+  async function openMore() {
+    more = true;
+    await tick();
+    moreEl?.scrollIntoView({ behavior: motionOK ? 'smooth' : 'auto', block: 'start' });
+  }
 
   // ───────── T-10-076 영구결번 ─────────
   // 세리머니는 첫 화면 번들을 늘리지 않게 따로 불러온다(LateCredits → RetiredNumberCredit). 결번 배지만 여기서 그린다.
@@ -154,7 +160,9 @@
       {/if}
     {/if}
     <div class="film-score">
-      <b><CountUp value={v.score} animate={playing} ms={1800} /></b><span>Legend Score</span>
+      <b><CountUp value={v.score} animate={playing} ms={1800} /></b><span>{L.scoreTitle}</span>
+      <!-- T-11-439 점수 구성은 맨 아래 접힌 곳에 있다: 펼치고 그리로 내려간다. -->
+      {#if d}<button class="link-btn" data-act="legend-score-more" aria-label={L.scoreMoreLabel} onclick={openMore}>{L.scoreMore}</button>{/if}
     </div>
     {#if worth > 0}
       <div class="film-worth" class:credit-late={playing} data-legend-value>
@@ -306,7 +314,7 @@
 
 {#if d}
   <!-- 펼칠 때만 그린다(시즌별 표가 길다). -->
-  <details class="card film-more" data-credit="career" bind:open={more}>
+  <details class="card film-more" data-credit="career" bind:open={more} bind:this={moreEl}>
     <summary>{L.moreSummary}</summary>
     {#if more && breakdown}
       <div class="stack">

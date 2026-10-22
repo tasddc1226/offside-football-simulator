@@ -356,6 +356,11 @@ export interface GameState {
   /** T-10-008. 선수 생성 때 고른 주력 능력치. 옛 저장본엔 없다 — engine.focusOf()로 읽는다. */
   focus?: AttrKey[];
   trait: string;
+  /**
+   * T-11-428 성장 특성 커브 버전. 2면 대기만성 · 조기 성장 나이 커브를 다듬은 값(training.ageGrowth · season.nextYear).
+   * 만들 때 정해져 바뀌지 않는다. 없으면 예전 커브 — 그 전에 만든 선수는 고른 특성 그대로 끝까지 간다.
+   */
+  gcv?: number | undefined;
   age: number;
   year: number;
   attrs: Record<AttrKey, number>;

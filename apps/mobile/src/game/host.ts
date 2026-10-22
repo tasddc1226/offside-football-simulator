@@ -138,7 +138,7 @@ export const {
 /** 은퇴 커리어 공유 링크 — 웹 주소로 연다(앱이 없는 사람도 볼 수 있다). */
 export const shareUrl = (careerId: string) => `${WEB_ORIGIN}/career/${careerId}`;
 
-export const { markNewsSeen, dismissNews, checkNews } = createNews(newsState);
+export const { markNewsSeen, dismissNews, checkNews, isNewPost } = createNews(newsState);
 
 export const { onOwnerConflict, adoptCareer, keepOnDevice } = createOwnerConflicts({
   state: appState,

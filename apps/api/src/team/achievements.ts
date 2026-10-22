@@ -8,7 +8,12 @@
 // T-11-046 '은퇴 직전까지 현역'은 그 시즌 은퇴 나이(T-11-045)의 한 살 아래다 — 프리시즌 40세, 시즌 1 44세.
 import { CAREER_FEATS } from '@offside/contracts/owner-title';
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
-import { LINEUP_SIZE, type AchCategory } from '@offside/contracts/owner-team';
+import {
+  LINEUP_SIZE,
+  achRewardOf,
+  type AchCategory,
+  type AchReward,
+} from '@offside/contracts/owner-team';
 import { LEAGUE_BASE } from '@offside/contracts/club-names';
 import {
   LEGACY_DETAIL_POSITIONS,
@@ -317,6 +322,8 @@ const collect = (
   cur: Math.min(cur, max),
   max,
 });
+/** T-11-357 단계 업적의 단계별 점수(보상 판정용 — 응답에는 싣지 않는다). */
+const ladderOf = new WeakMap<ClubAchievement, readonly number[]>();
 const tier = (
   id: string,
   label: string,
@@ -326,7 +333,7 @@ const tier = (
   ladder: readonly number[] = LADDER,
 ): ClubAchievement => {
   const level = steps.filter((s) => cur >= s).length;
-  return {
+  const item: ClubAchievement = {
     id,
     label,
     unit,
@@ -337,6 +344,8 @@ const tier = (
     points: ladder.slice(0, level).reduce((t, p) => t + p, 0),
     worth: ladder[level] ?? 0,
   };
+  ladderOf.set(item, ladder);
+  return item;
 };
 const group = (
   category: AchCategory,
@@ -354,6 +363,49 @@ export function teamKeptOf(groups: readonly ClubAchievementGroup[]): TeamKept {
     if (v > 0) kept[i.id] = v;
   }
   return kept;
+}
+
+/** T-11-357 보상 한 칸: 업적(단계 업적은 단계마다) 하나. key는 시즌 안에서 겹치지 않는 이름. */
+export type AchRewardStep = { id: string; key: string } & AchReward;
+
+/** 달성한 업적·단계 중 보상이 있는 것(achRewardOf). 단계 업적은 넘은 단계마다 한 칸이다. */
+export function achRewardSteps(groups: readonly ClubAchievementGroup[]): AchRewardStep[] {
+  const out: AchRewardStep[] = [];
+  for (const i of groups.filter((g) => !g.locked).flatMap((g) => g.items)) {
+    const ladder = ladderOf.get(i);
+    if (ladder && i.level !== undefined) {
+      for (let k = 1; k <= i.level; k++) {
+        const r = achRewardOf(ladder[k - 1] ?? 0);
+        if (r) out.push({ id: i.id, key: `${i.id}:${k}`, ...r });
+      }
+    } else if (i.done) {
+      const r = achRewardOf(i.points);
+      if (r) out.push({ id: i.id, key: i.id, ...r });
+    }
+  }
+  return out;
+}
+
+/**
+ * 응답에 보상을 붙인다 — reward = 다음 달성(단계)의 보상, got = 이 시즌에 이 업적으로 받은 보상. 지난 시즌 화면은 붙이지
+ * 않는다(그 시즌 보상은 끝났다).
+ */
+export function withAchRewards(
+  groups: readonly ClubAchievementGroup[],
+  got: ReadonlyMap<string, AchReward>,
+): ClubAchievementGroup[] {
+  return groups.map((g) => ({
+    ...g,
+    items: g.items.map((i) => {
+      const next = i.worth > 0 ? achRewardOf(i.worth) : null;
+      const mine = got.get(i.id);
+      return {
+        ...i,
+        ...(next ? { reward: next } : {}),
+        ...(mine && mine.boost + mine.scout > 0 ? { got: mine } : {}),
+      };
+    }),
+  }));
 }
 
 /** 시즌 업적 점수(달성한 업적 점수의 합)와 달성한 업적 수. */

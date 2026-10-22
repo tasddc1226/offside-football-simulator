@@ -31,4 +31,13 @@ export const attendance: Translation<AttendanceMsgs> = {
   close: 'Close',
   guestLead: (p) =>
     `Log in to check in every day and collect rewards. Over ${p.days} days you get: ${p.reward}`,
+  got: (p) => `You got: ${p.reward}`,
+  useHint:
+    'Use reroll and scout tickets at the candidate step when creating a player, and boost tickets in Potential Boost on the Player tab.',
+  toOwner: 'View in my club',
+  cellReward: (p) => `Day ${p.n} reward · ${p.reward}`,
+  cellLabel: (p) => `Day ${p.n}, ${p.reward}${p.state ? `, ${p.state}` : ''}`,
+  cellDone: 'stamped',
+  cellToday: 'today',
+  cellHint: "Tap a day to see that day's reward.",
 };

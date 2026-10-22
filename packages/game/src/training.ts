@@ -32,10 +32,31 @@ import { gTrainingText as L } from './i18n/ko/gTraining.js';
 /** 나이 성장 배율과 그 성장형의 전성기 배율(안내용 비교 기준). */
 function ageGrowth(s: GameState): { f: number; peak: number } {
   const a = s.age;
+  // T-11-428 커브 2: 대기만성은 22~29세 성장을 줄이고, 조기 성장은 24세부터 덜 꺾인다(노쇠 시작은 season.nextYear).
+  const v2 = (s.gcv ?? 1) >= 2;
   if (s.trait === 'early')
-    return { f: a <= 20 ? 1.5 : a <= 23 ? 1.15 : a <= 26 ? 0.6 : 0.14, peak: 1.5 };
+    return {
+      f: a <= 20 ? 1.5 : a <= 23 ? 1.15 : a <= 26 ? (v2 ? 0.7 : 0.6) : v2 ? 0.2 : 0.14,
+      peak: 1.5,
+    };
   if (s.trait === 'late')
-    return { f: a <= 21 ? 0.85 : a <= 25 ? 1.15 : a <= 29 ? 0.8 : 0.25, peak: 1.15 };
+    return {
+      f:
+        a <= 21
+          ? 0.85
+          : a <= 25
+            ? v2
+              ? 1.1
+              : 1.15
+            : a <= 29
+              ? v2
+                ? 0.65
+                : 0.8
+              : v2
+                ? 0.22
+                : 0.25,
+      peak: v2 ? 1.1 : 1.15,
+    };
   return { f: a <= 21 ? 1.3 : a <= 24 ? 1 : a <= 27 ? 0.55 : a <= 30 ? 0.22 : 0.08, peak: 1.3 };
 }
 /** 잠재력과 OVR의 차이로 정하는 성장 배율. 잠재력에 닿으면 하한(BAL.potGrowthFloor)까지 떨어진다. */

@@ -43,6 +43,7 @@ import {
   notifications,
   pushDeliveries,
   friends,
+  ownerItems,
   ownerTeams,
   teamMatches,
 } from '../db/schema.js';
@@ -862,6 +863,15 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     const after = await read();
     expect(feats(after).map((i) => i.done)).toEqual([true, true]);
     expect(feats(after).map((i) => i.points)).toEqual([50, 50]);
+    // T-11-357 50점 위업은 보상 문턱(80점) 아래라 점수만 오른다 — 다시 읽어도 아이템이 생기지 않는다.
+    expect(feats(after).map((i) => i.got)).toEqual([undefined, undefined]);
+    const boosts = async () =>
+      (await ctx.db.select().from(ownerItems).where(eq(ownerItems.profileId, me.profileId))).find(
+        (r) => r.item === 'boost',
+      )?.qty;
+    expect(await boosts()).toBeUndefined();
+    await read();
+    expect(await boosts()).toBeUndefined();
     // 판매해도 원 육성자의 선수 업적은 기존처럼 남는다.
     await ctx.db
       .update(cards)
@@ -1873,13 +1883,13 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       expect(team).toMatchObject({ season: 0, current: 1, founder: true });
     });
 
-    it('T-11-376 지난 시즌 선수는 급여 합이 예산(60) 안에서만 넣고, 카드 시즌이 보인다', async () => {
+    it('T-11-376 지난 시즌 선수는 급여 합이 예산(시즌 1은 80) 안에서만 넣고, 카드 시즌이 보인다', async () => {
       const a = await issueGoogleCookie(ctx, { nickname: '급여' });
-      // OVR 96 이상은 급여 20 — 예전 와일드카드 3명은 그대로 든다(하위 호환).
+      // OVR 96 이상은 급여 20 — T-11-450부터 시즌 1 예산 80이라 4명까지 든다.
       const stars: string[] = [];
-      for (let i = 0; i < 4; i++) stars.push(await addCareer(a.profileId, { peak: 96 }));
+      for (let i = 0; i < 5; i++) stars.push(await addCareer(a.profileId, { peak: 96 }));
       const mids: string[] = [];
-      for (let i = 0; i < 11; i++) mids.push(await addCareer(a.profileId, { peak: 85 }));
+      for (let i = 0; i < 11; i++) mids.push(await addCareer(a.profileId, { peak: 88 }));
       vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
       const s1 = await addCareer(a.profileId, { serviceSeason: 1, peak: 99 });
 
@@ -1887,24 +1897,24 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
         await (await call('GET', '/v1/owner-team', { cookie: a.cookie })).json(),
       ).data;
       expect(view.season).toBe(1);
-      expect(view.pastSalaryBudget).toBe(60);
+      expect(view.pastSalaryBudget).toBe(80);
       expect(view.players.find((p) => p.careerId === s1)?.season).toBe(1);
       expect(view.players.find((p) => p.careerId === stars[0])?.season).toBe(0);
 
       const over = await putTeam(a.cookie, { slots: slots(s1, ...stars) });
       expect(over.status).toBe(400);
       const err = ErrorEnvelopeSchema.parse(await over.json()).error;
-      expect(err.details).toEqual({ reason: 'PAST_SALARY_BUDGET', salary: 80, budget: 60 });
+      expect(err.details).toEqual({ reason: 'PAST_SALARY_BUDGET', salary: 100, budget: 80 });
       expect(err.message).toBe(
-        '지난 시즌 선수 급여가 예산을 넘어요(80/60). 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요.',
+        '지난 시즌 선수 급여가 예산을 넘어요(100/80). 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요.',
       );
-      const ok = await putTeam(a.cookie, { slots: slots(s1, ...stars.slice(0, 3)) });
+      const ok = await putTeam(a.cookie, { slots: slots(s1, ...stars.slice(0, 4)) });
       expect(ok.status).toBe(200);
       const team = PutRes.parse(await ok.json()).data.team;
       expect(team.season).toBe(1);
-      expect(team.slots.slice(0, 4).map((s) => s.season)).toEqual([1, 0, 0, 0]);
-      expect(team.slots[4]!.season).toBeUndefined();
-      // OVR 85~87(급여 6)은 10명까지, 11명이면 66이라 넘는다. 이번 시즌 선수(OVR 99)는 세지 않는다.
+      expect(team.slots.slice(0, 5).map((s) => s.season)).toEqual([1, 0, 0, 0, 0]);
+      expect(team.slots[5]!.season).toBeUndefined();
+      // OVR 88~89(급여 8)은 10명까지, 11명이면 88이라 넘는다. 이번 시즌 선수(OVR 99)는 세지 않는다.
       expect((await putTeam(a.cookie, { slots: slots(s1, ...mids.slice(0, 10)) })).status).toBe(
         200,
       );
@@ -1917,7 +1927,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
         body: { name: '급여 팀', manager: '감독', formation: '4-3-3', slots: slots(...stars) },
       });
       expect(ErrorEnvelopeSchema.parse(await en.json()).error.message).toBe(
-        'Past-season player salaries are over budget (80/60). Swap in lower-salary or this-season players.',
+        'Past-season player salaries are over budget (100/80). Swap in lower-salary or this-season players.',
       );
     });
 

@@ -27,3 +27,15 @@ test('배포 버전이 같으면 배너가 없고, 달라지면 탭으로 돌아
   await page.waitForLoadState('load');
   await expect(page.getByRole('button', { name: /새 커리어 킥오프/ })).toBeVisible();
 });
+
+// T-11-447 지연 청크를 못 불러오면 그 import는 실패로 끝나야 한다. 실패를 막으면(preventDefault) import가 undefined로 끝나
+// `{#await import(...) then { default }}` · `.then((m) => m.x, () => fallback)`가 대신 터졌다.
+test('지연 청크를 못 불러오면 새로고침 배너가 뜨고 import는 실패로 끝난다', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.route(/\/assets\/SiteFooter-[^/]+\.js$/, (route) => route.abort());
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: /새 커리어 킥오프/ })).toBeVisible();
+  await expect(page.getByRole('complementary', { name: '업데이트 알림' })).toBeVisible();
+  expect(errors.filter((m) => /destructure|undefined/.test(m))).toEqual([]);
+});

@@ -1,6 +1,6 @@
 <script lang="ts">
   // T-11-415 프리미엄 스카우트 천장 막대(앱 create/ScoutPityGauge.tsx). S 확정 · 특급 S 두 칸에 쌓인 장수를 보인다.
-  import { scoutPityGauge, scoutPityView, type ScoutPity } from '@offside/contracts/cup';
+  import { scoutPityAt, scoutPityGauge, scoutPityView, type ScoutPity } from '@offside/contracts/cup';
   import { scoutText as L } from '@offside/app-core/i18n/ko/scout';
 
   let { pity, empty = false }: { pity: ScoutPity; empty?: boolean } = $props();
@@ -26,7 +26,7 @@
       </div>
     </div>
   {/each}
-  <p class="muted fs-sm">{L.pityHelp}</p>
+  <p class="muted fs-sm">{L.pityHelp(scoutPityAt())}</p>
   {#if empty}<p class="muted fs-sm" data-pity-keep>{L.pityKeep}</p>{/if}
 </div>
 

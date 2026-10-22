@@ -4,6 +4,7 @@
   // 서버만 안다 — 웹은 서버가 준 결과만 그린다. LegendReport가 따로 불러온다(첫 화면 번들 밖).
   import type { RetiredNumberResult } from '@offside/contracts';
   import { setLegendPublic } from './legend.js';
+  import { canPublishName } from '@offside/app-core/namePublic';
   import { pendingRetirementIds } from '@offside/app-core/outbox';
   import { checkRetiredNumber } from '@offside/app-core/api/client';
   import { recordRn, rnMissOf, rnResults } from './retiredNumber.svelte.js';
@@ -83,9 +84,14 @@
       <div class="rn-ceremony rn-anon">
         <div class="eyebrow film-kicker">Retired Number</div>
         <p class="rn-line">{L.anonA}<br /><b>{L.anonSlot({ club: tn(rnSlot.club), number: rnSlot.number })}</b> {L.anonTail}</p>
-        <p class="rn-stats">{L.anonNote}</p>
-        {#if v.own}
-          <button class="btn btn-primary" data-act="rn-public" onclick={() => v.own && setLegendPublic(v.own, true)}>{L.publish}</button>
+        {#if v.own && !canPublishName(v.own.name)}
+          <!-- T-11-439 공개할 수 없는 이름이면 누르기 전에 알린다(눌러도 막힌다). -->
+          <p class="rn-stats" data-rn-blocked>{L.anonBlocked}</p>
+        {:else}
+          <p class="rn-stats">{L.anonNote}</p>
+          {#if v.own}
+            <button class="btn btn-primary" data-act="rn-public" onclick={() => v.own && setLegendPublic(v.own, true)}>{L.publish}</button>
+          {/if}
         {/if}
       </div>
     {:else if miss}

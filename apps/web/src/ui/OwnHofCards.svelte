@@ -12,11 +12,13 @@
   const h = $derived(v.own!);
 </script>
 
-<!-- 공유 이미지·대표 칭호 카드는 첫 화면 번들 밖에서 불러온다. -->
-{#await import('./share/ShareImageCard.svelte') then { default: ShareImageCard }}<ShareImageCard {v} />{/await}
+<!-- 공유 이미지·대표 칭호 카드는 첫 화면 번들 밖에서 불러온다. T-11-439 이미지에 그려지는 칭호·이름 공개를 먼저 정하고
+     그다음 이미지를 만들게 칭호 → 이름 공개 → 공유 이미지 순서로 둔다. -->
 {#await import('./titles/TitlePickCard.svelte') then { default: TitlePickCard }}<TitlePickCard {h} />{/await}
+{#if isHofEligible(h.age)}<PublishCard {h} />{/if}
+{#await import('./share/ShareImageCard.svelte') then { default: ShareImageCard }}<ShareImageCard {v} />{/await}
 {#if isHofEligible(h.age)}
-  <PublishCard {h} /><KeepLoginCard id={h.id!} />
+  <KeepLoginCard id={h.id!} />
 {:else}
   <section class="card stack" data-share="short">
     <div><div class="eyebrow">Hall of Fame</div><h2>{L.shortTitle}</h2></div>

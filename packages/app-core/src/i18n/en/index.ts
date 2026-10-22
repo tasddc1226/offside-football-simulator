@@ -56,6 +56,7 @@ import { homeMore } from './homeMore';
 import { iap } from './iap';
 import { inbox } from './inbox';
 import { keyMoment } from './keyMoment';
+import { league } from './league';
 import { legend } from './legend';
 import { legendRn } from './legendRn';
 import { legendStyle } from './legendStyle';
@@ -164,6 +165,7 @@ export const en = {
   iap,
   inbox,
   keyMoment,
+  league,
   legend,
   legendRn,
   legendStyle,

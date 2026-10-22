@@ -7,13 +7,17 @@ const ko = {
   reportLabel: (p: { name: string }) => `${p.name} 커리어 결산`,
   retiredAge: (p: { age: number }) => `${p.age}세 은퇴`,
   scoreLabel: (p: { score: number }) => `레전드 점수 ${p.score}`,
+  /** T-11-439 리포트 맨 위 큰 숫자 라벨과 점수 구성으로 내려가는 링크(B6). */
+  scoreTitle: '레전드 점수',
+  scoreMore: '자세히',
+  scoreMoreLabel: '레전드 점수 구성 자세히 보기',
   worth: '은퇴 가치',
   clubsLabel: '거쳐 간 구단',
   peakValue: (p: { value: string; season: string; club: string }) =>
     `최고 몸값 ${p.value} · ${p.season} ${p.club}`,
   peakOvr: (p: { peak: number }) => `최고 OVR ${p.peak}`,
   rnPillTitle: (p: { club: string; number: number }) => `${p.club} 영구결번 ${p.number}번`,
-  rnPill: (p: { club: string; number: number }) => `👑 ${p.club} 영결 ${p.number}`,
+  rnPill: (p: { club: string; number: number }) => `👑 ${p.club} 영구결번 ${p.number}`,
   // 통산 기록
   statsLabel: '통산 기록',
   statSeasons: '시즌',

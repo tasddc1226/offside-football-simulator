@@ -10,6 +10,9 @@ export const hofOwn: Translation<HofOwnMsgs> = {
   publishAfter: 'there.',
   publishHint:
     "Making your name public lets other players see your player's name. Avoid real names.",
+  publishWarn: 'Everyone can see this name. Avoid using a real name.',
+  publishBlocked:
+    "This name has a link or profanity, so it can't be made public. It appears anonymously in the Hall of Fame.",
   publishRevert: 'Make anonymous again',
   publishOn: 'Make name public',
   shortTitle: 'Kept on your player only',

@@ -117,6 +117,13 @@ export const cup: Translation<CupMsgs> = {
   toastEntered: 'You entered the cup.',
   toastWithdrawn: 'Entry withdrawn.',
   loginToEnter: 'Log in with Google to enter.',
+  loginCardNote: 'Log in to enter the cup and make match predictions.',
+  enterAskTitle: 'Enter the cup?',
+  enterAskWithdraw: 'You can withdraw while entries are open.',
+  enterAskOk: 'Enter',
+  enterAskCancel: 'Cancel',
+  toLineup: 'Go to lineup',
+  toMakeTeam: 'Build a team',
   enterLockNote:
     "Once you enter, your starters can't be listed on the market or released. They unlock when you're knocked out.",
   reasonNoTeam: 'You need a team for this season to enter.',
@@ -163,6 +170,17 @@ export const cup: Translation<CupMsgs> = {
   lineupLocked: 'Your lineup is locked for the cup match. You can change it again after the match.',
   lineupBand: (p) =>
     `Your cup lineup locks ${p.when}. From then until the match ends, you can't change it.`,
+  barOvrCap: (p) => `Team OVR ${p.ovr} / cap ${p.cap} (${p.division})`,
+  barOvrNoCap: (p) => `Team OVR ${p.ovr} · ${p.division} (no cap)`,
+  barFilled: (p) => `Starters ${p.n}/min ${p.min}`,
+  barOverCapBlock: (p) =>
+    `Your team is over the ${p.division} cap of ${p.cap}, so you can't save. Bring team OVR down to ${p.cap} or lower.`,
+  barOverCapMove: (p) =>
+    `Your team is over the ${p.division} cap. If it stays this way, you'll move up a division at the draw.`,
+  barShortBlock: (p) =>
+    `While you're in the cup, you need at least ${p.min} of your own players in the starting lineup to save.`,
+  barShortEntry: (p) =>
+    `To enter the cup, you need at least ${p.min} of your own players in the starting lineup.`,
   secMine: 'My cup',
   secRules: 'Rules',
   secSchedule: 'Schedule',
@@ -267,7 +285,9 @@ export const cup: Translation<CupMsgs> = {
   shopBusy: 'Buying…',
   shopSoldOut: "You've bought today's limit. You can buy more from 00:00 (KST) tomorrow.",
   shopClosed: "Reroll tickets aren't on sale right now.",
-  shopShort: "You don't have enough club funds.",
+  shopShort: (p) =>
+    `You need ${p.short} more club funds. Release players you developed to raise funds.`,
+  shopGoRelease: 'Go to release',
   shopConfirm: (p) =>
     `Buy 1 reroll ticket for ${p.price}? You'll have ${p.balance} in club funds left, and this can't be undone.`,
   shopDone: (p) => `Ticket bought. You now have ${plural(p.n, 'reroll ticket')}.`,

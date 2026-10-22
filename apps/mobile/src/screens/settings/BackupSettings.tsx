@@ -13,6 +13,7 @@ import {
   applyBackup,
   decodeBackup,
   encodeBackup,
+  replaceConfirmText,
   type Backup,
   type DecodeFail,
 } from '@offside/app-core/backup';
@@ -103,9 +104,10 @@ export function BackupSettings() {
   function importText(text: string) {
     const r = decodeBackup(text);
     if (!r.ok) return toast(failText()[r.reason]);
-    const cur = appState.G;
-    if (cur && !cur.retired) {
-      Alert.alert(L.importLabel, L.replaceConfirm({ name: cur.name }), [
+    // T-11-441 은퇴한 커리어도 세이브가 바뀌므로 묻는다.
+    const ask = replaceConfirmText(appState.G);
+    if (ask) {
+      Alert.alert(L.importLabel, ask, [
         { text: L.cancel, style: 'cancel' },
         { text: L.replaceOk, style: 'destructive', onPress: () => apply(r.backup) },
       ]);
@@ -139,7 +141,11 @@ export function BackupSettings() {
             {L.shareFile}
           </Btn>
         </View>
-      ) : null}
+      ) : (
+        <Txt testID="backup-none" tone="muted" v="sm" style={{ marginTop: 12 }}>
+          {L.exportNone}
+        </Txt>
+      )}
       {G && manualCode ? (
         <Field label={L.manualLabel} style={{ marginTop: 12 }}>
           <View

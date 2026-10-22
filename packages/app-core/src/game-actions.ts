@@ -2,6 +2,7 @@ import { transferOutlook } from '@offside/game/comps';
 import { careerMomentText as CM } from './i18n/ko/careerMoment';
 import { careerTrophy } from './career-trophy';
 import { measureOperation } from './measurement.js';
+import { keyMomentsOn } from './keyMomentPref.js';
 import type { Progress } from './player-metrics.js';
 import { marketFeedback, offerFeedback } from './career-feedback.js';
 // ───────── 게임 진행 액션 (웹·앱 공용, T-11-002) ─────────
@@ -44,7 +45,7 @@ import { scoreLine, type NatTourResult } from '@offside/game/national';
 import type { CompGame } from '@offside/game/comps';
 import { clubById } from '@offside/game/clubs';
 import { bracketLine } from './bracket.js';
-import { isMilOption } from '@offside/game/military';
+import { isMilOption, milAbroad, sangmuChance } from '@offside/game/military';
 import {
   endSeason,
   market,
@@ -71,13 +72,14 @@ import type {
   RenewOption,
 } from '@offside/game/types';
 import { markDexSeen } from './dex.js';
-import { pushEvLog, seasonLabel } from './career.js';
+import { clearPhaseReport, keepPhaseReport, pushEvLog, seasonLabel } from './career.js';
 import { scoutHint, seasonTrend, seasonTrendLine } from './scoutHint.js';
 import { recordPhaseOvr, takeSeasonGrowth } from './growth.js';
 import { publicNameOf } from './namePublic.js';
 import { fmtValue, growthDirFor, seasonLabelOf } from './format.js';
 import { crossesBorder, flightHours, hubOf } from './flight.js';
 import { gameActionsText as L } from './i18n/ko/gameActions';
+import { choiceChipsFor } from './eventPeek';
 import { tn } from '@offside/game/i18n/names';
 
 /** 비행 지도는 육지 데이터가 커서 해외 이적일 때만 불러온다(계약서를 여는 순간 미리 받아 둔다). */
@@ -93,7 +95,14 @@ import {
   type AppState,
   type Screen,
 } from './state.js';
-import { RES_LABEL, type NatGameView, type NatView, type TourView } from './sheets.js';
+import {
+  RES_LABEL,
+  type NatGameView,
+  type NatView,
+  type PhaseReport,
+  type TickerRow,
+  type TourView,
+} from './sheets.js';
 
 export interface GameHost {
   state: AppState;
@@ -251,15 +260,70 @@ export function createGameActions(host: GameHost) {
       const rngPre = getActiveRng().getState().seed;
       // 장면 판정 · 문구는 첫 화면 청크에 넣지 않는다(리그 구간을 진행할 때 불러온다).
       const km = ph > 0 ? await import('./keyMoments.js') : null;
+      // T-11-426 설정에서 끄면 장면을 열지 않는다(결과는 감독에게 맡겼을 때와 같다).
+      const moOn = keyMomentsOn();
       let r: PhaseResult;
       try {
-        r = playPhase(s, km?.momentHooks(s));
+        r = playPhase(s, moOn ? km?.momentHooks(s) : undefined);
         measureOperation('progress', 'success');
       } catch (error) {
         measureOperation('progress', 'failed', 'progress_blocked');
         throw error;
       }
       host.analytics.complete?.({ cid: s.cid, year: s.year, phase: ph, matches: r.block?.n ?? 0 });
+      // 경기 줄(가짜 스코어)은 게임 난수를 쓴다. 결과 하나에 한 번만 만들어 난수 소비 순서를 그대로 둔다(T-11-438 리포트 보관도 같은 줄을 쓴다).
+      const made = new WeakMap<PhaseResult, { rows: TickerRow[]; extras: string[] }>();
+      const lines = (x: PhaseResult) => {
+        let v = made.get(x);
+        if (!v) {
+          v = {
+            rows: x.block ? matchRows(s, x.block) : [],
+            extras: [
+              // T-11-186 대회 결과를 묶음 문구 대신 대회마다 한 줄로 띄운다.
+              ...x.comp.map((c) => c.t),
+              ...(x.nt ? [L.stepNat] : []),
+              ...(x.ev ? [L.stepEvent] : []),
+            ],
+          };
+          made.set(x, v);
+        }
+        return v;
+      };
+      const range = r.block ? roundRange(s, ph) : '';
+      const back = s.pos === 'DF' || s.pos === 'GK';
+      const title = ph === 0 ? L.preseasonDone : L.phaseResult({ phase: PHASES[ph]! });
+      /** 구간 결과 리포트(시즌 탭 맨 위 카드). 상태는 x로 정해진 뒤의 s를 읽는다. */
+      const reportOf = (x: PhaseResult, games: TickerRow[]): PhaseReport => {
+        const { block: b, comp, nt } = x;
+        return {
+          key: Date.now(),
+          year: s.year,
+          ph,
+          eyebrow: `${s.year} · ${title}`,
+          title: b ? L.blockTitle({ range, n: b.n }) : L.preseasonReady,
+          back,
+          block: b
+            ? {
+                w: b.w,
+                d: b.d,
+                l: b.l,
+                apps: b.apps,
+                goals: b.goals,
+                assists: b.assists,
+                rating: b.apps ? (b.rs / b.apps).toFixed(2) : null,
+                cs: b.cs,
+                hl: b.hl,
+              }
+            : null,
+          games,
+          rank: { before: rankBefore, after: teamRank(s) },
+          role: roleOf(s),
+          comps: comp.map((c) => ({ t: c.t, good: c.k === 'good', games: compGameViews(c.games) })),
+          nat: natViews(nt),
+          chips: diffChips(s, before, x.after),
+          titles: x.titles.map(titleView),
+        };
+      };
       const settle = (x: PhaseResult) => {
         // 부상 소식은 로그 문장이 아니라 엔진이 알려 주는 신호로 기록한다(언어가 달라도 같다).
         if (x.block?.injured) s.flags.injuredYear = s.year;
@@ -269,35 +333,28 @@ export function createGameActions(host: GameHost) {
             ? { type: 'seasonEnd' }
             : null;
         host.save();
+        // T-11-438 저장은 중계 전에 끝나므로, 중계 도중 앱을 끄면 리포트도 함께 남겨 다음 실행 때 보여 준다(세이브와 따로 둔다).
+        keepPhaseReport(s.cid, reportOf(x, lines(x).rows));
       };
       settle(r);
       host.analytics.play(s, ph === 0 && s.career.length === 0);
-      const lines = (x: PhaseResult) => ({
-        rows: x.block ? matchRows(s, x.block) : [],
-        extras: [
-          // T-11-186 대회 결과를 묶음 문구 대신 대회마다 한 줄로 띄운다.
-          ...x.comp.map((c) => c.t),
-          ...(x.nt ? [L.stepNat] : []),
-          ...(x.ev ? [L.stepEvent] : []),
-        ],
-      });
       const first = lines(r);
       const extras = first.extras;
       let games = first.rows;
-      const range = r.block ? roundRange(s, ph) : '';
-      const back = s.pos === 'DF' || s.pos === 'GK';
       // T-10-028: 경기는 중계 시트로 한 경기씩 보여 주고(승무패·스코어가 쌓이는 맛), 끝나면 리포트로 넘어간다.
       if (r.block && km) {
-        const mo = km.createMomentDriver({
-          s,
-          first: r,
-          rows: games,
-          extras,
-          pre,
-          rng: rngPre,
-          settle,
-          lines,
-        });
+        const mo = moOn
+          ? km.createMomentDriver({
+              s,
+              first: r,
+              rows: games,
+              extras,
+              pre,
+              rng: rngPre,
+              settle,
+              lines,
+            })
+          : undefined;
         await km.playBlock(
           sheet,
           {
@@ -311,7 +368,7 @@ export function createGameActions(host: GameHost) {
           extras,
           mo,
         );
-        ({ cur: r, rows: games } = mo);
+        if (mo) ({ cur: r, rows: games } = mo);
       } else
         await sheet.playSteps(L.preseasonRunning({ year: s.year }), [
           isPro(s) ? L.stepCampPro : L.stepCampAmateur,
@@ -320,39 +377,9 @@ export function createGameActions(host: GameHost) {
           L.stepFriendly,
           ...extras,
         ]);
-      const { block: b, comp, nt } = r;
-      const chips = diffChips(s, before, r.after);
-      const titles = r.titles.map(titleView);
-      const title = ph === 0 ? L.preseasonDone : L.phaseResult({ phase: PHASES[ph]! });
       sheet.closeSheet();
-      appState.report = {
-        key: Date.now(),
-        year: s.year,
-        ph,
-        eyebrow: `${s.year} · ${title}`,
-        title: b ? L.blockTitle({ range, n: b.n }) : L.preseasonReady,
-        back,
-        block: b
-          ? {
-              w: b.w,
-              d: b.d,
-              l: b.l,
-              apps: b.apps,
-              goals: b.goals,
-              assists: b.assists,
-              rating: b.apps ? (b.rs / b.apps).toFixed(2) : null,
-              cs: b.cs,
-              hl: b.hl,
-            }
-          : null,
-        games,
-        rank: { before: rankBefore, after: teamRank(s) },
-        role: roleOf(s),
-        comps: comp.map((c) => ({ t: c.t, good: c.k === 'good', games: compGameViews(c.games) })),
-        nat: natViews(nt),
-        chips,
-        titles,
-      };
+      appState.report = reportOf(r, games);
+      clearPhaseReport();
       appState.tab = 'season';
       host.scrollTop(true);
     } finally {
@@ -401,18 +428,38 @@ export function createGameActions(host: GameHost) {
 
   function choiceView(s: GameState, ev: EventDef, c: Choice, i: number) {
     const label = txt(c.label, s);
-    if (!c.p)
-      return isSafe(ev, c)
-        ? { label, odds: L.oddsSafe, hint: L.oddsSafeHint }
-        : { label, odds: L.oddsSure };
+    // T-11-432 득실 칩은 생성된 표만 읽는다(효과를 미리 돌리지 않는다).
+    // T-11-438 '안전' · '원터치' 설명은 선택지마다 붙이지 않고 시트 아래 한 줄(eventLegend)로 늘 보인다.
+    if (!c.p) {
+      const safe = isSafe(ev, c);
+      return {
+        label,
+        odds: safe ? L.oddsSafe : L.oddsSure,
+        chips: choiceChipsFor(ev.id, i, safe ? 'safe' : 'sure'),
+      };
+    }
     const odds = choiceOdds(c.p(s), ev.id, i);
+    const chips = choiceChipsFor(ev.id, i, 'roll');
     const mg = activeMg(c);
-    if (!mg) return { label, odds: `${Math.round(odds * 100)}%` };
+    if (!mg) return { label, odds: L.oddsPct({ p: Math.round(odds * 100) }), chips };
     return {
       label,
       odds: L.oddsMinigame({ zone: zoneLabel(zoneWidth(odds, mg.kind)) }),
-      hint: L.oddsMinigameHint,
+      chips,
     };
+  }
+
+  /**
+   * T-11-438 이 이벤트에 '안전' · '원터치' 선택지가 있으면 그 뜻을 한 줄씩. 전엔 hover · 접근성 라벨(칩이 없을 때만 화면)에만 있어
+   * 터치에서는 볼 수 없었고, 이벤트 시트는 닫을 수 없어 도감도 열 수 없었다.
+   */
+  function eventLegend(ev: EventDef): { term: string; text: string }[] {
+    const out: { term: string; text: string }[] = [];
+    if (ev.choices.some((c) => !c.p && isSafe(ev, c)))
+      out.push({ term: L.oddsSafe, text: L.oddsSafeHint });
+    if (ev.choices.some((c) => activeMg(c)))
+      out.push({ term: L.oddsMinigameTerm, text: L.oddsMinigameHint });
+    return out;
   }
 
   function showEvent(id: string) {
@@ -431,6 +478,7 @@ export function createGameActions(host: GameHost) {
           }
         : null,
       choices: ev.choices.map((c, i) => choiceView(s, ev, c, i)),
+      legend: eventLegend(ev),
     });
   }
 
@@ -641,7 +689,55 @@ export function createGameActions(host: GameHost) {
     // T-11-039 다른 구단의 오퍼는 계약서에 사인해야 확정된다(×로 닫으면 이적시장으로 돌아온다).
     if (o.kind === 'offer' || (o.kind === 'renew' && o.extension))
       return showContract(i, o, options);
+    if (needsPathConfirm(o, options)) return confirmPath(i, o, options);
     if (settleOption(i, o, options)) startSeason();
+  }
+
+  /**
+   * T-11-431 대학 진학 · 상무 지원 · 현역 입대는 되돌릴 수 없는 진로라 결과를 요약한 확인 시트를 거친다. 다른 길이 없는
+   * 선택(제의 없는 고3의 대학 진학, 입영 통지 뒤 현역 입대)은 묻지 않는다. 확인 시트는 난수를 쓰지 않는다.
+   */
+  const needsPathConfirm = (o: MarketOption, options: MarketOption[]) =>
+    (o.kind === 'uni' || o.kind === 'sangmu' || o.kind === 'army') && options.length > 1;
+
+  function confirmPath(i: number, o: MarketOption, options: MarketOption[]) {
+    const G = appState.G!;
+    const abroad = milAbroad(G);
+    const noTeam = !G.contract || G.contract.years <= 0;
+    const view =
+      o.kind === 'uni'
+        ? { eyebrow: 'University', title: L.pathUniTitle, text: L.pathUniText, cta: L.pathUniCta }
+        : o.kind === 'sangmu'
+          ? {
+              eyebrow: 'Military Service',
+              title: L.pathSangmuTitle,
+              text: L.pathSangmuText({
+                pct: Math.round(sangmuChance(G) * 100),
+                abroad,
+                fail: o.due ? 'army' : noTeam ? 'market' : 'stay',
+              }),
+              cta: L.pathSangmuCta,
+            }
+          : {
+              eyebrow: 'Military Service',
+              title: L.pathArmyTitle,
+              text: L.pathArmyText({ abroad }),
+              cta: L.pathArmyCta,
+            };
+    sheet.showSheet(
+      { kind: 'notice', eyebrow: view.eyebrow, title: view.title, muted: true, text: view.text },
+      [
+        {
+          label: view.cta,
+          cls: 'btn-primary',
+          fn: () => {
+            if (settleOption(i, o, options)) startSeason();
+          },
+        },
+        { label: L.pathBack, fn: nextPending },
+      ],
+      nextPending,
+    );
   }
 
   /** T-11-039 계약서. 아마추어(고교·대학)에서 처음 프로 구단에 가면 입단 계약, 그 밖에는 이적 계약. */
@@ -845,10 +941,9 @@ export function createGameActions(host: GameHost) {
         {
           label: L.newBtn,
           cls: 'btn-primary',
+          // T-11-431 진행 중인 세이브는 새 선수로 킥오프할 때(startCareer) 바꾼다. 만들기 화면에서 취소하거나 새로고침해도
+          // 이어하기할 수 있다.
           fn: () => {
-            host.analytics.replace();
-            appState.G = null;
-            host.save();
             sheet.closeSheet();
             appState.screen = 'create';
             Object.assign(appState.C, draftIdentity());
@@ -885,6 +980,7 @@ export function createGameActions(host: GameHost) {
     presetPotential?: CandidatePotential,
   ) {
     const previous = appState.G;
+    if (previous && !previous.retired) host.analytics.replace();
     const finalName = name.trim() || randomName();
     const finalNumber = clamp(+number || randomNumber(), 1, 99);
     const seed = freshSeed();
