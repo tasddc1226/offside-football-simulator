@@ -24,7 +24,7 @@ const itemName = (item: string) => ITEM_NAME[item as OwnerItem] ?? item;
 const STORE: Record<string, string> = {
   apple: 'App Store',
   google: 'Google Play',
-  toss: 'Toss Payments',
+  xsolla: 'Xsolla',
 };
 export const storeName = (s: string) => STORE[s] ?? s;
 const CHANNEL: Record<string, string> = { app: '앱', web: '웹', toss: '토스' };

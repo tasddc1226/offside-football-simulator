@@ -27,7 +27,7 @@ const ITEMS_SQL = `SELECT item, qty FROM owner_items WHERE profile_id = ?1
   UNION ALL SELECT 'mileage', progress FROM reroll_mileage WHERE profile_id = ?1`;
 const OWNER_SQL = `SELECT profile_id AS profileId FROM iap_purchases WHERE store = ? AND transaction_id = ?`;
 
-/** 구매 원장의 store: 앱 스토어 둘 · T-11-454 웹 결제(토스). */
+/** 구매 원장의 store: 앱 스토어 둘 · T-11-454 웹 결제(엑솔라). */
 type LedgerStore = IapStore | typeof WEB_PAY_STORE;
 
 const foldItems = (rows: readonly { item: string; qty: number }[]): Items => {

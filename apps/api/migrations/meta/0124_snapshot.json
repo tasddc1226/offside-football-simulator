@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "de95c8ae-03f9-44cd-a9de-40232adc6735",
+  "id": "3e6d915b-63ed-4333-8b40-3e9c633f0515",
   "prevId": "24781671-7191-4d53-9e06-5fd98424cbfb",
   "tables": {
     "acquisition_consents": {
@@ -8490,9 +8490,9 @@
           "notNull": true,
           "autoincrement": false
         },
-        "amount": {
-          "name": "amount",
-          "type": "integer",
+        "xsolla_order_id": {
+          "name": "xsolla_order_id",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -8502,20 +8502,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
-        },
-        "payment_key": {
-          "name": "payment_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "method": {
-          "name": "method",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
           "autoincrement": false
         },
         "test": {
@@ -8533,8 +8519,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "approved_at": {
-          "name": "approved_at",
+        "paid_at": {
+          "name": "paid_at",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -8557,10 +8543,10 @@
           ],
           "isUnique": false
         },
-        "web_pay_orders_payment_key_unique": {
-          "name": "web_pay_orders_payment_key_unique",
+        "web_pay_orders_xsolla_order_unique": {
+          "name": "web_pay_orders_xsolla_order_unique",
           "columns": [
-            "payment_key"
+            "xsolla_order_id"
           ],
           "isUnique": true
         }

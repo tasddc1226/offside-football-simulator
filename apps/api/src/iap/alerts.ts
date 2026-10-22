@@ -4,7 +4,7 @@ import { billing as en } from '../i18n/en/billing.js';
 import type { Bindings } from '../env.js';
 
 export type BillingAlert = {
-  store: 'apple' | 'google' | 'toss';
+  store: 'apple' | 'google' | 'xsolla';
   transactionId: string;
   kind: 'purchase' | 'renewal' | 'refund' | 'test';
   productId: string;
@@ -64,7 +64,7 @@ export function billingSlackMessage(row: AlertRow, id: string, locale: 'ko' | 'e
   const kind = L.kinds[row.kind as keyof typeof L.kinds] ?? row.kind;
   const environment = row.test ? L.sandbox : L.live;
   const store =
-    row.store === 'apple' ? 'App Store' : row.store === 'toss' ? 'Toss Payments' : 'Google Play';
+    row.store === 'apple' ? 'App Store' : row.store === 'xsolla' ? 'Xsolla' : 'Google Play';
   const product = Object.hasOwn(IAP_PRODUCTS, row.product_id)
     ? IAP_PRODUCTS[row.product_id as IapProductId]
     : null;

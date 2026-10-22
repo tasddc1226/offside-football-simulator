@@ -19,7 +19,7 @@ const APP_SESSION_PATH = '/v1/app/session';
 export const APPLE_WEB_CALLBACK_PATH = '/v1/auth/apple/callback';
 /** T-11-215 App Store 서버 알림 — Apple 서버가 보낸다(쿠키·세션 없음). 본문의 Apple 서명으로 확인한다. */
 export const APPLE_IAP_NOTIFY_PATH = '/v1/iap/apple/notifications';
-/** T-11-454 토스페이먼츠 웹훅 — 토스 서버가 보낸다(쿠키 · 세션 없음). 본문은 믿지 않고 paymentKey로 토스에 다시 조회한다. */
+/** T-11-454 엑솔라 웹훅 — 엑솔라 서버가 보낸다(쿠키 · 세션 없음). 본문 서명(Authorization: Signature)으로 확인한다. */
 export const WEB_PAY_WEBHOOK_PATH = '/v1/web-pay/webhook';
 
 /**

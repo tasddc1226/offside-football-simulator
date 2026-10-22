@@ -42,7 +42,7 @@ if (appState.G) keepStorage();
 // 구글 · Apple 로그인에서 돌아온 경우에만 로그인 코드를 불러온다(첫 화면 번들 예산).
 if (/[?&](google|apple)=/.test(location.search))
   void import('./ui/login.js').then((m) => m.handleOAuthReturn());
-// T-11-454 토스 결제창에서 돌아온 경우에만 웹 결제 코드를 불러온다.
+// T-11-454 엑솔라 결제창에서 돌아온 경우에만 웹 결제 코드를 불러온다.
 if (/[?&]webpay=/.test(location.search))
   void import('./ui/cup/webPay.svelte.js').then((m) => m.handleWebPayReturn());
 routeSharedCareer();

@@ -84,10 +84,15 @@ export type Bindings = {
   GOOGLE_RTDN_SERVICE_ACCOUNT?: string;
   /** T-11-174 secret. 쉼표 구분 프로필 id. 있으면 이 구단주에게만 인앱 상품을 보인다(출시 전 실기기 구매 확인용). 지우면 모두에게 열린다. */
   IAP_TESTERS?: string;
-  /** T-11-454 웹 결제(토스페이먼츠). `1`이고 두 키가 있어야 웹 상점에 결제가 열린다. 클라이언트 키는 공개값, 시크릿 키는 secret. */
+  /**
+   * T-11-454 웹 결제(엑솔라 Pay Station). `1`이고 프로젝트 id · API 키 · 웹훅 비밀 키가 있어야 웹 상점에 결제가 열린다.
+   * 프로젝트 id는 var, 두 키는 secret. XSOLLA_SANDBOX=`1`이면 샌드박스 결제창(테스트 카드)을 쓴다.
+   */
   WEB_PAY_ENABLED?: string;
-  TOSS_CLIENT_KEY?: string;
-  TOSS_SECRET_KEY?: string;
+  XSOLLA_PROJECT_ID?: string;
+  XSOLLA_API_KEY?: string;
+  XSOLLA_WEBHOOK_SECRET?: string;
+  XSOLLA_SANDBOX?: string;
   /** secret. 쉼표 구분 프로필 id. 있으면 이 구단주에게만 웹 결제를 연다(실결제 확인용). */
   WEB_PAY_TESTERS?: string;
   /** T-10-011. secret. 쉼표 구분 관리자 구글 이메일(게시판 글쓰기). 비어 있으면 관리자가 없다. */
