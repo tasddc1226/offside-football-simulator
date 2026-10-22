@@ -59,6 +59,7 @@ import { refreshOwnerTitles } from '../db/repos/ownerTitles.js';
 import { refreshAfterChange } from '../team/ownerAchievements.js';
 import { recordFirsts } from './firsts.js';
 import { exceedsOvrCap, growthTampered } from '../db/repos/anomalies.js';
+import { farmedOnUpload } from '../db/repos/potentialAudit.js';
 import { judgeRetirement } from './retiredNumbers.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { publishLive } from '../live/publish.js';
@@ -266,7 +267,11 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     const { growth } = body.season;
     const overCap = exceedsOvrCap(body.season.age, body.season.ovr);
     const prevOvr = growth && !overCap ? (prevRow?.ovr ?? null) : null;
-    const hide = overCap || growthTampered(growth, body.season.ovr, prevOvr);
+    // T-11-462 처음 올라오는 높은 잠재력 선수는 구단주가 후보를 조작해 모은 것인지 같이 본다(높은 잠재력일 때만 조회).
+    const hide =
+      overCap ||
+      growthTampered(growth, body.season.ovr, prevOvr) ||
+      (!head && (await farmedOnUpload(db, session.profileId, body.career.pot, now)));
 
     const sentRevision = Number(c.req.header('X-Upload-Revision'));
     // Legacy clients omit the header; retain their existing update contract.

@@ -6,6 +6,7 @@ import { createDb } from '../client.js';
 import { runBatch } from './batch.js';
 import { hideCareerStatements, resetFirstsBackfillStatement, setMeta } from './firsts.js';
 import { appMeta, careers } from '../schema.js';
+import { sweepFarmedPotential } from './potentialAudit.js';
 
 // 비정상 기록 정기 점검(매일 cron, 운영자 화면). 서버가 이미 받아 둔 시즌 기록만으로 게임에서 나올 수 없는 흐름을 찾는다.
 // 확실한 것(숨김)과 애매한 것(검토)을 나눈다 — 자동으로 내리는 건 사람이 낼 수 없는 값뿐이고, 정상 선수일 수도 있는 높은
@@ -205,6 +206,12 @@ export async function sweepAnomaliesPage(d1: D1Database, now: number, cursor?: A
       db,
       hidden.slice(i, i + HIDE_CHUNK).flatMap((f) => hideCareerStatements(db, f.info.id)),
     );
+  // T-11-462 훑은 커리어에 높은 잠재력이 있으면 그 구단주를 다시 판정한다.
+  const farmed = await sweepFarmedPotential(
+    db,
+    rows.map((r) => r.id),
+    new Date(now).toISOString(),
+  );
   const done = rows.length < 100;
   if (done) await setMeta(db, SWEPT_AT_KEY, cursor.through);
   const tail = rows.at(-1);
@@ -212,6 +219,7 @@ export async function sweepAnomaliesPage(d1: D1Database, now: number, cursor?: A
     done,
     checked: rows.length,
     hidden: hidden.length,
+    farmed,
     review: open.length - hidden.length,
     cursor: done ? null : { ...cursor, at: tail!.updated_at, id: tail!.id },
   };

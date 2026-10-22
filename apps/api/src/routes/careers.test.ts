@@ -322,6 +322,27 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect(await hiddenOf(other)).toBe(1);
   });
 
+  it('T-11-462: 스카우트권 없이 높은 잠재력 선수만 모은 구단주의 새 높은 잠재력 커리어는 첫 업로드에 숨긴다', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const body = seasonBody();
+    const send = (id: string, pot: number) =>
+      putJson(ctx, cookie, `/v1/careers/${id}/seasons/2026`, {
+        ...body,
+        career: { ...body.career, pot },
+      });
+    const hiddenOf = async (id: string) =>
+      (await ctx.db.select().from(careers).where(eq(careers.id, id)))[0]!.hidden;
+    const ids = Array.from({ length: 12 }, () => crypto.randomUUID());
+    for (const id of ids) expect((await send(id, 96)).status).toBe(200);
+    // 여유(10명) 안은 그대로, 넘은 뒤부터 숨긴다. 보통 선수는 묻지 않는다.
+    expect(await hiddenOf(ids[9]!)).toBe(0);
+    expect(await hiddenOf(ids[10]!)).toBe(1);
+    expect(await hiddenOf(ids[11]!)).toBe(1);
+    const normal = crypto.randomUUID();
+    expect((await send(normal, 75)).status).toBe(200);
+    expect(await hiddenOf(normal)).toBe(0);
+  });
+
   it('T-11-030: 처음 스카우트 평가는 한 번만 저장하고, 은퇴 때 실제 잠재력을 저장한다', async () => {
     const { cookie } = await issueCookie(ctx);
     const put = (path: string, body: unknown) => putJson(ctx, cookie, path, body);
