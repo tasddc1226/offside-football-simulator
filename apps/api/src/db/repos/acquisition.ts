@@ -1,3 +1,4 @@
+import { ACQUISITION_CONSENT_VERSION } from '@offside/contracts/acquisition';
 const ALL_IAP = `all_iap AS (
  SELECT store, transaction_id, profile_id, product_id, test, created_at, purchased_at, price_milliunits, currency, storefront, refunded_at, first_touch_id, last_touch_id FROM iap_purchases
  UNION ALL
@@ -11,10 +12,10 @@ export async function acquisitionReport(
   model: 'first' | 'last',
 ) {
   const touch = model === 'first' ? 'first_touch_id' : 'last_touch_id';
-  const [sessions, purchases, refunds, coverage] = await db.batch([
+  const [sessions, purchases, refunds, coverage, unattributed] = await db.batch([
     db
       .prepare(
-        `SELECT campaign, count(*) sessions, count(started_at) start_sessions, count(store_clicked_at) store_click_sessions,
+        `SELECT campaign, count(*) sessions, count(DISTINCT profile_id) profiles, count(started_at) start_sessions, count(store_clicked_at) store_click_sessions,
       sum(CASE WHEN linked_at IS NULL THEN 1 ELSE 0 END) unlinked_sessions
       FROM acquisition_sessions WHERE received_at>=? AND received_at<? GROUP BY campaign`,
       )
@@ -51,6 +52,28 @@ export async function acquisitionReport(
         `WITH ${ALL_IAP} SELECT count(*) sandbox_transactions FROM all_iap WHERE test=1 AND created_at>=? AND created_at<?`,
       )
       .bind(start, end),
+    // T-11-456 연결되지 않은 구매가 어느 단계에서 끊겼는지(동의 · 유입 기록 · 30일 창 · 로그인 연결) 첫 원인 하나로 센다.
+    db
+      .prepare(
+        `WITH ${ALL_IAP}, p AS (
+      SELECT profile_id, coalesce(purchased_at,created_at) at FROM all_iap
+      WHERE test=0 AND ${touch} IS NULL AND coalesce(purchased_at,created_at)>=? AND coalesce(purchased_at,created_at)<?
+    ) SELECT CASE
+        WHEN p.profile_id IS NULL THEN 'unknown_account'
+        WHEN NOT EXISTS(SELECT 1 FROM acquisition_consents c WHERE c.profile_id=p.profile_id AND c.version=?) THEN 'no_consent'
+        WHEN NOT EXISTS(SELECT 1 FROM acquisition_sessions s WHERE s.profile_id=p.profile_id) THEN 'no_session'
+        WHEN NOT EXISTS(SELECT 1 FROM acquisition_sessions s WHERE s.profile_id=p.profile_id
+          AND s.received_at<=p.at AND s.received_at>=strftime('%Y-%m-%dT%H:%M:%fZ', p.at, '-30 days')) THEN 'outside_window'
+        WHEN NOT EXISTS(SELECT 1 FROM acquisition_sessions s WHERE s.profile_id=p.profile_id
+          AND s.received_at<=p.at AND s.received_at>=strftime('%Y-%m-%dT%H:%M:%fZ', p.at, '-30 days')
+          AND s.linked_at IS NOT NULL AND s.linked_at<=p.at) THEN 'not_linked'
+        ELSE 'other' END reason,
+      count(*) transactions, count(DISTINCT p.profile_id) purchasers,
+      count(DISTINCT CASE WHEN EXISTS(SELECT 1 FROM acquisition_sessions s WHERE s.profile_id=p.profile_id AND s.campaign<>'')
+        THEN p.profile_id END) purchasers_with_campaign_session
+      FROM p GROUP BY reason`,
+      )
+      .bind(start, end, ACQUISITION_CONSENT_VERSION),
   ]);
   return {
     start,
@@ -66,5 +89,6 @@ export async function acquisitionReport(
     purchases: purchases?.results ?? [],
     refunds: refunds?.results ?? [],
     coverage: coverage?.results ?? [],
+    unattributedReasons: unattributed?.results ?? [],
   };
 }
