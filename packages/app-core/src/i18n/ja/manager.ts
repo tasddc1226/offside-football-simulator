@@ -84,6 +84,10 @@ export const manager: Translation<ManagerMsgs> = {
   abandon: '監督キャリアを諦める',
   abandonConfirm: '諦めると進めた監督キャリアが消え、元の選手に戻ります。諦めますか？',
   abandonOk: '諦める',
+  undo: '選手に戻す',
+  undoConfirm:
+    '監督キャリアの結果を破棄して元の選手に戻ります。監督カードは作られず、先発には自分で入れ直す必要があります。戻しますか？',
+  undoOk: '戻す',
   history: '過去のシーズン',
   historyRow: (p) => `${p.n}シーズン · ${p.club} ${p.teams}チーム中${p.rank}位`,
   historyRest: (p) => `${p.n}シーズン · 休み`,

@@ -1,0 +1,23 @@
+{
+  "id": "t-11-451-manager-undo",
+  "title": "감독 카드로 확정하기 전에는 선수로 되돌릴 수 있어요",
+  "items": [
+    "감독 커리어를 끝까지 진행한 뒤에도 '감독 카드로 확정'을 누르기 전이면 '선수로 되돌리기'로 원래 선수로 돌아갈 수 있어요.",
+    "되돌리면 감독 커리어 결과는 사라지고 감독 카드는 만들어지지 않아요. 선발에는 직접 다시 넣어 주세요."
+  ],
+  "en": {
+    "title": "You can return to the player before confirming the manager card",
+    "items": [
+      "Even after finishing a manager career, you can tap 'Return to player' before 'Confirm manager card' to get the original player back.",
+      "Returning discards the manager career result and no manager card is made. Put the player back in your lineup yourself."
+    ]
+  },
+  "ja": {
+    "title": "監督カードに確定する前なら選手に戻せます",
+    "items": [
+      "監督キャリアを最後まで進めた後でも、「監督カードに確定」を押す前なら「選手に戻す」で元の選手に戻せます。",
+      "戻すと監督キャリアの結果は消え、監督カードは作られません。先発には自分で入れ直してください。"
+    ]
+  },
+  "availability": "web-app"
+}
