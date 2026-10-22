@@ -37,8 +37,14 @@ test('preparation protects dirty work and existing native test environments', ()
   }
 });
 
-test('the overlay restores the reviewed app config and drops the mediation plugin', () => {
+test('the overlay restores the reviewed app config and drops the mediation plugin', (t) => {
   const repo = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
+  // PR 검사는 얕은 체크아웃이라 기준 커밋이 없다. 운영 배포 OTA 잡은 fetch-depth: 0으로 받는다.
+  try {
+    execFileSync('git', ['-C', repo, 'cat-file', '-e', `${source}^{commit}`], { stdio: 'ignore' });
+  } catch {
+    return t.skip('reviewed 1.1.3 commit is not in this shallow checkout');
+  }
   const root = mkdtempSync(join(tmpdir(), 'ota113-'));
   try {
     execFileSync('git', ['clone', '-q', '--no-checkout', '--shared', repo, root]);
