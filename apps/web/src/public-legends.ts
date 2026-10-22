@@ -30,7 +30,9 @@ export const LEGENDS_TTL = { list: 3600, player: 86400, index: 86400 } as const;
 /** 상위 목록 크기. 순위 · 포지션 페이지 100명, 허브 50명, 색인 대상은 레전드 점수 상위 1,000명 + 포지션별 100명. */
 const LIST = 100;
 const HUB = 50;
-const INDEX_PAGES = 10;
+// T-11-452 색인 대상을 상위 100명 + 포지션별 20명으로 줄였다(사이트맵의 대부분이 선수 기록표라 '가치가 별로 없는 콘텐츠' 재거절).
+const INDEX_PAGES = 1;
+const INDEX_POS = 20;
 
 const sortLabel = (sort: Sort) =>
   ({
@@ -114,12 +116,12 @@ const readList = async (
   return data;
 };
 
-/** 검색에 내보내는 선수 ID: 레전드 점수 상위 1,000명 + 포지션별 상위 100명 중 이름 공개 · 시즌별 기록이 있는 선수.
+/** 검색에 내보내는 선수 ID: 레전드 점수 상위 100명 + 포지션별 상위 20명 중 이름 공개 · 시즌별 기록이 있는 선수.
  * worker.ts가 하루 동안 엣지에 둔다(사이트맵과 선수 페이지가 함께 쓴다). */
 export async function readLegendsIndex(hostname: string): Promise<string[]> {
   const lists = await Promise.all([
     ...Array.from({ length: INDEX_PAGES }, (_, i) => readList(hostname, { page: i + 1 })),
-    ...POSITIONS.map((pos) => readList(hostname, { pos })),
+    ...POSITIONS.map((pos) => readList(hostname, { pos, limit: INDEX_POS })),
   ]);
   const ids = new Set<string>();
   for (const list of lists)
