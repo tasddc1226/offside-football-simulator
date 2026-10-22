@@ -107,6 +107,7 @@ import { teamSynergy } from './teamSynergy';
 import { title } from './title';
 import { titleTag } from './titleTag';
 import { translate } from './translate';
+import { webPay } from './webPay';
 
 export const en = {
   ...gameEngine,
@@ -216,4 +217,5 @@ export const en = {
   title,
   titleTag,
   translate,
+  webPay,
 };

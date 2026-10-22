@@ -8,6 +8,7 @@ import {
   type OwnerItem,
   type ScoutMode,
   type ScoutPity,
+  type WEB_PAY_STORE,
 } from '@offside/contracts';
 import type { VerifiedPurchaseMetadata } from '../../iap/metadata.js';
 import { ACQUISITION_WINDOW_MS } from '@offside/contracts/acquisition';
@@ -25,6 +26,9 @@ const ITEMS_SQL = `SELECT item, qty FROM owner_items WHERE profile_id = ?1
   UNION ALL SELECT 'pity.elites', elites FROM scout_pity WHERE profile_id = ?1
   UNION ALL SELECT 'mileage', progress FROM reroll_mileage WHERE profile_id = ?1`;
 const OWNER_SQL = `SELECT profile_id AS profileId FROM iap_purchases WHERE store = ? AND transaction_id = ?`;
+
+/** 구매 원장의 store: 앱 스토어 둘 · T-11-454 웹 결제(토스). */
+type LedgerStore = IapStore | typeof WEB_PAY_STORE;
 
 const foldItems = (rows: readonly { item: string; qty: number }[]): Items => {
   const out = Object.fromEntries(OWNER_ITEMS.map((k) => [k, 0])) as Record<OwnerItem, number>;
@@ -139,7 +143,7 @@ export async function spendItem(
 }
 
 /** 이 거래를 받은 구단주(없으면 undefined). */
-export async function iapOwnerOf(db: Db, store: IapStore, transactionId: string) {
+export async function iapOwnerOf(db: Db, store: LedgerStore, transactionId: string) {
   const row = await db.$client
     .prepare(OWNER_SQL)
     .bind(store, transactionId)
@@ -154,7 +158,7 @@ export async function iapOwnerOf(db: Db, store: IapStore, transactionId: string)
 export async function grantIapPurchase(
   db: Db,
   p: {
-    store: IapStore;
+    store: LedgerStore;
     transactionId: string;
     profileId: string;
     productId: string;
@@ -241,7 +245,7 @@ export type IapRevoke =
  */
 export async function revokeIapPurchase(
   db: Db,
-  store: IapStore,
+  store: LedgerStore,
   transactionId: string,
   now: string,
 ): Promise<IapRevoke> {

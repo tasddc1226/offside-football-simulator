@@ -21,7 +21,11 @@ export const ITEM_NAME: Record<OwnerItem, string> = {
 export const GRANT_ITEMS = Object.keys(ITEM_NAME) as OwnerItem[];
 const itemName = (item: string) => ITEM_NAME[item as OwnerItem] ?? item;
 
-const STORE: Record<string, string> = { apple: 'App Store', google: 'Google Play' };
+const STORE: Record<string, string> = {
+  apple: 'App Store',
+  google: 'Google Play',
+  toss: 'Toss Payments',
+};
 export const storeName = (s: string) => STORE[s] ?? s;
 const CHANNEL: Record<string, string> = { app: '앱', web: '웹', toss: '토스' };
 const STAGE: Record<string, string> = {

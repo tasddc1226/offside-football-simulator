@@ -290,6 +290,7 @@ export const authAttempts = sqliteTable(
         'TRANSLATE',
         'ACQUISITION',
         'CAREER_ACTIVITY',
+        'WEB_PAY',
       ],
     }).notNull(),
     subject: text('subject').notNull(),
@@ -2051,4 +2052,32 @@ export const iapRefundMarkers = sqliteTable(
     refundedAt: text('refunded_at').notNull(),
   },
   (t) => [primaryKey({ columns: [t.store, t.transactionId] })],
+);
+
+/**
+ * T-11-454 웹 결제(토스페이먼츠) 주문. 금액은 주문을 만들 때 서버가 정하고, 승인 때 결제창이 돌려준 금액과 맞춰 본다.
+ * 승인이 끝나면 iap_purchases(store 'toss', transaction_id = paymentKey)에 아이템 지급을 남긴다.
+ * status: READY(주문만) · DONE(승인 · 지급) · CANCELED(환불 · 회수).
+ */
+export const webPayOrders = sqliteTable(
+  'web_pay_orders',
+  {
+    orderId: text('order_id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    productId: text('product_id').notNull(),
+    amount: integer('amount').notNull(),
+    status: text('status', { enum: ['READY', 'DONE', 'CANCELED'] }).notNull(),
+    paymentKey: text('payment_key'),
+    method: text('method'),
+    test: integer('test', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('created_at').notNull(),
+    approvedAt: text('approved_at'),
+    canceledAt: text('canceled_at'),
+  },
+  (t) => [
+    index('web_pay_orders_profile_idx').on(t.profileId, t.createdAt),
+    uniqueIndex('web_pay_orders_payment_key_unique').on(t.paymentKey),
+  ],
 );

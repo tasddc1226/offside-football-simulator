@@ -56,6 +56,8 @@ export const CUP_JA: Record<CupTextKey, string> = {
   iapPending: 'お支払いがまだ完了していません。完了すると自動で受け取れます。',
   iapOtherAccount: '別のアカウントで購入されています。購入したアカウントでログインしてください。',
   iapUnavailable: '現在は購入を確認できません。しばらくしてからアプリを開き直すと受け取れます。',
+  webPayUnavailable:
+    '現在は決済を確認できません。しばらくしてからこの画面を開き直すと受け取れます。',
   shopClosed: '現在リロール券は販売していません。',
   shopDaily: 'リロール券は1日に{n}枚まで購入できます。明日0時(韓国時間)から再び購入できます。',
   shopWeekly:
