@@ -1,6 +1,7 @@
 import type { Db } from '../db/client.js';
 import { insertAuditLog } from '../db/repos/auditLog.js';
 import { moveCareers } from '../db/repos/careers.js';
+import { hideFarmedPotential } from '../db/repos/potentialAudit.js';
 import {
   getProfile,
   getProfileByGoogleSub,
@@ -96,6 +97,8 @@ export async function adoptAnonymousCareers(
   if (!current || !isAnonymous(current)) return;
   const count = await moveCareers(db, current.id, targetId);
   if (count) {
+    // T-11-462 익명 프로필에서 모은 높은 잠재력 선수를 옮겨 오면 받은 계정 기준으로 다시 판정한다.
+    await hideFarmedPotential(db, targetId, now);
     await insertAuditLog(db, {
       kind: 'CAREERS_MERGED',
       profileId: targetId,

@@ -10,7 +10,9 @@ export function isAcceptablePublicName(name: string): boolean {
 export const PUBLIC_NAME_MAX = 16;
 /** 선수를 만들 때 · 이름을 바꿀 때 쓰는 이름 길이 상한(T-11-377). */
 export const PLAYER_NAME_MAX = 12;
-export const PUBLIC_NAME_CHARS = /^[^\p{Cc}<>]+$/u;
+/** 제어 문자 · 꺾쇠 없이, 보이는 글자가 하나는 있어야 한다. T-11-462 한글 채움 문자(U+3164 등) · 폭 없는 문자 · 점자 빈칸만으로
+ * 된 이름은 화면에 아무것도 안 보여 신고 · 검색을 피해 간다. */
+export const PUBLIC_NAME_CHARS = /^(?=.*[^\s\p{Cf}\u115F\u1160\u3164\uFFA0\u2800])[^\p{Cc}<>]+$/u;
 /** 서버가 받는 공개 이름으로 다듬는다. 형식이 틀리거나 링크·욕설이 있으면 null(익명). */
 export function toPublicName(name: string): string | null {
   const n = name.trim();
