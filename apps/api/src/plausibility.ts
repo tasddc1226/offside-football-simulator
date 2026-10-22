@@ -1,6 +1,7 @@
 import type { CareerPos, CareerSeasonPayload, RetirementSummary } from '@offside/contracts';
 import { isDefaultClubId } from '@offside/contracts/club-names';
 import { controlPoints, legendTerms } from '@offside/contracts/hof-rules';
+import type { ValueRow } from '@offside/contracts/market-value';
 import { SLOT_OVER_PEAK } from '@offside/contracts/owner-team';
 import type { PeakProfile } from '@offside/contracts/positions';
 import { maxRetireAt } from '@offside/contracts/service-seasons';
@@ -182,6 +183,39 @@ export function boundRetirement(
     ballon,
     ...(summary.lastClubId ? { lastClubId: knownClubId(summary.lastClubId) } : {}),
   };
+}
+
+/** 스냅샷 시즌 행을 맞출 때 쓰는 저장된 시즌(몸값에 들어가는 리그·구단·복무 여부까지). */
+export interface StoredValueSeason extends StoredSeason {
+  league: string;
+  clubId: string | null;
+  mil: boolean;
+}
+
+/**
+ * T-11-448 몸값을 매길 시즌 행(은퇴 스냅샷의 career)을 받아 둔 시즌 기록에 맞춘다. 카드 기준가·은퇴 가치·은퇴 장려금이
+ * 이 행들로 매겨지므로, 받아 둔 시즌이 없는 해의 행은 빼고 남은 행의 나이·리그·구단·복무 여부는 서버 값으로, OVR은
+ * 서버 값을 넘지 않게 자른다. 레전드 점수는 boundRetirement가 따로 자르므로 여기 결과는 몸값에만 쓴다.
+ */
+export function boundValueRows<R extends ValueRow & { year: number }>(
+  career: readonly R[],
+  rows: readonly StoredValueSeason[],
+  retireAt?: number,
+): ValueRow[] {
+  const byYear = new Map(lifeSeasons(rows, retireAt).map((r) => [r.year, r]));
+  return career.flatMap((row) => {
+    const s = byYear.get(row.year);
+    if (!s) return [];
+    return [
+      {
+        league: s.league,
+        ...(s.clubId ? { clubId: s.clubId } : {}),
+        ...(s.mil ? { mil: true } : {}),
+        age: s.age,
+        ovr: Math.min(row.ovr, s.ovr),
+      },
+    ];
+  });
 }
 
 /**

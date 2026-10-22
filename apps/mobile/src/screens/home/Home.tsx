@@ -24,6 +24,7 @@ import { HeroFigure } from './HeroFigure';
 import { CupBanner } from '../owner/TeamCup';
 import { LeagueBanner } from '../league/LeagueScreen';
 import { CupChampionPopup } from './CupChampionPopup';
+import { PartnerPopup } from './PartnerPopup';
 import { HomeClubValue } from './HomeClubValue';
 import { HomeFirsts } from './HomeFirsts';
 import { HomeGift } from './HomeGift';
@@ -248,6 +249,8 @@ export default function Home() {
         ))}
         {/* T-11-290 오프사이드 컵 우승 팝업 — 앱을 켜 홈에 왔을 때 한 번(결승 뒤 일주일, 기기마다 '다시 보지 않기'). 배너와 같은 응답. */}
         <CupChampionPopup />
+        {/* T-11-423 아마축구 상호 홈 팝업 — 약정 기간 · 한국어 · 하루 숨김. 컵 우승 팝업과 한 번에 하나만. */}
+        <PartnerPopup />
         {/* T-11-080f 구단주 화면을 거치지 않고 이적시장으로 바로 간다(뒤로 가기는 홈으로). 홈에서는 서버를 부르지 않는다. */}
         <Tile
           wide

@@ -11,7 +11,7 @@ import { leagueOf, roleOf, fmtMoney, focusOf, labelOf } from '@offside/game/engi
 import { tn } from '@offside/game/i18n/names';
 import { mainTitle } from '@offside/game/titles';
 import { avatarSpec, avatarWidth } from '@offside/game/avatar';
-import { marketValue } from '@offside/game/season';
+import { marketValue, MIN_RETIRE_AGE } from '@offside/game/season';
 import type { GameState } from '@offside/game/types';
 import type { Tab } from '@offside/app-core/state';
 import { fmtValue } from '@offside/app-core/format';
@@ -48,6 +48,7 @@ import { PlayerNudge } from './PlayerNudge';
 import { notePlayerVisit, playerNudge } from '@offside/app-core/player-nudge';
 import { peekOpen } from '@offside/app-core/potential-peek';
 import { peekAvailable, potPeek } from '../../platform/rewardedPeek';
+import { prepareRetireAd } from '../../platform/interstitial';
 import { SeasonTab } from './SeasonTab';
 import { SaveHint } from './SaveHint';
 import { TitleDex } from './TitleDex';
@@ -134,6 +135,11 @@ export default function Game() {
     const id = setTimeout(toTitles, 80);
     return () => clearTimeout(id);
   }, [tab]);
+  // T-11-455 은퇴할 수 있는 나이부터 은퇴 전면광고를 미리 불러 둔다(시즌마다 한 번 확인, 오래된 광고는 다시 부른다).
+  const canRetire = !!s && !s.retired && s.age >= MIN_RETIRE_AGE;
+  useEffect(() => {
+    if (canRetire) prepareRetireAd();
+  }, [canRetire, s?.age]);
 
   if (!s) return null;
 

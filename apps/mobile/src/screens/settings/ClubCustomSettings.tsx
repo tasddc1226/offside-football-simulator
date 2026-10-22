@@ -10,7 +10,7 @@ import { useSnapshot } from 'valtio';
 import { LEAGUES } from '@offside/game/data';
 import { CLUB_NAME_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '@offside/game/clubs';
 import { clubsIn } from '@offside/game/engine';
-import { CLUB_SYNC_TEXT } from '@offside/app-core/clubCustom';
+import { CLUB_SYNC_TEXT, customLeagues } from '@offside/app-core/clubCustom';
 import {
   exportClubCustom,
   importClubCustom,
@@ -325,7 +325,7 @@ export function ClubCustomSettings() {
               label={T.league}
               testID="club-league"
               value={leagueId}
-              options={LEAGUES.map((L) => ({
+              options={customLeagues().map((L) => ({
                 value: L.id,
                 label: T.leagueOption({ name: tn(L.name), n: clubsIn(L.id).length }),
               }))}

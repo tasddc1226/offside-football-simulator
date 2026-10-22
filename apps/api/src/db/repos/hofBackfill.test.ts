@@ -5,7 +5,7 @@ import { appMeta } from '../schema.js';
 import { createTestD1, spyDb, type TestD1 } from '../../test/d1.js';
 import { ensureHofBackfilled } from './hofBackfill.js';
 
-const KEYS = ['club_ids_backfill', 'career_values_backfill', 'card_values_backfill'];
+const KEYS = ['club_ids_backfill', 'career_values_backfill'];
 describe('HOF backfill metadata stays request-local and bounded', () => {
   let ctx: TestD1;
   beforeAll(async () => {

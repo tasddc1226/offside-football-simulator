@@ -1,5 +1,5 @@
 import { CAMPAIGNS, campaignQuery } from '@offside/contracts/acquisition';
-import { IOS_APP_STORE_URL } from './links.js';
+import { IOS_APP_STORE_URL, PLAY_STORE_URL } from './links.js';
 
 /** providerToken must come from an App Store Connect campaign link, never an app/team ID. */
 export function appStoreCampaignUrl(href: string, providerToken: string | undefined): string {
@@ -14,5 +14,14 @@ export function appStoreCampaignUrl(href: string, providerToken: string | undefi
   url.searchParams.set('pt', providerToken);
   url.searchParams.set('ct', 'os1.' + parts.join('.'));
   url.searchParams.set('mt', '8');
+  return url.href;
+}
+
+/** T-11-456 Google Play는 install referrer로 허용 UTM만 넘긴다(Play Console 획득 보고서가 캠페인별 설치를 센다). */
+export function playStoreCampaignUrl(href: string): string {
+  const query = new URLSearchParams(campaignQuery(href));
+  if (!query.get('utm_source') || !query.get('utm_campaign')) return PLAY_STORE_URL;
+  const url = new URL(PLAY_STORE_URL);
+  url.searchParams.set('referrer', query.toString());
   return url.href;
 }

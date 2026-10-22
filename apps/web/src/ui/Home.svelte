@@ -113,6 +113,7 @@
   {/each}
   <!-- T-11-290 오프사이드 컵 우승 팝업 — 웹을 열어 홈에 왔을 때 한 번(결승 뒤 일주일, 기기마다 '다시 보지 않기'). 배너와 같은 응답. -->
   {#await import('./cup/CupChampionPopup.svelte') then { default: CupChampionPopup }}<CupChampionPopup />{/await}
+  {#await import('./PartnerPopup.svelte') then { default: PartnerPopup }}<PartnerPopup />{/await}
   <div class="tiles">
     <!-- T-11-080f 구단주 화면을 거치지 않고 이적시장으로 바로 간다(뒤로 가기는 홈으로). 홈에서는 서버를 부르지 않는다. -->
     <button class="tile tile-link tile-wide" data-act="home-market" onclick={() => go('market')}>

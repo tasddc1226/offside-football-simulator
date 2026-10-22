@@ -93,6 +93,11 @@ const ko = {
   abandon: '감독 커리어 포기',
   abandonConfirm: '포기하면 진행한 감독 커리어가 사라지고 원래 선수로 돌아와요. 포기할까요?',
   abandonOk: '포기하기',
+  /** T-11-451 확정 전 감독 커리어 끝 화면에서 원래 선수로 돌아가기(서버는 포기와 같다). */
+  undo: '선수로 되돌리기',
+  undoConfirm:
+    '감독 커리어 결과를 버리고 원래 선수로 돌아와요. 감독 카드는 만들어지지 않고, 선발에는 직접 다시 넣어야 해요. 되돌릴까요?',
+  undoOk: '되돌리기',
   history: '지난 시즌',
   historyRow: (p: { n: number; club: string; rank: number; teams: number }) =>
     `${p.n}시즌 · ${p.club} ${p.teams}팀 중 ${p.rank}위`,

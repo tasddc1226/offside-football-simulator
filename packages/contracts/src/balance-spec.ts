@@ -142,6 +142,24 @@ export const BALANCE_SPEC = {
     max: 1,
     step: 0.01,
   },
+  newLeagues: {
+    def: 0,
+    min: 0,
+    max: 1,
+    step: 1,
+  },
+  richYoungPull: {
+    def: 0.15,
+    min: 0,
+    max: 1,
+    step: 0.01,
+  },
+  braPull: {
+    def: 0.3,
+    min: 0,
+    max: 1,
+    step: 0.01,
+  },
   koreaStr: {
     def: 75,
     min: 60,

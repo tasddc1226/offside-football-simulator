@@ -206,4 +206,64 @@ describe('optional first-party acquisition and authoritative transactions', () =
       (await ctx.env.DB.prepare('SELECT * FROM acquisition_consents').all()).results,
     ).toHaveLength(0);
   });
+  it('reports why unattributed purchases were not linked to a session', async () => {
+    const none = await issueGoogleCookie(ctx);
+    const noSession = await issueGoogleCookie(ctx);
+    const old = await issueGoogleCookie(ctx);
+    const anon = await issueCookie(ctx);
+    for (const a of [noSession, old, anon]) await post(a.cookie, { action: 'grant' });
+    await post(old.cookie, { action: 'session', sessionId: crypto.randomUUID(), campaign });
+    await post(anon.cookie, { action: 'session', sessionId: crypto.randomUUID(), campaign });
+    const ancient = new Date(Date.now() - 31 * 86400_000).toISOString();
+    await ctx.env.DB.prepare(
+      'UPDATE acquisition_sessions SET received_at=?,linked_at=? WHERE profile_id=?',
+    )
+      .bind(ancient, ancient, old.profileId)
+      .run();
+    const now = new Date().toISOString();
+    for (const [i, a] of [none, noSession, old, anon].entries())
+      await grantIapPurchase(ctx.db, {
+        store: 'apple',
+        transactionId: `reason-${i}`,
+        profileId: a.profileId,
+        productId: 'com.offsidelab.app.reroll_5',
+        item: 'reroll',
+        qty: 5,
+        test: false,
+        now,
+        acquisitionEnabled: true,
+        metadata: {
+          purchasedAt: now,
+          priceMilliunits: 4990000,
+          currency: 'KRW',
+          storefront: 'KOR',
+        },
+      });
+    const from = new Date(Date.now() - 86400_000).toISOString(),
+      to = new Date(Date.now() + 86400_000).toISOString();
+    const report = await acquisitionReport(ctx.env.DB, from, to, 'first');
+    expect(report.purchases).toEqual([
+      expect.objectContaining({ campaign: 'unattributed', transactions: 4 }),
+    ]);
+    const reasons = Object.fromEntries(
+      (report.unattributedReasons as Record<string, unknown>[]).map((r) => [r.reason, r]),
+    ) as Record<string, Record<string, unknown>>;
+    expect(Object.keys(reasons).sort()).toEqual([
+      'no_consent',
+      'no_session',
+      'not_linked',
+      'outside_window',
+    ]);
+    expect(reasons.not_linked).toMatchObject({
+      transactions: 1,
+      purchasers_with_campaign_session: 1,
+    });
+    expect(reasons.no_consent).toMatchObject({
+      transactions: 1,
+      purchasers_with_campaign_session: 0,
+    });
+    expect(report.sessions).toEqual([
+      expect.objectContaining({ campaign, sessions: 1, profiles: 1, unlinked_sessions: 1 }),
+    ]);
+  });
 });
