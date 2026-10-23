@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectInApp, externalOpenUrl, manualOpenGuide } from './inapp.js';
+import { detectInApp, externalOpenUrl, manualOpenGuide, playStoreIntentUrl } from './inapp.js';
 
 const IOS =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko)';
@@ -74,6 +74,17 @@ describe('externalOpenUrl', () => {
   it('iOS 그 밖의 웹뷰는 프로그램으로 못 연다', () => {
     expect(externalOpenUrl({ app: 'instagram', os: 'ios' }, href)).toBeNull();
     expect(externalOpenUrl({ app: 'other-webview', os: 'ios' }, href)).toBeNull();
+  });
+});
+
+describe('playStoreIntentUrl', () => {
+  it('Play 스토어 앱 intent로 바꾸고 id · referrer를 그대로 넘기며 원래 주소로 돌아갈 길을 둔다', () => {
+    const href =
+      'https://play.google.com/store/apps/details?id=com.offsidelab.app&referrer=utm_source%3Dmeta%26utm_campaign%3Dlaunch';
+    expect(playStoreIntentUrl(href)).toBe(
+      'intent://details?id=com.offsidelab.app&referrer=utm_source%3Dmeta%26utm_campaign%3Dlaunch' +
+        `#Intent;scheme=market;package=com.android.vending;S.browser_fallback_url=${encodeURIComponent(href)};end`,
+    );
   });
 });
 

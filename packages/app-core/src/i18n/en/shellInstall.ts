@@ -10,9 +10,8 @@ export const shellInstall: Translation<ShellInstallMsgs> = {
     'Premium purchases are available in the app. You can still buy reroll tickets with club funds on the web.',
   conversionTitle: 'Play OFFSIDE in the app',
   conversionMilestone: 'Manage your records in the app',
-  conversionIos:
+  conversionBenefit:
     'In the app, rewarded ads can unlock potential checks and extra boost tries. Eligibility and ad availability apply.',
-  conversionAndroid: 'Get the Android app on Google Play.',
   conversionTransfer:
     'A career in progress does not transfer automatically. Copy its backup code in Settings and import it in the app.',
   conversionPlay: 'Get it on Google Play',
