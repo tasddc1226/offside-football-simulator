@@ -21,6 +21,7 @@ import {
   type DetailPos,
   type PeakProfile,
 } from '@offside/contracts/positions';
+import { mainClubSet } from './mainClub.js';
 import {
   and,
   desc,
@@ -388,6 +389,8 @@ export async function putRetirement(
       })
       .where(eq(careers.id, careerId))
       .returning(retiredHead),
+    // T-11-467 시너지용 주 리그 · 클럽(서버에 쌓인 시즌 기록으로 센다).
+    db.update(careers).set(mainClubSet).where(eq(careers.id, careerId)),
     // T-11-163 은퇴 장려금. 아래 카드 insert보다 먼저 — 카드가 아직 없을 때(이 커리어의 첫 은퇴)만 한 번 준다.
     ...(bonus > 0
       ? [

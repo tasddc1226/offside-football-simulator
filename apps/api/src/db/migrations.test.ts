@@ -482,6 +482,9 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'hidden',
     'pot',
     'pot_real',
+    // T-11-467 리그 컬러 · 클럽 동료.
+    'main_league',
+    'main_club',
   ],
   career_seasons: [
     'career_id',

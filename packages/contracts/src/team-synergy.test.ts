@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { FORMATIONS, lineStrength, presetLayout } from './owner-team.js';
 import {
+  CLUB_EFFECT,
   DUOS,
+  LEAGUE_MIN,
+  LEAGUE_STYLES,
   HOMEGROWN_MIN,
   NATIONAL_MIN,
   NATIONAL_POWER,
@@ -159,5 +162,52 @@ describe('T-11-105 줄 힘·시즌', () => {
   it(`경기 반영은 시즌 ${SYNERGY_FROM_SEASON}부터`, () => {
     expect(synergyApplies(0)).toBe(false);
     expect(synergyApplies(SYNERGY_FROM_SEASON)).toBe(true);
+  });
+});
+
+describe('T-11-467 리그 컬러 · 클럽 동료', () => {
+  const all = (over: (i: number) => Partial<SynergyPlayer>) =>
+    Array.from({ length: 11 }, (_, i) => p(i, null, over(i)));
+  it('리그 스타일은 어느 리그든 합이 국가대표와 같다', () => {
+    for (const st of Object.values(LEAGUE_STYLES))
+      expect(Object.values(st.effect).reduce((t, v) => t + (v ?? 0), 0)).toBeCloseTo(
+        NATIONAL_POWER,
+      );
+  });
+  it('같은 주 리그 7명이면 리그 컬러가 켜진다', () => {
+    const s = teamSynergy(all((i) => ({ league: i < LEAGUE_MIN ? 'll' : 'pl' })));
+    expect(s.active.find((a) => a.id === 'league')).toMatchObject({
+      league: 'll',
+      style: 'll_skill',
+      effect: LEAGUE_STYLES.ll!.effect,
+    });
+    expect(synergyPower(s)).toBeCloseTo(NATIONAL_POWER);
+    expect(
+      ids(teamSynergy(all((i) => ({ league: i < LEAGUE_MIN - 1 ? 'll' : 'pl' })))),
+    ).not.toContain('league');
+  });
+  it('국가대표와 함께 켜지면 인원이 많은 쪽만 효과가 있다(같으면 국가대표)', () => {
+    const more = teamSynergy(all((i) => ({ nation: i < 7 ? 'KR' : 'JP', league: 'pl' })));
+    expect(more.active.find((a) => a.id === 'league')?.effect).toEqual(LEAGUE_STYLES.pl!.effect);
+    expect(more.active.find((a) => a.id === 'national')?.effect).toEqual({});
+    expect(synergyPower(more)).toBeCloseTo(NATIONAL_POWER);
+    const tie = teamSynergy(
+      all((i) => ({ nation: i < 8 ? 'KR' : 'JP', league: i < 8 ? 'pl' : 'll' })),
+    );
+    expect(tie.active.find((a) => a.id === 'national')?.effect).toEqual(NATION_STYLES.KR!.effect);
+    expect(tie.active.find((a) => a.id === 'league')?.effect).toEqual({});
+  });
+  it('같은 주 클럽 3명이면 가장 많은 클럽 하나만 클럽 동료가 된다', () => {
+    const club = (i: number) => (i < 3 ? 'pl-1' : i < 7 ? 'll-2' : null);
+    const s = teamSynergy(all((i) => ({ club: club(i) })));
+    const c = s.active.filter((a) => a.id === 'club');
+    expect(c).toHaveLength(1);
+    expect(c[0]).toMatchObject({ club: 'll-2', members: [3, 4, 5, 6], effect: CLUB_EFFECT });
+    expect(ids(teamSynergy(all((i) => ({ club: i < 2 ? 'pl-1' : null }))))).not.toContain('club');
+  });
+  it('주 리그 · 클럽을 모르는 선수는 들지 않는다', () => {
+    const s = teamSynergy(all(() => ({})));
+    expect(ids(s)).not.toContain('league');
+    expect(ids(s)).not.toContain('club');
   });
 });
