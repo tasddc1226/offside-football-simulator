@@ -65,9 +65,13 @@ export const EDGE = {
   /** T-11-080f 시세 차트(시즌 · 기간 · 묶음별). */
   marketChart: (season: number, range: string, group?: { pos: string; band: number }) =>
     `/v1/market/chart?season=${season}&range=${range}${group ? `&pos=${group.pos}&band=${group.band}` : ''}`,
-  /** T-11-080 이적시장 목록은 첫 페이지만 담는다(시즌 · 정렬 · 포지션별). */
-  marketList: (season: number, sort: string, pos?: string) =>
-    `/v1/market?season=${season}&sort=${sort}${pos ? `&pos=${pos}` : ''}`,
+  /** T-11-080 이적시장 목록은 첫 페이지만 담는다(시즌 · 정렬 · 포지션 · T-11-474 세부 포지션 · 유형별). */
+  marketList: (
+    season: number,
+    sort: string,
+    f: { pos?: string | undefined; dpos?: string | undefined; type?: string | undefined } = {},
+  ) =>
+    `/v1/market?season=${season}&sort=${sort}${f.pos ? `&pos=${f.pos}` : ''}${f.dpos ? `&dpos=${f.dpos}` : ''}${f.type ? `&type=${f.type}` : ''}`,
   /** 게시판 목록은 첫 페이지(웹 기본 limit)만 담는다. */
   publicNews: (board: string) => `/v1/public-news/${board}`,
   boardFirstPage: (board: string) => `/v1/boards/${board}/posts?limit=${BOARD_PAGE_LIMIT}`,

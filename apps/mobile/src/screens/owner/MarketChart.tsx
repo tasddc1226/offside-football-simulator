@@ -2,9 +2,11 @@
 // 카드 상세: 같은 포지션군 · OVR대 하루 평균 선, 최저~최고 띠, 기준가 점선, 이 선수 거래 점. 영입 시트를 열 때만 부르고(1분 메모),
 // 기간을 바꾸면 그 기간만 새로 받는다. 점을 누르면 그날 값을 위에 보여 준다. 색은 국내 증권 관례대로 오름 빨강 · 내림 파랑.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, View, type ViewStyle } from 'react-native';
-import Svg, { Line as SvgLine, Path } from 'react-native-svg';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Pressable, View, type ViewStyle } from 'react-native';
+import Svg, { Defs, LinearGradient, Line as SvgLine, Path, Stop } from 'react-native-svg';
+import { useSnapshot } from 'valtio';
+import { prefs } from '../../store';
 import {
   fetchCardTrades,
   fetchMarketChart,
@@ -73,6 +75,100 @@ function Hit({
   );
 }
 
+/** T-11-474 평균선 아래 면(위에서 아래로 옅어지는 그라데이션). */
+function AreaFill({ id, d, color }: { id: string; d: string; color: string }) {
+  return (
+    <>
+      <Defs>
+        <LinearGradient id={id} x1="0" x2="0" y1="0" y2="1">
+          <Stop offset="0" stopColor={color} stopOpacity={0.28} />
+          <Stop offset="1" stopColor={color} stopOpacity={0} />
+        </LinearGradient>
+      </Defs>
+      <Path d={d} fill={`url(#${id})`} />
+    </>
+  );
+}
+
+/** T-11-474 마지막 거래일 점 — 맥박처럼 퍼지는 고리(움직임 줄이기면 점만). */
+function Pulse({
+  left,
+  top,
+  color,
+  ring,
+}: {
+  left: number;
+  top: number;
+  color: string;
+  ring: string;
+}) {
+  const { motionOK } = useSnapshot(prefs);
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!motionOK) return;
+    const loop = Animated.loop(
+      Animated.timing(v, { toValue: 1, duration: 1800, useNativeDriver: true }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [motionOK, v]);
+  const dot = { position: 'absolute', width: 9, height: 9, borderRadius: 5 } as const;
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', left: left - 4.5, top: top - 4.5 }}>
+      {motionOK ? (
+        <Animated.View
+          style={{
+            ...dot,
+            backgroundColor: color,
+            opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.55, 0] }),
+            transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [1, 3.2] }) }],
+          }}
+        />
+      ) : null}
+      <View style={{ ...dot, backgroundColor: color, borderWidth: 2, borderColor: ring }} />
+    </View>
+  );
+}
+
+/** T-11-474 하루 거래량 막대 줄(마지막 거래일은 강조). */
+function VolumeBars({
+  bars,
+  width,
+  height,
+  color,
+  lastColor,
+}: {
+  bars: { x: number; h: number }[];
+  width: number;
+  height: number;
+  color: string;
+  lastColor?: string;
+}) {
+  return (
+    <View style={{ width, height }}>
+      {bars.map((b, i) => (
+        <View
+          key={i}
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: (b.x / 100) * width - 2,
+            width: 4,
+            height: Math.max(1, (b.h / 100) * height),
+            borderTopLeftRadius: 2,
+            borderTopRightRadius: 2,
+            backgroundColor: i === bars.length - 1 && lastColor ? lastColor : color,
+            opacity: i === bars.length - 1 && lastColor ? 0.8 : 0.35,
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+const SPARK_W = 128;
+const SPARK_H = 44;
+
 /** 이적시장 머리의 시장 지수 한 줄(최근 7일 · 시장 전체). */
 export function MarketIndex({ points }: { points: readonly MarketChartPoint[] }) {
   const c = useColors();
@@ -96,40 +192,68 @@ export function MarketIndex({ points }: { points: readonly MarketChartPoint[] })
         backgroundColor: c.surface,
       }}
     >
-      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-        <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
-          {CHART_COPY.index}
-        </Txt>
-        <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(FONT.title2) }}>{index.pct}</Txt>
+      <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c.bad }} />
+          <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
+            {CHART_COPY.index}
+          </Txt>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+          <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(FONT.title2) }}>{index.pct}</Txt>
+          <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '700', color: tone }}>
+            {index.change}
+          </Txt>
+        </View>
         <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(FONT.caption2) }}>
           {CHART_COPY.indexSub(index.trades)}
         </Txt>
+        <Txt
+          testID="market-index-today"
+          numberOfLines={1}
+          style={{ fontSize: rem(FONT.caption2), fontWeight: '600' }}
+        >
+          {CHART_COPY.lastDay(index.today, index.lastTrades)}
+        </Txt>
       </View>
       {index.spark.line ? (
-        <Svg width={72} height={32} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <SvgLine
-            x1={0}
-            x2={100}
-            y1={index.spark.base}
-            y2={index.spark.base}
-            stroke={c.muted}
-            strokeWidth={1}
-            strokeDasharray="3 3"
-            vectorEffect="non-scaling-stroke"
-          />
-          <Path
-            d={index.spark.line}
-            fill="none"
-            stroke={tone}
-            strokeWidth={2}
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        </Svg>
+        <View style={{ width: SPARK_W, gap: 3 }}>
+          <View style={{ height: SPARK_H }}>
+            <Svg width={SPARK_W} height={SPARK_H} viewBox="0 0 100 100" preserveAspectRatio="none">
+              {index.spark.area ? (
+                <AreaFill id="mk-spark-fill" d={index.spark.area} color={tone} />
+              ) : null}
+              <SvgLine
+                x1={0}
+                x2={100}
+                y1={index.spark.base}
+                y2={index.spark.base}
+                stroke={c.muted}
+                strokeWidth={1}
+                strokeDasharray="3 3"
+                vectorEffect="non-scaling-stroke"
+              />
+              <Path
+                d={index.spark.line}
+                fill="none"
+                stroke={tone}
+                strokeWidth={2}
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            </Svg>
+            {index.spark.last ? (
+              <Pulse
+                left={(index.spark.last.x / 100) * SPARK_W}
+                top={(index.spark.last.y / 100) * SPARK_H}
+                color={tone}
+                ring={c.surface}
+              />
+            ) : null}
+          </View>
+          <VolumeBars bars={index.spark.bars} width={SPARK_W} height={11} color={tone} />
+        </View>
       ) : null}
-      <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '700', color: tone }}>
-        {index.change}
-      </Txt>
     </View>
   );
 }
@@ -206,6 +330,21 @@ export function MarketChart({ card }: { card: MarketCard }) {
           <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
             {CHART_COPY.group(POS[card.pos].label, band)}
           </Txt>
+          {model?.last ? (
+            <View
+              testID="chart-now"
+              style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 4 }}
+            >
+              <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(FONT.title2) }}>
+                {model.last.pct}
+              </Txt>
+              {model.change ? (
+                <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '700', color: tone }}>
+                  {model.change}
+                </Txt>
+              ) : null}
+            </View>
+          ) : null}
         </View>
         <View
           accessibilityRole="radiogroup"
@@ -268,7 +407,8 @@ export function MarketChart({ card }: { card: MarketCard }) {
                   preserveAspectRatio="none"
                   style={{ position: 'absolute' }}
                 >
-                  {model.band ? <Path d={model.band} fill={tone} fillOpacity={0.12} /> : null}
+                  {model.band ? <Path d={model.band} fill={tone} fillOpacity={0.1} /> : null}
+                  {model.area ? <AreaFill id="mc-fill" d={model.area} color={tone} /> : null}
                   <SvgLine
                     x1={0}
                     x2={100}
@@ -311,6 +451,9 @@ export function MarketChart({ card }: { card: MarketCard }) {
                     {label}
                   </Txt>
                 ))}
+                {model.last ? (
+                  <Pulse {...at(model.last.x, model.last.y)} color={tone} ring={c.surface} />
+                ) : null}
                 {model.days.map((d) => (
                   <Hit
                     key={d.p.day}
@@ -338,6 +481,20 @@ export function MarketChart({ card }: { card: MarketCard }) {
               </>
             ) : null}
           </View>
+          {model.bars.length && plotW > 0 ? (
+            <View
+              accessibilityLabel={CHART_COPY.volume}
+              style={{ borderBottomWidth: 1, borderBottomColor: c.line, alignSelf: 'flex-start' }}
+            >
+              <VolumeBars
+                bars={model.bars}
+                width={plotW}
+                height={22}
+                color={c.muted}
+                lastColor={c.accent}
+              />
+            </View>
+          ) : null}
           <View
             style={{
               flexDirection: 'row',
@@ -356,6 +513,22 @@ export function MarketChart({ card }: { card: MarketCard }) {
                   <View style={{ width: 12, height: 2, backgroundColor: c.muted }} />
                   <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
                     {CHART_COPY.legendLine}
+                  </Txt>
+                </>
+              ) : null}
+              {model.bars.length ? (
+                <>
+                  <View
+                    style={{
+                      width: 4,
+                      height: 8,
+                      backgroundColor: c.muted,
+                      opacity: 0.5,
+                      marginLeft: 6,
+                    }}
+                  />
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
+                    {CHART_COPY.volume}
                   </Txt>
                 </>
               ) : null}

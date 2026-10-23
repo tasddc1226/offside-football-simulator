@@ -196,13 +196,14 @@ describe('감독 커리어 (T-11-310)', () => {
     const owner = await issueGoogleCookie(ctx);
     const a = await addCard(owner.profileId);
     const b = await addCard(owner.profileId);
-    expect((await putTeam(owner.cookie, [...Array(9).fill(null), a, b])).status).toBe(200);
+    // 선발은 내놓을 수 없어(T-11-474) 벤치에서 내놓은 뒤 선발에 넣는다.
     const listed = await call('POST', '/v1/market/listings', {
       cookie: owner.cookie,
       headers: idem(),
       body: { careerId: a, price: 1_000_000 },
     });
     expect(listed.status).toBe(201);
+    expect((await putTeam(owner.cookie, [...Array(9).fill(null), a, b])).status).toBe(200);
 
     const before = await managers(owner.cookie);
     expect(before.active).toBeNull();

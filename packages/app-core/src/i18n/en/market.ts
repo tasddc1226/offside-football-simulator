@@ -22,6 +22,9 @@ export const market: Translation<MarketMsgs> = {
   sortOvr: 'OVR: high to low',
   sortLabel: 'Sort',
   posAll: 'All',
+  detailPos: 'Detail position',
+  playerType: 'Type',
+  filterReset: 'Clear filters',
   listCount: (p) => `${p.n}${p.more ? '+' : ''} ${p.n === 1 && !p.more ? 'player' : 'players'}`,
   priceSame: 'Base value',
   priceUp: (p) => `Base value +${p.d}%`,
@@ -39,7 +42,7 @@ export const market: Translation<MarketMsgs> = {
   reload: 'Reload',
   more: 'Load more',
   emptyClosed: 'The transfer market is closed during the break between seasons.',
-  emptyFiltered: 'No players are listed at this position yet.',
+  emptyFiltered: 'No players match these filters yet.',
   empty: 'No players on the market yet. Players will appear here when owners list them.',
   sheetBuy: 'Sign player',
   detailLegend: 'Legend Score',
@@ -56,7 +59,6 @@ export const market: Translation<MarketMsgs> = {
   buyNote:
     "A signed player can join your team right away. You can sell them again, but you can't release them for funds.",
   ownListing: 'You listed this player.',
-  buyLimit: "You've used all of today's signings. Come back tomorrow.",
   buyShort: (p) =>
     `You're ${p.short} short on club funds. Release a player you raised to free up funds.`,
   unlist: 'Take down listing',
@@ -67,6 +69,7 @@ export const market: Translation<MarketMsgs> = {
   sellStep1: '1. Choose a player to list',
   sellNone:
     "You don't have any player cards yet. They appear here when your players retire or you sign one.",
+  sellStartersHidden: 'Take starters out of your lineup to list them.',
   sellSelected: 'Selected',
   sellPickLabel: (p) => `Select ${p.name} to list`,
   sellStep2: (p) => `2. Set a price · ${p.name} ${p.pos} ${p.peak}`,
@@ -84,7 +87,6 @@ export const market: Translation<MarketMsgs> = {
   sellMax: (p) => `The highest price you can set is ${p.value}.`,
   noteListed: 'Listed',
   noteNoValue: 'No base value',
-  noteStarter: 'Starter',
   noteLocked: 'Locked',
   tradesListed: 'Listed players',
   listedAgo: (p) => `${p.price} · listed ${p.ago}`,

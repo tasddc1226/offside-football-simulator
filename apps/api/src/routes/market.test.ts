@@ -107,6 +107,26 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     expect(data.items.find((x) => x.card.careerId === id)?.card.look).toBe('s5h6y2g2');
   });
 
+  it('T-11-474 목록을 세부 포지션 · 선수 유형으로 좁힌다', async () => {
+    const seller = await issueGoogleCookie(ctx);
+    const winger = await addCard(seller.profileId);
+    const striker = await addCard(seller.profileId);
+    await ctx.db.update(cards).set({ dpos: 'LW' }).where(eq(cards.careerId, winger));
+    await ctx.db.update(cards).set({ dpos: 'ST' }).where(eq(cards.careerId, striker));
+    await ctx.db.update(careers).set({ type: 'speed' }).where(eq(careers.id, winger));
+    for (const id of [winger, striker])
+      expect((await list(seller.cookie, id, 1_000_000)).status).toBe(201);
+    const ids = async (q: string) =>
+      ListRes.parse(await (await call('GET', `/v1/market?${q}`)).json()).data.items.map(
+        (x) => x.card.careerId,
+      );
+    expect(await ids('pos=FW')).toHaveLength(2);
+    expect(await ids('pos=FW&dpos=LW')).toEqual([winger]);
+    expect(await ids('pos=FW&type=poacher')).toEqual([striker]);
+    expect(await ids('pos=FW&dpos=ST&type=speed')).toEqual([]);
+    expect((await call('GET', '/v1/market?type=wizard')).status).toBe(400);
+  });
+
   it('비로그인도 시장 목록을 보고, 방출·시장 쓰기는 구글 연결 구단주만 한다', async () => {
     const res = await call('GET', '/v1/market');
     expect(res.status).toBe(200);
@@ -192,6 +212,22 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     });
     expect(res.status).toBe(409);
     expect(await reason(res)).toBe('IN_LINEUP');
+  });
+
+  it('T-11-474 선발에 든 선수는 내놓을 수 없고, 팀에서 빼면 내놓는다', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    const a = await addCard(owner.profileId);
+    const team = (slots: (string | null)[]) =>
+      call('PUT', '/v1/owner-team', {
+        cookie: owner.cookie,
+        body: { name: '우리 FC', manager: '김감독', formation: '4-3-3', slots },
+      });
+    expect((await team([...Array(9).fill(null), a, null])).status).toBe(200);
+    const res = await list(owner.cookie, a, 1_000_000);
+    expect(res.status).toBe(409);
+    expect(await reason(res)).toBe('IN_LINEUP');
+    expect((await team(Array(11).fill(null))).status).toBe(200);
+    expect((await list(owner.cookie, a, 1_000_000)).status).toBe(201);
   });
 
   it('T-11-188 잠긴 선수는 내놓거나 방출할 수 없고, 판매 중인 선수는 내린 뒤 잠근다', async () => {
