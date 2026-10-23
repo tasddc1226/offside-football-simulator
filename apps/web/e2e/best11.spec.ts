@@ -17,19 +17,7 @@ const NAMES = [
   '류하람',
   '신우진',
 ];
-const NATIONS = [
-  '대한민국',
-  '브라질',
-  '스페인',
-  '대한민국',
-  '잉글랜드',
-  '프랑스',
-  '아르헨티나',
-  '대한민국',
-  '포르투갈',
-  '대한민국',
-  '독일',
-];
+const NATIONS = ['KR', 'BR', 'ES', 'KR', 'GB-ENG', 'FR', 'AR', 'KR', 'PT', 'KR', 'DE'];
 const id = (k: number) => `00000000-0000-4000-8000-${String(k).padStart(12, '0')}`;
 
 const player = (k: number, dpos: string, name: string, index: number) => ({
@@ -37,7 +25,6 @@ const player = (k: number, dpos: string, name: string, index: number) => ({
   name,
   dpos,
   nation: NATIONS[k % NATIONS.length]!,
-  look: null,
   peak: 88 + (k % 8),
   retiredAt: '2026-10-18T12:00:00.000Z',
   index,
@@ -56,9 +43,32 @@ const player = (k: number, dpos: string, name: string, index: number) => ({
   },
 });
 
+/** 구단주 팀 · 팀 프로필과 같은 선수 카드 값(TeamPlayer). */
+const card = (k: number, dpos: string) => ({
+  careerId: id(k),
+  look: null,
+  pos:
+    dpos === 'GK'
+      ? 'GK'
+      : ['LB', 'CB', 'RB'].includes(dpos)
+        ? 'DF'
+        : ['DM', 'CM', 'AM'].includes(dpos)
+          ? 'MF'
+          : 'FW',
+  nation: NATIONS[k % NATIONS.length]!,
+  dpos,
+  peak: 88 + (k % 8),
+  roles: null,
+  attrs: { pac: 80, sho: 78, dri: 82, pas: 84, def: 70, phy: 76 },
+  number: [1, 3, 4, 5, 2, 6, 8, 10, 11, 9, 7][k] ?? null,
+  publicName: NAMES[k] ?? null,
+  legendScore: [1650, 980, 1020, 870, 760, 1150, 1240, 1500, 940, 2050, 1120][k] ?? 1500,
+  season: 1,
+});
 const xi = SLOTS.map((slot, i) => ({
   slot,
   player: player(i, DPOS[i]!, NAMES[i]!, i === 9 ? 100 : 82 + (i % 5) * 3),
+  card: card(i, DPOS[i]!),
   since: '2026-10-18T12:00:00.000Z',
 }));
 const stRanking = [
@@ -123,7 +133,7 @@ test('BEST 11 탭: 아직 아무도 오르지 않은 시즌은 빈 안내를 보
       ok({
         ...BODY,
         updatedAt: null,
-        slots: SLOTS.map((slot) => ({ slot, player: null, since: null })),
+        slots: SLOTS.map((slot) => ({ slot, player: null, card: null, since: null })),
         rankings: [],
         changes: [],
       }),

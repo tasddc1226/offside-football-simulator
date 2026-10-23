@@ -13,12 +13,10 @@
   import { teamSeasonLabel } from '@offside/app-core/seasonName';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
-  let { player, face, name, rating, role, nation, season, compact = false, mini = false, youth = false, deploymentRating, ratingLabel = L.peakOvr }:
-    { player?: TeamPlayer | undefined;
-      /** T-11-463 선수 정보 없이 그림만(BEST 11). player가 있으면 player를 쓴다. */
-      face?: { careerId: string; look?: string | null | undefined } | undefined; name: string; rating: number; role: DetailPos; nation?: string | null | undefined; season?: number | undefined; compact?: boolean; mini?: boolean; youth?: boolean; deploymentRating?: number | undefined; ratingLabel?: string } = $props();
+  let { player, name, rating, role, nation, season, compact = false, mini = false, youth = false, deploymentRating, ratingLabel = L.peakOvr }:
+    { player?: TeamPlayer | undefined; name: string; rating: number; role: DetailPos; nation?: string | null | undefined; season?: number | undefined; compact?: boolean; mini?: boolean; youth?: boolean; deploymentRating?: number | undefined; ratingLabel?: string } = $props();
   // T-11-114 카드 시즌 뱃지(유스 선수·시즌을 모르는 옛 응답은 없다).
-  const portrait = $derived(youth ? null : player?.careerId ? cardAvatarSpec(player) : face ? cardAvatarSpec(face) : null);
+  const portrait = $derived(!youth && player?.careerId ? cardAvatarSpec(player) : null);
   const cardSeason = $derived(youth ? undefined : (season ?? player?.season));
   const country = $derived(!youth ? NATION_BY_CODE.get(nation ?? player?.nation ?? DEFAULT_NATION) : undefined);
   const tier = $derived(youth ? 'youth' : cardTier(player?.legendScore, player?.peak ?? rating));

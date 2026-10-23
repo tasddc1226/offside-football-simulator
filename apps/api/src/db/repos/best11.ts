@@ -1,4 +1,5 @@
 import type { Best11Change, Best11Player, Best11Ranked, Best11Response } from '@offside/contracts';
+import { careersByIds, teamPlayerCard } from './ownerTeams.js';
 import {
   BEST11_SLOTS,
   BEST11_TOP,
@@ -74,7 +75,6 @@ const candidateColumns = {
   ok: showableSql,
   name: careers.publicName,
   nation: careers.nation,
-  look: careers.look,
   peak: careers.peak,
 };
 type CandidateRow = {
@@ -86,13 +86,11 @@ type CandidateRow = {
   ok: number;
   name: string | null;
   nation: string | null;
-  look: string | null;
   peak: number | null;
 };
 type Cand = Best11Candidate & {
   name: string;
   nation: string | null;
-  look: string | null;
   peak: number;
 };
 
@@ -114,7 +112,6 @@ function toCand(r: CandidateRow): Cand | null {
       raw: JSON.parse(r.rawJson) as Best11Raw,
       name: r.name,
       nation: r.nation,
-      look: r.look,
       peak: r.peak ?? 0,
     };
   } catch {
@@ -449,7 +446,6 @@ function toPlayer(s: Best11Scored<Cand>): Best11Player {
     name: s.c.name,
     dpos: s.c.dpos,
     nation: s.c.nation,
-    look: s.c.look,
     peak: s.c.peak,
     retiredAt: s.c.retiredAt,
     index: s.index,
@@ -503,6 +499,15 @@ export async function readBest11(db: Db, season: number): Promise<Best11Response
   const owners = new Set(valid.filter((c) => xi.has(c.careerId)).map((c) => c.ownerId));
   const scoredOf = (slot: Best11Slot, careerId: string) =>
     rankings[slot].find((s) => s.c.careerId === careerId);
+  // 그라운드 카드는 구단주 팀 · 팀 프로필과 같은 선수 카드 값(등급 · 등번호 · 능력치 · 그림)으로 그린다. 11명만 한 번 더 읽는다.
+  const shown = stored.filter((s) => scoredOf(s.slot as Best11Slot, s.careerId));
+  const cardRows = await retryTransientRead(() =>
+    careersByIds(
+      db,
+      shown.map((s) => s.careerId),
+    ),
+  );
+  const cards = new Map(cardRows.map((r) => [r.id, teamPlayerCard(r)]));
   return {
     season,
     finalAt: state?.finalAt ?? null,
@@ -510,7 +515,12 @@ export async function readBest11(db: Db, season: number): Promise<Best11Response
     slots: BEST11_SLOTS.map((slot) => {
       const row = stored.find((s) => s.slot === slot);
       const scored = row && scoredOf(slot, row.careerId);
-      return { slot, player: scored ? toPlayer(scored) : null, since: scored ? row.since : null };
+      return {
+        slot,
+        player: scored ? toPlayer(scored) : null,
+        card: (scored && cards.get(row.careerId)) || null,
+        since: scored ? row.since : null,
+      };
     }),
     rankings: BEST11_SLOTS.filter((s) => s !== 'CB2').map((slot) => ({
       slot,

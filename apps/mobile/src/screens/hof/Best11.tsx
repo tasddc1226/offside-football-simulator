@@ -97,17 +97,34 @@ export default function Best11() {
   }, [season, tick]);
 
   const cells: PitchCell[] = BEST11_SLOTS.map((s) => {
-    const p = data?.slots.find((x) => x.slot === s)?.player;
-    return p
-      ? {
-          name: p.name,
-          rating: p.peak,
-          nation: p.nation,
-          youth: false,
-          careerId: p.careerId,
-          look: p.look,
-        }
-      : { name: L.emptySlot, rating: 0, youth: true };
+    const at = data?.slots.find((x) => x.slot === s);
+    const p = at?.player;
+    const card = at?.card;
+    if (!p) return { name: L.emptySlot, rating: 0, youth: true };
+    // 구단주 팀 · 팀 프로필과 같은 카드 값(등급 · 등번호 · 그림 · 시즌)을 넘긴다(TeamProfile.tsx와 같은 모양).
+    return {
+      name: p.name,
+      rating: p.peak,
+      nation: p.nation,
+      youth: false,
+      ...(card
+        ? {
+            careerId: card.careerId,
+            look: card.look,
+            season: card.season,
+            peak: card.peak,
+            number: card.number,
+            legendScore: card.legendScore,
+            attrs: card.attrs,
+            attrsEstimated: card.attrsEstimated,
+            height: card.height,
+            weight: card.weight,
+            foot: card.foot,
+            pos: card.pos,
+            type: card.type,
+          }
+        : { careerId: p.careerId }),
+    };
   });
   const filled = data?.slots.filter((s) => s.player).length ?? 0;
   const current = data?.slots.find((s) => s.slot === slot);

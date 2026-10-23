@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { BEST11_SLOTS } from './best11-rules.js';
 import { DetailPosSchema } from './careers.js';
+import { TeamPlayerSchema } from './teams.js';
 
 // T-11-463 시즌 BEST 11 공개 조회(`GET /v1/best11?season=`). 모두에게 같은 응답이라 엣지에 담는다. 구단주 id는 내보내지 않고,
 // 같은 구단주라 빠진 후보는 held로만 알린다.
@@ -12,8 +13,6 @@ export const Best11PlayerSchema = z.object({
   name: z.string(),
   dpos: DetailPosSchema,
   nation: z.string().nullable(),
-  /** 은퇴 선수 도트 꾸미기 코드(그라운드 카드 그림). 꾸미지 않았으면 null. */
-  look: z.string().nullable(),
   peak: z.number().int(),
   retiredAt: z.string(),
   /** BEST 11 지수와 세 기둥(자리 1위 = 100). */
@@ -60,6 +59,8 @@ export const Best11ResponseSchema = z.object({
     z.object({
       slot: Best11SlotSchema,
       player: Best11PlayerSchema.nullable(),
+      /** 그라운드 카드 값(구단주 팀 · 팀 프로필과 같은 선수 카드). 카드가 없는 옛 기록이면 null. */
+      card: TeamPlayerSchema.nullable(),
       since: z.string().nullable(),
     }),
   ),

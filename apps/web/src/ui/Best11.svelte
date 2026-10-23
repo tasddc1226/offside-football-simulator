@@ -50,9 +50,11 @@
   const layout = best11Layout();
   const cells = $derived(
     BEST11_SLOTS.map((s) => {
-      const p = data?.slots.find((x) => x.slot === s)?.player;
+      const at = data?.slots.find((x) => x.slot === s);
+      const p = at?.player;
+      // 구단주 팀 · 팀 프로필과 같은 카드 값(등급 · 등번호 · 그림 · 시즌)을 넘긴다.
       return p
-        ? { rating: p.peak, name: p.name, youth: false, nation: p.nation, face: { careerId: p.careerId, look: p.look } }
+        ? { rating: p.peak, name: p.name, youth: false, nation: p.nation, season: at?.card?.season, player: at?.card ?? undefined }
         : { rating: 0, name: L.emptySlot, youth: true };
     }),
   );
