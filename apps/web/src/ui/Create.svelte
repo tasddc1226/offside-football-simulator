@@ -358,7 +358,7 @@
         </p>
       </div>
 
-      <div class="field">
+      <div class="field" data-coach="pos">
         <span class="lbl">{L.position}</span>
         <div class="seg two">
           {#each posKeys as k (k)}
@@ -396,7 +396,7 @@
         </div>
       </div>
 
-      <div class="field">
+      <div class="field" data-coach="focus">
         <span class="lbl">{L.focusTitle({ n: FOCUS_PICK })}</span>
         <div class="seg two">
           {#each ATTR_KEYS as k (k)}
@@ -431,7 +431,7 @@
     <div class="action-bar at-bottom">
       <div class="action-bar-inner with-back">
         <button class="btn" data-act="home" onclick={goHome}>{L.cancel}</button>
-        <button class="btn btn-primary" data-act="next-candidates" disabled={focusLeft > 0 || !!bodyErr} onclick={() => (scouting = true)}>
+        <button class="btn btn-primary" data-act="next-candidates" data-coach="candidates" disabled={focusLeft > 0 || !!bodyErr} onclick={() => (scouting = true)}>
           {bodyErr ? L.checkBody : focusLeft > 0 ? L.focusMore({ n: focusLeft }) : L.seeCandidates}
         </button>
       </div>
@@ -446,7 +446,7 @@
     <!-- T-11-437 카드의 OVR이 확정값처럼 보이지 않게 소개 바로 아래에 둔다(앱과 같은 자리). -->
     <p class="muted fs-sm cand-note" data-candidate-stats-note>{CG.candidateNote}</p>
     <!-- T-11-221 후보 카드를 먼저 보이고, 다시 뽑기 · 잠재력 보기 같은 도구는 카드 아래로. -->
-    <div class="cand-list">
+    <div class="cand-list" data-coach="cands">
       {#each appState.candidates as cand, i (i)}
         {#if appState.candidatesOpen[i]}
           {@const f = fx[i]}
@@ -566,7 +566,7 @@
     <div class="action-bar at-bottom">
       <div class="action-bar-inner with-back">
         <button class="btn" data-act="home" onclick={backToForm}>{L.back}</button>
-        <button class="btn btn-primary" data-act="start" disabled={appState.candidatePick == null} onclick={confirmPick}>
+        <button class="btn btn-primary" data-act="start" data-coach="start" disabled={appState.candidatePick == null} onclick={confirmPick}>
           {appState.candidatePick == null ? L.pickOne : L.kickoff({ n: appState.candidatePick + 1 })}
         </button>
       </div>

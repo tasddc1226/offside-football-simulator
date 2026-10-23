@@ -126,7 +126,7 @@ async function setup(page: Page, pending: unknown = null): Promise<string[]> {
       if (sessionStorage.getItem('__structure_seeded')) return;
       sessionStorage.setItem('__structure_seeded', '1');
       localStorage.clear();
-      localStorage.setItem('ft_first_guide', '["home","items","save"]');
+      localStorage.setItem('ft_first_guide', '["items","save"]');
       localStorage.setItem('ft_save', JSON.stringify({ ...JSON.parse(save), pending }));
     },
     [SAVE, pending] as const,

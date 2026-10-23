@@ -18,7 +18,7 @@
     {#each v.ch as c, i (i)}<span class="badge-ch pop" style="--d:{120 + i * 90}ms">CH · {c}</span>{/each}
   </div>
 {/if}
-<div class="stats" style="grid-template-columns:repeat(4,1fr)">
+<div class="stats" style="grid-template-columns:repeat(4,1fr)" data-coach="season">
   <div><b>{v.stats.apps}</b><span>{sheetCoreText.tallyApps}</span></div>
   <div><b>{v.stats.goals}</b><span>{sheetCoreText.tallyGoals}</span></div>
   <div><b>{v.stats.col}</b><span>{v.stats.colLabel}</span></div>
