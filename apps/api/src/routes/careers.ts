@@ -31,6 +31,7 @@ import {
 } from './shared.js';
 import {
   careerHeadQuery,
+  prunedCareerQuery,
   getCareer,
   getCareerHead,
   groupStoredSeasons,
@@ -54,7 +55,8 @@ import { tryAttempt } from '../db/repos/authAttempts.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
-import { purgeEdge, waitUntil } from '../edgeCache.js';
+import { purgeEdge, purgeEdgeOrigin, waitUntil } from '../edgeCache.js';
+import { offerRetiredBest11 } from '../db/repos/best11.js';
 import { refreshOwnerTitles } from '../db/repos/ownerTitles.js';
 import { refreshAfterChange } from '../team/ownerAchievements.js';
 import { recordFirsts } from './firsts.js';
@@ -247,11 +249,14 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
 
     const body = readBody(c, PutCareerSeasonBodySchema);
     // T-11-276 커리어 머리와 지난 시즌 OVR을 한 왕복으로 읽는다(둘 다 기본 키 한 줄).
-    const [[headRow], [prevRow]] = await db.batch([
+    // T-11-468 지운 버린 커리어의 흔적도 같은 왕복으로 읽는다(다시 만들 때 주인 · 처음 서비스 시즌).
+    const [[headRow], [prevRow], [pruned]] = await db.batch([
       careerHeadQuery(db, careerId),
       seasonOvrQuery(db, careerId, year - 1),
+      prunedCareerQuery(db, careerId),
     ]);
     const head = assertOwnable(headRow, session.profileId);
+    if (!head && pruned && pruned.profileId !== session.profileId) throw careerOwnerMismatch();
     await limitUpload(db, 'CAREER_SEASON', session.profileId);
     const now = nowIso();
     await resumeCareerDetails(
@@ -294,6 +299,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
         JSON.stringify({ ...body.signals, headless: isHeadless(c.req.header('User-Agent')) }),
       hide,
       now,
+      ...(!head && pruned && { serviceSeason: pruned.serviceSeason }),
     });
 
     if (hide) purgeEdge(c, STALE.firstsChanged());
@@ -430,6 +436,13 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       Promise.all([
         refreshAfterChange(db, session.profileId, career.serviceSeason),
         refreshOwnerTitles(db, session.profileId, now),
+        // T-11-463 시즌 BEST 11 후보(이름을 공개한 은퇴만). 자리 주인이 바뀌면 그 시즌 BEST 11 캐시를 지운다.
+        offerRetiredBest11(db, { id: careerId, dpos: career.dpos }, seasons, now).then(
+          async (season) => {
+            if (season !== null)
+              await purgeEdgeOrigin(new URL(c.req.url).origin, [EDGE.best11(season)]);
+          },
+        ),
       ]),
     );
 

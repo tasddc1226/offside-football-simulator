@@ -1,9 +1,7 @@
 {
   "id": "t-11-187-server-legend-score",
   "title": "은퇴 레전드 점수 반영 수정",
-  "items": [
-    "이전 버전 앱에서 은퇴해도 명예의 전당과 선수 카드에 조정된 레전드 점수가 반영돼요."
-  ],
+  "items": ["이전 버전 앱에서 은퇴해도 명예의 전당과 선수 카드에 조정된 레전드 점수가 반영돼요."],
   "en": {
     "title": "Retirement legend score fix",
     "items": [

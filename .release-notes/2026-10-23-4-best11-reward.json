@@ -1,0 +1,24 @@
+{
+  "id": "t-11-463b-best11-reward",
+  "title": "시즌 BEST 11에 뽑히면 보상을 받아요",
+  "items": [
+    "시즌이 끝나 BEST 11이 확정되면 뽑힌 선수의 구단주가 선수 후보 리롤권 10장, 프리미엄 스카우트권 2장, 잠재력 강화권 2장을 받아요.",
+    "보상은 시즌마다 한 번 들어오고, 받으면 홈 알림으로 알려 드려요."
+  ],
+  "en": {
+    "title": "Rewards for the season BEST 11",
+    "items": [
+      "When the season ends and the BEST 11 is final, each selected player's owner gets 10 prospect rerolls, 2 premium scouts and 2 potential boosts.",
+      "The reward arrives once per season, and a home notification tells you when it lands."
+    ]
+  },
+  "ja": {
+    "title": "シーズンBEST 11に選ばれると報酬がもらえます",
+    "items": [
+      "シーズンが終わってBEST 11が確定すると、選ばれた選手のオーナーに選手候補リロール券10枚、プレミアムスカウト券2枚、潜在能力強化券2枚が届きます。",
+      "報酬はシーズンごとに1回届き、受け取るとホームのお知らせでお知らせします。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

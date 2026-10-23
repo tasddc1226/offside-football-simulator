@@ -144,4 +144,7 @@ export const CUP_JA: Record<CupTextKey, string> = {
   leagueForfeitedTitle: 'オフサイドリーグの残り試合は不戦敗になります',
   leagueForfeitedBody:
     '試合に{n}回出場できませんでした。残り試合はすべて0-3の負けとして記録されます。',
+  best11RewardTitle: 'シーズン{season} BEST 11に選ばれました',
+  best11RewardBody:
+    '{name}選手がシーズン{season} BEST 11に確定しました。選手候補リロール券{n}枚、プレミアムスカウト券{s}枚、ポテンシャル強化券{b}枚を受け取りました。',
 };

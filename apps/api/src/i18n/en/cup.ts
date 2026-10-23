@@ -152,4 +152,7 @@ export const CUP_EN: Record<CupTextKey, string> = {
   leagueForfeitedTitle: 'Your remaining OFFSIDE League matches will be forfeited',
   leagueForfeitedBody:
     'Your club missed {n} matches. All remaining matches will be recorded as 0:3 losses.',
+  best11RewardTitle: 'You made the Season {season} BEST 11',
+  best11RewardBody:
+    '{name} is confirmed in the Season {season} BEST 11. You received {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s).',
 };

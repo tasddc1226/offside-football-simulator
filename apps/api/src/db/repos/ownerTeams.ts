@@ -186,6 +186,8 @@ type LineupRow = {
   publicName: string | null;
   type?: string | null;
   foot?: string | null;
+  mainLeague?: string | null;
+  mainClub?: string | null;
   /** T-11-105 이 팀 구단주가 직접 키운 선수인지(SQL 비교라 0/1일 수 있다). */
   raised?: boolean | number | null;
   serviceSeason?: number | null;
@@ -208,6 +210,8 @@ export const toLineupCareer = (
   publicName: r.publicName,
   type: r.type ?? null,
   foot: r.foot ?? null,
+  mainLeague: r.mainLeague || null,
+  mainClub: r.mainClub || null,
   raised: !!r.raised,
   season: r.serviceSeason ?? 0,
 });
@@ -238,6 +242,9 @@ export function teamPlayerCard(
     type: career.type,
     // T-11-211 카드에 주발을 그린다(시너지 '주발 맞춤'도 이 값을 쓴다).
     ...(career.foot ? { foot: career.foot } : {}),
+    // T-11-467 시너지 리그 컬러 · 클럽 동료(편성 미리보기가 서버와 같이 센다).
+    ...(career.mainLeague ? { mainLeague: career.mainLeague } : {}),
+    ...(career.mainClub ? { mainClub: career.mainClub } : {}),
     season: career.season,
     ...bodyOf(r),
   };
@@ -296,6 +303,8 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       look: careers.look,
       type: careers.type,
       foot: careers.foot,
+      mainLeague: careers.mainLeague,
+      mainClub: careers.mainClub,
       serviceSeason: cards.serviceSeason,
       legendScore: cards.legendScore,
       cardValue: cards.cardValue,
@@ -411,6 +420,8 @@ export async function careersByIds(db: Db, ids: string[]) {
       look: careers.look,
       type: careers.type,
       foot: careers.foot,
+      mainLeague: careers.mainLeague,
+      mainClub: careers.mainClub,
       raiserId: careers.profileId,
       serviceSeason: cards.serviceSeason,
       hidden: sql<number>`coalesce(${careers.hidden}, 0)`,

@@ -1,0 +1,23 @@
+{
+  "id": "t-11-464-store-update-alert",
+  "title": "새 앱 버전이 나오면 팝업으로 알려 드려요",
+  "items": [
+    "스토어에 새 버전이 나왔는데 이 앱이 이전 버전이면, 앱을 켤 때 업데이트 팝업이 떠요. '업데이트'를 누르면 스토어로 바로 가요.",
+    "'나중에'를 고르면 같은 버전으로는 사흘 동안 다시 묻지 않아요."
+  ],
+  "en": {
+    "title": "We'll let you know with a pop-up when a new app version is out",
+    "items": [
+      "If a new version is in the store and your app is older, an update pop-up appears when you open the app. Tap 'Update' to go straight to the store.",
+      "If you choose 'Later', we won't ask again about the same version for three days."
+    ]
+  },
+  "ja": {
+    "title": "新しいアプリのバージョンが出たらポップアップでお知らせします",
+    "items": [
+      "ストアに新しいバージョンが出ていて、このアプリが前のバージョンなら、起動時にアップデートのポップアップが出ます。「アップデート」を押すとすぐストアに移動します。",
+      "「あとで」を選ぶと、同じバージョンについては3日間もう一度聞きません。"
+    ]
+  },
+  "availability": "app"
+}

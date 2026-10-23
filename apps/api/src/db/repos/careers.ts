@@ -21,6 +21,7 @@ import {
   type DetailPos,
   type PeakProfile,
 } from '@offside/contracts/positions';
+import { mainClubSet } from './mainClub.js';
 import {
   and,
   desc,
@@ -53,6 +54,7 @@ import {
   ownerFunds,
   ownerTeams,
   profiles,
+  prunedCareers,
   retiredNumbers,
   seasonTelemetry,
 } from '../schema.js';
@@ -98,6 +100,8 @@ export type PutCareerSeasonInput = {
   hide?: boolean | undefined;
   now: string;
   uploadRevision?: number;
+  /** T-11-468 지운 버린 커리어를 다시 만들 때 처음 서비스 시즌(pruned_careers). undefined면 지금 시각으로 정한다. */
+  serviceSeason?: number | null;
 };
 
 /**
@@ -171,7 +175,10 @@ export async function putCareerSeason(
           ...name,
           // 처음 올라온 시각의 시즌(0 = 프리시즌, 시즌 사이 휴식기면 NULL) — onConflict set에 없어 바뀌지 않는다.
           // T-11-095 세부 포지션 없이 만든 프리시즌 선수는 개막 뒤에 처음 올라와도 프리시즌이다.
-          serviceSeason: firstUploadSeasonAt(now, dpos !== null),
+          serviceSeason:
+            input.serviceSeason !== undefined
+              ? input.serviceSeason
+              : firstUploadSeasonAt(now, dpos !== null),
           createdAt: now,
           updatedAt: now,
         })
@@ -388,6 +395,8 @@ export async function putRetirement(
       })
       .where(eq(careers.id, careerId))
       .returning(retiredHead),
+    // T-11-467 시너지용 주 리그 · 클럽(서버에 쌓인 시즌 기록으로 센다).
+    db.update(careers).set(mainClubSet).where(eq(careers.id, careerId)),
     // T-11-163 은퇴 장려금. 아래 카드 insert보다 먼저 — 카드가 아직 없을 때(이 커리어의 첫 은퇴)만 한 번 준다.
     ...(bonus > 0
       ? [
@@ -991,6 +1000,13 @@ export const seasonOvrQuery = (db: Db, careerId: string, year: number) =>
     .select({ ovr: careerSeasons.ovr })
     .from(careerSeasons)
     .where(and(eq(careerSeasons.careerId, careerId), eq(careerSeasons.year, year)));
+
+/** T-11-468 지운 버린 커리어의 주인 · 처음 서비스 시즌(기본 키 한 줄). 시즌 업로드가 커리어 머리와 한 batch로 읽는다. */
+export const prunedCareerQuery = (db: Db, careerId: string) =>
+  db
+    .select({ profileId: prunedCareers.profileId, serviceSeason: prunedCareers.serviceSeason })
+    .from(prunedCareers)
+    .where(eq(prunedCareers.careerId, careerId));
 
 /** 은퇴 PUT이 보는 커리어의 소유자·상태·포지션(스냅샷 JSON까지 읽지 않는다). 조회문 — 다른 읽기와 한 batch로 보낼 수 있다. */
 export const careerHeadQuery = (db: Db, careerId: string) =>

@@ -11,6 +11,8 @@ import { runCareerRetention } from './careerRetention.js';
 import { DAILY_META_KEY } from './daily.js';
 import { backupDay } from './backup.js';
 import { logErrorText } from '../logError.js';
+import { runBest11Daily, type Best11DailyCursor } from '../db/repos/best11.js';
+import { pruneAbandonedCareers, type PruneResult } from './pruneAbandoned.js';
 
 export const DAILY_STATE_KEY = 'cron:daily:state';
 const LEASE_MS = 4 * 60_000;
@@ -22,6 +24,8 @@ export const DAILY_STAGES = [
   'careerRetention',
   'achievements',
   'iapRefunds',
+  'best11',
+  'pruneAbandoned',
 ] as const;
 type Stage = (typeof DAILY_STAGES)[number];
 export type DailyState = {
@@ -93,6 +97,20 @@ function steps(env: Bindings): DailyStep {
       }
       case 'iapRefunds':
         return { done: true, result: await syncGoogleVoided(env, db, at) };
+      case 'best11': {
+        // T-11-463 마감한 시즌 확정 · 빠진 후보 채우기 · 숨김 걸러 내기(세부 포지션 몇 개씩 이어 간다).
+        const result = await runBest11Daily(
+          db,
+          new Date(at).toISOString(),
+          (prior as { cursor?: Best11DailyCursor } | undefined)?.cursor,
+        );
+        return { done: result.done, result };
+      }
+      case 'pruneAbandoned': {
+        // T-11-468 버린 커리어(한 시간 안에 멈추고 일주일 넘게 갱신 없음) 정리. 하루 상한까지 cron마다 이어 간다.
+        const result = await pruneAbandonedCareers(env.DB, at, prior as PruneResult | undefined);
+        return { done: result.done, result };
+      }
     }
   };
 }

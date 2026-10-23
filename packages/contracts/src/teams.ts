@@ -133,6 +133,9 @@ export const TeamPlayerSchema = z.strictObject({
   /** T-11-105 시너지용 유형 id·주발. 구버전 응답에는 없다. */
   type: z.string().nullable().optional(),
   foot: z.string().nullable().optional(),
+  /** T-11-467 시너지 '리그 컬러' · '클럽 동료'용 가장 오래 뛴 프로 리그 id · 클럽 id. 아직 모르면 없다. */
+  mainLeague: z.string().nullable().optional(),
+  mainClub: z.string().nullable().optional(),
   /** T-11-114 카드 시즌(0 = 프리시즌). 팀 시즌보다 앞이면 와일드카드다. 구버전 응답에는 없다. */
   season: z.number().int().nonnegative().optional(),
   /** T-11-180 키(cm)·몸무게(kg). 체격을 입력하지 않은 옛 커리어·구버전 응답에는 없다. */
@@ -754,6 +757,8 @@ const TeamSynergyShape = z.strictObject({
       kind: z.enum(['duo', 'team', 'badge', 'foot']),
       nation: z.string().optional(),
       style: z.string().optional(),
+      league: z.string().optional(),
+      club: z.string().optional(),
     }),
   ),
   foot: z.array(z.number()),

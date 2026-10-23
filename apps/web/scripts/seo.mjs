@@ -295,6 +295,7 @@ const GUIDE_SECTIONS = [
       guideCopy.retiredNumber,
       guideCopy.retiredNumberContribution,
       guideCopy.retiredNumberProgress,
+      guideCopy.best11,
       '영구결번 자격을 채웠지만 후보 구단의 번호가 모두 먼저 결번되면 명예의 벽 칭호를 받습니다. 영구결번과는 별개이며 대표 칭호는 직접 고릅니다. 기존 선수는 은퇴 당시 조건을 서버 기록으로 확인할 수 있는 경우에만 칭호가 기록됩니다.',
     ],
   ],
@@ -449,6 +450,7 @@ const FAQ_ITEMS = [
     '외국 국적 선수도 병역이 있나요?',
     '없습니다. 병역은 대한민국 국적 선수에게만 있습니다. 외국 국적 선수는 입대 제안을 받지 않고, 병역은 ‘해당 없음’으로 표시됩니다.',
   ],
+  ['시즌 BEST 11은 어떻게 뽑나요?', guideCopy.best11],
   [
     '영구결번은 어떻게 받나요?',
     `${guideCopy.retiredNumber} ${guideCopy.retiredNumberContribution} ${guideCopy.retiredNumberProgress}`,

@@ -482,6 +482,9 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'hidden',
     'pot',
     'pot_real',
+    // T-11-467 리그 컬러 · 클럽 동료.
+    'main_league',
+    'main_club',
   ],
   career_seasons: [
     'career_id',
@@ -599,6 +602,21 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'updated_at',
     'activated_at',
   ],
+  // T-11-463 시즌 BEST 11.
+  best11_candidates: [
+    'career_id',
+    'season',
+    'profile_id',
+    'dpos',
+    'retired_at',
+    'raw_json',
+    'created_at',
+  ],
+  best11_slots: ['season', 'slot', 'career_id', 'score', 'since', 'rewarded_at'],
+  best11_seasons: ['season', 'final_at', 'updated_at', 'gate_json'],
+  best11_changes: ['id', 'season', 'slot', 'in_career_id', 'out_career_id', 'at'],
+  // T-11-468 지운 버린 커리어의 흔적.
+  pruned_careers: ['career_id', 'profile_id', 'service_season', 'pruned_at'],
   // T-11-333 코드 배포 밸런스 패치 공개 이력.
   balance_patches: [
     'id',

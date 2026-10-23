@@ -403,6 +403,10 @@ export const careers = sqliteTable(
     lastClub: text('last_club'),
     // T-10-066 마지막 소속 클럽 id(web CLUBS[].id). 구단명이 바뀌어도 엠블럼이 제 클럽을 찾는다. 옛 기록은 NULL.
     lastClubId: text('last_club_id'),
+    // T-11-467 시너지(리그 컬러 · 클럽 동료)용 가장 오래 뛴 프로 리그 id · 클럽 id(career_seasons에서 은퇴 때 센다, mainClubSql).
+    // 아직 세지 않았으면 NULL, 셌는데 프로 시즌이 없으면 ''.
+    mainLeague: text('main_league'),
+    mainClub: text('main_club'),
     // T-11-191 은퇴 선수 도트 꾸미기 코드(외형 전용 PUT으로 갱신 가능)(game look.ts lookCode). 꾸미지 않았거나 옛 기록은 NULL.
     look: text('look'),
     /** Server-owned, separate from active-career cosmetics. The art round a change was spent in (0 = none);
@@ -2079,3 +2083,74 @@ export const webPayOrders = sqliteTable(
     uniqueIndex('web_pay_orders_xsolla_order_unique').on(t.xsollaOrderId),
   ],
 );
+
+/**
+ * T-11-463 시즌 BEST 11 후보. 은퇴(자격을 갖춘 공개 이름 선수)마다 세 기둥 원점수를 한 줄 담는다. 자리마다 지수 상위
+ * BEST11_POOL명과 정규화 기준이 되는 후보만 남기고 나머지는 다시 계산할 때 지운다(시즌당 수백 줄).
+ */
+export const best11Candidates = sqliteTable(
+  'best11_candidates',
+  {
+    careerId: text('career_id')
+      .primaryKey()
+      .references(() => careers.id, { onDelete: 'cascade' }),
+    season: integer('season').notNull(),
+    profileId: text('profile_id').notNull(),
+    dpos: text('dpos').notNull(),
+    retiredAt: text('retired_at').notNull(),
+    /** best11Raw 결과(JSON). */
+    rawJson: text('raw_json').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [index('best11_candidates_season_idx').on(t.season)],
+);
+
+/** T-11-463 시즌마다 지금 BEST 11(자리마다 한 줄)과 그 자리에 오른 시각. */
+export const best11Slots = sqliteTable(
+  'best11_slots',
+  {
+    season: integer('season').notNull(),
+    slot: text('slot').notNull(),
+    careerId: text('career_id')
+      .notNull()
+      .references(() => careers.id, { onDelete: 'cascade' }),
+    score: real('score').notNull(),
+    since: text('since').notNull(),
+    /** T-11-463b 시즌 확정 뒤 자리 주인 구단주에게 보상을 준 시각(한 번만 준다). */
+    rewardedAt: text('rewarded_at'),
+  },
+  (t) => [primaryKey({ columns: [t.season, t.slot] })],
+);
+
+/** T-11-463 시즌 BEST 11의 상태: 확정 시각, 마지막 갱신, 은퇴 때 후보를 거르는 자리별 기준(정규화 최댓값 · 커트라인). */
+export const best11Seasons = sqliteTable('best11_seasons', {
+  season: integer('season').primaryKey(),
+  finalAt: text('final_at'),
+  updatedAt: text('updated_at').notNull(),
+  gateJson: text('gate_json'),
+});
+
+/** T-11-463 자리 주인이 바뀐 기록(홈 소식 · "BEST 11에 올랐던" 이력). */
+export const best11Changes = sqliteTable(
+  'best11_changes',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    season: integer('season').notNull(),
+    slot: text('slot').notNull(),
+    inCareerId: text('in_career_id').references(() => careers.id, { onDelete: 'set null' }),
+    outCareerId: text('out_career_id').references(() => careers.id, { onDelete: 'set null' }),
+    at: text('at').notNull(),
+  },
+  (t) => [index('best11_changes_season_idx').on(t.season, t.at)],
+);
+
+/**
+ * T-11-468 매일 단계가 지운 버린 커리어(생성 뒤 한 시간 안에 멈추고 일주일 넘게 갱신 없음)의 흔적. 기기에서 다시 이어 하면
+ * 다음 시즌 업로드가 커리어를 새로 만드는데, 그때 원래 서비스 시즌을 되살리고 다른 프로필이 같은 id를 가져가지 못하게 한다.
+ */
+export const prunedCareers = sqliteTable('pruned_careers', {
+  careerId: text('career_id').primaryKey(),
+  profileId: text('profile_id').notNull(),
+  serviceSeason: integer('service_season'),
+  prunedAt: text('pruned_at').notNull(),
+});

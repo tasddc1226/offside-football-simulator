@@ -41,6 +41,9 @@ export type LineupCareer = {
   foot?: string | null;
   nation?: string | null;
   raised?: boolean;
+  /** T-11-467 가장 오래 뛴 프로 리그 id · 클럽 id(시너지 리그 컬러 · 클럽 동료). */
+  mainLeague?: string | null;
+  mainClub?: string | null;
   /** T-11-114 카드 시즌(0 = 프리시즌). 팀 시즌보다 앞이면 와일드카드. */
   season?: number;
 };
