@@ -17,5 +17,4 @@ export const webPay: Translation<WebPayMsgs> = {
   canceled: 'This payment was refunded, so the items were taken back.',
   refund:
     'You can request a refund for unused items within 7 days of payment. Used items are not refundable. Contact: contact@offside-lab.com',
-  shopWeb: 'You can buy them below in Buy on the web.',
 };

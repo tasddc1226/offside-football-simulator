@@ -1,9 +1,11 @@
 <script lang="ts">
-  // T-11-196 프리미엄 스카우트권 상점(앱 owner/ScoutShop.tsx) — 잠재력 강화권 상점 아래. 웹은 스토어 결제를 하지 않아, 가진 장수와
-  // '앱에서 살 수 있어요', 확률 공개표만 보인다. 장수는 강화권 상점과 같은 30초 메모를 쓴다. T-11-244 구단 자금으로 한 주 1장.
+  // T-11-196 프리미엄 스카우트권 상점(앱 owner/ScoutShop.tsx) — 잠재력 강화권 상점 아래. 가진 장수 · 설명 · 확률 공개표를 보이고,
+  // T-11-471 웹 결제가 열려 있으면 앱 스토어 묶음 자리에 웹 결제 묶음을, 닫혀 있으면 '앱에서 살 수 있어요'를 보인다. 장수는
+  // 강화권 상점과 같은 30초 메모를 쓴다. T-11-244 구단 자금으로 한 주 1장.
   import { fetchItems } from '@offside/app-core/api/cup';
-  import { webPayText as W } from '@offside/app-core/i18n/ko/webPay';
-  import { webPay } from './webPay.svelte.js';
+  import { hasSessionHint } from '@offside/app-core/api/client';
+  import WebPayPacks from './WebPayPacks.svelte';
+  import { loadWebPay, webPay } from './webPay.svelte.js';
   import { scoutText as L } from '@offside/app-core/i18n/ko/scout';
   import { scoutPityAt } from '@offside/contracts/cup';
   import ScoutOdds from './ScoutOdds.svelte';
@@ -13,6 +15,9 @@
 
   let have = $state(0);
   $effect(() => void fetchItems().then((r) => r.ok && (have = r.data.scout ?? 0)));
+  $effect(() => {
+    if (hasSessionHint()) void loadWebPay();
+  });
 </script>
 
 <section class="card ss" aria-label={L.title} data-scout-shop>
@@ -21,7 +26,7 @@
   <span class="muted fs-sm" data-scout-sub>{have ? L.shopSubHave({ n: have }) : L.shopSub}</span>
   <p class="muted fs-sm">{L.what}</p>
   <p class="muted fs-sm">{L.pityHelp(scoutPityAt())}</p>
-  <p class="muted fs-sm">{webPay.config?.enabled ? W.shopWeb : L.shopWeb}</p>
+  {#if webPay.config?.enabled}<WebPayPacks item="scout" />{:else}<p class="muted fs-sm">{L.shopWeb}</p>{/if}
   <ScoutFunds onbought={(n, balance, spent) => ((have = n), onbought?.(balance, spent))} />
   <ScoutOdds />
 </section>

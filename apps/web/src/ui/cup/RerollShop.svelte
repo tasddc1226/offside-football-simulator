@@ -2,6 +2,7 @@
   // T-11-152 리롤권 상점(구단주 화면). 구단 자금으로 선수 후보 리롤권을 산다. 접힌 카드에는 가진 장수만 보이고(후보 화면과
   // 같은 30초 메모), 상점 값은 펼칠 때만 묻는다. 사면 서버가 돌려준 상점 값으로 바꾸고 onbought로 구단주 화면의 자금 줄을
   // 새 잔액으로 고친다(다시 묻지 않는다). focus면(후보 화면 '리롤권 상점 가기') 펼친 채로 열고 카드로 내려간다.
+  // T-11-471 펼치면 앱 스토어 묶음 자리에 웹 결제 묶음(웹 결제가 열린 구단주만)을 보인다.
   import { buyReroll, fetchItems, fetchRerollShop, type RerollShopResponse } from '@offside/app-core/api/cup';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
   import { fundsText } from '@offside/app-core/market';
@@ -9,6 +10,7 @@
   import Skeleton from '../Skeleton.svelte';
   import FundsShort from './FundsShort.svelte';
   import { toast } from '../helpers.js';
+  import WebPayPacks from './WebPayPacks.svelte';
 
   let { onbought, focus = false }: { onbought?: (balance: number, spent: number) => void; focus?: boolean } = $props();
 
@@ -98,6 +100,7 @@
         </button>
       {/if}
       <p class="muted fs-sm">{L.shopNote}</p>
+      <WebPayPacks item="reroll" />
     {:else}
       {#if failed}<p class="muted fs-sm">{L.shopLoadFail}</p>{:else}<Skeleton height={96} />{/if}
     {/if}

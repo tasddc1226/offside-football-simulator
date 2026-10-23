@@ -1,4 +1,4 @@
-// T-11-454 웹 결제(엑솔라) — 웹 구단주 화면 상점(apps/web ui/cup/WebPayShop.svelte).
+// T-11-454 웹 결제(엑솔라). T-11-471부터 앱 스토어 묶음(IapPacks)과 같은 자리에 아이템별로 보인다(apps/web ui/cup/WebPayPacks.svelte).
 import { ns } from '../core';
 
 const ko = {
@@ -16,7 +16,6 @@ const ko = {
   canceled: '환불된 결제라 아이템을 회수했어요.',
   refund:
     '받은 아이템을 쓰지 않았다면 결제일로부터 7일 안에 환불을 요청할 수 있어요. 쓴 아이템은 환불되지 않아요. 문의: contact@offside-lab.com',
-  shopWeb: '아래 웹에서 사기에서 살 수 있어요.',
 };
 
 export type WebPayMsgs = typeof ko;

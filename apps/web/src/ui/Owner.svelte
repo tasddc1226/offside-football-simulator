@@ -17,7 +17,6 @@
   import BoostShop from './cup/BoostShop.svelte';
   import RenameShop from './cup/RenameShop.svelte';
   import ScoutShop from './cup/ScoutShop.svelte';
-  import WebPayShop from './cup/WebPayShop.svelte';
   import RerollShop from './cup/RerollShop.svelte';
   import { ownerLockedText, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
   import { num, recordText } from '@offside/app-core/teamText';
@@ -264,8 +263,6 @@
     <BoostShop />
     <RenameShop />
     <ScoutShop onbought={(balance, spent) => market && (market = { balance, clubValue: market.clubValue - spent })} />
-    <!-- T-11-454 웹 결제: 서버가 연 구단주에게만 보인다. -->
-    <WebPayShop />
     <details class="card" data-app-shop-guide>
       <summary class="disc-row">{Install.conversionShopTitle}<span class="disc-chev" aria-hidden="true"></span></summary>
       <p class="muted fs-sm">{Install.conversionShopBody}</p>
