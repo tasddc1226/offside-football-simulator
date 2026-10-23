@@ -38,7 +38,6 @@ import {
   divisionRank,
   editionCups,
   fitsDivision,
-  HOME_GIFT,
   lockAt,
   OWNER_ITEMS,
   shopPriceAt,
@@ -70,13 +69,7 @@ import {
   rewardSnapshot,
   shopSnapshot,
 } from '../db/repos/itemShop.js';
-import {
-  claimHomeGift,
-  claimSeasonGift,
-  homeGiftClaimed,
-  ownerItemsOf,
-  spendItem,
-} from '../db/repos/iap.js';
+import { claimSeasonGift, ownerItemsOf, spendItem } from '../db/repos/iap.js';
 import { seasonAchGiftOf } from '../team/ownerAchievements.js';
 import { countOpenListingsAmong } from '../db/repos/market.js';
 import { newId } from '../db/ids.js';
@@ -779,31 +772,26 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
       return ok(c, OwnerItemsResponseSchema, items, 200, NO_STORE);
     });
 
-  // T-11-275 홈 선물. 로그인한 구단주만(아니면 403 GOOGLE_LOGIN_REQUIRED) 한 번 받는다. 조회는 PK 한 번이고 홈을 열 때
-  // 구단주 표시가 있는 기기만 부른다. 받기는 재시도가 두 번 받지 않게 멱등 키도 쓴다(받은 기록 PK가 최종 방어선).
-  // T-11-386 홈 선물을 받았으면 시즌 1 업적 보상(시즌 2 동안)을 같은 칸에 싣는다 — 처음 물을 때만 시즌 1 업적을 센다.
+  // T-11-386 홈 선물 칸: 시즌 1 업적 보상(시즌 2 동안). 로그인한 구단주만(아니면 403 GOOGLE_LOGIN_REQUIRED) 한 번 받는다.
+  // 홈을 열 때 구단주 표시가 있는 기기만 부른다. 받기는 재시도가 두 번 받지 않게 멱등 키도 쓴다(받은 기록 PK가 최종 방어선).
+  // T-11-472 구단주 선물(T-11-275)은 없앴다 — 옛 앱이 그 id로 받기를 누르면 409 GIFT_CLAIMED로 카드를 닫는다.
   app.get('/v1/items/gift', requireProfile, async (c) => {
     const me = await requireOwner(c);
-    const db = getDb(c);
-    let gift: HomeGiftResponse['gift'] = null;
-    if (!(await homeGiftClaimed(db, me.id))) {
-      const { id, boost, scout } = HOME_GIFT;
-      gift = { id, kind: 'home', boost, scout };
-    } else {
-      const r = await seasonAchGiftOf(db, me, nowIso());
-      const g = ACH_SEASON_GIFT;
-      if (r) gift = { id: g.id, kind: 'achSeason', season: g.season, ...r };
-    }
+    const r = await seasonAchGiftOf(getDb(c), me, nowIso());
+    const g = ACH_SEASON_GIFT;
+    const gift: HomeGiftResponse['gift'] = r
+      ? { id: g.id, kind: 'achSeason', season: g.season, ...r }
+      : null;
     return ok(c, HomeGiftResponseSchema, { gift }, 200, NO_STORE);
   });
-  // id가 없으면(옛 앱) 조회와 같은 순서로 지금 받을 수 있는 첫 선물을 준다.
+  // id가 없으면(옛 앱) 시즌 업적 보상을 받는다.
   app.post('/v1/items/gift/claim', requireProfile, idempotency, async (c) => {
     const me = await requireOwner(c);
     const { id } = readBody(c, GiftClaimBodySchema);
     const db = getDb(c);
     const now = nowIso();
-    let items = id === ACH_SEASON_GIFT.id ? null : await claimHomeGift(db, me.id, now);
-    if (!items && id !== HOME_GIFT.id) {
+    let items = null;
+    if (id === undefined || id === ACH_SEASON_GIFT.id) {
       const r = await seasonAchGiftOf(db, me, now);
       if (r) items = await claimSeasonGift(db, me.id, ACH_SEASON_GIFT.id, r, now);
     }

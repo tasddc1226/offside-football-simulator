@@ -108,7 +108,7 @@ export default function Home() {
     cup: <CupBanner onOpen={() => go('cup')} />,
     // T-11-418 오프사이드 리그 소식(신청은 리그 화면에서).
     league: <LeagueBanner />,
-    // T-11-275 구단주 선물(로그인한 구단주가 한 번 받으면 사라진다).
+    // 홈 선물 칸 · 시즌 업적 보상(T-11-386, 받으면 사라진다. T-11-472 구단주 선물은 없앴다).
     gift: <HomeGift />,
     attendance: <HomeAttendance auto={firstHome} />,
     live: <HomeLive />,
