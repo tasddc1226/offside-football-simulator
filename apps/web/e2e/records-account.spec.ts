@@ -225,7 +225,10 @@ test('D7 은퇴한 커리어 위로 백업을 불러올 때도 묻고, 커리어
   await page.locator('#sheet [data-sheet="1"]').click();
   await expect(page.locator('#toast')).not.toContainText('백업을 불러왔어요');
 
-  await page.evaluate(() => localStorage.clear());
+  // T-11-473 첫 커리어 안내는 끝난 채로 둔다(다른 기기를 흉내 낼 뿐이다).
+  await page.evaluate(
+    () => (localStorage.clear(), localStorage.setItem('ft_tutorial', '{"i":-1}')),
+  );
   await page.goto('/');
   await page.locator('[data-act="settings"]').click();
   await expect(page.locator('[data-backup="none"]')).toContainText('내보낼 백업이 없어요');

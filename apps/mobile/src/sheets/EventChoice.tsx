@@ -13,6 +13,7 @@ import { DISPLAY, rem } from '../theme/type';
 import { Press } from '../ui/Press';
 import { Txt } from '../ui/Txt';
 import { mixColor } from './parts';
+import { CoachTarget } from '../components/Coachmark';
 
 export function EventChoice({ v }: { v: Extract<SheetView, { kind: 'event' }> }) {
   const s = useSnapshot(v);
@@ -48,7 +49,7 @@ export function EventChoice({ v }: { v: Extract<SheetView, { kind: 'event' }> })
         {s.title}
       </Txt>
       <Txt>{s.text}</Txt>
-      <View style={{ gap: 10 }}>
+      <CoachTarget id="choice" style={{ gap: 10 }}>
         {s.choices.map((ch, i) => (
           <Press
             key={i}
@@ -97,7 +98,7 @@ export function EventChoice({ v }: { v: Extract<SheetView, { kind: 'event' }> })
             </View>
           </Press>
         ))}
-      </View>
+      </CoachTarget>
       {s.legend.length ? (
         <View testID="event-legend" style={{ gap: 2 }}>
           {s.legend.map((l) => (

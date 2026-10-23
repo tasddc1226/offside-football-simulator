@@ -14,7 +14,6 @@ export type HomeBlock =
   | 'seasonGauge'
   | 'cup'
   | 'league'
-  | 'firstGuide'
   | 'live';
 
 /** 받을 게 없을 때의 순서(T-11-435 전 홈 순서 그대로). */
@@ -27,7 +26,6 @@ export const HOME_BLOCKS: readonly HomeBlock[] = [
   'league',
   'gift',
   'attendance',
-  'firstGuide',
   'live',
 ];
 

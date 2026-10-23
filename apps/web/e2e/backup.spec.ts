@@ -29,7 +29,10 @@ test('백업 코드를 복사해 두고 저장소를 비운 뒤 불러오면 커
   expect(await page.evaluate(() => localStorage.getItem('ft_save'))).not.toBeNull();
 
   // 다른 기기처럼: 저장소를 비우고 다시 연다.
-  await page.evaluate(() => localStorage.clear());
+  // T-11-473 첫 커리어 안내는 끝난 채로 둔다(다른 기기를 흉내 낼 뿐이다).
+  await page.evaluate(
+    () => (localStorage.clear(), localStorage.setItem('ft_tutorial', '{"i":-1}')),
+  );
   await page.goto('/');
   await expect(page.locator('[data-act="continue"]')).toHaveCount(0);
   await page.locator('[data-act="settings"]').click();

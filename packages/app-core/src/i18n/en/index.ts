@@ -109,6 +109,7 @@ import { teamSynergy } from './teamSynergy';
 import { title } from './title';
 import { titleTag } from './titleTag';
 import { translate } from './translate';
+import { tutorial } from './tutorial';
 import { webPay } from './webPay';
 
 export const en = {
@@ -221,5 +222,6 @@ export const en = {
   title,
   titleTag,
   translate,
+  tutorial,
   webPay,
 };
