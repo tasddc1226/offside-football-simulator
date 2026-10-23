@@ -4,9 +4,6 @@ import { careerReminderText as reminderJa } from '../i18n/ja/careerReminder.js';
 import { attendanceReminderText as attendanceKo } from '../i18n/ko/attendanceReminder.js';
 import { attendanceReminderText as attendanceEn } from '../i18n/en/attendanceReminder.js';
 import { attendanceReminderText as attendanceJa } from '../i18n/ja/attendanceReminder.js';
-import { giftReminderText as giftKo } from '../i18n/ko/giftReminder.js';
-import { giftReminderText as giftEn } from '../i18n/en/giftReminder.js';
-import { giftReminderText as giftJa } from '../i18n/ja/giftReminder.js';
 import { RETIRED_NUMBER_SCOUTS } from '@offside/contracts/cup';
 import { INVITE_REROLLS, INVITE_SCOUTS } from '@offside/contracts/owner-team';
 import { OLD_INVITEE, OLD_INVITER, PUSH_JA, PUSH_TAIL_JA } from '../i18n/ja/push.js';
@@ -78,10 +75,6 @@ export function pushText(ko: string, lang: Lang): string {
   const attendance = lang === 'en' ? attendanceEn : attendanceJa;
   if (ko === attendanceKo.title) return attendance.title;
   if (ko === attendanceKo.body) return attendance.body;
-  // T-11-388 홈 선물 안내.
-  const gift = lang === 'en' ? giftEn : giftJa;
-  if (ko === giftKo.title) return gift.title;
-  if (ko === giftKo.body) return gift.body;
   const T = TABLES[lang];
   const hit = T.exact[ko];
   if (hit) return hit;

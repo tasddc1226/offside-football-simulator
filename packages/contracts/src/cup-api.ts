@@ -292,14 +292,14 @@ export type RerollShopResponse = z.infer<typeof RerollShopResponseSchema>;
  * 0으로 돌린다). 본문이 없으면(천장을 모르는 옛 앱) 확정 모드를 주지 않고 장수만 센다.
  */
 /**
- * T-11-275 GET /v1/items/gift — 받을 수 있는 홈 선물. 받았으면 null. T-11-386 홈 선물을 받았으면 시즌 업적 보상
- * (kind 'achSeason', season = 업적을 센 시즌)을 같은 칸으로 준다. kind가 없으면 홈 선물(옛 서버).
+ * GET /v1/items/gift — 홈 선물 칸에 받을 수 있는 시즌 업적 보상(T-11-386, kind 'achSeason', season = 업적을 센 시즌).
+ * 없으면 null. T-11-472 구단주 선물(T-11-275)은 없앴다 — 받은 기록(gift_claims 'gift-2026-10')은 그대로 둔다.
  */
 export const HomeGiftResponseSchema = z.strictObject({
   gift: z
     .strictObject({
       id: z.string(),
-      kind: z.enum(['home', 'achSeason']).optional(),
+      kind: z.enum(['achSeason']).optional(),
       season: z.number().int().min(1).optional(),
       boost: z.number().int().min(0),
       scout: z.number().int().min(0),

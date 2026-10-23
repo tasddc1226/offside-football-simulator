@@ -11,14 +11,6 @@ const season = (boost: number, scout: number) =>
 describe('giftCopy', () => {
   afterEach(() => setLocale('ko'));
 
-  it('홈 선물은 두 아이템을 함께 말한다', () => {
-    expect(giftCopy({ id: 'gift-2026-10', boost: 20, scout: 5 })).toEqual({
-      title: '구단주 선물이 도착했어요',
-      sub: '잠재력 강화권 20장과 프리미엄 스카우트권 5장을 받을 수 있어요.',
-      done: '잠재력 강화권 20장과 프리미엄 스카우트권 5장을 받았어요.',
-    });
-  });
-
   it('시즌 업적 보상은 받을 아이템만 말한다', () => {
     expect(season(3, 0)).toEqual({
       title: '시즌 1 업적 보상이 도착했어요',

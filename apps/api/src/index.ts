@@ -22,7 +22,6 @@ import { consumePushWork } from './push/queue.js';
 import { queueReengagement } from './push/reengagement.js';
 import { consumeCareerReminders, queueCareerReminders } from './push/careerReminder.js';
 import { queueAttendanceReminders } from './push/attendanceReminder.js';
-import { queueGiftReminders } from './push/giftReminder.js';
 import { consumeCupResults, publishCupResults } from './push/cupResult.js';
 import { consumeCommunityPush } from './push/communityQueue.js';
 import { runCup } from './team/cup.js';
@@ -91,7 +90,6 @@ export default {
       await queueAttendanceReminders(env, controller.scheduledTime).catch(
         logged('attendance-reminder'),
       );
-      await queueGiftReminders(env, controller.scheduledTime).catch(logged('gift-reminder'));
       await publishPushWork(env, 'personal', controller.scheduledTime).catch(
         logged('personal-push-publish'),
       );

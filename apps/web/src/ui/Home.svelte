@@ -99,7 +99,7 @@
       <!-- T-11-418 오프사이드 리그 소식(신청은 리그 화면). 첫 화면 번들 밖 지연 청크. -->
       {#await import('./league/LeagueBanner.svelte') then { default: LeagueBanner }}<LeagueBanner onopen={() => go('league')} />{/await}
     {:else if block === 'gift'}
-      <!-- T-11-275 구단주 선물(로그인한 구단주가 한 번 받으면 사라진다). 첫 화면 번들 밖 지연 청크. -->
+      <!-- 홈 선물 칸 · 시즌 업적 보상(T-11-386, 받으면 사라진다. T-11-472 구단주 선물은 없앴다). 첫 화면 번들 밖 지연 청크. -->
       {#await import('./HomeGift.svelte') then { default: HomeGift }}<HomeGift />{/await}
     {:else if block === 'attendance'}
       <!-- T-11-360 출석 체크 한 줄 입구 + 하루 한 번 뜨는 출석 창(보상은 로그인한 구단주만). 첫 화면 번들 밖 지연 청크. -->
