@@ -1,6 +1,7 @@
 import type { Best11Change, Best11Player, Best11Ranked, Best11Response } from '@offside/contracts';
 import { careersByIds, teamPlayerCard } from './ownerTeams.js';
 import {
+  BEST11_REWARD,
   BEST11_SLOTS,
   BEST11_TOP,
   best11Admits,
@@ -21,8 +22,11 @@ import { alias } from 'drizzle-orm/sqlite-core';
 import type { BatchItem } from 'drizzle-orm/batch';
 import type { Db } from '../client.js';
 import { retryTransientRead, retryTransientWrite } from '../retry.js';
+import { cupKo } from '../../cupText.js';
+import { eventNotificationStatements } from '../../push/events.js';
 import { runBatch } from './batch.js';
 import { isPublicRetired, storedSeasonsOf, type StoredSeasonRow } from './careers.js';
+import { grantItemStatement } from './itemShop.js';
 import { best11Candidates, best11Changes, best11Seasons, best11Slots, careers } from '../schema.js';
 
 // T-11-463 시즌 BEST 11. 은퇴할 때 그 선수의 세 기둥 원점수를 매기고(받아 둔 시즌 기록 기준, 보낸 숫자를 믿지 않는다),
@@ -335,24 +339,37 @@ export async function runBest11Daily(
   db: Db,
   now: string,
   prior?: Best11DailyCursor,
-): Promise<{ done: boolean; cursor?: Best11DailyCursor; finalized: number[]; added: number }> {
+): Promise<{
+  done: boolean;
+  cursor?: Best11DailyCursor;
+  finalized: number[];
+  rewarded: number;
+  added: number;
+}> {
   const finalized: number[] = [];
+  let rewarded = 0;
   for (const s of SERVICE_SEASONS) {
     if (s.id < 1 || s.endsAt === null || s.endsAt > now) continue;
+    // 확정 여부와 아직 보상을 주지 않은 자리 수를 한 번에 읽는다(다 끝난 시즌은 매일 이 읽기 하나로 끝난다).
     const [state] = await retryTransientRead(() =>
       db
-        .select({ finalAt: best11Seasons.finalAt })
+        .select({
+          finalAt: best11Seasons.finalAt,
+          unpaid: sql<number>`(select count(*) from ${best11Slots} where ${best11Slots.season} = ${s.id} and ${best11Slots.rewardedAt} is null)`,
+        })
         .from(best11Seasons)
         .where(eq(best11Seasons.season, s.id)),
     );
-    if (state?.finalAt) continue;
-    await recomputeBest11(db, s.id, now, true);
-    finalized.push(s.id);
+    if (!state?.finalAt) {
+      await recomputeBest11(db, s.id, now, true);
+      finalized.push(s.id);
+    } else if (!state.unpaid) continue;
+    rewarded += await rewardBest11(db, s.id, now);
   }
   const open = SERVICE_SEASONS.find(
     (s) => s.id >= 1 && s.startsAt <= now && (s.endsAt === null || s.endsAt > now),
   );
-  if (!open) return { done: true, finalized, added: 0 };
+  if (!open) return { done: true, finalized, rewarded, added: 0 };
   // 살펴볼 은퇴가 있었던 세부 포지션만 센다(빈 포지션은 조회 한 번이라 한 번에 넘긴다).
   let next = prior?.season === open.id ? prior.dpos : 0;
   let added = 0;
@@ -364,10 +381,69 @@ export async function runBest11Daily(
     next++;
   }
   if (next < DPOS_ORDER.length)
-    return { done: false, cursor: { season: open.id, dpos: next }, finalized, added };
+    return { done: false, cursor: { season: open.id, dpos: next }, finalized, rewarded, added };
   // 다 살펴봤으면 한 번 다시 채운다(숨김 · 이름 비공개로 자격을 잃은 후보도 여기서 빠진다).
   await recomputeBest11(db, open.id, now);
-  return { done: true, finalized, added };
+  return { done: true, finalized, rewarded, added };
+}
+
+/**
+ * T-11-463b 확정한 시즌의 11자리 주인 구단주에게 BEST11_REWARD를 주고 알림을 남긴다. rewarded_at이 비어 있는 자리만 바꾸고
+ * 아이템 · 알림은 그 자리가 이번에 바뀌었을 때만 더한다(매일 단계가 겹치거나 다시 돌아도 한 번). 보상을 준 자리 수.
+ */
+export async function rewardBest11(db: Db, season: number, now: string): Promise<number> {
+  const rows = await retryTransientRead(() =>
+    db
+      .select({ slot: best11Slots.slot, profileId: careers.profileId, name: careers.publicName })
+      .from(best11Slots)
+      .innerJoin(careers, eq(careers.id, best11Slots.careerId))
+      .where(
+        and(
+          eq(best11Slots.season, season),
+          isNull(best11Slots.rewardedAt),
+          isNotNull(best11Seasons.finalAt),
+        ),
+      )
+      .innerJoin(best11Seasons, eq(best11Seasons.season, best11Slots.season)),
+  );
+  if (!rows.length) return 0;
+  const d1 = db.$client;
+  const { rerolls: n, scouts: s, boosts: b } = BEST11_REWARD;
+  const stmts: D1PreparedStatement[] = [];
+  for (const r of rows) {
+    const granted = {
+      sql: 'EXISTS (SELECT 1 FROM best11_slots WHERE season = ? AND slot = ? AND rewarded_at = ?)',
+      params: [season, r.slot, now],
+    };
+    stmts.push(
+      d1
+        .prepare(
+          'UPDATE best11_slots SET rewarded_at = ? WHERE season = ? AND slot = ? AND rewarded_at IS NULL',
+        )
+        .bind(now, season, r.slot),
+      grantItemStatement(d1, r.profileId, 'reroll', n, now, { sql: 'changes() = 1' }),
+      grantItemStatement(d1, r.profileId, 'scout', s, now, granted),
+      grantItemStatement(d1, r.profileId, 'boost', b, now, granted),
+      ...eventNotificationStatements(
+        d1,
+        {
+          profileId: r.profileId,
+          // 한 구단주는 한 시즌에 한 자리만 차지한다.
+          sourceKey: `best11:${season}:reward`,
+          now,
+          content: {
+            kind: 'team',
+            title: cupKo('best11RewardTitle', { season }),
+            body: cupKo('best11RewardBody', { name: r.name ?? '', season, n, s, b }),
+            target: { type: 'screen', screen: 'home' },
+          },
+        },
+        granted,
+      ),
+    );
+  }
+  await retryTransientWrite(() => d1.batch(stmts));
+  return rows.length;
 }
 
 /** 세부 포지션 하나: 레전드 상위 BEST11_SCAN명 중 아직 후보가 아닌 은퇴를 원점수로 매겨, 순위를 바꿀 수 있는 것만 넣는다. */

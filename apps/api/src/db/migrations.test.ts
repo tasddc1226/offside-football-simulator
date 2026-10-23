@@ -601,7 +601,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'raw_json',
     'created_at',
   ],
-  best11_slots: ['season', 'slot', 'career_id', 'score', 'since'],
+  best11_slots: ['season', 'slot', 'career_id', 'score', 'since', 'rewarded_at'],
   best11_seasons: ['season', 'final_at', 'updated_at', 'gate_json'],
   best11_changes: ['id', 'season', 'slot', 'in_career_id', 'out_career_id', 'at'],
   // T-11-468 지운 버린 커리어의 흔적.

@@ -1,7 +1,12 @@
 // T-11-463 시즌 BEST 11 화면 규칙(웹 Best11.svelte · 앱 screens/hof/Best11.tsx가 함께 쓴다): 자리 이름, 선정 이유 세 줄,
 // 자리 변화 한 줄, 그라운드 자리 순서.
 import type { Best11Change, Best11Player, Best11Response } from '@offside/contracts';
-import { BEST11_SLOTS, BEST11_SLOT_ROLE, type Best11Slot } from '@offside/contracts/best11-rules';
+import {
+  BEST11_REWARD,
+  BEST11_SLOTS,
+  BEST11_SLOT_ROLE,
+  type Best11Slot,
+} from '@offside/contracts/best11-rules';
 import { DETAIL_LABEL } from '@offside/contracts/positions';
 import type { TeamPosition } from '@offside/contracts/owner-team';
 import { tn } from '@offside/game/i18n/names';
@@ -77,4 +82,5 @@ export const best11Criteria = (): string[] => [
   L.criteria3,
   L.criteria4,
   L.criteria5,
+  L.reward({ n: BEST11_REWARD.rerolls, s: BEST11_REWARD.scouts, b: BEST11_REWARD.boosts }),
 ];

@@ -144,6 +144,10 @@ export const CUP_KO = {
     '위 부에 빈자리가 생겨 시즌 {season}에는 {tier}부에서 뛰어요. 프리미엄 스카우트권 {s}장을 받았어요.',
   leagueForfeitedTitle: '오프사이드 리그 남은 경기가 기권패로 처리돼요',
   leagueForfeitedBody: '경기에 {n}번 나오지 못했어요. 남은 경기는 모두 0:3 패로 기록돼요.',
+  // T-11-463b 시즌 BEST 11 확정 보상.
+  best11RewardTitle: '시즌 {season} BEST 11에 뽑혔어요',
+  best11RewardBody:
+    '{name} 선수가 시즌 {season} BEST 11로 확정됐어요. 선수 후보 리롤권 {n}장, 프리미엄 스카우트권 {s}장, 잠재력 강화권 {b}장을 받았어요.',
 } as const;
 
 export type CupTextKey = keyof typeof CUP_KO;
