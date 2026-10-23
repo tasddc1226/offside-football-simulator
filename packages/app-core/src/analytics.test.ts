@@ -74,6 +74,12 @@ describe('privacy allowlists', () => {
       expect(campaignQuery(`https://offside-lab.com/${query}&uid=PRIVATE`)).toBe(query);
     }
   });
+  it('keeps the meta reels ad content per country', () => {
+    for (const content of ['jp_reels', 'uk_reels', 'us_reels']) {
+      const query = `?utm_source=meta&utm_medium=paid&utm_campaign=global_test&utm_content=${content}`;
+      expect(campaignQuery(`https://offside-lab.com/${query}&fbclid=PRIVATE`)).toBe(query);
+    }
+  });
   it.each(['launch', 'retirement_share'])(
     'preserves existing campaign %s and content',
     (campaign) => {
