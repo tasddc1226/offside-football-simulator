@@ -25,7 +25,6 @@ export const xsollaSandbox = (env: Bindings) => env.XSOLLA_SANDBOX === '1';
 export type XsollaTokenInput = {
   profileId: string;
   sku: string;
-  orderId: string;
   /** ISO 3166-1 alpha-2(Cloudflare가 알려 준 나라). 없으면 IPv4로 엑솔라가 정한다. */
   country: string | null;
   ip: string | null;
@@ -56,8 +55,8 @@ export async function createXsollaToken(
       },
       purchase: { items: [{ sku: input.sku, quantity: 1 }] },
       settings: {
+        // external_id(우리 주문 번호)를 보내면 엑솔라가 [0401-2000]으로 토큰을 거절한다. 주문은 엑솔라 주문 번호로 잇는다.
         language: input.language,
-        external_id: input.orderId,
         return_url: input.returnUrl,
       },
     }),
@@ -65,6 +64,9 @@ export async function createXsollaToken(
   const body = (await res.json().catch(() => null)) as {
     token?: unknown;
     order_id?: unknown;
+    errorCode?: unknown;
+    errorMessage?: unknown;
+    errorMessageExtended?: unknown;
   } | null;
   if (
     !res.ok ||
@@ -72,7 +74,10 @@ export async function createXsollaToken(
     !/^[A-Za-z0-9._~-]+$/.test(body.token) ||
     (typeof body.order_id !== 'number' && typeof body.order_id !== 'string')
   )
-    throw new Error(`xsolla token: ${res.status}`);
+    // 엑솔라 오류 코드 · 문구(요청 형식 · 상품 설정 문제)를 로그에 남긴다. 키나 사용자 정보는 담기지 않는다.
+    throw new Error(
+      `xsolla token: ${res.status} ${String(body?.errorCode ?? '')} ${String(body?.errorMessage ?? '').slice(0, 300)} ${JSON.stringify(body?.errorMessageExtended ?? '').slice(0, 500)}`.trim(),
+    );
   return { token: body.token, xsollaOrderId: String(body.order_id) };
 }
 
