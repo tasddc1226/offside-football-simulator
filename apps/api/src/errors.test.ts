@@ -37,8 +37,8 @@ describe('오류 문구 영어(T-11-106)', () => {
   });
 
   it('숫자·이름이 끼는 문장도 옮기고, 표에 없는 문장은 한국어로 둔다', () => {
-    expect(localizeMessage('한 번에 5명까지 내놓을 수 있어요.', 'en')).toBe(
-      'You can list up to 5 players at a time.',
+    expect(localizeMessage('친구는 신청 중인 사람을 포함해 50명까지예요.', 'en')).toBe(
+      'You can have up to 50 friends, including pending requests.',
     );
     expect(localizeMessage('팀 이름에 쓸 수 없는 말이 들어 있어요.', 'en')).toBe(
       "That team name isn't allowed.",
@@ -57,8 +57,8 @@ describe('오류 문구 영어(T-11-106)', () => {
     );
     expect(localizeMessage('표에 없는 문장', 'en')).toBe('표에 없는 문장');
     expect(localizeMessage('팀을 찾을 수 없어요.', 'ja')).toBe('チームが見つかりません。');
-    expect(localizeMessage('한 번에 5명까지 내놓을 수 있어요.', 'ja')).toBe(
-      '一度に5人まで出品できます。',
+    expect(localizeMessage('친구는 신청 중인 사람을 포함해 50명까지예요.', 'ja')).toBe(
+      'フレンドは申請中を含めて50人までです。',
     );
     expect(localizeMessage('팀을 찾을 수 없어요.', 'ko')).toBe('팀을 찾을 수 없어요.');
   });

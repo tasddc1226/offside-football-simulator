@@ -30,9 +30,13 @@ export type {
 } from '@offside/contracts';
 
 /** 지금 시즌 열린 등록. 서버가 첫 페이지를 15초 엣지 캐시한다. 쓰기(등록·취소·영입)는 메모를 비운다. */
-export const fetchMarket = (sort: MarketSort, pos: CareerPos | undefined, page: number) =>
+export const fetchMarket = (
+  sort: MarketSort,
+  f: { pos?: CareerPos | undefined; dpos?: string | undefined; type?: string | undefined },
+  page: number,
+) =>
   cachedGet<MarketListResponse>(
-    `/v1/market?sort=${sort}${pos ? `&pos=${pos}` : ''}${page ? `&page=${page}` : ''}`,
+    `/v1/market?sort=${sort}${f.pos ? `&pos=${f.pos}` : ''}${f.dpos ? `&dpos=${f.dpos}` : ''}${f.type ? `&type=${f.type}` : ''}${page ? `&page=${page}` : ''}`,
     30_000,
   );
 /** 시세 차트(T-11-080f). pos·band가 없으면 시장 전체. 서버가 1분 엣지 캐시하니 메모도 1분. */

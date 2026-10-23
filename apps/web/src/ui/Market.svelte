@@ -17,7 +17,6 @@
   // T-11-080 이적시장 — 지금 시즌 은퇴 선수 카드를 구단 자금으로 사고판다. 구단주 화면의 '이적시장'으로 연다.
   // T-11-080d 시안(이적시장 모바일 시안)대로: 초록 머리에 구단 자금과 '자금 만들기', 탭 셋(선수 사기 · 팔기 · 내 거래),
   // 카드 모양 목록, 카드 상세 영입 시트, 카드 고르기 + 슬라이더 판매, 방출 화면. 각 화면은 처음 열 때만 불러온다.
-  import type { CareerPos } from '@offside/contracts';
   import {
     buyListing,
     cancelListing,
@@ -38,6 +37,11 @@
   import { fetchOwnerTeam, type OwnerTeamResponse, type TeamPlayer } from '@offside/app-core/api/team';
   import {
     MARKET_POS_FILTERS,
+    marketDetailFilters,
+    marketFiltered,
+    marketTypeFilters,
+    pickMarketFilter,
+    type MarketFilter,
     MARKET_SORT_LABEL,
     MARKET_TICKER_MS,
     MARKET_TOAST,
@@ -57,6 +61,7 @@
     releaseLock,
     releaseValue,
     saleText,
+    sellCandidates,
     sellNote,
     sellSlider,
     sellable,
@@ -72,7 +77,7 @@
   import { agoKo, fmtValue } from '@offside/app-core/format';
   import { localCareerNames } from '@offside/game/hof-store';
   import { POS_LABEL } from '@offside/game/pos-label';
-  import { detailPosOf } from '@offside/contracts/positions';
+  import { DETAIL_LABEL, detailPosOf } from '@offside/contracts/positions';
   import Topbar from './Topbar.svelte';
   import PlayerCard from './team/PlayerCard.svelte';
   import { marketSalaryText } from '@offside/app-core/salary';
@@ -105,9 +110,12 @@
   }
   void loadMe();
 
-  // 선수 사기 — 정렬·포지션이 바뀌면 첫 페이지부터.
+  // 선수 사기 — 정렬·필터(포지션군 → 세부 포지션 · 유형, T-11-474)가 바뀌면 첫 페이지부터.
   let sort = $state<MarketSort>('new');
-  let pos = $state<CareerPos | undefined>(undefined);
+  let filter = $state<MarketFilter>({});
+  const pickFilter = (next: MarketFilter) => (filter = pickMarketFilter(filter, next));
+  const details = $derived(marketDetailFilters(filter.pos));
+  const types = $derived(marketTypeFilters(filter.pos));
   let items = $state<MarketListing[]>([]);
   let page = $state(0);
   let hasMore = $state(false);
@@ -127,7 +135,7 @@
   /** 받은 목록(첫 페이지면 그 페이지)을 돌려준다. 못 받으면 null. */
   async function loadList(next = 0): Promise<MarketListing[] | null> {
     if (next === 0) listStatus = 'loading';
-    const r = await fetchMarket(sort, pos, next);
+    const r = await fetchMarket(sort, filter, next);
     if (!r.ok) {
       listStatus = 'error';
       return null;
@@ -170,6 +178,7 @@
     if ((view === 'sell' || view === 'release') && !guest) void loadTeam();
   });
   const lineup = $derived(team ? lineupOf(team) : new Set<string>());
+  const forSale = $derived(team ? sellCandidates(team.players, lineup) : []);
   const isCurrent = $derived(!!team && team.season === team.current);
   const nameOfPlayer = (p: TeamPlayer) => marketName(p, local);
   const seasonName = $derived(team?.seasons.find((o) => o.id === team?.season)?.name ?? '');
@@ -299,8 +308,8 @@
     {#if me}
       <dl class="mk-hero-stats">
         <div><dt>{L.statClubValue}</dt><dd>{fmtValue(me.clubValue)}</dd></div>
-        <div><dt>{L.statBuysToday}</dt><dd>{me.rules.dailyBuys - me.buysLeft} / {me.rules.dailyBuys}</dd></div>
-        <div><dt>{L.statListed}</dt><dd>{me.listings.length} / {me.rules.listLimit}</dd></div>
+        <div><dt>{L.statBuysToday}</dt><dd>{me.boughtToday}</dd></div>
+        <div><dt>{L.statListed}</dt><dd>{me.listings.length}</dd></div>
       </dl>
     {:else if guest}
       <p class="mk-hero-note" data-market-guest-note>{L.guestHero}</p>
@@ -369,15 +378,31 @@
         {#if index}
           <div class="mk-index mk-idx-{index.tone}" data-market-index>
             <span class="mk-info">
-              <small>{CHART_COPY.index}</small>
-              <b>{index.pct}</b>
+              <small class="mk-idx-head"><span class="mk-live-dot" aria-hidden="true"></span>{CHART_COPY.index}</small>
+              <span class="mk-idx-row"><b>{index.pct}</b><em>{index.change}</em></span>
               <small>{CHART_COPY.indexSub(index.trades)}</small>
+              <small class="mk-idx-today" data-market-index-today>{CHART_COPY.lastDay(index.today, index.lastTrades)}</small>
             </span>
-              <svg class="mk-spark" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <!-- T-11-474 살아 있는 시세: 면 그라데이션 · 마지막 거래일 맥박 · 아래 거래량 막대 -->
+            <span class="mk-spark-wrap" aria-hidden="true">
+              <span class="mk-spark-plot">
+              <svg class="mk-spark" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="mk-spark-fill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0" stop-color="currentColor" stop-opacity="0.3" />
+                    <stop offset="1" stop-color="currentColor" stop-opacity="0" />
+                  </linearGradient>
+                </defs>
+                {#if index.spark.area}<path class="mk-spark-area" d={index.spark.area} fill="url(#mk-spark-fill)" />{/if}
                 <line x1="0" x2="100" y1={index.spark.base} y2={index.spark.base} />
-                <path d={index.spark.line} />
+                <path class="mk-spark-line" d={index.spark.line} pathLength="1" />
               </svg>
-            <em>{index.change}</em>
+              {#if index.spark.last}<span class="mk-spark-pulse" style:left="{index.spark.last.x}%" style:top="{index.spark.last.y}%"></span>{/if}
+              </span>
+              <span class="mk-spark-vol">
+                {#each index.spark.bars as b (b.p.day)}<i style:left="{b.x}%" style:height="{b.h}%"></i>{/each}
+              </span>
+            </span>
           </div>
         {/if}
         {#if live}
@@ -408,9 +433,32 @@
         {/if}
         <div class="mk-chips" role="group" aria-label={L.position}>
           {#each MARKET_POS_FILTERS as p (p ?? 'all')}
-            <button class="mk-chip" aria-pressed={pos === p} data-market-pos={p ?? 'all'} onclick={() => (pos = p)}>{p ? tn(POS_LABEL[p]) : L.posAll}</button>
+            <button class="mk-chip" aria-pressed={filter.pos === p} data-market-pos={p ?? 'all'} onclick={() => pickFilter({ pos: p })}>{p ? tn(POS_LABEL[p]) : L.posAll}</button>
           {/each}
         </div>
+        {#if filter.pos}
+          <div class="mk-subfilters" data-market-subfilters>
+            {#if details.length}
+              <div class="mk-subrow" role="group" aria-label={L.detailPos}>
+                <span class="mk-sublabel">{L.detailPos}</span>
+                <button class="mk-chip mk-chip-sm" aria-pressed={!filter.dpos} data-market-dpos="all" onclick={() => pickFilter({ dpos: undefined })}>{L.posAll}</button>
+                {#each details as d (d)}
+                  <button class="mk-chip mk-chip-sm" aria-pressed={filter.dpos === d} data-market-dpos={d} aria-label={tn(DETAIL_LABEL[d])} title={tn(DETAIL_LABEL[d])} onclick={() => pickFilter({ dpos: d })}>{d}</button>
+                {/each}
+              </div>
+            {/if}
+            <div class="mk-subrow" role="group" aria-label={L.playerType}>
+              <span class="mk-sublabel">{L.playerType}</span>
+              <button class="mk-chip mk-chip-sm" aria-pressed={!filter.type} data-market-type="all" onclick={() => pickFilter({ type: undefined })}>{L.posAll}</button>
+              {#each types as [id, name] (id)}
+                <button class="mk-chip mk-chip-sm" aria-pressed={filter.type === id} data-market-type={id} onclick={() => pickFilter({ type: id })}>{name}</button>
+              {/each}
+            </div>
+            {#if filter.dpos || filter.type}
+              <button class="mk-reset" data-market-reset onclick={() => (filter = { pos: filter.pos })}>{L.filterReset}</button>
+            {/if}
+          </div>
+        {/if}
         <div class="mk-sort">
           <span class="muted fs-sm">{season === null ? '' : L.listCount({ n: items.length, more: hasMore })}</span>
           <label class="fs-sm">{L.sortLabel}
@@ -439,7 +487,7 @@
                 </button>
               </li>
             {:else}
-              <li class="muted">{marketEmptyText(season, !!pos)}</li>
+              <li class="muted">{marketEmptyText(season, marketFiltered(filter))}</li>
             {/each}
           </ul>
           {#if hasMore}<button class="btn btn-block" onclick={() => loadList(page + 1)}>{L.more}</button>{/if}
@@ -455,9 +503,10 @@
         {:else if !isCurrent || team.players.length === 0}
           <p class="muted">{L.sellNone}</p>
         {:else}
+          {#if forSale.length < team.players.length}<p class="muted fs-sm" data-sell-starters>{L.sellStartersHidden}</p>{/if}
           <div class="mk-pick-grid">
-            {#each team.players as p (p.careerId)}
-              {@const note = sellNote(p, lineup)}
+            {#each forSale as p (p.careerId)}
+              {@const note = sellNote(p)}
               {@const off = !sellable(p)}
               <div class="mk-pick-cell">
                 <button class="mk-pick" aria-pressed={selling?.careerId === p.careerId} disabled={off} data-sell-pick={p.careerId} onclick={() => pickSell(p)}>
@@ -529,7 +578,7 @@
 </div>
 
 {#if buying && (me || guest)}
-  {@const block = !me ? null : myListingIds.has(buying.id) ? L.ownListing : buyBlock(buying.price, me.balance, me.buysLeft)}
+  {@const block = !me ? null : myListingIds.has(buying.id) ? L.ownListing : buyBlock(buying.price, me.balance)}
   {@const diff = priceDiff(buying.price, buying.card.cardValue)}
   <button class="mk-scrim" aria-label={L.close} onclick={closeSheets}></button>
   <div class="mk-sheet" role="dialog" aria-modal="true" aria-label={L.sheetBuy}>
@@ -862,6 +911,38 @@
     color: var(--surface);
     font-weight: 600;
   }
+  .mk-subfilters {
+    display: grid;
+    gap: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+  }
+  .mk-subrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+  .mk-sublabel {
+    min-width: 72px;
+    color: var(--muted);
+    font-size: var(--fs-label);
+  }
+  .mk-chip-sm {
+    min-height: 30px;
+    padding: 0 11px;
+  }
+  .mk-reset {
+    justify-self: end;
+    border: 0;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: var(--fs-label);
+    text-decoration: underline;
+    cursor: pointer;
+  }
   .mk-sort {
     display: flex;
     align-items: center;
@@ -1009,18 +1090,100 @@
     color: var(--tone);
     white-space: nowrap;
   }
-  .mk-spark {
-    width: 72px;
-    height: 32px;
+  .mk-index .mk-info {
+    gap: 1px;
+  }
+  .mk-idx-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mk-idx-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .mk-idx-today {
+    color: var(--ink) !important;
+    font-weight: 600;
+  }
+  .mk-spark-wrap {
+    display: grid;
+    gap: 3px;
+    width: 128px;
     flex: none;
+    color: var(--tone);
+  }
+  .mk-spark-plot {
+    position: relative;
+    height: 44px;
+  }
+  .mk-spark {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     overflow: visible;
   }
-  .mk-spark path {
+  .mk-spark-line {
     fill: none;
     stroke: var(--tone);
     stroke-width: 2;
     vector-effect: non-scaling-stroke;
     stroke-linejoin: round;
+    stroke-dasharray: 1;
+    animation: mk-draw 1s ease-out;
+  }
+  @keyframes mk-draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+  }
+  .mk-spark-pulse {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    margin: -4px 0 0 -4px;
+    border-radius: 50%;
+    background: var(--tone);
+    box-shadow: 0 0 0 2px var(--surface);
+  }
+  .mk-spark-pulse::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: var(--tone);
+    animation: mk-ping 1.8s ease-out infinite;
+  }
+  @keyframes mk-ping {
+    from {
+      transform: scale(1);
+      opacity: 0.55;
+    }
+    to {
+      transform: scale(3.2);
+      opacity: 0;
+    }
+  }
+  .mk-spark-vol {
+    position: relative;
+    height: 11px;
+  }
+  .mk-spark-vol i {
+    position: absolute;
+    bottom: 0;
+    width: 4px;
+    margin-left: -2px;
+    border-radius: 1px 1px 0 0;
+    background: var(--tone);
+    opacity: 0.35;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mk-spark-line,
+    .mk-spark-pulse::after {
+      animation: none;
+    }
   }
   .mk-spark line {
     stroke: var(--muted);
