@@ -9,6 +9,7 @@ import { appState, prefs, sheetState } from '../store';
 import { buzz, dismissSheet } from '../game/host';
 import { useColors } from '../theme/useColors';
 import { SheetBody } from '../sheets/SheetBody';
+import { CoachLayer, Coachmark } from '../components/Coachmark';
 import { Btn } from './Btn';
 import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
@@ -87,7 +88,11 @@ export function Sheet() {
               />
             </View>
             {/* 스냅숏이 아니라 원본 뷰를 넘긴다 — 본문(미니게임 등)이 뷰를 고치고, 읽을 때는 각자 useSnapshot으로 구독한다. */}
-            {s.view ? <SheetBody v={sheetState.view!} /> : null}
+            {s.view ? (
+              <CoachLayer value="sheet">
+                <SheetBody v={sheetState.view!} />
+              </CoachLayer>
+            ) : null}
             {s.buttons.map((b, i) => (
               <Btn
                 key={i}
@@ -104,6 +109,8 @@ export function Sheet() {
             ))}
           </ScrollView>
         </View>
+        {/* T-11-473 시트는 다른 창이라 첫 커리어 안내도 시트 안에 따로 둔다. */}
+        <Coachmark layer="sheet" />
       </View>
     </Modal>
   );

@@ -12,7 +12,7 @@
 <div class="eyebrow">{v.eyebrow}</div>
 <h2>{v.title}</h2>
 <p>{v.text}</p>
-<div class="stack">
+<div class="stack" data-coach="choice">
   {#each v.choices as c, i (i)}
     <!-- T-11-432 득실 칩을 버튼 안에 보인다. 터치 화면에서는 title이 안 보여서다. -->
     <button class="choice" data-choice={i} onclick={() => void chooseEvent(i)}

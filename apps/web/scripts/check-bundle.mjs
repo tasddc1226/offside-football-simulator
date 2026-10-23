@@ -109,8 +109,6 @@ const EAGER_NAMESPACES = new Set([
   'gamePotentialNote',
   'hof',
   'home',
-  // T-11-355 홈 처음 안내 카드(카드 문구만). 늦게 그리면 홈이 밀려서(CLS) 첫 화면에 둔다.
-  'firstGuide',
   'homeLive',
   'legendToast',
   'ownerConflict',

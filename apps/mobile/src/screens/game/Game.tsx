@@ -53,6 +53,7 @@ import { SeasonTab } from './SeasonTab';
 import { SaveHint } from './SaveHint';
 import { TitleDex } from './TitleDex';
 import { TrophyTab } from './TrophyTab';
+import { CoachTarget } from '../../components/Coachmark';
 
 /** 선수 카드 아래 알약(웹 .player .pill: 초록 바탕 위 반투명 흰 알약). fill이면 강조색으로 채운다. */
 function HeroPill({
@@ -224,34 +225,36 @@ export default function Game() {
                   openPlayer={() => switchTab('player')}
                   onVisibility={setPlayerHint}
                 />
-                <Btn
-                  block
-                  kind={act.kind === 'pending' ? 'accent' : 'primary'}
-                  testID={act.kind === 'pending' ? 'resume' : 'advance'}
-                  onPress={onAct}
-                  style={
-                    act.kind === 'advance'
-                      ? { flexDirection: 'column', gap: 1, paddingVertical: 8 }
-                      : undefined
-                  }
-                >
-                  {act.kind === 'advance' ? (
-                    // T-11-221 준비 요약(훈련 · 자기 투자 · 컨디션)은 버튼 둘째 줄에 둔다. 전에는 바 위의 작은 글자 링크였다.
-                    <>
-                      <Txt bold style={{ color: c.onPitch, fontSize: rem(FONT.body1) }}>
-                        {`${act.label} →`}
-                      </Txt>
-                      <Txt
-                        numberOfLines={1}
-                        style={{ color: c.onPitch, opacity: 0.8, fontSize: rem(FONT.caption) }}
-                      >
-                        {act.prep}
-                      </Txt>
-                    </>
-                  ) : (
-                    `${act.label} →`
-                  )}
-                </Btn>
+                <CoachTarget id="go">
+                  <Btn
+                    block
+                    kind={act.kind === 'pending' ? 'accent' : 'primary'}
+                    testID={act.kind === 'pending' ? 'resume' : 'advance'}
+                    onPress={onAct}
+                    style={
+                      act.kind === 'advance'
+                        ? { flexDirection: 'column', gap: 1, paddingVertical: 8 }
+                        : undefined
+                    }
+                  >
+                    {act.kind === 'advance' ? (
+                      // T-11-221 준비 요약(훈련 · 자기 투자 · 컨디션)은 버튼 둘째 줄에 둔다. 전에는 바 위의 작은 글자 링크였다.
+                      <>
+                        <Txt bold style={{ color: c.onPitch, fontSize: rem(FONT.body1) }}>
+                          {`${act.label} →`}
+                        </Txt>
+                        <Txt
+                          numberOfLines={1}
+                          style={{ color: c.onPitch, opacity: 0.8, fontSize: rem(FONT.caption) }}
+                        >
+                          {act.prep}
+                        </Txt>
+                      </>
+                    ) : (
+                      `${act.label} →`
+                    )}
+                  </Btn>
+                </CoachTarget>
               </ActionBar>
             ) : undefined
           }

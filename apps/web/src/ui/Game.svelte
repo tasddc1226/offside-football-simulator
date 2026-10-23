@@ -159,7 +159,7 @@
     <div class="action-bar-inner">
       <PlayerNudge openPlayer={() => switchTab('player')} />
       <!-- T-11-221 준비 요약(훈련 · 자기 투자 · 컨디션)은 버튼 둘째 줄에 둔다. 전에는 바 위의 작은 글자 링크였다. -->
-      <button class="btn btn-block {act.kind === 'pending' ? 'btn-accent' : 'btn-primary'}" class:btn-two={act.kind === 'advance'} data-act={act.kind === 'pending' ? 'resume' : 'advance'} data-tour="go" onclick={onAct}>
+      <button class="btn btn-block {act.kind === 'pending' ? 'btn-accent' : 'btn-primary'}" class:btn-two={act.kind === 'advance'} data-act={act.kind === 'pending' ? 'resume' : 'advance'} data-tour="go" data-coach="go" onclick={onAct}>
         {act.label} →{#if act.kind === 'advance'}<small class="btn-sub">{act.prep}</small>{/if}
       </button>
     </div>

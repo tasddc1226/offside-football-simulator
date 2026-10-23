@@ -17,6 +17,7 @@ import { Txt } from '../ui/Txt';
 import { Enter, Pop } from './anim';
 import { Hl, StatGrid, mixColor } from './parts';
 import { growthDirectionText } from '@offside/app-core/ratingReport';
+import { CoachTarget } from '../components/Coachmark';
 
 export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> }) {
   const s = useSnapshot(v);
@@ -55,15 +56,17 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
           ))}
         </View>
       ) : null}
-      <StatGrid
-        mt={14}
-        items={[
-          { key: 'apps', v: s.stats.apps, l: sheetCoreText.tallyApps },
-          { key: 'goals', v: s.stats.goals, l: sheetCoreText.tallyGoals },
-          { key: 'col', v: s.stats.col, l: s.stats.colLabel },
-          { key: 'rating', v: s.stats.rating, l: sheetCoreText.tallyRating },
-        ]}
-      />
+      <CoachTarget id="season">
+        <StatGrid
+          mt={14}
+          items={[
+            { key: 'apps', v: s.stats.apps, l: sheetCoreText.tallyApps },
+            { key: 'goals', v: s.stats.goals, l: sheetCoreText.tallyGoals },
+            { key: 'col', v: s.stats.col, l: s.stats.colLabel },
+            { key: 'rating', v: s.stats.rating, l: sheetCoreText.tallyRating },
+          ]}
+        />
+      </CoachTarget>
       {s.trophyHonors?.length ? (
         <View
           accessibilityLabel={CM.trophies}
