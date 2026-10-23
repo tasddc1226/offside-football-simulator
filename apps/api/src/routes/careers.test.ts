@@ -151,6 +151,34 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect(await ctx.env.BACKUP!.head(key)).not.toBeNull();
   });
 
+  it('T-11-468 지운 버린 커리어를 다시 올리면 원래 서비스 시즌으로 되살리고, 다른 프로필은 가져가지 못한다', async () => {
+    const owner = await issueCookie(ctx);
+    const app = createApp();
+    const put = (cookie: string, year: number, body = seasonBody()) =>
+      app.request(
+        `/v1/careers/${CAREER_ID}/seasons/${year}`,
+        jsonInit({ method: 'PUT', body, cookie }),
+        ctx.env,
+      );
+    expect((await put(owner.cookie, 2026)).status).toBe(200);
+    // 매일 단계가 지운 상태: 커리어 · 시즌이 없고 흔적만 남았다(처음 올라온 시즌은 프리시즌).
+    await ctx.env.DB.batch([
+      ctx.env.DB.prepare(
+        "INSERT INTO pruned_careers (career_id, profile_id, service_season, pruned_at) VALUES (?, ?, 0, '2026-10-20T19:00:00.000Z')",
+      ).bind(CAREER_ID, owner.profileId),
+      ctx.env.DB.prepare('DELETE FROM career_seasons WHERE career_id = ?').bind(CAREER_ID),
+      ctx.env.DB.prepare('DELETE FROM careers WHERE id = ?').bind(CAREER_ID),
+    ]);
+    const other = await issueCookie(ctx);
+    const next = seasonBody();
+    next.season.age = 19;
+    expect((await put(other.cookie, 2027, next)).status).toBe(409);
+    expect(await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID))).toEqual([]);
+    expect((await put(owner.cookie, 2027, next)).status).toBe(200);
+    const [row] = await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID));
+    expect(row).toMatchObject({ profileId: owner.profileId, serviceSeason: 0 });
+  });
+
   it('archived retirement restores logs and retains normal retirement/card behavior', async () => {
     const owner = await issueCookie(ctx);
     await putSeasonsFor(ctx.env, owner.cookie, CAREER_ID, retirementBody());

@@ -2114,3 +2114,14 @@ export const best11Changes = sqliteTable(
   },
   (t) => [index('best11_changes_season_idx').on(t.season, t.at)],
 );
+
+/**
+ * T-11-468 매일 단계가 지운 버린 커리어(생성 뒤 한 시간 안에 멈추고 일주일 넘게 갱신 없음)의 흔적. 기기에서 다시 이어 하면
+ * 다음 시즌 업로드가 커리어를 새로 만드는데, 그때 원래 서비스 시즌을 되살리고 다른 프로필이 같은 id를 가져가지 못하게 한다.
+ */
+export const prunedCareers = sqliteTable('pruned_careers', {
+  careerId: text('career_id').primaryKey(),
+  profileId: text('profile_id').notNull(),
+  serviceSeason: integer('service_season'),
+  prunedAt: text('pruned_at').notNull(),
+});

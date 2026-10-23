@@ -862,6 +862,13 @@
       "when": 1792728625152,
       "tag": "0125_main_club",
       "breakpoints": true
+    },
+    {
+      "idx": 126,
+      "version": "6",
+      "when": 1792733049233,
+      "tag": "0126_pruned_careers",
+      "breakpoints": true
     }
   ]
 }
