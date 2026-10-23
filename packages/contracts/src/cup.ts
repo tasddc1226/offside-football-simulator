@@ -393,12 +393,6 @@ export const rerollMileageLeft = (progress: number) => Math.max(1, REROLL_MILEAG
 /** T-11-244 영구결번을 처음 받은 커리어의 구단주가 받는 프리미엄 스카우트권. */
 export const RETIRED_NUMBER_SCOUTS = 1;
 
-/**
- * T-11-275 홈 선물 — 로그인한 구단주가 한 번만 받는 아이템 묶음. id를 바꾸면 새 선물이 된다(받은 기록은 id별로 남는다).
- * 받은 아이템은 다른 경로로 받은 것과 같은 owner_items에 들어가서 스카우트 천장 · 리롤권 마일리지도 똑같이 센다.
- */
-export const HOME_GIFT = { id: 'gift-2026-10', boost: 20, scout: 5 } as const;
-
 /** T-11-174 소모성 인앱 상품(App Store Connect·Play Console에 같은 ID로 만든다) — 사면 구단주 아이템이 qty만큼 는다. */
 export const REMOVE_ADS_PRODUCT_ID = 'com.offsidelab.app.remove_ads';
 export const IAP_PRODUCTS = {

@@ -1,4 +1,4 @@
-// T-11-275 홈의 구단주 선물(웹 HomeGift.svelte) — 오프사이드 컵 배너 바로 아래. 로그인한 구단주가 한 번 받으면 사라진다.
+// 홈 선물 칸(T-11-386 시즌 업적 보상, T-11-472 구단주 선물은 없앴다)(웹 HomeGift.svelte) — 오프사이드 컵 배너 바로 아래. 로그인한 구단주가 한 번 받으면 사라진다.
 // 묻는 조건 · 메모는 app-core api/gift.ts.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';

@@ -1,7 +1,6 @@
 // T-11-386 시즌 1 업적 보상 — 시즌 2 동안 홈 선물 칸의 받기 버튼으로 한 번. 장수는 처음 물을 때 시즌 1 업적을 세어
 // 적어 두고, 시즌 2 실시간 보상과 같은 표 · 시즌 상한으로 센다.
 import {
-  HOME_GIFT,
   HomeGiftResponseSchema,
   OwnerItemsResponseSchema,
   successEnvelope,
@@ -79,11 +78,7 @@ describe('T-11-386 시즌 1 업적 보상(GET /v1/items/gift · POST /v1/items/g
     const me = await issueGoogleCookie(ctx);
     await addS1Career(me.profileId, goals);
     await addS1Row(me.profileId, score);
-    // 10월 홈 선물은 먼저 받아 둔다(받기 전에는 그 선물이 먼저 보인다).
     vi.setSystemTime(new Date(IN_S1));
-    expect(
-      (await call('POST', '/v1/items/gift/claim', { cookie: me.cookie, headers: key() })).status,
-    ).toBe(200);
     return me;
   }
   const gift = async (cookie: string) =>
@@ -111,12 +106,12 @@ describe('T-11-386 시즌 1 업적 보상(GET /v1/items/gift · POST /v1/items/g
       .where(and(eq(ownerAchievements.profileId, me.profileId), eq(ownerAchievements.season, 1)));
     expect([row?.rewardBoost, row?.rewardScout]).toEqual([16, 6]);
 
-    // 다른 선물 id로는 받지 못한다.
-    expect((await claim(me.cookie, { id: HOME_GIFT.id })).status).toBe(409);
+    // 다른 선물 id(T-11-472 없앤 구단주 선물 포함)로는 받지 못한다.
+    expect((await claim(me.cookie, { id: 'gift-2026-10' })).status).toBe(409);
     const first = key();
     const res = await claim(me.cookie, { id: ACH_SEASON_GIFT.id }, first);
     const items = ItemsRes.parse(await res.json()).data;
-    expect(items).toMatchObject({ boost: 36, scout: 11 });
+    expect(items).toMatchObject({ boost: 16, scout: 6 });
     // 같은 키 재시도는 같은 응답, 새로 누르면 409이고 장수는 그대로다.
     expect(
       ItemsRes.parse(await (await claim(me.cookie, { id: ACH_SEASON_GIFT.id }, first)).json()).data,
@@ -139,7 +134,7 @@ describe('T-11-386 시즌 1 업적 보상(GET /v1/items/gift · POST /v1/items/g
     const me = await owner(30_000, 600);
     vi.setSystemTime(new Date(IN_S2));
     const res = await claim(me.cookie);
-    expect(ItemsRes.parse(await res.json()).data).toMatchObject({ boost: 36, scout: 11 });
+    expect(ItemsRes.parse(await res.json()).data).toMatchObject({ boost: 16, scout: 6 });
     expect(
       await ctx.db
         .select()
@@ -160,7 +155,7 @@ describe('T-11-386 시즌 1 업적 보상(GET /v1/items/gift · POST /v1/items/g
     const items = ItemsRes.parse(
       await (await call('GET', '/v1/items', { cookie: me.cookie })).json(),
     );
-    expect(items.data).toMatchObject({ boost: 36, scout: 11 });
+    expect(items.data).toMatchObject({ boost: 16, scout: 6 });
   });
 
   it('받을 칸이 없으면(점수가 문턱 아래 · 작은 업적만) 카드가 없고 받기는 409', async () => {
@@ -183,13 +178,11 @@ describe('T-11-386 시즌 1 업적 보상(GET /v1/items/gift · POST /v1/items/g
     expect((await claim(small.cookie, { id: ACH_SEASON_GIFT.id })).status).toBe(409);
   });
 
-  it('홈 선물을 아직 안 받았으면 홈 선물이 먼저다', async () => {
+  it('T-11-472 구단주 선물은 없앴다 — 시즌 1 업적 보상만 보이고, 옛 구단주 선물 id는 받지 못한다', async () => {
     const me = await issueGoogleCookie(ctx);
-    await addS1Career(me.profileId, 30_000);
-    await addS1Row(me.profileId, 600);
-    vi.setSystemTime(new Date(IN_S2));
-    expect(await gift(me.cookie)).toEqual({ id: HOME_GIFT.id, kind: 'home', boost: 20, scout: 5 });
-    await claim(me.cookie, { id: HOME_GIFT.id });
-    expect(await gift(me.cookie)).toMatchObject({ id: ACH_SEASON_GIFT.id, boost: 16, scout: 6 });
+    vi.setSystemTime(new Date(IN_S1));
+    expect(await gift(me.cookie)).toBeNull();
+    expect((await claim(me.cookie, { id: 'gift-2026-10' })).status).toBe(409);
+    expect((await claim(me.cookie)).status).toBe(409);
   });
 });
