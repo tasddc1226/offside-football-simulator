@@ -15,6 +15,7 @@ import { BarBelow } from '../ui/Screen';
 import { EdgeSwipeBack } from '../ui/EdgeSwipeBack';
 import { RefreshRoot } from '../ui/refresh';
 import { Sheet } from '../ui/Sheet';
+import { Coachmark, startCoach } from '../components/Coachmark';
 import { TABBAR_H } from '../ui/TabBar';
 import { Toast } from '../ui/Toast';
 import { NewsBanner } from '../banners/NewsBanner';
@@ -109,6 +110,7 @@ export default function App() {
     return () => offs.forEach((off) => off());
   }, []);
   useEffect(checkAch, [snap.screen, snap.teamView]);
+  useEffect(startCoach, []);
 
   const Current = SCREENS[snap.screen];
   const main = hasMainNav(snap.screen);
@@ -129,6 +131,8 @@ export default function App() {
       <ReviewNudge />
       <AnalyticsAsk />
       <Sheet />
+      {/* T-11-473 첫 커리어 따라가기 안내(시트가 열려 있으면 시트 안의 덮개가 대신한다). */}
+      <Coachmark layer="root" />
       {/* 아래 탭 막대(메인·게임)가 있으면 그 위로 띄운다(웹 body:has(nav.tabs) .toast). */}
       <Toast lift={main || snap.screen === 'game' ? TABBAR_H : 0} />
     </View>

@@ -15,7 +15,9 @@
   import { setSheetSkin, skin } from './skin.svelte.js';
   import SiteFooter from './SiteFooter.svelte';
   import { showInstallGuide } from './install.js';
-  import { goAccount, goFairness, goTypeDex, takeFocus } from './nav.js';
+  import { goAccount, goFairness, goHome, goTypeDex, takeFocus } from './nav.js';
+  import { replayCoach } from './coach.svelte.js';
+  import { tutorialText as TU } from '@offside/app-core/i18n/ko/tutorial';
   import { onMount } from 'svelte';
   import ItemsHint from './ItemsHint.svelte';
   import { firstGuideText as FG } from '@offside/app-core/i18n/ko/firstGuide';
@@ -42,6 +44,10 @@
   onMount(() => {
     if (takeFocus('backup')) document.querySelector('[data-settings="backup"]')?.scrollIntoView({ block: 'start' });
   });
+  function replayTutorial() {
+    replayCoach();
+    goHome();
+  }
 </script>
 
 <div class="wrap">
@@ -174,6 +180,8 @@
       <a href="/faq/">{L.faq} <span aria-hidden="true">›</span></a>
       <button data-act="fairness" onclick={goFairness}>{L.fairness} <span aria-hidden="true">›</span></button>
       <button data-act="type-dex" onclick={goTypeDex}>{FG.typeDex} <span aria-hidden="true">›</span></button>
+      <!-- T-11-473 첫 커리어 따라가기 안내를 처음부터(홈으로 가서 새 커리어 버튼을 비춘다). -->
+      <button data-act="tutorial-replay" onclick={replayTutorial}>{TU.replay} <span aria-hidden="true">›</span></button>
     </nav>
     <!-- T-11-321 서버 상태(펼칠 때만 불러온다) -->
     <ServerStatus />
