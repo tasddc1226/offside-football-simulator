@@ -13,6 +13,7 @@ import { avatarLook } from './avatarLook';
 import { avatarRecord } from './avatarRecord';
 import { backup } from './backup';
 import { balanceKeys } from './balanceKeys';
+import { best11 } from './best11';
 import { board } from './board';
 import { boardLabel } from './boardLabel';
 import { careerGuide } from './careerGuide';
@@ -123,6 +124,7 @@ export const en = {
   avatarRecord,
   backup,
   balanceKeys,
+  best11,
   board,
   boardLabel,
   careerGuide,

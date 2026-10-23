@@ -37,6 +37,8 @@ export const EDGE = {
   /** 시즌 진행 게이지(홈). TTL로만 새로 읽는다. */
   seasonGauge: '/v1/season/gauge',
   hofDetail: (careerId: string) => `/v1/hof/${careerId}`,
+  /** T-11-463 시즌 BEST 11(시즌 id를 푼 경로). 자리 주인이 바뀌면 지운다. */
+  best11: (season: number) => `/v1/best11?season=${season}`,
   hofList: (
     limit: number,
     page: number,

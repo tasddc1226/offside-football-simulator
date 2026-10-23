@@ -54,7 +54,8 @@ import { tryAttempt } from '../db/repos/authAttempts.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
-import { purgeEdge, waitUntil } from '../edgeCache.js';
+import { purgeEdge, purgeEdgeOrigin, waitUntil } from '../edgeCache.js';
+import { offerRetiredBest11 } from '../db/repos/best11.js';
 import { refreshOwnerTitles } from '../db/repos/ownerTitles.js';
 import { refreshAfterChange } from '../team/ownerAchievements.js';
 import { recordFirsts } from './firsts.js';
@@ -430,6 +431,13 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       Promise.all([
         refreshAfterChange(db, session.profileId, career.serviceSeason),
         refreshOwnerTitles(db, session.profileId, now),
+        // T-11-463 시즌 BEST 11 후보(이름을 공개한 은퇴만). 자리 주인이 바뀌면 그 시즌 BEST 11 캐시를 지운다.
+        offerRetiredBest11(db, { id: careerId, dpos: career.dpos }, seasons, now).then(
+          async (season) => {
+            if (season !== null)
+              await purgeEdgeOrigin(new URL(c.req.url).origin, [EDGE.best11(season)]);
+          },
+        ),
       ]),
     );
 

@@ -11,6 +11,7 @@
     "./balance": "./src/balance-spec.ts",
     "./balance-text": "./src/balance-text.ts",
     "./hof-rules": "./src/hof-rules.ts",
+    "./best11-rules": "./src/best11-rules.ts",
     "./content-filter": "./src/content-filter.ts",
     "./club-limits": "./src/club-limits.ts",
     "./polling": "./src/polling.ts",

@@ -60,4 +60,6 @@ export default {
     'On the web, your progress (save) is stored only in this browser. To move it to another device or the app, copy the backup code or save a file from In-progress career backup in Settings, then paste the code or pick the file on the new device.',
   saveApp:
     'In the app (Android and iOS), your progress is stored only on that device. When you switch devices, copy the code or export it with Share from In-progress career backup in Settings, then paste it into the same box on the new device. The app does not pick files, so paste the code or the exported text.',
+  best11:
+    "The Best XI in the Records room puts the best retired players of each service season into the 11 spots of a 4-3-3. Candidates have a public name, retired during that season, and have at least 300 pro appearances and at least 5 seasons with 20 or more appearances. The Best XI index weighs individual performance 50, team success 30 and individual awards 20, and one owner's players can hold only one spot. During the season the lineup is provisional, so a better retirement takes over a spot. It becomes final when the season closes.",
 };

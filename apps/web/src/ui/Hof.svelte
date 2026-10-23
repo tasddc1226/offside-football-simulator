@@ -1,6 +1,6 @@
 <script lang="ts">
   // 기록실(하단 메뉴) — 명예의 전당 전체 보기(100명씩 페이지)와 영구결번(T-10-076), 라이브 랭킹(팀 랭킹, T-10-092)을
-  // 탭으로 오간다. T-11-028 구단주 랭킹(구단주 시즌 업적 점수)을 더했다.
+  // 탭으로 오간다. T-11-028 구단주 랭킹(구단주 시즌 업적 점수)을 더했다. T-11-463 시즌 BEST 11.
   import AdSlot from '../ads/AdSlot.svelte';
   import HallOfFame from './HallOfFame.svelte';
   import RetiredWall from './RetiredWall.svelte';
@@ -9,16 +9,19 @@
   import Topbar from './Topbar.svelte';
   import { appState, type HofTab } from './state.svelte.js';
   import { hofText as L } from '@offside/app-core/i18n/ko/hof';
+  import { best11Text as B } from '@offside/app-core/i18n/ko/best11';
+  import Best11 from './Best11.svelte';
 
   // 문구는 그릴 때 읽어야 해서(언어 등록 뒤) 함수로 둔다.
   const tabs = (): Record<HofTab, string> => ({
     legends: L.tabLegends,
+    best11: B.tab,
     rn: L.tabRn,
     teams: L.tabTeams,
     ach: L.tabAch,
   });
 
-  const tabKeys: HofTab[] = ['legends', 'rn', 'teams', 'ach'];
+  const tabKeys: HofTab[] = ['legends', 'best11', 'rn', 'teams', 'ach'];
   function onTabKey(event: KeyboardEvent, tab: HofTab) {
     const index = tabKeys.indexOf(tab);
     let next: number;
@@ -43,6 +46,8 @@
   <div id="hof-tab-panel" role="tabpanel" aria-labelledby="hof-tab-{appState.hof.tab}" tabindex="0">
     {#if appState.hof.tab === 'rn'}
       <RetiredWall />
+    {:else if appState.hof.tab === 'best11'}
+      <Best11 />
     {:else if appState.hof.tab === 'teams'}
       <TeamRanking />
       <AdSlot place="records-bottom" />
