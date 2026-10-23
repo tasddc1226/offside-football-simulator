@@ -604,6 +604,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
   best11_slots: ['season', 'slot', 'career_id', 'score', 'since'],
   best11_seasons: ['season', 'final_at', 'updated_at', 'gate_json'],
   best11_changes: ['id', 'season', 'slot', 'in_career_id', 'out_career_id', 'at'],
+  // T-11-468 지운 버린 커리어의 흔적.
+  pruned_careers: ['career_id', 'profile_id', 'service_season', 'pruned_at'],
   // T-11-333 코드 배포 밸런스 패치 공개 이력.
   balance_patches: [
     'id',

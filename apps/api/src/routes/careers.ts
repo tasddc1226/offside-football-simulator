@@ -31,6 +31,7 @@ import {
 } from './shared.js';
 import {
   careerHeadQuery,
+  prunedCareerQuery,
   getCareer,
   getCareerHead,
   groupStoredSeasons,
@@ -248,11 +249,14 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
 
     const body = readBody(c, PutCareerSeasonBodySchema);
     // T-11-276 커리어 머리와 지난 시즌 OVR을 한 왕복으로 읽는다(둘 다 기본 키 한 줄).
-    const [[headRow], [prevRow]] = await db.batch([
+    // T-11-468 지운 버린 커리어의 흔적도 같은 왕복으로 읽는다(다시 만들 때 주인 · 처음 서비스 시즌).
+    const [[headRow], [prevRow], [pruned]] = await db.batch([
       careerHeadQuery(db, careerId),
       seasonOvrQuery(db, careerId, year - 1),
+      prunedCareerQuery(db, careerId),
     ]);
     const head = assertOwnable(headRow, session.profileId);
+    if (!head && pruned && pruned.profileId !== session.profileId) throw careerOwnerMismatch();
     await limitUpload(db, 'CAREER_SEASON', session.profileId);
     const now = nowIso();
     await resumeCareerDetails(
@@ -295,6 +299,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
         JSON.stringify({ ...body.signals, headless: isHeadless(c.req.header('User-Agent')) }),
       hide,
       now,
+      ...(!head && pruned && { serviceSeason: pruned.serviceSeason }),
     });
 
     if (hide) purgeEdge(c, STALE.firstsChanged());
