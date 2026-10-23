@@ -290,6 +290,7 @@ export const authAttempts = sqliteTable(
         'TRANSLATE',
         'ACQUISITION',
         'CAREER_ACTIVITY',
+        'WEB_PAY',
       ],
     }).notNull(),
     subject: text('subject').notNull(),
@@ -2055,6 +2056,32 @@ export const iapRefundMarkers = sqliteTable(
     refundedAt: text('refunded_at').notNull(),
   },
   (t) => [primaryKey({ columns: [t.store, t.transactionId] })],
+);
+
+/**
+ * T-11-454 웹 결제(엑솔라 Pay Station) 주문. 주문을 만들 때 엑솔라 결제 토큰을 받고 그 주문 번호(xsolla_order_id)를 둔다.
+ * 엑솔라 웹훅(order_paid)이 오면 iap_purchases(store 'xsolla', transaction_id = 엑솔라 주문 번호)에 아이템 지급을 남긴다.
+ * status: READY(주문만) · PAID(결제 · 지급) · CANCELED(환불 · 차지백 회수).
+ */
+export const webPayOrders = sqliteTable(
+  'web_pay_orders',
+  {
+    orderId: text('order_id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    productId: text('product_id').notNull(),
+    xsollaOrderId: text('xsolla_order_id').notNull(),
+    status: text('status', { enum: ['READY', 'PAID', 'CANCELED'] }).notNull(),
+    test: integer('test', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('created_at').notNull(),
+    paidAt: text('paid_at'),
+    canceledAt: text('canceled_at'),
+  },
+  (t) => [
+    index('web_pay_orders_profile_idx').on(t.profileId, t.createdAt),
+    uniqueIndex('web_pay_orders_xsolla_order_unique').on(t.xsollaOrderId),
+  ],
 );
 
 /**

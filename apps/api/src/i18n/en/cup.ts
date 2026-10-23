@@ -58,6 +58,8 @@ export const CUP_EN: Record<CupTextKey, string> = {
   iapPending: "The payment hasn't finished yet. You'll get it automatically once it does.",
   iapOtherAccount: 'This purchase was made on a different account. Log in with that account.',
   iapUnavailable: "We can't verify purchases right now. Reopen the app in a moment to get it.",
+  webPayUnavailable:
+    "We can't verify the payment right now. Reopen this page in a moment to get it.",
   shopClosed: "Reroll tickets aren't on sale right now.",
   shopDaily:
     'You can buy up to {n} reroll ticket(s) a day. You can buy more from 00:00 (KST) tomorrow.',

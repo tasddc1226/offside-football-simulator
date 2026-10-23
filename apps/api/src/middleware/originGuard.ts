@@ -19,6 +19,8 @@ const APP_SESSION_PATH = '/v1/app/session';
 export const APPLE_WEB_CALLBACK_PATH = '/v1/auth/apple/callback';
 /** T-11-215 App Store 서버 알림 — Apple 서버가 보낸다(쿠키·세션 없음). 본문의 Apple 서명으로 확인한다. */
 export const APPLE_IAP_NOTIFY_PATH = '/v1/iap/apple/notifications';
+/** T-11-454 엑솔라 웹훅 — 엑솔라 서버가 보낸다(쿠키 · 세션 없음). 본문 서명(Authorization: Signature)으로 확인한다. */
+export const WEB_PAY_WEBHOOK_PATH = '/v1/web-pay/webhook';
 
 /**
  * 결정 4: 상태 변경 요청은 허용된 Origin이어야 한다. GET·HEAD·OPTIONS는 대상이 아니다.
@@ -31,7 +33,8 @@ export const originGuard = createMiddleware<AppEnv>(async (c, next) => {
     !c.req.header(AUTHORIZATION_HEADER) &&
     c.req.path !== APP_SESSION_PATH &&
     c.req.path !== APPLE_WEB_CALLBACK_PATH &&
-    c.req.path !== APPLE_IAP_NOTIFY_PATH
+    c.req.path !== APPLE_IAP_NOTIFY_PATH &&
+    c.req.path !== WEB_PAY_WEBHOOK_PATH
   ) {
     const origin = c.req.header('Origin');
     if (!origin || !allowedOriginsFor(c.req.url, c.env).includes(origin)) {

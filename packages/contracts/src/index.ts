@@ -201,6 +201,7 @@ export * from './season-gauge-api.js';
 export * from './teams.js';
 export * from './cup.js';
 export * from './cup-api.js';
+export * from './web-pay.js';
 export * from './league.js';
 export * from './league-api.js';
 export * from './attendance.js';

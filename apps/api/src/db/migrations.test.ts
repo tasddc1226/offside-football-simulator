@@ -581,6 +581,17 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
   chat_mutes: ['profile_id', 'until', 'created_at'],
   // T-11-146 사용자 글 번역 캐시.
   translations: ['key', 'text', 'created_at'],
+  web_pay_orders: [
+    'order_id',
+    'profile_id',
+    'product_id',
+    'xsolla_order_id',
+    'status',
+    'test',
+    'created_at',
+    'paid_at',
+    'canceled_at',
+  ],
   balance_versions: [
     'version',
     'status',

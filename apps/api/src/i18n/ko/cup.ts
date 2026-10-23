@@ -56,6 +56,8 @@ export const CUP_KO = {
   iapPending: '결제가 아직 끝나지 않았어요. 결제가 끝나면 자동으로 받아요.',
   iapOtherAccount: '다른 계정으로 산 구매예요. 산 계정으로 로그인해 주세요.',
   iapUnavailable: '지금은 구매를 확인할 수 없어요. 잠시 뒤 앱을 다시 열면 받아요.',
+  // T-11-454 웹 결제.
+  webPayUnavailable: '지금은 결제를 확인할 수 없어요. 잠시 뒤 이 화면을 다시 열면 받아요.',
   shopClosed: '지금은 리롤권을 팔지 않아요.',
   shopDaily: '리롤권은 하루에 {n}장까지 살 수 있어요. 내일 0시(한국 시간)에 다시 살 수 있어요.',
   shopWeekly:
