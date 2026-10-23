@@ -195,16 +195,6 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '최고 판매가(기준가 배수)',
     desc: '판매가를 기준가의 이 배수 위로 정할 수 없다',
   },
-  marketListLimit: {
-    group: 'market',
-    label: '동시 판매 등록 수',
-    desc: '한 구단주가 한 번에 올려 둘 수 있는 판매 등록 수',
-  },
-  marketDailyBuys: {
-    group: 'market',
-    label: '하루 영입 수',
-    desc: '한 구단주가 하루(한국 시각)에 영입할 수 있는 선수 수',
-  },
   pastSalaryBudget: {
     group: 'team',
     label: '지난 시즌 선수 급여 예산',

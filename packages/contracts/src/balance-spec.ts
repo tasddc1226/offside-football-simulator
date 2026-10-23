@@ -249,18 +249,6 @@ export const BALANCE_SPEC = {
     step: 0.1,
     unit: 'x',
   },
-  marketListLimit: {
-    def: 10,
-    min: 1,
-    max: 50,
-    step: 1,
-  },
-  marketDailyBuys: {
-    def: 20,
-    min: 1,
-    max: 100,
-    step: 1,
-  },
   // T-11-376 지난 시즌 선수 급여 예산(구단 팀 선발). T-11-450 시즌 1 기준 80(급여 최대 20 × 4명).
   pastSalaryBudget: {
     def: 80,

@@ -9,8 +9,6 @@ const RULES = {
   feeRate: 0.05,
   priceMin: 0.5,
   priceMax: 3,
-  listLimit: 20,
-  dailyBuys: 10,
 };
 const RAISED = '00000000-0000-4000-8000-000000000021';
 const BOUGHT = '00000000-0000-4000-8000-000000000022';
@@ -45,7 +43,7 @@ const me = (balance: number) =>
     listings: [],
     trades: [],
     spends: [],
-    buysLeft: 10,
+    boughtToday: 0,
     rules: RULES,
   });
 

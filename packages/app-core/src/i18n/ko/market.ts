@@ -26,6 +26,10 @@ const ko = {
   sortOvr: 'OVR 높은 순',
   sortLabel: '정렬',
   posAll: '전체',
+  // T-11-474 세부 필터(명예의 전당처럼 포지션군을 고르면 열린다)
+  detailPos: '세부 포지션',
+  playerType: '유형',
+  filterReset: '필터 초기화',
   listCount: (p: { n: number; more: boolean }) => `선수 ${p.n}${p.more ? '+' : ''}명`,
   // 기준가 대비
   priceSame: '기준가',
@@ -47,7 +51,7 @@ const ko = {
   reload: '다시 불러오기',
   more: '더 보기',
   emptyClosed: '지금은 시즌 사이 휴식기라 이적시장이 닫혀 있어요.',
-  emptyFiltered: '이 포지션에는 아직 나온 선수가 없어요.',
+  emptyFiltered: '이 조건에 맞는 선수가 아직 없어요.',
   empty: '아직 시장에 나온 선수가 없어요. 구단주가 선수를 내놓으면 여기에 올라와요.',
   // 영입 시트
   sheetBuy: '선수 영입',
@@ -65,7 +69,6 @@ const ko = {
   buyNote:
     '영입한 선수는 바로 팀에 넣을 수 있어요. 다시 팔 수는 있지만 방출해서 자금으로 바꿀 수는 없어요.',
   ownListing: '내가 내놓은 선수예요.',
-  buyLimit: '오늘 영입 횟수를 다 썼어요. 내일 다시 영입할 수 있어요.',
   buyShort: (p: { short: string }) =>
     `구단 자금이 ${p.short} 모자라요. 직접 키운 선수를 방출하면 자금이 생겨요.`,
   unlist: '판매 내리기',
@@ -77,6 +80,7 @@ const ko = {
   // 팔기
   sellStep1: '1. 내놓을 선수',
   sellNone: '아직 내 선수 카드가 없어요. 선수가 은퇴하거나 영입하면 여기에 나와요.',
+  sellStartersHidden: '선발 선수는 팀에서 뺀 뒤 내놓을 수 있어요.',
   sellSelected: '선택',
   sellPickLabel: (p: { name: string }) => `${p.name} 내놓을 선수로 고르기`,
   sellStep2: (p: { name: string; pos: string; peak: number }) =>
@@ -95,7 +99,6 @@ const ko = {
   sellMax: (p: { value: string }) => `${p.value}까지 정할 수 있어요.`,
   noteListed: '판매 중',
   noteNoValue: '기준가 없음',
-  noteStarter: '선발',
   noteLocked: '잠김',
   // 내 거래
   tradesListed: '내놓은 선수',

@@ -133,3 +133,12 @@ export const MARKET_CHART_DAYS: Record<MarketChartRange, number | null> = {
   month: 30,
   season: null,
 };
+
+/** T-11-474 포지션군별 선수 유형 id(게임 TYPES와 같은 순서 · app-core 테스트가 맞춰 본다). 목록 필터에 쓴다. */
+export const MARKET_TYPES = {
+  FW: ['poacher', 'speed', 'target'],
+  MF: ['maker', 'b2b', 'winger'],
+  DF: ['stopper', 'fullback', 'libero'],
+  GK: ['shot', 'sweeper', 'wall'],
+} as const;
+export type MarketType = (typeof MARKET_TYPES)[keyof typeof MARKET_TYPES][number];

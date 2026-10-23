@@ -36,8 +36,6 @@ const ko = {
   marketFeeRate: '거래 수수료율',
   marketPriceMin: '최저 판매가(기준가 배수)',
   marketPriceMax: '최고 판매가(기준가 배수)',
-  marketListLimit: '동시 판매 등록 수',
-  marketDailyBuys: '하루 영입 수',
   leagueHomeAdv: '리그 홈 이점',
   pastSalaryBudget: '지난 시즌 선수 급여 예산',
   pastSalaryBudgetStep: '시즌당 급여 예산 증가',
