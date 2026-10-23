@@ -120,6 +120,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '시즌 2 새 리그 열기',
     desc: '1이면 브라질 · 포르투갈 · 사우디 · 중국 리그 구단이 이적 · 임대 제의를 내고 대륙 대회 상대로 나온다(진행 중 커리어는 다음 시즌부터)',
   },
+  eraRival: {
+    group: 'event',
+    label: '시대의 라이벌',
+    desc: '1이면 눈에 띈 시즌(25세 이하)에 또래 라이벌이 나타나 따로 성장하고 시즌마다 기록 · 수상을 비교한다(내 결과는 바뀌지 않는다)',
+  },
   richYoungPull: {
     group: 'transfer',
     label: '28세 미만 사우디 · 중국 오퍼 가중치',

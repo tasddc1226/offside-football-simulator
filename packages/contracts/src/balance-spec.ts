@@ -148,6 +148,12 @@ export const BALANCE_SPEC = {
     max: 1,
     step: 1,
   },
+  eraRival: {
+    def: 1,
+    min: 0,
+    max: 1,
+    step: 1,
+  },
   richYoungPull: {
     def: 0.15,
     min: 0,

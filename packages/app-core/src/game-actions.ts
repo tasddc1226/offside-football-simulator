@@ -74,6 +74,7 @@ import type {
 import { markDexSeen } from './dex.js';
 import { clearPhaseReport, keepPhaseReport, pushEvLog, seasonLabel } from './career.js';
 import { scoutHint, seasonTrend, seasonTrendLine } from './scoutHint.js';
+import { eraCard } from './era-view.js';
 import { recordPhaseOvr, takeSeasonGrowth } from './growth.js';
 import { publicNameOf } from './namePublic.js';
 import { fmtValue, growthDirFor, seasonLabelOf } from './format.js';
@@ -552,6 +553,7 @@ export function createGameActions(host: GameHost) {
       miles = [],
       titles = [],
       promo,
+      era,
     } = res;
     const s = appState.G!;
     // T-10-112 고3 첫 시즌이 끝났다. 다음 커리어는 새 후보를 받는다.
@@ -605,6 +607,7 @@ export function createGameActions(host: GameHost) {
         miles: miles.map(tn),
         titles,
         promo: promo && { club: tn(promo.club), down: tn(promo.down) },
+        era: era ? eraCard(s, era, rec) : null,
         notes,
         scoutHint: scoutHint(s, rec.year),
         seasonTrend: seasonTrendLine(s, rec.year),

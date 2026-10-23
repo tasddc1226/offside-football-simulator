@@ -21,6 +21,7 @@ const ko = {
   bigInjuryShare: '큰 부상 비율',
   mlsYoungPull: '30세 미만 MLS 오퍼 가중치',
   newLeagues: '시즌 2 새 리그 열기',
+  eraRival: '시대의 라이벌',
   richYoungPull: '28세 미만 사우디 · 중국 오퍼 가중치',
   braPull: '브라질 오퍼 가중치',
   koreaStr: 'A대표팀 전력',

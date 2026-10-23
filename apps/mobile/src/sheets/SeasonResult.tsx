@@ -18,6 +18,7 @@ import { Enter, Pop } from './anim';
 import { Hl, StatGrid, mixColor } from './parts';
 import { growthDirectionText } from '@offside/app-core/ratingReport';
 import { CoachTarget } from '../components/Coachmark';
+import { EraCard } from '../screens/game/EraRival';
 
 export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> }) {
   const s = useSnapshot(v);
@@ -133,6 +134,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
           </View>
         </Pop>
       ) : null}
+      {s.era ? <EraCard v={s.era} /> : null}
       {s.comps.length ? (
         <View>
           <Txt v="eyebrow" style={{ marginBottom: 6 }}>
