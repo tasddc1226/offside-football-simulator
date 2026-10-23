@@ -91,7 +91,7 @@
       {/each}
     </div>
     {#if model.bars.length}
-      <div class="mc-vol" aria-label={CHART_COPY.volume}>
+      <div class="mc-vol" role="img" aria-label={CHART_COPY.volume}>
         {#each model.bars as b (b.p.day)}
           <i style:left="{b.x}%" style:height="{b.h}%" class:mc-vol-last={b === model.bars.at(-1)}></i>
         {/each}
