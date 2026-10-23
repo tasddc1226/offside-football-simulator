@@ -19,7 +19,6 @@ import { TABBAR_H } from '../ui/TabBar';
 import { Toast } from '../ui/Toast';
 import { NewsBanner } from '../banners/NewsBanner';
 import { UpdateBanner } from '../banners/UpdateBanner';
-import { StoreUpdateBanner } from '../banners/StoreUpdateBanner';
 import { RetiredNumberAlert } from '../banners/RetiredNumberAlert';
 import { useColors } from '../theme/useColors';
 import Home from '../screens/home/Home';
@@ -124,7 +123,6 @@ export default function App() {
         </EdgeSwipeBack>
       </BarBelow.Provider>
       {main ? <MainNav /> : null}
-      <StoreUpdateBanner />
       <UpdateBanner />
       <NewsBanner />
       <RetiredNumberAlert />

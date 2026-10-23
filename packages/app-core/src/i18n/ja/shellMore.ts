@@ -11,9 +11,11 @@ export const shellMore: Translation<ShellMoreMsgs> = {
   adPreview: (p) => `広告枠 · ${p.place}`,
   updateBodyApp: '新しいバージョンが出ました。再起動するとすぐに反映されます。',
   updateBtnApp: '再起動',
-  storeUpdateAlert: 'アプリのアップデートのお知らせ',
   storeUpdateTitle: '新しいバージョンがストアに出ました',
-  storeUpdateBody: 'アップデートしないと、今後の修正がこのアプリに反映されません。',
+  storeUpdateBody: 'アップデートすると、新しい機能と修正がすぐに届きます。',
+  storeUpdateForceBody:
+    'このバージョンはサポートを終了しました。続けるにはストアでアップデートしてください。',
+  storeUpdateLater: 'あとで',
   storeUpdateBtn: 'アップデート',
   keepLoginTitle: 'ログインして記録を守る',
   keepLoginBody:
