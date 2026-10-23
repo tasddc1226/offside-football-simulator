@@ -1,6 +1,7 @@
-// T-11-454 웹 결제(엑솔라 Pay Station). 설정은 구단주 화면 상점이 열릴 때 한 번 묻는다(10분 메모). 상품을 고르면 서버가
-// 만든 결제창 주소로 같은 탭에서 가고, 끝나면 `/?webpay=<주문>`으로 돌아온다. 아이템은 엑솔라 웹훅이 서버에서 주므로 웹은 주문
-// 상태만 몇 번 묻는다. 그 사이 확인이 안 되면 주문을 기기에 두고 다음에 상점을 열 때 한 번 더 묻는다.
+// T-11-454 웹 결제(엑솔라 Pay Station). 설정은 웹 결제 묶음(WebPayPacks)이 처음 보일 때 한 번 묻는다(10분 메모). 상품을 고르면
+// 서버가 만든 결제창 주소로 같은 탭에서 가고, 끝나면 `/?webpay=<주문>`으로 돌아와 결제를 시작한 화면(경기 · 구단주)으로 간다.
+// 아이템은 엑솔라 웹훅이 서버에서 주므로 웹은 주문 상태만 몇 번 묻는다. 그 사이 확인이 안 되면 주문을 기기에 두고 다음에
+// 묶음이 보일 때 한 번 더 묻는다.
 import { clearApiCache } from '@offside/app-core/api/client';
 import {
   createWebPayOrder,
@@ -10,7 +11,8 @@ import {
 } from '@offside/app-core/api/webPay';
 import { webPayText as L } from '@offside/app-core/i18n/ko/webPay';
 import { toast } from '../helpers.js';
-import { go } from '../nav.js';
+import { go, goContinue } from '../nav.js';
+import { appState } from '../state.svelte.js';
 
 const PENDING_KEY = 'ft_webpay_pending';
 const ORDER_ID = /^wp_[a-f0-9]{32}$/;
@@ -26,16 +28,21 @@ export const webPay = $state<{ config: WebPayConfigResponse | null; busy: boolea
 });
 
 let loading: Promise<void> | null = null;
+/** 여러 묶음이 같이 불러도 설정 · 미확인 주문은 한 번만 묻는다(실패하면 다음에 다시). */
 export function loadWebPay() {
-  loading ??= fetchWebPayConfig().then((r) => {
-    if (r.ok) webPay.config = r.data;
-    else loading = null;
-  });
-  void checkPending();
+  if (!loading) {
+    loading = fetchWebPayConfig().then((r) => {
+      if (r.ok) webPay.config = r.data;
+      else loading = null;
+    });
+    void checkPending();
+  }
   return loading;
 }
 
-type Pending = { orderId: string; at: number };
+/** 결제창에서 돌아갈 화면. game은 진행 중인 선수(선수 탭 강화 · 이름 옆 변경권), 아니면 구단주 화면. */
+export type WebPayBack = 'game' | 'owner';
+type Pending = { orderId: string; at: number; back?: WebPayBack };
 function readPending(): Pending | null {
   try {
     const p = JSON.parse(localStorage.getItem(PENDING_KEY) ?? 'null') as Pending | null;
@@ -83,7 +90,7 @@ async function checkPending() {
 }
 
 /** 상품을 고르면 주문을 만들고 엑솔라 결제창으로 간다. */
-export async function startWebPay(productId: string) {
+export async function startWebPay(productId: string, back: WebPayBack = 'owner') {
   if (webPay.busy) return;
   webPay.busy = true;
   toast(L.opening);
@@ -92,15 +99,18 @@ export async function startWebPay(productId: string) {
     webPay.busy = false;
     return toast(r.error.message || L.startFail);
   }
-  writePending({ orderId: r.data.orderId, at: Date.now() });
+  writePending({ orderId: r.data.orderId, at: Date.now(), back });
   location.assign(r.data.payUrl);
 }
 
-/** main.ts: 엑솔라 결제창에서 돌아왔을 때(`?webpay=<주문>`). 주소를 정리하고 구단주 화면에서 결과를 기다린다. */
+/** main.ts: 엑솔라 결제창에서 돌아왔을 때(`?webpay=<주문>`). 주소를 정리하고 결제를 시작한 화면에서 결과를 기다린다. */
 export async function handleWebPayReturn() {
   const orderId = new URLSearchParams(location.search).get('webpay') ?? '';
   window.history.replaceState({}, '', '/');
-  go('owner');
+  const p = readPending();
+  if (p?.orderId === orderId && p.back === 'game' && appState.G && !appState.G.retired)
+    goContinue();
+  else go('owner');
   if (!ORDER_ID.test(orderId)) return;
   toast(L.confirming);
   for (let i = 0; i < POLL_TRIES; i += 1) {

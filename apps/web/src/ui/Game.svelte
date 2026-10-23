@@ -184,4 +184,4 @@
 </nav>
 
 {#if lookOpen}{#await import('./AvatarLook.svelte') then { default: AvatarLook }}<AvatarLook {s} onclose={() => (lookOpen = false)} />{/await}{/if}
-{#if renameOpen}{#await import('./RenameSheet.svelte') then { default: RenameSheet }}<RenameSheet careerId={s.cid} name={s.name} onclose={() => (renameOpen = false)} />{/await}{/if}
+{#if renameOpen}{#await import('./RenameSheet.svelte') then { default: RenameSheet }}<RenameSheet careerId={s.cid} name={s.name} back="game" onclose={() => (renameOpen = false)} />{/await}{/if}

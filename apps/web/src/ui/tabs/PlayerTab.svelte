@@ -31,6 +31,8 @@
   import type { RewardShopResponse } from '@offside/contracts';
   import { fetchItems } from '@offside/app-core/api/cup';
   import { hasSessionHint } from '@offside/app-core/api/client';
+  import { iapText as IL } from '@offside/app-core/i18n/ko/iap';
+  import WebPayPacks from '../cup/WebPayPacks.svelte';
 
   const { s }: { s: GameState } = $props();
   const lg = $derived(leagueOf(s.leagueId));
@@ -104,6 +106,7 @@
   const clubTry = $derived(freeOpen ? clubOffer(club, 'boost') : null);
   // T-11-157 구단 자금으로는 이번 시즌의 한 번을 쓴 뒤에도 더 시도한다(오늘 횟수는 서버가 센다 — 웹은 광고가 없다).
   // T-11-174 앱에서 산 잠재력 강화권. 로그인한 구단주가 강화 자리를 볼 때만 장수를 묻고, 못 받으면 버튼을 보이지 않는다.
+  // T-11-471 같은 자리에 앱 스토어 묶음처럼 웹 결제 묶음을 보인다(웹 결제가 열린 구단주만, 결제 뒤 이 화면으로 돌아온다).
   let tickets = $state(0);
   let ticketBusy = $state(false);
   $effect(() => {
@@ -207,6 +210,7 @@
         {ticketBusy ? B.ticketBusy : B.ticketBoost({ n: tickets, chance: boost.chance })}
       </button>
     {/if}
+    {#if ticketOpen}<WebPayPacks item="boost" back="game" note={IL.boostNote({ chance: boost.chance })} />{/if}
     {#if clubMsg}<p class="muted fs-sm" aria-live="polite">{clubMsg}</p>{/if}
     <p class="muted fs-xs">{boost.note}</p>
     {#if boost.history.length}

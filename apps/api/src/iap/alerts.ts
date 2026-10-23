@@ -61,7 +61,11 @@ type AlertRow = {
 };
 export function billingSlackMessage(row: AlertRow, id: string, locale: 'ko' | 'en' = 'ko') {
   const L = locale === 'ko' ? ko : en;
-  const kind = L.kinds[row.kind as keyof typeof L.kinds] ?? row.kind;
+  const web = row.store === 'xsolla';
+  const kind =
+    (web ? L.webKinds[row.kind as keyof typeof L.webKinds] : undefined) ??
+    L.kinds[row.kind as keyof typeof L.kinds] ??
+    row.kind;
   const environment = row.test ? L.sandbox : L.live;
   const store =
     row.store === 'apple' ? 'App Store' : row.store === 'xsolla' ? 'Xsolla' : 'Google Play';
@@ -90,7 +94,8 @@ export function billingSlackMessage(row: AlertRow, id: string, locale: 'ko' | 'e
         hourCycle: 'h23',
       }).format(date);
   const heading = `OFFSIDE · ${kind} · ${environment}`;
-  const detail = `${L.product}: ${productName}\n${L.store}: ${store}\n${L.received}: ${time} (${L.timezone})`;
+  const channel = web ? L.channels.web : L.channels.app;
+  const detail = `${L.product}: ${productName}\n${L.channel}: ${channel}\n${L.store}: ${store}\n${L.received}: ${time} (${L.timezone})`;
   const notice = row.test ? L.testNotice : '';
   const reference = `${L.productId}: ${row.product_id} · ${L.reference}: ${id.slice(0, 12)}`;
   const plain = (text: string) => ({ type: 'plain_text', text, emoji: true });

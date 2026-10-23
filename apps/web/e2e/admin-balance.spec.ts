@@ -486,7 +486,10 @@ test('T-11-263 매출 탭: 열 때 불러오고, 기간을 바꾸면 다시 받�
           krw: 1100,
         })),
         products: [{ productId: 'com.offsidelab.app.scout_5', count: 2, krw: 8800, refunded: 0 }],
-        stores: [{ store: 'google', count: 3, krw: 8800 }],
+        stores: [
+          { store: 'google', count: 2, krw: 7700 },
+          { store: 'xsolla', count: 1, krw: 1100 },
+        ],
         removeAds: { count: 1, refunds: 0, krw: 3300, since: T },
         recent: [],
       }),
@@ -501,6 +504,12 @@ test('T-11-263 매출 탭: 열 때 불러오고, 기간을 바꾸면 다시 받�
   const sum = page.locator('[data-revenue-summary]');
   await expect(sum).toContainText('₩8,800 · 3건');
   await expect(sum).toContainText('광고 제거');
+  // T-11-471 앱 인앱 결제와 웹 결제(엑솔라)를 나눠 보인다.
+  await expect(sum).toContainText('앱 인앱 결제₩7,700 · 2건');
+  await expect(sum).toContainText('웹 결제₩1,100 · 1건');
+  await expect(page.locator('[data-admin="revenue"]')).toContainText(
+    '웹 결제 (Xsolla)1건 · ₩1,100',
+  );
   await expect(page.locator('[data-admin="revenue"]')).toContainText('프리미엄 스카우트권 5장');
   await page.locator('[data-revenue-days="30"]').click();
   await expect.poll(() => asked).toEqual(['7', '30']);

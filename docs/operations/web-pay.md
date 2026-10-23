@@ -12,7 +12,8 @@ T-11-454. 웹(offside-lab.com) 구단주 화면에서 앱과 같은 인앱 상�
   `packages/contracts/src/cup.ts`의 `IAP_PRODUCTS`). 원화 가격은 앱 한국 정가(`IAP_PRICE_KRW`)와 같게 두고, 다른 통화는 엑솔라 자동 환산이나
   나라별 가격을 쓴다. 웹 상점에는 한국 기준가를 보이고 "결제 화면에서 사는 나라 통화로 보여요"를 붙인다.
 - 원장은 앱과 같은 `iap_purchases`이고 `store = 'xsolla'`, `transaction_id = 엑솔라 주문 번호`다. 매출 탭 · 결제 알림 · 운영 도구 구매 기록에
-  그대로 잡힌다(금액 · 통화는 사용자가 낸 통화). 옛 앱이 엄격한 enum으로 읽는 `IapStoreSchema` · `GET /v1/items`의 `iap.stores`에는 넣지 않았다.
+  그대로 잡힌다(금액 · 통화는 사용자가 낸 통화). T-11-471부터 결제 슬랙 알림은 제목이 '🌐 웹 결제' · '↩️ 웹 결제 환불'이고 결제 경로 줄로
+  앱 인앱 결제와 갈리며, 운영 도구 매출 요약에 '앱 인앱 결제' · '웹 결제' 합이 따로 보인다(스토어별 · 최근 결제는 '웹 결제 (Xsolla)'). 옛 앱이 엄격한 enum으로 읽는 `IapStoreSchema` · `GET /v1/items`의 `iap.stores`에는 넣지 않았다.
 - 주문은 `web_pay_orders`(0128): 우리 주문 id · 구단주 · 상품 · 엑솔라 주문 번호 · 상태(READY · PAID · CANCELED).
 - API (`apps/api/src/routes/webPay.ts`, 엑솔라 호출은 `apps/api/src/iap/xsolla.ts`)
   - `GET /v1/web-pay/config`: 로그인 구단주에게 켜져 있는지 · 상품 목록.
@@ -22,8 +23,13 @@ T-11-454. 웹(offside-lab.com) 구단주 화면에서 앱과 같은 인앱 상�
   - `POST /v1/web-pay/webhook`: 엑솔라 웹훅. `Authorization: Signature sha1(본문 + 웹훅 비밀 키)`로 확인한다.
     `user_validation`(프로필이 있으면 204), `order_paid`(아이템 지급), `order_canceled`(환불 · 차지백 회수, 결제보다 먼저 와도 나중 지급을 막는다).
     처리하면 204, 받을 수 없는 요청은 400(엑솔라가 다시 보내지 않는다), 우리 쪽 일시 오류는 5xx(12시간 안에 다시 보낸다).
-- 웹: `ui/cup/WebPayShop.svelte`(구단주 화면 상점 아래), `ui/cup/webPay.svelte.ts`. 상품을 누르면 같은 탭에서 결제창으로 가고
-  `/?webpay=<주문>`으로 돌아온다. 아이템은 웹훅이 주므로 웹은 2초 간격으로 6번까지 상태를 묻고, 그래도 확인이 안 되면 다음에 상점을 열 때 한 번 더 묻는다.
+- 웹: `ui/cup/WebPayPacks.svelte`(아이템별 묶음), `ui/cup/webPay.svelte.ts`. T-11-471부터 앱이 스토어 묶음(`IapPacks`)을 보이는
+  자리마다 같은 가격의 웹 묶음을 보인다: 구단주 화면 리롤권 · 잠재력 강화권 · 프리미엄 스카우트권 · 선수 이름 변경권 상점, 선수 탭 잠재력
+  강화 카드, 이름 변경 창(변경권이 없을 때). 웹 결제가 꺼져 있으면 예전처럼 '앱에서 살 수 있어요'만 보인다. 설정(`GET /v1/web-pay/config`)은
+  묶음이 처음 보일 때 한 번 묻는다(10분 메모). 상품을 누르면 같은 탭에서 결제창으로 가고 `/?webpay=<주문>`으로 돌아와 결제를 시작한
+  화면(진행 중 선수 · 구단주 화면)으로 간다. 아이템은 웹훅이 주므로 웹은 2초 간격으로 6번까지 상태를 묻고, 그래도 확인이 안 되면 다음에
+  묶음이 보일 때 한 번 더 묻는다.
+- 광고 제거(`com.offsidelab.app.remove_ads`)는 앱 광고를 끄는 스토어 상품이라 웹에서 팔지 않는다.
 - 앱은 바뀌지 않는다. 앱 안에서 웹 결제로 안내하지 않는다(스토어 정책).
 
 ## 설정

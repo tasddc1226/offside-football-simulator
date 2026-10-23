@@ -16,5 +16,4 @@ export const webPay: Translation<WebPayMsgs> = {
   canceled: '返金された決済のため、アイテムを回収しました。',
   refund:
     '受け取ったアイテムを使っていなければ、決済日から7日以内に返金を申請できます。使ったアイテムは返金できません。お問い合わせ: contact@offside-lab.com',
-  shopWeb: '下の「ウェブで購入」で購入できます。',
 };
