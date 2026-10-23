@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { compareVersions, storeUpdateUrl } from './appVersion.js';
+import { compareVersions, storeUpdateNeed } from './appVersion.js';
 
 const V = {
-  ios: { min: '1.1.0', url: 'https://apps.apple.com/kr/app/id1' },
-  android: { min: '1.0.0', url: 'https://play.google.com/store/apps/details?id=x' },
+  ios: { min: '1.1.0', latest: '1.1.4', url: 'https://apps.apple.com/kr/app/id1' },
+  android: {
+    min: '1.0.0',
+    latest: '1.0.0',
+    url: 'https://play.google.com/store/apps/details?id=x',
+  },
 };
 
 describe('앱 버전 (T-11-042)', () => {
@@ -14,15 +18,24 @@ describe('앱 버전 (T-11-042)', () => {
     expect(compareVersions('2.0.0', '1.99.99')).toBeGreaterThan(0);
   });
 
-  it('최소 버전보다 낮을 때만 스토어 주소를 준다', () => {
-    expect(storeUpdateUrl(V, 'ios', '1.0.0')).toBe(V.ios.url);
-    expect(storeUpdateUrl(V, 'ios', '1.1.0')).toBeNull();
-    expect(storeUpdateUrl(V, 'ios', '1.2.0')).toBeNull();
-    expect(storeUpdateUrl(V, 'android', '1.0.0')).toBeNull();
+  it('최소 버전보다 낮으면 강제, 최신 버전보다 낮으면 권장 업데이트다 (T-11-464)', () => {
+    expect(storeUpdateNeed(V, 'ios', '1.0.0')).toEqual({
+      kind: 'force',
+      url: V.ios.url,
+      latest: '1.1.4',
+    });
+    expect(storeUpdateNeed(V, 'ios', '1.1.0')).toEqual({
+      kind: 'suggest',
+      url: V.ios.url,
+      latest: '1.1.4',
+    });
+    expect(storeUpdateNeed(V, 'ios', '1.1.4')).toBeNull();
+    expect(storeUpdateNeed(V, 'ios', '1.2.0')).toBeNull();
+    expect(storeUpdateNeed(V, 'android', '1.0.0')).toBeNull();
   });
 
   it('버전을 모르면 안내하지 않는다', () => {
-    expect(storeUpdateUrl(V, 'ios', undefined)).toBeNull();
-    expect(storeUpdateUrl(V, 'ios', 'dev')).toBeNull();
+    expect(storeUpdateNeed(V, 'ios', undefined)).toBeNull();
+    expect(storeUpdateNeed(V, 'ios', 'dev')).toBeNull();
   });
 });
