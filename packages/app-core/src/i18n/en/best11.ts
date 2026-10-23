@@ -61,4 +61,6 @@ export const best11: Translation<Best11Msgs> = {
     'Awards count the top three per season, and awards for your own position count double.',
   criteria5:
     'Each owner holds one slot only. Ties go to performance, then awards, then the earlier retirement.',
+  reward: (p: { n: number; s: number; b: number }) =>
+    `When the season is final, each slot's owner receives ${p.n} player reroll ticket(s), ${p.s} premium scout ticket(s) and ${p.b} potential boost ticket(s).`,
 };

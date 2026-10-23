@@ -64,6 +64,8 @@ const ko = {
   criteria4: '개인 수상은 시즌마다 큰 상 3개까지 세고, 자기 포지션 상은 2배로 쳐요.',
   criteria5:
     '한 구단주는 한 자리만 차지해요. 지수가 같으면 개인 활약, 개인 수상, 먼저 은퇴한 순이에요.',
+  reward: (p: { n: number; s: number; b: number }) =>
+    `시즌이 확정되면 자리 주인 구단주는 선수 후보 리롤권 ${p.n}장, 프리미엄 스카우트권 ${p.s}장, 잠재력 강화권 ${p.b}장을 받아요.`,
 };
 
 export type Best11Msgs = typeof ko;

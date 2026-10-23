@@ -1,0 +1,1 @@
+ALTER TABLE `best11_slots` ADD `rewarded_at` text;

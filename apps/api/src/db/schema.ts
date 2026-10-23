@@ -2089,6 +2089,8 @@ export const best11Slots = sqliteTable(
       .references(() => careers.id, { onDelete: 'cascade' }),
     score: real('score').notNull(),
     since: text('since').notNull(),
+    /** T-11-463b 시즌 확정 뒤 자리 주인 구단주에게 보상을 준 시각(한 번만 준다). */
+    rewardedAt: text('rewarded_at'),
   },
   (t) => [primaryKey({ columns: [t.season, t.slot] })],
 );

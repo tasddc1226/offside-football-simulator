@@ -1,4 +1,6 @@
 import { Best11ResponseSchema, successEnvelope } from '@offside/contracts';
+import { BEST11_REWARD } from '@offside/contracts/best11-rules';
+import { applySeasonSchedule, closeSeasonSchedule } from '@offside/contracts/service-seasons';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
@@ -9,7 +11,15 @@ import {
   runBest11Daily,
 } from '../db/repos/best11.js';
 import { storedSeasonsOf } from '../db/repos/careers.js';
-import { best11Candidates, best11Changes, careerSeasons, careers } from '../db/schema.js';
+import {
+  best11Candidates,
+  best11Changes,
+  best11Slots,
+  careerSeasons,
+  careers,
+  notifications,
+  ownerItems,
+} from '../db/schema.js';
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { issueCookie } from '../test/http.js';
 
@@ -21,6 +31,7 @@ beforeEach(async () => {
   ctx = await createTestD1();
 });
 afterEach(async () => {
+  applySeasonSchedule([]);
   await ctx.dispose();
 });
 
@@ -194,6 +205,55 @@ describe('T-11-463 시즌 BEST 11', () => {
     expect((await readBest11(ctx.db, 1)).slots.find((s) => s.slot === 'DM')?.player?.careerId).toBe(
       missed,
     );
+  });
+
+  it('T-11-463b 시즌이 마감되면 매일 단계가 확정하고 자리 주인 구단주에게 보상을 한 번만 준다', async () => {
+    const a = await issueCookie(ctx);
+    const b = await issueCookie(ctx);
+    const c = await issueCookie(ctx);
+    const st = await addCareer(a.profileId, { dpos: 'ST', rating: 8 });
+    const gk = await addCareer(b.profileId, { dpos: 'GK', rating: 7 });
+    // 같은 구단주의 두 번째 선수(GK 2위)는 자리에 오르지 않아 보상도 한 번이다.
+    await addCareer(a.profileId, { dpos: 'GK', rating: 6.5 });
+    const outside = await addCareer(c.profileId, { dpos: 'ST', rating: 6 });
+    for (const id of [st, gk, outside]) await offer(id);
+    // 마감 전에는 확정도 보상도 없다.
+    expect((await runBest11Daily(ctx.db, NOW)).rewarded).toBe(0);
+    expect(await ctx.db.select().from(ownerItems)).toEqual([]);
+
+    applySeasonSchedule(closeSeasonSchedule(1, '2026-10-30T15:00:00.000Z', false));
+    const at = '2026-10-30T19:00:00.000Z';
+    const r = await runBest11Daily(ctx.db, at);
+    expect(r).toMatchObject({ finalized: [1], rewarded: 2 });
+    expect((await readBest11(ctx.db, 1)).finalAt).toBe(at);
+    const items = await ctx.db.select().from(ownerItems);
+    const qty = (p: string, item: string) =>
+      items.find((i) => i.profileId === p && i.item === item)?.qty ?? 0;
+    for (const p of [a.profileId, b.profileId]) {
+      expect(qty(p, 'reroll')).toBe(BEST11_REWARD.rerolls);
+      expect(qty(p, 'scout')).toBe(BEST11_REWARD.scouts);
+      expect(qty(p, 'boost')).toBe(BEST11_REWARD.boosts);
+    }
+    expect(items.filter((i) => i.profileId === c.profileId)).toEqual([]);
+    const sent = await ctx.db.select().from(notifications);
+    expect(sent.map((n) => [n.profileId, n.sourceKey]).sort()).toEqual(
+      [
+        [a.profileId, 'best11:1:reward'],
+        [b.profileId, 'best11:1:reward'],
+      ].sort(),
+    );
+    expect(sent[0]!.title).toBe('시즌 1 BEST 11에 뽑혔어요');
+    expect((await ctx.db.select().from(best11Slots)).every((s) => s.rewardedAt === at)).toBe(true);
+
+    // 다음 날 다시 돌아도 확정 · 보상은 그대로다.
+    const again = await runBest11Daily(ctx.db, '2026-10-31T19:00:00.000Z');
+    expect(again).toMatchObject({ finalized: [], rewarded: 0 });
+    expect(qty(a.profileId, 'reroll')).toBe(BEST11_REWARD.rerolls);
+    const after = await ctx.db.select().from(ownerItems);
+    expect(after.find((i) => i.profileId === a.profileId && i.item === 'reroll')?.qty).toBe(
+      BEST11_REWARD.rerolls,
+    );
+    expect(await ctx.db.select().from(notifications)).toHaveLength(2);
   });
 
   it('공개 조회는 쿠키가 있어도 세션 · 프로필을 읽지 않는다', async () => {

@@ -70,6 +70,11 @@ const PRIME_COUNT = 5;
 export const BEST11_POOL = 40;
 /** 화면에 보여 주는 자리별 순위 수. */
 export const BEST11_TOP = 10;
+/**
+ * T-11-463b 시즌이 확정되면 11자리 주인 구단주에게 한 번 주는 보상. 서버 전체 11명이라 컵 4강(리롤 7 · 스카우트 1 · 강화 1)보다
+ * 많고 준우승(10 · 2 · 2)과 같다. 한 구단주는 한 자리만 차지하므로 한 사람이 겹쳐 받지 않는다.
+ */
+export const BEST11_REWARD = { rerolls: 10, scouts: 2, boosts: 2 } as const;
 
 const TIER = new Map(LEAGUE_BASE.map((l) => [l.name, l.amateur ? -1 : l.tier]));
 /** 리그 등급별 무게(프리미어리그 6). 개인 활약 보정은 이 값 / 6, 리그 우승 점수는 이 값 그대로다. */
