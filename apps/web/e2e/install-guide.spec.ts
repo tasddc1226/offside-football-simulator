@@ -81,6 +81,25 @@ test.describe('안드로이드 Chrome', () => {
   });
 });
 
+test.describe('안드로이드 인스타그램 인앱 브라우저', () => {
+  test.use({
+    userAgent:
+      'Mozilla/5.0 (Linux; Android 14; SM-S921N Build/UP1A.231005.007; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/129.0.6668.81 Mobile Safari/537.36 Instagram 355.0.0.36.104 Android',
+  });
+
+  test('T-11-466 Google Play 버튼은 Play 스토어 앱 intent로 지금 창에서 열고 유입 캠페인을 넘긴다', async ({
+    page,
+  }) => {
+    await page.goto('/?utm_source=meta&utm_medium=paid&utm_campaign=global_test');
+    const play = page.locator('[data-app-conversion="home"] [data-act="play-store"]');
+    await expect(play).toHaveAttribute(
+      'href',
+      /^intent:\/\/details\?id=com\.offsidelab\.app&referrer=[^#]*utm_source%3Dmeta[^#]*#Intent;scheme=market;package=com\.android\.vending;S\.browser_fallback_url=https%3A%2F%2Fplay\.google\.com%2F/,
+    );
+    await expect(play).not.toHaveAttribute('target', '_blank');
+  });
+});
+
 test('홈 설치 카드를 닫으면 7일간 숨기고 플레이 화면에 반복하지 않는다', async ({ page }) => {
   await page.goto('/');
   const card = page.locator('[data-app-conversion="home"]');
