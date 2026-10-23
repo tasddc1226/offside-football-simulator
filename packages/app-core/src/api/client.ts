@@ -2,6 +2,7 @@ import type { DetailPos } from '@offside/contracts/positions';
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
 import { LIVE_POLL_SEC, TICKER_POLL_SEC } from '@offside/contracts/polling';
 import type {
+  Best11Response,
   Profile as ContractProfile,
   FirstsResponse,
   HofDetailResponse,
@@ -329,6 +330,10 @@ export function getHof(
 ): Promise<ApiResult<HofListResponse>> {
   const q = `limit=${limit}${page > 1 ? `&page=${page}` : ''}${sort !== 'score' ? `&sort=${sort}` : ''}${season !== null ? `&season=${season}` : ''}${name ? `&q=${encodeURIComponent(name)}` : ''}${pos ? `&pos=${pos}` : ''}${dpos ? `&dpos=${dpos}` : ''}`;
   return cachedGet<HofListResponse>(`/v1/hof?${q}`, 60_000);
+}
+/** T-11-463 시즌 BEST 11(공개). 자리 주인은 은퇴마다 바뀌지만 화면을 열 때만 부른다. */
+export function getBest11(season: number): Promise<ApiResult<Best11Response>> {
+  return cachedGet<Best11Response>(`/v1/best11?season=${season}`, 60_000);
 }
 /** T-10-013. 이 계정의 은퇴 선수. 익명 프로필이면 linked=false. */
 export function getMyCareers(): Promise<ApiResult<MyCareersResponse>> {
