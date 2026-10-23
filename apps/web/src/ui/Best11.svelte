@@ -139,7 +139,7 @@
           {/if}
 
           <h4 class="b11-rank-title">{L.rankTitle({ slot: best11SlotName(slot) })}</h4>
-          <p class="muted b11-rank-lead">{L.rankLead}{#if cutline !== null}&#32;<strong>{L.cutline({ index: fmtIndex(cutline) })}</strong>{/if}</p>
+          <p class="muted b11-rank-lead">{L.rankLead}{#if cutline !== null}<strong class="b11-cut">{L.cutline({ index: fmtIndex(cutline) })}</strong>{/if}</p>
           <ol class="b11-rank">
             {#each ranking as e, i (e.careerId)}
               <li class:held={e.held === 'owner'} class:xi={e.held === 'xi'} data-best11-rank={e.careerId}>
@@ -219,4 +219,5 @@
   .b11-criteria { margin-top:18px; font-size:var(--fs-caption); }
   .b11-criteria summary { cursor:pointer; font-weight:700; }
   .b11-criteria ul { margin:8px 0 0; padding-left:18px; display:grid; gap:4px; }
+  .b11-cut { margin-inline-start:0.3em; }
 </style>
