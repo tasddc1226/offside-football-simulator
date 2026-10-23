@@ -148,7 +148,6 @@ describe('T-11-454 웹 결제(엑솔라)', () => {
       purchase: { items: [{ sku: REROLL_15, quantity: 1 }] },
       settings: {
         language: 'en',
-        external_id: o.orderId,
         return_url: `http://localhost:5173/?webpay=${o.orderId}`,
       },
     });

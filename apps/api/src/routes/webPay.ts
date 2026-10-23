@@ -111,7 +111,6 @@ export function registerWebPayRoutes(app: Hono<AppEnv>) {
     const token = await createXsollaToken(c.env, {
       profileId: me.id,
       sku: productId,
-      orderId,
       country,
       ip: c.req.header('CF-Connecting-IP') ?? null,
       language: reqLang(c),
