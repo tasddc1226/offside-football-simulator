@@ -267,6 +267,7 @@ const GUIDE_SECTIONS = [
     '컵 대회 · 대륙 대회 · 개인상',
     [
       '소속 리그에 따라 국내 컵, 슈퍼컵, 대륙 클럽 대회(챔피언스리그 등)에 함께 출전합니다. 시즌이 끝나면 득점왕·MVP·발롱도르 같은 개인상을 노릴 수 있습니다. K리그2에서 1위로 시즌을 마치면 다음 시즌에 구단과 함께 K리그1로 승격합니다.',
+      guideCopy.eraRival,
     ],
   ],
   [
@@ -451,6 +452,7 @@ const FAQ_ITEMS = [
     '없습니다. 병역은 대한민국 국적 선수에게만 있습니다. 외국 국적 선수는 입대 제안을 받지 않고, 병역은 ‘해당 없음’으로 표시됩니다.',
   ],
   ['시즌 BEST 11은 어떻게 뽑나요?', guideCopy.best11],
+  ['시대의 라이벌은 언제 나타나나요?', guideCopy.eraRival],
   [
     '영구결번은 어떻게 받나요?',
     `${guideCopy.retiredNumber} ${guideCopy.retiredNumberContribution} ${guideCopy.retiredNumberProgress}`,

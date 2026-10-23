@@ -312,3 +312,48 @@ describe('T-11-428 성장 특성 커브 버전 호환성', () => {
     expect(loadSave(current())?.G.gcv).toBeUndefined();
   });
 });
+
+describe('T-11-475 시대의 라이벌 저장 호환성', () => {
+  it('라이벌이 없던 저장은 채우지 않고, 라이벌이 있는 저장은 그대로 보존한다', () => {
+    const old = current();
+    migrateSave(old);
+    expect(old.era).toBeUndefined();
+    const era: NonNullable<GameState['era']> = {
+      cur: {
+        name: '레온 피셔',
+        country: 'DE',
+        pos: old.pos,
+        born: old.year - old.age,
+        ovr: 74.5,
+        pot: 86,
+        curve: 1,
+        clubId: 'bl-3',
+        club: '도르트문트',
+        leagueId: 'bl',
+        since: old.year - 1,
+        retireAge: 36,
+        seasons: [
+          {
+            year: old.year - 1,
+            age: old.age - 1,
+            club: '도르트문트',
+            clubId: 'bl-3',
+            league: '분데스리가',
+            apps: 30,
+            goals: 12,
+            assists: 6,
+            cs: 0,
+            rating: 7.21,
+            ovr: 74,
+            rank: 3,
+            honors: ['분데스리가 올해의 팀'],
+            ballon: 18,
+          },
+        ],
+      },
+    };
+    const G = JSON.parse(JSON.stringify({ ...current(), era })) as GameState;
+    migrateSave(G);
+    expect(G.era).toEqual(era);
+  });
+});

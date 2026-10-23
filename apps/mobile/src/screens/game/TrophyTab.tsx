@@ -1,4 +1,4 @@
-// 트로피 탭(웹 tabs/TrophyTab.svelte): 우승 연혁 · 개인 수상 · 발롱도르 순위 · 완결된 스토리.
+// 트로피 탭(웹 tabs/TrophyTab.svelte): 우승 연혁 · 개인 수상 · 발롱도르 순위 · 시대의 라이벌 · 완결된 스토리.
 // 선수 상세(은퇴 화면)도 같은 카드를 쓸 수 있게 LegendSource를 받는다.
 import { FONT } from '@offside/app-core/design-tokens';
 import { CareerTrophy } from '../../ui/CareerTrophy';
@@ -13,6 +13,9 @@ import { ClubMark } from '../../ui/ClubBadge';
 import { Txt } from '../../ui/Txt';
 import { gameTrophyText as L } from '@offside/app-core/i18n/ko/gameTrophy';
 import { tn } from '@offside/game/i18n/names';
+import type { EraState } from '@offside/game/era';
+import { eraTab } from '@offside/app-core/era-view';
+import { EraTabCard } from './EraRival';
 
 /** 연도 + 내용 한 줄(웹 .trophy: 44px 연도 칸 + 본문, 위에 구분선). first면 구분선이 없다. */
 export function TrophyRow({
@@ -62,7 +65,8 @@ const Empty = () => (
   </Txt>
 );
 
-export function TrophyTab({ s }: { s: LegendSource }) {
+export function TrophyTab({ s }: { s: LegendSource & { era?: EraState | undefined } }) {
+  const era = eraTab(s);
   const trophies = s.trophies.slice().reverse();
   const awards = s.awards.slice().reverse();
   const ballon = (s.ballon || []).slice().reverse();
@@ -127,6 +131,8 @@ export function TrophyTab({ s }: { s: LegendSource }) {
           ))}
         </Card>
       ) : null}
+
+      {era ? <EraTabCard v={era} /> : null}
 
       <Card gap={4}>
         <Txt v="eyebrow">Story Album</Txt>

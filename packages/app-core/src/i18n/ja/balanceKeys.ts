@@ -21,6 +21,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   bigInjuryShare: '大ケガの割合',
   mlsYoungPull: '30歳未満へのMLSオファーの重み',
   newLeagues: 'シーズン2の新リーグを開く',
+  eraRival: '同時代のライバル',
   richYoungPull: '28歳未満へのサウジ・中国オファーの重み',
   braPull: 'ブラジルからのオファーの重み',
   koreaStr: '韓国A代表の戦力',

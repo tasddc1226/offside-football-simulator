@@ -1,0 +1,26 @@
+{
+  "id": "t-11-475-era-rival",
+  "title": "시대의 라이벌",
+  "items": [
+    "25세 이하에 1부 리그에서 눈에 띄는 시즌을 보내면 같은 포지션의 또래 라이벌이 나타나요",
+    "라이벌은 따로 성장하고 이적하며, 시즌 결산과 트로피 탭에서 기록 · 수상 · 발롱도르 순위를 나란히 비교해요",
+    "라이벌은 내 능력치와 경기 결과, 수상에 영향을 주지 않아요"
+  ],
+  "en": {
+    "title": "Rival of your era",
+    "items": [
+      "Have a standout top-flight season by age 25 and a rival your age in the same position may emerge.",
+      "Your rival grows and transfers on their own. The season review and Trophies tab compare stats, awards, and Ballon d'Or rankings side by side.",
+      "Your rival never changes your attributes, match results, or awards."
+    ]
+  },
+  "ja": {
+    "title": "同時代のライバル",
+    "items": [
+      "25歳以下で1部リーグで目立つシーズンを送ると、同じポジションの同世代ライバルが現れます。",
+      "ライバルは別に成長・移籍し、シーズン総括とトロフィータブで記録・受賞・バロンドール順位を並べて比べます。",
+      "ライバルがあなたの能力値・試合結果・受賞に影響することはありません。"
+    ]
+  },
+  "availability": "web-app"
+}

@@ -5,6 +5,7 @@
   import CareerTrophy from '../CareerTrophy.svelte';
   import { careerMomentText as CM } from '@offside/app-core/i18n/ko/careerMoment';
   import NewTitles from '../titles/NewTitles.svelte';
+  import EraCard from '../era/EraCard.svelte';
   import { sheetPlayText as L } from '@offside/app-core/i18n/ko/sheetPlay';
   import { sheetCoreText } from '@offside/app-core/i18n/ko/sheetCore';
   let { v }: { v: Extract<SheetView, { kind: 'season' }> } = $props();
@@ -44,6 +45,7 @@
     <p class="muted fs-xs">{L.promoDownWeb({ club: v.promo.down })}</p>
   </div>
 {/if}
+{#if v.era}<EraCard v={v.era} />{/if}
 {#if v.comps.length}
   <div>
     <div class="eyebrow" style="margin-bottom:6px">{L.comps}</div>
