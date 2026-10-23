@@ -15,7 +15,9 @@ import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
 import { saveKey } from '@offside/game/storage';
 import { buzz } from '../../game/host';
 import { SiteFooter } from '../../components/SiteFooter';
-import { goAccount, goFairness, goTypeDex, takeFocus } from '../../game/nav';
+import { goAccount, goFairness, goHome, goTypeDex, takeFocus } from '../../game/nav';
+import { replayCoach } from '../../components/Coachmark';
+import { tutorialText as TU } from '@offside/app-core/i18n/ko/tutorial';
 import { scrollBackTo } from '../../ui/scroll';
 import { ItemsHint } from '../../components/ItemsHint';
 import { firstGuideText as FG } from '@offside/app-core/i18n/ko/firstGuide';
@@ -108,6 +110,11 @@ function BuildInfo() {
       {updateId ? L.updateId({ id: updateId }) : L.updateEmbedded}
     </Txt>
   );
+}
+
+function replayTutorial() {
+  replayCoach();
+  goHome();
 }
 
 export default function Settings() {
@@ -280,6 +287,8 @@ export default function Settings() {
             { text: L.faq, path: '/faq/' },
             { text: L.fairness, id: 'fairness', onPress: goFairness },
             { text: FG.typeDex, id: 'type-dex', onPress: goTypeDex },
+            // T-11-473 첫 커리어 따라가기 안내를 처음부터(홈으로 가서 새 커리어 버튼을 비춘다).
+            { text: TU.replay, id: 'tutorial-replay', onPress: replayTutorial },
           ]}
         />
         {/* T-11-321 서버 상태(펼칠 때만 불러온다) */}

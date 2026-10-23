@@ -22,7 +22,6 @@
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
   import { DC_GALLERY_URL } from '@offside/app-core/links';
   import { homeText as L } from '@offside/app-core/i18n/ko/home';
-  import FirstGuide from './FirstGuide.svelte';
   import { homeOrder, NO_HOME_TODO, type HomeTodo } from '@offside/app-core/homeOrder';
 
   const firstHome = !homeShown.seen;
@@ -60,7 +59,7 @@
           <svg class="hero-play" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m10 7.8 6 4.2-6 4.2Z" /></svg>
           <span>{L.continueBtn}</span>
         </button>
-        <button class="hero-new" data-act="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>{L.newCareer}</button>
+        <button class="hero-new" data-act="new" data-coach="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>{L.newCareer}</button>
       </div>
     </section>
   {:else}
@@ -69,7 +68,7 @@
       <div class="eyebrow">Kick-off · 0′</div>
       <h1>{L.kickoffLine1}<br />{L.kickoffLine2}<br />{L.kickoffLine3}</h1>
       <p>{L.kickoffSub}</p>
-      <button class="btn btn-accent btn-block" data-act="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>{L.kickoffBtn}</button>
+      <button class="btn btn-accent btn-block" data-act="new" data-coach="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>{L.kickoffBtn}</button>
     </section>
   {/if}
   <!-- T-11-435 히어로 아래 블록 순서는 app-core homeOrder 한 곳에서 정한다(앱과 같다). 받을 선물 · 오늘 출석이 있으면 그 블록이
@@ -104,9 +103,6 @@
     {:else if block === 'attendance'}
       <!-- T-11-360 출석 체크 한 줄 입구 + 하루 한 번 뜨는 출석 창(보상은 로그인한 구단주만). 첫 화면 번들 밖 지연 청크. -->
       {#await import('./HomeAttendance.svelte')}<div class="card" style="min-height:52px;box-sizing:border-box" aria-hidden="true"></div>{:then { default: HomeAttendance }}<HomeAttendance auto={firstHome} />{/await}
-    {:else if block === 'firstGuide'}
-      <!-- T-11-355 처음 안내 카드(기기마다 닫을 때까지). 늦게 그리면 아래 홈 전체가 밀려서(CLS) 첫 화면 번들에 둔다. -->
-      <FirstGuide />
     {:else if block === 'live'}
       <HomeLive />
     {/if}

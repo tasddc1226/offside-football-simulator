@@ -29,7 +29,6 @@ import { HomeClubValue } from './HomeClubValue';
 import { HomeFirsts } from './HomeFirsts';
 import { HomeGift } from './HomeGift';
 import { HomeAttendance } from './HomeAttendance';
-import { FirstGuide } from './FirstGuide';
 import { HomeLive } from './HomeLive';
 import { HomeNews } from './HomeNews';
 import { HomeTicker } from './HomeTicker';
@@ -52,6 +51,7 @@ import { loadHomeTodo } from '@offside/app-core/homeTodo';
 import { useOnPull } from '../../ui/refresh';
 import { notificationDestination } from '../../platform/notificationDestination';
 import { chatUnread } from '../../platform/chatUnread';
+import { CoachTarget } from '../../components/Coachmark';
 
 // T-11-360 출석 창은 앱을 연 뒤 처음 그린 홈에서만 저절로 띄운다(로그아웃 뒤 · 다른 화면에서 돌아올 때는 아니다).
 let homeShown = false;
@@ -111,8 +111,6 @@ export default function Home() {
     // 홈 선물 칸 · 시즌 업적 보상(T-11-386, 받으면 사라진다. T-11-472 구단주 선물은 없앴다).
     gift: <HomeGift />,
     attendance: <HomeAttendance auto={firstHome} />,
-    // T-11-355 처음 안내 카드(기기마다 닫을 때까지).
-    firstGuide: <FirstGuide />,
     live: <HomeLive />,
   };
 
@@ -199,21 +197,24 @@ export default function Home() {
                     {L.continueBtn}
                   </Txt>
                 </Btn>
-                <Press
-                  testID="new"
-                  accessibilityRole="button"
-                  onPress={goNew}
-                  style={{
-                    alignSelf: 'center',
-                    minHeight: 44,
-                    justifyContent: 'center',
-                    paddingHorizontal: 12,
-                  }}
-                >
-                  <Txt style={{ ...btnText(c.onPitch), fontSize: rem(FONT.body2), opacity: 0.85 }}>
-                    {L.newCareer}
-                  </Txt>
-                </Press>
+                <CoachTarget id="new" style={{ alignSelf: 'center' }}>
+                  <Press
+                    testID="new"
+                    accessibilityRole="button"
+                    onPress={goNew}
+                    style={{
+                      minHeight: 44,
+                      justifyContent: 'center',
+                      paddingHorizontal: 12,
+                    }}
+                  >
+                    <Txt
+                      style={{ ...btnText(c.onPitch), fontSize: rem(FONT.body2), opacity: 0.85 }}
+                    >
+                      {L.newCareer}
+                    </Txt>
+                  </Press>
+                </CoachTarget>
               </View>
             </View>
           </PitchCard>
@@ -236,9 +237,11 @@ export default function Home() {
                 {[L.kickoffLine1, L.kickoffLine2, L.kickoffLine3].join('\n')}
               </Txt>
               <Txt style={{ ...p, color: alpha(c.onPitch, 0.8) }}>{L.kickoffSub}</Txt>
-              <Btn kind="accent" block testID="new" onPress={goNew} style={{ marginTop: 18 }}>
-                {L.kickoffBtn}
-              </Btn>
+              <CoachTarget id="new" style={{ marginTop: 18 }}>
+                <Btn kind="accent" block testID="new" onPress={goNew}>
+                  {L.kickoffBtn}
+                </Btn>
+              </CoachTarget>
             </View>
           </PitchCard>
         )}

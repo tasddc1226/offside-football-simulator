@@ -96,6 +96,7 @@ import {
   Txt,
   useShadow,
 } from '../../ui';
+import { CoachTarget } from '../../components/Coachmark';
 import { noteScrollY, revealFocusedInput } from '../../ui/scroll';
 import { useFormKeyboardScroll } from '../../ui/useFormKeyboardScroll';
 import { MiniRadar } from './MiniRadar';
@@ -760,21 +761,23 @@ export default function Create() {
               </Txt>
             </Field>
 
-            <Field label={L.position}>
-              <Seg>
-                {posKeys.map((k) => (
-                  <SegCell key={k} cols={2} testID={`pos-${k}`}>
-                    <PosOpt
-                      code={k}
-                      title={POS[k].label}
-                      blurb={POS[k].blurb}
-                      selected={C.pos === k}
-                      onPress={() => setPos(k, detailOpen)}
-                    />
-                  </SegCell>
-                ))}
-              </Seg>
-            </Field>
+            <CoachTarget id="pos">
+              <Field label={L.position}>
+                <Seg>
+                  {posKeys.map((k) => (
+                    <SegCell key={k} cols={2} testID={`pos-${k}`}>
+                      <PosOpt
+                        code={k}
+                        title={POS[k].label}
+                        blurb={POS[k].blurb}
+                        selected={C.pos === k}
+                        onPress={() => setPos(k, detailOpen)}
+                      />
+                    </SegCell>
+                  ))}
+                </Seg>
+              </Field>
+            </CoachTarget>
 
             {detailOpen && DETAILS_OF[C.pos].length > 1 ? (
               <Field label={L.detailPosition}>
@@ -816,30 +819,32 @@ export default function Create() {
               </Seg>
             </Field>
 
-            <Field label={L.focusTitle({ n: FOCUS_PICK })}>
-              <Seg>
-                {ATTR_KEYS.map((k) => {
-                  const d = preview[k] ?? 0;
-                  const on = C.focus.includes(k);
-                  return (
-                    <SegCell key={k} cols={2} testID={`focus-${k}`}>
-                      <Opt selected={on} onPress={() => toggleFocus(k)} style={{ flex: 1 }}>
-                        <Txt bold>{labels[k]}</Txt>
-                        <Txt
-                          style={[
-                            small,
-                            { color: d > 0 ? c.good : d < 0 ? c.bad : c.muted },
-                            d > 0 && { fontWeight: '600' },
-                          ]}
-                        >
-                          {focusNote(on, d)}
-                        </Txt>
-                      </Opt>
-                    </SegCell>
-                  );
-                })}
-              </Seg>
-            </Field>
+            <CoachTarget id="focus">
+              <Field label={L.focusTitle({ n: FOCUS_PICK })}>
+                <Seg>
+                  {ATTR_KEYS.map((k) => {
+                    const d = preview[k] ?? 0;
+                    const on = C.focus.includes(k);
+                    return (
+                      <SegCell key={k} cols={2} testID={`focus-${k}`}>
+                        <Opt selected={on} onPress={() => toggleFocus(k)} style={{ flex: 1 }}>
+                          <Txt bold>{labels[k]}</Txt>
+                          <Txt
+                            style={[
+                              small,
+                              { color: d > 0 ? c.good : d < 0 ? c.bad : c.muted },
+                              d > 0 && { fontWeight: '600' },
+                            ]}
+                          >
+                            {focusNote(on, d)}
+                          </Txt>
+                        </Opt>
+                      </SegCell>
+                    );
+                  })}
+                </Seg>
+              </Field>
+            </CoachTarget>
 
             <Field label={L.trait}>
               <Seg>
@@ -898,7 +903,7 @@ export default function Create() {
             <Txt v="sm" tone="muted" testID="candidate-stats-note">
               {CG.candidateNote}
             </Txt>
-            <View style={{ gap: 10 }}>
+            <CoachTarget id="cands" style={{ gap: 10 }}>
               {s.candidates.map((cand, i) => {
                 const isOpen = s.candidatesOpen[i];
                 const isPicked = s.candidatePick === i;
@@ -1130,7 +1135,7 @@ export default function Create() {
                   </FlyIn>
                 );
               })}
-            </View>
+            </CoachTarget>
             {s.candidatePick != null && s.candidates[s.candidatePick] ? (
               <View style={{ gap: 6 }}>
                 <Btn
@@ -1332,34 +1337,44 @@ export default function Create() {
           <Btn testID="home" onPress={goHome} style={{ width: '32%' }}>
             {L.cancel}
           </Btn>
-          <Btn
-            kind="primary"
-            testID="next-candidates"
-            disabled={focusLeft > 0 || !!bodyErr}
-            onPress={() => setScouting(true)}
+          <CoachTarget
+            id="candidates"
+            enabled={!(focusLeft > 0 || !!bodyErr)}
             style={{ flex: 1, minWidth: 0 }}
           >
-            {bodyErr
-              ? L.checkBody
-              : focusLeft > 0
-                ? L.focusMore({ n: focusLeft })
-                : L.seeCandidates}
-          </Btn>
+            <Btn
+              kind="primary"
+              testID="next-candidates"
+              disabled={focusLeft > 0 || !!bodyErr}
+              onPress={() => setScouting(true)}
+            >
+              {bodyErr
+                ? L.checkBody
+                : focusLeft > 0
+                  ? L.focusMore({ n: focusLeft })
+                  : L.seeCandidates}
+            </Btn>
+          </CoachTarget>
         </ActionBar>
       ) : s.candidates ? (
         <ActionBar row>
           <Btn testID="home" disabled={rewardBusy} onPress={backToForm} style={{ width: '32%' }}>
             {L.back}
           </Btn>
-          <Btn
-            kind="primary"
-            testID="start"
-            disabled={s.candidatePick == null || rewardBusy}
-            onPress={confirmPick}
+          <CoachTarget
+            id="start"
+            enabled={s.candidatePick != null && !rewardBusy}
             style={{ flex: 1, minWidth: 0 }}
           >
-            {s.candidatePick == null ? L.pickOne : L.kickoff({ n: s.candidatePick + 1 })}
-          </Btn>
+            <Btn
+              kind="primary"
+              testID="start"
+              disabled={s.candidatePick == null || rewardBusy}
+              onPress={confirmPick}
+            >
+              {s.candidatePick == null ? L.pickOne : L.kickoff({ n: s.candidatePick + 1 })}
+            </Btn>
+          </CoachTarget>
         </ActionBar>
       ) : null}
       {scouting ? <ScoutScan pos={C.pos} steps={scoutSteps} onDone={scouted} /> : null}

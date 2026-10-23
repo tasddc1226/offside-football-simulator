@@ -18,6 +18,7 @@
   import { pendingFriendRequests } from '@offside/app-core/api/friendPending';
   import { sheetState } from './sheetState.svelte.js';
   import { consentHere } from './consentPlace.js';
+  import { coach } from './coach.svelte.js';
   import type { Component } from 'svelte';
 
   // T-10-119 화면 전환 방향. 선수 생성은 1·2단계를 다른 화면으로 친다(상태는 appState에 있어 다시 그려도 된다).
@@ -181,6 +182,11 @@
   $effect(() => {
     if (rnAlert.item && !RnAlert) void import('./RetiredNumberAlert.svelte').then((m) => (RnAlert = m.default));
   });
+  // T-11-473 첫 커리어 따라가기 안내. 남은 단계가 있을 때만 말풍선 청크를 받는다.
+  let Coachmark = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (coach.i !== null && !Coachmark) void import('./Coachmark.svelte').then((m) => (Coachmark = m.default));
+  });
 </script>
 
 <!-- 화면 전환 모션(T-10-003 goal 3, T-10-119): 화면이 바뀔 때만 새로 마운트해 들어오는 트랜지션을 건다.
@@ -248,3 +254,4 @@
 <UpdateBanner />
 <NewsBanner />
 {#if RnAlert}<RnAlert />{/if}
+{#if Coachmark && coach.i !== null}<Coachmark />{/if}

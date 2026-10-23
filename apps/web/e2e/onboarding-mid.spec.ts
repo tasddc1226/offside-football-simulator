@@ -43,7 +43,7 @@ test('첫 커리어를 시작하면 저장 위치 안내가 한 번 뜨고, 백�
   await page.addInitScript(() => {
     if (sessionStorage.getItem('__sh_seeded')) return;
     sessionStorage.setItem('__sh_seeded', '1');
-    localStorage.setItem('ft_first_guide', '["home","items"]');
+    localStorage.setItem('ft_first_guide', '["items"]');
   });
   await page.goto('/');
   await page.getByRole('button', { name: /새 커리어 킥오프/ }).click();
