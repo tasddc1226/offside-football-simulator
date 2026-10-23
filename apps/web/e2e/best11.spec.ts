@@ -37,6 +37,7 @@ const player = (k: number, dpos: string, name: string, index: number) => ({
   name,
   dpos,
   nation: NATIONS[k % NATIONS.length]!,
+  look: null,
   peak: 88 + (k % 8),
   retiredAt: '2026-10-18T12:00:00.000Z',
   index,

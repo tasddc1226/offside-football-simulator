@@ -99,7 +99,14 @@ export default function Best11() {
   const cells: PitchCell[] = BEST11_SLOTS.map((s) => {
     const p = data?.slots.find((x) => x.slot === s)?.player;
     return p
-      ? { name: p.name, rating: p.peak, nation: p.nation, youth: false }
+      ? {
+          name: p.name,
+          rating: p.peak,
+          nation: p.nation,
+          youth: false,
+          careerId: p.careerId,
+          look: p.look,
+        }
       : { name: L.emptySlot, rating: 0, youth: true };
   });
   const filled = data?.slots.filter((s) => s.player).length ?? 0;

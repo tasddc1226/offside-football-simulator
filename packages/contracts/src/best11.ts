@@ -12,6 +12,8 @@ export const Best11PlayerSchema = z.object({
   name: z.string(),
   dpos: DetailPosSchema,
   nation: z.string().nullable(),
+  /** 은퇴 선수 도트 꾸미기 코드(그라운드 카드 그림). 꾸미지 않았으면 null. */
+  look: z.string().nullable(),
   peak: z.number().int(),
   retiredAt: z.string(),
   /** BEST 11 지수와 세 기둥(자리 1위 = 100). */

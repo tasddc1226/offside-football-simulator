@@ -52,7 +52,7 @@
     BEST11_SLOTS.map((s) => {
       const p = data?.slots.find((x) => x.slot === s)?.player;
       return p
-        ? { rating: p.peak, name: p.name, youth: false, nation: p.nation }
+        ? { rating: p.peak, name: p.name, youth: false, nation: p.nation, face: { careerId: p.careerId, look: p.look } }
         : { rating: 0, name: L.emptySlot, youth: true };
     }),
   );

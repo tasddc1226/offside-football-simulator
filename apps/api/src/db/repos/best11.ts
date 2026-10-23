@@ -74,6 +74,7 @@ const candidateColumns = {
   ok: showableSql,
   name: careers.publicName,
   nation: careers.nation,
+  look: careers.look,
   peak: careers.peak,
 };
 type CandidateRow = {
@@ -85,9 +86,15 @@ type CandidateRow = {
   ok: number;
   name: string | null;
   nation: string | null;
+  look: string | null;
   peak: number | null;
 };
-type Cand = Best11Candidate & { name: string; nation: string | null; peak: number };
+type Cand = Best11Candidate & {
+  name: string;
+  nation: string | null;
+  look: string | null;
+  peak: number;
+};
 
 const candidatesQuery = (db: Db, season: number) =>
   db
@@ -107,6 +114,7 @@ function toCand(r: CandidateRow): Cand | null {
       raw: JSON.parse(r.rawJson) as Best11Raw,
       name: r.name,
       nation: r.nation,
+      look: r.look,
       peak: r.peak ?? 0,
     };
   } catch {
@@ -441,6 +449,7 @@ function toPlayer(s: Best11Scored<Cand>): Best11Player {
     name: s.c.name,
     dpos: s.c.dpos,
     nation: s.c.nation,
+    look: s.c.look,
     peak: s.c.peak,
     retiredAt: s.c.retiredAt,
     index: s.index,

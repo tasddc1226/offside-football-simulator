@@ -9,6 +9,8 @@
   import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
   import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
   type Cell = { rating: number; name: string; youth: boolean; nation?: string | null | undefined; season?: number | undefined; player?: TeamPlayer | undefined;
+    /** T-11-463 선수 정보 없이 카드 그림만(BEST 11). */
+    face?: { careerId: string; look?: string | null | undefined } | undefined;
     /** T-11-376 지난 시즌 선수 급여(0이면 칩 없음 — 이번 시즌 선수 · 유스). */
     salary?: number | undefined };
   let { formation, cells, layout, selected = null, dragging = null, links = [], focus = null, applied = [], caption = null, element = $bindable(), onpick, onstart, onkey, onplace }:
@@ -61,20 +63,20 @@
           style:left="{point.x}%" style:top="{point.y}%" aria-pressed={selected === i}
           aria-label="{tn(DETAIL_LABEL[point.slot])} · {c.name}{country ? ` · ${tn(country.ko)}` : ''} · {ratingLabel}" aria-haspopup={c.player && !c.youth ? 'dialog' : undefined} onclick={(e) => press(e, i)}
           onpointerdown={(e) => onstart?.(e, i)} onkeydown={(e) => onkey?.(e, i)}>
-          <PlayerCard player={c.player} nation={c.nation} season={c.season} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? L.peakOvr : L.posOvrLabel} compact />
+          <PlayerCard player={c.player} face={c.face} nation={c.nation} season={c.season} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? L.peakOvr : L.posOvrLabel} compact />
           {#if applied.includes(i)}<span class="syn-pip" title={SY.pitchMemberAria}></span>{/if}
           {#if c.salary}<span class="salary-pip" data-salary-chip={c.salary}>{TC.salaryChip({ n: c.salary })}</span>{/if}
         </button>
       {:else if c.player && !c.youth}
         <button class="tm-slot peekable" class:syn-on={focus?.includes(i)} data-slot={i} style:left="{point.x}%" style:top="{point.y}%" aria-haspopup="dialog"
           aria-label="{tn(DETAIL_LABEL[point.slot])} · {c.name}{country ? ` · ${tn(country.ko)}` : ''} · {ratingLabel}" onclick={(e) => press(e, i)}>
-          <PlayerCard player={c.player} nation={c.nation} season={c.season} name={c.name} rating={c.player.peak} deploymentRating={c.rating} role={point.slot} ratingLabel={L.peakOvr} compact />
+          <PlayerCard player={c.player} face={c.face} nation={c.nation} season={c.season} name={c.name} rating={c.player.peak} deploymentRating={c.rating} role={point.slot} ratingLabel={L.peakOvr} compact />
           {#if applied.includes(i)}<span class="syn-pip" title={SY.pitchMemberAria}></span>{/if}
           {#if c.salary}<span class="salary-pip" data-salary-chip={c.salary}>{TC.salaryChip({ n: c.salary })}</span>{/if}
         </button>
       {:else}
         <div class="tm-slot" class:syn-on={focus?.includes(i)} data-slot={i} style:left="{point.x}%" style:top="{point.y}%" role="group" aria-label="{tn(DETAIL_LABEL[point.slot])} · {c.name}{country ? ` · ${tn(country.ko)}` : ''} · {ratingLabel}">
-          <PlayerCard player={c.player} nation={c.nation} season={c.season} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? L.peakOvr : L.posOvrLabel} compact />
+          <PlayerCard player={c.player} face={c.face} nation={c.nation} season={c.season} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? L.peakOvr : L.posOvrLabel} compact />
           {#if applied.includes(i)}<span class="syn-pip" title={SY.pitchMemberAria}></span>{/if}
           {#if c.salary}<span class="salary-pip" data-salary-chip={c.salary}>{TC.salaryChip({ n: c.salary })}</span>{/if}
         </div>
