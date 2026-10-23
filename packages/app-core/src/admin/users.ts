@@ -24,7 +24,7 @@ const itemName = (item: string) => ITEM_NAME[item as OwnerItem] ?? item;
 const STORE: Record<string, string> = {
   apple: 'App Store',
   google: 'Google Play',
-  xsolla: 'Xsolla',
+  xsolla: '웹 결제 (Xsolla)',
 };
 export const storeName = (s: string) => STORE[s] ?? s;
 const CHANNEL: Record<string, string> = { app: '앱', web: '웹', toss: '토스' };
@@ -119,14 +119,28 @@ export function grantError(delta: number, reason: string) {
 }
 
 export const REVENUE_NOTE =
-  '금액은 상품별 한국 정가 기준 추정이에요(스토어 환산·수수료 전). 테스트 결제는 빼요. 광고 제거는 서버 구매 기록이 없어 스토어 알림으로 세요.';
+  '금액은 상품별 한국 정가 기준 추정이에요(스토어 환산·수수료 전). 웹 결제도 한국 정가로 세요(실제로는 나라 통화로 결제). 테스트 결제는 빼요. 광고 제거는 서버 구매 기록이 없어 스토어 알림으로 세요.';
 export const periodLabel = (days: number) => (days === 1 ? '오늘' : `${days}일`);
+
+/** T-11-471 결제 경로별 합. 웹 결제는 엑솔라(xsolla), 나머지 스토어는 앱 인앱 결제다. */
+export function channelSums(r: AdminRevenue) {
+  const sums = { app: { count: 0, krw: 0 }, web: { count: 0, krw: 0 } };
+  for (const s of r.stores) {
+    const c = sums[s.store === 'xsolla' ? 'web' : 'app'];
+    c.count += s.count;
+    c.krw += s.krw;
+  }
+  return sums;
+}
 
 /** 매출 위쪽 요약(라벨, 값). */
 export function revenueSummary(r: AdminRevenue): [string, string][] {
   const ads = r.removeAds;
+  const ch = channelSums(r);
   return [
     ['매출(소모성)', `${won(r.total.krw)} · ${r.total.count.toLocaleString()}건`],
+    ['앱 인앱 결제', `${won(ch.app.krw)} · ${ch.app.count.toLocaleString()}건`],
+    ['웹 결제', `${won(ch.web.krw)} · ${ch.web.count.toLocaleString()}건`],
     ['결제한 사람', `${r.total.buyers.toLocaleString()}명 (첫 구매 ${r.total.firstBuyers})`],
     ['환불', `${r.total.refunds}건 · ${won(r.total.refundKrw)}`],
     ['광고 제거', `${ads.count}건 · 환불 ${ads.refunds} · ${won(ads.krw)}`],

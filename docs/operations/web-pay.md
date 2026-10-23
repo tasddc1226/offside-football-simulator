@@ -12,7 +12,8 @@ T-11-454. 웹(offside-lab.com) 구단주 화면에서 앱과 같은 인앱 상�
   `packages/contracts/src/cup.ts`의 `IAP_PRODUCTS`). 원화 가격은 앱 한국 정가(`IAP_PRICE_KRW`)와 같게 두고, 다른 통화는 엑솔라 자동 환산이나
   나라별 가격을 쓴다. 웹 상점에는 한국 기준가를 보이고 "결제 화면에서 사는 나라 통화로 보여요"를 붙인다.
 - 원장은 앱과 같은 `iap_purchases`이고 `store = 'xsolla'`, `transaction_id = 엑솔라 주문 번호`다. 매출 탭 · 결제 알림 · 운영 도구 구매 기록에
-  그대로 잡힌다(금액 · 통화는 사용자가 낸 통화). 옛 앱이 엄격한 enum으로 읽는 `IapStoreSchema` · `GET /v1/items`의 `iap.stores`에는 넣지 않았다.
+  그대로 잡힌다(금액 · 통화는 사용자가 낸 통화). T-11-471부터 결제 슬랙 알림은 제목이 '🌐 웹 결제' · '↩️ 웹 결제 환불'이고 결제 경로 줄로
+  앱 인앱 결제와 갈리며, 운영 도구 매출 요약에 '앱 인앱 결제' · '웹 결제' 합이 따로 보인다(스토어별 · 최근 결제는 '웹 결제 (Xsolla)'). 옛 앱이 엄격한 enum으로 읽는 `IapStoreSchema` · `GET /v1/items`의 `iap.stores`에는 넣지 않았다.
 - 주문은 `web_pay_orders`(0128): 우리 주문 id · 구단주 · 상품 · 엑솔라 주문 번호 · 상태(READY · PAID · CANCELED).
 - API (`apps/api/src/routes/webPay.ts`, 엑솔라 호출은 `apps/api/src/iap/xsolla.ts`)
   - `GET /v1/web-pay/config`: 로그인 구단주에게 켜져 있는지 · 상품 목록.

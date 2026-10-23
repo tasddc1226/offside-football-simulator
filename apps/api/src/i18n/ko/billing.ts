@@ -5,6 +5,13 @@ export const billing = {
     refund: '↩️ 환불',
     test: '🧪 연결 테스트',
   },
+  // T-11-471 웹 결제(엑솔라)는 제목부터 앱 인앱 결제와 갈라 보인다.
+  webKinds: {
+    purchase: '🌐 웹 결제',
+    refund: '↩️ 웹 결제 환불',
+  },
+  channel: '결제 경로',
+  channels: { app: '앱 인앱 결제', web: '웹 결제 (offside-lab.com)' },
   live: '실결제',
   sandbox: '테스트 · Sandbox',
   product: '상품',
