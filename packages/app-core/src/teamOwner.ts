@@ -1,6 +1,7 @@
 // T-10-092 구단주 팀 화면의 순수 로직(웹 team/Team.svelte · 앱 screens/owner/Team.tsx 공용, T-11-005).
 // 편성(자동 배치·자리 바꾸기)·선수 고르기 후보·업적 표기·경기 결과 표기처럼 화면이 그리기 전에 계산하는 것만 둔다.
 import { flagOf } from '@offside/contracts/nations';
+import { defaultClubName, LEAGUE_BASE } from '@offside/contracts/club-names';
 import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
 import { ATTR_KEYS } from '@offside/game/data';
 import {
@@ -13,7 +14,9 @@ import {
   DUOS,
   FOOT_BONUS,
   FOOT_BONUS_BOTH,
+  CLUB_EFFECT,
   HOMEGROWN_EFFECT,
+  LEAGUE_STYLES,
   NATIONAL_POWER,
   nationStyle,
   TEAM_RULES,
@@ -266,6 +269,9 @@ const synergyApplied = (s: TeamSynergy, a: ActiveSynergy): boolean =>
     : a.kind === 'foot'
       ? s.foot.some((b) => b > 0)
       : Object.values(a.effect).some((v) => (v ?? 0) > 0);
+/** T-11-467 리그 컬러 · 클럽 동료 칩에 붙이는 리그 · 클럽 이름(저장값은 한국어 이름, 그릴 때 옮긴다). */
+const leagueName = (id: string) => tn(LEAGUE_BASE.find((l) => l.id === id)?.name ?? id);
+const clubName = (id: string) => tn(defaultClubName(id) ?? id);
 /** 편성 화면의 시너지 칩(웹·앱 공용). 주발 맞춤은 인원과 자리 실력 보정 합을 보인다. */
 export const synergyChips = (s: TeamSynergy): SynergyChip[] =>
   s.active.map((a) => {
@@ -281,7 +287,15 @@ export const synergyChips = (s: TeamSynergy): SynergyChip[] =>
                 flag: flagOf(a.nation),
                 style: SY.styleName({ id: a.style!, ko: nationStyle(a.nation).name }),
               })
-            : name,
+            : a.league
+              ? SY.leagueChip({
+                  name,
+                  league: leagueName(a.league),
+                  style: SY.styleName({ id: a.style!, ko: LEAGUE_STYLES[a.league]?.name ?? '' }),
+                })
+              : a.club
+                ? SY.clubChip({ name, club: clubName(a.club), n: a.members.length })
+                : name,
       desc,
       effect:
         a.kind === 'foot'
@@ -330,6 +344,8 @@ export function synergyRows(s: TeamSynergy): SynergyRow[] {
     ...DUOS.map((d) => [d, synergyEffectText(d.effect)] as const),
     [TEAM_RULES.homegrown, synergyEffectText(HOMEGROWN_EFFECT)],
     [TEAM_RULES.national, SY.nationalVaries({ sum: signedNum(NATIONAL_POWER) })],
+    [TEAM_RULES.league, SY.leagueVaries({ sum: signedNum(NATIONAL_POWER) })],
+    [TEAM_RULES.club, synergyEffectText(CLUB_EFFECT)],
     [
       TEAM_RULES.foot,
       SY.fitEffectBoth({ v: signedNum(FOOT_BONUS), both: signedNum(FOOT_BONUS_BOTH) }),

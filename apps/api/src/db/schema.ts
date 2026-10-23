@@ -402,6 +402,10 @@ export const careers = sqliteTable(
     lastClub: text('last_club'),
     // T-10-066 마지막 소속 클럽 id(web CLUBS[].id). 구단명이 바뀌어도 엠블럼이 제 클럽을 찾는다. 옛 기록은 NULL.
     lastClubId: text('last_club_id'),
+    // T-11-467 시너지(리그 컬러 · 클럽 동료)용 가장 오래 뛴 프로 리그 id · 클럽 id(career_seasons에서 은퇴 때 센다, mainClubSql).
+    // 아직 세지 않았으면 NULL, 셌는데 프로 시즌이 없으면 ''.
+    mainLeague: text('main_league'),
+    mainClub: text('main_club'),
     // T-11-191 은퇴 선수 도트 꾸미기 코드(외형 전용 PUT으로 갱신 가능)(game look.ts lookCode). 꾸미지 않았거나 옛 기록은 NULL.
     look: text('look'),
     /** Server-owned, separate from active-career cosmetics. The art round a change was spent in (0 = none);

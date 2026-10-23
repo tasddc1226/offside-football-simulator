@@ -197,7 +197,7 @@ export default [
       [
         'Team synergy and the manager',
         [
-          'When team synergies activate from player type combinations, strong foot and players you raised yourself, your team gets stronger in matches. Duo synergies check both the player type and the lineup position, and each duo applies only once even if you have several matching pairs, while the effects of different synergies add up. With 7 or more starters of the same nationality, the national team lineup synergy activates.',
+          'When team synergies activate from player type combinations, strong foot and players you raised yourself, your team gets stronger in matches. Duo synergies check both the player type and the lineup position, and each duo applies only once even if you have several matching pairs, while the effects of different synergies add up. With 7 or more starters of the same nationality, the national team lineup synergy activates. With 7 or more starters who share their longest-played league, League colors activates (if both are on, the side with more players applies), and 3 or more starters from the same longest-played club activate Club teammates.',
           'Seat a finished manager in the manager slot and their mastery of the current formation is added to the three lines: attack, midfield and defense. Each line has a cap on the adjustment, though, so between equally strong teams even the best manager raises win rate by less than 5 percentage points. A manager cannot replace a good lineup. Think of them as the final touch.',
         ],
       ],

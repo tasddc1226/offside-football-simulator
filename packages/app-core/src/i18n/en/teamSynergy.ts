@@ -1,4 +1,4 @@
-import { HOMEGROWN_MIN, NATIONAL_MIN } from '@offside/contracts/owner-team';
+import { CLUB_MIN, HOMEGROWN_MIN, LEAGUE_MIN, NATIONAL_MIN } from '@offside/contracts/owner-team';
 import type { Translation } from '../core';
 import type { TeamSynergyMsgs } from '../ko/teamSynergy';
 
@@ -29,6 +29,11 @@ const NAMES: Record<string, readonly [string, string]> = {
     'National team lineup',
     `${NATIONAL_MIN}+ starters from the same country. The effect differs by country`,
   ],
+  league: [
+    'League colors',
+    `${LEAGUE_MIN}+ starters whose longest-played league is the same. The effect differs by league. If National team lineup is also on, only the side with more players applies`,
+  ],
+  club: ['Club teammates', `${CLUB_MIN}+ starters whose longest-played club is the same`],
   foot: [
     'Strong-foot fit',
     'FB / LB / RB / LWB / RWB: same-side foot. W / LW / RW: opposite foot. Any player type.',
@@ -53,6 +58,21 @@ const STYLES: Record<string, string> = {
   caf: 'African power',
   concacaf: 'Fast counters',
   ofc: 'Island resilience',
+  pl_pace: 'Premier League pace',
+  ll_skill: 'La Liga technique',
+  bl_press: 'Bundesliga pressing',
+  sa_tactic: 'Serie A tactics',
+  l1_talent: 'Ligue 1 talent',
+  por_flank: 'Primeira Liga wing play',
+  ere_total: 'Eredivisie total football',
+  bra_flair: 'Brasileirão flair',
+  mls_motor: 'MLS work rate',
+  spl_star: 'Saudi star power',
+  j1_order: 'J1 League organization',
+  csl_power: 'Chinese Super League power',
+  k1_grit: 'K League 1 grit',
+  k2_hustle: 'K League 2 hustle',
+  k3_spirit: 'K3 League spirit',
 };
 
 export const teamSynergy: Translation<TeamSynergyMsgs> = {
@@ -70,7 +90,7 @@ export const teamSynergy: Translation<TeamSynergyMsgs> = {
   chipNoEffect: 'No effect',
   chipOff: 'Inactive',
   chipHint:
-    'Tap a synergy to show its players. Match effects apply regardless of selection. National team lineup applies when 7+ starters share any nationality, and the effect differs by country.',
+    'Tap a synergy to show its players. Match effects apply regardless of selection. National team lineup applies when 7+ starters share any nationality, and the effect differs by country. League colors applies when 7+ starters share their longest-played league; if National team lineup is also on, only the side with more players applies.',
   pitchAll: (p) => `All ${p.n} synergies active`,
   pitchFocus: (p) => `Showing ${p.name} · all ${p.n} active`,
   pitchMemberAria: 'In an active synergy',
@@ -84,4 +104,7 @@ export const teamSynergy: Translation<TeamSynergyMsgs> = {
   styleName: (p) => STYLES[p.id] ?? p.ko,
   nationalChip: (p) => `${p.name} ${p.flag} ${p.style}`,
   nationalVaries: (p) => `Varies by country (total ${p.sum})`,
+  leagueChip: (p) => `${p.name} ${p.league} · ${p.style}`,
+  leagueVaries: (p) => `Varies by league (total ${p.sum})`,
+  clubChip: (p) => `${p.name} ${p.club} ×${p.n}`,
 };
