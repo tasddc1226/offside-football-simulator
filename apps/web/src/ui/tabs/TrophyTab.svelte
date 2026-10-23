@@ -6,8 +6,12 @@
   import type { LegendSource } from '@offside/game/types';
   import ClubMark from '../ClubMark.svelte';
   import { gameTrophyText as L } from '@offside/app-core/i18n/ko/gameTrophy';
+  import type { EraState } from '@offside/game/era';
+  import { eraTab } from '@offside/app-core/era-view';
+  import EraTab from '../era/EraTab.svelte';
 
-  const { s }: { s: LegendSource } = $props();
+  const { s }: { s: LegendSource & { era?: EraState | undefined } } = $props();
+  const era = $derived(eraTab(s));
   const trophies = $derived(s.trophies.slice().reverse());
   const awards = $derived(s.awards.slice().reverse());
   const ballon = $derived((s.ballon || []).slice().reverse());
@@ -47,6 +51,8 @@
     {/each}
   </section>
 {/if}
+
+{#if era}<EraTab v={era} />{/if}
 
 <section class="card">
   <div class="eyebrow">Story Album</div>

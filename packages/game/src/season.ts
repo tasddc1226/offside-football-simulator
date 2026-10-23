@@ -62,6 +62,7 @@ import { saveKey } from './storage.js';
 import { ballonWinsOf, legendScore, legendSnapshot, legendTermsOf } from './legend.js';
 import { gSeasonText as T } from './i18n/ko/gSeason.js';
 import { tn } from './i18n/names.js';
+import { eraSeasonEnd, type EraNote } from './era.js';
 
 /** 시즌 결산 결과 — 결산 시트가 그린다. tours는 명단에 들었거나 경기가 없던(예선 결과) 대회와 우승 대회만. */
 export interface SeasonEndResult {
@@ -75,6 +76,8 @@ export interface SeasonEndResult {
   titles: TitleView[];
   /** T-10-110 K리그2 우승으로 구단이 승격했으면. 옛 세이브의 pending.res에는 없다. */
   promo?: Promotion | undefined;
+  /** T-11-475 시대의 라이벌 소식(등장 · 이번 시즌 기록). 라이벌이 없거나 옛 세이브의 pending.res에는 없다. */
+  era?: EraNote | undefined;
 }
 /** 지난 시즌 대륙 챔피언이면 4년마다 열리는 FIFA 클럽 월드컵 결과(무작위 단계). 해당 없으면 null. */
 function clubWorldCup(s: GameState, tier: number): string | null {
@@ -215,6 +218,8 @@ export function endSeason(s: GameState): SeasonEndResult {
   );
   // T-10-110 기록(K리그2 · 우승)을 남긴 뒤 승격을 확정한다 — 이어지는 이적 시장·재계약부터 K1 기준이다.
   const promo = promoteClub(s, rank);
+  // T-11-475 라이벌은 따로 노는 난수원만 써서 아래 RNG 순서를 바꾸지 않는다.
+  const era = eraSeasonEnd(s, o, awards);
   const mil = milSeasonEnd(s);
   if (mil) notes.push(mil);
 
@@ -232,6 +237,7 @@ export function endSeason(s: GameState): SeasonEndResult {
     miles,
     titles,
     promo,
+    ...(era ? { era } : {}),
   };
 }
 

@@ -535,10 +535,10 @@ export function compGoals(S: Season) {
 
 // ───────── 시즌 개인상 · 발롱도르 시상식 ─────────
 // T-10-042에서 한 시즌 득점·도움 상한이 낮아진 만큼 기준도 낮춰, 수상 빈도를 그 이전(T-10-039) 수준에 맞췄다.
-const TOP_G = 0.57,
+export const TOP_G = 0.57,
   TOP_A = 0.34,
-  BALLON_BAR = 164.8,
-  MULLER_BAR = 36,
+  BALLON_BAR = 164.8;
+const MULLER_BAR = 36,
   SHOE_BAR = 56.5;
 /**
  * T-11-021 발롱도르 점수·FIFPRO 월드 11의 포지션 보정. atk: 골·도움 항 배수, bonus: 포지션 기본 점수, fifpro: FIFPRO
@@ -547,7 +547,7 @@ const TOP_G = 0.57,
  * 시뮬레이션하므로 후보가 몰린 공격수는 더 높은 순위여야 한다. 프리시즌 선수는 옛 보정(DF +2 · GK +3, 전원 12위)이다.
  */
 type BallonPos = Record<Pos, { atk: number; bonus: number; fifpro: number }>;
-const BALLON_POS: BallonPos = {
+export const BALLON_POS: BallonPos = {
   FW: { atk: 0.8, bonus: 0, fifpro: 8 },
   MF: { atk: 1, bonus: 5, fifpro: 13 },
   DF: { atk: 1, bonus: 6, fifpro: 13 },

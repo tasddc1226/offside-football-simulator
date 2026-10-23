@@ -21,6 +21,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   bigInjuryShare: 'Share of serious injuries',
   mlsYoungPull: 'MLS offer weight under 30',
   newLeagues: 'Open season 2 leagues',
+  eraRival: 'Rival of your era',
   richYoungPull: 'Saudi · China offer weight under 28',
   braPull: 'Brazil offer weight',
   koreaStr: 'Korea senior team strength',

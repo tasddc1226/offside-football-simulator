@@ -11,6 +11,7 @@ import type { PeekChip } from './eventPeek.js';
 import type { GrowthDirInfo } from './ratingReport.js';
 import type { BlockResult, MatchGame } from '@offside/game/match';
 import { shellText } from './i18n/ko/shell.js';
+import type { EraCardView } from './era-view.js';
 
 export type { Chip };
 export type SheetButton = { label: string; cls?: string; fn: () => void };
@@ -224,6 +225,8 @@ export type SheetView =
       titles: TitleView[];
       /** T-10-110 K리그2 우승 승격. */
       promo: Promotion | undefined;
+      /** T-11-475 시대의 라이벌 카드(등장 · 이번 시즌 비교). 라이벌이 없으면 없다. */
+      era?: EraCardView | null;
       notes: string[];
       /** 옛 시트 호환용. 은퇴 전에는 화면에 표시하지 않는다. 육성 중 안내는 scoutHint가 맡는다. */
       scout?: string | null;
