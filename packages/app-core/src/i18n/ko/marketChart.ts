@@ -19,6 +19,11 @@ const ko = {
   indexSub: (p: { trades: number }) => `최근 7일 거래 ${p.trades}건 · 기준가 대비`,
   indexA11y: (p: { pct: string; change: string }) => `시장 시세 기준가의 ${p.pct}, ${p.change}`,
   noChange: '변동 없음',
+  // T-11-474 살아 있는 시세(오늘 거래 · 거래량 · 실시간 표시)
+  todayTrades: (p: { trades: number }) => `오늘 거래 ${p.trades}건`,
+  lastDayTrades: (p: { trades: number }) => `마지막 거래일 ${p.trades}건`,
+  volume: '거래량',
+  live: '실시간',
   dayText: (p: { day: string; avg: string; trades: number }) =>
     `${p.day} · 평균 ${p.avg} · ${p.trades}건`,
   tradeText: (p: { day: string; ratio: string }) => `${p.day} 이 선수 · ${p.ratio}`,

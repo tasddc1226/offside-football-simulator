@@ -34,6 +34,11 @@ import { marketSalaryText } from '@offside/app-core/salary';
 import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import {
   MARKET_POS_FILTERS,
+  marketDetailFilters,
+  marketFiltered,
+  marketTypeFilters,
+  pickMarketFilter,
+  type MarketFilter,
   MARKET_SORT_LABEL,
   MARKET_TICKER_MS,
   MARKET_TOAST,
@@ -53,6 +58,7 @@ import {
   releaseLock,
   releaseValue,
   saleText,
+  sellCandidates,
   sellNote,
   sellSlider,
   sellable,
@@ -68,7 +74,7 @@ import {
 } from '@offside/app-core/market';
 import { agoKo, fmtValue } from '@offside/app-core/format';
 import { localCareerNames } from '@offside/game/hof-store';
-import { POS } from '@offside/game/data';
+import { DPOS, POS } from '@offside/game/data';
 import { prefs } from '../../store';
 import { go, takeFocus } from '../../game/nav';
 import { measureShown, scrollToView } from '../../ui/scroll';
@@ -330,16 +336,113 @@ function PctSlider({
   );
 }
 
+/** T-11-474 포지션군을 고르면 열리는 세부 포지션 · 유형 줄(명예의 전당 필터와 같은 순서). */
+function SubFilters({
+  filter,
+  onPick,
+}: {
+  filter: MarketFilter;
+  onPick: (next: MarketFilter) => void;
+}) {
+  const c = useColors();
+  const details = marketDetailFilters(filter.pos);
+  const row = (label: string, chips: ReactNode) => (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+      <Txt tone="muted" style={{ ...small, minWidth: 72 }}>
+        {label}
+      </Txt>
+      {chips}
+    </View>
+  );
+  return (
+    <View
+      testID="market-subfilters"
+      style={{
+        gap: 6,
+        padding: 10,
+        borderWidth: 1,
+        borderColor: c.line,
+        borderRadius: RADIUS.md,
+      }}
+    >
+      {details.length
+        ? row(
+            L.detailPos,
+            <>
+              <FilterChip
+                small
+                on={!filter.dpos}
+                label={L.posAll}
+                testID="market-dpos-all"
+                onPress={() => onPick({ dpos: undefined })}
+              />
+              {details.map((d) => (
+                <FilterChip
+                  key={d}
+                  small
+                  on={filter.dpos === d}
+                  label={d}
+                  a11yLabel={DPOS[d].label}
+                  testID={`market-dpos-${d}`}
+                  onPress={() => onPick({ dpos: d })}
+                />
+              ))}
+            </>,
+          )
+        : null}
+      {row(
+        L.playerType,
+        <>
+          <FilterChip
+            small
+            on={!filter.type}
+            label={L.posAll}
+            testID="market-type-all"
+            onPress={() => onPick({ type: undefined })}
+          />
+          {marketTypeFilters(filter.pos).map(([id, name]) => (
+            <FilterChip
+              key={id}
+              small
+              on={filter.type === id}
+              label={name}
+              testID={`market-type-${id}`}
+              onPress={() => onPick({ type: id })}
+            />
+          ))}
+        </>,
+      )}
+      {filter.dpos || filter.type ? (
+        <Press
+          testID="market-filter-reset"
+          accessibilityRole="button"
+          hitSlop={6}
+          onPress={() => onPick({ dpos: undefined, type: undefined })}
+          style={{ alignSelf: 'flex-end', paddingVertical: 2 }}
+        >
+          <Txt tone="muted" style={{ ...small, textDecorationLine: 'underline' }}>
+            {L.filterReset}
+          </Txt>
+        </Press>
+      ) : null}
+    </View>
+  );
+}
+
 function FilterChip({
   on,
   label,
   onPress,
   testID,
+  small: sm = false,
+  a11yLabel,
 }: {
   on: boolean;
   label: string;
   onPress: () => void;
   testID?: string;
+  small?: boolean;
+  a11yLabel?: string;
 }) {
   const c = useColors();
   return (
@@ -347,10 +450,11 @@ function FilterChip({
       testID={testID}
       accessibilityRole="button"
       accessibilityState={{ selected: on }}
+      {...(a11yLabel ? { accessibilityLabel: a11yLabel } : {})}
       onPress={onPress}
       style={{
-        minHeight: 34,
-        paddingHorizontal: 13,
+        minHeight: sm ? 30 : 34,
+        paddingHorizontal: sm ? 11 : 13,
         borderRadius: RADIUS.pill,
         borderWidth: 1,
         borderColor: on ? c.ink : c.line,
@@ -580,9 +684,10 @@ export default function Market() {
     }
   }, [loadMe, destination.market]);
 
-  // 선수 사기 — 정렬·포지션이 바뀌면 첫 페이지부터.
+  // 선수 사기 — 정렬·필터(포지션군 → 세부 포지션 · 유형, T-11-474)가 바뀌면 첫 페이지부터.
   const [sort, setSort] = useState<MarketSort>('new');
-  const [pos, setPos] = useState<CareerPos | undefined>(undefined);
+  const [filter, setFilter] = useState<MarketFilter>({});
+  const pickFilter = (next: MarketFilter) => setFilter((f) => pickMarketFilter(f, next));
   const [items, setItems] = useState<MarketListing[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -596,7 +701,7 @@ export default function Market() {
     async (next = 0, silent = false): Promise<MarketListing[] | null> => {
       const req = ++listReq.current;
       if (next === 0 && !silent) setListStatus('loading');
-      const r = await fetchMarket(sort, pos, next);
+      const r = await fetchMarket(sort, filter, next);
       if (req !== listReq.current) return null;
       if (!r.ok) {
         if (!silent) setListStatus('error');
@@ -611,7 +716,7 @@ export default function Market() {
       setListStatus('ok');
       return r.data.items;
     },
-    [sort, pos],
+    [sort, filter],
   );
   useEffect(() => {
     if (view === 'market') void loadList(0);
@@ -646,6 +751,7 @@ export default function Market() {
     if ((view === 'sell' || view === 'release') && !guest) void loadTeam();
   }, [view, loadTeam, guest]);
   const lineup = useMemo(() => (team ? lineupOf(team) : new Set<string>()), [team]);
+  const forSale = useMemo(() => (team ? sellCandidates(team.players, lineup) : []), [team, lineup]);
   const isCurrent = !!team && team.season === team.current;
   const nameOfPlayer = (p: TeamPlayer) => marketName(p, local);
   const seasonName = team?.seasons.find((o) => o.id === team.season)
@@ -792,7 +898,7 @@ export default function Market() {
     buying && me
       ? myListingIds.has(buying.id)
         ? L.ownListing
-        : buyBlock(buying.price, me.balance, me.buysLeft)
+        : buyBlock(buying.price, me.balance)
       : null;
   const box = {
     borderWidth: 1,
@@ -905,8 +1011,8 @@ export default function Market() {
             <View style={{ flexDirection: 'row', gap: 6 }}>
               {[
                 [L.statClubValue, fmtValue(me.clubValue)],
-                [L.statBuysToday, `${me.rules.dailyBuys - me.buysLeft} / ${me.rules.dailyBuys}`],
-                [L.statListed, `${me.listings.length} / ${me.rules.listLimit}`],
+                [L.statBuysToday, String(me.boughtToday)],
+                [L.statListed, String(me.listings.length)],
               ].map(([k, v]) => (
                 <View
                   key={k}
@@ -1111,13 +1217,14 @@ export default function Market() {
                   {MARKET_POS_FILTERS.map((p) => (
                     <FilterChip
                       key={p ?? 'all'}
-                      on={pos === p}
+                      on={filter.pos === p}
                       label={p ? POS[p].label : L.posAll}
                       testID={`market-pos-${p ?? 'all'}`}
-                      onPress={() => setPos(p)}
+                      onPress={() => pickFilter({ pos: p })}
                     />
                   ))}
                 </View>
+                {filter.pos ? <SubFilters filter={filter} onPick={pickFilter} /> : null}
                 <View
                   style={{
                     flexDirection: 'row',
@@ -1226,7 +1333,7 @@ export default function Market() {
                       })
                     ) : (
                       <Txt tone="muted" style={small}>
-                        {marketEmptyText(season, !!pos)}
+                        {marketEmptyText(season, marketFiltered(filter))}
                       </Txt>
                     )}
                     {hasMore ? (
@@ -1257,59 +1364,66 @@ export default function Market() {
                     {L.sellNone}
                   </Txt>
                 ) : (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                    {team.players.map((p) => {
-                      const on = selling?.careerId === p.careerId;
-                      const off = !sellable(p);
-                      return (
-                        <View
-                          key={p.careerId}
-                          style={{ width: '23%', flexGrow: 1, maxWidth: '25%', gap: 2 }}
-                        >
-                          <Press
-                            testID={`market-sell-pick-${p.careerId}`}
-                            disabled={off}
-                            accessibilityRole="button"
-                            accessibilityLabel={L.sellPickLabel({ name: nameOfPlayer(p) })}
-                            accessibilityState={{ selected: on, disabled: off }}
-                            onPress={() => {
-                              setSelling(p);
-                              setPct(100);
-                              setError(null);
-                              setSellPick((n) => n + 1);
-                            }}
-                            style={{
-                              minHeight: 104,
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: 3,
-                              paddingVertical: 6,
-                              paddingHorizontal: 4,
-                              borderRadius: RADIUS.md,
-                              borderWidth: on ? 2 : 1,
-                              borderColor: on ? c.accent : c.line,
-                              backgroundColor: on ? c.surface2 : c.surface,
-                            }}
+                  <>
+                    {forSale.length < team.players.length && (
+                      <Txt tone="muted" style={small} testID="market-sell-starters">
+                        {L.sellStartersHidden}
+                      </Txt>
+                    )}
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {forSale.map((p) => {
+                        const on = selling?.careerId === p.careerId;
+                        const off = !sellable(p);
+                        return (
+                          <View
+                            key={p.careerId}
+                            style={{ width: '23%', flexGrow: 1, maxWidth: '25%', gap: 2 }}
                           >
-                            <MiniCard c={p} name={nameOfPlayer(p)} dim={off} />
-                            <Txt numberOfLines={1} style={{ fontSize: rem(FONT.caption2) }}>
-                              {nameOfPlayer(p)}
-                            </Txt>
-                            <Txt
+                            <Press
+                              testID={`market-sell-pick-${p.careerId}`}
+                              disabled={off}
+                              accessibilityRole="button"
+                              accessibilityLabel={L.sellPickLabel({ name: nameOfPlayer(p) })}
+                              accessibilityState={{ selected: on, disabled: off }}
+                              onPress={() => {
+                                setSelling(p);
+                                setPct(100);
+                                setError(null);
+                                setSellPick((n) => n + 1);
+                              }}
                               style={{
-                                fontSize: rem(FONT.caption2),
-                                fontWeight: '600',
-                                color: on ? c.accentText : c.muted,
+                                minHeight: 104,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 3,
+                                paddingVertical: 6,
+                                paddingHorizontal: 4,
+                                borderRadius: RADIUS.md,
+                                borderWidth: on ? 2 : 1,
+                                borderColor: on ? c.accent : c.line,
+                                backgroundColor: on ? c.surface2 : c.surface,
                               }}
                             >
-                              {on ? L.sellSelected : sellNote(p, lineup)}
-                            </Txt>
-                          </Press>
-                          {p.locked ? unlockBtn(p) : null}
-                        </View>
-                      );
-                    })}
-                  </View>
+                              <MiniCard c={p} name={nameOfPlayer(p)} dim={off} />
+                              <Txt numberOfLines={1} style={{ fontSize: rem(FONT.caption2) }}>
+                                {nameOfPlayer(p)}
+                              </Txt>
+                              <Txt
+                                style={{
+                                  fontSize: rem(FONT.caption2),
+                                  fontWeight: '600',
+                                  color: on ? c.accentText : c.muted,
+                                }}
+                              >
+                                {on ? L.sellSelected : sellNote(p)}
+                              </Txt>
+                            </Press>
+                            {p.locked ? unlockBtn(p) : null}
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </>
                 )}
                 {selling && quote && me ? (
                   <View

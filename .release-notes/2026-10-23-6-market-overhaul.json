@@ -1,0 +1,29 @@
+{
+  "id": "t-11-474-market-overhaul",
+  "title": "이적시장 개편",
+  "items": [
+    "시세 그래프가 거래량 막대와 함께 마지막 거래일까지 움직이며 보여요",
+    "선수 사기에서 포지션을 고른 뒤 세부 포지션과 선수 유형으로 더 좁힐 수 있어요",
+    "하루 영입 수 제한과 한 번에 내놓을 수 있는 선수 수 제한을 없앴어요",
+    "선발에 든 선수는 팔기 목록에 보이지 않아요. 팀에서 뺀 뒤 내놓을 수 있어요"
+  ],
+  "en": {
+    "title": "Transfer market update",
+    "items": [
+      "The price chart now shows trading volume bars and moves up to the last trading day.",
+      "When buying players, pick a position group, then narrow by detailed position and player type.",
+      "The daily signing limit and the limit on how many players you can list at once are gone.",
+      "Starters no longer appear in the sell list. Take them out of your team to list them."
+    ]
+  },
+  "ja": {
+    "title": "移籍市場のアップデート",
+    "items": [
+      "相場グラフに取引量の棒が付き、最後の取引日まで動いて見えます。",
+      "選手を買うとき、ポジションを選んだあと詳細ポジションと選手タイプで絞り込めます。",
+      "1日の獲得数の上限と、一度に出品できる人数の上限をなくしました。",
+      "スタメンの選手は売却リストに出ません。チームから外すと出品できます。"
+    ]
+  },
+  "availability": "web-app"
+}

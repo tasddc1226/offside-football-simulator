@@ -21,6 +21,9 @@ export const ratioPct = (r: number) => `${pct1(r)}%`;
 
 export type ChartTone = 'up' | 'down' | 'same';
 const toneOf = (d: number): ChartTone => (d > 0 ? 'up' : d < 0 ? 'down' : 'same');
+/** 천분율 차이 → '▲ 1.2%p' · '변동 없음'. */
+const changeText = (d: number) =>
+  d === 0 ? L.noChange : `${d > 0 ? '▲' : '▼'} ${pct1(Math.abs(d))}%p`;
 
 export type CardTrade = MarketCardTradesResponse['trades'][number];
 
@@ -29,6 +32,14 @@ export interface ChartModel {
   line: string;
   /** 하루 최저~최고 띠(SVG path, 닫힌 도형). */
   band: string;
+  /** T-11-474 평균선 아래를 바닥까지 채운 면(그라데이션용 닫힌 도형). 점이 둘 미만이면 빈 문자열. */
+  area: string;
+  /** T-11-474 하루 거래량 막대(높이는 기간 최대 거래 수 대비 %). */
+  bars: { x: number; h: number; p: MarketChartPoint }[];
+  /** T-11-474 마지막 거래일 평균 점(맥박 표시와 현재 값 꼬리표). */
+  last: { x: number; y: number; pct: string } | null;
+  /** T-11-474 기간 첫 거래일 → 마지막 거래일 평균 차이('▲ 1.2%p'). 거래일이 하루면 빈 문자열. */
+  change: string;
   /** 기준가(100%) 점선 높이. */
   base: number;
   /** 하루 평균 점(누르면 그날 값을 보여 준다). */
@@ -83,9 +94,19 @@ export function chartModel(
     : '';
   const first = points[0]?.avg;
   const last = points.at(-1)?.avg;
+  const end0 = pts.at(-1);
+  const maxTrades = Math.max(1, ...points.map((p) => p.trades));
   return {
     line: pts.length ? line : '',
     band,
+    area: pts.length > 1 ? `${line}L${end0!.x},100L${pts[0]!.x},100Z` : '',
+    bars: points.map((p) => ({
+      x: x(p.day),
+      h: Math.max(6, Math.round((p.trades / maxTrades) * 100)),
+      p,
+    })),
+    last: end0 ? { x: end0.x, y: end0.y, pct: ratioPct(end0.p.avg) } : null,
+    change: points.length > 1 ? changeText(last! - first!) : '',
     base: y(1000),
     days: pts,
     dots: inRange.map((s) => ({ x: x(s.day), y: y(s.t.ratio), t: s.t })),
@@ -110,9 +131,18 @@ export function marketIndex(points: readonly MarketChartPoint[]) {
   return {
     pct: ratioPct(last.avg),
     tone: toneOf(d),
-    change: d === 0 ? L.noChange : `${d > 0 ? '▲' : '▼'} ${pct1(Math.abs(d))}%p`,
+    change: changeText(d),
     trades: points.reduce((n, p) => n + p.trades, 0),
-    spark: { line: spark.line, base: spark.base },
+    /** T-11-474 마지막 거래일 거래 수(오늘이면 '오늘 N건'). */
+    lastTrades: last.trades,
+    today: last.day === kstDay(new Date().toISOString()),
+    spark: {
+      line: spark.line,
+      base: spark.base,
+      area: spark.area,
+      bars: spark.bars,
+      last: spark.last,
+    },
   };
 }
 
@@ -146,4 +176,13 @@ export const CHART_COPY = {
     return L.index;
   },
   indexSub: (trades: number) => L.indexSub({ trades }),
+  /** T-11-474 시장 지수 아래 줄: '오늘 거래 12건' · '마지막 거래일 3건'. */
+  lastDay: (today: boolean, trades: number) =>
+    today ? L.todayTrades({ trades }) : L.lastDayTrades({ trades }),
+  get volume() {
+    return L.volume;
+  },
+  get live() {
+    return L.live;
+  },
 };
