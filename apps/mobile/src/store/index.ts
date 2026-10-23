@@ -19,11 +19,8 @@ export const sheetState = proxy<SheetState>(initialSheetState());
 export const toastState = proxy({ text: '', visible: false });
 export const clubCustom = proxy(initialClubCustomState());
 export const newsState = proxy(initialNewsState());
-/** T-11-042 스토어 업데이트 안내 — url: 이 앱이 최소 버전보다 낮으면 스토어 주소, closed: 이번 실행에서 닫았다. */
-export const storeUpdate = proxy<{ url: string | null; closed: boolean }>({
-  url: null,
-  closed: false,
-});
+/** T-11-464 스토어 업데이트 팝업이 떠 있다(그동안 다시 띄우지 않고, 리뷰 요청도 미룬다). */
+export const storeUpdate = proxy({ showing: false });
 /** 커리어 id → 이번 접속에서 받은 영구결번 심사 결과. */
 export const rnResults = proxy<RnResults>({});
 /** T-11-180 커리어 id → 결번을 못 받은 이유. */

@@ -62,7 +62,7 @@ export function ReviewNudge() {
           !rnAlert.item &&
           !toastState.visible &&
           !newsState.post &&
-          !(storeUpdate.url && !storeUpdate.closed) &&
+          !storeUpdate.showing &&
           !pushState.busy &&
           !interstitial.showing,
       );
