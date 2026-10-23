@@ -10,8 +10,20 @@ import type {
 } from './api/market.js';
 import type { FundsItem } from '@offside/contracts';
 import type { OwnerTeamResponse, TeamPlayer } from './api/team.js';
-import { RELEASE_MAX, marketFee, priceBand, releasePayout } from '@offside/contracts/market-value';
-import { POS_GROUPS, detailPosOf } from '@offside/contracts/positions';
+import {
+  MARKET_TYPES,
+  RELEASE_MAX,
+  marketFee,
+  priceBand,
+  releasePayout,
+  type MarketType,
+} from '@offside/contracts/market-value';
+import {
+  FILTER_DETAILS_OF,
+  POS_GROUPS,
+  detailPosOf,
+  type DetailPos,
+} from '@offside/contracts/positions';
 import { typeName } from '@offside/game/data';
 import { marketText as L } from './i18n/ko/market.js';
 import { intlLocale } from './i18n/core.js';
@@ -40,6 +52,25 @@ export const MARKET_SORT_LABEL = {
   },
 };
 export const MARKET_POS_FILTERS: readonly (CareerPos | undefined)[] = [undefined, ...POS_GROUPS];
+
+/** T-11-474 선수 사기 목록 필터. 세부 포지션 · 유형은 포지션군을 고른 뒤에만 고른다(명예의 전당과 같다). */
+export interface MarketFilter {
+  pos?: CareerPos | undefined;
+  dpos?: DetailPos | undefined;
+  type?: MarketType | undefined;
+}
+/** 포지션군 안의 세부 포지션(골키퍼처럼 하나뿐이면 고를 것이 없다). */
+export const marketDetailFilters = (pos: CareerPos | undefined): readonly DetailPos[] =>
+  pos && FILTER_DETAILS_OF[pos].length > 1 ? FILTER_DETAILS_OF[pos] : [];
+/** 포지션군의 선수 유형 [id, 이름]. */
+export const marketTypeFilters = (pos: CareerPos | undefined): [MarketType, string][] =>
+  pos ? MARKET_TYPES[pos].map((id) => [id, typeName(pos, id) ?? id]) : [];
+/** 필터 하나를 바꾼다. 포지션군이 바뀌면 그 안의 세부 포지션 · 유형은 풀린다. */
+export function pickMarketFilter(f: MarketFilter, next: MarketFilter): MarketFilter {
+  if ('pos' in next && next.pos !== f.pos) return { pos: next.pos };
+  return { ...f, ...next };
+}
+export const marketFiltered = (f: MarketFilter) => !!(f.pos || f.dpos || f.type);
 
 /** 이 기기에서 키운 선수면 이 기기의 이름, 아니면 공개 이름, 없으면 익명 표기. */
 export const marketName = (
@@ -91,8 +122,7 @@ export function sellQuote(cardValue: number, price: number, rules: MarketRules) 
 }
 
 /** 영입 시트 — 살 수 있으면 null, 아니면 막는 이유. */
-export function buyBlock(price: number, balance: number, buysLeft: number): string | null {
-  if (buysLeft <= 0) return L.buyLimit;
+export function buyBlock(price: number, balance: number): string | null {
   if (balance < price) return L.buyShort({ short: fmtValue(price - balance) });
   return null;
 }
@@ -114,7 +144,7 @@ export function staleListingNext(
   return { toast: L.staleRecheck };
 }
 
-/** 지금 시즌 선발(방출을 막는다). 지난 시즌 팀은 고칠 수 없어 막지 않는다. */
+/** 지금 시즌 선발(판매 · 방출을 막는다). 지난 시즌 팀은 고칠 수 없어 막지 않는다. */
 export const lineupOf = (d: OwnerTeamResponse): ReadonlySet<string> =>
   new Set(
     d.season === d.current && d.team
@@ -125,12 +155,16 @@ export const lineupOf = (d: OwnerTeamResponse): ReadonlySet<string> =>
 /** 팔기 탭에서 고를 수 있는 선수: 판매 중이 아니고 기준가가 있고 잠기지 않았다. */
 export const sellable = (p: TeamPlayer) => !p.listing && p.cardValue != null && !p.locked;
 
-/** 팔기 탭 카드 아래 한 줄: 판매 중이면 막고, 선발이면 알려 준다(팔리면 유스 선수가 채운다). */
-export function sellNote(p: TeamPlayer, lineup: ReadonlySet<string>): string {
+/** T-11-474 팔기 탭에 보이는 선수: 지금 시즌 선발은 팀에서 뺀 뒤에 내놓는다(서버도 막는다). */
+export const sellCandidates = (players: readonly TeamPlayer[], lineup: ReadonlySet<string>) =>
+  players.filter((p) => !lineup.has(p.careerId));
+
+/** 팔기 탭 카드 아래 한 줄: 고를 수 없는 이유. */
+export function sellNote(p: TeamPlayer): string {
   if (p.listing) return L.noteListed;
   if (p.cardValue == null) return L.noteNoValue;
   if (p.locked) return L.noteLocked;
-  return lineup.has(p.careerId) ? L.noteStarter : '';
+  return '';
 }
 
 /** T-11-188 잠금 버튼을 누를 수 있나: 판매 중인 선수는 내린 뒤에 잠근다(잠긴 선수는 판매 중일 수 없어 늘 풀 수 있다). */

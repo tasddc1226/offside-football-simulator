@@ -159,8 +159,8 @@ const EXACT: Record<string, string> = {
     'This player is listed. Take the listing down to lock them.',
   '내가 내놓은 선수예요.': "That's your own listing.",
   '판매가가 바뀌었어요. 다시 확인해 주세요.': 'The price has changed. Please check it again.',
-  '선발에 든 선수는 팀에서 뺀 뒤 방출해 주세요.':
-    'Remove starters from your team before releasing them.',
+  '선발에 든 선수는 팀에서 뺀 뒤 내놓거나 방출해 주세요.':
+    'Remove starters from your team before listing or releasing them.',
   '방출할 수 있는 선수가 없어요.': 'There are no players you can release.',
 };
 
@@ -182,14 +182,6 @@ const PATTERNS: [RegExp, (m: RegExpExecArray) => string][] = [
     /^지난 시즌 선수 급여가 예산을 넘어요\((\d+)\/(\d+)\)\. 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요\.$/,
     (m) =>
       `Past-season player salaries are over budget (${m[1]}/${m[2]}). Swap in lower-salary or this-season players.`,
-  ],
-  [
-    /^한 번에 (\d+)명까지 내놓을 수 있어요\.$/,
-    (m) => `You can list up to ${m[1]} players at a time.`,
-  ],
-  [
-    /^오늘은 (\d+)명까지 영입할 수 있어요\. 내일 다시 영입해 주세요\.$/,
-    (m) => `You can sign up to ${m[1]} players today. Try again tomorrow.`,
   ],
   [
     /^운영자 계정의 댓글 닉네임은 '(.+)'로 고정돼요\.$/,
