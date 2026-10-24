@@ -67,6 +67,14 @@
     return () => clearTimeout(hideTimer);
   });
 
+  // T-11-479 구간 진행 중계는 배경을 불투명하게 덮는다. 진행 결과(맡김)가 먼저 상태에 들어가 뒤 화면(순위표 · 대회 결과 · 기록)이
+  // 결정적 장면을 고르기 전에 결과를 보여 줬다.
+  $effect(() => {
+    const modal = hostRoot?.parentElement;
+    if (!modal) return;
+    modal.classList.toggle('modal-solid', view?.kind === 'block');
+  });
+
   // T-10-117 시트가 열려 있는 동안 뒤 페이지 스크롤을 잠근다(스크롤 위치는 그대로).
   $effect(() => {
     if (!sheetState.open) return;

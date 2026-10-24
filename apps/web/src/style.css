@@ -3097,6 +3097,9 @@ th.n {
 .modal.modal-in {
   opacity: 1;
 }
+.modal.modal-solid {
+  background: var(--bg);
+}
 .modal-host {
   display: contents;
 }
@@ -7701,6 +7704,9 @@ html:root[data-skin='sheet'] {
 :root[data-skin='sheet'] .modal {
   z-index: 30;
   background: rgba(255, 255, 255, 0.6);
+}
+:root[data-skin='sheet'] .modal.modal-solid {
+  background: var(--bg);
 }
 :root[data-skin='sheet'] .sheet {
   border-radius: var(--radius-sm);
