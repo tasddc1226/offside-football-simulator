@@ -15,6 +15,8 @@ export const BALANCE_GROUPS = {
   market: '이적시장',
   // T-11-376 구단 팀 편성. 서버가 팀 저장·조회 때 활성 버전을 바로 읽는다(커리어별 고정 아님).
   team: '구단 팀',
+  // T-11-374 카드 과제. 서버가 내기 · 조회 때 활성 버전을 바로 읽는다(커리어별 고정 아님).
+  exchange: '카드 과제',
 } as const;
 export type BalanceGroup = keyof typeof BALANCE_GROUPS;
 
@@ -234,6 +236,21 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     group: 'market',
     label: '주간 프리미엄 스카우트권 구매 수',
     desc: '한 구단주가 한 주(월요일 0시 한국 시각부터)에 구단 자금으로 살 수 있는 프리미엄 스카우트권 수. 0이면 팔지 않는다',
+  },
+  exchangeRewardReroll: {
+    group: 'exchange',
+    label: '카드 과제 완료 리롤권',
+    desc: '오늘 카드 과제 세 개를 모두 낸 날 한 번 받는 선수 후보 리롤권 수',
+  },
+  exchangeRewardBoost: {
+    group: 'exchange',
+    label: '카드 과제 완료 잠재력 강화권',
+    desc: '오늘 카드 과제 세 개를 모두 낸 날 한 번 받는 잠재력 강화권 수',
+  },
+  exchangeRewardScout: {
+    group: 'exchange',
+    label: '카드 과제 완료 프리미엄 스카우트권',
+    desc: '오늘 카드 과제 세 개를 모두 낸 날 한 번 받는 프리미엄 스카우트권 수',
   },
   rewardPriceCandidates: {
     group: 'market',

@@ -61,6 +61,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   titleAssists: 'Assist Academy',
   titleNational: 'International Academy',
   titleDynasty: 'Legend Dynasty',
+  titleExchange: 'House of Tribute',
   conditionMidfield: 'Develop 5 midfielders with peak OVR 90+ who retire aged 30+',
   conditionDefense: 'Develop 5 defenders with peak OVR 90+ who retire aged 30+',
   conditionKeeper: 'Develop 5 goalkeepers with peak OVR 90+ who retire aged 30+',
@@ -68,6 +69,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   conditionAssists: 'Develop 5 players with 300+ career assists who retire aged 30+',
   conditionNational: 'Develop 5 players with 150+ international caps who retire aged 30+',
   conditionDynasty: 'Develop 25 players who earn retired numbers',
+  conditionExchange: "Finish all of a day's card challenges on 10 days",
   gradeEntry: 'Entry',
   gradeSkilled: 'Skilled',
   gradeHonor: 'Honor',
@@ -83,6 +85,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   relatedNumbers: 'Related achievements · First retired number · 11 retired numbers',
   relatedBallon: 'Related achievements · First Ballon d’Or · 30 Ballon d’Or wins',
   relatedFirsts: 'A title from a finalized season-first honor',
+  relatedExchange: "Earned by finishing all of a day's card challenges",
   viewAchievements: 'Season achievements',
   titleBridge:
     'Season achievements are challenges for this season. Permanent titles reward repeated development across seasons or finalized season-first honors. Achievement points are not added toward titles.',

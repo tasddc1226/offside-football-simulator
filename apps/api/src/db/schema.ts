@@ -572,6 +572,8 @@ export const cards = sqliteTable(
     // T-11-310 감독으로 분류된 카드(1). 감독 커리어를 시작하면 켜지고 포기하면 꺼진다. 켜진 카드는 선발 · 판매 · 방출 · 잠금에서
     // 빠진다(manager_careers가 진행 · 완료 상태를 가진다).
     manager: integer('manager', { mode: 'boolean' }).notNull().default(false),
+    // T-11-374 카드 과제에 내서 사라진 카드면 그 기록 id(card_exchange_claims.id). 주인은 NULL, 방출 칸(released_*)은 비어 있다.
+    consumedIn: text('consumed_in'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -1869,6 +1871,8 @@ export const ownerTitleProgress = sqliteTable('owner_title_progress', {
   ballon: integer('ballon').notNull(),
   numbers: integer('numbers').notNull(),
   firsts: integer('firsts').notNull(),
+  // T-11-374 카드 과제 낸 횟수.
+  exchanges: integer('exchanges').notNull().default(0),
   updatedAt: text('updated_at').notNull(),
 });
 /** One editable prediction per account and cup match; settlement and grant are atomic. */
@@ -2154,3 +2158,30 @@ export const prunedCareers = sqliteTable('pruned_careers', {
   serviceSeason: integer('service_season'),
   prunedAt: text('pruned_at').notNull(),
 });
+
+/**
+ * T-11-374 카드 바치기 과제에 낸 기록(한 번에 한 줄). 과제 정의는 코드(contracts card-exchange-rules)에 있고 exchange_id는
+ * '2026-10-19-easy' · 's1-season' 같은 이번 주 · 이번 시즌 과제 id다. need는 낼 장수, cards는 batch가 실제로 비운 카드 수로
+ * 마지막에 채운다 — 둘이 다르면 CHECK 위반으로 batch 전체가 되돌아간다.
+ */
+export const cardExchangeClaims = sqliteTable(
+  'card_exchange_claims',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    exchangeId: text('exchange_id').notNull(),
+    need: integer('need').notNull(),
+    cards: integer('cards'),
+    rewardJson: text('reward_json').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    index('card_exchange_claims_profile_idx').on(table.profileId, table.exchangeId),
+    check(
+      'card_exchange_claims_cards_check',
+      sql`${table.cards} IS NULL OR ${table.cards} = ${table.need}`,
+    ),
+  ],
+);

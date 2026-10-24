@@ -306,6 +306,25 @@ export const BALANCE_SPEC = {
     max: 7,
     step: 1,
   },
+  // T-11-374 카드 과제: 오늘 과제 세 개를 모두 낸 날 한 번 받는 아이템 수. 서버가 내기 · 내 낸 횟수 조회 때 활성 버전을 바로 읽는다.
+  exchangeRewardReroll: {
+    def: 2,
+    min: 0,
+    max: 20,
+    step: 1,
+  },
+  exchangeRewardBoost: {
+    def: 1,
+    min: 0,
+    max: 10,
+    step: 1,
+  },
+  exchangeRewardScout: {
+    def: 0,
+    min: 0,
+    max: 5,
+    step: 1,
+  },
   // T-11-153 앱의 보상형 광고 자리(후보 잠재력 · 시즌 평가 보기 · 자금이 모자란 시즌의 강화)를 광고 대신 구단 자금으로
   // 받는다. 웹은 광고가 없어 후보 잠재력 · 강화만 구단 자금으로 받는다.
   rewardPriceCandidates: {

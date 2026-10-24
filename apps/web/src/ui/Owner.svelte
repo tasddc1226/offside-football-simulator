@@ -36,6 +36,8 @@
   import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
   import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
   import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
+  import { exchangeText as XC } from '@offside/app-core/i18n/ko/exchange';
+  import type { Component } from 'svelte';
   import { type OwnerTierTag } from '@offside/contracts';
   import { shapeOf } from '@offside/contracts/owner-team';
   import { tierTitle } from '@offside/app-core/ownerTier';
@@ -130,6 +132,13 @@
     if (to === 'friends') openFriends();
     else openTeam(to);
   }
+  // T-11-374 카드 과제 창은 열 때만 불러온다(과제 · 고르기 화면이 구단주 화면 청크에 붙지 않게).
+  let Exchange = $state<Component<{ onclose: () => void }> | null>(null);
+  let exchangeOpen = $state(false);
+  function openExchange() {
+    exchangeOpen = true;
+    if (!Exchange) void import('./owner/CardExchange.svelte').then((m) => (Exchange = m.default));
+  }
   function openTeam(v: TeamView = 'team') {
     appState.teamView = v;
     go('team');
@@ -208,6 +217,15 @@
       <span class="tap-go" aria-hidden="true">›</span>
       <button class="tap-cover" data-act="manager" aria-label={MG.entryAria} onclick={() => go('manager')}></button>
     </section>
+    <section class="card owner-market owner-tap" aria-label={XC.entryTitle} data-owner-exchange>
+      <div class="owner-who">
+        <h2>{XC.entryTitle}<span class="pill good owner-founder">{XC.entryNew}</span></h2>
+        <span class="muted fs-sm">{XC.entrySub}</span>
+      </div>
+      <span class="tap-go" aria-hidden="true">›</span>
+      <button class="tap-cover" data-act="exchange" aria-label={XC.entryAria} onclick={openExchange}></button>
+    </section>
+    {#if exchangeOpen && Exchange}<Exchange onclose={() => (exchangeOpen = false)} />{/if}
   {:else if guest}
     <section class="card owner-team" aria-label={L.myTeam} data-owner-team-locked>
 

@@ -103,6 +103,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'numbers',
     'firsts',
     'updated_at',
+    // T-11-374 카드 과제를 낸 횟수(헌납의 명가).
+    'exchanges',
   ],
   cup_entries: [
     'cup_id',
@@ -247,6 +249,18 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'manager',
     'created_at',
     'updated_at',
+    // T-11-374 카드 과제에 낸 카드(claim id). 소유자는 비고 released_at도 비어 있다.
+    'consumed_in',
+  ],
+  // T-11-374 카드 과제를 낸 기록(주 · 시즌 횟수 상한).
+  card_exchange_claims: [
+    'id',
+    'profile_id',
+    'exchange_id',
+    'need',
+    'cards',
+    'reward_json',
+    'created_at',
   ],
   // T-11-310 감독 커리어(진행 중 하나 · 끝낸 감독 카드).
   league_entries: [

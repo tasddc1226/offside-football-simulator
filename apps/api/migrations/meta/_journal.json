@@ -883,6 +883,13 @@
       "when": 1792746814744,
       "tag": "0128_web_pay_orders",
       "breakpoints": true
+    },
+    {
+      "idx": 129,
+      "version": "6",
+      "when": 1792844833548,
+      "tag": "0129_card_exchange",
+      "breakpoints": true
     }
   ]
 }

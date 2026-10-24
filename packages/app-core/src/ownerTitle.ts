@@ -40,6 +40,7 @@ export function titleLabel(id: string | null | undefined): string | null {
           'owner-assists': L.titleAssists,
           'owner-national': L.titleNational,
           'owner-dynasty': L.titleDynasty,
+          'owner-exchange': L.titleExchange,
         }[permanent.id]
       : null;
 }
@@ -62,6 +63,7 @@ export function titleCondition(id: string): string | null {
         'owner-assists': L.conditionAssists,
         'owner-national': L.conditionNational,
         'owner-dynasty': L.conditionDynasty,
+        'owner-exchange': L.conditionExchange,
       }[t.id]
     : null;
 }
@@ -250,6 +252,20 @@ const TITLE_PIXELS = {
     '...######...',
     '..########..',
   ],
+  'owner-exchange': [
+    '....####....',
+    '...#....#...',
+    '..#.####.#..',
+    '..#.#..#.#..',
+    '..#.####.#..',
+    '...#....#...',
+    '....####....',
+    '.....##.....',
+    '...######...',
+    '..##....##..',
+    '.##..##..##.',
+    '.##########.',
+  ],
   'owner-dynasty': [
     '.#...##...#.',
     '.##..##..##.',
@@ -295,6 +311,7 @@ export const titleRelated = (id: string): string | null => {
         numbers: L.relatedNumbers,
         ballon: L.relatedBallon,
         firsts: L.relatedFirsts,
+        exchange: L.relatedExchange,
       }[t.related]
     : null;
 };
