@@ -125,6 +125,8 @@ const shot = (page: Page, name: string) =>
 
 test('카드 과제: 목록 → 고르기 → 확인 → 결과, 다시 열어도 다시 묻지 않는다', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  // 창이 열리며 흐려지는 중에 대비 검사를 하지 않게 움직임을 줄인다.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   const s = await stub(page);
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
