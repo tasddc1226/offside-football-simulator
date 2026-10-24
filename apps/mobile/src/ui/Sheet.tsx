@@ -52,7 +52,8 @@ export function Sheet() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: c.scrim,
+            // T-11-479 구간 진행 중계는 불투명하게 덮는다(뒤 화면에 장면을 고르기 전 결과가 보였다, 웹 .modal-solid).
+            backgroundColor: v?.kind === 'block' ? c.bg : c.scrim,
           }}
         />
         <View

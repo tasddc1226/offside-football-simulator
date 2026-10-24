@@ -31,6 +31,12 @@ test('리그 구간 중계가 결정적 장면에서 멈추고, 고른 결과가
   await expect(page.locator('#an-skip')).toHaveCount(0);
   await expect(card).toContainText(/결정적 찬스|실점 위기/);
   await expect(card).toContainText('초 뒤 감독에게 맡겨요');
+  // T-11-479 맡김 결과가 이미 상태에 들어가 있으므로 중계 동안 뒤 화면(순위표 · 대회 결과)을 불투명하게 덮는다.
+  await expect(page.locator('#modal')).toHaveClass(/modal-solid/);
+  const backdrop = await page
+    .locator('#modal')
+    .evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(backdrop).not.toMatch(/rgba\(.*,\s*0?\.\d+\)/);
   const choices = card.locator('[data-key-moment-choice]');
   expect(await choices.count()).toBeGreaterThanOrEqual(3); // 선택지 2~3개 + 맡기기
   await expect(choices.first()).toContainText(/성공 \d+%/);
