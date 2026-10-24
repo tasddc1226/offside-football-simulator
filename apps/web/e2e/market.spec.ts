@@ -253,6 +253,31 @@ test('홈 타일에서 이적시장으로 바로 가고, 뒤로 가면 홈으로
   await expect(page.locator('[data-act="home-market"]')).toBeVisible();
 });
 
+test('T-11-477 매물 줄 아래에 카드 능력치 6개를 보이고, 능력치가 없는 옛 카드는 줄을 두지 않는다', async ({
+  page,
+}) => {
+  await stub(page);
+  const old = { ...listing, id: `${LISTING.slice(0, -1)}7`, card: { ...card, careerId: 'old' } };
+  const withAttrs = {
+    ...listing,
+    card: { ...card, attrs: { pac: 93, sho: 89, pas: 74, dri: 86, def: 38, phy: 71 } },
+  };
+  await page.route(`${API}/v1/market/me`, (r) => r.fulfill(me(200_000)));
+  await page.route(
+    (u) => u.href.startsWith(API) && u.pathname === '/v1/market',
+    (r) => r.fulfill(ok({ season: 0, items: [withAttrs, old], hasMore: false, recent: [] })),
+  );
+  await page.route(`${API}/v1/market/chart**`, (r) => r.fulfill(ok({ season: 0, points: [] })));
+  await page.goto('/');
+  await page.locator('[data-act="home-market"]').click();
+  const strip = page.locator(`[data-listing="${LISTING}"] [data-listing-attrs]`);
+  await expect(strip).toContainText('스피드93');
+  await expect(strip.locator('.mk-attr')).toHaveCount(6);
+  await expect(strip.locator('.mk-attr-hi')).toHaveText('93');
+  await expect(page.locator(`[data-listing="${old.id}"] [data-listing-attrs]`)).toHaveCount(0);
+  await expectNoA11yViolations(page);
+});
+
 test('자금이 모자라면 영입 버튼이 잠기고, 이미 팔린 선수는 목록을 새로 받는다', async ({
   page,
 }) => {
