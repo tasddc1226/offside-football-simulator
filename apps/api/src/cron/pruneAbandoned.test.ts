@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { DAY_MS } from '../time.js';
-import { PRUNE, pruneAbandonedCareers } from './pruneAbandoned.js';
+import { PRUNE, pruneAbandonedCareers, UNCHANGED } from './pruneAbandoned.js';
 
 const NOW = Date.parse('2026-10-23T19:00:00Z');
 const ago = (days: number, plusMs = 0) => new Date(NOW - days * DAY_MS + plusMs).toISOString();
@@ -50,6 +50,17 @@ beforeEach(async () => {
 afterEach(() => ctx.dispose());
 
 describe('T-11-468 버린 커리어 정리', () => {
+  it('지울 커리어는 넘긴 id로만 찾는다(진행 중 커리어 전체를 훑지 않는다, T-11-468b)', async () => {
+    const { results } = await ctx.env.DB.prepare(
+      `EXPLAIN QUERY PLAN DELETE FROM careers WHERE id IN (${UNCHANGED})`,
+    )
+      .bind('[]')
+      .all<{ detail: string }>();
+    const plan = results.map((r) => r.detail);
+    expect(plan.some((d) => /^SCAN j\b/.test(d))).toBe(true);
+    expect(plan.find((d) => /^(SEARCH|SCAN) c\b/.test(d))).toMatch(/\bid=\?/);
+  });
+
   it('한 시간 안에 멈추고 일주일 넘게 갱신이 없는 진행 중 커리어만 지우고 주인 · 서비스 시즌을 남긴다', async () => {
     await seed('gone', { season: 0 });
     await seed('recent', { days: 6 });

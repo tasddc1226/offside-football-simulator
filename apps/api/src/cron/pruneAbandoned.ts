@@ -43,8 +43,12 @@ const ELIGIBLE = `c.status = 'active' AND c.updated_at <= ?1
   AND NOT EXISTS (SELECT 1 FROM manager_careers r WHERE r.career_id = c.id)
   AND NOT EXISTS (SELECT 1 FROM career_renames r WHERE r.career_id = c.id)`;
 
-/** 읽은 뒤 그 사이 시즌이 올라오지 않은(같은 갱신 시각 · 아직 진행 중) 커리어만. ?1 = [{id, u}] JSON. */
-const UNCHANGED = `SELECT c.id FROM careers c JOIN json_each(?1) j
+/**
+ * 읽은 뒤 그 사이 시즌이 올라오지 않은(같은 갱신 시각 · 아직 진행 중) 커리어만. ?1 = [{id, u}] JSON.
+ * CROSS JOIN으로 json_each를 바깥에 둬 기본키로 찾는다. JOIN이면 플래너가 status 인덱스로 진행 중 커리어 전체를 훑어
+ * D1 CPU 한도를 넘기고 DB가 재시작됐다(T-11-468b).
+ */
+export const UNCHANGED = `SELECT c.id FROM json_each(?1) j CROSS JOIN careers c
   ON c.id = json_extract(j.value, '$.id') AND c.updated_at = json_extract(j.value, '$.u')
   WHERE c.status = 'active'`;
 
