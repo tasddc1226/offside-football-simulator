@@ -733,6 +733,8 @@ export const seasonTelemetry = sqliteTable('season_telemetry', {
   /** SeasonGrowth JSON(T-11-048). 없으면 NULL. */
   growthJson: text('growth_json'),
   createdAt: text('created_at').notNull(),
+  /** T-11-486a 앱 광고 이용 요약(AdUsage JSON). 웹 · 옛 앱은 NULL. 열 순서는 putCareerSeason의 select와 같다. */
+  adsJson: text('ads_json'),
 });
 
 /** T-1-004, ADR-008. `PROFILE_DELETED`·`RECOVERY_CODE_ISSUED`·`GOOGLE_LINKED`·`GOOGLE_UNLINKED`(T-1-013)·`CAREERS_MERGED`(T-10-013)·`BALANCE_ACTIVATED`·`COMMENTS_PURGED`(T-10-016). */

@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { createSheetController } from '@offside/app-core/sheet-controller';
 import { createGameActions } from '@offside/app-core/game-actions';
 import { createUploader } from '@offside/app-core/upload';
+import { takeAdUsage } from '../platform/adUsage';
 import * as Outbox from '@offside/app-core/outbox';
 import { saveGame } from '@offside/app-core/career';
 import { createClubCustom } from '@offside/app-core/clubCustom';
@@ -65,7 +66,7 @@ export function buzz() {
 // ───────── 업로드 ─────────
 const outbox = () => Promise.resolve(Outbox);
 export const { uploadSeason, uploadRetirement, uploadLegacyRetirement, enqueueAllSeasons } =
-  createUploader({ outbox, appVersion: APP_VERSION });
+  createUploader({ outbox, appVersion: APP_VERSION, ads: takeAdUsage });
 
 // ───────── 시트 · 진행 액션 ─────────
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));

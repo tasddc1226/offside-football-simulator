@@ -544,6 +544,38 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect(season).toMatchObject({ growthJson: null, eventsJson: '[]' });
   });
 
+  it('T-11-486a: 앱 광고 이용 요약은 측정 기록에 덧붙고, 모양이 틀리면 버리고 시즌은 받는다', async () => {
+    const owner = await issueCookie(ctx);
+    const app = createApp();
+    const ads = { af: false, rw: { c: 3, p: 1, b: 2 }, fr: { c: 0, p: 0, b: 0 }, it: 1 };
+    const send = (year: number, extra: Record<string, unknown>) => {
+      const b = seasonBody();
+      return app.request(
+        `/v1/careers/${CAREER_ID}/seasons/${year}`,
+        jsonInit({
+          method: 'PUT',
+          body: { ...b, season: { ...b.season, age: 18 + year - 2026 }, events: [], ...extra },
+          cookie: owner.cookie,
+        }),
+        ctx.env,
+      );
+    };
+    const rows = async () =>
+      (
+        await ctx.db
+          .select()
+          .from(seasonTelemetry)
+          .where(eq(seasonTelemetry.careerId, CAREER_ID))
+          .orderBy(seasonTelemetry.id)
+      ).map((r) => [r.year, r.adsJson && JSON.parse(r.adsJson)]);
+
+    // 선택 로그 · 성장 기록이 없어도 광고 요약이 있으면 한 행을 남긴다.
+    expect((await send(2026, { ads })).status).toBe(200);
+    expect((await send(2027, { ads: { ...ads, rw: { c: -1 } } })).status).toBe(200);
+    expect((await send(2028, {})).status).toBe(200);
+    expect(await rows()).toEqual([[2026, ads]]);
+  });
+
   it('T-11-048: 성장 기록 없이 올라온 첫 시즌은 NULL이고, 모양이 틀린 기록은 버리되 시즌은 받는다', async () => {
     const owner = await issueCookie(ctx);
     const app = createApp();

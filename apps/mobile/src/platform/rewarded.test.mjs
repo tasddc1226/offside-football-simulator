@@ -5,6 +5,7 @@ const f = vi.hoisted(() => ({
   consent: vi.fn(),
   create: vi.fn(),
   listeners: new Map(),
+  countReward: vi.fn(),
 }));
 vi.mock('react-native', () => ({ Platform: { select: (units) => units[f.platform] } }));
 vi.mock('react-native-google-mobile-ads', () => ({
@@ -21,6 +22,7 @@ vi.mock('./adFree', () => ({
     },
   },
 }));
+vi.mock('./adUsage', () => ({ countReward: f.countReward }));
 vi.mock('@offside/app-core/i18n/ko/ad', () => ({
   adText: { rewardedUnavailable: 'unavailable' },
 }));
@@ -70,6 +72,7 @@ describe('candidate report rewarded placement', () => {
       f.listeners.get('closed')();
       expect(await result).toBe('');
       expect(grant).toHaveBeenCalledOnce();
+      expect(f.countReward).toHaveBeenCalledExactlyOnceWith('candidates', false);
       expect(f.listeners.size).toBe(0);
     },
   );
@@ -80,6 +83,7 @@ describe('candidate report rewarded placement', () => {
     f.listeners.get('closed')();
     expect(await result).toBe('skipped');
     expect(grant).not.toHaveBeenCalled();
+    expect(f.countReward).not.toHaveBeenCalled();
   });
   it.each(['closed', 'error'])('reports unavailable on %s before the ad opens', async (event) => {
     const { grant, result } = await begin();
@@ -100,6 +104,7 @@ describe('candidate report rewarded placement', () => {
     expect(await result).toBe('');
     expect(grant).toHaveBeenCalledOnce();
     expect(f.create).not.toHaveBeenCalled();
+    expect(f.countReward).toHaveBeenCalledExactlyOnceWith('candidates', true);
   });
   it('uses Google test ads in development', async () => {
     vi.stubGlobal('__DEV__', true);

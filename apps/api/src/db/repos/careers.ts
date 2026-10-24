@@ -96,6 +96,8 @@ export type PutCareerSeasonInput = {
   publicName?: string | null | undefined;
   /** 자동 플레이 탐지용 조작 요약(JSON). undefined(옛 클라이언트·다시 보낸 기록)면 그대로 둔다. */
   signalsJson?: string | undefined;
+  /** T-11-486a 앱 광고 이용 요약(JSON). 없으면 NULL로 남긴다. */
+  adsJson?: string | undefined;
   /** 나이별 OVR 상한을 크게 넘겨 보낸 시즌이면 같은 batch에서 커리어를 숨긴다(저장 땐 상한으로 잘려 나중엔 알 수 없다, T-11-037). */
   hide?: boolean | undefined;
   now: string;
@@ -123,6 +125,7 @@ export async function putCareerSeason(
     eventsJson,
     publicName,
     signalsJson,
+    adsJson,
     hide,
     now,
   } = input;
@@ -131,6 +134,7 @@ export async function putCareerSeason(
   // 업로드마다 덧붙인다. career_seasons의 두 열은 새 행엔 비워 두고, 옛 행의 값은 덮어쓰지 않는다(기존 보관 작업이 옮긴다).
   const events = eventsJson === '[]' ? null : eventsJson;
   const growthJson = season.growth ? JSON.stringify(season.growth) : null;
+  const ads = adsJson ?? null;
   const name = publicName !== undefined ? { publicName } : {};
   // T-10-006 시즌 상세 — 옛 페이로드엔 없으므로 없으면 NULL(기록 없음)로 둔다.
   const detail = {
@@ -213,10 +217,10 @@ export async function putCareerSeason(
               ),
           ]
         : []),
-      ...(events !== null || growthJson !== null
+      ...(events !== null || growthJson !== null || ads !== null
         ? [
             db.insert(seasonTelemetry).select(sql`select null, ${careerId}, ${year},
-          ${season.age}, ${season.ovr}, ${events}, ${growthJson}, ${now} where ${accept}`),
+          ${season.age}, ${season.ovr}, ${events}, ${growthJson}, ${now}, ${ads} where ${accept}`),
           ]
         : []),
       db

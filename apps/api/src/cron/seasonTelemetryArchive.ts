@@ -23,6 +23,7 @@ type Row = {
   events_json: string | null;
   growth_json: string | null;
   created_at: string;
+  ads_json: string | null;
 };
 export type TelemetryArchiveResult = { at: number; objects: number; rows: number; bytes: number };
 
@@ -57,7 +58,7 @@ export async function archiveSeasonTelemetry(
   for (let page = 0; page < MAX_PAGES && Date.now() - wall < WALL_MS; page++) {
     const { results } = await db
       .prepare(
-        `SELECT id, career_id, year, age, ovr, events_json, growth_json, created_at
+        `SELECT id, career_id, year, age, ovr, events_json, growth_json, created_at, ads_json
          FROM season_telemetry ORDER BY id LIMIT ${PAGE}`,
       )
       .all<Row>();
@@ -69,12 +70,12 @@ export async function archiveSeasonTelemetry(
     const last = rows.at(-1)!.id;
     const key = `season-telemetry/${env}/${rows[0]!.created_at.slice(0, 10)}/${first}-${last}.ndjson.gz`;
     result.bytes += await gzipToR2(bucket, key, 'application/x-ndjson', async (write) => {
-      // 두 JSON 값은 이미 JSON이라 다시 파싱하지 않고 그대로 붙인다.
+      // 세 JSON 값은 이미 JSON이라 다시 파싱하지 않고 그대로 붙인다.
       await write(
         rows
           .map(
             (r) =>
-              `{"id":${r.id},"careerId":${JSON.stringify(r.career_id)},"year":${r.year},"age":${r.age},"ovr":${r.ovr},"createdAt":"${r.created_at}","events":${r.events_json ?? 'null'},"growth":${r.growth_json ?? 'null'}}\n`,
+              `{"id":${r.id},"careerId":${JSON.stringify(r.career_id)},"year":${r.year},"age":${r.age},"ovr":${r.ovr},"createdAt":"${r.created_at}","events":${r.events_json ?? 'null'},"growth":${r.growth_json ?? 'null'},"ads":${r.ads_json ?? 'null'}}\n`,
           )
           .join(''),
       );

@@ -6,6 +6,7 @@ import { AdEventType, InterstitialAd, TestIds } from 'react-native-google-mobile
 import { proxy } from 'valtio';
 import { askConsent } from './adConsent';
 import { adFree } from './adFree';
+import { countInterstitial } from './adUsage';
 
 /** ios·android-retire-interstitial */
 const UNIT = __DEV__
@@ -69,6 +70,8 @@ export function showRetireAd(now = Date.now()): boolean {
   shownAt = now;
   interstitial.showing = true;
   const offs = [
+    // T-11-486a 실제로 뜬 것만 센다.
+    ad.addAdEventListener(AdEventType.OPENED, countInterstitial),
     ad.addAdEventListener(AdEventType.CLOSED, done),
     ad.addAdEventListener(AdEventType.ERROR, done),
   ];

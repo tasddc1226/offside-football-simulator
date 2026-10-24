@@ -890,6 +890,13 @@
       "when": 1792844833548,
       "tag": "0129_card_exchange",
       "breakpoints": true
+    },
+    {
+      "idx": 130,
+      "version": "6",
+      "when": 1792855476007,
+      "tag": "0130_season_telemetry_ads",
+      "breakpoints": true
     }
   ]
 }
