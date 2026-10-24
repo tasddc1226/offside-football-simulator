@@ -53,6 +53,7 @@ jobs:
       VITE_ADSENSE_CLIENT: ${{ vars.VITE_ADSENSE_CLIENT }}
       VITE_ADSENSE_HOSTNAME: ${{ vars.VITE_ADSENSE_HOSTNAME }}
       VITE_ADSENSE_SLOTS: ${{ vars.VITE_ADSENSE_SLOTS }}
+      VITE_ADFIT_UNITS: ${{ vars.VITE_ADFIT_UNITS }}
     steps:
       - name: Require main and explicit deploy confirmation
         env:
