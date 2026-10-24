@@ -20,6 +20,7 @@ export function Sheet() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const v = sheetState.view;
+  const solid = v?.kind === 'block';
   const dismissible = canDismissSheet(
     { busy: s.busy, view: s.view as SheetView | null },
     G?.pending as Parameters<typeof canDismissSheet>[1],
@@ -36,7 +37,8 @@ export function Sheet() {
     <Modal
       visible={s.open}
       transparent
-      animationType={motionOK ? 'slide' : 'none'}
+      // 불투명한 막이 시트와 함께 아래에서 밀려 올라오지 않게 중계는 페이드로 연다.
+      animationType={!motionOK ? 'none' : solid ? 'fade' : 'slide'}
       statusBarTranslucent
       navigationBarTranslucent
       onShow={Keyboard.dismiss}
@@ -53,7 +55,8 @@ export function Sheet() {
             right: 0,
             bottom: 0,
             // T-11-479 구간 진행 중계는 불투명하게 덮는다(뒤 화면에 장면을 고르기 전 결과가 보였다, 웹 .modal-solid).
-            backgroundColor: v?.kind === 'block' ? c.bg : c.scrim,
+            // T-11-479b 화면 배경색(밝은 테마는 거의 흰색)이 아니라 scrim과 같은 어두운 색 — 진행할 때마다 하얗게 번쩍였다.
+            backgroundColor: solid ? c.scrimSolid : c.scrim,
           }}
         />
         <View
