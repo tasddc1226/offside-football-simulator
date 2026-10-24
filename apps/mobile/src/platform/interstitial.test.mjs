@@ -5,14 +5,16 @@ const f = vi.hoisted(() => ({
   consent: vi.fn(),
   create: vi.fn(),
   ads: [],
+  countInterstitial: vi.fn(),
 }));
 vi.mock('react-native', () => ({ Platform: { select: (units) => units[f.platform] } }));
 vi.mock('react-native-google-mobile-ads', () => ({
-  AdEventType: { LOADED: 'loaded', CLOSED: 'closed', ERROR: 'error' },
+  AdEventType: { LOADED: 'loaded', OPENED: 'opened', CLOSED: 'closed', ERROR: 'error' },
   TestIds: { INTERSTITIAL: 'test-interstitial' },
   InterstitialAd: { createForAdRequest: f.create },
 }));
 vi.mock('./adConsent', () => ({ askConsent: f.consent }));
+vi.mock('./adUsage', () => ({ countInterstitial: f.countInterstitial }));
 vi.mock('./adFree', () => ({
   adFree: {
     get owned() {
@@ -67,6 +69,8 @@ describe('retire interstitial', () => {
     const ad = f.ads[0];
     expect(ad.show).toHaveBeenCalledOnce();
     expect(m.interstitial.showing).toBe(true);
+    ad.listeners.get('opened')();
+    expect(f.countInterstitial).toHaveBeenCalledOnce();
     ad.listeners.get('closed')();
     expect(m.interstitial.showing).toBe(false);
     expect(ad.listeners.size).toBe(0);
