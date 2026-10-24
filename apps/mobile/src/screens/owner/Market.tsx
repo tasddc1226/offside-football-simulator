@@ -52,6 +52,7 @@ import {
   marketName,
   priceAtPct,
   staleListingNext,
+  cardAttrStrip,
   priceDiff,
   releaseAmount,
   releaseConfirmText,
@@ -82,7 +83,7 @@ import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { notificationDestination } from '../../platform/notificationDestination';
 import { toast } from '../../game/host';
 import { useColors } from '../../theme/useColors';
-import type { Colors } from '../../theme/colors';
+import { mix, type Colors } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { ActionBar, Btn, Press, Screen, Topbar, Txt } from '../../ui';
 import { useOnPull } from '../../ui/refresh';
@@ -346,28 +347,54 @@ function SubFilters({
 }) {
   const c = useColors();
   const details = marketDetailFilters(filter.pos);
-  const row = (label: string, chips: ReactNode) => (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
-      <Txt tone="muted" style={{ ...small, minWidth: 72 }}>
-        {label}
+  const filtered = !!(filter.dpos || filter.type);
+  const reset = (
+    <Press
+      testID="market-filter-reset"
+      accessibilityRole="button"
+      hitSlop={6}
+      onPress={() => onPick({ dpos: undefined, type: undefined })}
+    >
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption), textDecorationLine: 'underline' }}>
+        {L.filterReset}
       </Txt>
-      {chips}
+    </Press>
+  );
+  // 웹 .mk-subfilters와 같은 모양 — 라벨은 위, 칩은 아래에 줄바꿈으로 놓는다.
+  const row = (label: string, withReset: boolean, chips: ReactNode) => (
+    <View style={{ gap: 6 }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 14,
+        }}
+      >
+        <Txt tone="muted" style={{ fontSize: rem(FONT.caption), fontWeight: '600' }}>
+          {label}
+        </Txt>
+        {withReset && filtered ? reset : null}
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 14 }}>
+        {chips}
+      </View>
     </View>
   );
   return (
     <View
       testID="market-subfilters"
       style={{
-        gap: 6,
-        padding: 10,
-        borderWidth: 1,
-        borderColor: c.line,
+        gap: 12,
+        paddingVertical: 12,
         borderRadius: RADIUS.md,
+        backgroundColor: c.surface,
       }}
     >
       {details.length
         ? row(
             L.detailPos,
+            true,
             <>
               <FilterChip
                 small
@@ -392,6 +419,7 @@ function SubFilters({
         : null}
       {row(
         L.playerType,
+        !details.length,
         <>
           <FilterChip
             small
@@ -412,19 +440,43 @@ function SubFilters({
           ))}
         </>,
       )}
-      {filter.dpos || filter.type ? (
-        <Press
-          testID="market-filter-reset"
-          accessibilityRole="button"
-          hitSlop={6}
-          onPress={() => onPick({ dpos: undefined, type: undefined })}
-          style={{ alignSelf: 'flex-end', paddingVertical: 2 }}
-        >
-          <Txt tone="muted" style={{ ...small, textDecorationLine: 'underline' }}>
-            {L.filterReset}
+    </View>
+  );
+}
+
+/** T-11-477 매물 줄 아래 능력치 6개(웹 .mk-attrs). 능력치가 없는 옛 카드는 그리지 않는다. */
+function AttrStrip({ card }: { card: MarketCard }) {
+  const c = useColors();
+  const attrs = cardAttrStrip(card);
+  if (!attrs.length) return null;
+  return (
+    <View
+      testID="market-listing-attrs"
+      style={{
+        width: '100%',
+        flexDirection: 'row',
+        paddingTop: 8,
+        borderTopWidth: 1,
+        borderTopColor: c.line,
+      }}
+    >
+      {attrs.map((a) => (
+        <View key={a.key} style={{ flex: 1, alignItems: 'center', gap: 1, minWidth: 0 }}>
+          <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(FONT.caption2) }}>
+            {a.label}
           </Txt>
-        </Press>
-      ) : null}
+          <Txt
+            num
+            style={{
+              fontSize: rem(FONT.body2),
+              fontWeight: a.tone === 'lo' ? '500' : '700',
+              color: a.tone === 'hi' ? c.accentText : a.tone === 'lo' ? c.muted : c.ink,
+            }}
+          >
+            {a.value}
+          </Txt>
+        </View>
+      ))}
     </View>
   );
 }
@@ -454,11 +506,12 @@ function FilterChip({
       onPress={onPress}
       style={{
         minHeight: sm ? 30 : 34,
-        paddingHorizontal: sm ? 11 : 13,
+        paddingHorizontal: sm ? 12 : 13,
         borderRadius: RADIUS.pill,
         borderWidth: 1,
-        borderColor: on ? c.ink : c.line,
-        backgroundColor: on ? c.ink : c.surface,
+        // 세부 칩(small)은 바탕색 위에 강조색 톤으로 골라 위 포지션 칩과 위계를 나눈다(웹 .mk-chip-sm).
+        borderColor: sm ? (on ? c.accent : c.line) : on ? c.ink : c.line,
+        backgroundColor: sm ? (on ? mix(c.accent, c.surface, 0.18) : c.bg) : on ? c.ink : c.surface,
         justifyContent: 'center',
       }}
     >
@@ -466,7 +519,7 @@ function FilterChip({
         style={{
           fontSize: rem(FONT.label),
           fontWeight: on ? '600' : '400',
-          color: on ? c.surface : c.ink,
+          color: sm ? (on ? c.accentText : c.ink) : on ? c.surface : c.ink,
         }}
       >
         {label}
@@ -1287,6 +1340,7 @@ export default function Market() {
                             style={{
                               ...box,
                               flexDirection: 'row',
+                              flexWrap: 'wrap',
                               alignItems: 'center',
                               gap: 12,
                               paddingVertical: 10,
@@ -1328,6 +1382,7 @@ export default function Market() {
                                 {diff.text}
                               </Txt>
                             </View>
+                            <AttrStrip card={l.card} />
                           </Press>
                         );
                       })
