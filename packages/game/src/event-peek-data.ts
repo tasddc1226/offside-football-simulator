@@ -1,4 +1,4 @@
-// 생성 파일(T-11-432). 손으로 고치지 않는다 — event-peek.test.ts 주석의 명령으로 다시 만든다.
+// 생성 파일(T-11-432). 손으로 고치지 않는다 — event-peek.test.ts 주석의 명령으로 다시 만든 뒤 pnpm format으로 서식을 맞춘다.
 // 이벤트 선택지마다 선택하면 늘 같은 방향으로 바뀌는 득실(ok: 성공·확정 결과, fail: 실패 결과). 점수가 큰 순서다.
 import type { ChoicePeek } from './event-peek.js';
 
@@ -54,7 +54,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   rival: [
     {
       ok: ['attr+', 'cond-'],
-      fail: ['out', 'cond-'],
+      fail: ['cond-'],
     },
     {
       ok: ['trust-', 'cond+', 'morale+'],
@@ -127,7 +127,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
     },
     {
       ok: ['morale+', 'trust+'],
-      fail: ['morale-', 'trust-'],
+      fail: ['trust-', 'morale-'],
     },
   ],
   penalty: [
