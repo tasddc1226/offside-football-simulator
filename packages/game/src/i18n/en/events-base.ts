@@ -103,7 +103,7 @@ export const events_base: Record<string, EventText> = {
   },
   scout: {
     title: 'Overseas scout in the stands',
-    text: () => "Word is a scout from a big European club is at today's match.",
+    text: () => "Word is that a scout from a big European club is at today's match.",
     choices: [
       {
         label: byPos<string>({
