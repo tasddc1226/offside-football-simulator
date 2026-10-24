@@ -653,6 +653,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'events_json',
     'growth_json',
     'created_at',
+    'ads_json',
   ],
   retired_numbers: [
     'season',

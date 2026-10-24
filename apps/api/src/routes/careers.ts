@@ -297,6 +297,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       signalsJson:
         body.signals &&
         JSON.stringify({ ...body.signals, headless: isHeadless(c.req.header('User-Agent')) }),
+      adsJson: body.ads && JSON.stringify(body.ads),
       hide,
       now,
       ...(!head && pruned && { serviceSeason: pruned.serviceSeason }),

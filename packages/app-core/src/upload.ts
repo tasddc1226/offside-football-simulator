@@ -2,6 +2,7 @@
 // 시즌 종료·은퇴 때 서버로 보낼 본문을 만들어 업로드 큐(outbox.ts)에 넣는다. 큐 모듈은 클라이언트가 넘긴다
 // (웹은 동적 import로 메인 청크와 분리한다).
 import type {
+  AdUsage,
   CareerSeasonPayload,
   PlaySignals,
   PutCareerSeasonBody,
@@ -55,6 +56,8 @@ export interface UploaderHost {
   appVersion: string;
   /** 지난 업로드 이후의 조작 요약(자동 플레이 탐지, 관찰 전용). 없으면 싣지 않는다. */
   signals?(): PlaySignals;
+  /** T-11-486a 지난 업로드 이후의 광고 이용 요약(앱, 관찰 전용). 없으면 싣지 않는다. */
+  ads?(): AdUsage | undefined;
 }
 
 export function createUploader(host: UploaderHost) {
@@ -89,7 +92,12 @@ export function createUploader(host: UploaderHost) {
   function uploadSeason(s: GameState, rec: CareerRecord, growth?: SeasonGrowth) {
     const events = (s.evBuf || []).slice();
     const signals = host.signals?.();
-    const body = { ...seasonBody(s, rec, events, growth), ...(signals && { signals }) };
+    const ads = host.ads?.();
+    const body = {
+      ...seasonBody(s, rec, events, growth),
+      ...(signals && { signals }),
+      ...(ads && { ads }),
+    };
     const release = () => {
       if (events.every((event, i) => s.evBuf?.[i] === event)) s.evBuf?.splice(0, events.length);
     };
