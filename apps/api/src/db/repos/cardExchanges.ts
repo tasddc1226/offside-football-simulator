@@ -3,6 +3,7 @@ import type {
   ExchangeDef,
   ExchangeReward,
 } from '@offside/contracts/card-exchange-rules';
+import { DEFAULT_NATION } from '@offside/contracts/nations';
 import type { Db } from '../client.js';
 import { grantItemStatement } from './itemShop.js';
 
@@ -26,7 +27,7 @@ export async function myClaimCounts(
 
 /**
  * 낼 카드 후보: 요청한 카드 중 지금 내 카드(기본키로만 읽는다). raised는 내가 직접 키운 커리어인지(영입한 카드는 낼 수 없다).
- * 조건 판정은 contracts 순수 함수가 한다.
+ * 조건 판정은 contracts 순수 함수가 한다. 대한민국 선수는 국적이 NULL로 저장돼 화면(팀 목록)과 같이 KR로 읽는다.
  */
 export async function exchangeCardsOf(
   db: Db,
@@ -42,7 +43,7 @@ export async function exchangeCardsOf(
     )
     .bind(profileId, JSON.stringify(careerIds), profileId)
     .all<ExchangeCard & { raised: number }>();
-  return results;
+  return results.map((r) => ({ ...r, nation: r.nation ?? DEFAULT_NATION }));
 }
 
 /**

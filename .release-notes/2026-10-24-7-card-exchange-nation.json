@@ -1,0 +1,18 @@
+{
+  "id": "t-11-374b-card-exchange-nation",
+  "title": "카드 과제에 대한민국 선수를 낼 수 없던 문제 수정",
+  "items": [
+    "같은 국적 과제에 대한민국 선수를 고르면 조건에 맞지 않는다며 내지 못하던 문제를 고쳤어요"
+  ],
+  "en": {
+    "title": "Fixed South Korean players being rejected in card tasks",
+    "items": [
+      "Card tasks that need players of the same nationality now accept South Korean players."
+    ]
+  },
+  "ja": {
+    "title": "カード課題で韓国の選手を出せない問題を修正",
+    "items": ["同じ国籍の課題で韓国の選手を選ぶと条件に合わないと出せなかった問題を直しました。"]
+  },
+  "availability": "web-app"
+}

@@ -60,6 +60,7 @@ describe('카드 바치기 과제 (T-11-374)', () => {
     def: ExchangeDef,
     n = def.rule.count,
     raisedBy = profileId,
+    nation: string | null = '대한민국',
   ) {
     const r = def.rule;
     const shape = r.shape
@@ -89,7 +90,7 @@ describe('카드 바치기 과제 (T-11-374)', () => {
         peak,
         legendScore: r.legendOne ?? 300,
         apps: 300,
-        nation: '대한민국',
+        nation,
         serviceSeason: r.seasons?.[0] ?? 1,
         value: 1_000_000,
       });
@@ -106,6 +107,23 @@ describe('카드 바치기 과제 (T-11-374)', () => {
     (await ctx.db.select().from(cards).where(inArray(cards.careerId, ids))).filter(
       (c) => c.ownerId !== null,
     ).length;
+
+  it('같은 국적 과제: 국적이 비어 있는(대한민국) 카드와 KR 카드를 같은 국적으로 본다', async () => {
+    // 같은 국적 과제가 열리는 날을 찾는다(보통 묶음에 국가대표 소집이 있다).
+    const day = Array.from({ length: 10 }, (_, i) =>
+      new Date(Date.parse(NOW) + i * 86_400_000).toISOString(),
+    ).find((t) => exchangesAt(t).some((d) => d.rule.sameNation && !d.rule.avgPeakMin))!;
+    vi.setSystemTime(new Date(day));
+    const def = exchangesAt(day).find((d) => d.rule.sameNation && !d.rule.avgPeakMin)!;
+    const owner = await issueGoogleCookie(ctx);
+    const ids = [
+      ...(await addCards(owner.profileId, def, def.rule.count - 1, owner.profileId, null)),
+      ...(await addCards(owner.profileId, def, 1, owner.profileId, 'KR')),
+    ];
+    const res = await claim(owner.cookie, def.id, ids);
+    expect(res.status).toBe(200);
+    expect(await owned(ids)).toBe(0);
+  });
 
   it('구글 로그인한 구단주만 쓴다', async () => {
     expect((await call('GET', '/v1/exchanges/me')).status).toBe(401);
