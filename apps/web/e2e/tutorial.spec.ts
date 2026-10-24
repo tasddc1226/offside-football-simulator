@@ -31,6 +31,30 @@ test.describe('처음 온 기기', () => {
     expect(await page.evaluate(() => localStorage.getItem('ft_tutorial'))).toBe('{"i":4}');
   });
 
+  test('T-11-481 동의 창 같은 다른 창이 떠 있으면 그 뒤 자리를 비추지 않고, 닫히면 뜬다', async ({
+    page,
+  }) => {
+    // 처음 방문자에게 뜨는 이용 분석 동의 창처럼, 시트 상태를 거치지 않는 aria-modal 창을 홈 위에 띄운다.
+    await page.addInitScript(() => {
+      addEventListener('DOMContentLoaded', () => {
+        const d = document.createElement('div');
+        d.setAttribute('role', 'dialog');
+        d.setAttribute('aria-modal', 'true');
+        d.setAttribute('aria-label', 'consent');
+        d.id = 'fake-consent';
+        d.style.cssText = 'position:fixed;inset:20% 0 0;background:#fff;z-index:10';
+        document.body.append(d);
+      });
+    });
+    await page.goto('/');
+    await expect(page.locator('[data-act="home-market"]')).toBeAttached();
+    await page.waitForTimeout(500);
+    await expect(page.locator('.coach-bubble')).toHaveCount(0);
+    await expect(page.locator('.coach-dim')).toHaveCount(0);
+    await page.evaluate(() => document.getElementById('fake-consent')?.remove());
+    await expect(page.locator('.coach-bubble')).toHaveAttribute('data-coach-step', 'new');
+  });
+
   test('건너뛰면 다시 열어도 뜨지 않고, 설정에서 다시 볼 수 있다', async ({ page }) => {
     await page.goto('/');
     await page.locator('[data-act="coach-skip"]').click();
