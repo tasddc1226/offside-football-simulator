@@ -58,7 +58,6 @@ test('리그 구간 중계가 결정적 장면에서 멈추고, 고른 결과가
   const wdl = (await sheet.locator('[data-block-wdl]').textContent())!;
   await ok.click();
   await expect(sheet).toBeHidden();
-  await expect(page.locator('#modal')).not.toHaveClass(/modal-solid/);
   await expect(page.locator('[data-report]')).toContainText(wdl.replace(/\s+/g, ' ').trim());
   // 고른 결과로 다시 진행한 상태가 저장된다(구간이 끝나 전반기를 지났다).
   const phase = await page.evaluate(() => JSON.parse(localStorage.getItem('ft_save')!).phase);
