@@ -3098,7 +3098,7 @@ th.n {
   opacity: 1;
 }
 .modal.modal-solid {
-  background: var(--bg);
+  background: var(--scrim-solid);
 }
 .modal-host {
   display: contents;
@@ -7706,7 +7706,7 @@ html:root[data-skin='sheet'] {
   background: rgba(255, 255, 255, 0.6);
 }
 :root[data-skin='sheet'] .modal.modal-solid {
-  background: var(--bg);
+  background: var(--scrim-solid);
 }
 :root[data-skin='sheet'] .sheet {
   border-radius: var(--radius-sm);
