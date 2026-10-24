@@ -76,6 +76,21 @@ expo-iap 5.8.2는 StoreKit 2 경로이며 앱 코드에 Firebase `logTransaction
 
 통화별 transactions·unique_purchasers·가격 검증된 unique_payers·신규 결제자·반복 거래·금액 합계·환불·가격 누락·0원·sandbox를 분리한다. 신규 결제자는 두 원장의 모든 운영 거래 중 계정별 최초 행이며 검증 금액이 양수인 경우에만 센다. 과거 금액 미확인 거래가 먼저 있으면 신규로 추정하지 않으므로 보수적 하한이다. 미확인 가격 거래를 유료 결제자로 확정하지 않는다. `repeat_transactions`는 두 원장의 모든 운영 반복 거래이며 유료 확인 여부는 가격 coverage와 함께 해석한다. 통화끼리 합산하지 않는다. 직접 유입은 빈 campaign, 연결 없는 구매는 `unattributed`다.
 
+### 앱 IAP / 웹 결제 하위 분류
+
+기존 `purchases`, `refunds`, `coverage`, `unattributedReasons`는 모든 스토어의 전체 집계다.
+별도 `byStore` 객체에는 같은 이름의 배열과 각 행의 `store`를 추가한다. `apple` / `google`은 앱 IAP,
+`xsolla`는 웹 결제이며, 알 수 없는 스토어는 원래 값을 유지한다. 세션에는 결제 스토어가 없으므로 나누지 않는다.
+현재 저장소에는 이 관리자 API를 소비하는 화면이 없어 화면 변경은 없다. 응답 타입은
+`@offside/contracts/acquisition`의 `AcquisitionStoreBreakdown`에 있다.
+
+전체와 하위 분류를 더하지 않는다. 거래 건수는 같은 캠페인·통화의 스토어별 건수를 더해 전체와 대조할 수 있지만,
+같은 사람이 여러 스토어에서 사므로 고유 구매자·결제자는 스토어별 값을 더해 전체로 계산할 수 없다.
+신규 결제자와 반복 거래는 스토어별로 순서를 다시 매기지 않고 두 원장·모든 스토어의 기존 전체 이력을 따른다.
+통화는 환산하거나 합치지 않으며 미확인 통화·금액은 `null`을 유지한다. 금액 합은 확인된 값만 더하므로
+미확인 가격 건수도 함께 본다. 전체 Sandbox 건수는 빈 기간에 0이지만 하위 분류는 관측된 스토어만 반환한다.
+첫/마지막 귀속, 기간 경계, 구매/환불 시각, 광고 제거 복원 멱등성과 환불 금액의 의미는 기존과 같다.
+
 Migration은 최신 main 0109 기준 독립 0111이며 journal idx111, meta/0111_snapshot.json이다. 현재 schema generate 추가 변경 없음이다. 다른 0110 PR 병합 시 마지막 절의 재생성 조건을 따른다.
 
 Drizzle 0.31.10이 coalesce 식 인덱스의 쉼표를 열 구분으로 잘못 직렬화한 SQL을 로컬 테스트에서 발견해 표현식 SQL만 바로잡았다. ADD COLUMN FK의 ON DELETE SET NULL도 명시했다. schema/snapshot은 생성본을 유지하며 재생성 drift 없음과 빈 D1 전체 적용을 다시 검증한다.
@@ -143,7 +158,6 @@ CI39087673328이 head7fc5fee8에서 전체 성공한 뒤 main7297a213(#790)이 �
 최초 허용 UTM은 main의 첫 import인 entry-campaign에서 한 번 캡처한다. App Store와 first-party가 같은 정규화된 snapshot을 사용해 SPA 이동 뒤 생성기 로드가 늦어져도 최초 유입을 유지한다. raw URL·fbclid·이메일을 새 저장소에 보관하지 않으며 API/제3자 전송과 동의·철회 정책은 바뀌지 않는다. 해당 초기 snapshot만 이미 eager인 game/contracts 그룹과 묶고, $initial 및 재귀 캡처 금지를 유지했다. 예산·카운터·검사 fixture는 완화하지 않았다.
 
 #794 LM/RM 역할과 #793 감독 상세 표시는 main 코드를 그대로 보존했다. 보드 양쪽 행과 SEO의 main 변경/기존 acquisition 개인정보 본문을 각각 대조했다. migration/schema 변경은 없고 0111 부모0110/journal109→110→111을 유지한다. 로컬 웹94개(지연 초기화/개인정보/OS 회귀3개 포함), owner-team 계약20개, managerCard8개, 웹/e2e 타입·Svelte오류0(기존경고5)·변경 ESLint 검사를 통과했다. 브라우저/원격 CI 결과는 새 head에서 별도로 기록한다. 운영 활성화·병합·배포·환경 설정·개발앱 설치·실제 구매는 실행하지 않았다.
-
 
 ## 2026-10-18 명시적 활성화 승인 후 OTA 호환 수정
 
