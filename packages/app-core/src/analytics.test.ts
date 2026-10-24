@@ -75,7 +75,7 @@ describe('privacy allowlists', () => {
     }
   });
   it('keeps the meta reels ad content per country', () => {
-    for (const content of ['jp_reels', 'uk_reels', 'us_reels']) {
+    for (const content of ['jp_reels', 'uk_reels', 'us_reels', 'kr_reels']) {
       const query = `?utm_source=meta&utm_medium=paid&utm_campaign=global_test&utm_content=${content}`;
       expect(campaignQuery(`https://offside-lab.com/${query}&fbclid=PRIVATE`)).toBe(query);
     }
