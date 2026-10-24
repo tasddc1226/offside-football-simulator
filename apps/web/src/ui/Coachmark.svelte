@@ -50,11 +50,15 @@
   const last = $derived(idx === COACH_STEPS.length - 1);
   const pos = $derived(rect && bw ? bubbleAt({ x: rect.x - PAD, y: rect.y - PAD, w: rect.w + PAD * 2, h: rect.h + PAD * 2 }, { w: vw, h: vh }, { w: bw, h: bh }) : null);
 
-  /** 비출 자리. 크기가 있고, 시트가 열려 있으면 시트 안에 있어야 한다. */
+  /**
+   * 비출 자리. 크기가 있고, 맨 위에 열린 창(aria-modal — 시트 · 동의 창 · 홈 팝업)이 있으면 그 안에 있어야 한다.
+   * 동의 창처럼 시트 상태를 거치지 않는 창이 떠 있으면 그 뒤 자리는 비추지 않고 창이 닫힐 때까지 기다린다(T-11-481).
+   */
   function targetOf(id: CoachId): HTMLElement | null {
+    const top = [...document.querySelectorAll<HTMLElement>('[aria-modal="true"]')].filter((m) => m.offsetWidth || m.offsetHeight).at(-1);
     for (const el of document.querySelectorAll<HTMLElement>(`[data-coach="${id}"]`)) {
       if (!el.offsetWidth && !el.offsetHeight) continue;
-      if (sheetState.open !== !!el.closest('.modal')) continue;
+      if (top ? !top.contains(el) : sheetState.open || !!el.closest('.modal')) continue;
       return el;
     }
     return null;
