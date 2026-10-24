@@ -49,6 +49,8 @@ export const CAMPAIGNS: Record<string, readonly string[]> = {
     'jp_reels',
     'uk_reels',
     'us_reels',
+    // T-11-483 한국어판 릴스 영상 광고(한국 대상).
+    'kr_reels',
   ],
 };
 export function campaignQuery(href: string): string {
