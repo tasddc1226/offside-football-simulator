@@ -9,6 +9,7 @@ import type {
   MarketTrade,
 } from './api/market.js';
 import type { FundsItem } from '@offside/contracts';
+import { ATTR_KEYS, attrLabels, type AttrKey } from '@offside/game/data';
 import type { OwnerTeamResponse, TeamPlayer } from './api/team.js';
 import {
   MARKET_TYPES,
@@ -83,6 +84,22 @@ const priceRatio = (price: number, cardValue: number) =>
   cardValue > 0 ? Math.round((price / cardValue) * 100) : 100;
 
 /** 판매가 옆 표시: 기준가와 같으면 '기준가', 아니면 차이(%). 비싸면 up, 싸면 down. */
+/**
+ * T-11-477 매물 줄 아래 능력치 6개(카드 능력치 그대로, 골키퍼는 골키퍼 이름). 90 이상은 강조, 60 미만은 흐리게.
+ * 옛 기록처럼 능력치가 없으면 빈 배열 — 줄을 그리지 않는다.
+ */
+export function cardAttrStrip(
+  card: Pick<MarketCard, 'pos' | 'attrs'>,
+): { key: AttrKey; label: string; value: number; tone: 'hi' | 'lo' | '' }[] {
+  const a = card.attrs;
+  if (!a) return [];
+  const labels = attrLabels(card.pos);
+  return ATTR_KEYS.map((key) => {
+    const value = Math.round(a[key]);
+    return { key, label: labels[key], value, tone: value >= 90 ? 'hi' : value < 60 ? 'lo' : '' };
+  });
+}
+
 export function priceDiff(
   price: number,
   cardValue: number,

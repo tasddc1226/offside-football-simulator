@@ -1,0 +1,23 @@
+{
+  "id": "t-11-477-market-filter-attrs",
+  "title": "이적시장 목록 다듬기",
+  "items": [
+    "세부 포지션 · 유형 필터를 정리해 고른 칸이 한눈에 보여요",
+    "선수 목록 아래에 카드 능력치 6개가 바로 보여요"
+  ],
+  "en": {
+    "title": "Transfer market list polish",
+    "items": [
+      "The detailed position and player type filters are tidier, so your picks stand out.",
+      "Each player in the list now shows their six card attributes underneath."
+    ]
+  },
+  "ja": {
+    "title": "移籍市場リストの改善",
+    "items": [
+      "詳細ポジション・タイプのフィルターを整理し、選んだ項目がひと目で分かります。",
+      "選手リストの下にカード能力値6つがすぐ表示されます。"
+    ]
+  },
+  "availability": "web-app"
+}

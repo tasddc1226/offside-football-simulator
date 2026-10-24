@@ -55,6 +55,7 @@
     marketName,
     priceAtPct,
     staleListingNext,
+    cardAttrStrip,
     priceDiff,
     releaseAmount,
     releaseConfirmText,
@@ -440,23 +441,34 @@
           <div class="mk-subfilters" data-market-subfilters>
             {#if details.length}
               <div class="mk-subrow" role="group" aria-label={L.detailPos}>
-                <span class="mk-sublabel">{L.detailPos}</span>
-                <button class="mk-chip mk-chip-sm" aria-pressed={!filter.dpos} data-market-dpos="all" onclick={() => pickFilter({ dpos: undefined })}>{L.posAll}</button>
-                {#each details as d (d)}
-                  <button class="mk-chip mk-chip-sm" aria-pressed={filter.dpos === d} data-market-dpos={d} aria-label={tn(DETAIL_LABEL[d])} title={tn(DETAIL_LABEL[d])} onclick={() => pickFilter({ dpos: d })}>{d}</button>
-                {/each}
+                <div class="mk-subhead">
+                  <span class="mk-sublabel">{L.detailPos}</span>
+                  {#if filter.dpos || filter.type}
+                    <button class="mk-reset" data-market-reset onclick={() => (filter = { pos: filter.pos })}>{L.filterReset}</button>
+                  {/if}
+                </div>
+                <div class="mk-subchips">
+                  <button class="mk-chip mk-chip-sm" aria-pressed={!filter.dpos} data-market-dpos="all" onclick={() => pickFilter({ dpos: undefined })}>{L.posAll}</button>
+                  {#each details as d (d)}
+                    <button class="mk-chip mk-chip-sm" aria-pressed={filter.dpos === d} data-market-dpos={d} aria-label={tn(DETAIL_LABEL[d])} title={tn(DETAIL_LABEL[d])} onclick={() => pickFilter({ dpos: d })}>{d}</button>
+                  {/each}
+                </div>
               </div>
             {/if}
             <div class="mk-subrow" role="group" aria-label={L.playerType}>
-              <span class="mk-sublabel">{L.playerType}</span>
-              <button class="mk-chip mk-chip-sm" aria-pressed={!filter.type} data-market-type="all" onclick={() => pickFilter({ type: undefined })}>{L.posAll}</button>
-              {#each types as [id, name] (id)}
-                <button class="mk-chip mk-chip-sm" aria-pressed={filter.type === id} data-market-type={id} onclick={() => pickFilter({ type: id })}>{name}</button>
-              {/each}
+              <div class="mk-subhead">
+                <span class="mk-sublabel">{L.playerType}</span>
+                {#if !details.length && (filter.dpos || filter.type)}
+                  <button class="mk-reset" data-market-reset onclick={() => (filter = { pos: filter.pos })}>{L.filterReset}</button>
+                {/if}
+              </div>
+              <div class="mk-subchips">
+                <button class="mk-chip mk-chip-sm" aria-pressed={!filter.type} data-market-type="all" onclick={() => pickFilter({ type: undefined })}>{L.posAll}</button>
+                {#each types as [id, name] (id)}
+                  <button class="mk-chip mk-chip-sm" aria-pressed={filter.type === id} data-market-type={id} onclick={() => pickFilter({ type: id })}>{name}</button>
+                {/each}
+              </div>
             </div>
-            {#if filter.dpos || filter.type}
-              <button class="mk-reset" data-market-reset onclick={() => (filter = { pos: filter.pos })}>{L.filterReset}</button>
-            {/if}
           </div>
         {/if}
         <div class="mk-sort">
@@ -484,6 +496,11 @@
                     <small>{@render styleTag(l.card)}{cardMeta(l.card, season)}</small>
                   </span>
                   <span class="mk-price"><b>{fmtValue(l.price)}</b><small class="mk-{diff.tone}">{diff.text}</small></span>
+                  {#if l.card.attrs}
+                    <span class="mk-attrs" data-listing-attrs>
+                      {#each cardAttrStrip(l.card) as a (a.key)}<span class="mk-attr"><small>{a.label}</small><b class="num mk-attr-{a.tone}">{a.value}</b></span>{/each}
+                    </span>
+                  {/if}
                 </button>
               </li>
             {:else}
@@ -911,35 +928,56 @@
     color: var(--surface);
     font-weight: 600;
   }
+  /* 세부 포지션 · 유형 — 라벨은 위, 칩은 아래에 줄바꿈으로 놓는다. 선택은 강조색 톤으로 위 포지션 칩과 위계를 나눈다. */
   .mk-subfilters {
     display: grid;
-    gap: 6px;
-    padding: 10px 12px;
-    border: 1px solid var(--line);
+    gap: 12px;
+    padding: 12px 0;
     border-radius: var(--radius-md);
+    background: var(--surface);
   }
   .mk-subrow {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
+    display: grid;
     gap: 6px;
+    min-width: 0;
+  }
+  .mk-subhead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
   }
   .mk-sublabel {
-    min-width: 72px;
     color: var(--muted);
-    font-size: var(--fs-label);
+    font-size: var(--fs-caption);
+    font-weight: 600;
+  }
+  .mk-subchips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 14px;
   }
   .mk-chip-sm {
+    flex: none;
     min-height: 30px;
-    padding: 0 11px;
+    padding: 0 12px;
+    border-color: var(--line);
+    background: var(--bg);
+    white-space: nowrap;
+  }
+  .mk-chip-sm[aria-pressed='true'] {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+    color: var(--accent-text);
   }
   .mk-reset {
-    justify-self: end;
     border: 0;
+    padding: 0;
     background: none;
     color: var(--muted);
     font: inherit;
-    font-size: var(--fs-label);
+    font-size: var(--fs-caption);
     text-decoration: underline;
     cursor: pointer;
   }
@@ -1001,6 +1039,42 @@
   }
   button.mk-row {
     cursor: pointer;
+  }
+  /* T-11-477 매물 줄 아래 능력치 6개 — 줄을 내려 카드 · 이름 · 가격 아래에 칸을 고르게 나눈다. */
+  .mk-row:has(.mk-attrs) {
+    flex-wrap: wrap;
+  }
+  .mk-attrs {
+    flex-basis: 100%;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+  }
+  .mk-attr {
+    display: grid;
+    justify-items: center;
+    gap: 1px;
+    min-width: 0;
+  }
+  .mk-attr small {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: var(--fs-caption2);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mk-attr b {
+    font-size: var(--fs-body2);
+  }
+  .mk-attr-hi {
+    color: var(--accent-text);
+  }
+  .mk-attr-lo {
+    color: var(--muted);
+    font-weight: 500;
   }
   .mk-info {
     flex: 1;
