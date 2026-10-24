@@ -47,11 +47,22 @@ export type ExchangeDef = ExchangeSpec & {
   endsAt: string;
 };
 
-/** 오늘 과제 세 개를 모두 냈을 때 한 번 받는 보상. */
-export const EXCHANGE_DAILY_REWARD: readonly ExchangeReward[] = [
-  { item: 'reroll', qty: 2 },
-  { item: 'boost', qty: 1 },
-];
+/**
+ * 오늘 과제 세 개를 모두 냈을 때 한 번 받는 보상. 수량은 운영 도구 밸런스 설정(카드 과제 묶음)의 활성 버전에서 온다.
+ * 0장인 아이템은 빠진다.
+ */
+export const exchangeReward = (b: {
+  exchangeRewardReroll: number;
+  exchangeRewardBoost: number;
+  exchangeRewardScout: number;
+}): ExchangeReward[] =>
+  (
+    [
+      { item: 'reroll', qty: b.exchangeRewardReroll },
+      { item: 'boost', qty: b.exchangeRewardBoost },
+      { item: 'scout', qty: b.exchangeRewardScout },
+    ] as const
+  ).filter((w) => w.qty > 0);
 
 /** 하루마다 칸별로 다음 과제를 연다(칸마다 묶음 길이가 달라 날마다 조합이 바뀐다). */
 export const EXCHANGE_POOL: Record<ExchangeTier, readonly ExchangeSpec[]> = {

@@ -5,10 +5,10 @@
   import type { TeamPlayer, OwnerTeamResponse } from '@offside/app-core/api/team';
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
   import { claimExchange, fetchExchangeMe } from '@offside/app-core/api/exchange';
+  import type { ExchangeMeResponse } from '@offside/contracts';
   import {
     autoFill,
     canFinishAll,
-    EXCHANGE_DAILY_REWARD,
     endsText,
     exchangeCardOf,
     exchangeChecklist,
@@ -34,6 +34,7 @@
 
   let team = $state<OwnerTeamResponse | null>(null);
   let claims = $state<Record<string, number>>({});
+  let reward = $state<ExchangeMeResponse['reward']>([]);
   let failed = $state(false);
   let def = $state<ExchangeDef | null>(null);
   let picked = $state<string[]>([]);
@@ -65,6 +66,7 @@
     }
     team = t.data;
     claims = me.data.claims;
+    reward = me.data.reward;
   }
   $effect(() => {
     void load();
@@ -139,7 +141,7 @@
       <p class="muted fs-sm">{L.lead}</p>
       <section class="card stack xc-today" data-exchange-today>
         <b>{L.progress({ done: doneCount, total: defs.length })}</b>
-        <span class="fs-sm">{L.rewardAll} {rewardText(EXCHANGE_DAILY_REWARD)}</span>
+        <span class="fs-sm">{L.rewardAll} {rewardText(reward)}</span>
         <span class="muted fs-sm">{endsText(defs[0]!, now)}</span>
         {#if doneCount === defs.length}<span class="good fs-sm">{L.todayDone}</span>
         {:else if !feasible}<span class="xc-err fs-sm" data-exchange-cant>{L.cantFinish}</span>{/if}
@@ -156,7 +158,7 @@
       <ul class="xc-checks" data-exchange-checks>
         {#each checks as c (c.condition)}<li class:met={c.met}><span aria-hidden="true">{c.met ? '✓' : '·'}</span>{c.text}</li>{/each}
       </ul>
-      <p class="fs-sm">{L.rewardAll} {rewardText(EXCHANGE_DAILY_REWARD)}</p>
+      <p class="fs-sm">{L.rewardAll} {rewardText(reward)}</p>
       <div class="xc-tools">
         <b data-exchange-picked>{L.picked({ n: picked.length, need: def.rule.count })}</b>
         <button class="btn btn-sm" data-act="exchange-fill" disabled={busy} onclick={fill}>{L.autoFill}</button>

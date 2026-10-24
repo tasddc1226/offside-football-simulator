@@ -51,8 +51,8 @@ export async function exchangeCardsOf(
  *   2. 방출과 같은 가드(내 카드 · 직접 키운 커리어 · 잠금 · 감독 · 열린 등록 · 숨김)를 지나는 요청 카드의 주인을 비우고
  *      consumed_in에 기록 id를 남긴다.
  *   3. 기록의 cards에 실제로 비운 장수를 채운다. need와 다르면 CHECK 위반으로 batch 전체가 되돌아간다.
- *   4. 이 기록으로 오늘 과제(dayIds)를 모두 냈으면 기록에 보상을 적고 보상 아이템을 더한다. batch는 서로 끼어들지 않아
- *      마지막 과제를 낸 요청 하나만 보상을 받는다.
+ *   4. 이 기록으로 오늘 과제(dayIds)를 모두 냈으면 기록에 보상을 적고(reward_json은 그때까지 '', 보상이 0장이어도 '[]')
+ *      보상 아이템을 더한다. batch는 서로 끼어들지 않아 마지막 과제를 낸 요청 하나만 보상을 받는다.
  * 이미 냈으면 1번이 넣지 않아 나머지 문장도 아무것도 바꾸지 않는다 — claimed false.
  */
 export async function claimExchange(
@@ -81,7 +81,7 @@ export async function claimExchange(
     d1
       .prepare(
         `INSERT INTO card_exchange_claims (id, profile_id, exchange_id, need, reward_json, created_at)
-         SELECT ?, ?, ?, ?, '[]', ?
+         SELECT ?, ?, ?, ?, '', ?
          WHERE NOT EXISTS (SELECT 1 FROM card_exchange_claims WHERE profile_id = ? AND exchange_id = ?)`,
       )
       .bind(r.id, r.profileId, r.def.id, r.careerIds.length, r.now, r.profileId, r.def.id),

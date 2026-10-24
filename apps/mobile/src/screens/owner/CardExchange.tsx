@@ -9,10 +9,10 @@ import {
   type TeamPlayer,
 } from '@offside/app-core/api/team';
 import { claimExchange, fetchExchangeMe } from '@offside/app-core/api/exchange';
+import type { ExchangeMeResponse } from '@offside/contracts';
 import {
   autoFill,
   canFinishAll,
-  EXCHANGE_DAILY_REWARD,
   endsText,
   exchangeCardOf,
   exchangeChecklist,
@@ -42,6 +42,7 @@ export function CardExchange({ onClose }: { onClose: () => void }) {
   const [now] = useState(() => Date.now());
   const [team, setTeam] = useState<OwnerTeamResponse | null>(null);
   const [claims, setClaims] = useState<Record<string, number>>({});
+  const [reward, setReward] = useState<ExchangeMeResponse['reward']>([]);
   const [failed, setFailed] = useState(false);
   const [def, setDef] = useState<ExchangeDef | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
@@ -59,6 +60,7 @@ export function CardExchange({ onClose }: { onClose: () => void }) {
     if (!t.ok || !me.ok) return setFailed(true);
     setTeam(t.data);
     setClaims(me.data.claims);
+    setReward(me.data.reward);
   }, []);
   useEffect(() => {
     void load();
@@ -196,9 +198,7 @@ export function CardExchange({ onClose }: { onClose: () => void }) {
             </Txt>
             <Card gap={4} testID="exchange-today">
               <Txt bold>{L.progress({ done: doneCount, total: defs.length })}</Txt>
-              <Txt
-                style={{ fontSize: rem(0.875) }}
-              >{`${L.rewardAll} ${rewardText(EXCHANGE_DAILY_REWARD)}`}</Txt>
+              <Txt style={{ fontSize: rem(0.875) }}>{`${L.rewardAll} ${rewardText(reward)}`}</Txt>
               <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
                 {endsText(defs[0]!, now)}
               </Txt>
@@ -251,9 +251,7 @@ export function CardExchange({ onClose }: { onClose: () => void }) {
                 </Txt>
               ))}
             </View>
-            <Txt
-              style={{ fontSize: rem(0.875) }}
-            >{`${L.rewardAll} ${rewardText(EXCHANGE_DAILY_REWARD)}`}</Txt>
+            <Txt style={{ fontSize: rem(0.875) }}>{`${L.rewardAll} ${rewardText(reward)}`}</Txt>
             <Txt bold testID="exchange-picked">
               {L.picked({ n: picked.length, need: def.rule.count })}
             </Txt>

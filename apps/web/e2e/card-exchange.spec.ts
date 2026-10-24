@@ -95,7 +95,15 @@ async function stub(page: Page, opts: { claim?: 'ok' | 'gone' } = {}) {
   );
   await page.route(`${API}/v1/exchanges/me`, (r) => {
     s.meGets++;
-    return r.fulfill(ok({ claims: claimed ? { [EASY.id]: claimed } : {} }));
+    return r.fulfill(
+      ok({
+        claims: claimed ? { [EASY.id]: claimed } : {},
+        reward: [
+          { item: 'reroll', qty: 2 },
+          { item: 'boost', qty: 1 },
+        ],
+      }),
+    );
   });
   await page.route(`${API}/v1/exchanges/*/claim`, (r) => {
     const req = r.request();

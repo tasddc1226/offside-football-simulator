@@ -17,7 +17,6 @@ import { exchangeText as L } from './i18n/ko/exchange.js';
 export {
   autoFill,
   canFinishAll,
-  EXCHANGE_DAILY_REWARD,
   exchangeMet,
   exchangesAt,
   type ExchangeDef,

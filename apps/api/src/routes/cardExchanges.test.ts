@@ -4,14 +4,11 @@ import {
   ExchangeMeResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
-import {
-  EXCHANGE_DAILY_REWARD,
-  exchangesAt,
-  type ExchangeDef,
-} from '@offside/contracts/card-exchange-rules';
+import { exchangesAt, type ExchangeDef } from '@offside/contracts/card-exchange-rules';
 import { eq, inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  balanceVersions,
   cardExchangeClaims,
   cards,
   careers,
@@ -25,6 +22,11 @@ const MeRes = successEnvelope(ExchangeMeResponseSchema);
 const ClaimRes = successEnvelope(ExchangeClaimResponseSchema);
 const NOW = '2026-10-20T03:00:00.000Z';
 const DPOS = { GK: 'GK', DF: 'CB', MF: 'CM', FW: 'ST' } as const;
+/** 밸런스 기본값(exchangeRewardReroll 2 · exchangeRewardBoost 1 · exchangeRewardScout 0). */
+const DAILY = [
+  { item: 'reroll', qty: 2 },
+  { item: 'boost', qty: 1 },
+];
 
 let seq = 0;
 
@@ -117,7 +119,7 @@ describe('카드 바치기 과제 (T-11-374)', () => {
     const me0 = MeRes.parse(
       await (await call('GET', '/v1/exchanges/me', { cookie: owner.cookie })).json(),
     ).data;
-    expect(me0.claims).toEqual({});
+    expect(me0).toEqual({ claims: {}, reward: DAILY });
 
     const ids = await addCards(owner.profileId, first!);
     const res = await claim(owner.cookie, first!.id, ids, 'exchange-same-key');
@@ -164,8 +166,8 @@ describe('카드 바치기 과제 (T-11-374)', () => {
     }
     expect(results.map((r) => r.done)).toEqual([2, 3]);
     expect(results[0]!.rewards).toEqual([]);
-    expect(results[1]!.rewards).toEqual(EXCHANGE_DAILY_REWARD);
-    const want = EXCHANGE_DAILY_REWARD.map((w) => ({ item: w.item, qty: w.qty })).sort((a, b) =>
+    expect(results[1]!.rewards).toEqual(DAILY);
+    const want = DAILY.map((w) => ({ item: w.item, qty: w.qty })).sort((a, b) =>
       a.item.localeCompare(b.item),
     );
     expect(await items()).toEqual(want);
@@ -174,6 +176,52 @@ describe('카드 바치기 과제 (T-11-374)', () => {
       .from(ownerTitleProgress)
       .where(eq(ownerTitleProgress.profileId, owner.profileId));
     expect(progress?.exchanges).toBe(1);
+  });
+
+  it('보상 수량은 운영 도구 밸런스 설정의 활성 버전을 따른다 · 0장이어도 완료로 센다', async () => {
+    await ctx.db.insert(balanceVersions).values({
+      status: 'active',
+      valuesJson: JSON.stringify({
+        exchangeRewardReroll: 0,
+        exchangeRewardBoost: 0,
+        exchangeRewardScout: 1,
+      }),
+      createdBy: 'test',
+      createdAt: NOW,
+      updatedAt: NOW,
+      activatedAt: NOW,
+    });
+    const owner = await issueGoogleCookie(ctx);
+    const me = MeRes.parse(
+      await (await call('GET', '/v1/exchanges/me', { cookie: owner.cookie })).json(),
+    ).data;
+    expect(me.reward).toEqual([{ item: 'scout', qty: 1 }]);
+    let last;
+    for (const d of today()) {
+      const r = await claim(owner.cookie, d.id, await addCards(owner.profileId, d));
+      last = ClaimRes.parse(await r.json()).data;
+    }
+    expect(last!.rewards).toEqual([{ item: 'scout', qty: 1 }]);
+    const items = await ctx.db
+      .select()
+      .from(ownerItems)
+      .where(eq(ownerItems.profileId, owner.profileId));
+    expect(items.map((r) => [r.item, r.qty])).toEqual([['scout', 1]]);
+
+    // 보상을 모두 0으로 두어도 하루 완료(칭호 진행)는 센다.
+    await ctx.db
+      .update(balanceVersions)
+      .set({ valuesJson: JSON.stringify({ exchangeRewardReroll: 0, exchangeRewardBoost: 0 }) });
+    vi.setSystemTime(new Date('2026-10-21T03:00:00.000Z'));
+    for (const d of exchangesAt(new Date().toISOString()))
+      expect((await claim(owner.cookie, d.id, await addCards(owner.profileId, d))).status).toBe(
+        200,
+      );
+    const [progress] = await ctx.db
+      .select()
+      .from(ownerTitleProgress)
+      .where(eq(ownerTitleProgress.profileId, owner.profileId));
+    expect(progress?.exchanges).toBe(2);
   });
 
   it('영입한 선수는 낼 수 없다', async () => {
