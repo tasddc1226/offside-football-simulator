@@ -1,8 +1,10 @@
 // 홈 전광판(웹 HomeTicker.svelte). 헤더와 첫 카드 사이에서 이적·프로 입단·서버 최초 기록·신기록 소식이 오른쪽에서 왼쪽으로
 // 천천히 흐른다(서버에 실제로 올라온 기록만 — ticker.ts). 같은 줄을 두 벌 이어 붙여 한 벌 너비만큼 밀면 끊김 없이
 // 돈다. 새로 받은 소식은 한 바퀴가 끝날 때 바꿔 끼워 흐르던 글이 튀지 않게 한다. 누르고 있으면 멈춘다. 동작 줄이기면
-// 흐르지 않고 한 줄씩 바꿔 보여 준다.
+// 흐르지 않고 한 줄씩 바꿔 보여 준다. T-11-440 오른쪽 끝 버튼으로 멈추거나(흐름 · 한 줄씩 바꾸기 모두) 다시 흐르게 한다.
+// 멈춤은 이 기기에 남긴다.
 // 첫 화면이 밀리지 않게 응답 전·실패·빈 목록에도 같은 높이의 줄을 그린다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, AppState, Easing, ScrollView, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +22,11 @@ import { ClubMark, Txt } from '../../ui';
 import { homeText as L } from '@offside/app-core/i18n/ko/home';
 import { tn } from '@offside/game/i18n/names';
 import { useOnPull } from '../../ui/refresh';
+import Svg, { Path } from 'react-native-svg';
+import { kv } from '../../platform/setup';
+import { Press } from '../../ui/Press';
+
+const PAUSE_KEY = 'offside_ticker_paused';
 
 /** 흐르는 속도(px/초). 한글 한 줄을 편히 읽을 만큼 천천히. */
 const SPEED = 42;
@@ -37,6 +44,12 @@ export function HomeTicker() {
   const [copyW, setCopyW] = useState(0);
   const [still, setStill] = useState(0);
   const [holding, setHolding] = useState(false);
+  const [paused, setPaused] = useState(() => kv.getBoolean(PAUSE_KEY) ?? false);
+  const togglePause = () => {
+    const nextPaused = !paused;
+    setPaused(nextPaused);
+    kv.set(PAUSE_KEY, nextPaused);
+  };
   /** 흐르는 중에 받은 새 소식 — 한 바퀴가 끝날 때 바꿔 끼운다. */
   const next = useRef<TickerItem[] | null>(null);
   /** 서버 시각 - 이 기기 시각. '몇 분 전'을 서버 기준으로 센다. */
@@ -83,13 +96,13 @@ export function HomeTicker() {
 
   // 흐르지 않을 때는 5초마다 한 줄씩.
   useEffect(() => {
-    if (motionOK) return;
+    if (motionOK || paused) return;
     const step = setInterval(
       () => setStill((v) => (v + 1) % Math.max(1, items.length)),
       STILL_STEP_MS,
     );
     return () => clearInterval(step);
-  }, [motionOK, items.length]);
+  }, [motionOK, paused, items.length]);
 
   // 흐르기: 한 벌 너비(copyW)만큼 왼쪽으로 밀고, 끝나면 소식을 바꿔 끼우고 처음부터. 누르고 있으면 그 자리에서 멈췄다 이어 간다.
   const [x] = useState(() => new Animated.Value(0));
@@ -101,7 +114,7 @@ export function HomeTicker() {
     return () => x.removeListener(id);
   }, [x]);
   useEffect(() => {
-    if (!motionOK || !copyW || holding || !items.length) return;
+    if (!motionOK || !copyW || holding || paused || !items.length) return;
     let stopped = false;
     let anim: Animated.CompositeAnimation | null = null;
     const run = (from: number) => {
@@ -130,7 +143,7 @@ export function HomeTicker() {
       stopped = true;
       anim?.stop();
     };
-  }, [motionOK, copyW, holding, items, x]);
+  }, [motionOK, copyW, holding, paused, items, x]);
 
   const line = (k: TickerItem, key: string) => (
     <View
@@ -167,70 +180,101 @@ export function HomeTicker() {
           <Txt style={tk}>— {k.who}</Txt>
         </>
       )}
-      <Txt style={{ color: c.muted, fontSize: rem(0.75) }}>{ago(k.at)}</Txt>
+      <Txt style={{ color: c.muted, fontSize: rem(FONT.caption) }}>{ago(k.at)}</Txt>
     </View>
   );
 
   return (
     <View
       testID="home-ticker"
-      accessibilityLabel={L.tickerAria}
-      onTouchStart={() => setHolding(true)}
-      onTouchEnd={() => setHolding(false)}
-      onTouchCancel={() => setHolding(false)}
       style={{
         height: 34,
-        justifyContent: 'center',
+        flexDirection: 'row',
+        alignItems: 'center',
         overflow: 'hidden',
-        borderRadius: 12,
+        borderRadius: RADIUS.md,
         backgroundColor: c.surface,
         borderWidth: 1,
-        borderColor: c.line,
+        borderColor: 'transparent',
       }}
     >
-      {!items.length ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14 }}>
-          <TickTag label="Transfer" />
-          <Txt numberOfLines={1} style={[tk, { color: c.muted, flexShrink: 1 }]}>
-            {L.tickerIdle}
-          </Txt>
-        </View>
-      ) : !motionOK ? (
-        line(items[still % items.length]!, 'still')
-      ) : (
-        <>
-          <ScrollView
-            horizontal
-            scrollEnabled={false}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ alignItems: 'center' }}
+      <View
+        accessibilityLabel={L.tickerAria}
+        onTouchStart={() => setHolding(true)}
+        onTouchEnd={() => setHolding(false)}
+        onTouchCancel={() => setHolding(false)}
+        style={{
+          flex: 1,
+          minWidth: 0,
+          height: '100%',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        }}
+      >
+        {!items.length ? (
+          <View
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14 }}
           >
-            <Animated.View style={{ flexDirection: 'row', transform: [{ translateX: x }] }}>
-              <View
-                style={{ flexDirection: 'row' }}
-                onLayout={(e) => setCopyW(e.nativeEvent.layout.width)}
-              >
-                {items.map((k) => line(k, k.key))}
-              </View>
-              <View
-                style={{ flexDirection: 'row' }}
-                accessibilityElementsHidden
-                importantForAccessibility="no-hide-descendants"
-              >
-                {items.map((k) => line(k, `${k.key}#2`))}
-              </View>
-            </Animated.View>
-          </ScrollView>
-          {/* 양 끝이 흐려지며 들어오고 나간다 */}
-          <Fade side="left" color={c.surface} />
-          <Fade side="right" color={c.surface} />
-        </>
-      )}
+            <TickTag label="Transfer" />
+            <Txt numberOfLines={1} style={[tk, { color: c.muted, flexShrink: 1 }]}>
+              {L.tickerIdle}
+            </Txt>
+          </View>
+        ) : !motionOK ? (
+          line(items[still % items.length]!, 'still')
+        ) : (
+          <>
+            <ScrollView
+              horizontal
+              scrollEnabled={false}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ alignItems: 'center' }}
+            >
+              <Animated.View style={{ flexDirection: 'row', transform: [{ translateX: x }] }}>
+                <View
+                  style={{ flexDirection: 'row' }}
+                  onLayout={(e) => setCopyW(e.nativeEvent.layout.width)}
+                >
+                  {items.map((k) => line(k, k.key))}
+                </View>
+                <View
+                  style={{ flexDirection: 'row' }}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                >
+                  {items.map((k) => line(k, `${k.key}#2`))}
+                </View>
+              </Animated.View>
+            </ScrollView>
+            {/* 양 끝이 흐려지며 들어오고 나간다 */}
+            <Fade side="left" color={c.surface} />
+            <Fade side="right" color={c.surface} />
+          </>
+        )}
+      </View>
+      {items.length ? (
+        <Press
+          testID="ticker-pause"
+          accessibilityRole="button"
+          accessibilityLabel={paused ? L.tickerPlay : L.tickerPause}
+          accessibilityState={{ selected: paused }}
+          hitSlop={6}
+          onPress={togglePause}
+          style={{ width: 34, height: 34, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Svg width={14} height={14} viewBox="0 0 24 24" accessible={false}>
+            <Path
+              d={paused ? 'M8 5.5v13l10.5-6.5z' : 'M7 5h3.5v14H7zM13.5 5H17v14h-3.5z'}
+              fill={c.muted}
+            />
+          </Svg>
+        </Press>
+      ) : null}
     </View>
   );
 }
 
-const tk = { fontSize: rem(0.8125) } as const;
+const tk = { fontSize: rem(FONT.label) } as const;
 
 function Fade({ side, color }: { side: 'left' | 'right'; color: string }) {
   const clear = alpha(color, 0);
@@ -253,7 +297,7 @@ function TickTag({ kind, label }: { kind?: TickerItem['kind']; label?: string })
   return (
     <View
       style={{
-        borderRadius: 999,
+        borderRadius: RADIUS.pill,
         paddingVertical: 2,
         paddingHorizontal: 7,
         backgroundColor: gold
@@ -265,8 +309,8 @@ function TickTag({ kind, label }: { kind?: TickerItem['kind']; label?: string })
     >
       <Txt
         style={{
-          fontSize: rem(0.6875),
-          lineHeight: rem(0.6875) * 1.4,
+          fontSize: rem(FONT.caption2),
+          lineHeight: rem(FONT.caption2) * 1.4,
           fontWeight: '700',
           letterSpacing: rem(0.6875) * 0.02,
           color: gold ? c.accentText : warm ? c.ink : c.muted,

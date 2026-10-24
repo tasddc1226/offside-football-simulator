@@ -1,0 +1,23 @@
+{
+  "id": "t-11-422-card-value-peak",
+  "title": "오래 뛴 선수의 카드 기준가를 바로잡았어요",
+  "items": [
+    "카드 기준가를 최고 OVR을 기록한 시즌 중 몸값이 가장 높았던 시즌으로 매겨요. 최고 OVR을 찍은 뒤 30세를 넘겨 뛰어도 기준가가 내려가지 않아요.",
+    "이미 은퇴한 선수 카드도 새 기준으로 다시 매겨요. 기준가가 올라가는 카드만 바뀌고, 구단 가치에 차례로 반영돼요."
+  ],
+  "en": {
+    "title": "Fixed card values for long careers",
+    "items": [
+      "A card now uses the highest market value among the seasons in which the player reached their peak OVR. Playing past 30 after the peak no longer lowers it.",
+      "Cards of players who already retired are revalued too. Only cards whose value goes up change, and club values update over time."
+    ]
+  },
+  "ja": {
+    "title": "長くプレーした選手のカード基準価格を修正",
+    "items": [
+      "カードの基準価格を、最高OVRを記録したシーズンのうち市場価値が最も高かったシーズンで決めます。最高OVRの後に30歳を超えてプレーしても下がりません。",
+      "すでに引退した選手のカードも新しい基準で再計算します。基準価格が上がるカードだけが変わり、クラブ価値に順次反映されます。"
+    ]
+  },
+  "availability": "web-app"
+}

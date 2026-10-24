@@ -29,4 +29,13 @@ export const attendance: Translation<AttendanceMsgs> = {
   close: '閉じる',
   guestLead: (p) =>
     `ログインすると毎日出席して報酬がもらえます。${p.days}日間でもらえる報酬: ${p.reward}`,
+  got: (p) => `もらったアイテム: ${p.reward}`,
+  useHint:
+    'リロール券とスカウト券は選手作成の候補選びで、強化券は選手タブのポテンシャル強化で使います。',
+  toOwner: 'マイクラブで見る',
+  cellReward: (p) => `${p.n}日目の報酬 · ${p.reward}`,
+  cellLabel: (p) => `${p.n}日目、${p.reward}${p.state ? `、${p.state}` : ''}`,
+  cellDone: 'スタンプ済み',
+  cellToday: '今日',
+  cellHint: 'マスを押すとその日の報酬が見られます。',
 };

@@ -22,11 +22,18 @@
     <div>{#key t.k}<b class:bump={t.k !== 0 && t.k !== '-'}>{t.k}</b>{/key}<span>{t.l}</span></div>
   {/each}
 </div>
-<div class="ticker live">
+{#if v.moment}
+  {#await import('./KeyMoment.svelte') then K}<K.default m={v.moment} />{/await}
+{/if}
+<div class="ticker live" hidden={!!v.moment}>
   {#each v.ticker as m (m.key)}
     <TickerLine {m} />
   {/each}
 </div>
+{#if v.rated}
+  <!-- T-11-379 평점 구성(뛴 경기 평균) — 경기가 다 나온 뒤에 지연 청크로 붙는다. -->
+  {#await import('../RatingParts.svelte') then M}<M.default games={v.rated} />{/await}
+{/if}
 <div class="steps">
   {#each v.extras as x, i (i)}
     <div class:on={!x.done} class:done={x.done}>{x.text}</div>

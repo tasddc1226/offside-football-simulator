@@ -1,4 +1,4 @@
-import { HOMEGROWN_MIN, NATIONAL_MIN } from '@offside/contracts/owner-team';
+import { CLUB_MIN, HOMEGROWN_MIN, LEAGUE_MIN, NATIONAL_MIN } from '@offside/contracts/owner-team';
 import type { Translation } from '../core';
 import type { TeamSynergyMsgs } from '../ko/teamSynergy';
 
@@ -29,6 +29,11 @@ const NAMES: Record<string, readonly [string, string]> = {
     '代表ラインナップ',
     `同じ国籍の選手${NATIONAL_MIN}人以上がスタメン。国によって効果が違います`,
   ],
+  league: [
+    'リーグカラー',
+    `いちばん長くプレーしたリーグが同じ選手${LEAGUE_MIN}人以上がスタメン。リーグによって効果が違います。代表ラインナップと同時に有効なら人数が多いほうだけ適用されます`,
+  ],
+  club: ['クラブの仲間', `いちばん長くプレーしたクラブが同じ選手${CLUB_MIN}人以上がスタメン`],
   foot: [
     '利き足マッチ',
     'FB・LB・RB・LWB・RWBは同じ側の足、W・LW・RWは逆足。選手タイプは問いません。',
@@ -53,6 +58,21 @@ const STYLES: Record<string, string> = {
   caf: 'アフリカのフィジカル',
   concacaf: '速攻',
   ofc: '島国の粘り',
+  pl_pace: 'プレミアリーグのスピード',
+  ll_skill: 'ラ・リーガの技術',
+  bl_press: 'ブンデスリーガのプレス',
+  sa_tactic: 'セリエAの戦術',
+  l1_talent: 'リーグ・アンの才能',
+  por_flank: 'プリメイラ・リーガのサイド攻撃',
+  ere_total: 'エールディヴィジの全員サッカー',
+  bra_flair: 'ブラジレイロンの個人技',
+  mls_motor: 'MLSの運動量',
+  spl_star: 'サウジ・プロリーグのスター軍団',
+  j1_order: 'J1リーグの組織力',
+  csl_power: '中国スーパーリーグのパワー',
+  k1_grit: 'Kリーグ1の闘志',
+  k2_hustle: 'Kリーグ2の粘り',
+  k3_spirit: 'K3リーグの根性',
 };
 
 export const teamSynergy: Translation<TeamSynergyMsgs> = {
@@ -63,14 +83,14 @@ export const teamSynergy: Translation<TeamSynergyMsgs> = {
   fitEffect: (p) => `ポジション適性 ${p.v}`,
   fitEffectBoth: (p) => `ポジション適性 ${p.v}（両足 ${p.both}）`,
   requirementsHint:
-    '連携には選手タイプと配置位置の両方が必要です。括弧内は配置位置です。カードをタップしてタイプを確認できます。W・LW・RWのスピードスターはウインガー型の条件を満たしません。',
+    '連携には選手タイプと配置位置の両方が必要です。括弧内は配置位置です。カードをタップしてタイプを確認できます。W・LW・RWのスピードスターはウインガー型の条件を満たしません。W・LW・RWの位置はウインガーの役割の実力で出場するため、攻撃的・中央MFとして育てたウインガー型はスピード・クロスが足りないとOVRより低くなります。',
   title: 'チームシナジー',
   chipApplied: '適用中',
   chipViewing: '表示中',
   chipNoEffect: '効果なし',
   chipOff: '未適用',
   chipHint:
-    'シナジーをタップすると対象選手を表示します。選択に関係なく試合効果は適用されます。代表ラインナップは、どの国でも同じ国籍のスタメンが7人以上なら適用され、国によって効果が違います。',
+    'シナジーをタップすると対象選手を表示します。選択に関係なく試合効果は適用されます。代表ラインナップは、どの国でも同じ国籍のスタメンが7人以上なら適用され、国によって効果が違います。リーグカラーは、いちばん長くプレーしたリーグが同じスタメンが7人以上なら有効になり、代表ラインナップと同時に有効なら人数が多いほうだけ適用されます。',
   pitchAll: (p) => `シナジー${p.n}個すべて適用中`,
   pitchFocus: (p) => `${p.name}の選手を表示 · ${p.n}個すべて適用中`,
   pitchMemberAria: 'シナジー適用選手',
@@ -84,4 +104,7 @@ export const teamSynergy: Translation<TeamSynergyMsgs> = {
   styleName: (p) => STYLES[p.id] ?? p.ko,
   nationalChip: (p) => `${p.name} ${p.flag} ${p.style}`,
   nationalVaries: (p) => `国によって異なります(合計 ${p.sum})`,
+  leagueChip: (p) => `${p.name} ${p.league} · ${p.style}`,
+  leagueVaries: (p) => `リーグによって異なります(合計 ${p.sum})`,
+  clubChip: (p) => `${p.name} ${p.club} ${p.n}人`,
 };

@@ -1,0 +1,30 @@
+{
+  "id": "t-11-390-career-key-moments",
+  "title": "선수 커리어 결정적 장면",
+  "items": [
+    "리그 전반기 · 후반기 중계가 내 선수의 결정적 장면에서 한 번 멈춰요",
+    "공격수 · 미드필더는 득점 찬스, 수비수 · 골키퍼는 실점 위기에서 선택지를 골라요",
+    "컵 · 대륙 대회 결승에 뛰면 우승을 가르는 장면도 골라요",
+    "고르지 않으면 15초 뒤 감독에게 맡기고, 결과는 장면이 없을 때와 같은 확률이에요"
+  ],
+  "en": {
+    "title": "Key moments in player careers",
+    "items": [
+      "In each half of the league season, the match ticker stops once at a key moment for your player.",
+      "Forwards and midfielders choose how to take a scoring chance; defenders and goalkeepers choose how to stop a threat.",
+      "If you play in a cup or continental final, you also choose the moment that decides the trophy.",
+      "If you do not choose within 15 seconds, the manager decides, with the same odds as a match without the moment."
+    ]
+  },
+  "ja": {
+    "title": "選手キャリアの決定的な場面",
+    "items": [
+      "リーグ前半戦・後半戦の速報が、自分の選手の決定的な場面で一度止まります。",
+      "FW・MFは得点のチャンス、DF・GKは失点のピンチで選択肢を選びます。",
+      "カップ戦・大陸大会の決勝に出場すると、優勝を決める場面も選びます。",
+      "選ばないと15秒後に監督に任せ、結果は場面がない場合と同じ確率です。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

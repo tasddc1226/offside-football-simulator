@@ -157,6 +157,24 @@ export const SeasonGrowthSchema = z.strictObject({
         .max(4),
     })
     .optional(),
+  /**
+   * T-11-394 결정적 장면 기록(game moments.ts MomentLog). 리그 구간마다 하나 · 뛴 결승마다 하나라 시즌에 몇 개뿐이다.
+   * c는 고른 선택지 id · 'auto'(맡기기) · 'to'(시간 초과). b · p는 맡겼을 때 · 이번에 쓴 성공 확률(%).
+   */
+  km: z
+    .array(
+      z.strictObject({
+        ph: z.number().int().min(0).max(4),
+        at: z.enum(['l', 'f']),
+        sit: z.string().max(24),
+        c: z.string().max(24),
+        b: z.number().int().min(0).max(100),
+        p: z.number().int().min(0).max(100),
+        ok: z.boolean(),
+      }),
+    )
+    .max(8)
+    .optional(),
 });
 export type SeasonGrowth = z.infer<typeof SeasonGrowthSchema>;
 
@@ -359,6 +377,7 @@ export const RetiredNumberMissSchema = z
     seasons: z.number().int().optional(),
     need: z.number().int().optional(),
     pct: z.number().int().optional(),
+    close: z.boolean().optional(),
   })
   // 옛 응답 보정. 6 = retired-numbers.ts RN_MIN_SEASONS(기준값 모듈을 값으로 끌어오지 않는다).
   .transform((m) => ({ ...m, seasons: m.seasons ?? 0, need: m.need ?? 6 })) satisfies z.ZodType<
@@ -788,6 +807,8 @@ export const RetiredNumberProgressSchema = z.strictObject({
       eligible: z.boolean(),
       candidate: z.boolean(),
       availability: z.enum(['open', 'taken', 'unknown']),
+      /** T-11-429 지금은 기준을 넘지만 이 구단을 떠나면 기준 아래로 내려간다. 그 전 응답엔 없다. */
+      leaveRisk: z.boolean().optional(),
     }),
   ),
 });

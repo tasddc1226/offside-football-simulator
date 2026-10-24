@@ -6,6 +6,10 @@
   import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
   import { recordText, signedNum } from '@offside/app-core/teamText';
   import TeamLogo from './TeamLogo.svelte';
+  import TeamReport from './TeamReport.svelte';
+  import { teamMomentsText as M } from '@offside/app-core/i18n/ko/teamMoments';
+  import { momentTitle, pickedLabel } from '@offside/app-core/teamMoments';
+  import type { ReportLine } from '@offside/contracts/owner-team';
 
   let {
     m,
@@ -17,6 +21,7 @@
     onagain,
     onhistory,
     onplayer,
+    fix,
   }: {
     m: TeamMatch;
     team: OwnerTeam | null;
@@ -28,6 +33,8 @@
     onhistory?: (() => void) | undefined;
     /** T-11-269 우리 선수 이름을 누르면 시즌 통계의 그 선수 줄로(랭크 경기만 — 친선전은 통계에 없다). */
     onplayer?: ((careerId: string) => void) | undefined;
+    /** T-11-379 리포트 '고칠 곳' — 내 편성을 고칠 수 있을 때만 준다(다른 팀 경기 · 지난 시즌에는 없다). */
+    fix?: ((line: ReportLine) => { pos: string; go: () => void } | null) | undefined;
   } = $props();
   const link = (id: string | null) => (onplayer && !m.friendly && id ? id : null);
 
@@ -59,6 +66,7 @@
             {#if link(e.scorerId)}
               <button class="tm-player" onclick={() => onplayer!(e.scorerId!)} aria-label={L.playerStatsAria({ name: eventName(e.scorerId, e.scorer) })} data-act="team-player-stats"><b>{eventName(e.scorerId, e.scorer)}</b></button>
             {:else}<b>{eventName(e.scorerId, e.scorer)}</b>{/if}
+            {#if e.slot}<small class="muted tm-slot">{e.slot}</small>{/if}
             {#if e.assist}
               {#if link(e.assistId)}
                 <button class="tm-player muted fs-sm" onclick={() => onplayer!(e.assistId!)} aria-label={L.playerStatsAria({ name: eventName(e.assistId, e.assist) })}>{L.assist({ name: eventName(e.assistId, e.assist) })}</button>
@@ -71,6 +79,20 @@
   {:else}
     <p class="muted">{L.noGoals}</p>
   {/if}
+  {#if m.moments?.length}
+    <div class="tm-moments" data-team-moments>
+      <h2 class="eyebrow">{M.recordTitle}</h2>
+      <ul>
+        {#each m.moments as x (x.index)}
+          <li class:fail={!x.ok}>
+            <b>{momentTitle(x)}</b>
+            <span>{M.recordLine({ minute: x.minute, name: `${eventName(x.actor.id, x.actor.name)}(${x.actor.slot})`, choice: pickedLabel(x, eventName), ok: !!x.ok })}</span>
+          </li>
+        {/each}
+      </ul>
+    </div>
+  {/if}
+  <TeamReport {m} {fix} />
   <p class="muted fs-sm">{kstMonthDayTime(m.createdAt)}{team && m.mine === 'home' && !m.friendly ? L.resultRecord({ record: recordText(team.record) }) : ''}</p>
   {#if gain != null}
     <p class="fs-sm" data-rating-change>{L.ratingChange}<b>{signedNum(gain)}</b></p>
@@ -136,6 +158,28 @@
   .tm-events li > span:last-child {
     display: flex;
     flex-direction: column;
+  }
+  .tm-slot {
+    font-size: var(--fs-caption);
+  }
+  .tm-moments ul {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+  .tm-moments li {
+    display: grid;
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    box-shadow: inset 3px 0 0 var(--pitch-2);
+    font-size: var(--fs-body2);
+  }
+  .tm-moments li.fail {
+    box-shadow: inset 3px 0 0 var(--line);
   }
   .tm-player {
     all: unset;

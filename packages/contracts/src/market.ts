@@ -6,11 +6,17 @@ import {
   DetailPosSchema,
   PeakProfileSchema,
 } from './careers.js';
-import { MARKET_CHART_RANGES } from './market-value.js';
+import { MARKET_CHART_RANGES, MARKET_TYPES, type MarketType } from './market-value.js';
 import { IsoUtcSchema } from './primitives.js';
 import { FUNDS_ITEMS, type FundsItem } from './cup.js';
 
-export { MARKET_CHART_DAYS, MARKET_CHART_RANGES, type MarketChartRange } from './market-value.js';
+export {
+  MARKET_CHART_DAYS,
+  MARKET_CHART_RANGES,
+  MARKET_TYPES,
+  type MarketChartRange,
+  type MarketType,
+} from './market-value.js';
 
 // T-11-080 이적시장 · 구단 자금 · 방출. 설계: docs/tracking/owner-funds-card-market-plan.md.
 // 거래는 지금 팀 시즌(teamSeasonAt) 카드끼리만 한다. 금액은 모두 만 원 단위 정수.
@@ -18,6 +24,9 @@ export { MARKET_CHART_DAYS, MARKET_CHART_RANGES, type MarketChartRange } from '.
 export const MARKET_PER_PAGE = 20;
 export const MARKET_SORTS = ['new', 'price', 'ovr'] as const;
 export type MarketSort = (typeof MARKET_SORTS)[number];
+const MarketTypeSchema = z.enum(
+  Object.values(MARKET_TYPES).flat() as [MarketType, ...MarketType[]],
+);
 export { RELEASE_MAX } from './market-value.js';
 
 const man = z.number().int().min(0);
@@ -68,13 +77,14 @@ export const MarketRulesSchema = z.strictObject({
   feeRate: z.number(),
   priceMin: z.number(),
   priceMax: z.number(),
-  listLimit: z.number().int(),
-  dailyBuys: z.number().int(),
 });
 export type MarketRules = z.infer<typeof MarketRulesSchema>;
 
 export const MarketListQuerySchema = z.strictObject({
   pos: CareerPosSchema.optional(),
+  /** T-11-474 세부 포지션 · 선수 유형(명예의 전당처럼 포지션군 안에서 더 좁힌다). */
+  dpos: DetailPosSchema.optional(),
+  type: MarketTypeSchema.optional(),
   sort: z.enum(MARKET_SORTS).default('new'),
   page: z.coerce.number().int().min(0).max(10).default(0),
 });
@@ -91,7 +101,7 @@ export type MarketSale = z.infer<typeof MarketSaleSchema>;
 export const MARKET_RECENT = 10;
 
 /**
- * GET /v1/market — 지금 시즌의 열린 등록. 시즌 사이 휴식기면 season null · 빈 목록. 모두에게 같은 응답이라 엣지에
+ * GET /v1/market — 열린 등록(T-11-425부터 모든 시즌 카드). 시즌 사이 휴식기면 season null · 빈 목록. 모두에게 같은 응답이라 엣지에
  * 담는다 — 내 등록인지는 화면이 /v1/market/me의 listings와 id로 맞춘다.
  */
 export const MarketListResponseSchema = z.strictObject({
@@ -217,7 +227,8 @@ export const MarketMeResponseSchema = z.strictObject({
   /** T-11-153 구단 자금으로 산 것(최근 순). 자금 내역에 거래와 시각순으로 섞어 그린다. */
   spends: z.array(FundsSpendSchema),
   /** 오늘(한국 시각) 남은 영입 수. */
-  buysLeft: z.number().int().min(0),
+  /** 오늘(KST) 영입한 수. T-11-474 하루 영입 제한은 없앴고 화면 통계로만 쓴다. */
+  boughtToday: z.number().int().min(0),
   rules: MarketRulesSchema,
 });
 export type MarketMeResponse = z.infer<typeof MarketMeResponseSchema>;

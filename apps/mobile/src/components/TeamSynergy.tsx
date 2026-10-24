@@ -1,5 +1,6 @@
 // T-11-105 팀 시너지 — 적용 중 → 효과 없음 순으로 보이고, 미적용은 접어 두었다가 더보기로 연다(웹 team/TeamSynergy.svelte와 같은 내용).
 // 켜진 시너지는 누르면 그라운드에서 그 선수들을 잇는다. 누르는 것과 상관없이 켜진 것은 모두 적용된다.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { synergyPower, type TeamSynergy as Synergy } from '@offside/contracts/owner-team';
@@ -38,7 +39,7 @@ export function TeamSynergy({
           style={{
             width: 16,
             height: 16,
-            borderRadius: 8,
+            borderRadius: RADIUS.sm,
             alignItems: 'center',
             justifyContent: 'center',
             borderWidth: 1,
@@ -69,7 +70,7 @@ export function TeamSynergy({
             style={{
               paddingHorizontal: 7,
               paddingVertical: 1,
-              borderRadius: 999,
+              borderRadius: RADIUS.pill,
               borderWidth: 1,
               borderColor: viewing ? c.accent : applied ? `${c.accent}80` : c.line,
               backgroundColor: viewing ? c.accent : 'transparent',
@@ -95,7 +96,7 @@ export function TeamSynergy({
       gap: 8,
       paddingVertical: 8,
       paddingHorizontal: 10,
-      borderRadius: 10,
+      borderRadius: RADIUS.sm,
       borderWidth: 1,
       borderStyle: r.badge ? ('dashed' as const) : ('solid' as const),
       // 적용 중은 모두 같은 모습 — 누른 줄은 고른 것처럼 보이지 않게 배경만 바꾸고 '보는 중'을 단다.
@@ -156,7 +157,7 @@ export function TeamSynergy({
             minHeight: 40,
             justifyContent: 'center',
             paddingHorizontal: 14,
-            borderRadius: 999,
+            borderRadius: RADIUS.pill,
             borderWidth: 1,
             borderColor: c.line,
           }}

@@ -1,5 +1,6 @@
 // 방금 끝난 구간 결과를 시즌 탭 맨 위에서 순서대로 채워 보여 준다(웹 tabs/PhaseReport.svelte, T-10-024) — 경기 결과 점이
 // 하나씩 켜지고, 숫자가 올라가고, 순위 변화·하이라이트·능력치 변화가 이어서 나타난다. 동작 줄이기면 즉시.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -56,7 +57,7 @@ export function PhaseReport({ r }: { r: Report }) {
     { key: 'col', l: r.back ? L.tallyCs : L.tallyAssists, v: col.toFixed(0) },
     { key: 'rating', l: L.tallyRating, v: b?.rating ? rating.toFixed(2) : '-' },
   ];
-  const small = { fontSize: rem(1.25), color: c.muted } as const;
+  const small = { fontSize: rem(FONT.title2), color: c.muted } as const;
 
   return (
     <Card gap={14} style={{ borderWidth: 1.5, borderColor: mixColor(c.accent, c.line, 45) }}>
@@ -199,7 +200,7 @@ export function PhaseReport({ r }: { r: Report }) {
             onPress={() => setOpenGames(!openGames)}
             style={{ paddingVertical: 4 }}
           >
-            <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '600' }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.label), fontWeight: '600' }}>
               {`${openGames ? '▾' : '▸'} ${L.gamesSummary({ n: r.games.length })}`}
             </Txt>
           </Press>

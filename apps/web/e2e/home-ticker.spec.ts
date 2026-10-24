@@ -62,3 +62,28 @@ test('불러오지 못해도 같은 높이의 자리를 지킨다(첫 화면이 
   await expect(bar).toContainText('이적 소식과 서버 최초 기록이 여기로 흘러요');
   expect((await bar.boundingBox())?.height).toBe(34);
 });
+
+test('T-11-440 오른쪽 끝 버튼으로 전광판을 멈추고, 다시 열어도 멈춘 채로 둔다', async ({
+  page,
+}) => {
+  await page.route(`${API}/v1/ticker`, (r) => r.fulfill(ok(ticker)));
+  await page.goto('/');
+  const bar = page.locator('[data-home-ticker]');
+  const pause = bar.locator('[data-act="ticker-pause"]');
+  await expect(pause).toHaveAttribute('aria-pressed', 'false');
+  await expect(pause).toHaveAccessibleName('전광판 멈추기');
+  await pause.click();
+  await page.mouse.move(0, 600);
+  await expect(pause).toHaveAttribute('aria-pressed', 'true');
+  await expect(pause).toHaveAccessibleName('전광판 다시 흐르게 하기');
+  const state = () =>
+    bar.locator('.tk-track').evaluate((el) => getComputedStyle(el).animationPlayState);
+  await expect.poll(state).toBe('paused');
+  await page.reload();
+  await expect(bar.locator('[data-act="ticker-pause"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(state).toBe('paused');
+  await bar.locator('[data-act="ticker-pause"]').click();
+  // 마우스를 올려 둔 동안은 원래대로 멈춰 있으니 치운 뒤 본다.
+  await page.mouse.move(0, 600);
+  await expect.poll(state).toBe('running');
+});

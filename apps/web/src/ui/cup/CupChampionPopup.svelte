@@ -10,7 +10,9 @@
   import { onMount } from 'svelte';
   import { fetchCupHome, type CupChampion } from '@offside/app-core/api/cup';
   import { cupChampionToShow, dismissCupChampion } from '@offside/app-core/cupHome';
+  import { claimHomePopup } from '@offside/app-core/homePopup';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
+  import { divisionLabel } from '@offside/app-core/cupDivision';
   import CupTrophy from './CupTrophy.svelte';
   import TeamLogo from '../team/TeamLogo.svelte';
   import { appState, hofStart } from '../state.svelte.js';
@@ -37,8 +39,11 @@
     if (shownThisVisit) return;
     void fetchCupHome().then((r) => {
       if (!r.ok || shownThisVisit) return;
-      champion = cupChampionToShow(r.data);
-      if (champion) shownThisVisit = true;
+      const next = cupChampionToShow(r.data);
+      // T-11-423 제휴 팝업이 먼저 떴으면 이번 방문에는 띄우지 않는다(다음 방문에 보인다).
+      if (!next || !claimHomePopup()) return;
+      shownThisVisit = true;
+      champion = next;
     });
   });
 
@@ -99,7 +104,7 @@
       <div class="ccp-trophy">
         <CupTrophy stage="champion" edition={champion.edition} name={champion.owner} size={140} />
       </div>
-      <h2 class="ccp-title">{L.championPopupTitle({ n: champion.edition })}</h2>
+      <h2 class="ccp-title">{L.championPopupTitle({ n: champion.edition, d: divisionLabel(champion.division) })}</h2>
       <div class="ccp-team" data-cup-champion-team={champion.teamId}>
         <TeamLogo logo={champion.logo} name={champion.name} size={40} decorative />
         <span class="ccp-who">
@@ -197,7 +202,7 @@
   }
   .ccp-title {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: var(--fs-title2);
     animation: ccp-rise 0.4s ease 0.35s both;
   }
   .ccp-team {
@@ -206,8 +211,8 @@
     gap: 10px;
     max-width: 100%;
     padding: 8px 14px;
-    border: 1px solid var(--line);
-    border-radius: 14px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
     background: var(--surface-2);
     text-align: left;
     animation: ccp-rise 0.4s ease 0.45s both;

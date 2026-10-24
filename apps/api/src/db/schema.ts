@@ -107,6 +107,7 @@ export const notifications = sqliteTable(
   },
   (t) => [
     uniqueIndex('notifications_source_unique').on(t.profileId, t.sourceKey),
+    index('notifications_source_key_idx').on(t.sourceKey),
     index('notifications_profile_created_idx').on(t.profileId, t.createdAt, t.id),
     index('notifications_profile_read_created_idx').on(t.profileId, t.readAt, t.createdAt, t.id),
     index('notifications_expires_idx').on(t.expiresAt),
@@ -287,7 +288,9 @@ export const authAttempts = sqliteTable(
         'PUSH_TEST',
         'FRIEND_REQUEST',
         'TRANSLATE',
+        'ACQUISITION',
         'CAREER_ACTIVITY',
+        'WEB_PAY',
       ],
     }).notNull(),
     subject: text('subject').notNull(),
@@ -400,6 +403,10 @@ export const careers = sqliteTable(
     lastClub: text('last_club'),
     // T-10-066 마지막 소속 클럽 id(web CLUBS[].id). 구단명이 바뀌어도 엠블럼이 제 클럽을 찾는다. 옛 기록은 NULL.
     lastClubId: text('last_club_id'),
+    // T-11-467 시너지(리그 컬러 · 클럽 동료)용 가장 오래 뛴 프로 리그 id · 클럽 id(career_seasons에서 은퇴 때 센다, mainClubSql).
+    // 아직 세지 않았으면 NULL, 셌는데 프로 시즌이 없으면 ''.
+    mainLeague: text('main_league'),
+    mainClub: text('main_club'),
     // T-11-191 은퇴 선수 도트 꾸미기 코드(외형 전용 PUT으로 갱신 가능)(game look.ts lookCode). 꾸미지 않았거나 옛 기록은 NULL.
     look: text('look'),
     /** Server-owned, separate from active-career cosmetics. The art round a change was spent in (0 = none);
@@ -599,11 +606,12 @@ export const marketListings = sqliteTable(
       .on(table.careerId)
       .where(sql`${table.status} = 'open'`),
     index('market_listings_career_idx').on(table.careerId),
-    index('market_listings_new_idx').on(table.status, table.season, table.createdAt),
-    index('market_listings_price_idx').on(table.status, table.season, table.price, table.createdAt),
+    // T-11-425 모든 시즌 카드를 한 시장에서 거래해 목록 · 최근 거래 인덱스에서 시즌을 뺐다.
+    index('market_listings_new_idx').on(table.status, table.createdAt),
+    index('market_listings_price_idx').on(table.status, table.price, table.createdAt),
     index('market_listings_seller_idx').on(table.sellerId, table.status, table.closedAt),
     index('market_listings_buyer_idx').on(table.buyerId, table.closedAt),
-    index('market_listings_sold_idx').on(table.status, table.season, table.closedAt),
+    index('market_listings_sold_idx').on(table.status, table.closedAt),
     // 선수별 판매 기록(시세 차트의 점). 팔린 행만 담아 등록 · 취소 때는 쓰지 않는다.
     index('market_listings_card_idx')
       .on(table.careerId, table.closedAt)
@@ -1198,6 +1206,35 @@ export const teamMatches = sqliteTable(
 );
 
 /**
+ * T-11-387 장면 경기(문자중계 중 선택지)가 끝나기 전 상태. 경기를 시작하면 한 줄을 넣고, 장면을 고를 때마다 state_json을 고치며
+ * (rev로 동시 수정을 막는다), 마지막 장면을 판정하면 team_matches에 같은 id로 경기를 남기고 done_at을 적는다. 고르지 않고 떠난
+ * 경기는 5분 cron이 자동 선택으로 마감한다. 마감한 줄은 하루 뒤 지운다.
+ */
+export const teamLiveMatches = sqliteTable(
+  'team_live_matches',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id').notNull(),
+    homeTeamId: text('home_team_id')
+      .notNull()
+      .references(() => ownerTeams.id, { onDelete: 'cascade' }),
+    awayTeamId: text('away_team_id')
+      .notNull()
+      .references(() => ownerTeams.id, { onDelete: 'cascade' }),
+    stateJson: text('state_json').notNull(),
+    rev: integer('rev').notNull().default(0),
+    createdAt: text('created_at').notNull(),
+    doneAt: text('done_at'),
+    /** 마감 응답(내 팀 기록 · 레이팅 · 남은 경기). 같은 마감 요청을 다시 받으면 그대로 돌려준다. */
+    resultJson: text('result_json'),
+  },
+  (table) => [
+    index('team_live_matches_profile_idx').on(table.profileId, table.createdAt),
+    index('team_live_matches_open_idx').on(table.doneAt, table.createdAt),
+  ],
+);
+
+/**
  * T-11-098 친구. 한 쌍을 두 줄(내 쪽·상대 쪽)로 적어 내 친구 목록을 profile_id 하나로 읽는다. state는 그 줄 주인 기준 —
  * 신청하면 보낸 쪽 'sent'·받은 쪽 'received', 수락하면 둘 다 'accepted'. 거절·취소·친구 끊기는 두 줄을 지운다.
  * wins·draws·losses는 그 줄 주인 쪽에서 본 친선전 상대 전적이다(친구를 끊으면 함께 사라진다).
@@ -1271,6 +1308,9 @@ export const ownerAchievements = sqliteTable(
     players: integer('players').notNull(),
     // T-11-103 그 시즌에 닿은 팀 업적(JSON {id: 값}). 선발이 바뀌어도 팀 업적을 남긴다. NULL이면 아직 없다.
     teamKept: text('team_kept'),
+    // T-11-386 그 시즌 업적으로 받을 시즌 업적 보상 장수(ACH_SEASON_GIFT). 처음 셀 때 적는다. NULL이면 아직 안 셌다.
+    rewardBoost: integer('reward_boost'),
+    rewardScout: integer('reward_scout'),
     reachedAt: text('reached_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -1395,8 +1435,18 @@ export const cups = sqliteTable(
     capacity: integer('capacity').notNull(),
     minFilled: integer('min_filled').notNull(),
     createdAt: text('created_at').notNull(),
+    /** T-11-410 OVR 구간(junior · senior · master). NULL = 통합 대회(제1 · 2회). */
+    division: text('division'),
+    /** T-11-410 팀 OVR 상한. 마스터 · 통합 대회는 NULL, 아랫 구간은 접수가 열릴 때 채운다. */
+    ovrMax: integer('ovr_max'),
   },
-  (table) => [uniqueIndex('cups_edition_unique').on(table.edition)],
+  // 한 회차에 구간마다 한 대회(통합 대회는 회차에 하나).
+  (table) => [
+    uniqueIndex('cups_edition_division_unique').on(
+      table.edition,
+      sql`coalesce(${table.division}, '')`,
+    ),
+  ],
 );
 
 /**
@@ -1430,6 +1480,108 @@ export const cupEntries = sqliteTable(
 );
 
 /**
+ * T-11-418 오프사이드 리그 일정(시즌마다 한 행). 행이 없으면 서버가 시즌 개막으로 기본 일정(contracts planLeague)을
+ * 쓴다 — 이 행은 운영 도구로 배치 · 첫 라운드를 미룰 때만 생긴다. rounds_json은 1라운드부터의 경기 시각(UTC ISO) 배열.
+ */
+export const leagueSeasons = sqliteTable('league_seasons', {
+  season: integer('season').primaryKey(),
+  startsAt: text('starts_at').notNull(),
+  opensAt: text('opens_at').notNull(),
+  closesAt: text('closes_at').notNull(),
+  drawAt: text('draw_at').notNull(),
+  roundsJson: text('rounds_json').notNull(),
+  minFilled: integer('min_filled').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+/**
+ * T-11-418 오프사이드 리그 신청. 시즌마다 구단주당 한 행. 신청은 참가 의사만 남긴다 — 개막 전 사전 신청은 그 시즌 팀이
+ * 아직 없다. 팀 · 이름 · 감독 · OVR은 배치 때 그 시즌 팀으로 채운다(2차). status: active(신청 · 배치됨) · withdrawn(접수 중 취소) ·
+ * dropped(배치 때 자격이 모자람) · forfeited(기권이 쌓여 남은 경기 기권패). T-11-418b 배치 뒤 tier(부) · league_no(부 안 리그
+ * 번호), 기권 수, 라운드 결과 알림을 보낸 마지막 라운드.
+ */
+export const leagueEntries = sqliteTable(
+  'league_entries',
+  {
+    season: integer('season').notNull(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('active'),
+    teamId: text('team_id'),
+    name: text('name'),
+    manager: text('manager'),
+    ovr: integer('ovr'),
+    tier: integer('tier'),
+    leagueNo: integer('league_no'),
+    forfeits: integer('forfeits').notNull().default(0),
+    notifiedRound: integer('notified_round').notNull().default(0),
+    // T-11-418e 결산: 최종 순위 · 결과(LeagueOutcome) · 보상을 준 시각(한 번만 준다). 다음 시즌 배치가 읽는다.
+    finalRank: integer('final_rank'),
+    outcome: text('outcome'),
+    rewardedAt: text('rewarded_at'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.season, table.profileId] }),
+    index('league_entries_profile_idx').on(table.profileId),
+    index('league_entries_season_status_idx').on(table.season, table.status),
+    // 리그 하나(순위표) · 라운드 알림.
+    index('league_entries_season_league_idx').on(table.season, table.tier, table.leagueNo),
+  ],
+);
+
+/** T-11-418b 리그 시즌 진행 상태. 행이 있으면 배치가 끝났다. done_at: 마지막 라운드까지 치렀다. */
+export const leagueState = sqliteTable('league_state', {
+  season: integer('season').primaryKey(),
+  seed: text('seed').notNull(),
+  /** 부별 리그 수 · 팀 수 JSON([{ tier, leagues, teams }]). */
+  tiersJson: text('tiers_json').notNull(),
+  drawnAt: text('drawn_at').notNull(),
+  doneAt: text('done_at'),
+});
+
+/**
+ * T-11-418b 리그 경기. 배치 때 리그마다 14라운드를 한 번에 만든다. played_at이 차면 끝난 경기. forfeit: 0 없음 · 1 홈 기권 ·
+ * 2 원정 기권 · 3 둘 다. detail_json은 팀 경기와 같은 MatchDetail(기권 경기는 없음).
+ */
+export const leagueMatches = sqliteTable(
+  'league_matches',
+  {
+    id: text('id').primaryKey(),
+    season: integer('season').notNull(),
+    tier: integer('tier').notNull(),
+    leagueNo: integer('league_no').notNull(),
+    round: integer('round').notNull(),
+    slot: integer('slot').notNull(),
+    homeTeamId: text('home_team_id').notNull(),
+    awayTeamId: text('away_team_id').notNull(),
+    at: text('at').notNull(),
+    playedAt: text('played_at'),
+    homeGoals: integer('home_goals'),
+    awayGoals: integer('away_goals'),
+    forfeit: integer('forfeit').notNull().default(0),
+    detailJson: text('detail_json'),
+  },
+  (table) => [
+    uniqueIndex('league_matches_slot_unique').on(
+      table.season,
+      table.tier,
+      table.leagueNo,
+      table.round,
+      table.slot,
+    ),
+    // 시각이 된 경기(cron).
+    index('league_matches_season_at_idx').on(table.season, table.at),
+    // 명단 잠금 · 팀 통계.
+    index('league_matches_home_team_idx').on(table.homeTeamId),
+    index('league_matches_away_team_idx').on(table.awayTeamId),
+  ],
+);
+
+/**
  * T-11-145 컵 경기. 조별은 grp(1부터)·slot(그 라운드 조 안 순서), 토너먼트는 grp 0·slot(대진 순서). 추첨 때 조별 경기를,
  * 앞 라운드가 끝나면 다음 라운드를 만든다(INSERT OR IGNORE — 같은 자리는 한 번만). played_at이 차면 끝난 경기다.
  * 상대가 없거나(조 2팀) 한 팀이 못 나오면 forfeit. detail_json은 팀 경기와 같은 MatchDetail.
@@ -1453,6 +1605,8 @@ export const cupMatches = sqliteTable(
     winnerTeamId: text('winner_team_id'),
     forfeit: integer('forfeit').notNull().default(0),
     detailJson: text('detail_json'),
+    /** T-11-407 경기 전 예상(홈 기준 승 · 무 · 패 정수 % · 기대 득점). 명단이 잠긴 뒤 한 번 계산한다(team/cupOdds.ts). */
+    oddsJson: text('odds_json'),
   },
   (table) => [
     uniqueIndex('cup_matches_cup_round_slot_unique').on(
@@ -1635,12 +1789,28 @@ export const iapPurchases = sqliteTable(
     refundedAt: text('refunded_at'),
     /** T-11-215 환불로 회수한 장수. 이미 쓴 만큼은 회수하지 못해 qty보다 작을 수 있다. */
     revokedQty: integer('revoked_qty').notNull().default(0),
+    purchasedAt: text('purchased_at'),
+    priceMilliunits: integer('price_milliunits'),
+    currency: text('currency'),
+    storefront: text('storefront'),
+    firstTouchId: text('first_touch_id').references(() => acquisitionSessions.id, {
+      onDelete: 'set null',
+    }),
+    lastTouchId: text('last_touch_id').references(() => acquisitionSessions.id, {
+      onDelete: 'set null',
+    }),
   },
   (table) => [
     primaryKey({ columns: [table.store, table.transactionId] }),
     index('iap_purchases_profile_idx').on(table.profileId, table.createdAt),
     // T-11-263 운영 도구 매출(기간 합 · 최근 결제).
     index('iap_purchases_created_idx').on(table.createdAt),
+    index('iap_purchases_effective_time_idx').on(
+      sql`coalesce(${table.purchasedAt}, ${table.createdAt})`,
+    ),
+    index('iap_purchases_refunded_idx').on(table.refundedAt),
+    index('iap_purchases_first_touch_idx').on(table.firstTouchId),
+    index('iap_purchases_last_touch_idx').on(table.lastTouchId),
   ],
 );
 
@@ -1820,6 +1990,174 @@ export const managerCareers = sqliteTable(
     index('manager_careers_profile_idx').on(t.profileId, t.status, t.finishedAt),
   ],
 );
+
+/** Optional account acquisition consent. Never exported to advertising SDKs. */
+export const acquisitionConsents = sqliteTable('acquisition_consents', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  version: text('version').notNull(),
+  grantedAt: text('granted_at'),
+  revokedAt: text('revoked_at'),
+  revision: text('revision').notNull(),
+});
+export const acquisitionSessions = sqliteTable(
+  'acquisition_sessions',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    campaign: text('campaign').notNull(),
+    receivedAt: text('received_at').notNull(),
+    linkedAt: text('linked_at'),
+    startedAt: text('started_at'),
+    storeClickedAt: text('store_clicked_at'),
+  },
+  (t) => [
+    index('acquisition_sessions_profile_time_idx').on(t.profileId, t.receivedAt),
+    index('acquisition_sessions_time_idx').on(t.receivedAt),
+  ],
+);
+
+export const iapAdFreePurchases = sqliteTable(
+  'iap_ad_free_purchases',
+  {
+    store: text('store').notNull(),
+    transactionId: text('transaction_id').notNull(),
+    profileId: text('profile_id').references(() => profiles.id, { onDelete: 'cascade' }),
+    productId: text('product_id').notNull(),
+    test: integer('test', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('created_at').notNull(),
+    purchasedAt: text('purchased_at'),
+    priceMilliunits: integer('price_milliunits'),
+    currency: text('currency'),
+    storefront: text('storefront'),
+    refundedAt: text('refunded_at'),
+    firstTouchId: text('first_touch_id').references(() => acquisitionSessions.id, {
+      onDelete: 'set null',
+    }),
+    lastTouchId: text('last_touch_id').references(() => acquisitionSessions.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.store, t.transactionId] }),
+    index('iap_ad_free_profile_idx').on(t.profileId, t.createdAt),
+    index('iap_ad_free_created_idx').on(t.createdAt),
+    index('iap_ad_free_refunded_idx').on(t.refundedAt),
+    index('iap_ad_free_first_idx').on(t.firstTouchId),
+    index('iap_ad_free_last_idx').on(t.lastTouchId),
+  ],
+);
+
+/** Verified refund arriving before the optional ad-free record. No fabricated purchase row. */
+export const iapRefundMarkers = sqliteTable(
+  'iap_refund_markers',
+  {
+    store: text('store').notNull(),
+    transactionId: text('transaction_id').notNull(),
+    refundedAt: text('refunded_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.store, t.transactionId] })],
+);
+
+/**
+ * T-11-454 웹 결제(엑솔라 Pay Station) 주문. 주문을 만들 때 엑솔라 결제 토큰을 받고 그 주문 번호(xsolla_order_id)를 둔다.
+ * 엑솔라 웹훅(order_paid)이 오면 iap_purchases(store 'xsolla', transaction_id = 엑솔라 주문 번호)에 아이템 지급을 남긴다.
+ * status: READY(주문만) · PAID(결제 · 지급) · CANCELED(환불 · 차지백 회수).
+ */
+export const webPayOrders = sqliteTable(
+  'web_pay_orders',
+  {
+    orderId: text('order_id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    productId: text('product_id').notNull(),
+    xsollaOrderId: text('xsolla_order_id').notNull(),
+    status: text('status', { enum: ['READY', 'PAID', 'CANCELED'] }).notNull(),
+    test: integer('test', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('created_at').notNull(),
+    paidAt: text('paid_at'),
+    canceledAt: text('canceled_at'),
+  },
+  (t) => [
+    index('web_pay_orders_profile_idx').on(t.profileId, t.createdAt),
+    uniqueIndex('web_pay_orders_xsolla_order_unique').on(t.xsollaOrderId),
+  ],
+);
+
+/**
+ * T-11-463 시즌 BEST 11 후보. 은퇴(자격을 갖춘 공개 이름 선수)마다 세 기둥 원점수를 한 줄 담는다. 자리마다 지수 상위
+ * BEST11_POOL명과 정규화 기준이 되는 후보만 남기고 나머지는 다시 계산할 때 지운다(시즌당 수백 줄).
+ */
+export const best11Candidates = sqliteTable(
+  'best11_candidates',
+  {
+    careerId: text('career_id')
+      .primaryKey()
+      .references(() => careers.id, { onDelete: 'cascade' }),
+    season: integer('season').notNull(),
+    profileId: text('profile_id').notNull(),
+    dpos: text('dpos').notNull(),
+    retiredAt: text('retired_at').notNull(),
+    /** best11Raw 결과(JSON). */
+    rawJson: text('raw_json').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [index('best11_candidates_season_idx').on(t.season)],
+);
+
+/** T-11-463 시즌마다 지금 BEST 11(자리마다 한 줄)과 그 자리에 오른 시각. */
+export const best11Slots = sqliteTable(
+  'best11_slots',
+  {
+    season: integer('season').notNull(),
+    slot: text('slot').notNull(),
+    careerId: text('career_id')
+      .notNull()
+      .references(() => careers.id, { onDelete: 'cascade' }),
+    score: real('score').notNull(),
+    since: text('since').notNull(),
+    /** T-11-463b 시즌 확정 뒤 자리 주인 구단주에게 보상을 준 시각(한 번만 준다). */
+    rewardedAt: text('rewarded_at'),
+  },
+  (t) => [primaryKey({ columns: [t.season, t.slot] })],
+);
+
+/** T-11-463 시즌 BEST 11의 상태: 확정 시각, 마지막 갱신, 은퇴 때 후보를 거르는 자리별 기준(정규화 최댓값 · 커트라인). */
+export const best11Seasons = sqliteTable('best11_seasons', {
+  season: integer('season').primaryKey(),
+  finalAt: text('final_at'),
+  updatedAt: text('updated_at').notNull(),
+  gateJson: text('gate_json'),
+});
+
+/** T-11-463 자리 주인이 바뀐 기록(홈 소식 · "BEST 11에 올랐던" 이력). */
+export const best11Changes = sqliteTable(
+  'best11_changes',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    season: integer('season').notNull(),
+    slot: text('slot').notNull(),
+    inCareerId: text('in_career_id').references(() => careers.id, { onDelete: 'set null' }),
+    outCareerId: text('out_career_id').references(() => careers.id, { onDelete: 'set null' }),
+    at: text('at').notNull(),
+  },
+  (t) => [index('best11_changes_season_idx').on(t.season, t.at)],
+);
+
+/**
+ * T-11-468 매일 단계가 지운 버린 커리어(생성 뒤 한 시간 안에 멈추고 일주일 넘게 갱신 없음)의 흔적. 기기에서 다시 이어 하면
+ * 다음 시즌 업로드가 커리어를 새로 만드는데, 그때 원래 서비스 시즌을 되살리고 다른 프로필이 같은 id를 가져가지 못하게 한다.
+ */
+export const prunedCareers = sqliteTable('pruned_careers', {
+  careerId: text('career_id').primaryKey(),
+  profileId: text('profile_id').notNull(),
+  serviceSeason: integer('service_season'),
+  prunedAt: text('pruned_at').notNull(),
+});
 
 /**
  * T-11-374 카드 바치기 과제에 낸 기록(한 번에 한 줄). 과제 정의는 코드(contracts card-exchange-rules)에 있고 exchange_id는

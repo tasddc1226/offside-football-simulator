@@ -387,11 +387,24 @@ test('새 소식 알림: 마지막으로 본 뒤 올라온 글을 화면 위에 
   await page.goto('/');
   const banner = page.locator('[data-news-banner]');
   await expect(banner).toContainText('새 소식 2개가 올라왔어요');
+  // T-11-440 새 글이 둘 이상이면 가장 최근 글 하나 대신 게시판 목록을 열고, 새 글마다 NEW가 남는다.
   await banner.locator('[data-act="news-open"]').click();
-  await expect(page.locator('[data-post]')).toBeVisible();
+  await expect(page.locator('[data-board]')).toBeVisible();
+  await expect(page.locator('[data-post]')).toHaveCount(0);
+  const fresh = page.locator('[data-post-row]:has([data-post-new])');
+  await expect(fresh.first()).toBeVisible();
   await expect(banner).toHaveCount(0);
-  await page.reload();
+  // 연 글은 NEW가 빠진다.
+  const id = await fresh.first().getAttribute('data-post-row');
+  await fresh.first().click();
+  await expect(page.locator(`[data-post="${id}"]`)).toBeVisible();
+  await page.goBack();
+  await expect(page.locator(`[data-post-row="${id}"]`)).toBeVisible();
+  await expect(page.locator(`[data-post-row="${id}"] [data-post-new]`)).toHaveCount(0);
+  // 다시 열면(다음 실행) 이미 본 글이라 NEW도 알림도 없다.
+  await page.goto('/');
   await expect(page.locator('[data-home-news="notice"]')).toContainText(NOTICE.title);
+  await expect(page.locator('[data-post-new]')).toHaveCount(0);
   await expect(banner).toHaveCount(0);
 });
 

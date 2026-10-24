@@ -9,8 +9,6 @@ const RULES = {
   feeRate: 0.05,
   priceMin: 0.5,
   priceMax: 3,
-  listLimit: 20,
-  dailyBuys: 10,
 };
 const RAISED = '00000000-0000-4000-8000-000000000021';
 const BOUGHT = '00000000-0000-4000-8000-000000000022';
@@ -45,7 +43,7 @@ const me = (balance: number) =>
     listings: [],
     trades: [],
     spends: [],
-    buysLeft: 10,
+    boughtToday: 0,
     rules: RULES,
   });
 
@@ -255,6 +253,31 @@ test('홈 타일에서 이적시장으로 바로 가고, 뒤로 가면 홈으로
   await expect(page.locator('[data-act="home-market"]')).toBeVisible();
 });
 
+test('T-11-477 매물 줄 아래에 카드 능력치 6개를 보이고, 능력치가 없는 옛 카드는 줄을 두지 않는다', async ({
+  page,
+}) => {
+  await stub(page);
+  const old = { ...listing, id: `${LISTING.slice(0, -1)}7`, card: { ...card, careerId: 'old' } };
+  const withAttrs = {
+    ...listing,
+    card: { ...card, attrs: { pac: 93, sho: 89, pas: 74, dri: 86, def: 38, phy: 71 } },
+  };
+  await page.route(`${API}/v1/market/me`, (r) => r.fulfill(me(200_000)));
+  await page.route(
+    (u) => u.href.startsWith(API) && u.pathname === '/v1/market',
+    (r) => r.fulfill(ok({ season: 0, items: [withAttrs, old], hasMore: false, recent: [] })),
+  );
+  await page.route(`${API}/v1/market/chart**`, (r) => r.fulfill(ok({ season: 0, points: [] })));
+  await page.goto('/');
+  await page.locator('[data-act="home-market"]').click();
+  const strip = page.locator(`[data-listing="${LISTING}"] [data-listing-attrs]`);
+  await expect(strip).toContainText('스피드93');
+  await expect(strip.locator('.mk-attr')).toHaveCount(6);
+  await expect(strip.locator('.mk-attr-hi')).toHaveText('93');
+  await expect(page.locator(`[data-listing="${old.id}"] [data-listing-attrs]`)).toHaveCount(0);
+  await expectNoA11yViolations(page);
+});
+
 test('자금이 모자라면 영입 버튼이 잠기고, 이미 팔린 선수는 목록을 새로 받는다', async ({
   page,
 }) => {
@@ -313,8 +336,61 @@ test('자금이 모자라면 영입 버튼이 잠기고, 이미 팔린 선수는
 
   await page.locator(`[data-listing="${LISTING.slice(0, -1)}2"]`).click();
   await page.locator('[data-act="buy"]').click();
-  await expect(page.getByRole('alert')).toHaveText('이미 팔렸거나 내린 선수예요.');
+  // T-11-434 팔렸거나 내린 매물이면 시트를 닫고 토스트로 알린다.
+  await expect(page.locator('#toast')).toHaveText('이미 팔렸거나 내려간 선수예요.');
+  await expect(page.getByRole('dialog', { name: '선수 영입' })).toHaveCount(0);
   await expect.poll(() => listCalls).toBe(2);
+});
+
+test('가격이 바뀐 매물은 영입 시트를 새 가격으로 바꾸고 새 가격으로만 다시 보낸다(T-11-434)', async ({
+  page,
+}) => {
+  await stub(page);
+  let price = 120_000;
+  const sent: number[] = [];
+  await page.route(`${API}/v1/market/me`, (r) => r.fulfill(me(1_000_000)));
+  await page.route(
+    (u) => u.href.startsWith(API) && u.pathname === '/v1/market',
+    (r) =>
+      r.fulfill(ok({ season: 0, items: [{ ...listing, price }], hasMore: false, rules: RULES })),
+  );
+  await page.route(`${API}/v1/market/listings/**`, (r) => {
+    const body = r.request().postDataJSON() as { price: number };
+    sent.push(body.price);
+    // 화면이 시트를 연 뒤 판매자가 가격을 올렸다.
+    if (body.price !== 150_000) {
+      price = 150_000;
+      return r.fulfill({
+        status: 409,
+        json: {
+          error: {
+            code: 'CONFLICT',
+            message: '판매가가 바뀌었어요. 다시 확인해 주세요.',
+            retryable: false,
+            details: { reason: 'PRICE_CHANGED' },
+          },
+          meta: { requestId: 'req_e2e' },
+        },
+      });
+    }
+    return r.fulfill(ok({ balance: 850_000 }));
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="market"]').click();
+  await page.locator(`[data-listing="${LISTING}"]`).click();
+  const sheet = page.getByRole('dialog', { name: '선수 영입' });
+  await expect(page.locator('[data-act="buy"]')).toHaveText('12억에 영입하기');
+  await page.locator('[data-act="buy"]').click();
+
+  await expect(sheet.getByRole('alert')).toHaveText(
+    '가격이 15억으로 바뀌었어요. 다시 확인해 주세요.',
+  );
+  await expect(page.locator('[data-act="buy"]')).toHaveText('15억에 영입하기');
+  await expect(sheet).toContainText('85억');
+  await page.locator('[data-act="buy"]').click();
+  await expect(page.locator('#toast')).toHaveText('선수를 영입했어요.');
+  expect(sent).toEqual([120_000, 150_000]);
 });
 
 test('팔기 — 이번 시즌 선수를 슬라이더로 값을 정해 내놓고, 자금 만들기에서 직접 키운 선수만 방출한다', async ({
@@ -458,4 +534,126 @@ test('T-11-188 라커룸에서 선수를 잠그면 팔기 · 방출에서 막히
   await page.locator(`[data-unlock="${RAISED}"]`).click();
   await expect(row.locator('input[type="checkbox"]')).toBeEnabled();
   expect(locks.at(-1)).toEqual({ careerId: RAISED, locked: false });
+});
+
+test('T-11-442 로그인 전에는 팔기 · 내 거래 · 방출이 오류 대신 로그인 안내를 보이고 내 선수를 묻지 않는다', async ({
+  page,
+}) => {
+  let teamCalls = 0;
+  await page.route(`${API}/v1/market/me`, (r) =>
+    r.fulfill(fail(401, 'PROFILE_REQUIRED', '프로필 세션이 필요합니다.')),
+  );
+  await page.route(
+    (u) => u.href.startsWith(API) && u.pathname === '/v1/market',
+    (r) => r.fulfill(ok({ season: 0, items: [listing], hasMore: false, recent: [] })),
+  );
+  await page.route(`${API}/v1/market/chart**`, (r) => r.fulfill(ok({ season: 0, points: [] })));
+  await page.route(
+    (u) => u.href.startsWith(API) && u.pathname === '/v1/owner-team',
+    (r) => (teamCalls++, r.fulfill(fail(401, 'PROFILE_REQUIRED', 'x'))),
+  );
+  await page.goto('/');
+  await page.locator('[data-act="home-market"]').click();
+  await expect(page.locator('[data-market-guest-note]')).toHaveText(
+    '로그인하면 구단주가 되어 구단 자금으로 선수를 사고팔 수 있어요.',
+  );
+  await page.locator('[data-market-tab="sell"]').click();
+  await expect(page.locator('[data-market-guest="sell"]')).toContainText(
+    '로그인하면 직접 키운 선수를 이적시장에 내놓을 수 있어요.',
+  );
+  await expect(
+    page.locator('[data-market-guest="sell"] [data-act="market-guest-login"]'),
+  ).toBeVisible();
+  await expect(page.getByText('내 선수를 불러오지 못했어요.')).toHaveCount(0);
+  await page.locator('[data-market-tab="trades"]').click();
+  await expect(page.locator('[data-market-guest="trades"]')).toContainText('로그인하면');
+  await page.locator('[data-act="open-release"]').click();
+  await expect(page.locator('[data-act="open-release"]')).toHaveText('방출해서 자금 만들기');
+  await expect(page.locator('[data-market-guest="release"]')).toContainText('로그인하면');
+  await expectNoA11yViolations(page);
+  expect(teamCalls).toBe(0);
+});
+
+test('T-11-442 방출 전체 선택은 한 번에 50명까지만 고르고, 팔기 가격 칸은 고르면 화면에 들어온다', async ({
+  page,
+}) => {
+  await stub(page);
+  const many = Array.from({ length: 53 }, (_, i) =>
+    player(`00000000-0000-4000-8000-${String(100 + i).padStart(12, '0')}`, true, {
+      publicName: `키운 선수 ${i}`,
+    }),
+  );
+  let released: { careerIds: string[] } | null = null;
+  await page.route(`${API}/v1/market/me`, (r) => r.fulfill(me(0)));
+  await page.route(
+    (u) => u.href.startsWith(API) && u.pathname === '/v1/market',
+    (r) => r.fulfill(fail(500, 'X', 'x')),
+  );
+  await page.route(
+    (u) => u.href.startsWith(API) && u.pathname === '/v1/owner-team',
+    (r) =>
+      r.fulfill(
+        ok({
+          season: 0,
+          current: 0,
+          seasons: [{ id: 0, name: '프리시즌' }],
+          team: null,
+          players: many,
+          lastManager: null,
+          matchesLeft: 10,
+          matchesPerDay: 10,
+        }),
+      ),
+  );
+  await page.route(`${API}/v1/cards/release`, (r) => {
+    released = r.request().postDataJSON();
+    return r.fulfill(ok({ released: 50, amount: 4_000_000, balance: 4_000_000 }));
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="market"]').click();
+
+  // 팔기: 아래쪽 카드를 고르면 가격 칸이 화면 안으로 내려온다.
+  await page.locator('[data-market-tab="sell"]').click();
+  await page.locator(`[data-sell-pick="${many[52]!.careerId}"]`).click();
+  await expect(page.locator('.mk-price-box')).toBeInViewport();
+  await expect(page.locator('[data-act="list"]')).toBeInViewport();
+
+  await page.locator('[data-act="open-release"]').click();
+  const pickAll = page.locator('[data-act="pick-all"]');
+  await expect(pickAll).toHaveText('최대 50명 선택');
+  await pickAll.click();
+  await expect(page.locator('.mk-rel-list input:checked')).toHaveCount(50);
+  await expect(pickAll).toHaveText('선택 해제');
+  await expect(page.locator('.mk-dock')).toContainText('50명 방출');
+  // 51번째는 넣지 않고 알린다.
+  await page.locator(`[data-mine="${many[52]!.careerId}"] input[type="checkbox"]`).click();
+  await expect(page.locator('#toast')).toHaveText('한 번에 50명까지 방출할 수 있어요.');
+  await expect(page.locator('.mk-rel-list input:checked')).toHaveCount(50);
+  await page.locator('[data-act="release"]').click();
+  await page.locator('[data-act="release-confirm"]').click();
+  await expect(page.locator('#toast')).toHaveText('50명을 방출했어요.');
+  expect(released!.careerIds).toHaveLength(50);
+});
+
+test('T-11-442 리롤권 상점에서 자금이 모자라면 모자란 금액과 방출 화면으로 가는 버튼을 보인다', async ({
+  page,
+}) => {
+  await stub(page);
+  await page.route(`${API}/v1/items/shop`, (r) =>
+    r.fulfill(ok({ reroll: 0, balance: 30_000, price: 100_000, bought: 0, cap: 5 })),
+  );
+  await page.route(`${API}/v1/items`, (r) =>
+    r.fulfill(ok({ reroll: 0, boost: 0, scout: 0, rename: 0 })),
+  );
+  await page.route(`${API}/v1/market/me`, (r) => r.fulfill(me(30_000)));
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="reroll-shop"]').click();
+  const short = page.locator('[data-reroll-shop] [data-funds-short]');
+  await expect(short).toContainText('구단 자금이 7억 모자라요.');
+  await expect(page.locator('[data-act="reroll-buy"]')).toBeDisabled();
+  await short.locator('[data-act="funds-go-release"]').click();
+  await expect(page.locator('.mk-pane[aria-label="방출해서 자금 만들기"]')).toBeVisible();
+  await expect(page.locator('[data-act="open-release"]')).toHaveAttribute('aria-pressed', 'true');
 });

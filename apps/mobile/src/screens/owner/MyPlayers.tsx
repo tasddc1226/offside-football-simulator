@@ -3,6 +3,7 @@
 // 없어(공개를 고른 경우만) 같은 기기의 기록이 있으면 그 이름·공개 설정을 쓴다.
 // 한 줄의 틀(순위 칸·위 구분선·안쪽 여백)은 HofRow의 RowFrame이 그린다 — 여기서는 누르는 자리만 감싼다.
 // T-11-029 시즌 탭(프리시즌 / 시즌 1…)으로 거른다 — 개막한 시즌이 둘 이상일 때만 보이고, 기본은 지금 시즌이다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -26,7 +27,7 @@ import { playerName } from '@offside/app-core/format';
 import { fillGranted, openLocalLegend, openPublicLegend } from '../../game/host';
 import { HofRow, type RowStats } from '../../components/HofRow';
 import { rem } from '../../theme/type';
-import { Opt, Card, Press, Txt } from '../../ui';
+import { Opt, Card, Press, Txt, Skeleton } from '../../ui';
 import { SelectField } from '../settings/parts';
 import { ownerPlayersText as L } from '@offside/app-core/i18n/ko/ownerPlayers';
 import { useRefresh } from '../../ui/refresh';
@@ -173,15 +174,13 @@ export function MyPlayers() {
         {L.title}
       </Txt>
       {source === 'loading' ? (
-        <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
-          {L.loading}
-        </Txt>
+        <Skeleton rows={5} />
       ) : (
         <>
           <Txt
             tone="muted"
             testID={`my-source-${source}`}
-            style={{ fontSize: rem(0.75), marginBottom: 6 }}
+            style={{ fontSize: rem(FONT.caption), marginBottom: 6 }}
           >
             {source === 'account'
               ? L.sourceAccount
@@ -251,7 +250,7 @@ export function MyPlayers() {
                   </Press>
                 ))
               ) : (
-                <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
+                <Txt tone="muted" style={{ fontSize: rem(FONT.body2), paddingVertical: 8 }}>
                   {emptySeasonText(season, seasons.length > 1 ? rows.length : 0)}
                 </Txt>
               )}

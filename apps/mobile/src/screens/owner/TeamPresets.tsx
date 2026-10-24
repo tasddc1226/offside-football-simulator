@@ -1,7 +1,8 @@
 // T-11-217 팀 프리셋 시트(웹 team/TeamPresets.svelte) — 지금 편성 저장 · 불러오기 · 덮어쓰기 · 이름 바꾸기 · 삭제.
 // 불러오기는 편성 초안만 채운다.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import {
   TEAM_PRESET_NAME_MAX,
@@ -52,6 +53,24 @@ export function TeamPresets({
       setBusy(false);
     }
   }
+  /** T-11-431 덮어쓰기 · 삭제는 한 번 더 묻는다(팀 화면의 다른 확인과 같은 다이얼로그). */
+  function ask(i: number, kind: 'overwrite' | 'delete') {
+    const p = presets[i]!;
+    Alert.alert(p.name, kind === 'overwrite' ? L.tpOverwriteAsk : L.tpDeleteAsk, [
+      { text: L.cancel, style: 'cancel' },
+      {
+        text: kind === 'overwrite' ? L.tpOverwrite : L.tpDelete,
+        style: kind === 'delete' ? 'destructive' : 'default',
+        onPress: () =>
+          void run(
+            kind === 'overwrite'
+              ? replacePreset(presets, i, draft(p.name))
+              : removePreset(presets, i),
+            kind === 'overwrite',
+          ),
+      },
+    ]);
+  }
   async function finishRename(i: number) {
     const name = nameDraft.trim();
     if (name && name !== presets[i]!.name && !(await run(renamePreset(presets, i, name)))) return;
@@ -88,7 +107,7 @@ export function TeamPresets({
                 style={{
                   borderWidth: 1,
                   borderColor: c.line,
-                  borderRadius: 12,
+                  borderRadius: RADIUS.md,
                   padding: 12,
                   gap: 10,
                 }}
@@ -143,7 +162,7 @@ export function TeamPresets({
                   <Btn
                     sm
                     disabled={busy}
-                    onPress={() => void run(replacePreset(presets, i, draft(p.name)), true)}
+                    onPress={() => ask(i, 'overwrite')}
                     testID={`preset-overwrite-${i}`}
                   >
                     {L.tpOverwrite}
@@ -162,7 +181,7 @@ export function TeamPresets({
                   <Btn
                     sm
                     disabled={busy}
-                    onPress={() => void run(removePreset(presets, i))}
+                    onPress={() => ask(i, 'delete')}
                     testID={`preset-delete-${i}`}
                   >
                     {L.tpDelete}

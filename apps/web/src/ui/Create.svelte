@@ -9,7 +9,7 @@
   import { watchDetailOpening } from '@offside/app-core/season-opening';
   import { cubicOut } from 'svelte/easing';
   import { fly } from 'svelte/transition';
-  import { POS, DPOS, DETAILS_OF, TRAITS, ATTR_KEYS, FOCUS_PICK, FOCUS_GROWTH, attrLabels, defaultFocus, focusMod, posLabel } from '@offside/game/data';
+  import { POS, DPOS, DETAILS_OF, TRAITS, ATTR_KEYS, FOCUS_PICK, attrLabels, defaultFocus, focusMod, posLabel } from '@offside/game/data';
   import type { AttrKey, DetailPos, Pos } from '@offside/game/data';
   import { baseline, candidatePotentialGrades } from '@offside/game/candidates';
   // T-11-196 프리미엄 후보 식을 등록한다(첫 화면 번들에서 떼어 둠).
@@ -23,15 +23,16 @@
   import { fundsText } from '@offside/app-core/funds';
   import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
   import type { RewardShopResponse } from '@offside/contracts';
-  import { REROLL_MILEAGE, rerollMileageLeft, scoutPityView, type ScoutPity } from '@offside/contracts/cup';
+  import { REROLL_MILEAGE, rerollMileageLeft, scoutPityAt, type ScoutPity } from '@offside/contracts/cup';
   import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
   import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
   import ScoutOdds from './cup/ScoutOdds.svelte';
+  import ScoutPityGauge from './ScoutPityGauge.svelte';
   import { hasSessionHint } from '@offside/app-core/api/client';
   import { toast } from './helpers.js';
   import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
-  import { goHome, goRerollShop } from './nav.js';
-  import { bodyNote, hiddenStrength, scoutLine, startOvr, ovrFocusView } from '@offside/app-core/create-view';
+  import { go, goHome, goRerollShop } from './nav.js';
+  import { bodyNote, focusNote, hiddenStrength, scoutLine, startOvr, ovrFocusView } from '@offside/app-core/create-view';
   import { dur } from './motion.js';
   import { createText as L } from '@offside/app-core/i18n/ko/create';
   import Topbar from './Topbar.svelte';
@@ -39,11 +40,17 @@
   import NationPicker from './NationPicker.svelte';
   import { doneOnEnter } from './inputDone.js';
   import ScoutScan from './ScoutScan.svelte';
+  import RevealFx from './RevealFx.svelte';
+  import CountUp from './CountUp.svelte';
+  import { candidateTiers, gradeTier, revealTiming, revealTotal, REVEAL_BUZZ, type RevealTier } from '@offside/app-core/reveal';
+  import { revealText as R } from '@offside/app-core/i18n/ko/reveal';
+  import { buzz, motionOK } from './motion.js';
+  import { sheetOn } from './skin.svelte.js';
+  import { flashEdge, revealShort, revealTone } from './revealPrefs.js';
 
   const C = appState.C;
   const posKeys = Object.keys(POS) as Pos[];
   const feet = ['오른발', '왼발', '양발'] as const; // 저장값(화면에는 L.foot으로)
-  const growthPct = Math.round((FOCUS_GROWTH - 1) * 100);
   // T-10-091 세부 포지션은 시즌 1 개막부터 고른다. 프리시즌엔 선택지를 보이지 않고, 저장된 선택도 쓰지 않는다.
   let detailOpen = $state(detailOpenNow());
   // T-11-294 입력은 저장하지 않아 다시 열면 기본값이다. 킵한 후보가 있으면 그 조건으로 맞춰 바로 다시 나오게 한다(T-11-327 앱을 연 뒤 한 번).
@@ -95,10 +102,6 @@
     if (C.focus.includes(k)) C.focus = C.focus.filter((f) => f !== k);
     else C.focus = [...C.focus, k].slice(-FOCUS_PICK);
   }
-  function focusNote(k: AttrKey, d: number): string {
-    if (C.focus.includes(k)) return L.focusUp({ d, pct: growthPct });
-    return d < 0 ? L.focusDown({ d }) : L.focusNone;
-  }
   // T-10-111 후보를 바로 보여 주지 않고 스카우트가 추리는 연출(약 3초)이 끝난 뒤에 뽑는다.
   let scouting = $state(false);
   const scoutSteps = $derived([
@@ -140,8 +143,11 @@
   const NO_PITY: ScoutPity = { used: 0, streak: 0, elites: 0 };
   let pity = $state<ScoutPity>(NO_PITY);
   let scoutPlan: { seed: number; hit: boolean } | null = null;
-  const pityView = $derived(scoutPityView(pity));
   const premium = $derived(!!appState.candidates?.some((c) => c.guaranteed));
+  // T-11-437 로그인 흔적이 없으면 아이템을 묻지 않아 도구가 통째로 숨는다. 무엇을 쓸 수 있는지 한 줄로 알린다.
+  const guest = !hasSessionHint();
+  // T-11-437 쓸 도구(리롤권 · 스카우트권 · 천장 기록)가 없으면 상점 안내 · 능력치 설명을 '더 보기'로 접어 후보 고르기에 집중하게 한다.
+  const quiet = $derived(rerolls < 1 && scouts < 1 && pity.used < 1);
   async function premiumScout() {
     if (scoutBusy || scouts < 1 || !confirm(SL.confirm({ n: scouts - 1 }))) return;
     scoutBusy = true;
@@ -162,7 +168,9 @@
     if (r.data.pity) pity = r.data.pity;
     const mode = r.data.scoutMode ?? 'normal';
     premiumScoutCandidates(plan.seed, mode);
-    toast(mode === 'elite' ? SL.doneElite({ n: scouts }) : mode === 'sure' ? SL.doneSure({ n: scouts }) : SL.done({ n: scouts }));
+    // T-11-415 S가 그냥 나와 S 확정 칸이 0으로 돌아가면 그렇다고 알린다.
+    const reset = mode === 'normal' && r.data.pity?.streak === 0;
+    toast(mode === 'elite' ? SL.doneElite({ n: scouts, elite: scoutPityAt().elite }) : mode === 'sure' ? SL.doneSure({ n: scouts }) : reset ? SL.doneReset({ n: scouts }) : SL.done({ n: scouts }));
   }
   async function reroll() {
     if (rerolling || rerolls < 1 || !confirm(CL.rerollConfirm({ n: rerolls - 1 }))) return;
@@ -207,11 +215,15 @@
     appState.candidates = null;
   }
   function openAll() {
+    appState.candidatesOpen.forEach((_, i) => stage(i));
     appState.candidatesOpen = appState.candidatesOpen.map(() => true);
   }
   // 카드를 누르면(닫혀 있든 열려 있든) 바로 열리면서 그 후보가 선택된다 — 한 번의 탭으로
   // "오픈 + 선택"이 끝나는 모바일 우선 상호작용. "모두 오픈"은 선택 없이 전부 펼쳐만 준다.
   function pick(i: number) {
+    // 연출 중인 카드를 다시 누르면 바로 결과로 간다.
+    if (fx[i] && !fx[i].done) land(i);
+    stage(i);
     appState.candidatesOpen[i] = true;
     appState.candidatePick = i;
   }
@@ -219,9 +231,46 @@
     if (!picked) return;
     startCareer(C.name, C.number, picked.attrs, picked.potential);
   }
-  // 카드가 세로축으로 뒤집히며 열린다. 감속 모션이면 duration 0(즉시 표시).
-  function flipIn(_node: Element) {
-    return { duration: dur(360), easing: cubicOut, css: (t: number) => `transform: perspective(800px) rotateY(${(1 - t) * 90}deg); opacity: ${Math.min(1, t * 2)}` };
+  // T-11-371 팩 오픈식 공개: 열 때 보이는 값(OVR · 보장 · 천장)으로만 강도를 정한다. 이 화면에서 연 카드만 연출하고,
+  // 같은 화면의 두 번째 카드부터는 짧게. 감속 모션 · 업무 모드 · "연출 짧게"면 결과만.
+  const tiers = $derived<RevealTier[]>(appState.candidates ? candidateTiers(appState.candidates.map((c) => ({ ovr: startOvr(C.pos, c.attrs), guaranteed: c.guaranteed, pity: c.pity }))) : []);
+  const fxOff = !motionOK || sheetOn() || revealShort();
+  // 카드 번호 → 이번에 열며 볼 연출(뒷면 · 단서 · 멈춤 시간). 화면에 처음 들어올 때 이미 열린 카드는 연출하지 않는다.
+  let fx = $state<Record<number, { back: number; hint: number; hold: number; done: boolean }>>({});
+  let opened = 0;
+  // 다시 뽑기 · 프리미엄 스카우트로 후보가 바뀌면 새 카드로 다시 센다.
+  $effect(() => {
+    void appState.candidates;
+    fx = {};
+    opened = 0;
+  });
+  function stage(i: number) {
+    if (appState.candidatesOpen[i] || fx[i]) return;
+    const t = revealTiming(tiers[i] ?? 'normal', { off: fxOff, repeat: opened++ > 0 });
+    fx[i] = { ...t, done: revealTotal(t) === 0 };
+    if (fx[i].done) return land(i);
+    setTimeout(() => land(i), revealTotal(t));
+  }
+  function land(i: number) {
+    const f = fx[i];
+    if (!f || (f.done && revealTotal(f) > 0)) return;
+    f.done = true;
+    const tier = tiers[i] ?? 'normal';
+    buzz(REVEAL_BUZZ[tier]);
+    revealTone(tier);
+    if (tier === 'jackpot' && revealTotal(f) > 0) flashEdge();
+  }
+  // 잠재력 범위를 이 화면에서 새로 열었을 때만 등급 연출(다시 들어온 화면 · 킵하며 이미 본 후보는 그대로).
+  let potFresh = $state(false);
+  let potWas = appState.candidatePotentialOpen;
+  $effect(() => {
+    const open = appState.candidatePotentialOpen;
+    if (open && !potWas) potFresh = true;
+    potWas = open;
+  });
+  // 카드가 세로축으로 뒤집히며 열린다. 감속 모션이면 duration 0(즉시 표시). 대박은 뒷면에서 한 박자 쉬고 뒤집힌다.
+  function flipIn(_node: Element, delay = 0) {
+    return { delay, duration: dur(360), easing: cubicOut, css: (t: number) => `transform: perspective(800px) rotateY(${(1 - t) * 90}deg); opacity: ${Math.min(1, t * 2)}` };
   }
 </script>
 {#snippet ovrGuide(showTitle = true)}
@@ -309,7 +358,7 @@
         </p>
       </div>
 
-      <div class="field">
+      <div class="field" data-coach="pos">
         <span class="lbl">{L.position}</span>
         <div class="seg two">
           {#each posKeys as k (k)}
@@ -347,13 +396,13 @@
         </div>
       </div>
 
-      <div class="field">
+      <div class="field" data-coach="focus">
         <span class="lbl">{L.focusTitle({ n: FOCUS_PICK })}</span>
         <div class="seg two">
           {#each ATTR_KEYS as k (k)}
             {@const d = preview[k] ?? 0}
             <button class="opt focus-opt" data-set="focus" data-val={k} aria-pressed={C.focus.includes(k)} onclick={() => toggleFocus(k)}>
-              <b>{labels[k]}</b><small class:up={d > 0} class:down={d < 0}>{focusNote(k, d)}</small>
+              <b>{labels[k]}</b><small class:up={d > 0} class:down={d < 0}>{focusNote(C.focus.includes(k), d)}</small>
             </button>
           {/each}
         </div>
@@ -382,7 +431,7 @@
     <div class="action-bar at-bottom">
       <div class="action-bar-inner with-back">
         <button class="btn" data-act="home" onclick={goHome}>{L.cancel}</button>
-        <button class="btn btn-primary" data-act="next-candidates" disabled={focusLeft > 0 || !!bodyErr} onclick={() => (scouting = true)}>
+        <button class="btn btn-primary" data-act="next-candidates" data-coach="candidates" disabled={focusLeft > 0 || !!bodyErr} onclick={() => (scouting = true)}>
           {bodyErr ? L.checkBody : focusLeft > 0 ? L.focusMore({ n: focusLeft }) : L.seeCandidates}
         </button>
       </div>
@@ -394,19 +443,33 @@
         <button class="icon-btn" data-act="open-all" onclick={openAll}>{L.openAll}</button>
       {/if}
     </div>
+    <!-- T-11-437 카드의 OVR이 확정값처럼 보이지 않게 소개 바로 아래에 둔다(앱과 같은 자리). -->
+    <p class="muted fs-sm cand-note" data-candidate-stats-note>{CG.candidateNote}</p>
     <!-- T-11-221 후보 카드를 먼저 보이고, 다시 뽑기 · 잠재력 보기 같은 도구는 카드 아래로. -->
-    <div class="cand-list">
+    <div class="cand-list" data-coach="cands">
       {#each appState.candidates as cand, i (i)}
         {#if appState.candidatesOpen[i]}
-          <button class="cand-card open" class:picked={appState.candidatePick === i} data-cand={i} data-cand-open="true" aria-pressed={appState.candidatePick === i} onclick={() => pick(i)} in:flipIn>
+          {@const f = fx[i]}
+          {@const tier = tiers[i] ?? 'normal'}
+          <button class="cand-card open rv-card rv-{tier}" class:rv-run={f && !f.done} class:rv-land={f?.done && revealTotal(f) > 0} class:picked={appState.candidatePick === i} data-cand={i} data-cand-open="true" data-reveal={f ? (f.done ? 'done' : 'hint') : 'static'} data-reveal-tier={tier} style:--rv-hint="{f && !f.done ? f.hint : 0}ms" style:--rv-delay="{f && !f.done ? f.back : 0}ms" aria-pressed={appState.candidatePick === i} onclick={() => pick(i)} in:flipIn={f?.back ?? 0}>
+            {#if f?.done && revealTotal(f) > 0}<span class="sr-only" aria-live="polite">{R.candLive({ n: i + 1, ovr: startOvr(C.pos, cand.attrs), tier: tier === 'jackpot' ? R.jackpot : tier === 'good' ? R.good : '' })}</span>{/if}
             <span class="cc-head">
               <span class="cc-no">{L.candNo({ n: i + 1 })}</span>
-              <span class="cc-ovr">OVR <b class="num">{startOvr(C.pos, cand.attrs)}</b></span>
+              <span class="cc-ovr">OVR <b class="num">{#if f && f.hint > 0 && !f.done}<CountUp value={startOvr(C.pos, cand.attrs)} ms={f.back + f.hint} />{:else}{startOvr(C.pos, cand.attrs)}{/if}</b></span>
               {#if cand.pity}<span class="pill good" data-cand-pity={cand.pity}>{cand.pity === 'elite' ? SL.pillElite : SL.pillSure}</span>{:else if cand.guaranteed}<span class="pill" data-cand-sure>{SL.sure}</span>{/if}
               {#if cand.kept}<span class="pill" data-cand-kept>{L.kept}</span>{/if}
               {#if appState.candidatePick === i}<span class="pill good">{L.picked}</span>{/if}
             </span>
-            <span class="muted">{appState.candidatePotentialOpen || cand.kept?.revealed ? L.potentialRange(candidatePotentialGrades(cand.potential)) : L.potentialLocked}</span>
+            {#if appState.candidatePotentialOpen || cand.kept?.revealed}
+              {@const g = candidatePotentialGrades(cand.potential)}
+              {#if potFresh && !cand.kept?.revealed}
+                <span class="muted" data-cand-potential={i}><RevealFx grade={`${g.min}~${g.max}`} text={L.potentialRange(g)} tier={gradeTier(g.max)} /></span>
+              {:else}
+                <span class="muted" data-cand-potential={i}>{L.potentialRange(g)}</span>
+              {/if}
+            {:else}
+              <span class="muted" data-cand-potential={i}>{L.potentialLocked}</span>
+            {/if}
             <span class="cc-scout">“{scoutLine(C.pos, cand.attrs)}”</span>
             <span class="cc-body">
               <MiniRadar pos={C.pos} attrs={cand.attrs} size={84} />
@@ -443,9 +506,11 @@
     {/if}
     {#if scouts > 0}
       <button class="btn btn-sm btn-primary self-start" data-act="premium-scout" disabled={scoutBusy || rerolling} onclick={premiumScout}>{scoutBusy ? SL.busy : SL.btn({ n: scouts })}</button>
-      <p class="fs-sm" data-scout-pity>{SL.pitySure({ n: pityView.sureIn })} · {SL.pityElite({ n: pityView.eliteIn })}</p>
-      <p class="muted fs-sm">{SL.what} {SL.pityHelp}</p>
+      <p class="muted fs-sm">{SL.what}</p>
+      <ScoutPityGauge {pity} />
       <ScoutOdds />
+    {:else if pity.used > 0}
+      <ScoutPityGauge {pity} empty />
     {/if}
     {#if premium}<p class="muted fs-sm" data-premium-note>{SL.premiumNote}</p>{/if}
     {#if rerolls > 0}
@@ -456,28 +521,52 @@
         {CL.createShopHint} <button class="link-btn" data-act="reroll-shop-go" onclick={goRerollShop}>{CL.createShopGo}</button>
       </p>
     {/if}
-    <!-- T-11-355 상품 위치 안내(설정과 같은 카드, 기기마다 닫을 때까지) -->
-    <ItemsHint />
-    <p class="muted fs-sm">{appState.candidatePotentialOpen ? (premium ? SL.premiumHelp : L.potentialHelp) : L.potentialWeb}</p>
+    {#if guest}
+      <p class="muted fs-sm" data-login-tools>
+        {L.loginTools} <button class="link-btn" data-act="login-tools-go" onclick={() => go('owner')}>{L.loginToolsGo}</button>
+      </p>
+    {/if}
+    {#if appState.candidatePotentialOpen}
+      <p class="muted fs-sm">{premium ? SL.premiumHelp : L.potentialHelp}</p>
+    {:else if !quiet}
+      <p class="muted fs-sm">{L.potentialWeb}</p>
+    {/if}
+    {#if !quiet}
+      <!-- T-11-355 상품 위치 안내(설정과 같은 카드, 기기마다 닫을 때까지) -->
+      <ItemsHint />
+    {/if}
     {#if clubCand}
       <button class="btn btn-sm self-start" data-act="candidate-potential-club" disabled={clubBusy} onclick={revealWithClub}>
         {clubBusy ? B.clubBusy : B.clubCandidates({ price: fundsText(clubCand.price) })}
       </button>
     {/if}
     {#if clubMsg}<p class="muted fs-sm" aria-live="polite">{clubMsg}</p>{/if}
-    <!-- T-11-221 OVR 주요 능력치 설명은 펼침 행으로 접어 둔다(후보 카드를 아래로 밀지 않게). -->
-    <details class="card ovr-guide-box">
-      <summary class="disc-row" data-act="ovr-guide-toggle">{ovrFocus.title}<span class="disc-chev" aria-hidden="true"></span></summary>
-      {@render ovrGuide(false)}
-      <p class="muted fs-sm">{L.ovrCore}</p>
-    </details>
-    <div class="card position-guide-box"><PositionGuide pos={C.pos} /></div>
-    <p class="muted fs-sm" data-candidate-stats-note>{CG.candidateNote}</p>
+    {#if quiet}
+      <!-- T-11-437 쓸 도구가 없으면 상점 위치 · 능력치 설명을 한 번에 접어 둔다. -->
+      <details class="card more-tools" data-more-tools>
+        <summary class="disc-row" data-act="more-tools-toggle">{L.moreTools}<span class="disc-chev" aria-hidden="true"></span></summary>
+        <div class="stack more-body">
+          {#if !appState.candidatePotentialOpen}<p class="muted fs-sm">{L.potentialWeb}</p>{/if}
+          <ItemsHint />
+          {@render ovrGuide()}
+          <p class="muted fs-sm">{L.ovrCore}</p>
+          <PositionGuide pos={C.pos} />
+        </div>
+      </details>
+    {:else}
+      <!-- T-11-221 OVR 주요 능력치 설명은 펼침 행으로 접어 둔다(후보 카드를 아래로 밀지 않게). -->
+      <details class="card ovr-guide-box">
+        <summary class="disc-row" data-act="ovr-guide-toggle">{ovrFocus.title}<span class="disc-chev" aria-hidden="true"></span></summary>
+        {@render ovrGuide(false)}
+        <p class="muted fs-sm">{L.ovrCore}</p>
+      </details>
+      <div class="card position-guide-box"><PositionGuide pos={C.pos} /></div>
+    {/if}
 
     <div class="action-bar at-bottom">
       <div class="action-bar-inner with-back">
         <button class="btn" data-act="home" onclick={backToForm}>{L.back}</button>
-        <button class="btn btn-primary" data-act="start" disabled={appState.candidatePick == null} onclick={confirmPick}>
+        <button class="btn btn-primary" data-act="start" data-coach="start" disabled={appState.candidatePick == null} onclick={confirmPick}>
           {appState.candidatePick == null ? L.pickOne : L.kickoff({ n: appState.candidatePick + 1 })}
         </button>
       </div>
@@ -487,10 +576,20 @@
 {#if scouting}<ScoutScan pos={C.pos} steps={scoutSteps} onDone={scouted} />{/if}
 
 <style>
-.ovr-guide-box, .position-guide-box { padding-block: 0; }
+.ovr-guide-box, .position-guide-box, .more-tools { padding-block: 0; }
+.more-body { padding-bottom: 14px; }
+.cand-note { margin: 0; }
 .position-guide-box :global(.position-guide) { border-top: 0; }
 .ovr-guide-box .ovr-guide { margin-top: 0; }
-.ovr-guide { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 12px 0; font-size: .8125rem; line-height: 1.5; }
+.ovr-guide { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 12px 0; font-size: var(--fs-label); line-height: 1.5; }
 .ovr-guide p { margin: 4px 0 0; overflow-wrap: anywhere; }
 .cc-bar .ovr-core { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+/* T-11-371 공개 연출: 단서 단계에 능력치 막대가 0부터 차오르고, 결과에 강도별 테두리 빛. */
+.rv-run .cc-bar em { animation: rv-fill var(--rv-hint) cubic-bezier(.22,.61,.36,1) var(--rv-delay) both; }
+.rv-good.rv-land, .rv-jackpot.rv-land { box-shadow: 0 0 0 2px var(--accent), 0 0 18px 2px color-mix(in srgb, var(--accent) 45%, transparent); animation: rv-land .5s ease-out; }
+.rv-jackpot.rv-run { box-shadow: 0 0 0 2px var(--accent); animation: rv-charge .45s ease-in-out infinite alternate; }
+@keyframes rv-fill { from { width: 0; } }
+@keyframes rv-land { 0% { transform: scale(.96); } 60% { transform: scale(1.02); } 100% { transform: scale(1); } }
+@keyframes rv-charge { to { box-shadow: 0 0 0 2px var(--accent), 0 0 16px 4px color-mix(in srgb, var(--accent) 50%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .rv-run .cc-bar em, .rv-land, .rv-run { animation: none; } }
 </style>

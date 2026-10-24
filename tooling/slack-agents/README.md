@@ -95,16 +95,22 @@ Worker는 `apps/agents`(`agents.offside-lab.com`)다. `manifests/ops.yaml`에 �
 
 - **카드가 오는 때.** 승인 머지가 끝났을 때(머지한 main 커밋), 운영자가 `@손흥민 운영에 배포해`처럼 맡겼을 때(`deploy_request`, main 최신 커밋). 지난 운영 배포 태그 뒤 바뀐 커밋이 없으면 올리지 않는다.
 - **카드 내용.** 지난 배포 태그 · 커밋 목록(8개까지) · 마이그레이션 파일 · 요청 스레드. 버튼은 **승인하고 배포 / 거절**이고, 마이그레이션이 있으면 **프리플라이트**가 앞에 붙는다(프리플라이트를 눌러도 카드는 남아 배포를 이어서 누를 수 있다).
-- **누르면.** 운영자만 된다. main 최신 커밋이 카드의 커밋과 같을 때만 GitHub App으로 `deploy-production.yml`을 띄운다(앱의 actions 쓰기 권한). main이 바뀌었으면 띄우지 않고 새 카드를 올린다. 같은 커밋 · 같은 모드는 한 번만 띄우고(Durable Object `deploy:<sha>:<mode>`), 누가 언제 눌렀는지 승인 기록에 남긴다. 배포가 끝나면 `@mkt` 드림보트 요약 카드가 온다.
+- **누르면.** 운영자만 된다. main 최신 커밋이 카드의 커밋과 같을 때만 GitHub App으로 `deploy-production.yml`을 띄운다(앱의 actions 쓰기 권한). main이 바뀌었으면 띄우지 않고 새 카드를 올린다. 같은 커밋 · 같은 모드는 한 번만 띄우고(Durable Object `deploy:<sha>:<mode>`), 누가 언제 눌렀는지 승인 기록에 남긴다.
 
-## 4단계: `@mkt`(안정환) 연결 · 배포 뒤 드림보트 요약 (2026-10-16, T-11-296)
+## 4단계: `@mkt`(안정환) 연결 (2026-10-16, T-11-296)
 
-`manifests/mkt.yaml`에 이벤트 · 버튼 주소를 넣었다. `ENABLED_ROLES`는 `ops,plan,dev,mkt`.
+`manifests/mkt.yaml`에 이벤트 주소를 넣었다. `ENABLED_ROLES`는 `ops,plan,dev,mkt`. `@mkt`는 운영자 지시 · 주간 유입 리포트에서 공지 · 스토어 · 광고 문구 초안과 GA4 · 광고 성과를 다룬다.
 
-- **흐름.** 운영 배포(`deploy-production.yml`, 워크플로 이름 Production Release)가 `mode=deploy`로 성공하면 `agent-release.yml`이 Worker(`/internal/run?job=release`)에 커밋을 알린다 → `@mkt`(Sonnet 5.5)가 `release_changes`로 드림보트 마지막 게시 시각(since) 뒤 main 커밋과 그 커밋이 더한 게임 안 릴리즈 노트를 읽는다 → 유저 변경 중 큰 것만 1~3줄 요약 → `dreamboat_draft`가 `#agent-approvals`에 **승인하고 보내기 / 버리기** 카드를 올리고 `#agent-desk`에 고른 이유를 남긴다 → 운영자가 누르면 Worker가 드림보트에 보낸다(드림보트는 매일 04:00 KST에 게시).
-- **형식 검사.** 요약은 Worker가 다시 본다: `- `로 시작하는 줄 1~3개, 줄 60자 안쪽, 작업 번호 · 코드 · 주소 · 가운뎃점 없음. 틀리면 카드를 올리지 않는다. 한 초안은 한 번만 보낸다.
-- **비밀값.** `DREAMBOAT_URL`(드림보트 받기 · 보내기 주소, 키가 들어 있어 공개 저장소에 두지 않는다). 없으면 요약을 돌리지 않는다.
-- **세션과 나누기.** 드림보트는 마지막으로 보낸 것만 쓰므로, 4단계부터 배포 뒤 요약은 `@mkt` 승인 카드로 보낸다. 작업 세션이 직접 보내지 않는다.
+- **배포 뒤 알림.** 운영 배포(`deploy-production.yml`, 워크플로 이름 Production Release)가 `mode=deploy`로 성공하면 `agent-release.yml`이 Worker(`/internal/run?job=release`)에 커밋을 알리고, Worker는 배포 상태 카드를 닫거나 30 · 60분 확인을 예약한다(T-11-325).
+- **드림보트 요약은 없앴다(2026-10-18, T-11-393).** 처음엔 배포 뒤 `@mkt`가 드림보트 업데이트 요약 초안을 승인 카드로 올렸지만, 운영자가 드림보트 요약을 더 보내지 않기로 해 도구 · 승인 버튼 · 비밀값 `DREAMBOAT_URL`을 지웠다.
+
+## `@mkt` 인스타그램 · Threads · 광고 읽기 (2026-10-18, T-11-395)
+
+- **도구.** `instagram`(계정 · 게시물 · 댓글), `threads`(계정 · 글 · 답글), `meta_ads`(캠페인 · 광고 세트 · 광고 단위, 어제 · 7 · 14 · 30일). 전부 읽기만 한다. 게시 · 답글 · 광고 변경은 나중에 `#agent-approvals` 승인 카드로 더한다.
+- **비밀값.** `META_GRAPH_TOKEN`(비즈니스 Offside-lab 시스템 사용자 토큰, 만료 없음, `ads_read` · `instagram_basic` · `instagram_manage_insights` · `pages_read_engagement` · `pages_show_list`, 자산은 광고 계정 · 인스타그램 · 페이지를 보기 권한으로만). 없으면 인스타그램은 `META_ADS_ACCESS_TOKEN`을 쓴다. `THREADS_ACCESS_TOKEN`(Threads 장기 사용자 토큰, `threads_basic` · `threads_read_replies` · `threads_manage_insights`). Threads 토큰은 60일이면 끝나서 Worker가 아침 cron에서 7일마다 갱신해 원장(`threads:token`)에 둔다. 비밀값을 새로 넣으면 그 값이 이긴다.
+- **변수.** `META_IG_USER_ID`(17841417364785110, `wrangler.jsonc`).
+- **막힌 것(10-18).** 운영자 페이스북 계정이 Meta 개발자 등록의 이메일 단계에서 "평소에 사용하지 않는 기기" 보호에 걸려 앱을 아직 못 만들었다. 토큰이 없으면 세 도구는 숨는다.
+- **턴 상한.** 도구가 늘어 "조회 횟수 한도"에 자주 닿아 역할마다 1.5배쯤 올렸다(@mkt 8→14, 주간 리포트 7→10, @plan 10→16 · 문의 18 · 리뷰 16, @dev 12→18, @ops 15→20 · 경보 · 아침 8 · 배포 확인 12). 비용은 작업당 금액 상한이 그대로 막는다.
 
 ## `@mkt` GA4 읽기 (2026-10-16, T-11-299)
 

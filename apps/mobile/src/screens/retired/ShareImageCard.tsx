@@ -1,17 +1,28 @@
 // 은퇴한 내 선수의 SNS 공유용 한 장 이미지(웹 share/ShareImageCard.svelte, T-10-079). 누르면 카드(ShareCardView)를 화면
 // 밖에 그려 react-native-view-shot으로 PNG를 찍고, 미리 보기와 함께 공유 시트(expo-sharing)로 보낸다 — 인스타·카톡 공유와
-// 이미지 저장은 시트에서 고른다. 웹은 캔버스 1080×1350, 앱은 같은 카드를 0.5배로 줄여 그린 뷰를 찍어 1080×1350으로 뽑는다
+// 이미지 저장은 시트에서 고른다. T-11-439: 사진첩에 바로 저장하려면 새 네이티브 모듈(expo-media-library)이 필요해(1.1.2 OTA에
+// 실을 수 없다) 같은 시트를 여는 버튼 둘 대신 '공유하거나 저장하기' 하나와 시트에서 저장하는 법을 적는다. 만든 뒤 대표 칭호·
+// 결번이 바뀌면 낡은 이미지라고 알리고 '바뀐 내용 반영하기'를 주 버튼으로 둔다. 웹은 캔버스 1080×1350, 앱은 같은 카드를 0.5배로 줄여 그린 뷰를 찍어 1080×1350으로 뽑는다
 // (기기 화소 비율만큼 큰 비트맵을 만들지 않으려고). 카드 내용은 위 은퇴 리포트와 같은 LegendView(v)에서 뽑는다 —
 // 영구결번도 리포트처럼 이번 접속의 심사 결과를 먼저 본다.
-import { useRef, useState } from 'react';
+import { RADIUS } from '@offside/app-core/design-tokens';
+import { retiredTitleOf } from '@offside/app-core/retiredTitle';
+import { useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { Image } from 'expo-image';
 import * as Sharing from 'expo-sharing';
 import { captureRef } from 'react-native-view-shot';
-import { CARD_H, CARD_W, shareCardData, type ShareCardData } from '@offside/app-core/shareCard';
+import { useSnapshot } from 'valtio';
+import {
+  CARD_H,
+  CARD_W,
+  shareCardData,
+  shareCardKey,
+  type ShareCardData,
+} from '@offside/app-core/shareCard';
 import type { LegendView } from '@offside/app-core/state';
-import { rnOf, toast } from '../../game/host';
-import { legendTitleOf } from '../../store';
+import { toast } from '../../game/host';
+import { pickedTitles, rnResults } from '../../store';
 import { Btn } from '../../ui/Btn';
 import { Card } from '../../ui/Card';
 import { Txt } from '../../ui/Txt';
@@ -22,7 +33,18 @@ const frame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
 
 export function ShareImageCard({ v }: { v: LegendView }) {
   const h = v.own!;
-  const [shot, setShot] = useState<string | null>(null);
+  const [shot, setShot] = useState<{ uri: string; key: string } | null>(null);
+  // 대표 칭호·결번(이번 접속 값)이 바뀌면 다시 그린다 — 스냅숏을 읽어 구독한다.
+  const rs = useSnapshot(rnResults);
+  const pk = useSnapshot(pickedTitles);
+  const rnNow = h.id && h.id in rs ? rs[h.id] : v.rn;
+  const titleNow = retiredTitleOf(h.id ?? '', h.title, pk);
+  // 결번은 rnOf(host)와 같은 규칙: 이번 접속에서 받은 값이 먼저, 없으면 저장된 값.
+  const data = useMemo(
+    () => shareCardData({ ...v, rn: rnNow as LegendView['rn'] }, titleNow),
+    [v, rnNow, titleNow],
+  );
+  const stale = !!shot && shot.key !== shareCardKey(data);
   const [busy, setBusy] = useState(false);
   /** 찍는 동안만 화면 밖에 그리는 카드. */
   const [card, setCard] = useState<ShareCardData | null>(null);
@@ -33,10 +55,6 @@ export function ShareImageCard({ v }: { v: LegendView }) {
     if (busy) return;
     setBusy(true);
     try {
-      const data = shareCardData(
-        { ...v, rn: rnOf(h.id!, v.rn) },
-        legendTitleOf(h.id ?? '', h.title),
-      );
       const ready = new Promise<void>((r) => (laidOut.current = r));
       setCard(data);
       await Promise.race([ready, new Promise<void>((r) => setTimeout(r, 3000))]);
@@ -49,7 +67,7 @@ export function ShareImageCard({ v }: { v: LegendView }) {
         width: CARD_W,
         height: CARD_H,
       });
-      setShot(uri);
+      setShot({ uri, key: shareCardKey(data) });
     } catch {
       toast(L.imageFailed);
     } finally {
@@ -59,11 +77,15 @@ export function ShareImageCard({ v }: { v: LegendView }) {
     }
   }
 
-  async function send(dialogTitle: string) {
+  async function send() {
     if (!shot) return;
     try {
       if (!(await Sharing.isAvailableAsync())) return toast(L.imageCannotShare);
-      await Sharing.shareAsync(shot, { mimeType: 'image/png', UTI: 'public.png', dialogTitle });
+      await Sharing.shareAsync(shot.uri, {
+        mimeType: 'image/png',
+        UTI: 'public.png',
+        dialogTitle: L.imageShareDialog,
+      });
     } catch {
       // 공유 시트를 닫은 건 실패가 아니다. 시트를 못 열었을 때만 안내한다.
       toast(L.imageShareFailed);
@@ -81,39 +103,50 @@ export function ShareImageCard({ v }: { v: LegendView }) {
       {shot ? (
         <>
           <Image
-            source={{ uri: shot }}
+            source={{ uri: shot.uri }}
             testID="share-image-preview"
             accessibilityLabel={L.imageAlt({ name: h.name })}
-            style={{ width: '100%', aspectRatio: CARD_W / CARD_H, borderRadius: 12 }}
+            style={{ width: '100%', aspectRatio: CARD_W / CARD_H, borderRadius: RADIUS.md }}
           />
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Btn
-              style={{ flex: 1 }}
-              testID="share-image-save"
-              onPress={() => void send(L.imageSave)}
-            >
-              {L.imageSave}
-            </Btn>
-            <Btn
-              kind="primary"
-              style={{ flex: 1 }}
-              testID="share-image-send"
-              onPress={() => void send(L.imageShareDialog)}
-            >
-              {L.imageSend}
-            </Btn>
-          </View>
-          {/* 대표 칭호를 바꾼 뒤 다시 그릴 때. */}
+          {stale ? (
+            <>
+              <Txt v="sm" testID="share-image-stale">
+                {L.imageStale}
+              </Txt>
+              <Btn
+                kind="primary"
+                block
+                testID="share-image-refresh"
+                disabled={busy}
+                onPress={() => void make()}
+              >
+                {busy ? L.imageMaking : L.imageRefresh}
+              </Btn>
+            </>
+          ) : null}
           <Btn
-            sm
-            kind="ghost"
+            kind={stale ? undefined : 'primary'}
             block
-            testID="share-image-remake"
-            disabled={busy}
-            onPress={() => void make()}
+            testID="share-image-send"
+            onPress={() => void send()}
           >
-            {busy ? L.imageMaking : L.imageRemake}
+            {L.imageShareOrSave}
           </Btn>
+          <Txt v="xs" tone="muted">
+            {L.imageSheetNote}
+          </Txt>
+          {stale ? null : (
+            <Btn
+              sm
+              kind="ghost"
+              block
+              testID="share-image-remake"
+              disabled={busy}
+              onPress={() => void make()}
+            >
+              {busy ? L.imageMaking : L.imageRemake}
+            </Btn>
+          )}
         </>
       ) : (
         <>

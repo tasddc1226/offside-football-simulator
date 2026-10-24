@@ -155,7 +155,12 @@ describe('게임 특성화 (T-11-044)', { timeout: 20_000 }, () => {
           name,
           digest(
             leaguePhases.map((s) => v(clone(s))),
-            simBlock,
+            // T-11-379 평점 구성(parts) · T-11-390 결정적 장면(moment)은 설명용으로 더한 값이라 빼고 본다 — 결과 · 상태는 그 전과 같아야 한다.
+            (s) => {
+              const r = simBlock(s);
+              delete r.moment;
+              return { ...r, games: r.games.map(({ parts: _, ...g }) => g) };
+            },
           ),
         ]),
       ),

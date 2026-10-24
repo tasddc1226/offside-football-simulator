@@ -43,6 +43,6 @@
 <style>
 .market-head { position: relative; display: flex; flex-direction: column; gap: 14px; }
 .market-head h2 { padding-right: 40px; word-break: keep-all; }
-.market-x { position: absolute; top: -6px; right: -4px; width: 44px; height: 44px; border-radius: 999px; border: 0; background: var(--surface-2); color: var(--muted); font-size: 1.375rem; line-height: 1; }
-.destination { color: var(--ink); font-size: .8125rem; line-height: 1.5; }
+.market-x { position: absolute; top: -6px; right: -4px; width: 44px; height: 44px; border-radius: var(--radius-pill); border: 0; background: var(--surface-2); color: var(--muted); font-size: var(--fs-title2); line-height: 1; }
+.destination { color: var(--ink); font-size: var(--fs-label); line-height: 1.5; }
 </style>

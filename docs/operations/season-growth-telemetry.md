@@ -14,14 +14,15 @@ T-11-207부터 `season_telemetry`에 업로드마다 한 줄 덧붙는다. `grow
 그 전(2026-10-02 ~ T-11-207 배포)에 올라온 시즌은 `career_seasons.growth_json`에 있다. 새 시즌은 이 열을 비워 두고, 남은
 값은 아래 T-11-100 보관이 옮긴다.
 
-| 키        | 내용                                                                                               |
-| --------- | -------------------------------------------------------------------------------------------------- |
-| `v`       | 형식 버전(1). 세부 능력치 키 순서가 바뀌면 올린다.                                                 |
-| `o0`      | 시즌 시작 OVR. 첫 시즌은 선수를 만든 직후 OVR이다(= 시작 지점).                                    |
-| `ph`      | 구간(프리시즌·전반기·후반기)에 들어갈 때마다의 OVR. 시즌 끝 OVR은 `career_seasons.ovr`.            |
-| `a0`·`a1` | 시즌 시작·끝 능력치 6개 — `pac, sho, pas, dri, def, phy` 순서.                                     |
-| `s0`·`s1` | 시즌 시작·끝 세부 능력치 — `SUB_KEYS`(`packages/game/src/attributes.ts`) 순서, 34개.               |
-| `pot`     | `s` 스카우트 평가, `b` 잠재력 보너스, `bl` 숨은 성장분, `r` 재평가 횟수. 실제 잠재력 = s + b + bl. |
+| 키        | 내용                                                                                                                                                                                                                                                                                                           |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `v`       | 형식 버전(1). 세부 능력치 키 순서가 바뀌면 올린다.                                                                                                                                                                                                                                                             |
+| `o0`      | 시즌 시작 OVR. 첫 시즌은 선수를 만든 직후 OVR이다(= 시작 지점).                                                                                                                                                                                                                                                |
+| `ph`      | 구간(프리시즌·전반기·후반기)에 들어갈 때마다의 OVR. 시즌 끝 OVR은 `career_seasons.ovr`.                                                                                                                                                                                                                        |
+| `a0`·`a1` | 시즌 시작·끝 능력치 6개 — `pac, sho, pas, dri, def, phy` 순서.                                                                                                                                                                                                                                                 |
+| `s0`·`s1` | 시즌 시작·끝 세부 능력치 — `SUB_KEYS`(`packages/game/src/attributes.ts`) 순서, 34개.                                                                                                                                                                                                                           |
+| `pot`     | `s` 스카우트 평가, `b` 잠재력 보너스, `bl` 숨은 성장분, `r` 재평가 횟수. 실제 잠재력 = s + b + bl.                                                                                                                                                                                                             |
+| `km`      | T-11-394 결정적 장면 기록(있을 때만). 장면마다 `ph` 구간(1 전반기 · 2 후반기), `at` 자리(`l` 리그 · `f` 결승), `sit` 장면(`CAREER_SITUATIONS` 키), `c` 고른 선택지 id · `auto`(맡기기) · `to`(시간 초과), `b` 맡겼을 때 성공 확률(%), `p` 이번에 쓴 확률(%), `ok` 성공. 화면을 닫아 고르지 못한 장면은 빠진다. |
 
 `SUB_KEYS`는 맨 뒤에만 더한다(순서 고정 테스트가 `attributes.test.ts`에 있다). 순서를 바꾸거나 빼야 하면 `v`를 올리고 위
 표와 테스트를 함께 고친다.
@@ -90,4 +91,10 @@ WHERE t.age = 18 AND json_extract(t.growth_json, '$.o0') IS NOT NULL AND c.hidde
 SELECT t.age, count(*) n, round(avg(t.ovr - json_extract(t.growth_json, '$.o0')), 2) gain
 FROM season_telemetry t JOIN careers c ON c.id = t.career_id
 WHERE t.growth_json IS NOT NULL AND c.hidden = 0 GROUP BY t.age ORDER BY t.age;
+
+-- T-11-394 결정적 장면: 장면 · 선택지별 횟수와 성공률(맡김 auto · 시간 초과 to 포함, 최근 2일)
+SELECT json_extract(k.value, '$.sit') sit, json_extract(k.value, '$.c') c, count(*) n,
+  round(avg(json_extract(k.value, '$.ok')), 3) ok, round(avg(json_extract(k.value, '$.p')), 1) p
+FROM season_telemetry t, json_each(t.growth_json, '$.km') k
+WHERE t.growth_json IS NOT NULL GROUP BY sit, c ORDER BY sit, n DESC;
 ```

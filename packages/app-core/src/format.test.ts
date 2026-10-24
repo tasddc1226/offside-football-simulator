@@ -20,9 +20,16 @@ import {
   priceDiff,
   releaseLock,
   sellable,
+  sellCandidates,
   sellNote,
+  marketDetailFilters,
+  marketFiltered,
+  marketTypeFilters,
+  pickMarketFilter,
 } from './market.js';
 import { chartModel, marketIndex, ratioPct } from './marketChart.js';
+import { MARKET_TYPES } from '@offside/contracts/market-value';
+import { TYPES } from '@offside/game/data';
 
 describe('withRo', () => {
   it('받침에 맞춰 로/으로를 붙인다', () => {
@@ -65,7 +72,11 @@ describe('cardBody (T-11-211)', () => {
 describe('이적시장 줄 유형 (T-11-356)', () => {
   it('유형은 따로 돌려주고 아래 한 줄에는 레전드 점수·이적 횟수만', () => {
     expect(cardStyle({ pos: 'FW', type: 'speed' })).toBe('스피드스터');
-    expect(cardMeta({ legendScore: 1234, transfers: 2 })).toBe('레전드 1,234 · 이적 2회');
+    const c = { legendScore: 1234, transfers: 2, peak: 86, season: 1 };
+    expect(cardMeta(c)).toBe('레전드 1,234 · 이적 2회');
+    expect(cardMeta(c, 1)).toBe('레전드 1,234 · 이적 2회');
+    // T-11-425 지난 시즌 카드는 출신 시즌과 급여(최고 OVR 86 → 6)를 앞에 붙인다.
+    expect(cardMeta(c, 2)).toBe('시즌 1 · 급여 6 · 레전드 1,234 · 이적 2회');
   });
   it('유형이 없거나 모르는 id면 null', () => {
     expect(cardStyle({ pos: 'FW', type: null })).toBeNull();
@@ -80,8 +91,6 @@ describe('이적시장 표시 (T-11-080d)', () => {
     feeRate: 0.05,
     priceMin: 0.5,
     priceMax: 3,
-    listLimit: 20,
-    dailyBuys: 10,
   };
   it('카드 등급은 레전드 점수 → 최고 OVR 순으로 정한다', () => {
     expect(cardTier(1800, 78)).toBe('icon');
@@ -114,13 +123,21 @@ describe('이적시장 표시 (T-11-080d)', () => {
     ).toContain('판매 중');
     expect(releaseLock(p, new Set(['a']))).toContain('선발');
   });
+  it('T-11-474 팔기 탭은 지금 시즌 선발을 보이지 않는다', () => {
+    const players = [{ careerId: 'a' }, { careerId: 'b' }, { careerId: 'c' }] as never[];
+    expect(
+      sellCandidates(players, new Set(['b'])).map((p) => (p as { careerId: string }).careerId),
+    ).toEqual(['a', 'c']);
+    expect(sellCandidates(players, new Set())).toHaveLength(3);
+  });
   it('T-11-188 잠긴 선수는 내놓거나 방출할 수 없고, 판매 중인 선수는 잠글 수 없다', () => {
     const p = { careerId: 'a', raised: true, listing: null, cardValue: 80_000 } as never;
     const locked = { ...(p as object), locked: true } as never;
     const listed = { ...(p as object), listing: { id: 'x', price: 1 } } as never;
     expect(sellable(p)).toBe(true);
     expect(sellable(locked)).toBe(false);
-    expect(sellNote(locked, new Set())).toBe('잠김');
+    expect(sellNote(locked)).toBe('잠김');
+    expect(sellNote(p)).toBe('');
     expect(releaseLock(locked, new Set())).toBe('잠긴 선수예요');
     expect(lockToggleable(p)).toBe(true);
     expect(lockToggleable(locked)).toBe(true);
@@ -166,6 +183,47 @@ describe('시세 차트 (T-11-080f)', () => {
     expect(m.dots.map((d) => [d.x, d.t.ratio])).toEqual([[100, 700]]);
     expect([m.top, m.bottom, m.from, m.to, m.tone]).toEqual(['125%', '65%', '9/29', '10/5', 'up']);
     expect(m.base).toBeGreaterThan(m.days[1]!.y);
+    // T-11-474 면 · 거래량 막대 · 마지막 점 · 기간 변동
+    expect(m.area.endsWith('L100,100L0,100Z')).toBe(true);
+    expect(m.bars.map((b) => [b.x, b.h])).toEqual([
+      [0, 100],
+      [100, 100],
+    ]);
+    expect(m.last).toMatchObject({ x: 100, pct: '110%' });
+    expect(m.change).toBe('▲ 10%p');
+  });
+
+  it('T-11-474 시장 지수는 오늘 거래 수와 스파크 면 · 막대를 함께 준다', () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const i = marketIndex([p('2026-10-01', 1000), { ...p(today, 1050), trades: 5 }])!;
+    expect(i.lastTrades).toBe(5);
+    expect(i.spark.bars.map((b) => b.h)).toEqual([40, 100]);
+    expect(i.spark.area).not.toBe('');
+    expect(i.spark.last?.x).toBe(100);
+  });
+});
+
+describe('이적시장 세부 필터 (T-11-474)', () => {
+  it('세부 포지션 · 유형은 포지션군을 고른 뒤에만, 포지션군을 바꾸면 풀린다', () => {
+    expect(marketDetailFilters(undefined)).toEqual([]);
+    expect(marketDetailFilters('GK')).toEqual([]);
+    expect(marketDetailFilters('FW')).toContain('LW');
+    expect(marketTypeFilters('MF').map(([id]) => id)).toEqual(['maker', 'b2b', 'winger']);
+    expect(marketTypeFilters('FW')[1]).toEqual(['speed', '스피드스터']);
+    const f = pickMarketFilter({ pos: 'FW' }, { dpos: 'LW' });
+    expect(pickMarketFilter(f, { type: 'speed' })).toEqual({
+      pos: 'FW',
+      dpos: 'LW',
+      type: 'speed',
+    });
+    expect(pickMarketFilter(f, { pos: 'MF' })).toEqual({ pos: 'MF' });
+    expect(pickMarketFilter(f, { pos: 'FW' })).toEqual(f);
+    expect(marketFiltered({})).toBe(false);
+  });
+
+  it('필터 유형 id는 게임 유형 목록과 같다', () => {
+    for (const pos of ['FW', 'MF', 'DF', 'GK'] as const)
+      expect(MARKET_TYPES[pos]).toEqual(TYPES[pos].map((t) => t.id));
   });
 });
 

@@ -117,9 +117,13 @@ const ko = {
   newTitle: '새 칭호',
   progress: (p: { value: number; target: number }) => `${p.value}/${p.target}`,
   // 칭호 — 컵 성적. n은 대회 회차.
-  titleChampion: (p: { n: number }) => `제${p.n}회 챔피언`,
-  titleRunnerup: (p: { n: number }) => `제${p.n}회 준우승`,
-  titleSf: (p: { n: number }) => `제${p.n}회 4강`,
+  // T-11-410 d = 구간 이름(구간 대회 칭호만).
+  titleChampion: (p: { n: number; d?: string | undefined }) =>
+    `제${p.n}회${p.d ? ` ${p.d}` : ''} 챔피언`,
+  titleLeagueChampion: (p: { n: number }) => `시즌 ${p.n} 리그 챔피언`,
+  titleRunnerup: (p: { n: number; d?: string | undefined }) =>
+    `제${p.n}회${p.d ? ` ${p.d}` : ''} 준우승`,
+  titleSf: (p: { n: number; d?: string | undefined }) => `제${p.n}회${p.d ? ` ${p.d}` : ''} 4강`,
   titleAria: (p: { title: string }) => `대표 칭호 ${p.title}`,
   // 프로필
   open: '구단주 프로필',

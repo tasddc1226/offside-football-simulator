@@ -10,12 +10,14 @@ import type {
   RetiredNumberResult,
 } from '@offside/contracts';
 import type { PeakProfile } from '@offside/contracts/positions';
+import type { MomentLog } from './moments.js';
 import type { CareerBalance } from './balance.js';
 import type { CareerClubStrength } from './clubStrength.js';
 import type { AttrKey, Pos, Club, SAVE_VERSION, DetailPos } from './data.js';
 import type { SeasonEndResult } from './season.js';
 import type { MgKind } from './minigame.js';
 import type { TableRow } from './table.js';
+import type { EraState } from './era.js';
 
 export interface RngSaveState {
   seed: number;
@@ -355,6 +357,11 @@ export interface GameState {
   /** T-10-008. 선수 생성 때 고른 주력 능력치. 옛 저장본엔 없다 — engine.focusOf()로 읽는다. */
   focus?: AttrKey[];
   trait: string;
+  /**
+   * T-11-428 성장 특성 커브 버전. 2면 대기만성 · 조기 성장 나이 커브를 다듬은 값(training.ageGrowth · season.nextYear).
+   * 만들 때 정해져 바뀌지 않는다. 없으면 예전 커브 — 그 전에 만든 선수는 고른 특성 그대로 끝까지 간다.
+   */
+  gcv?: number | undefined;
   age: number;
   year: number;
   attrs: Record<AttrKey, number>;
@@ -411,12 +418,17 @@ export interface GameState {
   /** T-10-077. 커리어 내내 센 플레이 성향(playStyle.ts). 기능이 나오기 전에 시작한 저장엔 처음 선택 때 생긴다. */
   style?: PlayStyle | undefined;
   rng: RngSaveState;
+  /** T-11-475 시대의 라이벌(era.ts). 라이벌이 나타나기 전 · 옛 세이브엔 없다. */
+  era?: EraState | undefined;
   /** T-9-009. 이번 시즌 버퍼링된 선택 로그(`ft_save`와 함께 자동 저장). 시즌 종료 시 업로드 페이로드로
    * 옮겨지고 비워진다. 최대 300개, 넘치면 가장 오래된 것부터 버린다. */
   evBuf?: EventLogEntry[];
   /** T-11-048. 이번 시즌 구간(프리시즌·전반기·후반기)에 들어갈 때의 OVR. 시즌 종료 업로드(`takeSeasonGrowth`)가
    * 옮겨 가고 비운다. 관찰용 기록이라 게임 진행에는 쓰이지 않고 RNG도 쓰지 않는다. */
   ovrBuf?: number[];
+  /** T-11-394. 이번 시즌 결정적 장면 기록(moments.ts MomentLog). 화면이 장면을 고를 때마다 남기고 시즌 종료 업로드
+   * (`takeSeasonGrowth`)가 옮겨 가고 비운다. 관찰용이라 게임 진행에는 쓰이지 않는다. */
+  momentBuf?: MomentLog[];
 }
 
 export interface HofEntry {
@@ -434,7 +446,15 @@ export interface HofEntry {
   /** T-11-030 은퇴 때 기록한 실제 잠재력(반올림). 리포트·기록실·서버 관찰에 쓰며 옛 기록엔 없다. */
   pot?: number | undefined;
   /** T-11-141 은퇴 리포트 '잠재력이 바뀐 과정'의 재료(시작 시드·잠재력, 강화, 밸런스 버전). 옛 기록엔 없다. */
-  potFlow?: { origin?: { seed: number; pot: number }; boost: number; bal: number } | undefined;
+  potFlow?:
+    | {
+        origin?: { seed: number; pot: number };
+        boost: number;
+        /** T-11-408 boost 중 잠재력 강화 성공 단계(나머지는 이벤트). 기능 전 은퇴 기록엔 없다. */
+        lv?: number;
+        bal: number;
+      }
+    | undefined;
   age: number;
   apps: number;
   goals: number;

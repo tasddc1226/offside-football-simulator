@@ -1,0 +1,21 @@
+{
+  "id": "t-11-476-intl-no-rematch",
+  "title": "국제대회 대진 수정",
+  "items": [
+    "아시안게임 · 아시안컵 · 월드컵 · 올림픽에서 한 대회에 이미 만난 나라를 토너먼트에서 다시 만나지 않아요"
+  ],
+  "en": {
+    "title": "International tournament draw fix",
+    "items": [
+      "At the Asian Games, continental cups, World Cup, and Olympics, you no longer face the same country twice in one tournament."
+    ]
+  },
+  "ja": {
+    "title": "国際大会の組み合わせ修正",
+    "items": [
+      "アジア競技大会・大陸カップ・ワールドカップ・オリンピックで、同じ大会ですでに対戦した国とトーナメントで再び当たらなくなりました。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

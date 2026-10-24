@@ -1,4 +1,5 @@
 // 능력치 카드(웹 AttrCard.svelte): 레이더 · 범례 · 포지션별 OVR · 세부 능력치 목록(2단, T-11-353 OVR 반영 %) · 안내 · 성장이 느린 이유.
+import { FONT } from '@offside/app-core/design-tokens';
 import { Text, View, useWindowDimensions } from 'react-native';
 import { attrData } from '@offside/app-core/format';
 import { gameAttrText as L } from '@offside/app-core/i18n/ko/gameAttr';
@@ -12,6 +13,8 @@ import { Card } from '../../ui/Card';
 import { Pill } from '../../ui/bits';
 import { Txt } from '../../ui/Txt';
 import { Radar } from './Radar';
+import { growthDirectionText } from '@offside/app-core/ratingReport';
+import { ratingReportText as R } from '@offside/app-core/i18n/ko/ratingReport';
 
 type Data = ReturnType<typeof attrData>;
 
@@ -50,18 +53,18 @@ function Group({ g }: { g: Data['groups'][number] }) {
           borderBottomColor: c.line,
         }}
       >
-        <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>
+        <Txt style={{ fontSize: rem(FONT.body2), fontWeight: '700' }}>
           <Txt
             tone="muted"
             style={{
               fontFamily: DISPLAY[400],
-              fontSize: rem(0.75),
+              fontSize: rem(FONT.caption),
               letterSpacing: rem(0.75) * 0.08,
             }}
           >{`${g.abbr}  `}</Txt>
           {g.labelKr}
           {g.ovrPct ? (
-            <Txt tone="muted" style={{ fontSize: rem(0.6875), fontWeight: '400' }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.caption2), fontWeight: '400' }}>
               {`  ${L.shareLabel({ pct: g.ovrPct })}`}
             </Txt>
           ) : null}
@@ -69,7 +72,11 @@ function Group({ g }: { g: Data['groups'][number] }) {
         <Txt
           style={[
             num(700),
-            { fontSize: rem(1.375), lineHeight: rem(1.375), color: tierColor(c, g.tier) },
+            {
+              fontSize: rem(FONT.title2),
+              lineHeight: rem(FONT.title2),
+              color: tierColor(c, g.tier),
+            },
           ]}
         >
           {g.value}
@@ -88,15 +95,19 @@ function Group({ g }: { g: Data['groups'][number] }) {
         >
           <Txt
             tone={row.bold ? 'ink' : 'muted'}
-            style={{ flexShrink: 1, fontSize: rem(0.8125), fontWeight: row.bold ? '600' : '400' }}
+            style={{
+              flexShrink: 1,
+              fontSize: rem(FONT.label),
+              fontWeight: row.bold ? '600' : '400',
+            }}
           >
             {row.name}
           </Txt>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
             {row.ovrPct ? (
-              <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>{`${row.ovrPct}%`}</Txt>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>{`${row.ovrPct}%`}</Txt>
             ) : null}
-            <Txt style={[num(700), { fontSize: rem(1), color: tierColor(c, row.tier) }]}>
+            <Txt style={[num(700), { fontSize: rem(FONT.body), color: tierColor(c, row.tier) }]}>
               {row.value}
             </Txt>
           </View>
@@ -137,7 +148,7 @@ export function AttrCard({ s }: { s: GameState }) {
         style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}
       >
         <View style={{ width: 16, marginLeft: 8, borderTopWidth: 2, borderTopColor: c.accent }} />
-        <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
           {L.legendNow}
         </Txt>
         <View
@@ -149,7 +160,7 @@ export function AttrCard({ s }: { s: GameState }) {
             borderStyle: 'dashed',
           }}
         />
-        <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
           {L.legendPrev}
         </Txt>
       </View>
@@ -166,7 +177,7 @@ export function AttrCard({ s }: { s: GameState }) {
           borderTopColor: c.line,
         }}
       >
-        <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
           {L.roleOvr}
         </Txt>
         {d.roles.map((r) => {
@@ -177,7 +188,7 @@ export function AttrCard({ s }: { s: GameState }) {
               accessibilityLabel={`${r.title} ${r.ovr}`}
               style={{
                 fontFamily: DISPLAY[600],
-                fontSize: rem(0.8125),
+                fontSize: rem(FONT.label),
                 letterSpacing: rem(0.8125) * 0.06,
                 color,
               }}
@@ -186,7 +197,11 @@ export function AttrCard({ s }: { s: GameState }) {
               <Text
                 style={[
                   num(700),
-                  { fontSize: rem(1.125), letterSpacing: 0, color: r.on ? c.accentText : c.ink },
+                  {
+                    fontSize: rem(FONT.title3),
+                    letterSpacing: 0,
+                    color: r.on ? c.accentText : c.ink,
+                  },
                 ]}
               >
                 {r.ovr}
@@ -204,18 +219,22 @@ export function AttrCard({ s }: { s: GameState }) {
           </View>
         ))}
       </View>
-      <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-        <Txt style={{ fontSize: rem(0.75), fontWeight: '700' }}>{L.noteBold}</Txt>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
+        <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '700' }}>{L.noteBold}</Txt>
         {`${L.noteRest({ role: d.roleName })} ${L.shareNote}`}
       </Txt>
       {d.growthNote ? (
-        <Txt style={{ fontSize: rem(0.75), marginTop: 6, color: c.warn }}>
-          <Txt style={{ fontSize: rem(0.75), fontWeight: '700', color: c.warn }}>
+        <Txt style={{ fontSize: rem(FONT.caption), marginTop: 6, color: c.warn }}>
+          <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '700', color: c.warn }}>
             {L.growthTitle}
           </Txt>
           {` · ${d.growthNote}`}
         </Txt>
       ) : null}
+      <Txt style={{ fontSize: rem(FONT.caption), marginTop: 6 }} testID="growth-dir">
+        <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '700' }}>{R.dirTitle}</Txt>
+        {` · ${growthDirectionText(d.growthDir.d, d.growthDir.attr)}`}
+      </Txt>
     </Card>
   );
 }

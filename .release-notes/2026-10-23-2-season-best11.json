@@ -1,0 +1,29 @@
+{
+  "id": "t-11-463-season-best11",
+  "title": "기록실에 시즌 BEST 11이 생겼어요",
+  "items": [
+    "기록실의 BEST 11 탭에서 이번 시즌 은퇴 선수 중 포지션별 최고의 11명을 4-3-3 그라운드로 볼 수 있어요.",
+    "개인 활약 50, 팀 성과 30, 개인 수상 20으로 점수를 매기고, 한 구단주의 선수는 한 자리만 차지해요.",
+    "시즌 중에는 잠정이라 더 나은 선수가 은퇴하면 자리 주인이 바뀌어요. 시즌이 마감되면 확정돼요.",
+    "자리를 누르면 선정 이유와 그 자리 상위 10명, 자리에 오르는 데 필요한 지수를 볼 수 있어요."
+  ],
+  "en": {
+    "title": "Season Best XI is now in the Records room",
+    "items": [
+      "In the Best XI tab of the Records room, see the best 11 retired players of this season by position on a 4-3-3 pitch.",
+      "Players are scored on individual performance 50, team success 30 and individual awards 20, and one owner's players hold only one spot.",
+      "During the season the lineup is provisional, so a better retirement takes over a spot. It becomes final when the season closes.",
+      "Tap a spot to see why the player was picked, the top 10 for that spot and the index needed to get in."
+    ]
+  },
+  "ja": {
+    "title": "記録室にシーズンのベストイレブンができました",
+    "items": [
+      "記録室のベストイレブンタブで、今シーズン引退した選手からポジション別の最高の11人を4-3-3のピッチで見られます。",
+      "個人の活躍50、チーム成績30、個人賞20で点数を付け、1人のオーナーの選手は1ポジションだけを占めます。",
+      "シーズン中は暫定なので、より良い選手が引退するとポジションの主が替わります。シーズンが締め切られると確定します。",
+      "ポジションを押すと、選ばれた理由とそのポジションの上位10人、入るのに必要な指数が見られます。"
+    ]
+  },
+  "availability": "web-app"
+}

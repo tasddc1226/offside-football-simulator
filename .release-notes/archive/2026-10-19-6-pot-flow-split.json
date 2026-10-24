@@ -1,0 +1,29 @@
+{
+  "id": "t-11-408-pot-flow-split",
+  "title": "잠재력 과정 나눠 보기 · 문자중계 장면",
+  "items": [
+    "은퇴 리포트의 '잠재력이 바뀐 과정'에서 잠재력 강화와 트레이너 · 스토리 이벤트로 오른 값을 나눠 보여 줘요",
+    "25세까지의 잠재력 변동은 선택과 상관없이 무작위로 정해진다는 걸 리포트와 확률과 공정성에 적었어요",
+    "게임 가이드에 잠재력 강화 1회의 효과와 잠재력 등급 범위를 더했어요",
+    "팀 경기 문자중계에서 골 직전 장면이 득점한 선수의 자리에 맞게 나와요. 윙어는 측면 돌파, 공격수는 침투, 수비수는 세트피스로 그려요"
+  ],
+  "en": {
+    "title": "Potential breakdown in the retirement report",
+    "items": [
+      "The 'How potential changed' section of the retirement report now shows potential boosts and trainer or story events separately.",
+      "The report and Odds & Fairness now say that the potential drift until age 25 is random and not affected by your choices.",
+      "The game guide now explains what one potential boost does and the range of each potential grade.",
+      "In team match commentary, the play before a goal now matches the scorer's position: wingers go down the flank, forwards break through, and defenders score from set pieces."
+    ]
+  },
+  "ja": {
+    "title": "引退レポートのポテンシャルの内訳",
+    "items": [
+      "引退レポートの「ポテンシャルが変わった過程」で、ポテンシャル強化とトレーナー · ストーリーイベントで上がった分を分けて表示します。",
+      "25歳までのポテンシャルの変動は選択と関係なくランダムで決まることを、レポートと確率と公平性に書きました。",
+      "ゲームガイドに、ポテンシャル強化1回の効果とポテンシャル等級の範囲を追加しました。",
+      "チーム試合の文字中継で、ゴール直前の場面が得点した選手のポジションに合わせて出ます。ウイングはサイド突破、フォワードは抜け出し、ディフェンダーはセットプレーで描きます。"
+    ]
+  },
+  "availability": "web-app"
+}

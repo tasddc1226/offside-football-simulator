@@ -9,6 +9,21 @@ export const CUP_EN: Record<CupTextKey, string> = {
   predictionNotFinished: 'Only finished matches can be settled.',
   predictionClosed: 'This match has started or is not available for predictions.',
   title: 'Season {season} OFFSIDE Cup #{edition}',
+  titleDivision: 'Season {season} OFFSIDE Cup #{edition} {division}',
+  junior: 'Junior',
+  senior: 'Senior',
+  master: 'Master',
+  overCap: "Your team OVR is above this division's cap ({n}). Enter a higher division.",
+  enteredOther:
+    'You already entered another division of this cup. Withdraw that entry first to switch.',
+  ovrCap: "While you are in the OFFSIDE Cup {division}, your lineup can't go above team OVR {n}.",
+  movedTitle: 'Moved to {cup}',
+  movedUpBody:
+    'At the draw your team OVR was above the cap of the division you entered, so you moved up a division.',
+  mergedBody:
+    'Your division had fewer than {n} teams, so it plays together with the division above.',
+  adminCapOpen: "Entries are open, so the cap can't change.",
+  adminCapMaster: 'Master and single-division cups have no cap.',
   g1: 'Group matchday 1',
   g2: 'Group matchday 2',
   g3: 'Group matchday 3',
@@ -43,6 +58,8 @@ export const CUP_EN: Record<CupTextKey, string> = {
   iapPending: "The payment hasn't finished yet. You'll get it automatically once it does.",
   iapOtherAccount: 'This purchase was made on a different account. Log in with that account.',
   iapUnavailable: "We can't verify purchases right now. Reopen the app in a moment to get it.",
+  webPayUnavailable:
+    "We can't verify the payment right now. Reopen this page in a moment to get it.",
   shopClosed: "Reroll tickets aren't on sale right now.",
   shopDaily:
     'You can buy up to {n} reroll ticket(s) a day. You can buy more from 00:00 (KST) tomorrow.',
@@ -83,6 +100,8 @@ export const CUP_EN: Record<CupTextKey, string> = {
   earlyBody: 'Group draw {draw}, first match {first} (KST).',
   rewardBody: 'Final result: {stage}. You received {n} player reroll ticket(s).',
   openTitle: '{cup} registration is open',
+  openBodyDivision:
+    'Pick the division that fits your team OVR (Junior, Senior or Master). Up to {n} teams per division.',
   openBody: 'First come, first served for {n} teams. Enter from the cup banner on Home.',
   rewardBodyBoost:
     'Final result: {stage}. You received {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s).',
@@ -93,4 +112,47 @@ export const CUP_EN: Record<CupTextKey, string> = {
   grantBoost: 'The OFFSIDE team sent you {n} potential boost ticket(s).',
   grantScout: 'The OFFSIDE team sent you {n} premium scout ticket(s).',
   grantRename: 'The OFFSIDE team sent you {n} player rename ticket(s).',
+  // T-11-418b OFFSIDE League.
+  leagueDrawn: "You can't delay a league after placement.",
+  leagueLocked:
+    "You can't change your lineup from 1 hour before an OFFSIDE League match until it ends.",
+  leagueRemindTitle: 'The OFFSIDE League placement is tomorrow',
+  leagueRemindBody:
+    'You need {n} players in your Season {season} starting XI at placement to take part. You have {filled} now.',
+  leaguePlacedTitle: 'Season {season} OFFSIDE League placement',
+  leaguePlacedBody: '{team} is in Tier {tier}, League {league}. Round 1 kicks off today at {time}.',
+  leagueDroppedTitle: 'Your Season {season} OFFSIDE League entry was cancelled',
+  leagueDroppedBody:
+    'At placement, your Season {season} starting XI had fewer than {n} players. You can enter again next season.',
+  leagueLeftBody:
+    "The number of clubs didn't fit into leagues, so the {n} lowest-OVR clubs were left out. You can enter again next season.",
+  leagueCancelledTitle: "The Season {season} OFFSIDE League won't take place",
+  leagueRoundTitle: 'OFFSIDE League Round {round}: {result}',
+  leagueRoundBody: '{score} · Position {rank}',
+  leagueRoundForfeitBody:
+    '{score} · Forfeited: not enough players in your starting XI. Forfeits {n}/{limit}. {left} more and every remaining match is a 0:3 loss.',
+  leagueRest: 'Bye',
+  leagueRestBody: 'Bye this round · Position {rank}',
+  leagueEndTitle: 'Your Season {season} OFFSIDE League is over',
+  leagueEndBody: 'Tier {tier}, League {league}: finished in position {rank}.',
+  leagueChampionTitle: 'Season {season} OFFSIDE League Tier {tier}, League {league}: Champions!',
+  leagueEndBodyChampion:
+    'Tier 1 champions! You earned the Season {season} League Champion title, {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s).',
+  leagueEndBodyAll:
+    'Tier {tier}, League {league}: finished in position {rank}. You received {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s). Sign up next season to start in Tier {next}.',
+  leagueEndBodyReroll:
+    'Tier {tier}, League {league}: finished in position {rank}. You received {n} player reroll ticket(s). Sign up next season to start in Tier {next}.',
+  leagueEndBodyNext:
+    'Tier {tier}, League {league}: finished in position {rank}. Sign up next season to start in Tier {next}.',
+  leagueEndBodyForfeited:
+    'Tier {tier}, League {league}: finished in position {rank}. Too many forfeits, so there is no reward and next season starts in the bottom tier.',
+  leagueFillTitle: 'Promoted in the OFFSIDE League!',
+  leagueFillBody:
+    'A spot opened up above, so you play in Tier {tier} in Season {season}. You received {s} premium scout ticket(s).',
+  leagueForfeitedTitle: 'Your remaining OFFSIDE League matches will be forfeited',
+  leagueForfeitedBody:
+    'Your club missed {n} matches. All remaining matches will be recorded as 0:3 losses.',
+  best11RewardTitle: 'You made the Season {season} BEST 11',
+  best11RewardBody:
+    '{name} is confirmed in the Season {season} BEST 11. You received {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s).',
 };

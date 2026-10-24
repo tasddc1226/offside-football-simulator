@@ -1,10 +1,12 @@
 // T-10-092 라이브 랭킹(팀 랭킹, 웹 team/TeamRanking.svelte) — 기록실 탭. 선수가 한 명 이상 있는 구단주 팀을 시즌별로
 // 레이팅(경기 결과) 또는 팀 OVR 순으로 보여 주고, 줄을 누르면 팀 프로필(appState.hof.team)을 연다. 서버가 5분마다 새로 센다.
-import { useEffect, useState } from 'react';
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { TEAM_RANK_PER_PAGE } from '@offside/contracts/owner-team';
 import {
+  fetchMyTeamRank,
   fetchTeamRanking,
   type TeamRankResponse,
   type TeamRankSort,
@@ -12,14 +14,19 @@ import {
 import { num as n } from '@offside/app-core/teamText';
 import { fmtValue } from '@offside/app-core/format';
 import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
-import { appState } from '../../../store';
+import { accountCache, appState, prefs } from '../../../store';
+import { isMember } from '@offside/app-core/account';
+import { canJumpToMyRank, myRankJump } from '@offside/app-core/myRank';
+import { toast } from '../../../game/host';
+import { alpha } from '../../../theme/colors';
 import OwnerProfile from '../owner/OwnerProfile';
 import { rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
 import { Btn } from '../../../ui/Btn';
 import { Card } from '../../../ui/Card';
+import { Skeleton } from '../../../ui/Skeleton';
 import { Press } from '../../../ui/Press';
-import { scrollTo } from '../../../ui/scroll';
+import { scrollTo, scrollToView } from '../../../ui/scroll';
 import { Txt } from '../../../ui/Txt';
 import { displaySeasonAt, openTeamSeasons } from '@offside/contracts/service-seasons';
 import { RecordsSelect, RecordsChips } from '../RecordsControls';
@@ -79,10 +86,35 @@ export default function TeamRanking() {
   /** 다시 받을 기준 — 고른 시즌, 아니면 지금 시즌(띄운 채 개막을 넘기면 바뀐다). */
   const shownSeason = season ?? displaySeasonAt(now);
 
+  // T-11-441 '내 순위로' — 로그인한 구단주만, 가치순은 빼고. 누르면 내 팀이 있는 페이지로 가고 그 줄을 강조한다.
+  const acct = useSnapshot(accountCache).value;
+  // 로그인 상태를 아직 묻지 않았으면 버튼을 두고, 누를 때 서버가 판정한다(따로 묻지 않는다).
+  const member = acct === undefined || (!!acct && acct !== 'error' && isMember(acct));
+  const [myTeam, setMyTeam] = useState<string | null>(null);
+  const [jumping, setJumping] = useState(false);
+  /** 내 순위 응답이 곧 그 페이지다 — 페이지를 옮겨도 다시 받지 않게 한 번 넘겨 둔다. */
+  const preset = useRef<TeamRankResponse | null>(null);
+  const mineRow = useRef<View>(null);
+  const scrollMine = useRef(false);
+  async function jumpToMe() {
+    setJumping(true);
+    const j = myRankJump(await fetchMyTeamRank(season, sort), 'team');
+    setJumping(false);
+    if (!j.ok) return toast(j.message);
+    setMyTeam(j.data.me?.teamId ?? null);
+    if (j.data.page !== page) preset.current = j.data;
+    scrollMine.current = true;
+    setData(j.data);
+    setPage(j.data.page);
+  }
+
   const { tick, track, pulled } = useRefresh();
   useEffect(() => {
     // 팀 프로필을 연 채 당기면 가려진 목록은 다시 받지 않는다(프로필이 따로 받는다).
     if (pulled && snap.hof.team) return;
+    const p0 = preset.current;
+    preset.current = null;
+    if (p0 && p0.page === page && p0.sort === sort && !pulled) return;
     setFailed(false);
     if (!pulled) setLoading(true);
     let live = true; // 더 늦게 고른 조건의 응답만 쓴다.
@@ -119,7 +151,7 @@ export default function TeamRanking() {
     );
 
   const empty = (text: string) => (
-    <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
+    <Txt tone="muted" style={{ fontSize: rem(FONT.body2), paddingVertical: 8 }}>
       {text}
     </Txt>
   );
@@ -159,19 +191,20 @@ export default function TeamRanking() {
           setPage(1);
         }}
       />
+      {canJumpToMyRank(member, sort) ? (
+        <View style={{ flexDirection: 'row', marginTop: 8 }}>
+          <Btn sm testID="rank-my" disabled={jumping} onPress={() => void jumpToMe()}>
+            {L.myRank}
+          </Btn>
+        </View>
+      ) : null}
       <Txt tone="muted" style={{ fontSize: 12, marginVertical: 8 }}>
         {L.formGuide}
       </Txt>
       {failed ? (
         empty(L.rankFail)
       ) : loading || !data ? (
-        <Txt
-          tone="muted"
-          accessibilityLiveRegion="polite"
-          style={{ fontSize: rem(0.875), paddingVertical: 8 }}
-        >
-          {L.loading}
-        </Txt>
+        <Skeleton rows={6} />
       ) : data.items.length ? (
         <>
           <View
@@ -206,6 +239,7 @@ export default function TeamRanking() {
               key={t.teamId}
               scale={1}
               testID={`rank-team-${t.teamId}`}
+              accessibilityState={t.teamId === myTeam ? { selected: true } : undefined}
               onPress={() => open(t.teamId)}
               accessibilityLabel={L.teamRowAria({
                 rank: t.rank,
@@ -227,9 +261,24 @@ export default function TeamRanking() {
                 borderBottomWidth: 1,
                 borderBottomColor: c.line,
                 gap: 6,
+                ...(t.teamId === myTeam
+                  ? { backgroundColor: alpha(c.accent, 0.12), borderRadius: RADIUS.sm }
+                  : null),
               }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View
+                ref={t.teamId === myTeam ? mineRow : undefined}
+                onLayout={
+                  t.teamId === myTeam
+                    ? () => {
+                        if (!scrollMine.current) return;
+                        scrollMine.current = false;
+                        scrollToView(mineRow.current, prefs.motionOK);
+                      }
+                    : undefined
+                }
+                style={{ flexDirection: 'row', alignItems: 'center' }}
+              >
                 <View
                   style={{
                     flex: 1,
@@ -285,7 +334,7 @@ export default function TeamRanking() {
                         style={{
                           width: 18,
                           height: 18,
-                          borderRadius: 9,
+                          borderRadius: RADIUS.sm,
                           borderWidth: 1,
                           borderColor: result ? color : c.line,
                           alignItems: 'center',
@@ -335,7 +384,7 @@ export default function TeamRanking() {
       ) : (
         empty(L.teamsEmpty)
       )}
-      <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: 10 }}>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 10 }}>
         {sort === 'value' ? L.valueFoot : L.teamsFoot}
       </Txt>
     </Card>

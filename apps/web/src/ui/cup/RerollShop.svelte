@@ -2,11 +2,15 @@
   // T-11-152 리롤권 상점(구단주 화면). 구단 자금으로 선수 후보 리롤권을 산다. 접힌 카드에는 가진 장수만 보이고(후보 화면과
   // 같은 30초 메모), 상점 값은 펼칠 때만 묻는다. 사면 서버가 돌려준 상점 값으로 바꾸고 onbought로 구단주 화면의 자금 줄을
   // 새 잔액으로 고친다(다시 묻지 않는다). focus면(후보 화면 '리롤권 상점 가기') 펼친 채로 열고 카드로 내려간다.
+  // T-11-471 펼치면 앱 스토어 묶음 자리에 웹 결제 묶음(웹 결제가 열린 구단주만)을 보인다.
   import { buyReroll, fetchItems, fetchRerollShop, type RerollShopResponse } from '@offside/app-core/api/cup';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
   import { fundsText } from '@offside/app-core/market';
-  import { rerollShopState } from '@offside/app-core/rerollShop';
+  import { rerollShopState, shopShortText } from '@offside/app-core/rerollShop';
+  import Skeleton from '../Skeleton.svelte';
+  import FundsShort from './FundsShort.svelte';
   import { toast } from '../helpers.js';
+  import WebPayPacks from './WebPayPacks.svelte';
 
   let { onbought, focus = false }: { onbought?: (balance: number, spent: number) => void; focus?: boolean } = $props();
 
@@ -90,14 +94,15 @@
         <p class="muted fs-sm" data-reroll-soldout>{L.shopSoldOut}</p>
       {:else}
         <p class="rs-price" data-reroll-price>{L.shopPrice({ price: fundsText(shop.price!) })}</p>
-        {#if view === 'short'}<p class="muted fs-sm">{L.shopShort}</p>{/if}
+        {#if view === 'short'}<FundsShort text={shopShortText(shop.balance, shop.price)} />{/if}
         <button class="btn btn-primary btn-block" data-act="reroll-buy" disabled={busy || view === 'short'} onclick={buy}>
           {busy ? L.shopBusy : L.shopBuy({ price: fundsText(shop.price!) })}
         </button>
       {/if}
       <p class="muted fs-sm">{L.shopNote}</p>
+      <WebPayPacks item="reroll" />
     {:else}
-      <p class="muted fs-sm">{failed ? L.shopLoadFail : '…'}</p>
+      {#if failed}<p class="muted fs-sm">{L.shopLoadFail}</p>{:else}<Skeleton height={96} />{/if}
     {/if}
   {/if}
 </section>
@@ -123,7 +128,7 @@
   }
   .rs-head .tap-cover.open {
     inset: -18px -18px -5px;
-    border-radius: 16px 16px 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
   .rs-go {
     transform: rotate(90deg);
@@ -156,15 +161,15 @@
   }
   .rs-facts li {
     padding: 6px 10px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     font-variant-numeric: tabular-nums;
   }
   .rs-price {
     margin: 0;
     font-family: var(--display);
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
   }

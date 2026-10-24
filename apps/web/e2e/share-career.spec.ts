@@ -193,3 +193,116 @@ test('은퇴 기록이 아직 서버에 없으면 연결 오류가 아니라 "�
   ).toBeVisible();
   await expect(page.locator('.share-url')).toHaveCount(0);
 });
+
+test('T-11-433 은퇴 업로드가 대기 중이면 상태 줄과 다시 올리기를 보여 주고, 누르면 올라간다', async ({
+  page,
+}) => {
+  const uploaded = await stubApi(page, { google: true });
+  let down = true;
+  const puts: string[] = [];
+  await page.route(/\/v1\/careers\/[^/]+\/retirement$/, async (r) => {
+    puts.push(r.request().url());
+    if (down)
+      return r.fulfill({
+        status: 503,
+        json: { error: { code: 'SERVICE_UNAVAILABLE', message: '점검 중', retryable: true } },
+      });
+    return r.fallback();
+  });
+  await retireNow(page);
+  const status = page.locator('[data-share="bar"] .upload-status');
+  await expect(status).toHaveAttribute('data-upload', 'pending');
+  await expect(status).toContainText('서버 반영 대기 중이에요.');
+  const tries = puts.length;
+  // 폴링하지 않는다: 버튼을 누르기 전에는 다시 보내지 않는다.
+  await page.waitForTimeout(1500);
+  expect(puts.length).toBe(tries);
+
+  down = false;
+  await status.locator('[data-act="upload-retry"]').click();
+  await expect(page.getByText('기록을 서버에 올렸어요.')).toBeVisible();
+  await expect(status).toHaveCount(0);
+  expect(uploaded.size).toBe(1);
+});
+
+test('T-11-433 서버가 은퇴 기록을 거절하면 이유를 보여 주고, 공유 링크도 잠시 후 대신 이유를 말한다', async ({
+  page,
+}) => {
+  await stubApi(page, { google: true });
+  await page.route(/\/v1\/careers\/[^/]+\/retirement$/, (r) =>
+    r.fulfill({
+      status: 400,
+      json: {
+        error: {
+          code: 'VALIDATION_FAILED',
+          message: '시즌 기록이 있어야 은퇴를 기록할 수 있어요.',
+          retryable: false,
+          details: { reason: 'NO_SEASONS' },
+        },
+      },
+    }),
+  );
+  await retireNow(page);
+  const status = page.locator('[data-share="bar"] .upload-status');
+  await expect(status).toHaveAttribute('data-upload', 'rejected');
+  await expect(status).toContainText(
+    '서버에 올리지 못했어요. 시즌 기록이 서버에 없어서 은퇴 기록을 받지 않았어요.',
+  );
+  await expect(status.locator('[data-act="upload-retry"]')).toHaveCount(0);
+  await page.locator('[data-act="share-career"]').click();
+  await expect(
+    page.getByText('서버에 올리지 못한 기록이라 링크를 만들 수 없어요.', { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByText('잠시 후 다시 시도해 주세요.')).toHaveCount(0);
+  await expect(page.locator('.share-url')).toHaveCount(0);
+});
+
+test('T-11-439 공유받은 화면은 맨 위에도 시작 버튼이 있고, 공개된 이름은 맨 아래에서 신고할 수 있다', async ({
+  page,
+}) => {
+  const ID = '0d000000-0000-4000-8000-0000000004b8';
+  const calls: string[] = [];
+  page.on('request', (r) => {
+    if (/\/v1\/(reports|profile)/.test(r.url())) calls.push(`${r.method()} ${r.url()}`);
+  });
+  await page.route(new RegExp(`/v1/hof/${ID}$`), (r) =>
+    r.fulfill(
+      json({
+        data: {
+          entry: {
+            id: ID,
+            name: '공유왕',
+            pos: 'FW',
+            number: 9,
+            retireAge: 34,
+            peak: 86,
+            legendScore: 500,
+            apps: 300,
+            goals: 150,
+            assists: 70,
+            trophies: 3,
+            awards: 1,
+            caps: 0,
+            ballon: 0,
+            lastClub: '맨체스터 스카이블루',
+            retiredAt: '2026-09-26T00:00:00.000Z',
+            hasDetail: false,
+            title: null,
+          },
+          snapshot: null,
+        },
+      }),
+    ),
+  );
+  await page.goto(`/career/${ID}`);
+  await expect(page.locator('[data-shared="view"]')).toBeVisible();
+  const top = page.locator('[data-act="shared-start-top"]');
+  await expect(top).toBeInViewport();
+  await expect(top).toHaveText('나도 커리어 시작하기 →');
+  const report = page.locator('[data-act="name-report"]');
+  await expect(report).toHaveText('선수 이름 신고');
+  // 신고 버튼이 있어도 누르기 전에는 프로필 · 신고 API를 부르지 않는다.
+  expect(calls).toEqual([]);
+  await top.click();
+  await expect(page).toHaveURL(/\/$/);
+});

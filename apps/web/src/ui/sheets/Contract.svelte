@@ -1,12 +1,16 @@
 <script lang="ts">
   import { tn } from '@offside/game/i18n/names';
   // T-11-039 계약서 사인 — 이적시장에서 고른 구단과의 계약. 손가락·마우스로 사인하거나 '이름 사인 사용'으로 선수 이름을
-  // 흘려 쓴 사인을 넣으면 확정 버튼이 켜진다. 누르면 도장이 찍히고 onSign. 사인은 화면 연출이라 저장하지 않는다.
+  // 흘려 쓴 사인을 넣으면 확정 버튼이 켜진다. 누르면 도장이 찍히고 onSign. 사인은 세이브에 넣지 않고, 홈 카드에서 다시 그리도록
+  // 이 기기에 마지막 하나만 남긴다(T-11-412).
   import { onMount } from 'svelte';
   import ClubBadge from '../ClubBadge.svelte';
   import { motionOK } from '../motion.js';
   import { MIN_INK, REVEAL_MS, SKEW_X, SKEW_Y, STAMP_MS, signFlourish } from '@offside/app-core/signature';
   import type { SheetView } from '@offside/app-core/sheets';
+  import { packInk } from '@offside/app-core/lastSign';
+  import { saveLastSign } from '../lastSign.js';
+  import { appState } from '../state.svelte.js';
   import { sheetContractText as L } from '@offside/app-core/i18n/ko/sheetContract';
 
   let { v }: { v: Extract<SheetView, { kind: 'contract' }> } = $props();
@@ -27,6 +31,8 @@
   let mid: { x: number; y: number } | null = null;
   /** 획을 시작할 때 한 번 읽어 두는 패드 위치 — 긋는 동안 이벤트마다 레이아웃을 묻지 않는다. */
   let rect: DOMRect | null = null;
+  /** 그은 점(패드 px) — 확정하면 홈 카드용으로 남긴다. */
+  let strokes: { x: number; y: number }[][] = [];
 
   const inkColor = () => getComputedStyle(canvas!).color;
 
@@ -67,6 +73,7 @@
     ink = 0;
     inked = enough = named = false;
     last = mid = null;
+    strokes = [];
   }
 
   const at = (e: PointerEvent) => ({ x: e.clientX - rect!.left, y: e.clientY - rect!.top, t: e.timeStamp });
@@ -78,6 +85,7 @@
     const p = at(e);
     last = { ...p, w: 2.6 };
     mid = p;
+    strokes.push([p]);
     inked = true;
     ctx.fillStyle = ctx.strokeStyle = inkColor();
     ctx.lineCap = ctx.lineJoin = 'round';
@@ -101,6 +109,7 @@
       ctx.quadraticCurveTo(last.x, last.y, m.x, m.y);
       ctx.stroke();
       ink += d;
+      strokes[strokes.length - 1]?.push(p);
       last = { ...p, w };
       mid = m;
     }
@@ -155,6 +164,13 @@
   function sign() {
     if (!ready || sealed) return;
     sealed = true;
+    const cid = appState.G?.cid;
+    if (cid)
+      saveLastSign({
+        cid,
+        club: v.club.name,
+        mark: named ? { kind: 'name', name: v.name } : packInk(canvas!.clientWidth, canvas!.clientHeight, strokes),
+      });
     setTimeout(v.onSign, motionOK ? STAMP_MS : 0);
   }
 </script>
@@ -215,24 +231,24 @@
     right: -4px;
     width: 40px;
     height: 40px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     border: 0;
     background: var(--surface-2);
     color: var(--muted);
-    font-size: 1.375rem;
+    font-size: var(--fs-title2);
     line-height: 1;
   }
   .contract-text {
     margin: -4px 0 0;
     color: var(--muted);
-    font-size: 0.9375rem;
+    font-size: var(--fs-body1);
   }
   .contract-club {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 10px 12px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--surface-2);
   }
   .contract-club dl {
@@ -243,19 +259,19 @@
     margin: 0;
   }
   .contract-club dt {
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     color: var(--muted);
   }
   .contract-club dd {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     font-weight: 700;
   }
   .sign-pad {
     position: relative;
     height: 150px;
     border: 1.5px dashed var(--line);
-    border-radius: 14px;
+    border-radius: var(--radius-md);
     background: var(--surface);
     overflow: hidden;
   }
@@ -275,7 +291,7 @@
     display: grid;
     place-items: center;
     color: var(--muted);
-    font-size: 0.9375rem;
+    font-size: var(--fs-body1);
     pointer-events: none;
   }
   .sign-pad.inked .sign-hint {
@@ -296,7 +312,7 @@
     left: 0;
     bottom: 2px;
     color: var(--muted);
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     font-style: normal;
   }
   .stamp {
@@ -317,7 +333,7 @@
   }
   .stamp b {
     font-family: var(--display);
-    font-size: 1.25rem;
+    font-size: var(--fs-title2);
     letter-spacing: 0.06em;
     line-height: 1;
     align-self: end;
@@ -325,7 +341,7 @@
   .stamp span {
     align-self: start;
     max-width: 70px;
-    font-size: 0.5625rem;
+    font-size: var(--fs-caption2);
     font-weight: 700;
     overflow: hidden;
     white-space: nowrap;
@@ -344,7 +360,7 @@
   .sign-note {
     margin: -6px 0 0;
     text-align: center;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .sign-tools {
@@ -355,7 +371,7 @@
   }
   .sign-tools .link-btn {
     min-height: 40px;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
   }
   .sign-tools .link-btn:disabled {
     opacity: 0.45;

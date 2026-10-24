@@ -7,7 +7,11 @@ import type { ResolveResult } from '@offside/game/event-runner';
 import type { MgKind } from '@offside/game/minigame';
 import type { DragPoint, ShotResult } from '@offside/game/dragShot';
 import type { FlightMap } from './flight.js';
+import type { PeekChip } from './eventPeek.js';
+import type { GrowthDirInfo } from './ratingReport.js';
+import type { BlockResult, MatchGame } from '@offside/game/match';
 import { shellText } from './i18n/ko/shell.js';
+import type { EraCardView } from './era-view.js';
 
 export type { Chip };
 export type SheetButton = { label: string; cls?: string; fn: () => void };
@@ -92,6 +96,41 @@ export function sheetLabel(v: SheetView): string {
   }
 }
 
+/** T-11-390 결정적 장면 카드(문구는 지금 언어로 만든 것). */
+export type MomentCard = {
+  key: string;
+  kind: 'chance' | 'crisis';
+  final: boolean;
+  title: string;
+  head: string;
+  scene: string;
+  /** T-11-438 실패하면 무엇을 잃는지 한 줄(리그 찬스: 기록이 줄 수 있음, 위기: 실점 · 패배, 결승: 준우승). */
+  stake: string;
+  /** rec: T-11-438 미드필더 리그 찬스에서 성공하면 남는 기록(골 · 도움). 선택지마다 다른 성격을 보인다. */
+  choices: { id: string; label: string; pct: number; attr: string; rec?: string }[];
+  /** 감독에게 맡겼을 때 성공 확률(%). */
+  auto: number;
+};
+export type MomentView = MomentCard & {
+  /** 남은 초 · 제한 시간(초). */
+  left: number;
+  secs: number;
+  /** 고른 뒤 결과 줄. */
+  result: { text: string; ok: boolean; picked: string } | null;
+  choose: (id: string) => void;
+};
+/** T-11-390 구간 중계가 장면에서 멈추고, 고른 결과로 남은 경기를 바꾸는 쪽(keyMoments.ts, 구간 진행 때 불러온다). */
+export interface MomentDriver {
+  /**
+   * game번째 경기 · extra번째 부가 줄(대회 결과)을 보여 주기 전에 장면이 걸려 있으면 v.moment에 카드를 띄우고, 고르거나 제한 시간이
+   * 지나면 구간을 다시 진행한 결과(이미 보여 준 줄은 그대로)를 돌려준다. 장면이 없으면 null.
+   */
+  pause(
+    v: { moment?: MomentView | null; skip: (() => void) | null },
+    at: { game: number } | { extra: number },
+  ): Promise<{ b: BlockResult; rows: TickerRow[]; extras: string[] } | null>;
+}
+
 export type SheetView =
   | {
       kind: 'steps';
@@ -117,6 +156,10 @@ export type SheetView =
       ticker: TickerRow[];
       extras: { text: string; done: boolean }[];
       skip: (() => void) | null;
+      /** T-11-379 평점 구성을 보일 구간 경기(ratingReport ratingBreakdown). 경기가 다 나온 뒤에 채운다. */
+      rated?: MatchGame[] | null;
+      /** T-11-390 지금 멈춰 고르는 결정적 장면 카드. */
+      moment?: MomentView | null;
     }
   | { kind: 'judge'; label: string; p: number; pos: number }
   | {
@@ -147,7 +190,10 @@ export type SheetView =
       title: string;
       text: string;
       story: StoryTag | null;
-      choices: { label: string; odds: string; hint?: string }[];
+      /** T-11-432 chips: 선택하면 늘 일어나는 득실(최대 2개, 안전한 선택은 가끔 대가까지 3개). */
+      choices: { label: string; odds: string; chips: PeekChip[] }[];
+      /** T-11-438 선택지 표기('안전' · '원터치') 뜻. 그런 선택지가 있을 때만 선택지 아래 한 줄씩 보인다. */
+      legend: { term: string; text: string }[];
     }
   | {
       kind: 'eventResult';
@@ -179,6 +225,8 @@ export type SheetView =
       titles: TitleView[];
       /** T-10-110 K리그2 우승 승격. */
       promo: Promotion | undefined;
+      /** T-11-475 시대의 라이벌 카드(등장 · 이번 시즌 비교). 라이벌이 없으면 없다. */
+      era?: EraCardView | null;
       notes: string[];
       /** 옛 시트 호환용. 은퇴 전에는 화면에 표시하지 않는다. 육성 중 안내는 scoutHint가 맡는다. */
       scout?: string | null;
@@ -186,6 +234,8 @@ export type SheetView =
       scoutHint?: string | null;
       /** T-11-353 지난 시즌과 견준 흐름(평점·출전)과 나이 한 줄. 견줄 시즌이 없으면 null. */
       seasonTrend?: string | null;
+      /** T-11-379 성장 방향 원자료(골 · 도움 · 수비 능력치, 문장은 ratingReport growthDirectionText). */
+      growthDir?: GrowthDirInfo | null;
       fans: string[];
       age: number;
     }
@@ -216,6 +266,8 @@ export type SheetView =
       gained: number;
       score: number;
       next: string | null;
+      /** T-11-357 받은 업적 보상 한 줄(없으면 null). */
+      reward?: string | null;
     }
   | {
       /** 이적·조기 연장 계약서. 사인하면 onSign, ×는 onClose(저장된 이적시장으로 돌아간다). */

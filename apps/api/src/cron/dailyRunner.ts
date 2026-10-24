@@ -11,6 +11,8 @@ import { runCareerRetention } from './careerRetention.js';
 import { DAILY_META_KEY } from './daily.js';
 import { backupDay } from './backup.js';
 import { logErrorText } from '../logError.js';
+import { runBest11Daily, type Best11DailyCursor } from '../db/repos/best11.js';
+import { pruneAbandonedCareers, type PruneResult } from './pruneAbandoned.js';
 
 export const DAILY_STATE_KEY = 'cron:daily:state';
 const LEASE_MS = 4 * 60_000;
@@ -22,6 +24,8 @@ export const DAILY_STAGES = [
   'careerRetention',
   'achievements',
   'iapRefunds',
+  'best11',
+  'pruneAbandoned',
 ] as const;
 type Stage = (typeof DAILY_STAGES)[number];
 export type DailyState = {
@@ -93,6 +97,20 @@ function steps(env: Bindings): DailyStep {
       }
       case 'iapRefunds':
         return { done: true, result: await syncGoogleVoided(env, db, at) };
+      case 'best11': {
+        // T-11-463 마감한 시즌 확정 · 빠진 후보 채우기 · 숨김 걸러 내기(세부 포지션 몇 개씩 이어 간다).
+        const result = await runBest11Daily(
+          db,
+          new Date(at).toISOString(),
+          (prior as { cursor?: Best11DailyCursor } | undefined)?.cursor,
+        );
+        return { done: result.done, result };
+      }
+      case 'pruneAbandoned': {
+        // T-11-468 버린 커리어(한 시간 안에 멈추고 일주일 넘게 갱신 없음) 정리. 하루 상한까지 cron마다 이어 간다.
+        const result = await pruneAbandonedCareers(env.DB, at, prior as PruneResult | undefined);
+        return { done: result.done, result };
+      }
     }
   };
 }
@@ -228,26 +246,81 @@ export async function runDailyStep(
   return next;
 }
 
-/** Advance a few cheap, completed stages per tick, while yielding partial pages and bulk work. */
+const TICK_BUDGET_MS = 5000;
+const ANOMALY_PAGES_PER_TICK = 10;
+const ANOMALY_PAGE_SLOW_MS = 2000;
+const ANOMALY_PAGE_PAUSE_MS = 50;
+
+/** Checkpoint each small page; allow a bounded burst only for the read-heavy anomaly scan. */
 export async function runDailyTick(env: Bindings, scheduledAt: number, execute?: DailyStep) {
   const started = Date.now();
+  const perform = execute ?? steps(env);
   let result: DailyState | null = null;
-  for (let step = 0; step < 3 && Date.now() - started < 5000; step++) {
-    const previousStage = result?.stage;
+  let completedStages = 0;
+  let anomalyPages = 0;
+  let stepCount = 0;
+  let yieldReason = 'time-budget';
+  while (completedStages < 3 && Date.now() - started < TICK_BUDGET_MS) {
+    const pageStarted = Date.now();
+    let stage: Stage | undefined;
+    const measured: DailyStep = (...args) => {
+      stage = args[0];
+      return perform(...args);
+    };
     // Even a failed checkpoint read/claim must retain the overload signal so bulk work yields.
-    const next = await runDailyStep(env, scheduledAt, execute).catch((error: unknown) => {
+    const next = await runDailyStep(env, scheduledAt, measured).catch((error: unknown) => {
       const message = logErrorText(error);
       console.error(JSON.stringify({ level: 'error', job: 'daily-step', error: message }));
       return { status: 'retry' as const, error: message, stage: undefined };
     });
     if (next && next.stage === undefined) return next;
-    if (!next) break;
-    result = next;
-    if (next.status !== 'pending' || (previousStage !== undefined && next.stage === previousStage))
+    if (!next) {
+      yieldReason = 'no-claim';
       break;
-    // A partial first stage must also yield instead of immediately consuming another page.
-    const current = DAILY_STAGES[next.stage];
-    if (current && Object.hasOwn(next.results, current)) break;
+    }
+    result = next;
+    stepCount++;
+    if (next.status !== 'pending') {
+      yieldReason = next.status;
+      break;
+    }
+    const finished = next.stage > DAILY_STAGES.indexOf(stage!);
+    if (finished) completedStages++;
+    if (stage === 'anomalies') {
+      anomalyPages++;
+      // Include checkpoint/claim latency: a slow D1 round yields before another page starts.
+      if (Date.now() - pageStarted >= ANOMALY_PAGE_SLOW_MS) {
+        yieldReason = 'slow-page';
+        break;
+      }
+      if (anomalyPages >= ANOMALY_PAGES_PER_TICK) {
+        yieldReason = 'page-limit';
+        break;
+      }
+    }
+    if (finished) continue;
+    if (stage !== 'anomalies') {
+      yieldReason = 'partial-stage';
+      break;
+    }
+    if (Date.now() - started + ANOMALY_PAGE_PAUSE_MS >= TICK_BUDGET_MS) break;
+    // Keep user traffic interleaved instead of issuing an uninterrupted maintenance burst.
+    await new Promise((resolve) => setTimeout(resolve, ANOMALY_PAGE_PAUSE_MS));
   }
+  if (completedStages === 3) yieldReason = 'stage-limit';
+  if (stepCount)
+    console.log(
+      JSON.stringify({
+        level: result?.status === 'retry' ? 'error' : 'info',
+        job: 'daily-tick',
+        day: result?.day,
+        stage: result?.stage,
+        status: result?.status,
+        steps: stepCount,
+        anomalyPages,
+        durationMs: Date.now() - started,
+        yieldReason,
+      }),
+    );
   return result;
 }

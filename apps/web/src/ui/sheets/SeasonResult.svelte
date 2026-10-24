@@ -5,6 +5,7 @@
   import CareerTrophy from '../CareerTrophy.svelte';
   import { careerMomentText as CM } from '@offside/app-core/i18n/ko/careerMoment';
   import NewTitles from '../titles/NewTitles.svelte';
+  import EraCard from '../era/EraCard.svelte';
   import { sheetPlayText as L } from '@offside/app-core/i18n/ko/sheetPlay';
   import { sheetCoreText } from '@offside/app-core/i18n/ko/sheetCore';
   let { v }: { v: Extract<SheetView, { kind: 'season' }> } = $props();
@@ -18,7 +19,7 @@
     {#each v.ch as c, i (i)}<span class="badge-ch pop" style="--d:{120 + i * 90}ms">CH · {c}</span>{/each}
   </div>
 {/if}
-<div class="stats" style="grid-template-columns:repeat(4,1fr)">
+<div class="stats" style="grid-template-columns:repeat(4,1fr)" data-coach="season">
   <div><b>{v.stats.apps}</b><span>{sheetCoreText.tallyApps}</span></div>
   <div><b>{v.stats.goals}</b><span>{sheetCoreText.tallyGoals}</span></div>
   <div><b>{v.stats.col}</b><span>{v.stats.colLabel}</span></div>
@@ -44,6 +45,7 @@
     <p class="muted fs-xs">{L.promoDownWeb({ club: v.promo.down })}</p>
   </div>
 {/if}
+{#if v.era}<EraCard v={v.era} />{/if}
 {#if v.comps.length}
   <div>
     <div class="eyebrow" style="margin-bottom:6px">{L.comps}</div>
@@ -82,10 +84,16 @@
     <div class="eyebrow" style="margin-bottom:6px">{L.scoutHint}</div>
     <p>“{v.scoutHint}”</p>
     {#if v.seasonTrend}<p class="muted fs-sm" data-season-trend>{v.seasonTrend}</p>{/if}
+    {@render growthDir()}
   </div>
-{:else if v.seasonTrend}
-  <p class="muted fs-sm" data-season-trend>{v.seasonTrend}</p>
+{:else if v.seasonTrend || v.growthDir}
+  {#if v.seasonTrend}<p class="muted fs-sm" data-season-trend>{v.seasonTrend}</p>{/if}
+  {@render growthDir()}
 {/if}
+{#snippet growthDir()}
+  <!-- T-11-379 성장 방향 한 줄(지연 청크). -->
+  {#if v.growthDir}{#await import('../GrowthDir.svelte') then M}<M.default info={v.growthDir} cls="muted fs-sm" title={false} />{/await}{/if}
+{/snippet}
 <div>
   <div class="eyebrow" style="margin-bottom:6px">{L.fans}</div>
   <div class="fan-feed">
@@ -96,8 +104,8 @@
 
 <style>
   .season-trophies { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 10px; margin: 14px 0; }
-  .season-trophy { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--accent-text); min-width: 0; }
-  .season-trophy b { font-size: .875rem; overflow-wrap: anywhere; }
+  .season-trophy { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid transparent; border-radius: var(--radius-md); background: var(--surface-2); color: var(--accent-text); min-width: 0; }
+  .season-trophy b { font-size: var(--fs-body2); overflow-wrap: anywhere; }
   .trophy-reveal { display: flex; flex-shrink: 0; color: var(--gold, var(--accent)); animation: trophy-lift 480ms ease-out both; }
   @keyframes trophy-lift { from { transform: translateY(10px) scale(.86); } to { transform: translateY(0) scale(1); } }
   @media (prefers-reduced-motion: reduce) { .trophy-reveal { animation: none; } }

@@ -12,6 +12,7 @@
   import AdminAutomation from './admin/AdminAutomation.svelte';
   import AdminPush from './admin/AdminPush.svelte';
   import AdminCups from './admin/AdminCups.svelte';
+  import AdminLeague from './admin/AdminLeague.svelte';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
   import AdminFunds from './admin/AdminFunds.svelte';
   import AdminInvites from './admin/AdminInvites.svelte';
@@ -42,7 +43,7 @@
   });
 </script>
 
-<div class="wrap">
+<div class="wrap" class:push-wide={tab === 'push'}>
   <Topbar />
   <section class="card stack" style="gap:14px">
     <div>
@@ -63,7 +64,7 @@
       {:else if tab === 'users'}<AdminUsers />
       {:else if tab === 'revenue'}<AdminRevenue />
       {:else if tab === 'push'}<AdminPush />
-      {:else if tab === 'cup'}<AdminCups />
+      {:else if tab === 'cup'}<AdminLeague /><AdminCups />
       {:else if tab === 'comments'}<AdminChatReports /><AdminNameReports /><AdminComments />
       {:else if tab === 'automation'}<AdminAutomation />
       {:else if tab === 'funds'}<AdminFunds />
@@ -76,6 +77,7 @@
 </div>
 
 <style>
+  @media (min-width: 900px) { .wrap.push-wide { max-width: 960px; } }
   .admin-tabs { grid-template-columns:repeat(2,minmax(0,1fr)); }
   @media (min-width:360px) { .admin-tabs { grid-template-columns:repeat(3,minmax(0,1fr)); } }
   .admin-tabs button { min-height:44px; }

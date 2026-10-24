@@ -60,14 +60,15 @@ migration은 이 목록도 함께 고친다.
     - `runtimeVersion`은 `fingerprint` 정책이다. 네이티브(모듈 추가·SDK·`app.json` 네이티브 설정)가 바뀐 커밋은
       런타임이 달라 기존 스토어 앱에 내려가지 않는다 — 그때는 새 스토어 빌드(`eas build`)와 심사가 필요하다.
     - 게시 전에 플랫폼별 `eas fingerprint:generate` 해시를 완료된 production 빌드의
-      `runtime.version`과 대조해(`build:list --runtime-version`), 맞는 빌드가 없으면 `::warning::`과 요약 줄을 남긴다(실패시키지는 않는다).
-      네이티브 변경이 아닌데 이 경고가 뜨면 `eas.json`·`app.json` 수정을 먼저 의심한다.
+      `runtime.version`과 대조해(`build:list --runtime-version`), 맞는 빌드가 없으면 실패한다. current는 검증된1.1.3 플랫폼별 지문과도 정확히 일치해야 한다.
+      preflight도 실제 production 환경으로 이 검사를 수행하지만 OTA를 게시하지 않는다.
+      네이티브 변경이 아닌데 이 검사가 실패하면 `eas.json`·`app.json` 수정을 먼저 의심한다.
     - **`apps/mobile/eas.json`은 수정만 해도 런타임이 바뀐다**(fingerprint source `easBuild`). 2026-09-30
       `submit.production.ios.ascAppId` 한 줄 추가(#393)로 iOS `9e9ebda2`→`9243e6d7`, Android
       `965907c7`→`e9d03a9d`가 되어 그날 OTA가 설치된 어느 앱에도 가지 않았다(T-11-013에서 되돌림).
       `ascAppId` 같은 submit 전용 설정도 다음 네이티브(스토어) 빌드 때 함께 넣는다. `.fingerprintignore`로
       `eas.json`을 빼는 것도 그 자체로 해시를 바꾸므로 새 스토어 빌드와 같이 할 때만 한다.
-    - GitHub `production` 환경 secret `EXPO_TOKEN`(expo.dev → Access tokens)이 없으면 이 잡은 건너뛴다.
+    - GitHub `production` 환경 secret `EXPO_TOKEN`(expo.dev → Access tokens)이 없으면 호환성 검증을 할 수 없어 실패한다.
     - 되돌리기: `cd apps/mobile && npx eas-cli@latest update:rollback` 또는 이전 커밋으로 다시 `eas update`.
     - 앱 OTA가 아직 안 간(또는 옛 런타임) 앱도 한동안 남으므로 API는 하위 호환을 유지한다.
 
@@ -95,10 +96,13 @@ restore`로 되돌린다(그 경우도 그 시점 이후의 사용자 프로필/
 
 ### 스토어 업데이트 안내 (T-11-042)
 
-- `GET /v1/app/version`이 플랫폼별 최소 버전(`min`)과 스토어 주소를 준다(`apps/api/src/routes/appVersion.ts`의
-  `APP_VERSIONS`). 앱은 켤 때·앱으로 돌아올 때 확인해 이 앱 버전이 `min`보다 낮으면 화면 위에 '업데이트' 배너를 띄운다.
-  ✕로 닫으면 그 실행 동안만 숨긴다.
-- **`min`은 새 시즌 빌드가 그 플랫폼 스토어에 실제로 올라간 뒤에 올린다.** 먼저 올리면 받을 수 없는 업데이트를
+- `GET /v1/app/version`이 플랫폼별 최소 버전(`min`) · 최신 버전(`latest`)과 스토어 주소를 준다
+  (`apps/api/src/routes/appVersion.ts`의 `APP_VERSIONS`). 앱은 켤 때·앱으로 돌아올 때 확인해 OS 팝업으로 묻는다(T-11-464).
+  - 이 앱 버전이 `latest`보다 낮으면 '나중에' · '업데이트' 팝업. '나중에'(또는 스토어에 갔다 그냥 돌아옴) 뒤에는 같은
+    `latest`로 사흘 동안 다시 묻지 않는다.
+  - `min`보다 낮으면 '업데이트'만 있는 팝업. 닫을 수 없고 앱으로 돌아올 때마다 다시 뜬다.
+- **스토어 빌드가 출시되면 그 플랫폼의 `latest`를 올린다.** 시즌 빌드처럼 옛 버전을 더 받지 않을 때만 `min`도 올린다.
+- **`latest` · `min`은 그 빌드가 그 플랫폼 스토어에 실제로 올라간 뒤에 올린다.** 먼저 올리면 받을 수 없는 업데이트를
   안내한다. Play 공개 전에는 테스터가 받는 비공개 테스트 트랙이 그 스토어다. iOS·안드로이드 심사 시점이 다르면 따로 올린다. 응답은 5분 캐시라 반영까지 최대 10분(서버 캐시 5분 + 앱 메모 5분) 걸린다.
 - 이 안내 자체가 옛 빌드에 OTA로 들어가 있어야 하므로, 새 시즌 버전으로 올리기 전의 빌드 런타임에 먼저 배포한다
   (`1.0.0`에는 `1.1.0` 빌드 전에 운영 배포로 들어간다).

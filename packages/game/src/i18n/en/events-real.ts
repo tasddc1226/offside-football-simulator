@@ -24,15 +24,21 @@ const DERBY: Record<string, string> = {
   sa: 'Milan derby',
   ll: 'El Clasico',
   pl: 'Manchester derby',
+  csl: 'Shanghai derby',
+  spl: 'Riyadh derby',
+  bra: 'Fla-Flu',
+  por: 'O Clássico',
 };
 
 // realevents.ts 의 CAMP 와 같은 조건에서 같은 개수의 후보 중 pick 한 번 — 한국어와 같은 난수를 같은 만큼 쓴다.
 const camp = (s: GameState): string =>
   s.leagueId === 'mls'
     ? pick(['Florida, USA', 'Arizona, USA', 'Cancun, Mexico'])
-    : leagueOf(s.leagueId).tier <= 3
-      ? pick(['Antalya, Turkey', 'Chiang Mai, Thailand', 'Kagoshima, Japan', 'Seogwipo, Jeju'])
-      : pick(['Marbella, Spain', 'Dubai, UAE', 'Florida, USA']);
+    : s.leagueId === 'bra'
+      ? pick(['Florida, USA', 'Atibaia, Brazil'])
+      : leagueOf(s.leagueId).tier <= 3
+        ? pick(['Antalya, Turkey', 'Chiang Mai, Thailand', 'Kagoshima, Japan', 'Seogwipo, Jeju'])
+        : pick(['Marbella, Spain', 'Dubai, UAE', 'Florida, USA']);
 
 // releaseEvent(아시안게임·올림픽 차출 협상)의 공통 문구 틀.
 function release(o: {

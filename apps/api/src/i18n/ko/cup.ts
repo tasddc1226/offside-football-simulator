@@ -7,6 +7,18 @@ export const CUP_KO = {
   predictionNotFinished: '아직 종료되지 않은 경기는 정산할 수 없어요.',
   predictionClosed: '경기가 시작됐거나 지금은 예측할 수 없는 경기예요.',
   title: '시즌 {season} 제{edition}회 오프사이드 컵',
+  titleDivision: '시즌 {season} 제{edition}회 오프사이드 컵 {division}',
+  junior: '주니어',
+  senior: '시니어',
+  master: '마스터',
+  overCap: '팀 OVR이 이 구간 상한({n})보다 높아요. 윗 구간에 신청해 주세요.',
+  enteredOther: '이번 회차 다른 구간에 이미 신청했어요. 그 신청을 취소한 뒤 옮길 수 있어요.',
+  ovrCap: '오프사이드 컵 {division} 참가 중에는 팀 OVR이 {n}을 넘는 명단으로 바꿀 수 없어요.',
+  movedTitle: '{cup}로 옮겼어요',
+  movedUpBody: '조 추첨 때 팀 OVR이 신청한 구간 상한보다 높아 윗 구간으로 옮겼어요.',
+  mergedBody: '신청한 구간 팀이 {n}팀보다 적어 윗 구간과 함께 치러요.',
+  adminCapOpen: '접수가 열린 대회의 상한은 바꿀 수 없어요.',
+  adminCapMaster: '마스터 · 통합 대회에는 상한이 없어요.',
   g1: '조별 1차전',
   g2: '조별 2차전',
   g3: '조별 3차전',
@@ -44,6 +56,8 @@ export const CUP_KO = {
   iapPending: '결제가 아직 끝나지 않았어요. 결제가 끝나면 자동으로 받아요.',
   iapOtherAccount: '다른 계정으로 산 구매예요. 산 계정으로 로그인해 주세요.',
   iapUnavailable: '지금은 구매를 확인할 수 없어요. 잠시 뒤 앱을 다시 열면 받아요.',
+  // T-11-454 웹 결제.
+  webPayUnavailable: '지금은 결제를 확인할 수 없어요. 잠시 뒤 이 화면을 다시 열면 받아요.',
   shopClosed: '지금은 리롤권을 팔지 않아요.',
   shopDaily: '리롤권은 하루에 {n}장까지 살 수 있어요. 내일 0시(한국 시간)에 다시 살 수 있어요.',
   shopWeekly:
@@ -80,6 +94,8 @@ export const CUP_KO = {
   earlyBody: '조 추첨 {draw}, 첫 경기 {first}(한국 시간)에 열려요.',
   rewardBody: '최종 성적 {stage}. 선수 후보 리롤권 {n}장을 받았어요.',
   openTitle: '{cup} 접수가 열렸어요',
+  openBodyDivision:
+    '팀 OVR에 맞는 구간(주니어 · 시니어 · 마스터)을 골라 신청해 주세요. 구간마다 {n}팀까지예요.',
   openBody: '선착순 {n}팀이에요. 홈의 컵 배너에서 신청할 수 있어요.',
   rewardBodyBoost:
     '최종 성적 {stage}. 선수 후보 리롤권 {n}장, 프리미엄 스카우트권 {s}장, 잠재력 강화권 {b}장을 받았어요.',
@@ -90,6 +106,50 @@ export const CUP_KO = {
   grantBoost: '운영팀이 잠재력 강화권 {n}장을 보냈어요.',
   grantScout: '운영팀이 프리미엄 스카우트권 {n}장을 보냈어요.',
   grantRename: '운영팀이 선수 이름 변경권 {n}장을 보냈어요.',
+  // T-11-418b 오프사이드 리그.
+  leagueDrawn: '배치가 끝난 리그는 일정을 미룰 수 없어요.',
+  leagueLocked: '오프사이드 리그 경기 1시간 전부터 경기가 끝날 때까지 명단을 바꿀 수 없어요.',
+  leagueRemindTitle: '오프사이드 리그 배치가 내일이에요',
+  leagueRemindBody:
+    '배치 때 시즌 {season} 팀 선발에 선수가 {n}명 있어야 참가할 수 있어요. 지금은 {filled}명이에요.',
+  leaguePlacedTitle: '시즌 {season} 오프사이드 리그 배치 결과',
+  leaguePlacedBody: '{team}은(는) {tier}부 {league}리그예요. 1라운드는 오늘 {time}에 열려요.',
+  leagueDroppedTitle: '시즌 {season} 오프사이드 리그 참가가 취소됐어요',
+  leagueDroppedBody:
+    '배치 시각에 시즌 {season} 팀 선발 선수가 {n}명보다 적었어요. 다음 시즌에 다시 신청할 수 있어요.',
+  leagueLeftBody:
+    '참가 팀 수가 리그를 꾸리기에 맞지 않아 OVR이 낮은 팀부터 {n}팀이 빠졌어요. 다음 시즌에 다시 신청할 수 있어요.',
+  leagueCancelledTitle: '시즌 {season} 오프사이드 리그가 열리지 않아요',
+  leagueRoundTitle: '오프사이드 리그 {round}라운드 · {result}',
+  leagueRoundBody: '{score} · 지금 {rank}위예요',
+  // T-11-430 1 · 2번째 기권패(3번째는 leagueForfeitedBody가 따로 간다).
+  leagueRoundForfeitBody:
+    '{score} · 선발 선수가 모자라 기권패했어요. 기권 {n}/{limit}번, {left}번 더 기권하면 남은 경기는 모두 0:3 패예요.',
+  leagueRest: '휴식',
+  leagueRestBody: '이번 라운드는 쉬었어요 · 지금 {rank}위예요',
+  leagueEndTitle: '시즌 {season} 오프사이드 리그를 마쳤어요',
+  leagueEndBody: '{tier}부 {league}리그 최종 {rank}위예요.',
+  leagueChampionTitle: '시즌 {season} 오프사이드 리그 {tier}부 {league}리그 우승!',
+  // T-11-418e 결산(마지막 라운드 알림 본문 · 빈자리 승격).
+  leagueEndBodyChampion:
+    '1부 우승! 시즌 {season} 리그 챔피언 칭호와 선수 후보 리롤권 {n}장, 프리미엄 스카우트권 {s}장, 잠재력 강화권 {b}장을 받았어요.',
+  leagueEndBodyAll:
+    '{tier}부 {league}리그 최종 {rank}위예요. 선수 후보 리롤권 {n}장, 프리미엄 스카우트권 {s}장, 잠재력 강화권 {b}장을 받았어요. 다음 시즌에 신청하면 {next}부에서 시작해요.',
+  leagueEndBodyReroll:
+    '{tier}부 {league}리그 최종 {rank}위예요. 선수 후보 리롤권 {n}장을 받았어요. 다음 시즌에 신청하면 {next}부에서 시작해요.',
+  leagueEndBodyNext:
+    '{tier}부 {league}리그 최종 {rank}위예요. 다음 시즌에 신청하면 {next}부에서 시작해요.',
+  leagueEndBodyForfeited:
+    '{tier}부 {league}리그 최종 {rank}위예요. 기권이 쌓여 보상은 없고, 다음 시즌은 맨 아래 부에서 시작해요.',
+  leagueFillTitle: '오프사이드 리그 승격!',
+  leagueFillBody:
+    '위 부에 빈자리가 생겨 시즌 {season}에는 {tier}부에서 뛰어요. 프리미엄 스카우트권 {s}장을 받았어요.',
+  leagueForfeitedTitle: '오프사이드 리그 남은 경기가 기권패로 처리돼요',
+  leagueForfeitedBody: '경기에 {n}번 나오지 못했어요. 남은 경기는 모두 0:3 패로 기록돼요.',
+  // T-11-463b 시즌 BEST 11 확정 보상.
+  best11RewardTitle: '시즌 {season} BEST 11에 뽑혔어요',
+  best11RewardBody:
+    '{name} 선수가 시즌 {season} BEST 11로 확정됐어요. 선수 후보 리롤권 {n}장, 프리미엄 스카우트권 {s}장, 잠재력 강화권 {b}장을 받았어요.',
 } as const;
 
 export type CupTextKey = keyof typeof CUP_KO;

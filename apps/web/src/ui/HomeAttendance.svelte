@@ -8,6 +8,7 @@
     attendanceBoard,
     attendancePopupDue,
     boardTotal,
+    ITEM_MARK,
     markAttendancePopup,
     rewardText,
   } from '@offside/app-core/attendance-view';
@@ -15,8 +16,14 @@
   import LoginButtons from './LoginButtons.svelte';
   import PopSheet from './PopSheet.svelte';
   import { toast } from './helpers.js';
+  import { goRerollShop } from './nav.js';
 
   let card = $state<AttendanceCard | null>(null);
+  // T-11-440 응답을 받았는지. 못 받으면(null) 앱처럼 입구를 숨긴다(누를 수 없는 빈 카드를 남기지 않는다).
+  let loaded = $state(false);
+  // T-11-440 누른 칸(그날 보상을 글로 보인다)과 방금 받은 아이템(쓰는 곳 안내 · 내 구단 버튼).
+  let picked = $state<number | null>(null);
+  let got = $state<string | null>(null);
   let open = $state(false);
   let busy = $state(false);
   // 응답을 못 받아 다시 누르면 같은 키로 보내 서버가 두 번 주지 않는다. 출석이 끝나면 새 키(다음 날 누름)로 바꾼다.
@@ -31,6 +38,7 @@
   $effect(() => {
     void fetchAttendance().then((c) => {
       card = c;
+      loaded = true;
       // 컵 우승 팝업 같은 다른 창이 떠 있으면 오늘은 저절로 띄우지 않는다(다음에 홈에 올 때 뜬다).
       if (auto && c && attendancePopupDue(c) && !document.querySelector('[aria-modal="true"]')) {
         markAttendancePopup();
@@ -47,6 +55,7 @@
     if (r.ok) {
       key = crypto.randomUUID();
       card = { kind: 'owner', att: r.data.attendance };
+      got = rewardText(r.data.granted);
       toast(L.stamped({ n: r.data.attendance.stamps, reward: rewardText(r.data.granted) }));
     } else if (r.error.reason === 'ATTENDANCE_CHECKED') {
       card = { kind: 'owner', att: { ...att, checkedIn: true } };
@@ -58,10 +67,10 @@
   }
 </script>
 
-{#if !card}
+{#if !loaded}
   <!-- 불러오는 동안도 같은 높이를 차지해 아래 홈이 밀리지 않게 한다(CLS). -->
   <div class="card home-att-entry" aria-hidden="true"><span class="hae-title"><b>{L.title}</b></span></div>
-{:else}
+{:else if card}
   <button class="card home-att-entry" data-act="attendance-open" data-home-attendance={card.kind} aria-label={L.entryLabel} onclick={() => (open = true)}>
     <span class="hae-title"><b>{L.title}</b>{#if att && att.streak > 0}<span class="hae-streak num">🔥 {L.streak({ n: att.streak })}</span>{/if}</span>
     <span class="hae-sub fs-sm" class:done={att?.checkedIn}>
@@ -81,16 +90,31 @@
         </div>
         {#if att && att.streak > 0}<span class="ha-streak num" data-attendance-streak={att.streak}>🔥 {L.streak({ n: att.streak })}</span>{/if}
       </div>
-      <div class="ha-board" role="img" aria-label={L.boardLabel({ filled: board.filled, total: board.total })}>
+      <!-- T-11-440 칸마다 아이템 모양 기호(↻ ▲ ★)와 장수를 적어 색 없이도 가른다. 칸을 누르면 그날 보상을 글로 보인다. -->
+      <div class="ha-board" role="group" aria-label={L.boardLabel({ filled: board.filled, total: board.total })}>
         {#each board.cells as cell (cell.n)}
-          <span class="ha-cell it-{cell.item}" class:on={cell.on} class:big={cell.big} class:today={cell.today}>
+          <button
+            type="button"
+            class="ha-cell it-{cell.item}"
+            class:on={cell.on}
+            class:big={cell.big}
+            class:today={cell.today}
+            class:picked={picked === cell.n}
+            data-attendance-cell={cell.n}
+            aria-pressed={picked === cell.n}
+            aria-label={L.cellLabel({ n: cell.n, reward: cell.reward, state: cell.on ? L.cellDone : cell.today ? L.cellToday : '' })}
+            onclick={() => (picked = picked === cell.n ? null : cell.n)}
+          >
             <small class="ha-day num">{cell.n}</small>
-            {#if cell.on}<b class="ha-mark">✓</b>{:else if cell.big}<b class="ha-mark">🎁</b>{:else}<b class="ha-qty num">+{cell.qty}</b>{/if}
-          </span>
+            {#if cell.on}<b class="ha-mark">✓</b>{:else}<b class="ha-qty"><span class="ha-imark">{ITEM_MARK[cell.item]}</span><span class="num">{cell.qty}</span></b>{/if}
+          </button>
         {/each}
       </div>
+      <p class="ha-pick fs-sm" class:muted={!picked} role="status" data-attendance-pick={picked ?? ''}>
+        {picked ? L.cellReward({ n: picked, reward: board.cells[picked - 1]!.reward }) : L.cellHint}
+      </p>
       <ul class="ha-legend fs-xs" aria-hidden="true">
-        {#each ['reroll', 'boost', 'scout'] as const as k (k)}<li class="it-{k}">{ITEM[k]}</li>{/each}
+        {#each ['reroll', 'boost', 'scout'] as const as k (k)}<li class="it-{k}"><span class="ha-lmark">{ITEM_MARK[k]}</span>{ITEM[k]}</li>{/each}
       </ul>
       <div class="ha-meta fs-sm">
         {#if att}<span class="muted num">{L.board({ filled: board.filled, total: board.total })}</span>{/if}
@@ -101,6 +125,13 @@
         <LoginButtons back={{ home: true }} act="attendance-google-login" />
       {:else if att.checkedIn}
         <p class="ha-done fs-sm" data-attendance-done>{L.checked}</p>
+        {#if got}
+          <div class="ha-got" role="status" data-attendance-got>
+            <b class="fs-sm">{L.got({ reward: got })}</b>
+            <span class="muted fs-xs">{L.useHint}</span>
+          </div>
+          <button class="btn btn-block" data-act="attendance-to-owner" onclick={() => { open = false; goRerollShop(); }}>{L.toOwner}</button>
+        {/if}
       {:else}
         <button class="btn btn-accent btn-block" onclick={checkIn} disabled={busy} data-act="attendance-check-in">{busy ? L.busy : L.btn}</button>
       {/if}
@@ -119,6 +150,7 @@
     gap: 10px;
     width: 100%;
     padding-block: 12px;
+    border: 0;
     text-align: left;
     font: inherit;
     color: inherit;
@@ -131,7 +163,7 @@
     flex: none;
   }
   .hae-streak {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     font-weight: 700;
     color: var(--accent-text);
   }
@@ -174,12 +206,12 @@
   }
   .ha-title h2 {
     margin: 0;
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
   }
   .ha-streak {
     flex: none;
     font-weight: 700;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     color: var(--accent-text);
   }
   /* 아이템 색: 리롤권 = 기본, 강화권 = 금(--r4), 스카우트권 = 파랑(--r2). 칭호 등급 색이라 두 테마 모두 대비가 맞다. */
@@ -201,6 +233,10 @@
      대비가 모자란다). 큰 보상 칸은 고리가 두껍다. */
   .ha-cell {
     aspect-ratio: 1;
+    padding: 0;
+    border: 0;
+    font: inherit;
+    cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -217,16 +253,20 @@
     box-shadow: inset 0 0 0 3px var(--it);
   }
   .ha-day {
-    font-size: 0.625rem;
+    font-size: var(--fs-caption2);
   }
   .ha-qty,
   .ha-mark {
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
   }
   .ha-cell.on {
     background: var(--accent);
     box-shadow: none;
     color: var(--accent-ink);
+  }
+  .ha-cell.picked {
+    outline: 2px solid var(--ink);
+    outline-offset: 1px;
   }
   .ha-cell.today {
     box-shadow: none;
@@ -247,18 +287,35 @@
     align-items: center;
     gap: 4px;
   }
-  .ha-legend li::before {
-    content: '';
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--it);
+  /* 숫자 글꼴에는 ↻가 없어 기호는 본문 글꼴로 그린다. */
+  .ha-imark,
+  .ha-lmark {
+    font-family: var(--body);
+  }
+  .ha-lmark {
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .ha-pick {
+    margin: 0;
+    min-height: 1.5em;
+  }
+  .ha-got {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    background: var(--surface-2);
   }
   .ha-meta {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
     gap: 4px 12px;
+  }
+  .ha-got b {
+    color: var(--ink);
   }
   .ha-lead,
   .ha-done,

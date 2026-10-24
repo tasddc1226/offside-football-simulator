@@ -10,12 +10,21 @@ import type {
   RetiredNumberMiss,
   RetiredNumberResult,
 } from '@offside/contracts';
-import { loadKey, saveKey } from '@offside/game/storage';
-import { OUTBOX_KEY, markAchDirty } from './achDirty.js';
+import { markAchDirty } from './achDirty.js';
 import { apiAuth, apiBaseUrl, clearApiCache, fetchWithTimeout, noteSession } from './api/client.js';
 import { retiredNumberProgressSynced } from './api/retiredNumberProgress.js';
-import { loadOutbox, saveOutbox, persistUpload, type OutboxItem } from './outboxStore.js';
-export type { OutboxItem } from './outboxStore.js';
+import {
+  loadOutbox,
+  loadRejected,
+  markSending,
+  saveOutbox,
+  saveRejected,
+  persistUpload,
+  type OutboxItem,
+  type UploadRejection,
+} from './outboxStore.js';
+export type { OutboxItem, UploadStatus, RejectReason } from './outboxStore.js';
+export { retirementUploadStatus, onUploadStatus } from './outboxStore.js';
 
 /** T-11-182 못 보낸 항목이 남으면 앱이 켜져 있는 동안 이 간격으로 다시 보낸다(마지막 값에서 멈춘다). */
 const RETRY_MS = [30_000, 60_000, 120_000, 300_000] as const;
@@ -105,8 +114,40 @@ async function announceRetiredNumber(careerId: string, res: Response): Promise<v
   });
 }
 
-/** retry: 이 커리어만 다음 회차로 미룬다(5xx). abort: 이번 회차를 멈춘다(오프라인·세션 만료 — 뒤 항목도 같은 결과다). */
-type SendResult = 'ok' | 'retry' | 'abort' | 'drop' | 'conflict';
+/** retry: 이 커리어만 다음 회차로 미룬다(5xx). abort: 이번 회차를 멈춘다(오프라인·세션 만료 — 뒤 항목도 같은 결과다).
+ * T-11-433 drop은 서버가 돌려준 거절 사유를 함께 돌려준다(은퇴 화면 · 공유 링크가 이유를 보여 준다). */
+type SendResult = 'ok' | 'retry' | 'abort' | 'conflict' | { drop: UploadRejection };
+
+/** 4xx 응답 본문에서 오류 코드와 details.reason만 꺼낸다(메시지·값은 남기지 않는다). */
+async function rejectionOf(res: Response): Promise<UploadRejection> {
+  const body = (await res.json().catch(() => null)) as {
+    error?: { code?: unknown; details?: { reason?: unknown } };
+  } | null;
+  const code = body?.error?.code;
+  const reason = body?.error?.details?.reason;
+  return {
+    status: res.status,
+    ...(typeof code === 'string' ? { code } : {}),
+    ...(typeof reason === 'string' ? { reason } : {}),
+    at: Date.now(),
+  };
+}
+
+/** 거절 기록을 남긴다. 같은 기록(은퇴는 커리어, 시즌은 커리어 · 연도)의 지난 거절은 새 본문 · 사유로 바꾼다. */
+const slotOf = (i: OutboxItem) => `${i.kind}:${i.careerId}:${i.kind === 'season' ? i.year : ''}`;
+function quarantine(item: OutboxItem, rejected: UploadRejection): boolean {
+  const slot = slotOf(item);
+  const items = loadRejected().filter((i) => slotOf(i) !== slot);
+  items.push({ ...item, rejected });
+  return saveRejected(items);
+}
+
+/** 은퇴가 올라가면 그 커리어의 지난 은퇴 거절 기록을 지운다(이름 공개를 끄고 다시 올린 경우 등). */
+function clearRetirementRejections(careerId: string): void {
+  const items = loadRejected();
+  const kept = items.filter((i) => !(i.kind === 'retirement' && i.careerId === careerId));
+  if (kept.length !== items.length) saveRejected(kept);
+}
 
 async function sendItem(item: OutboxItem): Promise<SendResult> {
   try {
@@ -142,10 +183,11 @@ async function sendItem(item: OutboxItem): Promise<SendResult> {
       return 'ok';
     }
     // T-10-013: 다른 계정 소유 커리어. 버리되 UI에 알린다(이 계정으로 이어서 기록할지 고르게).
-    if (res.status === 409) {
-      const body = (await res.json().catch(() => null)) as { error?: { code?: string } } | null;
-      if (body?.error?.code === 'CAREER_OWNER_MISMATCH') return 'conflict';
-    }
+    const rejection =
+      res.status >= 400 && res.status < 500 && res.status !== 401 && res.status !== 429
+        ? await rejectionOf(res)
+        : null;
+    if (rejection?.code === 'CAREER_OWNER_MISMATCH') return 'conflict';
     // 4xx(검증 실패·409 소유권 충돌 포함)는 재시도해도 같은 결과이므로 버린다. 429(업로드 한도)는 시간이 지나면 풀리므로 큐에 남긴다.
     // T-11-182 한도는 한 시간 창이라 짧은 간격으로 다시 보내 봐야 또 막힌다 — 다음 재시도를 가장 긴 간격으로 미룬다.
     if (res.status === 429) retryStep = RETRY_MS.length - 1;
@@ -155,7 +197,7 @@ async function sendItem(item: OutboxItem): Promise<SendResult> {
       profileReady = false;
       return 'abort';
     }
-    return 'drop';
+    return { drop: rejection ?? { status: res.status, at: Date.now() } };
   } catch {
     // 브라우저가 오프라인이라고 알려 주면 뒤 항목도 같다 — 회차를 멈춘다. 그 밖의 예외(한 항목에서만 나는
     // 오류일 수 있다)와 시간 초과는 그 커리어만 미뤄 다른 커리어의 업로드를 막지 않는다.
@@ -170,8 +212,8 @@ let runningSince = 0;
 let runId = 0;
 let again = false;
 
-/** 큐를 순서대로 전송한다. 네트워크 오류·5xx는 큐에 남겨 다음 flush에서 재시도하고, 4xx는 버리고
- * 경고만 남긴다. 진행 중에 다시 부르면(전송 중 새 항목 enqueue 등) 지금 회차가 끝난 뒤 한 번 더
+/** 큐를 순서대로 전송한다. 네트워크 오류·5xx는 큐에 남겨 다음 flush에서 재시도하고, 4xx는 큐에서 빼
+ * 사유와 함께 거절 기록(ft_outbox:rejected)에 남긴다(T-11-433 은퇴 화면이 읽는다). 진행 중에 다시 부르면(전송 중 새 항목 enqueue 등) 지금 회차가 끝난 뒤 한 번 더
  * 돌리고, 호출한 쪽은 그 회차까지 끝나기를 기다린다.
  * T-11-301 회차가 STALE_RUN_MS보다 오래 돌고 있으면 매달린 것으로 보고 새 회차를 연다 — 요청마다 시간 상한이
  * 있어도 런타임이 abort를 무시하면 영원히 끝나지 않을 수 있고, 그 약속에 묶이면 앱을 완전히 다시 켤 때까지
@@ -244,28 +286,35 @@ async function flushOnce(syncedSeasons: Set<string>): Promise<void> {
     // T-10-045: 한 커리어의 항목은 순서대로만 보낸다. 첫 시즌 PUT이 재시도 대상인데 은퇴를 이어서 보내면
     // 서버에 커리어가 아직 없어 400(CAREER_NOT_FOUND)으로 버려진다 — 그 커리어의 뒤 항목은 다음 회차로 미룬다.
     const blocked = new Set<string>();
-    for (const item of items) {
-      if (blocked.has(item.careerId)) continue;
-      const result = await sendItem(item);
-      if (result === 'abort') break;
-      if (result === 'retry') {
-        blocked.add(item.careerId);
-        continue;
+    try {
+      for (const item of items) {
+        if (blocked.has(item.careerId)) continue;
+        markSending(item.careerId);
+        const result = await sendItem(item);
+        if (result === 'abort') break;
+        if (result === 'retry') {
+          blocked.add(item.careerId);
+          continue;
+        }
+        if (typeof result === 'object') {
+          if (!quarantine(item, result.drop)) continue;
+          console.warn('[outbox] rejected; record quarantined', item.kind, result.drop.status);
+        }
+        settled.add(JSON.stringify(item));
+        if (result === 'conflict') {
+          const conflict = { ...item };
+          delete conflict.revision;
+          conflicts.push(conflict);
+          // T-11-433 다른 계정 소유라 못 올린 은퇴도 은퇴 화면에 이유를 보여 준다(본문은 이미 기기 세이브에 있다).
+          if (item.kind === 'retirement')
+            quarantine(item, { status: 409, code: 'CAREER_OWNER_MISMATCH', at: Date.now() });
+        } else if (result === 'ok' && item.kind === 'retirement') {
+          retired = true;
+          clearRetirementRejections(item.careerId);
+        } else if (result === 'ok' && item.kind === 'season') syncedSeasons.add(item.careerId);
       }
-      if (result === 'drop') {
-        const rejected = loadKey<OutboxItem[]>(`${OUTBOX_KEY}:rejected`) ?? [];
-        if (!rejected.some((i) => JSON.stringify(i) === JSON.stringify(item))) rejected.push(item);
-        if (!saveKey(`${OUTBOX_KEY}:rejected`, rejected)) continue;
-      }
-      settled.add(JSON.stringify(item));
-      if (result === 'conflict') {
-        const conflict = { ...item };
-        delete conflict.revision;
-        conflicts.push(conflict);
-      } else if (result === 'ok' && item.kind === 'retirement') retired = true;
-      else if (result === 'ok' && item.kind === 'season') syncedSeasons.add(item.careerId);
-      else if (result === 'drop')
-        console.warn('[outbox] validation failed; record quarantined', item.kind, item.careerId);
+    } finally {
+      markSending(null);
     }
     // T-10-034: 시작할 때 읽은 목록으로 큐를 덮어쓰면 전송 중에 enqueue된 항목이 지워진다 — 지금 큐에서
     // 이번 회차에 끝낸(보냄·버림·충돌) 항목만 뺀다.

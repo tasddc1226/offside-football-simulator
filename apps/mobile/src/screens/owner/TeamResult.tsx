@@ -1,14 +1,20 @@
 // 경기 결과(웹 team/Team.svelte 의 view === 'result', 중계가 끝난 뒤) — 스코어 · 득점 · 레이팅 변화.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
+import { useColors } from '../../theme/useColors';
 import { TeamLogo } from '../../components/TeamLogo';
 import type { OwnerTeam, TeamMatch } from '@offside/app-core/api/team';
 import { kstMonthDayTime } from '@offside/app-core/boardText';
 import { OUTCOME_TITLE, outcomeOf } from '@offside/app-core/teamOwner';
 import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
+import { teamMomentsText as M } from '@offside/app-core/i18n/ko/teamMoments';
+import { momentTitle, pickedLabel } from '@offside/app-core/teamMoments';
 import { recordText, signedNum } from '@offside/app-core/teamText';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { Grid2 } from './TeamParts';
+import { TeamReport } from './TeamReport';
+import type { ReportLine } from '@offside/contracts/owner-team';
 
 export function TeamResult({
   m,
@@ -20,6 +26,7 @@ export function TeamResult({
   again,
   backLabel = L.backDefaultApp,
   onPlayer,
+  fix,
 }: {
   m: TeamMatch;
   team: OwnerTeam | null;
@@ -31,7 +38,10 @@ export function TeamResult({
   backLabel?: string;
   /** T-11-269 우리 선수 이름을 누르면 시즌 통계의 그 선수 줄로(랭크 경기만, 웹 TeamResult onplayer). */
   onPlayer?: (careerId: string) => void;
+  /** T-11-379 리포트 '고칠 곳' — 내 편성을 고칠 수 있을 때만(웹 TeamResult fix). */
+  fix?: ((line: ReportLine) => { pos: string; go: () => void } | null) | undefined;
 }) {
+  const c = useColors();
   const friendly = !!m.friendly;
   const linkable = (id: string | null): id is string => !!onPlayer && !friendly && !!id;
   const under = { textDecorationLine: 'underline' } as const;
@@ -100,22 +110,37 @@ export function TeamResult({
                 }}
               >{`${e.minute}'`}</Txt>
               <View style={{ alignItems: e.side === 'away' ? 'flex-end' : 'flex-start' }}>
-                {linkable(e.scorerId) ? (
-                  <Press
-                    onPress={() => onPlayer!(e.scorerId!)}
-                    accessibilityRole="button"
-                    accessibilityLabel={L.playerStatsAria({
-                      name: eventName(e.scorerId, e.scorer),
-                    })}
-                    testID="team-player-stats"
-                  >
-                    <Txt bold style={under}>
-                      {eventName(e.scorerId, e.scorer)}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    alignItems: 'baseline',
+                    justifyContent: e.side === 'away' ? 'flex-end' : 'flex-start',
+                    columnGap: 6,
+                  }}
+                >
+                  {linkable(e.scorerId) ? (
+                    <Press
+                      onPress={() => onPlayer!(e.scorerId!)}
+                      accessibilityRole="button"
+                      accessibilityLabel={L.playerStatsAria({
+                        name: eventName(e.scorerId, e.scorer),
+                      })}
+                      testID="team-player-stats"
+                    >
+                      <Txt bold style={under}>
+                        {eventName(e.scorerId, e.scorer)}
+                      </Txt>
+                    </Press>
+                  ) : (
+                    <Txt bold>{eventName(e.scorerId, e.scorer)}</Txt>
+                  )}
+                  {e.slot ? (
+                    <Txt tone="muted" v="xs" testID="team-slot">
+                      {e.slot}
                     </Txt>
-                  </Press>
-                ) : (
-                  <Txt bold>{eventName(e.scorerId, e.scorer)}</Txt>
-                )}
+                  ) : null}
+                </View>
                 {e.assist ? (
                   linkable(e.assistId) ? (
                     <Press
@@ -142,6 +167,39 @@ export function TeamResult({
       ) : (
         <Txt tone="muted">{L.noGoals}</Txt>
       )}
+      {m.moments?.length ? (
+        <View style={{ gap: 6 }} testID="team-moments">
+          <Txt v="eyebrow">{M.recordTitle}</Txt>
+          {m.moments.map((x) => (
+            <View
+              key={x.index}
+              style={{
+                gap: 2,
+                paddingVertical: 8,
+                paddingHorizontal: 10,
+                borderRadius: RADIUS.sm,
+                backgroundColor: c.surface2,
+                borderLeftWidth: 3,
+                borderLeftColor: x.ok ? c.pitch2 : c.line,
+                opacity: x.ok ? 1 : 0.7,
+              }}
+            >
+              <Txt bold v="sm">
+                {momentTitle(x)}
+              </Txt>
+              <Txt v="sm">
+                {M.recordLine({
+                  minute: x.minute,
+                  name: `${eventName(x.actor.id, x.actor.name)}(${x.actor.slot})`,
+                  choice: pickedLabel(x, eventName),
+                  ok: !!x.ok,
+                })}
+              </Txt>
+            </View>
+          ))}
+        </View>
+      ) : null}
+      <TeamReport m={m} fix={fix} />
       <Txt tone="muted" v="sm">
         {`${kstMonthDayTime(m.createdAt)}${team && !friendly && m.mine === 'home' ? L.resultRecord({ record: recordText(team.record) }) : ''}`}
       </Txt>

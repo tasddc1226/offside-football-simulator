@@ -259,8 +259,8 @@
     width: 100%;
     min-height: 44px;
     padding: 6px 12px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
     background: var(--surface-2);
     color: inherit;
     font: inherit;
@@ -299,19 +299,19 @@
     place-items: center;
     min-width: 76px;
     padding: 6px 10px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--pitch);
     color: var(--on-pitch);
     line-height: 1.1;
   }
   .tp-rating small {
     font-family: var(--display);
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     letter-spacing: 0.12em;
   }
   .tp-rating b {
     font-family: var(--display);
-    font-size: 1.5rem;
+    font-size: var(--fs-title1);
     color: var(--pitch-accent);
   }
   .tp-stats {
@@ -324,12 +324,12 @@
     display: grid;
     place-items: center;
     padding: 6px 2px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
     text-align: center;
   }
   .tp-stats dt {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .tp-stats dd {
@@ -355,9 +355,9 @@
   .tp-like {
     min-height: 40px;
     padding: 0 14px;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: var(--surface);
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill);
+    background: var(--surface-2);
     color: var(--ink);
     font: inherit;
     font-weight: 700;
@@ -383,7 +383,7 @@
     flex-direction: column;
     gap: 2px;
     padding: 10px 12px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--surface-2);
   }
   .tp-badges li.final {

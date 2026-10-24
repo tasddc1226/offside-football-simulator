@@ -81,8 +81,9 @@ const ko = {
   footLabel: '주발',
   focusTitle: (p: { n: number }) => `주력 능력치 · ${p.n}개 선택`,
   focusUp: (p: { d: number; pct: number }) => `시작 +${p.d} · 성장 +${p.pct}%`,
-  focusDown: (p: { d: number }) => `시작 ${p.d}`,
-  focusNone: '변화 없음',
+  /** T-11-437 비주력은 훈련 성장이 OFF_FOCUS_GROWTH만큼 느리다. pct는 줄어드는 비율(양수). */
+  focusDown: (p: { d: number; pct: number }) => `시작 ${p.d} · 성장 -${p.pct}%`,
+  focusNone: (p: { pct: number }) => `시작 변화 없음 · 성장 -${p.pct}%`,
   trait: '성장 특성',
   potentialNote: '잠재력 평가는 은퇴할 때 공개돼요.',
   // 하단 버튼
@@ -109,6 +110,11 @@ const ko = {
   potentialWeb: '앱에서 보상형 광고를 보면 후보 3명의 초기 잠재력 등급 범위를 볼 수 있어요.',
   potentialSaveFailed: '공개 결과를 저장하지 못했어요. 저장 공간을 확인해 주세요.',
   candIntro: '세 후보는 능력치 총합이 같고 분포와 잠재력이 달라요. 카드를 눌러 비교해 보세요.',
+  // T-11-437 웹 비로그인 후보 단계 · 도구 접기
+  loginTools:
+    '로그인하면 리롤권 · 프리미엄 스카우트권으로 후보를 다시 뽑고, 구단 자금으로 잠재력을 볼 수 있어요.',
+  loginToolsGo: '로그인하러 가기',
+  moreTools: '상점 · 능력치 안내 더 보기',
   openAll: '모두 열기',
   candNo: (p: { n: number }) => `후보 ${p.n}`,
   picked: '✓ 선택',

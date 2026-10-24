@@ -31,7 +31,6 @@ import {
   cardForListing,
   cardTrades,
   countBuysSince,
-  countOpenListingsOf,
   fundsOf,
   getListing,
   insertListing,
@@ -88,6 +87,8 @@ function seasonOrThrow(now: string): number {
   return season;
 }
 
+const inLineup = () =>
+  conflictError('선발에 든 선수는 팀에서 뺀 뒤 내놓거나 방출해 주세요.', 'IN_LINEUP');
 const listingGone = () => conflictError('이미 팔렸거나 내린 선수예요.', 'LISTING_GONE');
 /** T-11-310 감독으로 분류된 카드(감독 커리어 중 · 감독 카드)는 거래 · 방출 · 잠금 대상이 아니다. */
 const cardManager = () =>
@@ -96,10 +97,14 @@ const listingIdOf = (c: Context<AppEnv>) =>
   parseWithAppError(ListingIdSchema, c.req.param('listingId'));
 
 export function registerMarketRoutes(app: Hono<AppEnv>): void {
-  // 지금 시즌 열린 등록(공개 · 세션 조회 없음). 첫 페이지만 엣지에 담는다(포지션·정렬별 몇 개뿐).
+  // 열린 등록(공개 · 세션 조회 없음). T-11-425부터 모든 시즌 카드가 함께 오른다. 첫 페이지만 엣지에 담는다(포지션·세부 포지션·유형·정렬이 모두
+  // 정해진 목록이라 키 수가 묶여 있다).
+  // 시즌 사이 휴식기에는 닫는다.
   app.get('/v1/market', async (c) => {
     const q = parseWithAppError(MarketListQuerySchema, {
       pos: c.req.query('pos') || undefined,
+      dpos: c.req.query('dpos') || undefined,
+      type: c.req.query('type') || undefined,
       sort: c.req.query('sort') || undefined,
       page: c.req.query('page') || undefined,
     });
@@ -116,14 +121,14 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     const load = async () => {
       const db = getDb(c);
       const [list, recent] = await Promise.all([
-        listOpenListings(db, season, q),
-        q.page === 0 ? recentSales(db, season) : Promise.resolve([]),
+        listOpenListings(db, q),
+        q.page === 0 ? recentSales(db) : Promise.resolve([]),
       ]);
       return { season, ...list, recent };
     };
     const data =
       q.page === 0
-        ? await edgeCached(c, EDGE.marketList(season, q.sort, q.pos), LIST_TTL, load)
+        ? await edgeCached(c, EDGE.marketList(season, q.sort, q), LIST_TTL, load)
         : await load();
     return ok(c, MarketListResponseSchema, data, 200, CACHE);
   });
@@ -207,7 +212,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
         listings,
         trades,
         spends,
-        buysLeft: Math.max(0, rules.dailyBuys - bought),
+        boughtToday: bought,
         rules,
       },
       200,
@@ -215,30 +220,29 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     );
   });
 
-  // 판매 등록: 지금 시즌의 내 카드 · 기준가 있음 · 숨김 아님 · 열린 등록 없음 · 가격이 범위 안 · 동시 등록 상한 안.
+  // 판매 등록: 내 카드(T-11-425부터 출신 시즌과 상관없이) · 기준가 있음 · 숨김 아님 · 선발 아님 · 열린 등록 없음 · 가격이 범위 안. T-11-474 동시 등록 상한은 없앴다.
   app.post('/v1/market/listings', requireProfile, idempotency, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
     const input = readBody(c, CreateListingBodySchema);
     const now = nowIso();
     const season = seasonOrThrow(now);
-    const [card, open, rules] = await Promise.all([
+    const teamSeason = teamSeasonAt(now);
+    const [card, rules, [team]] = await Promise.all([
       cardForListing(db, input.careerId),
-      countOpenListingsOf(db, me.id),
       marketRules(db),
+      teamSeason === null ? Promise.resolve([]) : myTeamIn(db, me.id, teamSeason),
     ]);
     if (!card || card.ownerId !== me.id)
       throw notFoundError('내 선수 카드를 찾을 수 없어요.', 'CARD_NOT_FOUND');
-    if (card.season !== season)
-      throw conflictError('이번 시즌 선수만 내놓을 수 있어요.', 'CARD_OTHER_SEASON');
     if (card.cardValue === null || card.hidden)
       throw conflictError('기준가가 없는 선수는 내놓을 수 없어요.', 'CARD_NOT_TRADABLE');
     if (card.manager) throw cardManager();
     if (card.openListing) throw conflictError('이미 내놓은 선수예요.', 'CARD_LISTED');
     if (card.locked) throw cardLocked();
+    // T-11-474 지금 시즌 선발은 팀에서 뺀 뒤에 내놓는다(팔기 탭에도 보이지 않는다).
+    if (team && slotIdsOf(team).includes(input.careerId)) throw inLineup();
     await checkCupListing(db, me.id, season, input.careerId);
-    if (open >= rules.listLimit)
-      throw conflictError(`한 번에 ${rules.listLimit}명까지 내놓을 수 있어요.`, 'LISTING_LIMIT');
     const band = priceBand(card.cardValue, rules);
     if (input.price < band.min || input.price > band.max)
       throw conflictError('판매가가 정해진 범위를 벗어났어요.', 'PRICE_OUT_OF_BAND');
@@ -248,7 +252,6 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
         id,
         careerId: input.careerId,
         sellerId: me.id,
-        season,
         price: input.price,
         now,
       }))
@@ -273,23 +276,17 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     const input = readBody(c, BuyListingBodySchema);
     const now = nowIso();
     const season = seasonOrThrow(now);
-    const [found, funds, bought, rules] = await Promise.all([
+    const [found, funds, rules] = await Promise.all([
       getListing(db, id),
       fundsOf(db, me.id),
-      countBuysSince(db, me.id, kstTodayStart(now)),
       marketRules(db),
     ]);
-    if (!found || found.status !== 'open' || found.hidden || found.listing.card.season !== season)
-      throw listingGone();
+    if (!found || found.status !== 'open' || found.hidden) throw listingGone();
     const card = found.listing.card;
     if (found.sellerId === me.id) throw conflictError('내가 내놓은 선수예요.', 'OWN_LISTING');
     if (found.price !== input.price)
       throw conflictError('판매가가 바뀌었어요. 다시 확인해 주세요.', 'PRICE_CHANGED');
-    if (bought >= rules.dailyBuys)
-      throw conflictError(
-        `오늘은 ${rules.dailyBuys}명까지 영입할 수 있어요. 내일 다시 영입해 주세요.`,
-        'DAILY_BUY_LIMIT',
-      );
+    // T-11-474 하루 영입 수 제한은 없앴다(오늘 영입 수는 화면 통계로만 센다).
     // 잔액 행이 없거나 모자라면 batch 전에 막는다(행이 없으면 출금 UPDATE가 0행으로 지나가 공짜가 된다).
     if (funds < input.price) throw fundsShort();
     let result: Awaited<ReturnType<typeof buyListing>>;
@@ -330,8 +327,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
       marketRules(db),
     ]);
     const lineup = new Set(team ? slotIdsOf(team) : []);
-    if (input.careerIds.some((id) => lineup.has(id)))
-      throw conflictError('선발에 든 선수는 팀에서 뺀 뒤 방출해 주세요.', 'IN_LINEUP');
+    if (input.careerIds.some((id) => lineup.has(id))) throw inLineup();
     const res = await releaseCards(db, {
       profileId: me.id,
       careerIds: [...new Set(input.careerIds)],

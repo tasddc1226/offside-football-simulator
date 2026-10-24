@@ -1,5 +1,6 @@
 // 이름 신고 처리(웹 admin/AdminNameReports.svelte): 신고받은 명예의 전당 선수 이름·구단 이름을 대상마다 모아 본다.
 // 가리면 선수는 익명이 되고(다시 올려도 돌아오지 않는다), 구단은 가린 이름으로 바뀐다. 처리하면 감사 로그가 남는다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import * as api from '@offside/app-core/api/admin';
@@ -79,7 +80,7 @@ export default function AdminNameReports() {
                   <Txt bold>{it.name ?? '(지워진 대상)'}</Txt>
                   <Pill tone="warn">{`신고 ${it.reports}`}</Pill>
                 </View>
-                <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                   {`마지막 신고 ${kst(it.lastReportedAt)}`}
                 </Txt>
                 <View style={{ flexDirection: 'row', gap: 6 }}>

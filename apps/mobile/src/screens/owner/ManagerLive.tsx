@@ -1,5 +1,6 @@
 // T-11-310 감독 시즌 경기 중계(웹 ManagerLive.svelte) — 선수 커리어 경기 중계 시트처럼 한 경기씩 올라오며 승무패 · 승점이
 // 쌓인다. 경기 목록은 결산이 정한 승무패를 나눈 연출용이다(managerMatchday). 다 보거나 '결과 바로 보기'를 누르면 결산으로.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { tn } from '@offside/game/i18n/names';
@@ -64,7 +65,7 @@ export function ManagerLive({
       <ProgBar progress={matches.length ? shown / matches.length : 1} fill={step} />
       <Txt
         tone="muted"
-        style={{ fontSize: rem(0.75), fontVariant: ['tabular-nums'], marginTop: -6 }}
+        style={{ fontSize: rem(FONT.caption), fontVariant: ['tabular-nums'], marginTop: -6 }}
       >
         {M.liveRound({ rd: shown, total: matches.length })}
       </Txt>
@@ -73,14 +74,14 @@ export function ManagerLive({
         {recent.map((m, i) => (
           <Enter key={m.rd} kind="translateY" from={-6} ms={250}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Txt tone="muted" style={{ width: 34, fontSize: rem(0.8125) }}>{`${m.rd}R`}</Txt>
+              <Txt tone="muted" style={{ width: 34, fontSize: rem(FONT.label) }}>{`${m.rd}R`}</Txt>
               <View style={{ width: 30 }}>
                 <ResBadge res={m.res} />
               </View>
               <Txt
                 tone={i ? 'muted' : 'ink'}
                 bold={i === 0}
-                style={{ flex: 1, fontSize: rem(0.8125), fontVariant: ['tabular-nums'] }}
+                style={{ flex: 1, fontSize: rem(FONT.label), fontVariant: ['tabular-nums'] }}
               >{`${tn(m.opp)} ${m.gf}-${m.ga}`}</Txt>
             </View>
           </Enter>
@@ -97,7 +98,10 @@ export function ManagerLive({
           hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
           style={{ alignSelf: 'center', paddingVertical: 6 }}
         >
-          <Txt tone="muted" style={{ fontSize: rem(0.75), textDecorationLine: 'underline' }}>
+          <Txt
+            tone="muted"
+            style={{ fontSize: rem(FONT.caption), textDecorationLine: 'underline' }}
+          >
             {M.liveSkip}
           </Txt>
         </Press>

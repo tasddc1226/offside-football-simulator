@@ -8,7 +8,9 @@ import {
   dismissPushOffer,
   snoozePushOffer,
   pushOffer,
+  pushOfferReady,
 } from '../../platform/pushOffer';
+import { appState } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Txt } from '../../ui';
 import { WEB_ORIGIN } from '../../platform/config';
@@ -17,6 +19,7 @@ import { homeMoreText } from '@offside/app-core/i18n/ko/homeMore';
 export function PushOptInCard() {
   const state = useSnapshot(pushState);
   const offer = useSnapshot(pushOffer);
+  const { G } = useSnapshot(appState);
   const c = useColors();
   useEffect(() => {
     void checkPushOffer();
@@ -25,7 +28,13 @@ export function PushOptInCard() {
     });
     return () => subscription.remove();
   }, []);
-  if (offer.handled || Date.now() < offer.snoozedUntil || !offer.eligible || state.enabled)
+  if (
+    offer.handled ||
+    Date.now() < offer.snoozedUntil ||
+    !offer.eligible ||
+    state.enabled ||
+    !pushOfferReady(G)
+  )
     return null;
   return (
     <Card testID="push-opt-in" gap={12} style={{ borderWidth: 1, borderColor: c.line }}>

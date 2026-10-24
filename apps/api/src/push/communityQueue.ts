@@ -1,6 +1,7 @@
 import type { Bindings } from '../env.js';
 import { communityOwnerEmail } from './community.js';
 import { runPersonalPush } from './personal.js';
+import { publishPushWork } from './queuePublish.js';
 
 type CommunityPushJob = { version: 1; sourceKey: string };
 const validSource = (key: unknown): key is string =>
@@ -13,7 +14,18 @@ const enabled = (env: Bindings) =>
 
 /** Call only after the D1 commit. D1 remains the durable outbox if publishing fails. */
 export async function publishCommunityPush(env: Bindings, sourceKeys: string[]) {
-  if (!enabled(env) || !env.ADMIN_PUSH_QUEUE) return;
+  if (!enabled(env)) return;
+  if (env.PUSH_QUEUE) {
+    for (const key of [...new Set(sourceKeys)].filter(validSource)) {
+      try {
+        await publishPushWork(env, 'personal', Date.now(), { key });
+      } catch {
+        console.error(JSON.stringify({ job: 'community-queue-publish', fallback: 'cron' }));
+      }
+    }
+    return;
+  }
+  if (!env.ADMIN_PUSH_QUEUE) return;
   const keys = [...new Set(sourceKeys)].filter(validSource);
   if (!keys.length) return;
   try {

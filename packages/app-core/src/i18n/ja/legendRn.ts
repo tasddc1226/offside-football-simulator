@@ -5,14 +5,18 @@ export const legendRn: Translation<LegendRnMsgs> = {
   missKicker: '永久欠番の審査',
   missSeasons: (p: { club: string; seasons: number; need: number }) =>
     `${p.club}で${p.seasons}シーズンプレーしました。永久欠番には同じクラブで${p.need}シーズン以上が必要です。`,
-  missScore: (p: { club: string; pct: number }) =>
-    `${p.club}での貢献ポイントは永久欠番の基準の${p.pct}%でした。基準を超えると欠番になります。`,
+  pctBand: (p) => `${p.pct}%台`,
+  missScore: (p) =>
+    `${p.club}での貢献ポイントは永久欠番の基準の${p.band}でした。基準を超えると欠番になります。`,
+  missScoreClose: (p) =>
+    `${p.club}での貢献ポイントは永久欠番の基準にわずかに届きませんでした。基準を超えると欠番になります。`,
   missScoreSeasons: (p) =>
-    `${p.club}での貢献ポイントは永久欠番の基準の${p.pct}%で、${p.seasons}シーズンのプレーも${p.need}シーズンに届きませんでした。`,
+    `${p.club}での貢献ポイントは永久欠番の基準の${p.band}で、${p.seasons}シーズンのプレーも${p.need}シーズンに届きませんでした。`,
   missStatSeasons: '同一クラブのシーズン',
   missStatSeasonsVal: (p) => `${p.seasons} / ${p.need}シーズン`,
   missStatScore: '貢献ポイント',
-  missStatScoreVal: (p) => `基準の${p.pct}%`,
+  missStatScoreVal: (p) => `基準の${p.band}`,
+  missStatScoreClose: '基準のすぐ下',
   missStatScoreOver: '基準以上',
   pending: 'サーバーが永久欠番を審査しています。少ししてから殿堂で確認できます。',
   lineNum: (p) => `${p.number}番`,
@@ -31,6 +35,7 @@ export const legendRn: Translation<LegendRnMsgs> = {
   anonTail: 'の永久欠番が確定します。',
   anonNote: '先に名前を公開した選手がその番号を受け取ります。',
   publish: '名前を公開して欠番を受け取る',
+  anonBlocked: 'リンクや不適切な言葉を含む名前は公開できないため、この欠番は受け取れません。',
   alertTitle: (p) => `👑 ${p.name}、${p.number}番が永久欠番に`,
   alertSub: (p) => `${p.club} · サーバー${p.seq}番目の欠番`,
   alertLabel: (p) => `${p.name}、${p.number}番が永久欠番に`,

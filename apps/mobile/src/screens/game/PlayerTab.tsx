@@ -1,6 +1,7 @@
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { MIN_RETIRE_AGE, marketValue } from '@offside/game/season';
 // 선수 탭(웹 tabs/PlayerTab.svelte): 능력치 카드 · 선수 정보 · 국가대표 · 은퇴 선언(32세부터).
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { potentialNotice } from '@offside/app-core/potential-view';
@@ -8,6 +9,8 @@ import { gamePlayerText as L } from '@offside/app-core/i18n/ko/gamePlayer';
 import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
 import { boostHidden, boostView, doBoost, type BoostOutcome } from '@offside/app-core/boost-view';
 import { peekView } from '@offside/app-core/potential-peek';
+import { gradeTier } from '@offside/app-core/reveal';
+import { RevealGrade } from '../../components/RevealFx';
 import { TRAITS } from '@offside/game/data';
 import { boostFreeOpen, boostTicketOpen, type BoostPay } from '@offside/game/boost';
 import { ovr } from '@offside/game/attributes';
@@ -53,13 +56,13 @@ function Kv({ rows, mt = 0 }: { rows: Row[]; mt?: number }) {
     <View style={{ gap: 8, marginTop: mt }}>
       {rows.map((r) => (
         <View key={r.k} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
-          <Txt tone="muted" style={{ fontSize: rem(0.875), flexShrink: 1 }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.body2), flexShrink: 1 }}>
             {r.k}
           </Txt>
           <Txt
             testID={r.testID}
             style={{
-              fontSize: rem(0.875),
+              fontSize: rem(FONT.body2),
               fontWeight: '600',
               textAlign: 'right',
               flexShrink: 1,
@@ -167,7 +170,7 @@ function BoostCard({ s }: { s: GameState }) {
               style={{
                 width: 10,
                 height: 10,
-                borderRadius: 5,
+                borderRadius: RADIUS.xs,
                 borderWidth: 1.5,
                 borderColor: i < v.lv ? c.accent : c.line,
                 backgroundColor: i < v.lv ? c.accent : 'transparent',
@@ -237,14 +240,14 @@ function BoostCard({ s }: { s: GameState }) {
               {B.ticketBoost({ n: tickets, chance: v.chance })}
             </Btn>
           ) : null}
-          <IapPacks item="boost" note={IL.boostNote({ chance: v.chance })} />
+          <IapPacks item="boost" note={IL.boostNote({ chance: v.chance })} login={false} />
         </View>
       ) : null}
-      <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: 4 }}>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 4 }}>
         {v.note}
       </Txt>
       {v.history.map((h, i) => (
-        <Txt key={i} tone="muted" style={{ fontSize: rem(0.75), marginTop: 2 }}>
+        <Txt key={i} tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 2 }}>
           {`· ${h}`}
         </Txt>
       ))}
@@ -267,6 +270,12 @@ export function PlayerTab({ s }: { s: GameState }) {
   // T-11-079 보상형 광고로 이번 시즌 스카우트 평가 보기. 광고 단위도 광고 제거도 없으면 예전 안내만 둔다.
   const owned = useSnapshot(adFree).owned;
   const peek = useSnapshot(potPeek);
+  useEffect(
+    () => () => {
+      potPeek.fresh = false;
+    },
+    [],
+  );
   const pot = peekView(s, peek.peek, owned ? 'free' : 'ad');
   const canAd = peekAvailable();
   // T-11-153 광고 대신 구단 자금으로 평가 보기(로그인한 구단주). 광고 제거 구매자는 이미 광고 없이 본다.
@@ -279,7 +288,21 @@ export function PlayerTab({ s }: { s: GameState }) {
     { k: L.body, testID: 'body', v: `${body.h}cm · ${body.w}kg` },
     { k: L.foot, v: tn(s.foot) },
     { k: L.trait, v: traitName },
-    { k: L.potential, testID: 'pot', v: pot.kind === 'shown' ? pot.text : potentialNotice() },
+    {
+      k: L.potential,
+      testID: 'pot',
+      // T-11-371 이번에 연 평가만 등급 공개 연출(저장한 뒤 보여 준다).
+      v:
+        pot.kind === 'shown' ? (
+          peek.fresh ? (
+            <RevealGrade grade={pot.grade} text={pot.text} tier={gradeTier(pot.grade)} />
+          ) : (
+            pot.text
+          )
+        ) : (
+          potentialNotice()
+        ),
+    },
     { k: L.peakOvr, v: String(Math.max(s.peak, ovr(s))) },
     { k: L.trust, v: s.trust >= 2 ? L.trustHigh : s.trust >= 0 ? L.trustMid : L.trustLow },
     {
@@ -315,7 +338,7 @@ export function PlayerTab({ s }: { s: GameState }) {
             }}
             testID="pot-peek"
           >
-            <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
               {peek.message || pot.text}
             </Txt>
             {canAd && pot.kind === 'available' ? (
@@ -369,7 +392,7 @@ export function PlayerTab({ s }: { s: GameState }) {
               style={{
                 flex: 1,
                 backgroundColor: c.surface2,
-                borderRadius: 10,
+                borderRadius: RADIUS.sm,
                 padding: 8,
                 alignItems: 'center',
               }}
@@ -377,13 +400,13 @@ export function PlayerTab({ s }: { s: GameState }) {
               <Txt
                 style={{
                   fontFamily: DISPLAY[700],
-                  fontSize: rem(1.625),
-                  lineHeight: rem(1.625) * 1.1,
+                  fontSize: rem(FONT.title1),
+                  lineHeight: rem(FONT.title1) * 1.1,
                 }}
               >
                 {x.v}
               </Txt>
-              <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
                 {x.l}
               </Txt>
             </View>
@@ -399,12 +422,20 @@ export function PlayerTab({ s }: { s: GameState }) {
           ]}
         />
         {isKorean(s) && (
-          <Txt tone="muted" style={{ marginTop: 10, fontSize: rem(0.875) }} testID="military-guide">
+          <Txt
+            tone="muted"
+            style={{ marginTop: 10, fontSize: rem(FONT.body2) }}
+            testID="military-guide"
+          >
             {sportsServiceNotice()}
           </Txt>
         )}
         {isKorean(s) && s.mil.exempt && s.mil.sportsService?.monthsLeft == null && (
-          <Txt tone="muted" style={{ marginTop: 8, fontSize: rem(0.875) }} testID="military-legacy">
+          <Txt
+            tone="muted"
+            style={{ marginTop: 8, fontSize: rem(FONT.body2) }}
+            testID="military-legacy"
+          >
             {sportsServiceLegacyNotice()}
           </Txt>
         )}
@@ -417,7 +448,7 @@ export function PlayerTab({ s }: { s: GameState }) {
                 <TrophyRow key={x.year + x.name} year={x.year} first={i === 0}>
                   <Txt>
                     <Txt style={{ fontWeight: '700' }}>{tn(x.name).replace(/^\d{4} /, '')}</Txt>
-                    <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                    <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                       {`  ${L.tourLine({ stage: tn(x.stage), apps: x.apps, goals: x.goals })}`}
                     </Txt>
                   </Txt>

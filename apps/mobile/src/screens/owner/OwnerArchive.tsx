@@ -1,3 +1,4 @@
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -18,6 +19,7 @@ import { HonorEmblem } from '../../components/HonorEmblem';
 import { CupHonors } from '../../components/CupHonors';
 import { Btn, Card, Press, Txt } from '../../ui';
 import SeasonRecap from './SeasonRecap';
+import { Skeleton } from '../../ui/Skeleton';
 
 export function OwnerArchive() {
   const [archive] = useState(() => new Archive());
@@ -53,17 +55,12 @@ export function OwnerArchive() {
   const badges = honorViews(state.data?.honors.filter((h) => h.season === state.season) ?? []);
   const cups = owner?.cupHonors.filter((h) => h.season === state.season) ?? [];
   const tier = line?.achScore == null ? null : ownerTierOf(line.achScore);
-  const small = { fontSize: rem(0.8) };
+  const small = { fontSize: rem(FONT.label) };
   const expand = async (retry = false) => {
     await archive.expand(retry);
     if (archive.state.detail?.status === 'ready') appState.recapNew = false;
   };
-  if (state.loading)
-    return (
-      <Txt tone="muted" accessibilityLiveRegion="polite">
-        {L.archiveLoading}
-      </Txt>
-    );
+  if (state.loading) return <Skeleton rows={4} />;
   if (state.error)
     return (
       <Card gap={12} testID="archive-error">
@@ -92,7 +89,7 @@ export function OwnerArchive() {
             <Txt tone="muted" center style={small}>
               {label}
             </Txt>
-            <Txt num={700} style={{ fontSize: rem(1.4) }}>
+            <Txt num={700} style={{ fontSize: rem(FONT.title2) }}>
               {num(Number(value))}
             </Txt>
           </View>
@@ -114,7 +111,7 @@ export function OwnerArchive() {
               gap: 12,
               minHeight: 64,
               padding: 12,
-              borderRadius: 12,
+              borderRadius: RADIUS.md,
               borderWidth: 1,
               borderColor: state.season === s.season ? c.line : 'transparent',
               backgroundColor: state.season === s.season ? c.surface2 : 'transparent',
@@ -124,7 +121,7 @@ export function OwnerArchive() {
               style={{
                 width: 10,
                 height: 10,
-                borderRadius: 5,
+                borderRadius: RADIUS.xs,
                 borderWidth: 2,
                 borderColor: c.muted,
                 backgroundColor: state.season === s.season ? c.accent : 'transparent',
@@ -194,7 +191,7 @@ export function OwnerArchive() {
                 <Txt tone="muted" style={small}>
                   {L.archiveScore}
                 </Txt>
-                <Txt num={700} style={{ fontSize: rem(1.6) }}>
+                <Txt num={700} style={{ fontSize: rem(FONT.title1) }}>
                   {line.achScore === null ? L.none : num(line.achScore)}
                 </Txt>
               </View>
@@ -202,7 +199,7 @@ export function OwnerArchive() {
                 <Txt tone="muted" style={small}>
                   {L.archiveTeamRank}
                 </Txt>
-                <Txt num={700} style={{ fontSize: rem(1.6) }}>
+                <Txt num={700} style={{ fontSize: rem(FONT.title1) }}>
                   {line.teamRank === null ? L.none : L.rank({ n: line.teamRank })}
                 </Txt>
               </View>
@@ -291,8 +288,8 @@ export function OwnerArchive() {
                   padding: 16,
                   minHeight: 52,
                   borderWidth: 1,
-                  borderColor: c.line,
-                  borderRadius: 12,
+                  borderColor: 'transparent',
+                  borderRadius: RADIUS.md,
                   backgroundColor: c.surface,
                 }}
               >
@@ -304,9 +301,7 @@ export function OwnerArchive() {
               {state.expanded ? (
                 <View style={{ gap: 14 }}>
                   {state.detailLoading ? (
-                    <Txt tone="muted" accessibilityLiveRegion="polite">
-                      {L.archiveLoading}
-                    </Txt>
+                    <Skeleton rows={4} />
                   ) : state.detailError ? (
                     <>
                       <Txt>{L.archiveError}</Txt>

@@ -3,7 +3,7 @@ import type { PlayStyle } from '@offside/contracts';
 import { STYLE_COUNTERS } from '@offside/contracts/play-style';
 import type { CareerRecord, LegendSource } from '@offside/game/types';
 import type { LegendView } from './state.js';
-import { shareCardData } from './shareCard.js';
+import { shareCardData, shareCardKey } from './shareCard.js';
 
 const season = (
   year: number,
@@ -162,5 +162,16 @@ describe('T-10-079 공유 이미지 카드 내용', () => {
     ]);
     // 성향 칸이 있으면 우승 칸은 없다.
     expect(shareCardData(view(career, { d: { ...v.d!, style } }), null).honours).toEqual([]);
+  });
+});
+
+describe('T-11-439 이미 만든 공유 이미지가 낡았는지', () => {
+  it('대표 칭호나 결번이 바뀌면 열쇠가 달라지고, 같은 기록이면 같다', () => {
+    const v = view([season(2027, 'A', 'K리그1')]);
+    const base = shareCardKey(shareCardData(v, null));
+    expect(shareCardKey(shareCardData(view([season(2027, 'A', 'K리그1')]), null))).toBe(base);
+    expect(shareCardKey(shareCardData(v, 'wall_of_honor'))).not.toBe(base);
+    const rn = { kind: 'granted' as const, clubId: 'k1-1', club: 'A', number: 17, seq: 1 };
+    expect(shareCardKey(shareCardData({ ...v, rn }, null))).not.toBe(base);
   });
 });

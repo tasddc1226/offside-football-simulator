@@ -11,6 +11,10 @@ const ko = {
   cityIT: '밀라노',
   cityES: '마드리드',
   cityGB: '런던',
+  cityPT: '리스본',
+  cityBR: '상파울루',
+  citySA: '리야드',
+  cityCN: '상하이',
   countryKR: '대한민국',
   countryJP: '일본',
   countryUS: '미국',
@@ -20,6 +24,10 @@ const ko = {
   countryIT: '이탈리아',
   countryES: '스페인',
   countryGB: '잉글랜드',
+  countryPT: '포르투갈',
+  countryBR: '브라질',
+  countrySA: '사우디아라비아',
+  countryCN: '중국',
 };
 
 export type AppFlightMsgs = typeof ko;

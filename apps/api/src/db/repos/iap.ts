@@ -1,14 +1,16 @@
 import {
-  HOME_GIFT,
   OWNER_ITEMS,
   REROLL_MILEAGE,
-  SCOUT_PITY_ELITE,
-  SCOUT_PITY_SURE,
+  scoutPityAt,
+  type ScoutPityCap,
   type IapStore,
   type OwnerItem,
   type ScoutMode,
   type ScoutPity,
+  type WEB_PAY_STORE,
 } from '@offside/contracts';
+import type { VerifiedPurchaseMetadata } from '../../iap/metadata.js';
+import { ACQUISITION_WINDOW_MS } from '@offside/contracts/acquisition';
 import type { Db } from '../client.js';
 import { grantItemStatement } from './itemShop.js';
 
@@ -23,6 +25,9 @@ const ITEMS_SQL = `SELECT item, qty FROM owner_items WHERE profile_id = ?1
   UNION ALL SELECT 'pity.elites', elites FROM scout_pity WHERE profile_id = ?1
   UNION ALL SELECT 'mileage', progress FROM reroll_mileage WHERE profile_id = ?1`;
 const OWNER_SQL = `SELECT profile_id AS profileId FROM iap_purchases WHERE store = ? AND transaction_id = ?`;
+
+/** 구매 원장의 store: 앱 스토어 둘 · T-11-454 웹 결제(엑솔라). */
+type LedgerStore = IapStore | typeof WEB_PAY_STORE;
 
 const foldItems = (rows: readonly { item: string; qty: number }[]): Items => {
   const out = Object.fromEntries(OWNER_ITEMS.map((k) => [k, 0])) as Record<OwnerItem, number>;
@@ -49,9 +54,11 @@ const foldItems = (rows: readonly { item: string; qty: number }[]): Items => {
  * 값을 읽는다. pity = 기기가 천장을 아는지(옛 앱은 확정 모드를 받지 못하니 장수만 센다), hit = 기기가 뽑은 일반 후보에
  * S가 있었는지. 규칙은 contracts scoutPityView와 같다.
  */
-const ELITE_DUE = `?2 = 1 AND (used + 1) / ${SCOUT_PITY_ELITE} > elites`;
-const SURE_DUE = `?2 = 1 AND streak >= ${SCOUT_PITY_SURE - 1}`;
-const PITY_SQL = `INSERT INTO scout_pity (profile_id, used, streak, elites, mode, updated_at)
+// T-11-450 천장 장수는 시즌마다 다르다(scoutPityOf). 정수 두 개만 SQL에 넣는다.
+const pitySql = (cap: ScoutPityCap) => {
+  const ELITE_DUE = `?2 = 1 AND (used + 1) / ${Math.trunc(cap.elite)} > elites`;
+  const SURE_DUE = `?2 = 1 AND streak >= ${Math.trunc(cap.sure) - 1}`;
+  return `INSERT INTO scout_pity (profile_id, used, streak, elites, mode, updated_at)
   SELECT ?1, 1, CASE WHEN ?2 = 1 AND ?3 = 1 THEN 0 ELSE 1 END, 0, 'normal', ?4
   WHERE EXISTS (SELECT 1 FROM owner_items WHERE profile_id = ?1 AND item = 'scout' AND updated_at = ?4)
   ON CONFLICT (profile_id) DO UPDATE SET
@@ -61,6 +68,7 @@ const PITY_SQL = `INSERT INTO scout_pity (profile_id, used, streak, elites, mode
     used = used + 1,
     updated_at = excluded.updated_at
   RETURNING mode`;
+};
 
 /**
  * T-11-248 리롤권 한 장의 마일리지를 센다(장수를 뺀 같은 batch, 차감이 됐을 때만). progress가 REROLL_MILEAGE에 닿으면
@@ -109,7 +117,11 @@ export async function spendItem(
       )
       .bind(now, profileId, item),
     ...(item === 'scout'
-      ? [d1.prepare(PITY_SQL).bind(profileId, scout.pity ? 1 : 0, scout.hit ? 1 : 0, now)]
+      ? [
+          d1
+            .prepare(pitySql(scoutPityAt(now)))
+            .bind(profileId, scout.pity ? 1 : 0, scout.hit ? 1 : 0, now),
+        ]
       : []),
     ...(item === 'reroll'
       ? [
@@ -130,7 +142,7 @@ export async function spendItem(
 }
 
 /** 이 거래를 받은 구단주(없으면 undefined). */
-export async function iapOwnerOf(db: Db, store: IapStore, transactionId: string) {
+export async function iapOwnerOf(db: Db, store: LedgerStore, transactionId: string) {
   const row = await db.$client
     .prepare(OWNER_SQL)
     .bind(store, transactionId)
@@ -145,7 +157,7 @@ export async function iapOwnerOf(db: Db, store: IapStore, transactionId: string)
 export async function grantIapPurchase(
   db: Db,
   p: {
-    store: IapStore;
+    store: LedgerStore;
     transactionId: string;
     profileId: string;
     productId: string;
@@ -154,14 +166,25 @@ export async function grantIapPurchase(
     test: boolean;
     now: string;
     alertId?: string;
+    metadata?: VerifiedPurchaseMetadata;
+    acquisitionEnabled?: boolean;
   },
 ): Promise<Items | null> {
   const d1 = db.$client;
   const [, , owner, items] = await d1.batch<{ profileId?: string; item: string; qty: number }>([
     d1
       .prepare(
-        `INSERT INTO iap_purchases (store, transaction_id, profile_id, product_id, item, qty, test, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`,
+        `INSERT INTO iap_purchases (store, transaction_id, profile_id, product_id, item, qty, test, created_at,
+          purchased_at, price_milliunits, currency, storefront, first_touch_id, last_touch_id, refunded_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12,
+          (SELECT s.id FROM acquisition_sessions s JOIN acquisition_consents c ON c.profile_id=s.profile_id
+           WHERE ?13=1 AND s.profile_id=?3 AND s.linked_at IS NOT NULL AND s.linked_at<=?9
+             AND s.received_at>=?14 AND s.received_at<=?9 ORDER BY s.received_at, s.id LIMIT 1),
+          (SELECT s.id FROM acquisition_sessions s JOIN acquisition_consents c ON c.profile_id=s.profile_id
+           WHERE ?13=1 AND s.profile_id=?3 AND s.linked_at IS NOT NULL AND s.linked_at<=?9
+             AND s.received_at>=?14 AND s.received_at<=?9 ORDER BY s.received_at DESC, s.id DESC LIMIT 1),
+          (SELECT refunded_at FROM iap_refund_markers WHERE store=?1 AND transaction_id=?2))
+         ON CONFLICT DO NOTHING`,
       )
       .bind(
         p.store,
@@ -172,8 +195,19 @@ export async function grantIapPurchase(
         p.qty,
         p.test ? 1 : 0,
         p.now,
+        p.metadata?.purchasedAt ?? null,
+        p.metadata?.priceMilliunits ?? null,
+        p.metadata?.currency ?? null,
+        p.metadata?.storefront ?? null,
+        p.acquisitionEnabled ? 1 : 0,
+        p.metadata?.purchasedAt
+          ? new Date(Date.parse(p.metadata.purchasedAt) - ACQUISITION_WINDOW_MS).toISOString()
+          : null,
       ),
-    grantItemStatement(d1, p.profileId, p.item, p.qty, p.now, { sql: 'changes() = 1' }),
+    grantItemStatement(d1, p.profileId, p.item, p.qty, p.now, {
+      sql: 'changes() = 1 AND EXISTS (SELECT 1 FROM iap_purchases WHERE store=? AND transaction_id=? AND refunded_at IS NULL)',
+      params: [p.store, p.transactionId],
+    }),
     d1.prepare(OWNER_SQL).bind(p.store, p.transactionId),
     d1.prepare(ITEMS_SQL).bind(p.profileId),
     ...(p.alertId
@@ -182,7 +216,7 @@ export async function grantIapPurchase(
             .prepare(
               `INSERT INTO billing_alerts (id, store, kind, product_id, test, created_at)
       SELECT ?, store, 'purchase', product_id, test, created_at FROM iap_purchases
-      WHERE store = ? AND transaction_id = ? AND profile_id = ? AND created_at = ?
+      WHERE store = ? AND transaction_id = ? AND profile_id = ? AND created_at = ? AND refunded_at IS NULL
       ON CONFLICT DO NOTHING`,
             )
             .bind(p.alertId, p.store, p.transactionId, p.profileId, p.now),
@@ -210,7 +244,7 @@ export type IapRevoke =
  */
 export async function revokeIapPurchase(
   db: Db,
-  store: IapStore,
+  store: LedgerStore,
   transactionId: string,
   now: string,
 ): Promise<IapRevoke> {
@@ -254,34 +288,68 @@ export async function revokeIapPurchase(
   return { found: true, already: !marked?.meta.changes, ...r };
 }
 
-/** T-11-275 이 구단주가 지금 홈 선물을 받았는지(PK 조회 한 번). */
-export async function homeGiftClaimed(db: Db, profileId: string): Promise<boolean> {
+/**
+ * T-11-386 시즌 업적 보상 한 번 읽기 — 그 시즌 업적 행의 점수 · 적어 둔 보상 장수와 받았는지(giftId 받은 기록). 행이 없으면
+ * null(그 시즌에 업적을 센 적 없음). 장수가 null이면 아직 세지 않았다.
+ */
+export async function seasonGiftRowOf(
+  db: Db,
+  profileId: string,
+  season: number,
+  giftId: string,
+): Promise<{ score: number; boost: number | null; scout: number | null; claimed: boolean } | null> {
   const row = await db.$client
-    .prepare(`SELECT 1 AS x FROM gift_claims WHERE profile_id = ? AND gift_id = ?`)
-    .bind(profileId, HOME_GIFT.id)
-    .first();
-  return row !== null;
+    .prepare(
+      `SELECT score, reward_boost AS boost, reward_scout AS scout,
+              EXISTS (SELECT 1 FROM gift_claims WHERE profile_id = ?1 AND gift_id = ?3) AS claimed
+         FROM owner_achievements WHERE profile_id = ?1 AND season = ?2`,
+    )
+    .bind(profileId, season, giftId)
+    .first<{ score: number; boost: number | null; scout: number | null; claimed: number }>();
+  return row ? { ...row, claimed: row.claimed === 1 } : null;
+}
+
+/** T-11-386 센 시즌 업적 보상 장수를 적는다. 이미 적었으면 그대로 둔다(겹쳐 세도 먼저 적은 값). */
+export async function saveSeasonGift(
+  db: Db,
+  profileId: string,
+  season: number,
+  r: { boost: number; scout: number },
+) {
+  await db.$client
+    .prepare(
+      `UPDATE owner_achievements SET reward_boost = ?, reward_scout = ?
+        WHERE profile_id = ? AND season = ? AND reward_boost IS NULL`,
+    )
+    .bind(r.boost, r.scout, profileId, season)
+    .run();
 }
 
 /**
- * T-11-275 홈 선물 받기. 받은 기록을 넣고, 그 줄을 이 batch가 새로 넣었을 때만(claim_id) 강화권 · 스카우트권을 더한다.
- * 이미 받았으면 null, 아니면 받은 뒤 장수. 스카우트권은 다른 경로로 받은 것과 같은 줄이라 쓸 때 천장을 똑같이 센다.
+ * T-11-386 시즌 업적 보상 받기: 받은 기록을 넣고, 그 줄을 이 batch가 새로 넣었을
+ * 때만 적어 둔 장수만큼 더한다. 이미 받았으면 null, 아니면 받은 뒤 장수.
  */
-export async function claimHomeGift(db: Db, profileId: string, now: string): Promise<Items | null> {
+export async function claimSeasonGift(
+  db: Db,
+  profileId: string,
+  giftId: string,
+  r: { boost: number; scout: number },
+  now: string,
+): Promise<Items | null> {
   const d1 = db.$client;
   const claimId = crypto.randomUUID();
   const guard = {
     sql: `EXISTS (SELECT 1 FROM gift_claims WHERE profile_id = ? AND gift_id = ? AND claim_id = ?)`,
-    params: [profileId, HOME_GIFT.id, claimId],
+    params: [profileId, giftId, claimId],
   };
   const results = await d1.batch<{ item: string; qty: number }>([
     d1
       .prepare(
         `INSERT OR IGNORE INTO gift_claims (profile_id, gift_id, claim_id, claimed_at) VALUES (?, ?, ?, ?)`,
       )
-      .bind(profileId, HOME_GIFT.id, claimId, now),
-    grantItemStatement(d1, profileId, 'boost', HOME_GIFT.boost, now, guard),
-    grantItemStatement(d1, profileId, 'scout', HOME_GIFT.scout, now, guard),
+      .bind(profileId, giftId, claimId, now),
+    ...(r.boost > 0 ? [grantItemStatement(d1, profileId, 'boost', r.boost, now, guard)] : []),
+    ...(r.scout > 0 ? [grantItemStatement(d1, profileId, 'scout', r.scout, now, guard)] : []),
     d1.prepare(ITEMS_SQL).bind(profileId),
   ]);
   if (!results[0]?.meta.changes) return null;

@@ -1,0 +1,27 @@
+{
+  "id": "t-11-428-trait-growth-balance",
+  "title": "성장 특성 밸런스 조정",
+  "items": [
+    "대기만성은 22~29세에 자라는 폭이 조금 줄고, 32세부터 스피드와 피지컬이 떨어지기 시작해요.",
+    "조기 성장은 24세 이후에도 전보다 더 자라고, 31세부터 떨어지기 시작해요.",
+    "이번 업데이트 뒤에 만든 선수부터 적용돼요. 이미 뛰고 있는 선수는 지금 성장 방식 그대로 이어가요."
+  ],
+  "en": {
+    "title": "Growth trait balance changes",
+    "items": [
+      "Late bloomers grow a little less from age 22 to 29, and their pace and physical start to decline from age 32.",
+      "Early developers keep growing more than before after age 24, and start to decline from age 31.",
+      "These changes apply to players created after this update. Players already in a career keep their current growth."
+    ]
+  },
+  "ja": {
+    "title": "成長特性のバランス調整",
+    "items": [
+      "大器晩成は22〜29歳の成長幅が少し小さくなり、32歳からスピードとフィジカルが落ち始めます。",
+      "早熟は24歳以降も以前より伸び、31歳から落ち始めます。",
+      "このアップデート以降に作成した選手から適用されます。プレー中の選手は今の成長のまま続きます。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

@@ -5,7 +5,8 @@
   import { loadHOF } from '@offside/game/hof-store';
 import { loadKey } from '@offside/game/storage';
   import { loadGame } from './boot.js';
-  import { applyBackup, backupFileName, decodeBackup, encodeBackup, type DecodeFail } from '@offside/app-core/backup';
+  import { applyBackup, backupFileName, decodeBackup, encodeBackup, replaceConfirmText, type Backup, type DecodeFail } from '@offside/app-core/backup';
+  import { closeSheet, showSheet } from './sheetState.svelte.js';
   import { save, toast } from './helpers.js';
   import { goHome } from './nav.js';
   import { appState } from './state.svelte.js';
@@ -79,11 +80,20 @@ import { loadKey } from '@offside/game/storage';
   function importText(text: string) {
     const r = decodeBackup(text);
     if (!r.ok) return toast(failText()[r.reason]);
-    const cur = appState.G;
-    if (cur && !cur.retired) {
-      if (!confirm(L.replaceConfirm({ name: cur.name }))) return;
-    }
-    if (!applyBackup(r.backup, loadHOF())) return toast(L.noSpace);
+    // T-11-441 은퇴한 커리어도 세이브가 바뀌므로 묻는다(브라우저 확인 창 대신 설정의 다른 확인과 같은 시트).
+    const ask = replaceConfirmText(appState.G);
+    if (!ask) return apply(r.backup);
+    showSheet(
+      { kind: 'notice', eyebrow: 'Backup', title: L.importLabel, muted: true, text: ask },
+      [
+        { label: L.replaceOk, cls: 'btn-primary', fn: () => (closeSheet(), apply(r.backup)) },
+        { label: L.cancel, fn: closeSheet },
+      ],
+    );
+  }
+
+  function apply(backup: Backup) {
+    if (!applyBackup(backup, loadHOF())) return toast(L.noSpace);
     loadGame(); // 부팅과 같은 길로 저장을 읽는다(형식 변환·RNG 복원·밸런스)
     appState.report = null;
     pasted = '';
@@ -123,6 +133,8 @@ import { loadKey } from '@offside/game/storage';
         <textarea id="backup-code" readonly rows="3" data-backup="code" value={manualCode} onfocus={(e) => e.currentTarget.select()}></textarea>
       </div>
     {/if}
+  {:else}
+    <p class="muted fs-sm backup-none" data-backup="none">{L.exportNone}</p>
   {/if}
   <div class="backup-import" data-backup="import">
     <div class="field">
@@ -143,6 +155,9 @@ import { loadKey } from '@offside/game/storage';
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 12px;
+  }
+  .backup-none {
+    margin: 12px 0 0;
   }
   .backup-import {
     margin-top: 14px;

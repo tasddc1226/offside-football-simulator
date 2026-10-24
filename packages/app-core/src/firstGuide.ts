@@ -1,15 +1,17 @@
-// T-11-355 처음 안내 카드 · 상품 위치 안내(웹 FirstGuide.svelte·ItemsHint.svelte · 앱 screens/home/FirstGuide.tsx·components/ItemsHint.tsx).
-// 길찾기 질문(포지션·유형, 스카우트권 위치, 영구결번)에 답하는 카드를 기기마다 한 번, 닫을 때까지 보여 준다.
+// T-11-355 상품 위치 안내(웹 ItemsHint.svelte · 앱 components/ItemsHint.tsx)를 기기마다 한 번, 닫을 때까지 보여 준다.
+// 홈의 처음 안내 카드('home')는 T-11-473 첫 커리어 따라가기 안내(tutorial.ts)로 바꿨다 — 옛 기기에 남은 'home' 값은 읽을 때 버린다.
+// T-11-437 'save'는 커리어를 시작한 뒤 게임 화면에 한 번 띄우는 저장 위치 안내(웹·앱 SaveHint).
 // 화면 표시만 한다 — 게임 상태·세이브·난수는 건드리지 않는다.
 import { loadKey, saveKey } from '@offside/game/storage';
 
-export type GuideCard = 'home' | 'items';
+export type GuideCard = 'items' | 'save';
+const CARDS: readonly GuideCard[] = ['items', 'save'];
 
 const KEY = 'ft_first_guide';
 
 function closed(): GuideCard[] {
   const v = loadKey<unknown>(KEY);
-  return Array.isArray(v) ? v.filter((x): x is GuideCard => x === 'home' || x === 'items') : [];
+  return Array.isArray(v) ? v.filter((x): x is GuideCard => CARDS.includes(x as GuideCard)) : [];
 }
 
 /**
@@ -26,3 +28,10 @@ export function closeGuide(k: GuideCard): void {
   const list = closed();
   if (!list.includes(k)) saveKey(KEY, [...list, k]);
 }
+
+/**
+ * T-11-437 저장 위치 안내를 띄울지. 커리어 첫 시즌(지난 시즌 기록이 없을 때)에만, 이 기기에서 닫은 적 없을 때.
+ * 이미 시즌을 넘긴 커리어에는 띄우지 않아 기존 이용자에게 갑자기 끼어들지 않는다.
+ */
+export const saveHintOpen = (pastSeasons: number): boolean =>
+  pastSeasons === 0 && guideOpen('save');

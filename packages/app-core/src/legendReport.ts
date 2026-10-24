@@ -38,8 +38,12 @@ export const rnMissText = (m: RetiredNumberMiss) =>
   m.reason === 'seasons'
     ? RN.missSeasons({ club: tn(m.club), seasons: m.seasons, need: m.need })
     : m.seasons > 0 && m.seasons < m.need
-      ? RN.missScoreSeasons({ club: tn(m.club), pct: m.pct ?? 0, seasons: m.seasons, need: m.need })
-      : RN.missScore({ club: tn(m.club), pct: m.pct ?? 0 });
+      ? RN.missScoreSeasons({ club: tn(m.club), band: band(m), seasons: m.seasons, need: m.need })
+      : m.close
+        ? RN.missScoreClose({ club: tn(m.club) })
+        : RN.missScore({ club: tn(m.club), band: band(m) });
+/** T-11-429 10% 단위 내림 점수를 구간으로(90 → 90%대). */
+const band = (m: RetiredNumberMiss) => RN.pctBand({ pct: m.pct ?? 0 });
 
 /** T-11-264 어디서 모자랐는지 줄별로(라벨 · 값 · 넘었는지). 옛 응답(시즌 0 · pct 없음)은 아는 줄만 돌려준다. */
 export type RnMissStat = {
@@ -63,7 +67,12 @@ export function rnMissStats(m: RetiredNumberMiss): RnMissStat[] {
     out.push({
       key: 'score',
       label: RN.missStatScore,
-      value: m.pct >= 100 ? RN.missStatScoreOver : RN.missStatScoreVal({ pct: m.pct }),
+      value:
+        m.pct >= 100
+          ? RN.missStatScoreOver
+          : m.close
+            ? RN.missStatScoreClose
+            : RN.missStatScoreVal({ band: band(m) }),
       met: m.pct >= 100,
       pct: Math.min(100, m.pct),
     });

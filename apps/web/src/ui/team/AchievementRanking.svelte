@@ -1,11 +1,17 @@
 <script lang="ts">
+  import Skeleton from '../Skeleton.svelte';
   import { seasonLabel } from '@offside/app-core/seasonName';
   import TeamLogo from './TeamLogo.svelte';
   // T-11-028 구단주 랭킹 — 기록실 탭. 구단주의 시즌 업적 점수 순(같은 점수면 먼저 닿은 구단주가 앞선다). 구단주는 공개
   // 닉네임과 그 시즌 팀 이름으로만 보이고, 팀이 있으면 줄을 눌러 팀 프로필을 연다. 서버가 5분마다 새로 센다.
   import { ACH_GRADES, ACH_RANK_PER_PAGE, achGradeOf } from '@offside/contracts/owner-team';
   import { displaySeasonAt, openTeamSeasons, teamSeasonName } from '@offside/contracts/service-seasons';
-  import { fetchAchRanking, type AchRankResponse } from '@offside/app-core/api/team';
+  import { fetchAchRanking, fetchMyAchRank, type AchRankResponse } from '@offside/app-core/api/team';
+  import { canJumpToMyRank, myRankJump } from '@offside/app-core/myRank';
+  import { isMember } from '@offside/app-core/account';
+  import { accountCache } from '../account-state.svelte.js';
+  import { toast } from '../helpers.js';
+  import { tick } from 'svelte';
   import { hofStart } from '@offside/app-core/state';
   import { num as n } from '@offside/app-core/teamText';
   import { achGradeName } from '@offside/app-core/teamOwner';
@@ -32,9 +38,39 @@
   /** 다시 받을 기준 — 고른 시즌, 아니면 지금 시즌(띄운 채 개막을 넘기면 바뀐다). */
   const shownSeason = $derived(season ?? displaySeasonAt(now));
 
+  // T-11-441 '내 순위로'(팀 랭킹과 같다). 내 줄은 순위로 강조한다.
+  // 로그인 상태를 아직 묻지 않았으면(구단주 화면을 열지 않음) 버튼을 두고, 누를 때 서버가 판정한다(따로 묻지 않는다).
+  const member = $derived.by(() => {
+    const a = accountCache.value;
+    return a === undefined || (!!a && a !== 'error' && isMember(a));
+  });
+  /** 내 줄(시즌과 순위). 다른 시즌을 고르면 강조하지 않는다. */
+  let mine = $state<{ season: number; rank: number } | null>(null);
+  let jumping = $state(false);
+  let preset: AchRankResponse | null = null;
+  async function jumpToMe() {
+    jumping = true;
+    const j = myRankJump(await fetchMyAchRank(season), 'ach');
+    jumping = false;
+    if (!j.ok) return toast(j.message);
+    mine = { season: j.data.season, rank: j.rank };
+    if (j.data.page !== page) preset = j.data;
+    data = j.data;
+    page = j.data.page;
+    await tick();
+    document.querySelector(`[data-ach-rank="${j.rank}"]`)?.scrollIntoView({ block: 'center' });
+  }
+
   $effect(() => {
     const [se, p, example] = [season, page, preview];
     void shownSeason;
+    if (preset && preset.page === p && !example) {
+      preset = null;
+      loading = false;
+      failed = false;
+      return;
+    }
+    preset = null;
     let live = true;
     failed = false;
     loading = true;
@@ -100,10 +136,13 @@
     </label>
     {#if data && !loading && !failed}<span class="achievement-total muted">{L.ownersBefore}<b class="num">{n(data.total)}</b>{L.ownersAfter}</span>{/if}
   </div>
+  {#if canJumpToMyRank(member) && !preview}
+    <button class="btn btn-sm rank-jump" data-act="my-rank" disabled={jumping} onclick={() => void jumpToMe()}>{L.myRank}</button>
+  {/if}
   {#if failed}
     <p class="empty">{L.rankFail}</p>
   {:else if loading || !data}
-    <p class="empty" role="status">{L.loading}</p>
+    <Skeleton rows={6} />
   {:else if data.items.length}
     <div class="achievement-columns achievement-header" aria-hidden="true">
       <span class="achievement-heading">{L.hdrOwner}</span><span>{L.hdrGrade}</span><span title={L.hdrDoneTitle}>{L.hdrDone}</span><b>{L.hdrScore}</b>
@@ -124,7 +163,8 @@
           <span class="num achievement-done" title={L.doneTitle({ n: n(r.done) })}>{n(r.done)}</span>
           <strong class="num achievement-score" title={L.scoreTitle({ n: n(r.score) })}>{n(r.score)}</strong>
         {/snippet}
-        <li value={r.rank}>
+        {@const isMine = !!mine && mine.season === data.season && mine.rank === r.rank}
+        <li value={r.rank} class:mine={isMine} aria-current={isMine ? 'true' : undefined}>
           {#if r.team}
             <button class="achievement-columns achievement-row" data-ach-rank={r.rank} aria-label={L.rowAriaTeam({ label })} onclick={() => r.team && openTeam(r.team.id)}>{@render row()}</button>
           {:else}
@@ -158,6 +198,14 @@
 </section>
 
 <style>
+  /* T-11-441 내 줄 */
+  .achievement-list > li.mine {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    border-radius: 8px;
+  }
+  .rank-jump {
+    margin: 0 0 12px;
+  }
   .achievement-preview {
     display: flex;
     align-items: center;

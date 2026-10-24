@@ -1,5 +1,6 @@
 // 칭호 한 개를 등급 색 알약으로(웹 titles/TitleTag.svelte). 등급은 스크린 리더용 글자로도 알린다.
 // pop: 결산에서 새로 딴 칭호 — d(ms) 뒤에 튀어 오른다(동작 줄이기면 바로).
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef } from 'react';
 import { Animated } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -42,7 +43,7 @@ export function TitleTag({
       accessibilityLabel={L.tagLabel({ rarity: RARITY_LABEL[rarity], name })}
       style={{
         alignSelf: 'flex-start',
-        borderRadius: 999,
+        borderRadius: RADIUS.pill,
         paddingVertical: 2,
         paddingHorizontal: 9,
         backgroundColor: rarity === 4 ? alpha(c.accent, 0.14) : c.surface2,
@@ -51,7 +52,7 @@ export function TitleTag({
         transform: [{ scale: s }],
       }}
     >
-      <Txt numberOfLines={1} style={{ fontSize: rem(0.75), fontWeight: '700', color: rc }}>
+      <Txt numberOfLines={1} style={{ fontSize: rem(FONT.caption), fontWeight: '700', color: rc }}>
         {name}
       </Txt>
     </Animated.View>

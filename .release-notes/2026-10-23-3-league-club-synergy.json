@@ -1,0 +1,29 @@
+{
+  "id": "t-11-467-league-club-synergy",
+  "title": "팀 시너지에 리그 컬러 · 클럽 동료가 생겼어요",
+  "items": [
+    "가장 오래 뛴 리그가 같은 선발이 7명 이상이면 리그 컬러가 켜져요. 프리미어리그의 속도, 라리가의 기술처럼 리그마다 효과가 달라요.",
+    "국가대표 라인업과 리그 컬러가 함께 켜지면 인원이 많은 쪽만 적용돼요. 인원이 같으면 국가대표 라인업이 적용돼요.",
+    "가장 오래 뛴 클럽이 같은 선발이 3명 이상이면 클럽 동료가 켜져 중원 +0.5 · 수비 +0.5를 더해요.",
+    "이미 은퇴한 선수의 주 리그 · 클럽은 차례로 계산돼요. 라인업에 있는 선수부터 채워요."
+  ],
+  "en": {
+    "title": "League colors and Club teammates join team synergy",
+    "items": [
+      "With 7 or more starters who share their longest-played league, League colors turns on. Each league has its own effect, such as Premier League pace or La Liga technique.",
+      "If National team lineup and League colors are both on, only the side with more players applies. On a tie, National team lineup applies.",
+      "With 3 or more starters who share their longest-played club, Club teammates turns on and adds midfield +0.5 and defence +0.5.",
+      "The main league and club of players who already retired are filled in gradually, starting with players in lineups."
+    ]
+  },
+  "ja": {
+    "title": "チームシナジーにリーグカラーとクラブの仲間が加わりました",
+    "items": [
+      "いちばん長くプレーしたリーグが同じスタメンが7人以上だとリーグカラーが有効になります。プレミアリーグのスピード、ラ・リーガの技術のようにリーグごとに効果が違います。",
+      "代表ラインナップとリーグカラーが同時に有効なら、人数が多いほうだけ適用されます。同数なら代表ラインナップが適用されます。",
+      "いちばん長くプレーしたクラブが同じスタメンが3人以上だとクラブの仲間が有効になり、中盤+0.5・守備+0.5を加えます。",
+      "すでに引退した選手のメインリーグ・クラブは順番に計算されます。ラインナップにいる選手から埋めます。"
+    ]
+  },
+  "availability": "web-app"
+}

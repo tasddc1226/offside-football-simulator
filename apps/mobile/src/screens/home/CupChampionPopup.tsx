@@ -1,12 +1,15 @@
 // T-11-290 오프사이드 컵 우승 팝업(웹 cup/CupChampionPopup.svelte) — 앱을 켜 홈에 왔을 때 한 번, 가장 최근에 끝난 대회의
 // 우승 팀(결승 뒤 일주일, 서버 champion). 홈 컵 배너와 같은 공개 응답(30초 메모)이라 요청이 늘지 않는다. '다시 보지 않기'는
 // 대회 id로 기억한다(cupHome.ts). '우승 팀 보기'는 기록실 팀 프로필로 간다. 움직임 줄이기를 켰으면 바로 그린다.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Modal, Pressable, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { fetchCupHome, type CupChampion } from '@offside/app-core/api/cup';
 import { cupChampionToShow, dismissCupChampion } from '@offside/app-core/cupHome';
+import { claimHomePopup } from '@offside/app-core/homePopup';
 import { cupText as L } from '@offside/app-core/i18n/ko/cup';
+import { divisionLabel } from '@offside/app-core/cupDivision';
 import { hofStart } from '@offside/app-core/state';
 import { TeamLogo } from '../../components/TeamLogo';
 import { go } from '../../game/nav';
@@ -14,6 +17,7 @@ import { appState, prefs } from '../../store';
 import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { CupTrophy } from '../../ui/CupTrophy';
+import { analyticsAskPending } from '../../components/AnalyticsAsk';
 import { Btn, Press, Txt } from '../../ui';
 
 // 한 번 띄운 뒤에는 앱을 다시 켤 때까지 홈에 다시 와도 띄우지 않는다(닫기만 눌렀으면 다음에 다시 켤 때 보인다).
@@ -34,9 +38,11 @@ export function CupChampionPopup() {
     if (shownThisLaunch) return;
     let alive = true;
     void fetchCupHome().then((r) => {
-      if (!alive || !r.ok || shownThisLaunch) return;
+      // T-11-417 이용 분석 동의 창이 떠 있으면 이번 실행에는 띄우지 않는다(iOS는 창 두 개를 함께 띄우지 못한다).
+      if (!alive || !r.ok || shownThisLaunch || analyticsAskPending()) return;
       const next = cupChampionToShow(r.data);
-      if (next) {
+      // T-11-423 제휴 팝업이 먼저 떴으면 이번 실행에는 띄우지 않는다.
+      if (next && claimHomePopup()) {
         shownThisLaunch = true;
         setChampion(next);
       }
@@ -179,7 +185,7 @@ function Body({
             gap: 10,
             padding: 20,
             paddingTop: 22,
-            borderRadius: 20,
+            borderRadius: RADIUS.lg,
             backgroundColor: c.surface,
             opacity: card,
             transform: [
@@ -195,7 +201,7 @@ function Body({
               top: -60,
               width: 320,
               height: 320,
-              borderRadius: 160,
+              borderRadius: RADIUS.pill,
               backgroundColor: alpha('#f0b437', 0.18),
               opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0.9] }),
               transform: [
@@ -257,7 +263,7 @@ function Body({
           </Animated.View>
           <Animated.View style={[{ alignItems: 'center', gap: 10, width: '100%' }, rise(text)]}>
             <Txt v="h2" center>
-              {L.championPopupTitle({ n: champion.edition })}
+              {L.championPopupTitle({ n: champion.edition, d: divisionLabel(champion.division) })}
             </Txt>
             <View
               testID={`cup-champion-team-${champion.teamId}`}
@@ -269,8 +275,8 @@ function Body({
                 paddingVertical: 8,
                 paddingHorizontal: 14,
                 borderWidth: 1,
-                borderColor: c.line,
-                borderRadius: 14,
+                borderColor: 'transparent',
+                borderRadius: RADIUS.md,
                 backgroundColor: c.surface2,
               }}
             >

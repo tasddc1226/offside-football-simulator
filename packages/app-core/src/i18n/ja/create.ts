@@ -79,8 +79,8 @@ export const create: Translation<CreateMsgs> = {
   footLabel: '利き足',
   focusTitle: (p) => `主力能力値 · ${p.n}個選択`,
   focusUp: (p) => `開始 +${p.d} · 成長 +${p.pct}%`,
-  focusDown: (p) => `開始 ${p.d}`,
-  focusNone: '変化なし',
+  focusDown: (p) => `開始 ${p.d} · 成長 -${p.pct}%`,
+  focusNone: (p) => `開始 変化なし · 成長 -${p.pct}%`,
   trait: '成長タイプ',
   potentialNote: 'ポテンシャルの評価は引退時に公開されます。',
   cancel: 'キャンセル',
@@ -104,6 +104,10 @@ export const create: Translation<CreateMsgs> = {
   potentialSaveFailed: '公開結果を保存できませんでした。保存容量を確認してください。',
   candIntro:
     '3人の候補は能力値の合計が同じで、分布とポテンシャルが違います。カードをタップして比べてください。',
+  loginTools:
+    'ログインすると、リロール券・プレミアムスカウト券で候補を引き直し、クラブ資金でポテンシャルを見られます。',
+  loginToolsGo: 'ログインする',
+  moreTools: 'ショップ・能力値の案内をもっと見る',
   openAll: 'すべて開く',
   candNo: (p) => `候補${p.n}`,
   picked: '✓ 選択',

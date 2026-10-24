@@ -11,6 +11,13 @@ import { apiFetch } from './api/client.js';
 import { optionsOf, lookItemName, RECORD_NAME } from './avatarLook.js';
 import type { AppState, LegendView } from './state.js';
 import { retiredLookText as L } from './i18n/ko/retiredLook.js';
+import {
+  LOOK_ROUND,
+  receiptKey as receiptKeyOf,
+  rememberLookLock,
+  spentReceipt as spent,
+  type LocalReceipt,
+} from './retiredLookLock.js';
 
 const titlesOf = (v: LegendView) => v.d?.titles?.map((t) => t.id) ?? [];
 
@@ -61,14 +68,9 @@ const sameEntry = (h: HofEntry, v: LegendView) =>
 
 // Local-only legacy records have no server/card to transfer. Keep their one-time receipt outside
 // game/HOF saves: no save migration or score recalculation. Appearance + used flag are one write.
-const receiptKey = (v: LegendView) => `ft_retired_look:${v.avatarId}`;
-// T-11-243 Same art round as the server (RETIRED_LOOK_ROUND). Receipts from the dot character have
-// no round, so they keep their look but give one more change.
-const LOOK_ROUND = 2;
-type LocalReceipt = { used: true; look: string | null; round?: number };
+// T-11-243 round rule and receipt shape live in retiredLookLock.ts (the button reads them too).
+const receiptKey = (v: LegendView) => receiptKeyOf(v.avatarId!);
 const receiptOf = (v: LegendView) => loadKey<LocalReceipt>(receiptKey(v));
-const spent = (r: LocalReceipt | null | undefined): boolean =>
-  !!r?.used && (r.round ?? 1) >= LOOK_ROUND;
 const localPolicy = (v: LegendView): RetiredLookPolicy => {
   const receipt = receiptOf(v);
   return {
@@ -79,8 +81,18 @@ const localPolicy = (v: LegendView): RetiredLookPolicy => {
   };
 };
 
-/** Called once when the editor opens, never on every option/preview change. Fail closed. */
+/** Called once when the editor opens, never on every option/preview change. Fail closed. The lock is
+ * remembered for this session so the report button can show it without another request (T-11-439). */
 export async function loadRetiredLook(
+  state: AppState,
+  v: LegendView,
+): Promise<{ ok: true; policy: RetiredLookPolicy } | { ok: false; message: string }> {
+  const r = await loadPolicy(state, v);
+  if (r.ok && v.avatarId) rememberLookLock(v.avatarId, r.policy.lockedReason);
+  return r;
+}
+
+async function loadPolicy(
   state: AppState,
   v: LegendView,
 ): Promise<{ ok: true; policy: RetiredLookPolicy } | { ok: false; message: string }> {
@@ -123,8 +135,20 @@ function applyLocal(state: AppState, v: LegendView, code: string | null): boolea
   return ok;
 }
 
-/** Explicit Save: server owner/status validation first, then cosmetic-only local mirrors. */
+/** Explicit Save: server owner/status validation first, then cosmetic-only local mirrors. A saved
+ * change spends the one free change, so the report button turns to "used" (T-11-439). */
 export async function saveRetiredLook(
+  state: AppState,
+  v: LegendView,
+  code: string | null,
+): Promise<{ ok: true; message: string } | { ok: false; message: string }> {
+  const r = await saveLook(state, v, code);
+  // A no-op save (same look) spends nothing.
+  if (r.ok && v.avatarId && code !== (v.avatarLook ?? null)) rememberLookLock(v.avatarId, 'used');
+  return r;
+}
+
+async function saveLook(
   state: AppState,
   v: LegendView,
   code: string | null,

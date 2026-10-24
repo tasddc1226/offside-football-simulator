@@ -19,6 +19,7 @@ import { noteOwner } from '@offside/app-core/api/friendPending';
 import { isMember } from '@offside/app-core/account';
 import { gameText as T } from '@offside/app-core/i18n/ko/game';
 import { APP_VERSION, WEB_ORIGIN } from '../platform/config';
+import { showRetireAd } from '../platform/interstitial';
 import { ensureSession, renewSession, sessionToken } from '../platform/session';
 import {
   accountCache,
@@ -33,7 +34,7 @@ import {
   sheetState,
   toastState,
 } from '../store';
-import { scrollTo, scrollY } from '../ui/scroll';
+import { scrollBackTo, scrollTo, scrollY } from '../ui/scroll';
 
 // ───────── 저장 · 토스트 ─────────
 let saveWarned = false;
@@ -103,6 +104,7 @@ export const {
   uploadRetirement,
   analytics,
   trackPage,
+  retired: () => void showRetireAd(),
 });
 
 // ───────── 클럽 커스텀 · 선수 상세 · 영구결번 · 새 소식 · 소유권 충돌 ─────────
@@ -138,7 +140,7 @@ export const {
 /** 은퇴 커리어 공유 링크 — 웹 주소로 연다(앱이 없는 사람도 볼 수 있다). */
 export const shareUrl = (careerId: string) => `${WEB_ORIGIN}/career/${careerId}`;
 
-export const { markNewsSeen, dismissNews, checkNews } = createNews(newsState);
+export const { markNewsSeen, dismissNews, checkNews, isNewPost } = createNews(newsState);
 
 export const { onOwnerConflict, adoptCareer, keepOnDevice } = createOwnerConflicts({
   state: appState,
@@ -168,4 +170,4 @@ export async function refreshAccount() {
 
 // ───────── 뒤로 가기 ─────────
 /** 화면 방문 기록 — 화면이 바뀔 때 track(), Android 뒤로 버튼·'← 이전으로'가 back(). */
-export const navStack = createNavStack(appState, { closeSheet, scrollY, scrollTo });
+export const navStack = createNavStack(appState, { closeSheet, scrollY, scrollTo: scrollBackTo });

@@ -30,7 +30,7 @@ Store builds and OTA updates read the same EAS `production` environment (set 202
 - `OFFSIDE_NATIVE_ANALYTICS_ENABLED=true`, `OFFSIDE_ANALYTICS_ENVIRONMENT=production` (plain text)
 - `OFFSIDE_FIREBASE_IOS_FILE` (file, sensitive): the production `GoogleService-Info.plist` of `offside-eef89`
 
-EAS Build materializes file variables, but local `eas` commands (`fingerprint:generate`, `update`) load only string variables, so `app.config.js` would throw. `deploy-production.yml` therefore runs `eas env:pull production` before the OTA steps and exports `OFFSIDE_*`; the pulled file lands in the ignored `apps/mobile/.eas/`. The fingerprint depends on the plist content, not its path: with this environment iOS is `ccd19cfd…` locally and via EAS. Replacing the plist or toggling these variables changes the runtime and needs a new store build.
+EAS Build materializes file variables, but local `eas` commands (`fingerprint:generate`, `update`) load only string variables, so `app.config.js` would throw. `deploy-production.yml` therefore runs `eas env:pull production` before the OTA steps and exports `OFFSIDE_*` and the public JS-only `EXPO_PUBLIC_ACCOUNT_PURCHASES_ENABLED` flag; the pulled file lands in the ignored `apps/mobile/.eas/`. The fingerprint depends on the plist content, not its path: with this environment iOS is `ccd19cfd…` locally and via EAS. Replacing the plist or toggling these variables changes the runtime and needs a new store build.
 
 Locally: `eas env:pull production --path /tmp/eas.env`, then `set -a; . /tmp/eas.env; set +a` before `eas fingerprint:generate --environment production`.
 

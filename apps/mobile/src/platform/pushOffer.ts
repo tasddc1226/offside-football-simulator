@@ -5,6 +5,7 @@ import { kv } from './setup';
 
 const HANDLED = 'offside_push_offer_handled';
 const SNOOZED_UNTIL = 'offside_push_offer_snoozed_until';
+const READY = 'offside_push_offer_ready';
 export const PUSH_OFFER_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
 export const pushOffer = proxy({
   handled: kv.getBoolean(HANDLED) ?? false,
@@ -52,4 +53,17 @@ export function snoozePushOffer() {
   pushOffer.snoozedUntil = until;
   pushOffer.eligible = false;
   checked = undefined;
+}
+
+/**
+ * T-11-440 홈 알림 권유는 첫 시즌을 마친 뒤부터 띄운다(처음 연 화면에서 바로 권하지 않는다). 시즌을 한 번이라도 마친
+ * 커리어를 보면 기기에 남겨 은퇴 · 새 커리어 뒤에도 계속 권할 수 있게 한다. 받기 · 나중에 기록(HANDLED · SNOOZED_UNTIL)은 그대로다.
+ */
+export function pushOfferReady(
+  G: { career: readonly unknown[]; retired: boolean } | null,
+): boolean {
+  if (kv.getBoolean(READY)) return true;
+  if (!G || (G.career.length < 1 && !G.retired)) return false;
+  kv.set(READY, true);
+  return true;
 }

@@ -7,6 +7,11 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
     `マイチームのレーティング${p.rating}前後のチームです · 今日の残り試合 ${p.left}/${p.per}`,
   oppRating: 'レーティング',
   oppOvr: (p) => `OVR ${p.n}`,
+  oppGapUp: (p) => `自チームより${p.n}高い`,
+  oppGapDown: (p) => `自チームより${p.n}低い`,
+  oppGapEven: '自チームと同じ',
+  oppGapNote:
+    'レーティングの下の数字は自チームとの差です。レーティングが高いチームに勝つほど多く上がります。',
   oppRuleWeb: (p) =>
     `同じチームには1日1回挑戦できます。直近${p.days}日以内に対戦したチームだと、レーティングの変動が小さくなります。`,
   oppRuleApp: (p) =>

@@ -2,6 +2,7 @@
 // 어느 화면에 있든 화면 위에 9초 띄운다 — 화면을 누르고 있는 동안은 기다린다. '보기'는 그 선수의 은퇴 상세를 연다.
 // 다른 유저의 결번이라 구단은 그 유저가 바꿔 부른 이름이 아니라 게임 기본 이름으로.
 // 루트에서 화면 위에 얹는다(화면 전체를 덮는 자리 — 배너 밖은 터치를 통과시킨다).
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { Animated, Easing, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -116,7 +117,7 @@ function AlertCard({
             marginTop: insets.top + 8 - 3,
             width: W + 6,
             padding: 3,
-            borderRadius: 17,
+            borderRadius: RADIUS.lg,
             backgroundColor: alpha(c.pitchAccent, 0.25),
             shadowColor: '#000',
             shadowOpacity: 0.4,
@@ -137,7 +138,7 @@ function AlertCard({
             alignItems: 'center',
             gap: 12,
             backgroundColor: c.pitch,
-            borderRadius: 14,
+            borderRadius: RADIUS.md,
             borderWidth: 1,
             borderColor: c.pitchAccent,
             paddingVertical: 10,
@@ -163,14 +164,18 @@ function AlertCard({
           <View style={{ flex: 1, minWidth: 0 }}>
             <Txt
               bold
-              style={{ fontSize: rem(0.875), lineHeight: rem(0.875) * 1.4, color: c.pitchAccent }}
+              style={{
+                fontSize: rem(FONT.body2),
+                lineHeight: rem(FONT.body2) * 1.4,
+                color: c.pitchAccent,
+              }}
             >
               {L.alertTitle({ name: personName(item.name), number: item.number })}
             </Txt>
             <Txt
               style={{
-                fontSize: rem(0.8125),
-                lineHeight: rem(0.8125) * 1.4,
+                fontSize: rem(FONT.label),
+                lineHeight: rem(FONT.label) * 1.4,
                 color: alpha(c.onPitch, 0.85),
               }}
             >

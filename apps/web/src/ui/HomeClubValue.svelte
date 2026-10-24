@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   // T-11-129 홈의 구단 가치 TOP 3(선발 11명 카드 기준가 합). 라이브 랭킹 첫 페이지(sort=value)를 그대로 쓴다 — 기록실 팀 랭킹과
   // 같은 메모·엣지 캐시를 나눠 쓴다. 홈이 그려질 때 한 번 부르고, 줄을 누르면 기록실 팀 랭킹에서 그 팀 프로필을 연다.
   import { fetchTeamRanking, type TeamRankResponse } from '@offside/app-core/api/team';
@@ -41,7 +42,7 @@
   {#if failed}
     <p class="empty">{L.rankFail}</p>
   {:else if rows === null}
-    <p class="empty" role="status">{L.loading}</p>
+    <Skeleton rows={3} />
   {:else if rows.length === 0}
     <p class="empty">{L.homeValueEmpty}</p>
   {:else}
