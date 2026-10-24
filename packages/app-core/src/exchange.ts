@@ -16,6 +16,8 @@ import { exchangeText as L } from './i18n/ko/exchange.js';
 
 export {
   autoFill,
+  canFinishAll,
+  EXCHANGE_DAILY_REWARD,
   exchangeMet,
   exchangesAt,
   type ExchangeDef,
@@ -35,12 +37,13 @@ const NAMES: Record<string, () => string> = {
   bestEleven: () => L.nameBestEleven,
   legendGift: () => L.nameLegendGift,
   oneNation: () => L.nameOneNation,
-  legacy: () => L.nameLegacy,
+  seasonOne: () => L.nameSeasonOne,
+  elite: () => L.nameElite,
 };
 export const exchangeName = (key: string) => NAMES[key]?.() ?? key;
 
 export const tierLabel = (t: ExchangeTier) =>
-  ({ easy: L.tierEasy, normal: L.tierNormal, hard: L.tierHard, season: L.tierSeason })[t];
+  ({ easy: L.tierEasy, normal: L.tierNormal, hard: L.tierHard })[t];
 
 const seasonLabel = (s: number) => (s === 0 ? L.seasonPre : L.seasonN({ n: s }));
 const footLabel = (f: string) =>
@@ -95,18 +98,10 @@ export const rewardText = (rewards: readonly ExchangeReward[]) =>
     )
     .join(' · ');
 
-/** 남은 횟수 줄. 다 냈으면 '이번 주(시즌)에는 다 냈어요'. */
-export function claimsText(def: ExchangeDef, used: number): string {
-  const left = Math.max(0, def.maxClaims - used);
-  if (left === 0) return def.tier === 'season' ? L.seasonDone : L.allDone;
-  return L.left({ left, max: def.maxClaims });
-}
-
-/** 마감까지 남은 시간. 시즌 과제면 '시즌 마감까지'. */
+/** 오늘 과제가 바뀔 때까지 남은 시간(다음 0시 KST). */
 export function endsText(def: ExchangeDef, nowMs: number): string {
-  if (!def.endsAt) return L.seasonEnds;
-  const h = Math.max(0, Math.floor((Date.parse(def.endsAt) - nowMs) / 3_600_000));
-  return L.endsIn({ d: Math.floor(h / 24), h: h % 24 });
+  const m = Math.max(0, Math.floor((Date.parse(def.endsAt) - nowMs) / 60_000));
+  return L.endsIn({ h: Math.floor(m / 60), m: m % 60 });
 }
 
 /** 판정용 카드 값. */
@@ -121,12 +116,13 @@ export const exchangeCardOf = (p: TeamPlayer): ExchangeCard & { cardValue: numbe
   cardValue: p.cardValue ?? null,
 });
 
-/** 이 과제에 낼 수 없는 이유(잠김 · 판매 중 · 선발 · 조건 밖). 낼 수 있으면 null. */
+/** 이 과제에 낼 수 없는 이유(영입 · 잠김 · 판매 중 · 선발 · 조건 밖). 낼 수 있으면 null. 직접 키운 선수만 낼 수 있다. */
 export function exchangeLock(
   p: TeamPlayer,
   lineup: ReadonlySet<string>,
   rule: ExchangeRule,
 ): string | null {
+  if (!p.raised) return L.lockBought;
   if (p.locked) return L.lockLocked;
   if (p.listing) return L.lockListed;
   if (lineup.has(p.careerId)) return L.lockStarter;

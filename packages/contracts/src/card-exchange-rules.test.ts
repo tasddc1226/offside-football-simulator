@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   EXCHANGE_POOL,
   autoFill,
+  canFinishAll,
   exchangeById,
   exchangeChecks,
+  exchangeDay,
   exchangeMet,
-  exchangeWeek,
   exchangesAt,
   type ExchangeCard,
 } from './card-exchange-rules.js';
@@ -24,27 +25,33 @@ const card = (over: Partial<ExchangeCard> & { cardValue?: number } = {}) => ({
 });
 
 describe('카드 과제 주기 (T-11-374)', () => {
-  it('월요일 0시(KST)에 주가 바뀐다', () => {
-    // 일요일 23:59 KST = 일요일 14:59 UTC
-    expect(exchangeWeek('2026-10-25T14:59:00.000Z').key).toBe('2026-10-19');
-    expect(exchangeWeek('2026-10-25T15:00:00.000Z')).toEqual({
+  it('매일 0시(KST)에 날이 바뀐다', () => {
+    // 23:59 KST = 14:59 UTC
+    expect(exchangeDay('2026-10-25T14:59:00.000Z').key).toBe('2026-10-25');
+    expect(exchangeDay('2026-10-25T15:00:00.000Z')).toEqual({
       key: '2026-10-26',
       startsAt: '2026-10-25T15:00:00.000Z',
-      endsAt: '2026-11-01T15:00:00.000Z',
+      endsAt: '2026-10-26T15:00:00.000Z',
     });
   });
 
-  it('주마다 칸별 다음 과제를 열고, 시즌 중이면 시즌 과제를 더한다', () => {
-    const a = exchangesAt('2026-10-20T00:00:00.000Z', 1);
-    const b = exchangesAt('2026-10-27T00:00:00.000Z', 1);
-    expect(a.map((d) => d.tier)).toEqual(['easy', 'normal', 'hard', 'season']);
-    expect(a[0]!.id).toBe('2026-10-19-easy');
-    const i = EXCHANGE_POOL.easy.findIndex((s) => s.key === a[0]!.key);
-    expect(b[0]!.key).toBe(EXCHANGE_POOL.easy[(i + 1) % EXCHANGE_POOL.easy.length]!.key);
-    expect(a[3]).toMatchObject({ id: 's1-season', endsAt: null });
-    expect(a[3]!.rule.seasons).toEqual([0, 1]);
-    expect(exchangesAt('2026-10-20T00:00:00.000Z', null)).toHaveLength(3);
-    expect(exchangeById('2026-10-27T00:00:00.000Z', 1, a[0]!.id)).toBeNull();
+  it('하루마다 칸별 다음 과제를 연다', () => {
+    const a = exchangesAt('2026-10-20T00:00:00.000Z');
+    const b = exchangesAt('2026-10-21T00:00:00.000Z');
+    expect(a.map((d) => d.tier)).toEqual(['easy', 'normal', 'hard']);
+    expect(a[0]!.id).toBe('2026-10-20-easy');
+    for (const [t, tier] of (['easy', 'normal', 'hard'] as const).entries()) {
+      const pool = EXCHANGE_POOL[tier];
+      const i = pool.findIndex((s) => s.key === a[t]!.key);
+      expect(b[t]!.key).toBe(pool[(i + 1) % pool.length]!.key);
+    }
+    expect(exchangeById('2026-10-21T00:00:00.000Z', a[0]!.id)).toBeNull();
+    expect(exchangeById('2026-10-20T14:00:00.000Z', a[0]!.id)?.id).toBe(a[0]!.id);
+  });
+
+  it('하루 과제는 7장을 넘지 않는다', () => {
+    for (const pool of Object.values(EXCHANGE_POOL))
+      for (const s of pool) expect(s.rule.count).toBeLessThanOrEqual(7);
   });
 });
 
@@ -137,5 +144,25 @@ describe('맞는 카드로 채우기', () => {
     const got = autoFill(rule, cards)!;
     expect(exchangeMet(rule, got)).toBe(true);
     expect(got.filter((c) => c.pos === 'FW')).toHaveLength(1);
+  });
+});
+
+describe('오늘 과제를 모두 채울 수 있나', () => {
+  const defs = (rules: { count: number; pos?: readonly ('GK' | 'DF' | 'MF' | 'FW')[] }[]) =>
+    rules.map((rule, i) => ({
+      key: `k${i}`,
+      rule,
+      id: `d-${i}`,
+      tier: 'easy' as const,
+      startsAt: '',
+      endsAt: '',
+    }));
+
+  it('과제마다 다른 카드로 채운다', () => {
+    const cards = [card({ pos: 'GK' }), card({ pos: 'GK' }), card(), card()];
+    const two = defs([{ count: 2, pos: ['GK'] }, { count: 2 }]);
+    expect(canFinishAll(two, cards)).toBe(true);
+    expect(canFinishAll(defs([{ count: 2, pos: ['GK'] }, { count: 3 }]), cards)).toBe(false);
+    expect(canFinishAll([], [])).toBe(true);
   });
 });

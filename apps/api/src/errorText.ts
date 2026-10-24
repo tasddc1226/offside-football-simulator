@@ -147,7 +147,9 @@ const EXACT: Record<string, string> = {
   '선발에 든 선수는 팀에서 뺀 뒤 낼 수 있어요.':
     'Take starters out of your lineup before handing them in.',
   '과제 조건에 맞지 않는 선수가 있어요.': "Some players don't meet the challenge conditions.",
-  '이 과제는 낼 수 있는 횟수를 다 썼어요.': "You've used all your attempts for this challenge.",
+  '이 과제는 오늘 이미 냈어요.': "You've already completed this challenge today.",
+  '직접 키워 은퇴시킨 선수만 낼 수 있어요.':
+    'Only players you raised to retirement can be handed in.',
   '감독 칸에서 내린 뒤 경질할 수 있어요.':
     'That manager is in the manager slot. Clear the slot before sacking them.',
   '이미 감독인 선수예요.': 'That player is already a manager.',

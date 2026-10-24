@@ -4,11 +4,11 @@ import { ns } from '../core';
 const ko = {
   // 내 구단 화면 진입 카드
   entryTitle: '카드 과제',
-  entrySub: '쓰지 않는 은퇴 선수를 내고 아이템을 받아요',
+  entrySub: '직접 키운 은퇴 선수를 내고 아이템을 받아요',
   entryAria: '카드 과제 열기',
   entryNew: 'NEW',
   title: '카드 과제',
-  lead: '조건에 맞는 은퇴 선수를 내면 그 카드는 사라지고 아이템을 받아요. 과제는 매주 월요일 0시(한국 시간)에 바뀌어요.',
+  lead: '직접 키워 은퇴시킨 선수를 조건에 맞게 내면 그 카드는 사라져요. 오늘 과제 세 개를 모두 내면 보상을 받아요. 과제는 매일 0시(한국 시간)에 바뀌어요.',
   close: '닫기',
   back: '과제 목록',
   loading: '불러오는 중이에요…',
@@ -18,7 +18,6 @@ const ko = {
   tierEasy: '쉬움',
   tierNormal: '보통',
   tierHard: '어려움',
-  tierSeason: '시즌 과제',
   // 과제 이름
   nameKeepers: '수문장 모집',
   nameMidWorkers: '중원의 일꾼',
@@ -30,10 +29,11 @@ const ko = {
   nameSpine: '팀의 척추',
   nameFrontLine: '공격 라인',
   nameVeterans: '베테랑 모임',
-  nameBestEleven: '베스트 일레븐',
+  nameBestEleven: '베스트 세븐',
   nameLegendGift: '레전드의 선물',
-  nameOneNation: '한 나라 일레븐',
-  nameLegacy: '시즌의 유산',
+  nameOneNation: '한 나라 대표단',
+  nameSeasonOne: '시즌 1 동기들',
+  nameElite: '정상급 모임',
   // 조건
   condCount: (p: { n: number }) => `선수 ${p.n}명`,
   condPos: (p: { list: string }) => `${p.list}만`,
@@ -55,13 +55,13 @@ const ko = {
   rewardBoost: (p: { n: number }) => `잠재력 강화권 ${p.n}장`,
   rewardScout: (p: { n: number }) => `프리미엄 스카우트권 ${p.n}장`,
   reward: '보상',
-  // 횟수 · 기한
-  left: (p: { left: number; max: number }) => `남은 횟수 ${p.left}/${p.max}`,
-  allDone: '이번 주에는 다 냈어요',
-  seasonDone: '이번 시즌에는 다 냈어요',
-  endsIn: (p: { d: number; h: number }) =>
-    p.d > 0 ? `${p.d}일 ${p.h}시간 남음` : `${p.h}시간 남음`,
-  seasonEnds: '시즌 마감까지',
+  progress: (p: { done: number; total: number }) => `오늘 ${p.done}/${p.total}개 냈어요`,
+  rewardAll: '모두 내면 받는 보상',
+  taskDone: '냈어요',
+  todayDone: '오늘 과제를 모두 마쳤어요. 내일 0시에 새 과제가 열려요.',
+  cantFinish: '지금 가진 선수로는 오늘 과제를 모두 채우기 어려워요. 일부만 내면 보상이 없어요.',
+  endsIn: (p: { h: number; m: number }) =>
+    p.h > 0 ? `${p.h}시간 ${p.m}분 뒤 바뀌어요` : `${p.m}분 뒤 바뀌어요`,
   // 고르기
   pick: '선수 고르기',
   picked: (p: { n: number; need: number }) => `${p.n}/${p.need}명 골랐어요`,
@@ -74,19 +74,24 @@ const ko = {
   lockListed: '판매 중',
   lockStarter: '선발',
   lockNotFit: '조건 밖',
+  lockBought: '영입',
   cardLine: (p: { pos: string; peak: number }) => `${p.pos} · 최고 OVR ${p.peak}`,
-  bought: '영입',
   // 확인 · 결과
   confirmTitle: '카드를 낼까요?',
   confirmBody: (p: { n: number }) =>
     `선수 ${p.n}명의 카드가 사라지고 돌아오지 않아요. 명예의 전당과 은퇴 기록은 그대로 남아요.`,
-  confirmRaised: (p: { n: number }) =>
-    `직접 키운 선수 ${p.n}명은 방출하면 받을 수 있던 자금을 받지 않아요.`,
+  confirmRaised: (p: { n: number }) => `선수 ${p.n}명을 방출하면 받을 수 있던 자금은 받지 않아요.`,
   confirmValue: (p: { value: string }) => `카드 가치 합 ${p.value}`,
+  confirmLeft: (p: { left: number }) =>
+    `이 과제를 내도 ${p.left}개가 남아요. 오늘 과제를 모두 내야 보상을 받아요.`,
+  confirmLast: '오늘 마지막 과제예요. 내면 보상을 받아요.',
   confirmOk: '내기',
   cancel: '취소',
-  doneTitle: '과제를 마쳤어요',
+  doneTitle: '과제를 냈어요',
   doneBody: (p: { reward: string }) => `받은 보상: ${p.reward}`,
+  doneProgress: (p: { done: number; total: number }) =>
+    `오늘 ${p.done}/${p.total}개 냈어요. 모두 내면 보상을 받아요.`,
+  doneAllTitle: '오늘 과제를 모두 마쳤어요',
   doneTitleEarned: (p: { name: string }) => `새 칭호: ${p.name}`,
   claimFail: '카드를 내지 못했어요.',
   ok: '확인',

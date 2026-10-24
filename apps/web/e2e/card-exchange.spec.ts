@@ -3,22 +3,22 @@ import AxeBuilder from '@axe-core/playwright';
 import { exchangesAt } from '@offside/contracts/card-exchange-rules';
 import { API, fail, ok } from './helpers.js';
 
-// T-11-374 카드 과제 — 내 구단 화면 칸 → 과제 목록 → 선수 고르기(잠김 · 판매 중 · 선발 · 조건 밖) → 확인 → 결과.
-// 서버는 page.route로 흉내 낸다. 2026-10-19 주에는 쉬움 과제가 '왼발잡이 모임'(왼발 3명)이다.
+// T-11-374 카드 과제 — 내 구단 화면 칸 → 오늘 과제 목록 → 선수 고르기(영입 · 잠김 · 판매 중 · 선발 · 조건 밖) → 확인 → 결과.
+// 서버는 page.route로 흉내 낸다. 2026-10-20에는 쉬움 과제가 '공격진 정리'(최고 OVR 79 이하 FW 3명)다.
 
 const NOW = '2026-10-20T03:00:00Z';
-const EASY = exchangesAt(NOW, 1).find((d) => d.tier === 'easy')!;
+const EASY = exchangesAt(NOW).find((d) => d.tier === 'easy')!;
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const card = (n: number, extra: Record<string, unknown> = {}) => ({
   careerId: id(n),
   publicName: `과제선수${n}`,
-  pos: 'MF',
-  dpos: 'CM',
+  pos: 'FW',
+  dpos: 'ST',
   number: n,
   peak: 70 + n,
   legendScore: 300,
   cardValue: 10_000 * n,
-  raised: n % 2 === 1,
+  raised: true,
   locked: false,
   listing: null,
   roles: null,
@@ -83,7 +83,8 @@ async function stub(page: Page, opts: { claim?: 'ok' | 'gone' } = {}) {
             card(4),
             card(5, { locked: true }),
             card(6, { listing: { id: 'sale', price: 10_000 } }),
-            card(7, { foot: '오른발' }),
+            card(7, { pos: 'MF', dpos: 'CM' }),
+            card(8, { raised: false }),
           ].filter((p) => !gone.has(p.careerId)),
           lastManager: null,
           matchesLeft: 10,
@@ -106,7 +107,7 @@ async function stub(page: Page, opts: { claim?: 'ok' | 'gone' } = {}) {
     if (opts.claim === 'gone')
       return r.fulfill(fail(409, 'EXCHANGE_CARDS_GONE', '고른 선수 중 낼 수 없는 선수가 있어요.'));
     claimed++;
-    return r.fulfill(ok({ claimed: true, rewards: [{ item: 'reroll', qty: 2 }], titles: [] }));
+    return r.fulfill(ok({ claimed: 3, done: 1, rewards: [], titles: [] }));
   });
   return s;
 }
@@ -126,10 +127,13 @@ test('카드 과제: 목록 → 고르기 → 확인 → 결과, 다시 열어�
 
   await page.locator('[data-act="exchange"]').click();
   const sheet = page.locator('[data-card-exchange]');
-  await expect(sheet.locator('[data-exchange]')).toHaveCount(4);
-  await expect(sheet.locator('[data-exchange="easy"]')).toContainText('왼발잡이 모임');
-  await expect(sheet.locator('[data-exchange="easy"]')).toContainText('남은 횟수 3/3');
-  await expect(sheet.locator('[data-exchange="season"]')).toContainText('레전드 점수 800 이상');
+  await expect(sheet.locator('[data-exchange]')).toHaveCount(3);
+  await expect(sheet.locator('[data-exchange="easy"]')).toContainText('공격진 정리');
+  const todayCard = sheet.locator('[data-exchange-today]');
+  await expect(todayCard).toContainText('오늘 0/3개 냈어요');
+  await expect(todayCard).toContainText('리롤권 2장 · 잠재력 강화권 1장');
+  // 가진 선수로는 보통 · 어려움 과제를 채울 수 없어 미리 알린다.
+  await expect(sheet.locator('[data-exchange-cant]')).toBeVisible();
   const a11y = await new AxeBuilder({ page }).include('[data-card-exchange]').analyze();
   expect(a11y.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual(
     [],
@@ -137,24 +141,27 @@ test('카드 과제: 목록 → 고르기 → 확인 → 결과, 다시 열어�
   await shot(page, 'exchange-list');
 
   await sheet.locator('[data-exchange="easy"]').click();
-  // 선발 · 잠김 · 판매 중 · 조건 밖(오른발)은 고를 수 없다.
+  // 선발 · 잠김 · 판매 중 · 조건 밖(MF) · 영입한 선수는 고를 수 없다.
   await expect(sheet.locator(`[data-exchange-player="${id(4)}"]`)).toContainText('선발');
   await expect(sheet.locator(`[data-exchange-player="${id(5)}"]`)).toContainText('잠김');
   await expect(sheet.locator(`[data-exchange-player="${id(6)}"]`)).toContainText('판매 중');
   await expect(sheet.locator(`[data-exchange-player="${id(7)}"]`)).toContainText('조건 밖');
   await expect(sheet.locator(`[data-exchange-player="${id(7)}"] input`)).toBeDisabled();
+  await expect(sheet.locator(`[data-exchange-player="${id(8)}"]`)).toContainText('영입');
+  await expect(sheet.locator(`[data-exchange-player="${id(8)}"] input`)).toBeDisabled();
   await expect(sheet.locator('[data-act="exchange-submit"]')).toBeDisabled();
   await sheet.locator('[data-act="exchange-fill"]').click();
   await expect(sheet.locator('[data-exchange-picked]')).toHaveText('3/3명 골랐어요');
-  await expect(sheet.locator('[data-exchange-checks] li.met')).toHaveCount(2);
+  await expect(sheet.locator('[data-exchange-checks] li.met')).toHaveCount(3);
   await shot(page, 'exchange-pick');
 
   await sheet.locator('[data-act="exchange-submit"]').click();
   await expect(sheet).toContainText('카드를 낼까요?');
-  await expect(sheet).toContainText('직접 키운 선수 2명');
+  await expect(sheet).toContainText('방출하면 받을 수 있던 자금은 받지 않아요');
+  await expect(sheet).toContainText('2개가 남아요');
   await shot(page, 'exchange-confirm');
   await sheet.locator('[data-act="exchange-confirm"]').click();
-  await expect(sheet.locator('[data-exchange-done]')).toContainText('리롤권 2장');
+  await expect(sheet.locator('[data-exchange-done]')).toContainText('오늘 1/3개 냈어요');
   expect(s.claims).toHaveLength(1);
   expect(s.claims[0]!.id).toBe(EASY.id);
   expect(new Set((s.claims[0]!.body as { careerIds: string[] }).careerIds)).toEqual(
@@ -164,13 +171,15 @@ test('카드 과제: 목록 → 고르기 → 확인 → 결과, 다시 열어�
   await shot(page, 'exchange-done');
 
   await sheet.locator('[data-exchange-done] button').click();
-  await expect(sheet.locator('[data-exchange="easy"]')).toContainText('남은 횟수 2/3');
+  await expect(sheet.locator('[data-exchange="easy"]')).toContainText('냈어요');
+  await expect(sheet.locator('[data-exchange="easy"]')).toBeDisabled();
+  await expect(sheet.locator('[data-exchange-today]')).toContainText('오늘 1/3개 냈어요');
   // 낸 뒤 새로 받은 뒤로는 닫았다 열어도 메모로 그린다.
   const gets = { team: s.teamGets, me: s.meGets };
   await sheet.locator('[data-act="exchange-close"]').click();
   await expect(sheet).toHaveCount(0);
   await page.locator('[data-act="exchange"]').click();
-  await expect(page.locator('[data-card-exchange] [data-exchange]')).toHaveCount(4);
+  await expect(page.locator('[data-card-exchange] [data-exchange]')).toHaveCount(3);
   expect({ team: s.teamGets, me: s.meGets }).toEqual(gets);
 });
 

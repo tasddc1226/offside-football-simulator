@@ -4,7 +4,11 @@ import {
   ExchangeMeResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
-import { exchangesAt, type ExchangeDef } from '@offside/contracts/card-exchange-rules';
+import {
+  EXCHANGE_DAILY_REWARD,
+  exchangesAt,
+  type ExchangeDef,
+} from '@offside/contracts/card-exchange-rules';
 import { eq, inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -42,20 +46,32 @@ describe('카드 바치기 과제 (T-11-374)', () => {
   const reason = async (res: Response) =>
     (ErrorEnvelopeSchema.parse(await res.json()).error.details as { reason?: string } | undefined)
       ?.reason;
-  const easy = (): ExchangeDef => exchangesAt(NOW, 1).find((d) => d.tier === 'easy')!;
+  const today = () => exchangesAt(NOW);
+  const easy = (): ExchangeDef => today().find((d) => d.tier === 'easy')!;
 
-  /** 과제 조건에 맞는 은퇴 카드 n장(포지션 · 최고 OVR · 시즌 · 주발을 규칙에서 고른다). */
-  async function addCards(profileId: string, def: ExchangeDef, n = def.rule.count) {
+  /**
+   * 과제 조건에 맞는 은퇴 카드 n장(포지션 구성 · 최고 OVR · 평균 · 레전드 점수 · 시즌 · 주발을 규칙에서 고른다).
+   * raisedBy를 주면 그 구단주가 키운 커리어를 profileId가 가진 카드로 만든다(영입한 카드).
+   */
+  async function addCards(
+    profileId: string,
+    def: ExchangeDef,
+    n = def.rule.count,
+    raisedBy = profileId,
+  ) {
     const r = def.rule;
-    const pos = r.pos?.[0] ?? 'MF';
-    const peak = Math.max(r.peakMin ?? 0, Math.min(r.peakMax ?? 99, 75));
+    const shape = r.shape
+      ? Object.entries(r.shape).flatMap(([p, k]) => Array<string>(k).fill(p))
+      : [];
+    const peak = Math.min(r.peakMax ?? 99, Math.max(r.peakMin ?? 0, r.avgPeakMin ?? 0, 75));
     const ids: string[] = [];
     for (let i = 0; i < n; i++) {
+      const pos = (shape[i] ?? r.pos?.[0] ?? 'MF') as keyof typeof DPOS;
       const id = crypto.randomUUID();
       const at = '2026-10-10T00:00:00.000Z';
       await ctx.db.insert(careers).values({
         id,
-        profileId,
+        profileId: raisedBy,
         pos,
         dpos: DPOS[pos],
         foot: (r.foot ?? '오른발') as '오른발' | '왼발' | '양발',
@@ -69,15 +85,17 @@ describe('카드 바치기 과제 (T-11-374)', () => {
         retiredAt: at,
         retireAge: 34,
         peak,
-        legendScore: 300,
+        legendScore: r.legendOne ?? 300,
         apps: 300,
         nation: '대한민국',
-        serviceSeason: typeof r.seasons?.[0] === 'number' ? r.seasons[0] : 1,
+        serviceSeason: r.seasons?.[0] ?? 1,
         value: 1_000_000,
       });
       ids.push(id);
     }
     await syncCards(ctx, 500_000);
+    if (raisedBy !== profileId)
+      await ctx.db.update(cards).set({ ownerId: profileId }).where(inArray(cards.careerId, ids));
     return ids;
   }
   const claim = (cookie: string, id: string, careerIds: string[], key?: string) =>
@@ -93,20 +111,19 @@ describe('카드 바치기 과제 (T-11-374)', () => {
     expect((await call('GET', '/v1/exchanges/me', { cookie: anon.cookie })).status).toBe(403);
   });
 
-  it('조건에 맞는 카드를 내면 카드가 사라지고 보상을 받는다 · 같은 요청은 한 번만 · 횟수 상한', async () => {
+  it('과제마다 카드가 사라지고 · 오늘 과제를 모두 내야 보상을 한 번 받는다 · 같은 요청은 한 번만', async () => {
     const owner = await issueGoogleCookie(ctx);
-    const def = easy();
+    const [first, ...rest] = today();
     const me0 = MeRes.parse(
       await (await call('GET', '/v1/exchanges/me', { cookie: owner.cookie })).json(),
     ).data;
     expect(me0.claims).toEqual({});
 
-    const ids = await addCards(owner.profileId, def);
-    const res = await claim(owner.cookie, def.id, ids, 'exchange-same-key');
+    const ids = await addCards(owner.profileId, first!);
+    const res = await claim(owner.cookie, first!.id, ids, 'exchange-same-key');
     expect(res.status).toBe(200);
     const body = ClaimRes.parse(await res.json()).data;
-    expect(body.claimed).toBe(def.rule.count);
-    expect(body.rewards).toEqual(def.reward);
+    expect(body).toMatchObject({ claimed: first!.rule.count, done: 1, rewards: [], titles: [] });
 
     const rows = await ctx.db.select().from(cards).where(inArray(cards.careerId, ids));
     expect(rows.every((c) => c.ownerId === null && c.consumedIn && c.releasedAt === null)).toBe(
@@ -120,32 +137,55 @@ describe('카드 바치기 과제 (T-11-374)', () => {
       (await ctx.db.select().from(ownerItems).where(eq(ownerItems.profileId, owner.profileId)))
         .map((r) => ({ item: r.item, qty: r.qty }))
         .sort((a, b) => a.item.localeCompare(b.item));
-    expect(await items()).toEqual(def.reward.map((w) => ({ item: w.item, qty: w.qty })));
+    expect(await items()).toEqual([]);
+
+    // 같은 멱등 키로 다시 보내면 첫 응답 그대로.
+    const again = await claim(owner.cookie, first!.id, ids, 'exchange-same-key');
+    expect(again.status).toBe(200);
+
+    // 같은 과제는 하루 한 번.
+    const over = await addCards(owner.profileId, first!);
+    const limit = await claim(owner.cookie, first!.id, over);
+    expect(limit.status).toBe(409);
+    expect(await reason(limit)).toBe('EXCHANGE_LIMIT');
+    expect(await owned(over)).toBe(over.length);
+
+    const me1 = MeRes.parse(
+      await (await call('GET', '/v1/exchanges/me', { cookie: owner.cookie })).json(),
+    ).data;
+    expect(me1.claims).toEqual({ [first!.id]: 1 });
+
+    // 나머지 과제를 내면 마지막 요청만 보상을 받는다.
+    const results = [];
+    for (const d of rest) {
+      const r = await claim(owner.cookie, d.id, await addCards(owner.profileId, d));
+      expect(r.status).toBe(200);
+      results.push(ClaimRes.parse(await r.json()).data);
+    }
+    expect(results.map((r) => r.done)).toEqual([2, 3]);
+    expect(results[0]!.rewards).toEqual([]);
+    expect(results[1]!.rewards).toEqual(EXCHANGE_DAILY_REWARD);
+    const want = EXCHANGE_DAILY_REWARD.map((w) => ({ item: w.item, qty: w.qty })).sort((a, b) =>
+      a.item.localeCompare(b.item),
+    );
+    expect(await items()).toEqual(want);
     const [progress] = await ctx.db
       .select()
       .from(ownerTitleProgress)
       .where(eq(ownerTitleProgress.profileId, owner.profileId));
     expect(progress?.exchanges).toBe(1);
+  });
 
-    // 같은 멱등 키로 다시 보내면 첫 응답 그대로 · 보상은 한 번.
-    const again = await claim(owner.cookie, def.id, ids, 'exchange-same-key');
-    expect(again.status).toBe(200);
-    expect(await items()).toEqual(def.reward.map((w) => ({ item: w.item, qty: w.qty })));
-
-    const me1 = MeRes.parse(
-      await (await call('GET', '/v1/exchanges/me', { cookie: owner.cookie })).json(),
-    ).data;
-    expect(me1.claims).toEqual({ [def.id]: 1 });
-
-    for (let i = 1; i < def.maxClaims; i++) {
-      const more = await addCards(owner.profileId, def);
-      expect((await claim(owner.cookie, def.id, more)).status).toBe(200);
-    }
-    const over = await addCards(owner.profileId, def);
-    const limit = await claim(owner.cookie, def.id, over);
-    expect(limit.status).toBe(409);
-    expect(await reason(limit)).toBe('EXCHANGE_LIMIT');
-    expect(await owned(over)).toBe(over.length);
+  it('영입한 선수는 낼 수 없다', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    const other = await issueGoogleCookie(ctx);
+    const def = easy();
+    const mine = await addCards(owner.profileId, def, def.rule.count - 1);
+    const bought = await addCards(owner.profileId, def, 1, other.profileId);
+    const res = await claim(owner.cookie, def.id, [...mine, ...bought]);
+    expect(res.status).toBe(409);
+    expect(await reason(res)).toBe('EXCHANGE_NOT_RAISED');
+    expect(await owned([...mine, ...bought])).toBe(def.rule.count);
   });
 
   it('낼 수 없는 카드 · 조건이 안 맞는 묶음 · 닫힌 과제는 거절하고 아무것도 바꾸지 않는다', async () => {

@@ -1,13 +1,14 @@
 <script lang="ts">
-  // T-11-374 카드 바치기 과제(내 구단 화면 '카드 과제' 칸으로 연다). 과제 목록은 코드 묶음이라 부르지 않고, 열 때 내 팀
-  // (선수 목록 · 선발, 1분 메모)과 내 낸 횟수만 받는다. 과제를 고르면 선수를 고르고 확인한 뒤 낸다.
+  // T-11-374 카드 바치기 과제(내 구단 화면 '카드 과제' 칸으로 연다). 오늘의 과제 목록은 코드 묶음이라 부르지 않고, 열 때 내 팀
+  // (선수 목록 · 선발, 1분 메모)과 내 낸 횟수만 받는다. 과제를 고르면 선수를 고르고 확인한 뒤 낸다. 세 개를 모두 내면 보상.
   import PopSheet from '../PopSheet.svelte';
   import type { TeamPlayer, OwnerTeamResponse } from '@offside/app-core/api/team';
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
   import { claimExchange, fetchExchangeMe } from '@offside/app-core/api/exchange';
   import {
     autoFill,
-    claimsText,
+    canFinishAll,
+    EXCHANGE_DAILY_REWARD,
     endsText,
     exchangeCardOf,
     exchangeChecklist,
@@ -39,16 +40,20 @@
   let confirm = $state(false);
   let busy = $state(false);
   let error = $state<string | null>(null);
-  let done = $state<{ reward: string; titles: string[] } | null>(null);
+  let done = $state<{ reward: string | null; done: number; titles: string[] } | null>(null);
 
   const now = Date.now();
-  const defs = $derived(team ? exchangesAt(new Date(now).toISOString(), team.current ?? null) : []);
+  const defs = exchangesAt(new Date(now).toISOString());
   const lineup = $derived(team ? lineupOf(team) : new Set<string>());
   const players = $derived(team?.players ?? []);
   const chosen = $derived(players.filter((p) => picked.includes(p.careerId)));
   const checks = $derived(def ? exchangeChecklist(def.rule, chosen.map(exchangeCardOf)) : []);
   const ready = $derived(!!def && exchangeMet(def.rule, chosen.map(exchangeCardOf)));
-  const used = (d: ExchangeDef) => claims[d.id] ?? 0;
+  const used = (d: ExchangeDef) => (claims[d.id] ?? 0) > 0;
+  const doneCount = $derived(defs.filter(used).length);
+  // 영입 · 잠김 · 판매 중 · 선발을 뺀, 오늘 낼 수 있는 선수. 남은 과제를 모두 채울 수 있는지 미리 알린다.
+  const free = $derived(players.filter((p) => !exchangeLock(p, lineup, { count: 0 })).map(exchangeCardOf));
+  const feasible = $derived(canFinishAll(defs.filter((d) => !used(d)), free));
   const nameOf = (p: TeamPlayer) => marketName(p, local);
 
   async function load() {
@@ -99,7 +104,11 @@
       confirm = false;
       return;
     }
-    done = { reward: rewardText(r.data.rewards), titles: r.data.titles };
+    done = {
+      reward: r.data.rewards.length ? rewardText(r.data.rewards) : null,
+      done: r.data.done,
+      titles: r.data.titles,
+    };
     def = null;
     picked = [];
     confirm = false;
@@ -116,8 +125,8 @@
     </div>
     {#if done}
       <section class="card stack xc-done" role="status" data-exchange-done>
-        <b>{L.doneTitle}</b>
-        <span>{L.doneBody({ reward: done.reward })}</span>
+        <b>{done.reward ? L.doneAllTitle : L.doneTitle}</b>
+        <span>{done.reward ? L.doneBody({ reward: done.reward }) : L.doneProgress({ done: done.done, total: defs.length })}</span>
         {#each done.titles as t (t)}<span class="good">{L.doneTitleEarned({ name: titleLabel(t) ?? t })}</span>{/each}
         <button class="btn" onclick={() => (done = null)}>{L.ok}</button>
       </section>
@@ -128,21 +137,26 @@
       <p role="status">{L.loading}</p>
     {:else if !def}
       <p class="muted fs-sm">{L.lead}</p>
+      <section class="card stack xc-today" data-exchange-today>
+        <b>{L.progress({ done: doneCount, total: defs.length })}</b>
+        <span class="fs-sm">{L.rewardAll} {rewardText(EXCHANGE_DAILY_REWARD)}</span>
+        <span class="muted fs-sm">{endsText(defs[0]!, now)}</span>
+        {#if doneCount === defs.length}<span class="good fs-sm">{L.todayDone}</span>
+        {:else if !feasible}<span class="xc-err fs-sm" data-exchange-cant>{L.cantFinish}</span>{/if}
+      </section>
       {#each defs as d (d.id)}
-        {@const left = d.maxClaims - used(d)}
-        <button class="card xc-def" data-exchange={d.tier} disabled={left <= 0} onclick={() => open(d)}>
-          <span class="xc-tier pill {d.tier === 'hard' || d.tier === 'season' ? 'warn' : 'good'}">{tierLabel(d.tier)}</span>
+        <button class="card xc-def" data-exchange={d.tier} disabled={used(d)} onclick={() => open(d)}>
+          <span class="xc-tier pill {d.tier === 'hard' ? 'warn' : 'good'}">{tierLabel(d.tier)}</span>
           <b>{exchangeName(d.key)}</b>
           <span class="muted fs-sm">{exchangeChecklist(d.rule, []).map((c) => c.text).join(' · ')}</span>
-          <span class="fs-sm">{L.reward} {rewardText(d.reward)}</span>
-          <span class="muted fs-sm">{claimsText(d, used(d))} · {endsText(d, now)}</span>
+          {#if used(d)}<span class="good fs-sm">{L.taskDone}</span>{/if}
         </button>
       {/each}
     {:else}
       <ul class="xc-checks" data-exchange-checks>
         {#each checks as c (c.condition)}<li class:met={c.met}><span aria-hidden="true">{c.met ? '✓' : '·'}</span>{c.text}</li>{/each}
       </ul>
-      <p class="fs-sm">{L.reward} {rewardText(def.reward)}</p>
+      <p class="fs-sm">{L.rewardAll} {rewardText(EXCHANGE_DAILY_REWARD)}</p>
       <div class="xc-tools">
         <b data-exchange-picked>{L.picked({ n: picked.length, need: def.rule.count })}</b>
         <button class="btn btn-sm" data-act="exchange-fill" disabled={busy} onclick={fill}>{L.autoFill}</button>
@@ -155,7 +169,7 @@
           <input type="checkbox" checked={picked.includes(p.careerId)} disabled={!!lock || busy} onchange={() => toggle(p)} />
           <span class="stack" style="gap:2px;min-width:0">
             <b>{nameOf(p)}</b>
-            <small class="muted">{L.cardLine({ pos: tn(POS_LABEL[p.pos]), peak: p.peak })}{p.raised ? '' : ` · ${L.bought}`}</small>
+            <small class="muted">{L.cardLine({ pos: tn(POS_LABEL[p.pos]), peak: p.peak })}</small>
           </span>
           {#if lock}<small class="muted">{lock}</small>{:else if p.cardValue}<small>{fmtValue(p.cardValue)}</small>{/if}
         </label>
@@ -164,8 +178,9 @@
         {#if confirm}
           <b>{L.confirmTitle}</b>
           <p class="fs-sm">{L.confirmBody({ n: chosen.length })}</p>
-          {#if chosen.some((p) => p.raised)}<p class="fs-sm muted">{L.confirmRaised({ n: chosen.filter((p) => p.raised).length })}</p>{/if}
+          <p class="fs-sm muted">{L.confirmRaised({ n: chosen.length })}</p>
           <p class="fs-sm muted">{L.confirmValue({ value: fmtValue(chosen.reduce((a, p) => a + (p.cardValue ?? 0), 0)) })}</p>
+          <p class="fs-sm">{doneCount + 1 >= defs.length ? L.confirmLast : L.confirmLeft({ left: defs.length - doneCount - 1 })}</p>
           <div class="xc-actions">
             <button class="btn" disabled={busy} onclick={() => (confirm = false)}>{L.cancel}</button>
             <button class="btn xc-danger" data-act="exchange-confirm" disabled={busy} onclick={() => void submit()}>{L.confirmOk}</button>

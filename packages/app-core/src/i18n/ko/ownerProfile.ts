@@ -70,7 +70,7 @@ const ko = {
   conditionAssists: '직접 키운 통산 300도움 이상 선수 5명이 30세 이후에 은퇴',
   conditionNational: '직접 키운 A매치 150경기 이상 선수 5명이 30세 이후에 은퇴',
   conditionDynasty: '직접 키운 선수 25명이 영구결번 획득',
-  conditionExchange: '카드 과제를 10번 완료',
+  conditionExchange: '하루 카드 과제를 모두 마친 날 10일',
   gradeEntry: '입문',
   gradeSkilled: '숙련',
   gradeHonor: '명예',
@@ -86,7 +86,7 @@ const ko = {
   relatedNumbers: '연결 업적 · 첫 영구결번 · 영구결번 11명',
   relatedBallon: '연결 업적 · 첫 발롱도르 · 발롱도르 합계 30회',
   relatedFirsts: '시즌 최초 기록 배지에서 이어지는 칭호',
-  relatedExchange: '카드 과제를 낼 때마다 오르는 칭호',
+  relatedExchange: '하루 카드 과제를 모두 마칠 때마다 오르는 칭호',
   viewAchievements: '시즌 업적',
   titleBridge:
     '시즌 업적은 이번 시즌의 도전이에요. 영구 칭호는 여러 시즌의 반복 육성이나 확정된 최초 기록 배지로 받아요. 업적 점수를 그대로 합산하지는 않아요.',

@@ -1,5 +1,6 @@
-// T-11-374 카드 바치기 과제(내 구단 화면 '카드 과제' 칸으로 연다, 웹 owner/CardExchange.svelte). 과제 목록은 코드 묶음이라
-// 부르지 않고, 열 때 내 팀(선수 목록 · 선발, 1분 메모)과 내 낸 횟수만 받는다. 과제를 고르면 선수를 고르고 확인한 뒤 낸다.
+// T-11-374 카드 바치기 과제(내 구단 화면 '카드 과제' 칸으로 연다, 웹 owner/CardExchange.svelte). 오늘의 과제 목록은 코드
+// 묶음이라 부르지 않고, 열 때 내 팀(선수 목록 · 선발, 1분 메모)과 내 낸 횟수만 받는다. 과제를 고르면 선수를 고르고 확인한 뒤
+// 낸다. 세 개를 모두 내면 보상.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, View } from 'react-native';
 import {
@@ -10,7 +11,8 @@ import {
 import { claimExchange, fetchExchangeMe } from '@offside/app-core/api/exchange';
 import {
   autoFill,
-  claimsText,
+  canFinishAll,
+  EXCHANGE_DAILY_REWARD,
   endsText,
   exchangeCardOf,
   exchangeChecklist,
@@ -45,7 +47,11 @@ export function CardExchange({ onClose }: { onClose: () => void }) {
   const [picked, setPicked] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<{ reward: string; titles: string[] } | null>(null);
+  const [done, setDone] = useState<{
+    reward: string | null;
+    done: number;
+    titles: string[];
+  } | null>(null);
 
   const load = useCallback(async () => {
     setFailed(false);
@@ -58,17 +64,26 @@ export function CardExchange({ onClose }: { onClose: () => void }) {
     void load();
   }, [load]);
 
-  const defs = useMemo(
-    () => (team ? exchangesAt(new Date(now).toISOString(), team.current ?? null) : []),
-    [team, now],
-  );
+  const defs = useMemo(() => exchangesAt(new Date(now).toISOString()), [now]);
   const lineup = useMemo(() => (team ? lineupOf(team) : new Set<string>()), [team]);
   const players = team?.players ?? [];
   const chosen = players.filter((p) => picked.includes(p.careerId));
   const cards = chosen.map(exchangeCardOf);
   const checks = def ? exchangeChecklist(def.rule, cards) : [];
   const ready = !!def && exchangeMet(def.rule, cards);
-  const used = (d: ExchangeDef) => claims[d.id] ?? 0;
+  const used = (d: ExchangeDef) => (claims[d.id] ?? 0) > 0;
+  const doneCount = defs.filter(used).length;
+  // 영입 · 잠김 · 판매 중 · 선발을 뺀, 오늘 낼 수 있는 선수. 남은 과제를 모두 채울 수 있는지 미리 알린다.
+  const feasible = useMemo(
+    () =>
+      canFinishAll(
+        defs.filter((d) => !((claims[d.id] ?? 0) > 0)),
+        (team?.players ?? [])
+          .filter((p) => !exchangeLock(p, lineup, { count: 0 }))
+          .map(exchangeCardOf),
+      ),
+    [defs, claims, team, lineup],
+  );
   const nameOf = (p: TeamPlayer) => marketName(p, local);
 
   const open = (d: ExchangeDef) => {
@@ -101,20 +116,26 @@ export function CardExchange({ onClose }: { onClose: () => void }) {
     const r = await claimExchange(def.id, picked);
     setBusy(false);
     if (!r.ok) return setError(r.error.message || L.claimFail);
-    setDone({ reward: rewardText(r.data.rewards), titles: r.data.titles });
+    setDone({
+      reward: r.data.rewards.length ? rewardText(r.data.rewards) : null,
+      done: r.data.done,
+      titles: r.data.titles,
+    });
     setDef(null);
     setPicked([]);
     void load();
   };
   const askSubmit = () => {
-    const raised = chosen.filter((p) => p.raised).length;
     const value = chosen.reduce((a, p) => a + (p.cardValue ?? 0), 0);
     Alert.alert(
       L.confirmTitle,
       [
         L.confirmBody({ n: chosen.length }),
-        raised ? L.confirmRaised({ n: raised }) : null,
+        L.confirmRaised({ n: chosen.length }),
         L.confirmValue({ value: fmtValue(value) }),
+        doneCount + 1 >= defs.length
+          ? L.confirmLast
+          : L.confirmLeft({ left: defs.length - doneCount - 1 }),
       ]
         .filter(Boolean)
         .join('\n\n'),
@@ -148,8 +169,12 @@ export function CardExchange({ onClose }: { onClose: () => void }) {
         </View>
         {done ? (
           <Card gap={8} testID="exchange-done">
-            <Txt bold>{L.doneTitle}</Txt>
-            <Txt>{L.doneBody({ reward: done.reward })}</Txt>
+            <Txt bold>{done.reward ? L.doneAllTitle : L.doneTitle}</Txt>
+            <Txt>
+              {done.reward
+                ? L.doneBody({ reward: done.reward })
+                : L.doneProgress({ done: done.done, total: defs.length })}
+            </Txt>
             {done.titles.map((t) => (
               <Txt key={t} tone="good">
                 {L.doneTitleEarned({ name: titleLabel(t) ?? t })}
@@ -169,21 +194,37 @@ export function CardExchange({ onClose }: { onClose: () => void }) {
             <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
               {L.lead}
             </Txt>
+            <Card gap={4} testID="exchange-today">
+              <Txt bold>{L.progress({ done: doneCount, total: defs.length })}</Txt>
+              <Txt
+                style={{ fontSize: rem(0.875) }}
+              >{`${L.rewardAll} ${rewardText(EXCHANGE_DAILY_REWARD)}`}</Txt>
+              <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                {endsText(defs[0]!, now)}
+              </Txt>
+              {doneCount === defs.length ? (
+                <Txt tone="good" style={{ fontSize: rem(0.875) }}>
+                  {L.todayDone}
+                </Txt>
+              ) : !feasible ? (
+                <Txt tone="bad" style={{ fontSize: rem(0.875) }} testID="exchange-cant">
+                  {L.cantFinish}
+                </Txt>
+              ) : null}
+            </Card>
             {defs.map((d) => {
-              const left = d.maxClaims - used(d);
+              const off = used(d);
               return (
                 <Press
                   key={d.id}
                   testID={`exchange-${d.tier}`}
-                  disabled={left <= 0}
+                  disabled={off}
                   onPress={() => open(d)}
                   scale={0.98}
                 >
-                  <Card gap={4} style={{ opacity: left <= 0 ? 0.55 : 1 }}>
+                  <Card gap={4} style={{ opacity: off ? 0.55 : 1 }}>
                     <View style={{ flexDirection: 'row' }}>
-                      <Pill tone={d.tier === 'hard' || d.tier === 'season' ? 'warn' : 'good'}>
-                        {tierLabel(d.tier)}
-                      </Pill>
+                      <Pill tone={d.tier === 'hard' ? 'warn' : 'good'}>{tierLabel(d.tier)}</Pill>
                     </View>
                     <Txt bold>{exchangeName(d.key)}</Txt>
                     <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
@@ -191,12 +232,11 @@ export function CardExchange({ onClose }: { onClose: () => void }) {
                         .map((x) => x.text)
                         .join(' · ')}
                     </Txt>
-                    <Txt
-                      style={{ fontSize: rem(0.875) }}
-                    >{`${L.reward} ${rewardText(d.reward)}`}</Txt>
-                    <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                      {`${claimsText(d, used(d))} · ${endsText(d, now)}`}
-                    </Txt>
+                    {off ? (
+                      <Txt tone="good" style={{ fontSize: rem(0.875) }}>
+                        {L.taskDone}
+                      </Txt>
+                    ) : null}
                   </Card>
                 </Press>
               );
@@ -211,7 +251,9 @@ export function CardExchange({ onClose }: { onClose: () => void }) {
                 </Txt>
               ))}
             </View>
-            <Txt style={{ fontSize: rem(0.875) }}>{`${L.reward} ${rewardText(def.reward)}`}</Txt>
+            <Txt
+              style={{ fontSize: rem(0.875) }}
+            >{`${L.rewardAll} ${rewardText(EXCHANGE_DAILY_REWARD)}`}</Txt>
             <Txt bold testID="exchange-picked">
               {L.picked({ n: picked.length, need: def.rule.count })}
             </Txt>
@@ -263,8 +305,7 @@ export function CardExchange({ onClose }: { onClose: () => void }) {
                       <View style={{ gap: 2, flex: 1, minWidth: 0 }}>
                         <Txt bold>{nameOf(p)}</Txt>
                         <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-                          {L.cardLine({ pos: tn(POS_LABEL[p.pos]), peak: p.peak }) +
-                            (p.raised ? '' : ` · ${L.bought}`)}
+                          {L.cardLine({ pos: tn(POS_LABEL[p.pos]), peak: p.peak })}
                         </Txt>
                       </View>
                       <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
