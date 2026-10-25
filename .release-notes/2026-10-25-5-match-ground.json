@@ -1,0 +1,26 @@
+{
+  "id": "t-11-491-match-ground",
+  "title": "팀 경기 중계에 2D 그라운드",
+  "items": [
+    "랭크 · 친선 경기 문자중계 아래에 그라운드가 생겼어요. 중계 문구에 맞춰 22명과 공이 움직여요",
+    "골이 들어가면 공이 지난 길과 득점자 이름이 그라운드에 남아요",
+    "결정적 장면에서는 그라운드가 멈추고 선택지마다 1 · 2 · 3 화살표를 보여 줘요"
+  ],
+  "en": {
+    "title": "2D pitch for team match commentary",
+    "items": [
+      "Ranked and friendly matches now show a pitch under the text commentary. All 22 players and the ball move with each line.",
+      "When a goal goes in, the ball's path and the scorer's name stay on the pitch.",
+      "At a key moment the pitch pauses and draws a numbered 1 · 2 · 3 arrow for each choice."
+    ]
+  },
+  "ja": {
+    "title": "チーム試合の実況に2Dピッチ",
+    "items": [
+      "ランク・親善試合の文字実況の下にピッチが表示されます。実況に合わせて22人とボールが動きます。",
+      "ゴールが決まると、ボールの軌跡と得点者の名前がピッチに残ります。",
+      "決定的な場面ではピッチが止まり、選択肢ごとに1・2・3の矢印を表示します。"
+    ]
+  },
+  "availability": "web-app"
+}

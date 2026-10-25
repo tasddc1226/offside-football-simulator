@@ -560,6 +560,8 @@ test('T-11-387 랭크 경기 중 결정적 장면을 고르면 결과가 중계�
   await expect(card).toContainText('결정적 찬스');
   await expect(card).toContainText('공개 골잡이');
   await expect(card.locator('[data-moment-choice]')).toHaveCount(3);
+  // T-11-491 장면 동안 그라운드는 멈추고 선택지마다 번호 화살표를 긋는다.
+  await expect(live.locator('[data-match-ground] .mg-key')).toHaveText(['1', '2', '3']);
   await expect(card.locator('[data-moment-choice="round"]')).toContainText('58%');
   await expect(card.locator('[data-moment-choice="round"]')).toContainText('역습 20%');
   // T-11-443 스크린리더용 남은 시간은 처음 안내 한 줄, 건너뛰기 버튼은 감독에게 맡긴다고 적는다.
