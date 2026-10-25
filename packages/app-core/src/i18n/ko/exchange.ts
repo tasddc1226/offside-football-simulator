@@ -22,7 +22,7 @@ const ko = {
   nameKeepers: '수문장 모집',
   nameMidWorkers: '중원의 일꾼',
   nameBackline: '수비진 정리',
-  nameFounders: '프리시즌의 기억',
+  nameQuietFarewell: '조용한 은퇴',
   nameStrikers: '공격진 정리',
   nameLeftFoot: '왼발잡이 모임',
   nameNationalCall: '국가대표 소집',
