@@ -70,7 +70,9 @@ export const EXCHANGE_POOL: Record<ExchangeTier, readonly ExchangeSpec[]> = {
     { key: 'keepers', rule: { count: 2, pos: ['GK'] } },
     { key: 'midWorkers', rule: { count: 3, pos: ['MF'], peakMin: 70, peakMax: 79 } },
     { key: 'backline', rule: { count: 3, pos: ['DF'], peakMax: 79 } },
-    { key: 'founders', rule: { count: 2, seasons: [0] } },
+    // T-11-374c 프리시즌 카드 2장(founders)은 새로 만들 수 없어 프리시즌 뒤 시작한 구단주가 오늘 과제를 끝낼 수 없었다. 같은 칸을
+    // 누구나 가진 낮은 카드 과제로 바꿔 다른 날의 회전은 그대로 둔다.
+    { key: 'quietFarewell', rule: { count: 3, peakMax: 74 } },
     { key: 'strikers', rule: { count: 3, pos: ['FW'], peakMax: 79 } },
     // i18n-ignore: 주발은 커리어 저장값(한국어) 그대로 비교한다
     { key: 'leftFoot', rule: { count: 3, foot: '왼발' } },
