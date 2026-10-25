@@ -385,24 +385,19 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await expect(result).toContainText('익명의 공격수 No.7');
   await expect(result).toContainText('1승 0무 0패');
   await expect(result.locator('[data-rating-change]')).toContainText('내 팀 레이팅 +16');
-  // T-11-379 경기 리포트 — 기대 득점 · 진단 한 줄은 바로, 줄 비교는 눌러야 펼친다. 펼쳐도 API를 더 부르지 않는다.
+  // T-11-379 경기 리포트 — 기대 득점 · 진단 한 줄. T-11-498 줄 비교는 접지 않고 바로 보이며, 가장 밀린 줄을 바꾸러 간다.
   const report = result.locator('[data-team-report]');
   await expect(report.locator('[data-report-xg]')).toHaveText('기대 득점(xG) 1.6 : 0.9');
   await expect(report.locator('[data-report-diagnosis]')).toHaveText(
     '공격이 상대 수비벽보다 8 앞서 기회를 많이 만들었어요.',
   );
-  await expect(report.locator('[data-report-rows]')).toHaveCount(0);
-  let apiCalls = 0;
-  // 라운지 채팅 접속(/v1/chat/ticket)은 화면을 연 뒤 시간차로 나가 리포트와 무관하다.
-  const countApi = (r: { url(): string }) =>
-    void (r.url().startsWith(API) && !r.url().startsWith(`${API}/v1/chat/`) && apiCalls++);
-  page.on('request', countApi);
-  await report.locator('[data-act="team-report-compare"]').click();
+  await expect(report.locator('[data-report-line]')).toHaveCount(3);
   await expect(report.locator('[data-report-line="mid"]')).toHaveClass(/weak/);
+  await expect(result.getByRole('button', { name: /다시 경기하기/ })).toContainText(
+    '오늘 9경기 남았어요',
+  );
   await expectNoA11yViolations(page);
-  page.off('request', countApi);
-  expect(apiCalls).toBe(0);
-  await expect(report.locator('[data-act="team-report-fix"]')).toContainText('고칠 곳 · ');
+  await expect(report.locator('[data-act="team-report-fix"]')).toContainText(' 바꾸기');
   await result.locator('[data-act="team-replay"]').click();
   await expect(live.locator('[data-live-line="kickoff"]')).toContainText('킥오프');
   await live.locator('[data-act="live-skip"]').click();

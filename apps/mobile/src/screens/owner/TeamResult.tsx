@@ -1,5 +1,6 @@
 // 경기 결과(웹 team/Team.svelte 의 view === 'result', 중계가 끝난 뒤) — 스코어 · 득점 · 레이팅 변화.
-import { RADIUS } from '@offside/app-core/design-tokens';
+// T-11-498 위 띠에 승패 · 스코어 · 팀별 득점자를 모으고, 레이팅 · 전적은 그 아래 칩으로, 다시 경기하기 하나만 크게 둔다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import { useColors } from '../../theme/useColors';
 import { TeamLogo } from '../../components/TeamLogo';
@@ -12,7 +13,6 @@ import { momentTitle, pickedLabel } from '@offside/app-core/teamMoments';
 import { recordText, signedNum } from '@offside/app-core/teamText';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Press, Txt } from '../../ui';
-import { Grid2 } from './TeamParts';
 import { TeamReport } from './TeamReport';
 import type { ReportLine } from '@offside/contracts/owner-team';
 
@@ -46,127 +46,199 @@ export function TeamResult({
   const linkable = (id: string | null): id is string => !!onPlayer && !friendly && !!id;
   const under = { textDecorationLine: 'underline' } as const;
   const gain = m[m.mine].ratingChange;
-  const side = (s: TeamMatch['home'], away: boolean, mine: boolean) => (
-    <View style={{ flex: 1, minWidth: 0, gap: 2, alignItems: away ? 'flex-end' : 'flex-start' }}>
-      <TeamLogo logo={s.logo} name={s.name} size={40} decorative />
-      <Txt bold tone={mine ? 'accent' : 'ink'} style={{ textAlign: away ? 'right' : 'left' }}>
+  const won = outcomeOf(m) === '승'; // i18n-ignore 결과 키
+  const record = team && !friendly && m.mine === 'home' ? recordText(team.record) : null;
+  const soft = { color: c.onPitch, opacity: 0.72 } as const;
+  const side = (s: TeamMatch['home'], mine: boolean) => (
+    <View style={{ flex: 1, minWidth: 0, gap: 2, alignItems: 'center' }}>
+      <TeamLogo logo={s.logo} name={s.name} size={52} decorative />
+      <Txt
+        bold
+        style={{ textAlign: 'center', marginTop: 4, color: mine ? c.pitchAccent : c.onPitch }}
+      >
         {s.name}
       </Txt>
-      <Txt tone="muted" v="xs" style={{ textAlign: away ? 'right' : 'left' }}>
-        {`${s.owner} · OVR ${s.ovr}`}
+      <Txt v="xs" style={[soft, { textAlign: 'center' }]}>
+        {s.owner}
+      </Txt>
+      <Txt v="xs" style={soft}>{`OVR ${s.ovr}`}</Txt>
+    </View>
+  );
+  const goal = (n: number, mine: boolean) => (
+    <Txt
+      style={{
+        fontFamily: DISPLAY[700],
+        fontSize: rem(3.5),
+        lineHeight: rem(3.5),
+        color: mine ? c.pitchAccent : c.onPitch,
+      }}
+    >
+      {n}
+    </Txt>
+  );
+  const scorers = (s: 'home' | 'away') => {
+    const end = s === 'away';
+    return (
+      <View style={{ flex: 1, minWidth: 0, gap: 6, alignItems: end ? 'flex-end' : 'flex-start' }}>
+        {m.events
+          .filter((e) => e.side === s)
+          .map((e, k) => (
+            <View key={k} style={{ alignItems: end ? 'flex-end' : 'flex-start' }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  alignItems: 'baseline',
+                  justifyContent: end ? 'flex-end' : 'flex-start',
+                  columnGap: 5,
+                }}
+              >
+                {linkable(e.scorerId) ? (
+                  <Press
+                    onPress={() => onPlayer!(e.scorerId!)}
+                    accessibilityRole="button"
+                    accessibilityLabel={L.playerStatsAria({
+                      name: eventName(e.scorerId, e.scorer),
+                    })}
+                    testID="team-player-stats"
+                  >
+                    <Txt v="sm" bold style={[under, { color: c.onPitch }]}>
+                      {eventName(e.scorerId, e.scorer)}
+                    </Txt>
+                  </Press>
+                ) : (
+                  <Txt v="sm" bold style={{ color: c.onPitch }}>
+                    {eventName(e.scorerId, e.scorer)}
+                  </Txt>
+                )}
+                {e.slot ? (
+                  <Txt v="xs" style={soft} testID="team-slot">
+                    {e.slot}
+                  </Txt>
+                ) : null}
+                <Txt v="sm" style={[soft, { fontFamily: DISPLAY[700] }]}>{`${e.minute}'`}</Txt>
+              </View>
+              {e.assist ? (
+                linkable(e.assistId) ? (
+                  <Press
+                    onPress={() => onPlayer!(e.assistId!)}
+                    accessibilityRole="button"
+                    accessibilityLabel={L.playerStatsAria({
+                      name: eventName(e.assistId, e.assist),
+                    })}
+                  >
+                    <Txt v="xs" style={[soft, under]}>
+                      {L.assist({ name: eventName(e.assistId, e.assist) })}
+                    </Txt>
+                  </Press>
+                ) : (
+                  <Txt v="xs" style={soft}>
+                    {L.assist({ name: eventName(e.assistId, e.assist) })}
+                  </Txt>
+                )
+              ) : null}
+            </View>
+          ))}
+      </View>
+    );
+  };
+  const chip = (text: string, accent = false, testID?: string) => (
+    <View
+      testID={testID}
+      style={{
+        minHeight: 28,
+        justifyContent: 'center',
+        paddingHorizontal: 10,
+        borderRadius: RADIUS.pill,
+        borderWidth: 1,
+        borderColor: accent ? c.accent : c.line,
+        backgroundColor: c.surface2,
+      }}
+    >
+      <Txt v="sm" tone={accent ? 'accent' : 'muted'} bold={accent}>
+        {text}
       </Txt>
     </View>
   );
-  const goalStyle = {
-    fontFamily: DISPLAY[700],
-    fontSize: rem(2.5),
-    lineHeight: rem(2.5),
-  } as const;
   return (
     <Card gap={14}>
-      <View testID="team-result">
-        <Txt v="eyebrow">Full time</Txt>
-        <Txt v="h1" accessibilityRole="header">
-          {OUTCOME_TITLE[outcomeOf(m)]}
-        </Txt>
-        {friendly ? (
-          <Txt v="sm" tone="accent" bold testID="team-friendly-label">
-            {L.kindFriendly}
+      <View
+        testID="team-result"
+        style={{
+          gap: 14,
+          padding: 14,
+          paddingTop: 18,
+          borderRadius: RADIUS.md,
+          backgroundColor: c.pitch,
+        }}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+          <Txt v="eyebrow" style={soft}>
+            {friendly ? `Full time · ${L.kindFriendly}` : 'Full time'}
           </Txt>
-        ) : null}
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        {side(m.home, false, m.mine === 'home')}
-        <View
-          accessible
-          accessibilityLabel={L.scoreAria({ h: m.home.goals, a: m.away.goals })}
-          style={{ flexDirection: 'row', gap: 8 }}
-        >
-          <Txt style={goalStyle}>{m.home.goals}</Txt>
-          <Txt accessible={false} style={goalStyle}>
-            :
+          <Txt v="xs" style={soft}>
+            {kstMonthDayTime(m.createdAt)}
           </Txt>
-          <Txt style={goalStyle}>{m.away.goals}</Txt>
         </View>
-        {side(m.away, true, m.mine === 'away')}
-      </View>
-      {m.events.length ? (
-        <View style={{ gap: 8 }}>
-          {m.events.map((e, k) => (
-            <View
-              key={k}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {side(m.home, m.mine === 'home')}
+          <View style={{ alignItems: 'center', gap: 2 }}>
+            <Txt
+              accessibilityRole="header"
               style={{
-                flexDirection: e.side === 'away' ? 'row-reverse' : 'row',
-                gap: 10,
-                alignItems: 'baseline',
+                fontFamily: DISPLAY[700],
+                fontSize: rem(FONT.title2),
+                color: won ? c.pitchAccent : c.onPitch,
               }}
             >
+              {OUTCOME_TITLE[outcomeOf(m)]}
+            </Txt>
+            <View
+              accessible
+              accessibilityLabel={L.scoreAria({ h: m.home.goals, a: m.away.goals })}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+            >
+              {goal(m.home.goals, m.mine === 'home')}
               <Txt
-                tone="muted"
-                style={{
-                  minWidth: rem(1) * 2.2,
-                  fontFamily: DISPLAY[700],
-                  textAlign: e.side === 'away' ? 'right' : 'left',
-                }}
-              >{`${e.minute}'`}</Txt>
-              <View style={{ alignItems: e.side === 'away' ? 'flex-end' : 'flex-start' }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    flexWrap: 'wrap',
-                    alignItems: 'baseline',
-                    justifyContent: e.side === 'away' ? 'flex-end' : 'flex-start',
-                    columnGap: 6,
-                  }}
-                >
-                  {linkable(e.scorerId) ? (
-                    <Press
-                      onPress={() => onPlayer!(e.scorerId!)}
-                      accessibilityRole="button"
-                      accessibilityLabel={L.playerStatsAria({
-                        name: eventName(e.scorerId, e.scorer),
-                      })}
-                      testID="team-player-stats"
-                    >
-                      <Txt bold style={under}>
-                        {eventName(e.scorerId, e.scorer)}
-                      </Txt>
-                    </Press>
-                  ) : (
-                    <Txt bold>{eventName(e.scorerId, e.scorer)}</Txt>
-                  )}
-                  {e.slot ? (
-                    <Txt tone="muted" v="xs" testID="team-slot">
-                      {e.slot}
-                    </Txt>
-                  ) : null}
-                </View>
-                {e.assist ? (
-                  linkable(e.assistId) ? (
-                    <Press
-                      onPress={() => onPlayer!(e.assistId!)}
-                      accessibilityRole="button"
-                      accessibilityLabel={L.playerStatsAria({
-                        name: eventName(e.assistId, e.assist),
-                      })}
-                    >
-                      <Txt tone="muted" v="xs" style={under}>
-                        {L.assist({ name: eventName(e.assistId, e.assist) })}
-                      </Txt>
-                    </Press>
-                  ) : (
-                    <Txt tone="muted" v="xs">
-                      {L.assist({ name: eventName(e.assistId, e.assist) })}
-                    </Txt>
-                  )
-                ) : null}
-              </View>
+                accessible={false}
+                style={[soft, { fontFamily: DISPLAY[700], fontSize: rem(2.5) }]}
+              >
+                :
+              </Txt>
+              {goal(m.away.goals, m.mine === 'away')}
             </View>
-          ))}
+          </View>
+          {side(m.away, m.mine === 'away')}
         </View>
-      ) : (
-        <Txt tone="muted">{L.noGoals}</Txt>
-      )}
+        {m.events.length ? (
+          <View
+            style={{
+              flexDirection: 'row',
+              gap: 12,
+              paddingTop: 12,
+              borderTopWidth: 1,
+              borderTopColor: c.chalk,
+            }}
+          >
+            {scorers('home')}
+            {scorers('away')}
+          </View>
+        ) : (
+          <Txt v="sm" style={[soft, { textAlign: 'center' }]}>
+            {L.noGoals}
+          </Txt>
+        )}
+      </View>
+      {friendly ? (
+        <View style={{ flexDirection: 'row' }} testID="team-friendly-label">
+          {chip(L.friendlyNote)}
+        </View>
+      ) : gain != null || record ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {gain != null ? chip(`${L.ratingChange}${signedNum(gain)}`, true, 'rating-change') : null}
+          {record ? chip(L.recordChip({ record })) : null}
+        </View>
+      ) : null}
       {m.moments?.length ? (
         <View style={{ gap: 6 }} testID="team-moments">
           <Txt v="eyebrow">{M.recordTitle}</Txt>
@@ -200,34 +272,32 @@ export function TeamResult({
         </View>
       ) : null}
       <TeamReport m={m} fix={fix} />
-      <Txt tone="muted" v="sm">
-        {`${kstMonthDayTime(m.createdAt)}${team && !friendly && m.mine === 'home' ? L.resultRecord({ record: recordText(team.record) }) : ''}`}
-      </Txt>
-      {gain != null ? (
-        <Txt v="sm" testID="rating-change">
-          {L.ratingChange}
-          <Txt v="sm" bold>
-            {signedNum(gain)}
-          </Txt>
-        </Txt>
-      ) : null}
-      <Grid2>
-        <Btn block onPress={toTeam} testID="team-result-team">
-          {backLabel}
-        </Btn>
-        <Btn block onPress={replay} testID="team-replay">
-          {L.replay}
-        </Btn>
+      <View style={{ gap: 6 }}>
         <Btn
           block
           kind="primary"
           onPress={again}
           disabled={!friendly && matchesLeft === 0}
           testID="team-again"
+          style={{ minHeight: 56 }}
         >
-          {L.again}
+          {friendly
+            ? L.again
+            : `${L.again} · ${matchesLeft > 0 ? L.againLeft({ n: matchesLeft }) : L.againNone}`}
         </Btn>
-      </Grid2>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          <View style={{ flex: 1 }}>
+            <Btn block kind="ghost" onPress={replay} testID="team-replay">
+              {L.replay}
+            </Btn>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Btn block kind="ghost" onPress={toTeam} testID="team-result-team">
+              {backLabel}
+            </Btn>
+          </View>
+        </View>
+      </View>
     </Card>
   );
 }

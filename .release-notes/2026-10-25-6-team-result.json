@@ -1,0 +1,26 @@
+{
+  "id": "t-11-498-team-result",
+  "title": "팀 경기 결과 화면 정리",
+  "items": [
+    "경기 결과 위쪽에 승패 · 스코어 · 양 팀 득점자를 한눈에 모았어요",
+    "'다음 경기 전에' 카드에서 공격 · 중원 · 수비벽 비교를 바로 보고, 가장 밀린 포지션을 눌러 편성으로 갈 수 있어요",
+    "다시 경기하기 버튼에 오늘 남은 랭크 경기 수가 함께 보여요"
+  ],
+  "en": {
+    "title": "Cleaner team match results",
+    "items": [
+      "The result, score and both teams' scorers now sit together at the top.",
+      "The 'Before the next match' card shows attack, midfield and wall comparisons up front, and tapping the weakest position takes you to your lineup.",
+      "The Play again button now shows how many ranked matches you have left today."
+    ]
+  },
+  "ja": {
+    "title": "チーム試合の結果画面を整理",
+    "items": [
+      "結果・スコア・両チームの得点者を画面上部にまとめました。",
+      "「次の試合の前に」カードで攻撃・中盤・守備壁の比較がすぐ見え、いちばん押されたポジションから編成へ移れます。",
+      "もう一度試合するボタンに、今日残っているランク試合数が表示されます。"
+    ]
+  },
+  "availability": "web-app"
+}
