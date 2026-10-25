@@ -9,7 +9,7 @@ import {
   type ExchangeRule,
   type ExchangeTier,
 } from '@offside/contracts/card-exchange-rules';
-import { POS_LABEL } from '@offside/contracts/positions';
+import { DETAIL_LABEL, POS_LABEL, type PosGroup } from '@offside/contracts/positions';
 import { tn } from '@offside/game/i18n/names';
 import type { TeamPlayer } from './api/team.js';
 import { exchangeText as L } from './i18n/ko/exchange.js';
@@ -38,6 +38,14 @@ const NAMES: Record<string, () => string> = {
   oneNation: () => L.nameOneNation,
   seasonOne: () => L.nameSeasonOne,
   elite: () => L.nameElite,
+  centerBacks: () => L.nameCenterBacks,
+  wingers: () => L.nameWingers,
+  twoFooted: () => L.nameTwoFooted,
+  worldTour: () => L.nameWorldTour,
+  leagueMates: () => L.nameLeagueMates,
+  engineRoom: () => L.nameEngineRoom,
+  worldSelect: () => L.nameWorldSelect,
+  leagueStars: () => L.nameLeagueStars,
 };
 export const exchangeName = (key: string) => NAMES[key]?.() ?? key;
 
@@ -56,9 +64,10 @@ export function conditionText(rule: ExchangeRule, c: ExchangeCondition): string 
     case 'pos':
       return L.condPos({ list: (rule.pos ?? []).map((p) => tn(POS_LABEL[p])).join(' · ') });
     case 'shape':
+      // T-11-374d 'DF 2'처럼 약어로 보여 수비형 미드필더를 수비수로 읽는 일이 있었다. 큰 포지션 이름으로 쓴다.
       return L.condShape({
-        list: Object.entries(rule.shape ?? {})
-          .map(([p, n]) => `${p} ${n}`)
+        list: (Object.entries(rule.shape ?? {}) as [PosGroup, number][])
+          .map(([p, n]) => L.shapeItem({ pos: tn(POS_LABEL[p]), n }))
           .join(' · '),
       });
     case 'peak':
@@ -79,6 +88,12 @@ export function conditionText(rule: ExchangeRule, c: ExchangeCondition): string 
       });
     case 'foot':
       return footLabel(rule.foot ?? '');
+    case 'dpos':
+      return L.condDpos({ list: (rule.dpos ?? []).map((d) => tn(DETAIL_LABEL[d])).join(' · ') });
+    case 'sameLeague':
+      return L.condSameLeague;
+    case 'distinctNations':
+      return L.condDistinctNations;
   }
 }
 
@@ -112,6 +127,8 @@ export const exchangeCardOf = (p: TeamPlayer): ExchangeCard & { cardValue: numbe
   legendScore: p.legendScore,
   season: p.season ?? 0,
   foot: p.foot ?? null,
+  dpos: p.dpos,
+  league: p.mainLeague ?? null,
   cardValue: p.cardValue ?? null,
 });
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   EXCHANGE_POOL,
+  POOL_GROWN,
   autoFill,
   canFinishAll,
   exchangeById,
@@ -47,11 +48,39 @@ describe('카드 과제 주기 (T-11-374)', () => {
     expect(a[0]!.id).toBe('2026-10-20-easy');
     for (const [t, tier] of (['easy', 'normal', 'hard'] as const).entries()) {
       const pool = EXCHANGE_POOL[tier];
+      const len = POOL_GROWN.before[tier];
       const i = pool.findIndex((s) => s.key === a[t]!.key);
-      expect(b[t]!.key).toBe(pool[(i + 1) % pool.length]!.key);
+      expect(b[t]!.key).toBe(pool[(i + 1) % len]!.key);
     }
     expect(exchangeById('2026-10-21T00:00:00.000Z', a[0]!.id)).toBeNull();
     expect(exchangeById('2026-10-20T14:00:00.000Z', a[0]!.id)?.id).toBe(a[0]!.id);
+  });
+
+  it('과제를 늘리기 전 날은 예전 묶음 길이로 돌고, 늘린 날부터 새 과제가 열린다 (T-11-374d)', () => {
+    // 늘리기 전 마지막 날의 과제는 그대로다(배포한 날 연 과제가 하루 중간에 바뀌지 않는다).
+    expect(exchangesAt('2026-10-26T03:00:00.000Z').map((d) => d.key)).toEqual([
+      'strikers',
+      'frontLine',
+      'bestEleven',
+    ]);
+    const before = new Set<string>();
+    const after = new Set<string>();
+    for (let i = 0; i < 400; i++) {
+      const at = (from: string) =>
+        exchangesAt(new Date(Date.parse(from) + i * 86_400_000).toISOString());
+      for (const d of at('2025-09-01T03:00:00.000Z')) before.add(d.key);
+      for (const d of at(`${POOL_GROWN.from}T03:00:00.000Z`)) after.add(d.key);
+    }
+    // 늘린 날은 새 과제부터 연다.
+    expect(exchangesAt(`${POOL_GROWN.from}T03:00:00.000Z`).map((d) => d.key)).toEqual([
+      'centerBacks',
+      'worldTour',
+      'worldSelect',
+    ]);
+    const all = Object.values(EXCHANGE_POOL).flat();
+    expect(before.size).toBe(Object.values(POOL_GROWN.before).reduce((a, n) => a + n, 0));
+    expect(after.size).toBe(all.length);
+    expect(new Set(all.map((s) => s.key)).size).toBe(all.length);
   });
 
   it('하루 과제는 7장을 넘지 않는다', () => {
@@ -149,6 +178,52 @@ describe('맞는 카드로 채우기', () => {
     const got = autoFill(rule, cards)!;
     expect(exchangeMet(rule, got)).toBe(true);
     expect(got.filter((c) => c.pos === 'FW')).toHaveLength(1);
+  });
+});
+
+describe('세부 포지션 · 같은 리그 · 다른 국적 (T-11-374d)', () => {
+  it('세부 포지션은 목록 안이어야 하고, 세부 포지션이 없는 카드는 맞지 않는다', () => {
+    const rule = { count: 2, dpos: ['CB', 'SW'] as const };
+    expect(
+      exchangeMet(rule, [card({ pos: 'DF', dpos: 'CB' }), card({ pos: 'DF', dpos: 'SW' })]),
+    ).toBe(true);
+    expect(
+      exchangeMet(rule, [card({ pos: 'DF', dpos: 'CB' }), card({ pos: 'DF', dpos: 'LB' })]),
+    ).toBe(false);
+    expect(exchangeMet(rule, [card({ pos: 'DF', dpos: 'CB' }), card({ pos: 'DF' })])).toBe(false);
+  });
+
+  it('같은 리그는 리그를 아는 카드끼리, 채우기는 가장 많은 리그에서', () => {
+    const rule = { count: 2, sameLeague: true };
+    expect(exchangeMet(rule, [card({ league: 'eng1' }), card({ league: 'eng1' })])).toBe(true);
+    expect(exchangeMet(rule, [card({ league: 'eng1' }), card({ league: 'esp1' })])).toBe(false);
+    expect(exchangeMet(rule, [card({ league: null }), card({ league: null })])).toBe(false);
+    const got = autoFill(rule, [
+      card({ league: 'esp1' }),
+      card({ league: 'eng1' }),
+      card({ league: 'eng1' }),
+      card({ league: null }),
+    ]);
+    expect(got?.map((c) => c.league)).toEqual(['eng1', 'eng1']);
+  });
+
+  it('다른 국적은 국적마다 한 장, 평균을 올릴 때도 국적이 겹치지 않는다', () => {
+    const rule = { count: 3, distinctNations: true, avgPeakMin: 80 };
+    expect(
+      exchangeMet({ count: 2, distinctNations: true }, [
+        card({ nation: 'KR' }),
+        card({ nation: 'KR' }),
+      ]),
+    ).toBe(false);
+    const got = autoFill(rule, [
+      card({ nation: 'KR', peak: 70, cardValue: 1 }),
+      card({ nation: 'KR', peak: 70, cardValue: 2 }),
+      card({ nation: 'JP', peak: 75, cardValue: 3 }),
+      card({ nation: 'KR', peak: 90, cardValue: 9 }),
+      card({ nation: 'GB', peak: 85, cardValue: 8 }),
+    ])!;
+    expect(exchangeMet(rule, got)).toBe(true);
+    expect(autoFill({ count: 3, distinctNations: true }, [card(), card(), card()])).toBeNull();
   });
 });
 

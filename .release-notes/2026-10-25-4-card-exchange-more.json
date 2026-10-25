@@ -1,0 +1,26 @@
+{
+  "id": "t-11-374d-card-exchange-more",
+  "title": "카드 과제 8개 추가 · 포지션 조건 문구 개선",
+  "items": [
+    "카드 과제가 8개 늘었어요: 센터백 듀오 · 측면의 날개 · 양발잡이 · 다국적 군단 · 같은 리그 동료 · 중원 엔진 · 월드 셀렉션 · 리그 올스타",
+    "세부 포지션, 가장 오래 뛴 리그, 모두 다른 국적 같은 새 조건이 생겼어요",
+    "포지션 조건을 'DF 2 · MF 2' 대신 '수비수 2명 · 미드필더 2명'처럼 보여 줘요. 수비형 미드필더는 미드필더로 세요"
+  ],
+  "en": {
+    "title": "8 new card tasks and clearer position conditions",
+    "items": [
+      "8 card tasks were added: Centre-back pair, Wide men, Two-footed, Multinational squad, League mates, Engine room, World selection and League all-stars.",
+      "New conditions include detailed position, the league a player spent most of their career in, and all players from different nations.",
+      "Position conditions now read 'Defender ×2 · Midfielder ×2' instead of 'DF 2 · MF 2'. Defensive midfielders count as midfielders."
+    ]
+  },
+  "ja": {
+    "title": "カード課題を8つ追加・ポジション条件の表示を改善",
+    "items": [
+      "カード課題が8つ増えました：センターバックコンビ・サイドの翼・両利き・多国籍軍団・同じリーグの仲間・中盤のエンジン・ワールドセレクション・リーグオールスター。",
+      "細かいポジション、いちばん長くプレーしたリーグ、全員違う国籍といった新しい条件ができました。",
+      "ポジション条件を「DF 2 · MF 2」ではなく「ディフェンダー2人 · ミッドフィルダー2人」のように表示します。守備的MFはミッドフィルダーとして数えます。"
+    ]
+  },
+  "availability": "web-app"
+}
