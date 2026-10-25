@@ -269,6 +269,31 @@ describe('비정상 기록 정기 점검', () => {
     expect(await hiddenOf('legend-only')).toBe(0);
   });
 
+  it('운영자 화면은 매일 점검이 남긴 목록만 읽고 시즌 표를 훑지 않는다 (T-11-491)', async () => {
+    await career('near-page', [
+      [18, 70],
+      [19, 88],
+    ]);
+    await career('legend-page', [[18, 60]], {
+      status: 'retired',
+      retireAge: 35,
+      legendScore: ANOMALY.legend,
+    });
+    await career('far-page', [[18, 99]]);
+    const { d1, statements } = traceQueries();
+    expect(await anomalyReport(d1, NOW)).toMatchObject({ review: [], hidden: [] });
+    expect(await sweepAnomaliesPage(ctx.env.DB, NOW)).toMatchObject({ done: true, hidden: 1 });
+    statements.length = 0;
+    const report = await anomalyReport(d1, NOW);
+    expect(statements.some((sql) => sql.includes('career_seasons'))).toBe(false);
+    expect(report.review.map((c) => [c.careerId, c.reasons])).toEqual([
+      ['legend-page', ['legend']],
+      ['near-page', ['ovrHigh']],
+    ]);
+    expect(report.hidden).toMatchObject([{ careerId: 'far-page', reasons: ['ovrFar'] }]);
+    expect(await hiddenOf('legend-page')).toBe(0);
+  });
+
   it('은퇴 레전드 점수가 높으면 검토 목록에만 올린다', async () => {
     await career('star', [[18, 60]], {
       status: 'retired',

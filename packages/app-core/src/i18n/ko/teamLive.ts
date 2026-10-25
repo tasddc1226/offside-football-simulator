@@ -57,7 +57,7 @@ const ko = {
   title: (p: { home: string; away: string }) => `${p.home} 대 ${p.away} 문자중계`,
   scoreAria: (p: { a: number; b: number }) => `${p.a} 대 ${p.b}`,
   flow: '흐름',
-  // T-11-491 2D 그라운드
+  // T-11-492 2D 그라운드
   groundAria: (p: { home: string; away: string }) => `${p.home} 대 ${p.away} 경기 그라운드`,
   attackHome: (p: { t: string }) => `${p.t} 공격 →`,
   attackAway: (p: { t: string }) => `← ${p.t} 공격`,

@@ -1,5 +1,5 @@
 <script lang="ts">
-  // T-11-491 문자중계 2D 그라운드 — 22명과 공을 그라운드 위에 그리고, 줄마다 app-core matchGround가 정한 자리로 옮긴다.
+  // T-11-492 문자중계 2D 그라운드 — 22명과 공을 그라운드 위에 그리고, 줄마다 app-core matchGround가 정한 자리로 옮긴다.
   // 움직임은 CSS 전환(--mg-dur)으로만 그리고, 움직임 줄이기면 전환 없이 자리만 바꾼다. 위치는 연출이라 결과와 상관없다.
   import { teamLiveText as L } from '@offside/app-core/i18n/ko/teamLive';
   import { arrowShape, type GroundArrow, type GroundSide, type GroundSpot, type Pt } from '@offside/app-core/matchGround';

@@ -1,4 +1,4 @@
-// T-11-491 문자중계 2D 그라운드(웹 team/MatchGround.svelte) — 22명과 공을 그라운드 위에 그리고, 줄마다 app-core
+// T-11-492 문자중계 2D 그라운드(웹 team/MatchGround.svelte) — 22명과 공을 그라운드 위에 그리고, 줄마다 app-core
 // matchGround가 정한 자리로 옮긴다. 위치는 네이티브 드라이버 transform으로만 움직이고(SVG 필터 없음), 동작 줄이기면 자리만
 // 바꾼다. 위치는 연출이라 결과와 상관없다.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';

@@ -9,7 +9,7 @@
   // 감속 모션이어도 진행 템포는 그대로 두고(읽는 시간) 움직임 효과만 뺀다. '결과 바로 보기'로 언제든 끝낼 수 있다.
   // T-11-387 장면 경기(live)면 장면 분에 시계를 멈추고 선택지 카드를 띄운다. 고르면 서버가 결과를 정하고, 그 골이 중계에
   // 끼어든다. 제한 시간이 지나거나 '결과 바로 보기'를 누르면 남은 장면은 감독에게 맡긴다.
-  // T-11-491 전광판 아래 2D 그라운드가 줄마다 그 장면을 움직임으로 보여 준다(장면 카드를 띄우면 멈추고 선택지 화살표를 그린다).
+  // T-11-492 전광판 아래 2D 그라운드가 줄마다 그 장면을 움직임으로 보여 준다(장면 카드를 띄우면 멈추고 선택지 화살표를 그린다).
   import { onDestroy, onMount } from 'svelte';
   import {
     chooseMoment,
@@ -265,7 +265,7 @@
   <h1 id="tl-title" class="sr-only">{L.title({ home: match.home.name, away: match.away.name })}</h1>
   <div class="tl-board" class:flash={!!flash}>
     {#if active}
-      <!-- T-11-491 장면을 고르는 동안은 전광판을 한 줄로 접어 멈춘 그라운드가 시트 위에 다 보이게 한다. -->
+      <!-- T-11-492 장면을 고르는 동안은 전광판을 한 줄로 접어 멈춘 그라운드가 시트 위에 다 보이게 한다. -->
       <div class="tl-pause">
         <span class="tl-live paused">PAUSE</span>
         <span class="tl-clock" data-live-clock>{clockLabel}</span>

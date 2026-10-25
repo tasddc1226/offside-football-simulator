@@ -4,7 +4,7 @@
 // 대본(liveScript)·시계 표기는 웹과 같은 @offside/app-core/teamLive.
 // T-11-387 장면 경기(live)면 장면 분에 시계를 멈추고 선택지 카드를 띄운다. 고르면 서버가 결과를 정하고, 그 골이 중계에
 // 끼어든다. 제한 시간이 지나거나 '결과 바로 보기'를 누르면 남은 장면은 감독에게 맡긴다.
-// T-11-491 전광판 아래 2D 그라운드가 줄마다 그 장면을 움직임으로 보여 준다(장면 카드를 띄우면 멈추고 선택지 화살표를 그린다).
+// T-11-492 전광판 아래 2D 그라운드가 줄마다 그 장면을 움직임으로 보여 준다(장면 카드를 띄우면 멈추고 선택지 화살표를 그린다).
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, ScrollView, View } from 'react-native';
@@ -448,7 +448,7 @@ export function TeamLive({
           />
         ) : null}
         {active ? (
-          // T-11-491 장면을 고르는 동안은 전광판을 한 줄로 접어 멈춘 그라운드가 시트 위에 다 보이게 한다(웹 tl-pause).
+          // T-11-492 장면을 고르는 동안은 전광판을 한 줄로 접어 멈춘 그라운드가 시트 위에 다 보이게 한다(웹 tl-pause).
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <View
               style={{
@@ -811,7 +811,7 @@ export function TeamLive({
                     opacity: sending ? 0.6 : 1,
                   }}
                 >
-                  {/* T-11-491 그라운드 화살표 번호 */}
+                  {/* T-11-492 그라운드 화살표 번호 */}
                   <View
                     style={{
                       width: 22,

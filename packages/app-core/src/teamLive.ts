@@ -18,9 +18,9 @@ export type LiveLine = {
   score?: [number, number];
   /** T-11-387 골 줄의 재료(장면 경기는 장면 골이 끼어 스코어가 달라지므로 보여 줄 때 문구를 다시 만든다). */
   goal?: { scorer: string; assist: string | null; key: string };
-  /** T-11-491 고른 문구의 키(chance1 · buildLeft …). 2D 그라운드가 문구에 맞는 움직임을 고른다. */
+  /** T-11-492 고른 문구의 키(chance1 · buildLeft …). 2D 그라운드가 문구에 맞는 움직임을 고른다. */
   say?: string;
-  /** T-11-491 빌드업 · 골 줄의 득점자 자리. */
+  /** T-11-492 빌드업 · 골 줄의 득점자 자리. */
   slot?: DetailPos;
 };
 
@@ -110,7 +110,7 @@ type Say = (p: { t: string }) => string;
 type SayKey = {
   [K in keyof typeof L]: (typeof L)[K] extends Say ? K : never;
 }[keyof typeof L];
-// T-11-491 줄마다 고른 문구의 키를 남긴다(2D 그라운드). 고르는 방식(rnd 한 번)은 그대로다.
+// T-11-492 줄마다 고른 문구의 키를 남긴다(2D 그라운드). 고르는 방식(rnd 한 번)은 그대로다.
 const CHANCE: readonly SayKey[] = ['chance1', 'chance2', 'chance3', 'chance4', 'chance5'];
 const SAVE: readonly SayKey[] = ['save1', 'save2', 'save3'];
 const MISS: readonly SayKey[] = ['miss1', 'miss2', 'miss3'];
@@ -371,7 +371,7 @@ export type PlayStep = {
 export function playbackPlan(
   script: readonly LiveLine[],
   momentMinutes: readonly number[] = [],
-  /** T-11-491 줄 뒤 대기 시간(2D 그라운드는 움직임을 보여 줄 만큼 더 기다린다). */
+  /** T-11-492 줄 뒤 대기 시간(2D 그라운드는 움직임을 보여 줄 만큼 더 기다린다). */
   waitOf: (kind: LiveKind) => number = lineWaitMs,
 ): PlayStep[] {
   const goalMinutes = [...goalMinutesOf(script), ...momentMinutes];

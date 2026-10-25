@@ -897,6 +897,13 @@
       "when": 1792855476007,
       "tag": "0130_season_telemetry_ads",
       "breakpoints": true
+    },
+    {
+      "idx": 131,
+      "version": "6",
+      "when": 1792918890114,
+      "tag": "0131_hidden_legend_idx",
+      "breakpoints": true
     }
   ]
 }

@@ -60,7 +60,7 @@ const match = (over: Partial<TeamMatch> = {}): TeamMatch => ({
 const plain = (_id: string | null, fallback: string) => fallback;
 const inside = ([x, y]: readonly [number, number]) => x >= 0 && x <= 100 && y >= 0 && y <= 100;
 
-describe('T-11-491 2D 그라운드', () => {
+describe('T-11-492 2D 그라운드', () => {
   it('두 팀 11명씩, 홈은 왼쪽 진영 · 원정은 오른쪽 진영에 서고 등번호가 겹치지 않는다', () => {
     for (const f of ['4-3-3', '4-4-2', '3-5-2'] as const) {
       const ps = groundLineup({ home: side('A', 0, f), away: side('B', 0, f) });
