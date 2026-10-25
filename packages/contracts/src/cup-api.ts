@@ -291,18 +291,37 @@ export type RerollShopResponse = z.infer<typeof RerollShopResponseSchema>;
  * T-11-244 POST /v1/items/scout/use 본문. hit = 기기가 이번 시드로 뽑은 일반 프리미엄 후보에 S가 있는지(천장 카운트를
  * 0으로 돌린다). 본문이 없으면(천장을 모르는 옛 앱) 확정 모드를 주지 않고 장수만 센다.
  */
+const RecordRewardSchema = z.strictObject({
+  reroll: z.number().int().min(0),
+  scout: z.number().int().min(0),
+  boost: z.number().int().min(0),
+});
 /**
- * GET /v1/items/gift — 홈 선물 칸에 받을 수 있는 시즌 업적 보상(T-11-386, kind 'achSeason', season = 업적을 센 시즌).
- * 없으면 null. T-11-472 구단주 선물(T-11-275)은 없앴다 — 받은 기록(gift_claims 'gift-2026-10')은 그대로 둔다.
+ * GET /v1/items/gift — 홈 선물 칸에 받을 수 있는 시즌 보상 하나(받으면 다음 것). T-11-386 시즌 업적 보상(kind
+ * 'achSeason', season = 업적을 센 시즌)이 먼저, T-11-487 시즌 기록 보상(kind 'recordSeason', 리롤권 · 갈래별
+ * 내역 record)은 그 뒤다. 기록 보상은 그 카드를 그릴 줄 아는 기기(?v=2)에만 싣는다. 없으면 null.
+ * T-11-472 구단주 선물(T-11-275)은 없앴다 — 받은 기록(gift_claims 'gift-2026-10')은 그대로 둔다.
  */
 export const HomeGiftResponseSchema = z.strictObject({
   gift: z
     .strictObject({
       id: z.string(),
-      kind: z.enum(['achSeason']).optional(),
+      kind: z.enum(['achSeason', 'recordSeason']).optional(),
       season: z.number().int().min(1).optional(),
       boost: z.number().int().min(0),
       scout: z.number().int().min(0),
+      reroll: z.number().int().min(0).optional(),
+      record: z
+        .strictObject({
+          hofRank: z.number().int().min(1).nullable(),
+          icons: z.number().int().min(0),
+          legends: z.number().int().min(0),
+          ballonPlayers: z.number().int().min(0),
+          hof: RecordRewardSchema,
+          legend: RecordRewardSchema,
+          ballon: RecordRewardSchema,
+        })
+        .optional(),
     })
     .nullable(),
 });

@@ -326,14 +326,14 @@ export async function saveSeasonGift(
 }
 
 /**
- * T-11-386 시즌 업적 보상 받기: 받은 기록을 넣고, 그 줄을 이 batch가 새로 넣었을
+ * T-11-386 시즌 업적 보상(T-11-487 기록 보상은 리롤권도) 받기: 받은 기록을 넣고, 그 줄을 이 batch가 새로 넣었을
  * 때만 적어 둔 장수만큼 더한다. 이미 받았으면 null, 아니면 받은 뒤 장수.
  */
 export async function claimSeasonGift(
   db: Db,
   profileId: string,
   giftId: string,
-  r: { boost: number; scout: number },
+  r: { boost: number; scout: number; reroll?: number },
   now: string,
 ): Promise<Items | null> {
   const d1 = db.$client;
@@ -350,6 +350,7 @@ export async function claimSeasonGift(
       .bind(profileId, giftId, claimId, now),
     ...(r.boost > 0 ? [grantItemStatement(d1, profileId, 'boost', r.boost, now, guard)] : []),
     ...(r.scout > 0 ? [grantItemStatement(d1, profileId, 'scout', r.scout, now, guard)] : []),
+    ...(r.reroll ? [grantItemStatement(d1, profileId, 'reroll', r.reroll, now, guard)] : []),
     d1.prepare(ITEMS_SQL).bind(profileId),
   ]);
   if (!results[0]?.meta.changes) return null;
