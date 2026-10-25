@@ -140,50 +140,72 @@ test('카드 과제: 목록 → 고르기 → 확인 → 결과, 다시 열어�
   await expect(sheet.locator('[data-exchange]')).toHaveCount(3);
   await expect(sheet.locator('[data-exchange="easy"]')).toContainText('공격진 정리');
   const todayCard = sheet.locator('[data-exchange-today]');
-  await expect(todayCard).toContainText('오늘 0/3개 냈어요');
+  await expect(todayCard.locator('ol')).toHaveAttribute(
+    'aria-label',
+    '오늘 과제 3개 중 0개 냈어요',
+  );
   await expect(todayCard).toContainText('리롤권 2장 · 잠재력 강화권 1장');
-  // 가진 선수로는 보통 · 어려움 과제를 채울 수 없어 미리 알린다.
+  // 가진 선수로는 보통 · 어려움 과제를 채울 수 없어 미리 알린다(과제마다 한 줄).
   await expect(sheet.locator('[data-exchange-cant]')).toBeVisible();
+  await expect(sheet.locator('[data-exchange="normal"] [data-exchange-short]')).toBeVisible();
+  await expect(sheet.locator('[data-exchange="hard"] [data-exchange-short]')).toBeVisible();
+  // T-11-499 쉬움 과제는 낼 수 있는 공격수(가치 낮은 순)로 추천 조합을 채워 둔다.
+  await expect(sheet.locator('[data-exchange="easy"] [data-exchange-rec] li')).toHaveText([
+    '71과제선수1',
+    '72과제선수2',
+    '73과제선수3',
+  ]);
   const a11y = await new AxeBuilder({ page }).include('[data-card-exchange]').analyze();
   expect(a11y.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual(
     [],
   );
   await shot(page, 'exchange-list');
 
-  await sheet.locator('[data-exchange="easy"]').click();
-  // 선발 · 잠김 · 판매 중 · 조건 밖(MF) · 영입한 선수는 고를 수 없다.
+  // 바꾸기: 추천 조합을 고른 채로 고르기 화면을 연다.
+  await sheet.locator('[data-exchange="easy"] [data-act="exchange-change"]').click();
+  await expect(sheet.locator('[data-exchange-picked]')).toHaveText('3/3명 골랐어요');
+  await expect(sheet.locator('[data-exchange-checks] li.met')).toHaveCount(3);
+  // 선발 · 잠김 · 판매 중 · 조건 밖(MF) · 영입한 선수는 접힌 줄 안에 이유와 함께 있다.
+  await expect(sheet.locator(`[data-exchange-player="${id(4)}"]`)).toHaveCount(0);
+  await sheet.locator('[data-act="exchange-locked"]').click();
   await expect(sheet.locator(`[data-exchange-player="${id(4)}"]`)).toContainText('선발');
   await expect(sheet.locator(`[data-exchange-player="${id(5)}"]`)).toContainText('잠김');
   await expect(sheet.locator(`[data-exchange-player="${id(6)}"]`)).toContainText('판매 중');
   await expect(sheet.locator(`[data-exchange-player="${id(7)}"]`)).toContainText('조건 밖');
   await expect(sheet.locator(`[data-exchange-player="${id(7)}"] input`)).toBeDisabled();
   await expect(sheet.locator(`[data-exchange-player="${id(8)}"]`)).toContainText('영입');
-  await expect(sheet.locator(`[data-exchange-player="${id(8)}"] input`)).toBeDisabled();
+  await sheet.locator(`[data-exchange-player="${id(1)}"] input`).click();
+  await expect(sheet.locator('[data-exchange-picked]')).toHaveText('2/3명 골랐어요');
   await expect(sheet.locator('[data-act="exchange-submit"]')).toBeDisabled();
   await sheet.locator('[data-act="exchange-fill"]').click();
   await expect(sheet.locator('[data-exchange-picked]')).toHaveText('3/3명 골랐어요');
-  await expect(sheet.locator('[data-exchange-checks] li.met')).toHaveCount(3);
+  await expect(sheet.locator('[data-act="exchange-submit"]')).toHaveText('카드 3장 내기');
   await shot(page, 'exchange-pick');
 
   await sheet.locator('[data-act="exchange-submit"]').click();
-  await expect(sheet).toContainText('카드를 낼까요?');
-  await expect(sheet).toContainText('방출하면 받을 수 있던 자금은 받지 않아요');
-  await expect(sheet).toContainText('2개가 남아요');
+  const confirm = sheet.locator('[data-exchange-confirm]');
+  await expect(confirm).toContainText('카드 3장을 낼까요?');
+  await expect(confirm).toContainText('방출하면 받을 수 있던 자금은 받지 않아요');
+  await expect(confirm).toContainText('2개 더 내면 보상을 받아요');
   await shot(page, 'exchange-confirm');
   await sheet.locator('[data-act="exchange-confirm"]').click();
-  await expect(sheet.locator('[data-exchange-done]')).toContainText('오늘 1/3개 냈어요');
+  // 낸 뒤에는 목록에 머물며 알린다.
+  await expect(sheet.locator('[data-exchange-toast]')).toContainText(
+    "'공격진 정리' 과제를 냈어요. 2개 남았어요.",
+  );
   expect(s.claims).toHaveLength(1);
   expect(s.claims[0]!.id).toBe(EASY.id);
   expect(new Set((s.claims[0]!.body as { careerIds: string[] }).careerIds)).toEqual(
     new Set([id(1), id(2), id(3)]),
   );
   expect(s.claims[0]!.key).toBeTruthy();
-  await shot(page, 'exchange-done');
-
-  await sheet.locator('[data-exchange-done] button').click();
   await expect(sheet.locator('[data-exchange="easy"]')).toContainText('냈어요');
-  await expect(sheet.locator('[data-exchange="easy"]')).toBeDisabled();
-  await expect(sheet.locator('[data-exchange-today]')).toContainText('오늘 1/3개 냈어요');
+  await expect(sheet.locator('[data-exchange="easy"] button')).toHaveCount(0);
+  await expect(sheet.locator('[data-exchange-today] ol')).toHaveAttribute(
+    'aria-label',
+    '오늘 과제 3개 중 1개 냈어요',
+  );
+  await shot(page, 'exchange-done');
   // 낸 뒤 새로 받은 뒤로는 닫았다 열어도 메모로 그린다.
   const gets = { team: s.teamGets, me: s.meGets };
   await sheet.locator('[data-act="exchange-close"]').click();
@@ -200,9 +222,8 @@ test('카드 과제: 서버가 카드를 받지 못하면 고른 화면에 이�
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-act="exchange"]').click();
   const sheet = page.locator('[data-card-exchange]');
-  await sheet.locator('[data-exchange="easy"]').click();
-  await sheet.locator('[data-act="exchange-fill"]').click();
-  await sheet.locator('[data-act="exchange-submit"]').click();
+  // 추천 조합을 목록에서 바로 낸다.
+  await sheet.locator('[data-exchange="easy"] [data-act="exchange-quick"]').click();
   await sheet.locator('[data-act="exchange-confirm"]').click();
   await expect(sheet.getByRole('alert')).toContainText('낼 수 없는 선수가 있어요');
   await expect(sheet.locator('[data-exchange-picked]')).toHaveText('3/3명 골랐어요');

@@ -1,5 +1,6 @@
 // T-11-374 카드 바치기 과제 화면 문구 · 고르기 규칙. 웹 owner/CardExchange.svelte와 앱 screens/owner/CardExchange.tsx가 같이 쓴다.
 import {
+  autoFill,
   cardFits,
   exchangeChecks,
   type ExchangeCard,
@@ -117,6 +118,26 @@ export function endsText(def: ExchangeDef, nowMs: number): string {
   const m = Math.max(0, Math.floor((Date.parse(def.endsAt) - nowMs) / 60_000));
   return L.endsIn({ h: Math.floor(m / 60), m: m % 60 });
 }
+
+/** T-11-499 과제마다 미리 채워 둘 추천 조합(가치 낮은 선수부터). 많이 내는 과제부터 겹치지 않게 나누고, 그렇게 못 채운
+ *  과제는 따로 채워 본다. 그래도 못 채우면 null. */
+export function exchangeRecommend<T extends ExchangeCard & { cardValue?: number | null }>(
+  defs: readonly ExchangeDef[],
+  cards: readonly T[],
+): Map<string, T[] | null> {
+  const out = new Map<string, T[] | null>();
+  let left = [...cards];
+  for (const d of [...defs].sort((a, b) => b.rule.count - a.rule.count)) {
+    const got = autoFill(d.rule, left);
+    if (got) left = left.filter((c) => !got.includes(c));
+    out.set(d.id, got ?? autoFill(d.rule, cards));
+  }
+  return out;
+}
+
+/** 조건에 맞는 카드 수(못 채우는 과제에 보여 준다). */
+export const exchangeFitCount = (rule: ExchangeRule, cards: readonly ExchangeCard[]) =>
+  cards.filter((c) => cardFits(rule, c)).length;
 
 /** 판정용 카드 값. */
 export const exchangeCardOf = (p: TeamPlayer): ExchangeCard & { cardValue: number | null } => ({
