@@ -87,13 +87,29 @@ describe('시즌 업적 요약', () => {
   it('점수 표시와 등급 진행', () => {
     expect(achPoints(groups[0]!.items[0]!)).toBe('+10점');
     expect(achPoints(groups[0]!.items[1]!)).toBe('10점');
-    expect(achGradeView(350)).toMatchObject({
+    const s1 = (score: number) => ({ season: 1, score, rank: 5, ranked: 100 });
+    expect(achGradeView(s1(350))).toMatchObject({
       grade: { name: '브론즈' },
       next: { name: '실버' },
+      byRank: false,
       toNext: 150,
       ratio: 0.5,
     });
-    expect(achGradeView(9999)).toMatchObject({ next: null, toNext: 0, ratio: 1 });
+    expect(achGradeView(s1(9999))).toMatchObject({ next: null, toNext: 0, ratio: 1 });
+    // T-11-489 시즌 2부터는 순위: 1,000명 중 550위는 실버(상위 70%까지), 골드(상위 40% = 400위)까지 150계단.
+    expect(achGradeView({ season: 2, score: 300, rank: 550, ranked: 1000 })).toMatchObject({
+      grade: { id: 'silver' },
+      next: { id: 'gold' },
+      byRank: true,
+      toNext: 150,
+      ratio: 0.5,
+    });
+    expect(achGradeView({ season: 2, score: 0, rank: null, ranked: 1000 })).toMatchObject({
+      grade: { id: 'rookie' },
+      next: { id: 'bronze' },
+      toNext: 101,
+      ratio: 0,
+    });
     expect(achRankText(12, 297)).toBe('12위 · 297명 중');
     expect(achRankText(null, 3)).toMatch(/랭킹에 올라요/);
   });

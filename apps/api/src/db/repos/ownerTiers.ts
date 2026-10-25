@@ -1,10 +1,11 @@
 // T-11-128 구단주 티어 — 가장 최근에 끝난 시즌 마감 때 굳힌 업적 점수(owner_season_records.ach_score)의 업적 등급(ownerTierOf).
 // 프로필 · 댓글 · 채팅이 같이 쓴다. 그 시즌을 아직 굳히는 중이면 티어가 없다(굳히면 바로 붙는다).
+// T-11-489 시즌 2부터는 마감 업적 순위(ach_rank)와 결산이 센 랭킹 인원(state.ranked.ach)의 상위 비율로 정한다.
 import type { OwnerTierTag } from '@offside/contracts';
 import { ownerTierOf } from '@offside/contracts/owner-tier';
 import { lastClosedSeason } from '@offside/contracts/service-seasons';
 import { and, eq, inArray, desc, lte, sql } from 'drizzle-orm';
-import { closeStateOf } from '../../team/seasonClose.js';
+import { closeStateOf, type CloseState } from '../../team/seasonClose.js';
 import type { Db } from '../client.js';
 import { appMeta, ownerSeasonRecords as r } from '../schema.js';
 
@@ -28,13 +29,18 @@ export async function ownerTiersOf(
     await Promise.all(
       chunks.map((chunk) =>
         db
-          .select({ profileId: r.profileId, achScore: r.achScore })
+          .select({ profileId: r.profileId, achScore: r.achScore, achRank: r.achRank })
           .from(r)
           .where(and(inArray(r.profileId, chunk), eq(r.season, season))),
       ),
     )
   ).flat();
-  for (const row of rows) out.set(row.profileId, { tier: ownerTierOf(row.achScore), season });
+  const ranked = state.ranked?.ach ?? 0;
+  for (const row of rows)
+    out.set(row.profileId, {
+      tier: ownerTierOf({ season, score: row.achScore, rank: row.achRank, ranked }),
+      season,
+    });
   return out;
 }
 
@@ -50,17 +56,22 @@ export async function ownerTierHistoryOfProfile(
   const last = lastClosedSeason(now);
   if (last === null) return [];
   const rows = await db
-    .select({ season: r.season, achScore: r.achScore, state: appMeta.value })
+    .select({ season: r.season, achScore: r.achScore, achRank: r.achRank, state: appMeta.value })
     .from(r)
     .innerJoin(appMeta, eq(appMeta.key, sql`'season-close:' || ${r.season}`))
     .where(and(eq(r.profileId, profileId), lte(r.season, last)))
     .orderBy(desc(r.season));
   return rows.flatMap((row) => {
     try {
-      const state: unknown = JSON.parse(row.state);
-      if (!state || typeof state !== 'object' || !('step' in state) || state.step !== 'done')
-        return [];
-      return [{ season: row.season, tier: ownerTierOf(row.achScore) }];
+      const state = JSON.parse(row.state) as Partial<CloseState> | null;
+      if (!state || typeof state !== 'object' || state.step !== 'done') return [];
+      const tier = ownerTierOf({
+        season: row.season,
+        score: row.achScore,
+        rank: row.achRank,
+        ranked: state.ranked?.ach ?? 0,
+      });
+      return [{ season: row.season, tier }];
     } catch {
       return [];
     }

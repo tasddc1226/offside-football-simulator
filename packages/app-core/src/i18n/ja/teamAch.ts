@@ -9,13 +9,14 @@ export const teamAch: Translation<TeamAchMsgs> = {
   rankTitle: 'オーナーランキング',
   nextGradeBar: '次のランクまで',
   toNextGrade: (p) => `${p.grade}まで${p.pts}pt`,
+  toNextGradeRank: (p) => `${p.grade}まであと${p.n}位`,
   topGrade: '最高ランクです',
   achProgress: (p) => `${p.head} · 実績 ${p.done}/${p.total} 達成`,
   achAbout: (p) =>
     `${p.season}に初めてプレーして引退した自分の選手${p.n}人と、このシーズンのチーム・クラブ活動で積み上げます。シーズンごとにゼロから積み直します。`,
   perksTitle: '実績を積むと',
   perkGrade:
-    'スコアに応じてオーナーランクがルーキーからレジェンドまで上がり、オーナーランキングの順位が決まります。',
+    'スコアでオーナーランキングの順位が決まり、オーナーランクがルーキーからレジェンドまで付きます。シーズン2からランクはランキングの上位割合で決まります。',
   perkTier:
     'シーズン終了時のランクが、次のシーズンの間ずっとプロフィール・コメント・チャットのニックネーム横にティアとして付きます。',
   perkHonor:
@@ -71,6 +72,8 @@ export const teamAch: Translation<TeamAchMsgs> = {
   gradesTitle: 'ランクの基準',
   gradesToggleApp: (p) => `${p.open ? '▾' : '▸'} ランクの基準`,
   gradeFrom: (p) => `${p.n}ptから`,
+  gradeTop: (p) => `上位${p.pct}%`,
+  gradeRest: 'それ以外',
   noteReset: 'シーズンごとにゼロから積み直します。',
   noteSum: '選手・チーム・オーナー実績スコアの合計です。ランキングは5分ごとに更新されます。',
   noteApp:

@@ -54,7 +54,13 @@ export function OwnerArchive() {
   const pending = state.data?.pendingSeasons.includes(state.season ?? -1);
   const badges = honorViews(state.data?.honors.filter((h) => h.season === state.season) ?? []);
   const cups = owner?.cupHonors.filter((h) => h.season === state.season) ?? [];
-  const tier = line?.achScore == null ? null : ownerTierOf(line.achScore);
+  // T-11-489 서버가 시즌마다 정한 티어(시즌 2부터 상위 비율). 옛 응답이면 점수로 정한다.
+  const tier =
+    line?.tier !== undefined
+      ? line.tier
+      : line?.achScore == null
+        ? null
+        : ownerTierOf({ season: line.season, score: line.achScore });
   const small = { fontSize: rem(FONT.label) };
   const expand = async (retry = false) => {
     await archive.expand(retry);

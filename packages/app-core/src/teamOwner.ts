@@ -10,7 +10,10 @@ import {
   PAST_SALARY_BUDGET,
   YOUTH_OVR,
   seasonSalaryOf,
-  achGradeOf,
+  achGradeAt,
+  achGradeCutoff,
+  achTierByRank,
+  type AchStanding,
   DUOS,
   FOOT_BONUS,
   FOOT_BONUS_BOTH,
@@ -515,19 +518,36 @@ export function achSections(groups: readonly ClubAchievementGroup[]): AchSection
 export type AchGradeView = {
   grade: AchGrade;
   next: AchGrade | null;
-  /** 다음 등급까지 남은 점수(맨 위면 0). */
+  /** T-11-489 true면 등급이 상위 비율 기준이라 toNext가 점수가 아니라 올라야 할 순위 수다. */
+  byRank: boolean;
+  /** 다음 등급까지 남은 점수(상위 비율 시즌은 순위 수, 맨 위면 0). */
   toNext: number;
   /** 지금 등급 안에서 다음 등급까지 온 비율(0–1, 맨 위면 1). */
   ratio: number;
 };
-export function achGradeView(score: number): AchGradeView {
-  const { grade, next } = achGradeOf(score);
-  if (!next) return { grade, next, toNext: 0, ratio: 1 };
+export function achGradeView(s: AchStanding): AchGradeView {
+  const { grade, next, nextRank } = achGradeAt(s);
+  const byRank = achTierByRank(s.season);
+  if (!next) return { grade, next, byRank, toNext: 0, ratio: 1 };
+  if (!byRank)
+    return {
+      grade,
+      next,
+      byRank,
+      toNext: next.min - s.score,
+      ratio: (s.score - grade.min) / (next.min - grade.min),
+    };
+  // 순위가 없으면(점수 0) 랭킹 끝 다음 자리에서 센다.
+  const rank = s.rank ?? s.ranked + 1;
+  const floor = grade.id === 'rookie' ? s.ranked + 1 : achGradeCutoff(grade.id, s.ranked);
+  const top = nextRank ?? 1;
+  const span = floor - top;
   return {
     grade,
     next,
-    toNext: next.min - score,
-    ratio: (score - grade.min) / (next.min - grade.min),
+    byRank,
+    toNext: Math.max(1, rank - top),
+    ratio: span > 0 ? Math.min(1, Math.max(0, (floor - rank) / span)) : 0,
   };
 }
 

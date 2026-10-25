@@ -476,6 +476,54 @@ export function achGradeOf(score: number): { grade: AchGrade; next: AchGrade | n
 }
 
 /**
+ * T-11-489 이 시즌부터 등급을 업적 점수가 아니라 구단주 랭킹 상위 비율로 정한다. 점수 기준은 업적이 늘고 보상 상한이
+ * 풀릴수록 위로 쏠린다. 시즌 1까지(프리시즌 포함)는 점수 기준 그대로 둔다(굳힌 티어를 바꾸지 않는다).
+ */
+export const ACH_TIER_FROM_SEASON = 2;
+/**
+ * 등급마다 들어가는 상위 비율(%, 그 등급 이상 누적). 시즌 1 마감 분포(로그인 구단주 8,047명: 레전드 2.4% · 다이아까지
+ * 8.1% · 플래티넘까지 20.7% · 골드까지 41.5% · 실버까지 70.8% · 브론즈까지 88.2%)에 맞췄다. 루키는 나머지와 점수 0.
+ */
+export const ACH_GRADE_TOP = {
+  bronze: 90,
+  silver: 70,
+  gold: 40,
+  platinum: 20,
+  diamond: 8,
+  legend: 2,
+} as const satisfies Record<Exclude<AchGrade['id'], 'rookie'>, number>;
+
+/** 그 시즌 등급이 상위 비율 기준인가. */
+export const achTierByRank = (season: number): boolean => season >= ACH_TIER_FROM_SEASON;
+
+/** 그 등급에 드는 마지막 순위(랭킹 인원 ranked명 중 상위 비율, 적어도 1위). 루키는 끝까지. */
+export function achGradeCutoff(id: AchGrade['id'], ranked: number): number {
+  if (id === 'rookie') return Math.max(1, ranked);
+  return Math.max(1, Math.floor((ranked * ACH_GRADE_TOP[id]) / 100));
+}
+
+/** 구단주의 시즌 업적 자리 — 점수, 랭킹 순위(점수 0이면 null), 랭킹에 오른 구단주 수. */
+export type AchStanding = { season: number; score: number; rank: number | null; ranked: number };
+
+/**
+ * 시즌 등급과 다음 등급. 상위 비율 시즌이면 nextRank = 다음 등급에 들려면 올라야 하는 순위(맨 위면 null), 점수 시즌이면
+ * null(다음 등급은 next.min점).
+ */
+export function achGradeAt(s: AchStanding): {
+  grade: AchGrade;
+  next: AchGrade | null;
+  nextRank: number | null;
+} {
+  if (!achTierByRank(s.season)) return { ...achGradeOf(s.score), nextRank: null };
+  let i = 0;
+  if (s.rank !== null && s.score > 0)
+    while (i + 1 < ACH_GRADES.length && s.rank <= achGradeCutoff(ACH_GRADES[i + 1]!.id, s.ranked))
+      i++;
+  const next = ACH_GRADES[i + 1] ?? null;
+  return { grade: ACH_GRADES[i]!, next, nextRank: next ? achGradeCutoff(next.id, s.ranked) : null };
+}
+
+/**
  * T-11-357 업적 달성 보상(아이템만 · 확률·가격은 그대로). 업적(단계 업적은 단계마다)의 점수로 난이도를 나눈다 —
  * 40점 미만은 없음, 40~79점은 잠재력 강화권 1장, 80~149점은 2장, 150~249점은 강화권 3장 + 프리미엄 스카우트권 1장,
  * 250점 이상은 강화권 3장 + 스카우트권 2장. 시즌마다 업적이 처음부터 다시 쌓이므로 보상도 시즌마다 업적·단계당 한 번이다

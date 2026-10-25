@@ -277,7 +277,7 @@ export function TeamAchievements({
   }, [ach, newIds]);
   const seasonName = ach ? teamSeasonLabel(ach.season) : '';
   const tot = ach ? achTotal(ach.groups) : null;
-  const gv = ach ? achGradeView(ach.score) : null;
+  const gv = ach ? achGradeView(ach) : null;
   const sections = ach ? achSections(ach.groups) : [];
   const sec = sections.find((x) => x.id === cat) ?? sections[0];
   const near = ach ? achNear(ach.groups) : [];
@@ -363,7 +363,9 @@ export function TeamAchievements({
               <Txt tone="muted" v="sm">
                 {L.achProgress({
                   head: gv.next
-                    ? L.toNextGrade({ grade: achGradeName(gv.next), pts: num(gv.toNext) })
+                    ? gv.byRank
+                      ? L.toNextGradeRank({ grade: achGradeName(gv.next), n: num(gv.toNext) })
+                      : L.toNextGrade({ grade: achGradeName(gv.next), pts: num(gv.toNext) })
                     : L.topGrade,
                   done: tot.done,
                   total: tot.total,

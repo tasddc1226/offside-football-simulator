@@ -27,6 +27,7 @@ import { isAcceptablePublicName, isReservedNickname } from '@offside/contracts/c
 import {
   TEAM_MATCHES_PER_DAY,
   TEAM_REPEAT_WINDOW_DAYS,
+  achTierByRank,
   matchScore,
   pastSalaryOverText,
   pastSalarySum,
@@ -757,7 +758,14 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const me = await requireOwner(c);
     const now = nowIso();
     const season = seasonQuery(c, now);
-    const { groups, row } = await refreshOwnerAchievements(getDb(c), me, season, now, false);
+    const db = getDb(c);
+    const { groups, row } = await refreshOwnerAchievements(db, me, season, now, false);
+    // T-11-489 상위 비율 시즌은 등급이 순위로 정해져 순위를 함께 준다(랭킹 인원은 업적 화면과 같은 엣지 캐시).
+    const standing = achTierByRank(season)
+      ? await achievementRankOf(db, row, (load) =>
+          edgeCached(c, EDGE.achRanked(season), ACH_RANKED_TTL, load),
+        )
+      : {};
     return ok(
       c,
       ClubAchievementNotificationsSchema,
@@ -765,6 +773,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         season,
         groups: localizeAchievements(groups, reqLang(c)),
         score: row.score,
+        ...standing,
       },
       200,
       NO_STORE,

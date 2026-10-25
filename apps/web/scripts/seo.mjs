@@ -308,6 +308,7 @@ const GUIDE_SECTIONS = [
       guideCopy.salaryBudget,
       guideCopy.ownerRecords,
       guideCopy.achRewards,
+      guideCopy.ownerGrades,
       guideCopy.recordRewards,
       guideCopy.teamSynergy,
       guideCopy.matchReport,
