@@ -23,6 +23,7 @@ import type {
   AutomationReport,
   AutomationEnforcement,
   BalanceDraftInput,
+  BalanceSchedule,
   BalanceVersion,
   BalanceVersionList,
   PushPerformance,
@@ -30,6 +31,7 @@ import type {
 import { apiFetch, cachedGet, invalidateApiCache } from './client.js';
 
 export type {
+  BalanceSchedule,
   AdminComment,
   AdminItemGrantInput,
   AdminRevenue,
@@ -81,6 +83,11 @@ export const deleteBalanceDraft = (version: number) =>
   apiFetch<undefined>(`/v1/admin/balance/${version}`, { method: 'DELETE' });
 export const activateBalance = (version: number) =>
   apiFetch<BalanceVersion>(`/v1/admin/balance/${version}/activate`, { method: 'POST' });
+/** T-11-488 다음 시즌 개막에 켤 버전을 예약 · 취소한다. */
+export const scheduleBalance = (version: number) =>
+  apiFetch<BalanceSchedule>(`/v1/admin/balance/${version}/schedule`, { method: 'POST' });
+export const cancelBalanceSchedule = () =>
+  apiFetch<undefined>('/v1/admin/balance-schedule', { method: 'DELETE' });
 
 export const fetchAdminStats = (fresh = false) =>
   fresh

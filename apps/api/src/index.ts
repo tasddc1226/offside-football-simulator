@@ -10,6 +10,7 @@ import { runDailyTick } from './cron/dailyRunner.js';
 import { runSeasonEventsArchive } from './cron/seasonEventsArchive.js';
 import { runSeasonTelemetryArchive } from './cron/seasonTelemetryArchive.js';
 import { runSeasonGauge } from './cron/seasonGauge.js';
+import { runScheduledBalance } from './cron/balanceSchedule.js';
 import { loadSeasonSchedule } from './seasonSchedule.js';
 import { runInfraHealth } from './cron/infraHealth.js';
 import { createDb } from './db/client.js';
@@ -79,6 +80,15 @@ export default {
         })
         .finally(() => runInfraHealth(env, Date.now(), completed).catch(logged('infra-health')));
     } else {
+      // T-11-488 개막 예약한 밸런스를 새 시즌 첫 실행에서 켠다(새 커리어가 바로 받게 맨 앞에서).
+      await runScheduledBalance(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
+        .then(async (r) => {
+          if (!r) return;
+          console.log(JSON.stringify({ level: 'info', job: 'balance-schedule', ...r }));
+          if (r.activated && env.PUBLIC_API_ORIGIN)
+            await purgeEdgeOrigin(env.PUBLIC_API_ORIGIN, STALE.balanceActivated());
+        })
+        .catch(logged('balance-schedule'));
       // 푸시 단계가 실패해도 뒤의 시즌 결산·컵 진행은 돈다(다음 5분에 다시 보낸다).
       await recoverBillingAlerts(env, controller.scheduledTime).catch(logged('billing-recovery'));
       await publishPushWork(env, 'news', controller.scheduledTime).catch(

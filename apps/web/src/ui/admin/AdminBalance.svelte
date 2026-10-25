@@ -16,7 +16,7 @@
   } from '@offside/contracts/balance';
   import { BALANCE_GROUPS, BALANCE_TEXT, type BalanceGroup } from '@offside/contracts/balance-text';
   import * as api from '@offside/app-core/api/admin';
-  import type { BalanceVersion } from '@offside/app-core/api/admin';
+  import type { BalanceSchedule, BalanceVersion } from '@offside/app-core/api/admin';
   import {
     EVENT_LIST,
     PROB_EVENTS,
@@ -39,6 +39,7 @@
   const discardOk = () => !dirty || confirm('저장하지 않은 변경을 버릴까요?');
 
   let versions = $state<BalanceVersion[]>([]);
+  let scheduled = $state<BalanceSchedule | null>(null);
   let status = $state<LoadStatus>('loading');
   let selected = $state<number | null>(null);
   let work = $state<{ note: string; values: BalanceOverrides }>({ note: '', values: {} });
@@ -63,6 +64,7 @@
       return;
     }
     versions = r.data.versions;
+    scheduled = r.data.scheduled ?? null;
     status = 'ready';
     pick(select ?? selected ?? versions.find((v) => v.status === 'draft')?.version ?? active?.version ?? null);
   }
@@ -127,6 +129,24 @@
     toast(`${withEulReul(`v${v.version}`)} 적용했어요`);
     await load(v.version);
   }
+  /** T-11-488 시즌 중에는 바로 켤 수 없어 다음 시즌 개막에 켜지게 예약한다(서버 5분 cron이 켠다). */
+  async function schedule(v: BalanceVersion) {
+    if (v.status === 'draft' && dirty && !(await save())) return;
+    const lines = diffLines(v.status === 'draft' ? work.values : v.values);
+    const body = lines.length ? lines.join('\n') : '적용 중인 버전과 값이 같아요.';
+    const replace = scheduled && scheduled.version !== v.version ? `\n\n지금 예약된 v${scheduled.version} 대신 예약해요.` : '';
+    if (!confirm(`${withEulReul(`v${v.version}`)} 다음 시즌 개막에 적용할까요?\n\n${body}${replace}\n\n개막 뒤 5분 안에 켜져요. 그 전에 초안을 고치면 고친 값이 적용돼요.`)) return;
+    const s = await run(api.scheduleBalance(v.version));
+    if (!s) return;
+    scheduled = s;
+    toast(`v${v.version} 시즌 ${s.season} 개막 예약했어요`);
+  }
+  async function unschedule() {
+    if (!scheduled || !confirm(`v${scheduled.version} 개막 예약을 취소할까요?`)) return;
+    if ((await run(api.cancelBalanceSchedule())) === null) return;
+    scheduled = null;
+    toast('예약을 취소했어요');
+  }
   async function remove(v: BalanceVersion) {
     if (!confirm(`초안 ${withEulReul(`v${v.version}`)} 지울까요?`)) return;
     if ((await run(api.deleteBalanceDraft(v.version))) === null) return;
@@ -145,6 +165,12 @@
       진행 중인 커리어는 다음 시즌부터, 새 커리어는 바로 적용돼요.
     </p>
   </div>
+  {#if scheduled}
+    <div class="row admin-scheduled" style="gap:8px" data-balance-scheduled={scheduled.version}>
+      <span class="fs-sm">개막 예약: <b>v{scheduled.version}</b> · 시즌 {scheduled.season} 개막 뒤 5분 안에 적용</span>
+      <button class="icon-btn" data-act="cancel-schedule" disabled={busy} onclick={unschedule}>예약 취소</button>
+    </div>
+  {/if}
 
   <LoadState {status} failText="밸런스 설정을 불러오지 못했어요." retry={load}>
     <div class="row" style="gap:8px">
@@ -160,6 +186,7 @@
             <span class="row" style="gap:6px">
               <b>v{v.version}</b>
               <span class="pill {STATUS[v.status][1]}">{STATUS[v.status][0]}</span>
+              {#if scheduled?.version === v.version}<span class="pill warn">개막 예약</span>{/if}
               <span class="admin-note">{v.note || '메모 없음'}</span>
             </span>
             <span class="muted fs-xs">{dateOf(v.activatedAt ?? v.updatedAt)}</span>
@@ -269,6 +296,7 @@
           {#if editable}
             <button class="btn btn-primary" data-act="save-draft" disabled={busy || !dirty} onclick={() => void save().then((ok) => ok && toast('저장했어요'))}>저장</button>
             <button class="btn btn-accent" data-act="activate" disabled={busy} onclick={() => activate(current)}>적용하기</button>
+            <button class="btn" data-act="schedule" disabled={busy || scheduled?.version === current.version} onclick={() => schedule(current)}>다음 시즌 개막에 적용</button>
             <button class="icon-btn" data-act="delete-draft" disabled={busy} onclick={() => remove(current)}>초안 삭제</button>
           {:else}
             <button class="icon-btn" data-act="duplicate" disabled={busy} onclick={() => newDraft(current.values, `v${current.version} 복제`)}>복제해 새 초안</button>
@@ -295,6 +323,7 @@
   .admin-knob.changed { background: color-mix(in srgb, var(--warn) 12%, transparent); }
   .admin-knob input[type='number'] { width: 96px; }
   .icon-btn { white-space: nowrap; flex: none; }
+  .admin-scheduled { justify-content: space-between; padding: 8px 12px; border-radius: var(--radius-md); background: color-mix(in srgb, var(--warn) 12%, var(--surface)); }
   .admin-diff { border-top: 1px dashed var(--line); padding-top: 10px; }
   @media (max-width: 420px) { .admin-knob { grid-template-columns: 1fr; } }
 </style>
