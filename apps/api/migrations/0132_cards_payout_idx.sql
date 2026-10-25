@@ -1,0 +1,1 @@
+CREATE INDEX `cards_payout_idx` ON `cards` (`career_id`,`released_at`,`released_value`,`bonus_value`) WHERE "cards"."released_at" is not null or "cards"."bonus_value" is not null;

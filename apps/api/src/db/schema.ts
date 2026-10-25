@@ -581,7 +581,13 @@ export const cards = sqliteTable(
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
-  (table) => [index('cards_owner_season_idx').on(table.ownerId, table.serviceSeason, table.peak)],
+  (table) => [
+    index('cards_owner_season_idx').on(table.ownerId, table.serviceSeason, table.peak),
+    // T-11-493 운영 도구 자금 대조 — 방출 · 은퇴 장려금이 있는 카드만 든다(덮는 인덱스).
+    index('cards_payout_idx')
+      .on(table.careerId, table.releasedAt, table.releasedValue, table.bonusValue)
+      .where(sql`${table.releasedAt} is not null or ${table.bonusValue} is not null`),
+  ],
 );
 
 /**
