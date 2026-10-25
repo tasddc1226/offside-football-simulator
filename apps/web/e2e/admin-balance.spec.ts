@@ -528,7 +528,14 @@ test('T-11-263 매출 탭: 열 때 불러오고, 기간을 바꾸면 다시 받�
           { store: 'google', count: 2, krw: 7700 },
           { store: 'xsolla', count: 1, krw: 1100 },
         ],
-        removeAds: { count: 1, refunds: 0, krw: 3300, since: T },
+        removeAds: {
+          count: 1,
+          refunds: 0,
+          krw: 3300,
+          since: T,
+          allTime: { count: 4, refunds: 1, krw: 9900 },
+          stores: [{ store: 'apple', count: 1, refunds: 0 }],
+        },
         recent: [],
       }),
     );
@@ -541,7 +548,10 @@ test('T-11-263 매출 탭: 열 때 불러오고, 기간을 바꾸면 다시 받�
   await page.locator('[data-admin-tab="revenue"]').click();
   const sum = page.locator('[data-revenue-summary]');
   await expect(sum).toContainText('₩8,800 · 3건');
-  await expect(sum).toContainText('광고 제거');
+  // T-11-484 광고 제거는 원장 밖(스토어 알림)으로 따로, 합계와 전체 기간에도 보인다.
+  await expect(sum).toContainText('광고 제거(원장 밖)1건 · 환불 0 · ₩3,300 (App Store 1)');
+  await expect(sum).toContainText('합계(광고 제거 포함)₩12,100');
+  await expect(sum).toContainText('전체 기간(광고 제거)4건 · 환불 1 · ₩9,900');
   // T-11-471 앱 인앱 결제와 웹 결제(엑솔라)를 나눠 보인다.
   await expect(sum).toContainText('앱 인앱 결제₩7,700 · 2건');
   await expect(sum).toContainText('웹 결제₩1,100 · 1건');
