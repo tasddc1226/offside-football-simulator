@@ -18,6 +18,10 @@ export type LiveLine = {
   score?: [number, number];
   /** T-11-387 골 줄의 재료(장면 경기는 장면 골이 끼어 스코어가 달라지므로 보여 줄 때 문구를 다시 만든다). */
   goal?: { scorer: string; assist: string | null; key: string };
+  /** T-11-492 고른 문구의 키(chance1 · buildLeft …). 2D 그라운드가 문구에 맞는 움직임을 고른다. */
+  say?: string;
+  /** T-11-492 빌드업 · 골 줄의 득점자 자리. */
+  slot?: DetailPos;
 };
 
 /** 골 줄 문구. before는 골 전 스코어, n은 그 선수의 이 경기 몇 번째 골. */
@@ -82,7 +86,7 @@ export function fullTimeText(
 }
 
 /** 문자열 → 32비트 시드(FNV-1a) → mulberry32. */
-function rngOf(seed: string): () => number {
+export function rngOf(seed: string): () => number {
   let h = 0x811c9dc5;
   for (let i = 0; i < seed.length; i++) {
     h ^= seed.charCodeAt(i);
@@ -103,47 +107,60 @@ const pick = <T>(rnd: () => number, list: readonly T[]): T =>
 
 // 문구는 그릴 때 지금 언어로 읽는다(i18n/ko/teamLive.ts). 고르는 줄 수는 언어마다 같다 — 같은 경기는 같은 순서로 나온다.
 type Say = (p: { t: string }) => string;
-const chance = (): readonly Say[] => [L.chance1, L.chance2, L.chance3, L.chance4, L.chance5];
-const save = (): readonly Say[] => [L.save1, L.save2, L.save3];
-const miss = (): readonly Say[] => [L.miss1, L.miss2, L.miss3];
-const corner = (): readonly Say[] => [L.corner1, L.corner2];
-const build = (): readonly Say[] => [L.build1, L.build2, L.build3];
+type SayKey = {
+  [K in keyof typeof L]: (typeof L)[K] extends Say ? K : never;
+}[keyof typeof L];
+// T-11-492 줄마다 고른 문구의 키를 남긴다(2D 그라운드). 고르는 방식(rnd 한 번)은 그대로다.
+const CHANCE: readonly SayKey[] = ['chance1', 'chance2', 'chance3', 'chance4', 'chance5'];
+const SAVE: readonly SayKey[] = ['save1', 'save2', 'save3'];
+const MISS: readonly SayKey[] = ['miss1', 'miss2', 'miss3'];
+const CORNER: readonly SayKey[] = ['corner1', 'corner2'];
+const BUILD: readonly SayKey[] = ['build1', 'build2', 'build3'];
 
 /**
  * T-11-408 골 직전 장면을 득점자 자리로 고른다 — 측면 선수는 측면 돌파 · 크로스(왼쪽 · 오른쪽 자리면 그 쪽), 최전방은 침투 ·
  * 일대일, 2선은 중거리 · 늦은 침투, 수비수 · 골키퍼는 세트피스. 문전 혼전은 도움 없는 최전방 골에만. 자리가 없는 옛 경기는
  * 예전 목록 그대로. 어느 쪽이든 rnd를 한 번만 써서 뒤 줄(추가시간)의 순서가 바뀌지 않는다.
  */
-export function buildLines(slot: DetailPos | undefined, assisted: boolean): readonly Say[] {
+export function buildKeys(slot: DetailPos | undefined, assisted: boolean): readonly SayKey[] {
   switch (slot) {
     case 'LW':
     case 'LM':
     case 'LB':
     case 'LWB':
-      return [L.buildLeft, L.buildWide1, L.buildWide2];
+      return ['buildLeft', 'buildWide1', 'buildWide2'];
     case 'RW':
     case 'RM':
     case 'RB':
     case 'RWB':
-      return [L.buildRight, L.buildWide1, L.buildWide2];
+      return ['buildRight', 'buildWide1', 'buildWide2'];
     case 'W':
     case 'FB':
-      return [L.buildWide1, L.buildWide2];
+      return ['buildWide1', 'buildWide2'];
     case 'ST':
     case 'CF':
     case 'SS':
-      return assisted ? [L.build2, L.buildFwd1, L.buildFwd2] : [L.buildFwd1, L.buildFwd2, L.build3];
+      return assisted ? ['build2', 'buildFwd1', 'buildFwd2'] : ['buildFwd1', 'buildFwd2', 'build3'];
     case 'AM':
     case 'CM':
     case 'DM':
-      return [L.buildMid1, L.buildMid2, L.build1];
+      return ['buildMid1', 'buildMid2', 'build1'];
     case 'CB':
     case 'SW':
     case 'GK':
-      return [L.buildSet1, L.buildSet2];
+      return ['buildSet1', 'buildSet2'];
     default:
-      return build();
+      return BUILD;
   }
+}
+
+export const buildLines = (slot: DetailPos | undefined, assisted: boolean): readonly Say[] =>
+  buildKeys(slot, assisted).map((k) => L[k] as Say);
+
+/** 목록에서 하나(rnd 한 번) — 문구와 그 키. */
+function sayOf(rnd: () => number, keys: readonly SayKey[], t: string) {
+  const say = pick(rnd, keys);
+  return { say, text: (L[say] as Say)({ t }) };
 }
 
 /**
@@ -176,15 +193,15 @@ export function liveScript(
     used.add(minute);
     const side = rnd() < homeShare ? 'home' : 'away';
     const r = rnd();
-    const [kind, list] =
+    const [kind, keys] =
       r < 0.35
-        ? (['chance', chance()] as const)
+        ? (['chance', CHANCE] as const)
         : r < 0.6
-          ? (['save', save()] as const)
+          ? (['save', SAVE] as const)
           : r < 0.8
-            ? (['miss', miss()] as const)
-            : (['corner', corner()] as const);
-    lines.push({ minute, kind, side, text: pick(rnd, list)({ t: team[side] }) });
+            ? (['miss', MISS] as const)
+            : (['corner', CORNER] as const);
+    lines.push({ minute, kind, side, ...sayOf(rnd, keys, team[side]) });
   }
 
   // 골 — 직전 분에 빌드업 한 줄, 그 분에 골 줄.
@@ -201,11 +218,13 @@ export function liveScript(
     const key = `${e.side}:${e.scorerId ?? e.scorer}`;
     const n = (tally.get(key) ?? 0) + 1;
     tally.set(key, n);
+    const at = e.slot ? { slot: e.slot } : {};
     lines.push({
       minute: Math.max(1, e.minute - 1),
       kind: 'build',
       side: e.side,
-      text: pick(rnd, buildLines(e.slot, !!e.assist))({ t }),
+      ...sayOf(rnd, buildKeys(e.slot, !!e.assist), t),
+      ...at,
     });
     lines.push({
       minute: e.minute,
@@ -214,6 +233,7 @@ export function liveScript(
       text: goalLineText(t, e.side, e.minute, scorer, assist, before, n),
       score: [h, a],
       goal: { scorer, assist, key },
+      ...at,
     });
   }
 
@@ -351,6 +371,8 @@ export type PlayStep = {
 export function playbackPlan(
   script: readonly LiveLine[],
   momentMinutes: readonly number[] = [],
+  /** T-11-492 줄 뒤 대기 시간(2D 그라운드는 움직임을 보여 줄 만큼 더 기다린다). */
+  waitOf: (kind: LiveKind) => number = lineWaitMs,
 ): PlayStep[] {
   const goalMinutes = [...goalMinutesOf(script), ...momentMinutes];
   const steps: PlayStep[] = [];
@@ -362,7 +384,7 @@ export function playbackPlan(
     });
     while (i < script.length && script[i]!.minute === min && !script[i]!.extra) {
       const k = script[i]!.kind;
-      steps.push({ show: i++, wait: lineWaitMs(k) });
+      steps.push({ show: i++, wait: waitOf(k) });
     }
     while (i < script.length && script[i]!.minute === min && script[i]!.extra) {
       const l = script[i]!;

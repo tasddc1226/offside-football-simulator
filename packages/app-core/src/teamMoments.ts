@@ -112,13 +112,14 @@ export class LiveScore {
 
   /** 장면에서 난 골 한 줄. */
   event(e: TeamMatchEvent, name: NameOf): LiveLine {
-    return this.goalLine(
+    const l = this.goalLine(
       e.side,
       e.minute,
       name(e.scorerId, e.scorer),
       e.assist ? name(e.assistId, e.assist) : null,
       `${e.side}:${e.scorerId ?? e.scorer}`,
     );
+    return e.slot ? { ...l, slot: e.slot } : l;
   }
 }
 
@@ -142,9 +143,21 @@ export function momentLines(
     },
   ];
   if (m.kind === 'chance' && !m.ok)
-    out.push({ minute: m.minute, kind: 'save', side, text: M.chanceMiss({ name: actor }) });
+    out.push({
+      minute: m.minute,
+      kind: 'save',
+      side,
+      say: 'chanceMiss',
+      text: M.chanceMiss({ name: actor }),
+    });
   if (m.kind === 'crisis' && m.ok)
-    out.push({ minute: m.minute, kind: 'save', side: 'home', text: M.crisisSave({ name: actor }) });
+    out.push({
+      minute: m.minute,
+      kind: 'save',
+      side: 'home',
+      say: 'crisisSave',
+      text: M.crisisSave({ name: actor }),
+    });
   for (const e of goals) out.push(score.event(e, name));
   return out;
 }

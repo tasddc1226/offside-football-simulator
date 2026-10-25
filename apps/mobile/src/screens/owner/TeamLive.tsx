@@ -4,6 +4,7 @@
 // 대본(liveScript)·시계 표기는 웹과 같은 @offside/app-core/teamLive.
 // T-11-387 장면 경기(live)면 장면 분에 시계를 멈추고 선택지 카드를 띄운다. 고르면 서버가 결과를 정하고, 그 골이 중계에
 // 끼어든다. 제한 시간이 지나거나 '결과 바로 보기'를 누르면 남은 장면은 감독에게 맡긴다.
+// T-11-492 전광판 아래 2D 그라운드가 줄마다 그 장면을 움직임으로 보여 준다(장면 카드를 띄우면 멈추고 선택지 화살표를 그린다).
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, ScrollView, View } from 'react-native';
@@ -21,7 +22,6 @@ import {
   MOMENTUM_START,
   PHASE_LABEL,
   clockText,
-  lineWaitMs,
   liveScript,
   momentumAfter,
   momentumDecay,
@@ -30,6 +30,15 @@ import {
   type LiveLine,
   type LivePhase,
 } from '@offside/app-core/teamLive';
+import {
+  GroundPlay,
+  groundBall,
+  groundLineWaitMs,
+  groundSpots,
+  type GroundArrow,
+  type GroundPose,
+  type Pt,
+} from '@offside/app-core/matchGround';
 import {
   LiveScore,
   liveSkipLabel,
@@ -47,6 +56,7 @@ import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { Grid2 } from './TeamParts';
 import { TeamLogo } from '../../components/TeamLogo';
+import { MatchGround } from '../../components/MatchGround';
 import { PopSheet } from '../../ui/PopSheet';
 
 /** 중계 줄 하나 — 나타날 때 위에서 살짝 내려앉는다(웹 tl-in). */
@@ -157,8 +167,10 @@ export function TeamLive({
     playbackPlan(
       script,
       moments.map((m) => m.minute),
+      groundLineWaitMs,
     ),
   );
+  const [ground] = useState(() => new GroundPlay(match));
   const [tally] = useState(() => (live ? new LiveScore(match, neutral) : null));
 
   // 중계 줄은 장면 줄이 끼어들므로 대본 인덱스가 아니라 고정 키로 센다.
@@ -194,8 +206,14 @@ export function TeamLive({
   const [pendingMoments, setPendingMoments] = useState(live?.moments?.length ?? 0);
   const timer = useRef(new Animated.Value(1)).current;
 
-  // 골 배너 · 점수 튀어 오름 · 흐름 막대
-  const banner = useRef(new Animated.Value(0)).current;
+  /** 그라운드에 지금 그리는 자세 · 전환 시간 · 골까지 공이 지난 길 · 선택지 화살표. */
+  const [gPose, setGPose] = useState<GroundPose | null>(null);
+  const [gDur, setGDur] = useState(700);
+  const [gTrail, setGTrail] = useState<readonly Pt[]>([]);
+  const [gArrows, setGArrows] = useState<readonly GroundArrow[]>([]);
+  const gTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // 점수 튀어 오름 · 흐름 막대(GOAL 배너는 그라운드가 그린다)
   const bump = useRef(new Animated.Value(1)).current;
   const pulse = useRef(new Animated.Value(1)).current;
   const mom = useRef(new Animated.Value(MOMENTUM_START)).current;
@@ -219,20 +237,12 @@ export function TeamLive({
 
   useEffect(() => {
     if (!flash || !motionOK) return;
-    banner.setValue(0);
     bump.setValue(1);
-    Animated.parallel([
-      Animated.sequence([
-        Animated.timing(banner, { toValue: 1, duration: 360, useNativeDriver: true }),
-        Animated.delay(1100),
-        Animated.timing(banner, { toValue: 2, duration: 340, useNativeDriver: true }),
-      ]),
-      Animated.sequence([
-        Animated.timing(bump, { toValue: 1.25, duration: 240, useNativeDriver: true }),
-        Animated.timing(bump, { toValue: 1, duration: 360, useNativeDriver: true }),
-      ]),
+    Animated.sequence([
+      Animated.timing(bump, { toValue: 1.25, duration: 240, useNativeDriver: true }),
+      Animated.timing(bump, { toValue: 1, duration: 360, useNativeDriver: true }),
     ]).start();
-  }, [flash, motionOK, banner, bump]);
+  }, [flash, motionOK, bump]);
 
   useEffect(() => {
     if (!active) return;
@@ -251,6 +261,21 @@ export function TeamLive({
     const sleep = (ms: number) =>
       new Promise<void>((r) => setTimeout(r, waitMs(ms, fastRef.current)));
 
+    /** 줄 하나의 움직임을 줄 대기 시간 안에 차례로 보여 준다. */
+    function playGround(l: LiveLine) {
+      stopGround();
+      const steps = ground.line(l, waitMs(groundLineWaitMs(l.kind), fastRef.current));
+      const trail = ground.trail;
+      for (const st of steps)
+        gTimers.current.push(
+          setTimeout(() => {
+            setGPose(st.pose);
+            setGDur(Math.min(900, st.dur));
+            setGTrail(st.pose.goal ? trail : []);
+          }, st.at),
+        );
+    }
+
     function push(l: LiveLine) {
       const k = seq.current++;
       setShown((prev) => [{ k, l }, ...prev]);
@@ -261,6 +286,7 @@ export function TeamLive({
         clearTimeout(flashTimer.current);
         flashTimer.current = setTimeout(() => setFlash(null), FLASH_MS);
       }
+      playGround(l);
     }
 
     function show(i: number) {
@@ -273,6 +299,12 @@ export function TeamLive({
       return new Promise((resolve) => {
         let left = choiceSec;
         setActive({ m, left });
+        stopGround();
+        const g = ground.freeze(m, name);
+        setGDur(500);
+        setGPose(g.pose);
+        setGTrail([]);
+        setGArrows(g.arrows);
         pickRef.current = (choice) => {
           pickRef.current = null;
           clearInterval(countdownRef.current);
@@ -296,6 +328,7 @@ export function TeamLive({
       const r = await chooseMoment(match.id, m.index, choice);
       setSending(false);
       setActive(null);
+      setGArrows([]);
       if (!r.ok) {
         brokenRef.current = true;
         setPendingMoments(0);
@@ -306,7 +339,7 @@ export function TeamLive({
       for (const l of momentLines(r.data.moment, r.data.goals, name, tally!)) {
         if (!run.alive) return;
         push(l);
-        await sleep(lineWaitMs(l.kind));
+        await sleep(groundLineWaitMs(l.kind));
       }
     }
 
@@ -322,7 +355,13 @@ export function TeamLive({
         }
         if (step.show !== undefined) show(step.show);
         if (step.phase) setPhase(step.phase);
-        if (step.decay) setMomentum(momentumDecay);
+        if (step.decay) {
+          setMomentum(momentumDecay);
+          if (ground.settle()) {
+            setGPose(null);
+            setGTrail([]);
+          }
+        }
         if (step.wait > 0) await sleep(step.wait);
       }
       void finish();
@@ -334,9 +373,15 @@ export function TeamLive({
       pickRef.current?.(null);
       clearTimeout(flashTimer.current);
       clearInterval(countdownRef.current);
+      stopGround();
     };
     // 경기 하나에 한 번만 돈다.
   }, []);
+
+  function stopGround() {
+    for (const t of gTimers.current) clearTimeout(t);
+    gTimers.current = [];
+  }
 
   async function finish() {
     const run = runRef.current;
@@ -344,6 +389,7 @@ export function TeamLive({
     run.alive = false;
     pickRef.current?.(null);
     setActive(null);
+    setGArrows([]);
     if (live && !finalRef.current) {
       setSending(true);
       const r = await finishLiveMatch(match.id);
@@ -401,264 +447,312 @@ export function TeamLive({
             }}
           />
         ) : null}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              paddingVertical: 1,
-              paddingHorizontal: 8,
-              borderRadius: RADIUS.pill,
-              backgroundColor: done ? c.chalk : c.bad,
-            }}
-          >
-            {done ? null : (
-              <Animated.View
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: 4,
-                  backgroundColor: '#fff',
-                  opacity: pulse,
-                }}
-              />
-            )}
-            <Txt
+        {active ? (
+          // T-11-492 장면을 고르는 동안은 전광판을 한 줄로 접어 멈춘 그라운드가 시트 위에 다 보이게 한다(웹 tl-pause).
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View
               style={{
-                ...disp,
-                fontSize: rem(FONT.label),
-                color: '#fff',
-                letterSpacing: 0.06 * 13,
+                paddingVertical: 1,
+                paddingHorizontal: 8,
+                borderRadius: RADIUS.pill,
+                backgroundColor: c.chalk,
               }}
             >
-              {done ? 'FT' : 'LIVE'}
-            </Txt>
-          </View>
-          <Txt
-            testID="live-clock"
-            style={{
-              ...disp,
-              fontSize: rem(FONT.title1),
-              lineHeight: rem(FONT.title1) * 1.2,
-              color: c.pitchAccent,
-              minWidth: rem(1.5) * 3.4 * 0.5,
-              fontVariant: ['tabular-nums'],
-            }}
-          >
-            {clockLabel}
-          </Txt>
-          <Txt
-            style={{
-              marginLeft: 'auto',
-              fontSize: rem(FONT.body2),
-              color: c.onPitch,
-              opacity: 0.85,
-            }}
-          >
-            {PHASE_LABEL[phase]}
-          </Txt>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View
-            style={{
-              flex: 1,
-              minWidth: 0,
-              gap: 2,
-              transform: [{ scale: flash === 'home' && motionOK ? 1.06 : 1 }],
-            }}
-          >
-            <TeamLogo logo={match.home.logo} name={match.home.name} size={40} decorative />
+              <Txt
+                style={{
+                  ...disp,
+                  fontSize: rem(FONT.label),
+                  color: '#fff',
+                  letterSpacing: 0.06 * 13,
+                }}
+              >
+                PAUSE
+              </Txt>
+            </View>
             <Txt
+              testID="live-clock"
               style={{
+                ...disp,
+                fontSize: rem(FONT.title3),
+                color: c.pitchAccent,
+                fontVariant: ['tabular-nums'],
+              }}
+            >
+              {clockLabel}
+            </Txt>
+            <Txt
+              numberOfLines={1}
+              style={{
+                flex: 1,
+                minWidth: 0,
                 fontWeight: '700',
-                lineHeight: 19,
+                fontSize: rem(FONT.body2),
                 color: !neutral && match.mine === 'home' ? c.pitchAccent : c.onPitch,
               }}
             >
               {match.home.name}
             </Txt>
-            <Txt style={{ fontSize: rem(FONT.caption), color: c.onPitch, opacity: 0.75 }}>
-              {match.home.owner}
-            </Txt>
-          </View>
-          <Animated.View
-            testID="live-score"
-            accessibilityLiveRegion="polite"
-            accessible
-            accessibilityLabel={L.scoreAria({ a: score[0], b: score[1] })}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 8,
-              transform: [{ scale: bump }],
-            }}
-          >
             <Txt
+              testID="live-score"
+              accessibilityLiveRegion="polite"
+              accessibilityLabel={L.scoreAria({ a: score[0], b: score[1] })}
               style={{
                 fontFamily: DISPLAY[800],
-                fontSize: rem(2.6),
-                lineHeight: rem(2.6),
-                color: flash ? c.pitchAccent : c.onPitch,
-              }}
-            >
-              {score[0]}
-            </Txt>
-            <Txt
-              accessible={false}
-              style={{
-                fontFamily: DISPLAY[800],
-                fontSize: rem(2.6),
-                lineHeight: rem(2.6),
+                fontSize: rem(FONT.title3),
                 color: c.onPitch,
+                fontVariant: ['tabular-nums'],
               }}
             >
-              :
+              {`${score[0]} : ${score[1]}`}
             </Txt>
             <Txt
+              numberOfLines={1}
               style={{
-                fontFamily: DISPLAY[800],
-                fontSize: rem(2.6),
-                lineHeight: rem(2.6),
-                color: flash ? c.pitchAccent : c.onPitch,
-              }}
-            >
-              {score[1]}
-            </Txt>
-          </Animated.View>
-          <View
-            style={{
-              flex: 1,
-              minWidth: 0,
-              gap: 2,
-              alignItems: 'flex-end',
-              transform: [{ scale: flash === 'away' && motionOK ? 1.06 : 1 }],
-            }}
-          >
-            <TeamLogo logo={match.away.logo} name={match.away.name} size={40} decorative />
-            <Txt
-              style={{
-                fontWeight: '700',
-                lineHeight: 19,
+                flex: 1,
+                minWidth: 0,
                 textAlign: 'right',
+                fontWeight: '700',
+                fontSize: rem(FONT.body2),
                 color: !neutral && match.mine === 'away' ? c.pitchAccent : c.onPitch,
               }}
             >
               {match.away.name}
             </Txt>
-            <Txt style={{ fontSize: rem(FONT.caption), color: c.onPitch, opacity: 0.75 }}>
-              {match.away.owner}
-            </Txt>
           </View>
-        </View>
-        {/* 시간 막대: 채움 · 하프타임 눈금 · 골 점 */}
-        <View
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-          style={{ height: 6, borderRadius: 3, backgroundColor: c.chalk }}
-        >
-          <View
-            style={{
-              height: '100%',
-              width: `${Math.min(100, (clock / 90) * 100)}%`,
-              borderRadius: 3,
-              backgroundColor: c.pitchAccent,
-            }}
-          />
-          <View
-            style={{
-              position: 'absolute',
-              left: '50%',
-              top: -3,
-              width: 2,
-              height: 12,
-              backgroundColor: c.onPitch,
-              opacity: 0.6,
-            }}
-          />
-          {scored.map((g, k) => (
+        ) : (
+          <>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingVertical: 1,
+                  paddingHorizontal: 8,
+                  borderRadius: RADIUS.pill,
+                  backgroundColor: done ? c.chalk : c.bad,
+                }}
+              >
+                {done ? null : (
+                  <Animated.View
+                    style={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: 4,
+                      backgroundColor: '#fff',
+                      opacity: pulse,
+                    }}
+                  />
+                )}
+                <Txt
+                  style={{
+                    ...disp,
+                    fontSize: rem(FONT.label),
+                    color: '#fff',
+                    letterSpacing: 0.06 * 13,
+                  }}
+                >
+                  {done ? 'FT' : 'LIVE'}
+                </Txt>
+              </View>
+              <Txt
+                testID="live-clock"
+                style={{
+                  ...disp,
+                  fontSize: rem(FONT.title1),
+                  lineHeight: rem(FONT.title1) * 1.2,
+                  color: c.pitchAccent,
+                  minWidth: rem(1.5) * 3.4 * 0.5,
+                  fontVariant: ['tabular-nums'],
+                }}
+              >
+                {clockLabel}
+              </Txt>
+              <Txt
+                style={{
+                  marginLeft: 'auto',
+                  fontSize: rem(FONT.body2),
+                  color: c.onPitch,
+                  opacity: 0.85,
+                }}
+              >
+                {PHASE_LABEL[phase]}
+              </Txt>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  gap: 2,
+                  transform: [{ scale: flash === 'home' && motionOK ? 1.06 : 1 }],
+                }}
+              >
+                <TeamLogo logo={match.home.logo} name={match.home.name} size={40} decorative />
+                <Txt
+                  style={{
+                    fontWeight: '700',
+                    lineHeight: 19,
+                    color: !neutral && match.mine === 'home' ? c.pitchAccent : c.onPitch,
+                  }}
+                >
+                  {match.home.name}
+                </Txt>
+                <Txt style={{ fontSize: rem(FONT.caption), color: c.onPitch, opacity: 0.75 }}>
+                  {match.home.owner}
+                </Txt>
+              </View>
+              <Animated.View
+                testID="live-score"
+                accessibilityLiveRegion="polite"
+                accessible
+                accessibilityLabel={L.scoreAria({ a: score[0], b: score[1] })}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  transform: [{ scale: bump }],
+                }}
+              >
+                <Txt
+                  style={{
+                    fontFamily: DISPLAY[800],
+                    fontSize: rem(2.6),
+                    lineHeight: rem(2.6),
+                    color: flash ? c.pitchAccent : c.onPitch,
+                  }}
+                >
+                  {score[0]}
+                </Txt>
+                <Txt
+                  accessible={false}
+                  style={{
+                    fontFamily: DISPLAY[800],
+                    fontSize: rem(2.6),
+                    lineHeight: rem(2.6),
+                    color: c.onPitch,
+                  }}
+                >
+                  :
+                </Txt>
+                <Txt
+                  style={{
+                    fontFamily: DISPLAY[800],
+                    fontSize: rem(2.6),
+                    lineHeight: rem(2.6),
+                    color: flash ? c.pitchAccent : c.onPitch,
+                  }}
+                >
+                  {score[1]}
+                </Txt>
+              </Animated.View>
+              <View
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  gap: 2,
+                  alignItems: 'flex-end',
+                  transform: [{ scale: flash === 'away' && motionOK ? 1.06 : 1 }],
+                }}
+              >
+                <TeamLogo logo={match.away.logo} name={match.away.name} size={40} decorative />
+                <Txt
+                  style={{
+                    fontWeight: '700',
+                    lineHeight: 19,
+                    textAlign: 'right',
+                    color: !neutral && match.mine === 'away' ? c.pitchAccent : c.onPitch,
+                  }}
+                >
+                  {match.away.name}
+                </Txt>
+                <Txt style={{ fontSize: rem(FONT.caption), color: c.onPitch, opacity: 0.75 }}>
+                  {match.away.owner}
+                </Txt>
+              </View>
+            </View>
+            {/* 시간 막대: 채움 · 하프타임 눈금 · 골 점 */}
             <View
-              key={k}
-              style={{
-                position: 'absolute',
-                left: `${(g.minute / 90) * 100}%`,
-                top: -4,
-                width: 10,
-                height: 10,
-                marginLeft: -5,
-                borderRadius: RADIUS.xs,
-                backgroundColor: g.side === 'away' ? c.pitchAccent : c.onPitch,
-                borderWidth: 2,
-                borderColor: c.pitch,
-              }}
-            />
-          ))}
-        </View>
-        <View
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 8, opacity: 0.85 }}
-        >
-          <Txt style={{ fontSize: rem(FONT.caption), color: c.onPitch }}>{L.flow}</Txt>
-          <View
-            style={{
-              flex: 1,
-              height: 4,
-              borderRadius: 2,
-              backgroundColor: c.pitchAccent,
-              overflow: 'hidden',
-            }}
-          >
-            <Animated.View
-              style={{
-                height: '100%',
-                backgroundColor: c.onPitch,
-                width: mom.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
-              }}
-            />
-          </View>
-        </View>
-        {flash ? (
-          <Animated.View
-            pointerEvents="none"
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: motionOK
-                ? banner.interpolate({ inputRange: [0, 0.2, 1, 2], outputRange: [0, 1, 1, 0] })
-                : 1,
-              transform: [
-                {
-                  scale: motionOK
-                    ? banner.interpolate({ inputRange: [0, 1, 2], outputRange: [0.6, 1, 1] })
-                    : 1,
-                },
-              ],
-            }}
-          >
-            <Txt
-              style={{
-                fontFamily: DISPLAY[800],
-                fontSize: rem(3.4),
-                letterSpacing: 0.12 * rem(3.4),
-                color: c.pitchAccent,
-                textShadowColor: 'rgba(0,0,0,0.45)',
-                textShadowRadius: 12,
-                textShadowOffset: { width: 0, height: 2 },
-              }}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={{ height: 6, borderRadius: 3, backgroundColor: c.chalk }}
             >
-              GOAL!
-            </Txt>
-          </Animated.View>
-        ) : null}
+              <View
+                style={{
+                  height: '100%',
+                  width: `${Math.min(100, (clock / 90) * 100)}%`,
+                  borderRadius: 3,
+                  backgroundColor: c.pitchAccent,
+                }}
+              />
+              <View
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: -3,
+                  width: 2,
+                  height: 12,
+                  backgroundColor: c.onPitch,
+                  opacity: 0.6,
+                }}
+              />
+              {scored.map((g, k) => (
+                <View
+                  key={k}
+                  style={{
+                    position: 'absolute',
+                    left: `${(g.minute / 90) * 100}%`,
+                    top: -4,
+                    width: 10,
+                    height: 10,
+                    marginLeft: -5,
+                    borderRadius: RADIUS.xs,
+                    backgroundColor: g.side === 'away' ? c.pitchAccent : c.onPitch,
+                    borderWidth: 2,
+                    borderColor: c.pitch,
+                  }}
+                />
+              ))}
+            </View>
+            <View
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, opacity: 0.85 }}
+            >
+              <Txt style={{ fontSize: rem(FONT.caption), color: c.onPitch }}>{L.flow}</Txt>
+              <View
+                style={{
+                  flex: 1,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: c.pitchAccent,
+                  overflow: 'hidden',
+                }}
+              >
+                <Animated.View
+                  style={{
+                    height: '100%',
+                    backgroundColor: c.onPitch,
+                    width: mom.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+                  }}
+                />
+              </View>
+            </View>
+          </>
+        )}
       </View>
+
+      <MatchGround
+        spots={groundSpots(ground.players, gPose, momentum)}
+        ball={groundBall(gPose, momentum)}
+        dur={gDur}
+        goal={gPose?.goal ?? null}
+        trail={gTrail}
+        arrows={gArrows}
+        home={match.home.name}
+        away={match.away.name}
+        motionOK={motionOK}
+      />
 
       {/* T-11-387 결정적 장면은 아래에서 올라오는 시트로 띄운다. 고르거나 시간이 다 돼야 닫힌다(웹 PopSheet와 같다). */}
       {active ? (
@@ -693,7 +787,7 @@ export function TeamLive({
               </Txt>
             </Txt>
             <View style={{ gap: 6 }}>
-              {choices.map((ch) => (
+              {choices.map((ch, k) => (
                 <Press
                   key={ch.id}
                   testID={`live-moment-choice-${ch.id}`}
@@ -717,6 +811,21 @@ export function TeamLive({
                     opacity: sending ? 0.6 : 1,
                   }}
                 >
+                  {/* T-11-492 그라운드 화살표 번호 */}
+                  <View
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 11,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: c.pitch,
+                    }}
+                  >
+                    <Txt style={{ ...disp, fontSize: 12, lineHeight: 14, color: c.pitchAccent }}>
+                      {k + 1}
+                    </Txt>
+                  </View>
                   <Txt bold style={{ flex: 1, minWidth: 0 }}>
                     {ch.label}
                   </Txt>
@@ -726,7 +835,10 @@ export function TeamLive({
                     {M.pct({ p: ch.pct })}
                   </Txt>
                   {ch.tags.length ? (
-                    <Txt tone="muted" style={{ width: '100%', fontSize: rem(FONT.caption) }}>
+                    <Txt
+                      tone="muted"
+                      style={{ width: '100%', paddingLeft: 32, fontSize: rem(FONT.caption) }}
+                    >
                       {ch.tags.join(' · ')}
                     </Txt>
                   ) : null}
