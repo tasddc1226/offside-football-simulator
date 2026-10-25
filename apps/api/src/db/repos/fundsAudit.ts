@@ -12,7 +12,7 @@ import type { Db } from '../client.js';
 //   − 영입(market_listings 가격) − 구단 자금으로 산 것(owner_item_purchases)
 // 운영자가 열 때만 읽는다. 전체 대조는 세 기록을 한 번씩 훑는다. 방출 · 장려금은 그 값이 있는 카드만 담은 부분 인덱스에서
 // 출발해 커리어를 기본 키로 찾고(커리어 26만 행을 돌지 않는다), 구단주별 합은 한 번만 계산해 요약 · 어긋난 목록을 함께
-// 만든다(T-11-493).
+// 만든다(T-11-493). 전체 행은 Worker로 보내지 않는다(T-11-493b).
 
 const MISMATCH_LIMIT = 50;
 const MOVES_LIMIT = 50;
@@ -47,31 +47,60 @@ const ownerSums = ({ fees: _fees, ...r }: SumsRow): AdminFundsOwnerSums => r;
 /** 전체 구단주 대조 요약과 어긋난 구단주(차이 큰 순). */
 export async function fundsReport(db: Db, now: Date): Promise<AdminFundsReport> {
   const d1 = db.$client;
-  const [all, items] = await d1.batch([
-    d1.prepare(`WITH ${sums(false)} SELECT * FROM d`),
+  // 합계는 창 함수로 전체 구단주(1만여 행)를 한 번에 세고, Worker로는 어긋난 상위 몇 행만 보낸다.
+  const [top, items] = await d1.batch([
+    d1
+      .prepare(
+        `WITH ${sums(false)}
+         SELECT *, count(*) OVER () owners_n, sum(balance) OVER () balance_t, sum(released) OVER () released_t,
+                sum(bonus) OVER () bonus_t, sum(sold) OVER () sold_t, sum(bought) OVER () bought_t,
+                sum(fees) OVER () fees_t, sum(diff <> 0) OVER () mismatched_n
+           FROM d ORDER BY diff <> 0 DESC, abs(diff) DESC LIMIT ?`,
+      )
+      .bind(MISMATCH_LIMIT),
     d1.prepare(`SELECT item, sum(price) v FROM owner_item_purchases GROUP BY item`),
   ]);
-  const rows = all!.results as (SumsRow & { diff: number })[];
-  const total = (k: 'balance' | 'released' | 'bonus' | 'sold' | 'bought' | 'fees') =>
-    rows.reduce((n, r) => n + r[k], 0);
-  const bad = rows.filter((r) => r.diff !== 0);
+  type TopRow = SumsRow & {
+    diff: number;
+    owners_n: number;
+    balance_t: number;
+    released_t: number;
+    bonus_t: number;
+    sold_t: number;
+    bought_t: number;
+    fees_t: number;
+    mismatched_n: number;
+  };
+  const rows = top!.results as TopRow[];
+  const t = rows[0];
   return {
     generatedAt: now.toISOString(),
-    owners: rows.length,
-    balance: total('balance'),
-    released: total('released'),
-    bonus: total('bonus'),
-    sold: total('sold'),
-    bought: total('bought'),
-    fees: total('fees'),
-    mismatched: bad.length,
+    owners: t?.owners_n ?? 0,
+    balance: t?.balance_t ?? 0,
+    released: t?.released_t ?? 0,
+    bonus: t?.bonus_t ?? 0,
+    sold: t?.sold_t ?? 0,
+    bought: t?.bought_t ?? 0,
+    fees: t?.fees_t ?? 0,
+    mismatched: t?.mismatched_n ?? 0,
     items: Object.fromEntries(
       (items!.results as { item: string; v: number }[]).map((x) => [x.item, x.v]),
     ),
-    mismatches: bad
-      .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff))
-      .slice(0, MISMATCH_LIMIT)
-      .map(ownerSums),
+    mismatches: rows
+      .filter((r) => r.diff !== 0)
+      .map(
+        ({
+          owners_n: _o,
+          balance_t: _b,
+          released_t: _r,
+          bonus_t: _bo,
+          sold_t: _s,
+          bought_t: _bu,
+          fees_t: _f,
+          mismatched_n: _m,
+          ...r
+        }) => ownerSums(r),
+      ),
   };
 }
 
