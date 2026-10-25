@@ -1,6 +1,11 @@
 import { EXCHANGE_POOL } from '@offside/contracts/card-exchange-rules';
 import { describe, expect, it } from 'vitest';
-import { exchangeChecklist, exchangeName } from './exchange.js';
+import {
+  exchangeChecklist,
+  exchangeFitCount,
+  exchangeName,
+  exchangeRecommend,
+} from './exchange.js';
 import { en } from './i18n/en/index.js';
 import { ja } from './i18n/ja/index.js';
 import { setLocale } from './i18n/core.js';
@@ -38,5 +43,36 @@ describe('카드 과제 조건 문구 (T-11-374d)', () => {
     } finally {
       setLocale('ko');
     }
+  });
+});
+
+describe('카드 과제 추천 조합 (T-11-499)', () => {
+  const card = (n: number, pos: 'FW' | 'MF', cardValue: number) => ({
+    careerId: `c${n}`,
+    pos,
+    nation: 'KR',
+    peak: 70,
+    legendScore: 0,
+    season: 1,
+    foot: null,
+    dpos: null,
+    league: null,
+    cardValue,
+  });
+  const def = (id: string, count: number, pos?: ('FW' | 'MF')[]) =>
+    ({ id, key: id, tier: 'easy', rule: { count, ...(pos ? { pos } : {}) }, endsAt: '' }) as never;
+
+  it('많이 내는 과제부터 겹치지 않게, 가치 낮은 선수부터 고른다', () => {
+    const cards = [card(1, 'FW', 5), card(2, 'FW', 1), card(3, 'MF', 2), card(4, 'MF', 9)];
+    const recs = exchangeRecommend([def('fw', 1, ['FW']), def('any', 3)], cards);
+    expect(recs.get('any')?.map((c) => c.careerId)).toEqual(['c2', 'c3', 'c1']);
+    // 남은 카드로는 공격수 과제를 못 채우니 따로 채운다.
+    expect(recs.get('fw')?.map((c) => c.careerId)).toEqual(['c2']);
+  });
+
+  it('못 채우는 과제는 null, 맞는 선수 수를 센다', () => {
+    const cards = [card(1, 'MF', 1)];
+    expect(exchangeRecommend([def('fw', 2, ['FW'])], cards).get('fw')).toBeNull();
+    expect(exchangeFitCount({ count: 2, pos: ['MF'] }, cards)).toBe(1);
   });
 });
