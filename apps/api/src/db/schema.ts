@@ -532,6 +532,10 @@ export const careers = sqliteTable(
     index('careers_wall_of_honor_idx')
       .on(sql`coalesce(${table.serviceSeason}, 0)`)
       .where(sql`${table.wallOfHonorJson} is not null`),
+    // T-11-491 운영 도구 이상 기록의 숨긴 커리어 목록 — 숨긴 몇백 행만 든다.
+    index('careers_hidden_legend_idx')
+      .on(table.legendScore)
+      .where(sql`${table.hidden} = 1`),
   ],
 );
 
