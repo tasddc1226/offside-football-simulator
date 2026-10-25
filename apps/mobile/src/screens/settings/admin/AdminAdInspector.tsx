@@ -1,14 +1,18 @@
 // T-11-453 AdMob 광고 검사기 — 미디에이션 어댑터(Meta · Pangle · Liftoff)가 초기화됐는지, 그룹 입찰이 돌아오는지 기기에서 본다.
 // 검사기는 테스트 기기(platform/adConsent.ts TEST_DEVICES)에서만 열린다. 앱 전용(웹에는 없다).
+// T-11-453c SDK는 첫 광고 요청 때 초기화되므로(askConsent), 광고를 아직 안 본 실행(광고 제거 등)에서도 열리게 먼저 초기화한다.
 import { View } from 'react-native';
 import mobileAds from 'react-native-google-mobile-ads';
 import { toast } from '../../../game/host';
+import { askConsent } from '../../../platform/adConsent';
 import { Btn } from '../../../ui/Btn';
 import { Txt } from '../../../ui/Txt';
 
 export default function AdminAdInspector() {
   async function open() {
     try {
+      await askConsent();
+      await mobileAds().initialize();
       await mobileAds().openAdInspector();
     } catch (e) {
       toast(
