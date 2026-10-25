@@ -19,7 +19,7 @@ export const exchange: Translation<ExchangeMsgs> = {
   nameKeepers: '守護神募集',
   nameMidWorkers: '中盤の働き手',
   nameBackline: '守備陣の整理',
-  nameFounders: 'プレシーズンの記憶',
+  nameQuietFarewell: '静かな引退',
   nameStrikers: '攻撃陣の整理',
   nameLeftFoot: '左利きの集まり',
   nameNationalCall: '代表招集',

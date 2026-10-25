@@ -35,6 +35,11 @@ describe('카드 과제 주기 (T-11-374)', () => {
     });
   });
 
+  it('쉬움 과제는 새로 만들 수 없는 프리시즌 카드를 요구하지 않는다 (T-11-374c)', () => {
+    for (const spec of EXCHANGE_POOL.easy) expect(spec.rule.seasons ?? []).not.toContain(0);
+    expect(exchangesAt('2026-10-25T03:00:00.000Z')[0]!.key).toBe('quietFarewell');
+  });
+
   it('하루마다 칸별 다음 과제를 연다', () => {
     const a = exchangesAt('2026-10-20T00:00:00.000Z');
     const b = exchangesAt('2026-10-21T00:00:00.000Z');

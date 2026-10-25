@@ -19,7 +19,7 @@ export const exchange: Translation<ExchangeMsgs> = {
   nameKeepers: 'Goalkeeper call-up',
   nameMidWorkers: 'Midfield workers',
   nameBackline: 'Back line clear-out',
-  nameFounders: 'Preseason memories',
+  nameQuietFarewell: 'Quiet farewells',
   nameStrikers: 'Front line clear-out',
   nameLeftFoot: 'Left-footers',
   nameNationalCall: 'National team call-up',

@@ -26,7 +26,7 @@ const NAMES: Record<string, () => string> = {
   keepers: () => L.nameKeepers,
   midWorkers: () => L.nameMidWorkers,
   backline: () => L.nameBackline,
-  founders: () => L.nameFounders,
+  quietFarewell: () => L.nameQuietFarewell,
   strikers: () => L.nameStrikers,
   leftFoot: () => L.nameLeftFoot,
   nationalCall: () => L.nameNationalCall,
