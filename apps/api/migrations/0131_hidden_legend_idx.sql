@@ -1,0 +1,1 @@
+CREATE INDEX `careers_hidden_legend_idx` ON `careers` (`legend_score`) WHERE "careers"."hidden" = 1;

@@ -2,7 +2,7 @@ import { actionEntry } from './automationEnforcement.js';
 import type { AnomalyCareer, AnomalyReason, AnomalyReport, SeasonGrowth } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { OVR_CAP_BY_AGE, ovrCapAt } from '../../plausibility.js';
-import { createDb } from '../client.js';
+import { createDb, type Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { hideCareerStatements, resetFirstsBackfillStatement, setMeta } from './firsts.js';
 import { appMeta, careers } from '../schema.js';
@@ -12,7 +12,8 @@ import { sweepFarmedPotential } from './potentialAudit.js';
 // 확실한 것(숨김)과 애매한 것(검토)을 나눈다 — 자동으로 내리는 건 사람이 낼 수 없는 값뿐이고, 정상 선수일 수도 있는 높은
 // 값은 운영자가 보고 정한다. 운영 실측(커리어 1만 2천 개)이 근거다: 시즌 간 OVR 최대 상승 22, 나이별 OVR 최고 78/84/88(만
 // 18/19/20세), 정상 레전드 점수 상위 3,300 안팎. 조작이 확인된 두 커리어는 만 18세 OVR 99 · 레전드 점수 4,480대였다.
-// 운영자가 되돌린 커리어(app_meta `anomaly_cleared:<id>`)는 다시 걸지 않는다.
+// 운영자가 되돌린 커리어(app_meta `anomaly_cleared:<id>`)는 다시 걸지 않는다. 점검이 찾은 커리어와 이유는 app_meta
+// `anomaly_found:<id>`에 남겨, 운영자 화면이 시즌 표(수백만 행)를 다시 훑지 않고 그 목록만 읽는다(T-11-491).
 
 export const ANOMALY = {
   /** 한 시즌에 이만큼 이상 오르면 숨긴다(정상 최대 22 위). */
@@ -34,6 +35,9 @@ export const ANOMALY = {
 export const SWEPT_AT_KEY = 'anomaly_sweep_at';
 const CLEARED_PREFIX = 'anomaly_cleared:';
 const clearedKey = (careerId: string) => `${CLEARED_PREFIX}${careerId}`;
+const FOUND_PREFIX = 'anomaly_found:';
+/** FOUND_PREFIX 키 범위의 끝(':' 다음 글자) — LIKE 대신 기본 키 범위로 읽는다. */
+const FOUND_END = 'anomaly_found;';
 const HOUR_MS = 3_600_000;
 const LIST_LIMIT = 100;
 
@@ -45,6 +49,13 @@ type Info = {
   hidden: number;
 };
 type Found = Map<string, { info: Info; reasons: Set<AnomalyReason> }>;
+
+const note = (found: Found, info: Info, reason: AnomalyReason) => {
+  const f = found.get(info.id) ?? { info, reasons: new Set() };
+  found.set(info.id, f);
+  f.reasons.add(reason);
+};
+const COLUMNS = `c.id, c.status, c.legend_score, c.peak, c.hidden`;
 
 /** 시즌 한 줄(나이·OVR·직전 시즌 대비 상승)의 이유. 저장된 행의 `ovrFar`·`ovrHigh`는 상한으로 자르기 전(T-11-023 이전) 기록에만 남는다. */
 export function seasonReasons(age: number, ovr: number, jump: number | null): AnomalyReason[] {
@@ -75,12 +86,7 @@ async function findAnomalies(d1: D1Database, since: string, ids?: string[]): Pro
     if (!ids.length) return new Map();
   }
   const found: Found = new Map();
-  const note = (info: Info, reason: AnomalyReason) => {
-    const f = found.get(info.id) ?? { info, reasons: new Set() };
-    found.set(info.id, f);
-    f.reasons.add(reason);
-  };
-  const columns = `c.id, c.status, c.legend_score, c.peak, c.hidden`;
+  const columns = COLUMNS;
   const [seasons, legends] = await Promise.all([
     d1
       .prepare(
@@ -109,9 +115,33 @@ async function findAnomalies(d1: D1Database, since: string, ids?: string[]): Pro
           .all<Info>(),
   ]);
   for (const r of seasons.results)
-    for (const reason of seasonReasons(r.age, r.ovr, r.jump)) note(r, reason);
-  for (const r of legends?.results ?? []) note(r, 'legend');
+    for (const reason of seasonReasons(r.age, r.ovr, r.jump)) note(found, r, reason);
+  for (const r of legends?.results ?? []) note(found, r, 'legend');
   return found;
+}
+
+/** 이번에 훑은 커리어 중 은퇴 레전드 점수가 검토 기준 이상인 커리어(기본 키로 찾는다). */
+async function legendsOf(d1: D1Database, ids: string[]): Promise<Info[]> {
+  const { results } = await d1
+    .prepare(
+      `SELECT ${COLUMNS} FROM careers c
+       WHERE c.id IN (SELECT value FROM json_each(?1)) AND c.status = 'retired' AND c.legend_score >= ?2`,
+    )
+    .bind(JSON.stringify(ids), ANOMALY.legend)
+    .all<Info>();
+  return results;
+}
+
+/** 찾은 커리어와 이유를 남긴다. 같은 커리어를 다시 찾으면 이유를 새로 쓴다(시즌 이유는 커리어 전체 시즌으로 다시 센다). */
+async function recordFound(db: Db, found: Found) {
+  const list = [...found.values()];
+  for (let i = 0; i < list.length; i += RECORD_CHUNK)
+    await runBatch(
+      db,
+      list
+        .slice(i, i + RECORD_CHUNK)
+        .map((f) => setMeta(db, `${FOUND_PREFIX}${f.info.id}`, JSON.stringify([...f.reasons]))),
+    );
 }
 
 /** 숨기지 않았고 운영자가 되돌려 두지도 않은, 점검 대상으로 남은 커리어. */
@@ -165,6 +195,8 @@ export function growthTampered(
 
 /** cron 한 번의 D1 batch에 담는 커리어 수(커리어마다 문장 4개). */
 const HIDE_CHUNK = 20;
+/** 찾은 커리어를 남길 때 한 batch에 담는 수. */
+const RECORD_CHUNK = 50;
 
 export type AnomalyCursor = { since: string; through: string; at: string; id: string };
 /** The daily checkpoint owns this cursor. Every SQL window sees at most 100 careers. */
@@ -194,6 +226,13 @@ export async function sweepAnomaliesPage(d1: D1Database, now: number, cursor?: A
       )
     : new Map();
   const open = found.size ? openOnly(found, await clearedIds(d1)) : [];
+  // 매일 점검은 지금까지 은퇴 레전드 점수로 숨기지 않았다 — 검토 목록에만 남긴다.
+  const legends = rows.length
+    ? await legendsOf(
+        d1,
+        rows.map((r) => r.id),
+      )
+    : [];
   const hidden = open.filter(
     (f) =>
       f.reasons.has('ovrFar') ||
@@ -206,6 +245,8 @@ export async function sweepAnomaliesPage(d1: D1Database, now: number, cursor?: A
       db,
       hidden.slice(i, i + HIDE_CHUNK).flatMap((f) => hideCareerStatements(db, f.info.id)),
     );
+  for (const info of legends) note(found, info, 'legend');
+  await recordFound(db, found);
   // T-11-462 훑은 커리어에 높은 잠재력이 있으면 그 구단주를 다시 판정한다.
   const farmed = await sweepFarmedPotential(
     db,
@@ -247,6 +288,7 @@ export async function sweepAnomalies(d1: D1Database, now: number): Promise<Sweep
       db,
       toHide.slice(i, i + HIDE_CHUNK).flatMap((f) => hideCareerStatements(db, f.info.id)),
     );
+  await recordFound(db, found);
   await setMeta(db, SWEPT_AT_KEY, new Date(now).toISOString());
   return {
     hidden: toHide.length,
@@ -263,10 +305,16 @@ const toCareer = (info: Info, reasons: Iterable<AnomalyReason>): AnomalyCareer =
   reasons: [...reasons],
 });
 
-/** `GET /v1/admin/anomalies`. 운영자가 열 때만 전부 훑는다(시즌 표를 한 번만 읽는다). */
+/** `GET /v1/admin/anomalies`. 매일 점검이 남긴 목록(app_meta)만 읽는다 — 시즌 표는 훑지 않는다(T-11-491). */
 export async function anomalyReport(d1: D1Database, now: number): Promise<AnomalyReport> {
-  const [found, cleared, hiddenRows] = await Promise.all([
-    findAnomalies(d1, ''),
+  const [stored, cleared, hiddenRows] = await Promise.all([
+    d1
+      .prepare(
+        `SELECT ${COLUMNS}, a.value AS reasons FROM app_meta a JOIN careers c ON c.id = substr(a.key, ?3)
+         WHERE a.key >= ?1 AND a.key < ?2`,
+      )
+      .bind(FOUND_PREFIX, FOUND_END, FOUND_PREFIX.length + 1)
+      .all<Info & { reasons: string }>(),
     clearedIds(d1),
     d1
       .prepare(
@@ -275,6 +323,9 @@ export async function anomalyReport(d1: D1Database, now: number): Promise<Anomal
       .bind(LIST_LIMIT)
       .all<Info>(),
   ]);
+  const found: Found = new Map();
+  for (const { reasons, ...info } of stored.results)
+    for (const reason of JSON.parse(reasons) as AnomalyReason[]) note(found, info, reason);
   const byScore = (a: AnomalyCareer, b: AnomalyCareer) =>
     (b.legendScore ?? 0) - (a.legendScore ?? 0);
   return {
