@@ -19,6 +19,9 @@ export const EDGE = {
   /** T-11-141 공개 밸런스 이력. */
   balanceHistory: '/v1/balance/history',
   adminStats: '/v1/admin/stats',
+  /** T-11-494 무거운 운영 도구 집계. 관리자 확인 뒤에만 읽고, 여러 번 누르거나 새로고침해도 1분 안에는 D1에 다시 가지 않는다. */
+  adminFunds: '/v1/admin/funds',
+  adminAutomation: (hours: number) => `/v1/admin/automation?hours=${hours}`,
   /** T-11-029 서버 최초 기록·서버 기록은 시즌마다 따로다(시즌 id를 푼 경로). */
   firsts: (season: number) => `/v1/firsts?season=${season}`,
   /** T-11-029 영구결번은 시즌마다 따로다(시즌 id를 푼 경로). */

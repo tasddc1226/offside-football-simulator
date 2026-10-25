@@ -19,6 +19,7 @@ import {
 } from '../db/schema.js';
 import { kstWindow } from '../db/repos/revenue.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
+import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
 import {
   ADMIN_EMAIL,
   callJson,
@@ -315,6 +316,38 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
     expect((await toggle(true)).status).toBe(204);
     expect((await report()).hidden.map((c) => c.careerId)).toEqual(['car-x']);
     expect((await toggle(true, 'nope')).status).toBe(404);
+  });
+
+  it('무거운 집계(자금 대조 · 자동 플레이)는 1분 동안 엣지에 담고, 관리자 확인은 매번 한다 (T-11-494)', async () => {
+    const edge = installFakeEdgeCache();
+    try {
+      const admin = await makeAdmin();
+      const user = await issueCookie(ctx);
+      const origin = 'http://localhost';
+      for (const path of ['/v1/admin/funds', '/v1/admin/automation?hours=3']) {
+        expect((await call('GET', path, { cookie: admin.cookie })).status).toBe(200);
+        await flushEdge();
+        const key = [...edge.store.keys()].find((k) => k === `${origin}${path}`);
+        expect(key).toBeDefined();
+        expect(edge.controls.get(key!)).toBe('public, max-age=60');
+        // 담긴 결과가 있어도 관리자가 아니면 막힌다.
+        expect((await call('GET', path, { cookie: user.cookie })).status).toBe(403);
+        // 다시 열면 담긴 결과를 그대로 돌려준다(D1에 다시 가지 않는다).
+        edge.store.set(
+          key!,
+          JSON.stringify({
+            ...JSON.parse(edge.store.get(key!)!),
+            generatedAt: '2000-01-01T00:00:00.000Z',
+          }),
+        );
+        expect(
+          (await data<{ generatedAt: string }>(await call('GET', path, { cookie: admin.cookie })))
+            .generatedAt,
+        ).toBe('2000-01-01T00:00:00.000Z');
+      }
+    } finally {
+      edge.uninstall();
+    }
   });
 
   it('대시보드: 가입·활동·커리어·댓글 수와 최근 14일(KST) 추이', async () => {
