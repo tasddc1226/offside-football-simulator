@@ -71,10 +71,19 @@ describe('T-11-487 시즌 1 기록 보상(GET /v1/items/gift?v=2 · POST /v1/ite
       serviceSeason: o.season ?? 1,
     });
   }
-  /** 다른 구단주의 선수로 순위를 채운다(n명이 score점). */
+  /** 다른 구단주의 선수로 순위를 채운다(n명이 score점). 한 문장으로 넣는다(1,000명을 한 줄씩 넣으면 CI에서 느리다). */
   async function fillAhead(n: number, score: number) {
     const other = await issueCookie(ctx);
-    for (let i = 0; i < n; i++) await addCareer(other.profileId, score);
+    const at = '2026-10-14T00:00:00.000Z';
+    await ctx.env.DB.prepare(
+      `WITH RECURSIVE k(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM k WHERE i < ?1)
+       INSERT INTO careers (id, profile_id, pos, foot, type, trait, start_year, status, app_version,
+         created_at, updated_at, retired_at, retire_age, peak, legend_score, ballon, hidden, service_season)
+       SELECT 'ahead-' || i, ?2, 'FW', '오른발', 'poacher', 'late', 2026, 'retired', '1.0.0', ?3, ?3, ?3,
+         34, 90, ?4, 0, 0, 1 FROM k`,
+    )
+      .bind(n, other.profileId, at, score)
+      .run();
   }
 
   it('시즌 1 중에는 없고, 시즌 2에 세 갈래를 더해 한 번 준다', async () => {
