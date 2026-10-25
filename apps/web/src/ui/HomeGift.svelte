@@ -1,5 +1,5 @@
 <script lang="ts">
-  // 홈 선물 칸(T-11-386 시즌 업적 보상, T-11-472 구단주 선물은 없앴다) — 오프사이드 컵 배너 바로 아래. 로그인한 구단주가 한 번 받으면 사라진다. 묻는 조건 · 메모는
+  // 홈 선물 칸(T-11-386 시즌 업적 보상 → T-11-487 시즌 기록 보상, T-11-472 구단주 선물은 없앴다) — 오프사이드 컵 배너 바로 아래. 로그인한 구단주가 한 번 받으면 사라진다. 묻는 조건 · 메모는
   // app-core api/gift.ts. 첫 화면 번들 밖 지연 청크(Home.svelte가 import()로 부른다).
   import { claimHomeGift, fetchHomeGift, giftCopy, type HomeGift } from '@offside/app-core/api/gift';
   import { giftText as L } from '@offside/app-core/i18n/ko/gift';
@@ -28,6 +28,8 @@
       done = giftCopy(gift).done;
       key = crypto.randomUUID();
       gift = null;
+      // T-11-487 업적 보상 다음에 기록 보상이 있으면 바로 이어 보인다.
+      gift = await fetchHomeGift();
     } else if (r.error.reason === 'GIFT_CLAIMED' || r.error.reason === 'GOOGLE_LOGIN_REQUIRED') {
       gift = null;
     } else {
@@ -46,12 +48,14 @@
     </div>
     <button class="btn" onclick={goRerollShop} data-act="home-gift-owner">{L.toOwner}</button>
   </section>
-{:else if gift && copy}
+{/if}
+{#if gift && copy}
   <section class="card home-gift" data-home-gift={gift.id}>
     <div class="hg-text">
       <small class="eyebrow">Gift</small>
       <b>{copy.title}</b>
       <span class="muted fs-sm">{copy.sub}</span>
+      {#if copy.detail}<span class="fs-xs" data-home-gift-detail>{copy.detail}</span>{/if}
     </div>
     <button class="btn btn-accent" onclick={claim} disabled={busy} data-act="home-gift-claim">{busy ? L.busy : L.btn}</button>
   </section>

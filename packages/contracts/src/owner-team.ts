@@ -511,5 +511,60 @@ export const ACH_SEASON_GIFT = {
   openSeason: ACH_REWARD_FIRST_SEASON,
 } as const;
 
+/**
+ * T-11-487 시즌 1 기록 보상 — 시즌 1 명예의 전당 기록(마감 시각 기준)으로 시즌 2 동안 홈 선물 카드에서 한 번 준다.
+ * 로그인한 구단주만 받는다. 세 갈래를 더하며, 레전드 점수 · 발롱도르는 맞는 칸 하나만 받는다. 컵은 대회마다 단계 보상을
+ * 이미 줘서 더하지 않는다(2026-10-25 사용자 결정). 장수 기준: 컵 우승 15 · 3 · 3, BEST 11 10 · 2 · 2, 컵 4강 7 · 1 · 1.
+ */
+export const RECORD_SEASON_GIFT = { id: 'rec-season-1', season: 1, openSeason: 2 } as const;
+export type RecordReward = { reroll: number; scout: number; boost: number };
+/** 명예의 전당 순위(구단주의 가장 높은 선수, 시즌 결산 hof_rank와 같은 순서) 단계. 10-25 1000위 레전드 점수 약 2,245. */
+export const RECORD_HOF_TIERS: readonly ({ maxRank: number } & RecordReward)[] = [
+  { maxRank: 1, reroll: 15, scout: 3, boost: 3 },
+  { maxRank: 10, reroll: 10, scout: 2, boost: 2 },
+  { maxRank: 100, reroll: 7, scout: 1, boost: 1 },
+  { maxRank: 500, reroll: 5, scout: 1, boost: 0 },
+  { maxRank: 1000, reroll: 3, scout: 0, boost: 0 },
+];
+/** 레전드 점수: 아이콘(1,800점 이상) 수, 아이콘이 없으면 레전드(1,100점 이상) 보유. 위에서부터 맞는 칸 하나. */
+export const RECORD_LEGEND_TIERS: readonly ({ icons: number; legends: number } & RecordReward)[] = [
+  { icons: 5, legends: 0, reroll: 0, scout: 1, boost: 3 },
+  { icons: 1, legends: 0, reroll: 0, scout: 0, boost: 2 },
+  { icons: 0, legends: 1, reroll: 0, scout: 0, boost: 1 },
+];
+/** 발롱도르를 받은 선수 수(수상 횟수가 아니다 — 시즌 1 수상 선수가 1만 4천 명으로 흔하다). */
+export const RECORD_BALLON_TIERS: readonly ({ players: number } & RecordReward)[] = [
+  { players: 5, reroll: 7, scout: 1, boost: 1 },
+  { players: 2, reroll: 5, scout: 0, boost: 1 },
+  { players: 1, reroll: 3, scout: 0, boost: 0 },
+];
+/** 보상을 셀 시즌 기록. hofRank는 명예의 전당 선수가 없으면 null. legends는 아이콘을 뺀 레전드가 아니라 1,100점 이상 전부. */
+export type SeasonRecordFacts = {
+  hofRank: number | null;
+  icons: number;
+  legends: number;
+  ballonPlayers: number;
+};
+const NONE: RecordReward = { reroll: 0, scout: 0, boost: 0 };
+const pick = ({ reroll, scout, boost }: RecordReward): RecordReward => ({ reroll, scout, boost });
+/** 갈래별 보상과 합. */
+export function seasonRecordRewardOf(f: SeasonRecordFacts) {
+  const hof = RECORD_HOF_TIERS.find((t) => f.hofRank !== null && f.hofRank <= t.maxRank);
+  const legend = RECORD_LEGEND_TIERS.find((t) =>
+    t.icons > 0 ? f.icons >= t.icons : f.legends >= t.legends,
+  );
+  const ballon = RECORD_BALLON_TIERS.find((t) => f.ballonPlayers >= t.players);
+  const parts = {
+    hof: hof ? pick(hof) : NONE,
+    legend: legend ? pick(legend) : NONE,
+    ballon: ballon ? pick(ballon) : NONE,
+  };
+  const total = (k: keyof RecordReward) => parts.hof[k] + parts.legend[k] + parts.ballon[k];
+  return {
+    parts,
+    total: { reroll: total('reroll'), scout: total('scout'), boost: total('boost') },
+  };
+}
+
 /** 업적 랭킹 한 페이지의 구단주 수. */
 export const ACH_RANK_PER_PAGE = 20;

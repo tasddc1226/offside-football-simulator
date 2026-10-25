@@ -47,31 +47,41 @@ const GIFT = { id: 'ach-season-1', kind: 'achSeason', season: 1, boost: 16, scou
 // T-11-386 시즌 1 업적 보상(같은 칸). 0장인 아이템은 문장에서 뺀다.
 const SEASON_GIFT = { id: 'ach-season-1', kind: 'achSeason', season: 1, boost: 3, scout: 0 };
 
-async function giftStub(page: Page, owner: '1' | null, gift: 'ok' | 'login', offer: object = GIFT) {
+/** offer: 받기 전 선물. 배열이면 받을 때마다 다음 선물(T-11-487 업적 보상 → 기록 보상), 다 받으면 null. */
+async function giftStub(
+  page: Page,
+  owner: '1' | null,
+  gift: 'ok' | 'login',
+  offer: object | object[] = GIFT,
+) {
+  const offers = Array.isArray(offer) ? offer : [offer];
   await page.addInitScript((owner) => {
     localStorage.setItem('ft_session', '1');
     if (owner && localStorage.getItem('ft_owner') === null) localStorage.setItem('ft_owner', owner);
   }, owner);
   await page.route(`${API}/v1/cups/home`, (r) => r.fulfill(ok(CUP_HOME)));
   const calls = { get: 0, claim: 0, body: [] as unknown[] };
-  await page.route(`${API}/v1/items/gift`, (r) => {
-    calls.get++;
-    return r.fulfill(
-      gift === 'ok'
-        ? ok({ gift: offer })
-        : {
-            status: 403,
-            json: {
-              error: {
-                code: 'FORBIDDEN',
-                message: '로그인하면 팀을 만들 수 있어요.',
-                retryable: false,
-                details: { reason: 'GOOGLE_LOGIN_REQUIRED' },
+  await page.route(
+    (u) => `${u.origin}${u.pathname}` === `${API}/v1/items/gift`,
+    (r) => {
+      calls.get++;
+      return r.fulfill(
+        gift === 'ok'
+          ? ok({ gift: offers[calls.claim] ?? null })
+          : {
+              status: 403,
+              json: {
+                error: {
+                  code: 'FORBIDDEN',
+                  message: '로그인하면 팀을 만들 수 있어요.',
+                  retryable: false,
+                  details: { reason: 'GOOGLE_LOGIN_REQUIRED' },
+                },
               },
             },
-          },
-    );
-  });
+      );
+    },
+  );
   await page.route(`${API}/v1/items/gift/claim`, (r) => {
     calls.claim++;
     calls.body.push(r.request().postDataJSON());
@@ -110,14 +120,56 @@ test('홈 선물: 히어로 바로 아래에서 한 번 받으면 사라지고 �
   await expect(done).toContainText('잠재력 강화권 16장과 프리미엄 스카우트권 6장을 받았어요');
   await expect(done).toContainText('선수 탭 잠재력 강화');
   await expect(card).toHaveCount(0);
-  expect(calls).toMatchObject({ get: 1, claim: 1, body: [{ id: GIFT.id }] });
+  // 받은 뒤 다음 선물(T-11-487)을 한 번 다시 묻고, 없으면 그 시즌엔 묻지 않는다.
+  await expect.poll(() => calls.get).toBe(2);
+  expect(calls).toMatchObject({ claim: 1, body: [{ id: GIFT.id }] });
   await done.locator('[data-act="home-gift-owner"]').click();
   await expect(page.locator('.hero-home')).toHaveCount(0);
 
   await page.goto('/');
   await expect(page.locator('[data-cup-banner]')).toBeVisible();
   await expect(card).toHaveCount(0);
-  expect(calls).toMatchObject({ get: 1, claim: 1 });
+  expect(calls).toMatchObject({ get: 2, claim: 1 });
+});
+
+test('홈 선물: 업적 보상을 받으면 시즌 기록 보상이 이어서 보인다(T-11-487)', async ({ page }) => {
+  const z = { reroll: 0, scout: 0, boost: 0 };
+  const RECORD = {
+    id: 'rec-season-1',
+    kind: 'recordSeason',
+    season: 1,
+    reroll: 12,
+    scout: 1,
+    boost: 4,
+    record: {
+      hofRank: 13,
+      icons: 2,
+      legends: 3,
+      ballonPlayers: 2,
+      hof: { reroll: 7, scout: 1, boost: 1 },
+      legend: { ...z, boost: 2 },
+      ballon: { reroll: 5, scout: 0, boost: 1 },
+    },
+  };
+  const calls = await giftStub(page, '1', 'ok', [SEASON_GIFT, RECORD]);
+  await page.goto('/');
+  const card = page.locator('[data-home-gift]');
+  await expect(card).toHaveAttribute('data-home-gift', 'ach-season-1');
+  await card.locator('[data-act="home-gift-claim"]').click();
+  await expect(page.locator('[data-home-gift-done]')).toContainText('잠재력 강화권 3장을 받았어요');
+  await expect(card).toHaveAttribute('data-home-gift', 'rec-season-1');
+  await expect(card).toContainText('시즌 1 기록 보상이 도착했어요');
+  await expect(card.locator('[data-home-gift-detail]')).toHaveText(
+    '명예의 전당 13위 · 아이콘 2명 · 발롱도르 수상 선수 2명',
+  );
+  await card.locator('[data-act="home-gift-claim"]').click();
+  await expect(page.locator('[data-home-gift-done]')).toContainText('리롤권 12장');
+  await expect(card).toHaveCount(0);
+  expect(calls).toMatchObject({
+    get: 3,
+    claim: 2,
+    body: [{ id: 'ach-season-1' }, { id: 'rec-season-1' }],
+  });
 });
 
 test('홈 선물: 로그인하지 않은 기기는 한 번 확인한 뒤 다시 묻지 않는다', async ({ page }) => {
@@ -145,5 +197,6 @@ test('T-11-386 시즌 1 업적 보상: 같은 칸에서 받은 장수만 보이�
     '잠재력 강화권 3장을 받았어요.',
   );
   await expect(card).toHaveCount(0);
-  expect(calls).toMatchObject({ get: 1, claim: 1, body: [{ id: 'ach-season-1' }] });
+  await expect.poll(() => calls.get).toBe(2);
+  expect(calls).toMatchObject({ claim: 1, body: [{ id: 'ach-season-1' }] });
 });

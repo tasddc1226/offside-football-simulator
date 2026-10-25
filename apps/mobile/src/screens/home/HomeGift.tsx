@@ -1,4 +1,4 @@
-// 홈 선물 칸(T-11-386 시즌 업적 보상, T-11-472 구단주 선물은 없앴다)(웹 HomeGift.svelte) — 오프사이드 컵 배너 바로 아래. 로그인한 구단주가 한 번 받으면 사라진다.
+// 홈 선물 칸(T-11-386 시즌 업적 보상 → T-11-487 시즌 기록 보상, T-11-472 구단주 선물은 없앴다)(웹 HomeGift.svelte) — 오프사이드 컵 배너 바로 아래. 로그인한 구단주가 한 번 받으면 사라진다.
 // 묻는 조건 · 메모는 app-core api/gift.ts.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
@@ -34,29 +34,28 @@ export function HomeGift() {
     void reload();
   }, [reload, home]);
   useOnPull(reload);
-  if (done)
-    return (
-      <Card
-        testID="home-gift-done"
-        gap={10}
-        style={{ borderWidth: 1, borderColor: alpha(c.accent, 0.45) }}
-      >
-        <View style={{ gap: 2 }} accessibilityLiveRegion="polite">
-          <Txt v="eyebrow">Gift</Txt>
-          <Txt bold accessibilityRole="header">
-            {L.doneTitle}
-          </Txt>
-          <Txt v="sm">{done}</Txt>
-          <Txt v="xs" tone="muted">
-            {L.useHint}
-          </Txt>
-        </View>
-        <Btn sm testID="home-gift-owner" onPress={goRerollShop} style={{ alignSelf: 'flex-start' }}>
-          {L.toOwner}
-        </Btn>
-      </Card>
-    );
-  if (!gift) return null;
+  const doneCard = done ? (
+    <Card
+      testID="home-gift-done"
+      gap={10}
+      style={{ borderWidth: 1, borderColor: alpha(c.accent, 0.45) }}
+    >
+      <View style={{ gap: 2 }} accessibilityLiveRegion="polite">
+        <Txt v="eyebrow">Gift</Txt>
+        <Txt bold accessibilityRole="header">
+          {L.doneTitle}
+        </Txt>
+        <Txt v="sm">{done}</Txt>
+        <Txt v="xs" tone="muted">
+          {L.useHint}
+        </Txt>
+      </View>
+      <Btn sm testID="home-gift-owner" onPress={goRerollShop} style={{ alignSelf: 'flex-start' }}>
+        {L.toOwner}
+      </Btn>
+    </Card>
+  ) : null;
+  if (!gift) return doneCard;
   const copy = giftCopy(gift);
 
   const claim = async () => {
@@ -68,6 +67,8 @@ export function HomeGift() {
       setDone(copy.done);
       key.current = crypto.randomUUID();
       setGift(null);
+      // T-11-487 업적 보상 다음에 기록 보상이 있으면 바로 이어 보인다.
+      void reload();
     } else if (r.error.reason === 'GIFT_CLAIMED' || r.error.reason === 'GOOGLE_LOGIN_REQUIRED') {
       setGift(null);
     } else {
@@ -76,25 +77,33 @@ export function HomeGift() {
   };
 
   return (
-    <Card
-      testID="home-gift"
-      gap={12}
-      style={{ borderWidth: 1, borderColor: alpha(c.accent, 0.45), flexDirection: 'row' }}
-    >
-      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-        <Txt v="eyebrow">Gift</Txt>
-        <Txt bold accessibilityRole="header">
-          {copy.title}
-        </Txt>
-        <Txt v="sm" tone="muted">
-          {copy.sub}
-        </Txt>
-      </View>
-      <View style={{ justifyContent: 'center' }}>
-        <Btn kind="accent" disabled={busy} testID="home-gift-claim" onPress={() => void claim()}>
-          {busy ? L.busy : L.btn}
-        </Btn>
-      </View>
-    </Card>
+    <>
+      {doneCard}
+      <Card
+        testID="home-gift"
+        gap={12}
+        style={{ borderWidth: 1, borderColor: alpha(c.accent, 0.45), flexDirection: 'row' }}
+      >
+        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+          <Txt v="eyebrow">Gift</Txt>
+          <Txt bold accessibilityRole="header">
+            {copy.title}
+          </Txt>
+          <Txt v="sm" tone="muted">
+            {copy.sub}
+          </Txt>
+          {copy.detail ? (
+            <Txt v="xs" testID="home-gift-detail">
+              {copy.detail}
+            </Txt>
+          ) : null}
+        </View>
+        <View style={{ justifyContent: 'center' }}>
+          <Btn kind="accent" disabled={busy} testID="home-gift-claim" onPress={() => void claim()}>
+            {busy ? L.busy : L.btn}
+          </Btn>
+        </View>
+      </Card>
+    </>
   );
 }

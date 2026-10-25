@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE_SPEC } from './balance-spec.js';
 import {
+  seasonRecordRewardOf,
+  type SeasonRecordFacts,
   PAST_SALARY_BUDGET,
   PAST_SALARY_TABLE,
   pastSalarySum,
@@ -359,5 +361,44 @@ describe('T-11-376 지난 시즌 선수 급여', () => {
     expect(seasonSalaryBudget(80, 10, 2)).toBe(90);
     expect(seasonSalaryBudget(80, 10, 4)).toBe(110);
     expect(seasonSalaryBudget(60, 0, 3)).toBe(60);
+  });
+});
+
+describe('T-11-487 시즌 1 기록 보상', () => {
+  const of = (f: Partial<SeasonRecordFacts>) =>
+    seasonRecordRewardOf({ hofRank: null, icons: 0, legends: 0, ballonPlayers: 0, ...f });
+
+  it('기록이 없으면 0', () => {
+    expect(of({}).total).toEqual({ reroll: 0, scout: 0, boost: 0 });
+  });
+
+  it('명예의 전당 순위 경계', () => {
+    expect(of({ hofRank: 1 }).parts.hof).toEqual({ reroll: 15, scout: 3, boost: 3 });
+    expect(of({ hofRank: 2 }).parts.hof).toEqual({ reroll: 10, scout: 2, boost: 2 });
+    expect(of({ hofRank: 10 }).parts.hof).toEqual({ reroll: 10, scout: 2, boost: 2 });
+    expect(of({ hofRank: 11 }).parts.hof).toEqual({ reroll: 7, scout: 1, boost: 1 });
+    expect(of({ hofRank: 500 }).parts.hof).toEqual({ reroll: 5, scout: 1, boost: 0 });
+    expect(of({ hofRank: 1000 }).parts.hof).toEqual({ reroll: 3, scout: 0, boost: 0 });
+    expect(of({ hofRank: 1001 }).parts.hof).toEqual({ reroll: 0, scout: 0, boost: 0 });
+  });
+
+  it('레전드 점수는 맞는 칸 하나만', () => {
+    expect(of({ icons: 5, legends: 9 }).parts.legend).toEqual({ reroll: 0, scout: 1, boost: 3 });
+    expect(of({ icons: 4, legends: 9 }).parts.legend).toEqual({ reroll: 0, scout: 0, boost: 2 });
+    expect(of({ icons: 0, legends: 1 }).parts.legend).toEqual({ reroll: 0, scout: 0, boost: 1 });
+  });
+
+  it('발롱도르는 수상 선수 수로 한 칸', () => {
+    expect(of({ ballonPlayers: 1 }).parts.ballon).toEqual({ reroll: 3, scout: 0, boost: 0 });
+    expect(of({ ballonPlayers: 4 }).parts.ballon).toEqual({ reroll: 5, scout: 0, boost: 1 });
+    expect(of({ ballonPlayers: 12 }).parts.ballon).toEqual({ reroll: 7, scout: 1, boost: 1 });
+  });
+
+  it('최대치는 세 갈래 합', () => {
+    expect(of({ hofRank: 1, icons: 6, legends: 6, ballonPlayers: 5 }).total).toEqual({
+      reroll: 22,
+      scout: 5,
+      boost: 7,
+    });
   });
 });
