@@ -23,7 +23,13 @@ import {
   sellCandidates,
   sellNote,
   marketDetailFilters,
+  findClubs,
+  findLeagueOf,
+  findLeagues,
+  findNations,
+  marketFindChips,
   marketFiltered,
+  marketSubReset,
   marketTypeFilters,
   pickMarketFilter,
 } from './market.js';
@@ -219,6 +225,53 @@ describe('이적시장 세부 필터 (T-11-474)', () => {
     expect(pickMarketFilter(f, { pos: 'MF' })).toEqual({ pos: 'MF' });
     expect(pickMarketFilter(f, { pos: 'FW' })).toEqual(f);
     expect(marketFiltered({})).toBe(false);
+  });
+
+  it('T-11-500 국적 · 팀은 포지션을 바꿔도 남고, 리그와 클럽은 둘 중 하나만', () => {
+    const f = pickMarketFilter({ pos: 'FW', dpos: 'LW' }, { nation: 'BR' });
+    expect(pickMarketFilter(f, { pos: 'MF' })).toEqual({ pos: 'MF', nation: 'BR' });
+    expect(marketSubReset(f)).toEqual({ pos: 'FW', nation: 'BR' });
+    const club = pickMarketFilter(pickMarketFilter(f, { league: 'pl' }), { club: 'pl-0' });
+    expect(club).toMatchObject({ club: 'pl-0', league: undefined });
+    expect(pickMarketFilter(club, { league: 'll' })).toMatchObject({
+      league: 'll',
+      club: undefined,
+    });
+    expect(marketFiltered({ nation: 'BR' })).toBe(true);
+    expect(marketFindChips({ nation: 'BR', club: 'pl-0' })).toEqual([
+      { key: 'nation', name: '브라질' },
+      { key: 'club', name: '맨체스터 스카이블루' },
+    ]);
+  });
+
+  it('T-11-500 고를 거리를 이름으로 좁히고, 모르는 국적 · 아마추어 클럽은 뺀다', () => {
+    const facets = {
+      nations: [
+        { id: 'KR', n: 9 },
+        { id: 'BR', n: 3 },
+        { id: 'ZZ', n: 1 },
+      ],
+      leagues: [
+        { id: 'pl', n: 5 },
+        { id: 'll', n: 2 },
+        { id: 'hs', n: 1 },
+      ],
+      clubs: [
+        { id: 'pl-0', n: 3 },
+        { id: 'pl-4', n: 2 },
+        { id: 'll-1', n: 2 },
+        { id: 'hs-0', n: 1 },
+        { id: 'pl-99', n: 1 },
+      ],
+    };
+    expect(findNations(facets, '').map((x) => x.id)).toEqual(['KR', 'BR']);
+    expect(findNations(facets, '브라').map((x) => x.id)).toEqual(['BR']);
+    expect(findLeagues(facets, '').map((x) => x.id)).toEqual(['pl', 'll']);
+    expect(findClubs(facets, 'pl', '').map((x) => x.id)).toEqual(['pl-0', 'pl-4']);
+    // 검색어가 있으면 리그와 상관없이 모든 클럽에서 찾는다(띄어쓰기 무시).
+    expect(findClubs(facets, 'll', '맨체스터스카이').map((x) => x.id)).toEqual(['pl-0']);
+    expect(findLeagueOf({ club: 'll-1' }, facets)).toBe('ll');
+    expect(findLeagueOf({}, facets)).toBe('pl');
   });
 
   it('필터 유형 id는 게임 유형 목록과 같다', () => {

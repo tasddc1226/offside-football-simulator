@@ -657,3 +657,82 @@ test('T-11-442 리롤권 상점에서 자금이 모자라면 모자란 금액과
   await expect(page.locator('.mk-pane[aria-label="방출해서 자금 만들기"]')).toBeVisible();
   await expect(page.locator('[data-act="open-release"]')).toHaveAttribute('aria-pressed', 'true');
 });
+
+test('T-11-500 국적 · 팀으로 찾기 — 시트를 열 때만 고를 거리를 받고, 고르면 목록을 그 조건으로 다시 받는다', async ({
+  page,
+}) => {
+  await stub(page);
+  await page.route(`${API}/v1/market/me`, (r) => r.fulfill(me(200_000)));
+  const lists: string[] = [];
+  await page.route(
+    (u) => u.href.startsWith(API) && u.pathname === '/v1/market',
+    (r) => {
+      lists.push(new URL(r.request().url()).search);
+      return r.fulfill(
+        ok({
+          season: 0,
+          items: [{ ...listing, card: { ...card, nation: 'BR', league: 'pl', club: 'pl-0' } }],
+          hasMore: false,
+          recent: [],
+        }),
+      );
+    },
+  );
+  await page.route(`${API}/v1/market/chart**`, (r) => r.fulfill(ok({ season: 0, points: [] })));
+  let facetCalls = 0;
+  await page.route(`${API}/v1/market/facets`, (r) => {
+    facetCalls++;
+    return r.fulfill(
+      ok({
+        nations: [
+          { id: 'KR', n: 30 },
+          { id: 'BR', n: 4 },
+        ],
+        leagues: [
+          { id: 'pl', n: 20 },
+          { id: 'll', n: 5 },
+        ],
+        clubs: [
+          { id: 'pl-0', n: 9 },
+          { id: 'pl-4', n: 3 },
+          { id: 'll-1', n: 2 },
+        ],
+      }),
+    );
+  });
+  await page.goto('/');
+  await page.locator('[data-act="home-market"]').click();
+  // 매물 줄에 국적 · 가장 오래 뛴 클럽을 보인다.
+  await expect(page.locator(`[data-listing="${LISTING}"] [data-listing-from]`)).toHaveText(
+    '브라질 · 맨체스터 스카이블루',
+  );
+  expect(facetCalls).toBe(0);
+
+  await page.locator('[data-act="market-find"]').click();
+  const sheet = page.getByRole('dialog', { name: '국적 · 팀으로 찾기' });
+  await expect(sheet.locator('[data-find-nation]')).toHaveCount(2);
+  await expect(sheet.locator('[data-find-nation="BR"]')).toContainText('4');
+  await sheet.locator('[data-find-query]').fill('브라');
+  await expect(sheet.locator('[data-find-nation]')).toHaveCount(1);
+  await expectNoA11yViolations(page);
+  await sheet.locator('[data-find-nation="BR"]').click();
+  await expect(sheet).toHaveCount(0);
+  await expect(page.locator('[data-market-find-chip="nation"]')).toHaveText('브라질');
+  await expect.poll(() => lists.at(-1)).toBe('?sort=new&nation=BR');
+
+  // 팀 탭: 매물이 가장 많은 리그가 펼쳐지고, 클럽을 고르면 국적과 함께 건다.
+  await page.locator('[data-act="market-find"]').click();
+  await sheet.locator('[data-find-tab="team"]').click();
+  await expect(sheet.locator('[data-find-club]')).toHaveCount(2);
+  await sheet.locator('[data-find-league="ll"]').click();
+  await expect(sheet.locator('[data-find-club]')).toHaveCount(1);
+  await sheet.locator('[data-find-club="ll-1"]').click();
+  await expect.poll(() => lists.at(-1)).toBe('?sort=new&nation=BR&club=ll-1');
+  // 포지션을 바꿔도 국적 · 팀은 남는다.
+  await page.locator('[data-market-pos="FW"]').click();
+  await expect.poll(() => lists.at(-1)).toBe('?sort=new&pos=FW&nation=BR&club=ll-1');
+  // 칩을 누르면 그 조건만 푼다. 시트를 다시 열어도 고를 거리는 메모로 그린다.
+  await page.locator('[data-market-find-chip="nation"]').click();
+  await expect.poll(() => lists.at(-1)).toBe('?sort=new&pos=FW&club=ll-1');
+  expect(facetCalls).toBe(1);
+});

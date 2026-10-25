@@ -75,6 +75,8 @@ export const EDGE = {
     f: { pos?: string | undefined; dpos?: string | undefined; type?: string | undefined } = {},
   ) =>
     `/v1/market?season=${season}&sort=${sort}${f.pos ? `&pos=${f.pos}` : ''}${f.dpos ? `&dpos=${f.dpos}` : ''}${f.type ? `&type=${f.type}` : ''}`,
+  /** T-11-500 열린 매물의 국적 · 리그 · 클럽별 수(시즌별). TTL로만 새로 읽는다. */
+  marketFacets: (season: number) => `/v1/market/facets?season=${season}`,
   /** 게시판 목록은 첫 페이지(웹 기본 limit)만 담는다. */
   publicNews: (board: string) => `/v1/public-news/${board}`,
   boardFirstPage: (board: string) => `/v1/boards/${board}/posts?limit=${BOARD_PAGE_LIMIT}`,

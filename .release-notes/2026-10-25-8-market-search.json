@@ -1,0 +1,26 @@
+{
+  "id": "t-11-500-market-search",
+  "title": "이적시장 국적 · 팀으로 찾기",
+  "items": [
+    "이적시장의 '국적 · 팀' 버튼으로 매물이 있는 국적 · 리그 · 클럽을 매물 수와 함께 보고 골라 거를 수 있어요",
+    "이름을 쳐서 국적이나 클럽을 바로 찾을 수 있고, 고른 조건은 칩을 눌러 하나씩 풀어요",
+    "매물마다 선수의 국적과 가장 오래 뛴 클럽을 함께 보여 줘요"
+  ],
+  "en": {
+    "title": "Search the market by nationality and team",
+    "items": [
+      "Tap 'Nationality · Team' in the transfer market to see every nationality, league and club with listings, with counts, and filter by them.",
+      "Type a name to jump straight to a nationality or club, and tap a chip to remove that filter.",
+      "Each listing now shows the player's nationality and the club they played for longest."
+    ]
+  },
+  "ja": {
+    "title": "移籍市場を国籍 · チームで検索",
+    "items": [
+      "移籍市場の「国籍・チーム」ボタンで、出品のある国籍 · リーグ · クラブを件数付きで確認して絞り込めます。",
+      "名前を入力すると国籍やクラブをすぐに探せて、選んだ条件はチップをタップするとひとつずつ外せます。",
+      "出品ごとに選手の国籍と最も長くプレーしたクラブを表示します。"
+    ]
+  },
+  "availability": "web-app"
+}

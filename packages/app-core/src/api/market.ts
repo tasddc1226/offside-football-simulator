@@ -6,6 +6,7 @@ import type {
   MarketCardTradesResponse,
   MarketChartRange,
   MarketChartResponse,
+  MarketFacetsResponse,
   MarketFundsResponse,
   MarketListResponse,
   MarketMeResponse,
@@ -19,6 +20,7 @@ export type {
   MarketCard,
   MarketChartPoint,
   MarketChartRange,
+  MarketFacetsResponse,
   MarketFundsResponse,
   MarketListing,
   MarketListResponse,
@@ -32,13 +34,26 @@ export type {
 /** 지금 시즌 열린 등록. 서버가 첫 페이지를 15초 엣지 캐시한다. 쓰기(등록·취소·영입)는 메모를 비운다. */
 export const fetchMarket = (
   sort: MarketSort,
-  f: { pos?: CareerPos | undefined; dpos?: string | undefined; type?: string | undefined },
+  f: {
+    pos?: CareerPos | undefined;
+    dpos?: string | undefined;
+    type?: string | undefined;
+    nation?: string | undefined;
+    league?: string | undefined;
+    club?: string | undefined;
+  },
   page: number,
-) =>
-  cachedGet<MarketListResponse>(
-    `/v1/market?sort=${sort}${f.pos ? `&pos=${f.pos}` : ''}${f.dpos ? `&dpos=${f.dpos}` : ''}${f.type ? `&type=${f.type}` : ''}${page ? `&page=${page}` : ''}`,
+) => {
+  const q = (['pos', 'dpos', 'type', 'nation', 'league', 'club'] as const)
+    .map((k) => (f[k] ? `&${k}=${encodeURIComponent(f[k])}` : ''))
+    .join('');
+  return cachedGet<MarketListResponse>(
+    `/v1/market?sort=${sort}${q}${page ? `&page=${page}` : ''}`,
     30_000,
   );
+};
+/** T-11-500 '국적 · 팀' 시트의 고를 거리(매물이 있는 국적 · 리그 · 클럽과 수). 시트를 열 때만. 서버가 1분 엣지 캐시한다. */
+export const fetchMarketFacets = () => cachedGet<MarketFacetsResponse>('/v1/market/facets', 60_000);
 /** 시세 차트(T-11-080f). pos·band가 없으면 시장 전체. 서버가 1분 엣지 캐시하니 메모도 1분. */
 export const fetchMarketChart = (
   range: MarketChartRange,
