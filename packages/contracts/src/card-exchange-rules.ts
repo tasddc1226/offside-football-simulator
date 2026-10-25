@@ -4,6 +4,7 @@
 import { DAY_MS, KST_MS } from './kst.js';
 import type { CareerPos } from './careers.js';
 import type { OwnerItem } from './cup.js';
+import type { DetailPos } from './positions.js';
 
 export const EXCHANGE_TIERS = ['easy', 'normal', 'hard'] as const;
 export type ExchangeTier = (typeof EXCHANGE_TIERS)[number];
@@ -29,6 +30,12 @@ export type ExchangeRule = {
   seasons?: readonly number[];
   /** 모든 카드의 주발('왼발' · '오른발' · '양발', 저장값). */
   foot?: string;
+  /** T-11-374d 모든 카드의 세부 포지션이 이 중 하나. 세부 포지션이 없는 프리시즌 카드는 맞지 않는다. */
+  dpos?: readonly DetailPos[];
+  /** T-11-374d 모두 가장 오래 뛴 프로 리그가 같다(리그를 모르는 카드는 맞지 않는다). */
+  sameLeague?: boolean;
+  /** T-11-374d 모두 국적이 다르다. */
+  distinctNations?: boolean;
 };
 
 export type ExchangeReward = { item: OwnerItem; qty: number };
@@ -76,6 +83,11 @@ export const EXCHANGE_POOL: Record<ExchangeTier, readonly ExchangeSpec[]> = {
     { key: 'strikers', rule: { count: 3, pos: ['FW'], peakMax: 79 } },
     // i18n-ignore: 주발은 커리어 저장값(한국어) 그대로 비교한다
     { key: 'leftFoot', rule: { count: 3, foot: '왼발' } },
+    // T-11-374d 여기부터 늘린 과제(POOL_GROWN). 묶음 뒤에만 더한다.
+    { key: 'centerBacks', rule: { count: 2, dpos: ['CB', 'SW'] } },
+    { key: 'wingers', rule: { count: 2, dpos: ['LW', 'RW', 'W', 'LM', 'RM'] } },
+    // i18n-ignore: 주발은 커리어 저장값(한국어) 그대로 비교한다
+    { key: 'twoFooted', rule: { count: 2, foot: '양발' } },
   ],
   normal: [
     { key: 'nationalCall', rule: { count: 4, sameNation: true } },
@@ -83,6 +95,9 @@ export const EXCHANGE_POOL: Record<ExchangeTier, readonly ExchangeSpec[]> = {
     { key: 'frontLine', rule: { count: 4, shape: { MF: 2, FW: 2 }, avgPeakMin: 77 } },
     { key: 'veterans', rule: { count: 4, peakMin: 80 } },
     { key: 'seasonOne', rule: { count: 4, seasons: [1] } },
+    { key: 'worldTour', rule: { count: 4, distinctNations: true } },
+    { key: 'leagueMates', rule: { count: 4, sameLeague: true } },
+    { key: 'engineRoom', rule: { count: 4, dpos: ['DM', 'CM'], avgPeakMin: 75 } },
   ],
   hard: [
     {
@@ -92,7 +107,19 @@ export const EXCHANGE_POOL: Record<ExchangeTier, readonly ExchangeSpec[]> = {
     { key: 'legendGift', rule: { count: 5, legendOne: 600, avgPeakMin: 78 } },
     { key: 'oneNation', rule: { count: 6, sameNation: true, avgPeakMin: 78 } },
     { key: 'elite', rule: { count: 5, peakMin: 85 } },
+    { key: 'worldSelect', rule: { count: 5, distinctNations: true, avgPeakMin: 80 } },
+    { key: 'leagueStars', rule: { count: 5, sameLeague: true, avgPeakMin: 79 } },
   ],
+};
+
+/**
+ * T-11-374d 과제를 늘린 날(KST). 그 전 날은 늘리기 전 묶음 길이로 돌아, 배포한 날 이미 연 과제가 하루 중간에 바뀌지 않는다.
+ * 늘린 날에는 새로 더한 과제부터 차례로 연다.
+ * 묶음을 다시 늘릴 때는 from을 배포 다음 날로 옮기고 before에 지금 길이를 적는다.
+ */
+export const POOL_GROWN = {
+  from: '2026-10-27',
+  before: { easy: 6, normal: 5, hard: 4 } satisfies Record<ExchangeTier, number>,
 };
 
 /** 오늘(0시 KST 시작)의 KST 날짜 키와 UTC ISO 경계. */
@@ -116,8 +143,14 @@ export function exchangesAt(nowIso: string): ExchangeDef[] {
   const n = dayIndex(day.key);
   return EXCHANGE_TIERS.map((tier) => {
     const pool = EXCHANGE_POOL[tier];
+    const before = POOL_GROWN.before[tier];
+    // 늘린 날부터는 새 과제(묶음 뒤쪽)부터 연다.
+    const i =
+      day.key < POOL_GROWN.from
+        ? n % before
+        : (n - dayIndex(POOL_GROWN.from) + before) % pool.length;
     return {
-      ...pool[n % pool.length]!,
+      ...pool[i]!,
       id: `${day.key}-${tier}`,
       tier,
       startsAt: day.startsAt,
@@ -138,6 +171,9 @@ export type ExchangeCard = {
   legendScore?: number | null;
   season?: number;
   foot?: string | null;
+  dpos?: DetailPos | null;
+  /** 가장 오래 뛴 프로 리그 id(careers.main_league). 모르면 null. */
+  league?: string | null;
 };
 
 export const EXCHANGE_CONDITIONS = [
@@ -150,10 +186,13 @@ export const EXCHANGE_CONDITIONS = [
   'legendOne',
   'seasons',
   'foot',
+  'dpos',
+  'sameLeague',
+  'distinctNations',
 ] as const;
 export type ExchangeCondition = (typeof EXCHANGE_CONDITIONS)[number];
 
-/** 카드 한 장이 묶음 전체 조건과 상관없이 혼자 맞아야 하는 조건(포지션 · 최고 OVR 범위 · 시즌 · 주발). */
+/** 카드 한 장이 묶음 전체 조건과 상관없이 혼자 맞아야 하는 조건(포지션 · 최고 OVR 범위 · 시즌 · 주발 · 세부 포지션 · 리그 유무). */
 export function cardFits(rule: ExchangeRule, c: ExchangeCard): boolean {
   if (rule.pos && !rule.pos.includes(c.pos)) return false;
   if (rule.shape && !rule.shape[c.pos]) return false;
@@ -161,6 +200,8 @@ export function cardFits(rule: ExchangeRule, c: ExchangeCard): boolean {
   if (rule.peakMax !== undefined && c.peak > rule.peakMax) return false;
   if (rule.seasons && !rule.seasons.includes(c.season ?? 0)) return false;
   if (rule.foot && c.foot !== rule.foot) return false;
+  if (rule.dpos && !(c.dpos && rule.dpos.includes(c.dpos))) return false;
+  if (rule.sameLeague && !c.league) return false;
   return true;
 }
 
@@ -204,6 +245,18 @@ export function exchangeChecks(
   if (rule.seasons)
     out.push({ condition: 'seasons', met: each((c) => rule.seasons!.includes(c.season ?? 0)) });
   if (rule.foot) out.push({ condition: 'foot', met: each((c) => c.foot === rule.foot) });
+  if (rule.dpos)
+    out.push({ condition: 'dpos', met: each((c) => !!c.dpos && rule.dpos!.includes(c.dpos)) });
+  if (rule.sameLeague)
+    out.push({
+      condition: 'sameLeague',
+      met: each((c) => !!c.league && c.league === picked[0]!.league),
+    });
+  if (rule.distinctNations)
+    out.push({
+      condition: 'distinctNations',
+      met: each((c) => !!c.nation) && new Set(picked.map((c) => c.nation)).size === picked.length,
+    });
   return out;
 }
 
@@ -220,7 +273,7 @@ export function exchangeMet(rule: ExchangeRule, picked: readonly ExchangeCard[])
 
 /**
  * "맞는 카드로 채우기": 낼 수 있는 카드 중 혼자 맞는 카드를 가치가 낮은 순으로 골라 조건을 채운다. 포지션 구성은 자리마다,
- * 같은 국적은 가장 많은 국적에서, 레전드 점수 한 장은 그 조건을 채우는 가장 싼 카드부터 넣는다. 평균 OVR이 모자라면
+ * 같은 국적 · 같은 리그는 가장 많은 국적 · 리그에서, 다른 국적은 국적마다 한 장씩, 레전드 점수 한 장은 그 조건을 채우는 가장 싼 카드부터 넣는다. 평균 OVR이 모자라면
  * 고른 카드 중 가장 낮은 카드를 남은 카드 중 더 높은 카드로 바꾼다. 못 채우면 null.
  */
 export function autoFill<T extends ExchangeCard & { cardValue?: number | null }>(
@@ -230,9 +283,13 @@ export function autoFill<T extends ExchangeCard & { cardValue?: number | null }>
   const value = (c: T) => c.cardValue ?? 0;
   const fit = cards.filter((c) => cardFits(rule, c)).sort((a, b) => value(a) - value(b));
   const groups: T[][] = [];
-  if (rule.sameNation) {
+  const key = rule.sameNation ? (c: T) => c.nation : rule.sameLeague ? (c: T) => c.league : null;
+  if (key) {
     const by = new Map<string, T[]>();
-    for (const c of fit) if (c.nation) by.set(c.nation, [...(by.get(c.nation) ?? []), c]);
+    for (const c of fit) {
+      const k = key(c);
+      if (k) by.set(k, [...(by.get(k) ?? []), c]);
+    }
     groups.push(...[...by.values()].sort((a, b) => b.length - a.length));
   } else groups.push(fit);
   for (const pool of groups) {
@@ -248,7 +305,10 @@ function pick<T extends ExchangeCard & { cardValue?: number | null }>(
 ): T[] | null {
   const chosen: T[] = [];
   const take = (c: T) => chosen.push(c);
-  const left = () => pool.filter((c) => !chosen.includes(c));
+  // 다른 국적 과제는 이미 고른 카드(바꿔 뺄 카드는 빼고)와 국적이 겹치지 않는 카드만 남긴다.
+  const free = (c: T, but?: T) =>
+    !rule.distinctNations || !chosen.some((x) => x !== but && x.nation === c.nation);
+  const left = (but?: T) => pool.filter((c) => !chosen.includes(c) && free(c, but));
   if (rule.legendOne !== undefined) {
     const star = pool.find((c) => (c.legendScore ?? 0) >= rule.legendOne!);
     if (!star) return null;
@@ -264,9 +324,11 @@ function pick<T extends ExchangeCard & { cardValue?: number | null }>(
       more.forEach(take);
     }
   } else {
-    const more = left().slice(0, rule.count - chosen.length);
-    if (more.length < rule.count - chosen.length) return null;
-    more.forEach(take);
+    while (chosen.length < rule.count) {
+      const next = left()[0];
+      if (!next) return null;
+      take(next);
+    }
   }
   if (rule.avgPeakMin === undefined) return chosen;
   // 평균이 모자라면 가장 낮은 카드를 같은 포지션(포지션 구성이 없으면 아무)의 더 높은 카드로 바꾼다.
@@ -274,7 +336,7 @@ function pick<T extends ExchangeCard & { cardValue?: number | null }>(
     const swappable = chosen.filter((c) => (rule.legendOne === undefined ? true : c !== chosen[0]));
     const low = swappable.sort((a, b) => a.peak - b.peak)[0];
     if (!low) return null;
-    const up = left()
+    const up = left(low)
       .filter((c) => c.peak > low.peak && (!rule.shape || c.pos === low.pos))
       .sort((a, b) => a.peak - b.peak)[0];
     if (!up) return null;

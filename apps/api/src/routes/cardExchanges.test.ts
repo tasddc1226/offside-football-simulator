@@ -5,6 +5,7 @@ import {
   successEnvelope,
 } from '@offside/contracts';
 import { exchangesAt, type ExchangeDef } from '@offside/contracts/card-exchange-rules';
+import { DETAIL_GROUP } from '@offside/contracts/positions';
 import { eq, inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -52,7 +53,7 @@ describe('카드 바치기 과제 (T-11-374)', () => {
   const easy = (): ExchangeDef => today().find((d) => d.tier === 'easy')!;
 
   /**
-   * 과제 조건에 맞는 은퇴 카드 n장(포지션 구성 · 최고 OVR · 평균 · 레전드 점수 · 시즌 · 주발을 규칙에서 고른다).
+   * 과제 조건에 맞는 은퇴 카드 n장(포지션 구성 · 세부 포지션 · 최고 OVR · 평균 · 레전드 점수 · 시즌 · 주발 · 리그 · 국적을 규칙에서 고른다).
    * raisedBy를 주면 그 구단주가 키운 커리어를 profileId가 가진 카드로 만든다(영입한 카드).
    */
   async function addCards(
@@ -69,14 +70,17 @@ describe('카드 바치기 과제 (T-11-374)', () => {
     const peak = Math.min(r.peakMax ?? 99, Math.max(r.peakMin ?? 0, r.avgPeakMin ?? 0, 75));
     const ids: string[] = [];
     for (let i = 0; i < n; i++) {
-      const pos = (shape[i] ?? r.pos?.[0] ?? 'MF') as keyof typeof DPOS;
+      const pos = (shape[i] ??
+        (r.dpos ? DETAIL_GROUP[r.dpos[0]!] : undefined) ??
+        r.pos?.[0] ??
+        'MF') as keyof typeof DPOS;
       const id = crypto.randomUUID();
       const at = '2026-10-10T00:00:00.000Z';
       await ctx.db.insert(careers).values({
         id,
         profileId: raisedBy,
         pos,
-        dpos: DPOS[pos],
+        dpos: r.dpos?.[0] ?? DPOS[pos],
         foot: (r.foot ?? '오른발') as '오른발' | '왼발' | '양발',
         type: 'maker',
         trait: 'late',
@@ -90,7 +94,10 @@ describe('카드 바치기 과제 (T-11-374)', () => {
         peak,
         legendScore: r.legendOne ?? 300,
         apps: 300,
-        nation,
+        nation: r.distinctNations
+          ? (['KR', 'JP', 'GB', 'FR', 'DE', 'BR', 'AR'][i] ?? null)
+          : nation,
+        mainLeague: r.sameLeague ? 'eng1' : null,
         serviceSeason: r.seasons?.[0] ?? 1,
         value: 1_000_000,
       });
@@ -123,6 +130,41 @@ describe('카드 바치기 과제 (T-11-374)', () => {
     const res = await claim(owner.cookie, def.id, ids);
     expect(res.status).toBe(200);
     expect(await owned(ids)).toBe(0);
+  });
+
+  it('세부 포지션 · 같은 리그 · 다른 국적 과제를 서버도 같은 값으로 판정한다 (T-11-374d)', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    const days = Array.from({ length: 30 }, (_, i) =>
+      new Date(Date.parse('2026-10-27T03:00:00.000Z') + i * 86_400_000).toISOString(),
+    );
+    for (const pick of [
+      (d: ExchangeDef) => !!d.rule.dpos,
+      (d: ExchangeDef) => !!d.rule.sameLeague,
+      (d: ExchangeDef) => !!d.rule.distinctNations,
+    ]) {
+      const day = days.find((t) => exchangesAt(t).some(pick))!;
+      vi.setSystemTime(new Date(day));
+      const def = exchangesAt(day).find(pick)!;
+      const ids = await addCards(owner.profileId, def);
+      const res = await claim(owner.cookie, def.id, ids);
+      expect(res.status, def.key).toBe(200);
+      expect(await owned(ids)).toBe(0);
+    }
+  });
+
+  it('같은 리그 과제: 리그를 모르는 카드가 섞이면 거절한다 (T-11-374d)', async () => {
+    const day = Array.from({ length: 30 }, (_, i) =>
+      new Date(Date.parse('2026-10-27T03:00:00.000Z') + i * 86_400_000).toISOString(),
+    ).find((t) => exchangesAt(t).some((d) => d.rule.sameLeague))!;
+    vi.setSystemTime(new Date(day));
+    const def = exchangesAt(day).find((d) => d.rule.sameLeague)!;
+    const owner = await issueGoogleCookie(ctx);
+    const ids = await addCards(owner.profileId, def);
+    await ctx.db.update(careers).set({ mainLeague: '' }).where(eq(careers.id, ids[0]!));
+    const res = await claim(owner.cookie, def.id, ids);
+    expect(res.status).toBe(409);
+    expect(await reason(res)).toBe('EXCHANGE_UNMET');
+    expect(await owned(ids)).toBe(ids.length);
   });
 
   it('구글 로그인한 구단주만 쓴다', async () => {

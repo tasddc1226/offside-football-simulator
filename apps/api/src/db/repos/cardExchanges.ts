@@ -4,6 +4,7 @@ import type {
   ExchangeReward,
 } from '@offside/contracts/card-exchange-rules';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
+import { dposFor } from '@offside/contracts/positions';
 import type { Db } from '../client.js';
 import { grantItemStatement } from './itemShop.js';
 
@@ -36,14 +37,20 @@ export async function exchangeCardsOf(
 ): Promise<(ExchangeCard & { raised: number })[]> {
   const { results } = await db.$client
     .prepare(
-      `SELECT k.career_id AS careerId, k.pos, k.nation, k.peak, k.legend_score AS legendScore,
-              k.service_season AS season, c.foot, coalesce(c.profile_id = ?, 0) AS raised
+      `SELECT k.career_id AS careerId, k.pos, k.dpos, k.nation, k.peak, k.legend_score AS legendScore,
+              k.service_season AS season, c.foot, c.main_league AS league, coalesce(c.profile_id = ?, 0) AS raised
        FROM cards k LEFT JOIN careers c ON c.id = k.career_id
        WHERE k.career_id IN (SELECT value FROM json_each(?)) AND k.owner_id = ?`,
     )
     .bind(profileId, JSON.stringify(careerIds), profileId)
     .all<ExchangeCard & { raised: number }>();
-  return results.map((r) => ({ ...r, nation: r.nation ?? DEFAULT_NATION }));
+  // 세부 포지션 · 리그는 팀 목록(toLineupCareer)과 같이 읽는다: 큰 포지션과 어긋난 세부 포지션은 없음, 리그 ''(프로 시즌 없음)도 없음.
+  return results.map((r) => ({
+    ...r,
+    nation: r.nation ?? DEFAULT_NATION,
+    dpos: dposFor(r.pos, r.dpos),
+    league: r.league || null,
+  }));
 }
 
 /**
