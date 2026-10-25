@@ -1,52 +1,48 @@
 <script lang="ts">
-  // T-11-379 경기 리포트 — 기대 득점 · 진단 한 줄은 바로, 줄 비교 세 줄은 접어 둔다. 고칠 곳은 내 편성을 고칠 수 있을 때만.
+  // T-11-379 경기 리포트 — 기대 득점 · 진단 한 줄 · 줄 비교 세 줄. T-11-498 줄 비교를 접지 않고 가운데 선 기준 막대로 보여 주고,
+  // 가장 밀린 줄에서 바로 편성(고칠 곳)으로 간다. 고칠 곳은 내 편성을 고칠 수 있을 때만.
   import type { TeamMatch } from '@offside/app-core/api/team';
   import { teamMatchReport } from '@offside/app-core/matchReport';
   import { matchReportText as L } from '@offside/app-core/i18n/ko/matchReport';
+  import { signedNum } from '@offside/app-core/teamText';
   import type { ReportLine } from '@offside/contracts/owner-team';
 
   let { m, fix }: { m: TeamMatch; fix?: ((line: ReportLine) => { pos: string; go: () => void } | null) | undefined } = $props();
   const r = $derived(teamMatchReport(m));
   const target = $derived(r?.weak && fix ? fix(r.weak) : null);
-  let open = $state(false);
-  // 줄 힘은 대개 40~100이라 그 구간을 막대 전체로 늘려 차이가 보이게 한다.
-  const width = (x: number) => `${Math.max(4, Math.min(100, ((x - 40) / 60) * 100))}%`;
+  // 차이 30점이면 막대가 한쪽 끝까지 간다(줄 비교는 대개 ±30 안에 있다).
+  const half = (edge: number) => `${Math.max(2, Math.min(50, (Math.abs(edge) / 30) * 50))}%`;
 </script>
 
 {#if r}
-  <div class="tm-report stack" style="gap:8px" data-team-report>
+  <div class="tm-report stack" style="gap:10px" data-team-report>
     <div class="tm-report-head">
-      <b>{L.title}</b>
+      <h2 class="tm-report-title">{L.nextTitle}</h2>
       <span class="tm-report-xg" data-report-xg>{r.xgText}</span>
     </div>
     <p class="fs-sm" style="margin:0" data-report-diagnosis>{r.diagnosis}</p>
+    <ul class="tm-report-rows" data-report-rows>
+      {#each r.rows as row (row.line)}
+        <li class:weak={row.line === r.weak} class:up={row.edge >= 0} data-report-line={row.line} aria-label={L.lineAria({ line: row.label, mine: row.mine, opp: row.opp })}>
+          <span class="tm-report-label fs-sm" aria-hidden="true">
+            <span>{row.label}</span>
+            <span><small class="muted">{row.mine} : {row.opp}</small> <b>{signedNum(Math.round(row.edge))}</b></span>
+          </span>
+          <span class="tm-report-axis" aria-hidden="true"><span style:width={half(row.edge)}></span></span>
+        </li>
+      {/each}
+    </ul>
+    <p class="muted fs-xs" style="margin:0">{L.axisNote} {L.wallNote}</p>
     <p class="muted fs-xs" style="margin:0">{L.xgHint}</p>
-    <button class="btn btn-sm tm-report-toggle" aria-expanded={open} onclick={() => (open = !open)} data-act="team-report-compare">{open ? L.compareClose : L.compareOpen}</button>
-    {#if open}
-      <ul class="tm-report-rows" data-report-rows>
-        {#each r.rows as row (row.line)}
-          <li class:weak={row.line === r.weak} data-report-line={row.line} aria-label={L.lineAria({ line: row.label, mine: row.mine, opp: row.opp })}>
-            <span class="fs-sm">{row.label}</span>
-            <span class="tm-report-bars" aria-hidden="true">
-              <b>{row.mine}</b>
-              <span class="bar"><span class="me" style:width={width(row.mine)}></span></span>
-              <span class="bar"><span class="op" style:width={width(row.opp)}></span></span>
-              <b>{row.opp}</b>
-            </span>
-          </li>
-        {/each}
-      </ul>
-      <p class="muted fs-xs" style="margin:0">{L.wallNote}</p>
-    {/if}
     {#if target}
-      <button class="btn btn-sm" onclick={target.go} aria-label={L.fixAria({ pos: target.pos })} data-act="team-report-fix">{L.fix({ pos: target.pos })}</button>
+      <button class="btn tm-report-fix" onclick={target.go} aria-label={L.fixAria({ pos: target.pos })} data-act="team-report-fix">{L.fix({ pos: target.pos })}</button>
     {/if}
   </div>
 {/if}
 
 <style>
   .tm-report {
-    padding: 12px;
+    padding: 14px;
     border-radius: var(--radius-md);
     background: var(--surface-2);
   }
@@ -57,13 +53,14 @@
     gap: 8px;
     flex-wrap: wrap;
   }
+  .tm-report-title {
+    margin: 0;
+    font-size: var(--fs-body);
+  }
   .tm-report-xg {
     font-family: var(--display);
     font-weight: 700;
-  }
-  .tm-report-toggle {
-    justify-self: start;
-    align-self: flex-start;
+    color: var(--muted);
   }
   .tm-report-rows {
     list-style: none;
@@ -71,40 +68,62 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
   }
   .tm-report-rows li {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
   }
-  .tm-report-rows li.weak > span:first-child {
-    color: var(--bad, var(--accent-text));
-    font-weight: 600;
-  }
-  .tm-report-bars {
-    display: grid;
-    grid-template-columns: 2em 1fr 1fr 2em;
-    align-items: center;
-    gap: 6px;
-  }
-  .tm-report-bars b:last-child {
-    text-align: right;
-  }
-  .bar {
-    height: 6px;
-    border-radius: 3px;
-    background: var(--line);
-    overflow: hidden;
+  .tm-report-label {
     display: flex;
+    justify-content: space-between;
+    gap: 8px;
   }
-  .bar:nth-of-type(1) {
-    justify-content: flex-end;
+  .tm-report-label b {
+    font-family: var(--display);
+    color: var(--good);
   }
-  .bar .me {
-    background: var(--accent);
+  .tm-report-rows li:not(.up) .tm-report-label b {
+    color: var(--bad);
   }
-  .bar .op {
-    background: var(--muted);
+  .tm-report-rows li.weak .tm-report-label > span:first-child {
+    color: var(--bad);
+    font-weight: 700;
+  }
+  .tm-report-axis {
+    position: relative;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--line);
+  }
+  .tm-report-axis::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: -3px;
+    bottom: -3px;
+    width: 2px;
+    margin-left: -1px;
+    background: var(--faint);
+  }
+  .tm-report-axis > span {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 4px;
+  }
+  .tm-report-rows li.up .tm-report-axis > span {
+    left: 50%;
+    background: var(--good);
+  }
+  .tm-report-rows li:not(.up) .tm-report-axis > span {
+    right: 50%;
+    background: var(--bad);
+  }
+  .tm-report-fix {
+    border-color: var(--accent);
+    color: var(--accent-text);
+    background: transparent;
   }
 </style>

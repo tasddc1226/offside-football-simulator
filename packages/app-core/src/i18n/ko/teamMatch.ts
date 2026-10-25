@@ -85,12 +85,15 @@ const ko = {
   // 경기 결과
   assist: (p: { name: string }) => `도움 ${p.name}`,
   noGoals: '골 없이 비겼어요.',
-  resultRecord: (p: { record: string }) => ` · 내 팀 ${p.record}`,
+  recordChip: (p: { record: string }) => `내 팀 전적 ${p.record}`,
   ratingChange: '내 팀 레이팅 ',
   backHistory: '기록으로 돌아가기',
   backDefaultApp: '내 팀',
   replay: '중계 다시 보기',
   again: '다시 경기하기',
+  againLeft: (p: { n: number }) => `오늘 ${p.n}경기 남았어요`,
+  againNone: '오늘 경기를 모두 치렀어요',
+  friendlyNote: '친선전이라 레이팅은 그대로예요.',
   scoreAria: (p: { h: number; a: number }) => `${p.h} 대 ${p.a}`,
   // 공유 이미지(대화상자)
   shareTitle: 'SNS 공유 이미지',
