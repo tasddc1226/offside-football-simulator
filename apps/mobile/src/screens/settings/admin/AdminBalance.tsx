@@ -18,7 +18,7 @@ import {
 } from '@offside/contracts/balance';
 import { BALANCE_GROUPS, BALANCE_TEXT, type BalanceGroup } from '@offside/contracts/balance-text';
 import * as api from '@offside/app-core/api/admin';
-import type { BalanceVersion } from '@offside/app-core/api/admin';
+import type { BalanceSchedule, BalanceVersion } from '@offside/app-core/api/admin';
 import {
   EVENT_LIST,
   PROB_EVENTS,
@@ -85,6 +85,7 @@ export default function AdminBalance() {
   const { width } = useWindowDimensions();
   const narrow = width <= 420;
   const [versions, setVersions] = useState<BalanceVersion[]>([]);
+  const [scheduled, setScheduled] = useState<BalanceSchedule | null>(null);
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [selected, setSelected] = useState<number | null>(null);
   const [work, setWork] = useState<Work>({ note: '', values: {} });
@@ -129,6 +130,7 @@ export default function AdminBalance() {
     }
     const list = r.data.versions;
     setVersions(list);
+    setScheduled(r.data.scheduled ?? null);
     setStatus('ready');
     await pick(
       select ??
@@ -202,6 +204,36 @@ export default function AdminBalance() {
     toast(`${withEulReul(`v${v.version}`)} 적용했어요`);
     await load(v.version);
   }
+  /** T-11-488 시즌 중에는 바로 켤 수 없어 다음 시즌 개막에 켜지게 예약한다(서버 5분 cron이 켠다). */
+  async function schedule(v: BalanceVersion) {
+    if (v.status === 'draft' && dirty && !(await save())) return;
+    const lines = diffLines(v.status === 'draft' ? work.values : v.values);
+    const body = lines.length ? lines.join('\n') : '적용 중인 버전과 값이 같습니다.';
+    const replace =
+      scheduled && scheduled.version !== v.version
+        ? `\n\n지금 예약된 v${scheduled.version} 대신 예약해요.`
+        : '';
+    if (
+      !(await confirmAsync(
+        `${withEulReul(`v${v.version}`)} 다음 시즌 개막에 적용할까요?`,
+        `${body}${replace}\n\n개막 뒤 5분 안에 켜져요. 그 전에 초안을 고치면 고친 값이 적용돼요.`,
+        '예약',
+      ))
+    )
+      return;
+    const s = await run(api.scheduleBalance(v.version));
+    if (!s) return;
+    setScheduled(s);
+    toast(`v${v.version} 시즌 ${s.season} 개막 예약했어요`);
+  }
+  async function unschedule() {
+    if (!scheduled) return;
+    if (!(await confirmAsync(`v${scheduled.version} 개막 예약을 취소할까요?`, undefined, '취소')))
+      return;
+    if ((await run(api.cancelBalanceSchedule())) === null) return;
+    setScheduled(null);
+    toast('예약을 취소했어요');
+  }
   async function remove(v: BalanceVersion) {
     if (!(await confirmAsync(`초안 ${withEulReul(`v${v.version}`)} 지울까요?`, undefined, '삭제')))
       return;
@@ -263,6 +295,29 @@ export default function AdminBalance() {
         </Txt>
       </View>
 
+      {scheduled ? (
+        <View
+          testID="balance-scheduled"
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            paddingVertical: 8,
+            paddingHorizontal: 12,
+            borderRadius: RADIUS.md,
+            backgroundColor: alpha(c.warn, 0.12),
+          }}
+        >
+          <Txt style={{ flex: 1, fontSize: rem(FONT.label) }}>
+            {`개막 예약: v${scheduled.version} · 시즌 ${scheduled.season} 개막 뒤 5분 안에 적용`}
+          </Txt>
+          <Btn sm testID="cancel-schedule" disabled={busy} onPress={() => void unschedule()}>
+            예약 취소
+          </Btn>
+        </View>
+      ) : null}
+
       <LoadState
         status={status}
         failText="밸런스 설정을 불러오지 못했어요."
@@ -305,6 +360,7 @@ export default function AdminBalance() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Txt bold>{`v${v.version}`}</Txt>
                   <Pill tone={STATUS[v.status][1]}>{STATUS[v.status][0]}</Pill>
+                  {scheduled?.version === v.version ? <Pill tone="warn">개막 예약</Pill> : null}
                   <Txt numberOfLines={1} style={{ flex: 1, fontSize: rem(FONT.label) }}>
                     {v.note || '메모 없음'}
                   </Txt>
@@ -569,6 +625,13 @@ export default function AdminBalance() {
                     onPress={() => void activate(current)}
                   >
                     적용하기
+                  </Btn>
+                  <Btn
+                    testID="schedule"
+                    disabled={busy || scheduled?.version === current.version}
+                    onPress={() => void schedule(current)}
+                  >
+                    다음 시즌 개막에 적용
                   </Btn>
                   <Btn
                     sm

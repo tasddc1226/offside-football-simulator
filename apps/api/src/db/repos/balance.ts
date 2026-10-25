@@ -4,13 +4,14 @@ import {
   sanitizeBalance,
   type BalanceHistory,
   type BalancePatch,
+  type BalanceSchedule,
   type BalanceVersion,
 } from '@offside/contracts';
 import { seasonSalaryBudget } from '@offside/contracts/owner-team';
 import { and, desc, eq, isNotNull } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
-import { auditLog, balancePatches, balanceVersions } from '../schema.js';
+import { appMeta, auditLog, balancePatches, balanceVersions } from '../schema.js';
 import { runBatch } from './batch.js';
 
 // T-10-016 밸런스 설정 버전. 활성은 늘 하나 — 다른 버전을 활성화하면 이전 활성은 archived가 된다.
@@ -156,6 +157,38 @@ export async function deleteBalanceDraft(db: Db, version: number) {
   return res.meta.changes > 0;
 }
 
+/**
+ * T-11-488 다음 시즌 개막 예약(app_meta 한 줄). by는 예약한 관리자 — 개막 때 활성화 감사 로그에 그 사람으로 남긴다.
+ */
+const SCHEDULE_KEY = 'balance_scheduled';
+type StoredSchedule = BalanceSchedule & { by: string };
+
+export async function getBalanceSchedule(db: Db): Promise<StoredSchedule | null> {
+  const [row] = await db
+    .select({ value: appMeta.value })
+    .from(appMeta)
+    .where(eq(appMeta.key, SCHEDULE_KEY));
+  if (!row) return null;
+  try {
+    return JSON.parse(row.value) as StoredSchedule;
+  } catch {
+    return null;
+  }
+}
+
+export async function scheduleBalance(db: Db, s: StoredSchedule) {
+  const value = JSON.stringify(s);
+  await db
+    .insert(appMeta)
+    .values({ key: SCHEDULE_KEY, value })
+    .onConflictDoUpdate({ target: appMeta.key, set: { value } });
+}
+
+const clearScheduleQuery = (db: Db) => db.delete(appMeta).where(eq(appMeta.key, SCHEDULE_KEY));
+export async function clearBalanceSchedule(db: Db) {
+  await clearScheduleQuery(db);
+}
+
 /** 이전 활성 → archived, 이 버전 → active, 감사 로그를 한 트랜잭션으로. 되돌리기도 옛 버전을 이걸로 다시 켠다. */
 export async function activateBalance(
   db: Db,
@@ -165,8 +198,11 @@ export async function activateBalance(
   now: string,
   /** T-10-090 시즌 진행 중 잠금을 풀고 활성화했으면 그 시즌 id(감사 로그에 남긴다). */
   seasonOverride?: number,
+  /** T-11-488 개막 예약으로 켰으면 그 시즌 id — 예약도 같은 트랜잭션에서 지운다. */
+  scheduledSeason?: number,
 ) {
   await runBatch(db, [
+    ...(scheduledSeason ? [clearScheduleQuery(db)] : []),
     db
       .update(balanceVersions)
       .set({ status: 'archived', updatedAt: now })
@@ -179,7 +215,7 @@ export async function activateBalance(
       id: newId('aud'),
       kind: 'BALANCE_ACTIVATED',
       profileId,
-      payloadJson: JSON.stringify({ version, previous, seasonOverride }),
+      payloadJson: JSON.stringify({ version, previous, seasonOverride, scheduledSeason }),
       createdAt: now,
     }),
   ]);

@@ -134,6 +134,7 @@ async function mockApi(page: Page, opts: { linked: boolean; admin: boolean }) {
   await page.route(`${API}/v1/balance`, (route) =>
     route.fulfill(ok({ version: 1, values: { koreaStr: 76 }, activatedAt: T })),
   );
+  let scheduled: { version: number; season: number; scheduledAt: string } | null = null;
   await page.route(`${API}/v1/admin/balance**`, async (route: Route) => {
     const req = route.request();
     const path = new URL(req.url()).pathname;
@@ -142,7 +143,17 @@ async function mockApi(page: Page, opts: { linked: boolean; admin: boolean }) {
     sent.push({ method, path, body });
     const m = /^\/v1\/admin\/balance\/(\d+)(\/activate)?$/.exec(path);
     if (path === '/v1/admin/balance' && method === 'GET')
-      return route.fulfill(ok({ versions: [...versions].reverse() }));
+      return route.fulfill(ok({ versions: [...versions].reverse(), scheduled }));
+    // T-11-488 개막 예약 · 취소.
+    const sm = /^\/v1\/admin\/balance\/(\d+)\/schedule$/.exec(path);
+    if (sm && method === 'POST') {
+      scheduled = { version: +sm[1]!, season: 2, scheduledAt: T };
+      return route.fulfill(ok(scheduled));
+    }
+    if (path === '/v1/admin/balance-schedule' && method === 'DELETE') {
+      scheduled = null;
+      return route.fulfill({ status: 204 });
+    }
     if (path === '/v1/admin/balance' && method === 'POST') {
       const v: V = {
         version: versions.length + 1,
@@ -200,6 +211,33 @@ test('운영 도구: 초안을 만들어 수치를 고치고 적용한다', asyn
   await expect(page.locator('[data-version="2"]')).toContainText('적용 중');
   await expect(page.locator('[data-version="1"]')).toContainText('보관');
   expect(sent.some((s) => s.path === '/v1/admin/balance/2/activate')).toBe(true);
+});
+
+test('T-11-488 운영 도구: 초안을 다음 시즌 개막에 적용하게 예약하고 취소한다', async ({ page }) => {
+  const sent = await mockApi(page, { linked: true, admin: true });
+  page.on('dialog', (d) => void d.accept());
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="admin"]').click();
+  await page.locator('[data-admin-tab="balance"]').click();
+  await page.locator('[data-act="new-draft"]').click();
+  await expect(page.locator('[data-editing="2"]')).toBeVisible();
+
+  await page.locator('[data-act="schedule"]').click();
+  await expect(page.locator('[data-balance-scheduled="2"]')).toContainText('시즌 2 개막');
+  await expect(page.locator('[data-version="2"]')).toContainText('개막 예약');
+  await expect(page.locator('[data-act="schedule"]')).toBeDisabled();
+  expect(sent.some((s) => s.method === 'POST' && s.path === '/v1/admin/balance/2/schedule')).toBe(
+    true,
+  );
+  // 예약은 활성화가 아니다 — 적용 중은 그대로 v1.
+  await expect(page.locator('[data-version="1"]')).toContainText('적용 중');
+
+  await page.locator('[data-act="cancel-schedule"]').click();
+  await expect(page.locator('[data-balance-scheduled]')).toHaveCount(0);
+  expect(sent.some((s) => s.method === 'DELETE' && s.path === '/v1/admin/balance-schedule')).toBe(
+    true,
+  );
 });
 
 test('운영 도구: 구글 연결이 없으면 관리자 여부를 묻지도 않고 입구가 없다', async ({ page }) => {
