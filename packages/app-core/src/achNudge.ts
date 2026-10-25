@@ -2,7 +2,13 @@
 // 유저가 업적 탭을 열기 전엔 몰랐다. 이 기기가 마지막으로 본 업적별 점수를 적어 두고, 그런 쓰기가 있었으면(dirty) 다음에
 // 홈·구단주·내 팀 화면에 올 때 한 번 업적을 받아 비교한다 — 새로 오른 업적이 있으면 시트(등급이 오르면 엠블럼과 함께)를
 // 띄우고, 업적 탭을 열 때까지 하단 '구단주'와 내 팀 '업적' 탭에 점을, 업적 목록엔 NEW를 붙인다.
-import { achGradeOf, type AchGrade } from '@offside/contracts/owner-team';
+import {
+  ACH_GRADES,
+  achGradeAt,
+  achGradeOf,
+  achTierByRank,
+  type AchGrade,
+} from '@offside/contracts/owner-team';
 import type { ClubAchievementNotifications } from '@offside/contracts';
 import { loadKey, saveKey } from '@offside/game/storage';
 import { ACH_SEEN_KEY, OUTBOX_KEY, achUnseenCount, clearAchDirty, isAchDirty } from './achDirty.js';
@@ -27,6 +33,8 @@ export type AchSeen = {
   unseen: string[];
   /** T-11-357 업적별로 이 시즌에 받은 보상 [강화권, 스카우트권]. 옛 기록에는 없다. */
   got?: Record<string, [number, number]>;
+  /** T-11-489 상위 비율 시즌에 마지막으로 본 등급(순위가 바뀌어 점수로 되짚을 수 없다). 옛 기록에는 없다. */
+  grade?: AchGrade['id'];
 };
 export type AchFresh = { id: string; label: string; gained: number };
 export type AchNudge = {
@@ -36,6 +44,8 @@ export type AchNudge = {
   /** 등급이 올랐으면 이전 등급. */
   from: AchGrade | null;
   next: AchGrade | null;
+  /** T-11-489 상위 비율 시즌이면 다음 등급까지 올라야 할 순위 수(점수 시즌 · 맨 위면 null). */
+  toNextRank: number | null;
   /** T-11-357 새 업적으로 받은 보상(없으면 null). */
   reward: { boost: number; scout: number } | null;
 };
@@ -65,7 +75,21 @@ export function absorbAch(
   if (!prev && fresh.length > FIRST_RUN_MAX) fresh = [];
   const unseen = [...new Set([...(same ? prev.unseen : []), ...fresh.map((f) => f.id)])];
   const got = gotOf(r);
-  const seen: AchSeen = { season: r.season, pts, score: r.score, unseen, got };
+  const byRank = achTierByRank(r.season);
+  const at = achGradeAt({
+    season: r.season,
+    score: r.score,
+    rank: r.rank ?? null,
+    ranked: r.ranked ?? 0,
+  });
+  const seen: AchSeen = {
+    season: r.season,
+    pts,
+    score: r.score,
+    unseen,
+    got,
+    ...(byRank ? { grade: at.grade.id } : {}),
+  };
   if (!fresh.length) return { seen, nudge: null };
   // 새 업적이 이번에 더 받은 보상(본 기록의 보상을 뺀다).
   const baseGot = same ? (prev.got ?? {}) : {};
@@ -77,8 +101,16 @@ export function absorbAch(
     },
     { boost: 0, scout: 0 },
   );
-  const { grade, next } = achGradeOf(r.score);
-  const before = achGradeOf(prev ? baseScore : r.score - fresh.reduce((s, f) => s + f.gained, 0));
+  const { grade } = at;
+  // 순위가 없으면(옛 서버 응답) 다음 등급 안내를 빼고 등급만 보인다.
+  const next = byRank && r.rank == null ? null : at.next;
+  // 상위 비율 시즌은 같은 시즌에 본 등급보다 올랐을 때만 등급 상승으로 알린다(남이 앞질러 내려간 건 알리지 않는다).
+  const idx = (id: AchGrade['id'] | undefined) => ACH_GRADES.findIndex((g) => g.id === id);
+  const seenGrade = same && prev.grade ? ACH_GRADES[idx(prev.grade)] : undefined;
+  const before = byRank
+    ? (seenGrade ?? grade)
+    : achGradeOf(prev ? baseScore : r.score - fresh.reduce((s, f) => s + f.gained, 0)).grade;
+  const up = byRank ? idx(grade.id) > idx(before.id) : before.id !== grade.id;
   return {
     seen,
     nudge: {
@@ -86,7 +118,8 @@ export function absorbAch(
       score: r.score,
       grade,
       next,
-      from: before.grade.id !== grade.id ? before.grade : null,
+      toNextRank: at.nextRank !== null && r.rank != null ? r.rank - at.nextRank : null,
+      from: up ? before : null,
       reward: reward.boost + reward.scout > 0 ? reward : null,
     },
   };
@@ -115,9 +148,11 @@ export function achieveView(n: AchNudge): Extract<SheetView, { kind: 'achieve' }
     more: n.fresh.length - shown.length,
     gained: n.fresh.reduce((s, f) => s + f.gained, 0),
     score: n.score,
-    next: n.next
-      ? L.nextGrade({ name: achGradeName(n.next), pts: num(n.next.min - n.score) })
-      : null,
+    next: !n.next
+      ? null
+      : n.toNextRank !== null
+        ? L.nextGradeRank({ name: achGradeName(n.next), n: num(n.toNextRank) })
+        : L.nextGrade({ name: achGradeName(n.next), pts: num(n.next.min - n.score) }),
     reward: n.reward ? L.reward({ items: achRewardItems(n.reward) }) : null,
   };
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE_SPEC } from './balance-spec.js';
 import {
+  achGradeAt,
+  achGradeCutoff,
   seasonRecordRewardOf,
   type SeasonRecordFacts,
   PAST_SALARY_BUDGET,
@@ -400,5 +402,29 @@ describe('T-11-487 시즌 1 기록 보상', () => {
       scout: 5,
       boost: 7,
     });
+  });
+});
+
+describe('T-11-489 상위 비율 등급(achGradeAt)', () => {
+  it('시즌 1까지는 점수 기준, 시즌 2부터 순위 기준이다', () => {
+    expect(achGradeAt({ season: 1, score: 3500, rank: 999, ranked: 1000 }).grade.id).toBe('legend');
+    expect(achGradeAt({ season: 2, score: 3500, rank: 999, ranked: 1000 }).grade.id).toBe('rookie');
+  });
+  it('다음 등급에 들려면 올라야 하는 순위를 준다', () => {
+    expect(achGradeAt({ season: 2, score: 300, rank: 450, ranked: 1000 })).toMatchObject({
+      grade: { id: 'silver' },
+      next: { id: 'gold' },
+      nextRank: 400,
+    });
+    expect(achGradeAt({ season: 2, score: 9000, rank: 1, ranked: 1000 })).toMatchObject({
+      grade: { id: 'legend' },
+      next: null,
+      nextRank: null,
+    });
+  });
+  it('인원이 적어도 1위는 레전드다', () => {
+    expect(achGradeAt({ season: 2, score: 10, rank: 1, ranked: 3 }).grade.id).toBe('legend');
+    expect(achGradeCutoff('legend', 3)).toBe(1);
+    expect(achGradeCutoff('bronze', 3)).toBe(2);
   });
 });

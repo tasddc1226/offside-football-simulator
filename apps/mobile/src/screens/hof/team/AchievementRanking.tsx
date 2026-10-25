@@ -5,7 +5,13 @@ import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { useSnapshot } from 'valtio';
 import { View } from 'react-native';
-import { ACH_GRADES, ACH_RANK_PER_PAGE, achGradeOf } from '@offside/contracts/owner-team';
+import {
+  ACH_GRADES,
+  ACH_GRADE_TOP,
+  ACH_RANK_PER_PAGE,
+  achGradeAt,
+  achTierByRank,
+} from '@offside/contracts/owner-team';
 import { fetchAchRanking, fetchMyAchRank, type AchRankResponse } from '@offside/app-core/api/team';
 import { isMember } from '@offside/app-core/account';
 import { canJumpToMyRank, myRankJump } from '@offside/app-core/myRank';
@@ -46,6 +52,8 @@ export default function AchievementRanking() {
   const now = useSeasonNow();
   /** 다시 받을 기준 — 고른 시즌, 아니면 지금 시즌(띄운 채 개막을 넘기면 바뀐다). */
   const shownSeason = season ?? displaySeasonAt(now);
+  // T-11-489 등급 기준 안내: 상위 비율 시즌이면 '상위 N%'.
+  const byRank = achTierByRank(data?.season ?? shownSeason);
 
   // T-11-441 '내 순위로'(팀 랭킹과 같다). 내 줄은 시즌과 순위로 강조한다.
   const acct = useSnapshot(accountCache).value;
@@ -166,7 +174,13 @@ export default function AchievementRanking() {
           </View>
           {data.items.map((r) => {
             const team = r.team;
-            const grade = achGradeOf(r.score).grade;
+            // T-11-489 시즌 2부터 등급은 랭킹 상위 비율.
+            const grade = achGradeAt({
+              season: data.season,
+              score: r.score,
+              rank: r.rank,
+              ranked: data.total,
+            }).grade;
             const isMine = !!mine && mine.season === data.season && mine.rank === r.rank;
             const row = (
               <View
@@ -318,7 +332,11 @@ export default function AchievementRanking() {
               >
                 <AchGradeBadge grade={g} />
                 <Txt num={400} tone="muted" style={{ fontSize: rem(FONT.label) }}>
-                  {L.gradeFrom({ n: n(g.min) })}
+                  {byRank
+                    ? g.id === 'rookie'
+                      ? L.gradeRest
+                      : L.gradeTop({ pct: ACH_GRADE_TOP[g.id] })
+                    : L.gradeFrom({ n: n(g.min) })}
                 </Txt>
               </View>
             ))}

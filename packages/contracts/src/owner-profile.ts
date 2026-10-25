@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { IsoUtcSchema } from './primitives.js';
 import { TITLE_NONE, PERMANENT_TITLES } from './owner-title.js';
-import { OwnerHonorSchema, OwnerTierTagSchema } from './season-recap.js';
+import { OwnerHonorSchema, OwnerTierSchema, OwnerTierTagSchema } from './season-recap.js';
 import {
   CupHonorSchema,
   OwnerTitleSchema,
@@ -24,6 +24,11 @@ export const OwnerSeasonLineSchema = z.strictObject({
   /** 팀 레이팅 순위. 끝난 시즌은 마감 순위, 지금 시즌은 지금 순위. */
   teamRank: z.number().int().min(1).nullable(),
   closed: z.boolean(),
+  /**
+   * T-11-489 그 시즌 티어. 끝난 시즌은 결산을 굳힌 뒤의 티어(시즌 2부터 상위 비율), 진행 중인 시즌은 점수 기준 시즌만.
+   * 없으면 null, 옛 응답에는 없다(그때는 achScore로 정한다).
+   */
+  tier: OwnerTierSchema.nullable().optional(),
 });
 export type OwnerSeasonLine = z.infer<typeof OwnerSeasonLineSchema>;
 

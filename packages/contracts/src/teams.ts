@@ -616,6 +616,10 @@ export const ClubAchievementNotificationsSchema = ClubAchievementsResponseSchema
   season: true,
   groups: true,
   score: true,
+}).extend({
+  /** T-11-489 상위 비율 등급 시즌(achTierByRank)에만 싣는 순위 · 랭킹 인원. */
+  rank: ClubAchievementsResponseSchema.shape.rank.optional(),
+  ranked: count.optional(),
 });
 export type ClubAchievementNotifications = z.infer<typeof ClubAchievementNotificationsSchema>;
 

@@ -30,7 +30,8 @@
   const pending = $derived(view.data?.pendingSeasons.includes(view.season ?? -1));
   const badges = $derived(honorViews(view.data?.honors.filter((h) => h.season === view.season) ?? []));
   const cups = $derived(owner?.cupHonors.filter((h) => h.season === view.season) ?? []);
-  const tier = $derived(line?.achScore == null ? null : ownerTierOf(line.achScore));
+  // T-11-489 서버가 시즌마다 정한 티어(시즌 2부터 상위 비율). 옛 응답이면 점수로 정한다.
+  const tier = $derived(line?.tier !== undefined ? line.tier : line?.achScore == null ? null : ownerTierOf({ season: line.season, score: line.achScore }));
 
   function select(season: number) { appState.honorsSeason = season; archive.select(season); }
   async function expand(retry = false) {

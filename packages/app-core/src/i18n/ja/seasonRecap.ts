@@ -56,6 +56,7 @@ export const seasonRecap: Translation<SeasonRecapMsgs> = {
   secTier: 'シーズンランク',
   secBadges: '記録バッジ',
   tierWhy: (p) => `実績スコア${p.score}点でフィニッシュ`,
+  tierWhyTop: (p) => `オーナーランキング上位${p.pct}%でフィニッシュ`,
   tierTitle: (p) => `${p.season} ${p.tier}`,
   headlineGoals: (p) => `選手${p.n}人が引退し、${p.goals}ゴールを残しました`,
   headlineRetired: (p) => `選手${p.n}人がピッチを去りました`,

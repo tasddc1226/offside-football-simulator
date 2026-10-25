@@ -4,7 +4,7 @@
   import TeamLogo from './TeamLogo.svelte';
   // T-11-028 구단주 랭킹 — 기록실 탭. 구단주의 시즌 업적 점수 순(같은 점수면 먼저 닿은 구단주가 앞선다). 구단주는 공개
   // 닉네임과 그 시즌 팀 이름으로만 보이고, 팀이 있으면 줄을 눌러 팀 프로필을 연다. 서버가 5분마다 새로 센다.
-  import { ACH_GRADES, ACH_RANK_PER_PAGE, achGradeOf } from '@offside/contracts/owner-team';
+  import { ACH_GRADES, ACH_GRADE_TOP, ACH_RANK_PER_PAGE, achGradeAt, achGradeOf, achTierByRank } from '@offside/contracts/owner-team';
   import { displaySeasonAt, openTeamSeasons, teamSeasonName } from '@offside/contracts/service-seasons';
   import { fetchAchRanking, fetchMyAchRank, type AchRankResponse } from '@offside/app-core/api/team';
   import { canJumpToMyRank, myRankJump } from '@offside/app-core/myRank';
@@ -37,6 +37,8 @@
   const selectedSeason = $derived(season ?? data?.season ?? displaySeasonAt(now));
   /** 다시 받을 기준 — 고른 시즌, 아니면 지금 시즌(띄운 채 개막을 넘기면 바뀐다). */
   const shownSeason = $derived(season ?? displaySeasonAt(now));
+  // T-11-489 등급 기준 안내: 상위 비율 시즌이면 '상위 N%'.
+  const byRank = $derived(achTierByRank(data?.season ?? shownSeason));
 
   // T-11-441 '내 순위로'(팀 랭킹과 같다). 내 줄은 순위로 강조한다.
   // 로그인 상태를 아직 묻지 않았으면(구단주 화면을 열지 않음) 버튼을 두고, 누를 때 서버가 판정한다(따로 묻지 않는다).
@@ -149,7 +151,8 @@
     </div>
     <ol class="achievement-list" start={data.items[0]!.rank} aria-label={L.ownerListAria}>
       {#each data.items as r (r.rank)}
-        {@const grade = achGradeOf(r.score).grade}
+        <!-- T-11-489 시즌 2부터 등급은 랭킹 상위 비율(예시 화면은 점수 기준 그대로). -->
+        {@const grade = preview ? achGradeOf(r.score).grade : achGradeAt({ season: data.season, score: r.score, rank: r.rank, ranked: data.total }).grade}
         {@const name = r.nickname ?? L.anonOwner}
         {@const gradeName = achGradeName(grade)}
         {@const label = L.rowAria({ rank: r.rank, name, grade: gradeName, done: n(r.done), score: n(r.score) })}
@@ -188,7 +191,7 @@
       <summary class="muted fs-sm">{L.gradesTitle}</summary>
       <ul>
         {#each ACH_GRADES as g (g.id)}
-          <li><AchGradeBadge grade={g} /><span class="num muted">{L.gradeFrom({ n: n(g.min) })}</span></li>
+          <li><AchGradeBadge grade={g} /><span class="num muted">{byRank ? (g.id === 'rookie' ? L.gradeRest : L.gradeTop({ pct: ACH_GRADE_TOP[g.id] })) : L.gradeFrom({ n: n(g.min) })}</span></li>
         {/each}
       </ul>
     </details>

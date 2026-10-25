@@ -5,6 +5,7 @@ export const sheetAchieve: Translation<SheetAchieveMsgs> = {
   gradeUp: (p) => `${p.grade}ランクになりました`,
   achieved: (p) => `実績を${p.n}個達成しました`,
   nextGrade: (p) => `${p.name}まであと${p.pts}点`,
+  nextGradeRank: (p) => `${p.name}まであと${p.n}位`,
   fromTo: (p) => `${p.from}から${p.to}へ`,
   more: (p) => `ほか${p.n}個`,
   gainedPts: (p) => `+${p.n}点`,

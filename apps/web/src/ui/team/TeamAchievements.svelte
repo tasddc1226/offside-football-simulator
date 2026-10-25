@@ -48,7 +48,7 @@
   <LoadState {status} failText={L.achLoadFail} retry={() => load(ach?.season)}>
     {#if ach}
       {@const tot = achTotal(ach.groups)}
-      {@const gv = achGradeView(ach.score)}
+      {@const gv = achGradeView(ach)}
       {@const sections = achSections(ach.groups)}
       {@const sec = sections.find((x) => x.id === cat) ?? sections[0]!}
       {@const near = achNear(ach.groups)}
@@ -66,7 +66,7 @@
           <span style:width="{gv.ratio * 100}%"></span>
         </div>
         <p class="muted fs-sm" data-ach-next>
-          {L.achProgress({ head: gv.next ? L.toNextGrade({ grade: achGradeName(gv.next), pts: num(gv.toNext) }) : L.topGrade, done: tot.done, total: tot.total })}
+          {L.achProgress({ head: gv.next ? (gv.byRank ? L.toNextGradeRank({ grade: achGradeName(gv.next), n: num(gv.toNext) }) : L.toNextGrade({ grade: achGradeName(gv.next), pts: num(gv.toNext) })) : L.topGrade, done: tot.done, total: tot.total })}
         </p>
         <p class="muted fs-xs">{L.achAbout({ season: ach.seasons.find((o) => o.id === ach?.season)?.name ?? '', n: ach.players })}</p>
         <div class="tm-ach-perks" data-ach-perks>

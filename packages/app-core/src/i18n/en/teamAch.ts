@@ -9,13 +9,14 @@ export const teamAch: Translation<TeamAchMsgs> = {
   rankTitle: 'Owner ranking',
   nextGradeBar: 'Progress to next grade',
   toNextGrade: (p) => `${p.pts} pts to ${p.grade}`,
+  toNextGradeRank: (p) => `${p.n} places to ${p.grade}`,
   topGrade: "You're at the top grade",
   achProgress: (p) => `${p.head} · ${p.done}/${p.total} achievements completed`,
   achAbout: (p) =>
     `Built from your ${p.n} retired players who first played in ${p.season}, plus this season's team and club activity. It starts from zero every season.`,
   perksTitle: 'Why earn achievements',
   perkGrade:
-    'Your score raises your owner grade from Rookie up to Legend and sets your place in the owner ranking.',
+    'Your score sets your place in the owner ranking and your owner grade from Rookie up to Legend. From season 2, grades follow your top percentage in the ranking.',
   perkTier:
     'The grade you hold when the season ends shows as a tier next to your nickname on your profile, comments and chat all next season.',
   perkHonor:
@@ -72,6 +73,8 @@ export const teamAch: Translation<TeamAchMsgs> = {
   gradesTitle: 'Grade thresholds',
   gradesToggleApp: (p) => `${p.open ? '▾' : '▸'} Grade thresholds`,
   gradeFrom: (p) => `From ${p.n} pts`,
+  gradeTop: (p) => `Top ${p.pct}%`,
+  gradeRest: 'Everyone else',
   noteReset: 'It starts from zero every season.',
   noteSum:
     'This is the sum of player, team and owner achievement points. The ranking updates every 5 minutes.',
