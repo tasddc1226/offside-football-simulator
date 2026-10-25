@@ -6,7 +6,7 @@
   import type { AdminRevenue } from '@offside/app-core/api/admin';
   import { kstDateTime as kst } from '@offside/app-core/boardText';
   import {
-    ADMIN_REVENUE_DAYS, REVENUE_NOTE, adsSince, nick, periodLabel, productLine, productName, recentLine, revenueSummary, storeName, won,
+    ADMIN_REVENUE_DAYS, REVENUE_NOTE, adsSince, dayKrw, dayTitle, nick, periodLabel, productLine, productName, recentLine, revenueSummary, storeName, won,
   } from '@offside/app-core/admin/users';
 
   let days = $state(7);
@@ -25,7 +25,7 @@
     data = r.data;
     status = 'ready';
   }
-  const maxKrw = (r: AdminRevenue) => Math.max(1, ...r.daily.map((d) => d.krw));
+  const maxKrw = (r: AdminRevenue) => Math.max(1, ...r.daily.map(dayKrw));
 </script>
 
 <div class="stack" style="gap:14px" data-admin="revenue">
@@ -50,11 +50,11 @@
     {#if r.daily.length > 1}
       {@const max = maxKrw(r)}
       <figure class="daily">
-        <figcaption class="fs-sm">날짜별 매출</figcaption>
+        <figcaption class="fs-sm">날짜별 매출(광고 제거 포함)</figcaption>
         <div class="bars" role="list">
           {#each r.daily as d (d.day)}
-            <div class="bar" role="listitem" aria-label="{d.day} {won(d.krw)}" title="{d.day} · {won(d.krw)} · {d.count}건">
-              <i style="height:{Math.round((d.krw / max) * 100)}%"></i>
+            <div class="bar" role="listitem" aria-label="{d.day} {won(dayKrw(d))}" title={dayTitle(d)}>
+              <i style="height:{Math.round((dayKrw(d) / max) * 100)}%"></i>
               {#if r.daily.length <= 14}<small>{d.day.slice(8)}</small>{/if}
             </div>
           {/each}

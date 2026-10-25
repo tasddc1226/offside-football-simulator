@@ -219,6 +219,20 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
         test: false,
         createdAt: ago(1),
       },
+      // T-11-484 기간 밖 구매 · 다른 스토어 · 환불 · 테스트 알림.
+      ...[
+        ['b3', 'apple', 'purchase', ago(20), false],
+        ['b4', 'google', 'purchase', ago(0), false],
+        ['b5', 'apple', 'refund', ago(0), false],
+        ['b6', 'google', 'purchase', ago(0), true],
+      ].map(([id, store, kind, createdAt, test]) => ({
+        id: id as string,
+        store: store as string,
+        kind: kind as string,
+        productId: 'com.offsidelab.app.remove_ads',
+        test: test as boolean,
+        createdAt: createdAt as string,
+      })),
     ]);
     const res = await call('GET', '/v1/admin/revenue?days=7', { cookie: admin.cookie });
     expect(res.status).toBe(200);
@@ -240,7 +254,21 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
       krw: 0,
       refunded: 1,
     });
-    expect(r.removeAds).toMatchObject({ count: 1, refunds: 0, krw: 3300 });
+    // 기간 안: 애플 1 · 구글 1 구매, 애플 환불 1 → 3,300원. 전체 기간은 20일 전 구매까지 3건.
+    expect(r.removeAds).toMatchObject({
+      count: 2,
+      refunds: 1,
+      krw: 3300,
+      allTime: { count: 3, refunds: 1, krw: 6600 },
+    });
+    expect(r.removeAds.stores).toEqual(
+      expect.arrayContaining([
+        { store: 'apple', count: 1, refunds: 1 },
+        { store: 'google', count: 1, refunds: 0 },
+      ]),
+    );
+    expect(r.daily.reduce((s, d) => s + (d.adCount ?? 0), 0)).toBe(2);
+    expect(r.daily.reduce((s, d) => s + (d.adKrw ?? 0), 0)).toBe(6600);
     expect(r.recent.map((x) => x.productId)).not.toContain(undefined);
     expect(r.recent).toHaveLength(4);
     expect((await call('GET', '/v1/admin/revenue?days=5', { cookie: admin.cookie })).status).toBe(

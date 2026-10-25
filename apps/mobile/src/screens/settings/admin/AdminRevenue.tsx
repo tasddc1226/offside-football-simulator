@@ -14,6 +14,7 @@ import {
   productName,
   recentLine,
   revenueSummary,
+  dayKrw,
   storeName,
   won,
 } from '@offside/app-core/admin/users';
@@ -60,7 +61,7 @@ export default function AdminRevenue() {
     </Txt>
   );
   const r = data;
-  const max = r ? Math.max(1, ...r.daily.map((d) => d.krw)) : 1;
+  const max = r ? Math.max(1, ...r.daily.map(dayKrw)) : 1;
   return (
     <View testID="admin-revenue" style={{ gap: 14 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -115,16 +116,16 @@ export default function AdminRevenue() {
             {r.daily.length > 1 ? (
               <View style={{ gap: 6 }}>
                 <Txt bold style={small}>
-                  날짜별 매출
+                  날짜별 매출(광고 제거 포함)
                 </Txt>
                 <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 80 }}>
                   {r.daily.map((d) => (
                     <View
                       key={d.day}
-                      accessibilityLabel={`${d.day} ${won(d.krw)}`}
+                      accessibilityLabel={`${d.day} ${won(dayKrw(d))}`}
                       style={{
                         flex: 1,
-                        height: `${Math.max(1, Math.round((d.krw / max) * 100))}%`,
+                        height: `${Math.max(1, Math.round((dayKrw(d) / max) * 100))}%`,
                         backgroundColor: c.accent,
                         borderTopLeftRadius: 2,
                         borderTopRightRadius: 2,

@@ -119,7 +119,7 @@ export function grantError(delta: number, reason: string) {
 }
 
 export const REVENUE_NOTE =
-  '금액은 상품별 한국 정가 기준 추정이에요(스토어 환산·수수료 전). 웹 결제도 한국 정가로 세요(실제로는 나라 통화로 결제). 테스트 결제는 빼요. 광고 제거는 서버 구매 기록이 없어 스토어 알림으로 세요.';
+  '금액은 상품별 한국 정가 기준 추정이에요(스토어 환산·수수료 전). 웹 결제도 한국 정가로 세요(실제로는 나라 통화로 결제). 테스트 결제는 빼요. 광고 제거는 서버 원장 밖이라 스토어 알림으로 따로 세요(알림 기록 전 판매는 빠져요, 정확한 수는 App Store Connect · Play 판매 보고서).';
 export const periodLabel = (days: number) => (days === 1 ? '오늘' : `${days}일`);
 
 /** T-11-471 결제 경로별 합. 웹 결제는 엑솔라(xsolla), 나머지 스토어는 앱 인앱 결제다. */
@@ -143,13 +143,29 @@ export function revenueSummary(r: AdminRevenue): [string, string][] {
     ['웹 결제', `${won(ch.web.krw)} · ${ch.web.count.toLocaleString()}건`],
     ['결제한 사람', `${r.total.buyers.toLocaleString()}명 (첫 구매 ${r.total.firstBuyers})`],
     ['환불', `${r.total.refunds}건 · ${won(r.total.refundKrw)}`],
-    ['광고 제거', `${ads.count}건 · 환불 ${ads.refunds} · ${won(ads.krw)}`],
+    ['광고 제거(원장 밖)', adLine(ads, ads.stores)],
+    ['합계(광고 제거 포함)', won(r.total.krw + ads.krw)],
     [
       '전체 기간(소모성)',
       `${won(r.allTime.krw)} · ${r.allTime.count.toLocaleString()}건 · ${r.allTime.buyers.toLocaleString()}명`,
     ],
+    ...(ads.allTime ? ([['전체 기간(광고 제거)', adLine(ads.allTime)]] as [string, string][]) : []),
   ];
 }
+/** T-11-484 광고 제거 한 줄: 건수 · 환불 · 금액, 스토어별 건수가 있으면 뒤에. */
+function adLine(
+  a: { count: number; refunds: number; krw: number },
+  stores?: { store: string; count: number }[],
+) {
+  const by = stores?.length
+    ? ` (${stores.map((s) => `${storeName(s.store)} ${s.count.toLocaleString()}`).join(' · ')})`
+    : '';
+  return `${a.count.toLocaleString()}건 · 환불 ${a.refunds} · ${won(a.krw)}${by}`;
+}
+/** T-11-484 날짜별 막대 높이 · 설명에 쓰는 그날 합(소모성 + 광고 제거 알림). */
+export const dayKrw = (d: AdminRevenue['daily'][number]) => d.krw + (d.adKrw ?? 0);
+export const dayTitle = (d: AdminRevenue['daily'][number]) =>
+  `${d.day} · ${won(dayKrw(d))} · ${d.count}건${d.adCount ? ` · 광고 제거 ${d.adCount}건` : ''}`;
 export const adsSince = (r: AdminRevenue) =>
   r.removeAds.since ? `광고 제거 알림은 ${kst(r.removeAds.since)}부터 기록돼요.` : '';
 export const productLine = (p: AdminRevenue['products'][number]) =>
