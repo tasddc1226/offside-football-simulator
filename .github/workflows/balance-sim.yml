@@ -1,0 +1,92 @@
+name: Balance simulation matrix
+
+# 밸런스 초안(운영 도구 밸런스 버전 값)을 여러 정책 · 시드로 나란히 돌려 기준(base)과 비교한다. 배포 · 운영 DB와 무관하다.
+# sim/** 브랜치에 푸시하거나 수동 실행한다. 변형을 바꾸려면 아래 matrix.variant를 고친다.
+on:
+  push:
+    branches: ['sim/**']
+  workflow_dispatch:
+    inputs:
+      careers:
+        description: 작업 하나의 커리어 수
+        default: '5000'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: balance-sim-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sim:
+    name: ${{ matrix.variant.name }} · ${{ matrix.profile.name }} · seed ${{ matrix.seed }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          - { name: base, values: '{}' }
+          - { name: pot77, values: '{"potMean":77}' }
+          - { name: leagues, values: '{"newLeagues":1}' }
+          - { name: s2, values: '{"potMean":77,"premiumSMult":3,"newLeagues":1}' }
+          - { name: s2-pot76, values: '{"potMean":76,"premiumSMult":3,"newLeagues":1}' }
+          - { name: s2-pot78, values: '{"potMean":78,"premiumSMult":3,"newLeagues":1}' }
+        # random · smart는 원작 정책, user는 운영 유저에 가깝게(자기 투자 · 41세까지 · 미니게임 70%).
+        profile:
+          - { name: random, policy: random, env: '' }
+          - { name: smart, policy: smart, env: '' }
+          - { name: user, policy: smart, env: 'INVEST=1 RETIRE_AGE=41 MG=0.7' }
+        seed: [7, 11, 23]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Simulate
+        env:
+          VALUES: ${{ matrix.variant.values }}
+          TAG: ${{ matrix.variant.name }}__${{ matrix.profile.name }}__${{ matrix.seed }}
+          N: ${{ inputs.careers || '5000' }}
+        run: |
+          echo "$VALUES" > "$RUNNER_TEMP/balance.json"
+          BAL=""
+          if [ "$VALUES" != "{}" ]; then BAL="BALANCE=$RUNNER_TEMP/balance.json"; fi
+          cd tooling/fulltime-sim
+          env SEED=${{ matrix.seed }} DPOS=1 RETIRE_AT=45 $BAL ${{ matrix.profile.env }} \
+            pnpm exec tsx simulate.ts "$N" ${{ matrix.profile.policy }} "sim-$TAG"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sim-${{ matrix.variant.name }}__${{ matrix.profile.name }}__${{ matrix.seed }}
+          path: tooling/fulltime-sim/results/sim-${{ matrix.variant.name }}__${{ matrix.profile.name }}__${{ matrix.seed }}
+          retention-days: 14
+
+  summary:
+    name: Summary
+    needs: sim
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - uses: actions/download-artifact@v4
+        with:
+          path: sims
+          pattern: sim-*
+      - run: node tooling/fulltime-sim/balance-matrix-summary.mjs sims | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: balance-summary
+          path: sims/summary.json
+          retention-days: 30
