@@ -39,6 +39,9 @@
     MARKET_POS_FILTERS,
     marketDetailFilters,
     marketFiltered,
+    marketFindChips,
+    marketSubReset,
+    cardFrom,
     marketTypeFilters,
     pickMarketFilter,
     type MarketFilter,
@@ -84,6 +87,7 @@
   import { marketSalaryText } from '@offside/app-core/salary';
   import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
   import MarketChart from './MarketChart.svelte';
+  import MarketFind from './MarketFind.svelte';
   import { CHART_COPY, marketIndex } from '@offside/app-core/marketChart';
   import { go, takeFocus } from './nav.js';
   import { dur } from './motion.js';
@@ -115,6 +119,9 @@
   let sort = $state<MarketSort>('new');
   let filter = $state<MarketFilter>({});
   const pickFilter = (next: MarketFilter) => (filter = pickMarketFilter(filter, next));
+  // T-11-500 국적 · 팀으로 찾기 시트(열 때만 고를 거리를 받는다).
+  let finding = $state(false);
+  const findChips = $derived(marketFindChips(filter));
   const details = $derived(marketDetailFilters(filter.pos));
   const types = $derived(marketTypeFilters(filter.pos));
   let items = $state<MarketListing[]>([]);
@@ -437,6 +444,18 @@
             <button class="mk-chip" aria-pressed={filter.pos === p} data-market-pos={p ?? 'all'} onclick={() => pickFilter({ pos: p })}>{p ? tn(POS_LABEL[p]) : L.posAll}</button>
           {/each}
         </div>
+        <div class="mk-find" role="group" aria-label={L.findTitle}>
+          <button class="mk-chip mk-find-open" data-act="market-find" aria-haspopup="dialog" onclick={() => (finding = true)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            {L.findOpen}
+          </button>
+          {#each findChips as c (c.key)}
+            <button class="mk-chip mk-find-chip" aria-pressed="true" aria-label={L.findRemove({ name: c.name })} data-market-find-chip={c.key} onclick={() => pickFilter({ [c.key]: undefined })}>
+              {c.name}
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+            </button>
+          {/each}
+        </div>
         {#if filter.pos}
           <div class="mk-subfilters" data-market-subfilters>
             {#if details.length}
@@ -444,7 +463,7 @@
                 <div class="mk-subhead">
                   <span class="mk-sublabel">{L.detailPos}</span>
                   {#if filter.dpos || filter.type}
-                    <button class="mk-reset" data-market-reset onclick={() => (filter = { pos: filter.pos })}>{L.filterReset}</button>
+                    <button class="mk-reset" data-market-reset onclick={() => (filter = marketSubReset(filter))}>{L.filterReset}</button>
                   {/if}
                 </div>
                 <div class="mk-subchips">
@@ -459,7 +478,7 @@
               <div class="mk-subhead">
                 <span class="mk-sublabel">{L.playerType}</span>
                 {#if !details.length && (filter.dpos || filter.type)}
-                  <button class="mk-reset" data-market-reset onclick={() => (filter = { pos: filter.pos })}>{L.filterReset}</button>
+                  <button class="mk-reset" data-market-reset onclick={() => (filter = marketSubReset(filter))}>{L.filterReset}</button>
                 {/if}
               </div>
               <div class="mk-subchips">
@@ -494,6 +513,7 @@
                   <span class="mk-info">
                     <span class="mk-name">{marketName(l.card, local)}{#if myListingIds.has(l.id)}<em class="mk-tag">{L.myListing}</em>{/if}</span>
                     <small>{@render styleTag(l.card)}{cardMeta(l.card, season)}</small>
+                    <small class="mk-from" data-listing-from>{cardFrom(l.card)}</small>
                   </span>
                   <span class="mk-price"><b>{fmtValue(l.price)}</b><small class="mk-{diff.tone}">{diff.text}</small></span>
                   {#if l.card.attrs}
@@ -639,6 +659,10 @@
       </div>
     </div>
   </div>
+{/if}
+
+{#if finding}
+  <MarketFind {filter} onpick={pickFilter} onclose={() => (finding = false)} />
 {/if}
 
 {#if confirmRelease && me}
@@ -927,6 +951,27 @@
     background: var(--ink);
     color: var(--surface);
     font-weight: 600;
+  }
+  /* T-11-500 국적 · 팀으로 찾기 — 여는 칩 + 고른 것(지울 수 있는 칩) */
+  .mk-find {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .mk-find .mk-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mk-find-open {
+    border-color: var(--accent);
+    color: var(--accent-text);
+    font-weight: 600;
+  }
+  .mk-from {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   /* 세부 포지션 · 유형 — 라벨은 위, 칩은 아래에 줄바꿈으로 놓는다. 선택은 강조색 톤으로 위 포지션 칩과 위계를 나눈다. */
   .mk-subfilters {

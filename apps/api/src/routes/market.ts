@@ -13,6 +13,7 @@ import {
   MarketCardTradesResponseSchema,
   MarketChartQuerySchema,
   MarketChartResponseSchema,
+  MarketFacetsResponseSchema,
   MarketListQuerySchema,
   MarketFundsResponseSchema,
   MarketListResponseSchema,
@@ -36,6 +37,7 @@ import {
   insertListing,
   listOpenListings,
   marketChart,
+  marketFacets,
   marketFunds,
   marketRules,
   myOpenListings,
@@ -105,6 +107,9 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
       pos: c.req.query('pos') || undefined,
       dpos: c.req.query('dpos') || undefined,
       type: c.req.query('type') || undefined,
+      nation: c.req.query('nation') || undefined,
+      league: c.req.query('league') || undefined,
+      club: c.req.query('club') || undefined,
       sort: c.req.query('sort') || undefined,
       page: c.req.query('page') || undefined,
     });
@@ -126,11 +131,31 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
       ]);
       return { season, ...list, recent };
     };
+    // T-11-500 국적 · 리그 · 클럽으로 거른 목록은 키가 많아(국적 61 · 클럽 190여 곳 × 정렬 × 포지션) 엣지에 담지 않는다.
+    // 열린 매물만 훑는 가벼운 조회이고, 화면 메모 · 브라우저 캐시가 같은 요청을 다시 보내지 않는다.
+    const searched = !!(q.nation || q.league || q.club);
     const data =
-      q.page === 0
+      q.page === 0 && !searched
         ? await edgeCached(c, EDGE.marketList(season, q.sort, q), LIST_TTL, load)
         : await load();
     return ok(c, MarketListResponseSchema, data, 200, CACHE);
+  });
+
+  // T-11-500 '국적 · 팀' 시트의 고를 거리(공개 · 세션 조회 없음). 열린 매물이 있는 국적 · 리그 · 클럽과 매물 수. 시즌마다 키 하나.
+  app.get('/v1/market/facets', async (c) => {
+    const season = teamSeasonAt(nowIso());
+    if (season === null)
+      return ok(
+        c,
+        MarketFacetsResponseSchema,
+        { nations: [], leagues: [], clubs: [] },
+        200,
+        CHART_CACHE,
+      );
+    const data = await edgeCached(c, EDGE.marketFacets(season), CHART_TTL, () =>
+      marketFacets(getDb(c)),
+    );
+    return ok(c, MarketFacetsResponseSchema, data, 200, CHART_CACHE);
   });
 
   // T-11-080f 시세 차트(공개 · 세션 조회 없음). 묶음(포지션군 · OVR대) 또는 시장 전체의 하루치 시세.

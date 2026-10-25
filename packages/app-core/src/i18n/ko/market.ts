@@ -158,6 +158,26 @@ const ko = {
   toastUnlisted: '판매를 내렸어요.',
   toastBought: '선수를 영입했어요.',
   toastReleased: (p: { n: number }) => `${p.n}명을 방출했어요.`,
+  // T-11-500 국적 · 팀으로 찾기
+  findOpen: '국적 · 팀',
+  findTitle: '국적 · 팀으로 찾기',
+  findClose: '닫기',
+  findTabNation: '국적',
+  findTabNationOn: (p: { name: string }) => `국적 · ${p.name}`,
+  findTabTeam: '팀',
+  findTabTeamOn: (p: { name: string }) => `팀 · ${p.name}`,
+  findNationSearch: '국적 이름',
+  findTeamSearch: '리그 · 클럽 이름',
+  findNationCaption: (p: { n: number }) => `매물이 있는 국적 ${p.n}개 · 매물 많은 순`,
+  findLeagueCaption: '리그 · 가장 오래 뛴 리그',
+  findClubCaption: '클럽 · 가장 오래 뛴 클럽',
+  findLeagueAll: (p: { name: string }) => `${p.name} 전체로 보기`,
+  findClearNation: '국적 지우기',
+  findClearTeam: '팀 지우기',
+  findRemove: (p: { name: string }) => `${p.name} 필터 지우기`,
+  findNone: '맞는 국적 · 팀이 없어요.',
+  findFailed: '고를 목록을 불러오지 못했어요.',
+  findCount: (p: { n: number }) => `매물 ${p.n}건`,
 };
 
 export type MarketMsgs = typeof ko;

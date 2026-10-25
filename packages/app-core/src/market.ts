@@ -3,6 +3,7 @@ import type { CareerPos } from '@offside/contracts';
 import { fmtValue, playerName } from './format.js';
 import type {
   MarketCard,
+  MarketFacetsResponse,
   MarketListing,
   MarketRules,
   MarketSale,
@@ -26,6 +27,15 @@ import {
   type DetailPos,
 } from '@offside/contracts/positions';
 import { typeName } from '@offside/game/data';
+import { tn } from '@offside/game/i18n/names';
+import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
+import {
+  LEAGUE_BASE,
+  defaultClubName,
+  isAmateurClubId,
+  isDefaultClubId,
+  leagueOfClub,
+} from '@offside/contracts/club-names';
 import { marketText as L } from './i18n/ko/market.js';
 import { intlLocale } from './i18n/core.js';
 import { teamSeasonLabel } from './seasonName.js';
@@ -54,11 +64,15 @@ export const MARKET_SORT_LABEL = {
 };
 export const MARKET_POS_FILTERS: readonly (CareerPos | undefined)[] = [undefined, ...POS_GROUPS];
 
-/** T-11-474 선수 사기 목록 필터. 세부 포지션 · 유형은 포지션군을 고른 뒤에만 고른다(명예의 전당과 같다). */
+/** T-11-474 선수 사기 목록 필터. 세부 포지션 · 유형은 포지션군을 고른 뒤에만 고른다(명예의 전당과 같다).
+ *  T-11-500 국적 · 가장 오래 뛴 리그 · 클럽은 포지션과 따로 고른다(리그와 클럽은 둘 중 하나). */
 export interface MarketFilter {
   pos?: CareerPos | undefined;
   dpos?: DetailPos | undefined;
   type?: MarketType | undefined;
+  nation?: string | undefined;
+  league?: string | undefined;
+  club?: string | undefined;
 }
 /** 포지션군 안의 세부 포지션(골키퍼처럼 하나뿐이면 고를 것이 없다). */
 export const marketDetailFilters = (pos: CareerPos | undefined): readonly DetailPos[] =>
@@ -68,10 +82,83 @@ export const marketTypeFilters = (pos: CareerPos | undefined): [MarketType, stri
   pos ? MARKET_TYPES[pos].map((id) => [id, typeName(pos, id) ?? id]) : [];
 /** 필터 하나를 바꾼다. 포지션군이 바뀌면 그 안의 세부 포지션 · 유형은 풀린다. */
 export function pickMarketFilter(f: MarketFilter, next: MarketFilter): MarketFilter {
-  if ('pos' in next && next.pos !== f.pos) return { pos: next.pos };
-  return { ...f, ...next };
+  if ('pos' in next && next.pos !== f.pos) return { ...marketFindOnly(f), pos: next.pos };
+  // 리그를 고르면 클럽을, 클럽을 고르면 리그를 푼다.
+  const team = 'league' in next ? { club: undefined } : 'club' in next ? { league: undefined } : {};
+  return { ...f, ...team, ...next };
 }
-export const marketFiltered = (f: MarketFilter) => !!(f.pos || f.dpos || f.type);
+/** 세부 포지션 · 유형만 푼다(국적 · 팀은 남긴다). */
+export const marketSubReset = (f: MarketFilter): MarketFilter => ({
+  ...marketFindOnly(f),
+  pos: f.pos,
+});
+const marketFindOnly = (f: MarketFilter): MarketFilter => ({
+  nation: f.nation,
+  league: f.league,
+  club: f.club,
+});
+export const marketFiltered = (f: MarketFilter) =>
+  !!(f.pos || f.dpos || f.type || f.nation || f.league || f.club);
+
+// T-11-500 국적 · 팀으로 찾기. 고를 거리(서버 /v1/market/facets)를 지금 언어 이름으로 바꾸고 시트의 검색창으로 좁힌다.
+export const nationName = (code: string) => tn(NATION_BY_CODE.get(code)?.ko ?? code);
+export const leagueName = (id: string) => tn(LEAGUE_BASE.find((l) => l.id === id)?.name ?? id);
+export const clubName = (id: string) => tn(defaultClubName(id) ?? id);
+export interface FindItem {
+  id: string;
+  n: number;
+  name: string;
+}
+const squash = (s: string) => s.toLowerCase().replace(/\s+/g, '');
+/** 지금 언어 이름이나 한국어 이름에 검색어가 들어 있나(띄어쓰기 · 대소문자 무시). */
+const hit = (q: string, ...names: string[]) => !q || names.some((n) => squash(n).includes(q));
+const known = (ids: readonly { id: string; n: number }[], ok: (id: string) => boolean) =>
+  ids.filter((x) => ok(x.id));
+const PRO = new Set(LEAGUE_BASE.filter((l) => !l.amateur).map((l) => l.id));
+
+export function findNations(f: MarketFacetsResponse, query: string): FindItem[] {
+  const q = squash(query);
+  return known(f.nations, (id) => NATION_BY_CODE.has(id))
+    .map((x) => ({ ...x, name: nationName(x.id) }))
+    .filter((x) => hit(q, x.name, NATION_BY_CODE.get(x.id)!.ko));
+}
+export function findLeagues(f: MarketFacetsResponse, query: string): FindItem[] {
+  const q = squash(query);
+  return known(f.leagues, (id) => PRO.has(id))
+    .map((x) => ({ ...x, name: leagueName(x.id) }))
+    .filter((x) => hit(q, x.name, LEAGUE_BASE.find((l) => l.id === x.id)!.name));
+}
+/** 검색어가 있으면 모든 리그의 클럽에서, 없으면 고른 리그의 클럽만. */
+export function findClubs(
+  f: MarketFacetsResponse,
+  league: string | undefined,
+  query: string,
+): FindItem[] {
+  const q = squash(query);
+  return known(f.clubs, (id) => isDefaultClubId(id) && !isAmateurClubId(id))
+    .filter((x) => (q ? true : leagueOfClub(x.id)?.id === league))
+    .map((x) => ({ ...x, name: clubName(x.id) }))
+    .filter((x) => hit(q, x.name, defaultClubName(x.id)!));
+}
+/** 팀 탭을 열 때 펼칠 리그: 고른 리그 → 고른 클럽의 리그 → 매물이 가장 많은 리그. */
+export const findLeagueOf = (f: MarketFilter, facets: MarketFacetsResponse | null) =>
+  f.league ?? (f.club ? leagueOfClub(f.club)?.id : undefined) ?? facets?.leagues[0]?.id;
+/** 매물 줄의 국적 · 가장 오래 뛴 클럽(국적을 비워 둔 카드는 기본 국적). */
+export const cardFrom = (c: Pick<MarketCard, 'nation' | 'club'>) =>
+  [
+    nationName(c.nation ?? DEFAULT_NATION),
+    c.club && isDefaultClubId(c.club) ? clubName(c.club) : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+/** 목록 위에 남기는 '지울 수 있는' 칩. */
+export const marketFindChips = (
+  f: MarketFilter,
+): { key: 'nation' | 'league' | 'club'; name: string }[] => [
+  ...(f.nation ? [{ key: 'nation' as const, name: nationName(f.nation) }] : []),
+  ...(f.league ? [{ key: 'league' as const, name: leagueName(f.league) }] : []),
+  ...(f.club ? [{ key: 'club' as const, name: clubName(f.club) }] : []),
+];
 
 /** 이 기기에서 키운 선수면 이 기기의 이름, 아니면 공개 이름, 없으면 익명 표기. */
 export const marketName = (

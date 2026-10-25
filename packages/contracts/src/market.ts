@@ -9,6 +9,8 @@ import {
 import { MARKET_CHART_RANGES, MARKET_TYPES, type MarketType } from './market-value.js';
 import { IsoUtcSchema } from './primitives.js';
 import { FUNDS_ITEMS, type FundsItem } from './cup.js';
+import { NATION_BY_CODE } from './nations.js';
+import { LEAGUE_BASE, isAmateurClubId, isDefaultClubId } from './club-names.js';
 
 export {
   MARKET_CHART_DAYS,
@@ -60,6 +62,9 @@ export const MarketCardSchema = z.strictObject({
   /** 지금까지 팔린 횟수. */
   transfers: z.number().int().min(0),
   season: z.number().int().min(0),
+  /** T-11-500 가장 오래 뛴 프로 리그 · 클럽 id(시너지와 같은 기준). 모르면 null, 옛 응답에는 없다. */
+  league: z.string().nullable().optional(),
+  club: z.string().nullable().optional(),
 });
 export type MarketCard = z.infer<typeof MarketCardSchema>;
 
@@ -80,11 +85,26 @@ export const MarketRulesSchema = z.strictObject({
 });
 export type MarketRules = z.infer<typeof MarketRulesSchema>;
 
+const PRO_LEAGUES = new Set(LEAGUE_BASE.filter((l) => !l.amateur).map((l) => l.id));
+
 export const MarketListQuerySchema = z.strictObject({
   pos: CareerPosSchema.optional(),
   /** T-11-474 세부 포지션 · 선수 유형(명예의 전당처럼 포지션군 안에서 더 좁힌다). */
   dpos: DetailPosSchema.optional(),
   type: MarketTypeSchema.optional(),
+  /** T-11-500 국적 · 가장 오래 뛴 리그 · 클럽(시너지와 같은 기준). 게임에 있는 값만 받는다. */
+  nation: z
+    .string()
+    .refine((c) => NATION_BY_CODE.has(c))
+    .optional(),
+  league: z
+    .string()
+    .refine((id) => PRO_LEAGUES.has(id))
+    .optional(),
+  club: z
+    .string()
+    .refine((id) => isDefaultClubId(id) && !isAmateurClubId(id))
+    .optional(),
   sort: z.enum(MARKET_SORTS).default('new'),
   page: z.coerce.number().int().min(0).max(10).default(0),
 });
@@ -112,6 +132,18 @@ export const MarketListResponseSchema = z.strictObject({
   recent: z.array(MarketSaleSchema),
 });
 export type MarketListResponse = z.infer<typeof MarketListResponseSchema>;
+
+const FacetSchema = z.strictObject({ id: z.string(), n: z.number().int().min(1) });
+/**
+ * T-11-500 GET /v1/market/facets — 열린 매물이 있는 국적 · 리그 · 클럽과 매물 수(많은 순). 이적시장의 '국적 · 팀' 시트를 열 때만
+ * 부른다. 모두에게 같은 응답이라 엣지에 담는다. 시즌 사이 휴식기면 빈 목록.
+ */
+export const MarketFacetsResponseSchema = z.strictObject({
+  nations: z.array(FacetSchema),
+  leagues: z.array(FacetSchema),
+  clubs: z.array(FacetSchema),
+});
+export type MarketFacetsResponse = z.infer<typeof MarketFacetsResponseSchema>;
 
 /** 시세 차트 조회. pos·band를 함께 주면 그 묶음(포지션군 · OVR대), 둘 다 없으면 시장 전체. */
 export const MarketChartQuerySchema = z

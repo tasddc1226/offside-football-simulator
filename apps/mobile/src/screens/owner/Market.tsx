@@ -36,6 +36,8 @@ import {
   MARKET_POS_FILTERS,
   marketDetailFilters,
   marketFiltered,
+  marketFindChips,
+  cardFrom,
   marketTypeFilters,
   pickMarketFilter,
   type MarketFilter,
@@ -90,6 +92,8 @@ import { useOnPull } from '../../ui/refresh';
 import { PlayerCard } from '../../components/PlayerCard';
 import { LoginButtons } from './LoginButtons';
 import { MarketChart, MarketIndex } from './MarketChart';
+import { MarketFind } from './MarketFind';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { marketText as L } from '@offside/app-core/i18n/ko/market';
 import { intlLocale } from '@offside/app-core/i18n/core';
 import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
@@ -444,6 +448,72 @@ function SubFilters({
   );
 }
 
+/** T-11-500 '국적 · 팀' 여는 칩과 고른 것(누르면 지운다). 웹 .mk-find와 같은 모양. */
+function FindRow({
+  filter,
+  onOpen,
+  onPick,
+}: {
+  filter: MarketFilter;
+  onOpen: () => void;
+  onPick: (next: MarketFilter) => void;
+}) {
+  const c = useColors();
+  const chip = { minHeight: 34, paddingHorizontal: 13, borderRadius: RADIUS.pill, borderWidth: 1 };
+  const x = (color: string) => (
+    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 6l12 12M18 6 6 18" stroke={color} strokeWidth={2.6} strokeLinecap="round" />
+    </Svg>
+  );
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+      <Press
+        testID="market-find-open"
+        accessibilityRole="button"
+        onPress={onOpen}
+        style={{
+          ...chip,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          borderColor: c.accent,
+          backgroundColor: c.surface,
+        }}
+      >
+        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+          <Circle cx={11} cy={11} r={7} stroke={c.accentText} strokeWidth={2.2} />
+          <Path d="m20 20-3.5-3.5" stroke={c.accentText} strokeWidth={2.2} strokeLinecap="round" />
+        </Svg>
+        <Txt style={{ fontSize: rem(FONT.label), fontWeight: '600', color: c.accentText }}>
+          {L.findOpen}
+        </Txt>
+      </Press>
+      {marketFindChips(filter).map((f) => (
+        <Press
+          key={f.key}
+          testID={`market-find-chip-${f.key}`}
+          accessibilityRole="button"
+          accessibilityLabel={L.findRemove({ name: f.name })}
+          onPress={() => onPick({ [f.key]: undefined })}
+          style={{
+            ...chip,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            borderColor: c.ink,
+            backgroundColor: c.ink,
+          }}
+        >
+          <Txt style={{ fontSize: rem(FONT.label), fontWeight: '600', color: c.surface }}>
+            {f.name}
+          </Txt>
+          {x(c.surface)}
+        </Press>
+      ))}
+    </View>
+  );
+}
+
 /** T-11-477 매물 줄 아래 능력치 6개(웹 .mk-attrs). 능력치가 없는 옛 카드는 그리지 않는다. */
 function AttrStrip({ card }: { card: MarketCard }) {
   const c = useColors();
@@ -741,6 +811,8 @@ export default function Market() {
   const [sort, setSort] = useState<MarketSort>('new');
   const [filter, setFilter] = useState<MarketFilter>({});
   const pickFilter = (next: MarketFilter) => setFilter((f) => pickMarketFilter(f, next));
+  // T-11-500 국적 · 팀으로 찾기 시트(열 때만 고를 거리를 받는다).
+  const [finding, setFinding] = useState(false);
   const [items, setItems] = useState<MarketListing[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -1277,6 +1349,7 @@ export default function Market() {
                     />
                   ))}
                 </View>
+                <FindRow filter={filter} onOpen={() => setFinding(true)} onPick={pickFilter} />
                 {filter.pos ? <SubFilters filter={filter} onPick={pickFilter} /> : null}
                 <View
                   style={{
@@ -1363,6 +1436,14 @@ export default function Market() {
                               <Txt tone="muted" style={tiny}>
                                 <StyleTag card={l.card} />
                                 {cardMeta(l.card, season)}
+                              </Txt>
+                              <Txt
+                                tone="muted"
+                                style={tiny}
+                                numberOfLines={1}
+                                testID="market-listing-from"
+                              >
+                                {cardFrom(l.card)}
                               </Txt>
                             </View>
                             <View style={{ alignItems: 'flex-end', gap: 2 }}>
@@ -1856,6 +1937,13 @@ export default function Market() {
           </>
         ) : null}
       </MarketSheet>
+
+      <MarketFind
+        open={finding}
+        filter={filter}
+        onPick={pickFilter}
+        onClose={() => setFinding(false)}
+      />
 
       <MarketSheet open={confirmRelease && !!me} label={L.sheetRelease} onClose={closeSheets}>
         <View
