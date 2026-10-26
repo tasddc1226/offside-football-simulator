@@ -24,7 +24,11 @@ import {
   type HomeGiftResponse,
   type CupDivisionInfo,
 } from '@offside/contracts';
-import { ACH_SEASON_GIFT, RECORD_SEASON_GIFT } from '@offside/contracts/owner-team';
+import {
+  ACH_SEASON_GIFT,
+  AD_FREE_THANKS_GIFT,
+  RECORD_SEASON_GIFT,
+} from '@offside/contracts/owner-team';
 import { leagueLineupLocked } from '../team/league.js';
 import {
   CUP_GROUP_ROUNDS,
@@ -76,6 +80,7 @@ import {
 } from '../db/repos/itemShop.js';
 import { claimSeasonGift, ownerItemsOf, spendItem } from '../db/repos/iap.js';
 import { seasonAchGiftOf } from '../team/ownerAchievements.js';
+import { adFreeThanksGiftOf } from '../team/adFreeThanksGift.js';
 import { seasonRecordGiftOf } from '../team/seasonRecordGift.js';
 import { countOpenListingsAmong } from '../db/repos/market.js';
 import { newId } from '../db/ids.js';
@@ -782,6 +787,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
   // 홈을 열 때 구단주 표시가 있는 기기만 부른다. 받기는 재시도가 두 번 받지 않게 멱등 키도 쓴다(받은 기록 PK가 최종 방어선).
   // T-11-472 구단주 선물(T-11-275)은 없앴다 — 옛 앱이 그 id로 받기를 누르면 409 GIFT_CLAIMED로 카드를 닫는다.
   // T-11-487 업적 보상을 받았거나 없으면 시즌 기록 보상(리롤권 · 갈래별 내역)을 싣는다 — 그 카드를 그리는 기기(?v=2)만.
+  // T-11-517 그다음 광고 제거 구매 감사 선물 — 그 문구를 아는 기기(?v=3)만.
   app.get('/v1/items/gift', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
@@ -791,7 +797,8 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
     let gift: HomeGiftResponse['gift'] = r
       ? { id: g.id, kind: 'achSeason', season: g.season, ...r }
       : null;
-    if (!gift && c.req.query('v') === '2') {
+    const v = Number(c.req.query('v') ?? 1);
+    if (!gift && v >= 2) {
       const rec = await seasonRecordGiftOf(db, me.id, now);
       if (rec)
         gift = {
@@ -801,6 +808,10 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
           ...rec.total,
           record: { ...rec.facts, ...rec.parts },
         };
+    }
+    if (!gift && v >= 3) {
+      const thanks = await adFreeThanksGiftOf(db, me.id);
+      if (thanks) gift = { id: AD_FREE_THANKS_GIFT.id, kind: 'adFreeThanks', ...thanks };
     }
     return ok(c, HomeGiftResponseSchema, { gift }, 200, NO_STORE);
   });
@@ -817,6 +828,9 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
     } else if (id === RECORD_SEASON_GIFT.id) {
       const rec = await seasonRecordGiftOf(db, me.id, now);
       if (rec) items = await claimSeasonGift(db, me.id, RECORD_SEASON_GIFT.id, rec.total, now);
+    } else if (id === AD_FREE_THANKS_GIFT.id) {
+      const thanks = await adFreeThanksGiftOf(db, me.id);
+      if (thanks) items = await claimSeasonGift(db, me.id, AD_FREE_THANKS_GIFT.id, thanks, now);
     }
     if (!items) throw conflictError(cupKo('giftClaimed'), 'GIFT_CLAIMED');
     return ok(c, OwnerItemsResponseSchema, items, 200, NO_STORE);

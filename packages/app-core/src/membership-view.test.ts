@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { memberPerks, memberStatusText } from './membership-view';
 
 describe('T-11-512 클럽 멤버십 화면', () => {
-  it('혜택은 출석 2배 · 광고 제거 · 서포터 뱃지 세 가지다', () => {
-    expect(memberPerks().map((p) => p.key)).toEqual(['attend', 'ads', 'badge']);
+  it('혜택은 출석 2배 · 매일 강화권 · 광고 제거 · 서포터 뱃지 네 가지다', () => {
+    expect(memberPerks().map((p) => p.key)).toEqual(['attend', 'boost', 'ads', 'badge']);
   });
 
   it('자동 결제 여부에 맞춰 상태 한 줄을 고른다', () => {

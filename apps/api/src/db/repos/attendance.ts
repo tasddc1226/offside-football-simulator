@@ -2,6 +2,7 @@ import type { Attendance } from '@offside/contracts';
 import { checkInReward, nextStreak, streakAlive } from '@offside/contracts/attendance';
 import { OWNER_ITEMS, type OwnerItem } from '@offside/contracts/cup';
 import { kstDay } from '@offside/contracts/kst';
+import { MEMBER_ATTENDANCE_MULT, MEMBER_DAILY_BONUS } from '@offside/contracts/membership';
 import type { Db } from '../client.js';
 import { grantItemStatement } from './itemShop.js';
 
@@ -45,8 +46,8 @@ export async function checkIn(
   db: Db,
   profileId: string,
   now: string,
-  /** T-11-512 클럽 멤버십 구독 중이면 2(보상 배수). */
-  mult = 1,
+  /** T-11-512 클럽 멤버십 구독 중이면 보상 2배, T-11-517 잠재력 강화권 1장을 더 준다. */
+  member = false,
 ): Promise<{ attendance: Attendance; granted: Record<OwnerItem, number> } | null> {
   const d1 = db.$client;
   const today = kstDay(now);
@@ -63,8 +64,13 @@ export async function checkIn(
       graceWeek,
     };
     const base = checkInReward(next.stamps);
+    const bonus: Partial<Record<OwnerItem, number>> = member ? MEMBER_DAILY_BONUS : {};
+    const mult = member ? MEMBER_ATTENDANCE_MULT : 1;
     const reward = Object.fromEntries(
-      OWNER_ITEMS.filter((k) => base[k]).map((k) => [k, base[k]! * mult]),
+      OWNER_ITEMS.filter((k) => base[k] || bonus[k]).map((k) => [
+        k,
+        (base[k] ?? 0) * mult + (bonus[k] ?? 0),
+      ]),
     ) as typeof base;
     const claimId = crypto.randomUUID();
     const guard = {

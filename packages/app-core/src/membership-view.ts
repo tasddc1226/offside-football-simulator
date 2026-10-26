@@ -3,9 +3,10 @@ import type { MembershipResponse } from '@offside/contracts';
 import { dateOf } from './boardText';
 import { membershipText as L } from './i18n/ko/membership';
 
-/** 혜택 세 줄(가입 안내 · 이용 중 화면). */
+/** 혜택 네 줄(가입 안내 · 이용 중 화면). */
 export const memberPerks = () => [
   { key: 'attend', title: L.perkAttend, sub: L.perkAttendSub },
+  { key: 'boost', title: L.perkBoost, sub: L.perkBoostSub },
   { key: 'ads', title: L.perkAds, sub: L.perkAdsSub },
   { key: 'badge', title: L.perkBadge, sub: L.perkBadgeSub },
 ];

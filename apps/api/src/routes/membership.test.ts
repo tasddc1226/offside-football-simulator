@@ -122,7 +122,7 @@ describe('T-11-512 클럽 멤버십', () => {
     expect(await ctx.db.select().from(memberships)).toHaveLength(1);
   });
 
-  it('구독 중이면 출석 보상을 2배로 받고, 내 구단 · 친구 응답에 서포터 표시가 붙는다', async () => {
+  it('구독 중이면 출석 보상을 2배로 받고 강화권 1장을 더 받으며, 내 구단 · 친구 응답에 서포터 표시가 붙는다', async () => {
     const me = await issueGoogleCookie(ctx);
     apple.tx = appleTx(me.profileId);
     await claim(me.cookie);
@@ -132,8 +132,9 @@ describe('T-11-512 클럽 멤버십', () => {
     });
     const done = CheckInRes.parse(await res.json()).data;
     const base = checkInReward(1);
+    // T-11-517 2배와 따로 매일 잠재력 강화권 1장.
     for (const k of ['reroll', 'boost', 'scout', 'rename'] as const)
-      expect(done.granted[k]).toBe((base[k] ?? 0) * 2);
+      expect(done.granted[k]).toBe((base[k] ?? 0) * 2 + (k === 'boost' ? 1 : 0));
     expect(done.attendance.member).toBe(true);
     const team = TeamRes.parse(
       await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),

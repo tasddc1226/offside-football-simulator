@@ -306,7 +306,7 @@ export const HomeGiftResponseSchema = z.strictObject({
   gift: z
     .strictObject({
       id: z.string(),
-      kind: z.enum(['achSeason', 'recordSeason']).optional(),
+      kind: z.enum(['achSeason', 'recordSeason', 'adFreeThanks']).optional(),
       season: z.number().int().min(1).optional(),
       boost: z.number().int().min(0),
       scout: z.number().int().min(0),
