@@ -1,6 +1,7 @@
 // 팀 경기 화면(웹 TeamOpponents · TeamResult · TeamHistory · TeamMatchRow · TeamShare · teamShareCard,
 // 앱 TeamOpponents · TeamResult · TeamHistory · TeamShare). 웹·앱 문구가 다른 줄은 Web/App 접미사로 나눈다.
 import { ns } from '../core';
+import { waGwa } from '../../format.js';
 
 const ko = {
   // 상대 고르기
@@ -37,7 +38,7 @@ const ko = {
     'RP 아래 숫자는 내 팀과의 차이예요. RP가 높은 팀을 이기면 더 오르고, 져도 덜 깎여요.',
   oppRp: 'RP',
   matchStart: '경기 시작',
-  matchStartAria: (p: { name: string }) => `${p.name}과 경기 시작`,
+  matchStartAria: (p: { name: string }) => `${p.name}${waGwa(p.name)} 경기 시작`,
   matchRepick: (p: { left: number; max: number }) => `다른 상대 찾기 (${p.left}/${p.max})`,
   // 최근 경기
   historyTitle: '최근 경기',

@@ -1,6 +1,7 @@
 // T-11-310 감독 커리어 화면(웹 ui/Manager.svelte · 앱 screens/owner/Manager.tsx). 시즌 결산 · 이벤트 문장은 게임 엔진
 // gManager에 있다. 웹 · 앱이 같은 문구라 키를 함께 쓴다.
 import { ns } from '../core';
+import { withEulReul } from '../../format.js';
 
 const ko = {
   eyebrow: 'Manager career',
@@ -121,7 +122,7 @@ const ko = {
   release: '감독 경질',
   releaseTitle: (p: { name: string }) => `${p.name} 감독을 경질할까요?`,
   releasePay: (p: { amount: string }) =>
-    `직접 키운 선수라 방출처럼 구단 자금 ${p.amount}을 받아요.`,
+    `직접 키운 선수라 방출처럼 구단 자금 ${withEulReul(p.amount)} 받아요.`,
   releaseNoPay: '영입한 선수라 받는 구단 자금은 없어요.',
   releaseKeep: '감독 기록과 이미 받은 업적은 그대로 남아요.',
   releaseFinal: '경질한 감독은 되돌릴 수 없고 감독 칸에도 다시 앉힐 수 없어요.',

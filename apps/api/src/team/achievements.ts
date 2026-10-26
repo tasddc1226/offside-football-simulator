@@ -3,7 +3,7 @@
 // T-11-026 잠겨 있던 3~5단계를 연다 — 3단계 한 선수의 위업, 4단계 세계 무대 우승, 5단계 구단 전체의 불멸 기록.
 // 목표치는 운영 은퇴 기록 분포(2026-10-01, 은퇴 8천여 명)로 3단계는 선수 몇십 명 중 하나, 5단계는 손꼽히는 구단주만 닿게 잡았다.
 // T-11-028 업적을 선수·팀·구단주·감독(준비 중)으로 나누고 업적마다 점수를 매긴다. 점수 합이 그 시즌 구단주 등급과 업적
-// 랭킹이 된다 — 시즌마다 처음부터 다시 쌓는다. 팀은 편성(나만의 최강 팀)과 경기 성적(시즌 레이스)으로, 구단주는 시즌 동안
+// 랭킹이 된다 — 시즌마다 처음부터 다시 쌓는다. 팀은 편성(내가 만든 최강 팀)과 경기 성적(시즌 레이스)으로, 구단주는 시즌 동안
 // 꾸준히 찾아온 활동(은퇴시킨 선수·날, 팀 경기한 날, 응원)으로 센다. 팀·구단주 목표치는 프리시즌 팀 53개 분포(2026-10-01)로 잡았다.
 // T-11-046 '은퇴 직전까지 현역'은 그 시즌 은퇴 나이(T-11-045)의 한 살 아래다 — 프리시즌 40세, 시즌 1 44세.
 import { CAREER_FEATS } from '@offside/contracts/owner-title';
@@ -694,7 +694,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
     const best = (id: string, label: string, unit: string, cur: number, steps: number[]) =>
       tier(id, label, unit, Math.max(cur, kept[id] ?? 0), steps, TEAM_LADDER);
     groups.push(
-      group('team', 'team', 'TEAM', '나만의 최강 팀', [
+      group('team', 'team', 'TEAM', '내가 만든 최강 팀', [
         held('team-one', '팀에 선수 한 명 등록', players.length > 0, 10),
         held('team-full', '유스 없이 11명 채우기', full, 20),
         held(

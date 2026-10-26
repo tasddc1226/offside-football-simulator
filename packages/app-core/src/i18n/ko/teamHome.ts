@@ -183,7 +183,7 @@ const ko = {
     `${p.who} · 최고 OVR ${p.peak} · LS ${p.ls} · ${p.attrs}`,
   moreApp: '선수 더 보기',
   emptyFilteredApp: '조건에 맞는 대기 선수가 없어요. 선발 선수도 보거나 필터를 바꿔 주세요.',
-  emptyNoneApp: '이번 시즌에 커리어를 끝까지 뛰고 은퇴한 선수를 배치할 수 있어요.',
+  emptyNoneApp: '배치할 선수가 없어요. 이번 시즌에 은퇴까지 뛴 선수만 배치할 수 있어요.',
   // 그라운드 그림 · 선수 카드
   pitchAria: (p: { n: number }) => `선발 ${p.n}명 · 나머지 유스 선수`,
   attackDirection: '공격 방향 ↑',

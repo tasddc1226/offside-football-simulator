@@ -12,7 +12,7 @@ export const GROUP_JA: Record<string, { stage: string; title: string }> = {
   world: { stage: 'ステージ4', title: '世界の舞台を制す' },
   immortal: { stage: 'ステージ5', title: '不滅のクラブ' },
   beyond: { stage: 'ステージ6', title: '伝説の向こう' },
-  team: { stage: 'TEAM', title: '自分だけの最強チーム' },
+  team: { stage: 'TEAM', title: '自分で作った最強チーム' },
   race: { stage: 'RACE', title: 'シーズンレース' },
   owner: { stage: 'OWNER', title: 'クラブ運営' },
   manager: { stage: 'MANAGER', title: '監督キャリア' },

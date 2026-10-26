@@ -44,7 +44,7 @@ const ko = {
   achDone: (p: { n: number }) => `업적 ${p.n}개 달성`,
   rankOf: (p: { rank: number; total: string }) => `${p.rank}위 / ${p.total}`,
   unranked: '순위 밖',
-  next: (p: { season: string }) => `${p.season}에서 새 기록을 남겨 보세요.`,
+  next: (p: { season: string }) => `새 기록은 ${p.season}에 쌓여요.`,
   pickSeason: '시즌',
   loadFail: '결산을 불러오지 못했어요.',
   retry: '다시 시도',

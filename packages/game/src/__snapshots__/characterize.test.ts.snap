@@ -3,15 +3,15 @@
 exports[`게임 특성화 (T-11-044) > endSeason — 시즌 정산(seasonAwards·natSeasonEnd·milSeasonEnd 포함) 1`] = `
 {
   "대표팀": {
-    "hash": "c0bd1382dca31aef",
+    "hash": "ad5f1417c7af9dce",
     "n": 174,
   },
   "병역": {
-    "hash": "3dd373447863358d",
+    "hash": "df724c4bbfce2846",
     "n": 174,
   },
   "원본": {
-    "hash": "f7f81f351eec5d29",
+    "hash": "8488162a97c73b2f",
     "n": 174,
   },
 }
@@ -30,31 +30,31 @@ exports[`게임 특성화 (T-11-044) > market·acceptOption — 시장 선택지
   ],
   "대표팀": {
     "accepted": {
-      "hash": "fe9e83d45f01701b",
+      "hash": "dcfc26f7b8801cdb",
       "n": 174,
     },
     "options": {
-      "hash": "e778b20ccc52f9a2",
+      "hash": "5387c6e7051e108a",
       "n": 174,
     },
   },
   "병역": {
     "accepted": {
-      "hash": "b9c5e0e86c13976f",
+      "hash": "328c8c790813420a",
       "n": 174,
     },
     "options": {
-      "hash": "898e9c5401868a29",
+      "hash": "7717c863cce8cc4d",
       "n": 174,
     },
   },
   "원본": {
     "accepted": {
-      "hash": "a437d3fd62216835",
+      "hash": "389f1175e46085fe",
       "n": 174,
     },
     "options": {
-      "hash": "7ef03d1b25377e81",
+      "hash": "a145c0f0eb8db76f",
       "n": 174,
     },
   },
@@ -64,11 +64,11 @@ exports[`게임 특성화 (T-11-044) > market·acceptOption — 시장 선택지
 exports[`게임 특성화 (T-11-044) > natWindow — A매치·국제대회 창 1`] = `
 {
   "대표팀": {
-    "hash": "630d060c1de1fdce",
+    "hash": "995fc1c656b3a81d",
     "n": 522,
   },
   "원본": {
-    "hash": "ea2c9e9b1c19b039",
+    "hash": "f768a81085327072",
     "n": 522,
   },
 }
@@ -77,7 +77,7 @@ exports[`게임 특성화 (T-11-044) > natWindow — A매치·국제대회 창 1
 exports[`게임 특성화 (T-11-044) > rollEvent — 이벤트 추첨 1`] = `
 {
   "distinct": 51,
-  "hash": "e3d23bf47141d225",
+  "hash": "d253e4277d346414",
   "n": 522,
 }
 `;
@@ -85,15 +85,15 @@ exports[`게임 특성화 (T-11-044) > rollEvent — 이벤트 추첨 1`] = `
 exports[`게임 특성화 (T-11-044) > simBlock — 리그 구간 경기 결과 1`] = `
 {
   "대표팀": {
-    "hash": "d1d9a6f66467da1d",
+    "hash": "a0bd40866b4b8510",
     "n": 351,
   },
   "병역": {
-    "hash": "bb6d357e796ba24f",
+    "hash": "08708b7f33349b39",
     "n": 351,
   },
   "원본": {
-    "hash": "c92a83af29c73c79",
+    "hash": "7c595e22942e9180",
     "n": 351,
   },
 }
@@ -105,11 +105,11 @@ exports[`게임 특성화 (T-11-044) > 이벤트 × 선택지 — 확률 p 격�
   "reached": 63,
   "table": {
     "ad": "720 f6f25072799145fa",
-    "ag-release": "6 4d0eb90de7415716",
+    "ag-release": "6 b4e820d811468f4e",
     "asia-tour": "0 155cad1fc4d9cff1",
     "bench-talk": "21 5a5442d31bf3aeba",
     "charity": "870 d5637dd498b6ae0f",
-    "coach-farewell": "402 ec3b298f775e220d",
+    "coach-farewell": "402 159bd5760267d2f4",
     "dating-rumor": "385 5f385ac78aaf82c2",
     "derby": "194 5ad5e89157683530",
     "df-header": "97 4ed1c17480b1ab98",
@@ -129,12 +129,12 @@ exports[`게임 특성화 (T-11-044) > 이벤트 × 선택지 — 확률 p 격�
     "gk-no1": "3 d60a59658f45cff6",
     "gk-pk": "85 f410cf08ba82a955",
     "gk-sweeper": "136 24910e5d67fbd175",
-    "hat-trick": "96 1ba006bfdbe26975",
-    "haters": "83 93870d161f4ae312",
+    "hat-trick": "96 f6bd8986553d588e",
+    "haters": "83 2bdb94528afa518a",
     "interview": "870 b82b339132b49eec",
-    "kid-autograph": "434 c58e895856a5ae3a",
+    "kid-autograph": "434 a807f18a9f7d09d3",
     "knock": "755 c3b11e1785dc44a7",
-    "legend-critic": "276 f1a1018113a4c571",
+    "legend-critic": "276 da479325501eac05",
     "loan-talk": "0 ec86f2247d90e708",
     "mentor": "870 deb87d499cafb149",
     "mentor-2": "820 ff7cf2a073eb27e6",
@@ -145,16 +145,16 @@ exports[`게임 특성화 (T-11-044) > 이벤트 × 선택지 — 확률 p 격�
     "mil-notice": "35 fad90718892be6d2",
     "mil-notice-low": "11 aeb3eb49d14482c0",
     "newcoach": "498 666281812e2887c8",
-    "nt-retire": "780 16a53d2fbdb9a9d4",
+    "nt-retire": "780 f0bd7c08d0d36000",
     "oly-release": "6 b09e59b19ed47cf9",
     "paparazzi": "378 932a971032ad49b1",
     "party": "774 8eca75c89506f103",
-    "party-wags": "772 1bd8224e6a0cdcf2",
+    "party-wags": "772 4537b2b6826cac92",
     "penalty": "269 59f8b9eb1efdd2d7",
     "pk-save": "108 76bda90842b193ef",
-    "puskas": "115 ba7d93e49d58ee5c",
+    "puskas": "115 af57d4e5ae3c7c98",
     "racism": "0 ec86f2247d90e708",
-    "rehab-1": "5 bf63d2ad83228c70",
+    "rehab-1": "5 d41fdcf92a224a32",
     "rehab-2": "870 0de847eb22b2c2c2",
     "rehab-3": "755 25d323b74b5ba325",
     "rival": "644 4523e44dec0e508a",
@@ -166,10 +166,10 @@ exports[`게임 특성화 (T-11-044) > 이벤트 × 선택지 — 확률 p 격�
     "scandal-3": "870 386a75dc7cbc4e74",
     "scout": "743 40eaca9a47064c8d",
     "slump": "1 753679de612c541b",
-    "team-k": "62 270d02b23d6aa27a",
+    "team-k": "62 d933dc7bb18d0399",
     "trainer": "414 c149fb972087e9c3",
     "var": "498 1309a90cb601fd7e",
-    "wc-snub": "10 4d6c8c18a8078bae",
+    "wc-snub": "10 67c4d4d0b2582648",
     "winter-camp": "322 cf94e9bf5f927207",
     "winter-window": "242 d0bdaa3d32e89f13",
   },

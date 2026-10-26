@@ -131,8 +131,15 @@ describe('T-11-145 컵 규칙', () => {
     expect(cupText('시즌 1 제1회 오프사이드 컵 조 추첨 결과', 'en')).toBe(
       'Season 1 OFFSIDE Cup #1 group draw',
     );
+    expect(cupText('우리 FC 팀은 3조예요. 첫 경기는 오늘 21:00에 열려요.', 'ja')).toBe(
+      '우리 FCはグループ3です。初戦は本日21:00に始まります。',
+    );
+    // T-11-514 전에 저장된 옛 문구도 옮긴다.
     expect(cupText('우리 FC은(는) 3조예요. 첫 경기는 오늘 21:00에 열려요.', 'ja')).toBe(
       '우리 FCはグループ3です。初戦は本日21:00に始まります。',
+    );
+    expect(cupText('시즌 1 제1회 오프사이드 컵이 끝났어요', 'en')).toBe(
+      cupText('시즌 1 제1회 오프사이드 컵 결과가 나왔어요', 'en'),
     );
     expect(cupText('최종 성적 준우승. 선수 후보 리롤권 7장을 받았어요.', 'en')).toBe(
       'Final result: Runners-up. You received 7 player reroll ticket(s).',

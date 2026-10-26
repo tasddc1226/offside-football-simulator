@@ -40,12 +40,12 @@ const ko = {
   adminNoCups: '대회가 없어요.',
   lineupOpen: '팀 상세·스쿼드 보기',
   predictionLoginTitle: '승부예측으로 컵에 함께해요',
-  predictionLoginButton: 'Google 로그인하고 승부예측 참여하기',
+  predictionLoginButton: '구글로 로그인하고 승부예측 참여하기',
   predictionPick: '예측하기',
   predictionKnockout: '토너먼트는 승부차기를 포함한 최종 승리 팀을 맞혀요.',
   predictionPending: '결과 집계 중',
   predictionSaving: '예측 저장 중…',
-  predictionShares: '유저 예측 비율',
+  predictionShares: '구단주 예측 비율',
   predictionTitle: '승부예측',
   predictionIntro:
     '컵에 신청하지 않아도 모든 경기의 결과를 예측할 수 있어요. 맞힌 경기마다 선수 후보 리롤권 1장을 받아요.',
@@ -122,7 +122,7 @@ const ko = {
   withdrawConfirm: '컵 신청을 취소할까요? 접수 기간 안에는 다시 신청할 수 있어요.',
   toastEntered: '컵에 신청했어요.',
   toastWithdrawn: '신청을 취소했어요.',
-  loginToEnter: 'Google 로그인하면 신청할 수 있어요.',
+  loginToEnter: '구글로 로그인하면 신청할 수 있어요.',
   /** T-11-443 웹 비로그인 대회 화면 로그인 카드 · 신청 확인 · 신청 불가 사유에서 편성으로. */
   loginCardNote: '로그인하면 컵에 신청하고 승부예측에도 참여할 수 있어요.',
   enterAskTitle: '컵에 신청할까요?',
@@ -140,7 +140,7 @@ const ko = {
   reasonClosed: '지금은 신청 기간이 아니에요.',
   // T-11-410 OVR 구간별 대회
   reasonOverCap: (p: { ovr: number; cap: number }) =>
-    `팀 OVR ${p.ovr}은(는) 이 구간 상한 ${p.cap}보다 높아요. 윗 구간에 신청할 수 있어요.`,
+    `팀 OVR(${p.ovr})이 이 구간 상한(${p.cap})보다 높아요. 윗 구간에 신청할 수 있어요.`,
   reasonEnteredOther: '이번 회차 다른 구간에 신청했어요. 그 신청을 취소하면 옮길 수 있어요.',
   divisionJunior: '주니어',
   divisionSenior: '시니어',
@@ -152,9 +152,9 @@ const ko = {
   divisionEntries: (p: { n: number }) => `${p.n}팀 신청`,
   divisionMine: '내 구간',
   divisionFit: (p: { ovr: number; division: string }) =>
-    `내 팀 OVR ${p.ovr}이라 ${p.division}부터 신청할 수 있어요. 윗 구간에 도전해도 돼요.`,
+    `내 팀 OVR(${p.ovr})이라 ${p.division}부터 신청할 수 있어요. 윗 구간에 도전해도 돼요.`,
   divisionLockNote: (p: { cap: number }) =>
-    `조 추첨부터 탈락할 때까지 팀 OVR ${p.cap}을 넘는 명단으로 바꿀 수 없어요.`,
+    `조 추첨부터 탈락할 때까지 팀 OVR 상한(${p.cap})을 넘는 명단으로는 바꿀 수 없어요.`,
   ruleDivisions:
     '팀 OVR 구간(주니어 · 시니어 · 마스터)마다 따로 대회를 열어요. 내 OVR이 상한 이하인 구간에 신청할 수 있고, 윗 구간에 도전해도 돼요. 한 회차에 한 구간만 참가해요.',
   ruleDivisionMove:
@@ -196,7 +196,7 @@ const ko = {
     `팀 OVR ${p.ovr} · ${p.division}(상한 없음)`,
   barFilled: (p: { n: number; min: number }) => `선발 ${p.n}/최소 ${p.min}`,
   barOverCapBlock: (p: { division: string; cap: number }) =>
-    `${p.division} 상한 ${p.cap}을 넘어서 저장할 수 없어요. 팀 OVR을 ${p.cap} 이하로 맞춰 주세요.`,
+    `${p.division} 상한(${p.cap})을 넘어서 저장할 수 없어요. 팀 OVR을 ${p.cap} 이하로 맞춰 주세요.`,
   barOverCapMove: (p: { division: string }) =>
     `${p.division} 상한을 넘었어요. 이대로면 조 추첨 때 윗 구간으로 옮겨져요.`,
   barShortBlock: (p: { min: number }) =>

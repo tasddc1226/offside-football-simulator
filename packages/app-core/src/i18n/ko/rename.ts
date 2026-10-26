@@ -18,7 +18,7 @@ const ko = {
   have: (p: { n: number }) => `가진 변경권 ${p.n}장`,
   btn: '1장 쓰고 바꾸기',
   busy: '바꾸는 중…',
-  done: (p: { name: string }) => `이름을 ${p.name}(으)로 바꿨어요.`,
+  done: (p: { name: string }) => `이름을 ${withRo(p.name)} 바꿨어요.`,
   fail: '이름을 바꾸지 못했어요. 잠시 뒤 다시 눌러 주세요.',
   empty: '이름을 넣어 주세요.',
   invalid: '쓸 수 없는 이름이에요. 다른 이름을 넣어 주세요.',

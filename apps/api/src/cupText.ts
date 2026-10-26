@@ -26,9 +26,22 @@ export const cupTitle = (cup: CupDef) =>
 
 /** 자리 안에 다시 컵 문구가 들어가는 자리(대회 이름·라운드·결과). 팀 이름은 구단주가 지은 이름이라 옮기지 않는다. */
 const NESTED = new Set(['cup', 'round', 'result', 'stage', 'division']);
-const SENTENCES = (Object.keys(CUP_KO) as CupTextKey[]).map((key) => {
+// T-11-514 문구를 다듬기 전에 알림함에 저장된 옛 한국어 틀. 옛 알림도 같은 키로 옮긴다.
+const LEGACY_KO: [CupTextKey, string][] = [
+  ['completeTitle', '{cup}이 끝났어요'], // i18n-ignore: 옛 알림 원문
+  ['cancelledTitle', '{cup}이 열리지 않아요'], // i18n-ignore: 옛 알림 원문
+  ['outTitle', '{cup}을 마쳤어요'], // i18n-ignore: 옛 알림 원문
+  ['movedUpBody', '조 추첨 때 팀 OVR이 신청한 구간 상한보다 높아 윗 구간으로 옮겼어요.'], // i18n-ignore: 옛 알림 원문
+  ['mergedBody', '신청한 구간 팀이 {n}팀보다 적어 윗 구간과 함께 치러요.'], // i18n-ignore: 옛 알림 원문
+  ['drawBody', '{team}은(는) {group}조예요. 첫 경기는 오늘 {time}에 열려요.'], // i18n-ignore: 옛 알림 원문
+  ['leaguePlacedBody', '{team}은(는) {tier}부 {league}리그예요. 1라운드는 오늘 {time}에 열려요.'], // i18n-ignore: 옛 알림 원문
+];
+const SENTENCES = [
+  ...(Object.keys(CUP_KO) as CupTextKey[]).map((key) => [key, CUP_KO[key]] as const),
+  ...LEGACY_KO,
+].map(([key, ko]) => {
   const names: string[] = [];
-  const src = CUP_KO[key]
+  const src = ko
     .split(/(\{\w+\})/)
     .map((part) => {
       const m = /^\{(\w+)\}$/.exec(part);

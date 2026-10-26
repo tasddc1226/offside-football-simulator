@@ -28,7 +28,7 @@ const ko = {
   noHonors: '이번 시즌 수상은 없었어요.',
   promoTitle: 'K리그1 승격 확정',
   promoBodyWeb: (p: { club: string }) =>
-    `이번 시즌 1위로 ${p.club}의 승격이 확정됐어요. 다음 시즌에는 K리그1에서 새로운 도전을 시작해요.`,
+    `이번 시즌 1위로 ${p.club}의 승격이 확정됐어요. 다음 시즌은 K리그1에서 뛰어요.`,
   promoBodyApp: (p: { club: string }) =>
     `이번 시즌 1위로 ${p.club}의 승격이 확정됐어요. 다음 시즌은 K리그1에서 뛰어요.`,
   promoDownWeb: (p: { club: string }) => `자리를 내준 ${p.club} · K리그2 강등`,

@@ -41,6 +41,8 @@ const EN: Record<string, string> = {
   [`친구 초대 보상으로 선수 후보 리롤권 ${INVITE_REROLLS}장과 프리미엄 스카우트권 ${INVITE_SCOUTS}장을 받았어요.`]: `You got ${INVITE_REROLLS} candidate rerolls and ${INVITE_SCOUTS} premium scout ticket as an invite reward.`, // i18n-ignore: 번역표 키
   // T-11-244 retired number reward (db/repos/itemShop.ts).
   '영구결번 보상을 받았어요': 'You got a retired number reward', // i18n-ignore: 번역표 키
+  [`영구결번 보상으로 프리미엄 스카우트권 ${RETIRED_NUMBER_SCOUTS}장을 받았어요.`]: `Your retired number earned you ${RETIRED_NUMBER_SCOUTS} premium scout ticket.`, // i18n-ignore: 번역표 키
+  // Notices sent before T-11-514 kept the old wording.
   [`영구결번을 받아 프리미엄 스카우트권 ${RETIRED_NUMBER_SCOUTS}장을 받았어요.`]: `Your number was retired, so you got ${RETIRED_NUMBER_SCOUTS} premium scout ticket.`, // i18n-ignore: 번역표 키
   // Notices sent before T-11-244 (2 rerolls).
   [OLD_INVITEE]: 'You finished a career and got 2 candidate rerolls.',
