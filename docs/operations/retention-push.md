@@ -42,6 +42,10 @@
 적는다. 운영 도구 → 앱 푸시 → 분석 → **리텐션 푸시**에서 캠페인 · 단계마다 보낸 쪽과 비교군의 비율을 나란히 본다. 비교군이 끝나면
 `RETENTION_HOLDOUT_UNTIL`을 지우거나 그대로 두면 모두 보낸다.
 
+앱 분석(GA4)의 `offside_push_open`에는 `push_campaign=retention_lapsed`(`reminder_stage` 3 · 7 · 14 · 30) 또는
+`retention_onboarding`(1~5)이 붙는다(T-11-508). 허용 목록(`packages/app-core/src/analytics-native.ts`의 `PUSH_CAMPAIGNS`) 밖
+캠페인 · 단계는 `push_category`만 보낸다. 비교군은 푸시를 받지 않으므로 GA4로는 보낸 쪽만 보이고, 복귀율 비교는 위 원장으로 한다.
+
 ## 끄기
 
 `RETENTION_PUSH_ENABLED=0`이면 새 원장 · 알림을 쌓지 않고, cron은 옛 첫 커리어 독려 · 재방문 안내로 돌아간다.
