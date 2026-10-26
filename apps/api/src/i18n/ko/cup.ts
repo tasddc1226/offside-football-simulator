@@ -56,6 +56,8 @@ export const CUP_KO = {
   iapPending: '결제가 아직 끝나지 않았어요. 결제가 끝나면 자동으로 받아요.',
   iapOtherAccount: '다른 계정으로 산 구매예요. 산 계정으로 로그인해 주세요.',
   iapUnavailable: '지금은 구매를 확인할 수 없어요. 잠시 뒤 앱을 다시 열면 받아요.',
+  // T-11-511 시즌 패스.
+  passMissing: '이 시즌 패스가 없어요.',
   // T-11-454 웹 결제.
   webPayUnavailable: '지금은 결제를 확인할 수 없어요. 잠시 뒤 이 화면을 다시 열면 받아요.',
   shopClosed: '지금은 리롤권을 팔지 않아요.',

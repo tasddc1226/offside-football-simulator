@@ -23,6 +23,7 @@ export const billing: typeof ko = {
   testNotice: 'Test notification. Do not count this as revenue.',
   testProduct: 'Store notification connection check',
   removeAds: 'Remove ads',
+  seasonPass: 'Season pass',
   items: {
     reroll: 'Reroll tickets',
     boost: 'Potential boost tickets',

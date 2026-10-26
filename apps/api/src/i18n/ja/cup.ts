@@ -56,6 +56,8 @@ export const CUP_JA: Record<CupTextKey, string> = {
   iapPending: 'お支払いがまだ完了していません。完了すると自動で受け取れます。',
   iapOtherAccount: '別のアカウントで購入されています。購入したアカウントでログインしてください。',
   iapUnavailable: '現在は購入を確認できません。しばらくしてからアプリを開き直すと受け取れます。',
+  // T-11-511 シーズンパス。
+  passMissing: 'このシーズンのパスがありません。',
   webPayUnavailable:
     '現在は決済を確認できません。しばらくしてからこの画面を開き直すと受け取れます。',
   shopClosed: '現在リロール券は販売していません。',

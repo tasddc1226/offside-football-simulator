@@ -85,6 +85,7 @@ export const EXPECTED_TABLES = Object.freeze([
   'billing_alerts',
   'retired_numbers',
   'server_firsts',
+  'season_passes',
   'season_telemetry',
   'server_records',
   'sessions',

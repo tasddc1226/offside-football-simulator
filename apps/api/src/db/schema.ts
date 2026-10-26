@@ -1761,6 +1761,33 @@ export const ownerAttendanceDays = sqliteTable(
 );
 
 /**
+ * T-11-511 시즌 패스. 구단주 · 시즌마다 한 줄이고, 스토어 거래(store, transaction_id)마다 한 줄이다. claimed = 받은 단계까지,
+ * claim_id는 마지막으로 받은 요청(같은 batch의 아이템 지급 조건). 환불되면 refunded_at을 적고 패스를 닫는다.
+ */
+export const seasonPasses = sqliteTable(
+  'season_passes',
+  {
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    season: integer('season').notNull(),
+    store: text('store').notNull(),
+    transactionId: text('transaction_id').notNull(),
+    test: integer('test', { mode: 'boolean' }).notNull().default(false),
+    claimed: integer('claimed').notNull().default(0),
+    claimId: text('claim_id'),
+    purchasedAt: text('purchased_at'),
+    createdAt: text('created_at').notNull(),
+    refundedAt: text('refunded_at'),
+  },
+  (table) => [
+    primaryKey({ columns: [table.profileId, table.season] }),
+    uniqueIndex('season_passes_tx_unique').on(table.store, table.transactionId),
+    index('season_passes_created_idx').on(table.createdAt),
+  ],
+);
+
+/**
  * T-11-152 구단 자금으로 산 아이템 원장(자금이 없어진 내역). 하루 상한을 세고, 운영에서 자금 대조
  * (방출 + 판매 − 영입 − 아이템 구매)에 쓴다.
  */
