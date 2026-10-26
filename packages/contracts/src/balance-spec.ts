@@ -96,6 +96,13 @@ export const BALANCE_SPEC = {
     max: 5,
     step: 1,
   },
+  careCost: {
+    def: 1,
+    min: 0.25,
+    max: 4,
+    step: 0.05,
+    unit: 'x',
+  },
   potMean: {
     def: 75,
     min: 65,
@@ -359,6 +366,19 @@ export const BALANCE_SPEC = {
     def: 5,
     min: 0,
     max: 50,
+    step: 1,
+  },
+  surePrice: {
+    def: 2_000_000,
+    min: 10_000,
+    max: 100_000_000,
+    step: 10_000,
+    unit: 'man',
+  },
+  sureDailyCap: {
+    def: 3,
+    min: 0,
+    max: 20,
     step: 1,
   },
   // T-11-375 구단 디비전. 게임(웹)은 표시에만 쓰고, 서버가 랭크 경기 · 디비전 랭킹 · 시즌 마감 때 활성 버전을 바로 읽는다.

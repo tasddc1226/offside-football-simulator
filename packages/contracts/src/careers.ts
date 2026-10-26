@@ -154,7 +154,19 @@ export const SeasonGrowthSchema = z.strictObject({
             ok: z.boolean(),
           }),
         )
-        .max(4),
+        // T-11-513 강화권은 시즌 횟수가 없고 확정 강화도 더해져 4번을 넘을 수 있다(클라이언트는 마지막 16개만 싣는다).
+        .max(16),
+    })
+    .optional(),
+  /**
+   * T-11-513 몸 관리. 이번 시즌 끝에 능력치가 떨어지는(정점을 넘긴) 시즌이면 싣는다 — 받은 단계(t, 안 받았으면 0) · 쓴 자금(c) ·
+   * 시즌 끝 선수 자금(m). 받지 않은 시즌도 남겨 받는 비율과 '돈이 남는데 안 받은' 시즌을 서버에서 센다.
+   */
+  vc: z
+    .strictObject({
+      t: z.number().int().min(0).max(3),
+      c: z.number().int().min(0).max(1e9),
+      m: z.number().min(-1e9).max(1e12),
     })
     .optional(),
   /**

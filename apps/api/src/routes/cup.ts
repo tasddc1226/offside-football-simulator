@@ -11,6 +11,8 @@ import {
   RerollShopResponseSchema,
   BuyRewardBodySchema,
   RewardShopResponseSchema,
+  BuySureBodySchema,
+  SureShopResponseSchema,
   REWARD_KINDS,
   type CupMatch,
   type CupOdds,
@@ -63,7 +65,10 @@ import {
 import {
   buyReroll,
   buyRewardWithFunds,
+  buySureWithFunds,
   rerollShopRules,
+  sureShopRules,
+  sureSnapshot,
   buyScout,
   rewardShopRules,
   rewardSnapshot,
@@ -929,7 +934,66 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
     const next = { balance: res.balance, bought: { ...snap.bought, [input.kind]: bought + 1 } };
     return ok(c, RewardShopResponseSchema, rewardShop(next, rules), 200, NO_STORE);
   });
+
+  // T-11-513 확정 강화의 지금 값. 강화 자리를 볼 수 있는 구단주가 부른다(앱 · 웹 30초 메모).
+  app.get('/v1/items/sure', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const [snap, rule] = await Promise.all([
+      sureSnapshot(db, me.id, kstTodayStart(nowIso())),
+      sureShopRules(db),
+    ]);
+    return ok(c, SureShopResponseSchema, sureShop(snap, rule), 200, NO_STORE);
+  });
+
+  // T-11-513 확정 강화 한 번을 구단 자금으로 받는다. 화면에서 본 가격을 함께 보낸다(다르면 409). 강화는 응답을 받은 기기가 준다.
+  app.post('/v1/items/sure/buy', requireProfile, idempotency, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const input = readBody(c, BuySureBodySchema);
+    const now = nowIso();
+    const since = kstTodayStart(now);
+    const [snap, rule] = await Promise.all([sureSnapshot(db, me.id, since), sureShopRules(db)]);
+    const price = shopPriceAt(rule, snap.bought);
+    if (price === null)
+      throw rule.cap === 0
+        ? conflictError(cupKo('rewardClosed'), 'SHOP_CLOSED')
+        : conflictError(cupKo('rewardDaily', { n: rule.cap }), 'DAILY_LIMIT');
+    if (input.price !== price) throw conflictError(cupKo('rewardPriceChanged'), 'PRICE_CHANGED');
+    if (snap.balance < price) throw fundsShort();
+    let res: Awaited<ReturnType<typeof buySureWithFunds>>;
+    try {
+      res = await buySureWithFunds(db, {
+        id: newId('ipc'),
+        profileId: me.id,
+        price,
+        bought: snap.bought,
+        since,
+        now,
+      });
+    } catch (e) {
+      if (isFundsCheck(e)) throw fundsShort();
+      throw e;
+    }
+    if (!res.won) throw conflictError(cupKo('rewardPriceChanged'), 'PRICE_CHANGED');
+    return ok(
+      c,
+      SureShopResponseSchema,
+      sureShop({ balance: res.balance, bought: snap.bought + 1 }, rule),
+      200,
+      NO_STORE,
+    );
+  });
 }
+
+/** T-11-513 구단 자금 · 오늘 받은 횟수 · 수치로 확정 강화 값 응답을 만든다. */
+const sureShop = (
+  snap: { balance: number; bought: number },
+  rule: { price: number; growth: number; cap: number },
+) => ({
+  balance: snap.balance,
+  offer: { price: shopPriceAt(rule, snap.bought), bought: snap.bought, cap: rule.cap },
+});
 
 /** 구단 자금 · 오늘 받은 횟수 · 수치로 보상 값 응답을 만든다. */
 function rewardShop(

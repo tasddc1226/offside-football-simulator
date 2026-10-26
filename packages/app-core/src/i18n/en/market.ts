@@ -102,6 +102,7 @@ export const market: Translation<MarketMsgs> = {
   spendCandidates: 'Candidate potential',
   spendPeek: 'Season rating',
   spendBoost: 'Potential boost',
+  spendSure: 'Guaranteed boost',
   releasePane: 'Release players to raise funds',
   backToMarket: 'Back to market',
   releaseIntro:

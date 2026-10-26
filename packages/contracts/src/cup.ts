@@ -421,13 +421,17 @@ export type RewardKind = (typeof REWARD_KINDS)[number];
  * 14가 cap에서 오늘 산 횟수와 광고 횟수를 빼 버튼을 닫는다)가 막지 않게 넉넉한 값으로 보낸다.
  */
 export const REWARD_UNCAPPED = 999;
-/** 구단 자금으로 산 것(owner_item_purchases.item) — 리롤권(T-11-152)과 광고 대신 받은 보상(T-11-153). */
+/**
+ * 구단 자금으로 산 것(owner_item_purchases.item) — 리롤권(T-11-152)과 광고 대신 받은 보상(T-11-153), 확정 강화(T-11-513, sure).
+ * 확정 강화는 옛 앱이 받는 보상 값 응답(offers, strictObject)에 끼지 않게 REWARD_KINDS 밖에 둔다.
+ */
 export const FUNDS_ITEMS = [
   'reroll',
   'scout',
   ...REWARD_KINDS.map((k) => `reward:${k}` as const),
+  'sure',
 ] as const;
-export type FundsItem = 'reroll' | 'scout' | `reward:${RewardKind}`;
+export type FundsItem = 'reroll' | 'scout' | `reward:${RewardKind}` | 'sure';
 
 /**
  * T-11-152 구단 자금으로 사는 리롤권 가격(만 원). bought = 오늘(0시 한국 시각부터) 이미 산 장수.
