@@ -1,0 +1,24 @@
+{
+  "id": "t-11-409-cup-strength",
+  "title": "컵 경기 전력 차이 반영",
+  "items": [
+    "제3회 컵부터 랭크 경기와 같이 전력 차이를 더 크게 반영해요. 세 줄 힘이 10점 앞서면 승리 확률이 약 62%에서 72%로 올라요.",
+    "경기 전 예상 승 · 무 · 패도 같은 계산으로 보여 줘요."
+  ],
+  "en": {
+    "title": "Strength gaps count more in cup matches",
+    "items": [
+      "From the 3rd cup, strength gaps count as much as in ranked matches. A 10-point lead on all three lines raises the win chance from about 62% to 72%.",
+      "Pre-match win, draw and loss odds use the same calculation."
+    ]
+  },
+  "ja": {
+    "title": "カップ戦の戦力差の反映",
+    "items": [
+      "第3回カップからランクマッチと同じく戦力差を大きく反映します。3つのラインの力が10点上回ると、勝率がおよそ62%から72%に上がります。",
+      "試合前の勝ち・引き分け・負けの予想も同じ計算で表示します。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": { "changes": [{ "key": "cupAtkK", "from": 0.3, "to": 0.45 }] }
+}

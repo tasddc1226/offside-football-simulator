@@ -74,6 +74,15 @@ describe('privacy allowlists', () => {
       expect(campaignQuery(`https://offside-lab.com/${query}&uid=PRIVATE`)).toBe(query);
     }
   });
+  it('keeps the creator short-form campaign per platform', () => {
+    for (const [source, content] of [
+      ['tiktok', 'ethio_tiktok'],
+      ['youtube', 'ethio_short'],
+    ]) {
+      const query = `?utm_source=${source}&utm_medium=partner&utm_campaign=creator_test&utm_content=${content}`;
+      expect(campaignQuery(`https://offside-lab.com/${query}&ttclid=PRIVATE`)).toBe(query);
+    }
+  });
   it('keeps the meta reels ad content per country', () => {
     for (const content of ['jp_reels', 'uk_reels', 'us_reels', 'kr_reels']) {
       const query = `?utm_source=meta&utm_medium=paid&utm_campaign=global_test&utm_content=${content}`;

@@ -37,6 +37,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   marketFeeRate: 'Transfer fee rate',
   marketPriceMin: 'Minimum sale price (× base)',
   marketPriceMax: 'Maximum sale price (× base)',
+  cupAtkK: 'Cup strength gap weight',
   leagueHomeAdv: 'League home advantage',
   pastSalaryBudget: 'Past-season player salary budget',
   pastSalaryBudgetStep: 'Salary budget increase per season',
