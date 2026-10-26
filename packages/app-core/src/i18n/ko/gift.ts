@@ -28,6 +28,9 @@ const ko = {
   recordIcons: (p: { n: number }) => `아이콘 ${p.n}명`,
   recordLegends: (p: { n: number }) => `레전드 ${p.n}명`,
   recordBallon: (p: { n: number }) => `발롱도르 수상 선수 ${p.n}명`,
+  // T-11-517 광고 제거 구매 감사 선물(같은 칸, 기록 보상 다음).
+  adFreeTitle: '광고 제거를 먼저 사 주셔서 고마워요',
+  adFreeSub: (p: Got) => `감사 선물로 ${itemsOf(p)}을 받을 수 있어요.`,
   // T-11-440 받은 뒤 결과 · 쓰는 곳 안내
   doneTitle: '선물을 받았어요',
   useHint:

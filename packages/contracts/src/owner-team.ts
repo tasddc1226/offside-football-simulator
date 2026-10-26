@@ -599,6 +599,18 @@ export const ACH_SEASON_GIFT = {
  * 이미 줘서 더하지 않는다(2026-10-25 사용자 결정). 장수 기준: 컵 우승 15 · 3 · 3, BEST 11 10 · 2 · 2, 컵 4강 7 · 1 · 1.
  */
 export const RECORD_SEASON_GIFT = { id: 'rec-season-1', season: 1, openSeason: 2 } as const;
+
+/**
+ * T-11-517 광고 제거 구매 감사 선물 — 클럽 멤버십에 광고 제거가 들어가면서, 그 전에 광고 제거를 산 구단주(서버 구매 기록이
+ * 프로필에 묶인 것, 환불 · 시험 구매 제외)에게 홈 선물 칸에서 한 번 준다(2026-10-26 사용자 결정). before 뒤에 산 구매는 세지 않는다.
+ */
+export const AD_FREE_THANKS_GIFT = {
+  id: 'adfree-thanks-1',
+  before: '2026-11-01T00:00:00.000Z',
+  boost: 5,
+  scout: 0,
+  reroll: 5,
+} as const;
 export type RecordReward = { reroll: number; scout: number; boost: number };
 /** 명예의 전당 순위(구단주의 가장 높은 선수, 시즌 결산 hof_rank와 같은 순서) 단계. 10-25 1000위 레전드 점수 약 2,245. */
 export const RECORD_HOF_TIERS: readonly ({ maxRank: number } & RecordReward)[] = [
