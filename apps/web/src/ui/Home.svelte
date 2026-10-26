@@ -13,6 +13,7 @@
   import { goNew, goContinue, go, warmGame } from './nav.js';
   import Topbar from './Topbar.svelte';
   import InAppBanner from './InAppBanner.svelte';
+  import HomeAppStrip from './HomeAppStrip.svelte';
   import HallOfFame from './HallOfFame.svelte';
   import HomeNews from './HomeNews.svelte';
   import HomeFirsts from './firsts/HomeFirsts.svelte';
@@ -39,6 +40,8 @@
   <Topbar />
   <!-- T-10-115 카톡·인스타 같은 앱 안 브라우저에서만 한 번 보이는 외부 브라우저 안내 -->
   <InAppBanner />
+  <!-- T-11-506 휴대폰 웹에서 맨 위 한 줄 앱 안내(자세한 카드는 아래 타일 밑 AppConversion). 첫 화면에서 바로 정해 화면을 밀지 않는다. -->
+  <HomeAppStrip />
   <!-- T-10-122 이적·서버 최초 기록이 흐르는 전광판 -->
   <HomeTicker />
   {#if live && appState.G}

@@ -14,6 +14,8 @@ const ko = {
   conversionPlay: 'Google Play에서 받기',
   conversionStore: 'App Store에서 받기',
   conversionDismiss: '앱 안내 7일간 닫기',
+  /** T-11-506 휴대폰 웹 홈 맨 위 한 줄 띠의 스토어 버튼. */
+  stripGet: '앱 받기',
 
   inappHint:
     '카톡·인스타 안에서 열린 화면이에요. 기록은 이 앱 안에만 저장돼요. 외부 브라우저로 열면 로그인과 저장이 더 안전해요.',

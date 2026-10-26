@@ -36,6 +36,24 @@ test.describe('아이폰 Chrome', () => {
     await expect(sheet).toContainText('홈 화면에 추가하고 앱처럼 열기');
   });
 
+  test('T-11-506 홈 맨 위 한 줄 띠는 App Store로 보내고 닫으면 카드와 함께 7일 숨긴다', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    const strip = page.locator('[data-app-strip="ios"]');
+    await expect(strip).toBeVisible();
+    await expect(strip.locator('[data-act="app-strip-store"]')).toHaveAttribute(
+      'href',
+      /apps\.apple\.com/,
+    );
+    await strip.locator('[data-act="app-strip-close"]').click();
+    await expect(strip).toHaveCount(0);
+    await expect(page.locator('[data-app-conversion="home"]')).toHaveCount(0);
+    await page.reload();
+    await expect(page.locator('[data-act="new"]')).toBeVisible();
+    await expect(strip).toHaveCount(0);
+  });
+
   test('홈이 아닌 화면(구글 로그인 복귀 → 구단주)으로 열리면 띄우지 않는다', async ({ page }) => {
     await page.goto('/settings?google=error&reason=state');
     await expect(page.locator('h1')).toHaveText('내 구단');
@@ -54,6 +72,8 @@ test('데스크톱 홈 카드 · 설정에는 App Store와 Google Play를 함께
     /play\.google\.com\/store\/apps\/details\?id=com\.offsidelab\.app/,
   );
   await expect(page.locator('[data-act="home-android-tester"]')).toHaveCount(0);
+  // T-11-506 맨 위 한 줄 띠는 휴대폰 웹에서만.
+  await expect(page.locator('[data-app-strip]')).toHaveCount(0);
   await page.locator('[data-act="settings"]').click();
   await expect(page.locator('[data-act="app-store-settings-ios"]')).toBeVisible();
   await expect(page.locator('[data-act="app-store-settings-android"]')).toBeVisible();
@@ -70,6 +90,8 @@ test.describe('안드로이드 Chrome', () => {
   }) => {
     await page.goto('/?utm_source=meta&utm_medium=paid');
     await expect(page.locator('[data-act="play-store"]')).toBeVisible();
+    // T-11-506 광고로 들어온 방문은 먼저 플레이하게 두고 맨 위 띠를 띄우지 않는다.
+    await expect(page.locator('[data-app-strip]')).toHaveCount(0);
     await expect(page.locator('[data-act="app-store"]')).toHaveCount(0);
     await page.locator('[data-act="settings"]').click();
     await expect(page.locator('[data-settings="backup"]')).toBeVisible();

@@ -14,6 +14,8 @@ export const shellInstall: Translation<ShellInstallMsgs> = {
   conversionPlay: 'Google Playで入手',
   conversionStore: 'App Storeで入手',
   conversionDismiss: 'アプリの案内を7日間非表示',
+  /** T-11-506 휴대폰 웹 홈 맨 위 한 줄 띠의 스토어 버튼. */
+  stripGet: 'アプリを入手',
 
   inappHint:
     'アプリ内ブラウザ（KakaoTalk・Instagramなど）で開いています。記録はこのアプリの中にだけ保存されます。外部ブラウザで開くと、ログインと保存がより安全です。',
