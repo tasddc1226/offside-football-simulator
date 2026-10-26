@@ -169,6 +169,8 @@
         "ATTENDANCE_REMINDER_ENABLED": "1",
         "RETENTION_PUSH_ENABLED": "1",
         "RETENTION_HOLDOUT_UNTIL": "2026-11-10T15:00:00.000Z",
+        // T-11-512 클럽 멤버십 가입을 받는다. 입구는 MEMBERSHIP_LIVE(앱 1.1.5)가 열고, 그 전에는 개발 빌드만 닿는다.
+        "MEMBERSHIP_ENABLED": "1",
         "ALLOWED_ORIGINS": "https://offside-lab.com,https://offside-web.tasddc1569.workers.dev",
         "WEB_APP_URL": "https://offside-web.tasddc1569.workers.dev",
         "GOOGLE_REDIRECT_URI": "https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback",

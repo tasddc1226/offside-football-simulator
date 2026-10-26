@@ -1,6 +1,7 @@
 import type { Bindings } from '../env.js';
 import { recordBillingAlert } from './alerts.js';
 import { ANDROID_PACKAGE, getGooglePurchase, getGoogleSubscription } from './google.js';
+import { handleGoogleMembershipNotice } from './membership.js';
 
 export async function handleGoogleRtdn(env: Bindings, body: unknown, now: string) {
   const envelope = body as {
@@ -67,12 +68,14 @@ export async function handleGoogleRtdn(env: Bindings, body: unknown, now: string
       );
   }
   const sub = note.subscriptionNotification;
-  if (
-    (sub?.notificationType === 2 || sub?.notificationType === 4) &&
-    typeof sub.purchaseToken === 'string'
-  ) {
+  if (typeof sub?.purchaseToken === 'string') {
+    // T-11-512 구독 알림은 종류와 상관없이 지금 상태를 다시 읽어 멤버십을 고친다(갱신 · 유예 · 보류 · 취소 · 환불 · 만료).
     const purchase = await getGoogleSubscription(env.GOOGLE_PLAY_SA_JSON, sub.purchaseToken, opts);
-    if (purchase?.subscriptionState === 'SUBSCRIPTION_STATE_ACTIVE') {
+    if (purchase) await handleGoogleMembershipNotice(env, sub.purchaseToken, purchase, now);
+    if (
+      (sub.notificationType === 2 || sub.notificationType === 4) &&
+      purchase?.subscriptionState === 'SUBSCRIPTION_STATE_ACTIVE'
+    ) {
       for (const line of purchase.lineItems ?? [])
         if (line.productId && line.latestSuccessfulOrderId) {
           await recordBillingAlert(

@@ -82,6 +82,7 @@ import {
   toLineupCareer,
   type OwnerTeamRow,
 } from '../db/repos/ownerTeams.js';
+import { membersOf } from '../db/repos/memberships.js';
 import { achievementRankOf } from '../db/repos/ownerAchievements.js';
 import { teamCoachOf } from '../db/repos/managers.js';
 import {
@@ -264,12 +265,13 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const season = seasonQuery(c, now);
-    const [teams, players, [played], founder, [balance]] = await db.batch([
+    const [teams, players, [played], founder, [balance], member] = await db.batch([
       listMyTeams(db, me.id),
       listEligibleCareers(db, me.id, season),
       countMatchesSince(db, me.id, kstTodayStart(now)),
       foundersOf(db, [me.id]),
       activeBalanceQuery(db),
+      membersOf(db, [me.id], now),
     ]);
     // T-11-113 개막 뒤의 프리시즌 팀은 친선전용 편성을 보이고 고친다(지금 가진 선수만).
     const editableSeason = season === teamSeasonAt(now) || season === 0;
@@ -323,6 +325,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         matchesPerDay: TEAM_MATCHES_PER_DAY,
         pastSalaryBudget: pastSalaryBudgetFrom(balance, season),
         founder: founder.length > 0,
+        member: member.length > 0,
         // 컵 성적은 최근 대회부터 온다 — 첫 우승이 가장 최근 우승.
         ownerTitle: me.title,
       },

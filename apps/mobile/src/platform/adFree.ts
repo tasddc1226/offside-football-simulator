@@ -17,6 +17,9 @@ import { kv } from './setup';
 import { connectStore, onStoreError, onStorePurchase, STORE_SUPPORTED } from './store';
 import { adText as L } from '@offside/app-core/i18n/ko/ad';
 
+/** 지금 광고를 끄나: 평생 광고 제거를 샀거나 멤버십 구독 중. */
+export const adsOff = (s: { owned: boolean; member: boolean }) => s.owned || s.member;
+
 /** App Store Connect·Play Console에 같은 ID로 만든 비소모성 상품. */
 export const REMOVE_ADS = REMOVE_ADS_PRODUCT_ID;
 const OWNED = 'offside_ad_free';
@@ -24,6 +27,8 @@ export const SUPPORTED = STORE_SUPPORTED;
 
 export const adFree = proxy({
   owned: kv.getBoolean(OWNED) ?? false,
+  /** T-11-512 클럽 멤버십 구독 중(구독 기간에만 광고를 끈다, platform/membership.ts가 정한다). */
+  member: false,
   /** 스토어가 알려 준 현지 가격('₩3,300'). 못 받으면 빈 문자열. */
   price: '',
   busy: false,

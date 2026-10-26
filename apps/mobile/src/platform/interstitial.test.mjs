@@ -20,7 +20,9 @@ vi.mock('./adFree', () => ({
     get owned() {
       return f.owned;
     },
+    member: false,
   },
+  adsOff: (s) => s.owned || s.member,
 }));
 
 beforeEach(() => {

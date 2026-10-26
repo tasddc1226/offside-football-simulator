@@ -13,6 +13,8 @@ export const AttendanceSchema = z.strictObject({
   stamps: Count,
   streak: Count,
   bestStreak: Count,
+  /** T-11-512 클럽 멤버십 구독 중이라 출석 보상을 2배로 받는다. 배포 전 응답엔 없다. */
+  member: z.boolean().optional(),
 });
 export type Attendance = z.infer<typeof AttendanceSchema>;
 

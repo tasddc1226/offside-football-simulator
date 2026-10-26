@@ -57,6 +57,7 @@ import {
   myTeamIn,
   type OwnerTeamRow,
 } from '../db/repos/ownerTeams.js';
+import { membersOf } from '../db/repos/memberships.js';
 import { claimReferral, inviteCountsOf } from '../db/repos/referrals.js';
 import type { Db } from '../db/client.js';
 import { purgeEdge } from '../edgeCache.js';
@@ -127,8 +128,14 @@ async function peopleOf(
   // 개막 뒤(휴식기 포함)엔 프리시즌 팀도 함께 읽는다(친선전용 편성으로).
   const legacy = season !== 0;
   const seasons = [...(season === null ? [] : [season]), ...(legacy ? [0] : [])];
-  const [[teams, founders], managers] = await Promise.all([
-    ids.length === 0 ? [[], []] : db.batch([teamsOfOwners(db, ids, seasons), foundersOf(db, ids)]),
+  const [[teams, founders, members], managers] = await Promise.all([
+    ids.length === 0
+      ? [[], [], []]
+      : db.batch([
+          teamsOfOwners(db, ids, seasons),
+          foundersOf(db, ids),
+          membersOf(db, ids, nowIso()),
+        ]),
     latestManagersOf(
       db,
       inputs.filter((p) => !p.nickname).map((p) => p.profileId),
@@ -139,6 +146,7 @@ async function peopleOf(
     legacy ? teams.filter((t) => t.season === 0).map((t) => [t.profileId, friendlyTeamOf(t)]) : [],
   );
   const founder = new Set(founders.map((f) => f.profileId));
+  const member = new Set(members.map((m) => m.profileId));
   return new Map(
     inputs.map((p) => {
       const t = teamOf.get(p.profileId);
@@ -152,6 +160,7 @@ async function peopleOf(
           h2h: h2hOf(p.row),
           ...(legacy ? { preseasonTeam: lt ? teamSummary(lt) : null } : {}),
           founder: founder.has(p.profileId),
+          member: member.has(p.profileId),
         },
       ];
     }),

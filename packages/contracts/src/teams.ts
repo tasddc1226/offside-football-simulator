@@ -232,6 +232,8 @@ export const OwnerTeamResponseSchema = z.strictObject({
   pastSalaryBudget: z.number().int().min(0).optional(),
   /** T-11-113 창단 멤버(프리시즌에 은퇴 선수를 남긴 구단주). 배포 전 응답엔 없다. */
   founder: z.boolean().optional(),
+  /** T-11-512 클럽 멤버십 서포터(구독 중). 배포 전 응답엔 없다. */
+  member: z.boolean().optional(),
   /** T-11-150 내 대표 칭호(구단주 탭 닉네임 옆). 달지 않았으면 null, 배포 전 응답엔 없다. */
   ownerTitle: titleField,
 });

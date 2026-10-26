@@ -7,6 +7,8 @@ const ko = {
   board: (p: { filled: number; total: number }) => `도장 ${p.filled}/${p.total}`,
   todayLabel: '오늘 보상',
   tomorrowLabel: '내일 보상',
+  /** T-11-512 클럽 멤버십 구독 중. */
+  memberBonus: '멤버십 혜택으로 출석 보상을 2배로 받아요',
   grace:
     '매일 출석하면 그날 칸의 보상을 받아요. 빠진 날이 있어도 도장은 남고, 한 주에 하루는 빠져도 연속 기록이 이어져요.',
   btn: '출석하기',

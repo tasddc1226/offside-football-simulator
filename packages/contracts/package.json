@@ -27,6 +27,7 @@
     "./league": "./src/league.ts",
     "./attendance": "./src/attendance-rules.ts",
     "./season-pass": "./src/season-pass-rules.ts",
+    "./membership": "./src/membership-rules.ts",
     "./admin-items": "./src/admin-items.ts",
     "./positions": "./src/positions.ts",
     "./owner-team": "./src/owner-team.ts",
