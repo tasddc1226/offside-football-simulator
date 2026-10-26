@@ -47,4 +47,12 @@ export const push: Translation<PushMsgs> = {
   prefsConnectFailed: '通知設定に接続できませんでした。もう一度お試しください。',
   prefsLoadFailed: '通知設定を読み込めませんでした。',
   prefsSaveFailed: '通知設定を保存できませんでした。',
+  askOn: '通知を受け取る',
+  askLater: 'あとで',
+  askRetireTitle: 'このカードのお知らせを通知で受け取りますか?',
+  askRetireBody: 'このカードで作ったクラブの試合結果や、移籍市場で売れたことをお知らせします。',
+  askSellTitle: '売れたらお知らせしますか?',
+  askSellBody: '出品した選手が売れたら、入った資金と一緒にお知らせします。',
+  askClubTitle: '試合結果を通知で受け取りますか?',
+  askClubBody: 'ほかのオーナーがあなたのチームにランク戦を挑んだら、結果をお知らせします。',
 };

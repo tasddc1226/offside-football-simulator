@@ -248,3 +248,25 @@ it('captures a consented cold-start push after SDK initialization and cancels on
   await next.a.settled();
   expect(next.events.filter((e) => e.name === 'offside_push_open')).toHaveLength(0);
 });
+
+describe('push opt-in analytics', () => {
+  it('sends allowlisted places, one view per place and the OS result', async () => {
+    const h = setup({ initial: 'granted' });
+    await h.a.settled();
+    h.a.pushAsk('view', 'home');
+    h.a.pushAsk('view', 'home');
+    h.a.pushAsk('view', 'sell');
+    h.a.pushAsk('accept', 'sell');
+    h.a.pushAsk('result', 'sell', 'denied');
+    h.a.pushAsk('later', 'PRIVATE' as never);
+    await h.a.settled();
+    const events = h.events.filter((e) => e.name.startsWith('push_optin_'));
+    expect(events.map((e) => [e.name, e.params.place, e.params.result])).toEqual([
+      ['push_optin_view', 'home', undefined],
+      ['push_optin_view', 'sell', undefined],
+      ['push_optin_accept', 'sell', undefined],
+      ['push_optin_result', 'sell', 'denied'],
+    ]);
+    expect(JSON.stringify(h.events)).not.toContain('PRIVATE');
+  });
+});
