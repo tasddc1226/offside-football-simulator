@@ -158,7 +158,7 @@ test('참가 중 추첨 뒤 구간 상한을 넘으면 줄이 경고색으로 �
     'data-cup-rule-filled',
     'ok',
   );
-  const block = '주니어 상한 40을 넘어서 저장할 수 없어요. 팀 OVR을 40 이하로 맞춰 주세요.';
+  const block = '주니어 상한(40)을 넘어서 저장할 수 없어요. 팀 OVR을 40 이하로 맞춰 주세요.';
   await expect(page.locator('[data-cup-rule-note]')).toHaveText(block);
   await expect(page.locator('[data-team-save-reason]')).toHaveText(block);
   await expect(page.locator('[data-act="team-save"]')).toBeDisabled();

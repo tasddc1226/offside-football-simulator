@@ -163,7 +163,7 @@ const ko = {
   // T-11-290 스쿼드 댓글(팀 프로필 아래). 나머지 문구(신고·차단·로그인 문턱)는 board 사전을 같이 쓴다.
   profCommentsTitle: '스쿼드 댓글',
   profCommentsHint: '이 팀의 선발 스쿼드를 보고 구단주들이 남긴 이야기예요.',
-  profCommentsEmpty: '아직 댓글이 없어요. 이 스쿼드에 첫 한마디를 남길 수 있어요.',
+  profCommentsEmpty: '아직 댓글이 없어요.',
   profCommentPlaceholder: '이 스쿼드에 대해 한마디',
   profCommentsFail: '댓글을 불러오지 못했어요.',
 };

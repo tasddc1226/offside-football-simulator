@@ -9,7 +9,7 @@ export const careerReminderText = [
   },
   {
     title: '커리어는 천천히 이어가도 돼요',
-    body: '홈에서 이어 하기를 누르면 돼요. 이번 독려 뒤에는 추가로 보내지 않아요.',
+    body: '홈에서 이어 하기를 누르면 돼요. 이 알림 뒤에는 더 보내지 않아요.',
   },
 ] as const;
 export const activityErrorText = '잠시 뒤에 다시 시도해 주세요.';

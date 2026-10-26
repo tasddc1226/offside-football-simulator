@@ -17,7 +17,7 @@ describe('accountLabel', () => {
       accountLabel({ linked: linked(true, true), googleEmailMasked: 'a***@gmail.com' }),
     ).toEqual({
       title: 'a***@gmail.com',
-      via: 'Google 계정으로 로그인했어요.',
+      via: '구글 계정으로 로그인했어요.',
     });
     expect(accountLabel({ linked: linked(true, false), googleEmailMasked: null }).title).toBe(
       '구글 계정',

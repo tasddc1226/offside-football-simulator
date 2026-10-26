@@ -21,8 +21,7 @@ const ko = {
     '로그인하지 않은 상태에서는 이 기기에 저장된 현재 시즌 은퇴 선수의 카드 기준가를 합산해요.',
   profileEdit: '프로필 편집',
   profileName: '구단주 이름',
-  profileNameNotice:
-    '부적절한 구단주 이름은 신고 대상이 될 수 있으며, 확인 후 숨김 처리될 수 있어요.',
+  profileNameNotice: '부적절한 구단주 이름은 신고될 수 있고, 확인 후 숨겨질 수 있어요.',
   profileHint: '이름과 이미지는 구단주 프로필·댓글·채팅에 함께 표시돼요.',
   profileImagePick: '이미지 고르기',
   profileImageReset: '기본 이미지로 변경',
@@ -39,7 +38,7 @@ const ko = {
   avatarInitial: '구',
   guestName: '게스트 구단주',
   guestSub: '기록은 이 기기에만 저장돼요',
-  signedInSubWeb: 'Google 계정으로 로그인했어요',
+  signedInSubWeb: '구글 계정으로 로그인했어요',
   signedInSubApp: '로그인했어요',
   emptySummary: '첫 커리어를 끝까지 뛰면 은퇴 선수와 레전드 점수가 여기에 쌓여요.',
   statClubValue: '구단 가치',

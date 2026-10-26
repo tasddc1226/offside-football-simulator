@@ -104,7 +104,7 @@ const ko = {
   confirmTitle: (p: { n: number }) => `카드 ${p.n}장을 낼까요?`,
   confirmGone: '카드는 사라지고 돌아오지 않아요. 명예의 전당과 은퇴 기록은 남아요.',
   confirmFunds: (p: { value: string }) =>
-    `방출하면 받을 수 있던 자금은 받지 않아요. 카드 가치 합 ${p.value}`,
+    `방출했다면 받았을 자금은 받지 않아요. 카드 가치 합 ${p.value}`,
   confirmMore: (p: { left: number }) => `${p.left}개 더 내면 보상을 받아요`,
   confirmLast: '이번에 내면 보상을 받아요',
   confirmOk: (p: { n: number }) => `${p.n}장 내기`,

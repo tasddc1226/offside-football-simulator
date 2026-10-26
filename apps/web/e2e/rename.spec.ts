@@ -57,7 +57,7 @@ test('이름 변경권: 1장 써서 진행 중 선수 이름을 바꾸고 세이
   expect(calls.rename).toEqual([]);
   await dialog.locator('[data-act="rename-next"]').click();
   await dialog.locator('[data-act="rename-submit"]').click();
-  await expect(page.locator('#toast')).toHaveText('이름을 새이름(으)로 바꿨어요.');
+  await expect(page.locator('#toast')).toHaveText('이름을 새이름으로 바꿨어요.');
   await expect(dialog).toBeHidden();
   await expect(page.locator('.player h1')).toHaveText('새이름');
   expect(calls.rename).toEqual([{ name: '새이름' }]);
