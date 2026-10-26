@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { setStorage } from '@offside/game/storage';
 import { setLocale } from './i18n/core.js';
-import { claimHomePopup, resetHomePopup } from './homePopup.js';
 import {
   PARTNER_HIDE_KEY,
   PARTNER_POPUP,
@@ -31,7 +30,6 @@ beforeEach(() => {
   setStorage(store);
   setLocale('ko');
   resetPartnerPopupVisit();
-  resetHomePopup();
 });
 afterEach(() => setLocale('ko'));
 
@@ -68,13 +66,6 @@ describe('partnerVariant', () => {
   });
   it('반반으로 나뉜다', () => {
     expect(partnerVariant(() => 0.1)).toBe('a');
-  });
-});
-
-describe('claimHomePopup', () => {
-  it('한 방문에 홈 팝업은 하나만', () => {
-    expect(claimHomePopup()).toBe(true);
-    expect(claimHomePopup()).toBe(false);
   });
 });
 
