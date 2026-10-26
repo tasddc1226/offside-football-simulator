@@ -185,7 +185,7 @@ test('카드 과제: 목록 → 고르기 → 확인 → 결과, 다시 열어�
   await sheet.locator('[data-act="exchange-submit"]').click();
   const confirm = sheet.locator('[data-exchange-confirm]');
   await expect(confirm).toContainText('카드 3장을 낼까요?');
-  await expect(confirm).toContainText('방출하면 받을 수 있던 자금은 받지 않아요');
+  await expect(confirm).toContainText('방출했다면 받았을 자금은 받지 않아요');
   await expect(confirm).toContainText('2개 더 내면 보상을 받아요');
   await shot(page, 'exchange-confirm');
   await sheet.locator('[data-act="exchange-confirm"]').click();
