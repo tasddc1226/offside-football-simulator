@@ -45,6 +45,8 @@ export async function checkIn(
   db: Db,
   profileId: string,
   now: string,
+  /** T-11-512 클럽 멤버십 구독 중이면 2(보상 배수). */
+  mult = 1,
 ): Promise<{ attendance: Attendance; granted: Record<OwnerItem, number> } | null> {
   const d1 = db.$client;
   const today = kstDay(now);
@@ -60,7 +62,10 @@ export async function checkIn(
       lastDay: today,
       graceWeek,
     };
-    const reward = checkInReward(next.stamps);
+    const base = checkInReward(next.stamps);
+    const reward = Object.fromEntries(
+      OWNER_ITEMS.filter((k) => base[k]).map((k) => [k, base[k]! * mult]),
+    ) as typeof base;
     const claimId = crypto.randomUUID();
     const guard = {
       sql: `EXISTS (SELECT 1 FROM owner_attendance WHERE profile_id = ? AND claim_id = ?)`,

@@ -208,6 +208,7 @@ export * from './league.js';
 export * from './league-api.js';
 export * from './attendance.js';
 export * from './season-pass.js';
+export * from './membership.js';
 export * from './friends.js';
 export * from './market.js';
 export * from './season-recap.js';

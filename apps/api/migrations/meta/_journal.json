@@ -932,6 +932,13 @@
       "when": 1793018178870,
       "tag": "0135_season_passes",
       "breakpoints": true
+    },
+    {
+      "idx": 136,
+      "version": "6",
+      "when": 1793020933007,
+      "tag": "0136_memberships",
+      "breakpoints": true
     }
   ]
 }

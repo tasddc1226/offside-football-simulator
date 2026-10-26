@@ -70,6 +70,7 @@ import { market } from './market';
 import { marketChart } from './marketChart';
 import { marketValueChart } from './marketValueChart';
 import { matchReport } from './matchReport';
+import { membership } from './membership';
 import { owner } from './owner';
 import { ownerConflict } from './ownerConflict';
 import { ownerPlayers } from './ownerPlayers';
@@ -188,6 +189,7 @@ export const en = {
   marketChart,
   marketValueChart,
   matchReport,
+  membership,
   owner,
   ownerConflict,
   ownerPlayers,

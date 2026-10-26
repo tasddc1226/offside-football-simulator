@@ -57,13 +57,21 @@ describe('T-11-360 출석 체크', () => {
       stamps: 0,
       streak: 0,
       bestStreak: 0,
+      member: false,
     });
     const first = key();
     const check = (headers = key()) =>
       call('POST', '/v1/attendance/check-in', { cookie: me.cookie, headers });
     const got = CheckRes.parse(await (await check(first)).json()).data;
     expect(got).toEqual({
-      attendance: { today: '2026-10-17', checkedIn: true, stamps: 1, streak: 1, bestStreak: 1 },
+      attendance: {
+        today: '2026-10-17',
+        checkedIn: true,
+        stamps: 1,
+        streak: 1,
+        bestStreak: 1,
+        member: false,
+      },
       granted: { reroll: 1, boost: 0, scout: 0, rename: 0 },
     });
     expect(CheckRes.parse(await (await check(first)).json()).data).toEqual(got);

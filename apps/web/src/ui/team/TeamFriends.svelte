@@ -226,7 +226,7 @@
         <div class="fr-person" data-friend={p.code}>
           <TeamLogo logo={p.team?.logo ?? null} name={p.team?.name ?? p.name} size={32} decorative />
           <div class="fr-info">
-            <b>{p.name}</b>
+            <b>{p.name}{#if p.member}<span class="pill good fr-member" title={L.supporterLabel} data-friend-member>{L.supporter}</span>{/if}</b>
             <span class="muted fs-sm">{teamLine(p)}</span>
             {#if preseasonLine}<span class="muted fs-sm" data-friend-preseason>{preseasonLine}</span>{/if}
             {#if h2h}<span class="fs-sm">{L.h2hLine({ record: h2h })}</span>{/if}
@@ -262,6 +262,7 @@
 </section>
 
 <style>
+  .fr-member {margin-left:6px;vertical-align:middle;}
   .fr-h {
     margin: 6px 0 0;
     font-size: var(--fs-body1);

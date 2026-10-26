@@ -39,6 +39,9 @@
   import { exchangeText as XC } from '@offside/app-core/i18n/ko/exchange';
   import { seasonPassText as SP } from '@offside/app-core/i18n/ko/seasonPass';
   import { SEASON_PASS_LIVE } from '@offside/contracts/season-pass';
+  import { membershipText as MB } from '@offside/app-core/i18n/ko/membership';
+  import { MEMBERSHIP_LIVE } from '@offside/contracts/membership';
+  import { syncMember } from '../ads/ads';
   import type { Component } from 'svelte';
   import { type OwnerTierTag } from '@offside/contracts';
   import { shapeOf, usesRankLadder } from '@offside/contracts/owner-team';
@@ -112,7 +115,10 @@
   $effect(() => {
     if (!linked) return;
     void fetchOwnerTeam().then((r) => {
-      if (r.ok) card = ownerTeamCard(r.data);
+      if (r.ok) {
+        card = ownerTeamCard(r.data);
+        syncMember(card.member);
+      }
       else cardFailed = true;
     });
   });
@@ -148,6 +154,13 @@
     passOpen = true;
     if (!Pass) void import('./owner/SeasonPass.svelte').then((m) => (Pass = m.default));
   }
+  // T-11-512 클럽 멤버십 창도 열 때만 불러온다.
+  let Member = $state<Component<{ onclose: () => void }> | null>(null);
+  let memberOpen = $state(false);
+  function openMember() {
+    memberOpen = true;
+    if (!Member) void import('./owner/Membership.svelte').then((m) => (Member = m.default));
+  }
   function openTeam(v: TeamView = 'team') {
     appState.teamView = v;
     go('team');
@@ -169,7 +182,7 @@
       <div class="owner-id">
         <OwnerAvatar avatarId={accountCache.value && accountCache.value !== 'error' ? accountCache.value.avatarId : null} name={nickname ?? L.avatarInitial} size={48} />
         <div class="owner-who">
-          <b>{#if tierTag}<span class="owner-last-tier" title={tierTitle(tierTag)} data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={24} /></span>{/if}{guest ? L.guestName : (nickname ?? L.title)}{#if card?.title}<span class="owner-founder"><TitleBadge title={card.title} size="sm" /></span>{/if}</b>
+          <b>{#if tierTag}<span class="owner-last-tier" title={tierTitle(tierTag)} data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={24} /></span>{/if}{guest ? L.guestName : (nickname ?? L.title)}{#if card?.title}<span class="owner-founder"><TitleBadge title={card.title} size="sm" /></span>{/if}{#if card?.member}<span class="pill good owner-founder" title={MB.badgeLabel} data-owner-member>{MB.badge}</span>{/if}</b>
           <span class="muted fs-sm">{guest ? L.guestSub : L.title}</span>
         </div>
         {#if linked && accountCache.value && accountCache.value !== 'error'}<OwnerProfileEditor profile={accountCache.value} {admin} />{/if}
@@ -246,6 +259,17 @@
     </section>
     {/if}
     {#if passOpen && Pass}<Pass onclose={() => (passOpen = false)} />{/if}
+    {#if MEMBERSHIP_LIVE || import.meta.env.DEV}
+    <section class="card owner-market owner-tap" aria-label={MB.entry} data-owner-membership>
+      <div class="owner-who">
+        <h2>{MB.entry}{#if card?.member}<span class="pill good owner-founder">{MB.entryActive}</span>{/if}</h2>
+        <span class="muted fs-sm">{MB.entrySub}</span>
+      </div>
+      <span class="tap-go" aria-hidden="true">›</span>
+      <button class="tap-cover" data-act="membership" aria-label={MB.entry} onclick={openMember}></button>
+    </section>
+    {/if}
+    {#if memberOpen && Member}<Member onclose={() => (memberOpen = false)} />{/if}
   {:else if guest}
     <section class="card owner-team" aria-label={L.myTeam} data-owner-team-locked>
 

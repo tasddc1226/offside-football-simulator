@@ -2,6 +2,9 @@
 import { ns } from '../core';
 
 const ko = {
+  /** T-11-512 클럽 멤버십 서포터 뱃지. */
+  supporter: '서포터',
+  supporterLabel: '클럽 멤버십 서포터',
   // 알림 · 공유 문구
   invite: (p: { code: string; url: string }) =>
     `OFFSIDE에서 같이 팀 대결해요. 내 친구 코드: ${p.code}\n${p.url}`,
