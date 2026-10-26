@@ -13,6 +13,7 @@
     rewardText,
   } from '@offside/app-core/attendance-view';
   import { attendanceText as L } from '@offside/app-core/i18n/ko/attendance';
+  import { claimHomePopup, passHomePopup } from '@offside/app-core/homePopup';
   import LoginButtons from './LoginButtons.svelte';
   import PopSheet from './PopSheet.svelte';
   import { toast } from './helpers.js';
@@ -39,11 +40,12 @@
     void fetchAttendance().then((c) => {
       card = c;
       loaded = true;
-      // 컵 우승 팝업 같은 다른 창이 떠 있으면 오늘은 저절로 띄우지 않는다(다음에 홈에 올 때 뜬다).
-      if (auto && c && attendancePopupDue(c) && !document.querySelector('[aria-modal="true"]')) {
+      // 동의 창 같은 다른 창이 떠 있으면 오늘은 저절로 띄우지 않는다(다음에 홈에 올 때 뜬다). 홈 팝업 순서의 첫째라(T-11-423c)
+      // 띄우지 않을 때도 알려야 컵 우승 · 제휴 팝업이 기다리지 않는다.
+      if (auto && c && attendancePopupDue(c) && !document.querySelector('[aria-modal="true"]') && claimHomePopup('attendance')) {
         markAttendancePopup();
         open = true;
-      }
+      } else passHomePopup('attendance');
     });
   });
 

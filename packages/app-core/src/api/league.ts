@@ -18,7 +18,8 @@ export type {
 } from '@offside/contracts';
 
 /** 리그 한눈에(누구나): 일정 · 단계 · 신청 수. 서버 캐시 30초. */
-export const fetchLeague = () => cachedGet<LeagueResponse>('/v1/leagues/current', 30_000);
+// T-11-503 홈 리그 배너가 홈에 돌아올 때마다 다시 받지 않게 2분. 참가 · 취소는 apiFetch가 메모를 비운다.
+export const fetchLeague = () => cachedGet<LeagueResponse>('/v1/leagues/current', 120_000);
 /** 내 신청 · 자격. 리그 화면을 열 때만 부른다. */
 export const fetchLeagueMe = () => apiFetch<LeagueMeResponse>('/v1/leagues/current/me');
 
