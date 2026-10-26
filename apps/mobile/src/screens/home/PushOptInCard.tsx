@@ -2,14 +2,9 @@ import { useEffect } from 'react';
 import { AppState, Linking, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
-import { pushRegistration, pushState } from '../../platform/push';
-import {
-  checkPushOffer,
-  dismissPushOffer,
-  snoozePushOffer,
-  pushOffer,
-  pushOfferReady,
-} from '../../platform/pushOffer';
+import { pushState } from '../../platform/push';
+import { acceptPushAsk, laterPushAsk, trackPushAskView } from '../../platform/pushAsk';
+import { checkPushOffer, pushOffer, pushOfferReady } from '../../platform/pushOffer';
 import { appState } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Txt } from '../../ui';
@@ -28,14 +23,16 @@ export function PushOptInCard() {
     });
     return () => subscription.remove();
   }, []);
-  if (
-    offer.handled ||
-    Date.now() < offer.snoozedUntil ||
-    !offer.eligible ||
-    state.enabled ||
-    !pushOfferReady(G)
-  )
-    return null;
+  const visible =
+    !offer.handled &&
+    Date.now() >= offer.snoozedUntil &&
+    offer.eligible &&
+    !state.enabled &&
+    pushOfferReady(G);
+  useEffect(() => {
+    if (visible) trackPushAskView('home');
+  }, [visible]);
+  if (!visible) return null;
   return (
     <Card testID="push-opt-in" gap={12} style={{ borderWidth: 1, borderColor: c.line }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -61,9 +58,7 @@ export function PushOptInCard() {
           disabled={state.busy}
           testID="push-opt-in-accept"
           onPress={() => {
-            void pushRegistration.setEnabled(true).then(() => {
-              if (!pushState.failed) dismissPushOffer();
-            });
+            void acceptPushAsk('home');
           }}
         >
           {state.busy ? homeMoreText.pushBusy : homeMoreText.pushAccept}
@@ -73,7 +68,7 @@ export function PushOptInCard() {
           block
           disabled={state.busy}
           testID="push-opt-in-dismiss"
-          onPress={snoozePushOffer}
+          onPress={() => laterPushAsk('home')}
         >
           {homeMoreText.pushLater}
         </Btn>

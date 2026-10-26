@@ -33,13 +33,9 @@ import { teamHomeText as LH } from '@offside/app-core/i18n/ko/teamHome';
 import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import { useSnapshot } from 'valtio';
 import { appState } from '../../store';
-import {
-  checkPushOffer,
-  dismissPushOffer,
-  pushOffer,
-  snoozePushOffer,
-} from '../../platform/pushOffer';
-import { pushRegistration, pushState } from '../../platform/push';
+import { checkPushOffer, pushOffer } from '../../platform/pushOffer';
+import { pushState } from '../../platform/push';
+import { acceptPushAsk, laterPushAsk, trackPushAskView } from '../../platform/pushAsk';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLogo } from '../../components/TeamLogo';
 import { toast } from '../../game/host';
@@ -206,11 +202,14 @@ function PushNudge() {
   const push = useSnapshot(pushState);
   const offer = useSnapshot(pushOffer);
   useEffect(() => void checkPushOffer(), []);
-  if (offer.handled || Date.now() < offer.snoozedUntil || !offer.eligible || push.enabled)
-    return null;
+  const visible =
+    !offer.handled && Date.now() >= offer.snoozedUntil && offer.eligible && !push.enabled;
+  useEffect(() => {
+    if (visible) trackPushAskView('friends');
+  }, [visible]);
+  if (!visible) return null;
   async function turnOn() {
-    await pushRegistration.setEnabled(true);
-    if (!pushState.failed) dismissPushOffer();
+    await acceptPushAsk('friends');
     if (pushState.message) toast(pushState.message);
   }
   return (
@@ -229,7 +228,12 @@ function PushNudge() {
         >
           {L.pushNudgeOn}
         </Btn>
-        <Btn sm kind="ghost" testID="friend-push-nudge-later" onPress={snoozePushOffer}>
+        <Btn
+          sm
+          kind="ghost"
+          testID="friend-push-nudge-later"
+          onPress={() => laterPushAsk('friends')}
+        >
           {L.pushNudgeLater}
         </Btn>
       </View>

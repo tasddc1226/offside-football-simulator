@@ -86,6 +86,7 @@ import { rem } from '../../theme/type';
 import { achNudge } from '../../game/achNudge';
 import { accountCache, appState, prefs } from '../../store';
 import { notificationDestination } from '../../platform/notificationDestination';
+import { askPushAfter } from '../../platform/pushAsk';
 import { useColors } from '../../theme/useColors';
 import { BackBar, Btn, Card, Screen, Topbar, Txt, scrollTo } from '../../ui';
 import { BarBelow } from '../../ui/Screen';
@@ -521,6 +522,7 @@ export default function Team() {
         );
       setDraftKey(r.data.team.id);
       toast(created ? L.toastCreated : L.toastSavedApp);
+      if (created) void askPushAfter('club');
       return unchanged;
     } finally {
       savingRef.current = false;

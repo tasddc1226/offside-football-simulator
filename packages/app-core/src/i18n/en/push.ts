@@ -49,4 +49,13 @@ export const push: Translation<PushMsgs> = {
   prefsConnectFailed: "Couldn't connect to notification settings. Please try again.",
   prefsLoadFailed: "Couldn't load notification settings.",
   prefsSaveFailed: "Couldn't save notification settings.",
+  askOn: 'Turn on',
+  askLater: 'Later',
+  askRetireTitle: 'Get notified about this card?',
+  askRetireBody: "We'll send you match results for your club and news when your cards sell.",
+  askSellTitle: 'Want to know when it sells?',
+  askSellBody: "We'll let you know when your listed player sells and how much you received.",
+  askClubTitle: 'Get match results as notifications?',
+  askClubBody:
+    "We'll send you the result when another owner challenges your team to a ranked match.",
 };
