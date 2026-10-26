@@ -71,6 +71,7 @@ export const EXPECTED_TABLES = Object.freeze([
   'push_interactions',
   'push_news_events',
   'push_news_deliveries',
+  'retention_pushes',
   'referrals',
   'iap_purchases',
   'iap_ad_free_purchases',

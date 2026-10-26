@@ -1,0 +1,26 @@
+{
+  "id": "t-11-501-retention-push",
+  "title": "알림 설정에 독려 항목 추가",
+  "items": [
+    "쉬는 동안 선수가 팔렸거나 내 팀이 랭크 경기를 치렀으면 알림으로 알려 드려요",
+    "처음 시작한 주에는 다음에 할 일을 하나씩 알려 드려요",
+    "독려 알림은 하루 한 번까지 보내고, 설정의 앱 알림 받기에서 독려를 끄면 받지 않아요"
+  ],
+  "en": {
+    "title": "New Reminders setting",
+    "items": [
+      "If your players sold or your team played ranked matches while you were away, we let you know.",
+      "In your first week, we suggest one next step at a time.",
+      "Reminders come at most once a day. Turn off Reminders under app notifications in Settings to stop them."
+    ]
+  },
+  "ja": {
+    "title": "通知設定にリマインダーを追加",
+    "items": [
+      "休んでいる間に選手が売れたり、マイチームがランク戦をしたりしたら通知でお知らせします。",
+      "始めた最初の1週間は、次にやることを1つずつお知らせします。",
+      "リマインダーは1日1回までで、設定のアプリ通知でリマインダーをオフにすると届きません。"
+    ]
+  },
+  "availability": "app"
+}

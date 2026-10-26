@@ -86,6 +86,8 @@ export const pushPreferences = sqliteTable('push_preferences', {
   team: integer('team', { mode: 'boolean' }).notNull().default(true),
   market: integer('market', { mode: 'boolean' }).notNull().default(true),
   social: integer('social', { mode: 'boolean' }).notNull().default(true),
+  /** T-11-501 독려 알림(출석 · 복귀 · 첫 주 안내). 끄면 kind 'return' 푸시를 보내지 않는다(알림함에는 남는다). */
+  nudge: integer('nudge', { mode: 'boolean' }).notNull().default(true),
 });
 
 export const notifications = sqliteTable(
@@ -1953,6 +1955,40 @@ export const careerReminderOutcomes = sqliteTable('career_reminder_outcomes', {
   returnedAt: text('returned_at'),
   retiredAt: text('retired_at'),
 });
+
+/**
+ * T-11-501 리텐션 푸시 원장. 쉬는 사람 단계(lapsed: stage = 쉰 날 3 · 7 · 14 · 30)와 첫 주 다음 할 일(onboarding: stage =
+ * 단계 1~5)을 사람마다 한 줄씩 남긴다. 비교군(holdout)은 알림 없이 줄만 남겨 같은 기준으로 복귀를 잰다. lapse_key는 그 쉬기가
+ * 시작된 마지막 방문 시각(lapsed)이나 'signup'(onboarding)이라, 다시 왔다 쉬면 새 사다리가 된다.
+ */
+export const retentionPushes = sqliteTable(
+  'retention_pushes',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    campaign: text('campaign', { enum: ['lapsed', 'onboarding'] }).notNull(),
+    stage: integer('stage').notNull(),
+    /** 고른 문구(events · sold · matches · career · season · news · farewell · create · retire · club · rank · login). */
+    story: text('story').notNull(),
+    variant: text('variant', { enum: ['send', 'holdout'] }).notNull(),
+    lapseKey: text('lapse_key').notNull(),
+    notificationId: text('notification_id').references(() => notifications.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: text('created_at').notNull(),
+    /** 줄을 만든 뒤 7일 안에 처음 본 방문(기기 등록 갱신). */
+    returnedAt: text('returned_at'),
+    /** onboarding만: 7일 안에 그 단계를 넘어간 시각. */
+    progressedAt: text('progressed_at'),
+  },
+  (t) => [
+    uniqueIndex('retention_pushes_step_unique').on(t.profileId, t.campaign, t.stage, t.lapseKey),
+    index('retention_pushes_created_idx').on(t.createdAt),
+    index('retention_pushes_notification_idx').on(t.notificationId),
+  ],
+);
 
 /** Verified store events; no receipts, purchase tokens, email addresses or names. */
 export const billingAlerts = sqliteTable(

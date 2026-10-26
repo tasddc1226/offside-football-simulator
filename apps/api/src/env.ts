@@ -33,6 +33,10 @@ export type Bindings = {
   CAREER_REMINDER_ENABLED?: string;
   /** T-11-378 출석 독려 푸시. */
   ATTENDANCE_REMINDER_ENABLED?: string;
+  /** T-11-501 리텐션 푸시(쉬는 사람 사다리 · 첫 주 안내). 켜면 옛 커리어 독려 · 재방문 안내는 쌓지 않는다. */
+  RETENTION_PUSH_ENABLED?: string;
+  /** T-11-501 이 시각(ISO) 전까지 프로필 약 10%를 비교군으로 두고 알림 없이 원장만 남긴다. */
+  RETENTION_HOLDOUT_UNTIL?: string;
   CUP_PUSH_QUEUE?: Queue<{ version: 1; cupId: string }>;
   CAREER_PUSH_QUEUE?: Queue<{ version: 1; batchId: string }>;
   /** Expo enhanced push security용 secret. 클라이언트에는 넣지 않는다. */

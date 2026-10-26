@@ -3,7 +3,9 @@ import {
   RegisterPushDeviceSchema,
   PushDeviceResultSchema,
   PushTestResultSchema,
+  LegacyPushPreferencesSchema,
   PushPreferencesSchema,
+  type PushPreferences,
   PutPushPreferencesSchema,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
@@ -27,6 +29,10 @@ import { getPushPreferences, putPushPreferences } from '../db/repos/pushPreferen
 import { enforceLimit, NO_STORE, nowIso, ok, readBody, notFoundError } from './shared.js';
 
 export function registerPushRoutes(app: Hono<AppEnv>) {
+  // T-11-501 nudge를 아는 새 앱만 `?nudge=1`로 묻는다. 옛 앱에는 옛 모양을 그대로 돌려준다(strict 파싱).
+  const withNudge = (c: { req: { query(key: string): string | undefined } }) =>
+    c.req.query('nudge') === '1';
+  const legacy = ({ nudge: _, ...rest }: PushPreferences) => rest;
   const appSession = (c: Parameters<typeof getSessionOrThrow>[0]) => {
     const session = getSessionOrThrow(c);
     if (session.channel !== 'app')
@@ -35,13 +41,10 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
   };
   app.get('/v1/push/preferences', requireProfile, async (c) => {
     const session = appSession(c);
-    return ok(
-      c,
-      PushPreferencesSchema,
-      await getPushPreferences(getDb(c), session.profileId),
-      200,
-      NO_STORE,
-    );
+    const prefs = await getPushPreferences(getDb(c), session.profileId);
+    return withNudge(c)
+      ? ok(c, PushPreferencesSchema, prefs, 200, NO_STORE)
+      : ok(c, LegacyPushPreferencesSchema, legacy(prefs), 200, NO_STORE);
   });
   app.put('/v1/push/preferences', requireProfile, async (c) => {
     const session = appSession(c);
@@ -54,13 +57,10 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
       nowIso(),
       '잠시 뒤 알림 설정을 다시 시도해 주세요.',
     );
-    return ok(
-      c,
-      PushPreferencesSchema,
-      await putPushPreferences(getDb(c), session.profileId, input),
-      200,
-      NO_STORE,
-    );
+    const prefs = await putPushPreferences(getDb(c), session.profileId, input);
+    return withNudge(c)
+      ? ok(c, PushPreferencesSchema, prefs, 200, NO_STORE)
+      : ok(c, LegacyPushPreferencesSchema, legacy(prefs), 200, NO_STORE);
   });
   app.put('/v1/push/device', requireProfile, async (c) => {
     const session = appSession(c);

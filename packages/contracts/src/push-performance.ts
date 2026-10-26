@@ -72,6 +72,24 @@ export const PushPerformanceSchema = z.object({
     )
     .max(3)
     .optional(),
+  /** T-11-501 리텐션 푸시 원장. 캠페인 · 단계마다 보낸 쪽(send)과 비교군(holdout)을 같은 기준으로 센다. */
+  nudges: z
+    .array(
+      z.object({
+        campaign: z.enum(['lapsed', 'onboarding']),
+        stage: z.number().int().min(1).max(30),
+        sent: count,
+        held: count,
+        delivered: count,
+        clicked: count,
+        sentReturned: count,
+        heldReturned: count,
+        sentProgressed: count,
+        heldProgressed: count,
+      }),
+    )
+    .max(20)
+    .optional(),
   cups: z
     .array(
       PushMetricsSchema.extend({
