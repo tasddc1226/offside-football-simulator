@@ -32,7 +32,7 @@ const ko = {
   preseasonDone: '프리시즌 완료',
   phaseResult: (p: { phase: string }) => `${p.phase} 결과`,
   stepNat: 'A매치 소집 명단 발표',
-  stepEvent: '새로운 소식이 들려옵니다…',
+  stepEvent: '새 소식이 들려와요…',
   phaseRunning: (p: { year: number; phase: string }) => `${p.year} · ${p.phase} 진행 중`,
   blockTitle: (p: { range: string; n: number }) => `${p.range} · ${p.n}경기`,
   preseasonRunning: (p: { year: number }) => `${p.year} · 프리시즌 진행 중`,
@@ -41,7 +41,7 @@ const ko = {
   stepFitness: '체력 테스트',
   stepTactics: '전술 훈련',
   stepFriendly: '연습 경기',
-  preseasonReady: '시즌 준비를 마쳤습니다',
+  preseasonReady: '시즌 준비를 마쳤어요',
   // 시즌 결산 준비
   endRunning: (p: { year: number }) => `${p.year} · 시즌 결산 중`,
   endTable: '리그 최종 순위 확정',

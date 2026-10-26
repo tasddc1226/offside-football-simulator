@@ -6,7 +6,7 @@ const ko = {
   rivalLabel: (p: { ko: string }) => p.ko,
   rivalWin: (p: { label: string; g: number }) =>
     `${p.label} 승리!${p.g ? ` ${p.g}골을 터뜨리며` : ''} 국민 영웅이 됐습니다.`,
-  debut: (p: { name: string }) => `생애 첫 A대표팀 발탁! (${p.name})`,
+  debut: (p: { name: string }) => `생애 첫 A대표팀 발탁! ${p.name}에 소집됐습니다.`,
   windowName: (p: { m: number }) => `${p.m}월 A매치`,
   friendly: '친선 A매치',
   wcQual: (p: { year: number; region: string; conf: string }) =>

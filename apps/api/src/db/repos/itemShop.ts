@@ -276,7 +276,7 @@ export function retiredNumberRewardStatements(
         content: {
           kind: 'team',
           title: '영구결번 보상을 받았어요', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
-          body: `영구결번을 받아 프리미엄 스카우트권 ${RETIRED_NUMBER_SCOUTS}장을 받았어요.`, // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
+          body: `영구결번 보상으로 프리미엄 스카우트권 ${RETIRED_NUMBER_SCOUTS}장을 받았어요.`, // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
           target: { type: 'screen', screen: 'home' },
         },
       },

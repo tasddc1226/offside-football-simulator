@@ -14,7 +14,7 @@ const ko = {
     `${p.club}에서 쌓은 기여 점수가 영구결번 기준에 아주 조금 못 미쳤어요. 기준을 넘어야 결번을 받아요.`,
   // T-11-264 점수도 시즌도 모자랐을 때.
   missScoreSeasons: (p: { club: string; band: string; seasons: number; need: number }) =>
-    `${p.club}에서 쌓은 기여 점수가 영구결번 기준의 ${p.band}였고, ${p.seasons}시즌을 뛰어 ${p.need}시즌에도 모자랐어요.`,
+    `${p.club}에서 쌓은 기여 점수가 영구결번 기준의 ${p.band}였고, ${p.seasons}시즌만 뛰어 기준인 ${p.need}시즌에도 못 미쳤어요.`,
   /** T-11-264 어디서 모자랐는지 한눈에: 시즌 수 · 기여 점수. */
   missStatSeasons: '한 구단 시즌',
   missStatSeasonsVal: (p: { seasons: number; need: number }) => `${p.seasons} / ${p.need}시즌`,

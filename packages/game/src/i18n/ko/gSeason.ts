@@ -16,7 +16,7 @@ const ko = {
   cwcNote: (p: { stage: string }) => `클럽 월드 챔피언십 ${p.stage}`,
   exemptNote: (p: { what: string }) => `병역 특례(입대 면제) · ${p.what}`,
   promoted: (p: { club: string; league: string; down: string }) =>
-    `${p.club} ${p.league} 승격 확정! 다음 시즌은 ${p.league}에서 뜁니다 (${p.down} 강등)`,
+    `${p.club} ${p.league} 승격 확정! 다음 시즌은 ${p.league}에서 뜁니다. 강등된 팀은 ${p.down}입니다.`,
   // 이적 제의 역할
   roleStarter: '주전 보장',
   roleRotation: '로테이션',
@@ -26,7 +26,7 @@ const ko = {
   roleComeback: '하부 리그 · 재기 도전',
   // 병역이 막는 시장
   serveName: '김천 상무 복무 계속',
-  serveDesc: (p: { left: number }) => `전역까지 ${p.left}시즌 · 군 복무 중에는 이적할 수 없습니다`,
+  serveDesc: (p: { left: number }) => `전역까지 ${p.left}시즌 · 군 복무 중에는 이적할 수 없어요`,
   serveNote: '국군체육부대 소속으로 복무 중입니다.',
   dueNote: (p: { age: number }) =>
     `만 ${p.age}세. 더 이상 입영을 미룰 수 없습니다. 병역 의무를 이행해야 합니다.`,

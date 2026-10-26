@@ -13,7 +13,7 @@ test('경기 중계 시트가 끝나면 확인을 눌러 시즌 탭 리포트로
   await page.locator('[data-act="advance"]').click();
   await expect(page.locator('#sheet')).toContainText('프리시즌 진행 중');
   await expect(page.locator('#sheet')).toBeHidden({ timeout: 10_000 });
-  await expect(report).toContainText('시즌 준비를 마쳤습니다');
+  await expect(report).toContainText('시즌 준비를 마쳤어요');
   await clearPendingEvent(page);
 
   await page.locator('[data-act="advance"]').click();

@@ -579,7 +579,7 @@ describe('구단 시즌 업적', () => {
     expect(done).toBe(g.flatMap((x) => x.items).filter((i) => i.done).length);
   });
 
-  it('팀 업적은 편성(나만의 최강 팀)과 시즌 레이스(경기 기록)로 나뉜다', () => {
+  it('팀 업적은 편성(내가 만든 최강 팀)과 시즌 레이스(경기 기록)로 나뉜다', () => {
     const g = clubAchievements({
       careers: [],
       team: teamOf([], {

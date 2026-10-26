@@ -9,7 +9,8 @@ const ko = {
     `A매치 ${p.caps}경기를 끝으로 대표팀 유니폼을 내려놓았습니다. 이제 소속팀 경기에만 나섭니다.`,
   ntStayLabel: '다음 소집에도 응하겠다고 답한다',
   ntStayResult: '"부르면 언제든 가겠습니다." 짧게 답하고 소속팀 훈련장으로 돌아갔습니다.',
-  ntRetiredLog: (p: { caps: number }) => `대표팀 은퇴 발표 (A매치 ${p.caps}경기)`,
+  ntRetiredLog: (p: { caps: number }) =>
+    `대표팀 은퇴를 발표했습니다. A매치 ${p.caps}경기를 뛰었습니다.`,
   wagsTitle: '파티에서 받은 연락',
   wagsText:
     '파티에서 인사를 나눈 가수 출신 방송인에게서 메시지가 왔습니다. 다음 주에 저녁을 같이 먹자고 합니다.',
@@ -19,7 +20,7 @@ const ko = {
   wagsPublicFail:
     '사진이 먼저 퍼지며 열애설 기사가 쏟아졌습니다. 다음 날 훈련장 앞이 취재진으로 붐볐습니다.',
   wagsQuietLabel: '사람 없는 곳에서 조용히 만난다',
-  wagsQuietResult: '둘만 아는 단골집이 생겼습니다. 경기 전날 밤에도 마음이 편합니다.',
+  wagsQuietResult: '둘만 아는 단골집이 생겼습니다. 경기 전날 밤에도 거기서 조용히 저녁을 먹습니다.',
   wagsDeclineLabel: '시즌 중이라 정중히 거절한다',
   wagsDeclineResult: '"시즌 끝나고 연락드릴게요." 답장을 보내고 영상 분석실로 향했습니다.',
 };

@@ -33,7 +33,7 @@ const ko = {
   sangmuName: (p: { due: boolean }): string =>
     p.due ? '국군체육부대(상무) 마지막 지원' : '국군체육부대(상무) 추가 모집 지원',
   sangmuDesc: (p: { pct: number; abroad: boolean; due: boolean }) =>
-    `합격 확률 ${p.pct}% · 김천 상무에서 2시즌 복무하며 K리그1 출전${p.abroad ? ' · 해외 구단과의 계약은 해지됩니다' : ' · 전역 후 원소속팀 복귀'}${p.due ? ' · 불합격 시 현역 입대' : ' · 불합격 시 현 소속팀 잔류'}`,
+    `합격 확률 ${p.pct}% · 김천 상무에서 2시즌 복무하며 K리그1 출전${p.abroad ? ' · 해외 구단 계약 해지' : ' · 전역 후 원소속팀 복귀'}${p.due ? ' · 불합격 시 현역 입대' : ' · 불합격 시 현 소속팀 잔류'}`,
   armyName: (p: { due: boolean }): string => (p.due ? '현역 입대' : '현역 입대 (조기 이행)'),
   armyDesc: (p: { abroad: boolean }) =>
     `18개월 복무 · 2시즌 동안 공식 경기 출전 불가${p.abroad ? ' · 해외 구단과의 계약 해지' : ''}, 전역 후 원소속팀 복귀 협상`,

@@ -62,7 +62,7 @@ test('쌓인 장수를 막대로 보이고, 다음 장이 확정인 칸에 표�
   );
   page.once('dialog', (d) => d.accept());
   await page.locator('[data-act="premium-scout"]').click();
-  await expect(page.getByText('S 후보가 나와서 S 확정 칸을 처음부터 다시 세요.')).toBeVisible();
+  await expect(page.getByText('S 후보가 나와서 S 확정 칸이 처음부터 다시 시작돼요.')).toBeVisible();
   await expect(sure).toContainText('0 / 30장');
   await expect(sure).not.toHaveAttribute('data-pity-next');
   await expect(elite).toContainText('58 / 100장');
