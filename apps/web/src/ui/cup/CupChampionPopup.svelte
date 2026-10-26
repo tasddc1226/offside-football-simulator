@@ -10,7 +10,7 @@
   import { onMount } from 'svelte';
   import { fetchCupHome, type CupChampion } from '@offside/app-core/api/cup';
   import { cupChampionToShow, dismissCupChampion } from '@offside/app-core/cupHome';
-  import { claimHomePopup } from '@offside/app-core/homePopup';
+  import { claimHomePopup, homePopupTurn, passHomePopup } from '@offside/app-core/homePopup';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
   import { divisionLabel } from '@offside/app-core/cupDivision';
   import CupTrophy from './CupTrophy.svelte';
@@ -37,14 +37,20 @@
 
   onMount(() => {
     if (shownThisVisit) return;
-    void fetchCupHome().then((r) => {
-      if (!r.ok || shownThisVisit) return;
-      const next = cupChampionToShow(r.data);
-      // T-11-423 제휴 팝업이 먼저 떴으면 이번 방문에는 띄우지 않는다(다음 방문에 보인다).
-      if (!next || !claimHomePopup()) return;
+    let alive = true;
+    void fetchCupHome().then(async (r) => {
+      const next = r.ok && !shownThisVisit ? cupChampionToShow(r.data) : null;
+      if (!next) return passHomePopup('cup');
+      // T-11-423c 출석 창이 띄울지 정할 때까지 기다리고, 출석 창이 먼저 떴으면 이번 방문에는 띄우지 않는다(다음 방문에 보인다).
+      await homePopupTurn('cup');
+      if (!alive || shownThisVisit) return passHomePopup('cup');
+      if (!claimHomePopup('cup')) return;
       shownThisVisit = true;
       champion = next;
     });
+    return () => {
+      alive = false;
+    };
   });
 
   $effect(() => {
