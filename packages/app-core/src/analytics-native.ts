@@ -9,6 +9,13 @@ import {
 } from './analytics-model.js';
 import { createTracker } from './analytics-tracker.js';
 
+/** 푸시 열기에 붙이는 캠페인과 단계 허용 목록. 서버 push data의 campaign · reminderStage와 같다. */
+const PUSH_CAMPAIGNS = new Map<unknown, readonly number[]>([
+  ['career_reminder', [1, 2, 3]],
+  ['retention_lapsed', [3, 7, 14, 30]], // 쉰 날 수(T-11-501)
+  ['retention_onboarding', [1, 2, 3, 4, 5]], // 다음 할 일 순서
+]);
+
 export type NativeAnalyticsSDK = {
   consent(granted: boolean): Promise<void>;
   collect(enabled: boolean): Promise<void>;
@@ -156,11 +163,11 @@ export function createNativeAnalytics(io: IO) {
         ['news', 'team', 'market', 'social', 'community', 'return', 'test'].includes(kind)
           ? kind
           : 'other';
-      const reminder =
-        campaign === 'career_reminder' && (stage === 1 || stage === 2 || stage === 3);
+      const tagged =
+        typeof stage === 'number' && PUSH_CAMPAIGNS.get(campaign)?.includes(stage) === true;
       send('offside_push_open', {
         push_category: category,
-        ...(reminder ? { push_campaign: 'career_reminder', reminder_stage: stage } : {}),
+        ...(tagged ? { push_campaign: campaign as string, reminder_stage: stage } : {}),
       });
       return true;
     },
