@@ -83,6 +83,7 @@ import { go, takeFocus } from '../../game/nav';
 import { measureShown, scrollToView } from '../../ui/scroll';
 import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { notificationDestination } from '../../platform/notificationDestination';
+import { askPushAfter } from '../../platform/pushAsk';
 import { toast } from '../../game/host';
 import { useColors } from '../../theme/useColors';
 import { mix, type Colors } from '../../theme/colors';
@@ -945,7 +946,7 @@ export default function Market() {
   };
   // T-11-111 당겨서 새로고침 — 보이는 탭의 데이터만 조용히 다시 받는다(목록을 비우지 않는다). 사고파는 중에는 건너뛴다.
   useOnPull(() => (busy ? undefined : refresh(true)));
-  async function run<T>(send: () => Sent<T>, done: string) {
+  async function run<T>(send: () => Sent<T>, done: string): Promise<boolean> {
     setBusy(true);
     setError(null);
     const sent = buying;
@@ -956,7 +957,7 @@ export default function Market() {
       if (isStaleListing(r.error)) await settleStale(sent, r.error);
       else setError(r.error.message);
       setBusy(false);
-      return;
+      return false;
     }
     setBusy(false);
     closeSheets();
@@ -964,6 +965,7 @@ export default function Market() {
     setSelling(null);
     toast(done);
     await refresh();
+    return true;
   }
 
   // 지금 열린 영입 시트(그 사이 닫았거나 다른 매물을 열었는지 보려고 ref로도 둔다).
@@ -1678,7 +1680,9 @@ export default function Market() {
                         void run(
                           () => createListing(selling.careerId, sellPrice),
                           MARKET_TOAST.listed,
-                        )
+                        ).then((ok) => {
+                          if (ok) void askPushAfter('sell');
+                        })
                       }
                     >
                       {L.listFor({ price: fmtValue(sellPrice) })}
