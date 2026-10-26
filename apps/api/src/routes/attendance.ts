@@ -1,7 +1,6 @@
 import { AttendanceCheckInResponseSchema, AttendanceSchema } from '@offside/contracts';
 import type { Hono } from 'hono';
 import { cupKo } from '../cupText.js';
-import { MEMBER_ATTENDANCE_MULT } from '@offside/contracts/membership';
 import { attendanceOf, checkIn } from '../db/repos/attendance.js';
 import { isMember } from '../db/repos/memberships.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -28,9 +27,9 @@ export function registerAttendanceRoutes(app: Hono<AppEnv>) {
     const me = await requireOwner(c);
     const db = getDb(c);
     const now = nowIso();
-    // T-11-512 클럽 멤버십 구독 중이면 이번 출석 보상을 2배로 준다.
+    // T-11-512 클럽 멤버십 구독 중이면 이번 출석 보상을 2배로, T-11-517 잠재력 강화권 1장을 더 준다.
     const member = await isMember(db, me.id, now);
-    const done = await checkIn(db, me.id, now, member ? MEMBER_ATTENDANCE_MULT : 1);
+    const done = await checkIn(db, me.id, now, member);
     if (!done) throw conflictError(cupKo('attendanceChecked'), 'ATTENDANCE_CHECKED');
     return ok(
       c,

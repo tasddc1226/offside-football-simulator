@@ -2,7 +2,7 @@
 // 않은 것으로 확인된 기기, 이미 받은 기기는 묻지 않는다. 구단주인지 모르는 기기는 한 번 묻고 답(403이면 비로그인)을 구단주
 // 표시로 남긴다. "받을 게 없다"는 표시는 보상 id · 서비스 시즌마다 남겨, 시즌이 바뀌면 한 번 더 묻는다.
 // T-11-472 구단주 선물(T-11-275)은 없앴다. T-11-487 시즌 기록 보상은 업적 보상 다음 차례로 같은 칸에 온다(?v=2) — 하나를
-// 받으면 다음 것을 다시 묻는다.
+// 받으면 다음 것을 다시 묻는다. T-11-517 광고 제거 구매 감사 선물은 그다음 차례(?v=3, 멤버십 출시 T-11-516에서 묻기 시작한다).
 import type { HomeGiftResponse, OwnerItemsResponse } from '@offside/contracts';
 import { ACH_SEASON_GIFT, RECORD_SEASON_GIFT } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
@@ -73,6 +73,8 @@ export function giftCopy(g: HomeGift): {
   done: string;
 } {
   const p = { boost: g.boost, scout: g.scout, reroll: g.reroll ?? 0, season: g.season ?? 1 };
+  if (g.kind === 'adFreeThanks')
+    return { title: L.adFreeTitle, sub: L.adFreeSub(p), detail: null, done: L.seasonDone(p) };
   if (g.kind !== 'recordSeason')
     return { title: L.seasonTitle(p), sub: L.seasonSub(p), detail: null, done: L.seasonDone(p) };
   return {
