@@ -1,5 +1,5 @@
 // T-11-423 아마축구 상호 홈 팝업(웹 PartnerPopup.svelte) — 앱을 켜 홈에 왔을 때 한 번 아래에서 올라오는 시트로 소재 한 장을
-// 띄운다(규칙은 app-core partnerPopup.ts). 컵 우승 팝업이 먼저 자리를 잡을 수 있게 잠시 기다리고, 이용 분석 동의 창이 떠
+// 띄운다(규칙은 app-core partnerPopup.ts). 출석 · 컵 우승 창 다음 차례로 띄우고(T-11-423c), 이용 분석 동의 창이 떠
 // 있으면 띄우지 않는다(iOS는 창 두 개를 함께 띄우지 못한다). 그림을 다 받은 뒤에만 띄워 빈 시트가 보이지 않게 한다.
 // 그림을 누르면 기기에 맞는 아마축구 스토어를 연다.
 import { useEffect, useState } from 'react';
@@ -13,7 +13,7 @@ import {
   partnerPopupToShow,
   type PartnerVariant,
 } from '@offside/app-core/partnerPopup';
-import { claimHomePopup } from '@offside/app-core/homePopup';
+import { claimHomePopup, homePopupTurn } from '@offside/app-core/homePopup';
 import { partnerText as L } from '@offside/app-core/i18n/ko/partner';
 import { nativeAnalytics } from '../../analytics';
 import { analyticsAskPending } from '../../components/AnalyticsAsk';
@@ -32,9 +32,11 @@ export function PartnerPopup() {
     const t = setTimeout(() => {
       void Image.prefetch(PARTNER_POPUP.imageUrl(first))
         .catch(() => false)
+        // T-11-423c 홈 팝업 순서의 마지막 — 출석 · 컵 우승 창이 띄울지 정할 때까지 기다린다.
+        .then(async (ok) => (await homePopupTurn('partner'), ok))
         .then((ok) => {
           const v = partnerPopupToShow();
-          if (!alive || !ok || !v || analyticsAskPending() || !claimHomePopup()) return;
+          if (!alive || !ok || !v || analyticsAskPending() || !claimHomePopup('partner')) return;
           markPartnerPopupShown();
           setVariant(v);
           nativeAnalytics.partnerPopup('view', v);
