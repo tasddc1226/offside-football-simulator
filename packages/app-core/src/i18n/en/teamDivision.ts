@@ -19,7 +19,7 @@ export const teamDivision: Translation<TeamDivisionMsgs> = {
   promoted: (p) => `Promoted to ${p.name}!`,
   relegated: (p) => `Dropped to ${p.name}`,
   promotedBody: 'This result moved you up a division.',
-  relegatedBody: 'Win your rating back to return.',
+  relegatedBody: 'Win your RP back to return.',
   changedAway: (p) => `A match against you moved you to ${p.name}`,
   tabAll: 'All',
   tabsAria: 'Division',

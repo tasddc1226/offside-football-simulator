@@ -8,6 +8,7 @@ import {
   ACH_REWARD_FIRST_SEASON,
   ACH_REWARD_MIN,
   ACH_SEASON_GIFT,
+  usesRankLadder,
   type AchReward,
 } from '@offside/contracts/owner-team';
 import type { ClubAchievementGroup } from '@offside/contracts';
@@ -137,6 +138,7 @@ export async function computeOwnerAchievements(
     detail: detailPosInSeason(season),
     retireAt: retireAtOf(season),
     kept: keptOf(prev?.teamKept),
+    ladder: usesRankLadder(season),
   });
   return { groups, prev, players: careersIn.length };
 }

@@ -76,8 +76,10 @@ export const saveTeamPresets = (body: PutTeamPresetsBody) =>
     method: 'PUT',
     body: JSON.stringify(body),
   });
-/** 상대 후보는 서버가 섞어 준다 — '다른 상대 보기'가 새로 받게 메모하지 않는다. */
-export const fetchOpponents = () => apiFetch<TeamOpponentsResponse>('/v1/owner-team/opponents');
+/** 상대 후보는 서버가 섞어 준다 — '다른 상대 보기'가 새로 받게 메모하지 않는다.
+ * T-11-510 시즌 2부터는 상대 한 팀만 오고, pick(1~3)으로 그 경기의 다른 상대를 찾는다. */
+export const fetchOpponents = (pick = 0) =>
+  apiFetch<TeamOpponentsResponse>(`/v1/owner-team/opponents${pick ? `?pick=${pick}` : ''}`);
 export const playMatch = (opponentTeamId: string) =>
   apiFetch<PlayTeamMatchResponse>('/v1/owner-team/matches', {
     method: 'POST',

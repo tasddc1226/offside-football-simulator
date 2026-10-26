@@ -81,6 +81,7 @@ export const teamAch: Translation<TeamAchMsgs> = {
   noteApp:
     'It starts from zero every season. This is the sum of player, team and owner achievement points. The ranking updates every 5 minutes.',
   sortRating: 'Rating',
+  sortRp: 'RP',
   sortOvr: 'Team OVR',
   sortValue: 'Club value',
   colOvrApp: 'OVR',
@@ -111,6 +112,7 @@ export const teamAch: Translation<TeamAchMsgs> = {
   teamsEmpty:
     'No teams are ranked yet. Build a team from retired players on the Owner screen to appear here.',
   teamsFoot: 'Rating moves with team match results. The ranking updates every 5 minutes.',
+  teamsFootRp: 'RP moves with ranked match results. The ranking updates every 5 minutes.',
   valueFoot:
     'Club value is the sum of the starting XI card prices. The ranking updates every 5 minutes.',
   homeValueTitle: 'Top 3 club values',
@@ -124,6 +126,7 @@ export const teamAch: Translation<TeamAchMsgs> = {
   profMine: ' · My team',
   profOwner: 'Owner ',
   profRatingAria: (p) => `Team rating ${p.n}`,
+  profRpAria: (p) => `Team RP ${p.n}`,
   profStatOvr: 'Team OVR',
   profStatRecord: 'Record',
   profStatGoals: 'GF : GA',

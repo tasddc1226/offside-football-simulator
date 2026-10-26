@@ -22,6 +22,7 @@ import {
   ACH_RANK_PER_PAGE,
   TEAM_RANK_PER_PAGE,
   TEAM_STATS_MATCHES_MAX,
+  usesRankLadder,
   type FormationId,
 } from '@offside/contracts/owner-team';
 import { teamSeasonAt, teamSeasonClosed, teamSeasonName } from '@offside/contracts/service-seasons';
@@ -103,7 +104,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     const q = parseWithAppError(TeamRankQuerySchema, queryWithoutLang(c));
     const season = teamSeasonParam(q.season, now);
     // T-11-375 디비전 탭은 레이팅순에만 있다(다른 정렬에 붙으면 무시해 캐시 키를 늘리지 않는다).
-    const division = q.sort === 'rating' ? q.division : undefined;
+    const division = q.sort === 'rating' && usesRankLadder(season) ? q.division : undefined;
     const pageOf = (page: number, division?: number) =>
       edgeCached(
         c,
@@ -133,7 +134,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
               formation: t.formation as FormationId,
               ovr: t.ovr,
               rating: t.rating,
-              division: t.division,
+              ...(usesRankLadder(season) ? { division: t.division } : {}),
               record: recordOf(t),
               likes: t.likes,
               value: t.value,
@@ -290,7 +291,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           ovr: lineupOvr(lineup),
           lines: linesOf(lineup, t.season),
           rating: t.rating,
-          division: t.division,
+          ...(usesRankLadder(t.season) ? { division: t.division } : {}),
           record: recordOf(t),
           goals: { for: t.goalsFor, against: t.goalsAgainst },
           likes: t.likes,

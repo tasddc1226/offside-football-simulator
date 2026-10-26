@@ -13,6 +13,7 @@
     TEAM_NAME_MAX,
     TEAM_NAME_MIN,
     PAST_SALARY_BUDGET,
+    RANK_MATCH_REPICKS,
     TEAM_RATING_START,
     YOUTH_NAME,
     YOUTH_OVR,
@@ -20,6 +21,7 @@
     positionedLayout,
     slotRating,
     teamOvr,
+    usesRankLadder,
     type AchCategory,
     type FormationId,
     type TeamPosition,
@@ -127,6 +129,9 @@
 
   let opponents = $state<TeamOpponent[]>([]);
   let oppStatus = $state<LoadStatus>('loading');
+  /** T-11-510 시즌 2 자동 매칭에서 이번 경기의 '다른 상대 찾기' 횟수(경기를 치르면 0으로). */
+  let oppPick = $state(0);
+  const ladder = $derived(usesRankLadder(team?.season ?? 0));
   let playing = $state(false);
   let result = $state<TeamMatch | null>(null);
   /** T-11-375 방금 치른 경기의 내 디비전 전후(결과 창 승격 · 강등), 받은 경기로 바뀐 디비전 알림. */
@@ -442,7 +447,7 @@
 
   async function loadOpponents() {
     oppStatus = 'loading';
-    const r = await fetchOpponents();
+    const r = await fetchOpponents(oppPick);
     if (!r.ok) {
       oppStatus = 'error';
       return;
@@ -461,8 +466,11 @@
       if (r.error.reason === 'TEAM_MATCH_DAILY_LIMIT') matchesLeft = 0;
       if (r.error.reason === 'TEAM_OPPONENT_DAILY_LIMIT')
         opponents = opponents.filter((x) => x.teamId !== o.teamId);
+      // T-11-510 상대 RP가 그새 멀어졌다 — 같은 횟수로 새 상대를 받는다.
+      if (r.error.reason === 'TEAM_OPPONENT_STALE') void loadOpponents();
       return toast(r.error.message);
     }
+    oppPick = 0;
     result = r.data.match;
     liveMoments = r.data.live;
     resultOrigin = 'opponents';
@@ -736,7 +744,9 @@
         hint={matchHint}
         onreload={() => void loadOpponents()}
         onchallenge={(o) => void challenge(o)}
-        onmore={() => open('opponents')}
+        onmore={ladder ? () => ((oppPick += 1), void loadOpponents()) : () => open('opponents')}
+        {ladder}
+        repicksLeft={RANK_MATCH_REPICKS - oppPick}
         ontoTeam={editable ? () => switchView('team') : undefined}
         onsave={season === current && dirty && filled > 0 && matchesLeft > 0 ? () => void saveAndFindOpponents() : undefined}
         {saving}

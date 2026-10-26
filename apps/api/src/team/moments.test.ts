@@ -151,6 +151,50 @@ describe('startLiveMatch', () => {
   });
 });
 
+describe('T-11-510 시즌 2 장면 확률', () => {
+  const strong = team('s', 92);
+  const weak = team('w', 74);
+  it('전력이 앞서면 찬스 자동 성공률이 오르고 위기 자동 방어율도 오른다', () => {
+    const s = startLiveMatch('gap-1', strong, weak, 2);
+    const chance = s.moments.find((m) => m.kind === 'chance');
+    expect(chance?.autoPct).toBeGreaterThan(Math.round(MOMENT_RULES.chanceAuto * 100));
+    const w = startLiveMatch('gap-1', weak, strong, 2);
+    const crisis = w.moments.find((m) => m.kind === 'crisis');
+    expect(crisis?.autoPct).toBeLessThan(Math.round(MOMENT_RULES.crisisAuto * 100));
+    // 차이는 gapMax까지만 반영한다.
+    for (const m of [...s.moments, ...w.moments])
+      expect(
+        Math.abs(
+          (m.autoPct ?? 0) / 100 -
+            (m.kind === 'chance' ? MOMENT_RULES.chanceAuto : MOMENT_RULES.crisisAuto),
+        ),
+      ).toBeLessThanOrEqual(MOMENT_RULES.gapMax + 0.005);
+  });
+  it('시즌 1까지는 장면 확률이 전력과 상관없다', () => {
+    const s = startLiveMatch('gap-1', strong, weak, SEASON);
+    expect(s.moments.every((m) => m.autoPct === undefined)).toBe(true);
+  });
+  it('자동 선택이면 골 수 기대값이 장면 없는 경기와 같다(전력 차이가 있어도)', () => {
+    const N = 20000;
+    let lg = 0,
+      la = 0,
+      sg = 0,
+      sa = 0;
+    for (let i = 0; i < N; i++) {
+      const st = startLiveMatch(`g-${i}`, strong, weak, 2);
+      finishMoments(st);
+      const r = liveResult(st);
+      lg += r.homeGoals;
+      la += r.awayGoals;
+      const q = simulateMatch(`g-${i}`, strong, weak, 2);
+      sg += q.homeGoals;
+      sa += q.awayGoals;
+    }
+    expect(lg / N).toBeCloseTo(sg / N, 1);
+    expect(la / N).toBeCloseTo(sa / N, 1);
+  });
+});
+
 describe('resolveMoment', () => {
   it('한 번 판정한 장면은 다시 보내도 바뀌지 않고, 모르는 선택지는 거절한다', () => {
     const s = startLiveMatch('mat-r', home, away, SEASON);

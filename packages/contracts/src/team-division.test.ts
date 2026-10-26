@@ -10,12 +10,24 @@ import {
   TEAM_DIVISION_TOP,
 } from './team-division.js';
 
-const rules = divisionRules(resolveBalance());
+// 경계 규칙은 기본값과 상관없이 고정한 경계(T-11-375 가안)로 본다.
+const fixed = {
+  ...resolveBalance(),
+  teamDiv1: 950,
+  teamDiv2: 1000,
+  teamDiv3: 1050,
+  teamDiv4: 1100,
+  teamDiv5: 1175,
+  teamDiv6: 1250,
+  teamDiv7: 1350,
+};
+const rules = divisionRules(fixed);
 
 describe('T-11-375 구단 디비전', () => {
-  it('기본 경계는 기획 가안(950 · 1,000 · 1,050 · 1,100 · 1,175 · 1,250 · 1,350)이고 디비전은 8개다', () => {
-    expect(rules.bounds).toEqual([950, 1000, 1050, 1100, 1175, 1250, 1350]);
-    expect(rules.guard).toBe(30);
+  it('기본 경계는 T-11-510 RP 사다리 시뮬레이션 값이고 디비전은 8개다', () => {
+    const d = divisionRules(resolveBalance());
+    expect(d.bounds).toEqual([1050, 1200, 1400, 1700, 1800, 1900, 2000]);
+    expect(d.guard).toBe(30);
     expect(TEAM_DIVISION_KEYS).toHaveLength(8);
     expect(TEAM_DIVISION_TOP).toBe(7);
   });
@@ -49,7 +61,7 @@ describe('T-11-375 구단 디비전', () => {
   });
 
   it('경계를 거꾸로 두면 앞 경계 값을 써서 오름차순을 지킨다', () => {
-    const r = divisionRules({ ...resolveBalance(), teamDiv3: 900 });
+    const r = divisionRules({ ...fixed, teamDiv3: 900 });
     expect(r.bounds).toEqual([950, 1000, 1000, 1100, 1175, 1250, 1350]);
     expect(bandOf(1000, r.bounds)).toBe(3);
   });

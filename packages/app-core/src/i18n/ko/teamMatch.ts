@@ -27,6 +27,18 @@ const ko = {
   challengeAria: (p: { name: string }) => `${p.name}에 도전`,
   noOpponents: '아직 겨룰 팀이 없어요. 다른 구단주가 팀을 꾸리면 여기에 나와요.',
   moreOpponents: '다른 상대 보기',
+  // T-11-510 시즌 2 자동 매칭(서버가 비슷한 상대 한 팀을 골라 준다)
+  matchTitle: '랭크 매칭',
+  matchNear: (p: { rp: number; left: number; per: number }) =>
+    `내 팀 ${p.rp} RP에 맞는 상대예요 · 오늘 남은 경기 ${p.left}/${p.per}`,
+  matchRule: (p: { n: number }) =>
+    `RP와 전력이 비슷한 팀을 골라 드려요. 경기마다 상대를 ${p.n}번까지 다시 찾을 수 있어요.`,
+  matchGapNote:
+    'RP 아래 숫자는 내 팀과의 차이예요. RP가 높은 팀을 이기면 더 오르고, 져도 덜 깎여요.',
+  oppRp: 'RP',
+  matchStart: '경기 시작',
+  matchStartAria: (p: { name: string }) => `${p.name}과 경기 시작`,
+  matchRepick: (p: { left: number; max: number }) => `다른 상대 찾기 (${p.left}/${p.max})`,
   // 최근 경기
   historyTitle: '최근 경기',
   historyFail: '경기 기록을 불러오지 못했어요.',
@@ -87,6 +99,7 @@ const ko = {
   noGoals: '골 없이 비겼어요.',
   recordChip: (p: { record: string }) => `내 팀 전적 ${p.record}`,
   ratingChange: '내 팀 레이팅 ',
+  ratingChangeRp: '내 팀 RP ',
   backHistory: '기록으로 돌아가기',
   backDefaultApp: '내 팀',
   replay: '중계 다시 보기',

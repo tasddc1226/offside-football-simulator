@@ -3,7 +3,7 @@
   import { seasonLabel } from '@offside/app-core/seasonName';
   // T-10-092 라이브 랭킹(팀 랭킹) — 기록실 탭. 선수가 한 명 이상 있는 구단주 팀을 시즌별로 레이팅(경기 결과) 또는 팀 OVR
   // 순으로 보여 주고, 줄을 누르면 팀 프로필(appState.hof.team)을 연다. 서버가 5분마다 새로 센다.
-  import { TEAM_RANK_PER_PAGE } from '@offside/contracts/owner-team';
+  import { TEAM_RANK_PER_PAGE, usesRankLadder } from '@offside/contracts/owner-team';
   import { displaySeasonAt, openTeamSeasons, teamSeasonName } from '@offside/contracts/service-seasons';
   import { fetchMyTeamRank, fetchTeamDivisions, fetchTeamRanking, type TeamDivisionsResponse, type TeamRankResponse, type TeamRankSort } from '@offside/app-core/api/team';
   import { divisionName, TEAM_DIVISION_KEYS } from '@offside/app-core/teamDivision';
@@ -24,14 +24,16 @@
   import TitleBadge from '../cup/TitleBadge.svelte';
   import OwnerProfile from '../owner/OwnerProfile.svelte';
 
-  const sorts = (): [TeamRankSort, string][] => [
-    ['rating', L.sortRating],
+  /** T-11-510 시즌 2부터 레이팅 칸은 RP다. */
+  const ratingLabel = (rp: boolean) => (rp ? L.sortRp : L.sortRating);
+  const sorts = (rp: boolean): [TeamRankSort, string][] => [
+    ['rating', ratingLabel(rp)],
     ['ovr', L.sortOvr],
     ['value', L.sortValue],
   ];
   /** 정렬마다 값 칸의 이름과 값(구단 가치는 몸값 표기). */
-  const METRIC: Record<TeamRankSort, { label: () => string; of: (t: TeamRankResponse['items'][number]) => string }> = {
-    rating: { label: () => L.sortRating, of: (t) => n(t.rating) },
+  const METRIC: Record<TeamRankSort, { label: (rp: boolean) => string; of: (t: TeamRankResponse['items'][number]) => string }> = {
+    rating: { label: ratingLabel, of: (t) => n(t.rating) },
     ovr: { label: () => L.sortOvr, of: (t) => String(t.ovr) },
     value: { label: () => L.sortValue, of: (t) => fmtValue(t.value) },
   };
@@ -53,9 +55,11 @@
   const now = $derived(clock.now);
   const seasons = $derived(data?.seasons ?? openTeamSeasons(now).map((id) => ({ id, name: teamSeasonName(id) })));
   const selectedSeason = $derived(season ?? data?.season ?? displaySeasonAt(now));
+  /** T-11-510 디비전은 RP 사다리 시즌(2부터)에만 있다. */
+  const ladder = $derived(usesRankLadder(selectedSeason));
   /** 다시 받을 기준 — 고른 시즌, 아니면 지금 시즌(띄운 채 개막을 넘기면 바뀐다). */
   const shownSeason = $derived(season ?? displaySeasonAt(now));
-  const metricLabel = $derived(METRIC[sort].label());
+  const metricLabel = $derived(METRIC[sort].label(ladder));
   const metricOf = $derived(METRIC[sort].of);
   const rows = $derived(data?.items ?? []);
 
@@ -107,7 +111,7 @@
 
   // 디비전별 팀 수는 레이팅순을 볼 때만 한 번 받는다(5분 엣지 캐시 · 1분 메모).
   $effect(() => {
-    if (sort !== 'rating') return;
+    if (sort !== 'rating' || !ladder) return;
     const se = season;
     let live = true;
     void fetchTeamDivisions(se).then((r) => {
@@ -151,11 +155,11 @@
     {/if}
     <p class="hof-filter-label team-sort-label">{L.sortLabel}</p>
     <div class="hof-sorts team-ranking-sorts" role="group" aria-label={L.sortGroupAria}>
-      {#each sorts() as [k, label] (k)}
+      {#each sorts(ladder) as [k, label] (k)}
         <button class="hof-sort" aria-pressed={sort === k} data-rank-sort={k} onclick={() => ((sort = k), (page = 1))}>{label}</button>
       {/each}
     </div>
-    {#if sort === 'rating'}
+    {#if sort === 'rating' && ladder}
       <div class="hof-sorts team-div-tabs" role="group" aria-label={LD.tabsAria} data-rank-divisions>
         <button class="hof-sort" aria-pressed={division === undefined} data-rank-division="all" onclick={() => pickDivision(undefined)}>{LD.tabAll}</button>
         {#each TEAM_DIVISION_KEYS.map((_, i) => TEAM_DIVISION_KEYS.length - 1 - i) as d (d)}
@@ -211,7 +215,7 @@
     {:else}
       <p class="empty">{division !== undefined ? LD.emptyDivision : L.teamsEmpty}</p>
     {/if}
-    <p class="muted fs-xs" style="margin-top:10px">{sort === 'value' ? L.valueFoot : L.teamsFoot}</p>
+    <p class="muted fs-xs" style="margin-top:10px">{sort === 'value' ? L.valueFoot : ladder ? L.teamsFootRp : L.teamsFoot}</p>
 </section>
 {/if}
 

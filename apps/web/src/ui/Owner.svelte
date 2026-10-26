@@ -39,7 +39,7 @@
   import { exchangeText as XC } from '@offside/app-core/i18n/ko/exchange';
   import type { Component } from 'svelte';
   import { type OwnerTierTag } from '@offside/contracts';
-  import { shapeOf } from '@offside/contracts/owner-team';
+  import { shapeOf, usesRankLadder } from '@offside/contracts/owner-team';
   import { tierTitle } from '@offside/app-core/ownerTier';
   import GradeEmblem from './team/GradeEmblem.svelte';
   import { ownerProfileText as H } from '@offside/app-core/i18n/ko/ownerProfile';
@@ -189,7 +189,7 @@
       {#if card?.team}
         <dl class="owner-stats owner-team-stats" data-owner-team-record>
           <div><dt>{L.statRecord}</dt><dd>{recordText(card.team.record)}</dd></div>
-          <div><dt>{L.statRating}</dt><dd>{num(card.team.rating)}</dd></div>
+          <div><dt>{usesRankLadder(card.team.season) ? L.statRp : L.statRating}</dt><dd>{num(card.team.rating)}</dd></div>
           <div><dt>{L.statToday}</dt><dd>{card.left}/{card.perDay}</dd></div>
         </dl>
         <div class="owner-actions">

@@ -17,6 +17,7 @@ import {
   PAST_SALARY_BUDGET,
   TEAM_NAME_MAX,
   TEAM_NAME_MIN,
+  RANK_MATCH_REPICKS,
   TEAM_RATING_START,
   YOUTH_NAME,
   YOUTH_OVR,
@@ -27,6 +28,7 @@ import {
   shapeBase,
   shapeLayout,
   matchShape,
+  usesRankLadder,
   type FormationId,
 } from '@offside/contracts/owner-team';
 import {
@@ -203,6 +205,9 @@ export default function Team() {
     }
   }, [destination.friends, destination.history, status, needLogin]);
   const oppLoaded = useRef(false);
+  /** T-11-510 시즌 2 자동 매칭에서 이번 경기의 '다른 상대 찾기' 횟수(경기를 치르면 0으로). */
+  const [oppPick, setOppPick] = useState(0);
+  const oppPickRef = useRef(0);
   const [opponents, setOpponents] = useState<TeamOpponent[]>([]);
   const [oppStatus, setOppStatus] = useState<LoadStatus>('loading');
   const [playing, setPlaying] = useState(false);
@@ -561,7 +566,7 @@ export default function Team() {
   async function loadOpponents(silent = false) {
     oppLoaded.current = true;
     if (!silent) setOppStatus('loading');
-    const r = await fetchOpponents();
+    const r = await fetchOpponents(oppPickRef.current);
     if (!r.ok) return silent ? undefined : setOppStatus('error');
     setOpponents(r.data.items);
     setOppStatus('ready');
@@ -577,8 +582,12 @@ export default function Team() {
       if (r.error.reason === 'TEAM_MATCH_DAILY_LIMIT') setMatchesLeft(0);
       if (r.error.reason === 'TEAM_OPPONENT_DAILY_LIMIT')
         setOpponents((list) => list.filter((x) => x.teamId !== o.teamId));
+      // T-11-510 상대 RP가 그새 멀어졌다 — 같은 횟수로 새 상대를 받는다.
+      if (r.error.reason === 'TEAM_OPPONENT_STALE') void loadOpponents();
       return toast(r.error.message);
     }
+    oppPickRef.current = 0;
+    setOppPick(0);
     setResultOrigin('opponents');
     setResult(r.data.match);
     setLiveMoments(r.data.live);
@@ -805,7 +814,7 @@ export default function Team() {
           </View>
           {team ? (
             <Txt v="sm" tone="muted" testID="team-record">
-              {L.recordLineApp({
+              {(usesRankLadder(team.season) ? L.recordLineRpApp : L.recordLineApp)({
                 record: recordText(team.record),
                 rating: num(team.rating),
                 tail: legacy
@@ -820,7 +829,7 @@ export default function Team() {
               {L.introApp({ ovr: YOUTH_OVR })}
             </Txt>
           )}
-          {team && !legacy && team.season > 0 ? (
+          {team && !legacy && usesRankLadder(team.season) ? (
             <TeamDivision
               rating={team.rating}
               division={team.division}
@@ -1141,6 +1150,13 @@ export default function Team() {
             playing={playing}
             reload={() => void loadOpponents()}
             challenge={(o) => void challenge(o)}
+            ladder={usesRankLadder(team?.season ?? 0)}
+            repicksLeft={RANK_MATCH_REPICKS - oppPick}
+            repick={() => {
+              oppPickRef.current += 1;
+              setOppPick(oppPickRef.current);
+              void loadOpponents();
+            }}
             hint={matchHint}
             toTeam={editable ? () => switchView('team') : undefined}
             saveAndFind={

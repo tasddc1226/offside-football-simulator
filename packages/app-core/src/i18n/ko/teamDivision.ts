@@ -21,7 +21,7 @@ const ko = {
   promoted: (p: { name: string }) => `${p.name} 승격!`,
   relegated: (p: { name: string }) => `${p.name}로 내려갔어요`,
   promotedBody: '경기 결과로 디비전이 올랐어요.',
-  relegatedBody: '레이팅을 다시 올리면 돌아갈 수 있어요.',
+  relegatedBody: 'RP를 다시 올리면 돌아갈 수 있어요.',
   /** 받은 경기로 바뀐 디비전을 다음 접속 때 한 번 알린다. */
   changedAway: (p: { name: string }) => `받은 경기 결과로 ${p.name} 디비전이 됐어요`,
   /** 랭킹 디비전 탭. */

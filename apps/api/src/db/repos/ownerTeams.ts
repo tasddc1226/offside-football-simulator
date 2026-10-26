@@ -836,7 +836,13 @@ export type MatchDetail = {
 };
 
 /** 경기 한 판이 팀 행에 더하는 것(득실·레이팅 변화). */
-type Side = { teamId: string; filled: number; ovr: number; goals: number; rating: number };
+type Side = {
+  teamId: string;
+  filled: number;
+  ovr: number;
+  goals: number;
+  rating: number;
+};
 
 /**
  * T-11-375 경기 뒤 디비전 SQL — contracts `nextDivision`과 같은 식: max(구간, min(지금 디비전, 구간(레이팅 + guard))).

@@ -3,7 +3,7 @@
   import { seasonLabel } from '@offside/app-core/seasonName';
   // 팀 소개는 작게, 편성 그라운드는 바로 아래에. 보조 동작은 팀 메뉴에 모은다.
   import { tick } from 'svelte';
-  import { MANAGER_NAME_MAX, MANAGER_NAME_MIN, TEAM_NAME_MAX, TEAM_NAME_MIN, YOUTH_OVR } from '@offside/contracts/owner-team';
+  import { MANAGER_NAME_MAX, MANAGER_NAME_MIN, TEAM_NAME_MAX, TEAM_NAME_MIN, YOUTH_OVR, usesRankLadder } from '@offside/contracts/owner-team';
   import type { OwnerTeam, OwnerTeamResponse } from '@offside/app-core/api/team';
   import { num, recordText } from '@offside/app-core/teamText';
   import { isPreseasonLegacy, preseasonTeamNote } from '@offside/app-core/teamOwner';
@@ -108,11 +108,11 @@
   {#if team}
     <dl class="tm-stats" data-team-record>
       <div class="tm-record"><dt class="sr-only">{L.statRecord}</dt><dd>{recordText(team.record)}</dd></div>
-      <div><dt>{L.statRating}</dt><dd>{num(team.rating)}</dd></div>
+      <div><dt>{usesRankLadder(team.season) ? L.statRp : L.statRating}</dt><dd>{num(team.rating)}</dd></div>
       {#if legacy}<div><dt>{L.statFriendly}</dt><dd>{L.statFriendlyOnly}</dd></div>
       {:else}<div aria-label={editable ? L.leftAria({ left: matchesLeft, per: perDay }) : undefined}><dt>{editable ? L.statLeft : L.statSeason}</dt><dd>{editable ? L.statTimes({ n: matchesLeft }) : L.statPast}</dd></div>{/if}
     </dl>
-    {#if !legacy && team.season > 0}<TeamDivision rating={team.rating} division={team.division} season={team.season} notice={divisionNotice} />{/if}
+    {#if !legacy && usesRankLadder(team.season)}<TeamDivision rating={team.rating} division={team.division} season={team.season} notice={divisionNotice} />{/if}
   {/if}
   {#if legacy}
     <p class="muted fs-sm" data-team-legacy>{preseasonTeamNote()}</p>

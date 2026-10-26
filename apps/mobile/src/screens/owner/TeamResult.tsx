@@ -14,7 +14,7 @@ import { recordText, signedNum } from '@offside/app-core/teamText';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { TeamReport } from './TeamReport';
-import type { ReportLine } from '@offside/contracts/owner-team';
+import { usesRankLadder, type ReportLine } from '@offside/contracts/owner-team';
 import { DivisionEmblem } from '../../components/DivisionEmblem';
 import { divisionShiftView, type DivisionShift } from '@offside/app-core/teamDivision';
 
@@ -241,7 +241,13 @@ export function TeamResult({
         </View>
       ) : gain != null || record ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {gain != null ? chip(`${L.ratingChange}${signedNum(gain)}`, true, 'rating-change') : null}
+          {gain != null
+            ? chip(
+                `${usesRankLadder(team?.season ?? 0) ? L.ratingChangeRp : L.ratingChange}${signedNum(gain)}`,
+                true,
+                'rating-change',
+              )
+            : null}
           {record ? chip(L.recordChip({ record })) : null}
         </View>
       ) : null}

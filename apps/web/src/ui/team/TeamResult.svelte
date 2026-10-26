@@ -12,7 +12,7 @@
   import TeamReport from './TeamReport.svelte';
   import { teamMomentsText as M } from '@offside/app-core/i18n/ko/teamMoments';
   import { momentTitle, pickedLabel } from '@offside/app-core/teamMoments';
-  import type { ReportLine } from '@offside/contracts/owner-team';
+  import { usesRankLadder, type ReportLine } from '@offside/contracts/owner-team';
 
   let {
     m,
@@ -107,7 +107,7 @@
     <p class="tm-chips"><span class="tm-chip muted">{L.friendlyNote}</span></p>
   {:else if gain != null || record}
     <p class="tm-chips">
-      {#if gain != null}<span class="tm-chip gain" data-rating-change>{L.ratingChange}<b>{signedNum(gain)}</b></span>{/if}
+      {#if gain != null}<span class="tm-chip gain" data-rating-change>{usesRankLadder(team?.season ?? 0) ? L.ratingChangeRp : L.ratingChange}<b>{signedNum(gain)}</b></span>{/if}
       {#if record}<span class="tm-chip">{L.recordChip({ record })}</span>{/if}
     </p>
   {/if}

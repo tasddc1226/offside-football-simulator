@@ -10,7 +10,17 @@ import {
   takeDivisionChange,
 } from './teamDivision.js';
 
-const rules = divisionRules(resolveBalance());
+// 화면 규칙은 기본값과 상관없이 고정한 경계(T-11-375 가안)로 본다.
+const rules = divisionRules({
+  ...resolveBalance(),
+  teamDiv1: 950,
+  teamDiv2: 1000,
+  teamDiv3: 1050,
+  teamDiv4: 1100,
+  teamDiv5: 1175,
+  teamDiv6: 1250,
+  teamDiv7: 1350,
+});
 
 describe('T-11-375 디비전 화면 규칙', () => {
   beforeEach(() => {

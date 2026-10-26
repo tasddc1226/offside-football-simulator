@@ -4,7 +4,7 @@ import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
-import { TEAM_RANK_PER_PAGE } from '@offside/contracts/owner-team';
+import { TEAM_RANK_PER_PAGE, usesRankLadder } from '@offside/contracts/owner-team';
 import {
   fetchTeamDivisions,
   fetchMyTeamRank,
@@ -42,8 +42,10 @@ import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
 import { useSeasonNow } from '../../../ui/useSeasonNow';
 import { useRefresh } from '../../../ui/refresh';
 
-const sorts = (): [TeamRankSort, string][] => [
-  ['rating', L.sortRating],
+/** T-11-510 시즌 2부터 레이팅 칸은 RP다. */
+const ratingLabel = (rp: boolean) => (rp ? L.sortRp : L.sortRating);
+const sorts = (rp: boolean): [TeamRankSort, string][] => [
+  ['rating', ratingLabel(rp)],
   ['ovr', L.sortOvr],
   ['value', L.sortValue],
 ];
@@ -52,11 +54,17 @@ type Item = TeamRankResponse['items'][number];
 /** 정렬마다 값 칸의 이름(머리 칸은 head)·값·너비(구단 가치는 몸값 표기라 칸을 넓힌다, T-11-129). */
 const METRIC: Record<
   TeamRankSort,
-  { label: () => string; head: () => string; of: (t: Item) => string; w: number; size: number }
+  {
+    label: (rp: boolean) => string;
+    head: (rp: boolean) => string;
+    of: (t: Item) => string;
+    w: number;
+    size: number;
+  }
 > = {
   rating: {
-    label: () => L.sortRating,
-    head: () => L.sortRating,
+    label: ratingLabel,
+    head: ratingLabel,
     of: (t) => n(t.rating),
     w: 48,
     size: 17,
@@ -93,6 +101,8 @@ export default function TeamRanking() {
   const now = useSeasonNow();
   /** 다시 받을 기준 — 고른 시즌, 아니면 지금 시즌(띄운 채 개막을 넘기면 바뀐다). */
   const shownSeason = season ?? displaySeasonAt(now);
+  /** T-11-510 디비전은 RP 사다리 시즌(2부터)에만 있다. */
+  const ladder = usesRankLadder(data?.season ?? shownSeason);
 
   // T-11-441 '내 순위로' — 로그인한 구단주만, 가치순은 빼고. 누르면 내 팀이 있는 페이지로 가고 그 줄을 강조한다.
   const acct = useSnapshot(accountCache).value;
@@ -141,7 +151,7 @@ export default function TeamRanking() {
 
   // 디비전별 팀 수는 레이팅순을 볼 때만 받는다(5분 엣지 캐시 · 1분 메모).
   useEffect(() => {
-    if (sort !== 'rating') return;
+    if (sort !== 'rating' || !ladder) return;
     let live = true;
     void fetchTeamDivisions(season).then((r) => {
       if (live && r.ok) setDivisions(r.data);
@@ -149,11 +159,11 @@ export default function TeamRanking() {
     return () => {
       live = false;
     };
-  }, [season, sort, shownSeason]);
+  }, [season, sort, shownSeason, ladder]);
 
   const pages = data ? Math.max(1, Math.ceil(data.total / TEAM_RANK_PER_PAGE)) : 1;
   const metric = METRIC[sort];
-  const metricLabel = metric.label();
+  const metricLabel = metric.label(ladder);
   const metricOf = metric.of;
   function goPage(p: number) {
     setPage(p);
@@ -207,13 +217,13 @@ export default function TeamRanking() {
         label={L.sortGroupAria}
         testIDPrefix="rank-sort"
         value={sort}
-        items={sorts().map(([key, label]) => ({ key, label }))}
+        items={sorts(ladder).map(([key, label]) => ({ key, label }))}
         onPick={(key) => {
           setSort(key as TeamRankSort);
           setPage(1);
         }}
       />
-      {sort === 'rating' ? (
+      {sort === 'rating' && ladder ? (
         <View style={{ marginTop: 8 }} testID="rank-divisions">
           <RecordsChips
             label={LD.tabsAria}
@@ -276,7 +286,7 @@ export default function TeamRanking() {
               </Txt>
             ))}
             <Txt bold center style={{ width: metric.w, fontSize: 12 }}>
-              {metric.head()}
+              {metric.head(ladder)}
             </Txt>
           </View>
           {data.items.map((t) => (
@@ -433,7 +443,7 @@ export default function TeamRanking() {
         empty(division !== undefined && sort === 'rating' ? LD.emptyDivision : L.teamsEmpty)
       )}
       <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 10 }}>
-        {sort === 'value' ? L.valueFoot : L.teamsFoot}
+        {sort === 'value' ? L.valueFoot : ladder ? L.teamsFootRp : L.teamsFoot}
       </Txt>
     </Card>
   );

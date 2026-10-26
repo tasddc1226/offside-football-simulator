@@ -127,6 +127,8 @@ export type AchievementInput = {
   retireAt: number;
   /** T-11-103 그 시즌에 이미 닿은 팀 업적(teamKeptOf). 없으면 지금 팀으로만 판정한다. */
   kept?: TeamKept | undefined;
+  /** T-11-510 RP 사다리 시즌(2부터) — 팀 레이팅 업적 대신 팀 RP(디비전 경계) 업적을 둔다. */
+  ladder?: boolean;
 };
 
 /** 팀 업적 id → 그 시즌에 닿은 값(한 번 달성은 1, 단계 업적은 최고 값). */
@@ -759,7 +761,9 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
         best('team-streak', '최다 연승', '연승', team.bestStreak, [3, 5, 10]),
         held('team-margin', '5골 차 이상 승리', team.bestMargin >= 5, 30),
         best('team-goals', '팀 득점', '골', team.goalsFor, [50, 150, 500]),
-        best('team-rating', '팀 레이팅', '점', team.rating, [1100, 1200, 1300]),
+        input.ladder
+          ? best('team-rp', '팀 RP', 'RP', team.rating, [1400, 1700, 2000])
+          : best('team-rating', '팀 레이팅', '점', team.rating, [1100, 1200, 1300]),
         best('team-likes', '받은 좋아요', '개', team.likes, [1, 5, 20]),
       ]),
     );

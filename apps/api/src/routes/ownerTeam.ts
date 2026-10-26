@@ -29,9 +29,9 @@ import {
   TEAM_REPEAT_WINDOW_DAYS,
   achTierByRank,
   matchScore,
+  usesRankLadder,
   pastSalaryOverText,
   pastSalarySum,
-  ratingChange,
   shapeOf,
   type FormationId,
 } from '@offside/contracts/owner-team';
@@ -104,11 +104,20 @@ import {
   buildLineup,
   filledCount,
   lineupOvr,
+  rankedAtkK,
   simulateMatch,
   type LineupSlot,
 } from '../team/sim.js';
 import { lineupsOf, matchDetailOf, matchNotice, matchViews, playedMatch } from '../team/match.js';
 import { teamStatsView } from '../team/stats.js';
+import {
+  MATCH_POOL,
+  MATCH_POOL_CHECK,
+  MATCH_REPICKS,
+  matchRatingChange,
+  nearestCandidates,
+  pickCandidate,
+} from '../team/rank.js';
 import { liveDone, liveResult, resolveMoment, startLiveMatch } from '../team/moments.js';
 import {
   finalizeLive,
@@ -236,7 +245,8 @@ function toOwnerTeam(
     ovr: lineupOvr(lineup),
     lines: linesOf(lineup, row.season),
     rating: row.rating,
-    division: row.division,
+    // T-11-510 디비전은 RP 사다리 시즌(2부터)에만 있다.
+    ...(usesRankLadder(row.season) ? { division: row.division } : {}),
     record: recordOf(row),
     likes: row.likes,
     views: row.views,
@@ -503,13 +513,40 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const season = currentSeasonOrThrow(now);
     const [mine] = await myTeamIn(db, me.id, season);
     if (!mine) throw teamRequired();
-    const candidates = await listOpponentCandidates(
-      db,
-      me.id,
-      season,
-      { rating: mine.rating, ovr: mine.ovr },
-      kstTodayStart(now),
-    );
+    const ladder = usesRankLadder(season);
+    const todayStart = kstTodayStart(now);
+    const [candidates, [played, live]] = await Promise.all([
+      listOpponentCandidates(
+        db,
+        me.id,
+        season,
+        { rating: mine.rating, ovr: mine.ovr },
+        todayStart,
+        ladder ? MATCH_POOL_CHECK : undefined,
+      ),
+      ladder
+        ? db.batch([challengedSince(db, me.id, todayStart), openLiveSince(db, me.id, todayStart)])
+        : Promise.resolve([[], []] as const),
+    ]);
+    // 오늘 건 경기(마감 전 장면 경기 포함) 수와 그 상대들 — 장면 경기 중인 상대는 후보에서 뺀다.
+    const used = played.length + live.length;
+    const busy = new Set(live.map((m) => m.teamId));
+    if (ladder) {
+      // T-11-510 자동 매칭: 가까운 후보 중 (구단주, 날짜, 오늘 치른 경기 수, 몇 번째 상대)로 정한 한 팀. 같은 값이면 같은 상대다.
+      const pick = Math.min(
+        MATCH_REPICKS,
+        Math.max(0, Math.trunc(Number(c.req.query('pick') ?? 0)) || 0),
+      );
+      const chosen = pickCandidate(
+        nearestCandidates(
+          candidates.filter((t) => !busy.has(t.id)),
+          mine,
+          MATCH_POOL,
+        ),
+        `${me.id}:${todayStart}:${used}:${pick}`,
+      );
+      candidates.splice(0, candidates.length, ...(chosen ? [chosen] : []));
+    }
     // 가까운 팀 중에서 무작위로(매번 같은 상대만 나오지 않게).
     for (let i = candidates.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -573,6 +610,26 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       );
     }
     if (!opp || opp.team.profileId === me.id || opp.team.season !== season) throw teamNotFound();
+    // T-11-510 자동 매칭 시즌에는 고른 상대가 지금도 가까운 후보 안에 있어야 한다(그 사이 점수가 크게 바뀌면 새 상대를 받는다).
+    if (usesRankLadder(season)) {
+      const near = nearestCandidates(
+        await listOpponentCandidates(
+          db,
+          me.id,
+          season,
+          { rating: mine.rating, ovr: mine.ovr },
+          kstTodayStart(now),
+          MATCH_POOL_CHECK,
+        ),
+        mine,
+        MATCH_POOL_CHECK,
+      );
+      if (!near.some((t) => t.id === opp.team.id))
+        throw conflictError(
+          '상대 팀 점수가 바뀌어 새 상대를 찾았어요. 다시 경기를 시작해 주세요.',
+          'TEAM_OPPONENT_STALE',
+        );
+    }
     // T-10-095 같은 상대에게는 하루 한 번만 건다(받은 경기는 세지 않는다 — 받은 쪽은 되갚을 수 있다).
     if (challenged.some((m) => m.teamId === opp.team.id)) {
       throw rateLimited(
@@ -594,6 +651,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     if (input.live) {
       // T-11-387 장면 경기: 일반 골과 장면을 굴려 두고, 마지막 장면을 고르거나 마감할 때 경기를 남긴다.
       const state = startLiveMatch(id, lineups.home, lineups.away, season, {
+        atkK: rankedAtkK(season),
         coaches: lineups.coaches,
       });
       const snap = matchDetailOf(mine, opp.team, lineups, liveResult(state));
@@ -636,11 +694,12 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       );
     }
     const result = simulateMatch(id, lineups.home, lineups.away, season, {
+      atkK: rankedAtkK(season),
       coaches: lineups.coaches,
     });
     const score = matchScore(result.homeGoals, result.awayGoals);
-    // 기대 승률에 홈 이점을 넣고, 최근 TEAM_REPEAT_WINDOW_DAYS일 안에 이미 만난 횟수만큼 변화를 줄인다.
-    const delta = ratingChange(mine.rating, opp.team.rating, score, Number(met?.n ?? 0));
+    // 시즌 1(엘로)은 홈 이점과 최근 재대결 감쇠를 넣고, 시즌 2부터는 RP 사다리(T-11-510)다.
+    const delta = matchRatingChange(season, mine, opp.team, score, Number(met?.n ?? 0));
     const detail = matchDetailOf(mine, opp.team, lineups, result, delta);
     const homeSide = {
       teamId: mine.id,
@@ -699,10 +758,14 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         },
         rating: mine.rating + delta.home,
         // 읽은 레이팅으로 셈한 값이다(같은 순간 받은 경기가 있으면 저장값과 한 칸 다를 수 있고, 다음 팀 응답이 바로잡는다).
-        division: {
-          from: clampDivision(mine.division),
-          to: nextDivision(mine.rating + delta.home, mine.division, divisions),
-        },
+        ...(usesRankLadder(season)
+          ? {
+              division: {
+                from: clampDivision(mine.division),
+                to: nextDivision(mine.rating + delta.home, mine.division, divisions),
+              },
+            }
+          : {}),
         matchesLeft: Math.max(0, TEAM_MATCHES_PER_DAY - usedToday - 1),
       },
       201,
