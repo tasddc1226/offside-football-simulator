@@ -329,7 +329,8 @@ export function getHof(
   dpos: DetailPos | null = null,
 ): Promise<ApiResult<HofListResponse>> {
   const q = `limit=${limit}${page > 1 ? `&page=${page}` : ''}${sort !== 'score' ? `&sort=${sort}` : ''}${season !== null ? `&season=${season}` : ''}${name ? `&q=${encodeURIComponent(name)}` : ''}${pos ? `&pos=${pos}` : ''}${dpos ? `&dpos=${dpos}` : ''}`;
-  return cachedGet<HofListResponse>(`/v1/hof?${q}`, 60_000);
+  // T-11-503 홈 상위 목록이 홈에 돌아올 때마다 다시 받지 않게 5분 메모. 내 은퇴 업로드는 outbox가 메모를 비운다.
+  return cachedGet<HofListResponse>(`/v1/hof?${q}`, 300_000);
 }
 /** T-11-463 시즌 BEST 11(공개). 자리 주인은 은퇴마다 바뀌지만 화면을 열 때만 부른다. */
 export function getBest11(season: number): Promise<ApiResult<Best11Response>> {
@@ -403,7 +404,7 @@ export function checkRetiredNumber(
 export function getFirsts(season?: number): Promise<ApiResult<FirstsResponse>> {
   return cachedGet<FirstsResponse>(
     `/v1/firsts${season === undefined ? '' : `?season=${season}`}`,
-    60_000,
+    300_000, // T-11-503 홈에 돌아올 때마다 다시 받지 않게 5분.
   );
 }
 /** T-10-030 홈 라이브 현황(로그인 불필요). 홈이 1분마다 묻는다 — 서버 엣지 캐시와 같은 간격(T-10-045). */
