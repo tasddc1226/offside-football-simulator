@@ -26,6 +26,15 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   noOpponents:
     'まだ対戦できるチームがありません。他のオーナーがチームを組むと、ここに表示されます。',
   moreOpponents: '他の相手を見る',
+  matchTitle: 'ランクマッチング',
+  matchNear: (p) => `あなたのチーム ${p.rp} RP に合う相手です · 今日の残り試合 ${p.left}/${p.per}`,
+  matchRule: (p) => `RPと戦力が近いチームを選びます。1試合ごとに相手を${p.n}回まで探し直せます。`,
+  matchGapNote:
+    'RPの下の数字はあなたのチームとの差です。RPが高いチームに勝つと多く上がり、負けても減りが少なくなります。',
+  oppRp: 'RP',
+  matchStart: '試合開始',
+  matchStartAria: (p) => `${p.name}と試合開始`,
+  matchRepick: (p) => `別の相手を探す (${p.left}/${p.max})`,
   historyTitle: '最近の試合',
   historyFail: '試合記録を読み込めませんでした。',
   historyEmpty: 'まだ試合をしていません。',
@@ -84,6 +93,7 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   noGoals: 'スコアレスドローでした。',
   recordChip: (p) => `マイチーム戦績 ${p.record}`,
   ratingChange: 'マイチームのレーティング ',
+  ratingChangeRp: 'マイチームのRP ',
   backHistory: '記録に戻る',
   backDefaultApp: 'マイチーム',
   replay: '実況をもう一度見る',

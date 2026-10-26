@@ -11,11 +11,18 @@ import {
   TeamRankResponseSchema,
   type TeamRankResponse,
   TeamStatsResponseSchema,
+  TeamDivisionsQuerySchema,
+  TeamDivisionsResponseSchema,
+  type TeamDivisionsResponse,
 } from '@offside/contracts';
+import { resolveBalance } from '@offside/contracts/balance';
+import { divisionRules, type DivisionRules } from '@offside/contracts/team-division';
+import { getActiveBalance } from '../db/repos/balance.js';
 import {
   ACH_RANK_PER_PAGE,
   TEAM_RANK_PER_PAGE,
   TEAM_STATS_MATCHES_MAX,
+  usesRankLadder,
   type FormationId,
 } from '@offside/contracts/owner-team';
 import { teamSeasonAt, teamSeasonClosed, teamSeasonName } from '@offside/contracts/service-seasons';
@@ -27,8 +34,10 @@ import {
   eligibleMap,
   isTeamLiked,
   liveTeam,
+  countTeamsByDivision,
   listTeamRanking,
   listTeamRecentForm,
+  type RatingRange,
   listStatsMatches,
   otherKindTotals,
   myTeamIn,
@@ -49,6 +58,7 @@ import {
 import { edgeCached, waitUntil } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
+import type { Db } from '../db/client.js';
 import { parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
@@ -70,6 +80,15 @@ const RANK_CACHE = 'public, max-age=60';
 /** T-11-358 남의 팀 경기 통계. 랭크 경기 · 친선전을 치르면 지우고, 컵 경기는 이 TTL로만 새로 읽는다. */
 const TEAM_STATS_TTL = 300;
 
+/** T-11-375 활성 밸런스의 디비전 경계(엣지 캐시가 빈 때만 읽는다). */
+const activeDivisionRules = async (db: Db): Promise<DivisionRules> =>
+  divisionRules(resolveBalance((await getActiveBalance(db))?.values));
+/** 디비전 d의 레이팅 구간 [bounds[d-1], bounds[d]). */
+const divisionRange = (rules: DivisionRules, d: number): RatingRange => ({
+  min: d > 0 ? rules.bounds[d - 1]! : null,
+  max: d < rules.bounds.length ? rules.bounds[d]! : null,
+});
+
 const teamParam = (c: Context<AppEnv>) => parseWithAppError(TeamIdSchema, c.req.param('teamId'));
 
 /** 시즌 목록은 시계와 언어로만 정해진다 — 엣지에 담지 않고(키·퍼지·D1 읽기를 언어마다 늘리지 않고, 개막 직후 TTL만큼
@@ -84,13 +103,19 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     const now = nowIso();
     const q = parseWithAppError(TeamRankQuerySchema, queryWithoutLang(c));
     const season = teamSeasonParam(q.season, now);
-    const pageOf = (page: number) =>
+    // T-11-375 디비전 탭은 레이팅순에만 있다(다른 정렬에 붙으면 무시해 캐시 키를 늘리지 않는다).
+    const division = q.sort === 'rating' && usesRankLadder(season) ? q.division : undefined;
+    const pageOf = (page: number, division?: number) =>
       edgeCached(
         c,
-        EDGE.teamRank(season, q.sort, page),
+        EDGE.teamRank(season, q.sort, page, division),
         q.sort === 'value' ? RANK_VALUE_TTL : RANK_TTL,
         async (): Promise<Omit<TeamRankResponse, 'seasons'>> => {
-          const { rows, total } = await listTeamRanking(getDb(c), season, q.sort, page, now);
+          const range =
+            division === undefined
+              ? undefined
+              : divisionRange(await activeDivisionRules(getDb(c)), division);
+          const { rows, total } = await listTeamRanking(getDb(c), season, q.sort, page, now, range);
           const forms = await listTeamRecentForm(
             getDb(c),
             rows.map((t) => t.id),
@@ -109,6 +134,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
               formation: t.formation as FormationId,
               ovr: t.ovr,
               rating: t.rating,
+              ...(usesRankLadder(season) ? { division: t.division } : {}),
               record: recordOf(t),
               likes: t.likes,
               value: t.value,
@@ -139,8 +165,33 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
         NO_STORE,
       );
     }
-    const data = await pageOf(q.page);
+    const data = await pageOf(q.page, division);
     return ok(c, TeamRankResponseSchema, withSeasons(data, now, reqLang(c)), 200, RANK_CACHE);
+  });
+
+  // T-11-375 디비전별 팀 수와 지금 경계(랭킹 디비전 탭 · 내 위치). 모두에게 같아 5분 엣지 캐시, 경기마다 지우지 않는다.
+  app.get('/v1/teams/divisions', async (c) => {
+    const now = nowIso();
+    const q = parseWithAppError(TeamDivisionsQuerySchema, queryWithoutLang(c));
+    const season = teamSeasonParam(q.season, now);
+    const data = await edgeCached(
+      c,
+      EDGE.teamDivisions(season),
+      RANK_TTL,
+      async (): Promise<TeamDivisionsResponse> => {
+        const db = getDb(c);
+        const rules = await activeDivisionRules(db);
+        const counts = await countTeamsByDivision(db, season, rules.bounds);
+        return {
+          season,
+          bounds: rules.bounds,
+          guard: rules.guard,
+          counts,
+          total: counts.reduce((a, b) => a + b, 0),
+        };
+      },
+    );
+    return ok(c, TeamDivisionsResponseSchema, data, 200, RANK_CACHE);
   });
 
   // T-11-028 업적 랭킹(기록실). 시즌 업적 점수 순 — 구단주는 공개 닉네임과 그 시즌 팀 이름으로만 보인다. 팀 랭킹처럼 5분마다.
@@ -240,6 +291,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           ovr: lineupOvr(lineup),
           lines: linesOf(lineup, t.season),
           rating: t.rating,
+          ...(usesRankLadder(t.season) ? { division: t.division } : {}),
           record: recordOf(t),
           goals: { for: t.goalsFor, against: t.goalsAgainst },
           likes: t.likes,

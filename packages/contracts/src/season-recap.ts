@@ -16,6 +16,8 @@ export const HONOR_KINDS = [
   'retired-number',
   'wall-of-honor',
   'first',
+  // T-11-375 시즌 마감 디비전(value = 디비전 index, 프로 II 이상).
+  'division',
 ] as const;
 export const HonorKindSchema = z.enum(HONOR_KINDS);
 export type HonorKind = z.infer<typeof HonorKindSchema>;

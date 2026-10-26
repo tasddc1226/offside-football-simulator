@@ -3,6 +3,7 @@
 // 기대 득점 중 MOMENT_RULES.share만큼은 일반 골이 아니라 장면으로 만든다. 장면 수는 (몫 × 기대 득점 ÷ 자동 선택 성공 확률)의
 // 포아송이고, 장면마다 자동 선택이면 기본 확률로 골이 되므로 자동 선택 경기의 골 수 분포는 장면 없는 경기와 같다(포아송 솎기).
 // 장면의 판정값(roll)은 경기를 시작할 때 미리 굴려 둔다 — 고른 선택지는 문턱(확률)만 바꾸고, 같은 장면을 다시 보내도 결과가 같다.
+import { usesRankLadder } from '@offside/contracts/owner-team';
 import { BASE_DETAIL, type DetailPos } from '@offside/contracts/positions';
 import {
   MOMENT_RULES as R,
@@ -19,8 +20,9 @@ import {
   poisson,
   rngOf,
   seedOf,
+  wallOf,
   type LineupSlot,
-  type MatchCoaches,
+  type MatchOpts,
   type PlayerRef,
   type SideReport,
   type SimEvent,
@@ -46,6 +48,8 @@ export type StoredMoment = {
   /** 미리 굴린 판정값(0~100). */
   roll: number;
   counterRoll: number;
+  /** T-11-510 이 장면의 자동 선택 확률(정수 %, 전력 차이 반영). 옛 장면에는 없어 기본값을 쓴다. */
+  autoPct?: number;
   /** 화면에서 고르는 장면이면 true, 넘쳐서 자동 선택한 장면이면 false. */
   shown: boolean;
   /** 고른 선택지 id('auto' = 자동 선택). 아직 안 골랐으면 없다. */
@@ -94,16 +98,20 @@ export function choicePct(
   actor: LineupSlot,
   mate: LineupSlot,
   teamAvg: number,
+  gap = 0,
 ): number {
   const who = c.mate ? mate : actor;
   const edge = clamp((who.rating - teamAvg) * R.edgeK, -R.edgeMax, R.edgeMax);
   const typed = actor.syn?.type && c.types?.includes(actor.syn.type) ? R.typeBonus : 0;
   const p =
     kind === 'chance'
-      ? clamp(R.chanceAuto + c.adj + R.choiceShift + typed + edge, R.chanceMin, R.chanceMax)
-      : clamp(R.crisisAuto + c.adj + R.choiceShift + typed + edge, R.crisisMin, R.crisisMax);
+      ? clamp(R.chanceAuto + gap + c.adj + R.choiceShift + typed + edge, R.chanceMin, R.chanceMax)
+      : clamp(R.crisisAuto + gap + c.adj + R.choiceShift + typed + edge, R.crisisMin, R.crisisMax);
   return Math.round(p * 100);
 }
+
+/** T-11-510 전력 차이 보정(확률, ±gapMax). diff = 찬스는 우리 공격 − 상대 벽, 위기는 우리 벽 − 상대 공격. */
+export const momentGap = (diff: number) => clamp(diff * R.gapK, -R.gapMax, R.gapMax);
 
 const AUTO_PCT: Record<MomentKind, number> = {
   chance: Math.round(R.chanceAuto * 100),
@@ -135,16 +143,24 @@ export function startLiveMatch(
   home: readonly LineupSlot[],
   away: readonly LineupSlot[],
   season: number,
-  opts: { coaches?: MatchCoaches } = {},
+  opts: Pick<MatchOpts, 'coaches' | 'atkK'> = {},
 ): LiveState {
   const setup = matchSetup(home, away, season, opts);
+  const { home: hl, away: al } = { home: setup.report.home.lines, away: setup.report.away.lines };
+  const gap: Record<MomentKind, number> = usesRankLadder(season)
+    ? { chance: momentGap(hl.atk - wallOf(al)), crisis: momentGap(wallOf(hl) - al.atk) }
+    : { chance: 0, crisis: 0 };
+  const auto = {
+    chance: clamp(R.chanceAuto + gap.chance, R.chanceMin, R.chanceMax),
+    crisis: clamp(R.crisisAuto + gap.crisis, R.crisisMin, R.crisisMax),
+  };
   const rng = rngOf(seedOf(`${seed}:live`));
   const keep = 1 - R.share;
   const base: SimEvent[] = [];
   addGoalEvents(base, 'home', home, poisson(setup.homeXg * keep, rng), rng);
   addGoalEvents(base, 'away', away, poisson(setup.awayXg * keep, rng), rng);
-  const nChance = poisson((setup.homeXg * R.share) / R.chanceAuto, rng);
-  const nCrisis = poisson((setup.awayXg * R.share) / (1 - R.crisisAuto), rng);
+  const nChance = poisson((setup.homeXg * R.share) / auto.chance, rng);
+  const nCrisis = poisson((setup.awayXg * R.share) / (1 - auto.crisis), rng);
   const homeAvg = avgRating(home);
   const used = new Set<string>();
   const moments: StoredMoment[] = [];
@@ -165,13 +181,14 @@ export function startLiveMatch(
       opp: actorOf(away[oi]!),
       choices: sit.choices.map((c) => ({
         id: c.id,
-        pct: choicePct(kind, c, actor, mate, homeAvg),
+        pct: choicePct(kind, c, actor, mate, homeAvg, gap[kind]),
         mate: !!c.mate,
         risk: c.risk ?? 0,
         gain: c.gain ?? 0,
       })),
       roll: Math.floor(rng() * 100),
       counterRoll: Math.floor(rng() * 100),
+      ...(gap[kind] ? { autoPct: Math.round(auto[kind] * 100) } : {}),
       shown: true,
     });
   };
@@ -215,7 +232,7 @@ export function resolveMoment(m: StoredMoment, choice: string): boolean {
   if (m.picked !== undefined) return true;
   const c = choice === AUTO ? null : m.choices.find((x) => x.id === choice);
   if (choice !== AUTO && !c) return false;
-  const pct = c?.pct ?? AUTO_PCT[m.kind];
+  const pct = c?.pct ?? m.autoPct ?? AUTO_PCT[m.kind];
   const ok = m.roll < pct;
   const next = Math.min(90, m.minute + 1);
   const goals: SimEvent[] = [];

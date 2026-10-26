@@ -23,6 +23,8 @@ const PUBLIC_GETS = [
   '/v1/season/gauge',
   '/v1/teams',
   '/v1/teams?lang=en',
+  '/v1/teams?division=3',
+  '/v1/teams/divisions',
   '/v1/achievements/ranking',
   '/v1/leagues/current',
   '/v1/leagues/2/tables/1/1',

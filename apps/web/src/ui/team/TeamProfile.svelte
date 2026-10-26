@@ -1,6 +1,6 @@
 <script lang="ts">
   import { seasonLabel } from '@offside/app-core/seasonName';
-  import { shapeOf } from '@offside/contracts/owner-team';
+  import { shapeOf, usesRankLadder } from '@offside/contracts/owner-team';
   // T-10-092 팀 프로필(라이브 랭킹에서 연다) — 시즌 순위 · 감독 · 레이팅 · 선발 그라운드 · 줄 힘 · 좋아요/조회수 · 팀 히스토리
   // 배지. 누구나 본다. 남의 팀을 열면 조회수를 한 번 올린다(내 팀은 세지 않는다).
   // T-11-335 감독 칸에 앉힌 감독(이름 · 등급 · 포메이션 효과)과 줄 힘의 감독 보정을 내 팀 화면처럼 보인다.
@@ -159,7 +159,7 @@
           <h1>{team.name}</h1>
           <small class="muted">{seasonLabel(team.season, team.seasonName)}{team.rank ? ` · RANK #${team.rank}` : ''} · {shapeOf(team.formation, team.layout)}</small>
         </div></div>
-        <div class="tp-rating" aria-label={L.profRatingAria({ n: team.rating })}><small>RATING</small><b>{n(team.rating)}</b></div>
+        <div class="tp-rating" aria-label={usesRankLadder(team.season) ? L.profRpAria({ n: team.rating }) : L.profRatingAria({ n: team.rating })}><small>{usesRankLadder(team.season) ? 'RP' : 'RATING'}</small><b>{n(team.rating)}</b></div>
       </div>
       <button class="tp-people" data-act="owner-profile" onclick={openOwner}>
         <span class="tp-people-text muted fs-sm">

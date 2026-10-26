@@ -57,6 +57,7 @@ const ko = {
   honorRetiredNumber: '영구결번',
   honorWallOfHonor: '명예의 벽',
   honorFirst: '서버 최초 기록',
+  honorDivision: '시즌 디비전',
   bandFirst: '1위',
   bandTop: (p: { band: number }) => `상위 ${p.band}`,
   countNumbers: (p: { n: number }) => `${p.n}개`,
@@ -65,6 +66,7 @@ const ko = {
   ribbonTop: (p: { band: number }) => `TOP ${p.band}`,
   ribbonCount: (p: { n: number }) => `×${p.n}`,
   rankFinal: (p: { rank: string }) => `${p.rank}위로 마감`,
+  divisionFinal: (p: { name: string }) => `${p.name}로 마감`,
   // 구단주 티어(구단주 랭킹과 같은 업적 등급 — 마감 때 업적 점수로)
   secTier: '시즌 등급',
   secBadges: '기록 배지',

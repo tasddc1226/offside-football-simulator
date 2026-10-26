@@ -361,6 +361,99 @@ export const BALANCE_SPEC = {
     max: 50,
     step: 1,
   },
+  // T-11-375 구단 디비전. 게임(웹)은 표시에만 쓰고, 서버가 랭크 경기 · 디비전 랭킹 · 시즌 마감 때 활성 버전을 바로 읽는다.
+  // teamDiv1~7은 다음 디비전으로 올라가는 경계(아마추어 → 세미프로 II → … → 마스터). T-11-510 시즌 2부터 디비전은 RP 사다리
+  // 위에서 돌아 경계도 RP다(시즌 1 엘로 레이팅에는 디비전을 보이지 않는다). 바꾸면 다음 경기부터 적용된다.
+  teamDiv1: {
+    def: 1050,
+    min: 500,
+    max: 3000,
+    step: 5,
+  },
+  teamDiv2: {
+    def: 1200,
+    min: 500,
+    max: 3000,
+    step: 5,
+  },
+  teamDiv3: {
+    def: 1400,
+    min: 500,
+    max: 3000,
+    step: 5,
+  },
+  teamDiv4: {
+    def: 1700,
+    min: 500,
+    max: 3000,
+    step: 5,
+  },
+  teamDiv5: {
+    def: 1800,
+    min: 500,
+    max: 3000,
+    step: 5,
+  },
+  teamDiv6: {
+    def: 1900,
+    min: 500,
+    max: 3000,
+    step: 5,
+  },
+  teamDiv7: {
+    def: 2000,
+    min: 500,
+    max: 3000,
+    step: 5,
+  },
+  teamDivGuard: {
+    def: 30,
+    min: 0,
+    max: 200,
+    step: 5,
+  },
+  teamDivRewardFrom: {
+    def: 2,
+    min: 1,
+    max: 999,
+    step: 1,
+  },
+  teamDivMinMatches: {
+    def: 20,
+    min: 0,
+    max: 500,
+    step: 1,
+  },
+  teamDivReward3: {
+    def: 1,
+    min: 0,
+    max: 20,
+    step: 1,
+  },
+  teamDivReward4: {
+    def: 2,
+    min: 0,
+    max: 20,
+    step: 1,
+  },
+  teamDivReward5: {
+    def: 3,
+    min: 0,
+    max: 20,
+    step: 1,
+  },
+  teamDivReward6: {
+    def: 4,
+    min: 0,
+    max: 20,
+    step: 1,
+  },
+  teamDivReward7: {
+    def: 6,
+    min: 0,
+    max: 20,
+    step: 1,
+  },
 } as const satisfies Record<string, BalanceKnob>;
 
 export type BalanceKey = keyof typeof BALANCE_SPEC;

@@ -95,6 +95,7 @@ export const LABEL_JA: Record<string, string> = {
   'team-margin': '5点差以上で勝利',
   'team-goals': 'チーム得点',
   'team-rating': 'チームレーティング',
+  'team-rp': 'チームRP',
   'team-likes': 'もらった「いいね」',
   // 구단주
   'owner-nickname': '公開ニックネームを決める',
@@ -124,6 +125,7 @@ export const UNIT_JA: Record<string, string> = {
   'team-streak': '連勝',
   'team-goals': 'ゴール',
   'team-rating': '点',
+  'team-rp': 'RP',
   'team-likes': '個',
   'owner-players': '人',
   'owner-retire-days': '日',

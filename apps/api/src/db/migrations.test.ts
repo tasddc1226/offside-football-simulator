@@ -709,6 +709,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'season',
     'manager',
     'rating',
+    'division',
     'goals_for',
     'goals_against',
     'streak',

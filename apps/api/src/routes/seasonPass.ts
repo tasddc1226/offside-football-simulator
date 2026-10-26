@@ -5,7 +5,7 @@ import {
   SeasonPassResponseSchema,
   type SeasonPassResponse,
 } from '@offside/contracts';
-import { SEASON_PASS_PRODUCT_ID } from '@offside/contracts/season-pass';
+import { passSaleOpen, SEASON_PASS_PRODUCT_ID } from '@offside/contracts/season-pass';
 import type { Hono } from 'hono';
 import { cupKo } from '../cupText.js';
 import type { Db } from '../db/client.js';
@@ -39,9 +39,9 @@ const REJECT = {
 } as const;
 const reject = (r: IapRejection) => conflictError(cupKo(REJECT[r][0]), REJECT[r][1]);
 
-/** 새로 파는지: 스위치가 켜져 있고 이 구단주가 살 수 있는 스토어가 있을 때. */
+/** 새로 파는지: 스위치가 켜져 있고, 시즌 2가 열렸고, 이 구단주가 살 수 있는 스토어가 있을 때. */
 const storesFor = (env: Bindings, profileId: string) =>
-  env.SEASON_PASS_ENABLED === '1' ? iapStores(env, profileId) : [];
+  env.SEASON_PASS_ENABLED === '1' && passSaleOpen(nowIso()) ? iapStores(env, profileId) : [];
 
 async function passView(env: Bindings, db: Db, profileId: string): Promise<SeasonPassResponse> {
   const stores = storesFor(env, profileId);

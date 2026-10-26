@@ -111,6 +111,8 @@ const EXACT: Record<string, string> = {
     'Only your players who played and retired this season can join your team.',
   '이 팀과는 오늘 이미 겨뤘어요. 한국 시각 자정에 다시 도전할 수 있어요.':
     "You've already played this team today. You can challenge them again at midnight KST.",
+  '상대 팀 점수가 바뀌어 새 상대를 찾았어요. 다시 경기를 시작해 주세요.':
+    "The opponent's points changed, so we found a new opponent. Please start the match again.",
   '은퇴 선수를 한 명 이상 넣어야 경기할 수 있어요.':
     'Add at least one retired player to play a match.',
   '친구 코드를 찾을 수 없어요. 코드를 다시 확인해 주세요.':

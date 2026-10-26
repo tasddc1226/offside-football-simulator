@@ -49,13 +49,23 @@ export function passRewardBetween(from: number, to: number): AttendanceReward {
 /** 모든 단계 보상 합계(판매 화면). */
 export const passRewardTotal = () => passRewardBetween(0, SEASON_PASS_TIERS.length);
 
-/** 지금 패스를 파는 시즌: 진행 중인 시즌, 시즌 사이면 다음에 열 시즌. */
-export const passSaleSeason = (now: string): number => {
+/** 패스를 처음 파는 시즌. 시즌 1에는 팔지 않고 시즌 2 개막부터 연다. */
+export const SEASON_PASS_FIRST_SEASON = 2;
+
+/** 일정상 지금 시즌: 진행 중인 시즌, 시즌 사이면 다음에 열 시즌. */
+function scheduleSeason(now: string): number {
   const active = activeSeason(now);
   if (active) return active.id;
   const next = SERVICE_SEASONS.find((s) => s.startsAt > now);
   return next?.id ?? Math.max(0, ...SERVICE_SEASONS.map((s) => s.id)) + 1;
-};
+}
+
+/** 지금 새로 파는지: 시즌 2가 열린 뒤부터. */
+export const passSaleOpen = (now: string) => scheduleSeason(now) >= SEASON_PASS_FIRST_SEASON;
+
+/** 지금 패스를 파는 시즌(화면 · 지급 기준). 시즌 2가 열리기 전에는 시즌 2다. */
+export const passSaleSeason = (now: string): number =>
+  Math.max(SEASON_PASS_FIRST_SEASON, scheduleSeason(now));
 
 /** 이번 거래로 여는 시즌: 파는 시즌을 이미 가졌으면 그다음 시즌(같은 시즌에 두 번 사도 결제가 버려지지 않는다). */
 export function passSeasonFor(now: string, owned: readonly number[]): number {

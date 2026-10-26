@@ -68,6 +68,40 @@ export function ratingChange(
   const delta = Math.round(TEAM_RATING_K * (score - expected) * repeatFactor(meetings));
   return { home: delta, away: -delta };
 }
+
+// T-11-510 랭크 점수(RP) 사다리(docs/tracking/ranked-ladder-s2-design.md). 시즌 2부터 owner_teams.rating은 엘로 레이팅이
+// 아니라 RP다. 이기면 확실히 오르고, 디비전(T-11-375)이 높을수록 질 때 감점이 커서 같은 디비전끼리 반반이면 위로는 제자리다.
+/** RP 사다리를 쓰기 시작하는 서비스 시즌(그 전 시즌 팀은 엘로 레이팅으로 남는다). */
+export const RANK_LADDER_FROM_SEASON = 2;
+export const usesRankLadder = (season: number): boolean => season >= RANK_LADDER_FROM_SEASON;
+/** T-11-510 자동 매칭에서 한 경기마다 다른 상대를 다시 찾을 수 있는 횟수. */
+export const RANK_MATCH_REPICKS = 3;
+export const RANK_WIN = 20;
+export const RANK_DRAW = 3;
+/** 디비전마다(아마추어 → 마스터) 질 때 기본 감점. */
+export const RANK_LOSS_BY_DIVISION = [14, 14, 15, 16, 18, 19, 20, 22] as const;
+/** 상대 보정: (상대 RP − 내 RP) ÷ RANK_EDGE_DIV를 ±RANK_EDGE_MAX로 자른 값. */
+export const RANK_EDGE_DIV = 25;
+export const RANK_EDGE_MAX = 8;
+
+/**
+ * 한 팀 쪽 RP 변화. division = 경기 전 내 디비전, defender = 도전을 받은 쪽(깎일 때만 절반). 0 아래로는 내려가지 않는다.
+ * 두 팀 합은 지켜지지 않는다.
+ */
+export function rankPoints(
+  me: number,
+  opp: number,
+  score: 0 | 0.5 | 1,
+  division: number,
+  defender = false,
+): number {
+  const c = Math.max(-RANK_EDGE_MAX, Math.min(RANK_EDGE_MAX, (opp - me) / RANK_EDGE_DIV));
+  const loss =
+    RANK_LOSS_BY_DIVISION[Math.min(RANK_LOSS_BY_DIVISION.length - 1, Math.max(0, division))]!;
+  const raw = score === 1 ? RANK_WIN + c : score === 0.5 ? RANK_DRAW + c / 2 : -(loss - c);
+  return Math.max(-me, Math.round(defender && raw < 0 ? raw / 2 : raw)) || 0;
+}
+
 /** 빈 자리를 채우는 유스 선수의 OVR. */
 export const YOUTH_OVR = 50;
 export const YOUTH_NAME = '유스 선수';

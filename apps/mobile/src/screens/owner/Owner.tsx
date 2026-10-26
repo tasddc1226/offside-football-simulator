@@ -1,7 +1,7 @@
 // My club: shared owner identity and operations, with team-specific play in the team card.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
-import { shapeOf } from '@offside/contracts/owner-team';
+import { shapeOf, usesRankLadder } from '@offside/contracts/owner-team';
 import { Alert, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { fetchOwnerSummary } from '@offside/app-core/api/ownerSummary';
@@ -312,7 +312,7 @@ export default function Owner() {
                   first={1.35}
                   items={[
                     [L.statRecord, recordText(team.record)],
-                    [L.statRating, num(team.rating)],
+                    [usesRankLadder(team.season) ? L.statRp : L.statRating, num(team.rating)],
                     [L.statToday, `${card.left}/${card.perDay}`],
                   ]}
                 />

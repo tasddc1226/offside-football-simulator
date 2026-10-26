@@ -113,6 +113,17 @@ describe('T-11-511 시즌 패스', () => {
     });
   });
 
+  it('시즌 1에는 스위치가 켜져 있어도 팔지 않고, 시즌 2 패스를 보여 준다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    ctx.env.SEASON_PASS_ENABLED = '1';
+    vi.setSystemTime(new Date('2026-10-28T00:00:00.000Z'));
+    expect(await state(me.cookie)).toEqual({
+      onSale: false,
+      stores: [],
+      seasons: [{ season: 2, owned: false, progress: 0, tier: 0, claimed: 0 }],
+    });
+  });
+
   it('하루에 세는 은퇴는 dailyCap까지다', async () => {
     const me = await issueGoogleCookie(ctx);
     await retire(me.profileId, 23, { day: '2026-10-31' });

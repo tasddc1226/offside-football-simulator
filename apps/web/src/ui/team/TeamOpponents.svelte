@@ -2,7 +2,8 @@
   import TeamLogo from './TeamLogo.svelte';
   import TitleBadge from '../cup/TitleBadge.svelte';
   // 상대 고르기 — 내 팀 레이팅에 가까운 다른 구단주의 팀에 도전한다(레이팅이 크게, OVR은 작게). 경기할 수 없으면(hint) 목록 대신 이유를 보여 준다.
-  import { TEAM_REPEAT_WINDOW_DAYS } from '@offside/contracts/owner-team';
+  // T-11-510 시즌 2(ladder)는 서버가 고른 상대 한 팀과 '다른 상대 찾기'(경기마다 3번)를 보여 준다.
+  import { RANK_MATCH_REPICKS, TEAM_REPEAT_WINDOW_DAYS } from '@offside/contracts/owner-team';
   import type { TeamOpponent } from '@offside/app-core/api/team';
   import { ratingGap, recordText } from '@offside/app-core/teamText';
   import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
@@ -23,6 +24,8 @@
     onsave,
     saving = false,
     saveDisabled = false,
+    ladder = false,
+    repicksLeft = 0,
   }: {
     rating: number;
     matchesLeft: number;
@@ -41,16 +44,19 @@
     onsave?: (() => void) | undefined;
     saving?: boolean;
     saveDisabled?: boolean;
+    ladder?: boolean;
+    /** 이번 경기에서 남은 '다른 상대 찾기' 횟수. */
+    repicksLeft?: number;
   } = $props();
 </script>
 
 <section class="card stack" style="gap:12px">
   <div>
     <div class="eyebrow">Match</div>
-    <h1>{L.oppTitle}</h1>
-    {#if !hint}<p class="muted fs-sm">{L.oppNear({ rating, left: matchesLeft, per: perDay })}</p>{/if}
-    <p class="muted fs-xs">{L.oppRuleWeb({ days: TEAM_REPEAT_WINDOW_DAYS })}</p>
-    {#if !hint && opponents.length}<p class="muted fs-xs" data-opponent-gap-note>{L.oppGapNote}</p>{/if}
+    <h1>{ladder ? L.matchTitle : L.oppTitle}</h1>
+    {#if !hint}<p class="muted fs-sm">{ladder ? L.matchNear({ rp: rating, left: matchesLeft, per: perDay }) : L.oppNear({ rating, left: matchesLeft, per: perDay })}</p>{/if}
+    <p class="muted fs-xs">{ladder ? L.matchRule({ n: RANK_MATCH_REPICKS }) : L.oppRuleWeb({ days: TEAM_REPEAT_WINDOW_DAYS })}</p>
+    {#if !hint && opponents.length}<p class="muted fs-xs" data-opponent-gap-note>{ladder ? L.matchGapNote : L.oppGapNote}</p>{/if}
   </div>
   {#if hint}
     <p class="muted" data-match-hint>{onsave ? L.saveToSee : hint}</p>
@@ -68,13 +74,17 @@
           <b>{o.name}{#if o.title} <TitleBadge title={o.title} size="icon" />{/if}</b>
           <span class="muted fs-sm">{o.owner} · {o.shape ?? o.formation} · {recordText(o.record)}</span>
         </div>
-        <span class="tm-opp-score" data-opponent-rating={o.rating}><small class="muted">{L.oppRating}</small><b>{o.rating}</b><small class="tm-opp-gap" data-opponent-gap={gap.d}><span aria-hidden="true">{gap.text}</span><span class="sr-only">{gap.aria}</span></small><small class="muted">{L.oppOvr({ n: o.ovr })}</small></span>
-        <button class="btn btn-primary btn-sm" disabled={playing || matchesLeft === 0} onclick={() => onchallenge(o)} data-act="team-challenge">{L.challenge}</button>
+        <span class="tm-opp-score" data-opponent-rating={o.rating}><small class="muted">{ladder ? L.oppRp : L.oppRating}</small><b>{o.rating}</b><small class="tm-opp-gap" data-opponent-gap={gap.d}><span aria-hidden="true">{gap.text}</span><span class="sr-only">{gap.aria}</span></small><small class="muted">{L.oppOvr({ n: o.ovr })}</small></span>
+        <button class="btn btn-primary btn-sm" disabled={playing || matchesLeft === 0} onclick={() => onchallenge(o)} aria-label={ladder ? L.matchStartAria({ name: o.name }) : undefined} data-act="team-challenge">{ladder ? L.matchStart : L.challenge}</button>
       </div>
     {:else}
       <p class="muted">{L.noOpponents}</p>
     {/each}
-    <button class="icon-btn self-start" onclick={onmore} disabled={playing}>{L.moreOpponents}</button>
+    {#if ladder}
+      <button class="icon-btn self-start" onclick={onmore} disabled={playing || repicksLeft <= 0} data-act="team-repick">{L.matchRepick({ left: repicksLeft, max: RANK_MATCH_REPICKS })}</button>
+    {:else}
+      <button class="icon-btn self-start" onclick={onmore} disabled={playing}>{L.moreOpponents}</button>
+    {/if}
   </LoadState>
   {/if}
 </section>

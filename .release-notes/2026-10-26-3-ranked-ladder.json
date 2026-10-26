@@ -1,0 +1,43 @@
+{
+  "id": "t-11-510-ranked-ladder",
+  "title": "시즌 2 랭크 경기가 RP 사다리와 디비전으로 바뀌어요",
+  "items": [
+    "시즌 2부터 랭크 경기는 1,000 RP에서 시작해요. 이기면 20점, 비기면 3점을 얻고 지면 디비전에 따라 14~22점을 잃어요",
+    "RP가 높은 상대를 이기면 더 얻고 져도 덜 잃어요. 도전받은 경기에서 지면 잃는 점수가 절반이에요",
+    "상대는 RP와 전력이 비슷한 팀으로 자동으로 정해지고, 경기마다 3번까지 다른 상대를 찾을 수 있어요",
+    "랭크 경기는 팀 전력 차이가 결과에 더 크게 반영되고, 장면 성공 확률도 우리 공격과 상대 수비 차이를 따라요",
+    "RP에 따라 아마추어부터 마스터까지 8개 디비전에 들고, 시즌이 끝나면 프로 II 이상 팀에 배지와 리롤권을 줘요"
+  ],
+  "en": {
+    "title": "Season 2 ranked matches move to an RP ladder with divisions",
+    "items": [
+      "From season 2, ranked matches start at 1,000 RP. Win for 20, draw for 3, and lose 14 to 22 depending on your division.",
+      "Beat a higher-RP team to gain more, and lose less when you fall short. Losing a match you were challenged to costs half.",
+      "Opponents are matched automatically by similar RP and strength, and you can look for another opponent up to 3 times per match.",
+      "Team strength counts for more in ranked matches, and scene success chances follow your attack against the opposing defence.",
+      "Your RP puts you in one of eight divisions from Amateur to Master, and teams in Pro II or higher earn a badge and reroll tickets when the season ends."
+    ]
+  },
+  "ja": {
+    "title": "シーズン2のランク戦がRPのはしごとディビジョンに変わります",
+    "items": [
+      "シーズン2からランク戦は1,000 RPから始まります。勝つと20、引き分けで3を得て、負けるとディビジョンに応じて14〜22を失います。",
+      "RPが高い相手に勝つと多く得て、負けても減りが少なくなります。挑戦を受けた試合で負けたときは失うRPが半分です。",
+      "相手はRPと戦力が近いチームから自動で決まり、1試合ごとに3回まで別の相手を探せます。",
+      "ランク戦ではチーム戦力の差が結果により大きく表れ、シーンの成功確率も自チームの攻撃と相手守備の差に従います。",
+      "RPに応じてアマチュアからマスターまで8つのディビジョンに入り、シーズン終了時にプロII以上のチームにバッジとリロール券を贈ります。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": {
+    "changes": [
+      { "key": "teamDiv1", "from": 950, "to": 1050 },
+      { "key": "teamDiv2", "from": 1000, "to": 1200 },
+      { "key": "teamDiv3", "from": 1050, "to": 1400 },
+      { "key": "teamDiv4", "from": 1100, "to": 1700 },
+      { "key": "teamDiv5", "from": 1175, "to": 1800 },
+      { "key": "teamDiv6", "from": 1250, "to": 1900 },
+      { "key": "teamDiv7", "from": 1350, "to": 2000 }
+    ]
+  }
+}

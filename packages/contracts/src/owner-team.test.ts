@@ -27,7 +27,9 @@ import {
   YOUTH_OVR,
   fit,
   lineStrength,
+  rankPoints,
   ratingChange,
+  usesRankLadder,
   repeatFactor,
   slotFit,
   slotRating,
@@ -426,5 +428,30 @@ describe('T-11-489 상위 비율 등급(achGradeAt)', () => {
     expect(achGradeAt({ season: 2, score: 10, rank: 1, ranked: 3 }).grade.id).toBe('legend');
     expect(achGradeCutoff('legend', 3)).toBe(1);
     expect(achGradeCutoff('bronze', 3)).toBe(2);
+  });
+});
+
+describe('T-11-510 RP 사다리', () => {
+  it('시즌 2부터 쓴다', () => {
+    expect(usesRankLadder(1)).toBe(false);
+    expect(usesRankLadder(2)).toBe(true);
+  });
+  it('이기면 +20, 비기면 +3, 지면 디비전 감점에 상대 보정(±8)을 더한다', () => {
+    expect(rankPoints(1000, 1000, 1, 0)).toBe(20);
+    expect(rankPoints(1000, 1000, 0.5, 0)).toBe(3);
+    expect(rankPoints(1000, 1000, 0, 0)).toBe(-14);
+    expect(rankPoints(2000, 2000, 0, 7)).toBe(-22);
+    // 강한 상대(+100 → +4)를 이기면 더, 지면 덜.
+    expect(rankPoints(1500, 1600, 1, 4)).toBe(24);
+    expect(rankPoints(1500, 1600, 0, 4)).toBe(-14);
+    // 보정은 ±8까지.
+    expect(rankPoints(1000, 2000, 1, 0)).toBe(28);
+    expect(rankPoints(2000, 1000, 1, 7)).toBe(12);
+  });
+  it('받은 쪽은 깎일 때만 절반이고, 0 아래로는 내려가지 않는다', () => {
+    expect(rankPoints(1000, 1000, 0, 0, true)).toBe(-7);
+    expect(rankPoints(1000, 1000, 1, 0, true)).toBe(20);
+    expect(rankPoints(5, 1000, 0, 0)).toBe(-5);
+    expect(rankPoints(0, 0, 0, 0)).toBe(0);
   });
 });
