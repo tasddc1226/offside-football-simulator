@@ -105,11 +105,11 @@ export const fetchClubAchievements = (season?: number) =>
 export const fetchAchievementNotifications = () =>
   ownerCachedGet<ClubAchievementNotifications>('/v1/owner-team/achievement-notifications', 60_000);
 
-/** 라이브 랭킹(팀 랭킹). 서버가 5분마다 새로 센다. */
+/** 라이브 랭킹(팀 랭킹). 서버가 5분마다 새로 세므로 T-11-503부터 같은 5분 메모(홈 구단 가치 칸도 쓴다). */
 export const fetchTeamRanking = (season: number | undefined, sort: TeamRankSort, page: number) =>
   cachedGet<TeamRankResponse>(
     `/v1/teams?${season === undefined ? '' : `season=${season}&`}sort=${sort}&page=${page}`,
-    60_000,
+    300_000,
   );
 /** T-11-028 업적 랭킹(기록실). 서버가 5분마다 새로 센다. */
 export const fetchAchRanking = (season: number | undefined, page: number) =>
