@@ -18,11 +18,15 @@ import {
   boardComments,
   careers,
   iapPurchases,
+  iapAdFreePurchases,
+  acquisitionSessions,
+  acquisitionConsents,
   idempotency,
   giftClaims,
   ownerAttendance,
   ownerAttendanceDays,
   ownerItems,
+  cardExchangeClaims,
   scoutPity,
   rerollMileage,
   ownerTitleAwards,
@@ -141,6 +145,9 @@ export async function executeProfileDeletion(
         friendCode: null,
       })
       .where(eq(profiles.id, input.profileId)),
+    db.delete(iapAdFreePurchases).where(eq(iapAdFreePurchases.profileId, input.profileId)),
+    db.delete(acquisitionConsents).where(eq(acquisitionConsents.profileId, input.profileId)),
+    db.delete(acquisitionSessions).where(eq(acquisitionSessions.profileId, input.profileId)),
     // T-9-009: profiles는 소프트 삭제(deletedAt만 세팅)라 FK ON DELETE CASCADE가 트리거되지 않는다.
     // 커리어·시즌 데이터는 이 batch에서 명시적으로 지운다.
     deleteNameReportsStatement(db, input.profileId),
@@ -160,6 +167,8 @@ export async function executeProfileDeletion(
     db.delete(ownerTitleProgress).where(eq(ownerTitleProgress.profileId, input.profileId)),
     db.delete(cupPredictions).where(eq(cupPredictions.profileId, input.profileId)),
     db.delete(ownerItems).where(eq(ownerItems.profileId, input.profileId)),
+    // T-11-374 카드 과제 낸 기록.
+    db.delete(cardExchangeClaims).where(eq(cardExchangeClaims.profileId, input.profileId)),
     db.delete(scoutPity).where(eq(scoutPity.profileId, input.profileId)),
     db.delete(giftClaims).where(eq(giftClaims.profileId, input.profileId)),
     db.delete(ownerAttendance).where(eq(ownerAttendance.profileId, input.profileId)),

@@ -1,0 +1,23 @@
+{
+  "id": "t-11-473-first-career-tutorial",
+  "title": "첫 커리어 튜토리얼",
+  "items": [
+    "처음 시작하면 첫 선수 만들기부터 첫 시즌 결산까지 화면을 비추며 차례로 안내해요",
+    "건너뛴 안내는 설정 → 도움말 → 튜토리얼 다시 보기에서 처음부터 볼 수 있어요"
+  ],
+  "en": {
+    "title": "First career tutorial",
+    "items": [
+      "New players get a step-by-step guide that highlights each screen, from creating a player to the first season summary.",
+      "Skipped it? Replay it from Settings → Help → Replay the tutorial."
+    ]
+  },
+  "ja": {
+    "title": "はじめてのキャリアのチュートリアル",
+    "items": [
+      "はじめてプレイすると、選手作成から最初のシーズン結果まで画面を照らしながら順に案内します。",
+      "スキップした案内は、設定 → ヘルプ → チュートリアルをもう一度見る から最初から見られます。"
+    ]
+  },
+  "availability": "web-app"
+}

@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { Keyboard, View, useWindowDimensions } from 'react-native';
 import {
@@ -7,7 +8,8 @@ import {
   type TeamPosition,
 } from '@offside/contracts/owner-team';
 import type { TeamPlayer } from '@offside/app-core/api/team';
-import { assignSlot, attrLine } from '@offside/app-core/teamOwner';
+import { assignSlot, attrLine, salaryIn, type salaryBar } from '@offside/app-core/teamOwner';
+import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import { lockToggleable } from '@offside/app-core/market';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { DragPlayer, type PlayerDrag } from '../../components/DragPlayer';
@@ -51,6 +53,10 @@ export function TeamLineup({
   synApplied,
   synCaption,
   onLock,
+  focusSlot = null,
+  onFocused,
+  season,
+  salary = null,
 }: {
   formation: FormationId;
   layout: TeamPosition[];
@@ -71,6 +77,12 @@ export function TeamLineup({
   synCaption: string | null;
   /** T-11-188 선수 잠금·풀기. */
   onLock?: ((p: TeamPlayer) => void) | undefined;
+  /** T-11-379 경기 리포트 '고칠 곳'으로 고른 자리 — 골라 두고 맞는 선수 순으로 라커룸을 정렬한다. */
+  focusSlot?: number | null;
+  onFocused?: () => void;
+  /** T-11-376 팀 시즌(카드 급여 계산)과 급여 막대(프리시즌은 null). */
+  season: number;
+  salary?: ReturnType<typeof salaryBar>;
 }) {
   const c = useColors();
   const { height } = useWindowDimensions();
@@ -89,6 +101,12 @@ export function TeamLineup({
   const [limit, setLimit] = useState(24);
   useEffect(() => setLimit(24), [query, position, sort, starters]);
   const [focus, setFocus] = useState<number | null>(null);
+  useEffect(() => {
+    if (focusSlot === null || !editable) return;
+    setFocus(focusSlot);
+    setSort('fit');
+    onFocused?.();
+  }, [focusSlot, editable]);
   // 카드 팝업 — 짧게 누른 자리만 연다. 드래그(길게 눌러 끌기)가 시작·끝난 직후의 누름은 무시한다.
   const [peek, setPeek] = useState<{ i: number; origin: PeekOrigin } | null>(null);
   const dragAt = useRef(0);
@@ -290,6 +308,10 @@ export function TeamLineup({
         focus={synFocus}
         applied={synApplied}
         caption={synCaption}
+        salaries={slots.map((id) => {
+          const p = id ? players.find((x) => x.careerId === id) : undefined;
+          return p ? salaryIn(p, season) : 0;
+        })}
         ondrag={editable ? drag : undefined}
         onpick={
           editable
@@ -329,6 +351,7 @@ export function TeamLineup({
               <Txt v="h2">{L.lockerTitle}</Txt>
               <Txt tone="muted" v="sm">
                 {L.lockerCountApp({ n: visible.length })}
+                {salary ? ` · ${TC.salaryLeft({ n: salary.left })}` : ''}
               </Txt>
             </View>
             <Txt v="sm" tone="muted">
@@ -393,100 +416,132 @@ export function TeamLineup({
               </Txt>
             ) : null}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {visible.slice(0, limit).map((p) => (
-                <View key={p.careerId} style={{ width: '48%' }}>
-                  <DragPlayer index={null} id={p.careerId} drag={drag}>
-                    <Press
-                      testID={`locker-${p.careerId}`}
-                      accessibilityLabel={L.lockerPickAriaApp({
-                        who: `${nameOf(p)}${NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION) ? ` · ${tn(NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION)!.ko)}` : ''}`,
-                        peak: p.peak,
-                        ls: p.legendScore ?? 0,
-                        attrs: attrLine(p) ?? L.noAttrs,
-                      })}
-                      accessibilityState={{ selected: selected === p.careerId }}
-                      onPress={() => select(selected === p.careerId ? null : p.careerId)}
-                      style={{
-                        borderRadius: 12,
-                        borderWidth: selected === p.careerId ? 2 : 0,
-                        borderColor: c.accent,
-                      }}
-                    >
-                      <PlayerCard
-                        cell={{
-                          name: nameOf(p),
-                          careerId: p.careerId,
-                          look: p.look,
-                          nation: p.nation,
-                          season: p.season,
-                          rating: p.peak,
-                          number: p.number,
-                          legendScore: p.legendScore,
-                          attrs: p.attrs,
-                          attrsEstimated: p.attrsEstimated,
-                          height: p.height,
-                          weight: p.weight,
-                          foot: p.foot,
-                          cardValue: p.cardValue,
-                          pos: p.pos,
-                          type: p.type,
-                          locked: p.locked,
-                          youth: false,
-                        }}
-                        code={p.dpos ?? p.pos}
-                      />
-                    </Press>
-                  </DragPlayer>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 6,
-                    }}
-                  >
-                    <Txt v="xs" tone="muted" style={{ textAlign: 'center' }}>
-                      {slots.includes(p.careerId)
-                        ? L.rosterStarting({ slot: layout[slots.indexOf(p.careerId)]?.slot ?? '' })
-                        : L.rosterBench}
-                    </Txt>
-                    {onLock ? (
+              {visible.slice(0, limit).map((p) => {
+                const pay = salaryIn(p, season);
+                const wontFit =
+                  pay > 0 &&
+                  !!salary &&
+                  !slots.includes(p.careerId) &&
+                  salary.sum + pay > salary.budget;
+                return (
+                  <View key={p.careerId} style={{ width: '48%', opacity: wontFit ? 0.6 : 1 }}>
+                    <DragPlayer index={null} id={p.careerId} drag={drag}>
                       <Press
-                        testID={`team-lock-${p.careerId}`}
-                        accessibilityRole="button"
-                        accessibilityLabel={L.lockerLockAria({ name: nameOf(p) })}
-                        accessibilityState={{ selected: !!p.locked, disabled: !lockToggleable(p) }}
-                        disabled={!lockToggleable(p)}
-                        hitSlop={6}
-                        onPress={() => onLock(p)}
+                        testID={`locker-${p.careerId}`}
+                        accessibilityLabel={L.lockerPickAriaApp({
+                          who: `${nameOf(p)}${NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION) ? ` · ${tn(NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION)!.ko)}` : ''}`,
+                          peak: p.peak,
+                          ls: p.legendScore ?? 0,
+                          attrs: attrLine(p) ?? L.noAttrs,
+                        })}
+                        accessibilityState={{ selected: selected === p.careerId }}
+                        onPress={() => select(selected === p.careerId ? null : p.careerId)}
                         style={{
-                          minHeight: 28,
-                          paddingHorizontal: 8,
-                          borderRadius: 999,
-                          borderWidth: 1,
-                          borderColor: p.locked ? c.accent : c.line,
-                          justifyContent: 'center',
-                          opacity: lockToggleable(p) ? 1 : 0.6,
+                          borderRadius: RADIUS.md,
+                          borderWidth: selected === p.careerId ? 2 : 0,
+                          borderColor: c.accent,
                         }}
                       >
+                        <PlayerCard
+                          cell={{
+                            name: nameOf(p),
+                            careerId: p.careerId,
+                            look: p.look,
+                            nation: p.nation,
+                            season: p.season,
+                            rating: p.peak,
+                            number: p.number,
+                            legendScore: p.legendScore,
+                            attrs: p.attrs,
+                            attrsEstimated: p.attrsEstimated,
+                            height: p.height,
+                            weight: p.weight,
+                            foot: p.foot,
+                            cardValue: p.cardValue,
+                            pos: p.pos,
+                            type: p.type,
+                            locked: p.locked,
+                            youth: false,
+                          }}
+                          code={p.dpos ?? p.pos}
+                        />
+                      </Press>
+                    </DragPlayer>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      <Txt v="xs" tone="muted" style={{ textAlign: 'center' }}>
+                        {slots.includes(p.careerId)
+                          ? L.rosterStarting({
+                              slot: layout[slots.indexOf(p.careerId)]?.slot ?? '',
+                            })
+                          : L.rosterBench}
+                      </Txt>
+                      {pay > 0 ? (
                         <Txt
                           v="xs"
+                          bold
+                          testID={`salary-chip-${p.careerId}`}
                           style={{
-                            color: p.locked ? c.accentText : c.muted,
-                            fontWeight: p.locked ? '600' : '400',
+                            paddingHorizontal: 6,
+                            borderRadius: RADIUS.pill,
+                            borderWidth: 1,
+                            borderColor: wontFit ? c.bad : c.line,
+                            color: wontFit ? c.bad : c.muted,
                           }}
                         >
-                          {p.locked
-                            ? `🔒 ${L.lockerLocked}`
-                            : p.listing
-                              ? L.lockerListed
-                              : L.lockerLock}
+                          {wontFit
+                            ? `${TC.salaryChip({ n: pay })} · ${TC.salaryOver}`
+                            : TC.salaryChip({ n: pay })}
                         </Txt>
-                      </Press>
-                    ) : null}
+                      ) : null}
+                      {onLock ? (
+                        <Press
+                          testID={`team-lock-${p.careerId}`}
+                          accessibilityRole="button"
+                          accessibilityLabel={L.lockerLockAria({ name: nameOf(p) })}
+                          accessibilityState={{
+                            selected: !!p.locked,
+                            disabled: !lockToggleable(p),
+                          }}
+                          disabled={!lockToggleable(p)}
+                          hitSlop={6}
+                          onPress={() => onLock(p)}
+                          style={{
+                            minHeight: 28,
+                            paddingHorizontal: 8,
+                            borderRadius: RADIUS.pill,
+                            borderWidth: 1,
+                            borderColor: p.locked ? c.accent : c.line,
+                            justifyContent: 'center',
+                            opacity: lockToggleable(p) ? 1 : 0.6,
+                          }}
+                        >
+                          <Txt
+                            v="xs"
+                            style={{
+                              color: p.locked ? c.accentText : c.muted,
+                              fontWeight: p.locked ? '600' : '400',
+                            }}
+                          >
+                            {p.locked
+                              ? `🔒 ${L.lockerLocked}`
+                              : p.listing
+                                ? L.lockerListed
+                                : L.lockerLock}
+                          </Txt>
+                        </Press>
+                      ) : null}
+                    </View>
                   </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
             {visible.length > limit ? (
               <Btn sm onPress={() => setLimit(limit + 24)}>

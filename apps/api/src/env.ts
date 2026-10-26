@@ -5,6 +5,9 @@ import type { ChatRoom } from './chat/room.js';
 import type { LiveHub } from './live/hub.js';
 
 export type Bindings = {
+  ACQUISITION_ENABLED?: string;
+  /** All app push sends and receipt checks execute in Queue consumers. */
+  PUSH_QUEUE?: Queue<import('./push/queuePublish.js').PushWork>;
   CLUB_STRENGTH_ENABLED?: string;
   /** Reviewed provider league/team-id mappings. No secrets in this JSON. */
   CLUB_STRENGTH_SOURCES?: string;
@@ -30,6 +33,10 @@ export type Bindings = {
   CAREER_REMINDER_ENABLED?: string;
   /** T-11-378 출석 독려 푸시. */
   ATTENDANCE_REMINDER_ENABLED?: string;
+  /** T-11-501 리텐션 푸시(쉬는 사람 사다리 · 첫 주 안내). 켜면 옛 커리어 독려 · 재방문 안내는 쌓지 않는다. */
+  RETENTION_PUSH_ENABLED?: string;
+  /** T-11-501 이 시각(ISO) 전까지 프로필 약 10%를 비교군으로 두고 알림 없이 원장만 남긴다. */
+  RETENTION_HOLDOUT_UNTIL?: string;
   CUP_PUSH_QUEUE?: Queue<{ version: 1; cupId: string }>;
   CAREER_PUSH_QUEUE?: Queue<{ version: 1; batchId: string }>;
   /** Expo enhanced push security용 secret. 클라이언트에는 넣지 않는다. */
@@ -79,6 +86,17 @@ export type Bindings = {
   GOOGLE_RTDN_SERVICE_ACCOUNT?: string;
   /** T-11-174 secret. 쉼표 구분 프로필 id. 있으면 이 구단주에게만 인앱 상품을 보인다(출시 전 실기기 구매 확인용). 지우면 모두에게 열린다. */
   IAP_TESTERS?: string;
+  /**
+   * T-11-454 웹 결제(엑솔라 Pay Station). `1`이고 프로젝트 id · API 키 · 웹훅 비밀 키가 있어야 웹 상점에 결제가 열린다.
+   * 프로젝트 id는 var, 두 키는 secret. XSOLLA_SANDBOX=`1`이면 샌드박스 결제창(테스트 카드)을 쓴다.
+   */
+  WEB_PAY_ENABLED?: string;
+  XSOLLA_PROJECT_ID?: string;
+  XSOLLA_API_KEY?: string;
+  XSOLLA_WEBHOOK_SECRET?: string;
+  XSOLLA_SANDBOX?: string;
+  /** secret. 쉼표 구분 프로필 id. 있으면 이 구단주에게만 웹 결제를 연다(실결제 확인용). */
+  WEB_PAY_TESTERS?: string;
   /** T-10-011. secret. 쉼표 구분 관리자 구글 이메일(게시판 글쓰기). 비어 있으면 관리자가 없다. */
   ADMIN_EMAILS?: string;
   /** T-11-146 Workers AI(공지 번역 초안·댓글·채팅 번역 보기). staging·운영에만 있다 — 없으면 번역 경로가 503을 낸다. */

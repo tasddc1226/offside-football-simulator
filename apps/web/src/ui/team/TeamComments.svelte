@@ -174,7 +174,7 @@
     gap: 8px;
   }
   .tc-count {
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     font-weight: 500;
   }
 </style>

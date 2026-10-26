@@ -13,8 +13,12 @@ export const BALANCE_GROUPS = {
   military: '병역',
   // T-11-080 이적시장. 게임(웹)은 읽지 않고, 서버가 방출·등록·구매 요청 때 활성 버전을 바로 읽는다(커리어별 고정 아님).
   market: '이적시장',
+  // T-11-376 구단 팀 편성. 서버가 팀 저장·조회 때 활성 버전을 바로 읽는다(커리어별 고정 아님).
+  team: '구단 팀',
+  // T-11-374 카드 과제. 서버가 내기 · 조회 때 활성 버전을 바로 읽는다(커리어별 고정 아님).
+  exchange: '카드 과제',
   // T-11-375 구단 디비전. 서버가 랭크 경기 · 디비전 랭킹 · 시즌 마감 때 활성 버전을 바로 읽는다.
-  team: '구단 디비전',
+  division: '구단 디비전',
 } as const;
 export type BalanceGroup = keyof typeof BALANCE_GROUPS;
 
@@ -95,6 +99,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '스카우트 평가 오차',
     desc: '화면에 보이는 스카우트 평가가 실제 잠재력에서 벗어나는 표준편차 — 0이면 평가가 정확하다',
   },
+  premiumSMult: {
+    group: 'growth',
+    label: '프리미엄 스카우트 S 배수',
+    desc: '프리미엄 스카우트권 후보 한 명이 S일 확률을 일반 후보의 몇 배로 할지. 확률 공개표도 이 값으로 계산한다',
+  },
   injuryRate: {
     group: 'growth',
     label: '경기당 부상 확률',
@@ -109,6 +118,26 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     group: 'transfer',
     label: '30세 미만 MLS 오퍼 가중치',
     desc: '30세 미만 선수에게 MLS 구단이 오퍼를 낼 가중치(30세 이상은 1)',
+  },
+  newLeagues: {
+    group: 'transfer',
+    label: '시즌 2 새 리그 열기',
+    desc: '1이면 브라질 · 포르투갈 · 사우디 · 중국 리그 구단이 이적 · 임대 제의를 내고 대륙 대회 상대로 나온다(진행 중 커리어는 다음 시즌부터)',
+  },
+  eraRival: {
+    group: 'event',
+    label: '시대의 라이벌',
+    desc: '1이면 눈에 띈 시즌(25세 이하)에 또래 라이벌이 나타나 따로 성장하고 시즌마다 기록 · 수상을 비교한다(내 결과는 바뀌지 않는다)',
+  },
+  richYoungPull: {
+    group: 'transfer',
+    label: '28세 미만 사우디 · 중국 오퍼 가중치',
+    desc: '28세 미만 선수에게 사우디 · 중국 구단이 오퍼를 낼 가중치(28세 이상은 1)',
+  },
+  braPull: {
+    group: 'transfer',
+    label: '브라질 오퍼 가중치',
+    desc: '브라질 구단이 오퍼를 낼 가중치(1이면 다른 리그와 같다). 한국 선수의 브라질행은 드물어 낮게 둔다',
   },
   koreaStr: {
     group: 'national',
@@ -170,15 +199,20 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '최고 판매가(기준가 배수)',
     desc: '판매가를 기준가의 이 배수 위로 정할 수 없다',
   },
-  marketListLimit: {
-    group: 'market',
-    label: '동시 판매 등록 수',
-    desc: '한 구단주가 한 번에 올려 둘 수 있는 판매 등록 수',
+  pastSalaryBudget: {
+    group: 'team',
+    label: '지난 시즌 선수 급여 예산',
+    desc: '시즌 1 기준 구단 팀 선발에 넣은 지난 시즌 선수 급여(최고 OVR로 1~20) 합의 상한. 이번 시즌 선수는 급여가 없다',
   },
-  marketDailyBuys: {
-    group: 'market',
-    label: '하루 영입 수',
-    desc: '한 구단주가 하루(한국 시각)에 영입할 수 있는 선수 수',
+  pastSalaryBudgetStep: {
+    group: 'team',
+    label: '시즌당 급여 예산 증가',
+    desc: '팀 시즌이 하나 지날 때마다 급여 예산에 더하는 값. 시즌 n 예산 = 기준 예산 + 이 값 × (n - 1)',
+  },
+  leagueHomeAdv: {
+    group: 'team',
+    label: '리그 홈 이점',
+    desc: '오프사이드 리그 경기에서 홈 팀 기대 득점에 곱하는 배율. 1이면 홈 이점 없음. 랭크 경기 · 친선은 1.08 고정',
   },
   rerollPrice: {
     group: 'market',
@@ -204,6 +238,21 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     group: 'market',
     label: '주간 프리미엄 스카우트권 구매 수',
     desc: '한 구단주가 한 주(월요일 0시 한국 시각부터)에 구단 자금으로 살 수 있는 프리미엄 스카우트권 수. 0이면 팔지 않는다',
+  },
+  exchangeRewardReroll: {
+    group: 'exchange',
+    label: '카드 과제 완료 리롤권',
+    desc: '오늘 카드 과제 세 개를 모두 낸 날 한 번 받는 선수 후보 리롤권 수',
+  },
+  exchangeRewardBoost: {
+    group: 'exchange',
+    label: '카드 과제 완료 잠재력 강화권',
+    desc: '오늘 카드 과제 세 개를 모두 낸 날 한 번 받는 잠재력 강화권 수',
+  },
+  exchangeRewardScout: {
+    group: 'exchange',
+    label: '카드 과제 완료 프리미엄 스카우트권',
+    desc: '오늘 카드 과제 세 개를 모두 낸 날 한 번 받는 프리미엄 스카우트권 수',
   },
   rewardPriceCandidates: {
     group: 'market',
@@ -231,77 +280,77 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     desc: '보상마다 한 구단주가 하루(한국 시각)에 구단 자금으로 받을 수 있는 횟수(잠재력 강화는 횟수 없음). 0이면 구단 자금으로 받지 않는다',
   },
   teamDiv1: {
-    group: 'team',
+    group: 'division',
     label: '세미프로 II 승격 레이팅',
     desc: '팀 레이팅이 이 값 이상이면 세미프로 II 디비전으로 오른다. 앞 경계보다 낮게 두면 앞 경계 값을 쓴다',
   },
   teamDiv2: {
-    group: 'team',
+    group: 'division',
     label: '세미프로 I 승격 레이팅',
     desc: '팀 레이팅이 이 값 이상이면 세미프로 I 디비전으로 오른다. 앞 경계보다 낮게 두면 앞 경계 값을 쓴다',
   },
   teamDiv3: {
-    group: 'team',
+    group: 'division',
     label: '프로 II 승격 레이팅',
     desc: '팀 레이팅이 이 값 이상이면 프로 II 디비전으로 오른다. 앞 경계보다 낮게 두면 앞 경계 값을 쓴다',
   },
   teamDiv4: {
-    group: 'team',
+    group: 'division',
     label: '프로 I 승격 레이팅',
     desc: '팀 레이팅이 이 값 이상이면 프로 I 디비전으로 오른다. 앞 경계보다 낮게 두면 앞 경계 값을 쓴다',
   },
   teamDiv5: {
-    group: 'team',
+    group: 'division',
     label: '엘리트 II 승격 레이팅',
     desc: '팀 레이팅이 이 값 이상이면 엘리트 II 디비전으로 오른다. 앞 경계보다 낮게 두면 앞 경계 값을 쓴다',
   },
   teamDiv6: {
-    group: 'team',
+    group: 'division',
     label: '엘리트 I 승격 레이팅',
     desc: '팀 레이팅이 이 값 이상이면 엘리트 I 디비전으로 오른다. 앞 경계보다 낮게 두면 앞 경계 값을 쓴다',
   },
   teamDiv7: {
-    group: 'team',
+    group: 'division',
     label: '마스터 승격 레이팅',
     desc: '팀 레이팅이 이 값 이상이면 마스터 디비전으로 오른다. 앞 경계보다 낮게 두면 앞 경계 값을 쓴다',
   },
   teamDivGuard: {
-    group: 'team',
+    group: 'division',
     label: '디비전 강등 보호 점수',
     desc: '올라간 디비전은 레이팅이 그 경계보다 이만큼 더 떨어져야 내려간다',
   },
   teamDivRewardFrom: {
-    group: 'team',
+    group: 'division',
     label: '디비전 보상 시작 시즌',
     desc: '이 시즌 마감부터 디비전 배지 · 리롤권을 준다. 그 전 시즌은 디비전을 보여 주기만 한다',
   },
   teamDivMinMatches: {
-    group: 'team',
+    group: 'division',
     label: '디비전 보상 최소 경기 수',
     desc: '시즌 마감 디비전 보상을 받으려면 그 시즌 팀이 치른 랭크 경기(건 경기 + 받은 경기) 수가 이만큼 있어야 한다',
   },
   teamDivReward3: {
-    group: 'team',
+    group: 'division',
     label: '프로 II 시즌 보상 리롤권',
     desc: '시즌 마감 때 프로 II 디비전인 구단주가 받는 선수 후보 리롤권 장수',
   },
   teamDivReward4: {
-    group: 'team',
+    group: 'division',
     label: '프로 I 시즌 보상 리롤권',
     desc: '시즌 마감 때 프로 I 디비전인 구단주가 받는 선수 후보 리롤권 장수',
   },
   teamDivReward5: {
-    group: 'team',
+    group: 'division',
     label: '엘리트 II 시즌 보상 리롤권',
     desc: '시즌 마감 때 엘리트 II 디비전인 구단주가 받는 선수 후보 리롤권 장수',
   },
   teamDivReward6: {
-    group: 'team',
+    group: 'division',
     label: '엘리트 I 시즌 보상 리롤권',
     desc: '시즌 마감 때 엘리트 I 디비전인 구단주가 받는 선수 후보 리롤권 장수',
   },
   teamDivReward7: {
-    group: 'team',
+    group: 'division',
     label: '마스터 시즌 보상 리롤권',
     desc: '시즌 마감 때 마스터 디비전인 구단주가 받는 선수 후보 리롤권 장수',
   },

@@ -22,6 +22,8 @@
   import { boostHidden, boostView, doBoost, type BoostOutcome } from '@offside/app-core/boost-view';
   import { boostFreeOpen, boostTicketOpen } from '@offside/game/boost';
   import BoostFx from '../BoostFx.svelte';
+  import RevealFx from '../RevealFx.svelte';
+  import { gradeTier } from '@offside/app-core/reveal';
   import { retireAsk } from '../actions.js';
   import { save } from '../helpers.js';
   import { clubOffer, loadClubShop, payWithClub, payWithTicket } from '@offside/app-core/club-reward';
@@ -29,6 +31,8 @@
   import type { RewardShopResponse } from '@offside/contracts';
   import { fetchItems } from '@offside/app-core/api/cup';
   import { hasSessionHint } from '@offside/app-core/api/client';
+  import { iapText as IL } from '@offside/app-core/i18n/ko/iap';
+  import WebPayPacks from '../cup/WebPayPacks.svelte';
 
   const { s }: { s: GameState } = $props();
   const lg = $derived(leagueOf(s.leagueId));
@@ -44,12 +48,15 @@
   // T-11-133 자금을 내고 이번 시즌 스카우트 평가 보기(앱은 보상형 광고).
   let peek = $state(loadPeek());
   const pot = $derived(peekView(s, peek, 'pay'));
+  // T-11-371 이번에 연 평가만 등급 공개 연출(저장한 뒤 보여 준다). 다시 들어오면 그대로 글자.
+  let peekFx = $state(false);
   function onPeek() {
     const p = buyPeek(s);
     if (!p) return;
     save();
     savePeek(p);
     peek = p;
+    peekFx = true;
   }
   // T-11-083 잠재력 강화. 자금을 쓰는 시도라 버튼을 한 번 더 눌러야 한다.
   let arming = $state(false);
@@ -89,6 +96,7 @@
       const p = peekOf(s);
       savePeek(p);
       peek = p;
+      peekFx = true;
     });
     clubBusy = false;
     if (!r) return;
@@ -98,6 +106,7 @@
   const clubTry = $derived(freeOpen ? clubOffer(club, 'boost') : null);
   // T-11-157 구단 자금으로는 이번 시즌의 한 번을 쓴 뒤에도 더 시도한다(오늘 횟수는 서버가 센다 — 웹은 광고가 없다).
   // T-11-174 앱에서 산 잠재력 강화권. 로그인한 구단주가 강화 자리를 볼 때만 장수를 묻고, 못 받으면 버튼을 보이지 않는다.
+  // T-11-471 같은 자리에 앱 스토어 묶음처럼 웹 결제 묶음을 보인다(웹 결제가 열린 구단주만, 결제 뒤 이 화면으로 돌아온다).
   let tickets = $state(0);
   let ticketBusy = $state(false);
   $effect(() => {
@@ -146,7 +155,7 @@
     <dt>{L.body}</dt><dd data-body>{body.h}cm · {body.w}kg</dd>
     <dt>{L.foot}</dt><dd>{C.foot({ v: s.foot })}</dd>
     <dt>{L.trait}</dt><dd>{traitName}</dd>
-    <dt>{L.potential}</dt><dd data-pot>{pot.kind === 'shown' ? pot.text : potentialNotice()}</dd>
+    <dt>{L.potential}</dt><dd data-pot>{#if pot.kind === 'shown' && peekFx}<RevealFx grade={pot.grade} text={pot.text} tier={gradeTier(pot.grade)} />{:else}{pot.kind === 'shown' ? pot.text : potentialNotice()}{/if}</dd>
     <dt>{L.peakOvr}</dt><dd>{Math.max(s.peak, ovr(s))}</dd>
     <dt>{L.trust}</dt><dd>{s.trust >= 2 ? L.trustHigh : s.trust >= 0 ? L.trustMid : L.trustLow}</dd>
     <dt>{L.contract}</dt><dd>{s.contract ? L.contractLeft({ years: s.contract.years, salary: fmtMoney(s.contract.salary) }) : lg.amateur ? L.amateur : '-'}</dd>
@@ -201,6 +210,7 @@
         {ticketBusy ? B.ticketBusy : B.ticketBoost({ n: tickets, chance: boost.chance })}
       </button>
     {/if}
+    {#if ticketOpen}<WebPayPacks item="boost" back="game" note={IL.boostNote({ chance: boost.chance })} />{/if}
     {#if clubMsg}<p class="muted fs-sm" aria-live="polite">{clubMsg}</p>{/if}
     <p class="muted fs-xs">{boost.note}</p>
     {#if boost.history.length}

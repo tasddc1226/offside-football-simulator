@@ -107,19 +107,6 @@ export function recapStatusText(res: Pick<SeasonRecapResponse, 'season' | 'statu
   return res.status === 'none' ? L.cardNone({ season }) : L.cardReady({ season });
 }
 
-/** 구단주 화면 결산 카드(웹 · 앱 공용): 한 줄 문구 · 기록 배지 알약 3개 · 아직 안 열어 봤는지. */
-export function recapCardView(res: SeasonRecapResponse) {
-  const n = res.honors.length;
-  return {
-    line:
-      res.status === 'ready' && n > 0
-        ? `${recapStatusText(res)} · ${L.cardHonors({ n })}`
-        : recapStatusText(res),
-    chips: honorViews(res.honors).slice(0, 3),
-    isNew: res.status === 'ready' && !recapSeen(res.season),
-  };
-}
-
 /** 결산 기준 날짜 — 마감 시각 바로 앞(한국 시각) 날짜. 프리시즌이면 개막 전날. */
 export const recapCutoffText = (r: Pick<SeasonRecap, 'cutoff'>): string =>
   L.cutoff({

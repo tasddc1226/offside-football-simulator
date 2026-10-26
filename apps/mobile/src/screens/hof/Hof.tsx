@@ -1,5 +1,5 @@
 // 기록실(하단 메뉴, 웹 Hof.svelte) — 명예의 전당 전체 보기(100명씩 페이지 → 앱은 10명씩)와 영구결번(T-10-076), 라이브 랭킹(팀 랭킹,
-// T-10-092), 구단주 랭킹(T-11-028)을 탭으로 오간다. 팀 프로필에서는 뒤로 가기(T-11-213 스와이프·Android 뒤로)로 돌아온다.
+// T-10-092), 구단주 랭킹(T-11-028), 시즌 BEST 11(T-11-463)을 탭으로 오간다. 팀 프로필에서는 뒤로 가기(T-11-213 스와이프·Android 뒤로)로 돌아온다.
 import { useSnapshot } from 'valtio';
 import type { HofTab } from '@offside/app-core/state';
 import { AdSlot } from '../../components/AdSlot';
@@ -14,12 +14,15 @@ import { useColors } from '../../theme/useColors';
 import { RECORDS_TOUCH } from './RecordsControls';
 import RetiredWall from './RetiredWall';
 import { hofText as L } from '@offside/app-core/i18n/ko/hof';
+import { best11Text as B } from '@offside/app-core/i18n/ko/best11';
+import Best11 from './Best11';
 import AchievementRanking from './team/AchievementRanking';
 import TeamRanking from './team/TeamRanking';
 
 // 문구는 그릴 때 읽어야 해서(언어 등록 뒤) 함수로 둔다.
 const tabs = (): Record<HofTab, string> => ({
   legends: L.tabLegends,
+  best11: B.tab,
   rn: L.tabRn,
   teams: L.tabTeams,
   ach: L.tabAch,
@@ -75,6 +78,8 @@ export default function Hof() {
       </View>
       {hof.tab === 'rn' ? (
         <RetiredWall />
+      ) : hof.tab === 'best11' ? (
+        <Best11 />
       ) : hof.tab === 'teams' ? (
         <>
           <TeamRanking />

@@ -7,6 +7,7 @@
   import type { TeamStatsResponse } from '@offside/app-core/api/team';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import TeamLogo from './TeamLogo.svelte';
+  import TeamSeasonReport from './TeamSeasonReport.svelte';
   import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
   import { teamCoreText as C } from '@offside/app-core/i18n/ko/teamCore';
   import { statsDayLabel } from '@offside/app-core/teamText';
@@ -117,6 +118,7 @@
         </div>
         {@render kindList(kinds)}
       {/if}
+      <TeamSeasonReport report={s.report} />
       <div class="seg three" role="group" aria-label={L.statsTabLabel}>
         {#each tabs() as [k, label] (k)}
           <button class="hof-sort" aria-pressed={tab === k} onclick={() => (tab = k)} data-stats-tab={k}>{label}</button>
@@ -174,11 +176,11 @@
   }
   .tm-stats-total b {
     font-family: var(--display);
-    font-size: 1.5rem;
+    font-size: var(--fs-title1);
   }
   .tm-stats-sub {
     margin: 0;
-    font-size: 0.95rem;
+    font-size: var(--fs-body1);
   }
   .tm-stats-form {
     display: flex;
@@ -197,9 +199,9 @@
     min-width: 1.6em;
     height: 1.6em;
     padding: 0 3px;
-    border-radius: 6px;
+    border-radius: var(--radius-xs);
     border: 1px solid currentColor;
-    font-size: 0.8rem;
+    font-size: var(--fs-label);
     font-weight: 700;
   }
   .tm-form.w {
@@ -218,7 +220,7 @@
     margin: 0;
   }
   .tm-stats-pairs dt {
-    font-size: 0.8rem;
+    font-size: var(--fs-label);
     color: var(--muted);
   }
   .tm-stats-pairs dd {
@@ -252,7 +254,7 @@
   }
   .tm-stats-list li.focus {
     background: var(--surface-2);
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
   }
   .tm-stats-rows li {
     display: flex;

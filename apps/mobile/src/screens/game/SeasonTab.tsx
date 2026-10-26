@@ -1,3 +1,4 @@
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { coachFeedback } from '@offside/app-core/career-feedback';
 // 시즌 탭(웹 tabs/SeasonTab.svelte, T-11-025): 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자) → 시즌 현황(진행 막대·
 // 누적 기록·순위표·대회) → 스토리 → 최근 소식. 진행·이벤트 확인 버튼은 화면 아래 고정 바(Game.tsx, T-11-036)에 있다.
@@ -92,7 +93,7 @@ function Meter({
       accessibilityLabel={`${label} ${Math.round(value)}`}
       style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
     >
-      <Txt style={{ width: 72, fontSize: rem(0.8125) }}>{label}</Txt>
+      <Txt style={{ width: 72, fontSize: rem(FONT.label) }}>{label}</Txt>
       <View
         style={{
           flex: 1,
@@ -101,12 +102,19 @@ function Meter({
           borderRadius: 4,
           overflow: 'hidden',
           borderWidth: 1,
-          borderColor: c.line,
+          borderColor: 'transparent',
         }}
       >
         <View style={{ width: `${w}%`, height: '100%', borderRadius: 4, backgroundColor: fill }} />
       </View>
-      <Txt style={{ width: 34, textAlign: 'right', fontFamily: DISPLAY[600], fontSize: rem(1) }}>
+      <Txt
+        style={{
+          width: 34,
+          textAlign: 'right',
+          fontFamily: DISPLAY[600],
+          fontSize: rem(FONT.body),
+        }}
+      >
         {Math.round(value)}
       </Txt>
     </View>
@@ -172,18 +180,18 @@ function BracketRows({
           <Txt v="sm" style={{ flex: 1 }} numberOfLines={1}>
             {r.vs}
           </Txt>
-          <Txt v="sm" tone="muted" style={{ fontSize: rem(0.75) }}>
+          <Txt v="sm" tone="muted" style={{ fontSize: rem(FONT.caption) }}>
             {r.legs}
           </Txt>
           <Txt
             v="sm"
             style={{
-              fontSize: rem(0.75),
+              fontSize: rem(FONT.caption),
               fontWeight: '700',
               color: tone(r),
               borderWidth: 1,
               borderColor: tone(r),
-              borderRadius: 999,
+              borderRadius: RADIUS.pill,
               paddingHorizontal: 7,
               paddingVertical: 1,
             }}
@@ -203,7 +211,7 @@ function BracketRows({
 const RowMuted = ({ children }: { children: ReactNode }) => (
   <Txt
     tone="muted"
-    style={{ fontSize: rem(0.75), minWidth: 64, textAlign: 'right', flexShrink: 1 }}
+    style={{ fontSize: rem(FONT.caption), minWidth: 64, textAlign: 'right', flexShrink: 1 }}
   >
     {children}
   </Txt>
@@ -345,7 +353,7 @@ function Spotlight({
         margin: -5,
         padding: 3,
         borderWidth: 2,
-        borderRadius: 21,
+        borderRadius: RADIUS.lg,
         borderColor: on ? c.accent : 'transparent',
       }}
     >
@@ -363,11 +371,11 @@ function TourHint({ children }: { children: string }) {
       style={{
         paddingVertical: 6,
         paddingHorizontal: 10,
-        borderRadius: 10,
+        borderRadius: RADIUS.sm,
         backgroundColor: alpha(c.accent, 0.14),
       }}
     >
-      <Txt style={{ fontSize: rem(0.8125), fontWeight: '700', color: c.accentText }}>
+      <Txt style={{ fontSize: rem(FONT.label), fontWeight: '700', color: c.accentText }}>
         {children}
       </Txt>
     </View>
@@ -431,20 +439,23 @@ function ChoiceGrid({
                 paddingHorizontal: it.selected ? 8.5 : 10,
               }}
             >
-              <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>
+              <Txt style={{ fontSize: rem(FONT.body2), fontWeight: '700' }}>
                 {it.label}
                 {it.star ? <Txt style={{ color: c.accentText }}>{' ★'}</Txt> : null}
               </Txt>
               {it.effect ? (
-                <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 }}>
+                <Txt
+                  tone="muted"
+                  style={{ fontSize: rem(FONT.caption), lineHeight: rem(FONT.caption) * 1.35 }}
+                >
                   {it.effect[0]}
                 </Txt>
               ) : null}
               {it.tag ? (
                 <Txt
                   style={{
-                    fontSize: rem(0.75),
-                    lineHeight: rem(0.75) * 1.35,
+                    fontSize: rem(FONT.caption),
+                    lineHeight: rem(FONT.caption) * 1.35,
                     fontWeight: '600',
                     color: c.accentText,
                   }}
@@ -483,8 +494,8 @@ function TrainViewToggle({
         gap: 2,
         padding: 2,
         borderWidth: 1,
-        borderColor: c.line,
-        borderRadius: 10,
+        borderColor: 'transparent',
+        borderRadius: RADIUS.sm,
         backgroundColor: c.surface2,
       }}
     >
@@ -503,7 +514,7 @@ function TrainViewToggle({
             style={{
               width: 44,
               height: 34,
-              borderRadius: 8,
+              borderRadius: RADIUS.sm,
               alignItems: 'center',
               justifyContent: 'center',
               backgroundColor: on ? c.surface : 'transparent',
@@ -565,7 +576,7 @@ function HelpBox({
         gap: 4,
         paddingVertical: 10,
         paddingHorizontal: 12,
-        borderRadius: 10,
+        borderRadius: RADIUS.sm,
         backgroundColor: c.surface2,
       }}
     >
@@ -573,14 +584,14 @@ function HelpBox({
         <Txt
           style={{
             flex: 1,
-            fontSize: rem(0.8125),
-            lineHeight: rem(0.8125) * 1.5,
+            fontSize: rem(FONT.label),
+            lineHeight: rem(FONT.label) * 1.5,
             fontWeight: '700',
           }}
         >
           {title}
           {effect.length ? (
-            <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '700' }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.label), fontWeight: '700' }}>
               {` · ${effect.join(' · ')}`}
             </Txt>
           ) : null}
@@ -591,13 +602,13 @@ function HelpBox({
         <Txt
           key={n.text}
           tone={n.tone}
-          style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5 }}
+          style={{ fontSize: rem(FONT.label), lineHeight: rem(FONT.label) * 1.5 }}
         >
           {n.text}
         </Txt>
       ))}
       {body ? (
-        <Txt style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5 }}>{body}</Txt>
+        <Txt style={{ fontSize: rem(FONT.label), lineHeight: rem(FONT.label) * 1.5 }}>{body}</Txt>
       ) : null}
     </View>
   );
@@ -712,14 +723,14 @@ export function SeasonTab({ s }: { s: GameState }) {
             </View>
             <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
               {[L.preseason, L.phaseFirst, L.phaseSecond].map((tl) => (
-                <Txt key={tl} tone="muted" center style={{ flex: 1, fontSize: rem(0.6875) }}>
+                <Txt key={tl} tone="muted" center style={{ flex: 1, fontSize: rem(FONT.caption2) }}>
                   {tl}
                 </Txt>
               ))}
             </View>
           </View>
           {showTotals ? (
-            <Txt testID="season-totals" tone="muted" style={{ fontSize: rem(0.8125) }}>
+            <Txt testID="season-totals" tone="muted" style={{ fontSize: rem(FONT.label) }}>
               {L.totals({
                 w: S.w,
                 d: S.d,
@@ -743,7 +754,7 @@ export function SeasonTab({ s }: { s: GameState }) {
                 return (
                   <View key={cp.name}>
                     <StoryRow>
-                      <Txt style={{ flex: 1, fontSize: rem(0.875), fontWeight: '700' }}>
+                      <Txt style={{ flex: 1, fontSize: rem(FONT.body2), fontWeight: '700' }}>
                         {tn(cp.name)}
                       </Txt>
                       <RowMuted>
@@ -855,121 +866,126 @@ export function SeasonTab({ s }: { s: GameState }) {
         </Spotlight>
       )}
 
-      <Spotlight reg={reg('invest')} on={spot === 'invest'}>
-        <Card gap={10}>
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 10,
-            }}
-          >
-            <View style={{ flex: 1 }}>
-              <Txt v="eyebrow">Invest</Txt>
-              <Txt v="h2" accessibilityRole="header">
-                {L.investTitle}
-              </Txt>
+      {/* T-11-438 시즌이 끝난 화면(이적시장 대기)에서는 웹처럼 투자 카드를 숨긴다. */}
+      {ended ? null : (
+        <Spotlight reg={reg('invest')} on={spot === 'invest'}>
+          <Card gap={10}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 10,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Txt v="eyebrow">Invest</Txt>
+                <Txt v="h2" accessibilityRole="header">
+                  {L.investTitle}
+                </Txt>
+              </View>
+              <Pill>
+                {spend
+                  ? L.fundsAfter({
+                      v: appFormatText.won({ v: fmtMoney(s.money) }),
+                      after: appFormatText.won({ v: fmtMoney(Math.max(0, s.money - spend)) }),
+                    })
+                  : L.funds({ v: appFormatText.won({ v: fmtMoney(s.money) }) })}
+              </Pill>
             </View>
-            <Pill>
-              {spend
-                ? L.fundsAfter({
-                    v: appFormatText.won({ v: fmtMoney(s.money) }),
-                    after: appFormatText.won({ v: fmtMoney(Math.max(0, s.money - spend)) }),
-                  })
-                : L.funds({ v: appFormatText.won({ v: fmtMoney(s.money) }) })}
-            </Pill>
-          </View>
-          {wait === 'invest' ? <TourHint>{L.investHint}</TourHint> : null}
-          {/* T-11-219 드롭다운 대신 칸을 늘 보여 주고(한 번 눌러 고른다), 고른 투자의 설명은 아래 HelpBox에.
+            {wait === 'invest' ? <TourHint>{L.investHint}</TourHint> : null}
+            {/* T-11-219 드롭다운 대신 칸을 늘 보여 주고(한 번 눌러 고른다), 고른 투자의 설명은 아래 HelpBox에.
               T-11-221 '투자 안 함' 칸은 없애고 2×2만 둔다. 고른 칸을 다시 누르거나 '선택 해제'로 되돌린다. */}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {INVESTS.filter((d) => d.id !== 'none').map((d) => {
-              const cd = investCards.get(d.id)!;
-              const cost = investCost(s, d);
-              const note = investNote(d);
-              const sel = invest.id === d.id;
-              return (
-                <View
-                  key={d.id}
-                  testID={`invest-${d.id}`}
-                  style={{ flexGrow: 1, flexBasis: '45%' }}
-                >
-                  <PickPop on={popped?.g === 'invest' && popped.id === d.id}>
-                    <Opt
-                      selected={sel}
-                      disabled={!cd.affordable}
-                      onPress={() => setInvest(sel ? 'none' : d.id)}
-                      style={{
-                        flex: 1,
-                        minHeight: 44,
-                        paddingVertical: sel ? 7.5 : 9,
-                        paddingHorizontal: sel ? 10.5 : 12,
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Txt style={{ flexShrink: 1, fontSize: rem(0.875), fontWeight: '700' }}>
-                          {investName(s, d)}
-                        </Txt>
-                        {note ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {INVESTS.filter((d) => d.id !== 'none').map((d) => {
+                const cd = investCards.get(d.id)!;
+                const cost = investCost(s, d);
+                const note = investNote(d);
+                const sel = invest.id === d.id;
+                return (
+                  <View
+                    key={d.id}
+                    testID={`invest-${d.id}`}
+                    style={{ flexGrow: 1, flexBasis: '45%' }}
+                  >
+                    <PickPop on={popped?.g === 'invest' && popped.id === d.id}>
+                      <Opt
+                        selected={sel}
+                        disabled={!cd.affordable}
+                        onPress={() => setInvest(sel ? 'none' : d.id)}
+                        style={{
+                          flex: 1,
+                          minHeight: 44,
+                          paddingVertical: sel ? 7.5 : 9,
+                          paddingHorizontal: sel ? 10.5 : 12,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <Txt
-                            tone="muted"
+                            style={{ flexShrink: 1, fontSize: rem(FONT.body2), fontWeight: '700' }}
+                          >
+                            {investName(s, d)}
+                          </Txt>
+                          {note ? (
+                            <Txt
+                              tone="muted"
+                              style={{
+                                fontSize: rem(FONT.caption2),
+                                fontWeight: '600',
+                                paddingHorizontal: 6,
+                                paddingVertical: 1,
+                                borderRadius: RADIUS.pill,
+                                overflow: 'hidden',
+                                backgroundColor: c.surface2,
+                              }}
+                            >
+                              {note}
+                            </Txt>
+                          ) : null}
+                        </View>
+                        {cost ? (
+                          <Txt
                             style={{
-                              fontSize: rem(0.6875),
-                              fontWeight: '600',
-                              paddingHorizontal: 6,
-                              paddingVertical: 1,
-                              borderRadius: 999,
-                              overflow: 'hidden',
-                              backgroundColor: c.surface2,
+                              fontFamily: DISPLAY[700],
+                              fontSize: rem(FONT.label),
+                              color: c.accentText,
                             }}
                           >
-                            {note}
+                            {cd.affordable
+                              ? appFormatText.won({ v: fmtMoney(cost) })
+                              : cd.tag.split(' · ')[0]}
                           </Txt>
                         ) : null}
-                      </View>
-                      {cost ? (
-                        <Txt
-                          style={{
-                            fontFamily: DISPLAY[700],
-                            fontSize: rem(0.8125),
-                            color: c.accentText,
-                          }}
-                        >
-                          {cd.affordable
-                            ? appFormatText.won({ v: fmtMoney(cost) })
-                            : cd.tag.split(' · ')[0]}
-                        </Txt>
-                      ) : null}
-                    </Opt>
-                  </PickPop>
-                </View>
-              );
-            })}
-          </View>
-          <HelpBox
-            testID="invest-help"
-            title={investName(s, invest)}
-            effect={investCards.get(invest.id)!.effect}
-            body={investHelp(s, invest)}
-            action={
-              invest.id !== 'none' || wait === 'invest' ? (
-                <Press
-                  testID="invest-none"
-                  accessibilityRole="button"
-                  onPress={() => setInvest('none')}
-                  hitSlop={{ top: 6, bottom: 6 }}
-                  style={{ minHeight: 32, justifyContent: 'center', paddingHorizontal: 4 }}
-                >
-                  <Txt bold style={{ fontSize: rem(0.8125), color: c.accentText }}>
-                    {invest.id !== 'none' ? L.investClear : investName(s, invest)}
-                  </Txt>
-                </Press>
-              ) : null
-            }
-          />
-        </Card>
-      </Spotlight>
+                      </Opt>
+                    </PickPop>
+                  </View>
+                );
+              })}
+            </View>
+            <HelpBox
+              testID="invest-help"
+              title={investName(s, invest)}
+              effect={investCards.get(invest.id)!.effect}
+              body={investHelp(s, invest)}
+              action={
+                invest.id !== 'none' || wait === 'invest' ? (
+                  <Press
+                    testID="invest-none"
+                    accessibilityRole="button"
+                    onPress={() => setInvest('none')}
+                    hitSlop={{ top: 6, bottom: 6 }}
+                    style={{ minHeight: 32, justifyContent: 'center', paddingHorizontal: 4 }}
+                  >
+                    <Txt bold style={{ fontSize: rem(FONT.label), color: c.accentText }}>
+                      {invest.id !== 'none' ? L.investClear : investName(s, invest)}
+                    </Txt>
+                  </Press>
+                ) : null
+              }
+            />
+          </Card>
+        </Spotlight>
+      )}
 
       {activeStories.length ? (
         <Spotlight reg={reg('stories')} on={spot === 'stories'}>
@@ -980,7 +996,7 @@ export function SeasonTab({ s }: { s: GameState }) {
             </Txt>
             {activeStories.map(([k, v]) => (
               <StoryRow key={k}>
-                <Txt style={{ flex: 1, fontSize: rem(0.875), fontWeight: '700' }}>
+                <Txt style={{ flex: 1, fontSize: rem(FONT.body2), fontWeight: '700' }}>
                   {tn(STORIES[k]!.name)}
                 </Txt>
                 <View style={{ flexDirection: 'row', gap: 4 }}>
@@ -1027,7 +1043,7 @@ export function SeasonTab({ s }: { s: GameState }) {
                     style={{
                       width: 76,
                       fontFamily: DISPLAY[400],
-                      fontSize: rem(0.75),
+                      fontSize: rem(FONT.caption),
                       letterSpacing: rem(0.75) * 0.03,
                     }}
                   >
@@ -1036,8 +1052,8 @@ export function SeasonTab({ s }: { s: GameState }) {
                   <Txt
                     style={{
                       flex: 1,
-                      fontSize: rem(0.8125),
-                      lineHeight: rem(0.8125) * 1.5,
+                      fontSize: rem(FONT.label),
+                      lineHeight: rem(FONT.label) * 1.5,
                       fontWeight: l.kind === 'big' ? '600' : '400',
                       color: l.kind === 'good' ? c.good : l.kind === 'bad' ? c.bad : c.ink,
                     }}

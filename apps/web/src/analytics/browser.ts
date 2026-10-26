@@ -1,9 +1,11 @@
+import { recordAcquisition, setAcquisitionConsent, acquisitionEnabled } from './acquisition.js';
 import {
   createPlayerMetrics,
   PLAYER_METRICS_KEY,
   type Progress,
 } from '@offside/app-core/player-metrics';
 import type { OperationResult } from '@offside/app-core/measurement';
+import type { AppStoreOs } from '@offside/app-core/appPromo';
 import type { AppStorePlace } from './index.js';
 import { loadPixel, setAdConsent, trackMeta } from './meta.js';
 import {
@@ -231,7 +233,10 @@ export function setConsent(value: 'granted' | 'denied') {
     } catch {
       /* analytics is optional */
     }
-  } else stop();
+  } else {
+    stop();
+    if (acquisitionEnabled()) void setAcquisitionConsent('denied');
+  }
   for (const fn of listeners) fn();
 }
 export function initializeAnalytics(initialScreen: string, restoredCareerId: string | null = null) {
@@ -287,6 +292,7 @@ export const analytics = {
       /* cohort origin stays unknown */
     }
     tracker?.start(s, previous);
+    recordAcquisition('start');
     trackMeta('CareerStart');
     const { cid } = s;
     const year = s.year;
@@ -309,10 +315,11 @@ export const analytics = {
     metric(() => playerMetrics.retire(cid));
   },
 };
-/** T-11-092 웹 → App Store 링크를 누름(어느 안내에서 눌렀는지). */
-export const trackAppStoreClick = (place: AppStorePlace) => {
+/** T-11-092 웹 → 앱 스토어 링크를 누름(어느 안내에서 · T-11-449 어느 스토어로). */
+export const trackAppStoreClick = (place: AppStorePlace, store: AppStoreOs) => {
   try {
-    send('app_store_click', { place });
+    recordAcquisition('store_click');
+    send('app_store_click', { place, store });
     trackMeta('AppStoreClick');
   } catch {
     /* optional */
@@ -344,4 +351,15 @@ export const trackAppConversion = (
     destination:
       target === 'android' ? 'closed_test_form' : target === 'ios' ? 'app_store' : 'both',
   });
+};
+
+export const trackPartnerPopup = (
+  action: import('./index.js').PartnerPopupAction,
+  variant: 'a' | 'b',
+) => {
+  try {
+    send('partner_popup_' + action, { partner: 'amachuggu', variant });
+  } catch {
+    /* optional */
+  }
 };

@@ -126,7 +126,7 @@ async function setup(page: Page, pending: unknown = null): Promise<string[]> {
       if (sessionStorage.getItem('__structure_seeded')) return;
       sessionStorage.setItem('__structure_seeded', '1');
       localStorage.clear();
-      localStorage.setItem('ft_first_guide', '["home","items"]');
+      localStorage.setItem('ft_first_guide', '["items","save"]');
       localStorage.setItem('ft_save', JSON.stringify({ ...JSON.parse(save), pending }));
     },
     [SAVE, pending] as const,
@@ -149,6 +149,8 @@ const HOME_REQUESTS = [
   'GET /v1/cups/home',
   'GET /v1/firsts',
   'GET /v1/hof?limit=3',
+  // T-11-418 홈 리그 배너 — 리그를 여는 시즌이 없거나 끝났으면 그리지 않는다.
+  'GET /v1/leagues/current',
   'GET /v1/live',
   // 시즌 진행 게이지 · 시즌 일정 — 앱 시작 때 일정을 맞추는 요청과 홈 게이지가 같은 메모를 쓴다.
   'GET /v1/season/gauge',

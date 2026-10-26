@@ -20,6 +20,7 @@ import type {
   TeamRankSort,
   TeamStatsResponse,
   TeamDivisionsResponse,
+  TeamMomentResponse,
 } from '@offside/contracts';
 import { apiFetch, cachedGet, ownerCachedGet } from './client.js';
 import { withOwnerHint } from './friendPending.js';
@@ -33,7 +34,13 @@ export type {
   ClubAchievementNotifications,
   OwnerTeam,
   OwnerTeamResponse,
+  PlayTeamMatchResponse,
   TeamMatch,
+  TeamMatchEvent,
+  TeamMoment,
+  TeamMomentChoice,
+  TeamMomentResponse,
+  TeamLive,
   TeamOpponent,
   TeamPlayer,
   TeamPreset,
@@ -49,6 +56,7 @@ export type {
   TeamStatsMatch,
   TeamStatsOpponent,
   TeamStatsPlayer,
+  TeamStatsReport,
   TeamStatsResponse,
   TeamStatsSummary,
   TeamDivisionsResponse,
@@ -99,7 +107,7 @@ export const fetchClubAchievements = (season?: number) =>
 export const fetchAchievementNotifications = () =>
   ownerCachedGet<ClubAchievementNotifications>('/v1/owner-team/achievement-notifications', 60_000);
 
-/** 라이브 랭킹(팀 랭킹). 서버가 5분마다 새로 센다. */
+/** 라이브 랭킹(팀 랭킹). 서버가 5분마다 새로 세므로 T-11-503부터 같은 5분 메모(홈 구단 가치 칸도 쓴다). */
 export const fetchTeamRanking = (
   season: number | undefined,
   sort: TeamRankSort,
@@ -108,7 +116,7 @@ export const fetchTeamRanking = (
 ) =>
   cachedGet<TeamRankResponse>(
     `/v1/teams?${season === undefined ? '' : `season=${season}&`}sort=${sort}&page=${page}${division === undefined ? '' : `&division=${division}`}`,
-    60_000,
+    300_000,
   );
 /** T-11-375 디비전별 팀 수 · 경계(랭킹 디비전 탭). 서버가 5분마다 새로 센다. */
 export const fetchTeamDivisions = (season?: number) =>
@@ -117,6 +125,18 @@ export const fetchTeamDivisions = (season?: number) =>
 export const fetchAchRanking = (season: number | undefined, page: number) =>
   cachedGet<AchRankResponse>(
     `/v1/achievements/ranking?${season === undefined ? '' : `season=${season}&`}page=${page}`,
+    60_000,
+  );
+/** T-11-441 '내 순위로': 내 팀이 있는 페이지와 내 순위(me). 누를 때만 부르고, 1분 메모한다. 가치순은 서버가 세지 않는다. */
+export const fetchMyTeamRank = (season: number | undefined, sort: TeamRankSort) =>
+  cachedGet<TeamRankResponse>(
+    `/v1/teams?${season === undefined ? '' : `season=${season}&`}sort=${sort}&me=1`,
+    60_000,
+  );
+/** T-11-441 업적 랭킹의 '내 순위로'. */
+export const fetchMyAchRank = (season: number | undefined) =>
+  cachedGet<AchRankResponse>(
+    `/v1/achievements/ranking?${season === undefined ? '' : `season=${season}&`}me=1`,
     60_000,
   );
 /** 팀 프로필(좋아요 여부가 사람마다 달라 메모하지 않는다). */
@@ -130,3 +150,21 @@ export const viewTeam = (id: string) =>
   apiFetch<undefined>(`/v1/teams/${id}/views`, { method: 'POST', keepCache: true });
 export const likeTeam = (id: string, like: boolean) =>
   apiFetch<TeamLikeResponse>(`/v1/teams/${id}/like`, { method: like ? 'PUT' : 'DELETE' });
+
+/** T-11-387 장면 경기로 시작한다(문자중계 도중 장면을 고른다). 마지막 장면을 고르면 결과가 온다. */
+export const playLiveMatch = (opponentTeamId: string) =>
+  apiFetch<PlayTeamMatchResponse>('/v1/owner-team/matches', {
+    method: 'POST',
+    body: JSON.stringify({ opponentTeamId, live: true }),
+  });
+/** 장면 하나를 고른다(choice는 선택지 id, 'auto'면 감독에게 맡긴다). */
+export const chooseMoment = (matchId: string, index: number, choice: string) =>
+  apiFetch<TeamMomentResponse>(
+    `/v1/owner-team/matches/${encodeURIComponent(matchId)}/moments/${index}`,
+    { method: 'POST', body: JSON.stringify({ choice }) },
+  );
+/** 남은 장면을 감독에게 맡기고 경기를 끝낸다('결과 바로 보기'). */
+export const finishLiveMatch = (matchId: string) =>
+  apiFetch<PlayTeamMatchResponse>(`/v1/owner-team/matches/${encodeURIComponent(matchId)}/finish`, {
+    method: 'POST',
+  });

@@ -2,11 +2,23 @@
 // 로그인하지 않아도 보기 전용 공유 링크(/career/<id>)를 공유한다 — 링크는 공개 명예의 전당 상세라 로그인과 무관하다.
 // T-10-069 이 기기에 없는 계정의 내 선수도 띄운다 — 띄울지는 LegendView.shareId(legend.ts)가 정한다. 왼쪽 반은 홈으로.
 // T-11-213 선수 상세(하단 메뉴가 있는 화면)에서는 홈 버튼 없이 공유 버튼만 둔다(home={false}).
-import { useState } from 'react';
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
+import { useEffect, useState } from 'react';
 import { Platform, Share, TextInput, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { flushOutbox } from '@offside/app-core/outbox';
-import { checkShareLink, shareLinkText, shareLinkTitle } from '@offside/app-core/shareLink';
+import {
+  flushOutbox,
+  onUploadStatus,
+  retirementUploadStatus,
+  retryOutboxNow,
+} from '@offside/app-core/outbox';
+import {
+  checkShareLink,
+  retryResultText,
+  shareLinkText,
+  shareLinkTitle,
+  uploadStatusLine,
+} from '@offside/app-core/shareLink';
 import { shareText as L } from '@offside/app-core/i18n/ko/share';
 import { shareUrl, toast } from '../../game/host';
 import { goHome } from '../../game/nav';
@@ -14,6 +26,7 @@ import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { ActionBar } from '../../ui/ActionBar';
 import { Btn } from '../../ui/Btn';
+import { Txt } from '../../ui/Txt';
 
 export function ShareBar({
   id,
@@ -27,6 +40,25 @@ export function ShareBar({
   const c = useColors();
   const [busy, setBusy] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
+
+  // T-11-433 서버 반영 상태(웹 ShareBar.svelte와 같다). 기기 안 큐 · 거절 기록만 읽고, 큐가 바뀔 때 다시 읽는다.
+  const [status, setStatus] = useState(() => retirementUploadStatus(id));
+  useEffect(() => {
+    setStatus(retirementUploadStatus(id));
+    return onUploadStatus(() => setStatus(retirementUploadStatus(id)));
+  }, [id]);
+  const line = uploadStatusLine(status);
+  const [retrying, setRetrying] = useState(false);
+  async function retryUpload() {
+    if (retrying) return;
+    setRetrying(true);
+    try {
+      await retryOutboxNow();
+    } finally {
+      setRetrying(false);
+    }
+    toast(retryResultText(retirementUploadStatus(id)));
+  }
 
   // 링크를 서버에 확인한 뒤 공유한다.
   const checkLink = () => checkShareLink(id, { flush: flushOutbox, url: shareUrl });
@@ -75,6 +107,22 @@ export function ShareBar({
 
   return (
     <ActionBar inline={inline}>
+      {line ? (
+        <View
+          testID={`upload-status-${status.state}`}
+          accessibilityLiveRegion="polite"
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+        >
+          <Txt v="xs" tone={status.state === 'rejected' ? 'bad' : 'muted'} style={{ flex: 1 }}>
+            {line.text}
+          </Txt>
+          {line.retry ? (
+            <Btn sm testID="upload-retry" disabled={retrying} onPress={() => void retryUpload()}>
+              {L.uploadRetry}
+            </Btn>
+          ) : null}
+        </View>
+      ) : null}
       {url ? (
         <TextInput
           value={url}
@@ -86,10 +134,10 @@ export function ShareBar({
           // 읽기 전용: 값은 바꾸지 못하고 선택·복사만 된다.
           onChangeText={() => {}}
           style={{
-            fontSize: rem(0.8125),
+            fontSize: rem(FONT.label),
             paddingVertical: 10,
             paddingHorizontal: 12,
-            borderRadius: 10,
+            borderRadius: RADIUS.sm,
             borderWidth: 1,
             borderColor: c.line,
             backgroundColor: c.bg,

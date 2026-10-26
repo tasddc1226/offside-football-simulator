@@ -1,0 +1,23 @@
+{
+  "id": "t-11-374c-card-exchange-quiet-farewell",
+  "title": "카드 과제 '프리시즌의 기억'을 '조용한 은퇴'로 교체",
+  "items": [
+    "프리시즌 카드가 없으면 채울 수 없던 쉬움 과제 '프리시즌의 기억'을 '조용한 은퇴'(최고 OVR 74 이하 선수 3명)로 바꿨어요",
+    "오늘 이미 '프리시즌의 기억'을 낸 기록은 그대로 인정돼요"
+  ],
+  "en": {
+    "title": "Replaced the 'Preseason memories' card task with 'Quiet farewells'",
+    "items": [
+      "The easy task 'Preseason memories' could not be done without preseason cards. It is now 'Quiet farewells' (3 players with a peak OVR of 74 or lower).",
+      "If you already turned in 'Preseason memories' today, it still counts."
+    ]
+  },
+  "ja": {
+    "title": "カード課題「プレシーズンの記憶」を「静かな引退」に変更",
+    "items": [
+      "プレシーズンのカードがないと達成できなかったかんたん課題「プレシーズンの記憶」を「静かな引退」（最高OVR 74以下の選手3人）に変えました。",
+      "今日すでに「プレシーズンの記憶」を出した記録はそのまま認められます。"
+    ]
+  },
+  "availability": "web-app"
+}

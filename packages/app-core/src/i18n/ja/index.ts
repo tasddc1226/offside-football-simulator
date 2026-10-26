@@ -3,6 +3,7 @@
 import { ja as gameEngine } from '@offside/game/i18n/ja/index';
 import { account } from './account';
 import { ad } from './ad';
+import { adminPush } from './adminPush';
 import { appFlight } from './appFlight';
 import { appFormat } from './appFormat';
 import { appScout } from './appScout';
@@ -12,6 +13,7 @@ import { avatarLook } from './avatarLook';
 import { avatarRecord } from './avatarRecord';
 import { backup } from './backup';
 import { balanceKeys } from './balanceKeys';
+import { best11 } from './best11';
 import { board } from './board';
 import { boardLabel } from './boardLabel';
 import { careerGuide } from './careerGuide';
@@ -26,6 +28,8 @@ import { cup } from './cup';
 import { cupApp } from './cupApp';
 import { cupPush } from './cupPush';
 import { dex } from './dex';
+import { era } from './era';
+import { exchange } from './exchange';
 import { fairness } from './fairness';
 import { firstGuide } from './firstGuide';
 import { firsts } from './firsts';
@@ -54,6 +58,8 @@ import { homeLive } from './homeLive';
 import { homeMore } from './homeMore';
 import { iap } from './iap';
 import { inbox } from './inbox';
+import { keyMoment } from './keyMoment';
+import { league } from './league';
 import { legend } from './legend';
 import { legendRn } from './legendRn';
 import { legendStyle } from './legendStyle';
@@ -62,17 +68,22 @@ import { manager } from './manager';
 import { market } from './market';
 import { marketChart } from './marketChart';
 import { marketValueChart } from './marketValueChart';
+import { matchReport } from './matchReport';
 import { owner } from './owner';
 import { ownerConflict } from './ownerConflict';
 import { ownerPlayers } from './ownerPlayers';
 import { ownerProfile } from './ownerProfile';
+import { partner } from './partner';
 import { playerNudge } from './playerNudge';
 import { publicLegends } from './publicLegends';
 import { push } from './push';
+import { ratingReport } from './ratingReport';
 import { rename } from './rename';
 import { retention } from './retention';
 import { retired } from './retired';
 import { retiredLook } from './retiredLook';
+import { reveal } from './reveal';
+import { salary } from './salary';
 import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
 import { seasonRecap } from './seasonRecap';
@@ -96,15 +107,19 @@ import { teamDivision } from './teamDivision';
 import { teamHome } from './teamHome';
 import { teamLive } from './teamLive';
 import { teamMatch } from './teamMatch';
+import { teamMoments } from './teamMoments';
 import { teamSynergy } from './teamSynergy';
 import { title } from './title';
 import { titleTag } from './titleTag';
 import { translate } from './translate';
+import { tutorial } from './tutorial';
+import { webPay } from './webPay';
 
 export const ja = {
   ...gameEngine,
   account,
   ad,
+  adminPush,
   appFlight,
   appFormat,
   appScout,
@@ -114,6 +129,7 @@ export const ja = {
   avatarRecord,
   backup,
   balanceKeys,
+  best11,
   board,
   boardLabel,
   careerGuide,
@@ -128,6 +144,8 @@ export const ja = {
   cupApp,
   cupPush,
   dex,
+  era,
+  exchange,
   fairness,
   firstGuide,
   firsts,
@@ -156,6 +174,8 @@ export const ja = {
   homeMore,
   iap,
   inbox,
+  keyMoment,
+  league,
   legend,
   legendRn,
   legendStyle,
@@ -164,17 +184,22 @@ export const ja = {
   market,
   marketChart,
   marketValueChart,
+  matchReport,
   owner,
   ownerConflict,
   ownerPlayers,
   ownerProfile,
+  partner,
   playerNudge,
   publicLegends,
   push,
+  ratingReport,
   rename,
   retention,
   retired,
   retiredLook,
+  reveal,
+  salary,
   scout,
   seasonGauge,
   seasonRecap,
@@ -198,8 +223,11 @@ export const ja = {
   teamHome,
   teamLive,
   teamMatch,
+  teamMoments,
   teamSynergy,
   title,
   titleTag,
   translate,
+  tutorial,
+  webPay,
 };

@@ -1,11 +1,13 @@
 // 은퇴 리포트의 영구결번 장면(웹 RetiredNumberCredit.svelte, T-10-076) — 결번 세리머니 · 명예의 벽 헌정 · 이름 공개 안내.
 // 판정 기준(점수·시즌 수)은 서버만 안다 — 앱은 서버가 준 결과만 그린다. 결번 액자는 RnFrame(웹과 같은 도트 액자).
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef } from 'react';
 import { useSnapshot } from 'valtio';
 import { rnMisses, rnResults } from '../../store';
 import { View } from 'react-native';
 import type { RetiredNumberResult } from '@offside/contracts';
 import { pendingRetirementIds } from '@offside/app-core/outbox';
+import { canPublishName } from '@offside/app-core/namePublic';
 import { checkRetiredNumber } from '@offside/app-core/api/client';
 import { rnClubStats, rnMissStats, rnMissText, rnSlotOf } from '@offside/app-core/legendReport';
 import type { LegendView } from '@offside/app-core/state';
@@ -162,10 +164,17 @@ export function RetiredNumberCredit({
               </FText>{' '}
               {L.anonTail}
             </FText>
-            <FText tone="muted" size={0.875} lh={1.5} center>
-              {L.anonNote}
-            </FText>
-            {v.own ? (
+            {v.own && !canPublishName(v.own.name) ? (
+              // T-11-439 공개할 수 없는 이름이면 누르기 전에 알린다(눌러도 막힌다).
+              <FText tone="muted" size={0.875} lh={1.5} center testID="rn-blocked">
+                {L.anonBlocked}
+              </FText>
+            ) : (
+              <FText tone="muted" size={0.875} lh={1.5} center>
+                {L.anonNote}
+              </FText>
+            )}
+            {v.own && canPublishName(v.own.name) ? (
               <Btn
                 kind="primary"
                 testID="rn-public"
@@ -197,7 +206,7 @@ export function RetiredNumberCredit({
                         style={{
                           flex: 1,
                           height: 6,
-                          borderRadius: 999,
+                          borderRadius: RADIUS.pill,
                           backgroundColor: 'rgba(255,255,255,0.18)',
                           overflow: 'hidden',
                         }}
@@ -206,7 +215,7 @@ export function RetiredNumberCredit({
                           style={{
                             width: `${st.pct}%`,
                             height: '100%',
-                            borderRadius: 999,
+                            borderRadius: RADIUS.pill,
                             backgroundColor: st.met ? '#4fb27d' : '#e5ad2e',
                           }}
                         />

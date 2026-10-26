@@ -7,14 +7,15 @@ const ko = {
     '프리미엄 상품 결제는 앱에서 제공해요. 리롤권은 웹에서도 구단 자금으로 살 수 있어요.',
   conversionTitle: '앱에서 오프사이드를 즐겨요',
   conversionMilestone: '쌓은 기록, 앱에서도 관리해요',
-  conversionIos:
+  conversionBenefit:
     '앱에서는 보상형 광고로 잠재력 확인과 추가 강화 기회를 받을 수 있어요. 이용 조건과 광고 제공 여부에 따라 달라요.',
-  conversionAndroid: 'Android는 비공개 테스트 중이에요. 참여 신청 후 안내에 따라 설치해 주세요.',
   conversionTransfer:
     '진행 중인 커리어는 자동으로 옮겨지지 않아요. 설정에서 백업 코드를 복사해 앱으로 옮겨 주세요.',
-  conversionTest: 'Android 비공개 테스트 참여',
+  conversionPlay: 'Google Play에서 받기',
   conversionStore: 'App Store에서 받기',
   conversionDismiss: '앱 안내 7일간 닫기',
+  /** T-11-506 휴대폰 웹 홈 맨 위 한 줄 띠의 스토어 버튼. */
+  stripGet: '앱 받기',
 
   inappHint:
     '카톡·인스타 안에서 열린 화면이에요. 기록은 이 앱 안에만 저장돼요. 외부 브라우저로 열면 로그인과 저장이 더 안전해요.',
@@ -32,15 +33,15 @@ const ko = {
     '구글이 앱 안 브라우저(카톡·인스타 등)에서의 로그인을 막고 있어요. 외부 브라우저로 열어서 로그인해 주세요.',
   close: '닫기',
   // 웹에서 앱으로 이어 주는 안내(app-core appPromo.ts)
-  promoTileTitle: 'iPhone 앱 ↗',
-  promoTileSub: 'App Store에서 오프사이드 받기',
-  promoSheetTitle: 'iPhone 앱으로 이어서 해요',
+  promoSheetTitle: (p: { device: string }) => `${p.device} 앱으로 이어서 해요`,
   promoSheetText:
     '앱은 오래 안 들어와도 기록이 지워지지 않고, 새 소식을 알림으로 받아요. 진행 중인 커리어는 설정의 백업 코드로 앱에 옮겨요.',
-  promoSheetStore: 'App Store에서 받기',
+  promoSheetStore: (p: { store: string }) => `${p.store}에서 받기`,
   promoSheetHomeScreen: '홈 화면에 추가할게요',
-  promoMoveTitle: 'iPhone 앱으로 옮기기',
-  promoMoveStep1: 'App Store에서 오프사이드를 받아요.',
+  promoMoveTitle: (p: { device: string }) => `${p.device} 앱으로 옮기기`,
+  promoMoveTitleAny: '앱으로 옮기기',
+  promoMoveStep1: (p: { stores: readonly string[] }) =>
+    `${p.stores.join('나 ')}에서 오프사이드를 받아요.`,
   promoMoveStep2:
     '앱의 구단주 화면에서 같은 구글 계정으로 로그인하면 명예의 전당 · 구단 기록이 이어져요.',
   promoMoveStep3: '진행 중인 커리어는 아래 백업 코드를 복사해 앱 설정의 백업에 붙여 넣어요.',

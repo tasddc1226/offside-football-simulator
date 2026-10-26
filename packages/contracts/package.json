@@ -11,6 +11,7 @@
     "./balance": "./src/balance-spec.ts",
     "./balance-text": "./src/balance-text.ts",
     "./hof-rules": "./src/hof-rules.ts",
+    "./best11-rules": "./src/best11-rules.ts",
     "./content-filter": "./src/content-filter.ts",
     "./club-limits": "./src/club-limits.ts",
     "./polling": "./src/polling.ts",
@@ -23,6 +24,7 @@
     "./service-seasons": "./src/service-seasons.ts",
     "./season-gauge": "./src/season-gauge.ts",
     "./cup": "./src/cup.ts",
+    "./league": "./src/league.ts",
     "./attendance": "./src/attendance-rules.ts",
     "./admin-items": "./src/admin-items.ts",
     "./positions": "./src/positions.ts",
@@ -44,7 +46,10 @@
     "./club-strength-fallback": "./src/club-strength-fallback.json",
     "./club-strength-provider": "./src/club-strength-provider.ts",
     "./avatar-look": "./src/avatar-look.ts",
-    "./manager-rules": "./src/manager-rules.ts"
+    "./manager-rules": "./src/manager-rules.ts",
+    "./acquisition": "./src/acquisition.ts",
+    "./team-moments": "./src/team-moments.ts",
+    "./card-exchange-rules": "./src/card-exchange-rules.ts"
   },
   "scripts": {
     "test": "vitest run",

@@ -59,6 +59,7 @@ export const seasonRecap: Translation<SeasonRecapMsgs> = {
   secTier: 'Season grade',
   secBadges: 'Record badges',
   tierWhy: (p) => `Finished with ${p.score} achievement points`,
+  tierWhyTop: (p) => `Finished in the top ${p.pct}% of the owner ranking`,
   tierTitle: (p) => `${p.season} ${p.tier}`,
   headlineGoals: (p) => `${p.n} players retired with ${p.goals} goals between them`,
   headlineRetired: (p) => `${p.n} players hung up their boots`,

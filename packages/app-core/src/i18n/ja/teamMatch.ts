@@ -7,6 +7,11 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
     `マイチームのレーティング${p.rating}前後のチームです · 今日の残り試合 ${p.left}/${p.per}`,
   oppRating: 'レーティング',
   oppOvr: (p) => `OVR ${p.n}`,
+  oppGapUp: (p) => `自チームより${p.n}高い`,
+  oppGapDown: (p) => `自チームより${p.n}低い`,
+  oppGapEven: '自チームと同じ',
+  oppGapNote:
+    'レーティングの下の数字は自チームとの差です。レーティングが高いチームに勝つほど多く上がります。',
   oppRuleWeb: (p) =>
     `同じチームには1日1回挑戦できます。直近${p.days}日以内に対戦したチームだと、レーティングの変動が小さくなります。`,
   oppRuleApp: (p) =>
@@ -77,12 +82,15 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   playerStatsAria: (p: { name: string }) => `${p.name}のシーズン統計を見る`,
   assist: (p) => `アシスト ${p.name}`,
   noGoals: 'スコアレスドローでした。',
-  resultRecord: (p) => ` · マイチーム ${p.record}`,
+  recordChip: (p) => `マイチーム戦績 ${p.record}`,
   ratingChange: 'マイチームのレーティング ',
   backHistory: '記録に戻る',
   backDefaultApp: 'マイチーム',
   replay: '実況をもう一度見る',
   again: 'もう一度試合する',
+  againLeft: (p) => `今日はあと${p.n}試合です`,
+  againNone: '今日の試合はすべて終わりました',
+  friendlyNote: '親善試合ではレーティングは変わりません。',
   scoreAria: (p) => `${p.h}対${p.a}`,
   shareTitle: 'SNSシェア画像',
   shareLeadWeb: '今見ている編成を1枚にまとめました。',

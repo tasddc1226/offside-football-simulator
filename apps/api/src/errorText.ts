@@ -135,16 +135,26 @@ const EXACT: Record<string, string> = {
   '이미 팔렸거나 내린 선수예요.': 'That player has already been sold or unlisted.',
   '구단 자금이 모자라요.': "You don't have enough club funds.",
   '내 선수 카드를 찾을 수 없어요.': "We couldn't find your player card.",
-  '이번 시즌 선수만 내놓을 수 있어요.': "You can only list this season's players.",
   '기준가가 없는 선수는 내놓을 수 없어요.': "Players without a base value can't be listed.",
   '이미 내놓은 선수예요.': 'That player is already listed.',
   // T-11-310 감독 커리어
   '감독으로 분류된 선수는 내놓거나 방출하거나 잠글 수 없어요.':
     "A player who became a manager can't be listed, released or locked.",
   '감독 커리어를 찾을 수 없어요.': "We couldn't find that manager career.",
+  '지금 열린 카드 과제가 아니에요.': "That card challenge isn't open right now.",
+  '낼 수 없는 선수가 섞여 있어요. 목록을 새로 받아 주세요.':
+    "Some of those players can't be handed in. Refresh the list and try again.",
+  '선발에 든 선수는 팀에서 뺀 뒤 낼 수 있어요.':
+    'Take starters out of your lineup before handing them in.',
+  '과제 조건에 맞지 않는 선수가 있어요.': "Some players don't meet the challenge conditions.",
+  '이 과제는 오늘 이미 냈어요.': "You've already completed this challenge today.",
+  '직접 키워 은퇴시킨 선수만 낼 수 있어요.':
+    'Only players you raised to retirement can be handed in.',
   '감독 칸에서 내린 뒤 경질할 수 있어요.':
     'That manager is in the manager slot. Clear the slot before sacking them.',
   '이미 감독인 선수예요.': 'That player is already a manager.',
+  '진행 중인 경기를 찾지 못했어요.': 'We couldn’t find a match in progress.',
+  '고를 수 없는 선택지예요.': 'That option isn’t available.',
   '진행 중인 감독 커리어를 먼저 마치거나 포기해 주세요.':
     'Finish or give up your current manager career first.',
   '감독 커리어를 끝낸 감독만 감독 칸에 넣을 수 있어요.':
@@ -158,8 +168,8 @@ const EXACT: Record<string, string> = {
     'This player is listed. Take the listing down to lock them.',
   '내가 내놓은 선수예요.': "That's your own listing.",
   '판매가가 바뀌었어요. 다시 확인해 주세요.': 'The price has changed. Please check it again.',
-  '선발에 든 선수는 팀에서 뺀 뒤 방출해 주세요.':
-    'Remove starters from your team before releasing them.',
+  '선발에 든 선수는 팀에서 뺀 뒤 내놓거나 방출해 주세요.':
+    'Remove starters from your team before listing or releasing them.',
   '방출할 수 있는 선수가 없어요.': 'There are no players you can release.',
 };
 
@@ -178,16 +188,9 @@ const PATTERNS: [RegExp, (m: RegExpExecArray) => string][] = [
     (m) => `You've played all of today's matches (${m[1]} a day). They reopen at midnight KST.`,
   ],
   [
-    /^지난 시즌 선수는 선발에 (\d+)명까지 넣을 수 있어요\.$/,
-    (m) => `You can start up to ${m[1]} players from past seasons.`,
-  ],
-  [
-    /^한 번에 (\d+)명까지 내놓을 수 있어요\.$/,
-    (m) => `You can list up to ${m[1]} players at a time.`,
-  ],
-  [
-    /^오늘은 (\d+)명까지 영입할 수 있어요\. 내일 다시 영입해 주세요\.$/,
-    (m) => `You can sign up to ${m[1]} players today. Try again tomorrow.`,
+    /^지난 시즌 선수 급여가 예산을 넘어요\((\d+)\/(\d+)\)\. 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요\.$/,
+    (m) =>
+      `Past-season player salaries are over budget (${m[1]}/${m[2]}). Swap in lower-salary or this-season players.`,
   ],
   [
     /^운영자 계정의 댓글 닉네임은 '(.+)'로 고정돼요\.$/,

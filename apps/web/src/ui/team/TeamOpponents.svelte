@@ -4,7 +4,7 @@
   // 상대 고르기 — 내 팀 레이팅에 가까운 다른 구단주의 팀에 도전한다(레이팅이 크게, OVR은 작게). 경기할 수 없으면(hint) 목록 대신 이유를 보여 준다.
   import { TEAM_REPEAT_WINDOW_DAYS } from '@offside/contracts/owner-team';
   import type { TeamOpponent } from '@offside/app-core/api/team';
-  import { recordText } from '@offside/app-core/teamText';
+  import { ratingGap, recordText } from '@offside/app-core/teamText';
   import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
 
@@ -50,6 +50,7 @@
     <h1>{L.oppTitle}</h1>
     {#if !hint}<p class="muted fs-sm">{L.oppNear({ rating, left: matchesLeft, per: perDay })}</p>{/if}
     <p class="muted fs-xs">{L.oppRuleWeb({ days: TEAM_REPEAT_WINDOW_DAYS })}</p>
+    {#if !hint && opponents.length}<p class="muted fs-xs" data-opponent-gap-note>{L.oppGapNote}</p>{/if}
   </div>
   {#if hint}
     <p class="muted" data-match-hint>{onsave ? L.saveToSee : hint}</p>
@@ -60,13 +61,14 @@
   {:else}
   <LoadState {status} failText={L.oppLoadFail} retry={onreload}>
     {#each opponents as o (o.teamId)}
+      {@const gap = ratingGap(rating, o.rating)}
       <div class="tm-opp" data-opponent={o.teamId}>
         <TeamLogo logo={o.logo} name={o.name} size={32} decorative />
         <div class="tm-opp-info">
           <b>{o.name}{#if o.title} <TitleBadge title={o.title} size="icon" />{/if}</b>
           <span class="muted fs-sm">{o.owner} · {o.shape ?? o.formation} · {recordText(o.record)}</span>
         </div>
-        <span class="tm-opp-score" data-opponent-rating={o.rating}><small class="muted">{L.oppRating}</small><b>{o.rating}</b><small class="muted">{L.oppOvr({ n: o.ovr })}</small></span>
+        <span class="tm-opp-score" data-opponent-rating={o.rating}><small class="muted">{L.oppRating}</small><b>{o.rating}</b><small class="tm-opp-gap" data-opponent-gap={gap.d}><span aria-hidden="true">{gap.text}</span><span class="sr-only">{gap.aria}</span></small><small class="muted">{L.oppOvr({ n: o.ovr })}</small></span>
         <button class="btn btn-primary btn-sm" disabled={playing || matchesLeft === 0} onclick={() => onchallenge(o)} data-act="team-challenge">{L.challenge}</button>
       </div>
     {:else}
@@ -103,11 +105,16 @@
   }
   .tm-opp-score b {
     font-family: var(--display);
-    font-size: 1.375rem;
+    font-size: var(--fs-title2);
     font-weight: 700;
     color: var(--accent-text);
   }
   .tm-opp-score small {
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
+  }
+  .tm-opp-score .tm-opp-gap {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
   }
 </style>

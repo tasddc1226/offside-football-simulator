@@ -29,3 +29,5 @@ apps/mobile/.expo
 apps/mobile/expo-env.d.ts
 # T-11-286 그대로 들여온 fflate(apps/mobile/src/vendor)
 apps/mobile/src/vendor
+# 디자인 토큰에서 생성한다(T-11-396, packages/app-core/src/design-tokens.ts)
+apps/web/src/tokens.css

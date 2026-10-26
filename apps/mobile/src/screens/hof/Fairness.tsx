@@ -1,4 +1,5 @@
 // T-11-141 확률 도감의 '확률과 공정성'(웹 ui/Fairness.svelte). 내용은 app-core fairnessView, 이력은 펼칠 때만 불러온다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { fairnessView, loadHistoryRows, type HistoryRow } from '@offside/app-core/fairness';
@@ -30,7 +31,7 @@ function Cells({ cells, head }: { cells: readonly string[]; head?: boolean }) {
           bold={head}
           style={{
             flex: 1,
-            fontSize: head ? rem(0.75) : line.fontSize,
+            fontSize: head ? rem(FONT.caption) : line.fontSize,
             textAlign: i ? 'right' : 'left',
             fontVariant: ['tabular-nums'],
           }}
@@ -43,12 +44,15 @@ function Cells({ cells, head }: { cells: readonly string[]; head?: boolean }) {
 }
 
 const H3 = ({ children }: { children: string }) => (
-  <Txt bold style={{ fontSize: rem(0.875), marginTop: 14, marginBottom: 4 }}>
+  <Txt bold style={{ fontSize: rem(FONT.body2), marginTop: 14, marginBottom: 4 }}>
     {children}
   </Txt>
 );
 const Note = ({ children }: { children: string }) => (
-  <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.5, marginTop: 6 }}>
+  <Txt
+    tone="muted"
+    style={{ fontSize: rem(FONT.caption), lineHeight: rem(FONT.caption) * 1.5, marginTop: 6 }}
+  >
     {children}
   </Txt>
 );
@@ -84,7 +88,12 @@ function History() {
               <View
                 key={h.id}
                 testID={`fair-row-${h.kind}`}
-                style={{ padding: 10, borderRadius: 10, backgroundColor: c.surface2, gap: 4 }}
+                style={{
+                  padding: 10,
+                  borderRadius: RADIUS.sm,
+                  backgroundColor: c.surface2,
+                  gap: 4,
+                }}
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
                   <Txt bold style={[line, { flex: 1 }]}>
@@ -100,7 +109,7 @@ function History() {
                 </View>
                 {h.kind === 'patch' ? (
                   <>
-                    <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                    <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                       {L.historyPatchDay({ day: kstParts(h.appliedAt).day })}
                     </Txt>
                     {h.items.map((item) => (

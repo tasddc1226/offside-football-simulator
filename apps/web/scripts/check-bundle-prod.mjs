@@ -14,6 +14,9 @@ const PRODUCTION_SHAPE = {
   VITE_GA4_MEASUREMENT_ID: 'G-BUNDLE0000',
   VITE_GA4_HOSTNAME: 'offside-lab.com',
   VITE_META_PIXEL_ID: '000000000000000',
+  // Synthetic values exercise the optional acquisition path without production traffic.
+  VITE_ACQUISITION_ENABLED: 'true',
+  VITE_APPLE_PROVIDER_TOKEN: '123456',
 };
 const cwd = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const env = { ...process.env, ...PRODUCTION_SHAPE };

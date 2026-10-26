@@ -81,6 +81,7 @@ export {
   type SeasonGrowth,
   EventLogEntrySchema,
   PlaySignalsSchema,
+  AdUsageSchema,
   PutCareerSeasonBodySchema,
   CareerUpsertResponseSchema,
   RetirementSummarySchema,
@@ -159,6 +160,7 @@ export {
   type CareerSeasonPayload,
   type EventLogEntry,
   type PlaySignals,
+  type AdUsage,
   type PutCareerSeasonBody,
   type CareerUpsertResponse,
   type RetirementSummary,
@@ -201,6 +203,9 @@ export * from './season-gauge-api.js';
 export * from './teams.js';
 export * from './cup.js';
 export * from './cup-api.js';
+export * from './web-pay.js';
+export * from './league.js';
+export * from './league-api.js';
 export * from './attendance.js';
 export * from './friends.js';
 export * from './market.js';
@@ -222,3 +227,6 @@ export * from './owner-summary.js';
 export * from './manager.js';
 export * from './manager-rules.js';
 export * from './client-errors.js';
+export * from './card-exchange.js';
+export * from './card-exchange-rules.js';
+export * from './best11.js';

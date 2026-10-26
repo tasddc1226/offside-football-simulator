@@ -157,6 +157,24 @@ export const SeasonGrowthSchema = z.strictObject({
         .max(4),
     })
     .optional(),
+  /**
+   * T-11-394 결정적 장면 기록(game moments.ts MomentLog). 리그 구간마다 하나 · 뛴 결승마다 하나라 시즌에 몇 개뿐이다.
+   * c는 고른 선택지 id · 'auto'(맡기기) · 'to'(시간 초과). b · p는 맡겼을 때 · 이번에 쓴 성공 확률(%).
+   */
+  km: z
+    .array(
+      z.strictObject({
+        ph: z.number().int().min(0).max(4),
+        at: z.enum(['l', 'f']),
+        sit: z.string().max(24),
+        c: z.string().max(24),
+        b: z.number().int().min(0).max(100),
+        p: z.number().int().min(0).max(100),
+        ok: z.boolean(),
+      }),
+    )
+    .max(8)
+    .optional(),
 });
 export type SeasonGrowth = z.infer<typeof SeasonGrowthSchema>;
 
@@ -245,6 +263,28 @@ export const PlaySignalsSchema = z.strictObject({
 });
 export type PlaySignals = z.infer<typeof PlaySignalsSchema>;
 
+/** 보상형 광고 자리별 횟수 — c: 후보 잠재력 · 다시 뽑기, p: 잠재력 엿보기, b: 잠재력 강화(앱 rewarded.ts UNITS). */
+const AdPlacementCountsSchema = z.strictObject({
+  c: signalCount,
+  p: signalCount,
+  b: signalCount,
+});
+/**
+ * T-11-486a 앱 광고 이용 요약(관찰 전용). 지난 시즌 업로드(또는 앱 설치)부터 이 시즌이 끝날 때까지 이 기기에서 센 값이다.
+ * 광고 제거 범위를 나눌지 정하려고 구매 전 보상형 시청 수와 구매자가 광고 없이 받은 보상 수를 본다.
+ */
+export const AdUsageSchema = z.strictObject({
+  /** 업로드할 때 광고 제거를 갖고 있었는지. */
+  af: z.boolean(),
+  /** 보상형 광고를 끝까지 봐서 받은 보상. */
+  rw: AdPlacementCountsSchema,
+  /** 광고 제거 구매자가 광고 없이 받은 보상. */
+  fr: AdPlacementCountsSchema,
+  /** 은퇴 전면광고를 띄운 횟수. */
+  it: signalCount,
+});
+export type AdUsage = z.infer<typeof AdUsageSchema>;
+
 /**
  * T-11-377 POST /v1/careers/:careerId/rename — 선수 이름 변경권 1장으로 내 선수(진행 중 · 은퇴 · 이적시장에서 산 선수)
  * 이름을 바꾼다. 서버에 기록이 아직 없는 진행 중 커리어(첫 시즌 전)는 장수만 빼고 이름은 기기 세이브가 바꾼다.
@@ -270,6 +310,8 @@ export const PutCareerSeasonBodySchema = z.strictObject({
   /** 자동 플레이 탐지용 조작 요약. 옛 클라이언트·기록을 다시 보낼 때는 없다. */
   // 관찰용 부가 정보라 모양이 틀려도 시즌 기록은 받는다(버리면 기기 큐가 시즌 전체를 버린다).
   signals: PlaySignalsSchema.optional().catch(undefined),
+  /** T-11-486a 앱 광고 이용 요약. 웹 · 옛 앱은 없다. signals처럼 모양이 틀려도 시즌은 받는다. */
+  ads: AdUsageSchema.optional().catch(undefined),
 });
 export type PutCareerSeasonBody = z.infer<typeof PutCareerSeasonBodySchema>;
 
@@ -359,6 +401,7 @@ export const RetiredNumberMissSchema = z
     seasons: z.number().int().optional(),
     need: z.number().int().optional(),
     pct: z.number().int().optional(),
+    close: z.boolean().optional(),
   })
   // 옛 응답 보정. 6 = retired-numbers.ts RN_MIN_SEASONS(기준값 모듈을 값으로 끌어오지 않는다).
   .transform((m) => ({ ...m, seasons: m.seasons ?? 0, need: m.need ?? 6 })) satisfies z.ZodType<
@@ -788,6 +831,8 @@ export const RetiredNumberProgressSchema = z.strictObject({
       eligible: z.boolean(),
       candidate: z.boolean(),
       availability: z.enum(['open', 'taken', 'unknown']),
+      /** T-11-429 지금은 기준을 넘지만 이 구단을 떠나면 기준 아래로 내려간다. 그 전 응답엔 없다. */
+      leaveRisk: z.boolean().optional(),
     }),
   ),
 });

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   import LoginButtons from './LoginButtons.svelte';
   // T-11-015 라운지 채팅 — 모두가 보는 실시간 공개 채팅. 누구나 읽고, 구글로 로그인하고 닉네임을 정하면 쓴다.
   // 남의 메시지는 신고하고 작성자를 차단한다(앱스토어 UGC 정책) — 여럿이 신고하면 모두의 화면에서 가려진다.
@@ -250,7 +251,7 @@
           {/if}
         </li>
       {:else}
-        <li class="muted fs-sm chat-empty">{view.status === 'open' ? L.emptyOpen : L.loading}</li>
+        {#if view.status === 'open'}<li class="muted fs-sm chat-empty">{L.emptyOpen}</li>{:else}<li class="chat-wait"><Skeleton rows={4} /></li>{/if}
       {/each}
     </ol>
 

@@ -13,7 +13,7 @@ const ko = {
   valueInfoFormula: '구단 가치 = 구단 자금 + 보유 선수 카드의 기준가 합계',
   valueInfoOwned: '직접 키운 선수와 영입한 선수를 시즌 구분 없이 모두 포함해요.',
   valueInfoPrice:
-    '카드 기준가는 최고 OVR을 기록한 마지막 시즌의 몸값이에요. 몸값은 리그 자금력·OVR·나이로 계산해요.',
+    '카드 기준가는 최고 OVR을 기록한 시즌 중 몸값이 가장 높았던 시즌의 몸값이에요. 몸값은 리그 자금력·OVR·나이로 계산해서, 최고 OVR을 찍은 뒤 오래 뛰어도 기준가가 내려가지 않아요.',
   valueInfoFallback:
     '그 시즌의 몸값이 없으면 가장 비쌌던 프로 시즌을 사용하고, 프로 기록도 없으면 1억 원을 적용해요.',
   valueInfoExcluded: '판매 등록 가격이나 레전드 점수를 직접 더하지는 않아요.',
@@ -62,7 +62,7 @@ const ko = {
   buildTeam: '팀 만들기',
   teamBtnApp: '내 팀 · 시즌 업적',
   marketTitle: '이적시장',
-  marketSub: (p: { funds: string }) => `구단 자금 ${p.funds} · 이번 시즌 선수를 사고팔아요`,
+  marketSub: (p: { funds: string }) => `구단 자금 ${p.funds} · 선수를 사고팔아요`,
   open: '열기',
   /** 잠긴 '내 팀' 카드 가운데 배지. 🔒 뒤 U+FE0E는 글자 모양(이모지 아님) 지정. */
   lockBadge: '\u{1F512}︎ 로그인하면 열려요',

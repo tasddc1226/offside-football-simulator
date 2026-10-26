@@ -49,6 +49,8 @@ import { getPushPerformance } from '../db/repos/pushPerformance.js';
 
 // T-10-016 운영 도구: 대시보드와 댓글 관리. 댓글 하나 지우기는 게시판의 DELETE /v1/boards/comments/:id를 쓴다.
 const STATS_TTL = 60;
+/** T-11-494 자금 대조 · 자동 플레이 탐지처럼 수십만 행을 읽는 집계는 1분 동안 같은 결과를 다시 쓴다(겹쳐 누르기 방지). */
+const HEAVY_TTL = 60;
 
 export function registerAdminRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/admin/push-performance', async (c) => {
@@ -82,7 +84,9 @@ export function registerAdminRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/admin/automation', async (c) => {
     await requireAdmin(c);
     const hours = parseWithAppError(AutomationHoursSchema, c.req.query('hours'));
-    const data = await automationReport(getDb(c), new Date(), hours);
+    const data = await edgeCached(c, EDGE.adminAutomation(hours), HEAVY_TTL, () =>
+      automationReport(getDb(c), new Date(), hours),
+    );
     return ok(c, AutomationReportSchema, data, 200, 'private, no-store');
   });
 
@@ -101,7 +105,9 @@ export function registerAdminRoutes(app: Hono<AppEnv>): void {
   // T-11-153 구단 자금 대조: 전체 요약과 어긋난 구단주, 한 명의 출처별 합과 최근 움직임. 운영자가 열 때만 읽는다.
   app.get('/v1/admin/funds', async (c) => {
     await requireAdmin(c);
-    const data = await fundsReport(getDb(c), new Date());
+    const data = await edgeCached(c, EDGE.adminFunds, HEAVY_TTL, () =>
+      fundsReport(getDb(c), new Date()),
+    );
     return ok(c, AdminFundsReportSchema, data, 200, 'private, no-store');
   });
   app.get('/v1/admin/funds/owner', async (c) => {

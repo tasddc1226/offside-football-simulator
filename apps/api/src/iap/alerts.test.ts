@@ -172,6 +172,25 @@ describe('billing Slack presentation', () => {
       if (kind !== 'test') expect(msg.text).toContain('프리미엄 스카우트권 5장');
     }
   });
+  it('T-11-471 labels web (Xsolla) payments apart from in-app purchases', () => {
+    const row = {
+      store: 'xsolla',
+      kind: 'purchase',
+      product_id: 'com.offsidelab.app.reroll_15',
+      test: 0,
+      created_at: '2026-10-23T14:00:00Z',
+    };
+    const web = billingSlackMessage(row, 'abcdef1234567890');
+    expect(web.text).toContain('OFFSIDE · 🌐 웹 결제 · 실결제');
+    expect(web.text).toContain('결제 경로: 웹 결제 (offside-lab.com)');
+    expect(web.text).toContain('스토어: Xsolla');
+    expect(web.text).toContain('리롤권 15장');
+    expect(billingSlackMessage({ ...row, kind: 'refund' }, 'a').text).toContain('↩️ 웹 결제 환불');
+    expect(billingSlackMessage({ ...row, store: 'apple' }, 'a').text).toContain(
+      '결제 경로: 앱 인앱 결제',
+    );
+    expect(billingSlackMessage(row, 'a', 'en').text).toContain('🌐 Web purchase');
+  });
   it('keeps unknown products literal and makes Sandbox explicit in fallback and blocks', () => {
     const row = {
       store: 'google',

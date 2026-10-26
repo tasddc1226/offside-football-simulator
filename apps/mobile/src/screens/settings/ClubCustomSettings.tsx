@@ -2,6 +2,7 @@
 // 에디트 파일 내보내기/가져오기. 저장·동기화는 웹과 같은 @offside/app-core/clubCustom(host의 set·reset·export·import).
 // 앱과 다른 곳: ① 엠블럼 이미지 올리기는 이미지 선택 라이브러리가 없어 뺐다(이미 계정에서 받은 이미지는 '이미지 빼기'만
 // 된다). ② 색은 색 선택 칸 대신 #rrggbb 입력 + 색 견본 고르기. ③ 에디트 파일은 파일 대신 공유 시트(JSON 글) · 붙여넣기.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { Alert, Share, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -9,7 +10,7 @@ import { useSnapshot } from 'valtio';
 import { LEAGUES } from '@offside/game/data';
 import { CLUB_NAME_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '@offside/game/clubs';
 import { clubsIn } from '@offside/game/engine';
-import { CLUB_SYNC_TEXT } from '@offside/app-core/clubCustom';
+import { CLUB_SYNC_TEXT, customLeagues } from '@offside/app-core/clubCustom';
 import {
   exportClubCustom,
   importClubCustom,
@@ -97,7 +98,7 @@ function ColorField({
   return (
     <View style={{ gap: 6 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <Txt style={{ fontSize: rem(0.8125) }}>{label}</Txt>
+        <Txt style={{ fontSize: rem(FONT.label) }}>{label}</Txt>
         <Press
           accessibilityLabel={T.pickColor({ label })}
           accessibilityState={{ expanded: open }}
@@ -114,7 +115,7 @@ function ColorField({
             style={{
               width: 32,
               height: 28,
-              borderRadius: 6,
+              borderRadius: RADIUS.xs,
               borderWidth: 1,
               borderColor: c.line,
               backgroundColor: value,
@@ -144,7 +145,7 @@ function ColorField({
               style={{
                 width: 36,
                 height: 36,
-                borderRadius: 8,
+                borderRadius: RADIUS.sm,
                 backgroundColor: hex,
                 borderWidth: hex.toLowerCase() === value.toLowerCase() ? 3 : 1,
                 borderColor: hex.toLowerCase() === value.toLowerCase() ? c.accent : c.line,
@@ -182,7 +183,7 @@ function ClubRow({
   return (
     <View
       testID={`club-${club.id}`}
-      style={{ borderWidth: 1, borderColor: c.line, borderRadius: 12, padding: 8 }}
+      style={{ borderWidth: 1, borderColor: c.line, borderRadius: RADIUS.md, padding: 8 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <ClubBadge club={club} size={34} />
@@ -208,7 +209,7 @@ function ClubRow({
       {open ? (
         <View style={{ gap: 8, marginTop: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Txt style={{ fontSize: rem(0.8125) }}>{T.logoText}</Txt>
+            <Txt style={{ fontSize: rem(FONT.label) }}>{T.logoText}</Txt>
             <CommitInput
               value={logo.text}
               onCommit={(v) => editLogo({ text: v })}
@@ -317,14 +318,14 @@ export function ClubCustomSettings() {
             {CLUB_SYNC_TEXT[status]}
           </Txt>
           <View style={{ gap: 6 }}>
-            <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '600' }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.label), fontWeight: '600' }}>
               {T.league}
             </Txt>
             <SelectField
               label={T.league}
               testID="club-league"
               value={leagueId}
-              options={LEAGUES.map((L) => ({
+              options={customLeagues().map((L) => ({
                 value: L.id,
                 label: T.leagueOption({ name: tn(L.name), n: clubsIn(L.id).length }),
               }))}

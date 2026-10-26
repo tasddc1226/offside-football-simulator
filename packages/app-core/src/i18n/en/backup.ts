@@ -24,6 +24,9 @@ export const backup: Translation<BackupMsgs> = {
   replaceConfirm: (p) =>
     `Replace ${p.name}'s current career with this backup? This can't be undone.`,
   replaceOk: 'Replace',
+  replaceConfirmRetired: (p) =>
+    `Replace retired ${p.name}'s career screen with this backup? Hall of Fame records stay.`,
+  exportNone: 'There is no career saved on this device, so there is nothing to back up.',
   cancel: 'Cancel',
   noSpace: 'Not enough storage to restore the backup. Your current career is unchanged',
   restored: 'Backup restored',

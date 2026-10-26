@@ -8,7 +8,18 @@ import {
   type AttrKey,
   type Pos,
 } from './data.js';
-import { ovr, wOf, mainRole, ROLES, faceOf, SUBS, maxedShare } from './attributes.js';
+import {
+  ovr,
+  wOf,
+  mainRole,
+  roleChoices,
+  ROLES,
+  ROLE_NAME,
+  GROUP_W,
+  faceOf,
+  SUBS,
+  maxedShare,
+} from './attributes.js';
 import { clamp, ri, pick, chance, rnd } from './rng.js';
 import { baseline } from './candidates.js';
 import { BAL } from './balance.js';
@@ -21,10 +32,31 @@ import { gTrainingText as L } from './i18n/ko/gTraining.js';
 /** 나이 성장 배율과 그 성장형의 전성기 배율(안내용 비교 기준). */
 function ageGrowth(s: GameState): { f: number; peak: number } {
   const a = s.age;
+  // T-11-428 커브 2: 대기만성은 22~29세 성장을 줄이고, 조기 성장은 24세부터 덜 꺾인다(노쇠 시작은 season.nextYear).
+  const v2 = (s.gcv ?? 1) >= 2;
   if (s.trait === 'early')
-    return { f: a <= 20 ? 1.5 : a <= 23 ? 1.15 : a <= 26 ? 0.6 : 0.14, peak: 1.5 };
+    return {
+      f: a <= 20 ? 1.5 : a <= 23 ? 1.15 : a <= 26 ? (v2 ? 0.7 : 0.6) : v2 ? 0.2 : 0.14,
+      peak: 1.5,
+    };
   if (s.trait === 'late')
-    return { f: a <= 21 ? 0.85 : a <= 25 ? 1.15 : a <= 29 ? 0.8 : 0.25, peak: 1.15 };
+    return {
+      f:
+        a <= 21
+          ? 0.85
+          : a <= 25
+            ? v2
+              ? 1.1
+              : 1.15
+            : a <= 29
+              ? v2
+                ? 0.65
+                : 0.8
+              : v2
+                ? 0.22
+                : 0.25,
+      peak: v2 ? 1.1 : 1.15,
+    };
   return { f: a <= 21 ? 1.3 : a <= 24 ? 1 : a <= 27 ? 0.55 : a <= 30 ? 0.22 : 0.08, peak: 1.3 };
 }
 /** 잠재력과 OVR의 차이로 정하는 성장 배율. 잠재력에 닿으면 하한(BAL.potGrowthFloor)까지 떨어진다. */
@@ -175,7 +207,12 @@ export function growthSlowNote(s: GameState): string {
 /** Selected attribute's existing positional OVR weight; presentation only. */
 export function trainingOvrNote(s: GameState, t: TrainingDef): string {
   if (!t.attr) return '';
-  return L.helpWeight({ attr: labelOf(s, t.attr), pct: pct(wOf(s)[t.attr]) });
+  const now = pct(wOf(s)[t.attr]);
+  const line = L.helpWeight({ attr: labelOf(s, t.attr), pct: now });
+  // T-11-399 두 역할 중 높은 쪽으로 재는 선수는 다른 역할의 비중도 알린다(타깃맨 피지컬 5% → 23%).
+  const other = roleChoices(s).find((r) => r !== mainRole(s));
+  const alt = other ? pct(GROUP_W[other]![t.attr]) : now;
+  return alt === now ? line : `${line} ${L.helpWeightAlt({ role: ROLE_NAME[other!]!, pct: alt })}`;
 }
 /** T-10-074 고른 훈련의 자세한 설명(카드 아래). 숨은 잠재력 값은 드러내지 않는다. */
 export function trainingHelp(s: GameState, t: TrainingDef): string {
@@ -336,8 +373,9 @@ export const investCost = (s: GameState, d: InvestDef): number =>
   salaryCost(s, d.rate, d.min, BAL.investCost);
 /** 특훈이 올릴 능력치 — 지금 포지션의 핵심 능력치(가중치 0.1 이상) 중 가장 낮은 것 / 가장 높은 것. */
 export function investTarget(s: GameState, id: 'weak' | 'best'): AttrKey {
-  const w = wOf(s);
-  const core = ATTR_KEYS.filter((k) => (w[k] ?? 0) >= 0.1);
+  // T-11-399 두 역할 중 높은 쪽으로 재는 선수는 두 역할의 핵심 능력치에서 고른다(스트라이커로 잡힌 타깃맨의 피지컬).
+  const ws = roleChoices(s).map((r) => GROUP_W[r]!);
+  const core = ATTR_KEYS.filter((k) => ws.some((w) => (w[k] ?? 0) >= 0.1));
   return core.reduce((a, b) =>
     (id === 'weak' ? s.attrs[b] < s.attrs[a] : s.attrs[b] >= s.attrs[a]) ? b : a,
   );

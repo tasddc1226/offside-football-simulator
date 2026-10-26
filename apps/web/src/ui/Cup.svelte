@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   import LoginButtons from './LoginButtons.svelte';
   // T-11-145 오프사이드 컵 화면 — 구단주 화면의 컵 배너로 연다. 내 상태(신청·다음 경기), 토너먼트 대진, 조별 순위표와 경기,
   // 일정·보상·규칙. 치른 경기를 누르면 같은 화면에서 상세(득점·승부차기)를 연다. 처음 열 때 불러오는 지연 청크다.
@@ -11,6 +12,7 @@
   import { cupRewardText } from '@offside/app-core/cupReward';
   import { createCupPredictionController, emptyCupPredictions, type CupPredictionContext } from '@offside/app-core/cupPredictions';
   import { cupFolds, rememberCupFolds, type CupScheduleTab } from '@offside/app-core/cupFolds';
+  import { divisionCapLabel, divisionLabel } from '@offside/app-core/cupDivision';
   import Topbar from './Topbar.svelte';
   import LoadState, { type LoadStatus } from './LoadState.svelte';
   import TeamLogo from './team/TeamLogo.svelte';
@@ -37,6 +39,11 @@
   let scheduleChoice = $state<CupScheduleTab | null>(null);
   let groupChoice = $state<number | null>(null);
   let bracketMatch = $state<CupMatch | null>(null);
+  let bracket = $state<ReturnType<typeof CupBracket>>();
+  let bracketRestored = false;
+  // T-11-410 구간 대회: 보고 있는 대회 id('current' = 마스터)와 내가 신청한 구간.
+  let cupId = $state('current');
+  let myDivision = $state<string | null>(null);
 
   const linked = $derived.by(() => {
     const acct = accountCache.value;
@@ -60,18 +67,42 @@
   });
 
   async function loadMe() {
-    const r = await fetchCupMe();
+    const id = cupId;
+    const r = await fetchCupMe(id);
+    if (id !== cupId) return;
     me = r.ok ? r.data : null;
+    // '내 구간' 표시: 이 구간에 신청이 살아 있으면 여기, 이 구간 신청을 취소했으면 지운다.
+    const at = r.ok ? (r.data.cupId ?? id) : null;
+    if (r.ok && at) {
+      if (r.data.entry && r.data.entry.status !== 'withdrawn') myDivision = at;
+      else if (myDivision === at) myDivision = null;
+    }
+    // 처음에는 서버가 'current'를 내 구간(신청한 곳, 없으면 들어갈 수 있는 가장 낮은 곳)으로 풀어 준다 — 그 구간을 연다.
+    if (id === 'current' && r.ok && r.data.cupId) {
+      cupId = r.data.cupId;
+      if (data?.cup.id !== r.data.cupId) void load();
+    }
   }
   async function load() {
-    status = 'loading';
-    const r = await fetchCup();
+    const id = cupId;
+    if (!data) status = 'loading';
+    const r = await fetchCup(id);
+    if (id !== cupId) return;
     if (!r.ok) {
       status = 'error';
       return;
     }
     data = r.data;
     status = 'ready';
+  }
+  function pickDivision(id: string) {
+    if (id === data?.cup.id) return;
+    cupId = id;
+    detail = null;
+    bracketMatch = null;
+    groupChoice = null;
+    void load();
+    if (linked) void loadMe();
   }
   const reload = () => void Promise.all([load(), linked ? loadMe() : undefined]);
 
@@ -101,6 +132,13 @@
   const matchTime = $derived(data ? kstParts(data.cup.rounds[0]?.at ?? data.cup.opensAt).time : '');
   const lockTime = $derived(data ? kstParts(data.cup.rounds[0]?.lockAt ?? data.cup.opensAt).time : '');
   const stages = CUP_STAGES;
+  // T-11-406 팀 프로필에서 돌아오면 대진표에서 골랐던 경기를 다시 연다(스크롤 자리는 history가 되돌린다).
+  $effect(() => {
+    if (!data || bracketRestored) return;
+    bracketRestored = true;
+    const id = folds?.bracket?.match;
+    if (id) bracketMatch = data.matches.find((m) => m.id === id) ?? null;
+  });
   const predictionCap = $derived(data ? cupPredictionCap(data.cup.edition) : null);
 
   // T-11-290 owner면 그 팀 구단주의 프로필(승부예측 줄의 구단주 이름). 뒤로 가면 팀 프로필.
@@ -113,6 +151,7 @@
         groups: states('[data-cup-group]', 'data-cup-group'),
         rounds: states('[data-cup-round]', 'data-cup-round'),
         schedule: { tab: scheduleTab, group: selectedGroup, bracketList },
+        ...(bracket ? { bracket: { match: bracketMatch?.id ?? null, ...bracket.view() } } : {}),
       });
     }
     appState.hof = { ...hofStart(), tab: 'teams', team: id, season: data?.cup.season ?? null, owner };
@@ -134,6 +173,9 @@
   }
 </script>
 
+<!-- T-11-392 컵을 불러오는 동안: 대회 현황 카드 + 대진 카드. -->
+{#snippet cupSkeleton()}<div class="stack"><Skeleton height={120} /><Skeleton height={260} /></div>{/snippet}
+
 <div class="wrap">
   <Topbar />
   {#if detail && data}
@@ -144,13 +186,25 @@
   <div bind:this={content} hidden={!!detail} class="cup-content">
     <header class="settings-head">
       <div class="eyebrow">Offside Cup</div>
-      <h1>{data ? L.fullTitle({ n: data.cup.edition }) : L.title}</h1>
+      <h1>{data ? L.fullTitle({ n: data.cup.edition, d: divisionLabel(data.cup.division) }) : L.title}</h1>
     </header>
-    <LoadState {status} failText={L.loadFail} retry={load}>
+    {#if data?.divisions}
+      <nav class="cup-divisions" aria-label={L.divisionTabs} data-cup-divisions>
+        {#each data.divisions as d (d.id)}
+          <button aria-pressed={d.id === data.cup.id} class:active={d.id === data.cup.id} onclick={() => pickDivision(d.id)} data-cup-division={d.division}>
+            <b>{divisionLabel(d.division)}{#if d.id === myDivision}<span class="pill good">{L.divisionMine}</span>{/if}</b>
+            <small>{divisionCapLabel(d)}</small>
+            <small class="muted">{L.divisionEntries({ n: d.entries })}</small>
+          </button>
+        {/each}
+      </nav>
+    {/if}
+    <LoadState {status} failText={L.loadFail} retry={load} skeleton={cupSkeleton}>
       {#if data}
         {#if accountCache.value && accountCache.value !== 'error' && !linked}
           <section class="card stack cup-login" data-cup-login>
             <h2>{L.predictionLoginTitle}</h2>
+            <p class="muted fs-sm" data-cup-login-note>{L.loginCardNote}</p>
             <LoginButtons act="cup-login-google" back={{cup:true}} />
           </section>
         {/if}
@@ -163,10 +217,10 @@
             <div class="cup-champ" data-cup-champion-team>
               <span class="cup-laurel medal gold"><Laurel /></span>
               <TeamLogo logo={champion.logo} name={champion.name} size={44} decorative />
-              <div class="cup-champ-who"><small>{L.champTitle({ n: data.cup.edition })}</small><b>{champion.name}</b><small>{champion.owner}</small></div>
+              <div class="cup-champ-who"><small>{L.champTitle({ n: data.cup.edition, d: divisionLabel(data.cup.division) })}</small><b>{champion.name}</b><small>{champion.owner}</small></div>
             </div>
           {/if}
-          {#if linked}<CupEntry {data} {me} {linked} onchanged={reload} />{/if}
+          {#if linked}<CupEntry {data} {me} onchanged={reload} />{/if}
         </section>
 
         <section class="card cup-sec cup-info" data-cup-prediction-intro>
@@ -208,6 +262,7 @@
             <li>{L.ruleDaily({ time: matchTime })}</li>
             <li>{L.ruleLock({ time: lockTime })}</li>
             <li>{L.ruleForfeit}</li>
+            {#if data.divisions}<li data-cup-rule-divisions>{L.ruleDivisions}</li><li>{L.ruleDivisionMove}</li>{/if}
           </ul>
         </section>
         <section class="card cup-sec cup-info" data-cup-schedule>
@@ -237,6 +292,7 @@
 
         <section class="card cup-sec" class:cup-bracket={scheduleTab === 'knockout' && !bracketList} data-cup-fixtures tabindex="-1" aria-label={L.scheduleMatches}>
           <h2>{L.scheduleMatches}</h2>
+          <p class="muted fs-xs" data-cup-odds-note>{L.matchOddsPending}</p>
           <nav class="schedule-tabs" aria-label={L.scheduleMatches}>
             {#each [['groups', L.secGroups], ['knockout', L.secBracket]] as [tab, label] (tab)}
               <button aria-pressed={scheduleTab === tab} class:active={scheduleTab === tab} onclick={() => scheduleChoice = tab as CupScheduleTab}>{label}</button>
@@ -261,7 +317,7 @@
               <button class:chosen={bracketList} aria-pressed={bracketList} onclick={() => bracketListChoice = true}>{L.bracketList}</button>
             </div>
             <div hidden={bracketList}>
-              <CupBracket matches={data.matches} teams={names} {mineId} {now} onselect={async m => { bracketMatch = m; await tick(); content.querySelector('[data-bracket-selected]')?.scrollIntoView({block:'center'}); }} />
+              <CupBracket bind:this={bracket} start={folds?.bracket ?? null} matches={data.matches} teams={names} {mineId} {now} onselect={async m => { bracketMatch = m; await tick(); content.querySelector('[data-bracket-selected]')?.scrollIntoView({block:'center'}); }} />
               {#if bracketMatch}<div data-bracket-selected><CupMatchRow {prediction} m={bracketMatch} teams={names} {mineId} onopen={openMatch} /></div>{/if}
             </div>
             <div hidden={!bracketList}>
@@ -284,15 +340,21 @@
 
 <style>
   @media (min-width: 900px) { .cup-bracket { width:min(1400px, calc(100vw - 48px)); align-self:center; box-sizing:border-box; } }
+  .cup-divisions {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+  .cup-divisions button {display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;min-height:64px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer;}
+  .cup-divisions button.active {border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
+  .cup-divisions b {display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:var(--fs-body);}
+  .cup-divisions small {font-size:12px;overflow-wrap:anywhere;}
+  .cup-divisions .pill {font-size:11px;padding:1px 6px;}
   .schedule-tabs {display:flex;gap:16px;border-bottom:1px solid var(--line);}
   .schedule-tabs button {background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);font:inherit;font-weight:700;min-height:48px;padding:8px 0;cursor:pointer;}
   .schedule-tabs button.active {border-bottom-color:var(--accent);color:var(--ink);}
   .schedule-chips {display:flex;gap:6px;overflow-x:auto;padding:8px 0 12px;max-width:100%;}
-  .schedule-chips button {flex:none;border:1px solid var(--line);border-radius:10px;min-height:44px;padding:6px 10px;background:var(--bg);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;}
+  .schedule-chips button {flex:none;border: 1px solid transparent;border-radius:var(--radius-sm);min-height:44px;padding:6px 10px;background:var(--bg);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;}
   .schedule-chips button.active {border-color:var(--accent);color:var(--accent-text);font-weight:700;}
   [data-cup-bracket]:not([hidden]) {display:flex;flex-direction:column;gap:10px;}
-  .bracket-tabs { display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border:1px solid var(--line);border-radius:14px;background:var(--bg); }
-  .bracket-tabs button { min-width:0;min-height:44px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-size:.875rem;font-weight:600;padding:8px 12px;cursor:pointer; }
+  .bracket-tabs { display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border: 1px solid transparent;border-radius:var(--radius-md);background:var(--bg); }
+  .bracket-tabs button { min-width:0;min-height:44px;border:1px solid transparent;border-radius:var(--radius-sm);background:transparent;color:var(--muted);font:inherit;font-size:var(--fs-body2);font-weight:600;padding:8px 12px;cursor:pointer; }
   .bracket-tabs button.chosen { background:var(--surface);border-color:var(--line);color:var(--ink);box-shadow:0 1px 3px #0002; }
   .bracket-tabs button:focus-visible { outline:2px solid var(--accent);outline-offset:2px; }
   .cup-login { gap: 10px; border-color: var(--accent); }
@@ -310,7 +372,7 @@
   }
   .cup-sec h3 {
     margin: 0;
-    font-size: 1rem;
+    font-size: var(--fs-body);
   }
   .cup-sec p {
     margin: 0;
@@ -335,7 +397,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px;
-    border-radius: 14px;
+    border-radius: var(--radius-md);
     background: var(--pitch);
     color: var(--on-pitch);
   }
@@ -352,7 +414,7 @@
     overflow-wrap: anywhere;
   }
   .cup-champ-who b {
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
     color: var(--pitch-accent);
   }
   .cup-champ-who small {
@@ -410,7 +472,7 @@
   .cup-rewards {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     margin-bottom: 8px;
   }
   .cup-rewards th,
@@ -422,7 +484,7 @@
   }
   .cup-rewards thead th {
     border-top: 0;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .cup-rewards th:last-child,
@@ -456,7 +518,7 @@
     flex: none;
     text-align: right;
     color: var(--muted);
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     font-variant-numeric: tabular-nums;
   }
   .cup-entrant-who {
@@ -469,7 +531,7 @@
   }
   .cup-entrant-ovr {
     flex: none;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     font-variant-numeric: tabular-nums;
   }
   .cup-rules {
@@ -478,7 +540,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    font-size: 0.9375rem;
+    font-size: var(--fs-body1);
     line-height: 1.5;
   }
 </style>

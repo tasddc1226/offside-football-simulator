@@ -18,6 +18,10 @@ export const marketChart: Translation<MarketChartMsgs> = {
   indexSub: (p) => `直近7日の取引 ${p.trades}件 · 基準価格比`,
   indexA11y: (p) => `市場相場は基準価格の${p.pct}、${p.change}`,
   noChange: '変動なし',
+  todayTrades: (p: { trades: number }) => `今日の取引 ${p.trades}件`,
+  lastDayTrades: (p: { trades: number }) => `最終取引日 ${p.trades}件`,
+  volume: '取引量',
+  live: 'ライブ',
   dayText: (p) => `${p.day} · 平均 ${p.avg} · ${p.trades}件`,
   tradeText: (p) => `${p.day} この選手 · ${p.ratio}`,
 };

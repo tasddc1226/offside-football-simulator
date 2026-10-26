@@ -28,10 +28,16 @@ export const NEWS_GAP_MS = 10 * 60_000;
 /** 반응성은 클라이언트가 붙인다 — 넘겨받은 newsState를 그대로 고친다. */
 export function createNews(newsState: NewsState) {
   let lastCheck = 0;
+  // T-11-440 목록의 NEW 표시 기준. 이번에 앱을 열 때까지 본 시각이라 알림을 닫거나 '보기'를 눌러도 이번 실행 동안은
+  // 남는다(여러 건 알림에서 목록으로 가도 무엇이 새 글인지 보인다). 처음 온 기기(기록 없음)는 표시하지 않는다.
+  let since: string | null | undefined;
+  const opened = new Set<string>();
 
-  /** iso(글이 마지막으로 바뀐 시각)까지 본 것으로 기록한다. 알림에 걸린 글을 다 봤으면 알림도 닫는다. */
-  function markNewsSeen(iso: string) {
+  /** iso(글이 마지막으로 바뀐 시각)까지 본 것으로 기록한다. 알림에 걸린 글을 다 봤으면 알림도 닫는다. id는 연 글. */
+  function markNewsSeen(iso: string, id?: string) {
+    if (id) opened.add(id);
     const seen = loadKey<string>(SEEN_KEY);
+    if (since === undefined) since = seen;
     if (!seen || iso > seen) saveKey(SEEN_KEY, iso);
     if (newsState.post && touchedAt(newsState.post) <= iso) newsState.post = null;
   }
@@ -46,6 +52,7 @@ export function createNews(newsState: NewsState) {
     if (results.some((r) => !r.ok)) return; // 한쪽이라도 못 읽으면 다음에 다시 본다.
     const posts = results.flatMap((r) => (r.ok ? r.data.posts : []));
     const seen = loadKey<string>(SEEN_KEY);
+    if (since === undefined) since = seen;
     if (seen === null) {
       // 처음 온 기기: 지금까지 올라온 글은 알리지 않는다(글이 하나도 없으면 첫 글부터 알린다).
       saveKey(
@@ -66,5 +73,11 @@ export function createNews(newsState: NewsState) {
     newsState.edited = fresh[0]!.createdAt <= seen;
   }
 
-  return { markNewsSeen, dismissNews, checkNews };
+  /** T-11-440 이번 실행에서 아직 열지 않은 새 글인가(목록의 NEW 표시). */
+  function isNewPost(p: Pick<PostSummary, 'id' | 'createdAt'>): boolean {
+    if (since === undefined) since = loadKey<string>(SEEN_KEY);
+    return since !== null && p.createdAt > since && !opened.has(p.id);
+  }
+
+  return { markNewsSeen, dismissNews, checkNews, isNewPost };
 }

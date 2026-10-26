@@ -24,6 +24,7 @@
   {/each}
   {#if v.more > 0}<li class="muted"><span>{L.more({ n: v.more })}</span></li>{/if}
 </ul>
+{#if v.reward}<p class="ach-up-reward" data-ach-reward>{v.reward}</p>{/if}
 <p class="muted fs-sm ach-up-sum">
   <b class="num">{L.gainedPts({ n: n(v.gained) })}</b> · {L.nowPts({ n: n(v.score) })}{v.next ? ` · ${v.next}` : ''}
 </p>
@@ -58,7 +59,7 @@
     align-items: center;
     gap: 4px;
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     color: var(--muted);
   }
   .ach-up-from span {
@@ -79,9 +80,19 @@
     justify-content: space-between;
     gap: 12px;
     padding: 8px 12px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
+    font-size: var(--fs-body2);
+  }
+  .ach-up-reward {
+    margin: 10px 0 0;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent-text);
     font-size: 0.875rem;
+    font-weight: 700;
+    text-align: center;
   }
   .ach-up-sum {
     margin: 8px 0 0;

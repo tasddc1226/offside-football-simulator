@@ -133,8 +133,9 @@
       </label>
       <label class="field">
         <span class="lbl">{L.managerNameLabel}</span>
-        <input type="text" bind:value={manager} minlength={MANAGER_NAME_MIN} maxlength={MANAGER_NAME_MAX} placeholder={L.charsRange({ min: MANAGER_NAME_MIN, max: MANAGER_NAME_MAX })} aria-invalid={!!manager && !!issues.manager} aria-describedby="team-manager-hint" data-team-manager enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter />
+        <input type="text" bind:value={manager} minlength={MANAGER_NAME_MIN} maxlength={MANAGER_NAME_MAX} placeholder={L.charsRange({ min: MANAGER_NAME_MIN, max: MANAGER_NAME_MAX })} aria-invalid={!!manager && !!issues.manager} aria-describedby="team-manager-hint team-manager-note" data-team-manager enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter />
         <small id="team-manager-hint" class="muted">{issues.manager}</small>
+        <small id="team-manager-note" class="muted" data-team-manager-note>{L.managerNameNote}</small>
       </label>
     </div>
   {/if}
@@ -144,14 +145,14 @@
   .tm-head {display:flex;flex-direction:column;gap:8px;padding:8px 16px 16px;}
   .tm-top {display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;}
   .tm-season-name,.tm-season {font-size:12px;font-weight:600;color:var(--muted);}
-  .tm-season {max-width:calc(100% - 52px);min-height:44px;padding:0 24px 0 0;border:0;border-radius:6px;background:transparent;color:var(--muted);font-family:inherit;cursor:pointer;}
+  .tm-season {max-width:calc(100% - 52px);min-height:44px;padding:0 24px 0 0;border:0;border-radius:var(--radius-xs);background:transparent;color:var(--muted);font-family:inherit;cursor:pointer;}
   .tm-menu {position:relative;flex:none;}
-  .tm-menu summary {display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:8px;list-style:none;cursor:pointer;color:var(--muted);}
+  .tm-menu summary {display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:var(--radius-sm);list-style:none;cursor:pointer;color:var(--muted);}
   .tm-menu summary::-webkit-details-marker {display:none;}
   .tm-menu summary svg {width:22px;height:22px;fill:currentColor;}
   .tm-menu[open] summary {background:var(--surface-2);color:var(--ink);}
-  .tm-menu-items {position:absolute;top:calc(100% + 4px);right:0;z-index:50;width:184px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:var(--shadow);}
-  .tm-menu-items button {display:block;width:100%;min-height:44px;padding:10px;border:0;border-radius:6px;background:none;color:var(--ink);text-align:left;font:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+  .tm-menu-items {position:absolute;top:calc(100% + 4px);right:0;z-index:50;width:184px;padding:6px;border: 1px solid transparent;border-radius:var(--radius-md);background:var(--surface);box-shadow:var(--shadow);}
+  .tm-menu-items button {display:block;width:100%;min-height:44px;padding:10px;border:0;border-radius:var(--radius-xs);background:none;color:var(--ink);text-align:left;font:inherit;font-size:14px;font-weight:600;cursor:pointer;}
   .tm-menu-items button:hover,.tm-menu-items button:active {background:var(--surface-2);}
   .tm-title {
     display: flex;
@@ -167,7 +168,7 @@
   .tm-identity-text {min-width:0;}
   .tm-identity-text > span {display:block;margin-top:4px;font-size:12px;overflow-wrap:anywhere;}
   .tm-draft {display:inline-block;margin-left:6px;padding:1px 5px;border:1px solid var(--line);border-radius:4px;font-size:11px;color:var(--accent-text);}
-  .tm-logo-edit {display:flex;align-items:center;justify-content:center;flex:none;width:48px;height:48px;padding:0;border:0;border-radius:8px;background:none;color:inherit;cursor:pointer;}
+  .tm-logo-edit {display:flex;align-items:center;justify-content:center;flex:none;width:48px;height:48px;padding:0;border:0;border-radius:var(--radius-sm);background:none;color:inherit;cursor:pointer;}
   .tm-ovr-badge {
     flex: none;
     display: grid;
@@ -175,14 +176,14 @@
     min-width: 58px;
     gap:4px;
     padding: 8px 10px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--pitch);
     color: var(--on-pitch);
     line-height: 1.1;
   }
   .tm-ovr-badge small {
     font-family: var(--display);
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     letter-spacing: 0.06em;
   }
   .tm-ovr-badge b {
@@ -212,7 +213,7 @@
   .tm-stats .tm-record {justify-content:flex-start;border-left:0;padding-left:0;}
   .tm-stats div:last-child {padding-right:0;}
   .tm-stats dt {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .tm-stats dd {

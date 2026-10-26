@@ -98,7 +98,7 @@
     width: 100%;
     min-width: 400px;
     border-collapse: collapse;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     font-variant-numeric: tabular-nums;
   }
   .cg-table th,
@@ -113,7 +113,7 @@
   .cg-table th {
     font-weight: 600;
     color: var(--muted);
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
   }
   .cg-table .t {
     min-width: 170px;

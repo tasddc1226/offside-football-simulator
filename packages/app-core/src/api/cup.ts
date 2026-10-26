@@ -31,7 +31,8 @@ export type {
 
 /** 대회 한눈에(누구나). cupId 'current' = 지금 보여 줄 대회. 서버 캐시 30초. */
 export const fetchCup = (cupId = 'current') => cachedGet<CupResponse>(`/v1/cups/${cupId}`, 30_000);
-export const fetchCupHome = () => cachedGet<CupHomeResponse>('/v1/cups/home', 30_000);
+// T-11-503 홈 컵 배너 · 우승 팝업. 홈에 돌아올 때마다 다시 받지 않게 2분(컵 화면은 fetchCup이 30초로 따로 본다).
+export const fetchCupHome = () => cachedGet<CupHomeResponse>('/v1/cups/home', 120_000);
 /** 내 참가·자격·다음 경기·명단 잠금·리롤권. */
 export const fetchCupMe = (cupId = 'current') => apiFetch<CupMeResponse>(`/v1/cups/${cupId}/me`);
 export const fetchCupMatch = (cupId: string, matchId: string) =>

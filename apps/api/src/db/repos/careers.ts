@@ -8,7 +8,12 @@ import type {
   RetirementSummary,
 } from '@offside/contracts';
 import { HOF_MIN_RETIRE_AGE, WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
-import { cardValue, releasePayout, retireValue } from '@offside/contracts/market-value';
+import {
+  cardValue,
+  releasePayout,
+  retireValue,
+  type ValueRow,
+} from '@offside/contracts/market-value';
 import { firstUploadSeasonAt, type ServiceSeason } from '@offside/contracts/service-seasons';
 import {
   dposFor,
@@ -16,6 +21,7 @@ import {
   type DetailPos,
   type PeakProfile,
 } from '@offside/contracts/positions';
+import { mainClubSet } from './mainClub.js';
 import {
   and,
   desc,
@@ -35,7 +41,7 @@ import type { Bindings } from '../../env.js';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { sha256Hex } from '../hash.js';
-import { retryTransientWrite } from '../retry.js';
+import { retryTransientRead, retryTransientWrite } from '../retry.js';
 import { kstDay } from '../../time.js';
 import { honorsOf, hideCareerStatements } from './firsts.js';
 import {
@@ -48,6 +54,7 @@ import {
   ownerFunds,
   ownerTeams,
   profiles,
+  prunedCareers,
   retiredNumbers,
   seasonTelemetry,
 } from '../schema.js';
@@ -70,25 +77,12 @@ export function verifiedSnapshot(snapshot: LegendSnapshot, granted: boolean): Le
 
 export type CareerRow = typeof careers.$inferSelect;
 
-export async function getCareerOwner(db: Db, careerId: string): Promise<string | undefined> {
-  const [row] = await db
-    .select({ profileId: careers.profileId })
-    .from(careers)
-    .where(eq(careers.id, careerId));
-  return row?.profileId;
-}
-
-/** 공개 이름 갱신(upsert·update의 set). undefined(옛 클라이언트)면 그대로 두고, 운영자가 가린 이름(이름 신고,
- *  name_hidden_at)은 다시 채우지 않는다. keepRetired면 은퇴한 커리어의 이름도 그대로 둔다. */
-function publicNameSet(
-  publicName: string | null | undefined,
-  opts: { keepRetired?: boolean } = {},
-) {
+/** 은퇴 공개 이름 갱신. 옛 클라이언트·운영자가 가린 이름은 그대로 둔다. */
+function publicNameSet(publicName: string | null | undefined) {
   if (publicName === undefined) return {};
-  const locked = opts.keepRetired
-    ? sql`${careers.nameHiddenAt} is not null or ${careers.status} = 'retired'`
-    : sql`${careers.nameHiddenAt} is not null`;
-  return { publicName: sql`case when ${locked} then ${careers.publicName} else ${publicName} end` };
+  return {
+    publicName: sql`case when ${careers.nameHiddenAt} is not null then ${careers.publicName} else ${publicName} end`,
+  };
 }
 
 export type PutCareerSeasonInput = {
@@ -102,16 +96,20 @@ export type PutCareerSeasonInput = {
   publicName?: string | null | undefined;
   /** 자동 플레이 탐지용 조작 요약(JSON). undefined(옛 클라이언트·다시 보낸 기록)면 그대로 둔다. */
   signalsJson?: string | undefined;
+  /** T-11-486a 앱 광고 이용 요약(JSON). 없으면 NULL로 남긴다. */
+  adsJson?: string | undefined;
   /** 나이별 OVR 상한을 크게 넘겨 보낸 시즌이면 같은 batch에서 커리어를 숨긴다(저장 땐 상한으로 잘려 나중엔 알 수 없다, T-11-037). */
   hide?: boolean | undefined;
   now: string;
   uploadRevision?: number;
+  /** T-11-468 지운 버린 커리어를 다시 만들 때 처음 서비스 시즌(pruned_careers). undefined면 지금 시각으로 정한다. */
+  serviceSeason?: number | null;
 };
 
 /**
  * `PUT /v1/careers/:careerId/seasons/:year`. `careers` upsert는 `status`를 `set`에서 빼서 이미
  * `retired`인 행을 다시 `active`로 되돌리지 않는다(브리프: "NEVER downgrade retired→active"). 두 upsert를
- * D1 batch(단일 트랜잭션)로 묶어 원자적으로 반영한다. 호출 전 소유권은 라우트가 `getCareerOwner`로
+ * D1 batch(단일 트랜잭션)로 묶어 원자적으로 반영한다. 호출 전 소유권은 라우트가 batch로 읽은 커리어 헤더로
  * 이미 확인했다고 가정한다.
  */
 export async function putCareerSeason(
@@ -127,6 +125,7 @@ export async function putCareerSeason(
     eventsJson,
     publicName,
     signalsJson,
+    adsJson,
     hide,
     now,
   } = input;
@@ -135,6 +134,7 @@ export async function putCareerSeason(
   // 업로드마다 덧붙인다. career_seasons의 두 열은 새 행엔 비워 두고, 옛 행의 값은 덮어쓰지 않는다(기존 보관 작업이 옮긴다).
   const events = eventsJson === '[]' ? null : eventsJson;
   const growthJson = season.growth ? JSON.stringify(season.growth) : null;
+  const ads = adsJson ?? null;
   const name = publicName !== undefined ? { publicName } : {};
   // T-10-006 시즌 상세 — 옛 페이로드엔 없으므로 없으면 NULL(기록 없음)로 둔다.
   const detail = {
@@ -179,7 +179,10 @@ export async function putCareerSeason(
           ...name,
           // 처음 올라온 시각의 시즌(0 = 프리시즌, 시즌 사이 휴식기면 NULL) — onConflict set에 없어 바뀌지 않는다.
           // T-11-095 세부 포지션 없이 만든 프리시즌 선수는 개막 뒤에 처음 올라와도 프리시즌이다.
-          serviceSeason: firstUploadSeasonAt(now, dpos !== null),
+          serviceSeason:
+            input.serviceSeason !== undefined
+              ? input.serviceSeason
+              : firstUploadSeasonAt(now, dpos !== null),
           createdAt: now,
           updatedAt: now,
         })
@@ -192,17 +195,32 @@ export async function putCareerSeason(
             appVersion: meta.appVersion,
             // 처음 스카우트 평가는 비어 있을 때만 채운다(첫 시즌 업로드가 늦게 와도 한 번만).
             ...(meta.pot !== undefined && { pot: sql`coalesce(${careers.pot}, ${meta.pot})` }),
-            // 은퇴한 커리어의 공개 이름은 은퇴 PUT(명예의 전당 토글)만 바꾼다 — 늦게 도착한 시즌 업로드가 되돌리지 않게.
-            ...publicNameSet(publicName, { keepRetired: true }),
+            // Public names have two HOF indexes. Update them separately only when changed.
             updatedAt: now,
             // status는 의도적으로 뺀다 — 이미 retired인 커리어가 이 라우트로 다시 active가 되지 않는다.
           },
         })
         .returning({ status: careers.status }),
-      ...(events !== null || growthJson !== null
+      ...(publicName !== undefined
+        ? [
+            db
+              .update(careers)
+              .set({ publicName })
+              .where(
+                and(
+                  eq(careers.id, careerId),
+                  accept,
+                  eq(careers.status, 'active'),
+                  isNull(careers.nameHiddenAt),
+                  sql`${careers.publicName} is not ${publicName}`,
+                ),
+              ),
+          ]
+        : []),
+      ...(events !== null || growthJson !== null || ads !== null
         ? [
             db.insert(seasonTelemetry).select(sql`select null, ${careerId}, ${year},
-          ${season.age}, ${season.ovr}, ${events}, ${growthJson}, ${now} where ${accept}`),
+          ${season.age}, ${season.ovr}, ${events}, ${growthJson}, ${now}, ${ads} where ${accept}`),
           ]
         : []),
       db
@@ -279,6 +297,8 @@ export type PutRetirementInput = {
   look?: string | undefined;
   /** T-11-163 은퇴 장려금 비율(밸런스 marketRetireBonusRate). */
   bonusRate: number;
+  /** T-11-448 몸값을 매길 시즌 행 — 스냅샷 시즌을 받아 둔 시즌에 맞춘 것(plausibility.boundValueRows). */
+  valueRows?: ValueRow[] | undefined;
   /** T-11-311 스냅샷을 먼저 R2에 썼으면 그 키(careerSnapshots.putSnapshot). 없으면 snapshot_json에 둔다. */
   snapshotKey?: string | null | undefined;
   now: string;
@@ -311,9 +331,11 @@ export async function putRetirement(
     potReal,
     look,
     bonusRate,
+    valueRows,
     now,
   } = input;
-  const value = snapshot ? cardValue(snapshot.career, summary.peak) : null;
+  const rows = valueRows ?? snapshot?.career ?? [];
+  const value = snapshot ? cardValue(rows, summary.peak) : null;
   // T-11-163 은퇴 장려금: 기준가가 있는 카드만(스냅샷 없는 옛 기록은 거래도 하지 않는다).
   const bonus = value === null ? 0 : releasePayout(value, bonusRate);
   const results = await runBatch(db, [
@@ -363,7 +385,7 @@ export async function putRetirement(
                 ? { snapshotKey, snapshotJson: null }
                 : { snapshotJson: JSON.stringify(verifiedSnapshot(snapshot, false)) }),
               shirtNumber: snapshot.number,
-              value: retireValue(snapshot.career, summary.legendScore),
+              value: retireValue(rows, summary.legendScore),
             }
           : {}),
         ...(profile ? { peakProfile: JSON.stringify(profile) } : {}),
@@ -377,6 +399,8 @@ export async function putRetirement(
       })
       .where(eq(careers.id, careerId))
       .returning(retiredHead),
+    // T-11-467 시너지용 주 리그 · 클럽(서버에 쌓인 시즌 기록으로 센다).
+    db.update(careers).set(mainClubSet).where(eq(careers.id, careerId)),
     // T-11-163 은퇴 장려금. 아래 카드 insert보다 먼저 — 카드가 아직 없을 때(이 커리어의 첫 은퇴)만 한 번 준다.
     ...(bonus > 0
       ? [
@@ -436,6 +460,7 @@ export async function putRetirement(
             bonusValue: sql<number | null>`${bonus > 0 ? bonus : null}`.as('bonus_value'),
             locked: sql<boolean>`0`.as('locked'),
             manager: sql<boolean>`0`.as('manager'),
+            consumedIn: sql<string | null>`null`.as('consumed_in'),
             createdAt: sql<string>`${now}`.as('created_at'),
             updatedAt: sql<string>`${now}`.as('updated_at'),
           })
@@ -651,31 +676,37 @@ export async function listPublicHof(
     .limit(limit)
     .offset((page - 1) * limit)
     .as('hof_page');
-  const query = db
-    .select({ ...publicColumns, ...raiserColumns })
-    .from(careers)
-    .leftJoin(retiredNumbers, withRetiredNumber)
-    .leftJoin(profiles, withRaiserProfile)
-    .leftJoin(ownerTeams, withRaiserTeam)
-    .$dynamic();
-  const rows = await (sort === 'score'
-    ? query.innerJoin(pageIds, eq(careers.id, sql`"hof_page"."hof_career_id"`)).orderBy(...order)
-    : query
-        .where(where)
-        .orderBy(...order)
-        .limit(limit)
-        .offset((page - 1) * limit));
+  // Retry only a failed, side-effect-free SELECT, never the route/backfills/cache loader.
+  const rows = await retryTransientRead(async () => {
+    // Build afresh: adding the page join twice to one mutable builder is invalid.
+    const query = db
+      .select({ ...publicColumns, ...raiserColumns })
+      .from(careers)
+      .leftJoin(retiredNumbers, withRetiredNumber)
+      .leftJoin(profiles, withRaiserProfile)
+      .leftJoin(ownerTeams, withRaiserTeam)
+      .$dynamic();
+    return sort === 'score'
+      ? query.innerJoin(pageIds, eq(careers.id, sql`"hof_page"."hof_career_id"`)).orderBy(...order)
+      : query
+          .where(where)
+          .orderBy(...order)
+          .limit(limit)
+          .offset((page - 1) * limit);
+  });
   const total = await cachedTotal(async () => {
-    const [count] = await db
-      .select({ n: sql<number>`count(*)` })
-      .from(
-        q
-          ? rankSource
-          : dpos
-            ? sql`${careers} INDEXED BY careers_hof_dpos_idx`
-            : sql`${careers} INDEXED BY careers_hof_count_idx`,
-      )
-      .where(where);
+    const [count] = await retryTransientRead(async () =>
+      db
+        .select({ n: sql<number>`count(*)` })
+        .from(
+          q
+            ? rankSource
+            : dpos
+              ? sql`${careers} INDEXED BY careers_hof_dpos_idx`
+              : sql`${careers} INDEXED BY careers_hof_count_idx`,
+        )
+        .where(where),
+    );
     return Number(count?.n ?? 0);
   });
   const entries = rows.map(toPublicEntry);
@@ -689,15 +720,17 @@ export async function listPublicHof(
       .from(rankSource)
       .where(ranked)
       .as('ranked');
-    const ranks = await db
-      .select({ id: all.id, rk: all.rk })
-      .from(all)
-      .where(
-        inArray(
-          all.id,
-          entries.map((e) => e.id),
+    const ranks = await retryTransientRead(async () =>
+      db
+        .select({ id: all.id, rk: all.rk })
+        .from(all)
+        .where(
+          inArray(
+            all.id,
+            entries.map((e) => e.id),
+          ),
         ),
-      );
+    );
     const at = new Map(ranks.map((r) => [r.id, Number(r.rk)]));
     for (const e of entries) e.rank = at.get(e.id);
   }
@@ -973,10 +1006,12 @@ export const seasonOvrQuery = (db: Db, careerId: string, year: number) =>
     .from(careerSeasons)
     .where(and(eq(careerSeasons.careerId, careerId), eq(careerSeasons.year, year)));
 
-export async function storedSeasonOvr(db: Db, careerId: string, year: number) {
-  const [row] = await seasonOvrQuery(db, careerId, year);
-  return row?.ovr ?? null;
-}
+/** T-11-468 지운 버린 커리어의 주인 · 처음 서비스 시즌(기본 키 한 줄). 시즌 업로드가 커리어 머리와 한 batch로 읽는다. */
+export const prunedCareerQuery = (db: Db, careerId: string) =>
+  db
+    .select({ profileId: prunedCareers.profileId, serviceSeason: prunedCareers.serviceSeason })
+    .from(prunedCareers)
+    .where(eq(prunedCareers.careerId, careerId));
 
 /** 은퇴 PUT이 보는 커리어의 소유자·상태·포지션(스냅샷 JSON까지 읽지 않는다). 조회문 — 다른 읽기와 한 batch로 보낼 수 있다. */
 export const careerHeadQuery = (db: Db, careerId: string) =>

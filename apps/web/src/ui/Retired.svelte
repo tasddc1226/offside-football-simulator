@@ -16,7 +16,7 @@
 <div class="wrap">
   <Topbar />
   <!-- T-10-029: 명예의 전당 공개·다음 버튼은 크레딧 맨 아래에, 공유 버튼은 화면 아래에 고정된다(T-10-067). -->
-  <LegendReport {v}>
+  <LegendReport {v} fresh={appState.G?.cid}>
     {#snippet end()}
       {#if v.own?.id}<OwnHofCards {v} />{/if}
       <button class="btn btn-primary btn-block" data-act="new" onclick={goNew}>{L.newCareer}</button>

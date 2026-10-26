@@ -2,6 +2,7 @@
 // 타일은 구단 홈 유니폼 도트 액자(RnFrame), 바탕은 구단 엠블럼 색(rnStyle), 누르면 그 선수의 은퇴 상세.
 // T-11-029 결번은 시즌마다 따로 — 개막한 시즌이 둘 이상이면 시즌 탭을 보인다(웹과 같다).
 // T-11-101 열 때는 요약(구단별 수 + 최근 8개)만 받는다. 타일은 구단을 고르거나 최신순 전체를 열 때 그 몫만 받는다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { memo, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
@@ -40,6 +41,7 @@ import { type Colors } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { Btn } from '../../ui/Btn';
 import { Card } from '../../ui/Card';
+import { Skeleton } from '../../ui/Skeleton';
 import { ClubMark } from '../../ui/ClubBadge';
 import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
@@ -91,10 +93,10 @@ const MinePill = ({ c, style }: { c: Colors; style: ViewStyle }) => (
     style={[
       {
         paddingHorizontal: 6,
-        borderRadius: 999,
+        borderRadius: RADIUS.pill,
         backgroundColor: c.surface2,
         borderWidth: 1,
-        borderColor: c.line,
+        borderColor: 'transparent',
       },
       style,
     ]}
@@ -104,8 +106,8 @@ const MinePill = ({ c, style }: { c: Colors; style: ViewStyle }) => (
       numberOfLines={1}
       maxFontSizeMultiplier={1.2}
       style={{
-        fontSize: rem(0.625),
-        lineHeight: rem(0.625) * 1.6,
+        fontSize: rem(FONT.caption2),
+        lineHeight: rem(FONT.caption2) * 1.6,
         fontWeight: '600',
         color: c.muted,
       }}
@@ -147,9 +149,9 @@ const Tile = memo(function Tile({
         paddingBottom: 8,
         paddingHorizontal: 4,
         borderWidth: 1,
-        borderColor: c.line,
-        borderRadius: 14,
-        backgroundColor: c.surface,
+        borderColor: 'transparent',
+        borderRadius: RADIUS.md,
+        backgroundColor: c.surface2,
         overflow: 'hidden',
       }}
     >
@@ -173,19 +175,27 @@ const Tile = memo(function Tile({
       <Txt
         bold
         numberOfLines={1}
-        style={{ maxWidth: '100%', fontSize: rem(0.875), lineHeight: rem(0.875) * 1.5 }}
+        style={{ maxWidth: '100%', fontSize: rem(FONT.body2), lineHeight: rem(FONT.body2) * 1.5 }}
       >
         {name}
       </Txt>
       {withClub ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: '100%' }}>
           <ClubMark name={it.club} id={it.clubId} size={14} />
-          <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(0.75), flexShrink: 1 }}>
+          <Txt
+            tone="muted"
+            numberOfLines={1}
+            style={{ fontSize: rem(FONT.caption), flexShrink: 1 }}
+          >
             {clubName(it)}
           </Txt>
         </View>
       ) : !filteredPos ? (
-        <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(0.75), maxWidth: '100%' }}>
+        <Txt
+          tone="muted"
+          numberOfLines={1}
+          style={{ fontSize: rem(FONT.caption), maxWidth: '100%' }}
+        >
           {POS[it.pos].label}
         </Txt>
       ) : null}
@@ -193,7 +203,7 @@ const Tile = memo(function Tile({
         tone="muted"
         num={400}
         numberOfLines={1}
-        style={{ fontSize: rem(0.75), maxWidth: '100%' }}
+        style={{ fontSize: rem(FONT.caption), maxWidth: '100%' }}
       >
         {L.tileSeq({ seq: it.seq, day: day(it.grantedAt) })}
       </Txt>
@@ -232,7 +242,7 @@ const Message = ({ text, live }: { text: string; live?: boolean }) => (
   <Txt
     tone="muted"
     accessibilityLiveRegion={live ? 'polite' : undefined}
-    style={{ fontSize: rem(0.875), paddingVertical: 8 }}
+    style={{ fontSize: rem(FONT.body2), paddingVertical: 8 }}
   >
     {text}
   </Txt>
@@ -243,13 +253,16 @@ const CountPill = ({ c, count }: { c: Colors; count: number }) => (
     style={{
       paddingVertical: 1,
       paddingHorizontal: 9,
-      borderRadius: 999,
+      borderRadius: RADIUS.pill,
       borderWidth: 1,
       borderColor: c.accent,
       backgroundColor: alpha(c.accent, 0.16),
     }}
   >
-    <Txt num style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5, fontWeight: '700' }}>
+    <Txt
+      num
+      style={{ fontSize: rem(FONT.label), lineHeight: rem(FONT.label) * 1.5, fontWeight: '700' }}
+    >
       {count}
     </Txt>
   </View>
@@ -310,7 +323,7 @@ function Plaques({
               paddingRight: 12,
               borderWidth: 1,
               borderColor: alpha(leaf, 0.45),
-              borderRadius: 12,
+              borderRadius: RADIUS.md,
               backgroundColor: c.surface,
               overflow: 'hidden',
             }}
@@ -325,8 +338,8 @@ function Plaques({
                 style={{
                   fontFamily: DISPLAY[700],
                   fontVariant: ['tabular-nums'],
-                  fontSize: rem(1),
-                  lineHeight: rem(1),
+                  fontSize: rem(FONT.body),
+                  lineHeight: rem(FONT.body),
                   fontWeight: '700',
                   color: text,
                 }}
@@ -336,10 +349,14 @@ function Plaques({
             </View>
             <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-                <Txt bold numberOfLines={1} style={{ fontSize: rem(0.875), flexShrink: 1 }}>
+                <Txt bold numberOfLines={1} style={{ fontSize: rem(FONT.body2), flexShrink: 1 }}>
                   {name}
                 </Txt>
-                <Txt tone="muted" num={400} style={{ marginLeft: 'auto', fontSize: rem(0.75) }}>
+                <Txt
+                  tone="muted"
+                  num={400}
+                  style={{ marginLeft: 'auto', fontSize: rem(FONT.caption) }}
+                >
                   {day(w.grantedAt)}
                 </Txt>
               </View>
@@ -349,7 +366,7 @@ function Plaques({
                   <Txt
                     tone="muted"
                     numberOfLines={1}
-                    style={{ fontSize: rem(0.75), flexShrink: 1 }}
+                    style={{ fontSize: rem(FONT.caption), flexShrink: 1 }}
                   >
                     {clubName(w)}
                   </Txt>
@@ -378,7 +395,7 @@ function BackButton() {
       }}
       style={{ minHeight: RECORDS_TOUCH, justifyContent: 'center', alignSelf: 'flex-start' }}
     >
-      <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
         {L.backApp}
       </Txt>
     </Press>
@@ -416,7 +433,7 @@ function ClubRow({ c, club, showLeague }: { c: Colors; club: ClubSum; showLeague
         {name}
       </Txt>
       {showLeague && league ? (
-        <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(0.75) }}>
+        <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(FONT.caption) }}>
           {league}
         </Txt>
       ) : null}
@@ -454,7 +471,7 @@ function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> })
   const groups = useMemo(() => (summary ? rnByLeague(summary.clubs) : []), [summary]);
 
   if (failed) return <Message text={L.loadFailed} />;
-  if (!summary) return <Message live text={L.loading} />;
+  if (!summary) return <Skeleton rows={5} />;
   if (!summary.total) return <Message text={L.empty({ season: teamSeasonLabel(season) })} />;
   return (
     <View onLayout={onLayout}>
@@ -476,7 +493,7 @@ function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> })
             }}
             style={{ minHeight: RECORDS_TOUCH, justifyContent: 'center' }}
           >
-            <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
               {L.seeAll}
             </Txt>
           </Press>
@@ -501,7 +518,7 @@ function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> })
                   }}
                   style={{ minHeight: RECORDS_TOUCH, justifyContent: 'center' }}
                 >
-                  <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                     {wallOpen ? L.wallClose : L.wallOpen}
                   </Txt>
                 </Press>
@@ -512,7 +529,7 @@ function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> })
           </SectionTitle>
           {wallOpen ? (
             <>
-              <Txt tone="muted" style={{ fontSize: rem(0.75), marginBottom: 10 }}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginBottom: 10 }}>
                 {L.wallLead}
               </Txt>
               <Plaques list={summary.wall} withClub myIds={myIds} />
@@ -523,7 +540,10 @@ function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> })
       <SectionTitle>{L.clubsTitle}</SectionTitle>
       {groups.map((g) => (
         <View key={g.league}>
-          <Txt tone="muted" style={{ fontSize: rem(0.75), paddingTop: 12, paddingBottom: 4 }}>
+          <Txt
+            tone="muted"
+            style={{ fontSize: rem(FONT.caption), paddingTop: 12, paddingBottom: 4 }}
+          >
             {`${g.league} · ${g.count}`}
           </Txt>
           {g.clubs.map((club) => (
@@ -541,7 +561,7 @@ function FreeNumbers({ c, items }: { c: Colors; items: Item[] }) {
   return (
     <View testID="rn-free" style={{ marginBottom: 12 }}>
       <SectionTitle>{L.freeTitle({ n: free.length })}</SectionTitle>
-      <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
         {free.length ? L.freeLead : L.freeNone}
       </Txt>
       {free.length ? (
@@ -558,11 +578,11 @@ function FreeNumbers({ c, items }: { c: Colors; items: Item[] }) {
                 paddingVertical: 3,
                 borderWidth: 1,
                 borderColor: c.line,
-                borderRadius: 8,
+                borderRadius: RADIUS.sm,
                 alignItems: 'center',
               }}
             >
-              <Txt num={400} style={{ fontSize: rem(0.8125) }}>
+              <Txt num={400} style={{ fontSize: rem(FONT.label) }}>
                 {n}
               </Txt>
             </View>
@@ -634,7 +654,7 @@ function ClubScreen({
           <Txt bold numberOfLines={1} style={{ flexShrink: 1 }}>
             {clubName({ clubId, club: head.club })}
           </Txt>
-          <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(0.75) }}>
+          <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(FONT.caption) }}>
             {leagueOf(clubId)}
           </Txt>
           <View style={{ marginLeft: 'auto' }}>
@@ -673,7 +693,7 @@ function ClubScreen({
       {failed ? (
         <Message text={L.loadFailed} />
       ) : items === null ? (
-        <Message live text={L.loading} />
+        <Skeleton rows={5} />
       ) : filtered.length ? (
         <View onLayout={onLayout} style={{ marginTop: 6 }}>
           {ready ? <Tiles items={filtered} withClub={false} {...opts} /> : null}
@@ -741,7 +761,7 @@ function RecentScreen({ season, myIds }: { season: number; myIds: ReadonlySet<st
       {failed ? (
         <Message text={L.loadFailed} />
       ) : items === null ? (
-        <Message live text={L.loading} />
+        <Skeleton rows={5} />
       ) : items.length ? (
         <View onLayout={onLayout}>
           {ready ? <Tiles items={items} withClub {...opts} /> : null}

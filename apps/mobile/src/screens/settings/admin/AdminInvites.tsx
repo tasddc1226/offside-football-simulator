@@ -1,5 +1,6 @@
 // T-11-177 친구 초대 현황(웹 admin/AdminInvites.svelte). 초대 수 · 첫 커리어를 마친 수 · 지급된 리롤권,
 // 초대를 많이 한 구단주와 최근 초대.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import * as api from '@offside/app-core/api/admin';
@@ -36,8 +37,8 @@ export default function AdminInvites() {
   }
   useEffect(() => void load(), []);
 
-  const small = { fontSize: rem(0.8125) } as const;
-  const tiny = { fontSize: rem(0.75) } as const;
+  const small = { fontSize: rem(FONT.label) } as const;
+  const tiny = { fontSize: rem(FONT.caption) } as const;
   const row = {
     flexDirection: 'row',
     justifyContent: 'space-between',

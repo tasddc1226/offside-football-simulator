@@ -8,7 +8,7 @@
   import { retirementPotentialNote } from '@offside/app-core/potential-view';
   import { potentialFlowLines, potentialSeedLines } from '@offside/app-core/potential-flow';
   import { gamePotentialText as P } from '@offside/app-core/i18n/ko/gamePotential';
-  import type { Snippet } from 'svelte';
+  import { tick, type Snippet } from 'svelte';
   import { legendScoreBreakdown, legendTitle } from '@offside/game/season';
   import { careerChapters, careerClubs, nationalEvents, honoursRoll, type ChapterEvent, type HonourLine } from '@offside/game/retirement-report';
   import { POS_LABEL } from '@offside/game/pos-label';
@@ -33,9 +33,17 @@
   import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
   import { appState, hofStart } from './state.svelte.js';
   import { go } from './nav.js';
+  import RevealFx from './RevealFx.svelte';
+  import { gradeTier } from '@offside/app-core/reveal';
+  import { loadKey, saveKey } from '@offside/game/storage';
 
-  // end: 리포트 맨 아래(다음 행동 버튼 등).
-  const { v, end }: { v: LegendView; end?: Snippet } = $props();
+  // end: 리포트 맨 아래(다음 행동 버튼 등). fresh: 은퇴 직후 화면의 커리어 id — 그 커리어를 처음 볼 때만 실제 잠재력 공개 연출(T-11-371).
+  const { v, end, fresh }: { v: LegendView; end?: Snippet; fresh?: string | undefined } = $props();
+  const POT_SEEN = 'ft_reveal_pot';
+  // svelte-ignore state_referenced_locally
+  const potFx = !!fresh && loadKey<string>(POT_SEEN) !== fresh;
+  // svelte-ignore state_referenced_locally
+  if (potFx) saveKey(POT_SEEN, fresh);
   const d = $derived(v.d);
   const back = $derived(v.pos === 'GK' || v.pos === 'DF');
   const t = $derived(d ? totals(d) : null);
@@ -104,6 +112,12 @@
     return { destroy: () => io.unobserve(el) };
   }
   let more = $state(false);
+  let moreEl = $state<HTMLDetailsElement>();
+  async function openMore() {
+    more = true;
+    await tick();
+    moreEl?.scrollIntoView({ behavior: motionOK ? 'smooth' : 'auto', block: 'start' });
+  }
 
   // ───────── T-10-076 영구결번 ─────────
   // 세리머니는 첫 화면 번들을 늘리지 않게 따로 불러온다(LateCredits → RetiredNumberCredit). 결번 배지만 여기서 그린다.
@@ -146,7 +160,9 @@
       {/if}
     {/if}
     <div class="film-score">
-      <b><CountUp value={v.score} animate={playing} ms={1800} /></b><span>Legend Score</span>
+      <b><CountUp value={v.score} animate={playing} ms={1800} /></b><span>{L.scoreTitle}</span>
+      <!-- T-11-439 점수 구성은 맨 아래 접힌 곳에 있다: 펼치고 그리로 내려간다. -->
+      {#if d}<button class="link-btn" data-act="legend-score-more" aria-label={L.scoreMoreLabel} onclick={openMore}>{L.scoreMore}</button>{/if}
     </div>
     {#if worth > 0}
       <div class="film-worth" class:credit-late={playing} data-legend-value>
@@ -267,7 +283,7 @@
     <section class="film-pot" data-credit="pot" data-legend-pot use:reveal>
       <div class="eyebrow film-kicker">Scout Report</div>
       <p>{L.potTitle}</p>
-      <b>{v.pot.real}</b>
+      <b>{#if potFx}<RevealFx grade={v.pot.real} text={v.pot.real} tier={gradeTier(v.pot.real)} />{:else}{v.pot.real}{/if}</b>
       <p>{L.potLine({ value: v.pot.value })}</p>
       <p>{retirementPotentialNote()}</p>
       <div class="film-pot-ach" data-legend-ach>
@@ -298,7 +314,7 @@
 
 {#if d}
   <!-- 펼칠 때만 그린다(시즌별 표가 길다). -->
-  <details class="card film-more" data-credit="career" bind:open={more}>
+  <details class="card film-more" data-credit="career" bind:open={more} bind:this={moreEl}>
     <summary>{L.moreSummary}</summary>
     {#if more && breakdown}
       <div class="stack">
@@ -318,3 +334,10 @@
 {#if end}
   <div class="credit-wrap">{@render end()}</div>
 {/if}
+
+<style>
+  /* T-11-371 공개 연출 결과 글자는 크레딧의 금색을 그대로 쓴다(어두운 배경). */
+  .film-pot :global(.rv-text) {
+    color: inherit;
+  }
+</style>

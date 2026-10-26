@@ -11,9 +11,11 @@ export const shellMore: Translation<ShellMoreMsgs> = {
   adPreview: (p) => `Ad slot · ${p.place}`,
   updateBodyApp: 'A new version is out. Restart to apply it.',
   updateBtnApp: 'Restart',
-  storeUpdateAlert: 'App update alert',
   storeUpdateTitle: 'A new version is in the store',
-  storeUpdateBody: "Without updating, later fixes won't reach this app.",
+  storeUpdateBody: 'Update to get the latest features and fixes.',
+  storeUpdateForceBody:
+    'This version is no longer supported. Update from the store to keep playing.',
+  storeUpdateLater: 'Later',
   storeUpdateBtn: 'Update',
   keepLoginTitle: 'Sign in to keep your records',
   keepLoginBody:

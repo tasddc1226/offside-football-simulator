@@ -40,7 +40,7 @@
     gap: 2px;
   }
   .mg-resume-title {
-    font-size: 1.0625rem;
+    font-size: var(--fs-title3);
   }
   .mg-resume-name {
     color: var(--ink);

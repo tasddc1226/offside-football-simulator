@@ -12,6 +12,7 @@ const columns = {
   team: pushPreferences.team,
   market: pushPreferences.market,
   social: pushPreferences.social,
+  nudge: pushPreferences.nudge,
 };
 
 export async function getPushPreferences(db: Db, profileId: string) {

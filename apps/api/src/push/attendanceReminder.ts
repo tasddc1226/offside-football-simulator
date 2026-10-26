@@ -5,6 +5,7 @@ import { attendanceReminderText as text } from '../i18n/ko/attendanceReminder.js
 // T-11-378 출석 독려 푸시. 오늘(KST) 아직 출석하지 않은 로그인한 구단주에게 저녁(19시대) 한 번 앱 푸시를 보낸다. 앱 기기 등록이
 // 최근 14일 안에 갱신된(앱을 쓰는) 사람만, 마지막 출석 뒤 독려를 3번 받고도 오지 않았으면 다음 출석 전까지 멈춘다. 알림 원본은
 // 하루 · 사람마다 하나(source_key)라 19시대 5분 틱마다 다시 돌아도 한 번만 쌓인다. 보낼 때(personal.ts) 그 사이 출석했으면 보내지 않는다.
+// T-11-501 독려 알림을 껐거나, 같은 날 다른 독려(리텐션 푸시 등 kind 'return')를 이미 쌓았으면 건너뛴다(독려는 하루 하나).
 
 const DAY = 86400_000;
 /** 마지막 출석 뒤 이만큼 보내고도 오지 않으면 멈춘다. */
@@ -43,6 +44,8 @@ export async function queueAttendanceReminders(env: Bindings, time = Date.now())
       WHERE p.deleted_at IS NULL AND (p.google_sub IS NOT NULL OR p.apple_sub IS NOT NULL)
         AND (o.last_day IS NULL OR o.last_day <> ?)
         AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.profile_id = p.id AND n.source_key = ? || p.id)
+        AND COALESCE((SELECT pref.nudge FROM push_preferences pref WHERE pref.profile_id = p.id), 1) = 1
+        AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.profile_id = p.id AND n.kind = 'return' AND n.created_at >= ?)
         AND (SELECT COUNT(*) FROM notifications n WHERE n.profile_id = p.id
           AND n.source_key LIKE 'attendance-reminder:%' AND n.created_at > COALESCE(o.updated_at, '')) < ?
       LIMIT ${LIMIT}`,
@@ -56,6 +59,7 @@ export async function queueAttendanceReminders(env: Bindings, time = Date.now())
       now,
       today,
       prefix,
+      iso(Date.parse(`${today}T00:00:00+09:00`)),
       ATTENDANCE_REMINDER_MAX,
     ),
     // 사람마다 가장 최근 앱 기기 하나로만 보낸다(같은 사람이 여러 기기에서 같은 독려를 받지 않게). 21시(KST)가 지나면 보내지 않는다.

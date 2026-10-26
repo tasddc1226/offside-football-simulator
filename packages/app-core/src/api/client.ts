@@ -2,6 +2,7 @@ import type { DetailPos } from '@offside/contracts/positions';
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
 import { LIVE_POLL_SEC, TICKER_POLL_SEC } from '@offside/contracts/polling';
 import type {
+  Best11Response,
   Profile as ContractProfile,
   FirstsResponse,
   HofDetailResponse,
@@ -186,7 +187,15 @@ export async function apiFetch<T>(
     return failure('NETWORK_ERROR', L.network, true);
   }
 
-  if (isMutation && response.ok && !keepCache) clearApiCache();
+  if (isMutation && response.ok && !keepCache) {
+    // Delivery bookkeeping and inbox read markers do not change careers, funds or public lists.
+    // Unknown/domain mutations retain full invalidation (including account changes).
+    const pathname = path.split('?')[0]!;
+    if (pathname === '/v1/push/device') invalidateApiCache('/v1/push');
+    else if (/^\/v1\/notifications\/(?:read-all|[^/]+\/(?:read|interaction))$/.test(pathname))
+      invalidateApiCache('/v1/notifications');
+    else clearApiCache();
+  }
   // T-11-034 업적이 바뀌었을 수 있는 쓰기 — 다음 화면에서 업적을 한 번 받아 새 업적을 알린다.
   if (isMutation && response.ok && touchesAchievements(path)) markAchDirty();
   if (response.status === 204) return { ok: true, data: undefined as T };
@@ -320,7 +329,12 @@ export function getHof(
   dpos: DetailPos | null = null,
 ): Promise<ApiResult<HofListResponse>> {
   const q = `limit=${limit}${page > 1 ? `&page=${page}` : ''}${sort !== 'score' ? `&sort=${sort}` : ''}${season !== null ? `&season=${season}` : ''}${name ? `&q=${encodeURIComponent(name)}` : ''}${pos ? `&pos=${pos}` : ''}${dpos ? `&dpos=${dpos}` : ''}`;
-  return cachedGet<HofListResponse>(`/v1/hof?${q}`, 60_000);
+  // T-11-503 홈 상위 목록이 홈에 돌아올 때마다 다시 받지 않게 5분 메모. 내 은퇴 업로드는 outbox가 메모를 비운다.
+  return cachedGet<HofListResponse>(`/v1/hof?${q}`, 300_000);
+}
+/** T-11-463 시즌 BEST 11(공개). 자리 주인은 은퇴마다 바뀌지만 화면을 열 때만 부른다. */
+export function getBest11(season: number): Promise<ApiResult<Best11Response>> {
+  return cachedGet<Best11Response>(`/v1/best11?season=${season}`, 60_000);
 }
 /** T-10-013. 이 계정의 은퇴 선수. 익명 프로필이면 linked=false. */
 export function getMyCareers(): Promise<ApiResult<MyCareersResponse>> {
@@ -390,7 +404,7 @@ export function checkRetiredNumber(
 export function getFirsts(season?: number): Promise<ApiResult<FirstsResponse>> {
   return cachedGet<FirstsResponse>(
     `/v1/firsts${season === undefined ? '' : `?season=${season}`}`,
-    60_000,
+    300_000, // T-11-503 홈에 돌아올 때마다 다시 받지 않게 5분.
   );
 }
 /** T-10-030 홈 라이브 현황(로그인 불필요). 홈이 1분마다 묻는다 — 서버 엣지 캐시와 같은 간격(T-10-045). */

@@ -114,6 +114,14 @@ export const BALANCE_SPEC = {
     max: 6,
     step: 0.5,
   },
+  // T-11-450 프리미엄 스카우트 후보의 S 확률 배수(일반 후보 대비). 기본 2 = T-11-196 그대로.
+  premiumSMult: {
+    def: 2,
+    min: 1,
+    max: 5,
+    step: 0.5,
+    unit: 'x',
+  },
   injuryRate: {
     def: 0.012,
     min: 0,
@@ -130,6 +138,30 @@ export const BALANCE_SPEC = {
   },
   mlsYoungPull: {
     def: 0.1,
+    min: 0,
+    max: 1,
+    step: 0.01,
+  },
+  newLeagues: {
+    def: 0,
+    min: 0,
+    max: 1,
+    step: 1,
+  },
+  eraRival: {
+    def: 1,
+    min: 0,
+    max: 1,
+    step: 1,
+  },
+  richYoungPull: {
+    def: 0.15,
+    min: 0,
+    max: 1,
+    step: 0.01,
+  },
+  braPull: {
+    def: 0.3,
     min: 0,
     max: 1,
     step: 0.01,
@@ -217,17 +249,27 @@ export const BALANCE_SPEC = {
     step: 0.1,
     unit: 'x',
   },
-  marketListLimit: {
+  // T-11-376 지난 시즌 선수 급여 예산(구단 팀 선발). T-11-450 시즌 1 기준 80(급여 최대 20 × 4명).
+  pastSalaryBudget: {
+    def: 80,
+    min: 20,
+    max: 300,
+    step: 1,
+  },
+  // T-11-450 팀 시즌이 하나 지날 때마다 예산에 더하는 값(시즌 n 예산 = 기준 + 이 값 × (n - 1)).
+  pastSalaryBudgetStep: {
     def: 10,
-    min: 1,
+    min: 0,
     max: 50,
     step: 1,
   },
-  marketDailyBuys: {
-    def: 20,
+  // T-11-418e 오프사이드 리그 홈 팀의 기대 득점 배율(랭크 경기 · 친선과 같은 값에서 시작, 컵은 중립이라 없음).
+  leagueHomeAdv: {
+    def: 1.08,
     min: 1,
-    max: 100,
-    step: 1,
+    max: 1.3,
+    step: 0.01,
+    unit: 'x',
   },
   // T-11-152 구단 자금으로 사는 선수 후보 리롤권. 쌓이기만 하는 구단 자금을 없애려고 비싸게 판다.
   rerollPrice: {
@@ -262,6 +304,25 @@ export const BALANCE_SPEC = {
     def: 1,
     min: 0,
     max: 7,
+    step: 1,
+  },
+  // T-11-374 카드 과제: 오늘 과제 세 개를 모두 낸 날 한 번 받는 아이템 수. 서버가 내기 · 내 낸 횟수 조회 때 활성 버전을 바로 읽는다.
+  exchangeRewardReroll: {
+    def: 2,
+    min: 0,
+    max: 20,
+    step: 1,
+  },
+  exchangeRewardBoost: {
+    def: 1,
+    min: 0,
+    max: 10,
+    step: 1,
+  },
+  exchangeRewardScout: {
+    def: 0,
+    min: 0,
+    max: 5,
     step: 1,
   },
   // T-11-153 앱의 보상형 광고 자리(후보 잠재력 · 시즌 평가 보기 · 자금이 모자란 시즌의 강화)를 광고 대신 구단 자금으로

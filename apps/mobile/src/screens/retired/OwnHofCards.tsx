@@ -16,15 +16,15 @@ import { hofOwnText as L } from '@offside/app-core/i18n/ko/hofOwn';
 export function OwnHofCards({ v }: { v: LegendView }) {
   const h = v.own;
   if (!h) return null;
+  // T-11-439 이미지에 그려지는 칭호·이름 공개를 먼저 정하고 그다음 이미지를 만들게 칭호 → 이름 공개 → 공유 이미지 순서.
+  const eligible = isHofEligible(h.age);
   return (
     <>
-      <ShareImageCard v={v} />
       <TitlePickCard h={h} />
-      {isHofEligible(h.age) ? (
-        <>
-          <PublishCard key={h.id} h={h} />
-          <KeepLoginCard id={h.id!} />
-        </>
+      {eligible ? <PublishCard key={h.id} h={h} /> : null}
+      <ShareImageCard v={v} />
+      {eligible ? (
+        <KeepLoginCard id={h.id!} />
       ) : (
         <Card>
           <View>

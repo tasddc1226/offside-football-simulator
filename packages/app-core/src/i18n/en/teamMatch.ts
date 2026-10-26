@@ -6,6 +6,11 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   oppNear: (p) => `Teams near your rating of ${p.rating} · Matches left today: ${p.left}/${p.per}`,
   oppRating: 'Rating',
   oppOvr: (p) => `OVR ${p.n}`,
+  oppGapUp: (p) => `${p.n} higher than your team`,
+  oppGapDown: (p) => `${p.n} lower than your team`,
+  oppGapEven: 'Same as your team',
+  oppGapNote:
+    'The number under each rating is the gap to your team. Beating a higher-rated team earns more rating.',
   oppRuleWeb: (p) =>
     `You can challenge the same team once a day. If you've met a team in the last ${p.days} days, your rating moves less.`,
   oppRuleApp: (p) =>
@@ -76,12 +81,15 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   playerStatsAria: (p: { name: string }) => `View season stats for ${p.name}`,
   assist: (p) => `Assist ${p.name}`,
   noGoals: 'A goalless draw.',
-  resultRecord: (p) => ` · My team ${p.record}`,
+  recordChip: (p) => `Team record ${p.record}`,
   ratingChange: 'Team rating ',
   backHistory: 'Back to history',
   backDefaultApp: 'My team',
   replay: 'Watch commentary again',
   again: 'Play again',
+  againLeft: (p) => `${p.n} ${p.n === 1 ? 'match' : 'matches'} left today`,
+  againNone: 'You’ve played every match today',
+  friendlyNote: 'Friendlies don’t change your rating.',
   scoreAria: (p) => `${p.h} to ${p.a}`,
   shareTitle: 'Share image',
   shareLeadWeb: 'The lineup you are viewing, on one image.',

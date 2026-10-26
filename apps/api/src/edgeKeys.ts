@@ -8,10 +8,20 @@ import { BOARD_KEYS, BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
 export const EDGE = {
   cupHome: '/v1/cups/home',
   cupCurrent: '/v1/cups/current',
+  /** T-11-418 오프사이드 리그(일정 · 신청 수). TTL로만 새로 읽는다. */
+  leagueCurrent: '/v1/leagues/current',
+  /** T-11-418b 리그 하나(순위표 · 경기). 부 · 리그 번호는 배치 결과 안에서만 받는다. TTL로만 새로 읽는다. */
+  leagueTable: (season: number, tier: number, league: number) =>
+    `/v1/leagues/${season}/tables/${tier}/${league}`,
+  /** T-11-410 구간 대회 한 개(회차마다 3개). */
+  cupById: (id: string) => `/v1/cups/${id}`,
   balance: '/v1/balance',
   /** T-11-141 공개 밸런스 이력. */
   balanceHistory: '/v1/balance/history',
   adminStats: '/v1/admin/stats',
+  /** T-11-494 무거운 운영 도구 집계. 관리자 확인 뒤에만 읽고, 여러 번 누르거나 새로고침해도 1분 안에는 D1에 다시 가지 않는다. */
+  adminFunds: '/v1/admin/funds',
+  adminAutomation: (hours: number) => `/v1/admin/automation?hours=${hours}`,
   /** T-11-029 서버 최초 기록·서버 기록은 시즌마다 따로다(시즌 id를 푼 경로). */
   firsts: (season: number) => `/v1/firsts?season=${season}`,
   /** T-11-029 영구결번은 시즌마다 따로다(시즌 id를 푼 경로). */
@@ -30,6 +40,8 @@ export const EDGE = {
   /** 시즌 진행 게이지(홈). TTL로만 새로 읽는다. */
   seasonGauge: '/v1/season/gauge',
   hofDetail: (careerId: string) => `/v1/hof/${careerId}`,
+  /** T-11-463 시즌 BEST 11(시즌 id를 푼 경로). 자리 주인이 바뀌면 지운다. */
+  best11: (season: number) => `/v1/best11?season=${season}`,
   hofList: (
     limit: number,
     page: number,
@@ -58,9 +70,15 @@ export const EDGE = {
   /** T-11-080f 시세 차트(시즌 · 기간 · 묶음별). */
   marketChart: (season: number, range: string, group?: { pos: string; band: number }) =>
     `/v1/market/chart?season=${season}&range=${range}${group ? `&pos=${group.pos}&band=${group.band}` : ''}`,
-  /** T-11-080 이적시장 목록은 첫 페이지만 담는다(시즌 · 정렬 · 포지션별). */
-  marketList: (season: number, sort: string, pos?: string) =>
-    `/v1/market?season=${season}&sort=${sort}${pos ? `&pos=${pos}` : ''}`,
+  /** T-11-080 이적시장 목록은 첫 페이지만 담는다(시즌 · 정렬 · 포지션 · T-11-474 세부 포지션 · 유형별). */
+  marketList: (
+    season: number,
+    sort: string,
+    f: { pos?: string | undefined; dpos?: string | undefined; type?: string | undefined } = {},
+  ) =>
+    `/v1/market?season=${season}&sort=${sort}${f.pos ? `&pos=${f.pos}` : ''}${f.dpos ? `&dpos=${f.dpos}` : ''}${f.type ? `&type=${f.type}` : ''}`,
+  /** T-11-500 열린 매물의 국적 · 리그 · 클럽별 수(시즌별). TTL로만 새로 읽는다. */
+  marketFacets: (season: number) => `/v1/market/facets?season=${season}`,
   /** 게시판 목록은 첫 페이지(웹 기본 limit)만 담는다. */
   publicNews: (board: string) => `/v1/public-news/${board}`,
   boardFirstPage: (board: string) => `/v1/boards/${board}/posts?limit=${BOARD_PAGE_LIMIT}`,

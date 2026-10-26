@@ -2,6 +2,7 @@ import { configureMeasurement, type OperationResult } from '@offside/app-core/me
 import type { Progress } from '@offside/app-core/player-metrics';
 import { enabled } from './config.js';
 import type { Career } from '@offside/app-core/analytics-model';
+import type { AppStoreOs } from '@offside/app-core/appPromo';
 export { enabled } from './config.js';
 let adapter: typeof import('./browser.js') | undefined;
 let screen = 'home';
@@ -46,14 +47,21 @@ export const analytics = {
   retire: (s: Career) => adapter?.analytics.retire(s),
 };
 export const trackShareClick = () => adapter?.trackShareClick();
-/** T-11-092 App Store 링크를 누른 곳. */
-export type AppStorePlace = 'home' | 'sheet' | 'settings' | 'shop';
-export const trackAppStoreClick = (place: AppStorePlace) => adapter?.trackAppStoreClick(place);
+/** T-11-092 앱 스토어 링크를 누른 곳(T-11-449 어느 스토어인지도 남긴다). */
+export type AppStorePlace = 'home' | 'home_top' | 'sheet' | 'settings' | 'shop';
+export const trackAppStoreClick = (place: AppStorePlace, store: AppStoreOs) =>
+  adapter?.trackAppStoreClick(place, store);
 export const trackShareSuccess = () => adapter?.trackShareSuccess();
 
-export type AppConversionPlace = 'home' | 'shop';
+/** T-11-506 home_top: 휴대폰 웹 홈 맨 위 한 줄 띠. */
+export type AppConversionPlace = 'home' | 'home_top' | 'shop';
 export const trackAppConversion = (
   action: 'view' | 'click' | 'dismiss',
   place: AppConversionPlace,
   target: 'ios' | 'android' | 'both',
 ) => adapter?.trackAppConversion(action, place, target);
+
+/** T-11-423 제휴 홈 팝업. 노출 · 이동 · 닫기(오늘 하루 숨김 포함)와 소재(a·b)를 남긴다. */
+export type PartnerPopupAction = 'view' | 'click' | 'close' | 'hide_today';
+export const trackPartnerPopup = (action: PartnerPopupAction, variant: 'a' | 'b') =>
+  adapter?.trackPartnerPopup(action, variant);

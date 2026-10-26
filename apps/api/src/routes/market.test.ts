@@ -3,6 +3,7 @@ import {
   FundsHistoryResponseSchema,
   MarketCardTradesResponseSchema,
   MarketChartResponseSchema,
+  MarketFacetsResponseSchema,
   MarketListResponseSchema,
   AdminFundsOwnerSchema,
   AdminFundsReportSchema,
@@ -41,6 +42,7 @@ const TeamRes = successEnvelope(OwnerTeamResponseSchema);
 const ChartRes = successEnvelope(MarketChartResponseSchema);
 const TradesRes = successEnvelope(MarketCardTradesResponseSchema);
 const HistoryRes = successEnvelope(FundsHistoryResponseSchema);
+const FacetsRes = successEnvelope(MarketFacetsResponseSchema);
 
 let seq = 0;
 
@@ -107,6 +109,90 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     expect(data.items.find((x) => x.card.careerId === id)?.card.look).toBe('s5h6y2g2');
   });
 
+  it('T-11-474 목록을 세부 포지션 · 선수 유형으로 좁힌다', async () => {
+    const seller = await issueGoogleCookie(ctx);
+    const winger = await addCard(seller.profileId);
+    const striker = await addCard(seller.profileId);
+    await ctx.db.update(cards).set({ dpos: 'LW' }).where(eq(cards.careerId, winger));
+    await ctx.db.update(cards).set({ dpos: 'ST' }).where(eq(cards.careerId, striker));
+    await ctx.db.update(careers).set({ type: 'speed' }).where(eq(careers.id, winger));
+    for (const id of [winger, striker])
+      expect((await list(seller.cookie, id, 1_000_000)).status).toBe(201);
+    const ids = async (q: string) =>
+      ListRes.parse(await (await call('GET', `/v1/market?${q}`)).json()).data.items.map(
+        (x) => x.card.careerId,
+      );
+    expect(await ids('pos=FW')).toHaveLength(2);
+    expect(await ids('pos=FW&dpos=LW')).toEqual([winger]);
+    expect(await ids('pos=FW&type=poacher')).toEqual([striker]);
+    expect(await ids('pos=FW&dpos=ST&type=speed')).toEqual([]);
+    expect((await call('GET', '/v1/market?type=wizard')).status).toBe(400);
+  });
+
+  it('T-11-500 국적 · 가장 오래 뛴 리그 · 클럽으로 거르고, 고를 거리는 매물 수 순으로 준다', async () => {
+    const seller = await issueGoogleCookie(ctx);
+    const kr = await addCard(seller.profileId);
+    const br = await addCard(seller.profileId);
+    const br2 = await addCard(seller.profileId);
+    const amateur = await addCard(seller.profileId);
+    await ctx.db.update(cards).set({ nation: 'BR' }).where(eq(cards.careerId, br));
+    await ctx.db.update(cards).set({ nation: 'BR' }).where(eq(cards.careerId, br2));
+    await ctx.db
+      .update(careers)
+      .set({ mainLeague: 'pl', mainClub: 'pl-0' })
+      .where(eq(careers.id, kr));
+    await ctx.db
+      .update(careers)
+      .set({ mainLeague: 'pl', mainClub: 'pl-4' })
+      .where(eq(careers.id, br));
+    // 리그는 가장 오래 뛴 리그, 클럽은 가장 오래 뛴 클럽이라 둘이 다를 수 있다(시너지와 같은 기준).
+    await ctx.db
+      .update(careers)
+      .set({ mainLeague: 'pl', mainClub: 'll-1' })
+      .where(eq(careers.id, br2));
+    await ctx.db
+      .update(careers)
+      .set({ mainLeague: '', mainClub: '' })
+      .where(eq(careers.id, amateur));
+    for (const id of [kr, br, br2, amateur])
+      expect((await list(seller.cookie, id, 1_000_000)).status).toBe(201);
+    const ids = async (q: string) =>
+      new Set(
+        ListRes.parse(await (await call('GET', `/v1/market?${q}`)).json()).data.items.map(
+          (x) => x.card.careerId,
+        ),
+      );
+    // 국적을 비워 둔 카드는 대한민국으로 센다.
+    expect(await ids('nation=KR')).toEqual(new Set([kr, amateur]));
+    expect(await ids('nation=BR')).toEqual(new Set([br, br2]));
+    expect(await ids('league=pl')).toEqual(new Set([kr, br, br2]));
+    expect(await ids('club=pl-4')).toEqual(new Set([br]));
+    expect(await ids('nation=BR&league=pl&club=ll-1&pos=FW')).toEqual(new Set([br2]));
+    for (const bad of ['nation=ZZ', 'league=hs', 'club=hs-0', 'club=pl-99'])
+      expect((await call('GET', `/v1/market?${bad}`)).status).toBe(400);
+    const items = ListRes.parse(await (await call('GET', '/v1/market?club=pl-4')).json()).data
+      .items;
+    expect(items[0]!.card).toMatchObject({ nation: 'BR', league: 'pl', club: 'pl-4' });
+
+    const facets = FacetsRes.parse(await (await call('GET', '/v1/market/facets')).json()).data;
+    expect(facets.nations).toHaveLength(2);
+    expect(facets.nations).toEqual(
+      expect.arrayContaining([
+        { id: 'BR', n: 2 },
+        { id: 'KR', n: 2 },
+      ]),
+    );
+    expect(facets.leagues).toEqual([{ id: 'pl', n: 3 }]);
+    expect(facets.clubs).toEqual(
+      expect.arrayContaining([
+        { id: 'pl-0', n: 1 },
+        { id: 'pl-4', n: 1 },
+        { id: 'll-1', n: 1 },
+      ]),
+    );
+    expect(facets.clubs).toHaveLength(3);
+  });
+
   it('비로그인도 시장 목록을 보고, 방출·시장 쓰기는 구글 연결 구단주만 한다', async () => {
     const res = await call('GET', '/v1/market');
     expect(res.status).toBe(200);
@@ -120,6 +206,8 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     const { DB, seen } = spyDb(ctx.env.DB);
     for (const path of [
       '/v1/market?sort=price&pos=FW',
+      '/v1/market?nation=BR&club=pl-0',
+      '/v1/market/facets',
       '/v1/market/chart?range=month',
       `/v1/market/cards/${crypto.randomUUID()}/trades`,
     ]) {
@@ -192,6 +280,22 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     });
     expect(res.status).toBe(409);
     expect(await reason(res)).toBe('IN_LINEUP');
+  });
+
+  it('T-11-474 선발에 든 선수는 내놓을 수 없고, 팀에서 빼면 내놓는다', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    const a = await addCard(owner.profileId);
+    const team = (slots: (string | null)[]) =>
+      call('PUT', '/v1/owner-team', {
+        cookie: owner.cookie,
+        body: { name: '우리 FC', manager: '김감독', formation: '4-3-3', slots },
+      });
+    expect((await team([...Array(9).fill(null), a, null])).status).toBe(200);
+    const res = await list(owner.cookie, a, 1_000_000);
+    expect(res.status).toBe(409);
+    expect(await reason(res)).toBe('IN_LINEUP');
+    expect((await team(Array(11).fill(null))).status).toBe(200);
+    expect((await list(owner.cookie, a, 1_000_000)).status).toBe(201);
   });
 
   it('T-11-188 잠긴 선수는 내놓거나 방출할 수 없고, 판매 중인 선수는 내린 뒤 잠근다', async () => {
@@ -402,10 +506,36 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     ]);
   });
 
-  it('다른 시즌 카드는 내놓을 수 없고, 내 등록은 내릴 수 있다', async () => {
+  it('T-11-425 지난 시즌 카드도 내놓고 사고, 시장에는 모든 시즌 카드가 함께 오른다', async () => {
     const seller = await issueGoogleCookie(ctx);
-    const other = await addCard(seller.profileId, 1);
-    expect(await reason(await list(seller.cookie, other, 1_000_000))).toBe('CARD_OTHER_SEASON');
+    const buyer = await issueGoogleCookie(ctx);
+    const past = await addCard(seller.profileId, 0);
+    const now = await addCard(seller.profileId, 1);
+    await fund(buyer.profileId, 5_000_000);
+    vi.setSystemTime(new Date('2026-10-07T00:00:00.000Z')); // 시즌 1
+    const idOf = async (res: Response) => {
+      expect(res.status).toBe(201);
+      return ((await res.json()) as { data: { listing: { id: string } } }).data.listing.id;
+    };
+    const pastId = await idOf(await list(seller.cookie, past, 1_000_000));
+    const nowId = await idOf(await list(seller.cookie, now, 1_100_000));
+    const market = ListRes.parse(await (await call('GET', '/v1/market?sort=price')).json()).data;
+    expect(market.items.map((l) => [l.id, l.card.season])).toEqual([
+      [pastId, 0],
+      [nowId, 1],
+    ]);
+    const bought = await call('POST', `/v1/market/listings/${pastId}/buy`, {
+      cookie: buyer.cookie,
+      headers: idem(),
+      body: { price: 1_000_000 },
+    });
+    expect(bought.status).toBe(200);
+    const [card] = await ctx.db.select().from(cards).where(eq(cards.careerId, past));
+    expect(card!.ownerId).toBe(buyer.profileId);
+  });
+
+  it('내 등록은 내릴 수 있다', async () => {
+    const seller = await issueGoogleCookie(ctx);
     const card = await addCard(seller.profileId);
     const created = await list(seller.cookie, card, 1_000_000);
     const id = ((await created.json()) as { data: { listing: { id: string } } }).data.listing.id;

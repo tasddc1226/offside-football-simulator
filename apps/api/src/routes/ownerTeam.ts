@@ -5,6 +5,8 @@ import {
   OwnerTeamResponseSchema,
   PlayTeamMatchBodySchema,
   PlayTeamMatchResponseSchema,
+  TeamMomentBodySchema,
+  TeamMomentResponseSchema,
   PutOwnerTeamBodySchema,
   PutOwnerTeamResponseSchema,
   PutTeamCoachBodySchema,
@@ -25,10 +27,10 @@ import { isAcceptablePublicName, isReservedNickname } from '@offside/contracts/c
 import {
   TEAM_MATCHES_PER_DAY,
   TEAM_REPEAT_WINDOW_DAYS,
-  TEAM_WILDCARD_MAX,
-  WILDCARD_FULL_TEXT,
-  isWildcardSeason,
+  achTierByRank,
   matchScore,
+  pastSalaryOverText,
+  pastSalarySum,
   ratingChange,
   shapeOf,
   type FormationId,
@@ -36,13 +38,13 @@ import {
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import { resolveBalance } from '@offside/contracts/balance';
 import { clampDivision, divisionRules, nextDivision } from '@offside/contracts/team-division';
-import { activeBalanceQuery, balanceVersionOf } from '../db/repos/balance.js';
 import type { Context, Hono } from 'hono';
 import {
   NO_STORE,
   nowIso,
   ok,
   readBody,
+  notFoundError,
   teamNotFound,
   teamSeasonParam,
   conflictError,
@@ -82,6 +84,12 @@ import {
 } from '../db/repos/ownerTeams.js';
 import { achievementRankOf } from '../db/repos/ownerAchievements.js';
 import { teamCoachOf } from '../db/repos/managers.js';
+import {
+  activeBalanceQuery,
+  balanceVersionOf,
+  pastSalaryBudgetFrom,
+  pastSalaryBudgetOf,
+} from '../db/repos/balance.js';
 import { getProfile, hasAccount, type ProfileRecord } from '../db/repos/profiles.js';
 import { ownerTeams } from '../db/schema.js';
 import { and, eq } from 'drizzle-orm';
@@ -99,8 +107,21 @@ import {
   simulateMatch,
   type LineupSlot,
 } from '../team/sim.js';
-import { lineupsOf, matchDetailOf, matchViews, playedMatch } from '../team/match.js';
+import { lineupsOf, matchDetailOf, matchNotice, matchViews, playedMatch } from '../team/match.js';
 import { teamStatsView } from '../team/stats.js';
+import { liveDone, liveResult, resolveMoment, startLiveMatch } from '../team/moments.js';
+import {
+  finalizeLive,
+  liveMomentView,
+  livePayload,
+  liveStartResponse,
+  momentGoals,
+  refreshBoth,
+  type Finalized,
+  type LivePayload,
+} from '../team/liveMatch.js';
+import { insertLive, liveById, openLiveSince, saveLiveState } from '../db/repos/teamLive.js';
+import type { Db } from '../db/client.js';
 import { linesOf, recordOf, seasonOptions, slotsOf } from '../team/view.js';
 import { localizeAchievements } from '../team/achievementsText.js';
 import { reqLang, type Lang } from '../lang.js';
@@ -110,6 +131,24 @@ import { reqLang, type Lang } from '../lang.js';
 const OPPONENTS_SHOWN = 5;
 /** T-11-262 업적 랭킹 인원 엣지 캐시 TTL(초). */
 const ACH_RANKED_TTL = 300;
+
+const liveNotFound = () => notFoundError('진행 중인 경기를 찾지 못했어요.', 'TEAM_LIVE_NOT_FOUND');
+
+/** T-11-387 마감한 장면 경기의 뒷일: 두 팀 통계 캐시 · 두 구단주 점수. */
+function afterLiveFinal(c: Context<AppEnv>, f: Finalized) {
+  purgeEdge(c, STALE.teamMatchPlayed(f.homeTeamId, f.awayTeamId));
+  waitUntil(c, refreshBoth(getDb(c), f));
+}
+
+/** 떠난 장면 경기를 자동 선택으로 마감한다. */
+async function finishOpenLive(db: Db, ids: string[], now: string, lang: Lang) {
+  for (const id of ids) {
+    const row = await liveById(db, id);
+    if (!row || row.doneAt) continue;
+    const f = await finalizeLive(db, row, now, lang);
+    if (f?.fresh) await refreshBoth(db, f);
+  }
+}
 
 const teamRequired = () => conflictError('먼저 이번 시즌 팀을 만들어 주세요.', 'TEAM_REQUIRED');
 const coachNotEligible = () =>
@@ -215,11 +254,12 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const season = seasonQuery(c, now);
-    const [teams, players, [played], founder] = await db.batch([
+    const [teams, players, [played], founder, [balance]] = await db.batch([
       listMyTeams(db, me.id),
       listEligibleCareers(db, me.id, season),
       countMatchesSince(db, me.id, kstTodayStart(now)),
       foundersOf(db, [me.id]),
+      activeBalanceQuery(db),
     ]);
     // T-11-113 개막 뒤의 프리시즌 팀은 친선전용 편성을 보이고 고친다(지금 가진 선수만).
     const editableSeason = season === teamSeasonAt(now) || season === 0;
@@ -271,6 +311,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         lastManager: teams.findLast((t) => t.manager)?.manager ?? null,
         matchesLeft: Math.max(0, TEAM_MATCHES_PER_DAY - Number(played?.n ?? 0)),
         matchesPerDay: TEAM_MATCHES_PER_DAY,
+        pastSalaryBudget: pastSalaryBudgetFrom(balance, season),
         founder: founder.length > 0,
         // 컵 성적은 최근 대회부터 온다 — 첫 우승이 가장 최근 우승.
         ownerTitle: me.title,
@@ -314,16 +355,20 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         details: { reason: 'PLAYER_NOT_ELIGIBLE' },
       });
     }
-    // T-11-114 지난 시즌 선수(와일드카드)는 선발에 정해진 수까지만.
-    if (
-      ids.filter((id) => isWildcardSeason(eligible.get(id)?.season, season)).length >
-      TEAM_WILDCARD_MAX
-    ) {
-      throw new AppError({
-        code: 'VALIDATION_FAILED',
-        message: WILDCARD_FULL_TEXT,
-        details: { reason: 'WILDCARD_LIMIT' },
-      });
+    // T-11-376 지난 시즌 선수는 급여(최고 OVR) 합이 예산 안에서만. 지난 시즌 선수가 없으면 밸런스를 읽지 않는다.
+    const salary = pastSalarySum(
+      ids.map((id) => eligible.get(id)),
+      season,
+    );
+    if (salary > 0) {
+      const budget = await pastSalaryBudgetOf(db, season);
+      if (salary > budget) {
+        throw new AppError({
+          code: 'VALIDATION_FAILED',
+          message: pastSalaryOverText(salary, budget),
+          details: { reason: 'PAST_SALARY_BUDGET', salary, budget },
+        });
+      }
     }
     // 이전 클라이언트가 좌표를 보내지 않으면 기존 자유 편성을 보존한다.
     // 포메이션을 바꾼 요청만 새 기본 배치로 돌아간다.
@@ -343,7 +388,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           : null
         : input.layout;
     const lineup = buildLineup(input.formation, input.slots, eligible, layout);
-    if (!friendly) await checkCupLineup(db, me.id, season, ids, filledCount(lineup), now);
+    if (!friendly)
+      await checkCupLineup(db, me.id, season, ids, filledCount(lineup), now, lineupOvr(lineup));
     const values = {
       name: input.name,
       manager: input.manager,
@@ -424,7 +470,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       : null;
     if (input.coach && !coach) throw coachNotEligible();
     const ids = slotIdsOf(team).filter((x): x is string => x !== null);
-    await checkCupLineup(db, me.id, season, ids, team.filled, now);
+    await checkCupLineup(db, me.id, season, ids, team.filled, now, team.ovr);
     await db
       .update(ownerTeams)
       .set({ coachId: coach ? input.coach : null, updatedAt: now })
@@ -496,9 +542,10 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const now = nowIso();
     const season = currentSeasonOrThrow(now);
     // T-11-375 디비전 경계 · 강등 보호는 활성 밸런스에서 — 같은 batch로 읽어 왕복을 늘리지 않는다.
-    const [[mine], challenged, [opp], [active]] = await db.batch([
+    const [[mine], recorded, open, [opp], [active]] = await db.batch([
       myTeamIn(db, me.id, season),
       challengedSince(db, me.id, kstTodayStart(now)),
+      openLiveSince(db, me.id, kstTodayStart(now)),
       liveTeam(db, input.opponentTeamId),
       activeBalanceQuery(db),
     ]);
@@ -506,6 +553,18 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       resolveBalance(active ? balanceVersionOf(active).values : undefined),
     );
     if (!mine) throw teamRequired();
+    // T-11-387 아직 끝나지 않은 장면 경기도 오늘 경기로 센다. 떠난 경기는 여기서 자동 선택으로 마감한다(cron보다 먼저).
+    if (open.length)
+      waitUntil(
+        c,
+        finishOpenLive(
+          db,
+          open.map((o) => o.id),
+          now,
+          reqLang(c),
+        ),
+      );
+    const challenged = [...recorded, ...open];
     const usedToday = challenged.length;
     if (usedToday >= TEAM_MATCHES_PER_DAY) {
       throw rateLimited(
@@ -532,6 +591,50 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     if (filledCount(lineups.away) === 0) throw teamNotFound();
 
     const id = newId('mat');
+    if (input.live) {
+      // T-11-387 장면 경기: 일반 골과 장면을 굴려 두고, 마지막 장면을 고르거나 마감할 때 경기를 남긴다.
+      const state = startLiveMatch(id, lineups.home, lineups.away, season, {
+        coaches: lineups.coaches,
+      });
+      const snap = matchDetailOf(mine, opp.team, lineups, liveResult(state));
+      const payload = livePayload(
+        season,
+        state,
+        { home: snap.home, away: snap.away },
+        { home: filledCount(lineups.home), away: filledCount(lineups.away) },
+        lineups,
+        Number(met?.n ?? 0),
+        Math.max(0, TEAM_MATCHES_PER_DAY - usedToday - 1),
+      );
+      const row = {
+        id,
+        profileId: me.id,
+        homeTeamId: mine.id,
+        awayTeamId: opp.team.id,
+        stateJson: JSON.stringify(payload),
+        createdAt: now,
+      };
+      if (liveDone(state)) {
+        // 고를 장면이 하나도 없으면 바로 마감한다.
+        await insertLive(db, row);
+        const f = await finalizeLive(
+          db,
+          { ...row, rev: 0, doneAt: null, resultJson: null },
+          now,
+          reqLang(c),
+        );
+        if (!f) throw teamNotFound();
+        afterLiveFinal(c, f);
+        return ok(c, PlayTeamMatchResponseSchema, f.response, 201);
+      }
+      await insertLive(db, row);
+      return ok(
+        c,
+        PlayTeamMatchResponseSchema,
+        liveStartResponse(row, payload, mine, opp.team, reqLang(c)),
+        201,
+      );
+    }
     const result = simulateMatch(id, lineups.home, lineups.away, season, {
       coaches: lineups.coaches,
     });
@@ -566,17 +669,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           divisions,
         }),
       ],
-      {
-        profileId: opp.team.profileId,
-        sourceKey: `team-match:${id}`,
-        now,
-        content: {
-          kind: 'team',
-          title: '내 팀에 새 경기 결과가 있어요',
-          body: `${opp.team.name} ${result.awayGoals} : ${result.homeGoals} ${mine.name}. 최근 경기에서 결과를 확인해 주세요.`,
-          target: { type: 'screen', screen: 'team' },
-        },
-      },
+      matchNotice(id, mine, opp.team, result.homeGoals, result.awayGoals, now),
     );
     purgeEdge(c, STALE.teamMatchPlayed(mine.id, opp.team.id));
     // 상대 팀 기록(승패·레이팅)도 바뀌어 두 구단주 점수를 함께 센다.
@@ -616,13 +709,78 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     );
   });
 
+  // T-11-387 장면 하나를 고른다. 서버가 미리 굴린 판정값으로 결과를 정하고, 마지막 장면이면 경기를 마감해 결과를 함께 준다.
+  // 같은 장면을 다시 보내면(재시도) 처음 결과를 그대로 준다.
+  app.post('/v1/owner-team/matches/:id/moments/:index', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const lang = reqLang(c);
+    const { choice } = readBody(c, TeamMomentBodySchema);
+    const index = Number(c.req.param('index'));
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const row = await liveById(db, c.req.param('id'));
+      if (!row || row.profileId !== me.id) throw liveNotFound();
+      const payload = JSON.parse(row.stateJson) as LivePayload;
+      const m = Number.isInteger(index) ? payload.state.moments[index] : undefined;
+      if (!m || !m.shown) throw liveNotFound();
+      const fresh = m.picked === undefined;
+      if (fresh && !row.doneAt && !resolveMoment(m, choice)) {
+        throw new AppError({
+          code: 'VALIDATION_FAILED',
+          status: 400,
+          message: '고를 수 없는 선택지예요.',
+          details: { reason: 'TEAM_LIVE_CHOICE' },
+        });
+      }
+      const view = {
+        moment: liveMomentView(payload, index, lang),
+        goals: momentGoals(payload, m, lang),
+      };
+      if (row.doneAt || liveDone(payload.state)) {
+        const f = await finalizeLive(
+          db,
+          { ...row, stateJson: JSON.stringify(payload) },
+          nowIso(),
+          lang,
+        );
+        if (!f) throw liveNotFound();
+        if (f.fresh) afterLiveFinal(c, f);
+        return ok(c, TeamMomentResponseSchema, { ...view, final: f.response });
+      }
+      if (!fresh) return ok(c, TeamMomentResponseSchema, view);
+      const saved = await saveLiveState(db, row.id, row.rev, JSON.stringify(payload));
+      if (saved.meta.changes > 0) return ok(c, TeamMomentResponseSchema, view);
+      // 다른 요청이 먼저 고쳤다 — 다시 읽어 그 상태 위에서 고른다.
+    }
+    throw conflictError('잠시 뒤 다시 골라 주세요.', 'TEAM_LIVE_BUSY');
+  });
+
+  // T-11-387 남은 장면을 자동 선택으로 마감한다('결과 바로 보기').
+  app.post('/v1/owner-team/matches/:id/finish', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const row = await liveById(db, c.req.param('id'));
+    if (!row || row.profileId !== me.id) throw liveNotFound();
+    const f = await finalizeLive(db, row, nowIso(), reqLang(c));
+    if (!f) throw liveNotFound();
+    if (f.fresh) afterLiveFinal(c, f);
+    return ok(c, PlayTeamMatchResponseSchema, f.response);
+  });
+
   // 구단 시즌 업적(클럽하우스). season 없으면 지금 시즌, 0이면 프리시즌. 팀 업적은 그 시즌 팀으로 판정한다(지난 시즌에 팀이
   // 없었으면 보이지 않는다). T-11-028 점수를 다시 세어 적고 업적 랭킹 순위를 함께 준다.
   app.get('/v1/owner-team/achievement-notifications', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const now = nowIso();
     const season = seasonQuery(c, now);
-    const { groups, row } = await refreshOwnerAchievements(getDb(c), me, season, now, false);
+    const db = getDb(c);
+    const { groups, row } = await refreshOwnerAchievements(db, me, season, now, false);
+    // T-11-489 상위 비율 시즌은 등급이 순위로 정해져 순위를 함께 준다(랭킹 인원은 업적 화면과 같은 엣지 캐시).
+    const standing = achTierByRank(season)
+      ? await achievementRankOf(db, row, (load) =>
+          edgeCached(c, EDGE.achRanked(season), ACH_RANKED_TTL, load),
+        )
+      : {};
     return ok(
       c,
       ClubAchievementNotificationsSchema,
@@ -630,6 +788,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         season,
         groups: localizeAchievements(groups, reqLang(c)),
         score: row.score,
+        ...standing,
       },
       200,
       NO_STORE,

@@ -137,12 +137,22 @@ export const AdminRevenueSchema = z.object({
   total: RevenueSum.extend({ buyers: int, firstBuyers: int, refunds: int, refundKrw: int }),
   /** 전체 기간 합(환불 뺀, 소모성만). */
   allTime: RevenueSum.extend({ buyers: int }),
-  /** KST 날짜별(기간이 1일이면 오늘 하루). */
-  daily: z.array(RevenueSum.extend({ day: z.string() })),
+  /** KST 날짜별(기간이 1일이면 오늘 하루). adCount · adKrw = 그날 광고 제거 구매 알림(T-11-484, 환불 빼기 전). */
+  daily: z.array(
+    RevenueSum.extend({ day: z.string(), adCount: int.optional(), adKrw: int.optional() }),
+  ),
   products: z.array(RevenueSum.extend({ productId: z.string(), refunded: int })),
   stores: z.array(RevenueSum.extend({ store: z.string() })),
-  /** 광고 제거(스토어 알림 기준). since = 알림 기록이 시작된 시각. */
-  removeAds: z.object({ count: int, refunds: int, krw: int, since: z.string().nullable() }),
+  /** 광고 제거(스토어 알림 기준). since = 알림 기록이 시작된 시각. 서버 원장(iap_purchases) 밖이라 위 합에 없다.
+   * T-11-484 allTime = 전체 기간, stores = 기간 안 스토어별. */
+  removeAds: z.object({
+    count: int,
+    refunds: int,
+    krw: int,
+    since: z.string().nullable(),
+    allTime: z.object({ count: int, refunds: int, krw: int }).optional(),
+    stores: z.array(z.object({ store: z.string(), count: int, refunds: int })).optional(),
+  }),
   recent: z.array(
     z.object({
       store: z.string(),

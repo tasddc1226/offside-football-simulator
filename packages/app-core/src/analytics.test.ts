@@ -68,6 +68,18 @@ describe('privacy allowlists', () => {
       ),
     ).toBe('?utm_campaign=season1_launch');
   });
+  it('keeps the amachuggu partner popup campaign', () => {
+    for (const content of ['bs_a', 'bs_b', 'home_popup_a', 'home_popup_b']) {
+      const query = `?utm_source=amachuggu&utm_medium=partner&utm_campaign=amachuggu_collab&utm_content=${content}`;
+      expect(campaignQuery(`https://offside-lab.com/${query}&uid=PRIVATE`)).toBe(query);
+    }
+  });
+  it('keeps the meta reels ad content per country', () => {
+    for (const content of ['jp_reels', 'uk_reels', 'us_reels', 'kr_reels']) {
+      const query = `?utm_source=meta&utm_medium=paid&utm_campaign=global_test&utm_content=${content}`;
+      expect(campaignQuery(`https://offside-lab.com/${query}&fbclid=PRIVATE`)).toBe(query);
+    }
+  });
   it.each(['launch', 'retirement_share'])(
     'preserves existing campaign %s and content',
     (campaign) => {

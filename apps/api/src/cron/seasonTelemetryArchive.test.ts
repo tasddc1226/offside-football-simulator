@@ -83,6 +83,29 @@ describe('T-11-207 측정 기록 보관', () => {
     expect(await archiveSeasonTelemetry(ctx.env.DB, bucket(), 'test', NOW)).toBeNull();
   });
 
+  it('T-11-486a 광고 이용 요약도 R2 파일에 그대로 싣는다', async () => {
+    await ctx.env.DB.prepare('DELETE FROM season_telemetry').run();
+    const ads = '{"af":true,"rw":{"c":0,"p":0,"b":0},"fr":{"c":2,"p":0,"b":1},"it":0}';
+    await ctx.env.DB.prepare(
+      `INSERT INTO season_telemetry (career_id, year, age, ovr, events_json, growth_json, created_at, ads_json)
+       VALUES ('car_ads', 2032, 24, 60, NULL, NULL, ?1, ?2)`,
+    )
+      .bind(ago((TELEMETRY_KEEP_DAYS + 2) * DAY_MS), ads)
+      .run();
+    expect(await archiveSeasonTelemetry(ctx.env.DB, bucket(), 'test-ads', NOW)).toMatchObject({
+      rows: 1,
+    });
+    const listed = await bucket().list({ prefix: 'season-telemetry/test-ads/' });
+    const line = new TextDecoder()
+      .decode(
+        gunzipSync(
+          new Uint8Array(await (await bucket().get(listed.objects[0]!.key))!.arrayBuffer()),
+        ),
+      )
+      .trim();
+    expect((JSON.parse(line) as { ads: unknown }).ads).toEqual(JSON.parse(ads));
+  });
+
   it('R2 업로드가 실패하면 D1 행을 지우지 않는다', async () => {
     await ctx.env.DB.prepare('DELETE FROM season_telemetry').run();
     await insert(2031, ago((TELEMETRY_KEEP_DAYS + 2) * DAY_MS), '[{"k":"ev"}]', null);

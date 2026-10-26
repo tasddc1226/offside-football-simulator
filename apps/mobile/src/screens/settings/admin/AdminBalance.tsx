@@ -1,6 +1,7 @@
 // T-10-016 밸런스 설정(웹 admin/AdminBalance.svelte). 초안을 만들어 수치를 고치고, 활성화하면 GET /v1/balance로 퍼진다 — 진행 중인
 // 커리어는 다음 시즌 시작부터, 새 커리어는 바로 적용된다. 되돌리기는 옛 버전을 다시 활성화한다.
 // 값 고치기·차이 계산은 웹과 같은 app-core/balanceEdit를 쓴다. <select>는 PickerField(목록 창)로 바꿨다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, View, useWindowDimensions } from 'react-native';
 import {
@@ -17,7 +18,7 @@ import {
 } from '@offside/contracts/balance';
 import { BALANCE_GROUPS, BALANCE_TEXT, type BalanceGroup } from '@offside/contracts/balance-text';
 import * as api from '@offside/app-core/api/admin';
-import type { BalanceVersion } from '@offside/app-core/api/admin';
+import type { BalanceSchedule, BalanceVersion } from '@offside/app-core/api/admin';
 import {
   EVENT_LIST,
   PROB_EVENTS,
@@ -70,7 +71,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
         paddingHorizontal: 12,
         borderWidth: 1,
         borderColor: c.line,
-        borderRadius: 12,
+        borderRadius: RADIUS.md,
       }}
     >
       <Txt bold>{title}</Txt>
@@ -84,6 +85,7 @@ export default function AdminBalance() {
   const { width } = useWindowDimensions();
   const narrow = width <= 420;
   const [versions, setVersions] = useState<BalanceVersion[]>([]);
+  const [scheduled, setScheduled] = useState<BalanceSchedule | null>(null);
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [selected, setSelected] = useState<number | null>(null);
   const [work, setWork] = useState<Work>({ note: '', values: {} });
@@ -128,6 +130,7 @@ export default function AdminBalance() {
     }
     const list = r.data.versions;
     setVersions(list);
+    setScheduled(r.data.scheduled ?? null);
     setStatus('ready');
     await pick(
       select ??
@@ -201,6 +204,36 @@ export default function AdminBalance() {
     toast(`${withEulReul(`v${v.version}`)} 적용했어요`);
     await load(v.version);
   }
+  /** T-11-488 시즌 중에는 바로 켤 수 없어 다음 시즌 개막에 켜지게 예약한다(서버 5분 cron이 켠다). */
+  async function schedule(v: BalanceVersion) {
+    if (v.status === 'draft' && dirty && !(await save())) return;
+    const lines = diffLines(v.status === 'draft' ? work.values : v.values);
+    const body = lines.length ? lines.join('\n') : '적용 중인 버전과 값이 같습니다.';
+    const replace =
+      scheduled && scheduled.version !== v.version
+        ? `\n\n지금 예약된 v${scheduled.version} 대신 예약해요.`
+        : '';
+    if (
+      !(await confirmAsync(
+        `${withEulReul(`v${v.version}`)} 다음 시즌 개막에 적용할까요?`,
+        `${body}${replace}\n\n개막 뒤 5분 안에 켜져요. 그 전에 초안을 고치면 고친 값이 적용돼요.`,
+        '예약',
+      ))
+    )
+      return;
+    const s = await run(api.scheduleBalance(v.version));
+    if (!s) return;
+    setScheduled(s);
+    toast(`v${v.version} 시즌 ${s.season} 개막 예약했어요`);
+  }
+  async function unschedule() {
+    if (!scheduled) return;
+    if (!(await confirmAsync(`v${scheduled.version} 개막 예약을 취소할까요?`, undefined, '취소')))
+      return;
+    if ((await run(api.cancelBalanceSchedule())) === null) return;
+    setScheduled(null);
+    toast('예약을 취소했어요');
+  }
   async function remove(v: BalanceVersion) {
     if (!(await confirmAsync(`초안 ${withEulReul(`v${v.version}`)} 지울까요?`, undefined, '삭제')))
       return;
@@ -211,7 +244,7 @@ export default function AdminBalance() {
     await load();
   }
 
-  const small = { fontSize: rem(0.75) } as const;
+  const small = { fontSize: rem(FONT.caption) } as const;
   /** 이름·설명 칸 + 오른쪽 입력 칸(웹 .admin-knob: 좁은 화면에선 세로로 쌓는다). */
   const knob = (key: string, changed: boolean, left: React.ReactNode, right: React.ReactNode) => (
     <View
@@ -223,7 +256,7 @@ export default function AdminBalance() {
         gap: 8,
         paddingVertical: 4,
         paddingHorizontal: 6,
-        borderRadius: 8,
+        borderRadius: RADIUS.sm,
         backgroundColor: changed ? alpha(c.warn, 0.12) : 'transparent',
       }}
     >
@@ -238,17 +271,21 @@ export default function AdminBalance() {
         <Txt v="h2" accessibilityRole="header">
           밸런스 설정
         </Txt>
-        <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
           {active ? (
             <>
               {'적용 중: '}
-              <Txt bold tone="muted" style={{ fontSize: rem(0.8125) }}>{`v${active.version}`}</Txt>
+              <Txt
+                bold
+                tone="muted"
+                style={{ fontSize: rem(FONT.label) }}
+              >{`v${active.version}`}</Txt>
               {` · ${dateOf(active.activatedAt)}`}
             </>
           ) : (
             <>
               {'적용 중: '}
-              <Txt bold tone="muted" style={{ fontSize: rem(0.8125) }}>
+              <Txt bold tone="muted" style={{ fontSize: rem(FONT.label) }}>
                 기본값
               </Txt>
               {' (서버 설정 없음)'}
@@ -257,6 +294,29 @@ export default function AdminBalance() {
           {' — 진행 중인 커리어는 다음 시즌부터, 새 커리어는 바로 적용됩니다.'}
         </Txt>
       </View>
+
+      {scheduled ? (
+        <View
+          testID="balance-scheduled"
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            paddingVertical: 8,
+            paddingHorizontal: 12,
+            borderRadius: RADIUS.md,
+            backgroundColor: alpha(c.warn, 0.12),
+          }}
+        >
+          <Txt style={{ flex: 1, fontSize: rem(FONT.label) }}>
+            {`개막 예약: v${scheduled.version} · 시즌 ${scheduled.season} 개막 뒤 5분 안에 적용`}
+          </Txt>
+          <Btn sm testID="cancel-schedule" disabled={busy} onPress={() => void unschedule()}>
+            예약 취소
+          </Btn>
+        </View>
+      ) : null}
 
       <LoadState
         status={status}
@@ -277,7 +337,7 @@ export default function AdminBalance() {
         <ScrollView
           nestedScrollEnabled
           accessibilityLabel="버전 목록"
-          style={{ maxHeight: 260, borderWidth: 1, borderColor: c.line, borderRadius: 12 }}
+          style={{ maxHeight: 260, borderWidth: 1, borderColor: c.line, borderRadius: RADIUS.md }}
         >
           {versions.length ? (
             versions.map((v, i) => (
@@ -300,7 +360,8 @@ export default function AdminBalance() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Txt bold>{`v${v.version}`}</Txt>
                   <Pill tone={STATUS[v.status][1]}>{STATUS[v.status][0]}</Pill>
-                  <Txt numberOfLines={1} style={{ flex: 1, fontSize: rem(0.8125) }}>
+                  {scheduled?.version === v.version ? <Pill tone="warn">개막 예약</Pill> : null}
+                  <Txt numberOfLines={1} style={{ flex: 1, fontSize: rem(FONT.label) }}>
                     {v.note || '메모 없음'}
                   </Txt>
                 </View>
@@ -537,7 +598,7 @@ export default function AdminBalance() {
             >
               <Txt
                 bold
-                style={{ fontSize: rem(0.8125) }}
+                style={{ fontSize: rem(FONT.label) }}
               >{`적용 중인 버전과 다른 값 ${changes.length}개`}</Txt>
               {changes.map((line, i) => (
                 <Txt key={i} style={small}>
@@ -564,6 +625,13 @@ export default function AdminBalance() {
                     onPress={() => void activate(current)}
                   >
                     적용하기
+                  </Btn>
+                  <Btn
+                    testID="schedule"
+                    disabled={busy || scheduled?.version === current.version}
+                    onPress={() => void schedule(current)}
+                  >
+                    다음 시즌 개막에 적용
                   </Btn>
                   <Btn
                     sm

@@ -32,7 +32,7 @@ export async function recordPushInteraction(
 }
 
 // One row per notification/recipient, then aggregate delivery counts separately from unique clicks.
-const CTE = `WITH cohort AS (
+const CTE = `WITH candidates AS (
   SELECT n.*,
     CASE WHEN n.kind = 'news' THEN json_extract(n.target_json, '$.board')
       WHEN n.source_key LIKE 'friend-request:%' THEN 'friend-request'
@@ -40,12 +40,17 @@ const CTE = `WITH cohort AS (
       WHEN n.source_key LIKE 'friendly:%' THEN 'friendly' ELSE n.kind END AS category,
     CASE WHEN n.kind = 'news' OR n.source_key LIKE 'cup-complete:%' THEN n.source_key ELSE n.id END AS campaign
   FROM notifications n WHERE n.created_at >= ? AND n.created_at <= ? AND (? = 1 OR n.kind <> 'test')
+), cohort AS (
+  SELECT * FROM candidates WHERE (? IS NULL OR category = ?)
 ), facts AS (
   SELECT n.id, n.category, n.campaign, n.title, n.created_at, o.stage,
     MAX(CASE WHEN r.accepted_at IS NOT NULL AND o.returned_at IS NOT NULL THEN 1 ELSE 0 END) AS returned,
     MAX(CASE WHEN r.accepted_at IS NOT NULL AND o.retired_at IS NOT NULL THEN 1 ELSE 0 END) AS retired,
     COUNT(r.id) AS queued,
     SUM(CASE WHEN r.state IN ('pending','sending','accepted','checking') THEN 1 ELSE 0 END) AS pending,
+    SUM(CASE WHEN r.state = 'pending' THEN 1 ELSE 0 END) AS waiting,
+    SUM(CASE WHEN r.state = 'sending' THEN 1 ELSE 0 END) AS sending,
+    SUM(CASE WHEN r.state IN ('accepted','checking') THEN 1 ELSE 0 END) AS checking,
     SUM(CASE WHEN r.accepted_at IS NOT NULL THEN 1 ELSE 0 END) AS accepted,
     SUM(CASE WHEN r.confirmed_at IS NOT NULL THEN 1 ELSE 0 END) AS confirmed,
     SUM(CASE WHEN r.state = 'failed' THEN 1 ELSE 0 END) AS failed,
@@ -62,6 +67,9 @@ const CTE = `WITH cohort AS (
 const KEYS = [
   'queued',
   'pending',
+  'waiting',
+  'sending',
+  'checking',
   'accepted',
   'confirmed',
   'failed',
@@ -74,26 +82,39 @@ const KEYS = [
 ] as const;
 const COUNTS = KEYS.map((key) => `COALESCE(SUM(${key}), 0) AS ${key}`).join(', ');
 
-/** Indexed, bounded cohort (KST calendar days). Open-on-demand, four aggregate queries, no N+1. */
+/** Date range uses notifications_created_idx; joins use push_results_notification_idx.
+ * Category/issues are post-range aggregate filters, no new full-table scan or N+1.
+ * Issues filters campaign history only; summary/analysis retain the selected cohort for context. */
 export async function getPushPerformance(
   db: D1Database,
   query: PushPerformanceQuery,
   at = new Date(),
 ): Promise<PushPerformance> {
   const now = at.toISOString();
-  const through = query.through && query.through < now ? query.through : now;
+  const anchor = query.through && query.through < now ? query.through : now;
+  const previousEnd = new Date(Date.parse(`${kstDay(anchor)}T00:00:00+09:00`) - 1).toISOString();
+  // Pagination already carries the selected day's upper bound; never shift it a second time.
+  const through = query.previous === '1' && !query.through ? previousEnd : anchor;
   const today = `${kstDay(through)}T00:00:00+09:00`;
   const from = new Date(Date.parse(today) - (Number(query.days) - 1) * 86400_000).toISOString();
   const statement = (sql: string) =>
-    db.prepare(`${CTE} ${sql}`).bind(from, through, query.tests === '1' ? 1 : 0);
-  const [totals, categories, daily, campaigns, start, retention, cups] = await db.batch([
+    db
+      .prepare(`${CTE} ${sql}`)
+      .bind(
+        from,
+        through,
+        query.tests === '1' ? 1 : 0,
+        query.category ?? null,
+        query.category ?? null,
+      );
+  const [totals, categories, daily, campaigns, start, retention, cups, nudges] = await db.batch([
     statement(`SELECT ${COUNTS} FROM facts`),
     statement(`SELECT category, ${COUNTS} FROM facts GROUP BY category ORDER BY category`),
     statement(
       `SELECT substr(datetime(created_at, '+9 hours'), 1, 10) AS day, ${COUNTS} FROM facts GROUP BY day ORDER BY day`,
     ),
     statement(`SELECT campaign AS id, category, MIN(title) AS title, MAX(created_at) AS createdAt, ${COUNTS}
-      FROM facts GROUP BY campaign, category ORDER BY createdAt DESC, id DESC LIMIT 21 OFFSET ${query.page * 20}`),
+      FROM facts GROUP BY campaign, category ${query.issues === '1' ? 'HAVING SUM(failed + unknown) > 0' : ''} ORDER BY createdAt DESC, id DESC LIMIT 21 OFFSET ${query.page * 20}`),
     db.prepare("SELECT value FROM app_meta WHERE key = 'push_tracking_started_at'"),
     statement(
       `SELECT stage, ${COUNTS}, SUM(returned) AS returned, SUM(retired) AS retired FROM facts WHERE stage IS NOT NULL GROUP BY stage ORDER BY stage`,
@@ -121,6 +142,23 @@ export async function getPushPerformance(
         .join(', ')}
       FROM cup_people p LEFT JOIN facts f ON f.id=p.id GROUP BY p.cupId
       ORDER BY createdAt DESC, p.cupId DESC LIMIT 21 OFFSET ${query.page * 20}`),
+    // T-11-501 원장은 작고 created_at 인덱스로 기간만 읽는다. 비교군은 알림이 없어 facts를 거치지 않는다.
+    db
+      .prepare(
+        `SELECT campaign, stage,
+          SUM(variant = 'send') AS sent, SUM(variant = 'holdout') AS held,
+          SUM(EXISTS (SELECT 1 FROM push_results pr WHERE pr.notification_id = r.notification_id
+            AND pr.accepted_at IS NOT NULL)) AS delivered,
+          SUM(EXISTS (SELECT 1 FROM push_interactions i WHERE i.notification_id = r.notification_id
+            AND i.clicked_at IS NOT NULL)) AS clicked,
+          SUM(variant = 'send' AND returned_at IS NOT NULL) AS sentReturned,
+          SUM(variant = 'holdout' AND returned_at IS NOT NULL) AS heldReturned,
+          SUM(variant = 'send' AND progressed_at IS NOT NULL) AS sentProgressed,
+          SUM(variant = 'holdout' AND progressed_at IS NOT NULL) AS heldProgressed
+        FROM retention_pushes r WHERE created_at >= ? AND created_at <= ?
+        GROUP BY campaign, stage ORDER BY campaign, stage LIMIT 20`,
+      )
+      .bind(from, through),
   ]);
   return {
     generatedAt: now,
@@ -133,6 +171,7 @@ export async function getPushPerformance(
     campaigns: campaigns!.results.slice(0, 20) as PushPerformance['campaigns'],
     retention: retention!.results as PushPerformance['retention'],
     cups: cups!.results.slice(0, 20) as PushPerformance['cups'],
-    hasMore: campaigns!.results.length > 20 || cups!.results.length > 20,
+    nudges: nudges!.results as PushPerformance['nudges'],
+    hasMore: campaigns!.results.length > 20 || (query.issues !== '1' && cups!.results.length > 20),
   };
 }

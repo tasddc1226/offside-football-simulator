@@ -1,0 +1,20 @@
+{
+  "id": "t-11-414-clean-sheet-score",
+  "title": "수비수 경기별 스코어와 무실점 맞추기",
+  "items": [
+    "수비수 · 골키퍼의 경기별 기록에서 무실점으로 세지 않은 경기가 1-0 · 0-0처럼 실점 없는 스코어로 나오던 문제를 고쳤어요. 이제 스코어와 무실점 수가 맞아요"
+  ],
+  "en": {
+    "title": "Defender match scores now match clean sheets",
+    "items": [
+      "For defenders and goalkeepers, matches not counted as clean sheets sometimes showed scores like 1-0 or 0-0 in the match log. Scores now match the clean sheet count."
+    ]
+  },
+  "ja": {
+    "title": "DFの試合スコアと無失点数を一致",
+    "items": [
+      "DF · GKの試合別記録で、無失点に数えない試合が1-0や0-0のように失点なしのスコアで表示される問題を直しました。スコアと無失点数が一致するようになりました。"
+    ]
+  },
+  "availability": "web-app"
+}

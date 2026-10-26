@@ -1,13 +1,19 @@
 <script lang="ts">
-  import { tick } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import type { CupMatch, CupTeam } from '@offside/app-core/api/cup';
   import { BRACKET as B, cupBracket, type BracketNode } from '@offside/app-core/cupBracket';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
   import { roundLabel, whenText } from './cupView';
   import TeamLogo from '../team/TeamLogo.svelte';
-  let { matches, teams, mineId, now, onselect }: { matches: readonly CupMatch[]; teams: ReadonlyMap<string, CupTeam>; mineId: string | null; now: number; onselect: (m: CupMatch) => void } = $props();
+  import type { CupBracketView } from '@offside/app-core/cupFolds';
+  let { matches, teams, mineId, now, onselect, start = null }: { matches: readonly CupMatch[]; teams: ReadonlyMap<string, CupTeam>; mineId: string | null; now: number; onselect: (m: CupMatch) => void; start?: CupBracketView | null } = $props();
   let viewport: HTMLDivElement;
-  let active = $state(0);
+  // T-11-406 팀 프로필에서 돌아오면 보던 라운드 · 세로 위치에서 다시 연다.
+  // svelte-ignore state_referenced_locally
+  let active = $state(start?.column ?? 0);
+  onMount(() => { if (start) viewport.scrollTop = start.y; });
+  /** 지금 보는 라운드와 세로 위치(Cup이 팀 프로필로 가기 전에 기억한다). */
+  export const view = (): Omit<CupBracketView, 'match'> => ({ column: active, y: viewport?.scrollTop ?? 0 });
   const tree = $derived(cupBracket(matches, active));
   let viewWidth = $state(0);
   let offset = $derived(Math.min(active * B.column, Math.max(0, tree.width + 24 - viewWidth)));
@@ -68,18 +74,18 @@
 <style>
   .bracket-controls {min-width:0;}
   nav {display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:thin;}
-  nav button {flex:1 0 auto;min-height:44px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--muted);font:inherit;font-size:.8125rem;white-space:nowrap;cursor:pointer;}
+  nav button {flex:1 0 auto;min-height:44px;padding:6px 10px;border:1px solid var(--line);border-radius:var(--radius-pill);background:transparent;color:var(--muted);font:inherit;font-size:var(--fs-label);white-space:nowrap;cursor:pointer;}
   nav button.chosen {border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface));color:var(--accent-text);font-weight:700;}
   .bracket-help {display:flex;align-items:center;gap:12px;}
   .bracket-help p {flex:1;min-width:0;margin:0;line-height:1.5;}
-  .mine-jump {flex:none;display:flex;align-items:center;gap:4px;min-height:44px;padding:6px 0;border:0;background:transparent;color:var(--accent-text);font:inherit;font-size:.8125rem;font-weight:600;cursor:pointer;}
-  .bracket-viewport {max-width:100%;height:640px;max-height:65vh;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;transition:height .4s ease;overscroll-behavior:contain;border:1px solid var(--line);border-radius:12px;background:var(--bg);}
+  .mine-jump {flex:none;display:flex;align-items:center;gap:4px;min-height:44px;padding:6px 0;border:0;background:transparent;color:var(--accent-text);font:inherit;font-size:var(--fs-label);font-weight:600;cursor:pointer;}
+  .bracket-viewport {max-width:100%;height:640px;max-height:65vh;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;transition:height .4s ease;overscroll-behavior:contain;border: 1px solid transparent;border-radius:var(--radius-md);background:var(--bg);}
   .bracket-pan {position:relative;max-width:100%;transition:height .4s ease;}
   .bracket-canvas {position:relative;margin:12px;transition:transform .4s ease,height .4s ease;}
   svg {position:absolute;inset:0;pointer-events:none;}
   path {fill:none;stroke:var(--muted);stroke-width:1.5;opacity:.65;transition:d .4s ease;}
   .round-heading {position:absolute;top:0;margin:0;font-size:14px;}
-  .bracket-match {position:absolute;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:top .4s ease,height .4s ease;}
+  .bracket-match {position:absolute;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:8px 10px;border: 1px solid transparent;border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:top .4s ease,height .4s ease;}
   .bracket-match:disabled {opacity:1;cursor:default;border-style:dashed;}
   .bracket-match.mine {border:2px solid var(--accent);}
   .bracket-match:hover:not(:disabled) {border-color:var(--accent);}

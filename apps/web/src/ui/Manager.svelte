@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   // T-11-310 감독 커리어 — 구단주 화면의 '감독 커리어' 카드로 연다. 지금 가진 선수 카드로 감독 커리어를 시작하고(한 번에
   // 하나), 기기에서 시즌을 돌린 뒤 감독 카드로 확정해 우리 팀 감독 칸에 앉힌다. 화면을 열 때 목록을 한 번 받는다(메모 1분).
   import Topbar from './Topbar.svelte';
@@ -69,6 +70,7 @@
     saveManagerState,
     setTeamCoach,
     startConfirmLines,
+    finishConfirmLines,
     startManager,
     type ManagerStatKey,
   } from '@offside/app-core/manager';
@@ -83,6 +85,8 @@
   let error = $state<string | null>(null);
   let confirm = $state<ManagerCandidate | null>(null);
   let confirmAbandon = $state(false);
+  // T-11-443 '감독 카드로 확정'은 되돌릴 수 없어 한 번 더 묻는다.
+  let confirmFinish = $state(false);
   // T-11-345 경질할지 묻는 끝낸 감독 · 방금 경질한 알림.
   let confirmRelease = $state<ManagerCareer | null>(null);
   let released = $state<string | null>(null);
@@ -167,6 +171,7 @@
     if (!st || !res) return;
     const id = st.id;
     if (await run(() => finishManager(id, res))) {
+      confirmFinish = false;
       clearManagerState();
       await load();
     }
@@ -234,7 +239,10 @@
       evChips = [];
     } else if (bar.act === 'manager-result') playSeason();
     else if (bar.act === 'manager-continue') act(continueAfterResult);
-    else void finish();
+    else {
+      error = null;
+      confirmFinish = true;
+    }
   }
   const RANK: Record<string, number> = { S: 3, A: 2, B: 1, C: 0 };
   /** 숙련이 가장 높은 포메이션(효과 미리보기 기준). */
@@ -260,7 +268,7 @@
       <button class="btn self-start" data-act="manager-retry" onclick={() => void load()}>{M.retry}</button>
     </section>
   {:else if !data}
-    <section class="card"><p class="muted" aria-live="polite">{M.loading}</p></section>
+    <Skeleton height={240} />
   {:else if st && data.active}
     <!-- 진행 중 감독 커리어 -->
     <section class="card mg-col" data-manager-play={st.phase}>
@@ -339,7 +347,7 @@
           {@render cardBody(result)}
         </div>
         <p class="muted fs-sm">{M.doneLead}</p>
-        {#if error}<p class="mg-err" role="alert">{error}</p>{/if}
+        {#if error && !confirmFinish}<p class="mg-err" role="alert">{error}</p>{/if}
       </section>
     {/if}
 
@@ -445,8 +453,9 @@
         </ul>
       </details>
     {/if}
-    {#if st.phase !== 'done' && !sheetLabel}
-      <button class="btn mg-abandon" data-act="manager-abandon" onclick={() => ((confirmAbandon = true), (error = null))}>{M.abandon}</button>
+    <!-- T-11-451 시즌을 다 마친 뒤에도 확정 전에는 원래 선수로 돌아갈 수 있다(서버는 포기와 같다). -->
+    {#if !sheetLabel}
+      <button class="btn mg-abandon" data-act="manager-abandon" onclick={() => ((confirmAbandon = true), (error = null))}>{st.phase === 'done' ? M.undo : M.abandon}</button>
     {/if}
   {:else}
     <!-- 시작 · 내 감독 -->
@@ -495,7 +504,7 @@
         <p class="muted fs-sm">{M.noManagers}</p>
       {/each}
       {#if released}<p class="muted fs-sm" role="status" data-manager-released>{released}</p>{/if}
-      {#if error && !confirm && !confirmAbandon && !confirmRelease && st?.phase !== 'done'}<p class="mg-err" role="alert">{error}</p>{/if}
+      {#if error && !confirm && !confirmAbandon && !confirmRelease && !confirmFinish && st?.phase !== 'done'}<p class="mg-err" role="alert">{error}</p>{/if}
     </section>
   {/if}
 </div>
@@ -535,13 +544,27 @@
 
 {#if confirmAbandon}
   <button class="mg-scrim" aria-label={M.cancel} onclick={() => (confirmAbandon = false)}></button>
-  <div class="mg-sheet" role="dialog" aria-modal="true" aria-label={M.abandon} data-manager-abandon>
-    <h2>{M.abandon}</h2>
-    <p>{M.abandonConfirm}</p>
+  {@const undo = st?.phase === 'done'}
+  <div class="mg-sheet" role="dialog" aria-modal="true" aria-label={undo ? M.undo : M.abandon} data-manager-abandon>
+    <h2>{undo ? M.undo : M.abandon}</h2>
+    <p>{undo ? M.undoConfirm : M.abandonConfirm}</p>
     {#if error}<p class="mg-err" role="alert">{error}</p>{/if}
     <div class="mg-actions">
       <button class="btn" onclick={() => (confirmAbandon = false)}>{M.cancel}</button>
-      <button class="btn mg-danger" data-act="manager-abandon-confirm" disabled={busy} onclick={() => void abandon()}>{M.abandonOk}</button>
+      <button class="btn mg-danger" data-act="manager-abandon-confirm" disabled={busy} onclick={() => void abandon()}>{undo ? M.undoOk : M.abandonOk}</button>
+    </div>
+  </div>
+{/if}
+
+{#if confirmFinish}
+  <button class="mg-scrim" aria-label={M.cancel} onclick={() => (confirmFinish = false)}></button>
+  <div class="mg-sheet" role="dialog" aria-modal="true" aria-label={M.finishTitle} data-manager-finish>
+    <h2>{M.finishTitle}</h2>
+    <ul class="mg-lines">{#each finishConfirmLines() as line, i (i)}<li>{line}</li>{/each}</ul>
+    {#if error}<p class="mg-err" role="alert">{error}</p>{/if}
+    <div class="mg-actions">
+      <button class="btn" onclick={() => (confirmFinish = false)}>{M.cancel}</button>
+      <button class="btn btn-primary" data-act="manager-finish-confirm" disabled={busy} onclick={() => void finish()}>{M.finishOk}</button>
     </div>
   </div>
 {/if}
@@ -568,7 +591,7 @@
 
 <style>
   .mg-delta {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     font-weight: 700;
     color: var(--good);
     animation: pop 0.32s cubic-bezier(0.3, 1.6, 0.5, 1) both;
@@ -588,7 +611,7 @@
     margin: 0;
     padding: 0;
     list-style: none;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .mg-steps li.on {
@@ -611,7 +634,7 @@
   .mg-abandon-link {
     align-self: center;
     color: var(--muted);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
   }
   .manager {
     display: flex;
@@ -629,10 +652,10 @@
     margin: 0;
   }
   .mg-col h2 {
-    font-size: 1.0625rem;
+    font-size: var(--fs-title3);
   }
   .mg-col h3 {
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     color: var(--muted);
   }
   .mg-head {
@@ -641,7 +664,7 @@
     gap: 2px;
   }
   .mg-head b {
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
   }
   .mg-stats {
     display: grid;
@@ -651,11 +674,11 @@
   }
   .mg-stats div {
     padding: 8px 10px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
   }
   .mg-stats dt {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .mg-stats dd {
@@ -667,7 +690,7 @@
     font-variant-numeric: tabular-nums;
   }
   .mg-log {
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     line-height: 1.5;
   }
   .mg-row {
@@ -675,9 +698,9 @@
     align-items: center;
     gap: 10px;
     padding: 10px 12px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: var(--surface);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: var(--surface-2);
     color: var(--ink);
     text-align: left;
     font: inherit;
@@ -694,7 +717,7 @@
     gap: 2px;
   }
   .mg-info small {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
   }
   .mg-chips {
     display: flex;
@@ -707,16 +730,16 @@
     align-items: center;
     min-width: 64px;
     padding: 8px 12px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--surface);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
     color: var(--ink);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
   }
   .mg-chip small {
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     font-weight: 500;
     color: var(--muted);
   }
@@ -731,7 +754,7 @@
   }
   .mg-result {
     padding: 10px 12px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
     line-height: 1.5;
   }
@@ -742,11 +765,11 @@
   }
   .mg-trophy {
     padding: 4px 12px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--pitch);
     color: var(--on-pitch);
     font-weight: 700;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     animation: mg-pop 0.42s cubic-bezier(0.2, 1.4, 0.4, 1) var(--d, 0ms) both;
   }
   .mg-trophy.bad {
@@ -766,7 +789,7 @@
   }
   .mg-grade-pop {
     display: inline-block;
-    font-size: 1.25rem;
+    font-size: var(--fs-title2);
     animation: mg-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) 0.3s both;
   }
   @keyframes mg-pop {
@@ -786,7 +809,7 @@
     gap: 6px;
     padding: 12px;
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: var(--radius-md);
   }
   .mg-card-head {
     display: flex;
@@ -799,15 +822,15 @@
   }
   .mg-badge {
     padding: 2px 8px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--surface-2);
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     font-weight: 600;
   }
   .mg-hist {
     margin: 8px 0 0;
     padding-left: 18px;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     line-height: 1.6;
   }
   .mg-abandon {
@@ -839,7 +862,7 @@
     flex-direction: column;
     gap: 12px;
     padding: 16px 20px calc(16px + var(--safe-b));
-    border-radius: 22px 22px 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     background: var(--surface);
     color: var(--ink);
     box-shadow: var(--shadow);
@@ -849,12 +872,12 @@
     margin: 0;
   }
   .mg-sheet h2 {
-    font-size: 1.0625rem;
+    font-size: var(--fs-title3);
   }
   .mg-lines {
     margin: 0;
     padding-left: 18px;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     line-height: 1.6;
   }
   .mg-actions {

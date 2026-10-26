@@ -35,4 +35,5 @@
   </div>
   <p class="muted stat-note"><b>{L.noteBold}</b>{L.noteRest({ role: d.roleName ?? '' })} {L.shareNote}</p>
   {#if d.growthNote}<p class="stat-note growth-slow" data-growth-slow><b>{L.growthTitle}</b> · {d.growthNote}</p>{/if}
+  {#await import('./GrowthDir.svelte') then M}<M.default info={d.growthDir} />{/await}
 </section>

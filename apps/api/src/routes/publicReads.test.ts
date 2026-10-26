@@ -26,6 +26,9 @@ const PUBLIC_GETS = [
   '/v1/teams?division=3',
   '/v1/teams/divisions',
   '/v1/achievements/ranking',
+  '/v1/leagues/current',
+  '/v1/leagues/2/tables/1/1',
+  '/v1/leagues/2/matches/lgm_x',
   ...BOARD_KEYS.map((b) => `/v1/boards/${b}/posts?limit=${BOARD_PAGE_LIMIT}`),
 ];
 

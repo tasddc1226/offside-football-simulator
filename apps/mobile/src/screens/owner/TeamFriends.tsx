@@ -1,6 +1,7 @@
 // T-11-098 친구 · 친선전(웹 team/TeamFriends.svelte) — 내 팀 '경기' 탭의 '친구' 칸. 친구 코드 · 받은/보낸 신청 · 친구 ·
 // 최근 친선전. 친선전은 랭크와 따로 센다(레이팅·전적·업적에 들어가지 않고, 하루 한도와 친구별 상대 전적이 따로 있다).
 // 친구 데이터는 이 칸을 처음 열 때만 불러온다(useFriends). 문구는 웹과 같이 고친다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Alert, Share, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -408,7 +409,7 @@ export function TeamFriends({
               testID="friend-code"
               style={{
                 fontFamily: DISPLAY[700],
-                fontSize: rem(1.75),
+                fontSize: rem(FONT.title1),
                 letterSpacing: 2,
                 color: c.ink,
               }}

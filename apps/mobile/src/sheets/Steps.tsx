@@ -1,4 +1,5 @@
 // 진행 단계 시트(웹 sheets/Steps.svelte): 제목 · 채워지는 막대 · 단계 목록(지금 ▸ · 지난 ✓).
+import { FONT } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import type { SheetView } from '@offside/app-core/sheets';
@@ -28,7 +29,7 @@ export function Steps({
             <Txt
               key={i}
               tone={on ? 'ink' : 'muted'}
-              style={{ fontSize: rem(0.875), lineHeight: rem(0.875) * 1.55 }}
+              style={{ fontSize: rem(FONT.body2), lineHeight: rem(FONT.body2) * 1.55 }}
             >
               {on ? <Txt style={{ color: c.accent }}>{'▸ '}</Txt> : null}
               {done ? <Txt style={{ color: c.good }}>{'✓ '}</Txt> : null}

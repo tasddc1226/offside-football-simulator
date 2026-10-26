@@ -118,13 +118,13 @@
   .op-who {display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-width:0;}
   .op-who h1 {display:flex; align-items:center; gap:6px; margin:0; overflow-wrap:anywhere;}
   .op-tier {display:inline-flex;}
-  .op-grade {font-size:var(--fs-xs, 12px);}
-  .op-team {display:flex; align-items:center; gap:10px; width:100%; padding:10px 12px; border:0; border-radius:12px; background:var(--surface-2); color:inherit; font:inherit; text-align:left; cursor:pointer;}
+  .op-grade {font-size:var(--fs-caption, 12px);}
+  .op-team {display:flex; align-items:center; gap:10px; width:100%; padding:10px 12px; border:0; border-radius:var(--radius-md); background:var(--surface-2); color:inherit; font:inherit; text-align:left; cursor:pointer;}
   .op-team-text {display:flex; flex-direction:column; min-width:0; flex:1;}
   .op-team-text b {overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .op-stats {grid-template-columns:repeat(3, minmax(0, 1fr));}
-  .op-table {width:100%; border-collapse:collapse; font-size:var(--fs-sm, 14px);}
-  .op-table th {font-size:var(--fs-xs, 12px); font-weight:600; color:var(--muted); text-align:left; padding:0 4px 6px;}
+  .op-table {width:100%; border-collapse:collapse; font-size:var(--fs-label, 14px);}
+  .op-table th {font-size:var(--fs-caption, 12px); font-weight:600; color:var(--muted); text-align:left; padding:0 4px 6px;}
   .op-table td {padding:8px 4px; border-top:1px solid var(--line);}
   .op-table .num {text-align:right; font-variant-numeric:tabular-nums;}
   .op-team-cell {max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}

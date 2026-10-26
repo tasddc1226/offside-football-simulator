@@ -1,0 +1,92 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "includeEntryExports": true,
+  "ignoreExportsUsedInFile": true,
+  "ignoreWorkspaces": ["docs/archive/**"],
+  "workspaces": {
+    ".": {
+      "entry": [".github/scripts/*.{mjs,ts}", "tooling/avatar-layers/mobile-sources.mjs"],
+      "project": [".github/**/*.{js,mjs,ts}", "tooling/avatar-layers/*.mjs"]
+    },
+    "apps/api": {
+      "entry": ["src/index.ts!"],
+      "project": ["src/**/*.ts!", "*.{ts,js,mjs}", "!src/**/*.test.ts!", "!src/test/**!"]
+    },
+    "apps/agents": {
+      "entry": ["src/index.ts!"],
+      "project": ["src/**/*.ts!", "*.{ts,js,mjs}", "!src/**/*.test.ts!", "!src/test/**!"]
+    },
+    "apps/web": {
+      "entry": [
+        "src/main.ts!",
+        "src/worker.ts!",
+        "src/og-worker.ts!",
+        "scripts/*.{mjs,ts}",
+        "e2e/**/*.ts"
+      ],
+      "project": [
+        "src/**/*.{ts,svelte}!",
+        "scripts/*.{mjs,ts}",
+        "e2e/**/*.ts",
+        "*.ts",
+        "!src/**/*.test.ts!"
+      ]
+    },
+    "apps/mobile": {
+      "expo": false,
+      "entry": [
+        "src/app/**/*.tsx!",
+        "app.config.js",
+        "metro.config.js",
+        "plugins/*.js",
+        "scripts/*.mjs",
+        "vitest.push.config.mjs"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}!",
+        "plugins/*.js",
+        "scripts/*.mjs",
+        "*.{js,mjs,ts}",
+        "!src/**/*.test.{ts,tsx}!"
+      ],
+      "ignore": ["src/vendor/**"]
+    },
+    "packages/app-core": {
+      "project": [
+        "src/**/*.ts!",
+        "*.ts",
+        "!src/**/*.test.ts!",
+        "!src/**/__fixtures__/**!",
+        "!src/**/__snapshots__/**!"
+      ]
+    },
+    "packages/contracts": {
+      "project": [
+        "src/**/*.ts!",
+        "*.ts",
+        "!src/**/*.test.ts!",
+        "!src/**/__fixtures__/**!",
+        "!src/**/__snapshots__/**!"
+      ]
+    },
+    "packages/game": {
+      "project": [
+        "src/**/*.ts!",
+        "*.ts",
+        "!src/**/*.test.ts!",
+        "!src/**/__fixtures__/**!",
+        "!src/**/__snapshots__/**!"
+      ]
+    },
+    "tooling/fulltime-sim": {
+      "entry": ["*.ts"],
+      "project": ["*.ts"]
+    },
+    "tooling/scripts": {
+      "entry": ["*.mjs"],
+      "project": ["*.mjs", "*.ts"]
+    },
+    "tooling/eslint-config": {},
+    "tooling/tsconfig": {}
+  }
+}

@@ -5,7 +5,7 @@ import {
   type ChatView,
   type ChatRejectCode,
 } from '@offside/app-core/api/chat';
-import { createChatUnread } from './chat-unread.js';
+import { createChatUnread } from '@offside/app-core/chatUnread';
 
 export const chatState = $state<{ view: ChatView; unread: number }>({
   view: EMPTY_CHAT,
@@ -61,21 +61,30 @@ export function refreshChatIdentity() {
   if (connected && document.visibilityState === 'visible') chatSession();
 }
 
-/** 홈 알림과 채팅 화면은 소켓 하나를 공유한다. 숨겨진 탭은 연결을 유지하지 않는다. */
+/** T-11-504 탭을 잠깐 숨겼다 돌아와도 바로 끊지 않는다. 다시 붙을 때마다 입장권을 새로 받기 때문이다. */
+export const CHAT_HIDDEN_GRACE_MS = 60_000;
+
+/** 홈 알림과 채팅 화면은 소켓 하나를 공유한다. 숨긴 지 1분이 지난 탭은 연결을 유지하지 않는다. */
 export function startChatNotifications() {
+  let closing: ReturnType<typeof setTimeout> | undefined;
+  const close = () => {
+    clearTimeout(closing);
+    closing = undefined;
+    session?.close();
+    session = null;
+  };
   const visibility = () => {
-    if (document.visibilityState === 'visible') chatSession();
-    else {
-      session?.close();
-      session = null;
-    }
+    if (document.visibilityState === 'visible') {
+      clearTimeout(closing);
+      closing = undefined;
+      chatSession();
+    } else if (session && !closing) closing = setTimeout(close, CHAT_HIDDEN_GRACE_MS);
   };
   visibility();
   document.addEventListener('visibilitychange', visibility);
   return () => {
     document.removeEventListener('visibilitychange', visibility);
-    session?.close();
-    session = null;
+    close();
   };
 }
 

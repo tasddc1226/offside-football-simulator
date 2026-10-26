@@ -47,6 +47,8 @@ const ko = {
   helpWeightLow: '지금 포지션의 OVR에는 거의 반영되지 않아요.',
   helpWeight: (p: { attr: string; pct: number }) =>
     `지금 포지션 OVR에서 ${p.attr} 비중은 ${p.pct}%예요.`,
+  helpWeightAlt: (p: { role: string; pct: number }) =>
+    `${p.role} OVR에서는 ${p.pct}%이고, 둘 중 높은 쪽이 OVR이 돼요.`,
   // T-11-353 능력치 카드 "성장이 느린 이유": 개인 코치는 고르게 조금씩 키운다.
   slowSpread:
     '개인 코치는 여러 능력치를 고르게 조금씩 키워요. 한 능력치를 빨리 올리려면 그 능력치 훈련을 골라요.',

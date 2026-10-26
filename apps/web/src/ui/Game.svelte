@@ -17,6 +17,7 @@
   import TabIcon from './TabIcon.svelte';
   import NavIntro from './NavIntro.svelte';
   import PlayerNudge from './PlayerNudge.svelte';
+  import SaveHint from './SaveHint.svelte';
   import SeasonTab from './tabs/SeasonTab.svelte';
   import PlayerTab from './tabs/PlayerTab.svelte';
   import CareerTab from './tabs/CareerTab.svelte';
@@ -131,6 +132,8 @@
       <span class="pill">{focusName}</span>
     </div>
   </section>
+  <!-- T-11-437 첫 시즌에 한 번 · 기록 저장 위치와 백업 코드 자리 -->
+  {#if appState.tab === 'season'}<SaveHint pastSeasons={s.career.length} />{/if}
   <!-- 탭 전환 모션(T-10-003 goal 3): appState.tab을 key로 써서 탭이 바뀔 때만 새로 마운트해
        in 트랜지션이 걸리게 한다. opacity는 고정(1)해 transform만 움직인다 — 전환 중에도 텍스트
        명도 대비가 최종 값과 같게 유지돼(axe color-contrast가 중간 프레임을 스냅샷해도 값이
@@ -156,7 +159,7 @@
     <div class="action-bar-inner">
       <PlayerNudge openPlayer={() => switchTab('player')} />
       <!-- T-11-221 준비 요약(훈련 · 자기 투자 · 컨디션)은 버튼 둘째 줄에 둔다. 전에는 바 위의 작은 글자 링크였다. -->
-      <button class="btn btn-block {act.kind === 'pending' ? 'btn-accent' : 'btn-primary'}" class:btn-two={act.kind === 'advance'} data-act={act.kind === 'pending' ? 'resume' : 'advance'} data-tour="go" onclick={onAct}>
+      <button class="btn btn-block {act.kind === 'pending' ? 'btn-accent' : 'btn-primary'}" class:btn-two={act.kind === 'advance'} data-act={act.kind === 'pending' ? 'resume' : 'advance'} data-tour="go" data-coach="go" onclick={onAct}>
         {act.label} →{#if act.kind === 'advance'}<small class="btn-sub">{act.prep}</small>{/if}
       </button>
     </div>
@@ -181,4 +184,4 @@
 </nav>
 
 {#if lookOpen}{#await import('./AvatarLook.svelte') then { default: AvatarLook }}<AvatarLook {s} onclose={() => (lookOpen = false)} />{/await}{/if}
-{#if renameOpen}{#await import('./RenameSheet.svelte') then { default: RenameSheet }}<RenameSheet careerId={s.cid} name={s.name} onclose={() => (renameOpen = false)} />{/await}{/if}
+{#if renameOpen}{#await import('./RenameSheet.svelte') then { default: RenameSheet }}<RenameSheet careerId={s.cid} name={s.name} back="game" onclose={() => (renameOpen = false)} />{/await}{/if}

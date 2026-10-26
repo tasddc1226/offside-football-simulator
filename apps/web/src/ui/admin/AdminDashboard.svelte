@@ -100,16 +100,16 @@
 <style>
   .stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   @media (min-width: 560px) { .stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-  .stat { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .stat span { font-size: 0.75rem; color: var(--muted); }
-  .stat b { font-size: 1.375rem; font-variant-numeric: tabular-nums; }
-  .stat small { font-size: 0.75rem; color: var(--muted); }
+  .stat { border: 1px solid var(--line); border-radius: var(--radius-md); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .stat span { font-size: var(--fs-caption); color: var(--muted); }
+  .stat b { font-size: var(--fs-title2); font-variant-numeric: tabular-nums; }
+  .stat small { font-size: var(--fs-caption); color: var(--muted); }
   .daily { margin: 0; display: flex; flex-direction: column; gap: 6px; }
-  .daily figcaption { font-size: 0.8125rem; font-weight: 600; }
+  .daily figcaption { font-size: var(--fs-label); font-weight: 600; }
   .bars { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 3px; height: 90px; align-items: end; }
   .bar { height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; }
   .bar i { width: 100%; min-height: 2px; background: var(--pitch); border-radius: 3px 3px 0 0; }
-  .bar small { font-size: 0.625rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .bar small { font-size: var(--fs-caption2); color: var(--muted); font-variant-numeric: tabular-nums; }
   .audit { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-  .audit li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 0.8125rem; }
+  .audit li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: var(--fs-label); }
 </style>

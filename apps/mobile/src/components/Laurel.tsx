@@ -1,5 +1,6 @@
 // 명예의 전당 1~3위 월계관(웹 Laurel.svelte) + 순위 숫자 배지(웹 .hof-rank). 왼쪽 가지의 잎을 원호를 따라 놓고
 // 오른쪽은 좌우 반전해 그린다. 장식이라 스크린 리더에는 숨긴다(순위 숫자는 따로 읽힌다).
+import { FONT } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import Svg, { Ellipse, G, Circle, Path } from 'react-native-svg';
 import { DISPLAY, rem } from '../theme/type';
@@ -127,8 +128,8 @@ export function RankBadge({ rank, width = 40 }: { rank: number; width?: number }
           style={{
             fontFamily: DISPLAY[700],
             fontVariant: ['tabular-nums'],
-            fontSize: rem(1.0625),
-            lineHeight: rem(1.0625),
+            fontSize: rem(FONT.title3),
+            lineHeight: rem(FONT.title3),
             fontWeight: '700',
             color: text,
           }}
@@ -144,8 +145,8 @@ export function RankBadge({ rank, width = 40 }: { rank: number; width?: number }
         style={{
           fontFamily: DISPLAY[700],
           fontVariant: ['tabular-nums'],
-          fontSize: rem(1.375),
-          lineHeight: rem(1.375) * 1.2,
+          fontSize: rem(FONT.title2),
+          lineHeight: rem(FONT.title2) * 1.2,
           color: c.accentText,
           textAlign: 'center',
         }}

@@ -1,11 +1,12 @@
 // T-10-097 팀 경기 문자중계 대본. 서버가 정한 결과(스코어·골 분·득점자·도움)는 그대로 두고, 그 사이를 채우는 중계 문구만
 // 경기 id를 시드로 만든다 — 같은 경기는 다시 봐도 같은 중계가 나온다. 골이 아닌 줄(슈팅·선방·코너킥)은 연출이라 기록에
 // 남지 않는다.
+import type { DetailPos } from '@offside/contracts/positions';
 import type { TeamMatch } from './api/team.js';
 import { teamLiveText as L } from './i18n/ko/teamLive.js';
 
 export type LiveKind =
-  'kickoff' | 'chance' | 'save' | 'miss' | 'corner' | 'build' | 'goal' | 'ht' | 'ft';
+  'kickoff' | 'chance' | 'save' | 'miss' | 'corner' | 'build' | 'goal' | 'ht' | 'ft' | 'moment';
 export type LiveLine = {
   /** 경기 시계(1~90). 추가시간 줄은 45·90에 extra를 붙인다. 킥오프는 0. */
   minute: number;
@@ -15,10 +16,77 @@ export type LiveLine = {
   text: string;
   /** 골 줄 — 그 골이 들어간 뒤 스코어(홈, 원정). */
   score?: [number, number];
+  /** T-11-387 골 줄의 재료(장면 경기는 장면 골이 끼어 스코어가 달라지므로 보여 줄 때 문구를 다시 만든다). */
+  goal?: { scorer: string; assist: string | null; key: string };
+  /** T-11-492 고른 문구의 키(chance1 · buildLeft …). 2D 그라운드가 문구에 맞는 움직임을 고른다. */
+  say?: string;
+  /** T-11-492 빌드업 · 골 줄의 득점자 자리. */
+  slot?: DetailPos;
 };
 
+/** 골 줄 문구. before는 골 전 스코어, n은 그 선수의 이 경기 몇 번째 골. */
+export function goalLineText(
+  t: string,
+  side: 'home' | 'away',
+  minute: number,
+  scorer: string,
+  assist: string | null,
+  before: readonly [number, number],
+  n: number,
+): string {
+  const after: [number, number] =
+    side === 'home' ? [before[0] + 1, before[1]] : [before[0], before[1] + 1];
+  const mine = side === 'home' ? after[0] : after[1];
+  const theirs = side === 'home' ? after[1] : after[0];
+  const wasBehind = (side === 'home' ? before[0] - before[1] : before[1] - before[0]) < 0;
+  const flavor =
+    n === 3
+      ? L.flavorHat
+      : minute >= 85 && mine === theirs
+        ? L.flavorLateEq
+        : minute >= 85 && mine === theirs + 1
+          ? L.flavorLateWin
+          : wasBehind && mine === theirs
+            ? L.flavorEq
+            : wasBehind && mine > theirs
+              ? L.flavorLead
+              : '';
+  return `${L.goal({ t, scorer })}${assist ? L.goalAssist({ assist }) : ''}${flavor}`;
+}
+
+/** 하프타임 줄 문구. */
+export const halfTimeText = (m: Pick<TeamMatch, 'home' | 'away'>, hs: number, as: number) =>
+  L.halfTime({ home: m.home.name, away: m.away.name, hs, as });
+
+/** 경기 종료 줄 문구. */
+export function fullTimeText(
+  m: Pick<TeamMatch, 'home' | 'away' | 'mine'>,
+  h: number,
+  a: number,
+  neutral = false,
+): string {
+  const my = m.mine === 'home' ? h : a;
+  const their = m.mine === 'home' ? a : h;
+  return L.fullTime({
+    home: m.home.name,
+    away: m.away.name,
+    h,
+    a,
+    // 남의 경기(컵 공개 경기)는 이긴 팀 이름으로 끝낸다.
+    result: neutral
+      ? h === a
+        ? L.resultDraw
+        : L.resultTeamWin({ t: h > a ? m.home.name : m.away.name })
+      : my > their
+        ? L.resultWin
+        : my < their
+          ? L.resultLoss
+          : L.resultDraw,
+  });
+}
+
 /** 문자열 → 32비트 시드(FNV-1a) → mulberry32. */
-function rngOf(seed: string): () => number {
+export function rngOf(seed: string): () => number {
   let h = 0x811c9dc5;
   for (let i = 0; i < seed.length; i++) {
     h ^= seed.charCodeAt(i);
@@ -39,11 +107,61 @@ const pick = <T>(rnd: () => number, list: readonly T[]): T =>
 
 // 문구는 그릴 때 지금 언어로 읽는다(i18n/ko/teamLive.ts). 고르는 줄 수는 언어마다 같다 — 같은 경기는 같은 순서로 나온다.
 type Say = (p: { t: string }) => string;
-const chance = (): readonly Say[] => [L.chance1, L.chance2, L.chance3, L.chance4, L.chance5];
-const save = (): readonly Say[] => [L.save1, L.save2, L.save3];
-const miss = (): readonly Say[] => [L.miss1, L.miss2, L.miss3];
-const corner = (): readonly Say[] => [L.corner1, L.corner2];
-const build = (): readonly Say[] => [L.build1, L.build2, L.build3];
+type SayKey = {
+  [K in keyof typeof L]: (typeof L)[K] extends Say ? K : never;
+}[keyof typeof L];
+// T-11-492 줄마다 고른 문구의 키를 남긴다(2D 그라운드). 고르는 방식(rnd 한 번)은 그대로다.
+const CHANCE: readonly SayKey[] = ['chance1', 'chance2', 'chance3', 'chance4', 'chance5'];
+const SAVE: readonly SayKey[] = ['save1', 'save2', 'save3'];
+const MISS: readonly SayKey[] = ['miss1', 'miss2', 'miss3'];
+const CORNER: readonly SayKey[] = ['corner1', 'corner2'];
+const BUILD: readonly SayKey[] = ['build1', 'build2', 'build3'];
+
+/**
+ * T-11-408 골 직전 장면을 득점자 자리로 고른다 — 측면 선수는 측면 돌파 · 크로스(왼쪽 · 오른쪽 자리면 그 쪽), 최전방은 침투 ·
+ * 일대일, 2선은 중거리 · 늦은 침투, 수비수 · 골키퍼는 세트피스. 문전 혼전은 도움 없는 최전방 골에만. 자리가 없는 옛 경기는
+ * 예전 목록 그대로. 어느 쪽이든 rnd를 한 번만 써서 뒤 줄(추가시간)의 순서가 바뀌지 않는다.
+ */
+export function buildKeys(slot: DetailPos | undefined, assisted: boolean): readonly SayKey[] {
+  switch (slot) {
+    case 'LW':
+    case 'LM':
+    case 'LB':
+    case 'LWB':
+      return ['buildLeft', 'buildWide1', 'buildWide2'];
+    case 'RW':
+    case 'RM':
+    case 'RB':
+    case 'RWB':
+      return ['buildRight', 'buildWide1', 'buildWide2'];
+    case 'W':
+    case 'FB':
+      return ['buildWide1', 'buildWide2'];
+    case 'ST':
+    case 'CF':
+    case 'SS':
+      return assisted ? ['build2', 'buildFwd1', 'buildFwd2'] : ['buildFwd1', 'buildFwd2', 'build3'];
+    case 'AM':
+    case 'CM':
+    case 'DM':
+      return ['buildMid1', 'buildMid2', 'build1'];
+    case 'CB':
+    case 'SW':
+    case 'GK':
+      return ['buildSet1', 'buildSet2'];
+    default:
+      return BUILD;
+  }
+}
+
+export const buildLines = (slot: DetailPos | undefined, assisted: boolean): readonly Say[] =>
+  buildKeys(slot, assisted).map((k) => L[k] as Say);
+
+/** 목록에서 하나(rnd 한 번) — 문구와 그 키. */
+function sayOf(rnd: () => number, keys: readonly SayKey[], t: string) {
+  const say = pick(rnd, keys);
+  return { say, text: (L[say] as Say)({ t }) };
+}
 
 /**
  * 한 경기의 중계 대본. name(careerId, fallback)은 선수 표시 이름(내 선수는 이 기기에 남은 이름). 줄은 시계 순서이고,
@@ -75,15 +193,15 @@ export function liveScript(
     used.add(minute);
     const side = rnd() < homeShare ? 'home' : 'away';
     const r = rnd();
-    const [kind, list] =
+    const [kind, keys] =
       r < 0.35
-        ? (['chance', chance()] as const)
+        ? (['chance', CHANCE] as const)
         : r < 0.6
-          ? (['save', save()] as const)
+          ? (['save', SAVE] as const)
           : r < 0.8
-            ? (['miss', miss()] as const)
-            : (['corner', corner()] as const);
-    lines.push({ minute, kind, side, text: pick(rnd, list)({ t: team[side] }) });
+            ? (['miss', MISS] as const)
+            : (['corner', CORNER] as const);
+    lines.push({ minute, kind, side, ...sayOf(rnd, keys, team[side]) });
   }
 
   // 골 — 직전 분에 빌드업 한 줄, 그 분에 골 줄.
@@ -100,33 +218,22 @@ export function liveScript(
     const key = `${e.side}:${e.scorerId ?? e.scorer}`;
     const n = (tally.get(key) ?? 0) + 1;
     tally.set(key, n);
+    const at = e.slot ? { slot: e.slot } : {};
     lines.push({
       minute: Math.max(1, e.minute - 1),
       kind: 'build',
       side: e.side,
-      text: pick(rnd, build())({ t }),
+      ...sayOf(rnd, buildKeys(e.slot, !!e.assist), t),
+      ...at,
     });
-    const mine = e.side === 'home' ? h : a;
-    const theirs = e.side === 'home' ? a : h;
-    const wasBehind = (e.side === 'home' ? before[0] - before[1] : before[1] - before[0]) < 0;
-    const flavor =
-      n === 3
-        ? L.flavorHat
-        : e.minute >= 85 && mine === theirs
-          ? L.flavorLateEq
-          : e.minute >= 85 && mine === theirs + 1
-            ? L.flavorLateWin
-            : wasBehind && mine === theirs
-              ? L.flavorEq
-              : wasBehind && mine > theirs
-                ? L.flavorLead
-                : '';
     lines.push({
       minute: e.minute,
       kind: 'goal',
       side: e.side,
-      text: `${L.goal({ t, scorer })}${assist ? L.goalAssist({ assist }) : ''}${flavor}`,
+      text: goalLineText(t, e.side, e.minute, scorer, assist, before, n),
       score: [h, a],
+      goal: { scorer, assist, key },
+      ...at,
     });
   }
 
@@ -136,30 +243,13 @@ export function liveScript(
     minute: 45,
     extra: 1 + Math.floor(rnd() * 3),
     kind: 'ht',
-    text: L.halfTime({ home: team.home, away: team.away, hs: htScore[0], as: htScore[1] }),
+    text: halfTimeText(m, htScore[0], htScore[1]),
   });
-  const my = m.mine === 'home' ? h : a;
-  const their = m.mine === 'home' ? a : h;
   lines.push({
     minute: 90,
     extra: 2 + Math.floor(rnd() * 4),
     kind: 'ft',
-    text: L.fullTime({
-      home: team.home,
-      away: team.away,
-      h,
-      a,
-      // 남의 경기(컵 공개 경기)는 이긴 팀 이름으로 끝낸다.
-      result: opts.neutral
-        ? h === a
-          ? L.resultDraw
-          : L.resultTeamWin({ t: h > a ? team.home : team.away })
-        : my > their
-          ? L.resultWin
-          : my < their
-            ? L.resultLoss
-            : L.resultDraw,
-    }),
+    text: fullTimeText(m, h, a, opts.neutral),
   });
 
   // 시계 순서(같은 분이면 빌드업 → 골 → 나머지, 추가시간 줄은 그 분의 맨 뒤).
@@ -171,6 +261,7 @@ export function liveScript(
     save: 3,
     miss: 3,
     corner: 3,
+    moment: 3,
     ht: 9,
     ft: 9,
   };
@@ -246,9 +337,9 @@ export const momentumDecay = (momentum: number) => momentum + (MOMENTUM_START - 
 export const goalMinutesOf = (script: readonly LiveLine[]) =>
   script.filter((l) => l.kind === 'goal').map((l) => l.minute);
 
-/** 그 줄을 보여 준 뒤 기다리는 시간(ms) — 골 1700, 빌드업 900, 나머지 520. */
+/** 그 줄을 보여 준 뒤 기다리는 시간(ms) — 골 1700, 빌드업 · 장면 900, 나머지 520. */
 export const lineWaitMs = (kind: LiveKind) =>
-  kind === 'goal' ? 1700 : kind === 'build' ? 900 : 520;
+  kind === 'goal' ? 1700 : kind === 'build' || kind === 'moment' ? 900 : 520;
 
 /** 추가시간 시계가 1씩 올라가는 간격(ms). */
 export const EXTRA_TICK_MS = 260;
@@ -266,6 +357,8 @@ export type PlayStep = {
   extra?: number;
   phase?: LivePhase;
   show?: number;
+  /** T-11-387 장면 경기 — 이 단계에서 멈추고 장면(moments의 인덱스)을 고르게 한다. */
+  moment?: number;
   decay?: boolean;
   wait: number;
 };
@@ -275,15 +368,23 @@ export type PlayStep = {
  * 줄이 나온다) → 흐름 복귀와 대기. 46분에 후반으로 넘어가고, 하프타임 줄에서 멈췄다 이어진다. 끝나면(마지막 단계 뒤)
  * 앱이 경기 종료를 알린다. 앱은 단계마다 '아직 보고 있는지'를 확인하면 된다.
  */
-export function playbackPlan(script: readonly LiveLine[]): PlayStep[] {
-  const goalMinutes = goalMinutesOf(script);
+export function playbackPlan(
+  script: readonly LiveLine[],
+  momentMinutes: readonly number[] = [],
+  /** T-11-492 줄 뒤 대기 시간(2D 그라운드는 움직임을 보여 줄 만큼 더 기다린다). */
+  waitOf: (kind: LiveKind) => number = lineWaitMs,
+): PlayStep[] {
+  const goalMinutes = [...goalMinutesOf(script), ...momentMinutes];
   const steps: PlayStep[] = [];
   let i = 0;
   for (let min = 0; min <= 90; min++) {
     steps.push({ clock: min, extra: 0, ...(min === 46 ? { phase: '2nd' as const } : {}), wait: 0 });
+    momentMinutes.forEach((m, k) => {
+      if (m === min) steps.push({ moment: k, wait: 0 });
+    });
     while (i < script.length && script[i]!.minute === min && !script[i]!.extra) {
       const k = script[i]!.kind;
-      steps.push({ show: i++, wait: lineWaitMs(k) });
+      steps.push({ show: i++, wait: waitOf(k) });
     }
     while (i < script.length && script[i]!.minute === min && script[i]!.extra) {
       const l = script[i]!;

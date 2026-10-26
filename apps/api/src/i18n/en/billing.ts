@@ -6,6 +6,12 @@ export const billing: typeof ko = {
     refund: '↩️ Refund',
     test: '🧪 Connection test',
   },
+  webKinds: {
+    purchase: '🌐 Web purchase',
+    refund: '↩️ Web purchase refund',
+  },
+  channel: 'Channel',
+  channels: { app: 'In-app purchase', web: 'Web purchase (offside-lab.com)' },
   live: 'Live payment',
   sandbox: 'Test · Sandbox',
   product: 'Product',

@@ -4,13 +4,16 @@ import {
   type MarketSale,
   resolveBalance,
   type MarketChartPoint,
+  type MarketFacetsResponse,
   type MarketListing,
   type MarketRules,
   type MarketSort,
   type MarketTrade,
+  type MarketType,
 } from '@offside/contracts';
 import { CARD_VALUE_FLOOR, marketRatio } from '@offside/contracts/market-value';
-import type { PosGroup } from '@offside/contracts/positions';
+import { DEFAULT_NATION } from '@offside/contracts/nations';
+import type { DetailPos, PosGroup } from '@offside/contracts/positions';
 import { and, asc, desc, eq, gte, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
@@ -29,8 +32,6 @@ export async function marketRules(db: Db): Promise<MarketRules> {
     feeRate: b.marketFeeRate,
     priceMin: b.marketPriceMin,
     priceMax: b.marketPriceMax,
-    listLimit: b.marketListLimit,
-    dailyBuys: b.marketDailyBuys,
   };
 }
 
@@ -52,6 +53,8 @@ const cardCols = {
   cardValue: cards.cardValue,
   transfers: cards.transfers,
   season: cards.serviceSeason,
+  mainLeague: careers.mainLeague,
+  mainClub: careers.mainClub,
 };
 const listingCols = {
   id: marketListings.id,
@@ -86,16 +89,26 @@ const toListing = (r: ListingRow): MarketListing => ({
     cardValue: (r.cardValue as number | null) ?? 0,
     transfers: r.transfers as number,
     season: r.season as number,
+    league: (r.mainLeague as string | null) || null,
+    club: (r.mainClub as string | null) || null,
   },
 });
 
 const notHidden = sql`coalesce(${careers.hidden}, 0) = 0`;
 
-/** 지금 시즌의 열린 등록 한 페이지(하나 더 읽어 다음 페이지가 있는지 본다). */
+/** 열린 등록 한 페이지(하나 더 읽어 다음 페이지가 있는지 본다). T-11-425부터 모든 시즌 카드를 함께 본다. */
 export async function listOpenListings(
   db: Db,
-  season: number,
-  q: { pos?: PosGroup | undefined; sort: MarketSort; page: number },
+  q: {
+    pos?: PosGroup | undefined;
+    dpos?: DetailPos | undefined;
+    type?: MarketType | undefined;
+    nation?: string | undefined;
+    league?: string | undefined;
+    club?: string | undefined;
+    sort: MarketSort;
+    page: number;
+  },
 ): Promise<{ items: MarketListing[]; hasMore: boolean }> {
   const rows = await db
     .select(listingCols)
@@ -105,12 +118,18 @@ export async function listOpenListings(
     .where(
       and(
         eq(marketListings.status, 'open'),
-        eq(marketListings.season, season),
         notHidden,
         q.pos ? eq(cards.pos, q.pos) : undefined,
+        // T-11-474 세부 포지션 · 유형도 열린 등록만 훑으니 따로 인덱스를 두지 않는다.
+        q.dpos ? eq(cards.dpos, q.dpos) : undefined,
+        q.type ? eq(careers.type, q.type) : undefined,
+        // T-11-500 국적 · 가장 오래 뛴 리그 · 클럽도 같다. 대한민국은 국적을 비워 둔 카드가 많아 기본 국적으로 센다.
+        q.nation ? sql`coalesce(${cards.nation}, ${DEFAULT_NATION}) = ${q.nation}` : undefined,
+        q.league ? eq(careers.mainLeague, q.league) : undefined,
+        q.club ? eq(careers.mainClub, q.club) : undefined,
       ),
     )
-    // T-11-180 OVR 순은 카드 쪽 값이라 인덱스로 받치지 못한다. 한 시즌의 열린 등록(2026-10 운영 약 640건)만 정렬하고,
+    // T-11-180 OVR 순은 카드 쪽 값이라 인덱스로 받치지 못한다. 열린 등록(2026-10 운영 약 1,600건)만 정렬하고,
     // 첫 페이지는 엣지 캐시를 탄다.
     .orderBy(
       ...(q.sort === 'price'
@@ -127,14 +146,50 @@ export async function listOpenListings(
   };
 }
 
-/** 이번 시즌 최근에 팔린 선수(최신순). market_listings_sold_idx가 받친다. */
-export async function recentSales(db: Db, season: number): Promise<MarketSale[]> {
+/**
+ * T-11-500 열린 매물이 있는 국적 · 리그 · 클럽과 매물 수(많은 순). 열린 매물(2026-10 운영 약 2,200건)을 세 번 훑는 집계라
+ * 엣지 캐시 뒤에서만 부른다.
+ */
+export async function marketFacets(db: Db): Promise<MarketFacetsResponse> {
+  const open = and(eq(marketListings.status, 'open'), notHidden);
+  const count = sql<number>`count(*)`;
+  const nation = sql<string>`coalesce(${cards.nation}, ${DEFAULT_NATION})`;
+  const [nations, leagues, clubs] = await Promise.all([
+    db
+      .select({ id: nation, n: count })
+      .from(marketListings)
+      .innerJoin(cards, eq(cards.careerId, marketListings.careerId))
+      .leftJoin(careers, eq(careers.id, marketListings.careerId))
+      .where(open)
+      .groupBy(nation)
+      .orderBy(desc(count)),
+    db
+      .select({ id: careers.mainLeague, n: count })
+      .from(marketListings)
+      .innerJoin(careers, eq(careers.id, marketListings.careerId))
+      .where(and(open, sql`coalesce(${careers.mainLeague}, '') <> ''`))
+      .groupBy(careers.mainLeague)
+      .orderBy(desc(count)),
+    db
+      .select({ id: careers.mainClub, n: count })
+      .from(marketListings)
+      .innerJoin(careers, eq(careers.id, marketListings.careerId))
+      .where(and(open, sql`coalesce(${careers.mainClub}, '') <> ''`))
+      .groupBy(careers.mainClub)
+      .orderBy(desc(count)),
+  ]);
+  const facet = (r: { id: string | null; n: number }) => ({ id: r.id ?? '', n: Number(r.n) });
+  return { nations: nations.map(facet), leagues: leagues.map(facet), clubs: clubs.map(facet) };
+}
+
+/** 최근에 팔린 선수(최신순, 모든 시즌 카드). market_listings_sold_idx가 받친다. */
+export async function recentSales(db: Db): Promise<MarketSale[]> {
   const rows = await db
     .select({ ...listingCols, soldAt: marketListings.closedAt })
     .from(marketListings)
     .innerJoin(cards, eq(cards.careerId, marketListings.careerId))
     .leftJoin(careers, eq(careers.id, marketListings.careerId))
-    .where(and(eq(marketListings.status, 'sold'), eq(marketListings.season, season), notHidden))
+    .where(and(eq(marketListings.status, 'sold'), notHidden))
     .orderBy(desc(marketListings.closedAt))
     .limit(MARKET_RECENT);
   return rows.map((r) => {
@@ -179,14 +234,6 @@ export async function cardForListing(db: Db, careerId: string) {
     )
     .where(eq(cards.careerId, careerId));
   return row;
-}
-
-export async function countOpenListingsOf(db: Db, sellerId: string): Promise<number> {
-  const [row] = await db
-    .select({ n: sql<number>`count(*)` })
-    .from(marketListings)
-    .where(and(eq(marketListings.sellerId, sellerId), eq(marketListings.status, 'open')));
-  return row?.n ?? 0;
 }
 
 /** T-11-145 이 선수들 중 시장에 내놓은(열린 매물) 수.
@@ -355,15 +402,15 @@ export async function myTrades(db: Db, profileId: string): Promise<MarketTrade[]
  */
 export async function insertListing(
   db: Db,
-  l: { id: string; careerId: string; sellerId: string; season: number; price: number; now: string },
+  l: { id: string; careerId: string; sellerId: string; price: number; now: string },
 ): Promise<boolean> {
   const res = await db.$client
     .prepare(
       `INSERT OR IGNORE INTO market_listings (id, career_id, seller_id, season, price, status, created_at)
        SELECT ?, career_id, owner_id, service_season, ?, 'open', ? FROM cards
-       WHERE career_id = ? AND owner_id = ? AND service_season = ? AND locked = 0 AND manager = 0`,
+       WHERE career_id = ? AND owner_id = ? AND locked = 0 AND manager = 0`,
     )
-    .bind(l.id, l.price, l.now, l.careerId, l.sellerId, l.season)
+    .bind(l.id, l.price, l.now, l.careerId, l.sellerId)
     .run();
   return res.meta.changes === 1;
 }

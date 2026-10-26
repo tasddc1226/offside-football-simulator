@@ -1,9 +1,85 @@
 import { describe, it, expect, vi } from 'vitest';
-import { inspectInfraHealth, checkProduction } from './infra-health.mjs';
+import {
+  inspectInfraHealth,
+  checkProduction,
+  inspectQueueHealth,
+  inspectR2Storage,
+  checkResourceHealth,
+  inspectDnssec,
+} from './infra-health.mjs';
 
 const NOW = Date.parse('2026-10-08T01:17:00Z');
 const healthy = { at: NOW - 17 * 60_000, sizeBytes: 1024 ** 3, issues: [] };
+const queues = ['admin-push', 'billing', 'career-push', 'cup-push', 'push'].map((kind) => ({
+  name: `offside-${kind}-production-dlq`,
+  backlog: 0,
+  retention: 1209600,
+}));
 describe('read-only infrastructure monitoring', () => {
+  it('requires parent DS and a validated address before declaring DNSSEC complete', () => {
+    const ds = { Status: 0, AD: true, Answer: [{ type: 43 }] };
+    expect(inspectDnssec(ds, { Status: 0, AD: true, Answer: [{ type: 1 }] }).warning).toBe(false);
+    expect(inspectDnssec({ Status: 0, Answer: [] }, { Status: 0, AD: true }).warning).toBe(true);
+    expect(inspectDnssec(ds, { Status: 0, AD: false }).warning).toBe(true);
+    expect(inspectDnssec(null, null).warning).toBe(true);
+  });
+  it('fails on missing DLQ observations, retention drift and any backlog', () => {
+    expect(inspectQueueHealth(queues).failed).toBe(false);
+    expect(inspectQueueHealth(queues.slice(1)).failed).toBe(true);
+    for (const change of [{ backlog: 1 }, { backlog: undefined }, { retention: 86400 }])
+      expect(inspectQueueHealth([{ ...queues[0], ...change }, ...queues.slice(1)]).failed).toBe(
+        true,
+      );
+  });
+  it('distinguishes current R2 capacity warnings from missing data and monthly billing', () => {
+    const row = {
+      dimensions: { datetime: new Date(NOW).toISOString() },
+      max: { payloadSize: 9e9 },
+    };
+    expect(inspectR2Storage(row, NOW)).toMatchObject({ failed: false, warning: true });
+    expect(inspectR2Storage(row, NOW).summary).toContain('not GB-month');
+    expect(() => inspectR2Storage(row, NOW + 3 * 3600000)).toThrow();
+    expect(() => inspectR2Storage(undefined, NOW)).toThrow();
+  });
+  it('reads queue metrics and GraphQL only; missing analytics is explicitly unknown', async () => {
+    const calls = [];
+    const fetcher = async (url, init) => {
+      calls.push({ url, init });
+      if (url.endsWith('/graphql')) return Response.json({ errors: [{ message: 'private body' }] });
+      if (url.endsWith('/metrics'))
+        return Response.json({ success: true, result: { backlog_count: 0 } });
+      return Response.json({
+        success: true,
+        result: queues.map((q, i) => ({
+          queue_id: String(i),
+          queue_name: q.name,
+          settings: { message_retention_period: q.retention },
+        })),
+      });
+    };
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await checkResourceHealth(
+        { CLOUDFLARE_ACCOUNT_ID: 'test', CLOUDFLARE_API_TOKEN: 'private-token' },
+        fetcher,
+      );
+      expect(calls).toHaveLength(9);
+      expect(calls.filter((c) => c.init.method === 'POST')).toHaveLength(1);
+      expect(JSON.parse(calls.find((c) => c.init.method === 'POST').init.body).query).not.toContain(
+        'mutation',
+      );
+      expect(
+        calls
+          .filter((c) => c.url.startsWith('https://cloudflare-dns.com/'))
+          .every((c) => !c.init.headers.Authorization),
+      ).toBe(true);
+      const output = log.mock.calls.flat().join('');
+      expect(output).toContain('unknown');
+      expect(output).not.toContain('private');
+    } finally {
+      log.mockRestore();
+    }
+  });
   it('rejects missing, stale, future and malformed observations instead of reporting healthy', () => {
     for (const value of [
       null,

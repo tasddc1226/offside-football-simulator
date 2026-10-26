@@ -19,6 +19,7 @@ import { recoverIapItems } from '../platform/iapItems';
 import { useColors, useIsDark } from '../theme/useColors';
 import { useSnapshot } from 'valtio';
 import { prefs } from '../store';
+import { RevealEdgeHost } from '../components/RevealFx';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -56,6 +57,7 @@ export default function RootLayout() {
         key={lang}
         screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}
       />
+      <RevealEdgeHost />
     </GestureHandlerRootView>
   );
 }

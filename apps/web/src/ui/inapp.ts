@@ -57,8 +57,23 @@ export function externalOpenUrl(info: InAppInfo, href: string): string | null {
   return null;
 }
 
+/**
+ * T-11-466 Android 인앱 브라우저는 https Play 주소를 웹뷰 안의 웹 페이지로 열기도 해서 설치까지 한 단계가 더 생긴다.
+ * Play 스토어 앱을 바로 여는 intent 주소로 바꾼다(id · install referrer는 그대로). 열 앱이 없으면 원래 주소로 간다.
+ */
+export function playStoreIntentUrl(href: string): string {
+  const u = new URL(href);
+  return `intent://details${u.search}#Intent;scheme=market;package=com.android.vending;S.browser_fallback_url=${encodeURIComponent(href)};end`;
+}
+
 /** 프로그램으로 못 여는 경우의 안내 문구. 앱마다 메뉴 위치가 달라 위치는 뭉뚱그리고 항목 이름만 짚는다. */
 export function manualOpenGuide(info: InAppInfo, copied: boolean): string {
   const menu = info.os === 'ios' ? L.manualIos : L.manualAndroid;
   return copied ? L.manualCopied({ menu }) : menu;
+}
+
+/** Store routing needs only OS detection; keep campaign generation out of eager Home imports. */
+export function appTarget(ua = navigator.userAgent): 'ios' | 'android' | 'both' {
+  const os = osOf(ua);
+  return os === 'other' ? 'both' : os;
 }

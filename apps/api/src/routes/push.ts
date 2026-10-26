@@ -3,7 +3,9 @@ import {
   RegisterPushDeviceSchema,
   PushDeviceResultSchema,
   PushTestResultSchema,
+  LegacyPushPreferencesSchema,
   PushPreferencesSchema,
+  type PushPreferences,
   PutPushPreferencesSchema,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
@@ -14,18 +16,23 @@ import {
   registerPushDevice,
   unregisterPushDevice,
   ownPushDevice,
-  rememberPushTestTicket,
 } from '../db/repos/pushDevices.js';
-import { sendPushTest } from '../push/expo.js';
+import { pushQueueText as pushQueueKo } from '../i18n/ko/pushQueue.js';
+import { pushQueueText as pushQueueEn } from '../i18n/en/pushQueue.js';
+import { pushQueueText as pushQueueJa } from '../i18n/ja/pushQueue.js';
+import type { PushWork } from '../push/queuePublish.js';
 import { reservePushTest } from '../push/testLimit.js';
 import { sha256Hex } from '../db/hash.js';
-import { latePushResult } from '../push/result.js';
 import { queueNotification } from '../db/repos/notifications.js';
 import { reqLang } from '../lang.js';
 import { getPushPreferences, putPushPreferences } from '../db/repos/pushPreferences.js';
 import { enforceLimit, NO_STORE, nowIso, ok, readBody, notFoundError } from './shared.js';
 
 export function registerPushRoutes(app: Hono<AppEnv>) {
+  // T-11-501 nudge를 아는 새 앱만 `?nudge=1`로 묻는다. 옛 앱에는 옛 모양을 그대로 돌려준다(strict 파싱).
+  const withNudge = (c: { req: { query(key: string): string | undefined } }) =>
+    c.req.query('nudge') === '1';
+  const legacy = ({ nudge: _, ...rest }: PushPreferences) => rest;
   const appSession = (c: Parameters<typeof getSessionOrThrow>[0]) => {
     const session = getSessionOrThrow(c);
     if (session.channel !== 'app')
@@ -34,13 +41,10 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
   };
   app.get('/v1/push/preferences', requireProfile, async (c) => {
     const session = appSession(c);
-    return ok(
-      c,
-      PushPreferencesSchema,
-      await getPushPreferences(getDb(c), session.profileId),
-      200,
-      NO_STORE,
-    );
+    const prefs = await getPushPreferences(getDb(c), session.profileId);
+    return withNudge(c)
+      ? ok(c, PushPreferencesSchema, prefs, 200, NO_STORE)
+      : ok(c, LegacyPushPreferencesSchema, legacy(prefs), 200, NO_STORE);
   });
   app.put('/v1/push/preferences', requireProfile, async (c) => {
     const session = appSession(c);
@@ -53,13 +57,10 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
       nowIso(),
       '잠시 뒤 알림 설정을 다시 시도해 주세요.',
     );
-    return ok(
-      c,
-      PushPreferencesSchema,
-      await putPushPreferences(getDb(c), session.profileId, input),
-      200,
-      NO_STORE,
-    );
+    const prefs = await putPushPreferences(getDb(c), session.profileId, input);
+    return withNudge(c)
+      ? ok(c, PushPreferencesSchema, prefs, 200, NO_STORE)
+      : ok(c, LegacyPushPreferencesSchema, legacy(prefs), 200, NO_STORE);
   });
   app.put('/v1/push/device', requireProfile, async (c) => {
     const session = appSession(c);
@@ -93,7 +94,7 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
   app.post('/v1/push/test', requireProfile, async (c) => {
     const session = appSession(c);
     const { installationId } = readBody(c, PushDeviceIdentitySchema);
-    if (c.env.PUSH_TEST_ENABLED !== '1')
+    if (c.env.PUSH_TEST_ENABLED !== '1' || !c.env.PUSH_QUEUE)
       throw new AppError({ code: 'SERVICE_UNAVAILABLE', message: '알림 테스트 준비 중이에요.' });
     const now = nowIso();
     const device = await ownPushDevice(c.env.DB, session, installationId, now);
@@ -113,11 +114,11 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
       },
     });
     const deliveryId = `test:${notification.id}`;
-    // The same receipt worker checks manual test tickets, without re-sending them.
+    // Reserve durable ownership before Queue publication; only its consumer sends or checks receipts.
     await c.env.DB.prepare(
       `INSERT INTO push_deliveries
       (id, notification_id, installation_hash, session_id, profile_id, token, state, attempts, due_at, expires_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, 'sending', 1, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, ?, ?, ?)`,
     )
       .bind(
         deliveryId,
@@ -131,51 +132,20 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
         now,
       )
       .run();
+    const work: PushWork = { version: 1, kind: 'test', id: deliveryId, lang: reqLang(c) };
     try {
-      const ticketId = await sendPushTest(
-        device.token,
-        c.env.EXPO_PUSH_ACCESS_TOKEN,
-        fetch,
-        notification.id ?? undefined,
-        reqLang(c),
-      );
+      await c.env.PUSH_QUEUE!.send(work);
+    } catch {
+      // A publish can be ambiguous too. Cancel before reporting failure; never send directly.
       await c.env.DB.prepare(
-        "UPDATE push_deliveries SET state = 'accepted', ticket_id = ?, due_at = ?, updated_at = ? WHERE id = ? AND state = 'sending'",
+        "UPDATE push_deliveries SET state='cancelled',token='',updated_at=? WHERE id=? AND state='pending'",
       )
-        .bind(ticketId, new Date(Date.now() + 900_000).toISOString(), nowIso(), deliveryId)
+        .bind(nowIso(), deliveryId)
         .run();
-      await latePushResult(c.env.DB, 'push_deliveries', deliveryId, 'accepted', nowIso()).run();
-      await rememberPushTestTicket(
-        c.env.DB,
-        installationId,
-        { token: device.token, sessionId: session.id },
-        ticketId,
-        now,
-      );
-    } catch (e) {
-      const failed =
-        e instanceof AppError && (e.details as { reason?: string } | undefined)?.reason;
-      await c.env.DB.prepare(
-        "UPDATE push_deliveries SET state = ?, token = '', updated_at = ? WHERE id = ? AND state = 'sending'",
-      )
-        .bind(failed ? 'failed' : 'unknown', nowIso(), deliveryId)
-        .run();
-      await latePushResult(
-        c.env.DB,
-        'push_deliveries',
-        deliveryId,
-        failed ? 'failed' : 'unknown',
-        nowIso(),
-      ).run();
-      if (
-        e instanceof AppError &&
-        (e.details as { reason?: string } | undefined)?.reason === 'PUSH_DEVICE_NOT_REGISTERED'
-      )
-        await unregisterPushDevice(c.env.DB, installationId, {
-          token: device.token,
-          sessionId: session.id,
-        });
-      throw e;
+      throw new AppError({
+        code: 'SERVICE_UNAVAILABLE',
+        message: { ko: pushQueueKo, en: pushQueueEn, ja: pushQueueJa }[reqLang(c)].publishFailed,
+      });
     }
     return ok(c, PushTestResultSchema, { accepted: true, nextTestAt }, 200, NO_STORE);
   });

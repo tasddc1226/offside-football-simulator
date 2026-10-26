@@ -1,6 +1,7 @@
 // 선수가 뛰는 리그의 순위표(웹 tabs/LeagueTable.svelte, T-10-024). 기본은 상위 3팀 + 내 팀 앞뒤 2팀 + 꼴찌만 접어서 보여
 // 주고, '전체 순위'로 모두 펼친다. 접힌 구간은 '⋯' 줄 하나로 표시한다. T-11-025 시즌 탭의 시즌 현황 카드 안에 들어가는
 // 한 묶음이라 카드 테두리 없이 작은 제목을 단다. 칸은 순위·팀·경기·승점만(승·무·패는 리포트·시즌 누적 줄에 있다).
+import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, View } from 'react-native';
 import { leagueOf, leagueTable, seasonLeagueId } from '@offside/game/engine';
@@ -96,7 +97,7 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
       key={t}
       tone="muted"
       style={[
-        { fontSize: rem(0.6875), fontWeight: '600', textAlign: team ? 'left' : 'center' },
+        { fontSize: rem(FONT.caption2), fontWeight: '600', textAlign: team ? 'left' : 'center' },
         team ? { flex: 1, paddingLeft: 6 } : { width: COL },
       ]}
     >
@@ -158,7 +159,7 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
                     borderBottomColor: c.line,
                   }}
                 >
-                  <Txt tone="muted" style={{ lineHeight: rem(1) }}>
+                  <Txt tone="muted" style={{ lineHeight: rem(FONT.body) }}>
                     ⋯
                   </Txt>
                 </View>
@@ -202,7 +203,7 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
                     {x.r.me && delta ? (
                       <Txt
                         style={{
-                          fontSize: rem(0.625),
+                          fontSize: rem(FONT.caption2),
                           fontWeight: '700',
                           color: delta.startsWith('▲') ? c.good : c.bad,
                         }}
@@ -226,7 +227,7 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
                       numberOfLines={1}
                       style={{
                         flex: 1,
-                        fontSize: rem(0.8125),
+                        fontSize: rem(FONT.label),
                         fontWeight: x.r.me ? '700' : '400',
                       }}
                     >
@@ -241,7 +242,7 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
           ))}
         </View>
       ) : (
-        <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
           {L.empty({ n: rows.length })}
         </Txt>
       )}
@@ -252,7 +253,7 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
 /** 카드 안 작은 묶음 제목(웹 .sub-title). */
 export function SubTitle({ children }: { children: string }) {
   return (
-    <Txt accessibilityRole="header" style={{ fontSize: rem(0.9375), fontWeight: '700' }}>
+    <Txt accessibilityRole="header" style={{ fontSize: rem(FONT.body1), fontWeight: '700' }}>
       {children}
     </Txt>
   );
@@ -277,7 +278,7 @@ function Cell({
           width,
           textAlign: 'center',
           fontFamily: bold ? DISPLAY[700] : DISPLAY[400],
-          fontSize: rem(0.9375),
+          fontSize: rem(FONT.body1),
           fontVariant: ['tabular-nums'],
         },
         color ? { color } : null,

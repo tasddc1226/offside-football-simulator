@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   import ManagerResume from './ManagerResume.svelte';
   import AppConversion from './AppConversion.svelte';
   import { shellInstallText as Install } from '@offside/app-core/i18n/ko/shellInstall';
@@ -35,6 +36,8 @@
   import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
   import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
   import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
+  import { exchangeText as XC } from '@offside/app-core/i18n/ko/exchange';
+  import type { Component } from 'svelte';
   import { type OwnerTierTag } from '@offside/contracts';
   import { shapeOf } from '@offside/contracts/owner-team';
   import { tierTitle } from '@offside/app-core/ownerTier';
@@ -44,6 +47,22 @@
 
   // T-11-152 후보 화면 '리롤권 상점 가기'로 들어왔으면 리롤권 상점을 펼친 채로 연다(한 번만 읽힌다).
   const shopFocus = takeFocus('rerollShop');
+  // T-11-441 설정의 '계정 · 닉네임'으로 들어왔으면 계정 카드로 내려간다(한 번만).
+  // T-11-447 위 카드들이 응답을 받아 늦게 채워지며 계정 카드를 밀어내므로, 화면 높이가 바뀔 때마다 다시 맞춘다.
+  // 2초가 지나거나 유저가 직접 움직이면 멈춘다.
+  if (takeFocus('account')) holdInView('account-slot', 2000);
+
+  function holdInView(id: string, ms: number) {
+    const ro = new ResizeObserver(() => document.getElementById(id)?.scrollIntoView({ block: 'start' }));
+    const quit = ['wheel', 'touchstart', 'keydown'] as const;
+    const stop = () => {
+      ro.disconnect();
+      for (const t of quit) removeEventListener(t, stop);
+    };
+    for (const t of quit) addEventListener(t, stop, { passive: true });
+    ro.observe(document.body);
+    setTimeout(stop, ms);
+  }
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
   // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다). 계정 패널이 로그인 상태를 불러오거나
   // 바꾸면 다시 판단한다.
@@ -113,6 +132,13 @@
     if (to === 'friends') openFriends();
     else openTeam(to);
   }
+  // T-11-374 카드 과제 창은 열 때만 불러온다(과제 · 고르기 화면이 구단주 화면 청크에 붙지 않게).
+  let Exchange = $state<Component<{ onclose: () => void }> | null>(null);
+  let exchangeOpen = $state(false);
+  function openExchange() {
+    exchangeOpen = true;
+    if (!Exchange) void import('./owner/CardExchange.svelte').then((m) => (Exchange = m.default));
+  }
   function openTeam(v: TeamView = 'team') {
     appState.teamView = v;
     go('team');
@@ -172,9 +198,11 @@
         </div>
         {#if card.playHint}<p class="muted fs-sm">{card.playHint}</p>{/if}
       {:else}
-        <p class="muted fs-sm">
-          {card ? ownerTeamEmptyText(card) : cardFailed ? L.teamFailed : L.loading}
-        </p>
+        {#if card || cardFailed}
+          <p class="muted fs-sm">{card ? ownerTeamEmptyText(card) : L.teamFailed}</p>
+        {:else}
+          <Skeleton rows={2} />
+        {/if}
         <button class="btn {card && card.players > 0 ? 'btn-primary' : ''} btn-block" data-act="team" onclick={openMyTeam}>
           {card && card.players > 0 ? L.buildTeam : L.myTeam}{@render achDot()}
         </button>
@@ -189,6 +217,15 @@
       <span class="tap-go" aria-hidden="true">›</span>
       <button class="tap-cover" data-act="manager" aria-label={MG.entryAria} onclick={() => go('manager')}></button>
     </section>
+    <section class="card owner-market owner-tap" aria-label={XC.entryTitle} data-owner-exchange>
+      <div class="owner-who">
+        <h2>{XC.entryTitle}<span class="pill good owner-founder">{XC.entryNew}</span></h2>
+        <span class="muted fs-sm">{XC.entrySub}</span>
+      </div>
+      <span class="tap-go" aria-hidden="true">›</span>
+      <button class="tap-cover" data-act="exchange" aria-label={XC.entryAria} onclick={openExchange}></button>
+    </section>
+    {#if exchangeOpen && Exchange}<Exchange onclose={() => (exchangeOpen = false)} />{/if}
   {:else if guest}
     <section class="card owner-team" aria-label={L.myTeam} data-owner-team-locked>
 
@@ -289,8 +326,8 @@
 </div>
 
 <style>
-  .hub-section-title {margin:8px 2px 0;font-size:1rem;}
-  .hub-card-title {margin:0;font-size:1rem;}
+  .hub-section-title {margin:8px 2px 0;font-size:var(--fs-body);}
+  .hub-card-title {margin:0;font-size:var(--fs-body);}
   .owner-hall-entry {display:flex;flex-direction:column;gap:12px;}
   .owner-hall-entry > .owner-who {padding-right:24px;}
   .owner-hall-entry > .tap-go {position:absolute;right:18px;top:20px;}
@@ -313,7 +350,7 @@
     margin-right: 4px;
   }
   .owner-tier-history {display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none;}
-  .owner-tier-history li {display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);font-size:11px;font-weight:600;line-height:1.4;}
+  .owner-tier-history li {display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:5px 8px;border: 1px solid transparent;border-radius:var(--radius-xs);background:var(--surface-2);font-size:11px;font-weight:600;line-height:1.4;}
   .owner-who {
     display: flex;
     flex-direction: column;
@@ -321,7 +358,7 @@
     min-width: 0;
   }
   .owner-who b {
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
     overflow-wrap: anywhere;
   }
   .owner-who h2 {
@@ -340,19 +377,19 @@
     flex-direction: column;
     gap: 2px;
     padding: 10px 12px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--surface-2);
     min-width: 0;
     grid-column: span 2;
   }
   .owner-stats dt {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .owner-stats dd {
     margin: 0;
     font-family: var(--display);
-    font-size: 1.25rem;
+    font-size: var(--fs-title2);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
@@ -374,7 +411,7 @@
     margin-left: 4px;
   }
   .owner-stats .owner-value dd {
-    font-size: 1.75rem;
+    font-size: var(--fs-title1);
     color: var(--accent-text);
   }
   .owner-empty {
@@ -384,7 +421,7 @@
     padding-inline: 6px;
   }
   .owner-team-stats dd {
-    font-size: 1.0625rem;
+    font-size: var(--fs-title3);
   }
   .owner-team {
     display: flex;
@@ -407,19 +444,19 @@
     place-items: center;
     min-width: 58px;
     padding: 6px 8px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--pitch);
     color: var(--on-pitch);
     line-height: 1.1;
   }
   .owner-ovr small {
     font-family: var(--display);
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     letter-spacing: 0.12em;
   }
   .owner-ovr b {
     font-family: var(--display);
-    font-size: 1.625rem;
+    font-size: var(--fs-title1);
     color: var(--pitch-accent);
   }
   .owner-actions {
@@ -438,7 +475,7 @@
     justify-content: space-around;
     gap: 10px;
     padding: 14px 10px;
-    border-radius: 14px;
+    border-radius: var(--radius-md);
     background: repeating-linear-gradient(0deg, var(--pitch) 0 22px, var(--pitch-2) 22px 44px);
     overflow: hidden;
   }
@@ -458,10 +495,10 @@
     inset: 50% auto auto 50%;
     transform: translate(-50%, -50%);
     padding: 6px 12px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--surface);
     color: var(--ink);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     font-weight: 700;
     white-space: nowrap;
     box-shadow: 0 2px 10px rgb(0 0 0 / 0.2);

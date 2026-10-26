@@ -1,0 +1,20 @@
+{
+  "id": "t-11-479-moment-spoiler",
+  "title": "결정적 장면 결과가 미리 보이던 문제 수정",
+  "items": [
+    "시즌 진행 중계 동안 뒤 화면을 가려, 결정적 장면을 고르기 전에 리그 순위나 결승 결과가 먼저 보이지 않아요"
+  ],
+  "en": {
+    "title": "Key moment results no longer leak early",
+    "items": [
+      "The screen behind the season commentary is now covered, so league standings and final results no longer show before you pick a key moment."
+    ]
+  },
+  "ja": {
+    "title": "決定的な場面の結果が先に見える問題を修正",
+    "items": [
+      "シーズン進行の実況中は後ろの画面を隠し、決定的な場面を選ぶ前にリーグ順位や決勝の結果が見えなくなりました。"
+    ]
+  },
+  "availability": "web-app"
+}

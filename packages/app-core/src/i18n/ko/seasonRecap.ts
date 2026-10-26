@@ -71,6 +71,7 @@ const ko = {
   secTier: '시즌 등급',
   secBadges: '기록 배지',
   tierWhy: (p: { score: string }) => `업적 점수 ${p.score}점으로 마감`,
+  tierWhyTop: (p: { pct: number }) => `구단주 랭킹 상위 ${p.pct}%로 마감`,
   tierTitle: (p: { season: string; tier: string }) => `${p.season} ${p.tier}`,
   // 결산 화면 · 공유 카드
   headlineGoals: (p: { n: string; goals: string }) =>

@@ -1,0 +1,14 @@
+{
+  "id": "t-11-507-name-sign-android",
+  "title": "안드로이드 이름 사인 수정",
+  "items": ["안드로이드에서 계약서의 이름 사인 사용을 눌러도 사인이 보이지 않던 문제를 고쳤어요"],
+  "en": {
+    "title": "Name signature fix on Android",
+    "items": ["Fixed an issue where Sign with name left the contract blank on Android."]
+  },
+  "ja": {
+    "title": "Androidの名前サインを修正",
+    "items": ["Androidで契約書の名前サインを押してもサインが表示されなかった問題を修正しました。"]
+  },
+  "availability": "app"
+}

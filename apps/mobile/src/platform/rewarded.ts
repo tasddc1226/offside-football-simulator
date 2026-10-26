@@ -11,6 +11,7 @@ import {
 import { adText } from '@offside/app-core/i18n/ko/ad';
 import { askConsent } from './adConsent';
 import { adFree } from './adFree';
+import { countReward } from './adUsage';
 
 /** AdMob 보상형 광고 단위. 단위가 없는 플랫폼은 광고 제거 구매자만 보상을 받는다. */
 const UNITS = {
@@ -83,13 +84,15 @@ export async function claimReward(
   onEarned: () => void,
   skipped: string,
 ): Promise<string> {
-  if (!adFree.owned) {
+  const free = adFree.owned;
+  if (!free) {
     const unit = unitOf(p);
     if (!unit || !(await askConsent())) return adText.rewardedUnavailable;
     const result = await watch(unit);
     if (result === 'failed') return adText.rewardedUnavailable;
     if (result === 'closed') return skipped;
   }
+  countReward(p, free);
   onEarned();
   return '';
 }

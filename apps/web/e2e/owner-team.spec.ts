@@ -247,6 +247,8 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
               ovr: 56,
               goals: 2,
               ratingChange: 16,
+              xg: 1.6,
+              lines: { atk: 62, mid: 50, def: 57, gk: 55 },
             },
             away: {
               teamId: 'tem_00000000-0000-4000-8000-000000000002',
@@ -256,6 +258,8 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
               ovr: 55,
               goals: 1,
               ratingChange: -8,
+              xg: 0.9,
+              lines: { atk: 55, mid: 56, def: 54, gk: 55 },
             },
             events: [
               {
@@ -314,7 +318,7 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await page.locator('[data-team-name]').fill('우리 동네 FC');
   // 감독 이름이 비면 저장할 수 없고 이유를 보여 준다.
   await expect(page.locator('[data-act="team-save"]')).toBeDisabled();
-  await expect(page.locator('[data-team-save-reason]')).toContainText('감독 이름');
+  await expect(page.locator('[data-team-save-reason]')).toContainText('팀 대표 이름');
   await page.locator('[data-team-manager]').fill('홍감독');
   await page.locator('[data-act="team-auto"]').click();
   // 스트라이커 자리(9)에 공격수, 골키퍼 자리(0)에 골키퍼가 들어간다.
@@ -358,10 +362,16 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
 
   await page.locator('[data-team-tab="opponents"]').click();
   await expect(page.locator('[data-opponent]')).toContainText('라이벌 FC');
+  // T-11-443 레이팅 아래 내 팀(1,000)과의 차이와 그 뜻을 보인다.
+  await expect(page.locator('[data-opponent-gap="12"]')).toContainText('+12');
+  await expect(page.locator('[data-opponent-gap="12"] .sr-only')).toHaveText(
+    '내 팀보다 12점 높아요',
+  );
+  await expect(page.locator('[data-opponent-gap-note]')).toBeVisible();
   await page.locator('[data-act="team-challenge"]').click();
   await expect
     .poll(() => played)
-    .toEqual({ opponentTeamId: 'tem_00000000-0000-4000-8000-000000000002' });
+    .toEqual({ opponentTeamId: 'tem_00000000-0000-4000-8000-000000000002', live: true });
   // T-10-097 결과 전에 문자중계가 먼저 흐른다 — 킥오프 줄로 시작하고, 건너뛰면 결과 화면.
   const live = page.locator('[data-team-live]');
   await expect(live.locator('[data-live-line="kickoff"]')).toContainText('킥오프');
@@ -375,12 +385,216 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await expect(result).toContainText('익명의 공격수 No.7');
   await expect(result).toContainText('1승 0무 0패');
   await expect(result.locator('[data-rating-change]')).toContainText('내 팀 레이팅 +16');
+  // T-11-379 경기 리포트 — 기대 득점 · 진단 한 줄. T-11-498 줄 비교는 접지 않고 바로 보이며, 가장 밀린 줄을 바꾸러 간다.
+  const report = result.locator('[data-team-report]');
+  await expect(report.locator('[data-report-xg]')).toHaveText('기대 득점(xG) 1.6 : 0.9');
+  await expect(report.locator('[data-report-diagnosis]')).toHaveText(
+    '공격이 상대 수비벽보다 8 앞서 기회를 많이 만들었어요.',
+  );
+  await expect(report.locator('[data-report-line]')).toHaveCount(3);
+  await expect(report.locator('[data-report-line="mid"]')).toHaveClass(/weak/);
+  await expect(result.getByRole('button', { name: /다시 경기하기/ })).toContainText(
+    '오늘 9경기 남았어요',
+  );
   await expectNoA11yViolations(page);
+  await expect(report.locator('[data-act="team-report-fix"]')).toContainText(' 바꾸기');
   await result.locator('[data-act="team-replay"]').click();
   await expect(live.locator('[data-live-line="kickoff"]')).toContainText('킥오프');
   await live.locator('[data-act="live-skip"]').click();
   await result.getByRole('button', { name: '편성으로' }).click();
   await expect(page.locator('[data-team-record] dd').nth(1)).toHaveText('1,016');
+});
+
+// T-11-387 랭크 경기 결정적 장면 — 중계가 장면 분에 멈추고 선택지 카드를 띄운다. 고르면 서버 판정 골이 중계에 끼어들고,
+// 다음 장면에서 결과 바로 보기를 누르면 남은 장면을 감독에게 맡겨 마감한 결과(결정적 장면 · 득점자 자리)를 보인다.
+test('T-11-387 랭크 경기 중 결정적 장면을 고르면 결과가 중계와 결과 화면에 남는다', async ({
+  page,
+}) => {
+  await page.clock.install();
+  await stubOwner(page, true);
+  const team = teamFrom({
+    name: '우리 동네 FC',
+    formation: '4-3-3',
+    slots: [
+      PLAYERS[1]!.careerId,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      PLAYERS[0]!.careerId,
+    ],
+  });
+  await page.route(ownerTeamUrl, (route) => route.fulfill(ownerTeam({ team })));
+  await page.route(`${API}/v1/owner-team/opponents`, (route) =>
+    route.fulfill(
+      ok({
+        items: [
+          {
+            teamId: RIVAL,
+            name: '라이벌 FC',
+            owner: '라이벌 감독',
+            formation: '4-4-2',
+            ovr: 55,
+            rating: 1012,
+            record: REC,
+          },
+        ],
+      }),
+    ),
+  );
+  const STRIKER = PLAYERS[0]!.careerId;
+  const side = (teamId: string, name: string, goals: number, ratingChange: number | null) => ({
+    teamId,
+    name,
+    owner: '감독',
+    formation: '4-3-3',
+    ovr: 56,
+    goals,
+    ratingChange,
+  });
+  const chance = {
+    index: 0,
+    minute: 3,
+    kind: 'chance',
+    situation: 'st-1v1',
+    actor: { name: '공개 골잡이', id: STRIKER, slot: 'ST' },
+    mate: { name: '유스 선수', id: null, slot: 'W' },
+    opp: { name: '익명의 수비수 No.4', id: null, slot: 'CB' },
+    choices: [
+      { id: 'drive', pct: 40, mate: false, risk: 0, gain: 0 },
+      { id: 'square', pct: 44, mate: true, risk: 10, gain: 0 },
+      { id: 'round', pct: 58, mate: false, risk: 20, gain: 0 },
+    ],
+  };
+  const crisis = {
+    index: 1,
+    minute: 6,
+    kind: 'crisis',
+    situation: 'gk-1v1',
+    actor: { name: 'No.1', id: null, slot: 'GK' },
+    mate: { name: '유스 선수', id: null, slot: 'CB' },
+    opp: { name: '익명의 공격수 No.9', id: null, slot: 'ST' },
+    choices: [
+      { id: 'wait', pct: 62, mate: false, risk: 0, gain: 0 },
+      { id: 'rush', pct: 55, mate: false, risk: 0, gain: 8 },
+    ],
+  };
+  const goal = {
+    minute: 3,
+    side: 'home',
+    scorer: '공개 골잡이',
+    assist: null,
+    scorerId: STRIKER,
+    assistId: null,
+    slot: 'ST',
+  };
+  const final = {
+    match: {
+      id: 'mat_live',
+      home: side(MY_TEAM, '우리 동네 FC', 1, 9),
+      away: side(RIVAL, '라이벌 FC', 0, -9),
+      events: [goal],
+      moments: [
+        { ...chance, picked: 'round', ok: true },
+        { ...crisis, picked: 'auto', ok: true },
+      ],
+      mine: 'home',
+      createdAt: '2026-09-29T03:00:00.000Z',
+    },
+    record: { w: 1, d: 0, l: 0 },
+    rating: 1009,
+    matchesLeft: 9,
+  };
+  let started: unknown = null;
+  const picks: unknown[] = [];
+  let finished = 0;
+  await page.route(`${API}/v1/owner-team/matches`, (route) => {
+    started = route.request().postDataJSON();
+    return route.fulfill(
+      ok(
+        {
+          match: {
+            ...final.match,
+            home: side(MY_TEAM, '우리 동네 FC', 0, null),
+            away: side(RIVAL, '라이벌 FC', 0, null),
+            events: [],
+            moments: undefined,
+          },
+          record: REC,
+          rating: 1000,
+          matchesLeft: 9,
+          live: { moments: [chance, crisis], choiceSec: 15 },
+        },
+        201,
+      ),
+    );
+  });
+  await page.route(`${API}/v1/owner-team/matches/mat_live/moments/0`, (route) => {
+    picks.push(route.request().postDataJSON());
+    return route.fulfill(ok({ moment: { ...chance, picked: 'round', ok: true }, goals: [goal] }));
+  });
+  await page.route(`${API}/v1/owner-team/matches/mat_live/finish`, (route) => {
+    finished++;
+    return route.fulfill(ok(final));
+  });
+
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await page.locator('[data-team-tab="opponents"]').click();
+  await page.locator('[data-act="team-challenge"]').click();
+  await expect.poll(() => started).toEqual({ opponentTeamId: RIVAL, live: true });
+
+  const live = page.locator('[data-team-live]');
+  // 고를 장면은 중계 위로 올라오는 시트(대화상자)로 뜬다.
+  const card = page.getByRole('dialog').locator('[data-moment="st-1v1"]');
+  await expect(card).toContainText('결정적 찬스');
+  await expect(card).toContainText('공개 골잡이');
+  await expect(card.locator('[data-moment-choice]')).toHaveCount(3);
+  // T-11-492 장면 동안 그라운드는 멈추고 선택지마다 번호 화살표를 긋는다.
+  await expect(live.locator('[data-match-ground] .mg-key')).toHaveText(['1', '2', '3']);
+  await expect(card.locator('[data-moment-choice="round"]')).toContainText('58%');
+  await expect(card.locator('[data-moment-choice="round"]')).toContainText('역습 20%');
+  // T-11-443 스크린리더용 남은 시간은 처음 안내 한 줄, 건너뛰기 버튼은 감독에게 맡긴다고 적는다.
+  await expect(page.locator('[data-moment-spoken]')).toHaveText(
+    '15초 안에 고르지 않으면 감독에게 맡겨요',
+  );
+  await expect(page.locator('[data-act="moment-skip"]')).toHaveText('감독에게 맡기고 결과 보기');
+  await expect(live.locator('[data-act="live-skip"]')).toHaveText('감독에게 맡기고 결과 보기');
+  await expectNoA11yViolations(page);
+  // Freeze after the accessibility scan; browser/CI work must not spend the choice budget.
+  const now = await page.evaluate(() => Date.now());
+  await page.clock.pauseAt(new Date(now + 100));
+  await card.locator('[data-moment-choice="round"]').click();
+  await expect.poll(() => picks).toEqual([{ choice: 'round' }]);
+  await expect(card).toHaveCount(0);
+  // Play the commentary and goal holds through minute 6 without waiting on wall-clock timers.
+  // This stays inside the next choice's 15-second budget.
+  await page.clock.runFor(8_000);
+  await expect(live.locator('[data-live-line="moment"]')).toContainText('키퍼 제치기');
+  await expect(live.locator('[data-live-line="goal"]')).toContainText('공개 골잡이');
+  await expect(live.locator('[data-live-score]')).toContainText('1');
+
+  // 두 번째 장면에서 결과 바로 보기 — 고르지 않은 장면은 감독에게 맡기고 서버가 마감한다.
+  await expect(page.getByRole('dialog').locator('[data-moment="gk-1v1"]')).toBeVisible();
+  await page.locator('[data-act="moment-skip"]').click();
+  await expect(live).toHaveCount(0);
+  expect(finished).toBe(1);
+  const result = page.locator('[data-team-result]');
+  await expect(result.locator('h1')).toHaveText('승리');
+  await expect(result.locator('.tm-goals')).toContainText('1:0');
+  await expect(result.locator('.tm-slot')).toHaveText('ST');
+  const moments = result.locator('[data-team-moments]');
+  await expect(moments.locator('li')).toHaveCount(2);
+  await expect(moments.locator('li').first()).toContainText('키퍼 제치기');
+  await expect(moments.locator('li').nth(1)).toContainText('감독');
+  await expect(result.locator('[data-rating-change]')).toContainText('내 팀 레이팅 +9');
+  await page.clock.resume();
+  await expectNoA11yViolations(page);
 });
 
 test('T-11-269 기록 탭 — 더 보기로 지난 경기를 잇고, 통계 카드와 득점자 이름으로 시즌 통계를 연다', async ({
@@ -466,6 +680,19 @@ test('T-11-269 기록 탭 — 더 보기로 지난 경기를 잇고, 통계 카�
             ga: 5,
           },
         ],
+        report: {
+          matches: 9,
+          xgFor: 13.2,
+          xgAgainst: 8.1,
+          gf: 16,
+          ga: 7,
+          edges: { atk: 4.2, mid: -2.6, def: 1.3 },
+          behind: { atk: 1, mid: 6, def: 3 },
+          formations: [
+            { formation: '4-3-3', w: 5, d: 1, l: 1, gf: 13, ga: 5, xgFor: 10.1, xgAgainst: 6.2 },
+            { formation: '4-4-2', w: 1, d: 0, l: 1, gf: 3, ga: 2, xgFor: 3.1, xgAgainst: 1.9 },
+          ],
+        },
       }),
     );
   });
@@ -490,6 +717,16 @@ test('T-11-269 기록 탭 — 더 보기로 지난 경기를 잇고, 통계 카�
   await expect(stats.locator(`[data-stats-player="${STRIKER}"]`)).toContainText('공개 골잡이');
   await expect(stats.locator(`[data-stats-player="${STRIKER}"]`)).toContainText('12');
   await expect(stats).toContainText('유스 선수');
+  // T-11-379 시즌 경기 리포트 — 기대 득점 대비 실제 · 가장 자주 밀린 비교 · 포메이션별.
+  const seasonReport = stats.locator('[data-season-report]');
+  await expect(seasonReport.locator('[data-season-report-xg]')).toHaveText(
+    '9경기 · 기대 득점 13.2 → 실제 16골 · 기대 실점 8.1 → 실제 7골',
+  );
+  await expect(seasonReport).toContainText('기대보다 2.8골 더 넣었어요.');
+  await expect(seasonReport).toContainText(
+    '가장 자주 밀린 비교는 내 중원 vs 상대 중원이에요(6/9경기).',
+  );
+  await expect(seasonReport.locator('[data-season-formations] div')).toHaveCount(2);
   await expectNoA11yViolations(page);
   await stats.locator('[data-stats-tab="days"]').click();
   await expect(stats.locator('[data-stats-day="2026-09-30"]')).toContainText('9/30');
@@ -1023,6 +1260,58 @@ test('업적 달성 알림 — 쓰기 뒤 홈에서 승급 시트, 업적 보기
   await expect(page.locator('[data-ach-sheet]')).toHaveCount(0);
 });
 
+test('시트를 닫는 동안 늦게 온 본문 청크가 비워진 시트를 읽지 않는다', async ({ page }) => {
+  // T-11-447 닫기는 open · view를 함께 비우고 시트는 220ms 동안 내려가며 사라진다. 그 사이 도착한 지연 청크
+  // (업적 · 경기 평점 · 비행)가 빈 view를 읽다 오류를 냈다(운영 클라이언트 오류 'reading from/rated/done').
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await stubOwner(page, true);
+  await page.route(ownerTeamUrl, (route) =>
+    route.fulfill(ownerTeam({ season: 1, current: 1, seasons: SEASONS })),
+  );
+  await page.route(`${API}/v1/owner-team/achievement*`, (route) =>
+    route.fulfill(
+      ok({
+        season: 1,
+        score: 210,
+        groups: [
+          {
+            id: 'first',
+            category: 'player',
+            stage: '0단계',
+            title: '축구 인생 출발',
+            items: [
+              { id: 'retire-FW', label: '공격수 1명 은퇴', done: true, points: 190, worth: 0 },
+              { id: 'retire-GK', label: '골키퍼 1명 은퇴', done: true, points: 20, worth: 0 },
+            ],
+          },
+        ],
+      }),
+    ),
+  );
+  let release!: () => void;
+  const held = new Promise<void>((r) => (release = r));
+  await page.route(/\/assets\/Achieve-[^/]+\.js$/, async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'ft_ach_seen',
+      JSON.stringify({ season: 1, pts: { 'retire-FW': 190 }, score: 190, unseen: [] }),
+    );
+    localStorage.setItem('ft_ach_dirty', 'true');
+  });
+  await page.goto('/');
+  const close = page.locator('#sheet [data-sheet]').last();
+  await expect(close).toBeVisible();
+  await close.click();
+  release();
+  await expect(page.locator('#sheet')).toHaveCount(0);
+  await page.waitForTimeout(300);
+  expect(errors).toEqual([]);
+});
+
 test('모바일 편성 초안은 화면 왕복·새로고침에도 복원되고 저장 실패에는 남는다', async ({
   page,
 }) => {
@@ -1313,15 +1602,16 @@ test('T-11-113 프리시즌 친선전을 유지하고 자동 창단 멤버 배�
   expect(puts).toMatchObject([{ season: 0, name: '레전드 FC' }]);
 });
 
-test('T-11-114 지난 시즌 선수는 와일드카드로 선발에 3명까지 넣고 카드에 시즌 뱃지가 보인다', async ({
+test('T-11-376 지난 시즌 선수는 급여 예산 60 안에서 넣고, 급여 막대 · 칩 · 안내 · 저장 거절이 보인다', async ({
   page,
 }) => {
   await stubOwner(page, true);
+  // OVR 96 이상은 급여 20 — 세 명이면 예산 60이 다 찬다.
   const old = [1, 2, 3, 4].map((i) => ({
     ...PLAYERS[0]!,
     careerId: `00000000-0000-4000-8000-00000000010${i}`,
     publicName: `프리 ${i}`,
-    peak: 92 - i,
+    peak: 100 - i,
     season: 0,
   }));
   const fresh = {
@@ -1331,35 +1621,90 @@ test('T-11-114 지난 시즌 선수는 와일드카드로 선발에 3명까지 �
     peak: 70,
     season: 1,
   };
-  await page.route(ownerTeamUrl, (route) =>
-    route.fulfill(ownerTeam({ season: 1, current: 1, seasons: SEASONS, players: [...old, fresh] })),
-  );
+  const puts: unknown[] = [];
+  await page.route(ownerTeamUrl, (route) => {
+    if (route.request().method() === 'PUT') {
+      puts.push(route.request().postDataJSON());
+      return route.fulfill(
+        fail(
+          400,
+          'VALIDATION_FAILED',
+          '지난 시즌 선수 급여가 예산을 넘어요(60/40). 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요.',
+        ),
+      );
+    }
+    return route.fulfill(
+      ownerTeam({
+        season: 1,
+        current: 1,
+        seasons: SEASONS,
+        players: [...old, fresh],
+        pastSalaryBudget: 60,
+      }),
+    );
+  });
   await page.route(`${API}/v1/owner-team/opponents`, (route) => route.fulfill(ok({ items: [] })));
 
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-act="team"]').click();
-  await expect(page.locator('[data-team-wildcards]')).toHaveText('와일드카드 0/3');
+  const bar = page.locator('[data-team-salary]');
+  await expect(bar).toContainText('지난 시즌 선수 급여 0 / 60');
+  await expect(bar).toHaveAttribute('data-state', 'ok');
   await expect(
     page.locator(`[data-locker-player="${old[0]!.careerId}"] [data-card-season]`),
   ).toHaveText('PRE');
   await expect(
     page.locator(`[data-locker-player="${fresh.careerId}"] [data-card-season]`),
   ).toHaveText('S1');
+  // 지난 시즌 카드에만 급여 칩, 이번 시즌 카드는 칩이 없다.
+  await expect(
+    page.locator(`[data-locker-player="${old[0]!.careerId}"] [data-salary-chip]`),
+  ).toHaveText('급여 20');
+  await expect(
+    page.locator(`[data-locker-player="${fresh.careerId}"] [data-salary-chip]`),
+  ).toHaveCount(0);
 
   await page.locator('[data-act="team-auto"]').click();
-  await expect(page.locator('[data-team-wildcards]')).toHaveText('와일드카드 3/3');
+  await expect(bar).toContainText('지난 시즌 선수 급여 60 / 60');
+  await expect(bar).toHaveAttribute('data-state', 'full');
   await expect(page.locator('button[data-slot] [data-card-season="0"]')).toHaveCount(3);
   await expect(page.locator('button[data-slot] [data-card-season="1"]')).toHaveCount(1);
+  await expect(page.locator('button[data-slot] [data-salary-chip="20"]')).toHaveCount(3);
+  await expect(page.locator('[data-locker-salary]')).toHaveText('남은 예산 0');
+  const fourth = page.locator(`[data-locker-player="${old[3]!.careerId}"]`);
+  await expect(fourth.locator('[data-salary-over]')).toHaveText('급여 20 · 예산 초과');
   await page
     .locator('.ground-panel')
-    .screenshot({ path: test.info().outputPath('wildcard-ground.png') });
+    .screenshot({ path: test.info().outputPath('salary-ground.png') });
+  await page
+    .locator('[data-team-locker]')
+    .screenshot({ path: test.info().outputPath('salary-locker.png') });
 
   // 네 번째 지난 시즌 선수는 빈 자리에 넣을 수 없다.
-  await page.locator(`[data-locker-player="${old[3]!.careerId}"] .locker-select`).click();
+  await fourth.locator('.locker-select').click();
   await page.locator('button[data-slot]:has(.youth)').first().click();
-  await expect(page.locator('#toast')).toContainText('지난 시즌 선수는 선발에 3명까지');
-  await expect(page.locator('[data-team-wildcards]')).toHaveText('와일드카드 3/3');
+  await expect(page.locator('#toast')).toContainText('남은 예산(0)보다 커요');
+  await expect(bar).toContainText('60 / 60');
+
+  // 막대를 누르면 급여 안내(규칙 · 급여표 · 예).
+  await bar.click();
+  const guide = page.locator('[data-salary-guide]');
+  await expect(guide).toContainText('이번 시즌 선수는 급여가 없어요');
+  await expect(guide.locator('[data-salary-table] tbody tr')).toHaveCount(9);
+  await expect(guide).toContainText('OVR 96 이상 선수 3명 (급여 60)');
+  await expect(guide).toContainText('OVR 85~87 선수 10명 (급여 60)');
+  await page.locator('.sheet').screenshot({ path: test.info().outputPath('salary-guide.png') });
+  await page.locator('[data-act="salary-close"]').click();
+  await expect(guide).toHaveCount(0);
+
+  // 서버가 예산을 넘는다고 거절하면 그 문구를 그대로 알린다(운영 도구에서 예산을 내린 직후 등).
+  await page.locator('[data-team-name]').fill('급여 FC');
+  await page.locator('[data-team-manager]').fill('김감독');
+  await page.locator('[data-act="team-save"]').click();
+  await expect(page.locator('#toast')).toContainText('지난 시즌 선수 급여가 예산을 넘어요(60/40)');
+  expect(puts).toHaveLength(1);
+  await page.screenshot({ path: test.info().outputPath('salary-reject.png') });
 });
 
 // T-11-129 홈의 구단 가치 TOP 3 — 라이브 랭킹 첫 페이지(sort=value)를 한 번만 부르고, 전체 보기는 구단 가치 순 팀 랭킹으로 간다.
@@ -1584,9 +1929,26 @@ test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없
   expect(teamPuts).toBe(0);
 
   await page.locator('[data-act="team-presets"]').click();
+  // T-11-431 덮어쓰기 · 삭제는 한 번 더 묻는다. 취소하면 아무것도 보내지 않는다.
+  await sheet.locator('[data-preset="1"] [data-act="preset-overwrite"]').click();
+  await expect(sheet.locator('[data-preset="1"] [data-preset-ask="overwrite"]')).toContainText(
+    '지금 편성으로 덮어쓸까요?',
+  );
+  await sheet.locator('[data-act="preset-ask-cancel"]').click();
+  await expect(sheet.locator('[data-preset-ask]')).toHaveCount(0);
   await sheet.locator('[data-preset="0"] [data-act="preset-delete"]').click();
+  await expect(sheet.locator('[data-preset="0"] [data-preset-ask="delete"]')).toContainText(
+    '삭제할까요?',
+  );
+  expect(puts.length).toBe(2);
+  await sheet.locator('[data-act="preset-ask-ok"]').click();
   await expect.poll(() => puts.length).toBe(3);
   expect(puts[2]!.presets.map((p) => p.name)).toEqual(['주말 리그']);
+  await expect(sheet.locator('[data-preset-ask]')).toHaveCount(0);
+  await sheet.locator('[data-preset="0"] [data-act="preset-overwrite"]').click();
+  await sheet.locator('[data-act="preset-ask-ok"]').click();
+  await expect.poll(() => puts.length).toBe(4);
+  expect(puts[3]!.presets.map((p) => p.name)).toEqual(['주말 리그']);
 });
 
 for (const width of [320, 390, 1280]) {
@@ -1659,7 +2021,7 @@ test('T-11-323 감독 칸에 감독이 있으면 줄 힘에 감독 보정을 더
     pos: 'MF',
     mastery: { '4-3-3': 'S', '4-4-2': 'C', '3-5-2': 'C' },
     style: 'attack',
-    specials: [],
+    specials: ['counter'],
     grade: 'A',
     ending: 'steady',
   };
@@ -1681,6 +2043,17 @@ test('T-11-323 감독 칸에 감독이 있으면 줄 힘에 감독 보정을 더
   await expect(lines.locator('[data-coach-line="mid"]')).toHaveText('감독 +1.0');
   await expect(lines.locator('[data-coach-line="def"]')).toHaveText('감독 +0.4');
   await expect(lines.locator('[data-coach-line="gk"]')).toHaveCount(0);
+  // T-11-382 감독 칸의 보정 내역: 갈래별 값과, 짝 시너지가 꺼져 더하지 않은 특기.
+  const detail = page.locator('[data-coach-breakdown]');
+  await detail.locator('summary').click();
+  await expect(detail.locator('[data-coach-row="atk"]')).toContainText('공격 +2.0');
+  await expect(detail.locator('[data-coach-row="atk"]')).toContainText(
+    '숙련 S +1.0 · 공격 성향 +1.0',
+  );
+  await expect(detail.locator('[data-coach-capped]')).toHaveCount(0);
+  await expect(detail.locator('[data-coach-off]')).toHaveText(
+    '역습 전개: 짝이 되는 팀 시너지가 꺼져 있어 더하지 않아요.',
+  );
   // 4-4-2(숙련 C)로 바꾸면 성향만 남는다.
   await page.locator('[data-formation="4-4-2"]').click();
   await expect(lines.locator('[data-coach-line="atk"]')).toHaveText('감독 +1.0');

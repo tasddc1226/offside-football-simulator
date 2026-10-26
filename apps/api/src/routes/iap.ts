@@ -1,3 +1,6 @@
+import { REMOVE_ADS_PRODUCT_ID } from '@offside/contracts/cup';
+import { recordAdFreePurchase } from '../db/repos/adFreePurchases.js';
+import { getSessionOrThrow } from '../middleware/requireProfile.js';
 import { IAP_PRODUCTS, IapClaimBodySchema, OwnerItemsResponseSchema } from '@offside/contracts';
 import type { Hono } from 'hono';
 import { cupKo } from '../cupText.js';
@@ -13,7 +16,7 @@ import { iapAccount, iapStores, verifyIapClaim, type IapRejection } from '../iap
 import { APPLE_IAP_NOTIFY_PATH } from '../middleware/originGuard.js';
 import { requireProfile } from '../middleware/requireProfile.js';
 import { requireOwner } from './ownerTeam.js';
-import { conflictError, NO_STORE, nowIso, ok, readBody } from './shared.js';
+import { conflictError, NO_STORE, nowIso, ok, readBody, readJson, enforceLimit } from './shared.js';
 
 // T-11-174 인앱 상품(소모성): 리롤권 · 잠재력 강화권 묶음. 앱이 스토어에서 산 거래를 보내면 스토어 기준으로 확인하고
 // 거래마다 한 번만 아이템을 준다. 앱은 이 응답을 받은 뒤에만 스토어 거래를 마무리(소비)한다 — 응답을 못 받으면 다음 실행 때
@@ -30,16 +33,63 @@ const REJECT = {
 const reject = (r: IapRejection) => conflictError(cupKo(REJECT[r][0]), REJECT[r][1]);
 
 export function registerIapRoutes(app: Hono<AppEnv>) {
+  app.post('/v1/iap/ad-free/record', requireProfile, async (c) => {
+    c.header('Cache-Control', NO_STORE);
+    if (c.env.ACQUISITION_ENABLED !== '1') return c.body(null, 503);
+    let body: { store?: unknown; token?: unknown; profileId?: unknown };
+    try {
+      body = JSON.parse(c.get('rawBody') ?? '{}') as typeof body;
+    } catch {
+      return c.body(null, 400);
+    }
+    if (
+      !body ||
+      (body.store !== 'apple' && body.store !== 'google') ||
+      typeof body.token !== 'string' ||
+      !body.token ||
+      body.token.length > 16384
+    )
+      return c.body(null, 400);
+    const profileId = getSessionOrThrow(c).profileId;
+    if (body.profileId !== undefined && body.profileId !== profileId) return c.body(null, 409);
+    const consent = await c.env.DB.prepare(
+      'SELECT version FROM acquisition_consents WHERE profile_id=?',
+    )
+      .bind(profileId)
+      .first<{ version: string }>();
+    if (consent?.version !== 'account-acquisition-v1') return c.body(null, 204);
+    await enforceLimit(getDb(c), 'ACQUISITION', profileId, 60, nowIso(), 'RATE_LIMITED');
+    const verdict = await verifyIapClaim(
+      c.env,
+      { store: body.store, token: body.token, productId: REMOVE_ADS_PRODUCT_ID },
+      iapAccount(profileId),
+      { nowS: Math.floor(Date.now() / 1000), allowUnbound: true },
+    ).catch(() => null);
+    if (!verdict) throw unavailable();
+    if (!verdict.ok) throw reject(verdict.reason);
+    if (verdict.inherited) return c.body(null, 204);
+    await recordAdFreePurchase(c.env.DB, {
+      store: body.store,
+      transactionId: verdict.transactionId,
+      profileId: verdict.accountMatched ? profileId : null,
+      consentProfileId: profileId,
+      test: verdict.test,
+      now: nowIso(),
+      metadata: verdict.metadata,
+    });
+    // Store entitlement/acknowledgement remains owned by the existing native purchase path.
+    return c.body(null, 204);
+  });
   app.post('/v1/iap/google/notifications', async (c) => {
     if (c.env.BILLING_ALERTS_ENABLED !== '1') return c.body(null, 503);
     if (!(await verifyPubsubToken(c.env, c.req.header('Authorization')))) return c.body(null, 401);
-    const status = await handleGoogleRtdn(c.env, await c.req.json().catch(() => null), nowIso());
+    const status = await handleGoogleRtdn(c.env, readJson(c), nowIso());
     return c.body(null, status as 204 | 400 | 503);
   });
   // T-11-215 App Store 서버 알림(V2). Apple 서버가 보낸다 — 세션 없이 본문의 Apple 서명으로 확인하고, 환불이면 아이템을 회수한다.
   // 처리했거나 다룰 일이 없으면 200(Apple이 다시 보내지 않는다), 서명이 틀리면 400.
   app.post(APPLE_IAP_NOTIFY_PATH, async (c) => {
-    const body = (await c.req.json().catch(() => null)) as { signedPayload?: unknown } | null;
+    const body = readJson(c) as { signedPayload?: unknown } | null;
     const payload = typeof body?.signedPayload === 'string' ? body.signedPayload : '';
     const r = await handleAppleNotification(c.env, getDb(c), payload, nowIso());
     return c.body(null, r === 'invalid' ? 400 : 200);
@@ -75,6 +125,8 @@ export function registerIapRoutes(app: Hono<AppEnv>) {
       item: product.item,
       qty: product.qty * verdict.quantity,
       test: verdict.test,
+      metadata: verdict.metadata,
+      acquisitionEnabled: c.env.ACQUISITION_ENABLED === '1',
       now: nowIso(),
       ...(c.env.BILLING_ALERTS_ENABLED === '1'
         ? {

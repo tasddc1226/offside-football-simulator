@@ -39,6 +39,8 @@ import {
   type RatingRange,
   listStatsMatches,
   otherKindTotals,
+  myTeamIn,
+  ovrRankOf,
   ratingRankOf,
   setTeamLike,
   slotIdsOf,
@@ -47,7 +49,11 @@ import {
   teamPlayerCard,
 } from '../db/repos/ownerTeams.js';
 import { friendStateOf } from '../db/repos/friends.js';
-import { listAchievementRanking } from '../db/repos/ownerAchievements.js';
+import {
+  achievementRankOf,
+  achievementRowOf,
+  listAchievementRanking,
+} from '../db/repos/ownerAchievements.js';
 import { edgeCached, waitUntil } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -98,45 +104,67 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     const season = teamSeasonParam(q.season, now);
     // T-11-375 디비전 탭은 레이팅순에만 있다(다른 정렬에 붙으면 무시해 캐시 키를 늘리지 않는다).
     const division = q.sort === 'rating' ? q.division : undefined;
-    const data = await edgeCached(
-      c,
-      EDGE.teamRank(season, q.sort, q.page, division),
-      q.sort === 'value' ? RANK_VALUE_TTL : RANK_TTL,
-      async (): Promise<Omit<TeamRankResponse, 'seasons'>> => {
-        const range =
-          division === undefined
-            ? undefined
-            : divisionRange(await activeDivisionRules(getDb(c)), division);
-        const { rows, total } = await listTeamRanking(getDb(c), season, q.sort, q.page, now, range);
-        const forms = await listTeamRecentForm(
-          getDb(c),
-          rows.map((t) => t.id),
-        );
-        return {
-          season,
-          sort: q.sort,
-          page: q.page,
-          total,
-          items: rows.map((t, i) => ({
-            rank: (q.page - 1) * TEAM_RANK_PER_PAGE + i + 1,
-            teamId: t.id,
-            name: t.name,
-            logo: logoOf(t),
-            manager: t.manager,
-            formation: t.formation as FormationId,
-            ovr: t.ovr,
-            rating: t.rating,
-            division: t.division,
-            record: recordOf(t),
-            likes: t.likes,
-            value: t.value,
-            createdAt: t.createdAt,
-            recentForm: forms.get(t.id) ?? [],
-            title: t.title,
-          })),
-        };
-      },
-    );
+    const pageOf = (page: number, division?: number) =>
+      edgeCached(
+        c,
+        EDGE.teamRank(season, q.sort, page, division),
+        q.sort === 'value' ? RANK_VALUE_TTL : RANK_TTL,
+        async (): Promise<Omit<TeamRankResponse, 'seasons'>> => {
+          const range =
+            division === undefined
+              ? undefined
+              : divisionRange(await activeDivisionRules(getDb(c)), division);
+          const { rows, total } = await listTeamRanking(getDb(c), season, q.sort, page, now, range);
+          const forms = await listTeamRecentForm(
+            getDb(c),
+            rows.map((t) => t.id),
+          );
+          return {
+            season,
+            sort: q.sort,
+            page,
+            total,
+            items: rows.map((t, i) => ({
+              rank: (page - 1) * TEAM_RANK_PER_PAGE + i + 1,
+              teamId: t.id,
+              name: t.name,
+              logo: logoOf(t),
+              manager: t.manager,
+              formation: t.formation as FormationId,
+              ovr: t.ovr,
+              rating: t.rating,
+              division: t.division,
+              record: recordOf(t),
+              likes: t.likes,
+              value: t.value,
+              createdAt: t.createdAt,
+              recentForm: forms.get(t.id) ?? [],
+              title: t.title,
+            })),
+          };
+        },
+      );
+    // T-11-441 '내 순위로': 세션의 그 시즌 팀 순위를 세고 그 페이지(엣지 캐시 그대로)에 me를 붙인다. 가치순은 순위를
+    // 세려면 모든 팀의 가치를 더해야 해 세지 않는다. 사람마다 다른 응답이라 me 응답은 담지 않는다.
+    if (q.me && q.sort !== 'value') {
+      const session = await resolveSession(c);
+      const db = getDb(c);
+      const [team] = session ? await myTeamIn(db, session.profileId, season) : [];
+      const rank = team
+        ? await (q.sort === 'ovr' ? ovrRankOf(db, team) : ratingRankOf(db, team))
+        : null;
+      const me = team && rank ? { teamId: team.id, rank } : null;
+      const page = me ? Math.ceil(me.rank / TEAM_RANK_PER_PAGE) : q.page;
+      const data = await pageOf(Math.min(page, 500));
+      return ok(
+        c,
+        TeamRankResponseSchema,
+        { ...withSeasons(data, now, reqLang(c)), me },
+        200,
+        NO_STORE,
+      );
+    }
+    const data = await pageOf(q.page, division);
     return ok(c, TeamRankResponseSchema, withSeasons(data, now, reqLang(c)), 200, RANK_CACHE);
   });
 
@@ -170,31 +198,50 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     const now = nowIso();
     const q = parseWithAppError(AchRankQuerySchema, queryWithoutLang(c));
     const season = teamSeasonParam(q.season, now);
-    const data = await edgeCached(
-      c,
-      EDGE.achRank(season, q.page),
-      RANK_TTL,
-      async (): Promise<Omit<AchRankResponse, 'seasons'>> => {
-        const { rows, total } = await listAchievementRanking(getDb(c), season, q.page);
-        return {
-          season,
-          page: q.page,
-          total,
-          items: rows.map((r, i) => ({
-            rank: (q.page - 1) * ACH_RANK_PER_PAGE + i + 1,
-            nickname: r.nickname,
-            team:
-              r.teamId && r.teamName
-                ? { id: r.teamId, name: r.teamName, logo: logoOf({ logoJson: r.logoJson }) }
-                : null,
-            score: r.score,
-            done: r.done,
-            players: r.players,
-            title: r.title,
-          })),
-        };
-      },
-    );
+    const pageOf = (page: number) =>
+      edgeCached(
+        c,
+        EDGE.achRank(season, page),
+        RANK_TTL,
+        async (): Promise<Omit<AchRankResponse, 'seasons'>> => {
+          const { rows, total } = await listAchievementRanking(getDb(c), season, page);
+          return {
+            season,
+            page,
+            total,
+            items: rows.map((r, i) => ({
+              rank: (page - 1) * ACH_RANK_PER_PAGE + i + 1,
+              nickname: r.nickname,
+              team:
+                r.teamId && r.teamName
+                  ? { id: r.teamId, name: r.teamName, logo: logoOf({ logoJson: r.logoJson }) }
+                  : null,
+              score: r.score,
+              done: r.done,
+              players: r.players,
+              title: r.title,
+            })),
+          };
+        },
+      );
+    // T-11-441 '내 순위로'(팀 랭킹과 같다). 내 업적 행 하나와 앞선 수 한 번만 센다.
+    if (q.me) {
+      const session = await resolveSession(c);
+      const db = getDb(c);
+      const row = session ? await achievementRowOf(db, session.profileId, season) : undefined;
+      const rank = row ? (await achievementRankOf(db, row, async () => 0)).rank : null;
+      const me = rank ? { rank } : null;
+      const page = me ? Math.ceil(me.rank / ACH_RANK_PER_PAGE) : q.page;
+      const data = await pageOf(Math.min(page, 500));
+      return ok(
+        c,
+        AchRankResponseSchema,
+        { ...withSeasons(data, now, reqLang(c)), me },
+        200,
+        NO_STORE,
+      );
+    }
+    const data = await pageOf(q.page);
     return ok(c, AchRankResponseSchema, withSeasons(data, now, reqLang(c)), 200, RANK_CACHE);
   });
 

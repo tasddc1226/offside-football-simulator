@@ -16,6 +16,8 @@ import { openFriends, pendingInvite } from './friendInvite.svelte.js';
 import { openLocalLegend } from './legend.js';
 import { openBoard } from './nav.js';
 import { appState, hofStart } from './state.svelte.js';
+import { prepareAcquisitionOAuth } from '../analytics/acquisition.js';
+import { clearOAuthCampaign } from '../analytics/oauth-campaign.js';
 
 /** 로그인을 마치고 돌아와 다시 열 곳. T-10-028 소식 글(댓글), T-10-029 내 은퇴 선수(공유), T-11-015 채팅. */
 export type LoginReturn =
@@ -24,6 +26,8 @@ export type LoginReturn =
   | { chat: true }
   | { market: true }
   | { cup: true }
+  /** T-11-418 리그 화면에서 로그인했으면 리그 화면으로 돌아온다. */
+  | { league: true }
   /** T-11-290 팀 프로필(스쿼드 댓글)에서 로그인했으면 그 팀 프로필로 돌아온다. */
   | { team: string }
   /** T-11-360 홈 출석 체크에서 로그인했으면 홈으로 돌아와 바로 출석한다. */
@@ -50,17 +54,23 @@ function takeLoginReturn(): LoginReturn | null {
 /** 구글 로그인을 시작한다. 로그인은 프로필 세션이 있어야 시작된다 — 없으면 GET /v1/profile이 익명
  * 프로필을 만든다. */
 export async function startGoogleLogin(back: LoginReturn | null) {
+  clearOAuthCampaign();
   // T-10-115 인앱 브라우저에서는 구글이 로그인을 막는다(403 disallowed_useragent) — 구글로 보내지 않고 안내한다.
   const inApp = currentInApp();
   if (inApp) return showInAppLoginNotice(inApp);
   rememberLoginReturn(back);
-  if (!(await getProfile()).ok) return toast(loginOfflineText());
+  const me = await getProfile();
+  if (!me.ok) return toast(loginOfflineText());
+  await prepareAcquisitionOAuth('google', me.data.id);
   window.location.assign(googleStartUrl());
 }
 /** T-11-204 Apple 로그인을 시작한다(주소창으로 Apple에 갔다가 /settings?apple=...로 돌아온다). */
 export async function startAppleLogin(back: LoginReturn | null) {
+  clearOAuthCampaign();
   rememberLoginReturn(back);
-  if (!(await getProfile()).ok) return toast(loginOfflineText());
+  const me = await getProfile();
+  if (!me.ok) return toast(loginOfflineText());
+  await prepareAcquisitionOAuth('apple', me.data.id);
   window.location.assign(appleStartUrl());
 }
 export function handleOAuthReturn() {
@@ -85,6 +95,7 @@ export function handleOAuthReturn() {
     if ('chat' in back) return void (appState.screen = 'chat');
     if ('market' in back) return void (appState.screen = 'market');
     if ('cup' in back) return void (appState.screen = 'cup');
+    if ('league' in back) return void (appState.screen = 'league');
     if ('home' in back) return void (appState.screen = 'home');
     if ('team' in back) {
       appState.hof = { ...hofStart(), tab: 'teams', team: back.team };

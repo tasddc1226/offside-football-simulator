@@ -1,10 +1,11 @@
 // ───────── 순수 포맷/집계 헬퍼 (ui.ts의 문자열 템플릿 함수들을 컴포넌트가 쓰기 좋은 형태로 분리) ─────────
-import { growthSlowNote, labelOf } from '@offside/game/engine';
+import { growthDirection, growthSlowNote, labelOf } from '@offside/game/engine';
 import { LEAGUES } from '@offside/game/data';
 import type { AttrKey } from '@offside/game/data';
 import {
   ovrRole,
   mainRole,
+  roleChoices,
   ROLES,
   ROLE_NAME,
   POS_ROLES,
@@ -192,7 +193,8 @@ export function attrData(s: GameState) {
   const abbr = s.pos === 'GK' ? GK_ABBR : FACE_ABBR;
   const tier = (v: number): 't1' | 't2' | 't3' | 't4' =>
     v >= 80 ? 't4' : v >= 70 ? 't3' : v >= 50 ? 't2' : 't1';
-  const roles = [...new Set([role, ...POS_ROLES[s.pos]])].map((r) => ({
+  // T-11-399 두 역할 중 높은 쪽으로 재는 선수는 다른 역할도 늘 보인다(스트라이커로 잡힌 타깃맨이 타깃맨 OVR을 보게).
+  const roles = [...new Set([role, ...roleChoices(s), ...POS_ROLES[s.pos]])].map((r) => ({
     role: r,
     on: r === role,
     title: ROLE_NAME[r],
@@ -223,7 +225,21 @@ export function attrData(s: GameState) {
     };
   });
   // T-11-353 "몇 년째 안 올라요" 제보: 성장을 가장 크게 깎는 이유 한 줄(없으면 빈 문자열).
-  return { role, roleName: ROLE_NAME[role], roles, groups, growthNote: growthSlowNote(s) };
+  return {
+    role,
+    roleName: ROLE_NAME[role],
+    roles,
+    groups,
+    growthNote: growthSlowNote(s),
+    // T-11-379 골 · 도움(또는 수비 평점)에 가장 크게 쓰이는 능력치(문장은 ratingReport growthDirectionText).
+    growthDir: growthDirFor(s),
+  };
+}
+
+/** T-11-379 성장 방향 원자료(ratingReport의 GrowthDirInfo와 같은 모양). */
+export function growthDirFor(s: GameState) {
+  const d = growthDirection(s);
+  return { d, attr: d.kind === 'def' ? '' : labelOf(s, d.attr) };
 }
 
 /** 레이더 다각형 좌표. 0~100 값을 중심 c, 반지름 r에 매핑하고 12시 방향부터 시계 방향으로 돈다. */

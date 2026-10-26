@@ -1,5 +1,6 @@
 // 화면 위로 내려오는 알림 배너 껍데기(웹 .update-banner · .news-banner 자리·모양). 스토어 업데이트·새 버전·새 소식 배너가 같이 쓴다.
 // 루트에서 화면 위에 얹는다(화면 전체를 덮는 자리 — 배너 밖은 터치를 통과시킨다).
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import type { ReactNode } from 'react';
 import { Animated, View, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,7 +42,7 @@ export function TopBanner({
             alignItems: 'center',
             gap: 12,
             backgroundColor: c.pitch,
-            borderRadius: 14,
+            borderRadius: RADIUS.md,
             borderWidth: 1,
             borderColor: alpha(c.onPitch, 0.22),
             paddingVertical: 10,
@@ -75,14 +76,17 @@ export function BannerText({
   const c = useColors();
   return (
     <View style={{ flex: 1, minWidth: 0 }}>
-      <Txt bold style={{ fontSize: rem(0.875), lineHeight: rem(0.875) * 1.4, color: c.onPitch }}>
+      <Txt
+        bold
+        style={{ fontSize: rem(FONT.body2), lineHeight: rem(FONT.body2) * 1.4, color: c.onPitch }}
+      >
         {title}
       </Txt>
       <Txt
         numberOfLines={bodyLines}
         style={{
-          fontSize: rem(0.8125),
-          lineHeight: rem(0.8125) * 1.4,
+          fontSize: rem(FONT.label),
+          lineHeight: rem(FONT.label) * 1.4,
           color: alpha(c.onPitch, 0.85),
         }}
       >
@@ -105,12 +109,12 @@ export function BannerClose({ testID, onPress }: { testID: string; onPress: () =
         width: 36,
         height: 36,
         marginLeft: -4,
-        borderRadius: 10,
+        borderRadius: RADIUS.sm,
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
-      <Txt style={{ fontSize: rem(1), color: c.onPitch }}>✕</Txt>
+      <Txt style={{ fontSize: rem(FONT.body), color: c.onPitch }}>✕</Txt>
     </Press>
   );
 }

@@ -6,14 +6,18 @@ export const legendRn: Translation<LegendRnMsgs> = {
   missKicker: 'Retired number review',
   missSeasons: (p: { club: string; seasons: number; need: number }) =>
     `You played ${p.seasons} seasons at ${p.club}. A retired number needs ${p.need}+ seasons at one club.`,
-  missScore: (p: { club: string; pct: number }) =>
-    `Your contribution at ${p.club} reached ${p.pct}% of the retired number bar. You need to pass it to have your number retired.`,
+  pctBand: (p) => `${p.pct}–${p.pct + 9}%`,
+  missScore: (p) =>
+    `Your contribution at ${p.club} reached ${p.band} of the retired number bar. You need to pass it to have your number retired.`,
+  missScoreClose: (p) =>
+    `Your contribution at ${p.club} fell just short of the retired number bar. You need to pass it to have your number retired.`,
   missScoreSeasons: (p) =>
-    `Your contribution at ${p.club} reached ${p.pct}% of the retired number bar, and ${plural(p.seasons, 'season')} there fell short of ${p.need}.`,
+    `Your contribution at ${p.club} reached ${p.band} of the retired number bar, and ${plural(p.seasons, 'season')} there fell short of ${p.need}.`,
   missStatSeasons: 'Seasons at one club',
   missStatSeasonsVal: (p) => `${p.seasons} / ${p.need}`,
   missStatScore: 'Contribution',
-  missStatScoreVal: (p) => `${p.pct}% of the bar`,
+  missStatScoreVal: (p) => `${p.band} of the bar`,
+  missStatScoreClose: 'Just below the bar',
   missStatScoreOver: 'Over the bar',
   pending: 'The server is reviewing your retired number. Check the Hall of Fame in a moment.',
   lineNum: (p) => `No. ${p.number}`,
@@ -32,6 +36,8 @@ export const legendRn: Translation<LegendRnMsgs> = {
   anonTail: 'will be retired for you.',
   anonNote: 'The first player to make their name public gets the number.',
   publish: 'Go public and claim the number',
+  anonBlocked:
+    "This name has a link or profanity, so it can't be made public and this number can't be claimed.",
   alertTitle: (p) => `👑 ${p.name}: No. ${p.number} retired`,
   alertSub: (p) => `${p.club} · server retirement No. ${p.seq}`,
   alertLabel: (p) => `${p.name}, No. ${p.number} retired`,

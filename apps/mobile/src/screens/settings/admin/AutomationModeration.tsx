@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState, useRef } from 'react';
 import { Alert, View } from 'react-native';
 import type { AutomationEnforcement } from '@offside/contracts';
@@ -78,7 +79,7 @@ export default function AutomationModeration() {
                   padding: 12,
                   borderWidth: 1,
                   borderColor: colors.line,
-                  borderRadius: 12,
+                  borderRadius: RADIUS.md,
                 }}
               >
                 <Txt

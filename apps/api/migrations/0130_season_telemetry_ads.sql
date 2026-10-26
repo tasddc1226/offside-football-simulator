@@ -1,0 +1,1 @@
+ALTER TABLE `season_telemetry` ADD `ads_json` text;

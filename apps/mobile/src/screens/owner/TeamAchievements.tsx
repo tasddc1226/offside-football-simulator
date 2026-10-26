@@ -1,6 +1,7 @@
 // 시즌 업적 탭(웹 team/Team.svelte 의 [data-club-achievements]) — 맨 위 시즌 등급 · 점수 · 구단주 랭킹 · 다음 등급 막대, 다음 목표,
 // 분류(선수·팀·구단주·감독) 탭, 고른 분류의 단계별 묶음은 접었다 펴고(다 채우지 못한 첫 단계만 펼쳐 둔다), 감독 분류는
 // 잠금 카드로 예고한다. T-11-028 업적마다 점수가 있고 점수 합이 등급이 된다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import type { AchCategory } from '@offside/contracts/owner-team';
@@ -14,6 +15,7 @@ import {
   achMissing,
   achNear,
   achPoints,
+  achReward,
   achRankText,
   achSections,
   achState,
@@ -40,11 +42,11 @@ function Stage({ children }: { children: string }) {
       style={{
         paddingVertical: 2,
         paddingHorizontal: 6,
-        borderRadius: 6,
+        borderRadius: RADIUS.xs,
         backgroundColor: c.surface2,
       }}
     >
-      <Txt tone="accent" style={{ fontSize: rem(0.6875), fontWeight: '700' }}>
+      <Txt tone="accent" style={{ fontSize: rem(FONT.caption2), fontWeight: '700' }}>
         {children}
       </Txt>
     </View>
@@ -67,7 +69,7 @@ function Bar({ ratio, sm, label }: { ratio: number; sm?: boolean; label?: string
         : { importantForAccessibility: 'no-hide-descendants' as const })}
       style={{
         height: sm ? 6 : 8,
-        borderRadius: 99,
+        borderRadius: RADIUS.pill,
         overflow: 'hidden',
         backgroundColor: sm ? c.line : c.surface2,
       }}
@@ -76,7 +78,7 @@ function Bar({ ratio, sm, label }: { ratio: number; sm?: boolean; label?: string
         style={{
           width: `${pct}%`,
           height: '100%',
-          borderRadius: 99,
+          borderRadius: RADIUS.pill,
           backgroundColor: c.accent,
         }}
       />
@@ -92,7 +94,7 @@ function Pts({ children, got }: { children: string; got: boolean }) {
       style={{
         flexShrink: 0,
         fontFamily: DISPLAY[700],
-        fontSize: rem(0.8125),
+        fontSize: rem(FONT.label),
         fontVariant: ['tabular-nums'],
       }}
     >
@@ -115,7 +117,12 @@ function Group({
   return (
     <View
       testID={`ach-group-${g.id}`}
-      style={{ borderWidth: 1, borderColor: c.line, borderRadius: 12, backgroundColor: c.surface }}
+      style={{
+        borderWidth: 1,
+        borderColor: 'transparent',
+        borderRadius: RADIUS.md,
+        backgroundColor: c.surface2,
+      }}
     >
       <Press
         scale={0.99}
@@ -156,7 +163,7 @@ function Group({
                 gap: 10,
                 paddingVertical: 8,
                 paddingHorizontal: 10,
-                borderRadius: 10,
+                borderRadius: RADIUS.sm,
                 backgroundColor: c.surface2,
               }}
             >
@@ -166,19 +173,24 @@ function Group({
                   {newIds.has(i.id) ? <NewChip /> : null}
                 </View>
                 {i.desc ? (
-                  <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
                     {i.desc}
                   </Txt>
                 ) : null}
                 <Txt
                   tone={i.done ? 'accent' : 'muted'}
-                  style={{ fontSize: rem(0.75), fontWeight: i.done ? '700' : '400' }}
+                  style={{ fontSize: rem(FONT.caption), fontWeight: i.done ? '700' : '400' }}
                 >
                   {achState(i)}
                 </Txt>
                 {i.missing?.length ? (
-                  <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
                     {achMissing(i)}
+                  </Txt>
+                ) : null}
+                {achReward(i) ? (
+                  <Txt testID="ach-reward" tone="accent" style={{ fontSize: rem(0.6875) }}>
+                    {achReward(i)}
                   </Txt>
                 ) : null}
               </View>
@@ -202,8 +214,8 @@ function NewChip() {
       <Txt
         style={{
           color: '#fff',
-          fontSize: rem(0.625),
-          lineHeight: rem(0.625) * 1.3,
+          fontSize: rem(FONT.caption2),
+          lineHeight: rem(FONT.caption2) * 1.3,
           fontWeight: '800',
           letterSpacing: 0.04 * rem(0.625),
         }}
@@ -227,8 +239,8 @@ function ManagerSoon() {
         padding: 12,
         borderWidth: 1,
         borderStyle: 'dashed',
-        borderColor: c.line,
-        borderRadius: 12,
+        borderColor: 'transparent',
+        borderRadius: RADIUS.md,
         backgroundColor: c.surface2,
       }}
     >
@@ -265,7 +277,7 @@ export function TeamAchievements({
   }, [ach, newIds]);
   const seasonName = ach ? teamSeasonLabel(ach.season) : '';
   const tot = ach ? achTotal(ach.groups) : null;
-  const gv = ach ? achGradeView(ach.score) : null;
+  const gv = ach ? achGradeView(ach) : null;
   const sections = ach ? achSections(ach.groups) : [];
   const sec = sections.find((x) => x.id === cat) ?? sections[0];
   const near = ach ? achNear(ach.groups) : [];
@@ -334,15 +346,15 @@ export function TeamAchievements({
                     paddingVertical: 4,
                     paddingHorizontal: 10,
                     borderWidth: 1,
-                    borderColor: c.line,
-                    borderRadius: 10,
-                    backgroundColor: c.surface,
+                    borderColor: 'transparent',
+                    borderRadius: RADIUS.sm,
+                    backgroundColor: c.surface2,
                   }}
                 >
-                  <Txt tone="muted" style={{ fontSize: rem(0.6875), fontWeight: '600' }}>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.caption2), fontWeight: '600' }}>
                     {L.rankTitle}
                   </Txt>
-                  <Txt style={{ fontSize: rem(0.8125), fontWeight: '700', textAlign: 'right' }}>
+                  <Txt style={{ fontSize: rem(FONT.label), fontWeight: '700', textAlign: 'right' }}>
                     {achRankText(ach.rank, ach.ranked)}
                   </Txt>
                 </Press>
@@ -351,7 +363,9 @@ export function TeamAchievements({
               <Txt tone="muted" v="sm">
                 {L.achProgress({
                   head: gv.next
-                    ? L.toNextGrade({ grade: achGradeName(gv.next), pts: num(gv.toNext) })
+                    ? gv.byRank
+                      ? L.toNextGradeRank({ grade: achGradeName(gv.next), n: num(gv.toNext) })
+                      : L.toNextGrade({ grade: achGradeName(gv.next), pts: num(gv.toNext) })
                     : L.topGrade,
                   done: tot.done,
                   total: tot.total,
@@ -362,7 +376,12 @@ export function TeamAchievements({
               </Txt>
               <View
                 testID="ach-perks"
-                style={{ gap: 6, padding: 12, borderRadius: 10, backgroundColor: c.surface2 }}
+                style={{
+                  gap: 6,
+                  padding: 12,
+                  borderRadius: RADIUS.sm,
+                  backgroundColor: c.surface2,
+                }}
               >
                 <Txt v="sm" bold>
                   {L.perksTitle}
@@ -392,14 +411,14 @@ export function TeamAchievements({
                       gap: 6,
                       paddingVertical: 8,
                       paddingHorizontal: 10,
-                      borderRadius: 10,
+                      borderRadius: RADIUS.sm,
                       backgroundColor: c.surface2,
                     }}
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
                       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                         <Txt bold>{tn(n.item.label)}</Txt>
-                        <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                        <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                           {`${n.group} · ${achState(n.item)}`}
                         </Txt>
                       </View>
@@ -440,7 +459,7 @@ export function TeamAchievements({
                       paddingHorizontal: 4,
                       borderWidth: 1,
                       borderColor: on ? c.accent : c.line,
-                      borderRadius: 10,
+                      borderRadius: RADIUS.sm,
                       backgroundColor: on ? mix(c.accent, c.surface, 0.12) : c.surface,
                     }}
                   >
@@ -448,11 +467,15 @@ export function TeamAchievements({
                       numberOfLines={1}
                       adjustsFontSizeToFit
                       minimumFontScale={0.85}
-                      style={{ fontSize: rem(0.875), fontWeight: '700' }}
+                      style={{ fontSize: rem(FONT.body2), fontWeight: '700' }}
                     >
                       {achCatShort(x.id)}
                     </Txt>
-                    <Txt num={400} tone={on ? 'accent' : 'muted'} style={{ fontSize: rem(0.75) }}>
+                    <Txt
+                      num={400}
+                      tone={on ? 'accent' : 'muted'}
+                      style={{ fontSize: rem(FONT.caption) }}
+                    >
                       {x.locked ? '🔒︎' : num(x.score)}
                     </Txt>
                   </Press>

@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -31,6 +32,7 @@ import { CupHonors } from '../../components/CupHonors';
 import { OwnerHall } from './OwnerHall';
 import { OwnerArchive } from './OwnerArchive';
 import { LockerArt } from './LockerArt';
+import { Skeleton } from '../../ui/Skeleton';
 
 const panels = ['records', 'titles', 'trophies'] as const;
 // Same material palette as the web room; the record sheet follows the user's theme.
@@ -317,7 +319,7 @@ export default function OwnerHonors() {
                   style={{
                     width: zone === i ? 20 : 6,
                     height: 6,
-                    borderRadius: 5,
+                    borderRadius: RADIUS.xs,
                     backgroundColor: zone === i ? room.gold : room.line,
                   }}
                 />
@@ -370,7 +372,11 @@ export default function OwnerHonors() {
           {zone === 2 ? (
             <View testID="trophy-gallery" style={{ gap: 16 }}>
               {!data ? (
-                <Txt tone="muted">{failed ? L.archiveError : L.archiveLoading}</Txt>
+                failed ? (
+                  <Txt tone="muted">{L.archiveError}</Txt>
+                ) : (
+                  <Skeleton rows={4} />
+                )
               ) : !awards ? (
                 <Txt tone="muted">{L.roomEmptyAwards}</Txt>
               ) : (
@@ -390,7 +396,7 @@ export default function OwnerHonors() {
                               alignItems: 'center',
                               gap: 6,
                               padding: 12,
-                              borderRadius: 10,
+                              borderRadius: RADIUS.sm,
                               backgroundColor: c.surface,
                             }}
                           >
@@ -507,7 +513,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: room.line,
-    borderRadius: 8,
+    borderRadius: RADIUS.sm,
   },
   arrowText: { color: room.gold, fontSize: 30 },
   dots: { flexDirection: 'row', justifyContent: 'center' },

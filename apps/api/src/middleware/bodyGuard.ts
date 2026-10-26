@@ -14,16 +14,45 @@ function bodyTooLarge(): never {
   });
 }
 
-/** 결정 4: Content-Type·본문 크기 검사. 읽은 본문은 c.set('rawBody')로 라우트에 전달한다. */
+/** Count bytes before decoding; never buffer an unbounded request while checking its size. */
+async function readBoundedBody(request: Request): Promise<string> {
+  const reader = request.body?.getReader();
+  if (!reader) return '';
+  const decoder = new TextDecoder();
+  let size = 0;
+  let text = '';
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > REQUEST_BODY_MAX_BYTES) {
+        // Cleanup must not delay rejection if a producer never settles cancellation.
+        void reader.cancel().catch(() => {});
+        bodyTooLarge();
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    return text + decoder.decode();
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+/** Content-Type and bounded body read, including Apple's cross-site form callback. */
 export const bodyGuard = createMiddleware<AppEnv>(async (c, next) => {
-  // T-11-204 Apple form_post 콜백은 폼 본문이다(라우트가 직접 읽는다).
-  if (STATE_CHANGING_METHODS.has(c.req.method) && c.req.path !== APPLE_WEB_CALLBACK_PATH) {
-    const contentType = c.req.header(CONTENT_TYPE_HEADER) ?? '';
-    if (!contentType.toLowerCase().startsWith('application/json')) {
+  if (STATE_CHANGING_METHODS.has(c.req.method)) {
+    const appleForm = c.req.path === APPLE_WEB_CALLBACK_PATH;
+    const contentType = (c.req.header(CONTENT_TYPE_HEADER) ?? '')
+      .split(';')[0]!
+      .trim()
+      .toLowerCase();
+    const expected = appleForm ? 'application/x-www-form-urlencoded' : 'application/json';
+    if (contentType !== expected) {
       throw new AppError({
         code: 'VALIDATION_FAILED',
         message: '요청 데이터 형식이 올바르지 않아요.',
-        details: { reason: 'JSON_BODY_REQUIRED' },
+        details: { reason: appleForm ? 'FORM_BODY_REQUIRED' : 'JSON_BODY_REQUIRED' },
       });
     }
 
@@ -32,10 +61,7 @@ export const bodyGuard = createMiddleware<AppEnv>(async (c, next) => {
       bodyTooLarge();
     }
 
-    const rawBody = await c.req.text();
-    if (new TextEncoder().encode(rawBody).length > REQUEST_BODY_MAX_BYTES) {
-      bodyTooLarge();
-    }
+    const rawBody = await readBoundedBody(c.req.raw);
     c.set('rawBody', rawBody);
   }
   await next();

@@ -91,6 +91,33 @@ describe('achieveView', () => {
     expect(v.title).toBe('업적 5개를 달성했어요');
     expect(v.items).toHaveLength(4);
     expect(v.more).toBe(1);
+    expect(v.reward).toBeNull();
+  });
+
+  it('T-11-357 새 업적이 이번에 더 받은 보상만 한 줄로 싣는다', () => {
+    const withGot = (pts: Record<string, number>, got: Record<string, [number, number]>) => {
+      const r = resp(pts);
+      for (const i of r.groups[0]!.items) {
+        const g = got[i.id];
+        if (g) i.got = { boost: g[0], scout: g[1] };
+      }
+      return r;
+    };
+    // 골 업적은 3단계(강화권 1장)를 이미 봤고 이번에 4단계(강화권 1장 더)에 닿았다. 전설 업적은 스카우트권 1장.
+    const first = absorbAch(seen({ goals: 30 }), withGot({ goals: 70 }, { goals: [1, 0] }));
+    expect(first.nudge?.reward).toEqual({ boost: 1, scout: 0 });
+    const next = absorbAch(
+      first.seen,
+      withGot({ goals: 150, legend: 150 }, { goals: [2, 0], legend: [0, 1] }),
+    ).nudge!;
+    expect(next.reward).toEqual({ boost: 1, scout: 1 });
+    expect(achieveView(next).reward).toBe(
+      '보상으로 잠재력 강화권 1장 · 프리미엄 스카우트권 1장을 받았어요',
+    );
+    // 보상 없는 업적만 오르면 보상 줄이 없다.
+    expect(
+      absorbAch(first.seen, withGot({ goals: 70, a: 10 }, { goals: [1, 0] })).nudge?.reward,
+    ).toBeNull();
   });
 });
 

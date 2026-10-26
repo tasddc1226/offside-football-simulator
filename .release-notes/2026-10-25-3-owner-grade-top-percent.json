@@ -1,0 +1,27 @@
+{
+  "id": "t-11-489-owner-grade-top-percent",
+  "title": "시즌 2 구단주 등급은 상위 비율로",
+  "items": [
+    "시즌 2부터 구단주 등급은 업적 점수가 아니라 구단주 랭킹 상위 비율로 정해요.",
+    "상위 2%는 레전드, 8%까지 다이아, 20%까지 플래티넘, 40%까지 골드, 70%까지 실버, 90%까지 브론즈예요.",
+    "업적 화면에는 다음 등급까지 올라야 할 순위가 보여요. 시즌 1 등급과 티어는 그대로예요."
+  ],
+  "en": {
+    "title": "Season 2 owner grades by top percentage",
+    "items": [
+      "From season 2, owner grades follow your top percentage in the owner ranking instead of achievement points.",
+      "The top 2% are Legend, up to 8% Diamond, up to 20% Platinum, up to 40% Gold, up to 70% Silver and up to 90% Bronze.",
+      "The achievements screen shows how many places you need to climb for the next grade. Season 1 grades and tiers stay as they are."
+    ]
+  },
+  "ja": {
+    "title": "シーズン2のオーナーランクは上位割合で",
+    "items": [
+      "シーズン2から、オーナーランクは実績スコアではなくオーナーランキングの上位割合で決まります。",
+      "上位2%がレジェンド、8%までダイヤ、20%までプラチナ、40%までゴールド、70%までシルバー、90%までブロンズです。",
+      "実績画面に次のランクまで上げる必要がある順位が表示されます。シーズン1のランクとティアはそのままです。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

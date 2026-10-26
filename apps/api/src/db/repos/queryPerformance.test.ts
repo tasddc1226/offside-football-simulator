@@ -327,6 +327,8 @@ describe('critical query result and read-cost regressions (local D1)', () => {
       done: 1,
       players: 1,
       teamKept: null,
+      rewardBoost: null,
+      rewardScout: null,
       reachedAt: '2026-09-29',
       updatedAt: '2026-09-29',
     };

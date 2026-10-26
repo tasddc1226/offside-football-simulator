@@ -75,7 +75,7 @@
   }
   .mg-live h2 {
     margin: 0;
-    font-size: 1.0625rem;
+    font-size: var(--fs-title3);
   }
   .skip {
     align-self: center;

@@ -62,6 +62,7 @@ const ko = {
   titleAssists: '도움의 명가',
   titleNational: '국가대표의 산실',
   titleDynasty: '전설의 명가',
+  titleExchange: '헌납의 명가',
   conditionMidfield: '직접 키운 최고 능력치 90 이상 미드필더 5명이 30세 이후에 은퇴',
   conditionDefense: '직접 키운 최고 능력치 90 이상 수비수 5명이 30세 이후에 은퇴',
   conditionKeeper: '직접 키운 최고 능력치 90 이상 골키퍼 5명이 30세 이후에 은퇴',
@@ -69,6 +70,7 @@ const ko = {
   conditionAssists: '직접 키운 통산 300도움 이상 선수 5명이 30세 이후에 은퇴',
   conditionNational: '직접 키운 A매치 150경기 이상 선수 5명이 30세 이후에 은퇴',
   conditionDynasty: '직접 키운 선수 25명이 영구결번 획득',
+  conditionExchange: '하루 카드 과제를 모두 마친 날 10일',
   gradeEntry: '입문',
   gradeSkilled: '숙련',
   gradeHonor: '명예',
@@ -84,6 +86,7 @@ const ko = {
   relatedNumbers: '연결 업적 · 첫 영구결번 · 영구결번 11명',
   relatedBallon: '연결 업적 · 첫 발롱도르 · 발롱도르 합계 30회',
   relatedFirsts: '시즌 최초 기록 배지에서 이어지는 칭호',
+  relatedExchange: '하루 카드 과제를 모두 마칠 때마다 오르는 칭호',
   viewAchievements: '시즌 업적',
   titleBridge:
     '시즌 업적은 이번 시즌의 도전이에요. 영구 칭호는 여러 시즌의 반복 육성이나 확정된 최초 기록 배지로 받아요. 업적 점수를 그대로 합산하지는 않아요.',
@@ -114,9 +117,13 @@ const ko = {
   newTitle: '새 칭호',
   progress: (p: { value: number; target: number }) => `${p.value}/${p.target}`,
   // 칭호 — 컵 성적. n은 대회 회차.
-  titleChampion: (p: { n: number }) => `제${p.n}회 챔피언`,
-  titleRunnerup: (p: { n: number }) => `제${p.n}회 준우승`,
-  titleSf: (p: { n: number }) => `제${p.n}회 4강`,
+  // T-11-410 d = 구간 이름(구간 대회 칭호만).
+  titleChampion: (p: { n: number; d?: string | undefined }) =>
+    `제${p.n}회${p.d ? ` ${p.d}` : ''} 챔피언`,
+  titleLeagueChampion: (p: { n: number }) => `시즌 ${p.n} 리그 챔피언`,
+  titleRunnerup: (p: { n: number; d?: string | undefined }) =>
+    `제${p.n}회${p.d ? ` ${p.d}` : ''} 준우승`,
+  titleSf: (p: { n: number; d?: string | undefined }) => `제${p.n}회${p.d ? ` ${p.d}` : ''} 4강`,
   titleAria: (p: { title: string }) => `대표 칭호 ${p.title}`,
   // 프로필
   open: '구단주 프로필',

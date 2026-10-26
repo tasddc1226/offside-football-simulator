@@ -1,4 +1,5 @@
 // T-10-005 은퇴 선수 상세(웹 Legend.svelte) — 명예의 전당 · 구단주의 내 선수에서 언제든 다시 들어온다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -80,7 +81,7 @@ function CareerPlay() {
         paddingVertical: 8,
         paddingLeft: 12,
         paddingRight: 16,
-        borderRadius: 999,
+        borderRadius: RADIUS.pill,
         borderWidth: 1,
         borderColor: rolling ? c.line : c.accent,
         backgroundColor: rolling ? alpha(c.bg, 0.88) : c.accent,
@@ -96,7 +97,7 @@ function CareerPlay() {
           <Path d={rolling ? 'M8 6h3v12H8zM13 6h3v12h-3z' : 'M8 5.5v13l10.5-6.5z'} />
         </Svg>
       </View>
-      <Txt style={{ fontSize: rem(0.875), fontWeight: '700', color: fg }}>
+      <Txt style={{ fontSize: rem(FONT.body2), fontWeight: '700', color: fg }}>
         {rolling ? L.stop : L.play}
       </Txt>
     </Press>

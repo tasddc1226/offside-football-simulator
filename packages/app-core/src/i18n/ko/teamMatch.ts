@@ -9,6 +9,11 @@ const ko = {
     `내 팀 레이팅 ${p.rating}점 근처의 팀이에요 · 오늘 남은 경기 ${p.left}/${p.per}`,
   oppRating: '레이팅',
   oppOvr: (p: { n: number }) => `OVR ${p.n}`,
+  /** T-11-443 상대 레이팅과 내 팀 레이팅의 차이(레이팅 아래 +N · −N). */
+  oppGapUp: (p: { n: string }) => `내 팀보다 ${p.n}점 높아요`,
+  oppGapDown: (p: { n: string }) => `내 팀보다 ${p.n}점 낮아요`,
+  oppGapEven: '내 팀과 같아요',
+  oppGapNote: '레이팅 아래 숫자는 내 팀과의 차이예요. 레이팅이 높은 팀을 이기면 더 많이 올라요.',
   oppRuleWeb: (p: { days: number }) =>
     `같은 팀에는 하루 한 번 도전할 수 있어요. 최근 ${p.days}일 안에 다시 만난 팀이면 레이팅이 덜 움직여요.`,
   oppRuleApp: (p: { days: number }) =>
@@ -80,12 +85,15 @@ const ko = {
   // 경기 결과
   assist: (p: { name: string }) => `도움 ${p.name}`,
   noGoals: '골 없이 비겼어요.',
-  resultRecord: (p: { record: string }) => ` · 내 팀 ${p.record}`,
+  recordChip: (p: { record: string }) => `내 팀 전적 ${p.record}`,
   ratingChange: '내 팀 레이팅 ',
   backHistory: '기록으로 돌아가기',
   backDefaultApp: '내 팀',
   replay: '중계 다시 보기',
   again: '다시 경기하기',
+  againLeft: (p: { n: number }) => `오늘 ${p.n}경기 남았어요`,
+  againNone: '오늘 경기를 모두 치렀어요',
+  friendlyNote: '친선전이라 레이팅은 그대로예요.',
   scoreAria: (p: { h: number; a: number }) => `${p.h} 대 ${p.a}`,
   // 공유 이미지(대화상자)
   shareTitle: 'SNS 공유 이미지',
