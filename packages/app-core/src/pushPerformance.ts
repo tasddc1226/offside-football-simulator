@@ -114,6 +114,15 @@ export const RETENTION_METRICS = [
   'unknown',
 ] as const;
 
+/** T-11-501 리텐션 푸시 단계 이름(retentionText의 키). */
+export const nudgeStageKey = (campaign: 'lapsed' | 'onboarding', stage: number) =>
+  campaign === 'lapsed'
+    ? (`lapsed${stage}` as 'lapsed3' | 'lapsed7' | 'lapsed14' | 'lapsed30')
+    : (`onboarding${stage}` as
+        'onboarding1' | 'onboarding2' | 'onboarding3' | 'onboarding4' | 'onboarding5');
+/** 비율(소수 첫째 자리 %). 분모가 0이면 '-'. */
+export const nudgeRate = (n: number, of: number) => (of ? `${((n / of) * 100).toFixed(1)}%` : '-');
+
 export { cupPush as cupPushText } from './i18n/ko/cupPush';
 export const CUP_AUDIENCE_METRICS = [
   'recipients',

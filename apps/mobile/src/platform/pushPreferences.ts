@@ -17,6 +17,10 @@ export const pushPreferencesState = proxy({
   sessionRevision: 0,
 });
 let revision = 0;
+// T-11-501 nudge(독려 알림)는 `?nudge=1`로 물어야 실린다. 배포 순서로 서버가 아직 옛 모양을 주면 켜짐으로 읽는다.
+const PATH = '/v1/push/preferences?nudge=1';
+const parse = (data: unknown) =>
+  PushPreferencesSchema.parse({ nudge: true, ...(data as Partial<PushPreferences>) });
 let pending: Promise<void> | undefined;
 onSessionChanged(() => {
   revision++;
@@ -45,10 +49,10 @@ export async function loadPushPreferences() {
   pushPreferencesState.error = '';
   pending = (async () => {
     try {
-      const result = await apiFetch<PushPreferences>('/v1/push/preferences');
+      const result = await apiFetch<PushPreferences>(PATH);
       if (current !== revision || token !== sessionToken()) return;
       if (!result.ok) throw new Error(result.error.message);
-      pushPreferencesState.values = PushPreferencesSchema.parse(result.data);
+      pushPreferencesState.values = parse(result.data);
       pushPreferencesState.loaded = true;
     } catch (error) {
       if (current === revision)
@@ -73,13 +77,13 @@ export async function setPushPreference(key: keyof PushPreferences, enabled: boo
   pushPreferencesState.saving = key;
   pushPreferencesState.error = '';
   try {
-    const result = await apiFetch<PushPreferences>('/v1/push/preferences', {
+    const result = await apiFetch<PushPreferences>(PATH, {
       method: 'PUT',
       body: JSON.stringify({ [key]: enabled }),
     });
     if (current !== revision || token !== sessionToken()) return;
     if (!result.ok) throw new Error(result.error.message);
-    pushPreferencesState.values = PushPreferencesSchema.parse(result.data);
+    pushPreferencesState.values = parse(result.data);
   } catch (error) {
     if (current === revision) {
       pushPreferencesState.values[key] = before;

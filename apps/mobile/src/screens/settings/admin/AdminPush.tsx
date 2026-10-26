@@ -13,6 +13,8 @@ import {
   pushAdminText as L,
   retentionText as R,
   RETENTION_METRICS,
+  nudgeStageKey,
+  nudgeRate,
 } from '@offside/app-core/pushPerformance';
 import { Txt as BaseTxt, type TxtProps } from '../../../ui/Txt';
 import { Btn } from '../../../ui/Btn';
@@ -376,6 +378,63 @@ export default function AdminPush() {
                   <Txt tone="muted">{R.empty}</Txt>
                 )}
                 <Txt tone="muted">{R.help}</Txt>
+              </View>
+              <View
+                testID="retention-push-performance"
+                style={{ gap: 12, borderTopWidth: 1, borderTopColor: c.line, paddingTop: 16 }}
+              >
+                <Txt v="h3" accessibilityRole="header">
+                  {R.nudgeTitle}
+                </Txt>
+                <Txt tone="muted">{R.nudgePolicy}</Txt>
+                {(data.nudges ?? []).length ? (
+                  data.nudges!.map((item) => (
+                    <View
+                      key={`${item.campaign}:${item.stage}`}
+                      style={{ gap: 8, borderTopWidth: 1, borderTopColor: c.line, paddingTop: 12 }}
+                    >
+                      <Txt bold>{R[nudgeStageKey(item.campaign, item.stage)]}</Txt>
+                      {(
+                        [
+                          [R.nudgeSent, item.sent.toLocaleString()],
+                          [R.nudgeHeld, item.held.toLocaleString()],
+                          [R.nudgeDelivered, item.delivered.toLocaleString()],
+                          [R.nudgeClicked, item.clicked.toLocaleString()],
+                          [
+                            R.nudgeReturned,
+                            `${nudgeRate(item.sentReturned, item.sent)} / ${nudgeRate(item.heldReturned, item.held)}`,
+                          ],
+                          ...(item.campaign === 'onboarding'
+                            ? [
+                                [
+                                  R.nudgeProgressed,
+                                  `${nudgeRate(item.sentProgressed, item.sent)} / ${nudgeRate(item.heldProgressed, item.held)}`,
+                                ],
+                              ]
+                            : []),
+                        ] as [string, string][]
+                      ).map(([label, value]) => (
+                        <View
+                          key={label}
+                          style={{
+                            flexDirection: 'row',
+                            flexWrap: 'wrap',
+                            justifyContent: 'space-between',
+                            gap: 8,
+                          }}
+                        >
+                          <Txt tone="muted" style={{ flexShrink: 1 }}>
+                            {label}
+                          </Txt>
+                          <Txt>{value}</Txt>
+                        </View>
+                      ))}
+                    </View>
+                  ))
+                ) : (
+                  <Txt tone="muted">{R.nudgeEmpty}</Txt>
+                )}
+                <Txt tone="muted">{R.nudgeHelp}</Txt>
               </View>
 
               <Txt v="h3" accessibilityRole="header">

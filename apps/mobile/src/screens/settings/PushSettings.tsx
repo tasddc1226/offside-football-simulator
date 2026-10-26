@@ -22,6 +22,7 @@ const categories = (): { key: keyof PushPreferences; title: string; description:
   { key: 'team', title: L.catTeam, description: L.catTeamBody },
   { key: 'market', title: L.catMarket, description: L.catMarketBody },
   { key: 'social', title: L.catSocial, description: L.catSocialBody },
+  { key: 'nudge', title: L.catNudge, description: L.catNudgeBody },
 ];
 
 export function PushSettings() {

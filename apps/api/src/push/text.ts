@@ -8,6 +8,7 @@ import { RETIRED_NUMBER_SCOUTS } from '@offside/contracts/cup';
 import { INVITE_REROLLS, INVITE_SCOUTS } from '@offside/contracts/owner-team';
 import { OLD_INVITEE, OLD_INVITER, PUSH_JA, PUSH_TAIL_JA } from '../i18n/ja/push.js';
 import { cupText } from '../cupText.js';
+import { retentionText } from './retentionText.js';
 import type { Lang } from '../lang.js';
 
 // T-11-106 서버가 만든 알림 문구. 푸시는 보낼 때 기기의 언어를 알 수 없어(기기 등록에 언어가 없다) 한국어로 보내고,
@@ -66,6 +67,9 @@ const TABLES: Record<
 
 export function pushText(ko: string, lang: Lang): string {
   if (lang === 'ko') return ko;
+  // T-11-501 리텐션 푸시(숫자가 낀 문장은 틀로 되읽는다). 옛 커리어 독려와 같은 제목은 새 번역을 쓴다.
+  const retention = retentionText(ko, lang);
+  if (retention !== null) return retention;
   const reminders = lang === 'en' ? reminderEn : reminderJa;
   for (let i = 0; i < reminderKo.length; i++) {
     if (ko === reminderKo[i]!.title) return reminders[i]!.title;

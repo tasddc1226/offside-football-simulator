@@ -107,7 +107,7 @@ export async function getPushPerformance(
         query.category ?? null,
         query.category ?? null,
       );
-  const [totals, categories, daily, campaigns, start, retention, cups] = await db.batch([
+  const [totals, categories, daily, campaigns, start, retention, cups, nudges] = await db.batch([
     statement(`SELECT ${COUNTS} FROM facts`),
     statement(`SELECT category, ${COUNTS} FROM facts GROUP BY category ORDER BY category`),
     statement(
@@ -142,6 +142,23 @@ export async function getPushPerformance(
         .join(', ')}
       FROM cup_people p LEFT JOIN facts f ON f.id=p.id GROUP BY p.cupId
       ORDER BY createdAt DESC, p.cupId DESC LIMIT 21 OFFSET ${query.page * 20}`),
+    // T-11-501 원장은 작고 created_at 인덱스로 기간만 읽는다. 비교군은 알림이 없어 facts를 거치지 않는다.
+    db
+      .prepare(
+        `SELECT campaign, stage,
+          SUM(variant = 'send') AS sent, SUM(variant = 'holdout') AS held,
+          SUM(EXISTS (SELECT 1 FROM push_results pr WHERE pr.notification_id = r.notification_id
+            AND pr.accepted_at IS NOT NULL)) AS delivered,
+          SUM(EXISTS (SELECT 1 FROM push_interactions i WHERE i.notification_id = r.notification_id
+            AND i.clicked_at IS NOT NULL)) AS clicked,
+          SUM(variant = 'send' AND returned_at IS NOT NULL) AS sentReturned,
+          SUM(variant = 'holdout' AND returned_at IS NOT NULL) AS heldReturned,
+          SUM(variant = 'send' AND progressed_at IS NOT NULL) AS sentProgressed,
+          SUM(variant = 'holdout' AND progressed_at IS NOT NULL) AS heldProgressed
+        FROM retention_pushes r WHERE created_at >= ? AND created_at <= ?
+        GROUP BY campaign, stage ORDER BY campaign, stage LIMIT 20`,
+      )
+      .bind(from, through),
   ]);
   return {
     generatedAt: now,
@@ -154,6 +171,7 @@ export async function getPushPerformance(
     campaigns: campaigns!.results.slice(0, 20) as PushPerformance['campaigns'],
     retention: retention!.results as PushPerformance['retention'],
     cups: cups!.results.slice(0, 20) as PushPerformance['cups'],
+    nudges: nudges!.results as PushPerformance['nudges'],
     hasMore: campaigns!.results.length > 20 || (query.issues !== '1' && cups!.results.length > 20),
   };
 }

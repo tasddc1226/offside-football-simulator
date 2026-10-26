@@ -43,6 +43,8 @@ export const push: Translation<PushMsgs> = {
   catMarketBody: 'When a player you listed is sold',
   catSocial: 'Friends',
   catSocialBody: 'Friend requests, accepts and friendly results',
+  catNudge: 'Reminders',
+  catNudgeBody: 'Check-in, what happened while you were away and first-week tips',
   catAria: (p) => `${p.title} notifications`,
   prefsConnectFailed: "Couldn't connect to notification settings. Please try again.",
   prefsLoadFailed: "Couldn't load notification settings.",

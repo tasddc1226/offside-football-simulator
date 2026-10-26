@@ -78,6 +78,19 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'reminder_batch',
   ],
   career_reminder_outcomes: ['notification_id', 'stage', 'returned_at', 'retired_at'],
+  retention_pushes: [
+    'id',
+    'profile_id',
+    'campaign',
+    'stage',
+    'story',
+    'variant',
+    'lapse_key',
+    'notification_id',
+    'created_at',
+    'returned_at',
+    'progressed_at',
+  ],
   profile_avatars: ['profile_id', 'id', 'image'],
   owner_title_awards: [
     'profile_id',
@@ -358,7 +371,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'push_reserved_at',
     'expires_at',
   ],
-  push_preferences: ['profile_id', 'notice', 'release', 'team', 'market', 'social'],
+  push_preferences: ['profile_id', 'notice', 'release', 'team', 'market', 'social', 'nudge'],
   push_results: ['id', 'notification_id', 'state', 'accepted_at', 'confirmed_at', 'updated_at'],
   push_interactions: ['notification_id', 'clicked_at', 'target_opened_at'],
   push_deliveries: [
