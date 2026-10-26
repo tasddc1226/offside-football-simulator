@@ -66,6 +66,24 @@ async function person(createdDaysAgo: number, seenDaysAgo: number, google = true
   );
   return who;
 }
+/** 정해진 ID의 앱 사용자(로그인 발급 없이 바로 넣는다). 비교군 배정이 ID 끝 두 글자로 정해져서 쓴다. */
+async function bare(suffix: string, createdDaysAgo: number, seenDaysAgo: number) {
+  const profileId = `prf_00000000-0000-0000-0000-0000000000${suffix}`;
+  await run(
+    `INSERT INTO profiles (id, settings_json, created_at, last_seen_at, google_sub) VALUES (?, '{}', ?, ?, ?)`,
+    profileId,
+    iso(NOW - createdDaysAgo * DAY),
+    iso(NOW),
+    `sub-${profileId}`,
+  );
+  await addAppPushDevice(ctx, profileId);
+  await run(
+    'UPDATE push_devices SET updated_at=? WHERE profile_id=?',
+    iso(NOW - seenDaysAgo * DAY),
+    profileId,
+  );
+  return { profileId };
+}
 async function activity(
   who: { cookie: string; profileId: string },
   state: string,
@@ -313,12 +331,9 @@ describe('T-11-501 첫 주 다음 할 일', () => {
 
 describe('T-11-501 비교군과 하루 하나', () => {
   it('비교군 기간에는 약 10%를 알림 없이 원장에만 남기고, 끝나면 모두 보낸다', async () => {
-    let held: Awaited<ReturnType<typeof person>> | undefined;
-    for (let i = 0; i < 80 && !held; i++) {
-      const who = await person(30, 5);
-      if (inHoldout(who.profileId)) held = who;
-    }
-    expect(held).toBeDefined();
+    const held = await bare('19', 30, 5);
+    await bare('1a', 30, 5);
+    await bare('ff', 30, 5);
     const env = { ...ctx.env, RETENTION_HOLDOUT_UNTIL: iso(NOW + 14 * DAY) };
     await queueRetentionPushes(env, NOW);
     const ledger = await rows('retention_pushes');
@@ -349,7 +364,8 @@ describe('T-11-501 비교군과 하루 하나', () => {
 describe('T-11-501 운영 도구 집계', () => {
   it('캠페인 · 단계마다 보낸 쪽과 비교군의 복귀를 따로 센다', async () => {
     const people = [];
-    for (let i = 0; i < 30; i++) people.push(await person(30, 5));
+    for (const suffix of ['00', '0a', '19', '1a', '40', '80', 'c0', 'ff'])
+      people.push(await bare(suffix, 30, 5));
     await queueRetentionPushes({ ...ctx.env, RETENTION_HOLDOUT_UNTIL: iso(NOW + 14 * DAY) }, NOW);
     await run('UPDATE push_devices SET updated_at=?', iso(NOW + DAY));
     await measureRetention(ctx.env, NOW + 2 * DAY);
@@ -363,11 +379,11 @@ describe('T-11-501 운영 도구 집계', () => {
       {
         campaign: 'lapsed',
         stage: 3,
-        sent: 30 - held,
+        sent: people.length - held,
         held,
         delivered: 0,
         clicked: 0,
-        sentReturned: 30 - held,
+        sentReturned: people.length - held,
         heldReturned: held,
         sentProgressed: 0,
         heldProgressed: 0,
