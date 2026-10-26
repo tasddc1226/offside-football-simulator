@@ -20,6 +20,7 @@ import { chatSocket } from './chat/socket.js';
 import { liveSocket } from './live/socket.js';
 import { publishPushWork } from './push/queuePublish.js';
 import { consumePushWork } from './push/queue.js';
+import { queueRetentionPushes, retentionPushEnabled } from './push/retention.js';
 import { queueReengagement } from './push/reengagement.js';
 import { consumeCareerReminders, queueCareerReminders } from './push/careerReminder.js';
 import { queueAttendanceReminders } from './push/attendanceReminder.js';
@@ -94,9 +95,16 @@ export default {
       await publishPushWork(env, 'news', controller.scheduledTime).catch(
         logged('news-push-publish'),
       );
-      if (new Date(controller.scheduledTime).getUTCMinutes() === 0)
-        await queueCareerReminders(env, controller.scheduledTime).catch(logged('career-reminder'));
-      await queueReengagement(env, controller.scheduledTime).catch(logged('reengagement'));
+      // T-11-501 리텐션 푸시를 켜면 옛 커리어 독려 · 재방문 안내는 쌓지 않는다(같은 사람에게 겹쳐 가지 않게).
+      if (retentionPushEnabled(env))
+        await queueRetentionPushes(env, controller.scheduledTime).catch(logged('retention-push'));
+      else {
+        if (new Date(controller.scheduledTime).getUTCMinutes() === 0)
+          await queueCareerReminders(env, controller.scheduledTime).catch(
+            logged('career-reminder'),
+          );
+        await queueReengagement(env, controller.scheduledTime).catch(logged('reengagement'));
+      }
       await queueAttendanceReminders(env, controller.scheduledTime).catch(
         logged('attendance-reminder'),
       );

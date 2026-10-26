@@ -41,6 +41,8 @@ export const push: Translation<PushMsgs> = {
   catMarketBody: '出品した選手の売却完了',
   catSocial: 'フレンド',
   catSocialBody: 'フレンド申請・承認と親善試合の結果',
+  catNudge: 'リマインダー',
+  catNudgeBody: '出席・休んでいる間の出来事・最初の1週間のヒント',
   catAria: (p) => `${p.title}の通知`,
   prefsConnectFailed: '通知設定に接続できませんでした。もう一度お試しください。',
   prefsLoadFailed: '通知設定を読み込めませんでした。',

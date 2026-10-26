@@ -167,6 +167,8 @@
         "CAREER_REMINDER_ENABLED": "1",
         "REENGAGEMENT_PUSH_ENABLED": "1",
         "ATTENDANCE_REMINDER_ENABLED": "1",
+        "RETENTION_PUSH_ENABLED": "1",
+        "RETENTION_HOLDOUT_UNTIL": "2026-11-10T15:00:00.000Z",
         "ALLOWED_ORIGINS": "https://offside-lab.com,https://offside-web.tasddc1569.workers.dev",
         "WEB_APP_URL": "https://offside-web.tasddc1569.workers.dev",
         "GOOGLE_REDIRECT_URI": "https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback",

@@ -552,6 +552,40 @@ describe('feature push preferences and atomic events', () => {
     expect((await preferences(a, { team: 'false' })).status).toBe(400);
     expect((await createApp().request('/v1/push/preferences', {}, ctx.env)).status).toBe(401);
   });
+  it('T-11-501 nudge는 ?nudge=1로 묻는 새 앱에만 싣고, 옛 앱에는 옛 모양 그대로 돌려준다', async () => {
+    const a = await identity();
+    const legacy = (await (await call(a.token, '/v1/push/preferences')).json()) as {
+      data: Record<string, boolean>;
+    };
+    expect(Object.keys(legacy.data).sort()).toEqual([
+      'market',
+      'notice',
+      'release',
+      'social',
+      'team',
+    ]);
+    expect(await (await call(a.token, '/v1/push/preferences?nudge=1')).json()).toMatchObject({
+      data: { nudge: true },
+    });
+    const put = await createApp().request(
+      '/v1/push/preferences?nudge=1',
+      {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${a.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nudge: false }),
+      },
+      ctx.env,
+    );
+    expect(await put.json()).toMatchObject({ data: { nudge: false, team: true } });
+    // 옛 앱이 다른 항목을 바꿔도 nudge는 그대로이고 응답에 실리지 않는다.
+    const old = (await (await preferences(a, { team: false })).json()) as {
+      data: Record<string, boolean>;
+    };
+    expect(old.data).not.toHaveProperty('nudge');
+    expect(await (await call(a.token, '/v1/push/preferences?nudge=1')).json()).toMatchObject({
+      data: { nudge: false, team: false },
+    });
+  });
   it.each(['team', 'market', 'social'] as const)(
     'preserves %s inbox records without queueing opted-out device tokens or replaying them after opt-in',
     async (kind) => {

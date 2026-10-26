@@ -4,7 +4,7 @@
   import type { PushPerformance, PushMetrics, PushCategory } from '@offside/contracts';
   import { fetchPushPerformance } from '@offside/app-core/api/admin';
   import { kstDateTime as kst } from '@offside/app-core/boardText';
-  import { PUSH_CATEGORY_LABELS as labels, PUSH_METRIC_LABELS, pushClickRate, pushStatus, pushAdminText as L, retentionText as R, RETENTION_METRICS } from '@offside/app-core/pushPerformance';
+  import { PUSH_CATEGORY_LABELS as labels, PUSH_METRIC_LABELS, pushClickRate, pushStatus, pushAdminText as L, retentionText as R, RETENTION_METRICS, nudgeStageKey, nudgeRate } from '@offside/app-core/pushPerformance';
 
   let selectedPeriod = $state('7');
   let category = $state<PushCategory | ''>('');
@@ -99,6 +99,24 @@
       {:else}<p class="muted">{R.empty}</p>{/each}
       <p class="muted fs-xs">{R.help}</p>
     </section>
+    <section class="stack nudges" style="gap:10px" aria-label={R.nudgeTitle} data-nudge-performance>
+      <h3>{R.nudgeTitle}</h3>
+      <p class="muted fs-xs">{R.nudgePolicy}</p>
+      {#each data.nudges ?? [] as item (`${item.campaign}:${item.stage}`)}
+        <details class="push-row">
+          <summary><strong>{R[nudgeStageKey(item.campaign, item.stage)]}</strong> <span class="muted fs-xs">{R.nudgeReturned} {nudgeRate(item.sentReturned, item.sent)} / {nudgeRate(item.heldReturned, item.held)}</span></summary>
+          <dl class="push-details">
+            <div><dt>{R.nudgeSent}</dt><dd>{item.sent.toLocaleString()}</dd></div>
+            <div><dt>{R.nudgeHeld}</dt><dd>{item.held.toLocaleString()}</dd></div>
+            <div><dt>{R.nudgeDelivered}</dt><dd>{item.delivered.toLocaleString()}</dd></div>
+            <div><dt>{R.nudgeClicked}</dt><dd>{item.clicked.toLocaleString()}</dd></div>
+            <div><dt>{R.nudgeReturned}</dt><dd>{nudgeRate(item.sentReturned, item.sent)} / {nudgeRate(item.heldReturned, item.held)}</dd></div>
+            {#if item.campaign === 'onboarding'}<div><dt>{R.nudgeProgressed}</dt><dd>{nudgeRate(item.sentProgressed, item.sent)} / {nudgeRate(item.heldProgressed, item.held)}</dd></div>{/if}
+          </dl>
+        </details>
+      {:else}<p class="muted">{R.nudgeEmpty}</p>{/each}
+      <p class="muted fs-xs">{R.nudgeHelp}</p>
+    </section>
 
       <section class="stack" style="gap:8px" aria-label={L.categories}>
         <h3>{L.categories}</h3>
@@ -112,9 +130,9 @@
   {/if}
 </div>
 <style>
-  .retention { border-block: 1px solid var(--line); padding-block: 16px; }
-  .retention summary { display: block; }
-  .retention p { line-height: 1.6; }
+  .retention, .nudges { border-block: 1px solid var(--line); padding-block: 16px; }
+  .retention summary, .nudges summary { display: block; }
+  .retention p, .nudges p { line-height: 1.6; }
   .push-periods { grid-template-columns: repeat(5,minmax(0,1fr)); }
   .push-periods button { padding-inline: 2px; min-height: 44px; }
   .push-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }

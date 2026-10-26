@@ -40,6 +40,8 @@ const ko = {
   catMarketBody: '등록한 선수의 판매 완료',
   catSocial: '친구',
   catSocialBody: '친구 신청·수락과 친선전 결과',
+  catNudge: '독려',
+  catNudgeBody: '출석 · 쉬는 동안 생긴 일 · 첫 주 다음 할 일 안내',
   catAria: (p: { title: string }) => `${p.title} 알림`,
   prefsConnectFailed: '알림 설정에 연결하지 못했어요. 다시 시도해 주세요.',
   prefsLoadFailed: '알림 설정을 불러오지 못했어요.',

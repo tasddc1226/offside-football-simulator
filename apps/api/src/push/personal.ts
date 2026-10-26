@@ -39,6 +39,8 @@ type Row = {
   title: string;
   retention_stage: number | null;
   retention_lang: string | null;
+  /** T-11-501 리텐션 원장(retention_pushes)의 캠페인. 옛 커리어 독려는 null(retention_stage만 있다). */
+  retention_campaign: string | null;
   body: string;
   kind: string;
   target_json: string;
@@ -134,14 +136,16 @@ async function claim(
   const rows = await db
     .prepare(
       `SELECT q.*, n.title, n.body, n.kind, n.target_json,
-      (SELECT stage FROM career_reminder_outcomes WHERE notification_id=n.id) AS retention_stage,
+      COALESCE((SELECT stage FROM career_reminder_outcomes WHERE notification_id=n.id),
+        (SELECT stage FROM retention_pushes WHERE notification_id=n.id)) AS retention_stage,
+      (SELECT campaign FROM retention_pushes WHERE notification_id=n.id) AS retention_campaign,
       (SELECT lang FROM career_activity WHERE profile_id=q.profile_id) AS retention_lang,
     CASE WHEN d.token = q.token AND d.session_id = q.session_id AND d.profile_id = q.profile_id
       AND d.updated_at >= ? AND s.channel = 'app' AND s.profile_id = q.profile_id
       AND s.revoked_at IS NULL AND s.expires_at > ? AND p.deleted_at IS NULL AND p.id IS NOT NULL
       AND n.read_at IS NULL AND n.expires_at > ? AND q.expires_at > ?
       AND CASE n.kind WHEN 'team' THEN COALESCE(pref.team, 1) WHEN 'market' THEN COALESCE(pref.market, 1)
-        WHEN 'social' THEN COALESCE(pref.social, 1) ELSE 1 END = 1
+        WHEN 'social' THEN COALESCE(pref.social, 1) WHEN 'return' THEN COALESCE(pref.nudge, 1) ELSE 1 END = 1
       AND (n.kind <> 'social' OR ${SOCIAL_ELIGIBLE} = 1)
       AND (n.kind <> 'community' OR (n.source_key LIKE 'admin-community-%'
         AND p.google_sub IS NOT NULL AND lower(trim(p.email)) = ?
@@ -157,6 +161,9 @@ async function claim(
         WHEN n.source_key LIKE 'attendance-reminder:%' THEN NOT EXISTS (SELECT 1 FROM owner_attendance o
           WHERE o.profile_id=q.profile_id AND o.last_day = substr(n.source_key, 21, 10))
         WHEN n.source_key LIKE 'gift-reminder:%' THEN 0
+        WHEN n.source_key LIKE 'retention:%' THEN NOT EXISTS (SELECT 1 FROM push_devices active
+            WHERE active.profile_id=q.profile_id AND active.updated_at > n.created_at)
+          AND NOT EXISTS (SELECT 1 FROM career_activity a WHERE a.profile_id=q.profile_id AND a.last_active_at > n.created_at)
         ELSE NOT EXISTS (SELECT 1 FROM career_activity a WHERE a.profile_id=q.profile_id)
           AND NOT EXISTS (SELECT 1 FROM push_devices active WHERE active.profile_id = q.profile_id AND active.updated_at > ?) END)
       THEN 1 ELSE 0 END AS eligible
@@ -217,9 +224,11 @@ async function send(
           type: 'offside-notification',
           notificationId: r.notification_id,
           kind: r.kind,
-          ...(r.retention_stage
-            ? { campaign: 'career_reminder', reminderStage: r.retention_stage }
-            : {}),
+          ...(r.retention_campaign
+            ? { campaign: `retention_${r.retention_campaign}`, reminderStage: r.retention_stage }
+            : r.retention_stage
+              ? { campaign: 'career_reminder', reminderStage: r.retention_stage }
+              : {}),
           target: targetOf(r.target_json),
         },
       })),
