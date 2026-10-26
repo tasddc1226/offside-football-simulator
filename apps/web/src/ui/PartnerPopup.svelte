@@ -1,6 +1,6 @@
 <script lang="ts">
   // T-11-423 아마축구 상호 홈 팝업 — 웹을 열어 홈에 왔을 때 한 번 아래에서 올라오는 시트로 소재 한 장을 띄운다
-  // (규칙은 app-core partnerPopup.ts). 컵 우승 팝업이 먼저 자리를 잡을 수 있게 잠시 기다렸다 띄우고, 다른 창이 열려
+  // (규칙은 app-core partnerPopup.ts). 출석 · 컵 우승 창 다음 차례로 띄우고(T-11-423c), 다른 창이 열려
   // 있거나 업무 모드면 띄우지 않는다. 그림을 누르면 기기에 맞는 아마축구 스토어(PC는 웹)를 새 탭으로 연다. 서버 요청은 없다(그림만 public에서).
   import { onMount } from 'svelte';
   import {
@@ -10,7 +10,7 @@
     partnerPopupToShow,
     type PartnerVariant,
   } from '@offside/app-core/partnerPopup';
-  import { claimHomePopup } from '@offside/app-core/homePopup';
+  import { claimHomePopup, homePopupTurn } from '@offside/app-core/homePopup';
   import { partnerText as L } from '@offside/app-core/i18n/ko/partner';
   import { trackPartnerPopup } from '../analytics/index.js';
   import { motionOK } from './motion.js';
@@ -27,14 +27,20 @@
 
   onMount(() => {
     if (!partnerPopupToShow()) return;
-    const t = setTimeout(() => {
+    let alive = true;
+    const t = setTimeout(async () => {
+      // T-11-423c 홈 팝업 순서의 마지막 — 출석 · 컵 우승 창이 띄울지 정할 때까지 기다린다.
+      await homePopupTurn('partner');
       const v = partnerPopupToShow();
-      if (!v || sheetOn() || document.querySelector('[aria-modal="true"]') || !claimHomePopup()) return;
+      if (!alive || !v || sheetOn() || document.querySelector('[aria-modal="true"]') || !claimHomePopup('partner')) return;
       markPartnerPopupShown();
       variant = v;
       trackPartnerPopup('view', v);
     }, WAIT_MS);
-    return () => clearTimeout(t);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
   });
 
   $effect(() => {

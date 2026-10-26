@@ -17,6 +17,7 @@ import {
   markAttendancePopup,
   rewardText,
 } from '@offside/app-core/attendance-view';
+import { claimHomePopup, passHomePopup } from '@offside/app-core/homePopup';
 import { attendanceText as L } from '@offside/app-core/i18n/ko/attendance';
 import type { OwnerItem } from '@offside/contracts/cup';
 import { toast } from '../../game/host';
@@ -49,10 +50,17 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
     const next = await fetchAttendance();
     setCard(next);
     // T-11-417 이용 분석 동의 창이 떠 있으면 오늘은 저절로 띄우지 않는다(iOS는 창 두 개를 함께 띄우지 못한다).
-    if (auto && next && attendancePopupDue(next) && !analyticsAskPending()) {
+    // T-11-423c 홈 팝업 순서의 첫째라 띄우지 않을 때도 알려야 컵 우승 · 제휴 팝업이 기다리지 않는다.
+    if (
+      auto &&
+      next &&
+      attendancePopupDue(next) &&
+      !analyticsAskPending() &&
+      claimHomePopup('attendance')
+    ) {
       markAttendancePopup();
       setOpen(true);
-    }
+    } else passHomePopup('attendance');
   }, []);
   useEffect(() => {
     void reload(auto);
