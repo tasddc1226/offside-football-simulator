@@ -26,6 +26,7 @@
     "./cup": "./src/cup.ts",
     "./league": "./src/league.ts",
     "./attendance": "./src/attendance-rules.ts",
+    "./season-pass": "./src/season-pass-rules.ts",
     "./admin-items": "./src/admin-items.ts",
     "./positions": "./src/positions.ts",
     "./owner-team": "./src/owner-team.ts",

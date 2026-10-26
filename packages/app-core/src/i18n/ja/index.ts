@@ -87,6 +87,7 @@ import { reveal } from './reveal';
 import { salary } from './salary';
 import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
+import { seasonPass } from './seasonPass';
 import { seasonRecap } from './seasonRecap';
 import { serverStatus } from './serverStatus';
 import { settings } from './settings';
@@ -204,6 +205,7 @@ export const ja = {
   salary,
   scout,
   seasonGauge,
+  seasonPass,
   seasonRecap,
   serverStatus,
   settings,

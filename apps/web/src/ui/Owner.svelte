@@ -37,6 +37,8 @@
   import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
   import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
   import { exchangeText as XC } from '@offside/app-core/i18n/ko/exchange';
+  import { seasonPassText as SP } from '@offside/app-core/i18n/ko/seasonPass';
+  import { SEASON_PASS_LIVE } from '@offside/contracts/season-pass';
   import type { Component } from 'svelte';
   import { type OwnerTierTag } from '@offside/contracts';
   import { shapeOf, usesRankLadder } from '@offside/contracts/owner-team';
@@ -139,6 +141,13 @@
     exchangeOpen = true;
     if (!Exchange) void import('./owner/CardExchange.svelte').then((m) => (Exchange = m.default));
   }
+  // T-11-511 시즌 패스 창도 열 때만 불러온다.
+  let Pass = $state<Component<{ onclose: () => void }> | null>(null);
+  let passOpen = $state(false);
+  function openPass() {
+    passOpen = true;
+    if (!Pass) void import('./owner/SeasonPass.svelte').then((m) => (Pass = m.default));
+  }
   function openTeam(v: TeamView = 'team') {
     appState.teamView = v;
     go('team');
@@ -226,6 +235,17 @@
       <button class="tap-cover" data-act="exchange" aria-label={XC.entryAria} onclick={openExchange}></button>
     </section>
     {#if exchangeOpen && Exchange}<Exchange onclose={() => (exchangeOpen = false)} />{/if}
+    {#if SEASON_PASS_LIVE || import.meta.env.DEV}
+    <section class="card owner-market owner-tap" aria-label={SP.entry} data-owner-pass>
+      <div class="owner-who">
+        <h2>{SP.entry}</h2>
+        <span class="muted fs-sm">{SP.entryNew}</span>
+      </div>
+      <span class="tap-go" aria-hidden="true">›</span>
+      <button class="tap-cover" data-act="season-pass" aria-label={SP.entry} onclick={openPass}></button>
+    </section>
+    {/if}
+    {#if passOpen && Pass}<Pass onclose={() => (passOpen = false)} />{/if}
   {:else if guest}
     <section class="card owner-team" aria-label={L.myTeam} data-owner-team-locked>
 

@@ -1,4 +1,5 @@
 import { IAP_PRODUCTS, type IapProductId } from '@offside/contracts';
+import { SEASON_PASS_PRODUCT_ID } from '@offside/contracts/season-pass';
 import { billing as ko } from '../i18n/ko/billing.js';
 import { billing as en } from '../i18n/en/billing.js';
 import type { Bindings } from '../env.js';
@@ -79,7 +80,9 @@ export function billingSlackMessage(row: AlertRow, id: string, locale: 'ko' | 'e
         ? L.quantity(L.items[product.item], product.qty)
         : row.product_id === 'com.offsidelab.app.remove_ads'
           ? L.removeAds
-          : row.product_id;
+          : row.product_id === SEASON_PASS_PRODUCT_ID
+            ? L.seasonPass
+            : row.product_id;
   const date = new Date(row.created_at);
   const time = Number.isNaN(date.getTime())
     ? row.created_at
