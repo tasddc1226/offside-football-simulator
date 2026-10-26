@@ -21,7 +21,7 @@
 
 1. App Store Connect에 구독 그룹과 자동 갱신 구독 `com.offsidelab.app.club_monthly`(1개월)을 만든다. 첫 구독은 새 앱 버전과 함께 심사받는다. Play 콘솔에는 같은 ID의 구독과 월 기본 요금제를 만든다.
 2. App Store 서버 알림 V2 주소가 운영 API의 알림 경로인지, Play RTDN이 켜져 있는지 확인한다.
-3. 서버 변수 `MEMBERSHIP_ENABLED=1`을 켠다. 꺼져 있으면 GET이 `stores: []`라 앱이 가입 버튼을 보이지 않는다. 이미 가입한 구독의 확인과 혜택은 스위치와 상관없다.
+3. 서버 변수 `MEMBERSHIP_ENABLED=1`을 켠다(운영은 `wrangler.jsonc` production vars, 2026-10-26 켬). 꺼져 있으면 GET이 `stores: []`라 앱이 가입 버튼을 보이지 않는다. 이미 가입한 구독의 확인과 혜택은 스위치와 상관없다.
 4. `MEMBERSHIP_LIVE`(contracts)를 `true`로 바꿔 웹 · 앱 구단주 화면에 입구를 연다. 같은 PR에서 공개 가이드(`apps/web/scripts/seo.mjs` GUIDE_SECTIONS) · FAQ에 멤버십을 더한다. 앱의 구독 결제는 네이티브 변경이 없어 OTA로 나가지만, Apple 첫 구독 심사에는 이 화면이 든 빌드가 필요하다.
 
 `MEMBERSHIP_LIVE`가 false인 동안 입구는 개발 빌드(`import.meta.env.DEV`, `__DEV__`)에서만 보인다.
