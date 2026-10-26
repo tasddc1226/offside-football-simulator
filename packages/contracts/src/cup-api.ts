@@ -353,6 +353,19 @@ export const RewardShopResponseSchema = z.strictObject({
 export type RewardShopResponse = z.infer<typeof RewardShopResponseSchema>;
 export type RewardOffer = z.infer<typeof RewardOfferSchema>;
 
+/**
+ * GET /v1/items/sure — T-11-513 구단 자금 확정 강화의 지금 값과 구단 자금. price는 오늘 상한을 다 썼거나 닫았으면 null.
+ * 보상 값 응답(RewardShopResponse)과 따로 둬 옛 앱의 엄격한 스키마가 거절하지 않게 한다.
+ */
+export const SureShopResponseSchema = z.strictObject({
+  balance: z.number().int().min(0),
+  offer: RewardOfferSchema,
+});
+export type SureShopResponse = z.infer<typeof SureShopResponseSchema>;
+/** POST /v1/items/sure/buy — 화면에서 본 가격(그 사이 바뀌었으면 409). 응답은 바뀐 SureShopResponse. */
+export const BuySureBodySchema = z.strictObject({ price: z.number().int().min(1) });
+export type BuySureBody = z.infer<typeof BuySureBodySchema>;
+
 /** POST /v1/items/rewards/buy — 받을 보상과 화면에서 본 가격(그 사이 바뀌었으면 409). 응답은 바뀐 RewardShopResponse. */
 export const BuyRewardBodySchema = z.strictObject({
   kind: z.enum(REWARD_KINDS),

@@ -63,6 +63,7 @@ import { ballonWinsOf, legendScore, legendSnapshot, legendTermsOf } from './lege
 import { gSeasonText as T } from './i18n/ko/gSeason.js';
 import { tn } from './i18n/names.js';
 import { eraSeasonEnd, type EraNote } from './era.js';
+import { careKeep, peakEndAge } from './care.js';
 
 /** 시즌 결산 결과 — 결산 시트가 그린다. tours는 명단에 들었거나 경기가 없던(예선 결과) 대회와 우승 대회만. */
 export interface SeasonEndResult {
@@ -135,16 +136,15 @@ function seasonRecord(
 
 /** 한 해를 넘긴다: 나이·연도, 늦게 피는 재능, 노쇠, 대학 연차·계약 연수, 컨디션·사기 회복. 스카우트 소식이 있으면 돌려준다. */
 function nextYear(s: GameState, o: number): string | null {
+  // T-11-513 이번 시즌에 받은 몸 관리는 해를 넘기기 전에 읽는다.
+  const keep = careKeep(s);
   s.age++;
   s.year++;
   const scout = bloomTick(s);
   // T-11-428 커브 2는 조기 성장 30 · 대기만성 31세까지 버틴다(기본과 1년 차이).
-  const v2 = (s.gcv ?? 1) >= 2;
-  const peakEnd =
-    (s.trait === 'early' ? (v2 ? 30 : 29) : s.trait === 'late' ? (v2 ? 31 : 32) : 30) +
-    (s.pos === 'GK' ? 3 : 0);
+  const peakEnd = peakEndAge(s);
   if (s.age > peakEnd) {
-    const d = s.age - peakEnd;
+    const d = (s.age - peakEnd) * keep;
     addAttr(s, 'pac', -(1 + rnd() * 2) * d * 0.5);
     addAttr(s, 'phy', -(1 + rnd() * 2) * d * 0.4);
     for (const k of ['sho', 'pas', 'dri', 'def'] as const) addAttr(s, k, -rnd() * d * 0.35);

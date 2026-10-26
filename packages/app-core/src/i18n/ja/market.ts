@@ -99,6 +99,7 @@ export const market: Translation<MarketMsgs> = {
   spendCandidates: '候補のポテンシャル表示',
   spendPeek: 'シーズン評価の表示',
   spendBoost: 'ポテンシャル強化',
+  spendSure: '確定強化',
   releasePane: '放出して資金を作る',
   backToMarket: '移籍市場へ',
   releaseIntro:
