@@ -89,6 +89,40 @@ describe('first-party consent and delivery', () => {
     expect(a.acquisitionGranted()).toBe(false);
   });
 
+  it('sends each action once per session even when home re-checks consent (T-11-502)', async () => {
+    localStorage.setItem(CONSENT_KEY, 'granted');
+    api.hint = true;
+    api.status.mockResolvedValue({
+      ok: true,
+      data: { profileId: 'profile-a', granted: true, revision: null },
+    });
+    const actions: unknown[] = [];
+    let fail = true;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: RequestInit) => {
+        const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+        if (body.action === 'start' && fail) {
+          fail = false;
+          return new Response(null, { status: 503 });
+        }
+        actions.push(body.action);
+        return new Response(null, { status: 204 });
+      }),
+    );
+    const a = await import('./acquisition.js');
+    for (let i = 0; i < 3; i++) await a.acquisitionStatus();
+    a.recordAcquisition('start');
+    a.recordAcquisition('start');
+    a.recordAcquisition('start');
+    await tick();
+    expect(actions).toEqual(['session', 'start']);
+    sessionStorage.removeItem('offside_acquisition_session_v1');
+    await a.acquisitionStatus();
+    await tick();
+    expect(actions).toEqual(['session', 'start', 'session']);
+  });
+
   it('persists withdrawal before a fresh offline lookup and retries the known original account after reload', async () => {
     api.hint = true;
     localStorage.setItem('offside_acquisition_profile_v1', 'profile-a');

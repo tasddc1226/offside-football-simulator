@@ -271,6 +271,7 @@ export function recordAcquisition(action: 'session' | 'start' | 'store_click') {
         profile: string;
         campaign: string;
         at: number;
+        sent?: string[];
       } | null;
       if (
         !session ||
@@ -282,13 +283,19 @@ export function recordAcquisition(action: 'session' | 'start' | 'store_click') {
         session = { id: crypto.randomUUID(), profile: profileId!, campaign, at: now };
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
       }
+      // T-11-502 서버는 세션마다 행동별 첫 시각만 남기므로(coalesce) 이 세션에서 이미 받은 행동은 다시 보내지 않는다.
+      // 홈에 돌아올 때마다 'session'을 다시 보내던 요청이 세션당 행동 하나에 한 번으로 준다.
+      if (session.sent?.includes(action)) return;
       const res = await request({
         action,
         profileId: session.profile,
         sessionId: session.id,
         campaign: session.campaign,
       });
-      if (res.status === 409 || res.status === 401) {
+      if (res.ok) {
+        session.sent = [...(session.sent ?? []), action];
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      } else if (res.status === 409 || res.status === 401) {
         granted = false;
         sessionStorage.removeItem(SESSION_KEY);
       }
