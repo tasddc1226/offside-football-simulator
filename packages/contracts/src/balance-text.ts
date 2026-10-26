@@ -219,6 +219,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '리그 홈 이점',
     desc: '오프사이드 리그 경기에서 홈 팀 기대 득점에 곱하는 배율. 1이면 홈 이점 없음. 랭크 경기 · 친선은 1.08 고정',
   },
+  cupAtkK: {
+    group: 'team',
+    label: '컵 전력 차이 반영',
+    desc: '오프사이드 컵 경기에서 공격과 상대 수비벽 10점 차이가 기대 득점에 주는 무게(지수). 0.3이면 2회 컵까지, 0.45면 랭크 경기와 같다. 경기 전 예상에도 같이 쓴다',
+  },
   rerollPrice: {
     group: 'market',
     label: '리롤권 가격',
