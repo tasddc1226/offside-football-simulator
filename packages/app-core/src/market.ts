@@ -365,6 +365,9 @@ export const SPEND_LABEL: Record<FundsItem, string> = {
   get 'reward:boost'() {
     return L.spendBoost;
   },
+  get sure() {
+    return L.spendSure;
+  },
 };
 
 /** 방출 확인 문구. 되돌릴 수 없다는 것을 꼭 보여 준다. */

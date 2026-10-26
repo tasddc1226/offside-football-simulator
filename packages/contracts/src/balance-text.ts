@@ -84,6 +84,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '커리어당 추가 강화 횟수',
     desc: '자금이 모자란 시즌의 강화 추가 시도 횟수(커리어 전체). 0이면 없다',
   },
+  careCost: {
+    group: 'growth',
+    label: '몸 관리 비용 배율',
+    desc: '30대 몸 관리 비용(단계별 연봉 비례·최소 금액·하락 깊이)에 곱하는 값',
+  },
   potMean: {
     group: 'growth',
     label: '잠재력 평균',
@@ -278,6 +283,16 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     group: 'market',
     label: '광고 대신 구단 자금 하루 횟수',
     desc: '보상마다 한 구단주가 하루(한국 시각)에 구단 자금으로 받을 수 있는 횟수(잠재력 강화는 횟수 없음). 0이면 구단 자금으로 받지 않는다',
+  },
+  surePrice: {
+    group: 'market',
+    label: '확정 강화 가격',
+    desc: '구단 자금으로 확률 없이 잠재력 강화 한 단계를 받을 때 그날 첫 가격(만 원). 같은 날 다시 사면 보상 가격 상승 배율만큼 오른다',
+  },
+  sureDailyCap: {
+    group: 'market',
+    label: '확정 강화 하루 횟수',
+    desc: '구단 자금 확정 강화를 하루에 받을 수 있는 횟수(구단주 기준, 선수마다 한 번). 0이면 팔지 않는다',
   },
   teamDiv1: {
     group: 'division',

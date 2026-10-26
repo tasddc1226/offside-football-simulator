@@ -5,6 +5,7 @@ import { names } from './_names';
 import { roman } from './_roman';
 import { gAttrLabel } from './gAttrLabel';
 import { gBoost } from './gBoost';
+import { gCare } from './gCare';
 import { gComps } from './gComps';
 import { gData } from './gData';
 import { gDating } from './gDating';
@@ -39,6 +40,7 @@ export const en = {
   __roman: roman,
   gAttrLabel,
   gBoost,
+  gCare,
   gComps,
   gData,
   gDating,

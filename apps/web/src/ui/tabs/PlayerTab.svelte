@@ -26,9 +26,12 @@
   import { gradeTier } from '@offside/app-core/reveal';
   import { retireAsk } from '../actions.js';
   import { save } from '../helpers.js';
-  import { clubOffer, loadClubShop, payWithClub, payWithTicket } from '@offside/app-core/club-reward';
+  import { clubOffer, loadClubShop, loadSureShop, payWithClub, payWithSure, payWithTicket, sureOffer } from '@offside/app-core/club-reward';
   import { fundsText } from '@offside/app-core/funds';
-  import type { RewardShopResponse } from '@offside/contracts';
+  import type { RewardShopResponse, SureShopResponse } from '@offside/contracts';
+  import { careView, doCare } from '@offside/app-core/care-view';
+  import { gameCareText as CL } from '@offside/app-core/i18n/ko/gameCare';
+  import type { CareTier } from '@offside/game/care';
   import { fetchItems } from '@offside/app-core/api/cup';
   import { hasSessionHint } from '@offside/app-core/api/client';
   import { iapText as IL } from '@offside/app-core/i18n/ko/iap';
@@ -128,6 +131,43 @@
     if (r.boost !== null) tickets = r.boost;
     clubMsg = r.message;
   }
+  // T-11-513 구단 자금 확정 강화. 이 선수가 이번 시즌에 받을 수 있고 로그인한 구단주일 때만 값을 묻는다(30초 메모).
+  let sure = $state<SureShopResponse | null>(null);
+  let sureBusy = $state(false);
+  $effect(() => {
+    if (boost.sureOpen && hasSessionHint()) void loadSureShop().then((r) => (sure = r));
+  });
+  const sureTry = $derived(boost.sureOpen ? sureOffer(sure) : null);
+  async function onSureBoost() {
+    const o = sureTry;
+    if (sureBusy || !o) return;
+    sureBusy = true;
+    clubMsg = '';
+    let out: BoostOutcome | null = null;
+    const r = await payWithSure(o, confirm, () => (out = doBoost(s, 'sure')));
+    sureBusy = false;
+    if (!r) return;
+    if (r.shop) sure = r.shop;
+    clubMsg = r.message;
+    if (!out) return;
+    save();
+    fx = out;
+  }
+  // T-11-513 몸 관리. 고른 단계를 한 번 더 눌러 받는다(선수 자금을 쓴다).
+  const care = $derived(careView(s));
+  let careArm = $state<CareTier | null>(null);
+  let careMsg = $state('');
+  function onCare(t: CareTier) {
+    if (careArm !== t) {
+      careArm = t;
+      return;
+    }
+    careArm = null;
+    const msg = doCare(s, t);
+    if (!msg) return;
+    save();
+    careMsg = msg;
+  }
   async function onClubBoost() {
     const o = clubTry;
     if (clubBusy || !o) return;
@@ -210,6 +250,12 @@
         {ticketBusy ? B.ticketBusy : B.ticketBoost({ n: tickets, chance: boost.chance })}
       </button>
     {/if}
+    {#if sureTry}
+      <button class="btn btn-block" data-act="boost-sure" disabled={sureBusy} onclick={onSureBoost}>
+        {sureBusy ? B.clubBusy : B.sureButton({ price: fundsText(sureTry.price) })}
+      </button>
+      <p class="muted fs-xs">{B.sureNote}</p>
+    {/if}
     {#if ticketOpen}<WebPayPacks item="boost" back="game" note={IL.boostNote({ chance: boost.chance })} />{/if}
     {#if clubMsg}<p class="muted fs-sm" aria-live="polite">{clubMsg}</p>{/if}
     <p class="muted fs-xs">{boost.note}</p>
@@ -218,6 +264,29 @@
         {#each boost.history as h, i (i)}<li>{h}</li>{/each}
       </ul>
     {/if}
+  </section>
+{/if}
+
+{#if care}
+  <section class="card" data-care={care.status}>
+    <div class="eyebrow">Conditioning</div>
+    <h2 style="margin-bottom:6px">{CL.title}</h2>
+    <p class="fs-sm" data-care-line>{care.line}</p>
+    {#if care.options.length}
+      <div class="care-opts">
+        {#each care.options as o (o.t)}
+          {#if careArm === o.t}<p class="fs-sm boost-confirm" data-care-confirm>{o.confirm}</p>{/if}
+          <div class="boost-acts">
+            <button class="btn btn-block" class:btn-tonal={careArm === o.t} data-act="care-{o.t}" disabled={!o.affordable} aria-label="{o.name} · {o.effect} · {o.cost}" onclick={() => onCare(o.t)}>
+              {#if careArm === o.t}{CL.confirmBtn}{:else}<span class="care-name">{o.name}<small class="muted">{o.effect}</small></span><span class="btn-badge">{o.affordable ? o.cost : CL.short}</span>{/if}
+            </button>
+            {#if careArm === o.t}<button class="btn" data-act="care-cancel" onclick={() => (careArm = null)}>{CL.cancel}</button>{/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
+    {#if careMsg}<p class="muted fs-sm" aria-live="polite">{careMsg}</p>{/if}
+    <p class="muted fs-xs">{care.note}</p>
   </section>
 {/if}
 
@@ -262,6 +331,19 @@
 {/if}
 
 <style>
+  .care-opts {
+    margin: 4px 0;
+  }
+  .care-opts .btn {
+    justify-content: space-between;
+  }
+  .care-name {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    text-align: left;
+  }
   .pot-peek {
     display: grid;
     gap: 8px;
@@ -303,7 +385,8 @@
     gap: 8px;
     margin: 8px 0;
   }
-  .boost-acts [data-act='boost-cancel'] {
+  .boost-acts [data-act='boost-cancel'],
+  .boost-acts [data-act='care-cancel'] {
     flex: none;
     white-space: nowrap;
   }

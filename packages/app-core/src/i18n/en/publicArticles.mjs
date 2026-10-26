@@ -84,7 +84,7 @@ export default [
       [
         'When to boost potential',
         [
-          'From the end of your first season until age 29, you can raise potential with funds using Potential Boost in the Player tab. You can try once per season, up to 4 stages, and the higher the stage, the higher the cost and the lower the success chance. Each success raises potential by 1.',
+          'From the end of your first season until age 29, you can raise potential with funds using Potential Boost in the Player tab. You can try once per season, up to 4 stages, and the higher the stage, the higher the cost and the lower the success chance. Each success raises potential by 1. Signed-in club owners can also use club funds for a guaranteed boost, which raises one stage with no roll, once per player.',
           'A failure only costs you the funds, but each failure raises the next success chance by 5 percentage points. Since potential is a growth-speed benchmark, the same +1 pays off longer the earlier you get it, over the seasons that remain. In the early game, when funds are tight, trying steadily from the lower stages is more efficient.',
           'In a season when you are short on funds, you can watch a rewarded ad to the end in the app, or, if you are a signed-in owner, try once with club funds. Potential Boost tickets bought in the app have the same success chance as trying with funds, and the same stage cap and age limit.',
         ],

@@ -189,6 +189,8 @@ export interface BoostTry {
   club?: true;
   /** T-11-174 자금이 모자라 구단주의 잠재력 강화권(인앱 상품)으로 시도했다. 기능 전 기록·다른 시도엔 없다. */
   tk?: true;
+  /** T-11-513 구단 자금으로 확정 강화를 받았다(확률 없이 성공, 시즌마다 한 번). 기능 전 기록·다른 시도엔 없다. */
+  sure?: true;
   /** T-11-157 그 시즌의 한 번을 쓴 뒤 광고·구단 자금으로 더 시도했다(커리어 전체 횟수를 이 표시로 센다). 기능 전 기록·다른 시도엔 없다. */
   x?: true;
 }
@@ -406,6 +408,8 @@ export interface GameState {
   invest?: string | undefined;
   /** T-11-083 잠재력 강화(boost.ts). 기능 전 저장·시도하지 않은 커리어엔 없다. */
   boost?: BoostState | undefined;
+  /** T-11-513 마지막으로 받은 몸 관리(care.ts): 시즌 · 단계 · 쓴 자금(만 원). 기능 전 저장·받지 않은 커리어엔 없다. */
+  care?: { y: number; t: 1 | 2 | 3; c: number } | undefined;
   retired: boolean;
   chains: ChainEvent[];
   story: Record<string, StoryState>;

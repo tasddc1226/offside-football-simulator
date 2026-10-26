@@ -40,6 +40,7 @@ import { game } from './game';
 import { gameActions } from './gameActions';
 import { gameAttr } from './gameAttr';
 import { gameBoost } from './gameBoost';
+import { gameCare } from './gameCare';
 import { gameCareer } from './gameCareer';
 import { gameLeague } from './gameLeague';
 import { gameMySeason } from './gameMySeason';
@@ -157,6 +158,7 @@ export const ja = {
   gameActions,
   gameAttr,
   gameBoost,
+  gameCare,
   gameCareer,
   gameLeague,
   gameMySeason,
