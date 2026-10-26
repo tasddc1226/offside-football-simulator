@@ -119,3 +119,23 @@ it('does not multiply writes when the primary is overloaded', async () => {
   expect(fault.attempts()).toBe(1);
   expect(await row()).toBeNull();
 });
+
+it('does not rewrite an unchanged recent activity row, but refreshes after an hour (T-11-505)', async () => {
+  const id = crypto.randomUUID();
+  const at = (ms: number) => new Date(NOW + ms).toISOString();
+  expect((await send(ctx.env.DB, 'active', id)).status).toBe(204);
+  // 30분 뒤 같은 상태: 행을 다시 쓰지 않아 last_active_at이 그대로다.
+  vi.setSystemTime(NOW + 30 * 60_000);
+  expect((await send(ctx.env.DB, 'active', id)).status).toBe(204);
+  expect(await row()).toMatchObject({ last_active_at: at(0), lang: 'ko' });
+  // 바뀐 것(언어)이 있으면 바로 쓴다.
+  expect((await send(ctx.env.DB, 'active', id, 'en')).status).toBe(204);
+  expect(await row()).toMatchObject({ last_active_at: at(30 * 60_000), lang: 'en' });
+  // 한 시간이 지나면 같은 상태도 다시 쓴다.
+  vi.setSystemTime(NOW + 2 * 60 * 60_000);
+  expect((await send(ctx.env.DB, 'active', id, 'en')).status).toBe(204);
+  expect(await row()).toMatchObject({ last_active_at: at(2 * 60 * 60_000) });
+  // 은퇴는 늘 바로 쓴다.
+  expect((await send(ctx.env.DB, 'retired', id, 'en')).status).toBe(204);
+  expect(await row()).toMatchObject({ state: 'retired', retired_at: at(2 * 60 * 60_000) });
+});

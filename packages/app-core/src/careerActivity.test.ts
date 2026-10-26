@@ -13,14 +13,17 @@ afterEach(() => vi.useRealTimers());
 const advance = (ms: number) => vi.advanceTimersByTimeAsync(ms);
 
 describe('career activity delivery', () => {
-  it('coalesces repeated saves for 30 minutes with no idle polling', async () => {
+  it('coalesces repeated saves for 6 hours with no idle polling', async () => {
     const send = vi.fn(async () => true);
     const tracker = createCareerActivityTracker(send);
     await tracker.report(active);
     for (let i = 0; i < 100; i++) await tracker.report({ ...active });
     expect(send).toHaveBeenCalledOnce();
     expect(vi.getTimerCount()).toBe(0);
-    await advance(30 * 60_000);
+    await advance(6 * 60 * 60_000 - 1);
+    await tracker.report(active);
+    expect(send).toHaveBeenCalledOnce();
+    await advance(1);
     await tracker.report(active);
     expect(send).toHaveBeenCalledTimes(2);
     expect(vi.getTimerCount()).toBe(0);

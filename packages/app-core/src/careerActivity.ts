@@ -2,7 +2,8 @@ import type { CareerActivityInput } from '@offside/contracts';
 import { apiFetch } from './api/client.js';
 
 const MIN_GAP_MS = 60_000;
-const DEDUPE_MS = 30 * 60_000;
+// T-11-505 서버는 같은 상태를 복귀 푸시(3 · 7 · 14일) 판정에만 쓴다. 켜 둔 채 계속 하는 동안은 6시간에 한 번만 보낸다.
+const DEDUPE_MS = 6 * 60 * 60_000;
 const RETRY_MS = [60_000, 5 * 60_000, 15 * 60_000, 30 * 60_000, 60 * 60_000];
 export const ACTIVITY_RATE_LIMIT_WAIT_MS = 60 * 60_000;
 type SendResult = boolean | { ok: false; retryable: boolean; retryAfterMs?: number };
