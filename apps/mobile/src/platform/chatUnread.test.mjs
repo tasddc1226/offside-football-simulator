@@ -80,10 +80,29 @@ describe('app chat unread', () => {
     f.store.screen = 'owner';
     f.keyListeners.forEach((fn) => fn());
     expect(f.opened).toHaveLength(2);
-    // 백그라운드로 가면 닫는다.
+    // T-11-504 백그라운드로 가면 1분 뒤에 닫는다.
+    vi.useFakeTimers();
     f.appState = 'background';
     f.appListeners.forEach((fn) => fn('background'));
+    expect(f.opened[1].closed).toBe(false);
+    vi.advanceTimersByTime(m.CHAT_BACKGROUND_GRACE_MS);
     expect(f.opened[1].closed).toBe(true);
+    vi.useRealTimers();
+  });
+
+  it('keeps the socket when the app returns within the grace period (T-11-504)', async () => {
+    vi.useFakeTimers();
+    const m = await import('./chatUnread.ts');
+    m.startChatUnread();
+    f.appState = 'inactive';
+    f.appListeners.forEach((fn) => fn('inactive'));
+    vi.advanceTimersByTime(m.CHAT_BACKGROUND_GRACE_MS - 1);
+    f.appState = 'active';
+    f.appListeners.forEach((fn) => fn('active'));
+    vi.advanceTimersByTime(m.CHAT_BACKGROUND_GRACE_MS);
+    expect(f.opened).toHaveLength(1);
+    expect(f.opened[0].closed).toBe(false);
+    vi.useRealTimers();
   });
 
   it('counts new messages from others after the first visit and clears when read', async () => {
