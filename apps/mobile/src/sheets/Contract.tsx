@@ -5,9 +5,9 @@
 // PanResponder로 잡는다(DragShot과 같다 — 터치 대상이 늘 그 View라 locationX/Y가 패드 기준으로 일정하고, 바깥 스크롤이
 // 제스처를 가져가지 못한다).
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
-import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Easing, PanResponder, StyleSheet, View, type GestureResponderEvent } from 'react-native';
-import Svg, { ClipPath, Defs, G, Path, Rect, Text as SvgText } from 'react-native-svg';
+import Svg, { G, Path, Rect, Text as SvgText } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import type { SheetView } from '@offside/app-core/sheets';
 import { sheetContractText as L } from '@offside/app-core/i18n/ko/sheetContract';
@@ -110,7 +110,6 @@ export function Contract({ v }: { v: ContractView }) {
   const s = useSnapshot(v);
   const c = useColors();
   const { motionOK } = useSnapshot(prefs);
-  const clip = useId();
 
   const [done, setDone] = useState<string[]>([]);
   const [cur, setCur] = useState('');
@@ -319,35 +318,31 @@ export function Contract({ v }: { v: ContractView }) {
           {cur ? <Stroke d={cur} color={c.ink} /> : null}
           {named && W > 0 ? (
             <>
-              <Defs>
-                <ClipPath id={clip}>
-                  <Rect x={0} y={0} width={W * reveal} height={H} />
-                </ClipPath>
-              </Defs>
-              <G clipPath={`url(#${clip})`}>
-                <G
-                  transform={`translate(${W / 2} ${H * 0.56}) matrix(1 ${SKEW_Y} ${SKEW_X} 1 0 0)`}
+              <G transform={`translate(${W / 2} ${H * 0.56}) matrix(1 ${SKEW_Y} ${SKEW_X} 1 0 0)`}>
+                <SvgText
+                  x={0}
+                  y={0}
+                  textAnchor="middle"
+                  fontSize={sign.fs}
+                  fontWeight="500"
+                  fontStyle="italic"
+                  fill={c.ink}
                 >
-                  <SvgText
-                    x={0}
-                    y={0}
-                    textAnchor="middle"
-                    fontSize={sign.fs}
-                    fontWeight="500"
-                    fontStyle="italic"
-                    fill={c.ink}
-                  >
-                    {s.name}
-                  </SvgText>
-                  <Path
-                    d={sign.flourish}
-                    fill="none"
-                    stroke={c.ink}
-                    strokeWidth={2.2}
-                    strokeLinecap="round"
-                  />
-                </G>
+                  {s.name}
+                </SvgText>
+                <Path
+                  d={sign.flourish}
+                  fill="none"
+                  stroke={c.ink}
+                  strokeWidth={2.2}
+                  strokeLinecap="round"
+                />
               </G>
+              {/* 왼쪽부터 써 나가기: 아직 안 쓴 오른쪽을 패드 색으로 덮는다. 안드로이드 react-native-svg는 Defs 안
+                  ClipPath의 Rect가 바뀌어도 다시 그리지 않아(첫 프레임 너비 0에 멈춘다) 클립 대신 덮개를 줄인다. */}
+              {reveal < 1 ? (
+                <Rect x={W * reveal} y={0} width={W * (1 - reveal)} height={H} fill={c.surface2} />
+              ) : null}
             </>
           ) : null}
         </Svg>
