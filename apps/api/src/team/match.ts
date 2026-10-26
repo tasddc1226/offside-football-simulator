@@ -85,6 +85,8 @@ export function matchDetailOf(
   lineups: Lineups,
   result: SimResult,
   delta?: { home: number; away: number },
+  /** T-11-518 선발 명단을 남긴다(시즌 통계의 선수 출전 수). 랭크 경기만 켠다. */
+  opts: { xi?: boolean } = {},
 ): MatchDetail {
   const side = (
     t: OwnerTeamRow,
@@ -107,6 +109,13 @@ export function matchDetailOf(
       def: Math.round(report.lines.def),
       gk: Math.round(report.lines.gk),
     },
+    ...(opts.xi
+      ? {
+          xi: Object.fromEntries(
+            lineup.flatMap((s) => (s.careerId ? [[s.careerId, s.slot] as const] : [])),
+          ),
+        }
+      : {}),
   });
   return {
     home: side(home, lineups.home, delta?.home, result.synergy?.home, result.report.home),

@@ -657,7 +657,9 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         atkK: rankedAtkK(season),
         coaches: lineups.coaches,
       });
-      const snap = matchDetailOf(mine, opp.team, lineups, liveResult(state));
+      const snap = matchDetailOf(mine, opp.team, lineups, liveResult(state), undefined, {
+        xi: true,
+      });
       const payload = livePayload(
         season,
         state,
@@ -703,7 +705,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const score = matchScore(result.homeGoals, result.awayGoals);
     // 시즌 1(엘로)은 홈 이점과 최근 재대결 감쇠를 넣고, 시즌 2부터는 RP 사다리(T-11-510)다.
     const delta = matchRatingChange(season, mine, opp.team, score, Number(met?.n ?? 0));
-    const detail = matchDetailOf(mine, opp.team, lineups, result, delta);
+    const detail = matchDetailOf(mine, opp.team, lineups, result, delta, { xi: true });
     const homeSide = {
       teamId: mine.id,
       filled: filledCount(lineups.home),

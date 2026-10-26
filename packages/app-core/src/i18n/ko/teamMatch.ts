@@ -52,7 +52,7 @@ const ko = {
   historyMoreLoading: '불러오는 중…',
   historyMoreFail: '경기를 더 불러오지 못했어요. 다시 눌러 주세요.',
   statsCardTitle: '시즌 통계',
-  statsCardLead: '선수별 골 · 도움과 날짜별 · 상대별 전적을 모아 봐요.',
+  statsCardLead: '선수별 출전 · 골 · 도움과 날짜별 · 상대별 전적을 모아 봐요.',
   statsCardRecord: (p: { season: string; record: string }) => `${p.season} · ${p.record}`,
   statsOpen: '시즌 통계 보기',
   statsTitle: '시즌 통계',
@@ -69,6 +69,18 @@ const ko = {
   statsNoScorers: '아직 골이나 도움을 기록한 선수가 없어요.',
   statsGoals: '골',
   statsAssists: '도움',
+  // T-11-518 선수 출전 수 · 정렬
+  statsApps: '출전',
+  statsSortLabel: '정렬',
+  statsSortGoals: '골',
+  statsSortAssists: '도움',
+  statsSortApps: '출전',
+  statsPerGame: (p: { v: string }) => `경기당 ${p.v}골`,
+  statsNoGoal: '골 없음',
+  statsYouthSub: '빈 자리를 채운 경기',
+  statsAppsNote: '출전은 선발로 뛴 경기예요.',
+  statsAppsPartial: (p: { n: number }) =>
+    `출전은 선발 기록이 남은 최근 ${p.n}경기에서 셌어요. 그 전 경기는 출전에 들어가지 않아요.`,
   statsGfGa: (p: { gf: number; ga: number }) => `득점 ${p.gf} · 실점 ${p.ga}`,
   statsOppOwner: (p: { owner: string; n: number }) => `${p.owner} · ${p.n}경기`,
   // T-11-358 흐름 요약 · 경기 종류별 전적 · 남의 팀 통계

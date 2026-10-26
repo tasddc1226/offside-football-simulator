@@ -488,6 +488,10 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       .from(teamMatches)
       .where(eq(teamMatches.id, match.id));
     expect(JSON.parse(storedBefore!.detailJson).home).not.toHaveProperty('logo');
+    // T-11-518 랭크 경기는 두 팀 선발 명단(커리어 id → 자리)을 남기고, 공개 응답에는 싣지 않는다.
+    const xi = JSON.parse(storedBefore!.detailJson).home.xi as Record<string, string>;
+    expect(Object.keys(xi).length).toBeGreaterThan(0);
+    expect(match.home).not.toHaveProperty('xi');
     const nextLogo = { ...logo, text: 'NEW' };
     await ctx.db
       .update(ownerTeams)
@@ -585,10 +589,12 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     ).data;
     expect(stats).toMatchObject({ season: 0, matches: 4, capped: false });
     expect(stats.total).toEqual({ w: 2, d: 1, l: 1, gf: 6, ga: 3 });
+    // 옛 경기(선발 명단 없음)는 출전을 세지 않는다(T-11-518).
+    expect(stats.xiMatches).toBe(0);
     expect(stats.players).toEqual([
-      { careerId: striker, name: '김골잡', goals: 3, assists: 1 },
-      { careerId: winger, name: '김골잡', goals: 1, assists: 2 },
-      { careerId: null, name: '유스 선수', goals: 2, assists: 0 },
+      { careerId: striker, name: '김골잡', goals: 3, assists: 1, apps: 0 },
+      { careerId: winger, name: '김골잡', goals: 1, assists: 2, apps: 0 },
+      { careerId: null, name: '유스 선수', goals: 2, assists: 0, apps: 0 },
     ]);
     expect(stats.days).toEqual([
       { day: '2026-09-30', w: 1, d: 1, l: 1, gf: 4, ga: 2 },
