@@ -101,6 +101,7 @@ import { cupSchedule } from '../team/cupSchedule.js';
 import { lineupsOf, toMatch } from '../team/match.js';
 import { cupTeamsOf, matchOddsOf, mineOdds, oddsOfLineups, parseOdds } from '../team/cupOdds.js';
 import { filledCount } from '../team/sim.js';
+import { cupAtkKOf } from '../db/repos/balance.js';
 import { kstTodayStart, requireOwner } from './ownerTeam.js';
 import { kstWeekStart } from '../time.js';
 import {
@@ -282,7 +283,8 @@ export async function nextOddsOf(
   const home = team(next.homeTeamId);
   const away = team(next.awayTeamId);
   if (!home || !away) return null;
-  return mineOdds(oddsOfLineups(await lineupsOf(db, cup.season, home, away), cup.season), homeMine);
+  const [lineups, atkK] = await Promise.all([lineupsOf(db, cup.season, home, away), cupAtkKOf(db)]);
+  return mineOdds(oddsOfLineups(lineups, cup.season, atkK), homeMine);
 }
 
 const cupAndAll = async (c: Context<AppEnv>, selectedId?: string) => {

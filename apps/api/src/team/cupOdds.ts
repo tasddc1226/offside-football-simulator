@@ -18,11 +18,12 @@ export const CUP_ODDS_PER_TICK = 32;
 
 const round1 = (x: number) => Math.round(x * 10) / 10;
 
-/** 두 팀 명단으로 중립 경기 예상을 낸다. 정수 %로 반올림하고 합이 100이 되게 무승부로 맞춘다. */
-export function oddsOfLineups(lineups: Lineups, season: number): StoredOdds {
+/** 두 팀 명단으로 중립 경기 예상을 낸다. atkK는 경기(playCupMatch)와 같은 밸런스 값(T-11-409). 정수 %로 반올림하고 합이 100이 되게 무승부로 맞춘다. */
+export function oddsOfLineups(lineups: Lineups, season: number, atkK: number): StoredOdds {
   const o = matchOdds(lineups.home, lineups.away, season, {
     neutral: true,
     coaches: lineups.coaches,
+    atkK,
   });
   const h = Math.round(o.win * 100);
   const a = Math.round(o.loss * 100);
@@ -94,10 +95,12 @@ export async function fillCupOdds(
   cup: CupDef,
   matches: readonly CupMatchRow[],
   now: string,
+  atkKOf: () => Promise<number>,
   limit = CUP_ODDS_PER_TICK,
 ) {
   const due = oddsDue(matches, now, limit);
   if (!due.length) return 0;
+  const atkK = await atkKOf();
   const team = await cupTeamsOf(db, cup, [
     ...new Set(due.flatMap((m) => [m.homeTeamId!, m.awayTeamId!])),
   ]);
@@ -107,7 +110,7 @@ export async function fillCupOdds(
     const home = team(m.homeTeamId);
     const away = team(m.awayTeamId);
     if (!home || !away) continue;
-    const odds = oddsOfLineups(await lineupsOf(db, cup.season, home, away), cup.season);
+    const odds = oddsOfLineups(await lineupsOf(db, cup.season, home, away), cup.season, atkK);
     stmts.push(
       d1
         .prepare(

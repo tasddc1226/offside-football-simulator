@@ -29,6 +29,7 @@ import { grantItemStatement } from '../db/repos/itemShop.js';
 import { cupSchedule } from './cupSchedule.js';
 import { cupResultStatements } from '../push/cupResult.js';
 import { eventNotificationStatements } from '../push/events.js';
+import { cupAtkKOf } from '../db/repos/balance.js';
 import { lineupsOf, matchDetailOf } from './match.js';
 import { penaltyShootout, simulateMatch } from './sim.js';
 import { CUP_ODDS_PER_TICK, fillCupOdds, oddsOfLineups } from './cupOdds.js';
@@ -421,13 +422,17 @@ const insertMatch = (
     )
     .bind(newId('cpm'), cup.id, round, grp, slot, home, away, roundAt(cup, round));
 
-/** 경기 한 판을 치르고 적는다. 팀이 없거나(지워짐·다른 시즌) 선수가 없으면 0:3 몰수. */
+/**
+ * 경기 한 판을 치르고 적는다. 팀이 없거나(지워짐·다른 시즌) 선수가 없으면 0:3 몰수. atkK는 밸런스 설정 컵 공격 계수(T-11-409,
+ * 주지 않으면 여기서 읽는다).
+ */
 export async function playCupMatch(
   db: Db,
   cup: CupDef,
   m: CupMatchRow,
   entries: ReadonlyMap<string, CupEntryRow>,
   now: string,
+  atkK?: number,
 ) {
   const d1 = db.$client;
   const ids = [m.homeTeamId, m.awayTeamId].filter((x): x is string => !!x);
@@ -453,11 +458,15 @@ export async function playCupMatch(
   // T-11-407 cron이 늦어 잠금 뒤 예상을 아직 못 채웠으면 같은 명단으로 여기서 채운다(끝난 경기에도 경기 전 예상이 남는다).
   let odds: string | null = null;
   if (home && away) {
-    const lineups = await lineupsOf(db, cup.season, home, away);
-    if (!m.oddsJson) odds = JSON.stringify(oddsOfLineups(lineups, cup.season));
+    const [lineups, k] = await Promise.all([
+      lineupsOf(db, cup.season, home, away),
+      atkK ?? cupAtkKOf(db),
+    ]);
+    if (!m.oddsJson) odds = JSON.stringify(oddsOfLineups(lineups, cup.season, k));
     const result = simulateMatch(m.id, lineups.home, lineups.away, cup.season, {
       neutral: true,
       coaches: lineups.coaches,
+      atkK: k,
     });
     hg = result.homeGoals;
     ag = result.awayGoals;
@@ -602,6 +611,9 @@ export async function runCup(db: Db, now: string, cups?: readonly CupDef[]) {
   let oddsBudget = CUP_ODDS_PER_TICK;
   let advanced = false;
   const settled = new Set<string>();
+  // T-11-409 컵 공격 계수는 경기 · 예상을 계산할 때만, cron 한 번에 한 번 읽는다.
+  let atkK: Promise<number> | undefined;
+  const atkKOf = () => (atkK ??= cupAtkKOf(db));
   for (const cup of all) {
     if (now < cup.drawAt) continue;
     if (cup.division) {
@@ -629,7 +641,7 @@ export async function runCup(db: Db, now: string, cups?: readonly CupDef[]) {
       // T-11-407 명단이 잠긴 경기의 예상을 cron마다 한 번 채운다(이미 읽은 경기 목록으로, 남은 건 다음 cron이).
       if (!oddsChecked && oddsBudget > 0) {
         oddsChecked = true;
-        const n = await fillCupOdds(db, cup, matches, now, oddsBudget);
+        const n = await fillCupOdds(db, cup, matches, now, atkKOf, oddsBudget);
         oddsBudget -= n;
         if (n) log.push({ cup: cup.id, step: 'odds', n });
       }
@@ -644,7 +656,7 @@ export async function runCup(db: Db, now: string, cups?: readonly CupDef[]) {
         // 마감은 경기 시각(at) 기준이라 늦게 치른 경기도 같은 조건이다.
         const batch = due.filter((x) => x.round === round).slice(0, budget);
         budget -= batch.length;
-        for (const m of batch) await playCupMatch(db, cup, m, entryMap, now);
+        for (const m of batch) await playCupMatch(db, cup, m, entryMap, now, await atkKOf());
         log.push({ cup: cup.id, step: 'play', round, n: batch.length });
         // T-11-246 128팀이면 조별 3차전(64경기)과 64강 만들기·조별 탈락 보상을 한 번에 하면 D1 쿼리 상한(호출당 1000)에
         // 가깝다. cron 한 번에 라운드 하나만 치르고, 다음 라운드 만들기·보상은 다음 cron(5분 뒤)이 한다.
