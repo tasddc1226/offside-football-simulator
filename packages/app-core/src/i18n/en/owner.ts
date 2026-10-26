@@ -54,6 +54,7 @@ export const owner: Translation<OwnerMsgs> = {
   teamOvr: (p) => `Team OVR ${p.ovr}`,
   statRecord: 'Record',
   statRating: 'Rating',
+  statRp: 'RP',
   statToday: 'Matches today',
   play: 'Play match',
   teamFailed:

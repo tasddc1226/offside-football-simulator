@@ -19,6 +19,7 @@ import type {
   TeamRankResponse,
   TeamRankSort,
   TeamStatsResponse,
+  TeamDivisionsResponse,
   TeamMomentResponse,
 } from '@offside/contracts';
 import { apiFetch, cachedGet, ownerCachedGet } from './client.js';
@@ -58,6 +59,7 @@ export type {
   TeamStatsReport,
   TeamStatsResponse,
   TeamStatsSummary,
+  TeamDivisionsResponse,
 } from '@offside/contracts';
 
 /** `?season=` 꼬리(없으면 지금 시즌). */
@@ -74,8 +76,10 @@ export const saveTeamPresets = (body: PutTeamPresetsBody) =>
     method: 'PUT',
     body: JSON.stringify(body),
   });
-/** 상대 후보는 서버가 섞어 준다 — '다른 상대 보기'가 새로 받게 메모하지 않는다. */
-export const fetchOpponents = () => apiFetch<TeamOpponentsResponse>('/v1/owner-team/opponents');
+/** 상대 후보는 서버가 섞어 준다 — '다른 상대 보기'가 새로 받게 메모하지 않는다.
+ * T-11-510 시즌 2부터는 상대 한 팀만 오고, pick(1~3)으로 그 경기의 다른 상대를 찾는다. */
+export const fetchOpponents = (pick = 0) =>
+  apiFetch<TeamOpponentsResponse>(`/v1/owner-team/opponents${pick ? `?pick=${pick}` : ''}`);
 export const playMatch = (opponentTeamId: string) =>
   apiFetch<PlayTeamMatchResponse>('/v1/owner-team/matches', {
     method: 'POST',
@@ -106,11 +110,19 @@ export const fetchAchievementNotifications = () =>
   ownerCachedGet<ClubAchievementNotifications>('/v1/owner-team/achievement-notifications', 60_000);
 
 /** 라이브 랭킹(팀 랭킹). 서버가 5분마다 새로 세므로 T-11-503부터 같은 5분 메모(홈 구단 가치 칸도 쓴다). */
-export const fetchTeamRanking = (season: number | undefined, sort: TeamRankSort, page: number) =>
+export const fetchTeamRanking = (
+  season: number | undefined,
+  sort: TeamRankSort,
+  page: number,
+  division?: number,
+) =>
   cachedGet<TeamRankResponse>(
-    `/v1/teams?${season === undefined ? '' : `season=${season}&`}sort=${sort}&page=${page}`,
+    `/v1/teams?${season === undefined ? '' : `season=${season}&`}sort=${sort}&page=${page}${division === undefined ? '' : `&division=${division}`}`,
     300_000,
   );
+/** T-11-375 디비전별 팀 수 · 경계(랭킹 디비전 탭). 서버가 5분마다 새로 센다. */
+export const fetchTeamDivisions = (season?: number) =>
+  cachedGet<TeamDivisionsResponse>(`/v1/teams/divisions${seasonQ(season)}`, 60_000);
 /** T-11-028 업적 랭킹(기록실). 서버가 5분마다 새로 센다. */
 export const fetchAchRanking = (season: number | undefined, page: number) =>
   cachedGet<AchRankResponse>(

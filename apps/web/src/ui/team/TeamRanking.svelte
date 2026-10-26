@@ -3,9 +3,12 @@
   import { seasonLabel } from '@offside/app-core/seasonName';
   // T-10-092 라이브 랭킹(팀 랭킹) — 기록실 탭. 선수가 한 명 이상 있는 구단주 팀을 시즌별로 레이팅(경기 결과) 또는 팀 OVR
   // 순으로 보여 주고, 줄을 누르면 팀 프로필(appState.hof.team)을 연다. 서버가 5분마다 새로 센다.
-  import { TEAM_RANK_PER_PAGE } from '@offside/contracts/owner-team';
+  import { TEAM_RANK_PER_PAGE, usesRankLadder } from '@offside/contracts/owner-team';
   import { displaySeasonAt, openTeamSeasons, teamSeasonName } from '@offside/contracts/service-seasons';
-  import { fetchMyTeamRank, fetchTeamRanking, type TeamRankResponse, type TeamRankSort } from '@offside/app-core/api/team';
+  import { fetchMyTeamRank, fetchTeamDivisions, fetchTeamRanking, type TeamDivisionsResponse, type TeamRankResponse, type TeamRankSort } from '@offside/app-core/api/team';
+  import { divisionName, TEAM_DIVISION_KEYS } from '@offside/app-core/teamDivision';
+  import { teamDivisionText as LD } from '@offside/app-core/i18n/ko/teamDivision';
+  import DivisionEmblem from './DivisionEmblem.svelte';
   import { canJumpToMyRank, myRankJump } from '@offside/app-core/myRank';
   import { isMember } from '@offside/app-core/account';
   import { accountCache } from '../account-state.svelte.js';
@@ -21,14 +24,16 @@
   import TitleBadge from '../cup/TitleBadge.svelte';
   import OwnerProfile from '../owner/OwnerProfile.svelte';
 
-  const sorts = (): [TeamRankSort, string][] => [
-    ['rating', L.sortRating],
+  /** T-11-510 시즌 2부터 레이팅 칸은 RP다. */
+  const ratingLabel = (rp: boolean) => (rp ? L.sortRp : L.sortRating);
+  const sorts = (rp: boolean): [TeamRankSort, string][] => [
+    ['rating', ratingLabel(rp)],
     ['ovr', L.sortOvr],
     ['value', L.sortValue],
   ];
   /** 정렬마다 값 칸의 이름과 값(구단 가치는 몸값 표기). */
-  const METRIC: Record<TeamRankSort, { label: () => string; of: (t: TeamRankResponse['items'][number]) => string }> = {
-    rating: { label: () => L.sortRating, of: (t) => n(t.rating) },
+  const METRIC: Record<TeamRankSort, { label: (rp: boolean) => string; of: (t: TeamRankResponse['items'][number]) => string }> = {
+    rating: { label: ratingLabel, of: (t) => n(t.rating) },
     ovr: { label: () => L.sortOvr, of: (t) => String(t.ovr) },
     value: { label: () => L.sortValue, of: (t) => fmtValue(t.value) },
   };
@@ -40,6 +45,9 @@
   let season = $state<number | undefined>(undefined);
   let sort = $state<TeamRankSort>(appState.hof.teamSort ?? 'rating');
   let page = $state(1);
+  /** T-11-375 디비전 탭(레이팅순에만, undefined = 전체). */
+  let division = $state<number | undefined>(undefined);
+  let divisions = $state<TeamDivisionsResponse | null>(null);
   let data = $state<TeamRankResponse | null>(null);
   let failed = $state(false);
   let loading = $state(true);
@@ -47,9 +55,11 @@
   const now = $derived(clock.now);
   const seasons = $derived(data?.seasons ?? openTeamSeasons(now).map((id) => ({ id, name: teamSeasonName(id) })));
   const selectedSeason = $derived(season ?? data?.season ?? displaySeasonAt(now));
+  /** T-11-510 디비전은 RP 사다리 시즌(2부터)에만 있다. */
+  const ladder = $derived(usesRankLadder(selectedSeason));
   /** 다시 받을 기준 — 고른 시즌, 아니면 지금 시즌(띄운 채 개막을 넘기면 바뀐다). */
   const shownSeason = $derived(season ?? displaySeasonAt(now));
-  const metricLabel = $derived(METRIC[sort].label());
+  const metricLabel = $derived(METRIC[sort].label(ladder));
   const metricOf = $derived(METRIC[sort].of);
   const rows = $derived(data?.items ?? []);
 
@@ -78,6 +88,7 @@
 
   $effect(() => {
     const [se, so, p] = [season, sort, page];
+    const dv = so === 'rating' ? division : undefined;
     void shownSeason;
     if (preset && preset.page === p && preset.sort === so) {
       preset = null;
@@ -89,14 +100,29 @@
     let live = true;
     failed = false;
     loading = true;
-    void fetchTeamRanking(se, so, p).then((r) => {
-      if (!live || se !== season || so !== sort || p !== page) return;
+    void fetchTeamRanking(se, so, p, dv).then((r) => {
+      if (!live || se !== season || so !== sort || p !== page || dv !== (sort === 'rating' ? division : undefined)) return;
       loading = false;
       if (r.ok) data = r.data;
       else failed = true;
     });
     return () => { live = false; };
   });
+
+  // 디비전별 팀 수는 레이팅순을 볼 때만 한 번 받는다(5분 엣지 캐시 · 1분 메모).
+  $effect(() => {
+    if (sort !== 'rating' || !ladder) return;
+    const se = season;
+    let live = true;
+    void fetchTeamDivisions(se).then((r) => {
+      if (live && se === season && r.ok) divisions = r.data;
+    });
+    return () => { live = false; };
+  });
+  function pickDivision(d: number | undefined) {
+    division = d;
+    page = 1;
+  }
 
   const pages = $derived(data ? Math.max(1, Math.ceil(data.total / TEAM_RANK_PER_PAGE)) : 1);
   function goPage(p: number) {
@@ -129,10 +155,20 @@
     {/if}
     <p class="hof-filter-label team-sort-label">{L.sortLabel}</p>
     <div class="hof-sorts team-ranking-sorts" role="group" aria-label={L.sortGroupAria}>
-      {#each sorts() as [k, label] (k)}
+      {#each sorts(ladder) as [k, label] (k)}
         <button class="hof-sort" aria-pressed={sort === k} data-rank-sort={k} onclick={() => ((sort = k), (page = 1))}>{label}</button>
       {/each}
     </div>
+    {#if sort === 'rating' && ladder}
+      <div class="hof-sorts team-div-tabs" role="group" aria-label={LD.tabsAria} data-rank-divisions>
+        <button class="hof-sort" aria-pressed={division === undefined} data-rank-division="all" onclick={() => pickDivision(undefined)}>{LD.tabAll}</button>
+        {#each TEAM_DIVISION_KEYS.map((_, i) => TEAM_DIVISION_KEYS.length - 1 - i) as d (d)}
+          <button class="hof-sort team-div-tab" aria-pressed={division === d} data-rank-division={d} onclick={() => pickDivision(d)}>
+            <DivisionEmblem division={d} size={16} />{divisionName(d)}{#if divisions}<small class="num">{n(divisions.counts[d] ?? 0)}</small>{/if}
+          </button>
+        {/each}
+      </div>
+    {/if}
     <p class="team-form-guide muted">{L.formGuide}</p>
     {#if failed}
       <p class="empty">{L.rankFail}</p>
@@ -149,7 +185,7 @@
               {@const played = t.record.w + t.record.d + t.record.l}
               <li value={t.rank} class:mine={t.teamId === myTeam} aria-current={t.teamId === myTeam ? 'true' : undefined}>
                 <button class="team-standings-columns team-standings-row" data-rank-team={t.teamId} aria-label={L.teamRowAria({ rank: t.rank, name: t.name, played: n(played), w: n(t.record.w), d: n(t.record.d), l: n(t.record.l), metric: metricLabel, value: metricOf(t), form: formText(t.recentForm) })} onclick={() => open(t.teamId)}>
-                  <span class="team-standings-team"><span class="team-standings-rank num">{t.rank}</span><span class="team-standings-logo"><TeamLogo logo={t.logo} name={t.name} size={24} decorative />{#if t.title}<span class="team-standings-title"><TitleBadge title={t.title} size="icon" /></span>{/if}</span><b title={t.name}>{t.name}</b></span>
+                  <span class="team-standings-team"><span class="team-standings-rank num">{t.rank}</span>{#if t.division !== undefined}<span class="team-standings-div" title={divisionName(t.division)}><DivisionEmblem division={t.division} size={14} /></span>{/if}<span class="team-standings-logo"><TeamLogo logo={t.logo} name={t.name} size={24} decorative />{#if t.title}<span class="team-standings-title"><TitleBadge title={t.title} size="icon" /></span>{/if}</span><b title={t.name}>{t.name}</b></span>
                   <span class="num" title={L.playedTitle({ n: n(played) })}>{n(played)}</span>
                   <span class="num" title={L.winTitle({ n: n(t.record.w) })}>{n(t.record.w)}</span>
                   <span class="num" title={L.drawTitle({ n: n(t.record.d) })}>{n(t.record.d)}</span>
@@ -177,9 +213,9 @@
         </nav>
       {/if}
     {:else}
-      <p class="empty">{L.teamsEmpty}</p>
+      <p class="empty">{division !== undefined ? LD.emptyDivision : L.teamsEmpty}</p>
     {/if}
-    <p class="muted fs-xs" style="margin-top:10px">{sort === 'value' ? L.valueFoot : L.teamsFoot}</p>
+    <p class="muted fs-xs" style="margin-top:10px">{sort === 'value' ? L.valueFoot : ladder ? L.teamsFootRp : L.teamsFoot}</p>
 </section>
 {/if}
 
@@ -317,6 +353,24 @@
     align-items: center;
     gap: 2px;
     padding-left: 26px;
+  }
+  .team-div-tabs {
+    margin: -4px 0 12px;
+  }
+  .team-div-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .team-div-tab small {
+    font-size: 11px;
+    font-weight: 400;
+    color: inherit;
+  }
+  .team-standings-div {
+    flex: none;
+    display: inline-flex;
+    margin-left: -2px;
   }
   .team-form-guide {
     margin: 0 0 6px;

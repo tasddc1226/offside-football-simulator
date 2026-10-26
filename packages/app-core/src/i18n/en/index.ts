@@ -103,6 +103,7 @@ import { shellLogin } from './shellLogin';
 import { shellMore } from './shellMore';
 import { teamAch } from './teamAch';
 import { teamCore } from './teamCore';
+import { teamDivision } from './teamDivision';
 import { teamHome } from './teamHome';
 import { teamLive } from './teamLive';
 import { teamMatch } from './teamMatch';
@@ -218,6 +219,7 @@ export const en = {
   shellMore,
   teamAch,
   teamCore,
+  teamDivision,
   teamHome,
   teamLive,
   teamMatch,

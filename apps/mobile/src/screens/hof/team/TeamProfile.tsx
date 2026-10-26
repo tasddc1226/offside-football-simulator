@@ -25,7 +25,7 @@ import { TeamLogo } from '../../../components/TeamLogo';
 import { TeamLines, TeamPitch } from '../../../components/TeamPitch';
 import { TeamSynergy } from '../../../components/TeamSynergy';
 import { PlayerPeek, pitchPeekOrigin, type PeekOrigin } from '../../../components/PlayerPeek';
-import { presetLayout, shapeOf } from '@offside/contracts/owner-team';
+import { presetLayout, shapeOf, usesRankLadder } from '@offside/contracts/owner-team';
 import { friendRequestText } from '@offside/app-core/friendText';
 import { synergyFocus } from '@offside/app-core/teamOwner';
 import { coachLineBonus, coachSummary } from '@offside/app-core/managerCard';
@@ -197,7 +197,11 @@ export default function TeamProfile({ id }: { id: string }) {
               </View>
               <View
                 accessible
-                accessibilityLabel={L.profRatingAria({ n: team.rating })}
+                accessibilityLabel={
+                  usesRankLadder(team.season)
+                    ? L.profRpAria({ n: team.rating })
+                    : L.profRatingAria({ n: team.rating })
+                }
                 style={{
                   minWidth: 76,
                   alignItems: 'center',
@@ -216,7 +220,7 @@ export default function TeamProfile({ id }: { id: string }) {
                     color: c.onPitch,
                   }}
                 >
-                  RATING
+                  {usesRankLadder(team.season) ? 'RP' : 'RATING'}
                 </Txt>
                 <Txt
                   style={{

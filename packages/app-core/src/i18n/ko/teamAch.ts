@@ -95,6 +95,7 @@ const ko = {
     '시즌마다 처음부터 다시 쌓아요. 선수·팀·구단주 업적 점수의 합이고, 랭킹은 5분마다 갱신돼요.',
   // 팀 랭킹
   sortRating: '레이팅',
+  sortRp: 'RP',
   sortOvr: '팀 OVR',
   sortValue: '구단 가치',
   colOvrApp: 'OVR',
@@ -135,6 +136,7 @@ const ko = {
   teamsEmpty:
     '아직 랭킹에 오른 팀이 없어요. 구단주 화면에서 은퇴한 선수로 팀을 꾸리면 여기에 올라요.',
   teamsFoot: '레이팅은 팀 경기 결과로 오르내려요. 랭킹은 5분마다 갱신돼요.',
+  teamsFootRp: 'RP는 랭크 경기 결과로 오르내려요. 랭킹은 5분마다 갱신돼요.',
   valueFoot: '구단 가치는 선발 11명의 카드 기준가를 더한 값이에요. 랭킹은 5분마다 갱신돼요.',
   // T-11-129 홈의 구단 가치 TOP 3
   homeValueTitle: '구단 가치 TOP 3',
@@ -150,6 +152,7 @@ const ko = {
   profMine: ' · 내 팀',
   profOwner: '구단주 ',
   profRatingAria: (p: { n: number }) => `팀 레이팅 ${p.n}`,
+  profRpAria: (p: { n: number }) => `팀 RP ${p.n}`,
   profStatOvr: '팀 OVR',
   profStatRecord: '전적',
   profStatGoals: '득실',

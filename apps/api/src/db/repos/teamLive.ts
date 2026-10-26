@@ -2,6 +2,7 @@
 import { and, eq, gte, isNull, lt, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { ownerTeams, teamLiveMatches } from '../schema.js';
+import { activeBalanceQuery } from './balance.js';
 
 export type TeamLiveRow = typeof teamLiveMatches.$inferSelect;
 
@@ -59,9 +60,10 @@ export const staleLive = (db: Db, beforeIso: string, limit: number) =>
 export const purgeDoneLive = (db: Db, beforeIso: string) =>
   db.delete(teamLiveMatches).where(lt(teamLiveMatches.doneAt, beforeIso));
 
-/** 마감할 때 두 팀의 지금 행(레이팅 · 전적). */
+/** 마감할 때 두 팀의 지금 행(레이팅 · 전적)과 활성 밸런스(T-11-375 디비전 경계). */
 export const teamsForLive = (db: Db, homeId: string, awayId: string) =>
   db.batch([
     db.select().from(ownerTeams).where(eq(ownerTeams.id, homeId)),
     db.select().from(ownerTeams).where(eq(ownerTeams.id, awayId)),
+    activeBalanceQuery(db),
   ]);

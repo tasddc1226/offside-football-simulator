@@ -79,6 +79,7 @@ export const teamAch: Translation<TeamAchMsgs> = {
   noteApp:
     'シーズンごとにゼロから積み直します。選手・チーム・オーナー実績スコアの合計で、ランキングは5分ごとに更新されます。',
   sortRating: 'レーティング',
+  sortRp: 'RP',
   sortOvr: 'チームOVR',
   sortValue: 'クラブ価値',
   colOvrApp: 'OVR',
@@ -109,6 +110,7 @@ export const teamAch: Translation<TeamAchMsgs> = {
   teamsEmpty:
     'まだランキングに載ったチームはありません。オーナー画面で引退した選手でチームを組むと、ここに載ります。',
   teamsFoot: 'レーティングはチームの試合結果で上下します。ランキングは5分ごとに更新されます。',
+  teamsFootRp: 'RPはランク戦の結果で上下します。ランキングは5分ごとに更新されます。',
   valueFoot:
     'クラブ価値はスタメン11人のカード基準価格の合計です。ランキングは5分ごとに更新されます。',
   homeValueTitle: 'クラブ価値 TOP 3',
@@ -122,6 +124,7 @@ export const teamAch: Translation<TeamAchMsgs> = {
   profMine: ' · マイチーム',
   profOwner: 'オーナー ',
   profRatingAria: (p) => `チームレーティング ${p.n}`,
+  profRpAria: (p) => `チームRP ${p.n}`,
   profStatOvr: 'チームOVR',
   profStatRecord: '戦績',
   profStatGoals: '得失点',

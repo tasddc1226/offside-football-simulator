@@ -97,7 +97,9 @@ async function main() {
     sh('git', ['push', 'origin', `HEAD:refs/heads/${BRANCH}`]);
     const view = JSON.parse(sh('gh', ['pr', 'view', BRANCH, '--json', 'number,title']));
     // 위험도는 고친 커밋만이 아니라 PR 전체에서 다시 판정한다.
-    const all = sh('git', ['diff', '--name-only', 'origin/main...HEAD']).split('\n').filter(Boolean);
+    const all = sh('git', ['diff', '--name-only', 'origin/main...HEAD'])
+      .split('\n')
+      .filter(Boolean);
     return report({
       ...base,
       ok: true,
