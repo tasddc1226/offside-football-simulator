@@ -1,0 +1,26 @@
+{
+  "id": "t-11-518-player-apps",
+  "title": "시즌 통계에 선수 출전 수",
+  "items": [
+    "시즌 통계 선수 탭에서 선발로 뛴 경기 수를 골 · 도움과 함께 볼 수 있어요",
+    "골 · 도움 · 출전 순으로 정렬하고, 이름 밑에서 주 자리와 경기당 골을 확인해요",
+    "이번 업데이트 전에 치른 경기는 선발 기록이 없어 출전에 들어가지 않아요"
+  ],
+  "en": {
+    "title": "Player appearances in season stats",
+    "items": [
+      "The Players tab in season stats now shows how many matches each player started, next to goals and assists.",
+      "Sort by goals, assists or appearances, and see each player's main position and goals per game under their name.",
+      "Matches played before this update have no lineup record, so they aren't counted as appearances."
+    ]
+  },
+  "ja": {
+    "title": "シーズン統計に選手の出場数",
+    "items": [
+      "シーズン統計の選手タブで、先発した試合数をゴール・アシストと一緒に見られます。",
+      "ゴール・アシスト・出場順に並び替えられ、名前の下で主なポジションと1試合あたりのゴールを確認できます。",
+      "このアップデートより前の試合は先発の記録がないため、出場に入りません。"
+    ]
+  },
+  "availability": "web-app"
+}
