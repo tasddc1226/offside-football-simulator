@@ -23,11 +23,11 @@ export const PARTNER_POPUP = {
   /**
    * 아마축구가 앱 설치 스토어로 보내 달라고 했다(10-22). iPhone은 App Store, Android는 Google Play(설치 유입을
    * Play Console에서 셀 수 있게 referrer에 UTM), 스토어가 없는 PC는 웹 페이지에 UTM을 붙인다. App Store는 아마축구의
-   * 캠페인 토큰(pt)이 있어야 유입을 붙일 수 있어 지금은 주소만 쓴다.
+   * 캠페인 토큰(pt)·캠페인 이름(ct)이 붙은 주소를 쓴다(10-25 아마축구가 보내 준 링크).
    */
   link: (v: PartnerVariant, os: PartnerOs) =>
     os === 'ios'
-      ? 'https://apps.apple.com/kr/app/id6780728678'
+      ? 'https://apps.apple.com/app/apple-store/id6780728678?pt=129039099&ct=offside_collab_popup&mt=8'
       : os === 'android'
         ? `https://play.google.com/store/apps/details?id=com.amachuggu.app&referrer=${encodeURIComponent(partnerUtm(v))}`
         : `https://amachuggu.com/?${partnerUtm(v)}`,

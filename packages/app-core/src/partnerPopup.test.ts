@@ -80,7 +80,9 @@ describe('claimHomePopup', () => {
 
 describe('PARTNER_POPUP.link', () => {
   it('기기에 맞는 스토어로 보내고 Play와 웹에는 유입 표시를 붙인다', () => {
-    expect(PARTNER_POPUP.link('a', 'ios')).toBe('https://apps.apple.com/kr/app/id6780728678');
+    expect(PARTNER_POPUP.link('a', 'ios')).toBe(
+      'https://apps.apple.com/app/apple-store/id6780728678?pt=129039099&ct=offside_collab_popup&mt=8',
+    );
     const play = new URL(PARTNER_POPUP.link('b', 'android'));
     expect(play.host).toBe('play.google.com');
     expect(play.searchParams.get('id')).toBe('com.amachuggu.app');
