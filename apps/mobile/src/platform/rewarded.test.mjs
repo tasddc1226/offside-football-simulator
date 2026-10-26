@@ -20,7 +20,9 @@ vi.mock('./adFree', () => ({
     get owned() {
       return f.owned;
     },
+    member: false,
   },
+  adsOff: (s) => s.owned || s.member,
 }));
 vi.mock('./adUsage', () => ({ countReward: f.countReward }));
 vi.mock('@offside/app-core/i18n/ko/ad', () => ({
