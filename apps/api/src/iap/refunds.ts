@@ -8,6 +8,7 @@ import { recordBillingAlert } from './alerts.js';
 import { DEFAULT_BUNDLE_ID } from '../auth/apple-id-token.js';
 import type { Db } from '../db/client.js';
 import { revokeIapPurchase, type IapRevoke } from '../db/repos/iap.js';
+import { revokeSeasonPass } from '../db/repos/seasonPass.js';
 import type { Bindings } from '../env.js';
 import { APPLE_ROOT_G3_SHA256, verifyAppleNotification, verifyAppleTransaction } from './apple.js';
 import { listVoidedPurchases } from './google.js';
@@ -98,6 +99,11 @@ export async function handleAppleNotification(
     ),
     now,
   );
+  // T-11-511 시즌 패스 거래면 패스를 닫고 그 패스로 받은 아이템을 회수한다.
+  if (await revokeSeasonPass(db, 'apple', String(tx.transactionId), now)) {
+    log('pass-refund', { store: 'apple', tx: String(tx.transactionId).slice(-6) });
+    return 'revoked';
+  }
   const r = await revokeIapPurchase(db, 'apple', String(tx.transactionId), now);
   log('iap-refund', { store: 'apple', tx: String(tx.transactionId).slice(-6), ...summary(r) });
   return 'revoked';
@@ -125,6 +131,8 @@ export async function syncGoogleVoided(
   let unknown = 0;
   for (const v of list) {
     await markPurchaseRefund(env.DB, 'google', v.purchaseToken, now);
+    // T-11-511 시즌 패스 거래(무효화 목록에 매일 겹쳐 나온다 — 닫는 건 한 번뿐이다).
+    if (await revokeSeasonPass(db, 'google', v.purchaseToken, now)) continue;
     const r = await revokeIapPurchase(db, 'google', v.purchaseToken, now);
     if (env.BILLING_ALERTS_ENABLED === '1' && r.found) {
       const row = await env.DB.prepare(
