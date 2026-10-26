@@ -86,6 +86,8 @@ export type Bindings = {
   GOOGLE_RTDN_SERVICE_ACCOUNT?: string;
   /** T-11-174 secret. 쉼표 구분 프로필 id. 있으면 이 구단주에게만 인앱 상품을 보인다(출시 전 실기기 구매 확인용). 지우면 모두에게 열린다. */
   IAP_TESTERS?: string;
+  /** T-11-512 클럽 멤버십 새 가입을 받는다('1'). 꺼도 이미 가입한 구독의 확인 · 혜택은 그대로다. */
+  MEMBERSHIP_ENABLED?: string;
   /**
    * T-11-454 웹 결제(엑솔라 Pay Station). `1`이고 프로젝트 id · API 키 · 웹훅 비밀 키가 있어야 웹 상점에 결제가 열린다.
    * 프로젝트 id는 var, 두 키는 secret. XSOLLA_SANDBOX=`1`이면 샌드박스 결제창(테스트 카드)을 쓴다.

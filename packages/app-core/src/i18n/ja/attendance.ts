@@ -7,6 +7,7 @@ export const attendance: Translation<AttendanceMsgs> = {
   board: (p) => `スタンプ ${p.filled}/${p.total}`,
   todayLabel: '今日の報酬',
   tomorrowLabel: '明日の報酬',
+  memberBonus: 'メンバーシップ特典で出席報酬が2倍になります',
   grace:
     '毎日出席するとその日のマスの報酬がもらえます。休んだ日があってもスタンプは残り、週に1日までは休んでも連続記録が続きます。',
   btn: '出席する',

@@ -37,6 +37,8 @@ export type OwnerTeamCard = {
   playHint: string | null;
   /** T-11-113 창단 멤버(프리시즌에 은퇴 선수를 남긴 구단주). */
   founder: boolean;
+  /** T-11-512 클럽 멤버십 서포터(구독 중). */
+  member: boolean;
   /** T-11-145 가장 최근에 우승한 컵 회차(닉네임 옆 '제N회 챔피언'). */
   title: string | null;
 };
@@ -50,6 +52,7 @@ export function ownerTeamCard(d: OwnerTeamResponse): OwnerTeamCard {
     perDay: d.matchesPerDay,
     playHint: matchHintOf(d.team, false, d.matchesLeft, d.season, d.current),
     founder: !!d.founder,
+    member: !!d.member,
     title: d.ownerTitle ?? null,
   };
 }

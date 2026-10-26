@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 import { AdEventType, InterstitialAd, TestIds } from 'react-native-google-mobile-ads';
 import { proxy } from 'valtio';
 import { askConsent } from './adConsent';
-import { adFree } from './adFree';
+import { adFree, adsOff } from './adFree';
 import { countInterstitial } from './adUsage';
 
 /** ios·android-retire-interstitial */
@@ -33,7 +33,7 @@ let shownAt = -Infinity;
 
 /** 은퇴할 수 있을 때 부른다. 이미 쓸 수 있는 광고가 있거나 불러오는 중이면 아무것도 하지 않는다. */
 export function prepareRetireAd(now = Date.now()) {
-  if (!UNIT || adFree.owned || loading) return;
+  if (!UNIT || adsOff(adFree) || loading) return;
   if (ready && now - loadedAt < FRESH_MS) return;
   if (now - failedAt < RETRY_MS) return;
   loading = true;
@@ -66,7 +66,7 @@ export function prepareRetireAd(now = Date.now()) {
 export function showRetireAd(now = Date.now()): boolean {
   const ad = ready;
   ready = null;
-  if (!ad || adFree.owned || now - loadedAt >= FRESH_MS || now - shownAt < GAP_MS) return false;
+  if (!ad || adsOff(adFree) || now - loadedAt >= FRESH_MS || now - shownAt < GAP_MS) return false;
   shownAt = now;
   interstitial.showing = true;
   const offs = [

@@ -2233,3 +2233,28 @@ export const cardExchangeClaims = sqliteTable(
     ),
   ],
 );
+
+/**
+ * T-11-512 클럽 멤버십 구독. 스토어 구독 한 줄(Apple originalTransactionId, Google purchaseToken의 SHA-256)마다 한 줄이고
+ * 한 구독은 처음 묶인 구단주를 떠나지 않는다. until은 스토어가 알려 준 혜택 끝(다음 결제일 · 결제 유예 끝)이고, 환불 · 취소는
+ * until을 그 시각으로 당긴다. 구매 · 앱 시작 때 다시 보낸 거래 · 스토어 서버 알림이 같은 줄을 고친다(verified_at이 늦은 쪽만).
+ */
+export const memberships = sqliteTable(
+  'memberships',
+  {
+    store: text('store').notNull(),
+    chainId: text('chain_id').notNull(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    until: text('until').notNull(),
+    autoRenew: integer('auto_renew', { mode: 'boolean' }),
+    test: integer('test', { mode: 'boolean' }).notNull().default(false),
+    verifiedAt: text('verified_at').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.store, table.chainId] }),
+    index('memberships_profile_idx').on(table.profileId, table.until),
+  ],
+);

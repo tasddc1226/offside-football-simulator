@@ -11,6 +11,7 @@ import { revokeIapPurchase, type IapRevoke } from '../db/repos/iap.js';
 import type { Bindings } from '../env.js';
 import { APPLE_ROOT_G3_SHA256, verifyAppleNotification, verifyAppleTransaction } from './apple.js';
 import { listVoidedPurchases } from './google.js';
+import { handleAppleMembershipNotice } from './membership.js';
 
 const log = (job: string, fields: Record<string, unknown>) =>
   console.log(JSON.stringify({ level: 'info', job, ...fields }));
@@ -19,7 +20,7 @@ const log = (job: string, fields: Record<string, unknown>) =>
 const summary = (r: IapRevoke) =>
   r.found ? { already: r.already, item: r.item, qty: r.qty, revoked: r.revoked } : { found: false };
 
-export type AppleNotifyResult = 'invalid' | 'ignored' | 'revoked';
+export type AppleNotifyResult = 'invalid' | 'ignored' | 'revoked' | 'member';
 
 /**
  * App Store 서버 알림 한 건. 서명이 맞지 않으면 invalid(400), 다른 앱이거나 환불이 아니면 ignored, 환불이면 회수.
@@ -81,6 +82,15 @@ export async function handleAppleNotification(
         now,
       );
     }
+  }
+  // T-11-512 멤버십 구독 알림(가입 · 갱신 · 유예 · 만료 · 환불 · 자동 갱신 끄기)은 구독 기간을 고친다.
+  if (note.data.signedTransactionInfo) {
+    const tx = await verifyAppleTransaction(note.data.signedTransactionInfo, appleRoot);
+    if (
+      tx?.bundleId === (env.APPLE_BUNDLE_ID ?? DEFAULT_BUNDLE_ID) &&
+      (await handleAppleMembershipNotice(env, db, tx, note.data.signedRenewalInfo, now, appleRoot))
+    )
+      return 'member';
   }
   if (note.notificationType !== 'REFUND' || !note.data.signedTransactionInfo) {
     log('iap-apple-notify', { type: note.notificationType ?? null, handled: false });

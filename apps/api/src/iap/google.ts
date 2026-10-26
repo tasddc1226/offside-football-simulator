@@ -173,9 +173,41 @@ export async function getGoogleSubscription(saJson: string, token: string, opts:
   );
   if (res.status === 400 || res.status === 404 || res.status === 410) return null;
   if (!res.ok) throw new Error(`Google subscription ${res.status}`);
-  return (await res.json()) as {
-    subscriptionState?: string;
-    testPurchase?: object;
-    lineItems?: { productId?: string; latestSuccessfulOrderId?: string }[];
-  };
+  return (await res.json()) as GoogleSubscription;
+}
+
+/** subscriptionsv2 응답 중 쓰는 칸. */
+export interface GoogleSubscription {
+  subscriptionState?: string;
+  testPurchase?: object;
+  acknowledgementState?: string;
+  externalAccountIdentifiers?: { obfuscatedExternalAccountId?: string };
+  lineItems?: {
+    productId?: string;
+    latestSuccessfulOrderId?: string;
+    expiryTime?: string;
+    autoRenewingPlan?: { autoRenewEnabled?: boolean };
+  }[];
+}
+
+/** T-11-512 구독 승인. 승인하지 않은 구독은 사흘 뒤 Google이 환불한다. */
+export async function acknowledgeGoogleSubscription(
+  saJson: string,
+  productId: string,
+  token: string,
+  opts: GoogleOpts,
+): Promise<void> {
+  const doFetch = opts.fetcher ?? fetch;
+  const res = await doFetch(
+    `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${ANDROID_PACKAGE}/purchases/subscriptions/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(token)}:acknowledge`,
+    {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${await accessToken(saJson, doFetch, opts.nowS)}`,
+        'content-type': 'application/json',
+      },
+      body: '{}',
+    },
+  );
+  if (!res.ok) throw new Error(`Google subscription acknowledge ${res.status}`);
 }

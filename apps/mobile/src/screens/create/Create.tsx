@@ -76,7 +76,7 @@ import {
   toast,
 } from '../../game/host';
 import { claimReward, rewardOffer } from '../../platform/rewarded';
-import { adFree } from '../../platform/adFree';
+import { adFree, adsOff } from '../../platform/adFree';
 import { adRerollLeft, claimAdReroll } from '../../platform/adReroll';
 import { goHome, goRerollShop } from '../../game/nav';
 import { appState, prefs } from '../../store';
@@ -206,7 +206,7 @@ function FlyIn({ index, children }: { index: number; children: ReactNode }) {
 export default function Create() {
   const s = useSnapshot(appState, { sync: true });
   const C = s.C;
-  const owned = useSnapshot(adFree).owned;
+  const owned = adsOff(useSnapshot(adFree));
   const offer = rewardOffer('candidates', owned);
   const rewardLock = useRef(false);
   const [rewardBusy, setRewardBusy] = useState(false);

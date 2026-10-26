@@ -51,6 +51,9 @@ import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
 import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
 import { exchangeText as XC } from '@offside/app-core/i18n/ko/exchange';
 import { CardExchange } from './CardExchange';
+import { Membership } from './Membership';
+import { membershipText as MB } from '@offside/app-core/i18n/ko/membership';
+import { MEMBERSHIP_LIVE } from '@offside/contracts/membership';
 import { teamHomeText as T } from '@offside/app-core/i18n/ko/teamHome';
 import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { openFriends } from '../../platform/inbox';
@@ -152,6 +155,7 @@ export default function Owner() {
   const [admin, setAdmin] = useState(false);
   // T-11-374 카드 과제 창.
   const [exchangeOpen, setExchangeOpen] = useState(false);
+  const [memberOpen, setMemberOpen] = useState(false);
   const linked = !!acct && acct !== 'error' && isMember(acct);
   // T-10-103 비로그인으로 확인됐고 이 기기에 은퇴한 선수도 없으면 빈 '내 선수'를 숨긴다(확인 중·연결 실패면 그대로 둔다).
   const [localCount] = useState(() => loadHOF().length);
@@ -253,6 +257,11 @@ export default function Owner() {
                   {guest ? L.guestName : (nickname ?? L.title)}
                 </Txt>
                 {card?.title ? <TitleBadge title={card.title} /> : null}
+                {card?.member ? (
+                  <View testID="owner-member-badge" accessible accessibilityLabel={MB.badgeLabel}>
+                    <Pill tone="good">{MB.badge}</Pill>
+                  </View>
+                ) : null}
               </Row>
               <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
                 {sub}
@@ -400,6 +409,32 @@ export default function Owner() {
             </Card>
           </Press>
           {exchangeOpen ? <CardExchange onClose={() => setExchangeOpen(false)} /> : null}
+          {MEMBERSHIP_LIVE || __DEV__ ? (
+            <Press
+              testID="membership"
+              accessibilityLabel={MB.entry}
+              onPress={() => setMemberOpen(true)}
+              scale={0.98}
+            >
+              <Card gap={12} testID="owner-membership">
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Txt v="h2">{MB.entry}</Txt>
+                      {card?.member ? <Pill tone="good">{MB.entryActive}</Pill> : null}
+                    </View>
+                    <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                      {MB.entrySub}
+                    </Txt>
+                  </View>
+                  <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+                    ›
+                  </Txt>
+                </View>
+              </Card>
+            </Press>
+          ) : null}
+          {memberOpen ? <Membership onClose={() => setMemberOpen(false)} /> : null}
         </>
       ) : guest ? (
         <>

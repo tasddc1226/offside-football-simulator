@@ -22,6 +22,7 @@ export const billing: typeof ko = {
   productId: 'Product ID',
   testNotice: 'Test notification. Do not count this as revenue.',
   testProduct: 'Store notification connection check',
+  membership: 'Club membership (monthly)',
   removeAds: 'Remove ads',
   items: {
     reroll: 'Reroll tickets',
