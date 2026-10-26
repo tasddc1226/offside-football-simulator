@@ -99,7 +99,7 @@
       {:else}<p class="muted">{R.empty}</p>{/each}
       <p class="muted fs-xs">{R.help}</p>
     </section>
-    <section class="stack retention" style="gap:10px" aria-label={R.nudgeTitle} data-nudge-performance>
+    <section class="stack nudges" style="gap:10px" aria-label={R.nudgeTitle} data-nudge-performance>
       <h3>{R.nudgeTitle}</h3>
       <p class="muted fs-xs">{R.nudgePolicy}</p>
       {#each data.nudges ?? [] as item (`${item.campaign}:${item.stage}`)}
@@ -130,9 +130,9 @@
   {/if}
 </div>
 <style>
-  .retention { border-block: 1px solid var(--line); padding-block: 16px; }
-  .retention summary { display: block; }
-  .retention p { line-height: 1.6; }
+  .retention, .nudges { border-block: 1px solid var(--line); padding-block: 16px; }
+  .retention summary, .nudges summary { display: block; }
+  .retention p, .nudges p { line-height: 1.6; }
   .push-periods { grid-template-columns: repeat(5,minmax(0,1fr)); }
   .push-periods button { padding-inline: 2px; min-height: 44px; }
   .push-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
