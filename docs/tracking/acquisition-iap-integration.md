@@ -168,3 +168,21 @@ CI39087673328이 head7fc5fee8에서 전체 성공한 뒤 main7297a213(#790)이 �
 preflight는 실제 production 환경으로 iOS5493303a029b8c9943bb72166e91ffb14a5f1a6b / Androidbdab3b94672d81e85bba4b2a98ca7a8b825d8a66과 완료 production 빌드의 일치를 요구한다.1.1.2 호환 경로의 별도 지문 검증도 유지한다. 해시를 강제 설정하지 않는다. 운영 JS 공개 플래그의 명시적 true도 검증하며 OTA 게시 단계는 deploy에만 열린다.
 
 로컬 타입·활성화 합성 웹 빌드/번들138.20KB(예산145KB), 관련 회귀 및 독립 리뷰는 통과했다. 원격 preflight·필수 CI·실제 게시 결과는 후속 실행 증거로 확인한다. 실제 기기 OTA 적용·복원·환불·크래시 재전송·GA4 앱 스트림은 이 검사로 입증하지 않는다. 새 유료 구매나 운영 프로필/동의 생성은 테스트하지 않는다.
+
+## 크리에이터 협업 링크 (T-11-515, 2026-10-26)
+
+유료 숏폼 협업 시험(크리에이터 ethio_eafc, 틱톡 영상 1편 + 같은 영상의 유튜브 쇼츠)용 값을 allowlist 끝에 더했다(append-only).
+`utm_source` tiktok · youtube, `utm_medium` partner, `utm_campaign` creator_test, `utm_content` ethio_tiktok · ethio_short.
+운영 배포 전에는 웹 · App Store `ct`가 새 값을 버리므로 크리에이터에게 링크를 보내기 전에 배포한다.
+
+| 쓰는 곳                                             | 링크                                                                                                                                                                            |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 틱톡 프로필 · 캡션(웹, 기기에 맞는 스토어로 이어짐) | https://offside-lab.com/?utm_source=tiktok&utm_medium=partner&utm_campaign=creator_test&utm_content=ethio_tiktok                                                                |
+| 틱톡 · iOS 직접                                     | https://apps.apple.com/app/apple-store/id6817463687?pt=128166757&ct=os1.e.4.6.v&mt=8                                                                                            |
+| 틱톡 · Android 직접                                 | https://play.google.com/store/apps/details?id=com.offsidelab.app&referrer=utm_source%3Dtiktok%26utm_medium%3Dpartner%26utm_campaign%3Dcreator_test%26utm_content%3Dethio_tiktok |
+| 유튜브 쇼츠 설명(웹)                                | https://offside-lab.com/?utm_source=youtube&utm_medium=partner&utm_campaign=creator_test&utm_content=ethio_short                                                                |
+| 유튜브 · iOS 직접                                   | https://apps.apple.com/app/apple-store/id6817463687?pt=128166757&ct=os1.f.4.6.w&mt=8                                                                                            |
+| 유튜브 · Android 직접                               | https://play.google.com/store/apps/details?id=com.offsidelab.app&referrer=utm_source%3Dyoutube%26utm_medium%3Dpartner%26utm_campaign%3Dcreator_test%26utm_content%3Dethio_short |
+
+성과는 App Store Connect 유입 경로(캠페인 `os1.e.4.6.v` · `os1.f.4.6.w`), Play Console 획득 보고서(utm_campaign creator_test),
+GA4(utm_source tiktok · youtube)에서 본다. 비교 기준은 같은 기간 메타 광고 지출 ÷ 설치다.
