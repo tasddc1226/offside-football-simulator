@@ -122,6 +122,7 @@
         {#if att}<span class="muted num">{L.board({ filled: board.filled, total: board.total })}</span>{/if}
         <span data-attendance-next><span class="muted">{board.next.today ? L.todayLabel : L.tomorrowLabel}</span> · <b>{board.next.text}</b></span>
       </div>
+      {#if att?.member}<p class="fs-sm good" data-attendance-member>{L.memberBonus}</p>{/if}
       {#if !att}
         <p class="ha-lead fs-sm">{L.guestLead(boardTotal())}</p>
         <LoginButtons back={{ home: true }} act="attendance-google-login" />

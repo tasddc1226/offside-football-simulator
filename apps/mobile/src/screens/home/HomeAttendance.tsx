@@ -240,6 +240,11 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
               </Txt>
             </Txt>
           </Row>
+          {att?.member ? (
+            <Txt v="sm" tone="good" testID="attendance-member">
+              {L.memberBonus}
+            </Txt>
+          ) : null}
           {!att ? (
             <>
               <Txt v="sm">{L.guestLead(boardTotal())}</Txt>

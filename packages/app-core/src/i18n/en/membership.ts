@@ -1,0 +1,41 @@
+import type { Translation } from '../core';
+import type { MembershipMsgs } from '../ko/membership';
+
+export const membership: Translation<MembershipMsgs> = {
+  title: 'Club membership',
+  lead: 'A monthly subscription that adds to what you get every day.',
+  perkAttend: 'Double check-in rewards',
+  perkAttendSub: 'Every daily check-in gives twice the items.',
+  perkAds: 'No ads',
+  perkAdsSub: 'While subscribed, you get ad rewards without watching ads.',
+  perkBadge: 'Supporter badge',
+  perkBadgeSub: 'A supporter badge appears next to your name on your club and in friend lists.',
+  join: (p) => `Join for ${p.price}/month`,
+  joinBusy: 'Processing…',
+  joined: 'You joined the club membership.',
+  active: 'Your membership is active',
+  renews: (p) => `Next month is charged on ${p.date}.`,
+  ends: (p) => `Auto-renew is off. Benefits last until ${p.date}.`,
+  until: (p) => `Benefits last until ${p.date}.`,
+  expired: 'Your membership has ended. Join again to get the benefits right away.',
+  renewNote:
+    'Renews automatically every month. If you cancel, benefits continue for the rest of the period.',
+  manage: 'Manage subscription',
+  manageHint: 'Cancel or change payment in your store subscription settings.',
+  restore: 'Restore purchase',
+  restoreBusy: 'Checking…',
+  restoreNone: 'No membership to restore.',
+  adOwned: 'If you already bought Remove ads, it stays even after the membership ends.',
+  notOnSale: 'Membership sign-up is closed right now.',
+  webJoin:
+    'You can join in the app. Benefits from a membership joined in the app also apply on the web.',
+  login: 'Only signed-in owners can use the club membership.',
+  loadFail: "Couldn't load the membership.",
+  retry: 'Try again',
+  entry: 'Club membership',
+  entrySub: 'Double check-in rewards · No ads · Supporter badge',
+  entryActive: 'Active',
+  badge: 'Supporter',
+  badgeLabel: 'Club membership supporter',
+  back: 'Back to owner',
+};

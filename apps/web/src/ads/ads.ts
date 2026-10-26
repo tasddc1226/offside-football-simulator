@@ -18,7 +18,34 @@ export const preview = env.DEV && env.VITE_ADSENSE_PREVIEW === '1';
 /** 운영 호스트에서만 실제 광고를 요청한다(AdSense · 애드핏 같이). */
 export const onHost = (): boolean => hostname !== '' && window.location.hostname === hostname;
 export function enabled(): boolean {
-  return /^ca-pub-\d{16}$/.test(client) && onHost();
+  return /^ca-pub-\d{16}$/.test(client) && onHost() && !memberAdFree();
+}
+
+/**
+ * T-11-512 클럽 멤버십 구독 중이면 웹 광고도 끈다. 구단주 화면 · 멤버십 화면이 서버에서 받은 혜택 끝을 이 브라우저에 남긴다
+ * (광고 자리마다 서버를 부르지 않는다).
+ */
+const MEMBER_UNTIL = 'offside_member_until';
+export function rememberMember(until: string | null) {
+  try {
+    if (until) localStorage.setItem(MEMBER_UNTIL, until);
+    else localStorage.removeItem(MEMBER_UNTIL);
+  } catch {
+    // 저장소를 쓸 수 없으면 광고는 그대로 둔다.
+  }
+}
+/** 구단주 화면이 받은 서포터 여부로 맞춘다. 끝 시각을 모르면 하루만 끄고, 다음에 구단주 화면을 열 때 다시 맞춘다. */
+export function syncMember(member: boolean) {
+  if (!member) return rememberMember(null);
+  if (!memberAdFree()) rememberMember(new Date(Date.now() + 86_400_000).toISOString());
+}
+function memberAdFree(): boolean {
+  try {
+    const until = localStorage.getItem(MEMBER_UNTIL);
+    return !!until && until > new Date().toISOString();
+  } catch {
+    return false;
+  }
 }
 /** 광고 단위 ID. AdSense에서 위치별로 만든 단위를 VITE_ADSENSE_SLOTS({"records-bottom":"123…"})로 넘긴다. */
 export const slotOf = (place: AdPlace): string | undefined =>

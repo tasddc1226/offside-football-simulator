@@ -42,7 +42,7 @@ import { toast } from '../../game/host';
 import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
-import { Btn, Card, Txt } from '../../ui';
+import { Btn, Card, Pill, Txt } from '../../ui';
 import { TextField } from '../settings/parts';
 import { MatchRow } from './TeamHistory';
 import { Seg, SegBtn } from './TeamParts';
@@ -297,6 +297,11 @@ function Who({ f, h2h = false }: { f: FriendPerson; h2h?: boolean }) {
           <Txt bold numberOfLines={1} style={{ flexShrink: 1 }}>
             {f.name}
           </Txt>
+          {f.member ? (
+            <View accessible accessibilityLabel={L.supporterLabel}>
+              <Pill tone="good">{L.supporter}</Pill>
+            </View>
+          ) : null}
         </View>
         <Txt tone="muted" v="sm">
           {f.team ? `${f.team.name} · OVR ${f.team.ovr}` : L.noTeamLine}

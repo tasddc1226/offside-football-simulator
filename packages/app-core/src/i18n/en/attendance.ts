@@ -9,6 +9,7 @@ export const attendance: Translation<AttendanceMsgs> = {
   board: (p) => `Stamps ${p.filled}/${p.total}`,
   todayLabel: "Today's reward",
   tomorrowLabel: "Tomorrow's reward",
+  memberBonus: 'Membership doubles your check-in reward',
   grace:
     "Check in every day to get that day's reward. Missed days keep your stamps, and missing one day a week keeps your streak.",
   btn: 'Check in',

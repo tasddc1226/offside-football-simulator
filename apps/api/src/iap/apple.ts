@@ -25,6 +25,10 @@ export interface AppleTransaction {
   quantity?: number;
   revocationDate?: number;
   purchaseDate?: number;
+  /** T-11-512 자동 갱신 구독의 이번 기간 끝. */
+  expiresDate?: number;
+  /** Apple이 이 거래 정보에 서명한 시각(ms). 같은 구독의 정보 중 늦은 것을 고른다. */
+  signedDate?: number;
   price?: number;
   currency?: string;
   storefront?: string;
@@ -56,7 +60,20 @@ export interface AppleNotification {
   notificationType?: string;
   subtype?: string;
   notificationUUID?: string;
-  data?: { bundleId?: string; environment?: string; signedTransactionInfo?: string };
+  data?: {
+    bundleId?: string;
+    environment?: string;
+    signedTransactionInfo?: string;
+    /** T-11-512 자동 갱신 구독의 갱신 정보(JWS). */
+    signedRenewalInfo?: string;
+  };
+}
+
+/** T-11-512 자동 갱신 구독의 갱신 정보(signedRenewalInfo를 푼 것). */
+export interface AppleRenewalInfo {
+  originalTransactionId?: string;
+  autoRenewStatus?: number;
+  gracePeriodExpiresDate?: number;
 }
 
 /**
@@ -64,6 +81,9 @@ export interface AppleNotification {
  */
 export const verifyAppleTransaction = (jws: string, rootSha256 = APPLE_ROOT_G3_SHA256) =>
   verifyAppleJws<AppleTransaction>(jws, rootSha256);
+
+export const verifyAppleRenewal = (jws: string, rootSha256 = APPLE_ROOT_G3_SHA256) =>
+  verifyAppleJws<AppleRenewalInfo>(jws, rootSha256);
 
 /** T-11-215 서버 알림(signedPayload)도 거래와 같은 사슬로 서명된다. */
 export const verifyAppleNotification = (jws: string, rootSha256 = APPLE_ROOT_G3_SHA256) =>
