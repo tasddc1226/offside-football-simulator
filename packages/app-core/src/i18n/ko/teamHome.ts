@@ -62,6 +62,7 @@ const ko = {
   teamOvr: (p: { n: number }) => `팀 OVR ${p.n}`,
   statRecord: '전적',
   statRating: '레이팅',
+  statRp: 'RP',
   statLeft: '남은 경기',
   statSeason: '시즌',
   statTimes: (p: { n: number }) => `${p.n}회`,
@@ -81,6 +82,8 @@ const ko = {
   managerMine: '팀 대표',
   recordLineApp: (p: { record: string; rating: string; tail: string }) =>
     `${p.record} · 레이팅 ${p.rating} · ${p.tail}`,
+  recordLineRpApp: (p: { record: string; rating: string; tail: string }) =>
+    `${p.record} · ${p.rating} RP · ${p.tail}`,
   todayApp: (p: { left: number; per: number }) => `오늘 ${p.left}/${p.per}경기`,
   introApp: (p: { ovr: number }) =>
     `빈 자리는 유스 선수(OVR ${p.ovr})가 채워요. 한 명만 넣어도 경기할 수 있어요.`,

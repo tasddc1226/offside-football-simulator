@@ -2175,3 +2175,222 @@ test('T-11-358 팀 프로필에서 경기 통계를 열면 흐름 요약과 경�
   await expect(stats.locator('[data-stats-total]')).toBeVisible();
   expect(statsAsked).toBe(1);
 });
+
+test('T-11-375 · T-11-510 시즌 2 디비전 — 머리 카드 · 승격 띠 · 받은 경기 알림 · 디비전 탭 랭킹', async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date('2026-10-12T00:00:00.000Z'));
+  await stubOwner(page, true);
+  // T-11-510 디비전은 RP 사다리 시즌(2부터) 팀에만 보인다.
+  const seasons = [...SEASONS, { id: 2, name: '시즌 2' }];
+  const mine = {
+    ...teamFrom({
+      name: '우리 동네 FC',
+      formation: '4-3-3',
+      slots: [
+        '00000000-0000-4000-8000-000000000012',
+        ...Array(8).fill(null),
+        '00000000-0000-4000-8000-000000000011',
+      ],
+    }),
+    season: 2,
+    rating: 1390,
+    division: 2,
+    record: { w: 6, d: 2, l: 3 },
+  };
+  let gets = 0;
+  await page.route(ownerTeamUrl, (route) => {
+    gets++;
+    // 두 번째 GET은 받은 경기로 프로 II에서 세미프로 I로 내려간 뒤(다음 접속).
+    const team = gets >= 2 ? { ...mine, rating: 1360, division: 2 } : mine;
+    return route.fulfill(ownerTeam({ season: 2, current: 2, seasons, team }));
+  });
+  await page.route(`${API}/v1/owner-team/opponents`, (route) =>
+    route.fulfill(
+      ok({
+        items: [
+          {
+            teamId: RIVAL,
+            name: '라이벌 FC',
+            owner: '라이벌 감독',
+            formation: '4-4-2',
+            ovr: 55,
+            rating: 1402,
+            record: { w: 3, d: 1, l: 2 },
+          },
+        ],
+      }),
+    ),
+  );
+  await page.route(`${API}/v1/owner-team/matches`, (route) =>
+    route.fulfill(
+      ok(
+        {
+          match: {
+            id: 'mat_div',
+            home: {
+              teamId: MY_TEAM,
+              name: '우리 동네 FC',
+              owner: '구단주',
+              formation: '4-3-3',
+              ovr: 56,
+              goals: 1,
+              ratingChange: 16,
+            },
+            away: {
+              teamId: RIVAL,
+              name: '라이벌 FC',
+              owner: '라이벌 감독',
+              formation: '4-4-2',
+              ovr: 55,
+              goals: 0,
+              ratingChange: -16,
+            },
+            events: [
+              {
+                minute: 55,
+                side: 'home',
+                scorer: '공개 골잡이',
+                assist: null,
+                scorerId: null,
+                assistId: null,
+              },
+            ],
+            mine: 'home',
+            createdAt: '2026-10-12T00:00:00.000Z',
+          },
+          record: { w: 7, d: 2, l: 3 },
+          rating: 1406,
+          matchesLeft: 9,
+          division: { from: 2, to: 3 },
+        },
+        201,
+      ),
+    ),
+  );
+  const rankQueries: string[] = [];
+  await page.route(`${API}/v1/teams?*`, (route) => {
+    const sp = new URL(route.request().url()).searchParams;
+    rankQueries.push(sp.toString());
+    const d = sp.get('division');
+    const all = [
+      {
+        rank: 1,
+        teamId: RIVAL,
+        name: '라이벌 FC',
+        manager: '라이벌 감독',
+        formation: '4-4-2',
+        ovr: 70,
+        rating: 2100,
+        division: 7,
+        record: { w: 30, d: 2, l: 4 },
+        likes: 3,
+        createdAt: '2026-10-06T00:00:00.000Z',
+      },
+      {
+        rank: 2,
+        teamId: MY_TEAM,
+        name: '우리 동네 FC',
+        manager: '홍감독',
+        formation: '4-3-3',
+        ovr: 56,
+        rating: 1406,
+        division: 3,
+        record: { w: 7, d: 2, l: 3 },
+        likes: 0,
+        createdAt: '2026-10-06T00:00:00.000Z',
+      },
+    ];
+    const items =
+      d === null
+        ? all
+        : all.filter((t) => String(t.division) === d).map((t, i) => ({ ...t, rank: i + 1 }));
+    return route.fulfill(
+      ok({
+        season: 2,
+        seasons,
+        sort: sp.get('sort') ?? 'rating',
+        page: 1,
+        total: items.length,
+        items,
+      }),
+    );
+  });
+  let divisionReads = 0;
+  await page.route(`${API}/v1/teams/divisions**`, (route) => {
+    divisionReads++;
+    return route.fulfill(
+      ok({
+        season: 2,
+        bounds: [1050, 1200, 1400, 1700, 1800, 1900, 2000],
+        guard: 30,
+        counts: [12, 20, 31, 18, 9, 4, 2, 1],
+        total: 97,
+      }),
+    );
+  });
+
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  const card = page.locator('[data-team-division]');
+  await expect(card).toHaveAttribute('data-team-division', '2');
+  await expect(card.locator('[data-team-division-name]')).toHaveText('세미프로 I');
+  await expect(card.locator('[data-team-division-line]')).toHaveText('프로 II까지 10점');
+  await expect(card.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '95');
+  // 이 기기에서 처음 보는 시즌이라 알림은 없다.
+  await expect(page.locator('[data-team-division-notice]')).toHaveCount(0);
+  await expectNoA11yViolations(page);
+  if (process.env.SHOT_DIR)
+    await card.screenshot({ path: `${process.env.SHOT_DIR}/web-team-division.png` });
+
+  await page.locator('[data-team-tab="opponents"]').click();
+  await page.locator('[data-act="team-challenge"]').click();
+  await page.locator('[data-team-live] [data-act="live-skip"]').click();
+  const shift = page.locator('[data-team-result] [data-division-shift]');
+  await expect(shift).toHaveAttribute('data-division-shift', 'up');
+  await expect(shift).toContainText('프로 II');
+  await expectNoA11yViolations(page);
+  if (process.env.SHOT_DIR)
+    await page
+      .locator('[data-team-result]')
+      .screenshot({ path: `${process.env.SHOT_DIR}/web-team-promoted.png` });
+  await page.locator('[data-team-result]').getByRole('button', { name: '편성으로' }).click();
+  await expect(card.locator('[data-team-division-name]')).toHaveText('프로 II');
+  await expect(card.locator('[data-team-division-line]')).toHaveText('프로 I까지 294점');
+
+  // 다음 접속: 받은 경기로 세미프로 I이 됐으면 한 번 알린다.
+  await page.reload();
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await expect(page.locator('[data-team-division-notice]')).toContainText('세미프로 I');
+  if (process.env.SHOT_DIR)
+    await page
+      .locator('.tm-head')
+      .screenshot({ path: `${process.env.SHOT_DIR}/web-team-division-notice.png` });
+
+  // 라이브 랭킹: 레이팅순에만 디비전 탭, 팀 수는 한 번만 받는다.
+  await page.locator('[data-act="team-back"]').click();
+  await page.locator('[data-act="hof"]').click();
+  await page.locator('[data-hof-tab="teams"]').click();
+  const list = page.locator('[data-team-ranking]');
+  const tabs = list.locator('[data-rank-divisions]');
+  await expect(tabs.locator('[data-rank-division="7"]')).toContainText('마스터');
+  await expect(tabs.locator('[data-rank-division="7"]')).toContainText('1');
+  await expect(list.locator('[data-rank-team]')).toHaveCount(2);
+  await tabs.locator('[data-rank-division="3"]').click();
+  await expect.poll(() => rankQueries.at(-1)).toBe('sort=rating&page=1&division=3');
+  await expect(list.locator('[data-rank-team]')).toHaveCount(1);
+  await expect(list.locator('[data-rank-team]').first()).toContainText('우리 동네 FC');
+  await expectNoA11yViolations(page);
+  if (process.env.SHOT_DIR)
+    await list.screenshot({ path: `${process.env.SHOT_DIR}/web-ranking-division.png` });
+  await tabs.locator('[data-rank-division="5"]').click();
+  await expect(list).toContainText('이 디비전에는 아직 팀이 없어요');
+  await list.locator('[data-rank-sort="ovr"]').click();
+  await expect(tabs).toHaveCount(0);
+  await expect.poll(() => rankQueries.at(-1)).toBe('sort=ovr&page=1');
+  await list.locator('[data-rank-sort="rating"]').click();
+  await expect(tabs).toBeVisible();
+  expect(divisionReads).toBe(1);
+});

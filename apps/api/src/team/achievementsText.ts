@@ -97,6 +97,7 @@ const LABEL: Record<string, string> = {
   'team-margin': 'Win by 5 or more goals',
   'team-goals': 'Team goals',
   'team-rating': 'Team rating',
+  'team-rp': 'Team RP',
   'team-likes': 'Likes received',
   // 구단주
   'owner-nickname': 'Set a public nickname',
@@ -127,6 +128,7 @@ const UNIT: Record<string, string> = {
   'team-streak': ' in a row',
   'team-goals': ' goals',
   'team-rating': ' pts',
+  'team-rp': ' RP',
   'team-likes': ' likes',
   'owner-players': ' players',
   'owner-retire-days': ' days',

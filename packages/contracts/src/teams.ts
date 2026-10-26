@@ -25,6 +25,7 @@ import {
 } from './owner-team.js';
 import { IsoUtcSchema } from './primitives.js';
 import { TeamCoachSchema } from './manager.js';
+import { TEAM_DIVISION_TOP } from './team-division.js';
 import { TEAM_LOGO_IMG_MAX, TEAM_LOGO_PATTERNS, TEAM_LOGO_SHAPES } from './team-logo.js';
 
 // T-10-092 구단주 팀(팀 슬롯). 값(포메이션·적합도)은 zod 없는 `./owner-team.ts`에 있다.
@@ -90,6 +91,8 @@ export const ManagerNameSchema = z
 
 /** 팀 시즌: 서비스 시즌 id, 0 = 프리시즌(첫 시즌 개막 전). */
 export const TeamSeasonSchema = z.number().int().min(0);
+/** T-11-375 디비전 index(0 아마추어 ~ 7 마스터). */
+export const TeamDivisionSchema = z.number().int().min(0).max(TEAM_DIVISION_TOP);
 /** `?season=` — 없으면 지금 시즌. */
 export const TeamSeasonQuerySchema = z.coerce.number().int().min(0).max(999).optional();
 /** 고를 수 있는 시즌(0 = 프리시즌). */
@@ -196,6 +199,8 @@ export const OwnerTeamSchema = z.strictObject({
   lines: TeamLinesSchema,
   /** 팀 레이팅(경기 결과로 오르내린다). */
   rating: z.number().int(),
+  /** T-11-375 디비전 index(0 아마추어 ~ 7 마스터, 강등 보호 포함). 배포 전 응답엔 없다. */
+  division: TeamDivisionSchema.optional(),
   record: TeamRecordSchema,
   likes: count,
   views: count,
@@ -394,6 +399,8 @@ export const PlayTeamMatchResponseSchema = z.strictObject({
   match: TeamMatchSchema,
   record: TeamRecordSchema,
   rating: z.number().int(),
+  /** T-11-375 이 경기 전후 내 디비전(같으면 승강 없음). 배포 전 응답엔 없다. */
+  division: z.strictObject({ from: TeamDivisionSchema, to: TeamDivisionSchema }).optional(),
   matchesLeft: z.number().int().min(0),
   /**
    * T-11-387 장면 경기를 시작했으면 고를 장면들. 이때 match는 장면을 뺀 지금까지의 골만 담고, record · rating은 경기 전
@@ -635,6 +642,8 @@ export const TeamRankQuerySchema = z.strictObject({
   season: TeamSeasonQuerySchema,
   sort: TeamRankSortSchema.default('rating'),
   page: z.coerce.number().int().min(1).max(500).default(1),
+  /** T-11-375 디비전 탭(레이팅순만). 그 디비전의 레이팅 구간 팀만 고른다. */
+  division: z.coerce.number().int().min(0).max(TEAM_DIVISION_TOP).optional(),
   /** T-11-441 '내 순위로': 내 팀이 있는 페이지를 돌려주고 me를 붙인다(세션을 보고 엣지 캐시에 담지 않는다). */
   me: z.literal('1').optional(),
 });
@@ -649,6 +658,8 @@ export const TeamRankItemSchema = z.strictObject({
   formation: FormationIdSchema,
   ovr: z.number().int(),
   rating: z.number().int(),
+  /** T-11-375 저장된 디비전(강등 보호 포함). 이전 API 응답에는 없을 수 있다. */
+  division: TeamDivisionSchema.optional(),
   record: TeamRecordSchema,
   likes: count,
   /** 구단 가치 = 선발 11명 카드 기준가 합(만 원, T-11-129). 이전 API 응답에는 없을 수 있다. */
@@ -678,6 +689,18 @@ export const TeamRankResponseSchema = z.strictObject({
     .optional(),
 });
 export type TeamRankResponse = z.infer<typeof TeamRankResponseSchema>;
+
+export const TeamDivisionsQuerySchema = z.strictObject({ season: TeamSeasonQuerySchema });
+
+/** T-11-375 디비전별 팀 수(랭킹에 오른 팀, 레이팅 구간 기준) · 지금 경계. 모두에게 같아 5분 엣지 캐시. */
+export const TeamDivisionsResponseSchema = z.strictObject({
+  season: TeamSeasonSchema,
+  bounds: z.array(z.number().int()).length(TEAM_DIVISION_TOP),
+  guard: z.number().int().min(0),
+  counts: z.array(count).length(TEAM_DIVISION_TOP + 1),
+  total: count,
+});
+export type TeamDivisionsResponse = z.infer<typeof TeamDivisionsResponseSchema>;
 
 // ───────── T-11-028 업적 랭킹(기록실) ─────────
 
@@ -790,6 +813,8 @@ export const TeamProfileSchema = z.strictObject({
   ovr: z.number().int(),
   lines: TeamLinesSchema,
   rating: z.number().int(),
+  /** T-11-375 디비전(강등 보호 포함). 배포 전 응답엔 없다. */
+  division: TeamDivisionSchema.optional(),
   record: TeamRecordSchema,
   goals: z.strictObject({ for: count, against: count }),
   likes: count,

@@ -14,11 +14,14 @@ import { recordText, signedNum } from '@offside/app-core/teamText';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { TeamReport } from './TeamReport';
-import type { ReportLine } from '@offside/contracts/owner-team';
+import { usesRankLadder, type ReportLine } from '@offside/contracts/owner-team';
+import { DivisionEmblem } from '../../components/DivisionEmblem';
+import { divisionShiftView, type DivisionShift } from '@offside/app-core/teamDivision';
 
 export function TeamResult({
   m,
   team,
+  shift = null,
   eventName,
   matchesLeft,
   toTeam,
@@ -30,6 +33,8 @@ export function TeamResult({
 }: {
   m: TeamMatch;
   team: OwnerTeam | null;
+  /** T-11-375 방금 치른 경기의 디비전 전후(기록에서 연 경기는 null). */
+  shift?: DivisionShift | null;
   eventName: (id: string | null, fallback: string) => string;
   matchesLeft: number;
   toTeam: () => void;
@@ -46,6 +51,7 @@ export function TeamResult({
   const linkable = (id: string | null): id is string => !!onPlayer && !friendly && !!id;
   const under = { textDecorationLine: 'underline' } as const;
   const gain = m[m.mine].ratingChange;
+  const moved = friendly ? null : divisionShiftView(shift);
   const won = outcomeOf(m) === '승'; // i18n-ignore 결과 키
   const record = team && !friendly && m.mine === 'home' ? recordText(team.record) : null;
   const soft = { color: c.onPitch, opacity: 0.72 } as const;
@@ -235,7 +241,13 @@ export function TeamResult({
         </View>
       ) : gain != null || record ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {gain != null ? chip(`${L.ratingChange}${signedNum(gain)}`, true, 'rating-change') : null}
+          {gain != null
+            ? chip(
+                `${usesRankLadder(team?.season ?? 0) ? L.ratingChangeRp : L.ratingChange}${signedNum(gain)}`,
+                true,
+                'rating-change',
+              )
+            : null}
           {record ? chip(L.recordChip({ record })) : null}
         </View>
       ) : null}
@@ -269,6 +281,32 @@ export function TeamResult({
               </Txt>
             </View>
           ))}
+        </View>
+      ) : null}
+      {moved ? (
+        <View
+          accessibilityLiveRegion="polite"
+          testID={`division-shift-${moved.up ? 'up' : 'down'}`}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            padding: 12,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: moved.up ? c.accent : c.line,
+            backgroundColor: c.surface2,
+          }}
+        >
+          <DivisionEmblem division={moved.division} size={44} />
+          <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+            <Txt bold tone={moved.up ? 'accent' : 'bad'}>
+              {moved.title}
+            </Txt>
+            <Txt v="sm" tone="muted">
+              {moved.body}
+            </Txt>
+          </View>
         </View>
       ) : null}
       <TeamReport m={m} fix={fix} />

@@ -1,7 +1,8 @@
 // T-11-387 장면 경기 시작 · 장면 판정 · 마감. 랭크 경기 라우트(routes/ownerTeam.ts)와 5분 cron(마감 안 된 경기 정리)이 같이 쓴다.
 import type { PlayTeamMatchResponse, TeamMatchEvent } from '@offside/contracts';
 import { MOMENT_RULES } from '@offside/contracts/team-moments';
-import { matchScore, ratingChange } from '@offside/contracts/owner-team';
+import { matchScore, usesRankLadder } from '@offside/contracts/owner-team';
+import { matchRatingChange } from './rank.js';
 import type { Db } from '../db/client.js';
 import {
   logoOf,
@@ -19,6 +20,9 @@ import {
   type TeamLiveRow,
 } from '../db/repos/teamLive.js';
 import { commitNotifiedEvent } from '../push/events.js';
+import { resolveBalance } from '@offside/contracts/balance';
+import { clampDivision, divisionRules, nextDivision } from '@offside/contracts/team-division';
+import { balanceVersionOf } from '../db/repos/balance.js';
 import type { Lang } from '../lang.js';
 import { anonText } from './anon.js';
 import { refreshAfterChange } from './ownerAchievements.js';
@@ -177,10 +181,13 @@ export async function finalizeLive(
     };
   finishMoments(p.state);
   const result = liveResult(p.state);
-  const [[home], [away]] = await teamsForLive(db, row.homeTeamId, row.awayTeamId);
+  const [[home], [away], [active]] = await teamsForLive(db, row.homeTeamId, row.awayTeamId);
+  const divisions = divisionRules(
+    resolveBalance(active ? balanceVersionOf(active).values : undefined),
+  );
   if (!home || !away) return null;
   const score = matchScore(result.homeGoals, result.awayGoals);
-  const delta = ratingChange(home.rating, away.rating, score, p.met);
+  const delta = matchRatingChange(p.season, home, away, score, p.met);
   const detail = {
     home: { ...p.snap.home, ratingChange: delta.home },
     away: { ...p.snap.away, ratingChange: delta.away },
@@ -212,6 +219,14 @@ export async function finalizeLive(
       l: home.losses + (score === 0 ? 1 : 0),
     },
     rating: home.rating + delta.home,
+    ...(usesRankLadder(p.season)
+      ? {
+          division: {
+            from: clampDivision(home.division),
+            to: nextDivision(home.rating + delta.home, home.division, divisions),
+          },
+        }
+      : {}),
     matchesLeft: p.left,
   };
   try {
@@ -237,6 +252,7 @@ export async function finalizeLive(
           },
           detail,
           now: row.createdAt,
+          divisions,
         }),
         markLiveDone(db, row.id, JSON.stringify(p), JSON.stringify(response), now),
       ],

@@ -7,14 +7,17 @@
   import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
   import { recordText, signedNum } from '@offside/app-core/teamText';
   import TeamLogo from './TeamLogo.svelte';
+  import DivisionEmblem from './DivisionEmblem.svelte';
+  import { divisionShiftView, type DivisionShift } from '@offside/app-core/teamDivision';
   import TeamReport from './TeamReport.svelte';
   import { teamMomentsText as M } from '@offside/app-core/i18n/ko/teamMoments';
   import { momentTitle, pickedLabel } from '@offside/app-core/teamMoments';
-  import type { ReportLine } from '@offside/contracts/owner-team';
+  import { usesRankLadder, type ReportLine } from '@offside/contracts/owner-team';
 
   let {
     m,
     team,
+    shift = null,
     eventName,
     matchesLeft,
     ontoTeam,
@@ -26,6 +29,8 @@
   }: {
     m: TeamMatch;
     team: OwnerTeam | null;
+    /** T-11-375 방금 치른 경기의 내 디비전 전후(기록에서 연 경기는 null). */
+    shift?: DivisionShift | null;
     eventName: (id: string | null, fallback: string) => string;
     matchesLeft: number;
     ontoTeam: () => void;
@@ -40,6 +45,7 @@
   const link = (id: string | null) => (onplayer && !m.friendly && id ? id : null);
 
   const gain = $derived(m[m.mine].ratingChange);
+  const moved = $derived(m.friendly ? null : divisionShiftView(shift));
   const won = $derived(outcome(m) === '승'); // i18n-ignore 결과 키
   const record = $derived(team && m.mine === 'home' && !m.friendly ? recordText(team.record) : null);
   const goalsOf = (side: 'home' | 'away') => m.events.filter((e) => e.side === side);
@@ -101,7 +107,7 @@
     <p class="tm-chips"><span class="tm-chip muted">{L.friendlyNote}</span></p>
   {:else if gain != null || record}
     <p class="tm-chips">
-      {#if gain != null}<span class="tm-chip gain" data-rating-change>{L.ratingChange}<b>{signedNum(gain)}</b></span>{/if}
+      {#if gain != null}<span class="tm-chip gain" data-rating-change>{usesRankLadder(team?.season ?? 0) ? L.ratingChangeRp : L.ratingChange}<b>{signedNum(gain)}</b></span>{/if}
       {#if record}<span class="tm-chip">{L.recordChip({ record })}</span>{/if}
     </p>
   {/if}
@@ -116,6 +122,12 @@
           </li>
         {/each}
       </ul>
+    </div>
+  {/if}
+  {#if moved}
+    <div class="tm-div-shift" class:up={moved.up} role="status" data-division-shift={moved.up ? 'up' : 'down'}>
+      <span class="tm-div-shift-emblem"><DivisionEmblem division={moved.division} size={44} /></span>
+      <div><b>{moved.title}</b><small class="muted">{moved.body}</small></div>
     </div>
   {/if}
   <TeamReport {m} {fix} />
@@ -334,5 +346,43 @@
   .tm-player:focus-visible {
     outline: 2px solid var(--pitch-accent);
     outline-offset: 2px;
+  }
+  .tm-div-shift {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--bad) 8%, var(--surface));
+  }
+  .tm-div-shift.up {
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+    background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  }
+  .tm-div-shift div {
+    display: grid;
+    gap: 2px;
+  }
+  .tm-div-shift b {
+    font-size: 17px;
+  }
+  .tm-div-shift.up .tm-div-shift-emblem {
+    animation: tm-div-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  }
+  @keyframes tm-div-pop {
+    from {
+      transform: scale(0.4) rotate(-12deg);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tm-div-shift.up .tm-div-shift-emblem {
+      animation: none;
+    }
   }
 </style>

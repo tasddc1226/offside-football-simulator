@@ -56,8 +56,10 @@ export const EDGE = {
   hofCount: (sort: string, season?: number, pos?: string, dpos?: string) =>
     `/_count/hof?sort=${sort}${season !== undefined ? `&season=${season}` : ''}${pos ? `&pos=${pos}` : ''}${dpos ? `&dpos=${dpos}` : ''}`,
   /** T-10-092 라이브 랭킹(팀 랭킹). TTL로만 새로 읽는다(원작처럼 5분마다 갱신). */
-  teamRank: (season: number, sort: string, page: number) =>
-    `/v1/teams?season=${season}&sort=${sort}&page=${page}&form=5&logo=1`,
+  teamRank: (season: number, sort: string, page: number, division?: number) =>
+    `/v1/teams?season=${season}&sort=${sort}&page=${page}&form=5&logo=1${division !== undefined ? `&division=${division}` : ''}`,
+  /** T-11-375 디비전별 팀 수 · 경계. TTL로만 새로 읽는다(경기마다 지우지 않는다). */
+  teamDivisions: (season: number) => `/v1/teams/divisions?season=${season}`,
   /** T-11-262 업적 랭킹에 오른 구단주 수(클럽하우스 순위의 분모). 모두에게 같다. */
   achRanked: (season: number) => `/_count/ach-ranked?season=${season}`,
   /** T-11-358 한 팀의 경기 통계(팀 프로필). 언어와 상관없이 한 벌만 담는다. */

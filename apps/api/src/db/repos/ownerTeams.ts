@@ -14,6 +14,7 @@ import { DEFAULT_NATION } from '@offside/contracts/nations';
 import { defaultClubIds, isAmateurClubId } from '@offside/contracts/club-names';
 import { CARD_VALUE_FLOOR } from '@offside/contracts/market-value';
 import { teamSeasonClosed } from '@offside/contracts/service-seasons';
+import type { DivisionRules } from '@offside/contracts/team-division';
 import {
   LEGACY_DETAIL_POSITIONS,
   FACE_ATTRS,
@@ -37,6 +38,7 @@ import {
   notInArray,
   or,
   sql,
+  type SQL,
 } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { readInChunks } from '../chunk.js';
@@ -579,14 +581,23 @@ const rankOrder = (sort: TeamRankSort) =>
   })[sort];
 
 /** 라이브 랭킹 한 페이지 + 랭킹에 오른 팀 수. 팀마다 구단 가치(value)를 함께 센다. */
+/** T-11-375 디비전 탭: 그 디비전의 레이팅 구간 [min, max). 레이팅 인덱스(season, rating)로 고른다. */
+export type RatingRange = { min: number | null; max: number | null };
+
 export async function listTeamRanking(
   db: Db,
   season: number,
   sort: TeamRankSort,
   page: number,
   now: string,
+  range?: RatingRange,
 ) {
   const value = lineupValueSql(!teamSeasonClosed(season, now));
+  const where = and(
+    rankedIn(season),
+    range?.min != null ? gte(ownerTeams.rating, range.min) : undefined,
+    range?.max != null ? lt(ownerTeams.rating, range.max) : undefined,
+  );
   const columns = { team: ownerTeams, value: value.as('lineup_value'), title: profiles.title };
   const order = [...rankOrder(sort), asc(ownerTeams.id)];
   // T-11-268 평점·OVR순은 순서에 구단 가치가 필요 없다 — 페이지 팀을 먼저 고르고 그 팀만 가치를 센다.
@@ -595,7 +606,7 @@ export async function listTeamRanking(
     .select({ id: ownerTeams.id })
     .from(ownerTeams)
     .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
-    .where(rankedIn(season))
+    .where(where)
     .orderBy(...order)
     .limit(TEAM_RANK_PER_PAGE)
     .offset((page - 1) * TEAM_RANK_PER_PAGE)
@@ -606,7 +617,7 @@ export async function listTeamRanking(
           .select(columns)
           .from(ownerTeams)
           .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
-          .where(rankedIn(season))
+          .where(where)
           .orderBy(...order)
           .limit(TEAM_RANK_PER_PAGE)
           .offset((page - 1) * TEAM_RANK_PER_PAGE)
@@ -620,12 +631,35 @@ export async function listTeamRanking(
       .select({ n: sql<number>`count(*)` })
       .from(ownerTeams)
       .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
-      .where(rankedIn(season)),
+      .where(where),
   ]);
   return {
     rows: rows.map((r) => ({ ...r.team, value: Number(r.value), title: r.title })),
     total: Number(total?.n ?? 0),
   };
+}
+
+/**
+ * T-11-375 디비전별 팀 수(랭킹에 오른 팀, 레이팅 구간 기준). 시즌 팀을 (season, rating) 인덱스로 한 번 훑는다 — 모두에게
+ * 같아 엣지에 담는다.
+ */
+export async function countTeamsByDivision(db: Db, season: number, bounds: readonly number[]) {
+  const cols = [
+    sql`sum(${ownerTeams.rating} < ${bounds[0]!})`,
+    ...bounds.map((b, i) =>
+      i + 1 < bounds.length
+        ? sql`sum(${ownerTeams.rating} >= ${b} and ${ownerTeams.rating} < ${bounds[i + 1]!})`
+        : sql`sum(${ownerTeams.rating} >= ${b})`,
+    ),
+  ];
+  const [row] = await db
+    .select({ n: sql<string>`json_array(${sql.join(cols, sql`, `)})` })
+    .from(ownerTeams)
+    .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
+    .where(rankedIn(season));
+  const counts = (row ? (JSON.parse(row.n) as (number | null)[]) : []).map((n) => Number(n ?? 0));
+  while (counts.length < bounds.length + 1) counts.push(0);
+  return counts;
 }
 
 /** 한 페이지의 최근 전적을 한 쿼리로 읽는다. 인덱스로 팀마다 홈·원정 각 5개만 읽고 합친다. */
@@ -802,9 +836,28 @@ export type MatchDetail = {
 };
 
 /** 경기 한 판이 팀 행에 더하는 것(득실·레이팅 변화). */
-type Side = { teamId: string; filled: number; ovr: number; goals: number; rating: number };
+type Side = {
+  teamId: string;
+  filled: number;
+  ovr: number;
+  goals: number;
+  rating: number;
+};
 
-/** 경기 한 판을 남기고 두 팀 전적·레이팅·연승·득실(+ 다시 계산한 선발 수·OVR)을 한 batch로 고친다. 행 쓰기 3번. */
+/**
+ * T-11-375 경기 뒤 디비전 SQL — contracts `nextDivision`과 같은 식: max(구간, min(지금 디비전, 구간(레이팅 + guard))).
+ * UPDATE의 SET 식은 모두 바뀌기 전 행을 읽으므로 `rating + delta`가 이 경기 뒤 레이팅이다.
+ */
+export function divisionSql(rating: SQL, rules: DivisionRules): SQL {
+  const band = (offset: number) =>
+    sql.join(
+      rules.bounds.map((b) => sql`(${rating} >= ${b - offset})`),
+      sql` + `,
+    );
+  return sql`max(${band(0)}, min(${ownerTeams.division}, ${band(rules.guard)}))`;
+}
+
+/** 경기 한 판을 남기고 두 팀 전적·레이팅·디비전·연승·득실(+ 다시 계산한 선발 수·OVR)을 한 batch로 고친다. 행 쓰기 3번. */
 export function recordMatchStatements(
   db: Db,
   input: {
@@ -814,6 +867,8 @@ export function recordMatchStatements(
     away: Side;
     detail: MatchDetail;
     now: string;
+    /** T-11-375 디비전 경계 · 강등 보호(활성 밸런스). */
+    divisions: DivisionRules;
   },
 ) {
   const bump = (me: Side, them: Side) => {
@@ -829,6 +884,7 @@ export function recordMatchStatements(
         goalsAgainst: sql`${ownerTeams.goalsAgainst} + ${them.goals}`,
         // 레이팅 변화는 읽은 값으로 셈한 차이만 더한다(동시에 치른 경기가 서로 덮어쓰지 않게).
         rating: sql`${ownerTeams.rating} + ${me.rating}`,
+        division: divisionSql(sql`${ownerTeams.rating} + ${me.rating}`, input.divisions),
         streak: won ? sql`${ownerTeams.streak} + 1` : 0,
         bestStreak: won
           ? sql`max(${ownerTeams.bestStreak}, ${ownerTeams.streak} + 1)`

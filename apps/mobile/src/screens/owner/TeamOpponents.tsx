@@ -1,10 +1,11 @@
 // 상대 고르기(웹 team/Team.svelte 의 view === 'opponents') — 내 팀 OVR과 비슷한 다른 구단주의 팀에 도전한다.
-// 경기할 수 없으면(hint) 목록 대신 이유를 보여 준다.
+// 경기할 수 없으면(hint) 목록 대신 이유를 보여 준다. T-11-510 시즌 2(ladder)는 서버가 고른 상대 한 팀과
+// '다른 상대 찾기'(경기마다 3번)를 보여 준다.
 import { FONT } from '@offside/app-core/design-tokens';
 import { View } from 'react-native';
 import { TeamLogo } from '../../components/TeamLogo';
 import { TitleBadge } from '../../components/TitleBadge';
-import { TEAM_REPEAT_WINDOW_DAYS } from '@offside/contracts/owner-team';
+import { RANK_MATCH_REPICKS, TEAM_REPEAT_WINDOW_DAYS } from '@offside/contracts/owner-team';
 import type { TeamOpponent } from '@offside/app-core/api/team';
 import { ratingGap, recordText } from '@offside/app-core/teamText';
 import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
@@ -27,6 +28,9 @@ export function TeamOpponents({
   saveAndFind,
   saving = false,
   canSave = true,
+  ladder = false,
+  repicksLeft = 0,
+  repick,
 }: {
   rating: number;
   matchesLeft: number;
@@ -42,6 +46,10 @@ export function TeamOpponents({
   saveAndFind?: (() => void) | undefined;
   saving?: boolean;
   canSave?: boolean;
+  ladder?: boolean;
+  /** 이번 경기에서 남은 '다른 상대 찾기' 횟수. */
+  repicksLeft?: number;
+  repick?: (() => void) | undefined;
 }) {
   const c = useColors();
   return (
@@ -49,19 +57,23 @@ export function TeamOpponents({
       <View style={{ gap: 4 }}>
         <Txt v="eyebrow">Match</Txt>
         <Txt v="h1" accessibilityRole="header">
-          {L.oppTitle}
+          {ladder ? L.matchTitle : L.oppTitle}
         </Txt>
         {hint ? null : (
           <Txt tone="muted" v="sm">
-            {L.oppNear({ rating, left: matchesLeft, per: perDay })}
+            {ladder
+              ? L.matchNear({ rp: rating, left: matchesLeft, per: perDay })
+              : L.oppNear({ rating, left: matchesLeft, per: perDay })}
           </Txt>
         )}
         <Txt tone="muted" v="xs">
-          {L.oppRuleApp({ days: TEAM_REPEAT_WINDOW_DAYS })}
+          {ladder
+            ? L.matchRule({ n: RANK_MATCH_REPICKS })
+            : L.oppRuleApp({ days: TEAM_REPEAT_WINDOW_DAYS })}
         </Txt>
         {!hint && opponents.length ? (
           <Txt tone="muted" v="xs" testID="opponent-gap-note">
-            {L.oppGapNote}
+            {ladder ? L.matchGapNote : L.oppGapNote}
           </Txt>
         ) : null}
       </View>
@@ -91,6 +103,7 @@ export function TeamOpponents({
           {opponents.length ? (
             opponents.map((o) => {
               const gap = ratingGap(rating, o.rating);
+              const label = ladder ? L.oppRp : L.oppRating;
               return (
                 <View
                   key={o.teamId}
@@ -119,11 +132,11 @@ export function TeamOpponents({
                   </View>
                   <View
                     accessible
-                    accessibilityLabel={`${L.oppRating} ${o.rating} · ${gap.aria} · ${L.oppOvr({ n: o.ovr })}`}
+                    accessibilityLabel={`${label} ${o.rating} · ${gap.aria} · ${L.oppOvr({ n: o.ovr })}`}
                     style={{ alignItems: 'center', minWidth: rem(1.375) * 2.2 }}
                   >
                     <Txt tone="muted" style={{ fontSize: 11, lineHeight: 13 }}>
-                      {L.oppRating}
+                      {label}
                     </Txt>
                     <Txt
                       tone="accent"
@@ -151,11 +164,15 @@ export function TeamOpponents({
                     kind="primary"
                     sm
                     testID="team-challenge"
-                    accessibilityLabel={L.challengeAria({ name: o.name })}
+                    accessibilityLabel={
+                      ladder
+                        ? L.matchStartAria({ name: o.name })
+                        : L.challengeAria({ name: o.name })
+                    }
                     disabled={playing || matchesLeft === 0}
                     onPress={() => challenge(o)}
                   >
-                    {L.challenge}
+                    {ladder ? L.matchStart : L.challenge}
                   </Btn>
                 </View>
               );
@@ -163,9 +180,21 @@ export function TeamOpponents({
           ) : (
             <Txt tone="muted">{L.noOpponents}</Txt>
           )}
-          <Btn sm style={{ alignSelf: 'flex-start' }} onPress={reload} disabled={playing}>
-            {L.moreOpponents}
-          </Btn>
+          {ladder ? (
+            <Btn
+              sm
+              style={{ alignSelf: 'flex-start' }}
+              onPress={repick ?? reload}
+              disabled={playing || repicksLeft <= 0}
+              testID="team-repick"
+            >
+              {L.matchRepick({ left: repicksLeft, max: RANK_MATCH_REPICKS })}
+            </Btn>
+          ) : (
+            <Btn sm style={{ alignSelf: 'flex-start' }} onPress={reload} disabled={playing}>
+              {L.moreOpponents}
+            </Btn>
+          )}
         </LoadState>
       )}
     </Card>

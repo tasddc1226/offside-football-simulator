@@ -24,6 +24,13 @@ test('pr.md 첫 줄은 제목, 나머지는 본문', () => {
 
 test('CI 고치기는 @dev가 연 브랜치에만 올린다', () => {
   assert.equal(isAgentBranch('agent-dev/38925860138'), true);
-  for (const b of ['main', 'agent-dev/', 'agent-dev/1/../main', 'feature/agent-dev/1', '', undefined])
+  for (const b of [
+    'main',
+    'agent-dev/',
+    'agent-dev/1/../main',
+    'feature/agent-dev/1',
+    '',
+    undefined,
+  ])
     assert.equal(isAgentBranch(b), false);
 });

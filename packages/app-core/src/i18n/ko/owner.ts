@@ -55,6 +55,7 @@ const ko = {
   teamOvr: (p: { ovr: number }) => `팀 OVR ${p.ovr}`,
   statRecord: '전적',
   statRating: '레이팅',
+  statRp: 'RP',
   statToday: '오늘 경기',
   play: '경기하기',
   teamFailed: '시즌마다 은퇴한 선수로 팀을 꾸려 겨루고, 라이브 랭킹과 구단 업적을 채워요.',
