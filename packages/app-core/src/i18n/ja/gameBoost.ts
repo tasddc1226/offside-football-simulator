@@ -61,4 +61,8 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   ticketBusy: '強化券を使っています…',
   ticketFail: '強化券を使えませんでした。',
   lineExtraTicket: '今シーズンの挑戦は済んでいます。強化券なら回数の上限なしでさらに挑戦できます。',
+  sureCost: '確定強化',
+  sureButton: (p) => `クラブ資金で確定強化（${p.price}・100%）`,
+  sureNote:
+    'クラブ資金を払うと確率なしで1段階上がります。選手ごとに1回受けられ、選手資金での挑戦はそのまま残ります。',
 };

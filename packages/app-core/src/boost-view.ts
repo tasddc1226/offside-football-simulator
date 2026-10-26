@@ -9,6 +9,7 @@ import {
   boostExtraLeft,
   boostState,
   boostStatus,
+  boostSureOpen,
   boostTicketOpen,
   tryBoost,
   type BoostPay,
@@ -45,6 +46,8 @@ export interface BoostView {
   free: boolean;
   /** T-11-184 강화권으로 지금 시도할 수 있는지 — 이번 시즌의 한 번을 썼거나 자금이 모자랄 때(추가 시도 상한 없음). */
   ticketOpen: boolean;
+  /** T-11-513 구단 자금 확정 강화를 지금 받을 수 있는지(강화할 수 있는 나이 · 단계이고 이번 시즌에 받지 않았으면). */
+  sureOpen: boolean;
   note: string;
   /** 최근 시도(새것부터 4개). */
   history: string[];
@@ -113,6 +116,7 @@ export function boostView(
       : {}),
     free,
     ticketOpen,
+    sureOpen: boostSureOpen(s),
     ...(free && adOffer
       ? {
           adButton: (adOffer === 'free' ? L.adButtonFree : L.adButton)({ chance }),
@@ -131,15 +135,17 @@ export function boostView(
       .slice(-4)
       .reverse()
       .map((x) => {
-        const cost = x.ad
-          ? L.adCost
-          : x.club
-            ? L.clubCost
-            : x.tk
-              ? L.ticketCost
-              : L2.won({ v: fmtMoney(x.c) });
-        // T-11-157 추가 시도는 표시를 붙인다.
-        const pay = x.x ? L.extraCost({ cost }) : cost;
+        const cost = x.sure
+          ? L.sureCost
+          : x.ad
+            ? L.adCost
+            : x.club
+              ? L.clubCost
+              : x.tk
+                ? L.ticketCost
+                : L2.won({ v: fmtMoney(x.c) });
+        // T-11-157 추가 시도는 표시를 붙인다(T-11-513 확정 강화는 시즌의 한 번과 따로라 붙이지 않는다).
+        const pay = x.x && !x.sure ? L.extraCost({ cost }) : cost;
         const p = { y: x.y, lv: x.lv + 1, pct: x.p, cost: pay };
         return x.ok ? L.historyOk(p) : L.historyFail(p);
       }),

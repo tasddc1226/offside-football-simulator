@@ -71,6 +71,11 @@ const ko = {
   ticketFail: '강화권을 쓰지 못했어요.',
   // T-11-184 강화권은 추가 시도 상한이 없다.
   lineExtraTicket: '이번 시즌 시도는 했어요. 강화권으로는 횟수 상한 없이 더 시도할 수 있어요.',
+  // T-11-513 구단 자금 확정 강화. price는 fundsText로 쓴 금액.
+  sureCost: '확정 강화',
+  sureButton: (p: { price: string }) => `구단 자금으로 확정 강화 (${p.price} · 100%)`,
+  sureNote:
+    '구단 자금을 내면 확률 없이 한 단계 올라요. 선수마다 한 번 받을 수 있고, 선수 자금으로 하는 시도는 그대로 남아요.',
 };
 
 export type GameBoostMsgs = typeof ko;

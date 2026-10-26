@@ -13,6 +13,9 @@ const ko = {
   // T-11-174 잠재력 강화권으로 시도했다.
   successTicket: (p: { lv: number }) => `강화권으로 잠재력 강화 성공. ${p.lv}단계가 되었습니다.`,
   failTicket: '강화권으로 잠재력 강화 실패. 다음 시도 확률이 오릅니다.',
+  // T-11-513 구단 자금 확정 강화.
+  successSure: (p: { lv: number }) =>
+    `구단 자금으로 확정 강화를 했습니다. 잠재력이 ${p.lv}단계가 되었습니다.`,
 };
 export type GBoostMsgs = typeof ko;
 export const gBoostText = ns('gBoost', ko);
