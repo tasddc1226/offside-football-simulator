@@ -15,9 +15,20 @@ export const CAMPAIGNS: Record<string, readonly string[]> = {
     'facebook',
     // T-11-423 아마축구(아마추어 축구팀 운영 서비스) 상호 홈 팝업 협업.
     'amachuggu',
+    // T-11-515 크리에이터 협업 숏폼(틱톡 · 유튜브 쇼츠).
+    'tiktok',
+    'youtube',
   ],
   utm_medium: ['social', 'community', 'paid', 'partner'],
-  utm_campaign: ['launch', 'retirement_share', 'season1_launch', 'global_test', 'amachuggu_collab'],
+  utm_campaign: [
+    'launch',
+    'retirement_share',
+    'season1_launch',
+    'global_test',
+    'amachuggu_collab',
+    // T-11-515 크리에이터 협업 시험(유료 숏폼 1건).
+    'creator_test',
+  ],
   utm_content: [
     'career',
     'retirement',
@@ -54,6 +65,9 @@ export const CAMPAIGNS: Record<string, readonly string[]> = {
     'us_reels',
     // T-11-483 한국어판 릴스 영상 광고(한국 대상).
     'kr_reels',
+    // T-11-515 크리에이터 ethio_eafc 숏폼: 틱톡 영상 · 같은 영상의 유튜브 쇼츠.
+    'ethio_tiktok',
+    'ethio_short',
   ],
 };
 export function campaignQuery(href: string): string {
