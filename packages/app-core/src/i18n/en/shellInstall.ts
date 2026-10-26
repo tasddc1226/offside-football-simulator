@@ -17,6 +17,8 @@ export const shellInstall: Translation<ShellInstallMsgs> = {
   conversionPlay: 'Get it on Google Play',
   conversionStore: 'Get it on the App Store',
   conversionDismiss: 'Hide app notices for 7 days',
+  /** T-11-506 휴대폰 웹 홈 맨 위 한 줄 띠의 스토어 버튼. */
+  stripGet: 'Get the app',
 
   inappHint:
     "You're in an in-app browser (KakaoTalk, Instagram or similar). Your records are only saved inside this app. Open it in your regular browser for safer sign-in and saving.",
