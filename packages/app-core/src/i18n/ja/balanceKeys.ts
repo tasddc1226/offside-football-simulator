@@ -37,6 +37,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   marketFeeRate: '取引手数料率',
   marketPriceMin: '最低販売価格(基準価格の倍率)',
   marketPriceMax: '最高販売価格(基準価格の倍率)',
+  cupAtkK: 'カップの戦力差の反映',
   leagueHomeAdv: 'リーグのホームアドバンテージ',
   pastSalaryBudget: '過去シーズン選手の年俸予算',
   pastSalaryBudgetStep: 'シーズンごとの年俸予算増加',

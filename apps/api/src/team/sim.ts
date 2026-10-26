@@ -139,8 +139,8 @@ export const SIM = {
 } as const;
 
 /**
- * T-11-510 시즌 2부터 랭크 경기만 쓰는 공격 계수 — 전력 차이 10이면 건 쪽 승률이 약 66%에서 75%로 오른다. 컵 · 리그 · 친선은
- * SIM.atkK 그대로다.
+ * T-11-510 시즌 2부터 랭크 경기만 쓰는 공격 계수 — 전력 차이 10이면 건 쪽 승률이 약 66%에서 75%로 오른다. 리그 · 친선은
+ * SIM.atkK 그대로고, 컵은 밸런스 설정 cupAtkK(T-11-409)를 쓴다.
  */
 export const RANKED_ATK_K = 0.45;
 export const rankedAtkK = (season: number) => (usesRankLadder(season) ? RANKED_ATK_K : SIM.atkK);
@@ -340,7 +340,7 @@ export function matchOdds(
   home: readonly LineupSlot[],
   away: readonly LineupSlot[],
   season: number,
-  opts: { neutral?: boolean; coaches?: MatchCoaches } = {},
+  opts: Pick<MatchOpts, 'neutral' | 'coaches' | 'atkK'> = {},
 ) {
   const { homeXg, awayXg } = matchSetup(home, away, season, opts);
   return { ...oddsOfXg(homeXg, awayXg), homeXg, awayXg };

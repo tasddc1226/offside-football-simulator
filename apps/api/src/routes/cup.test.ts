@@ -9,6 +9,7 @@ import { planCup, planNextCup } from '@offside/contracts/cup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import {
+  balanceVersions,
   cards,
   careers,
   cupEntries,
@@ -364,6 +365,52 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
     expect(played.every((m) => m.played)).toBe(true);
     expect(played[0]!.odds).toEqual({ home: 10, draw: 20, away: 70 });
     expect(played[1]!.odds).toEqual(odds);
+  });
+
+  it('T-11-409 컵 공격 계수는 밸런스 설정을 따르고, 경기 전 예상 · 내 경기 칸이 같은 값을 쓴다', async () => {
+    const a = await owner(11);
+    const b = await owner(8);
+    await enter(a.cookie);
+    await enter(b.cookie);
+    const [ea, eb] = await Promise.all([me(a.cookie), me(b.cookie)]);
+    await ctx.db.update(cupEntries).set({ grp: 1 }).where(eq(cupEntries.cupId, CUP.id));
+    await ctx.db
+      .insert(cupState)
+      .values({ cupId: CUP.id, seed: 'test', groups: 1, drawnAt: CUP.drawAt });
+    const at = CUP.rounds[0]!;
+    await ctx.db.insert(cupMatches).values({
+      id: 'k-1',
+      cupId: CUP.id,
+      round: 'g1',
+      grp: 1,
+      slot: 0,
+      at,
+      homeTeamId: eb.entry!.teamId,
+      awayTeamId: ea.entry!.teamId,
+    });
+    const lock = new Date(Date.parse(at) - 60 * 60_000).toISOString();
+    const odds = async () => {
+      await ctx.db.update(cupMatches).set({ oddsJson: null }).where(eq(cupMatches.id, 'k-1'));
+      const live = (await me(b.cookie)).nextOdds!;
+      await runCup(ctx.db, lock, [CUP]);
+      const stored = CupRes.parse(await (await call('GET', `/v1/cups/${CUP.id}`)).json()).data
+        .matches[0]!.odds!;
+      expect(live).toMatchObject({ win: stored.home, draw: stored.draw, loss: stored.away });
+      return stored;
+    };
+    // 기본값 0.45가 2회 컵까지의 0.3보다 강한 팀(원정) 승률을 높인다.
+    const strong = await odds();
+    await ctx.db.insert(balanceVersions).values({
+      status: 'active',
+      valuesJson: JSON.stringify({ cupAtkK: 0.3 }),
+      createdBy: 'test',
+      createdAt: lock,
+      updatedAt: lock,
+      activatedAt: lock,
+    });
+    const old = await odds();
+    expect(strong.away).toBeGreaterThan(old.away);
+    expect(strong.home).toBeLessThan(old.home);
   });
 
   it('선발 7명이면 신청할 수 없다', async () => {
