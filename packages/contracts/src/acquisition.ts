@@ -45,6 +45,9 @@ export const CAMPAIGNS: Record<string, readonly string[]> = {
     // T-11-423 아마축구 바텀시트 팝업 소재 A(선수 뽑기)·B(평행세계).
     'bs_a',
     'bs_b',
+    // 10-23 아마축구에 보낸 소재별 Play 링크의 utm_content.
+    'home_popup_a',
+    'home_popup_b',
     // T-11-469 메타 릴스 세로 영상 광고(국가별 한 편, 일본은 일본어판 · 영국 · 미국은 영어판).
     'jp_reels',
     'uk_reels',
