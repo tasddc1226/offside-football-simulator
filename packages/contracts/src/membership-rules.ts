@@ -4,10 +4,10 @@
 /** 앱 스토어(구독 그룹) · Play(구독 + 기본 요금제)에 같은 ID로 만드는 자동 갱신 구독. */
 export const MEMBERSHIP_PRODUCT_ID = 'com.offsidelab.app.club_monthly';
 /**
- * 화면에 멤버십 입구를 보이는지. 스토어 구독 심사가 끝나 출시할 때 true로 바꾼다(그 전에는 개발 빌드에서만 보인다). 판매
+ * 화면에 멤버십 입구를 보이는지. T-11-516에서 켰다(false면 개발 빌드에서만 보인다). 판매
  * 자체는 서버 MEMBERSHIP_ENABLED가 정한다.
  */
-export const MEMBERSHIP_LIVE = false;
+export const MEMBERSHIP_LIVE = true;
 /** 한국 기준가(원/월). 실제 결제 금액은 스토어가 나라에 맞춰 보인다. */
 export const MEMBERSHIP_PRICE_KRW = 4900;
 /** 구독 중 출석 보상 배수. */

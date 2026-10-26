@@ -9,10 +9,10 @@ import { activeSeason, SERVICE_SEASONS } from './service-seasons.js';
 /** 앱 스토어 · Play에 같은 ID로 만드는 소모성 상품. 같은 시즌에 두 번 사면 다음 시즌 패스가 된다. */
 export const SEASON_PASS_PRODUCT_ID = 'com.offsidelab.app.season_pass';
 /**
- * 화면에 패스 입구를 보이는지. 스토어 상품 심사가 끝나 출시할 때 true로 바꾼다(그 전에는 개발 빌드에서만 보인다). 판매 자체는
+ * 화면에 패스 입구를 보이는지. T-11-516에서 켰다(false면 개발 빌드에서만 보인다). 판매 자체는
  * 서버 SEASON_PASS_ENABLED가 정한다.
  */
-export const SEASON_PASS_LIVE = false;
+export const SEASON_PASS_LIVE = true;
 /** 한국 기준가(원). 실제 결제 금액은 스토어가 나라에 맞춰 보인다. */
 export const SEASON_PASS_PRICE_KRW = 9900;
 
