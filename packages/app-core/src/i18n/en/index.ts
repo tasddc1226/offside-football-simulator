@@ -40,6 +40,7 @@ import { game } from './game';
 import { gameActions } from './gameActions';
 import { gameAttr } from './gameAttr';
 import { gameBoost } from './gameBoost';
+import { gameCare } from './gameCare';
 import { gameCareer } from './gameCareer';
 import { gameLeague } from './gameLeague';
 import { gameMySeason } from './gameMySeason';
@@ -87,6 +88,7 @@ import { reveal } from './reveal';
 import { salary } from './salary';
 import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
+import { seasonPass } from './seasonPass';
 import { seasonRecap } from './seasonRecap';
 import { serverStatus } from './serverStatus';
 import { settings } from './settings';
@@ -157,6 +159,7 @@ export const en = {
   gameActions,
   gameAttr,
   gameBoost,
+  gameCare,
   gameCareer,
   gameLeague,
   gameMySeason,
@@ -204,6 +207,7 @@ export const en = {
   salary,
   scout,
   seasonGauge,
+  seasonPass,
   seasonRecap,
   serverStatus,
   settings,

@@ -32,7 +32,10 @@ import { appState } from '../../store';
 import { adFree, adsOff } from '../../platform/adFree';
 import { claimReward, rewardOffer } from '../../platform/rewarded';
 import { openPeek, openPeekWithClub, peekAvailable, potPeek } from '../../platform/rewardedPeek';
-import { useClubReward } from '../../platform/clubShop';
+import { useClubReward, useSureShop } from '../../platform/clubShop';
+import { careView, doCare } from '@offside/app-core/care-view';
+import { gameCareText as CL } from '@offside/app-core/i18n/ko/gameCare';
+import type { CareTier } from '@offside/game/care';
 import { iapItems, useIapItems } from '../../platform/iapItems';
 import { payWithTicket } from '@offside/app-core/club-reward';
 import { iapText as IL } from '@offside/app-core/i18n/ko/iap';
@@ -97,6 +100,8 @@ function BoostCard({ s }: { s: GameState }) {
     club: !!club.offer,
     ticket: tickets > 0,
   });
+  // T-11-513 구단 자금 확정 강화. 이 선수가 이번 시즌에 받을 수 있을 때만 값을 묻는다.
+  const sure = useSureShop(v.sureOpen);
   // s는 읽기 전용 스냅샷이라 스토어의 세이브를 고친다. 결과를 먼저 저장하고 연출을 연다 — 연출 중에 앱을 꺼도 결과는 그대로다.
   const run = (pay: BoostPay) => {
     const out = doBoost(appState.G!, pay);
@@ -131,6 +136,17 @@ function BoostCard({ s }: { s: GameState }) {
     }
   };
   // 서버가 한 장을 뺀 뒤에만 강화한다.
+  const onSureBoost = async () => {
+    if (adBusy) return;
+    setAdBusy(true);
+    setAdMessage('');
+    try {
+      const message = await sure.pay(() => run('sure'));
+      if (message !== null) setAdMessage(message);
+    } finally {
+      setAdBusy(false);
+    }
+  };
   const onTicketBoost = async () => {
     if (adBusy) return;
     setAdBusy(true);
@@ -243,6 +259,21 @@ function BoostCard({ s }: { s: GameState }) {
           <IapPacks item="boost" note={IL.boostNote({ chance: v.chance })} login={false} />
         </View>
       ) : null}
+      {sure.offer ? (
+        <View style={{ marginVertical: 8, gap: 6 }} testID="boost-sure">
+          {!v.ticketOpen && adMessage ? (
+            <Txt v="sm" tone="muted">
+              {adMessage}
+            </Txt>
+          ) : null}
+          <Btn disabled={adBusy} testID="boost-sure-btn" onPress={() => void onSureBoost()}>
+            {B.sureButton({ price: fundsText(sure.offer.price) })}
+          </Btn>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
+            {B.sureNote}
+          </Txt>
+        </View>
+      ) : null}
       <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 4 }}>
         {v.note}
       </Txt>
@@ -251,6 +282,76 @@ function BoostCard({ s }: { s: GameState }) {
           {`· ${h}`}
         </Txt>
       ))}
+    </Card>
+  );
+}
+
+/** T-11-513 몸 관리: 정점을 넘긴 시즌에 선수 자금으로 시즌 끝 하락을 줄인다. 고른 단계를 한 번 더 눌러 받는다. */
+function CareCard({ s }: { s: GameState }) {
+  const c = useColors();
+  const [arm, setArm] = useState<CareTier | null>(null);
+  const [msg, setMsg] = useState('');
+  const v = careView(s);
+  if (!v) return null;
+  const onCare = (t: CareTier) => {
+    if (arm !== t) return setArm(t);
+    setArm(null);
+    // s는 읽기 전용 스냅샷이라 스토어의 세이브를 고친다.
+    const m = doCare(appState.G!, t);
+    if (!m) return;
+    save();
+    setMsg(m);
+  };
+  return (
+    <Card gap={0} testID="care">
+      <Txt v="eyebrow">Conditioning</Txt>
+      <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
+        {CL.title}
+      </Txt>
+      <Txt v="sm" testID="care-line">
+        {v.line}
+      </Txt>
+      {v.options.length ? (
+        <View style={{ marginVertical: 8, gap: 8 }}>
+          {v.options.map((o) => (
+            <View key={o.t} style={{ gap: 6 }}>
+              {arm === o.t ? (
+                <Txt v="sm" style={{ color: c.bad }} testID="care-confirm">
+                  {o.confirm}
+                </Txt>
+              ) : null}
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Btn
+                  kind={arm === o.t ? 'tonal' : undefined}
+                  style={{ flex: 1 }}
+                  testID={`care-${o.t}`}
+                  disabled={!o.affordable}
+                  accessibilityLabel={
+                    arm === o.t ? undefined : `${o.name} · ${o.effect} · ${o.cost}`
+                  }
+                  badge={arm === o.t ? undefined : o.affordable ? o.cost : CL.short}
+                  onPress={() => onCare(o.t)}
+                >
+                  {arm === o.t ? CL.confirmBtn : `${o.name} · ${o.effect}`}
+                </Btn>
+                {arm === o.t ? (
+                  <Btn testID="care-cancel" onPress={() => setArm(null)}>
+                    {CL.cancel}
+                  </Btn>
+                ) : null}
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : null}
+      {msg ? (
+        <Txt v="sm" tone="muted">
+          {msg}
+        </Txt>
+      ) : null}
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 4 }}>
+        {v.note}
+      </Txt>
     </Card>
   );
 }
@@ -371,6 +472,7 @@ export function PlayerTab({ s }: { s: GameState }) {
       </Card>
 
       {boostHidden(s) ? null : <BoostCard s={s} />}
+      <CareCard s={s} />
 
       <Card gap={0}>
         {/* 영어 나라 이름은 웹에서 첫 화면 번들 밖에서 불러왔지만 앱은 한 번들이라 바로 쓴다. */}

@@ -86,6 +86,8 @@ export type Bindings = {
   GOOGLE_RTDN_SERVICE_ACCOUNT?: string;
   /** T-11-174 secret. 쉼표 구분 프로필 id. 있으면 이 구단주에게만 인앱 상품을 보인다(출시 전 실기기 구매 확인용). 지우면 모두에게 열린다. */
   IAP_TESTERS?: string;
+  /** T-11-511 '1'이면 시즌 패스를 새로 판다(산 패스의 보상은 꺼도 받는다). */
+  SEASON_PASS_ENABLED?: string;
   /** T-11-512 클럽 멤버십 새 가입을 받는다('1'). 꺼도 이미 가입한 구독의 확인 · 혜택은 그대로다. */
   MEMBERSHIP_ENABLED?: string;
   /**

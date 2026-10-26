@@ -51,6 +51,7 @@ import { registerLeagueRoutes } from './routes/league.js';
 import { registerIapRoutes } from './routes/iap.js';
 import { registerWebPayRoutes } from './routes/webPay.js';
 import { registerAttendanceRoutes } from './routes/attendance.js';
+import { registerSeasonPassRoutes } from './routes/seasonPass.js';
 import { registerMembershipRoutes } from './routes/membership.js';
 import { registerAdminCupRoutes } from './routes/adminCups.js';
 import { registerAdminLeagueRoutes } from './routes/adminLeagues.js';
@@ -105,6 +106,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerWebPayRoutes(app);
   registerAcquisitionRoutes(app);
   registerAttendanceRoutes(app);
+  registerSeasonPassRoutes(app);
   registerMembershipRoutes(app);
   registerBoardRoutes(app);
   registerTranslateRoutes(app);

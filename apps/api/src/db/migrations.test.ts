@@ -191,6 +191,18 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'updated_at',
   ],
   owner_attendance_days: ['profile_id', 'day', 'checked_at'],
+  season_passes: [
+    'profile_id',
+    'season',
+    'store',
+    'transaction_id',
+    'test',
+    'claimed',
+    'claim_id',
+    'purchased_at',
+    'created_at',
+    'refunded_at',
+  ],
   memberships: [
     'store',
     'chain_id',

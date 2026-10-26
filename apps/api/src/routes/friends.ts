@@ -277,7 +277,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       me.id,
       FRIEND_REQUESTS_PER_HOUR,
       now,
-      '친구 신청을 너무 자주 보냈어요. 잠시 뒤에 다시 해 주세요.',
+      '친구 신청을 너무 자주 보냈어요. 잠시 뒤에 다시 시도해 주세요.',
     );
     const targetId =
       'code' in input

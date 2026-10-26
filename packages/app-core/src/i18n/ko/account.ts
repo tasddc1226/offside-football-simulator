@@ -40,7 +40,7 @@ const ko = {
   deleteFail: '계정을 삭제하지 못했어요. 잠시 뒤 다시 시도해 주세요.',
   // account.ts — 계정 카드 제목·안내
   googleTitle: '구글 계정',
-  googleVia: 'Google 계정으로 로그인했어요.',
+  googleVia: '구글 계정으로 로그인했어요.',
   appleTitle: 'Apple 계정',
   appleVia: 'Apple 계정으로 로그인했어요.',
   // 로그인 버튼 · auth.ts

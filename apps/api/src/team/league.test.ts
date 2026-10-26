@@ -167,7 +167,7 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     // 배치 결과 알림(다음 cron).
     expect(await run(at(L.drawAt, 300_000))).toMatchObject({ step: 'notify', n: 17 });
     expect((await notices(strong[0]!.profileId)).at(-1)?.body).toMatch(
-      /^리그팀\d+은\(는\) 1부 1리그예요\. 1라운드는 오늘 13:00에 열려요\.$/,
+      /^리그팀\d+ 팀은 1부 1리그예요\. 1라운드는 오늘 13:00에 열려요\.$/,
     );
     expect((await notices(short.profileId)).at(-1)?.title).toBe(
       '시즌 2 오프사이드 리그 참가가 취소됐어요',

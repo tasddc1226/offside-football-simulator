@@ -70,7 +70,7 @@ describe('cupLineupBar', () => {
     expect(bar?.overCap).toBe(true);
     expect(bar?.short).toBe(true);
     expect(bar?.block).toBe(
-      '주니어 상한 78을 넘어서 저장할 수 없어요. 팀 OVR을 78 이하로 맞춰 주세요.',
+      '주니어 상한(78)을 넘어서 저장할 수 없어요. 팀 OVR을 78 이하로 맞춰 주세요.',
     );
     expect(bar?.notes).toHaveLength(2);
   });

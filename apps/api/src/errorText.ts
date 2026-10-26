@@ -117,7 +117,7 @@ const EXACT: Record<string, string> = {
     'Add at least one retired player to play a match.',
   '친구 코드를 찾을 수 없어요. 코드를 다시 확인해 주세요.':
     "We couldn't find that friend code. Please check the code again.",
-  '친구 신청을 너무 자주 보냈어요. 잠시 뒤에 다시 해 주세요.':
+  '친구 신청을 너무 자주 보냈어요. 잠시 뒤에 다시 시도해 주세요.':
     "You're sending friend requests too often. Please try again shortly.",
   '내 코드예요. 친구의 코드를 넣어 주세요.': "That's your own code. Enter your friend's code.",
   '이 구단주에게는 친구 신청을 보낼 수 없어요.': "You can't send a friend request to this owner.",

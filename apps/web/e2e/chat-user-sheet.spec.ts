@@ -47,7 +47,7 @@ async function openChat(page: Page) {
 
 test('프로필 사진·이름·⋯ 모두 사용자 창을 열고, 배경·Esc·닫기로 닫힌다', async ({ page }) => {
   await openChat(page);
-  const sheet = page.getByRole('dialog', { name: '럼로우님' });
+  const sheet = page.getByRole('dialog', { name: '럼로우 님' });
   await page.locator('[data-act="chat-who"] .owner-avatar').tap();
   await expect(sheet).toBeVisible();
   await expect(sheet.locator('[data-report-reason]').first()).toBeVisible();
@@ -75,7 +75,7 @@ async function viewProfile(page: Page, teamId: string | null) {
     return route.fulfill({ status: 404, body: '{}' });
   });
   await openChat(page);
-  const sheet = page.getByRole('dialog', { name: '럼로우님' });
+  const sheet = page.getByRole('dialog', { name: '럼로우 님' });
   await page.locator('[data-act="chat-who"]').tap();
   await sheet.locator('[data-act="chat-profile"]').tap();
   return { sheet, opened };

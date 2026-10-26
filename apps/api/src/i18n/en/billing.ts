@@ -24,6 +24,7 @@ export const billing: typeof ko = {
   testProduct: 'Store notification connection check',
   membership: 'Club membership (monthly)',
   removeAds: 'Remove ads',
+  seasonPass: 'Season pass',
   items: {
     reroll: 'Reroll tickets',
     boost: 'Potential boost tickets',

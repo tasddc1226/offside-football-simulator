@@ -7,6 +7,7 @@ import {
   boostExtraLeft,
   boostFreeOpen,
   boostStatus,
+  boostSureOpen,
   boostTicketOpen,
   tryBoost,
 } from './boost.js';
@@ -233,5 +234,41 @@ describe('T-11-083 잠재력 강화', () => {
     boostCost(s);
     boostChance(s);
     expect(getActiveRng().getState()).toEqual(before);
+  });
+});
+
+describe('T-11-513 구단 자금 확정 강화', () => {
+  it('확률 없이 한 단계 오르고 RNG를 쓰지 않으며, 이번 시즌의 선수 자금 시도는 그대로 남는다', () => {
+    const s = player({ money: 1e6 });
+    const before = getActiveRng().getState();
+    const r = tryBoost(s, 'sure');
+    expect(r).toMatchObject({ ok: true, lv: 1, cost: 0, chance: 100 });
+    expect(getActiveRng().getState()).toEqual(before);
+    expect(s.flags.potBonus).toBe(1);
+    expect(s.money).toBe(1e6);
+    expect(s.boost!.log.at(-1)).toMatchObject({ sure: true, p: 100, c: 0 });
+    expect(boostStatus(s)).toBe('ready');
+  });
+
+  it('선수마다 한 번(다음 시즌에도 다시 못 받는다) · 최고 단계 · 29세 초과면 받을 수 없다', () => {
+    const s = player();
+    expect(tryBoost(s, 'sure')).not.toBeNull();
+    expect(boostSureOpen(s)).toBe(false);
+    expect(tryBoost(s, 'sure')).toBeNull();
+    s.year++;
+    expect(boostSureOpen(s)).toBe(false);
+    expect(boostSureOpen(player())).toBe(true);
+    s.boost = { lv: BOOST_MAX, fails: 0, log: [] };
+    expect(boostSureOpen(s)).toBe(false);
+    expect(boostSureOpen(player({ age: 30 }))).toBe(false);
+    expect(boostSureOpen(player({ seasons: 0 }))).toBe(false);
+  });
+
+  it('광고 · 구단 자금 추가 시도 횟수에 세지 않는다', () => {
+    const s = player({ money: 0, salary: 1000 });
+    nextRoll(0.999);
+    tryBoost(s, 'club');
+    tryBoost(s, 'sure');
+    expect(boostExtraLeft(s)).toBe(2);
   });
 });

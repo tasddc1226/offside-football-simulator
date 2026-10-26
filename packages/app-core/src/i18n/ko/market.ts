@@ -1,7 +1,7 @@
 // 이적시장(웹 ui/Market.svelte · 앱 screens/owner/Market.tsx) 화면 문구와, 그리기 전에 만드는 문구(market.ts).
 // 웹·앱이 같은 문구라 키를 함께 쓴다. 다른 줄만 Web/App 접미사로 나눈다.
 import { ns } from '../core';
-import { withEulReul } from '../../format.js';
+import { withEulReul, withRo } from '../../format.js';
 
 const ko = {
   title: '이적시장',
@@ -74,7 +74,7 @@ const ko = {
   unlist: '판매 내리기',
   buyFor: (p: { price: string }) => `${p.price}에 영입하기`,
   // T-11-434 영입 · 판매 내리기가 낡은 매물이라 실패한 뒤
-  priceMoved: (p: { price: string }) => `가격이 ${p.price}으로 바뀌었어요. 다시 확인해 주세요.`,
+  priceMoved: (p: { price: string }) => `가격이 ${withRo(p.price)} 바뀌었어요. 다시 확인해 주세요.`,
   staleGone: '이미 팔렸거나 내려간 선수예요.',
   staleRecheck: '가격이 바뀐 선수예요. 목록에서 다시 확인해 주세요.',
   // 팔기
@@ -116,6 +116,7 @@ const ko = {
   spendCandidates: '후보 잠재력 보기',
   spendPeek: '시즌 평가 보기',
   spendBoost: '잠재력 강화',
+  spendSure: '확정 강화',
   // 방출
   releasePane: '방출해서 자금 만들기',
   backToMarket: '이적시장으로',

@@ -131,8 +131,15 @@ describe('T-11-145 컵 규칙', () => {
     expect(cupText('시즌 1 제1회 오프사이드 컵 조 추첨 결과', 'en')).toBe(
       'Season 1 OFFSIDE Cup #1 group draw',
     );
+    expect(cupText('우리 FC 팀은 3조예요. 첫 경기는 오늘 21:00에 열려요.', 'ja')).toBe(
+      '우리 FCはグループ3です。初戦は本日21:00に始まります。',
+    );
+    // T-11-514 전에 저장된 옛 문구도 옮긴다.
     expect(cupText('우리 FC은(는) 3조예요. 첫 경기는 오늘 21:00에 열려요.', 'ja')).toBe(
       '우리 FCはグループ3です。初戦は本日21:00に始まります。',
+    );
+    expect(cupText('시즌 1 제1회 오프사이드 컵이 끝났어요', 'en')).toBe(
+      cupText('시즌 1 제1회 오프사이드 컵 결과가 나왔어요', 'en'),
     );
     expect(cupText('최종 성적 준우승. 선수 후보 리롤권 7장을 받았어요.', 'en')).toBe(
       'Final result: Runners-up. You received 7 player reroll ticket(s).',
@@ -723,6 +730,54 @@ describe('T-11-145 컵 진행(cron)', () => {
       bought: 6,
       cap: REWARD_UNCAPPED,
     });
+  });
+
+  it('T-11-513 확정 강화를 구단 자금으로 받는다: 같은 날 값이 오르고 하루 횟수가 있으며 보상 값과 따로 센다', async () => {
+    const who = await issueGoogleCookie(ctx);
+    type Shop = { balance: number; offer: { price: number | null; bought: number; cap: number } };
+    const shop = async () =>
+      (
+        (await (
+          await callJson(ctx.env, 'GET', '/v1/items/sure', { cookie: who.cookie })
+        ).json()) as { data: Shop }
+      ).data;
+    const buy = (price: number, k: string) =>
+      callJson(ctx.env, 'POST', '/v1/items/sure/buy', {
+        cookie: who.cookie,
+        body: { price },
+        headers: { [IDEMPOTENCY_KEY_HEADER]: `sure-${k}-key` },
+      });
+    const reason = async (r: Response) =>
+      ((await r.json()) as { error: { details: { reason: string } } }).error.details.reason;
+    expect(await shop()).toEqual({ balance: 0, offer: { price: 2_000_000, bought: 0, cap: 3 } });
+    expect(await reason(await buy(2_000_000, 'a'))).toBe('FUNDS_SHORT');
+    await ctx.db
+      .insert(ownerFunds)
+      .values({ profileId: who.profileId, balance: 20_000_000, updatedAt: CUP.opensAt });
+    const first = await buy(2_000_000, 'b');
+    expect(first.status).toBe(200);
+    expect(((await first.json()) as { data: Shop }).data).toEqual({
+      balance: 18_000_000,
+      offer: { price: 4_000_000, bought: 1, cap: 3 },
+    });
+    // 같은 키로 다시 보내면 두 번 쓰지 않는다. 옛 가격이면 가격이 바뀌었다고 알린다.
+    expect((await buy(2_000_000, 'b')).status).toBe(200);
+    expect(await reason(await buy(2_000_000, 'c'))).toBe('PRICE_CHANGED');
+    expect((await buy(4_000_000, 'd')).status).toBe(200);
+    expect((await buy(8_000_000, 'e')).status).toBe(200);
+    expect(await shop()).toEqual({ balance: 6_000_000, offer: { price: null, bought: 3, cap: 3 } });
+    expect(await reason(await buy(16_000_000, 'f'))).toBe('DAILY_LIMIT');
+    // 광고 대신 받는 보상 값은 그대로다(옛 앱이 받는 응답에 끼지 않는다).
+    const rewards = await callJson(ctx.env, 'GET', '/v1/items/rewards', { cookie: who.cookie });
+    const r = (await rewards.json()) as { data: { offers: Record<string, { bought: number }> } };
+    expect(Object.keys(r.data.offers).sort()).toEqual(['boost', 'candidates', 'peek']);
+    expect(r.data.offers.boost!.bought).toBe(0);
+    const ledger = await ctx.db.select().from(ownerItemPurchases);
+    expect(ledger.map((x) => `${x.item}:${x.price}`).sort()).toEqual([
+      'sure:2000000',
+      'sure:4000000',
+      'sure:8000000',
+    ]);
   });
 
   it('대회 화면은 누구나 본다', async () => {

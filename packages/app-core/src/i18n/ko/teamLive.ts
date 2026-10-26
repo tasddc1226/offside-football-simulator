@@ -43,7 +43,7 @@ const ko = {
   halfTime: (p: { home: string; away: string; hs: number; as: number }) =>
     `전반 종료. ${p.home} ${p.hs} : ${p.as} ${p.away}`,
   fullTime: (p: { home: string; away: string; h: number; a: number; result: string }) =>
-    `경기 종료! ${p.home} ${p.h} : ${p.a} ${p.away}. ${p.result}`,
+    `경기 종료. ${p.home} ${p.h} : ${p.a} ${p.away}. ${p.result}`,
   resultWin: '승리를 거둡니다!',
   resultLoss: '아쉬운 패배입니다.',
   resultDraw: '승부를 가리지 못했습니다.',

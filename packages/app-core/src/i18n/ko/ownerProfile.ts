@@ -18,7 +18,7 @@ const ko = {
   roomLoading: '라커룸을 준비하고 있어요.',
   roomBadgeCount: '기록 배지',
   roomCupCount: '컵 성적',
-  roomEmptyTitle: '대표 칭호를 골라 보세요.',
+  roomEmptyTitle: '대표 칭호가 없어요.',
   collectionEarned: '획득한 칭호',
   collectionLocked: '도전 중',
   collectionHint: '칭호를 누르면 바로 대표 칭호로 적용돼요.',
