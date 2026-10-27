@@ -79,6 +79,8 @@
       "routes": [{ "pattern": "api.offside-lab.com", "custom_domain": true }],
       "observability": {
         "enabled": true,
+        // OAuth callbacks can carry credentials in the URL. Keep query strings out of logs and traces.
+        "redact_query_string": true,
         // T-11-252 호출 로그(invocation log)는 요청마다 1건씩 더 쌓여 Workers Logs 포함량(월 2천만 건)을 넘긴다. 요청 기록은
         // middleware/logger.ts의 JSON 한 줄로 충분하다.
         "logs": { "enabled": true, "invocation_logs": false },
