@@ -77,3 +77,23 @@ describe('T-10-068 공유 미리보기 카드 경로', () => {
     expect((await get(PATH)).status).toBe(404);
   });
 });
+
+describe('T-11-531 크리에이터 짧은 주소', () => {
+  it('추적 링크로 넘긴다(대소문자 무시)', async () => {
+    for (const [path, content] of [
+      [
+        '/ethio',
+        'utm_source=tiktok&utm_medium=partner&utm_campaign=creator_test&utm_content=ethio_tiktok',
+      ],
+      ['/ETHIO', 'utm_content=ethio_tiktok'],
+      [
+        '/ethio-yt',
+        'utm_source=youtube&utm_medium=partner&utm_campaign=creator_test&utm_content=ethio_short',
+      ],
+    ] as const) {
+      const res = await get(path);
+      expect(res.status, path).toBe(302);
+      expect(res.headers.get('Location'), path).toContain(content);
+    }
+  });
+});
