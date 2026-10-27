@@ -6,7 +6,7 @@ const players = (n: number) => (n === 1 ? 'player' : 'players');
 export const seasonPass: Translation<SeasonPassMsgs> = {
   title: 'Season pass',
   seasonTitle: (p) => `Season ${p.season} pass`,
-  lead: 'Each player you retire this season moves you up the tiers, and every tier gives you items.',
+  lead: 'You get the first tier as soon as you buy. Each player you retire this season moves you up the tiers, and every tier gives you items.',
   rule: (p) =>
     `Only this season's players who retire at age ${p.age} or older count, up to ${p.daily} a day.`,
   once: 'This pass lasts one season. It does not renew or charge you again.',
@@ -18,10 +18,12 @@ export const seasonPass: Translation<SeasonPassMsgs> = {
   allOpen: 'All tiers unlocked',
   tierName: (p) => `Tier ${p.tier}`,
   tierNeed: (p) => `${p.n} retired`,
+  tierNow: 'On purchase',
+  tierBonus: (p) => `Bonus · ${p.n} retired`,
   stateClaimed: 'Claimed',
   stateOpen: 'Unlocked',
   stateLocked: 'Locked',
-  tierLabel: (p) => `Tier ${p.tier}, ${p.need} retired, ${p.reward}, ${p.state}`,
+  tierLabel: (p) => `Tier ${p.tier}, ${p.need}, ${p.reward}, ${p.state}`,
   buy: (p) => `Buy pass for ${p.price}`,
   buyBusy: 'Paying…',
   owned: 'You have this pass',
@@ -31,7 +33,8 @@ export const seasonPass: Translation<SeasonPassMsgs> = {
   got: (p) => `You got: ${p.reward}`,
   nothing: 'No rewards to claim right now',
   claimFail: "Couldn't claim. Please try again in a moment.",
-  buyHint: 'Buy the pass to claim rewards from tiers you have already unlocked.',
+  buyHint:
+    'Buy the pass to claim the first tier and any tiers you have already unlocked right away.',
   pastTitle: 'Past season passes',
   pastLead: 'You still have rewards to claim.',
   aheadTitle: (p) => `You already have the Season ${p.season} pass`,
