@@ -466,8 +466,7 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
       const me = async (q: string, cookie?: string) => {
         const res = await call('GET', `/v1/teams?me=1${q}`, cookie ? { cookie } : {});
         expect(res.status).toBe(200);
-        if (!q.includes('value'))
-          expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+        expect(res.headers.get('Cache-Control')).toBe('private, no-store');
         return RankRes.parse(await res.json()).data;
       };
       const byRating = await me('', strong.cookie);
@@ -478,12 +477,45 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
         teamId: strong.team.id,
         rank: 1,
       });
-      // 로그인하지 않았으면 null, 가치순은 세지 않는다.
+      // 로그인하지 않았으면 null.
       expect((await me('')).me).toBeNull();
-      expect((await me('&sort=value', strong.cookie)).me).toBeUndefined();
+      expect((await me('&sort=value', strong.cookie)).me).toEqual({
+        teamId: strong.team.id,
+        rank: 1,
+      });
       await flushEdge();
       // 엣지에는 공개 페이지만 담긴다(me 키 없음).
       expect([...edge.store.keys()].some((k) => k.includes('me'))).toBe(false);
+    } finally {
+      edge.uninstall();
+    }
+  });
+
+  it('가치순 내 순위는 동점 순서와 캐시된 옛 페이지를 처리한다', async () => {
+    const a = await team(1, 80);
+    const b = await team(1, 80);
+    const first = a.team.slots.find((x) => x.careerId)?.careerId;
+    const second = b.team.slots.find((x) => x.careerId)?.careerId;
+    await ctx.db.update(cards).set({ cardValue: 1000 }).where(eq(cards.careerId, first!));
+    await ctx.db.update(cards).set({ cardValue: 1000 }).where(eq(cards.careerId, second!));
+    await ctx.db.update(ownerTeams).set({ rating: 1000, createdAt: '2026-09-01T00:00:00Z' });
+    const edge = installFakeEdgeCache();
+    try {
+      const cached = (await rank('?sort=value')).data;
+      await flushEdge();
+      const lower = cached.items[1]!;
+      const mine = lower.teamId === a.team.id ? a : b;
+      const card = lower.teamId === a.team.id ? first : second;
+      const callMine = async () =>
+        RankRes.parse(
+          await (await call('GET', '/v1/teams?sort=value&me=1', { cookie: mine.cookie })).json(),
+        ).data;
+      expect((await callMine()).me).toEqual({ teamId: lower.teamId, rank: 2 });
+      await ctx.db.update(cards).set({ cardValue: 2000 }).where(eq(cards.careerId, card!));
+      const moved = await callMine();
+      expect(moved.me).toEqual({ teamId: lower.teamId, rank: 1 });
+      expect(moved.items[0]?.teamId).toBe(lower.teamId);
+      expect(moved.items[0]?.value).toBe(2000);
     } finally {
       edge.uninstall();
     }
@@ -526,17 +558,19 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     expect((await me(none.cookie)).me).toBeNull();
   });
 
-  it('T-11-268: 가치순 랭킹은 엣지에 30분, 평점·OVR순은 5분 담는다', async () => {
+  it('팀 랭킹은 모든 정렬을 엣지에 5분 담는다', async () => {
     await team(1, 80);
     const edge = installFakeEdgeCache();
     try {
       for (const sort of ['rating', 'ovr', 'value']) await rank(`?sort=${sort}`);
       await flushEdge();
       const ttl = (sort: string) =>
-        edge.controls.get(`http://localhost/v1/teams?season=0&sort=${sort}&page=1&form=5&logo=1`);
+        edge.controls.get(
+          `http://localhost/v1/teams?season=0&sort=${sort}&page=1&form=5&logo=1${sort === 'value' ? '&value-cache=2' : ''}`,
+        );
       expect(ttl('rating')).toBe('public, max-age=300');
       expect(ttl('ovr')).toBe('public, max-age=300');
-      expect(ttl('value')).toBe('public, max-age=1800');
+      expect(ttl('value')).toBe('public, max-age=300');
     } finally {
       edge.uninstall();
     }

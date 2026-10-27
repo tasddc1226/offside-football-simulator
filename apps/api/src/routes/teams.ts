@@ -43,6 +43,7 @@ import {
   myTeamIn,
   ovrRankOf,
   ratingRankOf,
+  valueRankOf,
   setTeamLike,
   slotIdsOf,
   layoutOf,
@@ -73,9 +74,6 @@ import { teamStatsView } from '../team/stats.js';
 // T-10-092 라이브 랭킹(팀 랭킹)과 팀 프로필. 로그인 없이 누구나 본다 — 팀 이름·감독 이름·선수의 공개 이름(없으면 익명
 // 표기)만 있고 구단주 계정 정보는 없다. 랭킹은 원작처럼 5분마다 새로 센다(엣지 캐시).
 const RANK_TTL = 300;
-/** T-11-268 가치순은 팀마다 선발 카드 가치를 모두 더해 정렬한다(운영 1회 약 5.6만 행) — 편성 저장 때도 지우지 않는
- * 목록이라 30분 동안 담는다. 평점·OVR순은 그대로 5분. */
-const RANK_VALUE_TTL = 1800;
 const RANK_CACHE = 'public, max-age=60';
 /** T-11-358 남의 팀 경기 통계. 랭크 경기 · 친선전을 치르면 지우고, 컵 경기는 이 TTL로만 새로 읽는다. */
 const TEAM_STATS_TTL = 300;
@@ -105,58 +103,70 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     const season = teamSeasonParam(q.season, now);
     // T-11-375 디비전 탭은 레이팅순에만 있다(다른 정렬에 붙으면 무시해 캐시 키를 늘리지 않는다).
     const division = q.sort === 'rating' && usesRankLadder(season) ? q.division : undefined;
-    const pageOf = (page: number, division?: number) =>
-      edgeCached(
-        c,
-        EDGE.teamRank(season, q.sort, page, division),
-        q.sort === 'value' ? RANK_VALUE_TTL : RANK_TTL,
-        async (): Promise<Omit<TeamRankResponse, 'seasons'>> => {
-          const range =
-            division === undefined
-              ? undefined
-              : divisionRange(await activeDivisionRules(getDb(c)), division);
-          const { rows, total } = await listTeamRanking(getDb(c), season, q.sort, page, now, range);
-          const forms = await listTeamRecentForm(
-            getDb(c),
-            rows.map((t) => t.id),
-          );
-          return {
-            season,
-            sort: q.sort,
-            page,
-            total,
-            items: rows.map((t, i) => ({
-              rank: (page - 1) * TEAM_RANK_PER_PAGE + i + 1,
-              teamId: t.id,
-              name: t.name,
-              logo: logoOf(t),
-              manager: t.manager,
-              formation: t.formation as FormationId,
-              ovr: t.ovr,
-              rating: t.rating,
-              ...(usesRankLadder(season) ? { division: t.division } : {}),
-              record: recordOf(t),
-              likes: t.likes,
-              value: t.value,
-              createdAt: t.createdAt,
-              recentForm: forms.get(t.id) ?? [],
-              title: t.title,
-            })),
-          };
-        },
+    const buildPage = async (
+      page: number,
+      division?: number,
+    ): Promise<Omit<TeamRankResponse, 'seasons'>> => {
+      const range =
+        division === undefined
+          ? undefined
+          : divisionRange(await activeDivisionRules(getDb(c)), division);
+      const { rows, total } = await listTeamRanking(getDb(c), season, q.sort, page, now, range);
+      const forms = await listTeamRecentForm(
+        getDb(c),
+        rows.map((t) => t.id),
       );
-    // T-11-441 '내 순위로': 세션의 그 시즌 팀 순위를 세고 그 페이지(엣지 캐시 그대로)에 me를 붙인다. 가치순은 순위를
-    // 세려면 모든 팀의 가치를 더해야 해 세지 않는다. 사람마다 다른 응답이라 me 응답은 담지 않는다.
-    if (q.me && q.sort !== 'value') {
+      return {
+        season,
+        sort: q.sort,
+        page,
+        total,
+        items: rows.map((t, i) => ({
+          rank: (page - 1) * TEAM_RANK_PER_PAGE + i + 1,
+          teamId: t.id,
+          name: t.name,
+          logo: logoOf(t),
+          manager: t.manager,
+          formation: t.formation as FormationId,
+          ovr: t.ovr,
+          rating: t.rating,
+          ...(usesRankLadder(season) ? { division: t.division } : {}),
+          record: recordOf(t),
+          likes: t.likes,
+          value: t.value,
+          createdAt: t.createdAt,
+          recentForm: forms.get(t.id) ?? [],
+          title: t.title,
+        })),
+      };
+    };
+    const pageOf = (page: number, division?: number) =>
+      edgeCached(c, EDGE.teamRank(season, q.sort, page, division), RANK_TTL, () =>
+        buildPage(page, division),
+      );
+    // 내 순위는 저장된 지표로 세고, 개인별 응답은 공유 캐시에 담지 않는다.
+    if (q.me) {
       const session = await resolveSession(c);
       const db = getDb(c);
       const [team] = session ? await myTeamIn(db, session.profileId, season) : [];
       const rank = team
-        ? await (q.sort === 'ovr' ? ovrRankOf(db, team) : ratingRankOf(db, team))
+        ? await (q.sort === 'value'
+            ? valueRankOf(db, team, now)
+            : q.sort === 'ovr'
+              ? ovrRankOf(db, team)
+              : ratingRankOf(db, team))
         : null;
       const me = team && rank ? { teamId: team.id, rank } : null;
       const page = me ? Math.ceil(me.rank / TEAM_RANK_PER_PAGE) : q.page;
-      const data = await pageOf(Math.min(page, 500));
+      const targetPage = Math.min(page, 500);
+      let data = await pageOf(targetPage);
+      // 캐시된 공개 순서가 최근 변경으로 내 실제 순위와 다르면 최신 페이지를 직접 읽는다.
+      if (
+        q.sort === 'value' &&
+        me &&
+        data.items[(me.rank - 1) % TEAM_RANK_PER_PAGE]?.teamId !== me.teamId
+      )
+        data = await buildPage(targetPage);
       return ok(
         c,
         TeamRankResponseSchema,

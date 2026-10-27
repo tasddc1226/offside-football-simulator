@@ -735,6 +735,40 @@ export async function ovrRankOf(db: Db, t: OwnerTeamRow): Promise<number | null>
   return Number(row?.n ?? 0) + 1;
 }
 
+/** 구단 가치순과 같은 값 · 레이팅 · 생성 시각 · ID 순서로 내 순위를 센다. */
+export async function valueRankOf(db: Db, t: OwnerTeamRow, now: string): Promise<number | null> {
+  if (t.filled === 0) return null;
+  const closed = teamSeasonClosed(t.season, now);
+  const value = closed ? ownerTeams.lineupValueClosed : ownerTeams.lineupValueOpen;
+  const mine = closed ? t.lineupValueClosed : t.lineupValueOpen;
+  const [row] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(ownerTeams)
+    .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
+    .where(
+      and(
+        rankedIn(t.season),
+        or(
+          gt(value, mine),
+          and(
+            eq(value, mine),
+            or(
+              gt(ownerTeams.rating, t.rating),
+              and(
+                eq(ownerTeams.rating, t.rating),
+                or(
+                  lt(ownerTeams.createdAt, t.createdAt),
+                  and(eq(ownerTeams.createdAt, t.createdAt), lt(ownerTeams.id, t.id)),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  return Number(row?.n ?? 0) + 1;
+}
+
 // ───────── 좋아요 · 조회수(게시판 글과 같은 방식) ─────────
 
 const likeOf = (teamId: string, profileId: string) =>

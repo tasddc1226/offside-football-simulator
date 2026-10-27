@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { canJumpToMyRank, myRankJump } from './myRank.js';
 
 describe('canJumpToMyRank (T-11-441)', () => {
-  it('로그인한 구단주만, 가치순은 빼고', () => {
+  it('로그인한 구단주만', () => {
     expect(canJumpToMyRank(true, 'rating')).toBe(true);
     expect(canJumpToMyRank(true, 'ovr')).toBe(true);
-    expect(canJumpToMyRank(true, 'value')).toBe(false);
+    expect(canJumpToMyRank(true, 'value')).toBe(true);
     expect(canJumpToMyRank(true)).toBe(true);
     expect(canJumpToMyRank(false, 'rating')).toBe(false);
   });
