@@ -204,7 +204,7 @@ export default [
       [
         'Preparing for the Offside Cup',
         [
-          'Each service season, a cup tournament is held between owner teams. Only teams with at least 8 of the 11 starting spots filled and no starters listed on the transfer market can enter, and from the 3rd cup a separate tournament runs for each team OVR division (Junior, Senior, Master).',
+          'Each service season, a cup tournament is held between owner teams. Only teams with at least 8 of the 11 starting spots filled (6 in the Junior division, with youth players in the empty spots) and no starters listed on the transfer market can enter, and from the 3rd cup a separate tournament runs for each team OVR division (Junior, Senior, Master).',
           'Cup match results are decided not by the team OVR average but by the attack, midfield and defense strength after adding formation, synergy and manager adjustments, and a stronger team can still lose. From the 3rd cup the strength gap counts as much as in ranked matches, but even with a 10-point lead on all three lines, the 90-minute odds are roughly 72% win, 17% draw and 11% loss. Lineups lock one hour before a match, so recheck your synergies and position fit before then.',
         ],
       ],

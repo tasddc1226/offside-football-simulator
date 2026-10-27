@@ -1,6 +1,7 @@
 import {
   CUP_DIVISIONS,
   CUP_DIVISION_FALLBACK_CAPS,
+  CUP_JUNIOR_MIN_FILLED,
   currentCup,
   divisionCaps,
   divisionFor,
@@ -90,6 +91,8 @@ describe('T-11-410 다음 회차', () => {
     // 10-31 00:00 KST 개막 → 11-02 21:10 KST.
     expect(new Set(next.map((c) => c.opensAt))).toEqual(new Set(['2026-11-02T12:10:00.000Z']));
     expect(next.every((c) => c.ovrMax === null)).toBe(true);
+    // T-11-527 주니어만 참가 자격을 낮춘다.
+    expect(next.map((c) => c.minFilled)).toEqual([CUP_JUNIOR_MIN_FILLED, 8, 8]);
   });
 });
 
@@ -117,7 +120,7 @@ describe('T-11-410 구간 대회 진행', () => {
     await ctx.dispose();
   });
 
-  async function enter(cup: CupDef, ovrs: readonly number[]) {
+  async function enter(cup: CupDef, ovrs: readonly number[], filled = 11) {
     const out: { profileId: string; teamId: string }[] = [];
     for (const ovr of ovrs) {
       const profileId = `prf_${crypto.randomUUID()}`;
@@ -136,7 +139,7 @@ describe('T-11-410 구간 대회 진행', () => {
         manager: '감독',
         formation: '4-4-2',
         slotsJson: JSON.stringify(Array(11).fill(null)),
-        filled: 11,
+        filled,
         ovr,
         createdAt: cup.opensAt,
         updatedAt: cup.opensAt,
@@ -195,6 +198,36 @@ describe('T-11-410 구간 대회 진행', () => {
     expect([await countIn(JUNIOR), await countIn(SENIOR), await countIn(MASTER)]).toEqual([
       9, 0, 11,
     ]);
+  });
+
+  it('T-11-527 주니어 자격으로 신청한 팀은 윗 구간에 합쳐져도 추첨에서 떨어지지 않는다', async () => {
+    await ctx.db
+      .update(cups)
+      .set({ minFilled: CUP_JUNIOR_MIN_FILLED })
+      .where(eq(cups.id, JUNIOR.id));
+    const edition = EDITION.map((c) => ({
+      ...c,
+      minFilled: c.division === 'junior' ? CUP_JUNIOR_MIN_FILLED : c.minFilled,
+    }));
+    // 주니어 5팀(선발 6명, 모자람) → 시니어에 합친다. 시니어 8팀 · 마스터 8팀은 그대로.
+    await enter(JUNIOR, [70, 71, 72, 73, 74], CUP_JUNIOR_MIN_FILLED);
+    await enter(
+      SENIOR,
+      Array.from({ length: 8 }, (_, i) => 81 + i),
+    );
+    await enter(
+      MASTER,
+      Array.from({ length: 8 }, (_, i) => 90 + i),
+    );
+    await runCup(ctx.db, JUNIOR.drawAt, edition);
+    expect([await countIn(JUNIOR), await countIn(SENIOR), await countIn(MASTER)]).toEqual([
+      0, 13, 8,
+    ]);
+    const [senior] = await ctx.db.select().from(cups).where(eq(cups.id, SENIOR.id));
+    expect(senior!.minFilled).toBe(CUP_JUNIOR_MIN_FILLED);
+    // 마스터는 옮겨 온 팀이 없어 그대로.
+    const [master] = await ctx.db.select().from(cups).where(eq(cups.id, MASTER.id));
+    expect(master!.minFilled).toBe(8);
   });
 
   it('cron은 구간마다 추첨하고 경기 예산을 나눠 쓴다, 추첨 뒤에는 상한을 넘는 명단을 막는다', async () => {

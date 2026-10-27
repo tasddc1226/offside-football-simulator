@@ -12,6 +12,7 @@ import {
   cupFinalAt,
   cupIdOf,
   divisionCaps,
+  divisionMinFilled,
   planCup,
   type CupDef,
 } from '@offside/contracts/cup';
@@ -93,6 +94,7 @@ export function registerAdminCupRoutes(app: Hono<AppEnv>): void {
           season,
           division,
           ovrMax: null,
+          minFilled: divisionMinFilled(division, draft.minFilled),
         }))
       : [{ ...draft, id: cupIdOf(season, edition), season }];
     await db.insert(cups).values(
