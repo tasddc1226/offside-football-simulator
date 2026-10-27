@@ -149,3 +149,64 @@ describe('칭호 판정', () => {
     expect(mainTitle(s)?.id).toBe('lg_goat');
   });
 });
+
+describe('상위 칭호 다음 단계 (T-11-545)', () => {
+  const ids = (s: GameState) => checkTitles(s).map((d) => d.id);
+
+  it('통산 기록 · 수상 · 우승 · 인기가 다음 단계에 닿으면 얻고, 한 칸 모자라면 못 얻는다', () => {
+    const s = fresh();
+    s.career = [rec({ goals: 499, assists: 249, apps: 699 })];
+    s.awards = Array.from({ length: 29 }, () => ({ year: 2030, t: '득점왕' }));
+    s.trophies = [
+      { year: 2030, t: 'UEFA 챔피언스리그 우승', club: '테스트 FC' },
+      ...Array.from({ length: 23 }, () => ({ year: 2031, t: 'K리그1 우승', club: '테스트 FC' })),
+    ];
+    s.fame = 1999;
+    const first = ids(s);
+    for (const id of [
+      'goals500',
+      'assists250',
+      'apps700',
+      'awards30',
+      'trophies25',
+      'bigear2',
+      'fame2000',
+    ])
+      expect(first).not.toContain(id);
+    expect(first).toEqual(expect.arrayContaining(['goals300', 'apps500', 'awards10', 'bigear']));
+    s.career = [rec({ goals: 500, assists: 250, apps: 700 })];
+    s.awards.push({ year: 2032, t: '득점왕' });
+    s.trophies.push({ year: 2032, t: 'UEFA 챔피언스리그 우승', club: '테스트 FC' });
+    s.fame = 2000;
+    expect(ids(s)).toEqual(
+      expect.arrayContaining([
+        'goals500',
+        'assists250',
+        'apps700',
+        'awards30',
+        'trophies25',
+        'bigear2',
+      ]),
+    );
+    // 인기 2000은 같은 판정에서 함께 얻는다.
+    expect(s.titles!.map((t) => t.id)).toContain('fame2000');
+  });
+
+  it('새 단계는 모두 전설 등급이고 도감 진행도가 있다', () => {
+    for (const id of [
+      'goals500',
+      'assists250',
+      'apps700',
+      'awards30',
+      'trophies25',
+      'bigear2',
+      'fame2000',
+    ]) {
+      const d = titleById(id)!;
+      expect(d.rarity).toBe(4);
+      expect(d.progress).toBeDefined();
+      expect(d.name).not.toBe(id);
+      expect(d.desc).not.toBe(`${id}_d`);
+    }
+  });
+});
