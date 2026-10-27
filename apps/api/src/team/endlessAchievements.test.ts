@@ -1,5 +1,5 @@
 // T-11-541 업적 상한 없애기 — 단계 업적은 정해 둔 마지막 단계 뒤로도 다음 목표가 이어지고(시즌 2부터), 점수 보너스는
-// 1,000점마다 끝없이 한 번씩 준다. 시즌 1은 정해 둔 단계에서 멈춰 마감 점수가 바뀌지 않는다.
+// 1,500점마다 끝없이 한 번씩 준다. 시즌 1은 정해 둔 단계에서 멈춰 마감 점수가 바뀌지 않는다.
 import {
   ACH_SCORE_BONUS,
   achScoreBonusCount,
@@ -116,9 +116,11 @@ describe('끝없는 단계 업적(clubAchievements endless)', () => {
   });
 
   it('끝없는 단계도 단계마다 보상 칸이 하나씩이다', () => {
-    const steps = achRewardSteps(groupsOf([career({ goals: 300_000 })], { endless: true })).filter(
-      (s) => s.id === 'goals',
-    );
+    const steps = achRewardSteps(
+      groupsOf([career({ goals: 300_000 })], { endless: true }),
+      2,
+    ).filter((s) => s.id === 'goals');
+    // 시즌 2 표: 끝없는 단계(7 · 8단계)는 강화권 1장씩이다.
     expect(steps.map((s) => s.key)).toEqual([
       'goals:3',
       'goals:4',
@@ -127,21 +129,21 @@ describe('끝없는 단계 업적(clubAchievements endless)', () => {
       'goals:7',
       'goals:8',
     ]);
-    expect(steps.slice(-2).every((s) => s.boost === 3 && s.scout === 2)).toBe(true);
+    expect(steps.slice(-2).every((s) => s.boost === 1 && s.scout === 0)).toBe(true);
   });
 });
 
 describe('점수 보너스(ACH_SCORE_BONUS)', () => {
-  it('1,000점마다 강화권 1장 · 리롤권 2장, 다섯 번째마다 스카우트권 1장을 더한다', () => {
-    expect(ACH_SCORE_BONUS.every).toBe(1000);
-    expect(achScoreBonusCount(999)).toBe(0);
-    expect(achScoreBonusCount(1000)).toBe(1);
-    expect(achScoreBonusCount(9740)).toBe(9);
+  it('1,500점마다 강화권 1장 · 리롤권 2장, 네 번째마다 스카우트권 1장을 더한다', () => {
+    expect(ACH_SCORE_BONUS.every).toBe(1500);
+    expect(achScoreBonusCount(1499)).toBe(0);
+    expect(achScoreBonusCount(1500)).toBe(1);
+    expect(achScoreBonusCount(9740)).toBe(6);
     expect(achScoreBonusOf(1)).toEqual({ boost: 1, scout: 0, reroll: 2 });
-    expect(achScoreBonusOf(5)).toEqual({ boost: 1, scout: 1, reroll: 2 });
-    expect(achScoreBonusOf(10)).toEqual({ boost: 1, scout: 1, reroll: 2 });
+    expect(achScoreBonusOf(4)).toEqual({ boost: 1, scout: 1, reroll: 2 });
+    expect(achScoreBonusOf(8)).toEqual({ boost: 1, scout: 1, reroll: 2 });
     const steps = achBonusSteps(2, 12_345);
-    expect(steps.map((s) => s.key)).toEqual(Array.from({ length: 12 }, (_, i) => `score:${i + 1}`));
+    expect(steps.map((s) => s.key)).toEqual(Array.from({ length: 8 }, (_, i) => `score:${i + 1}`));
     const sum = steps.reduce(
       (t, s) => ({
         boost: t.boost + s.boost,
@@ -150,7 +152,7 @@ describe('점수 보너스(ACH_SCORE_BONUS)', () => {
       }),
       { boost: 0, scout: 0, reroll: 0 },
     );
-    expect(sum).toEqual({ boost: 12, scout: 2, reroll: 24 });
+    expect(sum).toEqual({ boost: 8, scout: 2, reroll: 16 });
     // 시즌 1은 없다.
     expect(achBonusSteps(1, 12_345)).toEqual([]);
   });
@@ -172,22 +174,26 @@ describe('settleSeasonRewards — 점수 보너스는 한 번만', () => {
   it('다시 세거나 겹쳐 불려도 보너스를 한 번만 주고, 점수가 오르면 새 보너스만 더한다', async () => {
     const me = await issueGoogleCookie(ctx);
     const small = groupsOf([career({ goals: 1000 })], { endless: true });
-    const big = groupsOf([career({ goals: 30_000, legendScore: 3000, ballon: 10 })], {
-      endless: true,
-    });
+    const big = groupsOf(
+      [career({ goals: 30_000, assists: 15_000, apps: 100_000, legendScore: 3000, ballon: 10 })],
+      { endless: true },
+    );
     const scoreSmall = achievementScore(small).score;
     const scoreBig = achievementScore(big).score;
     expect(achScoreBonusCount(scoreSmall)).toBe(0);
     expect(achScoreBonusCount(scoreBig)).toBeGreaterThan(0);
     const stepSum = (g: typeof small) =>
-      achRewardSteps(g).reduce((t, r) => ({ boost: t.boost + r.boost, scout: t.scout + r.scout }), {
-        boost: 0,
-        scout: 0,
-      });
+      achRewardSteps(g, 2).reduce(
+        (t, r) => ({ boost: t.boost + r.boost, scout: t.scout + r.scout }),
+        {
+          boost: 0,
+          scout: 0,
+        },
+      );
 
     const first = await settleSeasonRewards(ctx.db, me.profileId, 2, small, NOW);
     expect(first.bonus).toEqual({
-      next: 1000,
+      next: 1500,
       reward: { boost: 1, scout: 0, reroll: 2 },
       got: { boost: 0, scout: 0, reroll: 0 },
     });
@@ -207,7 +213,7 @@ describe('settleSeasonRewards — 점수 보너스는 한 번만', () => {
       { boost: 0, scout: 0, reroll: 0 },
     );
     expect(again.bonus).toEqual({
-      next: (n + 1) * 1000,
+      next: (n + 1) * ACH_SCORE_BONUS.every,
       reward: achScoreBonusOf(n + 1),
       got: bonus,
     });

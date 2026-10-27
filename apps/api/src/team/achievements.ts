@@ -9,8 +9,10 @@
 import { CAREER_FEATS } from '@offside/contracts/owner-title';
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
 import {
+  ACH_ENDLESS_STEP_REWARD,
+  ACH_REWARD_V2_FROM_SEASON,
   LINEUP_SIZE,
-  achRewardOf,
+  achRewardAt,
   type AchCategory,
   type AchReward,
 } from '@offside/contracts/owner-team';
@@ -25,6 +27,8 @@ import {
   achievementDescs,
   achievementGroups,
   achievementLabels,
+  achievementUnits,
+  hiddenAchievement,
   managerUnits,
   tenureLabels,
 } from '../i18n/ko/achievements.js';
@@ -45,6 +49,8 @@ export type AchievementCareer = {
   /** 국적(옛 기록은 null). */
   nation: string | null;
   retireAge: number;
+  /** T-11-541 최고 OVR(모르면 없음). */
+  peak?: number;
   /** 받아 둔 시즌. */
   seasons: readonly AchievementSeason[];
 };
@@ -62,6 +68,9 @@ export type AchievementSeason = {
   cs: number | null;
   /** 현역 복무 시즌(상무는 일반 시즌으로 남고 clubId로 가린다). */
   mil?: boolean;
+  /** T-11-541 그 시즌 나이 · 도움(모르면 없음). */
+  age?: number;
+  assists?: number;
 };
 
 /** 내 팀 선발(업적 판정에 쓰는 것만). 빈 자리는 careerId null. */
@@ -92,6 +101,14 @@ export type AchievementTeam = {
   coach?: boolean;
   /** T-11-237 이 팀의 오프사이드 컵 최고 성적(끝난 컵만). 없으면 null. */
   cupBest?: 'champion' | 'runnerup' | 'sf' | 'qf' | 'r16' | 'r32' | 'r64' | 'group' | null;
+  /** T-11-541 무승부 · 패배 · 실점(owner_teams). */
+  draws?: number;
+  losses?: number;
+  goalsAgainst?: number;
+  /** T-11-541 내가 건 경기에서 무실점 승리 수 · 4골 차 이상 승리 수 · 한 경기 최다 득점(team_matches). */
+  cleanWins?: number;
+  bigWins?: number;
+  topScore?: number;
 };
 
 /** 그 시즌 구단주 활동. */
@@ -131,6 +148,11 @@ export type AchievementInput = {
   ladder?: boolean;
   /** T-11-541 단계 업적에 끝이 없는 시즌(ACH_ENDLESS_FROM_SEASON부터) — 마지막 단계 뒤로 다음 목표가 이어진다. */
   endless?: boolean;
+  /**
+   * T-11-541 업적이 다양해지는 시즌(ACH_VARIETY_FROM_SEASON부터) — 한 시즌의 위업 · 커리어의 모양 · 경기 장면 업적을 더하고
+   * 단계 업적마다 다른 단계 점수(GRIND · STEEP)를 쓴다.
+   */
+  varied?: boolean;
 };
 
 /** 팀 업적 id → 그 시즌에 닿은 값(한 번 달성은 1, 단계 업적은 최고 값). */
@@ -146,6 +168,7 @@ const EUROPE = leaguesFrom(4);
 const BIG5 = leaguesFrom(5);
 /** T-11-237 저장된 우승 이름(시즌 honors는 한국어로 저장된다). */
 const WORLD_CUP_WIN = 'FIFA 월드컵 우승'; // i18n-ignore 저장값
+const BALLON = '발롱도르'; // i18n-ignore 저장값
 const leagueWin = (league: string) => `${league} 우승`; // i18n-ignore 저장값
 const POTY = [
   'PFA 올해의 선수',
@@ -203,12 +226,14 @@ const CONF_CUPS = NATIONAL_WINS.filter(
 /** 트레블에서 세지 않는 우승(단판 슈퍼컵 · 대표팀 · 클럽 월드컵). */
 const NOT_TREBLE = /슈퍼컵|수페르코파|수페르타사|실드|샹피옹|클럽 월드컵/;
 const NATIONAL = new Set(NATIONAL_WINS);
+/** 한 시즌 클럽 우승(대표팀 · 단판 슈퍼컵 · 클럽 월드컵 제외) 수. */
+const clubTitles = (s: AchievementSeason) =>
+  s.honors.filter((h) => h.endsWith(' 우승') && !NATIONAL.has(h) && !NOT_TREBLE.test(h)).length;
 /** 한 시즌 트레블 — 그 시즌 리그 우승과 대륙 클럽 대회 우승을 포함해 클럽 우승 3개. */
 const treble = (s: AchievementSeason) =>
   s.honors.includes(`${s.league} 우승`) &&
   TREBLE_CONTINENTAL.some((h) => s.honors.includes(h)) &&
-  s.honors.filter((h) => h.endsWith(' 우승') && !NATIONAL.has(h) && !NOT_TREBLE.test(h)).length >=
-    3;
+  clubTitles(s) >= 3;
 /** 이름만 있는 옛 기록과 id가 있는 기록은 추정해서 합치지 않는다. */
 const clubKey = (s: AchievementSeason) => (s.clubId ? `id:${s.clubId}` : `name:${s.club}`);
 const proSeasons = (c: AchievementCareer) => c.seasons.filter((s) => !AMATEUR.has(s.league));
@@ -246,9 +271,12 @@ const TIERS: {
   unit: string;
   get: (c: AchievementCareer) => number;
   steps: number[];
+  /** T-11-541 다양해진 시즌의 단계 점수 — 많이 쌓으면 닿는 기록은 grind, 좋은 선수가 있어야 닿는 기록은 steep. */
+  v2: 'grind' | 'steep';
 }[] = [
   {
     id: 'goals',
+    v2: 'grind',
     label: '골',
     unit: '골',
     get: (c) => c.goals,
@@ -256,6 +284,7 @@ const TIERS: {
   },
   {
     id: 'assists',
+    v2: 'grind',
     label: '도움',
     unit: '도움',
     get: (c) => c.assists,
@@ -263,6 +292,7 @@ const TIERS: {
   },
   {
     id: 'apps',
+    v2: 'grind',
     label: '출전',
     unit: '경기',
     get: (c) => c.apps,
@@ -270,6 +300,7 @@ const TIERS: {
   },
   {
     id: 'caps',
+    v2: 'steep',
     label: 'A매치 출전',
     unit: '경기',
     get: (c) => c.caps,
@@ -278,6 +309,7 @@ const TIERS: {
   // T-11-237 모든 업적을 한 번씩 깬 구단주가 나와 윗단계를 연다(운영 시즌 1 구단주 7천여 명 중 상위 몇십 명 · 몇 명).
   {
     id: 'trophies',
+    v2: 'steep',
     label: '우승',
     unit: '회',
     get: (c) => c.trophies,
@@ -285,6 +317,7 @@ const TIERS: {
   },
   {
     id: 'awards',
+    v2: 'steep',
     label: '개인 수상',
     unit: '회',
     get: (c) => c.awards,
@@ -292,6 +325,7 @@ const TIERS: {
   },
   {
     id: 'legend',
+    v2: 'steep',
     label: '레전드 점수',
     unit: '점',
     get: (c) => c.legendScore,
@@ -311,6 +345,16 @@ const PTS = {
 /** 단계 업적의 단계별 점수(앞에서부터 목표 수만큼). */
 const LADDER = [10, 20, 40, 80, 160, 320];
 const TEAM_LADDER = [20, 40, 80];
+/**
+ * T-11-541 다양해진 시즌의 단계 점수. 오래 하면 누구나 닿는 쌓기 기록(골 · 도움 · 출전 · 은퇴시킨 선수 · 날 수)은 완만하게,
+ * 좋은 선수가 있어야 닿는 기록(A매치 · 우승 · 수상 · 레전드 점수)은 지금처럼 가파르게 오르되 끝을 조금 낮춘다. 어려운
+ * 위업을 세는 짧은 단계 업적(최고 OVR · 발롱도르 선수 · 레전드 선수)은 SHORT로 첫 단계부터 크게 준다.
+ */
+const GRIND = [10, 20, 30, 50, 80, 120];
+const STEEP = [10, 20, 40, 80, 160, 240];
+const SHORT = [20, 50, 100, 160];
+/** 팀 · 감독 단계 업적(3단계)은 마지막 단계만 보상이 있게 낮춘다. */
+const TEAM_V2 = [20, 30, 60];
 /** T-11-541 날 수 업적은 2주씩이 아니라 15일씩 이어 간다(30 → 45 → 60, 30~60일 시즌 안에 닿게). */
 const DAYS: StepGrow = { add: 15 };
 
@@ -375,8 +419,11 @@ export function stepsOf(
   return out;
 }
 
-/** T-11-357 단계 업적의 단계별 점수(보상 판정용 — 응답에는 싣지 않는다). */
-const ladderOf = new WeakMap<ClubAchievement, readonly number[]>();
+/**
+ * T-11-357 단계 업적의 단계별 점수(보상 판정용 — 응답에는 싣지 않는다). T-11-541 defined = 정해 둔 단계 수(그 뒤는
+ * 끝없는 단계).
+ */
+const ladderOf = new WeakMap<ClubAchievement, { points: readonly number[]; defined: number }>();
 /** 단계(1부터)의 점수. 사다리보다 긴 단계(T-11-541 끝없는 단계)는 사다리 마지막 점수다. */
 const stepPoints = (ladder: readonly number[], k: number) =>
   ladder[Math.min(k, ladder.length) - 1] ?? 0;
@@ -409,8 +456,14 @@ const tier = (
     points,
     worth: steps[level] !== undefined ? pointsAt(level + 1) : 0,
   };
-  ladderOf.set(item, levelPoints);
+  ladderOf.set(item, { points: levelPoints, defined: defined.length });
   return item;
+};
+/** 단계 업적에 판정 기준 한 줄을 붙인다(같은 객체를 고친다 — 단계 점수 기록 ladderOf가 객체로 찾는다). */
+const described = (i: ClubAchievement): ClubAchievement => {
+  const desc = achievementDescs[i.id];
+  if (desc) i.desc = desc;
+  return i;
 };
 const group = (
   category: AchCategory,
@@ -433,18 +486,34 @@ export function teamKeptOf(groups: readonly ClubAchievementGroup[]): TeamKept {
 /** T-11-357 보상 한 칸: 업적(단계 업적은 단계마다) 하나. key는 시즌 안에서 겹치지 않는 이름. */
 export type AchRewardStep = { id: string; key: string } & AchReward;
 
-/** 달성한 업적·단계 중 보상이 있는 것(achRewardOf). 단계 업적은 넘은 단계마다 한 칸이다. */
-export function achRewardSteps(groups: readonly ClubAchievementGroup[]): AchRewardStep[] {
+/**
+ * 업적 하나(단계 업적은 k단계, 1부터)의 보상. 그 시즌 보상 표(achRewardAt)로 정하고, T-11-541 시즌 2부터 끝없는 단계는
+ * ACH_ENDLESS_STEP_REWARD로 묶는다. 시즌 1(예전 표 · 끝없는 단계 없음)은 예전과 같다.
+ */
+function rewardAt(i: ClubAchievement, k: number, season: number): AchReward | null {
+  const ladder = ladderOf.get(i);
+  if (!ladder) return achRewardAt(season, i.points || i.worth);
+  if (season >= ACH_REWARD_V2_FROM_SEASON && k > ladder.defined) return ACH_ENDLESS_STEP_REWARD;
+  return achRewardAt(season, ladder.points[k - 1] ?? 0);
+}
+
+/**
+ * 달성한 업적·단계 중 보상이 있는 것(achRewardAt). 단계 업적은 넘은 단계마다 한 칸이다. season은 보상 표를 고른다 —
+ * 시즌 1 업적 보상(ACH_SEASON_GIFT)은 1로 센다.
+ */
+export function achRewardSteps(
+  groups: readonly ClubAchievementGroup[],
+  season: number,
+): AchRewardStep[] {
   const out: AchRewardStep[] = [];
   for (const i of groups.filter((g) => !g.locked).flatMap((g) => g.items)) {
-    const ladder = ladderOf.get(i);
-    if (ladder && i.level !== undefined) {
+    if (ladderOf.has(i) && i.level !== undefined) {
       for (let k = 1; k <= i.level; k++) {
-        const r = achRewardOf(ladder[k - 1] ?? 0);
+        const r = rewardAt(i, k, season);
         if (r) out.push({ id: i.id, key: `${i.id}:${k}`, ...r });
       }
     } else if (i.done) {
-      const r = achRewardOf(i.points);
+      const r = rewardAt(i, 1, season);
       if (r) out.push({ id: i.id, key: i.id, ...r });
     }
   }
@@ -458,11 +527,12 @@ export function achRewardSteps(groups: readonly ClubAchievementGroup[]): AchRewa
 export function withAchRewards(
   groups: readonly ClubAchievementGroup[],
   got: ReadonlyMap<string, AchReward>,
+  season: number,
 ): ClubAchievementGroup[] {
   return groups.map((g) => ({
     ...g,
     items: g.items.map((i) => {
-      const next = i.worth > 0 ? achRewardOf(i.worth) : null;
+      const next = i.worth > 0 ? rewardAt(i, (i.level ?? 0) + 1, season) : null;
       const mine = got.get(i.id);
       return {
         ...i,
@@ -482,9 +552,147 @@ export function achievementScore(groups: readonly ClubAchievementGroup[]) {
   };
 }
 
+/** T-11-541 숨은 업적 — 달성하기 전에는 이름 대신 '숨은 업적'과 힌트만 보인다(응답 언어 바꾸기도 이 목록을 본다). */
+export const HIDDEN_ACHIEVEMENTS: ReadonlySet<string> = new Set([
+  'secret-farewell',
+  'secret-homecoming',
+]);
+const secret = (id: string, done: boolean, pts: number): ClubAchievement =>
+  done
+    ? once(id, achievementLabels[id]!, true, pts)
+    : once(id, hiddenAchievement.label, false, pts, hiddenAchievement.descs[id]);
+
+/** 나이를 아는 일반 프로 시즌(병역 제외)을 나이 순으로. */
+const agedPro = (c: AchievementCareer) =>
+  proSeasons(c)
+    .filter((s) => ordinary(s) && s.age !== undefined)
+    .sort((a, b) => a.age! - b.age!);
+
+/**
+ * T-11-541 다양해진 시즌(ACH_VARIETY_FROM_SEASON부터)의 선수 업적 — 한 시즌의 위업(같은 시즌 기록의 조합)과 커리어의
+ * 모양(한 선수의 길 · 최고 OVR · 큰 선수를 몇 명 키웠나). 재료는 지금 업적과 같은 은퇴 요약 · 시즌 요약뿐이다.
+ */
+function variedPlayerGroups(careers: readonly AchievementCareer[]): ClubAchievementGroup[] {
+  const anySeason = (pred: (s: AchievementSeason, c: AchievementCareer) => boolean) =>
+    careers.some((c) => c.seasons.some((s) => pred(s, c)));
+  const anyone = (pred: (c: AchievementCareer) => boolean) => careers.some(pred);
+  const lbl = (id: string) => achievementLabels[id]!;
+  const feat = (id: string, done: boolean, pts: number) =>
+    once(id, lbl(id), done, pts, achievementDescs[id]);
+  const age = (s: AchievementSeason) => s.age ?? -1;
+  const count = (pred: (c: AchievementCareer) => boolean) => careers.filter(pred).length;
+  return [
+    group('player', 'season', achievementGroups.season!.stage, achievementGroups.season!.title, [
+      feat(
+        's-assists-30',
+        anySeason((s) => (s.assists ?? 0) >= 30),
+        50,
+      ),
+      feat(
+        's-teen-20',
+        anySeason((s) => age(s) >= 0 && age(s) <= 19 && s.goals >= 20),
+        50,
+      ),
+      feat(
+        's-veteran-20',
+        anySeason((s) => age(s) >= 35 && s.goals >= 20),
+        50,
+      ),
+      feat(
+        's-double',
+        anySeason(
+          (s) =>
+            s.honors.includes(leagueWin(s.league)) && TOP_SCORER.some((h) => s.honors.includes(h)),
+        ),
+        50,
+      ),
+      feat(
+        's-young-ballon',
+        anySeason((s) => age(s) >= 0 && age(s) <= 21 && s.honors.includes(BALLON)),
+        80,
+      ),
+      feat(
+        's-quadruple',
+        anySeason((s) => clubTitles(s) >= 4),
+        80,
+      ),
+      feat(
+        's-ballon-treble',
+        anySeason((s) => treble(s) && s.honors.includes(BALLON)),
+        150,
+      ),
+    ]),
+    group('player', 'career', achievementGroups.career!.stage, achievementGroups.career!.title, [
+      feat(
+        'c-journeyman',
+        anyone(
+          (c) =>
+            new Set(
+              proSeasons(c)
+                .filter(ordinary)
+                .map((s) => s.league),
+            ).size >= 5,
+        ),
+        40,
+      ),
+      feat(
+        'c-df-50',
+        anyone((c) => c.pos === 'DF' && c.goals >= 50),
+        50,
+      ),
+      tier(
+        'c-peak',
+        lbl('c-peak'),
+        achievementUnits['c-peak']!,
+        Math.max(0, ...careers.map((c) => c.peak ?? 0)),
+        [85, 90, 95, 99],
+        SHORT,
+      ),
+      tier(
+        'c-ballon-players',
+        lbl('c-ballon-players'),
+        achievementUnits['c-ballon-players']!,
+        count((c) => c.ballon > 0),
+        [1, 3, 10],
+        SHORT,
+        true,
+      ),
+      tier(
+        'c-legends',
+        lbl('c-legends'),
+        achievementUnits['c-legends']!,
+        count((c) => c.legendScore >= 1000),
+        [1, 5, 20],
+        SHORT,
+        true,
+      ),
+      secret(
+        'secret-farewell',
+        anyone((c) => {
+          const last = agedPro(c).at(-1);
+          return !!last && last.honors.includes(leagueWin(last.league));
+        }),
+        40,
+      ),
+      secret(
+        'secret-homecoming',
+        anyone((c) => {
+          const pro = agedPro(c);
+          const keys = new Set(pro.map(clubKey));
+          return keys.size >= 2 && clubKey(pro[0]!) === clubKey(pro.at(-1)!);
+        }),
+        40,
+      ),
+    ]),
+  ];
+}
+
 export function clubAchievements(input: AchievementInput): ClubAchievementGroup[] {
   const { careers, team, owner, detail, retireAt } = input;
   const endless = !!input.endless;
+  const varied = !!input.varied;
+  /** T-11-541 다양해진 시즌이면 그 단계 점수, 아니면 예전 사다리. */
+  const ladderFor = (v2: readonly number[], old: readonly number[] = LADDER) => (varied ? v2 : old);
   const managers = input.managers ?? [];
   const veteranAge = retireAt - 1;
   const honors = new Set(careers.flatMap((c) => c.seasons.flatMap((s) => s.honors)));
@@ -585,7 +793,17 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
       'records',
       '1단계',
       '기록 쌓기',
-      TIERS.map((t) => tier(t.id, t.label, t.unit, sum(t.get), t.steps, LADDER, endless)),
+      TIERS.map((t) =>
+        tier(
+          t.id,
+          t.label,
+          t.unit,
+          sum(t.get),
+          t.steps,
+          ladderFor(t.v2 === 'grind' ? GRIND : STEEP),
+          endless,
+        ),
+      ),
     ),
     group('player', 'collection', '2단계', '기록 조각 모으기', collection),
     group('player', 'legend', '3단계', '전설의 한 명', [
@@ -729,6 +947,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
       ),
     ]),
   ];
+  if (varied) groups.push(...variedPlayerGroups(careers));
 
   if (team) {
     const players = team.slots.filter((s) => s.careerId !== null);
@@ -745,7 +964,15 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
       return acc ? new Set([...acc].filter((c) => mine.has(c))) : mine;
     }, null);
     const best = (id: string, label: string, unit: string, cur: number, steps: number[]) =>
-      tier(id, label, unit, Math.max(cur, kept[id] ?? 0), steps, TEAM_LADDER, endless);
+      tier(
+        id,
+        label,
+        unit,
+        Math.max(cur, kept[id] ?? 0),
+        steps,
+        ladderFor(TEAM_V2, TEAM_LADDER),
+        endless,
+      );
     groups.push(
       group('team', 'team', 'TEAM', '내가 만든 최강 팀', [
         held('team-one', '팀에 선수 한 명 등록', players.length > 0, 10),
@@ -801,6 +1028,16 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
           all((s) => (s.peak ?? 0) >= 95),
           150,
         ),
+        ...(varied
+          ? [
+              held(
+                'team-cup-qf',
+                achievementLabels['team-cup-qf']!,
+                ['champion', 'runnerup', 'sf', 'qf'].includes(team.cupBest ?? ''),
+                40,
+              ),
+            ]
+          : []),
         held(
           'team-cup-sf',
           achievementLabels['team-cup-sf']!,
@@ -820,6 +1057,52 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
         best('team-likes', '받은 좋아요', '개', team.likes, [1, 5, 20]),
       ]),
     );
+    if (varied) {
+      const played = team.wins + (team.draws ?? 0) + (team.losses ?? 0);
+      groups.push(
+        group('team', 'match', achievementGroups.match!.stage, achievementGroups.match!.title, [
+          described(
+            best(
+              'team-clean',
+              achievementLabels['team-clean']!,
+              achievementUnits['team-clean']!,
+              team.cleanWins ?? 0,
+              [5, 20, 60],
+            ),
+          ),
+          described(
+            best(
+              'team-thrash',
+              achievementLabels['team-thrash']!,
+              achievementUnits['team-thrash']!,
+              team.bigWins ?? 0,
+              [3, 10, 30],
+            ),
+          ),
+          held(
+            'team-six',
+            achievementLabels['team-six']!,
+            (team.topScore ?? 0) >= 6,
+            40,
+            achievementDescs['team-six']!,
+          ),
+          held(
+            'team-winrate',
+            achievementLabels['team-winrate']!,
+            played >= 50 && team.wins >= played * 0.7,
+            60,
+            achievementDescs['team-winrate']!,
+          ),
+          held(
+            'team-wall',
+            achievementLabels['team-wall']!,
+            played >= 30 && (team.goalsAgainst ?? 0) < played,
+            50,
+            achievementDescs['team-wall']!,
+          ),
+        ]),
+      );
+    }
   }
 
   groups.push(
@@ -831,7 +1114,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
         '명',
         careers.length,
         [3, 10, 30, 100, 200],
-        LADDER,
+        ladderFor(GRIND),
         endless,
       ),
       tier(
@@ -840,7 +1123,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
         '일',
         owner.retireDays,
         [3, 7, 14, 30],
-        LADDER,
+        ladderFor(GRIND),
         endless,
         DAYS,
       ),
@@ -850,7 +1133,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
         '일',
         owner.matchDays,
         [3, 7, 14, 30],
-        LADDER,
+        ladderFor(GRIND),
         endless,
         DAYS,
       ),
@@ -860,7 +1143,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
         '번',
         owner.likesGiven,
         [1, 5, 20],
-        TEAM_LADDER,
+        ladderFor(TEAM_V2, TEAM_LADDER),
         endless,
       ),
     ]),
@@ -873,7 +1156,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
         managerUnits['mgr-count']!,
         managers.length,
         [2, 3, 5],
-        TEAM_LADDER,
+        ladderFor(TEAM_V2, TEAM_LADDER),
         endless,
       ),
       once(
@@ -901,6 +1184,25 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
         80,
       ),
       ...(team ? [once('mgr-coach', achievementLabels['mgr-coach']!, !!team.coach, 10)] : []),
+      ...(varied
+        ? [
+            tier(
+              'mgr-titles',
+              achievementLabels['mgr-titles']!,
+              achievementUnits['mgr-titles']!,
+              managers.reduce((t, m) => t + m.titles, 0),
+              [2, 5, 10],
+              TEAM_V2,
+              endless,
+            ),
+            once(
+              'mgr-double',
+              achievementLabels['mgr-double']!,
+              managers.some((m) => m.titles > 0 && m.promotions > 0),
+              60,
+            ),
+          ]
+        : []),
     ]),
   );
   return groups;

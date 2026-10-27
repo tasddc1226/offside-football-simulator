@@ -10,6 +10,7 @@ import {
   ACH_ENDLESS_FROM_SEASON,
   ACH_SCORE_BONUS,
   ACH_SEASON_GIFT,
+  ACH_VARIETY_FROM_SEASON,
   achScoreBonusCount,
   achScoreBonusOf,
   usesRankLadder,
@@ -125,6 +126,12 @@ export async function computeOwnerAchievements(
           likes: team.likes,
           cupBest,
           coach: !!team.coachId,
+          draws: team.draws,
+          losses: team.losses,
+          goalsAgainst: team.goalsAgainst,
+          cleanWins: activity.cleanWins,
+          bigWins: activity.bigWins,
+          topScore: activity.topScore,
         }
       : open
         ? { slots: [], wins: 0, bestStreak: 0, bestMargin: 0, goalsFor: 0, rating: 0, likes: 0 }
@@ -145,6 +152,7 @@ export async function computeOwnerAchievements(
     kept: keptOf(prev?.teamKept),
     ladder: usesRankLadder(season),
     endless: season >= ACH_ENDLESS_FROM_SEASON,
+    varied: season >= ACH_VARIETY_FROM_SEASON,
   });
   return { groups, prev, players: careersIn.length };
 }
@@ -179,7 +187,7 @@ export async function refreshOwnerAchievements(
   let bonus: AchBonusView | null = null;
   if (season === teamSeasonAt(now) && season >= ACH_REWARD_FIRST_SEASON) {
     const settled = await settleSeasonRewards(db, owner.id, season, groups, now);
-    shown = withAchRewards(groups, settled.got);
+    shown = withAchRewards(groups, settled.got, season);
     bonus = settled.bonus;
   }
   return { groups: shown, row, players, bonus };
@@ -214,7 +222,7 @@ export async function settleSeasonRewards(
   now: string,
   withBonus = true,
 ): Promise<{ got: Map<string, AchReward>; bonus: AchBonusView | null }> {
-  const steps = season < ACH_REWARD_FIRST_SEASON ? [] : achRewardSteps(groups);
+  const steps = season < ACH_REWARD_FIRST_SEASON ? [] : achRewardSteps(groups, season);
   const score = achievementScore(groups).score;
   const bonusOn = withBonus && season >= ACH_SCORE_BONUS.fromSeason;
   const bonusSteps = bonusOn ? achBonusSteps(season, score) : [];
@@ -258,10 +266,13 @@ export async function settleAchievementRewards(
   return (await settleSeasonRewards(db, profileId, season, groups, now, false)).got;
 }
 
-/** T-11-386 달성한 업적으로 받을 시즌 업적 보상 합(시즌 2 실시간 보상과 같은 표). */
+/**
+ * T-11-386 달성한 시즌 1 업적으로 받을 업적 보상 합. 시즌 1 업적은 시즌 1 보상 표(T-11-541 시즌 2부터 바뀐 표가 아니라
+ * 예전 표)로 센다 — 이미 적어 둔 장수와 처음 세는 장수가 같게.
+ */
 export function seasonGiftAmount(groups: readonly ClubAchievementGroup[]): AchReward {
   const sum = { boost: 0, scout: 0 };
-  for (const s of achRewardSteps(groups)) {
+  for (const s of achRewardSteps(groups, ACH_SEASON_GIFT.season)) {
     sum.boost += s.boost;
     sum.scout += s.scout;
   }

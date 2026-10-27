@@ -579,25 +579,53 @@ export function achRewardOf(points: number): AchReward | null {
   return t ? { boost: t.boost, scout: t.scout } : null;
 }
 /**
+ * T-11-541 시즌 2부터 쓰는 업적 보상 표. 시즌이 25일에서 30~60일로 길어져 같은 표면 보상이 시즌 길이만큼 늘어난다.
+ * 문턱을 올려(50 · 100 · 160 · 240점) 업적 하나(단계 하나)의 보상을 조금 줄였다. 시즌 1 업적 보상(ACH_SEASON_GIFT)과
+ * 이미 받은 보상은 예전 표(ACH_REWARD_TIERS) 그대로다.
+ */
+export const ACH_REWARD_TIERS_V2: readonly { min: number; boost: number; scout: number }[] = [
+  { min: 240, boost: 3, scout: 1 },
+  { min: 150, boost: 2, scout: 1 },
+  { min: 100, boost: 2, scout: 0 },
+  { min: 40, boost: 1, scout: 0 },
+];
+export const ACH_REWARD_V2_FROM_SEASON = 2;
+/**
+ * T-11-541 끝없는 단계(정해 둔 단계 뒤로 이어지는 단계) 한 칸의 보상. 점수는 사다리 마지막 점수를 그대로 주지만 보상은
+ * 강화권 1장으로 묶어, 오래 뛸수록 보상이 끝없이 커지지 않게 한다.
+ */
+export const ACH_ENDLESS_STEP_REWARD: AchReward = { boost: 1, scout: 0 };
+/** 그 시즌의 업적(단계) 보상. 시즌 2부터 새 표, 그 앞은 예전 표. */
+export function achRewardAt(season: number, points: number): AchReward | null {
+  if (season < ACH_REWARD_V2_FROM_SEASON) return achRewardOf(points);
+  const t = ACH_REWARD_TIERS_V2.find((x) => points >= x.min);
+  return t ? { boost: t.boost, scout: t.scout } : null;
+}
+/**
  * T-11-541 이 시즌부터 단계 업적에 끝이 없다 — 정해 둔 마지막 단계 뒤로도 다음 목표가 계속 이어진다(api
  * team/achievements.ts stepsOf). 시즌 1까지는 마감된 점수 · 시즌 1 업적 보상 장수가 바뀌지 않게 정해 둔 단계에서 멈춘다.
  */
 export const ACH_ENDLESS_FROM_SEASON = 2;
+/**
+ * T-11-541 이 시즌부터 업적이 다양해진다 — 한 시즌의 위업 · 커리어의 모양 · 경기 장면 같은 새 업적과 업적마다 다른
+ * 단계 점수(쌓기 업적은 완만하게, 어려운 위업은 짧고 가파르게). 시즌 1 업적 · 점수 · 보상은 그대로다.
+ */
+export const ACH_VARIETY_FROM_SEASON = 2;
 
 /**
- * T-11-541 시즌 점수 보너스 — 업적 점수가 every점을 넘을 때마다(1,000 · 2,000 · …, 끝없이) 잠재력 강화권 boost장과
- * 리롤권 reroll장을 주고, scoutEvery번째 보너스마다(5,000 · 10,000 · …) 프리미엄 스카우트권 1장을 더한다. 단계 보상
- * (ACH_REWARD_TIERS)과 따로 준다. 시즌 1(25일) 마감 분포는 로그인 구단주 8,539명 중 1,000점 이상 41% · 상위 10%
- * 2,280점 · 최고 9,740점이라, 보너스는 절반 가까이가 한 번 이상 받고 상위 10%가 2~3번, 최고 구단주가 9번(30~60일
- * 시즌이면 20번 안팎)이다. 단계 보상(시즌 1 표본 상위 10% 강화권 36장)에 비해 크게 늘리지 않는 폭으로 잡았다.
- * 서버 gift_claims 'ach:<시즌>:score:<k>'로 시즌마다 보너스당 한 번이다.
+ * T-11-541 시즌 점수 보너스 — 업적 점수가 every점을 넘을 때마다(1,500 · 3,000 · …, 끝없이) 잠재력 강화권 boost장과
+ * 리롤권 reroll장을 주고, scoutEvery번째 보너스마다(6,000 · 12,000 · …) 프리미엄 스카우트권 1장을 더한다. 단계 보상
+ * (ACH_REWARD_TIERS_V2)과 따로 준다. 시즌 1(25일) 마감 분포는 로그인 구단주 8,539명 중 1,000점 이상 41% · 상위 10%
+ * 2,280점 · 최고 9,740점이다. 시즌 2는 30~60일로 길고 업적도 늘어 점수가 오르므로, 처음 잡은 1,000점마다에서
+ * 1,500점마다 · 스카우트권은 네 번째마다로 줄여 45일 시즌 추정(중앙값 1번 · 상위 10% 1~2번 · 최고 5~6번)을 시즌 1
+ * 단계 보상과 비슷한 폭에 맞췄다. 서버 gift_claims 'ach:<시즌>:score:<k>'로 시즌마다 보너스당 한 번이다.
  */
 export const ACH_SCORE_BONUS = {
   fromSeason: 2,
-  every: 1000,
+  every: 1500,
   boost: 1,
   reroll: 2,
-  scoutEvery: 5,
+  scoutEvery: 4,
 } as const;
 export type AchBonusReward = { boost: number; scout: number; reroll: number };
 /** k번째(1부터) 점수 보너스의 아이템. */

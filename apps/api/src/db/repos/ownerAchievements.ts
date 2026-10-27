@@ -159,7 +159,10 @@ export async function listAchievementRanking(db: Db, season: number, page: numbe
   return { rows, total: Number(total?.n ?? 0) };
 }
 
-/** 그 시즌 구단주 활동 — 팀 경기를 건 날 수(한국 시각)와 다른 팀에 누른 좋아요 수. T-11-128 asOf면 그 시각까지만. */
+/**
+ * 그 시즌 구단주 활동 — 팀 경기를 건 날 수(한국 시각)와 다른 팀에 누른 좋아요 수. T-11-128 asOf면 그 시각까지만.
+ * T-11-541 같은 경기 행을 세는 김에 무실점 승리 · 4골 차 이상 승리 · 한 경기 최다 득점도 함께 센다(읽는 행은 그대로).
+ */
 export async function ownerActivityIn(
   db: Db,
   profileId: string,
@@ -183,11 +186,16 @@ export async function ownerActivityIn(
   // 팀이 없으면 건 경기도 없다 — 구단주의 지난 시즌 경기까지 읽지 않게 건너뛴다.
   if (teamId === null) {
     const [l] = await likes;
-    return { matchDays: 0, likesGiven: Number(l?.n ?? 0) };
+    return { matchDays: 0, likesGiven: Number(l?.n ?? 0), cleanWins: 0, bigWins: 0, topScore: 0 };
   }
   const [[m], [l]] = await db.batch([
     db
-      .select({ n: countDistinct(sql`date(${teamMatches.createdAt}, '+9 hours')`) })
+      .select({
+        n: countDistinct(sql`date(${teamMatches.createdAt}, '+9 hours')`),
+        clean: sql<number>`coalesce(sum(${teamMatches.awayGoals} = 0 and ${teamMatches.homeGoals} > 0), 0)`,
+        big: sql<number>`coalesce(sum(${teamMatches.homeGoals} - ${teamMatches.awayGoals} >= 4), 0)`,
+        top: sql<number>`coalesce(max(${teamMatches.homeGoals}), 0)`,
+      })
       .from(teamMatches)
       .where(
         and(
@@ -198,7 +206,13 @@ export async function ownerActivityIn(
       ),
     likes,
   ]);
-  return { matchDays: Number(m?.n ?? 0), likesGiven: Number(l?.n ?? 0) };
+  return {
+    matchDays: Number(m?.n ?? 0),
+    likesGiven: Number(l?.n ?? 0),
+    cleanWins: Number(m?.clean ?? 0),
+    bigWins: Number(m?.big ?? 0),
+    topScore: Number(m?.top ?? 0),
+  };
 }
 
 /**
