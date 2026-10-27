@@ -450,13 +450,17 @@ const winDrawLoss = {
   ga: z.number().int().min(0),
 };
 
-/** 우리 팀 선수 한 명의 그 시즌 랭크 경기 골 · 도움. careerId가 null이면 유스 선수(한 줄로 모은다). */
+/** 우리 팀 선수 한 명의 그 시즌 랭크 경기 출전 · 골 · 도움. careerId가 null이면 유스 선수(한 줄로 모은다). */
 export const TeamStatsPlayerSchema = z.strictObject({
   careerId: z.string().nullable(),
   /** 지금 공개 이름, 없으면 익명 표기(웹 · 앱이 이 기기에 남은 이름으로 바꿔 보여 준다). */
   name: z.string(),
   goals: z.number().int().min(0),
   assists: z.number().int().min(0),
+  /** T-11-518 선발로 뛴 경기 수(선발 명단이 남은 경기만, 유스 선수는 빈 자리가 있던 경기). 전 응답에는 없다. */
+  apps: z.number().int().min(0).optional(),
+  /** T-11-518 가장 많이 선 자리. 출전 기록이 없으면 없다. */
+  pos: DetailPosSchema.optional(),
 });
 export type TeamStatsPlayer = z.infer<typeof TeamStatsPlayerSchema>;
 
@@ -552,6 +556,8 @@ export const TeamStatsResponseSchema = z.strictObject({
   capped: z.boolean(),
   total: z.strictObject(winDrawLoss),
   players: z.array(TeamStatsPlayerSchema),
+  /** T-11-518 센 경기 중 선발 명단이 남은 경기 수(출전 수를 센 경기). 전 응답에는 없다. */
+  xiMatches: z.number().int().min(0).optional(),
   days: z.array(TeamStatsDaySchema),
   opponents: z.array(TeamStatsOpponentSchema),
   /** T-11-358 전 응답에는 없다. */

@@ -11,7 +11,7 @@
   import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
   import { teamCoreText as C } from '@offside/app-core/i18n/ko/teamCore';
   import { statsDayLabel } from '@offside/app-core/teamText';
-  import { bigMatchLine, formAria, formLetter, statsKindRows, streakText, type StatsKindRow } from '@offside/app-core/teamStats';
+  import { bigMatchLine, formAria, formLetter, statsKindRows, statsPlayerRows, statsSorts, streakText, type StatsKindRow, type StatsSort } from '@offside/app-core/teamStats';
   import { TEAM_STATS_MATCHES_MAX } from '@offside/contracts/owner-team';
 
   let {
@@ -45,6 +45,8 @@
     ['opponents', L.statsTabOpponents],
   ];
   const record = (t: { w: number; d: number; l: number }) => C.record(t);
+  // T-11-518 선수 탭 정렬(기본 골 순).
+  let sort = $state<StatsSort>('goals');
 
   // 선수 줄로 옮기기 — 통계가 준비되면 한 번만.
   let scrolled: string | null = null;
@@ -126,16 +128,26 @@
       </div>
       {#if tab === 'players'}
         {#if s.players.length}
-          <ol class="tm-stats-list">
-            <li class="tm-stats-head muted fs-sm" aria-hidden="true"><span></span><span>{L.statsGoals}</span><span>{L.statsAssists}</span></li>
-            {#each s.players as p, i (p.careerId ?? `anon:${p.name}`)}
+          {@const pr = statsPlayerRows(s, sort)}
+          {#if pr.showApps}
+            <div class="hof-sorts" style="margin:0" role="group" aria-label={L.statsSortLabel}>
+              {#each statsSorts() as [k, label] (k)}
+                <button class="hof-sort" aria-pressed={sort === k} onclick={() => (sort = k)} data-stats-sort={k}>{label}</button>
+              {/each}
+            </div>
+          {/if}
+          <ol class="tm-stats-list" class:apps={pr.showApps}>
+            <li class="tm-stats-head muted fs-sm" aria-hidden="true"><span></span>{#if pr.showApps}<span>{L.statsApps}</span>{/if}<span>{L.statsGoals}</span><span>{L.statsAssists}</span></li>
+            {#each pr.rows as { p, apps, sub }, i (p.careerId ?? `anon:${p.name}`)}
               <li data-stats-player={p.careerId ?? undefined} class:focus={!!focus && p.careerId === focus}>
-                <span class="tm-stats-name"><small class="muted">{i + 1}</small> {name(p.careerId, p.name)}</span>
+                <span class="tm-stats-name"><span><small class="muted">{i + 1}</small> {name(p.careerId, p.name)}</span>{#if sub}<small class="muted" data-stats-sub>{sub}</small>{/if}</span>
+                {#if apps !== null}<span data-stats-apps>{apps}</span>{/if}
                 <b>{p.goals}</b>
                 <b>{p.assists}</b>
               </li>
             {/each}
           </ol>
+          {#if pr.note}<p class="muted fs-xs" style="margin:0" data-stats-apps-note>{pr.note}</p>{/if}
         {:else}
           <p class="muted">{L.statsNoScorers}</p>
         {/if}
@@ -244,7 +256,11 @@
     border-top: 1px solid var(--line);
     font-variant-numeric: tabular-nums;
   }
+  .tm-stats-list.apps li {
+    grid-template-columns: 1fr 3.2em 3.2em 3.2em;
+  }
   .tm-stats-list li > b,
+  .tm-stats-list li > [data-stats-apps],
   .tm-stats-head > span:not(:first-child) {
     text-align: right;
   }
@@ -284,6 +300,6 @@
     overflow-wrap: anywhere;
   }
   .tm-stats-list .tm-stats-name {
-    display: block;
+    display: flex;
   }
 </style>
