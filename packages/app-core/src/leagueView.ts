@@ -1,10 +1,6 @@
 // T-11-418 오프사이드 리그 화면 규칙(웹 · 앱 공통): 단계 이름, 배너 한 줄, 일정 줄, 신청 불가 이유. 날짜는 한국 시간이다.
 import { KST_MS } from '@offside/contracts/kst';
-import {
-  LEAGUE_FORFEIT_GOALS,
-  LEAGUE_FORFEIT_LIMIT,
-  LEAGUE_SIZE,
-} from '@offside/contracts/league';
+import { LEAGUE_FORFEIT_GOALS, LEAGUE_FORFEIT_LIMIT, LEAGUE_SIZE } from '@offside/contracts/league';
 import type {
   LeagueMatch,
   LeagueMeResponse,
