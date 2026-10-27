@@ -61,6 +61,7 @@ import { accountLinkedSql } from './profiles.js';
 import type { AchievementSeason } from '../../team/achievements.js';
 import type { LineupCareer, PlayerRef } from '../../team/sim.js';
 import type { StoredMoment } from '../../team/moments.js';
+import { cardPublicName } from '../cardName.js';
 
 // T-10-092 구단주 팀(시즌마다 한 팀)·팀 경기·라이브 랭킹.
 
@@ -301,7 +302,7 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       height: careers.height,
       weight: careers.weight,
       number: cards.number,
-      publicName: careers.publicName,
+      publicName: cardPublicName,
       look: careers.look,
       type: careers.type,
       foot: careers.foot,
@@ -418,7 +419,7 @@ export async function careersByIds(db: Db, ids: string[]) {
       weight: careers.weight,
       legendScore: cards.legendScore,
       number: cards.number,
-      publicName: careers.publicName,
+      publicName: cardPublicName,
       look: careers.look,
       type: careers.type,
       foot: careers.foot,
@@ -1075,18 +1076,37 @@ export async function statsNamesOf(
       .from(careers)
       .where(inArray(careers.id, chunk)),
   );
-  return new Map(
+  const names = new Map(
     rows.map((r) => [r.id, { publicName: r.publicName, anon: anonName(r.pos, r.number) }]),
   );
+  // T-11-548 careers 행이 지워진 카드는 카드에 붙인 이름을 쓴다(익명 표기는 경기 기록 것). 그런 선수가 있을 때만 읽는다.
+  const missing = ids.filter((id) => !names.has(id));
+  if (missing.length) {
+    const cardNames = await readInChunks(missing, (chunk) =>
+      db
+        .select({ id: cards.careerId, publicName: cards.publicName })
+        .from(cards)
+        .where(and(inArray(cards.careerId, chunk), isNotNull(cards.publicName))),
+    );
+    for (const r of cardNames) names.set(r.id, { publicName: r.publicName, anon: '' });
+  }
+  return names;
 }
 
+/** 경기 기록에 나온 커리어의 지금 공개 이름(T-11-548 careers 행이 지워진 카드는 카드의 이름). */
 export async function publicNamesOf(db: Db, ids: string[]): Promise<Map<string, string>> {
   // 경기 여러 판이면 커리어가 100명을 넘는다 — 나눠 읽는다.
   const rows = await readInChunks(ids, (chunk) =>
     db
       .select({ id: careers.id, publicName: careers.publicName })
       .from(careers)
-      .where(and(inArray(careers.id, chunk), isNotNull(careers.publicName))),
+      .where(and(inArray(careers.id, chunk), isNotNull(careers.publicName)))
+      .union(
+        db
+          .select({ id: cards.careerId, publicName: cards.publicName })
+          .from(cards)
+          .where(and(inArray(cards.careerId, chunk), isNotNull(cards.publicName))),
+      ),
   );
   return new Map(rows.map((r) => [r.id, r.publicName!]));
 }
