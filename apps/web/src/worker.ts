@@ -125,7 +125,21 @@ export default {
   },
 };
 
+// T-11-531 크리에이터 프로필 소개(틱톡 160자)에 넣을 짧은 주소. 추적 링크(T-11-515)로 넘긴다.
+const SHORT_LINKS: Record<string, string> = {
+  '/ethio':
+    '/?utm_source=tiktok&utm_medium=partner&utm_campaign=creator_test&utm_content=ethio_tiktok',
+  '/ethio-yt':
+    '/?utm_source=youtube&utm_medium=partner&utm_campaign=creator_test&utm_content=ethio_short',
+};
+
 async function route(request: Request, env: Env, url: URL, ctx: Ctx): Promise<Response> {
+  const short = SHORT_LINKS[url.pathname.toLowerCase()];
+  if (short)
+    return new Response(null, {
+      status: 302,
+      headers: { Location: short, 'Cache-Control': 'no-store' },
+    });
   if (url.pathname === '/' && url.searchParams.has('news')) {
     // 공개 소식의 "게임에서 보기" 링크. 형식이 틀린 글 ID는 게임 게시판에 넘기지 않고 홈으로 보낸다.
     if (!NEWS_ID.test(url.searchParams.get('news') ?? ''))
