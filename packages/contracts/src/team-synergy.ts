@@ -8,6 +8,7 @@
  * T-11-197 듀오 효과 상한(줄마다 +3 · 합 +5)을 없앴다 — 켜진 듀오는 모두 표의 효과를 그대로 더한다.
  * T-11-467 팀 색깔에 리그 컬러(같은 주 리그 7명)와 클럽 동료(같은 주 클럽 3명)를 더했다. 리그 컬러는 국가대표 라인업과
  * 같은 칸이라 둘 다 켜지면 인원이 많은 쪽만(같으면 국가대표) 효과가 들어간다.
+ * T-11-542 시즌 2에 트리오 3개 · 듀오 9개 · 나라별 색깔 12개를 더했다. 기존 id는 그대로다(경기 기록 · 감독 특기가 id로 찾는다).
  */
 import { DEFAULT_NATION, NATION_BY_CODE, type Confed } from './nations.js';
 import { BASE_DETAIL, type DetailPos } from './positions.js';
@@ -68,11 +69,60 @@ type DuoDef = {
   needs: readonly Need[];
   /** 두 선수가 같은 쪽 측면에 서야 한다(측면 오버래핑). */
   sameSide?: boolean;
+  /** T-11-542 두 선수가 서로 반대쪽 측면에 서야 한다(측면 전환). */
+  oppositeSide?: boolean;
+  /** T-11-542 이 서비스 시즌부터 켜진다(없으면 처음부터). 지난 시즌 팀 · 경기는 그 시즌 규칙으로 센다. */
+  since?: number;
   effect: Partial<SynergyLines>;
 };
 
-/** 듀오 표. 켜진 듀오는 모두 효과를 더한다(T-11-197 상한 없음). 드물고 큰 듀오를 위에 둔다. */
+/** T-11-542 시즌 2에 더한 트리오 · 듀오 · 나라별 색깔이 켜지는 서비스 시즌. 시즌 1 남은 경기는 그대로 둔다. */
+export const SYNERGY_S2_SEASON = 2;
+/** 그 시즌에 쓰는 규칙인지(season을 모르면 지금 규칙 전부). */
+const ruleOn = (since: number | undefined, season: number | undefined): boolean =>
+  since === undefined || season === undefined || season >= since;
+
+/**
+ * 듀오 표. 켜진 듀오는 모두 효과를 더한다(T-11-197 상한 없음). 드물고 큰 듀오를 위에 둔다.
+ * T-11-542 세 선수가 함께 서야 켜지는 트리오(줄 힘 합 +1.5)를 맨 위에, 시즌 2에 더한 듀오를 기존 듀오 뒤에 둔다.
+ * 트리오도 경기 기록 · 화면에서는 듀오와 같은 종류('duo')로 다룬다. 한국어 이름 · 설명은 ko 사전 값이고 en · ja는 id로 찾는다.
+ */
 export const DUOS: readonly DuoDef[] = [
+  {
+    id: 'trident',
+    name: '삼지창', // i18n-ignore ko 이름(en · ja는 teamSynergy 사전에서 id로)
+    desc: '윙어 + 골 사냥꾼·타깃맨 스트라이커 + 또 한 명의 윙어·스피드스터', // i18n-ignore ko 설명
+    needs: [
+      { types: ['winger'], slots: ['W'] },
+      { types: ['poacher', 'target'], slots: ['ST'] },
+      { types: ['winger', 'speed'], slots: ['W'] },
+    ],
+    since: SYNERGY_S2_SEASON,
+    effect: { atk: 1, mid: 0.5 },
+  },
+  {
+    id: 'triangle',
+    name: '중원 삼각형', // i18n-ignore ko 이름
+    desc: '플레이메이커 + 박스 투 박스 + 윙어가 함께 중원에', // i18n-ignore ko 설명
+    needs: [
+      { types: ['maker'], slots: ['DM', 'CM', 'AM'] },
+      { types: ['b2b'], slots: ['DM', 'CM', 'AM'] },
+      { types: ['winger'], slots: ['DM', 'CM', 'AM'] },
+    ],
+    since: SYNERGY_S2_SEASON,
+    effect: { atk: 0.5, mid: 1 },
+  },
+  {
+    id: 'back_three',
+    name: '스리백', // i18n-ignore ko 이름
+    desc: '빌드업 센터백 + 스토퍼·빌드업 센터백 2명, 셋 다 센터백에', // i18n-ignore ko 설명
+    needs: [
+      { types: ['libero'], slots: ['CB'] },
+      { types: ['stopper', 'libero'], slots: ['CB'], count: 2 },
+    ],
+    since: SYNERGY_S2_SEASON,
+    effect: { mid: 0.5, def: 1 },
+  },
   {
     id: 'cross',
     name: '크로스 공식',
@@ -164,6 +214,99 @@ export const DUOS: readonly DuoDef[] = [
     ],
     effect: { def: 0.5 },
   },
+  {
+    id: 'big_small',
+    name: '빅 앤 스몰', // i18n-ignore ko 이름
+    desc: '타깃맨 + 골 사냥꾼 투톱', // i18n-ignore ko 설명
+    needs: [
+      { types: ['target'], slots: ['ST'] },
+      { types: ['poacher'], slots: ['ST'] },
+    ],
+    since: SYNERGY_S2_SEASON,
+    effect: { atk: 1 },
+  },
+  {
+    id: 'wings',
+    name: '양 날개', // i18n-ignore ko 이름
+    desc: '윙어 2명이 양쪽 측면 공격에', // i18n-ignore ko 설명
+    needs: [{ types: ['winger'], slots: ['W'], count: 2 }],
+    oppositeSide: true,
+    since: SYNERGY_S2_SEASON,
+    effect: { atk: 1 },
+  },
+  {
+    id: 'shadow',
+    name: '섀도 스트라이커', // i18n-ignore ko 이름
+    desc: '공격형 미드필더 자리의 윙어·박스 투 박스 + 골 사냥꾼 스트라이커', // i18n-ignore ko 설명
+    needs: [
+      { types: ['winger', 'b2b'], slots: ['AM'] },
+      { types: ['poacher'], slots: ['ST'] },
+    ],
+    since: SYNERGY_S2_SEASON,
+    effect: { atk: 0.5 },
+  },
+  {
+    id: 'double_pivot',
+    name: '더블 볼란치', // i18n-ignore ko 이름
+    desc: '박스 투 박스 2명이 수비형·중앙 미드필더에', // i18n-ignore ko 설명
+    needs: [{ types: ['b2b'], slots: ['DM', 'CM'], count: 2 }],
+    since: SYNERGY_S2_SEASON,
+    effect: { def: 0.5 },
+  },
+  {
+    id: 'anchor',
+    name: '앵커', // i18n-ignore ko 이름
+    desc: '수비형 미드필더 자리의 박스 투 박스 + 스토퍼 센터백', // i18n-ignore ko 설명
+    needs: [
+      { types: ['b2b'], slots: ['DM'] },
+      { types: ['stopper'], slots: ['CB'] },
+    ],
+    since: SYNERGY_S2_SEASON,
+    effect: { def: 0.5 },
+  },
+  {
+    id: 'regista',
+    name: '레지스타', // i18n-ignore ko 이름
+    desc: '수비형 미드필더 자리의 플레이메이커 + 빌드업 센터백', // i18n-ignore ko 설명
+    needs: [
+      { types: ['maker'], slots: ['DM'] },
+      { types: ['libero'], slots: ['CB'] },
+    ],
+    since: SYNERGY_S2_SEASON,
+    effect: { mid: 0.5 },
+  },
+  {
+    id: 'high_line',
+    name: '하이 라인', // i18n-ignore ko 이름
+    desc: '스위퍼 키퍼 + 공격형 풀백', // i18n-ignore ko 설명
+    needs: [
+      { types: ['sweeper'], slots: ['GK'] },
+      { types: ['fullback'], slots: ['FB'] },
+    ],
+    since: SYNERGY_S2_SEASON,
+    effect: { def: 1 },
+  },
+  {
+    id: 'switch',
+    name: '측면 전환', // i18n-ignore ko 이름
+    desc: '윙어 + 반대쪽 측면의 공격형 풀백', // i18n-ignore ko 설명
+    needs: [
+      { types: ['winger'], slots: ['W'] },
+      { types: ['fullback'], slots: ['FB'] },
+    ],
+    oppositeSide: true,
+    since: SYNERGY_S2_SEASON,
+    effect: { atk: 0.5 },
+  },
+  {
+    id: 'wingbacks',
+    name: '양쪽 풀백', // i18n-ignore ko 이름
+    desc: '공격형 풀백 2명이 양쪽 풀백에', // i18n-ignore ko 설명
+    needs: [{ types: ['fullback'], slots: ['FB'], count: 2 }],
+    oppositeSide: true,
+    since: SYNERGY_S2_SEASON,
+    effect: { mid: 0.5 },
+  },
 ];
 
 /** 팀 색깔 '우리가 키운 팀'에 필요한 직접 키운 선발 수와 효과. */
@@ -178,12 +321,19 @@ export const NATIONAL_MIN = 7;
  * 표에 없는 나라는 대륙연맹 색깔을 쓴다.
  */
 export const NATIONAL_POWER = 1.5;
-export type NationStyle = { id: string; name: string; effect: Partial<SynergyLines> };
-const style = (id: string, name: string, effect: Partial<SynergyLines>): NationStyle => ({
-  id,
-  name,
-  effect,
-});
+export type NationStyle = {
+  id: string;
+  name: string;
+  effect: Partial<SynergyLines>;
+  /** T-11-542 이 서비스 시즌부터 쓰는 색깔(그 전 시즌은 대륙연맹 색깔). */
+  since?: number;
+};
+const style = (
+  id: string,
+  name: string,
+  effect: Partial<SynergyLines>,
+  since?: number,
+): NationStyle => ({ id, name, effect, ...(since === undefined ? {} : { since }) });
 export const NATION_STYLES: Readonly<Record<string, NationStyle>> = {
   KR: style('kr_press', '투지의 압박', { mid: 1, def: 0.5 }),
   JP: style('jp_pass', '정교한 패스워크', { atk: 0.5, mid: 1 }),
@@ -196,6 +346,19 @@ export const NATION_STYLES: Readonly<Record<string, NationStyle>> = {
   'GB-ENG': style('eng_direct', '킥 앤 러시', { atk: 1, def: 0.5 }),
   NL: style('nl_total', '토털 풋볼', { atk: 0.5, mid: 0.5, def: 0.5 }),
   PT: style('pt_wing', '윙어의 나라', { atk: 1.25, mid: 0.25 }),
+  // T-11-542 시즌 2에 더한 나라(nations.ts 전력 순으로 표에 없던 10개 + 아시아 두 나라). 이름은 ko 사전 값이다.
+  BE: style('be_golden', '황금 세대', { atk: 0.5, mid: 1 }, SYNERGY_S2_SEASON), // i18n-ignore ko 이름
+  MA: style('ma_atlas', '아틀라스의 사자', { mid: 0.5, def: 1 }, SYNERGY_S2_SEASON), // i18n-ignore ko 이름
+  HR: style('hr_vatreni', '불꽃 중원', { mid: 1.25, def: 0.25 }, SYNERGY_S2_SEASON), // i18n-ignore ko 이름
+  UY: style('uy_garra', '가라 차루아', { atk: 0.5, def: 1 }, SYNERGY_S2_SEASON), // i18n-ignore ko 이름
+  DK: style('dk_dynamite', '대니시 다이너마이트', { atk: 0.75, mid: 0.75 }, SYNERGY_S2_SEASON), // i18n-ignore ko 이름
+  CO: style('co_rhythm', '커피 군단의 리듬', { atk: 1, mid: 0.5 }, SYNERGY_S2_SEASON), // i18n-ignore ko 이름
+  CH: style('ch_clock', '스위스 시계', { mid: 0.5, def: 0.75, gk: 0.25 }, SYNERGY_S2_SEASON), // i18n-ignore ko 이름
+  US: style('us_stamina', '지치지 않는 체력', { mid: 0.75, def: 0.75 }, SYNERGY_S2_SEASON), // i18n-ignore ko 이름
+  SN: style('sn_teranga', '테랑가의 사자', { atk: 0.75, def: 0.75 }, SYNERGY_S2_SEASON), // i18n-ignore ko 이름
+  MX: style('mx_tri', '엘 트리의 패스', { atk: 0.5, mid: 1 }, SYNERGY_S2_SEASON), // i18n-ignore ko 이름
+  AU: style('au_socceroos', '사커루의 근성', { atk: 0.5, def: 1 }, SYNERGY_S2_SEASON), // i18n-ignore ko 이름
+  CN: style('cn_wall', '만리장성 수비', { def: 1.25, gk: 0.25 }, SYNERGY_S2_SEASON), // i18n-ignore ko 이름
 };
 export const CONFED_STYLES: Readonly<Record<Confed, NationStyle>> = {
   AFC: style('afc', '아시아의 기동력', { mid: 0.75, def: 0.75 }),
@@ -205,9 +368,16 @@ export const CONFED_STYLES: Readonly<Record<Confed, NationStyle>> = {
   CONCACAF: style('concacaf', '빠른 역습', { atk: 0.75, mid: 0.75 }),
   OFC: style('ofc', '섬나라의 끈기', { def: 1.25, gk: 0.25 }),
 };
-/** 그 나라의 축구 색깔(표에 없으면 대륙연맹 색깔). */
-export const nationStyle = (code: string): NationStyle =>
-  NATION_STYLES[code] ?? CONFED_STYLES[NATION_BY_CODE.get(code)?.conf ?? 'AFC'];
+/** 색깔 id → 나라별 · 대륙연맹 색깔(경기 기록 · 프로필의 style id로 이름을 찾는다). */
+export const nationStyleById = (id: string): NationStyle | undefined =>
+  [...Object.values(NATION_STYLES), ...Object.values(CONFED_STYLES)].find((st) => st.id === id);
+/** 그 나라의 축구 색깔(표에 없거나 그 시즌에 아직 없던 색깔이면 대륙연맹 색깔). */
+export const nationStyle = (code: string, season?: number): NationStyle => {
+  const own = NATION_STYLES[code];
+  return own && ruleOn(own.since, season)
+    ? own
+    : CONFED_STYLES[NATION_BY_CODE.get(code)?.conf ?? 'AFC'];
+};
 
 /** T-11-467 팀 색깔 '리그 컬러'에 필요한 같은 주 리그 선발 수. 합은 국가대표 라인업과 같다. */
 export const LEAGUE_MIN = 7;
@@ -303,35 +473,50 @@ export function footBonus(p: SynergyPlayer | null): number {
 const fits = (p: SynergyPlayer | null, n: Need): p is SynergyPlayer =>
   !!p && !!p.type && n.types.includes(p.type) && n.slots.includes(BASE_DETAIL[p.slot]);
 
-/** 듀오 조건을 채우는 선수 묶음(자리 번호). 못 채우면 null. */
+/**
+ * 듀오 조건을 채우는 선수 묶음(자리 번호). 못 채우면 null.
+ * 조건을 앞에서부터 한 명씩 앞자리 선수로 채우고, 막히면 앞 조건의 다음 선수로 되돌아간다(T-11-542 트리오의 겹치는 유형 조건).
+ * 측면 조건(sameSide · oppositeSide)은 처음 두 선수에 걸고, 그때는 조건 순서대로 돌려준다(그 밖에는 자리 번호 순).
+ */
 function matchDuo(players: readonly (SynergyPlayer | null)[], d: DuoDef): number[] | null {
-  if (d.sameSide) {
-    const [a, b] = d.needs as [Need, Need];
+  const slots = d.needs.flatMap((n) => Array.from({ length: n.count ?? 1 }, () => n));
+  const sided = d.sameSide || d.oppositeSide;
+  const sideOk = (a: number, b: number) => {
+    const sa = side(players[a]!.x);
+    const sb = side(players[b]!.x);
+    return sa !== 0 && (d.sameSide ? sa === sb : sa === -sb);
+  };
+  const picked: number[] = [];
+  const walk = (k: number): boolean => {
+    if (k === slots.length) return true;
     for (let i = 0; i < players.length; i++) {
-      if (!fits(players[i]!, a)) continue;
-      const s = side(players[i]!.x);
-      if (s === 0) continue;
-      const j = players.findIndex((p, k) => k !== i && fits(p, b) && side(p.x) === s);
-      if (j >= 0) return [i, j];
+      if (picked.includes(i) || !fits(players[i]!, slots[k]!)) continue;
+      if (sided && k === 1 && !sideOk(picked[0]!, i)) continue;
+      picked.push(i);
+      if (walk(k + 1)) return true;
+      picked.pop();
     }
-    return null;
-  }
-  const used = new Set<number>();
-  for (const n of d.needs) {
-    for (let c = 0; c < (n.count ?? 1); c++) {
-      const i = players.findIndex((p, k) => !used.has(k) && fits(p, n));
-      if (i < 0) return null;
-      used.add(i);
-    }
-  }
-  return [...used].sort((a, b) => a - b);
+    return false;
+  };
+  if (!walk(0)) return null;
+  return sided ? picked : [...picked].sort((a, b) => a - b);
 }
 
-/** 선발 11자리 → 켜진 시너지·주발 보정·줄 보정. */
-export function teamSynergy(players: readonly (SynergyPlayer | null)[]): TeamSynergy {
+/** 그 서비스 시즌에 쓰는 듀오 · 트리오(season을 모르면 전부). */
+export const duosFor = (season?: number): readonly DuoDef[] =>
+  DUOS.filter((d) => ruleOn(d.since, season));
+
+/**
+ * 선발 11자리 → 켜진 시너지·주발 보정·줄 보정. season은 그 팀의 서비스 시즌(T-11-542 — 시즌 2 규칙은 시즌 2부터).
+ * 모르면 지금 규칙 전부로 센다.
+ */
+export function teamSynergy(
+  players: readonly (SynergyPlayer | null)[],
+  season?: number,
+): TeamSynergy {
   const active: ActiveSynergy[] = [];
   const lines: SynergyLines = { ...ZERO };
-  for (const d of DUOS) {
+  for (const d of duosFor(season)) {
     const members = matchDuo(players, d);
     if (!members) continue;
     for (const l of SYN_LINES) lines[l] += d.effect[l] ?? 0;
@@ -378,7 +563,7 @@ export function teamSynergy(players: readonly (SynergyPlayer | null)[]): TeamSyn
   };
   if (top) {
     const [nation, members] = top;
-    const st = nationStyle(nation);
+    const st = nationStyle(nation, season);
     active.push({
       ...TEAM_RULES.national,
       members,

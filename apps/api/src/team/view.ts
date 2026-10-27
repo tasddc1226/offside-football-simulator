@@ -35,7 +35,7 @@ export const slotsOf = (
 
 /** 줄 힘. 시너지 반영 시즌(T-11-105)이면 경기와 같게 시너지 보정을 더한다. */
 export function linesOf(lineup: readonly LineupSlot[], season: number): TeamLines {
-  const l = lineupLines(lineup, synergyApplies(season) ? lineupSynergy(lineup) : null);
+  const l = lineupLines(lineup, synergyApplies(season) ? lineupSynergy(lineup, season) : null);
   return {
     atk: Math.round(l.atk),
     mid: Math.round(l.mid),

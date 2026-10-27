@@ -14,14 +14,14 @@ import {
   achGradeCutoff,
   achTierByRank,
   type AchStanding,
-  DUOS,
+  duosFor,
   FOOT_BONUS,
   FOOT_BONUS_BOTH,
   CLUB_EFFECT,
   HOMEGROWN_EFFECT,
   LEAGUE_STYLES,
   NATIONAL_POWER,
-  nationStyle,
+  nationStyleById,
   TEAM_RULES,
   lineStrength,
   slotRating,
@@ -218,17 +218,20 @@ export function autoFillSlots(
 
 /**
  * T-11-105 편성 중인 선발의 시너지 — 서버 경기 계산(api team/sim.ts buildLineup)과 같은 입력으로 센다. 빈 자리는 유스 선수.
+ * season은 그 팀의 서비스 시즌(T-11-542 시즌 2 규칙은 시즌 2부터, 모르면 지금 규칙).
  */
 export function slotsSynergy(
   positions: TeamLayout,
   slots: readonly (string | null)[],
   byId: ReadonlyMap<string, TeamPlayer>,
+  season?: number,
 ): TeamSynergy {
   return teamSynergy(
     positions.map(({ slot, x }, i) => {
       const p = slots[i] ? byId.get(slots[i]!) : undefined;
       return p ? toSynergyPlayer(slot, x, p) : null;
     }),
+    season,
   );
 }
 
@@ -288,7 +291,7 @@ export const synergyChips = (s: TeamSynergy): SynergyChip[] =>
             ? SY.nationalChip({
                 name,
                 flag: flagOf(a.nation),
-                style: SY.styleName({ id: a.style!, ko: nationStyle(a.nation).name }),
+                style: SY.styleName({ id: a.style!, ko: nationStyleById(a.style!)?.name ?? '' }),
               })
             : a.league
               ? SY.leagueChip({
@@ -340,11 +343,12 @@ const STATE_RANK: Record<SynergyState, number> = { applied: 0, noEffect: 1, off:
 /**
  * 편성 화면의 시너지 목록(웹·앱 공용). 규칙 전부를 숨김 없이 보이고 적용 중 → 효과 없음 → 미적용 순으로 둔다(같은 상태는 표 순서).
  * 켜진 것은 실제 효과, 미적용은 규칙 효과를 보인다. 언어를 바꾸면 다시 만들어야 해서 함수다.
+ * season을 주면 그 시즌에 있던 규칙만 보인다(T-11-542 시즌 2 트리오 · 듀오는 시즌 1 팀에 보이지 않는다).
  */
-export function synergyRows(s: TeamSynergy): SynergyRow[] {
+export function synergyRows(s: TeamSynergy, season?: number): SynergyRow[] {
   const on = new Map(synergyChips(s).map((c) => [c.id, c]));
   const rules: (readonly [{ id: string; name: string; desc: string }, string])[] = [
-    ...DUOS.map((d) => [d, synergyEffectText(d.effect)] as const),
+    ...duosFor(season).map((d) => [d, synergyEffectText(d.effect)] as const),
     [TEAM_RULES.homegrown, synergyEffectText(HOMEGROWN_EFFECT)],
     [TEAM_RULES.national, SY.nationalVaries({ sum: signedNum(NATIONAL_POWER) })],
     [TEAM_RULES.league, SY.leagueVaries({ sum: signedNum(NATIONAL_POWER) })],

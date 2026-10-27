@@ -45,17 +45,20 @@ export function positionGuide(pos: Pos) {
     desc: t.desc,
     focus: join(focusOfType(pos, t.id)),
     combos: pairs.filter((f) => typeForFocus(pos, f) === t.id).map(join),
-    synergies: DUOS.flatMap((d) =>
-      d.needs
-        .filter((n) => n.types.includes(t.id))
-        .map((n) => ({
+    // T-11-542 트리오(스리백)처럼 한 유형이 두 조건에 들면 시너지 하나로 묶고 자리를 합친다.
+    synergies: DUOS.flatMap((d) => {
+      const needs = d.needs.filter((n) => n.types.includes(t.id));
+      if (!needs.length) return [];
+      return [
+        {
           id: d.id,
           name: TS.synName({ id: d.id, ko: d.name }),
-          slots: SELECTABLE_DETAIL_POSITIONS.filter((p) => n.slots.includes(BASE_DETAIL[p])).join(
-            '·',
-          ),
-        })),
-    ),
+          slots: SELECTABLE_DETAIL_POSITIONS.filter((p) =>
+            needs.some((n) => n.slots.includes(BASE_DETAIL[p])),
+          ).join('·'),
+        },
+      ];
+    }),
   }));
 }
 
