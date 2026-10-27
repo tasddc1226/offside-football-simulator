@@ -731,7 +731,10 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'presets_json',
     // T-11-310 감독 칸(끝낸 감독 카드).
     'coach_id',
+    'lineup_value_open',
+    'lineup_value_closed',
   ],
+  team_lineup_cards: ['team_id', 'slot', 'career_id'],
   team_likes: ['team_id', 'profile_id', 'created_at'],
   // T-11-290 팀 프로필 스쿼드 댓글(게시판 댓글과 같은 열, 글 대신 팀에 달린다).
   team_comments: [

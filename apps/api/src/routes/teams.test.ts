@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import {
   ErrorEnvelopeSchema,
   PlayTeamMatchResponseSchema,
@@ -143,6 +144,23 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     ] as const)
       await ctx.db.update(cards).set({ cardValue: v }).where(eq(cards.careerId, id!));
 
+    // Exercise the migration backfill against existing teams, including both eligibility rules.
+    const migration = readFileSync(
+      new URL('../../migrations/0138_fancy_scarlet_witch.sql', import.meta.url),
+      'utf8',
+    );
+    const statements = migration.split('--> statement-breakpoint').map((x) => x.trim());
+    const populate = statements.find((x) => x.startsWith('INSERT INTO team_lineup_cards'))!;
+    const calculate = statements.find((x) =>
+      x.startsWith('UPDATE owner_teams SET lineup_value_open'),
+    )!;
+    await ctx.env.DB.prepare('DELETE FROM team_lineup_cards').run();
+    await ctx.env.DB.prepare(
+      'UPDATE owner_teams SET lineup_value_open = 0, lineup_value_closed = 0',
+    ).run();
+    await ctx.env.DB.prepare(populate).run();
+    await ctx.env.DB.prepare(calculate).run();
+
     const data = (await rank('?sort=value')).data;
     expect(data.sort).toBe('value');
     expect(data.items.map((i) => [i.teamId, i.value])).toEqual([
@@ -160,6 +178,20 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
       [star.team.id, 1_000],
       [deep.team.id, 300],
     ]);
+    const stored = async () =>
+      (await ctx.db.select().from(ownerTeams).where(eq(ownerTeams.id, deep.team.id)))[0]!;
+    expect(await stored()).toMatchObject({ lineupValueOpen: 300, lineupValueClosed: 800 });
+    await ctx.db.update(cards).set({ manager: true }).where(eq(cards.careerId, c!));
+    expect(await stored()).toMatchObject({ lineupValueOpen: 0, lineupValueClosed: 800 });
+    await ctx.db.update(careers).set({ hidden: 0 }).where(eq(careers.id, b!));
+    expect(await stored()).toMatchObject({ lineupValueOpen: 400, lineupValueClosed: 1200 });
+    await ctx.db
+      .update(ownerTeams)
+      .set({ slotsJson: JSON.stringify([c]) })
+      .where(eq(ownerTeams.id, deep.team.id));
+    expect(await stored()).toMatchObject({ lineupValueOpen: 0, lineupValueClosed: 300 });
+    await ctx.db.delete(cards).where(eq(cards.careerId, c!));
+    expect(await stored()).toMatchObject({ lineupValueOpen: 0, lineupValueClosed: 0 });
   });
 
   it('최근 5경기는 홈·원정을 합쳐 최신순으로 읽고 상대 결과는 뒤집는다', async () => {

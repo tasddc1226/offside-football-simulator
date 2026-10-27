@@ -1140,6 +1140,8 @@ export const ownerTeams = sqliteTable(
     logoJson: text('logo_json'),
     filled: integer('filled').notNull(),
     ovr: integer('ovr').notNull(),
+    lineupValueOpen: integer('lineup_value_open').notNull().default(0),
+    lineupValueClosed: integer('lineup_value_closed').notNull().default(0),
     /** 팀 레이팅(경기 결과로 오르내린다, TEAM_RATING_START에서 시작). */
     rating: integer('rating').notNull().default(1000),
     /** T-11-375 디비전 index(0 아마추어 ~ 7 마스터). 레이팅 구간 + 강등 보호라 레이팅만으로 못 정해 따로 둔다. */
@@ -1173,6 +1175,34 @@ export const ownerTeams = sqliteTable(
     index('owner_teams_season_ovr_idx').on(table.season, table.ovr),
     // 라이브 랭킹(팀 랭킹).
     index('owner_teams_season_rating_idx').on(table.season, table.rating),
+    index('owner_teams_season_value_open_idx').on(
+      table.season,
+      table.lineupValueOpen,
+      table.rating,
+      table.createdAt,
+    ),
+    index('owner_teams_season_value_closed_idx').on(
+      table.season,
+      table.lineupValueClosed,
+      table.rating,
+      table.createdAt,
+    ),
+  ],
+);
+
+/** Reverse lookup for maintaining cached lineup values. */
+export const teamLineupCards = sqliteTable(
+  'team_lineup_cards',
+  {
+    teamId: text('team_id')
+      .notNull()
+      .references(() => ownerTeams.id, { onDelete: 'cascade' }),
+    slot: integer('slot').notNull(),
+    careerId: text('career_id').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.teamId, table.slot] }),
+    index('team_lineup_cards_career_idx').on(table.careerId, table.teamId),
   ],
 );
 
