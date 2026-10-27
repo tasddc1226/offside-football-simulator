@@ -12,14 +12,15 @@ import { applySeasonSchedule } from './service-seasons';
 describe('T-11-511 시즌 패스 규칙', () => {
   afterEach(() => applySeasonSchedule([]));
 
-  it('은퇴 수로 열린 단계 수', () => {
-    expect(passTierOf(0)).toBe(0);
-    expect(passTierOf(4)).toBe(3);
-    expect(passTierOf(25)).toBe(SEASON_PASS_TIERS.length);
+  it('은퇴 수로 열린 단계 수(1단계는 사면 바로 열린다)', () => {
+    expect(passTierOf(0)).toBe(1);
+    expect(passTierOf(4)).toBe(4);
+    expect(passTierOf(25)).toBe(11);
+    expect(passTierOf(50)).toBe(SEASON_PASS_TIERS.length);
   });
 
   it('(from, to] 단계 보상을 합친다', () => {
-    expect(passRewardBetween(0, 4)).toEqual({ reroll: 6, boost: 3 });
+    expect(passRewardBetween(0, 4)).toEqual({ reroll: 20, boost: 13, scout: 3 });
     expect(passRewardBetween(4, 4)).toEqual({});
   });
 

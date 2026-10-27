@@ -103,7 +103,7 @@ describe('T-11-511 시즌 패스', () => {
     expect(await state(me.cookie)).toEqual({
       onSale: false,
       stores: [],
-      seasons: [{ season: 2, owned: false, progress: 3, tier: 3, claimed: 0 }],
+      seasons: [{ season: 2, owned: false, progress: 3, tier: 4, claimed: 0 }],
     });
     ctx.env.SEASON_PASS_ENABLED = '1';
     expect(await state(me.cookie)).toMatchObject({
@@ -120,7 +120,7 @@ describe('T-11-511 시즌 패스', () => {
     expect(await state(me.cookie)).toEqual({
       onSale: false,
       stores: [],
-      seasons: [{ season: 2, owned: false, progress: 0, tier: 0, claimed: 0 }],
+      seasons: [{ season: 2, owned: false, progress: 0, tier: 1, claimed: 0 }],
     });
   });
 
@@ -128,7 +128,7 @@ describe('T-11-511 시즌 패스', () => {
     const me = await issueGoogleCookie(ctx);
     await retire(me.profileId, 23, { day: '2026-10-31' });
     await retire(me.profileId, 2, { day: '2026-11-01' });
-    expect((await state(me.cookie)).seasons[0]).toMatchObject({ progress: 22, tier: 9 });
+    expect((await state(me.cookie)).seasons[0]).toMatchObject({ progress: 22, tier: 10 });
   });
 
   it('산 거래로 패스를 열고, 열린 단계를 한꺼번에 받으며 다시 눌러도 두 번 받지 않는다', async () => {
@@ -138,23 +138,23 @@ describe('T-11-511 시즌 패스', () => {
     expect((await claim(me.cookie, 2)).status).toBe(404);
     appleTx.current = appleFor(me.profileId, '3000000001');
     const bought = PassRes.parse(await (await buy(me.cookie)).json()).data;
-    expect(bought.seasons[0]).toEqual({ season: 2, owned: true, progress: 5, tier: 4, claimed: 0 });
+    expect(bought.seasons[0]).toEqual({ season: 2, owned: true, progress: 5, tier: 5, claimed: 0 });
     // 같은 거래 재전송은 같은 결과다.
     expect(PassRes.parse(await (await buy(me.cookie)).json()).data).toEqual(bought);
     expect(await ctx.db.select().from(seasonPasses)).toHaveLength(1);
 
     const first = ClaimRes.parse(await (await claim(me.cookie, 2)).json()).data;
-    // 1~4단계: 리롤 3 + 강화 1 + 리롤 3 + 강화 2.
-    expect(first.granted).toEqual({ reroll: 6, boost: 3, scout: 0, rename: 0 });
-    expect(first.pass.seasons[0]).toMatchObject({ tier: 4, claimed: 4 });
+    // 1~5단계: 사면 바로(스카우트 2 · 강화 10 · 리롤 10) + 리롤 5 + 강화 3 + 리롤 5 · 스카우트 1 + 강화 5.
+    expect(first.granted).toEqual({ reroll: 20, boost: 18, scout: 3, rename: 0 });
+    expect(first.pass.seasons[0]).toMatchObject({ tier: 5, claimed: 5 });
     const again = ClaimRes.parse(await (await claim(me.cookie, 2)).json()).data;
     expect(again.granted).toEqual({ reroll: 0, boost: 0, scout: 0, rename: 0 });
-    expect(await items(me.cookie)).toMatchObject({ reroll: 6, boost: 3, scout: 0 });
+    expect(await items(me.cookie)).toMatchObject({ reroll: 20, boost: 18, scout: 3 });
 
-    // 더 은퇴시키면 남은 단계만 받는다(5~7단계 = 스카우트 1 + 리롤 4 · 강화 2 + 스카우트 1).
+    // 더 은퇴시키면 남은 단계만 받는다(6~8단계 = 리롤 6 · 스카우트 1 + 강화 5 · 이름 변경 1 + 리롤 7 · 스카우트 1).
     await retire(me.profileId, 7);
     const next = ClaimRes.parse(await (await claim(me.cookie, 2)).json()).data;
-    expect(next.granted).toEqual({ reroll: 4, boost: 2, scout: 2, rename: 0 });
+    expect(next.granted).toEqual({ reroll: 13, boost: 5, scout: 2, rename: 1 });
   });
 
   it('같은 시즌에 두 번 사면 다음 시즌 패스가 되고, 다른 구단주의 거래는 거절한다', async () => {
@@ -183,11 +183,11 @@ describe('T-11-511 시즌 패스', () => {
     await retire(me.profileId, 2, { season: 1 });
     const seasons = (await state(me.cookie)).seasons;
     expect(seasons.map((s) => [s.season, s.tier, s.claimed])).toEqual([
-      [2, 0, 0],
-      [1, 2, 0],
+      [2, 1, 0],
+      [1, 3, 0],
     ]);
     const got = ClaimRes.parse(await (await claim(me.cookie, 1)).json()).data;
-    expect(got.granted).toEqual({ reroll: 3, boost: 1, scout: 0, rename: 0 });
+    expect(got.granted).toEqual({ reroll: 15, boost: 13, scout: 2, rename: 0 });
     expect(got.pass.seasons.map((s) => s.season)).toEqual([2]);
   });
 

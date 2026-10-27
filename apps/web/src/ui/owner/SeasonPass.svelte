@@ -72,11 +72,12 @@
   <ol class="sp-tiers" data-pass-tiers={s.season}>
     {#each passTiers(s) as t (t.tier)}
       {@const state = t.state === 'claimed' ? L.stateClaimed : t.state === 'open' ? L.stateOpen : L.stateLocked}
-      <li class="sp-tier {t.state}" aria-label={L.tierLabel({ tier: t.tier, need: t.need, reward: t.reward, state })}>
+      {@const need = t.kind === 'now' ? L.tierNow : t.kind === 'bonus' ? L.tierBonus({ n: t.need }) : L.tierNeed({ n: t.need })}
+      <li class="sp-tier {t.state}" aria-label={L.tierLabel({ tier: t.tier, need, reward: t.reward, state })}>
         <b class="sp-num">{t.tier}</b>
         <span class="stack sp-tier-body">
           <span>{t.reward}</span>
-          <small class="muted">{L.tierNeed({ n: t.need })}</small>
+          <small class="muted">{need}</small>
         </span>
         <small class="sp-state">{state}</small>
       </li>

@@ -1,5 +1,5 @@
-// T-11-511 시즌 패스. 한 시즌 동안 쓰는 유료 패스(자동 갱신 없음)로, 그 시즌에 은퇴시킨 커리어 수만큼 단계가 열리고 단계마다
-// 아이템을 받는다. 진행도는 시즌 게이지와 같은 기준이다: 그 시즌 선수가 fullAge 이상에 은퇴한 커리어를 (구단주, KST 날짜)마다
+// T-11-511 시즌 패스. 한 시즌 동안 쓰는 유료 패스(자동 갱신 없음)로, 사면 바로 첫 단계를 받고 그 시즌에 은퇴시킨 커리어 수만큼
+// 단계가 열려 단계마다 아이템을 받는다. 진행도는 시즌 게이지와 같은 기준이다: 그 시즌 선수가 fullAge 이상에 은퇴한 커리어를 (구단주, KST 날짜)마다
 // dailyCap까지 센다. 패스를 시즌 중간에 사도 그 시즌 처음부터 센다.
 // 서버(지급)와 화면(단계표 · 받을 보상)이 같은 규칙을 쓰게 한 곳에 둔다. zod 없는 서브패스(`@offside/contracts/season-pass`).
 import type { AttendanceReward } from './attendance-rules.js';
@@ -18,19 +18,28 @@ export const SEASON_PASS_PRICE_KRW = 9900;
 
 export type SeasonPassTier = { tier: number; need: number; reward: AttendanceReward };
 
-/** 단계(1~10): 그 시즌 은퇴 커리어 need개를 채우면 열린다. */
+/**
+ * 단계: 그 시즌 은퇴 커리어 need개를 채우면 열린다. 1단계(need 0)는 사면 바로 받는 보상, 2~11단계가 기본 단계(은퇴 25명까지),
+ * 그 뒤(PASS_BONUS_FROM명부터)는 많이 뛰는 구단주를 위한 보너스 단계다(T-11-519). 스카우트권을 패스의 대표 보상으로 둔다.
+ */
 export const SEASON_PASS_TIERS: readonly SeasonPassTier[] = [
-  { tier: 1, need: 1, reward: { reroll: 3 } },
-  { tier: 2, need: 2, reward: { boost: 1 } },
-  { tier: 3, need: 3, reward: { reroll: 3 } },
-  { tier: 4, need: 5, reward: { boost: 2 } },
-  { tier: 5, need: 7, reward: { scout: 1 } },
-  { tier: 6, need: 9, reward: { reroll: 4, boost: 2 } },
-  { tier: 7, need: 12, reward: { scout: 1 } },
-  { tier: 8, need: 15, reward: { reroll: 5, boost: 3 } },
-  { tier: 9, need: 20, reward: { scout: 1 } },
-  { tier: 10, need: 25, reward: { reroll: 5, boost: 7, scout: 2 } },
+  { tier: 1, need: 0, reward: { scout: 2, boost: 10, reroll: 10 } },
+  { tier: 2, need: 1, reward: { reroll: 5 } },
+  { tier: 3, need: 2, reward: { boost: 3 } },
+  { tier: 4, need: 3, reward: { reroll: 5, scout: 1 } },
+  { tier: 5, need: 5, reward: { boost: 5 } },
+  { tier: 6, need: 7, reward: { reroll: 6, scout: 1 } },
+  { tier: 7, need: 9, reward: { boost: 5, rename: 1 } },
+  { tier: 8, need: 12, reward: { reroll: 7, scout: 1 } },
+  { tier: 9, need: 15, reward: { boost: 7, scout: 1 } },
+  { tier: 10, need: 20, reward: { reroll: 8, boost: 5, scout: 1 } },
+  { tier: 11, need: 25, reward: { scout: 3, boost: 10, rename: 1 } },
+  { tier: 12, need: 30, reward: { reroll: 8, boost: 5 } },
+  { tier: 13, need: 40, reward: { scout: 2, boost: 5 } },
+  { tier: 14, need: 50, reward: { scout: 2, boost: 10, reroll: 10 } },
 ];
+/** 이 은퇴 수부터는 보너스 단계다(화면에서 따로 표시한다). */
+export const PASS_BONUS_FROM = 30;
 
 /** 진행도(그 시즌 은퇴 커리어 수)로 열린 단계 수(0~10). */
 export const passTierOf = (progress: number) =>
