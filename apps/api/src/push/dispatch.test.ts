@@ -156,7 +156,11 @@ describe('공지 자동 푸시', () => {
     const transport = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
       const body = JSON.parse(init!.body as string) as unknown;
       expect(body).toMatchObject([
-        { to: 'ExpoPushToken[a]', data: { type: 'offside-news', board: 'notice', postId: id } },
+        {
+          to: 'ExpoPushToken[a]',
+          badge: 1,
+          data: { type: 'offside-news', board: 'notice', postId: id },
+        },
       ]);
       return accepted();
     });

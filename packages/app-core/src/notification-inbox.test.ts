@@ -66,6 +66,21 @@ describe('session-private inbox cache', () => {
     expect(s.detail?.readAt).toBeTruthy();
     expect(s.unreadCount).toBe(0);
   });
+  it('tells the app icon badge whether a read notification was unread, or unknown outside the list', async () => {
+    const readAt = { ok: true as const, data: { readAt: '2026-10-05T06:01:00.000Z' } };
+    request.mockResolvedValueOnce(readAt).mockResolvedValueOnce(page()).mockResolvedValue(readAt);
+    const onRead = vi.fn(),
+      s = initialInboxState(),
+      c = createNotificationInbox(s, { onRead });
+    await c.read('ntf_push');
+    expect(onRead).toHaveBeenLastCalledWith(undefined);
+    await c.load();
+    await c.read('ntf_one');
+    expect(onRead).toHaveBeenLastCalledWith(true);
+    expect(s.unreadCount).toBe(0);
+    await c.read('ntf_one');
+    expect(onRead).toHaveBeenLastCalledWith(false);
+  });
   it('retains unread state on failed read and preserves retry feedback', async () => {
     request.mockResolvedValueOnce(page()).mockResolvedValueOnce({
       ok: false,

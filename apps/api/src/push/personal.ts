@@ -4,6 +4,7 @@ import { postExpo } from './transport.js';
 import { kstDay } from '@offside/contracts/kst';
 import { latePushResult } from './result.js';
 import { communityOwnerEmail } from './community.js';
+import { badgeOf, unreadBadges } from './badge.js';
 
 const BATCH = 100;
 const MINUTE = 60_000;
@@ -198,11 +199,17 @@ async function send(
   transport: typeof fetch,
 ): Promise<Outcome[]> {
   try {
+    const badges = await unreadBadges(
+      env.DB,
+      rows.map((r) => r.profile_id),
+      iso(now),
+    );
     const response = await postExpo(
       env,
       'send',
       rows.map((r) => ({
         to: r.token,
+        ...badgeOf(badges, r.profile_id),
         title: r.retention_stage
           ? pushText(
               r.title,

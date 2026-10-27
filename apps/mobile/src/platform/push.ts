@@ -209,7 +209,8 @@ export function startPush() {
         notification.request.content.data?.test === true ||
         notification.request.content.data?.kind === 'community',
       shouldPlaySound: false,
-      shouldSetBadge: false,
+      // T-11-547 앱이 켜져 있어도 푸시의 badge(안 읽은 알림 수)로 아이콘 숫자를 맞춘다.
+      shouldSetBadge: true,
     }),
   });
   const last = Notifications.getLastNotificationResponse();

@@ -216,6 +216,8 @@ describe('personal event delivery infrastructure', () => {
     expect(fetcher).toHaveBeenCalledOnce();
     const payload = JSON.parse(fetcher.mock.calls[0]![1]!.body as string);
     expect(payload).toHaveLength(3);
+    // T-11-547 앱 아이콘 숫자는 받는 사람의 안 읽은 알림 수다(지금 보내는 알림 포함).
+    expect(payload.map((p: { badge: number }) => p.badge)).toEqual([1, 1, 1]);
     expect(payload[0].data).toEqual({
       type: 'offside-notification',
       notificationId: n.id,
