@@ -13,6 +13,11 @@ export const SEASON_PASS_PRODUCT_ID = 'com.offsidelab.app.season_pass';
  * 서버 SEASON_PASS_ENABLED가 정한다.
  */
 export const SEASON_PASS_LIVE = true;
+/**
+ * iOS 앱에서도 입구를 보이는지(T-11-516). App Store 패스 상품 심사가 끝나기 전에는 스토어가 가격을 주지 않아 사기 버튼이 없으므로
+ * iOS만 닫아 두고, 승인되면 true로 바꿔 OTA로 연다. 웹 · Android는 SEASON_PASS_LIVE만 본다.
+ */
+export const SEASON_PASS_IOS_LIVE = false;
 /** 한국 기준가(원). 실제 결제 금액은 스토어가 나라에 맞춰 보인다. */
 export const SEASON_PASS_PRICE_KRW = 9900;
 
