@@ -8,7 +8,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
 import { forgetSeasonSchedule, readSeasonSchedule, SCHEDULE_KEY } from '../seasonSchedule.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { ceilKstMidnight } from '@offside/contracts/season-gauge';
+import { ceilKstMidnight, SEASON_GAUGE } from '@offside/contracts/season-gauge';
 import { countSeasonGauge, openCupEndsAt, readSeasonGauge, runSeasonGauge } from './seasonGauge.js';
 
 // 시즌 1 개막(2026-10-06 00:00 KST) 이틀 뒤
@@ -42,11 +42,11 @@ const later = (iso: string, ms: number) => new Date(Date.parse(iso) + ms).toISOS
 beforeAll(async () => {
   ctx = await createTestD1();
   CUP_FINAL = (await openCupEndsAt(ctx.env.DB, 1))!;
-  // 최소 기간(14일, 10/20 00:00 KST)과 컵 결승 다음 00:00 KST 중 늦은 쪽.
+  // 최소 기간(30일, 11/05 00:00 KST)과 컵 결승 다음 00:00 KST 중 늦은 쪽.
   END = new Date(
     Math.max(
       ceilKstMidnight(Date.parse(CUP_FINAL) + 3_600_000),
-      Date.parse(START) + 14 * 86_400_000,
+      Date.parse(START) + SEASON_GAUGE.minDays * 86_400_000,
     ),
   ).toISOString();
   for (const p of ['a', 'b', 'c'])
@@ -60,10 +60,13 @@ beforeAll(async () => {
   // a: 같은 날(KST) 25번 완주 → 하루 상한 20, 다음 날 1번 더
   for (let i = 0; i < 25; i++) await retire('a', 40, '2026-10-06T01:00:00.000Z');
   await retire('a', 36, '2026-10-06T16:00:00.000Z');
+  // 같은 KST 날(10/07)에 19번 더 → 그날도 상한 20
+  for (let i = 0; i < 19; i++) await retire('a', 38, '2026-10-07T01:00:00.000Z');
   // b: 완주 2번 + 조기 은퇴(센다에서 빠짐)
   await retire('b', 35, '2026-10-06T02:00:00.000Z');
   await retire('b', 44, '2026-10-07T02:00:00.000Z');
   await retire('b', 22, '2026-10-07T03:00:00.000Z');
+  for (let i = 0; i < 11; i++) await retire('b', 37, '2026-10-07T04:00:00.000Z');
   // c: 프리시즌 선수만(참여 유저가 아니다)
   await retire('c', 40, '2026-10-06T02:00:00.000Z', 0);
 });
@@ -76,19 +79,19 @@ afterAll(() => {
 describe('시즌 진행 게이지 cron', () => {
   it('35세 이상 은퇴만, 유저·하루마다 20개까지 세고 참여 유저는 완주한 프로필만', async () => {
     expect(await countSeasonGauge(ctx.env.DB, 1, START)).toEqual({
-      contributed: 20 + 1 + 2,
+      contributed: 20 + 20 + 13,
       participants: 2,
     });
   });
 
   it('센 값을 굳히고(90%를 넘으면 마감 확정) 30분 안에는 다시 세지 않으며, 홈 API가 진행률을 돌려준다', async () => {
     const first = await runSeasonGauge(ctx.env.DB, NOW);
-    // 목표(참여 2명 × 12 = 24)의 90%를 넘었으니 마감을 확정한다 — 48시간 뒤보다 최소 14일(10/20 00:00 KST)이 늦고,
+    // 목표(참여 2명 × 29 = 58)의 90%를 넘었으니 마감을 확정한다 — 48시간 뒤보다 최소 30일(11/05 00:00 KST)이 늦고,
     // 시즌 1 컵이 그보다 늦게 끝나면 결승 다음 00:00 KST로 미룬다.
-    expect(END >= '2026-10-19T15:00:00.000Z').toBe(true);
+    expect(END >= '2026-11-04T15:00:00.000Z').toBe(true);
     expect(first).toMatchObject({
       season: 1,
-      contributed: 23,
+      contributed: 53,
       participants: 2,
       lockedAt: NOW,
       endsAt: END,
@@ -107,7 +110,7 @@ describe('시즌 진행 게이지 cron', () => {
       data: { gauge: { target: number; progress: number; endsAt: string } };
     };
     // 진행률은 응답 시각으로 다시 계산한다 — 확정 뒤에는 90%에서 마감 시각 100%로 시간에 따라 찬다.
-    expect(body.data.gauge).toMatchObject({ target: 24, endsAt: END });
+    expect(body.data.gauge).toMatchObject({ target: 58, endsAt: END });
     expect(body.data.gauge.progress).toBeGreaterThanOrEqual(0.9);
   });
 

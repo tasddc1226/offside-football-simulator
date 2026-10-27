@@ -25,7 +25,7 @@ export const seasonGauge: Translation<SeasonGaugeMsgs> = {
     `Careers whose player retired at age ${p.age} or older fill the gauge. Each person can add up to ${p.cap} careers a day. The goal is ${p.per} careers per participant (anyone with at least one career played through to retirement), so it grows as more players join.`,
   infoEndHead: 'Closing',
   infoEnd: (p) =>
-    `At ${p.lock}%, a closing time is set and a countdown appears. A season lasts at least ${p.min} days and at most ${p.max} days. If the Offside Cup is still running, the season continues until midnight KST on the day after the final. The next season opens at the closing time.`,
+    `At ${p.lock}%, a closing time is set and a countdown appears. A season lasts at least ${p.min} days and at most ${p.max} days. If the league or Offside Cup is still running, the season continues until midnight KST on the day after the last match. The next season opens at the closing time.`,
   infoCareerHead: 'Careers in progress',
   infoCareer:
     'A career in progress keeps going after the season ends. A player belongs to the season in which their first season record reached the server, and that does not change when the next season opens. Season recap ranking badges and completion records only count players who retired before the close.',
