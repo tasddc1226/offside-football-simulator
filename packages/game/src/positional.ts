@@ -262,15 +262,15 @@ export const POSITIONAL_EVENTS: EventDef[] = [
           text: '상대 빌드업을 끊고 그대로 결정적 패스까지 이어갔습니다. 활동량 1위!',
           fx: (s) => {
             s.season.assists++;
-            addAttr(s, 'phy', 1.5);
-            addStat(s, 'trust', 1.5);
-            addStat(s, 'cond', -12);
+            addAttr(s, 'phy', 2);
+            addStat(s, 'trust', 2);
+            addStat(s, 'cond', -10);
           },
         },
         fail: {
           text: '후반 20분, 다리에 쥐가 났습니다. 교체 아웃.',
           fx: (s) => {
-            addStat(s, 'cond', -18);
+            addStat(s, 'cond', -15);
             s.injury = Math.max(s.injury, 1);
           },
         },
@@ -282,12 +282,12 @@ export const POSITIONAL_EVENTS: EventDef[] = [
           text: '뛰는 거리는 줄었지만 볼 탈취는 늘었습니다. 코치가 데이터를 보고 감탄합니다.',
           fx: (s) => {
             addAttr(s, 'def', 1);
-            addStat(s, 'trust', 1);
+            addStat(s, 'trust', 0.8);
           },
         },
         fail: {
           text: '"압박 안 하는 선수는 못 쓴다." 감독의 불호령이 떨어졌습니다.',
-          fx: (s) => addStat(s, 'trust', -1.5),
+          fx: (s) => addStat(s, 'trust', -2),
         },
       },
     ],
@@ -484,7 +484,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
         fail: {
           text: '흔들린 마음이 다시 실수를 불렀습니다. 벤치로 밀려났습니다.',
           fx: (s) => {
-            addStat(s, 'trust', -2.5);
+            addStat(s, 'trust', -3);
             addStat(s, 'morale', -10);
           },
         },
@@ -494,8 +494,9 @@ export const POSITIONAL_EVENTS: EventDef[] = [
         ok: {
           text: '한 경기 쉬며 멘탈을 정리했습니다. 넘버원 자리는 조금 흔들립니다.',
           fx: (s) => {
-            addStat(s, 'morale', 6);
-            addStat(s, 'trust', -1);
+            addStat(s, 'morale', 8);
+            addStat(s, 'cond', 8);
+            addStat(s, 'trust', -0.5);
           },
         },
       },
@@ -511,7 +512,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
     choices: [
       {
         label: '필드 플레이어와 패스 훈련을 한다',
-        p: (s) => clamp(0.3 + (s.attrs.pas - 60) * 0.025, 0.12, 0.9),
+        p: (s) => clamp(0.4 + (s.attrs.pas - 55) * 0.02, 0.2, 0.85),
         ok: {
           text: '압박 속에서도 짧은 패스로 풀어나옵니다. 감독이 만족합니다.',
           fx: (s) => {
@@ -604,7 +605,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
   {
     id: 'gk-no1',
     title: '넘버원 경쟁',
-    w: 2,
+    w: 3,
     cond: (s) => posIs('GK')(s) && !isAmateur(s) && s.phase <= 1 && roleOfRef(s) !== '주전',
     text: () =>
       '골키퍼는 한 명만 뛸 수 있는 포지션입니다. 구단이 경쟁자에게 넘버원 장갑을 맡기려 한다는 이야기가 들립니다.',
