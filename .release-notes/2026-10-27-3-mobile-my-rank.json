@@ -1,0 +1,20 @@
+{
+  "id": "mobile-my-rank-center",
+  "title": "앱에서 내 순위 찾기 개선",
+  "items": [
+    "앱의 팀 랭킹과 구단주 랭킹에서 ‘내 순위로’를 누르면 내 기록을 화면 가운데에서 볼 수 있어요"
+  ],
+  "en": {
+    "title": "Find your rank in the app",
+    "items": [
+      "In team and owner rankings, My rank brings your entry into the middle of the screen."
+    ]
+  },
+  "ja": {
+    "title": "アプリの自分の順位を探しやすく",
+    "items": [
+      "チームとオーナーのランキングで「自分の順位へ」を押すと、自分の記録を画面中央に表示します。"
+    ]
+  },
+  "availability": "app"
+}

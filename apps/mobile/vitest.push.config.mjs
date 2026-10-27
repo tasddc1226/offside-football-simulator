@@ -6,6 +6,7 @@ export default {
     environment: 'node',
     globals: true,
     include: [
+      'src/ui/scroll.test.mjs',
       'src/platform/push.test.mjs',
       'src/platform/pushTracking.test.mjs',
       'src/platform/pushPreferences.test.mjs',

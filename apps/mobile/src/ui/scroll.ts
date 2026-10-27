@@ -67,6 +67,23 @@ export function scrollToView(target: View | null, animated = false) {
   );
 }
 
+/** 스크롤 창에서 대상 행을 가운데에 놓는다. 창과 행을 같은 좌표계에서 잰다. */
+export function centerView(target: View | null, animated = false) {
+  const scroll = view;
+  const viewport = scroll?.getNativeScrollRef();
+  if (!scroll || !target || !viewport) return;
+  viewport.measureInWindow((_x, viewportTop, _w, viewportHeight) => {
+    target.measureInWindow((_tx, targetTop, _tw, targetHeight) => {
+      if (view !== scroll) return;
+      const visibleHeight = h || viewportHeight;
+      scroll.scrollTo({
+        y: Math.max(0, y + targetTop - viewportTop - (visibleHeight - targetHeight) / 2),
+        animated,
+      });
+    });
+  });
+}
+
 /** 키보드에 가려진 입력칸만 드러낸다. 여러 줄 입력은 iOS 자동 inset만으로 부족할 수 있다. */
 export function revealFocusedInput() {
   const scroll = view;
