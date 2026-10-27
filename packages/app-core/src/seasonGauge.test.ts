@@ -48,9 +48,9 @@ describe('T-11-435 시즌 진행률 설명 창', () => {
     const text = info.map((x) => x.body).join(' ');
     expect(text).toContain('35세 이상까지 뛰고 은퇴한 커리어');
     expect(text).toContain('하루에 보탤 수 있는 커리어는 20개까지');
-    expect(text).toContain('은퇴까지 마친 커리어가 하나라도 있는 참여자 한 명당 12개');
+    expect(text).toContain('은퇴까지 마친 커리어가 하나라도 있는 참여자 한 명당 29개');
     expect(text).toContain('90%에 닿으면 마감 시각');
-    expect(text).toContain('최소 14일, 최대 25일');
+    expect(text).toContain('최소 30일, 최대 60일');
     expect(text).toContain('진행 중인 커리어는 그대로 이어서');
     expect(text).toContain('명예관');
     expect(text).not.toMatch(/\S — \S/);
