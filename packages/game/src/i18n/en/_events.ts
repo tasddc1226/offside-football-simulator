@@ -10,6 +10,7 @@ import { events_positional } from './events-positional';
 import { events_real } from './events-real';
 import { events_story } from './events-story';
 import { events_variety } from './events-variety';
+import { events_bigstage } from './events-bigstage';
 
 export const events: Record<string, EventText> = {
   'dating-rumor': {
@@ -100,4 +101,5 @@ export const events: Record<string, EventText> = {
   ...events_positional,
   ...events_military,
   ...events_variety,
+  ...events_bigstage,
 };
