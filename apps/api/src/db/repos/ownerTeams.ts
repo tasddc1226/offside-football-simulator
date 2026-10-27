@@ -12,7 +12,6 @@ import {
 } from '@offside/contracts/owner-team';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import { defaultClubIds, isAmateurClubId } from '@offside/contracts/club-names';
-import { CARD_VALUE_FLOOR } from '@offside/contracts/market-value';
 import { teamSeasonClosed } from '@offside/contracts/service-seasons';
 import type { DivisionRules } from '@offside/contracts/team-division';
 import {
@@ -557,30 +556,17 @@ export async function listOpponentCandidates(
   return [...up, ...down].map((r) => ({ ...r.team, title: r.title }));
 }
 
-/**
- * T-11-129 구단 가치 = 선발 11명 카드 기준가 합(만 원). 선발로 실제 뛰는 카드만 센다(eligibleMap과 같은 규칙): 그 시즌까지의
- * 숨기지 않은 카드, 진행 중 시즌이면 지금 그 구단주가 가진 카드. 기준가가 아직 없는 카드는 하한(CARD_VALUE_FLOOR)으로.
- * cross join으로 슬롯 11칸에서 카드 기본키로 찾게 순서를 고정한다 — 그냥 join이면 플래너가 구단주의 카드 전체
- * (cards_owner_season_idx)부터 훑어 운영에서 읽는 행이 10배 늘었다(49,186 → 4,722, 2026-10-06 측정).
- */
-const lineupValueSql = (open: boolean) => sql<number>`(
-  select coalesce(sum(coalesce(${cards.cardValue}, ${CARD_VALUE_FLOOR})), 0)
-  from json_each(${ownerTeams.slotsJson}) as slot
-  cross join ${cards} on ${cards.careerId} = slot.value
-  left join ${careers} on ${careers.id} = ${cards.careerId}
-  where ${cards.serviceSeason} <= ${ownerTeams.season} and coalesce(${careers.hidden}, 0) = 0
-  ${open ? sql`and ${cards.ownerId} = ${ownerTeams.profileId} and ${cards.manager} = 0` : sql``}
-)`;
-
-const rankOrder = (sort: TeamRankSort) =>
+/** Rank by the stored lineup total; closed seasons use the historical eligibility rule. */
+const rankOrder = (
+  sort: TeamRankSort,
+  value: typeof ownerTeams.lineupValueOpen | typeof ownerTeams.lineupValueClosed,
+) =>
   ({
     rating: [desc(ownerTeams.rating), desc(ownerTeams.ovr), asc(ownerTeams.createdAt)],
     ovr: [desc(ownerTeams.ovr), desc(ownerTeams.rating), asc(ownerTeams.createdAt)],
-    // Refer to the selected value: repeating the correlated aggregate runs it twice per team.
-    value: [desc(sql`lineup_value`), desc(ownerTeams.rating), asc(ownerTeams.createdAt)],
+    value: [desc(value), desc(ownerTeams.rating), asc(ownerTeams.createdAt)],
   })[sort];
 
-/** 라이브 랭킹 한 페이지 + 랭킹에 오른 팀 수. 팀마다 구단 가치(value)를 함께 센다. */
 /** T-11-375 디비전 탭: 그 디비전의 레이팅 구간 [min, max). 레이팅 인덱스(season, rating)로 고른다. */
 export type RatingRange = { min: number | null; max: number | null };
 
@@ -592,16 +578,21 @@ export async function listTeamRanking(
   now: string,
   range?: RatingRange,
 ) {
-  const value = lineupValueSql(!teamSeasonClosed(season, now));
+  const value = teamSeasonClosed(season, now)
+    ? ownerTeams.lineupValueClosed
+    : ownerTeams.lineupValueOpen;
   const where = and(
     rankedIn(season),
     range?.min != null ? gte(ownerTeams.rating, range.min) : undefined,
     range?.max != null ? lt(ownerTeams.rating, range.max) : undefined,
   );
-  const columns = { team: ownerTeams, value: value.as('lineup_value'), title: profiles.title };
-  const order = [...rankOrder(sort), asc(ownerTeams.id)];
-  // T-11-268 평점·OVR순은 순서에 구단 가치가 필요 없다 — 페이지 팀을 먼저 고르고 그 팀만 가치를 센다.
-  // 한 쿼리로 고르면 랭킹에 든 팀 전부(운영 약 1,900팀)의 가치를 세고 정렬해 1회 5.5만 행을 읽었다.
+  const columns = {
+    team: ownerTeams,
+    value: sql<number>`${value}`.as('lineup_value'),
+    title: profiles.title,
+  };
+  const order = [...rankOrder(sort, value), asc(ownerTeams.id)];
+  // 평점·OVR순은 먼저 해당 페이지의 팀을 선택한다. 가치순은 저장된 값으로 정렬한다.
   const pageIds = db
     .select({ id: ownerTeams.id })
     .from(ownerTeams)
