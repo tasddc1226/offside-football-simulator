@@ -101,7 +101,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   conditionNationalDynasty: 'Develop 20 players with 150+ international caps who retire aged 30+',
   conditionBallonDynasty: 'Develop 20 Ballon d’Or-winning players who retire aged 30+',
   conditionWorld: 'Players you developed who retired aged 30+ come from 10 nations',
-  conditionWorldTour: 'Players you developed who retired aged 30+ come from 30 nations',
+  conditionWorldTour: 'Players you developed who retired aged 30+ come from 20 nations',
   conditionExchangeMaster: "Finish all of a day's card challenges on 20 days",
   conditionCupRegular: 'Finish 3 OFFSIDE Cups with a final result',
   conditionCupContender: 'Reach the OFFSIDE Cup semi-finals or better 3 times',

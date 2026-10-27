@@ -99,7 +99,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   conditionNationalDynasty: '自分で育てたAマッチ150試合以上の選手20人が30歳以上で引退',
   conditionBallonDynasty: '自分で育てたバロンドール受賞選手20人が30歳以上で引退',
   conditionWorld: '30歳以上で引退した自分で育てた選手の国籍が10か国',
-  conditionWorldTour: '30歳以上で引退した自分で育てた選手の国籍が30か国',
+  conditionWorldTour: '30歳以上で引退した自分で育てた選手の国籍が20か国',
   conditionExchangeMaster: 'その日のカード課題をすべて達成した日が20日',
   conditionCupRegular: 'オフサイドカップ3大会で最終成績を残す',
   conditionCupContender: 'オフサイドカップでベスト4以上を3回',

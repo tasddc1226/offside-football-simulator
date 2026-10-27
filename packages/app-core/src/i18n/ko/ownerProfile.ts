@@ -100,7 +100,7 @@ const ko = {
   conditionNationalDynasty: '직접 키운 A매치 150경기 이상 선수 20명이 30세 이후에 은퇴',
   conditionBallonDynasty: '직접 키운 발롱도르 수상 선수 20명이 30세 이후에 은퇴',
   conditionWorld: '30세 이후에 은퇴한 직접 키운 선수의 국적이 10개 나라',
-  conditionWorldTour: '30세 이후에 은퇴한 직접 키운 선수의 국적이 30개 나라',
+  conditionWorldTour: '30세 이후에 은퇴한 직접 키운 선수의 국적이 20개 나라',
   conditionExchangeMaster: '하루 카드 과제를 모두 마친 날 20일',
   conditionCupRegular: '오프사이드 컵 3개 대회에서 최종 성적 남기기',
   conditionCupContender: '오프사이드 컵 4강 이상 3번',

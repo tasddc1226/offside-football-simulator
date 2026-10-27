@@ -319,7 +319,7 @@ export const PERMANENT_TITLES = def([
   {
     id: 'owner-world-tour',
     metric: 'nations',
-    target: 30,
+    target: 20,
     symbol: 'globe',
     grade: 'legend',
     category: 'legacy',
