@@ -16,6 +16,8 @@ export const STORIES: Record<string, StoryDef> = {
   scandal: { name: '스캔들', total: 3 },
   europe: { name: '유럽의 꿈', total: 3 },
   mentor: { name: '감독과의 인연', total: 3 },
+  // T-11-543 월드컵이 열리는 해의 명단 경쟁 → 발표 직전 경기 → 대회 뒤 귀국(bigstage-events.ts).
+  worldcup: { name: '월드컵 가는 길', total: 3 }, // i18n-ignore 저장값(storyLog.name, 화면은 tn)
 };
 export function turnNo(s: GameState): number {
   return (s.year - 2026) * (LAST_PHASE + 1) + Math.min(s.phase, LAST_PHASE);

@@ -582,6 +582,7 @@ const MISC: Record<string, string> = {
   스캔들: 'Scandal',
   '유럽의 꿈': 'European dream',
   '감독과의 인연': 'Bond with the manager',
+  '월드컵 가는 길': 'Road to the World Cup',
   // 스토리 결말(칭호 키이기도 하다)
   '끝내 넘어선 벽': 'Finally over the wall',
   '영원한 2인자': 'Forever second best',
@@ -602,6 +603,9 @@ const MISC: Record<string, string> = {
   '이루지 못한 꿈': 'The dream that never came true',
   '은사와 함께': 'Together with the mentor',
   홀로서기: 'Standing on your own',
+  '월드컵의 주인공': 'World Cup hero',
+  '꿈의 무대를 밟다': 'Made it to the big stage',
+  '다음 월드컵을 향해': 'Eyes on the next World Cup',
   '흐지부지 끝난 이야기': 'A story that fizzled out',
   // 병역
   '현역 복무': 'Active-duty service',

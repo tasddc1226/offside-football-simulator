@@ -152,6 +152,9 @@ const STORY_ENDINGS: [string, string, string][] = [
   ['europe', '이루지 못한 꿈', 'st_europe_dream'],
   ['mentor', '은사와 함께', 'st_mentor_with'],
   ['mentor', '홀로서기', 'st_mentor_alone'],
+  ['worldcup', '월드컵의 주인공', 'st_wc_hero'], // i18n-ignore 저장값(칭호 키)
+  ['worldcup', '꿈의 무대를 밟다', 'st_wc_stage'], // i18n-ignore 저장값(칭호 키)
+  ['worldcup', '다음 월드컵을 향해', 'st_wc_next'], // i18n-ignore 저장값(칭호 키)
 ];
 
 /** 칭호 이름·설명은 만들 때 굳히지 않고 읽을 때 지금 언어로 가져온다(getter). */

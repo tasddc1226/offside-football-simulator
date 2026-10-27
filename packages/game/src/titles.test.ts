@@ -40,7 +40,10 @@ describe('칭호 레지스트리 (T-10-026)', () => {
   });
 
   it('스토리의 모든 결말 문자열이 칭호로 이어진다', () => {
-    const src = readFileSync(new URL('./stories.ts', import.meta.url), 'utf8');
+    // T-11-543 월드컵 가는 길은 bigstage-events.ts에 있다.
+    const src = ['./stories.ts', './bigstage-events.ts']
+      .map((f) => readFileSync(new URL(f, import.meta.url), 'utf8'))
+      .join('\n');
     const endings = new Set<string>();
     for (const m of src.matchAll(/endStory\(s, '([a-z]+)', ([^)]*)\)/g))
       for (const q of m[2]!.matchAll(/'([^']+)'/g))
