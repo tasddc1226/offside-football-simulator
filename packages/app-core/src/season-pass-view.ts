@@ -1,16 +1,23 @@
 // T-11-511 시즌 패스 그리기 값(웹 owner/SeasonPass.svelte · 앱 screens/owner/SeasonPass.tsx가 같이 쓴다).
 import type { SeasonPassSeason } from '@offside/contracts';
 import { SEASON_GAUGE } from '@offside/contracts/season-gauge';
-import { passRewardTotal, SEASON_PASS_TIERS } from '@offside/contracts/season-pass';
+import {
+  PASS_BONUS_FROM,
+  passRewardTotal,
+  SEASON_PASS_TIERS,
+} from '@offside/contracts/season-pass';
 import { rewardText } from './attendance-view';
 
 export type PassTierState = 'claimed' | 'open' | 'locked';
+export type PassTierKind = 'now' | 'base' | 'bonus';
 
 /** 단계표: 받은 단계 · 열린 단계 · 아직 잠긴 단계. 패스가 없어도 진행도로 열린 단계는 'open'이다(받기는 패스가 있어야 한다). */
 export const passTiers = (s: SeasonPassSeason) =>
   SEASON_PASS_TIERS.map((t) => ({
     tier: t.tier,
     need: t.need,
+    /** 'now' = 사면 바로 받는 단계, 'bonus' = 기본 단계 뒤 보너스 단계(T-11-519). */
+    kind: (t.need === 0 ? 'now' : t.need >= PASS_BONUS_FROM ? 'bonus' : 'base') as PassTierKind,
     reward: rewardText(t.reward),
     state: (t.tier <= s.claimed
       ? 'claimed'
