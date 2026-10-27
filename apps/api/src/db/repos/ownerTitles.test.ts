@@ -2,11 +2,19 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { foundersOf } from './ownerTeams.js';
 import { eq } from 'drizzle-orm';
 import { createTestD1, syncCards, type TestD1 } from '../../test/d1.js';
-import { issueGoogleCookie, issueAdminCookie, ADMIN_EMAIL, callJson } from '../../test/http.js';
+import {
+  issueCookie,
+  issueGoogleCookie,
+  issueAdminCookie,
+  ADMIN_EMAIL,
+  callJson,
+} from '../../test/http.js';
 import {
   careers,
   cards,
+  cupEntries,
   ownerHonors,
+  ownerSeasonRecords,
   ownerTitleAwards,
   ownerTitleProgress,
   retiredNumbers,
@@ -17,6 +25,7 @@ import {
   refreshOwnerTitles,
   titleMetricsOf,
   grantPioneerTitles,
+  TITLE_PROGRESS_TTL_MS,
 } from './ownerTitles.js';
 
 const NOW = '2026-10-10T00:00:00.000Z';
@@ -135,13 +144,20 @@ describe('Permanent owner titles', () => {
       numbers: 1,
       firsts: 1,
       exchanges: 0,
+      forwards: 3,
+      positions: 1,
+      nations: 1,
+      cups: 0,
+      podiums: 0,
+      seasons: 0,
+      division: 0,
     });
     expect((await titleMetricsOf(ctx.db, b.profileId)).retired).toBe(0);
     const preview = await refreshOwnerTitles(ctx.db, a.profileId, NOW, true);
     expect(preview).toEqual([
-      'owner-founder',
       'owner-developer',
       'owner-star-maker',
+      'owner-founder',
       'owner-pioneer',
     ]);
     expect(await ctx.db.select().from(ownerTitleAwards)).toHaveLength(0);
@@ -197,9 +213,17 @@ describe('Permanent owner titles', () => {
       'owner-national',
       'owner-ballon-maker',
       'owner-dynasty',
+      // T-11-547 공격수 10명 · 네 포지션 · 90 이상 10명.
+      'owner-forward',
+      'owner-all-rounder',
+      'owner-star-factory',
     ]) {
       expect(hall.find((t) => t.id === id)?.earnedAt).toBe(NOW);
     }
+    expect(hall.find((t) => t.id === 'owner-star-cradle')).toMatchObject({
+      value: 25,
+      earnedAt: null,
+    });
     await ctx.db.update(careers).set({ goals: 500 }).where(eq(careers.id, ids[4]!));
     // A pre-v2 snapshot must be refreshed even without a newer career timestamp.
     await ctx.db
@@ -209,7 +233,7 @@ describe('Permanent owner titles', () => {
     const later = '2026-10-11T00:00:00.000Z';
     hall = await permanentTitlesOf(ctx.db, who.profileId, later);
     expect(hall.find((t) => t.id === 'owner-goals')).toMatchObject({ value: 5, earnedAt: later });
-    expect((await ctx.db.select().from(ownerTitleProgress))[0]?.criteriaVersion).toBe(3);
+    expect((await ctx.db.select().from(ownerTitleProgress))[0]?.criteriaVersion).toBe(4);
     // Historic awards remain valid when their earlier criteria were easier.
     await ctx.db
       .update(ownerTitleAwards)
@@ -314,5 +338,147 @@ describe('Permanent owner titles', () => {
         })
       ).status,
     ).toBe(403);
+  });
+
+  it('T-11-547 nations, cups, seasons and division count only that owner and award new tiers', async () => {
+    const who = await issueGoogleCookie(ctx);
+    const other = await issueGoogleCookie(ctx);
+    const ids = await seed(who.profileId, 12);
+    // 국적 NULL(대한민국) · 'KR'은 한 나라, 나머지 10개 나라 → 11.
+    const nations = [null, 'KR', 'BR', 'AR', 'FR', 'DE', 'ES', 'IT', 'EN', 'JP', 'US', 'MX'];
+    for (const [i, id] of ids.entries())
+      await ctx.db.update(careers).set({ nation: nations[i] }).where(eq(careers.id, id));
+    // 30세 전에 은퇴한 선수의 국적은 세지 않는다.
+    const [young] = await seed(who.profileId, 1);
+    await ctx.db.update(careers).set({ nation: 'NG', retireAge: 25 }).where(eq(careers.id, young!));
+    const entry = (profileId: string, cup: number, stage: string | null, status = 'active') => ({
+      cupId: `cup-${cup}`,
+      teamId: `team-${profileId}-${cup}`,
+      profileId,
+      name: 'Team',
+      manager: 'M',
+      ovr: 80,
+      status,
+      stage,
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    await ctx.db
+      .insert(cupEntries)
+      .values([
+        entry(who.profileId, 1, 'champion'),
+        entry(who.profileId, 2, 'sf'),
+        entry(who.profileId, 3, 'group'),
+        entry(who.profileId, 4, null),
+        entry(who.profileId, 5, null, 'withdrawn'),
+        entry(other.profileId, 1, 'runnerup'),
+      ]);
+    const record = (profileId: string, season: number, retired: number) => ({
+      profileId,
+      season,
+      players: retired,
+      retired,
+      retiredNumbers: 0,
+      wallOfHonor: 0,
+      firsts: 0,
+      createdAt: NOW,
+    });
+    await ctx.db
+      .insert(ownerSeasonRecords)
+      .values([
+        record(who.profileId, 0, 3),
+        record(who.profileId, 1, 1),
+        record(who.profileId, 2, 0),
+        record(other.profileId, 3, 5),
+      ]);
+    await ctx.db.insert(ownerHonors).values([
+      { profileId: who.profileId, season: 1, kind: 'division', value: 5, grantedAt: NOW },
+      { profileId: who.profileId, season: 1, kind: 'first', value: 1, grantedAt: NOW },
+      { profileId: other.profileId, season: 1, kind: 'division', value: 7, grantedAt: NOW },
+    ]);
+    expect(await titleMetricsOf(ctx.db, who.profileId)).toMatchObject({
+      nations: 11,
+      cups: 3,
+      podiums: 2,
+      seasons: 2,
+      division: 5,
+      firsts: 1,
+    });
+    const earned = await refreshOwnerTitles(ctx.db, who.profileId, NOW);
+    expect(earned).toEqual(expect.arrayContaining(['owner-world', 'owner-cup-regular']));
+    expect(earned).toContain('owner-division-elite');
+    for (const id of ['owner-world-tour', 'owner-cup-contender', 'owner-seasons'])
+      expect(earned).not.toContain(id);
+    expect(earned).not.toContain('owner-division-master');
+    const hall = await permanentTitlesOf(ctx.db, who.profileId, NOW);
+    expect(hall.find((t) => t.id === 'owner-cup-contender')).toMatchObject({
+      value: 2,
+      target: 3,
+    });
+    expect(hall.find((t) => t.id === 'owner-division-master')).toMatchObject({
+      value: 5,
+      target: 7,
+      earnedAt: null,
+    });
+  });
+
+  it('T-11-547 unlinked owners get no progress or awards', async () => {
+    const anon = await issueCookie(ctx);
+    await seed(anon.profileId, 60);
+    expect(await refreshOwnerTitles(ctx.db, anon.profileId, NOW)).toEqual([]);
+    expect(await permanentTitlesOf(ctx.db, anon.profileId, NOW)).toSatisfy(
+      (hall: { earnedAt: string | null }[]) => hall.every((t) => !t.earnedAt),
+    );
+    expect(await ctx.db.select().from(ownerTitleAwards)).toHaveLength(0);
+    expect(await ctx.db.select().from(ownerTitleProgress)).toHaveLength(0);
+  });
+
+  it('T-11-547 a version-3 snapshot is recounted once, team metrics refresh daily, old awards stay', async () => {
+    const who = await issueGoogleCookie(ctx);
+    await seed(who.profileId, 10);
+    await refreshOwnerTitles(ctx.db, who.profileId, NOW);
+    // v3 기준(헌납의 명가 10일)으로 받은 칭호 · 지금 기준보다 낮은 증거도 그대로 둔다.
+    await ctx.db.insert(ownerTitleAwards).values({
+      profileId: who.profileId,
+      titleId: 'owner-exchange',
+      criteriaVersion: 3,
+      evidence: 10,
+      earnedAt: NOW,
+    });
+    await ctx.db
+      .update(ownerTitleProgress)
+      .set({ criteriaVersion: 3, forwards: 0 })
+      .where(eq(ownerTitleProgress.profileId, who.profileId));
+    const later = '2026-10-10T01:00:00.000Z';
+    let hall = await permanentTitlesOf(ctx.db, who.profileId, later);
+    let [progress] = await ctx.db.select().from(ownerTitleProgress);
+    expect(progress).toMatchObject({ criteriaVersion: 4, forwards: 3, updatedAt: later });
+    expect(hall.find((t) => t.id === 'owner-exchange')).toMatchObject({
+      earnedAt: NOW,
+      value: 10,
+    });
+    // 같은 날 컵 성적이 생겨도 다시 세지 않고(쓰기 없음), 하루가 지나면 다시 센다.
+    await ctx.db.insert(cupEntries).values(
+      [1, 2, 3].map((n) => ({
+        cupId: `cup-${n}`,
+        teamId: `team-${n}`,
+        profileId: who.profileId,
+        name: 'Team',
+        manager: 'M',
+        ovr: 80,
+        stage: 'sf',
+        createdAt: NOW,
+        updatedAt: NOW,
+      })),
+    );
+    const sameDay = '2026-10-10T20:00:00.000Z';
+    hall = await permanentTitlesOf(ctx.db, who.profileId, sameDay);
+    expect(hall.find((t) => t.id === 'owner-cup-contender')?.earnedAt).toBeNull();
+    [progress] = await ctx.db.select().from(ownerTitleProgress);
+    expect(progress?.updatedAt).toBe(later);
+    const nextDay = new Date(Date.parse(later) + TITLE_PROGRESS_TTL_MS + 1).toISOString();
+    hall = await permanentTitlesOf(ctx.db, who.profileId, nextDay);
+    expect(hall.find((t) => t.id === 'owner-cup-contender')?.earnedAt).toBe(nextDay);
+    expect(hall.find((t) => t.id === 'owner-cup-regular')?.earnedAt).toBe(nextDay);
   });
 });
