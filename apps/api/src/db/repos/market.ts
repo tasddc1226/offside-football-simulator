@@ -20,6 +20,7 @@ import { getActiveBalance } from './balance.js';
 import { eventNotificationStatements } from '../../push/events.js';
 import { bodyOf, peakOf } from './ownerTeams.js';
 import { cards, careers, marketDaily, marketListings, ownerFunds } from '../schema.js';
+import { cardPublicName } from '../cardName.js';
 
 // T-11-080 이적시장 · 구단 자금 · 방출. 설계: docs/tracking/owner-funds-card-market-plan.md 5~7절.
 // 쓰기는 D1 batch(한 트랜잭션)로 묶고, "이번 요청이 이겼는가"는 첫 문장의 조건부 UPDATE가 남긴 표식으로 판정한다.
@@ -42,7 +43,7 @@ const cardCols = {
   nation: cards.nation,
   peak: cards.peak,
   number: cards.number,
-  publicName: careers.publicName,
+  publicName: cardPublicName,
   look: careers.look,
   legendScore: cards.legendScore,
   peakProfile: cards.peakProfile,
@@ -308,7 +309,7 @@ const tradeCard = {
   pos: cards.pos,
   peak: cards.peak,
   number: cards.number,
-  publicName: careers.publicName,
+  publicName: cardPublicName,
 };
 
 /** 최근 판매·영입·방출(각각 최근 TRADES건을 읽어 시각순으로 합친다). */

@@ -580,6 +580,9 @@ export const cards = sqliteTable(
     manager: integer('manager', { mode: 'boolean' }).notNull().default(false),
     // T-11-374 카드 과제에 내서 사라진 카드면 그 기록 id(card_exchange_claims.id). 주인은 NULL, 방출 칸(released_*)은 비어 있다.
     consumedIn: text('consumed_in'),
+    // T-11-548 키운 사람이 계정을 지워 careers 행이 없는 카드의 공개 이름(지금 주인이 이름 변경권으로 붙인다). careers 행이
+    // 있으면 그쪽 public_name을 쓰고 이 칸은 비워 둔다.
+    publicName: text('public_name'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
