@@ -43,6 +43,14 @@ export const CUP_DIVISION_MIN = 8;
 export const CUP_SEASON_OPEN_DAYS = 2;
 /** 상한을 정할 시즌 팀이 모자랄 때 쓰는 기본 상한(주니어 · 시니어). */
 export const CUP_DIVISION_FALLBACK_CAPS: readonly number[] = [80, 88];
+/**
+ * T-11-520 주니어 구간의 참가 자격(선발 실제 선수 수). 주니어 구간 팀은 선수가 모자란 경우가 많아(시즌 1 제3회: 최근 접속
+ * 주니어 팀 59%가 8명 미만) 다른 구간보다 낮게 두고, 빈자리는 다른 경기처럼 유스 선수가 채운다.
+ */
+export const CUP_JUNIOR_MIN_FILLED = 6;
+/** 구간 대회의 참가 자격: 주니어만 CUP_JUNIOR_MIN_FILLED까지 낮춘다(회차 기본값이 더 낮으면 그대로). */
+export const divisionMinFilled = (division: CupDivision | null | undefined, base: number) =>
+  division === 'junior' ? Math.min(base, CUP_JUNIOR_MIN_FILLED) : base;
 /** 구간 대회 id: 's2-3-junior'. 통합 대회는 's2-3'. */
 export const cupIdOf = (season: number, edition: number, division?: CupDivision | null) =>
   `s${season}-${edition}${division ? `-${division}` : ''}`;

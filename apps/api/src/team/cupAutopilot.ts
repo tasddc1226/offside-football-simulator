@@ -5,6 +5,7 @@ import {
   cupFinalAt,
   cupIdOf,
   divisionCaps,
+  divisionMinFilled,
   editionCups,
   planNextCup,
   type CupDef,
@@ -48,6 +49,7 @@ export function nextCupsFor(prev: CupDef): CupDef[] {
     id: cupIdOf(head.season, head.edition, division),
     division,
     ovrMax: null,
+    minFilled: divisionMinFilled(division, head.minFilled),
   }));
 }
 
@@ -159,7 +161,8 @@ export const cupOpenSource = (cupId: string) => `cup-open:${cupId}`;
  */
 export async function announceCupOpen(db: Db, now: string, all?: CupDef[]) {
   // T-11-410 구간 대회는 회차에 한 번(마스터 대회 id로) 알린다.
-  const cups = (all ?? (await cupSchedule(db))).filter(
+  const list = all ?? (await cupSchedule(db));
+  const cups = list.filter(
     (c) =>
       (!c.division || c.division === 'master') &&
       c.opensAt <= now &&
@@ -170,6 +173,8 @@ export async function announceCupOpen(db: Db, now: string, all?: CupDef[]) {
   const sent: string[] = [];
   for (const cup of cups) {
     const source = cupOpenSource(cup.id);
+    // T-11-520 구간 대회면 회차에서 가장 낮은 자격(주니어)으로 알린다 — 주니어에만 낼 수 있는 팀도 알림을 받는다.
+    const minFilled = Math.min(...editionCups(cup, list).map((c) => c.minFilled));
     const results = await d1.batch([
       d1.prepare('INSERT OR IGNORE INTO app_meta (key, value) VALUES (?, ?)').bind(source, now),
       d1
@@ -188,7 +193,7 @@ export async function announceCupOpen(db: Db, now: string, all?: CupDef[]) {
           now,
           cup.closesAt,
           cup.season,
-          cup.minFilled,
+          minFilled,
         ),
       // 결과 푸시(cupResultStatements)와 같은 규칙: 계정마다 최근 앱 기기 하나, 팀 알림을 끈 사람은 뺀다.
       d1
