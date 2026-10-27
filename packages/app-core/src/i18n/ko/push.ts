@@ -48,12 +48,14 @@ const ko = {
   prefsSaveFailed: '알림 설정을 저장하지 못했어요.',
   askOn: '알림 받기',
   askLater: '나중에',
-  askRetireTitle: '이 카드의 소식을 알림으로 받을까요?',
-  askRetireBody: '이 카드로 만든 구단의 경기 결과와 이적시장 판매 소식을 알려 드려요.',
+  askRetireTitle: '이 카드로 컵에 나갈 때 알림을 받을까요?',
+  askRetireBody:
+    '오프사이드 컵 접수는 며칠만 열려요. 접수가 열릴 때, 내 팀 경기 결과가 나올 때, 등록한 선수가 팔릴 때 바로 알려 드려요.',
   askSellTitle: '팔리면 알려 드릴까요?',
   askSellBody: '등록한 선수가 팔리면 들어온 자금과 함께 알려 드려요.',
-  askClubTitle: '경기 결과를 알림으로 받을까요?',
-  askClubBody: '다른 구단주가 내 팀에 랭크 경기를 걸면 결과를 알려 드려요.',
+  askClubTitle: '컵 접수와 경기 결과를 알림으로 받을까요?',
+  askClubBody:
+    '오프사이드 컵 접수가 열리면 바로 알려 드려요. 다른 구단주가 내 팀에 건 랭크 경기 결과도 알려 드려요.',
 };
 
 export type PushMsgs = typeof ko;

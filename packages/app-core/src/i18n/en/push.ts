@@ -51,11 +51,12 @@ export const push: Translation<PushMsgs> = {
   prefsSaveFailed: "Couldn't save notification settings.",
   askOn: 'Turn on',
   askLater: 'Later',
-  askRetireTitle: 'Get notified about this card?',
-  askRetireBody: "We'll send you match results for your club and news when your cards sell.",
+  askRetireTitle: 'Get notified when this card can play in the cup?',
+  askRetireBody:
+    "Offside Cup entries are open for only a few days. We'll tell you when entries open, when your team's results come in and when a listed player sells.",
   askSellTitle: 'Want to know when it sells?',
   askSellBody: "We'll let you know when your listed player sells and how much you received.",
-  askClubTitle: 'Get match results as notifications?',
+  askClubTitle: 'Get cup entries and match results as notifications?',
   askClubBody:
-    "We'll send you the result when another owner challenges your team to a ranked match.",
+    "We'll tell you as soon as Offside Cup entries open, and send results of ranked matches other owners play against your team.",
 };
