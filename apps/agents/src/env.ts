@@ -51,6 +51,8 @@ export interface Env {
   GA4_SA_EMAIL?: string;
   GA4_KEY_ID?: string;
   GA4_PROPERTY_ID?: string;
+  /** T-11-535 유저 반응 추적표(구글 시트 ID). GA4 서비스 계정을 시트 편집자로 공유한다. 없으면 voice 도구가 없다. */
+  VOICE_SHEET_ID?: string;
   /**
    * 스토어 리뷰(T-11-328). App Store Connect API 키(고객 지원 권한): 키 ID · 발급자 ID · 비공개 키(PKCS#8 PEM, 비밀값) · 앱 ID.
    * Google Play: 패키지 이름과 서비스 계정(Play Console "리뷰에 답글" 권한). 서비스 계정이 없으면 GA4 계정을 쓴다.
