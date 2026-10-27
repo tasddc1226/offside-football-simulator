@@ -26,6 +26,7 @@ import { reviewTools } from './reviews.ts';
 import { opsTools } from './tools/ops.ts';
 import { digestTools } from './tools/digest.ts';
 import { scheduleTools } from './tools/schedules.ts';
+import { voiceTools } from './voice.ts';
 
 export type RoleSpec = {
   system: string;
@@ -93,6 +94,7 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
         ...web,
         ...tools.filter((t) => t.name === 'd1_query'),
         ...appStatusTools(env),
+        ...voiceTools(env, task),
         ...memoryTools(env, 'plan', task),
         ...supportTools(env, task),
         ...supportCaseTools(env, task),

@@ -32,6 +32,8 @@
     // T-11-299 @mkt GA4 읽기(OFFSIDE - Production 속성, 서비스 계정은 뷰어). 비공개 키 · 계정 메일은 비밀값 GA4_SA_KEY · GA4_SA_EMAIL.
     "GA4_PROPERTY_ID": "556515567",
     "GA4_KEY_ID": "0de7dab176e5ac1a7a2d413b993a0d760a5fc717",
+    // T-11-535 유저 반응 추적표(구글 시트 "OFFSIDE 유저 반응", 운영자 소유 · GA4 서비스 계정만 편집자로 공유).
+    "VOICE_SHEET_ID": "1Kjb9QPpTYlifWYZLiMGcv3tZzss16flHgu8GDraWQRM",
     // T-11-328 스토어 리뷰. 발급자 ID · 비공개 키는 비밀값(ASC_ISSUER_ID · ASC_PRIVATE_KEY). Play는 GA4 서비스 계정을 쓴다.
     "ASC_KEY_ID": "YT8D3FZ96F",
     "ASC_APP_ID": "6817463687",
