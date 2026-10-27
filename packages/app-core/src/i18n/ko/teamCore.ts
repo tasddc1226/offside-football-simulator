@@ -59,8 +59,12 @@ const ko = {
   gradePlatinum: '플래티넘',
   gradeDiamond: '다이아',
   gradeLegend: '레전드',
+  cupTeamNote: (p: { season: string }) =>
+    `${p.season} 팀으로 오프사이드 컵에 참가하고 있어요. 컵이 끝날 때까지 이 팀의 선발을 고칠 수 있어요.`,
+  cupTeamLink: (p: { season: string }) => `컵에 나가는 ${p.season} 팀 고치기`,
   preseasonTeamNote:
     '프리시즌에 키운 선수 중 지금 가진 선수로 꾸려요. 이 팀은 친구와 하는 친선전에만 나가고, 프리시즌 랭킹과 업적은 그대로예요.',
+  hintCupTeam: '이 팀은 오프사이드 컵에만 나가요. 랭크 경기는 지금 시즌 팀으로 해요.',
   hintPreseason: '프리시즌 팀은 친구와 하는 친선전에만 나가요. 랭크 경기는 지금 시즌 팀으로 해요.',
   salaryBar: (p: { n: number; max: number }) => `지난 시즌 선수 급여 ${p.n} / ${p.max}`,
   salaryFull: (p: { salary: number; left: number }) =>

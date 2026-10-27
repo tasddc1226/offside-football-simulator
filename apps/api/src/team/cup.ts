@@ -22,7 +22,7 @@ import {
 import { and, asc, eq, getTableColumns, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
-import { cupEntries, cupMatches, cupState, ownerTeams, profiles } from '../db/schema.js';
+import { cupEntries, cupMatches, cupState, cups, ownerTeams, profiles } from '../db/schema.js';
 import { cupKo, cupTitle } from '../cupText.js';
 import { predictionSettlementStatements } from './cupPredictions.js';
 import { grantItemStatement } from '../db/repos/itemShop.js';
@@ -707,6 +707,17 @@ export const activeEntriesOf = (db: Db, profileId: string) =>
   db
     .select()
     .from(cupEntries)
+    .where(and(eq(cupEntries.profileId, profileId), eq(cupEntries.status, 'active')));
+
+/**
+ * T-11-552 구단주가 참가 중인(탈락 전) 컵의 시즌들. 시즌이 넘어간 뒤에도 끝나지 않은 지난 시즌 컵(시즌 1 제3회)의 팀은
+ * 컵 명단으로 고치고 선발을 지킨다. 참가 표 인덱스로 한 번 읽는다.
+ */
+export const activeCupSeasonsQuery = (db: Db, profileId: string) =>
+  db
+    .selectDistinct({ season: cups.season })
+    .from(cupEntries)
+    .innerJoin(cups, eq(cups.id, cupEntries.cupId))
     .where(and(eq(cupEntries.profileId, profileId), eq(cupEntries.status, 'active')));
 
 /** T-11-145 구단주의 컵 성적(보상까지 끝난 것, 최근 대회부터). 팀 프로필 트로피·칭호, 받침대에 새길 닉네임. */

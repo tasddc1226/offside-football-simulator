@@ -162,8 +162,7 @@ export function registerManagerRoutes(app: Hono<AppEnv>): void {
     if (!card || card.ownerId !== me.id || card.hidden)
       throw notFoundError('내 선수 카드를 찾을 수 없어요.', 'CARD_NOT_FOUND');
     if (card.manager) throw conflictError('이미 감독인 선수예요.', 'CARD_MANAGER');
-    const season = teamSeasonAt(now);
-    if (season !== null) await checkCupManager(db, me.id, season, input.careerId);
+    await checkCupManager(db, me.id, input.careerId);
     const origin = await managerOriginOf(db, input.careerId);
     if (!origin) throw notFoundError('내 선수 카드를 찾을 수 없어요.', 'CARD_NOT_FOUND');
     let id: string | null;

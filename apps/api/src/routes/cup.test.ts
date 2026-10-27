@@ -508,12 +508,12 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
     const fewer = await a.put([...a.ids.slice(0, 7), ...Array(4).fill(null)]);
     expect(fewer.status).toBe(409);
     expect(await reason(fewer)).toBe('CUP_MIN_FILLED');
-    await expect(checkCupListing(ctx.db, a.profileId, 1, a.ids[0]!)).rejects.toMatchObject({
+    await expect(checkCupListing(ctx.db, a.profileId, a.ids[0]!)).rejects.toMatchObject({
       details: { reason: 'CUP_CARD_LOCKED' },
     });
     // 취소하면 풀린다.
     await call('DELETE', `/v1/cups/${CUP.id}/entries/me`, { cookie: a.cookie });
-    await expect(checkCupListing(ctx.db, a.profileId, 1, a.ids[0]!)).resolves.toBeUndefined();
+    await expect(checkCupListing(ctx.db, a.profileId, a.ids[0]!)).resolves.toBeUndefined();
     expect((await a.put([...a.ids.slice(0, 7), ...Array(4).fill(null)])).status).toBe(200);
   });
 

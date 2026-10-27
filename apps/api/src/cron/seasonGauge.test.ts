@@ -8,7 +8,6 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
 import { forgetSeasonSchedule, readSeasonSchedule, SCHEDULE_KEY } from '../seasonSchedule.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { ceilKstMidnight } from '@offside/contracts/season-gauge';
 import { countSeasonGauge, openCupEndsAt, readSeasonGauge, runSeasonGauge } from './seasonGauge.js';
 
 // 시즌 1 개막(2026-10-06 00:00 KST) 이틀 뒤
@@ -34,7 +33,7 @@ const retire = (profile: string, age: number, at: string, season = 1) =>
     season,
   );
 
-// 제1회 컵(마이그레이션이 넣어 둔 시즌 1 회차)의 결승과, 그 뒤로 미룬 마감.
+// 제1회 컵(마이그레이션이 넣어 둔 시즌 1 회차)의 결승과 마감. T-11-552 시즌 1은 컵 결승을 기다리지 않는다.
 let CUP_FINAL: string;
 let END: string;
 const later = (iso: string, ms: number) => new Date(Date.parse(iso) + ms).toISOString();
@@ -42,13 +41,8 @@ const later = (iso: string, ms: number) => new Date(Date.parse(iso) + ms).toISOS
 beforeAll(async () => {
   ctx = await createTestD1();
   CUP_FINAL = (await openCupEndsAt(ctx.env.DB, 1))!;
-  // 최소 기간(14일, 10/20 00:00 KST)과 컵 결승 다음 00:00 KST 중 늦은 쪽.
-  END = new Date(
-    Math.max(
-      ceilKstMidnight(Date.parse(CUP_FINAL) + 3_600_000),
-      Date.parse(START) + 14 * 86_400_000,
-    ),
-  ).toISOString();
+  // 최소 기간(14일, 10/20 00:00 KST). 시즌 1 컵 결승이 더 늦어도 미루지 않는다.
+  END = new Date(Date.parse(START) + 14 * 86_400_000).toISOString();
   for (const p of ['a', 'b', 'c'])
     await run(
       'INSERT INTO profiles(id,settings_json,created_at,last_seen_at) VALUES (?,?,?,?)',
@@ -83,9 +77,9 @@ describe('시즌 진행 게이지 cron', () => {
 
   it('센 값을 굳히고(90%를 넘으면 마감 확정) 30분 안에는 다시 세지 않으며, 홈 API가 진행률을 돌려준다', async () => {
     const first = await runSeasonGauge(ctx.env.DB, NOW);
-    // 목표(참여 2명 × 12 = 24)의 90%를 넘었으니 마감을 확정한다 — 48시간 뒤보다 최소 14일(10/20 00:00 KST)이 늦고,
-    // 시즌 1 컵이 그보다 늦게 끝나면 결승 다음 00:00 KST로 미룬다.
-    expect(END >= '2026-10-19T15:00:00.000Z').toBe(true);
+    // 목표(참여 2명 × 12 = 24)의 90%를 넘었으니 마감을 확정한다 — 48시간 뒤보다 최소 14일(10/20 00:00 KST)이 늦다.
+    // T-11-552 시즌 1은 끝나지 않은 컵이 있어도 미루지 않는다.
+    expect(END).toBe('2026-10-19T15:00:00.000Z');
     expect(first).toMatchObject({
       season: 1,
       contributed: 23,
