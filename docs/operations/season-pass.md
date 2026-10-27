@@ -32,4 +32,4 @@
 2. 서버 변수 `SEASON_PASS_ENABLED=1`을 켠다. 꺼져 있으면 GET은 진행도만 주고 `stores: []`라 앱이 사기 버튼을 보이지 않는다. 받기는 스위치와 상관없이 된다. 스위치를 켜도 시즌 2 개막(`SEASON_PASS_FIRST_SEASON`) 전에는 팔지 않고, 그동안 화면은 시즌 2 패스를 보인다.
 3. `SEASON_PASS_LIVE`(contracts)를 `true`로 바꿔 웹 · 앱 구단주 화면에 입구를 연다. 앱은 OTA로 나간다. 같은 PR에서 공개 가이드(`apps/web/scripts/seo.mjs` GUIDE_SECTIONS) · FAQ에 시즌 패스를 더한다.
 
-`SEASON_PASS_LIVE`가 false인 동안 입구는 개발 빌드(`import.meta.env.DEV`, `__DEV__`)에서만 보인다.
+`SEASON_PASS_LIVE`가 false인 동안 입구는 개발 빌드(`import.meta.env.DEV`, `__DEV__`)에서만 보인다. true로 바꾼 뒤에도 입구는 시즌 2가 개막해야 보인다(`passEntryOpen`, T-11-519). 웹 · 앱이 시작 때 받아 둔 시즌 일정으로 판단하므로, 1.1.5처럼 true로 나간 앱도 그 전에는 입구가 없다.

@@ -53,7 +53,7 @@ import { exchangeText as XC } from '@offside/app-core/i18n/ko/exchange';
 import { CardExchange } from './CardExchange';
 import { SeasonPass } from './SeasonPass';
 import { seasonPassText as SP } from '@offside/app-core/i18n/ko/seasonPass';
-import { SEASON_PASS_LIVE } from '@offside/contracts/season-pass';
+import { passEntryOpen } from '@offside/contracts/season-pass';
 import { Membership } from './Membership';
 import { membershipText as MB } from '@offside/app-core/i18n/ko/membership';
 import { MEMBERSHIP_LIVE } from '@offside/contracts/membership';
@@ -413,7 +413,7 @@ export default function Owner() {
             </Card>
           </Press>
           {exchangeOpen ? <CardExchange onClose={() => setExchangeOpen(false)} /> : null}
-          {SEASON_PASS_LIVE || __DEV__ ? (
+          {passEntryOpen(new Date().toISOString()) || __DEV__ ? (
             <Press
               testID="season-pass"
               accessibilityLabel={SP.entry}

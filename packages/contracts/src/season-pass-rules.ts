@@ -72,6 +72,13 @@ function scheduleSeason(now: string): number {
 /** 지금 새로 파는지: 시즌 2가 열린 뒤부터. */
 export const passSaleOpen = (now: string) => scheduleSeason(now) >= SEASON_PASS_FIRST_SEASON;
 
+/**
+ * 화면에 패스 입구를 보이는지(T-11-519). 시즌 패스는 시즌마다 파는 상품이라 출시(SEASON_PASS_LIVE) 뒤에도 시즌 2가 열려야 보인다.
+ * 웹 · 앱이 시작 때 받아 둔 시즌 일정을 쓰므로 개막 시각에 앱 업데이트 없이 열린다.
+ */
+export const passEntryOpen = (now: string, live: boolean = SEASON_PASS_LIVE) =>
+  live && passSaleOpen(now);
+
 /** 지금 패스를 파는 시즌(화면 · 지급 기준). 시즌 2가 열리기 전에는 시즌 2다. */
 export const passSaleSeason = (now: string): number =>
   Math.max(SEASON_PASS_FIRST_SEASON, scheduleSeason(now));

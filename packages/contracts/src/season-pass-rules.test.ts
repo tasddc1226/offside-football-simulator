@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  passEntryOpen,
   passRewardBetween,
   passSaleOpen,
   passSaleSeason,
@@ -40,5 +41,22 @@ describe('T-11-511 시즌 패스 규칙', () => {
     expect(passSaleOpen('2026-10-31T00:00:00.000Z')).toBe(true);
     expect(passSaleSeason('2026-10-31T00:00:00.000Z')).toBe(2);
     expect(passSeasonFor('2026-11-05T00:00:00.000Z', [2])).toBe(3);
+  });
+
+  it('T-11-519 패스 입구는 출시 뒤에도 시즌 2 일정이 들어와 개막해야 보인다', () => {
+    // 시즌 2 일정을 아직 받지 못했으면 시즌 1이 이어지는 것으로 보고 숨긴다.
+    expect(passEntryOpen('2026-11-05T00:00:00.000Z', true)).toBe(false);
+    applySeasonSchedule([
+      {
+        id: 1,
+        startsAt: '2026-10-05T15:00:00.000Z',
+        endsAt: '2026-10-30T15:00:00.000Z',
+        retireAt: 45,
+      },
+      { id: 2, startsAt: '2026-10-30T15:00:00.000Z', endsAt: null, retireAt: 46 },
+    ]);
+    expect(passEntryOpen('2026-10-30T14:59:59.000Z', true)).toBe(false);
+    expect(passEntryOpen('2026-10-30T15:00:00.000Z', true)).toBe(true);
+    expect(passEntryOpen('2026-10-30T15:00:00.000Z', false)).toBe(false);
   });
 });
