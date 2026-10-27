@@ -17,6 +17,7 @@ import { pick, ri } from '@offside/game/rng';
 import { loadKey } from '@offside/game/storage';
 import { SURNAMES, GIVEN, defaultFocus } from '@offside/game/data';
 import type { GameState, HofEntry, LegendSource } from '@offside/game/types';
+import type { CreateLook } from '@offside/game/look';
 import type { Candidate } from '@offside/game/candidates';
 import type { PhaseReport } from './sheets.js';
 
@@ -105,7 +106,17 @@ export interface DraftCharacter {
   /** T-10-096 키(cm)·몸무게(kg). null이면 포지션 기본 체격을 따른다(포지션을 바꾸면 같이 바뀐다). */
   height: number | null;
   weight: number | null;
+  /** T-11-545 만들기에서 무료로 고른 외형(피부 · 머리색 · 머리 모양). 비어 있으면 기본 모습. */
+  look: CreateLook;
+  /**
+   * T-11-545 만들 커리어의 ID. 만들기 화면이 기본 얼굴을 미리 그리려고 먼저 정하고(draftCid), 커리어를 시작하면 비운다
+   * (다음 선수는 새 ID). 저장하지 않는다.
+   */
+  cid?: string | undefined;
 }
+
+/** T-11-545 만들 커리어의 ID(없으면 지금 만든다). 미리보기 얼굴과 시작한 선수의 얼굴이 같다. */
+export const draftCid = (c: Pick<DraftCharacter, 'cid'>): string => (c.cid ??= crypto.randomUUID());
 
 /** 새 커리어에 넣을 체격 — 입력하지 않은 칸은 포지션 기본값. */
 export const draftBody = (c: Pick<DraftCharacter, 'pos' | 'height' | 'weight'>): Body => ({
@@ -277,6 +288,7 @@ export const initialAppState = (): AppState => ({
     nation: deviceNation(),
     height: null,
     weight: null,
+    look: {},
   },
   candidates: null,
   candidatesOpen: [],

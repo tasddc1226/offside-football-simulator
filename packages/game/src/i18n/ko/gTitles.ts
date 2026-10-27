@@ -58,6 +58,14 @@ const ko = {
   lg_club: '클럽 레전드',
   lg_pro: '성실한 프로',
   lg_plain: '평범한 축구 커리어',
+  // T-11-545 시즌 1에 흔해진 상위 칭호의 다음 단계.
+  goals500: '득점의 신',
+  assists250: '그라운드의 지휘자',
+  apps700: '불멸의 철인',
+  fame2000: '세계의 얼굴',
+  trophies25: '트로피 컬렉터',
+  awards30: '시상대의 주인',
+  bigear2: '빅이어 수집가',
 
   goals100_d: '프로 통산 100골',
   goals300_d: '프로 통산 300골',
@@ -122,6 +130,13 @@ const ko = {
   wall_of_honor: '명예의 벽',
   wall_of_honor_d:
     '영구결번 자격을 채웠지만 후보 구단의 번호가 모두 먼저 결번된 선수에게 주는 칭호',
+  goals500_d: '프로 통산 500골',
+  assists250_d: '프로 통산 250도움',
+  apps700_d: '프로 통산 700경기 출전',
+  fame2000_d: '인기 2000',
+  trophies25_d: '트로피 25개',
+  awards30_d: '개인상 30개',
+  bigear2_d: 'UEFA 챔피언스리그 2회 우승',
 };
 export type GTitlesMsgs = typeof ko;
 export const gTitlesText = ns('gTitles', ko);

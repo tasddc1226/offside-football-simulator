@@ -58,6 +58,13 @@ export const gTitles: Translation<GTitlesMsgs> = {
   lg_club: 'クラブレジェンド',
   lg_pro: '誠実なプロ',
   lg_plain: '平凡なサッカー人生',
+  goals500: '得点の神',
+  assists250: 'ピッチの指揮者',
+  apps700: '不滅の鉄人',
+  fame2000: 'サッカーの顔',
+  trophies25: 'トロフィーコレクター',
+  awards30: '表彰台の主',
+  bigear2: 'ビッグイヤーコレクター',
 
   goals100_d: 'プロ通算100ゴール',
   goals300_d: 'プロ通算300ゴール',
@@ -120,4 +127,11 @@ export const gTitles: Translation<GTitlesMsgs> = {
   wall_of_honor: '名誉の壁',
   wall_of_honor_d:
     '永久欠番の資格を満たしたが、候補クラブの番号がすべて先に欠番になっていた選手に贈られる称号',
+  goals500_d: 'プロ通算500ゴール',
+  assists250_d: 'プロ通算250アシスト',
+  apps700_d: 'プロ通算700試合出場',
+  fame2000_d: '人気2000',
+  trophies25_d: 'トロフィー25個',
+  awards30_d: '個人賞30個',
+  bigear2_d: 'UEFAチャンピオンズリーグ2回優勝',
 };

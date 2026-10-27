@@ -3,15 +3,15 @@
 exports[`게임 특성화 (T-11-044) > endSeason — 시즌 정산(seasonAwards·natSeasonEnd·milSeasonEnd 포함) 1`] = `
 {
   "대표팀": {
-    "hash": "ad5f1417c7af9dce",
+    "hash": "e32e5dbe77896fd8",
     "n": 174,
   },
   "병역": {
-    "hash": "df724c4bbfce2846",
+    "hash": "d6cafec6a13d86f6",
     "n": 174,
   },
   "원본": {
-    "hash": "8488162a97c73b2f",
+    "hash": "e14dfa5ea5a7686a",
     "n": 174,
   },
 }
@@ -30,31 +30,31 @@ exports[`게임 특성화 (T-11-044) > market·acceptOption — 시장 선택지
   ],
   "대표팀": {
     "accepted": {
-      "hash": "dcfc26f7b8801cdb",
+      "hash": "2a3b20abe669fb50",
       "n": 174,
     },
     "options": {
-      "hash": "5387c6e7051e108a",
+      "hash": "c2abf0dbfc1db00d",
       "n": 174,
     },
   },
   "병역": {
     "accepted": {
-      "hash": "328c8c790813420a",
+      "hash": "3b3d5100c925a07b",
       "n": 174,
     },
     "options": {
-      "hash": "7717c863cce8cc4d",
+      "hash": "94ea9f372759b504",
       "n": 174,
     },
   },
   "원본": {
     "accepted": {
-      "hash": "389f1175e46085fe",
+      "hash": "8161993b41026b79",
       "n": 174,
     },
     "options": {
-      "hash": "a145c0f0eb8db76f",
+      "hash": "a151707b0cc9ef56",
       "n": 174,
     },
   },
@@ -64,11 +64,11 @@ exports[`게임 특성화 (T-11-044) > market·acceptOption — 시장 선택지
 exports[`게임 특성화 (T-11-044) > natWindow — A매치·국제대회 창 1`] = `
 {
   "대표팀": {
-    "hash": "995fc1c656b3a81d",
+    "hash": "8e03baceee0d6dba",
     "n": 522,
   },
   "원본": {
-    "hash": "f768a81085327072",
+    "hash": "3b16609963a43ac0",
     "n": 522,
   },
 }
@@ -77,7 +77,7 @@ exports[`게임 특성화 (T-11-044) > natWindow — A매치·국제대회 창 1
 exports[`게임 특성화 (T-11-044) > rollEvent — 이벤트 추첨 1`] = `
 {
   "distinct": 51,
-  "hash": "d253e4277d346414",
+  "hash": "66dd156151ebbd65",
   "n": 522,
 }
 `;
@@ -85,15 +85,15 @@ exports[`게임 특성화 (T-11-044) > rollEvent — 이벤트 추첨 1`] = `
 exports[`게임 특성화 (T-11-044) > simBlock — 리그 구간 경기 결과 1`] = `
 {
   "대표팀": {
-    "hash": "a0bd40866b4b8510",
+    "hash": "6fa3d1334402f75a",
     "n": 351,
   },
   "병역": {
-    "hash": "08708b7f33349b39",
+    "hash": "8bedc392c7d53208",
     "n": 351,
   },
   "원본": {
-    "hash": "7c595e22942e9180",
+    "hash": "ed83a25dbe321d95",
     "n": 351,
   },
 }

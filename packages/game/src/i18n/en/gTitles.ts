@@ -58,6 +58,13 @@ export const gTitles: Translation<GTitlesMsgs> = {
   lg_club: 'Club legend',
   lg_pro: 'Solid pro',
   lg_plain: 'Ordinary football career',
+  goals500: 'God of goals',
+  assists250: 'Pitch conductor',
+  apps700: 'Immortal iron man',
+  fame2000: 'Face of football',
+  trophies25: 'Trophy collector',
+  awards30: 'Podium regular',
+  bigear2: 'Big Ears collector',
 
   goals100_d: '100 career pro goals',
   goals300_d: '300 career pro goals',
@@ -121,4 +128,11 @@ export const gTitles: Translation<GTitlesMsgs> = {
   wall_of_honor: 'Wall of Honour',
   wall_of_honor_d:
     'Given to a player who qualified for a retired number, but every candidate club had already retired that number',
+  goals500_d: '500 career pro goals',
+  assists250_d: '250 career pro assists',
+  apps700_d: '700 career pro appearances',
+  fame2000_d: 'Fame 2000',
+  trophies25_d: '25 trophies',
+  awards30_d: '30 individual awards',
+  bigear2_d: 'Win the UEFA Champions League twice',
 };
