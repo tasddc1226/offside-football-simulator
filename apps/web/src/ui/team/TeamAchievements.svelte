@@ -5,7 +5,7 @@
   import { num } from '@offside/app-core/teamText';
   import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
   import {
-    achCatShort, achDone, achReward, achGradeName, achGradeView, achMissing, achNear, achPoints, achRankText, achSections, achState, achTotal,
+    achBonusView, achCatShort, achDone, achReward, achGradeName, achGradeView, achMissing, achNear, achPoints, achRankText, achSections, achState, achTotal,
   } from '@offside/app-core/teamOwner';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import AchGradeBadge from './AchGradeBadge.svelte';
@@ -52,6 +52,7 @@
       {@const sections = achSections(ach.groups)}
       {@const sec = sections.find((x) => x.id === cat) ?? sections[0]!}
       {@const near = achNear(ach.groups)}
+      {@const bonus = achBonusView(ach.bonus)}
       <!-- 단계는 모두 접어 두고, 새로 달성한 업적이 든 단계만 펼친다. -->
       {@const openId = sec.groups.find((g) => g.items.some((i) => newIds.has(i.id)))?.id ?? null}
       <div class="tm-ach-sum" data-ach-summary>
@@ -69,6 +70,15 @@
           {L.achProgress({ head: gv.next ? (gv.byRank ? L.toNextGradeRank({ grade: achGradeName(gv.next), n: num(gv.toNext) }) : L.toNextGrade({ grade: achGradeName(gv.next), pts: num(gv.toNext) })) : L.topGrade, done: tot.done, total: tot.total })}
         </p>
         <p class="muted fs-xs">{L.achAbout({ season: ach.seasons.find((o) => o.id === ach?.season)?.name ?? '', n: ach.players })}</p>
+        {#if bonus}
+          <!-- T-11-541 점수 보너스: 업적 점수 1,000점마다 끝없이 받는다. -->
+          <div class="tm-ach-perks" data-ach-bonus>
+            <b>{bonus.title}</b>
+            <span>{bonus.next}</span>
+            {#if bonus.got}<span class="tm-ach-reward">{bonus.got}</span>{/if}
+            <p class="muted fs-xs">{bonus.note}</p>
+          </div>
+        {/if}
         <div class="tm-ach-perks" data-ach-perks>
           <b>{L.perksTitle}</b>
           <ul>
@@ -161,7 +171,8 @@
     display: grid;
     gap: 4px;
   }
-  .tm-ach-perks li::marker {
+  .tm-ach-perks li::marker,
+  .tm-ach-perks .tm-ach-reward {
     color: var(--accent-text);
   }
   .tm-ach-head {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ClubAchievementGroup } from './api/team.js';
 import {
+  achBonusView,
   achGradeView,
   achNear,
   achPoints,
@@ -83,6 +84,25 @@ describe('시즌 업적 요약', () => {
     expect(
       achReward({ ...base, got: { boost: 2, scout: 0 }, reward: { boost: 0, scout: 1 } }),
     ).toBe('받은 보상 잠재력 강화권 2장 · 달성 보상 프리미엄 스카우트권 1장');
+  });
+  it('T-11-541 점수 보너스 칸 — 다음 보너스 · 받은 보너스(없으면 생략)', () => {
+    expect(achBonusView(undefined)).toBeNull();
+    const none = { boost: 0, scout: 0, reroll: 0 };
+    expect(
+      achBonusView({ next: 3000, reward: { boost: 1, scout: 0, reroll: 2 }, got: none }),
+    ).toEqual({
+      title: '점수 보너스',
+      next: '3,000점에 잠재력 강화권 1장 · 리롤권 2장',
+      got: null,
+      note: '업적 점수 1,500점마다 받아요. 상한은 없어요.',
+    });
+    expect(
+      achBonusView({
+        next: 6000,
+        reward: { boost: 1, scout: 0, reroll: 2 },
+        got: { boost: 5, scout: 1, reroll: 10 },
+      })?.got,
+    ).toBe('받은 보너스 잠재력 강화권 5장 · 프리미엄 스카우트권 1장 · 리롤권 10장');
   });
   it('점수 표시와 등급 진행', () => {
     expect(achPoints(groups[0]!.items[0]!)).toBe('+10점');

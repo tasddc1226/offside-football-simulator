@@ -624,6 +624,17 @@ export const ClubAchievementsResponseSchema = z.strictObject({
   /** 업적 랭킹 순위(점수가 0이면 null)와 랭킹에 오른 구단주 수. */
   rank: z.number().int().min(1).nullable(),
   ranked: count,
+  /**
+   * T-11-541 시즌 점수 보너스(ACH_SCORE_BONUS, 지금 시즌만 · 없으면 생략). next = 다음 보너스 점수, reward = 그 보너스
+   * 아이템, got = 이 시즌에 받은 보너스 합.
+   */
+  bonus: z
+    .strictObject({
+      next: count,
+      reward: z.strictObject({ boost: count, scout: count, reroll: count }),
+      got: z.strictObject({ boost: count, scout: count, reroll: count }),
+    })
+    .optional(),
 });
 export type ClubAchievementsResponse = z.infer<typeof ClubAchievementsResponseSchema>;
 

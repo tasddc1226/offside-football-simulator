@@ -16,6 +16,9 @@ export const GROUP_JA: Record<string, { stage: string; title: string }> = {
   race: { stage: 'RACE', title: 'シーズンレース' },
   owner: { stage: 'OWNER', title: 'クラブ運営' },
   manager: { stage: 'MANAGER', title: '監督キャリア' },
+  season: { stage: 'シーズン', title: '1シーズンの偉業' },
+  career: { stage: 'キャリア', title: 'キャリアのかたち' },
+  match: { stage: 'MATCH', title: '試合の名場面' },
 };
 
 export const LABEL_JA: Record<string, string> = {
@@ -110,6 +113,29 @@ export const LABEL_JA: Record<string, string> = {
   'mgr-mastery': 'フォーメーション熟練度Sの監督',
   'mgr-grade': 'S等級の監督',
   'mgr-coach': '監督枠を埋める',
+  // T-11-541 시즌 2부터
+  's-assists-30': '1シーズン30アシスト',
+  's-teen-20': '10代で1シーズン20ゴール',
+  's-veteran-20': '35歳を過ぎて1シーズン20ゴール',
+  's-double': '同じシーズンにリーグ優勝と得点王',
+  's-young-ballon': '21歳以下でバロンドール',
+  's-quadruple': '1シーズンでクラブタイトル4つ',
+  's-ballon-treble': '三冠のシーズンにバロンドールも',
+  'c-journeyman': '1人の選手が5つのリーグでプレー',
+  'c-df-50': '通算50ゴールのDF',
+  'c-peak': '最高OVR',
+  'c-ballon-players': 'バロンドールを受賞した選手',
+  'c-legends': 'レジェンドスコア1,000点の選手',
+  'secret-farewell': '優勝で締めくくった最後のシーズン',
+  'secret-homecoming': '最初のクラブに戻って引退',
+  'team-cup-qf': 'オフサイドカップ ベスト8',
+  'team-clean': '無失点勝利',
+  'team-thrash': '4点差以上の勝利',
+  'team-six': '1試合6ゴール',
+  'team-winrate': '勝率70%',
+  'team-wall': '1試合あたり失点1未満',
+  'mgr-titles': '監督としてのリーグ優勝合計',
+  'mgr-double': '優勝と昇格をどちらも果たした監督',
 };
 
 /** 단계 업적의 단위(숫자 바로 뒤에 붙는다). */
@@ -132,6 +158,12 @@ export const UNIT_JA: Record<string, string> = {
   'owner-match-days': '日',
   'owner-likes': '回',
   'mgr-count': '人',
+  'c-peak': '',
+  'c-ballon-players': '人',
+  'c-legends': '人',
+  'team-clean': '勝',
+  'team-thrash': '勝',
+  'mgr-titles': '回',
 };
 
 /** '○○세까지 현역'(시즌마다 나이가 다르다). */
@@ -141,4 +173,24 @@ export const DESC_JA: Record<string, string> = {
   'team-mates':
     'キャリアで1シーズンでも同じプロクラブでプレーしていれば達成です。高校・大学・兵役のシーズンは数えません。',
   'team-club': '引退時に最後に所属したクラブが11人全員同じである必要があります。',
+  // T-11-541
+  's-teen-20': '19歳以下のシーズンに20ゴールを決めれば達成です。',
+  's-veteran-20': '35歳以上のシーズンに20ゴールを決めれば達成です。',
+  's-quadruple':
+    'リーグ・カップ・大陸大会などのクラブタイトルを1シーズンで4つ取れば達成です。スーパーカップ・クラブワールドチャンピオンシップ・代表チームの優勝は数えません。',
+  'c-journeyman': '兵役のシーズンを除いて、5つ以上のプロリーグでプレーすれば達成です。',
+  'team-clean': '自分から挑んだ試合で、無失点で勝った試合を数えます。',
+  'team-thrash': '自分から挑んだ試合で、4点差以上で勝った試合を数えます。',
+  'team-six': '自分から挑んだ試合で、1試合6ゴール以上決めれば達成です。',
+  'team-winrate': '50試合以上戦い、勝率70%以上なら達成です。',
+  'team-wall': '30試合以上戦い、失点が試合数より少なければ達成です。',
+};
+
+/** T-11-541 숨은 업적(달성 전). */
+export const HIDDEN_JA = {
+  label: '隠し実績',
+  descs: {
+    'secret-farewell': 'ある選手の最後のシーズンに起こることです。',
+    'secret-homecoming': 'いくつものクラブを渡り歩いた選手の、最後の選択です。',
+  } as Record<string, string>,
 };

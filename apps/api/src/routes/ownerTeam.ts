@@ -868,7 +868,13 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const season = seasonQuery(c, now);
-    const { groups, row, players } = await refreshOwnerAchievements(db, me, season, now, false);
+    const { groups, row, players, bonus } = await refreshOwnerAchievements(
+      db,
+      me,
+      season,
+      now,
+      false,
+    );
     // T-11-262 랭킹 인원은 모두에게 같다 — 시즌마다 5분 엣지 캐시(순위는 사람마다 달라 매번 센다).
     const { rank, ranked } = await achievementRankOf(db, row, (load) =>
       edgeCached(c, EDGE.achRanked(season), ACH_RANKED_TTL, load),
@@ -885,6 +891,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         score: row.score,
         rank,
         ranked,
+        ...(bonus ? { bonus } : {}),
       },
       200,
       NO_STORE,

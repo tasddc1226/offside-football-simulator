@@ -22,6 +22,10 @@ export const teamAch: Translation<TeamAchMsgs> = {
   perkHonor:
     'Finish 1st, top 10 or top 100 in the owner ranking to keep a permanent honor in your season recap.',
   perkNote: 'Achievement points never affect match results.',
+  bonusTitle: 'Score bonus',
+  bonusNext: (p) => `At ${p.pts} pts: ${p.items}`,
+  bonusGot: (p) => `Received: ${p.items}`,
+  bonusNote: (p) => `You get one every ${p.every} achievement points, with no cap.`,
   nextGoal: 'Next goals',
   worthPlus: (p) => `+${p.n} pts`,
   catsAria: 'Achievement categories',
