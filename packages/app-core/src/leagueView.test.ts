@@ -1,4 +1,4 @@
-import { LEAGUE_ROUNDS, planLeague } from '@offside/contracts/league';
+import { LEAGUE_CYCLE, planLeague } from '@offside/contracts/league';
 import { describe, expect, it } from 'vitest';
 import type { LeagueMeResponse, LeagueResponse } from './api/league.js';
 import type { LeagueMatch, LeagueStanding, LeagueTableResponse } from './api/league.js';
@@ -32,7 +32,8 @@ import {
   leagueZone,
 } from './leagueView.js';
 
-const plan = planLeague(2, '2026-10-30T15:00:00.000Z');
+// T-11-540 시즌 2가 12/5 00:00 KST에 끝나면 11/5 ~ 12/4 30라운드.
+const plan = planLeague(2, '2026-10-30T15:00:00.000Z', '2026-12-04T15:00:00.000Z');
 const league = { ...plan, rounds: [...plan.rounds] };
 const data = (phase: LeagueResponse['phase']): LeagueResponse => ({ league, phase, entries: 12 });
 
@@ -42,7 +43,7 @@ describe('leagueView (T-11-418)', () => {
       '10월 24일 00:00 ~ 11월 4일 23:59',
       '10월 31일 00:00',
       '11월 5일 09:00',
-      '11월 5일 ~ 11월 18일, 매일 13:00',
+      '11월 5일 ~ 12월 4일, 매일 13:00',
     ]);
   });
   it('단계마다 배너 한 줄', () => {
@@ -162,7 +163,7 @@ describe('leagueView (T-11-418)', () => {
       { tier: 2, leagues: 2, teams: 15 },
     ];
     const running = { ...data('running'), tiers, playedRounds: 3 };
-    expect(leagueLine(running)).toBe('14라운드 중 3라운드를 치렀어요.');
+    expect(leagueLine(running)).toBe('30라운드 중 3라운드를 치렀어요.');
     const me = (
       placement: NonNullable<Parameters<typeof leaguePlacementLine>[0]>['placement'],
     ) => ({
@@ -197,7 +198,7 @@ describe('leagueView (T-11-418)', () => {
     expect([1, 2, 7, 8].map((r) => leagueZone(r, 8, 1, 2))).toEqual([null, null, 'down', 'down']);
     expect([1, 7].map((r) => leagueZone(r, 7, 2, 2))).toEqual(['up', null]);
     expect(leagueDefaultRound(running)).toBe(4);
-    expect(leagueDefaultRound({ playedRounds: 14 })).toBe(14);
+    expect(leagueDefaultRound({ playedRounds: 30, league: running.league })).toBe(30);
     const team = (id: string) => ({ teamId: id, name: id, owner: 'o', logo: null, ovr: 80 });
     const table = {
       teams: ['a', 'b', 'c'].map(team),
@@ -325,13 +326,13 @@ describe('leagueView (T-11-418)', () => {
     // 13라운드까지 a 3 · b 3 · d 0 · c 0(득실로 a > b > d > c). 14라운드 a-c, b-d. 0분은 0:0 무승부로 센다.
     const before = [match(13, 'a', 'c', [2, 0]), match(13, 'b', 'd', [1, 0])];
     const last = [
-      match(LEAGUE_ROUNDS, 'a', 'c', [0, 2], {
+      match(LEAGUE_CYCLE, 'a', 'c', [0, 2], {
         goals: [
           { minute: 30, side: 'away' },
           { minute: 80, side: 'away' },
         ],
       }),
-      match(LEAGUE_ROUNDS, 'b', 'd', [1, 0], { goals: [{ minute: 60, side: 'home' }] }),
+      match(LEAGUE_CYCLE, 'b', 'd', [1, 0], { goals: [{ minute: 60, side: 'home' }] }),
     ];
     const t = {
       standings: [row('b', 6, 1), row('c', 3, 2), row('a', 3, 3), row('d', 0, 4)],

@@ -3,12 +3,12 @@ import {
   LEAGUE_FILL_PROMOTE_SCOUTS,
   LEAGUE_FORFEIT_GOALS,
   LEAGUE_FORFEIT_LIMIT,
-  LEAGUE_ROUNDS,
   leagueFixtures,
   leagueNextTier,
   leagueOutcome,
   leaguePyramid,
   leagueReward,
+  leagueRoundPairs,
   leagueSeedOrder,
   type LeagueDef,
   type LeagueOutcome,
@@ -88,18 +88,23 @@ export const tiersOf = (state: LeagueStateRow): LeagueTier[] =>
 export const inLeague = (e: LeagueEntryRow) =>
   (e.status === 'active' || e.status === 'forfeited') && e.tier !== null && e.teamId !== null;
 
-/** 끝난 라운드 수: 모든 경기를 치른 앞쪽 라운드 수. 경기가 없으면 0. */
-export async function playedRounds(db: Db, season: number) {
+/** 끝난 라운드 수(모든 경기를 치른 앞쪽 라운드 수)와 일정에 남은 마지막 라운드. 경기가 없으면 둘 다 0. */
+export async function leagueProgress(db: Db, season: number) {
   const row = await db.$client
     .prepare(
-      `SELECT MIN(CASE WHEN played_at IS NULL THEN round END) AS open, COUNT(*) AS n
+      `SELECT MIN(CASE WHEN played_at IS NULL THEN round END) AS open, MAX(round) AS last, COUNT(*) AS n
        FROM league_matches WHERE season = ?`,
     )
     .bind(season)
-    .first<{ open: number | null; n: number }>();
-  if (!row?.n) return 0;
-  return row.open === null ? LEAGUE_ROUNDS : row.open - 1;
+    .first<{ open: number | null; last: number | null; n: number }>();
+  if (!row?.n) return { played: 0, last: 0 };
+  const last = row.last ?? 0;
+  return { played: row.open === null ? last : row.open - 1, last };
 }
+
+/** 끝난 라운드 수. */
+export const playedRounds = async (db: Db, season: number) =>
+  (await leagueProgress(db, season)).played;
 
 /**
  * 리그 순위표. 컵 조 순위와 같은 규칙(승점 → 득실 → 다득점 → 두 팀만 같으면 승자승 → 추첨 시드). 기권 경기는 나오지 못한
@@ -198,9 +203,10 @@ export async function leagueFinalGoals(db: Db, season: number, tier: number, lea
     .prepare(
       `SELECT m.id AS id, json_extract(e.value, '$.minute') AS minute, json_extract(e.value, '$.side') AS side
        FROM league_matches m, json_each(m.detail_json, '$.events') e
-       WHERE m.season = ? AND m.tier = ? AND m.league_no = ? AND m.round = ? AND m.detail_json IS NOT NULL`,
+       WHERE m.season = ?1 AND m.tier = ?2 AND m.league_no = ?3 AND m.detail_json IS NOT NULL
+         AND m.round = (SELECT MAX(round) FROM league_matches WHERE season = ?1 AND tier = ?2 AND league_no = ?3)`,
     )
-    .bind(season, tier, leagueNo, LEAGUE_ROUNDS)
+    .bind(season, tier, leagueNo)
     .all<{ id: string; minute: number; side: 'home' | 'away' }>();
   const out = new Map<string, { minute: number; side: 'home' | 'away' }[]>();
   for (const r of results)
@@ -391,9 +397,11 @@ export async function drawLeague(db: Db, league: LeagueDef, now: string) {
         )
         .sort((a, b) => b.team.ovr - a.team.ovr || a.team.id.localeCompare(b.team.id))
         .map((r) => r.team.id);
-      leagueFixtures(members).forEach((pairs, r) =>
-        pairs.forEach(([home, away], slot) =>
-          matches.push([newId('lgm'), t.tier, no, r + 1, slot, home, away, league.rounds[r]!]),
+      // T-11-540 시즌 마감 전날까지 한 바퀴(14라운드) 일정을 되풀이한다.
+      const cycle = leagueFixtures(members);
+      league.rounds.forEach((at, r) =>
+        leagueRoundPairs(cycle, r).forEach(([home, away], slot) =>
+          matches.push([newId('lgm'), t.tier, no, r + 1, slot, home, away, at]),
         ),
       );
     }
@@ -691,6 +699,7 @@ export async function notifyLeague(
   entries: readonly LeagueEntryRow[],
   played: number,
   now: string,
+  last = league.rounds.length,
 ) {
   const d1 = db.$client;
   const pending = entries
@@ -750,7 +759,7 @@ export async function notifyLeague(
       target = played;
       const table = tableOf(e.tier!, e.leagueNo!);
       const rank = table.find((s) => s.teamId === e.teamId)?.rank ?? table.length;
-      if (played === LEAGUE_ROUNDS) {
+      if (played === last) {
         key = `league:${season}:end`;
         // 결산(settleLeague)이 저장한 순위 · 결과를 쓴다. 결산 전 줄이면(옛 데이터) 순위표 순위만.
         const final = e.finalRank ?? rank;
@@ -819,14 +828,23 @@ export async function runLeague(db: Db, now: string, given?: LeagueDef) {
   const entries = await leagueEntriesOf(db, league.season);
   const n = await playLeagueMatches(db, league, entries, now);
   if (n) return { season: league.season, step: 'play', n };
-  const played = await playedRounds(db, league.season);
-  if (played === LEAGUE_ROUNDS) {
+  const { played, last } = await leagueProgress(db, league.season);
+  // T-11-540 게이지가 시즌 마감을 당기면 마감 뒤로 잡힌 라운드(아직 안 치른 경기)를 지운다. 마감은 48시간 넘게 남기고
+  // 확정되므로 그 라운드는 아직 치르지 않았다.
+  if (last > league.rounds.length) {
+    await db.$client
+      .prepare('DELETE FROM league_matches WHERE season = ? AND round > ? AND played_at IS NULL')
+      .bind(league.season, league.rounds.length)
+      .run();
+    return { season: league.season, step: 'trim', rounds: league.rounds.length };
+  }
+  if (last > 0 && played === last) {
     const settled = await settleLeague(db, league, state, entries, now);
     if (settled) return { season: league.season, step: 'settle', n: settled };
   }
-  const sent = await notifyLeague(db, league, state, entries, played, now);
+  const sent = await notifyLeague(db, league, state, entries, played, now, last);
   if (sent) return { season: league.season, step: 'notify', n: sent, played };
-  if (played === LEAGUE_ROUNDS || !tiersOf(state).length) {
+  if ((last > 0 && played === last) || !tiersOf(state).length) {
     await markDone(db, league.season, now);
     return { season: league.season, step: 'done' };
   }

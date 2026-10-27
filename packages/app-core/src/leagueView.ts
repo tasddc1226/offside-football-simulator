@@ -3,7 +3,6 @@ import { KST_MS } from '@offside/contracts/kst';
 import {
   LEAGUE_FORFEIT_GOALS,
   LEAGUE_FORFEIT_LIMIT,
-  LEAGUE_ROUNDS,
   LEAGUE_SIZE,
 } from '@offside/contracts/league';
 import type {
@@ -54,7 +53,7 @@ export function leagueLine(data: LeagueResponse): string {
       return L.closedLine({ at: leagueWhen(l.drawAt) });
     case 'running':
       return data.playedRounds
-        ? L.runningRounds({ n: data.playedRounds, total: LEAGUE_ROUNDS })
+        ? L.runningRounds({ n: data.playedRounds, total: l.rounds.length })
         : L.runningLine;
     case 'done':
       return L.doneLine;
@@ -75,7 +74,7 @@ export function leagueSchedule(l: LeagueResponse['league']) {
     ...(first && last
       ? [
           {
-            label: L.scheduleRounds,
+            label: L.scheduleRounds({ n: l.rounds.length }),
             text: L.daily({ from: leagueDate(first), to: leagueDate(last), time: kst(first).time }),
           },
         ]
@@ -262,8 +261,12 @@ export function leagueZone(
 }
 
 /** 처음 보여 줄 라운드: 다음에 치를 라운드(다 끝났으면 마지막). */
-export const leagueDefaultRound = (data: Pick<LeagueResponse, 'playedRounds'>) =>
-  Math.min(LEAGUE_ROUNDS, (data.playedRounds ?? 0) + 1);
+export const leagueDefaultRound = (data: Pick<LeagueResponse, 'playedRounds' | 'league'>) =>
+  Math.min(data.league.rounds.length, (data.playedRounds ?? 0) + 1);
+
+/** T-11-540 순위표 일정의 마지막 라운드(시즌 길이에 따라 다르다). 경기가 없으면 0. */
+export const leagueLastRound = (table: Pick<LeagueTableResponse, 'matches'>) =>
+  table.matches.reduce((n, m) => Math.max(n, m.round), 0);
 
 /** 한 라운드의 경기와 쉬는 팀(7팀 리그). */
 export function leagueRound(table: LeagueTableResponse, round: number) {
@@ -361,7 +364,8 @@ export function leagueRecords(table: Pick<LeagueTableResponse, 'standings' | 'ma
 
 /** 마지막 라운드 동시 중계를 열 수 있는가: 그 라운드를 다 치렀고 골 시각이 실려 있다. */
 export function leagueFinalReady(table: Pick<LeagueTableResponse, 'matches'>) {
-  const last = table.matches.filter((m) => m.round === LEAGUE_ROUNDS);
+  const final = leagueLastRound(table);
+  const last = table.matches.filter((m) => m.round === final);
   return last.length > 0 && last.every((m) => m.played && (m.forfeit || m.goals));
 }
 
@@ -379,7 +383,8 @@ export function leagueLive(
   table: Pick<LeagueTableResponse, 'standings' | 'matches'>,
   minute: number,
 ) {
-  const last = table.matches.filter((m) => m.round === LEAGUE_ROUNDS);
+  const final = leagueLastRound(table);
+  const last = table.matches.filter((m) => m.round === final);
   const scores = new Map(
     last.map((m) => {
       if (m.forfeit || !m.goals) return [m.id, { home: m.homeGoals ?? 0, away: m.awayGoals ?? 0 }];
@@ -403,7 +408,7 @@ export function leagueLive(
     );
     for (const m of table.matches) {
       if (!m.played) continue;
-      const live = m.round === LEAGUE_ROUNDS;
+      const live = m.round === final;
       if (live && !withLast) continue;
       const sc = live ? scores.get(m.id)! : { home: m.homeGoals ?? 0, away: m.awayGoals ?? 0 };
       const view = { ...m, homeGoals: sc.home, awayGoals: sc.away };
