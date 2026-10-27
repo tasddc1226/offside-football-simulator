@@ -263,8 +263,8 @@ describe('/v1/leagues (T-11-418)', () => {
     );
   });
   it('T-11-444 다음 시즌 배치 전에는 지난 시즌 결산(최종 순위 · 다음 시즌 부)을 함께 돌려준다', async () => {
-    // 시즌 2 리그가 끝나고(11/19 13:00 KST) 시즌 3(잠정 개막 11/25) 사전 신청 기간.
-    vi.setSystemTime(new Date('2026-11-20T03:00:00.000Z'));
+    // 시즌 2 리그가 끝나고(11/19 13:00 KST) 시즌 3(잠정 개막 12/30, T-11-528 시즌 2부터 최대 60일) 사전 신청 기간.
+    vi.setSystemTime(new Date('2026-12-23T03:00:00.000Z'));
     const v = await view();
     expect([v.league.season, v.phase]).toEqual([3, 'open']);
     const a = await owner(null);
