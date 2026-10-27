@@ -5,6 +5,7 @@ import {
   TeamPresetsSchema,
 } from '@offside/contracts';
 import type { TeamPlayer, TeamPreset, TeamRankItem, TeamRankSort } from '@offside/contracts';
+import { anonName } from '@offside/contracts/positions';
 import {
   TEAM_RANK_PER_PAGE,
   type DetailPos,
@@ -804,6 +805,8 @@ export type TeamSnapshot = {
   /** T-11-379 기대 득점(소수 한 자리)과 줄 힘(반올림). 이 기능 전 경기에는 없다. */
   xg?: number;
   lines?: { atk: number; mid: number; def: number; gk: number };
+  /** T-11-518 선발로 뛴 은퇴 선수(커리어 id → 자리). 유스 선수 자리는 빠진다. 랭크 경기만, 이 기능 전 경기에는 없다. */
+  xi?: Record<string, DetailPos>;
 };
 export type StoredEvent = {
   minute: number;
@@ -1033,6 +1036,30 @@ export async function otherKindTotals(db: Db, teamId: string): Promise<KindTotal
 }
 
 /** 경기 기록에 나온 커리어의 지금 공개 이름. */
+/**
+ * T-11-518 시즌 통계 선수 이름: 공개 이름이 있으면 공개 이름, 없으면 익명 표기("익명의 공격수 No.9"). 출전만 한 선수는
+ * 경기 기록에 익명 표기가 없어 커리어에서 만든다. 쿼리는 publicNamesOf와 같은 수다.
+ */
+export async function statsNamesOf(
+  db: Db,
+  ids: string[],
+): Promise<Map<string, { publicName: string | null; anon: string }>> {
+  const rows = await readInChunks(ids, (chunk) =>
+    db
+      .select({
+        id: careers.id,
+        publicName: careers.publicName,
+        pos: careers.pos,
+        number: careers.shirtNumber,
+      })
+      .from(careers)
+      .where(inArray(careers.id, chunk)),
+  );
+  return new Map(
+    rows.map((r) => [r.id, { publicName: r.publicName, anon: anonName(r.pos, r.number) }]),
+  );
+}
+
 export async function publicNamesOf(db: Db, ids: string[]): Promise<Map<string, string>> {
   // 경기 여러 판이면 커리어가 100명을 넘는다 — 나눠 읽는다.
   const rows = await readInChunks(ids, (chunk) =>
