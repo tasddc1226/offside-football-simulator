@@ -54,7 +54,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   rival: [
     {
       ok: ['attr+', 'cond-'],
-      fail: ['cond-'],
+      fail: ['out', 'cond-'],
     },
     {
       ok: ['trust-', 'cond+', 'morale+'],
@@ -127,7 +127,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
     },
     {
       ok: ['morale+', 'trust+'],
-      fail: ['trust-', 'morale-'],
+      fail: ['morale-', 'trust-'],
     },
   ],
   penalty: [
@@ -546,14 +546,6 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
     },
     {
       ok: ['morale+', 'cond-'],
-    },
-  ],
-  'wc-snub': [
-    {
-      ok: ['fame+', 'morale+'],
-    },
-    {
-      ok: ['trust+'],
     },
   ],
   'legend-critic': [
