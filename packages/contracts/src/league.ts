@@ -52,7 +52,7 @@ export function planLeague(season: number, startsAt: string, endsAt?: string | n
   const base = Date.parse(`${kstDay(startsAt)}T00:00:00.000Z`) - KST_MS;
   const at = (day: number, hour: number) =>
     new Date(base + day * DAY_MS + hour * 3_600_000).toISOString();
-  const end = endsAt ? Date.parse(endsAt) : base + SEASON_GAUGE.maxDays * DAY_MS;
+  const end = endsAt ? Date.parse(endsAt) : base + gaugeRules(season).maxDays * DAY_MS;
   // 마감(00:00 KST) 전날까지의 날 수. 마감이 배치 날보다 이르면(짧은 시즌) 한 라운드는 둔다.
   const lastDay = Math.ceil((end - base) / DAY_MS) - 1;
   const count = Math.max(1, lastDay - d.entryDays + 1);

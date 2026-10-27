@@ -107,7 +107,7 @@ describe('/v1/leagues (T-11-418)', () => {
     return who;
   }
 
-  it('시즌 2 개막으로 기본 일정을 만든다: 개막 7일 전 사전 신청, 개막 뒤 5일, 배치 09:00, 14라운드 13:00(KST)', async () => {
+  it('시즌 2 개막으로 기본 일정을 만든다: 개막 7일 전 사전 신청, 개막 뒤 5일, 배치 09:00, 마감 전날까지 매일 13:00(KST)', async () => {
     vi.setSystemTime(new Date(BEFORE));
     const soon = await view();
     expect(soon.phase).toBe('soon');
@@ -119,9 +119,10 @@ describe('/v1/leagues (T-11-418)', () => {
       drawAt: '2026-11-05T00:00:00.000Z',
       minFilled: 8,
     });
-    expect(soon.league.rounds).toHaveLength(14);
+    // T-11-540 마감 전에는 최대 기간 끝(12/30 00:00 KST) 전날까지 매일.
+    expect(soon.league.rounds).toHaveLength(55);
     expect(soon.league.rounds[0]).toBe('2026-11-05T04:00:00.000Z');
-    expect(soon.league.rounds.at(-1)).toBe('2026-11-18T04:00:00.000Z');
+    expect(soon.league.rounds.at(-1)).toBe('2026-12-29T04:00:00.000Z');
     // 사전 신청 전에는 신청할 수 없다.
     const a = await owner(null);
     expect(await me(a.cookie)).toEqual({
@@ -263,8 +264,8 @@ describe('/v1/leagues (T-11-418)', () => {
     );
   });
   it('T-11-444 다음 시즌 배치 전에는 지난 시즌 결산(최종 순위 · 다음 시즌 부)을 함께 돌려준다', async () => {
-    // 시즌 2 리그가 끝나고(11/19 13:00 KST) 시즌 3(잠정 개막 12/30, T-11-528 시즌 2부터 최대 60일) 사전 신청 기간.
-    vi.setSystemTime(new Date('2026-12-23T03:00:00.000Z'));
+    // 시즌 2 리그가 끝나고(T-11-540 마감 전날 12/29 13:00 KST, 하루 뒤 결산 화면이 닫힘) 시즌 3(잠정 개막 12/30) 접수 기간.
+    vi.setSystemTime(new Date('2026-12-31T03:00:00.000Z'));
     const v = await view();
     expect([v.league.season, v.phase]).toEqual([3, 'open']);
     const a = await owner(null);

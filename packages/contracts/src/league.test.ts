@@ -6,7 +6,7 @@ import {
   leagueSeasonAt,
   planLeague,
 } from './league.js';
-import { SEASON_GAUGE } from './season-gauge.js';
+import { gaugeRules } from './season-gauge.js';
 import type { ServiceSeason } from './service-seasons.js';
 
 const s1: ServiceSeason = {
@@ -59,7 +59,7 @@ describe('planLeague 시즌 내내 (T-11-540)', () => {
 
   it('마감이 없으면 최대 기간 끝을 마감으로 보고, 마감이 당겨지면 라운드가 준다', () => {
     const open = planLeague(2, S2);
-    const end = Date.parse(S2) + SEASON_GAUGE.maxDays * 86_400_000;
+    const end = Date.parse(S2) + gaugeRules(2).maxDays * 86_400_000;
     expect(Date.parse(open.rounds.at(-1)!)).toBe(end - 11 * 3_600_000);
     expect(planLeague(2, S2, '2026-12-01T15:00:00.000Z').rounds).toHaveLength(27);
   });
