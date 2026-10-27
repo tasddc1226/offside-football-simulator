@@ -273,7 +273,7 @@ export async function settleDivisions(db: Db, siblings: readonly CupDef[], now: 
     d1.prepare('INSERT OR IGNORE INTO app_meta (key, value) VALUES (?, ?)').bind(key, now),
   ];
   const moved = rows.filter((r) => ids[r.at] !== r.cupId);
-  // T-11-520 아랫 구간(주니어)은 자격이 낮다. 옮겨 간 팀이 추첨에서 떨어지지 않게 받는 대회 자격을 그 팀이 신청한 구간
+  // T-11-527 아랫 구간(주니어)은 자격이 낮다. 옮겨 간 팀이 추첨에서 떨어지지 않게 받는 대회 자격을 그 팀이 신청한 구간
   // 자격까지 낮춘다(접수가 끝난 뒤라 새 신청은 없고, 받는 대회의 명단 저장 판정도 같이 느슨해진다).
   const lowered = new Map<number, number>();
   for (const r of moved) {

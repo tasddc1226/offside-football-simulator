@@ -1,0 +1,23 @@
+{
+  "id": "t-11-527-junior-cup-entry",
+  "title": "주니어 컵 참가 자격 완화",
+  "items": [
+    "다음 컵부터 주니어 구간은 선발에 실제 선수 6명만 있어도 신청할 수 있어요. 빈자리는 유스 선수가 채워요.",
+    "주니어 신청 팀이 적어 윗 구간과 합쳐져도 그대로 추첨에 들어가요."
+  ],
+  "en": {
+    "title": "Easier entry for the Junior Cup",
+    "items": [
+      "From the next cup, you can enter the Junior division with just 6 real players in your starting lineup. Youth players fill the empty spots.",
+      "If the Junior division merges with the one above because too few teams entered, your team still goes into the draw."
+    ]
+  },
+  "ja": {
+    "title": "ジュニアカップの参加条件を緩和",
+    "items": [
+      "次のカップから、ジュニア部門はスタメンに実在の選手が6人いれば申し込めます。空いた枠はユース選手が埋めます。",
+      "ジュニアの申込チームが少なく上の部門と合わさっても、そのまま抽選に入ります。"
+    ]
+  },
+  "availability": "web-app"
+}

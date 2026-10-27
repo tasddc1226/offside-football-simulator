@@ -173,7 +173,7 @@ export async function announceCupOpen(db: Db, now: string, all?: CupDef[]) {
   const sent: string[] = [];
   for (const cup of cups) {
     const source = cupOpenSource(cup.id);
-    // T-11-520 구간 대회면 회차에서 가장 낮은 자격(주니어)으로 알린다 — 주니어에만 낼 수 있는 팀도 알림을 받는다.
+    // T-11-527 구간 대회면 회차에서 가장 낮은 자격(주니어)으로 알린다 — 주니어에만 낼 수 있는 팀도 알림을 받는다.
     const minFilled = Math.min(...editionCups(cup, list).map((c) => c.minFilled));
     const results = await d1.batch([
       d1.prepare('INSERT OR IGNORE INTO app_meta (key, value) VALUES (?, ?)').bind(source, now),

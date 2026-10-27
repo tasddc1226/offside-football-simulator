@@ -6,9 +6,9 @@ export const homeMore: Translation<HomeMoreMsgs> = {
   galleryWideTitle: 'OFFSIDE コミュニティ掲示板 ↗',
   galleryWideSub: 'DCinsideでキャリア自慢 · 攻略 · 要望を共有',
   chatLabelApp: 'ラウンジチャット',
-  pushTitle: '新しいお知らせを通知で受け取りますか？',
+  pushTitle: 'カップの受付と試合結果を通知で受け取りますか？',
   pushBody:
-    'お知らせ・アップデートの新着、相手が自分のチームに挑んだ試合の結果、出品した選手の売却、フレンド申請と親善試合の結果をお知らせします。種類ごとに設定でオフにできます。',
+    'オフサイドカップの受付は数日しか開きません。受付が始まったらすぐにお知らせし、カップの結果・自分のチームの試合結果・出品した選手の売却・フレンド申請もお知らせします。種類ごとに設定でオフにできます。',
   pushBusy: '通知を接続中…',
   pushAccept: '通知を受け取る',
   pushLater: 'あとで',

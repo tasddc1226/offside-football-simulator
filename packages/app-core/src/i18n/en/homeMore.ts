@@ -6,9 +6,9 @@ export const homeMore: Translation<HomeMoreMsgs> = {
   galleryWideTitle: 'OFFSIDE community gallery ↗',
   galleryWideSub: 'Share careers, tips and suggestions on DCinside',
   chatLabelApp: 'Lounge chat',
-  pushTitle: 'Get news as notifications?',
+  pushTitle: 'Get cup entries and match results as notifications?',
   pushBody:
-    "We'll notify you about new announcements and updates, matches other owners played against your team, sales of players you listed, and friend requests and friendly results. You can turn each type off in Settings.",
+    "Offside Cup entries are open for only a few days. We'll tell you the moment they open, plus cup results, your team's match results, sales of players you listed and friend requests. You can turn each type off in Settings.",
   pushBusy: 'Connecting notifications…',
   pushAccept: 'Turn on notifications',
   pushLater: 'Later',

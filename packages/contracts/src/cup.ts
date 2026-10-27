@@ -44,7 +44,7 @@ export const CUP_SEASON_OPEN_DAYS = 2;
 /** 상한을 정할 시즌 팀이 모자랄 때 쓰는 기본 상한(주니어 · 시니어). */
 export const CUP_DIVISION_FALLBACK_CAPS: readonly number[] = [80, 88];
 /**
- * T-11-520 주니어 구간의 참가 자격(선발 실제 선수 수). 주니어 구간 팀은 선수가 모자란 경우가 많아(시즌 1 제3회: 최근 접속
+ * T-11-527 주니어 구간의 참가 자격(선발 실제 선수 수). 주니어 구간 팀은 선수가 모자란 경우가 많아(시즌 1 제3회: 최근 접속
  * 주니어 팀 59%가 8명 미만) 다른 구간보다 낮게 두고, 빈자리는 다른 경기처럼 유스 선수가 채운다.
  */
 export const CUP_JUNIOR_MIN_FILLED = 6;
