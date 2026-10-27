@@ -22,7 +22,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
       fail: ['trust-', 'morale-'],
     },
     {
-      ok: ['cond-', 'trust+'],
+      ok: ['attr+', 'cond-', 'trust+'],
     },
   ],
   knock: [
@@ -80,7 +80,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   mentor: [
     {
-      ok: ['attr+'],
+      ok: ['attr+', 'morale+'],
       fail: ['morale-'],
     },
     {
@@ -127,7 +127,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
     },
     {
       ok: ['morale+', 'trust+'],
-      fail: ['morale-', 'trust-'],
+      fail: ['trust-', 'morale-'],
     },
   ],
   penalty: [
@@ -141,11 +141,11 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   'pk-save': [
     {
-      ok: ['fame+', 'trust+', 'morale+'],
+      ok: ['fame+', 'morale+', 'trust+'],
       fail: ['morale-'],
     },
     {
-      ok: ['fame+', 'trust+', 'morale+'],
+      ok: ['fame+', 'morale+', 'trust+'],
       fail: ['morale-'],
     },
   ],
@@ -210,7 +210,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   'rehab-1': [
     {
-      ok: ['story:rehab', 'out', 'trust+', 'morale+'],
+      ok: ['story:rehab', 'out', 'trust+'],
     },
     {
       ok: ['story:rehab'],
@@ -229,6 +229,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   'rehab-3': [
     {
       ok: ['fame+', 'morale+'],
+      fail: ['morale+'],
     },
     {
       ok: ['cond+', 'morale+'],
@@ -236,8 +237,8 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   'scandal-2': [
     {
-      ok: ['fame-', 'trust+'],
-      fail: ['fame-', 'trust-', 'morale-'],
+      ok: ['fame-', 'trust+', 'morale+'],
+      fail: ['trust-', 'fame-', 'morale-'],
     },
     {
       ok: ['trust+', 'morale+'],
@@ -285,7 +286,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
       ok: ['morale+', 'trust-'],
     },
     {
-      ok: ['fame+', 'morale+'],
+      ok: ['fame+', 'trust+', 'morale+'],
     },
   ],
   var: [
@@ -485,11 +486,11 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   'gk-error': [
     {
-      ok: ['trust+', 'morale+', 'fame+'],
+      ok: ['morale+', 'trust+', 'fame+'],
       fail: ['trust-', 'morale-'],
     },
     {
-      ok: ['cond+', 'morale+', 'trust-'],
+      ok: ['morale+', 'cond+', 'trust-'],
     },
   ],
   'gk-sweeper': [
@@ -549,6 +550,14 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
       ok: ['morale+', 'cond-'],
     },
   ],
+  'wc-snub': [
+    {
+      ok: ['fame+', 'morale+'],
+    },
+    {
+      ok: ['trust+'],
+    },
+  ],
   'legend-critic': [
     {
       ok: ['fame+', 'morale+'],
@@ -571,6 +580,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
       ok: ['fame+'],
     },
     {
+      ok: ['morale+'],
       fail: ['fame+', 'morale-'],
     },
   ],
@@ -585,7 +595,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   'nt-retire': [
     {
-      ok: ['cond+'],
+      ok: ['cond+', 'morale+'],
     },
     {},
   ],
