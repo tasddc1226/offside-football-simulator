@@ -481,8 +481,8 @@ export const REAL_EVENTS: EventDef[] = [
             addStat(s, 'fame', 7);
             addStat(s, 'morale', 5);
             addStat(s, 'trust', 0.8);
-            addStat(s, 'cond', s.age >= 30 ? -18 : -8);
-            if (s.age >= 31) s.injury = Math.max(s.injury, 1);
+            addStat(s, 'cond', s.age >= 30 ? -14 : -8);
+            if (s.age >= 32) s.injury = Math.max(s.injury, 1);
             addStat(s, 'money', adFee(s) / 2);
           },
         },

@@ -76,7 +76,7 @@ export const BASE_EVENTS: EventDef[] = [
   {
     id: 'knock',
     title: '훈련 중 통증',
-    w: 2,
+    w: 1.4,
     cond: (s) => s.injury === 0,
     text: () => '훈련 도중 햄스트링이 찌릿합니다. 의무팀은 휴식을 권합니다.',
     choices: [
@@ -145,7 +145,7 @@ export const BASE_EVENTS: EventDef[] = [
   {
     id: 'interview',
     title: '경기 전 인터뷰',
-    w: 2,
+    w: 1.4,
     cond: () => true,
     text: () => '기자가 마이크를 들이밉니다. "이번 상대, 자신 있습니까?"',
     choices: [
@@ -324,7 +324,7 @@ export const BASE_EVENTS: EventDef[] = [
   {
     id: 'mentor',
     title: '레전드 선배의 조언',
-    w: 2,
+    w: 1.4,
     cond: () => true,
     text: (s) => {
       const best = labelOf(s, bestKey(s));
@@ -396,7 +396,7 @@ export const BASE_EVENTS: EventDef[] = [
     choices: [
       {
         label: '정면으로 반박한다',
-        p: (s) => clamp(0.15 + (s.age - 20) * 0.03 + s.trust * 0.04, 0.1, 0.75),
+        p: (s) => clamp(0.25 + (s.age - 20) * 0.03 + s.trust * 0.04, 0.15, 0.8),
         ok: {
           text: '당당한 대응에 팬들이 응원으로 화답했습니다.',
           fx: (s) => {
@@ -475,8 +475,8 @@ export const BASE_EVENTS: EventDef[] = [
           text: '아이들과 한참 공을 찼습니다. 오랜만에 부담 없이 웃었습니다.',
           fx: (s) => {
             addStat(s, 'morale', 8);
-            addStat(s, 'fame', 3);
-            addStat(s, 'cond', -4);
+            addStat(s, 'fame', 4);
+            addStat(s, 'cond', -3);
           },
         },
       },
@@ -486,7 +486,7 @@ export const BASE_EVENTS: EventDef[] = [
           text: '아쉽지만 휴식을 택했습니다. 감독은 프로다운 판단이라고 했습니다.',
           fx: (s) => {
             addStat(s, 'cond', 8);
-            addStat(s, 'trust', 0.6);
+            addStat(s, 'trust', 0.5);
           },
         },
       },
@@ -495,8 +495,8 @@ export const BASE_EVENTS: EventDef[] = [
   {
     id: 'slump',
     title: '슬럼프',
-    w: 2,
-    cond: (s) => s.morale < 50,
+    w: 3,
+    cond: (s) => s.morale < 55,
     text: byPos<string>({
       FW: '골대가 유난히 작아 보입니다. 몇 경기째 골이 없고, 잠도 잘 오지 않습니다.',
       MF: '패스가 자꾸 발끝에서 어긋납니다. 잠도 잘 오지 않습니다.',
@@ -672,7 +672,7 @@ export const BASE_EVENTS: EventDef[] = [
           text: '관심 구단들이 움직이기 시작했습니다. 대신 홈 팬들은 서운해합니다.',
           fx: (s) => {
             s.flags.scouted = true;
-            addStat(s, 'trust', s.contract && s.contract.years <= 1 ? -0.5 : -2);
+            addStat(s, 'trust', s.contract && s.contract.years <= 1 ? -0.5 : -1.2);
             addStat(s, 'fame', 3);
             addStat(s, 'morale', 4);
           },
@@ -686,7 +686,7 @@ export const BASE_EVENTS: EventDef[] = [
               ? '홈 팬들은 환호했지만, 재계약 소식이 없다는 걸 모두가 압니다.'
               : '홈 팬들이 당신의 이름을 연호합니다.',
           fx: (s) => {
-            addStat(s, 'trust', s.contract && s.contract.years <= 1 ? 0.5 : 2);
+            addStat(s, 'trust', s.contract && s.contract.years <= 1 ? 0.5 : 1.5);
             addStat(s, 'morale', 5);
           },
         },

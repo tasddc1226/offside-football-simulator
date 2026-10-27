@@ -1,0 +1,51 @@
+{
+  "id": "season2-update",
+  "title": "시즌 2 업데이트",
+  "items": [
+    "리그가 시즌 내내 매일 열리고, 시즌이 끝날 때 최종 순위가 정해져요",
+    "업적 단계에 끝이 없어졌어요. 마지막 단계를 넘어도 다음 목표가 이어지고, 업적 점수 1,000점마다 강화권과 리롤권을 더 받아요",
+    "팀 시너지에 세 선수가 함께 켜는 트리오 3개와 새 듀오 9개가 생겼고, 국가대표 색깔이 23개 나라로 늘었어요",
+    "리그마다 실제 더비 상대가 정해졌고, 새 선수 이벤트 14개와 미니게임 선택지 5개가 더해졌어요",
+    "스카우트 재평가로 잠재력이 떨어지는 폭이 줄었어요. 한 번에 최대 3까지만 떨어져요",
+    "한쪽으로 쏠리던 선택지 12개의 득실을 고르게 맞추고, 자주 나오던 조언 · 인터뷰 · 통증 이벤트를 조금 줄였어요",
+    "하루 카드 과제에 내는 카드가 11~14장에서 7~9장으로 줄었어요",
+    "선수를 만들 때 피부색 · 머리색 · 머리 모양을 무료로 고를 수 있어요",
+    "득점의 신 · 세계의 얼굴 등 상위 칭호 7개가 생겼어요"
+  ],
+  "en": {
+    "title": "Season 2 update",
+    "items": [
+      "The league now plays every day all season, and final standings are set when the season ends.",
+      "Achievement steps no longer end. New goals keep coming after the last step, and every 1,000 achievement points gives extra boost and reroll tickets.",
+      "Team synergy adds 3 trios that switch on with three players plus 9 new duos, and national styles now cover 23 countries.",
+      "Each league now has real derby rivals, with 14 new player events and 5 more minigame choices.",
+      "Scout re-evaluations now lower potential less, by at most 3 at a time.",
+      "12 lopsided choices are now more even, and the frequent mentor, interview and pain events show up a little less.",
+      "Daily card tasks now take 7 to 9 cards instead of 11 to 14.",
+      "You can pick skin tone, hair colour and hairstyle for free when creating a player.",
+      "7 new top titles, including God of goals and Face of football."
+    ]
+  },
+  "ja": {
+    "title": "シーズン2アップデート",
+    "items": [
+      "リーグがシーズン中毎日開催され、シーズン終了時に最終順位が決まります。",
+      "実績の段階に上限がなくなりました。最後の段階の先も次の目標が続き、実績ポイント1,000ごとに強化券とリロール券を追加でもらえます。",
+      "チームシナジーに3人でそろうトリオ3つと新しいデュオ9つが加わり、代表チームのカラーが23か国になりました。",
+      "リーグごとに実際のダービー相手が決まり、新しい選手イベント14個とミニゲームの選択肢5つが加わりました。",
+      "スカウトの再評価で潜在能力が下がる幅を小さくしました。1回に下がるのは最大3までです。",
+      "片寄っていた選択肢12個の損得をそろえ、よく出ていた助言・インタビュー・痛みのイベントを少し減らしました。",
+      "毎日のカード課題に出すカードが11〜14枚から7〜9枚に減りました。",
+      "選手を作るときに肌の色・髪の色・髪型を無料で選べます。",
+      "得点の神・サッカーの顔など上位称号が7つ増えました。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": {
+    "changes": [
+      { "key": "bloomDrift", "from": 1.2, "to": 1 },
+      { "key": "rescoutDownScale", "from": 1, "to": 0.7 },
+      { "key": "rescoutDropCap", "from": 99, "to": 3 }
+    ]
+  }
+}

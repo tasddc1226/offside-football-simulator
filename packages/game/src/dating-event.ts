@@ -16,7 +16,7 @@ export const DATING_EVENT: EventDef = {
       ok: {
         text: () => L.privateResult,
         fx: (s) => {
-          addStat(s, 'morale', 2);
+          addStat(s, 'morale', 4);
         },
       },
     },
