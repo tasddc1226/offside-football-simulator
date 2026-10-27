@@ -104,6 +104,36 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '스카우트 평가 오차',
     desc: '화면에 보이는 스카우트 평가가 실제 잠재력에서 벗어나는 표준편차 — 0이면 평가가 정확하다',
   },
+  bloomDrift: {
+    group: 'growth',
+    label: '숨은 잠재력 흔들림',
+    desc: '스카우트 평가에 안 보이는 숨은 잠재력이 해마다 흔들리는 표준편차 — 클수록 재평가에서 크게 오르내린다',
+  },
+  bloomAge: {
+    group: 'growth',
+    label: '숨은 잠재력 고정 나이',
+    desc: '이 나이까지 숨은 잠재력이 해마다 흔들리고, 그 뒤로는 멈춘다',
+  },
+  rescoutShare1: {
+    group: 'growth',
+    label: '21세 재평가 반영 몫',
+    desc: '21세 스카우트 재평가가 그때까지 쌓인 숨은 잠재력 중 평가에 옮기는 비율',
+  },
+  rescoutShare2: {
+    group: 'growth',
+    label: '24세 재평가 반영 몫',
+    desc: '24세 스카우트 재평가가 남은 숨은 잠재력 중 평가에 옮기는 비율',
+  },
+  rescoutDownScale: {
+    group: 'growth',
+    label: '재평가 하락 비율',
+    desc: '재평가가 잠재력을 깎을 때 실제로 깎는 비율 — 1이면 그대로, 0.7이면 30%는 없던 일로 한다',
+  },
+  rescoutDropCap: {
+    group: 'growth',
+    label: '재평가 한 번 최대 하락',
+    desc: '재평가 한 번에 잠재력이 내려가는 최대 폭(99면 제한 없음). 넘는 몫은 없던 일로 한다',
+  },
   premiumSMult: {
     group: 'growth',
     label: '프리미엄 스카우트 S 배수',

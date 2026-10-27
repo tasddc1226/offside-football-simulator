@@ -121,6 +121,49 @@ export const BALANCE_SPEC = {
     max: 6,
     step: 0.5,
   },
+  // T-11-544 숨은 잠재력(bloom)의 해마다 흔들림(표준편차)과 그 흔들림이 멈추는 나이. 기본 1.2 · 25 = 시즌 1 그대로.
+  bloomDrift: {
+    def: 1.2,
+    min: 0,
+    max: 3,
+    step: 0.1,
+  },
+  bloomAge: {
+    def: 25,
+    min: 19,
+    max: 30,
+    step: 1,
+  },
+  // T-11-544 스카우트 재평가(21세 · 24세)가 숨은 잠재력 중 평가에 반영하는 몫. 기본 0.5 · 0.8 = 시즌 1 그대로.
+  rescoutShare1: {
+    def: 0.5,
+    min: 0,
+    max: 1,
+    step: 0.05,
+    unit: 'pct',
+  },
+  rescoutShare2: {
+    def: 0.8,
+    min: 0,
+    max: 1,
+    step: 0.05,
+    unit: 'pct',
+  },
+  // T-11-544 재평가가 잠재력을 깎을 때 실제로 깎는 비율과 한 번에 깎는 최대 폭. 덜 깎은 몫은 없던 일로 한다(숨은 잠재력에
+  // 남기지 않는다). 기본 1 · 99 = 시즌 1 그대로(그대로 깎는다).
+  rescoutDownScale: {
+    def: 1,
+    min: 0,
+    max: 1,
+    step: 0.05,
+    unit: 'x',
+  },
+  rescoutDropCap: {
+    def: 99,
+    min: 0,
+    max: 99,
+    step: 1,
+  },
   // T-11-450 프리미엄 스카우트 후보의 S 확률 배수(일반 후보 대비). 기본 2 = T-11-196 그대로.
   premiumSMult: {
     def: 2,
