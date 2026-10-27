@@ -2,7 +2,7 @@
 // 시즌 부(1부 · 2부 …)가 오르내린다. 기획은 docs/tracking/offside-league-plan.md. 시각은 모두 UTC ISO.
 // zod 없는 서브패스(`@offside/contracts/league`) — API 모양은 league-api.ts.
 import { DAY_MS, KST_MS, kstDay } from './kst.js';
-import { SEASON_GAUGE } from './season-gauge.js';
+import { gaugeRules } from './season-gauge.js';
 import { SERVICE_SEASONS, type ServiceSeason } from './service-seasons.js';
 
 /** 리그를 여는 첫 시즌. */
@@ -71,7 +71,7 @@ export function provisionalNextSeason(started: ServiceSeason | undefined): Servi
   if (!started) return null;
   const startsAt =
     started.endsAt ??
-    new Date(Date.parse(started.startsAt) + SEASON_GAUGE.maxDays * DAY_MS).toISOString();
+    new Date(Date.parse(started.startsAt) + gaugeRules(started.id).maxDays * DAY_MS).toISOString();
   // 이름은 화면에 쓰지 않는다(리그 일정 계산에만 쓴다).
   return { ...started, id: started.id + 1, name: '', startsAt, endsAt: null };
 }
