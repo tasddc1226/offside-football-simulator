@@ -274,7 +274,8 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
         ).results.map((r) => [r.item, r.qty]),
       );
     const champ = at1(1, 1).profileId;
-    expect(await items(champ)).toEqual({ reroll: 17, scout: 3, boost: 3 });
+    // T-11-541 시즌 2 새 업적(정점 OVR 90 선수) 단계 보상 강화권 1장이 더해진다.
+    expect(await items(champ)).toEqual({ reroll: 17, scout: 3, boost: 4 });
     expect(await items(at1(2, 1).profileId)).toEqual({ reroll: 9, scout: 1, boost: 1 });
     expect(await items(at1(2, 3).profileId)).toEqual({ reroll: 2 });
     const title = await ctx.env.DB.prepare('SELECT title FROM profiles WHERE id = ?')
