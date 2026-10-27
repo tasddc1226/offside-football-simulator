@@ -74,55 +74,36 @@ export function titlesOf(
 export const CAREER_FEATS = { goals: 500, caps: 150, assists: 300, peak: 90 } as const;
 export const TITLE_GRADES = ['entry', 'skilled', 'honor', 'legend'] as const;
 export type TitleGrade = (typeof TITLE_GRADES)[number];
+/** T-11-547 명예관 묶음(화면 순서). 트로피 칭호(컵 · 리그)는 묶음 밖에서 따로 그린다. */
+export const TITLE_CATEGORIES = ['growth', 'position', 'record', 'legacy', 'team'] as const;
+export type TitleCategory = (typeof TITLE_CATEGORIES)[number];
+/** T-11-547 구단주 팀 디비전 칭호의 기준(team-division TEAM_DIVISION_KEYS index — elite2 · master). */
+export const TITLE_DIVISION = { elite: 5, master: 7 } as const;
 
-/** Grades describe challenge depth, not measured rarity. Player milestones count distinct careers; firsts count finalized honors. */
-export const PERMANENT_TITLES = [
-  {
-    id: 'owner-founder',
-    metric: 'preseason',
-    target: 1,
-    symbol: 'flag',
-    grade: 'entry',
-    related: 'preseason',
-  },
+type PermanentTitleDef = {
+  id: string;
+  metric: string;
+  target: number;
+  symbol: string;
+  grade: TitleGrade;
+  category: TitleCategory;
+  related: string;
+};
+const def = <const T extends readonly PermanentTitleDef[]>(t: T) => t;
+
+/**
+ * Grades describe challenge depth, not measured rarity. Player milestones count distinct careers; firsts count finalized honors.
+ * T-11-547 같은 metric의 칭호는 target 순서로 한 사다리(단계)다. 맨 위 단계는 연결된 구단주의 0.5~3% 안팎을 겨눈다.
+ */
+export const PERMANENT_TITLES = def([
+  // 육성 — 은퇴시킨 선수 수 · 최고 능력치 90 이상 선수 수.
   {
     id: 'owner-developer',
     metric: 'retired',
     target: 10,
     symbol: 'academy',
     grade: 'entry',
-    related: 'retire',
-  },
-  {
-    id: 'owner-star-maker',
-    metric: 'elite',
-    target: 3,
-    symbol: 'star',
-    grade: 'skilled',
-    related: 'retire',
-  },
-  {
-    id: 'owner-midfield',
-    metric: 'midfield',
-    target: 5,
-    symbol: 'pitch',
-    grade: 'honor',
-    related: 'retire',
-  },
-  {
-    id: 'owner-defense',
-    metric: 'defense',
-    target: 5,
-    symbol: 'shield',
-    grade: 'honor',
-    related: 'retire',
-  },
-  {
-    id: 'owner-keeper',
-    metric: 'keeper',
-    target: 5,
-    symbol: 'glove',
-    grade: 'legend',
+    category: 'growth',
     related: 'retire',
   },
   {
@@ -131,14 +112,108 @@ export const PERMANENT_TITLES = [
     target: 50,
     symbol: 'academy',
     grade: 'honor',
+    category: 'growth',
     related: 'retire',
   },
+  {
+    id: 'owner-youth-kingdom',
+    metric: 'retired',
+    target: 100,
+    symbol: 'academy',
+    grade: 'legend',
+    category: 'growth',
+    related: 'retire',
+  },
+  {
+    id: 'owner-star-maker',
+    metric: 'elite',
+    target: 3,
+    symbol: 'star',
+    grade: 'skilled',
+    category: 'growth',
+    related: 'retire',
+  },
+  {
+    id: 'owner-star-factory',
+    metric: 'elite',
+    target: 10,
+    symbol: 'star',
+    grade: 'honor',
+    category: 'growth',
+    related: 'retire',
+  },
+  {
+    id: 'owner-star-cradle',
+    metric: 'elite',
+    target: 30,
+    symbol: 'star',
+    grade: 'legend',
+    category: 'growth',
+    related: 'retire',
+  },
+  // 포지션 — 최고 능력치 90 이상 선수의 포지션.
+  {
+    id: 'owner-forward',
+    metric: 'forwards',
+    target: 10,
+    symbol: 'ball',
+    grade: 'honor',
+    category: 'position',
+    related: 'retire',
+  },
+  {
+    id: 'owner-midfield',
+    metric: 'midfield',
+    target: 5,
+    symbol: 'pitch',
+    grade: 'honor',
+    category: 'position',
+    related: 'retire',
+  },
+  {
+    id: 'owner-defense',
+    metric: 'defense',
+    target: 5,
+    symbol: 'shield',
+    grade: 'honor',
+    category: 'position',
+    related: 'retire',
+  },
+  {
+    id: 'owner-keeper',
+    metric: 'keeper',
+    target: 5,
+    symbol: 'glove',
+    grade: 'legend',
+    category: 'position',
+    related: 'retire',
+  },
+  {
+    id: 'owner-all-rounder',
+    metric: 'positions',
+    target: 4,
+    symbol: 'pitch',
+    grade: 'honor',
+    category: 'position',
+    related: 'retire',
+  },
+  // 기록 — 한 커리어의 큰 기록을 낸 선수 수.
   {
     id: 'owner-goals',
     metric: 'scorers',
     target: 5,
     symbol: 'ball',
     grade: 'skilled',
+    category: 'record',
+    related: 'goals',
+  },
+  {
+    id: 'owner-goal-dynasty',
+    metric: 'scorers',
+    target: 20,
+    symbol: 'ball',
+    grade: 'legend',
+    category: 'record',
     related: 'goals',
   },
   {
@@ -147,6 +222,16 @@ export const PERMANENT_TITLES = [
     target: 5,
     symbol: 'pitch',
     grade: 'honor',
+    category: 'record',
+    related: 'assists',
+  },
+  {
+    id: 'owner-assist-dynasty',
+    metric: 'creators',
+    target: 20,
+    symbol: 'pitch',
+    grade: 'legend',
+    category: 'record',
     related: 'assists',
   },
   {
@@ -155,23 +240,17 @@ export const PERMANENT_TITLES = [
     target: 5,
     symbol: 'flag',
     grade: 'skilled',
+    category: 'record',
     related: 'caps',
   },
   {
-    id: 'owner-legend-home',
-    metric: 'numbers',
-    target: 3,
-    symbol: 'shirt',
-    grade: 'honor',
-    related: 'numbers',
-  },
-  {
-    id: 'owner-pioneer',
-    metric: 'firsts',
-    target: 1,
+    id: 'owner-national-dynasty',
+    metric: 'internationals',
+    target: 20,
     symbol: 'flag',
-    grade: 'honor',
-    related: 'firsts',
+    grade: 'legend',
+    category: 'record',
+    related: 'caps',
   },
   {
     id: 'owner-ballon-maker',
@@ -179,15 +258,45 @@ export const PERMANENT_TITLES = [
     target: 5,
     symbol: 'ball',
     grade: 'honor',
+    category: 'record',
     related: 'ballon',
   },
   {
-    id: 'owner-exchange',
-    metric: 'exchanges',
-    target: 10,
-    symbol: 'star',
-    grade: 'skilled',
-    related: 'exchange',
+    id: 'owner-ballon-dynasty',
+    metric: 'ballon',
+    target: 20,
+    symbol: 'ball',
+    grade: 'legend',
+    category: 'record',
+    related: 'ballon',
+  },
+  // 구단 유산 — 프리시즌 · 최초 기록 · 영구결번 · 국적 · 카드 과제.
+  {
+    id: 'owner-founder',
+    metric: 'preseason',
+    target: 1,
+    symbol: 'flag',
+    grade: 'entry',
+    category: 'legacy',
+    related: 'preseason',
+  },
+  {
+    id: 'owner-pioneer',
+    metric: 'firsts',
+    target: 1,
+    symbol: 'flag',
+    grade: 'honor',
+    category: 'legacy',
+    related: 'firsts',
+  },
+  {
+    id: 'owner-legend-home',
+    metric: 'numbers',
+    target: 3,
+    symbol: 'shirt',
+    grade: 'honor',
+    category: 'legacy',
+    related: 'numbers',
   },
   {
     id: 'owner-dynasty',
@@ -195,12 +304,108 @@ export const PERMANENT_TITLES = [
     target: 25,
     symbol: 'shirt',
     grade: 'legend',
+    category: 'legacy',
     related: 'numbers',
   },
-] as const;
-export type PermanentTitleId = (typeof PERMANENT_TITLES)[number]['id'];
-export type TitleMetric = (typeof PERMANENT_TITLES)[number]['metric'];
-export const TITLE_CRITERIA_VERSION = 3;
+  {
+    id: 'owner-world',
+    metric: 'nations',
+    target: 10,
+    symbol: 'globe',
+    grade: 'skilled',
+    category: 'legacy',
+    related: 'nations',
+  },
+  {
+    id: 'owner-world-tour',
+    metric: 'nations',
+    target: 20,
+    symbol: 'globe',
+    grade: 'legend',
+    category: 'legacy',
+    related: 'nations',
+  },
+  // T-11-547 10일 → 5일(과제가 10-24에 열려 아무도 닿지 못했다), 윗 단계 20일.
+  {
+    id: 'owner-exchange',
+    metric: 'exchanges',
+    target: 5,
+    symbol: 'star',
+    grade: 'skilled',
+    category: 'legacy',
+    related: 'exchange',
+  },
+  {
+    id: 'owner-exchange-master',
+    metric: 'exchanges',
+    target: 20,
+    symbol: 'star',
+    grade: 'honor',
+    category: 'legacy',
+    related: 'exchange',
+  },
+  // 구단주 팀 — 컵 · 시즌 · 디비전.
+  {
+    id: 'owner-cup-regular',
+    metric: 'cups',
+    target: 3,
+    symbol: 'trophy',
+    grade: 'entry',
+    category: 'team',
+    related: 'cup',
+  },
+  {
+    id: 'owner-cup-contender',
+    metric: 'podiums',
+    target: 3,
+    symbol: 'trophy',
+    grade: 'legend',
+    category: 'team',
+    related: 'cup',
+  },
+  {
+    id: 'owner-seasons',
+    metric: 'seasons',
+    target: 3,
+    symbol: 'calendar',
+    grade: 'skilled',
+    category: 'team',
+    related: 'seasons',
+  },
+  {
+    id: 'owner-division-elite',
+    metric: 'division',
+    target: TITLE_DIVISION.elite,
+    symbol: 'chevron',
+    grade: 'honor',
+    category: 'team',
+    related: 'division',
+  },
+  {
+    id: 'owner-division-master',
+    metric: 'division',
+    target: TITLE_DIVISION.master,
+    symbol: 'chevron',
+    grade: 'legend',
+    category: 'team',
+    related: 'division',
+  },
+]);
+export type PermanentTitle = (typeof PERMANENT_TITLES)[number];
+export type PermanentTitleId = PermanentTitle['id'];
+export type TitleMetric = PermanentTitle['metric'];
+/** T-11-547 4: 단계 · 새 칭호. 명예관을 열면 이전 버전 진행도를 한 번 다시 센다(받은 칭호는 그대로). */
+export const TITLE_CRITERIA_VERSION = 4;
 export const permanentTitleOf = (id: string | null | undefined) =>
   PERMANENT_TITLES.find((t) => t.id === id);
 export const isOwnerTitle = (id: string): boolean => !!parseTitle(id) || !!permanentTitleOf(id);
+
+/** T-11-547 같은 metric 칭호의 단계(target 순). step은 1부터. */
+export function titleLadderOf(id: string) {
+  const t = permanentTitleOf(id);
+  if (!t) return null;
+  const ladder = PERMANENT_TITLES.filter((x) => x.metric === t.metric).sort(
+    (a, b) => a.target - b.target,
+  );
+  return { step: ladder.indexOf(t) + 1, steps: ladder.length, ladder };
+}

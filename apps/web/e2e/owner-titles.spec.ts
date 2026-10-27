@@ -79,6 +79,13 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   const hall = page.locator('[data-owner-hall]');
   await expect(hall.locator('[data-permanent-title]')).toHaveCount(PERMANENT_TITLES.length - 1);
   await expect(hall.locator('[data-title-pick="owner-developer"]')).toHaveCount(1);
+  // T-11-547 묶음 · 다음 단계.
+  await expect(
+    hall.locator('[data-title-group="growth"] [data-title-pick="owner-developer"]'),
+  ).toHaveCount(1);
+  await expect(hall.locator('[data-title-pick="owner-developer"] [data-next-tier]')).toContainText(
+    '육성의 명가 10/50',
+  );
   await expect(hall.locator('[data-permanent-title="owner-keeper"]')).toHaveAttribute(
     'data-title-grade',
     'legend',
@@ -140,7 +147,9 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   await expect(hall.locator('.guide-body')).toBeVisible();
 });
 
-test('hall read failure can retry and shows all locked goals for a new owner', async ({ page }) => {
+test('hall read failure can retry and shows the first tier of every locked ladder for a new owner', async ({
+  page,
+}) => {
   await page.addInitScript(() => localStorage.setItem('ft_session', '1'));
   await page.route(`${API}/v1/**`, (route) =>
     route.fulfill(fail(503, 'UNAVAILABLE', 'unavailable')),
@@ -187,7 +196,12 @@ test('hall read failure can retry and shows all locked goals for a new owner', a
   await expect(error).toContainText('명예관을 불러오지 못했어요.');
   await error.getByRole('button', { name: '다시 시도' }).click();
   const hall = page.locator('[data-owner-hall]');
-  await expect(hall.locator('[data-permanent-title]')).toHaveCount(PERMANENT_TITLES.length);
+  // T-11-547 도전 중은 사다리마다 다음 단계 하나(같은 metric은 한 줄).
+  await expect(hall.locator('[data-permanent-title]')).toHaveCount(
+    new Set(PERMANENT_TITLES.map((t) => t.metric)).size,
+  );
+  await expect(hall.locator('[data-permanent-title="owner-academy"]')).toHaveCount(0);
+  await expect(hall.locator('[data-title-group="team"]')).toBeVisible();
   await expect(hall.locator('[data-title-pick]')).toHaveCount(0);
   expect(reads).toBe(2);
 });

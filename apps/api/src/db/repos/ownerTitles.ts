@@ -3,6 +3,7 @@ import {
   TITLE_CRITERIA_VERSION,
   CAREER_FEATS,
 } from '@offside/contracts/owner-title';
+import { DEFAULT_NATION } from '@offside/contracts/nations';
 import type { TitleMetric } from '@offside/contracts/owner-title';
 import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
@@ -12,7 +13,9 @@ import { accountLinkedSql } from './profiles.js';
 type Metrics = Record<TitleMetric, number>;
 
 /** Scalar aggregates use careers.profile_id, never the transferable cards.owner_id.
- * Pin the owner index: the global HOF peak index can otherwise scan every owner's retirees. */
+ * Pin the owner index: the global HOF peak index can otherwise scan every owner's retirees.
+ * T-11-547 subqueries read only owner-prefixed indexes (cup_entries_profile_idx, owner_season_records · owner_honors PK).
+ * Korean players are stored with a NULL nation, so they count as DEFAULT_NATION. */
 export async function titleMetricsOf(db: Db, profileId: string): Promise<Metrics> {
   const row = await db.get<Metrics>(sql`
     select
@@ -23,6 +26,9 @@ export async function titleMetricsOf(db: Db, profileId: string): Promise<Metrics
       coalesce(sum(pos = 'MF' and peak >= ${CAREER_FEATS.peak}), 0) as midfield,
       coalesce(sum(pos = 'DF' and peak >= ${CAREER_FEATS.peak}), 0) as defense,
       coalesce(sum(pos = 'GK' and peak >= ${CAREER_FEATS.peak}), 0) as keeper,
+      coalesce(sum(pos = 'FW' and peak >= ${CAREER_FEATS.peak}), 0) as forwards,
+      count(distinct case when peak >= ${CAREER_FEATS.peak} then pos end) as positions,
+      count(distinct coalesce(nullif(nation, ''), ${DEFAULT_NATION})) as nations,
       coalesce(sum(goals >= ${CAREER_FEATS.goals}), 0) as scorers,
       coalesce(sum(assists >= ${CAREER_FEATS.assists}), 0) as creators,
       coalesce(sum(caps >= ${CAREER_FEATS.caps}), 0) as internationals,
@@ -30,7 +36,15 @@ export async function titleMetricsOf(db: Db, profileId: string): Promise<Metrics
        where c.profile_id = ${profileId} and c.hidden = 0) as numbers,
       (select count(*) from owner_honors h where h.profile_id = ${profileId} and h.kind = 'first') as firsts,
       (select count(*) from card_exchange_claims x
-       where x.profile_id = ${profileId} and x.reward_json <> '') as exchanges
+       where x.profile_id = ${profileId} and x.reward_json <> '') as exchanges,
+      (select count(*) from cup_entries e where e.profile_id = ${profileId}
+       and e.stage is not null) as cups,
+      (select count(*) from cup_entries e where e.profile_id = ${profileId}
+       and e.stage in ('champion', 'runnerup', 'sf')) as podiums,
+      (select count(*) from owner_season_records s where s.profile_id = ${profileId}
+       and s.retired > 0) as seasons,
+      (select coalesce(max(h.value), 0) from owner_honors h where h.profile_id = ${profileId}
+       and h.kind = 'division') as division
     from careers INDEXED BY careers_profile_status_season_idx
     where profile_id = ${profileId} and status = 'retired'
       and hidden = 0 and peak is not null and retire_age >= 30`);
@@ -84,27 +98,35 @@ export async function refreshOwnerTitles(db: Db, profileId: string, now: string,
   return newlyEarned.map((t) => t.id);
 }
 
+/** T-11-547 Team metrics (cups, seasons, division) change without a career write; recount at most once a day on hall open. */
+export const TITLE_PROGRESS_TTL_MS = 24 * 60 * 60 * 1000;
+
 /** Read persisted progress only. Initial private hall entry seeds legacy/newly-linked accounts once. */
 export async function permanentTitlesOf(db: Db, profileId: string, now: string) {
   let [progress] = await db
     .select()
     .from(ownerTitleProgress)
     .where(eq(ownerTitleProgress.profileId, profileId));
+  const stale =
+    !progress ||
+    progress.criteriaVersion !== TITLE_CRITERIA_VERSION ||
+    Date.parse(now) - Date.parse(progress.updatedAt) > TITLE_PROGRESS_TTL_MS;
   // Indexed existence check repairs a retirement whose post-response award task was interrupted.
-  const pending = progress
-    ? await db
-        .select({ id: careers.id })
-        .from(careers)
-        .where(
-          and(
-            eq(careers.profileId, profileId),
-            eq(careers.status, 'retired'),
-            gt(careers.updatedAt, progress.updatedAt),
-          ),
-        )
-        .limit(1)
-    : [];
-  if (!progress || progress.criteriaVersion !== TITLE_CRITERIA_VERSION || pending.length) {
+  const pending =
+    progress && !stale
+      ? await db
+          .select({ id: careers.id })
+          .from(careers)
+          .where(
+            and(
+              eq(careers.profileId, profileId),
+              eq(careers.status, 'retired'),
+              gt(careers.updatedAt, progress.updatedAt),
+            ),
+          )
+          .limit(1)
+      : [];
+  if (stale || pending.length) {
     await refreshOwnerTitles(db, profileId, now);
     [progress] = await db
       .select()
