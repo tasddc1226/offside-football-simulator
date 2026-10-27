@@ -579,6 +579,37 @@ export function achRewardOf(points: number): AchReward | null {
   return t ? { boost: t.boost, scout: t.scout } : null;
 }
 /**
+ * T-11-541 이 시즌부터 단계 업적에 끝이 없다 — 정해 둔 마지막 단계 뒤로도 다음 목표가 계속 이어진다(api
+ * team/achievements.ts stepsOf). 시즌 1까지는 마감된 점수 · 시즌 1 업적 보상 장수가 바뀌지 않게 정해 둔 단계에서 멈춘다.
+ */
+export const ACH_ENDLESS_FROM_SEASON = 2;
+
+/**
+ * T-11-541 시즌 점수 보너스 — 업적 점수가 every점을 넘을 때마다(1,000 · 2,000 · …, 끝없이) 잠재력 강화권 boost장과
+ * 리롤권 reroll장을 주고, scoutEvery번째 보너스마다(5,000 · 10,000 · …) 프리미엄 스카우트권 1장을 더한다. 단계 보상
+ * (ACH_REWARD_TIERS)과 따로 준다. 시즌 1(25일) 마감 분포는 로그인 구단주 8,539명 중 1,000점 이상 41% · 상위 10%
+ * 2,280점 · 최고 9,740점이라, 보너스는 절반 가까이가 한 번 이상 받고 상위 10%가 2~3번, 최고 구단주가 9번(30~60일
+ * 시즌이면 20번 안팎)이다. 단계 보상(시즌 1 표본 상위 10% 강화권 36장)에 비해 크게 늘리지 않는 폭으로 잡았다.
+ * 서버 gift_claims 'ach:<시즌>:score:<k>'로 시즌마다 보너스당 한 번이다.
+ */
+export const ACH_SCORE_BONUS = {
+  fromSeason: 2,
+  every: 1000,
+  boost: 1,
+  reroll: 2,
+  scoutEvery: 5,
+} as const;
+export type AchBonusReward = { boost: number; scout: number; reroll: number };
+/** k번째(1부터) 점수 보너스의 아이템. */
+export function achScoreBonusOf(k: number): AchBonusReward {
+  const b = ACH_SCORE_BONUS;
+  return { boost: b.boost, reroll: b.reroll, scout: k % b.scoutEvery === 0 ? 1 : 0 };
+}
+/** 점수로 닿은 보너스 수. */
+export const achScoreBonusCount = (score: number): number =>
+  Math.max(0, Math.floor(score / ACH_SCORE_BONUS.every));
+
+/**
  * 업적 보상을 처음 주는 시즌. 시즌 중에는 경제를 바꾸지 않으므로 그 앞 시즌(시즌 1)에는 주지도 표시하지도 않는다 — 개막
  * 전에 배포해도 시즌 1 달성에는 주지 않고, 시즌 2는 첫 달성부터(개막 뒤 배포면 그 사이 달성도 다음에 셀 때) 준다.
  */

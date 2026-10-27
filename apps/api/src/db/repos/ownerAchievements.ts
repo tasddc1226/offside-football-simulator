@@ -258,7 +258,7 @@ export async function claimAchievementRewards(
   db: Db,
   profileId: string,
   season: number,
-  steps: readonly { key: string; boost: number; scout: number }[],
+  steps: readonly { key: string; boost: number; scout: number; reroll?: number }[],
   now: string,
 ): Promise<string[]> {
   const d1 = db.$client;
@@ -269,17 +269,23 @@ export async function claimAchievementRewards(
     params: [profileId, achClaimKey(season, key), claimId],
   });
   if (!steps.length) return [];
+  // T-11-541 점수 보너스는 리롤권도 준다.
+  const itemsOf = (s: (typeof steps)[number]) =>
+    (
+      [
+        ['boost', s.boost],
+        ['scout', s.scout],
+        ['reroll', s.reroll ?? 0],
+      ] as const
+    ).filter(([, n]) => n > 0);
   const results = await d1.batch(
     steps.flatMap((s) => [
       d1
         .prepare(`${insert} VALUES (?, ?, ?, ?)`)
         .bind(profileId, achClaimKey(season, s.key), claimId, now),
-      ...(s.boost > 0
-        ? [grantItemStatement(d1, profileId, 'boost', s.boost, now, mine(s.key))]
-        : []),
-      ...(s.scout > 0
-        ? [grantItemStatement(d1, profileId, 'scout', s.scout, now, mine(s.key))]
-        : []),
+      ...itemsOf(s).map(([item, n]) =>
+        grantItemStatement(d1, profileId, item, n, now, mine(s.key)),
+      ),
     ]),
   );
   // 업적마다 기록 넣기가 첫 문장이다 — 새로 넣었으면(changes 1) 이 batch가 준 것.
@@ -287,7 +293,7 @@ export async function claimAchievementRewards(
   let i = 0;
   for (const s of steps) {
     if (results[i]?.meta.changes) granted.push(s.key);
-    i += 1 + (s.boost > 0 ? 1 : 0) + (s.scout > 0 ? 1 : 0);
+    i += 1 + itemsOf(s).length;
   }
   return granted;
 }

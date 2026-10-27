@@ -38,6 +38,7 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   achRewardGot: (p) => `Received: ${p.items}`,
   achRewardBoost: (p) => plural(p.n, 'potential boost ticket'),
   achRewardScout: (p) => plural(p.n, 'premium scout ticket'),
+  achRewardReroll: (p) => plural(p.n, 'reroll ticket'),
   achRankNone: 'Complete an achievement to join the ranking',
   achRank: (p) => `#${p.rank} of ${p.ranked}`,
   achCatPlayer: 'Player achievements',

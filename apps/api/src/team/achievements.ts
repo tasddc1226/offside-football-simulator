@@ -129,6 +129,8 @@ export type AchievementInput = {
   kept?: TeamKept | undefined;
   /** T-11-510 RP 사다리 시즌(2부터) — 팀 레이팅 업적 대신 팀 RP(디비전 경계) 업적을 둔다. */
   ladder?: boolean;
+  /** T-11-541 단계 업적에 끝이 없는 시즌(ACH_ENDLESS_FROM_SEASON부터) — 마지막 단계 뒤로 다음 목표가 이어진다. */
+  endless?: boolean;
 };
 
 /** 팀 업적 id → 그 시즌에 닿은 값(한 번 달성은 1, 단계 업적은 최고 값). */
@@ -309,6 +311,8 @@ const PTS = {
 /** 단계 업적의 단계별 점수(앞에서부터 목표 수만큼). */
 const LADDER = [10, 20, 40, 80, 160, 320];
 const TEAM_LADDER = [20, 40, 80];
+/** T-11-541 날 수 업적은 2주씩이 아니라 15일씩 이어 간다(30 → 45 → 60, 30~60일 시즌 안에 닿게). */
+const DAYS: StepGrow = { add: 15 };
 
 const once = (
   id: string,
@@ -335,17 +339,65 @@ const collect = (
   cur: Math.min(cur, max),
   max,
 });
+/** T-11-541 정해 둔 단계 뒤로 이어 붙이는 방식. add면 그 간격으로, 없으면 마지막 두 단계의 비율로 늘린다. */
+export type StepGrow = { add?: number };
+/** 유효숫자 두 자리로 다듬는다(22,500 → 23,000 · 166,667 → 170,000). 1보다 작은 자리는 두지 않는다. */
+const nice = (x: number) => {
+  const p = 10 ** Math.max(0, Math.floor(Math.log10(x)) - 1);
+  return Math.round(x / p) * p;
+};
+/** 끝없는 단계가 한 번에 만드는 단계 수 상한(값이 비정상으로 커도 멈추게). */
+const MAX_EXTRA_STEPS = 200;
+
+/**
+ * T-11-541 cur까지 넘은 단계와 그다음 목표를 담은 단계 목록. endless면 정해 둔 마지막 단계 뒤로 다음 목표를 계속
+ * 만든다 — 마지막 두 단계의 비가 1.5 이상이면 같은 비로(유효숫자 두 자리), 아니면 같은 간격으로 늘린다(grow.add가
+ * 있으면 그 간격). 정해 둔 단계의 값은 그대로라 지난 기록 · 팀 업적 기록(team_kept)이 그대로 맞는다.
+ */
+export function stepsOf(
+  steps: readonly number[],
+  cur: number,
+  endless: boolean,
+  grow: StepGrow = {},
+): number[] {
+  const out = [...steps];
+  if (!endless || steps.length === 0) return out;
+  const last = steps[steps.length - 1]!;
+  const prev = steps.length > 1 ? steps[steps.length - 2]! : last / 2;
+  const ratio = last / prev;
+  const add = grow.add ?? (ratio >= 1.5 ? 0 : Math.max(1, last - prev));
+  for (let k = 1; k <= MAX_EXTRA_STEPS; k++) {
+    const before = out[out.length - 1]!;
+    if (before > cur) break;
+    const raw = add > 0 ? last + add * k : nice(last * ratio ** k);
+    out.push(raw > before ? raw : before + 1);
+  }
+  return out;
+}
+
 /** T-11-357 단계 업적의 단계별 점수(보상 판정용 — 응답에는 싣지 않는다). */
 const ladderOf = new WeakMap<ClubAchievement, readonly number[]>();
+/** 단계(1부터)의 점수. 사다리보다 긴 단계(T-11-541 끝없는 단계)는 사다리 마지막 점수다. */
+const stepPoints = (ladder: readonly number[], k: number) =>
+  ladder[Math.min(k, ladder.length) - 1] ?? 0;
 const tier = (
   id: string,
   label: string,
   unit: string,
   cur: number,
-  steps: readonly number[],
+  defined: readonly number[],
   ladder: readonly number[] = LADDER,
+  endless = false,
+  grow?: StepGrow,
 ): ClubAchievement => {
+  const steps = stepsOf(defined, cur, endless, grow);
   const level = steps.filter((s) => cur >= s).length;
+  // 정해 둔 사다리가 단계보다 짧으면(끝없는 단계가 아닐 때) 예전처럼 남는 단계는 0점이다.
+  const pointsAt = (k: number) =>
+    k > defined.length ? stepPoints(ladder, k) : (ladder[k - 1] ?? 0);
+  const levelPoints = Array.from({ length: steps.length }, (_, i) => pointsAt(i + 1));
+  let points = 0;
+  for (let k = 1; k <= level; k++) points += pointsAt(k);
   const item: ClubAchievement = {
     id,
     label,
@@ -354,10 +406,10 @@ const tier = (
     cur,
     level,
     next: steps[level] ?? null,
-    points: ladder.slice(0, level).reduce((t, p) => t + p, 0),
-    worth: ladder[level] ?? 0,
+    points,
+    worth: steps[level] !== undefined ? pointsAt(level + 1) : 0,
   };
-  ladderOf.set(item, ladder);
+  ladderOf.set(item, levelPoints);
   return item;
 };
 const group = (
@@ -432,6 +484,7 @@ export function achievementScore(groups: readonly ClubAchievementGroup[]) {
 
 export function clubAchievements(input: AchievementInput): ClubAchievementGroup[] {
   const { careers, team, owner, detail, retireAt } = input;
+  const endless = !!input.endless;
   const managers = input.managers ?? [];
   const veteranAge = retireAt - 1;
   const honors = new Set(careers.flatMap((c) => c.seasons.flatMap((s) => s.honors)));
@@ -532,7 +585,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
       'records',
       '1단계',
       '기록 쌓기',
-      TIERS.map((t) => tier(t.id, t.label, t.unit, sum(t.get), t.steps)),
+      TIERS.map((t) => tier(t.id, t.label, t.unit, sum(t.get), t.steps, LADDER, endless)),
     ),
     group('player', 'collection', '2단계', '기록 조각 모으기', collection),
     group('player', 'legend', '3단계', '전설의 한 명', [
@@ -692,7 +745,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
       return acc ? new Set([...acc].filter((c) => mine.has(c))) : mine;
     }, null);
     const best = (id: string, label: string, unit: string, cur: number, steps: number[]) =>
-      tier(id, label, unit, Math.max(cur, kept[id] ?? 0), steps, TEAM_LADDER);
+      tier(id, label, unit, Math.max(cur, kept[id] ?? 0), steps, TEAM_LADDER, endless);
     groups.push(
       group('team', 'team', 'TEAM', '내가 만든 최강 팀', [
         held('team-one', '팀에 선수 한 명 등록', players.length > 0, 10),
@@ -772,10 +825,44 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
   groups.push(
     group('owner', 'owner', 'OWNER', '구단 운영', [
       once('owner-nickname', '공개 닉네임 정하기', owner.nickname, 10),
-      tier('owner-players', '은퇴시킨 선수', '명', careers.length, [3, 10, 30, 100, 200]),
-      tier('owner-retire-days', '선수를 은퇴시킨 날', '일', owner.retireDays, [3, 7, 14, 30]),
-      tier('owner-match-days', '팀 경기를 치른 날', '일', owner.matchDays, [3, 7, 14, 30]),
-      tier('owner-likes', '다른 팀 응원(좋아요)', '번', owner.likesGiven, [1, 5, 20], TEAM_LADDER),
+      tier(
+        'owner-players',
+        '은퇴시킨 선수',
+        '명',
+        careers.length,
+        [3, 10, 30, 100, 200],
+        LADDER,
+        endless,
+      ),
+      tier(
+        'owner-retire-days',
+        '선수를 은퇴시킨 날',
+        '일',
+        owner.retireDays,
+        [3, 7, 14, 30],
+        LADDER,
+        endless,
+        DAYS,
+      ),
+      tier(
+        'owner-match-days',
+        '팀 경기를 치른 날',
+        '일',
+        owner.matchDays,
+        [3, 7, 14, 30],
+        LADDER,
+        endless,
+        DAYS,
+      ),
+      tier(
+        'owner-likes',
+        '다른 팀 응원(좋아요)',
+        '번',
+        owner.likesGiven,
+        [1, 5, 20],
+        TEAM_LADDER,
+        endless,
+      ),
     ]),
     // T-11-310 감독 커리어(그 시즌에 끝낸 감독 · 지금 팀 감독 칸).
     group('manager', 'manager', 'MANAGER', '감독 커리어', [
@@ -787,6 +874,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
         managers.length,
         [2, 3, 5],
         TEAM_LADDER,
+        endless,
       ),
       once(
         'mgr-title',

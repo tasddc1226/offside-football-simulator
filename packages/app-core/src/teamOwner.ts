@@ -6,6 +6,7 @@ import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
 import { ATTR_KEYS } from '@offside/game/data';
 import {
   ACH_CATEGORIES,
+  ACH_SCORE_BONUS,
   LINEUP_SIZE,
   PAST_SALARY_BUDGET,
   YOUTH_OVR,
@@ -40,6 +41,7 @@ import {
 import type {
   ClubAchievement,
   ClubAchievementGroup,
+  ClubAchievementsResponse,
   OwnerTeam,
   TeamMatch,
   TeamPlayer,
@@ -48,6 +50,7 @@ import { tn } from '@offside/game/i18n/names';
 import { num, signedNum } from './teamText.js';
 import { teamCoreText as L } from './i18n/ko/teamCore.js';
 import { teamHomeText as TH } from './i18n/ko/teamHome.js';
+import { teamAchText as TA } from './i18n/ko/teamAch.js';
 import { teamSynergyText as SY } from './i18n/ko/teamSynergy.js';
 
 /** 최고 시점 대표 능력치 한 줄(골키퍼는 골키퍼 능력치 이름). */
@@ -445,11 +448,12 @@ export function achNear(groups: readonly ClubAchievementGroup[], n = 3): AchNear
 export const achPoints = (i: ClubAchievement): string =>
   i.points > 0 ? L.achPointsGot({ n: num(i.points) }) : L.achPointsWorth({ n: num(i.worth) });
 
-/** T-11-357 업적 보상 아이템 이름(잠재력 강화권 · 프리미엄 스카우트권). 없으면 빈 문자열. */
-export const achRewardItems = (r: { boost: number; scout: number }): string =>
+/** T-11-357 업적 보상 아이템 이름(잠재력 강화권 · 프리미엄 스카우트권 · T-11-541 리롤권). 없으면 빈 문자열. */
+export const achRewardItems = (r: { boost: number; scout: number; reroll?: number }): string =>
   [
     r.boost > 0 ? L.achRewardBoost({ n: r.boost }) : '',
     r.scout > 0 ? L.achRewardScout({ n: r.scout }) : '',
+    r.reroll ? L.achRewardReroll({ n: r.reroll }) : '',
   ]
     .filter(Boolean)
     .join(' · ');
@@ -461,6 +465,20 @@ export function achReward(i: ClubAchievement): string | null {
     i.reward ? L.achRewardNext({ items: achRewardItems(i.reward) }) : '',
   ].filter(Boolean);
   return parts.length ? parts.join(' · ') : null;
+}
+
+/** T-11-541 업적 화면의 점수 보너스 줄(지금 시즌 응답에만 bonus가 있다). 없으면 null. */
+export function achBonusView(
+  bonus: ClubAchievementsResponse['bonus'],
+): { title: string; next: string; got: string | null; note: string } | null {
+  if (!bonus) return null;
+  const got = bonus.got.boost + bonus.got.scout + bonus.got.reroll > 0;
+  return {
+    title: TA.bonusTitle,
+    next: TA.bonusNext({ pts: num(bonus.next), items: achRewardItems(bonus.reward) }),
+    got: got ? TA.bonusGot({ items: achRewardItems(bonus.got) }) : null,
+    note: TA.bonusNote({ every: num(ACH_SCORE_BONUS.every) }),
+  };
 }
 
 // T-11-028 업적 분류(선수·팀·구단주·감독)와 시즌 등급.
