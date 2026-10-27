@@ -2,7 +2,7 @@
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { shapeOf, usesRankLadder } from '@offside/contracts/owner-team';
-import { Alert, View } from 'react-native';
+import { Alert, Platform, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { fetchOwnerSummary } from '@offside/app-core/api/ownerSummary';
 import { fetchOwnerTeam } from '@offside/app-core/api/team';
@@ -53,10 +53,10 @@ import { exchangeText as XC } from '@offside/app-core/i18n/ko/exchange';
 import { CardExchange } from './CardExchange';
 import { SeasonPass } from './SeasonPass';
 import { seasonPassText as SP } from '@offside/app-core/i18n/ko/seasonPass';
-import { passEntryOpen } from '@offside/contracts/season-pass';
+import { passEntryOpen, SEASON_PASS_IOS_LIVE } from '@offside/contracts/season-pass';
 import { Membership } from './Membership';
 import { membershipText as MB } from '@offside/app-core/i18n/ko/membership';
-import { MEMBERSHIP_LIVE } from '@offside/contracts/membership';
+import { MEMBERSHIP_IOS_LIVE, MEMBERSHIP_LIVE } from '@offside/contracts/membership';
 import { teamHomeText as T } from '@offside/app-core/i18n/ko/teamHome';
 import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { openFriends } from '../../platform/inbox';
@@ -413,7 +413,9 @@ export default function Owner() {
             </Card>
           </Press>
           {exchangeOpen ? <CardExchange onClose={() => setExchangeOpen(false)} /> : null}
-          {passEntryOpen(new Date().toISOString()) || __DEV__ ? (
+          {(passEntryOpen(new Date().toISOString()) &&
+            (Platform.OS !== 'ios' || SEASON_PASS_IOS_LIVE)) ||
+          __DEV__ ? (
             <Press
               testID="season-pass"
               accessibilityLabel={SP.entry}
@@ -435,7 +437,7 @@ export default function Owner() {
               </Card>
             </Press>
           ) : null}
-          {MEMBERSHIP_LIVE || __DEV__ ? (
+          {(MEMBERSHIP_LIVE && (Platform.OS !== 'ios' || MEMBERSHIP_IOS_LIVE)) || __DEV__ ? (
             <Press
               testID="membership"
               accessibilityLabel={MB.entry}
