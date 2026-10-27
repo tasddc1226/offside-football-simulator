@@ -79,18 +79,18 @@ test('the overlay restores the reviewed app config and drops the mediation plugi
   }
 });
 
-test('the deploy workflow publishes current, 1.1.3 and 1.1.2 with their own runtime checks', () => {
+test('the deploy workflow publishes current, 1.1.4, 1.1.3 and 1.1.2 with their own runtime checks', () => {
   const workflow = readFileSync(
     new URL('../workflows/deploy-production.yml', import.meta.url),
     'utf8',
   );
   const job = workflow.split('  app-update:')[1].split('  release-tag:')[0];
-  assert.match(job, /target: \[current, '1\.1\.3', '1\.1\.2'\]/);
+  assert.match(job, /target: \[current, '1\.1\.4', '1\.1\.3', '1\.1\.2'\]/);
   assert.match(
     job,
     /matrix\.target == '1\.1\.3'\s*\n\s*run: node \.github\/scripts\/prepare-ota-113\.mjs prepare/,
   );
   assert.match(job, /prepare-ota-113\.mjs check "\$PLATFORM" "\$FP"/);
   // 1.1.3 overlay가 바뀌면 같은 커밋이라도 다시 게시해야 하므로 변경 판정에 넣는다.
-  assert.match(job, /prepare-ota-113\.mjs \.\.\/\.\.\/\.github\/workflows\/deploy-production\.yml/);
+  assert.match(job, /git diff --quiet[^;]*prepare-ota-113\.mjs[^;]*deploy-production\.yml; then/);
 });
