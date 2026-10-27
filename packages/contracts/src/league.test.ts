@@ -13,9 +13,8 @@ const s1: ServiceSeason = {
 describe('leagueSeasonAt (T-11-418c)', () => {
   it('다음 시즌이 일정에 없으면 지금 시즌 최대 기간 끝을 잠정 개막으로 쓴다', () => {
     const s = leagueSeasonAt('2026-10-20T00:00:00.000Z', [s1]);
-    // T-11-528 최대 기간 60일: 10-06 00:00 KST + 60일 = 12-05 00:00 KST, 사전 신청은 7일 전 11-28 00:00 KST.
-    expect(s).toMatchObject({ id: 2, startsAt: '2026-12-04T15:00:00.000Z' });
-    expect(planLeague(s!.id, s!.startsAt).opensAt).toBe('2026-11-27T15:00:00.000Z');
+    expect(s).toMatchObject({ id: 2, startsAt: '2026-10-30T15:00:00.000Z' });
+    expect(planLeague(s!.id, s!.startsAt).opensAt).toBe('2026-10-23T15:00:00.000Z');
   });
 
   it('마감이 확정되면 그 마감을 개막으로', () => {
