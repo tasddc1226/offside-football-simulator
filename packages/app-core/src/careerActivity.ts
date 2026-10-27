@@ -1,4 +1,5 @@
 import type { CareerActivityInput } from '@offside/contracts';
+import { loadKey, saveKey } from '@offside/game/storage';
 import { apiFetch } from './api/client.js';
 
 const MIN_GAP_MS = 60_000;
@@ -8,11 +9,20 @@ const RETRY_MS = [60_000, 5 * 60_000, 15 * 60_000, 30 * 60_000, 60 * 60_000];
 export const ACTIVITY_RATE_LIMIT_WAIT_MS = 60 * 60_000;
 type SendResult = boolean | { ok: false; retryable: boolean; retryAfterMs?: number };
 const keyOf = (input: CareerActivityInput) => `${input.careerId}:${input.state}`;
+/** 마지막으로 보낸 상태와 6시간 창 끝. 앱 실행 · 웹 새로고침을 넘어 간격을 지키려고 기기에 남긴다. */
+export type ActivitySent = { key: string; until: number };
+type SentStore = { read(): ActivitySent | null; write(v: ActivitySent): void };
+const SENT_KEY = 'ft_activity_sent';
+const deviceSent: SentStore = {
+  read: () => loadKey<ActivitySent>(SENT_KEY),
+  write: (v) => void saveKey(SENT_KEY, v),
+};
 
 /** Latest activity plus one retirement marker; timers exist only for pending work. */
 export function createCareerActivityTracker(
   send: (input: CareerActivityInput) => Promise<SendResult>,
   now: () => number = Date.now,
+  sent?: SentStore,
 ) {
   let pending: CareerActivityInput[] = [];
   let inFlight: CareerActivityInput | undefined;
@@ -21,6 +31,12 @@ export function createCareerActivityTracker(
   let active = true;
   let lastKey = '';
   let dedupeUntil = 0;
+  const saved = sent?.read();
+  // 시계를 뒤로 돌린 기기에서 창이 6시간보다 길게 남지 않게 한다.
+  if (saved && typeof saved.key === 'string' && saved.until <= now() + DEDUPE_MS) {
+    lastKey = saved.key;
+    dedupeUntil = saved.until;
+  }
   let nextAt = 0;
   let failures = 0;
 
@@ -61,6 +77,7 @@ export function createCareerActivityTracker(
           failures = 0;
           lastKey = keyOf(current);
           dedupeUntil = now() + DEDUPE_MS;
+          sent?.write({ key: lastKey, until: dedupeUntil });
           nextAt = now() + MIN_GAP_MS;
         } else {
           failures++;
@@ -121,32 +138,36 @@ export function createCareerActivityTracker(
 }
 const keyOfOptional = (input: CareerActivityInput | undefined) => input && keyOf(input);
 
-const tracker = createCareerActivityTracker(async (input) => {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 6000);
-  try {
-    const result = await apiFetch('/v1/career-activity', {
-      method: 'PUT',
-      body: JSON.stringify(input),
-      keepCache: true,
-      signal: controller.signal,
-    });
-    if (result.ok) return true;
-    return {
-      ok: false,
-      retryable:
-        result.error.retryable ||
-        ['RATE_LIMITED', 'PROFILE_REQUIRED', 'INVALID_RESPONSE', 'NETWORK_ERROR'].includes(
-          result.error.code,
-        ),
-      ...(result.error.code === 'RATE_LIMITED'
-        ? { retryAfterMs: ACTIVITY_RATE_LIMIT_WAIT_MS }
-        : {}),
-    };
-  } finally {
-    clearTimeout(timer);
-  }
-});
+const tracker = createCareerActivityTracker(
+  async (input) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
+    try {
+      const result = await apiFetch('/v1/career-activity', {
+        method: 'PUT',
+        body: JSON.stringify(input),
+        keepCache: true,
+        signal: controller.signal,
+      });
+      if (result.ok) return true;
+      return {
+        ok: false,
+        retryable:
+          result.error.retryable ||
+          ['RATE_LIMITED', 'PROFILE_REQUIRED', 'INVALID_RESPONSE', 'NETWORK_ERROR'].includes(
+            result.error.code,
+          ),
+        ...(result.error.code === 'RATE_LIMITED'
+          ? { retryAfterMs: ACTIVITY_RATE_LIMIT_WAIT_MS }
+          : {}),
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+  },
+  Date.now,
+  deviceSent,
+);
 export const reportCareerActivity = tracker.report;
 export const flushCareerActivity = tracker.flush;
 export const setCareerActivityActive = tracker.setActive;

@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ACTIVITY_RATE_LIMIT_WAIT_MS, createCareerActivityTracker } from './careerActivity.js';
+import {
+  ACTIVITY_RATE_LIMIT_WAIT_MS,
+  createCareerActivityTracker,
+  type ActivitySent,
+} from './careerActivity.js';
 const active = { careerId: '00000000-0000-4000-8000-000000000001', state: 'active' } as const;
 const next = { ...active, careerId: '00000000-0000-4000-8000-000000000002' };
 const retired = { ...active, state: 'retired' } as const;
@@ -27,6 +31,31 @@ describe('career activity delivery', () => {
     await tracker.report(active);
     expect(send).toHaveBeenCalledTimes(2);
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('keeps the 6-hour window across app launches through the device store', async () => {
+    let saved: ActivitySent | null = null;
+    const store = { read: () => saved, write: (v: ActivitySent) => void (saved = v) };
+    const send = vi.fn(async () => true);
+    await createCareerActivityTracker(send, Date.now, store).report(active);
+    await advance(60 * 60_000);
+    // 다시 켠 앱: 새 추적기라도 같은 상태는 남은 창 동안 보내지 않는다.
+    await createCareerActivityTracker(send, Date.now, store).report(active);
+    expect(send).toHaveBeenCalledOnce();
+    await createCareerActivityTracker(send, Date.now, store).report(retired);
+    expect(send).toHaveBeenCalledTimes(2);
+    await advance(6 * 60 * 60_000);
+    await createCareerActivityTracker(send, Date.now, store).report(retired);
+    expect(send).toHaveBeenCalledTimes(3);
+  });
+
+  it('ignores a stored window longer than 6 hours after the device clock moved back', async () => {
+    const saved: ActivitySent = { key: `${active.careerId}:active`, until: 7 * 60 * 60_000 };
+    const send = vi.fn(async () => true);
+    const store = { read: () => saved, write: vi.fn() };
+    await createCareerActivityTracker(send, Date.now, store).report(active);
+    expect(send).toHaveBeenCalledOnce();
+    expect(store.write).toHaveBeenCalledWith({ key: saved.key, until: 6 * 60 * 60_000 });
   });
 
   it('does not queue identical saves while the same request is in flight', async () => {
