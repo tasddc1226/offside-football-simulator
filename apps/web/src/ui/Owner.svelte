@@ -38,7 +38,7 @@
   import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
   import { exchangeText as XC } from '@offside/app-core/i18n/ko/exchange';
   import { seasonPassText as SP } from '@offside/app-core/i18n/ko/seasonPass';
-  import { SEASON_PASS_LIVE } from '@offside/contracts/season-pass';
+  import { passEntryOpen } from '@offside/contracts/season-pass';
   import { membershipText as MB } from '@offside/app-core/i18n/ko/membership';
   import { MEMBERSHIP_LIVE } from '@offside/contracts/membership';
   import { syncMember } from '../ads/ads';
@@ -248,7 +248,7 @@
       <button class="tap-cover" data-act="exchange" aria-label={XC.entryAria} onclick={openExchange}></button>
     </section>
     {#if exchangeOpen && Exchange}<Exchange onclose={() => (exchangeOpen = false)} />{/if}
-    {#if SEASON_PASS_LIVE || import.meta.env.DEV}
+    {#if passEntryOpen(new Date().toISOString()) || import.meta.env.DEV}
     <section class="card owner-market owner-tap" aria-label={SP.entry} data-owner-pass>
       <div class="owner-who">
         <h2>{SP.entry}</h2>

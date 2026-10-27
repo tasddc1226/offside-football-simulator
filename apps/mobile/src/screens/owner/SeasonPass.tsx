@@ -87,13 +87,19 @@ function Track({
       {passTiers(s).map((t) => {
         const state =
           t.state === 'claimed' ? L.stateClaimed : t.state === 'open' ? L.stateOpen : L.stateLocked;
+        const need =
+          t.kind === 'now'
+            ? L.tierNow
+            : t.kind === 'bonus'
+              ? L.tierBonus({ n: t.need })
+              : L.tierNeed({ n: t.need });
         return (
           <View
             key={t.tier}
             accessible
             accessibilityLabel={L.tierLabel({
               tier: t.tier,
-              need: t.need,
+              need,
               reward: t.reward,
               state,
             })}
@@ -123,7 +129,7 @@ function Track({
             <View style={{ flex: 1, minWidth: 0 }}>
               <Txt>{t.reward}</Txt>
               <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-                {L.tierNeed({ n: t.need })}
+                {need}
               </Txt>
             </View>
             <Txt
