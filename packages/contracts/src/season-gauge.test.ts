@@ -8,7 +8,8 @@ import {
 } from './season-gauge.js';
 
 // 2026-10-06 00:00 KST
-const season = { id: 1, startsAt: '2026-10-05T15:00:00.000Z' };
+// 시즌 2부터의 규칙(T-11-528)을 본다. 시즌 1은 옛 규칙(T-11-546, 아래).
+const season = { id: 2, startsAt: '2026-10-05T15:00:00.000Z' };
 const at = (days: number) =>
   new Date(Date.parse(season.startsAt) + days * 86_400_000).toISOString();
 
@@ -81,5 +82,19 @@ describe('시즌 진행 게이지', () => {
     expect(new Date(ceilKstMidnight(Date.parse('2026-10-08T15:00:00Z'))).toISOString()).toBe(
       '2026-10-08T15:00:00.000Z',
     );
+  });
+
+  it('T-11-546 시즌 1은 옛 규칙(목표 12 · 14~25일): 시간 하한으로 22.5일째 90%에 닿아 25일째(10/31 00:00 KST) 마감', () => {
+    const s1 = { id: 1, startsAt: season.startsAt };
+    const counted = { contributed: 98_380, participants: 12_885 };
+    const before = stepSeasonGauge(null, s1, counted, at(22));
+    expect(before.lockedAt).toBeNull();
+    const locked = stepSeasonGauge(before, s1, counted, at(22.5));
+    expect(locked.lockedAt).toBe(at(22.5));
+    expect(locked.endsAt).toBe('2026-10-30T15:00:00.000Z');
+    expect(seasonGaugeView(locked, s1.startsAt, at(23))).toMatchObject({
+      target: 12 * 12_885,
+      maxEndsAt: '2026-10-30T15:00:00.000Z',
+    });
   });
 });

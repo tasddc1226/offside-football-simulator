@@ -234,20 +234,16 @@ describe('/v1/leagues (T-11-418)', () => {
     ]);
   });
 
-  it('T-11-418c 시즌 1 마감이 아직 없으면 최대 기간 끝(T-11-528 60일: 12/05 00:00)을 시즌 2 잠정 개막으로 사전 신청을 연다', async () => {
+  it('T-11-418c 시즌 1 마감이 아직 없으면 최대 기간 끝(10/31 00:00)을 시즌 2 잠정 개막으로 사전 신청을 연다', async () => {
     applySeasonSchedule([]);
     await ctx.env.DB.prepare("DELETE FROM app_meta WHERE key = 'season_schedule'").run();
     forgetSeasonSchedule();
     vi.setSystemTime(new Date(BEFORE));
     expect(await view()).toMatchObject({
       phase: 'soon',
-      league: {
-        season: 2,
-        startsAt: '2026-12-04T15:00:00.000Z',
-        opensAt: '2026-11-27T15:00:00.000Z',
-      },
+      league: { season: 2, startsAt: S2, opensAt: '2026-10-23T15:00:00.000Z' },
     });
-    vi.setSystemTime(new Date('2026-11-28T03:00:00.000Z'));
+    vi.setSystemTime(new Date(PRESIGN));
     expect((await view()).phase).toBe('open');
     const a = await owner(null);
     expect((await enter(a.cookie)).status).toBe(204);
@@ -267,8 +263,8 @@ describe('/v1/leagues (T-11-418)', () => {
     );
   });
   it('T-11-444 다음 시즌 배치 전에는 지난 시즌 결산(최종 순위 · 다음 시즌 부)을 함께 돌려준다', async () => {
-    // 시즌 2 리그가 끝나고(11/19 13:00 KST) 시즌 3(잠정 개막 12/30, T-11-528 최대 60일) 사전 신청 기간.
-    vi.setSystemTime(new Date('2026-12-23T03:00:00.000Z'));
+    // 시즌 2 리그가 끝나고(11/19 13:00 KST) 시즌 3(잠정 개막 11/25) 사전 신청 기간.
+    vi.setSystemTime(new Date('2026-11-20T03:00:00.000Z'));
     const v = await view();
     expect([v.league.season, v.phase]).toEqual([3, 'open']);
     const a = await owner(null);
