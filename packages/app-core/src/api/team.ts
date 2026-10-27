@@ -109,7 +109,7 @@ export const fetchClubAchievements = (season?: number) =>
 export const fetchAchievementNotifications = () =>
   ownerCachedGet<ClubAchievementNotifications>('/v1/owner-team/achievement-notifications', 60_000);
 
-/** 라이브 랭킹(팀 랭킹). 서버가 5분마다 새로 세므로 T-11-503부터 같은 5분 메모(홈 구단 가치 칸도 쓴다). */
+/** 라이브 랭킹(팀 랭킹). 공개 랭킹은 5분 엣지 캐시, 가치순은 클라이언트에서 1분 메모한다. */
 export const fetchTeamRanking = (
   season: number | undefined,
   sort: TeamRankSort,
@@ -118,7 +118,7 @@ export const fetchTeamRanking = (
 ) =>
   cachedGet<TeamRankResponse>(
     `/v1/teams?${season === undefined ? '' : `season=${season}&`}sort=${sort}&page=${page}${division === undefined ? '' : `&division=${division}`}`,
-    300_000,
+    sort === 'value' ? 60_000 : 300_000,
   );
 /** T-11-375 디비전별 팀 수 · 경계(랭킹 디비전 탭). 서버가 5분마다 새로 센다. */
 export const fetchTeamDivisions = (season?: number) =>
@@ -129,7 +129,7 @@ export const fetchAchRanking = (season: number | undefined, page: number) =>
     `/v1/achievements/ranking?${season === undefined ? '' : `season=${season}&`}page=${page}`,
     60_000,
   );
-/** T-11-441 '내 순위로': 내 팀이 있는 페이지와 내 순위(me). 누를 때만 부르고, 1분 메모한다. 가치순은 서버가 세지 않는다. */
+/** T-11-441 '내 순위로': 내 팀이 있는 페이지와 내 순위(me). 누를 때만 부르고, 1분 메모한다. */
 export const fetchMyTeamRank = (season: number | undefined, sort: TeamRankSort) =>
   cachedGet<TeamRankResponse>(
     `/v1/teams?${season === undefined ? '' : `season=${season}&`}sort=${sort}&me=1`,

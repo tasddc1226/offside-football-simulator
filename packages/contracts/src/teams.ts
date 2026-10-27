@@ -688,7 +688,7 @@ export const TeamRankResponseSchema = z.strictObject({
   page: z.number().int().min(1),
   total: count,
   items: z.array(TeamRankItemSchema),
-  /** T-11-441 me=1로 물었을 때만. 그 시즌 랭킹에 내 팀이 없으면 null. 가치순은 세지 않아 없다. */
+  /** T-11-441 me=1로 물었을 때만. 그 시즌 랭킹에 내 팀이 없으면 null. */
   me: z
     .strictObject({ teamId: TeamIdSchema, rank: z.number().int().min(1) })
     .nullable()

@@ -4,7 +4,7 @@ import { PRESEASON } from '@offside/contracts/service-seasons';
 import { createTestD1, syncCards, type TestD1 } from '../../test/d1.js';
 import { createDb } from '../client.js';
 import { listPublicHof } from './careers.js';
-import { listTeamRanking } from './ownerTeams.js';
+import { listTeamRanking, valueRankOf } from './ownerTeams.js';
 import { recordCareerFirsts } from './firsts.js';
 import { countOpenListingsAmong } from './market.js';
 import { achievementRankOf, ownerActivityIn } from './ownerAchievements.js';
@@ -227,6 +227,17 @@ describe('critical query result and read-cost regressions (local D1)', () => {
         expect(q.sql).not.toContain('json_each');
         expect(q.sql).not.toContain('cards');
         expect(await plan(q)).toContain('owner_teams_season_value_');
+      }
+    }
+    for (const now of ['2026-09-30T00:00:00.000Z', '2030-01-01T00:00:00.000Z']) {
+      let offset = 0;
+      for (const page of [1, 2, 3, 4]) {
+        const rows = (await listTeamRanking(ctx.db, 0, 'value', page, now)).rows;
+        for (const row of rows) {
+          traced.queries.length = 0;
+          expect(await valueRankOf(traced.db, row, now), row.id).toBe(++offset);
+          expect(traced.queries[0]!.sql).not.toContain('cards');
+        }
       }
     }
     const closed = await listTeamRanking(ctx.db, 0, 'value', 1, '2030-01-01T00:00:00.000Z');

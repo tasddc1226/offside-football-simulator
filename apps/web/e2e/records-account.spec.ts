@@ -82,9 +82,7 @@ test('D3 설정의 계정 · 닉네임은 내 구단 화면의 계정 카드로 
   await expect(page.locator('#account-slot')).toContainText('te***@gmail.com');
 });
 
-test('D4 팀 랭킹의 내 순위로는 내 팀이 있는 페이지로 가서 그 줄을 강조하고, 가치순에는 없다', async ({
-  page,
-}) => {
+test('D4 팀 랭킹의 내 순위로는 내 팀이 있는 페이지로 가서 그 줄을 강조한다', async ({ page }) => {
   await page.route(PROFILE_URL, (route) => route.fulfill(ok(member)));
   const asked: string[] = [];
   await page.route(`${API}/v1/teams?*`, (route) => {
@@ -121,7 +119,11 @@ test('D4 팀 랭킹의 내 순위로는 내 팀이 있는 페이지로 가서 �
   expect(asked.filter((q) => q.includes('me=1'))).toHaveLength(1);
 
   await list.locator('[data-rank-sort="value"]').click();
-  await expect(list.locator('[data-act="my-rank"]')).toHaveCount(0);
+  await expect(list.locator('[data-act="my-rank"]')).toBeVisible();
+  await list.locator('[data-act="my-rank"]').click();
+  await expect(list.locator('li.mine')).toContainText('팀 27');
+  await expect(list.locator('.hof-pager')).toContainText('2 / 3');
+  expect(asked.some((q) => q.includes('sort=value') && q.includes('me=1'))).toBe(true);
 });
 
 test('D4 업적 랭킹에 내 기록이 없으면 내 순위로가 그 이유를 알린다', async ({ page }) => {

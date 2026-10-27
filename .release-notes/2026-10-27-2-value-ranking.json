@@ -1,0 +1,14 @@
+{
+  "id": "club-value-my-rank",
+  "title": "구단 가치 순위에서 내 팀 찾기",
+  "items": ["구단 가치순 랭킹에서도 ‘내 순위로’를 눌러 내 팀을 바로 찾을 수 있어요"],
+  "en": {
+    "title": "Find your club value rank",
+    "items": ["Use ‘My rank’ to find your team in the club value ranking."]
+  },
+  "ja": {
+    "title": "クラブ価値ランキングで自分のチームを探す",
+    "items": ["クラブ価値順でも「自分の順位へ」から自分のチームをすぐに探せます。"]
+  },
+  "availability": "web-app"
+}

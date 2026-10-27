@@ -63,7 +63,7 @@
   const metricOf = $derived(METRIC[sort].of);
   const rows = $derived(data?.items ?? []);
 
-  // T-11-441 '내 순위로' — 로그인한 구단주만, 가치순은 빼고. 누르면 내 팀이 있는 페이지로 가고 그 줄을 강조한다.
+  // T-11-441 '내 순위로' — 로그인한 구단주만. 누르면 내 팀이 있는 페이지로 가고 그 줄을 강조한다.
   // 로그인 상태를 아직 묻지 않았으면(구단주 화면을 열지 않음) 버튼을 두고, 누를 때 서버가 판정한다(따로 묻지 않는다).
   const member = $derived.by(() => {
     const a = accountCache.value;
