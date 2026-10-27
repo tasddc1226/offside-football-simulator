@@ -3,6 +3,7 @@ import type { AppEnv, Bindings } from '../env.js';
 import { postExpo } from './transport.js';
 import { latePushResult } from './result.js';
 import { publishPushWork } from './queuePublish.js';
+import { badgeOf, unreadBadges } from './badge.js';
 
 const BATCH = 100;
 const MINUTE = 60_000;
@@ -149,11 +150,17 @@ async function send(
   transport: typeof fetch,
 ): Promise<Result[]> {
   try {
+    const badges = await unreadBadges(
+      env.DB,
+      rows.map((r) => r.profile_id),
+      iso(now),
+    );
     const response = await postExpo(
       env,
       'send',
       rows.map((r) => ({
         to: r.token,
+        ...badgeOf(badges, r.profile_id),
         title: r.board === 'notice' ? '오프사이드 공지' : '오프사이드 릴리즈 노트',
         body: r.title.slice(0, 160),
         channelId: 'news',
