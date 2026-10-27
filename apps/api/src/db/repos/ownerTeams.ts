@@ -685,88 +685,74 @@ export async function listTeamRecentForm(db: Db, teamIds: readonly string[]) {
   return forms;
 }
 
-/** 레이팅 순위(랭킹과 같은 순서 — 레이팅 · OVR · 먼저 만든 팀). 랭킹에 오르지 않은 팀(선수 0명)이면 null. */
-export async function ratingRankOf(db: Db, t: OwnerTeamRow): Promise<number | null> {
+/** 모든 정렬의 마지막 기준은 생성 시각, 같으면 팀 ID다. */
+const earlierTeam = (t: OwnerTeamRow) =>
+  or(
+    lt(ownerTeams.createdAt, t.createdAt),
+    and(eq(ownerTeams.createdAt, t.createdAt), lt(ownerTeams.id, t.id)),
+  );
+
+/** 목록과 같은 기준으로 앞선 팀을 세어 내 순위를 구한다. */
+async function rankBefore(
+  db: Db,
+  t: OwnerTeamRow,
+  earlier: SQL | undefined,
+): Promise<number | null> {
   if (t.filled === 0) return null;
   const [row] = await db
     .select({ n: sql<number>`count(*)` })
     .from(ownerTeams)
     .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
-    .where(
-      and(
-        rankedIn(t.season),
-        or(
-          gt(ownerTeams.rating, t.rating),
-          and(
-            eq(ownerTeams.rating, t.rating),
-            or(
-              gt(ownerTeams.ovr, t.ovr),
-              and(eq(ownerTeams.ovr, t.ovr), lt(ownerTeams.createdAt, t.createdAt)),
-            ),
-          ),
-        ),
-      ),
-    );
+    .where(and(rankedIn(t.season), earlier));
   return Number(row?.n ?? 0) + 1;
+}
+
+/** 레이팅 · OVR · 생성 시각 · ID 순서. */
+export function ratingRankOf(db: Db, t: OwnerTeamRow): Promise<number | null> {
+  return rankBefore(
+    db,
+    t,
+    or(
+      gt(ownerTeams.rating, t.rating),
+      and(
+        eq(ownerTeams.rating, t.rating),
+        or(gt(ownerTeams.ovr, t.ovr), and(eq(ownerTeams.ovr, t.ovr), earlierTeam(t))),
+      ),
+    ),
+  );
 }
 
 /** T-11-441 OVR 순위(OVR순 랭킹과 같은 순서 — OVR · 레이팅 · 먼저 만든 팀). 랭킹에 오르지 않은 팀이면 null. */
-export async function ovrRankOf(db: Db, t: OwnerTeamRow): Promise<number | null> {
-  if (t.filled === 0) return null;
-  const [row] = await db
-    .select({ n: sql<number>`count(*)` })
-    .from(ownerTeams)
-    .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
-    .where(
+export function ovrRankOf(db: Db, t: OwnerTeamRow): Promise<number | null> {
+  return rankBefore(
+    db,
+    t,
+    or(
+      gt(ownerTeams.ovr, t.ovr),
       and(
-        rankedIn(t.season),
-        or(
-          gt(ownerTeams.ovr, t.ovr),
-          and(
-            eq(ownerTeams.ovr, t.ovr),
-            or(
-              gt(ownerTeams.rating, t.rating),
-              and(eq(ownerTeams.rating, t.rating), lt(ownerTeams.createdAt, t.createdAt)),
-            ),
-          ),
-        ),
+        eq(ownerTeams.ovr, t.ovr),
+        or(gt(ownerTeams.rating, t.rating), and(eq(ownerTeams.rating, t.rating), earlierTeam(t))),
       ),
-    );
-  return Number(row?.n ?? 0) + 1;
+    ),
+  );
 }
 
 /** 구단 가치순과 같은 값 · 레이팅 · 생성 시각 · ID 순서로 내 순위를 센다. */
-export async function valueRankOf(db: Db, t: OwnerTeamRow, now: string): Promise<number | null> {
-  if (t.filled === 0) return null;
+export function valueRankOf(db: Db, t: OwnerTeamRow, now: string): Promise<number | null> {
   const closed = teamSeasonClosed(t.season, now);
   const value = closed ? ownerTeams.lineupValueClosed : ownerTeams.lineupValueOpen;
   const mine = closed ? t.lineupValueClosed : t.lineupValueOpen;
-  const [row] = await db
-    .select({ n: sql<number>`count(*)` })
-    .from(ownerTeams)
-    .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
-    .where(
+  return rankBefore(
+    db,
+    t,
+    or(
+      gt(value, mine),
       and(
-        rankedIn(t.season),
-        or(
-          gt(value, mine),
-          and(
-            eq(value, mine),
-            or(
-              gt(ownerTeams.rating, t.rating),
-              and(
-                eq(ownerTeams.rating, t.rating),
-                or(
-                  lt(ownerTeams.createdAt, t.createdAt),
-                  and(eq(ownerTeams.createdAt, t.createdAt), lt(ownerTeams.id, t.id)),
-                ),
-              ),
-            ),
-          ),
-        ),
+        eq(value, mine),
+        or(gt(ownerTeams.rating, t.rating), and(eq(ownerTeams.rating, t.rating), earlierTeam(t))),
       ),
-    );
-  return Number(row?.n ?? 0) + 1;
+    ),
+  );
 }
 
 // ───────── 좋아요 · 조회수(게시판 글과 같은 방식) ─────────

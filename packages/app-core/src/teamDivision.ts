@@ -21,8 +21,6 @@ export const currentDivisionRules = (): DivisionRules => divisionRules(latestBal
 
 const names = () => [L.d0, L.d1, L.d2, L.d3, L.d4, L.d5, L.d6, L.d7];
 export const divisionName = (d: number): string => names()[clampDivision(d)]!;
-/** 엠블럼 색 · 단계(CSS 클래스 · 앱 색표가 같은 키를 쓴다). */
-export const divisionKey = (d: number) => TEAM_DIVISION_KEYS[clampDivision(d)]!;
 /** 엠블럼 틀: 아마추어 · 세미프로 = 동, 프로 = 은, 엘리트 = 금, 마스터 = 금 + 왕관. */
 export const divisionTier = (d: number): 'bronze' | 'silver' | 'gold' | 'master' => {
   const c = clampDivision(d);

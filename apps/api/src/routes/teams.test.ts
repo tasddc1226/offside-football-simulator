@@ -491,6 +491,28 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     }
   });
 
+  it('모든 정렬에서 동점인 팀의 내 순위는 목록의 ID 순서와 같다', async () => {
+    const teams = [await team(1, 80), await team(1, 80)];
+    for (const { team: t } of teams) {
+      const careerId = t.slots.find((slot) => slot.careerId)?.careerId;
+      await ctx.db.update(cards).set({ cardValue: 1000 }).where(eq(cards.careerId, careerId!));
+    }
+    await ctx.db
+      .update(ownerTeams)
+      .set({ rating: 1000, ovr: 80, createdAt: '2026-09-01T00:00:00Z' });
+    const ordered = [...teams].sort((a, b) => a.team.id.localeCompare(b.team.id));
+    for (const sort of ['rating', 'ovr', 'value'] as const) {
+      const list = (await rank(`?sort=${sort}`)).data;
+      expect(list.items.map((item) => item.teamId)).toEqual(ordered.map((t) => t.team.id));
+      for (const [index, owner] of ordered.entries()) {
+        const res = await call('GET', `/v1/teams?sort=${sort}&me=1`, { cookie: owner.cookie });
+        const result = RankRes.parse(await res.json()).data;
+        expect(result.me).toEqual({ teamId: owner.team.id, rank: index + 1 });
+        expect(result.items[result.me!.rank - 1]?.teamId).toBe(owner.team.id);
+      }
+    }
+  });
+
   it('가치순 내 순위는 동점 순서와 캐시된 옛 페이지를 처리한다', async () => {
     const a = await team(1, 80);
     const b = await team(1, 80);
