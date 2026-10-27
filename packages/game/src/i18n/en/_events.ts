@@ -9,6 +9,7 @@ import { events_military } from './events-military';
 import { events_positional } from './events-positional';
 import { events_real } from './events-real';
 import { events_story } from './events-story';
+import { events_variety } from './events-variety';
 
 export const events: Record<string, EventText> = {
   'dating-rumor': {
@@ -98,4 +99,5 @@ export const events: Record<string, EventText> = {
   ...events_story,
   ...events_positional,
   ...events_military,
+  ...events_variety,
 };

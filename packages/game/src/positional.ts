@@ -168,6 +168,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
       {
         label: '직접 감아 찬다',
         p: (s) => clamp(0.22 + (s.attrs.sho - 60) * 0.008 + (s.attrs.pas - 60) * 0.008, 0.1, 0.55),
+        mg: { kind: 'shot' },
         ok: {
           text: '벽을 넘긴 프리킥이 골대 구석에 꽂혔습니다! 이제 전담 키커는 당신입니다.',
           fx: (s) => {
@@ -472,6 +473,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
       {
         label: '다음 경기에 바로 나선다',
         p: (s) => clamp(0.45 + (s.morale - 50) / 150 + (s.attrs.dri - 55) * 0.008, 0.2, 0.85),
+        mg: { kind: 'save' },
         ok: {
           text: '다음 경기 선방 7개, 무실점. 실수를 실력으로 덮었습니다.',
           fx: (s) => {
@@ -646,6 +648,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
       {
         label: '과감하게 나와서 펀칭한다',
         p: (s) => clamp(0.4 + (s.attrs.phy - 58) * 0.014, 0.15, 0.85),
+        mg: { kind: 'save' },
         ok: {
           text: '공중볼을 전부 지배했습니다. 상대 감독이 크로스 전술을 포기했습니다.',
           fx: (s) => {

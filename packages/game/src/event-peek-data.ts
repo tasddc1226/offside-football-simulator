@@ -62,7 +62,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   scout: [
     {
-      ok: ['story:europe', 'fame+'],
+      ok: ['fame+'],
       fail: ['trust-', 'morale-'],
     },
     {
@@ -478,7 +478,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   'df-overlap': [
     {
       ok: ['trust+', 'cond-', 'fame+', 'morale+'],
-      fail: ['cond-', 'trust-'],
+      fail: ['trust-', 'cond-'],
     },
     {
       ok: ['trust+', 'cond+'],
@@ -616,6 +616,133 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
     {
       ok: ['trust+', 'morale+'],
       fail: ['morale-'],
+    },
+  ],
+  'am-exam': [
+    {
+      ok: ['attr+', 'trust+', 'cond-'],
+      fail: ['morale-', 'trust-'],
+    },
+    {
+      ok: ['cond+', 'morale+'],
+    },
+  ],
+  'am-parents': [
+    {
+      ok: ['morale+', 'cond+'],
+      fail: ['morale-'],
+    },
+    {
+      ok: ['cond-', 'morale+'],
+    },
+  ],
+  'am-senior': [
+    {
+      ok: ['trust+', 'morale+'],
+      fail: ['trust-', 'morale-'],
+    },
+    {
+      ok: ['attr+', 'cond-'],
+    },
+  ],
+  'am-captain': [
+    {
+      ok: ['trust+', 'fame+', 'morale+'],
+      fail: ['morale-', 'cond-'],
+    },
+    {
+      ok: ['attr+'],
+    },
+  ],
+  'am-friendly': [
+    {
+      ok: ['fame+', 'morale+'],
+      fail: ['cond-', 'morale-'],
+    },
+    {
+      ok: ['attr+', 'trust+'],
+    },
+  ],
+  'mf-switch': [
+    {
+      ok: ['fame+', 'morale+'],
+      fail: ['trust-', 'morale-'],
+    },
+    {
+      ok: ['trust+'],
+    },
+  ],
+  'mf-tempo': [
+    {
+      ok: ['trust+', 'morale+'],
+      fail: ['trust-', 'morale-'],
+    },
+    {
+      ok: ['fame+', 'morale+'],
+      fail: ['trust-', 'morale-'],
+    },
+  ],
+  'fw-cross': [
+    {
+      ok: ['fame+', 'morale+'],
+      fail: ['morale-'],
+    },
+    {
+      ok: ['fame+', 'morale+'],
+      fail: ['morale-'],
+    },
+  ],
+  'fw-chase': [
+    {
+      ok: ['fame+', 'morale+', 'cond-'],
+      fail: ['cond-'],
+    },
+    {
+      ok: ['cond+'],
+    },
+  ],
+  'df-trap': [
+    {
+      ok: ['trust+', 'morale+'],
+      fail: ['trust-', 'morale-'],
+    },
+    {
+      ok: ['trust+'],
+    },
+  ],
+  'young-advice': [
+    {
+      ok: ['attr+', 'trust+', 'cond-'],
+      fail: ['cond-', 'morale-'],
+    },
+    {
+      ok: ['morale+'],
+    },
+  ],
+  'young-sns': [
+    {
+      ok: ['fame+', 'morale+'],
+      fail: ['morale-'],
+    },
+    {
+      ok: ['cond+'],
+    },
+  ],
+  'vet-recovery': [
+    {
+      ok: ['cond+', 'money-'],
+    },
+    {
+      ok: ['cond+', 'trust+'],
+      fail: ['trust-', 'morale-'],
+    },
+  ],
+  'vet-mentor': [
+    {
+      ok: ['trust+', 'cond-', 'morale+'],
+    },
+    {
+      ok: ['cond+'],
     },
   ],
 };

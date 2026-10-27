@@ -33,6 +33,7 @@ import { gSubs } from './gSubs';
 import { gTitles } from './gTitles';
 import { gTraining } from './gTraining';
 import { gTurn } from './gTurn';
+import { gVariety } from './gVariety';
 
 export const ja = {
   __events: events,
@@ -68,4 +69,5 @@ export const ja = {
   gTitles,
   gTraining,
   gTurn,
+  gVariety,
 };
