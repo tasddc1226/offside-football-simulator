@@ -28,7 +28,7 @@ import { Btn } from '../../../ui/Btn';
 import { Card } from '../../../ui/Card';
 import { Skeleton } from '../../../ui/Skeleton';
 import { Press } from '../../../ui/Press';
-import { scrollTo, scrollToView } from '../../../ui/scroll';
+import { centerView, scrollTo } from '../../../ui/scroll';
 import { Txt } from '../../../ui/Txt';
 import { displaySeasonAt, openTeamSeasons } from '@offside/contracts/service-seasons';
 import { RecordsSelect, RECORDS_TOUCH } from '../RecordsControls';
@@ -64,6 +64,16 @@ export default function AchievementRanking() {
   const preset = useRef<AchRankResponse | null>(null);
   const mineRow = useRef<View>(null);
   const scrollMine = useRef(false);
+  const [jumpTick, setJumpTick] = useState(0);
+  useEffect(() => {
+    if (!scrollMine.current) return;
+    const frame = requestAnimationFrame(() => {
+      if (!scrollMine.current || !mineRow.current) return;
+      scrollMine.current = false;
+      centerView(mineRow.current, prefs.motionOK);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [jumpTick, data]);
   async function jumpToMe() {
     setJumping(true);
     const j = myRankJump(await fetchMyAchRank(season), 'ach');
@@ -72,6 +82,7 @@ export default function AchievementRanking() {
     setMine({ season: j.data.season, rank: j.rank });
     if (j.data.page !== page) preset.current = j.data;
     scrollMine.current = true;
+    setJumpTick((n) => n + 1);
     setData(j.data);
     setPage(j.data.page);
   }
@@ -190,7 +201,7 @@ export default function AchievementRanking() {
                     ? () => {
                         if (!scrollMine.current) return;
                         scrollMine.current = false;
-                        scrollToView(mineRow.current, prefs.motionOK);
+                        centerView(mineRow.current, prefs.motionOK);
                       }
                     : undefined
                 }
