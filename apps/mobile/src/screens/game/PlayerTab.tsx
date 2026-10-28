@@ -30,7 +30,7 @@ import { retireAsk, save } from '../../game/host';
 import { BoostFx } from '../../components/BoostFx';
 import { appState } from '../../store';
 import { adFree, adsOff } from '../../platform/adFree';
-import { claimReward, rewardOffer } from '../../platform/rewarded';
+import { claimReward, prepareReward, rewardOffer } from '../../platform/rewarded';
 import { openPeek, openPeekWithClub, peekAvailable, potPeek } from '../../platform/rewardedPeek';
 import { useClubReward, useSureShop } from '../../platform/clubShop';
 import { careView, doCare } from '@offside/app-core/care-view';
@@ -102,6 +102,11 @@ function BoostCard({ s }: { s: GameState }) {
   });
   // T-11-513 구단 자금 확정 강화. 이 선수가 이번 시즌에 받을 수 있을 때만 값을 묻는다.
   const sure = useSureShop(v.sureOpen);
+  // T-11-558 광고 강화 버튼이 보이면 광고를 미리 불러 둔다.
+  const boostAd = !!v.adButton && rewardOffer('boost', owned) === 'ad';
+  useEffect(() => {
+    if (boostAd) prepareReward('boost');
+  }, [boostAd]);
   // s는 읽기 전용 스냅샷이라 스토어의 세이브를 고친다. 결과를 먼저 저장하고 연출을 연다 — 연출 중에 앱을 꺼도 결과는 그대로다.
   const run = (pay: BoostPay) => {
     const out = doBoost(appState.G!, pay);
@@ -383,6 +388,11 @@ export function PlayerTab({ s }: { s: GameState }) {
   // T-11-181 광고 단위가 없어도 구단 자금 길은 보인다.
   const club = useClubReward('peek', pot.kind === 'available' && !owned);
   const showPeek = pot.kind !== 'shown' && (canAd || !!club.offer);
+  // T-11-558 광고로 평가 보기 버튼이 보이면 광고를 미리 불러 둔다.
+  const peekAd = pot.kind === 'available' && canAd && !owned;
+  useEffect(() => {
+    if (peekAd) prepareReward('peek');
+  }, [peekAd]);
 
   const info: Row[] = [
     { k: L.nation, testID: 'nation', v: `${flagOf(nation.code)} ${tn(nation.ko)}` },
