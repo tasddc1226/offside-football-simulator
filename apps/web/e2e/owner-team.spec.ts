@@ -877,7 +877,7 @@ test('시즌 업적 — 등급·점수·랭킹 순위, 분류별 단계 묶음�
   await expect(box.locator('[data-ach-group="manager"]')).toContainText('감독 시뮬레이션이 열리면');
   await expectNoA11yViolations(page);
 
-  await box.getByLabel('시즌').selectOption({ label: '프리시즌' });
+  await box.getByLabel('시즌').selectOption('0');
   await expect(box).toContainText('프리시즌에 처음 뛰어 은퇴한 내 선수 5명');
   expect(seasons).toEqual([1, 0]);
 });
