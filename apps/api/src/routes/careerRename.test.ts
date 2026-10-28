@@ -88,6 +88,15 @@ describe('POST /v1/careers/:careerId/rename', () => {
     expect(await qtyOf(buyer.profileId)).toBe(1);
     expect((await careersByIds(ctx.db, [ORPHAN]))[0]?.publicName).toBe('포를란');
     expect((await publicNamesOf(ctx.db, [ORPHAN, ID])).get(ORPHAN)).toBe('포를란');
+    // T-11-555 경기 기록 선수가 50명을 넘어도 한 문장의 변수 100개 한도에 걸리지 않는다.
+    const many = [
+      ORPHAN,
+      ...Array.from(
+        { length: 119 },
+        (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+      ),
+    ];
+    expect((await publicNamesOf(ctx.db, many)).get(ORPHAN)).toBe('포를란');
     expect(await getNameTarget(ctx.db, 'career', ORPHAN)).toEqual({
       ownerId: buyer.profileId,
       name: '포를란',

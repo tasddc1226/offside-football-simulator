@@ -1,0 +1,14 @@
+{
+  "id": "t-11-555-match-names-fix",
+  "title": "경기 기록 오류 수정",
+  "items": ["경기를 많이 치른 구단주의 경기 기록이 열리지 않던 문제를 고쳤어요."],
+  "en": {
+    "title": "Match history fix",
+    "items": ["Fixed match history not opening for club owners who had played many matches."]
+  },
+  "ja": {
+    "title": "試合記録の不具合修正",
+    "items": ["試合を多く行ったオーナーの試合記録が開かなかった問題を修正しました。"]
+  },
+  "availability": "web-app"
+}

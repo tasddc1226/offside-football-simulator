@@ -1095,20 +1095,24 @@ export async function statsNamesOf(
 
 /** 경기 기록에 나온 커리어의 지금 공개 이름(T-11-548 careers 행이 지워진 카드는 카드의 이름). */
 export async function publicNamesOf(db: Db, ids: string[]): Promise<Map<string, string>> {
-  // 경기 여러 판이면 커리어가 100명을 넘는다 — 나눠 읽는다.
-  const rows = await readInChunks(ids, (chunk) =>
-    db
-      .select({ id: careers.id, publicName: careers.publicName })
-      .from(careers)
-      .where(and(inArray(careers.id, chunk), isNotNull(careers.publicName)))
-      .union(
-        db
-          .select({ id: cards.careerId, publicName: cards.publicName })
-          .from(cards)
-          .where(and(inArray(cards.careerId, chunk), isNotNull(cards.publicName))),
-      ),
-  );
-  return new Map(rows.map((r) => [r.id, r.publicName!]));
+  // 경기 여러 판이면 커리어가 100명을 넘는다 — 나눠 읽는다. 한 문장에 묶으면 조각을 두 번 넣어 변수 100개를 넘으니
+  // 커리어 · 카드를 따로 읽는다(T-11-555).
+  const [rows, cardRows] = await Promise.all([
+    readInChunks(ids, (chunk) =>
+      db
+        .select({ id: careers.id, publicName: careers.publicName })
+        .from(careers)
+        .where(and(inArray(careers.id, chunk), isNotNull(careers.publicName))),
+    ),
+    readInChunks(ids, (chunk) =>
+      db
+        .select({ id: cards.careerId, publicName: cards.publicName })
+        .from(cards)
+        .where(and(inArray(cards.careerId, chunk), isNotNull(cards.publicName))),
+    ),
+  ]);
+  // careers 행이 있으면 그 이름이 우선이다(카드 이름은 careers 행이 지워진 카드에만 쓴다).
+  return new Map([...cardRows, ...rows].map((r) => [r.id, r.publicName!]));
 }
 
 /**
