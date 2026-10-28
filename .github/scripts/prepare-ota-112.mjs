@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { removeLaterNative } from './prepare-ota-115.mjs';
 
 export const source = 'ae10f12f33768bdccd0162e8ee6b2de863e005b0';
 export const runtimes = {
@@ -90,6 +91,7 @@ export function prepare(root) {
   ])
     rmSync(resolve(root, file), { force: true });
   for (const dir of added) rmSync(resolve(root, dir), { recursive: true, force: true });
+  removeLaterNative(root);
   console.log(
     `Prepared 1.1.2 AdMob compatibility overlay from ${source}` +
       (added.length ? ` (removed workspaces added later: ${added.join(', ')})` : ''),

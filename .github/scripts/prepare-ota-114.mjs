@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { removeLaterNative } from './prepare-ota-115.mjs';
 
 /** Last main commit that changed app.json while it matched both 1.1.4 store builds. */
 export const source = '0371410e2bdcf3398440d5590c19d05c96002959';
@@ -29,6 +30,8 @@ export function prepare(root) {
   }
   const contents = restored.map((file) => git('show', `${source}:${file}`));
   restored.forEach((file, i) => writeFileSync(resolve(root, file), contents[i]));
+  // T-11-563 1.1.6에서 더한 네이티브(Meta 앱 이벤트)는 1.1.4 빌드에 없다.
+  removeLaterNative(root);
   console.log(`Prepared 1.1.4 app config overlay from ${source.slice(0, 7)}`);
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

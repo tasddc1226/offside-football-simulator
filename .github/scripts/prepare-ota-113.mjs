@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { removeLaterNative } from './prepare-ota-115.mjs';
 
 /** Last main commit whose native fingerprint matched both 1.1.3 store builds (production deploy 2026-10-22). */
 export const source = '9cac4fb9252513e8d1393c87ef4976c8186c1f6b';
@@ -36,6 +37,7 @@ export function prepare(root) {
   const contents = restored.map((file) => git('show', `${source}:${file}`));
   restored.forEach((file, i) => writeFileSync(resolve(root, file), contents[i]));
   for (const file of removed) rmSync(resolve(root, file), { force: true });
+  removeLaterNative(root);
   console.log(
     `Prepared 1.1.3 app config overlay from ${source.slice(0, 7)} (no mediation adapters)`,
   );

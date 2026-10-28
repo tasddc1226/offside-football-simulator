@@ -1,6 +1,7 @@
 // ───────── 앱 시작 (웹 main.ts · ui/boot.ts와 같은 순서) ─────────
 import { syncClubStrength } from '@offside/app-core/club-strength-sync';
 import { nativeAnalytics } from '../analytics';
+import { startMetaAppEvents } from '../analytics/meta';
 import { AccessibilityInfo, AppState } from 'react-native';
 import { setLatestBalance } from '@offside/game/balance';
 import type { BalanceConfig } from '@offside/contracts';
@@ -51,6 +52,7 @@ export async function boot(): Promise<void> {
   // T-11-438 중계 도중 끊긴 구간 리포트가 있으면 시즌 탭 맨 위에 다시 보여 준다.
   appState.report = takePhaseReport(appState.G) ?? appState.report;
   nativeAnalytics.initialize(appState.screen, appState.G?.cid ?? null);
+  startMetaAppEvents();
 
   void AccessibilityInfo.isReduceMotionEnabled().then((on) => (prefs.motionOK = !on));
   AccessibilityInfo.addEventListener('reduceMotionChanged', (on) => (prefs.motionOK = !on));

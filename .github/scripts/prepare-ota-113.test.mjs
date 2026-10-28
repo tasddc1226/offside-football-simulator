@@ -85,7 +85,7 @@ test('the deploy workflow publishes current, 1.1.4, 1.1.3 and 1.1.2 with their o
     'utf8',
   );
   const job = workflow.split('  app-update:')[1].split('  release-tag:')[0];
-  assert.match(job, /target: \[current, '1\.1\.4', '1\.1\.3', '1\.1\.2'\]/);
+  assert.match(job, /target: \[current, '1\.1\.5', '1\.1\.4', '1\.1\.3', '1\.1\.2'\]/);
   assert.match(
     job,
     /matrix\.target == '1\.1\.3'\s*\n\s*run: node \.github\/scripts\/prepare-ota-113\.mjs prepare/,

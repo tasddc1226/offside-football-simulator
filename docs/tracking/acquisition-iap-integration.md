@@ -68,7 +68,7 @@ Apple 서명 JWS의 `purchaseDate`, `price`(milliunits), `currency`, `storefront
 
 expo-iap 5.8.2는 StoreKit 2 경로이며 앱 코드에 Firebase `logTransaction` 호출은 없다. RNFirebase analytics의 수집 기본값 off, 명시적 opt-in, ad_storage/ad_user_data/ad_personalization false를 유지한다. Firebase 공식 문서는 StoreKit 1 자동 수집과 StoreKit 2 `Analytics.logTransaction` 경로 및 수동 이벤트의 자동 중복 제거 부재를 설명한다. 따라서 자동 구매 수집이 실제 운영 app stream에 존재한다고 단정하지 않는다. [Firebase 공식 안내](https://firebase.google.com/docs/analytics/ios/measure-in-app-purchases).
 
-실제 app stream/BigQuery 또는 DebugView의 consent-on sandbox 증거는 아직 없다. 새 Firebase 구매 이벤트·Measurement Protocol·Meta App Events·MMP는 활성화하지 않는다. 향후 SDK를 추가하면 전송 항목·목적·보존기간, ATT 적용 여부, App Store privacy/Google Data Safety 신고, SDK privacy manifest 및 새 바이너리·심사 필요성을 검토하고 별도로 승인받아야 한다. GA4 자동 이벤트와 내부 구매 원장을 더해 총매출로 세지 않는다.
+실제 app stream/BigQuery 또는 DebugView의 consent-on sandbox 증거는 아직 없다. 새 Firebase 구매 이벤트·Measurement Protocol·Meta App Events·MMP는 활성화하지 않는다. (2026-10-28 T-11-563에서 안드로이드 앱의 Meta 앱 설치 · 실행 이벤트만 앱 이용 분석 동의 아래 켰다. 구매 이벤트는 보내지 않는다. [meta-app-events.md](../operations/meta-app-events.md)) 향후 SDK를 추가하면 전송 항목·목적·보존기간, ATT 적용 여부, App Store privacy/Google Data Safety 신고, SDK privacy manifest 및 새 바이너리·심사 필요성을 검토하고 별도로 승인받아야 한다. GA4 자동 이벤트와 내부 구매 원장을 더해 총매출로 세지 않는다.
 
 ## 집계 API
 
