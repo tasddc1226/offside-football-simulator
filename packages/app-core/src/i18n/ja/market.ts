@@ -105,7 +105,6 @@ export const market: Translation<MarketMsgs> = {
   releaseIntro:
     '自分で育てた選手を放出すると、カードの基準価格分のクラブ資金が手に入ります。殿堂の記録はそのまま残ります。',
   seasonGroup: 'シーズン',
-  seasonChip: (p) => `${p.name}の選手`,
   pickAll: 'すべて選択',
   pickNone: '選択を解除',
   pickAllMax: (p) => `最大${p.n}人を選択`,

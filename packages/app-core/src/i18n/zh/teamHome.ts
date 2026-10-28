@@ -44,7 +44,6 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   modeRanked: '排位賽',
   modeFriends: '好友',
   seasonSelect: '選擇賽季',
-  seasonNow: '（目前）',
   teamMenu: '球隊選單',
   menuLogo: '隊徽設定',
   menuRename: '更改名稱',

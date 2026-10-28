@@ -319,7 +319,14 @@ export function LinkBtn({
   );
 }
 
-export type SelectOption<V extends string | number> = { value: V; label: string };
+export type SelectOption<V extends string | number> = {
+  value: V;
+  label: string;
+  /** 닫힌 칸에 보일 짧은 글자(없으면 label). */
+  face?: string;
+  /** 목록 줄 아래 작은 글자(시즌 기간 · 상태). */
+  detail?: string;
+};
 
 /** 고르기 칸(웹 <select>): 누르면 아래에서 올라오는 목록. */
 export function SelectField<V extends string | number>({
@@ -349,7 +356,7 @@ export function SelectField<V extends string | number>({
       <Press
         scale={0.985}
         testID={testID}
-        accessibilityLabel={`${label}, ${cur?.label ?? ''}`}
+        accessibilityLabel={`${label}, ${cur?.face ?? cur?.label ?? ''}`}
         accessibilityHint={L.tapToChange}
         accessibilityState={{ expanded: open }}
         onPress={() => {
@@ -374,7 +381,7 @@ export function SelectField<V extends string | number>({
         ]}
       >
         <Txt numberOfLines={1} style={{ flexShrink: 1, ...(compact ? { fontSize: 13 } : {}) }}>
-          {cur?.label ?? ''}
+          {cur?.face ?? cur?.label ?? ''}
         </Txt>
         <Txt tone="muted" accessible={false} style={{ fontSize: rem(FONT.caption) }}>
           ▼
@@ -438,6 +445,11 @@ export function SelectField<V extends string | number>({
                     }}
                   >
                     <Txt style={{ fontWeight: on ? '700' : '400' }}>{o.label}</Txt>
+                    {o.detail ? (
+                      <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
+                        {o.detail}
+                      </Txt>
+                    ) : null}
                   </Press>
                 );
               })}

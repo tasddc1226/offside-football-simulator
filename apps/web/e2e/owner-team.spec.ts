@@ -1118,7 +1118,7 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
   await expect(page.locator('.tm-head')).toContainText('시즌 1에 뛰고 은퇴한');
 
   // T-11-113 개막 뒤 프리시즌 팀은 친선전 전용으로 고칠 수 있다(랭크 경기 기록은 그대로 보인다).
-  await page.locator('[data-team-season]').selectOption({ label: '프리시즌' });
+  await page.locator('[data-team-season]').selectOption('0');
   await expect(page.locator('h1')).toHaveText('프리 FC');
   await expect(page.locator('[data-team-legacy]')).toContainText('친선전에만');
   await expect(page.locator('[data-team-readonly]')).toHaveCount(0);

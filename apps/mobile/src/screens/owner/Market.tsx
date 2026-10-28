@@ -97,8 +97,10 @@ import { MarketFind } from './MarketFind';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { marketText as L } from '@offside/app-core/i18n/ko/market';
 import { intlLocale } from '@offside/app-core/i18n/core';
-import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
+import { teamSeasonLabel } from '@offside/app-core/seasonName';
 import { Skeleton } from '../../ui/Skeleton';
+import { seasonOptions } from '../../ui/seasonOptions';
+import { SelectField } from '../settings/parts';
 
 type Sent<T> = Promise<
   { ok: true; data: T } | { ok: false; error: { message: string; reason?: string | undefined } }
@@ -1205,19 +1207,20 @@ export default function Market() {
               {L.releaseIntro}
             </Txt>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                {(team?.seasons ?? []).map((o) => (
-                  <FilterChip
-                    key={o.id}
-                    on={team?.season === o.id}
-                    label={L.seasonChip({ name: seasonLabel(o.id, o.name) })}
-                    testID={`market-season-${o.id}`}
-                    onPress={() => {
-                      setTeamSeason(o.id);
+              <View style={{ flex: 1, minWidth: 0 }}>
+                {team && team.seasons.length > 1 ? (
+                  <SelectField
+                    compact
+                    label={L.seasonGroup}
+                    testID="market-season"
+                    value={team.season}
+                    options={seasonOptions(team.seasons)}
+                    onChange={(id) => {
+                      setTeamSeason(id);
                       setPicked(new Set());
                     }}
                   />
-                ))}
+                ) : null}
               </View>
               {releasable.length > 0 ? (
                 <Press

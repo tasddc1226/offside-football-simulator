@@ -4,7 +4,6 @@ import type { HofRnMsgs } from '../ko/hofRn';
 export const hofRn: Translation<HofRnMsgs> = {
   season: '賽季',
   seasonAria: '退休背號賽季',
-  notOpen: '（即將開幕）',
   lead: '在同一家俱樂部長期活躍的球員，背號將不再被使用。每家俱樂部的每個號碼只限 1 人。',
   opens: (p) => `${p.name}將於${p.when}（韓國時間）開幕。`,
   loadFailed: '無法載入退休背號，請稍後再試。',

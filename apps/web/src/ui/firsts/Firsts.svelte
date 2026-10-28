@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SeasonSelect from '../SeasonSelect.svelte';
   import Skeleton from '../Skeleton.svelte';
   // T-10-027 서버 최초 기록 — 모든 플레이어를 통틀어 처음 세운 기록. 로그인 없이 누구나 본다.
   // 최근 기록 탭은 날짜별 연대기, 분류 탭은 규칙 전체(아직 아무도 못 세운 기록 포함)를 보여 준다. 끝없는 단계는
@@ -24,7 +25,6 @@
   import { firstsText as L } from '@offside/app-core/i18n/ko/firsts';
   import { tn } from '@offside/game/i18n/names';
   import { intlLocale } from '@offside/contracts/i18n';
-  import { teamSeasonLabel } from '@offside/app-core/seasonName';
 
   let data = $state<FirstsResponse | null>(null);
   let failed = $state(false);
@@ -81,11 +81,7 @@
       {L.introRecords({ records: tab === 'records' })}
     </p>
     {#if seasons.length > 1}
-      <div class="seg board-tabs hof-seasons" role="group" aria-label={L.seasonLabel}>
-        {#each seasons as id (id)}
-          <button class="opt" aria-pressed={season === id} data-firsts-season={id} onclick={() => (picked = id)}>{teamSeasonLabel(id)}</button>
-        {/each}
-      </div>
+      <div class="firsts-season"><SeasonSelect label={L.seasonLabel} value={season} {seasons} onpick={(v) => (picked = Number(v))} data-firsts-season-select /></div>
     {/if}
     <div class="hof-sorts" role="group" aria-label={L.tabsLabel}>
       {#each firstsTabs() as t (t.id)}

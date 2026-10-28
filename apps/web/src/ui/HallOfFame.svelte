@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SeasonSelect from './SeasonSelect.svelte';
   import { hofBasisNote } from '@offside/app-core/hofBasis';
   import Skeleton from './Skeleton.svelte';
   import { tn } from '@offside/game/i18n/names';
@@ -206,15 +207,7 @@
   {/if}
   {#if full}
     <div class="hof-toolbar">
-      <label class="hof-season-picker">
-        <span class="hof-filter-label">{L.season}</span>
-        <select aria-label={L.seasonAria} data-hof-season-select value={season === null ? 'all' : String(season)} onchange={(e) => pickSeason(e.currentTarget.value === 'all' ? null : Number(e.currentTarget.value))}>
-          <option value="all">{L.allSeasons}</option>
-          {#each [PRESEASON, ...SERVICE_SEASONS] as s (s.id)}
-            <option value={String(s.id)}>{seasonLabel(s.id, s.name)}{notOpen(s) ? L.notOpen : ''}</option>
-          {/each}
-        </select>
-      </label>
+      <SeasonSelect caption={L.season} label={L.seasonAria} all={L.allSeasons} value={season ?? 'all'} seasons={[PRESEASON, ...SERVICE_SEASONS]} onpick={(v) => pickSeason(v === 'all' ? null : v)} data-hof-season-select />
       {#if !upcoming}
         <div class="hof-filter-picker">
           <span class="hof-filter-label" aria-hidden="true">{L.filter}</span>
