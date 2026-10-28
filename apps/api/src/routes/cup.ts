@@ -101,6 +101,7 @@ import {
   type CupEntryRow,
   type CupMatchRow,
   type CupStateRow,
+  activeCupSeasonsQuery,
 } from '../team/cup.js';
 import { cupSchedule } from '../team/cupSchedule.js';
 import { lineupsOf, toMatch } from '../team/match.js';
@@ -1086,18 +1087,34 @@ export async function checkCupLineup(
   }
 }
 
-/** T-11-310 감독 전향 검사: 컵 참가 중이면 지금 선발에 든 선수는 감독이 될 수 없다(명단이 비면 대회 최소 인원이 깨진다). */
-export async function checkCupManager(db: Db, profileId: string, season: number, careerId: string) {
-  if (!(await activeCups(db, profileId, season)).length) return;
-  const [team] = await myTeamIn(db, profileId, season);
-  if (team && slotIdsOf(team).includes(careerId))
+/**
+ * 참가 중인(탈락 전) 컵의 선발 선수. 대회 시즌의 팀 명단을 본다 — T-11-552 시즌이 넘어간 뒤에도 끝나지 않은 지난 시즌 컵
+ * (시즌 1 제3회)의 선발을 지킨다.
+ */
+export async function cupLineupIds(db: Db, profileId: string): Promise<Set<string>> {
+  const out = new Set<string>();
+  for (const { season } of await activeCupSeasonsQuery(db, profileId)) {
+    const [team] = await myTeamIn(db, profileId, season);
+    for (const id of team ? slotIdsOf(team) : []) if (id) out.add(id);
+  }
+  return out;
+}
+
+/** T-11-310 감독 전향 검사: 컵 참가 중이면 선발에 든 선수는 감독이 될 수 없다(명단이 비면 대회 최소 인원이 깨진다). */
+export async function checkCupManager(db: Db, profileId: string, careerId: string) {
+  if ((await cupLineupIds(db, profileId)).has(careerId))
     throw conflictError(cupKo('cardManager'), 'CUP_CARD_LOCKED');
 }
 
-/** T-11-145 판매 등록 검사(R2): 컵 참가 중이면 지금 선발에 든 선수는 내놓을 수 없다. */
-export async function checkCupListing(db: Db, profileId: string, season: number, careerId: string) {
-  if (!(await activeCups(db, profileId, season)).length) return;
-  const [team] = await myTeamIn(db, profileId, season);
-  if (team && slotIdsOf(team).includes(careerId))
+/** T-11-145 판매 등록 검사(R2): 컵 참가 중이면 선발에 든 선수는 내놓을 수 없다. */
+export async function checkCupListing(db: Db, profileId: string, careerId: string) {
+  if ((await cupLineupIds(db, profileId)).has(careerId))
     throw conflictError(cupKo('cardLocked'), 'CUP_CARD_LOCKED');
+}
+
+/** T-11-552 방출 검사: 컵 참가 중이면 선발에 든 선수는 방출할 수 없다(시즌이 넘어간 지난 시즌 컵 명단 포함). */
+export async function checkCupRelease(db: Db, profileId: string, careerIds: readonly string[]) {
+  const ids = await cupLineupIds(db, profileId);
+  if (careerIds.some((id) => ids.has(id)))
+    throw conflictError(cupKo('cardReleaseLocked'), 'CUP_CARD_LOCKED');
 }

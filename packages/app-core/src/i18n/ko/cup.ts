@@ -152,13 +152,13 @@ const ko = {
   divisionEntries: (p: { n: number }) => `${p.n}팀 신청`,
   divisionMine: '내 구간',
   divisionFit: (p: { ovr: number; division: string }) =>
-    `내 팀 OVR(${p.ovr})이라 ${p.division}부터 신청할 수 있어요. 윗 구간에 도전해도 돼요.`,
+    `내 팀 OVR(${p.ovr})이라 ${p.division}부터 신청할 수 있어요. 조 추첨 때 신청한 팀들의 OVR로 구간을 다시 나눠요.`,
   divisionLockNote: (p: { cap: number }) =>
     `조 추첨부터 탈락할 때까지 팀 OVR 상한(${p.cap})을 넘는 명단으로는 바꿀 수 없어요.`,
   ruleDivisions:
-    '팀 OVR 구간(주니어 · 시니어 · 마스터)마다 따로 대회를 열어요. 내 OVR이 상한 이하인 구간에 신청할 수 있고, 윗 구간에 도전해도 돼요. 한 회차에 한 구간만 참가해요.',
+    '팀 OVR 구간(주니어 · 시니어 · 마스터)마다 따로 대회를 열어요. 내 OVR이 상한 이하인 구간에 신청할 수 있고, 한 회차에 한 구간만 참가해요.',
   ruleDivisionMove:
-    '조 추첨 때 팀 OVR이 상한을 넘었으면 윗 구간으로 옮기고, 8팀보다 적은 구간은 윗 구간과 함께 치러요.',
+    '조 추첨 때 신청한 팀이 30팀 이상이면 신청 팀 OVR을 셋으로 나눠 상한을 다시 정하고, 모든 팀을 OVR에 맞는 구간으로 옮겨요. 8팀보다 적은 구간은 윗 구간과 함께 치러요.',
   notEntered: '이번 대회에는 신청하지 않았어요.',
   nextMatch: (p: { round: string; vs: string; at: string }) =>
     `다음 경기 ${p.round} · ${p.vs} · ${p.at}`,
@@ -198,7 +198,7 @@ const ko = {
   barOverCapBlock: (p: { division: string; cap: number }) =>
     `${p.division} 상한(${p.cap})을 넘어서 저장할 수 없어요. 팀 OVR을 ${p.cap} 이하로 맞춰 주세요.`,
   barOverCapMove: (p: { division: string }) =>
-    `${p.division} 상한을 넘었어요. 이대로면 조 추첨 때 윗 구간으로 옮겨져요.`,
+    `${p.division} 상한을 넘었어요. 이대로면 조 추첨 때 OVR에 맞는 구간으로 옮겨져요.`,
   barShortBlock: (p: { min: number }) =>
     `컵 참가 중에는 선발에 내 선수가 ${p.min}명 이상 있어야 저장할 수 있어요.`,
   barShortEntry: (p: { min: number }) =>

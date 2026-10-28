@@ -78,7 +78,7 @@ describe('cupLineupBar', () => {
     const bar = cupLineupBar(cup('open'), me('s2-3-junior', true), { ovr: 80, filled: 8 }, BEFORE);
     expect(bar?.block).toBeNull();
     expect(bar?.notes).toEqual([
-      '주니어 상한을 넘었어요. 이대로면 조 추첨 때 윗 구간으로 옮겨져요.',
+      '주니어 상한을 넘었어요. 이대로면 조 추첨 때 OVR에 맞는 구간으로 옮겨져요.',
     ]);
   });
   it('참가 중이면 추첨 전에도 최소 인원이 모자라면 막는다', () => {

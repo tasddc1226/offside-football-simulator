@@ -1,3 +1,4 @@
+import { activeCupSeasonsQuery } from '../team/cup.js';
 import { checkCupLineup } from './cup.js';
 import {
   ClubAchievementsResponseSchema,
@@ -179,9 +180,24 @@ export async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
 
 const PAST_SEASON_TEXT = '지난 시즌 팀은 고칠 수 없어요.';
 
-/** 지금 시즌 팀만 고친다(프리시즌 팀은 친선전용으로). */
-function checkEditableSeason(season: number, current: number | null) {
-  if (season !== current && season !== 0) throw conflictError(PAST_SEASON_TEXT, 'SEASON_CLOSED');
+/**
+ * 지금 시즌 팀만 고친다(프리시즌 팀은 친선전용으로). T-11-552 끝나지 않은 컵에 참가 중인 지난 시즌 팀은 컵 명단으로
+ * 고친다(시즌 1 제3회 컵은 시즌 2 개막 뒤에도 시즌 1 팀으로 치른다). 컵 팀이면 true.
+ */
+async function checkEditableSeason(
+  db: Db,
+  profileId: string,
+  season: number,
+  current: number | null,
+) {
+  if (season === current || season === 0) return false;
+  if (
+    current !== null &&
+    season < current &&
+    (await activeCupSeasonsQuery(db, profileId)).some((r) => r.season === season)
+  )
+    return true;
+  throw conflictError(PAST_SEASON_TEXT, 'SEASON_CLOSED');
 }
 
 /** 지금 고치고 겨루는 팀 시즌. 시즌 사이 휴식기면 409 SEASON_CLOSED. */
@@ -265,16 +281,21 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const season = seasonQuery(c, now);
-    const [teams, players, [played], founder, [balance], member] = await db.batch([
+    const [teams, players, [played], founder, [balance], member, cupSeasons] = await db.batch([
       listMyTeams(db, me.id),
       listEligibleCareers(db, me.id, season),
       countMatchesSince(db, me.id, kstTodayStart(now)),
       foundersOf(db, [me.id]),
       activeBalanceQuery(db),
       membersOf(db, [me.id], now),
+      activeCupSeasonsQuery(db, me.id),
     ]);
+    const current = teamSeasonAt(now);
+    // T-11-552 끝나지 않은 컵에 참가 중인 지난 시즌(시즌 1 제3회 컵). 그 시즌 팀은 컵 명단으로 고친다.
+    const cupSeason =
+      cupSeasons.map((r) => r.season).find((s) => current !== null && s > 0 && s < current) ?? null;
     // T-11-113 개막 뒤의 프리시즌 팀은 친선전용 편성을 보이고 고친다(지금 가진 선수만).
-    const editableSeason = season === teamSeasonAt(now) || season === 0;
+    const editableSeason = season === current || season === 0 || season === cupSeason;
     const found = teams.find((t) => t.season === season);
     const team = found ? friendlyTeamOf(found) : null;
     const picks = players.map((p) => {
@@ -302,7 +323,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       OwnerTeamResponseSchema,
       {
         season,
-        current: teamSeasonAt(now),
+        current,
+        cupSeason,
         seasons: seasonOptions(now, reqLang(c)),
         team: team
           ? toOwnerTeam(
@@ -344,8 +366,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const now = nowIso();
     const current = teamSeasonAt(now);
     const season = input.season ?? currentSeasonOrThrow(now);
-    checkEditableSeason(season, current);
-    const friendly = season !== current;
+    const cupTeam = await checkEditableSeason(db, me.id, season, current);
+    const friendly = season !== current && !cupTeam;
     checkName(input.name, '팀 이름');
     checkName(input.manager, '감독 이름');
     if (input.logo?.text) checkName(input.logo.text, '로고 글자');
@@ -501,8 +523,9 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const now = nowIso();
     const current = teamSeasonAt(now);
     const season = input.season ?? currentSeasonOrThrow(now);
-    checkEditableSeason(season, current);
-    const [row] = await setTeamPresets(getDb(c), me.id, season, input.presets);
+    const db = getDb(c);
+    await checkEditableSeason(db, me.id, season, current);
+    const [row] = await setTeamPresets(db, me.id, season, input.presets);
     if (!row) throw teamNotFound();
     return ok(c, PutTeamPresetsResponseSchema, { presets: input.presets });
   });

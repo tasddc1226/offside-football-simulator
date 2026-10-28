@@ -145,13 +145,14 @@ export const cup: Translation<CupMsgs> = {
   divisionCapPending: 'The cap is set when entries open',
   divisionEntries: (p) => `${p.n} ${p.n === 1 ? 'team' : 'teams'} entered`,
   divisionMine: 'My division',
-  divisionFit: (p) => `With team OVR ${p.ovr} you can enter ${p.division} or any higher division.`,
+  divisionFit: (p) =>
+    `With team OVR ${p.ovr} you can enter ${p.division} or higher. At the draw, divisions are re-split by the OVR of the entered teams.`,
   divisionLockNote: (p) =>
     `From the draw until you're knocked out, your lineup can't go above team OVR ${p.cap}.`,
   ruleDivisions:
-    'Each team OVR division (Junior, Senior, Master) runs its own cup. Enter any division whose cap is at or above your OVR, or play up. One division per cup.',
+    'Each team OVR division (Junior, Senior, Master) runs its own cup. Enter any division whose cap is at or above your OVR. One division per cup.',
   ruleDivisionMove:
-    'If your team OVR is above the cap at the draw, you move up a division. Divisions with fewer than 8 teams play with the division above.',
+    'At the draw, if 30 or more teams entered, the caps are reset by splitting the entered teams into thirds by OVR, and every team moves to the division that fits its OVR. Divisions with fewer than 8 teams play with the division above.',
   notEntered: "You didn't enter this cup.",
   nextMatch: (p) => `Next match ${p.round} · ${p.vs} · ${p.at}`,
   nextPending: 'Your next opponent is still being decided.',
@@ -176,7 +177,7 @@ export const cup: Translation<CupMsgs> = {
   barOverCapBlock: (p) =>
     `Your team is over the ${p.division} cap of ${p.cap}, so you can't save. Bring team OVR down to ${p.cap} or lower.`,
   barOverCapMove: (p) =>
-    `Your team is over the ${p.division} cap. If it stays this way, you'll move up a division at the draw.`,
+    `Your team is over the ${p.division} cap. If it stays this way, you'll move to the division that fits your OVR at the draw.`,
   barShortBlock: (p) =>
     `While you're in the cup, you need at least ${p.min} of your own players in the starting lineup to save.`,
   barShortEntry: (p) =>
