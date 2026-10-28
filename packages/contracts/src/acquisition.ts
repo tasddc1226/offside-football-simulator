@@ -65,6 +65,8 @@ export const CAMPAIGNS: Record<string, readonly string[]> = {
     'us_reels',
     // T-11-483 한국어판 릴스 영상 광고(한국 대상).
     'kr_reels',
+    // T-11-560 번체 중국어판 릴스 영상 광고(대만 · 홍콩 대상).
+    'zh_reels',
     // T-11-515 크리에이터 ethio_eafc 숏폼: 틱톡 영상 · 같은 영상의 유튜브 쇼츠.
     'ethio_tiktok',
     'ethio_short',
