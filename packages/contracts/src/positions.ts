@@ -163,6 +163,12 @@ export const POS_LABEL_JA: Record<PosGroup, string> = {
   DF: 'ディフェンダー',
   GK: 'ゴールキーパー',
 };
+export const POS_LABEL_ZH: Record<PosGroup, string> = {
+  FW: '前鋒',
+  MF: '中場',
+  DF: '後衛',
+  GK: '門將',
+};
 /** 큰 포지션 순서(공격수 → 골키퍼). 명예의 전당 포지션 칩(T-11-018)이 쓴다. */
 export const POS_GROUPS = Object.keys(POS_LABEL) as PosGroup[];
 
@@ -171,11 +177,13 @@ const ANON: Record<Locale, (label: string, no: string) => string> = {
   ko: (label, no) => `익명의 ${label}${no}`,
   en: (label, no) => `Anonymous ${label}${no}`,
   ja: (label, no) => `匿名の${label}${no}`,
+  zh: (label, no) => `匿名${label}${no}`,
 };
 const POS_LABELS: Record<Locale, Record<PosGroup, string>> = {
   ko: POS_LABEL,
   en: POS_LABEL_EN,
   ja: POS_LABEL_JA,
+  zh: POS_LABEL_ZH,
 };
 export const anonName = (pos: PosGroup, number: number | null, lang: Locale = 'ko'): string =>
   ANON[lang](POS_LABELS[lang][pos], number != null ? ` No.${number}` : '');

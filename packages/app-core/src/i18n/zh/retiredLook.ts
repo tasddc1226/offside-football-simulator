@@ -1,0 +1,32 @@
+import type { Translation } from '../core';
+import type { RetiredLookMsgs } from '../ko/retiredLook';
+
+export const retiredLook: Translation<RetiredLookMsgs> = {
+  title: '退役球員造型',
+  button: '造型（1 次）',
+  buttonUsed: '造型（已使用）',
+  buttonTransferred: '無法變更造型',
+  intro: '基本造型免費。紀錄、能力值與球員資金都不會改變。',
+  policy: '退役球員的外觀可以免費更改一次。曾在轉會市場交易過的球員無法更改。',
+  used: '已在新的球員圖像中使用過外觀變更機會。',
+  transferred: '這名球員曾在轉會市場交易過，因此無法更改外觀。',
+  checking: '正在確認能否變更',
+  checkFailed: '無法確認能否變更，請關閉後重新開啟。',
+  localPartial: '已在這台裝置儲存外觀與變更次數，但紀錄畫面更新失敗，請重新開啟確認。',
+  recordNote: '紀錄道具在符合已儲存的稱號條件後即可選擇。',
+  retiredPreview: '退役造型',
+  kitPreview: '球員卡造型',
+  confirm: '確定外觀',
+  confirmTitle: '要確定使用這個外觀嗎？',
+  confirmNote: '確定後，這名球員的外觀就無法再更改。紀錄與能力值不變。',
+  back: '繼續編輯',
+  save: '儲存外觀',
+  saving: '儲存中',
+  cancel: '取消',
+  reset: '預設造型',
+  saved: '外觀已儲存，紀錄與能力值不變。',
+  localSaved: '已在這台裝置儲存外觀。這是伺服器上沒有的退役紀錄。',
+  serverSaved: '已在伺服器儲存外觀，但裝置儲存失敗，請重新開啟確認。',
+  storageFailed: '無法儲存到裝置，請確認儲存空間。',
+  failed: '無法儲存外觀，請再試一次。',
+};

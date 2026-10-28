@@ -1,0 +1,31 @@
+import type { Translation } from '@offside/contracts/i18n';
+import type { GStatsMsgs } from '../ko/gStats';
+
+export const gStats: Translation<GStatsMsgs> = {
+  potAch0: '突破了天生的極限。',
+  potAch1: '把天賦發揮到了最後。',
+  potAch2: '還留了一點餘力就離開了。',
+  potAch3: '是未能完全綻放的天賦。',
+  rescoutLate: '評價是大器晚成的天賦。',
+  rescoutEarly: '評價是成長曲線比預期更早觸頂。',
+  rescoutNarrow: '評估範圍縮小了。',
+  rescoutLog: (p) => `球探重新評估：潛力 ${p.before} → ${p.after}級。${p.note}`,
+  rescoutNote: (p) => `球探重新評估 · 潛力 ${p.before} → ${p.after}`,
+  chipCond: '狀態',
+  chipMorale: '士氣',
+  chipFame: '人氣',
+  chipTrust: '總教練信任',
+  chipMoney: '資金',
+  chipInjury: '受傷',
+  chipOut: (p) => `缺陣${p.n}場`,
+  chipPot: '潛力',
+  chipPotUp: '上升',
+  twistSafe: (p) => `求穩的代價 · ${p.why}`,
+  twistUp: (p) => `意外收穫 · ${p.label} +${p.d}`,
+  costMoraleLabel: '士氣',
+  costMoraleWhy: '沒有挑戰的遺憾',
+  costTrustLabel: '總教練信任',
+  costTrustWhy: '總教練不冷不熱的評價',
+  costFameLabel: '名聲',
+  costFameWhy: '「表現平平」的評價',
+};

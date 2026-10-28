@@ -20,6 +20,7 @@ import {
 import { pushQueueText as pushQueueKo } from '../i18n/ko/pushQueue.js';
 import { pushQueueText as pushQueueEn } from '../i18n/en/pushQueue.js';
 import { pushQueueText as pushQueueJa } from '../i18n/ja/pushQueue.js';
+import { pushQueueText as pushQueueZh } from '../i18n/zh/pushQueue.js';
 import type { PushWork } from '../push/queuePublish.js';
 import { reservePushTest } from '../push/testLimit.js';
 import { sha256Hex } from '../db/hash.js';
@@ -144,7 +145,8 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
         .run();
       throw new AppError({
         code: 'SERVICE_UNAVAILABLE',
-        message: { ko: pushQueueKo, en: pushQueueEn, ja: pushQueueJa }[reqLang(c)].publishFailed,
+        message: { ko: pushQueueKo, en: pushQueueEn, ja: pushQueueJa, zh: pushQueueZh }[reqLang(c)]
+          .publishFailed,
       });
     }
     return ok(c, PushTestResultSchema, { accepted: true, nextTestAt }, 200, NO_STORE);

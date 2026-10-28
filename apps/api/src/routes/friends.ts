@@ -105,7 +105,12 @@ type PersonInput = {
   row: Pick<FriendRow, 'wins' | 'draws' | 'losses'> | undefined;
 };
 
-const OWNER_NAME: Record<Lang, string> = { ko: '구단주', en: 'Owner', ja: 'オーナー' };
+const OWNER_NAME: Record<Lang, string> = {
+  ko: '구단주',
+  en: 'Owner',
+  ja: 'オーナー',
+  zh: '球隊老闆',
+};
 /** 보이는 이름: 닉네임 → 최근 감독 이름 → '구단주'. */
 const nameOf = (
   nickname: string | null,

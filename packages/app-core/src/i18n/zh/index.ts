@@ -1,0 +1,239 @@
+// 번체 중국어 사전 묶음 — 파일 이름 = ns() 이름 = export 이름 = 여기 키. 번체 중국어 사용자에게만 불러온다(웹은 지연 청크).
+// 직접 고치지 않는다: node tooling/scripts/i18n-index.mjs
+import { zh as gameEngine } from '@offside/game/i18n/zh/index';
+import { account } from './account';
+import { ad } from './ad';
+import { adminPush } from './adminPush';
+import { appFlight } from './appFlight';
+import { appFormat } from './appFormat';
+import { appScout } from './appScout';
+import { attendance } from './attendance';
+import { automationModeration } from './automationModeration';
+import { avatarLook } from './avatarLook';
+import { avatarRecord } from './avatarRecord';
+import { backup } from './backup';
+import { balanceKeys } from './balanceKeys';
+import { best11 } from './best11';
+import { board } from './board';
+import { boardLabel } from './boardLabel';
+import { careerGuide } from './careerGuide';
+import { careerMoment } from './careerMoment';
+import { chat } from './chat';
+import { chatReject } from './chatReject';
+import { club } from './club';
+import { clubStrength } from './clubStrength';
+import { clubSync } from './clubSync';
+import { create } from './create';
+import { cup } from './cup';
+import { cupApp } from './cupApp';
+import { cupPush } from './cupPush';
+import { dex } from './dex';
+import { era } from './era';
+import { exchange } from './exchange';
+import { fairness } from './fairness';
+import { firstGuide } from './firstGuide';
+import { firsts } from './firsts';
+import { firstsTab } from './firstsTab';
+import { friend } from './friend';
+import { fundsHistory } from './fundsHistory';
+import { game } from './game';
+import { gameActions } from './gameActions';
+import { gameAttr } from './gameAttr';
+import { gameBoost } from './gameBoost';
+import { gameCare } from './gameCare';
+import { gameCareer } from './gameCareer';
+import { gameLeague } from './gameLeague';
+import { gameMySeason } from './gameMySeason';
+import { gamePlayer } from './gamePlayer';
+import { gamePotential } from './gamePotential';
+import { gamePotentialNote } from './gamePotentialNote';
+import { gameReport } from './gameReport';
+import { gameSeason } from './gameSeason';
+import { gameTrophy } from './gameTrophy';
+import { gift } from './gift';
+import { hof } from './hof';
+import { hofOwn } from './hofOwn';
+import { hofRn } from './hofRn';
+import { home } from './home';
+import { homeLive } from './homeLive';
+import { homeMore } from './homeMore';
+import { iap } from './iap';
+import { inbox } from './inbox';
+import { keyMoment } from './keyMoment';
+import { league } from './league';
+import { legend } from './legend';
+import { legendRn } from './legendRn';
+import { legendStyle } from './legendStyle';
+import { legendToast } from './legendToast';
+import { manager } from './manager';
+import { market } from './market';
+import { marketChart } from './marketChart';
+import { marketValueChart } from './marketValueChart';
+import { matchReport } from './matchReport';
+import { membership } from './membership';
+import { owner } from './owner';
+import { ownerConflict } from './ownerConflict';
+import { ownerPlayers } from './ownerPlayers';
+import { ownerProfile } from './ownerProfile';
+import { partner } from './partner';
+import { playerNudge } from './playerNudge';
+import { publicLegends } from './publicLegends';
+import { push } from './push';
+import { ratingReport } from './ratingReport';
+import { rename } from './rename';
+import { retention } from './retention';
+import { retired } from './retired';
+import { retiredLook } from './retiredLook';
+import { reveal } from './reveal';
+import { salary } from './salary';
+import { scout } from './scout';
+import { seasonGauge } from './seasonGauge';
+import { seasonPass } from './seasonPass';
+import { seasonRecap } from './seasonRecap';
+import { serverStatus } from './serverStatus';
+import { settings } from './settings';
+import { settingsApi } from './settingsApi';
+import { share } from './share';
+import { sheetAchieve } from './sheetAchieve';
+import { sheetContract } from './sheetContract';
+import { sheetCore } from './sheetCore';
+import { sheetMinigame } from './sheetMinigame';
+import { sheetPlay } from './sheetPlay';
+import { shell } from './shell';
+import { shellInstall } from './shellInstall';
+import { shellInstallGuide } from './shellInstallGuide';
+import { shellLogin } from './shellLogin';
+import { shellMore } from './shellMore';
+import { teamAch } from './teamAch';
+import { teamCore } from './teamCore';
+import { teamDivision } from './teamDivision';
+import { teamHome } from './teamHome';
+import { teamLive } from './teamLive';
+import { teamMatch } from './teamMatch';
+import { teamMoments } from './teamMoments';
+import { teamSynergy } from './teamSynergy';
+import { title } from './title';
+import { titleTag } from './titleTag';
+import { translate } from './translate';
+import { tutorial } from './tutorial';
+import { webPay } from './webPay';
+
+export const zh = {
+  ...gameEngine,
+  account,
+  ad,
+  adminPush,
+  appFlight,
+  appFormat,
+  appScout,
+  attendance,
+  automationModeration,
+  avatarLook,
+  avatarRecord,
+  backup,
+  balanceKeys,
+  best11,
+  board,
+  boardLabel,
+  careerGuide,
+  careerMoment,
+  chat,
+  chatReject,
+  club,
+  clubStrength,
+  clubSync,
+  create,
+  cup,
+  cupApp,
+  cupPush,
+  dex,
+  era,
+  exchange,
+  fairness,
+  firstGuide,
+  firsts,
+  firstsTab,
+  friend,
+  fundsHistory,
+  game,
+  gameActions,
+  gameAttr,
+  gameBoost,
+  gameCare,
+  gameCareer,
+  gameLeague,
+  gameMySeason,
+  gamePlayer,
+  gamePotential,
+  gamePotentialNote,
+  gameReport,
+  gameSeason,
+  gameTrophy,
+  gift,
+  hof,
+  hofOwn,
+  hofRn,
+  home,
+  homeLive,
+  homeMore,
+  iap,
+  inbox,
+  keyMoment,
+  league,
+  legend,
+  legendRn,
+  legendStyle,
+  legendToast,
+  manager,
+  market,
+  marketChart,
+  marketValueChart,
+  matchReport,
+  membership,
+  owner,
+  ownerConflict,
+  ownerPlayers,
+  ownerProfile,
+  partner,
+  playerNudge,
+  publicLegends,
+  push,
+  ratingReport,
+  rename,
+  retention,
+  retired,
+  retiredLook,
+  reveal,
+  salary,
+  scout,
+  seasonGauge,
+  seasonPass,
+  seasonRecap,
+  serverStatus,
+  settings,
+  settingsApi,
+  share,
+  sheetAchieve,
+  sheetContract,
+  sheetCore,
+  sheetMinigame,
+  sheetPlay,
+  shell,
+  shellInstall,
+  shellInstallGuide,
+  shellLogin,
+  shellMore,
+  teamAch,
+  teamCore,
+  teamDivision,
+  teamHome,
+  teamLive,
+  teamMatch,
+  teamMoments,
+  teamSynergy,
+  title,
+  titleTag,
+  translate,
+  tutorial,
+  webPay,
+};

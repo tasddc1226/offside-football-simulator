@@ -188,6 +188,7 @@ const TEAM_SEASON: Record<Locale, { pre: string; name: (id: number) => string }>
   ko: { pre: '프리시즌', name: (id) => serviceSeason(id)?.name ?? seasonName(id) },
   en: { pre: 'Preseason', name: (id) => `Season ${id}` },
   ja: { pre: 'プレシーズン', name: (id) => `シーズン${id}` },
+  zh: { pre: '季前賽', name: (id) => `第${id}賽季` },
 };
 export const teamSeasonName = (id: number, lang: Locale = 'ko'): string =>
   id === 0 ? TEAM_SEASON[lang].pre : TEAM_SEASON[lang].name(id);

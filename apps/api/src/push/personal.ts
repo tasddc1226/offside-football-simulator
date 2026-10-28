@@ -5,6 +5,11 @@ import { kstDay } from '@offside/contracts/kst';
 import { latePushResult } from './result.js';
 import { communityOwnerEmail } from './community.js';
 import { badgeOf, unreadBadges } from './badge.js';
+import { TRANSLATED_LOCALES, type Locale } from '@offside/contracts/i18n';
+
+/** 이탈 알림을 쓸 언어(career_activity.lang). 옮기는 언어가 아니면 한국어. */
+const retentionLang = (lang: string | null): Locale =>
+  (TRANSLATED_LOCALES as readonly string[]).includes(lang ?? '') ? (lang as Locale) : 'ko';
 
 const BATCH = 100;
 const MINUTE = 60_000;
@@ -210,17 +215,9 @@ async function send(
       rows.map((r) => ({
         to: r.token,
         ...badgeOf(badges, r.profile_id),
-        title: r.retention_stage
-          ? pushText(
-              r.title,
-              r.retention_lang === 'en' ? 'en' : r.retention_lang === 'ja' ? 'ja' : 'ko',
-            )
-          : r.title,
+        title: r.retention_stage ? pushText(r.title, retentionLang(r.retention_lang)) : r.title,
         body: (r.retention_stage
-          ? pushText(
-              r.body,
-              r.retention_lang === 'en' ? 'en' : r.retention_lang === 'ja' ? 'ja' : 'ko',
-            )
+          ? pushText(r.body, retentionLang(r.retention_lang))
           : r.body
         ).slice(0, 160),
         channelId: 'news',

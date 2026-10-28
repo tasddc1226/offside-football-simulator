@@ -12,15 +12,17 @@ import { STORIES } from '../story.js';
 import { tn } from './names.js';
 import { en } from './en/index.js';
 import { ja } from './ja/index.js';
+import { zh } from './zh/index.js';
 
 // T-11-106 저장된 이름의 영어 대응표(en/_names.ts). 한국어에서는 그대로, 영어에서는 한글이 남지 않아야 한다.
-// T-11-140 일본어 대응표(ja/_names.ts)도 같은 목록으로 검사한다.
+// T-11-140 일본어 대응표(ja/_names.ts) · T-11-553 번체 중국어(zh/_names.ts)도 같은 목록으로 검사한다.
 const HANGUL = /[가-힣]/;
 afterEach(() => setLocale('ko'));
 
 const LANGS = [
   ['en', en],
   ['ja', ja],
+  ['zh', zh],
 ] as const;
 let cur: (typeof LANGS)[number] = LANGS[0];
 /** 지금 검사하는 언어로 바꿔 한글이 남은 이름들. */
@@ -79,10 +81,11 @@ describe.each(LANGS)('저장된 이름 → %s', (lang, dict) => {
     expect(untranslated([SANGMU.name, '김천 상무'])).toEqual([]);
     expect(untranslated(NATIONS.map((n) => n.ko))).toEqual([]);
     setLocale(lang, dict);
-    const [pl, k1, kr] =
-      lang === 'en'
-        ? ['Premier League', 'K League 1', 'South Korea']
-        : ['プレミアリーグ', 'Kリーグ1', '韓国'];
+    const [pl, k1, kr] = {
+      en: ['Premier League', 'K League 1', 'South Korea'],
+      ja: ['プレミアリーグ', 'Kリーグ1', '韓国'],
+      zh: ['英超', 'K1聯賽', '南韓'],
+    }[lang];
     expect(tn('프리미어리그')).toBe(pl);
     expect(tn('K리그1')).toBe(k1);
     expect(tn('대한민국')).toBe(kr);

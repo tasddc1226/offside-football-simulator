@@ -65,6 +65,7 @@ export const board: Translation<BoardMsgs> = {
     'Leave blank to show the Korean original. If you edit the Korean, update the translations too.',
   langEn: 'English',
   langJa: 'Japanese',
+  langZh: 'Traditional Chinese',
   translateDraft: 'Draft translations',
   translating: 'Translating…',
   translateDone: 'Draft translations filled in. Read them and fix anything off.',

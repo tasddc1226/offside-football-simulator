@@ -33,7 +33,7 @@ describe('Workers AI 번역', () => {
         code: 'SERVICE_UNAVAILABLE',
       });
   });
-  it('공지 초안은 제목·본문을 영어·일본어로 옮기고 한도에서 자른다', async () => {
+  it('공지 초안은 제목·본문을 영어·일본어·번체 중국어로 옮기고 한도에서 자른다', async () => {
     const ai = fakeAi((_, i) => {
       const ja = i.messages[0]!.content.includes('into Japanese');
       const src = i.messages[1]!.content;
@@ -45,6 +45,7 @@ describe('Workers AI 번역', () => {
     expect(out.en).toEqual({ title: 'Maintenance', body: 'Tonight' });
     expect(out.ja.body).toBe('今夜');
     expect(out.ja.title.length).toBeLessThanOrEqual(80);
-    expect(ai.run).toHaveBeenCalledTimes(4);
+    expect(out.zh.title.length).toBeLessThanOrEqual(80);
+    expect(ai.run).toHaveBeenCalledTimes(6);
   });
 });

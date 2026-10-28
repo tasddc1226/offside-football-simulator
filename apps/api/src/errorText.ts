@@ -2,6 +2,8 @@ import { activityErrorText as activityKo } from './i18n/ko/careerReminder.js';
 import { activityErrorText as activityEn } from './i18n/en/careerReminder.js';
 import { activityErrorText as activityJa } from './i18n/ja/careerReminder.js';
 import { EXACT_JA, PATTERNS_JA } from './i18n/ja/errorText.js';
+import { activityErrorText as activityZh } from './i18n/zh/careerReminder.js';
+import { EXACT_ZH, PATTERNS_ZH } from './i18n/zh/errorText.js';
 import { cupText } from './cupText.js';
 import type { Lang } from './lang.js';
 
@@ -219,12 +221,16 @@ const KIND: Record<string, string> = { 글: 'post', 댓글: 'comment', 차단: '
 const TABLES: Record<
   Exclude<Lang, 'ko'>,
   { exact: Record<string, string>; patterns: [RegExp, (m: RegExpExecArray) => string][] }
-> = { en: { exact: EXACT, patterns: PATTERNS }, ja: { exact: EXACT_JA, patterns: PATTERNS_JA } };
+> = {
+  en: { exact: EXACT, patterns: PATTERNS },
+  ja: { exact: EXACT_JA, patterns: PATTERNS_JA },
+  zh: { exact: EXACT_ZH, patterns: PATTERNS_ZH },
+};
 
 /** 한국어 문장을 요청 언어로. 한국어면 그대로, 표에 없으면 한국어 그대로 돌려준다. */
 export function localizeMessage(message: string, lang: Lang): string {
   if (lang === 'ko') return message;
-  if (message === activityKo) return lang === 'en' ? activityEn : activityJa;
+  if (message === activityKo) return { en: activityEn, ja: activityJa, zh: activityZh }[lang];
   const T = TABLES[lang];
   const hit = T.exact[message];
   if (hit) return hit;
