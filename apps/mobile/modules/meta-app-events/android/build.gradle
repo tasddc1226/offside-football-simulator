@@ -15,6 +15,6 @@ android {
 }
 
 dependencies {
-  // T-11-561 앱 설치 · 실행 이벤트만 쓴다(로그인 · 공유 모듈은 넣지 않는다).
+  // T-11-563 앱 설치 · 실행 이벤트만 쓴다(로그인 · 공유 모듈은 넣지 않는다).
   implementation "com.facebook.android:facebook-core:19.0.0"
 }

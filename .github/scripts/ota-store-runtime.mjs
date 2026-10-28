@@ -2,7 +2,7 @@
 // T-11-516 1.1.5(app version only). The fingerprint also hashes app.config.js and plugins/withAdMediation.js
 // (comments included), so changing them needs a new store build.
 // 1.1.5, 1.1.4 and 1.1.3 builds keep receiving updates through prepare-ota-115.mjs, -114 and -113.
-// T-11-561 1.1.6 adds the Meta app events module, so the values below must be replaced with the 1.1.6 production
+// T-11-563 1.1.6 adds the Meta app events module, so the values below must be replaced with the 1.1.6 production
 // build fingerprints (iOS · Android) before merging; until then the current lane refuses to publish.
 export const STORE_RUNTIMES = Object.freeze({
   ios: 'ca480d51e4d9afdae6f87685cc601133c9d16f1b', // 1.1.5(19), build f86ccd94-410a-4882-91c3-00773b9683b9

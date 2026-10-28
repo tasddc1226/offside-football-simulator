@@ -6,7 +6,7 @@ import com.facebook.appevents.AppEventsLogger
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
-// T-11-561 Meta 앱 설치 측정(앱 설치 광고의 설치 수). 매니페스트에서 자동 초기화 · 자동 이벤트 · 광고 ID 수집을 꺼 두고
+// T-11-563 Meta 앱 설치 측정(앱 설치 광고의 설치 수). 매니페스트에서 자동 초기화 · 자동 이벤트 · 광고 ID 수집을 꺼 두고
 // (plugins/withMetaAppEvents.js), 앱 이용 분석에 동의한 경우에만 JS가 setEnabled(true)를 부른다. 켠 값은 SDK가 기기에
 // 기억하므로 다음 실행부터는 SDK가 스스로 앱 실행을 보낸다. 철회하면 setEnabled(false)로 다시 끈다.
 class MetaAppEventsModule : Module() {

@@ -1,4 +1,4 @@
-// T-11-561 Meta 앱 이벤트(안드로이드 앱 설치 측정) 네이티브 설정. SDK는 modules/meta-app-events가 넣는다.
+// T-11-563 Meta 앱 이벤트(안드로이드 앱 설치 측정) 네이티브 설정. SDK는 modules/meta-app-events가 넣는다.
 // 자동 초기화 · 자동 이벤트 · 광고 ID 수집은 매니페스트에서 끄고, 앱 이용 분석 동의 뒤에만 켠다(src/analytics/meta.ts).
 // 앱 ID는 비즈니스 소유 개발자 앱 'OFFSIDE Agents'(광고 계정에 연결된 앱)이고, 클라이언트 토큰은 EAS 환경 변수
 // OFFSIDE_META_CLIENT_TOKEN으로만 받는다(저장소에 두지 않는다). 토큰이 없으면 SDK가 초기화되지 않아 아무것도 보내지 않는다.

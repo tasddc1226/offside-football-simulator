@@ -1,4 +1,4 @@
-// T-11-561 Only run in a disposable checkout. 1.1.6 added the Meta app events module (native only, Android:
+// T-11-563 Only run in a disposable checkout. 1.1.6 added the Meta app events module (native only, Android:
 // modules/meta-app-events + plugins/withMetaAppEvents.js); the JS no-ops without it, so the 1.1.5 store builds keep
 // receiving current JS once app.json is restored to the reviewed 1.1.5 shape and the new native pieces are removed.
 import { execFileSync } from 'node:child_process';

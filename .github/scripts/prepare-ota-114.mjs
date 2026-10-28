@@ -30,7 +30,7 @@ export function prepare(root) {
   }
   const contents = restored.map((file) => git('show', `${source}:${file}`));
   restored.forEach((file, i) => writeFileSync(resolve(root, file), contents[i]));
-  // T-11-561 1.1.6에서 더한 네이티브(Meta 앱 이벤트)는 1.1.4 빌드에 없다.
+  // T-11-563 1.1.6에서 더한 네이티브(Meta 앱 이벤트)는 1.1.4 빌드에 없다.
   removeLaterNative(root);
   console.log(`Prepared 1.1.4 app config overlay from ${source.slice(0, 7)}`);
 }
