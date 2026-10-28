@@ -7,7 +7,7 @@ import {
   AdminLeagueSchema,
   successEnvelope,
 } from '@offside/contracts';
-import { LEAGUE_CYCLE, planLeague } from '@offside/contracts/league';
+import { LEAGUE_CYCLE, leagueLateSlots, planLeague } from '@offside/contracts/league';
 import { applySeasonSchedule, closeSeasonSchedule } from '@offside/contracts/service-seasons';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -554,6 +554,112 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
       title: '오프사이드 리그 승격!',
       body: '위 부에 빈자리가 생겨 시즌 3에는 1부에서 뛰어요. 프리미엄 스카우트권 1장을 받았어요.',
     });
+  });
+  it('T-11-564 늦은 참가: 첫 배치 뒤 신청 → 다음 주 배치에서 새 리그 → 남은 팀은 마지막 배치에서 빠진다', async () => {
+    for (let i = 0; i < 8; i++) await entrant(8, 90);
+    expect(await run(L.drawAt)).toMatchObject({ step: 'draw', placed: 8, leagues: 1 });
+    // 14라운드 시즌이라 늦은 배치는 11/12 한 번(8라운드부터 7라운드).
+    const [slot] = leagueLateSlots(L);
+    expect(slot).toEqual({ at: at(L.drawAt, 7 * 86_400_000), firstRound: 8, last: true });
+    const me = async (cookie: string) =>
+      MeRes.parse(await (await call('GET', '/v1/leagues/current/me', { cookie })).json()).data;
+
+    // 첫 배치 뒤 신청: 자격을 갖춘 9팀 + 선발 7명인 1팀. 신청하면 다음 늦은 배치를 기다린다.
+    vi.setSystemTime(new Date(at(L.drawAt, 3_600_000)));
+    const late: Awaited<ReturnType<typeof entrant>>[] = [];
+    for (let i = 0; i < 9; i++) late.push(await entrant(8, 70));
+    const short = await entrant(7, 95);
+    const outsider = await entrant(8, 70, false);
+    expect(await me(outsider.cookie)).toMatchObject({ canEnter: true, lateDrawAt: slot!.at });
+    expect(await me(short.cookie)).toMatchObject({
+      canEnter: false,
+      lateDrawAt: slot!.at,
+      placement: null,
+    });
+    // 배치 전에는 취소하고 다시 신청할 수 있다.
+    expect(
+      (await call('DELETE', '/v1/leagues/current/entries/me', { cookie: short.cookie })).status,
+    ).toBe(204);
+    expect((await me(short.cookie)).canEnter).toBe(true);
+    expect(
+      (
+        await call('POST', '/v1/leagues/current/entries', {
+          cookie: short.cookie,
+          headers: { 'Idempotency-Key': 'lg-late-again' },
+        })
+      ).status,
+    ).toBe(204);
+
+    // 늦은 배치 시간 전에는 기다리는 신청을 건드리지 않는다.
+    await drain(at(slot!.at, -60_000));
+    expect(
+      (await ctx.db.select().from(leagueEntries)).filter(
+        (e) => e.tier === null && e.status === 'active',
+      ),
+    ).toHaveLength(10);
+
+    // 늦은 배치: 9팀 중 8팀이 2부(새 맨 아래 부) 1리그, 마지막 배치라 남은 1팀 · 자격 미달 1팀은 빠진다.
+    expect(await run(slot!.at)).toEqual({ season: 2, step: 'late', n: 10 });
+    expect(await run(at(slot!.at, 60_000))).not.toMatchObject({ step: 'late' });
+    const rows = await ctx.db.select().from(leagueEntries);
+    const lateRows = rows.filter((r) => late.some((x) => x.profileId === r.profileId));
+    expect(
+      lateRows.filter((r) => r.tier === 2 && r.leagueNo === 1 && r.status === 'active'),
+    ).toHaveLength(8);
+    const left = lateRows.find((r) => r.status === 'dropped')!;
+    expect(left.teamId).not.toBeNull();
+    expect(rows.find((r) => r.profileId === short.profileId)).toMatchObject({
+      status: 'dropped',
+      teamId: null,
+    });
+    const v = ViewRes.parse(await (await call('GET', '/v1/leagues/current')).json()).data;
+    expect(v.tiers).toEqual([
+      { tier: 1, leagues: 1, teams: 8 },
+      { tier: 2, leagues: 1, teams: 8 },
+    ]);
+    const { n } = (await ctx.env.DB.prepare(
+      'SELECT COUNT(*) AS n FROM league_matches WHERE tier = 2',
+    ).first<{ n: number }>())!;
+    expect(n).toBe(7 * 4);
+    expect(
+      await ctx.env.DB.prepare('SELECT MIN(round) AS r FROM league_matches WHERE tier = 2').first(
+        'r',
+      ),
+    ).toBe(8);
+
+    // 늦은 배치 시간이 끝나면 더 받지 않는다.
+    vi.setSystemTime(new Date(at(slot!.at, 4 * 3_600_000)));
+    expect((await me(outsider.cookie)).canEnter).toBe(false);
+    const closed = await call('POST', '/v1/leagues/current/entries', {
+      cookie: outsider.cookie,
+      headers: { 'Idempotency-Key': 'lg-late-closed' },
+    });
+    expect(closed.status).toBe(409);
+
+    // 알림: 늦은 참가는 첫 경기 안내만 받고, 이미 끝난 라운드 결과는 받지 않는다.
+    await drain(at(slot!.at, 120_000));
+    const placed = late.find((x) => x.profileId !== left.profileId)!;
+    expect((await notices(placed.profileId)).map((x) => x.body)).toEqual([
+      expect.stringMatching(/^리그팀\d+ 팀은 2부 1리그예요\. 첫 경기는 오늘 13:00에 열려요\.$/),
+    ]);
+    expect((await notices(left.profileId)).at(-1)?.body).toBe(
+      '마지막 배치에서 함께 리그를 꾸릴 팀이 모자랐어요. 다음 시즌에 다시 신청할 수 있어요.',
+    );
+    expect((await notices(short.profileId)).at(-1)?.body).toBe(
+      '마지막 배치 시각에 시즌 2 팀 선발 선수가 8명보다 적었어요. 다음 시즌에 다시 신청할 수 있어요.',
+    );
+
+    // 첫 경기(8라운드)를 치르면 그 결과부터 받는다.
+    await drain(at(L.rounds[7]!, 60_000));
+    expect((await notices(placed.profileId)).at(-1)?.title).toMatch(/^오프사이드 리그 8라운드 · /);
+
+    // 시즌 끝: 늦은 리그도 함께 결산한다(2부 1위는 승격).
+    await drain(at(L.rounds.at(-1)!, 60_000));
+    const done = (await ctx.db.select().from(leagueEntries)).filter(
+      (r) => r.tier === 2 && r.status === 'active',
+    );
+    expect(done.every((r) => r.outcome && r.finalRank)).toBe(true);
+    expect(done.find((r) => r.finalRank === 1)?.outcome).toBe('promoted');
   });
 });
 

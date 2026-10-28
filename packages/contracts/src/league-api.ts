@@ -49,7 +49,10 @@ export type LeagueResponse = z.infer<typeof LeagueResponseSchema>;
  */
 export const LeagueMeResponseSchema = z.strictObject({
   entry: z.strictObject({ createdAt: IsoUtcSchema }).nullable(),
-  /** 지금 신청할 수 있는가(접수 중이고 아직 신청하지 않았다). */
+  /**
+   * 지금 신청할 수 있는가(접수 중이고 아직 신청하지 않았다). T-11-564 리그가 시작한 뒤에는 늦은 참가를 받는 동안 신청하지
+   * 않았거나 배치에서 빠진 구단주.
+   */
   canEnter: z.boolean(),
   team: z
     .strictObject({
@@ -102,6 +105,11 @@ export const LeagueMeResponseSchema = z.strictObject({
     })
     .nullable()
     .optional(),
+  /**
+   * T-11-564 늦은 참가: 리그가 시작한 뒤 지금 신청하면(또는 신청해 두었으면) 들어갈 다음 늦은 배치 시각. 늦은 참가를 받지
+   * 않는 때(첫 배치 전 · 남은 배치 없음)는 null, 옛 응답에는 없다.
+   */
+  lateDrawAt: IsoUtcSchema.nullable().optional(),
   /**
    * T-11-444 지난 시즌 내 결산(최종 순위 · 결과 · 다음 시즌에 시작하는 부, 기권 퇴출은 null = 맨 아래). 이번 시즌 배치 전에만,
    * 지난 시즌 결산이 있을 때만 싣는다. 옛 응답에는 없다.

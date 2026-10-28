@@ -119,6 +119,12 @@ export const CUP_KO = {
     '배치 때 시즌 {season} 팀 선발에 선수가 {n}명 있어야 참가할 수 있어요. 지금은 {filled}명이에요.',
   leaguePlacedTitle: '시즌 {season} 오프사이드 리그 배치 결과',
   leaguePlacedBody: '{team} 팀은 {tier}부 {league}리그예요. 1라운드는 오늘 {time}에 열려요.',
+  // T-11-564 늦은 참가(첫 배치 뒤 매주 묶는 리그).
+  leagueLatePlacedBody: '{team} 팀은 {tier}부 {league}리그예요. 첫 경기는 오늘 {time}에 열려요.',
+  leagueLateDroppedBody:
+    '마지막 배치 시각에 시즌 {season} 팀 선발 선수가 {n}명보다 적었어요. 다음 시즌에 다시 신청할 수 있어요.',
+  leagueLateLeftBody:
+    '마지막 배치에서 함께 리그를 꾸릴 팀이 모자랐어요. 다음 시즌에 다시 신청할 수 있어요.',
   leagueDroppedTitle: '시즌 {season} 오프사이드 리그 참가가 취소됐어요',
   leagueDroppedBody:
     '배치 시각에 시즌 {season} 팀 선발 선수가 {n}명보다 적었어요. 다음 시즌에 다시 신청할 수 있어요.',

@@ -137,4 +137,9 @@ export const league: Translation<LeagueMsgs> = {
   moveTop: (p) => `第 1 名奪冠，第 7、8 名下個賽季降到第${p.down}級。`,
   moveBottom: (p) => `第 1 名下個賽季升到第${p.up}級。這是最低級別，沒有降級。`,
   moveMid: (p) => `第 1 名下個賽季升到第${p.up}級，第 7、8 名降到第${p.down}級。`,
+  ruleLate:
+    '聯賽開始後也能報名。每週分級時間會把晚報名的球隊編成 7～8 隊的新聯賽，加到最低級別。球隊不夠時順延到下週分級。',
+  lateEnterNote: (p) => `${p.at} 會把晚報名的球隊編成聯賽，從當天起每天比賽到賽季結束。`,
+  lateWaiting: (p) => `正在等待 ${p.at} 的分級。`,
+  lateAskDeadline: (p) => `${p.at} 分級前都可以取消報名。湊不齊組成聯賽的球隊時會順延到下週分級。`,
 };

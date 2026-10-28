@@ -83,6 +83,7 @@ export const leagueRules = () => [
   L.termTier,
   L.termLeague,
   L.ruleEntry,
+  L.ruleLate,
   L.ruleTiers,
   L.rulePoints,
   L.ruleMove,
@@ -93,6 +94,19 @@ export const leagueRules = () => [
 
 /** 홈 배너를 보일지: 리그가 끝나면 숨긴다. */
 export const leagueOnHome = (data: Pick<LeagueResponse, 'phase'>) => data.phase !== 'done';
+
+/**
+ * T-11-564 리그가 시작한 뒤 늦은 참가 쪽 상태: 신청할 수 있음(enter) · 신청해 두고 다음 늦은 배치를 기다림(waiting). 늦은 참가를
+ * 받지 않거나 해당 없으면 null.
+ */
+export function leagueLate(
+  data: Pick<LeagueResponse, 'phase'>,
+  me: LeagueMeResponse | null,
+): 'enter' | 'waiting' | null {
+  if (data.phase !== 'running' || !me?.lateDrawAt) return null;
+  if (me.canEnter) return 'enter';
+  return me.entry && !me.placement ? 'waiting' : null;
+}
 
 /** 개막 전 사전 신청 기간인가. */
 export const leaguePresign = (data: LeagueResponse, now = Date.now()) =>
@@ -109,7 +123,8 @@ export function leagueReadiness(
   now = Date.now(),
 ): { ok: boolean; text: string } | null {
   if (!me) return null;
-  if (data.phase !== 'open' && !(data.phase === 'closed' && me.entry)) return null;
+  if (data.phase !== 'open' && !(data.phase === 'closed' && me.entry) && !leagueLate(data, me))
+    return null;
   const min = data.league.minFilled;
   const season = data.league.season;
   if (leaguePresign(data, now)) {
@@ -127,9 +142,21 @@ export function leagueReadiness(
     : { ok: false, text: L.readyShort({ filled: me.team.filled, min }) };
 }
 
-/** T-11-430 신청 카드의 참가 자격 · 기권 규칙 두 줄. 배치 전(접수 예정 · 접수 중 · 배치 대기)에만. */
-export function leagueEntryRules(data: LeagueResponse): string[] {
-  if (data.phase !== 'soon' && data.phase !== 'open' && data.phase !== 'closed') return [];
+/**
+ * T-11-430 신청 카드의 참가 자격 · 기권 규칙 두 줄. 배치 전(접수 예정 · 접수 중 · 배치 대기)에만. T-11-564 리그가 시작한 뒤에는
+ * 늦은 참가를 받는 동안.
+ */
+export function leagueEntryRules(
+  data: LeagueResponse,
+  me: LeagueMeResponse | null = null,
+): string[] {
+  if (
+    data.phase !== 'soon' &&
+    data.phase !== 'open' &&
+    data.phase !== 'closed' &&
+    !leagueLate(data, me)
+  )
+    return [];
   const min = data.league.minFilled;
   return [
     L.entryRuleEligible({ season: data.league.season, min }),
@@ -147,7 +174,9 @@ export function leagueTeamAction(
   now = Date.now(),
 ): string | null {
   if (!me?.entry) return null;
-  if (data.phase === 'open' ? leaguePresign(data, now) : data.phase !== 'closed') return null;
+  const waiting = leagueLate(data, me) === 'waiting';
+  if (!waiting && (data.phase === 'open' ? leaguePresign(data, now) : data.phase !== 'closed'))
+    return null;
   return me.team ? L.fixLineup : L.makeTeam;
 }
 
@@ -477,6 +506,7 @@ export function leagueEntryCard(
   account: LeagueAccount,
   me: LeagueMeResponse | null,
   meFailed = false,
+  now = Date.now(),
 ): LeagueEntryCard {
   const { phase, league } = data;
   if (account === 'unknown') return { kind: 'hidden' };
@@ -486,7 +516,27 @@ export function leagueEntryCard(
       : { kind: 'hidden' };
   if (!me) return meFailed ? { kind: 'error', text: L.meFail } : { kind: 'hidden' };
   const at = leagueWhen(league.drawAt);
-  const ovr = me.team && phase === 'open' ? L.myOvr({ ovr: me.team.ovr }) : null;
+  const late = leagueLate(data, me);
+  const ovr = me.team && (phase === 'open' || late) ? L.myOvr({ ovr: me.team.ovr }) : null;
+  // T-11-564 늦은 참가: 다음 늦은 배치 전까지는 취소할 수 있다.
+  if (late && me.lateDrawAt) {
+    const lateAt = leagueWhen(me.lateDrawAt);
+    return late === 'enter'
+      ? {
+          kind: 'mine',
+          entered: false,
+          action: 'enter',
+          note: L.lateEnterNote({ at: lateAt }),
+          ovr,
+        }
+      : {
+          kind: 'mine',
+          entered: true,
+          action: now < Date.parse(me.lateDrawAt) ? 'withdraw' : null,
+          note: L.lateWaiting({ at: lateAt }),
+          ovr,
+        };
+  }
   if (me.entry) {
     const note =
       phase === 'open'
@@ -509,12 +559,14 @@ export function leagueEntryCard(
   };
 }
 
-/** 신청 확인 창: 참가 자격 · 기권 규칙 · 취소 마감. */
-export const leagueEnterAsk = (data: LeagueResponse) => ({
+/** 신청 확인 창: 참가 자격 · 기권 규칙 · 취소 마감(T-11-564 늦은 참가는 다음 늦은 배치 전까지). */
+export const leagueEnterAsk = (data: LeagueResponse, me: LeagueMeResponse | null = null) => ({
   title: L.enterAskTitle,
   lines: [
-    ...leagueEntryRules(data),
-    L.enterAskDeadline({ until: leagueUntil(data.league.closesAt) }),
+    ...leagueEntryRules(data, me),
+    leagueLate(data, me) && me?.lateDrawAt
+      ? L.lateAskDeadline({ at: leagueWhen(me.lateDrawAt) })
+      : L.enterAskDeadline({ until: leagueUntil(data.league.closesAt) }),
   ],
 });
 

@@ -28,6 +28,7 @@ import {
   leagueReadiness,
   leagueRound,
   leagueSchedule,
+  leagueLate,
   leagueTeamAction,
   leagueZone,
 } from './leagueView.js';
@@ -547,5 +548,63 @@ describe('leagueView (T-11-444)', () => {
       '부: 실력 단계예요. 1부가 가장 높아요.',
       '리그: 한 부 안에서 7 ~ 8팀씩 나눈 묶음이에요. 아래 부로 갈수록 리그가 많아요.',
     ]);
+  });
+});
+
+describe('leagueView 늦은 참가 (T-11-564)', () => {
+  const lateDrawAt = '2026-11-12T00:00:00.000Z';
+  const me = (o: Partial<LeagueMeResponse>): LeagueMeResponse => ({
+    entry: null,
+    canEnter: false,
+    team: { teamId: 'tm_1', filled: 8, ovr: 74 },
+    lateDrawAt,
+    ...o,
+  });
+  const before = Date.parse(lateDrawAt) - 3_600_000;
+  const entry = { createdAt: '2026-11-06T00:00:00.000Z' };
+
+  it('리그가 시작한 뒤에도 늦은 배치가 남아 있으면 신청 · 대기 · 취소를 보인다', () => {
+    const run = data('running');
+    expect(leagueLate(run, me({ canEnter: true }))).toBe('enter');
+    expect(leagueEntryCard(run, 'member', me({ canEnter: true }), false, before)).toEqual({
+      kind: 'mine',
+      entered: false,
+      action: 'enter',
+      note: '11월 12일 09:00에 늦게 신청한 팀끼리 리그를 만들어요. 그날부터 시즌 끝까지 매일 경기해요.',
+      ovr: '지금 내 팀 OVR 74',
+    });
+    expect(leagueEntryCard(run, 'member', me({ entry }), false, before)).toMatchObject({
+      entered: true,
+      action: 'withdraw',
+      note: '11월 12일 09:00 배치를 기다리고 있어요.',
+    });
+    // 배치 시간이 되면 취소할 수 없다.
+    expect(
+      leagueEntryCard(run, 'member', me({ entry }), false, Date.parse(lateDrawAt)),
+    ).toMatchObject({ action: null });
+    expect(leagueReadiness(run, me({ entry }))).toEqual({
+      ok: true,
+      text: '준비 완료 · 선발에 내 은퇴 선수 8명(자격 8명)',
+    });
+    expect(leagueTeamAction(run, me({ entry }))).toBe('팀 선발 고치기');
+    expect(leagueEntryRules(run, me({ entry }))).toHaveLength(2);
+    expect(leagueEnterAsk(run, me({ canEnter: true })).lines.at(-1)).toBe(
+      '11월 12일 09:00 배치 전까지는 신청을 취소할 수 있어요. 함께 리그를 꾸릴 팀이 모자라면 다음 주 배치로 넘어가요.',
+    );
+  });
+
+  it('늦은 배치가 없거나 이미 리그에서 뛰면 예전처럼 배치 줄에 맡긴다', () => {
+    const run = data('running');
+    const placed = me({
+      entry,
+      placement: { status: 'placed', tier: 2, league: 1, teamId: 'tm_1', rank: 3 },
+    });
+    expect(leagueLate(run, placed)).toBeNull();
+    expect(leagueLate(run, me({ canEnter: true, lateDrawAt: null }))).toBeNull();
+    expect(leagueLate(data('open'), me({ canEnter: true }))).toBeNull();
+    expect(leagueEntryCard(run, 'member', placed)).toMatchObject({ action: null, note: null });
+    expect(leagueRules()).toContain(
+      '리그가 시작한 뒤에도 신청할 수 있어요. 매주 배치 시각에 늦게 신청한 팀끼리 7~8팀 리그를 만들어 맨 아래 부에 더해요. 팀이 모자라면 다음 주 배치로 넘어가요.',
+    );
   });
 });

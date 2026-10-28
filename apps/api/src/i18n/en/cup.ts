@@ -126,6 +126,12 @@ export const CUP_EN: Record<CupTextKey, string> = {
     'You need {n} players in your Season {season} starting XI at placement to take part. You have {filled} now.',
   leaguePlacedTitle: 'Season {season} OFFSIDE League placement',
   leaguePlacedBody: '{team} is in Tier {tier}, League {league}. Round 1 kicks off today at {time}.',
+  leagueLatePlacedBody:
+    '{team} is in Tier {tier}, League {league}. Your first match kicks off today at {time}.',
+  leagueLateDroppedBody:
+    'At the last placement, your Season {season} starting XI had fewer than {n} players. You can enter again next season.',
+  leagueLateLeftBody:
+    "There weren't enough clubs to form a league at the last placement. You can enter again next season.",
   leagueDroppedTitle: 'Your Season {season} OFFSIDE League entry was cancelled',
   leagueDroppedBody:
     'At placement, your Season {season} starting XI had fewer than {n} players. You can enter again next season.',
