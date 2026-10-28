@@ -19,6 +19,8 @@ export const CUP_JA: Record<CupTextKey, string> = {
   movedTitle: '{cup}に移りました',
   movedUpBody:
     '組み合わせ抽選の時点でチームOVRが申し込んだ部門の上限を超えていたため、上の部門に移りました。',
+  sortedBody:
+    '組み合わせ抽選で、参加チームのOVRをもとに部門を分け直しました。チームOVR {ovr}に合う部門で戦います。',
   mergedBody: '申し込んだ部門のチームが{n}チームより少なかったため、上の部門と一緒に戦います。',
   adminCapOpen: '受付が始まった大会の上限は変えられません。',
   adminCapMaster: 'マスター・単一大会には上限がありません。',

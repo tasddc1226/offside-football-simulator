@@ -20,6 +20,8 @@ export const CUP_EN: Record<CupTextKey, string> = {
   movedTitle: 'Moved to {cup}',
   movedUpBody:
     'At the draw your team OVR was above the cap of the division you entered, so you moved up a division.',
+  sortedBody:
+    'At the draw, divisions were re-split by the OVR of all entered teams. Your team (OVR {ovr}) plays in the division that fits it.',
   mergedBody:
     'Your division had fewer than {n} teams, so it plays together with the division above.',
   adminCapOpen: "Entries are open, so the cap can't change.",

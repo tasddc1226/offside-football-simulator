@@ -16,6 +16,8 @@ export const CUP_KO = {
   ovrCap: '오프사이드 컵 {division} 참가 중에는 팀 OVR이 {n}을 넘는 명단으로 바꿀 수 없어요.',
   movedTitle: '{cup}로 옮겼어요',
   movedUpBody: '조 추첨 때 팀 OVR이 신청한 구간 상한보다 높아 위 구간으로 옮겼어요.',
+  sortedBody:
+    '조 추첨 때 신청한 팀들의 OVR로 구간을 다시 나눴어요. 팀 OVR {ovr}에 맞는 구간에서 뛰어요.',
   mergedBody: '신청한 구간 팀이 {n}팀보다 적어 위 구간과 함께 치러요.',
   adminCapOpen: '접수가 열린 대회의 상한은 바꿀 수 없어요.',
   adminCapMaster: '마스터 · 통합 대회에는 상한이 없어요.',

@@ -49,6 +49,7 @@ import {
   friends,
   ownerItems,
   ownerTeams,
+  cupEntries,
   teamMatches,
 } from '../db/schema.js';
 import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
@@ -2128,6 +2129,55 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       expect(await ctx.db.select().from(friendMatches)).toEqual([]);
       // 지운 사람의 코드로는 더 찾을 수 없다.
       expect((await request(a.cookie, { code: cCode })).status).toBe(404);
+    });
+  });
+
+  describe('T-11-552 시즌이 넘어간 뒤 끝나지 않은 지난 시즌 컵', () => {
+    it('컵에 참가 중인 시즌 1 팀은 시즌 2에도 컵 명단으로 고치고, 선발은 방출 · 판매할 수 없다', async () => {
+      vi.setSystemTime(new Date('2026-10-20T03:00:00.000Z'));
+      const a = await ownerWithTeam(9, 80, null, 1);
+      const b = await ownerWithTeam(8, 80, null, 1);
+      expect(a.team.season).toBe(1);
+      const now = '2026-10-20T03:00:00.000Z';
+      await ctx.db.insert(cupEntries).values({
+        cupId: 's1-1',
+        teamId: a.team.id,
+        profileId: a.profileId,
+        name: a.team.name,
+        manager: a.team.manager,
+        ovr: a.team.ovr,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await toSeason2();
+      const got = GetRes.parse(
+        await (await call('GET', '/v1/owner-team', { cookie: a.cookie })).json(),
+      ).data;
+      expect(got).toMatchObject({ season: 2, current: 2, cupSeason: 1 });
+      // 참가 중인 시즌 1 팀은 고친다(친선 편성이 아니라 컵이 읽는 명단 칸).
+      const res = await putTeam(a.cookie, { season: 1, slots: slots(...a.ids.slice(1)) });
+      expect(res.status).toBe(200);
+      const [row] = await ctx.db.select().from(ownerTeams).where(eq(ownerTeams.id, a.team.id));
+      expect(row!.filled).toBe(8);
+      expect(row!.friendlyJson).toBeNull();
+      // 참가하지 않은 구단주의 시즌 1 팀은 그대로 보기만 한다.
+      const closed = await putTeam(b.cookie, { season: 1, slots: slots(...b.ids.slice(1)) });
+      expect(closed.status).toBe(409);
+      const none = GetRes.parse(
+        await (await call('GET', '/v1/owner-team', { cookie: b.cookie })).json(),
+      ).data;
+      expect(none.cupSeason).toBeNull();
+      // 시즌 1 컵 선발은 시즌 2에도 방출할 수 없다.
+      const release = await call('POST', '/v1/cards/release', {
+        cookie: a.cookie,
+        headers: idem(),
+        body: { careerIds: [a.ids[1]] },
+      });
+      expect(release.status).toBe(409);
+      expect(
+        ((await release.json()) as { error: { details?: { reason?: string } } }).error.details
+          ?.reason,
+      ).toBe('CUP_CARD_LOCKED');
     });
   });
 });

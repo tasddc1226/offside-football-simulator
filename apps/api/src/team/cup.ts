@@ -7,6 +7,8 @@ import {
   CUP_ROUNDS,
   CUP_STAGES,
   CUP_DIVISION_MIN,
+  CUP_DIVISIONS,
+  entrantDivisionCaps,
   cupById,
   cupGroupCount,
   editionCups,
@@ -229,9 +231,10 @@ export async function pullCupIfFull(db: Db, cup: CupDef, now: string) {
 }
 
 /**
- * T-11-410 구간 대회 추첨 전 회차 정리(한 번). 1) 지금 팀 OVR이 신청한 구간 상한을 넘으면 들어갈 수 있는 가장 낮은 윗
- * 구간으로, 2) CUP_DIVISION_MIN팀보다 적은 구간은 바로 윗 구간으로, 3) 마스터가 모자라면 바로 아랫 구간을 마스터로 옮긴다.
- * 늘 위로만 옮긴다. 옮긴 팀에는 알림 1건. 한 번 했으면 app_meta 표시로 건너뛴다.
+ * T-11-410 구간 대회 추첨 전 회차 정리(한 번). 1) T-11-552 신청한 팀들의 지금 팀 OVR 1/3 · 2/3 지점으로 아랫 구간 상한을
+ * 다시 정하고(접수 때 상한은 신청하지 않은 팀까지 센 시즌 팀 기준이라 센 팀이 마스터로 몰렸다), 모든 팀을 들어갈 수 있는
+ * 가장 낮은 구간으로 옮긴다(신청한 구간은 희망으로만 본다). 2) CUP_DIVISION_MIN팀보다 적은 구간은 바로 윗 구간으로,
+ * 3) 마스터가 모자라면 바로 아랫 구간을 마스터로 옮긴다. 옮긴 팀에는 알림 1건. 한 번 했으면 app_meta 표시로 건너뛴다.
  */
 export async function settleDivisions(db: Db, siblings: readonly CupDef[], now: string) {
   const d1 = db.$client;
@@ -250,13 +253,26 @@ export async function settleDivisions(db: Db, siblings: readonly CupDef[], now: 
   const rows = results.map((r) => ({
     ...r,
     at: ids.indexOf(r.cupId),
-    why: '' as '' | 'up' | 'merged',
+    why: '' as '' | 'up' | 'sorted' | 'merged',
   }));
+  const caps = entrantDivisionCaps(rows.flatMap((r) => (r.ovr === null ? [] : [r.ovr])));
+  const capped: D1PreparedStatement[] = [];
+  siblings.forEach((c, i) => {
+    if (!caps || !c.division || c.division === 'master') return;
+    const cap = caps[CUP_DIVISIONS.indexOf(c.division)]!;
+    if (cap === c.ovrMax) return;
+    capped.push(d1.prepare('UPDATE cups SET ovr_max = ? WHERE id = ?').bind(cap, ids[i]!));
+    // 같은 cron이 이어서 추첨할 때 새 상한을 쓰게 한다.
+    c.ovrMax = cap;
+  });
   for (const r of rows) {
-    if (r.ovr === null || fitsDivision(siblings[r.at]!, r.ovr)) continue;
-    const up = siblings.findIndex((c, i) => i > r.at && fitsDivision(c, r.ovr!));
-    r.at = up < 0 ? siblings.length - 1 : up;
-    r.why = 'up';
+    // 신청이 적어 상한을 다시 정하지 않았으면 예전처럼 상한을 넘는 팀만 위로 옮긴다.
+    if (r.ovr === null || (!caps && fitsDivision(siblings[r.at]!, r.ovr))) continue;
+    const fit = siblings.findIndex((c) => fitsDivision(c, r.ovr!));
+    const to = fit < 0 ? siblings.length - 1 : fit;
+    if (to === r.at) continue;
+    r.at = to;
+    r.why = caps ? 'sorted' : 'up';
   }
   const count = (i: number) => rows.filter((r) => r.at === i).length;
   const merge = (from: number, to: number) => {
@@ -271,6 +287,7 @@ export async function settleDivisions(db: Db, siblings: readonly CupDef[], now: 
     if (count(i) > 0) merge(i, last);
   const stmts: D1PreparedStatement[] = [
     d1.prepare('INSERT OR IGNORE INTO app_meta (key, value) VALUES (?, ?)').bind(key, now),
+    ...capped,
   ];
   const moved = rows.filter((r) => ids[r.at] !== r.cupId);
   // T-11-527 아랫 구간(주니어)은 자격이 낮다. 옮겨 간 팀이 추첨에서 떨어지지 않게 받는 대회 자격을 그 팀이 신청한 구간
@@ -304,7 +321,11 @@ export async function settleDivisions(db: Db, siblings: readonly CupDef[], now: 
         r.profileId,
         `cup:${to.id}:moved`,
         cupKo('movedTitle', { cup: cupTitle(to) }),
-        r.why === 'up' ? cupKo('movedUpBody') : cupKo('mergedBody', { n: CUP_DIVISION_MIN }),
+        r.why === 'sorted'
+          ? cupKo('sortedBody', { ovr: r.ovr ?? 0 })
+          : r.why === 'up'
+            ? cupKo('movedUpBody')
+            : cupKo('mergedBody', { n: CUP_DIVISION_MIN }),
         now,
       ),
     );
