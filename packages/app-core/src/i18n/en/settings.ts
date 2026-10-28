@@ -32,7 +32,7 @@ export const settings: Translation<SettingsMsgs> = {
     "Your player's name appears in Home live, the Hall of Fame and server firsts. Turn it off to show something like 'An anonymous striker' from next season's records. Avoid using real names.",
   analyticsTitle: 'App analytics (optional)',
   analyticsBody:
-    'If you agree, Google Analytics measures screen visits, career start, progress and retirement, plus device, app version and session info. Player names, account details and save files are never sent. You can turn it off anytime, and nothing is sent before you agree.',
+    'If you agree, Google Analytics measures screen visits, career start, progress and retirement, plus device, app version and session info. On Android, the app also tells Meta it was installed and opened, to measure installs from ads. Player names, account details and save files are never sent. You can turn it off anytime, and nothing is sent before you agree.',
   help: 'Help',
   installGuide: 'Add to home screen',
   guide: 'Game guide',

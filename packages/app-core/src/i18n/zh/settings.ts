@@ -31,7 +31,7 @@ export const settings: Translation<SettingsMsgs> = {
     '首頁即時動態、名人堂與伺服器首次成就會顯示球員名字。關閉後會顯示為「匿名前鋒」這類名稱，從下個賽季的紀錄開始套用。建議不要使用真實姓名。',
   analyticsTitle: '同意 App 使用分析（選填）',
   analyticsBody:
-    '同意後，會透過 Google Analytics 分析畫面瀏覽、生涯開始・進行・退役，以及裝置・App 版本・工作階段資訊。不會傳送球員名字、帳號資訊或存檔。可隨時關閉，同意前的活動不會傳送。',
+    '同意後，會透過 Google Analytics 分析畫面瀏覽、生涯開始・進行・退役，以及裝置・App 版本・工作階段資訊。Android App 也會把安裝與開啟的資訊傳給 Meta，用來衡量廣告帶來的安裝。不會傳送球員名字、帳號資訊或存檔。可隨時關閉，同意前的活動不會傳送。',
   help: '說明',
   installGuide: '加入主畫面',
   guide: '遊戲指南',

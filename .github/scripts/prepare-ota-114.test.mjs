@@ -63,7 +63,7 @@ test('the deploy workflow publishes the 1.1.4 lane with its own runtime check', 
     'utf8',
   );
   const job = workflow.split('  app-update:')[1].split('  release-tag:')[0];
-  assert.match(job, /target: \[current, '1\.1\.4', '1\.1\.3', '1\.1\.2'\]/);
+  assert.match(job, /target: \[current, '1\.1\.5', '1\.1\.4', '1\.1\.3', '1\.1\.2'\]/);
   assert.match(
     job,
     /matrix\.target == '1\.1\.4'\s*\n\s*run: node \.github\/scripts\/prepare-ota-114\.mjs prepare/,
