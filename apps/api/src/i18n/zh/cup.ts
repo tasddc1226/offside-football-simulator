@@ -120,6 +120,10 @@ export const CUP_ZH: Record<CupTextKey, string> = {
     '第 {round} 輪比賽 {time} 開踢。陣容將在 {lock} 鎖定，目前先發只有 {filled}/11 人，空位會由青訓球員上場。',
   leaguePlacedTitle: '第 {season} 賽季 OFFSIDE 聯賽分級結果',
   leaguePlacedBody: '{team} 分在 {tier} 級 {title}。第 1 輪今天 {time} 開踢。',
+  leagueLatePlacedBody: '{team} 分在 {tier} 級 {title}。第一場比賽今天 {time} 起開踢。',
+  leagueLateDroppedBody:
+    '最後一次分級時第 {season} 賽季球隊的先發球員不足 {n} 名。下個賽季可以再報名。',
+  leagueLateLeftBody: '最後一次分級時湊不齊組成聯賽的球隊。下個賽季可以再報名。',
   leagueDroppedTitle: '第 {season} 賽季 OFFSIDE 聯賽參賽已取消',
   leagueDroppedBody: '分級時第 {season} 賽季球隊的先發球員不足 {n} 名。下個賽季可以再報名。',
   leagueLeftBody: '參賽球隊數無法剛好編成聯賽，OVR 最低的 {n} 隊被排除。下個賽季可以再報名。',
