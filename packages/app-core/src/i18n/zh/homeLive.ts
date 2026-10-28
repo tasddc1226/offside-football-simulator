@@ -1,0 +1,30 @@
+import type { Translation } from '../core';
+import type { HomeLiveMsgs } from '../ko/homeLive';
+
+export const homeLive: Translation<HomeLiveMsgs> = {
+  title: '此刻的 OFFSIDE',
+  statPlaying: '遊玩中',
+  statSeasons: '今日賽季數',
+  statNew: '今日新球員',
+  statRetired: '今日退役',
+  pause: '暫停消息',
+  pauseTitle: '暫停',
+  resumeTitle: '播放',
+  failed: '目前無法載入狀況，稍後會再確認一次。',
+  whatRetire: (p) => `退役 · 傳奇分數 ${p.score}`,
+  whatFirst: (p) => `在${p.club}完成了第一個賽季`,
+  whatHonor: (p) => `${p.honor} · ${p.club}`,
+  whatCleanSheets: (p) => `${p.club} 賽季${p.apps}場 零失球${p.cs}場`,
+  whatGoals: (p) => `${p.club} 賽季${p.goals}球 ${p.assists}助攻`,
+  attrsNone: '無能力值紀錄',
+  attrsEstimated: '推估能力值',
+  footRight: '右腳',
+  footLeft: '左腳',
+  footBoth: '雙足',
+  baseValue: (p) => `基準金額 ${p.value}`,
+  agoNow: '剛剛',
+  agoMin: (p) => `${p.n}分鐘前`,
+  agoHour: (p) => `${p.n}小時前`,
+  agoYesterday: '昨天',
+  agoDay: (p) => `${p.n}天前`,
+};

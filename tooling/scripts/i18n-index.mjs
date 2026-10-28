@@ -5,7 +5,7 @@
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const root = new URL('../../packages/', import.meta.url);
-const NAME = { en: '영어', ja: '일본어' };
+const NAME = { en: '영어', ja: '일본어', zh: '번체 중국어' };
 const head = (lang) =>
   `// ${NAME[lang]} 사전 묶음 — 파일 이름 = ns() 이름 = export 이름 = 여기 키. ${NAME[lang]} 사용자에게만 불러온다(웹은 지연 청크).\n` +
   '// 직접 고치지 않는다: node tooling/scripts/i18n-index.mjs\n';
@@ -24,9 +24,9 @@ function render(lang, pkg, { imports = [], spread = [], extra = [] }) {
   return `${head(lang)}${lines.join('\n')}\n\nexport const ${lang} = {\n${keys.map((k) => `  ${k},`).join('\n')}\n};\n`;
 }
 
-// T-11-140 일본어 묶음도 같은 모양으로 만든다(ja/<이름>.ts, export ja).
+// T-11-140 일본어 · T-11-553 번체 중국어 묶음도 같은 모양으로 만든다(ja/<이름>.ts, export ja).
 const targets = Object.fromEntries(
-  ['en', 'ja'].flatMap((lang) => [
+  ['en', 'ja', 'zh'].flatMap((lang) => [
     [
       `game/src/i18n/${lang}/index.ts`,
       render(lang, 'game', {

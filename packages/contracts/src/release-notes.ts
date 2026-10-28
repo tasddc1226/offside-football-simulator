@@ -21,6 +21,8 @@ export const ReleaseNoteSchema = z
     ...noteText,
     en: ReleaseNoteTextSchema.optional(),
     ja: ReleaseNoteTextSchema.optional(),
+    /** T-11-553 번체 중국어. 없으면 영어 문구를 쓴다. */
+    zh: ReleaseNoteTextSchema.optional(),
     availability: z.enum(['web', 'app', 'web-app', 'web-app-pending']),
     appVersion: z
       .string()

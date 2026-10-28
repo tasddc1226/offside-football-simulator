@@ -10,7 +10,8 @@ const ANON = /^익명의 (공격수|미드필더|수비수|골키퍼)(?: No\.(\d
 
 export function anonText(anon: string, lang: Lang): string {
   if (lang === 'ko') return anon;
-  if (anon === YOUTH_NAME) return lang === 'ja' ? 'ユース選手' : 'Youth player';
+  if (anon === YOUTH_NAME)
+    return lang === 'ja' ? 'ユース選手' : lang === 'zh' ? '青訓球員' : 'Youth player';
   const m = ANON.exec(anon);
   const pos = m && POS_OF_LABEL.get(m[1]!);
   return pos ? anonName(pos, m[2] ? Number(m[2]) : null, lang) : anon;

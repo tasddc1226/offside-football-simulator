@@ -61,6 +61,7 @@ const ko = {
   translationsHint: '비워 두면 한국어 원문을 보여 줘요. 한국어를 고치면 번역도 같이 고쳐 주세요.',
   langEn: '영어',
   langJa: '일본어',
+  langZh: '번체 중국어',
   translateDraft: '번역 초안 만들기',
   translating: '번역하는 중…',
   translateDone: '번역 초안을 채웠어요. 읽어 보고 고쳐 주세요.',

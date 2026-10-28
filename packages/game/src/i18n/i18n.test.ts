@@ -9,6 +9,7 @@ import type { GameState } from '../types.js';
 import { tn } from './names.js';
 import { en } from './en/index.js';
 import { ja } from './ja/index.js';
+import { zh } from './zh/index.js';
 
 // T-11-106 게임 엔진 문구. 네임스페이스(i18n/ko ↔ i18n/en), 이벤트 문구(_events), 저장된 이름 대응표(_names)를 검사하고,
 // 같은 시드를 한국어·영어로 돌려 문구 말고는 결과가 똑같은지(언어가 게임을 바꾸지 않는지) 확인한다.
@@ -16,12 +17,17 @@ const HANGUL = /[가-힣]/;
 const files = readdirSync(new URL('./ko', import.meta.url))
   .filter((f) => f.endsWith('.ts'))
   .map((f) => f.slice(0, -3));
-// T-11-140 일본어(ja)도 영어와 같은 검사를 받는다.
+// T-11-140 일본어(ja) · T-11-553 번체 중국어(zh)도 영어와 같은 검사를 받는다.
 const LANGS = [
   ['en', en],
   ['ja', ja],
+  ['zh', zh],
 ] as const;
-const dictFiles: Record<string, Record<string, Record<string, unknown>>> = { en: {}, ja: {} };
+const dictFiles: Record<string, Record<string, Record<string, unknown>>> = {
+  en: {},
+  ja: {},
+  zh: {},
+};
 for (const f of files) {
   await import(`./ko/${f}.ts`);
   for (const [lang] of LANGS)

@@ -1,6 +1,7 @@
 import { retentionPushText as ko, type RetentionStory } from '../i18n/ko/retentionPush.js';
 import { retentionPushText as en } from '../i18n/en/retentionPush.js';
 import { retentionPushText as ja } from '../i18n/ja/retentionPush.js';
+import { retentionPushText as zh } from '../i18n/zh/retentionPush.js';
 import type { Lang } from '../lang.js';
 
 // T-11-501 리텐션 푸시 문구 채우기와 되읽기. 알림함에는 한국어 문장이 남으므로, 다른 언어로 보일 때는 한국어 틀에 맞춰
@@ -37,7 +38,7 @@ export function retentionText(text: string, lang: Exclude<Lang, 'ko'>): string |
     const m = re.exec(text);
     if (!m) continue;
     const params = Object.fromEntries(keys.map((k, i) => [k, Number(m[i + 1])])) as RetentionParams;
-    return fillRetention((lang === 'en' ? en : ja)[story][part], params);
+    return fillRetention({ en, ja, zh }[lang][story][part], params);
   }
   return null;
 }

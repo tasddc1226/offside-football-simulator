@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { koSources, ns, resolveLocale, setLocale, AUTO_DETECT } from './core';
 import { en } from './en/index';
 import { ja } from './ja/index';
+import { zh } from './zh/index';
 
 // 모든 한국어 네임스페이스와 같은 이름의 영어 사전을 불러온다(ns 이름 중복이면 여기서 터진다).
 // 파일 이름 = ns() 이름 = 영어 파일의 export 이름 = en/index.ts의 키.
@@ -16,12 +17,17 @@ const gameNames = new Set(
     .filter((f) => f.endsWith('.ts'))
     .map((f) => f.slice(0, -3)),
 );
-// T-11-140 일본어(ja)도 영어와 같은 검사를 받는다.
+// T-11-140 일본어(ja) · T-11-553 번체 중국어(zh)도 영어와 같은 검사를 받는다.
 const LANGS = [
   ['en', en],
   ['ja', ja],
+  ['zh', zh],
 ] as const;
-const dictFiles: Record<string, Record<string, Record<string, unknown>>> = { en: {}, ja: {} };
+const dictFiles: Record<string, Record<string, Record<string, unknown>>> = {
+  en: {},
+  ja: {},
+  zh: {},
+};
 for (const f of files) {
   await import(`./ko/${f}.ts`);
   for (const [lang] of LANGS)
@@ -54,10 +60,15 @@ describe('i18n core', () => {
     expect(resolveLocale(null, ['en-US'])).toBe(AUTO_DETECT ? 'en' : 'ko');
     expect(resolveLocale(null, ['ja-JP'])).toBe(AUTO_DETECT ? 'ja' : 'ko');
     expect(resolveLocale('ja', ['ko-KR'])).toBe('ja');
+    // 번체 · 간체 기기 모두 번체 중국어로(간체 사전이 없다).
+    expect(resolveLocale(null, ['zh-TW'])).toBe(AUTO_DETECT ? 'zh' : 'ko');
+    expect(resolveLocale(null, ['zh-Hant-HK'])).toBe(AUTO_DETECT ? 'zh' : 'ko');
+    expect(resolveLocale(null, ['zh-CN'])).toBe(AUTO_DETECT ? 'zh' : 'ko');
+    expect(resolveLocale('zh', ['ja-JP'])).toBe('zh');
   });
 });
 
-describe('영어·일본어 사전', () => {
+describe('영어·일본어·번체 중국어 사전', () => {
   it.each(LANGS)(
     '파일 이름과 네임스페이스 이름이 같고, %s/index.ts가 모두 묶는다',
     (_lang, dict) => {
@@ -72,7 +83,7 @@ describe('영어·일본어 사전', () => {
     },
   );
 
-  it('묶음(en·ja index)이 생성 스크립트 결과와 같다', () => {
+  it('묶음(en·ja·zh index)이 생성 스크립트 결과와 같다', () => {
     // node tooling/scripts/i18n-index.mjs — 모든 언어·패키지를 한 번에 본다.
     execFileSync('node', [
       new URL('../../../../tooling/scripts/i18n-index.mjs', import.meta.url).pathname,

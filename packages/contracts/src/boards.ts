@@ -43,13 +43,15 @@ const TranslatedTextSchema = postText(TRANSLATED_BODY_MAX);
 export const PostTranslationsSchema = z.strictObject({
   en: TranslatedTextSchema.optional(),
   ja: TranslatedTextSchema.optional(),
+  zh: TranslatedTextSchema.optional(),
 });
 export type PostTranslations = z.infer<typeof PostTranslationsSchema>;
-/** T-11-146 관리자 "번역 초안 만들기" — 한국어 제목·본문을 보내면 영어·일본어 초안을 받는다(저장은 하지 않는다). */
+/** T-11-146 관리자 "번역 초안 만들기" — 한국어 제목·본문을 보내면 영어·일본어·번체 중국어 초안을 받는다(저장은 하지 않는다). */
 export const PostTranslateInputSchema = PostTextSchema;
 export const PostTranslateResponseSchema = z.object({
   en: TranslatedTextSchema,
   ja: TranslatedTextSchema,
+  zh: TranslatedTextSchema,
 });
 export type PostText = z.infer<typeof PostTextSchema>;
 export type PostTranslateResponse = z.infer<typeof PostTranslateResponseSchema>;

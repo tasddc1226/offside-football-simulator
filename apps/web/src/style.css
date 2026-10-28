@@ -13,6 +13,12 @@
     'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', Meiryo,
     'Noto Sans JP', system-ui, sans-serif;
 }
+/* T-11-553 번체 중국어도 한자가 한국식 글꼴로 그려지지 않게 번체 시스템 서체를 먼저 쓴다. */
+:root:lang(zh) {
+  --body:
+    'PingFang TC', 'Heiti TC', 'Microsoft JhengHei UI', 'Microsoft JhengHei', 'Noto Sans TC',
+    system-ui, sans-serif;
+}
 :root {
   --tabbar-h: 60px;
   /* T-11-036 게임 화면 고정 진행 바(준비 요약 줄 + 버튼) 높이 */

@@ -1,6 +1,6 @@
 // T-11-102 화면 문구 언어. 고른 언어는 이 기기(saveKey)에 두고, 없으면 기기 언어를 따른다(core.AUTO_DETECT).
 // 기기 언어는 core.deviceLocales(네이티브 모듈 없이 Intl)로 읽는다.
-// 영어·일본어 사전은 앱 번들에 함께 넣되 그 언어일 때만 읽는다(require — 한국어 시작 경로에서 평가하지 않는다).
+// 영어·일본어·번체 중국어 사전은 앱 번들에 함께 넣되 그 언어일 때만 읽는다(require — 한국어 시작 경로에서 평가하지 않는다).
 // 바꾸면 부른 쪽(설정 화면)이 prefs.lang을 바꿔 _layout이 루트를 다시 그린다. store는 여기서 가져오지 않는다 —
 // setup.ts가 저장소(MMKV)를 정하기 전에 store가 평가되면 테마 설정을 못 읽는다.
 import {
@@ -12,12 +12,14 @@ import {
 } from '@offside/app-core/i18n/core';
 import type { en as EnDicts } from '@offside/app-core/i18n/en/index';
 import type { ja as JaDicts } from '@offside/app-core/i18n/ja/index';
+import type { zh as ZhDicts } from '@offside/app-core/i18n/zh/index';
 import { loadKey, saveKey } from '@offside/game/storage';
 
 /* eslint-disable @typescript-eslint/no-require-imports -- 그 언어일 때만 평가한다 */
 const LOADERS: Partial<Record<Locale, () => Record<string, object>>> = {
   en: () => (require('@offside/app-core/i18n/en/index') as { en: typeof EnDicts }).en,
   ja: () => (require('@offside/app-core/i18n/ja/index') as { ja: typeof JaDicts }).ja,
+  zh: () => (require('@offside/app-core/i18n/zh/index') as { zh: typeof ZhDicts }).zh,
 };
 /* eslint-enable @typescript-eslint/no-require-imports */
 

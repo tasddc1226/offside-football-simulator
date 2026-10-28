@@ -1,3 +1,4 @@
+import { LOCALES } from '@offside/contracts/i18n';
 import type { Bindings } from '../env.js';
 import { runNewsPush } from './dispatch.js';
 import { runPersonalPush } from './personal.js';
@@ -14,7 +15,7 @@ function validWork(body: unknown): body is PushWork {
     return (
       validId(value.id) &&
       value.id.startsWith('test:ntf_') &&
-      ['ko', 'en', 'ja'].includes(value.lang ?? '')
+      (LOCALES as readonly string[]).includes(value.lang ?? '')
     );
   return (
     (value.kind === 'news' || value.kind === 'personal') &&

@@ -46,6 +46,12 @@ const TEXT: Record<
     app: 'アプリに適用しました',
     pending: (v) => `Web版に先に適用しました。アプリは${v}のアップデートで提供する予定です`,
   },
+  zh: {
+    title: (d) => `${d} 更新說明`,
+    web: '已套用至網頁版',
+    app: '已套用至 App',
+    pending: (v) => `已先套用至網頁版，App 將於 ${v} 更新中提供`,
+  },
 };
 
 export function releaseDay(now: string) {
@@ -76,7 +82,9 @@ export function appendReleaseNotes(
   let number = Math.max(0, ...numbers);
   const added = entries
     .map((entry) => {
-      const { title, items } = (lang !== 'ko' && entry[lang]) || entry;
+      // 번체 중국어 문구가 없는 옛 항목은 영어로 보인다(한국어보다 읽기 쉽다).
+      const { title, items } =
+        (lang !== 'ko' && (entry[lang] ?? (lang === 'zh' ? entry.en : undefined))) || entry;
       const availability =
         entry.availability === 'web-app-pending'
           ? `\n- ${t.pending(entry.appVersion!)}`
@@ -241,8 +249,18 @@ export async function publishReleaseNotes(db: D1Database, input: PublishReleaseN
               JSON.stringify(
                 balancePatches.map((entry) => ({
                   id: entry.id,
-                  title: { ko: entry.title, en: entry.en?.title, ja: entry.ja?.title },
-                  items: { ko: entry.items, en: entry.en?.items, ja: entry.ja?.items },
+                  title: {
+                    ko: entry.title,
+                    en: entry.en?.title,
+                    ja: entry.ja?.title,
+                    zh: entry.zh?.title,
+                  },
+                  items: {
+                    ko: entry.items,
+                    en: entry.en?.items,
+                    ja: entry.ja?.items,
+                    zh: entry.zh?.items,
+                  },
                   changes: entry.balance === true ? null : entry.balance!.changes,
                 })),
               ),
