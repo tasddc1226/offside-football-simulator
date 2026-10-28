@@ -6,6 +6,7 @@ const f = vi.hoisted(() => ({
   create: vi.fn(),
   listeners: new Map(),
   countReward: vi.fn(),
+  poolCreate: vi.fn(),
 }));
 vi.mock('react-native', () => ({ Platform: { select: (units) => units[f.platform] } }));
 vi.mock('react-native-google-mobile-ads', () => ({
@@ -13,6 +14,15 @@ vi.mock('react-native-google-mobile-ads', () => ({
   RewardedAdEventType: { LOADED: 'loaded', EARNED_REWARD: 'earned' },
   TestIds: { REWARDED: 'test-rewarded' },
   RewardedAd: { createForAdRequest: f.create },
+  AdFormat: { REWARDED: 'rewarded' },
+  AdPoolPresets: {
+    fullscreen: (format, adUnitId, options) => ({
+      poolId: `${format}-${adUnitId}`,
+      adUnitId,
+      ...options,
+    }),
+  },
+  AdPools: { create: f.poolCreate },
 }));
 vi.mock('./adConsent', () => ({ askConsent: f.consent }));
 vi.mock('./adFree', () => ({
@@ -37,6 +47,8 @@ beforeEach(() => {
   f.platform = 'ios';
   f.owned = false;
   f.consent.mockResolvedValue(true);
+  // 기본은 미리 불러오기를 못 쓰는 기기(바로 불러오기). 미리 불러오기 사례는 아래에서 따로 준다.
+  f.poolCreate.mockRejectedValue(new Error('no preloader'));
   show = vi.fn().mockResolvedValue(undefined);
   f.create.mockImplementation(() => ({
     loaded: true,
@@ -49,11 +61,12 @@ beforeEach(() => {
   }));
 });
 afterEach(() => vi.unstubAllGlobals());
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 async function begin(placement = 'candidates') {
   const { claimReward } = await import('./rewarded');
   const grant = vi.fn();
   const result = claimReward(placement, grant, 'skipped');
-  await Promise.resolve();
+  await flush();
   return { grant, result };
 }
 describe('candidate report rewarded placement', () => {
@@ -127,5 +140,88 @@ describe('boost', () => {
       expect(await result).toBe('');
       expect(grant).toHaveBeenCalledOnce();
     }
+  });
+});
+describe('T-11-558 preloaded rewarded ads', () => {
+  function pooledAd() {
+    const events = new Map();
+    return {
+      events,
+      format: 'rewarded',
+      isStaleByPolicy: () => false,
+      destroy: vi.fn(),
+      show: vi.fn().mockResolvedValue(undefined),
+      addAdEventListener: (event, fn) => {
+        events.set(event, fn);
+        return () => events.delete(event);
+      },
+    };
+  }
+  it('prepares one non-personalized pool per unit and skips ad-free purchasers', async () => {
+    f.poolCreate.mockResolvedValue({ poll: vi.fn() });
+    const { prepareReward } = await import('./rewarded');
+    prepareReward('boost');
+    prepareReward('boost');
+    await flush();
+    expect(f.poolCreate).toHaveBeenCalledExactlyOnceWith({
+      poolId: 'rewarded-ca-app-pub-3797087216173591/9962450572',
+      adUnitId: 'ca-app-pub-3797087216173591/9962450572',
+      requestOptions: { requestNonPersonalizedAdsOnly: true },
+    });
+    f.owned = true;
+    prepareReward('peek');
+    await flush();
+    expect(f.poolCreate).toHaveBeenCalledOnce();
+  });
+  it('shows a preloaded ad right away and grants after earning', async () => {
+    const ad = pooledAd();
+    f.poolCreate.mockResolvedValue({ poll: vi.fn().mockResolvedValue({ status: 'filled', ad }) });
+    const { prepareReward } = await import('./rewarded');
+    prepareReward('candidates');
+    const { grant, result } = await begin();
+    expect(ad.show).toHaveBeenCalledOnce();
+    expect(f.create).not.toHaveBeenCalled();
+    ad.events.get('opened')();
+    ad.events.get('earned')();
+    ad.events.get('closed')();
+    expect(await result).toBe('');
+    expect(grant).toHaveBeenCalledOnce();
+    expect(ad.destroy).toHaveBeenCalledOnce();
+    expect(ad.events.size).toBe(0);
+  });
+  it.each([
+    ['empty', { status: 'empty' }],
+    ['no-fill', { status: 'no-fill', error: {} }],
+  ])('loads on demand when the pool is %s', async (_, polled) => {
+    f.poolCreate.mockResolvedValue({ poll: vi.fn().mockResolvedValue(polled) });
+    const { grant, result } = await begin();
+    expect(f.create).toHaveBeenCalledOnce();
+    f.listeners.get('loaded')();
+    f.listeners.get('opened')();
+    f.listeners.get('earned')();
+    f.listeners.get('closed')();
+    expect(await result).toBe('');
+    expect(grant).toHaveBeenCalledOnce();
+  });
+  it('drops a stale preloaded ad and loads on demand', async () => {
+    const ad = { ...pooledAd(), isStaleByPolicy: () => true };
+    f.poolCreate.mockResolvedValue({ poll: vi.fn().mockResolvedValue({ status: 'filled', ad }) });
+    const { result } = await begin();
+    expect(ad.destroy).toHaveBeenCalledOnce();
+    expect(ad.show).not.toHaveBeenCalled();
+    expect(f.create).toHaveBeenCalledOnce();
+    f.listeners.get('closed')();
+    await result;
+  });
+  it('falls back to loading on demand when the preloaded ad cannot be shown', async () => {
+    const ad = pooledAd();
+    ad.show.mockRejectedValue(new Error('declined'));
+    f.poolCreate.mockResolvedValue({ poll: vi.fn().mockResolvedValue({ status: 'filled', ad }) });
+    const { result } = await begin();
+    await flush();
+    expect(ad.destroy).toHaveBeenCalledOnce();
+    expect(f.create).toHaveBeenCalledOnce();
+    f.listeners.get('closed')();
+    expect(await result).toBe('unavailable');
   });
 });

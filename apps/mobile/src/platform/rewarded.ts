@@ -1,12 +1,18 @@
 // 보상형 광고(AdMob) 공용 재생. 후보 잠재력(T-11-118, 후보 다시 뽑기 T-11-154도 같은 단위)·잠재력 엿보기·강화가 쓴다.
 // T-11-117 두 곳의 실적을 따로 보려고 광고 단위를 나눴다(재생 흐름은 같다).
 // 비개인화 광고만 요청하고, 동의는 배너와 같은 UMP를 쓴다. 개발 빌드는 구글 테스트 광고를 쓴다.
+// T-11-558 버튼이 보이면 SDK 미리 불러오기(Ad Preloading)로 단위마다 1개를 준비해 두고, 누르면 바로 띄운다.
+// 준비된 광고가 없거나 미리 불러오기를 못 쓰면 예전처럼 누른 뒤에 불러온다.
 import { Platform } from 'react-native';
 import {
   AdEventType,
+  AdFormat,
+  AdPoolPresets,
+  AdPools,
   RewardedAd,
   RewardedAdEventType,
   TestIds,
+  type AdPool,
 } from 'react-native-google-mobile-ads';
 import { adText } from '@offside/app-core/i18n/ko/ad';
 import { askConsent } from './adConsent';
@@ -45,15 +51,15 @@ export const rewardOffer = (p: RewardPlacement, owned: boolean): 'free' | 'ad' |
  */
 type WatchResult = 'earned' | 'closed' | 'failed';
 
-function watch(unit: string): Promise<WatchResult> {
+/** 보상형 광고 하나를 띄우는 데 필요한 것 — 바로 만든 광고와 미리 불러 둔 광고가 같이 쓴다. */
+type Playable = Pick<RewardedAd, 'show' | 'addAdEventListener'>;
+
+/** 띄우고 닫힐 때까지 기다린다. loaded가 있으면 LOADED를 기다렸다가 띄우고(바로 만든 광고), 없으면 바로 띄운다. */
+function play(ad: Playable, load?: () => boolean): Promise<WatchResult> {
   return new Promise((resolve) => {
-    const ad = RewardedAd.createForAdRequest(unit, { requestNonPersonalizedAdsOnly: true });
     let earned = false;
     let shown = false;
     const offs = [
-      ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
-        ad.show().catch(() => done());
-      }),
       ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
         earned = true;
       }),
@@ -64,14 +70,91 @@ function watch(unit: string): Promise<WatchResult> {
       ad.addAdEventListener(AdEventType.ERROR, () => done()),
     ];
     // 불러오기가 끝나지 않으면(네트워크) 20초에서 끊는다. 보여 주는 중이면 닫힐 때 끝난다.
-    const timer = setTimeout(() => !ad.loaded && done(), 20_000);
+    let timer: ReturnType<typeof setTimeout> | undefined;
     function done() {
       clearTimeout(timer);
       offs.forEach((off) => off());
       resolve(earned ? 'earned' : shown ? 'closed' : 'failed');
     }
-    ad.load();
+    if (load) {
+      offs.push(
+        ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
+          ad.show().catch(() => done());
+        }),
+      );
+      timer = setTimeout(() => !load() && done(), 20_000);
+    } else ad.show().catch(() => done());
   });
+}
+
+function watch(unit: string): Promise<WatchResult> {
+  const ad = RewardedAd.createForAdRequest(unit, { requestNonPersonalizedAdsOnly: true });
+  const result = play(ad, () => ad.loaded);
+  ad.load();
+  return result;
+}
+
+/** 단위마다 미리 불러오기 풀 하나. 만들지 못하면 null로 남겨 이번 실행에서는 다시 만들지 않는다. */
+const pools = new Map<string, Promise<AdPool | null>>();
+/** 풀 만들기 · 꺼내기가 이 시간 안에 끝나지 않으면 기다리지 않고 바로 불러온다. */
+const POOL_WAIT_MS = 3_000;
+
+const within = <T>(p: Promise<T>, ms: number, late?: (v: T) => void) =>
+  new Promise<T | null>((resolve) => {
+    let over = false;
+    const timer = setTimeout(() => {
+      over = true;
+      resolve(null);
+    }, ms);
+    void p.then((v) => {
+      if (over) return late?.(v);
+      clearTimeout(timer);
+      resolve(v);
+    });
+  });
+
+function poolOf(unit: string) {
+  let pool = pools.get(unit);
+  if (!pool) {
+    pool = askConsent()
+      .then((ok) =>
+        ok
+          ? AdPools.create(
+              AdPoolPresets.fullscreen(AdFormat.REWARDED, unit, {
+                requestOptions: { requestNonPersonalizedAdsOnly: true },
+              }),
+            )
+          : null,
+      )
+      .catch(() => null);
+    pools.set(unit, pool);
+  }
+  return pool;
+}
+
+/** 보상 버튼이 보일 때 부른다. 광고 제거 구매자 · 단위 없음은 부르지 않는다. 이미 준비 중이면 아무것도 하지 않는다. */
+export function prepareReward(p: RewardPlacement) {
+  const unit = unitOf(p);
+  if (!unit || adsOff(adFree)) return;
+  void poolOf(unit);
+}
+
+/** 미리 불러 둔 광고를 띄운다. 꺼낼 광고가 없거나 띄우지 못하면 null(바로 불러오기로 넘어간다). */
+async function watchPooled(unit: string): Promise<WatchResult | null> {
+  const pool = await within(poolOf(unit), POOL_WAIT_MS);
+  if (!pool) return null;
+  const r = await within(pool.poll(), POOL_WAIT_MS, (late) => {
+    if (late.status === 'filled') late.ad.destroy();
+  });
+  if (r?.status !== 'filled') return null;
+  const ad = r.ad;
+  if (ad.format !== AdFormat.REWARDED || ad.isStaleByPolicy()) {
+    ad.destroy();
+    return null;
+  }
+  const result = await play(ad);
+  ad.destroy();
+  return result === 'failed' ? null : result;
 }
 
 /**
@@ -88,7 +171,7 @@ export async function claimReward(
   if (!free) {
     const unit = unitOf(p);
     if (!unit || !(await askConsent())) return adText.rewardedUnavailable;
-    const result = await watch(unit);
+    const result = (await watchPooled(unit)) ?? (await watch(unit));
     if (result === 'failed') return adText.rewardedUnavailable;
     if (result === 'closed') return skipped;
   }

@@ -71,6 +71,12 @@ export function prepare(root) {
   if (!contents[config].includes(androidFile))
     throw new Error('1.1.2 app.config.js changed shape.');
   contents[config] = contents[config].replace(androidFile, 'const androidFile = undefined;');
+  // T-11-558 화면이 보상 버튼을 그릴 때 부르는 미리 불러오기. 1.1.2의 rewarded.ts는 누른 뒤에 불러오므로 아무것도 하지 않는다.
+  const rewarded = files.indexOf('apps/mobile/src/platform/rewarded.ts');
+  if (contents[rewarded].includes('prepareReward'))
+    throw new Error('1.1.2 rewarded.ts changed shape.');
+  contents[rewarded] +=
+    '\n/** T-11-558 1.1.2 호환: 미리 불러오기 없음. */\nexport function prepareReward(_placement: string) {}\n';
   files.forEach((file, i) => {
     const target = resolve(root, file);
     mkdirSync(dirname(target), { recursive: true });

@@ -75,7 +75,7 @@ import {
   startCareer,
   toast,
 } from '../../game/host';
-import { claimReward, rewardOffer } from '../../platform/rewarded';
+import { claimReward, prepareReward, rewardOffer } from '../../platform/rewarded';
 import { adFree, adsOff } from '../../platform/adFree';
 import { adRerollLeft, claimAdReroll } from '../../platform/adReroll';
 import { goHome, goRerollShop } from '../../game/nav';
@@ -354,6 +354,11 @@ export default function Create() {
   // T-11-154 광고 보고 다시 뽑기(리롤권 없이, 하루 2번, 이 기기에서 센다). 로그인하지 않아도 쓴다. 광고 단위 · 버튼 종류는
   // 후보 잠재력(offer)과 같다. 남은 횟수는 그릴 때마다 기기 저장소에서 읽는다(동기 · 작다).
   const adLeft = adRerollLeft();
+  // T-11-558 광고 버튼(잠재력 보기 · 다시 뽑기)이 보이면 광고를 미리 불러 둔다.
+  const adShown = offer === 'ad' && hasCandidates && (adLeft > 0 || !s.candidatePotentialOpen);
+  useEffect(() => {
+    if (adShown) prepareReward('candidates');
+  }, [adShown]);
   async function rerollWithAd() {
     if (rerollLock.current || rewardLock.current) return;
     rerollLock.current = true;
