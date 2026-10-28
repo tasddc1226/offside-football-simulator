@@ -4,7 +4,6 @@ import type { HofRnMsgs } from '../ko/hofRn';
 export const hofRn: Translation<HofRnMsgs> = {
   season: 'シーズン',
   seasonAria: '永久欠番のシーズン',
-  notOpen: '（開幕予定）',
   lead: 'ひとつのクラブで長く活躍した選手の背番号は二度と使われません。クラブごとにひとつの番号につき1人だけです。',
   opens: (p) => `${p.name}は${p.when}（韓国時間）に開幕します。`,
   loadFailed: '永久欠番を読み込めませんでした。しばらくしてからもう一度お試しください。',

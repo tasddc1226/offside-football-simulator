@@ -55,6 +55,7 @@ import {
 import { hofText as L } from '@offside/app-core/i18n/ko/hof';
 import { raiserLabel } from '@offside/app-core/hofRaiser';
 import { seasonLabel } from '@offside/app-core/seasonName';
+import { seasonOptions } from '../ui/seasonOptions';
 
 const TOP = 3;
 const PER_PAGE = 10;
@@ -287,10 +288,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
               onChange={(id) => pickSeason(id === 'all' ? null : Number(id))}
               options={[
                 { value: 'all', label: L.allSeasons },
-                ...[PRESEASON, ...SERVICE_SEASONS].map((s) => ({
-                  value: s.id,
-                  label: `${seasonLabel(s.id, s.name)}${notOpen(s) ? L.notOpen : ''}`,
-                })),
+                ...seasonOptions([PRESEASON, ...SERVICE_SEASONS], now),
               ]}
             />
           }

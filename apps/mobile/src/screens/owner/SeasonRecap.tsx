@@ -54,10 +54,11 @@ import { DISPLAY, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Press, Screen, Topbar, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
-import { Seg, TabOpt } from '../board/parts';
+import { SelectField } from '../settings/parts';
 import { RECAP_INK, RecapBackdrop, RecapShare } from './RecapShare';
 import { RecapCardReel } from './recap/RecapCardReel';
 import { RecapTeamPhoto } from './recap/RecapTeamPhoto';
+import { seasonOptions } from '../../ui/seasonOptions';
 
 const StillRecord = createContext(false);
 
@@ -319,21 +320,14 @@ export default function SeasonRecap({ record }: { record?: SeasonRecapResponse }
                 ) : null}
               </View>
               {seasons && seasons.length > 1 ? (
-                <Seg
-                  cols={Math.min(seasons.length, 3)}
+                <SelectField
                   label={L.pickSeason}
+                  testID="recap-season"
+                  value={season ?? seasons[seasons.length - 1]!}
+                  options={seasonOptions(seasons)}
+                  onChange={setPicked}
                   style={{ marginTop: 4 }}
-                >
-                  {seasons.map((id) => (
-                    <TabOpt
-                      key={id}
-                      title={teamSeasonLabel(id)}
-                      selected={season === id}
-                      testID={`recap-season-${id}`}
-                      onPress={() => setPicked(id)}
-                    />
-                  ))}
-                </Seg>
+                />
               ) : null}
               {st.kind === 'loading' ? (
                 <Txt tone="muted" accessibilityLiveRegion="polite" style={muted}>

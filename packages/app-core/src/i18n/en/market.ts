@@ -108,7 +108,6 @@ export const market: Translation<MarketMsgs> = {
   releaseIntro:
     'Releasing a player you raised adds their card base price to your club funds. Their Hall of Fame record stays.',
   seasonGroup: 'Season',
-  seasonChip: (p) => `${p.name} players`,
   pickAll: 'Select all',
   pickNone: 'Clear selection',
   pickAllMax: (p) => `Select up to ${p.n}`,

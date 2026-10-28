@@ -4965,10 +4965,6 @@ html:has(.wrap.has-actionbar) {
   background: var(--surface-2);
   font-size: var(--fs-label);
 }
-/* T-10-090 전체 / 시즌 순위 전환과 개막 전 안내. */
-.hof-seasons {
-  margin-top: 4px;
-}
 /* T-11-018 포지션별 순위 — 다섯 칸을 한 줄에(폰 폭에서도). */
 .seg.hof-pos {
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -4982,10 +4978,7 @@ html:has(.wrap.has-actionbar) {
   font-size: var(--fs-body2);
   white-space: nowrap;
 }
-/* T-10-103 개막 전 시즌 버튼에 'Coming soon' — 버튼 높이는 그대로, 오른쪽 위 테두리에 걸친다. */
-.hof-seasons .opt {
-  position: relative;
-}
+/* T-10-103 개막 전 표시 'Coming soon' — 오른쪽 위 테두리에 걸친다. */
 .soon-tag {
   position: absolute;
   top: -9px;
@@ -5020,10 +5013,6 @@ html:has(.wrap.has-actionbar) {
     grid-template-columns: 34px minmax(0, 1fr) auto;
     column-gap: 8px;
     padding-inline: 2px;
-  }
-  .hof-seasons .opt {
-    min-height: 44px; /* T-10-117 터치 44px */
-    padding-block: 6px;
   }
   .hof-sorts {
     position: relative;

@@ -123,7 +123,6 @@ const ko = {
   releaseIntro:
     '직접 키운 선수를 내보내면 카드 기준가만큼 구단 자금이 생겨요. 명예의 전당 기록은 그대로 남아요.',
   seasonGroup: '시즌',
-  seasonChip: (p: { name: string }) => `${p.name} 선수`,
   pickAll: '전체 선택',
   pickNone: '선택 해제',
   pickAllMax: (p: { n: number }) => `최대 ${p.n}명 선택`,

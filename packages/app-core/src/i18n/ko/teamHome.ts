@@ -50,7 +50,6 @@ const ko = {
   modeFriends: '친구',
   // 머리(웹 TeamHead)
   seasonSelect: '시즌 선택',
-  seasonNow: ' (지금)',
   teamMenu: '팀 메뉴',
   menuLogo: '로고 설정',
   menuRename: '이름 바꾸기',
