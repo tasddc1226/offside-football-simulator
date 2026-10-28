@@ -139,13 +139,13 @@ export const cup: Translation<CupMsgs> = {
   divisionEntries: (p) => `${p.n}チーム申込`,
   divisionMine: '自分の部門',
   divisionFit: (p) =>
-    `チームOVR ${p.ovr}なので${p.division}から申し込めます。上の部門に挑戦してもかまいません。`,
+    `チームOVR ${p.ovr}なので${p.division}から申し込めます。組み合わせ抽選で、参加チームのOVRをもとに部門を分け直します。`,
   divisionLockNote: (p) =>
     `組み合わせ抽選から敗退するまで、チームOVR ${p.cap}を超えるメンバーには変えられません。`,
   ruleDivisions:
-    'チームOVRの部門（ジュニア・シニア・マスター）ごとに別の大会を開きます。OVRが上限以下の部門に申し込め、上の部門への挑戦もできます。1回の大会で1部門だけ参加できます。',
+    'チームOVRの部門（ジュニア・シニア・マスター）ごとに別の大会を開きます。OVRが上限以下の部門に申し込めます。1回の大会で1部門だけ参加できます。',
   ruleDivisionMove:
-    '抽選時にチームOVRが上限を超えていれば上の部門に移り、8チーム未満の部門は上の部門と一緒に戦います。',
+    '抽選時に参加チームが30チーム以上なら、参加チームのOVRを3つに分けて上限を決め直し、すべてのチームをOVRに合う部門に移します。8チーム未満の部門は上の部門と一緒に戦います。',
   notEntered: '今回の大会には申し込んでいません。',
   nextMatch: (p) => `次の試合 ${p.round} · ${p.vs} · ${p.at}`,
   nextPending: '次の対戦相手が決まるところです。',
@@ -171,7 +171,7 @@ export const cup: Translation<CupMsgs> = {
   barOverCapBlock: (p) =>
     `${p.division}の上限${p.cap}を超えているため保存できません。チームOVRを${p.cap}以下にしてください。`,
   barOverCapMove: (p) =>
-    `${p.division}の上限を超えています。このままだと抽選で上の部門に移ります。`,
+    `${p.division}の上限を超えています。このままだと抽選でOVRに合う部門に移ります。`,
   barShortBlock: (p) =>
     `カップ参加中は、スタメンに自分の選手を${p.min}人以上置かないと保存できません。`,
   barShortEntry: (p) => `カップに申し込むには、スタメンに自分の選手が${p.min}人以上必要です。`,

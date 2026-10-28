@@ -184,6 +184,36 @@ describe('T-11-410 구간 대회 진행', () => {
     expect(moved.map((n) => n.title)).toEqual(['시즌 1 제3회 오프사이드 컵 마스터로 옮겼어요']);
   });
 
+  it('T-11-552 신청이 30팀 이상이면 신청 팀 OVR 3등분으로 상한을 다시 정하고 아래로도 옮긴다', async () => {
+    // 센 팀이 마스터로 몰렸다: 주니어 2팀, 시니어 4팀, 마스터 30팀(84~93).
+    await enter(JUNIOR, [70, 75]);
+    await enter(SENIOR, [80, 82, 84, 86]);
+    const masters = await enter(
+      MASTER,
+      Array.from({ length: 30 }, (_, i) => 84 + (i % 10)),
+    );
+    // 36팀을 OVR 순으로 12팀씩 끊은 경계 OVR: 상한 86 · 89(경계 OVR이 같은 팀은 아랫 구간에 남아 15 · 9 · 12팀).
+    expect(await settleDivisions(ctx.db, EDITION, JUNIOR.drawAt)).toEqual({ moved: 22 });
+    expect([await countIn(JUNIOR), await countIn(SENIOR), await countIn(MASTER)]).toEqual([
+      15, 9, 12,
+    ]);
+    expect(
+      (await ctx.db.select().from(cups))
+        .filter((c) => c.edition === 3)
+        .map((c) => [c.id, c.ovrMax])
+        .sort(),
+    ).toEqual([
+      ['s1-3-junior', 86],
+      ['s1-3-master', null],
+      ['s1-3-senior', 89],
+    ]);
+    const note = await ctx.db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.profileId, masters[0]!.profileId));
+    expect(note.map((n) => n.title)).toEqual(['시즌 1 제3회 오프사이드 컵 주니어로 옮겼어요']);
+  });
+
   it('마스터가 모자라면 바로 아랫 구간을 마스터로 올린다', async () => {
     await enter(
       JUNIOR,
@@ -248,11 +278,22 @@ describe('T-11-410 구간 대회 진행', () => {
     // 조별 1차전: 구간마다 8경기, 합 24경기는 예산(32) 안이라 cron 한 번에 끝난다.
     const log = await runCup(ctx.db, JUNIOR.rounds[0]!, EDITION);
     expect(log!.filter((l) => l.step === 'play').map((l) => l.n)).toEqual([8, 8, 8]);
-    await expect(
-      checkCupLineup(ctx.db, j!.profileId, 1, [], 11, JUNIOR.drawAt, 81),
-    ).rejects.toMatchObject({ details: { reason: 'CUP_OVR_CAP' } });
+    // T-11-552 추첨 전 정리가 상한을 신청 팀 분포(아래 1/3 · 2/3의 가장 높은 OVR)로 다시 정했다: 80 · 88 → 79 · 87.
+    expect(
+      (await ctx.db.select().from(cups))
+        .filter((c) => c.edition === 3)
+        .map((c) => [c.id, c.ovrMax])
+        .sort(),
+    ).toEqual([
+      ['s1-3-junior', 79],
+      ['s1-3-master', null],
+      ['s1-3-senior', 87],
+    ]);
     await expect(
       checkCupLineup(ctx.db, j!.profileId, 1, [], 11, JUNIOR.drawAt, 80),
+    ).rejects.toMatchObject({ details: { reason: 'CUP_OVR_CAP' } });
+    await expect(
+      checkCupLineup(ctx.db, j!.profileId, 1, [], 11, JUNIOR.drawAt, 79),
     ).resolves.toBeUndefined();
     // 접수 중에는 막지 않는다(신청을 옮기면 된다).
     await expect(

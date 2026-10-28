@@ -6,7 +6,7 @@
   import { MANAGER_NAME_MAX, MANAGER_NAME_MIN, TEAM_NAME_MAX, TEAM_NAME_MIN, YOUTH_OVR, usesRankLadder } from '@offside/contracts/owner-team';
   import type { OwnerTeam, OwnerTeamResponse } from '@offside/app-core/api/team';
   import { num, recordText } from '@offside/app-core/teamText';
-  import { isPreseasonLegacy, preseasonTeamNote } from '@offside/app-core/teamOwner';
+  import { cupTeamLink, cupTeamNote, isPreseasonLegacy, preseasonTeamNote } from '@offside/app-core/teamOwner';
   import { doneOnEnter } from '../inputDone.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import TeamLogo from './TeamLogo.svelte';
@@ -31,6 +31,7 @@
     renaming = $bindable(),
     onseason,
     divisionNotice = null,
+    cupSeason = null,
   }: {
     team: OwnerTeam | null;
     logo: Logo | null;
@@ -51,10 +52,14 @@
     onseason: (id: number) => void;
     /** T-11-375 받은 경기로 바뀐 디비전 알림(한 번). */
     divisionNotice?: string | null;
+    /** T-11-552 끝나지 않은 컵에 참가 중인 지난 시즌(그 시즌 팀은 컵 명단으로 고친다). */
+    cupSeason?: number | null;
   } = $props();
   // T-11-113 개막 뒤 프리시즌 팀 — 친선전 전용으로 고칠 수 있다.
   const issues = $derived(teamNameIssues(name, manager));
   const legacy = $derived(isPreseasonLegacy(season, current));
+  const cupTeam = $derived(season > 0 && season === cupSeason);
+  const cupSeasonName = $derived(((o) => (o ? seasonLabel(o.id, o.name) : ''))(seasons.find((o) => o.id === cupSeason)));
   let menuOpen = $state(false);
   let menu = $state<HTMLDetailsElement>();
   let teamNameInput = $state<HTMLInputElement>();
@@ -110,9 +115,14 @@
       <div class="tm-record"><dt class="sr-only">{L.statRecord}</dt><dd>{recordText(team.record)}</dd></div>
       <div><dt>{usesRankLadder(team.season) ? L.statRp : L.statRating}</dt><dd>{num(team.rating)}</dd></div>
       {#if legacy}<div><dt>{L.statFriendly}</dt><dd>{L.statFriendlyOnly}</dd></div>
-      {:else}<div aria-label={editable ? L.leftAria({ left: matchesLeft, per: perDay }) : undefined}><dt>{editable ? L.statLeft : L.statSeason}</dt><dd>{editable ? L.statTimes({ n: matchesLeft }) : L.statPast}</dd></div>{/if}
+      {:else}<div aria-label={editable && !cupTeam ? L.leftAria({ left: matchesLeft, per: perDay }) : undefined}><dt>{editable && !cupTeam ? L.statLeft : L.statSeason}</dt><dd>{editable && !cupTeam ? L.statTimes({ n: matchesLeft }) : L.statPast}</dd></div>{/if}
     </dl>
     {#if !legacy && usesRankLadder(team.season)}<TeamDivision rating={team.rating} division={team.division} season={team.season} notice={divisionNotice} />{/if}
+  {/if}
+  {#if cupTeam}
+    <p class="muted fs-sm" data-team-cup-season>{cupTeamNote(seasonName)}</p>
+  {:else if cupSeason && season === current}
+    <button class="btn btn-sm self-start" data-act="team-cup-season" onclick={() => onseason(cupSeason!)}>{cupTeamLink(cupSeasonName)}</button>
   {/if}
   {#if legacy}
     <p class="muted fs-sm" data-team-legacy>{preseasonTeamNote()}</p>

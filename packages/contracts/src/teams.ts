@@ -220,6 +220,10 @@ export type OwnerTeam = z.infer<typeof OwnerTeamSchema>;
 export const OwnerTeamResponseSchema = z.strictObject({
   season: TeamSeasonSchema,
   current: TeamSeasonSchema.nullable(),
+  /**
+   * T-11-552 끝나지 않은 컵에 참가 중인 지난 시즌(시즌 1 제3회 컵). 그 시즌 팀은 컵이 끝날 때까지 고친다. 옛 응답에는 없다.
+   */
+  cupSeason: TeamSeasonSchema.nullable().optional(),
   seasons: z.array(TeamSeasonOptionSchema),
   team: OwnerTeamSchema.nullable(),
   players: z.array(TeamPlayerSchema),

@@ -128,10 +128,10 @@ describe('API query counts without changing eligibility or response data', () =>
     for (const check of [checkCupListing, checkCupManager]) {
       const traced = spyDb(ctx.env.DB),
         db = createDb(traced.DB);
-      await expect(check(db, who.profileId, 1, 'starter')).rejects.toMatchObject({
+      await expect(check(db, who.profileId, 'starter')).rejects.toMatchObject({
         details: { reason: 'CUP_CARD_LOCKED' },
       });
-      await expect(check(db, who.profileId, 1, 'not-a-starter')).resolves.toBeUndefined();
+      await expect(check(db, who.profileId, 'not-a-starter')).resolves.toBeUndefined();
       expect(traced.seen.filter((q) => /from "cup_matches"/.test(q))).toHaveLength(0);
     }
   });

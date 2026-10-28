@@ -1,0 +1,23 @@
+{
+  "id": "t-11-552-cup-divisions",
+  "title": "오프사이드 컵 구간을 OVR로 다시 나눠요",
+  "items": [
+    "조 추첨 때 신청한 팀들의 OVR로 주니어 · 시니어 · 마스터를 고르게 다시 나눠요. 구간이 바뀐 팀에는 알림을 보내요.",
+    "시즌 1이 끝난 뒤에도 제3회 컵은 시즌 1 팀으로 이어서 치러요. 컵에 나가는 시즌 1 팀은 시즌 2에도 고칠 수 있고, 그 선발 선수는 판매 · 방출할 수 없어요."
+  ],
+  "en": {
+    "title": "Offside Cup divisions now split by OVR",
+    "items": [
+      "At the draw, entries are re-split into Junior, Senior and Master by team OVR so each division is evenly filled. Teams that move get a notification.",
+      "Cup 3 keeps going with Season 1 teams after Season 1 ends. You can still edit the Season 1 team you entered during Season 2, and its starters can't be sold or released."
+    ]
+  },
+  "ja": {
+    "title": "オフサイドカップの区分をOVRで分け直します",
+    "items": [
+      "組み合わせ抽選の時に、申し込んだチームのOVRでジュニア・シニア・マスターを均等に分け直します。区分が変わったチームには通知が届きます。",
+      "シーズン1が終わっても、第3回カップはシーズン1のチームで続けて戦います。出場中のシーズン1チームはシーズン2でも編集でき、その先発選手は売却・放出できません。"
+    ]
+  },
+  "availability": "web-app"
+}

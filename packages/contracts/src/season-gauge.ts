@@ -33,6 +33,8 @@ export const SEASON_GAUGE = {
   maxDays: 60,
   lockAt: 0.9,
   noticeHours: 48,
+  /** 1 = 끝나지 않은 컵 · 리그가 있으면 마감을 그 뒤로 미룬다. */
+  waitEvents: 1,
 } as const;
 
 export type SeasonGaugeRules = {
@@ -42,8 +44,15 @@ export type SeasonGaugeRules = {
 /**
  * T-11-546 시즌 1은 공지한 대로 옛 규칙(목표 12 · 14~25일, 시간 하한으로 10/31 00:00 KST 마감)으로 끝낸다. 시즌 1 마감은
  * 확정 전이었어서 T-11-528 값을 그대로 쓰면 최대 기간이 60일로 늘어 마감이 12월로 밀린다.
+ * T-11-552 제3회 컵(결승 11/6)도 마감을 미루지 않는다. 컵은 시즌 1 팀으로 다음 시즌까지 이어서 치른다.
  */
-const SEASON1_GAUGE: SeasonGaugeRules = { ...SEASON_GAUGE, perUser: 12, minDays: 14, maxDays: 25 };
+const SEASON1_GAUGE: SeasonGaugeRules = {
+  ...SEASON_GAUGE,
+  perUser: 12,
+  minDays: 14,
+  maxDays: 25,
+  waitEvents: 0,
+};
 
 /** 그 시즌의 게이지 규칙. */
 export const gaugeRules = (season: number): SeasonGaugeRules =>
@@ -116,7 +125,11 @@ export function seasonDeadline(
   const { minEndsAt, maxEndsAt } = seasonBounds(startsAt, rules);
   const t = Math.max(ms(lockedAt) + rules.noticeHours * HOUR, ms(minEndsAt));
   const base = Math.min(ceilKstMidnight(t), ms(maxEndsAt));
-  return iso(cupEndsAt ? Math.max(base, ceilKstMidnight(ms(cupEndsAt) + CUP_SETTLE_MS)) : base);
+  return iso(
+    cupEndsAt && rules.waitEvents
+      ? Math.max(base, ceilKstMidnight(ms(cupEndsAt) + CUP_SETTLE_MS))
+      : base,
+  );
 }
 
 /**
