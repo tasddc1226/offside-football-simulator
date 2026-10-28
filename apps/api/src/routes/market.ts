@@ -49,7 +49,7 @@ import {
 } from '../db/repos/market.js';
 import { myFundsSpends } from '../db/repos/itemShop.js';
 import { myTeamIn, slotIdsOf } from '../db/repos/ownerTeams.js';
-import { checkCupListing } from './cup.js';
+import { checkCupListing, checkCupRelease } from './cup.js';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -251,7 +251,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const input = readBody(c, CreateListingBodySchema);
     const now = nowIso();
-    const season = seasonOrThrow(now);
+    seasonOrThrow(now);
     const teamSeason = teamSeasonAt(now);
     const [card, rules, [team]] = await Promise.all([
       cardForListing(db, input.careerId),
@@ -267,7 +267,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     if (card.locked) throw cardLocked();
     // T-11-474 지금 시즌 선발은 팀에서 뺀 뒤에 내놓는다(팔기 탭에도 보이지 않는다).
     if (team && slotIdsOf(team).includes(input.careerId)) throw inLineup();
-    await checkCupListing(db, me.id, season, input.careerId);
+    await checkCupListing(db, me.id, input.careerId);
     const band = priceBand(card.cardValue, rules);
     if (input.price < band.min || input.price > band.max)
       throw conflictError('판매가가 정해진 범위를 벗어났어요.', 'PRICE_OUT_OF_BAND');
@@ -353,6 +353,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     ]);
     const lineup = new Set(team ? slotIdsOf(team) : []);
     if (input.careerIds.some((id) => lineup.has(id))) throw inLineup();
+    await checkCupRelease(db, me.id, input.careerIds);
     const res = await releaseCards(db, {
       profileId: me.id,
       careerIds: [...new Set(input.careerIds)],

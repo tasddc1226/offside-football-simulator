@@ -23,7 +23,14 @@ export const initialInboxState = () => ({
 export type InboxState = ReturnType<typeof initialInboxState>;
 
 /** 캐시는 현재 세션의 메모리에만 둔다. 계정 변경은 진행 중인 이전 응답도 폐기한다. */
-export function createNotificationInbox(state: InboxState) {
+/**
+ * onRead는 알림 하나를 읽은 뒤 부른다(앱 아이콘 뱃지가 쓴다, T-11-547). wasUnread는 목록·상세에 그 알림이 없어
+ * 읽기 전 상태를 모르면 undefined다(푸시에서 바로 읽은 경우).
+ */
+export function createNotificationInbox(
+  state: InboxState,
+  hooks: { onRead?: (wasUnread: boolean | undefined) => void } = {},
+) {
   let epoch = 0;
   let lastLoad = 0;
   let pending: Promise<void> | null = null;
@@ -145,11 +152,13 @@ export function createNotificationInbox(state: InboxState) {
       }
       const { readAt } = NotificationReadSchema.parse(r.data);
       const item = state.items.find((row) => row.id === id);
+      const known = !!item || state.detail?.id === id;
       const wasUnread = item ? !item.readAt : state.detail?.id === id && !state.detail.readAt;
       if (item) item.readAt = readAt;
       if (state.detail?.id === id) state.detail.readAt = readAt;
       if (wasUnread) state.unreadCount = Math.max(0, state.unreadCount - 1);
       if (state.onlyUnread) state.items = state.items.filter((row) => !row.readAt);
+      hooks.onRead?.(known ? wasUnread : undefined);
     });
   }
   function readAll() {

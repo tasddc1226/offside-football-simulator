@@ -76,7 +76,7 @@ const listColumns = {
   ...summaryColumns,
   titles: sql<
     string | null
-  >`json_object('en', json_extract(${boardPosts.i18nJson}, '$.en.title'), 'ja', json_extract(${boardPosts.i18nJson}, '$.ja.title'))`,
+  >`json_object('en', json_extract(${boardPosts.i18nJson}, '$.en.title'), 'ja', json_extract(${boardPosts.i18nJson}, '$.ja.title'), 'zh', json_extract(${boardPosts.i18nJson}, '$.zh.title'))`,
 };
 type ListedPost = PostSummary & { titles: string | null };
 

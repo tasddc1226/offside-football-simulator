@@ -19,6 +19,8 @@ export const CUP_JA: Record<CupTextKey, string> = {
   movedTitle: '{cup}に移りました',
   movedUpBody:
     '組み合わせ抽選の時点でチームOVRが申し込んだ部門の上限を超えていたため、上の部門に移りました。',
+  sortedBody:
+    '組み合わせ抽選で、参加チームのOVRをもとに部門を分け直しました。チームOVR {ovr}に合う部門で戦います。',
   mergedBody: '申し込んだ部門のチームが{n}チームより少なかったため、上の部門と一緒に戦います。',
   adminCapOpen: '受付が始まった大会の上限は変えられません。',
   adminCapMaster: 'マスター・単一大会には上限がありません。',
@@ -73,6 +75,7 @@ export const CUP_JA: Record<CupTextKey, string> = {
   minFilled: 'オフサイドカップ参加中は、スタメンに自分の引退選手を{n}人以上置いてください。',
   cardListed: 'オフサイドカップ参加中は、移籍市場に出した選手をスタメンに入れられません。',
   cardLocked: 'オフサイドカップ参加中のスタメン選手は出品できません。',
+  cardReleaseLocked: 'オフサイドカップ参加中のスタメン選手は放出できません。',
   cardManager: 'オフサイドカップ参加中のスタメン選手は監督キャリアを始められません。',
   droppedTitle: '{cup}へのエントリーが取り消されました',
   droppedBody: '抽選時点でスタメン選手が{n}人未満だったため参加できませんでした。',

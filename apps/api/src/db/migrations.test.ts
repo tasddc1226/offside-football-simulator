@@ -118,7 +118,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'updated_at',
     // T-11-374 카드 과제를 낸 횟수(헌납의 명가).
     'exchanges',
-    // T-11-547 단계 · 새 칭호.
+    // T-11-556 단계 · 새 칭호.
     'forwards',
     'positions',
     'nations',
@@ -294,6 +294,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'updated_at',
     // T-11-374 카드 과제에 낸 카드(claim id). 소유자는 비고 released_at도 비어 있다.
     'consumed_in',
+    // T-11-548 기록이 지워진 카드의 공개 이름.
+    'public_name',
   ],
   // T-11-374 카드 과제를 낸 기록(주 · 시즌 횟수 상한).
   card_exchange_claims: [

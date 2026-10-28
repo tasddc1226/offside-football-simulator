@@ -580,6 +580,9 @@ export const cards = sqliteTable(
     manager: integer('manager', { mode: 'boolean' }).notNull().default(false),
     // T-11-374 카드 과제에 내서 사라진 카드면 그 기록 id(card_exchange_claims.id). 주인은 NULL, 방출 칸(released_*)은 비어 있다.
     consumedIn: text('consumed_in'),
+    // T-11-548 키운 사람이 계정을 지워 careers 행이 없는 카드의 공개 이름(지금 주인이 이름 변경권으로 붙인다). careers 행이
+    // 있으면 그쪽 public_name을 쓰고 이 칸은 비워 둔다.
+    publicName: text('public_name'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -1946,7 +1949,7 @@ export const ownerTitleProgress = sqliteTable('owner_title_progress', {
   firsts: integer('firsts').notNull(),
   // T-11-374 카드 과제 낸 횟수.
   exchanges: integer('exchanges').notNull().default(0),
-  // T-11-547 최고 능력치 90 이상 공격수 · 그런 선수의 포지션 가짓수 · 은퇴 선수 국적 가짓수 · 마친 컵 · 컵 4강 이상 ·
+  // T-11-556 최고 능력치 90 이상 공격수 · 그런 선수의 포지션 가짓수 · 은퇴 선수 국적 가짓수 · 마친 컵 · 컵 4강 이상 ·
   // 은퇴 선수를 남긴 시즌 · 시즌 마감 디비전 휘장의 최고 index.
   forwards: integer('forwards').notNull().default(0),
   positions: integer('positions').notNull().default(0),

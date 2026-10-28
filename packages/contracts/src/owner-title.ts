@@ -74,10 +74,10 @@ export function titlesOf(
 export const CAREER_FEATS = { goals: 500, caps: 150, assists: 300, peak: 90 } as const;
 export const TITLE_GRADES = ['entry', 'skilled', 'honor', 'legend'] as const;
 export type TitleGrade = (typeof TITLE_GRADES)[number];
-/** T-11-547 명예관 묶음(화면 순서). 트로피 칭호(컵 · 리그)는 묶음 밖에서 따로 그린다. */
+/** T-11-556 명예관 묶음(화면 순서). 트로피 칭호(컵 · 리그)는 묶음 밖에서 따로 그린다. */
 export const TITLE_CATEGORIES = ['growth', 'position', 'record', 'legacy', 'team'] as const;
 export type TitleCategory = (typeof TITLE_CATEGORIES)[number];
-/** T-11-547 구단주 팀 디비전 칭호의 기준(team-division TEAM_DIVISION_KEYS index — elite2 · master). */
+/** T-11-556 구단주 팀 디비전 칭호의 기준(team-division TEAM_DIVISION_KEYS index — elite2 · master). */
 export const TITLE_DIVISION = { elite: 5, master: 7 } as const;
 
 type PermanentTitleDef = {
@@ -93,7 +93,7 @@ const def = <const T extends readonly PermanentTitleDef[]>(t: T) => t;
 
 /**
  * Grades describe challenge depth, not measured rarity. Player milestones count distinct careers; firsts count finalized honors.
- * T-11-547 같은 metric의 칭호는 target 순서로 한 사다리(단계)다. 맨 위 단계는 연결된 구단주의 0.5~3% 안팎을 겨눈다.
+ * T-11-556 같은 metric의 칭호는 target 순서로 한 사다리(단계)다. 맨 위 단계는 연결된 구단주의 0.5~3% 안팎을 겨눈다.
  */
 export const PERMANENT_TITLES = def([
   // 육성 — 은퇴시킨 선수 수 · 최고 능력치 90 이상 선수 수.
@@ -325,7 +325,7 @@ export const PERMANENT_TITLES = def([
     category: 'legacy',
     related: 'nations',
   },
-  // T-11-547 10일 → 5일(과제가 10-24에 열려 아무도 닿지 못했다), 윗 단계 20일.
+  // T-11-556 10일 → 5일(과제가 10-24에 열려 아무도 닿지 못했다), 윗 단계 20일.
   {
     id: 'owner-exchange',
     metric: 'exchanges',
@@ -394,13 +394,13 @@ export const PERMANENT_TITLES = def([
 export type PermanentTitle = (typeof PERMANENT_TITLES)[number];
 export type PermanentTitleId = PermanentTitle['id'];
 export type TitleMetric = PermanentTitle['metric'];
-/** T-11-547 4: 단계 · 새 칭호. 명예관을 열면 이전 버전 진행도를 한 번 다시 센다(받은 칭호는 그대로). */
+/** T-11-556 4: 단계 · 새 칭호. 명예관을 열면 이전 버전 진행도를 한 번 다시 센다(받은 칭호는 그대로). */
 export const TITLE_CRITERIA_VERSION = 4;
 export const permanentTitleOf = (id: string | null | undefined) =>
   PERMANENT_TITLES.find((t) => t.id === id);
 export const isOwnerTitle = (id: string): boolean => !!parseTitle(id) || !!permanentTitleOf(id);
 
-/** T-11-547 같은 metric 칭호의 단계(target 순). step은 1부터. */
+/** T-11-556 같은 metric 칭호의 단계(target 순). step은 1부터. */
 export function titleLadderOf(id: string) {
   const t = permanentTitleOf(id);
   if (!t) return null;

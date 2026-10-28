@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ceilKstMidnight,
+  gaugeRules,
   seasonDeadline,
   seasonGaugeProgress,
   seasonGaugeView,
@@ -96,5 +97,16 @@ describe('시즌 진행 게이지', () => {
       target: 12 * 12_885,
       maxEndsAt: '2026-10-30T15:00:00.000Z',
     });
+  });
+
+  it('T-11-552 시즌 1은 제3회 컵(결승 11/6 21:00 KST)이 남아 있어도 10/31 00:00 KST에 마감한다', () => {
+    const s1 = { id: 1, startsAt: season.startsAt };
+    const counted = { contributed: 98_685, participants: 12_918 };
+    const cupFinal = '2026-11-06T12:00:00.000Z';
+    const locked = stepSeasonGauge(null, s1, counted, at(22.5), cupFinal);
+    expect(locked.endsAt).toBe('2026-10-30T15:00:00.000Z');
+    expect(stepSeasonGauge(locked, s1, counted, at(23), cupFinal).endsAt).toBe(locked.endsAt);
+    // 시즌 2부터는 컵 결승 뒤로 미룬다.
+    expect(seasonDeadline(season.startsAt, at(40.5), at(44.9), gaugeRules(2))).toBe(at(45));
   });
 });

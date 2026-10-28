@@ -213,7 +213,7 @@ describe('Permanent owner titles', () => {
       'owner-national',
       'owner-ballon-maker',
       'owner-dynasty',
-      // T-11-547 공격수 10명 · 네 포지션 · 90 이상 10명.
+      // T-11-556 공격수 10명 · 네 포지션 · 90 이상 10명.
       'owner-forward',
       'owner-all-rounder',
       'owner-star-factory',
@@ -340,7 +340,7 @@ describe('Permanent owner titles', () => {
     ).toBe(403);
   });
 
-  it('T-11-547 nations, cups, seasons and division count only that owner and award new tiers', async () => {
+  it('T-11-556 nations, cups, seasons and division count only that owner and award new tiers', async () => {
     const who = await issueGoogleCookie(ctx);
     const other = await issueGoogleCookie(ctx);
     const ids = await seed(who.profileId, 12);
@@ -422,7 +422,7 @@ describe('Permanent owner titles', () => {
     });
   });
 
-  it('T-11-547 unlinked owners get no progress or awards', async () => {
+  it('T-11-556 unlinked owners get no progress or awards', async () => {
     const anon = await issueCookie(ctx);
     await seed(anon.profileId, 60);
     expect(await refreshOwnerTitles(ctx.db, anon.profileId, NOW)).toEqual([]);
@@ -433,7 +433,7 @@ describe('Permanent owner titles', () => {
     expect(await ctx.db.select().from(ownerTitleProgress)).toHaveLength(0);
   });
 
-  it('T-11-547 a version-3 snapshot is recounted once, team metrics refresh daily, old awards stay', async () => {
+  it('T-11-556 a version-3 snapshot is recounted once, team metrics refresh daily, old awards stay', async () => {
     const who = await issueGoogleCookie(ctx);
     await seed(who.profileId, 10);
     await refreshOwnerTitles(ctx.db, who.profileId, NOW);

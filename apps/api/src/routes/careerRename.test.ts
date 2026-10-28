@@ -4,10 +4,13 @@ import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueCookie, issueGoogleCookie, putJson, seasonBody } from '../test/http.js';
 import { cards, careerRenames, careers, ownerItems } from '../db/schema.js';
 import { updateRetired } from '../db/repos/careers.js';
+import { careersByIds, publicNamesOf } from '../db/repos/ownerTeams.js';
+import { getNameTarget } from '../db/repos/nameReports.js';
 
 // T-11-377 선수 이름 변경권.
 const ID = '00000000-0000-4000-8000-000000000761';
 const FRESH = '00000000-0000-4000-8000-000000000762';
+const ORPHAN = '00000000-0000-4000-8000-000000000763';
 describe('POST /v1/careers/:careerId/rename', () => {
   let ctx: TestD1;
   let raiser: Awaited<ReturnType<typeof issueGoogleCookie>>;
@@ -70,6 +73,49 @@ describe('POST /v1/careers/:careerId/rename', () => {
     expect(logs).toMatchObject([
       { careerId: ID, profileId: raiser.profileId, oldName: '옛이름', newName: '새이름' },
     ]);
+  });
+
+  it('T-11-548 키운 사람이 계정을 지워 기록이 없는 카드는 카드에 이름을 붙이고 팀 · 경기 기록 · 신고가 그 이름을 쓴다', async () => {
+    await ctx.env.DB.prepare(
+      `INSERT INTO cards (career_id, owner_id, service_season, pos, peak, legend_score, retire_value, transfers, created_at, updated_at)
+       VALUES (?, ?, 1, 'FW', 99, 100, 0, 3, '2026-10-18', '2026-10-18')`,
+    )
+      .bind(ORPHAN, buyer.profileId)
+      .run();
+    expect((await careersByIds(ctx.db, [ORPHAN]))[0]?.publicName).toBeNull();
+    expect(await reason(await rename(raiser.cookie, '남의카드', ORPHAN))).toBe('NOT_MINE');
+    expect((await rename(buyer.cookie, '포를란', ORPHAN)).status).toBe(200);
+    expect(await qtyOf(buyer.profileId)).toBe(1);
+    expect((await careersByIds(ctx.db, [ORPHAN]))[0]?.publicName).toBe('포를란');
+    expect((await publicNamesOf(ctx.db, [ORPHAN, ID])).get(ORPHAN)).toBe('포를란');
+    // T-11-555 경기 기록 선수가 50명을 넘어도 한 문장의 변수 100개 한도에 걸리지 않는다.
+    const many = [
+      ORPHAN,
+      ...Array.from(
+        { length: 119 },
+        (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+      ),
+    ];
+    expect((await publicNamesOf(ctx.db, many)).get(ORPHAN)).toBe('포를란');
+    expect(await getNameTarget(ctx.db, 'career', ORPHAN)).toEqual({
+      ownerId: buyer.profileId,
+      name: '포를란',
+    });
+    // 같은 이름은 장수를 빼지 않고, 다시 바꾸면 기록의 옛 이름은 카드 이름이다.
+    expect(await reason(await rename(buyer.cookie, '포를란', ORPHAN))).toBe('SAME');
+    expect((await rename(buyer.cookie, '디에고', ORPHAN)).status).toBe(200);
+    expect(
+      (await ctx.db.select().from(careerRenames).where(eq(careerRenames.careerId, ORPHAN))).map(
+        (r) => [r.oldName, r.newName],
+      ),
+    ).toEqual([
+      [null, '포를란'],
+      ['포를란', '디에고'],
+    ]);
+    // 이름은 카드 칸에 남는다.
+    expect(
+      (await ctx.db.select().from(cards).where(eq(cards.careerId, ORPHAN)))[0]?.publicName,
+    ).toBe('디에고');
   });
 
   it('이적시장에서 산 선수는 지금 카드 주인만 바꾼다', async () => {

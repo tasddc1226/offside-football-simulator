@@ -63,6 +63,7 @@ export const board: Translation<BoardMsgs> = {
   translationsHint: '空欄なら韓国語の原文を表示します。韓国語を直したら翻訳も直してください。',
   langEn: '英語',
   langJa: '日本語',
+  langZh: '繁体字中国語',
   translateDraft: '翻訳の下書きを作る',
   translating: '翻訳しています…',
   translateDone: '翻訳の下書きを入れました。読んで直してください。',

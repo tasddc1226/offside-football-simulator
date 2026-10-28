@@ -13,7 +13,7 @@ export type TitleGroupKey = TitleCategory | 'trophy';
 
 /**
  * One selectable card per earned title; nearest unfinished goals first, ties keep catalog order.
- * T-11-547 locked shows only the next tier of each ladder (same metric), so a long catalog stays short.
+ * T-11-556 locked shows only the next tier of each ladder (same metric), so a long catalog stays short.
  */
 export function titleCollection(hall: Pick<OwnerTitlesResponse, 'titles' | 'permanent'>) {
   const earned = [
@@ -37,7 +37,7 @@ export function titleCollection(hall: Pick<OwnerTitlesResponse, 'titles' | 'perm
   return { earned, locked, cups: earned.filter((id) => parseTitle(id)) };
 }
 
-/** T-11-547 Hall groups: permanent categories in catalog order, trophies (cup · league) last. Empty groups are dropped. */
+/** T-11-556 Hall groups: permanent categories in catalog order, trophies (cup · league) last. Empty groups are dropped. */
 export function titleGroups(hall: Pick<OwnerTitlesResponse, 'titles' | 'permanent'>) {
   const { earned, locked } = titleCollection(hall);
   const keys: TitleGroupKey[] = [...TITLE_CATEGORIES, 'trophy'];

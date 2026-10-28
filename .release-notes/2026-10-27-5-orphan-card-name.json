@@ -1,0 +1,20 @@
+{
+  "id": "t-11-548-orphan-card-name",
+  "title": "이름 변경권 오류 수정",
+  "items": [
+    "처음 키운 구단주가 계정을 지운 선수를 이적시장에서 산 뒤 이름 변경권을 써도 이름이 바뀌지 않던 문제를 고쳤어요."
+  ],
+  "en": {
+    "title": "Rename ticket fix",
+    "items": [
+      "Fixed rename tickets not changing the name of a player bought on the transfer market after the original club owner deleted their account."
+    ]
+  },
+  "ja": {
+    "title": "名前変更チケットの不具合修正",
+    "items": [
+      "最初に育てたオーナーがアカウントを削除した選手を移籍市場で買った後、名前変更チケットを使っても名前が変わらなかった問題を修正しました。"
+    ]
+  },
+  "availability": "web-app"
+}

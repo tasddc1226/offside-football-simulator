@@ -581,9 +581,17 @@ export const achRankText = (rank: number | null, ranked: number): string =>
 export const isPreseasonLegacy = (season: number, current: number | null) =>
   season === 0 && current !== 0;
 
-/** 그 시즌 팀을 고칠 수 있는가: 지금 시즌 팀과 개막 뒤의 프리시즌 팀(친선전용). */
-export const teamEditableIn = (season: number, current: number | null) =>
-  season === current || isPreseasonLegacy(season, current);
+/**
+ * 그 시즌 팀을 고칠 수 있는가: 지금 시즌 팀과 개막 뒤의 프리시즌 팀(친선전용). T-11-552 끝나지 않은 컵에 참가 중인 지난
+ * 시즌 팀(cupSeason, 서버가 알려 준다)은 컵이 끝날 때까지 컵 명단으로 고친다.
+ */
+export const teamEditableIn = (season: number, current: number | null, cupSeason?: number | null) =>
+  season === current || isPreseasonLegacy(season, current) || (season > 0 && season === cupSeason);
+
+/** T-11-552 컵에 참가 중인 지난 시즌 팀 화면의 안내. */
+export const cupTeamNote = (season: string) => L.cupTeamNote({ season });
+/** T-11-552 지금 시즌 팀 화면에서 컵에 참가 중인 지난 시즌 팀으로 가는 버튼. */
+export const cupTeamLink = (season: string) => L.cupTeamLink({ season });
 
 /** 개막 뒤 프리시즌 팀 화면의 안내. */
 export const preseasonTeamNote = () => L.preseasonTeamNote;
@@ -595,9 +603,11 @@ export function matchHintOf(
   matchesLeft: number,
   season: number,
   current: number | null,
+  cupSeason?: number | null,
 ): string | null {
   if (current === null) return L.hintRest;
   if (isPreseasonLegacy(season, current)) return L.hintPreseason;
+  if (season > 0 && season === cupSeason) return L.hintCupTeam;
   if (season !== current) return L.hintPast;
   return playHintOf(team, dirty, matchesLeft);
 }

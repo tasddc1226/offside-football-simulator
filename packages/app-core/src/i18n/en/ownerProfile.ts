@@ -70,7 +70,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   conditionNational: 'Develop 5 players with 150+ international caps who retire aged 30+',
   conditionDynasty: 'Develop 25 players who earn retired numbers',
   conditionExchange: "Finish all of a day's card challenges on 5 days",
-  // T-11-547 tiers and new titles.
+  // T-11-556 tiers and new titles.
   titleYouthKingdom: 'Youth Kingdom',
   titleStarFactory: 'Star Factory',
   titleStarCradle: 'Cradle of Stars',

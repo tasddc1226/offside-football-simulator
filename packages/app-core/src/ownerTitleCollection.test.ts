@@ -41,7 +41,7 @@ describe('title collection', () => {
     expect(permanent[0]?.id).toBe('owner-academy');
   });
 
-  it('T-11-547 shows only the next tier of each ladder, grouped by category with trophies last', () => {
+  it('T-11-556 shows only the next tier of each ladder, grouped by category with trophies last', () => {
     const at = '2026-10-10T00:00:00Z';
     const permanent: OwnerTitlesResponse['permanent'] = PERMANENT_TITLES.map((t) => ({
       id: t.id,

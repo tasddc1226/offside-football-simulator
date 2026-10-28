@@ -141,7 +141,7 @@ describe('/v1/owners · /v1/owner/title (T-11-150 구단주 프로필 · 대표 
     ).data;
     expect(my).toMatchObject({
       title: null,
-      // T-11-547 컵 3개 대회 최종 성적 → 컵 단골.
+      // T-11-556 컵 3개 대회 최종 성적 → 컵 단골.
       titles: ['cup-1-champion', 'cup-2-sf', 'owner-founder', 'owner-cup-regular'],
       pinned: false,
       teamId: a.team.id,

@@ -64,3 +64,25 @@ test.describe('일본어(T-11-140)', () => {
     expect(log).not.toMatch(/[가-힣]/);
   });
 });
+
+test.describe('번체 중국어(T-11-553)', () => {
+  test.use({ locale: 'zh-TW' });
+
+  test('언어: 번체 중국어 브라우저는 번체 중국어로 시작하고 게임 기록도 중국어다', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant');
+    await page.locator('[data-act="new"]').click();
+    await page.locator('[data-act="next-candidates"]').click();
+    await page.locator('[data-cand="0"]').click();
+    await page.locator('[data-act="start"]').click();
+    await expect(page.locator('.player h1')).toBeVisible();
+    const log = await page.evaluate(
+      () =>
+        (JSON.parse(localStorage.getItem('ft_save')!) as { log: { text: string }[] }).log[0]!.text,
+    );
+    expect(log).toMatch(/[一-鿿]/);
+    expect(log).not.toMatch(/[가-힣ぁ-んァ-ン]/);
+  });
+});

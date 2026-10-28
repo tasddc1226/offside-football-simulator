@@ -40,6 +40,7 @@
     "./nations": "./src/nations.ts",
     "./nations-en": "./src/nations-en.ts",
     "./nations-ja": "./src/nations-ja.ts",
+    "./nations-zh": "./src/nations-zh.ts",
     "./body": "./src/body.ts",
     "./i18n": "./src/i18n.ts",
     "./club-strength": "./src/club-strength.ts",

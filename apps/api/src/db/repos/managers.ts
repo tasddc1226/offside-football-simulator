@@ -14,6 +14,7 @@ import type { Db } from '../client.js';
 import { cards, careers, managerCareers } from '../schema.js';
 import { newId } from '../ids.js';
 import { retryTransientWrite } from '../retry.js';
+import { cardPublicName } from '../cardName.js';
 
 /** 프로 시즌(병역 · 고교 · 대학 제외) 조건. 클럽 id가 없는 옛 시즌은 리그 이름으로 거른다. */
 const PRO_SEASON = `s.mil = 0 AND coalesce(s.club_id, '') NOT LIKE 'hs-%' AND coalesce(s.club_id, '') NOT LIKE 'uni-%'
@@ -180,7 +181,7 @@ const rowCols = {
   resultJson: managerCareers.resultJson,
   createdAt: managerCareers.createdAt,
   finishedAt: managerCareers.finishedAt,
-  publicName: careers.publicName,
+  publicName: cardPublicName,
   number: cards.number,
   look: careers.look,
   pos: cards.pos,

@@ -9,7 +9,7 @@ import {
   titleLadderOf,
 } from './owner-title.js';
 
-describe('T-11-547 permanent title catalog', () => {
+describe('T-11-556 permanent title catalog', () => {
   it('ids are unique and every title has a known grade and category', () => {
     expect(new Set(PERMANENT_TITLES.map((t) => t.id)).size).toBe(PERMANENT_TITLES.length);
     for (const t of PERMANENT_TITLES) {

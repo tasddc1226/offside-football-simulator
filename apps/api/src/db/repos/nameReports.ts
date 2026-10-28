@@ -4,12 +4,13 @@ import {
   HIDDEN_TEAM_NAME,
   type NameReportKind,
 } from '@offside/contracts/board-limits';
-import { and, count, desc, eq, inArray, isNull, max, or } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNotNull, isNull, max, or } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
 import type { Db } from '../client.js';
+import { readInChunks } from '../chunk.js';
 import { auditLogStatement } from './auditLog.js';
 import { runBatch } from './batch.js';
-import { careers, nameReports, ownerTeams, profiles } from '../schema.js';
+import { cards, careers, nameReports, ownerTeams, profiles } from '../schema.js';
 
 // 공개 이름 신고(앱스토어 UGC 정책). 명예의 전당 선수 이름과 구단 이름·감독 이름을 신고받아 운영자가 가리거나
 // 기각한다. 선수 이름은 careers.name_hidden_at을 남겨 시즌·은퇴 업로드가 다시 채우지 않게 하고, 구단은 이름을
@@ -29,7 +30,14 @@ export async function getNameTarget(
       .from(careers)
       .where(eq(careers.id, id))
       .limit(1);
-    return row?.name ? { ownerId: row.ownerId, name: row.name } : null;
+    if (row) return row.name ? { ownerId: row.ownerId, name: row.name } : null;
+    // T-11-548 키운 사람이 계정을 지운 카드는 지금 주인이 붙인 카드 이름을 신고한다.
+    const [card] = await db
+      .select({ ownerId: cards.ownerId, name: cards.publicName })
+      .from(cards)
+      .where(eq(cards.careerId, id))
+      .limit(1);
+    return card?.name && card.ownerId ? { ownerId: card.ownerId, name: card.name } : null;
   }
   if (kind === 'owner') {
     const [row] = await db
@@ -91,12 +99,21 @@ export async function listOpenNameReports(db: Db): Promise<AdminNameReport[]> {
   const teamIds = ids('team');
   const ownerIds = ids('owner');
   const [careerNames, teamNames, ownerNames] = await Promise.all([
-    careerIds.length
-      ? db
+    // T-11-555 신고가 100건까지라 커리어 · 카드를 한 문장에 묶으면 변수 100개를 넘는다 — 나눠 읽고, careers 행이 있으면 그 이름이 우선이다.
+    Promise.all([
+      readInChunks(careerIds, (chunk) =>
+        db
+          .select({ id: cards.careerId, name: cards.publicName })
+          .from(cards)
+          .where(and(inArray(cards.careerId, chunk), isNotNull(cards.publicName))),
+      ),
+      readInChunks(careerIds, (chunk) =>
+        db
           .select({ id: careers.id, name: careers.publicName })
           .from(careers)
-          .where(inArray(careers.id, careerIds))
-      : [],
+          .where(inArray(careers.id, chunk)),
+      ),
+    ]).then(([cardNames, careerRows]) => [...cardNames, ...careerRows]),
     teamIds.length
       ? db
           .select({ id: ownerTeams.id, name: ownerTeams.name, manager: ownerTeams.manager })
@@ -126,8 +143,8 @@ export async function listOpenNameReports(db: Db): Promise<AdminNameReport[]> {
 /** 대상 id가 구단(owner_teams.id)인 종류 — 구단명과 그 구단주의 닉네임. */
 const TEAM_ID_KINDS = ['team', 'owner'] satisfies NameReportKind[];
 
-/** 가리기 — 선수는 공개 이름, 구단은 구단명·감독명, 구단주는 닉네임을 비운다. */
-function hideStatement(
+/** 가리기 — 선수는 공개 이름(T-11-548 careers 행이 없는 카드는 카드 이름), 구단은 구단명·감독명, 구단주는 닉네임을 비운다. */
+function hideStatements(
   db: Db,
   kind: NameReportKind,
   id: string,
@@ -135,19 +152,21 @@ function hideStatement(
   now: string,
 ) {
   if (kind === 'career')
-    return db
-      .update(careers)
-      .set({ publicName: null, nameHiddenAt: now })
-      .where(eq(careers.id, id));
+    return [
+      db.update(careers).set({ publicName: null, nameHiddenAt: now }).where(eq(careers.id, id)),
+      db.update(cards).set({ publicName: null }).where(eq(cards.careerId, id)),
+    ];
   // 닉네임을 비운다. 다시 정하기 전까지 랭킹엔 익명 구단주로, 댓글·채팅은 닉네임을 정해야 쓸 수 있다.
   if (kind === 'owner')
     return ownerId
-      ? db.update(profiles).set({ nickname: null }).where(eq(profiles.id, ownerId))
-      : null;
-  return db
-    .update(ownerTeams)
-    .set({ name: HIDDEN_TEAM_NAME, manager: HIDDEN_MANAGER_NAME, updatedAt: now })
-    .where(eq(ownerTeams.id, id));
+      ? [db.update(profiles).set({ nickname: null }).where(eq(profiles.id, ownerId))]
+      : [];
+  return [
+    db
+      .update(ownerTeams)
+      .set({ name: HIDDEN_TEAM_NAME, manager: HIDDEN_MANAGER_NAME, updatedAt: now })
+      .where(eq(ownerTeams.id, id)),
+  ];
 }
 
 /** 신고를 닫는다. hide면 이름을 가린다. 열린 신고가 없으면 null, 있으면 대상 구단의 시즌(엣지 캐시 퍼지용 —
@@ -175,8 +194,7 @@ export async function resolveNameReports(
     .limit(1);
   if (!first) return null;
   const statements: BatchItem<'sqlite'>[] = [];
-  const hide = action === 'hide' && hideStatement(db, kind, id, first.ownerId, now);
-  if (hide) statements.push(hide);
+  if (action === 'hide') statements.push(...hideStatements(db, kind, id, first.ownerId, now));
   statements.push(
     db.update(nameReports).set({ resolvedAt: now }).where(open),
     auditLogStatement(db, {

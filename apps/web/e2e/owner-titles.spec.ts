@@ -79,7 +79,7 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   const hall = page.locator('[data-owner-hall]');
   await expect(hall.locator('[data-permanent-title]')).toHaveCount(PERMANENT_TITLES.length - 1);
   await expect(hall.locator('[data-title-pick="owner-developer"]')).toHaveCount(1);
-  // T-11-547 묶음 · 다음 단계.
+  // T-11-556 묶음 · 다음 단계.
   await expect(
     hall.locator('[data-title-group="growth"] [data-title-pick="owner-developer"]'),
   ).toHaveCount(1);
@@ -196,7 +196,7 @@ test('hall read failure can retry and shows the first tier of every locked ladde
   await expect(error).toContainText('명예관을 불러오지 못했어요.');
   await error.getByRole('button', { name: '다시 시도' }).click();
   const hall = page.locator('[data-owner-hall]');
-  // T-11-547 도전 중은 사다리마다 다음 단계 하나(같은 metric은 한 줄).
+  // T-11-556 도전 중은 사다리마다 다음 단계 하나(같은 metric은 한 줄).
   await expect(hall.locator('[data-permanent-title]')).toHaveCount(
     new Set(PERMANENT_TITLES.map((t) => t.metric)).size,
   );

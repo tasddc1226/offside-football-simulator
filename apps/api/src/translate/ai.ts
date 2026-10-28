@@ -7,15 +7,20 @@ import { AppError } from '../errors.js';
 // 사람이 누를 때만 부른다(초안은 관리자 버튼, 번역 보기는 사용자 버튼 + D1 캐시). 원문·번역문은 로그에 남기지 않는다.
 export const TRANSLATE_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
-const LANGUAGE: Record<Locale, string> = { ko: 'Korean', en: 'English', ja: 'Japanese' };
+const LANGUAGE: Record<Locale, string> = {
+  ko: 'Korean',
+  en: 'English',
+  ja: 'Japanese',
+  zh: 'Traditional Chinese (Taiwan)',
+};
 const GLOSSARY = [
-  '확률 도감 = Odds guide = 確率図鑑', // i18n-ignore: 번역 용어집
-  '명예의 전당 = Hall of Fame = 殿堂', // i18n-ignore: 번역 용어집
-  '영구결번 = retired number = 永久欠番', // i18n-ignore: 번역 용어집
-  '이적시장 = transfer market = 移籍市場', // i18n-ignore: 번역 용어집
-  '구단주 = owner = オーナー', // i18n-ignore: 번역 용어집
-  '상무 = Sangmu = 尚武', // i18n-ignore: 번역 용어집
-  '잠재력 = potential = ポテンシャル', // i18n-ignore: 번역 용어집
+  '확률 도감 = Odds guide = 確率図鑑 = 機率圖鑑', // i18n-ignore: 번역 용어집
+  '명예의 전당 = Hall of Fame = 殿堂 = 名人堂', // i18n-ignore: 번역 용어집
+  '영구결번 = retired number = 永久欠番 = 退休背號', // i18n-ignore: 번역 용어집
+  '이적시장 = transfer market = 移籍市場 = 轉會市場', // i18n-ignore: 번역 용어집
+  '구단주 = owner = オーナー = 球隊老闆', // i18n-ignore: 번역 용어집
+  '상무 = Sangmu = 尚武 = 尚武', // i18n-ignore: 번역 용어집
+  '잠재력 = potential = ポテンシャル = 潛力', // i18n-ignore: 번역 용어집
 ].join('; ');
 
 const systemPrompt = (to: Locale) =>
@@ -24,11 +29,13 @@ const systemPrompt = (to: Locale) =>
     'Keep line breaks, Markdown markers such as "## " and "- ", numbers, dates, version strings, emoji and names exactly.',
     to === 'ja'
       ? 'Use natural polite Japanese (です・ます) unless the message is casual chat; then keep it casual.'
-      : to === 'ko'
-        ? 'Use natural Korean. Keep the tone of the original (casual chat stays casual).'
-        : 'Use plain, natural English. Keep the tone of the original.',
+      : to === 'zh'
+        ? 'Use Traditional Chinese characters and Taiwan vocabulary only (never Simplified). Keep the tone of the original.'
+        : to === 'ko'
+          ? 'Use natural Korean. Keep the tone of the original (casual chat stays casual).'
+          : 'Use plain, natural English. Keep the tone of the original.',
     // 화면 사전(app-core i18n)과 같은 표기. 용어집이 없으면 'Probability Encyclopedia'·'上武'처럼 옮겼다(T-11-146 비교).
-    `Use these game terms (Korean = English = Japanese): ${GLOSSARY}.`,
+    `Use these game terms (Korean = English = Japanese = Traditional Chinese): ${GLOSSARY}.`,
     `If the message is already in ${LANGUAGE[to]}, return it unchanged.`,
     'Output only the translation. No quotes, notes or explanations.',
   ].join('\n');
@@ -59,7 +66,7 @@ export async function translateText(ai: Ai | undefined, text: string, to: Locale
   return result;
 }
 
-/** 관리자 "번역 초안 만들기": 제목·본문을 영어·일본어로(네 번 동시에). 저장은 하지 않는다. */
+/** 관리자 "번역 초안 만들기": 제목·본문을 영어·일본어·번체 중국어로(여섯 번 동시에). 저장은 하지 않는다. */
 export async function draftTranslations(
   ai: Ai | undefined,
   input: PostText,
@@ -69,16 +76,18 @@ export async function draftTranslations(
     translateText(ai, text, to).catch(() => {
       throw unavailable(DRAFT_UNAVAILABLE);
     });
-  const [enTitle, enBody, jaTitle, jaBody] = await Promise.all([
+  const [enTitle, enBody, jaTitle, jaBody, zhTitle, zhBody] = await Promise.all([
     one(input.title, 'en'),
     one(input.body, 'en'),
     one(input.title, 'ja'),
     one(input.body, 'ja'),
+    one(input.title, 'zh'),
+    one(input.body, 'zh'),
   ]);
   // 번역이 원문보다 길어져도 저장할 수 있게 한도에서 자른다(관리자가 읽고 고친다).
   const text = (title: string, body: string) => ({
     title: title.slice(0, POST_TITLE_MAX),
     body: body.slice(0, TRANSLATED_BODY_MAX),
   });
-  return { en: text(enTitle, enBody), ja: text(jaTitle, jaBody) };
+  return { en: text(enTitle, enBody), ja: text(jaTitle, jaBody), zh: text(zhTitle, zhBody) };
 }

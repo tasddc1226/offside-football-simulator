@@ -8,6 +8,14 @@ import {
   UNIT_JA,
   ageLabelJa,
 } from '../i18n/ja/achievements.js';
+import {
+  DESC_ZH,
+  GROUP_ZH,
+  HIDDEN_ZH,
+  LABEL_ZH,
+  UNIT_ZH,
+  ageLabelZh,
+} from '../i18n/zh/achievements.js';
 import type { Lang } from '../lang.js';
 import { HIDDEN_ACHIEVEMENTS } from './achievements.js';
 
@@ -202,6 +210,14 @@ const TABLES: Record<Exclude<Lang, 'ko'>, Tables> = {
     desc: DESC_JA,
     unit: UNIT_JA,
     age: ageLabelJa,
+  },
+  zh: {
+    hidden: HIDDEN_ZH,
+    group: GROUP_ZH,
+    label: LABEL_ZH,
+    desc: DESC_ZH,
+    unit: UNIT_ZH,
+    age: ageLabelZh,
   },
 };
 

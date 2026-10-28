@@ -14,11 +14,12 @@ import {
   type LeagueOutcome,
 } from '@offside/contracts/league';
 import { leagueTitleIdOf, TITLE_STAGES } from '@offside/contracts/owner-title';
-import { and, asc, eq, getTableColumns, inArray, isNull, lte } from 'drizzle-orm';
+import { and, asc, eq, getTableColumns, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { cupKo } from '../cupText.js';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
 import {
+  cards,
   careers,
   leagueEntries,
   leagueMatches,
@@ -26,6 +27,7 @@ import {
   ownerTeams,
   profiles,
 } from '../db/schema.js';
+import { cardPublicName } from '../db/cardName.js';
 import { leagueHomeAdvOf } from '../db/repos/balance.js';
 import { grantItemStatement } from '../db/repos/itemShop.js';
 import { eventNotificationStatements } from '../push/events.js';
@@ -174,15 +176,16 @@ export async function leagueScorers(db: Db, season: number, tier: number, league
     (
       await db
         .select({
-          id: careers.id,
-          publicName: careers.publicName,
-          pos: careers.pos,
-          number: careers.shirtNumber,
+          id: cards.careerId,
+          publicName: cardPublicName,
+          pos: cards.pos,
+          number: sql<number | null>`coalesce(${careers.shirtNumber}, ${cards.number})`,
         })
-        .from(careers)
+        .from(cards)
+        .leftJoin(careers, eq(careers.id, cards.careerId))
         .where(
           inArray(
-            careers.id,
+            cards.careerId,
             top.map((r) => r.careerId),
           ),
         )
@@ -190,7 +193,7 @@ export async function leagueScorers(db: Db, season: number, tier: number, league
   );
   return top.flatMap((r) => {
     const c = who.get(r.careerId);
-    // 지워진 커리어는 빼고 싣는다.
+    // 지워진 카드는 빼고 싣는다.
     return c
       ? [{ name: c.publicName, pos: c.pos, number: c.number, teamId: r.teamId, goals: r.goals }]
       : [];

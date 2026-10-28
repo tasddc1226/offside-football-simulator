@@ -105,8 +105,11 @@ const diff = (k: BalanceKey, before: number, after: number) =>
   [K[k], `${fmt(k, before)} → ${fmt(k, after)}`] as const;
 const mapDiff = (a: Record<string, number>, b: Record<string, number>) =>
   new Set([...Object.keys(a), ...Object.keys(b)].filter((k) => a[k] !== b[k])).size;
-/** 한국어 원문과 번역 중 지금 언어(없으면 한국어). */
-const pick = <T>(t: { ko: T; en?: T | undefined; ja?: T | undefined }): T => t[getLocale()] ?? t.ko;
+/** 한국어 원문과 번역 중 지금 언어(없으면 한국어, 번체 중국어 문구가 없는 옛 항목은 영어). */
+const pick = <T>(t: { ko: T; en?: T | undefined; ja?: T | undefined; zh?: T | undefined }): T => {
+  const lang = getLocale();
+  return t[lang] ?? (lang === 'zh' ? t.en : undefined) ?? t.ko;
+};
 
 export type HistoryRow = {
   /** 목록 key — 버전은 `v<번호>`, 패치는 릴리즈 노트 항목 id. */

@@ -320,7 +320,7 @@ const TITLE_PIXELS = {
     '..#..##..#..',
     '..########..',
   ],
-  // T-11-547 새 칭호 그림. 같은 사다리의 윗 단계는 아래 TITLE_ICON_OF로 첫 단계 그림을 쓰고 등급 색으로 가른다.
+  // T-11-556 새 칭호 그림. 같은 사다리의 윗 단계는 아래 TITLE_ICON_OF로 첫 단계 그림을 쓰고 등급 색으로 가른다.
   'owner-forward': [
     '............',
     '........##..',
@@ -407,7 +407,7 @@ const TITLE_PIXELS = {
   ],
 } as const;
 
-/** T-11-547 윗 단계 칭호는 첫 단계 그림을 같이 쓴다. */
+/** T-11-556 윗 단계 칭호는 첫 단계 그림을 같이 쓴다. */
 const TITLE_ICON_OF: Partial<Record<PermanentTitleId, keyof typeof TITLE_PIXELS>> = {
   'owner-youth-kingdom': 'owner-academy',
   'owner-star-factory': 'owner-star-maker',

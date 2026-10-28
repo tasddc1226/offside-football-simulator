@@ -252,6 +252,25 @@ export function divisionCaps(ovrs: readonly number[]): number[] {
   return caps;
 }
 
+/** T-11-552 추첨 때 구간을 다시 나누는 데 필요한 최소 신청 팀 수(모자라면 접수 때 상한을 그대로 쓴다). */
+export const CUP_RESORT_MIN = 30;
+
+/**
+ * T-11-552 신청한 팀 OVR로 아랫 구간 상한을 다시 정한다: 아래 1/3 · 2/3에 드는 팀의 가장 높은 OVR(경계 OVR은 아랫 구간에
+ * 남는다). 같으면 한 칸씩 띄운다. 팀이 CUP_RESORT_MIN보다 적으면 null(다시 나누지 않는다).
+ */
+export function entrantDivisionCaps(ovrs: readonly number[]): number[] | null {
+  const n = CUP_DIVISIONS.length - 1;
+  if (ovrs.length < CUP_RESORT_MIN) return null;
+  const sorted = [...ovrs].sort((a, b) => a - b);
+  const caps: number[] = [];
+  for (let i = 1; i <= n; i++) {
+    const q = sorted[Math.max(0, Math.ceil((sorted.length * i) / (n + 1)) - 1)]!;
+    caps.push(Math.max(q, (caps.at(-1) ?? -1) + 1));
+  }
+  return caps;
+}
+
 /**
  * 지금 보여 줄 대회: 진행 중이거나 다가오는 것, 없으면 가장 최근에 끝난 것. 지난 대회를 보여 주는 동안 다음 대회
  * 접수가 열렸으면 다음 대회를 보여 준다.

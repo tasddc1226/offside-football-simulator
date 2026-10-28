@@ -1,0 +1,31 @@
+import type { Translation } from '../core';
+import type { ServerStatusMsgs } from '../ko/serverStatus';
+
+export const serverStatus: Translation<ServerStatusMsgs> = {
+  title: '伺服器狀態',
+  intro: '每 5 分鐘彙整一次遊戲伺服器收到的請求。',
+  loading: '載入中。',
+  error: '無法載入伺服器狀態，請稍後重新開啟。',
+  levelOk: '運作正常',
+  levelSlow: '比平常慢',
+  levelDown: '伺服器錯誤增加',
+  levelUnknown: '沒有最近的紀錄',
+  recentTitle: '最近 15 分鐘',
+  perMinute: '每分鐘請求',
+  avgResponse: '平均回應',
+  slowShare: '超過 1 秒的請求',
+  errorShare: '伺服器錯誤',
+  hoursTitle: '最近 24 小時',
+  hoursRequests: '每小時請求',
+  hoursAvg: '平均回應時間',
+  daysTitle: '最近 30 天',
+  colDay: '日期',
+  colRequests: '請求',
+  colAvg: '平均回應',
+  colSlow: '慢速請求',
+  trendUp: (p) => `昨天的請求為 ${p.n} 筆，比一週前增加 ${p.pct}。`,
+  trendDown: (p) => `昨天的請求為 ${p.n} 筆，比一週前減少 ${p.pct}。`,
+  trendFlat: (p) => `昨天的請求為 ${p.n} 筆，和一週前差不多。`,
+  yesterday: (p) => `昨天的請求為 ${p.n} 筆。`,
+  note: '請求數是伺服器自行計算的概數，可能略少於實際數字。自 2026 年 10 月 16 日起記錄。',
+};

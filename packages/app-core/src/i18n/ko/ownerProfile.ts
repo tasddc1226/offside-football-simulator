@@ -71,7 +71,7 @@ const ko = {
   conditionNational: '직접 키운 A매치 150경기 이상 선수 5명이 30세 이후에 은퇴',
   conditionDynasty: '직접 키운 선수 25명이 영구결번 획득',
   conditionExchange: '하루 카드 과제를 모두 마친 날 5일',
-  // T-11-547 단계 · 새 칭호.
+  // T-11-556 단계 · 새 칭호.
   titleYouthKingdom: '육성 왕국',
   titleStarFactory: '스타 공장',
   titleStarCradle: '별들의 요람',

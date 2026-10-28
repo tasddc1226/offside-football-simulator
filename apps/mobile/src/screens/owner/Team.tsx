@@ -63,6 +63,8 @@ import {
   salaryBlocks,
   salaryFullText,
   draftLines,
+  cupTeamLink,
+  cupTeamNote,
   isPreseasonLegacy,
   matchHintOf,
   preseasonTeamNote,
@@ -154,11 +156,14 @@ export default function Team() {
   const [budget, setBudget] = useState(PAST_SALARY_BUDGET);
   const [synFocus, setSynFocus] = useState<string | null>(null);
   const [current, setCurrent] = useState<number | null>(null);
+  // T-11-552 끝나지 않은 컵에 참가 중인 지난 시즌(그 시즌 팀은 컵 명단으로 고친다).
+  const [cupSeason, setCupSeason] = useState<number | null>(null);
   const [seasons, setSeasons] = useState<OwnerTeamResponse['seasons']>([]);
   const [lastManager, setLastManager] = useState<string | null>(null);
   // T-11-113 개막 뒤 프리시즌 팀은 친선전 전용으로 고칠 수 있다(랭크 경기는 지금 시즌 팀만).
   const legacy = isPreseasonLegacy(season, current);
-  const editable = teamEditableIn(season, current);
+  const editable = teamEditableIn(season, current, cupSeason);
+  const cupTeam = season > 0 && season === cupSeason;
   const seasonName = seasons.find((o) => o.id === season) ? teamSeasonLabel(season) : '';
 
   // 편집 초안 — 저장하기 전까지 이 기기에만 있다.
@@ -353,7 +358,7 @@ export default function Team() {
         : {}),
     };
   });
-  const matchHint = matchHintOf(team, dirty, matchesLeft, season, current);
+  const matchHint = matchHintOf(team, dirty, matchesLeft, season, current, cupSeason);
   const draftValue: PutOwnerTeamBody = { name, manager, logo, formation, slots, layout };
   draftNow.current = draftValue;
   dirtyNow.current = dirty;
@@ -416,6 +421,7 @@ export default function Team() {
     const d = r.data;
     setSeason(d.season);
     setCurrent(d.current);
+    setCupSeason(d.cupSeason ?? null);
     setSeasons(d.seasons);
     setLastManager(d.lastManager);
     setPlayers(d.players);
@@ -440,7 +446,7 @@ export default function Team() {
     const key =
       d.team?.id ??
       (profile && typeof profile === 'object' ? `new:${profile.id}:${d.season}` : null);
-    if (teamEditableIn(d.season, d.current) && key) {
+    if (teamEditableIn(d.season, d.current, d.cupSeason) && key) {
       const draft = readTeamDraft(key);
       setDraftKey(key);
       if (draft) {
@@ -501,7 +507,7 @@ export default function Team() {
       ...(season > 0 ? { layout: positions } : {}),
     };
     try {
-      const r = await saveOwnerTeam(legacy ? { ...body, season: 0 } : body);
+      const r = await saveOwnerTeam(season !== current ? { ...body, season } : body);
       if (!r.ok) {
         toast(r.error.message);
         // 컵 검사(잠금 · 상한 · 최소 인원)에 걸렸으면 띠를 다시 받는다.
@@ -541,7 +547,9 @@ export default function Team() {
 
   // ───────── 프리셋 (T-11-217) ─────────
   async function persistPresets(next: TeamPreset[], saved = false) {
-    const r = await saveTeamPresets(legacy ? { presets: next, season: 0 } : { presets: next });
+    const r = await saveTeamPresets(
+      season !== current ? { presets: next, season } : { presets: next },
+    );
     if (!r.ok) {
       toast(r.error.message);
       return false;
@@ -821,7 +829,7 @@ export default function Team() {
                 rating: num(team.rating),
                 tail: legacy
                   ? L.friendlyOnly
-                  : editable
+                  : editable && !cupTeam
                     ? L.todayApp({ left: matchesLeft, per: perDay })
                     : L.statPast,
               })}
@@ -843,6 +851,20 @@ export default function Team() {
             <Txt v="sm" tone="muted" testID="team-legacy">
               {preseasonTeamNote()}
             </Txt>
+          ) : null}
+          {cupTeam ? (
+            <Txt v="sm" tone="muted" testID="team-cup-season">
+              {cupTeamNote(teamSeasonLabel(season))}
+            </Txt>
+          ) : cupSeason && season === current ? (
+            <Btn
+              sm
+              kind="ghost"
+              testID="team-cup-season-link"
+              onPress={() => pickSeason(cupSeason)}
+            >
+              {cupTeamLink(teamSeasonLabel(cupSeason))}
+            </Btn>
           ) : null}
           {editable ? (
             <Btn sm kind="ghost" testID="team-more" onPress={() => setMenu(true)}>
@@ -1162,7 +1184,9 @@ export default function Team() {
             hint={matchHint}
             toTeam={editable ? () => switchView('team') : undefined}
             saveAndFind={
-              editable && !legacy && dirty && team ? () => void saveAndFind() : undefined
+              editable && !legacy && !cupTeam && dirty && team
+                ? () => void saveAndFind()
+                : undefined
             }
             saving={saving}
             canSave={nameOk}

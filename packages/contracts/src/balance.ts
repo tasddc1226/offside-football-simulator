@@ -57,7 +57,7 @@ export const BALANCE_PATCH_CHANGES_MAX = 20;
 
 /** 한국어 원문과 번역(없으면 한국어를 보여 준다). */
 const LocalizedSchema = <T extends z.ZodTypeAny>(item: T) =>
-  z.object({ ko: item, en: item.optional(), ja: item.optional() });
+  z.object({ ko: item, en: item.optional(), ja: item.optional(), zh: item.optional() });
 export const BalancePatchSchema = z.object({
   /** 릴리즈 노트 항목 id와 같다. */
   id: z.string().min(1).max(80),

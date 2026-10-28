@@ -55,8 +55,13 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   gradePlatinum: 'プラチナ',
   gradeDiamond: 'ダイヤ',
   gradeLegend: 'レジェンド',
+  cupTeamNote: (p: { season: string }) =>
+    `${p.season}のチームでオフサイドカップに参加しています。カップが終わるまでこのチームのスタメンを変更できます。`,
+  cupTeamLink: (p: { season: string }) => `カップに出る${p.season}のチームを編集`,
   preseasonTeamNote:
     'プレシーズンに育てた選手のうち、今持っている選手で組みます。このチームはフレンドとの親善試合にだけ出場し、プレシーズンのランキングと実績はそのまま残ります。',
+  hintCupTeam:
+    'このチームはオフサイドカップにだけ出場します。ランク戦は今のシーズンのチームで行います。',
   hintPreseason:
     'プレシーズンのチームはフレンドとの親善試合にだけ出場します。ランクマッチは今のシーズンのチームで行います。',
   salaryBar: (p) => `過去シーズン選手の年俸 ${p.n} / ${p.max}`,

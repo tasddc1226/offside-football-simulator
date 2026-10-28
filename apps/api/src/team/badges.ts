@@ -2,6 +2,7 @@
 // 순수 함수다 — 배지 테이블 없이 읽을 때마다 센다. 얻은 배지만 돌려준다(얻는 순서대로).
 import type { TeamBadge } from '@offside/contracts';
 import { BADGES_JA, finalRankJa } from '../i18n/ja/badges.js';
+import { BADGES_ZH, finalRankZh } from '../i18n/zh/badges.js';
 import type { Lang } from '../lang.js';
 
 export type BadgeTeam = {
@@ -92,11 +93,13 @@ export function teamBadges(
       ...RULES.filter((r) => r.ok(t)).map(({ id, label, desc }) => ({ id, label, desc })),
     ];
   }
-  const T = lang === 'ja' ? BADGES_JA : EN;
+  const T = lang === 'ja' ? BADGES_JA : lang === 'zh' ? BADGES_ZH : EN;
   const finalDesc =
     lang === 'ja'
       ? finalRankJa(seasonName, finalRank!)
-      : `Finished ${ordinal(finalRank!)} in ${seasonName}`;
+      : lang === 'zh'
+        ? finalRankZh(seasonName, finalRank!)
+        : `Finished ${ordinal(finalRank!)} in ${seasonName}`;
   return [
     ...(final ? [{ id: final.id, label: T[final.id]?.label ?? final.label, desc: finalDesc }] : []),
     ...RULES.filter((r) => r.ok(t)).map(({ id, label, desc }) => ({

@@ -70,7 +70,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   conditionNational: '自分で育てたAマッチ150試合以上の選手5人が30歳以上で引退',
   conditionDynasty: '自分で育てた選手25人が永久欠番を獲得',
   conditionExchange: 'その日のカード課題をすべて達成した日が5日',
-  // T-11-547 段階・新しい称号。
+  // T-11-556 段階・新しい称号。
   titleYouthKingdom: '育成王国',
   titleStarFactory: 'スター工場',
   titleStarCradle: '星たちのゆりかご',

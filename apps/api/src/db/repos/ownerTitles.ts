@@ -14,7 +14,7 @@ type Metrics = Record<TitleMetric, number>;
 
 /** Scalar aggregates use careers.profile_id, never the transferable cards.owner_id.
  * Pin the owner index: the global HOF peak index can otherwise scan every owner's retirees.
- * T-11-547 subqueries read only owner-prefixed indexes (cup_entries_profile_idx, owner_season_records · owner_honors PK).
+ * T-11-556 subqueries read only owner-prefixed indexes (cup_entries_profile_idx, owner_season_records · owner_honors PK).
  * Korean players are stored with a NULL nation, so they count as DEFAULT_NATION. */
 export async function titleMetricsOf(db: Db, profileId: string): Promise<Metrics> {
   const row = await db.get<Metrics>(sql`
@@ -98,7 +98,7 @@ export async function refreshOwnerTitles(db: Db, profileId: string, now: string,
   return newlyEarned.map((t) => t.id);
 }
 
-/** T-11-547 Team metrics (cups, seasons, division) change without a career write; recount at most once a day on hall open. */
+/** T-11-556 Team metrics (cups, seasons, division) change without a career write; recount at most once a day on hall open. */
 export const TITLE_PROGRESS_TTL_MS = 24 * 60 * 60 * 1000;
 
 /** Read persisted progress only. Initial private hall entry seeds legacy/newly-linked accounts once. */

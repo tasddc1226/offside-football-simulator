@@ -1,0 +1,20 @@
+{
+  "id": "t-11-547-app-icon-badge",
+  "title": "앱 아이콘에 안 읽은 알림 수",
+  "items": [
+    "안 읽은 알림이 있으면 앱 아이콘에 그 수가 보여요. 알림을 읽으면 숫자도 줄어요. 안드로이드는 런처에 따라 점으로 보일 수 있어요."
+  ],
+  "en": {
+    "title": "Unread count on the app icon",
+    "items": [
+      "The app icon now shows how many notifications you haven't read, and the number goes down as you read them. On Android, some launchers show a dot instead."
+    ]
+  },
+  "ja": {
+    "title": "アプリアイコンに未読通知の数",
+    "items": [
+      "未読の通知があると、アプリアイコンにその数が表示されます。通知を読むと数も減ります。Androidではランチャーによって点で表示されることがあります。"
+    ]
+  },
+  "availability": "app"
+}

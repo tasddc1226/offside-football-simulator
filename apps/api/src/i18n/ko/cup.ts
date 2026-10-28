@@ -16,6 +16,8 @@ export const CUP_KO = {
   ovrCap: '오프사이드 컵 {division} 참가 중에는 팀 OVR이 {n}을 넘는 명단으로 바꿀 수 없어요.',
   movedTitle: '{cup}로 옮겼어요',
   movedUpBody: '조 추첨 때 팀 OVR이 신청한 구간 상한보다 높아 위 구간으로 옮겼어요.',
+  sortedBody:
+    '조 추첨 때 신청한 팀들의 OVR로 구간을 다시 나눴어요. 팀 OVR {ovr}에 맞는 구간에서 뛰어요.',
   mergedBody: '신청한 구간 팀이 {n}팀보다 적어 위 구간과 함께 치러요.',
   adminCapOpen: '접수가 열린 대회의 상한은 바꿀 수 없어요.',
   adminCapMaster: '마스터 · 통합 대회에는 상한이 없어요.',
@@ -74,6 +76,7 @@ export const CUP_KO = {
   minFilled: '오프사이드 컵 참가 중에는 선발에 내 은퇴 선수를 {n}명 이상 두어야 해요.',
   cardListed: '오프사이드 컵 참가 중에는 이적시장에 내놓은 선수를 선발에 넣을 수 없어요.',
   cardLocked: '오프사이드 컵에 참가 중인 선발 선수는 내놓을 수 없어요.',
+  cardReleaseLocked: '오프사이드 컵에 참가 중인 선발 선수는 방출할 수 없어요.',
   cardManager: '오프사이드 컵에 참가 중인 선발 선수는 감독 커리어를 시작할 수 없어요.',
   droppedTitle: '{cup} 참가가 취소됐어요',
   droppedBody: '추첨 시각에 선발 선수가 {n}명보다 적어 참가할 수 없었어요.',

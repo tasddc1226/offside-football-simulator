@@ -1,12 +1,18 @@
 import { CUP_DIVISIONS, type CupDef } from '@offside/contracts/cup';
 import { CUP_EN } from './i18n/en/cup.js';
 import { CUP_JA } from './i18n/ja/cup.js';
+import { CUP_ZH } from './i18n/zh/cup.js';
 import { CUP_KO, type CupTextKey } from './i18n/ko/cup.js';
 import type { Lang } from './lang.js';
 
 // T-11-145 오프사이드 컵 서버 문구. 오류·알림은 다른 서버 문장처럼 한국어로 만들고(알림함에 한국어로 저장된다),
 // 응답을 만들 때 errorText·push/text가 이 표로 요청 언어로 바꾼다.
-const TABLES: Record<Lang, Record<CupTextKey, string>> = { ko: CUP_KO, en: CUP_EN, ja: CUP_JA };
+const TABLES: Record<Lang, Record<CupTextKey, string>> = {
+  ko: CUP_KO,
+  en: CUP_EN,
+  ja: CUP_JA,
+  zh: CUP_ZH,
+};
 
 const fill = (t: string, vars: Record<string, string | number>) =>
   t.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ''));

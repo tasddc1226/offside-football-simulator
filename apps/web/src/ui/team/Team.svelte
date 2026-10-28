@@ -74,7 +74,7 @@
   import { achNudge } from '../achNudge.js';
   import { fixSlot, slotName } from '@offside/app-core/matchReport';
   import type { ReportLine } from '@offside/contracts/owner-team';
-  import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, budgetOf, salaryBar, salaryBlocks, salaryFullText, salaryIn } from '@offside/app-core/teamOwner';
+  import { assignSlot, autoFillSlots, draftLines, matchHintOf, slotsSynergy, teamEditableIn, budgetOf, salaryBar, salaryBlocks, salaryFullText, salaryIn } from '@offside/app-core/teamOwner';
   import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
@@ -98,10 +98,12 @@
   /** 보고 있는 시즌 · 지금 고치고 겨루는 시즌(휴식기면 null) · 고를 수 있는 시즌. */
   let season = $state(0);
   let current = $state<number | null>(null);
+  /** T-11-552 끝나지 않은 컵에 참가 중인 지난 시즌(그 시즌 팀은 컵 명단으로 고친다). */
+  let cupSeason = $state<number | null>(null);
   let seasons = $state<OwnerTeamResponse['seasons']>([]);
   let lastManager = $state<string | null>(null);
   // T-11-113 개막 뒤에도 프리시즌 팀은 친선전용으로 고칠 수 있다.
-  const editable = $derived(teamEditableIn(season, current));
+  const editable = $derived(teamEditableIn(season, current, cupSeason));
   const seasonName = $derived(((o) => (o ? seasonLabel(o.id, o.name) : ''))(seasons.find((o) => o.id === season)));
 
   // 편집 초안 — 저장하기 전까지 이 기기에만 있다.
@@ -226,7 +228,7 @@
       return { rating: ratings[i] ?? YOUTH_OVR, name: p ? nameOf(p) : YOUTH_NAME, youth: !p, player: p, salary: p ? salaryIn(p, season) : 0 };
     }),
   );
-  const matchHint = $derived(matchHintOf(team, dirty, matchesLeft, season, current));
+  const matchHint = $derived(matchHintOf(team, dirty, matchesLeft, season, current, cupSeason));
 
   const draftValue = () => ({ name, manager, logo, formation, layout, slots });
   function preserveDraft() {
@@ -268,7 +270,7 @@
   // ───────── 프리셋 (T-11-217) ─────────
   const presetDraft = (presetName: string) => presetOf(presetName, formation, slots, season > 0 ? previewLayout : null);
   async function persistPresets(next: TeamPreset[], saved = false): Promise<boolean> {
-    const r = await saveTeamPresets({ presets: next, ...(isPreseasonLegacy(season, current) ? { season: 0 } : {}) });
+    const r = await saveTeamPresets({ presets: next, ...(season !== current ? { season } : {}) });
     if (!r.ok) { toast(r.error.message); return false; }
     presets = r.data.presets;
     if (team) team = { ...team, presets: r.data.presets };
@@ -314,6 +316,7 @@
       return;
     }
     ({ season, current, seasons, lastManager, players, matchesLeft } = r.data);
+    cupSeason = r.data.cupSeason ?? null;
     perDay = r.data.matchesPerDay;
     budget = budgetOf(r.data);
     needLogin = false;
@@ -403,7 +406,7 @@
     const r = await saveOwnerTeam({
       ...submitted, name: submitted.name.trim(), manager: submitted.manager.trim(),
       ...(season > 0 ? { layout: previewLayout } : {}),
-      ...(isPreseasonLegacy(season, current) ? { season: 0 } : {}),
+      ...(season !== current ? { season } : {}),
     });
     saving = false;
     if (!r.ok) {
@@ -656,6 +659,7 @@
         bind:renaming
         onseason={pickSeason}
         {divisionNotice}
+        {cupSeason}
       />
       {#if retireSyncing && editable}
         <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap" data-retire-syncing>

@@ -28,7 +28,7 @@ export type XsollaTokenInput = {
   /** ISO 3166-1 alpha-2(Cloudflare가 알려 준 나라). 없으면 IPv4로 엑솔라가 정한다. */
   country: string | null;
   ip: string | null;
-  language: 'ko' | 'en' | 'ja';
+  language: 'ko' | 'en' | 'ja' | 'zh';
   returnUrl: string;
 };
 
@@ -56,7 +56,8 @@ export async function createXsollaToken(
       purchase: { items: [{ sku: input.sku, quantity: 1 }] },
       settings: {
         // external_id(우리 주문 번호)를 보내면 엑솔라가 [0401-2000]으로 토큰을 거절한다. 주문은 엑솔라 주문 번호로 잇는다.
-        language: input.language,
+        // 엑솔라 언어 코드는 번체 중국어가 tw다(cn은 간체).
+        language: input.language === 'zh' ? 'tw' : input.language,
         return_url: input.returnUrl,
       },
     }),
