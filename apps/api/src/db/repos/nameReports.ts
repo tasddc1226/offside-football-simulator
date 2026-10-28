@@ -7,6 +7,7 @@ import {
 import { and, count, desc, eq, inArray, isNotNull, isNull, max, or } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
 import type { Db } from '../client.js';
+import { readInChunks } from '../chunk.js';
 import { auditLogStatement } from './auditLog.js';
 import { runBatch } from './batch.js';
 import { cards, careers, nameReports, ownerTeams, profiles } from '../schema.js';
@@ -98,18 +99,21 @@ export async function listOpenNameReports(db: Db): Promise<AdminNameReport[]> {
   const teamIds = ids('team');
   const ownerIds = ids('owner');
   const [careerNames, teamNames, ownerNames] = await Promise.all([
-    careerIds.length
-      ? db
+    // T-11-555 신고가 100건까지라 커리어 · 카드를 한 문장에 묶으면 변수 100개를 넘는다 — 나눠 읽고, careers 행이 있으면 그 이름이 우선이다.
+    Promise.all([
+      readInChunks(careerIds, (chunk) =>
+        db
+          .select({ id: cards.careerId, name: cards.publicName })
+          .from(cards)
+          .where(and(inArray(cards.careerId, chunk), isNotNull(cards.publicName))),
+      ),
+      readInChunks(careerIds, (chunk) =>
+        db
           .select({ id: careers.id, name: careers.publicName })
           .from(careers)
-          .where(inArray(careers.id, careerIds))
-          .union(
-            db
-              .select({ id: cards.careerId, name: cards.publicName })
-              .from(cards)
-              .where(and(inArray(cards.careerId, careerIds), isNotNull(cards.publicName))),
-          )
-      : [],
+          .where(inArray(careers.id, chunk)),
+      ),
+    ]).then(([cardNames, careerRows]) => [...cardNames, ...careerRows]),
     teamIds.length
       ? db
           .select({ id: ownerTeams.id, name: ownerTeams.name, manager: ownerTeams.manager })
