@@ -9,13 +9,15 @@ import {
 } from '@offside/contracts';
 import {
   LEAGUE_FROM_SEASON,
+  LEAGUE_LATE_MAX_LEAGUES,
+  leagueNextLate,
   leagueNextTier,
   leaguePhase,
   leagueReward,
   type LeagueOutcome,
 } from '@offside/contracts/league';
 import { displaySeasonAt } from '@offside/contracts/service-seasons';
-import { and, count, eq, inArray, ne } from 'drizzle-orm';
+import { and, count, eq, inArray, isNull, ne } from 'drizzle-orm';
 import type { Context, Hono } from 'hono';
 import { cupKo } from '../cupText.js';
 import type { Db } from '../db/client.js';
@@ -187,6 +189,23 @@ async function lastFinalOf(db: Db, league: LeagueDef, profileId: string, now: st
   };
 }
 
+/**
+ * T-11-564 늦은 참가를 받는 다음 배치(첫 배치를 마쳤고 리그가 열렸으며 남은 늦은 배치가 있을 때만). 첫 배치 전 · 리그가 열리지
+ * 않은 시즌 · 남은 배치 없음은 null.
+ */
+async function lateOf(db: Db, league: LeagueDef, now: string) {
+  const slot = leagueNextLate(league, now);
+  if (!slot) return null;
+  const [state] = await leagueStateOf(db, league.season);
+  return state && !state.doneAt && tiersOf(state).length ? slot : null;
+}
+
+/** 늦은 참가로 신청할 수 있는 내 신청 상태: 신청 없음 · 취소함 · 배치에서 빠짐. */
+const lateCanEnter = (mine: LeagueEntryRow | undefined) => !mine || mine.status === 'dropped';
+/** 늦은 참가 신청이 다음 배치를 기다리는 중(아직 리그에 들지 않음). */
+const lateWaiting = (mine: LeagueEntryRow | undefined) =>
+  mine?.status === 'active' && mine.tier === null;
+
 const mineOf = (db: Db, season: number, profileId: string) =>
   db
     .select()
@@ -233,17 +252,19 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const league = await leagueOf(c, now);
-    const [[mine], team, lastFinal] = await Promise.all([
+    const [[mine], team, lastFinal, late] = await Promise.all([
       mineOf(db, league.season, me.id),
       teamNow(db, league, me.id),
       lastFinalOf(db, league, me.id, now),
+      lateOf(db, league, now),
     ]);
     return ok(
       c,
       LeagueMeResponseSchema,
       {
         entry: mine ? { createdAt: mine.createdAt } : null,
-        canEnter: !mine && leaguePhase(league, now) === 'open',
+        canEnter: late ? lateCanEnter(mine) : !mine && leaguePhase(league, now) === 'open',
+        lateDrawAt: late && (lateCanEnter(mine) || lateWaiting(mine)) ? late.at : null,
         team,
         lastTeam: team || now >= league.closesAt ? null : await lastTeamOf(db, league, me.id, now),
         placement: now < league.drawAt ? null : await placementOf(db, league.season, mine),
@@ -255,13 +276,43 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
   });
 
   // 신청(접수 기간만, 정원 없음). 참가 의사만 남긴다 — 개막 전 사전 신청은 그 시즌 팀이 아직 없어서 팀은 배치 때 본다.
-  // 이미 신청했으면 그대로 돌려준다(자연 멱등). 취소했던 신청은 되살린다.
+  // 이미 신청했으면 그대로 돌려준다(자연 멱등). 취소했던 신청은 되살린다. T-11-564 리그가 시작한 뒤에는 늦은 참가로 받아
+  // 다음 늦은 배치를 기다리게 한다(배치에서 빠졌던 신청도 다시 받는다).
   app.post('/v1/leagues/current/entries', requireProfile, idempotency, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
     const now = nowIso();
     const league = await leagueOf(c, now);
-    if (leaguePhase(league, now) !== 'open') throw conflictError(cupKo('closed'), 'LEAGUE_CLOSED');
+    if (leaguePhase(league, now) !== 'open') {
+      if (!(await lateOf(db, league, now))) throw conflictError(cupKo('closed'), 'LEAGUE_CLOSED');
+      await db
+        .insert(leagueEntries)
+        .values({
+          season: league.season,
+          profileId: me.id,
+          status: 'active',
+          createdAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: [leagueEntries.season, leagueEntries.profileId],
+          set: {
+            status: 'active',
+            teamId: null,
+            name: null,
+            manager: null,
+            ovr: null,
+            tier: null,
+            leagueNo: null,
+            notifiedRound: 0,
+            createdAt: now,
+            updatedAt: now,
+          },
+          // 리그에서 뛰는 중이거나 이미 기다리는 신청은 그대로 둔다.
+          setWhere: inArray(leagueEntries.status, ['withdrawn', 'dropped']),
+        });
+      return c.body(null, 204);
+    }
     await db
       .insert(leagueEntries)
       .values({
@@ -286,8 +337,23 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const league = await leagueOf(c, now);
-    if (leaguePhase(league, now) !== 'open')
-      throw conflictError(cupKo('withdrawClosed'), 'LEAGUE_CLOSED');
+    if (leaguePhase(league, now) !== 'open') {
+      // T-11-564 늦은 참가는 다음 배치에 들기 전(배치 시간 전)까지만 취소할 수 있다.
+      const late = await lateOf(db, league, now);
+      if (!late || now >= late.at) throw conflictError(cupKo('withdrawClosed'), 'LEAGUE_CLOSED');
+      await db
+        .update(leagueEntries)
+        .set({ status: 'withdrawn', updatedAt: now })
+        .where(
+          and(
+            eq(leagueEntries.season, league.season),
+            eq(leagueEntries.profileId, me.id),
+            eq(leagueEntries.status, 'active'),
+            isNull(leagueEntries.tier),
+          ),
+        );
+      return c.body(null, 204);
+    }
     await db
       .update(leagueEntries)
       .set({ status: 'withdrawn', updatedAt: now })
@@ -300,7 +366,10 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/leagues/:season/tables/:tier/:league', async (c) => {
     const season = intParam(c.req.param('season'), 999);
     const tier = intParam(c.req.param('tier'), MAX_TIER);
-    const no = tier ? intParam(c.req.param('league'), 2 ** (tier - 1)) : null;
+    // T-11-564 늦은 참가 리그가 맨 아래 부에 더해질 수 있다.
+    const no = tier
+      ? intParam(c.req.param('league'), 2 ** (tier - 1) + LEAGUE_LATE_MAX_LEAGUES)
+      : null;
     if (!season || !tier || !no) throw notFoundError(cupKo('notFound'), 'LEAGUE_NOT_FOUND');
     const data = await edgeCached(c, EDGE.leagueTable(season, tier, no), 60, async () => {
       const db = getDb(c);

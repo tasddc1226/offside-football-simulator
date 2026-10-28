@@ -95,11 +95,11 @@
   // T-11-444 신청 카드의 단계별 노출은 앱과 같은 규칙(leagueEntryCard)을 쓴다.
   const card = $derived(data ? leagueEntryCard(data, account, me, meFailed) : null);
   const lastFinal = $derived(leagueLastFinalView(me));
-  const enterAsk = $derived(data ? leagueEnterAsk(data) : null);
+  const enterAsk = $derived(data ? leagueEnterAsk(data, me) : null);
   const presign = $derived(data ? leaguePresign(data) : false);
   const ready = $derived(data ? leagueReadiness(data, me) : null);
   // T-11-430 배치 전 신청 카드: 참가 자격 · 기권 규칙, 팀 선발 고치기(팀 편성 화면으로).
-  const entryRules = $derived(data ? leagueEntryRules(data) : []);
+  const entryRules = $derived(data ? leagueEntryRules(data, me) : []);
   const teamAction = $derived(data ? leagueTeamAction(data, me) : null);
   function openTeam() {
     appState.teamView = 'team';

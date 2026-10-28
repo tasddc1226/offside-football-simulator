@@ -1,0 +1,20 @@
+{
+  "id": "t-11-564-league-late-entry",
+  "title": "리그 늦은 참가",
+  "items": [
+    "오프사이드 리그가 시작한 뒤에도 신청할 수 있어요. 첫 배치 뒤 매주 같은 요일 09:00에 늦게 신청한 팀끼리 리그를 만들어 그날 13:00부터 경기해요."
+  ],
+  "en": {
+    "title": "Late league entry",
+    "items": [
+      "You can now enter the Offside League after it starts. Every week after the first draw, at 09:00 on the same weekday, late entries form new leagues that play from 13:00 that day."
+    ]
+  },
+  "ja": {
+    "title": "リーグ途中参加",
+    "items": [
+      "オフサイドリーグが始まった後も申し込めます。最初の組分けから毎週同じ曜日の09:00に、遅れて申し込んだチーム同士でリーグを作り、その日の13:00から試合をします。"
+    ]
+  },
+  "availability": "web-app"
+}

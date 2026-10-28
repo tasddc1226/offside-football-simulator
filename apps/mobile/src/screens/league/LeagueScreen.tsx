@@ -186,7 +186,7 @@ function EntryCard({
       { text: L.withdraw, style: 'destructive', onPress: () => void run('withdraw') },
     ]);
   const askEnter = () => {
-    const ask = leagueEnterAsk(data);
+    const ask = leagueEnterAsk(data, me);
     Alert.alert(ask.title, ask.lines.join('\n\n'), [
       { text: L.askClose, style: 'cancel' },
       { text: L.enter, onPress: () => void run('enter') },
@@ -217,7 +217,7 @@ function EntryCard({
   const ready = leagueReadiness(data, me);
   const placement = leaguePlacementLine(me, leagueCancelled(data));
   // T-11-430 배치 전: 참가 자격 · 기권 규칙, 팀 선발 고치기(팀 편성 화면으로).
-  const rules = leagueEntryRules(data);
+  const rules = leagueEntryRules(data, me);
   const teamAction = leagueTeamAction(data, me);
   const openTeam = () => {
     appState.teamView = 'team';

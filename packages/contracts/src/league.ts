@@ -101,6 +101,56 @@ export function leagueSeasonAt(
   return upcoming;
 }
 
+// ───────── T-11-564 늦은 참가 ─────────
+
+/** 늦은 참가 배치 간격(첫 배치부터 이 날 수마다, 같은 시각). */
+export const LEAGUE_LATE_EVERY_DAYS = 7;
+/** 늦은 참가 리그가 치를 수 있어야 하는 가장 적은 라운드 수(같은 리그 팀과 한 번씩은 만난다). */
+export const LEAGUE_LATE_MIN_ROUNDS = LEAGUE_CYCLE / 2;
+/** 늦은 배치를 하는 시간: 배치 시각부터 그날 첫 라운드 전까지. */
+export const LEAGUE_LATE_WINDOW_MS =
+  (LEAGUE_PLAN_DEFAULTS.matchHour - LEAGUE_PLAN_DEFAULTS.drawHour) * 3_600_000;
+/** 한 부에 늦은 참가로 더할 수 있는 리그 수 상한(순위표 주소 · 엣지 캐시 키가 무한히 늘지 않게). */
+export const LEAGUE_LATE_MAX_LEAGUES = 32;
+
+export interface LeagueLateSlot {
+  /** 늦은 배치 시각. */
+  at: string;
+  /** 그 배치로 만든 리그의 첫 라운드(1부터, 시즌 전체 라운드 번호). */
+  firstRound: number;
+  /** 시즌의 마지막 늦은 배치인가(이때 리그에 못 든 신청은 빠진다). */
+  last: boolean;
+}
+
+/**
+ * 첫 배치 뒤 LEAGUE_LATE_EVERY_DAYS일마다 여는 늦은 배치. 그 배치 날 첫 라운드부터 시즌 끝까지 LEAGUE_LATE_MIN_ROUNDS
+ * 라운드 이상 남은 배치만 연다. 게이지가 마감을 당기면 라운드가 줄어 뒤쪽 배치가 빠진다.
+ */
+export function leagueLateSlots(l: LeagueDef): LeagueLateSlot[] {
+  const out: LeagueLateSlot[] = [];
+  for (let n = 1; ; n++) {
+    const at = new Date(Date.parse(l.drawAt) + n * LEAGUE_LATE_EVERY_DAYS * DAY_MS).toISOString();
+    const i = l.rounds.findIndex((r) => r >= at);
+    if (i < 0 || l.rounds.length - i < LEAGUE_LATE_MIN_ROUNDS) break;
+    out.push({ at, firstRound: i + 1, last: false });
+  }
+  if (out.length) out[out.length - 1]!.last = true;
+  return out;
+}
+
+/** now가 늦은 배치 시간 안이면 그 배치. */
+export const leagueLateSlotAt = (l: LeagueDef, now: string) =>
+  leagueLateSlots(l).find(
+    (s) => now >= s.at && Date.parse(now) < Date.parse(s.at) + LEAGUE_LATE_WINDOW_MS,
+  ) ?? null;
+
+/** 지금 늦은 참가를 신청하면 들어갈 배치(배치 시간이 끝나지 않은 첫 배치). 첫 배치 전이거나 남은 배치가 없으면 null. */
+export const leagueNextLate = (l: LeagueDef, now: string) =>
+  now < l.drawAt
+    ? null
+    : (leagueLateSlots(l).find((s) => Date.parse(now) < Date.parse(s.at) + LEAGUE_LATE_WINDOW_MS) ??
+      null);
+
 export const leagueFinalAt = (l: LeagueDef) => l.rounds.at(-1)!;
 
 /** 끝난 리그를 '지난 시즌 리그'로 보여 주는 동안(마지막 라운드 뒤 하루)은 'running'으로 둔다 — 결산이 그 안에 끝난다. */

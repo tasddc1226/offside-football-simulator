@@ -3,7 +3,11 @@ import {
   LEAGUE_FILL_PROMOTE_SCOUTS,
   LEAGUE_FORFEIT_GOALS,
   LEAGUE_FORFEIT_LIMIT,
+  LEAGUE_LATE_MAX_LEAGUES,
+  LEAGUE_MIN_SIZE,
+  LEAGUE_SIZE,
   leagueFixtures,
+  leagueLateSlotAt,
   leagueNextTier,
   leagueOutcome,
   leaguePyramid,
@@ -468,6 +472,138 @@ export async function drawLeague(db: Db, league: LeagueDef, now: string) {
 }
 
 /**
+ * T-11-564 늦은 참가 배치(leagueLateSlots: 첫 배치 뒤 매주 같은 시각부터 그날 첫 라운드 전까지). 아직 리그에 들지 않은 신청
+ * 중 그 시즌 팀 선발이 자격 수 이상인 팀을 신청 순으로 7~8팀 리그로 묶어 맨 아래 부에 더한다(맨 아래 부가 1부면 2부를 연다).
+ * 새 리그는 그날 첫 라운드부터 시즌 끝까지 한 바퀴 일정을 처음부터 되풀이하고, 돌고 있는 리그 · 순위는 건드리지 않는다.
+ * 리그를 꾸리지 못한 팀은 다음 배치를 기다리고, 마지막 배치였으면 빠진다(dropped). 겹친 cron은 tiers_json을 먼저 바꾼 쪽만
+ * 쓴다: 모든 쓰기가 새 tiers_json이 저장됐는지 확인한다. 쓴 신청 수를 돌려준다.
+ */
+export async function lateDrawLeague(
+  db: Db,
+  league: LeagueDef,
+  state: LeagueStateRow,
+  now: string,
+) {
+  const slot = leagueLateSlotAt(league, now);
+  const tiers = tiersOf(state);
+  const bottom = tiers.at(-1);
+  if (!slot || !bottom) return 0;
+  const rows = await db
+    .select({ entry: leagueEntries, team: ownerTeams })
+    .from(leagueEntries)
+    .innerJoin(profiles, eq(profiles.id, leagueEntries.profileId))
+    .leftJoin(
+      ownerTeams,
+      and(eq(ownerTeams.profileId, leagueEntries.profileId), eq(ownerTeams.season, league.season)),
+    )
+    .where(
+      and(
+        eq(leagueEntries.season, league.season),
+        eq(leagueEntries.status, 'active'),
+        isNull(leagueEntries.tier),
+      ),
+    );
+  if (!rows.length) return 0;
+  const tier = Math.max(2, bottom.tier);
+  const had = tiers.find((t) => t.tier === tier);
+  const ready = rows
+    .filter((r) => r.team && r.team.filled >= league.minFilled)
+    .sort(
+      (a, b) =>
+        a.entry.createdAt.localeCompare(b.entry.createdAt) ||
+        a.entry.profileId.localeCompare(b.entry.profileId),
+    );
+  // leaguePyramid와 같은 나눔(7~8팀 리그), 한 부의 리그 수 상한 안에서.
+  let k = Math.ceil(ready.length / LEAGUE_SIZE);
+  if (k * LEAGUE_MIN_SIZE > ready.length) k = Math.floor(ready.length / LEAGUE_SIZE);
+  k = Math.max(0, Math.min(k, 2 ** (tier - 1) + LEAGUE_LATE_MAX_LEAGUES - (had?.leagues ?? 0)));
+  const used = ready.slice(0, Math.min(ready.length, k * LEAGUE_SIZE));
+  if (!used.length && !slot.last) return 0;
+  const base = had?.leagues ?? 0;
+  const grp = used.length
+    ? drawGroups(
+        used.map((r) => ({ teamId: r.team!.id, ovr: r.team!.ovr })),
+        k,
+        `${state.seed}:late:${slot.at}`,
+      )
+    : new Map<string, number>();
+  const placed = new Map(used.map((r) => [r.team!.id, base + grp.get(r.team!.id)!]));
+  const next = !used.length
+    ? tiers
+    : had
+      ? tiers.map((t) =>
+          t.tier === tier ? { ...t, leagues: t.leagues + k, teams: t.teams + used.length } : t,
+        )
+      : [...tiers, { tier, leagues: k, teams: used.length }];
+  const nextJson = JSON.stringify(next);
+  const usedIds = new Set(used.map((r) => r.entry.profileId));
+  const updates = rows.flatMap((r) => {
+    const no = r.team ? placed.get(r.team.id) : undefined;
+    // 마지막 배치가 아니면 리그에 못 든 신청은 그대로 다음 배치를 기다린다.
+    if (!no && !slot.last) return [];
+    // 자격은 갖췄는데 리그를 꾸리지 못하고 빠지면 팀 기록을 남긴다(빠진 이유: 팀 수).
+    const keep = !!no || (!usedIds.has(r.entry.profileId) && ready.includes(r));
+    return [
+      {
+        p: r.entry.profileId,
+        s: no ? 'active' : 'dropped',
+        t: keep ? r.team!.id : null,
+        n: keep ? r.team!.name : null,
+        m: keep ? r.team!.manager : null,
+        o: keep ? r.team!.ovr : null,
+        tier: no ? tier : null,
+        no: no ?? null,
+      },
+    ];
+  });
+  const matches: unknown[][] = [];
+  for (let i = 1; i <= k; i++) {
+    const members = used
+      .filter((r) => placed.get(r.team!.id) === base + i)
+      .sort((a, b) => b.team!.ovr - a.team!.ovr || a.team!.id.localeCompare(b.team!.id))
+      .map((r) => r.team!.id);
+    const cycle = leagueFixtures(members);
+    for (let r = slot.firstRound - 1; r < league.rounds.length; r++)
+      leagueRoundPairs(cycle, r - (slot.firstRound - 1)).forEach(([home, away], s) =>
+        matches.push([newId('lgm'), tier, base + i, r + 1, s, home, away, league.rounds[r]]),
+      );
+  }
+  const d1 = db.$client;
+  const guard = 'EXISTS (SELECT 1 FROM league_state WHERE season = ? AND tiers_json = ?)';
+  const stmts: D1PreparedStatement[] = [
+    d1
+      .prepare('UPDATE league_state SET tiers_json = ? WHERE season = ? AND tiers_json = ?')
+      .bind(nextJson, league.season, state.tiersJson),
+  ];
+  for (const part of chunks(updates))
+    stmts.push(
+      d1
+        .prepare(
+          `UPDATE league_entries SET status = j.s, team_id = j.t, name = j.n, manager = j.m, ovr = j.o, tier = j.tier,
+             league_no = j.no, notified_round = -1, updated_at = ?
+           FROM (SELECT value ->> 'p' AS p, value ->> 's' AS s, value ->> 't' AS t, value ->> 'n' AS n,
+                   value ->> 'm' AS m, value ->> 'o' AS o, value ->> 'tier' AS tier, value ->> 'no' AS no
+                 FROM json_each(?)) AS j
+           WHERE league_entries.season = ? AND league_entries.profile_id = j.p AND league_entries.status = 'active'
+             AND league_entries.tier IS NULL AND ${guard}`,
+        )
+        .bind(now, JSON.stringify(part), league.season, league.season, nextJson),
+    );
+  for (const part of chunks(matches))
+    stmts.push(
+      d1
+        .prepare(
+          `INSERT OR IGNORE INTO league_matches (id, season, tier, league_no, round, slot, home_team_id, away_team_id, at)
+           SELECT value ->> 0, ?, value ->> 1, value ->> 2, value ->> 3, value ->> 4, value ->> 5, value ->> 6, value ->> 7
+           FROM json_each(?) WHERE ${guard}`,
+        )
+        .bind(league.season, JSON.stringify(part), league.season, nextJson),
+    );
+  await d1.batch(stmts);
+  return updates.length;
+}
+
+/**
  * 시각이 된 경기를 치른다(라운드 · 부 · 리그 순). 홈 이점이 있다(중립 경기 아님). 팀이 없거나(지워짐 · 다른 시즌) 선발이
  * 비었거나 기권 처리된 쪽은 0:3 기권패이고, 기권이 LEAGUE_FORFEIT_LIMIT번 쌓이면 남은 경기는 모두 기권패로 친다.
  */
@@ -739,7 +875,15 @@ export async function notifyLeague(
     let title: string;
     let body: string;
     let key: string;
-    if (e.status === 'dropped') {
+    // T-11-564 첫 배치 뒤에 신청(다시 신청)한 늦은 참가.
+    const late = e.createdAt > state.drawnAt;
+    if (e.status === 'dropped' && late) {
+      key = `league:${season}:late-dropped`;
+      title = cupKo('leagueDroppedTitle', { season });
+      body = e.teamId
+        ? cupKo('leagueLateLeftBody')
+        : cupKo('leagueLateDroppedBody', { season, n: league.minFilled });
+    } else if (e.status === 'dropped') {
       key = `league:${season}:dropped`;
       title = cancelled
         ? cupKo('leagueCancelledTitle', { season })
@@ -752,12 +896,14 @@ export async function notifyLeague(
     } else if (e.notifiedRound < 0 || played === 0) {
       key = `league:${season}:placed`;
       title = cupKo('leaguePlacedTitle', { season });
-      body = cupKo('leaguePlacedBody', {
+      body = cupKo(late ? 'leagueLatePlacedBody' : 'leaguePlacedBody', {
         team: e.name ?? '-',
         tier: e.tier!,
         league: e.leagueNo!,
         time: kstHm(league.rounds[0]!),
       });
+      // 늦은 참가는 이미 끝난 라운드 결과를 보내지 않는다(그 리그는 다음 라운드부터 치른다).
+      if (late) target = played;
     } else {
       target = played;
       const table = tableOf(e.tier!, e.leagueNo!);
@@ -828,6 +974,11 @@ export async function runLeague(db: Db, now: string, given?: LeagueDef) {
   if (!state)
     return { season: league.season, step: 'draw', ...(await drawLeague(db, league, now)) };
   if (state.doneAt) return null;
+  // T-11-564 늦은 배치 시간이면 늦은 참가부터 묶는다(시간 밖이면 DB를 읽지 않는다).
+  if (leagueLateSlotAt(league, now)) {
+    const n = await lateDrawLeague(db, league, state, now);
+    if (n) return { season: league.season, step: 'late', n };
+  }
   const entries = await leagueEntriesOf(db, league.season);
   const n = await playLeagueMatches(db, league, entries, now);
   if (n) return { season: league.season, step: 'play', n };

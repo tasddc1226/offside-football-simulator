@@ -148,4 +148,11 @@ export const league: Translation<LeagueMsgs> = {
     `1st place goes up to Tier ${p.up} next season. This is the bottom tier, so there's no relegation.`,
   moveMid: (p) =>
     `1st place goes up to Tier ${p.up} next season. 7th and 8th drop to Tier ${p.down}.`,
+  ruleLate:
+    'You can still enter after the league starts. Each week at placement time, late entries are grouped into new leagues of 7 or 8 clubs in the bottom tier. If there are too few clubs, they move to the next week.',
+  lateEnterNote: (p) =>
+    `Late entries are grouped into leagues on ${p.at}. They play every day from then until the season ends.`,
+  lateWaiting: (p) => `Waiting for the ${p.at} placement.`,
+  lateAskDeadline: (p) =>
+    `You can cancel until the ${p.at} placement. If there are too few clubs to form a league, you move to the next week.`,
 };

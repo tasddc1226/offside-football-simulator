@@ -163,6 +163,14 @@ const ko = {
     `1위는 다음 시즌 ${p.up}부로 올라가요. 맨 아래 부라 강등은 없어요.`,
   moveMid: (p: { up: number; down: number }) =>
     `1위는 다음 시즌 ${p.up}부로 올라가고, 7 · 8위는 ${p.down}부로 내려가요.`,
+  // T-11-564 늦은 참가.
+  ruleLate:
+    '리그가 시작한 뒤에도 신청할 수 있어요. 매주 배치 시각에 늦게 신청한 팀끼리 7~8팀 리그를 만들어 맨 아래 부에 더해요. 팀이 모자라면 다음 주 배치로 넘어가요.',
+  lateEnterNote: (p: { at: string }) =>
+    `${p.at}에 늦게 신청한 팀끼리 리그를 만들어요. 그날부터 시즌 끝까지 매일 경기해요.`,
+  lateWaiting: (p: { at: string }) => `${p.at} 배치를 기다리고 있어요.`,
+  lateAskDeadline: (p: { at: string }) =>
+    `${p.at} 배치 전까지는 신청을 취소할 수 있어요. 함께 리그를 꾸릴 팀이 모자라면 다음 주 배치로 넘어가요.`,
 };
 
 export type LeagueMsgs = typeof ko;

@@ -118,6 +118,11 @@ export const CUP_JA: Record<CupTextKey, string> = {
     '組分け時にシーズン{season}チームのスタメンに選手が{n}人いれば参加できます。今は{filled}人です。',
   leaguePlacedTitle: 'シーズン{season} オフサイドリーグ組分け結果',
   leaguePlacedBody: '{team}は{tier}部{league}リーグです。第1節は今日{time}に始まります。',
+  leagueLatePlacedBody: '{team}は{tier}部{league}リーグです。最初の試合は今日{time}に始まります。',
+  leagueLateDroppedBody:
+    '最後の組分け時刻にシーズン{season}チームのスタメン選手が{n}人に届きませんでした。次のシーズンにまた申し込めます。',
+  leagueLateLeftBody:
+    '最後の組分けでリーグを組めるだけのチームが集まりませんでした。次のシーズンにまた申し込めます。',
   leagueDroppedTitle: 'シーズン{season} オフサイドリーグの参加が取り消されました',
   leagueDroppedBody:
     '組分け時刻にシーズン{season}チームのスタメン選手が{n}人に届きませんでした。次のシーズンにまた申し込めます。',
