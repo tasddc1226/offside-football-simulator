@@ -38,9 +38,9 @@ import { RecordsSelect, RecordsChips } from '../RecordsControls';
 import TeamProfile from './TeamProfile';
 import { TeamLogo } from '../../../components/TeamLogo';
 import { TitleBadge } from '../../../components/TitleBadge';
-import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
 import { useSeasonNow } from '../../../ui/useSeasonNow';
 import { useRefresh } from '../../../ui/refresh';
+import { seasonOptions } from '../../../ui/seasonOptions';
 
 /** T-11-510 시즌 2부터 레이팅 칸은 RP다. */
 const ratingLabel = (rp: boolean) => (rp ? L.sortRp : L.sortRating);
@@ -208,13 +208,7 @@ export default function TeamRanking() {
           label={L.seasonLabel}
           testID="rank-season-select"
           value={season ?? data?.season ?? displaySeasonAt(now)}
-          options={
-            data?.seasons.map((s) => ({ value: s.id, label: seasonLabel(s.id, s.name) })) ??
-            openTeamSeasons(now).map((id) => ({
-              value: id,
-              label: teamSeasonLabel(id),
-            }))
-          }
+          options={seasonOptions(data?.seasons ?? openTeamSeasons(now), now)}
           onChange={(id) => {
             setSeason(id);
             setPage(1);

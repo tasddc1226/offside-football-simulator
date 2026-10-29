@@ -112,6 +112,8 @@ const EAGER_NAMESPACES = new Set([
   'homeLive',
   'legendToast',
   'ownerConflict',
+  // T-11-562 명예의 전당(hof) 시즌 고르기 칸의 상태 · 기간 문구(작은 묶음).
+  'seasonPick',
   'settingsApi',
   'sheetCore',
   'shell',

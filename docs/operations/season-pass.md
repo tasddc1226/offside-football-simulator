@@ -1,7 +1,7 @@
 # 시즌 패스 (T-11-511)
 
 한 시즌 동안 쓰는 9,900원 패스다. 자동 갱신 없는 소모성 상품 `com.offsidelab.app.season_pass`로 판다.
-사면 바로 1단계를 받고, 그 시즌에 은퇴시킨 커리어 수로 2~11단계(25명까지)와 보너스 12~14단계(30 · 40 · 50명)가 열린다.
+사면 바로 1단계를 받고, 그 시즌에 은퇴시킨 커리어 수로 2~~11단계(25명까지)와 보너스 12~~14단계(30 · 40 · 50명)가 열린다.
 단계표와 보상은 `packages/contracts/src/season-pass-rules.ts`에 있다.
 
 ## 단계표 기준 (T-11-519, 2026-10-27)
@@ -32,4 +32,4 @@
 2. 서버 변수 `SEASON_PASS_ENABLED=1`을 켠다. 꺼져 있으면 GET은 진행도만 주고 `stores: []`라 앱이 사기 버튼을 보이지 않는다. 받기는 스위치와 상관없이 된다. 스위치를 켜도 시즌 2 개막(`SEASON_PASS_FIRST_SEASON`) 전에는 팔지 않고, 그동안 화면은 시즌 2 패스를 보인다.
 3. `SEASON_PASS_LIVE`(contracts)를 `true`로 바꿔 웹 · 앱 구단주 화면에 입구를 연다. 앱은 OTA로 나간다. 같은 PR에서 공개 가이드(`apps/web/scripts/seo.mjs` GUIDE_SECTIONS) · FAQ에 시즌 패스를 더한다.
 
-`SEASON_PASS_LIVE`가 false인 동안 입구는 개발 빌드(`import.meta.env.DEV`, `__DEV__`)에서만 보인다. true로 바꾼 뒤에도 입구는 시즌 2가 개막해야 보인다(`passEntryOpen`, T-11-519). 웹 · 앱이 시작 때 받아 둔 시즌 일정으로 판단하므로, 1.1.5처럼 true로 나간 앱도 그 전에는 입구가 없다. iOS 앱은 `SEASON_PASS_IOS_LIVE`도 true여야 보인다(T-11-516). App Store 패스 상품이 승인되면 true로 바꿔 운영 배포(OTA)로 연다.
+`SEASON_PASS_LIVE`가 false인 동안 입구는 개발 빌드(`import.meta.env.DEV`, `__DEV__`)에서만 보인다. true로 바꾼 뒤에도 입구는 시즌 2가 개막해야 보인다(`passEntryOpen`, T-11-519). 웹 · 앱이 시작 때 받아 둔 시즌 일정으로 판단하므로, 1.1.5처럼 true로 나간 앱도 그 전에는 입구가 없다. iOS 앱은 `SEASON_PASS_IOS_LIVE`도 true여야 보인다(T-11-516). App Store 패스 상품이 승인되면 true로 바꿔 운영 배포(OTA)로 연다. 2026-10-29 1.1.5 출시 뒤 true로 열었다(T-11-566).

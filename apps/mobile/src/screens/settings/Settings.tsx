@@ -9,13 +9,19 @@ import { keyMomentText as KM } from '@offside/app-core/i18n/ko/keyMoment';
 import { revealText as RV } from '@offside/app-core/i18n/ko/reveal';
 import { useTextSize } from '../../theme/useTextSize';
 import { nativeAnalytics } from '../../analytics';
-import { useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { View } from 'react-native';
 import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
 import { saveKey } from '@offside/game/storage';
 import { buzz } from '../../game/host';
 import { SiteFooter } from '../../components/SiteFooter';
-import { goAccount, goFairness, goHome, goTypeDex, takeFocus } from '../../game/nav';
+import { go, goFairness, goHome, goTypeDex, takeFocus } from '../../game/nav';
+import { Account } from '../owner/Account';
+import { LoginButtons } from '../owner/LoginButtons';
+import { accountCache } from '../../store';
+import { isMember } from '@offside/app-core/account';
+import { fetchOwnerSummary } from '@offside/app-core/api/ownerSummary';
+import { ownerText as OL } from '@offside/app-core/i18n/ko/owner';
 import { replayCoach } from '../../components/Coachmark';
 import { tutorialText as TU } from '@offside/app-core/i18n/ko/tutorial';
 import { scrollBackTo } from '../../ui/scroll';
@@ -33,7 +39,14 @@ import { AdFreeSettings } from './AdFreeSettings';
 import { PushSettings } from './PushSettings';
 import { ReviewSettings } from './ReviewSettings';
 import { ServerStatus } from './ServerStatus';
-import { SelectField, SettingsCard, SettingsLabel, SettingsRow, Switch } from './parts';
+import {
+  SelectField,
+  SettingsCard,
+  SettingsLabel,
+  SettingsRow,
+  SettingsTrigger,
+  Switch,
+} from './parts';
 import { settingsText as L } from '@offside/app-core/i18n/ko/settings';
 import { LOCALE_NAMES, LOCALES, type Locale } from '@offside/app-core/i18n/core';
 import { useSnapshot } from 'valtio';
@@ -119,6 +132,21 @@ function replayTutorial() {
 
 export default function Settings() {
   const [focusBackup] = useState(() => takeFocus('backup'));
+  // T-10-016 운영 도구 입구는 운영자에게만. 구글 연결 계정일 때만 서버에 묻는다(10분 메모, 익명이면 요청이 없다).
+  const c = useColors();
+  const cache = useSnapshot(accountCache);
+  const acct = cache.value;
+  const linked = !!acct && acct !== 'error' && isMember(acct);
+  const guest = acct === null || (!!acct && acct !== 'error' && !isMember(acct));
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    setAdmin(false);
+    if (linked) void fetchOwnerSummary().then((r) => alive && r.ok && setAdmin(r.data.admin));
+    return () => {
+      alive = false;
+    };
+  }, [linked]);
   const backupFocus = useRef(focusBackup);
   const dark = useIsDark();
   const textSize = useTextSize();
@@ -167,6 +195,26 @@ export default function Settings() {
         <Txt v="h1" accessibilityRole="header" style={{ marginTop: 2 }}>
           {L.title}
         </Txt>
+      </View>
+      {/* T-11-567 계정(로그인 · 연동 · 로그아웃 · 탈퇴)과 운영 도구 입구는 내 구단 화면에서 설정 맨 위로 옮겼다. */}
+      <View testID="account-slot" accessibilityLabel={OL.accountSection}>
+        <SettingsCard>
+          <Account />
+          {guest ? (
+            <View style={{ marginTop: 12 }}>
+              <LoginButtons />
+            </View>
+          ) : null}
+          {admin ? (
+            <View
+              style={{ marginTop: 12, paddingTop: 4, borderTopWidth: 1, borderTopColor: c.line }}
+            >
+              <SettingsTrigger testID="admin" label={OL.adminTools} onPress={() => go('admin')}>
+                <SettingsLabel title={OL.adminTools} />
+              </SettingsTrigger>
+            </View>
+          ) : null}
+        </SettingsCard>
       </View>
       {/* T-11-355 상품 위치 안내(기기마다 닫을 때까지) */}
       <ItemsHint />
@@ -283,7 +331,6 @@ export default function Settings() {
           label={L.help}
           items={[
             { text: L.guide, path: '/guide/' },
-            { text: L.accountLink, id: 'account', onPress: goAccount },
             { text: L.faq, path: '/faq/' },
             { text: L.fairness, id: 'fairness', onPress: goFairness },
             { text: FG.typeDex, id: 'type-dex', onPress: goTypeDex },

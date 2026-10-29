@@ -68,6 +68,16 @@ const ko = {
   lockBadge: '\u{1F512}︎ 로그인하면 열려요',
   accountSection: '계정',
   adminTools: '운영 도구',
+  // T-11-567 허브 바로가기 칸(2열)과 상점 화면.
+  shortcutsHeading: '바로가기',
+  tilePlayers: '보유 선수 · 육성 기록',
+  tileMarket: '선수 사고팔기',
+  tileExchange: '은퇴 선수를 아이템으로',
+  tileManager: '감독으로 이어 가기',
+  tileHall: '시즌 기록 · 칭호',
+  shopTitle: '상점',
+  tileShop: '리롤 · 강화 · 스카우트권',
+  shopLoginNeeded: '상점은 로그인한 구단주만 써요.',
   // ownerHub.ts
   teamEmptyWith: (p: { season: string; n: number }) =>
     `${p.season}에 은퇴한 내 선수 ${p.n}명으로 팀을 꾸릴 수 있어요. 빈 자리는 유스 선수가 채워요.`,

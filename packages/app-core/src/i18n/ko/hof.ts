@@ -33,7 +33,6 @@ const ko = {
   season: '시즌',
   seasonAria: '기록 시즌',
   allSeasons: '전체 시즌',
-  notOpen: ' (개막 예정)',
   filter: '필터',
   filterLabel: (p: { pos: string; sort: string }) => `필터, ${p.pos}, ${p.sort}`,
   filterA11y: (p: { label: string }) => `필터, ${p.label}`,

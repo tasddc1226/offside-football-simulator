@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SeasonSelect from '../SeasonSelect.svelte';
   import { teamNameIssues } from '@offside/app-core/careerGuide';
   import { seasonLabel } from '@offside/app-core/seasonName';
   // 팀 소개는 작게, 편성 그라운드는 바로 아래에. 보조 동작은 팀 메뉴에 모은다.
@@ -83,11 +84,7 @@
 <section class="card tm-head">
   <div class="tm-top">
     {#if seasons.length > 1}
-      <select class="tm-season" aria-label={L.seasonSelect} value={season} onchange={(e) => { closeMenu(); onseason(Number(e.currentTarget.value)); }} data-team-season>
-        {#each seasons as o (o.id)}
-          <option value={o.id}>{seasonLabel(o.id, o.name)}{o.id === current ? L.seasonNow : ''}</option>
-        {/each}
-      </select>
+      <div class="tm-season"><SeasonSelect compact label={L.seasonSelect} value={season} {seasons} onpick={(v) => { closeMenu(); onseason(Number(v)); }} data-team-season /></div>
     {:else}<span class="tm-season-name">{seasonName}</span>{/if}
     {#if editable}
     <details class="tm-menu" bind:this={menu} bind:open={menuOpen}>
@@ -154,8 +151,8 @@
 <style>
   .tm-head {display:flex;flex-direction:column;gap:8px;padding:8px 16px 16px;}
   .tm-top {display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;}
-  .tm-season-name,.tm-season {font-size:12px;font-weight:600;color:var(--muted);}
-  .tm-season {max-width:calc(100% - 52px);min-height:44px;padding:0 24px 0 0;border:0;border-radius:var(--radius-xs);background:transparent;color:var(--muted);font-family:inherit;cursor:pointer;}
+  .tm-season-name {font-size:12px;font-weight:600;color:var(--muted);}
+  .tm-season {flex:1;min-width:0;max-width:calc(100% - 52px);}
   .tm-menu {position:relative;flex:none;}
   .tm-menu summary {display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:var(--radius-sm);list-style:none;cursor:pointer;color:var(--muted);}
   .tm-menu summary::-webkit-details-marker {display:none;}

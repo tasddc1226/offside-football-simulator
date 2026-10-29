@@ -88,7 +88,7 @@ export const CUP_EN: Record<CupTextKey, string> = {
   droppedBody: 'You had fewer than {n} starting players at the draw, so you couldn’t take part.',
   cancelledTitle: "The {cup} won't take place",
   cancelledBody: 'Too few clubs entered, so this cup was cancelled.',
-  drawTitle: '{cup} group draw',
+  drawTitle: '{cup} groups are set',
   drawBody: '{team} is in Group {group}. The first match kicks off today at {time}.',
   matchTitle: 'OFFSIDE Cup {round}: {result}',
   champion: 'Champions',
