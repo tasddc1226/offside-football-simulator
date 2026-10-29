@@ -32,9 +32,9 @@
   "vars": {
     // ADR-015 도입 단계: 4단계(T-11-296)에 @mkt까지 연다.
     "ENABLED_ROLES": "ops,plan,dev,mkt",
-    // T-11-576 슬랙 → 디스코드 옮기기. "discord"로 바꿀 때 아래 채널 · 사용자 ID(OPERATOR_USER_ID · ALERT_CHANNELS · DESK_CHANNEL ·
-    // APPROVAL_CHANNEL)도 디스코드 값으로 바꾸고 AGENT_APP_IDS · AGENT_BOT_USERS는 비운다(docs/operations/discord-agents.md).
-    "CHAT_PLATFORM": "slack",
+    // T-11-576 디스코드로 옮겼다(2026-10-29). 슬랙으로 되돌릴 때는 "slack"과 아래 채널 · 사용자 ID를 슬랙 값으로 함께 되돌린다
+    // (docs/operations/discord-agents.md 되돌리기).
+    "CHAT_PLATFORM": "discord",
     "DISCORD_APP_ID": "1565286012953960458",
     "DISCORD_PUBLIC_KEY": "0b5796376fc66873a5eb746e1eaf587e968e39f76cf5b8ceed3c72b609eaf143",
     // OFFSIDE Lab 서버.
@@ -52,23 +52,23 @@
     "META_AD_ACCOUNT_ID": "943240728441057",
     // T-11-395 인스타그램 @offside.lab.kr. 토큰은 비밀값 INSTAGRAM_ACCESS_TOKEN(T-11-397) 또는 META_GRAPH_TOKEN, Threads는 THREADS_ACCESS_TOKEN.
     "META_IG_USER_ID": "17841417364785110",
-    "OPERATOR_USER_ID": "U0C9BAYGT8Q",
-    // 에이전트 봇 4개(자기 · 서로의 메시지에 반응하지 않는다).
-    "AGENT_APP_IDS": "A0C987NV8HZ,A0C9CFUM98E,A0C996C6R3P,A0C9E9PELTC",
-    "AGENT_BOT_USERS": "U0C987SP9MH,U0C9J5P80JG,U0C996EN269,U0C8Z49E58F",
+    "OPERATOR_USER_ID": "431489017041649664",
+    // 슬랙 에이전트 봇 4개(디스코드는 브리지가 자기 웹훅 글을 거른다).
+    "AGENT_APP_IDS": "",
+    "AGENT_BOT_USERS": "",
     // #offside-alerts
-    "ALERT_CHANNELS": "C0C8FEU657G",
+    "ALERT_CHANNELS": "1565295478701301881",
     "CF_ACCOUNT_ID": "12f369468d8f8386e116a5c76da455d2",
     "D1_DATABASE_ID": "2cfe462c-204e-4842-805c-5840fc9b1758",
     "GITHUB_REPO": "tasddc1226/offside-football-simulator",
     "API_BASE": "https://api.offside-lab.com",
     // #agent-desk
-    "DESK_CHANNEL": "C0C9E9WRVA6",
+    "DESK_CHANNEL": "1565295474821566587",
     "TASK_BUDGET_USD": "1.5",
     "DAILY_BUDGET_USD": "5",
     "DAILY_BUDGET_DEV_USD": "20",
     "DEV_RUN_BUDGET_USD": "5",
-    "APPROVAL_CHANNEL": "C0C9GCJPYAV",
+    "APPROVAL_CHANNEL": "1565295476637433936",
     // 고객 문의 메일함 검색 조건(T-11-291).
     "SUPPORT_QUERY": "to:contact@offside-lab.com",
     // Gmail 보내기 별칭(Cloudflare SMTP로 나간다, DKIM 자동).
