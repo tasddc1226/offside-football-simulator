@@ -5,7 +5,7 @@
   import { DETAIL_LABEL, FORMATION_IDS, LINEUP_SIZE, SHAPE_IDS, presetLayout, positionedLayout, positionRole, shapeBase, matchShape, shapeLayout, slotRating, slotFit, type FormationId, type ShapeId, type TeamPosition } from '@offside/contracts/owner-team';
   import { POS_LABEL, detailPosOf, type PosGroup } from '@offside/contracts/positions';
   import type { OwnerTeam, TeamLines as Lines, TeamPlayer } from '@offside/app-core/api/team';
-  import { attrLine, salaryIn, synergyFocus, type salaryBar } from '@offside/app-core/teamOwner';
+  import { attrLine, fatiguePctOf, salaryIn, synergyFocus, type LeagueFatigue, type salaryBar } from '@offside/app-core/teamOwner';
   import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
   import { lockToggleable } from '@offside/app-core/market';
   import { synergyApplies, type TeamSynergy as Synergy } from '@offside/contracts/owner-team';
@@ -21,14 +21,14 @@
   import { dur } from '../motion.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
-  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, saveBlock = null, salary = null, budget, onassign, onauto, onsave, onlock, onpresets, focusSlot = $bindable(null) }:
+  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, saveBlock = null, salary = null, fatigue = null, budget, onassign, onauto, onsave, onlock, onpresets, focusSlot = $bindable(null) }:
     { team: OwnerTeam | null; editable: boolean; formation: FormationId; layout: TeamPosition[] | null; slots: (string | null)[]; lines: Lines; synergy: Synergy; season: number;
       cells: { rating: number; name: string; youth: boolean; player?: TeamPlayer | undefined }[]; players: TeamPlayer[]; nameOf: (p: TeamPlayer) => string;
       teamName: string; managerName: string; teamLogo: TeamLogo | null; seasonName: string; filled: number; saving: boolean; nameOk: boolean; dirty: boolean;
       /** T-11-436 컵 규칙에 걸려 서버가 거절할 이유(있으면 저장 버튼 옆에 보인다). */
       saveBlock?: string | null;
       /** T-11-376 지난 시즌 선수 급여 막대(프리시즌은 null). */
-      salary?: ReturnType<typeof salaryBar>; budget: number; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void; onlock?: ((p: TeamPlayer) => void) | undefined; onpresets?: (() => void) | undefined; focusSlot?: number | null } = $props();
+      salary?: ReturnType<typeof salaryBar>; fatigue?: LeagueFatigue | null | undefined; budget: number; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void; onlock?: ((p: TeamPlayer) => void) | undefined; onpresets?: (() => void) | undefined; focusSlot?: number | null } = $props();
   let shareData = $state<TeamShareData | null>(null);
   let salaryOpen = $state(false);
   let pitch = $state<HTMLElement>();
@@ -239,6 +239,7 @@
           {@const country = NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION)}
           {@const pay = salaryIn(p, season)}
           {@const wontFit = at < 0 && pay > 0 && !!salary && salary.sum + pay > salary.budget}
+          {@const tired = fatiguePctOf(fatigue, p.careerId)}
           <article class="locker-player" class:chosen={selectedPlayer === p.careerId} class:salary-out={wontFit} data-locker-player={p.careerId}>
             <button class="locker-select" aria-pressed={selectedPlayer === p.careerId} aria-label={L.lockerPickAria({ who: `${nameOf(p)}${country ? ` · ${tn(country.ko)}` : ''}`, pos: tn(POS_LABEL[p.pos]), peak: p.peak, attrs: attrLine(p) ?? L.noAttrs })} onclick={() => pickPlayer(p.careerId)} onpointerdown={(e) => { if (e.pointerType === 'mouse') start(e, p.careerId, null); }}>
               <PlayerCard player={p} name={nameOf(p)} rating={p.peak} role={detailPosOf(p)} />
@@ -246,6 +247,7 @@
             <div class="roster-row">
               <span class="roster-state" class:starting={at >= 0}>{at >= 0 ? L.rosterStarting({ slot: positions[at]!.slot }) : L.rosterBench}</span>
               {#if pay > 0}<span class="salary-chip" class:over={wontFit} data-salary-chip={pay} data-salary-over={wontFit ? '' : undefined}>{wontFit ? `${TC.salaryChip({ n: pay })} · ${TC.salaryOver}` : TC.salaryChip({ n: pay })}</span>{/if}
+              {#if tired > 0}<span class="fatigue-chip" title={TC.fatigueHint} data-fatigue-chip={tired}>{TC.fatigueChip({ n: tired })}</span>{/if}
               {#if onlock}<button class="lock-toggle" class:on={p.locked} aria-pressed={!!p.locked} aria-label={L.lockerLockAria({ name: nameOf(p) })} data-act="lock" disabled={!lockToggleable(p)} onclick={() => onlock(p)}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d={p.locked ? 'M5.5 7V5a2.5 2.5 0 0 1 5 0v2' : 'M5.5 7V5a2.5 2.5 0 0 1 4.9-.7'} /></svg><span>{p.locked ? L.lockerLocked : p.listing ? L.lockerListed : L.lockerLock}</span></button>{/if}
             </div>
             <button class="drag-handle" aria-label={L.dragAria({ name: nameOf(p) })} onpointerdown={(e) => start(e, p.careerId, null)} onclick={() => pickPlayer(p.careerId)}><svg viewBox="0 0 18 12" aria-hidden="true"><path d="M3 2h2M3 6h2M3 10h2M8 2h2M8 6h2M8 10h2M13 2h2M13 6h2M13 10h2" /></svg><span>{L.dragLabel}</span></button>
@@ -299,6 +301,7 @@
   .salary-help {flex:none;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);font-size:12px;font-weight:700;color:var(--muted);}
   .salary-chip {display:inline-block;padding:1px 7px;border-radius:999px;border:1px solid var(--line);font-size:.68rem;font-weight:600;color:var(--muted);white-space:nowrap;}
   .salary-chip.over {border-color:var(--bad);color:var(--bad);}
+  .fatigue-chip {display:inline-block;padding:1px 7px;border-radius:999px;border:1px solid var(--warn);font-size:.68rem;font-weight:600;color:var(--warn);white-space:nowrap;}
   .locker-player.salary-out .locker-select {opacity:.55;}
   .locker-salary {white-space:nowrap;}
   .preset-bar {display:flex;justify-content:flex-end;margin:4px 14px 0;}

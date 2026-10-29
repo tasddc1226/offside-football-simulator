@@ -68,6 +68,9 @@ export const teamCore: Translation<TeamCoreMsgs> = {
     `この選手の年俸（${p.salary}）が残り予算（${p.left}）を超えています。過去シーズンの選手を外すか、今シーズンの選手を入れてください。`,
   salaryChip: (p) => `年俸 ${p.n}`,
   salaryOver: '予算オーバー',
+  // T-11-571 리그 체력
+  fatigueChip: (p: { n: number }) => `疲労 −${p.n}%`,
+  fatigueHint: 'リーグで3試合続けて先発すると疲れて実力が少し落ちます。1試合休めば回復します。',
   salaryLeft: (p) => `残り予算 ${p.n}`,
   salaryOpen: '年俸のご案内を見る',
   salaryOverSave: (p) =>

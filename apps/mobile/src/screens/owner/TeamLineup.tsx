@@ -8,7 +8,14 @@ import {
   type TeamPosition,
 } from '@offside/contracts/owner-team';
 import type { TeamPlayer } from '@offside/app-core/api/team';
-import { assignSlot, attrLine, salaryIn, type salaryBar } from '@offside/app-core/teamOwner';
+import {
+  assignSlot,
+  attrLine,
+  fatiguePctOf,
+  salaryIn,
+  type LeagueFatigue,
+  type salaryBar,
+} from '@offside/app-core/teamOwner';
 import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import { lockToggleable } from '@offside/app-core/market';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
@@ -56,6 +63,7 @@ export function TeamLineup({
   focusSlot = null,
   onFocused,
   season,
+  fatigue = null,
   salary = null,
 }: {
   formation: FormationId;
@@ -83,6 +91,8 @@ export function TeamLineup({
   /** T-11-376 팀 시즌(카드 급여 계산)과 급여 막대(프리시즌은 null). */
   season: number;
   salary?: ReturnType<typeof salaryBar>;
+  /** T-11-571 리그 체력(서버가 켰을 때만). */
+  fatigue?: LeagueFatigue | null | undefined;
 }) {
   const c = useColors();
   const { height } = useWindowDimensions();
@@ -418,6 +428,7 @@ export function TeamLineup({
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {visible.slice(0, limit).map((p) => {
                 const pay = salaryIn(p, season);
+                const tired = fatiguePctOf(fatigue, p.careerId);
                 const wontFit =
                   pay > 0 &&
                   !!salary &&
@@ -499,6 +510,23 @@ export function TeamLineup({
                           {wontFit
                             ? `${TC.salaryChip({ n: pay })} · ${TC.salaryOver}`
                             : TC.salaryChip({ n: pay })}
+                        </Txt>
+                      ) : null}
+                      {tired > 0 ? (
+                        <Txt
+                          v="xs"
+                          bold
+                          testID={`fatigue-chip-${p.careerId}`}
+                          accessibilityHint={TC.fatigueHint}
+                          style={{
+                            paddingHorizontal: 6,
+                            borderRadius: RADIUS.pill,
+                            borderWidth: 1,
+                            borderColor: c.warn,
+                            color: c.warn,
+                          }}
+                        >
+                          {TC.fatigueChip({ n: tired })}
                         </Txt>
                       ) : null}
                       {onLock ? (

@@ -1,5 +1,6 @@
 // T-10-092 구단주 팀 화면의 순수 로직(웹 team/Team.svelte · 앱 screens/owner/Team.tsx 공용, T-11-005).
 // 편성(자동 배치·자리 바꾸기)·선수 고르기 후보·업적 표기·경기 결과 표기처럼 화면이 그리기 전에 계산하는 것만 둔다.
+import { leagueFatiguePenalty } from '@offside/contracts/league';
 import { flagOf } from '@offside/contracts/nations';
 import { defaultClubName, LEAGUE_BASE } from '@offside/contracts/club-names';
 import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
@@ -76,6 +77,11 @@ export function assignSlot(
 // 최고 OVR로 정한 급여(1~20)의 합이 예산 안이어야 한다. 예산은 서버 응답(pastSalaryBudget), 없으면 기본값.
 export const budgetOf = (res: { pastSalaryBudget?: number | undefined } | null | undefined) =>
   res?.pastSalaryBudget ?? PAST_SALARY_BUDGET;
+// T-11-571 리그 체력(docs/tracking/league-fatigue-plan.md). 서버가 켰을 때만 응답에 온다.
+export type LeagueFatigue = { rate: number; streaks: Record<string, number> };
+/** 다음 리그 경기에 선발로 나가면 깎이는 자리 실력(%). 0이면 문제없다. */
+export const fatiguePctOf = (f: LeagueFatigue | null | undefined, careerId: string) =>
+  f ? Math.round(leagueFatiguePenalty(f.streaks[careerId] ?? 0, f.rate) * 100) : 0;
 /** 이 팀 시즌에서 카드가 받는 급여(이번 시즌 선수는 0). */
 export const salaryIn = (p: Pick<TeamPlayer, 'peak' | 'season'>, season: number) =>
   seasonSalaryOf(p, season);
