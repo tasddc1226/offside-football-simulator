@@ -62,6 +62,7 @@ test('웹 결제가 꺼져 있으면 묶음 없이 앱 안내를 그대로 둔�
   const calls = await setup(page, { enabled: false });
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="shop"]').click();
   await expect(page.locator('[data-scout-shop]')).toContainText(
     '프리미엄 스카우트권은 앱에서 살 수 있어요.',
   );
@@ -72,12 +73,13 @@ test('웹 결제가 꺼져 있으면 묶음 없이 앱 안내를 그대로 둔�
   expect(calls()).toBe(1);
 });
 
-test('구단주 화면: 아이템마다 앱과 같은 가격의 묶음을 보이고, 설정은 한 번만 묻는다', async ({
+test('상점 화면: 아이템마다 앱과 같은 가격의 묶음을 보이고, 설정은 한 번만 묻는다', async ({
   page,
 }) => {
   const calls = await setup(page, config);
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="shop"]').click();
   const boost = page.locator('[data-boost-shop]');
   await expect(boost.locator('[data-web-pay-packs="boost"]')).toContainText(
     '잠재력 강화권 3장 · 1,100원',
@@ -106,6 +108,7 @@ test('상품을 누르면 서버 주문의 결제창으로 가고, 돌아오면 
   );
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="shop"]').click();
   const shop = page.locator('[data-boost-shop]');
   await shop.locator(`[data-web-pay-product="${BOOST_3}"]`).click();
   await page.waitForURL(/sandbox-secure\.xsolla\.com/);
@@ -161,15 +164,23 @@ test('결제 확인이 늦으면 자동으로 들어온다고 알리고, 다음�
   );
   await page.goto(`/?webpay=${ORDER}`);
   await expect(page.getByText('결제를 확인하는 중…')).toBeVisible();
-  for (let i = 0; i < 6; i++) await page.clock.runFor(2000);
-  await expect(
-    page.getByText('결제가 확인되면 아이템이 자동으로 들어와요.', { exact: false }),
-  ).toBeVisible();
+  // 확인 요청은 진짜 네트워크라, 느린 러너에서는 시계를 정해진 횟수만 감으면 마지막 확인이 아직 안 끝났을 수 있다.
+  const later = page.getByText('결제가 확인되면 아이템이 자동으로 들어와요.', { exact: false });
+  await expect
+    .poll(
+      async () => {
+        await page.clock.runFor(2000);
+        return later.isVisible();
+      },
+      { timeout: 20_000 },
+    )
+    .toBe(true);
   const polled = statusCalls;
   expect(polled).toBeGreaterThanOrEqual(6);
   paid = true;
   await page.reload();
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="shop"]').click();
   await expect(page.getByText('결제가 끝나 아이템이 들어왔어요.')).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem('ft_webpay_pending'))).toBeNull();
 });

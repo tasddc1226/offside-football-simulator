@@ -35,7 +35,6 @@ export const settings: Translation<SettingsMsgs> = {
   help: '說明',
   installGuide: '加入主畫面',
   guide: '遊戲指南',
-  accountLink: '帳號・暱稱（我的俱樂部）',
   fairness: '機率與公平性',
   faq: '常見問題',
   legal: '服務政策',

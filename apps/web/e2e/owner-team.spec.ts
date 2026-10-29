@@ -143,7 +143,7 @@ test('익명 구단주는 내 팀 대신 구글 · Apple 로그인 버튼만 본
   await stubOwner(page, false);
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('#account-slot')).toContainText('로그인하지 않았어요');
+  await expect(page.locator('[data-owner-team-locked]')).toBeVisible();
   await expect(page.getByRole('link', { name: '구글로 로그인' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: '구글로 로그인' })).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Apple로 로그인' })).toHaveCount(1);
