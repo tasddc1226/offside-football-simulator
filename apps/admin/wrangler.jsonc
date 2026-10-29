@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // T-11-572 운영 지표 대시보드. 정적 파일만 내보낸다(Worker 코드 없음). 접근은 Cloudflare Access(운영자 메일 1개)가 막고,
+  // 지표는 api.offside-lab.com/v1/admin/kpi(requireAdmin)에서 받는다. Access를 거치지 않는 workers.dev 주소는 끈다.
+  "name": "offside-admin",
+  "compatibility_date": "2026-09-02",
+  "assets": { "directory": "./dist", "not_found_handling": "single-page-application" },
+  "workers_dev": false,
+  "env": {
+    "production": {
+      "name": "offside-admin",
+      "workers_dev": false,
+      "routes": [{ "pattern": "admin.offside-lab.com", "custom_domain": true }],
+    },
+  },
+}

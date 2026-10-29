@@ -14,6 +14,14 @@ export const clientIp = (c: Context<AppEnv>) => c.req.header('CF-Connecting-IP')
 /** 사람마다 다른 응답(엣지·브라우저 캐시 금지). */
 export const NO_STORE = 'private, no-store';
 
+/** 길이가 같을 때 끝까지 비교한다(토큰 추측 방지). */
+export function sameSecret(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
+
 /** 404 — 없는 대상. reason은 클라이언트가 구분할 때 쓰는 코드. */
 export const notFoundError = (message: string, reason: string) =>
   new AppError({ code: 'VALIDATION_FAILED', status: 404, message, details: { reason } });

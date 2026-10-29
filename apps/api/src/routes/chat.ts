@@ -31,7 +31,7 @@ import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { DAY_MS } from '../time.js';
-import { NO_STORE, notFoundError, nowIso, ok, readBody } from './shared.js';
+import { NO_STORE, notFoundError, nowIso, ok, readBody, sameSecret } from './shared.js';
 
 // T-11-015 실시간 채팅(라운지 방 하나). 누구나 읽고, 계정 로그인 + 닉네임이 있으면 쓴다. 메시지는 채팅방
 // Durable Object(chat/room.ts)에 있고 여기선 입장권 발급과 신고·차단(앱스토어 UGC 정책)·운영자 가리기·정지를 한다.
@@ -44,13 +44,6 @@ function room(c: Context<AppEnv>) {
 }
 
 const enc = new TextEncoder();
-/** 길이가 같을 때 끝까지 비교한다(토큰 추측 방지). */
-function sameSecret(a: string, b: string) {
-  if (a.length !== b.length) return false;
-  let d = 0;
-  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return d === 0;
-}
 /** 작성자 가명: 토큰을 섞은 해시 앞 8자. 같은 사람은 같은 가명이지만 프로필 ID로 되돌릴 수 없다. */
 async function pseudonym(secret: string, profileId: string) {
   const h = new Uint8Array(

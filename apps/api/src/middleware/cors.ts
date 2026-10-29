@@ -3,6 +3,8 @@ import { cors as honoCors } from 'hono/cors';
 import { parseAllowedOrigins, type Bindings } from '../env.js';
 import { resolveRequestHostPair } from '../production-hosts.js';
 
+const ADMIN_PATH = '/v1/admin/';
+
 export const cors = honoCors({
   origin: (origin, c) => {
     // c.env는 바인딩 없는 테스트 경로(예: 바인딩을 넘기지 않은 app.request())에서 undefined일 수 있다.
@@ -11,7 +13,9 @@ export const cors = honoCors({
     const env = c.env as Bindings | undefined;
     if (env && env.ENVIRONMENT === 'production') {
       const pair = resolveRequestHostPair(c.req.url, env);
-      return pair?.webOrigin === origin ? origin : undefined;
+      if (pair?.webOrigin === origin) return origin;
+      // T-11-572 운영 지표 대시보드는 운영자 경로만 부른다.
+      return pair?.adminOrigin === origin && c.req.path.startsWith(ADMIN_PATH) ? origin : undefined;
     }
     const allowed = parseAllowedOrigins(env);
     return allowed.includes(origin) ? origin : undefined;

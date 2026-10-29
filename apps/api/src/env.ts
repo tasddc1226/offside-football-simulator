@@ -113,6 +113,8 @@ export type Bindings = {
   CHAT?: DurableObjectNamespace<ChatRoom>;
   /** T-11-277 슬랙 에이전트가 라운지 채팅을 읽을 때 쓰는 비밀 토큰(`/v1/internal/agents/chat`). */
   AGENTS_READ_TOKEN?: string;
+  /** T-11-572 에이전트 Worker가 외부 지표(GA4 · 광고 · 스토어)를 kpi_daily에 넣을 때 쓰는 비밀 토큰(`/v1/internal/kpi`). */
+  KPI_INGEST_TOKEN?: string;
 };
 
 export type SessionContext = {
