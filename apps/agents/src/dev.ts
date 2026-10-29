@@ -9,7 +9,7 @@ import { DEPLOY_ACTIONS, deployInteraction, postDeployCard } from './deploy.ts';
 import { above, RISK_LABEL, riskOf } from './risk.ts';
 import { reviewPr } from './review.ts';
 import { chatClient, threadLink } from './chat.ts';
-import { threadReply } from './slack.ts';
+import { threadReply } from './reply.ts';
 import { supportFollowup } from './supportCase.ts';
 import type { Task } from './thread.ts';
 

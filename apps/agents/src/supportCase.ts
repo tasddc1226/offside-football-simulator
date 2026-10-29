@@ -9,7 +9,7 @@ import { enabled, type Env } from './env.ts';
 import { ledger, type WorkOrder } from './ledger.ts';
 import { higher, isRisk, RISK_LABEL, riskOf } from './risk.ts';
 import { chatClient, threadLink } from './chat.ts';
-import { threadReply } from './slack.ts';
+import { threadReply } from './reply.ts';
 import { threadOf, type Task } from './thread.ts';
 
 /** 문의 정리 한 번에 남길 수 있는 작업 후보 수. */

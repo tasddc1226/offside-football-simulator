@@ -4,9 +4,9 @@ import { notifyHook, postNotify } from './notifyHook.js';
 afterEach(() => vi.unstubAllGlobals());
 
 describe('notifyHook (T-11-576)', () => {
-  it('슬랙 수신 웹훅 · 디스코드 웹훅만 받는다', () => {
-    expect(notifyHook('https://hooks.slack.com/services/T/B/x')?.kind).toBe('slack');
-    expect(notifyHook('https://discord.com/api/webhooks/123/ab-C_d')?.kind).toBe('discord');
+  it('디스코드 웹훅만 받는다', () => {
+    expect(notifyHook('https://hooks.slack.com/services/T/B/x')).toBeNull();
+    expect(notifyHook('https://discord.com/api/webhooks/123/ab-C_d')).not.toBeNull();
     expect(notifyHook('https://discord.com/api/channels/1/messages')).toBeNull();
     expect(notifyHook('https://evil.example/api/webhooks/1/x')).toBeNull();
     expect(notifyHook(undefined)).toBeNull();
@@ -26,13 +26,13 @@ describe('notifyHook (T-11-576)', () => {
     });
   });
 
-  it('슬랙은 본문 그대로 보내고 ok 응답만 성공으로 본다', async () => {
+  it('실패 응답은 실패로 본다', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => new Response('invalid_payload', { status: 200 })),
+      vi.fn(async () => new Response('bad', { status: 400 })),
     );
-    expect(await postNotify(notifyHook('https://hooks.slack.com/services/x')!, { text: 'a' })).toBe(
-      false,
-    );
+    expect(
+      await postNotify(notifyHook('https://discord.com/api/webhooks/1/x')!, { text: 'a' }),
+    ).toBe(false);
   });
 });

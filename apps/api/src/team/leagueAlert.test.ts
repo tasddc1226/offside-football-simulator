@@ -90,7 +90,7 @@ describe('리그 자동 진행 경보 (T-11-445)', () => {
     vi.stubGlobal('fetch', fetcher);
     const stalls = [{ key: 'draw:2', text: '배치 밀림' }];
     const now = at(L.drawAt, 31);
-    ctx.env.BILLING_SLACK_WEBHOOK = 'https://hooks.slack.com/services/test';
+    ctx.env.BILLING_SLACK_WEBHOOK = 'https://discord.com/api/webhooks/1/test';
     expect(await postStallAlerts(ctx.env, d1(), 'league-alert', 'head', stalls, now)).toEqual([]);
     ctx.env.ENVIRONMENT = 'production';
     expect(await postStallAlerts(ctx.env, d1(), 'league-alert', 'head', stalls, now)).toEqual([

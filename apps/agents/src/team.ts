@@ -7,7 +7,6 @@ import { cardOf, kstClock, type CardSummary } from './card.ts';
 import { ROLES, type Env, type Role } from './env.ts';
 import { kstDay, ledger, type PendingApproval } from './ledger.ts';
 import { chatClient, threadLink } from './chat.ts';
-import { slackThreadLink } from './slack.ts';
 
 type Link = (channel: string, ts: string) => string;
 import { supportFollowup } from './supportCase.ts';
@@ -26,12 +25,8 @@ const age = (ms: number) =>
   ms >= DAY ? `${Math.floor(ms / DAY)}일` : `${Math.max(1, Math.round(ms / HOUR))}시간`;
 
 /** 아침 열린 카드 목록. 열린 카드가 없으면 null(올리지 않는다). */
-/** link: 스레드 링크(플랫폼마다 다르다, chat.ts threadLink). */
-export function openCardsText(
-  cards: CardSummary[],
-  now = Date.now(),
-  link: Link = slackThreadLink,
-): string | null {
+/** link: 스레드 링크(chat.ts threadLink). */
+export function openCardsText(cards: CardSummary[], now: number, link: Link): string | null {
   const open = cards.filter((c) => c.status !== '닫힘').sort((a, b) => a.updatedAt - b.updatedAt);
   if (!open.length) return null;
   const stale = open.filter((c) => c.status !== '보류' && now - c.updatedAt > STALE_MS);
@@ -99,11 +94,7 @@ export function retroText(r: RetroInput, now = Date.now()): string {
   ].join('\n');
 }
 
-export function pendingText(
-  list: PendingApproval[],
-  now = Date.now(),
-  link: Link = slackThreadLink,
-): string | null {
+export function pendingText(list: PendingApproval[], now: number, link: Link): string | null {
   const due = list.filter((p) => now - p.at >= PENDING_MIN_MS).sort((a, b) => a.at - b.at);
   if (!due.length) return null;
   return [

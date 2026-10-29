@@ -135,7 +135,7 @@ const header = (p: Part | undefined, name: string) =>
 /** `이름 <a@b.c>`에서 주소만. */
 export const addressOf = (v: string) => (/<([^>]+)>/.exec(v)?.[1] ?? v).trim().toLowerCase();
 
-/** 슬랙 · 프롬프트에는 주소를 가려서 쓴다(앞 두 글자 · 도메인만). */
+/** 채팅 · 프롬프트에는 주소를 가려서 쓴다(앞 두 글자 · 도메인만). */
 export const maskAddress = (v: string) => {
   const a = addressOf(v);
   const [user = '', domain = ''] = a.split('@');
