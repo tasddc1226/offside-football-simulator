@@ -51,7 +51,6 @@ const ko = {
   gateNicknameWeb: '채팅과 댓글에 쓸 닉네임을 정해 주세요.',
   gateNicknameApp: '채팅에 쓸 닉네임을 먼저 정해 주세요. 댓글 닉네임과 같아요.',
   // T-11-573 답장
-  reply: '답장',
   replyTo: (p: { nick: string }) => `${p.nick} 님에게 답장`,
   replyCancel: '답장 취소',
   replyGone: '볼 수 없는 메시지예요',
