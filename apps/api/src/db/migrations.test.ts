@@ -485,6 +485,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'created_at',
     'expires_at',
   ],
+  // T-11-572 운영 지표 대시보드(하루 한 번 모은 값).
+  kpi_daily: ['day', 'metric', 'dim', 'value', 'source', 'updated_at'],
   // T-9-009: 커리어·시즌 요약 저장(익명 포함 전체 사용자).
   careers: [
     'id',

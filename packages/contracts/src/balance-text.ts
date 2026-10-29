@@ -219,6 +219,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '리그 홈 이점',
     desc: '오프사이드 리그 경기에서 홈 팀 기대 득점에 곱하는 배율. 1이면 홈 이점 없음. 랭크 경기 · 친선은 1.08 고정',
   },
+  leagueFatigue: {
+    group: 'team',
+    label: '리그 체력',
+    desc: '오프사이드 리그에 연속 선발로 나간 선수의 자리 실력을 단계마다 깎는 비율. 3경기 연속부터 1단계, 최대 3단계이고 한 경기 쉬면 회복한다. 0이면 끈다. 랭크 경기 · 친선 · 컵에는 없다',
+  },
   cupAtkK: {
     group: 'team',
     label: '컵 전력 차이 반영',

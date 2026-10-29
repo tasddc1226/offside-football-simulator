@@ -248,6 +248,16 @@ export const OwnerTeamResponseSchema = z.strictObject({
   member: z.boolean().optional(),
   /** T-11-150 내 대표 칭호(구단주 탭 닉네임 옆). 달지 않았으면 null, 배포 전 응답엔 없다. */
   ownerTitle: titleField,
+  /**
+   * T-11-571 리그 체력(운영 도구에서 켰을 때만). rate는 단계마다 깎는 비율, streaks는 직전 리그 경기까지 연속 선발 수
+   * (커리어 id → 수, 1 이상만). 다음 리그 경기 단계는 contracts league.ts leagueFatigueSteps로 센다.
+   */
+  fatigue: z
+    .strictObject({
+      rate: z.number().min(0),
+      streaks: z.record(z.string(), z.number().int().min(1)),
+    })
+    .optional(),
 });
 export type OwnerTeamResponse = z.infer<typeof OwnerTeamResponseSchema>;
 

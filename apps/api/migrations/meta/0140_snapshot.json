@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "3584ae3b-1954-4d43-97e8-0d5cb0590d44",
+  "id": "f6927d6b-3b0b-4070-81d7-2141f2af4750",
   "prevId": "82de014c-271b-444d-ab8a-d39769cdab22",
   "tables": {
     "acquisition_consents": {
@@ -4418,6 +4418,68 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "kpi_daily": {
+      "name": "kpi_daily",
+      "columns": {
+        "day": {
+          "name": "day",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "metric": {
+          "name": "metric",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "dim": {
+          "name": "dim",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'all'"
+        },
+        "value": {
+          "name": "value",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "kpi_daily_day_metric_dim_pk": {
+          "columns": [
+            "day",
+            "metric",
+            "dim"
+          ],
+          "name": "kpi_daily_day_metric_dim_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "league_entries": {
       "name": "league_entries",
       "columns": {
@@ -6498,13 +6560,6 @@
         "presets_json": {
           "name": "presets_json",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "cup_ovr": {
-          "name": "cup_ovr",
-          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

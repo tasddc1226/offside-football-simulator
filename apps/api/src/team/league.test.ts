@@ -13,7 +13,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cupKo, cupText } from '../cupText.js';
 import { openLeagueEndsAt } from '../cron/seasonGauge.js';
-import { cards, careers, leagueEntries, ownerTeams } from '../db/schema.js';
+import { balanceVersions, cards, careers, leagueEntries, ownerTeams } from '../db/schema.js';
 import { forgetSeasonSchedule, saveSeasonSchedule } from '../seasonSchedule.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { ADMIN_EMAIL, callJson, issueAdminCookie, issueGoogleCookie } from '../test/http.js';
@@ -366,6 +366,34 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     const forfeits = table.matches.filter((m) => m.forfeit);
     expect(forfeits).toHaveLength(14);
   }, 60_000); // 14라운드를 다 치러 본다.
+
+  it('T-11-571 리그 체력: 켜면 선발을 경기 기록에 남기고, 내 팀 응답에 연속 선발 수를 싣는다', async () => {
+    const teams = [];
+    for (let i = 0; i < 8; i++) teams.push(await entrant(8, 80));
+    await ctx.db.insert(balanceVersions).values({
+      status: 'active',
+      valuesJson: JSON.stringify({ leagueFatigue: 0.03 }),
+      createdBy: 'test',
+      createdAt: OPEN,
+      updatedAt: OPEN,
+      activatedAt: OPEN,
+    });
+    await run(L.drawAt);
+    await drain(at(L.drawAt, 60_000));
+    for (const r of [0, 1, 2]) await drain(L.rounds[r]!);
+    const row = await ctx.env.DB.prepare(
+      'SELECT detail_json AS d FROM league_matches WHERE round = 3 AND played_at IS NOT NULL LIMIT 1',
+    ).first<{ d: string }>();
+    const detail = JSON.parse(row!.d) as { home: { xi?: Record<string, unknown> } };
+    expect(Object.keys(detail.home.xi ?? {})).toHaveLength(8);
+    vi.setSystemTime(new Date(at(L.rounds[2]!, 600_000)));
+    const res = (await (
+      await call('GET', '/v1/owner-team', { cookie: teams[0]!.cookie })
+    ).json()) as { data: { fatigue?: { rate: number; streaks: Record<string, number> } } };
+    expect(res.data.fatigue?.rate).toBe(0.03);
+    // 3경기 연속 선발 → 다음 경기는 2단계.
+    expect(Object.values(res.data.fatigue!.streaks)).toEqual(Array(8).fill(3));
+  }, 60_000);
 
   it('경기 때 선발 실카드가 8명보다 적으면(카드가 팔림) 그 경기만 0:3 기권패', async () => {
     const teams = [];

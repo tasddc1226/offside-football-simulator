@@ -21,6 +21,8 @@ export interface Env {
   GITHUB_REPO: string;
   /** 운영 API 주소(라운지 채팅 내부 읽기). */
   API_BASE: string;
+  /** T-11-572 운영 지표 대시보드에 외부 지표를 넣는 비밀 토큰(운영 API와 같은 값). 없으면 수집하지 않는다. */
+  KPI_INGEST_TOKEN?: string;
   /** 유저 반응 정리를 올릴 채널(#agent-desk). */
   DESK_CHANNEL: string;
   TASK_BUDGET_USD: string;

@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // T-11-572 운영 지표 대시보드. 정적 파일만 내보낸다(Worker 코드 없음). 접근은 Cloudflare Access(운영자 메일 1개)가 막고,
+  // 지표는 api.offside-lab.com/v1/admin/kpi(requireAdmin)에서 받는다. workers.dev 주소도 같은 Access 앱이 막는다.
+  // workers_dev를 끄면 wrangler가 존 라우트 목록을 읽어 CI 토큰(존 권한 없음)으로는 배포가 실패한다.
+  "name": "offside-admin",
+  "compatibility_date": "2026-09-02",
+  "assets": { "directory": "./dist", "not_found_handling": "single-page-application" },
+  "workers_dev": true,
+  "preview_urls": false,
+  "env": {
+    "production": {
+      "name": "offside-admin",
+      "workers_dev": true,
+      "preview_urls": false,
+      "routes": [{ "pattern": "admin.offside-lab.com", "custom_domain": true }],
+    },
+  },
+}

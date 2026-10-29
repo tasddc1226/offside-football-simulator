@@ -155,6 +155,7 @@ export default function Team() {
   /** 보고 있는 시즌 · 지금 고치고 겨루는 시즌(휴식기면 null) · 고를 수 있는 시즌. */
   const [season, setSeason] = useState(0);
   const [budget, setBudget] = useState(PAST_SALARY_BUDGET);
+  const [fatigue, setFatigue] = useState<OwnerTeamResponse['fatigue'] | null>(null);
   const [synFocus, setSynFocus] = useState<string | null>(null);
   const [current, setCurrent] = useState<number | null>(null);
   // T-11-552 끝나지 않은 컵에 참가 중인 지난 시즌(그 시즌 팀은 컵 명단으로 고친다).
@@ -442,6 +443,7 @@ export default function Team() {
     setMatchesLeft(d.matchesLeft);
     setPerDay(d.matchesPerDay);
     setBudget(budgetOf(d));
+    setFatigue(d.fatigue ?? null);
     if (silent) {
       if (JSON.stringify(d.team) !== JSON.stringify(teamNow.current)) {
         if (dirtyNow.current) setTeam(d.team);
@@ -1150,6 +1152,7 @@ export default function Team() {
               onFocused={() => setFocusSlot(null)}
               season={season}
               salary={salary}
+              fatigue={fatigue}
               change={(nextSlots, nextLayout) => {
                 // T-11-376 지난 시즌 선수는 급여 예산 안에서만.
                 if (salaryBlocks(slots, nextSlots, byId, season, budget)) {
