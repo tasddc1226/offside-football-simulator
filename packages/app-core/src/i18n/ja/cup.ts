@@ -168,6 +168,8 @@ export const cup: Translation<CupMsgs> = {
   barOvrCap: (p) => `チームOVR ${p.ovr} / 上限 ${p.cap}（${p.division}）`,
   barOvrNoCap: (p) => `チームOVR ${p.ovr} · ${p.division}（上限なし）`,
   barFilled: (p) => `スタメン ${p.n}/最低 ${p.min}`,
+  barPreset: (p) =>
+    `カップ戦はプリセット「${p.name}」で戦います。リーグ戦は下のチームメンバーで戦います。`,
   barOverCapBlock: (p) =>
     `${p.division}の上限${p.cap}を超えているため保存できません。チームOVRを${p.cap}以下にしてください。`,
   barOverCapMove: (p) =>

@@ -126,7 +126,7 @@ import {
 import { CupLockNotice, useCup } from './TeamCup';
 import { cupLineupBar } from '@offside/app-core/cupLineupBar';
 import { TeamPresets } from './TeamPresets';
-import { loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPresets';
+import { cupPresetOf, loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPresets';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
 import { fixSlot, slotName } from '@offside/app-core/matchReport';
 import type { ReportLine } from '@offside/contracts/owner-team';
@@ -324,11 +324,24 @@ export default function Team() {
   // T-11-382 줄 칸의 감독 보정이 어디서 왔는지(갈래별 값 · 상한에 잘린 몫 · 꺼진 특기).
   const coachDetail = team?.coach ? coachBreakdown(team.coach, formation, synergy, season) : null;
   const filled = slots.filter((s) => s !== null).length;
+  // T-11-570 컵 명단 프리셋이 있으면 컵은 그 편성으로 뛴다 — 줄은 프리셋 값을 보이고 팀 저장은 막지 않는다.
+  const cupPreset = cupPresetOf(team?.presets);
   // T-11-436 컵 규칙 줄 — 서버 저장 검사와 같은 판정. block이 있으면 저장을 막고 이유를 보인다.
   const cupBar =
     editable && !legacy && cupState.cup?.cup.season === season
-      ? cupLineupBar(cupState.cup, cupState.me, { ovr, filled }, new Date().toISOString())
+      ? cupLineupBar(
+          cupState.cup,
+          cupState.me,
+          cupPreset
+            ? {
+                ovr: cupPreset.ovr ?? 0,
+                filled: cupPreset.filled ?? cupPreset.slots.filter(Boolean).length,
+              }
+            : { ovr, filled },
+          new Date().toISOString(),
+        )
       : null;
+  const cupBlock = cupPreset ? null : (cupBar?.block ?? null);
   const dirty =
     !team ||
     name.trim() !== team.name ||
@@ -496,8 +509,8 @@ export default function Team() {
       toast(TC.salaryOverSave({ n: salary.sum, max: salary.budget }));
       return false;
     }
-    if (cupBar?.block) {
-      toast(cupBar.block);
+    if (cupBlock) {
+      toast(cupBlock);
       return false;
     }
     savingRef.current = true;
@@ -555,6 +568,8 @@ export default function Team() {
     );
     if (!r.ok) {
       toast(r.error.message);
+      // T-11-570 컵 명단 검사에 걸렸으면 컵 상태를 다시 받는다.
+      if (r.error.reason?.startsWith('CUP_')) void cupState.reload(true);
       return false;
     }
     setTeam((t) => (t ? { ...t, presets: r.data.presets } : t));
@@ -952,7 +967,9 @@ export default function Team() {
         ) : null}
         {editable || team ? (
           <>
-            {editable && !legacy ? <CupLockNotice state={cupState} bar={cupBar} /> : null}
+            {editable && !legacy ? (
+              <CupLockNotice state={cupState} bar={cupBar} preset={cupPreset?.name ?? null} />
+            ) : null}
             <Card gap={8}>
               <View
                 style={{
@@ -1307,14 +1324,14 @@ export default function Team() {
                       </Btn>
                     </View>
                   ) : null}
-                  {dirty && (!nameOk || cupBar?.block) ? (
+                  {dirty && (!nameOk || cupBlock) ? (
                     <Txt
                       v="sm"
                       tone="muted"
                       accessibilityLiveRegion="polite"
                       testID="team-save-reason"
                     >
-                      {nameIssues.name || nameIssues.manager || cupBar?.block}
+                      {nameIssues.name || nameIssues.manager || cupBlock}
                     </Txt>
                   ) : null}
                   {dirty ? (
@@ -1322,7 +1339,7 @@ export default function Team() {
                       kind="primary"
                       block
                       testID="team-save"
-                      disabled={saving || !nameOk || !!pendingDraft || !!cupBar?.block}
+                      disabled={saving || !nameOk || !!pendingDraft || !!cupBlock}
                       onPress={() => void save()}
                     >
                       {saving ? L.saving : team ? L.saveLineupApp : L.createTeam}
@@ -1350,7 +1367,9 @@ export default function Team() {
           close={() => setPresetsOpen(false)}
           presets={team?.presets ?? []}
           hasTeam={!!team}
-          locked={!!cupState.me?.locked}
+          locked={!!cupState.me?.locked && !cupPreset}
+          cupLocked={!!cupState.me?.locked}
+          cup={season > 0}
           draft={(presetName) =>
             presetOf(presetName, formation, slots, season > 0 ? positions : null)
           }

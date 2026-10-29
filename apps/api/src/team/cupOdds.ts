@@ -5,6 +5,7 @@ import { CUP_ROUNDS, lockAt, type CupDef, type CupRound } from '@offside/contrac
 import type { CupMatchOdds, CupOdds } from '@offside/contracts';
 import { inArray } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
+import { cupTeamOf } from '../db/repos/ownerTeams.js';
 import { ownerTeams } from '../db/schema.js';
 import type { CupMatchRow } from './cup.js';
 import { lineupsOf, type Lineups } from './match.js';
@@ -54,7 +55,7 @@ export const mineOdds = (o: StoredOdds, homeMine: boolean): CupOdds => ({
   xg: { mine: homeMine ? o.xh : o.xa, opp: homeMine ? o.xa : o.xh },
 });
 
-/** 두 팀 중 이번 시즌 팀만(시즌이 지난 팀 · 없어진 팀은 몰수라 예상이 없다). */
+/** 두 팀 중 이번 시즌 팀만(시즌이 지난 팀 · 없어진 팀은 몰수라 예상이 없다). T-11-570 컵 명단 프리셋이 있으면 그 편성으로. */
 export async function cupTeamsOf(db: Db, cup: CupDef, ids: readonly string[]) {
   const rows = ids.length
     ? await db
@@ -64,7 +65,7 @@ export async function cupTeamsOf(db: Db, cup: CupDef, ids: readonly string[]) {
     : [];
   return (id: string | null) => {
     const t = id ? rows.find((r) => r.id === id) : undefined;
-    return t && t.season === cup.season ? t : undefined;
+    return t && t.season === cup.season ? cupTeamOf(t) : undefined;
   };
 }
 

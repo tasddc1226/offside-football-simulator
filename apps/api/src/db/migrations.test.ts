@@ -737,6 +737,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'coach_id',
     'lineup_value_open',
     'lineup_value_closed',
+    // T-11-570 컵 명단 프리셋 OVR.
+    'cup_ovr',
   ],
   team_lineup_cards: ['team_id', 'slot', 'career_id'],
   team_likes: ['team_id', 'profile_id', 'created_at'],

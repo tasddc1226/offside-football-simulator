@@ -68,7 +68,7 @@
   import TeamResult from './TeamResult.svelte';
   import TeamFriends from './TeamFriends.svelte';
   import TeamPresets from './TeamPresets.svelte';
-  import { loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPresets';
+  import { cupPresetOf, loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPresets';
   import { friendsUi } from '../friendInvite.svelte.js';
   import { shellText as S } from '@offside/app-core/i18n/ko/shell';
   import { achNudge } from '../achNudge.js';
@@ -208,8 +208,12 @@
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
   const lines = $derived(draftLines(slotCodes, ratings, synergy, season));
   const filled = $derived(slots.filter((s) => s !== null).length);
+  // T-11-570 컵 명단 프리셋이 있으면 컵은 그 편성으로 뛴다 — 줄은 프리셋 값을 보이고 팀 저장은 막지 않는다.
+  const cupPreset = $derived(cupPresetOf(presets));
+  const cupDraft = $derived(cupPreset ? { ovr: cupPreset.ovr ?? 0, filled: cupPreset.filled ?? cupPreset.slots.filter(Boolean).length } : { ovr, filled });
   // T-11-436 서버 저장 검사와 같은 판정. block이 있으면 저장을 막고 이유를 보인다.
-  const cupBar = $derived(editable && cupRule ? cupLineupBar(cupRule.cup, cupRule.me, { ovr, filled }, new Date().toISOString()) : null);
+  const cupBar = $derived(editable && cupRule ? cupLineupBar(cupRule.cup, cupRule.me, cupDraft, new Date().toISOString()) : null);
+  const cupBlock = $derived(cupPreset ? null : (cupBar?.block ?? null));
   const dirty = $derived(
     !team ||
       name.trim() !== team.name ||
@@ -272,7 +276,12 @@
   const presetDraft = (presetName: string) => presetOf(presetName, formation, slots, season > 0 ? previewLayout : null);
   async function persistPresets(next: TeamPreset[], saved = false): Promise<boolean> {
     const r = await saveTeamPresets({ presets: next, ...(season !== current ? { season } : {}) });
-    if (!r.ok) { toast(r.error.message); return false; }
+    if (!r.ok) {
+      toast(r.error.message);
+      // T-11-570 컵 명단 검사에 걸렸으면 띠를 다시 받는다.
+      if (r.error.reason?.startsWith('CUP_')) void loadCupBand(season);
+      return false;
+    }
     presets = r.data.presets;
     if (team) team = { ...team, presets: r.data.presets };
     if (saved) toast(L.tpSaved);
@@ -400,7 +409,7 @@
   async function save(): Promise<boolean> {
     if (saving || !nameOk || !editable || pendingDraft) return false;
     if (salary && salary.state === 'over') { toast(TC.salaryOverSave({ n: salary.sum, max: salary.budget })); return false; }
-    if (cupBar?.block) { toast(cupBar.block); return false; }
+    if (cupBlock) { toast(cupBlock); return false; }
     const key = draftKey;
     const sequence = loadSequence;
     const submitted = JSON.parse(JSON.stringify(draftValue())) as ReturnType<typeof draftValue>;
@@ -642,7 +651,7 @@
       {:else if restoredDraft && dirty}
         <section class="card draft-notice" role="status"><p>{L.draftRestoredWeb}</p><button class="btn btn-sm" onclick={discardDraft} data-act="team-draft-discard">{L.draftDiscardWeb}</button></section>
       {/if}
-      {#if editable && (cupBar || (cupBand && (cupBand.locked || cupBand.when)))}<CupLineupBand locked={!!cupBand?.locked} when={cupBand?.when ?? null} bar={cupBar} />{/if}
+      {#if editable && (cupBar || (cupBand && (cupBand.locked || cupBand.when)))}<CupLineupBand locked={!!cupBand?.locked} when={cupBand?.when ?? null} bar={cupBar} preset={cupPreset?.name ?? null} />{/if}
       <TeamHead
         {team}
         {logo}
@@ -702,8 +711,8 @@
         {seasonName}
         {filled}
         {saving}
-        nameOk={nameOk && !pendingDraft && !cupBar?.block}
-        saveBlock={cupBar?.block ?? null}
+        nameOk={nameOk && !pendingDraft && !cupBlock}
+        saveBlock={cupBlock}
         {dirty}
         onassign={assign}
         onauto={autoFill}
@@ -732,7 +741,7 @@
           {/if}
         </section>
       {/if}
-      <TeamPresets bind:open={presetsOpen} {presets} hasTeam={!!team} locked={!!cupBand?.locked} draft={presetDraft} persist={persistPresets} onload={applyPreset} />
+      <TeamPresets bind:open={presetsOpen} {presets} hasTeam={!!team} locked={!!cupBand?.locked && !cupPreset} cupLocked={!!cupBand?.locked} cup={season > 0} draft={presetDraft} persist={persistPresets} onload={applyPreset} />
     {:else if view === 'opponents'}
       <div class="seg two tm-mode" role="group" aria-label={L.matchKindLabel}>
         <button class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && oppStatus !== 'ready') void loadOpponents(); }}>{L.modeRanked}</button>

@@ -25,6 +25,7 @@ import { and, asc, eq, getTableColumns, inArray, isNotNull, sql } from 'drizzle-
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
 import { cupEntries, cupMatches, cupState, cups, ownerTeams, profiles } from '../db/schema.js';
+import { cupTeamOf } from '../db/repos/ownerTeams.js';
 import { cupKo, cupTitle } from '../cupText.js';
 import { predictionSettlementStatements } from './cupPredictions.js';
 import { grantItemStatement } from '../db/repos/itemShop.js';
@@ -244,7 +245,7 @@ export async function settleDivisions(db: Db, siblings: readonly CupDef[], now: 
   const ids = siblings.map((c) => c.id);
   const { results } = await d1
     .prepare(
-      `SELECT e.cup_id AS cupId, e.team_id AS teamId, e.profile_id AS profileId, t.ovr AS ovr
+      `SELECT e.cup_id AS cupId, e.team_id AS teamId, e.profile_id AS profileId, coalesce(t.cup_ovr, t.ovr) AS ovr
        FROM cup_entries e LEFT JOIN owner_teams t ON t.id = e.team_id
        WHERE e.cup_id IN (${ids.map(() => '?').join(', ')}) AND e.status = 'active'`,
     )
@@ -353,7 +354,8 @@ export async function drawCup(db: Db, cup: CupDef, now: string) {
           ),
         )
     : [];
-  const byId = new Map(teams.map((t) => [t.team.id, t.team]));
+  // T-11-570 컵 명단 프리셋이 있으면 그 OVR · 선발 수로 조를 짠다.
+  const byId = new Map(teams.map((t) => [t.team.id, cupTeamOf(t.team)]));
   const ok = entries.filter((e) => {
     const t = byId.get(e.teamId);
     return t && t.season === cup.season && t.filled >= cup.minFilled;
@@ -484,7 +486,8 @@ export async function playCupMatch(
     : [];
   const team = (id: string | null) => {
     const t = id ? rows.find((r) => r.team.id === id)?.team : undefined;
-    return t && t.season === cup.season ? t : undefined;
+    // T-11-570 컵 명단 프리셋이 있으면 그 편성으로 뛴다.
+    return t && t.season === cup.season ? cupTeamOf(t) : undefined;
   };
   const home = team(m.homeTeamId);
   const away = team(m.awayTeamId);
