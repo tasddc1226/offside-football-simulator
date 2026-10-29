@@ -113,6 +113,11 @@ curl -sS -X POST -H "Authorization: Bearer $AGENTS_READ_TOKEN" \
 
 ## 슬랙 정리
 
-1. 전환하고 2주 동안 문제가 없으면 슬랙 앱 4개의 이벤트 · 상호작용 주소를 끈다.
-2. 그다음 `SLACK_*_BOT_TOKEN` · `SLACK_*_SIGNING_SECRET` Worker 비밀값을 지운다.
-3. 슬랙 코드 경로(`/slack/*`)를 지우는 일은 별도 작업으로 한다.
+2026-10-29 전환하고 바로 닫았다.
+
+1. **알림 대상:** Cloudflare 플랫폼 알림 5개 · 모니터 5개를 디스코드 대상 "OFFSIDE Discord infrastructure alerts"(`#offside-alerts`의 `cloudflare` 웹훅)로 옮겼다. 슬랙 대상은 되돌리기용으로 남겨 두었다.
+2. **Worker 비밀값:** `SLACK_*_BOT_TOKEN` · `SLACK_*_SIGNING_SECRET` 8개를 지웠다. 슬랙 이벤트는 서명 확인에서 거절된다.
+3. **남은 일:** 슬랙 앱 4개의 이벤트 · 상호작용 주소는 Offside-Lab 슬랙 계정으로 api.slack.com에 들어가 끈다. 끄지 않아도 슬랙에 글이 없으면 이벤트가 오지 않는다.
+4. **별도 작업:** 슬랙 코드 경로(`/slack/*`)를 지우는 일은 별도 작업으로 한다.
+
+봇 `offside-notify` 웹훅은 디스코드 화면에서 주소를 복사할 수 없다(앱이 만든 웹훅). 저장소 밖에 주소를 넣어야 하면 채널 설정 → 연동에서 웹훅을 새로 만든다.
