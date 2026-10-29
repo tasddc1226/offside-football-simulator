@@ -1,10 +1,11 @@
 // T-11-312 @dev(손흥민) 운영 배포 승인. 승인 머지 뒤나 운영자 지시로 #agent-approvals에 배포 승인 카드를 올리고,
 // 운영자가 버튼을 누를 때만 Worker가 deploy-production.yml을 띄운다. 누르는 순간 main 최신 커밋과 같은지 다시 본다
 // (워크플로도 expected_sha가 main 최신이 아니면 멈춘다). 같은 커밋 · 같은 모드는 한 번만 띄운다.
-import { botToken, ROLE_NAMES, type Env } from './env.ts';
+import { type Env } from './env.ts';
 import type { Gh } from './github.ts';
 import { ledger } from './ledger.ts';
-import { slackClient, threadLink, threadReply } from './slack.ts';
+import { chatClient, threadLink } from './chat.ts';
+import { threadReply } from './slack.ts';
 
 const WORKFLOW = 'deploy-production.yml';
 const MIGRATION = /^apps\/api\/migrations\/[^/]+\.sql$/;
@@ -20,7 +21,7 @@ export type DeployPlan = {
 };
 type Origin = { channel: string; threadTs: string };
 
-const devSlack = (env: Env) => slackClient(botToken(env, 'dev'), fetch, ROLE_NAMES.dev);
+const devSlack = (env: Env) => chatClient(env, 'dev');
 
 /** 지난 운영 배포(최신 릴리즈 태그)와 이 커밋 사이에 무엇이 들어가는지. */
 export async function deployPlan(g: Gh, sha: string): Promise<DeployPlan> {
@@ -56,7 +57,7 @@ export function deployCard(env: Env, plan: DeployPlan, origin?: Origin) {
     plan.migrations.length
       ? `• 마이그레이션: ${plan.migrations.map((m) => `\`${m.split('/').pop()}\``).join(' · ')} — 프리플라이트를 먼저 돌려 보세요`
       : '• 마이그레이션: 없음',
-    ...(origin ? [`• 요청: <${threadLink(origin.channel, origin.threadTs)}|스레드>`] : []),
+    ...(origin ? [`• 요청: <${threadLink(env, origin.channel, origin.threadTs)}|스레드>`] : []),
     '• 되돌리기: main에서 revert한 뒤 다시 배포. 운영 DB 마이그레이션은 되돌리지 않아요.',
   ].join('\n');
   const value = JSON.stringify({ sha: plan.sha, ...(origin ? { o: origin } : {}) });

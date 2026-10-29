@@ -55,11 +55,11 @@ export const slackClient =
 /** markdown 블록은 12,000자까지 받는다. */
 const MD_LIMIT = 11_500;
 
-/** 에이전트 답을 스레드에 단다(threadTs가 없으면 새 글). 본문은 markdown 블록, 아래에 비용 줄. */
-/** 슬랙 스레드 링크(승인 카드의 '요청 스레드'). */
-export const threadLink = (channel: string, ts: string) =>
+/** 슬랙 스레드 링크(승인 카드의 '요청 스레드'). 플랫폼에 맞는 링크는 chat.ts threadLink. */
+export const slackThreadLink = (channel: string, ts: string) =>
   `https://offside-lab.slack.com/archives/${channel}/p${ts.replace('.', '')}`;
 
+/** 에이전트 답을 스레드에 단다(threadTs가 없으면 새 글). 본문은 markdown 블록, 아래에 비용 줄. */
 export function threadReply(
   channel: string,
   threadTs: string | undefined,

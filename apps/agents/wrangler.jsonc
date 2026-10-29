@@ -13,11 +13,14 @@
       { "name": "LEDGER", "class_name": "AgentLedger" },
       // T-11-325 작업 카드(스레드마다 하나, card.ts).
       { "name": "CARD", "class_name": "WorkCard" },
+      // T-11-576 디스코드 게이트웨이 · 메시지 옮기기(bridge.ts, 객체 하나).
+      { "name": "DISCORD", "class_name": "DiscordBridge" },
     ],
   },
   "migrations": [
     { "tag": "v1-agents", "new_sqlite_classes": ["AgentThread", "AgentLedger"] },
     { "tag": "v2-cards", "new_sqlite_classes": ["WorkCard"] },
+    { "tag": "v3-discord", "new_sqlite_classes": ["DiscordBridge"] },
   ],
   // 매시 7분 고객 문의 메일(@plan, support.ts, T-11-291). 3시간마다 47분 유저 반응 살피기(@plan, reactions.ts, 디시는 매시 27분 Actions가 넣어 둔 것, T-11-289),
   // 매일 23:50 UTC(08:50 KST) 주기 작업 보고(@ops) · 열린 카드 목록(@plan) · 월요일 주간 회고(@plan) · 주간 유입 리포트(@mkt).
@@ -29,6 +32,13 @@
   "vars": {
     // ADR-015 도입 단계: 4단계(T-11-296)에 @mkt까지 연다.
     "ENABLED_ROLES": "ops,plan,dev,mkt",
+    // T-11-576 슬랙 → 디스코드 옮기기. "discord"로 바꿀 때 아래 채널 · 사용자 ID(OPERATOR_USER_ID · ALERT_CHANNELS · DESK_CHANNEL ·
+    // APPROVAL_CHANNEL)도 디스코드 값으로 바꾸고 AGENT_APP_IDS · AGENT_BOT_USERS는 비운다(docs/operations/discord-agents.md).
+    "CHAT_PLATFORM": "slack",
+    "DISCORD_APP_ID": "1565286012953960458",
+    "DISCORD_PUBLIC_KEY": "0b5796376fc66873a5eb746e1eaf587e968e39f76cf5b8ceed3c72b609eaf143",
+    // OFFSIDE Lab 서버.
+    "DISCORD_GUILD_ID": "1565285712062976002",
     // T-11-299 @mkt GA4 읽기(OFFSIDE - Production 속성, 서비스 계정은 뷰어). 비공개 키 · 계정 메일은 비밀값 GA4_SA_KEY · GA4_SA_EMAIL.
     "GA4_PROPERTY_ID": "556515567",
     "GA4_KEY_ID": "0de7dab176e5ac1a7a2d413b993a0d760a5fc717",

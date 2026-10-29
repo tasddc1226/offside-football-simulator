@@ -1,12 +1,13 @@
 // 운영자 멈춤. 스레드에서 에이전트를 불러 "멈춰"라고만 쓰면 모델을 거치지 않고 Worker가 바로 처리한다:
 // 그 스레드의 네 역할 대기열을 비우고, 돌고 있는 답은 다음 턴 전에 끊고, 그 스레드가 띄운 @dev Actions 실행을 취소하고,
 // 작업 카드를 보류로 둔다. 운영 배포는 마이그레이션 중간에 끊기면 위험해서 멈추지 않는다.
-import { botToken, enabled, ROLE_NAMES, ROLES, type Env } from './env.ts';
+import { enabled, ROLES, type Env } from './env.ts';
 import { cardOf } from './card.ts';
 import { appGh, cancelDevRuns } from './dev.ts';
 import type { Gh } from './github.ts';
 import { ledger } from './ledger.ts';
-import { slackClient, threadReply } from './slack.ts';
+import { chatClient } from './chat.ts';
+import { threadReply } from './slack.ts';
 import { threadOf, type Task } from './thread.ts';
 
 const STOP =
@@ -20,7 +21,7 @@ export async function stopThread(
   task: Task,
   gh: () => Promise<Gh> = () => appGh(env),
 ): Promise<string> {
-  const slack = slackClient(botToken(env, task.role), fetch, ROLE_NAMES[task.role]);
+  const slack = chatClient(env, task.role);
   const say = (text: string) =>
     slack('chat.postMessage', threadReply(task.channel, task.threadTs, text));
   if (task.threadTs === task.sourceTs) {

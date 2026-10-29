@@ -1,14 +1,15 @@
 // ADR-015 3단계 @dev(손흥민). 운영자 지시 → agent-dev.yml(Actions가 고치고 PR) → CI 결과 → #agent-approvals 승인 카드 → 운영자 버튼으로 squash 머지.
 // 코드를 고치는 쪽(Actions의 Claude)은 push 권한이 없고, 머지는 승인 버튼을 누른 사람이 운영자일 때만 Worker가 한다.
 import type { Tool } from './claude.ts';
-import { botToken, dailyBudget, ROLE_NAMES, type Env } from './env.ts';
+import { dailyBudget, type Env } from './env.ts';
 import { ghClient, installationToken, type Gh } from './github.ts';
 import { ledger, type DevJob } from './ledger.ts';
 import { cardOf } from './card.ts';
 import { DEPLOY_ACTIONS, deployInteraction, postDeployCard } from './deploy.ts';
 import { above, RISK_LABEL, riskOf } from './risk.ts';
 import { reviewPr } from './review.ts';
-import { slackClient, threadLink, threadReply } from './slack.ts';
+import { chatClient, threadLink } from './chat.ts';
+import { threadReply } from './slack.ts';
 import { supportFollowup } from './supportCase.ts';
 import type { Task } from './thread.ts';
 
@@ -31,7 +32,7 @@ export const appGh = async (env: Env, fetcher: typeof fetch = fetch): Promise<Gh
   return ghClient(env.GITHUB_REPO, token, fetcher);
 };
 
-const devSlack = (env: Env) => slackClient(botToken(env, 'dev'), fetch, ROLE_NAMES.dev);
+const devSlack = (env: Env) => chatClient(env, 'dev');
 
 export { threadLink };
 
@@ -423,7 +424,7 @@ export function approvalCard(env: Env, job: DevJob, c: DevCi) {
   const text = [
     `*머지 승인 요청* · <${prUrl}|PR #${job.pr}> ${job.title}`,
     `• 무엇을: 위 PR을 main에 squash 머지`,
-    `• 왜: 운영자 지시(<${threadLink(job.channel, job.threadTs)}|스레드>)`,
+    `• 왜: 운영자 지시(<${threadLink(env, job.channel, job.threadTs)}|스레드>)`,
     `• 검사: <${c.url}|CI 통과> · 커밋 \`${c.sha.slice(0, 7)}\``,
     ...riskLines(job),
     ...reviewLines(job),

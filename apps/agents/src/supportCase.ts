@@ -5,10 +5,11 @@
 import type { Tool } from './claude.ts';
 import { cardOf } from './card.ts';
 import { orderRequest, startCard } from './captain.ts';
-import { botToken, enabled, ROLE_NAMES, type Env } from './env.ts';
+import { enabled, type Env } from './env.ts';
 import { ledger, type WorkOrder } from './ledger.ts';
 import { higher, isRisk, RISK_LABEL, riskOf } from './risk.ts';
-import { slackClient, threadLink, threadReply } from './slack.ts';
+import { chatClient, threadLink } from './chat.ts';
+import { threadReply } from './slack.ts';
 import { threadOf, type Task } from './thread.ts';
 
 /** 문의 정리 한 번에 남길 수 있는 작업 후보 수. */
@@ -95,7 +96,7 @@ export function supportCaseTools(env: Env, task: Task): Tool[] {
   ];
 }
 
-const planSlack = (env: Env) => slackClient(botToken(env, 'plan'), fetch, ROLE_NAMES.plan);
+const planSlack = (env: Env) => chatClient(env, 'plan');
 
 /**
  * 정리 글이 올라간 뒤(thread.ts follow): 남긴 작업 후보마다 #agent-desk에 스레드를 열고 작업 카드 · 시작 카드를 만든다.
@@ -109,7 +110,7 @@ export async function openSupportCases(env: Env, eventId: string, channel: strin
   for (const c of cases) {
     const head = await slack('chat.postMessage', {
       channel,
-      text: `*문의 작업 후보* · ${c.title}\n• 위험도: ${RISK_LABEL[c.risk]} · <${threadLink(channel, postTs)}|문의 정리>`,
+      text: `*문의 작업 후보* · ${c.title}\n• 위험도: ${RISK_LABEL[c.risk]} · <${threadLink(env, channel, postTs)}|문의 정리>`,
     });
     if (!head.ts) continue;
     const thread = `${channel}:${head.ts}`;

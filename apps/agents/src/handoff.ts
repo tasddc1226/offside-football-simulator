@@ -1,7 +1,7 @@
 // ADR-015 넘기기 형식. 에이전트 답의 줄 머리에 `→ @역할: 요청`이 있으면 같은 스레드에서 그 역할에게 일을 넘긴다.
 // 슬랙 이벤트를 거치지 않고 Worker 안에서 넘긴다(봇끼리의 메시지는 이벤트에서 무시한다). 스레드마다 6번까지.
 import type { Role } from './env.ts';
-import { isRole, list, ROLES, roleOfCall, type Env } from './env.ts';
+import { isRole, list, ROLE_CALLS, ROLES, roleOfCall, type Env } from './env.ts';
 
 export const MAX_HOPS = 6;
 
@@ -30,6 +30,8 @@ export function parseHandoffs(text: string, from: Role): Handoff[] {
  */
 export function linkRoles(env: Env, text: string): string {
   const users = list(env.AGENT_BOT_USERS);
+  // 디스코드는 봇 하나가 이름으로 나눠 쓰므로 역할 키를 부르는 한글 이름으로 바꾼다(T-11-576).
+  const name = (r: Role) => (env.CHAT_PLATFORM === 'discord' ? `@${ROLE_CALLS[r][0]}` : undefined);
   // 백틱으로 나눈 조각 중 짝수 번째만 코드 밖이다.
   return text
     .split('`')
@@ -37,6 +39,8 @@ export function linkRoles(env: Env, text: string): string {
       i % 2
         ? part
         : part.replace(/(^|[\s(（])@(ops|plan|dev|mkt)\b/g, (all, pre: string, r: string) => {
+            const called = name(r as Role);
+            if (called) return `${pre}${called}`;
             const u = users[ROLES.indexOf(r as Role)];
             return u ? `${pre}<@${u}>` : all;
           }),

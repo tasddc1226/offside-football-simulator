@@ -1,17 +1,8 @@
 // ADR-015 슬랙 에이전트 Worker. 슬랙 이벤트를 받아 서명을 확인하고 3초 안에 200을 돌려준 뒤, 일은 스레드 객체에 넘긴다.
 import { refreshSocialToken } from './social.ts';
 import { runKpiIngest } from './kpi.ts';
-import {
-  calledRoles,
-  enabled,
-  isRole,
-  list,
-  signingSecret,
-  stripCalls,
-  type Env,
-  type Role,
-} from './env.ts';
-import { alertSignature, kstDay, ledger } from './ledger.ts';
+import { enabled, isRole, list, signingSecret, type Env, type Role } from './env.ts';
+import { kstDay, ledger } from './ledger.ts';
 import { collect, triagePrompt, type DcCursor, type Reaction } from './reactions.ts';
 import { devCi, devInteraction, devResult, type DevCi, type DevResult } from './dev.ts';
 import { verifySlack } from './slack.ts';
@@ -19,87 +10,17 @@ import { scanSupport, supportInteraction } from './support.ts';
 import { REVIEW_ACTIONS, reviewInteraction, scanReviews } from './reviews.ts';
 import { threadOf, type Task } from './thread.ts';
 import { START_ACTIONS, startInteraction } from './captain.ts';
-import { isStopCommand, stopThread } from './stop.ts';
+import { decide, dispatchTask, type SlackEvent } from './events.ts';
+import { discordInteraction } from './discordRoutes.ts';
+import { bridgeOf } from './bridge.ts';
+import { onDiscord } from './chat.ts';
 import { afterDeploy, approvalsBundle, captainMorning, watchStatus } from './team.ts';
 
 export { AgentThread } from './thread.ts';
 export { AgentLedger } from './ledger.ts';
 export { WorkCard } from './card.ts';
-
-type SlackEvent = {
-  type: string;
-  subtype?: string;
-  user?: string;
-  bot_id?: string;
-  app_id?: string;
-  bot_profile?: { app_id?: string };
-  text?: string;
-  channel: string;
-  ts: string;
-  thread_ts?: string;
-};
-
-const IGNORED_SUBTYPES = new Set([
-  'message_changed',
-  'message_deleted',
-  'channel_join',
-  'channel_leave',
-  'channel_topic',
-  'channel_purpose',
-]);
-const stripMentions = (s: string) => s.replace(/<@[A-Z0-9]+>/g, '').trim();
-
-/** 이 역할이 맡을 일인지 고른다. 아니면 null. */
-export function decide(
-  env: Env,
-  role: Role,
-  eventId: string,
-  ev: SlackEvent,
-  botUser: string | undefined,
-): Task | null {
-  if (ev.subtype && IGNORED_SUBTYPES.has(ev.subtype)) return null;
-  const appId = ev.app_id ?? ev.bot_profile?.app_id;
-  // 에이전트 봇끼리 · 자기 메시지에는 반응하지 않는다(넘기기는 Worker 안에서 한다, handoff.ts).
-  if (
-    (appId && list(env.AGENT_APP_IDS).includes(appId)) ||
-    (ev.user && list(env.AGENT_BOT_USERS).includes(ev.user))
-  )
-    return null;
-  const text = ev.text ?? '';
-  const base = { eventId, role, channel: ev.channel, sourceTs: ev.ts };
-  const operator = ev.user === env.OPERATOR_USER_ID;
-  if (ev.type === 'app_mention') {
-    // 명령은 운영자만(ADR-015 보안).
-    if (!operator) return null;
-    return { ...base, kind: 'mention', threadTs: ev.thread_ts ?? ev.ts, text: stripMentions(text) };
-  }
-  if (ev.type !== 'message') return null;
-  // 멘션은 app_mention으로 따로 오므로 message 쪽에서는 건너뛴다.
-  if (botUser && text.includes(`<@${botUser}>`)) return null;
-  if (
-    role === 'ops' &&
-    list(env.ALERT_CHANNELS).includes(ev.channel) &&
-    !ev.thread_ts &&
-    (ev.bot_id || ev.subtype === 'bot_message')
-  ) {
-    // 정상 복구 알림은 정리할 원인이 없다.
-    if (text.trimStart().startsWith('✅')) return null;
-    return { ...base, kind: 'alert', threadTs: ev.ts, text };
-  }
-  // 한글로 부른 글(`@이운재 …`)은 부른 역할만 멘션으로 받는다. 다른 역할을 불렀으면 스레드 주인도 답하지 않는다.
-  const called = operator ? calledRoles(text) : [];
-  if (called.length)
-    return called.includes(role)
-      ? {
-          ...base,
-          kind: 'mention',
-          threadTs: ev.thread_ts ?? ev.ts,
-          text: stripCalls(stripMentions(text)),
-        }
-      : null;
-  // T-11-325: 멘션 없는 답글 · 글로는 깨우지 않는다(불필요한 호출 줄이기). 일을 시키려면 봇을 멘션하거나 `@이름`으로 부른다.
-  return null;
-}
+export { DiscordBridge } from './bridge.ts';
+export { decide } from './events.ts';
 
 /** 역할 → 봇 사용자 ID(AGENT_BOT_USERS 순서는 ops · plan · dev · mkt). */
 const botUserOf = (env: Env, role: Role) =>
@@ -109,6 +30,9 @@ export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
     if (url.pathname === '/internal/run') return internalRun(req, url, env);
+    // T-11-576 디스코드 버튼(Interactions Endpoint URL).
+    if (url.pathname === '/discord/interactions' && req.method === 'POST')
+      return discordInteraction(req, env, ctx, KEEP_PENDING);
     const inter = /^\/slack\/(dev|plan|mkt)\/interactive$/.exec(url.pathname);
     if (inter && req.method === 'POST')
       return interactive(req, env, ctx, inter[1] as 'dev' | 'plan' | 'mkt');
@@ -134,23 +58,10 @@ export default {
     if (payload.type === 'url_verification') return Response.json({ challenge: payload.challenge });
     if (payload.type === 'event_callback' && payload.event && payload.event_id) {
       const task = decide(env, role, payload.event_id, payload.event, botUserOf(env, role));
-      // 운영자 멈춤은 모델을 거치지 않고 바로 처리한다(stop.ts).
-      if (task?.kind === 'mention' && isStopCommand(task.text)) {
+      if (task)
         ctx.waitUntil(
-          stopThread(env, task).catch((e: unknown) => console.error('stop failed', String(e))),
+          dispatchTask(env, task).catch((e: unknown) => console.error('enqueue failed', String(e))),
         );
-        return new Response('');
-      }
-      if (task) {
-        const stub = threadOf(env, role, task.channel, task.threadTs);
-        const run = async () => {
-          // 같은 경보의 6시간 재안내는 24시간 안에 다시 정리하지 않는다(비용).
-          if (task.kind === 'alert' && !(await ledger(env).freshAlert(alertSignature(task.text))))
-            return;
-          await stub.enqueue(task);
-        };
-        ctx.waitUntil(run().catch((e: unknown) => console.error('enqueue failed', String(e))));
-      }
     }
     return new Response('');
   },
@@ -186,6 +97,8 @@ export default {
       return;
     }
     if (ev.cron === WATCH_CRON) {
+      // T-11-576 디스코드 게이트웨이가 끊겨 있으면 다시 잇는다(객체 알람이 1분마다 보고, 이건 알람이 멈췄을 때의 안전망).
+      if (onDiscord(env)) ctx.waitUntil(bridgeOf(env).ensure().catch(log('discord gateway')));
       if (enabled(env, 'ops'))
         ctx.waitUntil(
           watchStatus(env, ev.scheduledTime).then(
@@ -293,6 +206,7 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
     return Response.json({ cards });
   }
   // T-11-325 시험용: 서버 상태 감시 한 번 · 아침 카드 목록 · 승인 대기 묶음.
+  if (job === 'discord-status') return Response.json(await bridgeOf(env).status());
   if (job === 'watch') return Response.json({ result: await watchStatus(env) });
   if (job === 'cards') {
     await captainMorning(env);

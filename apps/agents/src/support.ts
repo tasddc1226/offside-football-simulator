@@ -2,9 +2,9 @@
 // #agent-approvals 승인 카드에 같이 올리고, 운영자가 버튼을 눌러야 보낸다(ADR-015 밖으로 나가는 일은 사람이 승인).
 // 권한은 gmail.readonly · gmail.compose뿐이다. 받는 사람은 원래 메일의 보낸 사람으로 Worker가 정한다(모델이 고르지 않는다).
 import type { Tool } from './claude.ts';
-import { botToken, ROLE_NAMES, type Env } from './env.ts';
+import { type Env } from './env.ts';
 import { ledger } from './ledger.ts';
-import { slackClient } from './slack.ts';
+import { chatClient } from './chat.ts';
 import { threadOf, type Task } from './thread.ts';
 
 const GMAIL = 'https://gmail.googleapis.com/gmail/v1/users/me';
@@ -256,7 +256,7 @@ export type MailDraft = {
   body: string;
 };
 
-const planSlack = (env: Env) => slackClient(botToken(env, 'plan'), fetch, ROLE_NAMES.plan);
+const planSlack = (env: Env) => chatClient(env, 'plan');
 
 export function mailCard(env: Env, d: MailDraft) {
   const value = JSON.stringify({ draft: d.draftId });
