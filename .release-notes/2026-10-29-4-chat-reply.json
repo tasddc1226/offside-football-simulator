@@ -1,0 +1,20 @@
+{
+  "id": "t-11-573-chat-reply",
+  "title": "라운지 채팅 답장",
+  "items": [
+    "라운지 채팅에서 다른 사람의 메시지 아래 '답장'을 누르면 그 메시지를 인용해 답할 수 있어요. 인용을 누르면 원래 메시지로 올라가요."
+  ],
+  "en": {
+    "title": "Replies in Lounge chat",
+    "items": [
+      "Tap Reply under someone's message in Lounge chat to answer with a quote. Tap the quote to jump to the original message."
+    ]
+  },
+  "ja": {
+    "title": "ラウンジチャットで返信",
+    "items": [
+      "ラウンジチャットで他の人のメッセージの下の「返信」を押すと、そのメッセージを引用して返信できます。引用を押すと元のメッセージに移動します。"
+    ]
+  },
+  "availability": "web-app"
+}
