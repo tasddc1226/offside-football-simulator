@@ -12,7 +12,7 @@ export const MEMBERSHIP_LIVE = true;
  * iOS 앱에서도 입구를 보이는지(T-11-516). App Store 구독(club_monthly) 심사가 끝나기 전에는 가입 버튼이 없으므로 iOS만 닫아 두고,
  * 승인되면 true로 바꿔 OTA로 연다. 웹 · Android는 MEMBERSHIP_LIVE만 본다.
  */
-export const MEMBERSHIP_IOS_LIVE = false;
+export const MEMBERSHIP_IOS_LIVE = true;
 /** 한국 기준가(원/월). 실제 결제 금액은 스토어가 나라에 맞춰 보인다. */
 export const MEMBERSHIP_PRICE_KRW = 4900;
 /** 구독 중 출석 보상 배수. */
