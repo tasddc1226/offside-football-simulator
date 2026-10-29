@@ -6,7 +6,8 @@ import { serviceAccountToken } from './google.ts';
 import { ascReady, ascToken, playAccount, playReady, storeApi, type StoreApi } from './reviews.ts';
 
 export type Row = { metric: string; dim: string; value: number };
-export type Batch = { day: string; rows: Row[] };
+/** error: 묶음 일부가 실패했을 때(넣은 행은 그대로 넣는다). */
+export type Batch = { day: string; rows: Row[]; error?: string };
 type Fetch = typeof fetch;
 
 const DAY_MS = 86_400_000;
@@ -170,7 +171,13 @@ export async function reviewRows(
 
 /** App Store 전체 평점(한국 스토어, 공개 조회 API). 지금 값이라 수집한 날(어제)에만 넣는다. */
 export async function appStoreRatingRows(env: Env, fetcher: Fetch = fetch): Promise<Row[]> {
-  const r = await fetcher(`https://itunes.apple.com/lookup?id=${env.ASC_APP_ID}&country=kr`);
+  // 사용자 에이전트가 없으면 Workers에서 403이 난다.
+  const r = await fetcher(`https://itunes.apple.com/lookup?id=${env.ASC_APP_ID}&country=kr`, {
+    headers: {
+      'User-Agent': 'offside-agents/1.0 (+https://offside-lab.com)',
+      Accept: 'application/json',
+    },
+  });
   const data = (await r.json().catch(() => ({}))) as {
     results?: { averageUserRating?: number; userRatingCount?: number }[];
   };
@@ -285,7 +292,8 @@ export const admobReady = (env: Env) =>
     env.ADMOB_PUBLISHER_ID,
   );
 
-const ADMOB_PLATFORM: Record<string, string> = { IOS: 'ios', ANDROID: 'android' };
+/** 보고서 PLATFORM 값은 'iOS' · 'Android'(대소문자를 보지 않는다). */
+const ADMOB_PLATFORM: Record<string, string> = { ios: 'ios', android: 'android' };
 
 /**
  * AdMob 미디에이션 보고서(모든 광고 소스 합, Meta 입찰 포함)를 플랫폼별로. 수익은 원화(추정 수익, 마이크로 단위).
@@ -338,7 +346,7 @@ export async function admobRows(env: Env, day: string, fetcher: Fetch = fetch): 
   const rows: Row[] = [];
   for (const x of data) {
     if (!x.row) continue;
-    const dim = ADMOB_PLATFORM[x.row.dimensionValues?.PLATFORM?.value ?? ''];
+    const dim = ADMOB_PLATFORM[(x.row.dimensionValues?.PLATFORM?.value ?? '').toLowerCase()];
     if (!dim) continue;
     const mv = x.row.metricValues ?? {};
     const int = (k: string) => Number(mv[k]?.integerValue ?? 0);
