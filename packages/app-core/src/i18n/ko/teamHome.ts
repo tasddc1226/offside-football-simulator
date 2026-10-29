@@ -316,10 +316,11 @@ const ko = {
   tpLocked: '컵 명단이 잠겨 있어 지금은 불러올 수 없어요.',
   // T-11-570 컵 명단 프리셋
   tpCupBadge: '컵 명단',
-  tpCupSet: '컵 명단으로',
-  tpCupUnset: '컵 명단 해제',
+  tpCupTitle: '컵 경기 명단',
+  tpCupTeam: '팀 명단',
   tpCupHint:
-    '컵 명단으로 고른 프리셋은 컵 경기에 그대로 나가요. 리그 경기는 팀 명단으로 뛰어요. 같은 선수가 양쪽에 들어가도 돼요.',
+    '컵 경기에 쓸 편성을 골라요. 팀 명단을 고르면 리그와 같은 선발로 뛰어요. 같은 선수가 양쪽에 들어가도 돼요.',
+  tpMore: (p: { name: string }) => `${p.name} 관리`,
   tpCupSetDone: '컵 명단으로 정했어요. 컵 경기는 이 편성으로 뛰어요.',
   tpCupUnsetDone: '컵 명단을 풀었어요. 컵 경기도 팀 명단으로 뛰어요.',
   tpCupLocked: '컵 명단이 잠겨 있어 지금은 바꿀 수 없어요.',
