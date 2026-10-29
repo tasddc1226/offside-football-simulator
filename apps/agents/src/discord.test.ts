@@ -19,9 +19,6 @@ const env = {
   ENABLED_ROLES: 'ops,plan,dev,mkt',
   OPERATOR_USER_ID: '111',
   ALERT_CHANNELS: '900',
-  AGENT_APP_IDS: '',
-  AGENT_BOT_USERS: '',
-  CHAT_PLATFORM: 'discord',
   DISCORD_GUILD_ID: '42',
 } as unknown as Env;
 
@@ -195,11 +192,8 @@ describe('디스코드 공통', () => {
   });
 
   it('역할 키는 한글 이름으로, 스레드 링크는 디스코드 주소로', () => {
-    expect(linkRoles(env, '→ @dev: 고쳐 줘 `@ops`')).toBe('→ @손흥민: 고쳐 줘 `@ops`');
+    expect(linkRoles('→ @dev: 고쳐 줘 `@ops`')).toBe('→ @손흥민: 고쳐 줘 `@ops`');
     expect(threadLink(env, '700', '500')).toBe('https://discord.com/channels/42/700/500');
-    expect(threadLink({ CHAT_PLATFORM: 'slack' } as Env, 'C1', '1.2')).toBe(
-      'https://offside-lab.slack.com/archives/C1/p12',
-    );
   });
 
   it('Ed25519 서명을 확인하고 오래된 요청 · 다른 본문은 거절한다', async () => {

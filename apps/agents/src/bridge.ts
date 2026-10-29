@@ -218,9 +218,9 @@ export class DiscordBridge extends DurableObject<Env> {
 
   // ── 게이트웨이 ─────────────────────────────────────────────
 
-  /** 끊겨 있으면 잇고 1분 알람을 건다. 디스코드를 쓰지 않으면 아무것도 하지 않는다. */
+  /** 끊겨 있으면 잇고 1분 알람을 건다. 봇 토큰이 없으면 아무것도 하지 않는다. */
   async ensure(): Promise<'off' | 'connected' | 'connecting'> {
-    if (this.env.CHAT_PLATFORM !== 'discord' || !this.env.DISCORD_BOT_TOKEN) return 'off';
+    if (!this.env.DISCORD_BOT_TOKEN) return 'off';
     if ((await this.ctx.storage.getAlarm()) == null)
       await this.ctx.storage.setAlarm(Date.now() + ALARM_MS);
     if (this.ws) return 'connected';
@@ -232,7 +232,6 @@ export class DiscordBridge extends DurableObject<Env> {
     const state = await this.ensure().catch((e: unknown) => `error: ${String(e).slice(0, 200)}`);
     const s = await this.ctx.storage.get<Session>('gw');
     return {
-      platform: this.env.CHAT_PLATFORM ?? 'slack',
       state,
       socket: !!this.ws,
       session: !!s?.id,
@@ -248,8 +247,7 @@ export class DiscordBridge extends DurableObject<Env> {
       await this.prune();
       await this.ctx.storage.put('prunedOn', day);
     }
-    if (this.env.CHAT_PLATFORM === 'discord')
-      await this.ctx.storage.setAlarm(Date.now() + ALARM_MS);
+    if (this.env.DISCORD_BOT_TOKEN) await this.ctx.storage.setAlarm(Date.now() + ALARM_MS);
   }
 
   /** 오래된 메시지 위치 · 버튼 값을 지운다(하루 한 번). */

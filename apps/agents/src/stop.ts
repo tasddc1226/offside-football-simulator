@@ -7,7 +7,7 @@ import { appGh, cancelDevRuns } from './dev.ts';
 import type { Gh } from './github.ts';
 import { ledger } from './ledger.ts';
 import { chatClient } from './chat.ts';
-import { threadReply } from './slack.ts';
+import { threadReply } from './reply.ts';
 import { threadOf, type Task } from './thread.ts';
 
 const STOP =

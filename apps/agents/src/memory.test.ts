@@ -30,10 +30,10 @@ describe('스레드를 넘는 기억 (T-11-332)', () => {
   it('recall은 모든 역할, remember는 주장이 운영자 지시 스레드에서만 쓴다', async () => {
     const store = { recall: vi.fn(async () => [all[1]!]), remember: vi.fn(async () => {}) };
     const task = { kind: 'mention', channel: 'C9', threadTs: '9.9' } as Task;
-    const ops = memoryTools({} as Env, 'ops', task, store as never);
+    const ops = memoryTools({ DISCORD_GUILD_ID: '42' } as Env, 'ops', task, store as never);
     expect(ops.map((t) => t.name)).toEqual(['recall']);
     expect(await ops[0]!.run({ query: '임대' })).toBe(
-      '- 1970-01-01 결정(@plan): 임대 고도화는 11월 데이터 보고 판단 · https://offside-lab.slack.com/archives/C1/p21',
+      '- 1970-01-01 결정(@plan): 임대 고도화는 11월 데이터 보고 판단 · https://discord.com/channels/42/C1/2.1',
     );
     const plan = memoryTools({} as Env, 'plan', task, store as never);
     expect(await plan[1]!.run({ decision: '  구단명 신고는 3건부터 숨김  ' })).toBe('남겼어요');

@@ -1,7 +1,7 @@
 // 스토어 리뷰(T-11-328): App Store · Google Play 리뷰를 1시간마다 읽어 @plan이 정리하고 답글 초안을 만든다. 초안은
 // #agent-approvals 승인 카드로 올리고, 운영자가 버튼을 눌러야 스토어에 답글이 달린다(ADR-015 밖으로 나가는 일은 사람이 승인).
 // App Store는 App Store Connect API 키(ES256, 고객 지원 권한), Google Play는 서비스 계정(Play Console "리뷰에 답글" 권한).
-// 리뷰어 닉네임은 읽지 않는다(로그 · 슬랙에 유저 이름을 남기지 않는다).
+// 리뷰어 닉네임은 읽지 않는다(로그 · 채팅에 유저 이름을 남기지 않는다).
 import type { Tool } from './claude.ts';
 import { type Env } from './env.ts';
 import { b64u, pemDer, serviceAccountToken } from './google.ts';

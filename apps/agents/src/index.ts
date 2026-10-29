@@ -1,19 +1,15 @@
-// ADR-015 슬랙 에이전트 Worker. 슬랙 이벤트를 받아 서명을 확인하고 3초 안에 200을 돌려준 뒤, 일은 스레드 객체에 넘긴다.
+// ADR-015 에이전트 Worker. 디스코드 게이트웨이(bridge.ts)가 받은 글과 버튼(discordRoutes.ts)을 역할 스레드 객체에 넘기고, 주기 작업을 돌린다.
 import { refreshSocialToken } from './social.ts';
 import { runKpiIngest } from './kpi.ts';
-import { enabled, isRole, list, signingSecret, type Env, type Role } from './env.ts';
+import { enabled, type Env } from './env.ts';
 import { kstDay, ledger } from './ledger.ts';
 import { collect, triagePrompt, type DcCursor, type Reaction } from './reactions.ts';
-import { devCi, devInteraction, devResult, type DevCi, type DevResult } from './dev.ts';
-import { verifySlack } from './slack.ts';
-import { scanSupport, supportInteraction } from './support.ts';
-import { REVIEW_ACTIONS, reviewInteraction, scanReviews } from './reviews.ts';
+import { devCi, devResult, type DevCi, type DevResult } from './dev.ts';
+import { scanSupport } from './support.ts';
+import { scanReviews } from './reviews.ts';
 import { threadOf, type Task } from './thread.ts';
-import { START_ACTIONS, startInteraction } from './captain.ts';
-import { decide, dispatchTask, type SlackEvent } from './events.ts';
 import { discordInteraction } from './discordRoutes.ts';
 import { bridgeOf } from './bridge.ts';
-import { onDiscord } from './chat.ts';
 import { afterDeploy, approvalsBundle, captainMorning, watchStatus } from './team.ts';
 
 export { AgentThread } from './thread.ts';
@@ -22,10 +18,6 @@ export { WorkCard } from './card.ts';
 export { DiscordBridge } from './bridge.ts';
 export { decide } from './events.ts';
 
-/** 역할 → 봇 사용자 ID(AGENT_BOT_USERS 순서는 ops · plan · dev · mkt). */
-const botUserOf = (env: Env, role: Role) =>
-  list(env.AGENT_BOT_USERS)[['ops', 'plan', 'dev', 'mkt'].indexOf(role)];
-
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
@@ -33,37 +25,8 @@ export default {
     // T-11-576 디스코드 버튼(Interactions Endpoint URL).
     if (url.pathname === '/discord/interactions' && req.method === 'POST')
       return discordInteraction(req, env, ctx, KEEP_PENDING);
-    const inter = /^\/slack\/(dev|plan|mkt)\/interactive$/.exec(url.pathname);
-    if (inter && req.method === 'POST')
-      return interactive(req, env, ctx, inter[1] as 'dev' | 'plan' | 'mkt');
-    const m = /^\/slack\/([a-z]+)\/events$/.exec(url.pathname);
     if (url.pathname === '/health') return new Response('ok');
-    if (!m || req.method !== 'POST') return new Response('not found', { status: 404 });
-    const role = m[1]!;
-    if (!isRole(role) || !enabled(env, role)) return new Response('not found', { status: 404 });
-    const body = await req.text();
-    const ok = await verifySlack(
-      signingSecret(env, role),
-      req.headers.get('x-slack-request-timestamp'),
-      req.headers.get('x-slack-signature'),
-      body,
-    );
-    if (!ok) return new Response('bad signature', { status: 401 });
-    const payload = JSON.parse(body) as {
-      type: string;
-      challenge?: string;
-      event_id?: string;
-      event?: SlackEvent;
-    };
-    if (payload.type === 'url_verification') return Response.json({ challenge: payload.challenge });
-    if (payload.type === 'event_callback' && payload.event && payload.event_id) {
-      const task = decide(env, role, payload.event_id, payload.event, botUserOf(env, role));
-      if (task)
-        ctx.waitUntil(
-          dispatchTask(env, task).catch((e: unknown) => console.error('enqueue failed', String(e))),
-        );
-    }
-    return new Response('');
+    return new Response('not found', { status: 404 });
   },
 
   /**
@@ -98,7 +61,7 @@ export default {
     }
     if (ev.cron === WATCH_CRON) {
       // T-11-576 디스코드 게이트웨이가 끊겨 있으면 다시 잇는다(객체 알람이 1분마다 보고, 이건 알람이 멈췄을 때의 안전망).
-      if (onDiscord(env)) ctx.waitUntil(bridgeOf(env).ensure().catch(log('discord gateway')));
+      ctx.waitUntil(bridgeOf(env).ensure().catch(log('discord gateway')));
       if (enabled(env, 'ops'))
         ctx.waitUntil(
           watchStatus(env, ev.scheduledTime).then(
@@ -236,53 +199,6 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
     return Response.json({ bySource, errors });
   }
   return Response.json(await scanReactions(env));
-}
-
-/** 슬랙 버튼(@dev 머지 승인 · @plan 답장 승인). 서명을 확인하고 3초 안에 200을 돌려준 뒤 일은 뒤에서 한다. */
-async function interactive(
-  req: Request,
-  env: Env,
-  ctx: ExecutionContext,
-  role: 'dev' | 'plan' | 'mkt',
-): Promise<Response> {
-  if (!enabled(env, role)) return new Response('not found', { status: 404 });
-  const body = await req.text();
-  const ok = await verifySlack(
-    signingSecret(env, role),
-    req.headers.get('x-slack-request-timestamp'),
-    req.headers.get('x-slack-signature'),
-    body,
-  );
-  if (!ok) return new Response('bad signature', { status: 401 });
-  const raw = new URLSearchParams(body).get('payload');
-  if (!raw) return new Response('');
-  const p = JSON.parse(raw) as {
-    message?: { ts?: string };
-    actions?: { action_id?: string }[];
-  };
-  const action = p.actions?.[0]?.action_id ?? '';
-  const handle =
-    role === 'plan' && START_ACTIONS.includes(action)
-      ? startInteraction
-      : role === 'plan' && REVIEW_ACTIONS.includes(action)
-        ? reviewInteraction
-        : role === 'dev'
-          ? devInteraction
-          : role === 'plan'
-            ? supportInteraction
-            : null;
-  if (!handle) return new Response('');
-  ctx.waitUntil(
-    handle(env, JSON.parse(raw))
-      .then(async (r) => {
-        console.log(`${role} interaction`, r);
-        // T-11-325 승인 대기에서 빼고 대기 시간을 잰다. 버튼이 남는 결과(권한 없음 · 프리플라이트 · 띄우기 실패)는 그대로 둔다.
-        if (p.message?.ts && !KEEP_PENDING.has(String(r)))
-          await ledger(env).pendingDone(p.message.ts);
-      })
-      .catch((e: unknown) => console.error(`${role} interaction failed`, String(e))),
-  );
-  return new Response('');
 }
 
 const KEEP_PENDING = new Set(['forbidden', 'ignored', 'preflight', 'failed']);
