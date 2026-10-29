@@ -44,6 +44,11 @@
   let view = $state.raw<ChatView>(EMPTY_CHAT);
   let text = $state('');
   let selected = $state<string | null>(null);
+  /** T-11-573 답장할 원문. 원문이 화면에서 빠지면(가림·차단) 답장도 접는다. */
+  let replyTo = $state<ChatMessage | null>(null);
+  const replying = $derived(replyTo && view.messages.some((m) => m.id === replyTo!.id) ? replyTo : null);
+  /** 거절된 줄을 되돌릴 때 답장도 되돌린다. */
+  let sentReply: ChatMessage | null = null;
   let busy = $state(false);
   /** T-11-146 번역 보기. */
   const tr = createTranslations();
@@ -92,7 +97,10 @@
       },
       (code, restore) => {
         toast(CHAT_REJECT_TEXT[code]);
-        if (restore) text ||= restore;
+        if (restore) {
+          text ||= restore;
+          replyTo ??= sentReply;
+        }
       },
     );
     void tick().then(markVisible);
@@ -131,8 +139,24 @@
   function send() {
     const body = text.trim();
     if (!body) return;
-    if (!chatSession().send(body)) return toast(L.sendWait);
+    if (!chatSession().send(body, replying?.id)) return toast(L.sendWait);
+    sentReply = replying;
+    replyTo = null;
     text = '';
+  }
+  function startReply(m: ChatMessage) {
+    replyTo = m;
+    input?.focus();
+  }
+  const quoteName = (r: { admin: boolean; nickname: string }) => (r.admin ? ADMIN_NICKNAME : r.nickname);
+  /** T-11-573 인용을 누르면 원문으로 올라가 잠깐 표시한다. 불러오지 않은 옛 줄이면 알리기만 한다. */
+  function jump(id: string) {
+    const el = list?.querySelector<HTMLElement>(`[data-chat-msg="${CSS.escape(id)}"]`);
+    if (!el) return toast(L.replyNotLoaded);
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    el.classList.remove('chat-flash');
+    void el.offsetWidth;
+    el.classList.add('chat-flash');
   }
 
   /** 요청 하나를 보내고 성공하면 패널을 닫고 알린다. 성공 여부와 응답을 돌려준다. */
@@ -241,13 +265,24 @@
               </button>
             {/if}
           </div>
+          {#if m.replyTo}
+            {#if m.reply}
+              {@const r = m.reply}
+              <button class="chat-quote" data-act="chat-quote" aria-label={L.replyJump({ nick: quoteName(r) })} onclick={() => jump(r.id)}><b>{quoteName(r)}</b><span>{r.body}</span></button>
+            {:else}
+              <span class="chat-quote gone muted" data-chat-quote-gone>{L.replyGone}</span>
+            {/if}
+          {/if}
           <!-- 보낸 시각은 말풍선 옆 아래(남의 말은 오른쪽, 내 말은 왼쪽). -->
           <div class="chat-body-row">
             <p class="chat-bubble" lang={tr.translated(m.id) ? getLocale() : undefined}>{tr.text(m.id, m.body)}</p>
             <time class="muted chat-time num" datetime={new Date(m.at).toISOString()}>{chatTime(m.at)}</time>
           </div>
-          {#if !mine(m) && canTranslate(m.body)}
-            <button class="translate-btn" data-act="translate" disabled={tr.busy(m.id)} onclick={() => void tr.toggle(m.id, m.body)}>{tr.label(m.id)}</button>
+          {#if !mine(m) && (view.write || canTranslate(m.body))}
+            <div class="chat-acts">
+              {#if view.write}<button class="translate-btn" data-act="chat-reply" aria-label={L.replyTo({ nick: quoteName(m) })} onclick={() => startReply(m)}>{L.reply}</button>{/if}
+              {#if canTranslate(m.body)}<button class="translate-btn" data-act="translate" disabled={tr.busy(m.id)} onclick={() => void tr.toggle(m.id, m.body)}>{tr.label(m.id)}</button>{/if}
+            </div>
           {/if}
         </li>
       {:else}
@@ -257,6 +292,14 @@
 
     <div class="chat-composer">
       {#if view.write}
+        {#if replying}
+          <div class="chat-replying" data-chat-replying>
+            <p class="fs-xs"><b>{L.replyTo({ nick: quoteName(replying) })}</b> <span class="muted">{replying.body}</span></p>
+            <button type="button" class="icon-btn" aria-label={L.replyCancel} data-act="chat-reply-cancel" onclick={() => (replyTo = null)}>
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+            </button>
+          </div>
+        {/if}
         <form class="chat-form" onsubmit={(e) => (e.preventDefault(), send())}>
           <textarea
             rows="1"
@@ -270,6 +313,11 @@
             data-chat-input
             onfocus={focusInput}
             onkeydown={(e) => {
+              if (e.key === 'Escape' && replyTo) {
+                e.preventDefault();
+                replyTo = null;
+                return;
+              }
               if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && window.matchMedia('(pointer: fine)').matches) {
                 e.preventDefault();
                 send();
@@ -343,3 +391,74 @@
     </div>
   </PopSheet>
 {/if}
+
+<style>
+  /* T-11-573 답장 — 말풍선 위 인용 한 줄, 입력창 위 답장 중 표시. */
+  .chat-quote {
+    display: flex;
+    gap: 6px;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0 0 4px;
+    padding: 4px 10px;
+    border: 0;
+    border-left: 3px solid var(--pitch);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    color: inherit;
+    font: inherit;
+    font-size: var(--fs-caption);
+    text-align: left;
+    cursor: pointer;
+  }
+  .chat-quote span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--muted);
+  }
+  .chat-quote b {
+    flex: none;
+  }
+  .chat-quote.gone {
+    border-left-color: var(--line);
+    cursor: default;
+  }
+  .chat-acts {
+    display: flex;
+    gap: 10px;
+  }
+  .chat-replying {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 4px 4px 4px 10px;
+    border-left: 3px solid var(--pitch);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+  }
+  .chat-replying p {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  :global(.chat-msg.chat-flash) {
+    border-radius: var(--radius-lg);
+    animation: chat-flash 1.2s ease-out;
+  }
+  @keyframes chat-flash {
+    from {
+      background: color-mix(in srgb, var(--pitch) 22%, transparent);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(.chat-msg.chat-flash) {
+      animation: none;
+    }
+  }
+</style>
