@@ -150,6 +150,42 @@ describe('T-11-492 2D 그라운드', () => {
     );
   });
 
+  it('T-11-582 세트피스는 문전에 여러 명이 모이고, 열린 플레이 빌드업에는 최전방이 뛰어 든다', () => {
+    const m = match();
+    const ps = groundLineup(m);
+    const line = (say: string): LiveLine => ({
+      minute: 78,
+      kind: 'build',
+      side: 'home',
+      text: '',
+      say,
+      slot: say.startsWith('buildSet') ? 'CB' : 'LW',
+    });
+    const inBox = (pose: ReturnType<typeof groundPoses>[number], side: 'home' | 'away') =>
+      Object.entries(pose.moves ?? {}).filter(([k, [x, y]]) => {
+        const p = ps.find((q) => q.key === k)!;
+        return p.side === side && p.slot !== 'GK' && x >= 84 && y >= 20 && y <= 80;
+      }).length;
+    for (const say of ['buildSet1', 'buildSet2']) {
+      const last = groundPoses(m.id, ps, line(say)).at(-1)!;
+      // 센터백 혼자가 아니라 공격 4명 이상, 수비도 그만큼 붙는다(프리킥은 오프사이드 줄 83 근처).
+      const atk = Object.entries(last.moves ?? {}).filter(
+        ([k, [x]]) => ps.find((q) => q.key === k)!.side === 'home' && x >= 82,
+      ).length;
+      expect(atk).toBeGreaterThanOrEqual(4);
+      if (say === 'buildSet1') {
+        expect(inBox(last, 'away')).toBeGreaterThanOrEqual(4);
+        // 코너킥 때 문전에 가지 않은 필드 선수도 하프라인까지 올라온다.
+        const spots = groundSpots(ps, last, 0.5).filter((s) => s.side === 'home');
+        const field = spots.filter((s) => ps.find((p) => p.key === s.key)!.slot !== 'GK');
+        expect(Math.min(...field.map((s) => s.x))).toBeGreaterThanOrEqual(47);
+      }
+    }
+    const st = ps.filter((p) => p.side === 'home' && p.slot === 'ST');
+    const wide = groundPoses(m.id, ps, line('buildLeft')).at(-1)!;
+    for (const p of st) expect(wide.moves?.[p.key]?.[0]).toBeGreaterThanOrEqual(84);
+  });
+
   it('같은 경기는 늘 같은 움직임이다', () => {
     const run = () => {
       const play = new GroundPlay(match());
