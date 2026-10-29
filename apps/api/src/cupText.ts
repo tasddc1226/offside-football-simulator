@@ -40,6 +40,7 @@ const LEGACY_KO: [CupTextKey, string][] = [
   ['movedUpBody', '조 추첨 때 팀 OVR이 신청한 구간 상한보다 높아 윗 구간으로 옮겼어요.'], // i18n-ignore: 옛 알림 원문
   ['mergedBody', '신청한 구간 팀이 {n}팀보다 적어 윗 구간과 함께 치러요.'], // i18n-ignore: 옛 알림 원문
   ['drawBody', '{team}은(는) {group}조예요. 첫 경기는 오늘 {time}에 열려요.'], // i18n-ignore: 옛 알림 원문
+  ['drawTitle', '{cup} 조 추첨 결과'], // i18n-ignore: 옛 알림 원문(T-11-568 전)
   ['leaguePlacedBody', '{team}은(는) {tier}부 {league}리그예요. 1라운드는 오늘 {time}에 열려요.'], // i18n-ignore: 옛 알림 원문
 ];
 const SENTENCES = [

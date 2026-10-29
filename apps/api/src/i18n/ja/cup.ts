@@ -81,7 +81,7 @@ export const CUP_JA: Record<CupTextKey, string> = {
   droppedBody: '抽選時点でスタメン選手が{n}人未満だったため参加できませんでした。',
   cancelledTitle: '{cup}は開催されません',
   cancelledBody: '参加クラブが少なすぎるため、今回の大会は中止になりました。',
-  drawTitle: '{cup} 組み合わせ抽選結果',
+  drawTitle: '{cup} 組み合わせ決定',
   drawBody: '{team}はグループ{group}です。初戦は本日{time}に始まります。',
   matchTitle: 'オフサイドカップ {round}:{result}',
   champion: '優勝',

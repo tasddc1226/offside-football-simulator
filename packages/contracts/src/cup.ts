@@ -294,10 +294,13 @@ export const lockAt = (iso: string) =>
 
 /**
  * 모인 팀 수로 조 수를 정한다. 조마다 2팀이 토너먼트로 가고, 토너먼트는 조 수 × 2강에서 시작한다(64강·32강·16강·8강·4강).
- * 조는 2~4팀. 4팀 미만이면 열지 않는다(0). 64강은 64강 일정이 있는 대회(정원 128)만 연다.
+ * T-11-568 조는 되도록 3~5팀(제3회 구간 대회는 구간마다 64~70팀이라 32개 조면 거의 2팀 조였다). 그렇게 나눌 수 없으면
+ * 2~4팀. 4팀 미만이면 열지 않는다(0). 64강은 64강 일정이 있는 대회(정원 128)만 연다.
  */
 export function cupGroupCount(teams: number, capacity = CUP_CAPACITY_MAX): number {
-  for (const g of [32, 16, 8, 4, 2]) if (teams >= g * 2 && g * 4 <= Math.max(capacity, 8)) return g;
+  const fits = (g: number) => g * 4 <= Math.max(capacity, 8);
+  for (const g of [32, 16, 8, 4, 2]) if (fits(g) && teams >= g * 3 && teams <= g * 5) return g;
+  for (const g of [32, 16, 8, 4, 2]) if (fits(g) && teams >= g * 2) return g;
   return 0;
 }
 
