@@ -22,6 +22,18 @@ export const CHAT_TICKET_MS = 60_000;
 /** 운영자가 고르는 채팅 정지 기간(일). */
 export const CHAT_MUTE_DAYS = [1, 7, 30] as const;
 
+/** T-11-573 답장한 원문 앞부분(이만큼 자른다). 전체는 원문 줄에 있다. */
+export const CHAT_REPLY_SNIPPET = 60;
+
+/** T-11-573 답장한 원문. 방이 보낼 때 원문과 붙여 만든다. */
+export type ChatReply = {
+  id: string;
+  author: string;
+  nickname: string;
+  admin: boolean;
+  body: string;
+};
+
 /** 방이 보내는 메시지 한 줄. author는 작성자를 가리키는 불투명한 키다(프로필 id는 내보내지 않는다). */
 export type ChatMessage = {
   id: string;
@@ -36,6 +48,10 @@ export type ChatMessage = {
   /** T-11-150 보낸 사람의 대표 칭호(owner-title.ts id, 보낸 때 기준). 옛 메시지엔 없다. */
   title?: string | null;
   avatarId?: string | null;
+  /** T-11-573 답장한 원문 id. 옛 메시지 · 보통 메시지엔 없다. */
+  replyTo?: string | null;
+  /** T-11-573 답장한 원문. 원문이 가려졌거나 지워졌으면 null(replyTo는 남는다). */
+  reply?: ChatReply | null;
 };
 
 /** 쓰기를 거절한 이유(보낸 사람에게만 간다). */
@@ -56,7 +72,8 @@ export type ChatServerEvent =
 
 /** 클라이언트 → 서버(핑은 LIVE_PING 문자열 그대로). */
 export type ChatClientEvent =
-  | { t: 'send'; body: string }
+  /** replyTo(T-11-573): 답장할 원문 id. 원문이 없거나 가려졌으면 보통 메시지로 올라간다. */
+  | { t: 'send'; body: string; replyTo?: string }
   /** T-11-180 위로 올리면 before(메시지 id)보다 이전 줄을 CHAT_HISTORY개씩 부른다. 옛 방은 무시한다. */
   | { t: 'older'; before: string };
 
