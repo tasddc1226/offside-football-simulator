@@ -53,7 +53,6 @@ export const chat: Translation<ChatMsgs> = {
   gateNicknameWeb: 'Pick a nickname for chat and comments.',
   gateNicknameApp: "Pick a chat nickname first. It's the same as your comment nickname.",
   // T-11-573 replies
-  reply: 'Reply',
   replyTo: (p: { nick: string }) => `Replying to ${p.nick}`,
   replyCancel: 'Cancel reply',
   replyGone: 'This message is unavailable',
