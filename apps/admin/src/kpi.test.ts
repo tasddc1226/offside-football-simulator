@@ -6,6 +6,10 @@ import {
   fmtChange,
   indexRows,
   nonEmpty,
+  periodSum,
+  productLabel,
+  ratio,
+  sourceLag,
   tableOf,
   tile,
   toCsv,
@@ -64,5 +68,34 @@ describe('kpi 화면 모양 (T-11-572)', () => {
     expect(fmt(null)).toBe('—');
     expect(fmt(12345, 'krw')).toBe('₩12,345');
     expect(fmt(0.123, 'pct')).toBe('12.3%');
+  });
+});
+
+describe('이름표 (T-11-577)', () => {
+  it('상품 id를 아이템 · 수량으로 읽는다', () => {
+    expect(productLabel('com.offsidelab.app.reroll_40')).toBe('리롤권 ×40');
+    expect(productLabel('com.offsidelab.app.remove_ads')).toBe('광고 제거');
+    expect(productLabel('com.offsidelab.app.mystery_1')).toBe('mystery_1');
+  });
+  it('비율은 분모가 0이면 비교하지 않는다', () => {
+    expect(ratio(1, 4)).toBe(0.25);
+    expect(ratio(1, 0)).toBeNull();
+  });
+});
+
+describe('빠진 날 (T-11-577)', () => {
+  it('기간 합은 빠진 날 수를 같이 주고, 하루도 없으면 0이 아니라 null', () => {
+    const v: Record<string, number | null> = { a: 3, b: null, c: 0 };
+    expect(periodSum(['a', 'b', 'c'], (d) => v[d] ?? null)).toEqual({ sum: 3, missing: 1 });
+    expect(periodSum(['b'], () => null)).toEqual({ sum: null, missing: 1 });
+  });
+  it('0만 들어온 계열은 빈 계열이 아니다', () => {
+    expect(nonEmpty([{ key: 'z', label: 'z', values: [0, null] }])).toHaveLength(1);
+    expect(nonEmpty([{ key: 'n', label: 'n', values: [null, null] }])).toHaveLength(0);
+  });
+  it('원천 지연은 어제와 마지막 행의 날짜 차이', () => {
+    expect(sourceLag('2026-10-28', '2026-10-28')).toBe(0);
+    expect(sourceLag('2026-10-26', '2026-10-28')).toBe(2);
+    expect(sourceLag(undefined, '2026-10-28')).toBeNull();
   });
 });
