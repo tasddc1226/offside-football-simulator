@@ -1,7 +1,7 @@
 // T-11-005 기록실·소식·운영 도구가 함께 쓰는 작은 부품 — 입력 칸(웹 input·textarea·.field), 두 칸·세 칸 선택 줄(.seg),
 // 가로 칩 줄(.hof-sorts), 확인 창(웹 confirm). 키트에 없는 것만 여기 둔다.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
-import { Children, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Children, useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
 import {
   Alert,
   ScrollView,
@@ -23,7 +23,12 @@ import { revealFocusedInput } from '../../ui/scroll';
 import { boardText as L } from '@offside/app-core/i18n/ko/board';
 
 /** 입력 칸(웹 input[type=text] · textarea) — 16px 글자(iOS가 작은 칸에 초점이 가면 확대한다), surface-2 바탕. */
-export function TextBox({ style, multiline, onFocus, ...rest }: TextInputProps) {
+export function TextBox({
+  style,
+  multiline,
+  onFocus,
+  ...rest
+}: TextInputProps & { ref?: Ref<TextInput> }) {
   const c = useColors();
   return (
     <TextInput

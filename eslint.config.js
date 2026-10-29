@@ -15,7 +15,7 @@ export default [
     ],
   },
   // T-10-001: apps/web UI가 Svelte 5(runes)로 옮겨오며 .svelte 파일에도 린트를 켠다.
-  ...svelteConfig(['apps/web/src/**/*.svelte']),
+  ...svelteConfig(['apps/web/src/**/*.svelte', 'apps/admin/src/**/*.svelte']),
   ...typedConfig(
     [
       'apps/*/src/**/*.ts',

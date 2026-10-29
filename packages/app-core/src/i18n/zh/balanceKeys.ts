@@ -44,6 +44,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   marketPriceMin: '最低售價（基準價倍數）',
   marketPriceMax: '最高售價（基準價倍數）',
   cupAtkK: '盃賽戰力差反映',
+  leagueFatigue: '聯賽體力',
   leagueHomeAdv: '聯賽主場優勢',
   pastSalaryBudget: '過去賽季球員薪資預算',
   pastSalaryBudgetStep: '每賽季薪資預算增加',

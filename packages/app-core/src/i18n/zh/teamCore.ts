@@ -67,6 +67,13 @@ export const teamCore: Translation<TeamCoreMsgs> = {
     `這名球員的薪資（${p.salary}）超過剩餘預算（${p.left}）。請移除過去賽季的球員，或改用本賽季的球員。`,
   salaryChip: (p) => `薪資 ${p.n}`,
   salaryOver: '超出預算',
+  // T-11-571 리그 체력
+  staminaLabel: '體力',
+  staminaAria: (p: { left: number; total: number; pct: number }) =>
+    p.pct
+      ? `體力 ${p.left}/${p.total} · 下場聯賽實力 −${p.pct}%`
+      : `體力 ${p.left}/${p.total} · 狀態良好`,
+  fatigueHint: '聯賽連續先發3場會疲勞，實力稍微下降。休息一場就會恢復。',
   salaryLeft: (p) => `剩餘預算 ${p.n}`,
   salaryOpen: '查看薪資說明',
   salaryOverSave: (p) =>

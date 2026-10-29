@@ -161,6 +161,7 @@ export const cup: Translation<CupMsgs> = {
   barOvrCap: (p) => `球隊 OVR ${p.ovr} / 上限 ${p.cap}（${p.division}）`,
   barOvrNoCap: (p) => `球隊 OVR ${p.ovr} · ${p.division}（無上限）`,
   barFilled: (p) => `先發 ${p.n}/最少 ${p.min}`,
+  barPreset: (p) => `盃賽以「${p.name}」預設陣容出賽。聯賽以下方的球隊陣容出賽。`,
   barOverCapBlock: (p) =>
     `已超過${p.division}上限 ${p.cap}，無法儲存。請將球隊 OVR 調整到 ${p.cap} 以下。`,
   barOverCapMove: (p) => `已超過${p.division}上限。維持現狀的話，抽籤時會被移到符合 OVR 的組別。`,

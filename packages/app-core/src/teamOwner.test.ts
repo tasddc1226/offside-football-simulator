@@ -229,3 +229,19 @@ describe('T-11-105 편성 화면 시너지', () => {
     });
   });
 });
+
+describe('T-11-571 체력 게이지', () => {
+  it('꺼져 있으면 없고, 연속 선발 단계마다 한 칸씩 준다', async () => {
+    const { staminaOf, STAMINA_CELLS } = await import('./teamOwner.js');
+    expect(staminaOf(null, 'a')).toBeNull();
+    expect(staminaOf({ rate: 0, streaks: { a: 5 } }, 'a')).toBeNull();
+    const f = { rate: 0.03, streaks: { a: 1, b: 2, c: 3, d: 9 } };
+    expect(['x', 'a', 'b', 'c', 'd'].map((id) => staminaOf(f, id))).toEqual([
+      { left: STAMINA_CELLS, pct: 0 },
+      { left: 4, pct: 0 },
+      { left: 3, pct: 3 },
+      { left: 2, pct: 6 },
+      { left: 1, pct: 9 },
+    ]);
+  });
+});

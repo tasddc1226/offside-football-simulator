@@ -28,12 +28,13 @@ import {
   profiles,
 } from '../db/schema.js';
 import { cardPublicName } from '../db/cardName.js';
-import { leagueHomeAdvOf } from '../db/repos/balance.js';
+import { leagueMatchBalanceOf } from '../db/repos/balance.js';
 import { grantItemStatement } from '../db/repos/itemShop.js';
 import { eventNotificationStatements } from '../push/events.js';
 import { drawGroups, groupStandings, rngFrom } from './cupRules.js';
 import { currentLeague } from './leagueSchedule.js';
 import type { OwnerTeamRow } from '../db/repos/ownerTeams.js';
+import { FATIGUE_LOOKBACK, startStreaks, withFatigue, type PlayedLeagueMatch } from './fatigue.js';
 import { lineupsOf, matchDetailOf } from './match.js';
 import { filledCount, simulateMatch } from './sim.js';
 
@@ -508,7 +509,32 @@ export async function playLeagueMatches(
     ).map((r) => [r.team.id, r.team]),
   );
   const byTeam = new Map(entries.filter(inLeague).map((e) => [e.teamId!, e]));
-  const homeAdv = await leagueHomeAdvOf(db);
+  const { homeAdv, fatigue } = await leagueMatchBalanceOf(db);
+  // T-11-571 리그 체력: 켜져 있으면 이번에 치를 라운드 앞 몇 라운드의 경기 기록을 한 번에 읽는다(팀 id 목록 없이 —
+  // 바인딩 한도). 이번 cron에서 치른 경기도 뒤에 더해 따라잡기 때 이어서 센다.
+  const played: PlayedLeagueMatch[] = [];
+  if (fatigue > 0) {
+    const first = Math.min(...due.map((m) => m.round));
+    const last = Math.max(...due.map((m) => m.round));
+    played.push(
+      ...(await db
+        .select({
+          round: leagueMatches.round,
+          homeTeamId: leagueMatches.homeTeamId,
+          awayTeamId: leagueMatches.awayTeamId,
+          detailJson: leagueMatches.detailJson,
+        })
+        .from(leagueMatches)
+        .where(
+          and(
+            eq(leagueMatches.season, league.season),
+            sql`${leagueMatches.playedAt} IS NOT NULL`,
+            sql`${leagueMatches.round} >= ${first - FATIGUE_LOOKBACK}`,
+            sql`${leagueMatches.round} < ${last}`,
+          ),
+        )),
+    );
+  }
   // 이번 cron에서 늘어난 기권(같은 팀이 한 번에 여러 경기를 치르는 따라잡기 때).
   const forfeits = new Map<string, number>();
   const stmts: D1PreparedStatement[] = [];
@@ -541,14 +567,20 @@ export async function playLeagueMatches(
     let forfeit = 0;
     let detail: string | null = null;
     if (home && away && both) {
-      const result = simulateMatch(m.id, both.home, both.away, league.season, {
+      const tired = {
+        ...both,
+        home: withFatigue(both.home, startStreaks(played, home.id, m.round), fatigue),
+        away: withFatigue(both.away, startStreaks(played, away.id, m.round), fatigue),
+      };
+      const result = simulateMatch(m.id, tired.home, tired.away, league.season, {
         neutral: false,
-        coaches: both.coaches,
+        coaches: tired.coaches,
         homeAdv,
       });
       hg = result.homeGoals;
       ag = result.awayGoals;
-      detail = JSON.stringify(matchDetailOf(home, away, both, result));
+      // T-11-571 선발을 남겨 다음 라운드 체력을 센다.
+      detail = JSON.stringify(matchDetailOf(home, away, tired, result, undefined, { xi: true }));
     } else {
       forfeit = (home ? 0 : 1) | (away ? 0 : 2);
       if (forfeit === 1) ag = LEAGUE_FORFEIT_GOALS;
@@ -562,6 +594,13 @@ export async function playLeagueMatches(
         )
         .bind(now, hg, ag, forfeit, detail, m.id),
     );
+    if (fatigue > 0)
+      played.push({
+        round: m.round,
+        homeTeamId: m.homeTeamId,
+        awayTeamId: m.awayTeamId,
+        detailJson: detail,
+      });
     for (const [bit, id] of [
       [1, m.homeTeamId],
       [2, m.awayTeamId],

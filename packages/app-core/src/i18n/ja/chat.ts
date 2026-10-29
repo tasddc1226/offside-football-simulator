@@ -52,4 +52,10 @@ export const chat: Translation<ChatMsgs> = {
   gateNicknameWeb: 'チャットとコメントで使うニックネームを決めてください。',
   gateNicknameApp:
     'まずチャットで使うニックネームを決めてください。コメント用ニックネームと同じです。',
+  // T-11-573 返信
+  replyTo: (p: { nick: string }) => `${p.nick}さんに返信`,
+  replyCancel: '返信をやめる',
+  replyGone: '表示できないメッセージです',
+  replyJump: (p: { nick: string }) => `${p.nick}さんの元のメッセージを見る`,
+  replyNotLoaded: '前の会話のため、ここでは表示できません。',
 };

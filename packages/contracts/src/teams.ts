@@ -182,9 +182,17 @@ export const TeamPresetSchema = z.strictObject({
   formation: FormationIdSchema,
   slots: z.array(CareerIdParamSchema.nullable()).length(LINEUP_SIZE),
   layout: TeamLayoutSchema.nullable(),
+  /** T-11-570 컵 경기에 이 프리셋으로 나간다(한 팀에 하나까지). 없으면 컵도 팀 명단으로 뛴다. */
+  cup: z.literal(true).optional(),
+  /** T-11-570 컵 명단 프리셋의 팀 OVR · 선발 수(서버가 저장할 때 계산해 채운다, 보낸 값은 무시). */
+  ovr: z.number().int().optional(),
+  filled: z.number().int().optional(),
 });
 export type TeamPreset = z.infer<typeof TeamPresetSchema>;
-export const TeamPresetsSchema = z.array(TeamPresetSchema).max(TEAM_PRESET_MAX);
+export const TeamPresetsSchema = z
+  .array(TeamPresetSchema)
+  .max(TEAM_PRESET_MAX)
+  .refine((ps) => ps.filter((p) => p.cup).length <= 1, { message: 'one cup preset' });
 
 export const OwnerTeamSchema = z.strictObject({
   id: TeamIdSchema,
@@ -240,6 +248,16 @@ export const OwnerTeamResponseSchema = z.strictObject({
   member: z.boolean().optional(),
   /** T-11-150 내 대표 칭호(구단주 탭 닉네임 옆). 달지 않았으면 null, 배포 전 응답엔 없다. */
   ownerTitle: titleField,
+  /**
+   * T-11-571 리그 체력(운영 도구에서 켰을 때만). rate는 단계마다 깎는 비율, streaks는 직전 리그 경기까지 연속 선발 수
+   * (커리어 id → 수, 1 이상만). 다음 리그 경기 단계는 contracts league.ts leagueFatigueSteps로 센다.
+   */
+  fatigue: z
+    .strictObject({
+      rate: z.number().min(0),
+      streaks: z.record(z.string(), z.number().int().min(1)),
+    })
+    .optional(),
 });
 export type OwnerTeamResponse = z.infer<typeof OwnerTeamResponseSchema>;
 

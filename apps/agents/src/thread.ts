@@ -1,14 +1,15 @@
-// 슬랙 스레드 하나 = 역할마다 객체 하나. 일을 받은 순서대로 하나씩 처리하고, 이어지는 지시를 위해 대화 요약 · 비용을 저장한다.
+// 채팅 스레드 하나 = 역할마다 객체 하나. 일을 받은 순서대로 하나씩 처리하고, 이어지는 지시를 위해 대화 요약 · 비용을 저장한다.
 // 운영 D1은 쓰지 않는다(ADR-015 인프라).
 import { DurableObject } from 'cloudflare:workers';
 import { ClaudeError, MODEL_LABEL, runAgent, type Message, type Tool } from './claude.ts';
-import { apiKey, botToken, dailyBudget, enabled, ROLE_NAMES, type Env, type Role } from './env.ts';
+import { apiKey, dailyBudget, enabled, type Env, type Role } from './env.ts';
 import { cardOf } from './card.ts';
 import { isIncident, linkRoles, MAX_HOPS, parseHandoffs } from './handoff.ts';
 import { kstDay, ledger } from './ledger.ts';
 import { mcpTools, type McpServer } from './mcp.ts';
 import { roleSpec } from './roles.ts';
-import { slackClient, threadReply } from './slack.ts';
+import { chatClient } from './chat.ts';
+import { threadReply } from './reply.ts';
 import { openSupportCases } from './supportCase.ts';
 
 export type Task = {
@@ -119,7 +120,7 @@ export class AgentThread extends DurableObject<Env> {
 
   private async handle(task: Task, startedAt: number) {
     const env = this.env;
-    const slack = slackClient(botToken(env, task.role), fetch, ROLE_NAMES[task.role]);
+    const slack = chatClient(env, task.role);
     const book = ledger(env);
     // 운영자가 끼어든 횟수(주간 회고, T-11-325).
     if (task.kind === 'mention' || task.kind === 'reply') await book.touch();
@@ -169,7 +170,7 @@ export class AgentThread extends DurableObject<Env> {
         await cardOf(env, task.channel, task.threadTs)
           .addCost(task.role, r.costUsd)
           .catch((e: unknown) => console.error('card cost failed', String(e).slice(0, 200)));
-      // 검토할 반응이 없으면 슬랙에 올리지 않는다(비용만 적는다).
+      // 검토할 반응이 없으면 채널에 올리지 않는다(비용만 적는다).
       if (task.kind === 'triage' && r.text.trim().startsWith(NOTHING)) {
         console.log('triage: nothing', r.costUsd.toFixed(3));
         return;
@@ -189,7 +190,7 @@ export class AgentThread extends DurableObject<Env> {
           threadReply(
             task.channel,
             isNewPost(task) ? undefined : task.threadTs,
-            `${r.text ? `${linkRoles(env, r.text)}\n\n` : ''}_운영자 지시로 여기서 멈췄어요._`,
+            `${r.text ? `${linkRoles(r.text)}\n\n` : ''}_운영자 지시로 여기서 멈췄어요._`,
             `${MODEL_LABEL[spec.model]} · ${r.turns}턴 · $${r.costUsd.toFixed(3)}`,
           ),
         );
@@ -223,7 +224,7 @@ export class AgentThread extends DurableObject<Env> {
       threadReply(
         task.channel,
         isNewPost(task) ? undefined : task.threadTs,
-        alertOperator(env, task, linkRoles(env, reply)),
+        alertOperator(env, task, linkRoles(reply)),
         footer,
       ),
     );
@@ -295,11 +296,7 @@ export class AgentThread extends DurableObject<Env> {
       if (!enabled(env, h.to)) continue;
       const n = await ledger(env).hop(`${task.channel}:${threadTs}`);
       if (n > MAX_HOPS) {
-        await slackClient(
-          botToken(env, task.role),
-          fetch,
-          ROLE_NAMES[task.role],
-        )(
+        await chatClient(env, task.role)(
           'chat.postMessage',
           threadReply(
             task.channel,

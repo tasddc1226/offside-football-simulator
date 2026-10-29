@@ -4,7 +4,15 @@ import { GoogleLoginButton } from '../../ui/GoogleLoginButton';
 // 남의 메시지는 신고하고 작성자를 차단한다(앱스토어 UGC 정책) — 여럿이 신고하면 모두의 화면에서 가려진다.
 // 운영자는 메시지를 가리고 작성자를 정지한다.
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
-import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import {
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  View,
+  type TextInput,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import {
@@ -41,6 +49,7 @@ import { openWeb } from '../../platform/openWeb';
 import { markChatRead } from '../../platform/chatUnread';
 import { chatText as L } from '@offside/app-core/i18n/ko/chat';
 import { rem } from '../../theme/type';
+import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { AppleLoginButton, useAppleLogin } from '../../ui/AppleLoginButton';
 import { Btn } from '../../ui/Btn';
@@ -53,11 +62,22 @@ import { TextBox, confirmAsync } from '../board/parts';
 import { Skeleton } from '../../ui/Skeleton';
 
 const small = { fontSize: rem(FONT.caption) } as const;
+/** T-11-573 말풍선 위 인용 한 줄 · 입력칸 위 답장 중 표시(색은 화면에서 넣는다). */
+const quote = {
+  flexDirection: 'row',
+  gap: 6,
+  maxWidth: '100%',
+  marginBottom: 4,
+  paddingVertical: 4,
+  paddingHorizontal: 10,
+  borderLeftWidth: 3,
+  borderRadius: RADIUS.sm,
+} as const;
 /** 채팅 티어는 보낸 때의 지난 시즌 티어 — 시즌 이름(접근성 글자)은 지금 기준 지난 시즌으로 읽힌다. */
 const tierSeason = lastClosedSeason(new Date().toISOString()) ?? 0;
 
 /** 입력칸 — 글자를 칠 때마다 메시지 목록까지 다시 그리지 않도록 입력 상태를 따로 둔다. */
-type InputHandle = { restore(body: string): void };
+type InputHandle = { restore(body: string): void; focus(): void };
 function ChatInput(props: {
   onFocus: () => void;
   onResize: () => void;
@@ -67,7 +87,12 @@ function ChatInput(props: {
   const c = useColors();
   const [text, setText] = useState('');
   const [height, setHeight] = useState(48);
-  useImperativeHandle(props.ref, () => ({ restore: (body) => setText((t) => t || body) }), []);
+  const box = useRef<TextInput>(null);
+  useImperativeHandle(
+    props.ref,
+    () => ({ restore: (body) => setText((t) => t || body), focus: () => box.current?.focus() }),
+    [],
+  );
   const submit = () => {
     const body = text.trim();
     if (body && props.send(body)) {
@@ -78,6 +103,7 @@ function ChatInput(props: {
   return (
     <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
       <TextBox
+        ref={box}
         testID="chat-input"
         accessibilityLabel={L.messageLabel}
         placeholder={L.placeholder}
@@ -154,6 +180,13 @@ export default function Chat() {
   const input = useRef<InputHandle>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** T-11-573 답장할 원문. 원문이 화면에서 빠지면(가림·차단) 답장도 접는다. */
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  /** 거절된 줄을 되돌릴 때 답장도 되돌린다. */
+  const sentReply = useRef<ChatMessage | null>(null);
+  /** 인용을 누르면 원문으로 올라가려고 줄마다 목록 안 위치를 적어 둔다. */
+  const rowY = useRef(new Map<string, number>());
+  const [flash, setFlash] = useState<string | null>(null);
   const session = useRef<ChatSession | null>(null);
   const list = useRef<ScrollView>(null);
   /** 맨 아래 가까이 보고 있을 때만 새 줄을 따라 내려간다. */
@@ -186,7 +219,10 @@ export default function Chat() {
       },
       (code, restore) => {
         toast(CHAT_REJECT_TEXT[code]);
-        if (restore) input.current?.restore(restore);
+        if (restore) {
+          input.current?.restore(restore);
+          setReplyTo((r) => r ?? sentReply.current);
+        }
       },
     );
   };
@@ -202,10 +238,30 @@ export default function Chat() {
   const toggle = (m: ChatMessage) => setSelected(selected === m.id ? null : m.id);
   /** T-11-146 번역 보기. */
   const tr = useTranslations();
+  const replying = replyTo && view.messages.some((m) => m.id === replyTo.id) ? replyTo : null;
   function send(body: string) {
-    if (session.current?.send(body)) return true;
+    if (session.current?.send(body, replying?.id)) {
+      sentReply.current = replying;
+      setReplyTo(null);
+      return true;
+    }
     toast(L.sendWait);
     return false;
+  }
+  function startReply(m: ChatMessage) {
+    setReplyTo(m);
+    input.current?.focus();
+  }
+  const quoteName = (r: { admin: boolean; nickname: string }) =>
+    r.admin ? ADMIN_NICKNAME : r.nickname;
+  /** T-11-573 인용을 누르면 원문으로 올라가 잠깐 표시한다. 불러오지 않은 옛 줄이면 알리기만 한다. */
+  function jump(id: string) {
+    const y = rowY.current.get(id);
+    if (y === undefined || !view.messages.some((m) => m.id === id)) return toast(L.replyNotLoaded);
+    atBottom.current = false;
+    list.current?.scrollTo({ y: Math.max(0, y - 80), animated: true });
+    setFlash(id);
+    setTimeout(() => setFlash((f) => (f === id ? null : f)), 1200);
   }
   /** 요청 하나를 보내고 성공하면 패널을 닫고 알린다. */
   async function run<T>(p: Promise<ApiResult<T>>, done: string) {
@@ -428,10 +484,13 @@ export default function Chat() {
               <View
                 key={m.id}
                 testID={`chat-msg-${m.id}`}
+                onLayout={(e) => rowY.current.set(m.id, e.nativeEvent.layout.y)}
                 style={{
                   alignSelf: mine(m) ? 'flex-end' : 'flex-start',
                   alignItems: mine(m) ? 'flex-end' : 'flex-start',
                   maxWidth: '85%',
+                  borderRadius: RADIUS.lg,
+                  backgroundColor: flash === m.id ? alpha(c.pitch, 0.18) : undefined,
                 }}
               >
                 <View
@@ -483,6 +542,33 @@ export default function Chat() {
                     </Press>
                   ) : null}
                 </View>
+                {m.replyTo ? (
+                  m.reply ? (
+                    <Press
+                      testID="chat-quote"
+                      accessibilityRole="button"
+                      accessibilityLabel={L.replyJump({ nick: quoteName(m.reply) })}
+                      onPress={() => jump(m.reply!.id)}
+                      style={[quote, { borderLeftColor: c.pitch, backgroundColor: c.surface2 }]}
+                    >
+                      <Txt bold style={small}>
+                        {quoteName(m.reply)}
+                      </Txt>
+                      <Txt tone="muted" numberOfLines={1} style={[small, { flexShrink: 1 }]}>
+                        {m.reply.body}
+                      </Txt>
+                    </Press>
+                  ) : (
+                    <View
+                      testID="chat-quote-gone"
+                      style={[quote, { borderLeftColor: c.line, backgroundColor: c.surface2 }]}
+                    >
+                      <Txt tone="muted" style={small}>
+                        {L.replyGone}
+                      </Txt>
+                    </View>
+                  )
+                ) : null}
                 {/* 보낸 시각은 말풍선 옆 아래(남의 말은 오른쪽, 내 말은 왼쪽). */}
                 <View
                   style={{
@@ -512,6 +598,34 @@ export default function Chat() {
                   <Txt tone="muted" style={small}>
                     {chatTime(m.at)}
                   </Txt>
+                  {view.write && !mine(m) ? (
+                    // T-11-575 답장은 시각 옆 아이콘.
+                    <Press
+                      testID="chat-reply"
+                      accessibilityRole="button"
+                      accessibilityLabel={L.replyTo({ nick: quoteName(m) })}
+                      onPress={() => startReply(m)}
+                      hitSlop={8}
+                      style={{
+                        width: 28,
+                        height: 28,
+                        marginLeft: -4,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Svg width={16} height={16} viewBox="0 0 24 24" accessible={false}>
+                        <Path
+                          d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11"
+                          stroke={c.muted}
+                          strokeWidth={2}
+                          fill="none"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </Svg>
+                    </Press>
+                  ) : null}
                 </View>
                 {!mine(m) ? tr.button(m.id, m.body) : null}
               </View>
@@ -535,6 +649,47 @@ export default function Chat() {
             borderTopColor: c.line,
           }}
         >
+          {view.write && replying ? (
+            <View
+              testID="chat-replying"
+              style={[
+                quote,
+                {
+                  alignItems: 'center',
+                  maxWidth: '100%',
+                  marginBottom: 8,
+                  paddingVertical: 2,
+                  paddingRight: 0,
+                  borderLeftColor: c.pitch,
+                  backgroundColor: c.surface2,
+                },
+              ]}
+            >
+              <Txt numberOfLines={1} style={[small, { flex: 1 }]}>
+                <Txt bold style={small}>
+                  {L.replyTo({ nick: quoteName(replying) })}
+                </Txt>{' '}
+                <Txt tone="muted" style={small}>
+                  {replying.body}
+                </Txt>
+              </Txt>
+              <Press
+                testID="chat-reply-cancel"
+                accessibilityLabel={L.replyCancel}
+                onPress={() => setReplyTo(null)}
+                style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Svg width={18} height={18} viewBox="0 0 24 24" accessible={false}>
+                  <Path
+                    d="M6 6l12 12M18 6 6 18"
+                    stroke={c.ink}
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                  />
+                </Svg>
+              </Press>
+            </View>
+          ) : null}
           {view.write ? (
             <ChatInput
               ref={input}

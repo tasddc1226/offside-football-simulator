@@ -1167,6 +1167,8 @@ export const ownerTeams = sqliteTable(
     friendlyJson: text('friendly_json'),
     /** T-11-217 팀 프리셋(포메이션 · 선발 · 배치, 최대 5개) JSON 배열. 없으면 null. */
     presetsJson: text('presets_json'),
+    /** T-11-570 컵 명단으로 고른 프리셋의 팀 OVR(저장할 때 계산). 컵 명단이 없으면 null — 컵은 팀 OVR을 쓴다. */
+    cupOvr: integer('cup_ovr'),
     /** T-11-310 감독 칸(끝낸 감독 카드의 career_id). 비었으면 null — 지금과 같은 결과. */
     coachId: text('coach_id'),
     createdAt: text('created_at').notNull(),
@@ -2328,4 +2330,22 @@ export const memberships = sqliteTable(
     primaryKey({ columns: [table.store, table.chainId] }),
     index('memberships_profile_idx').on(table.profileId, table.until),
   ],
+);
+
+/**
+ * T-11-572 운영 지표 대시보드(admin.offside-lab.com). 하루 한 번 모은 값(KST 날짜 · 지표 · 나눔)을 긴 표로 둔다.
+ * 운영 D1 값은 일일 cron `kpi` 단계가, 외부(GA4 · 광고 · 스토어) 값은 에이전트 Worker가 `/v1/internal/kpi`로 넣는다.
+ * 대시보드는 이 표만 읽는다(화면을 열 때 운영 표에 집계 쿼리를 날리지 않는다). 설계: docs/tracking/admin-kpi-dashboard-design.md
+ */
+export const kpiDaily = sqliteTable(
+  'kpi_daily',
+  {
+    day: text('day').notNull(),
+    metric: text('metric').notNull(),
+    dim: text('dim').notNull().default('all'),
+    value: real('value').notNull(),
+    source: text('source').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.day, table.metric, table.dim] })],
 );

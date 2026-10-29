@@ -11,6 +11,7 @@ import {
   type StoreReview,
 } from './reviews.ts';
 import type { Task } from './thread.ts';
+import { fakeChat } from './testChat.ts';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -149,7 +150,7 @@ const ready = {
   OPERATOR_USER_ID: 'UOP',
   APPROVAL_CHANNEL: 'CAPP',
   DESK_CHANNEL: 'CDESK',
-  SLACK_PLAN_BOT_TOKEN: 'x',
+  DISCORD: fakeChat,
 };
 
 describe('review_draft', () => {

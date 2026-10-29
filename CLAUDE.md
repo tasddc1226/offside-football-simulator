@@ -12,7 +12,7 @@ Expo · React Native, 안드로이드 · iOS)이 같은 게임 로직 `packages/
 게임을 시뮬레이션하지 않고 익명 프로필 · Google/Apple 로그인 · 복구 코드, 커리어 · 시즌 요약
 적재, 명예의 전당 · 기록실, 구단주 팀 · 이적시장 · 감독, 컵 대회 · 승부 예측, 라운지 채팅 ·
 친구, 공지 · 업데이트 게시판, 출석 · 선물, 앱 결제(IAP) · 푸시, 구단명 커스텀, 서버 밸런스
-설정, 운영 도구를 다룬다. `apps/agents`는 운영을 돕는 슬랙 에이전트 Worker다(ADR-015).
+설정, 운영 도구를 다룬다. `apps/agents`는 운영을 돕는 디스코드 에이전트 Worker다(ADR-015).
 계정 병합 플로우는 없다.
 
 pnpm workspaces + Turborepo 모노레포. Node ≥22.13, TypeScript strict. 게임 엔진은 웹·앱이 함께 쓰는 `packages/game`(ADR-014)이다.

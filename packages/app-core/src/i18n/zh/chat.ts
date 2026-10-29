@@ -50,4 +50,10 @@ export const chat: Translation<ChatMsgs> = {
   loginGoogle: '使用 Google 登入',
   gateNicknameWeb: '請設定聊天與留言使用的暱稱。',
   gateNicknameApp: '請先設定聊天使用的暱稱，與留言暱稱相同。',
+  // T-11-573 回覆
+  replyTo: (p: { nick: string }) => `回覆 ${p.nick}`,
+  replyCancel: '取消回覆',
+  replyGone: '無法顯示這則訊息',
+  replyJump: (p: { nick: string }) => `查看 ${p.nick} 的原始訊息`,
+  replyNotLoaded: '這是較早的對話，無法在這裡顯示。',
 };

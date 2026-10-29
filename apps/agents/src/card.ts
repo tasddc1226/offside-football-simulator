@@ -1,11 +1,12 @@
-// ADR-015 5단계(T-11-325) 작업 카드. 슬랙 스레드 하나에 카드 하나(키 `<채널>:<스레드 ts>`). 역할별 AgentThread는 대화만,
+// ADR-015 5단계(T-11-325) 작업 카드. 채팅 스레드 하나에 카드 하나(키 `<채널>:<스레드 ts>`). 역할별 AgentThread는 대화만,
 // 카드는 이 객체가 맡는다. 카드는 그 스레드에 주장(@plan) 이름으로 한 번 올리고 바뀔 때마다 chat.update로 고친다.
 // 판단이 필요한 상태(조사 → 수정, 확인 → 닫힘, 보류)는 주장이 card_update로, 시스템 사건(PR · 승인 · 머지 · 배포)은 Worker가 바꾼다.
 import { DurableObject } from 'cloudflare:workers';
-import { botToken, ROLE_NAMES, ROLES, type Env, type Role } from './env.ts';
+import { ROLES, type Env, type Role } from './env.ts';
 import { ledger } from './ledger.ts';
 import { RISK_LABEL, type Risk } from './risk.ts';
-import { slackClient, threadReply } from './slack.ts';
+import { chatClient } from './chat.ts';
+import { threadReply } from './reply.ts';
 import { threadOf } from './thread.ts';
 
 export const STATUSES = [
@@ -156,8 +157,7 @@ export function renderCard(c: Card): string {
   ].join('\n');
 }
 
-const roleSlack = (env: Env, role: Role) =>
-  slackClient(botToken(env, role), fetch, ROLE_NAMES[role]);
+const roleSlack = (env: Env, role: Role) => chatClient(env, role);
 
 export class WorkCard extends DurableObject<Env> {
   async get(): Promise<Card | undefined> {

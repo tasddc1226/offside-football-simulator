@@ -4,6 +4,7 @@ import { MEMBERSHIP_PRODUCT_ID } from '@offside/contracts/membership';
 import { billing as ko } from '../i18n/ko/billing.js';
 import { billing as en } from '../i18n/en/billing.js';
 import type { Bindings } from '../env.js';
+import { notifyHook, postNotify } from '../notifyHook.js';
 
 export type BillingAlert = {
   store: 'apple' | 'google' | 'xsolla';
@@ -141,16 +142,9 @@ export async function consumeBillingAlerts(batch: MessageBatch<unknown>, env: Bi
       continue;
     }
     try {
-      const url = new URL(env.BILLING_SLACK_WEBHOOK);
-      if (url.origin !== 'https://hooks.slack.com' || !url.pathname.startsWith('/services/'))
-        throw new Error('invalid webhook');
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(billingSlackMessage(row, body.id)),
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (!response.ok || (await response.text()).trim() !== 'ok')
+      const hook = notifyHook(env.BILLING_SLACK_WEBHOOK);
+      if (!hook) throw new Error('invalid webhook');
+      if (!(await postNotify(hook, billingSlackMessage(row, body.id))))
         throw new Error('delivery rejected');
       await env.DB.prepare('UPDATE billing_alerts SET sent_at = ?, lease_until = 0 WHERE id = ?')
         .bind(new Date().toISOString(), body.id)

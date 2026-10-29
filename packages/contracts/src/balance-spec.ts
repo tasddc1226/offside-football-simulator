@@ -321,6 +321,15 @@ export const BALANCE_SPEC = {
     step: 0.01,
     unit: 'x',
   },
+  // T-11-571 리그 체력: 리그 경기에 연속 선발로 나간 선수의 자리 실력을 단계마다 이만큼 깎는다(0이면 끔). 기획은
+  // docs/tracking/league-fatigue-plan.md, 단계는 league.ts leagueFatigueSteps.
+  leagueFatigue: {
+    def: 0,
+    min: 0,
+    max: 0.1,
+    step: 0.01,
+    unit: 'pct',
+  },
   // T-11-409 오프사이드 컵 경기의 공격 계수(공격 − 상대 벽 10점당 지수). 3회 컵부터 랭크 경기(T-11-510)와 같은 0.45.
   cupAtkK: {
     def: 0.45,

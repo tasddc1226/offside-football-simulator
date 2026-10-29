@@ -13,6 +13,7 @@ import {
 } from './supportCase.ts';
 import { afterDeploy } from './team.ts';
 import type { Task } from './thread.ts';
+import { fakeChat } from './testChat.ts';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -40,7 +41,7 @@ function setup(batch: string[] = ['t-1'], cases: SupportCase[] = []) {
   });
   const env = {
     ENABLED_ROLES: 'plan,dev',
-    SLACK_PLAN_BOT_TOKEN: 'x',
+    DISCORD: fakeChat,
     APPROVAL_CHANNEL: 'CAPPROVE',
     LEDGER: {
       idFromName: () => 'id',
