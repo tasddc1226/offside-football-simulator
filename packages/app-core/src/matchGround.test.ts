@@ -173,7 +173,13 @@ describe('T-11-492 2D 그라운드', () => {
         ([k, [x]]) => ps.find((q) => q.key === k)!.side === 'home' && x >= 82,
       ).length;
       expect(atk).toBeGreaterThanOrEqual(4);
-      if (say === 'buildSet1') expect(inBox(last, 'away')).toBeGreaterThanOrEqual(4);
+      if (say === 'buildSet1') {
+        expect(inBox(last, 'away')).toBeGreaterThanOrEqual(4);
+        // 코너킥 때 문전에 가지 않은 필드 선수도 하프라인까지 올라온다.
+        const spots = groundSpots(ps, last, 0.5).filter((s) => s.side === 'home');
+        const field = spots.filter((s) => ps.find((p) => p.key === s.key)!.slot !== 'GK');
+        expect(Math.min(...field.map((s) => s.x))).toBeGreaterThanOrEqual(47);
+      }
     }
     const st = ps.filter((p) => p.side === 'home' && p.slot === 'ST');
     const wide = groundPoses(m.id, ps, line('buildLeft')).at(-1)!;

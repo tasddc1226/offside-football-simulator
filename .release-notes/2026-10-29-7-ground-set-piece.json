@@ -3,12 +3,14 @@
   "title": "경기 화면 세트피스 움직임",
   "items": [
     "코너킥 · 프리킥 골 장면에서 센터백 혼자가 아니라 공격수들도 함께 문전으로 올라가고, 상대 수비가 따라붙어요.",
+    "코너킥 때 문전에 가지 않은 수비수들도 하프라인까지 올라와요.",
     "측면 · 중원 빌드업 때 최전방 공격수가 문전으로 뛰어 들어요."
   ],
   "en": {
     "title": "Set-piece movement on the match pitch",
     "items": [
       "On corner and free-kick goals, attackers now join the center-back in the box, and defenders mark them.",
+      "On corners, defenders who stay out of the box now push up to the halfway line.",
       "During wing and midfield build-ups, the striker now runs into the box."
     ]
   },
@@ -16,6 +18,7 @@
     "title": "試合画面のセットプレーの動き",
     "items": [
       "コーナーキック・フリーキックのゴール場面で、センターバックだけでなく攻撃陣もゴール前に上がり、相手DFがマークにつきます。",
+      "コーナーキックでは、ゴール前に行かないDFもハーフウェーラインまで上がります。",
       "サイド・中盤のビルドアップでは、センターフォワードがゴール前に走り込みます。"
     ]
   },

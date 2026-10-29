@@ -172,6 +172,8 @@ function setPiece(
   scAt: Pt,
   spots: readonly Pt[],
   not: readonly string[] = [],
+  /** 코너킥: 문전에 가지 않은 필드 선수도 하프라인까지 올라온다(공격하는 팀 기준 a 48 아래면 48~52로). */
+  halfway = false,
 ): Move[] {
   const skip = new Set([sc.key, ...not]);
   const up: GroundPlayer[] = [];
@@ -187,7 +189,17 @@ function setPiece(
     // 상대는 자기 골문 쪽 반 걸음 앞에 붙는다.
     marks.push([d, [q[0] + (P(1, 50)[0] > 50 ? -1.5 : 1.5), q[1] + (q[1] < 50 ? 2 : -2)]]);
   }
-  return [...moves, ...marks];
+  const rest: Move[] = [];
+  if (halfway) {
+    const moved = new Set([...skip, ...up.map((p) => p.key)]);
+    for (const p of T) {
+      if (p.slot === 'GK' || moved.has(p.key)) continue;
+      const own = P(0, 50)[0] === 0 ? p.x : 100 - p.x;
+      // 측면 수비는 중앙 수비보다 조금 더 올라선다.
+      if (own < 48) rest.push([p, P(p.slot === 'FB' ? 52 : 48, p.lane)]);
+    }
+  }
+  return [...moves, ...marks, ...rest];
 }
 
 /** 한 줄의 동작 묶음. 앞 동작에서 옮긴 선수는 그 자리에 남는다. */
@@ -426,7 +438,7 @@ function scenePoses(
           .add(
             0.5,
             P(99.5, flag),
-            [[tk, P(99, flag)], ...setPiece(T, D, P, sc, [86, 50], BOX, [tk.key])],
+            [[tk, P(99, flag)], ...setPiece(T, D, P, sc, [86, 50], BOX, [tk.key], true)],
             tk,
           )
           .add(0.5, P(91, 50), [[sc, P(91, 50)]], sc).poses;
@@ -560,7 +572,7 @@ function scenePoses(
       const cb = role(T, 'CB', rnd);
       return mv
         .add(0.5, P(99.5, flag), [[tk, P(99, flag)]], tk)
-        .add(0.5, P(99.5, flag), setPiece(T, D, P, cb, [88, 50], BOX, [tk.key]), tk).poses;
+        .add(0.5, P(99.5, flag), setPiece(T, D, P, cb, [88, 50], BOX, [tk.key], true), tk).poses;
     }
     case 'corner2': {
       const tk = role(T, 'AM', rnd);
