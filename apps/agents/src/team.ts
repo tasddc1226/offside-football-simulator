@@ -4,9 +4,12 @@
 // - 운영 배포 성공: 배포 상태 카드 → 사건이면 30 · 60분 확인 예약, 아니면 닫기(문의 작업이면 마무리 답장 초안, T-11-400)
 // - 5분마다 공개 서버 상태(GET /v1/status, 엣지 60초 캐시라 운영 D1을 건드리지 않는다) → 두 칸 이어 나쁘면 @ops 사건
 import { cardOf, kstClock, type CardSummary } from './card.ts';
-import { botToken, ROLE_NAMES, ROLES, type Env, type Role } from './env.ts';
+import { ROLES, type Env, type Role } from './env.ts';
 import { kstDay, ledger, type PendingApproval } from './ledger.ts';
-import { slackClient, threadLink } from './slack.ts';
+import { chatClient, threadLink } from './chat.ts';
+import { slackThreadLink } from './slack.ts';
+
+type Link = (channel: string, ts: string) => string;
 import { supportFollowup } from './supportCase.ts';
 import { threadOf } from './thread.ts';
 
@@ -17,20 +20,25 @@ export const STALE_MS = DAY;
 /** 승인 묶음에 넣는 대기 시간. */
 const PENDING_MIN_MS = HOUR;
 
-const planSlack = (env: Env) => slackClient(botToken(env, 'plan'), fetch, ROLE_NAMES.plan);
+const planSlack = (env: Env) => chatClient(env, 'plan');
 
 const age = (ms: number) =>
   ms >= DAY ? `${Math.floor(ms / DAY)}일` : `${Math.max(1, Math.round(ms / HOUR))}시간`;
 
 /** 아침 열린 카드 목록. 열린 카드가 없으면 null(올리지 않는다). */
-export function openCardsText(cards: CardSummary[], now = Date.now()): string | null {
+/** link: 스레드 링크(플랫폼마다 다르다, chat.ts threadLink). */
+export function openCardsText(
+  cards: CardSummary[],
+  now = Date.now(),
+  link: Link = slackThreadLink,
+): string | null {
   const open = cards.filter((c) => c.status !== '닫힘').sort((a, b) => a.updatedAt - b.updatedAt);
   if (!open.length) return null;
   const stale = open.filter((c) => c.status !== '보류' && now - c.updatedAt > STALE_MS);
   const lines = open.map((c) => {
     const flag = stale.includes(c) ? '⏸ ' : '';
     const next = c.next ? ` · 다음 ${kstClock(c.next.at)} ${c.next.what}` : '';
-    return `- ${flag}<${threadLink(c.channel, c.threadTs)}|${c.goal.slice(0, 60)}> · ${c.status} · @${c.owner} · ${age(now - c.updatedAt)}째 그대로${next}`;
+    return `- ${flag}<${link(c.channel, c.threadTs)}|${c.goal.slice(0, 60)}> · ${c.status} · @${c.owner} · ${age(now - c.updatedAt)}째 그대로${next}`;
   });
   return [
     `**열린 작업 카드 ${open.length}개**${stale.length ? ` · 24시간 넘게 멈춘 카드 ${stale.length}개(⏸)` : ''}`,
@@ -91,12 +99,16 @@ export function retroText(r: RetroInput, now = Date.now()): string {
   ].join('\n');
 }
 
-export function pendingText(list: PendingApproval[], now = Date.now()): string | null {
+export function pendingText(
+  list: PendingApproval[],
+  now = Date.now(),
+  link: Link = slackThreadLink,
+): string | null {
   const due = list.filter((p) => now - p.at >= PENDING_MIN_MS).sort((a, b) => a.at - b.at);
   if (!due.length) return null;
   return [
     `**승인 대기 ${due.length}건**`,
-    ...due.map((p) => `- <${threadLink(p.channel, p.ts)}|${p.label}> · ${age(now - p.at)}째`),
+    ...due.map((p) => `- <${link(p.channel, p.ts)}|${p.label}> · ${age(now - p.at)}째`),
   ].join('\n');
 }
 
@@ -108,7 +120,7 @@ export async function captainMorning(env: Env, now = Date.now()) {
   const book = ledger(env);
   const cards = await book.cards(now);
   const slack = planSlack(env);
-  const list = openCardsText(cards, now);
+  const list = openCardsText(cards, now, (c, t) => threadLink(env, c, t));
   if (list)
     await slack('chat.postMessage', { channel: env.DESK_CHANNEL, text: list, blocks: md(list) });
   // 23:50 UTC 일요일 = 월요일 08:50 KST.
@@ -138,7 +150,7 @@ export async function captainMorning(env: Env, now = Date.now()) {
 }
 
 export async function approvalsBundle(env: Env, now = Date.now()) {
-  const text = pendingText(await ledger(env).pending(now), now);
+  const text = pendingText(await ledger(env).pending(now), now, (c, t) => threadLink(env, c, t));
   if (!text) return 'none';
   await planSlack(env)('chat.postMessage', {
     channel: env.APPROVAL_CHANNEL,

@@ -2,6 +2,7 @@
 import type { WorkCard } from './card.ts';
 import type { AgentLedger } from './ledger.ts';
 import type { AgentThread } from './thread.ts';
+import type { DiscordBridge } from './bridge.ts';
 
 export const ROLES = ['ops', 'plan', 'dev', 'mkt'] as const;
 export type Role = (typeof ROLES)[number];
@@ -11,6 +12,16 @@ export interface Env {
   LEDGER: DurableObjectNamespace<AgentLedger>;
   /** T-11-325 스레드마다 작업 카드 하나. */
   CARD: DurableObjectNamespace<WorkCard>;
+  /** T-11-576 디스코드 게이트웨이 · 메시지 옮기기(bridge.ts). */
+  DISCORD: DurableObjectNamespace<DiscordBridge>;
+  /** T-11-576 'discord'면 디스코드로 주고받는다. 없거나 'slack'이면 슬랙. 채널 · 사용자 ID vars도 그 플랫폼 값이어야 한다. */
+  CHAT_PLATFORM?: string;
+  DISCORD_APP_ID?: string;
+  /** 버튼 요청 서명 확인용 앱 공개 키(비밀 아님). */
+  DISCORD_PUBLIC_KEY?: string;
+  DISCORD_GUILD_ID?: string;
+  /** 봇 토큰(비밀값). */
+  DISCORD_BOT_TOKEN?: string;
   ENABLED_ROLES: string;
   OPERATOR_USER_ID: string;
   AGENT_APP_IDS: string;

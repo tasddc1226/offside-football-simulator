@@ -2,13 +2,14 @@
 // 운영 D1은 쓰지 않는다(ADR-015 인프라).
 import { DurableObject } from 'cloudflare:workers';
 import { ClaudeError, MODEL_LABEL, runAgent, type Message, type Tool } from './claude.ts';
-import { apiKey, botToken, dailyBudget, enabled, ROLE_NAMES, type Env, type Role } from './env.ts';
+import { apiKey, dailyBudget, enabled, type Env, type Role } from './env.ts';
 import { cardOf } from './card.ts';
 import { isIncident, linkRoles, MAX_HOPS, parseHandoffs } from './handoff.ts';
 import { kstDay, ledger } from './ledger.ts';
 import { mcpTools, type McpServer } from './mcp.ts';
 import { roleSpec } from './roles.ts';
-import { slackClient, threadReply } from './slack.ts';
+import { chatClient } from './chat.ts';
+import { threadReply } from './slack.ts';
 import { openSupportCases } from './supportCase.ts';
 
 export type Task = {
@@ -119,7 +120,7 @@ export class AgentThread extends DurableObject<Env> {
 
   private async handle(task: Task, startedAt: number) {
     const env = this.env;
-    const slack = slackClient(botToken(env, task.role), fetch, ROLE_NAMES[task.role]);
+    const slack = chatClient(env, task.role);
     const book = ledger(env);
     // 운영자가 끼어든 횟수(주간 회고, T-11-325).
     if (task.kind === 'mention' || task.kind === 'reply') await book.touch();
@@ -295,11 +296,7 @@ export class AgentThread extends DurableObject<Env> {
       if (!enabled(env, h.to)) continue;
       const n = await ledger(env).hop(`${task.channel}:${threadTs}`);
       if (n > MAX_HOPS) {
-        await slackClient(
-          botToken(env, task.role),
-          fetch,
-          ROLE_NAMES[task.role],
-        )(
+        await chatClient(env, task.role)(
           'chat.postMessage',
           threadReply(
             task.channel,

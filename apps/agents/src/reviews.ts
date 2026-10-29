@@ -3,10 +3,10 @@
 // App Store는 App Store Connect API 키(ES256, 고객 지원 권한), Google Play는 서비스 계정(Play Console "리뷰에 답글" 권한).
 // 리뷰어 닉네임은 읽지 않는다(로그 · 슬랙에 유저 이름을 남기지 않는다).
 import type { Tool } from './claude.ts';
-import { botToken, ROLE_NAMES, type Env } from './env.ts';
+import { type Env } from './env.ts';
 import { b64u, pemDer, serviceAccountToken } from './google.ts';
 import { ledger } from './ledger.ts';
-import { slackClient } from './slack.ts';
+import { chatClient } from './chat.ts';
 import { threadOf, type Task } from './thread.ts';
 
 export type Store = 'ios' | 'android';
@@ -328,7 +328,7 @@ export async function scanReviews(
   return { reviews: fresh.length, ready: true, errors };
 }
 
-const planSlack = (env: Env) => slackClient(botToken(env, 'plan'), fetch, ROLE_NAMES.plan);
+const planSlack = (env: Env) => chatClient(env, 'plan');
 
 export function reviewCard(env: Env, d: ReviewDraft) {
   const value = JSON.stringify({ draft: d.id });

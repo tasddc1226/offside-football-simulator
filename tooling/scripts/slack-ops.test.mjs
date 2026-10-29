@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { deliverOnce, slackMessage } from './slack-ops-client.mjs';
+import { deliverOnce, discordMessage, sendSlack, slackMessage } from './slack-ops-client.mjs';
 import { previousKstDay, monitor, daily } from './slack-ops.mjs';
 import { parseCommunity, isFeedback, issueUpdate } from './slack-feedback.mjs';
 import { storeMail } from './slack-store-mail.mjs';
@@ -219,5 +219,31 @@ describe('release reporting', () => {
     );
     await releaseUpdate(db, {}, event, f);
     expect(f).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('discord webhook delivery (T-11-576)', () => {
+  const hook = 'https://discord.com/api/webhooks/123/abc-DEF_9';
+  it('sends title, lines and links as one plain content with mentions off', async () => {
+    const m = slackMessage(
+      '🚨 점검 필요',
+      ['D1 <@here>', '두 번째'],
+      [{ label: 'Actions', url: 'https://github.com/x' }],
+    );
+    expect(discordMessage(m)).toEqual({
+      content: '🚨 점검 필요\nD1 <@here>\n두 번째\n[Actions](<https://github.com/x>)',
+      allowed_mentions: { parse: [] },
+      flags: 4,
+    });
+    const fetcher = vi.fn(async () => new Response(null, { status: 204 }));
+    await sendSlack(hook, m, fetcher);
+    expect(JSON.parse(fetcher.mock.calls[0][1].body).content).toMatch(/^🚨 점검 필요/);
+  });
+  it('rejects other discord paths and fails on non-2xx', async () => {
+    await expect(
+      sendSlack('https://discord.com/api/channels/1/messages', slackMessage('a', [])),
+    ).rejects.toThrow('Invalid Slack destination');
+    const fetcher = vi.fn(async () => new Response('{}', { status: 404 }));
+    await expect(sendSlack(hook, slackMessage('a', []), fetcher)).rejects.toThrow('HTTP 404');
   });
 });
