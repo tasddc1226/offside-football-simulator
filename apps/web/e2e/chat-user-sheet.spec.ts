@@ -6,7 +6,7 @@ test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true
 
 async function openChat(page: Page) {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.route(`${API}/v1/chat/ticket`, (route) =>
+  await page.route(`${API}/v1/chat/ticket*`, (route) =>
     route.fulfill(
       ok({
         ticket: null,
@@ -69,7 +69,7 @@ test('프로필 사진·이름·⋯ 모두 사용자 창을 열고, 배경·Esc�
 /** 작성자 팀 조회(teamId)와 구단주 프로필 요청을 흉내 내고 사용자 창의 프로필 보기를 누른다. */
 async function viewProfile(page: Page, teamId: string | null) {
   const opened: string[] = [];
-  await page.route(`${API}/v1/chat/messages/m1/owner`, (route) => route.fulfill(ok({ teamId })));
+  await page.route(`${API}/v1/chat/messages/m1/owner*`, (route) => route.fulfill(ok({ teamId })));
   await page.route(`${API}/v1/owners/by-team/*`, (route) => {
     opened.push(new URL(route.request().url()).pathname);
     return route.fulfill({ status: 404, body: '{}' });

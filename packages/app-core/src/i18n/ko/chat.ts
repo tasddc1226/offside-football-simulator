@@ -5,6 +5,7 @@ const ko = {
   title: '라운지 채팅',
   back: '← 이전으로',
   online: (p: { n: number }) => `${p.n}명 접속`,
+  roomsLabel: '언어별 채팅방',
   reconnecting: '다시 연결하는 중…',
   connecting: '연결하는 중…',
   rulesLabel: '채팅 이용 안내와 차단 목록',

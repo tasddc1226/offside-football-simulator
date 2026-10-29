@@ -16,7 +16,7 @@ test('새 채팅 수를 표시하고 읽으면 지우며 화면 이동에는 연
       }),
     ),
   );
-  await page.route(`${API}/v1/chat/ticket`, (route) => {
+  await page.route(`${API}/v1/chat/ticket*`, (route) => {
     tickets++;
     return route.fulfill(
       ok({
@@ -97,7 +97,7 @@ test('닉네임 변경·로그아웃 후 이전 계정의 채팅 연결을 재�
     loggedIn = false;
     return route.fulfill({ status: 204 });
   });
-  await page.route(`${API}/v1/chat/ticket`, (route) => {
+  await page.route(`${API}/v1/chat/ticket*`, (route) => {
     tickets++;
     return route.fulfill(
       ok({

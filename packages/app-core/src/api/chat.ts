@@ -17,46 +17,88 @@ import {
   CHAT_HISTORY,
   type CHAT_MUTE_DAYS,
   CHAT_SOCKET_PATH,
+  isChatRoom,
   type ChatClientEvent,
+  type ChatRoomKey,
   type ChatMessage,
   type ChatRejectCode,
   type ChatServerEvent,
 } from '@offside/contracts/chat';
 import { LIVE_PING, LIVE_PING_SEC } from '@offside/contracts/polling';
+import { storage } from '@offside/game/storage';
 import { kstParts } from '../boardText.js';
+import { getLocale } from '../i18n/core.js';
 import { chatRejectText } from '../i18n/ko/chatReject.js';
 import { apiBaseUrl, apiFetch, cachedGet, withProfile } from './client.js';
 
-export type { AdminChatReport, ChatMessage, ChatRejectCode, ChatTicketResponse };
+export type { AdminChatReport, ChatMessage, ChatRejectCode, ChatRoomKey, ChatTicketResponse };
 
-export const chatTicket = () =>
+const ROOM_KEY = 'ft_chat_room';
+/** T-11-583 들어갈 언어 방. 고른 방이 없으면 화면 언어 방이다(이 기기에만 기억한다). */
+export function currentChatRoom(): ChatRoomKey {
+  try {
+    const saved = storage().getItem(ROOM_KEY);
+    if (isChatRoom(saved)) return saved;
+  } catch {
+    /* 저장소가 막혀 있으면 화면 언어 방. */
+  }
+  const locale = getLocale();
+  return isChatRoom(locale) ? locale : 'ko';
+}
+/** 방을 고른다. 열린 소켓은 부르는 쪽이 닫고 새로 연다. */
+export function setChatRoom(room: ChatRoomKey) {
+  try {
+    storage().setItem(ROOM_KEY, room);
+  } catch {
+    /* 기억하지 못해도 이번 화면에서는 고른 방으로 붙는다. */
+  }
+}
+const inRoom = (room: ChatRoomKey) => `room=${room}`;
+
+export const chatTicket = (room: ChatRoomKey = currentChatRoom()) =>
   withProfile(() =>
-    apiFetch<ChatTicketResponse>('/v1/chat/ticket', { method: 'POST', keepCache: true }),
+    apiFetch<ChatTicketResponse>(`/v1/chat/ticket?${inRoom(room)}`, {
+      method: 'POST',
+      keepCache: true,
+    }),
   );
 /** 메시지 신고 — 여럿이 신고하면 모두의 화면에서 가려진다. */
-export const reportChat = (id: string, input: CommentReportInput) =>
+export const reportChat = (
+  id: string,
+  input: CommentReportInput,
+  room: ChatRoomKey = currentChatRoom(),
+) =>
   withProfile(() =>
-    apiFetch<undefined>(`/v1/chat/messages/${id}/report`, {
+    apiFetch<undefined>(`/v1/chat/messages/${id}/report?${inRoom(room)}`, {
       method: 'POST',
       body: JSON.stringify(input),
       keepCache: true,
     }),
   );
 /** 작성자 차단(게시판 댓글 차단과 같은 목록) — 그 사람의 메시지가 내 화면에서 빠진다. */
-export const blockChatAuthor = (id: string) =>
+export const blockChatAuthor = (id: string, room: ChatRoomKey = currentChatRoom()) =>
   withProfile(() =>
-    apiFetch<ChatBlockResponse>(`/v1/chat/messages/${id}/block`, { method: 'POST' }),
+    apiFetch<ChatBlockResponse>(`/v1/chat/messages/${id}/block?${inRoom(room)}`, {
+      method: 'POST',
+    }),
   );
 /** T-11-167 내가 차단한 사람 — 채팅의 차단 목록을 열 때만 부른다. 푸는 건 게시판과 같은 unblock(boards.ts)이다. */
 export const fetchChatBlocks = () =>
   withProfile(() => cachedGet<ChatBlockListResponse>('/v1/chat/blocks', 60_000));
 /** T-11-344 작성자의 구단주 프로필(가장 최근 팀 id) — 사용자 창에서 '프로필 보기'를 누를 때만 부른다. */
-export const fetchChatOwner = (id: string) =>
-  cachedGet<ChatOwnerResponse>(`/v1/chat/messages/${id}/owner`, 600_000);
-export const adminHideChat = (id: string) =>
-  apiFetch<undefined>(`/v1/admin/chat/messages/${id}/hide`, { method: 'POST', keepCache: true });
-export const adminMuteChat = (id: string, input: ChatMuteInput) =>
-  apiFetch<undefined>(`/v1/admin/chat/messages/${id}/mute`, {
+export const fetchChatOwner = (id: string, room: ChatRoomKey = currentChatRoom()) =>
+  cachedGet<ChatOwnerResponse>(`/v1/chat/messages/${id}/owner?${inRoom(room)}`, 600_000);
+export const adminHideChat = (id: string, room: ChatRoomKey = currentChatRoom()) =>
+  apiFetch<undefined>(`/v1/admin/chat/messages/${id}/hide?${inRoom(room)}`, {
+    method: 'POST',
+    keepCache: true,
+  });
+export const adminMuteChat = (
+  id: string,
+  input: ChatMuteInput,
+  room: ChatRoomKey = currentChatRoom(),
+) =>
+  apiFetch<undefined>(`/v1/admin/chat/messages/${id}/mute?${inRoom(room)}`, {
     method: 'POST',
     body: JSON.stringify(input),
     keepCache: true,
@@ -117,8 +159,12 @@ export function chatMutedText(until: string | null) {
     : chatRejectText.mutedNotice;
 }
 
-export const chatSocketUrl = (ticket: string | null, base = apiBaseUrl()) =>
-  `${base.replace(/^http/, 'ws')}${CHAT_SOCKET_PATH}${ticket ? `?t=${encodeURIComponent(ticket)}` : ''}`;
+export const chatSocketUrl = (
+  ticket: string | null,
+  room: ChatRoomKey = 'ko',
+  base = apiBaseUrl(),
+) =>
+  `${base.replace(/^http/, 'ws')}${CHAT_SOCKET_PATH}?${inRoom(room)}${ticket ? `&t=${encodeURIComponent(ticket)}` : ''}`;
 
 /** 화면에 그리는 채팅 상태. */
 export type ChatView = {
@@ -244,11 +290,13 @@ export type ChatSession = {
 
 /**
  * 채팅방에 붙는다. 상태가 바뀔 때마다 onChange, 내 줄이 거절되면 onReject를 부른다. restore는 거절된 줄 —
- * 고쳐 다시 보낼 수 있을 때만(정지·읽기 전용이 아니면) 준다.
+ * 고쳐 다시 보낼 수 있을 때만(정지·읽기 전용이 아니면) 준다. room(T-11-583)은 세션 동안 바꾸지 않는다 —
+ * 다른 방으로 가려면 닫고 새로 연다.
  */
 export function openChat(
   onChange: (v: ChatView) => void,
   onReject: (code: ChatRejectCode, restore: string | null) => void = () => {},
+  room: ChatRoomKey = currentChatRoom(),
 ): ChatSession {
   let view = EMPTY_CHAT;
   /** 보냈지만 아직 방에서 돌아오지 않은 줄. */
@@ -271,7 +319,7 @@ export function openChat(
   const open = async () => {
     const WS = g.WebSocket;
     if (stopped || !WS) return;
-    const r = await chatTicket();
+    const r = await chatTicket(room);
     if (stopped) return;
     const me = r.ok ? r.data : null;
     if (me) {
@@ -279,7 +327,7 @@ export function openChat(
       for (const id of me.reported) dropped.add(id);
     }
     set({ ...view, me, status: view.status === 'open' ? 'retrying' : view.status });
-    const sock = new WS(chatSocketUrl(me?.ticket ?? null));
+    const sock = new WS(chatSocketUrl(me?.ticket ?? null, room));
     ws = sock;
     sock.onopen = () => {
       wait = RETRY_MIN_MS;

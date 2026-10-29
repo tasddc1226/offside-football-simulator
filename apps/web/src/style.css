@@ -7236,6 +7236,22 @@ button.what {
   font-size: var(--fs-title3);
   line-height: 1.4;
 }
+/* T-11-583 언어 방 고르기 */
+.chat-rooms {
+  flex: none;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.chat-rooms .opt {
+  min-height: 36px;
+  padding: 6px 4px;
+  align-items: center;
+  text-align: center;
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
 .chat-rules {
   position: relative;
 }

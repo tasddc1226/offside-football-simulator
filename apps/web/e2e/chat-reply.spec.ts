@@ -9,7 +9,7 @@ const other = { at: 100, admin: false, tier: null, title: null, avatarId: null }
 
 async function openChat(page: Page) {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.route(`${API}/v1/chat/ticket`, (route) =>
+  await page.route(`${API}/v1/chat/ticket*`, (route) =>
     route.fulfill(
       ok({
         ticket: 'tk',
