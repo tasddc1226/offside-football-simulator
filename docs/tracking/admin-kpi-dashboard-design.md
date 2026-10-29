@@ -23,7 +23,7 @@
    `admin.offside-lab.com`(같은 사이트)에서 `credentials: 'include'`로 보내면 실린다. 핸들러는 `requireAdmin`으로 막는다.
    `ALLOWED_ORIGINS`(운영)에 `https://admin.offside-lab.com`을 더한다.
 3. 응답은 `Cache-Control: no-store`, 엣지 캐시하지 않는다(관리자 전용). 웹 메모(`cachedGet`)는 1분.
-4. Access를 거치지 않은 `*.workers.dev` 주소는 끈다(`workers_dev: false`).
+4. `offside-admin.<계정>.workers.dev` 주소도 같은 Access 앱의 목적지로 막는다. `workers_dev: false`로 끄면 wrangler가 존 라우트 목록을 읽어서, 존 권한이 없는 CI 토큰으로는 배포가 실패한다(T-11-572 첫 배포).
 
 ADMIN_EMAILS가 여러 개여도 Access 정책이 1명만 통과시킨다. 대시보드 API를 운영자 1명으로 더 좁힐 필요가 생기면 `KPI_OWNER_EMAIL`을 따로 둔다(지금은 안 함).
 
