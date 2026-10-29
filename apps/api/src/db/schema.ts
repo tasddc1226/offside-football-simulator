@@ -1167,6 +1167,8 @@ export const ownerTeams = sqliteTable(
     friendlyJson: text('friendly_json'),
     /** T-11-217 팀 프리셋(포메이션 · 선발 · 배치, 최대 5개) JSON 배열. 없으면 null. */
     presetsJson: text('presets_json'),
+    /** T-11-570 컵 명단으로 고른 프리셋의 팀 OVR(저장할 때 계산). 컵 명단이 없으면 null — 컵은 팀 OVR을 쓴다. */
+    cupOvr: integer('cup_ovr'),
     /** T-11-310 감독 칸(끝낸 감독 카드의 career_id). 비었으면 null — 지금과 같은 결과. */
     coachId: text('coach_id'),
     createdAt: text('created_at').notNull(),

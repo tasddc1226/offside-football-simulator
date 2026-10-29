@@ -960,6 +960,13 @@
       "when": 1793090122544,
       "tag": "0139_card_public_name",
       "breakpoints": true
+    },
+    {
+      "idx": 140,
+      "version": "6",
+      "when": 1793246197442,
+      "tag": "0140_owner_team_cup_ovr",
+      "breakpoints": true
     }
   ]
 }

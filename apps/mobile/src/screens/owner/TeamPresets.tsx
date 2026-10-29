@@ -1,5 +1,5 @@
 // T-11-217 팀 프리셋 시트(웹 team/TeamPresets.svelte) — 지금 편성 저장 · 불러오기 · 덮어쓰기 · 이름 바꾸기 · 삭제.
-// 불러오기는 편성 초안만 채운다.
+// 불러오기는 편성 초안만 채운다. T-11-570 프리셋 하나를 컵 명단으로 고르면 컵 경기는 그 편성으로 뛴다.
 import { RADIUS } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
@@ -12,8 +12,10 @@ import {
   removePreset,
   renamePreset,
   replacePreset,
+  setCupPreset,
   type TeamPreset,
 } from '@offside/app-core/teamPresets';
+import { toast } from '../../game/host';
 import { TeamDialog } from '../../components/TeamDialog';
 import { useColors } from '../../theme/useColors';
 import { Btn, Txt } from '../../ui';
@@ -24,6 +26,8 @@ export function TeamPresets({
   presets,
   hasTeam,
   locked,
+  cupLocked = false,
+  cup = false,
   draft,
   persist,
   onLoad,
@@ -33,6 +37,10 @@ export function TeamPresets({
   hasTeam: boolean;
   /** 컵 명단이 잠겨 불러올 수 없다. */
   locked: boolean;
+  /** T-11-570 컵 경기 명단이 잠겨 컵 명단을 고르거나 고칠 수 없다. */
+  cupLocked?: boolean;
+  /** T-11-570 컵 명단 고르기를 보인다. */
+  cup?: boolean;
   /** 지금 편성 초안을 이 이름의 프리셋으로. */
   draft: (name: string) => TeamPreset;
   /** saved: 지금 편성을 저장 · 덮어쓴 경우(알림). */
@@ -71,6 +79,11 @@ export function TeamPresets({
       },
     ]);
   }
+  async function toggleCup(i: number) {
+    const on = !presets[i]!.cup;
+    if (await run(setCupPreset(presets, on ? i : null)))
+      toast(on ? L.tpCupSetDone : L.tpCupUnsetDone);
+  }
   async function finishRename(i: number) {
     const name = nameDraft.trim();
     if (name && name !== presets[i]!.name && !(await run(renamePreset(presets, i, name)))) return;
@@ -93,9 +106,18 @@ export function TeamPresets({
               {L.tpLocked}
             </Txt>
           ) : null}
+          {cup && cupLocked && presets.some((p) => p.cup) ? (
+            <Txt v="sm" tone="warn" testID="preset-cup-locked">
+              {L.tpCupLocked}
+            </Txt>
+          ) : null}
           {presets.length === 0 ? (
             <Txt v="sm" tone="muted">
               {L.tpEmpty}
+            </Txt>
+          ) : cup ? (
+            <Txt v="sm" tone="muted" testID="preset-cup-hint">
+              {L.tpCupHint}
             </Txt>
           ) : null}
           {presets.map((p, i) => {
@@ -106,7 +128,7 @@ export function TeamPresets({
                 testID={`preset-${i}`}
                 style={{
                   borderWidth: 1,
-                  borderColor: c.line,
+                  borderColor: p.cup ? c.good : c.line,
                   borderRadius: RADIUS.md,
                   padding: 12,
                   gap: 10,
@@ -143,6 +165,22 @@ export function TeamPresets({
                       columnGap: 10,
                     }}
                   >
+                    {p.cup ? (
+                      <Txt
+                        v="xs"
+                        bold
+                        testID={`preset-cup-badge-${i}`}
+                        style={{
+                          color: '#fff',
+                          backgroundColor: c.good,
+                          borderRadius: 999,
+                          paddingHorizontal: 8,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {L.tpCupBadge}
+                      </Txt>
+                    ) : null}
                     <Txt style={{ fontWeight: '700' }}>{p.name}</Txt>
                     <Txt v="sm" tone="muted">
                       {L.tpSummary({ shape: s.shape, n: s.starters })}
@@ -159,9 +197,19 @@ export function TeamPresets({
                   >
                     {L.tpLoad}
                   </Btn>
+                  {cup ? (
+                    <Btn
+                      sm
+                      disabled={busy || cupLocked}
+                      onPress={() => void toggleCup(i)}
+                      testID={`preset-cup-${i}`}
+                    >
+                      {p.cup ? L.tpCupUnset : L.tpCupSet}
+                    </Btn>
+                  ) : null}
                   <Btn
                     sm
-                    disabled={busy}
+                    disabled={busy || (!!p.cup && cupLocked)}
                     onPress={() => ask(i, 'overwrite')}
                     testID={`preset-overwrite-${i}`}
                   >
@@ -180,7 +228,7 @@ export function TeamPresets({
                   </Btn>
                   <Btn
                     sm
-                    disabled={busy}
+                    disabled={busy || (!!p.cup && cupLocked)}
                     onPress={() => ask(i, 'delete')}
                     testID={`preset-delete-${i}`}
                   >

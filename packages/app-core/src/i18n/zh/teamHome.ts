@@ -284,4 +284,11 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   tpLoaded: '預設組合已載入。點「儲存」才會套用到球隊。',
   tpLoadedMissing: (p) => `預設組合已載入。目前不在隊上的 ${p.n} 名球員位置已留空。`,
   tpLocked: '盃賽名單已鎖定，目前無法載入。',
+  tpCupBadge: '盃賽陣容',
+  tpCupSet: '設為盃賽陣容',
+  tpCupUnset: '取消盃賽陣容',
+  tpCupHint: '設為盃賽陣容的預設會直接用於盃賽。聯賽使用球隊陣容。同一名球員可以同時在兩邊。',
+  tpCupSetDone: '已設為盃賽陣容。盃賽將以此陣容出賽。',
+  tpCupUnsetDone: '已取消盃賽陣容。盃賽也將以球隊陣容出賽。',
+  tpCupLocked: '盃賽陣容已鎖定，目前無法更改。',
 };

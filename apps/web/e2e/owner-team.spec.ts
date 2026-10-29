@@ -1884,7 +1884,7 @@ test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없
       },
     ],
   };
-  const puts: { presets: { name: string; formation: string }[] }[] = [];
+  const puts: { presets: { name: string; formation: string; cup?: true }[] }[] = [];
   let teamPuts = 0;
   await page.route(ownerTeamUrl, async (route) => {
     if (route.request().method() === 'GET')
@@ -1949,6 +1949,18 @@ test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없
   await sheet.locator('[data-act="preset-ask-ok"]').click();
   await expect.poll(() => puts.length).toBe(4);
   expect(puts[3]!.presets.map((p) => p.name)).toEqual(['주말 리그']);
+
+  // T-11-570 컵 명단으로 고르면 cup 표시를 보내고 배지가 붙는다. 다시 누르면 푼다.
+  await expect(sheet.locator('[data-preset-cup-hint]')).toBeVisible();
+  await sheet.locator('[data-preset="0"] [data-act="preset-cup"]').click();
+  await expect.poll(() => puts.length).toBe(5);
+  expect(puts[4]!.presets[0]).toMatchObject({ name: '주말 리그', cup: true });
+  await expect(sheet.locator('[data-preset="0"] [data-preset-cup]')).toHaveText('컵 명단');
+  await expect(page.getByText('컵 명단으로 정했어요.')).toBeVisible();
+  await sheet.locator('[data-preset="0"] [data-act="preset-cup"]').click();
+  await expect.poll(() => puts.length).toBe(6);
+  expect(puts[5]!.presets[0]!.cup).toBeUndefined();
+  await expect(sheet.locator('[data-preset-cup]')).toHaveCount(0);
 });
 
 for (const width of [320, 390, 1280]) {

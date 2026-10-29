@@ -437,9 +437,12 @@ export function CupCard({
 export function CupLockNotice({
   state,
   bar = null,
+  preset = null,
 }: {
   state: CupState;
   bar?: CupLineupBar | null;
+  /** T-11-570 컵 명단 프리셋 이름(있으면 컵은 그 편성으로 뛰고, 줄도 그 프리셋 값이다). */
+  preset?: string | null;
 }) {
   const c = useColors();
   const next = myNext(state);
@@ -467,6 +470,11 @@ export function CupLockNotice({
       {bar ? (
         <Txt v="xs" bold>
           {L.title}
+        </Txt>
+      ) : null}
+      {preset ? (
+        <Txt v="sm" testID="cup-preset">
+          {L.barPreset({ name: preset })}
         </Txt>
       ) : null}
       {text ? <Txt v="sm">{text}</Txt> : null}

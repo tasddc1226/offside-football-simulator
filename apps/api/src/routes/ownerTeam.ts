@@ -10,6 +10,7 @@ import {
   TeamMomentResponseSchema,
   PutOwnerTeamBodySchema,
   PutOwnerTeamResponseSchema,
+  type TeamPreset,
   PutTeamCoachBodySchema,
   PutTeamCoachResponseSchema,
   PutTeamPresetsBodySchema,
@@ -78,6 +79,8 @@ import {
   layoutOf,
   logoOf,
   presetsOf,
+  cupPresetOf,
+  cupTeamOf,
   setTeamPresets,
   teamPlayerCard,
   toLineupCareer,
@@ -274,6 +277,53 @@ function toOwnerTeam(
   };
 }
 
+/**
+ * 저장할 선발 검사(팀 저장 · T-11-570 컵 명단 프리셋): 한 선수는 한 자리, 지금 가진 내 선수만, 지난 시즌 선수 급여 예산 안.
+ */
+async function checkLineupPlayers(
+  db: Db,
+  profileId: string,
+  season: number,
+  current: number | null,
+  slots: readonly (string | null)[],
+) {
+  const ids = slots.filter((x): x is string => x !== null);
+  if (new Set(ids).size !== ids.length) {
+    throw new AppError({
+      code: 'VALIDATION_FAILED',
+      message: '한 선수는 한 자리에만 넣을 수 있어요.',
+      details: { reason: 'DUPLICATE_PLAYER' },
+    });
+  }
+  const eligible = eligibleMap(await careersByIds(db, ids), profileId, season, true);
+  if (ids.some((id) => !eligible.has(id))) {
+    throw new AppError({
+      code: 'VALIDATION_FAILED',
+      message:
+        season === current
+          ? '지금 가진 내 선수만 팀에 넣을 수 있어요.'
+          : '지금 가진 프리시즌 선수만 프리시즌 팀에 넣을 수 있어요.',
+      details: { reason: 'PLAYER_NOT_ELIGIBLE' },
+    });
+  }
+  // T-11-376 지난 시즌 선수는 급여(최고 OVR) 합이 예산 안에서만. 지난 시즌 선수가 없으면 밸런스를 읽지 않는다.
+  const salary = pastSalarySum(
+    ids.map((id) => eligible.get(id)),
+    season,
+  );
+  if (salary > 0) {
+    const budget = await pastSalaryBudgetOf(db, season);
+    if (salary > budget) {
+      throw new AppError({
+        code: 'VALIDATION_FAILED',
+        message: pastSalaryOverText(salary, budget),
+        details: { reason: 'PAST_SALARY_BUDGET', salary, budget },
+      });
+    }
+  }
+  return { ids, eligible };
+}
+
 export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
   // 내 팀(보고 있는 시즌) + 그 시즌에 넣을 수 있는 은퇴 선수 + 오늘 남은 경기 수. 화면을 열 때 한 번 부른다(웹 메모 1분).
   app.get('/v1/owner-team', requireProfile, async (c) => {
@@ -371,46 +421,10 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     checkName(input.name, '팀 이름');
     checkName(input.manager, '감독 이름');
     if (input.logo?.text) checkName(input.logo.text, '로고 글자');
-    const ids = input.slots.filter((x): x is string => x !== null);
-    if (new Set(ids).size !== ids.length) {
-      throw new AppError({
-        code: 'VALIDATION_FAILED',
-        message: '한 선수는 한 자리에만 넣을 수 있어요.',
-        details: { reason: 'DUPLICATE_PLAYER' },
-      });
-    }
-    const eligible = eligibleMap(await careersByIds(db, ids), me.id, season, true);
-    if (ids.some((id) => !eligible.has(id))) {
-      throw new AppError({
-        code: 'VALIDATION_FAILED',
-        message:
-          season === current
-            ? '지금 가진 내 선수만 팀에 넣을 수 있어요.'
-            : '지금 가진 프리시즌 선수만 프리시즌 팀에 넣을 수 있어요.',
-        details: { reason: 'PLAYER_NOT_ELIGIBLE' },
-      });
-    }
-    // T-11-376 지난 시즌 선수는 급여(최고 OVR) 합이 예산 안에서만. 지난 시즌 선수가 없으면 밸런스를 읽지 않는다.
-    const salary = pastSalarySum(
-      ids.map((id) => eligible.get(id)),
-      season,
-    );
-    if (salary > 0) {
-      const budget = await pastSalaryBudgetOf(db, season);
-      if (salary > budget) {
-        throw new AppError({
-          code: 'VALIDATION_FAILED',
-          message: pastSalaryOverText(salary, budget),
-          details: { reason: 'PAST_SALARY_BUDGET', salary, budget },
-        });
-      }
-    }
+    const { ids, eligible } = await checkLineupPlayers(db, me.id, season, current, input.slots);
     // 이전 클라이언트가 좌표를 보내지 않으면 기존 자유 편성을 보존한다.
-    // 포메이션을 바꾼 요청만 새 기본 배치로 돌아간다.
-    const [stored] =
-      friendly || input.layout === undefined || input.coach === undefined
-        ? await myTeamIn(db, me.id, season)
-        : [];
+    // 포메이션을 바꾼 요청만 새 기본 배치로 돌아간다. T-11-570 컵 명단 프리셋이 있는지도 이 행에서 본다.
+    const [stored] = await myTeamIn(db, me.id, season);
     const previous = stored ? friendlyTeamOf(stored) : null;
     // T-11-310 감독 칸: 보내지 않으면(옛 클라이언트) 그대로 둔다. 끝낸 내 감독만 넣는다.
     const coachId = input.coach === undefined ? (previous?.coachId ?? null) : input.coach;
@@ -423,8 +437,11 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           : null
         : input.layout;
     const lineup = buildLineup(input.formation, input.slots, eligible, layout);
+    // T-11-570 컵 명단 프리셋이 따로 있으면 팀 명단은 컵에 나가지 않으므로 리그 잠금만 본다.
     if (!friendly)
-      await checkCupLineup(db, me.id, season, ids, filledCount(lineup), now, lineupOvr(lineup));
+      await checkCupLineup(db, me.id, season, ids, filledCount(lineup), now, lineupOvr(lineup), {
+        cup: !(stored && cupPresetOf(stored)),
+      });
     const values = {
       name: input.name,
       manager: input.manager,
@@ -504,8 +521,10 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       ? await coachOf(db, { coachId: input.coach, profileId: me.id })
       : null;
     if (input.coach && !coach) throw coachNotEligible();
-    const ids = slotIdsOf(team).filter((x): x is string => x !== null);
-    await checkCupLineup(db, me.id, season, ids, team.filled, now, team.ovr);
+    // T-11-570 감독은 리그 · 컵 모두에 나가므로 컵 검사는 컵 명단(프리셋이 있으면 그 편성)으로 한다.
+    const cupTeam = cupTeamOf(team);
+    const ids = slotIdsOf(cupTeam).filter((x): x is string => x !== null);
+    await checkCupLineup(db, me.id, season, ids, cupTeam.filled, now, cupTeam.ovr);
     await db
       .update(ownerTeams)
       .set({ coachId: coach ? input.coach : null, updatedAt: now })
@@ -517,6 +536,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
 
   // T-11-217 팀 프리셋 목록 통째 교체. 팀을 한 번 저장한 뒤에만(시즌 팀 행에 둔다). 프리셋은 편성 초안만 채우고,
   // 실제 팀 반영은 PUT /v1/owner-team이 선수 · 컵 잠금을 검사한다 — 여기서는 모양만 본다.
+  // T-11-570 컵 명단 프리셋은 컵에 그대로 나가므로, 컵 명단이 바뀔 때(지정 · 해제 · 편성 변경)만 팀 저장과 같은 선수 · 컵 검사를 한다.
   app.put('/v1/owner-team/presets', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const input = readBody(c, PutTeamPresetsBodySchema);
@@ -525,9 +545,36 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const season = input.season ?? currentSeasonOrThrow(now);
     const db = getDb(c);
     await checkEditableSeason(db, me.id, season, current);
-    const [row] = await setTeamPresets(db, me.id, season, input.presets);
+    const [team] = await myTeamIn(db, me.id, season);
+    if (!team) throw teamNotFound();
+    const before = cupPresetOf(team);
+    const next = input.presets.find((p) => p.cup);
+    // OVR · 선발 수는 서버가 채운다(보낸 값은 버린다).
+    let presets = input.presets.map(({ ovr: _ovr, filled: _filled, ...p }) => p as TeamPreset);
+    const lineupKey = (p: TeamPreset | null | undefined) =>
+      p ? JSON.stringify([p.formation, p.slots, p.layout]) : null;
+    let fixed: { ovr: number; filled: number } | null =
+      before && before.ovr !== undefined ? { ovr: before.ovr, filled: before.filled ?? 0 } : null;
+    if (lineupKey(before) !== lineupKey(next)) {
+      if (next) {
+        const { ids, eligible } = await checkLineupPlayers(db, me.id, season, current, next.slots);
+        const lineup = buildLineup(next.formation, next.slots, eligible, next.layout);
+        fixed = { ovr: lineupOvr(lineup), filled: filledCount(lineup) };
+        await checkCupLineup(db, me.id, season, ids, fixed.filled, now, fixed.ovr, {
+          league: false,
+        });
+      } else {
+        // 컵 명단을 풀면 팀 명단이 다시 컵에 나간다.
+        const ids = slotIdsOf(team).filter((x): x is string => x !== null);
+        await checkCupLineup(db, me.id, season, ids, team.filled, now, team.ovr, {
+          league: false,
+        });
+      }
+    }
+    if (next && fixed) presets = presets.map((p) => (p.cup ? { ...p, ...fixed } : p));
+    const [row] = await setTeamPresets(db, me.id, season, presets);
     if (!row) throw teamNotFound();
-    return ok(c, PutTeamPresetsResponseSchema, { presets: input.presets });
+    return ok(c, PutTeamPresetsResponseSchema, { presets });
   });
 
   // 경기 상대 후보: 같은 시즌에서 내 팀 레이팅에 가까운 다른 구단주의 팀 몇 개를 섞어서(레이팅이 같으면 OVR이 가까운 팀부터).

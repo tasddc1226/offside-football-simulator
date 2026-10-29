@@ -289,4 +289,12 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   tpLoaded: 'プリセットを読み込みました。保存を押すとチームに反映されます。',
   tpLoadedMissing: (p) => `プリセットを読み込みました。今いない選手 ${p.n}人の枠は空けました。`,
   tpLocked: 'カップの登録メンバーが締め切られているため、今は読み込めません。',
+  tpCupBadge: 'カップ用',
+  tpCupSet: 'カップで使う',
+  tpCupUnset: 'カップ用を解除',
+  tpCupHint:
+    'カップ用にしたプリセットはそのままカップ戦に出ます。リーグ戦はチームメンバーで戦います。同じ選手が両方に入っても大丈夫です。',
+  tpCupSetDone: 'カップ用に設定しました。カップ戦はこの編成で戦います。',
+  tpCupUnsetDone: 'カップ用を解除しました。カップ戦もチームメンバーで戦います。',
+  tpCupLocked: 'カップ用メンバーが締め切られているため、今は変更できません。',
 };

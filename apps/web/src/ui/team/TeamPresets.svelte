@@ -1,7 +1,9 @@
 <script lang="ts">
   // T-11-217 팀 프리셋 시트 — 지금 편성 저장 · 불러오기 · 덮어쓰기 · 이름 바꾸기 · 삭제. 불러오기는 초안만 채운다.
+  // T-11-570 프리셋 하나를 컵 명단으로 고르면 컵 경기는 그 편성으로 뛴다.
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
-  import { TEAM_PRESET_NAME_MAX, nextPresetName, presetSummary, presetsFull, removePreset, renamePreset, replacePreset, type TeamPreset } from '@offside/app-core/teamPresets';
+  import { TEAM_PRESET_NAME_MAX, nextPresetName, presetSummary, presetsFull, removePreset, renamePreset, replacePreset, setCupPreset, type TeamPreset } from '@offside/app-core/teamPresets';
+  import { toast } from '../helpers.js';
   import { lockScroll } from '../scrollLock.js';
 
   let {
@@ -9,6 +11,8 @@
     presets,
     hasTeam,
     locked,
+    cupLocked = false,
+    cup = false,
     draft,
     persist,
     onload,
@@ -18,6 +22,10 @@
     hasTeam: boolean;
     /** 컵 명단이 잠겨 불러올 수 없다. */
     locked: boolean;
+    /** T-11-570 컵 경기 명단이 잠겨 컵 명단을 고르거나 고칠 수 없다. */
+    cupLocked?: boolean;
+    /** T-11-570 컵 명단 고르기를 보인다(이번 시즌 팀). */
+    cup?: boolean;
     /** 지금 편성 초안을 이 이름의 프리셋으로. */
     draft: (name: string) => TeamPreset;
     /** saved: 지금 편성을 저장 · 덮어쓴 경우(알림). */
@@ -61,6 +69,10 @@
     if (name && name !== presets[i]!.name && !(await run(renamePreset(presets, i, name)))) return;
     renaming = null;
   }
+  async function toggleCup(i: number) {
+    const on = !presets[i]!.cup;
+    if (await run(setCupPreset(presets, on ? i : null))) toast(on ? L.tpCupSetDone : L.tpCupUnsetDone);
+  }
   function load(p: TeamPreset) {
     onload(p);
     dialog.close();
@@ -74,18 +86,19 @@
     <p class="note" data-preset-need-team>{L.tpNeedTeam}</p>
   {:else}
     {#if locked}<p class="note" data-preset-locked>{L.tpLocked}</p>{/if}
-    {#if presets.length === 0}<p class="muted fs-sm" data-preset-empty>{L.tpEmpty}</p>{/if}
+    {#if cup && cupLocked && presets.some((p) => p.cup)}<p class="note" data-preset-cup-locked>{L.tpCupLocked}</p>{/if}
+    {#if presets.length === 0}<p class="muted fs-sm" data-preset-empty>{L.tpEmpty}</p>{:else if cup}<p class="muted fs-sm" data-preset-cup-hint>{L.tpCupHint}</p>{/if}
     <ul>
       {#each presets as p, i (i)}
         {@const s = presetSummary(p)}
-        <li data-preset={i}>
+        <li data-preset={i} class:cup={p.cup}>
           {#if renaming === i}
             <form class="rename" onsubmit={(e) => { e.preventDefault(); void finishRename(i); }}>
               <input type="text" aria-label={L.tpNameLabel} maxlength={TEAM_PRESET_NAME_MAX} bind:value={nameDraft} data-preset-name-input />
               <button class="btn btn-sm" type="submit" disabled={busy || !nameDraft.trim()} data-act="preset-rename-done">{L.tpNameDone}</button>
             </form>
           {:else}
-            <div class="head"><strong data-preset-name>{p.name}</strong><span class="muted fs-sm">{L.tpSummary({ shape: s.shape, n: s.starters })}</span></div>
+            <div class="head">{#if p.cup}<span class="cup-badge" data-preset-cup>{L.tpCupBadge}</span>{/if}<strong data-preset-name>{p.name}</strong><span class="muted fs-sm">{L.tpSummary({ shape: s.shape, n: s.starters })}</span></div>
           {/if}
           {#if asking?.i === i}
             {@const kind = asking.kind}
@@ -99,9 +112,10 @@
           {:else}
             <div class="acts">
               <button class="btn btn-sm btn-primary" disabled={busy || locked} onclick={() => load(p)} data-act="preset-load">{L.tpLoad}</button>
-              <button class="btn btn-sm" disabled={busy} onclick={() => { renaming = null; asking = { i, kind: 'overwrite' }; }} data-act="preset-overwrite">{L.tpOverwrite}</button>
+              {#if cup}<button class="btn btn-sm" class:on={p.cup} disabled={busy || cupLocked} onclick={() => toggleCup(i)} data-act="preset-cup">{p.cup ? L.tpCupUnset : L.tpCupSet}</button>{/if}
+              <button class="btn btn-sm" disabled={busy || (p.cup && cupLocked)} onclick={() => { renaming = null; asking = { i, kind: 'overwrite' }; }} data-act="preset-overwrite">{L.tpOverwrite}</button>
               <button class="btn btn-sm" disabled={busy} onclick={() => startRename(i)} data-act="preset-rename">{L.tpRename}</button>
-              <button class="btn btn-sm" disabled={busy} onclick={() => { renaming = null; asking = { i, kind: 'delete' }; }} data-act="preset-delete">{L.tpDelete}</button>
+              <button class="btn btn-sm" disabled={busy || (p.cup && cupLocked)} onclick={() => { renaming = null; asking = { i, kind: 'delete' }; }} data-act="preset-delete">{L.tpDelete}</button>
             </div>
           {/if}
         </li>
@@ -126,6 +140,9 @@
   li{border:1px solid var(--line);border-radius:var(--radius-md);padding:12px;display:grid;gap:10px;}
   .head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;}
   .head strong{word-break:keep-all;overflow-wrap:anywhere;}
+  li.cup{border-color:var(--good);}
+  .cup-badge{align-self:center;padding:1px 8px;border-radius:999px;background:var(--good);color:#fff;font-size:12px;font-weight:700;}
+  .acts .on{border-color:var(--good);}
   .acts{display:flex;flex-wrap:wrap;gap:6px;}
   .ask{display:grid;gap:8px;padding:10px;border-radius:var(--radius-sm);background:var(--surface-2);}
   .ask p{margin:0;}

@@ -293,4 +293,12 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   tpLoadedMissing: (p) =>
     `Preset loaded. ${plural(p.n, 'spot')} left empty for players you no longer have.`,
   tpLocked: 'Your cup lineup is locked, so presets can’t be loaded right now.',
+  tpCupBadge: 'Cup lineup',
+  tpCupSet: 'Use for cup',
+  tpCupUnset: 'Stop using for cup',
+  tpCupHint:
+    'A preset set as your cup lineup plays your cup matches as is. League matches use your team lineup. The same player can be in both.',
+  tpCupSetDone: 'Set as your cup lineup. Cup matches will use this lineup.',
+  tpCupUnsetDone: 'Cup lineup cleared. Cup matches will use your team lineup.',
+  tpCupLocked: 'Your cup lineup is locked, so it can’t be changed right now.',
 };
