@@ -13,8 +13,8 @@
     d1: { label: '운영 DB', when: '매일 04:00 서버 일일 작업' },
     ga4: { label: 'GA4', when: '매일 08:50 에이전트' },
     meta: { label: 'Meta 광고', when: '매일 08:50 에이전트' },
-    admob: { label: 'AdMob', when: '연결 전' },
-    store: { label: '스토어', when: '연결 전' },
+    admob: { label: 'AdMob', when: '매일 08:50 에이전트 (AdMob 키 연결 뒤)' },
+    store: { label: '스토어', when: '매일 08:50 에이전트' },
   };
   /** 어제 날짜 행이 있는지만 본다(그날 지표가 모두 들어왔는지는 모른다). */
   function state(lastDay: string | undefined, yesterday: string | undefined) {

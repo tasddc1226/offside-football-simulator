@@ -21,6 +21,17 @@ describe('운영 지표 수집 (T-11-572)', () => {
     let call = 0;
     const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
       if (url.startsWith('https://graph.facebook.com')) {
+        if (url.includes('breakdowns=country'))
+          return Response.json({
+            data: [
+              {
+                country: 'JP',
+                spend: '15000',
+                clicks: '30',
+                actions: [{ action_type: 'mobile_app_install', value: '12' }],
+              },
+            ],
+          });
         if (call++ === 1) return Response.json({ error: { message: 'rate' } }, { status: 400 });
         return Response.json({
           data: [
@@ -53,9 +64,12 @@ describe('운영 지표 수집 (T-11-572)', () => {
     );
     expect(out.map((x) => [x.day, x.rows ?? 'error'])).toEqual([
       ['2026-10-28', 4],
+      ['2026-10-28', 3],
       ['2026-10-27', 'error'],
+      ['2026-10-27', 3],
     ]);
-    expect(posts).toHaveLength(1);
+    expect(posts).toHaveLength(3);
+    expect(posts[1]!.rows).toContainEqual({ metric: 'ad_installs_country', dim: 'jp', value: 12 });
     expect(posts[0]!.source).toBe('meta');
     expect(posts[0]!.rows).toContainEqual({
       metric: 'ad_installs',

@@ -54,6 +54,11 @@ ADMIN_EMAILS가 여러 개여도 Access 정책이 1명만 통과시킨다. 대�
 | `pass_count`            | `all`                        | `season_passes` 그날 구매                                                                                        |
 | `members_active`        | `all`                        | 그날 끝 시각에 유효한 `memberships`                                                                              |
 | `comments` · `chat`     | `all`                        | 게시판 댓글 · 라운지 메시지 수                                                                                   |
+| `members_new`           | 스토어                       | T-11-577 `memberships.created_at` 그날(구독 묶음이 처음 생긴 날)                                                 |
+| `members_renewed`       | 스토어                       | T-11-577 `billing_alerts` kind `renewal` · 멤버십 상품 그날                                                      |
+| `members_expired`       | 스토어                       | T-11-577 `memberships.until` 그날(지금 끝난 묶음, 다시 결제하면 날이 옮겨 간다)                                  |
+| `members_autorenew_off` | 스토어                       | T-11-577 어제 끝에 유효하고 `auto_renew = 0`(지금 상태라 어제만, `active`처럼)                                   |
+| `client_errors`         | 플랫폼                       | T-11-577 `client_errors.count` 그날 합                                                                           |
 | `cup_entries`           | `all`                        | 컵 참가 수(접수 기간 날만)                                                                                       |
 
 ### 2단계 — 외부 (에이전트 Worker → API)
@@ -70,6 +75,22 @@ ADMIN_EMAILS가 여러 개여도 Access 정책이 1명만 통과시킨다. 대�
 | Google Ads | `ad_spend_krw` (dim `google`)                                                         | 캠페인 시작 뒤                                                                       |
 | ASC · Play | `store_rating` · `store_reviews_new` (dim `ios` · `android`)                          | 이미 있는 `reviews.ts` 재사용                                                        |
 | 엑솔라     | 1단계 `iap_*`의 `xsolla`로 충분(웹훅이 D1에 남긴다)                                   | 정산 금액은 3단계                                                                    |
+
+### T-11-577 추가 수집 (`apps/agents/src/kpiSources.ts`)
+
+서버는 보낸 지표를 그날 통째로 바꾸므로 한 지표의 나눔은 한 번에 보낸다. 같은 값을 다른 기준으로 나눈 것은 지표 이름을 따로 둔다(대시보드가 나눔을 더한다).
+
+| 지표                                                                    | 원천 · 정의                                                                  | 자격 증명                                                                                  |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `d1_retention` · `d7_retention` · `retention_cohort` · `d1/d7_retained` | GA4 코호트(firstSessionDate). 값은 코호트 날짜에, 화면은 사람 수로 가중 평균 | 있음                                                                                       |
+| `ad_spend_country_krw` · `ad_installs_country` · `ad_clicks_country`    | Meta 계정 전체 `breakdowns=country`(dim 국가 코드)                           | 있음                                                                                       |
+| `store_reviews_new` · `store_review_stars`                              | ASC · Play 리뷰 API에서 그날(KST) 새 리뷰 수 · 평균 별점                     | 있음                                                                                       |
+| `store_rating` (ios)                                                    | iTunes 공개 조회(한국 스토어) 전체 평점, 수집한 날(어제)에만                 | 필요 없음                                                                                  |
+| `store_installs` (ios)                                                  | App Store 판매 보고서 일간 요약의 첫 다운로드(1F 등)                         | `ASC_SALES_KEY_ID` · `ASC_SALES_PRIVATE_KEY` · `ASC_VENDOR_NUMBER`(판매 권한 키)           |
+| `store_installs` (android)                                              | Play 통계 보고서 버킷 `stats/installs/…_overview.csv` Daily User Installs    | `PLAY_REPORTS_BUCKET` + 서비스 계정에 보고서 보기 권한                                     |
+| `ad_revenue_krw` · `ad_impressions` · `ad_requests` · `ad_matched`      | AdMob 미디에이션 보고서(플랫폼별, 원화)                                      | `ADMOB_*` — `apps/agents/scripts/admob-auth.ts`로 운영자 동의(Google Cloud offside-agents) |
+
+화면: 사용자(재방문) · 수익(멤버십 흐름) · 그로스(국가별 · 스토어) · 개요 운영 상태(어제 오류) · 푸시(`/v1/admin/push-performance`) · 신고 · 이상(자동 플레이 의심 `/v1/admin/automation?hours=6`).
 
 ### 연결 가능한 외부 원천 전체 (2026-10-29 기준)
 

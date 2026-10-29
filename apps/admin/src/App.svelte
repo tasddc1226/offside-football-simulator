@@ -13,6 +13,7 @@
   import Game from './pages/Game.svelte';
   import Season from './pages/Season.svelte';
   import Reports from './pages/Reports.svelte';
+  import Push from './pages/Push.svelte';
   import Data from './pages/Data.svelte';
 
   type PageProps = { days: number; tick: number };
@@ -29,6 +30,7 @@
     { id: 'growth', label: '그로스', icon: 'growth', desc: '광고 지출 · 설치 · 유입', page: Growth },
     { id: 'game', label: '게임 · 커뮤니티', icon: 'game', desc: '커리어 · 은퇴 · 게시판', page: Game },
     { id: 'season', label: '시즌 · 대회', icon: 'trophy', desc: '오프사이드 리그 · 컵 · 시즌 패스', page: Season },
+    { id: 'push', label: '푸시', icon: 'bell', desc: '보낸 알림의 도달 · 클릭 · 복귀', page: Push },
     { id: 'reports', label: '신고 · 이상', icon: 'flag', desc: '채팅 · 이름 신고와 비정상 커리어', page: Reports },
     { id: 'data', label: '데이터', icon: 'data', desc: '수집 원천 상태와 원본 표', page: Data },
   ];

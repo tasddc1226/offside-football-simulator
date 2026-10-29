@@ -3,6 +3,7 @@ import {
   REMOVE_ADS_PRICE_SQL,
   REMOVE_ADS_PRODUCT,
 } from '@offside/contracts/admin-items';
+import { MEMBERSHIP_PRODUCT_ID } from '@offside/contracts/membership';
 import { SEASON_PASS_PRICE_KRW } from '@offside/contracts/season-pass';
 import {
   KPI_EXTERNAL_METRICS,
@@ -39,7 +40,12 @@ export function kstPastDays(at: number, n: number) {
 
 const num = (v: unknown) => Number(v ?? 0);
 
-/** 운영 D1 지표 이름. `active`는 그날 바로 다음(어제)만 셀 수 있어 다시 쓰기 · 거꾸로 채우기에서 뺀다. */
+/**
+ * 운영 D1 지표 이름. `active` · `members_autorenew_off`는 지금 상태라 그날 바로 다음(어제)만 셀 수 있어 다시 쓰기 · 거꾸로 채우기에서 뺀다.
+ * T-11-577 멤버십 흐름: 새 가입(구독 묶음이 처음 생긴 날) · 갱신(스토어 갱신 알림) · 만료(지금 끝난 묶음의 끝난 날, 다시 결제하면 날이 옮겨 간다).
+ * `client_errors`는 그날 앱 · 웹 오류 횟수(플랫폼별).
+ */
+export const D1_SNAPSHOT_METRICS = ['active', 'members_autorenew_off'] as const;
 export const D1_METRICS = [
   'signups',
   'careers_new',
@@ -52,70 +58,114 @@ export const D1_METRICS = [
   'pass_count',
   'pass_krw',
   'members_active',
+  'members_new',
+  'members_renewed',
+  'members_expired',
   'comments',
+  'client_errors',
 ] as const;
 
-/** 운영 D1에서 KST 하루치 지표를 모은다(쓰지 않는다). withActive: 접속자(세션 마지막 접속)도 센다. */
+/** 운영 D1에서 KST 하루치 지표를 모은다(쓰지 않는다). withActive: 접속자(세션 마지막 접속) · 자동 갱신 끈 구독자처럼 지금 상태도 센다. */
 export async function collectD1Day(
   d1: D1Database,
   day: string,
   withActive: boolean,
 ): Promise<KpiRow[]> {
   const { start, end } = kstDayRange(day);
-  const [signups, active, careersNew, retired, iap, adFree, passes, members, comments] =
-    await d1.batch<Record<string, unknown>>([
-      d1
-        .prepare(
-          `SELECT count(*) n, coalesce(sum(google_sub IS NOT NULL OR apple_sub IS NOT NULL), 0) linked
+  const [
+    signups,
+    active,
+    careersNew,
+    retired,
+    iap,
+    adFree,
+    passes,
+    members,
+    comments,
+    memberNew,
+    memberRenewed,
+    memberExpired,
+    autoRenewOff,
+    errors,
+  ] = await d1.batch<Record<string, unknown>>([
+    d1
+      .prepare(
+        `SELECT count(*) n, coalesce(sum(google_sub IS NOT NULL OR apple_sub IS NOT NULL), 0) linked
            FROM profiles WHERE created_at >= ?1 AND created_at < ?2 AND deleted_at IS NULL`,
-        )
-        .bind(start, end),
-      // 다음 날 다시 들어온 세션은 last_seen_at이 넘어가 빠진다(수집 04:00 KST라 4시간분 근사).
-      d1
-        .prepare(
-          `SELECT channel, count(DISTINCT profile_id) n FROM sessions
+      )
+      .bind(start, end),
+    // 다음 날 다시 들어온 세션은 last_seen_at이 넘어가 빠진다(수집 04:00 KST라 4시간분 근사).
+    d1
+      .prepare(
+        `SELECT channel, count(DISTINCT profile_id) n FROM sessions
            WHERE last_seen_at >= ?1 AND last_seen_at < ?2 GROUP BY 1`,
-        )
-        .bind(start, end),
-      d1
-        .prepare(`SELECT count(*) n FROM careers WHERE created_at >= ?1 AND created_at < ?2`)
-        .bind(start, end),
-      d1
-        .prepare(
-          `SELECT count(*) n FROM careers WHERE status = 'retired' AND retired_at >= ?1 AND retired_at < ?2`,
-        )
-        .bind(start, end),
-      d1
-        .prepare(
-          `SELECT store, count(*) n, coalesce(sum(${PRICE_SQL}), 0) krw, count(DISTINCT profile_id) buyers
+      )
+      .bind(start, end),
+    d1
+      .prepare(`SELECT count(*) n FROM careers WHERE created_at >= ?1 AND created_at < ?2`)
+      .bind(start, end),
+    d1
+      .prepare(
+        `SELECT count(*) n FROM careers WHERE status = 'retired' AND retired_at >= ?1 AND retired_at < ?2`,
+      )
+      .bind(start, end),
+    d1
+      .prepare(
+        `SELECT store, count(*) n, coalesce(sum(${PRICE_SQL}), 0) krw, count(DISTINCT profile_id) buyers
            FROM iap_purchases WHERE test = 0 AND refunded_at IS NULL AND created_at >= ?1 AND created_at < ?2
            GROUP BY 1`,
-        )
-        .bind(start, end),
-      d1
-        .prepare(
-          `SELECT store, coalesce(sum(kind = 'purchase'), 0) - coalesce(sum(kind = 'refund'), 0) n,
+      )
+      .bind(start, end),
+    d1
+      .prepare(
+        `SELECT store, coalesce(sum(kind = 'purchase'), 0) - coalesce(sum(kind = 'refund'), 0) n,
            coalesce(sum(CASE kind WHEN 'refund' THEN -1 ELSE 1 END * ${REMOVE_ADS_PRICE_SQL}), 0) krw
            FROM billing_alerts WHERE test = 0 AND product_id = ?3 AND kind IN ('purchase', 'refund')
            AND created_at >= ?1 AND created_at < ?2 GROUP BY 1`,
-        )
-        .bind(start, end, REMOVE_ADS_PRODUCT),
-      d1
-        .prepare(
-          `SELECT store, count(*) n FROM season_passes
+      )
+      .bind(start, end, REMOVE_ADS_PRODUCT),
+    d1
+      .prepare(
+        `SELECT store, count(*) n FROM season_passes
            WHERE test = 0 AND refunded_at IS NULL AND created_at >= ?1 AND created_at < ?2 GROUP BY 1`,
-        )
-        .bind(start, end),
-      d1
-        .prepare(
-          `SELECT store, count(DISTINCT profile_id) n FROM memberships
+      )
+      .bind(start, end),
+    d1
+      .prepare(
+        `SELECT store, count(DISTINCT profile_id) n FROM memberships
            WHERE test = 0 AND created_at < ?1 AND until >= ?1 GROUP BY 1`,
-        )
-        .bind(end),
-      d1
-        .prepare(`SELECT count(*) n FROM board_comments WHERE created_at >= ?1 AND created_at < ?2`)
-        .bind(start, end),
-    ]);
+      )
+      .bind(end),
+    d1
+      .prepare(`SELECT count(*) n FROM board_comments WHERE created_at >= ?1 AND created_at < ?2`)
+      .bind(start, end),
+    d1
+      .prepare(
+        `SELECT store, count(*) n FROM memberships
+           WHERE test = 0 AND created_at >= ?1 AND created_at < ?2 GROUP BY 1`,
+      )
+      .bind(start, end),
+    d1
+      .prepare(
+        `SELECT store, count(*) n FROM billing_alerts WHERE test = 0 AND kind = 'renewal' AND product_id = ?3
+           AND created_at >= ?1 AND created_at < ?2 GROUP BY 1`,
+      )
+      .bind(start, end, MEMBERSHIP_PRODUCT_ID),
+    d1
+      .prepare(
+        `SELECT store, count(*) n FROM memberships WHERE test = 0 AND until >= ?1 AND until < ?2 GROUP BY 1`,
+      )
+      .bind(start, end),
+    d1
+      .prepare(
+        `SELECT store, count(DISTINCT profile_id) n FROM memberships
+           WHERE test = 0 AND auto_renew = 0 AND created_at < ?1 AND until >= ?1 GROUP BY 1`,
+      )
+      .bind(end),
+    d1
+      .prepare('SELECT platform, sum(count) n FROM client_errors WHERE day = ?1 GROUP BY 1')
+      .bind(day),
+  ]);
   const rows: KpiRow[] = [];
   const add = (metric: string, dim: string, value: unknown) =>
     rows.push({ metric, dim, value: num(value) });
@@ -140,6 +190,12 @@ export async function collectD1Day(
   }
   for (const r of members!.results) add('members_active', String(r.store), r.n);
   add('comments', 'all', comments!.results[0]?.n);
+  for (const r of memberNew!.results) add('members_new', String(r.store), r.n);
+  for (const r of memberRenewed!.results) add('members_renewed', String(r.store), r.n);
+  for (const r of memberExpired!.results) add('members_expired', String(r.store), r.n);
+  if (withActive)
+    for (const r of autoRenewOff!.results) add('members_autorenew_off', String(r.store), r.n);
+  for (const r of errors!.results) add('client_errors', String(r.platform), r.n);
   return rows;
 }
 
@@ -245,7 +301,7 @@ export async function runKpiDaily(
       'd1',
       rows,
       now,
-      withActive ? [...D1_METRICS, 'active'] : D1_METRICS,
+      withActive ? [...D1_METRICS, ...D1_SNAPSHOT_METRICS] : D1_METRICS,
     );
   }
   return { done: older.length < KPI_BACKFILL_STEP || older.at(-1) === oldest, written: days };

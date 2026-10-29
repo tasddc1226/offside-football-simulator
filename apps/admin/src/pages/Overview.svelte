@@ -2,7 +2,7 @@
   // T-11-577 개요: 오늘 확인할 일. 데이터 경보 · 실시간 현황(운영 DB) · 기간 매출 · 광고 제거 가격 판단 · 운영 상태.
   // 추세 차트는 사용자 · 수익 · 게임 화면에 두고 여기서는 겹치지 않게 뺀다.
   import type { AdminRevenue, AdminStats, KpiReport } from '@offside/contracts';
-  import { fmt, kstTime, ratio } from '../kpi.ts';
+  import { dimLabel, fmt, indexRows, kstTime, ratio, valueOn } from '../kpi.ts';
   import { loader } from '../load.svelte.ts';
   import AdFreePrice from '../ui/AdFreePrice.svelte';
   import DataAlerts from '../ui/DataAlerts.svelte';
@@ -16,6 +16,20 @@
   // 가격 판단은 기간 선택과 무관하게 30일로 본다(인상 전 기준 구간이 필요하다).
   const rev30 = loader<AdminRevenue>(() => '/v1/admin/revenue?days=30', () => tick);
   const kpi = loader<KpiReport>(() => '/v1/admin/kpi?days=30', () => tick);
+  // 어제 앱 · 웹 오류 횟수(일일 수집 client_errors, 플랫폼별). 상세는 운영 도구의 오류 화면.
+  const errors = $derived.by(() => {
+    if (!kpi.r?.ok) return null;
+    const rep = kpi.r.data;
+    const last = rep.days.at(-1);
+    const idx = indexRows(rep);
+    const total = last ? valueOn(idx, last, 'client_errors') : null;
+    if (total === null) return null;
+    const parts = rep.rows
+      .filter((x) => x.day === last && x.metric === 'client_errors')
+      .map((x) => `${dimLabel(x.dim)} ${fmt(x.value)}`)
+      .join(' · ');
+    return { total, parts };
+  });
   const pct = (a: number, b: number) => {
     const r = ratio(a, b);
     return r === null ? '-' : `${Math.round(r * 100)}%`;
@@ -87,6 +101,10 @@
               <dd>{s.balance ? `v${s.balance.version}` : '기본값'}{#if s.balance?.activatedAt}<small> · {kstTime(s.balance.activatedAt)} 적용</small>{/if}</dd>
               <dt>게시판</dt>
               <dd>글 {fmt(s.board.posts)} · 댓글 {fmt(s.board.comments)}<small> · 7일 댓글 {fmt(s.board.comments7d)}</small></dd>
+              {#if errors}
+                <dt>어제 앱 · 웹 오류</dt>
+                <dd>{fmt(errors.total)}회{#if errors.parts}<small> · {errors.parts}</small>{/if}</dd>
+              {/if}
             </dl>
             <h3 class="section-title">최근 운영 기록</h3>
             {#if s.audit.length}

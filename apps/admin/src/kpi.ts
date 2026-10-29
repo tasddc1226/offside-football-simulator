@@ -136,7 +136,10 @@ export const DIM_LABEL: Record<string, string> = {
   xsolla: '웹 결제',
   linked: '로그인 연결',
 };
-export const dimLabel = (dim: string) => DIM_LABEL[dim] ?? dim;
+const REGION = new Intl.DisplayNames(['ko'], { type: 'region' });
+/** 나눔 이름표. 두 글자 소문자는 국가 코드(Meta 국가별)로 읽는다. */
+export const dimLabel = (dim: string) =>
+  DIM_LABEL[dim] ?? (/^[a-z]{2}$/.test(dim) ? (REGION.of(dim.toUpperCase()) ?? dim) : dim);
 
 const ITEM_LABEL: Record<string, string> = {
   reroll: '리롤권',

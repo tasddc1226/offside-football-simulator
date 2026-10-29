@@ -1,11 +1,25 @@
-// T-11-572 운영 지표 대시보드 2단계: 매일 08:50 KST 보고 cron에서 외부 지표(GA4 · Meta 광고) 하루치를 받아
+// T-11-572 운영 지표 대시보드 2단계: 매일 08:50 KST 보고 cron에서 외부 지표(GA4 · Meta 광고 · 스토어 · AdMob, T-11-577 kpiSources.ts) 하루치를 받아
 // 운영 API `/v1/internal/kpi`(비밀값 KPI_INGEST_TOKEN)로 넣는다. 원천 하나가 실패해도 나머지는 넣는다.
 // GA4는 하루 넘게 값이 바뀌므로 어제와 그제를 함께 다시 보낸다(서버는 그 날 · 원천 · 지표를 통째로 바꾼다).
 import type { Env } from './env.ts';
 import { ga4Ready } from './ga4.ts';
 import { serviceAccountToken } from './google.ts';
+import {
+  admobReady,
+  admobRows,
+  appStoreRatingRows,
+  ascInstallRows,
+  ascSalesReady,
+  ga4RetentionBatches,
+  metaCountryRows,
+  playInstallRows,
+  playInstallsReady,
+  reviewRows,
+  type Batch,
+  type Row,
+} from './kpiSources.ts';
+import { reviewsReady, storeApi } from './reviews.ts';
 
-type Row = { metric: string; dim: string; value: number };
 type Fetch = typeof fetch;
 
 const KST_MS = 9 * 3_600_000;
@@ -117,20 +131,54 @@ async function ingest(env: Env, day: string, source: string, rows: Row[], fetche
   if (!r.ok) throw new Error(`kpi ingest ${source} ${day} ${r.status}`);
 }
 
-/** 원천마다 어제 · 그제를 넣는다. 결과는 원천 · 날짜별 성공 행 수 또는 오류. */
+/**
+ * 원천마다 어제 · 그제를 넣는다. 결과는 원천 · 날짜별 성공 행 수 또는 오류.
+ * 서버는 보낸 지표를 그 날 통째로 바꾸므로(나눔 포함) 한 지표의 나눔은 한 번에 보낸다(예: 설치 iOS · 안드로이드).
+ */
 export async function runKpiIngest(env: Env, at: number, fetcher: Fetch = fetch) {
   if (!kpiReady(env)) return [];
-  const sources: [string, (day: string) => Promise<Row[]>][] = [];
-  if (ga4Ready(env)) sources.push(['ga4', (d) => ga4Rows(env, d, fetcher)]);
-  if (env.META_ADS_ACCESS_TOKEN && env.META_AD_ACCOUNT_ID)
-    sources.push(['meta', (d) => metaRows(env, d, fetcher)]);
+  const yesterday = kstDayAgo(at, 1);
+  const tasks: [string, (day: string) => Promise<Batch[]>][] = [];
+  const one = (f: (day: string) => Promise<Row[]>) => async (day: string) => [
+    { day, rows: await f(day) },
+  ];
+  if (ga4Ready(env)) {
+    tasks.push(['ga4', one((d) => ga4Rows(env, d, fetcher))]);
+    tasks.push(['ga4', (d) => ga4RetentionBatches(env, d, fetcher)]);
+  }
+  if (env.META_ADS_ACCESS_TOKEN && env.META_AD_ACCOUNT_ID) {
+    tasks.push(['meta', one((d) => metaRows(env, d, fetcher))]);
+    tasks.push(['meta', one((d) => metaCountryRows(env, d, fetcher))]);
+  }
+  if (reviewsReady(env))
+    tasks.push(['store', one((d) => reviewRows(env, d, storeApi(env, fetcher)))]);
+  if (env.ASC_APP_ID)
+    tasks.push([
+      'store',
+      async (d) =>
+        d === yesterday ? [{ day: d, rows: await appStoreRatingRows(env, fetcher) }] : [],
+    ]);
+  if (ascSalesReady(env) || playInstallsReady(env))
+    tasks.push([
+      'store',
+      async (d) => {
+        const [ios, android] = await Promise.all([
+          ascSalesReady(env) ? ascInstallRows(env, d, fetcher) : null,
+          playInstallsReady(env) ? playInstallRows(env, d, fetcher) : null,
+        ]);
+        const rows = [...(ios ?? []), ...(android ?? [])];
+        return rows.length ? [{ day: d, rows }] : [];
+      },
+    ]);
+  if (admobReady(env)) tasks.push(['admob', one((d) => admobRows(env, d, fetcher))]);
   const out: { source: string; day: string; rows?: number; error?: string }[] = [];
-  for (const day of [kstDayAgo(at, 1), kstDayAgo(at, 2)])
-    for (const [source, collect] of sources) {
+  for (const day of [yesterday, kstDayAgo(at, 2)])
+    for (const [source, collect] of tasks) {
       try {
-        const rows = await collect(day);
-        await ingest(env, day, source, rows, fetcher);
-        out.push({ source, day, rows: rows.length });
+        for (const b of await collect(day)) {
+          await ingest(env, b.day, source, b.rows, fetcher);
+          out.push({ source, day: b.day, rows: b.rows.length });
+        }
       } catch (e) {
         out.push({ source, day, error: String(e).slice(0, 200) });
       }

@@ -4,7 +4,7 @@ import {
   type KpiReport,
 } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { billingAlerts, iapPurchases } from '../db/schema.js';
+import { billingAlerts, clientErrors, iapPurchases, memberships } from '../db/schema.js';
 import {
   KPI_BACKFILL_DAYS,
   kstDayRange,
@@ -92,6 +92,53 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
       test: false,
       createdAt: mid,
     });
+    // T-11-577 멤버십 흐름: 어제 새로 가입(자동 갱신 끔) · 어제 갱신 알림 · 어제 끝난 묶음.
+    const later = new Date(at + 20 * 86_400_000).toISOString();
+    await ctx.db.insert(memberships).values([
+      {
+        store: 'apple',
+        chainId: 'c1',
+        profileId: admin.profileId,
+        until: later,
+        autoRenew: false,
+        verifiedAt: mid,
+        createdAt: mid,
+      },
+      {
+        store: 'google',
+        chainId: 'c2',
+        profileId: admin.profileId,
+        until: mid,
+        autoRenew: false,
+        verifiedAt: mid,
+        createdAt: new Date(Date.parse(mid) - 30 * 86_400_000).toISOString(),
+      },
+    ]);
+    await ctx.db.insert(billingAlerts).values({
+      id: 'b2',
+      store: 'google',
+      kind: 'renewal',
+      productId: 'com.offsidelab.app.club_monthly',
+      test: false,
+      createdAt: mid,
+    });
+    await ctx.db.insert(clientErrors).values(
+      [3, 4].map((count, i) => ({
+        day: yesterday!,
+        fingerprint: `f${i}`,
+        platform: 'android',
+        kind: 'error',
+        message: 'x',
+        frame: '',
+        place: '',
+        stack: '',
+        firstVersion: '1',
+        lastVersion: '1',
+        count,
+        firstAt: mid,
+        lastAt: mid,
+      })),
+    );
 
     let result: KpiDailyResult | undefined;
     let steps = 0;
@@ -113,6 +160,12 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
     expect(value(r, yesterday!, 'ad_free_krw', 'apple')).toBe(
       mid >= REMOVE_ADS_PRICE_CHANGED_AT ? 6600 : REMOVE_ADS_PRICE_BEFORE_KRW,
     );
+    expect(value(r, yesterday!, 'members_new', 'apple')).toBe(1);
+    expect(value(r, yesterday!, 'members_renewed', 'google')).toBe(1);
+    expect(value(r, yesterday!, 'members_expired', 'google')).toBe(1);
+    expect(value(r, yesterday!, 'members_autorenew_off', 'apple')).toBe(1);
+    expect(value(r, yesterday!, 'members_autorenew_off', 'google')).toBeUndefined();
+    expect(value(r, yesterday!, 'client_errors', 'android')).toBe(7);
     expect(r.sources.map((s) => s.source)).toEqual(['d1']);
     expect(r.sources[0]!.lastDay).toBe(yesterday);
     const count = await env.DB.prepare('SELECT min(day) d FROM kpi_daily').first<{ d: string }>();

@@ -1,6 +1,8 @@
 import type { KpiReport } from '@offside/contracts';
 import { describe, expect, it } from 'vitest';
+import { dimTotals, retention, viewOf } from './kpi-page.ts';
 import {
+  dimLabel,
   dimSeries,
   fmt,
   fmtChange,
@@ -97,5 +99,32 @@ describe('빠진 날 (T-11-577)', () => {
     expect(sourceLag('2026-10-28', '2026-10-28')).toBe(0);
     expect(sourceLag('2026-10-26', '2026-10-28')).toBe(2);
     expect(sourceLag(undefined, '2026-10-28')).toBeNull();
+  });
+
+  it('국가 코드 이름표 · 기간 나눔 합 · 재방문 가중 평균 (T-11-577)', () => {
+    expect(dimLabel('jp')).toBe('일본');
+    expect(dimLabel('ios')).toBe('iOS');
+    const rep: KpiReport = {
+      generatedAt: '2026-10-29T00:00:00.000Z',
+      days: ['2026-10-26', '2026-10-27', '2026-10-28'],
+      sources: [],
+      rows: [
+        { day: '2026-10-26', metric: 'ad_spend_country_krw', dim: 'jp', value: 100 },
+        { day: '2026-10-27', metric: 'ad_spend_country_krw', dim: 'jp', value: 50 },
+        { day: '2026-10-27', metric: 'ad_spend_country_krw', dim: 'kr', value: 200 },
+        { day: '2026-10-26', metric: 'retention_cohort', dim: 'all', value: 100 },
+        { day: '2026-10-26', metric: 'd1_retained', dim: 'all', value: 30 },
+        { day: '2026-10-27', metric: 'retention_cohort', dim: 'all', value: 300 },
+        { day: '2026-10-27', metric: 'd1_retained', dim: 'all', value: 30 },
+      ],
+    };
+    const v = viewOf(rep);
+    expect(dimTotals(v, 'ad_spend_country_krw')).toEqual([
+      { dim: 'kr', value: 200 },
+      { dim: 'jp', value: 150 },
+    ]);
+    // 날마다 비율 평균(20%)이 아니라 사람 수로 가중(60/400).
+    expect(retention(v, 1)).toEqual({ rate: 0.15, cohorts: 2 });
+    expect(retention(v, 7)).toEqual({ rate: null, cohorts: 0 });
   });
 });

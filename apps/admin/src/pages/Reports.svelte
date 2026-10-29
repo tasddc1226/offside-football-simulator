@@ -1,6 +1,12 @@
 <script lang="ts">
-  // T-11-577 신고 · 이상: 열린 라운지 채팅 신고 · 이름 신고 · 비정상 커리어(검토 대상). 처리 버튼은 기존 운영 도구에 있다.
-  import type { AdminChatReportList, AdminNameReportList, AnomalyReport } from '@offside/contracts';
+  // T-11-577 신고 · 이상: 열린 라운지 채팅 신고 · 이름 신고 · 비정상 커리어(검토 대상) · 자동 플레이 의심(최근 6시간, 관찰 전용).
+  // 처리 버튼은 기존 운영 도구에 있다.
+  import type {
+    AdminChatReportList,
+    AdminNameReportList,
+    AnomalyReport,
+    AutomationReport,
+  } from '@offside/contracts';
   import { GAME_URL } from '../api.ts';
   import { fmt, kstTime } from '../kpi.ts';
   import { loader } from '../load.svelte.ts';
@@ -11,6 +17,7 @@
   const chat = loader<AdminChatReportList>(() => '/v1/admin/chat/reports', () => tick);
   const names = loader<AdminNameReportList>(() => '/v1/admin/name-reports', () => tick);
   const anomalies = loader<AnomalyReport>(() => '/v1/admin/anomalies', () => tick);
+  const automation = loader<AutomationReport>(() => '/v1/admin/automation?hours=6', () => tick);
 
   const REASON: Record<string, string> = { spam: '도배', abuse: '욕설', sexual: '음란', other: '기타' };
   const KIND: Record<string, string> = { career: '선수 이름', team: '구단 · 감독 이름', owner: '구단주 닉네임' };
@@ -19,6 +26,13 @@
     ovrHigh: 'OVR 상한 조금 넘음',
     jump: '한 시즌 급상승',
     legend: '레전드 점수 이상',
+  };
+  const AUTOMATION: Record<string, string> = {
+    metronome: '간격이 기계처럼 일정',
+    steady: '간격이 꽤 일정',
+    serial: '번호만 바꾼 이름 연달아',
+    nonstop: '쉬지 않고 업로드',
+    aiName: 'AI · 봇 같은 이름',
   };
   const count = <T,>(r: { ok: true; data: T } | { ok: false } | null, n: (d: T) => number) =>
     r?.ok ? n(r.data) : null;
@@ -113,6 +127,39 @@
         {:else}
           <p class="note">검토할 커리어가 없어요.</p>
         {/if}
+      </section>
+    {/snippet}
+  </Load>
+
+  <Load r={automation.r} height={220}>
+    {#snippet children(d)}
+      <section class="panel">
+        <header>
+          <h2>자동 플레이 의심</h2>
+          <span class="hint">최근 {d.hours}시간 시즌 올린 {fmt(d.profiles)}명 중 {fmt(d.suspects.length)}명 · {kstTime(d.generatedAt)} 기준</span>
+        </header>
+        {#if d.suspects.length}
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr><th>프로필</th><th>수준</th><th class="num">점수</th><th class="num">시즌</th><th class="num">활동 시간</th><th>이유</th></tr></thead>
+              <tbody>
+                {#each d.suspects as x (x.profile)}
+                  <tr>
+                    <td><code>{x.profile}</code></td>
+                    <td><span class={`chip ${x.level === 'high' ? 'bad' : 'warn'}`}>{x.level === 'high' ? '높음' : '중간'}</span></td>
+                    <td class="num">{fmt(x.score)}</td>
+                    <td class="num">{fmt(x.seasons)}</td>
+                    <td class="num">{fmt(x.activeHours)}시간</td>
+                    <td>{x.reasons.map((r) => AUTOMATION[r] ?? r).join(', ')}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {:else}
+          <p class="note">의심되는 프로필이 없어요.</p>
+        {/if}
+        <p class="note">관찰 전용이에요. 숨김 · 제재는 운영 도구의 자동 플레이 화면에서 해요.</p>
       </section>
     {/snippet}
   </Load>
