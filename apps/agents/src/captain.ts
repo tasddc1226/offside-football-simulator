@@ -9,7 +9,7 @@ import type { Gh } from './github.ts';
 import { kstDay, ledger, type WorkOrder } from './ledger.ts';
 import { higher, isRisk, RISK_LABEL, riskOf, type Risk } from './risk.ts';
 import { chatClient, threadLink } from './chat.ts';
-import { threadReply } from './slack.ts';
+import { threadReply } from './reply.ts';
 import type { Task } from './thread.ts';
 
 /** 낮음 자동 시작 하루 상한. 넘으면 시작 카드로 바뀐다. */

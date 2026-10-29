@@ -16,7 +16,6 @@ import {
 } from './support.ts';
 import type { Env } from './env.ts';
 import { decide } from './index.ts';
-import { slackClient, verifySlack } from './slack.ts';
 import { failureText } from './thread.ts';
 import { ClaudeError } from './claude.ts';
 import { readOnlySql } from './tools/ops.ts';
@@ -28,45 +27,7 @@ import { nextRuns, kstText } from './cron.ts';
 import { devInteraction, devTools, mergeBlocker } from './dev.ts';
 import { appJwt, type Gh } from './github.ts';
 import type { Task } from './thread.ts';
-
-async function sign(secret: string, ts: string, body: string) {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const mac = new Uint8Array(
-    await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`v0:${ts}:${body}`)),
-  );
-  return `v0=${[...mac].map((b) => b.toString(16).padStart(2, '0')).join('')}`;
-}
-
-describe('verifySlack', () => {
-  it('맞는 서명만 받고, 5분 지난 요청은 거절한다', async () => {
-    const body = '{"type":"event_callback"}';
-    const sig = await sign('s3cret', '1000', body);
-    expect(await verifySlack('s3cret', '1000', sig, body, 1000)).toBe(true);
-    expect(await verifySlack('other', '1000', sig, body, 1000)).toBe(false);
-    expect(await verifySlack('s3cret', '1000', sig, `${body} `, 1000)).toBe(false);
-    expect(await verifySlack('s3cret', '1000', sig, body, 1000 + 301)).toBe(false);
-    expect(await verifySlack('', '1000', sig, body, 1000)).toBe(false);
-  });
-
-  it('글을 올릴 때만 한글 작성자 이름을 붙인다', async () => {
-    const sent: Record<string, unknown>[] = [];
-    const fetcher = (async (_u: string, init: RequestInit) => {
-      sent.push(JSON.parse(String(init.body)));
-      return new Response('{"ok":true}');
-    }) as unknown as typeof fetch;
-    const slack = slackClient('xoxb-t', fetcher, '이운재 · 운영');
-    await slack('chat.postMessage', { channel: 'C1', text: 'hi' });
-    await slack('reactions.add', { channel: 'C1', timestamp: '1', name: 'eyes' });
-    expect(sent[0]).toMatchObject({ username: '이운재 · 운영', text: 'hi' });
-    expect(sent[1]).not.toHaveProperty('username');
-  });
-});
+import { fakeChat } from './testChat.ts';
 
 describe('readOnlySql', () => {
   it('SELECT · WITH 한 문장만 통과시킨다', () => {
@@ -280,8 +241,6 @@ describe('runAgent', () => {
 describe('decide', () => {
   const env = {
     OPERATOR_USER_ID: 'UOP',
-    AGENT_APP_IDS: 'AOPS,APLAN',
-    AGENT_BOT_USERS: 'UBOTOPS,UBOTPLAN',
     ALERT_CHANNELS: 'CALERT',
   } as Env;
   const ev = (e: Record<string, unknown>) =>
@@ -289,13 +248,7 @@ describe('decide', () => {
 
   it('한글로 부른 글은 부른 역할만 멘션으로 받는다', () => {
     const call = (role: 'ops' | 'plan', e: Record<string, unknown>) =>
-      decide(
-        env,
-        role,
-        'EK',
-        ev({ type: 'message', user: 'UOP', ...e }),
-        role === 'ops' ? 'UBOTOPS' : 'UBOTPLAN',
-      );
+      decide(env, role, 'EK', ev({ type: 'message', user: 'UOP', ...e }));
     expect(call('ops', { text: '@이운재 오늘 가입 수' })).toMatchObject({
       kind: 'mention',
       threadTs: '1.1',
@@ -310,13 +263,7 @@ describe('decide', () => {
     expect(call('plan', { text: '@운영 서버 봐 줘', thread_ts: '0.9' })).toBeNull();
     expect(call('ops', { text: '@운영팀 이야기' })).toBeNull();
     expect(
-      decide(
-        env,
-        'ops',
-        'EK2',
-        ev({ type: 'message', user: 'USTRANGER', text: '@이운재 hi' }),
-        'UBOTOPS',
-      ),
+      decide(env, 'ops', 'EK2', ev({ type: 'message', user: 'USTRANGER', text: '@이운재 hi' })),
     ).toBeNull();
   });
 
@@ -327,21 +274,14 @@ describe('decide', () => {
         'ops',
         'E1',
         ev({ type: 'app_mention', user: 'UOP', text: '<@UBOTOPS> 오늘 가입 수' }),
-        'UBOTOPS',
       ),
     ).toMatchObject({ kind: 'mention', threadTs: '1.1', text: '오늘 가입 수' });
     expect(
-      decide(
-        env,
-        'ops',
-        'E2',
-        ev({ type: 'app_mention', user: 'USTRANGER', text: 'hi' }),
-        'UBOTOPS',
-      ),
+      decide(env, 'ops', 'E2', ev({ type: 'app_mention', user: 'USTRANGER', text: 'hi' })),
     ).toBeNull();
   });
 
-  it('경보 채널의 웹훅 글을 경보로 받고, 정상 복구 · 에이전트 글은 건너뛴다', () => {
+  it('경보 채널의 웹훅 글을 경보로 받고, 정상 복구 · 스레드 안 글은 건너뛴다', () => {
     expect(
       decide(
         env,
@@ -354,7 +294,6 @@ describe('decide', () => {
           channel: 'CALERT',
           text: '🚨 점검 필요',
         }),
-        'UBOTOPS',
       ),
     ).toMatchObject({ kind: 'alert' });
     expect(
@@ -369,16 +308,6 @@ describe('decide', () => {
           channel: 'CALERT',
           text: '✅ 정상 복구',
         }),
-        'UBOTOPS',
-      ),
-    ).toBeNull();
-    expect(
-      decide(
-        env,
-        'ops',
-        'E5',
-        ev({ type: 'message', bot_id: 'B2', app_id: 'APLAN', channel: 'CALERT', text: '🚨' }),
-        'UBOTOPS',
       ),
     ).toBeNull();
     expect(
@@ -394,28 +323,17 @@ describe('decide', () => {
           thread_ts: '0.9',
           text: '🚨',
         }),
-        'UBOTOPS',
       ),
     ).toBeNull();
   });
 
-  it('멘션 없는 운영자 스레드 답글로는 깨우지 않고, 멘션이 든 글은 app_mention 쪽에 맡긴다', () => {
+  it('멘션 없는 운영자 스레드 답글 · 고친 글로는 깨우지 않는다', () => {
     expect(
       decide(
         env,
         'ops',
         'E7',
         ev({ type: 'message', user: 'UOP', thread_ts: '0.5', text: '더 봐 줘' }),
-        'UBOTOPS',
-      ),
-    ).toBeNull();
-    expect(
-      decide(
-        env,
-        'ops',
-        'E8',
-        ev({ type: 'message', user: 'UOP', thread_ts: '0.5', text: '<@UBOTOPS> 더' }),
-        'UBOTOPS',
       ),
     ).toBeNull();
     expect(
@@ -424,7 +342,6 @@ describe('decide', () => {
         'ops',
         'E9',
         ev({ type: 'message', subtype: 'message_changed', user: 'UOP', thread_ts: '0.5' }),
-        'UBOTOPS',
       ),
     ).toBeNull();
   });
@@ -505,12 +422,11 @@ describe('parseHandoffs', () => {
     ]);
   });
 
-  it('슬랙에 올릴 때 역할 키를 봇 멘션으로 바꾸고, 코드 표기 · 메일 주소는 그대로 둔다', () => {
-    const env = { AGENT_BOT_USERS: 'UOPS,UPLAN,UDEV,UMKT' } as unknown as Env;
-    expect(linkRoles(env, '@plan 결론부터요.\n→ @ops: 확인해 주세요')).toBe(
-      '<@UPLAN> 결론부터요.\n→ <@UOPS>: 확인해 주세요',
+  it('올릴 때 역할 키를 부르는 한글 이름으로 바꾸고, 코드 표기 · 메일 주소는 그대로 둔다', () => {
+    expect(linkRoles('@plan 결론부터요.\n→ @ops: 확인해 주세요')).toBe(
+      '@박지성 결론부터요.\n→ @이운재: 확인해 주세요',
     );
-    expect(linkRoles(env, '`→ @dev:` 줄 · co***@ops.com · @planning')).toBe(
+    expect(linkRoles('`→ @dev:` 줄 · co***@ops.com · @planning')).toBe(
       '`→ @dev:` 줄 · co***@ops.com · @planning',
     );
   });
@@ -1001,7 +917,7 @@ describe('고객 문의', () => {
       const env = {
         OPERATOR_USER_ID: 'UOP',
         APPROVAL_CHANNEL: 'C',
-        SLACK_PLAN_BOT_TOKEN: 'x',
+        DISCORD: fakeChat,
         LEDGER: { idFromName: () => 'id', get: () => book },
       } as unknown as Env;
       const calls: string[] = [];
@@ -1122,7 +1038,7 @@ describe('@dev 운영 배포 승인 (T-11-312)', () => {
       OPERATOR_USER_ID: 'UOP',
       APPROVAL_CHANNEL: 'CAPP',
       GITHUB_REPO: 'o/r',
-      SLACK_DEV_BOT_TOKEN: 'x',
+      DISCORD: fakeChat,
       LEDGER: { idFromName: () => 'id', get: () => book },
     } as unknown as Env;
     const calls: { path: string; method: string; body?: unknown }[] = [];

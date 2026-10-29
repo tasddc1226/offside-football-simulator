@@ -5,7 +5,7 @@ import { type Env } from './env.ts';
 import type { Gh } from './github.ts';
 import { ledger } from './ledger.ts';
 import { chatClient, threadLink } from './chat.ts';
-import { threadReply } from './slack.ts';
+import { threadReply } from './reply.ts';
 
 const WORKFLOW = 'deploy-production.yml';
 const MIGRATION = /^apps\/api\/migrations\/[^/]+\.sql$/;

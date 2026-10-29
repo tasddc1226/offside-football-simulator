@@ -1,7 +1,7 @@
 // ADR-015 넘기기 형식. 에이전트 답의 줄 머리에 `→ @역할: 요청`이 있으면 같은 스레드에서 그 역할에게 일을 넘긴다.
-// 슬랙 이벤트를 거치지 않고 Worker 안에서 넘긴다(봇끼리의 메시지는 이벤트에서 무시한다). 스레드마다 6번까지.
+// 채팅 이벤트를 거치지 않고 Worker 안에서 넘긴다(에이전트 자기 글은 브리지가 거른다). 스레드마다 6번까지.
 import type { Role } from './env.ts';
-import { isRole, list, ROLE_CALLS, ROLES, roleOfCall, type Env } from './env.ts';
+import { isRole, ROLE_CALLS, roleOfCall } from './env.ts';
 
 export const MAX_HOPS = 6;
 
@@ -25,25 +25,20 @@ export function parseHandoffs(text: string, from: Role): Handoff[] {
 }
 
 /**
- * 슬랙에 올릴 때 역할 키(`@ops` · `→ @plan:`)를 그 봇의 진짜 멘션(`<@U…>`)으로 바꾼다. 넘기기는 바꾸기 전 답으로 고르고,
- * 봇끼리의 멘션 이벤트는 받지 않으니(index.ts decide) 이 멘션으로 두 번 넘어가지 않는다. 코드 표기(`@plan`) 안은 그대로 둔다.
+ * 올릴 때 역할 키(`@ops` · `→ @plan:`)를 부르는 한글 이름(`@이운재`)으로 바꾼다. 봇 하나가 이름으로 나눠 쓰고 자기 글은 브리지가
+ * 거르므로 이 이름으로 두 번 넘어가지 않는다. 넘기기는 바꾸기 전 답으로 고른다. 코드 표기(`@plan`) 안은 그대로 둔다.
  */
-export function linkRoles(env: Env, text: string): string {
-  const users = list(env.AGENT_BOT_USERS);
-  // 디스코드는 봇 하나가 이름으로 나눠 쓰므로 역할 키를 부르는 한글 이름으로 바꾼다(T-11-576).
-  const name = (r: Role) => (env.CHAT_PLATFORM === 'discord' ? `@${ROLE_CALLS[r][0]}` : undefined);
+export function linkRoles(text: string): string {
   // 백틱으로 나눈 조각 중 짝수 번째만 코드 밖이다.
   return text
     .split('`')
     .map((part, i) =>
       i % 2
         ? part
-        : part.replace(/(^|[\s(（])@(ops|plan|dev|mkt)\b/g, (all, pre: string, r: string) => {
-            const called = name(r as Role);
-            if (called) return `${pre}${called}`;
-            const u = users[ROLES.indexOf(r as Role)];
-            return u ? `${pre}<@${u}>` : all;
-          }),
+        : part.replace(
+            /(^|[\s(（])@(ops|plan|dev|mkt)\b/g,
+            (_, pre: string, r: string) => `${pre}@${ROLE_CALLS[r as Role][0]}`,
+          ),
     )
     .join('`');
 }

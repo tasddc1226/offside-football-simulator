@@ -14,8 +14,6 @@ export interface Env {
   CARD: DurableObjectNamespace<WorkCard>;
   /** T-11-576 디스코드 게이트웨이 · 메시지 옮기기(bridge.ts). */
   DISCORD: DurableObjectNamespace<DiscordBridge>;
-  /** T-11-576 'discord'면 디스코드로 주고받는다. 없거나 'slack'이면 슬랙. 채널 · 사용자 ID vars도 그 플랫폼 값이어야 한다. */
-  CHAT_PLATFORM?: string;
   DISCORD_APP_ID?: string;
   /** 버튼 요청 서명 확인용 앱 공개 키(비밀 아님). */
   DISCORD_PUBLIC_KEY?: string;
@@ -24,8 +22,6 @@ export interface Env {
   DISCORD_BOT_TOKEN?: string;
   ENABLED_ROLES: string;
   OPERATOR_USER_ID: string;
-  AGENT_APP_IDS: string;
-  AGENT_BOT_USERS: string;
   ALERT_CHANNELS: string;
   CF_ACCOUNT_ID: string;
   D1_DATABASE_ID: string;
@@ -99,14 +95,6 @@ export interface Env {
   ANTHROPIC_PLAN_API_KEY: string;
   ANTHROPIC_DEV_API_KEY: string;
   ANTHROPIC_MKT_API_KEY: string;
-  SLACK_OPS_BOT_TOKEN: string;
-  SLACK_PLAN_BOT_TOKEN: string;
-  SLACK_DEV_BOT_TOKEN: string;
-  SLACK_MKT_BOT_TOKEN: string;
-  SLACK_OPS_SIGNING_SECRET: string;
-  SLACK_PLAN_SIGNING_SECRET: string;
-  SLACK_DEV_SIGNING_SECRET: string;
-  SLACK_MKT_SIGNING_SECRET: string;
 }
 
 export const list = (v: string | undefined) =>
@@ -115,7 +103,7 @@ export const list = (v: string | undefined) =>
     .map((s) => s.trim())
     .filter(Boolean);
 
-/** 슬랙에 보이는 이름(T-11-281). 넘기기 줄 · 설정 키는 역할 키(ops · plan · dev · mkt)를 그대로 쓴다. */
+/** 채팅에 보이는 이름(T-11-281). 넘기기 줄 · 설정 키는 역할 키(ops · plan · dev · mkt)를 그대로 쓴다. */
 export const ROLE_NAMES: Record<Role, string> = {
   ops: '이운재 · 운영',
   plan: '박지성 · 기획',
@@ -123,7 +111,7 @@ export const ROLE_NAMES: Record<Role, string> = {
   mkt: '안정환 · 마케팅',
 };
 
-/** 슬랙에서 한글로 부르는 이름(T-11-283). 슬랙 멘션은 영어 표시 이름만 찾아서, 운영자가 `@이운재`처럼 글로 쓰면 Worker가 멘션으로 받는다. */
+/** 한글로 부르는 이름(T-11-283). 봇은 하나라 운영자가 `@이운재`처럼 글로 쓰면 Worker가 그 역할의 멘션으로 받는다. */
 export const ROLE_CALLS: Record<Role, readonly string[]> = {
   ops: ['이운재', '운영'],
   plan: ['박지성', '기획'],
@@ -153,5 +141,3 @@ export const enabled = (env: Env, role: Role) => list(env.ENABLED_ROLES).include
 
 const KEY = (role: Role) => role.toUpperCase() as Uppercase<Role>;
 export const apiKey = (env: Env, role: Role) => env[`ANTHROPIC_${KEY(role)}_API_KEY`];
-export const botToken = (env: Env, role: Role) => env[`SLACK_${KEY(role)}_BOT_TOKEN`];
-export const signingSecret = (env: Env, role: Role) => env[`SLACK_${KEY(role)}_SIGNING_SECRET`];

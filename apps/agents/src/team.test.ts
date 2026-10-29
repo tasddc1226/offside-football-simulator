@@ -20,6 +20,7 @@ import {
 } from './team.ts';
 import type { Gh } from './github.ts';
 import { alertOperator, type Task } from './thread.ts';
+import { fakeChat } from './testChat.ts';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -115,18 +116,21 @@ const summary = (p: Partial<CardSummary>): CardSummary => ({
 });
 
 describe('정기 글', () => {
+  const link = (c: string, t: string) => `https://discord.com/channels/42/${c}/${t}`;
+
   it('열린 카드 목록은 24시간 넘게 멈춘 카드를 표시하고, 열린 카드가 없으면 올리지 않는다', () => {
-    expect(openCardsText([summary({ status: '닫힘', closedAt: NOW })], NOW)).toBeNull();
+    expect(openCardsText([summary({ status: '닫힘', closedAt: NOW })], NOW, link)).toBeNull();
     const text = openCardsText(
       [
         summary({ goal: '오래됨', updatedAt: NOW - 30 * H }),
         summary({ goal: '최근', threadTs: '2.2' }),
       ],
       NOW,
+      link,
     )!;
     expect(text).toContain('**열린 작업 카드 2개** · 24시간 넘게 멈춘 카드 1개(⏸)');
     expect(text.indexOf('오래됨')).toBeLessThan(text.indexOf('최근'));
-    expect(text).toContain('⏸ <https://offside-lab.slack.com/archives/C1/p11|오래됨>');
+    expect(text).toContain('⏸ <https://discord.com/channels/42/C1/1.1|오래됨>');
   });
 
   it('주간 회고는 지난 7일 카드 · 리드타임 · 개입 · 비용을 센다', () => {
@@ -162,7 +166,7 @@ describe('정기 글', () => {
 
   it('승인 묶음은 1시간 넘은 카드만 오래된 순으로', () => {
     expect(
-      pendingText([{ ts: '9.9', channel: 'CA', label: '새것', at: NOW - 60_000 }], NOW),
+      pendingText([{ ts: '9.9', channel: 'CA', label: '새것', at: NOW - 60_000 }], NOW, link),
     ).toBeNull();
     const text = pendingText(
       [
@@ -170,6 +174,7 @@ describe('정기 글', () => {
         { ts: '1.1', channel: 'CA', label: '머지', at: NOW - 5 * H },
       ],
       NOW,
+      link,
     )!;
     expect(text).toContain('**승인 대기 2건**');
     expect(text.indexOf('머지')).toBeLessThan(text.indexOf('배포'));
@@ -314,8 +319,6 @@ describe('주장', () => {
   it('#agent-desk에 멘션 없이 올린 글은 주장도 받지 않고, @이름으로 부르면 받는다', () => {
     const env = {
       OPERATOR_USER_ID: 'UOP',
-      AGENT_APP_IDS: 'AOPS,APLAN',
-      AGENT_BOT_USERS: 'UBOTOPS,UBOTPLAN,UBOTDEV,UBOTMKT',
       ALERT_CHANNELS: 'CALERT',
       DESK_CHANNEL: 'CDESK',
     } as Env;
@@ -328,22 +331,18 @@ describe('주장', () => {
         text: '서버가 느리대요',
         ...e,
       }) as Parameters<typeof decide>[3];
-    expect(decide(env, 'plan', 'E', ev({}), 'UBOTPLAN')).toBeNull();
-    expect(
-      decide(env, 'plan', 'E', ev({ text: '@박지성 서버가 느리대요' }), 'UBOTPLAN'),
-    ).toMatchObject({
+    expect(decide(env, 'plan', 'E', ev({}))).toBeNull();
+    expect(decide(env, 'plan', 'E', ev({ text: '@박지성 서버가 느리대요' }))).toMatchObject({
       kind: 'mention',
       threadTs: '5.5',
       text: '서버가 느리대요',
     });
-    expect(
-      decide(env, 'plan', 'E', ev({ thread_ts: '1.1', text: '진행해' }), 'UBOTPLAN'),
-    ).toBeNull();
-    expect(decide(env, 'ops', 'E', ev({}), 'UBOTOPS')).toBeNull();
-    expect(decide(env, 'plan', 'E', ev({ user: 'USTRANGER' }), 'UBOTPLAN')).toBeNull();
-    expect(decide(env, 'plan', 'E', ev({ channel: 'COTHER' }), 'UBOTPLAN')).toBeNull();
-    expect(decide(env, 'plan', 'E', ev({ text: '<@UBOTDEV> 고쳐 줘' }), 'UBOTPLAN')).toBeNull();
-    expect(decide(env, 'plan', 'E', ev({ text: '@손흥민 고쳐 줘' }), 'UBOTPLAN')).toBeNull();
+    expect(decide(env, 'plan', 'E', ev({ thread_ts: '1.1', text: '진행해' }))).toBeNull();
+    expect(decide(env, 'ops', 'E', ev({}))).toBeNull();
+    expect(decide(env, 'plan', 'E', ev({ user: 'USTRANGER' }))).toBeNull();
+    expect(decide(env, 'plan', 'E', ev({ channel: 'COTHER' }))).toBeNull();
+    expect(decide(env, 'plan', 'E', ev({ text: '<@UBOTDEV> 고쳐 줘' }))).toBeNull();
+    expect(decide(env, 'plan', 'E', ev({ text: '@손흥민 고쳐 줘' }))).toBeNull();
   });
 
   type Book = {
@@ -389,6 +388,7 @@ describe('주장', () => {
       DAILY_BUDGET_USD: '5',
       DAILY_BUDGET_DEV_USD: '20',
       DEV_RUN_BUDGET_USD: '5',
+      DISCORD: fakeChat,
       LEDGER: { idFromName: () => 'id', get: () => book },
       CARD: {
         idFromName: () => 'id',

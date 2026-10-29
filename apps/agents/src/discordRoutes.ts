@@ -11,7 +11,7 @@ import { supportInteraction } from './support.ts';
 
 type Handler = (env: Env, p: never) => Promise<unknown>;
 
-/** 버튼 action_id → 처리 함수. 슬랙은 앱(역할)마다 주소가 나뉘었지만 디스코드는 봇 하나라 action_id로 고른다. */
+/** 버튼 action_id → 처리 함수. 봇이 하나라 action_id로 고른다. */
 export function handlerFor(action: string): Handler | null {
   if (START_ACTIONS.includes(action)) return startInteraction as Handler;
   if (REVIEW_ACTIONS.includes(action)) return reviewInteraction as Handler;

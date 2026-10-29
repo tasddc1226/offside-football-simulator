@@ -1,17 +1,15 @@
-// 채팅 이벤트 → 역할 일(Task). 슬랙 이벤트(index.ts)와 디스코드 게이트웨이(bridge.ts)가 같이 쓴다(T-11-576).
+// 채팅 이벤트 → 역할 일(Task). 디스코드 게이트웨이(bridge.ts)가 받은 글을 여기서 고른다(T-11-576).
 import { calledRoles, enabled, list, ROLES, stripCalls, type Env, type Role } from './env.ts';
 import { alertSignature, ledger } from './ledger.ts';
 import { isStopCommand, stopThread } from './stop.ts';
 import { threadOf, type Task } from './thread.ts';
 
-/** 슬랙 Events API 메시지 모양. 디스코드 메시지도 이 모양으로 옮겨 받는다(discordFormat.ts toSlackEvent). */
+/** 채팅 메시지 모양(슬랙 Events API에서 물려받은 이름). 디스코드 메시지를 이 모양으로 옮겨 받는다(discordFormat.ts toSlackEvent). */
 export type SlackEvent = {
   type: string;
   subtype?: string;
   user?: string;
   bot_id?: string;
-  app_id?: string;
-  bot_profile?: { app_id?: string };
   text?: string;
   channel: string;
   ts: string;
@@ -29,21 +27,9 @@ const IGNORED_SUBTYPES = new Set([
 const stripMentions = (s: string) => s.replace(/<@[A-Z0-9]+>/g, '').trim();
 
 /** 이 역할이 맡을 일인지 고른다. 아니면 null. */
-export function decide(
-  env: Env,
-  role: Role,
-  eventId: string,
-  ev: SlackEvent,
-  botUser: string | undefined,
-): Task | null {
+export function decide(env: Env, role: Role, eventId: string, ev: SlackEvent): Task | null {
+  // 에이전트 자기 글(역할 웹훅)은 브리지가 먼저 거른다(bridge.ts ours:).
   if (ev.subtype && IGNORED_SUBTYPES.has(ev.subtype)) return null;
-  const appId = ev.app_id ?? ev.bot_profile?.app_id;
-  // 에이전트 봇끼리 · 자기 메시지에는 반응하지 않는다(넘기기는 Worker 안에서 한다, handoff.ts).
-  if (
-    (appId && list(env.AGENT_APP_IDS).includes(appId)) ||
-    (ev.user && list(env.AGENT_BOT_USERS).includes(ev.user))
-  )
-    return null;
   const text = ev.text ?? '';
   const base = { eventId, role, channel: ev.channel, sourceTs: ev.ts };
   const operator = ev.user === env.OPERATOR_USER_ID;
@@ -53,8 +39,6 @@ export function decide(
     return { ...base, kind: 'mention', threadTs: ev.thread_ts ?? ev.ts, text: stripMentions(text) };
   }
   if (ev.type !== 'message') return null;
-  // 멘션은 app_mention으로 따로 오므로 message 쪽에서는 건너뛴다.
-  if (botUser && text.includes(`<@${botUser}>`)) return null;
   if (
     role === 'ops' &&
     list(env.ALERT_CHANNELS).includes(ev.channel) &&
@@ -92,8 +76,7 @@ export async function dispatchTask(env: Env, task: Task): Promise<void> {
 }
 
 /**
- * 디스코드 메시지 하나에서 맡을 일들. 디스코드는 봇 하나가 네 역할을 이름(웹훅)으로 나눠 쓰므로, 슬랙의 역할별 app_mention이
- * 없다. 한글 이름(`@이운재`)으로 부른 글은 부른 역할이, 이름 없이 봇만 멘션한 운영자 글은 주장(@plan)이 맡는다.
+ * 디스코드 메시지 하나에서 맡을 일들. 봇 하나가 네 역할을 이름(웹훅)으로 나눠 쓰므로 역할별 멘션이 없다. 한글 이름(`@이운재`)으로 부른 글은 부른 역할이, 이름 없이 봇만 멘션한 운영자 글은 주장(@plan)이 맡는다.
  */
 export function discordTasks(
   env: Env,
@@ -104,8 +87,8 @@ export function discordTasks(
   const roles = ROLES.filter((r) => enabled(env, r));
   if (mentioned && ev.user === env.OPERATOR_USER_ID && !calledRoles(ev.text ?? '').length) {
     if (!roles.includes('plan')) return [];
-    const t = decide(env, 'plan', eventId, { ...ev, type: 'app_mention' }, undefined);
+    const t = decide(env, 'plan', eventId, { ...ev, type: 'app_mention' });
     return t ? [t] : [];
   }
-  return roles.flatMap((r: Role) => decide(env, r, eventId, ev, undefined) ?? []);
+  return roles.flatMap((r: Role) => decide(env, r, eventId, ev) ?? []);
 }

@@ -7,6 +7,7 @@ import type { Gh } from './github.ts';
 import { decide } from './index.ts';
 import { isStopCommand, stopThread } from './stop.ts';
 import { AgentThread, type Task } from './thread.ts';
+import { fakeChat } from './testChat.ts';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -32,8 +33,6 @@ describe('운영자 멈춤', () => {
   it('운영자 멘션에서 온 멈춤만 멘션 일로 고른다', () => {
     const env = {
       OPERATOR_USER_ID: 'UOP',
-      AGENT_APP_IDS: 'AOPS',
-      AGENT_BOT_USERS: 'UBOTOPS',
       ALERT_CHANNELS: '',
     } as Env;
     const ev = (user: string) =>
@@ -45,10 +44,10 @@ describe('운영자 멈춤', () => {
         ts: '2.2',
         thread_ts: '1.1',
       }) as Parameters<typeof decide>[3];
-    const t = decide(env, 'ops', 'E', ev('UOP'), 'UBOTOPS');
+    const t = decide(env, 'ops', 'E', ev('UOP'));
     expect(t).toMatchObject({ kind: 'mention', text: '멈춰', threadTs: '1.1' });
     expect(isStopCommand(t!.text)).toBe(true);
-    expect(decide(env, 'ops', 'E', ev('USTRANGER'), 'UBOTOPS')).toBeNull();
+    expect(decide(env, 'ops', 'E', ev('USTRANGER'))).toBeNull();
   });
 
   it('runAgent는 멈춤을 보면 다음 턴을 부르지 않고 지금까지 쓴 글로 끝낸다', async () => {
@@ -127,7 +126,7 @@ describe('운영자 멈춤', () => {
       ENABLED_ROLES: 'ops,plan,dev',
       GITHUB_REPO: 'o/r',
       GITHUB_APP_PRIVATE_KEY: 'k',
-      SLACK_OPS_BOT_TOKEN: 't',
+      DISCORD: fakeChat,
       LEDGER: { idFromName: () => 'id', get: () => ({ claimStop: async () => claimed }) },
       THREAD: {
         idFromName: (n: string) => n,
