@@ -1,4 +1,8 @@
-import type { KpiReport } from '@offside/contracts';
+import {
+  REMOVE_ADS_PRICE_BEFORE_KRW,
+  REMOVE_ADS_PRICE_CHANGED_AT,
+  type KpiReport,
+} from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { billingAlerts, iapPurchases } from '../db/schema.js';
 import {
@@ -105,7 +109,10 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
     expect(value(r, yesterday!, 'iap_krw', 'apple')).toBe(1100);
     expect(value(r, yesterday!, 'iap_count', 'apple')).toBe(1);
     expect(value(r, yesterday!, 'ad_free_count', 'apple')).toBe(1);
-    expect(value(r, yesterday!, 'ad_free_krw', 'apple')).toBe(3300);
+    // T-11-574 판매 시각의 정가(인상 전 3,300원, 뒤 6,600원).
+    expect(value(r, yesterday!, 'ad_free_krw', 'apple')).toBe(
+      mid >= REMOVE_ADS_PRICE_CHANGED_AT ? 6600 : REMOVE_ADS_PRICE_BEFORE_KRW,
+    );
     expect(r.sources.map((s) => s.source)).toEqual(['d1']);
     expect(r.sources[0]!.lastDay).toBe(yesterday);
     const count = await env.DB.prepare('SELECT min(day) d FROM kpi_daily').first<{ d: string }>();
