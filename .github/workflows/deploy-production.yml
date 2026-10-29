@@ -124,6 +124,12 @@ jobs:
           VITE_API_BASE_URL="$PRODUCTION_API_URL" pnpm --filter @offside/web build
           pnpm --filter @offside/web check:bundle
 
+      # T-11-572 운영 지표 대시보드(admin.offside-lab.com). Cloudflare Access(운영자 메일 1개)를 건 뒤
+      # 저장소 변수 ADMIN_DASHBOARD_ENABLED=1을 켜야 배포한다(Access 없이 주소가 열리지 않게).
+      - name: Build admin dashboard
+        if: inputs.mode == 'deploy' && vars.ADMIN_DASHBOARD_ENABLED == '1'
+        run: pnpm --filter @offside/admin build
+
       - name: Capture recovery bookmark and inspect current schema
         id: schema
         env:
@@ -204,6 +210,13 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node .github/scripts/acquisition-release.mjs deploy-web production
+
+      - name: Deploy admin dashboard
+        if: inputs.mode == 'deploy' && vars.ADMIN_DASHBOARD_ENABLED == '1'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm --filter @offside/admin deploy:production
 
       - name: Verify candidate web assets before read-back
         if: inputs.mode == 'deploy'

@@ -960,6 +960,13 @@
       "when": 1793090122544,
       "tag": "0139_card_public_name",
       "breakpoints": true
+    },
+    {
+      "idx": 140,
+      "version": "6",
+      "when": 1793245483838,
+      "tag": "0140_kpi_daily",
+      "breakpoints": true
     }
   ]
 }

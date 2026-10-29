@@ -13,6 +13,7 @@ import { backupDay } from './backup.js';
 import { logErrorText } from '../logError.js';
 import { runBest11Daily, type Best11DailyCursor } from '../db/repos/best11.js';
 import { pruneAbandonedCareers, type PruneResult } from './pruneAbandoned.js';
+import { runKpiDaily, type KpiDailyResult } from '../db/repos/kpi.js';
 
 export const DAILY_STATE_KEY = 'cron:daily:state';
 const LEASE_MS = 4 * 60_000;
@@ -26,6 +27,7 @@ export const DAILY_STAGES = [
   'iapRefunds',
   'best11',
   'pruneAbandoned',
+  'kpi',
 ] as const;
 type Stage = (typeof DAILY_STAGES)[number];
 export type DailyState = {
@@ -109,6 +111,11 @@ function steps(env: Bindings): DailyStep {
       case 'pruneAbandoned': {
         // T-11-468 버린 커리어(한 시간 안에 멈추고 일주일 넘게 갱신 없음) 정리. 하루 상한까지 cron마다 이어 간다.
         const result = await pruneAbandonedCareers(env.DB, at, prior as PruneResult | undefined);
+        return { done: result.done, result };
+      }
+      case 'kpi': {
+        // T-11-572 운영 지표 대시보드: 전날까지 KST 하루치를 kpi_daily에 모은다(처음엔 90일 거꾸로 채운다).
+        const result = await runKpiDaily(env.DB, at, prior as KpiDailyResult | undefined);
         return { done: result.done, result };
       }
     }

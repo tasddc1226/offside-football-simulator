@@ -197,6 +197,7 @@ export * from './balance.js';
 export * from './admin.js';
 export * from './admin-users.js';
 export * from './admin-items.js';
+export * from './kpi.js';
 export * from './live.js';
 export * from './ticker.js';
 export * from './season-gauge-api.js';
