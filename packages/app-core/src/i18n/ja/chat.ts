@@ -53,7 +53,6 @@ export const chat: Translation<ChatMsgs> = {
   gateNicknameApp:
     'まずチャットで使うニックネームを決めてください。コメント用ニックネームと同じです。',
   // T-11-573 返信
-  reply: '返信',
   replyTo: (p: { nick: string }) => `${p.nick}さんに返信`,
   replyCancel: '返信をやめる',
   replyGone: '表示できないメッセージです',

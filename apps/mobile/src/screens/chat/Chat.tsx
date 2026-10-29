@@ -598,25 +598,36 @@ export default function Chat() {
                   <Txt tone="muted" style={small}>
                     {chatTime(m.at)}
                   </Txt>
+                  {view.write && !mine(m) ? (
+                    // T-11-575 답장은 시각 옆 아이콘.
+                    <Press
+                      testID="chat-reply"
+                      accessibilityRole="button"
+                      accessibilityLabel={L.replyTo({ nick: quoteName(m) })}
+                      onPress={() => startReply(m)}
+                      hitSlop={8}
+                      style={{
+                        width: 28,
+                        height: 28,
+                        marginLeft: -4,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Svg width={16} height={16} viewBox="0 0 24 24" accessible={false}>
+                        <Path
+                          d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11"
+                          stroke={c.muted}
+                          strokeWidth={2}
+                          fill="none"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </Svg>
+                    </Press>
+                  ) : null}
                 </View>
-                {!mine(m) ? (
-                  <View style={{ flexDirection: 'row', gap: 10 }}>
-                    {view.write ? (
-                      <Press
-                        testID="chat-reply"
-                        accessibilityRole="button"
-                        accessibilityLabel={L.replyTo({ nick: quoteName(m) })}
-                        onPress={() => startReply(m)}
-                        style={{ minHeight: 32, justifyContent: 'center', paddingHorizontal: 2 }}
-                      >
-                        <Txt tone="muted" style={[small, { textDecorationLine: 'underline' }]}>
-                          {L.reply}
-                        </Txt>
-                      </Press>
-                    ) : null}
-                    {tr.button(m.id, m.body)}
-                  </View>
-                ) : null}
+                {!mine(m) ? tr.button(m.id, m.body) : null}
               </View>
             ))
           ) : view.status === 'open' ? (

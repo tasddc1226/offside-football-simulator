@@ -51,7 +51,6 @@ export const chat: Translation<ChatMsgs> = {
   gateNicknameWeb: '請設定聊天與留言使用的暱稱。',
   gateNicknameApp: '請先設定聊天使用的暱稱，與留言暱稱相同。',
   // T-11-573 回覆
-  reply: '回覆',
   replyTo: (p: { nick: string }) => `回覆 ${p.nick}`,
   replyCancel: '取消回覆',
   replyGone: '無法顯示這則訊息',

@@ -277,12 +277,15 @@
           <div class="chat-body-row">
             <p class="chat-bubble" lang={tr.translated(m.id) ? getLocale() : undefined}>{tr.text(m.id, m.body)}</p>
             <time class="muted chat-time num" datetime={new Date(m.at).toISOString()}>{chatTime(m.at)}</time>
+            {#if view.write && !mine(m)}
+              <!-- T-11-575 답장은 시각 옆 아이콘. -->
+              <button class="chat-reply" aria-label={L.replyTo({ nick: quoteName(m) })} title={L.replyTo({ nick: quoteName(m) })} data-act="chat-reply" onclick={() => startReply(m)}>
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 14 4 9l5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              </button>
+            {/if}
           </div>
-          {#if !mine(m) && (view.write || canTranslate(m.body))}
-            <div class="chat-acts">
-              {#if view.write}<button class="translate-btn" data-act="chat-reply" aria-label={L.replyTo({ nick: quoteName(m) })} onclick={() => startReply(m)}>{L.reply}</button>{/if}
-              {#if canTranslate(m.body)}<button class="translate-btn" data-act="translate" disabled={tr.busy(m.id)} onclick={() => void tr.toggle(m.id, m.body)}>{tr.label(m.id)}</button>{/if}
-            </div>
+          {#if !mine(m) && canTranslate(m.body)}
+            <button class="translate-btn" data-act="translate" disabled={tr.busy(m.id)} onclick={() => void tr.toggle(m.id, m.body)}>{tr.label(m.id)}</button>
           {/if}
         </li>
       {:else}
@@ -425,9 +428,24 @@
     border-left-color: var(--line);
     cursor: default;
   }
-  .chat-acts {
-    display: flex;
-    gap: 10px;
+  .chat-reply {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    margin-left: -4px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .chat-reply:hover,
+  .chat-reply:focus-visible {
+    background: var(--surface-2);
+    color: var(--ink);
   }
   .chat-replying {
     display: flex;
