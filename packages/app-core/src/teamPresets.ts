@@ -58,8 +58,10 @@ export const presetSummary = (preset: TeamPreset) => ({
 export const replacePreset = (presets: readonly TeamPreset[], i: number, next: TeamPreset) =>
   presets.map((p, j) => (j === i ? { ...next, ...(p.cup ? { cup: true as const } : {}) } : p));
 /** T-11-570 i번째를 컵 명단으로(null이면 컵 명단을 푼다). 컵 명단은 하나뿐이다. */
-export const setCupPreset = (presets: readonly TeamPreset[], i: number | null) =>
-  presets.map(({ cup: _cup, ...p }, j) => (j === i ? { ...p, cup: true as const } : p));
+export const setCupPreset = (presets: readonly TeamPreset[], i: number | null): TeamPreset[] =>
+  presets
+    .map(({ cup: _cup, ...p }) => p as TeamPreset)
+    .map((p, j) => (j === i ? { ...p, cup: true } : p));
 /** T-11-570 컵 명단 프리셋(없으면 null). */
 export const cupPresetOf = (presets: readonly TeamPreset[] | undefined) =>
   presets?.find((p) => p.cup) ?? null;
