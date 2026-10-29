@@ -97,3 +97,17 @@ describe('T-11-531 크리에이터 짧은 주소', () => {
     }
   });
 });
+
+describe('T-11-584 랜딩 /get', () => {
+  it('기기 스토어로 302, 캐시 · 색인하지 않는다', async () => {
+    const res = await worker.fetch(
+      new Request('https://offside-lab.com/get?os=android&p=end'),
+      { ASSETS: assets },
+      ctx,
+    );
+    expect(res.status).toBe(302);
+    expect(res.headers.get('Location')).toMatch(/^https:\/\/play\.google\.com\//);
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+    expect(res.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
+  });
+});
