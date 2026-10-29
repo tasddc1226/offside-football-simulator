@@ -1884,7 +1884,7 @@ test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없
       },
     ],
   };
-  const puts: { presets: { name: string; formation: string }[] }[] = [];
+  const puts: { presets: { name: string; formation: string; cup?: true }[] }[] = [];
   let teamPuts = 0;
   await page.route(ownerTeamUrl, async (route) => {
     if (route.request().method() === 'GET')
@@ -1911,7 +1911,9 @@ test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없
   expect(puts[0]!.presets.map((p) => p.name)).toEqual(['옛 편성', '프리셋 2']);
   await expect(sheet.locator('[data-preset]')).toHaveCount(2);
 
-  // 이름 바꾸기 · 삭제도 목록을 통째로 보낸다.
+  // 이름 바꾸기 · 삭제도 목록을 통째로 보낸다. 덮어쓰기 · 이름 바꾸기 · 삭제는 카드의 관리(⋯)를 열어야 보인다.
+  await expect(sheet.locator('[data-act="preset-rename"]')).toHaveCount(0);
+  await sheet.locator('[data-preset="1"] [data-act="preset-more"]').click();
   await sheet.locator('[data-preset="1"] [data-act="preset-rename"]').click();
   await sheet.locator('[data-preset-name-input]').fill('주말 리그');
   await sheet.locator('[data-act="preset-rename-done"]').click();
@@ -1930,12 +1932,14 @@ test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없
 
   await page.locator('[data-act="team-presets"]').click();
   // T-11-431 덮어쓰기 · 삭제는 한 번 더 묻는다. 취소하면 아무것도 보내지 않는다.
+  await sheet.locator('[data-preset="1"] [data-act="preset-more"]').click();
   await sheet.locator('[data-preset="1"] [data-act="preset-overwrite"]').click();
   await expect(sheet.locator('[data-preset="1"] [data-preset-ask="overwrite"]')).toContainText(
     '지금 편성으로 덮어쓸까요?',
   );
   await sheet.locator('[data-act="preset-ask-cancel"]').click();
   await expect(sheet.locator('[data-preset-ask]')).toHaveCount(0);
+  await sheet.locator('[data-preset="0"] [data-act="preset-more"]').click();
   await sheet.locator('[data-preset="0"] [data-act="preset-delete"]').click();
   await expect(sheet.locator('[data-preset="0"] [data-preset-ask="delete"]')).toContainText(
     '삭제할까요?',
@@ -1945,10 +1949,24 @@ test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없
   await expect.poll(() => puts.length).toBe(3);
   expect(puts[2]!.presets.map((p) => p.name)).toEqual(['주말 리그']);
   await expect(sheet.locator('[data-preset-ask]')).toHaveCount(0);
+  await sheet.locator('[data-preset="0"] [data-act="preset-more"]').click();
   await sheet.locator('[data-preset="0"] [data-act="preset-overwrite"]').click();
   await sheet.locator('[data-act="preset-ask-ok"]').click();
   await expect.poll(() => puts.length).toBe(4);
   expect(puts[3]!.presets.map((p) => p.name)).toEqual(['주말 리그']);
+
+  // T-11-570 위쪽 컵 경기 명단에서 프리셋을 고르면 cup 표시를 보내고 배지가 붙는다. 팀 명단을 고르면 푼다.
+  await expect(sheet.locator('[data-preset-cup-hint]')).toBeVisible();
+  await expect(sheet.locator('[data-act="preset-cup-team"]')).toBeChecked();
+  await sheet.locator('[data-preset-cup-pick] label', { hasText: '주말 리그' }).click();
+  await expect.poll(() => puts.length).toBe(5);
+  expect(puts[4]!.presets[0]).toMatchObject({ name: '주말 리그', cup: true });
+  await expect(sheet.locator('[data-preset="0"] [data-preset-cup]')).toHaveText('컵 명단');
+  await expect(page.getByText('컵 명단으로 정했어요.')).toBeVisible();
+  await sheet.locator('[data-preset-cup-pick] label', { hasText: '팀 명단' }).click();
+  await expect.poll(() => puts.length).toBe(6);
+  expect(puts[5]!.presets[0]!.cup).toBeUndefined();
+  await expect(sheet.locator('[data-preset-cup]')).toHaveCount(0);
 });
 
 for (const width of [320, 390, 1280]) {

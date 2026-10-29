@@ -123,11 +123,35 @@ export function presetsOf(row: Pick<OwnerTeamRow, 'presetsJson'>): TeamPreset[] 
   }
 }
 
-/** T-11-217 그 시즌 내 팀의 프리셋을 통째로 바꾼다. 팀이 없으면 바뀐 행이 없다(빈 배열). */
+/** T-11-570 컵 명단으로 고른 프리셋(없으면 null). */
+export const cupPresetOf = (row: Pick<OwnerTeamRow, 'presetsJson'>) =>
+  presetsOf(row).find((p) => p.cup) ?? null;
+
+/**
+ * T-11-570 컵 경기 · 예상 · 신청 · 잠금이 읽는 팀 행. 컵 명단 프리셋이 있으면 포메이션 · 선발 · 배치 · OVR을 그 프리셋 것으로
+ * 바꾸고(이름 · 로고 · 감독은 팀 것), 없으면 팀 그대로다.
+ */
+export function cupTeamOf<T extends OwnerTeamRow>(row: T): T {
+  const p = cupPresetOf(row);
+  if (!p) return row;
+  return {
+    ...row,
+    formation: p.formation,
+    slotsJson: JSON.stringify(p.slots),
+    layoutJson: p.layout ? JSON.stringify(p.layout) : null,
+    ovr: row.cupOvr ?? p.ovr ?? row.ovr,
+    filled: p.filled ?? p.slots.filter((x) => x !== null).length,
+  };
+}
+
+/** T-11-217 그 시즌 내 팀의 프리셋을 통째로 바꾼다. 팀이 없으면 바뀐 행이 없다(빈 배열). T-11-570 컵 명단 OVR도 함께 적는다. */
 export const setTeamPresets = (db: Db, profileId: string, season: number, presets: TeamPreset[]) =>
   db
     .update(ownerTeams)
-    .set({ presetsJson: presets.length ? JSON.stringify(presets) : null })
+    .set({
+      presetsJson: presets.length ? JSON.stringify(presets) : null,
+      cupOvr: presets.find((p) => p.cup)?.ovr ?? null,
+    })
     .where(and(eq(ownerTeams.profileId, profileId), eq(ownerTeams.season, season)))
     .returning({ id: ownerTeams.id });
 
@@ -162,7 +186,8 @@ export async function liveTeamsByIds(db: Db, ids: readonly string[]) {
         season: ownerTeams.season,
         name: ownerTeams.name,
         manager: ownerTeams.manager,
-        ovr: ownerTeams.ovr,
+        // T-11-570 컵 화면에서만 쓰므로 컵 명단 OVR을 먼저 본다.
+        ovr: sql<number>`coalesce(${ownerTeams.cupOvr}, ${ownerTeams.ovr})`,
         logoJson: ownerTeams.logoJson,
       })
       .from(ownerTeams)
