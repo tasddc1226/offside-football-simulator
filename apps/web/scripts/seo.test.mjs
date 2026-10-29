@@ -12,6 +12,7 @@ import {
   BRAND_VERSION,
   PUBLIC_PAGES,
   STATIC_PAGES,
+  landingPage,
   articlePath,
   createStructuredData,
   stripAppBundle,
@@ -103,7 +104,7 @@ test('production discovery files contain the public pages', () => {
   assert.match(createRobotsTxt(config), /Sitemap: https:\/\/play\.example\.com\/sitemap\.xml/);
   assert.equal(
     (createSitemapXml(config.origin).match(/<url>/g) ?? []).length,
-    7 + articlesKo.length,
+    8 + articlesKo.length,
   );
   // T-11-231 운영 소개 페이지.
   assert.match(
@@ -210,4 +211,24 @@ test('T-11-452 공략 글 영어 · 일본어는 한국어와 같은 구조이�
     assert.deepEqual(shape(translated), shape(articlesKo));
     assert.doesNotMatch(JSON.stringify(translated), /[가-힣]/);
   }
+});
+
+test('T-11-584 /app/ 랜딩은 독립 문서이고 색인 · 구조화 데이터 · 스토어 버튼을 갖춘다', () => {
+  const config = { origin: 'https://play.example.com', indexingEnabled: true };
+  const html = landingPage(config);
+  assert.match(html, /^<!doctype html>/);
+  assert.doesNotMatch(html, /<script type="module"/);
+  assert.match(html, /<meta name="robots" content="index, follow" \/>/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/play\.example\.com\/app\/" \/>/);
+  assert.match(html, /"@type":\["VideoGame","MobileApplication"\]/);
+  assert.match(html, /"ratingCount":224/);
+  assert.match(html, /리뷰 224개/);
+  assert.match(html, /href="\/get\?os=ios&amp;p=hero"/);
+  assert.match(html, /href="\/get\?os=android&amp;p=hero"/);
+  assert.match(
+    html,
+    /href="\/\?utm_source=landing&amp;utm_medium=web&amp;utm_campaign=app_landing&amp;utm_content=lp_hero"/,
+  );
+  assert.doesNotMatch(html, /무료/);
+  assert.match(createSitemapXml(config.origin), /<loc>https:\/\/play\.example\.com\/app\/<\/loc>/);
 });
