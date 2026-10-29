@@ -161,13 +161,18 @@ export async function runKpiIngest(env: Env, at: number, fetcher: Fetch = fetch)
   if (ascSalesReady(env) || playInstallsReady(env))
     tasks.push([
       'store',
+      // 한 스토어가 실패해도 다른 스토어 설치는 넣고, 실패는 결과에 남긴다.
       async (d) => {
-        const [ios, android] = await Promise.all([
+        const got = await Promise.allSettled([
           ascSalesReady(env) ? ascInstallRows(env, d, fetcher) : null,
           playInstallsReady(env) ? playInstallRows(env, d, fetcher) : null,
         ]);
-        const rows = [...(ios ?? []), ...(android ?? [])];
-        return rows.length ? [{ day: d, rows }] : [];
+        const rows = got.flatMap((x) => (x.status === 'fulfilled' ? (x.value ?? []) : []));
+        const error = got
+          .flatMap((x) => (x.status === 'rejected' ? [String(x.reason)] : []))
+          .join(' · ');
+        if (!rows.length && error) throw new Error(error);
+        return rows.length ? [{ day: d, rows, ...(error ? { error } : {}) }] : [];
       },
     ]);
   if (admobReady(env)) tasks.push(['admob', one((d) => admobRows(env, d, fetcher))]);
@@ -177,7 +182,12 @@ export async function runKpiIngest(env: Env, at: number, fetcher: Fetch = fetch)
       try {
         for (const b of await collect(day)) {
           await ingest(env, b.day, source, b.rows, fetcher);
-          out.push({ source, day: b.day, rows: b.rows.length });
+          out.push({
+            source,
+            day: b.day,
+            rows: b.rows.length,
+            ...(b.error ? { error: b.error.slice(0, 200) } : {}),
+          });
         }
       } catch (e) {
         out.push({ source, day, error: String(e).slice(0, 200) });

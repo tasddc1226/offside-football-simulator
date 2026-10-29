@@ -111,7 +111,7 @@ describe('운영 지표 추가 수집 (T-11-577)', () => {
             { header: {} },
             {
               row: {
-                dimensionValues: { PLATFORM: { value: 'ANDROID' } },
+                dimensionValues: { PLATFORM: { value: 'Android' } },
                 metricValues: {
                   ESTIMATED_EARNINGS: { microsValue: '12345000000' },
                   IMPRESSIONS: { integerValue: '900' },
