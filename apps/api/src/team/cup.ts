@@ -420,7 +420,8 @@ export async function drawCup(db: Db, cup: CupDef, now: string) {
       ...notify(
         d1,
         e.profileId,
-        `cup:${cup.id}:draw`,
+        // T-11-568 다시 추첨하면 새 시드로 알림을 한 번 더 보낸다(같은 키면 앞 알림 때문에 걸러진다).
+        `cup:${cup.id}:draw:${seed.slice(0, 8)}`,
         cupKo('drawTitle', { cup: cupTitle(cup) }),
         cupKo('drawBody', { team: t.name, group: grp.get(e.teamId)!, time: kstHm(cup.rounds[0]!) }),
         now,

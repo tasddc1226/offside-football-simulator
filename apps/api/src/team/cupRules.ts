@@ -42,10 +42,27 @@ export function drawGroups(
 
 /**
  * 조 안 풀리그 일정(3라운드). 4팀: 라운드마다 2경기. 3팀: 라운드마다 1경기(한 팀 휴식). 2팀: 1라운드에만 1경기.
+ * T-11-568 5팀: 10경기를 4 · 4 · 2경기로(한 팀이 하루 두 경기를 치르는 날이 있다). 모두 네 경기씩 치른다.
  * 돌려주는 값: 라운드 0..2별 [홈, 원정] 쌍.
  */
 export function groupFixtures(teamIds: readonly string[]): [string, string][][] {
   const t = teamIds;
+  if (t.length === 5) {
+    // 휴식 자리를 더한 6자리 원형 배치(첫 자리 고정)로 5번 돌린 풀리그를 이틀치씩 묶는다.
+    const ring: (string | null)[] = [...t, null];
+    const days: [string, string][][] = [];
+    for (let r = 0; r < 5; r++) {
+      const day: [string, string][] = [];
+      for (let i = 0; i < 3; i++) {
+        const a = ring[i]!;
+        const b = ring[5 - i]!;
+        if (a && b) day.push(r % 2 ? [b, a] : [a, b]);
+      }
+      days.push(day);
+      ring.splice(1, 0, ring.pop()!);
+    }
+    return [[...days[0]!, ...days[1]!], [...days[2]!, ...days[3]!], days[4]!];
+  }
   if (t.length === 4)
     return [
       [

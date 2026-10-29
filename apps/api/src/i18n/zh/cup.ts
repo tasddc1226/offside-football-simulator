@@ -77,7 +77,7 @@ export const CUP_ZH: Record<CupTextKey, string> = {
   droppedBody: '抽籤時先發球員不足 {n} 人，因此無法參賽。',
   cancelledTitle: '{cup}停辦',
   cancelledBody: '參賽球隊太少，本屆賽事取消。',
-  drawTitle: '{cup} 分組抽籤結果',
+  drawTitle: '{cup} 分組完成',
   drawBody: '{team} 分在 {group} 組。首戰今天 {time} 開踢。',
   matchTitle: 'OFFSIDE 盃 {round}：{result}',
   champion: '冠軍',

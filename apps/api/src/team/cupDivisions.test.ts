@@ -274,7 +274,8 @@ describe('T-11-410 구간 대회 진행', () => {
       Array.from({ length: 16 }, (_, i) => 89 + (i % 10)),
     );
     await runCup(ctx.db, JUNIOR.drawAt, EDITION);
-    for (const c of EDITION) expect((await cupStateOf(ctx.db, c.id))[0]?.groups).toBe(8);
+    // T-11-568 16팀은 4팀씩 4개 조(조별 1차전은 조마다 2경기).
+    for (const c of EDITION) expect((await cupStateOf(ctx.db, c.id))[0]?.groups).toBe(4);
     // 조별 1차전: 구간마다 8경기, 합 24경기는 예산(32) 안이라 cron 한 번에 끝난다.
     const log = await runCup(ctx.db, JUNIOR.rounds[0]!, EDITION);
     expect(log!.filter((l) => l.step === 'play').map((l) => l.n)).toEqual([8, 8, 8]);
