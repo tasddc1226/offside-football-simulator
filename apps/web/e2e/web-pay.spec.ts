@@ -164,10 +164,17 @@ test('결제 확인이 늦으면 자동으로 들어온다고 알리고, 다음�
   );
   await page.goto(`/?webpay=${ORDER}`);
   await expect(page.getByText('결제를 확인하는 중…')).toBeVisible();
-  for (let i = 0; i < 6; i++) await page.clock.runFor(2000);
-  await expect(
-    page.getByText('결제가 확인되면 아이템이 자동으로 들어와요.', { exact: false }),
-  ).toBeVisible();
+  // 확인 요청은 진짜 네트워크라, 느린 러너에서는 시계를 정해진 횟수만 감으면 마지막 확인이 아직 안 끝났을 수 있다.
+  const later = page.getByText('결제가 확인되면 아이템이 자동으로 들어와요.', { exact: false });
+  await expect
+    .poll(
+      async () => {
+        await page.clock.runFor(2000);
+        return later.isVisible();
+      },
+      { timeout: 20_000 },
+    )
+    .toBe(true);
   const polled = statusCalls;
   expect(polled).toBeGreaterThanOrEqual(6);
   paid = true;
