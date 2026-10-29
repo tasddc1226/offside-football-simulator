@@ -339,7 +339,7 @@
   .locker-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(144px,1fr));gap:16px 12px;align-items:start;} .locker-player {position:relative;max-width:170px;width:100%;justify-self:center;}
   .locker-select {width:100%;display:block;border:0;border-radius:var(--radius-md);background:none;padding:0;cursor:grab;touch-action:pan-y;user-select:none;-webkit-user-select:none;}
   .locker-select:focus-visible {outline:3px solid var(--accent);outline-offset:3px;} .locker-player.chosen .locker-select {filter:drop-shadow(0 0 5px var(--accent));}
-  .roster-row {display:flex;align-items:center;justify-content:center;gap:8px;padding-top:6px;} .roster-row .roster-state {padding-top:0;}
+  .roster-row {display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 8px;padding-top:6px;} .roster-row .roster-state {padding-top:0;white-space:nowrap;} .roster-row .lock-toggle {white-space:nowrap;}
   .lock-toggle {display:inline-flex;align-items:center;gap:3px;min-height:28px;padding:0 8px;border:1px solid var(--line);border-radius:var(--radius-pill);background:none;color:var(--muted);font:inherit;font-size:var(--fs-caption);cursor:pointer;} .lock-toggle svg {width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;} .lock-toggle rect {fill:currentColor;stroke:none;}
   .lock-toggle.on {border-color:var(--accent);color:var(--accent);font-weight:600;} .lock-toggle:disabled {cursor:default;opacity:.6;}
   .roster-state {display:block;text-align:center;font-size:var(--fs-caption);color:var(--muted);padding-top:6px;} .roster-state.starting {color:var(--good);font-weight:600;}
