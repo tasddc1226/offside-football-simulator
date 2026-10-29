@@ -74,6 +74,23 @@ export interface Env {
   PLAY_SA_EMAIL?: string;
   PLAY_SA_KEY?: string;
   PLAY_KEY_ID?: string;
+  /**
+   * T-11-577 운영 지표 스토어 수집. App Store 판매 보고서(첫 다운로드)는 판매 권한 키가 따로 필요하다(위 키는 고객 지원 권한):
+   * 키 ID · 비공개 키(PKCS#8 PEM, 비밀값) · 판매자 번호(Payments and Financial Reports). 없으면 iOS 설치를 넣지 않는다.
+   */
+  ASC_SALES_KEY_ID?: string;
+  ASC_SALES_PRIVATE_KEY?: string;
+  ASC_VENDOR_NUMBER?: string;
+  /** Play Console 통계 보고서 Cloud Storage 버킷(`pubsite_prod_…`, gs:// 없이). Play 서비스 계정에 보고서 받기 권한이 있어야 한다. */
+  PLAY_REPORTS_BUCKET?: string;
+  /**
+   * T-11-577 AdMob 수익(미디에이션 보고서). AdMob API는 서비스 계정을 받지 않아 운영자 Google 동의로 받은 갱신 토큰을 쓴다
+   * (scripts/admob-auth.ts가 넣는다). 게시자 ID는 `pub-…`. 없으면 AdMob을 수집하지 않는다.
+   */
+  ADMOB_CLIENT_ID?: string;
+  ADMOB_CLIENT_SECRET?: string;
+  ADMOB_REFRESH_TOKEN?: string;
+  ADMOB_PUBLISHER_ID?: string;
   /** T-11-332 EAS 빌드 · OTA 읽기(Expo 액세스 토큰). */
   EXPO_TOKEN?: string;
   /** T-11-332 Meta 광고 성과 읽기(없으면 meta_ads 도구가 없다). */

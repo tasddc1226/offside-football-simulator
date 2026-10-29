@@ -67,8 +67,9 @@ export function metricSeries(
 }
 
 /** 줄이 전부 비었으면 뺀다(아직 연결 안 된 원천). */
+/** 값이 하나라도 들어온 계열만(0도 들어온 값이다. 모두 빈 날이면 아직 수집 전). */
 export const nonEmpty = (series: Series[]) =>
-  series.filter((s) => s.values.some((v) => v !== null && v !== 0));
+  series.filter((s) => s.values.some((v) => v !== null));
 
 export type Tile = { value: number | null; prev: number | null; change: number | null };
 
@@ -82,9 +83,17 @@ export function tile(days: readonly string[], at: (day: string) => number | null
   return { value, prev, change };
 }
 
-/** 기간 합(값이 없는 날은 건너뛴다). */
-export const periodSum = (days: readonly string[], at: (day: string) => number | null) =>
-  days.reduce((s, d) => s + (at(d) ?? 0), 0);
+/** 기간 합과 값이 빠진 날 수. 하루도 없으면 sum은 null(0과 구별). */
+export function periodSum(days: readonly string[], at: (day: string) => number | null) {
+  let sum: number | null = null;
+  let missing = 0;
+  for (const d of days) {
+    const v = at(d);
+    if (v === null) missing += 1;
+    else sum = (sum ?? 0) + v;
+  }
+  return { sum, missing };
+}
 
 /** 표 · CSV: 날짜 × (지표|나눔). */
 export function tableOf(r: KpiReport) {
@@ -113,3 +122,65 @@ export const fmt = (v: number | null, unit: 'n' | 'krw' | 'pct' = 'n') => {
 };
 export const fmtChange = (c: number | null) =>
   c === null ? '' : `${c >= 0 ? '+' : '−'}${Math.abs(c * 100).toFixed(0)}%`;
+
+// T-11-577 화면 이름표 · 시각.
+export const DIM_LABEL: Record<string, string> = {
+  all: '전체',
+  web: '웹',
+  app: '앱',
+  toss: '토스',
+  ios: 'iOS',
+  android: 'Android',
+  apple: 'iOS',
+  google: 'Android',
+  xsolla: '웹 결제',
+  linked: '로그인 연결',
+};
+const REGION = new Intl.DisplayNames(['ko'], { type: 'region' });
+/** 나눔 이름표. 두 글자 소문자는 국가 코드(Meta 국가별)로 읽는다. */
+export const dimLabel = (dim: string) =>
+  DIM_LABEL[dim] ?? (/^[a-z]{2}$/.test(dim) ? (REGION.of(dim.toUpperCase()) ?? dim) : dim);
+
+const ITEM_LABEL: Record<string, string> = {
+  reroll: '리롤권',
+  boost: '잠재력 강화권',
+  scout: '스카우트권',
+  rename: '이름 변경권',
+};
+/** 'com.offsidelab.app.reroll_40' → '리롤권 ×40'. 모르는 상품은 id 끝부분. */
+export function productLabel(productId: string) {
+  const tail = productId.split('.').at(-1) ?? productId;
+  if (tail === 'remove_ads') return '광고 제거';
+  if (tail === 'club_monthly') return '클럽 멤버십';
+  const m = /^([a-z]+)_(\d+)$/.exec(tail);
+  return m && ITEM_LABEL[m[1]!] ? `${ITEM_LABEL[m[1]!]} ×${m[2]}` : tail;
+}
+
+/** UTC ISO → 'M. D. HH:mm'(KST). */
+export const kstTime = (iso: string) =>
+  new Date(iso).toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+/** a 대비 b 비율(0.12 = 12%). b가 0이면 null. */
+export const ratio = (a: number, b: number) => (b ? a / b : null);
+
+/** 그 지표에 들어온 나눔(dim) 목록과 이름표. */
+export const dimsOf = (r: KpiReport, metric: string) =>
+  [...new Set(r.rows.filter((x) => x.metric === metric).map((x) => x.dim))]
+    .sort()
+    .map((dim) => ({ dim, label: dimLabel(dim) }));
+
+/** 운영 DB 일일 지표가 아직 없을 때 차트 자리에 쓰는 말. */
+export const KPI_EMPTY = '매일 04:00(KST) 수집이 시작되면 보여요.';
+
+/** 어제(KST) 대비 마지막 행이 며칠 밀렸는지. 행이 없으면 null. */
+export function sourceLag(lastDay: string | undefined, yesterday: string | undefined) {
+  if (!lastDay || !yesterday) return null;
+  return Math.round((Date.parse(yesterday) - Date.parse(lastDay)) / 86_400_000);
+}
