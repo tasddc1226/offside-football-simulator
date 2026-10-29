@@ -11,10 +11,10 @@ import { ok } from './shared.js';
  * 업데이트 팝업). `min`보다 낮은 앱은 닫을 수 없는 팝업을 받는다.
  */
 export const APP_VERSIONS: AppVersionResponse = {
-  ios: { min: '1.1.2', latest: '1.1.4', url: 'https://apps.apple.com/kr/app/id6817463687' },
+  ios: { min: '1.1.4', latest: '1.1.5', url: 'https://apps.apple.com/kr/app/id6817463687' },
   android: {
-    min: '1.1.2',
-    latest: '1.1.4',
+    min: '1.1.4',
+    latest: '1.1.5',
     url: 'https://play.google.com/store/apps/details?id=com.offsidelab.app',
   },
 };
