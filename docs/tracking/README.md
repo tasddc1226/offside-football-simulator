@@ -17,10 +17,14 @@
 - [T-11-145: 시즌 1 제1회 오프사이드 컵](offside-cup-s1-plan.md) — 기간 접수·조별 예선·토너먼트, 자격·정원·일정·명단 잠금·트로피와 리롤권 보상, 구현 위치.
 - [T-11-150: 구단주 프로필 · 명예관 · 대표 칭호](owner-profile-honors-plan.md) — 컵 칭호를 닉네임 옆에, 시즌을 넘는 구단주 기록 화면, 칭호 고르기.
 - [T-11-027: 웹 광고 도입(AdSense)](web-ads-plan.md) — 플레이를 끊지 않는 광고 위치·빈도·동의·기술 방식과 단계별 도입·중단 기준.
+- [T-11-151: 다음 서비스 시즌 스피드·신체 성장 개선](next-season-physical-growth-plan.md) — 원문 의견·현행 코드 근거, 자연 성장 후보와 기존 커리어·카드 공정성, 검증·미결 사항.
+- [T-11-239: 유저 피드백 잔여 과제](career-feedback-plans/README.md) — 임금협상·대진표·결승 미니게임·유스·역오퍼와 부분 구현 이후 확장, 별도 작업의 경계.
+- 새 콘텐츠 제안(T-11-520~525): [원정 투어](content-proposals/away-tour.md) · [감독 도전 과제](content-proposals/manager-challenges.md) · [구단 프로젝트](content-proposals/club-projects.md) · [선수 헌정전](content-proposals/player-tributes.md) · [주간 공략팀](content-proposals/weekly-tactics.md) · [유저 제작 도전장](content-proposals/community-challenges.md). 구현 전 제안이다.
 
 ## 분석 기획
 
 - [T-10-083: GA4 최소 행동 측정](ga4-measurement-plan.md) — 핵심 이벤트, 유입·반복 플레이 지표, 개인정보·중복 방지와 도입 기준.
+- [T-11-461: 세부 능력치 99 상한 확장 시뮬](../analysis/sub-cap-sim-2026-10-22.md) — 상한 99 · 105 · 110 · 없음 × 훈련 정책 4가지 × 10만 커리어 결과. 구현 없음.
 
 ## 역할
 
