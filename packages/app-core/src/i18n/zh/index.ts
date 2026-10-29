@@ -89,6 +89,7 @@ import { salary } from './salary';
 import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
 import { seasonPass } from './seasonPass';
+import { seasonPick } from './seasonPick';
 import { seasonRecap } from './seasonRecap';
 import { serverStatus } from './serverStatus';
 import { settings } from './settings';
@@ -208,6 +209,7 @@ export const zh = {
   scout,
   seasonGauge,
   seasonPass,
+  seasonPick,
   seasonRecap,
   serverStatus,
   settings,

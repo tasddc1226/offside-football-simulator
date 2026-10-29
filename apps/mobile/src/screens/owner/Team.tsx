@@ -130,6 +130,7 @@ import { loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPre
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
 import { fixSlot, slotName } from '@offside/app-core/matchReport';
 import type { ReportLine } from '@offside/contracts/owner-team';
+import { seasonOptions } from '../../ui/seasonOptions';
 
 const between = (v: string, min: number, max: number) =>
   v.trim().length >= min && v.trim().length <= max;
@@ -800,10 +801,7 @@ export default function Team() {
               label={L.seasonLabel}
               testID="team-season"
               value={season}
-              options={seasons.map((o) => ({
-                value: o.id,
-                label: `${o.name}${o.id === current ? L.seasonNow : ''}`,
-              }))}
+              options={seasonOptions(seasons)}
               onChange={pickSeason}
             />
           ) : (

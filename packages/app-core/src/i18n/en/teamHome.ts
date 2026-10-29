@@ -45,7 +45,6 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   modeRanked: 'Ranked match',
   modeFriends: 'Friends',
   seasonSelect: 'Select season',
-  seasonNow: ' (current)',
   teamMenu: 'Team menu',
   menuLogo: 'Logo',
   menuRename: 'Rename',

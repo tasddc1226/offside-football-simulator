@@ -7,6 +7,7 @@
 </script>
 
 <script lang="ts">
+  import SeasonSelect from './SeasonSelect.svelte';
   import Skeleton from './Skeleton.svelte';
   import { tick } from 'svelte';
   import { hofText as H } from '@offside/app-core/i18n/ko/hof';
@@ -165,12 +166,7 @@
 
 <section class="card" data-rn-wall data-rn-screen={view.screen}>
   <div class="hof-toolbar">
-    <label class="hof-season-picker">
-      <span class="hof-filter-label">{L.season}</span>
-      <select aria-label={L.seasonAria} data-rn-season-select value={String(season)} onchange={(e) => pickSeason(Number(e.currentTarget.value))}>
-        {#each seasons as s (s.id)}<option value={String(s.id)}>{seasonLabel(s.id, s.name)}{s.startsAt > now ? L.notOpen : ''}</option>{/each}
-      </select>
-    </label>
+    <SeasonSelect caption={L.season} label={L.seasonAria} value={season} {seasons} onpick={(v) => pickSeason(Number(v))} data-rn-season-select />
   </div>
 
   {#if upcoming || view.screen === 'home'}

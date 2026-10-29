@@ -44,7 +44,6 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   modeRanked: 'ランクマッチ',
   modeFriends: 'フレンド',
   seasonSelect: 'シーズン選択',
-  seasonNow: '（現在）',
   teamMenu: 'チームメニュー',
   menuLogo: 'ロゴ設定',
   menuRename: '名前を変更',

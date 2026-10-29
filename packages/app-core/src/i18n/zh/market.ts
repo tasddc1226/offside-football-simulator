@@ -101,7 +101,6 @@ export const market: Translation<MarketMsgs> = {
   backToMarket: '前往轉會市場',
   releaseIntro: '釋出親手培養的球員，可以獲得與球員卡基準價相同的俱樂部資金。名人堂紀錄會保留。',
   seasonGroup: '賽季',
-  seasonChip: (p) => `${p.name}的球員`,
   pickAll: '全選',
   pickNone: '取消選擇',
   pickAllMax: (p) => `最多選擇${p.n}名`,

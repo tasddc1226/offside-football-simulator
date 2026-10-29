@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SeasonSelect from '../SeasonSelect.svelte';
   // T-11-028 시즌 업적 화면 — 점수·등급, 다음 목표, 분류별 업적. 불러오기는 Team.svelte가 맡는다.
   import type { AchCategory } from '@offside/contracts/owner-team';
   import type { ClubAchievementsResponse } from '@offside/app-core/api/team';
@@ -38,11 +39,7 @@
       <h1>{L.achTitle}</h1>
     </div>
     {#if ach && ach.seasons.length > 1}
-      <select class="tm-season" aria-label={L.seasonLabel} value={ach.season} onchange={(e) => load(Number(e.currentTarget.value))}>
-        {#each ach.seasons as o (o.id)}
-          <option value={o.id}>{o.name}</option>
-        {/each}
-      </select>
+      <div class="tm-season"><SeasonSelect compact label={L.seasonLabel} value={ach.season} seasons={ach.seasons} onpick={(v) => load(Number(v))} /></div>
     {/if}
   </div>
   <LoadState {status} failText={L.achLoadFail} retry={() => load(ach?.season)}>
@@ -332,14 +329,7 @@
   }
   .tm-season {
     flex: none;
-    max-width: 45%;
-    min-height: 40px;
-    padding: 0 8px;
-    border: 1px solid transparent;
-    border-radius: var(--radius-sm);
-    background: var(--surface-2);
-    color: var(--ink);
-    font: inherit;
+    max-width: 50%;
   }
   .tm-ach {
     border: 1px solid transparent;

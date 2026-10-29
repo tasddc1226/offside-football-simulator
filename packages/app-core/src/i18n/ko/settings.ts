@@ -35,8 +35,6 @@ const ko = {
   help: '도움말',
   installGuide: '홈 화면에 추가하기',
   guide: '게임 가이드',
-  // T-11-441 계정 · 닉네임은 내 구단 화면에 있다.
-  accountLink: '계정 · 닉네임 (내 구단)',
   faq: '자주 묻는 질문',
   fairness: '확률과 공정성',
   legal: '서비스 정책',

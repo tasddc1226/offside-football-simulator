@@ -1,0 +1,20 @@
+{
+  "id": "t-11-566-ios-pass-membership",
+  "title": "아이폰에서도 클럽 멤버십",
+  "items": [
+    "아이폰 앱에서도 내 구단 화면에서 클럽 멤버십에 가입할 수 있어요. 시즌 패스는 시즌 2가 열리면 살 수 있어요."
+  ],
+  "en": {
+    "title": "Club membership on iPhone",
+    "items": [
+      "You can now join the club membership from the My club screen in the iPhone app. The season pass goes on sale when season 2 opens."
+    ]
+  },
+  "ja": {
+    "title": "iPhoneでもクラブメンバーシップ",
+    "items": [
+      "iPhoneアプリでもマイクラブ画面からクラブメンバーシップに加入できます。シーズンパスはシーズン2が始まると購入できます。"
+    ]
+  },
+  "availability": "app"
+}

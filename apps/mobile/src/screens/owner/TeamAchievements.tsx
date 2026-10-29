@@ -34,7 +34,8 @@ import { Card, Press, Txt } from '../../ui';
 import { SelectField } from '../settings/parts';
 import { AchGradeBadge, TmTitle } from './TeamParts';
 import { tn } from '@offside/game/i18n/names';
-import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
+import { teamSeasonLabel } from '@offside/app-core/seasonName';
+import { seasonOptions } from '../../ui/seasonOptions';
 
 function Stage({ children }: { children: string }) {
   const c = useColors();
@@ -301,7 +302,7 @@ export function TeamAchievements({
               label={L.seasonLabel}
               testID="ach-season"
               value={ach.season}
-              options={ach.seasons.map((o) => ({ value: o.id, label: seasonLabel(o.id, o.name) }))}
+              options={seasonOptions(ach.seasons)}
               onChange={(v) => load(v)}
               style={{ maxWidth: '45%', minHeight: 40 }}
             />

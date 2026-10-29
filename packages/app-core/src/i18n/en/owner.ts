@@ -68,6 +68,15 @@ export const owner: Translation<OwnerMsgs> = {
   lockBadge: '\u{1F512}︎ Unlocks when you log in',
   accountSection: 'Account',
   adminTools: 'Admin tools',
+  shortcutsHeading: 'Shortcuts',
+  tilePlayers: 'Your players · growth records',
+  tileMarket: 'Buy and sell players',
+  tileExchange: 'Turn retired players into items',
+  tileManager: 'Carry on as a manager',
+  tileHall: 'Season records · titles',
+  shopTitle: 'Shop',
+  tileShop: 'Rerolls · boosts · scout tickets',
+  shopLoginNeeded: 'Sign in as a club owner to use the shop.',
   teamEmptyWith: (p) =>
     `You can build a team from your ${plural(p.n, 'player')} who retired in ${p.season}. Youth players fill any empty spots.`,
   teamEmptyNone: (p) =>

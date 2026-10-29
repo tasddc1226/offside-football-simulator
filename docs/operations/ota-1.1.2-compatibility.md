@@ -1,5 +1,10 @@
 # 1.1.2 심사 빌드 OTA 호환 배포
 
+> **종료 (T-11-559):** iOS 1.1.5 출시 뒤 1.1.2 · 1.1.3 OTA를 끝냈다. 배포 matrix는 `current / 1.1.4 × ios / android`이고
+> `prepare-ota-112.mjs` · `prepare-ota-113.mjs`는 지웠다. 최소 앱 버전(`apps/api/src/routes/appVersion.ts`)을 1.1.4로 올려
+> 낮은 앱은 닫을 수 없는 스토어 업데이트 팝업을 받는다. 결정 근거: 10-25~~28 알림 등록 기기 중 1.1.2 · 1.1.3은 9대(2~~3%).
+> 아래는 당시 기록이다.
+
 1.1.2 스토어 심사 빌드는 AdMob을 포함하지만 현재 main의 네이티브 구성은
 AppLovin MAX를 사용한다. 버전 문자열이나 runtimeVersion만 바꿔 동일 번들을
 게시하면 안 된다. 기존 production 배포 흐름에서 API·웹 배포가 성공한 뒤,

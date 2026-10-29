@@ -5,14 +5,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { assertRuntime, prepare, restored, runtimes, source } from './prepare-ota-114.mjs';
-import { runtimes as runtimes113 } from './prepare-ota-113.mjs';
+import { STORE_RUNTIMES } from './ota-store-runtime.mjs';
 
 test('only the reviewed 1.1.4 store runtimes can receive the 1.1.4 bundle', () => {
   for (const [platform, runtime] of Object.entries(runtimes)) {
     assert.doesNotThrow(() => assertRuntime(platform, runtime));
     assert.throws(() => assertRuntime(platform, 'different-native-build'), /mismatch/);
-    // 1.1.3 경로와 같은 런타임에 두 번 게시하지 않는다.
-    assert.notEqual(runtime, runtimes113[platform]);
+    // current 경로와 같은 런타임에 두 번 게시하지 않는다.
+    assert.notEqual(runtime, STORE_RUNTIMES[platform]);
   }
   assert.throws(() => assertRuntime('web', undefined), /mismatch/);
 });
@@ -63,7 +63,8 @@ test('the deploy workflow publishes the 1.1.4 lane with its own runtime check', 
     'utf8',
   );
   const job = workflow.split('  app-update:')[1].split('  release-tag:')[0];
-  assert.match(job, /target: \[current, '1\.1\.4', '1\.1\.3', '1\.1\.2'\]/);
+  assert.match(job, /target: \[current, '1\.1\.4'\]/);
+  assert.doesNotMatch(job, /prepare-ota-11[23]/);
   assert.match(
     job,
     /matrix\.target == '1\.1\.4'\s*\n\s*run: node \.github\/scripts\/prepare-ota-114\.mjs prepare/,

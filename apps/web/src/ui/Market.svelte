@@ -9,6 +9,7 @@
 </script>
 
 <script lang="ts">
+  import SeasonSelect from './SeasonSelect.svelte';
   import { tick as flush } from 'svelte';
   import Skeleton from './Skeleton.svelte';
   import LoginButtons from './LoginButtons.svelte';
@@ -334,11 +335,7 @@
       </div>
       <p class="muted fs-sm">{L.releaseIntro}</p>
       <div class="mk-chips-row">
-        <div class="mk-chips" role="group" aria-label={L.seasonGroup}>
-          {#each team?.seasons ?? [] as o (o.id)}
-            <button class="mk-chip" aria-pressed={team?.season === o.id} onclick={() => ((teamSeason = o.id), (picked = new Set()))}>{L.seasonChip({ name: o.name })}</button>
-          {/each}
-        </div>
+        {#if team && team.seasons.length > 1}<div class="mk-season"><SeasonSelect compact label={L.seasonGroup} value={team.season} seasons={team.seasons} onpick={(v) => ((teamSeason = Number(v)), (picked = new Set()))} data-market-season /></div>{/if}
         {#if releasable.length > 0}<button class="mk-link" data-act="pick-all" onclick={pickAll}>{pickAllLabel(releasable.length, allPicked)}</button>{/if}
       </div>
       {#if guest}
