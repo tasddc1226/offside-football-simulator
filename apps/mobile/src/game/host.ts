@@ -169,6 +169,13 @@ export async function refreshAccount() {
   if (r.ok) noteOwner(isMember(r.data));
 }
 
+const ACCOUNT_REVALIDATE_MS = 5 * 60_000;
+/** 계정 상태를 쓰는 화면(설정 계정 카드 · 구단주 · 상점, T-11-567)이 열릴 때. 처음이면 묻고, 5분이 지났으면 조용히 다시 묻는다. */
+export function ensureAccount() {
+  if (accountCache.value === undefined) void refreshAccount();
+  else if (Date.now() - accountCache.fetchedAt > ACCOUNT_REVALIDATE_MS) void refreshAccount();
+}
+
 // ───────── 뒤로 가기 ─────────
 /** 화면 방문 기록 — 화면이 바뀔 때 track(), Android 뒤로 버튼·'← 이전으로'가 back(). */
 export const navStack = createNavStack(appState, { closeSheet, scrollY, scrollTo: scrollBackTo });

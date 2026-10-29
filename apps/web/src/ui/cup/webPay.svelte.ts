@@ -40,7 +40,7 @@ export function loadWebPay() {
   return loading;
 }
 
-/** 결제창에서 돌아갈 화면. game은 진행 중인 선수(선수 탭 강화 · 이름 옆 변경권), 아니면 구단주 화면. */
+/** 결제창에서 돌아갈 화면. game은 진행 중인 선수(선수 탭 강화 · 이름 옆 변경권), 아니면 상점 화면(T-11-567, 저장값이라 이름은 owner 그대로). */
 export type WebPayBack = 'game' | 'owner';
 type Pending = { orderId: string; at: number; back?: WebPayBack };
 function readPending(): Pending | null {
@@ -106,11 +106,12 @@ export async function startWebPay(productId: string, back: WebPayBack = 'owner')
 /** main.ts: 엑솔라 결제창에서 돌아왔을 때(`?webpay=<주문>`). 주소를 정리하고 결제를 시작한 화면에서 결과를 기다린다. */
 export async function handleWebPayReturn() {
   const orderId = new URLSearchParams(location.search).get('webpay') ?? '';
-  window.history.replaceState({}, '', '/');
+  // 주소만 정리하고 화면 기록(history.svelte.ts)의 상태는 남긴다 — 지우면 다음 탭 이동이 홈으로 튄다(T-11-567).
+  window.history.replaceState(window.history.state, '', '/');
   const p = readPending();
   if (p?.orderId === orderId && p.back === 'game' && appState.G && !appState.G.retired)
     goContinue();
-  else go('owner');
+  else go('shop');
   if (!ORDER_ID.test(orderId)) return;
   toast(L.confirming);
   for (let i = 0; i < POLL_TRIES; i += 1) {

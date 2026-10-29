@@ -116,6 +116,11 @@
   $effect(() => {
     if (appState.screen === 'funds' && !FundsHistory) void import('./FundsHistory.svelte').then((m) => (FundsHistory = m.default));
   });
+  // T-11-567 상점도 처음 열 때 불러온다.
+  let Shop = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'shop' && !Shop) void import('./Shop.svelte').then((m) => (Shop = m.default));
+  });
   // T-11-310: 감독 커리어도 처음 열 때 불러온다(감독 엔진 포함).
   let Manager = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
@@ -220,6 +225,8 @@
       {#if Market}<Market />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'funds'}
       {#if FundsHistory}<FundsHistory />{:else}{@render waiting()}{/if}
+    {:else if appState.screen === 'shop'}
+      {#if Shop}<Shop />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'manager'}
       {#if Manager}<Manager />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'recap'}
