@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { COMMENT_REPORT_REASONS, NAME_REPORT_KINDS } from '@offside/contracts/board-limits';
+import { CHAT_ROOMS } from '@offside/contracts/chat';
 import {
   check,
   index,
@@ -1386,6 +1387,8 @@ export const chatReports = sqliteTable(
     createdAt: text('created_at').notNull(),
     /** 운영자가 처리(가리기·기각·정지)한 시각. 처리 전엔 null. */
     resolvedAt: text('resolved_at'),
+    /** T-11-583 메시지가 있는 언어 방. 운영자가 신고를 처리할 때 그 방에서 가린다. */
+    room: text('room', { enum: CHAT_ROOMS }).notNull().default('ko'),
   },
   (table) => [
     primaryKey({ columns: [table.messageId, table.profileId] }),

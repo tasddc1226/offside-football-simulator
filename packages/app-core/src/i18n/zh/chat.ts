@@ -5,6 +5,7 @@ export const chat: Translation<ChatMsgs> = {
   title: '交誼廳聊天',
   back: '← 返回',
   online: (p) => `${p.n} 人在線`,
+  roomsLabel: '依語言分的聊天室',
   reconnecting: '重新連線中…',
   connecting: '連線中…',
   rulesLabel: '聊天使用說明與封鎖名單',

@@ -19,7 +19,7 @@ import { profiles, profileAvatars } from '../db/schema.js';
 import { reqLang } from '../lang.js';
 import { avatarText } from '../profile/avatarText.js';
 import { validateAvatarImage } from '../profile/avatar.js';
-import { chatRoom } from '../chat/socket.js';
+import { chatRooms } from '../chat/socket.js';
 import { clientIp, ok, readBody, readJson, nowIso, enforceLimit, conflictError } from './shared.js';
 import { commentIdentity } from '../auth/admin.js';
 import { issueSession, readSessionToken, sessionCookie } from '../auth/session.js';
@@ -161,7 +161,11 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
       db.update(profiles).set({ avatarId }).where(eq(profiles.id, profileId)),
     ]);
     if (profile.avatarId) purgeEdge(c, [`/v1/avatars/${profile.avatarId}`]);
-    if (c.env.CHAT) waitUntil(c, chatRoom(c.env.CHAT).updateAvatar(profileId, avatarId));
+    if (c.env.CHAT)
+      waitUntil(
+        c,
+        Promise.all(chatRooms(c.env.CHAT).map((r) => r.updateAvatar(profileId, avatarId))),
+      );
     return ok(c, ProfileSchema, buildProfileResponse({ ...profile, avatarId }, c.env.ADMIN_EMAILS));
   });
 
@@ -290,7 +294,11 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     // 조회부터 조각씩 다시 훑어 채운다. 나머지는 바뀐 공개 캐시만 비운다(명예의 전당 목록은 TTL 1분).
     if (previousAvatar?.id) {
       purgeEdge(c, [`/v1/avatars/${previousAvatar.id}`]);
-      if (c.env.CHAT) waitUntil(c, chatRoom(c.env.CHAT).updateAvatar(session.profileId, null));
+      if (c.env.CHAT)
+        waitUntil(
+          c,
+          Promise.all(chatRooms(c.env.CHAT).map((r) => r.updateAvatar(session.profileId, null))),
+        );
     }
     // T-11-311 지운 커리어의 R2 은퇴 상세도 지운다(응답 뒤).
     waitUntil(c, deleteSnapshots(c.env, careerIds));

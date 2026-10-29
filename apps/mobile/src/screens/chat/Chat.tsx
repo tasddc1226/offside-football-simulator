@@ -20,7 +20,14 @@ import {
   COMMENT_REPORT_REASONS,
   type CommentReportReason,
 } from '@offside/contracts/board-limits';
-import { CHAT_BODY_MAX, CHAT_MUTE_DAYS } from '@offside/contracts/chat';
+import {
+  CHAT_BODY_MAX,
+  CHAT_MUTE_DAYS,
+  CHAT_ROOMS,
+  type ChatRoomKey,
+} from '@offside/contracts/chat';
+import { LOCALE_NAMES } from '@offside/contracts/i18n';
+import { Seg, TabOpt } from '../board/parts';
 import { lastClosedSeason } from '@offside/contracts/service-seasons';
 import * as api from '@offside/app-core/api/chat';
 import { unblock as unblockApi } from '@offside/app-core/api/boards';
@@ -177,6 +184,8 @@ export default function Chat() {
     };
   }, []);
   const [view, setView] = useState<ChatView>(EMPTY_CHAT);
+  /** T-11-583 들어간 언어 방. */
+  const [room, setRoom] = useState<ChatRoomKey>(api.currentChatRoom);
   const input = useRef<InputHandle>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -204,7 +213,7 @@ export default function Chat() {
     return () => opened.remove();
   }, []);
 
-  const connect = () => {
+  const connect = (to: ChatRoomKey = room) => {
     session.current?.close();
     session.current = api.openChat(
       (v) => {
@@ -224,7 +233,20 @@ export default function Chat() {
           setReplyTo((r) => r ?? sentReply.current);
         }
       },
+      to,
     );
+  };
+  /** T-11-583 다른 언어 방으로 옮긴다 — 지금 소켓을 닫고 그 방에 새로 붙는다. */
+  const pickRoom = (to: ChatRoomKey) => {
+    if (to === room) return;
+    api.setChatRoom(to);
+    setRoom(to);
+    setSelected(null);
+    setReplyTo(null);
+    entering.current = true;
+    shown.current = EMPTY_CHAT.messages;
+    setView(EMPTY_CHAT);
+    connect(to);
   };
   useEffect(() => {
     connect();
@@ -394,6 +416,28 @@ export default function Chat() {
             </Svg>
           </Press>
         </View>
+        <Seg
+          cols={4}
+          gap={6}
+          label={L.roomsLabel}
+          style={{
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderBottomWidth: 1,
+            borderBottomColor: c.line,
+          }}
+        >
+          {CHAT_ROOMS.map((r) => (
+            <TabOpt
+              key={r}
+              title={LOCALE_NAMES[r]}
+              selected={room === r}
+              testID={`chat-room-${r}`}
+              onPress={() => pickRoom(r)}
+              tight
+            />
+          ))}
+        </Seg>
         {blocks !== undefined ? (
           <View
             testID="chat-blocks"
@@ -724,7 +768,7 @@ export default function Chat() {
               <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                 {L.gateNicknameApp}
               </Txt>
-              <NicknameForm onsaved={connect} />
+              <NicknameForm onsaved={() => connect()} />
             </View>
           ) : (
             <Txt tone="muted" style={{ fontSize: rem(FONT.label) }} testID="chat-gate-muted">

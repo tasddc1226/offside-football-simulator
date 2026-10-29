@@ -1,10 +1,18 @@
 /**
  * T-11-015 실시간 채팅 한도·메시지 모양. zod가 없는 서브패스(`@offside/contracts/chat`)라 웹·앱 번들과 서버의
- * Durable Object가 같은 값을 쓴다. 방은 지금 라운지 하나다.
+ * Durable Object가 같은 값을 쓴다. 방은 언어마다 하나다(T-11-583).
  */
 import type { OwnerTier } from './owner-tier.js';
 export const CHAT_SOCKET_PATH = '/v1/chat/ws';
 export const CHAT_ROOM = 'lounge';
+/** T-11-583 언어별 라운지 방. 화면 언어 방으로 들어가고 다른 방도 고를 수 있다. */
+export const CHAT_ROOMS = ['ko', 'en', 'ja', 'zh'] as const;
+export type ChatRoomKey = (typeof CHAT_ROOMS)[number];
+export const isChatRoom = (v: unknown): v is ChatRoomKey =>
+  (CHAT_ROOMS as readonly unknown[]).includes(v);
+/** 방(Durable Object) 이름. 한국어 방은 예전 이름 그대로라 그동안의 대화가 이어진다. */
+export const chatRoomName = (r: ChatRoomKey): string =>
+  r === 'ko' ? CHAT_ROOM : `${CHAT_ROOM}:${r}`;
 /** 메시지 한 줄 최대 길이(자). */
 export const CHAT_BODY_MAX = 200;
 /** 들어오면 받는 최근 메시지 수. */

@@ -6,6 +6,7 @@ export const chat: Translation<ChatMsgs> = {
   title: 'Lounge chat',
   back: '← Back',
   online: (p) => `${p.n} online`,
+  roomsLabel: 'Chat room by language',
   reconnecting: 'Reconnecting…',
   connecting: 'Connecting…',
   rulesLabel: 'Chat rules and blocked users',
