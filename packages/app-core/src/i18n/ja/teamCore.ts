@@ -69,7 +69,11 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   salaryChip: (p) => `年俸 ${p.n}`,
   salaryOver: '予算オーバー',
   // T-11-571 리그 체력
-  fatigueChip: (p: { n: number }) => `疲労 −${p.n}%`,
+  staminaLabel: '体力',
+  staminaAria: (p: { left: number; total: number; pct: number }) =>
+    p.pct
+      ? `体力 ${p.left}/${p.total} · 次のリーグ戦の実力 −${p.pct}%`
+      : `体力 ${p.left}/${p.total} · 問題なし`,
   fatigueHint: 'リーグで3試合続けて先発すると疲れて実力が少し落ちます。1試合休めば回復します。',
   salaryLeft: (p) => `残り予算 ${p.n}`,
   salaryOpen: '年俸のご案内を見る',

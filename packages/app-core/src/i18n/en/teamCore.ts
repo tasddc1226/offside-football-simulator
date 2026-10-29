@@ -70,7 +70,11 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   salaryChip: (p) => `Salary ${p.n}`,
   salaryOver: 'Over budget',
   // T-11-571 리그 체력
-  fatigueChip: (p: { n: number }) => `Fatigue −${p.n}%`,
+  staminaLabel: 'Stamina',
+  staminaAria: (p: { left: number; total: number; pct: number }) =>
+    p.pct
+      ? `Stamina ${p.left}/${p.total} · next league match −${p.pct}%`
+      : `Stamina ${p.left}/${p.total} · fresh`,
   fatigueHint:
     'Players who start 3 league matches in a row get tired and play a little worse. One match of rest brings them back.',
   salaryLeft: (p) => `${p.n} left`,

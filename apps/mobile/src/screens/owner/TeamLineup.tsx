@@ -11,8 +11,9 @@ import type { TeamPlayer } from '@offside/app-core/api/team';
 import {
   assignSlot,
   attrLine,
-  fatiguePctOf,
   salaryIn,
+  STAMINA_CELLS,
+  staminaOf,
   type LeagueFatigue,
   type salaryBar,
 } from '@offside/app-core/teamOwner';
@@ -428,7 +429,7 @@ export function TeamLineup({
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {visible.slice(0, limit).map((p) => {
                 const pay = salaryIn(p, season);
-                const tired = fatiguePctOf(fatigue, p.careerId);
+                const stamina = staminaOf(fatigue, p.careerId);
                 const wontFit =
                   pay > 0 &&
                   !!salary &&
@@ -512,22 +513,43 @@ export function TeamLineup({
                             : TC.salaryChip({ n: pay })}
                         </Txt>
                       ) : null}
-                      {tired > 0 ? (
-                        <Txt
-                          v="xs"
-                          bold
-                          testID={`fatigue-chip-${p.careerId}`}
+                      {stamina ? (
+                        <View
+                          testID={`stamina-${p.careerId}`}
+                          accessible
+                          accessibilityRole="image"
+                          accessibilityLabel={TC.staminaAria({
+                            left: stamina.left,
+                            total: STAMINA_CELLS,
+                            pct: stamina.pct,
+                          })}
                           accessibilityHint={TC.fatigueHint}
-                          style={{
-                            paddingHorizontal: 6,
-                            borderRadius: RADIUS.pill,
-                            borderWidth: 1,
-                            borderColor: c.warn,
-                            color: c.warn,
-                          }}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                         >
-                          {TC.fatigueChip({ n: tired })}
-                        </Txt>
+                          <Txt v="xs" bold tone="muted">
+                            {TC.staminaLabel}
+                          </Txt>
+                          <View style={{ flexDirection: 'row', gap: 2 }}>
+                            {Array.from({ length: STAMINA_CELLS }, (_, k) => (
+                              <View
+                                key={k}
+                                style={{
+                                  width: 7,
+                                  height: 10,
+                                  borderRadius: 2,
+                                  backgroundColor:
+                                    k >= stamina.left
+                                      ? c.line
+                                      : stamina.left === 1
+                                        ? c.bad
+                                        : stamina.left < STAMINA_CELLS
+                                          ? c.warn
+                                          : c.good,
+                                }}
+                              />
+                            ))}
+                          </View>
+                        </View>
                       ) : null}
                       {onLock ? (
                         <Press

@@ -72,7 +72,11 @@ const ko = {
   salaryChip: (p: { n: number }) => `급여 ${p.n}`,
   salaryOver: '예산 초과',
   // T-11-571 리그 체력
-  fatigueChip: (p: { n: number }) => `체력 −${p.n}%`,
+  staminaLabel: '체력',
+  staminaAria: (p: { left: number; total: number; pct: number }) =>
+    p.pct
+      ? `체력 ${p.left}/${p.total}칸 · 다음 리그 경기 실력 −${p.pct}%`
+      : `체력 ${p.left}/${p.total}칸 · 문제없음`,
   fatigueHint:
     '리그에 3경기 연속 선발로 나가면 지쳐서 실력이 조금 떨어져요. 한 경기 쉬면 회복해요.',
   salaryLeft: (p: { n: number }) => `남은 예산 ${p.n}`,

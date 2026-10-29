@@ -1,6 +1,10 @@
 // T-10-092 구단주 팀 화면의 순수 로직(웹 team/Team.svelte · 앱 screens/owner/Team.tsx 공용, T-11-005).
 // 편성(자동 배치·자리 바꾸기)·선수 고르기 후보·업적 표기·경기 결과 표기처럼 화면이 그리기 전에 계산하는 것만 둔다.
-import { leagueFatiguePenalty } from '@offside/contracts/league';
+import {
+  LEAGUE_FATIGUE_MAX_STEPS,
+  leagueFatiguePenalty,
+  leagueFatigueSteps,
+} from '@offside/contracts/league';
 import { flagOf } from '@offside/contracts/nations';
 import { defaultClubName, LEAGUE_BASE } from '@offside/contracts/club-names';
 import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
@@ -79,9 +83,20 @@ export const budgetOf = (res: { pastSalaryBudget?: number | undefined } | null |
   res?.pastSalaryBudget ?? PAST_SALARY_BUDGET;
 // T-11-571 리그 체력(docs/tracking/league-fatigue-plan.md). 서버가 켰을 때만 응답에 온다.
 export type LeagueFatigue = { rate: number; streaks: Record<string, number> };
-/** 다음 리그 경기에 선발로 나가면 깎이는 자리 실력(%). 0이면 문제없다. */
-export const fatiguePctOf = (f: LeagueFatigue | null | undefined, careerId: string) =>
-  f ? Math.round(leagueFatiguePenalty(f.streaks[careerId] ?? 0, f.rate) * 100) : 0;
+/** 체력 게이지 칸 수(문제없음 + 단계마다 한 칸씩). */
+export const STAMINA_CELLS = LEAGUE_FATIGUE_MAX_STEPS + 1;
+/**
+ * 다음 리그 경기에 선발로 나갈 때의 체력 게이지. left는 남은 칸(STAMINA_CELLS = 문제없음, 1 = 최대로 지침), pct는 깎이는
+ * 자리 실력(%). 체력이 꺼져 있으면 null.
+ */
+export function staminaOf(f: LeagueFatigue | null | undefined, careerId: string) {
+  if (!f || f.rate <= 0) return null;
+  const streak = f.streaks[careerId] ?? 0;
+  return {
+    left: STAMINA_CELLS - leagueFatigueSteps(streak),
+    pct: Math.round(leagueFatiguePenalty(streak, f.rate) * 100),
+  };
+}
 /** 이 팀 시즌에서 카드가 받는 급여(이번 시즌 선수는 0). */
 export const salaryIn = (p: Pick<TeamPlayer, 'peak' | 'season'>, season: number) =>
   seasonSalaryOf(p, season);
