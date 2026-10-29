@@ -1,5 +1,6 @@
 // ADR-015 슬랙 에이전트 Worker. 슬랙 이벤트를 받아 서명을 확인하고 3초 안에 200을 돌려준 뒤, 일은 스레드 객체에 넘긴다.
 import { refreshSocialToken } from './social.ts';
+import { runKpiIngest } from './kpi.ts';
 import {
   calledRoles,
   enabled,
@@ -167,6 +168,13 @@ export default {
         ctx.waitUntil(captainMorning(env, ev.scheduledTime).catch(log('captain morning')));
       if (enabled(env, 'mkt') && isMonday(ev.scheduledTime))
         ctx.waitUntil(mktWeekly(env, ev.scheduledTime).catch(log('mkt weekly')));
+      // T-11-572 운영 지표 대시보드: 어제 · 그제 GA4 · Meta 광고 지표를 운영 API에 넣는다.
+      ctx.waitUntil(
+        runKpiIngest(env, ev.scheduledTime).then((r) => {
+          for (const x of r)
+            if (x.error) console.error('kpi ingest failed', x.source, x.day, x.error);
+        }, log('kpi ingest')),
+      );
       // T-11-395 · T-11-397 Threads · Instagram 토큰은 60일이면 끝나니 하루 한 번 보고 7일마다 갱신한다.
       for (const kind of ['threads', 'instagram'] as const)
         ctx.waitUntil(

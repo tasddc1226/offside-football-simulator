@@ -12,6 +12,7 @@ import { requestId } from './middleware/requestId.js';
 import { securityHeaders } from './middleware/securityHeaders.js';
 import { seasonScheduleMiddleware } from './seasonSchedule.js';
 import { registerAdminRoutes } from './routes/admin.js';
+import { registerKpiRoutes } from './routes/kpi.js';
 import { registerAppAuthRoutes } from './routes/appAuth.js';
 import { registerAppVersionRoutes } from './routes/appVersion.js';
 import { registerAuthRoutes } from './routes/auth.js';
@@ -118,6 +119,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerBalanceRoutes(app);
   registerClubStrengthRoutes(app);
   registerAdminRoutes(app);
+  registerKpiRoutes(app);
   registerAdminCupRoutes(app);
   registerAdminLeagueRoutes(app);
 

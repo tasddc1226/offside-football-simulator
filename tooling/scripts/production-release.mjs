@@ -43,6 +43,7 @@ export const EXPECTED_TABLES = Object.freeze([
   'friend_matches',
   'friends',
   'idempotency',
+  'kpi_daily',
   'league_entries',
   'league_matches',
   'league_seasons',

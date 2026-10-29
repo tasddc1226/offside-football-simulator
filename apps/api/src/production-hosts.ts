@@ -4,14 +4,22 @@ export const PRODUCTION_HOST_PAIRS = {
   'api.offside-lab.com': {
     apiOrigin: 'https://api.offside-lab.com',
     webOrigin: 'https://offside-lab.com',
+    // T-11-572 운영 지표 대시보드. 이 Origin은 운영자 경로(/v1/admin/*)에만 CORS를 연다(middleware/cors.ts).
+    adminOrigin: 'https://admin.offside-lab.com',
   },
   'offside-api.tasddc1569.workers.dev': {
     apiOrigin: 'https://offside-api.tasddc1569.workers.dev',
     webOrigin: 'https://offside-web.tasddc1569.workers.dev',
+    adminOrigin: null,
   },
 } as const;
 
-export type RequestHostPair = { apiOrigin: string; webOrigin: string; googleRedirectUri: string };
+export type RequestHostPair = {
+  apiOrigin: string;
+  webOrigin: string;
+  adminOrigin?: string | null;
+  googleRedirectUri: string;
+};
 
 /** Production routing is selected only by the URL Cloudflare gives the Worker. */
 export function resolveRequestHostPair(requestUrl: string, env: Bindings): RequestHostPair | null {
