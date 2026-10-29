@@ -68,6 +68,13 @@ export const teamCore: Translation<TeamCoreMsgs> = {
     `この選手の年俸（${p.salary}）が残り予算（${p.left}）を超えています。過去シーズンの選手を外すか、今シーズンの選手を入れてください。`,
   salaryChip: (p) => `年俸 ${p.n}`,
   salaryOver: '予算オーバー',
+  // T-11-571 리그 체력
+  staminaLabel: '体力',
+  staminaAria: (p: { left: number; total: number; pct: number }) =>
+    p.pct
+      ? `体力 ${p.left}/${p.total} · 次のリーグ戦の実力 −${p.pct}%`
+      : `体力 ${p.left}/${p.total} · 問題なし`,
+  fatigueHint: 'リーグで3試合続けて先発すると疲れて実力が少し落ちます。1試合休めば回復します。',
   salaryLeft: (p) => `残り予算 ${p.n}`,
   salaryOpen: '年俸のご案内を見る',
   salaryOverSave: (p) =>

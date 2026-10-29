@@ -90,11 +90,13 @@ import {
   activeBalanceQuery,
   balanceVersionOf,
   pastSalaryBudgetFrom,
+  leagueFatigueFrom,
   pastSalaryBudgetOf,
 } from '../db/repos/balance.js';
 import { getProfile, hasAccount, type ProfileRecord } from '../db/repos/profiles.js';
-import { ownerTeams } from '../db/schema.js';
-import { and, eq } from 'drizzle-orm';
+import { leagueMatches, ownerTeams } from '../db/schema.js';
+import { FATIGUE_LOOKBACK, startStreaks } from '../team/fatigue.js';
+import { and, desc, eq, isNotNull, or } from 'drizzle-orm';
 import { edgeCached, purgeEdge, waitUntil } from '../edgeCache.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -274,6 +276,39 @@ function toOwnerTeam(
   };
 }
 
+/**
+ * T-11-571 내 팀의 리그 체력(켜져 있을 때만). 이 팀의 최근 리그 경기 몇 판의 선발로 다음 라운드 기준 연속 선발 수를 센다.
+ * 꺼져 있으면 쿼리하지 않는다.
+ */
+async function fatigueOf(
+  db: Db,
+  teamId: string,
+  season: number,
+  balance: Parameters<typeof leagueFatigueFrom>[0],
+) {
+  const rate = leagueFatigueFrom(balance);
+  if (rate <= 0) return null;
+  const played = await db
+    .select({
+      round: leagueMatches.round,
+      homeTeamId: leagueMatches.homeTeamId,
+      awayTeamId: leagueMatches.awayTeamId,
+      detailJson: leagueMatches.detailJson,
+    })
+    .from(leagueMatches)
+    .where(
+      and(
+        eq(leagueMatches.season, season),
+        isNotNull(leagueMatches.playedAt),
+        or(eq(leagueMatches.homeTeamId, teamId), eq(leagueMatches.awayTeamId, teamId)),
+      ),
+    )
+    .orderBy(desc(leagueMatches.round))
+    .limit(FATIGUE_LOOKBACK);
+  const next = (played[0]?.round ?? 0) + 1;
+  return { rate, streaks: Object.fromEntries(startStreaks(played, teamId, next)) };
+}
+
 export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
   // 내 팀(보고 있는 시즌) + 그 시즌에 넣을 수 있는 은퇴 선수 + 오늘 남은 경기 수. 화면을 열 때 한 번 부른다(웹 메모 1분).
   app.get('/v1/owner-team', requireProfile, async (c) => {
@@ -318,6 +353,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         eligible.set(id, career);
     }
     const coach = team ? await coachOf(db, team) : null;
+    const fatigue =
+      team && season === current ? await fatigueOf(db, team.id, season, balance) : null;
     return ok(
       c,
       OwnerTeamResponseSchema,
@@ -350,6 +387,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         member: member.length > 0,
         // 컵 성적은 최근 대회부터 온다 — 첫 우승이 가장 최근 우승.
         ownerTitle: me.title,
+        ...(fatigue ? { fatigue } : {}),
       },
       200,
       NO_STORE,

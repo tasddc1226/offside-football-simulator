@@ -5,6 +5,20 @@ import { DAY_MS, KST_MS, kstDay } from './kst.js';
 import { gaugeRules } from './season-gauge.js';
 import { SERVICE_SEASONS, type ServiceSeason } from './service-seasons.js';
 
+/**
+ * T-11-571 리그 체력. 직전 리그 경기들에 연속으로 선발로 나간 수(streak)가 LEAGUE_FATIGUE_FREE 이상이면 단계가 생긴다
+ * (3경기 연속 출전부터 1단계). 단계는 LEAGUE_FATIGUE_MAX_STEPS까지이고, 한 경기 쉬면(선발에서 빠지거나 그 경기를 못 치르면)
+ * 0으로 돌아간다. 단계마다 자리 실력을 밸런스 leagueFatigue 비율만큼 깎는다(0이면 끔).
+ */
+export const LEAGUE_FATIGUE_FREE = 2;
+export const LEAGUE_FATIGUE_MAX_STEPS = 3;
+/** 직전까지 연속 선발 수 → 이번 경기 체력 단계(0 = 문제없음). */
+export const leagueFatigueSteps = (streak: number) =>
+  Math.min(LEAGUE_FATIGUE_MAX_STEPS, Math.max(0, streak - LEAGUE_FATIGUE_FREE + 1));
+/** 이번 경기 자리 실력에서 깎는 비율(0~1). */
+export const leagueFatiguePenalty = (streak: number, rate: number) =>
+  rate > 0 ? leagueFatigueSteps(streak) * rate : 0;
+
 /** 리그를 여는 첫 시즌. */
 export const LEAGUE_FROM_SEASON = 2;
 /** 리그 하나의 팀 수. */

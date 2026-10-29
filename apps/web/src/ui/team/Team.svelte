@@ -170,6 +170,7 @@
   const byId = $derived(new Map(players.map((p) => [p.careerId, p])));
   // T-11-376 지난 시즌 선수 급여 예산(서버가 팀 시즌에 맞춰 계산한 값, 옛 응답이면 기본 80).
   let budget = $state(PAST_SALARY_BUDGET);
+  let fatigue = $state<OwnerTeamResponse['fatigue'] | null>(null);
   const salary = $derived(salaryBar(slots, byId, season, budget));
   const nameOf = (p: TeamPlayer) => marketName(p, localNames);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
@@ -319,6 +320,7 @@
     cupSeason = r.data.cupSeason ?? null;
     perDay = r.data.matchesPerDay;
     budget = budgetOf(r.data);
+    fatigue = r.data.fatigue ?? null;
     needLogin = false;
     applyTeam(r.data.team);
     divisionNotice =
@@ -686,6 +688,7 @@
         managerName={manager.trim()}
         {editable}
         {salary}
+        {fatigue}
         {budget}
         bind:formation
         bind:layout
