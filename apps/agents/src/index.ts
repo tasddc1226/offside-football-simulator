@@ -176,6 +176,8 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
     return Response.json({ ok: true });
   }
   if (job === 'bundle') return Response.json({ result: await approvalsBundle(env) });
+  // T-11-579 운영 지표 수집을 지금 한 번(kpi-ingest.yml 수동 실행). 08:50 정기 수집과 같은 어제 · 그제를 넣는다.
+  if (job === 'kpi') return Response.json({ result: await runKpiIngest(env, Date.now()) });
   // 고객 문의: dry=1이면 커서를 옮기지 않고 새 문의 수만 돌려준다.
   if (job === 'support')
     return Response.json(
