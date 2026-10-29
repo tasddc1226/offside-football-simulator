@@ -4,7 +4,13 @@
 import { AppState } from 'react-native';
 import { proxy } from 'valtio';
 import { subscribeKey } from 'valtio/utils';
-import { openChat, type ChatMessage, type ChatSession } from '@offside/app-core/api/chat';
+import {
+  currentChatRoom,
+  openChat,
+  type ChatMessage,
+  type ChatRoomKey,
+  type ChatSession,
+} from '@offside/app-core/api/chat';
 import { createChatUnread } from '@offside/app-core/chatUnread';
 import { appState } from '../store';
 import { kv } from './setup';
@@ -12,11 +18,20 @@ import { kv } from './setup';
 export const chatUnread = proxy({ n: 0 });
 
 let tracker: ReturnType<typeof createChatUnread> | null = null;
+let trackerRoom: ChatRoomKey | null = null;
+/** T-11-583 읽음 기록은 언어 방마다 따로다 — 방을 바꾸면 그 방의 기록으로 센다. */
 function unreadTracker() {
-  tracker ??= createChatUnread({
-    getItem: (k) => kv.getString(k) ?? null,
-    setItem: (k, v) => kv.set(k, v),
-  });
+  const room = currentChatRoom();
+  if (!tracker || trackerRoom !== room) {
+    tracker = createChatUnread(
+      {
+        getItem: (k) => kv.getString(k) ?? null,
+        setItem: (k, v) => kv.set(k, v),
+      },
+      room,
+    );
+    trackerRoom = room;
+  }
   return tracker;
 }
 

@@ -158,7 +158,7 @@ const HOME_REQUESTS = [
   'GET /v1/teams?sort=value&page=1',
   'GET /v1/ticker',
   // 미읽음 알림용 연결을 처음 한 번 열고, 화면을 옮길 때는 그대로 재사용한다.
-  'POST /v1/chat/ticket',
+  'POST /v1/chat/ticket?room=ko',
   // One coalesced activity signal for the restored career; tab changes add no requests.
   'PUT /v1/career-activity',
 ];

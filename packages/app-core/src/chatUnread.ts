@@ -1,11 +1,12 @@
-import type { ChatMessage } from '@offside/contracts/chat';
+import type { ChatMessage, ChatRoomKey } from '@offside/contracts/chat';
 
 type ReadMark = { at: number; ids: string[] };
 type Storage = Pick<globalThis.Storage, 'getItem' | 'setItem'>;
-const KEY = 'ft_chat_read';
+const BASE_KEY = 'ft_chat_read';
 
-/** 채팅 읽음 기록은 게임 세이브와 별개로 이 기기에만 둔다. */
-export function createChatUnread(storage?: Storage) {
+/** 채팅 읽음 기록은 게임 세이브와 별개로 이 기기에만 둔다. T-11-583 언어 방마다 따로 센다(한국어 방은 예전 키). */
+export function createChatUnread(storage?: Storage, room: ChatRoomKey = 'ko') {
+  const KEY = room === 'ko' ? BASE_KEY : `${BASE_KEY}:${room}`;
   let mark: ReadMark | null = null;
   try {
     const saved: unknown = JSON.parse(storage?.getItem(KEY) ?? 'null');

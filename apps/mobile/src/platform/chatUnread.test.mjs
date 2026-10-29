@@ -34,6 +34,7 @@ vi.mock('./setup', () => ({
   },
 }));
 vi.mock('@offside/app-core/api/chat', () => ({
+  currentChatRoom: () => 'ko',
   openChat: (onChange) => {
     const s = { onChange, closed: false, close: () => (s.closed = true) };
     f.opened.push(s);

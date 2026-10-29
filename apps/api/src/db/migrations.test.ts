@@ -638,6 +638,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'body',
     'created_at',
     'resolved_at',
+    'room',
   ],
   chat_mutes: ['profile_id', 'until', 'created_at'],
   // T-11-146 사용자 글 번역 캐시.

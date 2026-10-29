@@ -38,7 +38,9 @@
   import { go, goHome } from './nav.js';
   import { appState, hofStart } from './state.svelte.js';
   import { trackViewport } from './viewport.js';
-  import { chatSession, listenChat, markChatRead } from './chat-state.svelte.js';
+  import { chatSession, chatState, listenChat, markChatRead, switchChatRoom } from './chat-state.svelte.js';
+  import { CHAT_ROOMS } from '@offside/contracts/chat';
+  import { LOCALE_NAMES } from '@offside/contracts/i18n';
 
   // 상태는 통째로 바꿔 끼우므로 깊은 반응성이 필요 없다.
   let view = $state.raw<ChatView>(EMPTY_CHAT);
@@ -249,6 +251,11 @@
         </div>
       </details>
     </header>
+    <div class="seg chat-rooms" role="group" aria-label={L.roomsLabel}>
+      {#each CHAT_ROOMS as r (r)}
+        <button class="opt" lang={r} aria-pressed={chatState.room === r} data-chat-room={r} onclick={() => switchChatRoom(r)}>{LOCALE_NAMES[r]}</button>
+      {/each}
+    </div>
 
     <ol class="chat-list" bind:this={list} onscroll={onListScroll} data-chat-list>
       {#if view.loadingOlder}<li class="muted fs-sm chat-older">{L.loadingOlder}</li>{/if}

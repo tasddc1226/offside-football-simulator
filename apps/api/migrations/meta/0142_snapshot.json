@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "08d48911-22b0-4c21-bb42-a84502838021",
+  "id": "35c2b83e-65db-4d6f-b370-11a0bbe1c030",
   "prevId": "1d5cf818-3e34-4298-8c12-dbdb18353803",
   "tables": {
     "acquisition_consents": {
@@ -2807,6 +2807,14 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "room": {
+          "name": "room",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'ko'"
         }
       },
       "indexes": {
@@ -6843,62 +6851,6 @@
         },
         "exchanges": {
           "name": "exchanges",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "forwards": {
-          "name": "forwards",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "positions": {
-          "name": "positions",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "nations": {
-          "name": "nations",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "cups": {
-          "name": "cups",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "podiums": {
-          "name": "podiums",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "seasons": {
-          "name": "seasons",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "division": {
-          "name": "division",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
