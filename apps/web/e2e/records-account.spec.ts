@@ -29,9 +29,9 @@ const teamRow = (rank: number) => ({
   recentForm: [],
 });
 
-async function openOwner(page: Page) {
+async function openSettings(page: Page) {
   await page.goto('/');
-  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="settings"]').click();
 }
 
 test('D2 계정 삭제는 확인 시트를 거치고, 실패하면 실패를, 성공하면 삭제를 알린다', async ({
@@ -53,7 +53,7 @@ test('D2 계정 삭제는 확인 시트를 거치고, 실패하면 실패를, �
     return route.fulfill({ status: 204 });
   });
 
-  await openOwner(page);
+  await openSettings(page);
   const account = page.locator('#account-slot');
   await account.locator('[data-act="delete-account"]').click();
   await expect(page.locator('#sheet')).toContainText('되돌릴 수 없어요');
@@ -73,11 +73,9 @@ test('D2 계정 삭제는 확인 시트를 거치고, 실패하면 실패를, �
   await expect(account).toContainText('로그인하지 않았어요');
 });
 
-test('D3 설정의 계정 · 닉네임은 내 구단 화면의 계정 카드로 간다', async ({ page }) => {
+test('D3 계정 카드는 설정 맨 위에 있다 (T-11-567)', async ({ page }) => {
   await page.route(PROFILE_URL, (route) => route.fulfill(ok(member)));
-  await page.goto('/');
-  await page.locator('[data-act="settings"]').click();
-  await page.locator('[data-act="account"]').click();
+  await openSettings(page);
   await expect(page.locator('#account-slot')).toBeInViewport();
   await expect(page.locator('#account-slot')).toContainText('te***@gmail.com');
 });

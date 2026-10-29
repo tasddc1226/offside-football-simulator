@@ -207,6 +207,7 @@ test('설정', async ({ page }) => {
   await setup(page);
   await page.locator('[data-act="settings"]').click();
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.locator('#account-slot')).toContainText('로그인하지 않았어요');
   await expect(page.locator('#app')).toMatchAriaSnapshot({ name: 'settings.aria.yml' });
 });
 
@@ -214,6 +215,6 @@ test('구단주', async ({ page }) => {
   await setup(page);
   await page.locator('[data-act="owner"]').click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('내 구단');
-  await expect(page.locator('#account-slot')).toContainText('로그인하지 않았어요');
+  await expect(page.locator('[data-owner-team-locked]')).toBeVisible();
   await expect(page.locator('#app')).toMatchAriaSnapshot({ name: 'owner.aria.yml' });
 });

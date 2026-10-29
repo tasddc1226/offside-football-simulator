@@ -36,7 +36,6 @@ export const settings: Translation<SettingsMsgs> = {
   help: 'Help',
   installGuide: 'Add to home screen',
   guide: 'Game guide',
-  accountLink: 'Account · nickname (My club)',
   faq: 'FAQ',
   fairness: 'Odds and fairness',
   legal: 'Policies',

@@ -15,7 +15,14 @@
   import { setSheetSkin, skin } from './skin.svelte.js';
   import SiteFooter from './SiteFooter.svelte';
   import { showInstallGuide } from './install.js';
-  import { goAccount, goFairness, goHome, goTypeDex, takeFocus } from './nav.js';
+  import { goFairness, goHome, goTypeDex, takeFocus } from './nav.js';
+  import Account from './Account.svelte';
+  import LoginButtons from './LoginButtons.svelte';
+  import { accountCache } from './account-state.svelte.js';
+  import { isMember } from '@offside/app-core/account';
+  import { fetchOwnerSummary } from '@offside/app-core/api/ownerSummary';
+  import { ownerText as OL } from '@offside/app-core/i18n/ko/owner';
+  import { appState } from './state.svelte.js';
   import { replayCoach } from './coach.svelte.js';
   import { tutorialText as TU } from '@offside/app-core/i18n/ko/tutorial';
   import { onMount } from 'svelte';
@@ -39,6 +46,23 @@
   let keyMoments = $state(keyMomentsOn());
   let dark = $state(isDark());
   let namePublic = $state(namePublicEnabled());
+  // T-10-016 운영 도구 입구는 운영자에게만. 구글 연결 계정일 때만 서버에 묻는다(10분 메모, 익명이면 요청이 없다).
+  let admin = $state(false);
+  const linked = $derived.by(() => {
+    const acct = accountCache.value;
+    return !!acct && acct !== 'error' && isMember(acct);
+  });
+  // 로그인 안 함(익명 프로필이거나 세션 없음). 확인 중 · 연결 실패는 아니다.
+  const guest = $derived.by(() => {
+    const acct = accountCache.value;
+    return acct === null || (!!acct && acct !== 'error' && !isMember(acct));
+  });
+  $effect(() => {
+    let alive = true;
+    admin = false;
+    if (linked) void fetchOwnerSummary().then((r) => alive && r.ok && (admin = r.data.admin));
+    return () => { alive = false; };
+  });
 
   // T-11-437 게임 화면 저장 위치 안내에서 왔으면 백업 코드 카드를 보이게 내린다.
   onMount(() => {
@@ -56,6 +80,17 @@
     <div class="eyebrow">Settings</div>
     <h1>{L.title}</h1>
   </header>
+  <!-- T-11-567 계정(로그인 · 연동 · 로그아웃 · 탈퇴)과 운영 도구 입구는 내 구단 화면에서 설정 맨 위로 옮겼다. -->
+  <section class="card settings-card" id="account-slot" aria-label={OL.accountSection}>
+    <Account />
+    {#if guest}<LoginButtons />{/if}
+    {#if admin}
+      <button class="settings-row settings-trigger settings-admin" data-act="admin" onclick={() => (appState.screen = 'admin')}>
+        <span class="settings-label"><strong>{OL.adminTools}</strong></span>
+        <i class="settings-chev" aria-hidden="true">›</i>
+      </button>
+    {/if}
+  </section>
   <!-- T-11-355 상품 위치 안내(기기마다 닫을 때까지) -->
   <ItemsHint />
 
@@ -176,7 +211,6 @@
     <nav class="card settings-links" aria-label={L.help}>
       <button data-act="install-guide" onclick={() => showInstallGuide()}>{L.installGuide} <span aria-hidden="true">›</span></button>
       <a href="/guide/">{L.guide} <span aria-hidden="true">›</span></a>
-      <button data-act="account" onclick={goAccount}>{L.accountLink} <span aria-hidden="true">›</span></button>
       <a href="/faq/">{L.faq} <span aria-hidden="true">›</span></a>
       <button data-act="fairness" onclick={goFairness}>{L.fairness} <span aria-hidden="true">›</span></button>
       <button data-act="type-dex" onclick={goTypeDex}>{FG.typeDex} <span aria-hidden="true">›</span></button>
@@ -198,3 +232,7 @@
 
   <SiteFooter />
 </div>
+
+<style>
+  .settings-admin {margin-top:12px;padding-top:12px;border-top:1px solid var(--line);}
+</style>

@@ -118,7 +118,6 @@ test('닉네임 변경·로그아웃 후 이전 계정의 채팅 연결을 재�
   await page.goto('/');
   await expect.poll(() => tickets).toBe(1);
   await page.locator('[data-act="owner"]').click();
-  const account = page.locator('#account-slot');
   const editor = page.locator('[data-owner-profile-editor]');
   await editor.locator('[data-owner-profile-edit]').click();
   await editor.getByRole('textbox', { name: '구단주 이름' }).fill('새닉네임');
@@ -128,6 +127,8 @@ test('닉네임 변경·로그아웃 후 이전 계정의 채팅 연결을 재�
     .locator('[data-owner-profile-dialog]')
     .getByRole('button', { name: '닫기', exact: true })
     .click();
+  await page.locator('[data-act="settings"]').click();
+  const account = page.locator('#account-slot');
   await account.locator('[data-act="logout"]').click();
   await page.locator('#sheet [data-sheet="0"]').click();
   await expect(account).toContainText('로그인하지 않았어요');
