@@ -12,7 +12,6 @@ import { applySeasonSchedule, closeSeasonSchedule } from '@offside/contracts/ser
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cupKo, cupText } from '../cupText.js';
-import { openLeagueEndsAt } from '../cron/seasonGauge.js';
 import { balanceVersions, cards, careers, leagueEntries, ownerTeams } from '../db/schema.js';
 import { forgetSeasonSchedule, saveSeasonSchedule } from '../seasonSchedule.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
