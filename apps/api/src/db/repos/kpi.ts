@@ -1,4 +1,8 @@
-import { IAP_PRICE_KRW, REMOVE_ADS_PRODUCT } from '@offside/contracts/admin-items';
+import {
+  IAP_PRICE_KRW,
+  REMOVE_ADS_PRICE_SQL,
+  REMOVE_ADS_PRODUCT,
+} from '@offside/contracts/admin-items';
 import { SEASON_PASS_PRICE_KRW } from '@offside/contracts/season-pass';
 import {
   KPI_EXTERNAL_METRICS,
@@ -90,7 +94,8 @@ export async function collectD1Day(
         .bind(start, end),
       d1
         .prepare(
-          `SELECT store, coalesce(sum(kind = 'purchase'), 0) - coalesce(sum(kind = 'refund'), 0) n
+          `SELECT store, coalesce(sum(kind = 'purchase'), 0) - coalesce(sum(kind = 'refund'), 0) n,
+           coalesce(sum(CASE kind WHEN 'refund' THEN -1 ELSE 1 END * ${REMOVE_ADS_PRICE_SQL}), 0) krw
            FROM billing_alerts WHERE test = 0 AND product_id = ?3 AND kind IN ('purchase', 'refund')
            AND created_at >= ?1 AND created_at < ?2 GROUP BY 1`,
         )
@@ -125,10 +130,9 @@ export async function collectD1Day(
     add('iap_krw', String(r.store), r.krw);
     add('iap_buyers', String(r.store), r.buyers);
   }
-  const adPrice = IAP_PRICE_KRW[REMOVE_ADS_PRODUCT];
   for (const r of adFree!.results) {
     add('ad_free_count', String(r.store), r.n);
-    add('ad_free_krw', String(r.store), num(r.n) * adPrice);
+    add('ad_free_krw', String(r.store), r.krw);
   }
   for (const r of passes!.results) {
     add('pass_count', String(r.store), r.n);

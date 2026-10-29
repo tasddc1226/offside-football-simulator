@@ -18,8 +18,17 @@ export const IAP_PRICE_KRW: Record<IapProductId | typeof REMOVE_ADS_PRODUCT, num
   'com.offsidelab.app.scout_1': 1100,
   'com.offsidelab.app.scout_5': 4400,
   'com.offsidelab.app.rename_5': 1100,
-  [REMOVE_ADS_PRODUCT]: 3300,
+  [REMOVE_ADS_PRODUCT]: 6600,
 };
+
+/**
+ * T-11-574 광고 제거 정가를 3,300원에서 6,600원으로 올린 시각(두 스토어 변경 직후). 매출 추정은 판매 시각의 정가로 세서
+ * 지난 판매를 새 가격으로 다시 세지 않는다.
+ */
+export const REMOVE_ADS_PRICE_CHANGED_AT = '2026-10-29T08:00:00.000Z';
+export const REMOVE_ADS_PRICE_BEFORE_KRW = 3300;
+/** created_at 열 기준 광고 제거 정가 SQL 식(값은 코드 상수라 그대로 넣는다). */
+export const REMOVE_ADS_PRICE_SQL = `CASE WHEN created_at >= '${REMOVE_ADS_PRICE_CHANGED_AT}' THEN ${IAP_PRICE_KRW[REMOVE_ADS_PRODUCT]} ELSE ${REMOVE_ADS_PRICE_BEFORE_KRW} END`;
 export const iapProduct = (productId: string) =>
   Object.hasOwn(IAP_PRODUCTS, productId) ? IAP_PRODUCTS[productId as IapProductId] : null;
 

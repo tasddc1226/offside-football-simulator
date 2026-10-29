@@ -5,6 +5,8 @@ import {
   type AdminStats,
   type AnomalyReport,
   type AutomationReport,
+  REMOVE_ADS_PRICE_BEFORE_KRW,
+  REMOVE_ADS_PRICE_CHANGED_AT,
 } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -222,7 +224,7 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
       },
       // T-11-484 기간 밖 구매 · 다른 스토어 · 환불 · 테스트 알림.
       ...[
-        ['b3', 'apple', 'purchase', ago(20), false],
+        ['b3', 'apple', 'purchase', '2026-10-01T00:00:00.000Z', false],
         ['b4', 'google', 'purchase', ago(0), false],
         ['b5', 'apple', 'refund', ago(0), false],
         ['b6', 'google', 'purchase', ago(0), true],
@@ -255,12 +257,16 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
       krw: 0,
       refunded: 1,
     });
-    // 기간 안: 애플 1 · 구글 1 구매, 애플 환불 1 → 3,300원. 전체 기간은 20일 전 구매까지 3건.
+    // 기간 안: 애플 1 · 구글 1 구매, 애플 환불 1. 전체 기간은 가격 인상 전 구매(b3)까지 3건.
+    // T-11-574 금액은 판매 시각의 정가로 센다(인상 전 3,300원, 뒤 6,600원).
+    const adPrice = (at: string) =>
+      at >= REMOVE_ADS_PRICE_CHANGED_AT ? 6600 : REMOVE_ADS_PRICE_BEFORE_KRW;
+    const windowKrw = adPrice(ago(1)) + adPrice(ago(0)) - adPrice(ago(0));
     expect(r.removeAds).toMatchObject({
       count: 2,
       refunds: 1,
-      krw: 3300,
-      allTime: { count: 3, refunds: 1, krw: 6600 },
+      krw: windowKrw,
+      allTime: { count: 3, refunds: 1, krw: windowKrw + REMOVE_ADS_PRICE_BEFORE_KRW },
     });
     expect(r.removeAds.stores).toEqual(
       expect.arrayContaining([
@@ -269,7 +275,7 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
       ]),
     );
     expect(r.daily.reduce((s, d) => s + (d.adCount ?? 0), 0)).toBe(2);
-    expect(r.daily.reduce((s, d) => s + (d.adKrw ?? 0), 0)).toBe(6600);
+    expect(r.daily.reduce((s, d) => s + (d.adKrw ?? 0), 0)).toBe(adPrice(ago(1)) + adPrice(ago(0)));
     expect(r.recent.map((x) => x.productId)).not.toContain(undefined);
     expect(r.recent).toHaveLength(4);
     expect((await call('GET', '/v1/admin/revenue?days=5', { cookie: admin.cookie })).status).toBe(
