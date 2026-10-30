@@ -1,0 +1,32 @@
+import type { Translation } from '../core';
+import type { TutorialMsgs } from '../ko/tutorial';
+
+export const tutorial: Translation<TutorialMsgs> = {
+  step: (p) => `${p.n} / ${p.total}`,
+  skip: '略過',
+  next: '下一步',
+  done: '我知道了',
+  tapHint: '點擊發光的地方',
+  label: '首次生涯導覽',
+  newTitle: '建立第一位球員',
+  newBody: '從高三到退役，跟著一位球員走完整個生涯。點這裡開始。',
+  posTitle: '選擇位置',
+  posBody: '每個位置重要的能力值與累積的紀錄都不一樣。',
+  focusTitle: (p) => `選擇 ${p.n} 項主力能力值`,
+  focusBody: '選擇的組合會決定球員類型，初始能力值也會往那個方向偏重。',
+  candidatesTitle: '查看候選人',
+  candidatesBody: '選好主力能力值後，點這個按鈕。',
+  candsTitle: '從三位候選人中選一位',
+  candsBody: '能力值總和相同，但分配與潛力不同。可以用重抽券重新抽，用高級球探券尋找更好的候選人。',
+  startTitle: '開始生涯',
+  startBody: '用選好的候選人進入第一個賽季。',
+  goTitle: '推進賽季',
+  goBody: '每點一次，賽季就往前推進一個階段。訓練與自我投資可在上方卡片中更改。',
+  choiceTitle: '事件來了',
+  choiceBody: '選一個吧。能力值與人氣會依你的選擇而改變。',
+  seasonTitle: '第一個賽季結束了',
+  seasonBody: '一整年的紀錄都整理在這裡。成長的能力值可以在球員分頁查看。',
+  retireTitle: '退役後就會登上名人堂',
+  retireBody: '紀錄・獎盃・個人獎累積越多，傳奇分數就越高。繼續你的生涯吧。',
+  replay: '重看教學',
+};

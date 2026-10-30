@@ -1,4 +1,5 @@
 // T-11-263 매출(웹 admin/AdminRevenue.svelte): 기간(오늘 · 7일 · 30일 · 90일) 합 · 날짜별 · 상품별 · 스토어별 · 최근 결제.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import * as api from '@offside/app-core/api/admin';
@@ -13,6 +14,7 @@ import {
   productName,
   recentLine,
   revenueSummary,
+  dayKrw,
   storeName,
   won,
 } from '@offside/app-core/admin/users';
@@ -42,8 +44,8 @@ export default function AdminRevenue() {
   }
   useEffect(() => void load(), []);
 
-  const small = { fontSize: rem(0.8125) } as const;
-  const tiny = { fontSize: rem(0.75) } as const;
+  const small = { fontSize: rem(FONT.label) } as const;
+  const tiny = { fontSize: rem(FONT.caption) } as const;
   const row = {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -59,7 +61,7 @@ export default function AdminRevenue() {
     </Txt>
   );
   const r = data;
-  const max = r ? Math.max(1, ...r.daily.map((d) => d.krw)) : 1;
+  const max = r ? Math.max(1, ...r.daily.map(dayKrw)) : 1;
   return (
     <View testID="admin-revenue" style={{ gap: 14 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -114,16 +116,16 @@ export default function AdminRevenue() {
             {r.daily.length > 1 ? (
               <View style={{ gap: 6 }}>
                 <Txt bold style={small}>
-                  날짜별 매출
+                  날짜별 매출(광고 제거 포함)
                 </Txt>
                 <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 80 }}>
                   {r.daily.map((d) => (
                     <View
                       key={d.day}
-                      accessibilityLabel={`${d.day} ${won(d.krw)}`}
+                      accessibilityLabel={`${d.day} ${won(dayKrw(d))}`}
                       style={{
                         flex: 1,
-                        height: `${Math.max(1, Math.round((d.krw / max) * 100))}%`,
+                        height: `${Math.max(1, Math.round((dayKrw(d) / max) * 100))}%`,
                         backgroundColor: c.accent,
                         borderTopLeftRadius: 2,
                         borderTopRightRadius: 2,

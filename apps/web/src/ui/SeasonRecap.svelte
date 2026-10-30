@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SeasonSelect from './SeasonSelect.svelte';
   // T-11-128 구단주 시즌 결산 — 끝난 시즌의 기록(서버가 굳힌 값)과 받은 휘장을 한 화면에 모아 보여 준다.
   // 구단주 화면의 '시즌 결산' 카드로 연다. 열면 그 시즌 결산을 '봤다'고 표시한다(카드의 NEW).
   // 맨 위 시즌 카드(등급 · 한 줄 요약 · 자랑거리) → 선수단(단체사진 · 카드 흐름) → 숫자 → 이 시즌의 얼굴 → 카드 등급 → 팀 → 순위 → 휘장 → 남긴 기록 순.
@@ -138,12 +139,7 @@
     <h1>{L.title({ season: name || (season !== null ? teamSeasonLabel(season) : L.cardTitle) })}</h1>
     {#if recap}<p class="muted fs-sm" data-recap-cutoff>{recapCutoffText(recap)}</p>{/if}
     {#if seasons.length > 1}
-      <label class="recap-picker">
-        <span class="muted fs-sm">{L.pickSeason}</span>
-        <select data-recap-season value={String(season ?? '')} onchange={(e) => void load(Number(e.currentTarget.value))}>
-          {#each [...seasons].reverse() as s (s)}<option value={String(s)}>{teamSeasonLabel(s)}</option>{/each}
-        </select>
-      </label>
+      <div class="recap-picker"><SeasonSelect compact caption={L.pickSeason} label={L.pickSeason} value={season ?? seasons.at(-1) ?? 0} {seasons} onpick={(v) => void load(Number(v))} data-recap-season /></div>
     {/if}
   </header>
   {/if}
@@ -394,7 +390,7 @@
     align-items: center;
     gap: 6px;
     padding: 18px 18px 20px;
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
     color: #eef4ef;
     text-align: center;
     background:
@@ -412,8 +408,8 @@
     font-weight: 700;
     letter-spacing: 0.06em;
   }
-  .hero-brand { color: #f0b437; font-size: 1.125rem; }
-  .hero-eyebrow { color: #9fb0a5; font-size: 0.875rem; align-self: center; }
+  .hero-brand { color: #f0b437; font-size: var(--fs-title3); }
+  .hero-eyebrow { color: #9fb0a5; font-size: var(--fs-body2); align-self: center; }
   .hero-season {
     margin: 4px 0 0;
     font-size: clamp(1.75rem, 8vw, 2.5rem);
@@ -428,15 +424,15 @@
   }
   .hero-tier {
     font-family: var(--display);
-    font-size: 1.5rem;
+    font-size: var(--fs-title1);
     letter-spacing: 0.02em;
     color: var(--tier-light);
   }
-  .hero-reason { font-size: 0.8125rem; color: #9fb0a5; }
+  .hero-reason { font-size: var(--fs-label); color: #9fb0a5; }
   .hero-headline {
     margin: 8px 0 2px;
     max-width: 30ch;
-    font-size: 1.0625rem;
+    font-size: var(--fs-title3);
     font-weight: 700;
     line-height: 1.5;
     text-wrap: balance;
@@ -452,11 +448,11 @@
   }
   .hero-pills li {
     padding: 5px 12px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     border: 1px solid color-mix(in srgb, var(--tier-light) 55%, transparent);
     background: color-mix(in srgb, var(--tier) 22%, transparent);
     color: var(--tier-mark);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     font-weight: 700;
     animation: rise 0.5s ease-out both;
     animation-delay: calc(0.35s + var(--i) * 0.07s);
@@ -500,11 +496,11 @@
     align-items: center;
     gap: 2px;
     padding: 12px 6px 10px;
-    border-radius: 14px;
+    border-radius: var(--radius-md);
     background: var(--surface-2);
     min-width: 0;
   }
-  .big-numbers dt { font-size: 0.75rem; color: var(--muted); }
+  .big-numbers dt { font-size: var(--fs-caption); color: var(--muted); }
   .big-numbers dd {
     margin: 0;
     font-family: var(--display);
@@ -533,8 +529,8 @@
     min-height: 44px;
     min-width: 0;
     padding: 14px;
-    border-radius: 14px;
-    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
     background: var(--surface-2);
   }
   .face-best {
@@ -557,11 +553,11 @@
     animation: pop 0.7s cubic-bezier(0.2, 1.4, 0.4, 1) both;
   }
   .face-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .face-eyebrow { font-size: 0.75rem; font-weight: 600; opacity: 0.8; }
-  .face-name { font-size: 1.125rem; line-height: 1.3; overflow-wrap: anywhere; }
-  .face-sub { font-size: 0.8125rem; opacity: 0.8; overflow-wrap: anywhere; }
-  .face-score { margin-top: 6px; font-family: var(--display); font-size: 1.125rem; font-weight: 700; }
-  .face-peak { font-family: var(--display); font-size: 0.9375rem; font-weight: 700; opacity: 0.85; }
+  .face-eyebrow { font-size: var(--fs-caption); font-weight: 600; opacity: 0.8; }
+  .face-name { font-size: var(--fs-title3); line-height: 1.3; overflow-wrap: anywhere; }
+  .face-sub { font-size: var(--fs-label); opacity: 0.8; overflow-wrap: anywhere; }
+  .face-score { margin-top: 6px; font-family: var(--display); font-size: var(--fs-title3); font-weight: 700; }
+  .face-peak { font-family: var(--display); font-size: var(--fs-body1); font-weight: 700; opacity: 0.85; }
   .face-goals {
     display: flex;
     align-items: baseline;
@@ -574,14 +570,14 @@
     line-height: 1;
     color: var(--accent-text);
   }
-  .face-goals small { font-family: var(--body); font-size: 0.8125rem; color: var(--muted); }
+  .face-goals small { font-family: var(--body); font-size: var(--fs-label); color: var(--muted); }
 
   /* 카드 등급 — 한 줄 막대와 범례. */
   .tier-bar {
     display: flex;
     gap: 2px;
     height: 18px;
-    border-radius: 9px;
+    border-radius: var(--radius-sm);
     overflow: hidden;
   }
   .tier-bar span {
@@ -598,7 +594,7 @@
     margin: 0;
     padding: 0;
     list-style: none;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
   }
   .tier-legend li { display: flex; align-items: center; gap: 6px; min-width: 0; }
   .tier-legend li.none { opacity: 0.45; }
@@ -610,19 +606,19 @@
     background: var(--c-base);
     border: 1px solid var(--c-line);
   }
-  .tier-legend b { margin-left: auto; font-family: var(--display); font-size: 0.9375rem; }
+  .tier-legend b { margin-left: auto; font-family: var(--display); font-size: var(--fs-body1); }
 
   /* 팀 — 승 · 무 · 패 비율 막대. */
   .team-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-  .team-name { font-size: 1.0625rem; overflow-wrap: anywhere; }
+  .team-name { font-size: var(--fs-title3); overflow-wrap: anywhere; }
   .wdl {
     display: flex;
     gap: 2px;
     height: 26px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     overflow: hidden;
     font-family: var(--display);
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     font-weight: 700;
   }
   .wdl span {
@@ -641,16 +637,16 @@
 
   /* 시즌 순위 — 상위 몇 %인지 막대로. */
   .rank-list { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
-  .rank-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 4px 8px; font-size: 0.875rem; }
+  .rank-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 4px 8px; font-size: var(--fs-body2); }
   .rank-row > span { grid-column: 1 / -1; }
-  .rank-row b { min-width: 0; font-family: var(--display); font-size: 1.0625rem; }
+  .rank-row b { min-width: 0; font-family: var(--display); font-size: var(--fs-title3); }
   .rank-row em {
     white-space: nowrap;
     font-style: normal;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     font-weight: 700;
     padding: 2px 8px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--surface-2);
     color: var(--muted);
   }

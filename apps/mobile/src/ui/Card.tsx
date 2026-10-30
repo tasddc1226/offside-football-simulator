@@ -1,25 +1,20 @@
 // 카드(웹 .card) · 초록 그라운드 카드(웹 .hero-home, 분필 선 포함).
 import type { ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
-import { useColors } from '../theme/useColors';
-import { useIsDark } from '../theme/useColors';
+import { RADIUS } from '@offside/app-core/design-tokens';
+import { useColors, useIsDark } from '../theme/useColors';
 
 export function useShadow(): ViewStyle {
   const dark = useIsDark();
+  // T-11-396 흰 카드가 회색 바탕에서 살짝 뜰 만큼만(웹 --shadow). 다크는 그림자 없이 면 색으로 나눈다.
   return dark
-    ? {
-        shadowColor: '#000',
-        shadowOpacity: 0.5,
-        shadowRadius: 14,
-        shadowOffset: { width: 0, height: 10 },
-        elevation: 3,
-      }
+    ? {}
     : {
-        shadowColor: '#14201a',
-        shadowOpacity: 0.12,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 6 },
-        elevation: 2,
+        shadowColor: '#11141a',
+        shadowOpacity: 0.04,
+        shadowRadius: 2,
+        shadowOffset: { width: 0, height: 1 },
+        elevation: 1,
       };
 }
 
@@ -39,7 +34,11 @@ export function Card({
   return (
     <View
       testID={testID}
-      style={[{ backgroundColor: c.surface, borderRadius: 16, padding: 18, gap }, shadow, style]}
+      style={[
+        { backgroundColor: c.surface, borderRadius: RADIUS.lg, padding: 20, gap },
+        shadow,
+        style,
+      ]}
     >
       {children}
     </View>
@@ -62,7 +61,7 @@ export function PitchCard({
       style={[
         {
           backgroundColor: c.pitch,
-          borderRadius: 20,
+          borderRadius: RADIUS.lg,
           paddingTop: 24,
           paddingHorizontal: 20,
           paddingBottom: 20,

@@ -9,7 +9,7 @@ import { careers } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueCookie, issueGoogleCookie } from '../test/http.js';
 import { ownerTiersOf } from '../db/repos/ownerTiers.js';
-import { closeStateOf, runSeasonClose } from './seasonClose.js';
+import { closeDivisions, closeStateOf, runSeasonClose } from './seasonClose.js';
 
 const RecapRes = successEnvelope(SeasonRecapResponseSchema);
 const HonorsRes = successEnvelope(OwnerHonorsResponseSchema);
@@ -127,7 +127,8 @@ describe('T-11-128 시즌 결산', () => {
     );
     expect(pending.data.status).toBe('pending');
 
-    expect(await closeAll()).toEqual(['records', 'ach', 'ranks', 'honors', 'specials']);
+    // T-11-375 디비전 단계는 보상 시작 시즌(기본 2) 전이라 휘장 · 리롤권 없이 지나간다.
+    expect(await closeAll()).toEqual(['records', 'ach', 'ranks', 'honors', 'specials', 'division']);
     expect(await closeStateOf(ctx.db, 0)).toMatchObject({
       step: 'done',
       cutoff: CUTOFF,
@@ -224,5 +225,85 @@ describe('T-11-128 시즌 결산', () => {
     ).data;
     expect(all.seasons).toEqual([0]);
     expect(all.honors).toHaveLength(6);
+  });
+
+  describe('T-11-375 시즌 마감 디비전 보상', () => {
+    const NOW = '2026-11-01T00:00:00.000Z';
+    const SEASON = 2;
+    const CUT = '2026-10-31T00:00:00.000Z';
+    const team = (
+      profileId: string,
+      o: { division: number; filled?: number; games?: number; createdAt?: string },
+    ) =>
+      ctx.db.run(sql`
+        insert into owner_teams (id, profile_id, season, name, formation, slots_json, filled, ovr, rating, division, wins, draws, losses, created_at, updated_at)
+        values (${crypto.randomUUID()}, ${profileId}, ${SEASON}, ${`팀 ${o.division}`}, '4-3-3', '[]', ${o.filled ?? 11}, 80, 1000,
+          ${o.division}, ${o.games ?? 30}, 0, 0, ${o.createdAt ?? BEFORE}, ${BEFORE})`);
+    const rerolls = async (profileId: string) => {
+      const [row] = await ctx.db.all<{ qty: number }>(
+        sql`select qty from owner_items where profile_id = ${profileId} and item = 'reroll'`,
+      );
+      return row?.qty ?? 0;
+    };
+    const honorOf = async (profileId: string) => {
+      const [row] = await ctx.db.all<{ value: number }>(
+        sql`select value from owner_honors where profile_id = ${profileId} and season = ${SEASON} and kind = 'division'`,
+      );
+      return row?.value ?? null;
+    };
+
+    it('자격을 갖춘 프로 II 이상에만 휘장과 리롤권(가안 1 · 2 · 3 · 4 · 6)을 한 번만 준다', async () => {
+      const master = await issueGoogleCookie(ctx);
+      const pro2 = await issueGoogleCookie(ctx);
+      const semi = await issueGoogleCookie(ctx);
+      const few = await issueGoogleCookie(ctx);
+      const thin = await issueGoogleCookie(ctx);
+      const late = await issueGoogleCookie(ctx);
+      const guest = await issueCookie(ctx);
+      await team(master.profileId, { division: 7 });
+      await team(pro2.profileId, { division: 3 });
+      await team(semi.profileId, { division: 2 });
+      // 경기 수 · 선발 은퇴 선수 수 · 마감 뒤에 만든 팀은 자격 밖.
+      await team(few.profileId, { division: 6, games: 19 });
+      await team(thin.profileId, { division: 6, filled: 7 });
+      await team(late.profileId, { division: 6, createdAt: NOW });
+      await team(guest.profileId, { division: 7 });
+      await ctx.db.run(
+        sql`insert into owner_items (profile_id, item, qty, updated_at) values (${pro2.profileId}, 'reroll', 5, ${BEFORE})`,
+      );
+
+      expect(await closeDivisions(ctx.db, SEASON, CUT, NOW)).toBe(2);
+      expect(await honorOf(master.profileId)).toBe(7);
+      expect(await honorOf(pro2.profileId)).toBe(3);
+      for (const p of [semi, few, thin, late, guest]) expect(await honorOf(p.profileId)).toBeNull();
+      expect(await rerolls(master.profileId)).toBe(6);
+      expect(await rerolls(pro2.profileId)).toBe(6);
+      expect(await rerolls(few.profileId)).toBe(0);
+
+      // 다시 돌아도(다른 시각) 두 번 주지 않는다.
+      expect(await closeDivisions(ctx.db, SEASON, CUT, '2026-11-01T00:05:00.000Z')).toBe(0);
+      expect(await rerolls(master.profileId)).toBe(6);
+    });
+
+    it('보상 시작 시즌 전(시즌 1)에는 아무것도 주지 않는다', async () => {
+      const a = await issueGoogleCookie(ctx);
+      await ctx.db.run(sql`
+        insert into owner_teams (id, profile_id, season, name, formation, slots_json, filled, ovr, rating, division, wins, created_at, updated_at)
+        values (${crypto.randomUUID()}, ${a.profileId}, 1, '팀', '4-3-3', '[]', 11, 80, 1400, 7, 40, ${BEFORE}, ${BEFORE})`);
+      expect(await closeDivisions(ctx.db, 1, CUT, NOW)).toBe(0);
+      expect(await rerolls(a.profileId)).toBe(0);
+    });
+
+    it('운영 도구에서 보상 시작 시즌 · 리롤권 수를 바꾸면 그 값으로 준다', async () => {
+      const a = await issueGoogleCookie(ctx);
+      await ctx.db.run(sql`
+        insert into owner_teams (id, profile_id, season, name, formation, slots_json, filled, ovr, rating, division, wins, created_at, updated_at)
+        values (${crypto.randomUUID()}, ${a.profileId}, 1, '팀', '4-3-3', '[]', 11, 80, 1400, 7, 40, ${BEFORE}, ${BEFORE})`);
+      await ctx.db.run(sql`
+        insert into balance_versions (status, note, values_json, created_by, created_at, updated_at, activated_at)
+        values ('active', '', ${JSON.stringify({ teamDivRewardFrom: 1, teamDivReward7: 9 })}, 'admin', ${BEFORE}, ${BEFORE}, ${BEFORE})`);
+      expect(await closeDivisions(ctx.db, 1, CUT, NOW)).toBe(1);
+      expect(await rerolls(a.profileId)).toBe(9);
+    });
   });
 });

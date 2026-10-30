@@ -71,6 +71,13 @@ type SchemaRow = { type: string; name: string; sql: string };
 
 const q = (name: string) => `"${name.replace(/"/g, '""')}"`;
 
+/** 열 수만큼 `a + b + …`로 이으면 SQLite 식 깊이 상한(100)을 넘는다(careers 47열). 반씩 묶어 깊이를 log로 둔다. */
+function balancedSum(terms: string[]): string {
+  if (terms.length <= 2) return terms.join(' + ') || '0';
+  const mid = terms.length >> 1;
+  return `(${balancedSum(terms.slice(0, mid))}) + (${balancedSum(terms.slice(mid))})`;
+}
+
 /** SQLite 리터럴. D1은 값을 null·number·string, BLOB은 바이트 배열로 돌려준다. */
 function literal(v: unknown): string {
   if (v === null || v === undefined) return 'NULL';
@@ -299,11 +306,11 @@ async function exportStep(
       if (!tableSql.has(name)) continue;
       const columns = (await db.prepare(`PRAGMA table_info(${q(name)})`).all<{ name: string }>())
         .results;
-      const size = columns
+      const size = balancedSum(
         // SQLite reads TEXT/BLOB byte lengths from record metadata. Casting first
         // loads wide JSON overflow pages just to size rows we may not export yet.
-        .map((c) => `coalesce(octet_length(${q(c.name)}), 0) + 16`)
-        .join(' + ');
+        columns.map((c) => `(coalesce(octet_length(${q(c.name)}), 0) + 16)`),
+      );
       let candidates = 64;
       for (;;) {
         const page = await db

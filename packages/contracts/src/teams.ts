@@ -7,7 +7,7 @@ import {
   PeakProfileSchema,
 } from './careers.js';
 import { PUBLIC_NAME_CHARS } from './content-filter.js';
-import { CUP_STAGES } from './cup.js';
+import { CUP_DIVISIONS, CUP_STAGES } from './cup.js';
 import { isOwnerTitle } from './owner-title.js';
 import {
   ACH_CATEGORIES,
@@ -26,6 +26,7 @@ import {
 import { IsoUtcSchema } from './primitives.js';
 import { CARD_SPECIAL_KINDS } from './card-special.js';
 import { TeamCoachSchema } from './manager.js';
+import { TEAM_DIVISION_TOP } from './team-division.js';
 import { TEAM_LOGO_IMG_MAX, TEAM_LOGO_PATTERNS, TEAM_LOGO_SHAPES } from './team-logo.js';
 
 // T-10-092 구단주 팀(팀 슬롯). 값(포메이션·적합도)은 zod 없는 `./owner-team.ts`에 있다.
@@ -91,6 +92,8 @@ export const ManagerNameSchema = z
 
 /** 팀 시즌: 서비스 시즌 id, 0 = 프리시즌(첫 시즌 개막 전). */
 export const TeamSeasonSchema = z.number().int().min(0);
+/** T-11-375 디비전 index(0 아마추어 ~ 7 마스터). */
+export const TeamDivisionSchema = z.number().int().min(0).max(TEAM_DIVISION_TOP);
 /** `?season=` — 없으면 지금 시즌. */
 export const TeamSeasonQuerySchema = z.coerce.number().int().min(0).max(999).optional();
 /** 고를 수 있는 시즌(0 = 프리시즌). */
@@ -142,6 +145,9 @@ export const TeamPlayerSchema = z.strictObject({
   /** T-11-105 시너지용 유형 id·주발. 구버전 응답에는 없다. */
   type: z.string().nullable().optional(),
   foot: z.string().nullable().optional(),
+  /** T-11-467 시너지 '리그 컬러' · '클럽 동료'용 가장 오래 뛴 프로 리그 id · 클럽 id. 아직 모르면 없다. */
+  mainLeague: z.string().nullable().optional(),
+  mainClub: z.string().nullable().optional(),
   /** T-11-114 카드 시즌(0 = 프리시즌). 팀 시즌보다 앞이면 와일드카드다. 구버전 응답에는 없다. */
   season: z.number().int().nonnegative().optional(),
   /** T-11-180 키(cm)·몸무게(kg). 체격을 입력하지 않은 옛 커리어·구버전 응답에는 없다. */
@@ -187,9 +193,17 @@ export const TeamPresetSchema = z.strictObject({
   formation: FormationIdSchema,
   slots: z.array(CareerIdParamSchema.nullable()).length(LINEUP_SIZE),
   layout: TeamLayoutSchema.nullable(),
+  /** T-11-570 컵 경기에 이 프리셋으로 나간다(한 팀에 하나까지). 없으면 컵도 팀 명단으로 뛴다. */
+  cup: z.literal(true).optional(),
+  /** T-11-570 컵 명단 프리셋의 팀 OVR · 선발 수(서버가 저장할 때 계산해 채운다, 보낸 값은 무시). */
+  ovr: z.number().int().optional(),
+  filled: z.number().int().optional(),
 });
 export type TeamPreset = z.infer<typeof TeamPresetSchema>;
-export const TeamPresetsSchema = z.array(TeamPresetSchema).max(TEAM_PRESET_MAX);
+export const TeamPresetsSchema = z
+  .array(TeamPresetSchema)
+  .max(TEAM_PRESET_MAX)
+  .refine((ps) => ps.filter((p) => p.cup).length <= 1, { message: 'one cup preset' });
 
 export const OwnerTeamSchema = z.strictObject({
   id: TeamIdSchema,
@@ -204,6 +218,8 @@ export const OwnerTeamSchema = z.strictObject({
   lines: TeamLinesSchema,
   /** 팀 레이팅(경기 결과로 오르내린다). */
   rating: z.number().int(),
+  /** T-11-375 디비전 index(0 아마추어 ~ 7 마스터, 강등 보호 포함). 배포 전 응답엔 없다. */
+  division: TeamDivisionSchema.optional(),
   record: TeamRecordSchema,
   likes: count,
   views: count,
@@ -223,6 +239,10 @@ export type OwnerTeam = z.infer<typeof OwnerTeamSchema>;
 export const OwnerTeamResponseSchema = z.strictObject({
   season: TeamSeasonSchema,
   current: TeamSeasonSchema.nullable(),
+  /**
+   * T-11-552 끝나지 않은 컵에 참가 중인 지난 시즌(시즌 1 제3회 컵). 그 시즌 팀은 컵이 끝날 때까지 고친다. 옛 응답에는 없다.
+   */
+  cupSeason: TeamSeasonSchema.nullable().optional(),
   seasons: z.array(TeamSeasonOptionSchema),
   team: OwnerTeamSchema.nullable(),
   players: z.array(TeamPlayerSchema),
@@ -231,10 +251,24 @@ export const OwnerTeamResponseSchema = z.strictObject({
   /** 오늘(한국 시각) 남은 경기 수. */
   matchesLeft: z.number().int().min(0),
   matchesPerDay: z.number().int().min(1),
+  /** T-11-376 지난 시즌 선수 급여 예산(운영 도구 밸런스 활성 값). 배포 전 응답엔 없다 — 화면은 PAST_SALARY_BUDGET을 쓴다. */
+  pastSalaryBudget: z.number().int().min(0).optional(),
   /** T-11-113 창단 멤버(프리시즌에 은퇴 선수를 남긴 구단주). 배포 전 응답엔 없다. */
   founder: z.boolean().optional(),
+  /** T-11-512 클럽 멤버십 서포터(구독 중). 배포 전 응답엔 없다. */
+  member: z.boolean().optional(),
   /** T-11-150 내 대표 칭호(구단주 탭 닉네임 옆). 달지 않았으면 null, 배포 전 응답엔 없다. */
   ownerTitle: titleField,
+  /**
+   * T-11-571 리그 체력(운영 도구에서 켰을 때만). rate는 단계마다 깎는 비율, streaks는 직전 리그 경기까지 연속 선발 수
+   * (커리어 id → 수, 1 이상만). 다음 리그 경기 단계는 contracts league.ts leagueFatigueSteps로 센다.
+   */
+  fatigue: z
+    .strictObject({
+      rate: z.number().min(0),
+      streaks: z.record(z.string(), z.number().int().min(1)),
+    })
+    .optional(),
 });
 export type OwnerTeamResponse = z.infer<typeof OwnerTeamResponseSchema>;
 
@@ -294,7 +328,11 @@ export type TeamOpponent = z.infer<typeof TeamOpponentSchema>;
 export const TeamOpponentsResponseSchema = z.strictObject({ items: z.array(TeamOpponentSchema) });
 export type TeamOpponentsResponse = z.infer<typeof TeamOpponentsResponseSchema>;
 
-export const PlayTeamMatchBodySchema = z.strictObject({ opponentTeamId: TeamIdSchema });
+/** T-11-387 live: true면 문자중계 도중 장면을 고르는 경기로 시작한다(옛 앱은 보내지 않아 한 번에 끝난다). */
+export const PlayTeamMatchBodySchema = z.strictObject({
+  opponentTeamId: TeamIdSchema,
+  live: z.boolean().optional(),
+});
 export type PlayTeamMatchBody = z.infer<typeof PlayTeamMatchBodySchema>;
 
 export const TeamMatchSideSchema = z.strictObject({
@@ -307,6 +345,10 @@ export const TeamMatchSideSchema = z.strictObject({
   goals: z.number().int().min(0),
   /** 이 경기로 바뀐 그 팀 레이팅(T-10-095 전에 치른 경기는 기록이 없어 null). */
   ratingChange: z.number().int().nullable(),
+  /** T-11-379 기대 득점(소수 한 자리). 이 기능 전에 치른 경기에는 없다. */
+  xg: z.number().min(0).optional(),
+  /** T-11-379 그 경기 줄 힘(시너지 · 감독 보정 뒤, 반올림). 이 기능 전에 치른 경기에는 없다. */
+  lines: TeamLinesSchema.optional(),
 });
 export type TeamMatchSide = z.infer<typeof TeamMatchSideSchema>;
 
@@ -318,8 +360,58 @@ export const TeamMatchEventSchema = z.strictObject({
   /** 조회한 구단주 쪽 선수의 커리어 id — 웹이 이 기기에 있는 (비공개) 이름으로 바꿔 보여 준다. 상대 쪽은 늘 null. */
   scorerId: z.string().nullable(),
   assistId: z.string().nullable(),
+  /** T-11-387 득점자 자리. 이 기능 전에 치른 경기에는 없다. */
+  slot: DetailPosSchema.optional(),
 });
 export type TeamMatchEvent = z.infer<typeof TeamMatchEventSchema>;
+
+// ───────── 장면 경기(T-11-387) ─────────
+// 장면 · 선택지 id와 규칙은 `@offside/contracts/team-moments`. 확률은 서버가 그 선수로 계산한 정수 %다(찬스는 골, 위기는 막을 확률).
+
+export const TeamMomentChoiceSchema = z.strictObject({
+  id: z.string().max(32),
+  pct: z.number().int().min(0).max(100),
+  /** 동료가 마무리한다. */
+  mate: z.boolean(),
+  /** 실패하면 상대 역습 골 확률(%). */
+  risk: z.number().int().min(0).max(100),
+  /** 막아 내면 우리 역습 골 확률(%). */
+  gain: z.number().int().min(0).max(100),
+});
+export type TeamMomentChoice = z.infer<typeof TeamMomentChoiceSchema>;
+
+/** 장면 한 사람. id는 조회한 구단주 쪽 선수의 커리어 id(웹 · 앱이 기기 안 이름으로 바꾼다). */
+export const TeamMomentActorSchema = z.strictObject({
+  name: z.string(),
+  id: z.string().nullable(),
+  slot: DetailPosSchema,
+});
+export type TeamMomentActor = z.infer<typeof TeamMomentActorSchema>;
+
+export const TeamMomentSchema = z.strictObject({
+  index: z.number().int().min(0),
+  minute: z.number().int().min(1).max(90),
+  kind: z.enum(['chance', 'crisis']),
+  situation: z.string().max(32),
+  actor: TeamMomentActorSchema,
+  mate: TeamMomentActorSchema,
+  opp: TeamMomentActorSchema,
+  choices: z.array(TeamMomentChoiceSchema).min(1).max(3),
+  /** 판정한 장면이면 고른 선택지('auto' = 자동 선택)와 결과. */
+  picked: z.string().max(32).optional(),
+  ok: z.boolean().optional(),
+});
+export type TeamMoment = z.infer<typeof TeamMomentSchema>;
+
+/** 진행 중인 장면 경기. moments는 아직 고르지 않은 장면이다. choiceSec 안에 안 고르면 자동 선택한다. */
+export const TeamLiveSchema = z.strictObject({
+  moments: z.array(TeamMomentSchema),
+  choiceSec: z.number().int().min(1),
+});
+export type TeamLive = z.infer<typeof TeamLiveSchema>;
+
+export const TeamMomentBodySchema = z.strictObject({ choice: z.string().min(1).max(32) });
+export type TeamMomentBody = z.infer<typeof TeamMomentBodySchema>;
 
 /** 한 경기. home은 경기를 건 팀이다. mine은 조회한 구단주 팀의 쪽. */
 export const TeamMatchSchema = z.strictObject({
@@ -330,6 +422,8 @@ export const TeamMatchSchema = z.strictObject({
   mine: z.enum(['home', 'away']),
   /** T-11-098 친구와 치른 친선전(레이팅·전적에 들어가지 않는다). 랭크 경기와 구버전 응답에는 없다. */
   friendly: z.boolean().optional(),
+  /** T-11-387 화면에서 고른 장면과 결과(장면 경기만). */
+  moments: z.array(TeamMomentSchema).optional(),
   createdAt: IsoUtcSchema,
 });
 export type TeamMatch = z.infer<typeof TeamMatchSchema>;
@@ -338,9 +432,24 @@ export const PlayTeamMatchResponseSchema = z.strictObject({
   match: TeamMatchSchema,
   record: TeamRecordSchema,
   rating: z.number().int(),
+  /** T-11-375 이 경기 전후 내 디비전(같으면 승강 없음). 배포 전 응답엔 없다. */
+  division: z.strictObject({ from: TeamDivisionSchema, to: TeamDivisionSchema }).optional(),
   matchesLeft: z.number().int().min(0),
+  /**
+   * T-11-387 장면 경기를 시작했으면 고를 장면들. 이때 match는 장면을 뺀 지금까지의 골만 담고, record · rating은 경기 전
+   * 값이다. 마지막 장면을 고르거나 마감하면 TeamMomentResponse.final로 결과가 온다.
+   */
+  live: TeamLiveSchema.optional(),
 });
 export type PlayTeamMatchResponse = z.infer<typeof PlayTeamMatchResponseSchema>;
+
+/** 장면 하나를 고른 결과. goals는 이 장면에서 난 골, final은 경기가 끝났을 때의 경기 결과다. */
+export const TeamMomentResponseSchema = z.strictObject({
+  moment: TeamMomentSchema,
+  goals: z.array(TeamMatchEventSchema),
+  final: PlayTeamMatchResponseSchema.optional(),
+});
+export type TeamMomentResponse = z.infer<typeof TeamMomentResponseSchema>;
 
 /** T-11-269 경기 기록 다음 쪽 커서(`<createdAt>_<경기 id>`). 첫 쪽에는 붙이지 않는다. */
 export const TeamMatchCursorSchema = z
@@ -374,13 +483,17 @@ const winDrawLoss = {
   ga: z.number().int().min(0),
 };
 
-/** 우리 팀 선수 한 명의 그 시즌 랭크 경기 골 · 도움. careerId가 null이면 유스 선수(한 줄로 모은다). */
+/** 우리 팀 선수 한 명의 그 시즌 랭크 경기 출전 · 골 · 도움. careerId가 null이면 유스 선수(한 줄로 모은다). */
 export const TeamStatsPlayerSchema = z.strictObject({
   careerId: z.string().nullable(),
   /** 지금 공개 이름, 없으면 익명 표기(웹 · 앱이 이 기기에 남은 이름으로 바꿔 보여 준다). */
   name: z.string(),
   goals: z.number().int().min(0),
   assists: z.number().int().min(0),
+  /** T-11-518 선발로 뛴 경기 수(선발 명단이 남은 경기만, 유스 선수는 빈 자리가 있던 경기). 전 응답에는 없다. */
+  apps: z.number().int().min(0).optional(),
+  /** T-11-518 가장 많이 선 자리. 출전 기록이 없으면 없다. */
+  pos: DetailPosSchema.optional(),
 });
 export type TeamStatsPlayer = z.infer<typeof TeamStatsPlayerSchema>;
 
@@ -433,6 +546,41 @@ export const TeamStatsSummarySchema = z.strictObject({
 });
 export type TeamStatsSummary = z.infer<typeof TeamStatsSummarySchema>;
 
+/** T-11-379 줄 비교 세 가지(공격 대 상대 수비벽 · 중원 대 상대 중원 · 내 수비벽 대 상대 공격). */
+export const TeamReportLineSchema = z.enum(['atk', 'mid', 'def']);
+export type TeamReportLine = z.infer<typeof TeamReportLineSchema>;
+const lineEdges = z.strictObject({ atk: z.number(), mid: z.number(), def: z.number() });
+
+/** T-11-379 포메이션 하나의 전적과 기대 득점 합. */
+export const TeamReportFormationSchema = z.strictObject({
+  formation: FormationIdSchema,
+  ...winDrawLoss,
+  xgFor: z.number().min(0),
+  xgAgainst: z.number().min(0),
+});
+export type TeamReportFormation = z.infer<typeof TeamReportFormationSchema>;
+
+/** T-11-379 경기 리포트(기대 득점이 남은 랭크 경기만 센다). */
+export const TeamStatsReportSchema = z.strictObject({
+  /** 기대 득점이 남은 경기 수. 0이면 화면이 리포트를 그리지 않는다. */
+  matches: z.number().int().min(0),
+  /** 기대 득점 · 기대 실점 합(소수 한 자리)과 그 경기들의 실제 득실. */
+  xgFor: z.number().min(0),
+  xgAgainst: z.number().min(0),
+  gf: z.number().int().min(0),
+  ga: z.number().int().min(0),
+  /** 줄 비교 평균(내 쪽 − 상대 쪽, 소수 한 자리). */
+  edges: lineEdges,
+  /** 줄마다 상대보다 약했던 경기 수. */
+  behind: z.strictObject({
+    atk: z.number().int().min(0),
+    mid: z.number().int().min(0),
+    def: z.number().int().min(0),
+  }),
+  formations: z.array(TeamReportFormationSchema),
+});
+export type TeamStatsReport = z.infer<typeof TeamStatsReportSchema>;
+
 /** 내 팀(그 시즌)의 랭크 경기 통계. T-11-358부터 summary에 친선전 · 컵 전적과 흐름 요약을 함께 준다. */
 export const TeamStatsResponseSchema = z.strictObject({
   season: z.number().int().min(0),
@@ -441,10 +589,14 @@ export const TeamStatsResponseSchema = z.strictObject({
   capped: z.boolean(),
   total: z.strictObject(winDrawLoss),
   players: z.array(TeamStatsPlayerSchema),
+  /** T-11-518 센 경기 중 선발 명단이 남은 경기 수(출전 수를 센 경기). 전 응답에는 없다. */
+  xiMatches: z.number().int().min(0).optional(),
   days: z.array(TeamStatsDaySchema),
   opponents: z.array(TeamStatsOpponentSchema),
   /** T-11-358 전 응답에는 없다. */
   summary: TeamStatsSummarySchema.optional(),
+  /** T-11-379 전 응답에는 없다. */
+  report: TeamStatsReportSchema.optional(),
 });
 export type TeamStatsResponse = z.infer<typeof TeamStatsResponseSchema>;
 
@@ -472,6 +624,10 @@ export const ClubAchievementSchema = z.strictObject({
   points: count,
   /** 다음에 달성하면 더 얻는 점수(끝까지 왔으면 0). */
   worth: count,
+  /** T-11-357 다음에 달성하면 받는 아이템(지금 시즌만, 없으면 생략). */
+  reward: z.strictObject({ boost: count, scout: count }).optional(),
+  /** T-11-357 이 시즌에 이 업적으로 받은 아이템(지금 시즌만, 없으면 생략). */
+  got: z.strictObject({ boost: count, scout: count }).optional(),
 });
 export type ClubAchievement = z.infer<typeof ClubAchievementSchema>;
 
@@ -508,6 +664,10 @@ export const ClubAchievementNotificationsSchema = ClubAchievementsResponseSchema
   season: true,
   groups: true,
   score: true,
+}).extend({
+  /** T-11-489 상위 비율 등급 시즌(achTierByRank)에만 싣는 순위 · 랭킹 인원. */
+  rank: ClubAchievementsResponseSchema.shape.rank.optional(),
+  ranked: count.optional(),
 });
 export type ClubAchievementNotifications = z.infer<typeof ClubAchievementNotificationsSchema>;
 
@@ -521,6 +681,10 @@ export const TeamRankQuerySchema = z.strictObject({
   season: TeamSeasonQuerySchema,
   sort: TeamRankSortSchema.default('rating'),
   page: z.coerce.number().int().min(1).max(500).default(1),
+  /** T-11-375 디비전 탭(레이팅순만). 그 디비전의 레이팅 구간 팀만 고른다. */
+  division: z.coerce.number().int().min(0).max(TEAM_DIVISION_TOP).optional(),
+  /** T-11-441 '내 순위로': 내 팀이 있는 페이지를 돌려주고 me를 붙인다(세션을 보고 엣지 캐시에 담지 않는다). */
+  me: z.literal('1').optional(),
 });
 
 /** 랭킹 한 줄. 선수가 한 명 이상 있는 팀만 오른다. */
@@ -533,6 +697,8 @@ export const TeamRankItemSchema = z.strictObject({
   formation: FormationIdSchema,
   ovr: z.number().int(),
   rating: z.number().int(),
+  /** T-11-375 저장된 디비전(강등 보호 포함). 이전 API 응답에는 없을 수 있다. */
+  division: TeamDivisionSchema.optional(),
   record: TeamRecordSchema,
   likes: count,
   /** 구단 가치 = 선발 11명 카드 기준가 합(만 원, T-11-129). 이전 API 응답에는 없을 수 있다. */
@@ -555,14 +721,33 @@ export const TeamRankResponseSchema = z.strictObject({
   page: z.number().int().min(1),
   total: count,
   items: z.array(TeamRankItemSchema),
+  /** T-11-441 me=1로 물었을 때만. 그 시즌 랭킹에 내 팀이 없으면 null. */
+  me: z
+    .strictObject({ teamId: TeamIdSchema, rank: z.number().int().min(1) })
+    .nullable()
+    .optional(),
 });
 export type TeamRankResponse = z.infer<typeof TeamRankResponseSchema>;
+
+export const TeamDivisionsQuerySchema = z.strictObject({ season: TeamSeasonQuerySchema });
+
+/** T-11-375 디비전별 팀 수(랭킹에 오른 팀, 레이팅 구간 기준) · 지금 경계. 모두에게 같아 5분 엣지 캐시. */
+export const TeamDivisionsResponseSchema = z.strictObject({
+  season: TeamSeasonSchema,
+  bounds: z.array(z.number().int()).length(TEAM_DIVISION_TOP),
+  guard: z.number().int().min(0),
+  counts: z.array(count).length(TEAM_DIVISION_TOP + 1),
+  total: count,
+});
+export type TeamDivisionsResponse = z.infer<typeof TeamDivisionsResponseSchema>;
 
 // ───────── T-11-028 업적 랭킹(기록실) ─────────
 
 export const AchRankQuerySchema = z.strictObject({
   season: TeamSeasonQuerySchema,
   page: z.coerce.number().int().min(1).max(500).default(1),
+  /** T-11-441 '내 순위로'(팀 랭킹과 같다). */
+  me: z.literal('1').optional(),
 });
 
 /** 업적 랭킹 한 줄. 구단주는 공개 닉네임(없으면 null)과 그 시즌 팀 이름으로만 보인다. */
@@ -592,6 +777,11 @@ export const AchRankResponseSchema = z.strictObject({
   page: z.number().int().min(1),
   total: count,
   items: z.array(AchRankItemSchema),
+  /** T-11-441 me=1로 물었을 때만. 그 시즌 랭킹에 내가 없으면 null. */
+  me: z
+    .strictObject({ rank: z.number().int().min(1) })
+    .nullable()
+    .optional(),
 });
 export type AchRankResponse = z.infer<typeof AchRankResponseSchema>;
 
@@ -608,6 +798,8 @@ export const CupHonorSchema = z.strictObject({
   cupId: z.string(),
   season: z.number().int(),
   edition: z.number().int(),
+  /** T-11-410 구간 대회 성적이면 그 구간. */
+  division: z.enum(CUP_DIVISIONS).optional(),
   stage: z.enum(CUP_STAGES),
   teamName: z.string(),
   /** 트로피 받침대에 새기는 구단주 닉네임(지금 닉네임, 없으면 null). 배포 전 응답엔 없다. */
@@ -633,6 +825,8 @@ const TeamSynergyShape = z.strictObject({
       kind: z.enum(['duo', 'team', 'badge', 'foot']),
       nation: z.string().optional(),
       style: z.string().optional(),
+      league: z.string().optional(),
+      club: z.string().optional(),
     }),
   ),
   foot: z.array(z.number()),
@@ -658,6 +852,8 @@ export const TeamProfileSchema = z.strictObject({
   ovr: z.number().int(),
   lines: TeamLinesSchema,
   rating: z.number().int(),
+  /** T-11-375 디비전(강등 보호 포함). 배포 전 응답엔 없다. */
+  division: TeamDivisionSchema.optional(),
   record: TeamRecordSchema,
   goals: z.strictObject({ for: count, against: count }),
   likes: count,

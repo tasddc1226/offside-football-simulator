@@ -1,5 +1,6 @@
 // T-11-263 유저 한 명 조회와 아이템 지급·회수(웹 admin/AdminUsers.svelte). 프로필 id · 닉네임 · 친구 코드로 찾아 프로필 · 접속 ·
 // 커리어 · 구단 · 컵 · 결제 · 아이템 · 지급 기록을 한 화면에 모은다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 import * as api from '@offside/app-core/api/admin';
@@ -76,8 +77,8 @@ export default function AdminUsers() {
     ]);
   }
 
-  const small = { fontSize: rem(0.8125) } as const;
-  const tiny = { fontSize: rem(0.75) } as const;
+  const small = { fontSize: rem(FONT.label) } as const;
+  const tiny = { fontSize: rem(FONT.caption) } as const;
   const line = { paddingVertical: 6, borderTopWidth: 1, borderTopColor: c.line } as const;
   const section = (title: string, lines: string[], key: string) => (
     <View key={key} testID={`user-section-${key}`} style={{ gap: 4 }}>
@@ -134,7 +135,7 @@ export default function AdminUsers() {
             paddingHorizontal: 12,
             borderWidth: 1,
             borderColor: c.line,
-            borderRadius: 12,
+            borderRadius: RADIUS.md,
           }}
         >
           <View>

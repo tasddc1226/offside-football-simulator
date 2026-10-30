@@ -58,9 +58,12 @@ describe('T-10-100 몸값', () => {
     // 두 시즌뿐이면 모자란 한 시즌은 0으로 친다
     expect(retireValue(car.slice(0, 1), 0)).toBe(Math.round(top[0]! / 3 / 1000) * 1000);
   });
-  it('T-11-080 카드 기준가 = 최고 OVR 마지막 시즌 몸값, 0이면 가장 비싼 프로 시즌, 그래도 없으면 1억', () => {
-    const car = [row({ ovr: 88, age: 24 }), row({ ovr: 88, age: 31 }), row({ ovr: 80 })];
-    expect(cardValue(car, 88)).toBe(valueFor('pl', 88, 31));
+  it('T-11-080 카드 기준가 = 최고 OVR 시즌 중 가장 비싼 몸값, 0이면 가장 비싼 프로 시즌, 그래도 없으면 1억', () => {
+    // T-11-422 같은 OVR로 30세를 넘겨 뛰어도 기준가가 줄지 않는다(30세에 은퇴한 카드와 같다).
+    const car = [row({ ovr: 88, age: 29 }), row({ ovr: 88, age: 31 }), row({ ovr: 80 })];
+    expect(cardValue(car, 88)).toBe(valueFor('pl', 88, 29));
+    expect(cardValue(car, 88)).toBe(cardValue(car.slice(0, 1), 88));
+    expect(cardValue(car, 88)).toBeGreaterThan(valueFor('pl', 88, 31));
     // 최고 OVR 시즌이 복무 시즌이면 가장 비쌌던 프로 시즌
     const mil = [row({ ovr: 82 }), row({ ovr: 84, league: '병역', mil: true })];
     expect(cardValue(mil, 84)).toBe(valueFor('pl', 82, 25));

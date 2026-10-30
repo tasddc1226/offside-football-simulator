@@ -1,0 +1,26 @@
+{
+  "id": "t-11-418e-league-settle",
+  "title": "오프사이드 리그 결산 · 보상 · 승강",
+  "items": [
+    "마지막 라운드가 끝나면 바로 결산해요. 1부 우승은 '시즌 리그 챔피언' 칭호와 리롤권 15장 · 프리미엄 스카우트권 3장 · 잠재력 강화권 3장을 받아요.",
+    "2부 아래 리그 1위는 부와 상관없이 7 · 1 · 1장, 2위는 리롤권 3장을 받고, 기권 없이 끝까지 뛰면 리롤권 2장을 더 받아요. 승격하면 언제나 프리미엄 스카우트권을 받아요.",
+    "다음 시즌에는 지난 결과대로 부가 정해져요. 위 부에 빈자리가 나면 아래 부 2위부터 올라가고, 처음 참가하는 팀은 3부부터 시작할 수 있어요."
+  ],
+  "en": {
+    "title": "OFFSIDE League settlement, rewards and promotion",
+    "items": [
+      "The league is settled as soon as the final round ends. The tier 1 champions get the Season League Champion title, 15 reroll tickets, 3 premium scout tickets and 3 potential boost tickets.",
+      "In tier 2 and below, 1st place gets 7, 1 and 1 whatever the tier and 2nd gets 3 reroll tickets, and finishing without a forfeit adds 2 reroll tickets. Promotion always comes with a premium scout ticket.",
+      "Next season's tiers follow this season's results. When a spot opens above, 2nd-placed teams move up first, and new teams can start as high as tier 3."
+    ]
+  },
+  "ja": {
+    "title": "オフサイドリーグの精算・報酬・昇降格",
+    "items": [
+      "最終節が終わるとすぐに精算します。1部優勝は「シーズン リーグ王者」の称号とリロール券15枚・プレミアムスカウト券3枚・ポテンシャル強化券3枚を受け取ります。",
+      "2部以下のリーグは部に関係なく1位が7・1・1枚、2位がリロール券3枚を受け取り、棄権なしで最後まで戦うとリロール券2枚が追加されます。昇格すると必ずプレミアムスカウト券を受け取ります。",
+      "次のシーズンは今回の結果で部が決まります。上の部に空きが出ると下の部の2位から上がり、初参加のチームは3部から始められます。"
+    ]
+  },
+  "availability": "web-app"
+}

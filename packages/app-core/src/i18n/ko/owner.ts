@@ -13,7 +13,7 @@ const ko = {
   valueInfoFormula: '구단 가치 = 구단 자금 + 보유 선수 카드의 기준가 합계',
   valueInfoOwned: '직접 키운 선수와 영입한 선수를 시즌 구분 없이 모두 포함해요.',
   valueInfoPrice:
-    '카드 기준가는 최고 OVR을 기록한 마지막 시즌의 몸값이에요. 몸값은 리그 자금력·OVR·나이로 계산해요.',
+    '카드 기준가는 최고 OVR을 기록한 시즌 중 몸값이 가장 높았던 시즌의 몸값이에요. 몸값은 리그 자금력·OVR·나이로 계산해서, 최고 OVR을 찍은 뒤 오래 뛰어도 기준가가 내려가지 않아요.',
   valueInfoFallback:
     '그 시즌의 몸값이 없으면 가장 비쌌던 프로 시즌을 사용하고, 프로 기록도 없으면 1억 원을 적용해요.',
   valueInfoExcluded: '판매 등록 가격이나 레전드 점수를 직접 더하지는 않아요.',
@@ -21,8 +21,7 @@ const ko = {
     '로그인하지 않은 상태에서는 이 기기에 저장된 현재 시즌 은퇴 선수의 카드 기준가를 합산해요.',
   profileEdit: '프로필 편집',
   profileName: '구단주 이름',
-  profileNameNotice:
-    '부적절한 구단주 이름은 신고 대상이 될 수 있으며, 확인 후 숨김 처리될 수 있어요.',
+  profileNameNotice: '부적절한 구단주 이름은 신고될 수 있고, 확인 후 숨겨질 수 있어요.',
   profileHint: '이름과 이미지는 구단주 프로필·댓글·채팅에 함께 표시돼요.',
   profileImagePick: '이미지 고르기',
   profileImageReset: '기본 이미지로 변경',
@@ -39,7 +38,7 @@ const ko = {
   avatarInitial: '구',
   guestName: '게스트 구단주',
   guestSub: '기록은 이 기기에만 저장돼요',
-  signedInSubWeb: 'Google 계정으로 로그인했어요',
+  signedInSubWeb: '구글 계정으로 로그인했어요',
   signedInSubApp: '로그인했어요',
   emptySummary: '첫 커리어를 끝까지 뛰면 은퇴 선수와 레전드 점수가 여기에 쌓여요.',
   statClubValue: '구단 가치',
@@ -55,6 +54,7 @@ const ko = {
   teamOvr: (p: { ovr: number }) => `팀 OVR ${p.ovr}`,
   statRecord: '전적',
   statRating: '레이팅',
+  statRp: 'RP',
   statToday: '오늘 경기',
   play: '경기하기',
   teamFailed: '시즌마다 은퇴한 선수로 팀을 꾸려 겨루고, 라이브 랭킹과 구단 업적을 채워요.',
@@ -62,12 +62,22 @@ const ko = {
   buildTeam: '팀 만들기',
   teamBtnApp: '내 팀 · 시즌 업적',
   marketTitle: '이적시장',
-  marketSub: (p: { funds: string }) => `구단 자금 ${p.funds} · 이번 시즌 선수를 사고팔아요`,
+  marketSub: (p: { funds: string }) => `구단 자금 ${p.funds} · 선수를 사고팔아요`,
   open: '열기',
   /** 잠긴 '내 팀' 카드 가운데 배지. 🔒 뒤 U+FE0E는 글자 모양(이모지 아님) 지정. */
   lockBadge: '\u{1F512}︎ 로그인하면 열려요',
   accountSection: '계정',
   adminTools: '운영 도구',
+  // T-11-567 허브 바로가기 칸(2열)과 상점 화면.
+  shortcutsHeading: '바로가기',
+  tilePlayers: '보유 선수 · 육성 기록',
+  tileMarket: '선수 사고팔기',
+  tileExchange: '은퇴 선수를 아이템으로',
+  tileManager: '감독으로 이어 가기',
+  tileHall: '시즌 기록 · 칭호',
+  shopTitle: '상점',
+  tileShop: '리롤 · 강화 · 스카우트권',
+  shopLoginNeeded: '상점은 로그인한 구단주만 써요.',
   // ownerHub.ts
   teamEmptyWith: (p: { season: string; n: number }) =>
     `${p.season}에 은퇴한 내 선수 ${p.n}명으로 팀을 꾸릴 수 있어요. 빈 자리는 유스 선수가 채워요.`,

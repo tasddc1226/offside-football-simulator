@@ -1,4 +1,6 @@
 <script lang="ts">
+  import SeasonSelect from './SeasonSelect.svelte';
+  import Skeleton from './Skeleton.svelte';
   // 내 선수 전용 화면 — 시즌별 전체 기록과 보유 선수 관리.
   // T-10-013: 계정에 연결돼 있으면 계정 기록(서버), 아니면 이 기기 기록(ft_hof)이다. 서버에는 선수 이름이
   // 없어(공개를 고른 경우만) 같은 기기의 기록이 있으면 그 이름·공개 설정을 쓴다.
@@ -19,7 +21,6 @@
   import { seasonNow } from './seasonNow.svelte.js';
   import type { DetailPos, POS } from '@offside/game/data';
   import { ownerPlayersText as L } from '@offside/app-core/i18n/ko/ownerPlayers';
-  import { seasonLabel } from '@offside/app-core/seasonName';
 
   type MineRow = { nation?: string | undefined; key: string; name: string; pos: keyof typeof POS; dpos?: DetailPos | null | undefined; club: string; clubId?: string | null | undefined; rn?: number | null | undefined; wall?: number | null | undefined; tag: string | null; stats: RowStats; title: string | null; season: number; /** T-11-109 비로그인 구단 가치용 카드 기준가(이 기기 기록만). */ value?: number; open: () => void };
 
@@ -133,7 +134,7 @@
   <div class="eyebrow">My players</div>
   <h1 id="my-players-title" style="margin-bottom:8px">{L.title}</h1>
   {#if source === 'loading'}
-    <p class="empty">{L.loading}</p>
+    <Skeleton rows={5} />
   {:else}
     <p class="muted hof-source" data-my-source={source}>
       {source === 'account'
@@ -144,12 +145,7 @@
     </p>
     {#if seasons.length > 1}
       <div class="hof-toolbar">
-        <label class="hof-season-picker">
-          <span class="hof-filter-label">{L.seasonGroup}</span>
-          <select data-my-season-select value={String(season)} onchange={(e) => (appState.playersSeason = Number(e.currentTarget.value))}>
-            {#each seasons as s (s.id)}<option value={String(s.id)}>{seasonLabel(s.id, s.name)}</option>{/each}
-          </select>
-        </label>
+        <SeasonSelect caption={L.seasonGroup} label={L.seasonGroup} value={season} {seasons} onpick={(v) => (appState.playersSeason = Number(v))} data-my-season-select />
       </div>
     {/if}
     {#if source === 'account'}

@@ -5,19 +5,31 @@ import {
   CupHomeResponseSchema,
   BuyRerollBodySchema,
   ScoutUseBodySchema,
+  GiftClaimBodySchema,
   HomeGiftResponseSchema,
   OwnerItemsResponseSchema,
   RerollShopResponseSchema,
   BuyRewardBodySchema,
   RewardShopResponseSchema,
+  BuySureBodySchema,
+  SureShopResponseSchema,
   REWARD_KINDS,
   type CupMatch,
+  type CupOdds,
   type RewardShopResponse,
   type CupPhase,
   type CupResponse,
   type CupHomeResponse,
   type CupChampion,
+  type HomeGiftResponse,
+  type CupDivisionInfo,
 } from '@offside/contracts';
+import {
+  ACH_SEASON_GIFT,
+  AD_FREE_THANKS_GIFT,
+  RECORD_SEASON_GIFT,
+} from '@offside/contracts/owner-team';
+import { leagueLineupLocked } from '../team/league.js';
 import {
   CUP_GROUP_ROUNDS,
   CUP_KO_ROUNDS,
@@ -25,9 +37,13 @@ import {
   CUP_HOME_AFTER_MS,
   cupById,
   cupFinalAt,
+  cupLineupVerdict,
   cupRoundsOf,
   currentCup,
-  HOME_GIFT,
+  divisionFor,
+  divisionRank,
+  editionCups,
+  fitsDivision,
   lockAt,
   OWNER_ITEMS,
   shopPriceAt,
@@ -35,13 +51,14 @@ import {
   type RewardKind,
   type CupRound,
 } from '@offside/contracts/cup';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, ne, sql } from 'drizzle-orm';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import type { Context, Hono } from 'hono';
 import type { Db } from '../db/client.js';
 import { cupEntries, cupMatches } from '../db/schema.js';
 import {
+  cupTeamOf,
   myTeamIn,
   publicNamesOf,
   slotIdsOf,
@@ -53,13 +70,19 @@ import {
 import {
   buyReroll,
   buyRewardWithFunds,
+  buySureWithFunds,
   rerollShopRules,
+  sureShopRules,
+  sureSnapshot,
   buyScout,
   rewardShopRules,
   rewardSnapshot,
   shopSnapshot,
 } from '../db/repos/itemShop.js';
-import { claimHomeGift, homeGiftClaimed, ownerItemsOf, spendItem } from '../db/repos/iap.js';
+import { claimSeasonGift, ownerItemsOf, spendItem } from '../db/repos/iap.js';
+import { seasonAchGiftOf } from '../team/ownerAchievements.js';
+import { adFreeThanksGiftOf } from '../team/adFreeThanksGift.js';
+import { seasonRecordGiftOf } from '../team/seasonRecordGift.js';
 import { countOpenListingsAmong } from '../db/repos/market.js';
 import { newId } from '../db/ids.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -70,6 +93,7 @@ import { requireProfile } from '../middleware/requireProfile.js';
 import {
   cupEntriesOf,
   cupMatchesOf,
+  cupMatchesIn,
   cupStateOf,
   groupTable,
   activeEntriesOf,
@@ -78,10 +102,13 @@ import {
   type CupEntryRow,
   type CupMatchRow,
   type CupStateRow,
+  activeCupSeasonsQuery,
 } from '../team/cup.js';
 import { cupSchedule } from '../team/cupSchedule.js';
 import { lineupsOf, toMatch } from '../team/match.js';
+import { cupTeamsOf, matchOddsOf, mineOdds, oddsOfLineups, parseOdds } from '../team/cupOdds.js';
 import { filledCount } from '../team/sim.js';
+import { cupAtkKOf } from '../db/repos/balance.js';
 import { kstTodayStart, requireOwner } from './ownerTeam.js';
 import { kstWeekStart } from '../time.js';
 import {
@@ -132,6 +159,7 @@ export const toCupMatch = (m: CupMatchRow): CupMatch => ({
   pens: m.pensHome === null || m.pensAway === null ? null : { home: m.pensHome, away: m.pensAway },
   winnerTeamId: m.winnerTeamId,
   forfeit: m.forfeit === 1,
+  odds: matchOddsOf(m.oddsJson),
 });
 
 export const cupInfo = (cup: CupDef) => ({
@@ -148,16 +176,53 @@ export const cupInfo = (cup: CupDef) => ({
   })),
   capacity: cup.capacity,
   minFilled: cup.minFilled,
+  ...(cup.division ? { division: cup.division, ovrMax: cup.ovrMax ?? null } : {}),
 });
+
+/** T-11-410 같은 회차 구간들과 구간별 신청 수(쿼리 1번). 통합 대회면 undefined. */
+async function divisionsOf(
+  db: Db,
+  cup: CupDef,
+  all: readonly CupDef[],
+): Promise<CupDivisionInfo[] | undefined> {
+  if (!cup.division) return undefined;
+  const siblings = editionCups(cup, all);
+  const rows = await db
+    .select({ cupId: cupEntries.cupId, n: sql<number>`count(*)` })
+    .from(cupEntries)
+    .where(
+      and(
+        inArray(
+          cupEntries.cupId,
+          siblings.map((c) => c.id),
+        ),
+        ne(cupEntries.status, 'withdrawn'),
+      ),
+    )
+    .groupBy(cupEntries.cupId);
+  const count = new Map(rows.map((r) => [r.cupId, r.n]));
+  return siblings.map((c) => ({
+    id: c.id,
+    division: c.division!,
+    ovrMax: c.ovrMax ?? null,
+    entries: count.get(c.id) ?? 0,
+  }));
+}
 
 const activeCount = (entries: readonly CupEntryRow[]) =>
   entries.filter((e) => e.status !== 'withdrawn').length;
 
-async function cupView(db: Db, cup: CupDef, now: string): Promise<CupResponse> {
-  const [entries, matches, [state]] = await Promise.all([
+async function cupView(
+  db: Db,
+  cup: CupDef,
+  now: string,
+  all: readonly CupDef[],
+): Promise<CupResponse> {
+  const [entries, matches, [state], divisions] = await Promise.all([
     cupEntriesOf(db, cup.id),
     cupMatchesOf(db, cup.id),
     cupStateOf(db, cup.id),
+    divisionsOf(db, cup, all),
   ]);
   // 추첨 전에는 신청한 팀을 신청 순으로 보여 준다(T-11-160). 추첨 뒤에는 조에 들어간 팀만.
   const shown = entries.filter((e) => e.status !== 'withdrawn' && (!state || e.grp !== null));
@@ -202,16 +267,74 @@ async function cupView(db: Db, cup: CupDef, now: string): Promise<CupResponse> {
       )
       .map(toCupMatch),
     championTeamId: final?.winnerTeamId ?? null,
+    ...(divisions ? { divisions } : {}),
   };
 }
 
-const cupOf = async (c: Context<AppEnv>, selectedId?: string) => {
+/**
+ * T-11-405 내 다음 경기 예상 — 컵 경기(playCupMatch)와 같이 두 팀 명단으로 중립 경기 줄 힘 · 기대 득점을 내고 90분
+ * 승 · 무 · 패를 계산한다. T-11-407 명단이 잠겨 계산해 둔 값이 있으면 그 값(모두에게 보이는 값과 같다), 없으면 지금 명단으로
+ * 계산한다(쿼리 3번: 팀 1번 + 선발 · 감독 2번). 상대가 아직 없거나 어느 팀이 이번 시즌 팀이 아니면 null.
+ */
+export async function nextOddsOf(
+  db: Db,
+  cup: CupDef,
+  next: CupMatchRow,
+  mine: string,
+): Promise<CupOdds | null> {
+  if (!next.homeTeamId || !next.awayTeamId) return null;
+  const homeMine = next.homeTeamId === mine;
+  const stored = parseOdds(next.oddsJson);
+  if (stored) return mineOdds(stored, homeMine);
+  const team = await cupTeamsOf(db, cup, [next.homeTeamId, next.awayTeamId]);
+  const home = team(next.homeTeamId);
+  const away = team(next.awayTeamId);
+  if (!home || !away) return null;
+  const [lineups, atkK] = await Promise.all([lineupsOf(db, cup.season, home, away), cupAtkKOf(db)]);
+  return mineOdds(oddsOfLineups(lineups, cup.season, atkK), homeMine);
+}
+
+const cupAndAll = async (c: Context<AppEnv>, selectedId?: string) => {
   const id = selectedId ?? c.req.param('cupId');
   const all = await cupSchedule(getDb(c));
   const cup = id === 'current' ? currentCup(nowIso(), all) : id ? cupById(id, all) : undefined;
   if (!cup) throw notFoundError(cupKo('notFound'), 'CUP_NOT_FOUND');
-  return cup;
+  return { cup, all };
 };
+const cupOf = async (c: Context<AppEnv>, selectedId?: string) =>
+  (await cupAndAll(c, selectedId)).cup;
+
+/**
+ * T-11-410 'current'로 부른 구단주 요청을 그 사람의 구간으로 푼다: 같은 회차에 신청한 구간, 없으면 지금 팀 OVR로 들어갈 수
+ * 있는 가장 낮은 구간(팀이 없으면 마스터). id를 직접 주었거나 통합 대회면 그대로.
+ */
+async function myDivision(
+  db: Db,
+  cup: CupDef,
+  all: readonly CupDef[],
+  profileId: string,
+  current: boolean,
+) {
+  if (!current || !cup.division) return cup;
+  const siblings = editionCups(cup, all);
+  const [entered] = await db
+    .select({ cupId: cupEntries.cupId })
+    .from(cupEntries)
+    .where(
+      and(
+        eq(cupEntries.profileId, profileId),
+        inArray(
+          cupEntries.cupId,
+          siblings.map((x) => x.id),
+        ),
+        ne(cupEntries.status, 'withdrawn'),
+      ),
+    )
+    .limit(1);
+  if (entered) return cupById(entered.cupId, siblings) ?? cup;
+  const [team] = await myTeamIn(db, profileId, cup.season);
+  return team ? (divisionFor(siblings, cupTeamOf(team).ovr) ?? cup) : cup;
+}
 
 /** Two DB round trips including schedule lookup; never load team logos or match details for home. */
 export async function cupHomeView(
@@ -285,12 +408,19 @@ export async function cupHomeView(
  */
 export function recentCupFor(now: string, cups: readonly CupDef[]): CupDef | undefined {
   const t = Date.parse(now);
-  return [...cups]
-    .filter((c) => {
-      const final = Date.parse(cupFinalAt(c));
-      return final <= t && t < final + CUP_HOME_AFTER_MS;
-    })
-    .sort((a, b) => cupFinalAt(b).localeCompare(cupFinalAt(a)))[0];
+  return (
+    [...cups]
+      .filter((c) => {
+        const final = Date.parse(cupFinalAt(c));
+        return final <= t && t < final + CUP_HOME_AFTER_MS;
+      })
+      // T-11-410 같은 회차 구간이 함께 끝나면 마스터 우승을 보인다.
+      .sort(
+        (a, b) =>
+          cupFinalAt(b).localeCompare(cupFinalAt(a)) ||
+          divisionRank(b.division) - divisionRank(a.division),
+      )[0]
+  );
 }
 
 /**
@@ -325,6 +455,7 @@ export async function cupChampionView(db: Db, cup: CupDef): Promise<CupChampion 
     cupId: cup.id,
     season: cup.season,
     edition: cup.edition,
+    ...(cup.division ? { division: cup.division } : {}),
     teamId: row.teamId,
     name,
     owner,
@@ -333,30 +464,57 @@ export async function cupChampionView(db: Db, cup: CupDef): Promise<CupChampion 
   };
 }
 
-/** 신청 자격(지금 팀 기준). 실제 선수 수는 선발을 다시 세어 본다(팔린 카드는 빠진다). */
+/** 신청 자격(지금 팀 기준, T-11-570 컵 명단 프리셋이 있으면 그 편성). 실제 선수 수는 선발을 다시 세어 본다(팔린 카드는 빠진다). */
 async function eligibility(
   db: Db,
   cup: CupDef,
   profileId: string,
   now: string,
   entries: readonly CupEntryRow[],
+  all: readonly CupDef[],
 ) {
-  const [team] = await myTeamIn(db, profileId, cup.season);
+  const [row] = await myTeamIn(db, profileId, cup.season);
+  const team = row ? cupTeamOf(row) : undefined;
   if (!team) return { ok: false, reason: 'no-team' as const, filled: 0, team };
-  const lineups = await lineupsOf(db, cup.season, team, team);
+  // T-11-410 같은 회차 다른 구간에 이미 신청했는가.
+  const others = cup.division
+    ? editionCups(cup, all)
+        .filter((x) => x.id !== cup.id)
+        .map((x) => x.id)
+    : [];
+  const [other] = others.length
+    ? await db
+        .select({ cupId: cupEntries.cupId })
+        .from(cupEntries)
+        .where(
+          and(
+            eq(cupEntries.profileId, profileId),
+            inArray(cupEntries.cupId, others),
+            ne(cupEntries.status, 'withdrawn'),
+          ),
+        )
+        .limit(1)
+    : [];
+  const lineups = await lineupsOf(db, cup.season, team, team, { coaches: false });
   const filled = filledCount(lineups.home);
   const ids = slotIdsOf(team).filter((x): x is string => !!x);
   const listed = await countOpenListingsAmong(db, ids);
+  // 아랫 구간 상한은 접수가 열린 뒤 cron이 채운다(그 몇 분 동안은 아직 열리지 않은 것으로).
+  const capless = !!cup.division && cup.division !== 'master' && cup.ovrMax == null;
   const reason =
-    now < cup.opensAt || now >= cup.closesAt
+    now < cup.opensAt || now >= cup.closesAt || capless
       ? ('closed' as const)
       : filled < cup.minFilled
         ? ('not-enough' as const)
         : listed > 0
           ? ('listed' as const)
-          : activeCount(entries) >= cup.capacity
-            ? ('full' as const)
-            : null;
+          : other
+            ? ('entered-other' as const)
+            : !fitsDivision(cup, team.ovr)
+              ? ('over-cap' as const)
+              : activeCount(entries) >= cup.capacity
+                ? ('full' as const)
+                : null;
   return { ok: reason === null, reason, filled, team };
 }
 
@@ -391,25 +549,39 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
       if (!cup) throw notFoundError(cupKo('notFound'), 'CUP_NOT_FOUND');
       // 우승 팝업용 최근 우승은 지금 보여 줄 대회와 다를 수 있다(다음 대회 접수가 열린 뒤). 끝난 대회가 있을 때만 한 행 더 읽는다.
       const recent = recentCupFor(now, all);
-      const [home, champion] = await Promise.all([
+      const [home, champion, divisions] = await Promise.all([
         cupHomeView(db, cup, now),
         recent ? cupChampionView(db, recent) : null,
+        divisionsOf(db, cup, all),
       ]);
-      return { ...home, champion };
+      if (!divisions) return { ...home, champion };
+      // T-11-410 구간 대회: 단계 · 라운드는 마스터 기준, 신청 수는 구간을 합한다(추첨 뒤 팀 수도 신청 수 합으로).
+      const entries = divisions.reduce((n, d) => n + d.entries, 0);
+      return {
+        ...home,
+        entries,
+        teamCount: Math.max(home.teamCount, entries),
+        champion,
+        divisions,
+      };
     });
     return ok(c, CupHomeResponseSchema, data, 200, PUBLIC_CACHE);
   });
   // 대회 한눈에: 일정·참가 수·조 순위·대진·결과. 누구나 본다. cupId 'current'는 지금 보여 줄 대회.
   app.get('/v1/cups/:cupId', async (c) => {
     const load = async () => {
-      const cup = await cupOf(c);
-      return cupView(getDb(c), cup, nowIso());
+      const { cup, all } = await cupAndAll(c);
+      return cupView(getDb(c), cup, nowIso(), all);
     };
     // Bound the key space to the current public cup; personal eligibility always stays uncached.
+    // T-11-410 구간 대회 id(회차마다 3개)도 엣지에 담는다 — 있는 대회 id만 키가 된다.
+    const id = c.req.param('cupId');
     const data =
-      c.req.param('cupId') === 'current'
+      id === 'current'
         ? await edgeCached(c, EDGE.cupCurrent, 30, load)
-        : await load();
+        : /-(junior|senior|master)$/.test(id)
+          ? await edgeCached(c, EDGE.cupById(id), 30, load)
+          : await load();
     return ok(c, CupResponseSchema, data, 200, PUBLIC_CACHE);
   });
 
@@ -417,7 +589,9 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/cups/:cupId/me', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
-    const cup = await cupOf(c);
+    const picked = await cupAndAll(c);
+    const all = picked.all;
+    const cup = await myDivision(db, picked.cup, all, me.id, c.req.param('cupId') === 'current');
     const now = nowIso();
     const [entries, matches, rerolls] = await Promise.all([
       cupEntriesOf(db, cup.id),
@@ -425,7 +599,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
       ownerItemsOf(db, me.id).then((x) => x.reroll),
     ]);
     const mine = entries.find((e) => e.profileId === me.id);
-    const el = await eligibility(db, cup, me.id, now, entries);
+    const el = await eligibility(db, cup, me.id, now, entries, all);
     const next = mine
       ? matches
           .filter(
@@ -437,6 +611,8 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
       c,
       CupMeResponseSchema,
       {
+        cupId: cup.id,
+        ovr: el.team?.ovr ?? null,
         entry: mine
           ? {
               teamId: mine.teamId,
@@ -452,6 +628,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
           filled: el.filled,
         },
         next: next ? toCupMatch(next) : null,
+        nextOdds: next && mine ? await nextOddsOf(db, cup, next, mine.teamId) : null,
         locked: mine?.status === 'active' ? lineupLocked(matches, mine.teamId, now) : false,
         rerolls,
       },
@@ -464,12 +641,15 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
   app.post('/v1/cups/:cupId/entries', requireProfile, idempotency, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
-    const cup = await cupOf(c);
+    const picked = await cupAndAll(c);
+    const all = picked.all;
+    // T-11-410 'current'로 신청하면(구간을 모르는 옛 앱) 내 OVR로 들어갈 가장 낮은 구간에 넣는다.
+    const cup = await myDivision(db, picked.cup, all, me.id, c.req.param('cupId') === 'current');
     const now = nowIso();
     const entries = await cupEntriesOf(db, cup.id);
     if (entries.some((e) => e.profileId === me.id && e.status !== 'withdrawn'))
       return c.body(null, 204);
-    const el = await eligibility(db, cup, me.id, now, entries);
+    const el = await eligibility(db, cup, me.id, now, entries, all);
     if (!el.ok || !el.team) {
       const msg = {
         closed: cupKo('closed'),
@@ -477,10 +657,12 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
         'not-enough': cupKo('notEnough', { n: cup.minFilled }),
         listed: cupKo('listed'),
         full: cupKo('full'),
+        'entered-other': cupKo('enteredOther'),
+        'over-cap': cupKo('overCap', { n: cup.ovrMax ?? 0 }),
       };
       throw conflictError(
         msg[el.reason ?? 'closed'],
-        `CUP_${(el.reason ?? 'closed').toUpperCase().replace('-', '_')}`,
+        `CUP_${(el.reason ?? 'closed').toUpperCase().replaceAll('-', '_')}`,
       );
     }
     const t = el.team;
@@ -505,7 +687,14 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
   app.delete('/v1/cups/:cupId/entries/me', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
-    const cup = await cupOf(c);
+    const picked = await cupAndAll(c);
+    const cup = await myDivision(
+      db,
+      picked.cup,
+      picked.all,
+      me.id,
+      c.req.param('cupId') === 'current',
+    );
     const now = nowIso();
     if (now >= cup.closesAt) throw conflictError(cupKo('withdrawClosed'), 'CUP_CLOSED');
     await db
@@ -599,23 +788,55 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
       return ok(c, OwnerItemsResponseSchema, items, 200, NO_STORE);
     });
 
-  // T-11-275 홈 선물. 로그인한 구단주만(아니면 403 GOOGLE_LOGIN_REQUIRED) 한 번 받는다. 조회는 PK 한 번이고 홈을 열 때
-  // 구단주 표시가 있는 기기만 부른다. 받기는 재시도가 두 번 받지 않게 멱등 키도 쓴다(받은 기록 PK가 최종 방어선).
+  // T-11-386 홈 선물 칸: 시즌 1 업적 보상(시즌 2 동안), T-11-487 시즌 1 기록 보상. 로그인한 구단주만(아니면 403 GOOGLE_LOGIN_REQUIRED) 한 번 받는다.
+  // 홈을 열 때 구단주 표시가 있는 기기만 부른다. 받기는 재시도가 두 번 받지 않게 멱등 키도 쓴다(받은 기록 PK가 최종 방어선).
+  // T-11-472 구단주 선물(T-11-275)은 없앴다 — 옛 앱이 그 id로 받기를 누르면 409 GIFT_CLAIMED로 카드를 닫는다.
+  // T-11-487 업적 보상을 받았거나 없으면 시즌 기록 보상(리롤권 · 갈래별 내역)을 싣는다 — 그 카드를 그리는 기기(?v=2)만.
+  // T-11-517 그다음 광고 제거 구매 감사 선물 — 그 문구를 아는 기기(?v=3)만.
   app.get('/v1/items/gift', requireProfile, async (c) => {
     const me = await requireOwner(c);
-    const claimed = await homeGiftClaimed(getDb(c), me.id);
-    const { id, boost, scout } = HOME_GIFT;
-    return ok(
-      c,
-      HomeGiftResponseSchema,
-      { gift: claimed ? null : { id, boost, scout } },
-      200,
-      NO_STORE,
-    );
+    const db = getDb(c);
+    const now = nowIso();
+    const r = await seasonAchGiftOf(db, me, now);
+    const g = ACH_SEASON_GIFT;
+    let gift: HomeGiftResponse['gift'] = r
+      ? { id: g.id, kind: 'achSeason', season: g.season, ...r }
+      : null;
+    const v = Number(c.req.query('v') ?? 1);
+    if (!gift && v >= 2) {
+      const rec = await seasonRecordGiftOf(db, me.id, now);
+      if (rec)
+        gift = {
+          id: RECORD_SEASON_GIFT.id,
+          kind: 'recordSeason',
+          season: RECORD_SEASON_GIFT.season,
+          ...rec.total,
+          record: { ...rec.facts, ...rec.parts },
+        };
+    }
+    if (!gift && v >= 3) {
+      const thanks = await adFreeThanksGiftOf(db, me.id);
+      if (thanks) gift = { id: AD_FREE_THANKS_GIFT.id, kind: 'adFreeThanks', ...thanks };
+    }
+    return ok(c, HomeGiftResponseSchema, { gift }, 200, NO_STORE);
   });
+  // id가 없으면(옛 앱) 시즌 업적 보상을 받는다.
   app.post('/v1/items/gift/claim', requireProfile, idempotency, async (c) => {
     const me = await requireOwner(c);
-    const items = await claimHomeGift(getDb(c), me.id, nowIso());
+    const { id } = readBody(c, GiftClaimBodySchema);
+    const db = getDb(c);
+    const now = nowIso();
+    let items = null;
+    if (id === undefined || id === ACH_SEASON_GIFT.id) {
+      const r = await seasonAchGiftOf(db, me, now);
+      if (r) items = await claimSeasonGift(db, me.id, ACH_SEASON_GIFT.id, r, now);
+    } else if (id === RECORD_SEASON_GIFT.id) {
+      const rec = await seasonRecordGiftOf(db, me.id, now);
+      if (rec) items = await claimSeasonGift(db, me.id, RECORD_SEASON_GIFT.id, rec.total, now);
+    } else if (id === AD_FREE_THANKS_GIFT.id) {
+      const thanks = await adFreeThanksGiftOf(db, me.id);
+      if (thanks) items = await claimSeasonGift(db, me.id, AD_FREE_THANKS_GIFT.id, thanks, now);
+    }
     if (!items) throw conflictError(cupKo('giftClaimed'), 'GIFT_CLAIMED');
     return ok(c, OwnerItemsResponseSchema, items, 200, NO_STORE);
   });
@@ -732,7 +953,66 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
     const next = { balance: res.balance, bought: { ...snap.bought, [input.kind]: bought + 1 } };
     return ok(c, RewardShopResponseSchema, rewardShop(next, rules), 200, NO_STORE);
   });
+
+  // T-11-513 확정 강화의 지금 값. 강화 자리를 볼 수 있는 구단주가 부른다(앱 · 웹 30초 메모).
+  app.get('/v1/items/sure', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const [snap, rule] = await Promise.all([
+      sureSnapshot(db, me.id, kstTodayStart(nowIso())),
+      sureShopRules(db),
+    ]);
+    return ok(c, SureShopResponseSchema, sureShop(snap, rule), 200, NO_STORE);
+  });
+
+  // T-11-513 확정 강화 한 번을 구단 자금으로 받는다. 화면에서 본 가격을 함께 보낸다(다르면 409). 강화는 응답을 받은 기기가 준다.
+  app.post('/v1/items/sure/buy', requireProfile, idempotency, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const input = readBody(c, BuySureBodySchema);
+    const now = nowIso();
+    const since = kstTodayStart(now);
+    const [snap, rule] = await Promise.all([sureSnapshot(db, me.id, since), sureShopRules(db)]);
+    const price = shopPriceAt(rule, snap.bought);
+    if (price === null)
+      throw rule.cap === 0
+        ? conflictError(cupKo('rewardClosed'), 'SHOP_CLOSED')
+        : conflictError(cupKo('rewardDaily', { n: rule.cap }), 'DAILY_LIMIT');
+    if (input.price !== price) throw conflictError(cupKo('rewardPriceChanged'), 'PRICE_CHANGED');
+    if (snap.balance < price) throw fundsShort();
+    let res: Awaited<ReturnType<typeof buySureWithFunds>>;
+    try {
+      res = await buySureWithFunds(db, {
+        id: newId('ipc'),
+        profileId: me.id,
+        price,
+        bought: snap.bought,
+        since,
+        now,
+      });
+    } catch (e) {
+      if (isFundsCheck(e)) throw fundsShort();
+      throw e;
+    }
+    if (!res.won) throw conflictError(cupKo('rewardPriceChanged'), 'PRICE_CHANGED');
+    return ok(
+      c,
+      SureShopResponseSchema,
+      sureShop({ balance: res.balance, bought: snap.bought + 1 }, rule),
+      200,
+      NO_STORE,
+    );
+  });
 }
+
+/** T-11-513 구단 자금 · 오늘 받은 횟수 · 수치로 확정 강화 값 응답을 만든다. */
+const sureShop = (
+  snap: { balance: number; bought: number },
+  rule: { price: number; growth: number; cap: number },
+) => ({
+  balance: snap.balance,
+  offer: { price: shopPriceAt(rule, snap.bought), bought: snap.bought, cap: rule.cap },
+});
 
 /** 구단 자금 · 오늘 받은 횟수 · 수치로 보상 값 응답을 만든다. */
 function rewardShop(
@@ -748,16 +1028,16 @@ function rewardShop(
   return { balance: snap.balance, offers };
 }
 
-/** 컵에 참가 중인(탈락 전) 이 시즌 대회와 그 경기들. 없으면 빈 배열. */
+/** 컵에 참가 중인(탈락 전) 이 시즌 대회. 경기 목록은 명단 잠금 검사에서만 읽는다. */
 async function activeCups(db: Db, profileId: string, season: number) {
   const rows = await activeEntriesOf(db, profileId);
   if (!rows.length) return [];
   const all = await cupSchedule(db);
-  const out: { cup: CupDef; entry: CupEntryRow; matches: CupMatchRow[] }[] = [];
+  const out: { cup: CupDef; entry: CupEntryRow }[] = [];
   for (const entry of rows) {
     const cup = cupById(entry.cupId, all);
     if (!cup || cup.season !== season) continue;
-    out.push({ cup, entry, matches: await cupMatchesOf(db, cup.id) });
+    out.push({ cup, entry });
   }
   return out;
 }
@@ -773,29 +1053,76 @@ export async function checkCupLineup(
   ids: readonly string[],
   filled: number,
   now: string,
+  ovr: number,
+  /**
+   * T-11-570 league: 리그 잠금을 본다(팀 명단 · 감독). cup: 이 명단이 컵 명단이다 — 컵 명단 프리셋이 따로 있는 팀의 팀 저장은
+   * false로 불러 컵 검사를 건너뛰고, 프리셋 저장은 league를 false로 불러 컵 검사만 한다.
+   */
+  { league = true, cup = true }: { league?: boolean; cup?: boolean } = {},
 ) {
-  for (const { cup, entry, matches } of await activeCups(db, profileId, season)) {
-    if (lineupLocked(matches, entry.teamId, now))
+  // T-11-418b 리그 경기도 1시간 전부터 끝날 때까지 명단을 잠근다.
+  if (league && (await leagueLineupLocked(db, profileId, season, now)))
+    throw conflictError(cupKo('leagueLocked'), 'LEAGUE_LINEUP_LOCKED');
+  if (!cup) return;
+  const active = await activeCups(db, profileId, season);
+  if (!active.length) return;
+  const matches = await cupMatchesIn(
+    db,
+    active.map(({ cup }) => cup.id),
+  );
+  let listed: Promise<number> | undefined;
+  for (const { cup, entry } of active) {
+    // T-11-436 편성 화면 줄과 같은 판정(cupLineupVerdict). T-11-410 구간 대회는 추첨 뒤 탈락 전까지 상한을 넘는 명단으로
+    // 바꿀 수 없다(접수 중에는 신청을 옮기면 된다).
+    const verdict = cupLineupVerdict(cup, { ovr, filled }, now);
+    if (verdict.capBlocks)
+      throw conflictError(
+        cupKo('ovrCap', { division: cupKo(cup.division!), n: cup.ovrMax ?? 0 }),
+        'CUP_OVR_CAP',
+      );
+    if (
+      lineupLocked(
+        matches.filter((m) => m.cupId === cup.id),
+        entry.teamId,
+        now,
+      )
+    )
       throw conflictError(cupKo('lineupLocked'), 'CUP_LINEUP_LOCKED');
-    if (filled < cup.minFilled)
+    if (verdict.short)
       throw conflictError(cupKo('minFilled', { n: cup.minFilled }), 'CUP_MIN_FILLED');
-    if ((await countOpenListingsAmong(db, ids)) > 0)
+    if ((await (listed ??= countOpenListingsAmong(db, ids))) > 0)
       throw conflictError(cupKo('cardListed'), 'CUP_CARD_LISTED');
   }
 }
 
-/** T-11-310 감독 전향 검사: 컵 참가 중이면 지금 선발에 든 선수는 감독이 될 수 없다(명단이 비면 대회 최소 인원이 깨진다). */
-export async function checkCupManager(db: Db, profileId: string, season: number, careerId: string) {
-  if (!(await activeCups(db, profileId, season)).length) return;
-  const [team] = await myTeamIn(db, profileId, season);
-  if (team && slotIdsOf(team).includes(careerId))
+/**
+ * 참가 중인(탈락 전) 컵의 선발 선수. 대회 시즌의 팀 명단을 본다 — T-11-552 시즌이 넘어간 뒤에도 끝나지 않은 지난 시즌 컵
+ * (시즌 1 제3회)의 선발을 지킨다. T-11-570 컵 명단 프리셋이 있으면 그 프리셋 선발이다.
+ */
+export async function cupLineupIds(db: Db, profileId: string): Promise<Set<string>> {
+  const out = new Set<string>();
+  for (const { season } of await activeCupSeasonsQuery(db, profileId)) {
+    const [team] = await myTeamIn(db, profileId, season);
+    for (const id of team ? slotIdsOf(cupTeamOf(team)) : []) if (id) out.add(id);
+  }
+  return out;
+}
+
+/** T-11-310 감독 전향 검사: 컵 참가 중이면 선발에 든 선수는 감독이 될 수 없다(명단이 비면 대회 최소 인원이 깨진다). */
+export async function checkCupManager(db: Db, profileId: string, careerId: string) {
+  if ((await cupLineupIds(db, profileId)).has(careerId))
     throw conflictError(cupKo('cardManager'), 'CUP_CARD_LOCKED');
 }
 
-/** T-11-145 판매 등록 검사(R2): 컵 참가 중이면 지금 선발에 든 선수는 내놓을 수 없다. */
-export async function checkCupListing(db: Db, profileId: string, season: number, careerId: string) {
-  if (!(await activeCups(db, profileId, season)).length) return;
-  const [team] = await myTeamIn(db, profileId, season);
-  if (team && slotIdsOf(team).includes(careerId))
+/** T-11-145 판매 등록 검사(R2): 컵 참가 중이면 선발에 든 선수는 내놓을 수 없다. */
+export async function checkCupListing(db: Db, profileId: string, careerId: string) {
+  if ((await cupLineupIds(db, profileId)).has(careerId))
     throw conflictError(cupKo('cardLocked'), 'CUP_CARD_LOCKED');
+}
+
+/** T-11-552 방출 검사: 컵 참가 중이면 선발에 든 선수는 방출할 수 없다(시즌이 넘어간 지난 시즌 컵 명단 포함). */
+export async function checkCupRelease(db: Db, profileId: string, careerIds: readonly string[]) {
+  const ids = await cupLineupIds(db, profileId);
+  if (careerIds.some((id) => ids.has(id)))
+    throw conflictError(cupKo('cardReleaseLocked'), 'CUP_CARD_LOCKED');
 }

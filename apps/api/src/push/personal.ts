@@ -4,6 +4,12 @@ import { postExpo } from './transport.js';
 import { kstDay } from '@offside/contracts/kst';
 import { latePushResult } from './result.js';
 import { communityOwnerEmail } from './community.js';
+import { badgeOf, unreadBadges } from './badge.js';
+import { TRANSLATED_LOCALES, type Locale } from '@offside/contracts/i18n';
+
+/** 이탈 알림을 쓸 언어(career_activity.lang). 옮기는 언어가 아니면 한국어. */
+const retentionLang = (lang: string | null): Locale =>
+  (TRANSLATED_LOCALES as readonly string[]).includes(lang ?? '') ? (lang as Locale) : 'ko';
 
 const BATCH = 100;
 const MINUTE = 60_000;
@@ -39,6 +45,8 @@ type Row = {
   title: string;
   retention_stage: number | null;
   retention_lang: string | null;
+  /** T-11-501 리텐션 원장(retention_pushes)의 캠페인. 옛 커리어 독려는 null(retention_stage만 있다). */
+  retention_campaign: string | null;
   body: string;
   kind: string;
   target_json: string;
@@ -134,14 +142,16 @@ async function claim(
   const rows = await db
     .prepare(
       `SELECT q.*, n.title, n.body, n.kind, n.target_json,
-      (SELECT stage FROM career_reminder_outcomes WHERE notification_id=n.id) AS retention_stage,
+      COALESCE((SELECT stage FROM career_reminder_outcomes WHERE notification_id=n.id),
+        (SELECT stage FROM retention_pushes WHERE notification_id=n.id)) AS retention_stage,
+      (SELECT campaign FROM retention_pushes WHERE notification_id=n.id) AS retention_campaign,
       (SELECT lang FROM career_activity WHERE profile_id=q.profile_id) AS retention_lang,
     CASE WHEN d.token = q.token AND d.session_id = q.session_id AND d.profile_id = q.profile_id
       AND d.updated_at >= ? AND s.channel = 'app' AND s.profile_id = q.profile_id
       AND s.revoked_at IS NULL AND s.expires_at > ? AND p.deleted_at IS NULL AND p.id IS NOT NULL
       AND n.read_at IS NULL AND n.expires_at > ? AND q.expires_at > ?
       AND CASE n.kind WHEN 'team' THEN COALESCE(pref.team, 1) WHEN 'market' THEN COALESCE(pref.market, 1)
-        WHEN 'social' THEN COALESCE(pref.social, 1) ELSE 1 END = 1
+        WHEN 'social' THEN COALESCE(pref.social, 1) WHEN 'return' THEN COALESCE(pref.nudge, 1) ELSE 1 END = 1
       AND (n.kind <> 'social' OR ${SOCIAL_ELIGIBLE} = 1)
       AND (n.kind <> 'community' OR (n.source_key LIKE 'admin-community-%'
         AND p.google_sub IS NOT NULL AND lower(trim(p.email)) = ?
@@ -156,6 +166,10 @@ async function claim(
         AND NOT EXISTS (SELECT 1 FROM notifications other WHERE other.profile_id=q.profile_id AND other.id<>n.id AND other.created_at > ?)
         WHEN n.source_key LIKE 'attendance-reminder:%' THEN NOT EXISTS (SELECT 1 FROM owner_attendance o
           WHERE o.profile_id=q.profile_id AND o.last_day = substr(n.source_key, 21, 10))
+        WHEN n.source_key LIKE 'gift-reminder:%' THEN 0
+        WHEN n.source_key LIKE 'retention:%' THEN NOT EXISTS (SELECT 1 FROM push_devices active
+            WHERE active.profile_id=q.profile_id AND active.updated_at > n.created_at)
+          AND NOT EXISTS (SELECT 1 FROM career_activity a WHERE a.profile_id=q.profile_id AND a.last_active_at > n.created_at)
         ELSE NOT EXISTS (SELECT 1 FROM career_activity a WHERE a.profile_id=q.profile_id)
           AND NOT EXISTS (SELECT 1 FROM push_devices active WHERE active.profile_id = q.profile_id AND active.updated_at > ?) END)
       THEN 1 ELSE 0 END AS eligible
@@ -190,22 +204,20 @@ async function send(
   transport: typeof fetch,
 ): Promise<Outcome[]> {
   try {
+    const badges = await unreadBadges(
+      env.DB,
+      rows.map((r) => r.profile_id),
+      iso(now),
+    );
     const response = await postExpo(
       env,
       'send',
       rows.map((r) => ({
         to: r.token,
-        title: r.retention_stage
-          ? pushText(
-              r.title,
-              r.retention_lang === 'en' ? 'en' : r.retention_lang === 'ja' ? 'ja' : 'ko',
-            )
-          : r.title,
+        ...badgeOf(badges, r.profile_id),
+        title: r.retention_stage ? pushText(r.title, retentionLang(r.retention_lang)) : r.title,
         body: (r.retention_stage
-          ? pushText(
-              r.body,
-              r.retention_lang === 'en' ? 'en' : r.retention_lang === 'ja' ? 'ja' : 'ko',
-            )
+          ? pushText(r.body, retentionLang(r.retention_lang))
           : r.body
         ).slice(0, 160),
         channelId: 'news',
@@ -216,9 +228,11 @@ async function send(
           type: 'offside-notification',
           notificationId: r.notification_id,
           kind: r.kind,
-          ...(r.retention_stage
-            ? { campaign: 'career_reminder', reminderStage: r.retention_stage }
-            : {}),
+          ...(r.retention_campaign
+            ? { campaign: `retention_${r.retention_campaign}`, reminderStage: r.retention_stage }
+            : r.retention_stage
+              ? { campaign: 'career_reminder', reminderStage: r.retention_stage }
+              : {}),
           target: targetOf(r.target_json),
         },
       })),
@@ -310,9 +324,12 @@ export async function runPersonalPush(
   now = Date.now(),
   transport: typeof fetch = fetch,
   communitySourceKey?: string | { retentionBatch: string } | { cupResult: string },
+  ids?: string[],
 ) {
   if (env.ENVIRONMENT !== 'production' || env.PERSONAL_PUSH_ENABLED !== '1')
     return { enabled: false };
+  if (ids && !ids.length) return { enabled: true, states: {} };
+  const idScope = ids ? ` AND id IN (${ids.map(() => '?').join(',')})` : '';
   const lease = crypto.randomUUID();
   // Bound source key and kind keep Queue messages away from ordinary user notifications.
   const retentionBatch =
@@ -347,12 +364,14 @@ export async function runPersonalPush(
   await env.DB.batch([
     env.DB.prepare(
       "UPDATE push_deliveries SET state = 'unknown', token = '', lease_id = NULL, updated_at = ? WHERE state = 'sending' AND due_at <= ?" +
-        scope,
-    ).bind(iso(now), iso(now), ...scopeParams),
+        scope +
+        idScope,
+    ).bind(iso(now), iso(now), ...scopeParams, ...(ids ?? [])),
     env.DB.prepare(
       "UPDATE push_deliveries SET state = 'accepted', lease_id = NULL WHERE state = 'checking' AND due_at <= ?" +
-        scope,
-    ).bind(iso(now), ...scopeParams),
+        scope +
+        idScope,
+    ).bind(iso(now), ...scopeParams, ...(ids ?? [])),
   ]);
   const states: Partial<Record<Outcome['state'], number>> = {};
   const hour = new Date(now + 9 * 3600_000).getUTCHours();
@@ -366,8 +385,10 @@ export async function runPersonalPush(
     if (!checking && (hour < 11 || hour >= 19))
       only += ` AND NOT EXISTS
       (SELECT 1 FROM notifications WHERE id=push_deliveries.notification_id AND source_key LIKE 'career-reminder:%')`;
-    const onlyParams = [...scopeParams];
-    if (!checking && communitySourceKey === undefined) {
+    only += idScope;
+    const onlyParams = [...scopeParams, ...(ids ?? [])];
+    if (!checking) only += " AND id NOT LIKE 'test:%'";
+    if (!checking && communitySourceKey === undefined && ids === undefined) {
       // Give Queue first delivery; cron repairs missed publishes after five minutes.
       only += ` AND NOT EXISTS (SELECT 1 FROM notifications WHERE id=push_deliveries.notification_id
         AND (source_key LIKE 'career-reminder:%' OR source_key LIKE 'cup-complete:%') AND created_at > ?)`;

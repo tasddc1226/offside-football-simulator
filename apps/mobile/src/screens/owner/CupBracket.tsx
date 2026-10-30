@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { alpha } from '../../theme/colors';
 import { useSnapshot } from 'valtio';
 import { prefs } from '../../store';
@@ -6,6 +7,7 @@ import { LayoutAnimation, ScrollView, View, useWindowDimensions } from 'react-na
 import Svg, { Path } from 'react-native-svg';
 import { BRACKET as B, cupBracket, type BracketNode } from '@offside/app-core/cupBracket';
 import type { CupMatch, CupResponse } from '@offside/app-core/api/cup';
+import type { CupBracketView } from '@offside/app-core/cupFolds';
 import { cupText as L } from '@offside/app-core/i18n/ko/cup';
 import { TeamLogo } from '../../components/TeamLogo';
 import { useColors } from '../../theme/useColors';
@@ -17,18 +19,31 @@ export default function CupBracket({
   mineId,
   now,
   onselect,
+  start = null,
+  view,
 }: {
   cup: CupResponse;
   mineId: string | null;
   now: number;
   onselect: (m: CupMatch) => void;
+  /** T-11-406 팀 프로필에서 돌아오면 보던 라운드 · 세로 위치에서 다시 연다. */
+  start?: CupBracketView | null;
+  /** 지금 보는 라운드 · 세로 위치를 적어 두는 곳(CupScreen이 팀 프로필로 가기 전에 기억한다). */
+  view?: { current: Omit<CupBracketView, 'match'> };
 }) {
   const c = useColors();
   const window = useWindowDimensions();
   const { motionOK } = useSnapshot(prefs);
   const horizontal = useRef<ScrollView>(null);
   const vertical = useRef<ScrollView>(null);
-  const [active, setActive] = useState(0);
+  const [active, setActive] = useState(start?.column ?? 0);
+  if (view) view.current.column = active;
+  useEffect(() => {
+    if (!start) return;
+    horizontal.current?.scrollTo({ x: start.column * B.column, animated: false });
+    vertical.current?.scrollTo({ y: start.y, animated: false });
+    if (view) view.current.y = start.y;
+  }, []); // 처음 그릴 때 한 번만 옮긴다.
   const tree = cupBracket(cup.matches, active);
   const pending = useRef<{ column: number; node?: BracketNode } | null>(null);
   const own = tree.nodes.findLast(
@@ -76,7 +91,7 @@ export default function CupBracket({
               paddingHorizontal: 10,
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: 24,
+              borderRadius: RADIUS.lg,
               borderWidth: 1,
               borderColor: i === active ? c.accent : c.line,
               backgroundColor: i === active ? alpha(c.accent, 0.12) : 'transparent',
@@ -120,12 +135,16 @@ export default function CupBracket({
           height: Math.min(window.height * 0.65, tree.viewportHeight),
           borderWidth: 1,
           borderColor: c.line,
-          borderRadius: 12,
+          borderRadius: RADIUS.md,
         }}
       >
         <ScrollView
           ref={vertical}
           nestedScrollEnabled
+          scrollEventThrottle={64}
+          onScroll={(e) => {
+            if (view) view.current.y = e.nativeEvent.contentOffset.y;
+          }}
           style={{
             width: tree.width + 24,
             height: Math.min(window.height * 0.65, tree.viewportHeight),
@@ -174,7 +193,7 @@ export default function CupBracket({
                     height: n.height,
                     padding: n.compact ? 4 : 8,
                     gap: n.compact ? 2 : 4,
-                    borderRadius: 10,
+                    borderRadius: RADIUS.sm,
                     borderWidth: mine ? 2 : 1,
                     borderColor: mine ? c.accent : c.line,
                     backgroundColor: c.surface,

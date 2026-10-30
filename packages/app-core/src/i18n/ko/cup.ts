@@ -40,12 +40,12 @@ const ko = {
   adminNoCups: '대회가 없어요.',
   lineupOpen: '팀 상세·스쿼드 보기',
   predictionLoginTitle: '승부예측으로 컵에 함께해요',
-  predictionLoginButton: 'Google 로그인하고 승부예측 참여하기',
+  predictionLoginButton: '구글로 로그인하고 승부예측 참여하기',
   predictionPick: '예측하기',
   predictionKnockout: '토너먼트는 승부차기를 포함한 최종 승리 팀을 맞혀요.',
   predictionPending: '결과 집계 중',
   predictionSaving: '예측 저장 중…',
-  predictionShares: '유저 예측 비율',
+  predictionShares: '구단주 예측 비율',
   predictionTitle: '승부예측',
   predictionIntro:
     '컵에 신청하지 않아도 모든 경기의 결과를 예측할 수 있어요. 맞힌 경기마다 선수 후보 리롤권 1장을 받아요.',
@@ -66,8 +66,11 @@ const ko = {
   predictionLoading: '승부예측을 불러오는 중…',
   title: '오프사이드 컵',
   edition: (p: { n: number }) => `제${p.n}회`,
-  fullTitle: (p: { n: number }) => `제${p.n}회 오프사이드 컵`,
-  champTitle: (p: { n: number }) => `제${p.n}회 오프사이드 컵 챔피언`,
+  // T-11-410 d = 구간 이름(구간 대회만).
+  fullTitle: (p: { n: number; d?: string | undefined }) =>
+    `제${p.n}회 오프사이드 컵${p.d ? ` ${p.d}` : ''}`,
+  champTitle: (p: { n: number; d?: string | undefined }) =>
+    `제${p.n}회 오프사이드 컵${p.d ? ` ${p.d}` : ''} 챔피언`,
   open: '대회 보기',
   loadFail: '대회 정보를 불러오지 못했어요.',
   loading: '불러오는 중…',
@@ -119,7 +122,15 @@ const ko = {
   withdrawConfirm: '컵 신청을 취소할까요? 접수 기간 안에는 다시 신청할 수 있어요.',
   toastEntered: '컵에 신청했어요.',
   toastWithdrawn: '신청을 취소했어요.',
-  loginToEnter: 'Google 로그인하면 신청할 수 있어요.',
+  loginToEnter: '구글로 로그인하면 신청할 수 있어요.',
+  /** T-11-443 웹 비로그인 대회 화면 로그인 카드 · 신청 확인 · 신청 불가 사유에서 편성으로. */
+  loginCardNote: '로그인하면 컵에 신청하고 승부예측에도 참여할 수 있어요.',
+  enterAskTitle: '컵에 신청할까요?',
+  enterAskWithdraw: '접수 기간 안에는 신청을 취소할 수 있어요.',
+  enterAskOk: '신청하기',
+  enterAskCancel: '취소',
+  toLineup: '편성으로 가기',
+  toMakeTeam: '팀 만들러 가기',
   enterLockNote: '신청하면 선발 선수는 이적시장에 올리거나 방출할 수 없어요. 탈락하면 풀려요.',
   reasonNoTeam: '이번 시즌 구단이 있어야 신청할 수 있어요.',
   reasonNotEnough: (p: { filled: number; min: number }) =>
@@ -127,11 +138,50 @@ const ko = {
   reasonListed: '이적시장에 올린 선수가 선발에 있어요. 선발에서 빼거나 판매를 취소해 주세요.',
   reasonFull: '정원이 다 찼어요.',
   reasonClosed: '지금은 신청 기간이 아니에요.',
+  // T-11-410 OVR 구간별 대회
+  reasonOverCap: (p: { ovr: number; cap: number }) =>
+    `팀 OVR(${p.ovr})이 이 구간 상한(${p.cap})보다 높아요. 윗 구간에 신청할 수 있어요.`,
+  reasonEnteredOther: '이번 회차 다른 구간에 신청했어요. 그 신청을 취소하면 옮길 수 있어요.',
+  divisionJunior: '주니어',
+  divisionSenior: '시니어',
+  divisionMaster: '마스터',
+  divisionTabs: 'OVR 구간',
+  divisionCap: (p: { n: number }) => `OVR ${p.n} 이하`,
+  divisionNoCap: 'OVR 제한 없음',
+  divisionCapPending: '상한은 접수가 열리면 정해져요',
+  divisionEntries: (p: { n: number }) => `${p.n}팀 신청`,
+  divisionMine: '내 구간',
+  divisionFit: (p: { ovr: number; division: string }) =>
+    `내 팀 OVR(${p.ovr})이라 ${p.division}부터 신청할 수 있어요. 조 추첨 때 신청한 팀들의 OVR로 구간을 다시 나눠요.`,
+  divisionLockNote: (p: { cap: number }) =>
+    `조 추첨부터 탈락할 때까지 팀 OVR 상한(${p.cap})을 넘는 명단으로는 바꿀 수 없어요.`,
+  ruleDivisions:
+    '팀 OVR 구간(주니어 · 시니어 · 마스터)마다 따로 대회를 열어요. 내 OVR이 상한 이하인 구간에 신청할 수 있고, 한 회차에 한 구간만 참가해요.',
+  ruleDivisionMove:
+    '조 추첨 때 신청한 팀이 30팀 이상이면 신청 팀 OVR을 셋으로 나눠 상한을 다시 정하고, 모든 팀을 OVR에 맞는 구간으로 옮겨요. 8팀보다 적은 구간은 윗 구간과 함께 치러요.',
   notEntered: '이번 대회에는 신청하지 않았어요.',
   nextMatch: (p: { round: string; vs: string; at: string }) =>
     `다음 경기 ${p.round} · ${p.vs} · ${p.at}`,
   nextPending: '다음 경기 상대가 정해지는 중이에요.',
   lockNote: (p: { when: string }) => `${p.when} 명단 마감`,
+  // T-11-405 다음 경기 예상(지금 두 팀 명단 기준, 90분)
+  oddsLine: (p: { win: number; draw: number; loss: number }) =>
+    `예상 승 ${p.win}% · 무 ${p.draw}% · 패 ${p.loss}%`,
+  oddsNote: '지금 두 팀 명단으로 계산했어요. 명단은 경기 1시간 전에 잠겨요.',
+  oddsKoNote: '토너먼트에서 비기면 승부차기로 가려요.',
+  // T-11-407 모든 경기 예상(경기 줄 아래 막대).
+  matchOddsLabel: '예상',
+  matchOddsBefore: '경기 전 예상',
+  matchOddsDraw: (p: { n: number }) => `무 ${p.n}%`,
+  matchOddsAria: (p: {
+    label: string;
+    home: string;
+    away: string;
+    h: number;
+    d: number;
+    a: number;
+  }) => `${p.label}: ${p.home} 승 ${p.h}%, 무승부 ${p.d}%, ${p.away} 승 ${p.a}%`,
+  matchOddsPending: '예상 승 · 무 · 패는 경기 1시간 전, 명단이 잠기면 나와요.',
   lockedNow: '명단이 잠겼어요. 경기가 끝나면 다시 바꿀 수 있어요.',
   myResult: (p: { stage: string }) => `내 성적 ${p.stage}`,
   youWon: '우승했어요!',
@@ -139,6 +189,23 @@ const ko = {
   lineupLocked: '컵 경기 명단이 잠겼어요. 경기가 끝나면 다시 바꿀 수 있어요.',
   lineupBand: (p: { when: string }) =>
     `${p.when} 컵 명단이 마감돼요. 마감부터 그 경기가 끝날 때까지 바꿀 수 없어요.`,
+  // T-11-436 편성 화면 컵 규칙 줄(팀 OVR · 상한, 선발 인원)
+  barOvrCap: (p: { ovr: number; cap: number; division: string }) =>
+    `팀 OVR ${p.ovr} / 상한 ${p.cap}(${p.division})`,
+  barOvrNoCap: (p: { ovr: number; division: string }) =>
+    `팀 OVR ${p.ovr} · ${p.division}(상한 없음)`,
+  barFilled: (p: { n: number; min: number }) => `선발 ${p.n}/최소 ${p.min}`,
+  // T-11-570 컵 명단 프리셋을 고른 팀
+  barPreset: (p: { name: string }) =>
+    `컵 경기는 '${p.name}' 프리셋으로 뛰어요. 리그 경기는 아래 팀 명단으로 뛰어요.`,
+  barOverCapBlock: (p: { division: string; cap: number }) =>
+    `${p.division} 상한(${p.cap})을 넘어서 저장할 수 없어요. 팀 OVR을 ${p.cap} 이하로 맞춰 주세요.`,
+  barOverCapMove: (p: { division: string }) =>
+    `${p.division} 상한을 넘었어요. 이대로면 조 추첨 때 OVR에 맞는 구간으로 옮겨져요.`,
+  barShortBlock: (p: { min: number }) =>
+    `컵 참가 중에는 선발에 내 선수가 ${p.min}명 이상 있어야 저장할 수 있어요.`,
+  barShortEntry: (p: { min: number }) =>
+    `컵에 신청하려면 선발에 내 선수가 ${p.min}명 이상 있어야 해요.`,
   // 대회 화면
   secMine: '내 대회',
   secRules: '규칙',
@@ -181,7 +248,8 @@ const ko = {
   // T-11-290 우승 팝업(앱·웹을 열 때 한 번)
   championPopupAria: '오프사이드 컵 우승 소식',
   championPopupEyebrow: (p: { n: number }) => `Offside Cup · 제${p.n}회`,
-  championPopupTitle: (p: { n: number }) => `제${p.n}회 오프사이드 컵 우승`,
+  championPopupTitle: (p: { n: number; d?: string | undefined }) =>
+    `제${p.n}회 오프사이드 컵${p.d ? ` ${p.d}` : ''} 우승`,
   championPopupBody: '결승에서 이기고 트로피를 들었어요.',
   championPopupOwner: (p: { owner: string }) => `구단주 ${p.owner}`,
   championPopupTeam: '우승 팀 보기',
@@ -219,8 +287,8 @@ const ko = {
   forfeitNote: '한 팀이 나오지 못해 0:3 몰수패로 끝났어요.',
   // 팀 프로필 컵 기록
   honorsTitle: '컵 기록',
-  honorResult: (p: { edition: number; stage: string }) =>
-    `제${p.edition}회 오프사이드 컵 ${p.stage}`,
+  honorResult: (p: { edition: number; stage: string; d?: string | undefined }) =>
+    `제${p.edition}회 오프사이드 컵${p.d ? ` ${p.d}` : ''} ${p.stage}`,
   honorTeam: (p: { team: string }) => `참가 팀 ${p.team}`,
   // 선수 만들기 리롤권
   rerollBtn: (p: { n: number }) => `후보 다시 뽑기 (리롤권 ${p.n}장)`,
@@ -252,7 +320,10 @@ const ko = {
   shopBusy: '사는 중…',
   shopSoldOut: '오늘 살 수 있는 만큼 다 샀어요. 내일 0시(한국 시간)에 다시 살 수 있어요.',
   shopClosed: '지금은 리롤권을 팔지 않아요.',
-  shopShort: '구단 자금이 모자라요.',
+  // T-11-442 얼마나 모자라는지와 자금을 만드는 곳(방출)
+  shopShort: (p: { short: string }) =>
+    `구단 자금이 ${p.short} 모자라요. 직접 키운 선수를 방출하면 자금이 생겨요.`,
+  shopGoRelease: '방출하러 가기',
   shopConfirm: (p: { price: string; balance: string }) =>
     `리롤권 1장을 ${p.price}에 살까요? 산 뒤 구단 자금은 ${p.balance} 남고, 되돌릴 수 없어요.`,
   shopDone: (p: { n: number }) => `리롤권을 샀어요. 이제 ${p.n}장 있어요.`,

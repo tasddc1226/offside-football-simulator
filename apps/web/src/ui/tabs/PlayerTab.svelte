@@ -22,13 +22,20 @@
   import { boostHidden, boostView, doBoost, type BoostOutcome } from '@offside/app-core/boost-view';
   import { boostFreeOpen, boostTicketOpen } from '@offside/game/boost';
   import BoostFx from '../BoostFx.svelte';
+  import RevealFx from '../RevealFx.svelte';
+  import { gradeTier } from '@offside/app-core/reveal';
   import { retireAsk } from '../actions.js';
   import { save } from '../helpers.js';
-  import { clubOffer, loadClubShop, payWithClub, payWithTicket } from '@offside/app-core/club-reward';
+  import { clubOffer, loadClubShop, loadSureShop, payWithClub, payWithSure, payWithTicket, sureOffer } from '@offside/app-core/club-reward';
   import { fundsText } from '@offside/app-core/funds';
-  import type { RewardShopResponse } from '@offside/contracts';
+  import type { RewardShopResponse, SureShopResponse } from '@offside/contracts';
+  import { careView, doCare } from '@offside/app-core/care-view';
+  import { gameCareText as CL } from '@offside/app-core/i18n/ko/gameCare';
+  import type { CareTier } from '@offside/game/care';
   import { fetchItems } from '@offside/app-core/api/cup';
   import { hasSessionHint } from '@offside/app-core/api/client';
+  import { iapText as IL } from '@offside/app-core/i18n/ko/iap';
+  import WebPayPacks from '../cup/WebPayPacks.svelte';
 
   const { s }: { s: GameState } = $props();
   const lg = $derived(leagueOf(s.leagueId));
@@ -44,12 +51,15 @@
   // T-11-133 자금을 내고 이번 시즌 스카우트 평가 보기(앱은 보상형 광고).
   let peek = $state(loadPeek());
   const pot = $derived(peekView(s, peek, 'pay'));
+  // T-11-371 이번에 연 평가만 등급 공개 연출(저장한 뒤 보여 준다). 다시 들어오면 그대로 글자.
+  let peekFx = $state(false);
   function onPeek() {
     const p = buyPeek(s);
     if (!p) return;
     save();
     savePeek(p);
     peek = p;
+    peekFx = true;
   }
   // T-11-083 잠재력 강화. 자금을 쓰는 시도라 버튼을 한 번 더 눌러야 한다.
   let arming = $state(false);
@@ -89,6 +99,7 @@
       const p = peekOf(s);
       savePeek(p);
       peek = p;
+      peekFx = true;
     });
     clubBusy = false;
     if (!r) return;
@@ -98,6 +109,7 @@
   const clubTry = $derived(freeOpen ? clubOffer(club, 'boost') : null);
   // T-11-157 구단 자금으로는 이번 시즌의 한 번을 쓴 뒤에도 더 시도한다(오늘 횟수는 서버가 센다 — 웹은 광고가 없다).
   // T-11-174 앱에서 산 잠재력 강화권. 로그인한 구단주가 강화 자리를 볼 때만 장수를 묻고, 못 받으면 버튼을 보이지 않는다.
+  // T-11-471 같은 자리에 앱 스토어 묶음처럼 웹 결제 묶음을 보인다(웹 결제가 열린 구단주만, 결제 뒤 이 화면으로 돌아온다).
   let tickets = $state(0);
   let ticketBusy = $state(false);
   $effect(() => {
@@ -118,6 +130,43 @@
     ticketBusy = false;
     if (r.boost !== null) tickets = r.boost;
     clubMsg = r.message;
+  }
+  // T-11-513 구단 자금 확정 강화. 이 선수가 이번 시즌에 받을 수 있고 로그인한 구단주일 때만 값을 묻는다(30초 메모).
+  let sure = $state<SureShopResponse | null>(null);
+  let sureBusy = $state(false);
+  $effect(() => {
+    if (boost.sureOpen && hasSessionHint()) void loadSureShop().then((r) => (sure = r));
+  });
+  const sureTry = $derived(boost.sureOpen ? sureOffer(sure) : null);
+  async function onSureBoost() {
+    const o = sureTry;
+    if (sureBusy || !o) return;
+    sureBusy = true;
+    clubMsg = '';
+    let out: BoostOutcome | null = null;
+    const r = await payWithSure(o, confirm, () => (out = doBoost(s, 'sure')));
+    sureBusy = false;
+    if (!r) return;
+    if (r.shop) sure = r.shop;
+    clubMsg = r.message;
+    if (!out) return;
+    save();
+    fx = out;
+  }
+  // T-11-513 몸 관리. 고른 단계를 한 번 더 눌러 받는다(선수 자금을 쓴다).
+  const care = $derived(careView(s));
+  let careArm = $state<CareTier | null>(null);
+  let careMsg = $state('');
+  function onCare(t: CareTier) {
+    if (careArm !== t) {
+      careArm = t;
+      return;
+    }
+    careArm = null;
+    const msg = doCare(s, t);
+    if (!msg) return;
+    save();
+    careMsg = msg;
   }
   async function onClubBoost() {
     const o = clubTry;
@@ -146,7 +195,7 @@
     <dt>{L.body}</dt><dd data-body>{body.h}cm · {body.w}kg</dd>
     <dt>{L.foot}</dt><dd>{C.foot({ v: s.foot })}</dd>
     <dt>{L.trait}</dt><dd>{traitName}</dd>
-    <dt>{L.potential}</dt><dd data-pot>{pot.kind === 'shown' ? pot.text : potentialNotice()}</dd>
+    <dt>{L.potential}</dt><dd data-pot>{#if pot.kind === 'shown' && peekFx}<RevealFx grade={pot.grade} text={pot.text} tier={gradeTier(pot.grade)} />{:else}{pot.kind === 'shown' ? pot.text : potentialNotice()}{/if}</dd>
     <dt>{L.peakOvr}</dt><dd>{Math.max(s.peak, ovr(s))}</dd>
     <dt>{L.trust}</dt><dd>{s.trust >= 2 ? L.trustHigh : s.trust >= 0 ? L.trustMid : L.trustLow}</dd>
     <dt>{L.contract}</dt><dd>{s.contract ? L.contractLeft({ years: s.contract.years, salary: fmtMoney(s.contract.salary) }) : lg.amateur ? L.amateur : '-'}</dd>
@@ -201,6 +250,13 @@
         {ticketBusy ? B.ticketBusy : B.ticketBoost({ n: tickets, chance: boost.chance })}
       </button>
     {/if}
+    {#if sureTry}
+      <button class="btn btn-block" data-act="boost-sure" disabled={sureBusy} onclick={onSureBoost}>
+        {sureBusy ? B.clubBusy : B.sureButton({ price: fundsText(sureTry.price) })}
+      </button>
+      <p class="muted fs-xs">{B.sureNote}</p>
+    {/if}
+    {#if ticketOpen}<WebPayPacks item="boost" back="game" note={IL.boostNote({ chance: boost.chance })} />{/if}
     {#if clubMsg}<p class="muted fs-sm" aria-live="polite">{clubMsg}</p>{/if}
     <p class="muted fs-xs">{boost.note}</p>
     {#if boost.history.length}
@@ -208,6 +264,29 @@
         {#each boost.history as h, i (i)}<li>{h}</li>{/each}
       </ul>
     {/if}
+  </section>
+{/if}
+
+{#if care}
+  <section class="card" data-care={care.status}>
+    <div class="eyebrow">Conditioning</div>
+    <h2 style="margin-bottom:6px">{CL.title}</h2>
+    <p class="fs-sm" data-care-line>{care.line}</p>
+    {#if care.options.length}
+      <div class="care-opts">
+        {#each care.options as o (o.t)}
+          {#if careArm === o.t}<p class="fs-sm boost-confirm" data-care-confirm>{o.confirm}</p>{/if}
+          <div class="boost-acts">
+            <button class="btn btn-block" class:btn-tonal={careArm === o.t} data-act="care-{o.t}" disabled={!o.affordable} aria-label="{o.name} · {o.effect} · {o.cost}" onclick={() => onCare(o.t)}>
+              {#if careArm === o.t}{CL.confirmBtn}{:else}<span class="care-name">{o.name}<small class="muted">{o.effect}</small></span><span class="btn-badge">{o.affordable ? o.cost : CL.short}</span>{/if}
+            </button>
+            {#if careArm === o.t}<button class="btn" data-act="care-cancel" onclick={() => (careArm = null)}>{CL.cancel}</button>{/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
+    {#if careMsg}<p class="muted fs-sm" aria-live="polite">{careMsg}</p>{/if}
+    <p class="muted fs-xs">{care.note}</p>
   </section>
 {/if}
 
@@ -252,6 +331,19 @@
 {/if}
 
 <style>
+  .care-opts {
+    margin: 4px 0;
+  }
+  .care-opts .btn {
+    justify-content: space-between;
+  }
+  .care-name {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    text-align: left;
+  }
   .pot-peek {
     display: grid;
     gap: 8px;
@@ -293,7 +385,8 @@
     gap: 8px;
     margin: 8px 0;
   }
-  .boost-acts [data-act='boost-cancel'] {
+  .boost-acts [data-act='boost-cancel'],
+  .boost-acts [data-act='care-cancel'] {
     flex: none;
     white-space: nowrap;
   }

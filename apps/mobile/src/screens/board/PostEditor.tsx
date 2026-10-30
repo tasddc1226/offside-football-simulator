@@ -1,4 +1,5 @@
 // 관리자 글 편집기(웹 Board.svelte의 editing 폼). id가 없으면 새 글. 제목·(릴리즈 노트는 버전)·본문·번역·맨 위 고정.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { Switch, View } from 'react-native';
 import {
@@ -90,7 +91,7 @@ export function PostEditor({
           onChangeText={(body) => onChange({ ...draft, body })}
           style={{ minHeight: 12 * 26 }}
         />
-        <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
           {L.bodyHint}
         </Txt>
       </Field>
@@ -99,7 +100,7 @@ export function PostEditor({
       </Btn>
       {showI18n ? (
         <View style={{ gap: 10 }}>
-          <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
             {L.translationsHint}
           </Txt>
           <Btn

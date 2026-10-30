@@ -1,0 +1,31 @@
+import type { Translation } from '../core';
+import type { AppFlightMsgs } from '../ko/appFlight';
+
+export const appFlight: Translation<AppFlightMsgs> = {
+  cityKR: '仁川',
+  cityJP: '東京',
+  cityUS: '紐約',
+  cityNL: '阿姆斯特丹',
+  cityFR: '巴黎',
+  cityDE: '法蘭克福',
+  cityIT: '米蘭',
+  cityES: '馬德里',
+  cityGB: '倫敦',
+  cityPT: '里斯本',
+  cityBR: '聖保羅',
+  citySA: '利雅德',
+  cityCN: '上海',
+  countryKR: '韓國',
+  countryJP: '日本',
+  countryUS: '美國',
+  countryNL: '荷蘭',
+  countryFR: '法國',
+  countryDE: '德國',
+  countryIT: '義大利',
+  countryES: '西班牙',
+  countryGB: '英格蘭',
+  countryPT: '葡萄牙',
+  countryBR: '巴西',
+  countrySA: '沙烏地阿拉伯',
+  countryCN: '中國',
+};

@@ -7,6 +7,7 @@ import { grantPioneerTitles } from '../db/repos/ownerTitles.js';
 // ranks:   팀 레이팅 · 업적 · 명예의 전당 순위를 매긴다.
 // honors:  순위와 보유 기록으로 휘장을 준다.
 // specials: T-11-372 그 시즌 특별 카드(포지션별 베스트 11 · 득점왕 · 도움왕 · MVP) 표식을 카드에 붙인다(시즌 1부터).
+// division: T-11-375 시즌 마감 디비전 휘장 · 리롤권(보상 시작 시즌부터, 휘장과 리롤권을 한 batch로).
 import { HONOR_BANDS, type RankedHonorKind } from '@offside/contracts';
 import {
   CARD_ELITE_PEAK,
@@ -34,11 +35,19 @@ import { appMeta, ownerAchievements, ownerSeasonRecords, profiles } from '../db/
 import { achievementScore } from './achievements.js';
 import { computeOwnerAchievements } from './ownerAchievements.js';
 import { logErrorText } from '../logError.js';
+import { resolveBalance } from '@offside/contracts/balance';
+import { divisionRerolls, TEAM_DIVISION_REWARD_MIN } from '@offside/contracts/team-division';
+import { getActiveBalance } from '../db/repos/balance.js';
+
+import { CUP_PLAN_DEFAULTS } from '@offside/contracts/cup';
+
+/** T-11-375 디비전 보상을 받는 선발 은퇴 선수 수(컵 참가 자격과 같다). */
+export const DIVISION_REWARD_FILLED = CUP_PLAN_DEFAULTS.minFilled;
 
 /** 업적 다시 세기 한 번에 몇 명(구단주마다 D1을 7번쯤 부른다). */
 const ACH_CHUNK = 40;
 
-export type CloseStep = 'records' | 'ach' | 'ranks' | 'honors' | 'specials' | 'done';
+export type CloseStep = 'records' | 'ach' | 'ranks' | 'honors' | 'specials' | 'division' | 'done';
 export type CloseState = {
   step: CloseStep;
   cutoff: string;
@@ -74,9 +83,8 @@ const saveState = (db: Db, season: number, state: CloseState) =>
   setMeta(db, closeMetaKey(season), JSON.stringify(state));
 
 /** 로그인 수단이 있는 삭제되지 않은 구단주(profiles 별칭 p). 라이브 랭킹의 accountLinkedSql · rankedIn과 같은 기준으로 맞춘다. */
-const LINKED = sql.raw(
-  '(p.google_sub is not null or p.apple_sub is not null) and p.deleted_at is null',
-);
+const LINKED_SQL = '(p.google_sub is not null or p.apple_sub is not null) and p.deleted_at is null';
+const LINKED = sql.raw(LINKED_SQL);
 
 async function closeRecords(db: Db, season: number, cutoff: string, now: string) {
   // 선수 기록은 마감 전에 은퇴한 선수만 센다(결번·명예의 벽은 소급 지급이 늦어도 은퇴 시각으로 판단). 최초 기록은 세운 시각.
@@ -343,6 +351,47 @@ async function closeSpecials(db: Db, season: number, cutoff: string, now: string
   ]);
 }
 
+/**
+ * T-11-375 시즌 마감 디비전 보상. 자격: 로그인 수단이 있는 구단주, 마감 전에 만든 팀, 선발 은퇴 선수 8명 이상, 그 시즌 랭크
+ * 경기(건 경기 + 받은 경기) teamDivMinMatches판 이상, 디비전 프로 II 이상. 휘장(owner_honors 기본 키가 시즌 · 종류라 한 번만)을
+ * 넣고 같은 batch에서 이번에 넣은 휘장에만 리롤권을 더한다 — 다시 돌아도 휘장이 이미 있어 두 번 주지 않는다.
+ */
+export async function closeDivisions(db: Db, season: number, cutoff: string, now: string) {
+  const b = resolveBalance((await getActiveBalance(db))?.values);
+  if (season < b.teamDivRewardFrom) return 0;
+  const rerolls = [3, 4, 5, 6, 7].map((d) => divisionRerolls(d, b));
+  const d1 = db.$client;
+  const [honors] = await d1.batch([
+    d1
+      .prepare(
+        `INSERT OR IGNORE INTO owner_honors (profile_id, season, kind, band, rank, value, granted_at)
+         SELECT t.profile_id, t.season, 'division', NULL, NULL, t.division, ?1
+         FROM owner_teams t JOIN profiles p ON p.id = t.profile_id
+         WHERE t.season = ?2 AND t.division >= ?3 AND t.filled >= ?4
+           AND t.wins + t.draws + t.losses >= ?5 AND t.created_at < ?6 AND ${LINKED_SQL}`,
+      )
+      .bind(
+        now,
+        season,
+        TEAM_DIVISION_REWARD_MIN,
+        DIVISION_REWARD_FILLED,
+        b.teamDivMinMatches,
+        cutoff,
+      ),
+    d1
+      .prepare(
+        `INSERT INTO owner_items (profile_id, item, qty, updated_at)
+         SELECT profile_id, 'reroll', q, ?1 FROM (
+           SELECT h.profile_id, CASE h.value WHEN 3 THEN ?2 WHEN 4 THEN ?3 WHEN 5 THEN ?4 WHEN 6 THEN ?5 ELSE ?6 END AS q
+           FROM owner_honors h WHERE h.season = ?7 AND h.kind = 'division' AND h.granted_at = ?1
+         ) WHERE q > 0
+         ON CONFLICT (profile_id, item) DO UPDATE SET qty = qty + excluded.qty, updated_at = excluded.updated_at`,
+      )
+      .bind(now, ...rerolls, season),
+  ]);
+  return honors?.meta.changes ?? 0;
+}
+
 /** 끝났는데 아직 굳히지 않은 가장 오래된 시즌의 다음 단계를 하나 돈다. 할 일이 없으면 null. */
 export async function runSeasonClose(db: Db, now: string) {
   const closed = openTeamSeasons(now).filter((s) => teamSeasonClosed(s, now));
@@ -371,8 +420,11 @@ export async function runSeasonClose(db: Db, now: string) {
       await closeHonors(db, season, now);
       await grantPioneerTitles(db, now);
       state.step = 'specials';
+    } else if (state.step === 'specials') {
+      await closeSpecials(db, season, cutoff, now);
+      state.step = 'division';
     } else {
-      await closeSpecials(db, season, state.cutoff, now);
+      await closeDivisions(db, season, cutoff, now);
       state.step = 'done';
       state.closedAt = now;
     }

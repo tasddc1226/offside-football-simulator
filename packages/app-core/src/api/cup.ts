@@ -9,6 +9,7 @@ import type {
   RerollShopResponse,
   RewardKind,
   RewardShopResponse,
+  SureShopResponse,
 } from '@offside/contracts';
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
 import { apiFetch, cachedGet, ownerCachedGet } from './client.js';
@@ -31,7 +32,8 @@ export type {
 
 /** 대회 한눈에(누구나). cupId 'current' = 지금 보여 줄 대회. 서버 캐시 30초. */
 export const fetchCup = (cupId = 'current') => cachedGet<CupResponse>(`/v1/cups/${cupId}`, 30_000);
-export const fetchCupHome = () => cachedGet<CupHomeResponse>('/v1/cups/home', 30_000);
+// T-11-503 홈 컵 배너 · 우승 팝업. 홈에 돌아올 때마다 다시 받지 않게 2분(컵 화면은 fetchCup이 30초로 따로 본다).
+export const fetchCupHome = () => cachedGet<CupHomeResponse>('/v1/cups/home', 120_000);
 /** 내 참가·자격·다음 경기·명단 잠금·리롤권. */
 export const fetchCupMe = (cupId = 'current') => apiFetch<CupMeResponse>(`/v1/cups/${cupId}/me`);
 export const fetchCupMatch = (cupId: string, matchId: string) =>
@@ -101,6 +103,16 @@ export const buyRewardWithFunds = (kind: RewardKind, price: number, key: string)
   apiFetch<RewardShopResponse>('/v1/items/rewards/buy', {
     method: 'POST',
     body: JSON.stringify({ kind, price }),
+    headers: { [IDEMPOTENCY_KEY_HEADER]: key },
+  });
+
+/** T-11-513 구단 자금 확정 강화의 지금 값. 로그인한 구단주가 강화 자리를 볼 때만 부른다. 받으면(쓰기 성공) 메모가 비워진다. */
+export const fetchSureShop = () => ownerCachedGet<SureShopResponse>('/v1/items/sure', 30_000);
+/** 확정 강화 한 번을 구단 자금으로 받는다. price는 화면에서 본 가격, key는 한 번의 시도마다 하나. */
+export const buySureWithFunds = (price: number, key: string) =>
+  apiFetch<SureShopResponse>('/v1/items/sure/buy', {
+    method: 'POST',
+    body: JSON.stringify({ price }),
     headers: { [IDEMPOTENCY_KEY_HEADER]: key },
   });
 

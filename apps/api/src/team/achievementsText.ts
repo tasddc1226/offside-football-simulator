@@ -1,6 +1,7 @@
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
 import { achievementDescs, tenureLabels } from '../i18n/en/achievements.js';
 import { DESC_JA, GROUP_JA, LABEL_JA, UNIT_JA, ageLabelJa } from '../i18n/ja/achievements.js';
+import { DESC_ZH, GROUP_ZH, LABEL_ZH, UNIT_ZH, ageLabelZh } from '../i18n/zh/achievements.js';
 import type { Lang } from '../lang.js';
 
 // T-11-106 업적 문구의 영어. 판정(achievements.ts)은 한국어 문구와 id를 그대로 만들고, 응답을 보낼 때 id로 문구만
@@ -97,6 +98,7 @@ const LABEL: Record<string, string> = {
   'team-margin': 'Win by 5 or more goals',
   'team-goals': 'Team goals',
   'team-rating': 'Team rating',
+  'team-rp': 'Team RP',
   'team-likes': 'Likes received',
   // 구단주
   'owner-nickname': 'Set a public nickname',
@@ -127,6 +129,7 @@ const UNIT: Record<string, string> = {
   'team-streak': ' in a row',
   'team-goals': ' goals',
   'team-rating': ' pts',
+  'team-rp': ' RP',
   'team-likes': ' likes',
   'owner-players': ' players',
   'owner-retire-days': ' days',
@@ -151,6 +154,7 @@ const TABLES: Record<Exclude<Lang, 'ko'>, Tables> = {
     age: (age) => `Still playing at ${age}`,
   },
   ja: { group: GROUP_JA, label: LABEL_JA, desc: DESC_JA, unit: UNIT_JA, age: ageLabelJa },
+  zh: { group: GROUP_ZH, label: LABEL_ZH, desc: DESC_ZH, unit: UNIT_ZH, age: ageLabelZh },
 };
 
 function item(i: ClubAchievement, T: Tables): ClubAchievement {

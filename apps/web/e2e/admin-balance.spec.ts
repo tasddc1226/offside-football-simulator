@@ -134,6 +134,7 @@ async function mockApi(page: Page, opts: { linked: boolean; admin: boolean }) {
   await page.route(`${API}/v1/balance`, (route) =>
     route.fulfill(ok({ version: 1, values: { koreaStr: 76 }, activatedAt: T })),
   );
+  let scheduled: { version: number; season: number; scheduledAt: string } | null = null;
   await page.route(`${API}/v1/admin/balance**`, async (route: Route) => {
     const req = route.request();
     const path = new URL(req.url()).pathname;
@@ -142,7 +143,17 @@ async function mockApi(page: Page, opts: { linked: boolean; admin: boolean }) {
     sent.push({ method, path, body });
     const m = /^\/v1\/admin\/balance\/(\d+)(\/activate)?$/.exec(path);
     if (path === '/v1/admin/balance' && method === 'GET')
-      return route.fulfill(ok({ versions: [...versions].reverse() }));
+      return route.fulfill(ok({ versions: [...versions].reverse(), scheduled }));
+    // T-11-488 개막 예약 · 취소.
+    const sm = /^\/v1\/admin\/balance\/(\d+)\/schedule$/.exec(path);
+    if (sm && method === 'POST') {
+      scheduled = { version: +sm[1]!, season: 2, scheduledAt: T };
+      return route.fulfill(ok(scheduled));
+    }
+    if (path === '/v1/admin/balance-schedule' && method === 'DELETE') {
+      scheduled = null;
+      return route.fulfill({ status: 204 });
+    }
     if (path === '/v1/admin/balance' && method === 'POST') {
       const v: V = {
         version: versions.length + 1,
@@ -172,7 +183,7 @@ test('운영 도구: 초안을 만들어 수치를 고치고 적용한다', asyn
   const sent = await mockApi(page, { linked: true, admin: true });
   page.on('dialog', (d) => void d.accept());
   await page.goto('/');
-  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="settings"]').click();
   await expect(page.getByText('ad***@gmail.com')).toBeVisible();
   await page.locator('[data-act="admin"]').click();
   await expect(page.locator('h1')).toHaveText('운영 도구');
@@ -202,11 +213,38 @@ test('운영 도구: 초안을 만들어 수치를 고치고 적용한다', asyn
   expect(sent.some((s) => s.path === '/v1/admin/balance/2/activate')).toBe(true);
 });
 
+test('T-11-488 운영 도구: 초안을 다음 시즌 개막에 적용하게 예약하고 취소한다', async ({ page }) => {
+  const sent = await mockApi(page, { linked: true, admin: true });
+  page.on('dialog', (d) => void d.accept());
+  await page.goto('/');
+  await page.locator('[data-act="settings"]').click();
+  await page.locator('[data-act="admin"]').click();
+  await page.locator('[data-admin-tab="balance"]').click();
+  await page.locator('[data-act="new-draft"]').click();
+  await expect(page.locator('[data-editing="2"]')).toBeVisible();
+
+  await page.locator('[data-act="schedule"]').click();
+  await expect(page.locator('[data-balance-scheduled="2"]')).toContainText('시즌 2 개막');
+  await expect(page.locator('[data-version="2"]')).toContainText('개막 예약');
+  await expect(page.locator('[data-act="schedule"]')).toBeDisabled();
+  expect(sent.some((s) => s.method === 'POST' && s.path === '/v1/admin/balance/2/schedule')).toBe(
+    true,
+  );
+  // 예약은 활성화가 아니다 — 적용 중은 그대로 v1.
+  await expect(page.locator('[data-version="1"]')).toContainText('적용 중');
+
+  await page.locator('[data-act="cancel-schedule"]').click();
+  await expect(page.locator('[data-balance-scheduled]')).toHaveCount(0);
+  expect(sent.some((s) => s.method === 'DELETE' && s.path === '/v1/admin/balance-schedule')).toBe(
+    true,
+  );
+});
+
 test('운영 도구: 구글 연결이 없으면 관리자 여부를 묻지도 않고 입구가 없다', async ({ page }) => {
   const sent = await mockApi(page, { linked: false, admin: false });
   await page.goto('/');
-  await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('h1')).toHaveText('내 구단');
+  await page.locator('[data-act="settings"]').click();
+  await expect(page.locator('#account-slot')).toContainText('로그인하지 않았어요');
   await expect(page.locator('[data-act="admin"]')).toHaveCount(0);
   expect(sent.some((s) => s.path === '/v1/boards/viewer')).toBe(false);
 });
@@ -217,7 +255,7 @@ test('운영 도구: 대시보드가 기본 탭이고, 댓글 탭에서 작성�
   const sent = await mockApi(page, { linked: true, admin: true });
   page.on('dialog', (d) => void d.accept());
   await page.goto('/');
-  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="settings"]').click();
   await expect(page.getByText('ad***@gmail.com')).toBeVisible();
   await page.locator('[data-act="admin"]').click();
   await expect(page.locator('[data-stat="users"]')).toContainText('1,234');
@@ -303,7 +341,7 @@ test('운영 도구: 자동 플레이 탭은 열 때 불러오고, 구간을 바
     );
   });
   await page.goto('/');
-  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="settings"]').click();
   await expect(page.getByText('ad***@gmail.com')).toBeVisible();
   await page.locator('[data-act="admin"]').click();
   await expect(page.locator('[data-stat="users"]')).toBeVisible();
@@ -369,7 +407,7 @@ test('자동 숨김 이력: 모바일, 페이지 이동, 복구 및 탭 재진�
     return r.fulfill({ status: 204 });
   });
   await page.goto('/');
-  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="settings"]').click();
   await page.locator('[data-act="admin"]').click();
   await page.locator('[data-admin-tab="automation"]').click();
   const panel = page.locator('[data-automation-enforcement]');
@@ -446,7 +484,7 @@ test('T-11-263 유저 조회 탭: 찾아서 요약을 보고, 확인 뒤 아이�
     return route.fulfill(ok(user()));
   });
   await page.goto('/');
-  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="settings"]').click();
   await page.locator('[data-act="admin"]').click();
   await page.locator('[data-admin-tab="users"]').click();
   expect(queries).toEqual([]);
@@ -486,21 +524,40 @@ test('T-11-263 매출 탭: 열 때 불러오고, 기간을 바꾸면 다시 받�
           krw: 1100,
         })),
         products: [{ productId: 'com.offsidelab.app.scout_5', count: 2, krw: 8800, refunded: 0 }],
-        stores: [{ store: 'google', count: 3, krw: 8800 }],
-        removeAds: { count: 1, refunds: 0, krw: 3300, since: T },
+        stores: [
+          { store: 'google', count: 2, krw: 7700 },
+          { store: 'xsolla', count: 1, krw: 1100 },
+        ],
+        removeAds: {
+          count: 1,
+          refunds: 0,
+          krw: 3300,
+          since: T,
+          allTime: { count: 4, refunds: 1, krw: 9900 },
+          stores: [{ store: 'apple', count: 1, refunds: 0 }],
+        },
         recent: [],
       }),
     );
   });
   await page.goto('/');
-  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="settings"]').click();
   await page.locator('[data-act="admin"]').click();
   await expect(page.locator('[data-stat="users"]')).toBeVisible();
   expect(asked).toEqual([]);
   await page.locator('[data-admin-tab="revenue"]').click();
   const sum = page.locator('[data-revenue-summary]');
   await expect(sum).toContainText('₩8,800 · 3건');
-  await expect(sum).toContainText('광고 제거');
+  // T-11-484 광고 제거는 원장 밖(스토어 알림)으로 따로, 합계와 전체 기간에도 보인다.
+  await expect(sum).toContainText('광고 제거(원장 밖)1건 · 환불 0 · ₩3,300 (App Store 1)');
+  await expect(sum).toContainText('합계(광고 제거 포함)₩12,100');
+  await expect(sum).toContainText('전체 기간(광고 제거)4건 · 환불 1 · ₩9,900');
+  // T-11-471 앱 인앱 결제와 웹 결제(엑솔라)를 나눠 보인다.
+  await expect(sum).toContainText('앱 인앱 결제₩7,700 · 2건');
+  await expect(sum).toContainText('웹 결제₩1,100 · 1건');
+  await expect(page.locator('[data-admin="revenue"]')).toContainText(
+    '웹 결제 (Xsolla)1건 · ₩1,100',
+  );
   await expect(page.locator('[data-admin="revenue"]')).toContainText('프리미엄 스카우트권 5장');
   await page.locator('[data-revenue-days="30"]').click();
   await expect.poll(() => asked).toEqual(['7', '30']);

@@ -136,7 +136,7 @@ describe('capacity safeguards', () => {
   });
 
   it('public HOF anchors on primary before count while authenticated reads keep using primary', async () => {
-    for (const key of ['club_ids_backfill', 'career_values_backfill', 'card_values_backfill'])
+    for (const key of ['club_ids_backfill', 'career_values_backfill'])
       await run("INSERT OR REPLACE INTO app_meta(key,value) VALUES (?1,'1')", key);
     const { cookie } = await issueCookie(ctx);
     const primary: string[] = [];

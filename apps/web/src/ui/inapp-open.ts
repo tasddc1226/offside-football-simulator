@@ -16,6 +16,9 @@ export function isStandalone(): boolean {
   }
 }
 
+/** 인앱 브라우저 안내를 닫았는지 적어 두는 키(InAppBanner). */
+export const INAPP_HINT_KEY = 'ft_inapp_hint';
+
 let cached: InAppInfo | null | undefined;
 /** 지금 열린 브라우저가 인앱 브라우저면 그 정보, 아니면 null(한 번 계산해 둔다). */
 export function currentInApp(): InAppInfo | null {

@@ -125,3 +125,6 @@ export function shareCardData(v: LegendView, titleId: string | null | undefined)
 /** 카드 바닥의 한 줄 소개·게임 이름. 언어를 바꾸면 달라져야 하므로 읽을 때 고른다. */
 export const tagline = (): string => L.cardTagline;
 export const cardBrand = (): string => L.cardBrand;
+
+/** T-11-439 이미 만든 이미지가 지금 기록과 같은가를 견줄 열쇠. 칭호·결번처럼 카드에 그려지는 값이 바뀌면 달라진다. */
+export const shareCardKey = (c: ShareCardData): string => JSON.stringify(c);

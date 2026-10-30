@@ -31,7 +31,6 @@ export const hof: Translation<HofMsgs> = {
   season: 'シーズン',
   seasonAria: '記録シーズン',
   allSeasons: '全シーズン',
-  notOpen: '（開幕予定）',
   filter: 'フィルター',
   filterLabel: (p) => `フィルター、${p.pos}、${p.sort}`,
   filterA11y: (p) => `フィルター、${p.label}`,
@@ -42,6 +41,10 @@ export const hof: Translation<HofMsgs> = {
   all: 'すべて',
   rankBasis: '順位の基準',
   sortGroup: 'ランキングの種類',
+  basisScore: 'レジェンドスコアは通算記録・トロフィー・個人賞・代表歴を合わせた値です。',
+  basisValue: '引退価値は最も高かった3シーズンの市場価値の平均にレジェンドスコアを反映した値です。',
+  basisGa: '攻撃ポイント（P）はゴールとアシストを足した数です。',
+  basisPeak: '最高OVRはキャリアで最も高かった総合能力値です。',
   opens: (p) => `${p.name}は${p.when}（韓国時間）に開幕します。`,
   opensNote:
     '開幕後に作った選手が引退すると、ここに載ります。いま（プレシーズン）作った選手は「プレシーズン」と「全体」の殿堂に残ります。',

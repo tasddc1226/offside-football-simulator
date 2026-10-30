@@ -11,6 +11,7 @@ import {
   legendScoreOfRecord,
   legendTermsOfRecord,
 } from '@offside/contracts/hof-rules';
+import { cardValue, retireValue } from '@offside/contracts/market-value';
 import { gzipToR2 } from '../cron/backup.js';
 import { createApp } from '../app.js';
 import { UPLOAD_LIMIT } from './careers.js';
@@ -148,6 +149,34 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       (await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID)))[0]!.detailArchiveKey,
     ).toBeNull();
     expect(await ctx.env.BACKUP!.head(key)).not.toBeNull();
+  });
+
+  it('T-11-468 지운 버린 커리어를 다시 올리면 원래 서비스 시즌으로 되살리고, 다른 프로필은 가져가지 못한다', async () => {
+    const owner = await issueCookie(ctx);
+    const app = createApp();
+    const put = (cookie: string, year: number, body = seasonBody()) =>
+      app.request(
+        `/v1/careers/${CAREER_ID}/seasons/${year}`,
+        jsonInit({ method: 'PUT', body, cookie }),
+        ctx.env,
+      );
+    expect((await put(owner.cookie, 2026)).status).toBe(200);
+    // 매일 단계가 지운 상태: 커리어 · 시즌이 없고 흔적만 남았다(처음 올라온 시즌은 프리시즌).
+    await ctx.env.DB.batch([
+      ctx.env.DB.prepare(
+        "INSERT INTO pruned_careers (career_id, profile_id, service_season, pruned_at) VALUES (?, ?, 0, '2026-10-20T19:00:00.000Z')",
+      ).bind(CAREER_ID, owner.profileId),
+      ctx.env.DB.prepare('DELETE FROM career_seasons WHERE career_id = ?').bind(CAREER_ID),
+      ctx.env.DB.prepare('DELETE FROM careers WHERE id = ?').bind(CAREER_ID),
+    ]);
+    const other = await issueCookie(ctx);
+    const next = seasonBody();
+    next.season.age = 19;
+    expect((await put(other.cookie, 2027, next)).status).toBe(409);
+    expect(await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID))).toEqual([]);
+    expect((await put(owner.cookie, 2027, next)).status).toBe(200);
+    const [row] = await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID));
+    expect(row).toMatchObject({ profileId: owner.profileId, serviceSeason: 0 });
   });
 
   it('archived retirement restores logs and retains normal retirement/card behavior', async () => {
@@ -321,6 +350,27 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect(await hiddenOf(other)).toBe(1);
   });
 
+  it('T-11-462: 스카우트권 없이 높은 잠재력 선수만 모은 구단주의 새 높은 잠재력 커리어는 첫 업로드에 숨긴다', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const body = seasonBody();
+    const send = (id: string, pot: number) =>
+      putJson(ctx, cookie, `/v1/careers/${id}/seasons/2026`, {
+        ...body,
+        career: { ...body.career, pot },
+      });
+    const hiddenOf = async (id: string) =>
+      (await ctx.db.select().from(careers).where(eq(careers.id, id)))[0]!.hidden;
+    const ids = Array.from({ length: 12 }, () => crypto.randomUUID());
+    for (const id of ids) expect((await send(id, 96)).status).toBe(200);
+    // 여유(10명) 안은 그대로, 넘은 뒤부터 숨긴다. 보통 선수는 묻지 않는다.
+    expect(await hiddenOf(ids[9]!)).toBe(0);
+    expect(await hiddenOf(ids[10]!)).toBe(1);
+    expect(await hiddenOf(ids[11]!)).toBe(1);
+    const normal = crypto.randomUUID();
+    expect((await send(normal, 75)).status).toBe(200);
+    expect(await hiddenOf(normal)).toBe(0);
+  });
+
   it('T-11-030: 처음 스카우트 평가는 한 번만 저장하고, 은퇴 때 실제 잠재력을 저장한다', async () => {
     const { cookie } = await issueCookie(ctx);
     const put = (path: string, body: unknown) => putJson(ctx, cookie, path, body);
@@ -418,6 +468,18 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       code: 'RATE_LIMITED',
       retryable: true,
     });
+    // Rejected retries must not keep rewriting the exhausted D1 counter.
+    const rejected = await Promise.all(
+      Array.from({ length: 4 }, async () => put(heavy.cookie, CAREER_ID)),
+    );
+    expect(rejected.every((res) => res.status === 429)).toBe(true);
+    const counter = await ctx.db
+      .select({ count: authAttempts.count })
+      .from(authAttempts)
+      .where(
+        and(eq(authAttempts.kind, 'CAREER_SEASON'), eq(authAttempts.subject, heavy.profileId)),
+      );
+    expect(counter[0]!.count).toBe(UPLOAD_LIMIT.CAREER_SEASON);
     const otherId = '7a1c9b1a-6f0f-4a4b-9c3a-1e2f3a4b5c6e';
     expect((await put(other.cookie, otherId)).status).toBe(200);
   });
@@ -467,11 +529,51 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect((await send({ growth: { ...growth, o0: 53 } })).status).toBe(200);
     expect((await growths()).at(-1)!.o0).toBe(53);
 
+    // T-11-394 결정적 장면 기록(km)도 성장 기록에 실려 그대로 쌓인다.
+    const km = [
+      { ph: 1, at: 'l', sit: 'c-1v1', c: 'chip', b: 34, p: 31, ok: true },
+      { ph: 2, at: 'f', sit: 'g-cross', c: 'to', b: 58, p: 58, ok: false },
+    ];
+    expect((await send({ growth: { ...growth, km } })).status).toBe(200);
+    expect((await growths()).at(-1)).toEqual({ ...growth, km });
+
     const [season] = await ctx.db
       .select()
       .from(careerSeasons)
       .where(eq(careerSeasons.careerId, CAREER_ID));
     expect(season).toMatchObject({ growthJson: null, eventsJson: '[]' });
+  });
+
+  it('T-11-486a: 앱 광고 이용 요약은 측정 기록에 덧붙고, 모양이 틀리면 버리고 시즌은 받는다', async () => {
+    const owner = await issueCookie(ctx);
+    const app = createApp();
+    const ads = { af: false, rw: { c: 3, p: 1, b: 2 }, fr: { c: 0, p: 0, b: 0 }, it: 1 };
+    const send = (year: number, extra: Record<string, unknown>) => {
+      const b = seasonBody();
+      return app.request(
+        `/v1/careers/${CAREER_ID}/seasons/${year}`,
+        jsonInit({
+          method: 'PUT',
+          body: { ...b, season: { ...b.season, age: 18 + year - 2026 }, events: [], ...extra },
+          cookie: owner.cookie,
+        }),
+        ctx.env,
+      );
+    };
+    const rows = async () =>
+      (
+        await ctx.db
+          .select()
+          .from(seasonTelemetry)
+          .where(eq(seasonTelemetry.careerId, CAREER_ID))
+          .orderBy(seasonTelemetry.id)
+      ).map((r) => [r.year, r.adsJson && JSON.parse(r.adsJson)]);
+
+    // 선택 로그 · 성장 기록이 없어도 광고 요약이 있으면 한 행을 남긴다.
+    expect((await send(2026, { ads })).status).toBe(200);
+    expect((await send(2027, { ads: { ...ads, rw: { c: -1 } } })).status).toBe(200);
+    expect((await send(2028, {})).status).toBe(200);
+    expect(await rows()).toEqual([[2026, ads]]);
   });
 
   it('T-11-048: 성장 기록 없이 올라온 첫 시즌은 NULL이고, 모양이 틀린 기록은 버리되 시즌은 받는다', async () => {
@@ -1025,6 +1127,71 @@ describe('조작된 기록 보정', () => {
       expect((await row()).legendScore).toBe(expected);
     },
   );
+
+  it('T-11-448 카드 기준가·은퇴 가치는 스냅샷 시즌이 아니라 받아 둔 시즌으로 매긴다', async () => {
+    const stored = [
+      { year: 2030, age: 22, ovr: 74 },
+      { year: 2031, age: 23, ovr: 80 },
+      { year: 2032, age: 24, ovr: 85 },
+    ];
+    for (const s of stored) {
+      const body = seasonBody();
+      const res = await put(`/v1/careers/${CAREER_ID}/seasons/${s.year}`, {
+        ...body,
+        season: { ...body.season, age: s.age, league: 'K리그1', ovr: s.ovr, honors: [] },
+      });
+      expect(res.status).toBe(200);
+    }
+    const forged = (year: number, age: number) => ({
+      year,
+      age,
+      club: '테스트 FC',
+      league: '프리미어리그',
+      apps: 40,
+      goals: 30,
+      assists: 10,
+      cs: 0,
+      rating: 9,
+      rank: 1,
+      ovr: 200,
+      honors: [],
+    });
+    const snapshot = {
+      number: 10,
+      pos: 'FW',
+      age: 25,
+      peak: 200,
+      lastClub: '테스트 FC',
+      // 받아 둔 세 시즌을 부풀리고, 받아 둔 적 없는 해도 하나 덧붙였다.
+      career: [...stored.map((s) => forged(s.year, s.age)), forged(2029, 18)],
+      trophies: [],
+      awards: [],
+      ballon: [],
+      nat: { caps: 0 },
+      storyLog: [],
+      miles: [],
+    };
+    const res = await put(`/v1/careers/${CAREER_ID}/retirement`, {
+      ...retirementBody(),
+      retireAge: 25,
+      peak: 200,
+      apps: 60,
+      goals: 30,
+      assists: 9,
+      trophies: 0,
+      awards: 0,
+      caps: 0,
+      snapshot,
+    });
+    expect(res.status).toBe(200);
+    const rows = stored.map((s) => ({ league: 'K리그1', age: s.age, ovr: s.ovr }));
+    const r = await row();
+    expect(r.peak).toBe(85);
+    expect(r.value).toBe(retireValue(rows, r.legendScore!));
+    const [card] = await ctx.db.select().from(cards).where(eq(cards.careerId, CAREER_ID));
+    expect(card?.cardValue).toBe(cardValue(rows, 85));
+    expect(card?.cardValue).toBeLessThan(cardValue(snapshot.career, 200));
+  });
 
   it('은퇴를 다시 보내면 공개 이름만 바뀌고 요약은 첫 은퇴 그대로다', async () => {
     await putSeasonsFor(ctx.env, cookie, CAREER_ID, retirementBody());

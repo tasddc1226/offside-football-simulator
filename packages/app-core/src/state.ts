@@ -20,8 +20,8 @@ import type { GameState, HofEntry, LegendSource } from '@offside/game/types';
 import type { Candidate } from '@offside/game/candidates';
 import type { PhaseReport } from './sheets.js';
 
-/** 기록실(하단 메뉴 'hof')의 탭. T-11-028 'ach' = 업적 랭킹. */
-export type HofTab = 'legends' | 'rn' | 'teams' | 'ach';
+/** 기록실(하단 메뉴 'hof')의 탭. T-11-028 'ach' = 업적 랭킹. T-11-463 'best11' = 시즌 BEST 11. */
+export type HofTab = 'legends' | 'best11' | 'rn' | 'teams' | 'ach';
 /**
  * 기록실 화면 상태. season: 서비스 시즌 순위(T-10-090). null이면 전체 명예의 전당. team: 라이브 랭킹에서 연 팀
  * 프로필(T-10-092).
@@ -72,12 +72,16 @@ export type Screen =
   | 'market'
   /** 구단 자금 내역(구단주 화면의 구단 자금 칸에서 연다). */
   | 'funds'
+  /** T-11-567 상점(구단주 화면의 상점 칸에서 연다): 리롤권 · 강화권 · 이름 변경권 · 스카우트권. */
+  | 'shop'
   /** T-11-310 감독 커리어(구단주 화면의 감독 커리어 카드로 연다). */
   | 'manager'
   /** T-11-128 구단주 시즌 결산(구단주 화면의 '시즌 결산' 카드로 연다). */
   | 'recap'
   /** T-11-145 오프사이드 컵(구단주 화면의 컵 배너로 연다). */
   | 'cup'
+  /** T-11-418 오프사이드 리그(홈의 리그 배너로 연다). */
+  | 'league'
   | 'board'
   | 'dex'
   | 'hof'
@@ -119,9 +123,6 @@ export const draftDpos = (
   c: Pick<DraftCharacter, 'pos' | 'dpos'>,
   now = new Date().toISOString(),
 ): DetailPos | undefined => (detailPosOpen(now) && dposFor(c.pos, c.dpos)) || undefined;
-
-/** T-11-045 새 커리어의 은퇴 나이 — 지금 시즌(개막 전이면 프리시즌)의 값으로 정해져 커리어에 고정된다. */
-export const draftRetireAt = (): number => retireAtNow(new Date().toISOString());
 
 /** 생성 확정 시각을 한 번만 읽는다. 자정을 넘긴 초안도 화면과 같은 기본 세부 포지션을 받는다. */
 export function draftCareerRules(

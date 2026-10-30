@@ -3,6 +3,7 @@ import {
   AdminChatReportResolveSchema,
   CHAT_KEEP_MS,
   CHAT_REPORT_HIDE,
+  CHAT_ROOMS,
   ChatBlockListResponseSchema,
   ChatBlockResponseSchema,
   ChatMessageIdSchema,
@@ -14,7 +15,7 @@ import {
 import type { Context, Hono } from 'hono';
 import { getViewer, requireAdmin } from '../auth/admin.js';
 import { chatAuthor } from '../chat/rules.js';
-import { chatRoom } from '../chat/socket.js';
+import { chatRoom, chatRoomKey, chatRooms } from '../chat/socket.js';
 import { blockAuthor, listBlocks } from '../db/repos/boards.js';
 import {
   blockedProfileIds,
@@ -31,26 +32,23 @@ import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { DAY_MS } from '../time.js';
-import { NO_STORE, notFoundError, nowIso, ok, readBody } from './shared.js';
+import { NO_STORE, notFoundError, nowIso, ok, readBody, sameSecret } from './shared.js';
 
-// T-11-015 실시간 채팅(라운지 방 하나). 누구나 읽고, 계정 로그인 + 닉네임이 있으면 쓴다. 메시지는 채팅방
+// T-11-015 실시간 채팅(라운지, T-11-583부터 언어마다 방 하나 — `?room=`, 없으면 한국어 방). 누구나 읽고, 계정 로그인 + 닉네임이 있으면 쓴다. 메시지는 채팅방
 // Durable Object(chat/room.ts)에 있고 여기선 입장권 발급과 신고·차단(앱스토어 UGC 정책)·운영자 가리기·정지를 한다.
 // 서로 다른 CHAT_REPORT_HIDE명이 신고하면 운영자를 기다리지 않고 가린다.
 
-function room(c: Context<AppEnv>) {
+function chatNs(c: Context<AppEnv>) {
   if (!c.env.CHAT)
     throw new AppError({ code: 'SERVICE_UNAVAILABLE', message: '채팅을 잠시 쓸 수 없어요.' });
-  return chatRoom(c.env.CHAT);
+  return c.env.CHAT;
+}
+/** 요청의 언어 방(`?room=`). 메시지 단위 요청은 그 메시지가 있는 방을 함께 보낸다. */
+function room(c: Context<AppEnv>, key = chatRoomKey(c.req.query('room'))) {
+  return chatRoom(chatNs(c), key);
 }
 
 const enc = new TextEncoder();
-/** 길이가 같을 때 끝까지 비교한다(토큰 추측 방지). */
-function sameSecret(a: string, b: string) {
-  if (a.length !== b.length) return false;
-  let d = 0;
-  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return d === 0;
-}
 /** 작성자 가명: 토큰을 섞은 해시 앞 8자. 같은 사람은 같은 가명이지만 프로필 ID로 되돌릴 수 없다. */
 async function pseudonym(secret: string, profileId: string) {
   const h = new Uint8Array(
@@ -68,7 +66,7 @@ async function findMessage(c: Context<AppEnv>) {
   return { chat, m };
 }
 
-/** 작성자를 days일 정지하고 그 메시지를 가린다. 열린 소켓은 바로 읽기 전용이 된다. */
+/** 작성자를 days일 정지하고 그 메시지를 가린다. 모든 방의 열린 소켓이 바로 읽기 전용이 된다. */
 async function muteAuthor(
   c: Context<AppEnv>,
   chat: ReturnType<typeof room>,
@@ -81,7 +79,10 @@ async function muteAuthor(
     new Date(now + input.days * DAY_MS).toISOString(),
     new Date(now).toISOString(),
   );
-  await Promise.all([chat.revoke(input.profileId), chat.hide(input.messageId)]);
+  await Promise.all([
+    ...chatRooms(chatNs(c)).map((r) => r.revoke(input.profileId)),
+    chat.hide(input.messageId),
+  ]);
 }
 
 /** 남의 메시지만 신고·차단한다. 운영자 메시지는 신고·차단하지 않는다. */
@@ -181,6 +182,7 @@ export function registerChatRoutes(app: Hono<AppEnv>) {
         authorProfileId: m.profileId,
         nickname: m.nickname,
         body: m.body,
+        room: chatRoomKey(c.req.query('room')),
       },
       nowIso(),
     );
@@ -207,13 +209,20 @@ export function registerChatRoutes(app: Hono<AppEnv>) {
     const now = Date.now();
     const since = Math.max(Number(c.req.query('since')) || now - 3600_000, now - CHAT_KEEP_MS);
     const limit = Math.min(200, Math.max(1, Number(c.req.query('limit')) || 100));
-    const rows = await room(c).recent(since, limit);
+    // T-11-583 언어 방을 모두 읽어 시각 순으로 합친다(방마다 limit줄씩 받아 합친 뒤 최근 limit줄).
+    const keys = CHAT_ROOMS;
+    const perRoom = await Promise.all(keys.map((k) => room(c, k).recent(since, limit)));
+    const rows = perRoom
+      .flatMap((rs, i) => rs.map((r) => ({ ...r, room: keys[i]! })))
+      .sort((a, b) => a.at - b.at)
+      .slice(-limit);
     const items = await Promise.all(
       rows.map(async (r) => ({
         id: r.id,
         at: r.at,
         author: await pseudonym(secret, r.profileId),
         body: r.body,
+        room: r.room,
       })),
     );
     return c.json({ items }, 200, { 'Cache-Control': NO_STORE });
@@ -245,13 +254,14 @@ export function registerChatRoutes(app: Hono<AppEnv>) {
   app.post('/v1/admin/chat/reports/resolve', async (c) => {
     await requireAdmin(c);
     const input = readBody(c, AdminChatReportResolveSchema);
-    const chat = room(c);
-    const author = await resolveChatReports(getDb(c), input.messageId, nowIso());
-    if (!author) throw notFoundError('열린 신고가 없어요.', 'CHAT_REPORT_NOT_FOUND');
+    chatNs(c);
+    const found = await resolveChatReports(getDb(c), input.messageId, nowIso());
+    if (!found) throw notFoundError('열린 신고가 없어요.', 'CHAT_REPORT_NOT_FOUND');
+    const chat = room(c, found.room);
     if (input.action === 'hide') await chat.hide(input.messageId);
     if (input.action === 'mute')
       await muteAuthor(c, chat, {
-        profileId: author,
+        profileId: found.author,
         messageId: input.messageId,
         days: input.days,
       });

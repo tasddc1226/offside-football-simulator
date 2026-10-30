@@ -64,3 +64,20 @@ describe('올림픽 예선 · 차출 (T-10-016)', () => {
     expect(s.nat).toMatchObject({ caps: 0, goals: 0, assists: 0 });
   });
 });
+
+describe('국제대회 상대 중복 (T-11-476)', () => {
+  it('한 대회에서 이미 만난 나라를 토너먼트에서 다시 만나지 않는다', () => {
+    let knockouts = 0;
+    for (let seed = 1; seed <= 300; seed++)
+      for (const year of [2026, 2027, 2028]) {
+        const s = youngster(seed, year, 'k1');
+        s.nat.qual[year] = true;
+        for (const t of natSeasonEnd(s).tours) {
+          const opps = t.matches.map((m) => m.opp);
+          expect(new Set(opps).size, `${t.name} ${opps.join(',')}`).toBe(opps.length);
+          if (t.matches.some((m) => m.stage === '결승')) knockouts++;
+        }
+      }
+    expect(knockouts).toBeGreaterThan(0);
+  });
+});

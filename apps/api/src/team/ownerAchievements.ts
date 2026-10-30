@@ -5,7 +5,17 @@ import { detailPosInSeason } from '@offside/contracts/positions';
 import { retireAtOf, teamSeasonAt, teamSeasonEndsAt } from '@offside/contracts/service-seasons';
 import type { Db } from '../db/client.js';
 import {
+  ACH_REWARD_FIRST_SEASON,
+  ACH_REWARD_MIN,
+  ACH_SEASON_GIFT,
+  usesRankLadder,
+  type AchReward,
+} from '@offside/contracts/owner-team';
+import type { ClubAchievementGroup } from '@offside/contracts';
+import {
+  achievementClaimsOf,
   achievementRowOf,
+  claimAchievementRewards,
   ownerActivityIn,
   saveAchievementScore,
   staleAchievementOwners,
@@ -19,9 +29,17 @@ import {
   seasonCareersOf,
   slotIdsOf,
 } from '../db/repos/ownerTeams.js';
+import { saveSeasonGift, seasonGiftRowOf } from '../db/repos/iap.js';
 import { getProfile, hasAccount } from '../db/repos/profiles.js';
 import { seasonManagersOf } from '../db/repos/managers.js';
-import { achievementScore, clubAchievements, teamKeptOf, type TeamKept } from './achievements.js';
+import {
+  achRewardSteps,
+  achievementScore,
+  clubAchievements,
+  teamKeptOf,
+  withAchRewards,
+  type TeamKept,
+} from './achievements.js';
 import { buildLineup } from './sim.js';
 import { cupBestOf } from './cup.js';
 import { kstDay } from '../time.js';
@@ -120,6 +138,7 @@ export async function computeOwnerAchievements(
     detail: detailPosInSeason(season),
     retireAt: retireAtOf(season),
     kept: keptOf(prev?.teamKept),
+    ladder: usesRankLadder(season),
   });
   return { groups, prev, players: careersIn.length };
 }
@@ -149,7 +168,76 @@ export async function refreshOwnerAchievements(
     now,
     touch,
   );
-  return { groups, row, players };
+  // T-11-357 지금 시즌이면 새로 달성한 업적의 보상을 준다(지난 시즌은 보상이 끝났다). 보상을 주기 전 시즌은 표시도 없다.
+  let shown = groups;
+  if (season === teamSeasonAt(now) && season >= ACH_REWARD_FIRST_SEASON) {
+    const got = await settleAchievementRewards(db, owner.id, season, groups, now);
+    shown = withAchRewards(groups, got);
+  }
+  return { groups: shown, row, players };
+}
+
+/**
+ * T-11-357 업적 달성 보상을 맞춘다 — 받은 기록에 없는 달성 업적·단계에 보상을 주고, 업적별로 이 시즌에 받은 보상을
+ * 돌려준다. ACH_REWARD_FIRST_SEASON 앞 시즌은 주지 않는다. 보상 칸이 없으면 읽지 않는다.
+ */
+export async function settleAchievementRewards(
+  db: Db,
+  profileId: string,
+  season: number,
+  groups: readonly ClubAchievementGroup[],
+  now: string,
+): Promise<Map<string, AchReward>> {
+  const steps = achRewardSteps(groups);
+  if (season < ACH_REWARD_FIRST_SEASON || !steps.length) return new Map();
+  const claims = await achievementClaimsOf(db, profileId, season);
+  const fresh = steps.filter((s) => !claims.has(s.key));
+  const granted = new Set(
+    fresh.length ? await claimAchievementRewards(db, profileId, season, fresh, now) : [],
+  );
+  const got = new Map<string, AchReward>();
+  for (const s of steps) {
+    if (!claims.has(s.key) && !granted.has(s.key)) continue;
+    const g = got.get(s.id) ?? { boost: 0, scout: 0 };
+    got.set(s.id, { boost: g.boost + s.boost, scout: g.scout + s.scout });
+  }
+  return got;
+}
+
+/** T-11-386 달성한 업적으로 받을 시즌 업적 보상 합(시즌 2 실시간 보상과 같은 표). */
+export function seasonGiftAmount(groups: readonly ClubAchievementGroup[]): AchReward {
+  const sum = { boost: 0, scout: 0 };
+  for (const s of achRewardSteps(groups)) {
+    sum.boost += s.boost;
+    sum.scout += s.scout;
+  }
+  return sum;
+}
+
+/**
+ * T-11-386 받을 수 있는 시즌 1 업적 보상(ACH_SEASON_GIFT). 시즌 2 동안 · 아직 받지 않았고 1장 이상일 때만. 장수는 처음
+ * 물을 때 시즌 1 업적을 마감 시각 기준으로 한 번 세어 업적 행에 적고, 다음부터는 그 값을 읽는다.
+ * 점수가 강화권 문턱보다 낮으면 보상 칸이 있을 수 없어 세지 않는다.
+ */
+export async function seasonAchGiftOf(
+  db: Db,
+  owner: { id: string; nickname: string | null },
+  now: string,
+): Promise<AchReward | null> {
+  const g = ACH_SEASON_GIFT;
+  if (teamSeasonAt(now) !== g.openSeason) return null;
+  const row = await seasonGiftRowOf(db, owner.id, g.season, g.id);
+  if (!row || row.claimed || row.score < ACH_REWARD_MIN) return null;
+  let r: AchReward;
+  if (row.boost !== null && row.scout !== null) r = { boost: row.boost, scout: row.scout };
+  else {
+    // 시즌 결산(seasonClose)과 같은 마감 시각 기준 — 마감 뒤 은퇴한 시즌 1 출신 선수 등은 세지 않아 언제 물어도 같다.
+    const cutoff = teamSeasonEndsAt(g.season) ?? now;
+    const { groups } = await computeOwnerAchievements(db, owner, g.season, cutoff, cutoff);
+    r = seasonGiftAmount(groups);
+    await saveSeasonGift(db, owner.id, g.season, r);
+  }
+  return r.boost + r.scout > 0 ? r : null;
 }
 
 /**
@@ -164,10 +252,10 @@ export async function refreshAfterChange(db: Db, profileId: string, season: numb
 }
 
 /**
- * 매일 cron: 놓친 구단주의 점수를 다시 센다(한 번에 limit명 — 남으면 다음 날 이어서). 구단주마다 D1을 7번쯤 부르므로
- * 한 번 호출의 하위 요청 한도(1,000) 안에 들도록 100명으로 끊는다.
+ * 매일 cron: 놓친 구단주의 점수를 다시 센다(한 번에 limit명 — 남으면 다음 날 이어서). 구단주마다 D1을 9번쯤
+ * 부르므로(T-11-357 업적 보상 읽기·쓰기 포함) 한 번 호출의 하위 요청 한도(1,000) 안에 들도록 80명으로 끊는다.
  */
-export async function rebuildStaleAchievements(db: Db, now: string, limit = 100) {
+export async function rebuildStaleAchievements(db: Db, now: string, limit = 80) {
   const season = teamSeasonAt(now);
   if (season === null) return { season, refreshed: 0 };
   const ids = await staleAchievementOwners(db, season, limit);

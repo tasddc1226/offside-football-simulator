@@ -7,6 +7,8 @@ const ko = {
   board: (p: { filled: number; total: number }) => `도장 ${p.filled}/${p.total}`,
   todayLabel: '오늘 보상',
   tomorrowLabel: '내일 보상',
+  /** T-11-512 클럽 멤버십 구독 중. */
+  memberBonus: '멤버십 혜택으로 출석 보상 2배에 잠재력 강화권 1장을 더 받아요',
   grace:
     '매일 출석하면 그날 칸의 보상을 받아요. 빠진 날이 있어도 도장은 남고, 한 주에 하루는 빠져도 연속 기록이 이어져요.',
   btn: '출석하기',
@@ -31,6 +33,17 @@ const ko = {
   close: '닫기',
   guestLead: (p: { days: number; reward: string }) =>
     `로그인하면 매일 출석하고 보상을 받아요. ${p.days}일 동안 받는 보상: ${p.reward}`,
+  // T-11-440 출석 뒤 받은 아이템 · 쓰는 곳 안내, 칸을 눌러 그날 보상 보기
+  got: (p: { reward: string }) => `받은 아이템: ${p.reward}`,
+  useHint:
+    '리롤권과 스카우트권은 선수 만들기 후보 단계에서, 강화권은 선수 탭 잠재력 강화에서 써요.',
+  toOwner: '내 구단에서 보기',
+  cellReward: (p: { n: number; reward: string }) => `${p.n}일째 보상 · ${p.reward}`,
+  cellLabel: (p: { n: number; reward: string; state: string }) =>
+    `${p.n}일째, ${p.reward}${p.state ? `, ${p.state}` : ''}`,
+  cellDone: '도장 찍음',
+  cellToday: '오늘 칸',
+  cellHint: '칸을 누르면 그날 보상을 볼 수 있어요.',
 };
 
 export type AttendanceMsgs = typeof ko;

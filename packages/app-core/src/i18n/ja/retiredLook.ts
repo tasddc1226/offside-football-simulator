@@ -3,11 +3,14 @@ import type { RetiredLookMsgs } from '../ko/retiredLook';
 
 export const retiredLook: Translation<RetiredLookMsgs> = {
   title: '引退した選手の着せ替え',
+  button: '着せ替え (1回)',
+  buttonUsed: '着せ替え (使用済み)',
+  buttonTransferred: '着せ替え不可',
   intro: '基本の着せ替えは無料です。記録・能力値・選手の資金は変わりません。',
   policy:
-    '引退後の外見は一度だけ無料で変更できます。選手の絵が新しくなったので、以前に変更した選手ももう一度変更できます。移籍歴のある選手は変更できません。',
+    '引退した選手の外見は一度だけ無料で変更できます。移籍市場で取引されたことのある選手は変更できません。',
   used: '新しい選手の絵での外見変更はすでに使用済みです。',
-  transferred: '一度でも移籍した選手は、再獲得後も外見を変更できません。',
+  transferred: '移籍市場で取引されたことのある選手なので、外見を変更できません。',
   checking: '変更できるか確認中',
   checkFailed: '変更できるか確認できませんでした。閉じてから開き直してください。',
   localPartial:

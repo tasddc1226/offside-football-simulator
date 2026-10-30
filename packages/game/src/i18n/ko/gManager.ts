@@ -231,7 +231,7 @@ const ko = {
   ev_cut_c0: '받아들인다',
   ev_cut_r0: '전지훈련을 하나 줄였습니다. 이사회는 협조해 줘서 고맙다고 했습니다.',
   ev_cut_c1: '선수단 몫은 지켜 달라고 맞선다',
-  ev_cut_r1: '선수단 예산은 지켰습니다. 선수들은 감독 편이라는 걸 알게 됐습니다.',
+  ev_cut_r1: '선수단 예산은 지켰습니다. 다음 날 훈련장에서 주장이 먼저 다가와 악수를 청했습니다.',
 };
 export type GManagerMsgs = typeof ko;
 export const gManagerText = ns('gManager', ko);

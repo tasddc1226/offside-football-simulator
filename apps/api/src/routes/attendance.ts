@@ -2,6 +2,7 @@ import { AttendanceCheckInResponseSchema, AttendanceSchema } from '@offside/cont
 import type { Hono } from 'hono';
 import { cupKo } from '../cupText.js';
 import { attendanceOf, checkIn } from '../db/repos/attendance.js';
+import { isMember } from '../db/repos/memberships.js';
 import { getDb, type AppEnv } from '../env.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { requireProfile } from '../middleware/requireProfile.js';
@@ -13,13 +14,29 @@ import { conflictError, NO_STORE, nowIso, ok } from './shared.js';
 export function registerAttendanceRoutes(app: Hono<AppEnv>) {
   app.get('/v1/attendance', requireProfile, async (c) => {
     const me = await requireOwner(c);
-    return ok(c, AttendanceSchema, await attendanceOf(getDb(c), me.id, nowIso()), 200, NO_STORE);
+    const db = getDb(c);
+    const now = nowIso();
+    const [attendance, member] = await Promise.all([
+      attendanceOf(db, me.id, now),
+      isMember(db, me.id, now),
+    ]);
+    return ok(c, AttendanceSchema, { ...attendance, member }, 200, NO_STORE);
   });
 
   app.post('/v1/attendance/check-in', requireProfile, idempotency, async (c) => {
     const me = await requireOwner(c);
-    const done = await checkIn(getDb(c), me.id, nowIso());
+    const db = getDb(c);
+    const now = nowIso();
+    // T-11-512 클럽 멤버십 구독 중이면 이번 출석 보상을 2배로, T-11-517 잠재력 강화권 1장을 더 준다.
+    const member = await isMember(db, me.id, now);
+    const done = await checkIn(db, me.id, now, member);
     if (!done) throw conflictError(cupKo('attendanceChecked'), 'ATTENDANCE_CHECKED');
-    return ok(c, AttendanceCheckInResponseSchema, done, 200, NO_STORE);
+    return ok(
+      c,
+      AttendanceCheckInResponseSchema,
+      { ...done, attendance: { ...done.attendance, member } },
+      200,
+      NO_STORE,
+    );
   });
 }

@@ -1,6 +1,7 @@
 // T-11-098 친구 · 친선전(웹 team/TeamFriends.svelte) — 내 팀 '경기' 탭의 '친구' 칸. 친구 코드 · 받은/보낸 신청 · 친구 ·
 // 최근 친선전. 친선전은 랭크와 따로 센다(레이팅·전적·업적에 들어가지 않고, 하루 한도와 친구별 상대 전적이 따로 있다).
 // 친구 데이터는 이 칸을 처음 열 때만 불러온다(useFriends). 문구는 웹과 같이 고친다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Alert, Share, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -32,20 +33,16 @@ import { teamHomeText as LH } from '@offside/app-core/i18n/ko/teamHome';
 import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import { useSnapshot } from 'valtio';
 import { appState } from '../../store';
-import {
-  checkPushOffer,
-  dismissPushOffer,
-  pushOffer,
-  snoozePushOffer,
-} from '../../platform/pushOffer';
-import { pushRegistration, pushState } from '../../platform/push';
+import { checkPushOffer, pushOffer } from '../../platform/pushOffer';
+import { pushState } from '../../platform/push';
+import { acceptPushAsk, laterPushAsk, trackPushAskView } from '../../platform/pushAsk';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLogo } from '../../components/TeamLogo';
 import { toast } from '../../game/host';
 import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
-import { Btn, Card, Txt } from '../../ui';
+import { Btn, Card, Pill, Txt } from '../../ui';
 import { TextField } from '../settings/parts';
 import { MatchRow } from './TeamHistory';
 import { Seg, SegBtn } from './TeamParts';
@@ -205,11 +202,14 @@ function PushNudge() {
   const push = useSnapshot(pushState);
   const offer = useSnapshot(pushOffer);
   useEffect(() => void checkPushOffer(), []);
-  if (offer.handled || Date.now() < offer.snoozedUntil || !offer.eligible || push.enabled)
-    return null;
+  const visible =
+    !offer.handled && Date.now() >= offer.snoozedUntil && offer.eligible && !push.enabled;
+  useEffect(() => {
+    if (visible) trackPushAskView('friends');
+  }, [visible]);
+  if (!visible) return null;
   async function turnOn() {
-    await pushRegistration.setEnabled(true);
-    if (!pushState.failed) dismissPushOffer();
+    await acceptPushAsk('friends');
     if (pushState.message) toast(pushState.message);
   }
   return (
@@ -228,7 +228,12 @@ function PushNudge() {
         >
           {L.pushNudgeOn}
         </Btn>
-        <Btn sm kind="ghost" testID="friend-push-nudge-later" onPress={snoozePushOffer}>
+        <Btn
+          sm
+          kind="ghost"
+          testID="friend-push-nudge-later"
+          onPress={() => laterPushAsk('friends')}
+        >
           {L.pushNudgeLater}
         </Btn>
       </View>
@@ -292,6 +297,11 @@ function Who({ f, h2h = false }: { f: FriendPerson; h2h?: boolean }) {
           <Txt bold numberOfLines={1} style={{ flexShrink: 1 }}>
             {f.name}
           </Txt>
+          {f.member ? (
+            <View accessible accessibilityLabel={L.supporterLabel}>
+              <Pill tone="good">{L.supporter}</Pill>
+            </View>
+          ) : null}
         </View>
         <Txt tone="muted" v="sm">
           {f.team ? `${f.team.name} · OVR ${f.team.ovr}` : L.noTeamLine}
@@ -408,7 +418,7 @@ export function TeamFriends({
               testID="friend-code"
               style={{
                 fontFamily: DISPLAY[700],
-                fontSize: rem(1.75),
+                fontSize: rem(FONT.title1),
                 letterSpacing: 2,
                 color: c.ink,
               }}

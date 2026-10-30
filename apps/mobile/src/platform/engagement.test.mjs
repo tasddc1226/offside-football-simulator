@@ -158,6 +158,24 @@ describe('native push consent offer', () => {
     expect(reopened.pushOffer.handled).toBe(true);
     expect(f.permissions).toHaveBeenCalledOnce();
   });
+  it('T-11-440 waits for the first finished season, then remembers it across retirement and new careers', async () => {
+    const p = await import('./pushOffer.ts');
+    expect(p.pushOfferReady(null)).toBe(false);
+    expect(p.pushOfferReady({ career: [], retired: false })).toBe(false);
+    expect(f.values.has('offside_push_offer_ready')).toBe(false);
+    expect(p.pushOfferReady({ career: [{}], retired: false })).toBe(true);
+    expect(f.values.get('offside_push_offer_ready')).toBe(true);
+    // 새 커리어(시즌 기록 없음)나 커리어가 없어도 한 번 넘었으면 계속 권한다.
+    expect(p.pushOfferReady({ career: [], retired: false })).toBe(true);
+    expect(p.pushOfferReady(null)).toBe(true);
+  });
+  it('T-11-440 keeps the existing handled and snooze keys untouched by the season gate', async () => {
+    f.values.set('offside_push_offer_snoozed_until', Date.now() + 1000);
+    const p = await import('./pushOffer.ts');
+    p.pushOfferReady({ career: [{}], retired: false });
+    expect(p.pushOffer.snoozedUntil).toBeGreaterThan(Date.now());
+    expect(p.pushOffer.handled).toBe(false);
+  });
   it.each(['ios', 'android'])('hides a blocked OS permission on %s', async (platform) => {
     f.platform = platform;
     f.permission = { granted: false, status: 'denied', canAskAgain: false };
@@ -179,7 +197,7 @@ describe('native store review adapter', () => {
     async (platform) => {
       f.platform = platform;
       const r = await import('./review.ts');
-      expect(await r.reviewPrompt.afterCareer('career-1', () => true)).toBe(true);
+      expect(await r.reviewPrompt.afterHighlight('career-1', () => true)).toBe(true);
       expect(f.request).toHaveBeenCalledOnce();
       expect(f.open).not.toHaveBeenCalled();
     },
@@ -187,7 +205,7 @@ describe('native store review adapter', () => {
   it('skips automatic review on an old binary with no module', async () => {
     f.native = false;
     const r = await import('./review.ts');
-    expect(await r.reviewPrompt.afterCareer('career-1', () => true)).toBe(false);
+    expect(await r.reviewPrompt.afterHighlight('career-1', () => true)).toBe(false);
     expect(f.request).not.toHaveBeenCalled();
     expect(f.save).not.toHaveBeenCalled();
   });
@@ -203,7 +221,7 @@ describe('native store review adapter', () => {
           : 'https://play.google.com/store/apps/details?id=com.offsidelab.app&showAllReviews=true',
       );
       expect(f.request).not.toHaveBeenCalled();
-      expect(await r.reviewPrompt.afterCareer('career-1', () => true)).toBe(false);
+      expect(await r.reviewPrompt.afterHighlight('career-1', () => true)).toBe(false);
     },
   );
   it('leaves the automatic review cooldown untouched if the explicit store link fails', async () => {
@@ -216,7 +234,7 @@ describe('native store review adapter', () => {
     f.save.mockReturnValue(false);
     const r = await import('./review.ts');
     await expect(r.openReviewStore()).resolves.toBeUndefined();
-    expect(await r.reviewPrompt.afterCareer('career-1', () => true)).toBe(false);
+    expect(await r.reviewPrompt.afterHighlight('career-1', () => true)).toBe(false);
     expect(f.request).not.toHaveBeenCalled();
   });
 });

@@ -10,6 +10,7 @@ import { CreditScreen } from './credit';
 import { LegendReport } from './LegendReport';
 import { RetiredAdSlot } from './RetiredAdSlot';
 import { OwnHofCards } from './OwnHofCards';
+import { PushAskCard } from '../../components/PushAskCard';
 import { ShareBar } from './ShareBar';
 import { retiredText as L } from '@offside/app-core/i18n/ko/retired';
 
@@ -25,9 +26,11 @@ export default function Retired() {
       {/* T-10-029: 명예의 전당 공개·다음 버튼은 크레딧 맨 아래에, 공유 버튼은 화면 아래에 고정된다(T-10-067). */}
       <LegendReport
         v={v}
+        fresh={appState.G?.cid}
         end={
           <>
             {v.own?.id ? <OwnHofCards v={v} /> : null}
+            <PushAskCard />
             <Btn kind="primary" block testID="new" onPress={goNew}>
               {L.newCareer}
             </Btn>

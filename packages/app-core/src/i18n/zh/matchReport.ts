@@ -1,0 +1,38 @@
+import type { Translation } from '../core';
+import type { MatchReportMsgs } from '../ko/matchReport';
+
+export const matchReport: Translation<MatchReportMsgs> = {
+  title: '比賽報告',
+  xgLine: (p) => `預期進球(xG) ${p.mine} : ${p.opp}`,
+  xgHint: '根據兩隊各線實力算出的進球期望值。1.0 代表平均一球。',
+  nextTitle: '下一場比賽前',
+  axisNote: '長條在中線右側，代表我方佔上風。',
+  lineAtk: '我方攻擊 vs 對手防線',
+  lineMid: '我方中場 vs 對手中場',
+  lineDef: '我方防線 vs 對手攻擊',
+  lineAria: (p) => `${p.line}：${p.mine} 對 ${p.opp}`,
+  wallNote: '防線為後衛 70% 加上門將 30% 的數值。',
+  dLuckWin: '預期進球落後，但還是拿下了結果。',
+  dLuckLoss: '預期進球領先，但進球沒有跟上。',
+  dEven: '三條線都旗鼓相當，勝負取決於當天的走勢。',
+  dAtkUp: (p) => `攻擊比對手防線高出${p.n}，創造了許多機會。`,
+  dAtkDown: (p) => `攻擊比對手防線低了${p.n}，機會不多。`,
+  dMidUp: (p) => `中場高出${p.n}，掌控了比賽。`,
+  dMidDown: (p) => `中場落後${p.n}，把更多球權讓給了對手。`,
+  dDefUp: (p) => `防線比對手攻擊穩固${p.n}，很少讓對手有機會。`,
+  dDefDown: (p) => `防線比對手攻擊弱了${p.n}，讓對手有很多機會。`,
+  fix: (p) => `更換${p.pos}`,
+  fixAria: (p) => `選擇放入${p.pos}位置的球員`,
+  seasonTitle: '比賽報告',
+  seasonEmpty: '預期進球會從這次更新之後的比賽開始累積。',
+  seasonXg: (p) =>
+    `${p.n}場 · 預期進球 ${p.xgFor} → 實際 ${p.gf}球 · 預期失球 ${p.xgAgainst} → 實際 ${p.ga}球`,
+  seasonFinishUp: (p) => `比預期多進了${p.n}球。`,
+  seasonFinishDown: (p) => `比預期少進了${p.n}球。`,
+  seasonFinishEven: '進球數符合預期。',
+  seasonBehind: (p) => `最常落後的比較是${p.line}（${p.k}/${p.n}場）。`,
+  seasonNoBehind: '三條線的比較中沒有落後的比賽。',
+  seasonEdges: '各線平均比較',
+  seasonFormations: '依陣型',
+  seasonFormationRow: (p) => `${p.w}勝${p.d}和${p.l}敗 · 預期進球 ${p.xgFor} : ${p.xgAgainst}`,
+};

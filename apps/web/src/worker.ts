@@ -1,3 +1,5 @@
+import { withCampaignBanner } from './app-banner.js';
+import { storeRedirect } from './store-redirect.js';
 import { serveNews, newsSitemap } from './public-news.js';
 import {
   LEGENDS_TTL,
@@ -16,6 +18,7 @@ interface Fetcher {
 }
 interface Env {
   ASSETS: Fetcher;
+  APPLE_PROVIDER_TOKEN?: string;
   /** T-10-068 공유 미리보기 카드 워커(서비스 바인딩). 로컬 개발에선 없다. */
   OG?: Fetcher;
 }
@@ -25,6 +28,9 @@ interface Ctx {
 
 const PUBLIC_PATHS = new Set([
   '/',
+  '/app',
+  '/app/',
+  '/app/index.html',
   '/guide',
   '/guide/',
   '/guide/index.html',
@@ -44,6 +50,8 @@ const PUBLIC_PATHS = new Set([
   '/legal/privacy/',
   '/legal/privacy/index.html',
 ]);
+// T-11-452 가이드 아래 공략 글(/guide/<slug>/). 빌드가 만든 정적 파일이 있을 때만 공개 페이지로 본다.
+const GUIDE_ARTICLE = /^\/guide\/[a-z0-9-]+(\/|\/index\.html)?$/;
 // 앱 셸(오프사이드/풀타임 SPA)로 서빙해야 하는 경로. 게임 자체는 `/`에서 로드되고,
 // `/settings`는 구글 OAuth 콜백(`?google=linked|switched|error&reason=...`)이
 // 돌아오는 목적지라 앱 셸로 떨어져야 한다. `/career/<id>`(T-10-029 공유 링크)는 아래에서 미리보기 메타를 넣어 따로 내린다.
@@ -99,7 +107,7 @@ function withPreconnect(response: Response, url: URL): Response {
   const result = new Response(response.body, response);
   result.headers.append(
     'Link',
-    `<https://fonts.gstatic.com>; rel=preconnect; crossorigin, <${resolveApiBaseUrl(undefined, url.hostname)}>; rel=preconnect`,
+    `<https://fonts.gstatic.com>; rel=preconnect; crossorigin, <https://cdn.jsdelivr.net>; rel=preconnect; crossorigin, <${resolveApiBaseUrl(undefined, url.hostname)}>; rel=preconnect`,
   );
   return result;
 }
@@ -114,11 +122,41 @@ export default {
   async fetch(request: Request, env: Env, ctx: Ctx): Promise<Response> {
     const url = new URL(request.url);
     if (OG_CARD_PATH.test(url.pathname)) return careerCard(request, env, ctx);
-    return withPreconnect(await route(request, env, url, ctx), url);
+    return withPreconnect(
+      await withCampaignBanner(await route(request, env, url, ctx), url, env.APPLE_PROVIDER_TOKEN),
+      url,
+    );
   },
 };
 
+// T-11-531 크리에이터 프로필 소개(틱톡 160자)에 넣을 짧은 주소. 추적 링크(T-11-515)로 넘긴다.
+const SHORT_LINKS: Record<string, string> = {
+  '/ethio':
+    '/?utm_source=tiktok&utm_medium=partner&utm_campaign=creator_test&utm_content=ethio_tiktok',
+  '/ethio-yt':
+    '/?utm_source=youtube&utm_medium=partner&utm_campaign=creator_test&utm_content=ethio_short',
+};
+
 async function route(request: Request, env: Env, url: URL, ctx: Ctx): Promise<Response> {
+  if (url.pathname === '/get' || url.pathname === '/get/')
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: storeRedirect(
+          url,
+          request.headers.get('User-Agent') ?? '',
+          env.APPLE_PROVIDER_TOKEN,
+        ),
+        'Cache-Control': 'no-store',
+        'X-Robots-Tag': 'noindex, nofollow',
+      },
+    });
+  const short = SHORT_LINKS[url.pathname.toLowerCase()];
+  if (short)
+    return new Response(null, {
+      status: 302,
+      headers: { Location: short, 'Cache-Control': 'no-store' },
+    });
   if (url.pathname === '/' && url.searchParams.has('news')) {
     // 공개 소식의 "게임에서 보기" 링크. 형식이 틀린 글 ID는 게임 게시판에 넘기지 않고 홈으로 보낸다.
     if (!NEWS_ID.test(url.searchParams.get('news') ?? ''))
@@ -134,8 +172,16 @@ async function route(request: Request, env: Env, url: URL, ctx: Ctx): Promise<Re
   const isNews = url.pathname === '/news' || url.pathname.startsWith('/news/');
   const isLegends = /^\/legends(\/|$)/i.test(url.pathname);
   const asset = await env.ASSETS.fetch(request);
-  const isPublicPage = PUBLIC_PATHS.has(url.pathname);
+  const isPublicPage =
+    PUBLIC_PATHS.has(url.pathname) || (asset.status === 200 && GUIDE_ARTICLE.test(url.pathname));
   const isDiscovery = url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml';
+  // T-11-585 랜딩 스크린샷 · QR은 이미지 검색에 잡히게 둔다(나머지 정적 파일은 noindex 그대로).
+  // 빌드가 만드는 _headers의 /* 규칙이 정적 파일 응답에 noindex를 미리 붙여 오므로 여기서 지운다.
+  if (url.pathname.startsWith('/landing/') && asset.status === 200) {
+    const result = new Response(asset.body, asset);
+    result.headers.delete('X-Robots-Tag');
+    return result;
+  }
   // T-10-004: Vite 산출물(/assets/*)은 파일명에 내용 해시가 들어가 내용이 바뀌면 URL도 바뀐다 —
   // 재방문 때 재검증 없이 캐시를 그대로 쓰도록 1년 immutable로 내려 준다.
   if (url.pathname.startsWith('/assets/') && asset.status === 200)

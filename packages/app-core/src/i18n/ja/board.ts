@@ -9,6 +9,8 @@ export const board: Translation<BoardMsgs> = {
   news: 'お知らせ',
   tabsLabel: '掲示板',
   pinned: '固定',
+  // T-11-440 이번에 앱을 연 뒤 아직 열지 않은 새 글 표시
+  postNew: 'NEW',
   loadFail: 'お知らせを読み込めませんでした。',
   empty: 'まだ投稿がありません。',
   more: 'もっと見る',
@@ -29,7 +31,8 @@ export const board: Translation<BoardMsgs> = {
   loginGate: 'Googleでログインするとコメントできます。',
   loginGateApple: 'GoogleかAppleでログインするとコメントできます。',
   loginGoogle: 'Googleでログイン',
-  nicknameGate: 'まずコメント用のニックネームを決めてください。設定のアカウントから変更できます。',
+  nicknameGate:
+    'まずコメント用のニックネームを決めてください。マイクラブ画面のプロフィール編集で決められます。',
   commentAsBefore: '',
   commentAsAfter:
     'の名前で投稿します。暴言・誹謗中傷・宣伝などの不適切なコメントは削除し、利用を制限します（',
@@ -60,6 +63,7 @@ export const board: Translation<BoardMsgs> = {
   translationsHint: '空欄なら韓国語の原文を表示します。韓国語を直したら翻訳も直してください。',
   langEn: '英語',
   langJa: '日本語',
+  langZh: '繁体字中国語',
   translateDraft: '翻訳の下書きを作る',
   translating: '翻訳しています…',
   translateDone: '翻訳の下書きを入れました。読んで直してください。',

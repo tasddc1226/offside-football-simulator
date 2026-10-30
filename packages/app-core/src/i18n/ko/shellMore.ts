@@ -11,9 +11,11 @@ const ko = {
   adPreview: (p: { place: string }) => `광고 자리 · ${p.place}`,
   updateBodyApp: '새 버전이 나왔어요. 다시 시작하면 바로 적용돼요.',
   updateBtnApp: '다시 시작',
-  storeUpdateAlert: '앱 업데이트 알림',
   storeUpdateTitle: '새 버전이 스토어에 나왔어요',
-  storeUpdateBody: '업데이트하지 않으면 이후 수정이 이 앱에 들어가지 않아요.',
+  storeUpdateBody: '업데이트하면 새 기능과 수정을 바로 받아요.',
+  storeUpdateForceBody:
+    '이 버전은 더 이상 지원하지 않아요. 스토어에서 업데이트해야 계속할 수 있어요.',
+  storeUpdateLater: '나중에',
   storeUpdateBtn: '업데이트',
   keepLoginTitle: '로그인하고 기록 지키기',
   keepLoginBody:

@@ -1,0 +1,27 @@
+{
+  "id": "t-11-487-season1-record-reward",
+  "title": "시즌 1 기록 보상",
+  "items": [
+    "시즌 2가 열리면 로그인한 구단주는 홈의 받기 버튼으로 시즌 1 기록 보상을 한 번 받아요.",
+    "명예의 전당 순위(1000위까지), 아이콘·레전드 선수, 발롱도르 수상 선수 수에 따라 리롤권·스카우트권·강화권을 더해 줘요.",
+    "시즌 1 업적 보상이 남아 있으면 그것을 받은 뒤에 이어서 보여요. 자세한 표는 게임 가이드에 있어요."
+  ],
+  "en": {
+    "title": "Season 1 record rewards",
+    "items": [
+      "When season 2 opens, signed-in owners can claim season 1 record rewards once from the Claim button on Home.",
+      "Reroll, scout and boost tickets are added up from your Hall of Fame rank (top 1,000), Icon and Legend players, and Ballon d'Or-winning players.",
+      "If you still have season 1 achievement rewards, this shows up right after you claim them. The full table is in the game guide."
+    ]
+  },
+  "ja": {
+    "title": "シーズン1記録報酬",
+    "items": [
+      "シーズン2が始まると、ログインしたオーナーはホームの受け取るボタンからシーズン1記録報酬を1回受け取れます。",
+      "殿堂順位（1000位まで）、アイコン・レジェンド選手、バロンドール受賞選手の数に応じて、リロール券・スカウト券・強化券を合計して受け取れます。",
+      "シーズン1の実績報酬が残っている場合は、それを受け取った後に続けて表示されます。詳しい表はゲームガイドにあります。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

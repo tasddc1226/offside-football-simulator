@@ -9,6 +9,7 @@ import {
   RN_SEASON_HONOR_CAP,
   rnCandidates,
   rnCut,
+  rnLeaveRisk,
   rnMissOf,
   rnQualifies,
   type RnClub,
@@ -125,6 +126,32 @@ describe('영구결번 구단 기여 점수 (T-10-076)', () => {
     expect(rnMissOf([club({ seasons: 2, score: 0 })], 800)).toBeNull();
     expect(rnMissOf([club({ clubId: null, score: 700 })], 800)).toBeNull();
     expect(rnMissOf([], 800)).toBeNull();
+  });
+
+  it('T-11-429 기준의 95% 이상에서 못 받으면 close를 함께 준다', () => {
+    const club = (score: number): RnClub => ({
+      clubId: 'pl-0',
+      club: '맨체스터 스카이블루',
+      seasons: 14,
+      play: 0,
+      honors: 0,
+      bond: 0,
+      score,
+    });
+    expect(rnMissOf([club(794)], 800)).toMatchObject({ reason: 'score', pct: 90, close: true });
+    expect(rnMissOf([club(759)], 800)).not.toHaveProperty('close');
+  });
+
+  it('T-11-429 지금 구단에서 은퇴해야 기준을 넘는 구단만 이적 위험으로 알린다', () => {
+    const career = Array.from({ length: 10 }, (_, i) => season({ year: 2030 + i }));
+    const [now] = clubContributions('FW', career);
+    const left = clubContributions('FW', career, undefined, true)[0]!;
+    // 원클럽맨 가산(20%)이 빠지고 긴 연속 가산(5%)만 남는다.
+    expect(now!.bond).toBeCloseTo((now!.play + now!.honors) * RN_BOND.oneClub);
+    expect(left.bond).toBeCloseTo((left.play + left.honors) * RN_BOND.longRun);
+    expect([...rnLeaveRisk('FW', career, left.score + 1)]).toEqual(['pl-0']);
+    expect(rnLeaveRisk('FW', career, left.score).size).toBe(0);
+    expect(rnLeaveRisk('FW', career, now!.score + 1).size).toBe(0);
   });
 
   it('T-11-094 시즌 1부터 기준은 포지션별, 프리시즌은 공통 827 그대로', () => {

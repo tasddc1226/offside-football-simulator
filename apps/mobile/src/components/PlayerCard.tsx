@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
@@ -695,7 +696,7 @@ export function PlayerCard({
             paddingHorizontal: 7,
             borderWidth: 0.5,
             borderColor: tone.line,
-            borderRadius: 999,
+            borderRadius: RADIUS.pill,
             overflow: 'hidden',
             color: tone.ink,
             fontSize: 10,

@@ -1,0 +1,26 @@
+{
+  "id": "t-11-499-card-exchange-ui",
+  "title": "카드 과제 화면 정리",
+  "items": [
+    "오늘 낸 과제와 모두 내면 받는 보상을 위쪽 진행 띠에서 한눈에 볼 수 있어요",
+    "과제마다 가치가 낮은 선수로 조합을 미리 채워 둬서 '이 3명 내기' 한 번에 낼 수 있어요",
+    "선수 고르기에서는 낼 수 있는 선수만 가치 낮은 순으로 보이고, 사라지는 카드 가치를 미리 알려 줘요"
+  ],
+  "en": {
+    "title": "Cleaner card challenges",
+    "items": [
+      "A progress strip at the top shows how many challenges you've handed in today and the reward for finishing all.",
+      "Each challenge comes pre-filled with your lowest-value players, so you can hand it in with one tap.",
+      "When choosing players, only eligible ones are listed, lowest value first, with the card value you'll lose shown up front."
+    ]
+  },
+  "ja": {
+    "title": "カード課題の画面を整理",
+    "items": [
+      "今日出した課題と、すべて出すと受け取れる報酬を上部の進行バーでひと目で確認できます。",
+      "課題ごとに価値の低い選手で組み合わせをあらかじめ埋めておくので、ワンタップで出せます。",
+      "選手を選ぶときは出せる選手だけを価値の低い順に表示し、なくなるカード価値を先に知らせます。"
+    ]
+  },
+  "availability": "web-app"
+}

@@ -15,11 +15,11 @@ import { BarBelow } from '../ui/Screen';
 import { EdgeSwipeBack } from '../ui/EdgeSwipeBack';
 import { RefreshRoot } from '../ui/refresh';
 import { Sheet } from '../ui/Sheet';
+import { Coachmark, startCoach } from '../components/Coachmark';
 import { TABBAR_H } from '../ui/TabBar';
 import { Toast } from '../ui/Toast';
 import { NewsBanner } from '../banners/NewsBanner';
 import { UpdateBanner } from '../banners/UpdateBanner';
-import { StoreUpdateBanner } from '../banners/StoreUpdateBanner';
 import { RetiredNumberAlert } from '../banners/RetiredNumberAlert';
 import { useColors } from '../theme/useColors';
 import Home from '../screens/home/Home';
@@ -39,11 +39,14 @@ import OwnerHonors from '../screens/owner/OwnerHonors';
 import Team from '../screens/owner/Team';
 import Market from '../screens/owner/Market';
 import FundsHistory from '../screens/owner/FundsHistory';
+import Shop from '../screens/owner/Shop';
 import Manager from '../screens/owner/Manager';
 import Cup from '../screens/owner/CupScreen';
+import League from '../screens/league/LeagueScreen';
 import Settings from '../screens/settings/Settings';
 import Admin from '../screens/settings/Admin';
 import { ReviewNudge } from '../components/ReviewNudge';
+import { AnalyticsAsk } from '../components/AnalyticsAsk';
 
 const SCREENS: Record<Screen, ComponentType> = {
   home: Home,
@@ -63,12 +66,16 @@ const SCREENS: Record<Screen, ComponentType> = {
   team: Team,
   market: Market,
   funds: FundsHistory,
+  // T-11-567 상점(구단주 화면의 상점 칸으로 연다).
+  shop: Shop,
   // T-11-310 감독 커리어(구단주 화면의 감독 커리어 카드로 연다).
   manager: Manager,
   // T-11-128 구단주 시즌 결산(구단주 화면의 결산 카드로 연다).
   recap: OwnerHonors,
   // T-11-145 오프사이드 컵(구단주 화면의 컵 배너로 연다).
   cup: Cup,
+  // T-11-418 오프사이드 리그(홈의 리그 배너로 연다).
+  league: League,
   settings: Settings,
   admin: Admin,
 };
@@ -106,6 +113,7 @@ export default function App() {
     return () => offs.forEach((off) => off());
   }, []);
   useEffect(checkAch, [snap.screen, snap.teamView]);
+  useEffect(startCoach, []);
 
   const Current = SCREENS[snap.screen];
   const main = hasMainNav(snap.screen);
@@ -120,12 +128,14 @@ export default function App() {
         </EdgeSwipeBack>
       </BarBelow.Provider>
       {main ? <MainNav /> : null}
-      <StoreUpdateBanner />
       <UpdateBanner />
       <NewsBanner />
       <RetiredNumberAlert />
       <ReviewNudge />
+      <AnalyticsAsk />
       <Sheet />
+      {/* T-11-473 첫 커리어 따라가기 안내(시트가 열려 있으면 시트 안의 덮개가 대신한다). */}
+      <Coachmark layer="root" />
       {/* 아래 탭 막대(메인·게임)가 있으면 그 위로 띄운다(웹 body:has(nav.tabs) .toast). */}
       <Toast lift={main || snap.screen === 'game' ? TABBAR_H : 0} />
     </View>

@@ -1,0 +1,14 @@
+{
+  "id": "t-11-558-rewarded-preload",
+  "title": "광고 보상 더 빠르게",
+  "items": ["잠재력 보기 · 강화 · 평가 보기 광고를 미리 준비해 두어 버튼을 누르면 바로 떠요."],
+  "en": {
+    "title": "Faster ad rewards",
+    "items": ["Reward ads for potential, boosts and scout reports now load in advance and start right away."]
+  },
+  "ja": {
+    "title": "広告報酬がすばやく",
+    "items": ["ポテンシャル表示・強化・評価表示の広告を事前に準備し、ボタンを押すとすぐに流れます。"]
+  },
+  "availability": "app"
+}

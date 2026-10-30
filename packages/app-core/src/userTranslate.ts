@@ -16,6 +16,8 @@ export function canTranslate(text: string, locale: Locale = getLocale()): boolea
   const japanese = KANA.test(text) || HAN.test(text);
   if (locale === 'ko') return !hangul && (japanese || LATIN.test(text));
   if (locale === 'ja') return hangul || (!japanese && LATIN.test(text));
+  // 번체 중국어: 한자만 쓴 글은 중국어로 보고, 가나가 섞인 일본어 글 · 한글 · 라틴 글에 단다.
+  if (locale === 'zh') return hangul || KANA.test(text) || (!HAN.test(text) && LATIN.test(text));
   return hangul || japanese;
 }
 

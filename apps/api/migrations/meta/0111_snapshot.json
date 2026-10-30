@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "f55f29df-6f9e-472a-9672-50db992c450a",
+  "id": "5b6bdc75-fe55-47ca-8d2e-f9fdd68d4dae",
   "prevId": "acca5a2d-28a6-4186-88b2-6293d0c412a5",
   "tables": {
     "api_status_buckets": {
@@ -903,77 +903,6 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "card_specials": {
-      "name": "card_specials",
-      "columns": {
-        "career_id": {
-          "name": "career_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "season": {
-          "name": "season",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "rank": {
-          "name": "rank",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "rule_version": {
-          "name": "rule_version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "card_specials_season_idx": {
-          "name": "card_specials_season_idx",
-          "columns": [
-            "season",
-            "kind",
-            "rank"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "card_specials_career_id_season_kind_pk": {
-          "columns": [
-            "career_id",
-            "season",
-            "kind"
-          ],
-          "name": "card_specials_career_id_season_kind_pk"
-        }
-      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
@@ -4110,6 +4039,13 @@
             "source_key"
           ],
           "isUnique": true
+        },
+        "notifications_source_key_idx": {
+          "name": "notifications_source_key_idx",
+          "columns": [
+            "source_key"
+          ],
+          "isUnique": false
         },
         "notifications_profile_created_idx": {
           "name": "notifications_profile_created_idx",

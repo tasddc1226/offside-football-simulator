@@ -1,4 +1,4 @@
-// T-11-146 관리자 글 편집기의 상태와 저장 입력(웹·앱 공통). 한국어 원문 + 영어·일본어 번역 칸.
+// T-11-146 관리자 글 편집기의 상태와 저장 입력(웹·앱 공통). 한국어 원문 + 영어·일본어·번체 중국어 번역 칸.
 import type { Post, PostDetailResponse, PostInput, PostText } from '@offside/contracts';
 import { TRANSLATED_LOCALES, type TranslatedLocale } from '@offside/contracts/i18n';
 import { translatePost } from './api/boards.js';
@@ -6,7 +6,8 @@ import { boardText as L } from './i18n/ko/board.js';
 
 export const POST_LANGS = TRANSLATED_LOCALES;
 export type PostLang = TranslatedLocale;
-export const postLangLabel = (lang: PostLang): string => (lang === 'en' ? L.langEn : L.langJa);
+export const postLangLabel = (lang: PostLang): string =>
+  ({ en: L.langEn, ja: L.langJa, zh: L.langZh })[lang];
 
 export type PostDraft = {
   /** 없으면 새 글. */
@@ -21,7 +22,16 @@ const blank = (): PostText => ({ title: '', body: '' });
 
 /** 고칠 글은 서버가 관리자에게 준 원문(source)으로 채운다 — post는 화면 언어로 옮긴 것이다. */
 export function draftOf(post?: Post, source?: PostDetailResponse['source']): PostDraft {
-  if (!post) return { title: '', body: '', version: '', pinned: false, en: blank(), ja: blank() };
+  if (!post)
+    return {
+      title: '',
+      body: '',
+      version: '',
+      pinned: false,
+      en: blank(),
+      ja: blank(),
+      zh: blank(),
+    };
   return {
     id: post.id,
     title: source?.title ?? post.title,
@@ -30,6 +40,7 @@ export function draftOf(post?: Post, source?: PostDetailResponse['source']): Pos
     pinned: post.pinned,
     en: { ...blank(), ...source?.i18n.en },
     ja: { ...blank(), ...source?.i18n.ja },
+    zh: { ...blank(), ...source?.i18n.zh },
   };
 }
 

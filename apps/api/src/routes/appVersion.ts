@@ -7,11 +7,14 @@ import { ok } from './shared.js';
  * T-11-042 플랫폼별 최소 앱 버전과 스토어 주소. 앱이 켤 때·돌아올 때 묻고, 자기 버전이 낮으면 스토어 업데이트를 안내한다.
  * 새 시즌 빌드(`1.<시즌>.0`)가 **스토어에 출시된 뒤에**(Play 공개 전엔 테스터가 받는 비공개 테스트 트랙에 올라간 뒤에) 그 플랫폼의 min을 올린다 — 먼저 올리면 받을 수 없는 업데이트를
  * 안내하게 된다. DB를 읽지 않는다.
+ * T-11-464 `latest`는 그 플랫폼 스토어에 출시된 최신 버전이다 — 스토어 빌드가 출시되면 올린다(낮은 앱에 '나중에'가 있는
+ * 업데이트 팝업). `min`보다 낮은 앱은 닫을 수 없는 팝업을 받는다.
  */
 export const APP_VERSIONS: AppVersionResponse = {
-  ios: { min: '1.1.2', url: 'https://apps.apple.com/kr/app/id6817463687' },
+  ios: { min: '1.1.4', latest: '1.1.5', url: 'https://apps.apple.com/kr/app/id6817463687' },
   android: {
-    min: '1.1.2',
+    min: '1.1.4',
+    latest: '1.1.5',
     url: 'https://play.google.com/store/apps/details?id=com.offsidelab.app',
   },
 };

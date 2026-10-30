@@ -24,6 +24,10 @@ const ko = {
   replaceConfirm: (p: { name: string }) =>
     `지금 진행 중인 ${p.name} 선수의 커리어를 백업으로 바꿀까요? 되돌릴 수 없어요.`,
   replaceOk: '바꾸기',
+  // T-11-441 은퇴한 커리어를 덮을 때도 묻는다 · 내보낼 커리어가 없을 때의 이유
+  replaceConfirmRetired: (p: { name: string }) =>
+    `은퇴한 ${p.name} 선수의 커리어 화면을 백업으로 바꿀까요? 명예의 전당 기록은 그대로 남아요.`,
+  exportNone: '이 기기에 저장된 커리어가 없어 내보낼 백업이 없어요.',
   cancel: '취소',
   noSpace: '저장 공간이 부족해 백업을 불러오지 못했어요. 현재 커리어는 그대로예요',
   restored: '백업을 불러왔어요',

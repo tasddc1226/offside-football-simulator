@@ -10,12 +10,15 @@ import {
   ErrorEnvelopeSchema,
   OwnerTeamResponseSchema,
   PlayTeamMatchResponseSchema,
+  TeamMomentResponseSchema,
+  type PlayTeamMatchResponse,
   PutOwnerTeamResponseSchema,
   TeamMatchesResponseSchema,
   TeamOpponentsResponseSchema,
   TeamProfileResponseSchema,
   TeamRankResponseSchema,
   TeamStatsResponseSchema,
+  TeamDivisionsResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
 import {
@@ -23,14 +26,18 @@ import {
   TEAM_MATCHES_PER_DAY,
   YOUTH_OVR,
   matchScore,
+  rankPoints,
   ratingChange,
   presetLayout,
   positionedLayout,
   FORMATIONS,
 } from '@offside/contracts/owner-team';
 import { eq } from 'drizzle-orm';
+import { resolveBalance } from '@offside/contracts/balance';
+import { divisionRules, nextDivision } from '@offside/contracts/team-division';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  balanceVersions,
   boardBlocks,
   cards,
   careerSeasons,
@@ -40,7 +47,9 @@ import {
   notifications,
   pushDeliveries,
   friends,
+  ownerItems,
   ownerTeams,
+  cupEntries,
   teamMatches,
 } from '../db/schema.js';
 import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
@@ -48,6 +57,9 @@ import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { callJson, deleteProfile, issueCookie, issueGoogleCookie } from '../test/http.js';
 import { addAppPushDevice } from '../test/push.js';
 import { runPersonalPush } from '../push/personal.js';
+import { finishStaleLive } from '../team/liveMatch.js';
+import { applySeasonSchedule, closeSeasonSchedule } from '@offside/contracts/service-seasons';
+import { forgetSeasonSchedule, saveSeasonSchedule } from '../seasonSchedule.js';
 
 const GetRes = successEnvelope(OwnerTeamResponseSchema);
 const PutRes = successEnvelope(PutOwnerTeamResponseSchema);
@@ -62,6 +74,8 @@ const FriendDelRes = successEnvelope(FriendRemoveResponseSchema);
 const FriendlyRes = successEnvelope(PlayFriendlyResponseSchema);
 const TeamProfileRes = successEnvelope(TeamProfileResponseSchema);
 const StatsRes = successEnvelope(TeamStatsResponseSchema);
+const RankRes = successEnvelope(TeamRankResponseSchema);
+const DivRes = successEnvelope(TeamDivisionsResponseSchema);
 
 type Pos = 'FW' | 'MF' | 'DF' | 'GK';
 let seq = 0;
@@ -76,12 +90,19 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
   });
   afterEach(async () => {
     vi.useRealTimers();
+    applySeasonSchedule([]);
+    forgetSeasonSchedule();
     await ctx.dispose();
   });
 
   const call = (method: string, path: string, opts?: Parameters<typeof callJson>[3]) =>
     callJson(ctx.env, method, path, opts);
   const idem = () => ({ 'Idempotency-Key': `team-match-${++seq}-key` });
+  /** T-11-510 시즌 1을 10-31 00:00(KST)에 마감하고 시즌 2 첫날로 옮긴다. */
+  async function toSeason2() {
+    await saveSeasonSchedule(ctx.env.DB, closeSeasonSchedule(1, '2026-10-30T15:00:00.000Z', false));
+    vi.setSystemTime(new Date('2026-11-01T03:00:00.000Z'));
+  }
 
   /** 이 프로필의 커리어를 바로 넣는다(은퇴 업로드 검증은 careers.test가 본다). */
   async function addCareer(
@@ -457,6 +478,9 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       ).json(),
     ).data.match;
     expect(match.home.ovr).toBe(team.ovr);
+    // T-11-379 방금 치른 경기에는 두 팀 기대 득점과 줄 힘이 붙는다.
+    expect(match.home.xg).toBeGreaterThan(0);
+    expect(match.away.lines).toMatchObject({ atk: expect.any(Number), gk: expect.any(Number) });
     expect(match.home.logo).toEqual(logo);
     expect(match.away.logo).toEqual(rivalLogo);
     // 로고를 저장하지 않았던 옛 경기에도 현재 로고를 붙인다. 경기 원본은 덮어쓰지 않는다.
@@ -465,6 +489,10 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       .from(teamMatches)
       .where(eq(teamMatches.id, match.id));
     expect(JSON.parse(storedBefore!.detailJson).home).not.toHaveProperty('logo');
+    // T-11-518 랭크 경기는 두 팀 선발 명단(커리어 id → 자리)을 남기고, 공개 응답에는 싣지 않는다.
+    const xi = JSON.parse(storedBefore!.detailJson).home.xi as Record<string, string>;
+    expect(Object.keys(xi).length).toBeGreaterThan(0);
+    expect(match.home).not.toHaveProperty('xi');
     const nextLogo = { ...logo, text: 'NEW' };
     await ctx.db
       .update(ownerTeams)
@@ -562,10 +590,12 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     ).data;
     expect(stats).toMatchObject({ season: 0, matches: 4, capped: false });
     expect(stats.total).toEqual({ w: 2, d: 1, l: 1, gf: 6, ga: 3 });
+    // 옛 경기(선발 명단 없음)는 출전을 세지 않는다(T-11-518).
+    expect(stats.xiMatches).toBe(0);
     expect(stats.players).toEqual([
-      { careerId: striker, name: '김골잡', goals: 3, assists: 1 },
-      { careerId: winger, name: '김골잡', goals: 1, assists: 2 },
-      { careerId: null, name: '유스 선수', goals: 2, assists: 0 },
+      { careerId: striker, name: '김골잡', goals: 3, assists: 1, apps: 0 },
+      { careerId: winger, name: '김골잡', goals: 1, assists: 2, apps: 0 },
+      { careerId: null, name: '유스 선수', goals: 2, assists: 0, apps: 0 },
     ]);
     expect(stats.days).toEqual([
       { day: '2026-09-30', w: 1, d: 1, l: 1, gf: 4, ga: 2 },
@@ -594,6 +624,8 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       cup: { w: 0, d: 0, l: 0, gf: 0, ga: 0 },
     });
     expect(theirs.summary).toMatchObject({ form: ['w', 'l', 'l'], streak: { kind: 'w', n: 1 } });
+    // T-11-379 기대 득점이 없는 옛 경기는 리포트에 세지 않는다.
+    expect(stats.report).toMatchObject({ matches: 0, xgFor: 0, formations: [] });
     // 친선전(받은 경기 0:2 패 · 건 경기 1:1 무)과 컵(승부차기 승 · 패 · 기권 · 아직 안 치른 경기)은 합계로 센다.
     const friendly = (id: string, home: typeof me, away: typeof me, hg: number, ag: number) =>
       ctx.db.insert(friendMatches).values({
@@ -853,6 +885,15 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     const after = await read();
     expect(feats(after).map((i) => i.done)).toEqual([true, true]);
     expect(feats(after).map((i) => i.points)).toEqual([50, 50]);
+    // T-11-357 50점 위업은 보상 문턱(80점) 아래라 점수만 오른다 — 다시 읽어도 아이템이 생기지 않는다.
+    expect(feats(after).map((i) => i.got)).toEqual([undefined, undefined]);
+    const boosts = async () =>
+      (await ctx.db.select().from(ownerItems).where(eq(ownerItems.profileId, me.profileId))).find(
+        (r) => r.item === 'boost',
+      )?.qty;
+    expect(await boosts()).toBeUndefined();
+    await read();
+    expect(await boosts()).toBeUndefined();
     // 판매해도 원 육성자의 선수 업적은 기존처럼 남는다.
     await ctx.db
       .update(cards)
@@ -1347,6 +1388,148 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(items.map((i) => i.rating)).toEqual([1120, 1080, 900]);
   });
 
+  describe('T-11-387 장면 경기', () => {
+    const MomentRes = successEnvelope(TeamMomentResponseSchema);
+    /** 장면이 하나 이상 나오는 경기를 시작한다(장면이 없으면 바로 끝나므로 다른 상대로 다시 건다). */
+    async function startLive(me: Awaited<ReturnType<typeof ownerWithTeam>>) {
+      for (let i = 0; i < 6; i++) {
+        const rival = await ownerWithTeam(5, 82, '라이벌 에이스');
+        const res = await call('POST', '/v1/owner-team/matches', {
+          cookie: me.cookie,
+          headers: idem(),
+          body: { opponentTeamId: rival.team.id, live: true },
+        });
+        expect(res.status).toBe(201);
+        const data = PlayRes.parse(await res.json()).data;
+        if (data.live?.moments.length) return { rival, data };
+      }
+      throw new Error('장면이 나오는 경기를 만들지 못했어요');
+    }
+    const choose = (cookie: string, id: string, index: number, choice: string) =>
+      call('POST', `/v1/owner-team/matches/${id}/moments/${index}`, { cookie, body: { choice } });
+
+    it('장면을 모두 고르면 경기가 남고, 시작 때는 기록 · 레이팅 · 알림이 없다', async () => {
+      const me = await ownerWithTeam(8, 85);
+      const { rival, data } = await startLive(me);
+      const { match, live } = data;
+      expect(live!.moments.length).toBeLessThanOrEqual(3);
+      expect(live!.choiceSec).toBe(15);
+      expect(data.rating).toBe(1000);
+      expect(await ctx.db.select().from(teamMatches).where(eq(teamMatches.id, match.id))).toEqual(
+        [],
+      );
+      // 장면 주인공은 내 선수(커리어 id), 상대 공격수 id는 내보내지 않는다.
+      for (const m of live!.moments) {
+        if (m.actor.id) expect(me.ids).toContain(m.actor.id);
+        expect(m.opp.id).toBeNull();
+        expect(m.choices.length).toBeGreaterThan(0);
+      }
+      // 모르는 선택지 · 남의 경기는 거절한다.
+      const first = live!.moments[0]!;
+      expect((await choose(me.cookie, match.id, first.index, 'nope')).status).toBe(400);
+      expect((await choose(rival.cookie, match.id, first.index, first.choices[0]!.id)).status).toBe(
+        404,
+      );
+      let final: PlayTeamMatchResponse | undefined;
+      let goals = 0;
+      for (const m of live!.moments) {
+        const res = await choose(me.cookie, match.id, m.index, m.choices[0]!.id);
+        expect(res.status).toBe(200);
+        const body = MomentRes.parse(await res.json()).data;
+        expect(body.moment).toMatchObject({ index: m.index, picked: m.choices[0]!.id });
+        goals += body.goals.length;
+        // 같은 장면을 다시 보내도 결과가 같다.
+        const again = MomentRes.parse(
+          await (await choose(me.cookie, match.id, m.index, m.choices.at(-1)!.id)).json(),
+        ).data;
+        expect(again.moment).toEqual(body.moment);
+        final = body.final ?? final;
+      }
+      expect(final).toBeDefined();
+      const f = final!;
+      expect(f.match.home.goals + f.match.away.goals).toBe(
+        match.home.goals + match.away.goals + goals,
+      );
+      expect(f.match.moments?.map((m) => m.picked)).toEqual(
+        live!.moments.map((m) => m.choices[0]!.id),
+      );
+      const [row] = await ctx.db.select().from(teamMatches).where(eq(teamMatches.id, match.id));
+      expect([row!.homeGoals, row!.awayGoals]).toEqual([f.match.home.goals, f.match.away.goals]);
+      const want = ratingChange(1000, 1000, matchScore(f.match.home.goals, f.match.away.goals));
+      expect(f.rating).toBe(1000 + want.home);
+      expect(await ctx.db.select().from(notifications)).toMatchObject([
+        { profileId: rival.profileId, sourceKey: `team-match:${match.id}` },
+      ]);
+      // 경기 기록에도 장면이 남는다.
+      const mine = MatchesRes.parse(
+        await (await call('GET', '/v1/owner-team/matches', { cookie: me.cookie })).json(),
+      ).data.items;
+      expect(mine.find((x) => x.id === match.id)?.moments).toHaveLength(live!.moments.length);
+    });
+
+    it('결과 바로 보기는 남은 장면을 자동 선택으로 마감하고, 다시 불러도 같은 결과다', async () => {
+      const me = await ownerWithTeam(8, 85);
+      const { data } = await startLive(me);
+      const finish = () =>
+        call('POST', `/v1/owner-team/matches/${data.match.id}/finish`, { cookie: me.cookie });
+      const a = PlayRes.parse(await (await finish()).json()).data;
+      const b = PlayRes.parse(await (await finish()).json()).data;
+      expect(b).toEqual(a);
+      expect(a.match.moments?.every((m) => m.picked === 'auto')).toBe(true);
+      expect(await ctx.db.select().from(teamMatches)).toHaveLength(1);
+      // 마감한 뒤 장면을 보내면 마감한 결과를 그대로 준다.
+      const m = data.live!.moments[0]!;
+      const late = MomentRes.parse(
+        await (await choose(me.cookie, data.match.id, m.index, m.choices[0]!.id)).json(),
+      ).data;
+      expect(late.moment.picked).toBe('auto');
+      expect(late.final).toEqual(a);
+    });
+
+    it('떠난 경기는 cron이 10분 뒤 자동 선택으로 마감한다', async () => {
+      const me = await ownerWithTeam(8, 85);
+      const { data } = await startLive(me);
+      expect(await finishStaleLive(ctx.db, new Date(Date.now() + 60_000).toISOString())).toEqual({
+        done: 0,
+        checked: 0,
+      });
+      const later = new Date(Date.now() + 11 * 60_000).toISOString();
+      expect((await finishStaleLive(ctx.db, later)).done).toBe(1);
+      const [row] = await ctx.db
+        .select()
+        .from(teamMatches)
+        .where(eq(teamMatches.id, data.match.id));
+      expect(row).toBeDefined();
+    });
+
+    it('끝나지 않은 장면 경기도 같은 상대 하루 한 번에 센다', async () => {
+      const me = await ownerWithTeam(8, 85);
+      const { rival } = await startLive(me);
+      const again = await call('POST', '/v1/owner-team/matches', {
+        cookie: me.cookie,
+        headers: idem(),
+        body: { opponentTeamId: rival.team.id, live: true },
+      });
+      expect(again.status).toBe(429);
+      expect(ErrorEnvelopeSchema.parse(await again.json()).error.details).toEqual({
+        reason: 'TEAM_OPPONENT_DAILY_LIMIT',
+      });
+    });
+
+    it('live 없이 부르면(옛 앱) 지금처럼 한 번에 끝난다', async () => {
+      const me = await ownerWithTeam(5, 85);
+      const rival = await ownerWithTeam(5, 82);
+      const res = await call('POST', '/v1/owner-team/matches', {
+        cookie: me.cookie,
+        headers: idem(),
+        body: { opponentTeamId: rival.team.id },
+      });
+      const data = PlayRes.parse(await res.json()).data;
+      expect(data.live).toBeUndefined();
+      expect(await ctx.db.select().from(teamMatches)).toHaveLength(1);
+    });
+  });
+
   it('T-10-095 같은 상대에게는 하루 한 번만 걸고, 다음 날 다시 만나면 레이팅 변화가 줄어든다', async () => {
     const me = await ownerWithTeam(1);
     const rival = await ownerWithTeam(1);
@@ -1390,6 +1573,137 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       want.away + 0,
     ]);
     expect(await rivalRating()).toBe(rivalBefore + want.away);
+  });
+
+  it('T-11-510 시즌 1까지는 엘로 그대로, 디비전은 응답에 싣지 않는다', async () => {
+    const me = await ownerWithTeam(5, 85);
+    const rival = await ownerWithTeam(3, 70);
+    const opp = OppRes.parse(
+      await (await call('GET', '/v1/owner-team/opponents', { cookie: me.cookie })).json(),
+    ).data;
+    expect(opp.items.map((i) => i.teamId)).toEqual([rival.team.id]);
+    const res = await call('POST', '/v1/owner-team/matches', {
+      cookie: me.cookie,
+      headers: idem(),
+      body: { opponentTeamId: rival.team.id },
+    });
+    const body = PlayRes.parse(await res.json()).data;
+    expect(body.division).toBeUndefined();
+    const mine = GetRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    ).data;
+    expect(mine.team?.division).toBeUndefined();
+  });
+
+  describe('T-11-510 시즌 2 RP 사다리', () => {
+    beforeEach(toSeason2);
+
+    it('경기 뒤 RP는 건 쪽 그대로 · 받은 쪽은 깎일 때 절반, 두 팀 디비전을 같이 고치고 응답에 싣는다', async () => {
+      const rules = divisionRules(resolveBalance());
+      const me = await ownerWithTeam(5, 85, null, 2);
+      const rival = await ownerWithTeam(3, 70, null, 2);
+      // 나는 프로 II 경계(1,400) 바로 아래 세미프로 I, 상대는 경계 아래지만 강등 보호(30) 중인 프로 II.
+      await ctx.db
+        .update(ownerTeams)
+        .set({ rating: 1395, division: 2 })
+        .where(eq(ownerTeams.id, me.team.id));
+      await ctx.db
+        .update(ownerTeams)
+        .set({ rating: 1390, division: 3 })
+        .where(eq(ownerTeams.id, rival.team.id));
+      const res = await call('POST', '/v1/owner-team/matches', {
+        cookie: me.cookie,
+        headers: idem(),
+        body: { opponentTeamId: rival.team.id },
+      });
+      expect(res.status).toBe(201);
+      const body = PlayRes.parse(await res.json()).data;
+      const score = matchScore(body.match.home.goals, body.match.away.goals);
+      expect([body.match.home.ratingChange, body.match.away.ratingChange]).toEqual([
+        rankPoints(1395, 1390, score, 2),
+        rankPoints(1390, 1395, (1 - score) as 0 | 0.5 | 1, 3, true),
+      ]);
+      const [homeRow] = await ctx.db.select().from(ownerTeams).where(eq(ownerTeams.id, me.team.id));
+      const [awayRow] = await ctx.db
+        .select()
+        .from(ownerTeams)
+        .where(eq(ownerTeams.id, rival.team.id));
+      expect(homeRow!.division).toBe(nextDivision(homeRow!.rating, 2, rules));
+      expect(awayRow!.division).toBe(nextDivision(awayRow!.rating, 3, rules));
+      expect(body.division).toEqual({ from: 2, to: homeRow!.division });
+      const mine = GetRes.parse(
+        await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+      ).data;
+      expect(mine.team?.division).toBe(homeRow!.division);
+    });
+
+    it('상대는 서버가 한 팀만 골라 주고, 같은 pick이면 같은 상대 · pick은 3까지', async () => {
+      const me = await ownerWithTeam(3, 80, null, 2);
+      const rivals = await Promise.all([1, 2, 3, 4, 5].map(() => ownerWithTeam(3, 80, null, 2)));
+      const ids = new Set(rivals.map((t) => t.team.id));
+      const get = async (q: string) =>
+        OppRes.parse(
+          await (await call('GET', `/v1/owner-team/opponents${q}`, { cookie: me.cookie })).json(),
+        ).data.items.map((i) => i.teamId);
+      const first = await get('');
+      expect(first).toHaveLength(1);
+      expect(ids.has(first[0]!)).toBe(true);
+      expect(await get('?pick=0')).toEqual(first);
+      const picks = await Promise.all(['?pick=1', '?pick=2', '?pick=3', '?pick=9'].map(get));
+      for (const p of picks) expect(p).toHaveLength(1);
+      expect(picks[3]).toEqual(picks[2]);
+    });
+
+    it('고른 상대 RP가 그새 멀어지면 409 TEAM_OPPONENT_STALE', async () => {
+      const me = await ownerWithTeam(1, 80, null, 2);
+      const near = await Promise.all(
+        Array.from({ length: 13 }, () => ownerWithTeam(1, 80, null, 2)),
+      );
+      const far = near[0]!;
+      await ctx.db.update(ownerTeams).set({ rating: 3000 }).where(eq(ownerTeams.id, far.team.id));
+      const res = await call('POST', '/v1/owner-team/matches', {
+        cookie: me.cookie,
+        headers: idem(),
+        body: { opponentTeamId: far.team.id },
+      });
+      expect(res.status).toBe(409);
+      expect(ErrorEnvelopeSchema.parse(await res.json()).error.details).toEqual({
+        reason: 'TEAM_OPPONENT_STALE',
+      });
+      // 가까운 상대에게는 그대로 걸 수 있다.
+      const ok = await call('POST', '/v1/owner-team/matches', {
+        cookie: me.cookie,
+        headers: idem(),
+        body: { opponentTeamId: near[1]!.team.id },
+      });
+      expect(ok.status).toBe(201);
+    });
+
+    it('디비전 랭킹은 RP 구간 팀만, 디비전별 팀 수는 세션 없이 경계와 함께', async () => {
+      const teams = await Promise.all([1, 1, 1, 1].map(() => ownerWithTeam(1, 80, null, 2)));
+      const ratings = [900, 1250, 1300, 2100];
+      await Promise.all(
+        teams.map((t, i) =>
+          ctx.db
+            .update(ownerTeams)
+            .set({ rating: ratings[i]! })
+            .where(eq(ownerTeams.id, t.team.id)),
+        ),
+      );
+      const semi1 = RankRes.parse(
+        await (await call('GET', '/v1/teams?sort=rating&division=2')).json(),
+      ).data;
+      expect(semi1.items.map((i) => i.rating)).toEqual([1300, 1250]);
+      expect(semi1.total).toBe(2);
+      const master = RankRes.parse(await (await call('GET', '/v1/teams?division=7')).json()).data;
+      expect(master.items.map((i) => i.rating)).toEqual([2100]);
+      const div = DivRes.parse(await (await call('GET', '/v1/teams/divisions')).json()).data;
+      expect(div.bounds).toEqual([1050, 1200, 1400, 1700, 1800, 1900, 2000]);
+      expect(div.guard).toBe(30);
+      expect(div.counts).toEqual([1, 0, 2, 0, 0, 0, 0, 1]);
+      expect(div.total).toBe(4);
+      expect((await call('GET', '/v1/teams?division=8')).status).toBe(400);
+    });
   });
 
   it('프로필을 지우면 팀과 그 팀의 경기도 지워진다', async () => {
@@ -1722,30 +2036,76 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       expect(team).toMatchObject({ season: 0, current: 1, founder: true });
     });
 
-    it('T-11-114 지난 시즌 선수는 와일드카드로 이번 시즌 선발에 3명까지 넣고, 카드 시즌이 보인다', async () => {
-      const a = await issueGoogleCookie(ctx, { nickname: '와일드' });
-      const pre = [];
-      for (let i = 0; i < 4; i++) pre.push(await addCareer(a.profileId, { peak: 88 }));
+    it('T-11-376 지난 시즌 선수는 급여 합이 예산(시즌 1은 80) 안에서만 넣고, 카드 시즌이 보인다', async () => {
+      const a = await issueGoogleCookie(ctx, { nickname: '급여' });
+      // OVR 96 이상은 급여 20 — T-11-450부터 시즌 1 예산 80이라 4명까지 든다.
+      const stars: string[] = [];
+      for (let i = 0; i < 5; i++) stars.push(await addCareer(a.profileId, { peak: 96 }));
+      const mids: string[] = [];
+      for (let i = 0; i < 11; i++) mids.push(await addCareer(a.profileId, { peak: 88 }));
       vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
-      const s1 = await addCareer(a.profileId, { serviceSeason: 1 });
+      const s1 = await addCareer(a.profileId, { serviceSeason: 1, peak: 99 });
 
       const view = GetRes.parse(
         await (await call('GET', '/v1/owner-team', { cookie: a.cookie })).json(),
       ).data;
       expect(view.season).toBe(1);
-      expect(view.players.map((p) => [p.careerId, p.season]).sort()).toEqual(
-        [...pre.map((id) => [id, 0]), [s1, 1]].sort(),
-      );
+      expect(view.pastSalaryBudget).toBe(80);
+      expect(view.players.find((p) => p.careerId === s1)?.season).toBe(1);
+      expect(view.players.find((p) => p.careerId === stars[0])?.season).toBe(0);
 
-      const over = await putTeam(a.cookie, { slots: slots(s1, ...pre) });
+      const over = await putTeam(a.cookie, { slots: slots(s1, ...stars) });
       expect(over.status).toBe(400);
-      expect(await reason(over)).toBe('WILDCARD_LIMIT');
-      const ok = await putTeam(a.cookie, { slots: slots(s1, ...pre.slice(0, 3)) });
+      const err = ErrorEnvelopeSchema.parse(await over.json()).error;
+      expect(err.details).toEqual({ reason: 'PAST_SALARY_BUDGET', salary: 100, budget: 80 });
+      expect(err.message).toBe(
+        '지난 시즌 선수 급여가 예산을 넘어요(100/80). 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요.',
+      );
+      const ok = await putTeam(a.cookie, { slots: slots(s1, ...stars.slice(0, 4)) });
       expect(ok.status).toBe(200);
       const team = PutRes.parse(await ok.json()).data.team;
       expect(team.season).toBe(1);
-      expect(team.slots.slice(0, 4).map((s) => s.season)).toEqual([1, 0, 0, 0]);
-      expect(team.slots[4]!.season).toBeUndefined();
+      expect(team.slots.slice(0, 5).map((s) => s.season)).toEqual([1, 0, 0, 0, 0]);
+      expect(team.slots[5]!.season).toBeUndefined();
+      // OVR 88~89(급여 8)은 10명까지, 11명이면 88이라 넘는다. 이번 시즌 선수(OVR 99)는 세지 않는다.
+      expect((await putTeam(a.cookie, { slots: slots(s1, ...mids.slice(0, 10)) })).status).toBe(
+        200,
+      );
+      expect(await reason(await putTeam(a.cookie, { slots: slots(...mids) }))).toBe(
+        'PAST_SALARY_BUDGET',
+      );
+      // 영어 요청은 영어 문구.
+      const en = await call('PUT', '/v1/owner-team?lang=en', {
+        cookie: a.cookie,
+        body: { name: '급여 팀', manager: '감독', formation: '4-3-3', slots: slots(...stars) },
+      });
+      expect(ErrorEnvelopeSchema.parse(await en.json()).error.message).toBe(
+        'Past-season player salaries are over budget (100/80). Swap in lower-salary or this-season players.',
+      );
+    });
+
+    it('T-11-376 운영 도구 밸런스의 급여 예산을 바로 읽는다', async () => {
+      const a = await issueGoogleCookie(ctx, { nickname: '예산' });
+      const stars: string[] = [];
+      for (let i = 0; i < 2; i++) stars.push(await addCareer(a.profileId, { peak: 96 }));
+      vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
+      const now = new Date().toISOString();
+      await ctx.db.insert(balanceVersions).values({
+        status: 'active',
+        valuesJson: JSON.stringify({ pastSalaryBudget: 30 }),
+        createdBy: 'test',
+        createdAt: now,
+        updatedAt: now,
+        activatedAt: now,
+      });
+      const view = GetRes.parse(
+        await (await call('GET', '/v1/owner-team', { cookie: a.cookie })).json(),
+      ).data;
+      expect(view.pastSalaryBudget).toBe(30);
+      expect(await reason(await putTeam(a.cookie, { slots: slots(...stars) }))).toBe(
+        'PAST_SALARY_BUDGET',
+      );
+      expect((await putTeam(a.cookie, { slots: slots(stars[0]!) })).status).toBe(200);
     });
 
     it('친구를 끊으면 두 줄이 지워지고, 프로필을 지우면 친구 줄과 친선전이 사라진다', async () => {
@@ -1769,6 +2129,55 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       expect(await ctx.db.select().from(friendMatches)).toEqual([]);
       // 지운 사람의 코드로는 더 찾을 수 없다.
       expect((await request(a.cookie, { code: cCode })).status).toBe(404);
+    });
+  });
+
+  describe('T-11-552 시즌이 넘어간 뒤 끝나지 않은 지난 시즌 컵', () => {
+    it('컵에 참가 중인 시즌 1 팀은 시즌 2에도 컵 명단으로 고치고, 선발은 방출 · 판매할 수 없다', async () => {
+      vi.setSystemTime(new Date('2026-10-20T03:00:00.000Z'));
+      const a = await ownerWithTeam(9, 80, null, 1);
+      const b = await ownerWithTeam(8, 80, null, 1);
+      expect(a.team.season).toBe(1);
+      const now = '2026-10-20T03:00:00.000Z';
+      await ctx.db.insert(cupEntries).values({
+        cupId: 's1-1',
+        teamId: a.team.id,
+        profileId: a.profileId,
+        name: a.team.name,
+        manager: a.team.manager,
+        ovr: a.team.ovr,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await toSeason2();
+      const got = GetRes.parse(
+        await (await call('GET', '/v1/owner-team', { cookie: a.cookie })).json(),
+      ).data;
+      expect(got).toMatchObject({ season: 2, current: 2, cupSeason: 1 });
+      // 참가 중인 시즌 1 팀은 고친다(친선 편성이 아니라 컵이 읽는 명단 칸).
+      const res = await putTeam(a.cookie, { season: 1, slots: slots(...a.ids.slice(1)) });
+      expect(res.status).toBe(200);
+      const [row] = await ctx.db.select().from(ownerTeams).where(eq(ownerTeams.id, a.team.id));
+      expect(row!.filled).toBe(8);
+      expect(row!.friendlyJson).toBeNull();
+      // 참가하지 않은 구단주의 시즌 1 팀은 그대로 보기만 한다.
+      const closed = await putTeam(b.cookie, { season: 1, slots: slots(...b.ids.slice(1)) });
+      expect(closed.status).toBe(409);
+      const none = GetRes.parse(
+        await (await call('GET', '/v1/owner-team', { cookie: b.cookie })).json(),
+      ).data;
+      expect(none.cupSeason).toBeNull();
+      // 시즌 1 컵 선발은 시즌 2에도 방출할 수 없다.
+      const release = await call('POST', '/v1/cards/release', {
+        cookie: a.cookie,
+        headers: idem(),
+        body: { careerIds: [a.ids[1]] },
+      });
+      expect(release.status).toBe(409);
+      expect(
+        ((await release.json()) as { error: { details?: { reason?: string } } }).error.details
+          ?.reason,
+      ).toBe('CUP_CARD_LOCKED');
     });
   });
 });

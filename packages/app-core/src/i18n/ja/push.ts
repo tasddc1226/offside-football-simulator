@@ -41,8 +41,23 @@ export const push: Translation<PushMsgs> = {
   catMarketBody: '出品した選手の売却完了',
   catSocial: 'フレンド',
   catSocialBody: 'フレンド申請・承認と親善試合の結果',
+  catNudge: 'リマインダー',
+  catNudgeBody: '出席・休んでいる間の出来事・最初の1週間のヒント',
   catAria: (p) => `${p.title}の通知`,
   prefsConnectFailed: '通知設定に接続できませんでした。もう一度お試しください。',
   prefsLoadFailed: '通知設定を読み込めませんでした。',
   prefsSaveFailed: '通知設定を保存できませんでした。',
+  askOn: '通知を受け取る',
+  askLater: 'あとで',
+  askRetireTitle: 'このカードでカップに出るとき、通知を受け取りますか？',
+  askRetireBody:
+    'オフサイドカップの受付は数日しか開きません。受付が始まったとき、自分のチームの試合結果が出たとき、出品した選手が売れたときにすぐお知らせします。',
+  askSellTitle: '売れたらお知らせしますか?',
+  askSellBody: '出品した選手が売れたら、入った資金と一緒にお知らせします。',
+  askClubTitle: 'カップの受付と試合結果を通知で受け取りますか？',
+  askClubBody:
+    'オフサイドカップの受付が始まったらすぐにお知らせします。ほかのオーナーが自分のチームに挑んだランク戦の結果もお知らせします。',
+  askCupTitle: 'カップの結果を通知で受け取りますか？',
+  askCupBody:
+    'カップが終わったら、自分のチームの最終結果をすぐにお知らせします。次のカップの受付が始まったときもお知らせします。',
 };

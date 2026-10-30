@@ -143,7 +143,7 @@
   }
   .combo-flag {
     left: 13px;
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
   }
   .combo-caret {
     right: 13px;
@@ -164,8 +164,8 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 12px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
     box-shadow: var(--shadow);
     padding: 4px;
   }
@@ -175,7 +175,7 @@
     padding: 8px 10px 4px;
     background: var(--surface);
     color: var(--muted);
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     font-weight: 600;
   }
   .combo-opt {
@@ -183,7 +183,7 @@
     gap: 8px;
     align-items: center;
     padding: 10px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
   }
   .combo-opt.active {

@@ -5,6 +5,7 @@ export const chat: Translation<ChatMsgs> = {
   title: 'ラウンジチャット',
   back: '← 戻る',
   online: (p) => `${p.n}人が接続中`,
+  roomsLabel: '言語別チャットルーム',
   reconnecting: '再接続中…',
   connecting: '接続中…',
   rulesLabel: 'チャットの利用案内とブロック一覧',
@@ -52,4 +53,10 @@ export const chat: Translation<ChatMsgs> = {
   gateNicknameWeb: 'チャットとコメントで使うニックネームを決めてください。',
   gateNicknameApp:
     'まずチャットで使うニックネームを決めてください。コメント用ニックネームと同じです。',
+  // T-11-573 返信
+  replyTo: (p: { nick: string }) => `${p.nick}さんに返信`,
+  replyCancel: '返信をやめる',
+  replyGone: '表示できないメッセージです',
+  replyJump: (p: { nick: string }) => `${p.nick}さんの元のメッセージを見る`,
+  replyNotLoaded: '前の会話のため、ここでは表示できません。',
 };

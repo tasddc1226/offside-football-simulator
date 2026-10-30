@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { deliverOnce, slackMessage } from './slack-ops-client.mjs';
+import { deliverOnce, discordMessage, sendSlack, slackMessage } from './slack-ops-client.mjs';
 import { previousKstDay, monitor, daily } from './slack-ops.mjs';
 import { parseCommunity, isFeedback, issueUpdate } from './slack-feedback.mjs';
 import { storeMail } from './slack-store-mail.mjs';
@@ -14,9 +14,9 @@ function dbFake(values = {}) {
   };
 }
 const hooks = {
-  SLACK_ALERTS_WEBHOOK: 'https://hooks.slack.com/services/test',
-  SLACK_DAILY_WEBHOOK: 'https://hooks.slack.com/services/daily',
-  SLACK_PURCHASES_WEBHOOK: 'https://hooks.slack.com/services/billing',
+  SLACK_ALERTS_WEBHOOK: 'https://discord.com/api/webhooks/1/test',
+  SLACK_DAILY_WEBHOOK: 'https://discord.com/api/webhooks/1/daily',
+  SLACK_PURCHASES_WEBHOOK: 'https://discord.com/api/webhooks/1/billing',
 };
 const ok = () => new Response('ok');
 describe('operations delivery and time boundaries', () => {
@@ -58,7 +58,7 @@ describe('operations delivery and time boundaries', () => {
     const health = { at: now, sizeBytes: 2e9, issues: ['backup-not-completed'], daysToLimit: 50 };
     const db = dbFake({ 'cron:infra-health:last': health });
     const fetcher = vi.fn(async (url) =>
-      String(url).includes('hooks.slack.com')
+      String(url).includes('discord.com/api/webhooks')
         ? ok()
         : String(url).endsWith('/v1/health')
           ? Response.json({ data: { ok: true } })
@@ -66,10 +66,14 @@ describe('operations delivery and time boundaries', () => {
     );
     await monitor(db, hooks, now, fetcher);
     await monitor(db, hooks, now + 1000, fetcher);
-    expect(fetcher.mock.calls.filter(([u]) => u.includes('hooks.slack.com'))).toHaveLength(1);
+    expect(fetcher.mock.calls.filter(([u]) => u.includes('discord.com/api/webhooks'))).toHaveLength(
+      1,
+    );
     db.state.set('cron:infra-health:last', { ...health, issues: [] });
     await monitor(db, hooks, now + 2000, fetcher);
-    expect(fetcher.mock.calls.filter(([u]) => u.includes('hooks.slack.com'))).toHaveLength(2);
+    expect(fetcher.mock.calls.filter(([u]) => u.includes('discord.com/api/webhooks'))).toHaveLength(
+      2,
+    );
   });
   it('skips repeated daily queries and never reports test events as live', async () => {
     const db = dbFake();
@@ -126,7 +130,7 @@ describe('feedback source boundaries', () => {
       },
       f,
     );
-    expect(JSON.parse(f.mock.calls[0][1].body).text).toContain('운영 반영 여부 확인 필요');
+    expect(JSON.parse(f.mock.calls[0][1].body).content).toContain('운영 반영 여부 확인 필요');
   });
 });
 describe('store mail boundaries', () => {
@@ -157,7 +161,7 @@ describe('feedback collection retries', () => {
     let id = 10;
     let fail = true;
     const fetcher = vi.fn(async (url) => {
-      if (url.includes('hooks.slack.com'))
+      if (url.includes('discord.com/api/webhooks'))
         return new Response(fail ? 'fail' : 'ok', { status: fail ? 500 : 200 });
       return new Response(
         `gall_list<tr data-no="${id}"><td class="gall_tit"><a href="/mgallery/board/view/?id=offsidegame&no=${id}">버그 문의</a></td></tr><tr data-no="9"><td class="gall_tit"><a href="/mgallery/board/view/?id=offsidegame&no=9">자랑</a></td></tr>`,
@@ -209,8 +213,8 @@ describe('release reporting', () => {
       f,
     );
     const payload = JSON.parse(f.mock.calls[1][1].body);
-    expect(payload.text).toContain('웹·API 배포: 성공');
-    expect(payload.text).toContain('OTA 1.1.2 / iOS: 실패');
+    expect(payload.content).toContain('웹·API 배포: 성공');
+    expect(payload.content).toContain('OTA 1.1.2 / iOS: 실패');
     f.mockImplementation(async () =>
       Response.json({
         total_count: 1,
@@ -219,5 +223,31 @@ describe('release reporting', () => {
     );
     await releaseUpdate(db, {}, event, f);
     expect(f).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('discord webhook delivery (T-11-576)', () => {
+  const hook = 'https://discord.com/api/webhooks/123/abc-DEF_9';
+  it('sends title, lines and links as one plain content with mentions off', async () => {
+    const m = slackMessage(
+      '🚨 점검 필요',
+      ['D1 <@here>', '두 번째'],
+      [{ label: 'Actions', url: 'https://github.com/x' }],
+    );
+    expect(discordMessage(m)).toEqual({
+      content: '🚨 점검 필요\nD1 <@here>\n두 번째\n[Actions](<https://github.com/x>)',
+      allowed_mentions: { parse: [] },
+      flags: 4,
+    });
+    const fetcher = vi.fn(async () => new Response(null, { status: 204 }));
+    await sendSlack(hook, m, fetcher);
+    expect(JSON.parse(fetcher.mock.calls[0][1].body).content).toMatch(/^🚨 점검 필요/);
+  });
+  it('rejects other discord paths and fails on non-2xx', async () => {
+    await expect(
+      sendSlack('https://discord.com/api/channels/1/messages', slackMessage('a', [])),
+    ).rejects.toThrow('Invalid notify destination');
+    const fetcher = vi.fn(async () => new Response('{}', { status: 404 }));
+    await expect(sendSlack(hook, slackMessage('a', []), fetcher)).rejects.toThrow('HTTP 404');
   });
 });

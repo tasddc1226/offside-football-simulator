@@ -9,10 +9,11 @@
   import {
     unlinkGoogle, logout, startProfileDeletion, confirmProfileDeletion,
   } from '@offside/app-core/api/client';
-  import { accountCache, refreshAccount } from './account-state.svelte.js';
+  import { accountCache, ensureAccount, loadAccount as load } from './account-state.svelte.js';
   import { refreshChatIdentity } from './chat-state.svelte.js';
-  import { accountLabel, isMember } from '@offside/app-core/account';
+  import { accountLabel, isMember, runProfileDeletion } from '@offside/app-core/account';
   import { closeSheet, showSheet } from './sheetState.svelte.js';
+  import { toast } from './helpers.js';
   import { accountText as L } from '@offside/app-core/i18n/ko/account';
 
   /** 관리자 계정(설정 화면이 확인한다)은 댓글 닉네임이 '운영자'로 고정돼 바꾸는 칸이 없다. */
@@ -21,31 +22,32 @@
   // 벗어났다 돌아오면 이 컴포넌트가 다시 마운트되므로, 모듈 스코프에 캐시를 둬 재검증
   // 간격이 지나기 전까지는 "확인 중…" 이 다시 보이지 않게 한다(원본 account.ts와 동일한 캐시 정책).
   // 로그인 상태는 OAuth 복귀(전체 새로고침)나 이 패널의 버튼으로만 바뀐다 — 설정을 오갈 때마다 다시 묻지 않는다.
-  const REVALIDATE_MS = 5 * 60_000;
   // 화면은 반응형 모듈 캐시를 그대로 그린다(설정의 운영 도구 입구도 같은 값을 본다).
   const profile = $derived(accountCache.value);
   const set = (v: typeof accountCache.value) => (accountCache.value = v);
 
-  async function load(silent = false) {
-    if (!silent) set(undefined);
-    await refreshAccount();
-    // T-11-275 로그인 상태를 구단주 표시로도 남겨 홈 선물이 로그인한 기기에서만 묻게 한다.
-    const p = accountCache.value;
-    if (p !== undefined && p !== 'error') noteOwner(!!p && isMember(p));
-  }
-
-  onMount(() => {
-    if (accountCache.value === undefined) void load();
-    else if (Date.now() - accountCache.fetchedAt > REVALIDATE_MS) void load(true);
-  });
+  onMount(ensureAccount);
 
   async function doUnlink() {
+    closeSheet();
     const r = await unlinkGoogle();
     if (r.ok) {
       refreshChatIdentity();
       await load();
     }
-    else set('error');
+    // T-11-431 해제 실패는 연결 오류 카드로 덮지 않는다. 계정 카드는 그대로 두고 해제 실패만 알린다.
+    else toast(L.unlinkFail);
+  }
+  /** T-11-431 연동 해제는 로그인 수단을 없애므로 한 번 더 묻는다. */
+  function askUnlink() {
+    const apple = !!profile && profile !== 'error' && profile.linked.apple;
+    showSheet(
+      { kind: 'notice', eyebrow: 'Account', title: L.unlinkTitle, muted: true, text: apple ? L.unlinkBodyApple : L.unlinkBodyOnly },
+      [
+        { label: L.unlinkConfirm, cls: 'btn-primary', fn: () => void doUnlink() },
+        { label: L.cancel, fn: closeSheet },
+      ],
+    );
   }
   async function doLogout() {
     closeSheet();
@@ -64,13 +66,29 @@
       ],
     );
   }
-  async function doDeleteFlow() {
-    if (!window.confirm(L.deleteBody)) return;
-    const start = await startProfileDeletion();
-    if (!start.ok) return set('error');
-    const confirmResult = await confirmProfileDeletion(start.data.confirmToken);
-    if (confirmResult.ok) refreshChatIdentity();
-    set(confirmResult.ok ? null : 'error');
+  /** T-11-441 계정 삭제도 연동 해제와 같은 확인 시트를 거치고, 끝나면 결과를 토스트로 알린다.
+   *  실패는 연결 오류 카드로 덮지 않고 계정 카드를 그대로 둔다. */
+  async function doDelete() {
+    closeSheet();
+    const done = await runProfileDeletion({
+      start: startProfileDeletion,
+      confirm: (t) => confirmProfileDeletion(t),
+    });
+    if (!done) return toast(L.deleteFail);
+    noteOwner(false);
+    appState.friendReq = 0;
+    refreshChatIdentity();
+    set(null);
+    toast(L.deleteDone);
+  }
+  function askDelete() {
+    showSheet(
+      { kind: 'notice', eyebrow: 'Account', title: L.deleteAccount, muted: true, text: L.deleteBody },
+      [
+        { label: L.deleteConfirm, cls: 'btn-primary', fn: () => void doDelete() },
+        { label: L.cancel, fn: closeSheet },
+      ],
+    );
   }
 </script>
 
@@ -82,7 +100,7 @@
     <button class="btn btn-sm" onclick={() => load()}>{L.retry}</button>
   </div>
 {:else if !profile || !isMember(profile)}
-  <!-- T-10-102 비로그인은 안내만 — 구글 로그인 버튼은 구단주 화면이 카드 밖에 하나만 둔다(T-11-026 잠긴 '내 팀' 카드 안). -->
+  <!-- T-10-102 비로그인은 안내만 — 로그인 버튼은 카드를 쓰는 화면이 둔다(설정 계정 카드 · 구단주 화면의 잠긴 '내 팀' 카드). -->
   <div class="account-card">
     <div class="who"><b>{L.guestTitle}</b><span class="muted">{L.guestBody}</span></div>
   </div>
@@ -94,9 +112,9 @@
   </div>
   <div class="account-more">
     {#if profile.linked.google}
-      <button class="link-btn" onclick={doUnlink}>{L.unlinkGoogle}</button>
+      <button class="link-btn" data-act="unlink" onclick={askUnlink}>{L.unlinkGoogle}</button>
       <span aria-hidden="true">·</span>
     {/if}
-    <button class="link-btn bad" onclick={doDeleteFlow}>{L.deleteAccount}</button>
+    <button class="link-btn bad" data-act="delete-account" onclick={askDelete}>{L.deleteAccount}</button>
   </div>
 {/if}

@@ -57,7 +57,7 @@ export const BALANCE_PATCH_CHANGES_MAX = 20;
 
 /** 한국어 원문과 번역(없으면 한국어를 보여 준다). */
 const LocalizedSchema = <T extends z.ZodTypeAny>(item: T) =>
-  z.object({ ko: item, en: item.optional(), ja: item.optional() });
+  z.object({ ko: item, en: item.optional(), ja: item.optional(), zh: item.optional() });
 export const BalancePatchSchema = z.object({
   /** 릴리즈 노트 항목 id와 같다. */
   id: z.string().min(1).max(80),
@@ -99,7 +99,19 @@ export const BalanceVersionSchema = z.object({
 });
 export type BalanceVersion = z.infer<typeof BalanceVersionSchema>;
 
-export const BalanceVersionListSchema = z.object({ versions: z.array(BalanceVersionSchema) });
+/** T-11-488 다음 시즌 개막에 켤 버전. 개막 뒤 첫 5분 cron이 활성화하고 지운다. */
+export const BalanceScheduleSchema = z.object({
+  version: z.number().int().min(1),
+  season: z.number().int().min(1),
+  scheduledAt: IsoUtcSchema,
+});
+export type BalanceSchedule = z.infer<typeof BalanceScheduleSchema>;
+
+export const BalanceVersionListSchema = z.object({
+  versions: z.array(BalanceVersionSchema),
+  /** T-11-488 예약(없으면 null). 옛 서버 응답에는 없다. */
+  scheduled: BalanceScheduleSchema.nullable().optional(),
+});
 export type BalanceVersionList = z.infer<typeof BalanceVersionListSchema>;
 
 export const BalanceDraftInputSchema = z.strictObject({

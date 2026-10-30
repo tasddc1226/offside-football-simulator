@@ -33,8 +33,8 @@ export function watchForUpdates(): void {
   document.addEventListener('visibilitychange', checkIfVisible);
   setInterval(checkIfVisible, INTERVAL_MS);
   // 빌드의 동적 import는 모두 Vite 프리로드 헬퍼를 거쳐, 청크를 못 불러오면 이 이벤트가 온다.
-  window.addEventListener('vite:preloadError', (e) => {
-    e.preventDefault();
+  // T-11-447 preventDefault는 하지 않는다. 막으면 import가 실패 대신 undefined로 끝나 부르는 쪽의 실패 처리가 돌지 않는다.
+  window.addEventListener('vite:preloadError', () => {
     updateState.ready = true;
   });
 }

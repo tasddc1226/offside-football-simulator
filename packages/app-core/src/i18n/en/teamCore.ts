@@ -1,5 +1,6 @@
 import type { Translation } from '../core';
 import type { TeamCoreMsgs } from '../ko/teamCore';
+import { plural } from './_util';
 
 export const teamCore: Translation<TeamCoreMsgs> = {
   record: (p) => `${p.w}W ${p.d}D ${p.l}L`,
@@ -33,6 +34,10 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   achUndoneHint: (p) => `Not yet · ${p.hint}`,
   achPointsGot: (p) => `+${p.n} pts`,
   achPointsWorth: (p) => `${p.n} pts`,
+  achRewardNext: (p) => `Reward: ${p.items}`,
+  achRewardGot: (p) => `Received: ${p.items}`,
+  achRewardBoost: (p) => plural(p.n, 'potential boost ticket'),
+  achRewardScout: (p) => plural(p.n, 'premium scout ticket'),
   achRankNone: 'Complete an achievement to join the ranking',
   achRank: (p) => `#${p.rank} of ${p.ranked}`,
   achCatPlayer: 'Player achievements',
@@ -50,10 +55,32 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   gradePlatinum: 'Platinum',
   gradeDiamond: 'Diamond',
   gradeLegend: 'Legend',
+  cupTeamNote: (p: { season: string }) =>
+    `Your ${p.season} team is playing in the OFFSIDE Cup. You can change its lineup until the cup ends.`,
+  cupTeamLink: (p: { season: string }) => `Edit your ${p.season} cup team`,
   preseasonTeamNote:
     'Built from the preseason players you still own. This team only plays friendlies with friends, and your preseason ranking and achievements stay as they are.',
+  hintCupTeam:
+    'This team only plays in the OFFSIDE Cup. Ranked matches use your current-season team.',
   hintPreseason:
     'Your preseason team only plays friendlies with friends. Use your current season team for ranked matches.',
-  wildcardLabel: (p) => `Wildcards ${p.n}/${p.max}`,
-  wildcardFull: (p) => `You can start up to ${p.max} players from past seasons.`,
+  salaryBar: (p) => `Past-season salaries ${p.n} / ${p.max}`,
+  salaryFull: (p) =>
+    `This player's salary (${p.salary}) is more than your remaining budget (${p.left}). Bench a past-season player or use this season's players.`,
+  salaryChip: (p) => `Salary ${p.n}`,
+  salaryOver: 'Over budget',
+  // T-11-571 리그 체력
+  staminaLabel: 'Stamina',
+  staminaAria: (p: { left: number; total: number; pct: number }) =>
+    p.pct
+      ? `Stamina ${p.left}/${p.total} · next league match −${p.pct}%`
+      : `Stamina ${p.left}/${p.total} · fresh`,
+  fatigueHint:
+    'Players who start 3 league matches in a row get tired and play a little worse. One match of rest brings them back.',
+  salaryLeft: (p) => `${p.n} left`,
+  salaryOpen: 'Open salary guide',
+  salaryOverSave: (p) =>
+    `Past-season salaries are over budget (${p.n}/${p.max}), so the team can't be saved. Swap in lower-salary or this-season players.`,
+  salaryLabel: 'Salary',
+  salaryLater: (p) => `None this season · ${p.n} from next season`,
 };

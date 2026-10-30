@@ -1,37 +1,51 @@
 // T-10-092 라이브 랭킹(팀 랭킹, 웹 team/TeamRanking.svelte) — 기록실 탭. 선수가 한 명 이상 있는 구단주 팀을 시즌별로
 // 레이팅(경기 결과) 또는 팀 OVR 순으로 보여 주고, 줄을 누르면 팀 프로필(appState.hof.team)을 연다. 서버가 5분마다 새로 센다.
-import { useEffect, useState } from 'react';
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
-import { TEAM_RANK_PER_PAGE } from '@offside/contracts/owner-team';
+import { TEAM_RANK_PER_PAGE, usesRankLadder } from '@offside/contracts/owner-team';
 import {
+  fetchTeamDivisions,
+  fetchMyTeamRank,
   fetchTeamRanking,
+  type TeamDivisionsResponse,
   type TeamRankResponse,
   type TeamRankSort,
 } from '@offside/app-core/api/team';
+import { divisionName, TEAM_DIVISION_KEYS } from '@offside/app-core/teamDivision';
+import { teamDivisionText as LD } from '@offside/app-core/i18n/ko/teamDivision';
+import { DivisionEmblem } from '../../../components/DivisionEmblem';
 import { num as n } from '@offside/app-core/teamText';
 import { fmtValue } from '@offside/app-core/format';
 import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
-import { appState } from '../../../store';
+import { accountCache, appState, prefs } from '../../../store';
+import { isMember } from '@offside/app-core/account';
+import { canJumpToMyRank, myRankJump } from '@offside/app-core/myRank';
+import { toast } from '../../../game/host';
+import { alpha } from '../../../theme/colors';
 import OwnerProfile from '../owner/OwnerProfile';
 import { rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
 import { Btn } from '../../../ui/Btn';
 import { Card } from '../../../ui/Card';
+import { Skeleton } from '../../../ui/Skeleton';
 import { Press } from '../../../ui/Press';
-import { scrollTo } from '../../../ui/scroll';
+import { centerView, scrollTo } from '../../../ui/scroll';
 import { Txt } from '../../../ui/Txt';
 import { displaySeasonAt, openTeamSeasons } from '@offside/contracts/service-seasons';
 import { RecordsSelect, RecordsChips } from '../RecordsControls';
 import TeamProfile from './TeamProfile';
 import { TeamLogo } from '../../../components/TeamLogo';
 import { TitleBadge } from '../../../components/TitleBadge';
-import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
 import { useSeasonNow } from '../../../ui/useSeasonNow';
 import { useRefresh } from '../../../ui/refresh';
+import { seasonOptions } from '../../../ui/seasonOptions';
 
-const sorts = (): [TeamRankSort, string][] => [
-  ['rating', L.sortRating],
+/** T-11-510 시즌 2부터 레이팅 칸은 RP다. */
+const ratingLabel = (rp: boolean) => (rp ? L.sortRp : L.sortRating);
+const sorts = (rp: boolean): [TeamRankSort, string][] => [
+  ['rating', ratingLabel(rp)],
   ['ovr', L.sortOvr],
   ['value', L.sortValue],
 ];
@@ -40,11 +54,17 @@ type Item = TeamRankResponse['items'][number];
 /** 정렬마다 값 칸의 이름(머리 칸은 head)·값·너비(구단 가치는 몸값 표기라 칸을 넓힌다, T-11-129). */
 const METRIC: Record<
   TeamRankSort,
-  { label: () => string; head: () => string; of: (t: Item) => string; w: number; size: number }
+  {
+    label: (rp: boolean) => string;
+    head: (rp: boolean) => string;
+    of: (t: Item) => string;
+    w: number;
+    size: number;
+  }
 > = {
   rating: {
-    label: () => L.sortRating,
-    head: () => L.sortRating,
+    label: ratingLabel,
+    head: ratingLabel,
     of: (t) => n(t.rating),
     w: 48,
     size: 17,
@@ -72,34 +92,89 @@ export default function TeamRanking() {
   const [season, setSeason] = useState<number | undefined>(undefined);
   const [sort, setSort] = useState<TeamRankSort>(appState.hof.teamSort ?? 'rating');
   const [page, setPage] = useState(1);
+  /** T-11-375 디비전 탭(레이팅순에만, undefined = 전체). */
+  const [division, setDivision] = useState<number | undefined>(undefined);
+  const [divisions, setDivisions] = useState<TeamDivisionsResponse | null>(null);
   const [data, setData] = useState<TeamRankResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const now = useSeasonNow();
   /** 다시 받을 기준 — 고른 시즌, 아니면 지금 시즌(띄운 채 개막을 넘기면 바뀐다). */
   const shownSeason = season ?? displaySeasonAt(now);
+  /** T-11-510 디비전은 RP 사다리 시즌(2부터)에만 있다. */
+  const ladder = usesRankLadder(data?.season ?? shownSeason);
+
+  // T-11-441 '내 순위로' — 로그인한 구단주만. 누르면 내 팀이 있는 페이지로 가고 그 줄을 강조한다.
+  const acct = useSnapshot(accountCache).value;
+  // 로그인 상태를 아직 묻지 않았으면 버튼을 두고, 누를 때 서버가 판정한다(따로 묻지 않는다).
+  const member = acct === undefined || (!!acct && acct !== 'error' && isMember(acct));
+  const [myTeam, setMyTeam] = useState<string | null>(null);
+  const [jumping, setJumping] = useState(false);
+  /** 내 순위 응답이 곧 그 페이지다 — 페이지를 옮겨도 다시 받지 않게 한 번 넘겨 둔다. */
+  const preset = useRef<TeamRankResponse | null>(null);
+  const mineRow = useRef<View>(null);
+  const scrollMine = useRef(false);
+  const [jumpTick, setJumpTick] = useState(0);
+  useEffect(() => {
+    if (!scrollMine.current) return;
+    const frame = requestAnimationFrame(() => {
+      if (!scrollMine.current || !mineRow.current) return;
+      scrollMine.current = false;
+      centerView(mineRow.current, prefs.motionOK);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [jumpTick, data]);
+  async function jumpToMe() {
+    setJumping(true);
+    const j = myRankJump(await fetchMyTeamRank(season, sort), 'team');
+    setJumping(false);
+    if (!j.ok) return toast(j.message);
+    setMyTeam(j.data.me?.teamId ?? null);
+    if (j.data.page !== page) preset.current = j.data;
+    scrollMine.current = true;
+    setJumpTick((n) => n + 1);
+    setData(j.data);
+    setPage(j.data.page);
+  }
 
   const { tick, track, pulled } = useRefresh();
   useEffect(() => {
     // 팀 프로필을 연 채 당기면 가려진 목록은 다시 받지 않는다(프로필이 따로 받는다).
     if (pulled && snap.hof.team) return;
+    const p0 = preset.current;
+    preset.current = null;
+    if (p0 && p0.page === page && p0.sort === sort && !pulled) return;
     setFailed(false);
     if (!pulled) setLoading(true);
     let live = true; // 더 늦게 고른 조건의 응답만 쓴다.
-    void track(fetchTeamRanking(season, sort, page)).then((r) => {
-      if (!live) return;
-      setLoading(false);
-      if (r.ok) setData(r.data);
-      else setFailed(true);
+    void track(fetchTeamRanking(season, sort, page, sort === 'rating' ? division : undefined)).then(
+      (r) => {
+        if (!live) return;
+        setLoading(false);
+        if (r.ok) setData(r.data);
+        else setFailed(true);
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [season, sort, page, division, shownSeason, tick, track]);
+
+  // 디비전별 팀 수는 레이팅순을 볼 때만 받는다(5분 엣지 캐시 · 1분 메모).
+  useEffect(() => {
+    if (sort !== 'rating' || !ladder) return;
+    let live = true;
+    void fetchTeamDivisions(season).then((r) => {
+      if (live && r.ok) setDivisions(r.data);
     });
     return () => {
       live = false;
     };
-  }, [season, sort, page, shownSeason, tick, track]);
+  }, [season, sort, shownSeason, ladder]);
 
   const pages = data ? Math.max(1, Math.ceil(data.total / TEAM_RANK_PER_PAGE)) : 1;
   const metric = METRIC[sort];
-  const metricLabel = metric.label();
+  const metricLabel = metric.label(ladder);
   const metricOf = metric.of;
   function goPage(p: number) {
     setPage(p);
@@ -119,7 +194,7 @@ export default function TeamRanking() {
     );
 
   const empty = (text: string) => (
-    <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
+    <Txt tone="muted" style={{ fontSize: rem(FONT.body2), paddingVertical: 8 }}>
       {text}
     </Txt>
   );
@@ -133,13 +208,7 @@ export default function TeamRanking() {
           label={L.seasonLabel}
           testID="rank-season-select"
           value={season ?? data?.season ?? displaySeasonAt(now)}
-          options={
-            data?.seasons.map((s) => ({ value: s.id, label: seasonLabel(s.id, s.name) })) ??
-            openTeamSeasons(now).map((id) => ({
-              value: id,
-              label: teamSeasonLabel(id),
-            }))
-          }
+          options={seasonOptions(data?.seasons ?? openTeamSeasons(now), now)}
           onChange={(id) => {
             setSeason(id);
             setPage(1);
@@ -153,25 +222,49 @@ export default function TeamRanking() {
         label={L.sortGroupAria}
         testIDPrefix="rank-sort"
         value={sort}
-        items={sorts().map(([key, label]) => ({ key, label }))}
+        items={sorts(ladder).map(([key, label]) => ({ key, label }))}
         onPick={(key) => {
           setSort(key as TeamRankSort);
           setPage(1);
         }}
       />
+      {sort === 'rating' && ladder ? (
+        <View style={{ marginTop: 8 }} testID="rank-divisions">
+          <RecordsChips
+            label={LD.tabsAria}
+            testIDPrefix="rank-division"
+            scroll
+            value={division === undefined ? 'all' : String(division)}
+            items={[
+              { key: 'all', label: LD.tabAll },
+              ...TEAM_DIVISION_KEYS.map((_, i) => TEAM_DIVISION_KEYS.length - 1 - i).map((d) => ({
+                key: String(d),
+                label: divisions
+                  ? `${divisionName(d)} ${n(divisions.counts[d] ?? 0)}`
+                  : divisionName(d),
+              })),
+            ]}
+            onPick={(key) => {
+              setDivision(key === 'all' ? undefined : Number(key));
+              setPage(1);
+            }}
+          />
+        </View>
+      ) : null}
+      {canJumpToMyRank(member, sort) ? (
+        <View style={{ flexDirection: 'row', marginTop: 8 }}>
+          <Btn sm testID="rank-my" disabled={jumping} onPress={() => void jumpToMe()}>
+            {L.myRank}
+          </Btn>
+        </View>
+      ) : null}
       <Txt tone="muted" style={{ fontSize: 12, marginVertical: 8 }}>
         {L.formGuide}
       </Txt>
       {failed ? (
         empty(L.rankFail)
       ) : loading || !data ? (
-        <Txt
-          tone="muted"
-          accessibilityLiveRegion="polite"
-          style={{ fontSize: rem(0.875), paddingVertical: 8 }}
-        >
-          {L.loading}
-        </Txt>
+        <Skeleton rows={6} />
       ) : data.items.length ? (
         <>
           <View
@@ -198,7 +291,7 @@ export default function TeamRanking() {
               </Txt>
             ))}
             <Txt bold center style={{ width: metric.w, fontSize: 12 }}>
-              {metric.head()}
+              {metric.head(ladder)}
             </Txt>
           </View>
           {data.items.map((t) => (
@@ -206,6 +299,7 @@ export default function TeamRanking() {
               key={t.teamId}
               scale={1}
               testID={`rank-team-${t.teamId}`}
+              accessibilityState={t.teamId === myTeam ? { selected: true } : undefined}
               onPress={() => open(t.teamId)}
               accessibilityLabel={L.teamRowAria({
                 rank: t.rank,
@@ -227,9 +321,24 @@ export default function TeamRanking() {
                 borderBottomWidth: 1,
                 borderBottomColor: c.line,
                 gap: 6,
+                ...(t.teamId === myTeam
+                  ? { backgroundColor: alpha(c.accent, 0.12), borderRadius: RADIUS.sm }
+                  : null),
               }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View
+                ref={t.teamId === myTeam ? mineRow : undefined}
+                onLayout={
+                  t.teamId === myTeam
+                    ? () => {
+                        if (!scrollMine.current) return;
+                        scrollMine.current = false;
+                        centerView(mineRow.current, prefs.motionOK);
+                      }
+                    : undefined
+                }
+                style={{ flexDirection: 'row', alignItems: 'center' }}
+              >
                 <View
                   style={{
                     flex: 1,
@@ -251,6 +360,9 @@ export default function TeamRanking() {
                       </View>
                     ) : null}
                   </View>
+                  {t.division !== undefined ? (
+                    <DivisionEmblem division={t.division} size={14} />
+                  ) : null}
                   <Txt bold numberOfLines={1} style={{ flex: 1, fontSize: 13 }}>
                     {t.name}
                   </Txt>
@@ -285,7 +397,7 @@ export default function TeamRanking() {
                         style={{
                           width: 18,
                           height: 18,
-                          borderRadius: 9,
+                          borderRadius: RADIUS.sm,
                           borderWidth: 1,
                           borderColor: result ? color : c.line,
                           alignItems: 'center',
@@ -333,10 +445,10 @@ export default function TeamRanking() {
           ) : null}
         </>
       ) : (
-        empty(L.teamsEmpty)
+        empty(division !== undefined && sort === 'rating' ? LD.emptyDivision : L.teamsEmpty)
       )}
-      <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: 10 }}>
-        {sort === 'value' ? L.valueFoot : L.teamsFoot}
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 10 }}>
+        {sort === 'value' ? L.valueFoot : ladder ? L.teamsFootRp : L.teamsFoot}
       </Txt>
     </Card>
   );

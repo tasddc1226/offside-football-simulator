@@ -11,16 +11,21 @@ import type {
   TeamRankItem,
   TeamRankSort,
 } from '@offside/contracts';
-import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
+import { anonName } from '@offside/contracts/positions';
+import {
+  TEAM_RANK_PER_PAGE,
+  type DetailPos,
+  type FormationId,
+} from '@offside/contracts/owner-team';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import { defaultClubIds, isAmateurClubId } from '@offside/contracts/club-names';
-import { CARD_VALUE_FLOOR } from '@offside/contracts/market-value';
 import {
   CARD_SPECIAL_KINDS,
   sortSpecials,
   type CardSpecialKind,
 } from '@offside/contracts/card-special';
 import { teamSeasonClosed } from '@offside/contracts/service-seasons';
+import type { DivisionRules } from '@offside/contracts/team-division';
 import {
   LEGACY_DETAIL_POSITIONS,
   FACE_ATTRS,
@@ -67,6 +72,8 @@ import {
 import { accountLinkedSql } from './profiles.js';
 import type { AchievementSeason } from '../../team/achievements.js';
 import type { LineupCareer, PlayerRef } from '../../team/sim.js';
+import type { StoredMoment } from '../../team/moments.js';
+import { cardPublicName } from '../cardName.js';
 
 // T-10-092 구단주 팀(시즌마다 한 팀)·팀 경기·라이브 랭킹.
 
@@ -128,11 +135,35 @@ export function presetsOf(row: Pick<OwnerTeamRow, 'presetsJson'>): TeamPreset[] 
   }
 }
 
-/** T-11-217 그 시즌 내 팀의 프리셋을 통째로 바꾼다. 팀이 없으면 바뀐 행이 없다(빈 배열). */
+/** T-11-570 컵 명단으로 고른 프리셋(없으면 null). */
+export const cupPresetOf = (row: Pick<OwnerTeamRow, 'presetsJson'>) =>
+  presetsOf(row).find((p) => p.cup) ?? null;
+
+/**
+ * T-11-570 컵 경기 · 예상 · 신청 · 잠금이 읽는 팀 행. 컵 명단 프리셋이 있으면 포메이션 · 선발 · 배치 · OVR을 그 프리셋 것으로
+ * 바꾸고(이름 · 로고 · 감독은 팀 것), 없으면 팀 그대로다.
+ */
+export function cupTeamOf<T extends OwnerTeamRow>(row: T): T {
+  const p = cupPresetOf(row);
+  if (!p) return row;
+  return {
+    ...row,
+    formation: p.formation,
+    slotsJson: JSON.stringify(p.slots),
+    layoutJson: p.layout ? JSON.stringify(p.layout) : null,
+    ovr: row.cupOvr ?? p.ovr ?? row.ovr,
+    filled: p.filled ?? p.slots.filter((x) => x !== null).length,
+  };
+}
+
+/** T-11-217 그 시즌 내 팀의 프리셋을 통째로 바꾼다. 팀이 없으면 바뀐 행이 없다(빈 배열). T-11-570 컵 명단 OVR도 함께 적는다. */
 export const setTeamPresets = (db: Db, profileId: string, season: number, presets: TeamPreset[]) =>
   db
     .update(ownerTeams)
-    .set({ presetsJson: presets.length ? JSON.stringify(presets) : null })
+    .set({
+      presetsJson: presets.length ? JSON.stringify(presets) : null,
+      cupOvr: presets.find((p) => p.cup)?.ovr ?? null,
+    })
     .where(and(eq(ownerTeams.profileId, profileId), eq(ownerTeams.season, season)))
     .returning({ id: ownerTeams.id });
 
@@ -167,7 +198,8 @@ export async function liveTeamsByIds(db: Db, ids: readonly string[]) {
         season: ownerTeams.season,
         name: ownerTeams.name,
         manager: ownerTeams.manager,
-        ovr: ownerTeams.ovr,
+        // T-11-570 컵 화면에서만 쓰므로 컵 명단 OVR을 먼저 본다.
+        ovr: sql<number>`coalesce(${ownerTeams.cupOvr}, ${ownerTeams.ovr})`,
         logoJson: ownerTeams.logoJson,
       })
       .from(ownerTeams)
@@ -218,6 +250,8 @@ type LineupRow = {
   publicName: string | null;
   type?: string | null;
   foot?: string | null;
+  mainLeague?: string | null;
+  mainClub?: string | null;
   /** T-11-105 이 팀 구단주가 직접 키운 선수인지(SQL 비교라 0/1일 수 있다). */
   raised?: boolean | number | null;
   serviceSeason?: number | null;
@@ -242,6 +276,8 @@ export const toLineupCareer = (
   publicName: r.publicName,
   type: r.type ?? null,
   foot: r.foot ?? null,
+  mainLeague: r.mainLeague || null,
+  mainClub: r.mainClub || null,
   raised: !!r.raised,
   season: r.serviceSeason ?? 0,
 });
@@ -272,6 +308,9 @@ export function teamPlayerCard(
     type: career.type,
     // T-11-211 카드에 주발을 그린다(시너지 '주발 맞춤'도 이 값을 쓴다).
     ...(career.foot ? { foot: career.foot } : {}),
+    // T-11-467 시너지 리그 컬러 · 클럽 동료(편성 미리보기가 서버와 같이 센다).
+    ...(career.mainLeague ? { mainLeague: career.mainLeague } : {}),
+    ...(career.mainClub ? { mainClub: career.mainClub } : {}),
     season: career.season,
     ...bodyOf(r),
     ...specialsOf(r.specialsJson),
@@ -316,8 +355,8 @@ export const myTeamIn = (db: Db, profileId: string, season: number) =>
     .where(and(eq(ownerTeams.profileId, profileId), eq(ownerTeams.season, season)));
 
 /**
- * 그 시즌에 넣을 수 있는 내 선수 카드(그 시즌까지 올라온 선수, 최고 OVR 순). T-11-114 지난 시즌 선수는 와일드카드로
- * 선발에 TEAM_WILDCARD_MAX명까지만 넣는다(PUT이 센다). T-11-080부터 직접 키운 선수 + 영입한
+ * 그 시즌에 넣을 수 있는 내 선수 카드(그 시즌까지 올라온 선수, 최고 OVR 순). T-11-376 지난 시즌 선수는 급여 합이
+ * 예산(pastSalaryBudget) 안에서만 선발에 넣는다(PUT이 센다). T-11-080부터 직접 키운 선수 + 영입한
  * 선수 — 소유는 cards.owner_id다. 공개 이름·숨김·옛 추정 능력치·키운 사람은 careers에서 붙인다(기록이 지워졌으면 익명).
  */
 export function listEligibleCareers(db: Db, profileId: string, season: number, limit = 300) {
@@ -333,10 +372,12 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       height: careers.height,
       weight: careers.weight,
       number: cards.number,
-      publicName: careers.publicName,
+      publicName: cardPublicName,
       look: careers.look,
       type: careers.type,
       foot: careers.foot,
+      mainLeague: careers.mainLeague,
+      mainClub: careers.mainClub,
       serviceSeason: cards.serviceSeason,
       legendScore: cards.legendScore,
       cardValue: cards.cardValue,
@@ -449,10 +490,12 @@ export async function careersByIds(db: Db, ids: string[]) {
       weight: careers.weight,
       legendScore: cards.legendScore,
       number: cards.number,
-      publicName: careers.publicName,
+      publicName: cardPublicName,
       look: careers.look,
       type: careers.type,
       foot: careers.foot,
+      mainLeague: careers.mainLeague,
+      mainClub: careers.mainClub,
       raiserId: careers.profileId,
       serviceSeason: cards.serviceSeason,
       hidden: sql<number>`coalesce(${careers.hidden}, 0)`,
@@ -587,47 +630,48 @@ export async function listOpponentCandidates(
   return [...up, ...down].map((r) => ({ ...r.team, title: r.title }));
 }
 
-/**
- * T-11-129 구단 가치 = 선발 11명 카드 기준가 합(만 원). 선발로 실제 뛰는 카드만 센다(eligibleMap과 같은 규칙): 그 시즌까지의
- * 숨기지 않은 카드, 진행 중 시즌이면 지금 그 구단주가 가진 카드. 기준가가 아직 없는 카드는 하한(CARD_VALUE_FLOOR)으로.
- * cross join으로 슬롯 11칸에서 카드 기본키로 찾게 순서를 고정한다 — 그냥 join이면 플래너가 구단주의 카드 전체
- * (cards_owner_season_idx)부터 훑어 운영에서 읽는 행이 10배 늘었다(49,186 → 4,722, 2026-10-06 측정).
- */
-const lineupValueSql = (open: boolean) => sql<number>`(
-  select coalesce(sum(coalesce(${cards.cardValue}, ${CARD_VALUE_FLOOR})), 0)
-  from json_each(${ownerTeams.slotsJson}) as slot
-  cross join ${cards} on ${cards.careerId} = slot.value
-  left join ${careers} on ${careers.id} = ${cards.careerId}
-  where ${cards.serviceSeason} <= ${ownerTeams.season} and coalesce(${careers.hidden}, 0) = 0
-  ${open ? sql`and ${cards.ownerId} = ${ownerTeams.profileId} and ${cards.manager} = 0` : sql``}
-)`;
-
-const rankOrder = (sort: TeamRankSort) =>
+/** Rank by the stored lineup total; closed seasons use the historical eligibility rule. */
+const rankOrder = (
+  sort: TeamRankSort,
+  value: typeof ownerTeams.lineupValueOpen | typeof ownerTeams.lineupValueClosed,
+) =>
   ({
     rating: [desc(ownerTeams.rating), desc(ownerTeams.ovr), asc(ownerTeams.createdAt)],
     ovr: [desc(ownerTeams.ovr), desc(ownerTeams.rating), asc(ownerTeams.createdAt)],
-    // Refer to the selected value: repeating the correlated aggregate runs it twice per team.
-    value: [desc(sql`lineup_value`), desc(ownerTeams.rating), asc(ownerTeams.createdAt)],
+    value: [desc(value), desc(ownerTeams.rating), asc(ownerTeams.createdAt)],
   })[sort];
 
-/** 라이브 랭킹 한 페이지 + 랭킹에 오른 팀 수. 팀마다 구단 가치(value)를 함께 센다. */
+/** T-11-375 디비전 탭: 그 디비전의 레이팅 구간 [min, max). 레이팅 인덱스(season, rating)로 고른다. */
+export type RatingRange = { min: number | null; max: number | null };
+
 export async function listTeamRanking(
   db: Db,
   season: number,
   sort: TeamRankSort,
   page: number,
   now: string,
+  range?: RatingRange,
 ) {
-  const value = lineupValueSql(!teamSeasonClosed(season, now));
-  const columns = { team: ownerTeams, value: value.as('lineup_value'), title: profiles.title };
-  const order = [...rankOrder(sort), asc(ownerTeams.id)];
-  // T-11-268 평점·OVR순은 순서에 구단 가치가 필요 없다 — 페이지 팀을 먼저 고르고 그 팀만 가치를 센다.
-  // 한 쿼리로 고르면 랭킹에 든 팀 전부(운영 약 1,900팀)의 가치를 세고 정렬해 1회 5.5만 행을 읽었다.
+  const value = teamSeasonClosed(season, now)
+    ? ownerTeams.lineupValueClosed
+    : ownerTeams.lineupValueOpen;
+  const where = and(
+    rankedIn(season),
+    range?.min != null ? gte(ownerTeams.rating, range.min) : undefined,
+    range?.max != null ? lt(ownerTeams.rating, range.max) : undefined,
+  );
+  const columns = {
+    team: ownerTeams,
+    value: sql<number>`${value}`.as('lineup_value'),
+    title: profiles.title,
+  };
+  const order = [...rankOrder(sort, value), asc(ownerTeams.id)];
+  // 평점·OVR순은 먼저 해당 페이지의 팀을 선택한다. 가치순은 저장된 값으로 정렬한다.
   const pageIds = db
     .select({ id: ownerTeams.id })
     .from(ownerTeams)
     .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
-    .where(rankedIn(season))
+    .where(where)
     .orderBy(...order)
     .limit(TEAM_RANK_PER_PAGE)
     .offset((page - 1) * TEAM_RANK_PER_PAGE)
@@ -638,7 +682,7 @@ export async function listTeamRanking(
           .select(columns)
           .from(ownerTeams)
           .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
-          .where(rankedIn(season))
+          .where(where)
           .orderBy(...order)
           .limit(TEAM_RANK_PER_PAGE)
           .offset((page - 1) * TEAM_RANK_PER_PAGE)
@@ -652,12 +696,35 @@ export async function listTeamRanking(
       .select({ n: sql<number>`count(*)` })
       .from(ownerTeams)
       .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
-      .where(rankedIn(season)),
+      .where(where),
   ]);
   return {
     rows: rows.map((r) => ({ ...r.team, value: Number(r.value), title: r.title })),
     total: Number(total?.n ?? 0),
   };
+}
+
+/**
+ * T-11-375 디비전별 팀 수(랭킹에 오른 팀, 레이팅 구간 기준). 시즌 팀을 (season, rating) 인덱스로 한 번 훑는다 — 모두에게
+ * 같아 엣지에 담는다.
+ */
+export async function countTeamsByDivision(db: Db, season: number, bounds: readonly number[]) {
+  const cols = [
+    sql`sum(${ownerTeams.rating} < ${bounds[0]!})`,
+    ...bounds.map((b, i) =>
+      i + 1 < bounds.length
+        ? sql`sum(${ownerTeams.rating} >= ${b} and ${ownerTeams.rating} < ${bounds[i + 1]!})`
+        : sql`sum(${ownerTeams.rating} >= ${b})`,
+    ),
+  ];
+  const [row] = await db
+    .select({ n: sql<string>`json_array(${sql.join(cols, sql`, `)})` })
+    .from(ownerTeams)
+    .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
+    .where(rankedIn(season));
+  const counts = (row ? (JSON.parse(row.n) as (number | null)[]) : []).map((n) => Number(n ?? 0));
+  while (counts.length < bounds.length + 1) counts.push(0);
+  return counts;
 }
 
 /** 한 페이지의 최근 전적을 한 쿼리로 읽는다. 인덱스로 팀마다 홈·원정 각 5개만 읽고 합친다. */
@@ -691,29 +758,74 @@ export async function listTeamRecentForm(db: Db, teamIds: readonly string[]) {
   return forms;
 }
 
-/** 레이팅 순위(랭킹과 같은 순서 — 레이팅 · OVR · 먼저 만든 팀). 랭킹에 오르지 않은 팀(선수 0명)이면 null. */
-export async function ratingRankOf(db: Db, t: OwnerTeamRow): Promise<number | null> {
+/** 모든 정렬의 마지막 기준은 생성 시각, 같으면 팀 ID다. */
+const earlierTeam = (t: OwnerTeamRow) =>
+  or(
+    lt(ownerTeams.createdAt, t.createdAt),
+    and(eq(ownerTeams.createdAt, t.createdAt), lt(ownerTeams.id, t.id)),
+  );
+
+/** 목록과 같은 기준으로 앞선 팀을 세어 내 순위를 구한다. */
+async function rankBefore(
+  db: Db,
+  t: OwnerTeamRow,
+  earlier: SQL | undefined,
+): Promise<number | null> {
   if (t.filled === 0) return null;
   const [row] = await db
     .select({ n: sql<number>`count(*)` })
     .from(ownerTeams)
     .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
-    .where(
-      and(
-        rankedIn(t.season),
-        or(
-          gt(ownerTeams.rating, t.rating),
-          and(
-            eq(ownerTeams.rating, t.rating),
-            or(
-              gt(ownerTeams.ovr, t.ovr),
-              and(eq(ownerTeams.ovr, t.ovr), lt(ownerTeams.createdAt, t.createdAt)),
-            ),
-          ),
-        ),
-      ),
-    );
+    .where(and(rankedIn(t.season), earlier));
   return Number(row?.n ?? 0) + 1;
+}
+
+/** 레이팅 · OVR · 생성 시각 · ID 순서. */
+export function ratingRankOf(db: Db, t: OwnerTeamRow): Promise<number | null> {
+  return rankBefore(
+    db,
+    t,
+    or(
+      gt(ownerTeams.rating, t.rating),
+      and(
+        eq(ownerTeams.rating, t.rating),
+        or(gt(ownerTeams.ovr, t.ovr), and(eq(ownerTeams.ovr, t.ovr), earlierTeam(t))),
+      ),
+    ),
+  );
+}
+
+/** T-11-441 OVR 순위(OVR순 랭킹과 같은 순서 — OVR · 레이팅 · 먼저 만든 팀). 랭킹에 오르지 않은 팀이면 null. */
+export function ovrRankOf(db: Db, t: OwnerTeamRow): Promise<number | null> {
+  return rankBefore(
+    db,
+    t,
+    or(
+      gt(ownerTeams.ovr, t.ovr),
+      and(
+        eq(ownerTeams.ovr, t.ovr),
+        or(gt(ownerTeams.rating, t.rating), and(eq(ownerTeams.rating, t.rating), earlierTeam(t))),
+      ),
+    ),
+  );
+}
+
+/** 구단 가치순과 같은 값 · 레이팅 · 생성 시각 · ID 순서로 내 순위를 센다. */
+export function valueRankOf(db: Db, t: OwnerTeamRow, now: string): Promise<number | null> {
+  const closed = teamSeasonClosed(t.season, now);
+  const value = closed ? ownerTeams.lineupValueClosed : ownerTeams.lineupValueOpen;
+  const mine = closed ? t.lineupValueClosed : t.lineupValueOpen;
+  return rankBefore(
+    db,
+    t,
+    or(
+      gt(value, mine),
+      and(
+        eq(value, mine),
+        or(gt(ownerTeams.rating, t.rating), and(eq(ownerTeams.rating, t.rating), earlierTeam(t))),
+      ),
+    ),
+  );
 }
 
 // ───────── 좋아요 · 조회수(게시판 글과 같은 방식) ─────────
@@ -783,20 +895,56 @@ export type TeamSnapshot = {
   ratingChange?: number;
   /** 이 경기에 반영된 시너지 id(T-11-105, 반영 시즌 경기만). */
   synergy?: string[];
+  /** T-11-379 기대 득점(소수 한 자리)과 줄 힘(반올림). 이 기능 전 경기에는 없다. */
+  xg?: number;
+  lines?: { atk: number; mid: number; def: number; gk: number };
+  /** T-11-518 선발로 뛴 은퇴 선수(커리어 id → 자리). 유스 선수 자리는 빠진다. 랭크 경기만, 이 기능 전 경기에는 없다. */
+  xi?: Record<string, DetailPos>;
 };
 export type StoredEvent = {
   minute: number;
   side: 'home' | 'away';
   scorer: PlayerRef;
   assist: PlayerRef | null;
+  /** T-11-387 득점자 자리. 이 기능 전 경기에는 없다. */
+  slot?: DetailPos;
 };
-/** team_matches.detail_json. 시너지 반영 시즌 경기는 TeamSnapshot.synergy에 켜진 시너지 id를 남긴다(T-11-105). */
-export type MatchDetail = { home: TeamSnapshot; away: TeamSnapshot; events: StoredEvent[] };
+/** T-11-387 장면 경기에서 화면에 띄운 장면(판정값은 남기지 않는다). */
+export type StoredMomentView = Omit<StoredMoment, 'roll' | 'counterRoll' | 'shown' | 'goals'>;
+/**
+ * team_matches.detail_json. 시너지 반영 시즌 경기는 TeamSnapshot.synergy에 켜진 시너지 id를 남긴다(T-11-105). 장면 경기는
+ * 띄운 장면과 고른 결과를 moments에 남긴다(T-11-387).
+ */
+export type MatchDetail = {
+  home: TeamSnapshot;
+  away: TeamSnapshot;
+  events: StoredEvent[];
+  moments?: StoredMomentView[];
+};
 
 /** 경기 한 판이 팀 행에 더하는 것(득실·레이팅 변화). */
-type Side = { teamId: string; filled: number; ovr: number; goals: number; rating: number };
+type Side = {
+  teamId: string;
+  filled: number;
+  ovr: number;
+  goals: number;
+  rating: number;
+};
 
-/** 경기 한 판을 남기고 두 팀 전적·레이팅·연승·득실(+ 다시 계산한 선발 수·OVR)을 한 batch로 고친다. 행 쓰기 3번. */
+/**
+ * T-11-375 경기 뒤 디비전 SQL — contracts `nextDivision`과 같은 식: max(구간, min(지금 디비전, 구간(레이팅 + guard))).
+ * UPDATE의 SET 식은 모두 바뀌기 전 행을 읽으므로 `rating + delta`가 이 경기 뒤 레이팅이다.
+ */
+export function divisionSql(rating: SQL, rules: DivisionRules): SQL {
+  const band = (offset: number) =>
+    sql.join(
+      rules.bounds.map((b) => sql`(${rating} >= ${b - offset})`),
+      sql` + `,
+    );
+  return sql`max(${band(0)}, min(${ownerTeams.division}, ${band(rules.guard)}))`;
+}
+
+/** 경기 한 판을 남기고 두 팀 전적·레이팅·디비전·연승·득실(+ 다시 계산한 선발 수·OVR)을 한 batch로 고친다. 행 쓰기 3번. */
 export function recordMatchStatements(
   db: Db,
   input: {
@@ -806,6 +954,8 @@ export function recordMatchStatements(
     away: Side;
     detail: MatchDetail;
     now: string;
+    /** T-11-375 디비전 경계 · 강등 보호(활성 밸런스). */
+    divisions: DivisionRules;
   },
 ) {
   const bump = (me: Side, them: Side) => {
@@ -821,6 +971,7 @@ export function recordMatchStatements(
         goalsAgainst: sql`${ownerTeams.goalsAgainst} + ${them.goals}`,
         // 레이팅 변화는 읽은 값으로 셈한 차이만 더한다(동시에 치른 경기가 서로 덮어쓰지 않게).
         rating: sql`${ownerTeams.rating} + ${me.rating}`,
+        division: divisionSql(sql`${ownerTeams.rating} + ${me.rating}`, input.divisions),
         streak: won ? sql`${ownerTeams.streak} + 1` : 0,
         bestStreak: won
           ? sql`max(${ownerTeams.bestStreak}, ${ownerTeams.streak} + 1)`
@@ -978,15 +1129,62 @@ export async function otherKindTotals(db: Db, teamId: string): Promise<KindTotal
 }
 
 /** 경기 기록에 나온 커리어의 지금 공개 이름. */
-export async function publicNamesOf(db: Db, ids: string[]): Promise<Map<string, string>> {
-  // 경기 여러 판이면 커리어가 100명을 넘는다 — 나눠 읽는다.
+/**
+ * T-11-518 시즌 통계 선수 이름: 공개 이름이 있으면 공개 이름, 없으면 익명 표기("익명의 공격수 No.9"). 출전만 한 선수는
+ * 경기 기록에 익명 표기가 없어 커리어에서 만든다. 쿼리는 publicNamesOf와 같은 수다.
+ */
+export async function statsNamesOf(
+  db: Db,
+  ids: string[],
+): Promise<Map<string, { publicName: string | null; anon: string }>> {
   const rows = await readInChunks(ids, (chunk) =>
     db
-      .select({ id: careers.id, publicName: careers.publicName })
+      .select({
+        id: careers.id,
+        publicName: careers.publicName,
+        pos: careers.pos,
+        number: careers.shirtNumber,
+      })
       .from(careers)
-      .where(and(inArray(careers.id, chunk), isNotNull(careers.publicName))),
+      .where(inArray(careers.id, chunk)),
   );
-  return new Map(rows.map((r) => [r.id, r.publicName!]));
+  const names = new Map(
+    rows.map((r) => [r.id, { publicName: r.publicName, anon: anonName(r.pos, r.number) }]),
+  );
+  // T-11-548 careers 행이 지워진 카드는 카드에 붙인 이름을 쓴다(익명 표기는 경기 기록 것). 그런 선수가 있을 때만 읽는다.
+  const missing = ids.filter((id) => !names.has(id));
+  if (missing.length) {
+    const cardNames = await readInChunks(missing, (chunk) =>
+      db
+        .select({ id: cards.careerId, publicName: cards.publicName })
+        .from(cards)
+        .where(and(inArray(cards.careerId, chunk), isNotNull(cards.publicName))),
+    );
+    for (const r of cardNames) names.set(r.id, { publicName: r.publicName, anon: '' });
+  }
+  return names;
+}
+
+/** 경기 기록에 나온 커리어의 지금 공개 이름(T-11-548 careers 행이 지워진 카드는 카드의 이름). */
+export async function publicNamesOf(db: Db, ids: string[]): Promise<Map<string, string>> {
+  // 경기 여러 판이면 커리어가 100명을 넘는다 — 나눠 읽는다. 한 문장에 묶으면 조각을 두 번 넣어 변수 100개를 넘으니
+  // 커리어 · 카드를 따로 읽는다(T-11-555).
+  const [rows, cardRows] = await Promise.all([
+    readInChunks(ids, (chunk) =>
+      db
+        .select({ id: careers.id, publicName: careers.publicName })
+        .from(careers)
+        .where(and(inArray(careers.id, chunk), isNotNull(careers.publicName))),
+    ),
+    readInChunks(ids, (chunk) =>
+      db
+        .select({ id: cards.careerId, publicName: cards.publicName })
+        .from(cards)
+        .where(and(inArray(cards.careerId, chunk), isNotNull(cards.publicName))),
+    ),
+  ]);
+  // careers 행이 있으면 그 이름이 우선이다(카드 이름은 careers 행이 지워진 카드에만 쓴다).
+  return new Map([...cardRows, ...rows].map((r) => [r.id, r.publicName!]));
 }
 
 /**

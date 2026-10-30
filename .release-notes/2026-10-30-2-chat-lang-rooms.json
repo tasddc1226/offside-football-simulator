@@ -1,0 +1,23 @@
+{
+  "id": "t-11-583-chat-lang-rooms",
+  "title": "언어별 라운지 채팅방",
+  "items": [
+    "라운지 채팅이 한국어 · English · 日本語 · 繁體中文 방으로 나뉘었어요. 처음에는 화면 언어 방으로 들어가요.",
+    "채팅 화면 위의 버튼으로 다른 언어 방에 들어갈 수 있고, 고른 방은 다음에도 그대로예요."
+  ],
+  "en": {
+    "title": "Lounge chat rooms by language",
+    "items": [
+      "Lounge chat is now split into Korean, English, Japanese and Traditional Chinese rooms. You start in the room for your display language.",
+      "Use the buttons at the top of the chat to join another language room. Your choice is remembered next time."
+    ]
+  },
+  "ja": {
+    "title": "言語別ラウンジチャットルーム",
+    "items": [
+      "ラウンジチャットが한국어・English・日本語・繁體中文のルームに分かれました。最初は表示言語のルームに入ります。",
+      "チャット画面上のボタンで他の言語のルームに入れます。選んだルームは次回もそのままです。"
+    ]
+  },
+  "availability": "web-app"
+}

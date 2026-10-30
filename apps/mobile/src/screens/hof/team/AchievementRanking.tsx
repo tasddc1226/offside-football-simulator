@@ -1,21 +1,34 @@
 // T-11-028 구단주 랭킹(웹 team/AchievementRanking.svelte) — 기록실 탭. 구단주의 시즌 업적 점수 순(같은 점수면 먼저 닿은 구단주가
 // 앞선다). 구단주는 공개 닉네임과 그 시즌 팀 이름으로만 보이고, 팀이 있으면 줄을 눌러 팀 프로필(appState.hof.team)을 연다.
 // 서버가 5분마다 새로 센다.
-import { useEffect, useState } from 'react';
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
+import { useEffect, useRef, useState } from 'react';
+import { useSnapshot } from 'valtio';
 import { View } from 'react-native';
-import { ACH_GRADES, ACH_RANK_PER_PAGE, achGradeOf } from '@offside/contracts/owner-team';
-import { fetchAchRanking, type AchRankResponse } from '@offside/app-core/api/team';
+import {
+  ACH_GRADES,
+  ACH_GRADE_TOP,
+  ACH_RANK_PER_PAGE,
+  achGradeAt,
+  achTierByRank,
+} from '@offside/contracts/owner-team';
+import { fetchAchRanking, fetchMyAchRank, type AchRankResponse } from '@offside/app-core/api/team';
+import { isMember } from '@offside/app-core/account';
+import { canJumpToMyRank, myRankJump } from '@offside/app-core/myRank';
 import { hofStart } from '@offside/app-core/state';
 import { num as n } from '@offside/app-core/teamText';
 import { achGradeName } from '@offside/app-core/teamOwner';
 import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
-import { appState } from '../../../store';
+import { accountCache, appState, prefs } from '../../../store';
+import { toast } from '../../../game/host';
+import { alpha } from '../../../theme/colors';
 import { rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
 import { Btn } from '../../../ui/Btn';
 import { Card } from '../../../ui/Card';
+import { Skeleton } from '../../../ui/Skeleton';
 import { Press } from '../../../ui/Press';
-import { scrollTo } from '../../../ui/scroll';
+import { centerView, scrollTo } from '../../../ui/scroll';
 import { Txt } from '../../../ui/Txt';
 import { displaySeasonAt, openTeamSeasons } from '@offside/contracts/service-seasons';
 import { RecordsSelect, RECORDS_TOUCH } from '../RecordsControls';
@@ -23,9 +36,9 @@ import { AchGradeBadge } from '../../owner/TeamParts';
 import { GradeEmblem } from '../../../ui/GradeEmblem';
 import { TitleBadge } from '../../../components/TitleBadge';
 import { TeamLogo } from '../../../components/TeamLogo';
-import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
 import { useSeasonNow } from '../../../ui/useSeasonNow';
 import { useRefresh } from '../../../ui/refresh';
+import { seasonOptions } from '../../../ui/seasonOptions';
 
 export default function AchievementRanking() {
   const c = useColors();
@@ -39,9 +52,46 @@ export default function AchievementRanking() {
   const now = useSeasonNow();
   /** 다시 받을 기준 — 고른 시즌, 아니면 지금 시즌(띄운 채 개막을 넘기면 바뀐다). */
   const shownSeason = season ?? displaySeasonAt(now);
+  // T-11-489 등급 기준 안내: 상위 비율 시즌이면 '상위 N%'.
+  const byRank = achTierByRank(data?.season ?? shownSeason);
+
+  // T-11-441 '내 순위로'(팀 랭킹과 같다). 내 줄은 시즌과 순위로 강조한다.
+  const acct = useSnapshot(accountCache).value;
+  // 로그인 상태를 아직 묻지 않았으면 버튼을 두고, 누를 때 서버가 판정한다(따로 묻지 않는다).
+  const member = acct === undefined || (!!acct && acct !== 'error' && isMember(acct));
+  const [mine, setMine] = useState<{ season: number; rank: number } | null>(null);
+  const [jumping, setJumping] = useState(false);
+  const preset = useRef<AchRankResponse | null>(null);
+  const mineRow = useRef<View>(null);
+  const scrollMine = useRef(false);
+  const [jumpTick, setJumpTick] = useState(0);
+  useEffect(() => {
+    if (!scrollMine.current) return;
+    const frame = requestAnimationFrame(() => {
+      if (!scrollMine.current || !mineRow.current) return;
+      scrollMine.current = false;
+      centerView(mineRow.current, prefs.motionOK);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [jumpTick, data]);
+  async function jumpToMe() {
+    setJumping(true);
+    const j = myRankJump(await fetchMyAchRank(season), 'ach');
+    setJumping(false);
+    if (!j.ok) return toast(j.message);
+    setMine({ season: j.data.season, rank: j.rank });
+    if (j.data.page !== page) preset.current = j.data;
+    scrollMine.current = true;
+    setJumpTick((n) => n + 1);
+    setData(j.data);
+    setPage(j.data.page);
+  }
 
   const { tick, track, pulled } = useRefresh();
   useEffect(() => {
+    const p0 = preset.current;
+    preset.current = null;
+    if (p0 && p0.page === page && !pulled) return;
     setFailed(false);
     if (!pulled) setLoading(true);
     let live = true; // 더 늦게 고른 조건의 응답만 쓴다.
@@ -67,7 +117,7 @@ export default function AchievementRanking() {
   }
 
   const empty = (text: string) => (
-    <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
+    <Txt tone="muted" style={{ fontSize: rem(FONT.body2), paddingVertical: 8 }}>
       {text}
     </Txt>
   );
@@ -81,13 +131,7 @@ export default function AchievementRanking() {
           label={L.seasonLabel}
           testID="ach-rank-season-select"
           value={season ?? data?.season ?? displaySeasonAt(now)}
-          options={
-            data?.seasons.map((s) => ({ value: s.id, label: seasonLabel(s.id, s.name) })) ??
-            openTeamSeasons(now).map((id) => ({
-              value: id,
-              label: teamSeasonLabel(id),
-            }))
-          }
+          options={seasonOptions(data?.seasons ?? openTeamSeasons(now), now)}
           onChange={(id) => {
             setSeason(id);
             setPage(1);
@@ -97,16 +141,17 @@ export default function AchievementRanking() {
           {L.ownersApp({ n: n(data?.total ?? 0) })}
         </Txt>
       </View>
+      {canJumpToMyRank(member) ? (
+        <View style={{ flexDirection: 'row', marginBottom: 10 }}>
+          <Btn sm testID="ach-rank-my" disabled={jumping} onPress={() => void jumpToMe()}>
+            {L.myRank}
+          </Btn>
+        </View>
+      ) : null}
       {failed ? (
         empty(L.rankFail)
       ) : loading || !data ? (
-        <Txt
-          tone="muted"
-          accessibilityLiveRegion="polite"
-          style={{ fontSize: rem(0.875), paddingVertical: 8 }}
-        >
-          {L.loading}
-        </Txt>
+        <Skeleton rows={6} />
       ) : data.items.length ? (
         <>
           <View
@@ -134,9 +179,27 @@ export default function AchievementRanking() {
           </View>
           {data.items.map((r) => {
             const team = r.team;
-            const grade = achGradeOf(r.score).grade;
+            // T-11-489 시즌 2부터 등급은 랭킹 상위 비율.
+            const grade = achGradeAt({
+              season: data.season,
+              score: r.score,
+              rank: r.rank,
+              ranked: data.total,
+            }).grade;
+            const isMine = !!mine && mine.season === data.season && mine.rank === r.rank;
             const row = (
               <View
+                ref={isMine ? mineRow : undefined}
+                onLayout={
+                  isMine
+                    ? () => {
+                        if (!scrollMine.current) return;
+                        scrollMine.current = false;
+                        centerView(mineRow.current, prefs.motionOK);
+                      }
+                    : undefined
+                }
+                accessibilityState={isMine ? { selected: true } : undefined}
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -144,6 +207,9 @@ export default function AchievementRanking() {
                   paddingVertical: 12,
                   borderBottomWidth: 1,
                   borderBottomColor: c.line,
+                  ...(isMine
+                    ? { backgroundColor: alpha(c.accent, 0.12), borderRadius: RADIUS.sm }
+                    : null),
                 }}
               >
                 <Txt num tone="muted" center style={{ width: 24, fontSize: 15 }}>
@@ -265,20 +331,24 @@ export default function AchievementRanking() {
                   gap: 8,
                   paddingVertical: 6,
                   paddingHorizontal: 10,
-                  borderRadius: 10,
+                  borderRadius: RADIUS.sm,
                   backgroundColor: c.surface2,
                 }}
               >
                 <AchGradeBadge grade={g} />
-                <Txt num={400} tone="muted" style={{ fontSize: rem(0.8125) }}>
-                  {L.gradeFrom({ n: n(g.min) })}
+                <Txt num={400} tone="muted" style={{ fontSize: rem(FONT.label) }}>
+                  {byRank
+                    ? g.id === 'rookie'
+                      ? L.gradeRest
+                      : L.gradeTop({ pct: ACH_GRADE_TOP[g.id] })
+                    : L.gradeFrom({ n: n(g.min) })}
                 </Txt>
               </View>
             ))}
           </View>
         ) : null}
       </View>
-      <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: 10 }}>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 10 }}>
         {L.noteApp}
       </Txt>
     </Card>

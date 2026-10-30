@@ -19,6 +19,8 @@ import type {
   TeamRankResponse,
   TeamRankSort,
   TeamStatsResponse,
+  TeamDivisionsResponse,
+  TeamMomentResponse,
 } from '@offside/contracts';
 import { apiFetch, cachedGet, ownerCachedGet } from './client.js';
 import { withOwnerHint } from './friendPending.js';
@@ -32,7 +34,13 @@ export type {
   ClubAchievementNotifications,
   OwnerTeam,
   OwnerTeamResponse,
+  PlayTeamMatchResponse,
   TeamMatch,
+  TeamMatchEvent,
+  TeamMoment,
+  TeamMomentChoice,
+  TeamMomentResponse,
+  TeamLive,
   TeamOpponent,
   TeamPlayer,
   TeamPreset,
@@ -48,8 +56,10 @@ export type {
   TeamStatsMatch,
   TeamStatsOpponent,
   TeamStatsPlayer,
+  TeamStatsReport,
   TeamStatsResponse,
   TeamStatsSummary,
+  TeamDivisionsResponse,
 } from '@offside/contracts';
 
 /** `?season=` 꼬리(없으면 지금 시즌). */
@@ -66,8 +76,10 @@ export const saveTeamPresets = (body: PutTeamPresetsBody) =>
     method: 'PUT',
     body: JSON.stringify(body),
   });
-/** 상대 후보는 서버가 섞어 준다 — '다른 상대 보기'가 새로 받게 메모하지 않는다. */
-export const fetchOpponents = () => apiFetch<TeamOpponentsResponse>('/v1/owner-team/opponents');
+/** 상대 후보는 서버가 섞어 준다 — '다른 상대 보기'가 새로 받게 메모하지 않는다.
+ * T-11-510 시즌 2부터는 상대 한 팀만 오고, pick(1~3)으로 그 경기의 다른 상대를 찾는다. */
+export const fetchOpponents = (pick = 0) =>
+  apiFetch<TeamOpponentsResponse>(`/v1/owner-team/opponents${pick ? `?pick=${pick}` : ''}`);
 export const playMatch = (opponentTeamId: string) =>
   apiFetch<PlayTeamMatchResponse>('/v1/owner-team/matches', {
     method: 'POST',
@@ -97,16 +109,36 @@ export const fetchClubAchievements = (season?: number) =>
 export const fetchAchievementNotifications = () =>
   ownerCachedGet<ClubAchievementNotifications>('/v1/owner-team/achievement-notifications', 60_000);
 
-/** 라이브 랭킹(팀 랭킹). 서버가 5분마다 새로 센다. */
-export const fetchTeamRanking = (season: number | undefined, sort: TeamRankSort, page: number) =>
+/** 라이브 랭킹(팀 랭킹). 공개 랭킹은 5분 엣지 캐시, 가치순은 클라이언트에서 1분 메모한다. */
+export const fetchTeamRanking = (
+  season: number | undefined,
+  sort: TeamRankSort,
+  page: number,
+  division?: number,
+) =>
   cachedGet<TeamRankResponse>(
-    `/v1/teams?${season === undefined ? '' : `season=${season}&`}sort=${sort}&page=${page}`,
-    60_000,
+    `/v1/teams?${season === undefined ? '' : `season=${season}&`}sort=${sort}&page=${page}${division === undefined ? '' : `&division=${division}`}`,
+    sort === 'value' ? 60_000 : 300_000,
   );
+/** T-11-375 디비전별 팀 수 · 경계(랭킹 디비전 탭). 서버가 5분마다 새로 센다. */
+export const fetchTeamDivisions = (season?: number) =>
+  cachedGet<TeamDivisionsResponse>(`/v1/teams/divisions${seasonQ(season)}`, 60_000);
 /** T-11-028 업적 랭킹(기록실). 서버가 5분마다 새로 센다. */
 export const fetchAchRanking = (season: number | undefined, page: number) =>
   cachedGet<AchRankResponse>(
     `/v1/achievements/ranking?${season === undefined ? '' : `season=${season}&`}page=${page}`,
+    60_000,
+  );
+/** T-11-441 '내 순위로': 내 팀이 있는 페이지와 내 순위(me). 누를 때만 부르고, 1분 메모한다. */
+export const fetchMyTeamRank = (season: number | undefined, sort: TeamRankSort) =>
+  cachedGet<TeamRankResponse>(
+    `/v1/teams?${season === undefined ? '' : `season=${season}&`}sort=${sort}&me=1`,
+    60_000,
+  );
+/** T-11-441 업적 랭킹의 '내 순위로'. */
+export const fetchMyAchRank = (season: number | undefined) =>
+  cachedGet<AchRankResponse>(
+    `/v1/achievements/ranking?${season === undefined ? '' : `season=${season}&`}me=1`,
     60_000,
   );
 /** 팀 프로필(좋아요 여부가 사람마다 달라 메모하지 않는다). */
@@ -120,3 +152,21 @@ export const viewTeam = (id: string) =>
   apiFetch<undefined>(`/v1/teams/${id}/views`, { method: 'POST', keepCache: true });
 export const likeTeam = (id: string, like: boolean) =>
   apiFetch<TeamLikeResponse>(`/v1/teams/${id}/like`, { method: like ? 'PUT' : 'DELETE' });
+
+/** T-11-387 장면 경기로 시작한다(문자중계 도중 장면을 고른다). 마지막 장면을 고르면 결과가 온다. */
+export const playLiveMatch = (opponentTeamId: string) =>
+  apiFetch<PlayTeamMatchResponse>('/v1/owner-team/matches', {
+    method: 'POST',
+    body: JSON.stringify({ opponentTeamId, live: true }),
+  });
+/** 장면 하나를 고른다(choice는 선택지 id, 'auto'면 감독에게 맡긴다). */
+export const chooseMoment = (matchId: string, index: number, choice: string) =>
+  apiFetch<TeamMomentResponse>(
+    `/v1/owner-team/matches/${encodeURIComponent(matchId)}/moments/${index}`,
+    { method: 'POST', body: JSON.stringify({ choice }) },
+  );
+/** 남은 장면을 감독에게 맡기고 경기를 끝낸다('결과 바로 보기'). */
+export const finishLiveMatch = (matchId: string) =>
+  apiFetch<PlayTeamMatchResponse>(`/v1/owner-team/matches/${encodeURIComponent(matchId)}/finish`, {
+    method: 'POST',
+  });

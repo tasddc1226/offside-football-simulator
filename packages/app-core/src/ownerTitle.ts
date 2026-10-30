@@ -5,16 +5,12 @@ import {
   type TitleGrade,
   type TitleStage,
 } from '@offside/contracts/owner-title';
+import { divisionLabel } from './cupDivision.js';
 import { ownerProfileText as L } from './i18n/ko/ownerProfile.js';
 
-export {
-  parseTitle,
-  TITLE_NONE,
-  TITLE_GRADES,
-  permanentTitleOf,
-} from '@offside/contracts/owner-title';
+export { parseTitle, TITLE_NONE, permanentTitleOf } from '@offside/contracts/owner-title';
 
-const LABEL: Record<TitleStage, (p: { n: number }) => string> = {
+const LABEL: Record<TitleStage, (p: { n: number; d?: string | undefined }) => string> = {
   champion: (p) => L.titleChampion(p),
   runnerup: (p) => L.titleRunnerup(p),
   sf: (p) => L.titleSf(p),
@@ -25,7 +21,9 @@ export function titleLabel(id: string | null | undefined): string | null {
   const t = parseTitle(id);
   const permanent = permanentTitleOf(id);
   return t
-    ? LABEL[t.stage]({ n: t.edition })
+    ? t.league
+      ? L.titleLeagueChampion({ n: t.edition })
+      : LABEL[t.stage]({ n: t.edition, d: divisionLabel(t.division) })
     : permanent
       ? {
           'owner-founder': L.titleFounder,
@@ -42,6 +40,7 @@ export function titleLabel(id: string | null | undefined): string | null {
           'owner-assists': L.titleAssists,
           'owner-national': L.titleNational,
           'owner-dynasty': L.titleDynasty,
+          'owner-exchange': L.titleExchange,
         }[permanent.id]
       : null;
 }
@@ -64,6 +63,7 @@ export function titleCondition(id: string): string | null {
         'owner-assists': L.conditionAssists,
         'owner-national': L.conditionNational,
         'owner-dynasty': L.conditionDynasty,
+        'owner-exchange': L.conditionExchange,
       }[t.id]
     : null;
 }
@@ -252,6 +252,20 @@ const TITLE_PIXELS = {
     '...######...',
     '..########..',
   ],
+  'owner-exchange': [
+    '....####....',
+    '...#....#...',
+    '..#.####.#..',
+    '..#.#..#.#..',
+    '..#.####.#..',
+    '...#....#...',
+    '....####....',
+    '.....##.....',
+    '...######...',
+    '..##....##..',
+    '.##..##..##.',
+    '.##########.',
+  ],
   'owner-dynasty': [
     '.#...##...#.',
     '.##..##..##.',
@@ -285,8 +299,6 @@ export const titleGradeLabel = (grade: TitleGrade): string =>
   ({ entry: L.gradeEntry, skilled: L.gradeSkilled, honor: L.gradeHonor, legend: L.gradeLegend })[
     grade
   ];
-export const titleGradeNote = (grade: TitleGrade): string =>
-  ({ entry: L.noteEntry, skilled: L.noteSkilled, honor: L.noteHonor, legend: L.noteLegend })[grade];
 export const titleRelated = (id: string): string | null => {
   const t = permanentTitleOf(id);
   return t
@@ -299,6 +311,7 @@ export const titleRelated = (id: string): string | null => {
         numbers: L.relatedNumbers,
         ballon: L.relatedBallon,
         firsts: L.relatedFirsts,
+        exchange: L.relatedExchange,
       }[t.related]
     : null;
 };

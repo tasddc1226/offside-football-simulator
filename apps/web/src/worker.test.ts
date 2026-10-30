@@ -25,6 +25,7 @@ describe('T-10-037 preconnect 헤더', () => {
     for (const path of ['/', '/settings']) {
       const link = (await get(path)).headers.get('Link');
       expect(link, path).toContain('<https://fonts.gstatic.com>; rel=preconnect; crossorigin');
+      expect(link, path).toContain('<https://cdn.jsdelivr.net>; rel=preconnect; crossorigin');
       expect(link, path).toContain('<https://api.offside-lab.com>; rel=preconnect');
     }
   });
@@ -74,5 +75,59 @@ describe('T-10-068 공유 미리보기 카드 경로', () => {
 
   it('카드 워커가 없으면(로컬) 404', async () => {
     expect((await get(PATH)).status).toBe(404);
+  });
+});
+
+describe('T-11-531 크리에이터 짧은 주소', () => {
+  it('추적 링크로 넘긴다(대소문자 무시)', async () => {
+    for (const [path, content] of [
+      [
+        '/ethio',
+        'utm_source=tiktok&utm_medium=partner&utm_campaign=creator_test&utm_content=ethio_tiktok',
+      ],
+      ['/ETHIO', 'utm_content=ethio_tiktok'],
+      [
+        '/ethio-yt',
+        'utm_source=youtube&utm_medium=partner&utm_campaign=creator_test&utm_content=ethio_short',
+      ],
+    ] as const) {
+      const res = await get(path);
+      expect(res.status, path).toBe(302);
+      expect(res.headers.get('Location'), path).toContain(content);
+    }
+  });
+});
+
+describe('T-11-584 랜딩 /get', () => {
+  it('기기 스토어로 302, 캐시 · 색인하지 않는다', async () => {
+    const res = await worker.fetch(
+      new Request('https://offside-lab.com/get?os=android&p=end'),
+      { ASSETS: assets },
+      ctx,
+    );
+    expect(res.status).toBe(302);
+    expect(res.headers.get('Location')).toMatch(/^https:\/\/play\.google\.com\//);
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+    expect(res.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
+  });
+});
+
+describe('T-11-585 랜딩 이미지', () => {
+  it('/landing/ 파일은 noindex를 붙이지 않는다', async () => {
+    const res = await worker.fetch(
+      new Request('https://offside-lab.com/landing/live.webp'),
+      {
+        ASSETS: {
+          // 운영 ASSETS는 _headers의 /* 규칙대로 noindex를 붙여 돌려준다.
+          fetch: async () =>
+            new Response('x', {
+              headers: { 'Content-Type': 'image/webp', 'X-Robots-Tag': 'noindex, nofollow' },
+            }),
+        },
+      },
+      ctx,
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get('X-Robots-Tag')).toBeNull();
   });
 });

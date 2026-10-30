@@ -33,7 +33,6 @@ const ko = {
   season: '시즌',
   seasonAria: '기록 시즌',
   allSeasons: '전체 시즌',
-  notOpen: ' (개막 예정)',
   filter: '필터',
   filterLabel: (p: { pos: string; sort: string }) => `필터, ${p.pos}, ${p.sort}`,
   filterA11y: (p: { label: string }) => `필터, ${p.label}`,
@@ -44,6 +43,11 @@ const ko = {
   all: '전체',
   rankBasis: '순위 기준',
   sortGroup: '순위 유형',
+  // T-11-441 순위 기준 한 줄 설명(뜻이 바로 보이지 않는 기준만)
+  basisScore: '레전드 점수는 통산 기록 · 트로피 · 개인상 · 대표팀 경력을 합친 값이에요.',
+  basisValue: '은퇴 가치는 가장 높았던 세 시즌의 몸값 평균에 레전드 점수를 반영한 값이에요.',
+  basisGa: '공격포인트(P)는 골과 도움을 더한 수예요.',
+  basisPeak: '최고 OVR은 커리어에서 가장 높았던 종합 능력치예요.',
   // 목록
   opens: (p: { name: string; when: string }) => `${p.name}은 ${p.when}(한국 시각)에 개막해요.`,
   opensNote:
@@ -85,7 +89,7 @@ const ko = {
   }) =>
     `${p.rank}위 ${p.name}, ${p.country}${p.pos ? `, ${p.pos}` : ''}, ${p.value}${p.unit}${p.mine ? ', 내 선수' : ''}`,
   rnChipTitle: (p: { number: number }) => `영구결번 ${p.number}번`,
-  rnChip: (p: { number: number }) => `👑 영결 ${p.number}`,
+  rnChip: (p: { number: number }) => `👑 영구결번 ${p.number}`,
   // T-11-234 명예의 벽(영구결번 자리가 이미 찬 구단에서 받은 칭호)도 이름 옆에 번호와 함께.
   wallChipTitle: (p: { number: number }) => `명예의 벽 ${p.number}번`,
   wallChip: (p: { number: number }) => `🏅 명예의 벽 ${p.number}`,

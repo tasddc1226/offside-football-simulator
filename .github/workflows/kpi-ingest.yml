@@ -1,0 +1,24 @@
+# T-11-579 운영 지표 외부 수집(GA4 · Meta · 스토어 · AdMob)을 08:50 정기 실행을 기다리지 않고 지금 한 번 돌린다.
+# 새 자격 증명을 넣은 뒤 확인할 때 쓴다. 결과는 원천 · 날짜별 넣은 행 수 또는 오류(비밀값은 나오지 않는다).
+name: KPI ingest now
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Run agent KPI ingest
+        env:
+          AGENTS_READ_TOKEN: ${{ secrets.AGENTS_READ_TOKEN }}
+        run: |
+          out=$(curl -sS -f -X POST 'https://agents.offside-lab.com/internal/run?job=kpi' \
+            -H "Authorization: Bearer $AGENTS_READ_TOKEN")
+          echo "$out" | jq -r '.result[] | [.source, .day, (.rows // "error"), (.error // "")] | @tsv'
+          if echo "$out" | jq -e '[.result[] | select(.error)] | length > 0' >/dev/null; then
+            echo "::warning::일부 원천이 실패했어요(위 표의 error)"
+          fi

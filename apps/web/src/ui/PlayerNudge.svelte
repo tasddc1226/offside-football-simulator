@@ -51,12 +51,12 @@
 {/if}
 
 <style>
-  :global(body:has([data-player-nudge]) [data-tab='player']) { background: var(--surface); outline: 2px solid var(--accent); outline-offset: -3px; border-radius: 9px; }
-  .player-nudge { box-sizing: border-box; width: min(360px, calc(100% - 32px)); max-width: 100%; padding: 0; border: 1px solid var(--accent); border-radius: 18px; background: var(--surface); color: var(--ink); text-align: center; }
+  :global(body:has([data-player-nudge]) [data-tab='player']) { background: var(--surface); outline: 2px solid var(--accent); outline-offset: -3px; border-radius: var(--radius-sm); }
+  .player-nudge { box-sizing: border-box; width: min(360px, calc(100% - 32px)); max-width: 100%; padding: 0; border: 1px solid var(--accent); border-radius: var(--radius-lg); background: var(--surface); color: var(--ink); text-align: center; }
   .player-nudge::backdrop { background: #0009; }
   .nudge-body { padding: 20px; }
-  strong { display: block; font-size: 1.0625rem; }
-  p { font-size: .875rem; line-height: 1.6; margin: 8px 0 16px; }
+  strong { display: block; font-size: var(--fs-title3); }
+  p { font-size: var(--fs-body2); line-height: 1.6; margin: 8px 0 16px; }
   .nudge-actions { display: flex; gap: 8px; }
   button { min-height: 44px; }
   .btn-primary { flex: 1; }

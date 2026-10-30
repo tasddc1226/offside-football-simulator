@@ -33,7 +33,8 @@ export const manager: Translation<ManagerMsgs> = {
   confirmListed: '移籍市場の出品が取り下げられます。',
   confirmValue: (p) => `クラブ価値が${p.value}下がります。`,
   confirmLocked: '監督になった選手は売却・放出・ロックができません。',
-  confirmAbandon: '途中で諦めると元の選手に戻ります。スタメンには自分で入れ直してください。',
+  confirmAbandon:
+    '途中で諦めると元の選手に戻ります。スタメンには自分で入れ直してください。監督カードに確定した後は選手に戻せません。',
   confirmOk: '監督として始める',
   cancel: 'キャンセル',
   progress: (p) => `${p.season} / ${p.total}シーズン · ${p.age}歳`,
@@ -72,12 +73,21 @@ export const manager: Translation<ManagerMsgs> = {
   resultHeading: (p) => `${p.n}シーズンの結果`,
   nextSeason: '次へ進む',
   doneHeading: '監督キャリア終了',
-  doneLead: '監督カードに確定すると、自分のチームの監督枠に据えられます。',
+  doneLead:
+    '監督カードに確定すると、自分のチームの監督枠に据えられます。確定した後は選手に戻せません。',
   finish: '監督カードに確定',
   finishFail: '確定できませんでした。しばらくしてからもう一度お試しください。',
+  finishTitle: '監督カードに確定しますか？',
+  finishSeat: '確定するとチームの監督枠に置けます。',
+  finishFinal: '確定すると選手には戻せません。',
+  finishOk: '確定する',
   abandon: '監督キャリアを諦める',
   abandonConfirm: '諦めると進めた監督キャリアが消え、元の選手に戻ります。諦めますか？',
   abandonOk: '諦める',
+  undo: '選手に戻す',
+  undoConfirm:
+    '監督キャリアの結果を破棄して元の選手に戻ります。監督カードは作られず、先発には自分で入れ直す必要があります。戻しますか？',
+  undoOk: '戻す',
   history: '過去のシーズン',
   historyRow: (p) => `${p.n}シーズン · ${p.club} ${p.teams}チーム中${p.rank}位`,
   historyRest: (p) => `${p.n}シーズン · 休み`,
@@ -90,7 +100,7 @@ export const manager: Translation<ManagerMsgs> = {
   effect: '監督枠の効果',
   effectFor: (p) => `${p.formation}のとき`,
   effectNote:
-    '特技は、対応するチームシナジーが発動しているときだけ加算されます。4-2-3-1などの変形配置は、元のフォーメーション（4-3-3・4-4-2・3-5-2）の熟練度を使います。',
+    '特技は、対応するチームシナジーが発動しているときだけ加算されます。4-2-3-1などの変形配置は、元のフォーメーション（4-3-3・4-4-2・3-5-2）の熟練度を使います。監督補正はライン（攻撃・中盤・守備）ごとに−1.5から+3.0までです。',
   coachNow: '自分のチームの監督',
   seat: 'チームの監督にする',
   unseat: '監督枠を空ける',
@@ -129,6 +139,17 @@ export const manager: Translation<ManagerMsgs> = {
   teamCoach: '監督枠',
   teamCoachEmpty: '空いています',
   teamCoachManage: '監督を選ぶ',
+  /** T-11-382 監督枠の補正内訳。 */
+  breakdown: '補正の内訳',
+  partStyle: (p: { name: string }) => `${p.name}志向`,
+  breakdownCapped: (p: { raw: string; max: string }) =>
+    `合計は${p.raw}ですが、ラインごとに最大${p.max}までしか加わりません。`,
+  breakdownFloor: (p: { raw: string; min: string }) =>
+    `合計は${p.raw}ですが、ラインごとに${p.min}より下がりません。`,
+  breakdownOff: (p: { names: string }) =>
+    `${p.names}：対になるチームシナジーがオフなので加わりません。`,
+  breakdownNote:
+    '監督補正はラインごとに−1.5から+3.0までです。特技は対のシナジーが複数オンでも一度だけ加わります。',
   profileCoach: '就任中の監督',
   teamCoachLine: (p: { v: string }) => `監督 ${p.v}`,
   oddsSure: '確定',

@@ -129,6 +129,7 @@ describe('T-11-372 시즌 특별 카드', () => {
       '1:ranks',
       '1:honors',
       '1:specials',
+      '1:division',
     ]);
     expect(await closeStateOf(ctx.db, 1)).toMatchObject({ step: 'done', cutoff: END });
 

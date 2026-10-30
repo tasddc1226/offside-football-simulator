@@ -40,10 +40,25 @@ const ko = {
   catMarketBody: '등록한 선수의 판매 완료',
   catSocial: '친구',
   catSocialBody: '친구 신청·수락과 친선전 결과',
+  catNudge: '독려',
+  catNudgeBody: '출석 · 쉬는 동안 생긴 일 · 첫 주 다음 할 일 안내',
   catAria: (p: { title: string }) => `${p.title} 알림`,
   prefsConnectFailed: '알림 설정에 연결하지 못했어요. 다시 시도해 주세요.',
   prefsLoadFailed: '알림 설정을 불러오지 못했어요.',
   prefsSaveFailed: '알림 설정을 저장하지 못했어요.',
+  askOn: '알림 받기',
+  askLater: '나중에',
+  askRetireTitle: '이 카드로 컵에 나갈 때 알림을 받을까요?',
+  askRetireBody:
+    '오프사이드 컵 접수는 며칠만 열려요. 접수가 열릴 때, 내 팀 경기 결과가 나올 때, 등록한 선수가 팔릴 때 바로 알려 드려요.',
+  askSellTitle: '팔리면 알려 드릴까요?',
+  askSellBody: '등록한 선수가 팔리면 들어온 자금과 함께 알려 드려요.',
+  askClubTitle: '컵 접수와 경기 결과를 알림으로 받을까요?',
+  askClubBody:
+    '오프사이드 컵 접수가 열리면 바로 알려 드려요. 다른 구단주가 내 팀에 건 랭크 경기 결과도 알려 드려요.',
+  askCupTitle: '컵 결과를 알림으로 받을까요?',
+  askCupBody:
+    '컵이 끝나면 내 팀의 최종 결과를 바로 알려 드려요. 다음 컵 접수가 열릴 때도 알려 드려요.',
 };
 
 export type PushMsgs = typeof ko;

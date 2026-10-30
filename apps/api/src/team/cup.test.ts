@@ -49,13 +49,20 @@ const CUP128 = planCup({ id: 's1-2', season: 1, edition: 2, opensOn: '2026-10-09
 describe('T-11-145 컵 규칙', () => {
   it('팀 수로 조 수를 정한다', () => {
     expect(cupGroupCount(128)).toBe(32);
-    expect(cupGroupCount(64)).toBe(32);
-    expect(cupGroupCount(63)).toBe(16);
+    expect(cupGroupCount(96)).toBe(32);
+    // T-11-568 조는 되도록 3~5팀: 제3회 구간 대회(64~70팀)는 32개 조(거의 2팀)가 아니라 16개 조.
+    expect(cupGroupCount(80)).toBe(16);
+    expect(cupGroupCount(70)).toBe(16);
+    expect(cupGroupCount(64)).toBe(16);
+    expect(cupGroupCount(48)).toBe(16);
+    // 3~5팀으로 나눌 수 없으면 예전처럼 2~4팀.
+    expect(cupGroupCount(81)).toBe(32);
     // 정원 64 대회(제1회)는 64강을 열지 않는다.
     expect(cupGroupCount(64, 64)).toBe(16);
-    expect(cupGroupCount(32)).toBe(16);
+    expect(cupGroupCount(32)).toBe(8);
     expect(cupGroupCount(31)).toBe(8);
-    expect(cupGroupCount(8)).toBe(4);
+    expect(cupGroupCount(8)).toBe(2);
+    expect(cupGroupCount(5)).toBe(2);
     expect(cupGroupCount(4)).toBe(2);
     expect(cupGroupCount(3)).toBe(0);
   });
@@ -74,8 +81,13 @@ describe('T-11-145 컵 규칙', () => {
     expect(new Set(teams.slice(0, 16).map((t) => a.get(t.teamId))).size).toBe(16);
   });
 
-  it('조 일정: 4팀은 6경기, 3팀은 3경기, 2팀은 1경기', () => {
+  it('조 일정: 5팀은 10경기, 4팀은 6경기, 3팀은 3경기, 2팀은 1경기', () => {
     const n = (ids: string[]) => groupFixtures(ids).flat().length;
+    // T-11-568 5팀 조는 모든 짝이 한 번씩, 4 · 4 · 2경기로 나눠 모두 네 경기씩.
+    const five = groupFixtures(['a', 'b', 'c', 'd', 'e']);
+    expect(five.map((r) => r.length)).toEqual([4, 4, 2]);
+    expect(new Set(five.flat().map((p) => [...p].sort().join(''))).size).toBe(10);
+    for (const t of 'abcde') expect(five.flat().filter((p) => p.includes(t))).toHaveLength(4);
     expect(n(['a', 'b', 'c', 'd'])).toBe(6);
     expect(n(['a', 'b', 'c'])).toBe(3);
     expect(n(['a', 'b'])).toBe(1);
@@ -128,11 +140,22 @@ describe('T-11-145 컵 규칙', () => {
 
   it('알림 문장을 영어·일본어로 옮긴다(팀 이름은 그대로)', () => {
     expect(cupText('오프사이드 컵 결승 · 이겼어요', 'en')).toBe('OFFSIDE Cup Final: You won');
-    expect(cupText('시즌 1 제1회 오프사이드 컵 조 추첨 결과', 'en')).toBe(
-      'Season 1 OFFSIDE Cup #1 group draw',
+    expect(cupText('시즌 1 제1회 오프사이드 컵 조 편성 완료', 'en')).toBe(
+      'Season 1 OFFSIDE Cup #1 groups are set',
     );
+    // T-11-568 전에 저장된 추첨 알림 제목도 옮긴다.
+    expect(cupText('시즌 1 제1회 오프사이드 컵 조 추첨 결과', 'en')).toBe(
+      'Season 1 OFFSIDE Cup #1 groups are set',
+    );
+    expect(cupText('우리 FC 팀은 3조예요. 첫 경기는 오늘 21:00에 열려요.', 'ja')).toBe(
+      '우리 FCはグループ3です。初戦は本日21:00に始まります。',
+    );
+    // T-11-514 전에 저장된 옛 문구도 옮긴다.
     expect(cupText('우리 FC은(는) 3조예요. 첫 경기는 오늘 21:00에 열려요.', 'ja')).toBe(
       '우리 FCはグループ3です。初戦は本日21:00に始まります。',
+    );
+    expect(cupText('시즌 1 제1회 오프사이드 컵이 끝났어요', 'en')).toBe(
+      cupText('시즌 1 제1회 오프사이드 컵 결과가 나왔어요', 'en'),
     );
     expect(cupText('최종 성적 준우승. 선수 후보 리롤권 7장을 받았어요.', 'en')).toBe(
       'Final result: Runners-up. You received 7 player reroll ticket(s).',
@@ -364,14 +387,14 @@ describe('T-11-145 컵 진행(cron)', () => {
     await addAppPushDevice(ctx, teams[0]!.profileId);
     const final = cupFinalAt(CUP);
     // 결승 전에는 만들지 않는다. 밀린 단계도 없다.
-    expect(await scheduleNextCup(ctx.db, CUP.drawAt, [CUP])).toBeNull();
+    expect(await scheduleNextCup(ctx.db, CUP.drawAt, [CUP])).toEqual([]);
     expect(await cupStalls(ctx.db, CUP.opensAt, [CUP])).toEqual([]);
     // 추첨이 30분 넘게 안 되면 경보 대상.
     const lateDraw = new Date(Date.parse(CUP.drawAt) + 31 * 60_000).toISOString();
     expect((await cupStalls(ctx.db, lateDraw, [CUP])).map((s) => s.key)).toEqual(['draw:s1-1']);
     await runAll();
     const after = new Date(Date.parse(final) + 5 * 60_000).toISOString();
-    const next = await scheduleNextCup(ctx.db, after, [CUP]);
+    const [next] = await scheduleNextCup(ctx.db, after, [CUP]);
     expect(next).toMatchObject({
       id: 's1-2',
       season: 1,
@@ -381,7 +404,7 @@ describe('T-11-145 컵 진행(cron)', () => {
     });
     expect(next!.rounds).toHaveLength(cupRoundsOf(next!).length);
     // 두 번째 cron·관리자가 이미 만든 경우는 그대로 둔다.
-    expect(await scheduleNextCup(ctx.db, after, [CUP])).toBeNull();
+    expect(await scheduleNextCup(ctx.db, after, [CUP])).toEqual([]);
     // 다음 회차가 없으면 경보, 있으면 조용하다.
     const late = new Date(Date.parse(final) + 31 * 60_000).toISOString();
     expect((await cupStalls(ctx.db, late, [CUP])).map((s) => s.key)).toEqual(['next:s1-1']);
@@ -414,7 +437,7 @@ describe('T-11-145 컵 진행(cron)', () => {
       "INSERT INTO app_meta (key, value) VALUES ('cup:autopilot', 'off')",
     ).run();
     const after = new Date(Date.parse(cupFinalAt(CUP)) + 5 * 60_000).toISOString();
-    expect(await scheduleNextCup(ctx.db, after, [CUP])).toBeNull();
+    expect(await scheduleNextCup(ctx.db, after, [CUP])).toEqual([]);
   });
 
   it.each([64, 40, 20, 5])(
@@ -473,7 +496,9 @@ describe('T-11-145 컵 진행(cron)', () => {
       expect(mine.map((x) => x.sourceKey).filter((k) => k.startsWith('cup-match:'))).toHaveLength(
         played,
       );
-      expect(mine.find((x) => x.sourceKey === `cup:${CUP.id}:draw`)?.body).toContain('21:00');
+      expect(mine.find((x) => x.sourceKey.startsWith(`cup:${CUP.id}:draw:`))?.body).toContain(
+        '21:00',
+      );
       const result = mine.filter((x) => x.sourceKey === `cup:${CUP.id}:result`);
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({ title: '시즌 1 제1회 오프사이드 컵 우승!' });
@@ -530,12 +555,16 @@ describe('T-11-145 컵 진행(cron)', () => {
     expect(lineupLocked(matches, a!.teamId, before)).toBe(false);
     expect(lineupLocked(matches, a!.teamId, during)).toBe(true);
     // 명단 저장도 같은 판정으로 막고, 잠기기 전에는 통과한다.
-    await expect(checkCupLineup(ctx.db, a!.profileId, 1, [], 11, during)).rejects.toMatchObject({
-      details: { reason: 'CUP_LINEUP_LOCKED' },
-    });
-    await expect(checkCupLineup(ctx.db, a!.profileId, 1, [], 11, before)).resolves.toBeUndefined();
+    await expect(checkCupLineup(ctx.db, a!.profileId, 1, [], 11, during, 70)).rejects.toMatchObject(
+      {
+        details: { reason: 'CUP_LINEUP_LOCKED' },
+      },
+    );
+    await expect(
+      checkCupLineup(ctx.db, a!.profileId, 1, [], 11, before, 70),
+    ).resolves.toBeUndefined();
     // 실제 카드가 8명보다 적으면 대회 중에는 저장할 수 없다.
-    await expect(checkCupLineup(ctx.db, a!.profileId, 1, [], 7, before)).rejects.toMatchObject({
+    await expect(checkCupLineup(ctx.db, a!.profileId, 1, [], 7, before, 70)).rejects.toMatchObject({
       details: { reason: 'CUP_MIN_FILLED' },
     });
     await runCup(ctx.db, at, [CUP]);
@@ -719,6 +748,54 @@ describe('T-11-145 컵 진행(cron)', () => {
       bought: 6,
       cap: REWARD_UNCAPPED,
     });
+  });
+
+  it('T-11-513 확정 강화를 구단 자금으로 받는다: 같은 날 값이 오르고 하루 횟수가 있으며 보상 값과 따로 센다', async () => {
+    const who = await issueGoogleCookie(ctx);
+    type Shop = { balance: number; offer: { price: number | null; bought: number; cap: number } };
+    const shop = async () =>
+      (
+        (await (
+          await callJson(ctx.env, 'GET', '/v1/items/sure', { cookie: who.cookie })
+        ).json()) as { data: Shop }
+      ).data;
+    const buy = (price: number, k: string) =>
+      callJson(ctx.env, 'POST', '/v1/items/sure/buy', {
+        cookie: who.cookie,
+        body: { price },
+        headers: { [IDEMPOTENCY_KEY_HEADER]: `sure-${k}-key` },
+      });
+    const reason = async (r: Response) =>
+      ((await r.json()) as { error: { details: { reason: string } } }).error.details.reason;
+    expect(await shop()).toEqual({ balance: 0, offer: { price: 2_000_000, bought: 0, cap: 3 } });
+    expect(await reason(await buy(2_000_000, 'a'))).toBe('FUNDS_SHORT');
+    await ctx.db
+      .insert(ownerFunds)
+      .values({ profileId: who.profileId, balance: 20_000_000, updatedAt: CUP.opensAt });
+    const first = await buy(2_000_000, 'b');
+    expect(first.status).toBe(200);
+    expect(((await first.json()) as { data: Shop }).data).toEqual({
+      balance: 18_000_000,
+      offer: { price: 4_000_000, bought: 1, cap: 3 },
+    });
+    // 같은 키로 다시 보내면 두 번 쓰지 않는다. 옛 가격이면 가격이 바뀌었다고 알린다.
+    expect((await buy(2_000_000, 'b')).status).toBe(200);
+    expect(await reason(await buy(2_000_000, 'c'))).toBe('PRICE_CHANGED');
+    expect((await buy(4_000_000, 'd')).status).toBe(200);
+    expect((await buy(8_000_000, 'e')).status).toBe(200);
+    expect(await shop()).toEqual({ balance: 6_000_000, offer: { price: null, bought: 3, cap: 3 } });
+    expect(await reason(await buy(16_000_000, 'f'))).toBe('DAILY_LIMIT');
+    // 광고 대신 받는 보상 값은 그대로다(옛 앱이 받는 응답에 끼지 않는다).
+    const rewards = await callJson(ctx.env, 'GET', '/v1/items/rewards', { cookie: who.cookie });
+    const r = (await rewards.json()) as { data: { offers: Record<string, { bought: number }> } };
+    expect(Object.keys(r.data.offers).sort()).toEqual(['boost', 'candidates', 'peek']);
+    expect(r.data.offers.boost!.bought).toBe(0);
+    const ledger = await ctx.db.select().from(ownerItemPurchases);
+    expect(ledger.map((x) => `${x.item}:${x.price}`).sort()).toEqual([
+      'sure:2000000',
+      'sure:4000000',
+      'sure:8000000',
+    ]);
   });
 
   it('대회 화면은 누구나 본다', async () => {

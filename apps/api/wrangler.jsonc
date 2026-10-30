@@ -29,7 +29,7 @@
   // 로컬 기본값. 원격 origin은 staging/production 환경에만 둔다. 비밀값 없음.
   "vars": {
     "ENVIRONMENT": "local",
-    "ALLOWED_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173",
+    "ALLOWED_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174",
     // D-21. GOOGLE_CLIENT_ID·GOOGLE_CLIENT_SECRET은 U-003 뒤 `wrangler secret put`으로 넣는다.
     // GOOGLE_FAKE=1은 로컬에서만 의미가 있다(가짜 OIDC).
     "WEB_APP_URL": "http://localhost:5173",
@@ -71,14 +71,16 @@
     "production": {
       "name": "offside-api",
       "workers_dev": true,
-      // T-11-320 요청은 서울(ICN)에서 받지만 D1 주 DB는 다른 APAC 지점에 있어, 쿼리 실행은 0.2ms인데 한 번 오갈 때마다
-      // 약 100ms가 든다. 로그인 요청은 세션·프로필·본문 조회를 차례로 부르니 그만큼 쌓인다(시즌 저장 약 620ms).
-      // Smart Placement가 워커를 D1 가까이에서 돌려 사용자↔워커 한 번만 멀리 오가게 한다.
+      // T-11-385 invocation metrics already showed most fetches in SIN with Smart Placement.
+      // An explicit Singapore-region trial did not establish a material D1 round-trip benefit.
+      // Keep automatic placement so this does not pin compute if the D1 primary changes.
       "placement": { "mode": "smart" },
       "ai": { "binding": "AI" },
       "routes": [{ "pattern": "api.offside-lab.com", "custom_domain": true }],
       "observability": {
         "enabled": true,
+        // OAuth callbacks can carry credentials in the URL. Keep query strings out of logs and traces.
+        "redact_query_string": true,
         // T-11-252 호출 로그(invocation log)는 요청마다 1건씩 더 쌓여 Workers Logs 포함량(월 2천만 건)을 넘긴다. 요청 기록은
         // middleware/logger.ts의 JSON 한 줄로 충분하다.
         "logs": { "enabled": true, "invocation_logs": false },
@@ -88,12 +90,21 @@
       "triggers": { "crons": ["0 19 * * *", "*/5 * * * *"] },
       "queues": {
         "producers": [
+          { "binding": "PUSH_QUEUE", "queue": "offside-push-production" },
           { "binding": "BILLING_QUEUE", "queue": "offside-billing-production" },
           { "binding": "CUP_PUSH_QUEUE", "queue": "offside-cup-push-production" },
           { "binding": "ADMIN_PUSH_QUEUE", "queue": "offside-admin-push-production" },
           { "binding": "CAREER_PUSH_QUEUE", "queue": "offside-career-push-production" },
         ],
         "consumers": [
+          {
+            "queue": "offside-push-production",
+            "max_batch_size": 1,
+            "max_batch_timeout": 1,
+            "max_concurrency": 1,
+            "max_retries": 3,
+            "dead_letter_queue": "offside-push-production-dlq",
+          },
           {
             "queue": "offside-billing-production",
             "max_batch_size": 1,
@@ -158,6 +169,12 @@
         "CAREER_REMINDER_ENABLED": "1",
         "REENGAGEMENT_PUSH_ENABLED": "1",
         "ATTENDANCE_REMINDER_ENABLED": "1",
+        "RETENTION_PUSH_ENABLED": "1",
+        "RETENTION_HOLDOUT_UNTIL": "2026-11-10T15:00:00.000Z",
+        // T-11-512 클럽 멤버십 가입을 받는다. 입구는 MEMBERSHIP_LIVE(앱 1.1.5)가 열고, 그 전에는 개발 빌드만 닿는다.
+        "MEMBERSHIP_ENABLED": "1",
+        // T-11-569 시즌 패스 판매. 코드가 시즌 2 개막(2026-10-31 00:00 KST) 전에는 팔지 않고 입구도 숨기므로(passSaleOpen) 미리 켜 둔다.
+        "SEASON_PASS_ENABLED": "1",
         "ALLOWED_ORIGINS": "https://offside-lab.com,https://offside-web.tasddc1569.workers.dev",
         "WEB_APP_URL": "https://offside-web.tasddc1569.workers.dev",
         "GOOGLE_REDIRECT_URI": "https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback",

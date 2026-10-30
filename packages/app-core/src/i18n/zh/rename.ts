@@ -1,0 +1,31 @@
+import type { Translation } from '../core';
+import type { RenameMsgs } from '../ko/rename';
+
+export const rename: Translation<RenameMsgs> = {
+  title: '更改球員名字',
+  entry: '改名',
+  entryLabel: (p) => `更改${p.name}的名字`,
+  lead: '用 1 張改名券更改名字。新名字會公開在名人堂、轉會市場與俱樂部比賽中。',
+  label: '新名字',
+  rule: (p) => `最多 ${p.max} 個字。不能使用連結、不雅字詞與 < > 符號。`,
+  next: '下一步',
+  confirm: (p) => `要把名字改成「${p.name}」嗎？`,
+  confirmNote: '會使用 1 張改名券，新名字會公開在名人堂、轉會市場與俱樂部比賽中。',
+  edit: '重新修改',
+  have: (p) => `持有改名券 ${p.n} 張`,
+  btn: '使用 1 張並更改',
+  busy: '更改中…',
+  done: (p) => `已將名字改為「${p.name}」。`,
+  fail: '無法更改名字，請稍後再按一次。',
+  empty: '請輸入名字。',
+  invalid: '這個名字無法使用，請輸入其他名字。',
+  same: '和目前的名字相同。',
+  none: '沒有改名券。簽到第 28 天可獲得 1 張。',
+  noneApp: '沒有改名券。簽到第 28 天可獲得 1 張，也可以在下方購買。',
+  guest: '登入後即可用改名券更改球員名字。',
+  close: '關閉',
+  shopTitle: '球員改名券',
+  shopHave: (p) => `持有改名券 ${p.n} 張`,
+  shopWeb: '改名券可在 App 中購買。',
+  shopNote: '現役球員在球員畫面的名字旁更改，退役或簽下的球員則在「我的球員」清單中更改。',
+};

@@ -4,6 +4,8 @@
 // T-10-090 전체 보기는 '전체 / 시즌 1'을 고른다. 시즌 순위엔 개막 뒤 새로 만든 선수만 오른다(프리시즌 선수 제외).
 // T-11-029 '프리시즌' 탭은 개막 전에 만든 선수만 모은다(개막 뒤에 은퇴해도 포함). 홈 미리보기는 지금 시즌 TOP이다.
 // T-11-018 포지션별 순위 — 레전드 점수 상위권을 공격수가 채우므로 포지션 안에서도 겨루게 한다.
+import { hofBasisNote } from '@offside/app-core/hofBasis';
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
@@ -37,16 +39,23 @@ import { rem } from '../theme/type';
 import { useColors } from '../theme/useColors';
 import { Btn } from '../ui/Btn';
 import { Card } from '../ui/Card';
+import { Skeleton } from '../ui/Skeleton';
 import { MoreLink } from '../ui/MoreLink';
 import { Press } from '../ui/Press';
 import { scrollTo } from '../ui/scroll';
 import { Txt } from '../ui/Txt';
 import { HofRow, type RowStats } from './HofRow';
 import { HofPodium } from './HofPodium';
-import { RecordsSelect, RecordsFilters, RecordsChips } from '../screens/hof/RecordsControls';
+import {
+  RecordsSelect,
+  RecordsFilters,
+  RecordsChips,
+  RECORDS_TOUCH,
+} from '../screens/hof/RecordsControls';
 import { hofText as L } from '@offside/app-core/i18n/ko/hof';
 import { raiserLabel } from '@offside/app-core/hofRaiser';
 import { seasonLabel } from '@offside/app-core/seasonName';
+import { seasonOptions } from '../ui/seasonOptions';
 
 const TOP = 3;
 const PER_PAGE = 10;
@@ -199,7 +208,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
       : L.emptySort({ scope, sort: by.label });
 
   const empty = (text: string) => (
-    <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
+    <Txt tone="muted" style={{ fontSize: rem(FONT.body2), paddingVertical: 8 }}>
       {text}
     </Txt>
   );
@@ -248,6 +257,28 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
           testID="hof-filters"
           open={filtering}
           onToggle={() => setFiltering(!filtering)}
+          trailing={
+            // T-11-441 검색은 접힌 필터 안이 아니라 필터 옆에 늘 둔다(웹 툴바의 돋보기와 같다).
+            !upcoming ? (
+              <Press
+                scale={1}
+                testID="hof-search"
+                accessibilityLabel={L.searchLabel}
+                accessibilityState={{ expanded: searching }}
+                onPress={toggleSearch}
+                style={{
+                  width: RECORDS_TOUCH,
+                  height: RECORDS_TOUCH,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: RADIUS.sm,
+                  backgroundColor: searching ? c.line : c.surface2,
+                }}
+              >
+                <SearchIcon color={c.ink} />
+              </Press>
+            ) : null
+          }
           label={`${posLabel || L.allPositions} · ${by.label}`}
           season={
             <RecordsSelect
@@ -257,10 +288,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
               onChange={(id) => pickSeason(id === 'all' ? null : Number(id))}
               options={[
                 { value: 'all', label: L.allSeasons },
-                ...[PRESEASON, ...SERVICE_SEASONS].map((s) => ({
-                  value: s.id,
-                  label: `${seasonLabel(s.id, s.name)}${notOpen(s) ? L.notOpen : ''}`,
-                })),
+                ...seasonOptions([PRESEASON, ...SERVICE_SEASONS], now),
               ]}
             />
           }
@@ -304,16 +332,6 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
                   isNew: isNew(key),
                 }))}
               />
-              <Press
-                scale={1}
-                testID="hof-search"
-                accessibilityState={{ expanded: searching }}
-                onPress={toggleSearch}
-                style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8 }}
-              >
-                <SearchIcon color={c.ink} />
-                <Txt style={{ fontSize: 13 }}>{L.searchLabel}</Txt>
-              </Press>
             </>
           ) : null}
         </RecordsFilters>
@@ -321,35 +339,38 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
 
       {upcoming ? (
         <View testID="hof-upcoming" style={{ paddingVertical: 8, gap: 4 }}>
-          <Txt bold style={{ fontSize: rem(0.875) }}>
+          <Txt bold style={{ fontSize: rem(FONT.body2) }}>
             {L.opens({
               name: seasonLabel(upcoming.id, upcoming.name),
               when: kstMonthDayHour(upcoming.startsAt),
             })}
           </Txt>
-          <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
             {L.opensNote}
           </Txt>
         </View>
       ) : all === null && !failed ? (
-        <Txt
-          tone="muted"
-          accessibilityLiveRegion="polite"
-          style={{ fontSize: rem(0.875), paddingVertical: 8 }}
-        >
-          {L.loading}
-        </Txt>
+        <Skeleton rows={6} />
       ) : failed ? (
         empty(L.loadFailed)
       ) : all && all.length ? (
         <>
           {full ? (
-            <Txt tone="muted" style={{ fontSize: rem(0.75), marginBottom: 6 }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginBottom: 6 }}>
               {L.source({ scope, q, sort: by.label, isScore: sort === 'score', total })}
             </Txt>
           ) : null}
+          {full && hofBasisNote(sort) ? (
+            <Txt
+              testID="hof-basis"
+              tone="muted"
+              style={{ fontSize: rem(FONT.caption), marginBottom: 8 }}
+            >
+              {hofBasisNote(sort)}
+            </Txt>
+          ) : null}
           {!full && ss ? (
-            <Txt tone="muted" style={{ fontSize: rem(0.75), marginBottom: 6 }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginBottom: 6 }}>
               {L.homeSource({ season: seasonLabel(ss.id, ss.name) })}
             </Txt>
           ) : null}

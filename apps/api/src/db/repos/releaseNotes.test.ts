@@ -126,7 +126,7 @@ describe('릴리즈 노트 게시 트랜잭션', () => {
       '웹에 적용했어요',
     );
   });
-  it('영어·일본어 본문을 함께 쌓고 번역이 없는 항목·옛 오늘 글은 한국어로 이어 쓴다', async () => {
+  it('영어·일본어·번체 중국어 본문을 함께 쌓고 번역이 없는 항목·옛 오늘 글은 한국어(번체 중국어는 영어)로 이어 쓴다', async () => {
     const en = { title: 'Records', items: ['Shows every nationality'] };
     await publishReleaseNotes(ctx.env.DB, input([{ ...entry, en }]), now);
     expect(JSON.parse(String((await post())!.i18n_json))).toEqual({
@@ -137,6 +137,11 @@ describe('릴리즈 노트 게시 트랜잭션', () => {
       ja: {
         title: '261003 リリースノート',
         body: '261003 リリースノート\n\n## 1. 기록실 개선\n- 선수 국적을 모두 표시해요',
+      },
+      // T-11-553 번체 중국어 문구가 없으면 영어 문구로 쓴다.
+      zh: {
+        title: '261003 更新說明',
+        body: '261003 更新說明\n\n## 1. Records\n- Shows every nationality',
       },
     });
     // 번역 칸을 나중에 더해도 게시한 항목의 이력 해시(한국어 원문)는 그대로다.

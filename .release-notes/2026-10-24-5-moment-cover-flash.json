@@ -1,0 +1,20 @@
+{
+  "id": "t-11-479b-moment-cover-flash",
+  "title": "시즌 진행 화면이 하얗게 번쩍이던 문제 수정",
+  "items": [
+    "밝은 테마에서 시즌을 진행할 때 화면이 하얗게 바뀌던 문제를 고쳤어요. 진행 중계 동안 뒤 화면은 어둡게 가려져요"
+  ],
+  "en": {
+    "title": "Fixed the white flash during season progress",
+    "items": [
+      "In the light theme, the screen no longer turns white when you advance the season. The screen behind the commentary is dimmed instead."
+    ]
+  },
+  "ja": {
+    "title": "シーズン進行中に画面が白くなる問題を修正",
+    "items": [
+      "ライトテーマでシーズンを進めると画面が白くなる問題を直しました。実況中は後ろの画面が暗く隠れます。"
+    ]
+  },
+  "availability": "web-app"
+}

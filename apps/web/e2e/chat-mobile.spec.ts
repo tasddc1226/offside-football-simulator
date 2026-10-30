@@ -19,7 +19,7 @@ async function openChat(page: Page, nickname = true, allOther = false) {
       }),
     ),
   );
-  await page.route(`${API}/v1/chat/ticket`, (route) =>
+  await page.route(`${API}/v1/chat/ticket*`, (route) =>
     route.fulfill(
       ok({
         ticket: nickname ? 'test' : null,

@@ -1,6 +1,7 @@
 // 팀 경기 화면(웹 TeamOpponents · TeamResult · TeamHistory · TeamMatchRow · TeamShare · teamShareCard,
 // 앱 TeamOpponents · TeamResult · TeamHistory · TeamShare). 웹·앱 문구가 다른 줄은 Web/App 접미사로 나눈다.
 import { ns } from '../core';
+import { waGwa } from '../../format.js';
 
 const ko = {
   // 상대 고르기
@@ -9,6 +10,11 @@ const ko = {
     `내 팀 레이팅 ${p.rating}점 근처의 팀이에요 · 오늘 남은 경기 ${p.left}/${p.per}`,
   oppRating: '레이팅',
   oppOvr: (p: { n: number }) => `OVR ${p.n}`,
+  /** T-11-443 상대 레이팅과 내 팀 레이팅의 차이(레이팅 아래 +N · −N). */
+  oppGapUp: (p: { n: string }) => `내 팀보다 ${p.n}점 높아요`,
+  oppGapDown: (p: { n: string }) => `내 팀보다 ${p.n}점 낮아요`,
+  oppGapEven: '내 팀과 같아요',
+  oppGapNote: '레이팅 아래 숫자는 내 팀과의 차이예요. 레이팅이 높은 팀을 이기면 더 많이 올라요.',
   oppRuleWeb: (p: { days: number }) =>
     `같은 팀에는 하루 한 번 도전할 수 있어요. 최근 ${p.days}일 안에 다시 만난 팀이면 레이팅이 덜 움직여요.`,
   oppRuleApp: (p: { days: number }) =>
@@ -22,6 +28,18 @@ const ko = {
   challengeAria: (p: { name: string }) => `${p.name}에 도전`,
   noOpponents: '아직 겨룰 팀이 없어요. 다른 구단주가 팀을 꾸리면 여기에 나와요.',
   moreOpponents: '다른 상대 보기',
+  // T-11-510 시즌 2 자동 매칭(서버가 비슷한 상대 한 팀을 골라 준다)
+  matchTitle: '랭크 매칭',
+  matchNear: (p: { rp: number; left: number; per: number }) =>
+    `내 팀 ${p.rp} RP에 맞는 상대예요 · 오늘 남은 경기 ${p.left}/${p.per}`,
+  matchRule: (p: { n: number }) =>
+    `RP와 전력이 비슷한 팀을 골라 드려요. 경기마다 상대를 ${p.n}번까지 다시 찾을 수 있어요.`,
+  matchGapNote:
+    'RP 아래 숫자는 내 팀과의 차이예요. RP가 높은 팀을 이기면 더 오르고, 져도 덜 깎여요.',
+  oppRp: 'RP',
+  matchStart: '경기 시작',
+  matchStartAria: (p: { name: string }) => `${p.name}${waGwa(p.name)} 경기 시작`,
+  matchRepick: (p: { left: number; max: number }) => `다른 상대 찾기 (${p.left}/${p.max})`,
   // 최근 경기
   historyTitle: '최근 경기',
   historyFail: '경기 기록을 불러오지 못했어요.',
@@ -34,7 +52,7 @@ const ko = {
   historyMoreLoading: '불러오는 중…',
   historyMoreFail: '경기를 더 불러오지 못했어요. 다시 눌러 주세요.',
   statsCardTitle: '시즌 통계',
-  statsCardLead: '선수별 골 · 도움과 날짜별 · 상대별 전적을 모아 봐요.',
+  statsCardLead: '선수별 출전 · 골 · 도움과 날짜별 · 상대별 전적을 모아 봐요.',
   statsCardRecord: (p: { season: string; record: string }) => `${p.season} · ${p.record}`,
   statsOpen: '시즌 통계 보기',
   statsTitle: '시즌 통계',
@@ -51,6 +69,18 @@ const ko = {
   statsNoScorers: '아직 골이나 도움을 기록한 선수가 없어요.',
   statsGoals: '골',
   statsAssists: '도움',
+  // T-11-518 선수 출전 수 · 정렬
+  statsApps: '출전',
+  statsSortLabel: '정렬',
+  statsSortGoals: '골',
+  statsSortAssists: '도움',
+  statsSortApps: '출전',
+  statsPerGame: (p: { v: string }) => `경기당 ${p.v}골`,
+  statsNoGoal: '골 없음',
+  statsYouthSub: '빈 자리를 채운 경기',
+  statsAppsNote: '출전은 선발로 뛴 경기예요.',
+  statsAppsPartial: (p: { n: number }) =>
+    `출전은 선발 기록이 남은 최근 ${p.n}경기에서 셌어요. 그 전 경기는 출전에 들어가지 않아요.`,
   statsGfGa: (p: { gf: number; ga: number }) => `득점 ${p.gf} · 실점 ${p.ga}`,
   statsOppOwner: (p: { owner: string; n: number }) => `${p.owner} · ${p.n}경기`,
   // T-11-358 흐름 요약 · 경기 종류별 전적 · 남의 팀 통계
@@ -80,12 +110,16 @@ const ko = {
   // 경기 결과
   assist: (p: { name: string }) => `도움 ${p.name}`,
   noGoals: '골 없이 비겼어요.',
-  resultRecord: (p: { record: string }) => ` · 내 팀 ${p.record}`,
+  recordChip: (p: { record: string }) => `내 팀 전적 ${p.record}`,
   ratingChange: '내 팀 레이팅 ',
+  ratingChangeRp: '내 팀 RP ',
   backHistory: '기록으로 돌아가기',
   backDefaultApp: '내 팀',
   replay: '중계 다시 보기',
   again: '다시 경기하기',
+  againLeft: (p: { n: number }) => `오늘 ${p.n}경기 남았어요`,
+  againNone: '오늘 경기를 모두 치렀어요',
+  friendlyNote: '친선전이라 레이팅은 그대로예요.',
   scoreAria: (p: { h: number; a: number }) => `${p.h} 대 ${p.a}`,
   // 공유 이미지(대화상자)
   shareTitle: 'SNS 공유 이미지',

@@ -1,15 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { shellInstallText as L } from '@offside/app-core/i18n/ko/shellInstall';
-  import { IOS_APP_STORE_URL, ANDROID_TESTER_FORM_URL } from '@offside/app-core/links';
   import { trackAppConversion, trackAppStoreClick, type AppConversionPlace } from '../analytics/index.js';
-  import { appTarget } from './appStore.js';
+  import { appTarget, appStoreUrl, opensInPlace, playStoreUrl } from './appStore.js';
   import { playedEnough } from './adLanding.js';
   import { conversionNotice, restoreConversionNotice, dismissConversionNotice, homePromptDue, recordHomePrompt } from './appConversion.svelte.js';
 
   const { context }: { context: AppConversionPlace } = $props();
   let ready = $state(false);
   let target = $state<'ios' | 'android' | 'both'>('both');
+  const playUrl = playStoreUrl();
   let viewed = false;
   let eligible = $state(false);
   let element: HTMLElement | undefined = $state();
@@ -36,7 +36,7 @@
   });
   function click(to: 'ios' | 'android') {
     trackAppConversion('click', context, to);
-    if (to === 'ios') trackAppStoreClick(context);
+    trackAppStoreClick(context, to);
   }
   function dismiss() {
     trackAppConversion('dismiss', context, target);
@@ -47,11 +47,10 @@
 {#if visible}
   <aside bind:this={element} class="card app-conversion" data-app-conversion={context} aria-label={L.conversionTitle}>
     <div class="heading"><strong>{milestone ? L.conversionMilestone : L.conversionTitle}</strong>{#if context === 'home'}<button class="icon-btn" aria-label={L.conversionDismiss} onclick={dismiss}>×</button>{/if}</div>
-    {#if target !== 'android'}<p class="muted fs-sm">{L.conversionIos}</p>{/if}
-    {#if target !== 'ios'}<p class="muted fs-sm">{L.conversionAndroid}</p>{/if}
+    <p class="muted fs-sm">{L.conversionBenefit}</p>
     <div class="actions">
-      {#if target !== 'android'}<a class="btn btn-accent" data-act="app-store" href={IOS_APP_STORE_URL} target="_blank" rel="noopener noreferrer" onclick={() => click('ios')}>{L.conversionStore}</a>{/if}
-      {#if target !== 'ios'}<a class="btn" data-act="android-tester" href={ANDROID_TESTER_FORM_URL} target="_blank" rel="noopener noreferrer" onclick={() => click('android')}>{L.conversionTest}</a>{/if}
+      {#if target !== 'android'}<a class="btn btn-accent" data-act="app-store" href={appStoreUrl()} target="_blank" rel="noopener noreferrer" onclick={() => click('ios')}>{L.conversionStore}</a>{/if}
+      {#if target !== 'ios'}<a class="btn btn-accent" data-act="play-store" href={playUrl} target={opensInPlace(playUrl) ? undefined : '_blank'} rel="noopener noreferrer" onclick={() => click('android')}>{L.conversionPlay}</a>{/if}
     </div>
     <p class="muted fs-sm transfer">{L.conversionTransfer}</p>
   </aside>

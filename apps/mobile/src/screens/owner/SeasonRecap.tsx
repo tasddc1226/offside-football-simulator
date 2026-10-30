@@ -2,6 +2,7 @@
 // 맨 위 시즌 카드(등급 · 한 줄 요약 · 자랑거리) → 숫자 → 이 시즌의 얼굴 → 카드 등급 → 팀 → 순위 → 기록 배지 → 남긴 선수 순.
 // 끝난 시즌이 둘 이상이면 시즌 칩으로 고른다(기본은 가장 최근). '결산 공유하기'는 같은 값을 4:5 한 장으로 그린다(RecapShare.tsx).
 // 결산을 열면 그 시즌을 '봤다'고 기록해 구단주 허브 카드의 NEW 표시를 끈다. 뒤로 가기는 구단주 허브로 돌아간다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import {
   createContext,
   useContext,
@@ -53,10 +54,11 @@ import { DISPLAY, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Press, Screen, Topbar, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
-import { Seg, TabOpt } from '../board/parts';
+import { SelectField } from '../settings/parts';
 import { RECAP_INK, RecapBackdrop, RecapShare } from './RecapShare';
 import { RecapCardReel } from './recap/RecapCardReel';
 import { RecapTeamPhoto } from './recap/RecapTeamPhoto';
+import { seasonOptions } from '../../ui/seasonOptions';
 
 const StillRecord = createContext(false);
 
@@ -69,7 +71,7 @@ const Sec = ({ children }: { children: string }) => (
 
 /** 카드 제목 아래 한 줄 설명(웹 .sec-lead). */
 const Lead = ({ children }: { children: string }) => (
-  <Txt tone="muted" style={{ fontSize: rem(0.875), marginTop: -4 }}>
+  <Txt tone="muted" style={{ fontSize: rem(FONT.body2), marginTop: -4 }}>
     {children}
   </Txt>
 );
@@ -106,14 +108,14 @@ function Stat({ label, value, testID }: { label: string; value: string; testID?:
         gap: 2,
         paddingVertical: 10,
         paddingHorizontal: 12,
-        borderRadius: 12,
+        borderRadius: RADIUS.md,
         backgroundColor: c.surface2,
       }}
     >
-      <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
         {label}
       </Txt>
-      <Txt num style={{ fontSize: rem(1.125) }}>
+      <Txt num style={{ fontSize: rem(FONT.title3) }}>
         {value}
       </Txt>
     </View>
@@ -145,20 +147,20 @@ function BigNumber({ n }: { n: { key: string; label: string; value: number } }) 
         paddingTop: 12,
         paddingBottom: 10,
         paddingHorizontal: 6,
-        borderRadius: 14,
+        borderRadius: RADIUS.md,
         backgroundColor: lead ? mix(c.accent, c.surface2, 0.14) : c.surface2,
       }}
     >
       <CountUp
         value={n.value}
         style={{
-          fontSize: rem(1.75),
-          lineHeight: rem(1.75) * 1.05,
+          fontSize: rem(FONT.title1),
+          lineHeight: rem(FONT.title1) * 1.05,
           color: lead ? c.accentText : c.ink,
           textAlign: 'center',
         }}
       />
-      <Txt tone="muted" center style={{ fontSize: rem(0.75) }}>
+      <Txt tone="muted" center style={{ fontSize: rem(FONT.caption) }}>
         {n.label}
       </Txt>
     </View>
@@ -181,7 +183,7 @@ function ShareButton({ where, onPress }: { where: 'hero' | 'end'; onPress: () =>
         minHeight: 44,
         marginTop: 8,
         paddingHorizontal: 20,
-        borderRadius: 12,
+        borderRadius: RADIUS.md,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -207,7 +209,7 @@ function ShareButton({ where, onPress }: { where: 'hero' | 'end'; onPress: () =>
           strokeLinejoin="round"
         />
       </Svg>
-      <Txt style={{ color: fg, fontSize: rem(0.9375), fontWeight: '600' }}>{L.shareBtn}</Txt>
+      <Txt style={{ color: fg, fontSize: rem(FONT.body1), fontWeight: '600' }}>{L.shareBtn}</Txt>
     </Press>
   );
 }
@@ -234,10 +236,14 @@ function HonorBadge({ h }: { h: HonorView }) {
         <HonorEmblem h={h} size={76} />
       </View>
       <View style={{ gap: 1, alignItems: 'center', minWidth: 0 }} accessibilityElementsHidden>
-        <Txt bold center style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.25 }}>
+        <Txt bold center style={{ fontSize: rem(FONT.label), lineHeight: rem(FONT.label) * 1.25 }}>
           {h.title}
         </Txt>
-        <Txt num={600} center style={{ fontSize: rem(0.75), color: text, fontWeight: '600' }}>
+        <Txt
+          num={600}
+          center
+          style={{ fontSize: rem(FONT.caption), color: text, fontWeight: '600' }}
+        >
           {h.detail}
         </Txt>
       </View>
@@ -293,7 +299,7 @@ export default function SeasonRecap({ record }: { record?: SeasonRecapResponse }
   const recap = res?.recap ?? null;
   const shown = res ? teamSeasonLabel(res.season) : '';
   const honors = res ? honorViews(res.honors) : [];
-  const muted = { fontSize: rem(0.875) } as const;
+  const muted = { fontSize: rem(FONT.body2) } as const;
 
   return (
     <StillRecord.Provider value={embedded}>
@@ -314,21 +320,14 @@ export default function SeasonRecap({ record }: { record?: SeasonRecapResponse }
                 ) : null}
               </View>
               {seasons && seasons.length > 1 ? (
-                <Seg
-                  cols={Math.min(seasons.length, 3)}
+                <SelectField
                   label={L.pickSeason}
+                  testID="recap-season"
+                  value={season ?? seasons[seasons.length - 1]!}
+                  options={seasonOptions(seasons)}
+                  onChange={setPicked}
                   style={{ marginTop: 4 }}
-                >
-                  {seasons.map((id) => (
-                    <TabOpt
-                      key={id}
-                      title={teamSeasonLabel(id)}
-                      selected={season === id}
-                      testID={`recap-season-${id}`}
-                      onPress={() => setPicked(id)}
-                    />
-                  ))}
-                </Seg>
+                />
               ) : null}
               {st.kind === 'loading' ? (
                 <Txt tone="muted" accessibilityLiveRegion="polite" style={muted}>
@@ -456,7 +455,7 @@ function Hero({ recap, onShare }: { recap: Recap; onShare: () => void }) {
     <View
       testID={`recap-tier-${tier}`}
       style={{
-        borderRadius: 20,
+        borderRadius: RADIUS.lg,
         overflow: 'hidden',
         alignItems: 'center',
         gap: 6,
@@ -476,7 +475,7 @@ function Hero({ recap, onShare }: { recap: Recap; onShare: () => void }) {
           style={{
             color: RECAP_INK.gold,
             fontFamily: DISPLAY[700],
-            fontSize: rem(1.125),
+            fontSize: rem(FONT.title3),
             letterSpacing: 1,
           }}
         >
@@ -486,7 +485,7 @@ function Hero({ recap, onShare }: { recap: Recap; onShare: () => void }) {
           style={{
             color: RECAP_INK.muted,
             fontFamily: DISPLAY[700],
-            fontSize: rem(0.875),
+            fontSize: rem(FONT.body2),
             letterSpacing: 1,
           }}
         >
@@ -528,13 +527,13 @@ function Hero({ recap, onShare }: { recap: Recap; onShare: () => void }) {
           style={{
             color: palette.light,
             fontFamily: DISPLAY[700],
-            fontSize: rem(1.5),
+            fontSize: rem(FONT.title1),
             letterSpacing: 0.3,
           }}
         >
           {title}
         </Txt>
-        <Txt num style={{ color: RECAP_INK.muted, fontSize: rem(0.8125) }}>
+        <Txt num style={{ color: RECAP_INK.muted, fontSize: rem(FONT.label) }}>
           {tierReason(recap)}
         </Txt>
       </View>
@@ -545,9 +544,9 @@ function Hero({ recap, onShare }: { recap: Recap; onShare: () => void }) {
           marginTop: 8,
           maxWidth: 300,
           color: RECAP_INK.ink,
-          fontSize: rem(1.0625),
+          fontSize: rem(FONT.title3),
           fontWeight: '700',
-          lineHeight: rem(1.0625) * 1.5,
+          lineHeight: rem(FONT.title3) * 1.5,
         }}
       >
         {recapHeadline(recap)}
@@ -569,13 +568,13 @@ function Hero({ recap, onShare }: { recap: Recap; onShare: () => void }) {
               style={{
                 paddingVertical: 5,
                 paddingHorizontal: 12,
-                borderRadius: 999,
+                borderRadius: RADIUS.pill,
                 borderWidth: 1,
                 borderColor: alpha(palette.light, 0.55),
                 backgroundColor: alpha(palette.base, 0.22),
               }}
             >
-              <Txt style={{ color: palette.mark, fontSize: rem(0.8125), fontWeight: '700' }}>
+              <Txt style={{ color: palette.mark, fontSize: rem(FONT.label), fontWeight: '700' }}>
                 {h}
               </Txt>
             </View>
@@ -695,27 +694,29 @@ function BestFace({ best }: { best: Best }) {
         </Animated.View>
       ) : null}
       <View style={{ flex: card ? 1 : undefined, minWidth: 0, gap: 2 }}>
-        <Txt style={{ color: sw.ink, opacity: 0.8, fontSize: rem(0.75), fontWeight: '600' }}>
+        <Txt
+          style={{ color: sw.ink, opacity: 0.8, fontSize: rem(FONT.caption), fontWeight: '600' }}
+        >
           {`${L.best} · ${L.cardTierName({ tier })}`}
         </Txt>
         <Txt
           style={{
             color: sw.ink,
-            fontSize: rem(1.125),
-            lineHeight: rem(1.125) * 1.3,
+            fontSize: rem(FONT.title3),
+            lineHeight: rem(FONT.title3) * 1.3,
             fontWeight: '700',
           }}
         >
           {name}
         </Txt>
-        <Txt style={{ color: sw.ink, opacity: 0.8, fontSize: rem(0.8125) }}>
+        <Txt style={{ color: sw.ink, opacity: 0.8, fontSize: rem(FONT.label) }}>
           {[POS[best.pos].label, best.lastClub].filter(Boolean).join(' · ')}
         </Txt>
-        <Txt num style={{ color: sw.ink, marginTop: 6, fontSize: rem(1.125) }}>
+        <Txt num style={{ color: sw.ink, marginTop: 6, fontSize: rem(FONT.title3) }}>
           {L.bestScore({ score: num(best.score) })}
         </Txt>
         {best.peak ? (
-          <Txt num style={{ color: sw.ink, opacity: 0.85, fontSize: rem(0.9375) }}>
+          <Txt num style={{ color: sw.ink, opacity: 0.85, fontSize: rem(FONT.body1) }}>
             {`${L.peak} ${best.peak}`}
           </Txt>
         ) : null}
@@ -725,7 +726,7 @@ function BestFace({ best }: { best: Best }) {
   const box = {
     minHeight: 44,
     padding: 14,
-    borderRadius: 14,
+    borderRadius: RADIUS.md,
     borderWidth: 2,
     borderColor: sw.line,
     overflow: 'hidden',
@@ -760,11 +761,11 @@ function ScorerFace({ scorer }: { scorer: NonNullable<NonNullable<Recap['stats']
   const name = playerName(scorer.name, scorer.pos, null);
   const body = (
     <View style={{ gap: 2 }}>
-      <Txt style={{ opacity: 0.8, fontSize: rem(0.75), fontWeight: '600' }}>{L.scorer}</Txt>
-      <Txt bold style={{ fontSize: rem(1.125), lineHeight: rem(1.125) * 1.3 }}>
+      <Txt style={{ opacity: 0.8, fontSize: rem(FONT.caption), fontWeight: '600' }}>{L.scorer}</Txt>
+      <Txt bold style={{ fontSize: rem(FONT.title3), lineHeight: rem(FONT.title3) * 1.3 }}>
         {name}
       </Txt>
-      <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
         {POS[scorer.pos].label}
       </Txt>
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4, paddingTop: 6 }}>
@@ -772,7 +773,7 @@ function ScorerFace({ scorer }: { scorer: NonNullable<NonNullable<Recap['stats']
           value={scorer.goals}
           style={{ fontSize: rem(2.25), lineHeight: rem(2.25), color: c.accentText }}
         />
-        <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
           {L.numGoals}
         </Txt>
       </View>
@@ -782,9 +783,9 @@ function ScorerFace({ scorer }: { scorer: NonNullable<NonNullable<Recap['stats']
   const box = {
     minHeight: 44,
     padding: 14,
-    borderRadius: 14,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: c.line,
+    borderColor: 'transparent',
     backgroundColor: c.surface2,
   } as const;
   return (
@@ -806,7 +807,13 @@ function Cards({ recap }: { recap: Recap }) {
       <View
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
-        style={{ flexDirection: 'row', gap: 2, height: 18, borderRadius: 9, overflow: 'hidden' }}
+        style={{
+          flexDirection: 'row',
+          gap: 2,
+          height: 18,
+          borderRadius: RADIUS.sm,
+          overflow: 'hidden',
+        }}
       >
         {bars
           .filter((b) => b.n > 0)
@@ -848,10 +855,13 @@ function Cards({ recap }: { recap: Recap }) {
                   borderColor: sw.line,
                 }}
               />
-              <Txt numberOfLines={1} style={{ fontSize: rem(0.8125), flexShrink: 1, color: c.ink }}>
+              <Txt
+                numberOfLines={1}
+                style={{ fontSize: rem(FONT.label), flexShrink: 1, color: c.ink }}
+              >
                 {b.label}
               </Txt>
-              <Txt num style={{ marginLeft: 'auto', fontSize: rem(0.9375) }}>
+              <Txt num style={{ marginLeft: 'auto', fontSize: rem(FONT.body1) }}>
                 {L.tierCount({ n: b.n })}
               </Txt>
             </View>
@@ -880,10 +890,10 @@ function TeamSection({ recap }: { recap: Recap }) {
               gap: 8,
             }}
           >
-            <Txt bold style={{ flex: 1, fontSize: rem(1.0625) }}>
+            <Txt bold style={{ flex: 1, fontSize: rem(FONT.title3) }}>
               {t.name}
             </Txt>
-            <Txt tone="muted" num style={{ fontSize: rem(0.875) }}>
+            <Txt tone="muted" num style={{ fontSize: rem(FONT.body2) }}>
               {L.played({ n: num(sum.played) })}
             </Txt>
           </View>
@@ -895,7 +905,7 @@ function TeamSection({ recap }: { recap: Recap }) {
                 flexDirection: 'row',
                 gap: 2,
                 height: 26,
-                borderRadius: 8,
+                borderRadius: RADIUS.sm,
                 overflow: 'hidden',
               }}
             >
@@ -919,7 +929,7 @@ function TeamSection({ recap }: { recap: Recap }) {
                       justifyContent: 'center',
                     }}
                   >
-                    <Txt num style={{ color: '#ffffff', fontSize: rem(0.875) }}>
+                    <Txt num style={{ color: '#ffffff', fontSize: rem(FONT.body2) }}>
                       {String(n)}
                     </Txt>
                   </View>
@@ -956,7 +966,7 @@ function TeamSection({ recap }: { recap: Recap }) {
           </Grid>
         </>
       ) : (
-        <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
           {L.noTeam}
         </Txt>
       )}
@@ -980,9 +990,9 @@ function Ranks({ recap }: { recap: Recap }) {
           accessibilityLabel={`${r.label} ${rankLine(r.rank, r.total)}`}
           style={{ gap: 6 }}
         >
-          <Txt style={{ fontSize: rem(0.875) }}>{r.label}</Txt>
+          <Txt style={{ fontSize: rem(FONT.body2) }}>{r.label}</Txt>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-            <Txt num style={{ flex: 1, minWidth: 0, fontSize: rem(1.0625) }}>
+            <Txt num style={{ flex: 1, minWidth: 0, fontSize: rem(FONT.title3) }}>
               {rankText(r.rank, r.total)}
             </Txt>
             {r.pct !== null ? (
@@ -990,13 +1000,13 @@ function Ranks({ recap }: { recap: Recap }) {
                 style={{
                   paddingVertical: 2,
                   paddingHorizontal: 8,
-                  borderRadius: 999,
+                  borderRadius: RADIUS.pill,
                   backgroundColor: r.hot ? mix(c.accent, c.surface, 0.18) : c.surface2,
                 }}
               >
                 <Txt
                   style={{
-                    fontSize: rem(0.75),
+                    fontSize: rem(FONT.caption),
                     fontWeight: '700',
                     color: r.hot ? c.accentText : c.muted,
                   }}
@@ -1021,7 +1031,7 @@ function Ranks({ recap }: { recap: Recap }) {
         </View>
       ))}
       {recap.achievements ? (
-        <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+        <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
           {`${L.achScore} ${num(recap.achievements.score)} · ${L.achDone({ n: recap.achievements.done })}`}
         </Txt>
       ) : null}

@@ -150,12 +150,19 @@ describe('compact owner summary', () => {
           wallOfHonor: 0,
           firsts: 0,
           achScore: 1480,
+          // T-11-489 시즌 2부터는 마감 순위의 상위 비율: 1,000명 중 300위는 골드(상위 40%까지).
+          achRank: 300,
           createdAt: '2027-02-01T00:00:00Z',
         });
         await ctx.db.insert(appMeta).values({
           key: `season-close:${season}`,
           value:
-            season === 3 ? 'invalid' : JSON.stringify({ step: season === 2 ? 'ranks' : 'done' }),
+            season === 3
+              ? 'invalid'
+              : JSON.stringify({
+                  step: season === 2 ? 'ranks' : 'done',
+                  ranked: { team: 0, ach: 1000, hof: 0 },
+                }),
         });
       }
       expect(

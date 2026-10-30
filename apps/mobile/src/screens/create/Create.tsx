@@ -1,5 +1,6 @@
 // 선수 생성(웹 Create.svelte): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
 // 1단계(프로필 입력) → 2단계(후보 카드 비교·선택). appState.candidates가 있으면 2단계.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { careerGuideText as CG } from '@offside/app-core/i18n/ko/careerGuide';
 import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { Alert, Animated, Easing, ScrollView, TextInput, View } from 'react-native';
@@ -12,7 +13,6 @@ import {
   TRAITS,
   ATTR_KEYS,
   FOCUS_PICK,
-  FOCUS_GROWTH,
   attrLabels,
   defaultFocus,
   focusMod,
@@ -27,6 +27,7 @@ import { BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
 import { isKorean, nationOf } from '@offside/game/nation';
 import {
   bodyNote,
+  focusNote,
   hiddenStrength,
   scoutLine,
   startOvr,
@@ -41,10 +42,22 @@ import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
 import {
   REROLL_MILEAGE,
   rerollMileageLeft,
-  scoutPityView,
+  scoutPityAt,
   type ScoutPity,
 } from '@offside/contracts/cup';
 import { ScoutOdds } from '../owner/ScoutOdds';
+import { ScoutPityGauge } from './ScoutPityGauge';
+import {
+  candidateTiers,
+  gradeTier,
+  revealTiming,
+  revealTotal,
+  type RevealTier,
+  type RevealTiming,
+} from '@offside/app-core/reveal';
+import { revealText as RV } from '@offside/app-core/i18n/ko/reveal';
+import { CountUp } from '../../components/CountUp';
+import { flashEdge, revealBuzz, RevealGrade } from '../../components/RevealFx';
 import { fundsText } from '@offside/app-core/funds';
 import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
 import { useClubReward } from '../../platform/clubShop';
@@ -62,8 +75,8 @@ import {
   startCareer,
   toast,
 } from '../../game/host';
-import { claimReward, rewardOffer } from '../../platform/rewarded';
-import { adFree } from '../../platform/adFree';
+import { claimReward, prepareReward, rewardOffer } from '../../platform/rewarded';
+import { adFree, adsOff } from '../../platform/adFree';
 import { adRerollLeft, claimAdReroll } from '../../platform/adReroll';
 import { goHome, goRerollShop } from '../../game/nav';
 import { appState, prefs } from '../../store';
@@ -83,6 +96,7 @@ import {
   Txt,
   useShadow,
 } from '../../ui';
+import { CoachTarget } from '../../components/Coachmark';
 import { noteScrollY, revealFocusedInput } from '../../ui/scroll';
 import { useFormKeyboardScroll } from '../../ui/useFormKeyboardScroll';
 import { MiniRadar } from './MiniRadar';
@@ -98,7 +112,6 @@ const NO_PITY: ScoutPity = { used: 0, streak: 0, elites: 0 };
 
 const posKeys = Object.keys(POS) as Pos[];
 const feet = ['오른발', '왼발', '양발'] as const; // 저장값(화면에는 L.foot으로)
-const growthPct = Math.round((FOCUS_GROWTH - 1) * 100);
 
 // ── 입력을 원본 상태(appState.C)에 쓰는 동작들 ──
 // 세부 포지션을 바꾸면 주력 능력치도 그 포지션의 기본값으로 다시 켠다.
@@ -136,16 +149,19 @@ function confirmPick() {
 }
 
 /** 카드가 세로축으로 뒤집히며 열린다. 동작 줄이기면 바로 표시. */
-function FlipIn({ children }: { children: ReactNode }) {
+function FlipIn({ children, delay = 0 }: { children: ReactNode; delay?: number }) {
   const [v] = useState(() => new Animated.Value(prefs.motionOK ? 0 : 1));
   useEffect(() => {
     if (prefs.motionOK)
       Animated.timing(v, {
         toValue: 1,
+        // T-11-371 대박은 뒷면에서 한 박자 쉬고 뒤집힌다.
+        delay,
         duration: 360,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }).start();
+    // 마운트 때 한 번만 뒤집는다.
   }, [v]);
   return (
     <Animated.View
@@ -190,12 +206,71 @@ function FlyIn({ index, children }: { index: number; children: ReactNode }) {
 export default function Create() {
   const s = useSnapshot(appState, { sync: true });
   const C = s.C;
-  const owned = useSnapshot(adFree).owned;
+  const owned = adsOff(useSnapshot(adFree));
   const offer = rewardOffer('candidates', owned);
   const rewardLock = useRef(false);
   const [rewardBusy, setRewardBusy] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [rewardMessage, setRewardMessage] = useState('');
+  // T-11-371 팩 오픈식 공개: 열 때 보이는 값(OVR · 보장 · 천장)으로만 강도를 정한다. 이 화면에서 연 카드만 연출하고,
+  // 두 번째 카드부터는 짧게. 동작 줄이기 · "연출 짧게"면 결과만.
+  const tiers: RevealTier[] = s.candidates
+    ? candidateTiers(
+        s.candidates.map((c) => ({
+          ovr: startOvr(C.pos, c.attrs),
+          guaranteed: c.guaranteed,
+          pity: c.pity,
+        })),
+      )
+    : [];
+  const [fx, setFx] = useState<Record<number, RevealTiming & { done: boolean }>>({});
+  const opened = useRef(0);
+  const fxTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => {
+    // 다시 뽑기 · 프리미엄 스카우트로 후보가 바뀌면 새 카드로 다시 센다.
+    setFx({});
+    opened.current = 0;
+  }, [s.candidates]);
+  useEffect(() => () => fxTimers.current.forEach(clearTimeout), []);
+  const land = (i: number) =>
+    setFx((m) => {
+      const f = m[i];
+      if (!f || f.done) return m;
+      const tier = tiers[i] ?? 'normal';
+      revealBuzz(tier);
+      if (tier === 'jackpot') flashEdge();
+      return { ...m, [i]: { ...f, done: true } };
+    });
+  const stage = (i: number) => {
+    if (appState.candidatesOpen[i] || fx[i]) return;
+    const tier = tiers[i] ?? 'normal';
+    const t = revealTiming(tier, {
+      off: !prefs.motionOK,
+      short: prefs.revealShort,
+      repeat: opened.current++ > 0,
+    });
+    const total = revealTotal(t);
+    if (total === 0) revealBuzz(tier);
+    else fxTimers.current.push(setTimeout(() => land(i), total));
+    setFx((m) => ({ ...m, [i]: { ...t, done: total === 0 } }));
+  };
+  const pickCard = (i: number) => {
+    // 연출 중인 카드를 다시 누르면 바로 결과로 간다.
+    if (fx[i] && !fx[i].done) land(i);
+    stage(i);
+    pick(i);
+  };
+  const openAllCards = () => {
+    appState.candidatesOpen.forEach((_, i) => stage(i));
+    openAll();
+  };
+  // 잠재력 범위를 이 화면에서 새로 열었을 때만 등급 연출.
+  const potWas = useRef(s.candidatePotentialOpen);
+  const [potFresh, setPotFresh] = useState(false);
+  useEffect(() => {
+    if (s.candidatePotentialOpen && !potWas.current) setPotFresh(true);
+    potWas.current = s.candidatePotentialOpen;
+  }, [s.candidatePotentialOpen]);
   const reveal = async () => {
     if (rewardLock.current || appState.candidatePotentialOpen) return;
     rewardLock.current = true;
@@ -236,8 +311,9 @@ export default function Create() {
   // T-11-244 천장 카운트. 다시 보낼 때는 같은 시드 계획을 같은 멱등 키와 함께 쓴다.
   const [pity, setPity] = useState<ScoutPity>(NO_PITY);
   const scoutPlan = useRef<{ seed: number; hit: boolean } | null>(null);
-  const pityView = scoutPityView(pity);
   const premium = !!s.candidates?.some((x) => x.guaranteed);
+  // T-11-437 쓸 도구(리롤권 · 스카우트권 · 천장 기록)가 없으면 상점 안내 · 능력치 설명을 '더 보기'로 접는다.
+  const quiet = rerolls < 1 && scouts < 1 && pity.used < 1;
   useEffect(() => {
     if (!hasCandidates) return;
     let live = true;
@@ -278,6 +354,11 @@ export default function Create() {
   // T-11-154 광고 보고 다시 뽑기(리롤권 없이, 하루 2번, 이 기기에서 센다). 로그인하지 않아도 쓴다. 광고 단위 · 버튼 종류는
   // 후보 잠재력(offer)과 같다. 남은 횟수는 그릴 때마다 기기 저장소에서 읽는다(동기 · 작다).
   const adLeft = adRerollLeft();
+  // T-11-558 광고 버튼(잠재력 보기 · 다시 뽑기)이 보이면 광고를 미리 불러 둔다.
+  const adShown = offer === 'ad' && hasCandidates && (adLeft > 0 || !s.candidatePotentialOpen);
+  useEffect(() => {
+    if (adShown) prepareReward('candidates');
+  }, [adShown]);
   async function rerollWithAd() {
     if (rerollLock.current || rewardLock.current) return;
     rerollLock.current = true;
@@ -358,12 +439,16 @@ export default function Create() {
       premiumScoutCandidates(plan.seed, mode);
       setRewardMessage('');
       const n = r.data.scout;
+      // T-11-415 S가 그냥 나와 S 확정 칸이 0으로 돌아가면 그렇다고 알린다.
+      const reset = mode === 'normal' && r.data.pity?.streak === 0;
       toast(
         mode === 'elite'
-          ? SL.doneElite({ n })
+          ? SL.doneElite({ n, elite: scoutPityAt().elite })
           : mode === 'sure'
             ? SL.doneSure({ n })
-            : SL.done({ n }),
+            : reset
+              ? SL.doneReset({ n })
+              : SL.done({ n }),
       );
     } finally {
       rerollLock.current = false;
@@ -432,7 +517,7 @@ export default function Create() {
   };
 
   const onPitch = c.onPitch;
-  const small = { fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 };
+  const small = { fontSize: rem(FONT.caption), lineHeight: rem(FONT.caption) * 1.35 };
 
   const ovrGuideBody = (showTitle: boolean) => (
     <View
@@ -499,7 +584,7 @@ export default function Create() {
                 alignItems: 'center',
                 gap: 14,
                 backgroundColor: c.pitch,
-                borderRadius: 18,
+                borderRadius: RADIUS.lg,
                 paddingVertical: 14,
                 paddingHorizontal: 16,
                 shadowColor: '#000',
@@ -525,7 +610,7 @@ export default function Create() {
               <Txt
                 style={{
                   fontFamily: DISPLAY[700],
-                  fontSize: rem(0.8125),
+                  fontSize: rem(FONT.label),
                   letterSpacing: rem(0.8125) * 0.12,
                   color: c.pitchAccent,
                 }}
@@ -537,18 +622,22 @@ export default function Create() {
               <Txt
                 bold
                 numberOfLines={1}
-                style={{ fontSize: rem(1.25), lineHeight: rem(1.25) * 1.2, color: onPitch }}
+                style={{
+                  fontSize: rem(FONT.title2),
+                  lineHeight: rem(FONT.title2) * 1.2,
+                  color: onPitch,
+                }}
               >
                 {C.name.trim() || L.noName}
               </Txt>
               <Txt
                 style={{
-                  fontSize: rem(0.8125),
-                  lineHeight: rem(0.8125) * 1.5,
+                  fontSize: rem(FONT.label),
+                  lineHeight: rem(FONT.label) * 1.5,
                   color: alpha(onPitch, 0.75),
                 }}
               >
-                <Txt accessibilityElementsHidden style={{ fontSize: rem(0.8125) }}>
+                <Txt accessibilityElementsHidden style={{ fontSize: rem(FONT.label) }}>
                   {flagOf(nation.code)}
                 </Txt>{' '}
                 {tn(nation.ko)} · {posLabel({ pos: C.pos, dpos })} · {L.foot({ v: C.foot })}
@@ -563,9 +652,9 @@ export default function Create() {
             </View>
             <View style={{ alignItems: 'center', gap: 2 }}>
               <MiniRadar pos={C.pos} attrs={cardAttrs} size={72} onPitch />
-              <Txt style={{ fontSize: rem(0.6875), color: alpha(onPitch, 0.85) }}>
+              <Txt style={{ fontSize: rem(FONT.caption2), color: alpha(onPitch, 0.85) }}>
                 {picked ? L.ovrStart : L.ovrEst} OVR{' '}
-                <Txt num style={{ fontSize: rem(1.0625), color: c.pitchAccent }}>
+                <Txt num style={{ fontSize: rem(FONT.title3), color: c.pitchAccent }}>
                   {startOvr(C.pos, cardAttrs)}
                 </Txt>
               </Txt>
@@ -606,7 +695,7 @@ export default function Create() {
                         justifyContent: 'center',
                       }}
                     >
-                      <Txt style={{ fontSize: rem(1.25) }}>🎲</Txt>
+                      <Txt style={{ fontSize: rem(FONT.title2) }}>🎲</Txt>
                     </Press>
                   </View>
                 </Field>
@@ -677,21 +766,23 @@ export default function Create() {
               </Txt>
             </Field>
 
-            <Field label={L.position}>
-              <Seg>
-                {posKeys.map((k) => (
-                  <SegCell key={k} cols={2} testID={`pos-${k}`}>
-                    <PosOpt
-                      code={k}
-                      title={POS[k].label}
-                      blurb={POS[k].blurb}
-                      selected={C.pos === k}
-                      onPress={() => setPos(k, detailOpen)}
-                    />
-                  </SegCell>
-                ))}
-              </Seg>
-            </Field>
+            <CoachTarget id="pos">
+              <Field label={L.position}>
+                <Seg>
+                  {posKeys.map((k) => (
+                    <SegCell key={k} cols={2} testID={`pos-${k}`}>
+                      <PosOpt
+                        code={k}
+                        title={POS[k].label}
+                        blurb={POS[k].blurb}
+                        selected={C.pos === k}
+                        onPress={() => setPos(k, detailOpen)}
+                      />
+                    </SegCell>
+                  ))}
+                </Seg>
+              </Field>
+            </CoachTarget>
 
             {detailOpen && DETAILS_OF[C.pos].length > 1 ? (
               <Field label={L.detailPosition}>
@@ -714,9 +805,6 @@ export default function Create() {
               </Field>
             ) : null}
 
-            <Txt v="sm" tone="muted" testID="candidate-stats-note">
-              {CG.candidateNote}
-            </Txt>
             {ovrGuide}
             {/* T-11-234 유형별 주력 능력치를 생성 중에도 본다(시즌 탭과 같은 안내). */}
             <PositionGuide pos={C.pos} />
@@ -736,34 +824,32 @@ export default function Create() {
               </Seg>
             </Field>
 
-            <Field label={L.focusTitle({ n: FOCUS_PICK })}>
-              <Seg>
-                {ATTR_KEYS.map((k) => {
-                  const d = preview[k] ?? 0;
-                  const on = C.focus.includes(k);
-                  return (
-                    <SegCell key={k} cols={2} testID={`focus-${k}`}>
-                      <Opt selected={on} onPress={() => toggleFocus(k)} style={{ flex: 1 }}>
-                        <Txt bold>{labels[k]}</Txt>
-                        <Txt
-                          style={[
-                            small,
-                            { color: d > 0 ? c.good : d < 0 ? c.bad : c.muted },
-                            d > 0 && { fontWeight: '600' },
-                          ]}
-                        >
-                          {on
-                            ? L.focusUp({ d, pct: growthPct })
-                            : d < 0
-                              ? L.focusDown({ d })
-                              : L.focusNone}
-                        </Txt>
-                      </Opt>
-                    </SegCell>
-                  );
-                })}
-              </Seg>
-            </Field>
+            <CoachTarget id="focus">
+              <Field label={L.focusTitle({ n: FOCUS_PICK })}>
+                <Seg>
+                  {ATTR_KEYS.map((k) => {
+                    const d = preview[k] ?? 0;
+                    const on = C.focus.includes(k);
+                    return (
+                      <SegCell key={k} cols={2} testID={`focus-${k}`}>
+                        <Opt selected={on} onPress={() => toggleFocus(k)} style={{ flex: 1 }}>
+                          <Txt bold>{labels[k]}</Txt>
+                          <Txt
+                            style={[
+                              small,
+                              { color: d > 0 ? c.good : d < 0 ? c.bad : c.muted },
+                              d > 0 && { fontWeight: '600' },
+                            ]}
+                          >
+                            {focusNote(on, d)}
+                          </Txt>
+                        </Opt>
+                      </SegCell>
+                    );
+                  })}
+                </Seg>
+              </Field>
+            </CoachTarget>
 
             <Field label={L.trait}>
               <Seg>
@@ -813,34 +899,46 @@ export default function Create() {
                 {L.candIntro}
               </Txt>
               {s.candidatesOpen.some((o) => !o) ? (
-                <Btn sm testID="open-all" onPress={openAll}>
+                <Btn sm testID="open-all" onPress={openAllCards}>
                   {L.openAll}
                 </Btn>
               ) : null}
             </View>
-            <View style={{ gap: 10 }}>
+            {/* T-11-437 카드의 OVR이 확정값처럼 보이지 않게 소개 바로 아래에 둔다(웹과 같은 자리). */}
+            <Txt v="sm" tone="muted" testID="candidate-stats-note">
+              {CG.candidateNote}
+            </Txt>
+            <CoachTarget id="cands" style={{ gap: 10 }}>
               {s.candidates.map((cand, i) => {
                 const isOpen = s.candidatesOpen[i];
                 const isPicked = s.candidatePick === i;
+                const f = fx[i];
+                const tier = tiers[i] ?? 'normal';
+                const running = !!f && !f.done;
+                const landed = !!f && f.done && revealTotal(f) > 0;
+                const glow = tier !== 'normal' && (landed || (running && tier === 'jackpot'));
                 if (isOpen)
                   return (
-                    <FlipIn key={`open-${i}`}>
+                    <FlipIn key={`open-${i}`} delay={running ? f.back : 0}>
                       <Press
                         scale={0.985}
+                        accessibilityLabel={`${landed && tier !== 'normal' ? `${tier === 'jackpot' ? RV.jackpot : RV.good}! ` : ''}${L.candOpenA11y(
+                          {
+                            n: i + 1,
+                            ovr: startOvr(C.pos, cand.attrs),
+                            line: scoutLine(C.pos, cand.attrs),
+                          },
+                        )}`}
                         testID={`cand-${i}`}
-                        accessibilityLabel={L.candOpenA11y({
-                          n: i + 1,
-                          ovr: startOvr(C.pos, cand.attrs),
-                          line: scoutLine(C.pos, cand.attrs),
-                        })}
+                        {...(landed ? { accessibilityLiveRegion: 'polite' as const } : {})}
                         accessibilityState={{ selected: isPicked }}
-                        onPress={() => pick(i)}
+                        onPress={() => pickCard(i)}
                         style={[
                           {
                             gap: 8,
-                            borderRadius: 16,
+                            borderRadius: RADIUS.lg,
                             backgroundColor: c.surface,
-                            borderColor: isPicked ? c.accent : c.line,
+                            borderColor: isPicked || glow ? c.accent : c.line,
                             // 고른 카드는 안쪽으로 한 겹 더 두른다(웹 inset 1.5px)
                             borderWidth: isPicked ? 3 : 1.5,
                             padding: isPicked ? 14.5 : 16,
@@ -852,7 +950,7 @@ export default function Create() {
                           <Txt
                             style={{
                               fontFamily: DISPLAY[700],
-                              fontSize: rem(1.125),
+                              fontSize: rem(FONT.title3),
                               letterSpacing: rem(1.125) * 0.02,
                             }}
                           >
@@ -862,13 +960,17 @@ export default function Create() {
                             tone="muted"
                             style={{
                               marginLeft: 'auto',
-                              fontSize: rem(0.75),
-                              lineHeight: rem(1.6),
+                              fontSize: rem(FONT.caption),
+                              lineHeight: rem(FONT.title1),
                             }}
                           >
                             OVR{' '}
-                            <Txt num style={{ fontSize: rem(1.375) }}>
-                              {startOvr(C.pos, cand.attrs)}
+                            <Txt num style={{ fontSize: rem(FONT.title2) }}>
+                              {running && f.hint > 0 ? (
+                                <CountUp value={startOvr(C.pos, cand.attrs)} ms={f.back + f.hint} />
+                              ) : (
+                                startOvr(C.pos, cand.attrs)
+                              )}
                             </Txt>
                           </Txt>
                           {cand.pity ? (
@@ -888,13 +990,23 @@ export default function Create() {
                           }
                           testID={`candidate-potential-${i}`}
                         >
-                          {s.candidatePotentialOpen || cand.kept?.revealed
-                            ? L.potentialRange(candidatePotentialGrades(cand.potential))
-                            : L.potentialLocked}
+                          {s.candidatePotentialOpen || cand.kept?.revealed ? (
+                            potFresh && !cand.kept?.revealed ? (
+                              <RevealGrade
+                                grade={`${candidatePotentialGrades(cand.potential).min}~${candidatePotentialGrades(cand.potential).max}`}
+                                text={L.potentialRange(candidatePotentialGrades(cand.potential))}
+                                tier={gradeTier(candidatePotentialGrades(cand.potential).max)}
+                              />
+                            ) : (
+                              L.potentialRange(candidatePotentialGrades(cand.potential))
+                            )
+                          ) : (
+                            L.potentialLocked
+                          )}
                         </Txt>
                         <Txt
                           tone="accent"
-                          style={{ fontSize: rem(0.875), fontWeight: '600' }}
+                          style={{ fontSize: rem(FONT.body2), fontWeight: '600' }}
                         >{`“${scoutLine(C.pos, cand.attrs)}”`}</Txt>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                           <MiniRadar pos={C.pos} attrs={cand.attrs} size={84} />
@@ -911,7 +1023,7 @@ export default function Create() {
                                     numberOfLines={1}
                                     style={{
                                       width: 56,
-                                      fontSize: rem(0.75),
+                                      fontSize: rem(FONT.caption),
                                       color: hi ? c.ink : c.muted,
                                       ...(hi ? { fontWeight: '600' as const } : {}),
                                       ...(ovrFocus.keys.includes(k)
@@ -947,7 +1059,7 @@ export default function Create() {
                                       {
                                         width: 26,
                                         textAlign: 'right',
-                                        fontSize: rem(0.9375),
+                                        fontSize: rem(FONT.body1),
                                         color: c.ink,
                                       },
                                     ]}
@@ -971,14 +1083,14 @@ export default function Create() {
                         n: i + 1,
                         k: labels[hiddenStrength(cand.attrs, C.focus)],
                       })}
-                      onPress={() => pick(i)}
+                      onPress={() => pickCard(i)}
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
                         gap: 14,
                         borderWidth: 1.5,
                         borderColor: c.line,
-                        borderRadius: 16,
+                        borderRadius: RADIUS.lg,
                         backgroundColor: c.pitch,
                         padding: 16,
                       }}
@@ -987,7 +1099,7 @@ export default function Create() {
                         style={{
                           width: 48,
                           height: 48,
-                          borderRadius: 24,
+                          borderRadius: RADIUS.lg,
                           alignItems: 'center',
                           justifyContent: 'center',
                           borderWidth: 2,
@@ -998,8 +1110,8 @@ export default function Create() {
                         <Txt
                           style={{
                             fontFamily: DISPLAY[700],
-                            fontSize: rem(1.625),
-                            lineHeight: rem(1.625) * 1.15,
+                            fontSize: rem(FONT.title1),
+                            lineHeight: rem(FONT.title1) * 1.15,
                             color: onPitch,
                           }}
                         >
@@ -1007,17 +1119,17 @@ export default function Create() {
                         </Txt>
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Txt bold style={{ fontSize: rem(1), color: onPitch }}>
+                        <Txt bold style={{ fontSize: rem(FONT.body), color: onPitch }}>
                           {L.candNo({ n: i + 1 })}
                         </Txt>
-                        <Txt style={{ fontSize: rem(0.75), color: alpha(onPitch, 0.75) }}>
+                        <Txt style={{ fontSize: rem(FONT.caption), color: alpha(onPitch, 0.75) }}>
                           {L.scoutMemo({ k: labels[hiddenStrength(cand.attrs, C.focus)] })}
                         </Txt>
                       </View>
                       <Txt
                         accessibilityElementsHidden
                         style={{
-                          fontSize: rem(0.6875),
+                          fontSize: rem(FONT.caption2),
                           fontWeight: '600',
                           color: alpha(onPitch, 0.7),
                         }}
@@ -1028,7 +1140,7 @@ export default function Create() {
                   </FlyIn>
                 );
               })}
-            </View>
+            </CoachTarget>
             {s.candidatePick != null && s.candidates[s.candidatePick] ? (
               <View style={{ gap: 6 }}>
                 <Btn
@@ -1058,18 +1170,19 @@ export default function Create() {
                 >
                   {rerolling ? SL.busy : SL.btn({ n: scouts })}
                 </Btn>
-                <Txt v="sm" testID="candidate-scout-pity">
-                  {`${SL.pitySure({ n: pityView.sureIn })} · ${SL.pityElite({ n: pityView.eliteIn })}`}
-                </Txt>
                 <Txt v="sm" tone="muted">
-                  {`${SL.what} ${SL.pityHelp}`}
+                  {SL.what}
                 </Txt>
+                <ScoutPityGauge pity={pity} />
                 <ScoutOdds />
               </View>
             ) : owner ? (
-              <Btn sm kind="ghost" testID="premium-scout-go" onPress={goRerollShop}>
-                {SL.shopGo}
-              </Btn>
+              <View style={{ gap: 6 }}>
+                {pity.used > 0 ? <ScoutPityGauge pity={pity} empty /> : null}
+                <Btn sm kind="ghost" testID="premium-scout-go" onPress={goRerollShop}>
+                  {SL.shopGo}
+                </Btn>
+              </View>
             ) : null}
             {premium ? (
               <Txt v="sm" tone="muted" testID="premium-note">
@@ -1100,8 +1213,8 @@ export default function Create() {
                 </Btn>
               </View>
             ) : null}
-            {/* T-11-355 상품 위치 안내(설정과 같은 카드, 기기마다 닫을 때까지) */}
-            <ItemsHint />
+            {/* T-11-355 상품 위치 안내(설정과 같은 카드, 기기마다 닫을 때까지). T-11-437 쓸 도구가 없으면 아래 '더 보기'로 접는다. */}
+            {quiet ? null : <ItemsHint />}
             {/* T-11-221 광고 두 개(다시 뽑기 · 잠재력 보기)는 후보 카드 아래 반폭 톤 버튼 한 줄로. 전에는 카드 위에 전폭으로 쌓여
                 첫 화면에 후보가 보이지 않았다. 접근성 이름은 전체 문구. */}
             {(offer && adLeft > 0) || (offer && !s.candidatePotentialOpen) ? (
@@ -1174,27 +1287,52 @@ export default function Create() {
                 </Txt>
               ) : null}
             </View>
-            {/* T-11-221 OVR 주요 능력치 설명은 펼침 행으로 접어 둔다. */}
-            <Card gap={0} style={{ paddingVertical: 0 }}>
-              <DisclosureRow
-                border={false}
-                open={guideOpen}
-                onToggle={() => setGuideOpen(!guideOpen)}
-                label={ovrFocus.title}
-                testID="ovr-guide-toggle"
-              />
-              {guideOpen ? (
-                <View style={{ paddingBottom: 14, gap: 8 }}>
-                  {ovrGuideBody(false)}
-                  <Txt v="sm" tone="muted">
-                    {L.ovrCore}
-                  </Txt>
-                </View>
-              ) : null}
-            </Card>
-            <Card gap={0} style={{ paddingVertical: 0 }}>
-              <PositionGuide pos={C.pos} />
-            </Card>
+            {quiet ? (
+              // T-11-437 쓸 도구(리롤권 · 스카우트권 · 천장 기록)가 없으면 상점 위치 · 능력치 설명을 한 번에 접어 둔다.
+              <Card gap={0} style={{ paddingVertical: 0 }}>
+                <DisclosureRow
+                  border={false}
+                  open={guideOpen}
+                  onToggle={() => setGuideOpen(!guideOpen)}
+                  label={L.moreTools}
+                  testID="more-tools-toggle"
+                />
+                {guideOpen ? (
+                  <View style={{ paddingBottom: 14, gap: 8 }}>
+                    <ItemsHint />
+                    {ovrGuideBody(true)}
+                    <Txt v="sm" tone="muted">
+                      {L.ovrCore}
+                    </Txt>
+                    <PositionGuide pos={C.pos} />
+                  </View>
+                ) : null}
+              </Card>
+            ) : (
+              <>
+                {/* T-11-221 OVR 주요 능력치 설명은 펼침 행으로 접어 둔다. */}
+                <Card gap={0} style={{ paddingVertical: 0 }}>
+                  <DisclosureRow
+                    border={false}
+                    open={guideOpen}
+                    onToggle={() => setGuideOpen(!guideOpen)}
+                    label={ovrFocus.title}
+                    testID="ovr-guide-toggle"
+                  />
+                  {guideOpen ? (
+                    <View style={{ paddingBottom: 14, gap: 8 }}>
+                      {ovrGuideBody(false)}
+                      <Txt v="sm" tone="muted">
+                        {L.ovrCore}
+                      </Txt>
+                    </View>
+                  ) : null}
+                </Card>
+                <Card gap={0} style={{ paddingVertical: 0 }}>
+                  <PositionGuide pos={C.pos} />
+                </Card>
+              </>
+            )}
           </>
         ) : null}
       </ScrollView>
@@ -1204,34 +1342,44 @@ export default function Create() {
           <Btn testID="home" onPress={goHome} style={{ width: '32%' }}>
             {L.cancel}
           </Btn>
-          <Btn
-            kind="primary"
-            testID="next-candidates"
-            disabled={focusLeft > 0 || !!bodyErr}
-            onPress={() => setScouting(true)}
+          <CoachTarget
+            id="candidates"
+            enabled={!(focusLeft > 0 || !!bodyErr)}
             style={{ flex: 1, minWidth: 0 }}
           >
-            {bodyErr
-              ? L.checkBody
-              : focusLeft > 0
-                ? L.focusMore({ n: focusLeft })
-                : L.seeCandidates}
-          </Btn>
+            <Btn
+              kind="primary"
+              testID="next-candidates"
+              disabled={focusLeft > 0 || !!bodyErr}
+              onPress={() => setScouting(true)}
+            >
+              {bodyErr
+                ? L.checkBody
+                : focusLeft > 0
+                  ? L.focusMore({ n: focusLeft })
+                  : L.seeCandidates}
+            </Btn>
+          </CoachTarget>
         </ActionBar>
       ) : s.candidates ? (
         <ActionBar row>
           <Btn testID="home" disabled={rewardBusy} onPress={backToForm} style={{ width: '32%' }}>
             {L.back}
           </Btn>
-          <Btn
-            kind="primary"
-            testID="start"
-            disabled={s.candidatePick == null || rewardBusy}
-            onPress={confirmPick}
+          <CoachTarget
+            id="start"
+            enabled={s.candidatePick != null && !rewardBusy}
             style={{ flex: 1, minWidth: 0 }}
           >
-            {s.candidatePick == null ? L.pickOne : L.kickoff({ n: s.candidatePick + 1 })}
-          </Btn>
+            <Btn
+              kind="primary"
+              testID="start"
+              disabled={s.candidatePick == null || rewardBusy}
+              onPress={confirmPick}
+            >
+              {s.candidatePick == null ? L.pickOne : L.kickoff({ n: s.candidatePick + 1 })}
+            </Btn>
+          </CoachTarget>
         </ActionBar>
       ) : null}
       {scouting ? <ScoutScan pos={C.pos} steps={scoutSteps} onDone={scouted} /> : null}
@@ -1245,7 +1393,7 @@ function LiveTag({ children }: { children: string }) {
   return (
     <View
       style={{
-        borderRadius: 999,
+        borderRadius: RADIUS.pill,
         borderWidth: 1,
         borderColor: alpha(c.onPitch, 0.3),
         paddingVertical: 1,
@@ -1254,8 +1402,8 @@ function LiveTag({ children }: { children: string }) {
     >
       <Txt
         style={{
-          fontSize: rem(0.6875),
-          lineHeight: rem(0.6875) * 1.5,
+          fontSize: rem(FONT.caption2),
+          lineHeight: rem(FONT.caption2) * 1.5,
           fontWeight: '600',
           color: c.onPitch,
         }}
@@ -1289,7 +1437,7 @@ function PosOpt({
           position: 'absolute',
           right: 10,
           top: 8,
-          fontSize: rem(0.9375),
+          fontSize: rem(FONT.body1),
           letterSpacing: rem(0.9375) * 0.06,
           color: selected ? c.accentText : c.muted,
         }}
@@ -1297,7 +1445,10 @@ function PosOpt({
         {code}
       </Txt>
       <Txt bold>{title}</Txt>
-      <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 }}>
+      <Txt
+        tone="muted"
+        style={{ fontSize: rem(FONT.caption), lineHeight: rem(FONT.caption) * 1.35 }}
+      >
         {blurb}
       </Txt>
     </Opt>

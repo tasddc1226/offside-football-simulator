@@ -1,7 +1,6 @@
 <script lang="ts">
+  import Skeleton from './Skeleton.svelte';
   import ManagerResume from './ManagerResume.svelte';
-  import AppConversion from './AppConversion.svelte';
-  import { shellInstallText as Install } from '@offside/app-core/i18n/ko/shellInstall';
   import LoginButtons from './LoginButtons.svelte';
   // My club keeps owner identity and shared operations outside the season team card.
   // Team slots can expand later without duplicating the owner profile, finances or honors.
@@ -13,40 +12,40 @@
   import { fetchMarketFunds, type MarketFundsResponse } from '@offside/app-core/api/market';
   import { fundsText } from '@offside/app-core/market';
   import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
-  import BoostShop from './cup/BoostShop.svelte';
-  import RenameShop from './cup/RenameShop.svelte';
-  import ScoutShop from './cup/ScoutShop.svelte';
-  import RerollShop from './cup/RerollShop.svelte';
   import { ownerLockedText, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
   import { num, recordText } from '@offside/app-core/teamText';
   import { fmtValue } from '@offside/app-core/format';
   import { appState, type TeamView } from './state.svelte.js';
-  import { accountCache } from './account-state.svelte.js';
+  import { onMount } from 'svelte';
+  import { accountCache, ensureAccount } from './account-state.svelte.js';
   import { isMember } from '@offside/app-core/account';
-  import Account from './Account.svelte';
   import ClubValueInfo from './owner/ClubValueInfo.svelte';
   import OwnerProfileEditor from './owner/OwnerProfileEditor.svelte';
   import { loadMyPlayerSummary } from '@offside/app-core/myPlayers';
   import { ownerPlayersText as P } from '@offside/app-core/i18n/ko/ownerPlayers';
   import TeamLogo from './team/TeamLogo.svelte';
   import { loadHOF } from '@offside/game/hof-store';
-  import { go, takeFocus } from './nav.js';
+  import { go } from './nav.js';
   import { openFriends } from './friendInvite.svelte.js';
   import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
   import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
   import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
+  import { exchangeText as XC } from '@offside/app-core/i18n/ko/exchange';
+  import { seasonPassText as SP } from '@offside/app-core/i18n/ko/seasonPass';
+  import { passEntryOpen } from '@offside/contracts/season-pass';
+  import { membershipText as MB } from '@offside/app-core/i18n/ko/membership';
+  import { MEMBERSHIP_LIVE } from '@offside/contracts/membership';
+  import { syncMember } from '../ads/ads';
+  import type { Component } from 'svelte';
   import { type OwnerTierTag } from '@offside/contracts';
-  import { shapeOf } from '@offside/contracts/owner-team';
+  import { shapeOf, usesRankLadder } from '@offside/contracts/owner-team';
   import { tierTitle } from '@offside/app-core/ownerTier';
   import GradeEmblem from './team/GradeEmblem.svelte';
   import { ownerProfileText as H } from '@offside/app-core/i18n/ko/ownerProfile';
   import TitleBadge from './cup/TitleBadge.svelte';
 
-  // T-11-152 후보 화면 '리롤권 상점 가기'로 들어왔으면 리롤권 상점을 펼친 채로 연다(한 번만 읽힌다).
-  const shopFocus = takeFocus('rerollShop');
-  // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
-  // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다). 계정 패널이 로그인 상태를 불러오거나
-  // 바꾸면 다시 판단한다.
+  // T-10-016: 운영자면 프로필 편집에 운영 도구 표시를 넘긴다(운영 도구 입구는 T-11-567부터 설정 화면의 계정 카드).
+  // 관리자는 구글 연결 계정이라, 연결된 계정일 때만 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다).
   let admin = $state(false);
   const linked = $derived.by(() => {
     const acct = accountCache.value;
@@ -64,24 +63,22 @@
     return acct && acct !== 'error' ? acct.nickname : null;
   });
   let tierTag = $state<OwnerTierTag | null>(null);
-  let tiers = $state<OwnerTierTag[]>([]);
   $effect(() => {
     let alive = true;
     admin = false;
     tierTag = null;
-    tiers = [];
     if (linked) void fetchOwnerSummary().then((r) => {
-      if (alive && r.ok) { admin = r.data.admin; tierTag = r.data.tier; tiers = r.data.tiers ?? (r.data.tier ? [r.data.tier] : []); }
+      if (alive && r.ok) { admin = r.data.admin; tierTag = r.data.tier; }
     });
     return () => { alive = false; };
   });
 
-  // 전용 목록을 열지 않아도 현재 시즌의 기존 기록 기준으로 요약한다.
+  // 비로그인 구단 가치는 이 기기 기록의 카드 기준가 합(T-11-567 명예관 미리보기를 빼서 로그인하면 묻지 않는다).
   let summary = $state<OwnerSummary | null>(null);
   $effect(() => {
-    if (!linked && !guest) return;
+    if (!guest) return;
     let alive = true;
-    void loadMyPlayerSummary(linked).then(value => { if (alive) summary = value; });
+    void loadMyPlayerSummary(false).then(value => { if (alive) summary = value; });
     return () => { alive = false; };
   });
 
@@ -91,7 +88,10 @@
   $effect(() => {
     if (!linked) return;
     void fetchOwnerTeam().then((r) => {
-      if (r.ok) card = ownerTeamCard(r.data);
+      if (r.ok) {
+        card = ownerTeamCard(r.data);
+        syncMember(card.member);
+      }
       else cardFailed = true;
     });
   });
@@ -113,10 +113,35 @@
     if (to === 'friends') openFriends();
     else openTeam(to);
   }
+  // T-11-374 카드 과제 창은 열 때만 불러온다(과제 · 고르기 화면이 구단주 화면 청크에 붙지 않게).
+  let Exchange = $state<Component<{ onclose: () => void }> | null>(null);
+  let exchangeOpen = $state(false);
+  function openExchange() {
+    exchangeOpen = true;
+    if (!Exchange) void import('./owner/CardExchange.svelte').then((m) => (Exchange = m.default));
+  }
+  // T-11-511 시즌 패스 창도 열 때만 불러온다.
+  let Pass = $state<Component<{ onclose: () => void }> | null>(null);
+  let passOpen = $state(false);
+  function openPass() {
+    passOpen = true;
+    if (!Pass) void import('./owner/SeasonPass.svelte').then((m) => (Pass = m.default));
+  }
+  // T-11-512 클럽 멤버십 창도 열 때만 불러온다.
+  let Member = $state<Component<{ onclose: () => void }> | null>(null);
+  let memberOpen = $state(false);
+  function openMember() {
+    memberOpen = true;
+    if (!Member) void import('./owner/Membership.svelte').then((m) => (Member = m.default));
+  }
+  const passEntry = passEntryOpen(new Date().toISOString()) || import.meta.env.DEV;
+  const memberEntry = MEMBERSHIP_LIVE || import.meta.env.DEV;
   function openTeam(v: TeamView = 'team') {
     appState.teamView = v;
     go('team');
   }
+  // T-11-567 계정 카드가 설정으로 옮겨 가서, 로그인 여부는 이 화면이 직접 확인한다(5분 메모).
+  onMount(ensureAccount);
 </script>
 
 {#snippet achDot()}
@@ -130,15 +155,20 @@
   </header>
 
   {#if linked || guest}
+    <!-- T-11-567 구단 가치 · 자금은 따로 카드를 두지 않고 프로필 카드 아래 줄에 둔다. -->
     <section class="card owner-hub" data-owner-summary aria-label={L.summaryLabel}>
       <div class="owner-id">
         <OwnerAvatar avatarId={accountCache.value && accountCache.value !== 'error' ? accountCache.value.avatarId : null} name={nickname ?? L.avatarInitial} size={48} />
         <div class="owner-who">
-          <b>{#if tierTag}<span class="owner-last-tier" title={tierTitle(tierTag)} data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={24} /></span>{/if}{guest ? L.guestName : (nickname ?? L.title)}{#if card?.title}<span class="owner-founder"><TitleBadge title={card.title} size="sm" /></span>{/if}</b>
+          <b>{#if tierTag}<span class="owner-last-tier" title={tierTitle(tierTag)} data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={24} /></span>{/if}{guest ? L.guestName : (nickname ?? L.title)}{#if card?.title}<span class="owner-founder"><TitleBadge title={card.title} size="sm" /></span>{/if}{#if card?.member}<span class="pill good owner-founder" title={MB.badgeLabel} data-owner-member>{MB.badge}</span>{/if}</b>
           <span class="muted fs-sm">{guest ? L.guestSub : L.title}</span>
         </div>
         {#if linked && accountCache.value && accountCache.value !== 'error'}<OwnerProfileEditor profile={accountCache.value} {admin} />{/if}
       </div>
+      <dl class="owner-stats" data-club-operations aria-label={L.operationsHeading}>
+        <div class="owner-value" data-owner-value><dt>{L.statClubValue}</dt><ClubValueInfo {linked} /><dd>{clubValue !== null ? fmtValue(clubValue) : '–'}</dd></div>
+        {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}<span class="owner-funds-go" aria-hidden="true">›</span></dt><dd>{funds}</dd><button class="tap-cover" data-act="funds-history" aria-label={F.openAria} onclick={() => go('funds')}></button></div>{/if}
+      </dl>
     </section>
     <AdSlot place="owner-summary" />
   {/if}
@@ -163,7 +193,7 @@
       {#if card?.team}
         <dl class="owner-stats owner-team-stats" data-owner-team-record>
           <div><dt>{L.statRecord}</dt><dd>{recordText(card.team.record)}</dd></div>
-          <div><dt>{L.statRating}</dt><dd>{num(card.team.rating)}</dd></div>
+          <div><dt>{usesRankLadder(card.team.season) ? L.statRp : L.statRating}</dt><dd>{num(card.team.rating)}</dd></div>
           <div><dt>{L.statToday}</dt><dd>{card.left}/{card.perDay}</dd></div>
         </dl>
         <div class="owner-actions">
@@ -172,22 +202,15 @@
         </div>
         {#if card.playHint}<p class="muted fs-sm">{card.playHint}</p>{/if}
       {:else}
-        <p class="muted fs-sm">
-          {card ? ownerTeamEmptyText(card) : cardFailed ? L.teamFailed : L.loading}
-        </p>
+        {#if card || cardFailed}
+          <p class="muted fs-sm">{card ? ownerTeamEmptyText(card) : L.teamFailed}</p>
+        {:else}
+          <Skeleton rows={2} />
+        {/if}
         <button class="btn {card && card.players > 0 ? 'btn-primary' : ''} btn-block" data-act="team" onclick={openMyTeam}>
           {card && card.players > 0 ? L.buildTeam : L.myTeam}{@render achDot()}
         </button>
       {/if}
-    </section>
-    <!-- T-11-338 감독 커리어는 '팀' 묶음 안, 내 팀 바로 아래(이적시장 · 상점 사이에 묻혀 찾기 어려웠다). -->
-    <section class="card owner-market owner-tap" aria-label={MG.entryTitle} data-owner-manager>
-      <div class="owner-who">
-        <h2>{MG.entryTitle}<span class="pill good owner-founder" data-owner-manager-new>{MG.entryNew}</span></h2>
-        <span class="muted fs-sm">{MG.entrySub}</span>
-      </div>
-      <span class="tap-go" aria-hidden="true">›</span>
-      <button class="tap-cover" data-act="manager" aria-label={MG.entryAria} onclick={() => go('manager')}></button>
     </section>
   {:else if guest}
     <section class="card owner-team" aria-label={L.myTeam} data-owner-team-locked>
@@ -205,96 +228,59 @@
     </section>
   {/if}
 
-  {#if !guest || localCount > 0}
-    <section class="card owner-market owner-tap" data-owner-players-entry aria-label={P.title}>
-      <div class="owner-who"><h2>{P.title}</h2><span class="muted fs-sm">{P.entryLead}</span></div>
-      <span class="tap-go" aria-hidden="true">›</span>
-      <button class="tap-cover" data-act="open-owner-players" aria-label={P.openPlayers} onclick={() => { appState.playersView = linked ? 'manage' : 'records'; go('players'); }}></button>
-    </section>
-  {/if}
-
-  {#if linked || guest}
-    <section class="card owner-hub" data-club-operations aria-label={L.operationsHeading}>
-      <h2 class="hub-card-title">{L.operationsHeading}</h2>
-      <dl class="owner-stats">
-        <div class="owner-value" data-owner-value><dt>{L.statClubValue}</dt><ClubValueInfo {linked} /><dd>{clubValue !== null ? fmtValue(clubValue) : '–'}</dd></div>
-        {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}<span class="owner-funds-go" aria-hidden="true">›</span></dt><dd>{funds}</dd><button class="tap-cover" data-act="funds-history" aria-label={F.openAria} onclick={() => go('funds')}></button></div>{/if}
-      </dl>
-    </section>
-  {/if}
-
-  {#if linked}
-    <section class="card owner-market owner-tap" aria-label={L.marketTitle} data-owner-market>
-      <div class="owner-who">
-        <h2>{L.marketTitle}</h2>
-        <span class="muted fs-sm">{L.marketSub({ funds })}</span>
-      </div>
-      <span class="tap-go" aria-hidden="true">›</span>
-      <button class="tap-cover" data-act="market" aria-label={`${L.marketTitle} ${L.open}`} onclick={() => go('market')}></button>
-    </section>
-
-  {/if}
-
-
-
-
-  {#if linked}
-    <!-- T-11-152 리롤권 상점: 펼칠 때만 상점을 묻는다. 사면 자금 줄을 다시 받는다(쓰기 성공으로 메모가 비워졌다). -->
-    <RerollShop focus={shopFocus} onbought={(balance, spent) => market && (market = { balance, clubValue: market.clubValue - spent })} />
-    <BoostShop />
-    <RenameShop />
-    <ScoutShop onbought={(balance, spent) => market && (market = { balance, clubValue: market.clubValue - spent })} />
-    <details class="card" data-app-shop-guide>
-      <summary class="disc-row">{Install.conversionShopTitle}<span class="disc-chev" aria-hidden="true"></span></summary>
-      <p class="muted fs-sm">{Install.conversionShopBody}</p>
-      <AppConversion context="shop" />
-    </details>
-  {/if}
-
-  {#if linked}
-    <section class="card owner-hall-entry owner-tap" data-owner-hall-entry aria-label={H.hallTitle}>
-      <div class="owner-who">
-        <h2>{H.hallTitle}<span class="pill good owner-founder" data-owner-hall-new>{H.hallNew}</span></h2>
-        <span class="muted fs-sm">{H.hallSummary}</span>
-      </div>
-      {#if tiers.length}
-        <ul class="owner-tier-history" aria-label={L.seasonTierHistory} data-owner-tier-history>
-          {#each tiers as tier (tier.season)}
-            <li class="ach-grade" data-grade={tier.tier} data-owner-tier={tier.tier} data-tier-season={tier.season}>
-              <GradeEmblem id={tier.tier} size={16} /><span>{tierTitle(tier)}</span>
-            </li>
-          {/each}
-        </ul>
+  <!-- T-11-567 바로가기: 한 줄 카드 여섯 장을 2열 칸으로 줄였다. 상점 넷은 상점 화면으로 옮겼다. -->
+  {#if linked || !guest || localCount > 0}
+    <nav class="owner-tiles" aria-label={L.shortcutsHeading} data-owner-tiles>
+      {#if !guest || localCount > 0}
+        <button class="owner-tile" data-act="open-owner-players" data-owner-players-entry aria-label={P.openPlayers} onclick={() => { appState.playersView = linked ? 'manage' : 'records'; go('players'); }}>
+          <b>{P.title}</b><span>{L.tilePlayers}</span>
+        </button>
       {/if}
-      <p class="muted fs-sm owner-empty">{card?.season ?? L.currentSeason}</p>
-      <dl class="owner-stats" data-owner-record-preview>
-        <div><dt>{L.statRetired}</dt><dd>{summary ? num(summary.players) : '–'}</dd></div>
-        <div><dt>{L.statLegend}</dt><dd>{summary ? num(summary.score) : '–'}</dd></div>
-        <div><dt>{L.statRetiredNumbers}</dt><dd>{summary ? num(summary.retired) : '–'}</dd></div>
-      </dl>
-      <span class="tap-go" aria-hidden="true">›</span>
-      <button class="tap-cover" data-act="open-owner-hall" aria-label={`${H.openHall} · ${H.hallNew}`} onclick={() => go('honors')}></button>
+      {#if linked}
+        <button class="owner-tile" data-act="market" data-owner-market aria-label={`${L.marketTitle} ${L.open}`} onclick={() => go('market')}>
+          <b>{L.marketTitle}</b><span>{L.tileMarket}</span>
+        </button>
+        <button class="owner-tile" data-act="exchange" data-owner-exchange aria-label={XC.entryAria} onclick={openExchange}>
+          <b>{XC.entryTitle}<span class="pill good">{XC.entryNew}</span></b><span>{L.tileExchange}</span>
+        </button>
+        <button class="owner-tile" data-act="manager" data-owner-manager aria-label={MG.entryAria} onclick={() => go('manager')}>
+          <b>{MG.entryTitle}<span class="pill good" data-owner-manager-new>{MG.entryNew}</span></b><span>{L.tileManager}</span>
+        </button>
+        <button class="owner-tile" data-act="open-owner-hall" data-owner-hall-entry aria-label={`${H.openHall} · ${H.hallNew}`} onclick={() => go('honors')}>
+          <b>{H.hallTitle}<span class="pill good" data-owner-hall-new>{H.hallNew}</span></b><span>{L.tileHall}</span>
+        </button>
+        <button class="owner-tile" data-act="shop" data-owner-shop aria-label={L.shopTitle} onclick={() => go('shop')}>
+          <b>{L.shopTitle}</b><span>{L.tileShop}</span>
+        </button>
+      {/if}
+    </nav>
+  {/if}
+  {#if exchangeOpen && Exchange}<Exchange onclose={() => (exchangeOpen = false)} />{/if}
+
+  {#if linked && (passEntry || memberEntry)}
+    <!-- T-11-567 시즌 패스 · 클럽 멤버십은 한 카드에 두 줄로. -->
+    <section class="card owner-perks" aria-label={`${SP.entry} · ${MB.entry}`} data-owner-perks>
+      {#if passEntry}
+        <button class="owner-perk" data-act="season-pass" data-owner-pass aria-label={SP.entry} onclick={openPass}>
+          <span class="owner-who"><b>{SP.entry}</b><span class="muted fs-sm">{SP.entryNew}</span></span>
+          <i aria-hidden="true">›</i>
+        </button>
+      {/if}
+      {#if memberEntry}
+        <button class="owner-perk" data-act="membership" data-owner-membership aria-label={MB.entry} onclick={openMember}>
+          <span class="owner-who"><b>{MB.entry}{#if card?.member}<span class="pill good owner-founder">{MB.entryActive}</span>{/if}</b><span class="muted fs-sm">{MB.entrySub}</span></span>
+          <i aria-hidden="true">›</i>
+        </button>
+      {/if}
     </section>
   {/if}
-
-  <section class="card settings-card" id="account-slot" aria-label={L.accountSection}>
-    <Account />
-    {#if admin}
-      <button class="settings-row settings-trigger owner-admin" data-act="admin" onclick={() => (appState.screen = 'admin')}>
-        <span class="settings-label"><strong>{L.adminTools}</strong></span>
-        <i class="settings-chev" aria-hidden="true">›</i>
-      </button>
-    {/if}
-  </section>
+  {#if passOpen && Pass}<Pass onclose={() => (passOpen = false)} />{/if}
+  {#if memberOpen && Member}<Member onclose={() => (memberOpen = false)} />{/if}
 </div>
 
 <style>
-  .hub-section-title {margin:8px 2px 0;font-size:1rem;}
-  .hub-card-title {margin:0;font-size:1rem;}
-  .owner-hall-entry {display:flex;flex-direction:column;gap:12px;}
-  .owner-hall-entry > .owner-who {padding-right:24px;}
-  .owner-hall-entry > .tap-go {position:absolute;right:18px;top:20px;}
-  .owner-founder {margin-left:6px;vertical-align:middle;}
+  .hub-section-title {margin:8px 2px 0;font-size:var(--fs-body);}
+    .owner-founder {margin-left:6px;vertical-align:middle;}
   .owner-hub {
     display: flex;
     flex-direction: column;
@@ -312,8 +298,6 @@
     vertical-align: -5px;
     margin-right: 4px;
   }
-  .owner-tier-history {display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none;}
-  .owner-tier-history li {display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);font-size:11px;font-weight:600;line-height:1.4;}
   .owner-who {
     display: flex;
     flex-direction: column;
@@ -321,7 +305,7 @@
     min-width: 0;
   }
   .owner-who b {
-    font-size: 1.125rem;
+    font-size: var(--fs-title3);
     overflow-wrap: anywhere;
   }
   .owner-who h2 {
@@ -340,19 +324,19 @@
     flex-direction: column;
     gap: 2px;
     padding: 10px 12px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--surface-2);
     min-width: 0;
     grid-column: span 2;
   }
   .owner-stats dt {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .owner-stats dd {
     margin: 0;
     font-family: var(--display);
-    font-size: 1.25rem;
+    font-size: var(--fs-title2);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
@@ -374,17 +358,14 @@
     margin-left: 4px;
   }
   .owner-stats .owner-value dd {
-    font-size: 1.75rem;
+    font-size: var(--fs-title1);
     color: var(--accent-text);
-  }
-  .owner-empty {
-    margin: 0;
   }
   .owner-team-stats div {
     padding-inline: 6px;
   }
   .owner-team-stats dd {
-    font-size: 1.0625rem;
+    font-size: var(--fs-title3);
   }
   .owner-team {
     display: flex;
@@ -407,19 +388,19 @@
     place-items: center;
     min-width: 58px;
     padding: 6px 8px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--pitch);
     color: var(--on-pitch);
     line-height: 1.1;
   }
   .owner-ovr small {
     font-family: var(--display);
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     letter-spacing: 0.12em;
   }
   .owner-ovr b {
     font-family: var(--display);
-    font-size: 1.625rem;
+    font-size: var(--fs-title1);
     color: var(--pitch-accent);
   }
   .owner-actions {
@@ -438,7 +419,7 @@
     justify-content: space-around;
     gap: 10px;
     padding: 14px 10px;
-    border-radius: 14px;
+    border-radius: var(--radius-md);
     background: repeating-linear-gradient(0deg, var(--pitch) 0 22px, var(--pitch-2) 22px 44px);
     overflow: hidden;
   }
@@ -458,29 +439,73 @@
     inset: 50% auto auto 50%;
     transform: translate(-50%, -50%);
     padding: 6px 12px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--surface);
     color: var(--ink);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     font-weight: 700;
     white-space: nowrap;
     box-shadow: 0 2px 10px rgb(0 0 0 / 0.2);
   }
-  .owner-market {
+  /* T-11-567 바로가기 2열 칸. 좁은 화면에서도 두 칸, 글은 두 줄까지. */
+  .owner-tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .owner-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+    min-height: 76px;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .owner-tile:hover { background: var(--surface-2); }
+  .owner-tile b {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: var(--fs-body);
+  }
+  .owner-tile > span {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: var(--fs-label);
+  }
+  .owner-tile .pill { font-size: var(--fs-caption2); }
+  .owner-perks {
+    display: flex;
+    flex-direction: column;
+    padding-block: 4px;
+  }
+  .owner-perk {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    padding: 12px 0;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
   }
-  .owner-market h2 {
-    margin: 0;
-  }
-  .owner-tap {
-    position: relative;
-  }
-  .owner-admin {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid var(--line);
-  }
+  .owner-perk + .owner-perk { border-top: 1px solid var(--line); }
+  .owner-perk b { font-size: var(--fs-body); }
+  .owner-perk i { color: var(--muted); font-style: normal; font-size: var(--fs-title2); }
 </style>

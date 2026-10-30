@@ -1,0 +1,27 @@
+{
+  "id": "t-11-399-targetman-role",
+  "title": "타깃맨 육성 안내",
+  "items": [
+    "스트라이커로 평가되는 타깃맨도 능력치 화면의 포지션별 OVR에서 타깃맨 OVR을 볼 수 있어요",
+    "타깃맨은 훈련 설명에 스트라이커와 타깃맨 OVR 비중이 함께 나와요",
+    "타깃맨의 약점·강점 특훈이 피지컬처럼 타깃맨 OVR에 크게 반영되는 능력치도 골라요"
+  ],
+  "en": {
+    "title": "Target man growth guide",
+    "items": [
+      "Target men rated as strikers can now see their Target Man OVR in the position OVR list on the attributes screen.",
+      "Training descriptions for target men show the weight in both Striker and Target Man OVR.",
+      "Weak and strong special training for target men can now pick attributes that count heavily toward Target Man OVR, such as Physical."
+    ]
+  },
+  "ja": {
+    "title": "ターゲットマン育成の案内",
+    "items": [
+      "ストライカーとして評価されているターゲットマンも、能力値画面のポジション別OVRでターゲットマンのOVRを確認できます。",
+      "ターゲットマンのトレーニング説明に、ストライカーとターゲットマンのOVR比重が一緒に表示されます。",
+      "ターゲットマンの弱点・強み特訓が、フィジカルのようにターゲットマンOVRに大きく反映される能力値も選ぶようになりました。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

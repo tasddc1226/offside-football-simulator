@@ -4,6 +4,7 @@
 // requestAnimationFrame은 vsync가 아니라 setTimeout 0)에선 그려진 바늘이 실제 시각보다 뒤처져 탭하는 순간 판정 위치로
 // 튀었다. 손가락이 닿는 순간(onPressIn)을 입력으로 보고, 스크린 리더 활성화(onPress)는 같은 함수를 부른다.
 // 판정이 나면(v.ok, sheet-controller가 채운다) 공이 날아가는 결과 장면을 두 단계로 그린다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { memo, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -218,8 +219,8 @@ export function Minigame({ v }: { v: Extract<SheetView, { kind: 'minigame' }> })
               <Txt
                 style={{
                   fontFamily: DISPLAY[800],
-                  fontSize: rem(1.75),
-                  lineHeight: rem(1.75) * 1.3,
+                  fontSize: rem(FONT.title1),
+                  lineHeight: rem(FONT.title1) * 1.3,
                   color: c.chalk,
                   textShadowColor: 'rgba(0,0,0,0.45)',
                   textShadowOffset: { width: 0, height: 2 },
@@ -239,7 +240,7 @@ export function Minigame({ v }: { v: Extract<SheetView, { kind: 'minigame' }> })
             height: 16,
             marginTop: 10,
             marginHorizontal: 14,
-            borderRadius: 8,
+            borderRadius: RADIUS.sm,
             backgroundColor: mixColor(c.bad, c.pitch, 55),
           }}
         >
@@ -250,7 +251,7 @@ export function Minigame({ v }: { v: Extract<SheetView, { kind: 'minigame' }> })
               bottom: 0,
               left: `${(s.center - s.w / 2) * 100}%`,
               width: `${s.w * 100}%`,
-              borderRadius: 8,
+              borderRadius: RADIUS.sm,
               backgroundColor: c.good,
               borderWidth: 2,
               borderColor: alpha('#ffffff', 0.13),
@@ -263,7 +264,7 @@ export function Minigame({ v }: { v: Extract<SheetView, { kind: 'minigame' }> })
           style={{
             minHeight: rem(1.125) * 1.4,
             marginTop: 10,
-            fontSize: rem(1.125),
+            fontSize: rem(FONT.title3),
             fontWeight: '800',
             letterSpacing: rem(1.125) * 0.02,
             color: c.onPitch,

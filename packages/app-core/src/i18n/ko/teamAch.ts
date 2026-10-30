@@ -11,6 +11,7 @@ const ko = {
   rankTitle: '구단주 랭킹',
   nextGradeBar: '다음 등급까지',
   toNextGrade: (p: { grade: string; pts: string }) => `${p.grade}까지 ${p.pts}점`,
+  toNextGradeRank: (p: { grade: string; n: string }) => `${p.grade}까지 ${p.n}계단`,
   topGrade: '최고 등급이에요',
   achProgress: (p: { head: string; done: number; total: number }) =>
     `${p.head} · 업적 ${p.done}/${p.total} 달성`,
@@ -18,7 +19,8 @@ const ko = {
     `${p.season}에 처음 뛰어 은퇴한 내 선수 ${p.n}명과 이 시즌 팀·구단 활동으로 채워요. 시즌마다 처음부터 다시 쌓아요.`,
   // 업적을 쌓으면 — 실제로 업적 점수가 쓰이는 곳만 적는다(경기 실력에는 들어가지 않는다).
   perksTitle: '업적을 쌓으면',
-  perkGrade: '점수에 따라 구단주 등급이 루키부터 레전드까지 오르고, 구단주 랭킹 순위가 매겨져요.',
+  perkGrade:
+    '구단주 랭킹 순위가 매겨지고 구단주 등급이 루키부터 레전드까지 정해져요. 시즌 2부터 등급은 랭킹 상위 비율로 정해요.',
   perkTier: '시즌이 끝날 때의 등급이 다음 시즌 내내 프로필·댓글·채팅 닉네임 옆에 티어로 붙어요.',
   perkHonor:
     '구단주 랭킹 1위·상위 10위·상위 100위 안에 들면 시즌 결산에 기록 배지가 영구히 남아요.',
@@ -44,6 +46,12 @@ const ko = {
   ownersAfter: '명',
   ownersApp: (p: { n: string }) => `구단주 ${p.n}명`,
   rankFail: '랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.',
+  // T-11-441 내 순위로
+  myRank: '내 순위로',
+  myRankTeamNone: '이 시즌 랭킹에 내 팀이 없어요.',
+  myRankAchNone: '이 시즌 업적 랭킹에 내 기록이 없어요.',
+  myRankFail: '내 순위를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.',
+  myRow: '내 순위',
   loading: '불러오는 중…',
   hdrOwner: '구단주',
   hdrGrade: '등급',
@@ -79,12 +87,15 @@ const ko = {
   gradesTitle: '등급 기준',
   gradesToggleApp: (p: { open: boolean }) => `${p.open ? '▾' : '▸'} 등급 기준`,
   gradeFrom: (p: { n: string }) => `${p.n}점부터`,
+  gradeTop: (p: { pct: number }) => `상위 ${p.pct}%`,
+  gradeRest: '그 밖',
   noteReset: '시즌마다 처음부터 다시 쌓아요.',
   noteSum: '선수·팀·구단주 업적 점수의 합이고, 랭킹은 5분마다 갱신돼요.',
   noteApp:
     '시즌마다 처음부터 다시 쌓아요. 선수·팀·구단주 업적 점수의 합이고, 랭킹은 5분마다 갱신돼요.',
   // 팀 랭킹
   sortRating: '레이팅',
+  sortRp: 'RP',
   sortOvr: '팀 OVR',
   sortValue: '구단 가치',
   colOvrApp: 'OVR',
@@ -125,6 +136,7 @@ const ko = {
   teamsEmpty:
     '아직 랭킹에 오른 팀이 없어요. 구단주 화면에서 은퇴한 선수로 팀을 꾸리면 여기에 올라요.',
   teamsFoot: '레이팅은 팀 경기 결과로 오르내려요. 랭킹은 5분마다 갱신돼요.',
+  teamsFootRp: 'RP는 랭크 경기 결과로 오르내려요. 랭킹은 5분마다 갱신돼요.',
   valueFoot: '구단 가치는 선발 11명의 카드 기준가를 더한 값이에요. 랭킹은 5분마다 갱신돼요.',
   // T-11-129 홈의 구단 가치 TOP 3
   homeValueTitle: '구단 가치 TOP 3',
@@ -140,6 +152,7 @@ const ko = {
   profMine: ' · 내 팀',
   profOwner: '구단주 ',
   profRatingAria: (p: { n: number }) => `팀 레이팅 ${p.n}`,
+  profRpAria: (p: { n: number }) => `팀 RP ${p.n}`,
   profStatOvr: '팀 OVR',
   profStatRecord: '전적',
   profStatGoals: '득실',
@@ -150,7 +163,7 @@ const ko = {
   // T-11-290 스쿼드 댓글(팀 프로필 아래). 나머지 문구(신고·차단·로그인 문턱)는 board 사전을 같이 쓴다.
   profCommentsTitle: '스쿼드 댓글',
   profCommentsHint: '이 팀의 선발 스쿼드를 보고 구단주들이 남긴 이야기예요.',
-  profCommentsEmpty: '아직 댓글이 없어요. 이 스쿼드에 첫 한마디를 남길 수 있어요.',
+  profCommentsEmpty: '아직 댓글이 없어요.',
   profCommentPlaceholder: '이 스쿼드에 대해 한마디',
   profCommentsFail: '댓글을 불러오지 못했어요.',
 };

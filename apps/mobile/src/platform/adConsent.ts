@@ -3,14 +3,27 @@
 // 확인에 실패하면 광고를 요청하지 않는다.
 // T-11-143 운영자 기기는 실제 광고 대신 테스트 광고를 받는다(무효 트래픽 방지). 앱을 지웠다 깔면 ID가 바뀔 수 있다.
 // ID는 기기 로그의 "<Google> To get test ads on this device" 줄에서 찾는다(해시값이라 비밀값 아님).
+// T-11-478 동의 뒤 SDK를 초기화하고 광고를 요청한다. 미디에이션 어댑터(Meta · Liftoff · Pangle)는 초기화 때 준비되므로,
+// 초기화 없이 바로 요청하면 첫 요청에 입찰 신호가 빠진다. 초기화가 늦어도 광고를 막지 않게 INIT_WAIT_MS까지만 기다린다.
 import mobileAds, { AdsConsent } from 'react-native-google-mobile-ads';
 
-const TEST_DEVICES = ['cf501bb8e326505e664bd41f504f4164'];
+// T-11-587 운영자 iPhone 재설치로 바뀐 ID(9401…)를 더한다. 옛 ID는 다른 설치본용으로 남긴다.
+const TEST_DEVICES = ['cf501bb8e326505e664bd41f504f4164', '9401ba83ecab139866f77381004260bc'];
+const INIT_WAIT_MS = 5_000;
 
 let consent: Promise<boolean> | undefined;
 export const askConsent = () =>
   (consent ??= mobileAds()
     .setRequestConfiguration({ testDeviceIdentifiers: TEST_DEVICES })
     .then(() => AdsConsent.gatherConsent())
-    .then((info) => info.canRequestAds)
+    .then(async (info) => {
+      if (!info.canRequestAds) return false;
+      await Promise.race([
+        mobileAds()
+          .initialize()
+          .catch(() => undefined),
+        new Promise((resolve) => setTimeout(resolve, INIT_WAIT_MS)),
+      ]);
+      return true;
+    })
     .catch(() => false));

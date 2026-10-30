@@ -1,4 +1,4 @@
-import type { TeamMatch } from '@offside/contracts';
+import type { TeamMatch, TeamMoment } from '@offside/contracts';
 import type { FormationId } from '@offside/contracts/owner-team';
 import type { Db } from '../db/client.js';
 import {
@@ -11,11 +11,20 @@ import {
   teamLogosByIds,
   type MatchDetail,
   type OwnerTeamRow,
+  type StoredMomentView,
   type TeamMatchRow,
 } from '../db/repos/ownerTeams.js';
 import type { Lang } from '../lang.js';
 import { anonText } from './anon.js';
-import { buildLineup, lineupOvr, type MatchCoach, type PlayerRef, type SimResult } from './sim.js';
+import type { MomentActor } from './moments.js';
+import {
+  buildLineup,
+  lineupOvr,
+  type MatchCoach,
+  type PlayerRef,
+  type SideReport,
+  type SimResult,
+} from './sim.js';
 import { coachesByIds } from '../db/repos/managers.js';
 
 // 랭크 경기(T-10-092)와 친선전(T-11-098)이 함께 쓰는 경기 한 판 준비 · 저장할 상세 · 화면 모양 변환.
@@ -29,14 +38,23 @@ export type MatchHead = Pick<
  * 두 팀(그 시즌)의 선발. 각 팀은 자기 구단주의 그 시즌 은퇴 선수만 뛴다. T-11-310 감독 칸의 감독도 함께 읽는다(그 팀
  * 구단주가 끝낸 감독만). 쿼리 2번(나란히).
  */
-export async function lineupsOf(db: Db, season: number, home: OwnerTeamRow, away: OwnerTeamRow) {
+export async function lineupsOf(
+  db: Db,
+  season: number,
+  home: OwnerTeamRow,
+  away: OwnerTeamRow,
+  options: { coaches?: boolean } = {},
+) {
   const homeSlots = slotIdsOf(home);
   const awaySlots = slotIdsOf(away);
   const [rows, coachRows] = await Promise.all([
     careersByIds(db, [
       ...new Set([...homeSlots, ...awaySlots].filter((x): x is string => x !== null)),
     ]),
-    coachesByIds(db, [home.coachId, away.coachId]),
+    // Eligibility only counts real players; it does not use coach modifiers.
+    options.coaches === false
+      ? new Map<string, never>()
+      : coachesByIds(db, [home.coachId, away.coachId]),
   ]);
   const coach = (t: OwnerTeamRow): MatchCoach => {
     const c = t.coachId ? coachRows.get(t.coachId) : undefined;
@@ -67,12 +85,15 @@ export function matchDetailOf(
   lineups: Lineups,
   result: SimResult,
   delta?: { home: number; away: number },
+  /** T-11-518 선발 명단을 남긴다(시즌 통계의 선수 출전 수). 랭크 경기만 켠다. */
+  opts: { xi?: boolean } = {},
 ): MatchDetail {
   const side = (
     t: OwnerTeamRow,
     lineup: Lineups['home'],
     change: number | undefined,
     synergy: string[] | undefined,
+    report: SideReport,
   ) => ({
     teamId: t.id,
     name: t.name,
@@ -81,18 +102,35 @@ export function matchDetailOf(
     ovr: lineupOvr(lineup),
     ...(change === undefined ? {} : { ratingChange: change }),
     ...(synergy === undefined ? {} : { synergy }),
+    xg: Math.round(report.xg * 10) / 10,
+    lines: {
+      atk: Math.round(report.lines.atk),
+      mid: Math.round(report.lines.mid),
+      def: Math.round(report.lines.def),
+      gk: Math.round(report.lines.gk),
+    },
+    ...(opts.xi
+      ? {
+          xi: Object.fromEntries(
+            lineup.flatMap((s) => (s.careerId ? [[s.careerId, s.slot] as const] : [])),
+          ),
+        }
+      : {}),
   });
   return {
-    home: side(home, lineups.home, delta?.home, result.synergy?.home),
-    away: side(away, lineups.away, delta?.away, result.synergy?.away),
-    events: result.events.map((e) => ({
-      minute: e.minute,
-      side: e.side,
-      scorer: e.scorer,
-      assist: e.assist,
-    })),
+    home: side(home, lineups.home, delta?.home, result.synergy?.home, result.report.home),
+    away: side(away, lineups.away, delta?.away, result.synergy?.away, result.report.away),
+    events: result.events.map(storedEvent),
   };
 }
+
+export const storedEvent = (e: SimResult['events'][number]): MatchDetail['events'][number] => ({
+  minute: e.minute,
+  side: e.side,
+  scorer: e.scorer,
+  assist: e.assist,
+  slot: e.slot,
+});
 
 export function toMatch(
   row: MatchHead,
@@ -112,6 +150,8 @@ export function toMatch(
     owner: side.owner,
     formation: side.formation,
     ovr: side.ovr,
+    ...(side.xg === undefined ? {} : { xg: side.xg }),
+    ...(side.lines === undefined ? {} : { lines: side.lines }),
   });
   return {
     id: row.id,
@@ -134,9 +174,44 @@ export function toMatch(
       assist: e.assist ? label(e.assist) : null,
       scorerId: e.side === mine ? e.scorer.careerId : null,
       assistId: e.side === mine ? (e.assist?.careerId ?? null) : null,
+      ...(e.slot ? { slot: e.slot } : {}),
     })),
     mine,
+    ...(d.moments?.length
+      ? { moments: d.moments.map((m, i) => momentView(m, i, mine === 'home', label)) }
+      : {}),
     createdAt: row.createdAt,
+  };
+}
+
+/** 장면 하나를 화면 모양으로. 장면은 늘 경기를 건 쪽(home)의 것이라, 조회한 쪽이 home일 때만 커리어 id를 준다. */
+export function momentView(
+  m: StoredMomentView,
+  index: number,
+  mineIsHome: boolean,
+  label: (p: PlayerRef) => string,
+): TeamMoment {
+  const who = (a: MomentActor, mineSide: boolean) => ({
+    name: label(a.ref),
+    id: mineSide ? a.ref.careerId : null,
+    slot: a.slot,
+  });
+  return {
+    index,
+    minute: m.minute,
+    kind: m.kind,
+    situation: m.situation,
+    actor: who(m.actor, mineIsHome),
+    mate: who(m.mate, mineIsHome),
+    opp: who(m.opp, !mineIsHome),
+    choices: m.choices.map((c) => ({
+      id: c.id,
+      pct: c.pct,
+      mate: c.mate,
+      risk: Math.round(c.risk * 100),
+      gain: Math.round(c.gain * 100),
+    })),
+    ...(m.picked === undefined ? {} : { picked: m.picked, ok: !!m.ok }),
   };
 }
 
@@ -168,9 +243,10 @@ export function playedMatch(
 const careerIdsIn = (details: readonly MatchDetail[]) => [
   ...new Set(
     details.flatMap((d) =>
-      d.events.flatMap((e) =>
-        [e.scorer.careerId, e.assist?.careerId].filter((x): x is string => !!x),
-      ),
+      [
+        ...d.events.flatMap((e) => [e.scorer.careerId, e.assist?.careerId]),
+        ...(d.moments ?? []).flatMap((m) => [m.actor, m.mate, m.opp].map((a) => a.ref.careerId)),
+      ].filter((x): x is string => !!x),
     ),
   ),
 ];
@@ -192,3 +268,23 @@ export async function matchViews<R extends MatchHead & { detailJson: string }>(
   ]);
   return rows.map((r, i) => toMatch(r, details[i]!, myTeamIdOf(r), names, logos, lang));
 }
+
+/** 경기를 받은 구단주에게 보내는 알림(랭크 경기 · 장면 경기 마감). */
+export const matchNotice = (
+  id: string,
+  home: Pick<OwnerTeamRow, 'name'>,
+  away: Pick<OwnerTeamRow, 'name' | 'profileId'>,
+  homeGoals: number,
+  awayGoals: number,
+  now: string,
+) => ({
+  profileId: away.profileId,
+  sourceKey: `team-match:${id}`,
+  now,
+  content: {
+    kind: 'team' as const,
+    title: '내 팀에 새 경기 결과가 있어요',
+    body: `${away.name} ${awayGoals} : ${homeGoals} ${home.name}. 최근 경기에서 결과를 확인해 주세요.`,
+    target: { type: 'screen' as const, screen: 'team' as const },
+  },
+});

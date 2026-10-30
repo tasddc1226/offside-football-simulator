@@ -65,7 +65,12 @@ export function whenText(iso: string, now = Date.now()): string {
 export const timeText = (iso: string): string => kstDate(iso).time;
 
 /** 신청이 막힌 이유. */
-export function reasonText(el: CupMeResponse['eligibility'], min: number): string | null {
+export function reasonText(
+  el: CupMeResponse['eligibility'],
+  min: number,
+  ovr?: number | undefined,
+  cap?: number | null | undefined,
+): string | null {
   switch (el.reason) {
     case 'no-team':
       return L.reasonNoTeam;
@@ -77,6 +82,10 @@ export function reasonText(el: CupMeResponse['eligibility'], min: number): strin
       return L.reasonFull;
     case 'closed':
       return L.reasonClosed;
+    case 'over-cap':
+      return L.reasonOverCap({ ovr: ovr ?? 0, cap: cap ?? 0 });
+    case 'entered-other':
+      return L.reasonEnteredOther;
     default:
       return null;
   }

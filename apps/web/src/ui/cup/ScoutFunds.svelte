@@ -5,7 +5,9 @@
   import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
   import { scoutText as L } from '@offside/app-core/i18n/ko/scout';
   import { fundsText } from '@offside/app-core/market';
-  import { scoutShopState } from '@offside/app-core/rerollShop';
+  import { scoutShopState, shopShortText } from '@offside/app-core/rerollShop';
+  import Skeleton from '../Skeleton.svelte';
+  import FundsShort from './FundsShort.svelte';
   import { toast } from '../helpers.js';
 
   let { onbought }: { onbought?: (have: number, balance: number, spent: number) => void } = $props();
@@ -58,14 +60,14 @@
     {:else if view === 'soldOut'}
       <p class="muted fs-sm" data-scout-soldout>{L.fundsSoldOut}</p>
     {:else}
-      {#if view === 'short'}<p class="muted fs-sm">{CL.shopShort}</p>{/if}
+      {#if view === 'short'}<FundsShort text={shopShortText(shop.balance, shop.scout.price)} />{/if}
       <button class="btn btn-primary btn-block" data-act="scout-funds-buy" disabled={busy || view === 'short'} onclick={buy}>
         {busy ? CL.shopBusy : CL.shopBuy({ price: fundsText(shop.scout.price!) })}
       </button>
     {/if}
     <p class="muted fs-sm">{L.fundsNote}</p>
   {:else}
-    <p class="muted fs-sm">{failed ? CL.shopLoadFail : '…'}</p>
+    {#if failed}<p class="muted fs-sm">{CL.shopLoadFail}</p>{:else}<Skeleton height={72} />{/if}
   {/if}
 {/if}
 
@@ -80,9 +82,9 @@
   }
   .sf-facts li {
     padding: 6px 10px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
     font-variant-numeric: tabular-nums;
   }
 </style>

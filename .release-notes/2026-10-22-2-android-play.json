@@ -1,0 +1,26 @@
+{
+  "id": "t-11-449-android-play",
+  "title": "Android 앱이 Google Play에 나왔어요",
+  "items": [
+    "Google Play에서 오프사이드 Android 앱을 받을 수 있어요(지금은 한국).",
+    "안드로이드 웹의 앱 안내와 설정 > 앱으로 옮기기가 Google Play로 연결돼요. PC에서는 App Store와 Google Play를 함께 보여 줘요.",
+    "비공개 테스트 참여 안내는 내렸어요."
+  ],
+  "en": {
+    "title": "The Android app is on Google Play",
+    "items": [
+      "You can get the OFFSIDE Android app on Google Play (Korea for now).",
+      "On Android web, the app notice and Settings > Move to the app now link to Google Play. On PC, both the App Store and Google Play are shown.",
+      "The closed-test signup has been removed."
+    ]
+  },
+  "ja": {
+    "title": "AndroidアプリがGoogle Playで公開されました",
+    "items": [
+      "Google PlayでOFFSIDEのAndroidアプリを入手できます（現在は韓国のみ）。",
+      "Androidのウェブでは、アプリの案内と設定 > アプリに移るがGoogle Playにつながります。PCではApp StoreとGoogle Playを両方表示します。",
+      "クローズドテストの参加案内は終了しました。"
+    ]
+  },
+  "availability": "web"
+}

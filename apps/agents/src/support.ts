@@ -2,9 +2,9 @@
 // #agent-approvals 승인 카드에 같이 올리고, 운영자가 버튼을 눌러야 보낸다(ADR-015 밖으로 나가는 일은 사람이 승인).
 // 권한은 gmail.readonly · gmail.compose뿐이다. 받는 사람은 원래 메일의 보낸 사람으로 Worker가 정한다(모델이 고르지 않는다).
 import type { Tool } from './claude.ts';
-import { botToken, ROLE_NAMES, type Env } from './env.ts';
+import { type Env } from './env.ts';
 import { ledger } from './ledger.ts';
-import { slackClient } from './slack.ts';
+import { chatClient } from './chat.ts';
 import { threadOf, type Task } from './thread.ts';
 
 const GMAIL = 'https://gmail.googleapis.com/gmail/v1/users/me';
@@ -135,7 +135,7 @@ const header = (p: Part | undefined, name: string) =>
 /** `이름 <a@b.c>`에서 주소만. */
 export const addressOf = (v: string) => (/<([^>]+)>/.exec(v)?.[1] ?? v).trim().toLowerCase();
 
-/** 슬랙 · 프롬프트에는 주소를 가려서 쓴다(앞 두 글자 · 도메인만). */
+/** 채팅 · 프롬프트에는 주소를 가려서 쓴다(앞 두 글자 · 도메인만). */
 export const maskAddress = (v: string) => {
   const a = addressOf(v);
   const [user = '', domain = ''] = a.split('@');
@@ -256,7 +256,7 @@ export type MailDraft = {
   body: string;
 };
 
-const planSlack = (env: Env) => slackClient(botToken(env, 'plan'), fetch, ROLE_NAMES.plan);
+const planSlack = (env: Env) => chatClient(env, 'plan');
 
 export function mailCard(env: Env, d: MailDraft) {
   const value = JSON.stringify({ draft: d.draftId });
@@ -306,7 +306,10 @@ export function supportTools(
   task: Task,
   gmail: () => Promise<Gmail> = () => appGmail(env),
 ): Tool[] {
-  if (!gmailReady(env) || !['support', 'mention', 'reply'].includes(task.kind)) return [];
+  if (!gmailReady(env) || !['support', 'mention', 'reply', 'followup'].includes(task.kind))
+    return [];
+  // T-11-400 마무리 답장(followup)은 그 작업의 문의 메일 스레드에만, 우리가 앞서 답한 뒤에도 쓴다.
+  const followup = task.kind === 'followup';
   let drafts = 0;
   return [
     {
@@ -388,13 +391,15 @@ export function supportTools(
         if (drafts >= MAX_DRAFTS) throw new Error('이번 정리에서는 초안을 더 만들 수 없어요');
         const body = String(input.body ?? '').trim();
         if (!body) throw new Error('본문이 비었어요');
+        if (followup && String(input.thread_id) !== task.mail)
+          throw new Error('이 작업의 문의 메일 스레드에만 답장을 만들 수 있어요');
         const g = await gmail();
         const t = await g<{ id: string; messages?: RawMessage[] }>(
           `/threads/${encodeURIComponent(String(input.thread_id))}?format=full`,
         );
         const all = (t.messages ?? []).map(parseMessage);
         // 마지막 메일이 우리가 보낸 답이면 이미 답한 문의다(운영자가 직접 답했을 수 있다).
-        if (all.at(-1)?.sent) throw new Error('이 스레드는 이미 답장했어요');
+        if (all.at(-1)?.sent && !followup) throw new Error('이 스레드는 이미 답장했어요');
         const last = all.filter((m) => !m.sent).at(-1);
         if (!last) throw new Error('답할 문의 메일이 없어요');
         if (isAutomated(last.from)) throw new Error('자동 메일에는 답장을 만들지 않아요');
@@ -530,6 +535,8 @@ export async function scanSupport(
   // 읽은 데까지 커서를 먼저 옮긴다(정리가 실패해도 같은 메일로 다시 돈을 쓰지 않는다).
   await book.setSupportCursor(latest);
   if (!mails.length) return { mails: 0, skipped, ready: true };
+  // T-11-400 작업 후보(support_case)는 이 정리에 넘긴 메일 스레드에만 걸 수 있다.
+  await book.setSupportBatch(`support:${latest}`, [...new Set(mails.map((m) => m.threadId))]);
   await threadOf(env, 'plan', env.DESK_CHANNEL, 'support').enqueue({
     eventId: `support:${latest}`,
     kind: 'support',

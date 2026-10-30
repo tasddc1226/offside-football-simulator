@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { COMMENT_NICKNAME_MAX } from './board-limits.js';
+import { PUBLIC_NAME_CHARS } from './content-filter.js';
 import { IsoUtcSchema } from './primitives.js';
 
 /** 02 `ProfileSettings`. */
@@ -30,13 +31,13 @@ export const ProfileSchema = z.strictObject({
 
 export type Profile = z.infer<typeof ProfileSchema>;
 
-/** T-10-028 댓글 닉네임: 2~12자, 제어 문자·꺾쇠 없이. */
+/** T-10-028 댓글 닉네임: 2~12자, 제어 문자·꺾쇠 없이, 보이는 글자가 있어야 한다(T-11-462). */
 export const NicknameSchema = z
   .string()
   .trim()
   .min(2)
   .max(COMMENT_NICKNAME_MAX)
-  .regex(/^[^\p{Cc}<>]+$/u, '닉네임에 쓸 수 없는 문자가 있어요.');
+  .regex(PUBLIC_NAME_CHARS, '닉네임에 쓸 수 없는 문자가 있어요.');
 export const PutNicknameBodySchema = z.strictObject({ nickname: NicknameSchema });
 export type PutNicknameBody = z.infer<typeof PutNicknameBodySchema>;
 

@@ -119,6 +119,8 @@ export function clubContributions(
   pos: Pos,
   seasons: readonly RnSeason[],
   resolve: (name: string) => string | undefined = () => undefined,
+  /** T-11-429 지금 구단을 떠난다고 보고 애착을 센다(그 구단에서 은퇴 · 원클럽맨 가산이 빠진다). */
+  leave = false,
 ): RnClub[] {
   const w = LEGEND_W[pos];
   const by = new Map<string, RnClub>();
@@ -145,10 +147,34 @@ export function clubContributions(
     const honors = [...new Set(r.honors)].reduce((t, h) => t + honorPoints(h), 0);
     b.honors += Math.min(honors, RN_SEASON_HONOR_CAP);
   }
+  if (leave) order.push(LEFT);
   for (const [key, b] of by) b.bond = (b.play + b.honors) * bondRate(order, key);
   const out = [...by.values()];
   for (const b of out) b.score = b.play + b.honors + b.bond;
   return out.sort((a, b) => b.score - a.score);
+}
+
+/** 떠난 뒤의 구단 자리(어떤 구단 키와도 겹치지 않는다). */
+const LEFT = '\u0000left';
+
+/**
+ * T-11-429 지금은 기준을 넘지만 지금 구단을 떠나면 기준 아래로 내려가는 구단 id. 플레이 중 진행률은 지금 구단에서
+ * 은퇴한다고 보고 내므로, 이적하면 결번을 놓칠 수 있는 구단을 미리 알린다.
+ */
+export function rnLeaveRisk(
+  pos: Pos,
+  seasons: readonly RnSeason[],
+  cut: number,
+  resolve?: (name: string) => string | undefined,
+): Set<string> {
+  const left = new Map(
+    clubContributions(pos, seasons, resolve, true).map((c) => [c.clubId, c.score]),
+  );
+  return new Set(
+    clubContributions(pos, seasons, resolve)
+      .filter((c) => c.clubId != null && c.score >= cut && (left.get(c.clubId) ?? 0) < cut)
+      .map((c) => c.clubId!),
+  );
 }
 
 /** 그 구단의 애착 비율(RN_BOND). order: 프로 시즌의 구단 키(연도 순). */
@@ -190,8 +216,14 @@ export function rnMissOf(clubs: readonly RnClub[], cut: number): RnMiss | null {
   const base = { club: best.club, seasons: best.seasons, need: RN_MIN_SEASONS, pct };
   if (best.score >= cut)
     return best.seasons < RN_MIN_SEASONS ? { reason: 'seasons', ...base, pct: 100 } : null;
-  return best.seasons >= RN_MISS_MIN_SEASONS || pct >= 50 ? { reason: 'score', ...base } : null;
+  // T-11-429 기준 바로 아래면 10% 단위 내림(90%) 대신 '아주 조금 모자람'으로 보이게 표시한다.
+  const close = best.score >= cut * RN_CLOSE ? { close: true } : {};
+  return best.seasons >= RN_MISS_MIN_SEASONS || pct >= 50
+    ? { reason: 'score', ...base, ...close }
+    : null;
 }
+/** T-11-429 기준의 이 비율 이상이면 결과 화면이 '기준 바로 아래'로 보여 준다. */
+export const RN_CLOSE = 0.95;
 export type RnMiss = {
   /** seasons: 점수는 넘겼지만 시즌이 모자람. score: 기여 점수가 모자람(시즌도 모자랄 수 있다). */
   reason: 'seasons' | 'score';
@@ -200,6 +232,8 @@ export type RnMiss = {
   need: number;
   /** 기준 대비 기여 점수(10% 단위, 최대 90%. 기준을 넘긴 seasons 사유는 100). T-11-264 전 응답엔 seasons 사유에 없다. */
   pct?: number | undefined;
+  /** T-11-429 기준의 RN_CLOSE 이상(기준 바로 아래). 그 전 응답엔 없다. */
+  close?: boolean | undefined;
 };
 
 /** 결번을 노릴 구단 — 가장 큰 기여 구단, 그 자리가 이미 찼으면 두 번째 구단(자격이 있을 때만). */

@@ -1,5 +1,6 @@
 // 남의 공개 이름(명예의 전당 선수·구단) 신고(웹 NameReport.svelte) — 앱스토어 UGC 정책. 운영자가 관리 화면에서
 // 가리거나 기각한다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { Children, Fragment, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { reportName } from '@offside/app-core/api/reports';
@@ -44,7 +45,7 @@ export function NameReport({ kind, id, name }: { kind: NameReportKind; id: strin
       onPress={() => void send()}
       style={{ minHeight: 36, justifyContent: 'center', paddingHorizontal: 8 }}
     >
-      <Txt style={{ fontSize: rem(0.8125), color: c.muted }}>{sent ? L.reportDone : T.btn}</Txt>
+      <Txt style={{ fontSize: rem(FONT.label), color: c.muted }}>{sent ? L.reportDone : T.btn}</Txt>
     </Press>
   );
 }
@@ -65,7 +66,7 @@ export function NameReports({ children }: { children: ReactNode }) {
     >
       {items.map((item, i) => (
         <Fragment key={i}>
-          {i > 0 ? <Txt style={{ fontSize: rem(0.8125), color: c.muted }}>·</Txt> : null}
+          {i > 0 ? <Txt style={{ fontSize: rem(FONT.label), color: c.muted }}>·</Txt> : null}
           {item}
         </Fragment>
       ))}

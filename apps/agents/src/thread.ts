@@ -1,21 +1,24 @@
-// 슬랙 스레드 하나 = 역할마다 객체 하나. 일을 받은 순서대로 하나씩 처리하고, 이어지는 지시를 위해 대화 요약 · 비용을 저장한다.
+// 채팅 스레드 하나 = 역할마다 객체 하나. 일을 받은 순서대로 하나씩 처리하고, 이어지는 지시를 위해 대화 요약 · 비용을 저장한다.
 // 운영 D1은 쓰지 않는다(ADR-015 인프라).
 import { DurableObject } from 'cloudflare:workers';
 import { ClaudeError, MODEL_LABEL, runAgent, type Message, type Tool } from './claude.ts';
-import { apiKey, botToken, dailyBudget, enabled, ROLE_NAMES, type Env, type Role } from './env.ts';
+import { apiKey, dailyBudget, enabled, type Env, type Role } from './env.ts';
 import { cardOf } from './card.ts';
 import { isIncident, linkRoles, MAX_HOPS, parseHandoffs } from './handoff.ts';
 import { kstDay, ledger } from './ledger.ts';
 import { mcpTools, type McpServer } from './mcp.ts';
 import { roleSpec } from './roles.ts';
-import { slackClient, threadReply } from './slack.ts';
+import { chatClient } from './chat.ts';
+import { threadReply } from './reply.ts';
+import { openSupportCases } from './supportCase.ts';
 
 export type Task = {
   eventId: string;
   /**
-   * triage: 유저 반응 살피기, report: 아침 주기 작업 보고, support: 고객 문의 메일, reviews: 스토어 리뷰(T-11-328), release: 운영 배포 뒤 드림보트 요약(넷 다 새 글로
+   * triage: 유저 반응 살피기, report: 아침 주기 작업 보고, support: 고객 문의 메일, reviews: 스토어 리뷰(T-11-328)(넷 다 새 글로
    * 올린다). handoff: 다른 에이전트가 넘긴 일. incident: 사건 조사(@ops, Opus. 서버 상태 감시가 연 사건은 새 글, 경보에서 넘어온
-   * 사건은 그 스레드). verify: 배포 뒤 30 · 60분 지표 비교(@ops, 작업 카드 알람).
+   * 사건은 그 스레드). verify: 배포 뒤 30 · 60분 지표 비교(@ops, 작업 카드 알람). followup: 문의 작업이 배포되거나
+   * "고칠 것 없음"으로 끝났을 때 그 문의에 답장 초안 만들기(@plan, T-11-400).
    */
   kind:
     | 'alert'
@@ -25,10 +28,10 @@ export type Task = {
     | 'report'
     | 'support'
     | 'reviews'
-    | 'release'
     | 'handoff'
     | 'incident'
-    | 'verify';
+    | 'verify'
+    | 'followup';
   role: Role;
   channel: string;
   /** 답을 달 스레드(첫 메시지 ts). 새 글(triage · report)은 아직 없다(올린 글이 스레드가 된다). */
@@ -43,6 +46,8 @@ export type Task = {
   back?: boolean;
   /** verify: 마지막(60분) 확인. 끝나면 주장에게 결과를 넘긴다. */
   final?: boolean;
+  /** followup: 답장을 만들 수 있는 문의 메일 스레드(Gmail threadId). */
+  mail?: string;
 };
 
 /** owner: 이 역할이 연 스레드인지. 넘겨받기만 한 스레드에선 운영자 답글을 받지 않는다(한 답글에 두 봇이 답하지 않게). */
@@ -58,13 +63,27 @@ const isNewPost = (t: Task) =>
   t.kind === 'report' ||
   t.kind === 'support' ||
   t.kind === 'reviews' ||
-  t.kind === 'release' ||
   (t.kind === 'incident' && !t.threadTs);
 
 export const threadOf = (env: Env, role: Role, channel: string, threadTs: string) =>
   env.THREAD.get(env.THREAD.idFromName(`${role}:${channel}:${threadTs}`));
 
 export class AgentThread extends DurableObject<Env> {
+  /** 지금 돌고 있는 일의 시작 시각(이 isolate 안). 멈춤이 이보다 뒤면 그 일을 끊는다. */
+  private busySince: number | undefined;
+
+  /**
+   * 운영자 멈춤(stop.ts). 기다리는 일을 비우고, 돌고 있는 일은 다음 턴 전에 끝내게 한다.
+   * 멈춘 뒤에 새로 들어온 일은 그대로 돈다(멈춘 시각보다 늦게 시작하니까).
+   */
+  async stop(now = Date.now()): Promise<{ cleared: number; running: boolean }> {
+    const s = this.ctx.storage;
+    const cleared = ((await s.get<Task[]>('queue')) ?? []).length;
+    await s.put('queue', []);
+    await s.put('stopAt', now);
+    return { cleared, running: this.busySince !== undefined };
+  }
+
   async enqueue(task: Task): Promise<'queued' | 'duplicate' | 'ignored'> {
     const s = this.ctx.storage;
     const seen = (await s.get<string[]>('seen')) ?? [];
@@ -92,15 +111,16 @@ export class AgentThread extends DurableObject<Env> {
       if (!task) return;
       await this.ctx.storage.put('queue', queue);
       // 실패해도 던지지 않는다(알람 재시도가 같은 일을 다시 돌려 비용이 두 번 든다).
-      await this.handle(task).catch((e: unknown) =>
-        console.error('agent task failed', task.role, String(e)),
-      );
+      this.busySince = Date.now();
+      await this.handle(task, this.busySince)
+        .catch((e: unknown) => console.error('agent task failed', task.role, String(e)))
+        .finally(() => (this.busySince = undefined));
     }
   }
 
-  private async handle(task: Task) {
+  private async handle(task: Task, startedAt: number) {
     const env = this.env;
-    const slack = slackClient(botToken(env, task.role), fetch, ROLE_NAMES[task.role]);
+    const slack = chatClient(env, task.role);
     const book = ledger(env);
     // 운영자가 끼어든 횟수(주간 회고, T-11-325).
     if (task.kind === 'mention' || task.kind === 'reply') await book.touch();
@@ -127,7 +147,7 @@ export class AgentThread extends DurableObject<Env> {
       history: [],
       costUsd: 0,
       runs: 0,
-      owner: task.kind !== 'handoff',
+      owner: task.kind !== 'handoff' && task.kind !== 'followup',
     };
     const spec = roleSpec(env, task.role, task);
     const prompt = spec.prompt(task);
@@ -143,13 +163,14 @@ export class AgentThread extends DurableObject<Env> {
         maxTurns: spec.maxTurns,
         budgetUsd: Number(env.TASK_BUDGET_USD),
         model: spec.model,
+        shouldStop: async () => ((await this.ctx.storage.get<number>('stopAt')) ?? 0) >= startedAt,
       });
       const day = await book.add(task.role, r.costUsd);
       if (!isNewPost(task))
         await cardOf(env, task.channel, task.threadTs)
           .addCost(task.role, r.costUsd)
           .catch((e: unknown) => console.error('card cost failed', String(e).slice(0, 200)));
-      // 검토할 반응이 없으면 슬랙에 올리지 않는다(비용만 적는다).
+      // 검토할 반응이 없으면 채널에 올리지 않는다(비용만 적는다).
       if (task.kind === 'triage' && r.text.trim().startsWith(NOTHING)) {
         console.log('triage: nothing', r.costUsd.toFixed(3));
         return;
@@ -162,6 +183,25 @@ export class AgentThread extends DurableObject<Env> {
         (r.stopped === 'turns'
           ? '\n\n_조회 횟수 한도에 닿아 여기서 멈췄어요. 이어서 하려면 다시 불러 주세요._'
           : '');
+      if (r.stopped === 'operator') {
+        // 운영자가 멈췄다: 지금까지 쓴 글만 남기고 카드 · 넘기기 · 사건 후속은 하지 않는다.
+        await slack(
+          'chat.postMessage',
+          threadReply(
+            task.channel,
+            isNewPost(task) ? undefined : task.threadTs,
+            `${r.text ? `${linkRoles(r.text)}\n\n` : ''}_운영자 지시로 여기서 멈췄어요._`,
+            `${MODEL_LABEL[spec.model]} · ${r.turns}턴 · $${r.costUsd.toFixed(3)}`,
+          ),
+        );
+        if (task.sourceTs)
+          await slack('reactions.remove', {
+            channel: task.channel,
+            timestamp: task.sourceTs,
+            name: 'eyes',
+          });
+        return;
+      }
       footer = `${MODEL_LABEL[spec.model]} · ${r.turns}턴 · $${r.costUsd.toFixed(3)} · 오늘 ${task.role} $${day.costUsd.toFixed(2)} (${kstDay()})`;
       state.history = [
         ...state.history,
@@ -184,7 +224,7 @@ export class AgentThread extends DurableObject<Env> {
       threadReply(
         task.channel,
         isNewPost(task) ? undefined : task.threadTs,
-        linkRoles(env, reply),
+        alertOperator(env, task, linkRoles(reply)),
         footer,
       ),
     );
@@ -207,6 +247,8 @@ export class AgentThread extends DurableObject<Env> {
   /** T-11-325 사건 · 배포 뒤 확인의 다음 걸음. 넘기기 줄과 달리 Worker가 정해서 넘긴다(넘기기 횟수에 세지 않는다). */
   private async follow(task: Task, threadTs: string, reply: string) {
     const env = this.env;
+    // T-11-400 문의 정리가 남긴 작업 후보는 정리 글이 올라간 뒤 스레드 · 카드 · 시작 카드로 만든다.
+    if (task.kind === 'support') await openSupportCases(env, task.eventId, task.channel, threadTs);
     // 경보 첫 정리(Haiku)가 사건이라고 보면 같은 스레드에서 Opus로 다시 본다.
     if (task.kind === 'alert' && isIncident(reply))
       await threadOf(env, 'ops', task.channel, threadTs).enqueue({
@@ -254,11 +296,7 @@ export class AgentThread extends DurableObject<Env> {
       if (!enabled(env, h.to)) continue;
       const n = await ledger(env).hop(`${task.channel}:${threadTs}`);
       if (n > MAX_HOPS) {
-        await slackClient(
-          botToken(env, task.role),
-          fetch,
-          ROLE_NAMES[task.role],
-        )(
+        await chatClient(env, task.role)(
           'chat.postMessage',
           threadReply(
             task.channel,
@@ -283,6 +321,10 @@ export class AgentThread extends DurableObject<Env> {
     }
   }
 }
+
+/** 사건 조사 글은 운영자를 멘션해 휴대폰 알림이 가게 한다(밤에 #agent-desk 글을 놓치지 않게). */
+export const alertOperator = (env: Env, task: Pick<Task, 'kind'>, text: string) =>
+  task.kind === 'incident' && env.OPERATOR_USER_ID ? `<@${env.OPERATOR_USER_ID}> ${text}` : text;
 
 const firstLine = (s: string) =>
   (s.split('\n').find((l) => l.trim()) ?? '')

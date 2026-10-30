@@ -1,6 +1,7 @@
 import {
   BALANCE_HISTORY_LIMIT,
   BalanceConfigSchema,
+  BalanceScheduleSchema,
   BalanceHistorySchema,
   BalanceDraftInputSchema,
   BalanceVersionListSchema,
@@ -8,16 +9,19 @@ import {
   BalanceVersionSchema,
 } from '@offside/contracts';
 import type { Context, Hono } from 'hono';
-import { activeSeason } from '@offside/contracts/service-seasons';
+import { activeSeason, displaySeasonAt, teamSeasonAt } from '@offside/contracts/service-seasons';
 import { requireAdmin } from '../auth/admin.js';
 import {
   activateBalance,
+  clearBalanceSchedule,
   createBalanceDraft,
   deleteBalanceDraft,
   getActiveBalance,
+  getBalanceSchedule,
   getBalanceVersion,
   listAppliedBalanceVersions,
   listBalanceVersions,
+  scheduleBalance,
   updateBalanceDraft,
 } from '../db/repos/balance.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
@@ -49,6 +53,9 @@ const seasonLocked = (name: string) =>
     'SEASON_BALANCE_LOCKED',
   );
 
+/** T-11-488 예약이 켜질 시즌: 지금 시즌(휴식기면 마지막 시즌)의 다음 시즌. */
+const nextSeasonAt = (now: string) => (teamSeasonAt(now) ?? displaySeasonAt(now)) + 1;
+
 async function versionOr404(c: Context<AppEnv>, version: number) {
   const v = await getBalanceVersion(getDb(c), version);
   if (!v) throw notFound();
@@ -76,8 +83,30 @@ export function registerBalanceRoutes(app: Hono<AppEnv>): void {
 
   app.get('/v1/admin/balance', async (c) => {
     await requireAdmin(c);
-    const versions = await listBalanceVersions(getDb(c));
-    return ok(c, BalanceVersionListSchema, { versions });
+    const db = getDb(c);
+    const [versions, s] = await Promise.all([listBalanceVersions(db), getBalanceSchedule(db)]);
+    const scheduled = s && { version: s.version, season: s.season, scheduledAt: s.scheduledAt };
+    return ok(c, BalanceVersionListSchema, { versions, scheduled });
+  });
+
+  // T-11-488 다음 시즌 개막에 켤 버전을 예약한다(하나만 — 다시 예약하면 바뀐다). 켜는 일은 5분 cron(cron/balanceSchedule.ts).
+  app.post('/v1/admin/balance/:version/schedule', async (c) => {
+    const version = versionParam(c);
+    const viewer = await requireAdmin(c);
+    const target = await versionOr404(c, version);
+    if (target.status === 'active')
+      // i18n-ignore 운영 도구 전용 문구(운영 도구는 한국어로 둔다)
+      throw conflictError('이미 적용 중인 버전이에요.', 'BALANCE_ALREADY_ACTIVE');
+    const now = nowIso();
+    const scheduled = { version, season: nextSeasonAt(now), scheduledAt: now };
+    await scheduleBalance(getDb(c), { ...scheduled, by: viewer.profileId! });
+    return ok(c, BalanceScheduleSchema, scheduled);
+  });
+
+  app.delete('/v1/admin/balance-schedule', async (c) => {
+    await requireAdmin(c);
+    await clearBalanceSchedule(getDb(c));
+    return c.body(null, 204);
   });
 
   app.post('/v1/admin/balance', async (c) => {

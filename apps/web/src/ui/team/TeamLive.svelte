@@ -1,11 +1,24 @@
 <script lang="ts">
   import TeamLogo from './TeamLogo.svelte';
+  import MatchGround from './MatchGround.svelte';
+  import PopSheet from '../PopSheet.svelte';
   import { teamLiveText as L } from '@offside/app-core/i18n/ko/teamLive';
+  import { teamMomentsText as M } from '@offside/app-core/i18n/ko/teamMoments';
   // T-10-097 팀 경기 문자중계 — 한 화면에서 시계가 0'부터 90'+까지 흐르며 중계 줄이 하나씩 올라온다. 골이 가까우면
   // 시계가 느려지고, 골이 들어가면 전광판이 번쩍인다. 결과는 이미 서버가 정했고 여기서는 보여 주기만 한다.
   // 감속 모션이어도 진행 템포는 그대로 두고(읽는 시간) 움직임 효과만 뺀다. '결과 바로 보기'로 언제든 끝낼 수 있다.
+  // T-11-387 장면 경기(live)면 장면 분에 시계를 멈추고 선택지 카드를 띄운다. 고르면 서버가 결과를 정하고, 그 골이 중계에
+  // 끼어든다. 제한 시간이 지나거나 '결과 바로 보기'를 누르면 남은 장면은 감독에게 맡긴다.
+  // T-11-492 전광판 아래 2D 그라운드가 줄마다 그 장면을 움직임으로 보여 준다(장면 카드를 띄우면 멈추고 선택지 화살표를 그린다).
   import { onDestroy, onMount } from 'svelte';
-  import type { TeamMatch } from '@offside/app-core/api/team';
+  import {
+    chooseMoment,
+    finishLiveMatch,
+    type PlayTeamMatchResponse,
+    type TeamLive,
+    type TeamMatch,
+    type TeamMoment,
+  } from '@offside/app-core/api/team';
   import {
     FLASH_MS,
     MOMENTUM_START,
@@ -19,26 +32,63 @@
     type LiveLine,
     type LivePhase,
   } from '@offside/app-core/teamLive';
+  import {
+    GroundPlay,
+    groundBall,
+    groundLineWaitMs,
+    groundSpots,
+    type GroundArrow,
+    type GroundPose,
+    type Pt,
+  } from '@offside/app-core/matchGround';
+  import {
+    LiveScore,
+    liveSkipLabel,
+    momentChoices,
+    momentLines,
+    momentScene,
+    momentTimerSpoken,
+    momentTitle,
+  } from '@offside/app-core/teamMoments';
 
   let {
     match,
     name,
     onend,
     neutral = false,
+    live,
+    onfinal,
   }: {
     match: TeamMatch;
     name: (id: string | null, fallback: string) => string;
     onend: () => void;
     /** 내 팀이 없는 경기(컵 공개 경기) — 내 팀 강조 없이 그린다. */
     neutral?: boolean;
+    /** T-11-387 고를 장면(장면 경기를 막 시작했을 때만). */
+    live?: TeamLive | undefined;
+    /** 장면 경기가 끝났을 때의 결과(스코어 · 기록 · 레이팅). */
+    onfinal?: ((r: PlayTeamMatchResponse) => void) | undefined;
   } = $props();
 
   // 경기 하나에 한 번 만든다(부모가 경기마다 {#key}로 새로 그린다).
   // svelte-ignore state_referenced_locally
   const script = liveScript(match, name, { neutral });
-  const plan = playbackPlan(script);
+  // svelte-ignore state_referenced_locally
+  const moments: TeamMoment[] = live?.moments ?? [];
+  // svelte-ignore state_referenced_locally
+  const choiceSec = live?.choiceSec ?? 15;
+  const plan = playbackPlan(
+    script,
+    moments.map((m) => m.minute),
+    groundLineWaitMs,
+  );
+  // svelte-ignore state_referenced_locally
+  const ground = new GroundPlay(match);
+  // svelte-ignore state_referenced_locally
+  const tally = live ? new LiveScore(match, neutral) : null;
 
-  let shown = $state<number[]>([]);
+  let shown = $state<{ k: number; l: LiveLine }[]>([]);
+  let seq = 0;
   let clock = $state(0);
   let extra = $state(0);
   let phase = $state<LivePhase>('1st');
@@ -50,23 +100,118 @@
   let alive = true;
   let flashTimer: ReturnType<typeof setTimeout> | undefined;
 
+  /** 지금 고르는 장면과 남은 초. */
+  let active = $state<{ m: TeamMoment; left: number } | null>(null);
+  let sending = $state(false);
+  let pick: ((choice: string | null) => void) | null = null;
+  let countdown: ReturnType<typeof setInterval> | undefined;
+  let final: PlayTeamMatchResponse | null = null;
+  /** 판정을 받지 못하면 남은 장면은 건너뛰고 끝에서 마감한다. */
+  let broken = false;
+  /** T-11-443 아직 고르지 않은 장면 수('결과 바로 보기'가 감독에게 맡긴다는 걸 버튼에 적는다). */
+  let pendingMoments = $state(moments.length);
+
+  /** 그라운드에 지금 그리는 자세 · 전환 시간 · 골까지 공이 지난 길 · 선택지 화살표. */
+  let gPose = $state.raw<GroundPose | null>(null);
+  let gDur = $state(700);
+  let gTrail = $state.raw<readonly Pt[]>([]);
+  let gArrows = $state.raw<readonly GroundArrow[]>([]);
+  let gTimers: ReturnType<typeof setTimeout>[] = [];
+  const spots = $derived(groundSpots(ground.players, gPose, momentum));
+  const ball = $derived(groundBall(gPose, momentum));
+
+  function stopGround() {
+    for (const t of gTimers) clearTimeout(t);
+    gTimers = [];
+  }
+
+  /** 줄 하나의 움직임을 줄 대기 시간 안에 차례로 보여 준다. */
+  function playGround(l: LiveLine) {
+    stopGround();
+    const steps = ground.line(l, waitMs(groundLineWaitMs(l.kind), fast));
+    const trail = ground.trail;
+    for (const st of steps) {
+      gTimers.push(
+        setTimeout(() => {
+          gPose = st.pose;
+          gDur = Math.min(900, st.dur);
+          gTrail = st.pose.goal ? trail : [];
+        }, st.at),
+      );
+    }
+  }
+
   const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, waitMs(ms, fast)));
 
   const scored = $derived(
-    shown.map((i) => script[i]!).filter((l): l is LiveLine & { side: 'home' | 'away' } => l.kind === 'goal' && !!l.side),
+    shown.map((x) => x.l).filter((l): l is LiveLine & { side: 'home' | 'away' } => l.kind === 'goal' && !!l.side),
   );
   const clockLabel = $derived(extra ? `${clock}+${extra}'` : `${clock}'`);
   const phaseLabel = $derived(PHASE_LABEL[phase]);
+  const choices = $derived(active ? momentChoices(active.m, name) : []);
 
-  function show(i: number) {
-    const l = script[i]!;
-    shown = [i, ...shown];
+  function push(l: LiveLine) {
+    shown = [{ k: seq++, l }, ...shown];
     momentum = momentumAfter(momentum, l);
     if (l.kind === 'goal' && l.score) {
       score = l.score;
       flash = l.side ?? null;
       clearTimeout(flashTimer);
       flashTimer = setTimeout(() => (flash = null), FLASH_MS);
+    }
+    playGround(l);
+  }
+
+  function show(i: number) {
+    const l = script[i]!;
+    push(tally ? tally.line(l) : l);
+  }
+
+  /** 장면 카드를 띄우고 고른 선택지(시간이 지나면 'auto', 경기를 끝내면 null)를 기다린다. */
+  function ask(m: TeamMoment): Promise<string | null> {
+    return new Promise((resolve) => {
+      active = { m, left: choiceSec };
+      stopGround();
+      const g = ground.freeze(m, name);
+      gDur = 500;
+      gPose = g.pose;
+      gTrail = [];
+      gArrows = g.arrows;
+      pick = (choice) => {
+        pick = null;
+        clearInterval(countdown);
+        resolve(choice);
+      };
+      countdown = setInterval(() => {
+        if (!active) return;
+        active = { ...active, left: active.left - 1 };
+        if (active.left <= 0) pick?.('auto');
+      }, 1000);
+    });
+  }
+
+  async function moment(k: number) {
+    const m = moments[k];
+    if (!m || broken || !alive) return;
+    const choice = await ask(m);
+    pendingMoments = moments.length - k - 1;
+    if (choice === null || !alive) return;
+    sending = true;
+    const r = await chooseMoment(match.id, m.index, choice);
+    sending = false;
+    active = null;
+    gArrows = [];
+    if (!r.ok) {
+      broken = true;
+      pendingMoments = 0;
+      push({ minute: m.minute, kind: 'moment', text: M.failed });
+      return;
+    }
+    if (r.data.final) final = r.data.final;
+    for (const l of momentLines(r.data.moment, r.data.goals, name, tally!)) {
+      if (!alive) return;
+      push(l);
+      await sleep(groundLineWaitMs(l.kind));
     }
   }
 
@@ -76,17 +221,34 @@
       if (!alive) return;
       if (step.clock !== undefined) clock = step.clock;
       if (step.extra !== undefined) extra = step.extra;
+      if (step.moment !== undefined) await moment(step.moment);
       if (step.show !== undefined) show(step.show);
       if (step.phase) phase = step.phase;
-      if (step.decay) momentum = momentumDecay(momentum);
+      if (step.decay) {
+        momentum = momentumDecay(momentum);
+        if (ground.settle()) {
+          gPose = null;
+          gTrail = [];
+        }
+      }
       if (step.wait > 0) await sleep(step.wait);
     }
-    finish();
+    void finish();
   }
 
-  function finish() {
+  async function finish() {
     if (!alive) return;
     alive = false;
+    pick?.(null);
+    active = null;
+    gArrows = [];
+    if (live && !final) {
+      sending = true;
+      const r = await finishLiveMatch(match.id);
+      sending = false;
+      if (r.ok) final = r.data;
+    }
+    if (final) onfinal?.(final);
     onend();
   }
 
@@ -94,12 +256,24 @@
   onDestroy(() => {
     alive = false;
     clearTimeout(flashTimer);
+    clearInterval(countdown);
+    stopGround();
   });
 </script>
 
 <section class="card tl" data-team-live aria-labelledby="tl-title">
   <h1 id="tl-title" class="sr-only">{L.title({ home: match.home.name, away: match.away.name })}</h1>
   <div class="tl-board" class:flash={!!flash}>
+    {#if active}
+      <!-- T-11-492 장면을 고르는 동안은 전광판을 한 줄로 접어 멈춘 그라운드가 시트 위에 다 보이게 한다. -->
+      <div class="tl-pause">
+        <span class="tl-live paused">PAUSE</span>
+        <span class="tl-clock" data-live-clock>{clockLabel}</span>
+        <b class="tl-p-team" class:mine={!neutral && match.mine === 'home'}>{match.home.name}</b>
+        <span class="tl-p-goals" aria-live="polite" data-live-score>{score[0]} : {score[1]}</span>
+        <b class="tl-p-team away" class:mine={!neutral && match.mine === 'away'}>{match.away.name}</b>
+      </div>
+    {:else}
     <div class="tl-top">
       <span class="tl-live" class:done={phase === 'ft'}>{phase === 'ft' ? 'FT' : 'LIVE'}</span>
       <span class="tl-clock" data-live-clock>{clockLabel}</span>
@@ -127,14 +301,43 @@
       <span>{L.flow}</span>
       <div class="tl-mom-track"><div class="tl-mom-fill" style:width="{momentum * 100}%"></div></div>
     </div>
-    {#if flash}
-      <div class="tl-banner" aria-hidden="true">GOAL!</div>
     {/if}
   </div>
 
+  <MatchGround {spots} {ball} dur={gDur} goal={gPose?.goal ?? null} trail={gTrail} arrows={gArrows} home={match.home.name} away={match.away.name} />
+
+  {#if active}
+    <!-- T-11-387 고를 장면은 아래에서 올라오는 시트로 띄운다. 고르거나 시간이 다 돼야 닫힌다(배경 누르기로 닫지 않는다). -->
+    <PopSheet label={momentTitle(active.m)} step={`${active.m.index}`}>
+      <div class="tl-moment" class:crisis={active.m.kind === 'crisis'} data-moment={active.m.situation}>
+        <p class="tl-m-head">
+          <b>{momentTitle(active.m)}</b>
+          <span class="tl-m-score">{active.m.minute}' · {score[0]} : {score[1]}</span>
+        </p>
+        <p class="tl-m-scene">{momentScene(active.m, name)}</p>
+        <p class="tl-m-ask">{M.ask} <small>{active.m.kind === 'chance' ? M.chancePct : M.crisisPct}</small></p>
+        <div class="tl-m-choices">
+          {#each choices as c, k (c.id)}
+            <button class="tl-m-choice" disabled={sending} onclick={() => pick?.(c.id)} data-moment-choice={c.id}>
+              <span class="tl-m-key" aria-hidden="true">{k + 1}</span>
+              <span class="tl-m-label">{c.label}</span>
+              <b class="tl-m-pct">{M.pct({ p: c.pct })}</b>
+              {#if c.tags.length}<small class="tl-m-tags">{c.tags.join(' · ')}</small>{/if}
+            </button>
+          {/each}
+        </div>
+        <div class="tl-m-timer" aria-hidden="true"><i style:width="{(active.left / choiceSec) * 100}%"></i></div>
+        <!-- T-11-443 화면 글자는 매초 바뀌고, 스크린리더는 처음 안내와 마지막 몇 초만 읽는다. -->
+        <p class="tl-m-hint" aria-hidden="true">{sending ? M.sending : M.timer({ s: active.left })}</p>
+        <p class="sr-only" aria-live="polite" data-moment-spoken>{sending ? M.sending : momentTimerSpoken(active.left, choiceSec)}</p>
+        <button class="btn tl-m-skip" disabled={sending} onclick={() => void finish()} data-act="moment-skip">{M.skipToManager}</button>
+      </div>
+    </PopSheet>
+  {/if}
+
   <ol class="tl-feed">
-    {#each shown as i (i)}
-      {@const l = script[i]!}
+    {#each shown as x (x.k)}
+      {@const l = x.l}
       <li class="k-{l.kind}" class:away={l.side === 'away'} class:home={l.side === 'home'} data-live-line={l.kind}>
         <span class="tl-min">{clockText(l)}</span>
         <span>{l.text}</span>
@@ -144,7 +347,7 @@
 
   <div class="tm-actions">
     <button class="btn" aria-pressed={fast} onclick={() => (fast = !fast)} data-act="live-fast">{fast ? L.speedNormal : L.speedFast}</button>
-    <button class="btn btn-primary" onclick={finish} data-act="live-skip">{L.skip}</button>
+    <button class="btn btn-primary" disabled={sending} onclick={() => void finish()} data-act="live-skip">{liveSkipLabel(pendingMoments)}</button>
   </div>
 </section>
 
@@ -158,7 +361,7 @@
     display: grid;
     gap: 10px;
     padding: 14px;
-    border-radius: 14px;
+    border-radius: var(--radius-md);
     background: var(--pitch);
     color: var(--on-pitch);
     overflow: hidden;
@@ -178,11 +381,11 @@
     align-items: center;
     gap: 6px;
     padding: 1px 8px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--bad);
     color: #fff;
     font-weight: 700;
-    font-size: 0.8125rem;
+    font-size: var(--fs-label);
   }
   .tl-live::before {
     content: '';
@@ -192,14 +395,48 @@
     background: currentColor;
     animation: tl-pulse 1.2s ease-in-out infinite;
   }
-  .tl-live.done {
+  .tl-live.done,
+  .tl-live.paused {
     background: var(--chalk);
   }
-  .tl-live.done::before {
+  .tl-live.done::before,
+  .tl-live.paused::before {
     display: none;
   }
+  .tl-pause {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .tl-pause .tl-clock {
+    min-width: 0;
+    font-family: var(--display);
+    font-size: var(--fs-title3);
+  }
+  .tl-p-team {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--fs-body2);
+  }
+  .tl-p-team.away {
+    text-align: right;
+  }
+  .tl-p-team.mine {
+    color: var(--pitch-accent);
+  }
+  .tl-p-goals {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: var(--fs-title3);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
   .tl-clock {
-    font-size: 1.5rem;
+    font-size: var(--fs-title1);
     font-weight: 700;
     color: var(--pitch-accent);
     font-variant-numeric: tabular-nums;
@@ -207,7 +444,7 @@
   }
   .tl-phase {
     margin-left: auto;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     opacity: 0.85;
   }
   .tl-score {
@@ -232,7 +469,7 @@
   }
   .tl-team small {
     opacity: 0.75;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
   }
   .tl-team.mine b {
     color: var(--pitch-accent);
@@ -292,7 +529,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     opacity: 0.85;
   }
   .tl-mom-track {
@@ -306,20 +543,6 @@
     height: 100%;
     background: var(--on-pitch);
     transition: width 0.6s ease;
-  }
-  .tl-banner {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    font-family: var(--display);
-    font-size: 3.4rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    color: var(--pitch-accent);
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
-    pointer-events: none;
-    animation: tl-banner 1.8s ease-out forwards;
   }
   .tl-feed {
     list-style: none;
@@ -335,9 +558,9 @@
     grid-template-columns: 3.4em 1fr;
     gap: 8px;
     padding: 6px 10px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     line-height: 1.45;
     animation: tl-in 0.35s ease-out;
   }
@@ -361,6 +584,113 @@
     font-weight: 700;
     background: transparent;
     border: 1px dashed var(--line);
+  }
+  .tl-feed li.k-moment {
+    font-weight: 700;
+    background: var(--surface);
+    border: 1px solid var(--pitch-accent);
+  }
+  .tl-moment {
+    display: grid;
+    gap: 10px;
+  }
+  .tl-m-score {
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+  }
+  .tl-m-skip {
+    justify-self: center;
+    min-height: 44px;
+  }
+  .tl-m-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 0;
+    font-family: var(--display);
+    letter-spacing: 0.04em;
+  }
+  .tl-m-head b {
+    font-size: var(--fs-title3);
+    color: var(--pitch-2);
+  }
+  .tl-moment.crisis .tl-m-head b {
+    color: var(--bad);
+  }
+  .tl-m-scene,
+  .tl-m-ask,
+  .tl-m-hint {
+    margin: 0;
+    line-height: 1.5;
+  }
+  .tl-m-ask small,
+  .tl-m-hint {
+    color: var(--muted);
+    font-size: var(--fs-label);
+  }
+  .tl-m-choices {
+    display: grid;
+    gap: 6px;
+  }
+  .tl-m-choice {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 2px 10px;
+    min-height: 48px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background: var(--surface-2);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .tl-m-choice:hover:not(:disabled),
+  .tl-m-choice:focus-visible {
+    border-color: var(--pitch-2);
+  }
+  .tl-m-choice:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .tl-m-label {
+    font-weight: 700;
+  }
+  .tl-m-pct {
+    font-family: var(--display);
+    font-size: var(--fs-title3);
+    font-variant-numeric: tabular-nums;
+  }
+  .tl-m-key {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--pitch);
+    color: var(--pitch-accent);
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .tl-m-tags {
+    grid-column: 2 / -1;
+    color: var(--muted);
+    font-size: var(--fs-caption);
+  }
+  .tl-m-timer {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+    overflow: hidden;
+  }
+  .tl-m-timer i {
+    display: block;
+    height: 100%;
+    background: var(--pitch-2);
+    transition: width 1s linear;
   }
   .tl-min {
     font-family: var(--display);
@@ -389,23 +719,6 @@
       transform: scale(1.25);
     }
   }
-  @keyframes tl-banner {
-    0% {
-      opacity: 0;
-      transform: scale(0.6);
-    }
-    20% {
-      opacity: 1;
-      transform: scale(1.08);
-    }
-    75% {
-      opacity: 1;
-      transform: scale(1);
-    }
-    100% {
-      opacity: 0;
-    }
-  }
   @keyframes tl-in {
     from {
       transform: translateY(-8px) scale(0.98);
@@ -415,12 +728,12 @@
     .tl-board.flash,
     .tl-board.flash .tl-goals,
     .tl-feed li,
-    .tl-live::before,
-    .tl-banner {
+    .tl-live::before {
       animation: none;
     }
     .tl-team,
     .tl-fill,
+    .tl-m-timer i,
     .tl-mom-fill {
       transition: none;
     }

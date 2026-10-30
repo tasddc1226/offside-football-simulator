@@ -16,20 +16,47 @@
 import { DAY_MS as DAY, KST_MS as KST } from './kst.js';
 
 export const SEASON_GAUGE = {
-  /** T-11-192 10 → 12: 시즌 1이 4.6일 만에 56%까지 차 2주 남짓이면 끝날 상황이라 목표를 올렸다. */
-  perUser: 12,
+  /**
+   * T-11-192 10 → 12: 시즌 1이 4.6일 만에 56%까지 차 2주 남짓이면 끝날 상황이라 목표를 올렸다.
+   * T-11-528 12 → 29: 최대 기간을 25일에서 60일로 늘린 만큼(×2.4) 목표도 올려 하루 진행 속도를 그대로 둔다.
+   */
+  perUser: 29,
   dailyCap: 20,
   /** 이 나이 이상에 은퇴한 커리어만 센다(끝까지 뛴 커리어). */
   fullAge: 35,
   /**
    * T-11-192 7 → 14, 21 → 28: 빨리 차도 2주는 하고, 느려도 4주면 끝난다.
    * T-11-352 28 → 25: 시즌 1 게이지가 하루 1.7%p로 느려져 시간 하한으로 11-03에 끝날 상황이라 사흘 당겼다(10-31 토 개막).
+   * T-11-528 14 → 30, 25 → 60: 시즌 2부터 한두 달 운영(2026-10-27 사용자 결정). 시즌 1은 마감(10-31)이 이미 확정돼 바뀌지 않는다.
    */
-  minDays: 14,
-  maxDays: 25,
+  minDays: 30,
+  maxDays: 60,
   lockAt: 0.9,
   noticeHours: 48,
+  /** 1 = 끝나지 않은 컵 · 리그가 있으면 마감을 그 뒤로 미룬다. */
+  waitEvents: 1,
 } as const;
+
+export type SeasonGaugeRules = {
+  readonly [K in keyof typeof SEASON_GAUGE]: number;
+};
+
+/**
+ * T-11-546 시즌 1은 공지한 대로 옛 규칙(목표 12 · 14~25일, 시간 하한으로 10/31 00:00 KST 마감)으로 끝낸다. 시즌 1 마감은
+ * 확정 전이었어서 T-11-528 값을 그대로 쓰면 최대 기간이 60일로 늘어 마감이 12월로 밀린다.
+ * T-11-552 제3회 컵(결승 11/6)도 마감을 미루지 않는다. 컵은 시즌 1 팀으로 다음 시즌까지 이어서 치른다.
+ */
+const SEASON1_GAUGE: SeasonGaugeRules = {
+  ...SEASON_GAUGE,
+  perUser: 12,
+  minDays: 14,
+  maxDays: 25,
+  waitEvents: 0,
+};
+
+/** 그 시즌의 게이지 규칙. */
+export const gaugeRules = (season: number): SeasonGaugeRules =>
+  season <= 1 ? SEASON1_GAUGE : SEASON_GAUGE;
 
 /** 서버가 app_meta에 굳혀 두는 게이지 상태. */
 export interface SeasonGaugeState {
@@ -70,17 +97,17 @@ const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 /** 다음 00:00 KST로 올린다(이미 자정이면 그대로). */
 export const ceilKstMidnight = (t: number): number => Math.ceil((t + KST) / DAY) * DAY - KST;
 
-export const gaugeTarget = (participants: number): number =>
-  Math.max(1, participants) * SEASON_GAUGE.perUser;
+export const gaugeTarget = (participants: number, rules: SeasonGaugeRules = SEASON_GAUGE): number =>
+  Math.max(1, participants) * rules.perUser;
 
-export const seasonBounds = (startsAt: string) => ({
-  minEndsAt: iso(ms(startsAt) + SEASON_GAUGE.minDays * DAY),
-  maxEndsAt: iso(ms(startsAt) + SEASON_GAUGE.maxDays * DAY),
+export const seasonBounds = (startsAt: string, rules: SeasonGaugeRules = SEASON_GAUGE) => ({
+  minEndsAt: iso(ms(startsAt) + rules.minDays * DAY),
+  maxEndsAt: iso(ms(startsAt) + rules.maxDays * DAY),
 });
 
 /** 시간 하한: 개막부터 지난 시간 ÷ 최대 기간. */
-const timeShare = (startsAt: string, now: string) =>
-  clamp01((ms(now) - ms(startsAt)) / (SEASON_GAUGE.maxDays * DAY));
+const timeShare = (startsAt: string, now: string, rules: SeasonGaugeRules) =>
+  clamp01((ms(now) - ms(startsAt)) / (rules.maxDays * DAY));
 
 /** 컵 마지막 경기 뒤 결과·보상을 굳힐 여유(5분 cron 몇 번). */
 const CUP_SETTLE_MS = HOUR;
@@ -93,11 +120,16 @@ export function seasonDeadline(
   startsAt: string,
   lockedAt: string,
   cupEndsAt: string | null = null,
+  rules: SeasonGaugeRules = SEASON_GAUGE,
 ): string {
-  const { minEndsAt, maxEndsAt } = seasonBounds(startsAt);
-  const t = Math.max(ms(lockedAt) + SEASON_GAUGE.noticeHours * HOUR, ms(minEndsAt));
+  const { minEndsAt, maxEndsAt } = seasonBounds(startsAt, rules);
+  const t = Math.max(ms(lockedAt) + rules.noticeHours * HOUR, ms(minEndsAt));
   const base = Math.min(ceilKstMidnight(t), ms(maxEndsAt));
-  return iso(cupEndsAt ? Math.max(base, ceilKstMidnight(ms(cupEndsAt) + CUP_SETTLE_MS)) : base);
+  return iso(
+    cupEndsAt && rules.waitEvents
+      ? Math.max(base, ceilKstMidnight(ms(cupEndsAt) + CUP_SETTLE_MS))
+      : base,
+  );
 }
 
 /**
@@ -111,15 +143,16 @@ export function stepSeasonGauge(
   now: string,
   cupEndsAt: string | null = null,
 ): SeasonGaugeState {
-  const raw = counted.contributed / gaugeTarget(counted.participants);
-  const peak = Math.min(1, Math.max(prev?.peak ?? 0, raw, timeShare(season.startsAt, now)));
+  const rules = gaugeRules(season.id);
+  const raw = counted.contributed / gaugeTarget(counted.participants, rules);
+  const peak = Math.min(1, Math.max(prev?.peak ?? 0, raw, timeShare(season.startsAt, now, rules)));
   let lockedAt = prev?.lockedAt ?? null;
   let endsAt = prev?.endsAt ?? null;
-  if (!lockedAt && peak >= SEASON_GAUGE.lockAt) {
+  if (!lockedAt && peak >= rules.lockAt) {
     lockedAt = now;
-    endsAt = seasonDeadline(season.startsAt, now, cupEndsAt);
+    endsAt = seasonDeadline(season.startsAt, now, cupEndsAt, rules);
   } else if (endsAt && cupEndsAt && now < endsAt) {
-    const later = seasonDeadline(season.startsAt, lockedAt!, cupEndsAt);
+    const later = seasonDeadline(season.startsAt, lockedAt!, cupEndsAt, rules);
     if (later > endsAt) endsAt = later;
   }
   return { season: season.id, ...counted, peak, lockedAt, endsAt, updatedAt: now };
@@ -131,13 +164,14 @@ export function seasonGaugeProgress(
   startsAt: string,
   now: string,
 ): number {
-  const { lockAt } = SEASON_GAUGE;
+  const rules = gaugeRules(state.season);
+  const { lockAt } = rules;
   if (state.lockedAt && state.endsAt) {
     const span = ms(state.endsAt) - ms(state.lockedAt);
     const done = span > 0 ? clamp01((ms(now) - ms(state.lockedAt)) / span) : 1;
     return lockAt + (1 - lockAt) * done;
   }
-  return Math.min(lockAt, Math.max(state.peak, timeShare(startsAt, now)));
+  return Math.min(lockAt, Math.max(state.peak, timeShare(startsAt, now, rules)));
 }
 
 export function seasonGaugeView(
@@ -151,9 +185,9 @@ export function seasonGaugeView(
     progress: seasonGaugeProgress(state, startsAt, now),
     contributed: state.contributed,
     participants: state.participants,
-    target: gaugeTarget(state.participants),
+    target: gaugeTarget(state.participants, gaugeRules(state.season)),
     endsAt: state.endsAt,
-    ...seasonBounds(startsAt),
+    ...seasonBounds(startsAt, gaugeRules(state.season)),
     updatedAt: state.updatedAt,
   };
 }

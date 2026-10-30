@@ -44,7 +44,7 @@ const ko = {
   achDone: (p: { n: number }) => `업적 ${p.n}개 달성`,
   rankOf: (p: { rank: number; total: string }) => `${p.rank}위 / ${p.total}`,
   unranked: '순위 밖',
-  next: (p: { season: string }) => `${p.season}에서 새 기록을 남겨 보세요.`,
+  next: (p: { season: string }) => `새 기록은 ${p.season}에 쌓여요.`,
   pickSeason: '시즌',
   loadFail: '결산을 불러오지 못했어요.',
   retry: '다시 시도',
@@ -57,6 +57,7 @@ const ko = {
   honorRetiredNumber: '영구결번',
   honorWallOfHonor: '명예의 벽',
   honorFirst: '서버 최초 기록',
+  honorDivision: '시즌 디비전',
   bandFirst: '1위',
   bandTop: (p: { band: number }) => `상위 ${p.band}`,
   countNumbers: (p: { n: number }) => `${p.n}개`,
@@ -65,10 +66,12 @@ const ko = {
   ribbonTop: (p: { band: number }) => `TOP ${p.band}`,
   ribbonCount: (p: { n: number }) => `×${p.n}`,
   rankFinal: (p: { rank: string }) => `${p.rank}위로 마감`,
+  divisionFinal: (p: { name: string }) => `${p.name}로 마감`,
   // 구단주 티어(구단주 랭킹과 같은 업적 등급 — 마감 때 업적 점수로)
   secTier: '시즌 등급',
   secBadges: '기록 배지',
   tierWhy: (p: { score: string }) => `업적 점수 ${p.score}점으로 마감`,
+  tierWhyTop: (p: { pct: number }) => `구단주 랭킹 상위 ${p.pct}%로 마감`,
   tierTitle: (p: { season: string; tier: string }) => `${p.season} ${p.tier}`,
   // 결산 화면 · 공유 카드
   headlineGoals: (p: { n: string; goals: string }) =>

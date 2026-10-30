@@ -535,8 +535,17 @@ function playBracket(
   key: string,
   play: (opp: [string, number], stage: string) => IntlResult,
 ): string {
+  // T-11-476 한 대회에서 이미 만난 나라는 토너먼트 상대로 다시 뽑지 않는다(난수 소비는 그대로 한 번).
+  const met = new Set<string>();
+  const next = (pool: [string, number][]) => {
+    const left = pool.filter((o) => !met.has(o[0]));
+    const opp = pick(left.length ? left : pool);
+    met.add(opp[0]);
+    return opp;
+  };
   let pts = 0;
   for (const opp of T.group()) {
+    met.add(opp[0]);
     const m = play(opp, '');
     pts += m.res === 'W' ? 3 : m.res === 'D' ? 1 : 0;
   }
@@ -544,11 +553,11 @@ function playBracket(
   let stage = '조별리그 탈락';
   for (const [name, pool] of T.rounds) {
     stage = name;
-    const m = play(pick(pool), name);
+    const m = play(next(pool), name);
     if (name === '결승') return won(m) ? '우승' : '준우승';
     if (!won(m)) {
       if (key === 'olympic' && name === '4강')
-        return won(play(pick(T.bronze!), '동메달 결정전')) ? '동메달' : '4위';
+        return won(play(next(T.bronze!), '동메달 결정전')) ? '동메달' : '4위';
       return stage;
     }
   }

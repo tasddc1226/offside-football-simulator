@@ -3,6 +3,7 @@
 // 누가 넘을 때마다 다음 목표가 열린다. 서버 기록 탭은 더 큰 기록이 나오면 주인이 바뀌는 최다·최고 기록(T-10-056).
 // T-11-335 분류 탭은 단계 기록을 한 줄로 묶고(가장 높은 단계 · 다음 목표 · 진행, 누르면 단계 전부), 최근 기록은 그날 한 선수가
 // 한 번에 넘은 단계를 한 줄로 묶는다. 최근 기록 위에 이 시즌 기록을 가장 많이 세운 선수를 보인다.
+import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import type { FirstsResponse, ServerFirst } from '@offside/contracts';
@@ -24,16 +25,18 @@ import { appState } from '../../store';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Card } from '../../ui/Card';
+import { Skeleton } from '../../ui/Skeleton';
 import { Pill } from '../../ui/bits';
 import { Press } from '../../ui/Press';
 import { Screen } from '../../ui/Screen';
 import { Topbar } from '../../ui/Topbar';
 import { Txt } from '../../ui/Txt';
-import { Seg, SortChips, TabOpt } from '../board/parts';
+import { SortChips } from '../board/parts';
+import { SelectField } from '../settings/parts';
 import { intlLocale } from '@offside/app-core/i18n/core';
-import { teamSeasonLabel } from '@offside/app-core/seasonName';
 import { useSeasonNow } from '../../ui/useSeasonNow';
 import { useRefresh } from '../../ui/refresh';
+import { seasonOptions } from '../../ui/seasonOptions';
 
 type Holder = NonNullable<ServerFirst['holder']>;
 
@@ -77,7 +80,7 @@ function FirstRow({
         <Txt
           bold={!locked}
           tone={locked ? 'muted' : 'ink'}
-          style={{ flex: 1, fontSize: rem(0.9375), fontWeight: locked ? '600' : '700' }}
+          style={{ flex: 1, fontSize: rem(FONT.body1), fontWeight: locked ? '600' : '700' }}
         >
           {label}
         </Txt>
@@ -99,12 +102,12 @@ function FirstRow({
 }
 
 const TimeText = ({ children }: { children: string }) => (
-  <Txt tone="muted" num={400} style={{ fontSize: rem(0.8125) }}>
+  <Txt tone="muted" num={400} style={{ fontSize: rem(FONT.label) }}>
     {children}
   </Txt>
 );
 const WhoText = ({ children }: { children: string }) => (
-  <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+  <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
     {children}
   </Txt>
 );
@@ -160,7 +163,7 @@ export default function Firsts() {
     );
   };
   const empty = (text: string) => (
-    <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
+    <Txt tone="muted" style={{ fontSize: rem(FONT.body2), paddingVertical: 8 }}>
       {text}
     </Txt>
   );
@@ -187,32 +190,29 @@ export default function Firsts() {
               <Txt
                 num
                 testID="firsts-count"
-                style={{ fontSize: rem(1.375), lineHeight: rem(1.375) * 1.3, color: c.accentText }}
+                style={{
+                  fontSize: rem(FONT.title2),
+                  lineHeight: rem(FONT.title2) * 1.3,
+                  color: c.accentText,
+                }}
               >
                 {`${done}/${total}`}
               </Txt>
             ) : null}
           </View>
-          <Txt tone="muted" style={{ fontSize: rem(0.8125), marginBottom: 10 }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.label), marginBottom: 10 }}>
             {L.introRecords({ records: tab === 'records' })}
           </Txt>
         </View>
         {seasons.length > 1 ? (
-          <Seg
-            cols={Math.min(seasons.length, 3)}
+          <SelectField
             label={L.seasonLabel}
+            testID="firsts-season"
+            value={season}
+            options={seasonOptions(seasons, now)}
+            onChange={setPicked}
             style={{ marginBottom: 10 }}
-          >
-            {seasons.map((id) => (
-              <TabOpt
-                key={id}
-                title={teamSeasonLabel(id)}
-                selected={season === id}
-                testID={`firsts-season-${id}`}
-                onPress={() => setPicked(id)}
-              />
-            ))}
-          </Seg>
+          />
         ) : null}
         <SortChips
           label={L.tabsLabel}
@@ -225,13 +225,7 @@ export default function Firsts() {
         {failed ? (
           empty(L.loadFailed)
         ) : !data ? (
-          <Txt
-            tone="muted"
-            accessibilityLiveRegion="polite"
-            style={{ fontSize: rem(0.875), paddingVertical: 8 }}
-          >
-            {L.loading}
-          </Txt>
+          <Skeleton rows={5} />
         ) : tab === 'recent' ? (
           days.length ? (
             <View>
@@ -241,7 +235,7 @@ export default function Firsts() {
                     accessibilityRole="header"
                     tone="muted"
                     style={{
-                      fontSize: rem(0.8125),
+                      fontSize: rem(FONT.label),
                       fontWeight: '700',
                       marginTop: 14,
                       marginBottom: 2,
@@ -278,7 +272,7 @@ export default function Firsts() {
                     num
                     accessibilityRole="header"
                     tone="muted"
-                    style={{ fontSize: rem(0.8125), marginTop: 14, marginBottom: 2 }}
+                    style={{ fontSize: rem(FONT.label), marginTop: 14, marginBottom: 2 }}
                   >
                     {d.day}
                   </Txt>
@@ -314,7 +308,7 @@ export default function Firsts() {
                 label={firstLabel(r.label)}
                 topRight={
                   r.holder && r.value !== null && r.achievedAt ? (
-                    <Txt num style={{ fontSize: rem(0.9375), fontWeight: '800' }}>
+                    <Txt num style={{ fontSize: rem(FONT.body1), fontWeight: '800' }}>
                       {`${r.value.toLocaleString(intlLocale())}${firstUnit(r.unit)}`}
                     </Txt>
                   ) : undefined
@@ -355,7 +349,7 @@ export default function Firsts() {
                   {many ? (
                     <View style={{ gap: 4, marginTop: -4, paddingBottom: 10 }}>
                       {sr.top ? (
-                        <Txt style={{ fontSize: rem(0.8125) }}>
+                        <Txt style={{ fontSize: rem(FONT.label) }}>
                           {sr.next ? L.next({ label: firstLabel(sr.next.label) }) : L.allDone}
                         </Txt>
                       ) : null}
@@ -369,7 +363,7 @@ export default function Firsts() {
                       >
                         <Txt
                           tone="muted"
-                          style={{ fontSize: rem(0.8125), textDecorationLine: 'underline' }}
+                          style={{ fontSize: rem(FONT.label), textDecorationLine: 'underline' }}
                         >
                           {`${L.steps({ done: sr.done, total: sr.steps.length })} · ${shown ? L.hideSteps : L.showSteps}`}
                         </Txt>
@@ -401,7 +395,7 @@ export default function Firsts() {
                                   tone={x.holder ? 'ink' : 'muted'}
                                   style={{
                                     flex: 1,
-                                    fontSize: rem(0.8125),
+                                    fontSize: rem(FONT.label),
                                     fontWeight: x.holder ? '700' : '600',
                                   }}
                                 >

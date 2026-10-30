@@ -1,4 +1,5 @@
 // 시트·게임 화면이 함께 쓰는 작은 조각: 강조 줄(웹 .hl), 숫자 칸(.stats · .tally), 진행 막대(.prog), 색 섞기.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Animated, Easing, View, type StyleProp, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -32,7 +33,7 @@ export function SkipLink({ onPress }: { onPress: () => void }) {
       hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
       style={{ alignSelf: 'center', paddingVertical: 6, paddingHorizontal: 2 }}
     >
-      <Txt tone="muted" style={{ fontSize: rem(0.75), textDecorationLine: 'underline' }}>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption), textDecorationLine: 'underline' }}>
         {sheetCoreText.skip}
       </Txt>
     </Press>
@@ -45,7 +46,7 @@ export function Hl({ children }: { children: ReactNode }) {
   return (
     <View style={{ paddingLeft: 12, borderLeftWidth: 3, borderLeftColor: c.accent }}>
       {typeof children === 'string' ? (
-        <Txt style={{ fontSize: rem(0.875) }}>{children}</Txt>
+        <Txt style={{ fontSize: rem(FONT.body2) }}>{children}</Txt>
       ) : (
         children
       )}
@@ -82,7 +83,7 @@ export function StatGrid({
           style={{
             flex: 1,
             backgroundColor: c.surface2,
-            borderRadius: 10,
+            borderRadius: RADIUS.sm,
             paddingVertical: 8,
             paddingHorizontal: 4,
             alignItems: 'center',
@@ -92,8 +93,8 @@ export function StatGrid({
             <Txt
               style={{
                 fontFamily: DISPLAY[700],
-                fontSize: rem(1.5),
-                lineHeight: rem(1.5) * 1.1,
+                fontSize: rem(FONT.title1),
+                lineHeight: rem(FONT.title1) * 1.1,
                 fontVariant: ['tabular-nums'],
               }}
             >
@@ -102,7 +103,10 @@ export function StatGrid({
           ) : (
             x.v
           )}
-          <Txt tone="muted" style={{ fontSize: rem(0.6875), lineHeight: rem(0.6875) * 1.5 }}>
+          <Txt
+            tone="muted"
+            style={{ fontSize: rem(FONT.caption2), lineHeight: rem(FONT.caption2) * 1.5 }}
+          >
             {x.l}
           </Txt>
         </View>
@@ -142,7 +146,7 @@ export function ProgBar({ progress, fill }: { progress: number; fill: number }) 
         borderRadius: 4,
         backgroundColor: c.surface2,
         borderWidth: 1,
-        borderColor: c.line,
+        borderColor: 'transparent',
         overflow: 'hidden',
       }}
     >

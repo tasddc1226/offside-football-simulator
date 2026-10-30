@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { CONTROL_BASE, CONTROL_CAP, LEGEND_W_DETAIL } from '@offside/contracts/hof-rules';
 import type { CareerSeasonPayload } from '@offside/contracts';
-import { boundRetirement, sanitizeSeason, type StoredSeason } from './plausibility.js';
+import {
+  boundRetirement,
+  boundValueRows,
+  sanitizeSeason,
+  type StoredSeason,
+  type StoredValueSeason,
+} from './plausibility.js';
 
 const seasons: StoredSeason[] = Array.from({ length: 10 }, (_, i) => ({
   year: 2030 + i,
@@ -88,5 +94,42 @@ describe('커리어 은퇴 나이 (T-11-045)', () => {
     const r = boundRetirement('MF', sent, long, null, 41)!;
     expect(r.retireAge).toBe(41);
     expect(r.apps).toBe(23 * 30);
+  });
+});
+
+describe('몸값 시즌 행 보정 (T-11-448)', () => {
+  const stored = (year: number, age: number, ovr: number, mil = false): StoredValueSeason => ({
+    year,
+    age,
+    apps: 30,
+    goals: 5,
+    assists: 5,
+    rating: 7,
+    cs: 0,
+    caps: 0,
+    ovr,
+    honors: [],
+    league: 'K리그1',
+    clubId: 'k1-1',
+    mil,
+  });
+  const sent = (year: number, age: number, ovr: number) => ({
+    year,
+    age,
+    league: '프리미어리그',
+    clubId: 'pl-0',
+    ovr,
+  });
+
+  it('받아 둔 시즌의 나이·리그·구단·복무로 바꾸고 OVR은 받아 둔 값을 넘지 않게 자른다', () => {
+    const rows = [stored(2030, 22, 80), stored(2031, 23, 85, true)];
+    expect(boundValueRows([sent(2030, 18, 200), sent(2031, 23, 70)], rows)).toEqual([
+      { league: 'K리그1', clubId: 'k1-1', age: 22, ovr: 80 },
+      { league: 'K리그1', clubId: 'k1-1', mil: true, age: 23, ovr: 70 },
+    ]);
+  });
+
+  it('받아 둔 적 없는 해의 행은 뺀다', () => {
+    expect(boundValueRows([sent(2029, 21, 99)], [stored(2030, 22, 80)])).toEqual([]);
   });
 });

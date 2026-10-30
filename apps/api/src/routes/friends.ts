@@ -57,6 +57,7 @@ import {
   myTeamIn,
   type OwnerTeamRow,
 } from '../db/repos/ownerTeams.js';
+import { membersOf } from '../db/repos/memberships.js';
 import { claimReferral, inviteCountsOf } from '../db/repos/referrals.js';
 import type { Db } from '../db/client.js';
 import { purgeEdge } from '../edgeCache.js';
@@ -104,7 +105,12 @@ type PersonInput = {
   row: Pick<FriendRow, 'wins' | 'draws' | 'losses'> | undefined;
 };
 
-const OWNER_NAME: Record<Lang, string> = { ko: '구단주', en: 'Owner', ja: 'オーナー' };
+const OWNER_NAME: Record<Lang, string> = {
+  ko: '구단주',
+  en: 'Owner',
+  ja: 'オーナー',
+  zh: '球隊老闆',
+};
 /** 보이는 이름: 닉네임 → 최근 감독 이름 → '구단주'. */
 const nameOf = (
   nickname: string | null,
@@ -127,8 +133,14 @@ async function peopleOf(
   // 개막 뒤(휴식기 포함)엔 프리시즌 팀도 함께 읽는다(친선전용 편성으로).
   const legacy = season !== 0;
   const seasons = [...(season === null ? [] : [season]), ...(legacy ? [0] : [])];
-  const [[teams, founders], managers] = await Promise.all([
-    ids.length === 0 ? [[], []] : db.batch([teamsOfOwners(db, ids, seasons), foundersOf(db, ids)]),
+  const [[teams, founders, members], managers] = await Promise.all([
+    ids.length === 0
+      ? [[], [], []]
+      : db.batch([
+          teamsOfOwners(db, ids, seasons),
+          foundersOf(db, ids),
+          membersOf(db, ids, nowIso()),
+        ]),
     latestManagersOf(
       db,
       inputs.filter((p) => !p.nickname).map((p) => p.profileId),
@@ -139,6 +151,7 @@ async function peopleOf(
     legacy ? teams.filter((t) => t.season === 0).map((t) => [t.profileId, friendlyTeamOf(t)]) : [],
   );
   const founder = new Set(founders.map((f) => f.profileId));
+  const member = new Set(members.map((m) => m.profileId));
   return new Map(
     inputs.map((p) => {
       const t = teamOf.get(p.profileId);
@@ -152,6 +165,7 @@ async function peopleOf(
           h2h: h2hOf(p.row),
           ...(legacy ? { preseasonTeam: lt ? teamSummary(lt) : null } : {}),
           founder: founder.has(p.profileId),
+          member: member.has(p.profileId),
         },
       ];
     }),
@@ -268,7 +282,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       me.id,
       FRIEND_REQUESTS_PER_HOUR,
       now,
-      '친구 신청을 너무 자주 보냈어요. 잠시 뒤에 다시 해 주세요.',
+      '친구 신청을 너무 자주 보냈어요. 잠시 뒤에 다시 시도해 주세요.',
     );
     const targetId =
       'code' in input

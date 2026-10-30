@@ -12,7 +12,7 @@ export const owner: Translation<OwnerMsgs> = {
   valueInfoFormula: 'クラブ価値 = クラブ資金 + 保有選手カードの基準価格の合計',
   valueInfoOwned: '育成した選手と獲得した選手を、シーズンを問わず含みます。',
   valueInfoPrice:
-    'カードの基準価格は最高OVRを記録した最後のシーズンの市場価値です。リーグの資金力・OVR・年齢で計算します。',
+    'カードの基準価格は最高OVRを記録したシーズンのうち、市場価値が最も高かったシーズンの市場価値です。リーグの資金力・OVR・年齢で計算するので、最高OVRの後に長くプレーしても下がりません。',
   valueInfoFallback:
     'そのシーズンの市場価値がない場合は最も高かったプロシーズンを使い、プロ記録もなければ1億ウォンを適用します。',
   valueInfoExcluded: '出品価格やレジェンドスコアを直接加算することはありません。',
@@ -53,6 +53,7 @@ export const owner: Translation<OwnerMsgs> = {
   teamOvr: (p) => `チームOVR ${p.ovr}`,
   statRecord: '戦績',
   statRating: 'レート',
+  statRp: 'RP',
   statToday: '今日の試合',
   play: '試合をする',
   teamFailed:
@@ -61,11 +62,20 @@ export const owner: Translation<OwnerMsgs> = {
   buildTeam: 'チームを作る',
   teamBtnApp: 'マイチーム · シーズン実績',
   marketTitle: '移籍市場',
-  marketSub: (p) => `クラブ資金 ${p.funds} · 今シーズンの選手を売り買いできます`,
+  marketSub: (p) => `クラブ資金 ${p.funds} · 選手を売り買いできます`,
   open: '開く',
   lockBadge: '\u{1F512}︎ ログインすると開きます',
   accountSection: 'アカウント',
   adminTools: '運営ツール',
+  shortcutsHeading: 'ショートカット',
+  tilePlayers: '所属選手・育成記録',
+  tileMarket: '選手の売り買い',
+  tileExchange: '引退選手をアイテムに',
+  tileManager: '監督として続ける',
+  tileHall: 'シーズン記録・称号',
+  shopTitle: 'ショップ',
+  tileShop: 'リロール・強化・スカウト券',
+  shopLoginNeeded: 'ショップはログインしたオーナーだけが使えます。',
   teamEmptyWith: (p) =>
     `${p.season}に引退した自分の選手${p.n}人でチームを組めます。空いた枠はユースの選手が埋めます。`,
   teamEmptyNone: (p) => `${p.season}にプレーして引退した選手が出たら、チームを組めます。`,

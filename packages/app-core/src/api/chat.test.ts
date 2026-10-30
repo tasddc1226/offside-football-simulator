@@ -1,6 +1,16 @@
-import { CHAT_HISTORY, type ChatMessage } from '@offside/contracts/chat';
+import { CHAT_HISTORY, type ChatMessage, type ChatServerEvent } from '@offside/contracts/chat';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { applyChat, chatSocketUrl, EMPTY_CHAT, openChat, type ChatView } from './chat.js';
+import { setLocale } from '@offside/contracts/i18n';
+import { setStorage } from '@offside/game/storage';
+import {
+  applyChat,
+  chatSocketUrl,
+  currentChatRoom,
+  EMPTY_CHAT,
+  openChat,
+  setChatRoom,
+  type ChatView,
+} from './chat.js';
 
 const msg = (id: string, author = 'a'): ChatMessage => ({
   id,
@@ -23,7 +33,7 @@ describe('T-11-015 채팅 상태', () => {
     ).toBeNull();
   });
   it('들어오면 최근 줄을 받고, 새 줄은 뒤에 붙이고, 가린 줄은 뺀다. 차단한 작성자는 넣지 않는다', () => {
-    const skip = (m: ChatMessage) => m.author === 'x';
+    const skip = (m: { author: string }) => m.author === 'x';
     let v = applyChat(
       EMPTY_CHAT,
       { t: 'hello', messages: [msg('1'), msg('2', 'x')], online: 3, write: true },
@@ -38,7 +48,7 @@ describe('T-11-015 채팅 상태', () => {
   });
 
   it('T-11-180 이전 줄은 앞에 붙이고(겹치거나 차단한 줄 빼고), 다시 붙어도 남긴다', () => {
-    const skip = (m: ChatMessage) => m.author === 'x';
+    const skip = (m: { author: string }) => m.author === 'x';
     const at = (id: string, t: number, author = 'a') => ({ ...msg(id, author), at: t });
     const full = Array.from({ length: CHAT_HISTORY }, (_, i) => at(`n${i}`, 100 + i));
     let v = applyChat(EMPTY_CHAT, { t: 'hello', messages: full, online: 1, write: false }, skip);
@@ -65,11 +75,58 @@ describe('T-11-015 채팅 상태', () => {
     expect(applyChat(open, { t: 'err', code: 'rate' }, () => false)).toBe(open);
   });
 
-  it('소켓 주소는 API 주소를 ws로 바꾸고 입장권을 붙인다', () => {
-    expect(chatSocketUrl(null, 'https://api.example')).toBe('wss://api.example/v1/chat/ws');
-    expect(chatSocketUrl('t 1', 'http://localhost:8787')).toBe(
-      'ws://localhost:8787/v1/chat/ws?t=t%201',
+  it('T-11-573 원문이 가려지거나 차단한 사람의 줄이면 답장의 원문을 비우고, 모르는 이벤트는 무시한다', () => {
+    const reply = (id: string, to: ChatMessage): ChatMessage => ({
+      ...msg(id, 'b'),
+      replyTo: to.id,
+      reply: { id: to.id, author: to.author, nickname: to.nickname, admin: false, body: to.body },
+    });
+    const skip = (m: { author: string }) => m.author === 'x';
+    const orig = msg('1');
+    const blockedOrig = msg('2', 'x');
+    let v = applyChat(
+      EMPTY_CHAT,
+      {
+        t: 'hello',
+        messages: [orig, blockedOrig, reply('3', orig), reply('4', blockedOrig)],
+        online: 1,
+        write: true,
+      },
+      skip,
     );
+    expect(v.messages.map((m) => [m.id, m.reply?.id ?? null])).toEqual([
+      ['1', null],
+      ['3', '1'],
+      ['4', null],
+    ]);
+    expect(v.messages[2]!.replyTo).toBe('2');
+    v = applyChat(v, { t: 'hide', id: '1' }, skip);
+    expect(v.messages.map((m) => [m.id, m.reply?.id ?? null])).toEqual([
+      ['3', null],
+      ['4', null],
+    ]);
+    expect(applyChat(v, { t: 'new-thing' } as unknown as ChatServerEvent, skip)).toBe(v);
+  });
+
+  it('소켓 주소는 API 주소를 ws로 바꾸고 언어 방과 입장권을 붙인다', () => {
+    expect(chatSocketUrl(null, 'ko', 'https://api.example')).toBe(
+      'wss://api.example/v1/chat/ws?room=ko',
+    );
+    expect(chatSocketUrl('t 1', 'ja', 'http://localhost:8787')).toBe(
+      'ws://localhost:8787/v1/chat/ws?room=ja&t=t%201',
+    );
+  });
+
+  it('T-11-583 고른 방이 없으면 화면 언어 방, 고르면 그 방을 기억한다', () => {
+    const store = new Map<string, string>();
+    setStorage({ getItem: (k) => store.get(k) ?? null, setItem: (k, v) => void store.set(k, v) });
+    setLocale('en');
+    expect(currentChatRoom()).toBe('en');
+    setChatRoom('ja');
+    expect(currentChatRoom()).toBe('ja');
+    store.set('ft_chat_room', 'xx');
+    expect(currentChatRoom()).toBe('en');
+    setLocale('ko');
   });
 });
 
@@ -127,7 +184,7 @@ describe('T-11-015 openChat', () => {
     const views: ChatView[] = [];
     const chat = openChat((v) => views.push(v));
     await vi.waitFor(() => expect(sockets).toHaveLength(1));
-    expect(sockets[0]!.url).toContain('?t=tk0');
+    expect(sockets[0]!.url).toContain('&t=tk0');
     expect(chat.send('안녕')).toBe(false); // hello 전
     sockets[0]!.onopen?.();
     sockets[0]!.emit({
@@ -140,6 +197,12 @@ describe('T-11-015 openChat', () => {
     expect(views.at(-1)!.me?.author).toBe('me');
     expect(chat.send('안녕')).toBe(true);
     expect(JSON.parse(sockets[0]!.sent.at(-1)!)).toEqual({ t: 'send', body: '안녕' });
+    expect(chat.send('맞아요', '1')).toBe(true);
+    expect(JSON.parse(sockets[0]!.sent.at(-1)!)).toEqual({
+      t: 'send',
+      body: '맞아요',
+      replyTo: '1',
+    });
 
     sockets[0]!.emit({ t: 'msg', m: msg('3', 'b') });
     chat.drop('3');
@@ -151,7 +214,7 @@ describe('T-11-015 openChat', () => {
     expect(views.at(-1)!.status).toBe('retrying');
     await vi.advanceTimersByTimeAsync(2_000);
     expect(sockets).toHaveLength(2);
-    expect(sockets[1]!.url).toContain('?t=tk1');
+    expect(sockets[1]!.url).toContain('&t=tk1');
     sockets[1]!.emit({
       t: 'hello',
       messages: [msg('1'), msg('3', 'b'), msg('4', 'b')],

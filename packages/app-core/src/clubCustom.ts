@@ -4,7 +4,8 @@
 // 로컬에만 남고(게임은 그대로), 다음 부팅·다음 변경 때 다시 맞춘다. 에디트 파일(JSON)로도 옮길 수 있다.
 // 반응성은 클라이언트가 붙인다 — 넘겨받은 state 객체를 그대로 고친다(웹 $state, 앱 valtio).
 import { loadKey, saveKey } from '@offside/game/storage';
-import { CLUBS } from '@offside/game/data';
+import { CLUBS, LEAGUES, type League } from '@offside/game/data';
+import { latestBalance } from '@offside/game/balance';
 import {
   applyClubNames,
   sanitizeClubCustom,
@@ -17,6 +18,12 @@ import { apiFetch } from './api/client.js';
 import { clubSyncText } from './i18n/ko/clubSync.js';
 
 const KEY = 'ft_clubs';
+
+/** T-11-457 구단명 설정에 보일 리그. 시즌 2 리그는 서버 최신 밸런스에서 newLeagues가 켜지면(시즌 2 개막) 함께 열린다. */
+export function customLeagues(): League[] {
+  const open = latestBalance().values.newLeagues >= 1;
+  return LEAGUES.filter((l) => !l.added || open);
+}
 const PUSH_DELAY_MS = 1500;
 
 /** local: 세션 없음(이 기기에만 저장) · syncing: 맞추는 중 · synced: 계정과 같음 · error: 네트워크/서버 오류 ·

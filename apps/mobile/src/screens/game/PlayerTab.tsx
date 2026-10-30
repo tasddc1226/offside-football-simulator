@@ -1,6 +1,7 @@
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { MIN_RETIRE_AGE, marketValue } from '@offside/game/season';
 // 선수 탭(웹 tabs/PlayerTab.svelte): 능력치 카드 · 선수 정보 · 국가대표 · 은퇴 선언(32세부터).
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { potentialNotice } from '@offside/app-core/potential-view';
@@ -8,6 +9,8 @@ import { gamePlayerText as L } from '@offside/app-core/i18n/ko/gamePlayer';
 import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
 import { boostHidden, boostView, doBoost, type BoostOutcome } from '@offside/app-core/boost-view';
 import { peekView } from '@offside/app-core/potential-peek';
+import { gradeTier } from '@offside/app-core/reveal';
+import { RevealGrade } from '../../components/RevealFx';
 import { TRAITS } from '@offside/game/data';
 import { boostFreeOpen, boostTicketOpen, type BoostPay } from '@offside/game/boost';
 import { ovr } from '@offside/game/attributes';
@@ -26,10 +29,13 @@ import { fmtValue } from '@offside/app-core/format';
 import { retireAsk, save } from '../../game/host';
 import { BoostFx } from '../../components/BoostFx';
 import { appState } from '../../store';
-import { adFree } from '../../platform/adFree';
-import { claimReward, rewardOffer } from '../../platform/rewarded';
+import { adFree, adsOff } from '../../platform/adFree';
+import { claimReward, prepareReward, rewardOffer } from '../../platform/rewarded';
 import { openPeek, openPeekWithClub, peekAvailable, potPeek } from '../../platform/rewardedPeek';
-import { useClubReward } from '../../platform/clubShop';
+import { useClubReward, useSureShop } from '../../platform/clubShop';
+import { careView, doCare } from '@offside/app-core/care-view';
+import { gameCareText as CL } from '@offside/app-core/i18n/ko/gameCare';
+import type { CareTier } from '@offside/game/care';
 import { iapItems, useIapItems } from '../../platform/iapItems';
 import { payWithTicket } from '@offside/app-core/club-reward';
 import { iapText as IL } from '@offside/app-core/i18n/ko/iap';
@@ -53,13 +59,13 @@ function Kv({ rows, mt = 0 }: { rows: Row[]; mt?: number }) {
     <View style={{ gap: 8, marginTop: mt }}>
       {rows.map((r) => (
         <View key={r.k} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
-          <Txt tone="muted" style={{ fontSize: rem(0.875), flexShrink: 1 }}>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.body2), flexShrink: 1 }}>
             {r.k}
           </Txt>
           <Txt
             testID={r.testID}
             style={{
-              fontSize: rem(0.875),
+              fontSize: rem(FONT.body2),
               fontWeight: '600',
               textAlign: 'right',
               flexShrink: 1,
@@ -84,7 +90,7 @@ function BoostCard({ s }: { s: GameState }) {
   const [fx, setFx] = useState<BoostOutcome | null>(null);
   const [adBusy, setAdBusy] = useState(false);
   const [adMessage, setAdMessage] = useState('');
-  const owned = useSnapshot(adFree).owned;
+  const owned = adsOff(useSnapshot(adFree));
   // T-11-153 광고 대신 구단 자금으로 시도(로그인한 구단주). 광고 제거 구매자는 이미 광고 없이 시도한다.
   // T-11-157 자금이 모자란 시즌의 한 번과 추가 시도에 쓴다. 광고는 하루 횟수가 없고, 구단 자금은 서버가 하루 상한을 둔다.
   const club = useClubReward('boost', boostFreeOpen(s) && !owned);
@@ -94,6 +100,13 @@ function BoostCard({ s }: { s: GameState }) {
     club: !!club.offer,
     ticket: tickets > 0,
   });
+  // T-11-513 구단 자금 확정 강화. 이 선수가 이번 시즌에 받을 수 있을 때만 값을 묻는다.
+  const sure = useSureShop(v.sureOpen);
+  // T-11-558 광고 강화 버튼이 보이면 광고를 미리 불러 둔다.
+  const boostAd = !!v.adButton && rewardOffer('boost', owned) === 'ad';
+  useEffect(() => {
+    if (boostAd) prepareReward('boost');
+  }, [boostAd]);
   // s는 읽기 전용 스냅샷이라 스토어의 세이브를 고친다. 결과를 먼저 저장하고 연출을 연다 — 연출 중에 앱을 꺼도 결과는 그대로다.
   const run = (pay: BoostPay) => {
     const out = doBoost(appState.G!, pay);
@@ -128,6 +141,17 @@ function BoostCard({ s }: { s: GameState }) {
     }
   };
   // 서버가 한 장을 뺀 뒤에만 강화한다.
+  const onSureBoost = async () => {
+    if (adBusy) return;
+    setAdBusy(true);
+    setAdMessage('');
+    try {
+      const message = await sure.pay(() => run('sure'));
+      if (message !== null) setAdMessage(message);
+    } finally {
+      setAdBusy(false);
+    }
+  };
   const onTicketBoost = async () => {
     if (adBusy) return;
     setAdBusy(true);
@@ -167,7 +191,7 @@ function BoostCard({ s }: { s: GameState }) {
               style={{
                 width: 10,
                 height: 10,
-                borderRadius: 5,
+                borderRadius: RADIUS.xs,
                 borderWidth: 1.5,
                 borderColor: i < v.lv ? c.accent : c.line,
                 backgroundColor: i < v.lv ? c.accent : 'transparent',
@@ -237,17 +261,102 @@ function BoostCard({ s }: { s: GameState }) {
               {B.ticketBoost({ n: tickets, chance: v.chance })}
             </Btn>
           ) : null}
-          <IapPacks item="boost" note={IL.boostNote({ chance: v.chance })} />
+          <IapPacks item="boost" note={IL.boostNote({ chance: v.chance })} login={false} />
         </View>
       ) : null}
-      <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: 4 }}>
+      {sure.offer ? (
+        <View style={{ marginVertical: 8, gap: 6 }} testID="boost-sure">
+          {!v.ticketOpen && adMessage ? (
+            <Txt v="sm" tone="muted">
+              {adMessage}
+            </Txt>
+          ) : null}
+          <Btn disabled={adBusy} testID="boost-sure-btn" onPress={() => void onSureBoost()}>
+            {B.sureButton({ price: fundsText(sure.offer.price) })}
+          </Btn>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
+            {B.sureNote}
+          </Txt>
+        </View>
+      ) : null}
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 4 }}>
         {v.note}
       </Txt>
       {v.history.map((h, i) => (
-        <Txt key={i} tone="muted" style={{ fontSize: rem(0.75), marginTop: 2 }}>
+        <Txt key={i} tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 2 }}>
           {`· ${h}`}
         </Txt>
       ))}
+    </Card>
+  );
+}
+
+/** T-11-513 몸 관리: 정점을 넘긴 시즌에 선수 자금으로 시즌 끝 하락을 줄인다. 고른 단계를 한 번 더 눌러 받는다. */
+function CareCard({ s }: { s: GameState }) {
+  const c = useColors();
+  const [arm, setArm] = useState<CareTier | null>(null);
+  const [msg, setMsg] = useState('');
+  const v = careView(s);
+  if (!v) return null;
+  const onCare = (t: CareTier) => {
+    if (arm !== t) return setArm(t);
+    setArm(null);
+    // s는 읽기 전용 스냅샷이라 스토어의 세이브를 고친다.
+    const m = doCare(appState.G!, t);
+    if (!m) return;
+    save();
+    setMsg(m);
+  };
+  return (
+    <Card gap={0} testID="care">
+      <Txt v="eyebrow">Conditioning</Txt>
+      <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
+        {CL.title}
+      </Txt>
+      <Txt v="sm" testID="care-line">
+        {v.line}
+      </Txt>
+      {v.options.length ? (
+        <View style={{ marginVertical: 8, gap: 8 }}>
+          {v.options.map((o) => (
+            <View key={o.t} style={{ gap: 6 }}>
+              {arm === o.t ? (
+                <Txt v="sm" style={{ color: c.bad }} testID="care-confirm">
+                  {o.confirm}
+                </Txt>
+              ) : null}
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Btn
+                  kind={arm === o.t ? 'tonal' : undefined}
+                  style={{ flex: 1 }}
+                  testID={`care-${o.t}`}
+                  disabled={!o.affordable}
+                  accessibilityLabel={
+                    arm === o.t ? undefined : `${o.name} · ${o.effect} · ${o.cost}`
+                  }
+                  badge={arm === o.t ? undefined : o.affordable ? o.cost : CL.short}
+                  onPress={() => onCare(o.t)}
+                >
+                  {arm === o.t ? CL.confirmBtn : `${o.name} · ${o.effect}`}
+                </Btn>
+                {arm === o.t ? (
+                  <Btn testID="care-cancel" onPress={() => setArm(null)}>
+                    {CL.cancel}
+                  </Btn>
+                ) : null}
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : null}
+      {msg ? (
+        <Txt v="sm" tone="muted">
+          {msg}
+        </Txt>
+      ) : null}
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 4 }}>
+        {v.note}
+      </Txt>
     </Card>
   );
 }
@@ -265,21 +374,46 @@ export function PlayerTab({ s }: { s: GameState }) {
   // 체격 입력 이전 선수는 포지션 표준 체격으로 보여 준다(표시만 — 능력치 보정은 없다).
   const body = s.body ?? BODY_DEFAULT[s.pos];
   // T-11-079 보상형 광고로 이번 시즌 스카우트 평가 보기. 광고 단위도 광고 제거도 없으면 예전 안내만 둔다.
-  const owned = useSnapshot(adFree).owned;
+  const owned = adsOff(useSnapshot(adFree));
   const peek = useSnapshot(potPeek);
+  useEffect(
+    () => () => {
+      potPeek.fresh = false;
+    },
+    [],
+  );
   const pot = peekView(s, peek.peek, owned ? 'free' : 'ad');
   const canAd = peekAvailable();
   // T-11-153 광고 대신 구단 자금으로 평가 보기(로그인한 구단주). 광고 제거 구매자는 이미 광고 없이 본다.
   // T-11-181 광고 단위가 없어도 구단 자금 길은 보인다.
   const club = useClubReward('peek', pot.kind === 'available' && !owned);
   const showPeek = pot.kind !== 'shown' && (canAd || !!club.offer);
+  // T-11-558 광고로 평가 보기 버튼이 보이면 광고를 미리 불러 둔다.
+  const peekAd = pot.kind === 'available' && canAd && !owned;
+  useEffect(() => {
+    if (peekAd) prepareReward('peek');
+  }, [peekAd]);
 
   const info: Row[] = [
     { k: L.nation, testID: 'nation', v: `${flagOf(nation.code)} ${tn(nation.ko)}` },
     { k: L.body, testID: 'body', v: `${body.h}cm · ${body.w}kg` },
     { k: L.foot, v: tn(s.foot) },
     { k: L.trait, v: traitName },
-    { k: L.potential, testID: 'pot', v: pot.kind === 'shown' ? pot.text : potentialNotice() },
+    {
+      k: L.potential,
+      testID: 'pot',
+      // T-11-371 이번에 연 평가만 등급 공개 연출(저장한 뒤 보여 준다).
+      v:
+        pot.kind === 'shown' ? (
+          peek.fresh ? (
+            <RevealGrade grade={pot.grade} text={pot.text} tier={gradeTier(pot.grade)} />
+          ) : (
+            pot.text
+          )
+        ) : (
+          potentialNotice()
+        ),
+    },
     { k: L.peakOvr, v: String(Math.max(s.peak, ovr(s))) },
     { k: L.trust, v: s.trust >= 2 ? L.trustHigh : s.trust >= 0 ? L.trustMid : L.trustLow },
     {
@@ -315,7 +449,7 @@ export function PlayerTab({ s }: { s: GameState }) {
             }}
             testID="pot-peek"
           >
-            <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
               {peek.message || pot.text}
             </Txt>
             {canAd && pot.kind === 'available' ? (
@@ -348,6 +482,7 @@ export function PlayerTab({ s }: { s: GameState }) {
       </Card>
 
       {boostHidden(s) ? null : <BoostCard s={s} />}
+      <CareCard s={s} />
 
       <Card gap={0}>
         {/* 영어 나라 이름은 웹에서 첫 화면 번들 밖에서 불러왔지만 앱은 한 번들이라 바로 쓴다. */}
@@ -369,7 +504,7 @@ export function PlayerTab({ s }: { s: GameState }) {
               style={{
                 flex: 1,
                 backgroundColor: c.surface2,
-                borderRadius: 10,
+                borderRadius: RADIUS.sm,
                 padding: 8,
                 alignItems: 'center',
               }}
@@ -377,13 +512,13 @@ export function PlayerTab({ s }: { s: GameState }) {
               <Txt
                 style={{
                   fontFamily: DISPLAY[700],
-                  fontSize: rem(1.625),
-                  lineHeight: rem(1.625) * 1.1,
+                  fontSize: rem(FONT.title1),
+                  lineHeight: rem(FONT.title1) * 1.1,
                 }}
               >
                 {x.v}
               </Txt>
-              <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
                 {x.l}
               </Txt>
             </View>
@@ -399,12 +534,20 @@ export function PlayerTab({ s }: { s: GameState }) {
           ]}
         />
         {isKorean(s) && (
-          <Txt tone="muted" style={{ marginTop: 10, fontSize: rem(0.875) }} testID="military-guide">
+          <Txt
+            tone="muted"
+            style={{ marginTop: 10, fontSize: rem(FONT.body2) }}
+            testID="military-guide"
+          >
             {sportsServiceNotice()}
           </Txt>
         )}
         {isKorean(s) && s.mil.exempt && s.mil.sportsService?.monthsLeft == null && (
-          <Txt tone="muted" style={{ marginTop: 8, fontSize: rem(0.875) }} testID="military-legacy">
+          <Txt
+            tone="muted"
+            style={{ marginTop: 8, fontSize: rem(FONT.body2) }}
+            testID="military-legacy"
+          >
             {sportsServiceLegacyNotice()}
           </Txt>
         )}
@@ -417,7 +560,7 @@ export function PlayerTab({ s }: { s: GameState }) {
                 <TrophyRow key={x.year + x.name} year={x.year} first={i === 0}>
                   <Txt>
                     <Txt style={{ fontWeight: '700' }}>{tn(x.name).replace(/^\d{4} /, '')}</Txt>
-                    <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                    <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                       {`  ${L.tourLine({ stage: tn(x.stage), apps: x.apps, goals: x.goals })}`}
                     </Txt>
                   </Txt>

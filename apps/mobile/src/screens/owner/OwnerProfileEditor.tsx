@@ -1,3 +1,4 @@
+import { RADIUS } from '@offside/app-core/design-tokens';
 import Svg, { Path } from 'react-native-svg';
 import { useColors } from '../../theme/useColors';
 import { useState } from 'react';
@@ -97,7 +98,7 @@ export function OwnerProfileEditor({ profile, admin }: { profile: Profile; admin
           height: 44,
           alignItems: 'center',
           justifyContent: 'center',
-          borderRadius: 10,
+          borderRadius: RADIUS.sm,
           backgroundColor: pressed ? c.surface2 : 'transparent',
         })}
       >

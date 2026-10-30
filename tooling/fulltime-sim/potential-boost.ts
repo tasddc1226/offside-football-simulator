@@ -30,6 +30,7 @@ import {
 import { pick, createRng, setActiveRng } from '@offside/game/rng';
 import { gradeOf, truePot } from '@offside/game/stats';
 import { BOOST } from '@offside/game/boost';
+import { CARES, buyCare, careCost, careStatus } from '@offside/game/care';
 import { OVR_CAP_BY_AGE } from '../../apps/api/src/plausibility.js';
 import type { GameState, MarketOption, OfferOption } from '@offside/game/types';
 
@@ -72,6 +73,8 @@ export type BoostConfig = {
   freeShort?: boolean;
   /** 커리어 전체 추가 시도 상한(없으면 무제한). */
   freeTotal?: number;
+  /** T-11-513 확정 강화: 시즌의 강화를 마친 뒤 확률 없이 한 단계 올린다(시즌에 한 번, 커리어 전체 이 횟수까지). */
+  sure?: number;
 };
 
 type Hook = (s: GameState, r: () => number) => void;
@@ -174,11 +177,12 @@ export type Career = {
         fails: number;
         ages: number[];
         extra?: number;
+        sure?: number;
       }
     | undefined;
 };
 
-function career(seed: number, hook?: Hook, cfg?: BoostConfig): Career {
+function career(seed: number, hook?: Hook, cfg?: BoostConfig, pre?: Hook): Career {
   setActiveRng(createRng(seed));
   const pos = pick(['FW', 'MF', 'DF', 'GK'] as const);
   const type = pick(TYPES[pos]).id;
@@ -200,6 +204,7 @@ function career(seed: number, hook?: Hook, cfg?: BoostConfig): Career {
     level: 0,
     income: 0,
     fails: 0,
+    sure: 0,
     ages: [] as number[],
   };
   let prevMoney = s.money;
@@ -210,6 +215,7 @@ function career(seed: number, hook?: Hook, cfg?: BoostConfig): Career {
       const { ev } = playPhase(s);
       if (ev) resolveChoice(s, ev, pickChoice(s, ev));
     }
+    if (pre) pre(s, r);
     const res = endSeason(s);
     seasons.push({
       age: res.rec.age,
@@ -220,6 +226,17 @@ function career(seed: number, hook?: Hook, cfg?: BoostConfig): Career {
     b.income += Math.max(0, s.money - prevMoney);
     if (hook) hook(s, r);
     if (cfg) boostSeason(s, cfg, r, b);
+    if (
+      cfg?.sure &&
+      b.sure < cfg.sure &&
+      s.age <= cfg.maxAge &&
+      s.career.length > 0 &&
+      b.level < cfg.p.length
+    ) {
+      b.sure++;
+      b.level++;
+      s.flags.potBonus = (s.flags.potBonus ?? 0) + 1;
+    }
     prevMoney = s.money;
     let m = market(s),
       g = 0;
@@ -591,6 +608,17 @@ export const CONFIGS: BoostConfig[] = [
   },
 ];
 
+// T-11-513 확정 강화: 출시 규칙(T-11-157t2)에 확정 강화를 커리어 전체 N번 더한다.
+const RELEASE = 'T-11-157t2';
+for (const k of [1, 3, 99]) {
+  const c = CONFIGS.find((x) => x.name.startsWith(RELEASE))!;
+  CONFIGS.push({
+    ...c,
+    name: `T-11-513 · 출시 + 확정 강화 ${k === 99 ? '매 시즌' : `커리어 ${k}번`}`,
+    sure: k,
+  });
+}
+
 function modeBoost(n: number) {
   const sd = seeds(n);
   const base = sd.map((x) => career(x));
@@ -676,10 +704,92 @@ function modeBoost(n: number) {
   }
 }
 
+// T-11-513 몸 관리: 30대에 자금의 SHARE 몫 안에서 살 수 있는 가장 높은 단계를 매 시즌 산다(TIER로 단계 고정).
+function modeCare(n: number) {
+  const sd = seeds(n);
+  const base = sd.map((x) => career(x));
+  const share = +(process.env.SHARE || 0.5);
+  const fixed = process.env.TIER ? +process.env.TIER : 0;
+  const spent = new Map<number, number>();
+  const tiers = [0, 0, 0, 0];
+  const arm = sd.map((x, i) =>
+    career(x, undefined, undefined, (s) => {
+      if (careStatus(s) !== 'open') return;
+      const d = [...CARES]
+        .reverse()
+        .find((c) => (!fixed || c.t === fixed) && careCost(s, c) <= s.money * share);
+      if (!d) return;
+      const r = buyCare(s, d.t);
+      if (!r) return;
+      tiers[d.t]!++;
+      spent.set(i, (spent.get(i) ?? 0) + r.cost);
+    }),
+  );
+  const dp = arm.map((a, i) => a.peak - base[i]!.peak);
+  const dl = arm.map((a, i) => a.legend - base[i]!.legend);
+  const dr = arm.map((a, i) => a.retireAge - base[i]!.retireAge);
+  const sp = sd.map((_, i) => spent.get(i) ?? 0);
+  const used = sp.filter((v) => v > 0).length;
+  const ovrAt = (cs: Career[], age: number) =>
+    mean(cs.flatMap((c) => c.seasons.filter((r) => r.age === age).map((r) => r.ovr)));
+  console.log(
+    `몸 관리 (n=${n}, SHARE=${share}, TIER=${fixed || '최고'}, RETIRE_AGE=${RETIRE_AGE})`,
+  );
+  console.log(
+    `  산 커리어 ${((used / n) * 100).toFixed(0)}% · 단계별 횟수 1:${tiers[1]} 2:${tiers[2]} 3:${tiers[3]}`,
+  );
+  console.log(
+    `  지출 p50 ${eok(
+      q(
+        sp.filter((v) => v > 0),
+        0.5,
+      ),
+    )} · p90 ${eok(
+      q(
+        sp.filter((v) => v > 0),
+        0.9,
+      ),
+    )} · 은퇴 자금 p50 ${eok(
+      q(
+        arm.map((a) => a.money),
+        0.5,
+      ),
+    )} (안 삼 ${eok(
+      q(
+        base.map((a) => a.money),
+        0.5,
+      ),
+    )})`,
+  );
+  console.log(
+    `  최고 OVR Δ 평균 ${mean(dp).toFixed(2)} · 레전드 Δ 평균 ${mean(dl).toFixed(0)} p90 ${q(dl, 0.9)} · 은퇴 나이 Δ 평균 ${mean(dr).toFixed(2)}`,
+  );
+  console.log(
+    `  레전드 p50 ${q(
+      arm.map((a) => a.legend),
+      0.5,
+    )} p90 ${q(
+      arm.map((a) => a.legend),
+      0.9,
+    )} (안 삼 p50 ${q(
+      base.map((a) => a.legend),
+      0.5,
+    )} p90 ${q(
+      base.map((a) => a.legend),
+      0.9,
+    )})`,
+  );
+  for (const age of [31, 33, 35, 37, 39])
+    console.log(
+      `  ${age}세 시즌 말 OVR 평균 ${ovrAt(arm, age).toFixed(1)} (안 삼 ${ovrAt(base, age).toFixed(1)})`,
+    );
+}
+
 const mode = process.argv[2] || 'money';
 const N = +(process.argv[3] || 300);
 const t0 = Date.now();
 if (mode === 'money') modeMoney(N);
 else if (mode === 'effect') modeEffect(N);
+else if (mode === 'care') modeCare(N);
 else modeBoost(N);
 console.error(`(${((Date.now() - t0) / 1000).toFixed(0)}s)`);

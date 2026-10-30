@@ -17,46 +17,88 @@ import {
   CHAT_HISTORY,
   type CHAT_MUTE_DAYS,
   CHAT_SOCKET_PATH,
+  isChatRoom,
   type ChatClientEvent,
+  type ChatRoomKey,
   type ChatMessage,
   type ChatRejectCode,
   type ChatServerEvent,
 } from '@offside/contracts/chat';
 import { LIVE_PING, LIVE_PING_SEC } from '@offside/contracts/polling';
+import { storage } from '@offside/game/storage';
 import { kstParts } from '../boardText.js';
+import { getLocale } from '../i18n/core.js';
 import { chatRejectText } from '../i18n/ko/chatReject.js';
 import { apiBaseUrl, apiFetch, cachedGet, withProfile } from './client.js';
 
-export type { AdminChatReport, ChatMessage, ChatRejectCode, ChatTicketResponse };
+export type { AdminChatReport, ChatMessage, ChatRejectCode, ChatRoomKey, ChatTicketResponse };
 
-export const chatTicket = () =>
+const ROOM_KEY = 'ft_chat_room';
+/** T-11-583 들어갈 언어 방. 고른 방이 없으면 화면 언어 방이다(이 기기에만 기억한다). */
+export function currentChatRoom(): ChatRoomKey {
+  try {
+    const saved = storage().getItem(ROOM_KEY);
+    if (isChatRoom(saved)) return saved;
+  } catch {
+    /* 저장소가 막혀 있으면 화면 언어 방. */
+  }
+  const locale = getLocale();
+  return isChatRoom(locale) ? locale : 'ko';
+}
+/** 방을 고른다. 열린 소켓은 부르는 쪽이 닫고 새로 연다. */
+export function setChatRoom(room: ChatRoomKey) {
+  try {
+    storage().setItem(ROOM_KEY, room);
+  } catch {
+    /* 기억하지 못해도 이번 화면에서는 고른 방으로 붙는다. */
+  }
+}
+const inRoom = (room: ChatRoomKey) => `room=${room}`;
+
+export const chatTicket = (room: ChatRoomKey = currentChatRoom()) =>
   withProfile(() =>
-    apiFetch<ChatTicketResponse>('/v1/chat/ticket', { method: 'POST', keepCache: true }),
+    apiFetch<ChatTicketResponse>(`/v1/chat/ticket?${inRoom(room)}`, {
+      method: 'POST',
+      keepCache: true,
+    }),
   );
 /** 메시지 신고 — 여럿이 신고하면 모두의 화면에서 가려진다. */
-export const reportChat = (id: string, input: CommentReportInput) =>
+export const reportChat = (
+  id: string,
+  input: CommentReportInput,
+  room: ChatRoomKey = currentChatRoom(),
+) =>
   withProfile(() =>
-    apiFetch<undefined>(`/v1/chat/messages/${id}/report`, {
+    apiFetch<undefined>(`/v1/chat/messages/${id}/report?${inRoom(room)}`, {
       method: 'POST',
       body: JSON.stringify(input),
       keepCache: true,
     }),
   );
 /** 작성자 차단(게시판 댓글 차단과 같은 목록) — 그 사람의 메시지가 내 화면에서 빠진다. */
-export const blockChatAuthor = (id: string) =>
+export const blockChatAuthor = (id: string, room: ChatRoomKey = currentChatRoom()) =>
   withProfile(() =>
-    apiFetch<ChatBlockResponse>(`/v1/chat/messages/${id}/block`, { method: 'POST' }),
+    apiFetch<ChatBlockResponse>(`/v1/chat/messages/${id}/block?${inRoom(room)}`, {
+      method: 'POST',
+    }),
   );
 /** T-11-167 내가 차단한 사람 — 채팅의 차단 목록을 열 때만 부른다. 푸는 건 게시판과 같은 unblock(boards.ts)이다. */
 export const fetchChatBlocks = () =>
   withProfile(() => cachedGet<ChatBlockListResponse>('/v1/chat/blocks', 60_000));
 /** T-11-344 작성자의 구단주 프로필(가장 최근 팀 id) — 사용자 창에서 '프로필 보기'를 누를 때만 부른다. */
-export const fetchChatOwner = (id: string) =>
-  cachedGet<ChatOwnerResponse>(`/v1/chat/messages/${id}/owner`, 600_000);
-export const adminHideChat = (id: string) =>
-  apiFetch<undefined>(`/v1/admin/chat/messages/${id}/hide`, { method: 'POST', keepCache: true });
-export const adminMuteChat = (id: string, input: ChatMuteInput) =>
-  apiFetch<undefined>(`/v1/admin/chat/messages/${id}/mute`, {
+export const fetchChatOwner = (id: string, room: ChatRoomKey = currentChatRoom()) =>
+  cachedGet<ChatOwnerResponse>(`/v1/chat/messages/${id}/owner?${inRoom(room)}`, 600_000);
+export const adminHideChat = (id: string, room: ChatRoomKey = currentChatRoom()) =>
+  apiFetch<undefined>(`/v1/admin/chat/messages/${id}/hide?${inRoom(room)}`, {
+    method: 'POST',
+    keepCache: true,
+  });
+export const adminMuteChat = (
+  id: string,
+  input: ChatMuteInput,
+  room: ChatRoomKey = currentChatRoom(),
+) =>
+  apiFetch<undefined>(`/v1/admin/chat/messages/${id}/mute?${inRoom(room)}`, {
     method: 'POST',
     body: JSON.stringify(input),
     keepCache: true,
@@ -117,8 +159,12 @@ export function chatMutedText(until: string | null) {
     : chatRejectText.mutedNotice;
 }
 
-export const chatSocketUrl = (ticket: string | null, base = apiBaseUrl()) =>
-  `${base.replace(/^http/, 'ws')}${CHAT_SOCKET_PATH}${ticket ? `?t=${encodeURIComponent(ticket)}` : ''}`;
+export const chatSocketUrl = (
+  ticket: string | null,
+  room: ChatRoomKey = 'ko',
+  base = apiBaseUrl(),
+) =>
+  `${base.replace(/^http/, 'ws')}${CHAT_SOCKET_PATH}?${inRoom(room)}${ticket ? `&t=${encodeURIComponent(ticket)}` : ''}`;
 
 /** 화면에 그리는 채팅 상태. */
 export type ChatView = {
@@ -145,11 +191,28 @@ export const EMPTY_CHAT: ChatView = {
 /** 화면에 들고 있는 최대 줄 수(오래된 줄부터 버린다). 이전 줄은 이만큼 찼으면 더 부르지 않는다. */
 const KEEP = 300;
 
+/**
+ * skip이 참인 줄은 빼고, T-11-573 답장의 원문이 skip 대상(차단한 작성자·내가 신고한 줄)이면 원문을 비운다.
+ * 바뀐 게 없으면 같은 배열을 돌려준다.
+ */
+export function cleanChat(
+  messages: ChatMessage[],
+  skip: (m: Pick<ChatMessage, 'id' | 'author'>) => boolean,
+): ChatMessage[] {
+  let changed = false;
+  const out = messages.flatMap((m) => {
+    if (skip(m)) return ((changed = true), []);
+    if (m.reply && skip(m.reply)) return ((changed = true), [{ ...m, reply: null }]);
+    return [m];
+  });
+  return changed ? out : messages;
+}
+
 /** 서버 이벤트 하나를 반영한 새 상태. skip이 참인 줄(차단한 작성자·내가 신고한 줄)은 넣지 않는다. */
 export function applyChat(
   view: ChatView,
   e: ChatServerEvent,
-  skip: (m: ChatMessage) => boolean,
+  skip: (m: Pick<ChatMessage, 'id' | 'author'>) => boolean,
 ): ChatView {
   switch (e.t) {
     case 'hello': {
@@ -160,7 +223,7 @@ export function applyChat(
       return {
         ...view,
         status: 'open',
-        messages: [...kept, ...e.messages.filter((m) => !skip(m))].slice(-KEEP),
+        messages: [...kept, ...cleanChat(e.messages, skip)].slice(-KEEP),
         online: e.online,
         write: e.write,
         more: kept.length ? view.more : (e.more ?? e.messages.length >= CHAT_HISTORY),
@@ -169,13 +232,15 @@ export function applyChat(
     }
     case 'older': {
       const have = new Set(view.messages.map((m) => m.id));
-      const add = e.messages.filter((m) => !skip(m) && !have.has(m.id));
+      const add = cleanChat(e.messages, skip).filter((m) => !have.has(m.id));
       // 한 페이지가 통째로 빠지면(차단한 작성자뿐) 맨 위 줄이 그대로라 같은 페이지를 다시 부르게 되니 멈춘다.
       const more = e.more && add.length > 0;
       return { ...view, messages: [...add, ...view.messages], more, loadingOlder: false };
     }
     case 'msg':
-      return skip(e.m) ? view : { ...view, messages: [...view.messages, e.m].slice(-KEEP) };
+      return skip(e.m)
+        ? view
+        : { ...view, messages: [...view.messages, ...cleanChat([e.m], skip)].slice(-KEEP) };
     case 'avatar':
       return {
         ...view,
@@ -186,9 +251,13 @@ export function applyChat(
     case 'online':
       return { ...view, online: e.n };
     case 'hide':
-      return { ...view, messages: view.messages.filter((m) => m.id !== e.id) };
+      // T-11-573 가린 줄을 인용한 답장은 원문을 비운다.
+      return { ...view, messages: cleanChat(view.messages, (m) => m.id === e.id) };
     case 'err':
       return e.code === 'muted' ? { ...view, write: false } : view;
+    default:
+      // T-11-573 나중에 생길 이벤트는 무시한다(모르는 이벤트로 상태가 비지 않게).
+      return view;
   }
 }
 
@@ -206,8 +275,8 @@ const RETRY_MIN_MS = 2_000;
 const RETRY_MAX_MS = 60_000;
 
 export type ChatSession = {
-  /** 한 줄 보낸다. 소켓이 열려 있지 않으면 false. */
-  send(body: string): boolean;
+  /** 한 줄 보낸다. replyTo(T-11-573)는 답장할 원문 id. 소켓이 열려 있지 않으면 false. */
+  send(body: string, replyTo?: string | null): boolean;
   /** T-11-180 맨 위 줄보다 이전 줄을 부른다. 더 없거나 부르는 중이거나 KEEP만큼 찼으면 부르지 않는다. */
   older(): void;
   /** 차단한 작성자의 줄을 지금 화면에서 빼고, 앞으로 오는 줄도 뺀다. */
@@ -221,19 +290,22 @@ export type ChatSession = {
 
 /**
  * 채팅방에 붙는다. 상태가 바뀔 때마다 onChange, 내 줄이 거절되면 onReject를 부른다. restore는 거절된 줄 —
- * 고쳐 다시 보낼 수 있을 때만(정지·읽기 전용이 아니면) 준다.
+ * 고쳐 다시 보낼 수 있을 때만(정지·읽기 전용이 아니면) 준다. room(T-11-583)은 세션 동안 바꾸지 않는다 —
+ * 다른 방으로 가려면 닫고 새로 연다.
  */
 export function openChat(
   onChange: (v: ChatView) => void,
   onReject: (code: ChatRejectCode, restore: string | null) => void = () => {},
+  room: ChatRoomKey = currentChatRoom(),
 ): ChatSession {
   let view = EMPTY_CHAT;
   /** 보냈지만 아직 방에서 돌아오지 않은 줄. */
   let pending = '';
   let blocked = new Set<string>();
   const dropped = new Set<string>();
-  const skip = (m: ChatMessage) => blocked.has(m.author) || dropped.has(m.id);
-  const refilter = () => set({ ...view, messages: view.messages.filter((m) => !skip(m)) });
+  const skip = (m: Pick<ChatMessage, 'id' | 'author'>) =>
+    blocked.has(m.author) || dropped.has(m.id);
+  const refilter = () => set({ ...view, messages: cleanChat(view.messages, skip) });
   let ws: Sock | null = null;
   let ping: ReturnType<typeof setInterval> | undefined;
   let retry: ReturnType<typeof setTimeout> | undefined;
@@ -247,7 +319,7 @@ export function openChat(
   const open = async () => {
     const WS = g.WebSocket;
     if (stopped || !WS) return;
-    const r = await chatTicket();
+    const r = await chatTicket(room);
     if (stopped) return;
     const me = r.ok ? r.data : null;
     if (me) {
@@ -255,7 +327,7 @@ export function openChat(
       for (const id of me.reported) dropped.add(id);
     }
     set({ ...view, me, status: view.status === 'open' ? 'retrying' : view.status });
-    const sock = new WS(chatSocketUrl(me?.ticket ?? null));
+    const sock = new WS(chatSocketUrl(me?.ticket ?? null, room));
     ws = sock;
     sock.onopen = () => {
       wait = RETRY_MIN_MS;
@@ -288,9 +360,15 @@ export function openChat(
 
   void open();
   return {
-    send(body) {
+    send(body, replyTo) {
       if (!ws || view.status !== 'open') return false;
-      ws.send(JSON.stringify({ t: 'send', body } satisfies ChatClientEvent));
+      ws.send(
+        JSON.stringify({
+          t: 'send',
+          body,
+          ...(replyTo ? { replyTo } : {}),
+        } satisfies ChatClientEvent),
+      );
       pending = body;
       return true;
     },

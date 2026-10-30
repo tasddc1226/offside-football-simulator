@@ -57,6 +57,9 @@ describe('앱·웹 오류 보내기 (T-11-331)', () => {
 
   it('다른 출처 · 확장 프로그램 오류는 보내지 않는다', () => {
     expect(reportError('error', 'Script error.')).toBe(false);
+    expect(
+      reportError('error', new ReferenceError("Can't find variable: _AutofillCallbackHandler")),
+    ).toBe(false);
     const e = new Error('boom');
     e.stack = 'Error: boom\n at chrome-extension://abc/x.js:1:1';
     expect(reportError('error', e)).toBe(false);

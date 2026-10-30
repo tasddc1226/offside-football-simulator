@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { CUP_ROUNDS, CUP_STAGES, IAP_PRODUCT_IDS, REWARD_KINDS, SCOUT_MODES } from './cup.js';
+import {
+  CUP_DIVISIONS,
+  CUP_ROUNDS,
+  CUP_STAGES,
+  IAP_PRODUCT_IDS,
+  REWARD_KINDS,
+  SCOUT_MODES,
+} from './cup.js';
 import { IsoUtcSchema } from './primitives.js';
 import { TeamIdSchema, TeamLogoSchema, TeamMatchSchema } from './teams.js';
 
@@ -7,7 +14,9 @@ import { TeamIdSchema, TeamLogoSchema, TeamMatchSchema } from './teams.js';
 
 // ───────── API 모양 ─────────
 
-export const CupIdSchema = z.string().regex(/^s\d+-\d+$/);
+export const CupIdSchema = z.string().regex(/^s\d+-\d+(?:-(?:junior|senior|master))?$/);
+/** T-11-410 OVR 구간. */
+export const CupDivisionSchema = z.enum(CUP_DIVISIONS);
 export const CupRoundSchema = z.enum(CUP_ROUNDS);
 export const CupStageSchema = z.enum(CUP_STAGES);
 export const CupPhaseSchema = z.enum([
@@ -49,6 +58,14 @@ export const CupGroupSchema = z.strictObject({
   standings: z.array(CupStandingSchema),
 });
 
+/** T-11-407 경기 전 예상 승 · 무 · 패(홈 기준 정수 %, 합 100). */
+export const CupMatchOddsSchema = z.strictObject({
+  home: z.number().int().min(0).max(100),
+  draw: z.number().int().min(0).max(100),
+  away: z.number().int().min(0).max(100),
+});
+export type CupMatchOdds = z.infer<typeof CupMatchOddsSchema>;
+
 export const CupMatchSchema = z.strictObject({
   id: z.string(),
   round: CupRoundSchema,
@@ -66,6 +83,8 @@ export const CupMatchSchema = z.strictObject({
   winnerTeamId: z.string().nullable(),
   /** 한 팀이 나오지 못해 0:3으로 끝난 경기. */
   forfeit: z.boolean(),
+  /** T-11-407 경기 전 예상(명단이 잠긴 경기 1시간 전부터). 잠금 전 · 몰수 경기는 null, 옛 서버 응답에는 없다. */
+  odds: CupMatchOddsSchema.nullable().optional(),
 });
 export type CupMatch = z.infer<typeof CupMatchSchema>;
 
@@ -81,8 +100,21 @@ export const CupInfoSchema = z.strictObject({
   ),
   capacity: z.number().int(),
   minFilled: z.number().int(),
+  /** T-11-410 구간(통합 대회 · 옛 응답에는 없다). */
+  division: CupDivisionSchema.optional(),
+  /** T-11-410 팀 OVR 상한(마스터 · 접수 전 아랫 구간은 null). */
+  ovrMax: z.number().int().nullable().optional(),
 });
 export type CupInfo = z.infer<typeof CupInfoSchema>;
+
+/** T-11-410 회차 안 구간 하나(탭 · 배너). entries는 신청(취소 제외) 팀 수. */
+export const CupDivisionInfoSchema = z.strictObject({
+  id: CupIdSchema,
+  division: CupDivisionSchema,
+  ovrMax: z.number().int().nullable(),
+  entries: z.number().int(),
+});
+export type CupDivisionInfo = z.infer<typeof CupDivisionInfoSchema>;
 
 export const CupResponseSchema = z.strictObject({
   cup: CupInfoSchema,
@@ -94,6 +126,8 @@ export const CupResponseSchema = z.strictObject({
   matches: z.array(CupMatchSchema),
   /** 우승 팀(끝났을 때). */
   championTeamId: z.string().nullable(),
+  /** T-11-410 같은 회차의 구간들(아래에서 위). 통합 대회 · 옛 응답에는 없다. */
+  divisions: z.array(CupDivisionInfoSchema).optional(),
 });
 export type CupResponse = z.infer<typeof CupResponseSchema>;
 
@@ -102,6 +136,8 @@ export const CupChampionSchema = z.strictObject({
   cupId: CupIdSchema,
   season: z.number().int(),
   edition: z.number().int(),
+  /** T-11-410 구간 대회 우승이면 그 구간. */
+  division: CupDivisionSchema.optional(),
   teamId: z.string(),
   name: z.string(),
   owner: z.string(),
@@ -121,19 +157,40 @@ export const CupHomeResponseSchema = z.strictObject({
   championName: z.string().nullable(),
   /** T-11-290 결승 뒤 CUP_HOME_AFTER_MS 안에 끝난 가장 최근 대회의 우승 팀. 다음 대회 접수가 열려 cup이 바뀌어도 남는다. */
   champion: CupChampionSchema.nullable(),
+  /** T-11-410 구간들(entries · teamCount는 구간을 합한 값). 통합 대회 · 옛 응답에는 없다. */
+  divisions: z.array(CupDivisionInfoSchema).optional(),
 });
 export type CupHomeResponse = z.infer<typeof CupHomeResponseSchema>;
 
 /** 신청 자격 검사 결과. ok가 아니면 reason으로 안내한다. */
 export const CupEligibilitySchema = z.strictObject({
   ok: z.boolean(),
-  reason: z.enum(['no-team', 'not-enough', 'listed', 'closed', 'full']).nullable(),
+  // T-11-410 over-cap = 팀 OVR이 구간 상한보다 높다, entered-other = 같은 회차 다른 구간에 신청했다.
+  reason: z
+    .enum(['no-team', 'not-enough', 'listed', 'closed', 'full', 'over-cap', 'entered-other'])
+    .nullable(),
   filled: z.number().int(),
 });
 
 export const CupEntryStatusSchema = z.enum(['active', 'out', 'champion', 'withdrawn']);
 
+/**
+ * T-11-405 내 다음 경기의 예상(지금 두 팀 명단 기준, 내 쪽에서 본 90분 승 · 무 · 패 %). 경기와 같은 줄 힘 · 기대 득점으로
+ * 계산한다. 토너먼트에서 비기면 승부차기로 가린다.
+ */
+export const CupOddsSchema = z.strictObject({
+  win: z.number().int().min(0).max(100),
+  draw: z.number().int().min(0).max(100),
+  loss: z.number().int().min(0).max(100),
+  xg: z.strictObject({ mine: z.number(), opp: z.number() }),
+});
+export type CupOdds = z.infer<typeof CupOddsSchema>;
+
 export const CupMeResponseSchema = z.strictObject({
+  /** T-11-410 이 응답이 본 대회. 'current'로 물으면 내가 신청한 구간(없으면 내 OVR로 들어갈 가장 낮은 구간). */
+  cupId: CupIdSchema.optional(),
+  /** T-11-410 내 팀 OVR(팀이 없으면 null). 구간 탭에서 들어갈 수 있는 구간을 고른다. */
+  ovr: z.number().int().nullable().optional(),
   entry: z
     .strictObject({
       teamId: TeamIdSchema,
@@ -146,6 +203,8 @@ export const CupMeResponseSchema = z.strictObject({
   eligibility: CupEligibilitySchema,
   /** 다음 내 경기(있으면). */
   next: CupMatchSchema.nullable(),
+  /** T-11-405 다음 경기 예상(두 팀이 다 정해졌고 지금 팀이 있을 때만). 옛 서버 응답에는 없다. */
+  nextOdds: CupOddsSchema.nullable().optional(),
   /** 지금 명단이 잠겨 있는가(경기 1시간 전 ~ 그 경기가 끝날 때까지). */
   locked: z.boolean(),
   rerolls: z.number().int().min(0),
@@ -232,16 +291,42 @@ export type RerollShopResponse = z.infer<typeof RerollShopResponseSchema>;
  * T-11-244 POST /v1/items/scout/use 본문. hit = 기기가 이번 시드로 뽑은 일반 프리미엄 후보에 S가 있는지(천장 카운트를
  * 0으로 돌린다). 본문이 없으면(천장을 모르는 옛 앱) 확정 모드를 주지 않고 장수만 센다.
  */
-/** T-11-275 GET /v1/items/gift — 받을 수 있는 홈 선물. 받았으면 null. */
+const RecordRewardSchema = z.strictObject({
+  reroll: z.number().int().min(0),
+  scout: z.number().int().min(0),
+  boost: z.number().int().min(0),
+});
+/**
+ * GET /v1/items/gift — 홈 선물 칸에 받을 수 있는 시즌 보상 하나(받으면 다음 것). T-11-386 시즌 업적 보상(kind
+ * 'achSeason', season = 업적을 센 시즌)이 먼저, T-11-487 시즌 기록 보상(kind 'recordSeason', 리롤권 · 갈래별
+ * 내역 record)은 그 뒤다. 기록 보상은 그 카드를 그릴 줄 아는 기기(?v=2)에만 싣는다. 없으면 null.
+ * T-11-472 구단주 선물(T-11-275)은 없앴다 — 받은 기록(gift_claims 'gift-2026-10')은 그대로 둔다.
+ */
 export const HomeGiftResponseSchema = z.strictObject({
   gift: z
     .strictObject({
       id: z.string(),
+      kind: z.enum(['achSeason', 'recordSeason', 'adFreeThanks']).optional(),
+      season: z.number().int().min(1).optional(),
       boost: z.number().int().min(0),
       scout: z.number().int().min(0),
+      reroll: z.number().int().min(0).optional(),
+      record: z
+        .strictObject({
+          hofRank: z.number().int().min(1).nullable(),
+          icons: z.number().int().min(0),
+          legends: z.number().int().min(0),
+          ballonPlayers: z.number().int().min(0),
+          hof: RecordRewardSchema,
+          legend: RecordRewardSchema,
+          ballon: RecordRewardSchema,
+        })
+        .optional(),
     })
     .nullable(),
 });
+/** T-11-386 POST /v1/items/gift/claim 본문. id = 화면에 보인 선물(없으면 지금 받을 수 있는 첫 선물 — 옛 앱). */
+export const GiftClaimBodySchema = z.strictObject({ id: z.string().max(64).optional() });
 export type HomeGiftResponse = z.infer<typeof HomeGiftResponseSchema>;
 
 export const ScoutUseBodySchema = z.strictObject({ hit: z.boolean().optional() });
@@ -268,6 +353,19 @@ export const RewardShopResponseSchema = z.strictObject({
 export type RewardShopResponse = z.infer<typeof RewardShopResponseSchema>;
 export type RewardOffer = z.infer<typeof RewardOfferSchema>;
 
+/**
+ * GET /v1/items/sure — T-11-513 구단 자금 확정 강화의 지금 값과 구단 자금. price는 오늘 상한을 다 썼거나 닫았으면 null.
+ * 보상 값 응답(RewardShopResponse)과 따로 둬 옛 앱의 엄격한 스키마가 거절하지 않게 한다.
+ */
+export const SureShopResponseSchema = z.strictObject({
+  balance: z.number().int().min(0),
+  offer: RewardOfferSchema,
+});
+export type SureShopResponse = z.infer<typeof SureShopResponseSchema>;
+/** POST /v1/items/sure/buy — 화면에서 본 가격(그 사이 바뀌었으면 409). 응답은 바뀐 SureShopResponse. */
+export const BuySureBodySchema = z.strictObject({ price: z.number().int().min(1) });
+export type BuySureBody = z.infer<typeof BuySureBodySchema>;
+
 /** POST /v1/items/rewards/buy — 받을 보상과 화면에서 본 가격(그 사이 바뀌었으면 409). 응답은 바뀐 RewardShopResponse. */
 export const BuyRewardBodySchema = z.strictObject({
   kind: z.enum(REWARD_KINDS),
@@ -290,6 +388,8 @@ export const AdminCupCreateSchema = z
     matchHour: z.number().int().min(0).max(23).optional(),
     capacity: z.number().int().min(4).max(128).optional(),
     minFilled: z.number().int().min(1).max(11).optional(),
+    /** T-11-410 OVR 구간별로 연다(구간마다 대회 하나). 상한은 접수가 열릴 때 시즌 팀 분포로 정한다. */
+    divisions: z.boolean().optional(),
   })
   // 추첨은 첫 경기 2시간 전보다 앞서야 한다.
   .refine((v) => (v.matchHour ?? 21) - (v.drawHour ?? 12) >= 2, { path: ['drawHour'] });
@@ -303,6 +403,16 @@ export const AdminCupSchema = z.strictObject({
   entries: z.number().int(),
 });
 export type AdminCup = z.infer<typeof AdminCupSchema>;
+/** T-11-410 PUT /v1/admin/cups/:cupId/cap — 아랫 구간 상한(접수가 열리기 전만). */
+export const AdminCupCapSchema = z.strictObject({ ovrMax: z.number().int().min(1).max(120) });
+export type AdminCupCap = z.infer<typeof AdminCupCapSchema>;
+/** T-11-410 GET /v1/admin/cups/caps — 지금 시즌 팀 분포로 낸 상한 제안. */
+export const AdminCupCapsSuggestSchema = z.strictObject({
+  season: z.number().int(),
+  teams: z.number().int(),
+  caps: z.array(z.number().int()),
+});
+export type AdminCupCapsSuggest = z.infer<typeof AdminCupCapsSuggestSchema>;
 export const AdminCupListSchema = z.strictObject({ items: z.array(AdminCupSchema) });
 export type AdminCupList = z.infer<typeof AdminCupListSchema>;
 

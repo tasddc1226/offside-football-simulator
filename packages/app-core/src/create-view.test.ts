@@ -5,7 +5,7 @@ import { newGame } from '@offside/game/engine';
 import { GK_SUBS, ovr, SUBS } from '@offside/game/attributes';
 import { BODY_DEFAULT } from '@offside/contracts/body';
 import { createRng, setActiveRng } from '@offside/game/rng';
-import { bodyNote, hiddenStrength, scoutLine, startOvr } from './create-view.js';
+import { bodyNote, focusNote, hiddenStrength, scoutLine, startOvr } from './create-view.js';
 import { iGa, polyPoints } from './format.js';
 
 describe('선수 생성 표시 로직', () => {
@@ -80,5 +80,13 @@ describe('bodyNote', () => {
     const allowed = ['div', 'han', 'jmp', 'str', 'ref', 'rea'].map((k) => SUBS[k]);
     expect(note).not.toBe('');
     for (const n of names(note)) expect(allowed).toContain(n);
+  });
+});
+
+describe('T-11-437 주력 능력치 버튼 한 줄', () => {
+  it('비주력도 훈련 성장이 느려지는 것을 함께 보인다', () => {
+    expect(focusNote(true, 6)).toBe('시작 +6 · 성장 +20%');
+    expect(focusNote(false, 0)).toBe('시작 변화 없음 · 성장 -10%');
+    expect(focusNote(false, -4)).toBe('시작 -4 · 성장 -10%');
   });
 });

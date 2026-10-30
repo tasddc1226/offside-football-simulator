@@ -48,7 +48,8 @@ export async function fundsHistory(
         `WITH m AS (${MOVES}),
               p AS (SELECT * FROM m ORDER BY at DESC, id DESC LIMIT ?2 OFFSET ?3)
          SELECT p.id, p.kind, p.item, p.amount, p.fee, p.at, p.cid,
-                k.pos, k.peak, k.number, ca.public_name AS publicName
+                k.pos, k.peak, k.number,
+                CASE WHEN ca.id IS NULL THEN k.public_name ELSE ca.public_name END AS publicName
            FROM p LEFT JOIN cards k ON k.career_id = p.cid LEFT JOIN careers ca ON ca.id = p.cid
           ORDER BY p.at DESC, p.id DESC`,
       )

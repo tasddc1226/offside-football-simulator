@@ -206,6 +206,35 @@ export const buyRewardWithFunds = (
   },
 ) => buyItem(db, { ...b, item: rewardItem(b.kind), grant: null });
 
+// ───────── T-11-513 확정 강화 ─────────
+// 구단 자금으로 확률 없이 잠재력 강화 한 단계를 받는다. 서버는 자금만 받고 원장(item = sure)에 남긴다. 강화는 기기의 게임이 준다
+// (커리어마다 시즌 한 번은 기기가 지킨다). 보상 값 응답(offers)과 따로 둬 옛 앱이 모르는 칸을 받지 않게 한다.
+
+/** 확정 강화 수치(활성 버전, 없으면 기본값). 같은 날 값 상승은 보상과 같은 배율을 쓴다. */
+export async function sureShopRules(db: Db) {
+  const b = resolveBalance((await getActiveBalance(db))?.values);
+  return { price: b.surePrice, growth: b.rewardPriceGrowth, cap: b.sureDailyCap };
+}
+
+/** 구단 자금과 since(오늘 0시, 한국 시각) 뒤에 받은 확정 강화 수. */
+export async function sureSnapshot(db: Db, profileId: string, since: string) {
+  const row = await db.$client
+    .prepare(
+      `SELECT (SELECT balance FROM owner_funds WHERE profile_id = ?1) AS balance,
+              coalesce(sum(qty), 0) AS bought
+         FROM owner_item_purchases WHERE profile_id = ?1 AND item = 'sure' AND created_at >= ?2`,
+    )
+    .bind(profileId, since)
+    .first<{ balance: number | null; bought: number }>();
+  return { balance: row?.balance ?? 0, bought: row?.bought ?? 0 };
+}
+
+/** 확정 강화 한 번을 구단 자금으로 받기(buyItem). */
+export const buySureWithFunds = (
+  db: Db,
+  b: { id: string; profileId: string; price: number; bought: number; since: string; now: string },
+) => buyItem(db, { ...b, item: 'sure', grant: null });
+
 /** 구단 자금으로 산 것(리롤권 · 광고 대신 받은 보상) 최근 limit개. 이적시장 '자금 내역'에 거래와 함께 보인다. */
 export async function myFundsSpends(
   db: Db,
@@ -247,7 +276,7 @@ export function retiredNumberRewardStatements(
         content: {
           kind: 'team',
           title: '영구결번 보상을 받았어요', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
-          body: `영구결번을 받아 프리미엄 스카우트권 ${RETIRED_NUMBER_SCOUTS}장을 받았어요.`, // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
+          body: `영구결번 보상으로 프리미엄 스카우트권 ${RETIRED_NUMBER_SCOUTS}장을 받았어요.`, // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
           target: { type: 'screen', screen: 'home' },
         },
       },

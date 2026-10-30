@@ -2,6 +2,7 @@
 // 스캔 빔이 피치를 훑으며 선수 점을 찍고, 마지막 훑기에서 내 포지션 구역의 세 명이 금색으로 확정된다.
 // 연출용 난수는 Math.random이다(게임 RNG를 건드리지 않는다). 탭하면 건너뛸 수 있고, 동작 줄이기면
 // 빔 없이 짧게 단계만 넘긴다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -130,7 +131,7 @@ function Spinner({ motionOK }: { motionOK: boolean }) {
       style={{
         width: 14,
         height: 14,
-        borderRadius: 7,
+        borderRadius: RADIUS.xs,
         borderWidth: 2,
         borderColor: c.accent,
         borderRightColor: 'transparent',
@@ -237,23 +238,23 @@ export function ScoutScan({
               paddingTop: 18,
               paddingHorizontal: 16,
               paddingBottom: 14,
-              borderRadius: 16,
+              borderRadius: RADIUS.lg,
               backgroundColor: c.surface,
               borderWidth: 1,
-              borderColor: c.line,
+              borderColor: 'transparent',
             },
             shadow,
           ]}
         >
           <Txt v="eyebrow">Scouting</Txt>
-          <Txt v="h2" accessibilityRole="header" style={{ fontSize: rem(1.15) }}>
+          <Txt v="h2" accessibilityRole="header" style={{ fontSize: rem(FONT.title3) }}>
             {L.scanTitle}
           </Txt>
 
           <View
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
-            style={{ aspectRatio: 16 / 10, borderRadius: 10, overflow: 'hidden' }}
+            style={{ aspectRatio: 16 / 10, borderRadius: RADIUS.sm, overflow: 'hidden' }}
           >
             {/* 10%씩 번갈아 깔린 잔디 줄 */}
             <View style={StyleSheet.absoluteFill}>
@@ -303,7 +304,7 @@ export function ScoutScan({
                 <View
                   style={{
                     flex: 1,
-                    borderRadius: 15,
+                    borderRadius: RADIUS.md,
                     alignItems: 'center',
                     justifyContent: 'center',
                     backgroundColor: alpha(c.pitchAccent, 0.3),
@@ -313,7 +314,7 @@ export function ScoutScan({
                     style={{
                       width: 22,
                       height: 22,
-                      borderRadius: 11,
+                      borderRadius: RADIUS.sm,
                       alignItems: 'center',
                       justifyContent: 'center',
                       backgroundColor: c.pitchAccent,
@@ -322,8 +323,8 @@ export function ScoutScan({
                     <Txt
                       style={{
                         fontFamily: DISPLAY[700],
-                        fontSize: rem(0.8),
-                        lineHeight: rem(0.8) * 1.2,
+                        fontSize: rem(FONT.label),
+                        lineHeight: rem(FONT.label) * 1.2,
                         color: c.accentInk,
                         includeFontPadding: false,
                       }}
@@ -354,16 +355,16 @@ export function ScoutScan({
           </View>
 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Txt tone="muted" style={{ fontSize: rem(0.85) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
               {L.scannedBefore}{' '}
-              <Txt num style={{ fontSize: rem(1.05) }}>
+              <Txt num style={{ fontSize: rem(FONT.title3) }}>
                 {count.toLocaleString(intlLocale())}
               </Txt>
               {L.scannedAfter}
             </Txt>
-            <Txt tone="muted" style={{ fontSize: rem(0.85) }}>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
               {L.scanCand}{' '}
-              <Txt num style={{ fontSize: rem(1.05) }}>
+              <Txt num style={{ fontSize: rem(FONT.title3) }}>
                 {locked}
               </Txt>
               /3
@@ -390,11 +391,11 @@ export function ScoutScan({
                     }}
                   >
                     {done ? (
-                      <Txt style={{ fontSize: rem(0.75), color: c.good }}>✓</Txt>
+                      <Txt style={{ fontSize: rem(FONT.caption), color: c.good }}>✓</Txt>
                     ) : now ? (
                       <Spinner motionOK={motionOK} />
                     ) : (
-                      <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                      <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
                         ·
                       </Txt>
                     )}
@@ -402,7 +403,7 @@ export function ScoutScan({
                   <Txt
                     style={{
                       flex: 1,
-                      fontSize: rem(0.88),
+                      fontSize: rem(FONT.body2),
                       color: done ? c.good : now ? c.ink : c.muted,
                       fontWeight: now ? '600' : '400',
                     }}
@@ -413,7 +414,7 @@ export function ScoutScan({
               );
             })}
           </View>
-          <Txt tone="muted" center style={{ fontSize: rem(0.8), marginTop: 2 }}>
+          <Txt tone="muted" center style={{ fontSize: rem(FONT.label), marginTop: 2 }}>
             {p >= 1 ? L.scanDone : L.scanSkip}
           </Txt>
         </View>

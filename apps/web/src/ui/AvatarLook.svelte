@@ -141,31 +141,31 @@ import { buyLookRecord, wearLookRecord, buyLook, setLook, type LookRecord } from
 <style>
   .look {position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center;}
   .look-backdrop {position:absolute;inset:0;border:0;padding:0;background:color-mix(in srgb,#000,transparent 45%);}
-  .look-body {position:relative;width:100%;max-width:480px;max-height:88vh;overflow:auto;background:var(--surface);color:var(--ink);border-radius:20px 20px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px;}
+  .look-body {position:relative;width:100%;max-width:480px;max-height:88vh;overflow:auto;background:var(--surface);color:var(--ink);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px;}
   .look-head {display:flex;gap:14px;align-items:center;}
-  .look-head h2 {margin:0 0 2px;font-size:1.1rem;}
+  .look-head h2 {margin:0 0 2px;font-size:var(--fs-title3);}
   .look-head p {margin:2px 0 0;}
-  .look-preview {flex:none;padding:8px;border-radius:14px;background:var(--pitch);}
+  .look-preview {flex:none;padding:8px;border-radius:var(--radius-md);background:var(--pitch);}
   .look-money {font-weight:700;}
   .look-rows {display:flex;flex-direction:column;gap:12px;}
-  .look-row {display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:14px;}
-  .look-row-head {display:flex;justify-content:space-between;align-items:center;font-size:.9rem;}
-  .look-row-head span {color:var(--muted);font-size:.8rem;font-weight:600;}
+  .look-row {display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:var(--radius-md);}
+  .look-row-head {display:flex;justify-content:space-between;align-items:center;font-size:var(--fs-body1);}
+  .look-row-head span {color:var(--muted);font-size:var(--fs-label);font-weight:600;}
   .look-row-head .look-owned {color:var(--good);}
   .look-opts {display:flex;flex-wrap:wrap;gap:8px;}
-  .look-opt {min-height:36px;min-width:36px;padding:0 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font:inherit;font-size:.8rem;cursor:pointer;}
+  .look-opt {min-height:36px;min-width:36px;padding:0 10px;border: 1px solid transparent;border-radius:var(--radius-pill);background:var(--surface-2);color:var(--ink);font:inherit;font-size:var(--fs-label);cursor:pointer;}
   .look-opt.swatch {padding:4px;display:grid;place-items:center;}
   .look-opt.swatch span {display:block;width:24px;height:24px;border-radius:50%;box-shadow:inset 0 0 0 1px #0003;}
   .look-opt[aria-pressed='true'] {border-color:var(--accent);box-shadow:0 0 0 2px var(--accent);font-weight:700;}
   .look-opt:disabled {cursor:default;opacity:.6;}
   .look-recs p {margin:0;}
-  .look-rec {display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer;}
+  .look-rec {display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border: 1px solid transparent;border-radius:var(--radius-md);background:var(--surface-2);color:var(--ink);font:inherit;text-align:left;cursor:pointer;}
   .look-rec:not(.open) {opacity:.7;}
   .look-rec[aria-pressed='true'] {border-color:var(--accent);box-shadow:0 0 0 2px var(--accent);}
   .look-rec:disabled {cursor:default;}
   .look-rec-swatch {flex:none;width:28px;height:28px;border-radius:50%;box-shadow:inset 0 0 0 1px #0003, 0 0 8px #ffe36e88;}
-  .look-rec-text {flex:1;min-width:0;display:flex;flex-direction:column;font-size:.85rem;}
-  .look-rec-text small {color:var(--muted);font-size:.75rem;}
-  .look-rec-act {flex:none;font-size:.8rem;font-weight:700;color:var(--accent-text);}
-  .look-short {margin:0;color:var(--bad);font-size:.8rem;font-weight:600;}
+  .look-rec-text {flex:1;min-width:0;display:flex;flex-direction:column;font-size:var(--fs-body2);}
+  .look-rec-text small {color:var(--muted);font-size:var(--fs-caption);}
+  .look-rec-act {flex:none;font-size:var(--fs-label);font-weight:700;color:var(--accent-text);}
+  .look-short {margin:0;color:var(--bad);font-size:var(--fs-label);font-weight:600;}
 </style>

@@ -1,6 +1,7 @@
 // SNS 공유 이미지 카드(웹 share/shareCard.ts drawShareCard) — 같은 카드 내용(app-core shareCardData)을 1080×1350 도안
 // 좌표 그대로 RN 뷰로 그린다. ShareImageCard가 이걸 화면 밖에 그려 captureRef로 PNG를 찍는다. 색·글자 크기·자리는 웹
 // 캔버스 값(도안 px)을 그대로 쓴다. 글자 자리는 baseline 대신 위 끝 기준이라 웹과 몇 px 어긋날 수 있다.
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { Text, View, type TextStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -113,7 +114,7 @@ export function ShareCardView({ c }: { c: ShareCardData }) {
           top: 430 - 240,
           width: 480,
           height: 480,
-          borderRadius: 240,
+          borderRadius: RADIUS.pill,
           borderWidth: 3,
           borderColor: 'rgba(238,244,239,0.05)',
         }}

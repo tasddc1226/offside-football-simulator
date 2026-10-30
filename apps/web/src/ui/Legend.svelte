@@ -62,12 +62,12 @@
     gap: 6px;
     min-height: 40px;
     padding: 8px 16px 8px 12px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     border: 1px solid var(--accent);
     background: var(--accent);
     color: var(--accent-ink);
     font-weight: 700;
-    font-size: 0.875rem;
+    font-size: var(--fs-body2);
     box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
   }
   .career-play.on {

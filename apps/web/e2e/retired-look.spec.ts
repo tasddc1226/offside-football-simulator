@@ -75,6 +75,8 @@ async function openOwn(page: Page) {
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player="0"]').click();
+  // T-11-439 B5 열어 보기 전에는 남은 1회로 보여 준다(버튼만을 위해 서버를 부르지 않는다).
+  await expect(page.locator('[data-act="retired-look"]')).toHaveText('꾸미기 (1회)');
   await page.locator('[data-act="retired-look"]').click();
   return page.getByRole('dialog', { name: '은퇴 선수 꾸미기' });
 }
@@ -127,6 +129,9 @@ for (const width of [320, 390, 1280])
     expect(writes).toEqual([{ look: 'y6e2' }]);
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ft_hof')!)[0]);
     expect(saved).toEqual({ ...JSON.parse(before!)[0], look: 'y6e2' });
+    // T-11-439 B5 저장하면 버튼이 다시 묻지 않고 사용함으로 잠긴다.
+    await expect(page.locator('[data-act="retired-look"]')).toHaveText('꾸미기 (사용함)');
+    await expect(page.locator('[data-act="retired-look"]')).toBeDisabled();
     // Reload checks the server policy and displays the permanent one-time lock.
     dialog = await openOwn(page);
     await expect(dialog.getByRole('status')).toContainText('외형 변경 기회를 이미 사용');
@@ -227,12 +232,16 @@ for (const width of [320, 390, 1280]) {
       if (r.url().endsWith('/look') && r.method() === 'PUT') writes.push(r.url());
     });
     const dialog = await openOwn(page);
-    await expect(dialog.getByRole('status')).toContainText('재영입해도');
+    await expect(dialog.getByRole('status')).toContainText('이적시장에서 거래된 적 있는');
     await expect(dialog.locator('[data-act="retired-look-save"]')).toBeDisabled();
     await expect(dialog.locator('[data-look-item]')).toHaveCount(0);
     expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
     expect(writes).toEqual([]);
     await capture(page, `transferred-${width}`);
+    // T-11-439 B5 닫으면 버튼이 막힌 이유를 쓰고 눌리지 않는다.
+    await dialog.getByRole('button', { name: '취소', exact: true }).click();
+    await expect(page.locator('[data-act="retired-look"]')).toHaveText('꾸미기 불가');
+    await expect(page.locator('[data-act="retired-look"]')).toBeDisabled();
   });
 }
 

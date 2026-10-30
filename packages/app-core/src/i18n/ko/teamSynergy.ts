@@ -23,7 +23,7 @@ const ko = {
   fitEffect: (p: { v: string }) => `자리 실력 ${p.v}`,
   fitEffectBoth: (p: { v: string; both: string }) => `자리 실력 ${p.v}(양발 ${p.both})`,
   requirementsHint:
-    '듀오는 선수 유형과 배치 자리가 모두 맞아야 해요. 괄호는 배치 자리예요. 선수 카드를 눌러 유형을 확인해요. W·LW·RW에 둔 스피드스터는 윙어 유형 조건에 들지 않아요.',
+    '듀오는 선수 유형과 배치 자리가 모두 맞아야 해요. 괄호는 배치 자리예요. 선수 카드를 눌러 유형을 확인해요. W·LW·RW에 둔 스피드스터는 윙어 유형 조건에 들지 않아요. W·LW·RW 자리는 윙어 역할 실력으로 뛰어서, 공격형·중앙 미드필더로 키운 윙어 유형은 스피드·크로스가 모자라면 OVR보다 낮게 뛰어요.',
   title: '팀 시너지',
   /** 칩 상태 — 켜진 시너지는 모두 적용 중, 누른 칩은 그라운드에서 보는 중. */
   chipApplied: '적용 중',
@@ -31,7 +31,7 @@ const ko = {
   chipNoEffect: '효과 없음',
   chipOff: '미적용',
   chipHint:
-    '시너지를 누르면 해당 선수들을 보여 줘요. 선택과 관계없이 경기 효과는 적용돼요. 국가대표 라인업은 어느 나라든 같은 국적 선발이 7명 이상이면 적용되고, 나라마다 효과가 달라요.',
+    '시너지를 누르면 해당 선수들을 보여 줘요. 선택과 관계없이 경기 효과는 적용돼요. 국가대표 라인업은 같은 국적 선발이 7명 이상이면 적용되고, 나라마다 효과가 달라요. 리그 컬러는 가장 오래 뛴 리그가 같은 선발이 7명 이상이면 켜져요. 두 효과가 함께 켜지면 인원이 많은 쪽만 적용돼요.',
   pitchAll: (p: { n: number }) => `시너지 ${p.n}개 모두 적용 중`,
   pitchFocus: (p: { name: string; n: number }) => `${p.name} 선수 보기 · ${p.n}개 모두 적용 중`,
   pitchMemberAria: '시너지 적용 선수',
@@ -50,6 +50,11 @@ const ko = {
   nationalChip: (p: { name: string; flag: string; style: string }) =>
     `${p.name} ${p.flag} ${p.style}`,
   nationalVaries: (p: { sum: string }) => `나라마다 달라요(합 ${p.sum})`,
+  // T-11-467 리그 컬러 · 클럽 동료. 스타일 이름은 contracts LEAGUE_STYLES 그대로다.
+  leagueChip: (p: { name: string; league: string; style: string }) =>
+    `${p.name} ${p.league} · ${p.style}`,
+  leagueVaries: (p: { sum: string }) => `리그마다 달라요(합 ${p.sum})`,
+  clubChip: (p: { name: string; club: string; n: number }) => `${p.name} ${p.club} ${p.n}명`,
 };
 
 export type TeamSynergyMsgs = typeof ko;

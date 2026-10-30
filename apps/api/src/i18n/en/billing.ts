@@ -6,6 +6,12 @@ export const billing: typeof ko = {
     refund: '↩️ Refund',
     test: '🧪 Connection test',
   },
+  webKinds: {
+    purchase: '🌐 Web purchase',
+    refund: '↩️ Web purchase refund',
+  },
+  channel: 'Channel',
+  channels: { app: 'In-app purchase', web: 'Web purchase (offside-lab.com)' },
   live: 'Live payment',
   sandbox: 'Test · Sandbox',
   product: 'Product',
@@ -16,7 +22,9 @@ export const billing: typeof ko = {
   productId: 'Product ID',
   testNotice: 'Test notification. Do not count this as revenue.',
   testProduct: 'Store notification connection check',
+  membership: 'Club membership (monthly)',
   removeAds: 'Remove ads',
+  seasonPass: 'Season pass',
   items: {
     reroll: 'Reroll tickets',
     boost: 'Potential boost tickets',

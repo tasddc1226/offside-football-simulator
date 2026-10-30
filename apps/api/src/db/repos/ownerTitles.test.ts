@@ -134,6 +134,7 @@ describe('Permanent owner titles', () => {
       ballon: 1,
       numbers: 1,
       firsts: 1,
+      exchanges: 0,
     });
     expect((await titleMetricsOf(ctx.db, b.profileId)).retired).toBe(0);
     const preview = await refreshOwnerTitles(ctx.db, a.profileId, NOW, true);

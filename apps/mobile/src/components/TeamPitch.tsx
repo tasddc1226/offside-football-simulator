@@ -1,3 +1,4 @@
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useState, type RefObject } from 'react';
 import { Pressable, View } from 'react-native';
 import Svg, { Line } from 'react-native-svg';
@@ -17,6 +18,7 @@ import { DragPlayer, type PlayerDrag } from './DragPlayer';
 import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
+import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import { coachLineTag } from '@offside/app-core/managerCard';
 import { tn } from '@offside/game/i18n/names';
 
@@ -40,9 +42,12 @@ export function TeamPitch({
   focus = null,
   applied = [],
   caption = null,
+  salaries = [],
 }: {
   formation: FormationId;
   cells: readonly PitchCell[];
+  /** T-11-376 자리마다 지난 시즌 선수 급여(0이면 칩 없음). */
+  salaries?: readonly number[];
   layout?: TeamLayout | null;
   onpick?: ((i: number) => void) | undefined;
   ondrag?: PlayerDrag | undefined;
@@ -68,11 +73,11 @@ export function TeamPitch({
     <View
       testID="team-pitch"
       onLayout={fixedHeight ? undefined : (e) => setWidth(e.nativeEvent.layout.width)}
-      style={{ height, borderRadius: 16, backgroundColor: c.pitch }}
+      style={{ height, borderRadius: RADIUS.lg, backgroundColor: c.pitch }}
     >
       <View
         pointerEvents="none"
-        style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: 16 }}
+        style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: RADIUS.lg }}
       >
         {Array.from({ length: 5 }, (_, i) => (
           <View
@@ -200,7 +205,7 @@ export function TeamPitch({
                   })}
                   accessibilityState={{ selected: selected === i }}
                   style={{
-                    borderRadius: 10,
+                    borderRadius: RADIUS.sm,
                     borderWidth: selected === i || focus?.includes(i) ? 2 : 0,
                     borderColor: selected === i ? c.pitchAccent : c.accent,
                   }}
@@ -208,6 +213,24 @@ export function TeamPitch({
                   <PlayerCard cell={cell} code={pos.slot} compact animate={animate} />
                 </Press>
               </DragPlayer>
+              {salaries[i] ? (
+                <View
+                  pointerEvents="none"
+                  testID={`slot-${i}-salary`}
+                  style={{
+                    position: 'absolute',
+                    left: -4,
+                    bottom: 8,
+                    paddingHorizontal: 4,
+                    borderRadius: 999,
+                    backgroundColor: '#000c',
+                  }}
+                >
+                  <Txt style={{ fontSize: 8, lineHeight: 11, fontWeight: '700', color: '#ffd76a' }}>
+                    {TC.salaryChip({ n: salaries[i]! })}
+                  </Txt>
+                </View>
+              ) : null}
               {applied.includes(i) ? (
                 <View
                   pointerEvents="none"
@@ -218,7 +241,7 @@ export function TeamPitch({
                     bottom: -6,
                     width: 10,
                     height: 10,
-                    borderRadius: 5,
+                    borderRadius: RADIUS.xs,
                     borderWidth: 2,
                     borderColor: c.pitch,
                     backgroundColor: c.accent,
@@ -247,7 +270,7 @@ export function TeamPitch({
           maxWidth: '100%',
           paddingVertical: 4,
           paddingHorizontal: 10,
-          borderRadius: 999,
+          borderRadius: RADIUS.pill,
           backgroundColor: c.surface2,
         }}
       >
@@ -288,16 +311,23 @@ export function TeamLines({ lines, coach = null }: { lines: Lines; coach?: Syner
               flex: 1,
               alignItems: 'center',
               paddingVertical: 6,
-              borderRadius: 10,
+              borderRadius: RADIUS.sm,
               backgroundColor: c.surface2,
             }}
           >
-            <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.5 }}>
+            <Txt
+              tone="muted"
+              style={{ fontSize: rem(FONT.caption), lineHeight: rem(FONT.caption) * 1.5 }}
+            >
               {label}
             </Txt>
             <Txt
               num
-              style={{ fontSize: rem(1.25), lineHeight: rem(1.25) * 1.3, fontWeight: '700' }}
+              style={{
+                fontSize: rem(FONT.title2),
+                lineHeight: rem(FONT.title2) * 1.3,
+                fontWeight: '700',
+              }}
             >
               {v}
             </Txt>
@@ -305,7 +335,7 @@ export function TeamLines({ lines, coach = null }: { lines: Lines; coach?: Syner
               <Txt
                 testID={`coach-line-${k}`}
                 style={{
-                  fontSize: rem(0.6875),
+                  fontSize: rem(FONT.caption2),
                   fontWeight: '600',
                   color: coach![k] < 0 ? c.bad : c.good,
                 }}

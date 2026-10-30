@@ -2,6 +2,7 @@
 // 보여 준다(가짜 활동 없음). 1분마다 새로 받고(앱이 보일 때만 — CLAUDE.md의 폴링은 분 단위), 그 사이 새 소식은 실시간
 // 소켓으로 바로 받아 맨 위에 끼운다(다음 조회가 그 소식을 담으면 조회 결과로 넘긴다). 티커는 3.5초마다 한 줄씩 올라간다 —
 // 동작 줄이기면 움직이지 않고 최신 3줄만, 누르고 있거나 일시정지를 누르면 멈춘다.
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Animated, AppState, Easing, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
@@ -152,7 +153,7 @@ export function HomeLive() {
             <LiveDot motionOK={motionOK} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <Txt v="eyebrow">Live</Txt>
-              <Txt v="h2" accessibilityRole="header" style={{ fontSize: rem(1.0625) }}>
+              <Txt v="h2" accessibilityRole="header" style={{ fontSize: rem(FONT.title3) }}>
                 {L.title}
               </Txt>
             </View>
@@ -197,7 +198,7 @@ export function HomeLive() {
                 }}
               >
                 {failed ? (
-                  <Txt tone="muted" center style={{ fontSize: rem(0.8125) }}>
+                  <Txt tone="muted" center style={{ fontSize: rem(FONT.label) }}>
                     {L.failed}
                   </Txt>
                 ) : null}
@@ -260,13 +261,13 @@ export function HomeLive() {
                             numberOfLines={1}
                             style={{
                               flex: 1,
-                              fontSize: rem(0.8125),
+                              fontSize: rem(FONT.label),
                               textDecorationLine: 'underline',
                               textDecorationStyle: 'dotted',
                               textDecorationColor: c.line,
                             }}
                           >
-                            <Txt bold style={{ fontSize: rem(0.8125) }}>
+                            <Txt bold style={{ fontSize: rem(FONT.label) }}>
                               {who(e)}
                             </Txt>{' '}
                             {what(e)}
@@ -283,15 +284,15 @@ export function HomeLive() {
                           }}
                         >
                           <ClubMark name={e.club} id={e.clubId} />
-                          <Txt numberOfLines={1} style={{ flex: 1, fontSize: rem(0.8125) }}>
-                            <Txt bold style={{ fontSize: rem(0.8125) }}>
+                          <Txt numberOfLines={1} style={{ flex: 1, fontSize: rem(FONT.label) }}>
+                            <Txt bold style={{ fontSize: rem(FONT.label) }}>
                               {who(e)}
                             </Txt>{' '}
                             {what(e)}
                           </Txt>
                         </View>
                       )}
-                      <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+                      <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
                         {ago(e.at)}
                       </Txt>
                     </View>
@@ -330,14 +331,14 @@ function StatBox({
         flexBasis: 70,
         minWidth: 0,
         backgroundColor: c.surface2,
-        borderRadius: 10,
+        borderRadius: RADIUS.sm,
         paddingVertical: 8,
         paddingHorizontal: 10,
         gap: 1,
       }}
     >
       {children}
-      <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
         {label}
       </Txt>
     </View>
@@ -353,8 +354,8 @@ function StatNum({ children }: { children: React.ReactNode }) {
       style={{
         fontFamily: DISPLAY[700],
         fontVariant: ['tabular-nums'],
-        fontSize: rem(1.375),
-        lineHeight: rem(1.375) * 1.1,
+        fontSize: rem(FONT.title2),
+        lineHeight: rem(FONT.title2) * 1.1,
       }}
     >
       {children}
@@ -383,14 +384,14 @@ function LiveDot({ motionOK }: { motionOK: boolean }) {
     <View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: c.bad }}
+      style={{ width: 10, height: 10, borderRadius: RADIUS.xs, backgroundColor: c.bad }}
     >
       {motionOK ? (
         <Animated.View
           style={{
             position: 'absolute',
             inset: 0,
-            borderRadius: 5,
+            borderRadius: RADIUS.xs,
             backgroundColor: c.bad,
             opacity: v.interpolate({ inputRange: [0, 0.7, 1], outputRange: [0.45, 0, 0] }),
             transform: [

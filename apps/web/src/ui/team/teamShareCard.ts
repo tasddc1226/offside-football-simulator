@@ -25,7 +25,7 @@ export type TeamShareData = {
 
 export const TEAM_SHARE_W = 1080;
 export const TEAM_SHARE_H = 1350;
-const BODY = "'IBM Plex Sans KR', 'Apple SD Gothic Neo', sans-serif";
+const BODY = "'Pretendard Variable', 'Apple SD Gothic Neo', sans-serif";
 const DISPLAY = "'Barlow Condensed', 'Arial Narrow', sans-serif";
 const SHIELD = new Path2D(
   'M0 16H23L36 4 73 0 110 4 123 16H146L143 150 126 166 73 178 20 166 3 150Z',

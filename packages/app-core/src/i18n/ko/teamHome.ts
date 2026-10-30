@@ -50,18 +50,18 @@ const ko = {
   modeFriends: '친구',
   // 머리(웹 TeamHead)
   seasonSelect: '시즌 선택',
-  seasonNow: ' (지금)',
   teamMenu: '팀 메뉴',
   menuLogo: '로고 설정',
   menuRename: '이름 바꾸기',
   logoOpen: '팀 로고 설정',
   titleEnterName: '팀 이름 입력',
-  managerEnter: '감독 이름 입력',
-  managerLine: (p: { name: string }) => `${p.name} 감독`,
+  managerEnter: '팀 대표 이름 입력',
+  managerLine: (p: { name: string }) => `대표 ${p.name}`,
   unsaved: '저장 전',
   teamOvr: (p: { n: number }) => `팀 OVR ${p.n}`,
   statRecord: '전적',
   statRating: '레이팅',
+  statRp: 'RP',
   statLeft: '남은 경기',
   statSeason: '시즌',
   statTimes: (p: { n: number }) => `${p.n}회`,
@@ -72,13 +72,17 @@ const ko = {
   introNone: (p: { season: string }) => `${p.season}에는 팀을 꾸리지 않았어요.`,
   readonlyNote: '지난 시즌 팀이라 보기만 할 수 있어요.',
   teamNameLabel: '팀 이름',
-  managerNameLabel: '감독 이름',
+  managerNameLabel: '팀 대표 이름',
+  /** T-11-443 팀 대표 이름은 표시용이다(감독 칸 보정과 무관). */
+  managerNameNote: '팀 소개에만 보이는 이름이에요. 경기 보정은 감독 칸에 앉힌 감독이 줘요.',
   charsRange: (p: { min: number; max: number }) => `${p.min}~${p.max}자`,
   // 머리(앱 Team.tsx)
   seasonLabel: '시즌',
-  managerMine: '나의 감독',
+  managerMine: '팀 대표',
   recordLineApp: (p: { record: string; rating: string; tail: string }) =>
     `${p.record} · 레이팅 ${p.rating} · ${p.tail}`,
+  recordLineRpApp: (p: { record: string; rating: string; tail: string }) =>
+    `${p.record} · ${p.rating} RP · ${p.tail}`,
   todayApp: (p: { left: number; per: number }) => `오늘 ${p.left}/${p.per}경기`,
   introApp: (p: { ovr: number }) =>
     `빈 자리는 유스 선수(OVR ${p.ovr})가 채워요. 한 명만 넣어도 경기할 수 있어요.`,
@@ -178,7 +182,7 @@ const ko = {
     `${p.who} · 최고 OVR ${p.peak} · LS ${p.ls} · ${p.attrs}`,
   moreApp: '선수 더 보기',
   emptyFilteredApp: '조건에 맞는 대기 선수가 없어요. 선발 선수도 보거나 필터를 바꿔 주세요.',
-  emptyNoneApp: '이번 시즌에 커리어를 끝까지 뛰고 은퇴한 선수를 배치할 수 있어요.',
+  emptyNoneApp: '배치할 선수가 없어요. 이번 시즌에 은퇴까지 뛴 선수만 배치할 수 있어요.',
   // 그라운드 그림 · 선수 카드
   pitchAria: (p: { n: number }) => `선발 ${p.n}명 · 나머지 유스 선수`,
   attackDirection: '공격 방향 ↑',
@@ -306,6 +310,9 @@ const ko = {
   tpOverwrite: '덮어쓰기',
   tpRename: '이름 바꾸기',
   tpDelete: '삭제',
+  // T-11-431 덮어쓰기 · 삭제 확인
+  tpOverwriteAsk: '지금 편성으로 덮어쓸까요?',
+  tpDeleteAsk: '이 프리셋을 삭제할까요?',
   tpNameLabel: '프리셋 이름',
   tpNameDone: '확인',
   tpSaved: '프리셋을 저장했어요.',
@@ -313,6 +320,16 @@ const ko = {
   tpLoadedMissing: (p: { n: number }) =>
     `프리셋을 불러왔어요. 지금 없는 선수 ${p.n}명의 자리는 비웠어요.`,
   tpLocked: '컵 명단이 잠겨 있어 지금은 불러올 수 없어요.',
+  // T-11-570 컵 명단 프리셋
+  tpCupBadge: '컵 명단',
+  tpCupTitle: '컵 경기 명단',
+  tpCupTeam: '팀 명단',
+  tpCupHint:
+    '컵 경기에 쓸 편성을 골라요. 팀 명단을 고르면 리그와 같은 선발로 뛰어요. 같은 선수가 양쪽에 들어가도 돼요.',
+  tpMore: (p: { name: string }) => `${p.name} 관리`,
+  tpCupSetDone: '컵 명단으로 정했어요. 컵 경기는 이 편성으로 뛰어요.',
+  tpCupUnsetDone: '컵 명단을 풀었어요. 컵 경기도 팀 명단으로 뛰어요.',
+  tpCupLocked: '컵 명단이 잠겨 있어 지금은 바꿀 수 없어요.',
 };
 
 export type TeamHomeMsgs = typeof ko;

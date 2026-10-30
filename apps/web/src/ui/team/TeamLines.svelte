@@ -36,22 +36,22 @@
     display: grid;
     place-items: center;
     padding: 6px 0;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background: var(--surface-2);
   }
   .team-lines dt {
-    font-size: 0.75rem;
+    font-size: var(--fs-caption);
     color: var(--muted);
   }
   .team-lines dd {
     margin: 0;
     font-family: var(--display);
-    font-size: 1.25rem;
+    font-size: var(--fs-title2);
     font-weight: 700;
   }
   .team-lines dd.coach {
     font-family: inherit;
-    font-size: 0.6875rem;
+    font-size: var(--fs-caption2);
     font-weight: 600;
     color: var(--good, var(--accent));
   }

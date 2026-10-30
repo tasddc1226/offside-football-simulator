@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { clearPendingEvent, startCareer } from './helpers.js';
+import { clearPendingEvent, settleBlock, startCareer } from './helpers.js';
 
 // T-10-024: 구간 진행 시트가 닫힌 뒤, 결과는 시즌 탭 맨 위 리포트 카드에 그린다. 이어지는 이벤트는
 // 액션바 버튼(이벤트 확인)으로 연다. T-10-028: 경기 구간은 중계 시트로 한 경기씩 보여 준 뒤 리포트로 넘어간다.
@@ -13,7 +13,7 @@ test('경기 중계 시트가 끝나면 확인을 눌러 시즌 탭 리포트로
   await page.locator('[data-act="advance"]').click();
   await expect(page.locator('#sheet')).toContainText('프리시즌 진행 중');
   await expect(page.locator('#sheet')).toBeHidden({ timeout: 10_000 });
-  await expect(report).toContainText('시즌 준비를 마쳤습니다');
+  await expect(report).toContainText('시즌 준비를 마쳤어요');
   await clearPendingEvent(page);
 
   await page.locator('[data-act="advance"]').click();
@@ -23,7 +23,7 @@ test('경기 중계 시트가 끝나면 확인을 눌러 시즌 탭 리포트로
   await expect(page.locator('#an-skip')).toBeVisible();
   // T-10-029: 다 나오면 바로 닫히지 않고 확인 버튼을 기다린다. 중계의 최종 승무패가 리포트와 같다.
   const ok = sheet.locator('[data-sheet="0"]');
-  await expect(ok).toHaveText('확인', { timeout: 15_000 });
+  await settleBlock(page);
   await expect(page.locator('#an-skip')).toHaveCount(0);
   const finalWdl = (await sheet.locator('[data-block-wdl]').textContent())!;
   await page.waitForTimeout(500);
@@ -75,9 +75,9 @@ test('경기 중계는 건너뛰기로 최종 기록까지 채우고, 확인을 
 
   await page.locator('[data-act="advance"]').click();
   await page.locator('#an-skip').click();
-  // 건너뛰면 남은 경기를 한 번에 채워 최종 기록과 확인 버튼을 보여 준다.
+  // 건너뛰면 남은 경기를 한 번에 채워 최종 기록과 확인 버튼을 보여 준다(T-11-390 결정적 장면에서는 멈춘다 — 맡긴다).
   const ok = page.locator('#sheet [data-sheet="0"]');
-  await expect(ok).toHaveText('확인', { timeout: 1_500 });
+  await settleBlock(page, 5_000);
   await expect(page.locator('#sheet .prog i')).toHaveAttribute('style', /width:\s*100%/);
   await ok.click();
   await expect(page.locator('#sheet')).toBeHidden();

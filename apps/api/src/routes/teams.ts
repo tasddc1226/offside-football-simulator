@@ -11,11 +11,18 @@ import {
   TeamRankResponseSchema,
   type TeamRankResponse,
   TeamStatsResponseSchema,
+  TeamDivisionsQuerySchema,
+  TeamDivisionsResponseSchema,
+  type TeamDivisionsResponse,
 } from '@offside/contracts';
+import { resolveBalance } from '@offside/contracts/balance';
+import { divisionRules, type DivisionRules } from '@offside/contracts/team-division';
+import { getActiveBalance } from '../db/repos/balance.js';
 import {
   ACH_RANK_PER_PAGE,
   TEAM_RANK_PER_PAGE,
   TEAM_STATS_MATCHES_MAX,
+  usesRankLadder,
   type FormationId,
 } from '@offside/contracts/owner-team';
 import { teamSeasonAt, teamSeasonClosed, teamSeasonName } from '@offside/contracts/service-seasons';
@@ -27,11 +34,16 @@ import {
   eligibleMap,
   isTeamLiked,
   liveTeam,
+  countTeamsByDivision,
   listTeamRanking,
   listTeamRecentForm,
+  type RatingRange,
   listStatsMatches,
   otherKindTotals,
+  myTeamIn,
+  ovrRankOf,
   ratingRankOf,
+  valueRankOf,
   setTeamLike,
   slotIdsOf,
   layoutOf,
@@ -39,10 +51,15 @@ import {
   teamPlayerCard,
 } from '../db/repos/ownerTeams.js';
 import { friendStateOf } from '../db/repos/friends.js';
-import { listAchievementRanking } from '../db/repos/ownerAchievements.js';
+import {
+  achievementRankOf,
+  achievementRowOf,
+  listAchievementRanking,
+} from '../db/repos/ownerAchievements.js';
 import { edgeCached, waitUntil } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
+import type { Db } from '../db/client.js';
 import { parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
@@ -57,12 +74,18 @@ import { teamStatsView } from '../team/stats.js';
 // T-10-092 라이브 랭킹(팀 랭킹)과 팀 프로필. 로그인 없이 누구나 본다 — 팀 이름·감독 이름·선수의 공개 이름(없으면 익명
 // 표기)만 있고 구단주 계정 정보는 없다. 랭킹은 원작처럼 5분마다 새로 센다(엣지 캐시).
 const RANK_TTL = 300;
-/** T-11-268 가치순은 팀마다 선발 카드 가치를 모두 더해 정렬한다(운영 1회 약 5.6만 행) — 편성 저장 때도 지우지 않는
- * 목록이라 30분 동안 담는다. 평점·OVR순은 그대로 5분. */
-const RANK_VALUE_TTL = 1800;
 const RANK_CACHE = 'public, max-age=60';
 /** T-11-358 남의 팀 경기 통계. 랭크 경기 · 친선전을 치르면 지우고, 컵 경기는 이 TTL로만 새로 읽는다. */
 const TEAM_STATS_TTL = 300;
+
+/** T-11-375 활성 밸런스의 디비전 경계(엣지 캐시가 빈 때만 읽는다). */
+const activeDivisionRules = async (db: Db): Promise<DivisionRules> =>
+  divisionRules(resolveBalance((await getActiveBalance(db))?.values));
+/** 디비전 d의 레이팅 구간 [bounds[d-1], bounds[d]). */
+const divisionRange = (rules: DivisionRules, d: number): RatingRange => ({
+  min: d > 0 ? rules.bounds[d - 1]! : null,
+  max: d < rules.bounds.length ? rules.bounds[d]! : null,
+});
 
 const teamParam = (c: Context<AppEnv>) => parseWithAppError(TeamIdSchema, c.req.param('teamId'));
 
@@ -78,41 +101,107 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     const now = nowIso();
     const q = parseWithAppError(TeamRankQuerySchema, queryWithoutLang(c));
     const season = teamSeasonParam(q.season, now);
+    // T-11-375 디비전 탭은 레이팅순에만 있다(다른 정렬에 붙으면 무시해 캐시 키를 늘리지 않는다).
+    const division = q.sort === 'rating' && usesRankLadder(season) ? q.division : undefined;
+    const buildPage = async (
+      page: number,
+      division?: number,
+    ): Promise<Omit<TeamRankResponse, 'seasons'>> => {
+      const range =
+        division === undefined
+          ? undefined
+          : divisionRange(await activeDivisionRules(getDb(c)), division);
+      const { rows, total } = await listTeamRanking(getDb(c), season, q.sort, page, now, range);
+      const forms = await listTeamRecentForm(
+        getDb(c),
+        rows.map((t) => t.id),
+      );
+      return {
+        season,
+        sort: q.sort,
+        page,
+        total,
+        items: rows.map((t, i) => ({
+          rank: (page - 1) * TEAM_RANK_PER_PAGE + i + 1,
+          teamId: t.id,
+          name: t.name,
+          logo: logoOf(t),
+          manager: t.manager,
+          formation: t.formation as FormationId,
+          ovr: t.ovr,
+          rating: t.rating,
+          ...(usesRankLadder(season) ? { division: t.division } : {}),
+          record: recordOf(t),
+          likes: t.likes,
+          value: t.value,
+          createdAt: t.createdAt,
+          recentForm: forms.get(t.id) ?? [],
+          title: t.title,
+        })),
+      };
+    };
+    const pageOf = (page: number, division?: number) =>
+      edgeCached(c, EDGE.teamRank(season, q.sort, page, division), RANK_TTL, () =>
+        buildPage(page, division),
+      );
+    // 내 순위는 저장된 지표로 세고, 개인별 응답은 공유 캐시에 담지 않는다.
+    if (q.me) {
+      const session = await resolveSession(c);
+      const db = getDb(c);
+      const [team] = session ? await myTeamIn(db, session.profileId, season) : [];
+      const rank = team
+        ? await (q.sort === 'value'
+            ? valueRankOf(db, team, now)
+            : q.sort === 'ovr'
+              ? ovrRankOf(db, team)
+              : ratingRankOf(db, team))
+        : null;
+      const me = team && rank ? { teamId: team.id, rank } : null;
+      const page = me ? Math.ceil(me.rank / TEAM_RANK_PER_PAGE) : q.page;
+      const targetPage = Math.min(page, 500);
+      let data = await pageOf(targetPage);
+      // 캐시된 공개 순서가 최근 변경으로 내 실제 순위와 다르면 최신 페이지를 직접 읽는다.
+      if (
+        q.sort === 'value' &&
+        me &&
+        data.items[(me.rank - 1) % TEAM_RANK_PER_PAGE]?.teamId !== me.teamId
+      )
+        data = await buildPage(targetPage);
+      return ok(
+        c,
+        TeamRankResponseSchema,
+        { ...withSeasons(data, now, reqLang(c)), me },
+        200,
+        NO_STORE,
+      );
+    }
+    const data = await pageOf(q.page, division);
+    return ok(c, TeamRankResponseSchema, withSeasons(data, now, reqLang(c)), 200, RANK_CACHE);
+  });
+
+  // T-11-375 디비전별 팀 수와 지금 경계(랭킹 디비전 탭 · 내 위치). 모두에게 같아 5분 엣지 캐시, 경기마다 지우지 않는다.
+  app.get('/v1/teams/divisions', async (c) => {
+    const now = nowIso();
+    const q = parseWithAppError(TeamDivisionsQuerySchema, queryWithoutLang(c));
+    const season = teamSeasonParam(q.season, now);
     const data = await edgeCached(
       c,
-      EDGE.teamRank(season, q.sort, q.page),
-      q.sort === 'value' ? RANK_VALUE_TTL : RANK_TTL,
-      async (): Promise<Omit<TeamRankResponse, 'seasons'>> => {
-        const { rows, total } = await listTeamRanking(getDb(c), season, q.sort, q.page, now);
-        const forms = await listTeamRecentForm(
-          getDb(c),
-          rows.map((t) => t.id),
-        );
+      EDGE.teamDivisions(season),
+      RANK_TTL,
+      async (): Promise<TeamDivisionsResponse> => {
+        const db = getDb(c);
+        const rules = await activeDivisionRules(db);
+        const counts = await countTeamsByDivision(db, season, rules.bounds);
         return {
           season,
-          sort: q.sort,
-          page: q.page,
-          total,
-          items: rows.map((t, i) => ({
-            rank: (q.page - 1) * TEAM_RANK_PER_PAGE + i + 1,
-            teamId: t.id,
-            name: t.name,
-            logo: logoOf(t),
-            manager: t.manager,
-            formation: t.formation as FormationId,
-            ovr: t.ovr,
-            rating: t.rating,
-            record: recordOf(t),
-            likes: t.likes,
-            value: t.value,
-            createdAt: t.createdAt,
-            recentForm: forms.get(t.id) ?? [],
-            title: t.title,
-          })),
+          bounds: rules.bounds,
+          guard: rules.guard,
+          counts,
+          total: counts.reduce((a, b) => a + b, 0),
         };
       },
     );
-    return ok(c, TeamRankResponseSchema, withSeasons(data, now, reqLang(c)), 200, RANK_CACHE);
+    return ok(c, TeamDivisionsResponseSchema, data, 200, RANK_CACHE);
   });
 
   // T-11-028 업적 랭킹(기록실). 시즌 업적 점수 순 — 구단주는 공개 닉네임과 그 시즌 팀 이름으로만 보인다. 팀 랭킹처럼 5분마다.
@@ -120,31 +209,50 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     const now = nowIso();
     const q = parseWithAppError(AchRankQuerySchema, queryWithoutLang(c));
     const season = teamSeasonParam(q.season, now);
-    const data = await edgeCached(
-      c,
-      EDGE.achRank(season, q.page),
-      RANK_TTL,
-      async (): Promise<Omit<AchRankResponse, 'seasons'>> => {
-        const { rows, total } = await listAchievementRanking(getDb(c), season, q.page);
-        return {
-          season,
-          page: q.page,
-          total,
-          items: rows.map((r, i) => ({
-            rank: (q.page - 1) * ACH_RANK_PER_PAGE + i + 1,
-            nickname: r.nickname,
-            team:
-              r.teamId && r.teamName
-                ? { id: r.teamId, name: r.teamName, logo: logoOf({ logoJson: r.logoJson }) }
-                : null,
-            score: r.score,
-            done: r.done,
-            players: r.players,
-            title: r.title,
-          })),
-        };
-      },
-    );
+    const pageOf = (page: number) =>
+      edgeCached(
+        c,
+        EDGE.achRank(season, page),
+        RANK_TTL,
+        async (): Promise<Omit<AchRankResponse, 'seasons'>> => {
+          const { rows, total } = await listAchievementRanking(getDb(c), season, page);
+          return {
+            season,
+            page,
+            total,
+            items: rows.map((r, i) => ({
+              rank: (page - 1) * ACH_RANK_PER_PAGE + i + 1,
+              nickname: r.nickname,
+              team:
+                r.teamId && r.teamName
+                  ? { id: r.teamId, name: r.teamName, logo: logoOf({ logoJson: r.logoJson }) }
+                  : null,
+              score: r.score,
+              done: r.done,
+              players: r.players,
+              title: r.title,
+            })),
+          };
+        },
+      );
+    // T-11-441 '내 순위로'(팀 랭킹과 같다). 내 업적 행 하나와 앞선 수 한 번만 센다.
+    if (q.me) {
+      const session = await resolveSession(c);
+      const db = getDb(c);
+      const row = session ? await achievementRowOf(db, session.profileId, season) : undefined;
+      const rank = row ? (await achievementRankOf(db, row, async () => 0)).rank : null;
+      const me = rank ? { rank } : null;
+      const page = me ? Math.ceil(me.rank / ACH_RANK_PER_PAGE) : q.page;
+      const data = await pageOf(Math.min(page, 500));
+      return ok(
+        c,
+        AchRankResponseSchema,
+        { ...withSeasons(data, now, reqLang(c)), me },
+        200,
+        NO_STORE,
+      );
+    }
+    const data = await pageOf(q.page);
     return ok(c, AchRankResponseSchema, withSeasons(data, now, reqLang(c)), 200, RANK_CACHE);
   });
 
@@ -193,6 +301,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           ovr: lineupOvr(lineup),
           lines: linesOf(lineup, t.season),
           rating: t.rating,
+          ...(usesRankLadder(t.season) ? { division: t.division } : {}),
           record: recordOf(t),
           goals: { for: t.goalsFor, against: t.goalsAgainst },
           likes: t.likes,

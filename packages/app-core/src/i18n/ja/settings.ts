@@ -44,6 +44,12 @@ export const settings: Translation<SettingsMsgs> = {
   privacy: 'プライバシーポリシー',
   tapToChange: 'タップして変更',
   close: '閉じる',
+  consentCardTitle: '利用分析と計測への同意',
+  consentAll: 'すべてに同意',
+  consentPick: '選んだ項目のみ同意',
+  consentSave: '選択内容を保存',
+  consentFailToast:
+    '流入と購入の関連付けをサーバーに反映できませんでした。設定からもう一度選んでください。',
   consentAria: '任意の利用分析',
   consentTitle: 'ゲーム改善のための利用分析',
   consentOptional: '（任意）',
@@ -53,12 +59,16 @@ export const settings: Translation<SettingsMsgs> = {
     '広告からの訪問を測るため、Meta（Facebook・Instagram）ピクセルも使います。Cookieで訪問とキャリア開始・最初のシーズン完了・App Storeボタンの利用だけをMetaに送ります。',
   consentBody2:
     '分析情報はGoogleの海外サーバーで処理され、ユーザー・イベントデータは2か月間保管されます。設定からいつでも変更できます。',
+  acquisitionTitle: '流入とアプリ購入の関連付け',
+  acquisitionBody:
+    '同意すると、広告からの訪問、ゲーム開始、アプリへの移動をOFFSIDEのサーバーに記録します。同じGoogle・Appleアカウントでログインすると、30日以内の流入と確認済みのアプリ購入を関連付けます。ログインは任意で、90日を過ぎた流入記録は毎日順次削除します。アカウント情報を広告会社やGoogle Analyticsに送りません。撤回すると関連付けの記録を削除します。古い同意要求を防ぐ撤回マーカーはアカウント削除まで保管します。7日を過ぎたアプリ購入の送信待ち記録は次のアプリ操作時に削除します。',
+  acquisitionRetry:
+    'サーバーに反映できませんでした。もう一度押してください。撤回の処理中は、この端末から新しい記録を送りません。 元のアカウントの設定で、このボタンから撤回を再試行してください。アカウントを変更した場合は、元のアカウントにログインし直してください。',
   consentMore: '詳しく見る',
   consentNow: '現在:',
   consentGranted: '同意',
   consentDenied: '同意しない',
   consentUnset: '未選択',
-  consentRevoke: '分析への同意を撤回',
   consentAgree: '分析に同意',
   consentRevokeNote:
     '撤回すると以降の収集は止まり、このブラウザの分析用Cookie・記録を削除します。すでに送信された情報は自動では削除されません。',

@@ -64,4 +64,8 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   ticketFail: "Couldn't use a boost ticket.",
   lineExtraTicket:
     "You've tried this season. With boost tickets you can keep trying, with no limit on tries.",
+  sureCost: 'Guaranteed boost',
+  sureButton: (p) => `Guaranteed boost with club funds (${p.price} · 100%)`,
+  sureNote:
+    'Pay club funds to go up one level with no roll. Each player can get it once, and your regular attempt with player money stays available.',
 };

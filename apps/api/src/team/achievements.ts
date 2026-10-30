@@ -3,12 +3,17 @@
 // T-11-026 잠겨 있던 3~5단계를 연다 — 3단계 한 선수의 위업, 4단계 세계 무대 우승, 5단계 구단 전체의 불멸 기록.
 // 목표치는 운영 은퇴 기록 분포(2026-10-01, 은퇴 8천여 명)로 3단계는 선수 몇십 명 중 하나, 5단계는 손꼽히는 구단주만 닿게 잡았다.
 // T-11-028 업적을 선수·팀·구단주·감독(준비 중)으로 나누고 업적마다 점수를 매긴다. 점수 합이 그 시즌 구단주 등급과 업적
-// 랭킹이 된다 — 시즌마다 처음부터 다시 쌓는다. 팀은 편성(나만의 최강 팀)과 경기 성적(시즌 레이스)으로, 구단주는 시즌 동안
+// 랭킹이 된다 — 시즌마다 처음부터 다시 쌓는다. 팀은 편성(내가 만든 최강 팀)과 경기 성적(시즌 레이스)으로, 구단주는 시즌 동안
 // 꾸준히 찾아온 활동(은퇴시킨 선수·날, 팀 경기한 날, 응원)으로 센다. 팀·구단주 목표치는 프리시즌 팀 53개 분포(2026-10-01)로 잡았다.
 // T-11-046 '은퇴 직전까지 현역'은 그 시즌 은퇴 나이(T-11-045)의 한 살 아래다 — 프리시즌 40세, 시즌 1 44세.
 import { CAREER_FEATS } from '@offside/contracts/owner-title';
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
-import { LINEUP_SIZE, type AchCategory } from '@offside/contracts/owner-team';
+import {
+  LINEUP_SIZE,
+  achRewardOf,
+  type AchCategory,
+  type AchReward,
+} from '@offside/contracts/owner-team';
 import { LEAGUE_BASE } from '@offside/contracts/club-names';
 import {
   LEGACY_DETAIL_POSITIONS,
@@ -122,6 +127,8 @@ export type AchievementInput = {
   retireAt: number;
   /** T-11-103 그 시즌에 이미 닿은 팀 업적(teamKeptOf). 없으면 지금 팀으로만 판정한다. */
   kept?: TeamKept | undefined;
+  /** T-11-510 RP 사다리 시즌(2부터) — 팀 레이팅 업적 대신 팀 RP(디비전 경계) 업적을 둔다. */
+  ladder?: boolean;
 };
 
 /** 팀 업적 id → 그 시즌에 닿은 값(한 번 달성은 1, 단계 업적은 최고 값). */
@@ -131,7 +138,8 @@ export type TeamKept = Readonly<Record<string, number>>;
 // (POTY·TOP_SCORER·YOUNG) · game/national.ts와 같다.
 const leaguesFrom = (minTier: number) =>
   LEAGUE_BASE.filter((l) => !l.amateur && l.tier >= minTier).map((l) => l.name);
-const LEAGUES = leaguesFrom(0);
+// T-11-457 '전 리그 우승'은 시즌 1까지의 리그로 센다(새 리그가 생겨도 이미 모은 조각이 줄지 않게).
+const LEAGUES = LEAGUE_BASE.filter((l) => !l.amateur && !l.added).map((l) => l.name);
 const EUROPE = leaguesFrom(4);
 const BIG5 = leaguesFrom(5);
 /** T-11-237 저장된 우승 이름(시즌 honors는 한국어로 저장된다). */
@@ -149,6 +157,10 @@ const POTY = [
   'K리그1 MVP',
   'K리그2 MVP',
   'K3리그 MVP',
+  '중국 슈퍼리그 MVP',
+  '사우디 프로리그 올해의 선수',
+  '브라질레이랑 올해의 선수',
+  '프리메이라 리가 올해의 선수',
 ];
 const TOP_SCORER = [
   '프리미어리그 골든부트',
@@ -162,6 +174,10 @@ const TOP_SCORER = [
   'K리그1 득점왕',
   'K리그2 득점왕',
   'K3리그 득점왕',
+  '중국 슈퍼리그 득점왕',
+  '사우디 프로리그 득점왕',
+  '브라질레이랑 득점왕',
+  '프리메이라 리가 득점왕',
 ];
 const YOUNG = [
   'PFA 올해의 영플레이어',
@@ -177,16 +193,18 @@ const CONTINENTAL = [
   'AFC 챔피언스리그 엘리트 우승',
   'CONCACAF 챔피언스컵 우승',
 ];
+/** T-11-457 트레블은 리베르타도레스 우승도 센다('대륙 대회 모두 우승' 조각은 시즌 1까지의 세 대회 그대로). */
+const TREBLE_CONTINENTAL = [...CONTINENTAL, '코파 리베르타도레스 우승'];
 const CONF_CUPS = NATIONAL_WINS.filter(
   (n) => n !== 'FIFA 월드컵 우승' && n !== '아시안게임 금메달' && n !== '올림픽 금메달',
 );
 /** 트레블에서 세지 않는 우승(단판 슈퍼컵 · 대표팀 · 클럽 월드컵). */
-const NOT_TREBLE = /슈퍼컵|수페르코파|실드|샹피옹|클럽 월드컵/;
+const NOT_TREBLE = /슈퍼컵|수페르코파|수페르타사|실드|샹피옹|클럽 월드컵/;
 const NATIONAL = new Set(NATIONAL_WINS);
 /** 한 시즌 트레블 — 그 시즌 리그 우승과 대륙 클럽 대회 우승을 포함해 클럽 우승 3개. */
 const treble = (s: AchievementSeason) =>
   s.honors.includes(`${s.league} 우승`) &&
-  CONTINENTAL.some((h) => s.honors.includes(h)) &&
+  TREBLE_CONTINENTAL.some((h) => s.honors.includes(h)) &&
   s.honors.filter((h) => h.endsWith(' 우승') && !NATIONAL.has(h) && !NOT_TREBLE.test(h)).length >=
     3;
 /** 이름만 있는 옛 기록과 id가 있는 기록은 추정해서 합치지 않는다. */
@@ -317,6 +335,8 @@ const collect = (
   cur: Math.min(cur, max),
   max,
 });
+/** T-11-357 단계 업적의 단계별 점수(보상 판정용 — 응답에는 싣지 않는다). */
+const ladderOf = new WeakMap<ClubAchievement, readonly number[]>();
 const tier = (
   id: string,
   label: string,
@@ -326,7 +346,7 @@ const tier = (
   ladder: readonly number[] = LADDER,
 ): ClubAchievement => {
   const level = steps.filter((s) => cur >= s).length;
-  return {
+  const item: ClubAchievement = {
     id,
     label,
     unit,
@@ -337,6 +357,8 @@ const tier = (
     points: ladder.slice(0, level).reduce((t, p) => t + p, 0),
     worth: ladder[level] ?? 0,
   };
+  ladderOf.set(item, ladder);
+  return item;
 };
 const group = (
   category: AchCategory,
@@ -354,6 +376,49 @@ export function teamKeptOf(groups: readonly ClubAchievementGroup[]): TeamKept {
     if (v > 0) kept[i.id] = v;
   }
   return kept;
+}
+
+/** T-11-357 보상 한 칸: 업적(단계 업적은 단계마다) 하나. key는 시즌 안에서 겹치지 않는 이름. */
+export type AchRewardStep = { id: string; key: string } & AchReward;
+
+/** 달성한 업적·단계 중 보상이 있는 것(achRewardOf). 단계 업적은 넘은 단계마다 한 칸이다. */
+export function achRewardSteps(groups: readonly ClubAchievementGroup[]): AchRewardStep[] {
+  const out: AchRewardStep[] = [];
+  for (const i of groups.filter((g) => !g.locked).flatMap((g) => g.items)) {
+    const ladder = ladderOf.get(i);
+    if (ladder && i.level !== undefined) {
+      for (let k = 1; k <= i.level; k++) {
+        const r = achRewardOf(ladder[k - 1] ?? 0);
+        if (r) out.push({ id: i.id, key: `${i.id}:${k}`, ...r });
+      }
+    } else if (i.done) {
+      const r = achRewardOf(i.points);
+      if (r) out.push({ id: i.id, key: i.id, ...r });
+    }
+  }
+  return out;
+}
+
+/**
+ * 응답에 보상을 붙인다 — reward = 다음 달성(단계)의 보상, got = 이 시즌에 이 업적으로 받은 보상. 지난 시즌 화면은 붙이지
+ * 않는다(그 시즌 보상은 끝났다).
+ */
+export function withAchRewards(
+  groups: readonly ClubAchievementGroup[],
+  got: ReadonlyMap<string, AchReward>,
+): ClubAchievementGroup[] {
+  return groups.map((g) => ({
+    ...g,
+    items: g.items.map((i) => {
+      const next = i.worth > 0 ? achRewardOf(i.worth) : null;
+      const mine = got.get(i.id);
+      return {
+        ...i,
+        ...(next ? { reward: next } : {}),
+        ...(mine && mine.boost + mine.scout > 0 ? { got: mine } : {}),
+      };
+    }),
+  }));
 }
 
 /** 시즌 업적 점수(달성한 업적 점수의 합)와 달성한 업적 수. */
@@ -629,7 +694,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
     const best = (id: string, label: string, unit: string, cur: number, steps: number[]) =>
       tier(id, label, unit, Math.max(cur, kept[id] ?? 0), steps, TEAM_LADDER);
     groups.push(
-      group('team', 'team', 'TEAM', '나만의 최강 팀', [
+      group('team', 'team', 'TEAM', '내가 만든 최강 팀', [
         held('team-one', '팀에 선수 한 명 등록', players.length > 0, 10),
         held('team-full', '유스 없이 11명 채우기', full, 20),
         held(
@@ -696,7 +761,9 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
         best('team-streak', '최다 연승', '연승', team.bestStreak, [3, 5, 10]),
         held('team-margin', '5골 차 이상 승리', team.bestMargin >= 5, 30),
         best('team-goals', '팀 득점', '골', team.goalsFor, [50, 150, 500]),
-        best('team-rating', '팀 레이팅', '점', team.rating, [1100, 1200, 1300]),
+        input.ladder
+          ? best('team-rp', '팀 RP', 'RP', team.rating, [1400, 1700, 2000])
+          : best('team-rating', '팀 레이팅', '점', team.rating, [1100, 1200, 1300]),
         best('team-likes', '받은 좋아요', '개', team.likes, [1, 5, 20]),
       ]),
     );

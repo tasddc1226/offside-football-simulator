@@ -129,6 +129,45 @@ describe('비정상 기록 정기 점검', () => {
     await ctx.dispose();
   });
 
+  function traceQueries() {
+    const statements: string[] = [];
+    const d1 = new Proxy(ctx.env.DB, {
+      get(target, key) {
+        if (key === 'prepare')
+          return (sql: string) => {
+            statements.push(sql);
+            return target.prepare(sql);
+          };
+        const value = Reflect.get(target, key);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    return { d1, statements };
+  }
+
+  it('does not load administrator overrides when the page has no anomaly candidates', async () => {
+    await career('normal-page', [[18, 60]]);
+    const { d1, statements } = traceQueries();
+    expect(await sweepAnomaliesPage(d1, NOW)).toMatchObject({ done: true, checked: 1, hidden: 0 });
+    expect(statements.some((sql) => sql.includes('key LIKE'))).toBe(false);
+  });
+
+  it('does not scan old seasons again when no selected career has an eligible incremental season', async () => {
+    await career('old-season-page', [[18, 99]], { updatedAt: iso(-DAY) });
+    // The season predates the last sweep; changing only the career must not make it eligible.
+    await ctx.env.DB.prepare('UPDATE career_seasons SET created_at=? WHERE career_id=?')
+      .bind(iso(-2 * DAY), 'old-season-page')
+      .run();
+    await ctx.env.DB.prepare('INSERT INTO app_meta(key,value) VALUES (?,?)')
+      .bind(SWEPT_AT_KEY, iso(-DAY))
+      .run();
+    const { d1, statements } = traceQueries();
+    expect(await sweepAnomaliesPage(d1, NOW)).toMatchObject({ done: true, checked: 1, hidden: 0 });
+    expect(statements.some((sql) => sql.includes('WITH s AS'))).toBe(false);
+    expect(statements.some((sql) => sql.includes('key LIKE'))).toBe(false);
+    expect(await hiddenOf('old-season-page')).toBe(0);
+  });
+
   it('pages equal timestamps without skipping the next career or committing the completion watermark early', async () => {
     await ctx.env.DB.prepare(
       `WITH RECURSIVE n(i) AS (VALUES(0) UNION ALL SELECT i+1 FROM n WHERE i<100)
@@ -228,6 +267,31 @@ describe('비정상 기록 정기 점검', () => {
     expect(await q('SELECT id,hidden FROM careers ORDER BY id')).toEqual(legacy);
     expect(await hiddenOf('old-season')).toBe(0);
     expect(await hiddenOf('legend-only')).toBe(0);
+  });
+
+  it('운영자 화면은 매일 점검이 남긴 목록만 읽고 시즌 표를 훑지 않는다 (T-11-491)', async () => {
+    await career('near-page', [
+      [18, 70],
+      [19, 88],
+    ]);
+    await career('legend-page', [[18, 60]], {
+      status: 'retired',
+      retireAge: 35,
+      legendScore: ANOMALY.legend,
+    });
+    await career('far-page', [[18, 99]]);
+    const { d1, statements } = traceQueries();
+    expect(await anomalyReport(d1, NOW)).toMatchObject({ review: [], hidden: [] });
+    expect(await sweepAnomaliesPage(ctx.env.DB, NOW)).toMatchObject({ done: true, hidden: 1 });
+    statements.length = 0;
+    const report = await anomalyReport(d1, NOW);
+    expect(statements.some((sql) => sql.includes('career_seasons'))).toBe(false);
+    expect(report.review.map((c) => [c.careerId, c.reasons])).toEqual([
+      ['legend-page', ['legend']],
+      ['near-page', ['ovrHigh']],
+    ]);
+    expect(report.hidden).toMatchObject([{ careerId: 'far-page', reasons: ['ovrFar'] }]);
+    expect(await hiddenOf('legend-page')).toBe(0);
   });
 
   it('은퇴 레전드 점수가 높으면 검토 목록에만 올린다', async () => {

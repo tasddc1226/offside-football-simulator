@@ -18,6 +18,7 @@ import {
 import type { TeamSynergy } from './team-synergy.js';
 
 export * from './team-synergy.js';
+export * from './match-report.js';
 
 /** 팀 이름 길이(앞뒤 공백 제외). */
 export const TEAM_NAME_MIN = 2;
@@ -67,6 +68,40 @@ export function ratingChange(
   const delta = Math.round(TEAM_RATING_K * (score - expected) * repeatFactor(meetings));
   return { home: delta, away: -delta };
 }
+
+// T-11-510 랭크 점수(RP) 사다리(docs/tracking/ranked-ladder-s2-design.md). 시즌 2부터 owner_teams.rating은 엘로 레이팅이
+// 아니라 RP다. 이기면 확실히 오르고, 디비전(T-11-375)이 높을수록 질 때 감점이 커서 같은 디비전끼리 반반이면 위로는 제자리다.
+/** RP 사다리를 쓰기 시작하는 서비스 시즌(그 전 시즌 팀은 엘로 레이팅으로 남는다). */
+export const RANK_LADDER_FROM_SEASON = 2;
+export const usesRankLadder = (season: number): boolean => season >= RANK_LADDER_FROM_SEASON;
+/** T-11-510 자동 매칭에서 한 경기마다 다른 상대를 다시 찾을 수 있는 횟수. */
+export const RANK_MATCH_REPICKS = 3;
+export const RANK_WIN = 20;
+export const RANK_DRAW = 3;
+/** 디비전마다(아마추어 → 마스터) 질 때 기본 감점. */
+export const RANK_LOSS_BY_DIVISION = [14, 14, 15, 16, 18, 19, 20, 22] as const;
+/** 상대 보정: (상대 RP − 내 RP) ÷ RANK_EDGE_DIV를 ±RANK_EDGE_MAX로 자른 값. */
+export const RANK_EDGE_DIV = 25;
+export const RANK_EDGE_MAX = 8;
+
+/**
+ * 한 팀 쪽 RP 변화. division = 경기 전 내 디비전, defender = 도전을 받은 쪽(깎일 때만 절반). 0 아래로는 내려가지 않는다.
+ * 두 팀 합은 지켜지지 않는다.
+ */
+export function rankPoints(
+  me: number,
+  opp: number,
+  score: 0 | 0.5 | 1,
+  division: number,
+  defender = false,
+): number {
+  const c = Math.max(-RANK_EDGE_MAX, Math.min(RANK_EDGE_MAX, (opp - me) / RANK_EDGE_DIV));
+  const loss =
+    RANK_LOSS_BY_DIVISION[Math.min(RANK_LOSS_BY_DIVISION.length - 1, Math.max(0, division))]!;
+  const raw = score === 1 ? RANK_WIN + c : score === 0.5 ? RANK_DRAW + c / 2 : -(loss - c);
+  return Math.max(-me, Math.round(defender && raw < 0 ? raw / 2 : raw)) || 0;
+}
+
 /** 빈 자리를 채우는 유스 선수의 OVR. */
 export const YOUTH_OVR = 50;
 export const YOUTH_NAME = '유스 선수';
@@ -74,12 +109,48 @@ export const YOUTH_NAME = '유스 선수';
 export const TEAM_MATCHES_PER_DAY = 10;
 /** 한 팀의 선발 인원. */
 export const LINEUP_SIZE = 11;
-/** T-11-114 선발에 넣을 수 있는 지난 시즌 선수(와일드카드) 수. 나머지는 그 시즌 선수다. */
-export const TEAM_WILDCARD_MAX = 3;
-/** 팀 시즌보다 앞 시즌 카드면 와일드카드. 시즌을 모르는 옛 응답은 그 시즌 선수로 본다. */
+/** 팀 시즌보다 앞 시즌 카드면 지난 시즌 선수(T-11-114). 시즌을 모르는 옛 응답은 그 시즌 선수로 본다. */
 export const isWildcardSeason = (cardSeason: number | null | undefined, teamSeason: number) =>
   (cardSeason ?? teamSeason) < teamSeason;
-export const WILDCARD_FULL_TEXT = `지난 시즌 선수는 선발에 ${TEAM_WILDCARD_MAX}명까지 넣을 수 있어요.`;
+
+// T-11-376 지난 시즌 선수 급여 예산(docs/tracking/salary-cap-plan.md). T-11-114 "지난 시즌 선수 3명까지"를 대신한다. 이번 시즌
+// 선수는 급여가 없고, 지난 시즌 선수는 카드 최고 OVR로 정한 급여의 합이 예산(밸런스 키 pastSalaryBudget) 안이어야 한다.
+// 급여 최대 20 × 3명 = 60이라 예전 규칙으로 짤 수 있던 선발은 모두 그대로 짤 수 있다.
+/** 지난 시즌 선수 급여 예산의 기본값(BALANCE_SPEC.pastSalaryBudget.def와 같다 — 서버 값이 없는 옛 응답이 쓴다). */
+export const PAST_SALARY_BUDGET = 80;
+/** T-11-450 팀 시즌이 하나 지날 때마다 늘어나는 예산(BALANCE_SPEC.pastSalaryBudgetStep.def와 같다). */
+export const PAST_SALARY_BUDGET_STEP = 10;
+/** 그 팀 시즌의 급여 예산: 시즌 1이 기준, 시즌마다 step씩 는다(프리시즌 0도 기준). */
+export const seasonSalaryBudget = (base: number, step: number, teamSeason: number) =>
+  base + step * Math.max(0, teamSeason - 1);
+/** 급여표: 최고 OVR이 min 이상이면 그 급여(높은 구간부터). 마지막 줄(min 0)은 74 이하. */
+export const PAST_SALARY_TABLE: readonly { readonly min: number; readonly salary: number }[] = [
+  { min: 96, salary: 20 },
+  { min: 94, salary: 16 },
+  { min: 92, salary: 13 },
+  { min: 90, salary: 10 },
+  { min: 88, salary: 8 },
+  { min: 85, salary: 6 },
+  { min: 80, salary: 4 },
+  { min: 75, salary: 2 },
+  { min: 0, salary: 1 },
+];
+/** 카드 최고 OVR의 급여(지난 시즌 선수일 때만 센다). */
+export const salaryOf = (peak: number): number =>
+  PAST_SALARY_TABLE.find((t) => peak >= t.min)?.salary ?? 1;
+/** 그 팀 시즌에서 이 카드가 받는 급여 — 이번 시즌 선수는 0. */
+export const seasonSalaryOf = (
+  card: { peak: number; season?: number | null | undefined },
+  teamSeason: number,
+) => (isWildcardSeason(card.season, teamSeason) ? salaryOf(card.peak) : 0);
+/** 선발 카드들의 지난 시즌 급여 합. */
+export const pastSalarySum = (
+  cards: readonly ({ peak: number; season?: number | null | undefined } | null | undefined)[],
+  teamSeason: number,
+) => cards.reduce((sum, c) => sum + (c ? seasonSalaryOf(c, teamSeason) : 0), 0);
+/** 예산을 넘는 선발을 저장할 때 서버 오류 문구(영 · 일은 api errorText.ts). */
+export const pastSalaryOverText = (sum: number, budget: number) =>
+  `지난 시즌 선수 급여가 예산을 넘어요(${sum}/${budget}). 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요.`;
 
 // T-11-098 친구 · 친선전. 친선전은 레이팅·전적·업적에 들어가지 않고 친구끼리 상대 전적만 남긴다.
 /** 친구(보낸·받은 신청 포함) 상한. */
@@ -327,7 +398,14 @@ export const slotRating = (slot: DetailPos, p: SlotPlayer): number => {
   const role = p.roles[slot] ?? p.roles[BASE_DETAIL[slot]];
   // T-11-237 타겟맨 유형은 최고 OVR을 스트라이커·타겟맨 역할 중 높은 쪽으로 잰다(T-11-229). 자리별 실력의 ST는 스트라이커
   // 역할로만 저장돼 헤딩·몸싸움으로 키운 타겟맨이 스트라이커 자리에서도 최고 OVR보다 낮게 뛰었다 — 스트라이커 자리는 최고 OVR 아래로 내리지 않는다.
-  const own = p.type === 'target' && BASE_DETAIL[slot] === 'ST' ? Math.max(role, p.peak) : role;
+  const own =
+    p.type === 'target' && BASE_DETAIL[slot] === 'ST'
+      ? Math.max(role, p.peak)
+      : // T-11-383 윙어 유형은 좌·우 미드필더 자리에서 중앙 미드필더 · 윙어 역할 중 높은 쪽으로 뛴다. 선수 커리어 OVR(T-11-236
+        // wingerRole)과 같은 규칙인데 팀 자리만 중앙 미드필더 역할로 재서 측면 미드필더 윙어가 제자리에서 크게 떨어졌다.
+        p.type === 'winger' && (slot === 'LM' || slot === 'RM')
+        ? Math.max(role, p.roles.W)
+        : role;
   return Math.min(own, p.peak + SLOT_OVER_PEAK);
 };
 
@@ -409,13 +487,6 @@ export function teamOvr(ratings: readonly (number | null)[]): number {
 // 점수 합이 그 시즌 구단주 등급이 된다. 시즌마다 처음부터 다시 쌓으므로 등급도 시즌마다 새로 오른다.
 export const ACH_CATEGORIES = ['player', 'team', 'owner', 'manager'] as const;
 export type AchCategory = (typeof ACH_CATEGORIES)[number];
-export const ACH_CATEGORY_NAME: Record<AchCategory, string> = {
-  player: '선수 업적',
-  team: '팀 업적',
-  owner: '구단주 업적',
-  manager: '감독 업적',
-};
-
 /**
  * 시즌 등급(오름차순 min = 그 등급에 필요한 점수). 프리시즌 구단주 297명의 점수(2026-10-01)로 잡았다 — 중앙값 실버,
  * 상위 25% 골드, 상위 5% 플래티넘, 상위 1% 다이아. 레전드는 팀·구단주 업적까지 시즌 내내 채워야 닿는다.
@@ -436,6 +507,157 @@ export function achGradeOf(score: number): { grade: AchGrade; next: AchGrade | n
   let i = 0;
   while (i + 1 < ACH_GRADES.length && score >= ACH_GRADES[i + 1]!.min) i++;
   return { grade: ACH_GRADES[i]!, next: ACH_GRADES[i + 1] ?? null };
+}
+
+/**
+ * T-11-489 이 시즌부터 등급을 업적 점수가 아니라 구단주 랭킹 상위 비율로 정한다. 점수 기준은 업적이 늘고 보상 상한이
+ * 풀릴수록 위로 쏠린다. 시즌 1까지(프리시즌 포함)는 점수 기준 그대로 둔다(굳힌 티어를 바꾸지 않는다).
+ */
+export const ACH_TIER_FROM_SEASON = 2;
+/**
+ * 등급마다 들어가는 상위 비율(%, 그 등급 이상 누적). 시즌 1 마감 분포(로그인 구단주 8,047명: 레전드 2.4% · 다이아까지
+ * 8.1% · 플래티넘까지 20.7% · 골드까지 41.5% · 실버까지 70.8% · 브론즈까지 88.2%)에 맞췄다. 루키는 나머지와 점수 0.
+ */
+export const ACH_GRADE_TOP = {
+  bronze: 90,
+  silver: 70,
+  gold: 40,
+  platinum: 20,
+  diamond: 8,
+  legend: 2,
+} as const satisfies Record<Exclude<AchGrade['id'], 'rookie'>, number>;
+
+/** 그 시즌 등급이 상위 비율 기준인가. */
+export const achTierByRank = (season: number): boolean => season >= ACH_TIER_FROM_SEASON;
+
+/** 그 등급에 드는 마지막 순위(랭킹 인원 ranked명 중 상위 비율, 적어도 1위). 루키는 끝까지. */
+export function achGradeCutoff(id: AchGrade['id'], ranked: number): number {
+  if (id === 'rookie') return Math.max(1, ranked);
+  return Math.max(1, Math.floor((ranked * ACH_GRADE_TOP[id]) / 100));
+}
+
+/** 구단주의 시즌 업적 자리 — 점수, 랭킹 순위(점수 0이면 null), 랭킹에 오른 구단주 수. */
+export type AchStanding = { season: number; score: number; rank: number | null; ranked: number };
+
+/**
+ * 시즌 등급과 다음 등급. 상위 비율 시즌이면 nextRank = 다음 등급에 들려면 올라야 하는 순위(맨 위면 null), 점수 시즌이면
+ * null(다음 등급은 next.min점).
+ */
+export function achGradeAt(s: AchStanding): {
+  grade: AchGrade;
+  next: AchGrade | null;
+  nextRank: number | null;
+} {
+  if (!achTierByRank(s.season)) return { ...achGradeOf(s.score), nextRank: null };
+  let i = 0;
+  if (s.rank !== null && s.score > 0)
+    while (i + 1 < ACH_GRADES.length && s.rank <= achGradeCutoff(ACH_GRADES[i + 1]!.id, s.ranked))
+      i++;
+  const next = ACH_GRADES[i + 1] ?? null;
+  return { grade: ACH_GRADES[i]!, next, nextRank: next ? achGradeCutoff(next.id, s.ranked) : null };
+}
+
+/**
+ * T-11-357 업적 달성 보상(아이템만 · 확률·가격은 그대로). 업적(단계 업적은 단계마다)의 점수로 난이도를 나눈다 —
+ * 40점 미만은 없음, 40~79점은 잠재력 강화권 1장, 80~149점은 2장, 150~249점은 강화권 3장 + 프리미엄 스카우트권 1장,
+ * 250점 이상은 강화권 3장 + 스카우트권 2장. 시즌마다 업적이 처음부터 다시 쌓이므로 보상도 시즌마다 업적·단계당 한 번이다
+ * (서버 gift_claims 'ach:<시즌>:<업적>[:<단계>]'). 시즌 상한은 없다(10-21 해제). 시즌 1 운영 표본(무작위 600명)에서
+ * 강화권 중앙값 11장 · 상위 10% 36장, 스카우트권은 13%가 받는다.
+ */
+export const ACH_REWARD_TIERS: readonly { min: number; boost: number; scout: number }[] = [
+  { min: 250, boost: 3, scout: 2 },
+  { min: 150, boost: 3, scout: 1 },
+  { min: 80, boost: 2, scout: 0 },
+  { min: 40, boost: 1, scout: 0 },
+];
+/** 보상이 있는 가장 낮은 업적 점수. */
+export const ACH_REWARD_MIN = ACH_REWARD_TIERS[ACH_REWARD_TIERS.length - 1]!.min;
+export type AchReward = { boost: number; scout: number };
+/** 한 업적(단계)의 점수로 정하는 보상. 없으면 null. */
+export function achRewardOf(points: number): AchReward | null {
+  const t = ACH_REWARD_TIERS.find((x) => points >= x.min);
+  return t ? { boost: t.boost, scout: t.scout } : null;
+}
+/**
+ * 업적 보상을 처음 주는 시즌. 시즌 중에는 경제를 바꾸지 않으므로 그 앞 시즌(시즌 1)에는 주지도 표시하지도 않는다 — 개막
+ * 전에 배포해도 시즌 1 달성에는 주지 않고, 시즌 2는 첫 달성부터(개막 뒤 배포면 그 사이 달성도 다음에 셀 때) 준다.
+ */
+export const ACH_REWARD_FIRST_SEASON = 2;
+/**
+ * T-11-386 시즌 1 업적 보상 — 시즌 1에 달성한 업적을 시즌 2 보상 표(achRewardOf)로 세어 시즌 2 동안 홈 선물
+ * 카드의 받기 버튼으로 한 번 준다. 시즌 1 기록은 마감 뒤 바뀌지 않아 처음 셀 때 장수를 적어 두고 그 값으로 준다.
+ */
+export const ACH_SEASON_GIFT = {
+  id: 'ach-season-1',
+  season: ACH_REWARD_FIRST_SEASON - 1,
+  openSeason: ACH_REWARD_FIRST_SEASON,
+} as const;
+
+/**
+ * T-11-487 시즌 1 기록 보상 — 시즌 1 명예의 전당 기록(마감 시각 기준)으로 시즌 2 동안 홈 선물 카드에서 한 번 준다.
+ * 로그인한 구단주만 받는다. 세 갈래를 더하며, 레전드 점수 · 발롱도르는 맞는 칸 하나만 받는다. 컵은 대회마다 단계 보상을
+ * 이미 줘서 더하지 않는다(2026-10-25 사용자 결정). 장수 기준: 컵 우승 15 · 3 · 3, BEST 11 10 · 2 · 2, 컵 4강 7 · 1 · 1.
+ */
+export const RECORD_SEASON_GIFT = { id: 'rec-season-1', season: 1, openSeason: 2 } as const;
+
+/**
+ * T-11-517 광고 제거 구매 감사 선물 — 클럽 멤버십에 광고 제거가 들어가면서, 그 전에 광고 제거를 산 구단주(서버 구매 기록이
+ * 프로필에 묶인 것, 환불 · 시험 구매 제외)에게 홈 선물 칸에서 한 번 준다(2026-10-26 사용자 결정). before 뒤에 산 구매는 세지 않는다.
+ */
+export const AD_FREE_THANKS_GIFT = {
+  id: 'adfree-thanks-1',
+  before: '2026-11-01T00:00:00.000Z',
+  boost: 5,
+  scout: 0,
+  reroll: 5,
+} as const;
+export type RecordReward = { reroll: number; scout: number; boost: number };
+/** 명예의 전당 순위(구단주의 가장 높은 선수, 시즌 결산 hof_rank와 같은 순서) 단계. 10-25 1000위 레전드 점수 약 2,245. */
+export const RECORD_HOF_TIERS: readonly ({ maxRank: number } & RecordReward)[] = [
+  { maxRank: 1, reroll: 15, scout: 3, boost: 3 },
+  { maxRank: 10, reroll: 10, scout: 2, boost: 2 },
+  { maxRank: 100, reroll: 7, scout: 1, boost: 1 },
+  { maxRank: 500, reroll: 5, scout: 1, boost: 0 },
+  { maxRank: 1000, reroll: 3, scout: 0, boost: 0 },
+];
+/** 레전드 점수: 아이콘(1,800점 이상) 수, 아이콘이 없으면 레전드(1,100점 이상) 보유. 위에서부터 맞는 칸 하나. */
+export const RECORD_LEGEND_TIERS: readonly ({ icons: number; legends: number } & RecordReward)[] = [
+  { icons: 5, legends: 0, reroll: 0, scout: 1, boost: 3 },
+  { icons: 1, legends: 0, reroll: 0, scout: 0, boost: 2 },
+  { icons: 0, legends: 1, reroll: 0, scout: 0, boost: 1 },
+];
+/** 발롱도르를 받은 선수 수(수상 횟수가 아니다 — 시즌 1 수상 선수가 1만 4천 명으로 흔하다). */
+export const RECORD_BALLON_TIERS: readonly ({ players: number } & RecordReward)[] = [
+  { players: 5, reroll: 7, scout: 1, boost: 1 },
+  { players: 2, reroll: 5, scout: 0, boost: 1 },
+  { players: 1, reroll: 3, scout: 0, boost: 0 },
+];
+/** 보상을 셀 시즌 기록. hofRank는 명예의 전당 선수가 없으면 null. legends는 아이콘을 뺀 레전드가 아니라 1,100점 이상 전부. */
+export type SeasonRecordFacts = {
+  hofRank: number | null;
+  icons: number;
+  legends: number;
+  ballonPlayers: number;
+};
+const NONE: RecordReward = { reroll: 0, scout: 0, boost: 0 };
+const pick = ({ reroll, scout, boost }: RecordReward): RecordReward => ({ reroll, scout, boost });
+/** 갈래별 보상과 합. */
+export function seasonRecordRewardOf(f: SeasonRecordFacts) {
+  const hof = RECORD_HOF_TIERS.find((t) => f.hofRank !== null && f.hofRank <= t.maxRank);
+  const legend = RECORD_LEGEND_TIERS.find((t) =>
+    t.icons > 0 ? f.icons >= t.icons : f.legends >= t.legends,
+  );
+  const ballon = RECORD_BALLON_TIERS.find((t) => f.ballonPlayers >= t.players);
+  const parts = {
+    hof: hof ? pick(hof) : NONE,
+    legend: legend ? pick(legend) : NONE,
+    ballon: ballon ? pick(ballon) : NONE,
+  };
+  const total = (k: keyof RecordReward) => parts.hof[k] + parts.legend[k] + parts.ballon[k];
+  return {
+    parts,
+    total: { reroll: total('reroll'), scout: total('scout'), boost: total('boost') },
+  };
 }
 
 /** 업적 랭킹 한 페이지의 구단주 수. */

@@ -12,10 +12,13 @@
   import UpdateBanner from './UpdateBanner.svelte';
   import NewsBanner from './NewsBanner.svelte';
   import MainNav, { hasMainNav } from './MainNav.svelte';
+  import { shellText } from '@offside/app-core/i18n/ko/shell';
   import { rnAlert } from './retiredNumber.svelte.js';
   import { achCheckable, achUnseenCount, isAchDirty, onAchDirty } from '@offside/app-core/achDirty';
   import { pendingFriendRequests } from '@offside/app-core/api/friendPending';
   import { sheetState } from './sheetState.svelte.js';
+  import { consentHere } from './consentPlace.js';
+  import { coach } from './coach.svelte.js';
   import type { Component } from 'svelte';
 
   // T-10-119 화면 전환 방향. 선수 생성은 1·2단계를 다른 화면으로 친다(상태는 appState에 있어 다시 그려도 된다).
@@ -113,6 +116,11 @@
   $effect(() => {
     if (appState.screen === 'funds' && !FundsHistory) void import('./FundsHistory.svelte').then((m) => (FundsHistory = m.default));
   });
+  // T-11-567 상점도 처음 열 때 불러온다.
+  let Shop = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'shop' && !Shop) void import('./Shop.svelte').then((m) => (Shop = m.default));
+  });
   // T-11-310: 감독 커리어도 처음 열 때 불러온다(감독 엔진 포함).
   let Manager = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
@@ -124,6 +132,11 @@
   let Cup = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
     if (appState.screen === 'cup' && !Cup) void import('./Cup.svelte').then((m) => (Cup = m.default));
+  });
+  // T-11-418: 오프사이드 리그도 처음 열 때 불러온다.
+  let League = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'league' && !League) void import('./League.svelte').then((m) => (League = m.default));
   });
   // T-10-090: 기록실(전체 명예의 전당·영구결번 벽)도 처음 열 때 불러온다. 홈의 TOP 3는 그대로 첫 화면에 있다.
   let Hof = $state<Component<Record<string, never>> | null>(null);
@@ -174,63 +187,78 @@
   $effect(() => {
     if (rnAlert.item && !RnAlert) void import('./RetiredNumberAlert.svelte').then((m) => (RnAlert = m.default));
   });
+  // T-11-473 첫 커리어 따라가기 안내. 남은 단계가 있을 때만 말풍선 청크를 받는다.
+  let Coachmark = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (coach.i !== null && !Coachmark) void import('./Coachmark.svelte').then((m) => (Coachmark = m.default));
+  });
 </script>
 
 <!-- 화면 전환 모션(T-10-003 goal 3, T-10-119): 화면이 바뀔 때만 새로 마운트해 들어오는 트랜지션을 건다.
      방향·방식은 motion.ts screenIn. 감속 모션이면 duration 0.
      T-10-004: 래퍼를 <main> 랜드마크로 둬 모든 화면 콘텐츠가 랜드마크 안에 들어가게 한다(axe region). -->
+<!-- T-11-389 화면 코드를 받는 동안의 뼈대(제목 · 카드 두 장, style.css .sk-wait). 첫 화면 번들에 들어가 요소 하나로 그린다. -->
+{#snippet waiting()}<div class="sk-wait" role="status" aria-busy="true"><span class="sr-only">{shellText.loading}</span></div>{/snippet}
 {#key screenKey}
   <main in:screenIn={{ dir: enter.dir }}>
-    {#if AnalyticsConsent && appState.screen !== 'settings'}<AnalyticsConsent />{/if}
     {#if appState.screen === 'home'}
       <Home />
     {:else if appState.screen === 'create'}
-      {#if Create}<Create />{/if}
+      {#if Create}<Create />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'retired'}
-      {#if Retired}<Retired />{/if}
+      {#if Retired}<Retired />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'legend'}
-      {#if Legend}<Legend />{/if}
+      {#if Legend}<Legend />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'hof'}
-      {#if Hof}<Hof />{/if}
+      {#if Hof}<Hof />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'settings'}
-      {#if Settings}<Settings />{/if}
+      {#if Settings}<Settings />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'owner'}
-      {#if Owner}<Owner />{/if}
+      {#if Owner}<Owner />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'players'}
-      {#if OwnerPlayers}<OwnerPlayers />{/if}
+      {#if OwnerPlayers}<OwnerPlayers />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'honors'}
-      {#if OwnerHonors}<OwnerHonors />{/if}
+      {#if OwnerHonors}<OwnerHonors />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'team'}
-      {#if Team}<Team />{/if}
+      {#if Team}<Team />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'market'}
-      {#if Market}<Market />{/if}
+      {#if Market}<Market />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'funds'}
-      {#if FundsHistory}<FundsHistory />{/if}
+      {#if FundsHistory}<FundsHistory />{:else}{@render waiting()}{/if}
+    {:else if appState.screen === 'shop'}
+      {#if Shop}<Shop />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'manager'}
-      {#if Manager}<Manager />{/if}
+      {#if Manager}<Manager />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'recap'}
-      {#if OwnerHonors}<OwnerHonors />{/if}
+      {#if OwnerHonors}<OwnerHonors />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'cup'}
-      {#if Cup}<Cup />{/if}
+      {#if Cup}<Cup />{:else}{@render waiting()}{/if}
+    {:else if appState.screen === 'league'}
+      {#if League}<League />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'dex'}
-      {#if Dex}<Dex />{/if}
+      {#if Dex}<Dex />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'board'}
-      {#if Board}{#key appState.board}<Board />{/key}{/if}
+      {#if Board}{#key appState.board}<Board />{/key}{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'chat'}
-      {#if Chat}<Chat />{/if}
+      {#if Chat}<Chat />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'firsts'}
-      {#if Firsts}<Firsts />{/if}
+      {#if Firsts}<Firsts />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'shared'}
-      {#if Shared}<Shared />{/if}
+      {#if Shared}<Shared />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'admin'}
-      {#if Admin}<Admin />{/if}
+      {#if Admin}<Admin />{:else}{@render waiting()}{/if}
     {:else}
-      {#if Game}<Game />{/if}
+      {#if Game}<Game />{:else}{@render waiting()}{/if}
     {/if}
   </main>
 {/key}
+<!-- T-11-417 동의를 묻는 창은 화면이 바뀌어도 다시 그리지 않게 화면 밖에 둔다(환경설정에서는 그 화면 카드가 대신한다).
+     T-11-437 선수 생성 · 게임 등 다른 화면에서는 띄우지 않고 홈으로 돌아올 때까지 미룬다. 고르기 전에는 동의하지 않은 것과
+     같아 이용 분석 · 유입 연결을 하나도 보내지 않는다(analytics/browser.ts · acquisition.ts가 동의를 확인한다). -->
+{#if AnalyticsConsent && consentHere(appState.screen)}<AnalyticsConsent />{/if}
 <!-- 홈 하단 메뉴는 화면 전환 래퍼 밖에 둬 화면이 바뀔 때 다시 그려지지 않게 한다. -->
 {#if hasMainNav(appState.screen)}<MainNav />{/if}
 <UpdateBanner />
 <NewsBanner />
 {#if RnAlert}<RnAlert />{/if}
+{#if Coachmark && coach.i !== null}<Coachmark />{/if}

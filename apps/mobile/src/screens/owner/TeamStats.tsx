@@ -2,6 +2,7 @@
 // 선수별 골 · 도움, 날짜별 전적, 상대별 전적을 탭으로 나눠 보여 준다. 랭크 경기만 센다(친선전은 저장하지 않는다).
 // T-11-358 흐름 요약(최근 흐름 · 연속 기록 · 도전/도전받음 · 가장 큰 승패)과 경기 종류별 전적(랭크 · 친선 · 컵)을 위에 둔다.
 // 남의 팀 프로필에서도 같은 화면을 쓴다(embedded: 제목을 h2로, 돌아가기 대신 닫기).
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import type { TeamStatsResponse } from '@offside/app-core/api/team';
@@ -13,8 +14,11 @@ import {
   formAria,
   formLetter,
   statsKindRows,
+  statsPlayerRows,
+  statsSorts,
   streakText,
   type StatsKindRow,
+  type StatsSort,
 } from '@offside/app-core/teamStats';
 import { TEAM_STATS_MATCHES_MAX } from '@offside/contracts/owner-team';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
@@ -23,6 +27,7 @@ import { DISPLAY, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Txt } from '../../ui';
 import { Seg, TabOpt } from '../board/parts';
+import { TeamSeasonReport } from './TeamReport';
 
 type Tab = 'players' | 'days' | 'opponents';
 
@@ -50,6 +55,8 @@ export function TeamStats({
 }) {
   const c = useColors();
   const [tab, setTab] = useState<Tab>('players');
+  // T-11-518 선수 탭 정렬(기본 골 순).
+  const [sort, setSort] = useState<StatsSort>('goals');
   useEffect(() => {
     if (focus) setTab('players');
   }, [focus]);
@@ -64,7 +71,8 @@ export function TeamStats({
   } as const;
   const num = { width: rem(1) * 3, textAlign: 'right' } as const;
   const s = stats;
-  const focused = s && focus ? s.players.findIndex((p) => p.careerId === focus) : -1;
+  const pr = s ? statsPlayerRows(s, sort) : null;
+  const focused = pr && focus ? pr.rows.findIndex((r) => r.p.careerId === focus) : -1;
   const right = (main: string, sub: string) => (
     <View style={{ alignItems: 'flex-end' }}>
       <Txt>{main}</Txt>
@@ -135,7 +143,7 @@ export function TeamStats({
                     minWidth: rem(1.6),
                     height: rem(1.6),
                     paddingHorizontal: 3,
-                    borderRadius: 6,
+                    borderRadius: RADIUS.xs,
                     borderWidth: 1,
                     borderColor: formColor(r),
                     alignItems: 'center',
@@ -192,7 +200,7 @@ export function TeamStats({
             >
               <Txt
                 testID="team-stats-total"
-                style={{ fontFamily: DISPLAY[700], fontSize: rem(1.5) }}
+                style={{ fontFamily: DISPLAY[700], fontSize: rem(FONT.title1) }}
               >
                 {record(s.total)}
               </Txt>
@@ -202,6 +210,7 @@ export function TeamStats({
             </View>
             {s.summary ? flow(s.summary) : null}
             {kindList(statsKindRows(s))}
+            <TeamSeasonReport report={s.report} />
             <Seg cols={3} label={L.statsTabLabel}>
               {(
                 [
@@ -228,7 +237,7 @@ export function TeamStats({
                       testID="team-stats-focus"
                       style={{
                         padding: 10,
-                        borderRadius: 10,
+                        borderRadius: RADIUS.sm,
                         backgroundColor: c.surface2,
                         gap: 2,
                         marginBottom: 6,
@@ -236,15 +245,42 @@ export function TeamStats({
                     >
                       <Txt
                         bold
-                      >{`${focused + 1}. ${name(s.players[focused]!.careerId, s.players[focused]!.name)}`}</Txt>
-                      <Txt v="sm">{`${L.statsGoals} ${s.players[focused]!.goals} · ${L.statsAssists} ${s.players[focused]!.assists}`}</Txt>
+                      >{`${focused + 1}. ${name(pr!.rows[focused]!.p.careerId, pr!.rows[focused]!.p.name)}`}</Txt>
+                      <Txt v="sm">
+                        {[
+                          ...(pr!.rows[focused]!.apps !== null
+                            ? [`${L.statsApps} ${pr!.rows[focused]!.apps}`]
+                            : []),
+                          `${L.statsGoals} ${pr!.rows[focused]!.p.goals}`,
+                          `${L.statsAssists} ${pr!.rows[focused]!.p.assists}`,
+                        ].join(' · ')}
+                      </Txt>
                     </View>
+                  ) : null}
+                  {pr!.showApps ? (
+                    <Seg cols={3} label={L.statsSortLabel}>
+                      {statsSorts().map(([k, label]) => (
+                        <TabOpt
+                          key={k}
+                          tight
+                          title={label}
+                          selected={sort === k}
+                          testID={`team-stats-sort-${k}`}
+                          onPress={() => setSort(k)}
+                        />
+                      ))}
+                    </Seg>
                   ) : null}
                   <View
                     style={[row, { borderTopWidth: 0, paddingBottom: 2 }]}
                     importantForAccessibility="no-hide-descendants"
                   >
                     <View style={{ flex: 1 }} />
+                    {pr!.showApps ? (
+                      <Txt tone="muted" v="sm" style={num}>
+                        {L.statsApps}
+                      </Txt>
+                    ) : null}
                     <Txt tone="muted" v="sm" style={num}>
                       {L.statsGoals}
                     </Txt>
@@ -252,18 +288,30 @@ export function TeamStats({
                       {L.statsAssists}
                     </Txt>
                   </View>
-                  {s.players.map((p, i) => (
+                  {pr!.rows.map(({ p, apps, sub }, i) => (
                     <View
                       key={p.careerId ?? `anon:${p.name}`}
                       style={[
                         row,
-                        i === focused && { backgroundColor: c.surface2, borderRadius: 8 },
+                        i === focused && { backgroundColor: c.surface2, borderRadius: RADIUS.sm },
                       ]}
                     >
-                      <Txt style={{ flex: 1, minWidth: 0 }}>
-                        <Txt tone="muted" v="xs">{`${i + 1} `}</Txt>
-                        {name(p.careerId, p.name)}
-                      </Txt>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Txt>
+                          <Txt tone="muted" v="xs">{`${i + 1} `}</Txt>
+                          {name(p.careerId, p.name)}
+                        </Txt>
+                        {sub ? (
+                          <Txt tone="muted" v="xs">
+                            {sub}
+                          </Txt>
+                        ) : null}
+                      </View>
+                      {apps !== null ? (
+                        <Txt num style={num} testID={`team-stats-apps-${p.careerId ?? 'youth'}`}>
+                          {String(apps)}
+                        </Txt>
+                      ) : null}
                       <Txt num bold style={num}>
                         {String(p.goals)}
                       </Txt>
@@ -272,6 +320,11 @@ export function TeamStats({
                       </Txt>
                     </View>
                   ))}
+                  {pr!.note ? (
+                    <Txt tone="muted" v="xs" style={{ marginTop: 6 }} testID="team-stats-apps-note">
+                      {pr!.note}
+                    </Txt>
+                  ) : null}
                 </View>
               ) : (
                 <Txt tone="muted">{L.statsNoScorers}</Txt>

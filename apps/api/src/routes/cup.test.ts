@@ -9,6 +9,7 @@ import { planCup, planNextCup } from '@offside/contracts/cup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import {
+  balanceVersions,
   cards,
   careers,
   cupEntries,
@@ -22,7 +23,8 @@ import {
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
 import { installFakeEdgeCache, flushEdge } from '../test/edgeCache.js';
-import { drawCup } from '../team/cup.js';
+import { drawCup, runCup } from '../team/cup.js';
+import { cupTeamsOf } from '../team/cupOdds.js';
 import { checkCupListing, cupChampionView, cupHomeView, recentCupFor } from './cup.js';
 
 const MeRes = successEnvelope(CupMeResponseSchema);
@@ -267,6 +269,151 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
     });
   });
 
+  it('T-11-405 내 다음 경기 예상: 지금 두 팀 명단 기준 승 · 무 · 패 %, 상대가 없으면 null', async () => {
+    const a = await owner(11);
+    const b = await owner(8);
+    await enter(a.cookie);
+    await enter(b.cookie);
+    const [ea, eb] = await Promise.all([me(a.cookie), me(b.cookie)]);
+    await ctx.db.update(cupEntries).set({ grp: 1 }).where(eq(cupEntries.cupId, CUP.id));
+    await ctx.db
+      .insert(cupState)
+      .values({ cupId: CUP.id, seed: 'test', groups: 1, drawnAt: CUP.drawAt });
+    await ctx.db.insert(cupMatches).values({
+      id: 'odds-g1',
+      cupId: CUP.id,
+      round: 'g1',
+      grp: 1,
+      slot: 0,
+      at: CUP.rounds[0]!,
+      homeTeamId: eb.entry!.teamId,
+      awayTeamId: ea.entry!.teamId,
+    });
+    const strong = (await me(a.cookie)).nextOdds!;
+    const weak = (await me(b.cookie)).nextOdds!;
+    // 11명이 다 찬 팀이 유스 3명 섞인 팀보다 유리하고, 두 쪽에서 본 확률은 서로 뒤집힌다.
+    expect(strong.win + strong.draw + strong.loss).toBe(100);
+    expect(strong.win).toBeGreaterThan(strong.loss);
+    expect(weak).toMatchObject({ win: strong.loss, loss: strong.win, draw: strong.draw });
+    expect(weak.xg).toEqual({ mine: strong.xg.opp, opp: strong.xg.mine });
+    // 상대가 아직 정해지지 않은 토너먼트 경기면 예상이 없다.
+    await ctx.db.delete(cupMatches);
+    await ctx.db.insert(cupMatches).values({
+      id: 'odds-sf',
+      cupId: CUP.id,
+      round: 'sf',
+      slot: 0,
+      at: CUP.rounds[0]!,
+      homeTeamId: ea.entry!.teamId,
+    });
+    expect(await me(a.cookie)).toMatchObject({ next: { id: 'odds-sf' }, nextOdds: null });
+  });
+
+  it('T-11-407 모든 경기 예상: 명단이 잠기면 cron이 한 번 계산해 두고, 끝난 경기에도 남는다', async () => {
+    const a = await owner(11);
+    const b = await owner(8);
+    await enter(a.cookie);
+    await enter(b.cookie);
+    const [ea, eb] = await Promise.all([me(a.cookie), me(b.cookie)]);
+    await ctx.db.update(cupEntries).set({ grp: 1 }).where(eq(cupEntries.cupId, CUP.id));
+    await ctx.db
+      .insert(cupState)
+      .values({ cupId: CUP.id, seed: 'test', groups: 1, drawnAt: CUP.drawAt });
+    const at = CUP.rounds[0]!;
+    const row = (id: string, slot: number) => ({
+      id,
+      cupId: CUP.id,
+      round: 'g1',
+      grp: 1,
+      slot,
+      at,
+      homeTeamId: eb.entry!.teamId,
+      awayTeamId: ea.entry!.teamId,
+    });
+    await ctx.db.insert(cupMatches).values([row('all-1', 0), row('all-2', 1)]);
+    const matches = async () =>
+      CupRes.parse(await (await call('GET', `/v1/cups/${CUP.id}`)).json()).data.matches;
+    const lock = Date.parse(at) - 60 * 60_000;
+    // 잠기기 전에는 계산하지 않는다(내 경기 칸은 지금 명단으로 따로 계산한다).
+    await runCup(ctx.db, new Date(lock - 60_000).toISOString(), [CUP]);
+    expect((await matches()).map((m) => m.odds)).toEqual([null, null]);
+    // 잠긴 뒤 cron: 두 경기 모두 홈 기준으로 채우고, 내 경기 칸과 같은 값이다.
+    const log = await runCup(ctx.db, new Date(lock).toISOString(), [CUP]);
+    expect(log).toContainEqual({ cup: CUP.id, step: 'odds', n: 2 });
+    const [first] = await matches();
+    const odds = first!.odds!;
+    expect(odds.home + odds.draw + odds.away).toBe(100);
+    expect(odds.away).toBeGreaterThan(odds.home);
+    const weak = (await me(b.cookie)).nextOdds!;
+    expect(weak).toMatchObject({ win: odds.home, draw: odds.draw, loss: odds.away });
+    // 다음 cron은 다시 계산하지 않는다.
+    expect(await runCup(ctx.db, new Date(lock + 5 * 60_000).toISOString(), [CUP])).toBeNull();
+    // 저장해 둔 값이 있으면 내 경기 칸도 그 값을 쓴다(명단이 잠겨 같은 값이어야 한다).
+    await ctx.db
+      .update(cupMatches)
+      .set({ oddsJson: JSON.stringify({ h: 10, d: 20, a: 70, xh: 0.5, xa: 2.1 }) })
+      .where(eq(cupMatches.id, 'all-1'));
+    expect((await me(a.cookie)).nextOdds).toEqual({
+      win: 70,
+      draw: 20,
+      loss: 10,
+      xg: { mine: 2.1, opp: 0.5 },
+    });
+    // cron이 늦어 예상 없이 경기 시각이 되면 경기를 치르면서 채운다.
+    await ctx.db.update(cupMatches).set({ oddsJson: null }).where(eq(cupMatches.id, 'all-2'));
+    await runCup(ctx.db, at, [CUP]);
+    const played = await matches();
+    expect(played.every((m) => m.played)).toBe(true);
+    expect(played[0]!.odds).toEqual({ home: 10, draw: 20, away: 70 });
+    expect(played[1]!.odds).toEqual(odds);
+  });
+
+  it('T-11-409 컵 공격 계수는 밸런스 설정을 따르고, 경기 전 예상 · 내 경기 칸이 같은 값을 쓴다', async () => {
+    const a = await owner(11);
+    const b = await owner(8);
+    await enter(a.cookie);
+    await enter(b.cookie);
+    const [ea, eb] = await Promise.all([me(a.cookie), me(b.cookie)]);
+    await ctx.db.update(cupEntries).set({ grp: 1 }).where(eq(cupEntries.cupId, CUP.id));
+    await ctx.db
+      .insert(cupState)
+      .values({ cupId: CUP.id, seed: 'test', groups: 1, drawnAt: CUP.drawAt });
+    const at = CUP.rounds[0]!;
+    await ctx.db.insert(cupMatches).values({
+      id: 'k-1',
+      cupId: CUP.id,
+      round: 'g1',
+      grp: 1,
+      slot: 0,
+      at,
+      homeTeamId: eb.entry!.teamId,
+      awayTeamId: ea.entry!.teamId,
+    });
+    const lock = new Date(Date.parse(at) - 60 * 60_000).toISOString();
+    const odds = async () => {
+      await ctx.db.update(cupMatches).set({ oddsJson: null }).where(eq(cupMatches.id, 'k-1'));
+      const live = (await me(b.cookie)).nextOdds!;
+      await runCup(ctx.db, lock, [CUP]);
+      const stored = CupRes.parse(await (await call('GET', `/v1/cups/${CUP.id}`)).json()).data
+        .matches[0]!.odds!;
+      expect(live).toMatchObject({ win: stored.home, draw: stored.draw, loss: stored.away });
+      return stored;
+    };
+    // 기본값 0.45가 2회 컵까지의 0.3보다 강한 팀(원정) 승률을 높인다.
+    const strong = await odds();
+    await ctx.db.insert(balanceVersions).values({
+      status: 'active',
+      valuesJson: JSON.stringify({ cupAtkK: 0.3 }),
+      createdBy: 'test',
+      createdAt: lock,
+      updatedAt: lock,
+      activatedAt: lock,
+    });
+    const old = await odds();
+    expect(strong.away).toBeGreaterThan(old.away);
+    expect(strong.home).toBeLessThan(old.home);
+  });
+
   it('선발 7명이면 신청할 수 없다', async () => {
     const a = await owner(7);
     expect((await me(a.cookie)).eligibility).toMatchObject({ ok: false, reason: 'not-enough' });
@@ -362,13 +509,68 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
     const fewer = await a.put([...a.ids.slice(0, 7), ...Array(4).fill(null)]);
     expect(fewer.status).toBe(409);
     expect(await reason(fewer)).toBe('CUP_MIN_FILLED');
-    await expect(checkCupListing(ctx.db, a.profileId, 1, a.ids[0]!)).rejects.toMatchObject({
+    await expect(checkCupListing(ctx.db, a.profileId, a.ids[0]!)).rejects.toMatchObject({
       details: { reason: 'CUP_CARD_LOCKED' },
     });
     // 취소하면 풀린다.
     await call('DELETE', `/v1/cups/${CUP.id}/entries/me`, { cookie: a.cookie });
-    await expect(checkCupListing(ctx.db, a.profileId, 1, a.ids[0]!)).resolves.toBeUndefined();
+    await expect(checkCupListing(ctx.db, a.profileId, a.ids[0]!)).resolves.toBeUndefined();
     expect((await a.put([...a.ids.slice(0, 7), ...Array(4).fill(null)])).status).toBe(200);
+  });
+
+  it('T-11-570 컵 명단 프리셋: 컵은 그 프리셋으로 뛰고, 팀 명단은 컵 검사 없이 바꾼다', async () => {
+    const a = await owner(11);
+    expect((await enter(a.cookie)).status).toBe(204);
+    const preset = (slots: (string | null)[], cup = true) => ({
+      name: '컵 명단',
+      formation: '4-3-3',
+      slots,
+      layout: null,
+      ...(cup ? { cup: true } : {}),
+    });
+    const presets = (list: unknown[]) =>
+      call('PUT', '/v1/owner-team/presets', { cookie: a.cookie, body: { presets: list } });
+    const eight = [...a.ids.slice(0, 8), ...Array(3).fill(null)];
+    // 컵 명단도 최소 인원 · 내 선수 검사를 받는다.
+    const short = await presets([preset([...a.ids.slice(0, 7), ...Array(4).fill(null)])]);
+    expect(short.status).toBe(409);
+    expect(await reason(short)).toBe('CUP_MIN_FILLED');
+    const foreign = await presets([preset([crypto.randomUUID(), ...eight.slice(1)])]);
+    expect(await reason(foreign)).toBe('PLAYER_NOT_ELIGIBLE');
+    // 컵 명단은 하나만.
+    expect((await presets([preset(eight), preset(eight)])).status).toBe(400);
+    const saved = await presets([preset(eight), preset(a.ids, false)]);
+    expect(saved.status).toBe(200);
+    const body = (await saved.json()) as { data: { presets: { ovr?: number; filled?: number }[] } };
+    expect(body.data.presets[0]).toMatchObject({ cup: true, filled: 8 });
+    expect(body.data.presets[1]!.ovr).toBeUndefined();
+    const cupOvr = body.data.presets[0]!.ovr!;
+    expect((await me(a.cookie)).ovr).toBe(cupOvr);
+    // 컵 경기 · 예상은 프리셋 선발을 읽는다.
+    const [team] = await ctx.db
+      .select()
+      .from(ownerTeams)
+      .where(eq(ownerTeams.profileId, a.profileId));
+    expect(team!.cupOvr).toBe(cupOvr);
+    const cupTeam = (await cupTeamsOf(ctx.db, CUP, [team!.id]))(team!.id)!;
+    expect(JSON.parse(cupTeam.slotsJson)).toEqual(eight);
+    expect(cupTeam.ovr).toBe(cupOvr);
+    // 팀 명단은 컵 최소 인원과 상관없이 줄일 수 있다.
+    expect((await a.put([...a.ids.slice(8), ...Array(8).fill(null)])).status).toBe(200);
+    // 판매 잠금은 컵 명단 선수만.
+    await expect(checkCupListing(ctx.db, a.profileId, a.ids[0]!)).rejects.toMatchObject({
+      details: { reason: 'CUP_CARD_LOCKED' },
+    });
+    await expect(checkCupListing(ctx.db, a.profileId, a.ids[9]!)).resolves.toBeUndefined();
+    // 컵 명단을 풀면 팀 명단(3명)이 다시 컵에 나가므로 막힌다.
+    const unset = await presets([preset(eight, false)]);
+    expect(await reason(unset)).toBe('CUP_MIN_FILLED');
+    // 이름만 바꾸면 컵 명단 검사를 다시 하지 않고 OVR을 지킨다.
+    const renamed = await presets([{ ...preset(eight), name: '컵 주전' }]);
+    expect(renamed.status).toBe(200);
+    expect(
+      ((await renamed.json()) as { data: { presets: { ovr?: number }[] } }).data.presets[0]!.ovr,
+    ).toBe(cupOvr);
   });
 
   // T-11-322 owner_teams를 IN (...) 한 번으로 읽어 101팀부터 D1 바인딩 한도(100)를 넘겨 503이 났다.

@@ -28,7 +28,9 @@ export async function titleMetricsOf(db: Db, profileId: string): Promise<Metrics
       coalesce(sum(caps >= ${CAREER_FEATS.caps}), 0) as internationals,
       (select count(*) from retired_numbers r join careers c on c.id = r.career_id
        where c.profile_id = ${profileId} and c.hidden = 0) as numbers,
-      (select count(*) from owner_honors h where h.profile_id = ${profileId} and h.kind = 'first') as firsts
+      (select count(*) from owner_honors h where h.profile_id = ${profileId} and h.kind = 'first') as firsts,
+      (select count(*) from card_exchange_claims x
+       where x.profile_id = ${profileId} and x.reward_json <> '') as exchanges
     from careers INDEXED BY careers_profile_status_season_idx
     where profile_id = ${profileId} and status = 'retired'
       and hidden = 0 and peak is not null and retire_age >= 30`);

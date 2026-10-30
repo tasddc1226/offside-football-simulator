@@ -43,8 +43,23 @@ export const push: Translation<PushMsgs> = {
   catMarketBody: 'When a player you listed is sold',
   catSocial: 'Friends',
   catSocialBody: 'Friend requests, accepts and friendly results',
+  catNudge: 'Reminders',
+  catNudgeBody: 'Check-in, what happened while you were away and first-week tips',
   catAria: (p) => `${p.title} notifications`,
   prefsConnectFailed: "Couldn't connect to notification settings. Please try again.",
   prefsLoadFailed: "Couldn't load notification settings.",
   prefsSaveFailed: "Couldn't save notification settings.",
+  askOn: 'Turn on',
+  askLater: 'Later',
+  askRetireTitle: 'Get notified when this card can play in the cup?',
+  askRetireBody:
+    "Offside Cup entries are open for only a few days. We'll tell you when entries open, when your team's results come in and when a listed player sells.",
+  askSellTitle: 'Want to know when it sells?',
+  askSellBody: "We'll let you know when your listed player sells and how much you received.",
+  askClubTitle: 'Get cup entries and match results as notifications?',
+  askClubBody:
+    "We'll tell you as soon as Offside Cup entries open, and send results of ranked matches other owners play against your team.",
+  askCupTitle: 'Get cup results as notifications?',
+  askCupBody:
+    "When the cup ends, we'll tell you your team's final result right away. We'll also let you know when the next cup opens for entries.",
 };

@@ -5,6 +5,8 @@ import {
   type AdminStats,
   type AnomalyReport,
   type AutomationReport,
+  REMOVE_ADS_PRICE_BEFORE_KRW,
+  REMOVE_ADS_PRICE_CHANGED_AT,
 } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -19,6 +21,7 @@ import {
 } from '../db/schema.js';
 import { kstWindow } from '../db/repos/revenue.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
+import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
 import {
   ADMIN_EMAIL,
   callJson,
@@ -219,6 +222,20 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
         test: false,
         createdAt: ago(1),
       },
+      // T-11-484 기간 밖 구매 · 다른 스토어 · 환불 · 테스트 알림.
+      ...[
+        ['b3', 'apple', 'purchase', '2026-10-01T00:00:00.000Z', false],
+        ['b4', 'google', 'purchase', ago(0), false],
+        ['b5', 'apple', 'refund', ago(0), false],
+        ['b6', 'google', 'purchase', ago(0), true],
+      ].map(([id, store, kind, createdAt, test]) => ({
+        id: id as string,
+        store: store as string,
+        kind: kind as string,
+        productId: 'com.offsidelab.app.remove_ads',
+        test: test as boolean,
+        createdAt: createdAt as string,
+      })),
     ]);
     const res = await call('GET', '/v1/admin/revenue?days=7', { cookie: admin.cookie });
     expect(res.status).toBe(200);
@@ -240,7 +257,25 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
       krw: 0,
       refunded: 1,
     });
-    expect(r.removeAds).toMatchObject({ count: 1, refunds: 0, krw: 3300 });
+    // 기간 안: 애플 1 · 구글 1 구매, 애플 환불 1. 전체 기간은 가격 인상 전 구매(b3)까지 3건.
+    // T-11-574 금액은 판매 시각의 정가로 센다(인상 전 3,300원, 뒤 6,600원).
+    const adPrice = (at: string) =>
+      at >= REMOVE_ADS_PRICE_CHANGED_AT ? 6600 : REMOVE_ADS_PRICE_BEFORE_KRW;
+    const windowKrw = adPrice(ago(1)) + adPrice(ago(0)) - adPrice(ago(0));
+    expect(r.removeAds).toMatchObject({
+      count: 2,
+      refunds: 1,
+      krw: windowKrw,
+      allTime: { count: 3, refunds: 1, krw: windowKrw + REMOVE_ADS_PRICE_BEFORE_KRW },
+    });
+    expect(r.removeAds.stores).toEqual(
+      expect.arrayContaining([
+        { store: 'apple', count: 1, refunds: 1 },
+        { store: 'google', count: 1, refunds: 0 },
+      ]),
+    );
+    expect(r.daily.reduce((s, d) => s + (d.adCount ?? 0), 0)).toBe(2);
+    expect(r.daily.reduce((s, d) => s + (d.adKrw ?? 0), 0)).toBe(adPrice(ago(1)) + adPrice(ago(0)));
     expect(r.recent.map((x) => x.productId)).not.toContain(undefined);
     expect(r.recent).toHaveLength(4);
     expect((await call('GET', '/v1/admin/revenue?days=5', { cookie: admin.cookie })).status).toBe(
@@ -287,6 +322,38 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
     expect((await toggle(true)).status).toBe(204);
     expect((await report()).hidden.map((c) => c.careerId)).toEqual(['car-x']);
     expect((await toggle(true, 'nope')).status).toBe(404);
+  });
+
+  it('무거운 집계(자금 대조 · 자동 플레이)는 1분 동안 엣지에 담고, 관리자 확인은 매번 한다 (T-11-494)', async () => {
+    const edge = installFakeEdgeCache();
+    try {
+      const admin = await makeAdmin();
+      const user = await issueCookie(ctx);
+      const origin = 'http://localhost';
+      for (const path of ['/v1/admin/funds', '/v1/admin/automation?hours=3']) {
+        expect((await call('GET', path, { cookie: admin.cookie })).status).toBe(200);
+        await flushEdge();
+        const key = [...edge.store.keys()].find((k) => k === `${origin}${path}`);
+        expect(key).toBeDefined();
+        expect(edge.controls.get(key!)).toBe('public, max-age=60');
+        // 담긴 결과가 있어도 관리자가 아니면 막힌다.
+        expect((await call('GET', path, { cookie: user.cookie })).status).toBe(403);
+        // 다시 열면 담긴 결과를 그대로 돌려준다(D1에 다시 가지 않는다).
+        edge.store.set(
+          key!,
+          JSON.stringify({
+            ...JSON.parse(edge.store.get(key!)!),
+            generatedAt: '2000-01-01T00:00:00.000Z',
+          }),
+        );
+        expect(
+          (await data<{ generatedAt: string }>(await call('GET', path, { cookie: admin.cookie })))
+            .generatedAt,
+        ).toBe('2000-01-01T00:00:00.000Z');
+      }
+    } finally {
+      edge.uninstall();
+    }
   });
 
   it('대시보드: 가입·활동·커리어·댓글 수와 최근 14일(KST) 추이', async () => {

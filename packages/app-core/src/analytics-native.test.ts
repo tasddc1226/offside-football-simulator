@@ -205,15 +205,30 @@ describe('push open analytics', () => {
     expect(await h.a.pushOpen('PRIVATE-ID', 'return', 'career_reminder', 1)).toBe(true);
     expect(await h.a.pushOpen('PRIVATE-ID', 'return', 'career_reminder', 1)).toBe(false);
     await h.a.pushOpen('PRIVATE-2', 'PRIVATE-kind', 'PRIVATE-campaign', 'PRIVATE-stage');
+    await h.a.pushOpen('lapsed', 'return', 'retention_lapsed', 14);
+    await h.a.pushOpen('onboarding', 'return', 'retention_onboarding', 4);
+    await h.a.pushOpen('bad-stage', 'return', 'retention_lapsed', 5);
+    await h.a.pushOpen('proto', 'return', 'constructor', 1);
     await h.a.settled();
     const events = h.events.filter((e) => e.name === 'offside_push_open');
-    expect(events).toHaveLength(2);
+    expect(events).toHaveLength(6);
     expect(events[0]!.params).toMatchObject({
       push_category: 'return',
       push_campaign: 'career_reminder',
       reminder_stage: 1,
     });
     expect(events[1]!.params.push_category).toBe('other');
+    expect(events[1]!.params).not.toHaveProperty('push_campaign');
+    expect(events[2]!.params).toMatchObject({
+      push_campaign: 'retention_lapsed',
+      reminder_stage: 14,
+    });
+    expect(events[3]!.params).toMatchObject({
+      push_campaign: 'retention_onboarding',
+      reminder_stage: 4,
+    });
+    expect(events[4]!.params).not.toHaveProperty('push_campaign');
+    expect(events[5]!.params).not.toHaveProperty('push_campaign');
     expect(JSON.stringify(events)).not.toContain('PRIVATE');
     h.a.setConsent('denied');
     await h.a.settled();
@@ -232,4 +247,26 @@ it('captures a consented cold-start push after SDK initialization and cancels on
   expect(await open).toBe(false);
   await next.a.settled();
   expect(next.events.filter((e) => e.name === 'offside_push_open')).toHaveLength(0);
+});
+
+describe('push opt-in analytics', () => {
+  it('sends allowlisted places, one view per place and the OS result', async () => {
+    const h = setup({ initial: 'granted' });
+    await h.a.settled();
+    h.a.pushAsk('view', 'home');
+    h.a.pushAsk('view', 'home');
+    h.a.pushAsk('view', 'sell');
+    h.a.pushAsk('accept', 'sell');
+    h.a.pushAsk('result', 'sell', 'denied');
+    h.a.pushAsk('later', 'PRIVATE' as never);
+    await h.a.settled();
+    const events = h.events.filter((e) => e.name.startsWith('push_optin_'));
+    expect(events.map((e) => [e.name, e.params.place, e.params.result])).toEqual([
+      ['push_optin_view', 'home', undefined],
+      ['push_optin_view', 'sell', undefined],
+      ['push_optin_accept', 'sell', undefined],
+      ['push_optin_result', 'sell', 'denied'],
+    ]);
+    expect(JSON.stringify(h.events)).not.toContain('PRIVATE');
+  });
 });

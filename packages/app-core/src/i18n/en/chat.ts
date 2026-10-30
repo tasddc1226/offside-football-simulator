@@ -6,6 +6,7 @@ export const chat: Translation<ChatMsgs> = {
   title: 'Lounge chat',
   back: '← Back',
   online: (p) => `${p.n} online`,
+  roomsLabel: 'Chat room by language',
   reconnecting: 'Reconnecting…',
   connecting: 'Connecting…',
   rulesLabel: 'Chat rules and blocked users',
@@ -52,4 +53,10 @@ export const chat: Translation<ChatMsgs> = {
   loginGoogle: 'Log in with Google',
   gateNicknameWeb: 'Pick a nickname for chat and comments.',
   gateNicknameApp: "Pick a chat nickname first. It's the same as your comment nickname.",
+  // T-11-573 replies
+  replyTo: (p: { nick: string }) => `Replying to ${p.nick}`,
+  replyCancel: 'Cancel reply',
+  replyGone: 'This message is unavailable',
+  replyJump: (p: { nick: string }) => `Show ${p.nick}'s original message`,
+  replyNotLoaded: 'That message is too far back to show here.',
 };

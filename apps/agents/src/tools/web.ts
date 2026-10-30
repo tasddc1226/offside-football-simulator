@@ -4,7 +4,7 @@ import type { Tool } from '../claude.ts';
 
 const TEXT_MAX = 8000;
 const BLOCKED_HOST =
-  /^(localhost|.*\.local|.*\.internal|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.|\[)|(^|\.)slack\.com$|(^|\.)workers\.dev$/i;
+  /^(localhost|.*\.local|.*\.internal|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.|\[)|(^|\.)slack\.com$|(^|\.)discord(app)?\.com$|(^|\.)workers\.dev$/i;
 
 export function readableUrl(raw: unknown): URL | undefined {
   try {

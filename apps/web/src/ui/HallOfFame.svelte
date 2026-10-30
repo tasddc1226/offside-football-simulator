@@ -1,4 +1,7 @@
 <script lang="ts">
+  import SeasonSelect from './SeasonSelect.svelte';
+  import { hofBasisNote } from '@offside/app-core/hofBasis';
+  import Skeleton from './Skeleton.svelte';
   import { tn } from '@offside/game/i18n/names';
   // T-10-005 명예의 전당: 모든 유저의 은퇴 선수(서버). 행을 누르면 상세로. 이 기기에서 은퇴한 선수에는
   // '내 선수' 표시를 단다. 내 선수 목록은 구단주 화면으로 옮겼다(T-10-058, MyPlayers).
@@ -204,15 +207,7 @@
   {/if}
   {#if full}
     <div class="hof-toolbar">
-      <label class="hof-season-picker">
-        <span class="hof-filter-label">{L.season}</span>
-        <select aria-label={L.seasonAria} data-hof-season-select value={season === null ? 'all' : String(season)} onchange={(e) => pickSeason(e.currentTarget.value === 'all' ? null : Number(e.currentTarget.value))}>
-          <option value="all">{L.allSeasons}</option>
-          {#each [PRESEASON, ...SERVICE_SEASONS] as s (s.id)}
-            <option value={String(s.id)}>{seasonLabel(s.id, s.name)}{notOpen(s) ? L.notOpen : ''}</option>
-          {/each}
-        </select>
-      </label>
+      <SeasonSelect caption={L.season} label={L.seasonAria} all={L.allSeasons} value={season ?? 'all'} seasons={[PRESEASON, ...SERVICE_SEASONS]} onpick={(v) => pickSeason(v === 'all' ? null : v)} data-hof-season-select />
       {#if !upcoming}
         <div class="hof-filter-picker">
           <span class="hof-filter-label" aria-hidden="true">{L.filter}</span>
@@ -263,11 +258,12 @@
       <p>{L.opensNote}</p>
     </div>
   {:else if all === null && !failed}
-    <p class="empty">{L.loading}</p>
+    <Skeleton rows={6} />
   {:else if failed}
     <p class="empty">{L.loadFailed}</p>
   {:else if all && all.length}
     {#if full}<p class="muted hof-source">{L.source({ scope, q, sort: by.label, isScore: sort === 'score', total })}</p>{/if}
+    {#if full && hofBasisNote(sort)}<p class="muted fs-xs hof-basis" data-hof-basis>{hofBasisNote(sort)}</p>{/if}
     {#if !full && ss}<p class="muted hof-source">{L.homeSource({ season: seasonLabel(ss.id, ss.name) })}</p>{/if}
     {#if podium.length}
       <HofPodium players={podium} label={by.label} unit={by.unit} showPosition={pos === null} />

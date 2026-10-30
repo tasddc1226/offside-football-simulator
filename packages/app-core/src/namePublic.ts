@@ -16,3 +16,7 @@ export function setNamePublic(on: boolean) {
 /** 서버에 보낼 공개 이름. 꺼져 있거나 서버가 받지 않을 이름(링크·욕설·형식)이면 null. */
 export const publicNameOf = (name: string): string | null =>
   namePublicEnabled() ? toPublicName(name) : null;
+
+/** T-11-439 이 이름을 명예의 전당에 공개할 수 있나(환경설정과 무관, 서버가 받을 이름인가). 이름 공개 카드와 결번 안내가
+ * 누르기 전에 미리 알리고, 공개 동작(legend.ts setLegendPublic)도 같은 기준으로 막는다. */
+export const canPublishName = (name: string): boolean => toPublicName(name) != null;

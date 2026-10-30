@@ -94,7 +94,7 @@
   .card-face { position:relative; overflow:hidden; min-height:183px; padding:28px 10px 20px; clip-path:inherit; background:linear-gradient(135deg,transparent 34%,#ffffff25 34.5%,transparent 35%,transparent 62%,#ffffff1c 62.5%,transparent 63%),radial-gradient(ellipse at 80% 10%,var(--card-light),transparent 70%),linear-gradient(165deg,var(--card-base),var(--card-dark)); color:var(--card-ink); }
   .card-rating { position:absolute; top:28px; left:11px; display:flex; flex-direction:column; align-items:center; z-index:1; }
   .card-rating b { font-family:var(--display); font-size:2.3rem; font-weight:800; line-height:.9; }
-  .card-rating span { font-family:var(--display); font-size:.82rem; font-weight:700; line-height:1; margin-top:4px; }
+  .card-rating span { font-family:var(--display); font-size:var(--fs-label); font-weight:700; line-height:1; margin-top:4px; }
   .card-nation {position:absolute;top:82px;left:11px;z-index:1;width:36px;text-align:center;font-family:system-ui,sans-serif;font-size:18px;line-height:18px;}
   /* T-11-114 시즌 뱃지(색은 cardSeasonColor). */
   .card-lock {position:absolute;top:30px;right:11px;z-index:1;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#000a;box-shadow:0 0 0 1px #ffffff66 inset;} .card-lock svg {width:13px;height:13px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;} .card-lock rect {fill:#fff;stroke:none;}
@@ -118,7 +118,7 @@
   .card-art.has-portrait :global(.avatar) { width:auto; max-width:100%; height:100%; }
   .portrait-number { position:absolute; right:0; bottom:0; min-width:16px; padding:1px 3px; border-radius:3px; color:var(--card-light); background:var(--card-ink); font:700 10px/1.1 var(--display); text-align:center; }
   .compact .portrait-number { min-width:10px; padding:0 2px; font-size:7px; }
-  .card-name { display:block; margin-top:4px; text-align:center; font-size:.88rem; white-space:nowrap; overflow:hidden; line-height:1.6; }
+  .card-name { display:block; margin-top:4px; text-align:center; font-size:var(--fs-body2); white-space:nowrap; overflow:hidden; line-height:1.6; }
   .name-track {display:inline-block;width:max-content;vertical-align:top;}
   .card-name.scrolling {text-align:left;}
   .card-name.scrolling .name-track {animation:card-name-scroll var(--name-duration) linear infinite;}
@@ -132,25 +132,25 @@
     .card-name.scrolling .name-track {animation:none;}
     .card-name::-webkit-scrollbar {display:none;}
   }
-  .card-type {display:block;width:max-content;max-width:100%;margin:3px auto 0;padding:1px 7px;border:1px solid color-mix(in srgb,var(--card-ink),transparent 65%);border-radius:999px;font-size:10px;line-height:1.4;font-weight:700;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .card-type {display:block;width:max-content;max-width:100%;margin:3px auto 0;padding:1px 7px;border:1px solid color-mix(in srgb,var(--card-ink),transparent 65%);border-radius:var(--radius-pill);font-size:10px;line-height:1.4;font-weight:700;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .card-divider { height:1px; background:var(--card-ink); opacity:.25; margin:4px 0 6px; }
-  .card-career { display:flex;justify-content:center;align-items:baseline;gap:4px;font-size:.72rem; }
-  .card-career b { font-family:var(--display); font-size:1.15rem; }
-  .card-body { font-size:.6rem; text-align:center; font-weight:700; opacity:.85; }
+  .card-career { display:flex;justify-content:center;align-items:baseline;gap:4px;font-size:var(--fs-caption); }
+  .card-career b { font-family:var(--display); font-size:var(--fs-title3); }
+  .card-body { font-size:var(--fs-caption2); text-align:center; font-weight:700; opacity:.85; }
   .card-attributes {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 4px;margin:8px 0 0;text-align:center;}
   .card-attributes dt {font-size:10px;line-height:1.3;font-weight:600;}
-  .card-attributes dd {margin:0;font-family:var(--display);font-size:1.25rem;line-height:1.1;font-weight:700;}
-  .card-foot { font-size:.6rem; text-align:center; margin-top:7px; opacity:.8; }
+  .card-attributes dd {margin:0;font-family:var(--display);font-size:var(--fs-title2);line-height:1.1;font-weight:700;}
+  .card-foot { font-size:var(--fs-caption2); text-align:center; margin-top:7px; opacity:.8; }
   .compact .card-face { min-height:0; height:100px; padding:11px 4px 13px; }
   .compact .card-rating { top:14px; left:7px; }
-  .compact .card-rating b { font-size:1.6rem; }
-  .compact .card-rating span { font-size:.62rem; margin-top:2px; }
+  .compact .card-rating b { font-size:var(--fs-title1); }
+  .compact .card-rating span { font-size:var(--fs-caption2); margin-top:2px; }
   .compact .card-nation {top:13px;left:auto;right:5px;width:16px;font-size:12px;line-height:14px;}
   .compact .card-art { height:48px; margin:10px 0 0 17px; }
-  .compact .shirt-number { font-size:1.15rem; }
+  .compact .shirt-number { font-size:var(--fs-title3); }
   .compact .card-name { font-size:11px; margin-top:3px; }
   .compact.deployed .card-art {height:36px;}
-  @media(max-width:440px) { .compact .card-face { height:88px; padding:8px 3px 10px; } .compact .card-rating { left:5px;top:11px; } .compact .card-season {top:2px;} .compact .card-rating b { font-size:1.3rem; } .compact .card-art { height:34px;margin-top:8px; } .compact .shirt-number {font-size:1rem;} .compact.deployed .card-art {height:24px;} }
+  @media(max-width:440px) { .compact .card-face { height:88px; padding:8px 3px 10px; } .compact .card-rating { left:5px;top:11px; } .compact .card-season {top:2px;} .compact .card-rating b { font-size:var(--fs-title2); } .compact .card-art { height:34px;margin-top:8px; } .compact .shirt-number {font-size:var(--fs-body);} .compact.deployed .card-art {height:24px;} }
   /* 이적시장 목록용 — 이름은 줄 옆에 따로 나오므로 카드에서 뺀다(compact와 같이 쓴다). 높이는 이름 줄만큼 줄인다. */
   .mini .card-face {height:84px;}
   @media(max-width:440px) { .mini .card-face {height:68px;} }

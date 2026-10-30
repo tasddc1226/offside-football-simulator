@@ -1,13 +1,17 @@
 import { careerReminderText as reminderKo } from '../i18n/ko/careerReminder.js';
 import { careerReminderText as reminderEn } from '../i18n/en/careerReminder.js';
 import { careerReminderText as reminderJa } from '../i18n/ja/careerReminder.js';
+import { careerReminderText as reminderZh } from '../i18n/zh/careerReminder.js';
 import { attendanceReminderText as attendanceKo } from '../i18n/ko/attendanceReminder.js';
 import { attendanceReminderText as attendanceEn } from '../i18n/en/attendanceReminder.js';
 import { attendanceReminderText as attendanceJa } from '../i18n/ja/attendanceReminder.js';
+import { attendanceReminderText as attendanceZh } from '../i18n/zh/attendanceReminder.js';
 import { RETIRED_NUMBER_SCOUTS } from '@offside/contracts/cup';
 import { INVITE_REROLLS, INVITE_SCOUTS } from '@offside/contracts/owner-team';
 import { OLD_INVITEE, OLD_INVITER, PUSH_JA, PUSH_TAIL_JA } from '../i18n/ja/push.js';
+import { PUSH_TAIL_ZH, PUSH_ZH } from '../i18n/zh/push.js';
 import { cupText } from '../cupText.js';
+import { retentionText } from './retentionText.js';
 import type { Lang } from '../lang.js';
 
 // T-11-106 서버가 만든 알림 문구. 푸시는 보낼 때 기기의 언어를 알 수 없어(기기 등록에 언어가 없다) 한국어로 보내고,
@@ -40,6 +44,8 @@ const EN: Record<string, string> = {
   [`친구 초대 보상으로 선수 후보 리롤권 ${INVITE_REROLLS}장과 프리미엄 스카우트권 ${INVITE_SCOUTS}장을 받았어요.`]: `You got ${INVITE_REROLLS} candidate rerolls and ${INVITE_SCOUTS} premium scout ticket as an invite reward.`, // i18n-ignore: 번역표 키
   // T-11-244 retired number reward (db/repos/itemShop.ts).
   '영구결번 보상을 받았어요': 'You got a retired number reward', // i18n-ignore: 번역표 키
+  [`영구결번 보상으로 프리미엄 스카우트권 ${RETIRED_NUMBER_SCOUTS}장을 받았어요.`]: `Your retired number earned you ${RETIRED_NUMBER_SCOUTS} premium scout ticket.`, // i18n-ignore: 번역표 키
+  // Notices sent before T-11-514 kept the old wording.
   [`영구결번을 받아 프리미엄 스카우트권 ${RETIRED_NUMBER_SCOUTS}장을 받았어요.`]: `Your number was retired, so you got ${RETIRED_NUMBER_SCOUTS} premium scout ticket.`, // i18n-ignore: 번역표 키
   // Notices sent before T-11-244 (2 rerolls).
   [OLD_INVITEE]: 'You finished a career and got 2 candidate rerolls.',
@@ -62,17 +68,21 @@ const TABLES: Record<
     sep: '. ',
   },
   ja: { exact: PUSH_JA, tails: PUSH_TAIL_JA, sep: '。' },
+  zh: { exact: PUSH_ZH, tails: PUSH_TAIL_ZH, sep: '。' },
 };
 
 export function pushText(ko: string, lang: Lang): string {
   if (lang === 'ko') return ko;
-  const reminders = lang === 'en' ? reminderEn : reminderJa;
+  // T-11-501 리텐션 푸시(숫자가 낀 문장은 틀로 되읽는다). 옛 커리어 독려와 같은 제목은 새 번역을 쓴다.
+  const retention = retentionText(ko, lang);
+  if (retention !== null) return retention;
+  const reminders = { en: reminderEn, ja: reminderJa, zh: reminderZh }[lang];
   for (let i = 0; i < reminderKo.length; i++) {
     if (ko === reminderKo[i]!.title) return reminders[i]!.title;
     if (ko === reminderKo[i]!.body) return reminders[i]!.body;
   }
   // T-11-378 출석 독려.
-  const attendance = lang === 'en' ? attendanceEn : attendanceJa;
+  const attendance = { en: attendanceEn, ja: attendanceJa, zh: attendanceZh }[lang];
   if (ko === attendanceKo.title) return attendance.title;
   if (ko === attendanceKo.body) return attendance.body;
   const T = TABLES[lang];

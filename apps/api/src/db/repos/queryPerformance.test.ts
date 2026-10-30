@@ -4,7 +4,7 @@ import { PRESEASON } from '@offside/contracts/service-seasons';
 import { createTestD1, syncCards, type TestD1 } from '../../test/d1.js';
 import { createDb } from '../client.js';
 import { listPublicHof } from './careers.js';
-import { listTeamRanking } from './ownerTeams.js';
+import { listTeamRanking, valueRankOf } from './ownerTeams.js';
 import { recordCareerFirsts } from './firsts.js';
 import { countOpenListingsAmong } from './market.js';
 import { achievementRankOf, ownerActivityIn } from './ownerAchievements.js';
@@ -203,52 +203,50 @@ describe('critical query result and read-cost regressions (local D1)', () => {
     expect((await listPublicHof(ctx.db, 20, 1, 'score', undefined, '%_')).total).toBe(0);
   });
 
-  it('team value sorts reuse one aggregate and preserve pagination, ties and season eligibility', async () => {
+  it('team value ranking reads stored values and preserves season eligibility', async () => {
     for (const now of ['2026-09-30T00:00:00.000Z', '2030-01-01T00:00:00.000Z']) {
-      for (const page of [1, 2, 3]) {
+      const open = now.startsWith('2026');
+      // Independent copy of the old live aggregate, used only as a test oracle.
+      const oracle = await ctx.env.DB.prepare(
+        `SELECT t.id, (
+        SELECT coalesce(sum(coalesce(c.card_value, 10000)), 0)
+        FROM json_each(t.slots_json) slot
+        CROSS JOIN cards c ON c.career_id = slot.value
+        LEFT JOIN careers r ON r.id = c.career_id
+        WHERE c.service_season <= t.season AND coalesce(r.hidden, 0) = 0
+        ${open ? 'AND c.owner_id = t.profile_id AND c.manager = 0' : ''}
+      ) AS value FROM owner_teams t WHERE t.season = 0`,
+      ).all<{ id: string; value: number }>();
+      const expected = new Map(oracle.results.map((row) => [row.id, row.value]));
+      for (const page of [1, 2, 3, 4]) {
         traced.queries.length = 0;
         const result = await listTeamRanking(traced.db, 0, 'value', page, now);
+        for (const row of result.rows) expect(row.value, row.id).toBe(expected.get(row.id));
         expect(result.total).toBe(77);
         const q = traced.queries[0]!;
-        const aggregate = q.sql.match(/(\([\s\S]*?\)) as "lineup_value"/)?.[1];
-        expect(aggregate).toBeTruthy();
-        const beforeOrder = (q.sql.slice(0, q.sql.indexOf('order by')).match(/\?/g) ?? []).length;
-        const baseline = {
-          ...q,
-          sql: q.sql.replace('order by lineup_value desc', `order by ${aggregate} desc`),
-          params: [
-            ...q.params.slice(0, beforeOrder),
-            ...q.params.slice(0, (aggregate!.match(/\?/g) ?? []).length),
-            ...q.params.slice(beforeOrder),
-          ],
-        };
-        const current = await run(q);
-        const old = await run(baseline);
-        expect(current.results).toEqual(old.results);
-        const currentPlan = await plan(q);
-        expect(currentPlan.match(/CORRELATED SCALAR SUBQUERY/g)).toHaveLength(1);
-        expect((await plan(baseline)).match(/CORRELATED SCALAR SUBQUERY/g)).toHaveLength(2);
-        expect(currentPlan).toContain(
-          'SEARCH cards USING INDEX sqlite_autoindex_cards_1 (career_id=?)',
-        );
-        expect(current.meta.rows_read).toBeLessThan(old.meta.rows_read);
-        console.info('team value rows read', {
-          now,
-          page,
-          before: old.meta.rows_read,
-          after: current.meta.rows_read,
-        });
+        expect(q.sql).not.toContain('json_each');
+        expect(q.sql).not.toContain('cards');
+        expect(await plan(q)).toContain('owner_teams_season_value_');
       }
     }
-    const live = await listTeamRanking(ctx.db, 0, 'value', 1, '2026-09-30T00:00:00.000Z');
+    for (const now of ['2026-09-30T00:00:00.000Z', '2030-01-01T00:00:00.000Z']) {
+      let offset = 0;
+      for (const page of [1, 2, 3, 4]) {
+        const rows = (await listTeamRanking(ctx.db, 0, 'value', page, now)).rows;
+        for (const row of rows) {
+          traced.queries.length = 0;
+          expect(await valueRankOf(traced.db, row, now), row.id).toBe(++offset);
+          expect(traced.queries[0]!.sql).not.toContain('cards');
+        }
+      }
+    }
     const closed = await listTeamRanking(ctx.db, 0, 'value', 1, '2030-01-01T00:00:00.000Z');
     expect(closed.rows.find((r) => r.id === 'team-1')).toMatchObject({ value: 1100 });
-    const livePages = [...live.rows];
-    for (const page of [2, 3, 4]) {
+    const livePages = [];
+    for (const page of [1, 2, 3, 4])
       livePages.push(
         ...(await listTeamRanking(ctx.db, 0, 'value', page, '2026-09-30T00:00:00.000Z')).rows,
       );
-    }
     expect(livePages.find((r) => r.id === 'team-1')).toMatchObject({ value: 100 });
   });
   it('wall of honor reads only wall rows through its partial index (T-11-259)', async () => {
@@ -327,6 +325,8 @@ describe('critical query result and read-cost regressions (local D1)', () => {
       done: 1,
       players: 1,
       teamKept: null,
+      rewardBoost: null,
+      rewardScout: null,
       reachedAt: '2026-09-29',
       updatedAt: '2026-09-29',
     };
@@ -360,29 +360,14 @@ describe('critical query result and read-cost regressions (local D1)', () => {
           for (const page of [1, 2, 4]) {
             traced.queries.length = 0;
             await listTeamRanking(traced.db, 0, 'value', page, now);
-            const valueQuery = traced.queries[0]!;
             traced.queries.length = 0;
             const result = await listTeamRanking(traced.db, 0, sort, page, now);
             expect(result.total).toBe(77);
             const q = traced.queries[0]!;
             expect(q.sql).toContain('"team_page"');
-            // 바꾸기 전 쿼리: 페이지를 고르면서 모든 팀의 가치를 센다.
-            const order =
-              sort === 'rating'
-                ? 'order by "owner_teams"."rating" desc, "owner_teams"."ovr" desc, "owner_teams"."created_at" asc, "owner_teams"."id" asc'
-                : 'order by "owner_teams"."ovr" desc, "owner_teams"."rating" desc, "owner_teams"."created_at" asc, "owner_teams"."id" asc';
-            const baseline = {
-              ...valueQuery,
-              sql: valueQuery.sql.replace(
-                'order by lineup_value desc, "owner_teams"."rating" desc, "owner_teams"."created_at" asc, "owner_teams"."id" asc',
-                order,
-              ),
-            };
-            expect(baseline.sql).not.toBe(valueQuery.sql);
-            const current = await run(q);
-            const old = await run(baseline);
-            expect(current.results).toEqual(old.results);
-            expect(current.results.length).toBe(page === 4 ? 17 : 20);
+            expect(q.sql).not.toContain('json_each');
+            expect(q.sql).not.toContain('cards');
+            expect(result.rows.length).toBe(page === 4 ? 17 : 20);
             for (const r of result.rows) expect(r.value).toBe(allValues.get(r.id));
           }
         }

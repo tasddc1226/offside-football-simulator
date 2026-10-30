@@ -1,14 +1,11 @@
-import {
-  HOME_GIFT,
-  HomeGiftResponseSchema,
-  OwnerItemsResponseSchema,
-  successEnvelope,
-} from '@offside/contracts';
+import { OwnerItemsResponseSchema, successEnvelope } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { giftClaims, iapPurchases, ownerItems } from '../db/schema.js';
+import { iapPurchases, ownerItems } from '../db/schema.js';
 import { resetGoogleTokenCache } from '../iap/google.js';
 import { syncGoogleVoided } from '../iap/refunds.js';
 import { createApp } from '../app.js';
+import { forgetSeasonSchedule, saveSeasonSchedule } from '../seasonSchedule.js';
+import { applySeasonSchedule } from '@offside/contracts/service-seasons';
 import { createDb } from '../db/client.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, deleteProfile, issueCookie, issueGoogleCookie } from '../test/http.js';
@@ -254,6 +251,51 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     expect(items.data.scout).toBe(200 - 71);
   });
 
+  it('T-11-450 시즌 2부터는 S 없이 19장 뒤 20장째가 S 확정, 누적 70장째가 특급 S', async () => {
+    await saveSeasonSchedule(ctx.env.DB, [
+      {
+        id: 1,
+        startsAt: '2026-10-05T15:00:00.000Z',
+        endsAt: '2026-10-30T15:00:00.000Z',
+        retireAt: 45,
+      },
+      { id: 2, startsAt: '2026-10-30T15:00:00.000Z', endsAt: null, retireAt: 46 },
+    ]);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-02T00:00:00.000Z'));
+    try {
+      const me = await issueGoogleCookie(ctx);
+      await ctx.db.insert(ownerItems).values({
+        profileId: me.profileId,
+        item: 'scout',
+        qty: 100,
+        updatedAt: new Date().toISOString(),
+      });
+      const use = async () =>
+        ItemsRes.parse(
+          await (
+            await call('POST', '/v1/items/scout/use', {
+              cookie: me.cookie,
+              headers: { 'Idempotency-Key': crypto.randomUUID() },
+              body: { hit: false },
+            })
+          ).json(),
+        ).data;
+      for (let i = 1; i <= 19; i++) expect((await use()).scoutMode).toBe('normal');
+      const sure = await use();
+      expect(sure.scoutMode).toBe('sure');
+      expect(sure.pity).toEqual({ used: 20, streak: 0, elites: 0 });
+      await ctx.env.DB.prepare('UPDATE scout_pity SET used = 69').run();
+      const elite = await use();
+      expect(elite.scoutMode).toBe('elite');
+      expect(elite.pity).toEqual({ used: 70, streak: 0, elites: 1 });
+    } finally {
+      vi.useRealTimers();
+      applySeasonSchedule([]);
+      forgetSeasonSchedule();
+    }
+  });
+
   it('T-11-248 리롤권을 30장 쓸 때마다 프리미엄 스카우트권 1장을 같은 응답으로 받는다', async () => {
     const me = await issueGoogleCookie(ctx);
     const now = new Date().toISOString();
@@ -308,49 +350,6 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     await deleteProfile(ctx.env, me.cookie, 'iap-delete');
     expect(await ctx.db.select().from(iapPurchases)).toHaveLength(0);
     expect(await ctx.db.select().from(ownerItems)).toHaveLength(0);
-  });
-
-  it('T-11-275 홈 선물은 로그인한 구단주만 한 번 받고, 받은 스카우트권도 쓸 때 천장을 센다', async () => {
-    const GiftRes = successEnvelope(HomeGiftResponseSchema);
-    const guest = await issueCookie(ctx);
-    expect((await call('GET', '/v1/items/gift', { cookie: guest.cookie })).status).toBe(403);
-    const key = () => ({ 'Idempotency-Key': crypto.randomUUID() });
-    const guestClaim = await call('POST', '/v1/items/gift/claim', {
-      cookie: guest.cookie,
-      headers: key(),
-    });
-    expect(guestClaim.status).toBe(403);
-
-    const me = await issueGoogleCookie(ctx);
-    const gift = async () =>
-      GiftRes.parse(await (await call('GET', '/v1/items/gift', { cookie: me.cookie })).json()).data
-        .gift;
-    expect(await gift()).toEqual({ id: HOME_GIFT.id, boost: 20, scout: 5 });
-    const claim = (headers = key()) =>
-      call('POST', '/v1/items/gift/claim', { cookie: me.cookie, headers });
-    // 같은 멱등 키로 다시 보내면 같은 응답, 새 키로 다시 누르면 409이고 장수는 그대로다.
-    const first = key();
-    const got = ItemsRes.parse(await (await claim(first)).json()).data;
-    expect(got).toEqual({ reroll: 0, boost: 20, scout: 5, rename: 0 });
-    expect(ItemsRes.parse(await (await claim(first)).json()).data).toEqual(got);
-    const again = await claim();
-    expect(again.status).toBe(409);
-    expect(await again.json()).toMatchObject({ error: { details: { reason: 'GIFT_CLAIMED' } } });
-    expect(await gift()).toBeNull();
-
-    const used = ItemsRes.parse(
-      await (
-        await call('POST', '/v1/items/scout/use', {
-          cookie: me.cookie,
-          headers: key(),
-          body: { hit: false },
-        })
-      ).json(),
-    ).data;
-    expect(used).toMatchObject({ boost: 20, scout: 4, pity: { used: 1, streak: 1, elites: 0 } });
-
-    await deleteProfile(ctx.env, me.cookie, 'gift-delete');
-    expect(await ctx.db.select().from(giftClaims)).toHaveLength(0);
   });
 
   it('로그인하지 않은 프로필은 살 수 없다', async () => {

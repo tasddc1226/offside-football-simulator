@@ -4,19 +4,20 @@
 import type { Tool } from './claude.ts';
 import { cardOf, isStatus, type CardSource, type CardStatus } from './card.ts';
 import { appGh, dispatchWork, workRunsUrl } from './dev.ts';
-import { botToken, isRole, list, ROLE_NAMES, type Env } from './env.ts';
+import { isRole, list, type Env } from './env.ts';
 import type { Gh } from './github.ts';
 import { kstDay, ledger, type WorkOrder } from './ledger.ts';
 import { higher, isRisk, RISK_LABEL, riskOf, type Risk } from './risk.ts';
-import { slackClient, threadLink, threadReply } from './slack.ts';
+import { chatClient, threadLink } from './chat.ts';
+import { threadReply } from './reply.ts';
 import type { Task } from './thread.ts';
 
 /** 낮음 자동 시작 하루 상한. 넘으면 시작 카드로 바뀐다. */
 export const AUTO_LIMIT = 3;
 export const START_ACTIONS = ['plan_start', 'plan_start_reject'];
 
-const planSlack = (env: Env) => slackClient(botToken(env, 'plan'), fetch, ROLE_NAMES.plan);
-const devSlack = (env: Env) => slackClient(botToken(env, 'dev'), fetch, ROLE_NAMES.dev);
+const planSlack = (env: Env) => chatClient(env, 'plan');
+const devSlack = (env: Env) => chatClient(env, 'dev');
 
 const EMAIL = /[\w.+-]+@[\w-]+(\.[\w-]+)+/g;
 const clean = (v: unknown, n: number) =>
@@ -232,7 +233,7 @@ export function startCard(env: Env, o: WorkOrder, why = '') {
     `*작업 시작 승인 요청* · ${o.title}`,
     `• 위험도: ${RISK_LABEL[o.risk]}${why ? ` (${why} 시작 카드로 왔어요)` : ''}`,
     `• 무엇을: 아래 명세로 @dev가 Actions에서 고치고 PR을 열어요. 머지는 따로 승인 카드로 받아요.`,
-    `• 요청: <${threadLink(channel!, ts!)}|스레드>`,
+    `• 요청: <${threadLink(env, channel!, ts!)}|스레드>`,
     '```',
     o.request.slice(0, 2500),
     '```',

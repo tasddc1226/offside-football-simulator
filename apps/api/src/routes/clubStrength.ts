@@ -15,6 +15,7 @@ import { reqLang } from '../lang.js';
 import { strengthOwnerOnly as ko } from '../i18n/ko/clubStrength.js';
 import { strengthOwnerOnly as en } from '../i18n/en/clubStrength.js';
 import { strengthOwnerOnly as ja } from '../i18n/ja/clubStrength.js';
+import { strengthOwnerOnly as zh } from '../i18n/zh/clubStrength.js';
 
 export function registerClubStrengthRoutes(app: Hono<AppEnv>): void {
   app.get(STRENGTH_PATH, async (c) => {
@@ -35,7 +36,7 @@ export function registerClubStrengthRoutes(app: Hono<AppEnv>): void {
     const owner = c.env.CLUB_STRENGTH_OWNER_EMAIL ?? (emails.length === 1 ? emails[0] : undefined);
     const profile = await getProfile(getDb(c), viewer.profileId!);
     if (!owner || owner.includes(',') || !isAdminEmail(owner, profile?.email ?? null))
-      throw new AppError({ code: 'FORBIDDEN', message: { ko, en, ja }[reqLang(c)] });
+      throw new AppError({ code: 'FORBIDDEN', message: { ko, en, ja, zh }[reqLang(c)] });
     const before = parseWithAppError(StrengthHistoryBeforeSchema, c.req.query('before'));
     return ok(
       c,

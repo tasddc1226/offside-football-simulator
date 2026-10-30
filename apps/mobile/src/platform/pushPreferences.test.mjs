@@ -33,7 +33,7 @@ describe('account feature push preferences', () => {
     f.api.mockResolvedValueOnce({ ok: true, data: { ...defaults, market: false } });
     await p.setPushPreference('market', false);
     expect(p.pushPreferencesState.values.market).toBe(false);
-    expect(f.api).toHaveBeenLastCalledWith('/v1/push/preferences', {
+    expect(f.api).toHaveBeenLastCalledWith('/v1/push/preferences?nudge=1', {
       method: 'PUT',
       body: '{"market":false}',
     });
@@ -42,6 +42,15 @@ describe('account feature push preferences', () => {
     expect(p.pushPreferencesState.values.market).toBe(false);
     expect(p.pushPreferencesState.error).toBe('저장 실패');
     expect(p.pushPreferencesState.saving).toBeNull();
+  });
+  it('T-11-501 reads nudge from the new shape and treats an old server shape as nudge on', async () => {
+    const p = await import('./pushPreferences');
+    await p.loadPushPreferences();
+    expect(f.api).toHaveBeenCalledWith('/v1/push/preferences?nudge=1');
+    expect(p.pushPreferencesState.values.nudge).toBe(true);
+    f.api.mockResolvedValueOnce({ ok: true, data: { ...defaults, nudge: false } });
+    await p.setPushPreference('nudge', false);
+    expect(p.pushPreferencesState.values.nudge).toBe(false);
   });
   it('discards an old account load response after account switching', async () => {
     const p = await import('./pushPreferences');

@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { proxy } from 'valtio';
+import { proxy, subscribe } from 'valtio';
 import {
   NotificationIdSchema,
   NotificationTargetSchema,
@@ -13,12 +13,28 @@ import { inboxText as L } from '@offside/app-core/i18n/ko/inbox';
 import { appState } from '../store';
 import { notificationDestination } from './notificationDestination';
 import { invalidateApiCache } from '@offside/app-core/api/client';
+import { recheckOwner } from '@offside/app-core/api/friendPending';
 import { trackPushInteraction } from './pushTracking';
+import { readOneBadge, showBadge } from './badge';
 
 export const inboxState = proxy(initialInboxState());
-export const inbox = createNotificationInbox(inboxState);
+export const inbox = createNotificationInbox(inboxState, {
+  // 목록을 불러왔으면 줄어든 unreadCount를 아래 구독이 뱃지로 옮긴다. 아니면 지금 숫자에서 하나 뺀다.
+  onRead: (wasUnread) => {
+    if (wasUnread === undefined || (wasUnread && !inboxState.loaded)) void readOneBadge();
+  },
+});
+// T-11-547 알림함 목록을 불러온 뒤에는 그 안 읽은 개수를 앱 아이콘 뱃지로 맞춘다.
+let badged: number | undefined;
+subscribe(inboxState, () => {
+  const count = inboxState.loaded ? inboxState.unreadCount : undefined;
+  if (count === badged) return;
+  badged = count;
+  if (count !== undefined) showBadge(count);
+});
 onSessionChanged(() => {
   inbox.reset();
+  showBadge(0);
   Object.assign(notificationDestination, { friends: false, history: false, market: false });
 });
 export async function loadInbox(options: Parameters<typeof inbox.load>[0] = {}) {
@@ -55,6 +71,10 @@ export function openInboxTarget(
       if (kind === 'social') invalidateApiCache('/v1/friends');
       if (kind === 'social') appState.teamView = 'opponents';
       else if (kind === 'team') appState.teamView = 'history';
+    }
+    if (parsed.data.screen === 'home') {
+      recheckOwner();
+      notificationDestination.home++;
     }
     if (parsed.data.screen === 'market' && kind === 'market') {
       invalidateApiCache('/v1/market');

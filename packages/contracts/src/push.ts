@@ -19,8 +19,11 @@ export const PushTestResultSchema = z.object({
 });
 export type RegisterPushDevice = z.infer<typeof RegisterPushDeviceSchema>;
 
-/** 재방문 안내는 기기 전체 수신 설정을 따르며 별도 항목을 두지 않는다. */
-export const PushPreferencesSchema = z
+/**
+ * 종류별 알림 받기. T-11-501 nudge는 출석 · 복귀 · 첫 주 안내(kind 'return')다. 옛 앱은 strict 스키마로 응답을 읽어 모르는
+ * 키가 오면 설정 화면이 깨지므로, 서버는 `?nudge=1`로 묻는 새 앱에만 nudge를 싣는다(LegacyPushPreferencesSchema가 옛 모양).
+ */
+export const LegacyPushPreferencesSchema = z
   .object({
     notice: z.boolean(),
     release: z.boolean(),
@@ -29,6 +32,9 @@ export const PushPreferencesSchema = z
     social: z.boolean(),
   })
   .strict();
+export const PushPreferencesSchema = LegacyPushPreferencesSchema.extend({
+  nudge: z.boolean(),
+}).strict();
 export const PutPushPreferencesSchema = PushPreferencesSchema.partial().refine(
   (value) => Object.keys(value).length > 0,
   { message: '변경할 알림 설정을 선택해 주세요.' },
@@ -40,6 +46,7 @@ export const DEFAULT_PUSH_PREFERENCES: PushPreferences = {
   team: true,
   market: true,
   social: true,
+  nudge: true,
 };
 
 /** Only activity metadata; the local save and player name never leave the device here. */

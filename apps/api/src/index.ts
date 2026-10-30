@@ -5,10 +5,12 @@ import { app } from './app.js';
 import { updateClubStrength } from './clubStrength/update.js';
 import { runBackupStep } from './cron/backup.js';
 import { runSnapshotOffload } from './careerSnapshots.js';
+import { runMainClubBackfill } from './db/repos/mainClub.js';
 import { runDailyTick } from './cron/dailyRunner.js';
 import { runSeasonEventsArchive } from './cron/seasonEventsArchive.js';
 import { runSeasonTelemetryArchive } from './cron/seasonTelemetryArchive.js';
 import { runSeasonGauge } from './cron/seasonGauge.js';
+import { runScheduledBalance } from './cron/balanceSchedule.js';
 import { loadSeasonSchedule } from './seasonSchedule.js';
 import { runInfraHealth } from './cron/infraHealth.js';
 import { createDb } from './db/client.js';
@@ -16,15 +18,19 @@ import { runFirstsRescan } from './db/repos/firsts.js';
 import type { Bindings } from './env.js';
 import { chatSocket } from './chat/socket.js';
 import { liveSocket } from './live/socket.js';
-import { runNewsPush } from './push/dispatch.js';
-import { runPersonalPush } from './push/personal.js';
+import { publishPushWork } from './push/queuePublish.js';
+import { consumePushWork } from './push/queue.js';
+import { queueRetentionPushes, retentionPushEnabled } from './push/retention.js';
 import { queueReengagement } from './push/reengagement.js';
 import { consumeCareerReminders, queueCareerReminders } from './push/careerReminder.js';
 import { queueAttendanceReminders } from './push/attendanceReminder.js';
 import { consumeCupResults, publishCupResults } from './push/cupResult.js';
 import { consumeCommunityPush } from './push/communityQueue.js';
 import { runCup } from './team/cup.js';
+import { finishStaleLive } from './team/liveMatch.js';
 import { runCupAutopilot } from './team/cupAutopilot.js';
+import { runLeague } from './team/league.js';
+import { alertLeagueStalls } from './team/leagueAlert.js';
 import { purgeEdgeOrigin } from './edgeCache.js';
 import { STALE } from './edgeKeys.js';
 import { runSeasonClose } from './team/seasonClose.js';
@@ -37,6 +43,7 @@ export { LiveHub } from './live/hub.js';
 export { ChatRoom } from './chat/room.js';
 export default {
   queue(batch: MessageBatch<unknown>, env: Bindings) {
+    if (batch.queue === 'offside-push-production') return consumePushWork(batch, env);
     if (batch.queue === 'offside-billing-production') return consumeBillingAlerts(batch, env);
     if (batch.queue === 'offside-cup-push-production') return consumeCupResults(batch, env);
     return batch.queue === 'offside-career-push-production'
@@ -60,6 +67,13 @@ export default {
     // 시즌 일정(게이지가 확정한 마감·다음 시즌)을 먼저 입힌다 — 아래 결산·보존·게이지가 같은 일정을 본다.
     await loadSeasonSchedule(env.DB, true).catch(logged('season-schedule'));
     if (controller.cron === '0 19 * * *') {
+      // Bounded daily retention; FK SET NULL removes stale purchase attribution too.
+      await env.DB.prepare(
+        `DELETE FROM acquisition_sessions WHERE id IN (SELECT id FROM acquisition_sessions WHERE received_at < ? ORDER BY received_at LIMIT 1000)`,
+      )
+        .bind(new Date(controller.scheduledTime - 90 * 86400_000).toISOString())
+        .run()
+        .catch(logged('acquisition-retention'));
       let completed = false;
       await runDailyTick(env, controller.scheduledTime)
         .then((daily) => {
@@ -67,16 +81,36 @@ export default {
         })
         .finally(() => runInfraHealth(env, Date.now(), completed).catch(logged('infra-health')));
     } else {
+      // T-11-488 개막 예약한 밸런스를 새 시즌 첫 실행에서 켠다(새 커리어가 바로 받게 맨 앞에서).
+      await runScheduledBalance(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
+        .then(async (r) => {
+          if (!r) return;
+          console.log(JSON.stringify({ level: 'info', job: 'balance-schedule', ...r }));
+          if (r.activated && env.PUBLIC_API_ORIGIN)
+            await purgeEdgeOrigin(env.PUBLIC_API_ORIGIN, STALE.balanceActivated());
+        })
+        .catch(logged('balance-schedule'));
       // 푸시 단계가 실패해도 뒤의 시즌 결산·컵 진행은 돈다(다음 5분에 다시 보낸다).
       await recoverBillingAlerts(env, controller.scheduledTime).catch(logged('billing-recovery'));
-      await runNewsPush(env).catch(logged('news-push'));
-      if (new Date(controller.scheduledTime).getUTCMinutes() === 0)
-        await queueCareerReminders(env, controller.scheduledTime).catch(logged('career-reminder'));
-      await queueReengagement(env, controller.scheduledTime).catch(logged('reengagement'));
+      await publishPushWork(env, 'news', controller.scheduledTime).catch(
+        logged('news-push-publish'),
+      );
+      // T-11-501 리텐션 푸시를 켜면 옛 커리어 독려 · 재방문 안내는 쌓지 않는다(같은 사람에게 겹쳐 가지 않게).
+      if (retentionPushEnabled(env))
+        await queueRetentionPushes(env, controller.scheduledTime).catch(logged('retention-push'));
+      else {
+        if (new Date(controller.scheduledTime).getUTCMinutes() === 0)
+          await queueCareerReminders(env, controller.scheduledTime).catch(
+            logged('career-reminder'),
+          );
+        await queueReengagement(env, controller.scheduledTime).catch(logged('reengagement'));
+      }
       await queueAttendanceReminders(env, controller.scheduledTime).catch(
         logged('attendance-reminder'),
       );
-      await runPersonalPush(env, controller.scheduledTime).catch(logged('personal-push'));
+      await publishPushWork(env, 'personal', controller.scheduledTime).catch(
+        logged('personal-push-publish'),
+      );
       // 시즌 진행 게이지: 30분마다 세어 굳히고, 90%에 닿으면 마감 시각을 확정해 시즌 일정에
       // 다음 시즌과 함께 적는다. 결산보다 먼저 돈다.
       await runSeasonGauge(env.DB, new Date(controller.scheduledTime).toISOString())
@@ -91,6 +125,12 @@ export default {
             JSON.stringify({ level: 'error', job: 'season-close', error: logErrorText(e) }),
           ),
         );
+      // T-11-387 고르지 않고 떠난 장면 경기를 자동 선택으로 마감한다.
+      await finishStaleLive(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
+        .then(
+          (r) => r.done && console.log(JSON.stringify({ level: 'info', job: 'team-live', ...r })),
+        )
+        .catch(logged('team-live'));
       // T-11-145 오프사이드 컵: 추첨 → 시각이 된 경기 → 진출·보상. 실패하면 다음 5분에 이어서 한다.
       await runCup(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
         .then(async (r) => {
@@ -104,6 +144,25 @@ export default {
         .catch((e: unknown) =>
           console.error(JSON.stringify({ level: 'error', job: 'cup', error: logErrorText(e) })),
         );
+      // T-11-418b 오프사이드 리그: 배치 안내 → 배치 → 시각이 된 경기 → 알림. 공개 조회는 엣지 캐시가 짧아(30 · 60초) 지우지 않는다.
+      await runLeague(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
+        .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'league', ...r })))
+        .catch(logged('league'));
+      // T-11-445 리그가 밀리면 운영 슬랙에 알린다(15분마다, 문제마다 한 번).
+      if (new Date(controller.scheduledTime).getUTCMinutes() % 15 === 0)
+        await alertLeagueStalls(
+          env,
+          createDb(env.DB),
+          new Date(controller.scheduledTime).toISOString(),
+        )
+          .then(
+            (r) =>
+              r.length &&
+              console.log(
+                JSON.stringify({ level: 'info', job: 'league-alert', alerted: r.length }),
+              ),
+          )
+          .catch(logged('league-alert'));
       // T-11-251 다음 회차 만들기 → 접수 시작 알림 → 밀린 단계 슬랙 경보(15분마다).
       await runCupAutopilot(env, controller.scheduledTime).catch(logged('cup-autopilot'));
       // A cron round can commit before a later step fails; purge even on a partial run.
@@ -139,6 +198,10 @@ export default {
         await runBackupStep(env.DB, env.BACKUP, env.ENVIRONMENT, controller.scheduledTime)
           .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'backup', ...r })))
           .catch(logged('backup'));
+      // T-11-467 이 기능 전에 은퇴한 선수의 주 리그 · 클럽을 조금씩 채운다(다 채우면 멈춘다).
+      await runMainClubBackfill(env.DB)
+        .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'main-club', ...r })))
+        .catch(logged('main-club'));
       // T-11-311 이 기능 전에 은퇴한 기록의 상세 스냅샷을 D1에서 R2로 조금씩 옮긴다(다 옮기면 멈춘다).
       await runSnapshotOffload(env)
         .then(

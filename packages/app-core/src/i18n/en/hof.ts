@@ -29,7 +29,6 @@ export const hof: Translation<HofMsgs> = {
   season: 'Season',
   seasonAria: 'Record season',
   allSeasons: 'All seasons',
-  notOpen: ' (opens soon)',
   filter: 'Filter',
   filterLabel: (p) => `Filter, ${p.pos}, ${p.sort}`,
   filterA11y: (p) => `Filter, ${p.label}`,
@@ -40,6 +39,12 @@ export const hof: Translation<HofMsgs> = {
   all: 'All',
   rankBasis: 'Rank by',
   sortGroup: 'Ranking type',
+  basisScore:
+    'Legend score combines career totals, trophies, individual awards and international caps.',
+  basisValue:
+    'Retirement value is the average market value of the best three seasons, adjusted by legend score.',
+  basisGa: 'Goal contributions (pts) are goals plus assists.',
+  basisPeak: 'Peak OVR is the highest overall rating in the career.',
   opens: (p) => `${p.name} opens ${p.when} (Korea time).`,
   opensNote:
     "Players created after the opening appear here once they retire. Players created now (preseason) stay in the 'Preseason' and 'All' tabs.",

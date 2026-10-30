@@ -9,6 +9,8 @@ const ko = {
   news: '소식',
   tabsLabel: '게시판',
   pinned: '고정',
+  // T-11-440 이번에 앱을 연 뒤 아직 열지 않은 새 글 표시
+  postNew: 'NEW',
   loadFail: '소식을 불러오지 못했어요.',
   empty: '아직 올라온 글이 없어요.',
   more: '더 보기',
@@ -28,7 +30,8 @@ const ko = {
   loginGate: '구글로 로그인하면 댓글을 쓸 수 있어요.',
   loginGateApple: '구글이나 Apple로 로그인하면 댓글을 쓸 수 있어요.',
   loginGoogle: '구글로 로그인',
-  nicknameGate: '댓글에 쓸 닉네임을 먼저 정해 주세요. 설정의 계정에서 바꿀 수 있어요.',
+  nicknameGate:
+    '댓글에 쓸 닉네임을 먼저 정해 주세요. 내 구단 화면의 프로필 편집에서 정할 수 있어요.',
   commentAsBefore: '',
   commentAsAfter: ' 이름으로 남겨요. 욕설·비방·광고 같은 부적절한 댓글은 지우고 이용을 제한해요(',
   terms: '이용약관',
@@ -58,6 +61,7 @@ const ko = {
   translationsHint: '비워 두면 한국어 원문을 보여 줘요. 한국어를 고치면 번역도 같이 고쳐 주세요.',
   langEn: '영어',
   langJa: '일본어',
+  langZh: '번체 중국어',
   translateDraft: '번역 초안 만들기',
   translating: '번역하는 중…',
   translateDone: '번역 초안을 채웠어요. 읽어 보고 고쳐 주세요.',

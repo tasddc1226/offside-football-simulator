@@ -1,10 +1,13 @@
 import { IAP_PRODUCTS, type IapProductId } from '@offside/contracts';
+import { SEASON_PASS_PRODUCT_ID } from '@offside/contracts/season-pass';
+import { MEMBERSHIP_PRODUCT_ID } from '@offside/contracts/membership';
 import { billing as ko } from '../i18n/ko/billing.js';
 import { billing as en } from '../i18n/en/billing.js';
 import type { Bindings } from '../env.js';
+import { notifyHook, postNotify } from '../notifyHook.js';
 
 export type BillingAlert = {
-  store: 'apple' | 'google';
+  store: 'apple' | 'google' | 'xsolla';
   transactionId: string;
   kind: 'purchase' | 'renewal' | 'refund' | 'test';
   productId: string;
@@ -61,9 +64,14 @@ type AlertRow = {
 };
 export function billingSlackMessage(row: AlertRow, id: string, locale: 'ko' | 'en' = 'ko') {
   const L = locale === 'ko' ? ko : en;
-  const kind = L.kinds[row.kind as keyof typeof L.kinds] ?? row.kind;
+  const web = row.store === 'xsolla';
+  const kind =
+    (web ? L.webKinds[row.kind as keyof typeof L.webKinds] : undefined) ??
+    L.kinds[row.kind as keyof typeof L.kinds] ??
+    row.kind;
   const environment = row.test ? L.sandbox : L.live;
-  const store = row.store === 'apple' ? 'App Store' : 'Google Play';
+  const store =
+    row.store === 'apple' ? 'App Store' : row.store === 'xsolla' ? 'Xsolla' : 'Google Play';
   const product = Object.hasOwn(IAP_PRODUCTS, row.product_id)
     ? IAP_PRODUCTS[row.product_id as IapProductId]
     : null;
@@ -74,7 +82,11 @@ export function billingSlackMessage(row: AlertRow, id: string, locale: 'ko' | 'e
         ? L.quantity(L.items[product.item], product.qty)
         : row.product_id === 'com.offsidelab.app.remove_ads'
           ? L.removeAds
-          : row.product_id;
+          : row.product_id === SEASON_PASS_PRODUCT_ID
+            ? L.seasonPass
+            : row.product_id === MEMBERSHIP_PRODUCT_ID
+              ? L.membership
+              : row.product_id;
   const date = new Date(row.created_at);
   const time = Number.isNaN(date.getTime())
     ? row.created_at
@@ -89,7 +101,8 @@ export function billingSlackMessage(row: AlertRow, id: string, locale: 'ko' | 'e
         hourCycle: 'h23',
       }).format(date);
   const heading = `OFFSIDE · ${kind} · ${environment}`;
-  const detail = `${L.product}: ${productName}\n${L.store}: ${store}\n${L.received}: ${time} (${L.timezone})`;
+  const channel = web ? L.channels.web : L.channels.app;
+  const detail = `${L.product}: ${productName}\n${L.channel}: ${channel}\n${L.store}: ${store}\n${L.received}: ${time} (${L.timezone})`;
   const notice = row.test ? L.testNotice : '';
   const reference = `${L.productId}: ${row.product_id} · ${L.reference}: ${id.slice(0, 12)}`;
   const plain = (text: string) => ({ type: 'plain_text', text, emoji: true });
@@ -129,16 +142,9 @@ export async function consumeBillingAlerts(batch: MessageBatch<unknown>, env: Bi
       continue;
     }
     try {
-      const url = new URL(env.BILLING_SLACK_WEBHOOK);
-      if (url.origin !== 'https://hooks.slack.com' || !url.pathname.startsWith('/services/'))
-        throw new Error('invalid webhook');
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(billingSlackMessage(row, body.id)),
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (!response.ok || (await response.text()).trim() !== 'ok')
+      const hook = notifyHook(env.BILLING_SLACK_WEBHOOK);
+      if (!hook) throw new Error('invalid webhook');
+      if (!(await postNotify(hook, billingSlackMessage(row, body.id))))
         throw new Error('delivery rejected');
       await env.DB.prepare('UPDATE billing_alerts SET sent_at = ?, lease_until = 0 WHERE id = ?')
         .bind(new Date().toISOString(), body.id)

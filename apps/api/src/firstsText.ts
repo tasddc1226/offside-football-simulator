@@ -2,6 +2,7 @@ import type { FirstsResponse, TickerFirst } from '@offside/contracts';
 import { CONFEDS, CONF_ORDER } from '@offside/contracts/nations';
 import { retireAtOf, nextRetireAt } from '@offside/contracts/service-seasons';
 import { FIXED_JA, LADDER_JA, RECORD_JA, retireCapJa } from './i18n/ja/firsts.js';
+import { FIXED_ZH, LADDER_ZH, RECORD_ZH, retireCapZh } from './i18n/zh/firsts.js';
 import type { Lang } from './lang.js';
 
 // T-11-106 서버 최초 기록·서버 기록 문구의 영어. 판정(firsts.ts)은 한국어 문장과 id를 그대로 만들고, 응답을 보낼 때
@@ -101,6 +102,7 @@ const TABLES: Record<Exclude<Lang, 'ko'>, Tables> = {
           : `First to retire at ${cap}!`,
   },
   ja: { fixed: FIXED_JA, ladder: LADDER_JA, record: RECORD_JA, retireCap: retireCapJa },
+  zh: { fixed: FIXED_ZH, ladder: LADDER_ZH, record: RECORD_ZH, retireCap: retireCapZh },
 };
 
 /** 최초 기록 id → 요청 언어 문장. 모르는 id면 null. season은 시즌마다 다른 기록(은퇴 나이)에 쓴다. */
