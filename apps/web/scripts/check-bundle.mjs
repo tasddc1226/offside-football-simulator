@@ -118,6 +118,8 @@ const EAGER_NAMESPACES = new Set([
   'seasonPick',
   'settingsApi',
   'sheetCore',
+  // T-11-588 업무 모드 틀(main.ts가 바로 붙이는 SheetChrome · skin 탭 제목)의 꾸밈 글자. 전에는 코드에 박힌 한국어였다.
+  'sheetChrome',
   'shell',
   'shellInstall',
   'shellLogin',

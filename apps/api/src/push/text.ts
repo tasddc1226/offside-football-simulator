@@ -13,10 +13,11 @@ import { PUSH_TAIL_ZH, PUSH_ZH } from '../i18n/zh/push.js';
 import { cupText } from '../cupText.js';
 import { retentionText } from './retentionText.js';
 import type { Lang } from '../lang.js';
+import { TRANSLATED_LOCALES } from '@offside/contracts/i18n';
 
-// T-11-106 서버가 만든 알림 문구. 푸시는 보낼 때 기기의 언어를 알 수 없어(기기 등록에 언어가 없다) 한국어로 보내고,
-// 커리어 독려만 마지막 활동 언어로 발송한다. 알림함은 읽을 때 요청 언어로 바꿔 보여 준다. 공지·릴리즈 노트의 본문(글 제목)은 보낼 때의 한국어 제목이다 — 운영자가 쓴
-// 번역(T-11-146 board_posts.i18n_json)은 게시판에서만 고른다.
+// T-11-106 서버가 만든 알림 문구. 기기 등록에는 언어가 없어 푸시는 받는 사람의 마지막 게임 언어(career_activity.lang)로
+// 보낸다(T-11-588, 그 전에는 커리어 독려만). 알림함은 읽을 때 요청 언어로 바꿔 보여 준다. 공지·릴리즈 노트 푸시의 본문(글 제목)은
+// 운영자가 쓴 번역(T-11-146 board_posts.i18n_json)의 제목을 고르고, 없으면 보낼 때의 한국어 제목이다(push/dispatch.ts).
 const EN: Record<string, string> = {
   '오프사이드 공지': 'OFFSIDE notice',
   '오프사이드 릴리즈 노트': 'OFFSIDE release notes',
@@ -70,6 +71,10 @@ const TABLES: Record<
   ja: { exact: PUSH_JA, tails: PUSH_TAIL_JA, sep: '。' },
   zh: { exact: PUSH_ZH, tails: PUSH_TAIL_ZH, sep: '。' },
 };
+
+/** T-11-588 푸시를 쓸 언어. career_activity.lang이 옮기는 언어가 아니면(기록이 없으면) 한국어. */
+export const pushLang = (lang: string | null | undefined): Lang =>
+  (TRANSLATED_LOCALES as readonly string[]).includes(lang ?? '') ? (lang as Lang) : 'ko';
 
 export function pushText(ko: string, lang: Lang): string {
   if (lang === 'ko') return ko;

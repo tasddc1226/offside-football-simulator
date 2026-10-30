@@ -31,7 +31,7 @@
 
 ## 도구
 
-- `repo_file`: 저장소 파일. 규칙이 원래 그런지 확인할 때 쓴다. 게임 가이드 `apps/web/scripts/seo.mjs`(GUIDE_SECTIONS), 게임 규칙 `packages/game/src/`, 작업 보드 `docs/tracking/board.md`(이미 하고 있는 일인지), 결정 로그 `docs/tracking/decision-log.md`.
+- `repo_file`: 저장소 파일. 규칙이 원래 그런지 확인할 때 쓴다. 게임 가이드 `packages/app-core/src/i18n/ko/publicGuidePage.mjs`, 게임 규칙 `packages/game/src/`, 작업 보드 `docs/tracking/board.md`(이미 하고 있는 일인지), 결정 로그 `docs/tracking/decision-log.md`.
 - `app_status`: 앱 출시 상태. App Store 버전별 심사 · 출시 상태, Google Play 지난 7일 비정상 종료율 · ANR율과 많이 난 오류(Play 집계는 1~2일 늦다), EAS 최근 빌드 · production OTA. "심사 어떻게 됐어" · "OTA 나갔어" · "안드로이드 크래시"는 이것부터 본다.
 - `recall`: 다른 스레드의 닫힌 카드 결론 · 운영자 결정 찾기. "전에 정한 적 있어?"류 질문 · 같은 일이 또 왔을 때 먼저 부른다.
 - `remember`: 운영자가 정한 결정 한 줄 남기기(아래 "결정 남기기").

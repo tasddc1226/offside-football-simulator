@@ -4,6 +4,8 @@ import { postExpo } from './transport.js';
 import { latePushResult } from './result.js';
 import { publishPushWork } from './queuePublish.js';
 import { badgeOf, unreadBadges } from './badge.js';
+import { pushLang, pushText } from './text.js';
+import { translatedPost } from '../db/repos/boards.js';
 
 const BATCH = 100;
 const MINUTE = 60_000;
@@ -22,6 +24,9 @@ type Delivery = {
   board: 'notice' | 'release';
   post_id: string;
   title: string;
+  /** T-11-588 글의 번역(board_posts.i18n_json)과 받는 사람의 마지막 게임 언어. */
+  i18n_json: string | null;
+  lang: string | null;
   expires_at: string;
   eligible: number;
 };
@@ -59,7 +64,8 @@ async function claim(
     .run();
   const rows = await db
     .prepare(
-      `SELECT q.*, e.board, e.post_id, e.title, e.expires_at, n.id AS notification_id,
+      `SELECT q.*, e.board, e.post_id, e.title, e.expires_at, n.id AS notification_id, b.i18n_json,
+      (SELECT lang FROM career_activity WHERE profile_id = q.profile_id) AS lang,
       CASE WHEN d.installation_hash IS NOT NULL AND d.token = q.token AND d.session_id = q.session_id
         AND d.profile_id = q.profile_id AND d.updated_at >= ? AND s.channel = 'app'
         AND s.profile_id = q.profile_id AND s.revoked_at IS NULL AND s.expires_at > ?
@@ -143,6 +149,16 @@ async function finish(
   await db.batch(writes);
 }
 
+/** T-11-588 받는 사람 언어의 제목(고정 문구)과 본문(글 제목 번역, 번체 중국어가 없으면 영어, 둘 다 없으면 한국어). */
+function newsText(r: Delivery) {
+  const lang = pushLang(r.lang);
+  const translated = translatedPost(r.i18n_json, lang);
+  return {
+    title: pushText(r.board === 'notice' ? '오프사이드 공지' : '오프사이드 릴리즈 노트', lang),
+    body: (translated?.title ?? r.title).slice(0, 160),
+  };
+}
+
 async function send(
   env: Bindings,
   rows: Delivery[],
@@ -161,8 +177,7 @@ async function send(
       rows.map((r) => ({
         to: r.token,
         ...badgeOf(badges, r.profile_id),
-        title: r.board === 'notice' ? '오프사이드 공지' : '오프사이드 릴리즈 노트',
-        body: r.title.slice(0, 160),
+        ...newsText(r),
         channelId: 'news',
         sound: 'default',
         ttl: 3600,

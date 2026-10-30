@@ -4,7 +4,13 @@ import { BRAND_VERSION, CAREER_OG_BANDS, createHeadMarkup } from '../scripts/seo
 import { POS } from '@offside/game/data';
 import { LEGEND_BANDS } from '@offside/game/legend-bands';
 import { POS_LABEL } from '@offside/game/pos-label';
-import { bandCardPath, careerShareMeta, injectShareMeta, OG_VERSION } from './share-meta.js';
+import {
+  bandCardPath,
+  careerShareMeta,
+  injectShareMeta,
+  OG_VERSION,
+  shareLang,
+} from './share-meta.js';
 
 const entry = {
   id: '0f8a3b52-6c1d-4e0a-9b7e-1a2b3c4d5e6f',
@@ -44,6 +50,22 @@ describe('careerShareMeta', () => {
     expect(bandCardPath(612, null)).toBe(`/og-career-lg_world-${BRAND_VERSION}.png`);
     expect(bandCardPath(612, 'ST')).toBe(`/og-career-lg_club-${BRAND_VERSION}.png`);
     expect(m.url).toBe(`https://offside-lab.com/career/${entry.id}`);
+  });
+
+  it('T-11-588 공유 링크의 ?lang=으로 제목·설명을 그 언어로 쓴다', () => {
+    const en = careerShareMeta(entry, 'https://offside-lab.com', 'en');
+    expect(en.title).toBe('손흥<민> · World-class legend (Legend 612 pts)');
+    expect(en.description).toBe('Retired at 36 · 540 matches, 231 goals, 98 assists · 6 trophies.');
+    expect(en.url).toBe(`https://offside-lab.com/career/${entry.id}?lang=en`);
+    const zh = careerShareMeta({ ...entry, name: null, number: 7 }, 'https://x.test', 'zh');
+    expect(zh.title).toMatch(/^匿名前鋒 No\.7 · /);
+    for (const lang of ['ja', 'zh'] as const)
+      expect(
+        JSON.stringify(careerShareMeta({ ...entry, name: null }, 'https://x.test', lang)),
+      ).not.toMatch(/[가-힣]/);
+    expect(shareLang('ja')).toBe('ja');
+    expect(shareLang('fr')).toBe('ko');
+    expect(shareLang(null)).toBe('ko');
   });
 
   it('이름이 없으면 익명 표기, 소속이 없으면 소속을 뺀다', () => {

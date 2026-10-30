@@ -95,7 +95,9 @@ import { serverStatus } from './serverStatus';
 import { settings } from './settings';
 import { settingsApi } from './settingsApi';
 import { share } from './share';
+import { shareMeta } from './shareMeta';
 import { sheetAchieve } from './sheetAchieve';
+import { sheetChrome } from './sheetChrome';
 import { sheetContract } from './sheetContract';
 import { sheetCore } from './sheetCore';
 import { sheetMinigame } from './sheetMinigame';
@@ -215,7 +217,9 @@ export const en = {
   settings,
   settingsApi,
   share,
+  shareMeta,
   sheetAchieve,
+  sheetChrome,
   sheetContract,
   sheetCore,
   sheetMinigame,

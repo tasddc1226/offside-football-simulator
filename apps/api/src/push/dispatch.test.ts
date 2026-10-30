@@ -6,6 +6,7 @@ import { runNewsPush } from './dispatch.js';
 import { unregisterPushDevice } from '../db/repos/pushDevices.js';
 import { sha256Hex } from '../db/hash.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
+import { listNotifications } from '../db/repos/notifications.js';
 
 const now = Date.parse('2026-10-04T03:00:00.000Z');
 const iso = (n = now) => new Date(n).toISOString();
@@ -70,6 +71,7 @@ beforeEach(async () => {
   await ctx.env.DB.batch(
     [
       'push_preferences',
+      'career_activity',
       'notifications',
       'push_news_events',
       'push_devices',
@@ -182,6 +184,41 @@ describe('공지 자동 푸시', () => {
     });
     await runNewsPush(production(), now + 16 * 60_000, receipt);
     expect(receipt).toHaveBeenCalledTimes(1);
+  });
+  it('T-11-588 받는 사람의 게임 언어로 제목과 글 제목 번역을 보낸다(중국어 번역이 없으면 영어)', async () => {
+    for (const id of ['a', 'b', 'c']) await device(id);
+    await ctx.env.DB.batch(
+      [
+        ['a', 'en'],
+        ['b', 'zh'],
+      ].map(([id, lang]) =>
+        ctx.env.DB.prepare(
+          "INSERT INTO career_activity (profile_id, state, last_active_at, lang) VALUES (?, 'active', ?, ?)",
+        ).bind(id, iso(), lang),
+      ),
+    );
+    await createPost(
+      ctx.db,
+      'notice',
+      { ...fields, i18n: { en: { title: 'Today notice', body: 'Body' } } },
+      'author',
+      iso(),
+    );
+    const sent: { to: string; title: string; body: string }[] = [];
+    const transport = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
+      const body = JSON.parse(init!.body as string) as typeof sent;
+      sent.push(...body);
+      return Response.json({ data: body.map((_, i) => ({ status: 'ok', id: `ticket-${i}` })) });
+    });
+    await runNewsPush(production(), now, transport);
+    const of = (id: string) => sent.find((m) => m.to === `ExpoPushToken[${id}]`);
+    expect(of('a')).toMatchObject({ title: 'OFFSIDE notice', body: 'Today notice' });
+    expect(of('b')).toMatchObject({ title: 'OFFSIDE 公告', body: 'Today notice' });
+    expect(of('c')).toMatchObject({ title: '오프사이드 공지', body: '오늘 공지' });
+    // 알림함도 읽는 언어의 글 제목으로 보인다.
+    const inbox = await listNotifications(ctx.env.DB, 'a', iso(), {}, 'en');
+    expect(inbox.items[0]).toMatchObject({ kind: 'news', body: 'Today notice' });
+    expect((await listNotifications(ctx.env.DB, 'a', iso(), {})).items[0]!.body).toBe('오늘 공지');
   });
   it.each(['device', 'session', 'post', 'token', 'expiry', 'preference'] as const)(
     '발송 전 %s 변경을 확인하고 취소한다',
