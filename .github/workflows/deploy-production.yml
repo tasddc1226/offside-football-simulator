@@ -9,6 +9,11 @@ on:
         default: preflight
         type: choice
         options: [preflight, deploy]
+      skip_release_notes:
+        description: 'Skip publishing in-game release notes for this deployment'
+        required: true
+        default: false
+        type: boolean
       expected_sha:
         description: 'Exact main commit SHA to inspect or deploy'
         required: true
@@ -431,7 +436,7 @@ jobs:
   release-notes:
     name: Publish in-game release notes
     needs: [production-release, app-update, release-tag]
-    if: inputs.mode == 'deploy'
+    if: inputs.mode == 'deploy' && !inputs.skip_release_notes
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment:
