@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
+import { countTouch } from '../platform/playSignals';
 
 export function PopSheet({
   label,
@@ -39,7 +40,11 @@ export function PopSheet({
       onShow={Keyboard.dismiss}
       onRequestClose={() => onClose?.()}
     >
-      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: c.scrim }}>
+      {/* 모달은 앱 루트 뷰 밖에 그려져 자동 플레이 탐지 터치를 여기서 따로 센다(T-11-590). */}
+      <View
+        style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: c.scrim }}
+        onTouchStart={countTouch}
+      >
         {onClose ? (
           <Pressable
             accessible={false}
