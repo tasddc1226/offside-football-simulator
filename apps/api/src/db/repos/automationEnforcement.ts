@@ -172,7 +172,7 @@ export async function sweepAutomation(
           max(coalesce(json_extract(signals_json,'$.headless'),0)) AS headless,
           sum(coalesce(json_extract(signals_json,'$.synthetic'),0)) AS synthetic,
           sum(coalesce(json_extract(signals_json,'$.clicks'),0)) AS clicks,
-          sum(CASE WHEN json_extract(signals_json,'$.clicks') + json_extract(signals_json,'$.keys') + json_extract(signals_json,'$.touches') = 0 THEN 1 ELSE 0 END) AS noInput
+          sum(CASE WHEN json_extract(signals_json,'$.app') IS NULL AND json_extract(signals_json,'$.clicks') + json_extract(signals_json,'$.keys') + json_extract(signals_json,'$.touches') = 0 THEN 1 ELSE 0 END) AS noInput
           FROM career_seasons WHERE career_id IN (${ids.map(() => '?').join(',')}) AND signals_json IS NOT NULL AND json_valid(signals_json)
           GROUP BY career_id`,
             )
