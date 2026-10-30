@@ -22,7 +22,7 @@ import {
 } from '../push/community.js';
 import { publishCommunityPush } from '../push/communityQueue.js';
 
-// T-11-015 채팅방. 방 하나(이름 CHAT_ROOM)가 소켓을 모두 붙들고, 받은 줄을 SQLite에 적은 뒤 모두에게 보낸다.
+// T-11-015 채팅방. 언어마다 방 하나(이름 chatRoomName, T-11-583)가 소켓을 모두 붙들고, 받은 줄을 SQLite에 적은 뒤 모두에게 보낸다.
 // LiveHub처럼 Hibernation API로 받는다 — 조용하면 잠들어 비용이 없고, 핑에는 깨지 않고 런타임이 pong을 돌려준다.
 // 누구나 읽고, 쓰려면 API가 발급한 입장권(issueTicket)을 소켓 주소에 붙여 온다. 소켓마다 누가 쓰는지와 최근
 // 전송 시각(도배 방지)을 attachment에 둔다 — 잠들었다 깨도 남는다.
@@ -87,6 +87,12 @@ const send = (ws: WebSocket, message: string) => {
 const sendAll = (sockets: WebSocket[], event: ChatServerEvent) => {
   const message = JSON.stringify(event);
   for (const ws of sockets) send(ws, message);
+};
+
+/** T-11-583 운영자 채팅 알림에 붙이는 방 표시. 한국어 방(예전 이름)은 붙이지 않는다. */
+export const roomTag = (name: string | undefined): string => {
+  const lang = name?.split(':')[1];
+  return lang ? `[${lang.toUpperCase()}] ` : '';
 };
 
 export class ChatRoom extends DurableObject<Bindings> {
@@ -301,7 +307,12 @@ export class ChatRoom extends DurableObject<Bindings> {
         .filter((r) => r.hidden === 0)
         .flatMap((r) => {
           const m = toMessage(r);
-          const event: CommunityEvent = { ...m, type: 'chat', now: new Date(m.at).toISOString() };
+          const event: CommunityEvent = {
+            ...m,
+            body: roomTag(this.ctx.id?.name) + m.body,
+            type: 'chat',
+            now: new Date(m.at).toISOString(),
+          };
           return communityStatements(this.env, recipients, event);
         });
       if (stmts.length) {

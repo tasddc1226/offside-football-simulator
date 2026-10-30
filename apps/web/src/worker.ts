@@ -1,4 +1,5 @@
 import { withCampaignBanner } from './app-banner.js';
+import { storeRedirect } from './store-redirect.js';
 import { serveNews, newsSitemap } from './public-news.js';
 import {
   LEGENDS_TTL,
@@ -27,6 +28,9 @@ interface Ctx {
 
 const PUBLIC_PATHS = new Set([
   '/',
+  '/app',
+  '/app/',
+  '/app/index.html',
   '/guide',
   '/guide/',
   '/guide/index.html',
@@ -134,6 +138,19 @@ const SHORT_LINKS: Record<string, string> = {
 };
 
 async function route(request: Request, env: Env, url: URL, ctx: Ctx): Promise<Response> {
+  if (url.pathname === '/get' || url.pathname === '/get/')
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: storeRedirect(
+          url,
+          request.headers.get('User-Agent') ?? '',
+          env.APPLE_PROVIDER_TOKEN,
+        ),
+        'Cache-Control': 'no-store',
+        'X-Robots-Tag': 'noindex, nofollow',
+      },
+    });
   const short = SHORT_LINKS[url.pathname.toLowerCase()];
   if (short)
     return new Response(null, {

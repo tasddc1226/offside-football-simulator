@@ -1,6 +1,16 @@
 import { CHAT_HISTORY, type ChatMessage, type ChatServerEvent } from '@offside/contracts/chat';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { applyChat, chatSocketUrl, EMPTY_CHAT, openChat, type ChatView } from './chat.js';
+import { setLocale } from '@offside/contracts/i18n';
+import { setStorage } from '@offside/game/storage';
+import {
+  applyChat,
+  chatSocketUrl,
+  currentChatRoom,
+  EMPTY_CHAT,
+  openChat,
+  setChatRoom,
+  type ChatView,
+} from './chat.js';
 
 const msg = (id: string, author = 'a'): ChatMessage => ({
   id,
@@ -98,11 +108,25 @@ describe('T-11-015 채팅 상태', () => {
     expect(applyChat(v, { t: 'new-thing' } as unknown as ChatServerEvent, skip)).toBe(v);
   });
 
-  it('소켓 주소는 API 주소를 ws로 바꾸고 입장권을 붙인다', () => {
-    expect(chatSocketUrl(null, 'https://api.example')).toBe('wss://api.example/v1/chat/ws');
-    expect(chatSocketUrl('t 1', 'http://localhost:8787')).toBe(
-      'ws://localhost:8787/v1/chat/ws?t=t%201',
+  it('소켓 주소는 API 주소를 ws로 바꾸고 언어 방과 입장권을 붙인다', () => {
+    expect(chatSocketUrl(null, 'ko', 'https://api.example')).toBe(
+      'wss://api.example/v1/chat/ws?room=ko',
     );
+    expect(chatSocketUrl('t 1', 'ja', 'http://localhost:8787')).toBe(
+      'ws://localhost:8787/v1/chat/ws?room=ja&t=t%201',
+    );
+  });
+
+  it('T-11-583 고른 방이 없으면 화면 언어 방, 고르면 그 방을 기억한다', () => {
+    const store = new Map<string, string>();
+    setStorage({ getItem: (k) => store.get(k) ?? null, setItem: (k, v) => void store.set(k, v) });
+    setLocale('en');
+    expect(currentChatRoom()).toBe('en');
+    setChatRoom('ja');
+    expect(currentChatRoom()).toBe('ja');
+    store.set('ft_chat_room', 'xx');
+    expect(currentChatRoom()).toBe('en');
+    setLocale('ko');
   });
 });
 
@@ -160,7 +184,7 @@ describe('T-11-015 openChat', () => {
     const views: ChatView[] = [];
     const chat = openChat((v) => views.push(v));
     await vi.waitFor(() => expect(sockets).toHaveLength(1));
-    expect(sockets[0]!.url).toContain('?t=tk0');
+    expect(sockets[0]!.url).toContain('&t=tk0');
     expect(chat.send('안녕')).toBe(false); // hello 전
     sockets[0]!.onopen?.();
     sockets[0]!.emit({
@@ -190,7 +214,7 @@ describe('T-11-015 openChat', () => {
     expect(views.at(-1)!.status).toBe('retrying');
     await vi.advanceTimersByTimeAsync(2_000);
     expect(sockets).toHaveLength(2);
-    expect(sockets[1]!.url).toContain('?t=tk1');
+    expect(sockets[1]!.url).toContain('&t=tk1');
     sockets[1]!.emit({
       t: 'hello',
       messages: [msg('1'), msg('3', 'b'), msg('4', 'b')],

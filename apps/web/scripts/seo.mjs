@@ -4,6 +4,7 @@ import sharp from 'sharp';
 import guideCopy from '../../../packages/app-core/src/i18n/ko/publicGuide.mjs';
 import ARTICLES from '../../../packages/app-core/src/i18n/ko/publicArticles.mjs';
 import { APP_SHELL_MARK } from './app-shell.mjs';
+import { LANDING_STATS, landingHtml } from './landing.mjs';
 
 // T-11-073 아이콘 도형은 brand/build-icons.mjs 한 곳에 있다(라이트·다크 두 벌).
 import { BRAND_VERSION, brandSvg as iconSvg } from '../brand/build-icons.mjs';
@@ -26,6 +27,12 @@ export const PUBLIC_PAGES = {
     title: '오프사이드 | 이번 생은 축구다 — 축구선수 커리어 시뮬레이션',
     description:
       '이번 생은 축구다. 오프사이드(풀타임)에서 고교 3학년부터 은퇴까지, 훈련·이적·이벤트 선택으로 한 선수의 커리어를 만듭니다. 설치 없이 바로 하는 무료 웹 시뮬레이션 게임입니다.',
+  },
+  // T-11-584 앱 · 웹 랜딩. 게임 셸 없이 독립 문서로 나간다(landing.mjs).
+  '/app/': {
+    title: '오프사이드 | 고3부터 은퇴까지 축구 선수 키우기 게임',
+    description:
+      '고3 선수 한 명을 프로 데뷔, 이적, 입대, 국가대표를 거쳐 은퇴까지 키우는 축구 인생게임이에요. 은퇴한 선수로 구단주 팀을 만들어 다른 유저와 경기해요. iPhone · Android 앱과 웹에서 할 수 있어요.',
   },
   '/guide/': {
     title: '게임 가이드 | 오프사이드',
@@ -126,6 +133,30 @@ export function createStructuredData(origin, path) {
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'KRW' },
       },
     ];
+  // 랜딩의 평점은 화면에 보이는 App Store 평점 · 리뷰 수와 같은 값이다(LANDING_STATS).
+  if (path === '/app/')
+    return [
+      {
+        '@type': ['VideoGame', 'MobileApplication'],
+        name: '오프사이드',
+        alternateName: 'OFFSIDE',
+        description: PUBLIC_PAGES['/app/'].description,
+        url,
+        image: `${origin}/og-offside-${BRAND_VERSION}.png`,
+        inLanguage: ['ko', 'en', 'ja', 'zh-Hant'],
+        genre: ['스포츠', '시뮬레이션'],
+        gamePlatform: ['iOS', 'Android', 'Web browser'],
+        applicationCategory: 'GameApplication',
+        operatingSystem: 'iOS, Android, Web',
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'KRW' },
+        aggregateRating: {
+          '@type': 'AggregateRating',
+          ratingValue: LANDING_STATS.rating,
+          ratingCount: LANDING_STATS.ratingCount,
+          bestRating: 5,
+        },
+      },
+    ];
   const article = ARTICLES.find((a) => articlePath(a.slug) === path);
   const trail = [
     { name: '홈', item: home },
@@ -202,7 +233,7 @@ export function createSitemapXml(origin) {
 export function createLlmsTxt(origin) {
   const link = (path) =>
     `- [${PUBLIC_PAGES[path].title}](${absoluteUrl(origin, path)}): ${PUBLIC_PAGES[path].description}`;
-  return `# 오프사이드 (OFFSIDE · 풀타임)\n\n> ${PUBLIC_PAGES['/'].description}\n\n웹 브라우저에서 무료로 플레이하는 한국어 축구 선수 커리어 스토리 시뮬레이션 게임이다. 설치나 로그인 없이 바로 시작할 수 있다.\n\n## 문서\n\n${['/guide/', ...ARTICLES.map((a) => articlePath(a.slug)), '/faq/', '/fairness/', '/about/'].map(link).join('\n')}\n\n## 정책\n\n${['/legal/terms/', '/legal/privacy/'].map(link).join('\n')}\n`;
+  return `# 오프사이드 (OFFSIDE · 풀타임)\n\n> ${PUBLIC_PAGES['/'].description}\n\n웹 브라우저에서 무료로 플레이하는 한국어 축구 선수 커리어 스토리 시뮬레이션 게임이다. 설치나 로그인 없이 바로 시작할 수 있다.\n\n## 문서\n\n${['/app/', '/guide/', ...ARTICLES.map((a) => articlePath(a.slug)), '/faq/', '/fairness/', '/about/'].map(link).join('\n')}\n\n## 정책\n\n${['/legal/terms/', '/legal/privacy/'].map(link).join('\n')}\n`;
 }
 export function createHeaders({ indexingEnabled }) {
   const publicHeaders = PUBLIC_PATHS.map(
@@ -728,6 +759,10 @@ export const STATIC_PAGES = {
   '/legal/privacy/': privacyBody,
 };
 
+/** T-11-584 /app/ 랜딩 문서. 다른 공개 페이지와 같은 SEO 머리(색인 · canonical · 구조화 데이터)를 쓴다. */
+export const landingPage = (config) =>
+  landingHtml(createHeadMarkup(config, '/app/'), PUBLIC_PAGES['/app/'].title);
+
 export function seoPlugin(config) {
   let outputDirectory = 'dist';
   return {
@@ -741,6 +776,10 @@ export function seoPlugin(config) {
       server.middlewares.use(async (req, res, next) => {
         const pathname = (req.url ?? '').split('?')[0];
         const path = pathname.endsWith('/') ? pathname : `${pathname}/`;
+        if (path === '/app/') {
+          res.setHeader('Content-Type', 'text/html; charset=utf-8');
+          return res.end(landingPage(config));
+        }
         const body = STATIC_PAGES[path];
         if (!body) return next();
         // #app 은 pageHtml이 본문으로 갈아 끼우므로 앱 셸 렌더(T-10-041)는 건너뛴다.
@@ -769,6 +808,8 @@ export function seoPlugin(config) {
         await mkdir(directory, { recursive: true });
         await writeFile(join(directory, 'index.html'), pageHtml(base, config, path, body));
       }
+      await mkdir(join(outputDirectory, 'app'), { recursive: true });
+      await writeFile(join(outputDirectory, 'app', 'index.html'), landingPage(config));
       await writeFile(
         join(outputDirectory, 'news-shell.html'),
         pageHtml(base, config, '/', '<!-- public-news-body -->', { forceNoIndex: true }),
