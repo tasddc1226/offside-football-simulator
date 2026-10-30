@@ -13,6 +13,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   investCost: 'Self-investment cost multiplier',
   boostCost: 'Potential boost cost multiplier',
   boostExtraTotal: 'Extra boost tries per career',
+  boostGreat: 'Potential boost great success share',
   careCost: 'Conditioning cost multiplier',
   potMean: 'Potential average',
   potSd: 'Potential spread',

@@ -52,4 +52,6 @@ export const fairness: Translation<FairnessMsgs> = {
   historyPatchDay: (p) => `${p.day} 套用`,
   historyOpenNote: '在更新說明中查看',
   version: (p) => (p.v ? `目前新生涯套用平衡版本${p.v}。` : '目前新生涯套用預設平衡（版本 0）。'),
+  boostGreatPct: (p) => `${p.pct}%（大成功 ${p.great}%）`,
+  boostGreatNote: (p) => `成功時有${p.pct}%為大成功，一次提升兩階。挑戰最後一個階段時沒有大成功。`,
 };

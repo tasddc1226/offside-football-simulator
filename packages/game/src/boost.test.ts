@@ -1,11 +1,12 @@
-import { describe, expect, it } from 'vitest';
-import { applyBalance } from './balance.js';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { applyBalance, setLatestBalance } from './balance.js';
 import {
   BOOST_MAX,
   boostChance,
   boostCost,
   boostExtraLeft,
   boostFreeOpen,
+  boostGreatChance,
   boostStatus,
   boostSureOpen,
   boostTicketOpen,
@@ -32,6 +33,13 @@ const nextRoll = (v: number) =>
   setActiveRng({ ...createRng(1), next: () => v } as ReturnType<typeof createRng>);
 
 describe('T-11-083 잠재력 강화', () => {
+  // 이 묶음은 대성공(T-11-593)을 끄고 예전 규칙을 본다(newGame이 최신 설정을 적용한다). 대성공은 아래 묶음에서 따로 본다.
+  beforeEach(() => setLatestBalance({ version: 1, values: { boostGreat: 0 } }));
+  afterEach(() => {
+    setLatestBalance(null);
+    applyBalance();
+  });
+
   it('첫 시즌 전·29세 초과·자금 부족이면 시도할 수 없고 상태를 바꾸지 않는다', () => {
     expect(boostStatus(player({ seasons: 0 }))).toBe('locked');
     expect(boostStatus(player({ age: 30 }))).toBe('aged');
@@ -64,7 +72,7 @@ describe('T-11-083 잠재력 강화', () => {
     const bonus = s.flags.potBonus ?? 0;
     nextRoll(0);
     const r = tryBoost(s)!;
-    expect(r).toMatchObject({ ok: true, lv: 1, cost: 7000, chance: 50 });
+    expect(r).toMatchObject({ ok: true, great: false, lv: 1, cost: 7000, chance: 50 });
     expect(s.money).toBe(43000);
     expect(s.flags.potBonus).toBe(bonus + 1);
     expect(s.boost).toMatchObject({ lv: 1, fails: 0, year: s.year });
@@ -234,6 +242,37 @@ describe('T-11-083 잠재력 강화', () => {
     boostCost(s);
     boostChance(s);
     expect(getActiveRng().getState()).toEqual(before);
+  });
+});
+
+describe('T-11-593 잠재력 강화 대성공', () => {
+  it('T-11-593 성공 판정과 같은 난수가 대성공 확률보다 낮으면 두 단계를 오르고 기록에 대성공을 남긴다', () => {
+    const s = player({ salary: 10000, money: 50000 });
+    const bonus = s.flags.potBonus ?? 0;
+    expect(boostGreatChance(s)).toBe(10);
+    nextRoll(0.09);
+    expect(tryBoost(s)).toMatchObject({ ok: true, great: true, lv: 2, greatChance: 10 });
+    expect(s.flags.potBonus).toBe(bonus + 2);
+    expect(s.boost!.log[0]).toMatchObject({ lv: 0, ok: true, g: true });
+    expect(s.log[0]!.text).toContain('대성공');
+  });
+
+  it('T-11-593 대성공 비율이 0이면 예전과 같고, +4 도전에는 대성공이 없다', () => {
+    const s = player({ salary: 10000, money: 50000 });
+    try {
+      applyBalance({ boostGreat: 0 });
+      expect(boostGreatChance(s)).toBe(0);
+      nextRoll(0);
+      expect(tryBoost(s)).toMatchObject({ ok: true, great: false, lv: 1 });
+      expect(s.boost!.log[0]!.g).toBeUndefined();
+    } finally {
+      applyBalance();
+    }
+    const top = player({ salary: 10000, money: 50000 });
+    top.boost = { lv: BOOST_MAX - 1, fails: 0, log: [] };
+    expect(boostGreatChance(top)).toBe(0);
+    nextRoll(0);
+    expect(tryBoost(top)).toMatchObject({ ok: true, great: false, lv: BOOST_MAX });
   });
 });
 

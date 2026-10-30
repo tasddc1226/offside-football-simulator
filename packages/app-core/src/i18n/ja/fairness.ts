@@ -60,4 +60,7 @@ export const fairness: Translation<FairnessMsgs> = {
     p.v
       ? `いま新しいキャリアにはバランスバージョン${p.v}が適用されます。`
       : 'いま新しいキャリアには基本バランス(バージョン0)が適用されます。',
+  boostGreatPct: (p) => `${p.pct}%（大成功 ${p.great}%）`,
+  boostGreatNote: (p) =>
+    `成功のうち${p.pct}%は大成功で、一気に2段階上がります。最後の段階への挑戦には大成功がありません。`,
 };

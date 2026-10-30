@@ -16,6 +16,8 @@
 // 쓸모없어졌다), 단계 · 나이 상한은 같다(최고
 // 단계를 넘기지 않으니 잠재력 상한은 그대로다). 확률을 굴리지 않아 RNG를 쓰지 않는다. 이번 시즌의 한 번 · 추가 시도 상한에
 // 세지 않는다.
+// T-11-593 대성공: 성공 중 BAL.boostGreat 비율은 두 단계를 한 번에 올린다(최고 단계를 넘는 시도엔 없다, 확정 강화엔 없다). 성공 판정과
+// 같은 난수 값으로 가른다(roll × 100 < 대성공 확률) — RNG를 더 쓰지 않아 대성공 비율이 0이면 예전과 결과가 같다.
 import { BAL } from './balance.js';
 import { rnd } from './rng.js';
 import { fmtMoney } from './player.js';
@@ -52,6 +54,13 @@ export function boostChance(s: GameState): number {
   const b = boostState(s);
   if (b.lv >= BOOST_MAX) return 0;
   return Math.round(Math.min(1, BOOST.p[b.lv]! + BOOST.pity * b.fails) * 100);
+}
+
+/** T-11-593 다음 시도의 대성공(두 단계) 확률(%, 정수). 두 단계를 올리면 최고 단계를 넘거나 비율이 0이면 0. */
+export function boostGreatChance(s: GameState): number {
+  const b = boostState(s);
+  if (b.lv + 2 > BOOST_MAX) return 0;
+  return Math.round(boostChance(s) * BAL.boostGreat);
 }
 
 export type BoostStatus =
@@ -105,11 +114,15 @@ export function boostSureOpen(s: GameState): boolean {
 
 export interface BoostResult {
   ok: boolean;
+  /** T-11-593 대성공 — 두 단계를 올렸다. */
+  great: boolean;
   /** 시도 뒤 단계. */
   lv: number;
   cost: number;
   /** 시도한 확률(%). */
   chance: number;
+  /** T-11-593 시도한 대성공 확률(%). 없으면 0. */
+  greatChance: number;
 }
 
 /**
@@ -136,10 +149,14 @@ export function tryBoost(s: GameState, pay: BoostPay = 'money'): BoostResult | n
   const cost = free ? 0 : boostCost(s);
   const sure = pay === 'sure';
   const chance = sure ? 100 : boostChance(s);
-  const ok = sure || rnd() * 100 < chance;
+  const greatChance = sure ? 0 : boostGreatChance(s);
+  const roll = sure ? 0 : rnd() * 100;
+  const ok = sure || roll < chance;
+  const great = ok && roll < greatChance;
+  const up = great ? 2 : ok ? 1 : 0;
   s.money -= cost;
   const next: BoostState = {
-    lv: ok ? b.lv + 1 : b.lv,
+    lv: b.lv + up,
     fails: ok ? 0 : b.fails + 1,
     // 확정 강화는 이번 시즌의 한 번을 쓰지 않는다(선수 자금 시도는 그대로 남는다).
     year: sure ? b.year : s.year,
@@ -152,6 +169,7 @@ export function tryBoost(s: GameState, pay: BoostPay = 'money'): BoostResult | n
         p: chance,
         c: cost,
         ok,
+        ...(great ? { g: true as const } : {}),
         ...(pay === 'ad' ? { ad: true as const } : {}),
         ...(pay === 'club' ? { club: true as const } : {}),
         ...(pay === 'ticket' ? { tk: true as const } : {}),
@@ -161,10 +179,18 @@ export function tryBoost(s: GameState, pay: BoostPay = 'money'): BoostResult | n
     ],
   };
   s.boost = next;
-  if (ok) s.flags.potBonus = (s.flags.potBonus ?? 0) + 1;
+  if (ok) s.flags.potBonus = (s.flags.potBonus ?? 0) + up;
   // 잠재력 등급은 은퇴 때 공개한다 — 소식에도 단계만 남긴다.
-  log(s, boostLine(pay, ok, next.lv, cost), ok ? 'good' : 'bad');
-  return { ok, lv: next.lv, cost, chance };
+  log(
+    s,
+    great
+      ? cost > 0
+        ? BT.greatCost({ lv: next.lv, cost: fmtMoney(cost) })
+        : BT.great({ lv: next.lv })
+      : boostLine(pay, ok, next.lv, cost),
+    ok ? 'good' : 'bad',
+  );
+  return { ok, great, lv: next.lv, cost, chance, greatChance };
 }
 
 /** 강화 소식 한 줄. 선수 자금이 아니면 무엇으로 시도했는지 괄호에 적는다. */

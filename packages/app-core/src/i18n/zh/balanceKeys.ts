@@ -13,6 +13,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   investCost: '自我投資費用倍率',
   boostCost: '潛力強化費用倍率',
   boostExtraTotal: '每段生涯追加強化次數',
+  boostGreat: '潛力強化大成功比例',
   careCost: '身體管理費用倍率',
   potMean: '潛力平均值',
   potSd: '潛力離散度',

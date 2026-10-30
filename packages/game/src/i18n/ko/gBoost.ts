@@ -16,6 +16,11 @@ const ko = {
   // T-11-513 구단 자금 확정 강화.
   successSure: (p: { lv: number }) =>
     `구단 자금으로 확정 강화를 했습니다. 잠재력이 ${p.lv}단계가 되었습니다.`,
+  // T-11-593 대성공(두 단계).
+  great: (p: { lv: number }) =>
+    `잠재력 강화 대성공. 두 단계를 한 번에 올려 ${p.lv}단계가 되었습니다.`,
+  greatCost: (p: { lv: number; cost: string }) =>
+    `잠재력 강화 대성공. 두 단계를 한 번에 올려 ${p.lv}단계가 되었습니다. ${p.cost}원을 썼습니다.`,
 };
 export type GBoostMsgs = typeof ko;
 export const gBoostText = ns('gBoost', ko);

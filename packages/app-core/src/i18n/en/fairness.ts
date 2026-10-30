@@ -60,4 +60,7 @@ export const fairness: Translation<FairnessMsgs> = {
     p.v
       ? `New careers currently use balance version ${p.v}.`
       : 'New careers currently use the default balance (version 0).',
+  boostGreatPct: (p) => `${p.pct}% (great ${p.great}%)`,
+  boostGreatNote: (p) =>
+    `${p.pct}% of successes are great successes that jump two levels at once. There is no great success when going for the last level.`,
 };

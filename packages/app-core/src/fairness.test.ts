@@ -44,7 +44,12 @@ describe('fairness', () => {
       'C 48.2%',
       'D 18.0%',
     ]);
-    expect(v.boost.map(([, p]) => p)).toEqual(['50%', '35%', '25%', '15%']);
+    expect(v.boost.map(([, p]) => p)).toEqual([
+      '50% (대성공 10%)',
+      '35% (대성공 7%)',
+      '25% (대성공 5%)',
+      '15%',
+    ]);
     expect(oddsPct(0.0004)).toBe('<0.1%');
     expect(oddsPct(0.026)).toBe('2.6%');
   });

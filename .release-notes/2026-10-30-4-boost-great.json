@@ -1,0 +1,25 @@
+{
+  "id": "t-11-593-boost-great",
+  "title": "잠재력 강화 대성공",
+  "items": [
+    "잠재력 강화에 성공하면 그중 20%는 대성공으로 두 단계를 한 번에 올라요. +4단계에 도전할 때는 대성공이 없어요"
+  ],
+  "en": {
+    "title": "Potential boost great success",
+    "items": [
+      "20% of successful potential boosts are now great successes that raise two levels at once. There is no great success when going for level +4."
+    ]
+  },
+  "ja": {
+    "title": "ポテンシャル強化の大成功",
+    "items": [
+      "ポテンシャル強化に成功すると、そのうち20%は大成功で一気に2段階上がります。+4段階への挑戦には大成功がありません。"
+    ]
+  },
+  "zh": {
+    "title": "潛力強化大成功",
+    "items": ["潛力強化成功時，其中 20% 為大成功，一次提升兩個階段。挑戰第 +4 階段時沒有大成功。"]
+  },
+  "availability": "web-app",
+  "balance": { "changes": [{ "key": "boostGreat", "from": 0, "to": 0.2 }] }
+}
