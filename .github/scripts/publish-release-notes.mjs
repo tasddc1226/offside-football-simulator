@@ -7,6 +7,8 @@ export const ENDPOINT = 'https://api.offside-lab.com/v1/internal/release-notes';
 
 /** T-11-146 이 날짜(파일명 앞자리) 이후의 항목은 영어(`en`)·일본어(`ja`) 문구가 있어야 한다. */
 export const TRANSLATED_SINCE = '2026-10-08';
+/** T-11-588 이 날짜 이후의 항목은 번체 중국어(`zh`) 문구도 있어야 한다. 그 전 항목은 중국어 화면에 영어로 보인다. */
+export const ZH_SINCE = '2026-10-31';
 
 const textOk = (t) =>
   !!t &&
@@ -19,7 +21,7 @@ const textOk = (t) =>
   t.items.length >= 1 &&
   t.items.length <= 12 &&
   t.items.every((s) => typeof s === 'string' && !!s.trim() && s.length <= 500 && !/[\r\n]/.test(s));
-/** 영어·일본어 문구: 제목·항목만(ReleaseNoteTextSchema와 같다). */
+/** 영어·일본어·번체 중국어 문구: 제목·항목만(ReleaseNoteTextSchema와 같다). */
 const validText = (t) => textOk(t) && Object.keys(t).every((k) => k === 'title' || k === 'items');
 /** T-11-333 밸런스 패치 표시: `true` 또는 `{ changes: [{ key, from, to }] }`(ReleaseNoteSchema.balance와 같다). */
 const validBalance = (b) =>
@@ -60,19 +62,29 @@ export function readEntries(directory) {
       !['web', 'app', 'web-app', 'web-app-pending'].includes(e.availability) ||
       (e.appVersion !== undefined && !/^\d+\.\d+\.\d+$/.test(e.appVersion)) ||
       (e.availability === 'web-app-pending' && !e.appVersion) ||
-      ['en', 'ja'].some((l) => e[l] !== undefined && !validText(e[l])) ||
+      ['en', 'ja', 'zh'].some((l) => e[l] !== undefined && !validText(e[l])) ||
       !validBalance(e.balance) ||
       Object.keys(e).some(
         (k) =>
-          !['id', 'title', 'items', 'en', 'ja', 'availability', 'appVersion', 'balance'].includes(
-            k,
-          ),
+          ![
+            'id',
+            'title',
+            'items',
+            'en',
+            'ja',
+            'zh',
+            'availability',
+            'appVersion',
+            'balance',
+          ].includes(k),
       ) ||
       ids.has(e.id)
     )
       throw new Error('Invalid or duplicate release-note entry.');
     if (names[i] >= TRANSLATED_SINCE && (!e.en || !e.ja))
       throw new Error(`${names[i]}: add English (en) and Japanese (ja) text.`);
+    if (names[i] >= ZH_SINCE && !e.zh)
+      throw new Error(`${names[i]}: add Traditional Chinese (zh) text.`);
     ids.add(e.id);
   });
   const payloadBytes = Buffer.byteLength(JSON.stringify({ sha: 'a'.repeat(40), entries }));

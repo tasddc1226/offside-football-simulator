@@ -61,7 +61,7 @@ const CONT_STAGES = [
 
 describe.each(LANGS)('저장된 이름 → %s', (lang, dict) => {
   beforeEach(() => {
-    cur = lang === 'en' ? LANGS[0] : LANGS[1];
+    cur = LANGS.find(([l]) => l === lang)!;
   });
 
   it('한국어에서는 그대로 돌려준다', () => {

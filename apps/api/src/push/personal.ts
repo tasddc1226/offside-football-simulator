@@ -1,15 +1,10 @@
 import type { Bindings } from '../env.js';
-import { pushText } from './text.js';
+import { pushLang, pushText } from './text.js';
 import { postExpo } from './transport.js';
 import { kstDay } from '@offside/contracts/kst';
 import { latePushResult } from './result.js';
 import { communityOwnerEmail } from './community.js';
 import { badgeOf, unreadBadges } from './badge.js';
-import { TRANSLATED_LOCALES, type Locale } from '@offside/contracts/i18n';
-
-/** 이탈 알림을 쓸 언어(career_activity.lang). 옮기는 언어가 아니면 한국어. */
-const retentionLang = (lang: string | null): Locale =>
-  (TRANSLATED_LOCALES as readonly string[]).includes(lang ?? '') ? (lang as Locale) : 'ko';
 
 const BATCH = 100;
 const MINUTE = 60_000;
@@ -44,7 +39,8 @@ type Row = {
   token: string;
   title: string;
   retention_stage: number | null;
-  retention_lang: string | null;
+  /** T-11-588 받는 사람의 마지막 게임 언어(career_activity.lang). 모든 개인 알림을 이 언어로 보낸다. */
+  lang: string | null;
   /** T-11-501 리텐션 원장(retention_pushes)의 캠페인. 옛 커리어 독려는 null(retention_stage만 있다). */
   retention_campaign: string | null;
   body: string;
@@ -145,7 +141,7 @@ async function claim(
       COALESCE((SELECT stage FROM career_reminder_outcomes WHERE notification_id=n.id),
         (SELECT stage FROM retention_pushes WHERE notification_id=n.id)) AS retention_stage,
       (SELECT campaign FROM retention_pushes WHERE notification_id=n.id) AS retention_campaign,
-      (SELECT lang FROM career_activity WHERE profile_id=q.profile_id) AS retention_lang,
+      (SELECT lang FROM career_activity WHERE profile_id=q.profile_id) AS lang,
     CASE WHEN d.token = q.token AND d.session_id = q.session_id AND d.profile_id = q.profile_id
       AND d.updated_at >= ? AND s.channel = 'app' AND s.profile_id = q.profile_id
       AND s.revoked_at IS NULL AND s.expires_at > ? AND p.deleted_at IS NULL AND p.id IS NOT NULL
@@ -215,11 +211,8 @@ async function send(
       rows.map((r) => ({
         to: r.token,
         ...badgeOf(badges, r.profile_id),
-        title: r.retention_stage ? pushText(r.title, retentionLang(r.retention_lang)) : r.title,
-        body: (r.retention_stage
-          ? pushText(r.body, retentionLang(r.retention_lang))
-          : r.body
-        ).slice(0, 160),
+        title: pushText(r.title, pushLang(r.lang)),
+        body: pushText(r.body, pushLang(r.lang)).slice(0, 160),
         channelId: 'news',
         sound: 'default',
         ttl: 3600,

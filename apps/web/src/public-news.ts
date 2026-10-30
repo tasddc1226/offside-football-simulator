@@ -1,3 +1,4 @@
+import { publicDocPath } from '@offside/app-core/links';
 import { parseBody } from '@offside/app-core/boardText';
 import { boardText as D } from '@offside/app-core/i18n/ko/board';
 import { shellText as L } from '@offside/app-core/i18n/ko/shell';
@@ -59,7 +60,7 @@ export async function readNewsIndex(hostname: string): Promise<NewsSummary[]> {
   return pages.flat();
 }
 const nav = () =>
-  `<nav class="public-news-nav"><a href="/">OFFSIDE</a><a href="/news/">${escape(D.publicNews)}</a><a href="/guide/">${escape(L.footGuide)}</a><a href="/faq/">${escape(L.footFaq)}</a><a href="/fairness/">${escape(L.footFairness)}</a></nav>`;
+  `<nav class="public-news-nav"><a href="/">OFFSIDE</a><a href="/news/">${escape(D.publicNews)}</a><a href="${publicDocPath('/guide/')}">${escape(L.footGuide)}</a><a href="${publicDocPath('/faq/')}">${escape(L.footFaq)}</a><a href="/fairness/">${escape(L.footFairness)}</a></nav>`;
 const bodyHtml = (body: string) =>
   parseBody(body)
     .map((b) =>
