@@ -53,12 +53,34 @@ T-11-454. 웹(offside-lab.com) 구단주 화면에서 앱과 같은 인앱 상�
 
 ## 출시 전 확인 (운영자)
 
-1. 엑솔라 라이선스 계약 서명(퍼블리셔 계정에서 사업자 정보 · 정산 계좌). 계약 전에는 샌드박스만 된다.
-2. 통신판매업 신고, 사이트 아래 사업자 정보 표시(상호 · 대표자 · 사업자등록번호 · 통신판매업 신고번호 · 주소 · 연락처).
+1. 엑솔라 라이선스 계약 서명(퍼블리셔 계정에서 사업자 정보 · 정산 계좌). 계약 전에는 샌드박스만 된다. (2026-10-29 승인)
+2. 통신판매업 신고, 사이트 아래 사업자 정보 표시. T-11-589부터 GitHub production 환경 변수 `BUSINESS_INFO`(JSON)를 넣으면
+   홈 · 설정 푸터와 이용약관 7항에 보인다. 공개 저장소라 실명 · 주소를 코드에 두지 않는다. 칸이 하나라도 비면 아무것도 보이지 않는다.
+   ```json
+   {
+     "name": "상호",
+     "owner": "대표자",
+     "regNo": "000-00-00000",
+     "mailOrderNo": "제0000-경기광명-0000호",
+     "address": "사업장 주소",
+     "phone": "전화번호"
+   }
+   ```
 3. 게임물 등급: 웹 배포 게임의 등급분류(GRAC) 필요 여부를 확인한다. 앱 스토어의 IARC 등급은 웹에 적용되지 않는다.
-4. 이용약관 · 개인정보처리방침 · 가이드 FAQ에 웹 결제(엑솔라가 판매자로 처리하는 결제 정보, 환불 · 청약철회)를 더한다(`apps/web/scripts/seo.mjs`).
-   지금 문구는 "결제 상품은 앱에서 삽니다"라서, 켜는 PR에서 함께 고친다.
-5. 운영에 `XSOLLA_SANDBOX` 없이 + `WEB_PAY_TESTERS`(본인)로 실결제 1건 · 환불 1건을 해 본 뒤 테스터 목록을 지운다.
+4. 이용약관(1항 웹 결제 · 청약철회 · 미성년자 취소) · 개인정보처리방침(4항 · 9항 Xsolla) · 가이드 상점 문구는 T-11-589에서 고쳤다.
+   약관 시행일은 켜는 날로 바꾼다.
+
+## 켜기 (운영)
+
+1. GitHub production 환경 변수 `BUSINESS_INFO`를 넣는다(위 2번).
+2. 운영 API: var `WEB_PAY_ENABLED=1` · `XSOLLA_PROJECT_ID=318798`은 T-11-589에서 `apps/api/wrangler.jsonc` production vars에 넣어 두었다.
+   secret은 운영자가 직접 넣는다(`pnpm --filter @offside/api exec wrangler secret put <이름> --env production`). **`WEB_PAY_TESTERS`(운영자
+   프로필 id)를 먼저 넣고** `XSOLLA_API_KEY` · `XSOLLA_WEBHOOK_SECRET`을 넣는다. 두 키가 들어가는 순간 열리므로 순서를 바꾸면 모두에게 열린다.
+   `XSOLLA_SANDBOX`는 넣지 않는다.
+3. 엑솔라 프로젝트 설정 → 웹훅 서버 주소를 `https://api.offside-lab.com/v1/web-pay/webhook`으로 바꾸고 '웹훅 사용'을 켠다(프로젝트당 1개라
+   staging 시험은 이때부터 못 한다). 웹훅 비밀 키는 staging에 쓴 것과 같다.
+4. 운영 배포 뒤 운영자 계정으로 가장 싼 묶음 실결제 1건 → 아이템 확인 → 퍼블리셔 계정에서 환불 → 회수 · 매출 탭 확인.
+5. `WEB_PAY_TESTERS`를 지우면(`wrangler secret delete`) 모든 로그인 구단주에게 열린다.
 
 ## 환불
 

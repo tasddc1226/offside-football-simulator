@@ -1,6 +1,8 @@
 <script lang="ts">
   import { DC_GALLERY_URL, publicDocPath } from '@offside/app-core/links';
   import { shellText as L } from '@offside/app-core/i18n/ko/shell';
+  import { bizInfoText as B } from '@offside/app-core/i18n/ko/bizInfo';
+  import { businessCheckUrl, businessInfo as biz } from '../businessInfo';
 </script>
 
 <!-- 문의·SNS 링크 푸터 — 홈과 설정 화면 맨 아래에 같은 모양으로 둔다. -->
@@ -20,9 +22,17 @@
   </p>
   <p>{L.footCommunity} <a href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">{L.footGallery}</a></p>
   <p>{L.footFootballData}</p>
+  {#if biz}
+    <p class="biz-info" data-testid="business-info">
+      {B.name} {biz.name} · {B.owner} {biz.owner} · {B.regNo} {biz.regNo}
+      (<a href={businessCheckUrl(biz.regNo)} target="_blank" rel="noopener noreferrer">{B.check}</a>)
+      · {B.mailOrder} {biz.mailOrderNo} · {B.address} {biz.address} · {B.phone} {biz.phone}
+    </p>
+  {/if}
 </footer>
 
 <style>
   .public-links { display:flex; flex-wrap:wrap; justify-content:center; gap:4px 16px; }
   .public-links a { display:inline-flex; align-items:center; min-height:44px; }
+  .biz-info { font-size: var(--fs-label); word-break: keep-all; }
 </style>
