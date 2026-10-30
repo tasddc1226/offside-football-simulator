@@ -175,6 +175,8 @@ async function route(request: Request, env: Env, url: URL, ctx: Ctx): Promise<Re
   const isPublicPage =
     PUBLIC_PATHS.has(url.pathname) || (asset.status === 200 && GUIDE_ARTICLE.test(url.pathname));
   const isDiscovery = url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml';
+  // T-11-585 랜딩 스크린샷 · QR은 이미지 검색에 잡히게 둔다(나머지 정적 파일은 noindex 그대로).
+  if (url.pathname.startsWith('/landing/') && asset.status === 200) return asset;
   // T-10-004: Vite 산출물(/assets/*)은 파일명에 내용 해시가 들어가 내용이 바뀌면 URL도 바뀐다 —
   // 재방문 때 재검증 없이 캐시를 그대로 쓰도록 1년 immutable로 내려 준다.
   if (url.pathname.startsWith('/assets/') && asset.status === 200)
