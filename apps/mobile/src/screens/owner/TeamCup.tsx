@@ -31,6 +31,7 @@ import { useOnPull } from '../../ui/refresh';
 import { TeamLogo } from '../../components/TeamLogo';
 import { CupTrophy } from '../../ui/CupTrophy';
 import { dayTimeText, phaseLabel, reasonText, roundLabel, stageLabel, whenText } from './cupText';
+import { askPushAfter } from '../../platform/pushAsk';
 
 export interface CupState {
   cup: CupResponse | null;
@@ -211,7 +212,10 @@ function CupEntry({ state }: { state: CupState }) {
     try {
       const r = await (kind === 'enter' ? enterCup(cupId) : withdrawCup(cupId));
       if (!r.ok) toast(r.error.message || A.actionFail);
-      else toast(kind === 'enter' ? L.toastEntered : L.toastWithdrawn);
+      else {
+        toast(kind === 'enter' ? L.toastEntered : L.toastWithdrawn);
+        if (kind === 'enter') void askPushAfter('cup');
+      }
       await reload(true);
     } finally {
       lock.current = false;
