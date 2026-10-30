@@ -184,3 +184,42 @@ test('결제 확인이 늦으면 자동으로 들어온다고 알리고, 다음�
   await expect(page.getByText('결제가 끝나 아이템이 들어왔어요.')).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem('ft_webpay_pending'))).toBeNull();
 });
+
+test('T-11-591 클럽 멤버십: 웹 30일 이용권을 사고 돌아오면 멤버십 창을 다시 열어 새 상태를 보인다', async ({
+  page,
+}) => {
+  const MEMBER = 'com.offsidelab.app.club_monthly';
+  await setup(page, { ...config, membership: { productId: MEMBER, amount: 4900, days: 30 } });
+  let paid = false;
+  await page.route(`${API}/v1/membership`, (r) =>
+    r.fulfill(
+      ok(
+        paid
+          ? {
+              active: true,
+              until: '2026-12-01T00:00:00.000Z',
+              autoRenew: null,
+              store: null,
+              stores: [],
+            }
+          : { active: false, until: null, autoRenew: null, store: null, stores: [] },
+      ),
+    ),
+  );
+  await page.route(`${API}/v1/web-pay/orders/${ORDER}`, (r) => r.fulfill(ok({ status: 'PAID' })));
+  const orderBody = await fakePayStation(page);
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="membership"]').click();
+  const buy = page.locator('[data-act="member-web-buy"]');
+  await expect(buy).toContainText('웹에서 30일 이용권 사기 · 4,900원');
+  await buy.click();
+  await page.waitForURL(/sandbox-secure\.xsolla\.com/);
+  expect(orderBody()).toEqual({ productId: MEMBER });
+  paid = true;
+  await page.goto(`/?webpay=${ORDER}`);
+  await expect(page.getByText('결제가 끝나 멤버십 혜택이 시작됐어요.')).toBeVisible();
+  await expect(page.getByText('멤버십을 이용하고 있어요')).toBeVisible();
+  // 웹 이용권 중에도 이어서 살 수 있다.
+  await expect(page.locator('[data-act="member-web-buy"]')).toBeVisible();
+});

@@ -39,6 +39,9 @@ export const seasonPass: Translation<SeasonPassMsgs> = {
   pastLead: 'You still have rewards to claim.',
   aheadTitle: (p) => `You already have the Season ${p.season} pass`,
   aheadLead: 'Progress starts when that season opens.',
+  webBuyBtn: (p: { price: string }) => `Buy on the web · ₩${p.price}`,
+  webBuyNote:
+    'Pay by card, PayPal or a local method. This season’s pass opens as soon as payment completes.',
   notOnSale: 'The pass is not on sale right now.',
   webBuy: 'You can buy the pass in the app. Rewards from your pass can be claimed on the web too.',
   login: 'Only logged-in owners can use the season pass.',

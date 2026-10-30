@@ -11,6 +11,8 @@ export const webPay: Translation<WebPayMsgs> = {
   opening: 'Opening checkout…',
   startFail: "Couldn't open checkout. Please try again in a moment.",
   confirming: 'Confirming payment…',
+  donePass: 'Payment complete. Your season pass is open.',
+  doneMember: 'Payment complete. Your membership perks have started.',
   done: 'Payment complete. Your items are in.',
   pending:
     "Your items will arrive once the payment is confirmed. If you didn't pay, you can ignore this.",
