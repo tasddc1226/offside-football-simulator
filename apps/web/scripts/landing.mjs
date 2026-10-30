@@ -74,17 +74,18 @@ const icon = {
 const ctas = (place) =>
   `<div class="ctas"><a class="btn web" data-web href="${webHref(place).replaceAll('&', '&amp;')}">${icon.web}<span><small>설치 없이</small>웹에서 하기</span></a><a class="btn store ios" data-store href="${getHref('ios', place)}">${icon.ios}<span><small>Download on the</small>App Store</span></a><a class="btn store android" data-store href="${getHref('android', place)}">${icon.android}<span><small>GET IT ON</small>Google Play</span></a></div>`;
 
+// 표시 폭은 첫 화면 겹친 사진 150~210px, 갤러리 휴대폰 56vw · PC 260px 안팎이라 320px 판을 먼저 쓴다(T-11-585).
 const shot = ([key, , alt], lazy) =>
-  `<img src="/landing/${key}.webp" width="540" height="1169" alt="${alt}"${lazy ? ' loading="lazy"' : ''} decoding="async">`;
+  `<img src="/landing/${key}-320.webp" srcset="/landing/${key}-320.webp 320w, /landing/${key}.webp 540w" sizes="${lazy ? '(min-width: 820px) 260px, 56vw' : '(min-width: 820px) 210px, 150px'}" width="540" height="1169" alt="${alt}"${lazy ? ' loading="lazy"' : ' fetchpriority="high"'} decoding="async">`;
 
 export const landingBody = () => `<a class="skip" href="#main">본문으로</a>
 <nav class="nav"><a class="mini" href="/app/">OFFSIDE</a><a class="play-top" href="${webHref('nav').replaceAll('&', '&amp;')}" data-web>웹에서 하기 →</a></nav>
 <main id="main">
 <header class="hero">
   <div class="sticker" aria-hidden="true"><span><b>S2</b>10.31<br>OPEN</span></div>
-  <h1 class="logo" aria-label="오프사이드 풀타임">Offside<span>Full Time</span></h1>
+  <p class="logo" role="img" aria-label="오프사이드 풀타임">Offside<span>Full Time</span></p>
   <p class="subtitle">풀타임: 휘슬이 울릴 때까지</p>
-  <p class="pitch-line">고3 선수 한 명을 프로 데뷔, 이적, 입대, 국가대표를 거쳐 은퇴까지 키우는 축구 커리어 게임이에요.</p>
+  <h1 class="pitch-line">고3 선수 한 명을 은퇴까지 키우는 축구 커리어 시뮬레이션<small>프로 데뷔, 이적, 입대, 국가대표를 내 선택으로 지나요.</small></h1>
   ${ctas('hero')}
   <div class="qr"><img src="/landing/qr-get.svg" width="76" height="76" alt=""><p><b>폰으로 찍어서 받기</b>iPhone · Android 자동으로 맞춰 열려요</p></div>
   <div class="stack" aria-hidden="true">${SHOTS.filter(([k]) => k !== 'pk')
@@ -95,7 +96,7 @@ export const landingBody = () => `<a class="skip" href="#main">본문으로</a>
 <section class="sec">
   <p class="tag">한 번의 커리어</p>
   <h2>열여덟 살에 시작해서 은퇴로 끝나요</h2>
-  <p class="lead">후보 세 명 중 한 명을 골라요. 같은 선수로 다시 해도 커리어가 매번 다르게 흘러가요.</p>
+  <p class="lead">축구 선수 키우기는 후보 세 명 중 한 명을 고르는 데서 시작해요. 같은 선수로 다시 해도 커리어가 매번 다르게 흘러가요.</p>
   <ol class="path">${PATH.map(([age, h, p]) => `<li><span class="age">${age}</span><h3>${h}</h3><p>${p}</p></li>`).join('')}</ol>
 </section>
 <section class="after">
@@ -161,7 +162,7 @@ const sync=()=>{const on=past&&!atEnd;dock.classList.toggle('on',on);dock.toggle
 new IntersectionObserver(([e])=>{past=!e.isIntersecting&&e.boundingClientRect.top<0;sync()}).observe(hero);
 new IntersectionObserver(([e])=>{atEnd=e.isIntersecting;sync()}).observe(end)})();`;
 
-const CSS = `:root{--cream:#f4ecd6;--paper:#fffaf0;--ink:#17201a;--ink-2:#4a5148;--pitch:#1d4a35;--pitch-2:#2a6247;--gold:#f2b632;--red:#c8401f;
+const CSS = `:root{--cream:#f4ecd6;--paper:#fffaf0;--ink:#17201a;--ink-2:#4a5148;--pitch:#1d4a35;--pitch-2:#2a6247;--gold:#f2b632;--red:#a8361a;
 --display:'Barlow Condensed','Arial Narrow',sans-serif;--body:'Pretendard Variable',Pretendard,-apple-system,'Apple SD Gothic Neo',system-ui,sans-serif;
 --hand:'Gaegu',var(--body);--poster:'Black Han Sans',var(--body);color-scheme:light}
 *{box-sizing:border-box}
@@ -183,7 +184,8 @@ img{max-width:100%}
 .logo{margin:0;font-family:var(--display);font-weight:800;font-style:italic;text-transform:uppercase;line-height:.8;font-size:clamp(60px,19vw,74px);letter-spacing:-.01em;color:var(--gold);text-shadow:3px 3px 0 var(--ink),-1px -1px 0 var(--ink),1px -1px 0 var(--ink),-1px 1px 0 var(--ink);transform:rotate(-3deg)}
 .logo span{display:block;font-size:.5em;color:var(--cream);letter-spacing:.04em;margin-top:6px}
 .subtitle{display:inline-block;margin:16px 0 0;font-family:var(--poster);font-size:19px;background:var(--cream);color:var(--ink);padding:4px 12px 2px;border:2px solid var(--ink);transform:rotate(1.5deg)}
-.pitch-line{margin:16px auto 0;max-width:30em;font-size:15px;color:rgba(244,236,214,.92)}
+.pitch-line{margin:16px auto 0;max-width:30em;font-family:var(--body);font-weight:800;font-size:18px;line-height:1.4;color:var(--cream);text-wrap:balance}
+.pitch-line small{display:block;margin-top:6px;font-size:15px;font-weight:400;color:rgba(244,236,214,.88)}
 .ctas{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px auto 0;max-width:660px}
 .btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 12px;border-radius:12px;border:3px solid var(--ink);text-decoration:none;font-weight:800;font-size:15px;line-height:1.1;box-shadow:4px 4px 0 var(--ink);transition:transform .12s,box-shadow .12s;text-align:left;color:var(--ink);background:var(--paper)}
 .btn:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}
@@ -257,7 +259,7 @@ html[data-os=other] .dock{display:none}
 .nav{padding:20px 40px}
 .hero{margin:6px 40px 0;padding:56px 40px 0;border-radius:26px}
 .hero::before{background:repeating-linear-gradient(90deg,transparent 0 80px,rgba(255,255,255,.045) 80px 160px),radial-gradient(circle at 50% 40%,transparent 150px,rgba(244,236,214,.3) 151px 155px,transparent 156px),linear-gradient(90deg,transparent calc(50% - 2px),rgba(244,236,214,.3) calc(50% - 2px) calc(50% + 2px),transparent calc(50% + 2px))}
-.logo{font-size:168px}.subtitle{font-size:26px;margin-top:22px}.pitch-line{font-size:18px;max-width:34em}
+.logo{font-size:168px}.subtitle{font-size:26px;margin-top:22px}.pitch-line{font-size:24px;max-width:30em}.pitch-line small{font-size:17px}
 .ctas,html[data-os=other] .ctas,html:not([data-os]) .ctas{grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:14px}
 .btn{min-height:58px;font-size:16px}
 html[data-os=other] .qr,html:not([data-os]) .qr{display:inline-flex;align-items:center;gap:12px;margin-top:18px;background:var(--cream);color:var(--ink);border:3px solid var(--ink);border-radius:12px;padding:8px 14px 8px 8px;box-shadow:4px 4px 0 var(--ink);text-align:left;transform:rotate(-1deg)}
@@ -279,6 +281,16 @@ html[data-os=other] .qr,html:not([data-os]) .qr{display:inline-flex;align-items:
 .foot{padding:30px 40px 40px}
 .dock{display:none}}`;
 
+// 글꼴 CSS는 그리기를 막지 않게 늦게 붙인다(T-11-585, 게임 셸 index.html과 같은 방식).
+const PRETENDARD =
+  'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css';
+const BARLOW =
+  'https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;1,800&display=swap';
+const lazyCss = (href) => {
+  const h = href.replaceAll('&', '&amp;');
+  return `<link rel="preload" as="style" href="${h}" onload="this.onload=null;this.rel='stylesheet'" /><noscript><link rel="stylesheet" href="${h}" /></noscript>`;
+};
+
 /** 완성된 /app/ 문서. head는 다른 공개 페이지와 같은 SEO 머리(createHeadMarkup)를 받는다. */
 export function landingHtml(headMarkup, title) {
   const body = landingBody();
@@ -291,10 +303,7 @@ export function landingHtml(headMarkup, title) {
 <title>${title}</title>
 <script>${OS_SCRIPT}</script>
 ${headMarkup}
-<link rel="preload" as="image" href="/landing/live.webp" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;1,800&display=swap" />
-<link rel="stylesheet" href="${fontHref(body).replaceAll('&', '&amp;')}" />
+${[PRETENDARD, BARLOW, fontHref(body)].map(lazyCss).join('\n')}
 <style>${CSS}</style>
 </head>
 <body>

@@ -230,5 +230,15 @@ test('T-11-584 /app/ 랜딩은 독립 문서이고 색인 · 구조화 데이터
     /href="\/\?utm_source=landing&amp;utm_medium=web&amp;utm_campaign=app_landing&amp;utm_content=lp_hero"/,
   );
   assert.doesNotMatch(html, /무료/);
+  // T-11-585 검색어가 든 제목 · H1 하나, 글꼴 CSS는 그리기를 막지 않는다, 다른 공개 페이지에서 랜딩으로 잇는다.
+  assert.match(html, /<title>축구 선수 키우기 게임 오프사이드/);
+  assert.equal(html.match(/<h1\b/g)?.length, 1);
+  assert.match(
+    html,
+    /<h1 class="pitch-line">고3 선수 한 명을 은퇴까지 키우는 축구 커리어 시뮬레이션/,
+  );
+  assert.doesNotMatch(html, /(?<!<noscript>)<link rel="stylesheet" href="https:\/\//);
+  for (const path of ['/guide/', '/faq/', '/fairness/', '/about/'])
+    assert.match(STATIC_PAGES[path], /href="\/app\/"/, path);
   assert.match(createSitemapXml(config.origin), /<loc>https:\/\/play\.example\.com\/app\/<\/loc>/);
 });
