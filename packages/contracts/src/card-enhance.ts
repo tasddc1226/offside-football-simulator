@@ -33,7 +33,7 @@ export type EnhanceRules = {
 
 export const DEFAULT_ENHANCE_RULES: EnhanceRules = {
   open: false,
-  startsPerTry: 20,
+  startsPerTry: 10,
   costScale: 1,
   rateScale: 1,
 };

@@ -5,7 +5,7 @@ import { cardEnhanceText as L } from './i18n/ko/cardEnhance.js';
 
 describe('카드 강화 창 (T-11-373)', () => {
   const open = { ...DEFAULT_ENHANCE_RULES, open: true };
-  const card = { level: 0, fails: 0, starts: 20, used: 0 };
+  const card = { level: 0, fails: 0, starts: 10, used: 0 };
 
   it('시도할 수 있으면 서버에 보낼 본 값을 만든다', () => {
     const v = enhanceView(card, open, 1_000_000);

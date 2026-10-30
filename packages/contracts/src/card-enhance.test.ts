@@ -51,9 +51,9 @@ describe('카드 강화 표 (T-11-373)', () => {
   });
 
   it('시도권: 선발 경기 수 ÷ 경기 수 − 쓴 시도권', () => {
-    const card = { level: 0, fails: 0, starts: 45, used: 1 };
+    const card = { level: 0, fails: 0, starts: 25, used: 1 };
     expect(enhanceTriesLeft(card, r)).toBe(1);
-    expect(enhanceStartsToNext(card, r)).toBe(15);
+    expect(enhanceStartsToNext(card, r)).toBe(5);
     expect(enhanceTriesLeft({ ...card, used: 2 }, r)).toBe(0);
   });
 });

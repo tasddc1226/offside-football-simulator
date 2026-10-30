@@ -135,14 +135,14 @@ describe('카드 강화 (T-11-373)', () => {
       updatedAt: '2026-09-29T00:00:00.000Z',
       activatedAt: '2026-09-29T00:00:00.000Z',
     });
-  /** 강화를 열고, 카드 하나를 선발에 넣어 20경기를 뛴 구단주. */
+  /** 강화를 열고, 카드 하나를 선발에 넣어 10경기를 뛴 구단주. */
   async function ready(balance = 100_000_000) {
     const owner = await issueGoogleCookie(ctx);
     const id = await addCard(owner.profileId);
     await fund(owner.profileId, balance);
     await activate({ enhanceOpen: 1 });
     const team = await addTeam(owner.profileId, [id, ...Array<null>(10).fill(null)]);
-    await play(team, 20);
+    await play(team, 10);
     return { owner, id, team };
   }
   const first: EnhanceBody = { level: 0, fails: 0, used: 0, cost: ENHANCE_COSTS[0], rateBp: 9000 };
@@ -154,7 +154,7 @@ describe('카드 강화 (T-11-373)', () => {
     await fund(owner.profileId, 1_000_000);
     expect((await call('GET', `/v1/cards/${id}/enhance`)).status).toBe(401);
     expect(await state(owner.cookie, id)).toEqual({
-      rules: { open: false, startsPerTry: 20, costScale: 1, rateScale: 1 },
+      rules: { open: false, startsPerTry: 10, costScale: 1, rateScale: 1 },
       card: { level: 0, fails: 0, starts: 0, used: 0 },
       balance: 1_000_000,
     });
@@ -175,13 +175,13 @@ describe('카드 강화 (T-11-373)', () => {
     await activate({ enhanceOpen: 1 });
     expect(await reason(await enhance(owner.cookie, id, first))).toBe('ENHANCE_NO_TRY');
     const team = await addTeam(owner.profileId, [id, ...Array<null>(10).fill(null)]);
-    await play(team, 19);
-    expect((await state(owner.cookie, id)).card.starts).toBe(19);
+    await play(team, 9);
+    expect((await state(owner.cookie, id)).card.starts).toBe(9);
     expect(await reason(await enhance(owner.cookie, id, first))).toBe('ENHANCE_NO_TRY');
-    await play(team, 20);
+    await play(team, 10);
     nextRoll(0);
     expect((await enhance(owner.cookie, id, first)).status).toBe(200);
-    // 한 장을 썼으니 다음 시도권은 40경기째다.
+    // 한 장을 썼으니 다음 시도권은 20경기째다.
     nextRoll(0);
     expect(
       await reason(
@@ -230,7 +230,7 @@ describe('카드 강화 (T-11-373)', () => {
       to: 1,
       cost: 100_000,
       balance: 99_900_000,
-      card: { level: 1, fails: 0, starts: 20, used: 1 },
+      card: { level: 1, fails: 0, starts: 10, used: 1 },
     });
     expect(await cardOf(id)).toMatchObject({ enhance: 1, enhanceFails: 0, enhanceUsed: 1 });
     const history = HistoryRes.parse(
@@ -338,12 +338,12 @@ describe('카드 강화 (T-11-373)', () => {
     const { owner, id, team } = await ready();
     const buyer = await issueGoogleCookie(ctx);
     await ctx.db.update(cards).set({ ownerId: buyer.profileId }).where(eq(cards.careerId, id));
-    expect((await cardOf(id)).enhanceStarts).toBe(20);
+    expect((await cardOf(id)).enhanceStarts).toBe(10);
     await play(team, 50);
-    expect((await state(buyer.cookie, id)).card.starts).toBe(20);
+    expect((await state(buyer.cookie, id)).card.starts).toBe(10);
     // 판 사람이 선발을 고쳐도 다시 쌓지 않는다.
     await setSlots(team, Array<null>(11).fill(null));
-    expect((await cardOf(id)).enhanceStarts).toBe(20);
+    expect((await cardOf(id)).enhanceStarts).toBe(10);
     expect(owner.profileId).not.toBe(buyer.profileId);
   });
 

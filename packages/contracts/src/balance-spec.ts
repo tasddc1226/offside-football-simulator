@@ -469,7 +469,7 @@ export const BALANCE_SPEC = {
     step: 1,
   },
   enhanceStartsPerTry: {
-    def: 20,
+    def: 10,
     min: 1,
     max: 200,
     step: 1,
