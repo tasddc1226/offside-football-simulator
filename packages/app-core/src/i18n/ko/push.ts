@@ -56,6 +56,9 @@ const ko = {
   askClubTitle: '컵 접수와 경기 결과를 알림으로 받을까요?',
   askClubBody:
     '오프사이드 컵 접수가 열리면 바로 알려 드려요. 다른 구단주가 내 팀에 건 랭크 경기 결과도 알려 드려요.',
+  askCupTitle: '컵 결과를 알림으로 받을까요?',
+  askCupBody:
+    '컵이 끝나면 내 팀의 최종 결과를 바로 알려 드려요. 다음 컵 접수가 열릴 때도 알려 드려요.',
 };
 
 export type PushMsgs = typeof ko;

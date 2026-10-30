@@ -50,6 +50,7 @@ import { Btn, Card, Pill, Press, Screen, Skeleton, Topbar, Txt, scrollTo } from 
 import { GoogleLoginButton } from '../../ui/GoogleLoginButton';
 import { useOnPull } from '../../ui/refresh';
 import { LeagueBoard, LeagueMatchDetail, LeaguePicker } from './LeagueBoard';
+import { askPushAfter } from '../../platform/pushAsk';
 
 /** 홈의 리그 배너(누구나 보는 리그 소식). 리그가 끝났거나 불러오지 못하면 그리지 않는다. */
 export function LeagueBanner() {
@@ -173,7 +174,10 @@ function EntryCard({
     try {
       const r = await (kind === 'enter' ? enterLeague() : withdrawLeague());
       if (!r.ok) toast(r.error.message || A.actionFail);
-      else toast(kind === 'enter' ? L.toastEntered : L.toastWithdrawn);
+      else {
+        toast(kind === 'enter' ? L.toastEntered : L.toastWithdrawn);
+        if (kind === 'enter') void askPushAfter('league');
+      }
       await reload();
     } finally {
       lock.current = false;
