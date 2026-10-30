@@ -25,9 +25,16 @@ export const RN_CUT_SEASON: Readonly<Record<Pos, number>> = {
   DF: 870,
   GK: 890,
 };
+/** 시즌 2부터 기존 기준보다 약 5% 높인다. 이미 확정한 결번은 서버가 그대로 보존한다. */
+export const RN_CUT_SEASON_2: Readonly<Record<Pos, number>> = {
+  FW: 1575,
+  MF: 1050,
+  DF: 914,
+  GK: 935,
+};
 /** 그 시즌(0 = 프리시즌)·포지션의 결번 기준 점수. */
 export const rnCut = (pos: Pos, season: number): number =>
-  season === 0 ? RN_CUT : RN_CUT_SEASON[pos];
+  season === 0 ? RN_CUT : season === 1 ? RN_CUT_SEASON[pos] : RN_CUT_SEASON_2[pos];
 /** 그 구단에서 뛴 최소 시즌 수. */
 export const RN_MIN_SEASONS = 6;
 
