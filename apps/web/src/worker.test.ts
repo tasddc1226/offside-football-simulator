@@ -97,3 +97,37 @@ describe('T-11-531 크리에이터 짧은 주소', () => {
     }
   });
 });
+
+describe('T-11-584 랜딩 /get', () => {
+  it('기기 스토어로 302, 캐시 · 색인하지 않는다', async () => {
+    const res = await worker.fetch(
+      new Request('https://offside-lab.com/get?os=android&p=end'),
+      { ASSETS: assets },
+      ctx,
+    );
+    expect(res.status).toBe(302);
+    expect(res.headers.get('Location')).toMatch(/^https:\/\/play\.google\.com\//);
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+    expect(res.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
+  });
+});
+
+describe('T-11-585 랜딩 이미지', () => {
+  it('/landing/ 파일은 noindex를 붙이지 않는다', async () => {
+    const res = await worker.fetch(
+      new Request('https://offside-lab.com/landing/live.webp'),
+      {
+        ASSETS: {
+          // 운영 ASSETS는 _headers의 /* 규칙대로 noindex를 붙여 돌려준다.
+          fetch: async () =>
+            new Response('x', {
+              headers: { 'Content-Type': 'image/webp', 'X-Robots-Tag': 'noindex, nofollow' },
+            }),
+        },
+      },
+      ctx,
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get('X-Robots-Tag')).toBeNull();
+  });
+});

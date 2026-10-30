@@ -1,4 +1,5 @@
 import { withCampaignBanner } from './app-banner.js';
+import { storeRedirect } from './store-redirect.js';
 import { serveNews, newsSitemap } from './public-news.js';
 import {
   LEGENDS_TTL,
@@ -27,6 +28,9 @@ interface Ctx {
 
 const PUBLIC_PATHS = new Set([
   '/',
+  '/app',
+  '/app/',
+  '/app/index.html',
   '/guide',
   '/guide/',
   '/guide/index.html',
@@ -134,6 +138,19 @@ const SHORT_LINKS: Record<string, string> = {
 };
 
 async function route(request: Request, env: Env, url: URL, ctx: Ctx): Promise<Response> {
+  if (url.pathname === '/get' || url.pathname === '/get/')
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: storeRedirect(
+          url,
+          request.headers.get('User-Agent') ?? '',
+          env.APPLE_PROVIDER_TOKEN,
+        ),
+        'Cache-Control': 'no-store',
+        'X-Robots-Tag': 'noindex, nofollow',
+      },
+    });
   const short = SHORT_LINKS[url.pathname.toLowerCase()];
   if (short)
     return new Response(null, {
@@ -158,6 +175,13 @@ async function route(request: Request, env: Env, url: URL, ctx: Ctx): Promise<Re
   const isPublicPage =
     PUBLIC_PATHS.has(url.pathname) || (asset.status === 200 && GUIDE_ARTICLE.test(url.pathname));
   const isDiscovery = url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml';
+  // T-11-585 랜딩 스크린샷 · QR은 이미지 검색에 잡히게 둔다(나머지 정적 파일은 noindex 그대로).
+  // 빌드가 만드는 _headers의 /* 규칙이 정적 파일 응답에 noindex를 미리 붙여 오므로 여기서 지운다.
+  if (url.pathname.startsWith('/landing/') && asset.status === 200) {
+    const result = new Response(asset.body, asset);
+    result.headers.delete('X-Robots-Tag');
+    return result;
+  }
   // T-10-004: Vite 산출물(/assets/*)은 파일명에 내용 해시가 들어가 내용이 바뀌면 URL도 바뀐다 —
   // 재방문 때 재검증 없이 캐시를 그대로 쓰도록 1년 immutable로 내려 준다.
   if (url.pathname.startsWith('/assets/') && asset.status === 200)
