@@ -41,7 +41,8 @@ async function memberView(env: Bindings, db: Db, profileId: string): Promise<Mem
   return {
     active: memberActive(row?.until, nowIso()),
     until: row?.until ?? null,
-    autoRenew: row?.autoRenew ?? null,
+    // T-11-591 웹 결제 멤버십은 자동 갱신이 없는 기간권이라 '자동 결제를 껐어요' 대신 끝나는 날만 보이게 null로 보낸다.
+    autoRenew: row?.store === 'xsolla' ? null : (row?.autoRenew ?? null),
     store: row?.store === 'apple' || row?.store === 'google' ? row.store : null,
     stores,
     ...(stores.length ? { account: iapAccount(profileId) } : {}),

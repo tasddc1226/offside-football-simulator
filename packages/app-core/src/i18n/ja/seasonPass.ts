@@ -36,6 +36,8 @@ export const seasonPass: Translation<SeasonPassMsgs> = {
   pastLead: '受け取っていない報酬が残っています。',
   aheadTitle: (p) => `シーズン${p.season}パスを先に持っています`,
   aheadLead: 'そのシーズンが始まると進行が始まります。',
+  webBuyBtn: (p: { price: string }) => `ウェブで買う · ${p.price}ウォン`,
+  webBuyNote: 'カードや各国の決済手段で買えます。決済が終わると今シーズンのパスがすぐ開きます。',
   notOnSale: '現在パスは販売していません。',
   webBuy: 'パスはアプリで買えます。買ったパスの報酬はウェブでも受け取れます。',
   login: 'ログインしたオーナーだけがシーズンパスを使えます。',

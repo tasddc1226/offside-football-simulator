@@ -1,6 +1,6 @@
 <script lang="ts">
-  // T-11-511 시즌 패스(내 구단 화면 '시즌 패스' 칸으로 연다). 열 때 한 번 패스 상태(1분 메모)를 받는다. 웹에서는 사지 않고
-  // (앱 결제), 산 패스의 열린 단계 보상을 받는다.
+  // T-11-511 시즌 패스(내 구단 화면 '시즌 패스' 칸으로 연다). 열 때 한 번 패스 상태(1분 메모)를 받는다. 산 패스의 열린 단계
+  // 보상을 받고, T-11-591부터 웹 결제가 열린 구단주는 웹에서 이번 시즌 패스를 산다(엑솔라).
   import PopSheet from '../PopSheet.svelte';
   import Skeleton from '../Skeleton.svelte';
   import type { SeasonPassResponse, SeasonPassSeason } from '@offside/contracts';
@@ -16,6 +16,8 @@
     passTotalText,
   } from '@offside/app-core/season-pass-view';
   import { seasonPassText as L } from '@offside/app-core/i18n/ko/seasonPass';
+  import { hasSessionHint } from '@offside/app-core/api/client';
+  import { loadWebPay, startWebPay, webPay } from '../cup/webPay.svelte.js';
 
   const { onclose }: { onclose: () => void } = $props();
 
@@ -32,6 +34,16 @@
     else failed = needsOwnerLogin(r.error) ? 'login' : 'error';
   }
   void load();
+  if (hasSessionHint()) void loadWebPay();
+  // 결제창에서 돌아와 결제가 확인되면 패스 상태를 다시 읽는다.
+  let seenPaid = webPay.paid;
+  $effect(() => {
+    if (webPay.paid !== seenPaid) {
+      seenPaid = webPay.paid;
+      void load();
+    }
+  });
+  const webPass = $derived(webPay.config?.enabled ? webPay.config.pass : undefined);
 
   const current = $derived(pass?.seasons[0] ?? null);
   const past = $derived(pass?.seasons.filter((s) => current && s.season < current.season) ?? []);
@@ -106,7 +118,12 @@
       <p class="fs-sm">{L.lead}</p>
       {@render track(current)}
       {#if !current.owned}
-        <p class="fs-sm muted" data-pass-web-buy>{pass.onSale ? L.webBuy : L.notOnSale}</p>
+        {#if webPass}
+          <button class="btn btn-primary btn-block" data-act="pass-web-buy" disabled={webPay.busy} onclick={() => void startWebPay(webPass.productId, 'pass')}>{L.webBuyBtn({ price: webPass.amount.toLocaleString('ko-KR') })}</button>
+          <p class="fs-xs muted">{L.webBuyNote}</p>
+        {:else}
+          <p class="fs-sm muted" data-pass-web-buy>{pass.onSale ? L.webBuy : L.notOnSale}</p>
+        {/if}
       {/if}
       <p class="fs-xs muted">{L.rule(PASS_RULE)} {L.midSeason} {L.once}</p>
       <p class="fs-xs muted">{L.total({ reward: passTotalText() })}</p>
