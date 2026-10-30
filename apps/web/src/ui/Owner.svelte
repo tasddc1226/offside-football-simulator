@@ -43,6 +43,7 @@
   import GradeEmblem from './team/GradeEmblem.svelte';
   import { ownerProfileText as H } from '@offside/app-core/i18n/ko/ownerProfile';
   import TitleBadge from './cup/TitleBadge.svelte';
+  import { webPay } from './cup/webPay.svelte.js';
 
   // T-10-016: 운영자면 프로필 편집에 운영 도구 표시를 넘긴다(운영 도구 입구는 T-11-567부터 설정 화면의 계정 카드).
   // 관리자는 구글 연결 계정이라, 연결된 계정일 때만 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다).
@@ -134,6 +135,10 @@
     memberOpen = true;
     if (!Member) void import('./owner/Membership.svelte').then((m) => (Member = m.default));
   }
+  // T-11-591 웹 결제창에서 돌아오면 결제를 시작한 시즌 패스 · 멤버십 창을 다시 연다.
+  if (webPay.reopen === 'pass') openPass();
+  else if (webPay.reopen === 'member') openMember();
+  webPay.reopen = null;
   const passEntry = passEntryOpen(new Date().toISOString()) || import.meta.env.DEV;
   const memberEntry = MEMBERSHIP_LIVE || import.meta.env.DEV;
   function openTeam(v: TeamView = 'team') {
