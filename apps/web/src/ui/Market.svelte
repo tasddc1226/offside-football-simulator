@@ -95,7 +95,9 @@
   import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
   import { toast } from './helpers.js';
   import { marketText as L } from '@offside/app-core/i18n/ko/market';
+  import { tradeValue } from '@offside/contracts/card-enhance';
   import { RELEASE_MAX } from '@offside/contracts/market-value';
+  import { enhanceSellNote } from '@offside/app-core/cardEnhance';
 
   const local = localCareerNames();
   // T-11-442 상점의 '방출하러 가기'로 오면 방출 화면부터 연다.
@@ -210,8 +212,10 @@
   // 팔기 — 고른 선수와 판매가(기준가의 %).
   let selling = $state<TeamPlayer | null>(null);
   let pct = $state(100);
-  const sellPrice = $derived(selling?.cardValue && me ? priceAtPct(selling.cardValue, pct, me.rules) : 0);
-  const quote = $derived(selling?.cardValue && me ? sellQuote(selling.cardValue, sellPrice, me.rules) : null);
+  // T-11-373 강화한 카드는 기준가에 강화 가치를 더한 값으로 가격 범위를 잰다(서버와 같은 규칙).
+  const sellValue = $derived(selling?.cardValue ? tradeValue(selling.cardValue, selling.enhance) : 0);
+  const sellPrice = $derived(sellValue && me ? priceAtPct(sellValue, pct, me.rules) : 0);
+  const quote = $derived(sellValue && me ? sellQuote(sellValue, sellPrice, me.rules) : null);
   // T-11-442 카드를 고르면 아래 가격 칸이 화면 밖일 수 있어 그 칸이 보이게 내린다(이미 보이면 그대로).
   let priceBox = $state<HTMLElement | null>(null);
   function pickSell(p: TeamPlayer) {
@@ -554,12 +558,12 @@
           </div>
         {/if}
         {#if selling && quote && me}
-          {@const diff = priceDiff(sellPrice, selling.cardValue!)}
+          {@const diff = priceDiff(sellPrice, sellValue)}
           {@const range = sellSlider(me.rules)}
           <div class="mk-price-box" bind:this={priceBox}>
             <h2 class="mk-step">{L.sellStep2({ name: nameOfPlayer(selling), pos: detailPosOf(selling), peak: selling.peak })}</h2>
             <div class="mk-presets">
-              <button aria-pressed={pct === 100} onclick={() => (pct = 100)}><span>{L.presetBase}</span><b>{fmtValue(selling.cardValue!)}</b></button>
+              <button aria-pressed={pct === 100} onclick={() => (pct = 100)}><span>{L.presetBase}</span><b>{fmtValue(sellValue)}</b></button>
               <button aria-pressed={pct !== 100} onclick={() => (pct = pct === 100 ? 110 : pct)}><span>{L.presetCustom}</span><b>{pct === 100 ? L.presetSlider : fmtValue(sellPrice)}</b></button>
             </div>
             <label class="mk-slider">
@@ -572,6 +576,7 @@
               <div class="strong"><dt>{L.gets}</dt><dd>{fmtValue(quote.gets)}</dd></div>
             </dl>
             <p class="muted fs-sm">{L.sellHelp}</p>
+            {#if enhanceSellNote(selling.enhance)}<p class="muted fs-sm" data-sell-enhance>{enhanceSellNote(selling.enhance)}</p>{/if}
             {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
             <button class="btn btn-primary btn-block" data-act="list" disabled={busy || !!quote.error} onclick={() => run(() => createListing(selling!.careerId, sellPrice), MARKET_TOAST.listed)}>
               {L.listFor({ price: fmtValue(sellPrice) })}

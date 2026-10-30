@@ -8,6 +8,7 @@
   import { attrLine, STAMINA_CELLS, salaryIn, staminaOf, synergyFocus, type LeagueFatigue, type salaryBar } from '@offside/app-core/teamOwner';
   import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
   import { lockToggleable } from '@offside/app-core/market';
+  import { cardEnhanceText as CE } from '@offside/app-core/i18n/ko/cardEnhance';
   import { synergyApplies, type TeamSynergy as Synergy } from '@offside/contracts/owner-team';
   import { coachLineBonus } from '@offside/app-core/managerCard';
   import TeamLines from './TeamLines.svelte';
@@ -21,14 +22,14 @@
   import { dur } from '../motion.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
-  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, saveBlock = null, salary = null, fatigue = null, budget, onassign, onauto, onsave, onlock, onpresets, focusSlot = $bindable(null) }:
+  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, saveBlock = null, salary = null, fatigue = null, budget, onassign, onauto, onsave, onlock, onenhance, onpresets, focusSlot = $bindable(null) }:
     { team: OwnerTeam | null; editable: boolean; formation: FormationId; layout: TeamPosition[] | null; slots: (string | null)[]; lines: Lines; synergy: Synergy; season: number;
       cells: { rating: number; name: string; youth: boolean; player?: TeamPlayer | undefined }[]; players: TeamPlayer[]; nameOf: (p: TeamPlayer) => string;
       teamName: string; managerName: string; teamLogo: TeamLogo | null; seasonName: string; filled: number; saving: boolean; nameOk: boolean; dirty: boolean;
       /** T-11-436 컵 규칙에 걸려 서버가 거절할 이유(있으면 저장 버튼 옆에 보인다). */
       saveBlock?: string | null;
       /** T-11-376 지난 시즌 선수 급여 막대(프리시즌은 null). */
-      salary?: ReturnType<typeof salaryBar>; fatigue?: LeagueFatigue | null | undefined; budget: number; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void; onlock?: ((p: TeamPlayer) => void) | undefined; onpresets?: (() => void) | undefined; focusSlot?: number | null } = $props();
+      salary?: ReturnType<typeof salaryBar>; fatigue?: LeagueFatigue | null | undefined; budget: number; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void; onlock?: ((p: TeamPlayer) => void) | undefined; onenhance?: ((p: TeamPlayer) => void) | undefined; onpresets?: (() => void) | undefined; focusSlot?: number | null } = $props();
   let shareData = $state<TeamShareData | null>(null);
   let salaryOpen = $state(false);
   let pitch = $state<HTMLElement>();
@@ -249,6 +250,7 @@
               {#if pay > 0}<span class="salary-chip" class:over={wontFit} data-salary-chip={pay} data-salary-over={wontFit ? '' : undefined}>{wontFit ? `${TC.salaryChip({ n: pay })} · ${TC.salaryOver}` : TC.salaryChip({ n: pay })}</span>{/if}
               {#if stamina}<span class="stamina" data-stamina={stamina.left} role="img" title={TC.fatigueHint} aria-label={TC.staminaAria({ left: stamina.left, total: STAMINA_CELLS, pct: stamina.pct })}><small aria-hidden="true">{TC.staminaLabel}</small><span class="stamina-bar" aria-hidden="true">{#each { length: STAMINA_CELLS } as _, k (k)}<i class:on={k < stamina.left}></i>{/each}</span></span>{/if}
               {#if onlock}<button class="lock-toggle" class:on={p.locked} aria-pressed={!!p.locked} aria-label={L.lockerLockAria({ name: nameOf(p) })} data-act="lock" disabled={!lockToggleable(p)} onclick={() => onlock(p)}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d={p.locked ? 'M5.5 7V5a2.5 2.5 0 0 1 5 0v2' : 'M5.5 7V5a2.5 2.5 0 0 1 4.9-.7'} /></svg><span>{p.locked ? L.lockerLocked : p.listing ? L.lockerListed : L.lockerLock}</span></button>{/if}
+              {#if onenhance && p.cardValue != null}<button class="lock-toggle enhance-toggle" aria-label={CE.openAria({ name: nameOf(p) })} data-act="enhance" onclick={() => onenhance(p)}><span>{p.enhance ? `+${p.enhance}` : CE.open}</span></button>{/if}
             </div>
             <button class="drag-handle" aria-label={L.dragAria({ name: nameOf(p) })} onpointerdown={(e) => start(e, p.careerId, null)} onclick={() => pickPlayer(p.careerId)}><svg viewBox="0 0 18 12" aria-hidden="true"><path d="M3 2h2M3 6h2M3 10h2M8 2h2M8 6h2M8 10h2M13 2h2M13 6h2M13 10h2" /></svg><span>{L.dragLabel}</span></button>
           </article>
@@ -344,6 +346,7 @@
   .roster-row {display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 8px;padding-top:6px;} .roster-row .roster-state {padding-top:0;white-space:nowrap;} .roster-row .lock-toggle {white-space:nowrap;}
   .lock-toggle {display:inline-flex;align-items:center;gap:3px;min-height:28px;padding:0 8px;border:1px solid var(--line);border-radius:var(--radius-pill);background:none;color:var(--muted);font:inherit;font-size:var(--fs-caption);cursor:pointer;} .lock-toggle svg {width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;} .lock-toggle rect {fill:currentColor;stroke:none;}
   .lock-toggle.on {border-color:var(--accent);color:var(--accent);font-weight:600;} .lock-toggle:disabled {cursor:default;opacity:.6;}
+  .enhance-toggle {color:var(--accent-text);font-weight:600;}
   .roster-state {display:block;text-align:center;font-size:var(--fs-caption);color:var(--muted);padding-top:6px;} .roster-state.starting {color:var(--good);font-weight:600;}
   .drag-handle {display:flex;align-items:center;justify-content:center;gap:5px;width:100%;min-height:44px;border:0;background:none;color:var(--muted);font:inherit;font-size:var(--fs-caption);cursor:grab;touch-action:none;}
   .drag-handle svg {width:18px;height:12px;stroke:currentColor;stroke-width:1.6;} .locker-empty {grid-column:1/-1;padding:12px 0;}

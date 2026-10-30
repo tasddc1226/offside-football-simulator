@@ -51,6 +51,7 @@
     "./club-strength-provider": "./src/club-strength-provider.ts",
     "./avatar-look": "./src/avatar-look.ts",
     "./manager-rules": "./src/manager-rules.ts",
+    "./card-enhance": "./src/card-enhance.ts",
     "./acquisition": "./src/acquisition.ts",
     "./team-moments": "./src/team-moments.ts",
     "./card-exchange-rules": "./src/card-exchange-rules.ts"

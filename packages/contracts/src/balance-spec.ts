@@ -460,6 +460,34 @@ export const BALANCE_SPEC = {
     max: 500,
     step: 1,
   },
+  // T-11-373 카드 강화(card-enhance.ts). 단계별 확률 · 비용 · 강화 OVR의 모양은 contracts 표에 고정하고, 열기 · 시도권 경기 수 ·
+  // 비용 · 확률 배율만 연다. enhanceOpen = 0이면 시도를 닫는다(이미 올린 단계의 효과는 그대로).
+  enhanceOpen: {
+    def: 0,
+    min: 0,
+    max: 1,
+    step: 1,
+  },
+  enhanceStartsPerTry: {
+    def: 20,
+    min: 1,
+    max: 200,
+    step: 1,
+  },
+  enhanceCostScale: {
+    def: 1,
+    min: 0.1,
+    max: 10,
+    step: 0.05,
+    unit: 'x',
+  },
+  enhanceRateScale: {
+    def: 1,
+    min: 0.5,
+    max: 1.5,
+    step: 0.01,
+    unit: 'x',
+  },
   teamDivReward3: {
     def: 1,
     min: 0,

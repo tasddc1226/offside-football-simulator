@@ -45,6 +45,7 @@ import { registerSeasonRecapRoutes } from './routes/seasonRecap.js';
 import { registerTeamRoutes } from './routes/teams.js';
 import { registerTeamCommentRoutes } from './routes/teamComments.js';
 import { registerMarketRoutes } from './routes/market.js';
+import { registerCardEnhanceRoutes } from './routes/cardEnhance.js';
 import { registerManagerRoutes } from './routes/managers.js';
 import { registerCardExchangeRoutes } from './routes/cardExchanges.js';
 import { registerCupRoutes } from './routes/cup.js';
@@ -99,6 +100,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerTeamRoutes(app);
   registerTeamCommentRoutes(app);
   registerMarketRoutes(app);
+  registerCardEnhanceRoutes(app);
   registerManagerRoutes(app);
   registerCardExchangeRoutes(app);
   registerCupRoutes(app);

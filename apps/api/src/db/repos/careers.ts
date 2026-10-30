@@ -463,6 +463,10 @@ export async function putRetirement(
             consumedIn: sql<string | null>`null`.as('consumed_in'),
             // T-11-548 careers 행이 있는 카드는 그 이름을 쓴다(카드 이름은 비워 둔다).
             publicName: sql<string | null>`null`.as('public_name'),
+            enhance: sql<number>`0`.as('enhance'),
+            enhanceFails: sql<number>`0`.as('enhance_fails'),
+            enhanceStarts: sql<number>`0`.as('enhance_starts'),
+            enhanceUsed: sql<number>`0`.as('enhance_used'),
             createdAt: sql<string>`${now}`.as('created_at'),
             updatedAt: sql<string>`${now}`.as('updated_at'),
           })

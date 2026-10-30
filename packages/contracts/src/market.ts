@@ -8,6 +8,7 @@ import {
 } from './careers.js';
 import { MARKET_CHART_RANGES, MARKET_TYPES, type MarketType } from './market-value.js';
 import { IsoUtcSchema } from './primitives.js';
+import { ENHANCE_MAX } from './card-enhance.js';
 import { FUNDS_ITEMS, type FundsItem } from './cup.js';
 import { NATION_BY_CODE } from './nations.js';
 import { LEAGUE_BASE, isAmateurClubId, isDefaultClubId } from './club-names.js';
@@ -65,6 +66,8 @@ export const MarketCardSchema = z.strictObject({
   /** T-11-500 가장 오래 뛴 프로 리그 · 클럽 id(시너지와 같은 기준). 모르면 null, 옛 응답에는 없다. */
   league: z.string().nullable().optional(),
   club: z.string().nullable().optional(),
+  /** T-11-373 카드 강화 단계(1~5). 강화하지 않은 카드 · 옛 응답에는 없다. 판매 가격 범위의 기준 가치에 강화 가치가 더해진다. */
+  enhance: z.number().int().min(1).max(ENHANCE_MAX).optional(),
 });
 export type MarketCard = z.infer<typeof MarketCardSchema>;
 
@@ -286,6 +289,56 @@ export const CardLockBodySchema = z.strictObject({
 });
 export type CardLockBody = z.infer<typeof CardLockBodySchema>;
 export const CardLockResponseSchema = z.strictObject({ locked: z.boolean() });
+
+const enhanceLevelSchema = z.number().int().min(0).max(ENHANCE_MAX);
+
+/** T-11-373 카드 강화 수치(운영 도구 밸런스의 활성 버전). 화면이 확률 · 비용 · 시도권을 card-enhance.ts로 그린다. */
+export const EnhanceRulesSchema = z.strictObject({
+  open: z.boolean(),
+  startsPerTry: z.number().int().min(1),
+  costScale: z.number(),
+  rateScale: z.number(),
+});
+
+/** 카드 하나의 강화 상태. starts는 선발로 뛴 랭크 경기 수, used는 쓴 시도권 수. */
+export const EnhanceCardStateSchema = z.strictObject({
+  level: enhanceLevelSchema,
+  fails: z.number().int().min(0),
+  starts: z.number().int().min(0),
+  used: z.number().int().min(0),
+});
+
+/** GET /v1/cards/:careerId/enhance — 강화 창을 열 때 한 번. 그 카드 상태 · 잔액 · 수치. */
+export const EnhanceStateResponseSchema = z.strictObject({
+  rules: EnhanceRulesSchema,
+  card: EnhanceCardStateSchema,
+  balance: z.number().int(),
+});
+export type EnhanceStateResponse = z.infer<typeof EnhanceStateResponseSchema>;
+
+/**
+ * POST /v1/cards/:careerId/enhance — 화면에서 본 단계 · 실패 수 · 쓴 시도권 · 비용 · 확률(만분율)을 함께 보낸다. 그 사이 다른 기기에서
+ * 강화했거나 운영 수치가 바뀌어 다르면 409(ENHANCE_STALE). 같은 시도의 재시도는 Idempotency-Key를 그대로 보내 한 번만 판정 · 차감한다.
+ */
+export const EnhanceBodySchema = z.strictObject({
+  level: enhanceLevelSchema,
+  fails: z.number().int().min(0),
+  used: z.number().int().min(0),
+  cost: man,
+  rateBp: z.number().int().min(0).max(10_000),
+});
+export type EnhanceBody = z.infer<typeof EnhanceBodySchema>;
+
+export const EnhanceResponseSchema = z.strictObject({
+  success: z.boolean(),
+  from: enhanceLevelSchema,
+  to: enhanceLevelSchema,
+  cost: man,
+  balance: z.number().int(),
+  /** 시도 뒤 카드 상태. */
+  card: EnhanceCardStateSchema,
+});
+export type EnhanceResponse = z.infer<typeof EnhanceResponseSchema>;
 export type CardLockResponse = z.infer<typeof CardLockResponseSchema>;
 
 export const ReleaseCardsBodySchema = z.strictObject({

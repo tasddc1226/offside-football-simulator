@@ -1,3 +1,4 @@
+import { ENHANCE_MAX } from './card-enhance.js';
 import { z } from 'zod';
 import type { TeamSynergy } from './team-synergy.js';
 import {
@@ -148,6 +149,8 @@ export const TeamPlayerSchema = z.strictObject({
   locked: z.boolean().optional(),
   /** T-11-080 판매 등록 중이면 그 등록. */
   listing: z.strictObject({ id: z.string(), price: z.number().int() }).nullable().optional(),
+  /** T-11-373 카드 강화 단계(1~5). 강화하지 않은 카드 · 구버전 응답에는 없다. 자리 실력에 강화 OVR이 더해진다. */
+  enhance: z.number().int().min(1).max(ENHANCE_MAX).optional(),
 });
 export type TeamPlayer = z.infer<typeof TeamPlayerSchema>;
 
@@ -242,6 +245,8 @@ export const OwnerTeamResponseSchema = z.strictObject({
   matchesPerDay: z.number().int().min(1),
   /** T-11-376 지난 시즌 선수 급여 예산(운영 도구 밸런스 활성 값). 배포 전 응답엔 없다 — 화면은 PAST_SALARY_BUDGET을 쓴다. */
   pastSalaryBudget: z.number().int().min(0).optional(),
+  /** T-11-373 카드 강화를 받는가(밸런스 enhanceOpen). 구버전 응답에는 없다(닫힘). */
+  enhanceOpen: z.boolean().optional(),
   /** T-11-113 창단 멤버(프리시즌에 은퇴 선수를 남긴 구단주). 배포 전 응답엔 없다. */
   founder: z.boolean().optional(),
   /** T-11-512 클럽 멤버십 서포터(구독 중). 배포 전 응답엔 없다. */

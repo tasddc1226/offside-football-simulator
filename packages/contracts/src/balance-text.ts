@@ -354,6 +354,26 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '디비전 보상 최소 경기 수',
     desc: '시즌 마감 디비전 보상을 받으려면 그 시즌 팀이 치른 랭크 경기(건 경기 + 받은 경기) 수가 이만큼 있어야 한다',
   },
+  enhanceOpen: {
+    group: 'team',
+    label: '카드 강화 열기',
+    desc: '1이면 카드 강화 시도를 받는다. 0이면 닫는다(이미 올린 단계의 효과는 그대로다)',
+  },
+  enhanceStartsPerTry: {
+    group: 'team',
+    label: '카드 강화 시도권 경기 수',
+    desc: '카드가 구단주 팀 선발로 뛴 랭크 경기가 이만큼 쌓일 때마다 그 카드의 강화 시도권 1장을 준다',
+  },
+  enhanceCostScale: {
+    group: 'team',
+    label: '카드 강화 비용 배율',
+    desc: '카드 강화 단계별 비용표(10억 · 20억 · 40억 · 70억 · 100억)에 곱하는 배율',
+  },
+  enhanceRateScale: {
+    group: 'team',
+    label: '카드 강화 확률 배율',
+    desc: '카드 강화 단계별 성공 확률표(90% · 75% · 60% · 45% · 30%)에 곱하는 배율. 정수 퍼센트로 자르고 100%를 넘지 않는다. 단계별 확정 천장은 그대로다',
+  },
   teamDivReward3: {
     group: 'division',
     label: '프로 II 시즌 보상 리롤권',

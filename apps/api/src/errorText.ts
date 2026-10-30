@@ -141,6 +141,16 @@ const EXACT: Record<string, string> = {
   '내 선수 카드를 찾을 수 없어요.': "We couldn't find your player card.",
   '기준가가 없는 선수는 내놓을 수 없어요.': "Players without a base value can't be listed.",
   '이미 내놓은 선수예요.': 'That player is already listed.',
+  // T-11-373 카드 강화
+  '감독 카드는 강화할 수 없어요.': "Manager cards can't be enhanced.",
+  '기준가가 없는 옛 기록은 강화할 수 없어요.':
+    "Older records without a base value can't be enhanced.",
+  '판매 등록 중인 선수는 강화할 수 없어요.': "Players on the transfer list can't be enhanced.",
+  '이미 가장 높은 단계예요.': 'This card is already at the highest level.',
+  '지금은 카드 강화를 쉬고 있어요.': 'Card enhance is closed right now.',
+  '강화 시도권이 없어요. 선발로 경기를 더 뛰면 생겨요.':
+    'No enhance tries left. Start this player in more matches to earn one.',
+  '강화 상태가 바뀌었어요. 다시 확인해 주세요.': 'The enhance status changed. Please check again.',
   // T-11-310 감독 커리어
   '감독으로 분류된 선수는 내놓거나 방출하거나 잠글 수 없어요.':
     "A player who became a manager can't be listed, released or locked.",

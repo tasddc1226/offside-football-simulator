@@ -584,6 +584,13 @@ export const cards = sqliteTable(
     // T-11-548 키운 사람이 계정을 지워 careers 행이 없는 카드의 공개 이름(지금 주인이 이름 변경권으로 붙인다). careers 행이
     // 있으면 그쪽 public_name을 쓰고 이 칸은 비워 둔다.
     publicName: text('public_name'),
+    // T-11-373 카드 강화 단계(0~5)와 그 단계에서 실패한 수(천장). 시도권은 이 카드가 구단주 팀 선발로 뛴 랭크 경기 수로 얻는다 —
+    // enhance_starts는 선발에서 빠질 때 쌓아 둔 경기 수(지금 선발 중인 경기 수는 team_lineup_cards.since로 더한다), enhance_used는
+    // 쓴 시도권 수. 거래 · 시즌이 바뀌어도 카드에 남는다.
+    enhance: integer('enhance').notNull().default(0),
+    enhanceFails: integer('enhance_fails').notNull().default(0),
+    enhanceStarts: integer('enhance_starts').notNull().default(0),
+    enhanceUsed: integer('enhance_used').notNull().default(0),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -593,6 +600,34 @@ export const cards = sqliteTable(
     index('cards_payout_idx')
       .on(table.careerId, table.releasedAt, table.releasedValue, table.bonusValue)
       .where(sql`${table.releasedAt} is not null or ${table.bonusValue} is not null`),
+  ],
+);
+
+/**
+ * T-11-373 카드 강화 시도 기록. 한 줄이 곧 구단 자금 지출(cost)이라 자금 내역 · 운영 도구 대조의 출처가 된다. request_key는 화면이
+ * 같은 시도를 다시 보낼 때 쓰는 멱등 키로, 판정 · 차감과 같은 batch에서 들어가 재시도가 두 번 판정되지 않는다. roll은 서버가 뽑은
+ * 난수(만분율), rate_bp는 그때 확률(만분율)이다.
+ */
+export const cardEnhanceLog = sqliteTable(
+  'card_enhance_log',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id').notNull(),
+    careerId: text('career_id').notNull(),
+    requestKey: text('request_key').notNull(),
+    fromLevel: integer('from_level').notNull(),
+    toLevel: integer('to_level').notNull(),
+    fails: integer('fails').notNull(),
+    success: integer('success', { mode: 'boolean' }).notNull(),
+    rateBp: integer('rate_bp').notNull(),
+    roll: integer('roll').notNull(),
+    cost: integer('cost').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('card_enhance_log_request_unique').on(table.profileId, table.requestKey),
+    // 자금 내역 · 대조.
+    index('card_enhance_log_profile_idx').on(table.profileId, table.createdAt),
   ],
 );
 
@@ -1196,7 +1231,7 @@ export const ownerTeams = sqliteTable(
   ],
 );
 
-/** Reverse lookup for maintaining cached lineup values. */
+/** Reverse lookup for maintaining cached lineup values, plus T-11-373 per-card start counts. */
 export const teamLineupCards = sqliteTable(
   'team_lineup_cards',
   {
@@ -1205,6 +1240,8 @@ export const teamLineupCards = sqliteTable(
       .references(() => ownerTeams.id, { onDelete: 'cascade' }),
     slot: integer('slot').notNull(),
     careerId: text('career_id').notNull(),
+    // T-11-373 이 선발에 들어온 때의 팀 경기 수(wins + draws + losses). 지금 경기 수와의 차이가 이 자리에서 뛴 랭크 경기 수다.
+    since: integer('since').notNull().default(0),
   },
   (table) => [
     primaryKey({ columns: [table.teamId, table.slot] }),

@@ -11,6 +11,7 @@ export const fundsHistory: Translation<FundsHistoryMsgs> = {
   spending: 'Money out',
   released: 'Released',
   bonus: 'Retirement bonus',
+  enhance: 'Card enhance',
   sold: 'Sold',
   fees: (p) => `${p.fee} fee taken`,
   bought: 'Signed',
