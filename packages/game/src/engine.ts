@@ -28,6 +28,7 @@ import { log } from './stats.js';
 import { gTurnText as M } from './i18n/ko/gTurn.js';
 import { tn } from './i18n/names.js';
 import { nationOf } from './nation.js';
+import { createLookState, type CreateLook } from './create-look.js';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import type { Body } from '@offside/contracts/body';
 import { PRESEASON_RETIRE_AT } from '@offside/contracts/service-seasons';
@@ -41,6 +42,8 @@ export * from './match.js';
 export * from './table.js';
 export * from './story.js';
 export * from './event-runner.js';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // ───────── 새 커리어 ─────────
 // T-10-002: presetAttrs가 주어지면(선수 생성 후보 카드에서 고른 분포) ri(-4,4) 루프를 건너뛰고
@@ -62,6 +65,10 @@ export function newGame(
     retireAt?: number | undefined;
     foot: GameState['foot'];
     trait: string;
+    /** T-11-545 만들기 화면이 미리보기에 쓴 커리어 ID(UUID). 없거나 모양이 틀리면 새로 만든다 — RNG는 쓰지 않는다. */
+    cid?: string | undefined;
+    /** T-11-545 만들기에서 무료로 고른 외형. 없으면 커리어 ID로 정하는 기본 모습. */
+    look?: CreateLook | undefined;
   } & ({ type: string; focus?: undefined } | { type?: undefined; focus: AttrKey[] }),
   seed: number,
   presetAttrs?: Record<AttrKey, number>,
@@ -86,6 +93,7 @@ export function newGame(
   const potDraw = retireAt ? { mean: BAL.potMean, sd: BAL.potSd } : PRESEASON_POT;
   const drawnPot = clamp(Math.round(potDraw.mean + gauss() * potDraw.sd), 55, 96);
   const drawnScout = clamp(Math.round(drawnPot + gauss() * BAL.potScoutSd), 55, 96);
+  const look = createLookState(o.look);
   const pot = presetPotential ? clamp(Math.round(presetPotential.value), 55, 96) : drawnPot;
   const scouted = presetPotential ? clamp(Math.round(presetPotential.scouted), 55, 96) : drawnScout;
   // sub/season/seasonStartSub은 initSubs()/newSeason() 호출로만 실제 값이 정해진다(둘 다 RNG를
@@ -95,7 +103,8 @@ export function newGame(
   const s: GameState = {
     // cid는 crypto.randomUUID()로 만든다 — 시드 RNG(rnd/ri/gauss 등)를 절대 소모하지 않는다.
     v: SAVE_VERSION,
-    cid: crypto.randomUUID(),
+    cid: o.cid && UUID.test(o.cid) ? o.cid : crypto.randomUUID(),
+    ...(look && { look }),
     halves: 1,
     name: o.name,
     number: o.number,

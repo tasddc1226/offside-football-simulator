@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "539cbf45-d6ba-44c3-902f-de2f271c3b58",
+  "id": "87020b38-2be9-49e6-bb5a-741978e75b7b",
   "prevId": "35c2b83e-65db-4d6f-b370-11a0bbe1c030",
   "tables": {
     "acquisition_consents": {
@@ -1421,77 +1421,6 @@
           "value": "\"card_exchange_claims\".\"cards\" IS NULL OR \"card_exchange_claims\".\"cards\" = \"card_exchange_claims\".\"need\""
         }
       }
-    },
-    "card_specials": {
-      "name": "card_specials",
-      "columns": {
-        "career_id": {
-          "name": "career_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "season": {
-          "name": "season",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "rank": {
-          "name": "rank",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "rule_version": {
-          "name": "rule_version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "card_specials_season_idx": {
-          "name": "card_specials_season_idx",
-          "columns": [
-            "season",
-            "kind",
-            "rank"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "card_specials_career_id_season_kind_pk": {
-          "columns": [
-            "career_id",
-            "season",
-            "kind"
-          ],
-          "name": "card_specials_career_id_season_kind_pk"
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
     },
     "cards": {
       "name": "cards",
@@ -6922,6 +6851,62 @@
         },
         "exchanges": {
           "name": "exchanges",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "forwards": {
+          "name": "forwards",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "positions": {
+          "name": "positions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "nations": {
+          "name": "nations",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "cups": {
+          "name": "cups",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "podiums": {
+          "name": "podiums",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "seasons": {
+          "name": "seasons",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "division": {
+          "name": "division",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,

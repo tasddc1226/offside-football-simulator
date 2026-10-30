@@ -22,7 +22,7 @@
 3. 바뀐 패키지의 검사를 돌린다: `pnpm --filter <패키지> lint`, `typecheck`, `test`. 전체 e2e는 돌리지 않는다(PR CI가 돈다). `pnpm format`으로 서식을 맞추고 `pnpm lint:i18n` · `pnpm lint:deps`도 돌린다.
    - 웹을 바꿨으면 `pnpm --filter @offside/web build && pnpm --filter @offside/web check:bundle`로 번들 예산을 본다.
    - `packages/game`의 확률 · 성장 · 이벤트 가중치를 바꿨으면 `SEED=<n> pnpm --filter @offside/fulltime-sim sim`을 변경 전후로 돌려 차이를 PR 본문에 적는다. 동작을 보존하는 변경이면 `golden.test.ts` 스냅샷이 바뀌면 안 된다.
-   - 게임 규칙 · 수치가 바뀌면 공개 가이드(`apps/web/scripts/seo.mjs`의 `GUIDE_SECTIONS`)를 같이 고친다.
+   - 게임 규칙 · 수치가 바뀌면 공개 가이드 · FAQ(`packages/app-core/src/i18n/{ko,en,ja,zh}/publicGuidePage.mjs`)를 네 언어 함께 고친다.
 4. 진행 보드(`docs/tracking/board.md`) 맨 위에 행을 더한다. 작업 ID는 지시에 있으면 그것을, 없으면 보드의 가장 큰 번호 + 1을 쓰고, 상태는 `PR 대기`로 둔다.
 5. 커밋한다. 메시지는 `T-<ID>: 설명`(한국어) + 빈 줄 + `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 6. 결과 파일(아래 경로)에 PR 제목 한 줄과 본문을 쓴다.

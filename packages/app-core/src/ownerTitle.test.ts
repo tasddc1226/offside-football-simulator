@@ -3,7 +3,14 @@ import { titlesOf, PERMANENT_TITLES, TITLE_GRADES } from '@offside/contracts/own
 import { setLocale } from './i18n/core.js';
 import { en } from './i18n/en/index.js';
 import { ja } from './i18n/ja/index.js';
-import { titleLabel, titleCondition, titleRelated, titleGradeLabel } from './ownerTitle.js';
+import {
+  titleLabel,
+  titleCondition,
+  titleRelated,
+  titleGradeLabel,
+  titleIconPath,
+  titleCategoryLabel,
+} from './ownerTitle.js';
 
 describe('대표 칭호 (T-11-150)', () => {
   afterEach(() => setLocale('ko'));
@@ -56,10 +63,14 @@ it('permanent labels and criteria are translated and unknown titles stay hidden'
     setLocale(locale);
     for (const t of PERMANENT_TITLES) {
       expect(titleLabel(t.id)).toBeTruthy();
-      if (t.id !== 'owner-pioneer') expect(titleCondition(t.id)).toContain(String(t.target));
+      if (t.id !== 'owner-pioneer' && t.metric !== 'division')
+        expect(titleCondition(t.id)).toContain(String(t.target));
       expect(titleRelated(t.id)).toBeTruthy();
+      expect(titleIconPath(t.id)).toBeTruthy();
+      expect(titleCategoryLabel(t.category)).toBeTruthy();
     }
     for (const grade of TITLE_GRADES) expect(titleGradeLabel(grade)).toBeTruthy();
+    expect(titleCategoryLabel('trophy')).toBeTruthy();
     expect(titleCondition('owner-developer')).toContain('10');
     expect(titleCondition('owner-star-maker')).toContain('90');
   }

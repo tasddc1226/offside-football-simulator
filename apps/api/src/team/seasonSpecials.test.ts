@@ -125,6 +125,8 @@ describe('T-11-372 시즌 특별 카드', () => {
     const steps = await closeAll();
     expect(steps.filter((s) => s.startsWith('1:'))).toEqual([
       '1:records',
+      '1:stats',
+      '1:stats',
       '1:ach',
       '1:ranks',
       '1:honors',

@@ -7,6 +7,7 @@
   import WebPayPacks from './WebPayPacks.svelte';
   import { loadWebPay, webPay } from './webPay.svelte.js';
   import { scoutText as L } from '@offside/app-core/i18n/ko/scout';
+  import { scoutWhatText } from '@offside/app-core/scoutOdds';
   import { scoutPityAt } from '@offside/contracts/cup';
   import ScoutOdds from './ScoutOdds.svelte';
   import ScoutFunds from './ScoutFunds.svelte';
@@ -24,7 +25,7 @@
   <small class="eyebrow">Premium scout</small>
   <h2>{L.title}</h2>
   <span class="muted fs-sm" data-scout-sub>{have ? L.shopSubHave({ n: have }) : L.shopSub}</span>
-  <p class="muted fs-sm">{L.what}</p>
+  <p class="muted fs-sm">{scoutWhatText()}</p>
   <p class="muted fs-sm">{L.pityHelp(scoutPityAt())}</p>
   {#if webPay.config?.enabled}<WebPayPacks item="scout" />{:else}<p class="muted fs-sm">{L.shopWeb}</p>{/if}
   <ScoutFunds onbought={(n, balance, spent) => ((have = n), onbought?.(balance, spent))} />

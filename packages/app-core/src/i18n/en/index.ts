@@ -14,6 +14,7 @@ import { avatarRecord } from './avatarRecord';
 import { backup } from './backup';
 import { balanceKeys } from './balanceKeys';
 import { best11 } from './best11';
+import { bizInfo } from './bizInfo';
 import { board } from './board';
 import { boardLabel } from './boardLabel';
 import { careerGuide } from './careerGuide';
@@ -95,7 +96,9 @@ import { serverStatus } from './serverStatus';
 import { settings } from './settings';
 import { settingsApi } from './settingsApi';
 import { share } from './share';
+import { shareMeta } from './shareMeta';
 import { sheetAchieve } from './sheetAchieve';
+import { sheetChrome } from './sheetChrome';
 import { sheetContract } from './sheetContract';
 import { sheetCore } from './sheetCore';
 import { sheetMinigame } from './sheetMinigame';
@@ -134,6 +137,7 @@ export const en = {
   backup,
   balanceKeys,
   best11,
+  bizInfo,
   board,
   boardLabel,
   careerGuide,
@@ -215,7 +219,9 @@ export const en = {
   settings,
   settingsApi,
   share,
+  shareMeta,
   sheetAchieve,
+  sheetChrome,
   sheetContract,
   sheetCore,
   sheetMinigame,

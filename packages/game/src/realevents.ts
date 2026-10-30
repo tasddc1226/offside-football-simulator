@@ -4,24 +4,9 @@ import { leagueOf, addStat, addAttr, isPro, byPos, adFee } from './engine.js';
 import { ovr } from './attributes.js';
 import { callupScore, RELEASE } from './national.js';
 import { isKorean, nationOf } from './nation.js';
+import { DERBY_PAIRS, derbyText } from './derby.js';
 import type { EventDef, GameState } from './types.js';
 
-const DERBY: Record<string, string> = {
-  k2: '경인 더비',
-  k1: '동해안 더비',
-  j1: '다마가와 클라시코',
-  mls: '엘 트라피코',
-  ere: '데 클라시커르',
-  l1: '르 클라시크',
-  bl: '데어 클라시커',
-  sa: '밀라노 더비',
-  ll: '엘 클라시코',
-  pl: '맨체스터 더비',
-  csl: '상하이 더비',
-  spl: '리야드 더비',
-  bra: '플라-플루',
-  por: '오 클라시코',
-};
 const CAMP = (s: GameState) =>
   s.leagueId === 'mls'
     ? pick(['미국 플로리다', '미국 애리조나', '멕시코 칸쿤'])
@@ -436,9 +421,9 @@ export const REAL_EVENTS: EventDef[] = [
     id: 'derby',
     title: '라이벌 더비',
     w: 2,
-    cond: (s) => isPro(s) && s.phase > 0 && !!DERBY[s.leagueId] && !(s.mil && s.mil.serving),
-    text: (s) =>
-      `${DERBY[s.leagueId]}. 한 주 내내 도시가 들썩였습니다. 경기장 공기가 평소와 다릅니다.`,
+    cond: (s) => isPro(s) && s.phase > 0 && !!DERBY_PAIRS[s.leagueId] && !(s.mil && s.mil.serving),
+    // T-11-543 리그마다 더비 3~4개와 상대 구단(derby.ts). 고르는 데 RNG를 쓰지 않는다.
+    text: (s) => derbyText(s),
     choices: [
       {
         label: byPos<string>({
@@ -496,8 +481,8 @@ export const REAL_EVENTS: EventDef[] = [
             addStat(s, 'fame', 7);
             addStat(s, 'morale', 5);
             addStat(s, 'trust', 0.8);
-            addStat(s, 'cond', s.age >= 30 ? -18 : -8);
-            if (s.age >= 31) s.injury = Math.max(s.injury, 1);
+            addStat(s, 'cond', s.age >= 30 ? -14 : -8);
+            if (s.age >= 32) s.injury = Math.max(s.injury, 1);
             addStat(s, 'money', adFee(s) / 2);
           },
         },

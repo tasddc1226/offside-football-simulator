@@ -5,6 +5,7 @@
 import type { GameState, LookItem, LookState } from './types.js';
 import { LOOK_CODE, LOOK_ORDER } from './look-code.js';
 export { LOOK_ORDER, lookCode } from './look-code.js';
+export * from './create-look.js';
 
 /** 머리 모양(avatar.ts HAIR 키) — 순서가 코드 값이다. 뒤에만 더한다. */
 export const LOOK_STYLES = [

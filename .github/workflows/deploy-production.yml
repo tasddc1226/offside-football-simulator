@@ -9,6 +9,11 @@ on:
         default: preflight
         type: choice
         options: [preflight, deploy]
+      skip_release_notes:
+        description: 'Skip publishing in-game release notes for this deployment'
+        required: true
+        default: false
+        type: boolean
       expected_sha:
         description: 'Exact main commit SHA to inspect or deploy'
         required: true
@@ -54,6 +59,8 @@ jobs:
       VITE_ADSENSE_HOSTNAME: ${{ vars.VITE_ADSENSE_HOSTNAME }}
       VITE_ADSENSE_SLOTS: ${{ vars.VITE_ADSENSE_SLOTS }}
       VITE_ADFIT_UNITS: ${{ vars.VITE_ADFIT_UNITS }}
+      # T-11-589 통신판매업 사업자 정보(JSON: name · owner · regNo · mailOrderNo · address · phone). 공개 저장소라 코드에 두지 않는다. 비면 푸터 · 약관에 안 보인다.
+      BUSINESS_INFO: ${{ vars.BUSINESS_INFO }}
     steps:
       - name: Require main and explicit deploy confirmation
         env:
@@ -429,7 +436,7 @@ jobs:
   release-notes:
     name: Publish in-game release notes
     needs: [production-release, app-update, release-tag]
-    if: inputs.mode == 'deploy'
+    if: inputs.mode == 'deploy' && !inputs.skip_release_notes
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment:

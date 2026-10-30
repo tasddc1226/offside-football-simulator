@@ -15,7 +15,7 @@ export async function currentLeague(db: Db, now: string): Promise<LeagueDef | un
     .from(leagueSeasons)
     .where(eq(leagueSeasons.season, season.id))
     .limit(1);
-  if (!row) return planLeague(season.id, season.startsAt);
+  if (!row) return planLeague(season.id, season.startsAt, season.endsAt);
   return {
     season: row.season,
     startsAt: row.startsAt,

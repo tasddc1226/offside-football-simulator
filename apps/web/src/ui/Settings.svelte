@@ -14,6 +14,7 @@
   import { isDark, setDark } from './theme.js';
   import { setSheetSkin, skin } from './skin.svelte.js';
   import SiteFooter from './SiteFooter.svelte';
+  import { publicDocPath } from '@offside/app-core/links';
   import { showInstallGuide } from './install.js';
   import { goFairness, goHome, goTypeDex, takeFocus } from './nav.js';
   import Account from './Account.svelte';
@@ -210,8 +211,8 @@
     <h2 id="settings-help">{L.help}</h2>
     <nav class="card settings-links" aria-label={L.help}>
       <button data-act="install-guide" onclick={() => showInstallGuide()}>{L.installGuide} <span aria-hidden="true">›</span></button>
-      <a href="/guide/">{L.guide} <span aria-hidden="true">›</span></a>
-      <a href="/faq/">{L.faq} <span aria-hidden="true">›</span></a>
+      <a href={publicDocPath('/guide/')}>{L.guide} <span aria-hidden="true">›</span></a>
+      <a href={publicDocPath('/faq/')}>{L.faq} <span aria-hidden="true">›</span></a>
       <button data-act="fairness" onclick={goFairness}>{L.fairness} <span aria-hidden="true">›</span></button>
       <button data-act="type-dex" onclick={goTypeDex}>{FG.typeDex} <span aria-hidden="true">›</span></button>
       <!-- T-11-473 첫 커리어 따라가기 안내를 처음부터(홈으로 가서 새 커리어 버튼을 비춘다). -->

@@ -108,9 +108,12 @@ export const filledCount = (lineup: readonly LineupSlot[]) =>
   lineup.filter((s) => s.careerId !== null).length;
 export const lineupOvr = (lineup: readonly LineupSlot[]) => teamOvr(lineup.map((s) => s.rating));
 
-/** 선발의 시너지(T-11-105). */
-export const lineupSynergy = (lineup: readonly LineupSlot[]): TeamSynergy =>
-  teamSynergy(lineup.map((s) => s.syn));
+/** 선발의 시너지(T-11-105). season은 그 경기 · 팀의 서비스 시즌(T-11-542 시즌 2 규칙은 시즌 2부터, 모르면 지금 규칙). */
+export const lineupSynergy = (lineup: readonly LineupSlot[], season?: number): TeamSynergy =>
+  teamSynergy(
+    lineup.map((s) => s.syn),
+    season,
+  );
 
 /**
  * 공격·중원·수비·골키퍼 힘 — 자리마다의 몫과 포메이션의 줄 무게(contracts owner-team.ts lineStrength). synergy를 주면
@@ -288,8 +291,8 @@ export function matchSetup(
   if (home.length !== LINEUP_SIZE || away.length !== LINEUP_SIZE)
     throw new Error('선발은 11명이어야 합니다.');
   const on = synergyApplies(season);
-  const hSyn = on ? lineupSynergy(home) : null;
-  const aSyn = on ? lineupSynergy(away) : null;
+  const hSyn = on ? lineupSynergy(home, season) : null;
+  const aSyn = on ? lineupSynergy(away, season) : null;
   const hs = withCoach(lineupLines(home, hSyn), opts.coaches?.home, hSyn);
   const as = withCoach(lineupLines(away, aSyn), opts.coaches?.away, aSyn);
   // T-11-145 컵은 중립 경기 — 홈 이점을 주지 않는다.

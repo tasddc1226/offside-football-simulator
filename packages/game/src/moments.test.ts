@@ -93,8 +93,9 @@ describe('T-11-390 결정적 장면', () => {
 
   it('고르면 장면 경기만 바뀌고 다른 리그 경기는 그대로다', () => {
     let changed = 0;
+    // T-11-543 이벤트가 늘어 같은 시드의 진행이 바뀌었다. 4시즌으로는 결과가 뒤집힌 장면이 하나도 없어 5시즌을 본다.
     for (const pos of ['FW', 'MF', 'DF', 'GK'] as const)
-      walk(pos, 31, 4, (s, rng) => {
+      walk(pos, 31, 5, (s, rng) => {
         const a = replay(s, rng);
         const m = a.r.block?.moment;
         if (!m) return;

@@ -1,5 +1,5 @@
-// T-11-418 오프사이드 리그. 시즌마다 신청한 구단을 8팀 리그로 나눠 홈 · 원정 두 번씩 14라운드를 치르고, 순위로 다음
-// 시즌 부(1부 · 2부 …)가 오르내린다. 기획은 docs/tracking/offside-league-plan.md. 시각은 모두 UTC ISO.
+// T-11-418 오프사이드 리그. 시즌마다 신청한 구단을 8팀 리그로 나눠 시즌 마감 전날까지 매일 한 라운드씩 치르고(T-11-540,
+// 홈 · 원정 두 바퀴 14라운드를 되풀이), 순위로 다음 시즌 부(1부 · 2부 …)가 오르내린다. 기획은 docs/tracking/offside-league-plan.md. 시각은 모두 UTC ISO.
 // zod 없는 서브패스(`@offside/contracts/league`) — API 모양은 league-api.ts.
 import { DAY_MS, KST_MS, kstDay } from './kst.js';
 import { gaugeRules } from './season-gauge.js';
@@ -23,8 +23,8 @@ export const leagueFatiguePenalty = (streak: number, rate: number) =>
 export const LEAGUE_FROM_SEASON = 2;
 /** 리그 하나의 팀 수. */
 export const LEAGUE_SIZE = 8;
-/** 라운드 수(같은 리그 7팀과 홈 · 원정 한 번씩). */
-export const LEAGUE_ROUNDS = (LEAGUE_SIZE - 1) * 2;
+/** 한 바퀴 일정의 라운드 수(같은 리그 7팀과 홈 · 원정 한 번씩). T-11-540부터 시즌 마감까지 이 일정을 되풀이한다. */
+export const LEAGUE_CYCLE = (LEAGUE_SIZE - 1) * 2;
 
 /**
  * 시즌 일정의 기본값: 개막 7일 전(앞 시즌 막바지)부터 사전 신청을 받고, 개막 뒤 5일은 새 시즌 팀을 꾸리며 계속 받는다.
@@ -56,22 +56,27 @@ export interface LeagueDef {
 
 /**
  * 개막 시각 하나로 리그 일정을 만든다. 접수는 개막 presignDays일 전 00:00(KST)부터 개막 entryDays일 뒤 00:00까지, 배치는
- * 그날 drawHour시, 라운드는 그날부터 하루 한 라운드 matchHour시. 시즌 2(10/31 00:00 개막) = 접수 10/24~11/4,
- * 배치 11/5 09:00, 경기 11/5~11/18 13:00.
+ * 그날 drawHour시, 라운드는 그날부터 시즌 마감 전날까지 하루 한 라운드 matchHour시(T-11-540). 마감이 아직 정해지지 않았으면
+ * 최대 기간 끝을 마감으로 보고, 게이지가 마감을 당기면 그 뒤 라운드는 빠진다(cron이 치르지 않은 경기를 지운다).
+ * 시즌 2(10/31 00:00 개막) = 접수 10/24~11/4, 배치 11/5 09:00, 경기 11/5 13:00부터 마감 전날까지.
  */
-export function planLeague(season: number, startsAt: string): LeagueDef {
+export function planLeague(season: number, startsAt: string, endsAt?: string | null): LeagueDef {
   const d = LEAGUE_PLAN_DEFAULTS;
   // 개막한 날(KST) 00:00을 기준으로 날짜를 센다.
   const base = Date.parse(`${kstDay(startsAt)}T00:00:00.000Z`) - KST_MS;
   const at = (day: number, hour: number) =>
     new Date(base + day * DAY_MS + hour * 3_600_000).toISOString();
+  const end = endsAt ? Date.parse(endsAt) : base + gaugeRules(season).maxDays * DAY_MS;
+  // 마감(00:00 KST) 전날까지의 날 수. 마감이 배치 날보다 이르면(짧은 시즌) 한 라운드는 둔다.
+  const lastDay = Math.ceil((end - base) / DAY_MS) - 1;
+  const count = Math.max(1, lastDay - d.entryDays + 1);
   return {
     season,
     startsAt,
     opensAt: at(-d.presignDays, 0),
     closesAt: at(d.entryDays, 0),
     drawAt: at(d.entryDays, d.drawHour),
-    rounds: Array.from({ length: LEAGUE_ROUNDS }, (_, i) => at(d.entryDays + i, d.matchHour)),
+    rounds: Array.from({ length: count }, (_, i) => at(d.entryDays + i, d.matchHour)),
     minFilled: d.minFilled,
   };
 }
@@ -102,7 +107,10 @@ export function leagueSeasonAt(
   const next = seasons.find((s) => s.startsAt > now) ?? provisionalNextSeason(started);
   const cur = started && started.id >= LEAGUE_FROM_SEASON ? started : null;
   const upcoming = next && next.id >= LEAGUE_FROM_SEASON ? next : null;
-  if (cur && (!upcoming || leaguePhase(planLeague(cur.id, cur.startsAt), now) !== 'done'))
+  if (
+    cur &&
+    (!upcoming || leaguePhase(planLeague(cur.id, cur.startsAt, cur.endsAt), now) !== 'done')
+  )
     return cur;
   return upcoming;
 }
@@ -125,7 +133,7 @@ export function leaguePhase(l: LeagueDef, now: string): LeaguePhase {
 
 // ───────── 2차: 배치 · 대진 (T-11-418b) ─────────
 
-/** 한 리그의 가장 적은 팀 수. 7팀 리그는 라운드마다 한 팀이 쉬어 12경기를 치른다(14라운드 그대로). */
+/** 한 리그의 가장 적은 팀 수. 7팀 리그는 라운드마다 한 팀이 쉰다(한 바퀴 14라운드에 12경기). */
 export const LEAGUE_MIN_SIZE = LEAGUE_SIZE - 1;
 /** 기권이 이만큼 쌓이면 남은 경기는 모두 0:3 패로 친다. */
 export const LEAGUE_FORFEIT_LIMIT = 3;
@@ -158,7 +166,7 @@ export function leaguePyramid(n: number): {
 }
 
 /**
- * 한 리그의 홈 · 원정 두 바퀴 일정(LEAGUE_ROUNDS라운드). 원형 방식: 첫 팀을 고정하고 나머지를 돌린다. 7팀이면 빈 자리와 짝이 된
+ * 한 리그의 홈 · 원정 두 바퀴 일정(LEAGUE_CYCLE라운드). 시즌이 길면 이 일정을 되풀이한다(leagueRoundPairs). 원형 방식: 첫 팀을 고정하고 나머지를 돌린다. 7팀이면 빈 자리와 짝이 된
  * 팀이 그 라운드에 쉰다. 둘째 바퀴는 첫 바퀴를 홈 · 원정만 바꿔 되풀이한다. 돌려주는 값: 라운드 0..13별 [홈, 원정] 쌍.
  */
 export function leagueFixtures<T>(ids: readonly T[]): [T, T][][] {
@@ -183,6 +191,10 @@ export function leagueFixtures<T>(ids: readonly T[]): [T, T][][] {
   }
   return [...first, ...first.map((pairs) => pairs.map(([h, a]) => [a, h] as [T, T]))];
 }
+
+/** T-11-540 r번째 라운드(0부터)의 [홈, 원정] 쌍: 한 바퀴 일정을 되풀이한다. */
+export const leagueRoundPairs = <T>(cycle: readonly (readonly [T, T])[][], r: number) =>
+  cycle[r % cycle.length]!;
 
 // ───────── 4차: 결산 · 승강 (T-11-418e) ─────────
 

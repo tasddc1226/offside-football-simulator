@@ -112,6 +112,7 @@ const CUP_WIN = new Set(
     .flat()
     .map((c) => `${c} 우승`),
 );
+const uclWins = (s: GameState) => trophyCount(s, (x) => x === 'UEFA 챔피언스리그 우승');
 const TOP_CONT_WIN = new Set(['UCL', 'ACLE', 'CCC', 'LIB'].map((k) => `${CONT[k]!.name} 우승`));
 /** 같은 해에 리그·국내 컵·최상위 대륙 대회를 모두 들어 올렸는지. */
 const treble = (s: GameState) =>
@@ -151,6 +152,9 @@ const STORY_ENDINGS: [string, string, string][] = [
   ['europe', '이루지 못한 꿈', 'st_europe_dream'],
   ['mentor', '은사와 함께', 'st_mentor_with'],
   ['mentor', '홀로서기', 'st_mentor_alone'],
+  ['worldcup', '월드컵의 주인공', 'st_wc_hero'], // i18n-ignore 저장값(칭호 키)
+  ['worldcup', '꿈의 무대를 밟다', 'st_wc_stage'], // i18n-ignore 저장값(칭호 키)
+  ['worldcup', '다음 월드컵을 향해', 'st_wc_next'], // i18n-ignore 저장값(칭호 키)
 ];
 
 /** 칭호 이름·설명은 만들 때 굳히지 않고 읽을 때 지금 언어로 가져온다(getter). */
@@ -207,11 +211,15 @@ export const TITLES: TitleDef[] = [
   // 기록
   n('goals100', 'record', 2, (s) => sum(s, 'goals'), 100),
   n('goals300', 'record', 4, (s) => sum(s, 'goals'), 300),
+  // T-11-545 시즌 1 은퇴 선수의 13.6%가 골 머신을 얻어 다음 단계를 둔다(시뮬레이터로 1~3%를 겨냥).
+  n('goals500', 'record', 4, (s) => sum(s, 'goals'), 500),
   n('season30', 'record', 3, (s) => best(s, (r) => (r.pro ? r.goals : 0)), 30),
   n('assists100', 'record', 3, (s) => sum(s, 'assists'), 100),
+  n('assists250', 'record', 4, (s) => sum(s, 'assists'), 250),
   n('season20a', 'record', 3, (s) => best(s, (r) => (r.pro ? r.assists : 0)), 20),
   n('cs100', 'record', 3, (s) => sum(s, 'cs'), 100),
   n('apps500', 'record', 3, (s) => sum(s, 'apps'), 500),
+  n('apps700', 'record', 4, (s) => sum(s, 'apps'), 700),
   t('rating8', 'record', 3, (s) => s.career.some((r) => r.pro && r.apps >= 15 && r.rating >= 8)),
   n('ovr80', 'record', 2, (s) => s.peak, 80),
   n('ovr90', 'record', 4, (s) => s.peak, 90),
@@ -235,16 +243,19 @@ export const TITLES: TitleDef[] = [
   t('goldenshoe', 'award', 3, (s) => awardCount(s, (a) => a === '유러피언 골든슈') >= 1),
   t('yashin', 'award', 3, (s) => awardCount(s, (a) => a === '야신 트로피') >= 1),
   n('awards10', 'award', 3, (s) => s.awards.length, 10),
+  n('awards30', 'award', 4, (s) => s.awards.length, 30),
   t('ballon', 'award', 4, (s) => awardCount(s, (a) => a === '발롱도르') >= 1),
   n('ballon3', 'award', 4, (s) => awardCount(s, (a) => a === '발롱도르'), 3),
   // 우승
   t('champion', 'trophy', 1, (s) => trophyCount(s, (x) => LEAGUE_WIN.has(x)) >= 1),
   t('cupwinner', 'trophy', 1, (s) => trophyCount(s, (x) => CUP_WIN.has(x)) >= 1),
   t('continental', 'trophy', 3, (s) => trophyCount(s, (x) => TOP_CONT_WIN.has(x)) >= 1),
-  t('bigear', 'trophy', 4, (s) => trophyCount(s, (x) => x === 'UEFA 챔피언스리그 우승') >= 1),
+  t('bigear', 'trophy', 4, (s) => uclWins(s) >= 1),
+  n('bigear2', 'trophy', 4, uclWins, 2),
   t('treble', 'trophy', 4, treble),
   t('cwc', 'trophy', 3, (s) => trophyCount(s, (x) => x === 'FIFA 클럽 월드컵 우승') >= 1),
   n('trophies10', 'trophy', 3, (s) => s.trophies.length, 10),
+  n('trophies25', 'trophy', 4, (s) => s.trophies.length, 25),
   // 국가대표
   only(
     isKorean,
@@ -294,6 +305,7 @@ export const TITLES: TitleDef[] = [
   n('fame100', 'fame', 2, (s) => Math.floor(s.fame), 100),
   n('fame300', 'fame', 3, (s) => Math.floor(s.fame), 300),
   n('fame1000', 'fame', 4, (s) => Math.floor(s.fame), 1000),
+  n('fame2000', 'fame', 4, (s) => Math.floor(s.fame), 2000),
   // Server-only: checkTitles never grants it, so no popularity or game rewards.
   t(WALL_OF_HONOR_TITLE_ID, 'legend', 4, () => false),
   // 은퇴 — 은퇴할 때 레전드 점수 구간 하나만. T-11-018 기준은 시즌 1 선수 것이고, 프리시즌 선수는 옛 기준을 쓴다.

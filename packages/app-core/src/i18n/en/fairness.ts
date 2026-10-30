@@ -40,7 +40,7 @@ export const fairness: Translation<FairnessMsgs> = {
   hiddenPot: 'Revealed when you retire. Scouting ratings can differ a little from the real value.',
   hiddenBloomTerm: 'Late bloomers',
   hiddenBloom:
-    'Real potential drifts randomly up or down each season until age 25 and is applied at the re-evaluations at 21 and 24. Your choices do not affect it, and the rule is the same for every player.',
+    'Real potential drifts randomly up or down each season until age 25 and is applied at the re-evaluations at 21 and 24. When a re-evaluation lowers it, only 70% of the drop counts, at most 3 per re-evaluation, and the rest is forgiven. Your choices do not affect it, and the rule is the same for every player.',
   hiddenStoryTerm: 'Story and special events',
   hiddenStory:
     'They unlock in the guide only after you experience them, to avoid spoilers. Their odds follow the same rules.',

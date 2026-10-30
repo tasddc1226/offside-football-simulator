@@ -4,6 +4,7 @@ import { events } from './_events';
 import { names } from './_names';
 import { roman } from './_roman';
 import { gAttrLabel } from './gAttrLabel';
+import { gBigStage } from './gBigStage';
 import { gBoost } from './gBoost';
 import { gCare } from './gCare';
 import { gComps } from './gComps';
@@ -33,12 +34,14 @@ import { gSubs } from './gSubs';
 import { gTitles } from './gTitles';
 import { gTraining } from './gTraining';
 import { gTurn } from './gTurn';
+import { gVariety } from './gVariety';
 
 export const en = {
   __events: events,
   __names: names,
   __roman: roman,
   gAttrLabel,
+  gBigStage,
   gBoost,
   gCare,
   gComps,
@@ -68,4 +71,5 @@ export const en = {
   gTitles,
   gTraining,
   gTurn,
+  gVariety,
 };

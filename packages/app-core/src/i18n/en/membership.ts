@@ -28,6 +28,9 @@ export const membership: Translation<MembershipMsgs> = {
   restoreBusy: 'Checking…',
   restoreNone: 'No membership to restore.',
   adOwned: 'If you already bought Remove ads, it stays even after the membership ends.',
+  webBuy: (p: { price: string; days: number }) => `Buy ${p.days} days on the web · ₩${p.price}`,
+  webOnce:
+    'A web pass does not renew on its own. Buy again before it ends and the new days start when the current ones run out.',
   notOnSale: 'Membership sign-up is closed right now.',
   webJoin:
     'You can join in the app. Benefits from a membership joined in the app also apply on the web.',

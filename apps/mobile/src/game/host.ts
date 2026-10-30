@@ -1,3 +1,4 @@
+import { careerShareUrl } from '@offside/app-core/links';
 // ───────── 앱 쪽 연결 (T-11-005) ─────────
 // 게임 진행·시트 연출·업로드·선수 상세·클럽 커스텀·영구결번·새 소식은 웹과 같은 @offside/app-core 로직을 쓴다.
 // 여기서는 앱 상태(valtio)와 화면 쪽 동작(스크롤·토스트·햅틱)을 넘겨 한 벌씩 만든다.
@@ -7,6 +8,7 @@ import { createSheetController } from '@offside/app-core/sheet-controller';
 import { createGameActions } from '@offside/app-core/game-actions';
 import { createUploader } from '@offside/app-core/upload';
 import { takeAdUsage } from '../platform/adUsage';
+import { takePlaySignals } from '../platform/playSignals';
 import * as Outbox from '@offside/app-core/outbox';
 import { saveGame } from '@offside/app-core/career';
 import { createClubCustom } from '@offside/app-core/clubCustom';
@@ -66,7 +68,12 @@ export function buzz() {
 // ───────── 업로드 ─────────
 const outbox = () => Promise.resolve(Outbox);
 export const { uploadSeason, uploadRetirement, uploadLegacyRetirement, enqueueAllSeasons } =
-  createUploader({ outbox, appVersion: APP_VERSION, ads: takeAdUsage });
+  createUploader({
+    outbox,
+    appVersion: APP_VERSION,
+    signals: takePlaySignals,
+    ads: takeAdUsage,
+  });
 
 // ───────── 시트 · 진행 액션 ─────────
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
@@ -139,7 +146,7 @@ export const {
 } = createLegends({ state: appState, rnOf, toast, uploadRetirement, scrollTop: () => scrollTo(0) });
 
 /** 은퇴 커리어 공유 링크 — 웹 주소로 연다(앱이 없는 사람도 볼 수 있다). */
-export const shareUrl = (careerId: string) => `${WEB_ORIGIN}/career/${careerId}`;
+export const shareUrl = (careerId: string) => careerShareUrl(WEB_ORIGIN, careerId);
 
 export const { markNewsSeen, dismissNews, checkNews, isNewPost } = createNews(newsState);
 

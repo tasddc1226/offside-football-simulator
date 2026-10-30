@@ -26,7 +26,12 @@ export default defineConfig(({ mode }) => {
     },
   };
 
-  const define = { __APP_VERSION__: JSON.stringify(version) };
+  // T-11-589 사업자 정보는 VITE_가 아닌 이름으로 받아 푸터에만 넣는다. VITE_로 두면 import.meta.env를 통째로 읽는 모듈(ads ·
+  // analytics)에 값 전체가 실려 첫 화면 번들이 커진다.
+  const define = {
+    __APP_VERSION__: JSON.stringify(version),
+    __BUSINESS_INFO__: JSON.stringify(process.env.BUSINESS_INFO ?? ''),
+  };
   return {
     plugins: [svelte(), appShellPlugin({ define }), seoPlugin(seoConfig), versionJson],
     define,

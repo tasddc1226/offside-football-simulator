@@ -204,6 +204,43 @@ describe('private notification inbox', () => {
   });
 });
 describe('personal event delivery infrastructure', () => {
+  it('T-11-588 개인 알림은 받는 사람의 마지막 게임 언어로 보내고, 기록이 없으면 한국어로 보낸다', async () => {
+    const a = await identity();
+    const b = await identity();
+    await device(a, 1);
+    await device(b, 2);
+    await ctx.env.DB.prepare(
+      "INSERT INTO career_activity (profile_id, state, last_active_at, lang) VALUES (?, 'active', ?, 'ja')",
+    )
+      .bind(a.profileId, iso())
+      .run();
+    const result = {
+      kind: 'team' as const,
+      title: '내 팀에 새 경기 결과가 있어요',
+      body: 'A 1 : 0 B. 최근 경기에서 결과를 확인해 주세요.',
+      target: { type: 'screen' as const, screen: 'team' as const },
+    };
+    for (const who of [a, b])
+      await queueNotification(ctx.env.DB, {
+        profileId: who.profileId,
+        sourceKey: 'result',
+        content: result,
+        now: iso(),
+        push: true,
+      });
+    enable();
+    const fetcher = send();
+    await runPersonalPush(ctx.env, NOW, fetcher);
+    const payload = JSON.parse(fetcher.mock.calls[0]![1]!.body as string) as {
+      title: string;
+      body: string;
+    }[];
+    expect(payload.map((p) => p.title).sort()).toEqual(
+      [result.title, '自分のチームに新しい試合結果があります'].sort(),
+    );
+    expect(payload.map((p) => p.body)).toContain('A 1 : 0 B。最近の試合で結果を確認してください。');
+    expect(payload.map((p) => p.body)).toContain(result.body);
+  });
   it('includes legacy subscribers without a separate engagement opt-in and confirms all device receipts once', async () => {
     const a = await identity();
     await device(a, 1);

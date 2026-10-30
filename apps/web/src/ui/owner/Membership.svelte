@@ -1,6 +1,7 @@
 <script lang="ts">
-  // T-11-512 클럽 멤버십(내 구단 화면 '클럽 멤버십' 칸으로 연다). 열 때 한 번 상태(1분 메모)를 받는다. 웹에서는 가입하지 않고
-  // (앱 구독), 혜택과 지금 상태를 보인다. 받은 혜택 끝은 이 브라우저에 남겨 그때까지 웹 광고를 끈다.
+  // T-11-512 클럽 멤버십(내 구단 화면 '클럽 멤버십' 칸으로 연다). 열 때 한 번 상태(1분 메모)를 받는다. 혜택과 지금 상태를
+  // 보이고, 받은 혜택 끝은 이 브라우저에 남겨 그때까지 웹 광고를 끈다. T-11-591부터 웹 결제가 열린 구단주는 자동 갱신 없는
+  // 기간권을 웹에서 산다(엑솔라). 앱 구독 중이면 사지 않게 버튼을 숨긴다.
   import PopSheet from '../PopSheet.svelte';
   import Skeleton from '../Skeleton.svelte';
   import type { MembershipResponse } from '@offside/contracts';
@@ -9,6 +10,8 @@
   import { memberPerks, memberStatusText } from '@offside/app-core/membership-view';
   import { membershipText as L } from '@offside/app-core/i18n/ko/membership';
   import { rememberMember } from '../../ads/ads';
+  import { hasSessionHint } from '@offside/app-core/api/client';
+  import { loadWebPay, startWebPay, webPay } from '../cup/webPay.svelte.js';
 
   const { onclose }: { onclose: () => void } = $props();
 
@@ -26,6 +29,17 @@
     rememberMember(r.data.active ? r.data.until : null);
   }
   void load();
+  if (hasSessionHint()) void loadWebPay();
+  let seenPaid = webPay.paid;
+  $effect(() => {
+    if (webPay.paid !== seenPaid) {
+      seenPaid = webPay.paid;
+      void load();
+    }
+  });
+  const webMember = $derived(webPay.config?.enabled ? webPay.config.membership : undefined);
+  // 앱 스토어 구독 중이면 웹 기간권을 팔지 않는다(두 번 내지 않게). 웹 기간권 중이면 이어서 산다.
+  const canWebBuy = $derived(!!webMember && !!m && (!m.active || m.store === null));
 
   const line = $derived(m ? memberStatusText(m) : null);
 </script>
@@ -56,7 +70,10 @@
           <li><b>{p.title}</b><span class="muted fs-sm">{p.sub}</span></li>
         {/each}
       </ul>
-      {#if m.active}
+      {#if canWebBuy && webMember}
+        <button class="btn btn-primary btn-block" data-act="member-web-buy" disabled={webPay.busy} onclick={() => void startWebPay(webMember.productId, 'member')}>{L.webBuy({ price: webMember.amount.toLocaleString('ko-KR'), days: webMember.days })}</button>
+        <p class="fs-xs muted">{L.webOnce}</p>
+      {:else if m.active}
         <p class="fs-sm muted">{L.manageHint}</p>
       {:else}
         <p class="fs-sm muted" data-member-web-join>{m.stores.length ? L.webJoin : L.notOnSale}</p>

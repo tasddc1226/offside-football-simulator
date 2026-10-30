@@ -1006,6 +1006,8 @@ export function createGameActions(host: GameHost) {
       presetAttrs,
       presetPotential,
     );
+    // T-11-545 미리보기에 쓴 ID는 이 선수에게 주었으니 다음 선수는 새 ID를 받는다.
+    appState.C.cid = undefined;
     host.save();
     appState.screen = 'game';
     host.trackPage('game');

@@ -26,6 +26,7 @@
   import { REROLL_MILEAGE, rerollMileageLeft, scoutPityAt, type ScoutPity } from '@offside/contracts/cup';
   import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
   import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
+  import { scoutWhatText } from '@offside/app-core/scoutOdds';
   import ScoutOdds from './cup/ScoutOdds.svelte';
   import ScoutPityGauge from './ScoutPityGauge.svelte';
   import { hasSessionHint } from '@offside/app-core/api/client';
@@ -38,6 +39,7 @@
   import Topbar from './Topbar.svelte';
   import MiniRadar from './MiniRadar.svelte';
   import NationPicker from './NationPicker.svelte';
+  import CreateLook from './CreateLook.svelte';
   import { doneOnEnter } from './inputDone.js';
   import ScoutScan from './ScoutScan.svelte';
   import RevealFx from './RevealFx.svelte';
@@ -358,6 +360,8 @@
         </p>
       </div>
 
+      <CreateLook />
+
       <div class="field" data-coach="pos">
         <span class="lbl">{L.position}</span>
         <div class="seg two">
@@ -506,7 +510,7 @@
     {/if}
     {#if scouts > 0}
       <button class="btn btn-sm btn-primary self-start" data-act="premium-scout" disabled={scoutBusy || rerolling} onclick={premiumScout}>{scoutBusy ? SL.busy : SL.btn({ n: scouts })}</button>
-      <p class="muted fs-sm">{SL.what}</p>
+      <p class="muted fs-sm">{scoutWhatText()}</p>
       <ScoutPityGauge {pity} />
       <ScoutOdds />
     {:else if pity.used > 0}

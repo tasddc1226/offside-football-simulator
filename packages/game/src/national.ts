@@ -13,7 +13,7 @@ import { grantSportsService } from './military.js';
 import { gNationalText as L } from './i18n/ko/gNational.js';
 import { tn } from './i18n/names.js';
 
-const NT_THRESHOLD = 80;
+export const NT_THRESHOLD = 80;
 const AFC_NT: [string, number][] = [
   ['일본', 77],
   ['이란', 74],
@@ -187,6 +187,13 @@ const CONT_CUP: Record<
     year: (y) => y % 4 === 0,
   },
 };
+/** T-11-543 올해 내 연맹의 대륙컵이 열리면 그 연맹(이벤트 문구가 대회 이름을 고른다), 아니면 null. */
+export function contCupConf(s: GameState): Confed | null {
+  const conf = natSide(s).conf;
+  return CONT_CUP[conf].year(s.year) ? conf : null;
+}
+/** T-11-543 와일드카드(나이 제한을 넘은 선수) 제안에 답한 결과 플래그. true면 명단에 든다, false면 가지 않는다. */
+export const oaFlag = (key: string, year: number) => `oa${key}${year}`;
 /** 대표팀 트로피 이름들(대륙컵·월드컵·올림픽·아시안게임) — 기록의 club을 대표팀으로 적는 데 쓴다. */
 export const NATIONAL_TROPHIES = new Set([...NATIONAL_WINS, '올림픽 은메달', '올림픽 동메달']);
 /** 단계(phase)별 A매치 기간의 달 — 이름은 만들 때 지금 언어로 붙인다. */
@@ -492,6 +499,10 @@ function squadRole(
   if (s.injury > 0) return { role: 'none', why: L.whyInjury };
   if (T.youth) {
     const young = s.age <= 23;
+    // T-11-543 와일드카드 제안(bigstage-events.ts oa-wildcard)에 답했으면 그대로 따른다 — 구단 허락까지 받은 뒤라 차출 협상도 없다.
+    const oa = young ? undefined : s.flags[oaFlag(key, s.year)];
+    if (oa === false) return { role: 'none', why: '' };
+    if (oa === true) return { role: 'starter', why: L.whyWildcard };
     const need = young ? 68 : 84;
     if (sc < need + gauss() * 1.5) return { role: 'none', why: young ? L.whyCut : '' };
     // 아시안게임·올림픽 남자축구는 의무 차출 대회가 아니라 해외 구단은 거절할 수 있다(T-10-016 올림픽 추가).

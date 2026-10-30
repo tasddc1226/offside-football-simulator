@@ -118,6 +118,14 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'updated_at',
     // T-11-374 카드 과제를 낸 횟수(헌납의 명가).
     'exchanges',
+    // T-11-556 단계 · 새 칭호.
+    'forwards',
+    'positions',
+    'nations',
+    'cups',
+    'podiums',
+    'seasons',
+    'division',
   ],
   cup_entries: [
     'cup_id',

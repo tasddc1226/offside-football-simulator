@@ -299,7 +299,7 @@ export default function Team() {
   });
   const ovr = teamOvr(ratings);
   // T-11-105 선발 시너지 — 늘 보여 주고, 반영 시즌부터 줄 힘에도 더한다.
-  const synergy = slotsSynergy(positions, slots, byId);
+  const synergy = slotsSynergy(positions, slots, byId, season);
   const syn = synergyFocus(synergy, synFocus);
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
   const lines = draftLines(slotCodes, ratings, synergy, season);

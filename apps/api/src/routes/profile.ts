@@ -207,7 +207,7 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     if (isReservedNickname(nickname)) {
       throw new AppError({
         code: 'VALIDATION_FAILED',
-        message: `'운영자'처럼 운영진으로 보이는 닉네임은 쓸 수 없어요.`,
+        message: `닉네임에 '운영자'처럼 운영진으로 보이는 말은 쓸 수 없어요.`,
         details: { reason: 'RESERVED_NICKNAME' },
       });
     }

@@ -2,6 +2,7 @@
 // 구단 이름·엠블럼, 도움말·서비스 정책 링크. 이 설정들은 이 기기에만 저장된다. 계정·운영 도구는 구단주 화면에 있다.
 // 앱에서 뺀 것(웹 전용): 효과음·배경음악·음량·음악 출처, '홈 화면에 추가하기' 안내.
 import { FONT } from '@offside/app-core/design-tokens';
+import { publicDocPath } from '@offside/app-core/links';
 import { setTextSize, TEXT_SIZES } from '@offside/app-core/textSize';
 import { REVEAL_SHORT_KEY } from '@offside/app-core/reveal';
 import { keyMomentsOn, setKeyMomentsOn } from '@offside/app-core/keyMomentPref';
@@ -53,7 +54,8 @@ import { useSnapshot } from 'valtio';
 import { saveLocale } from '../../platform/locale';
 
 /** 정책·가이드는 웹 페이지를 앱 안 브라우저로 연다. id·onPress 항목은 앱 안 화면으로 간다. */
-type LinkItem = { text: string; path: string } | { text: string; id: string; onPress: () => void };
+type LinkItem =
+  { text: string; path: string; id?: string } | { text: string; id: string; onPress: () => void };
 function LinkList({ label, items }: { label: string; items: LinkItem[] }) {
   const c = useColors();
   return (
@@ -61,11 +63,11 @@ function LinkList({ label, items }: { label: string; items: LinkItem[] }) {
       <View accessibilityLabel={label}>
         {items.map((it, i) => (
           <Press
-            key={'id' in it ? it.id : it.path}
+            key={'path' in it ? (it.id ?? it.path) : it.id}
             scale={0.985}
             accessibilityRole="link"
-            testID={`link-${'id' in it ? it.id : it.path.replaceAll('/', '')}`}
-            onPress={() => ('id' in it ? it.onPress() : openWeb(it.path))}
+            testID={`link-${'path' in it ? (it.id ?? it.path.replaceAll('/', '')) : it.id}`}
+            onPress={() => ('onPress' in it ? it.onPress() : openWeb(it.path))}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -330,8 +332,8 @@ export default function Settings() {
         <LinkList
           label={L.help}
           items={[
-            { text: L.guide, path: '/guide/' },
-            { text: L.faq, path: '/faq/' },
+            { text: L.guide, path: publicDocPath('/guide/'), id: 'guide' },
+            { text: L.faq, path: publicDocPath('/faq/'), id: 'faq' },
             { text: L.fairness, id: 'fairness', onPress: goFairness },
             { text: FG.typeDex, id: 'type-dex', onPress: goTypeDex },
             // T-11-473 첫 커리어 따라가기 안내를 처음부터(홈으로 가서 새 커리어 버튼을 비춘다).
