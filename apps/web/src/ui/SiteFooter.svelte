@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { DC_GALLERY_URL } from '@offside/app-core/links';
+  import { DC_GALLERY_URL, publicDocPath } from '@offside/app-core/links';
   import { shellText as L } from '@offside/app-core/i18n/ko/shell';
 </script>
 
 <!-- 문의·SNS 링크 푸터 — 홈과 설정 화면 맨 아래에 같은 모양으로 둔다. -->
 <footer class="site-foot">
   <nav class="public-links">
-    <a href="/guide/">{L.footGuide}</a>
-    <a href="/faq/">{L.footFaq}</a>
+    <a href={publicDocPath('/guide/')}>{L.footGuide}</a>
+    <a href={publicDocPath('/faq/')}>{L.footFaq}</a>
     <a href="/fairness/">{L.footFairness}</a>
     <a href="/news/">{L.navBoard}</a>
     <a href="/legends/">{L.footLegends}</a>

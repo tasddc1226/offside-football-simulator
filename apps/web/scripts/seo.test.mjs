@@ -5,11 +5,14 @@ import { brandSvg } from '../brand/build-icons.mjs';
 import guideKo from '../../../packages/app-core/src/i18n/ko/publicGuide.mjs';
 import guideEn from '../../../packages/app-core/src/i18n/en/publicGuide.mjs';
 import guideJa from '../../../packages/app-core/src/i18n/ja/publicGuide.mjs';
+import guideZh from '../../../packages/app-core/src/i18n/zh/publicGuide.mjs';
 import articlesKo from '../../../packages/app-core/src/i18n/ko/publicArticles.mjs';
 import articlesEn from '../../../packages/app-core/src/i18n/en/publicArticles.mjs';
 import articlesJa from '../../../packages/app-core/src/i18n/ja/publicArticles.mjs';
+import articlesZh from '../../../packages/app-core/src/i18n/zh/publicArticles.mjs';
 import {
   BRAND_VERSION,
+  GUIDE_LOCALES,
   PUBLIC_PAGES,
   STATIC_PAGES,
   landingPage,
@@ -104,7 +107,8 @@ test('production discovery files contain the public pages', () => {
   assert.match(createRobotsTxt(config), /Sitemap: https:\/\/play\.example\.com\/sitemap\.xml/);
   assert.equal(
     (createSitemapXml(config.origin).match(/<url>/g) ?? []).length,
-    8 + articlesKo.length,
+    // T-11-588 가이드 · FAQ · 공략 글은 영어 · 일본어 · 번체 중국어 주소가 더 있다.
+    8 + articlesKo.length + 3 * (2 + articlesKo.length),
   );
   // T-11-231 운영 소개 페이지.
   assert.match(
@@ -159,7 +163,7 @@ test('structured data: home is a free web game, FAQ mirrors visible Q&A, no-inde
 });
 
 test('static guide correction dictionaries have complete English and Japanese counterparts', () => {
-  for (const translated of [guideEn, guideJa]) {
+  for (const translated of [guideEn, guideJa, guideZh]) {
     assert.deepEqual(Object.keys(translated).sort(), Object.keys(guideKo).sort());
     for (const text of Object.values(translated)) {
       assert.equal(typeof text, 'string');
@@ -207,7 +211,7 @@ test('T-11-452 공략 글은 가이드 아래 색인 페이지로 나가고 가�
 
 test('T-11-452 공략 글 영어 · 일본어는 한국어와 같은 구조이고 한글이 없다', () => {
   const shape = (list) => list.map((a) => [a.slug, a.sections.map(([, ps]) => ps.length)]);
-  for (const translated of [articlesEn, articlesJa]) {
+  for (const translated of [articlesEn, articlesJa, articlesZh]) {
     assert.deepEqual(shape(translated), shape(articlesKo));
     assert.doesNotMatch(JSON.stringify(translated), /[가-힣]/);
   }
@@ -241,4 +245,70 @@ test('T-11-584 /app/ 랜딩은 독립 문서이고 색인 · 구조화 데이터
   for (const path of ['/guide/', '/faq/', '/fairness/', '/about/'])
     assert.match(STATIC_PAGES[path], /href="\/app\/"/, path);
   assert.match(createSitemapXml(config.origin), /<loc>https:\/\/play\.example\.com\/app\/<\/loc>/);
+});
+
+test('T-11-588 가이드 · FAQ 본문은 네 언어가 같은 구조이고 다른 언어 페이지에는 한글이 없다', () => {
+  const shape = (p) => [
+    p.guide.sections.map(([, ps]) => ps.length),
+    p.faq.items.length,
+    Object.keys(p.ui),
+    Object.keys(p.guide),
+    Object.keys(p.faq),
+  ];
+  const ko = GUIDE_LOCALES.ko.page;
+  for (const lang of ['en', 'ja', 'zh']) {
+    const { prefix, page, articles } = GUIDE_LOCALES[lang];
+    assert.deepEqual(shape(page), shape(ko), lang);
+    const paths = [
+      `${prefix}/guide/`,
+      `${prefix}/faq/`,
+      ...articles.map((a) => `${prefix}${articlePath(a.slug)}`),
+    ];
+    for (const path of paths) {
+      assert.ok(STATIC_PAGES[path], path);
+      assert.doesNotMatch(STATIC_PAGES[path], /[가-힣]/, path);
+      assert.doesNotMatch(
+        PUBLIC_PAGES[path].title + PUBLIC_PAGES[path].description,
+        /[가-힣]/,
+        path,
+      );
+    }
+    // 가이드 · FAQ · 공략 글끼리는 같은 언어 주소로 잇는다.
+    assert.match(STATIC_PAGES[`${prefix}/guide/`], new RegExp(`href="${prefix}/faq/"`));
+    assert.match(
+      STATIC_PAGES[`${prefix}/guide/`],
+      new RegExp(`href="${prefix}/guide/${articles[0].slug}/"`),
+    );
+  }
+});
+
+test('T-11-588 언어별 페이지는 html lang · og:locale · hreflang · 구조화 데이터를 그 언어로 낸다', () => {
+  const config = { origin: 'https://play.example.com', indexingEnabled: true };
+  const html = pageHtml(FAKE_BASE_HTML, config, '/ja/faq/', STATIC_PAGES['/ja/faq/']);
+  assert.match(html, /<html lang="ja"/);
+  assert.match(html, /og:locale" content="ja_JP"/);
+  for (const [hreflang, path] of [
+    ['ko', '/faq/'],
+    ['en', '/en/faq/'],
+    ['ja', '/ja/faq/'],
+    ['zh-Hant', '/zh/faq/'],
+    ['x-default', '/faq/'],
+  ])
+    assert.ok(
+      html.includes(`hreflang="${hreflang}" href="https://play.example.com${path}"`),
+      hreflang,
+    );
+  assert.match(
+    pageHtml(FAKE_BASE_HTML, config, '/guide/', STATIC_PAGES['/guide/']),
+    /<html lang="ko"/,
+  );
+  // 소개 · 약관처럼 한 벌인 페이지에는 다른 언어 주소를 달지 않는다.
+  assert.doesNotMatch(createHeadMarkup(config, '/about/'), /hreflang/);
+  const faq = createStructuredData(config.origin, '/zh/faq/').find((n) => n['@type'] === 'FAQPage');
+  assert.equal(faq.mainEntity.length, GUIDE_LOCALES.zh.page.faq.items.length);
+  assert.doesNotMatch(JSON.stringify(faq), /[가-힣]/);
+  const slug = articlesEn[0].slug;
+  const article = createStructuredData(config.origin, `/en/guide/${slug}/`);
+  assert.equal(article[1].inLanguage, 'en');
+  assert.equal(article[0].itemListElement[1].item, 'https://play.example.com/en/guide/');
 });

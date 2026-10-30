@@ -4,6 +4,14 @@
 // CAREER_OG_BANDS)로 돌려보낸다. 게임 코드를 끌어오지 않게 순수 함수로만 둔다.
 import type { PublicHofEntry } from '@offside/contracts';
 import { legendBand } from '@offside/game/legend-bands';
+import { gLegend as bandEn } from '@offside/game/i18n/en/gLegend';
+import { gLegend as bandJa } from '@offside/game/i18n/ja/gLegend';
+import { gLegend as bandZh } from '@offside/game/i18n/zh/gLegend';
+import { shareMetaText as ko } from '@offside/app-core/i18n/ko/shareMeta';
+import { shareMeta as en } from '@offside/app-core/i18n/en/shareMeta';
+import { shareMeta as ja } from '@offside/app-core/i18n/ja/shareMeta';
+import { shareMeta as zh } from '@offside/app-core/i18n/zh/shareMeta';
+import { TRANSLATED_LOCALES, type Locale } from '@offside/contracts/i18n';
 import { anonName } from '@offside/game/pos-label';
 import { hashStr } from '@offside/game/hash';
 import { ogCardPath } from './share-path.js';
@@ -25,15 +33,32 @@ export const cardVersion = (e: PublicHofEntry): string =>
 
 export type ShareMeta = { title: string; description: string; image: string; url: string };
 
-export function careerShareMeta(e: PublicHofEntry, origin: string): ShareMeta {
-  const who = e.name ?? anonName(e.pos, e.number);
+// T-11-588 워커는 언어를 바꾸지 않으므로(setLocale 없음) 언어별 문구를 직접 고른다.
+const TEXT = { ko, en, ja, zh };
+const BAND: Record<Exclude<Locale, 'ko'>, Record<string, string>> = {
+  en: bandEn,
+  ja: bandJa,
+  zh: bandZh,
+};
+
+/** 공유 링크의 ?lang=(공유한 사람의 화면 언어). 없거나 모르는 값이면 한국어. */
+export const shareLang = (v: string | null): Locale =>
+  (TRANSLATED_LOCALES as readonly string[]).includes(v ?? '') ? (v as Locale) : 'ko';
+
+export function careerShareMeta(e: PublicHofEntry, origin: string, lang: Locale = 'ko'): ShareMeta {
+  const T = TEXT[lang];
+  const who = e.name ?? anonName(e.pos, e.number, lang);
   const band = legendBand(e.legendScore, e.dpos);
-  const club = e.lastClub ? ` · 마지막 소속 ${e.lastClub}` : '';
+  const club = e.lastClub && lang === 'ko' ? T.club({ club: e.lastClub }) : '';
   return {
-    title: `${who} · ${band.name} (레전드 ${e.legendScore}점)`,
-    description: `${e.retireAge}세 은퇴 · ${e.apps}경기 ${e.goals}골 ${e.assists}도움 · 트로피 ${e.trophies}개${club}.`,
+    title: T.title({
+      who,
+      band: lang === 'ko' ? band.name : (BAND[lang][band.id] ?? band.name),
+      score: e.legendScore,
+    }),
+    description: `${T.description({ age: e.retireAge, apps: e.apps, goals: e.goals, assists: e.assists, trophies: e.trophies })}${club}.`,
     image: `${origin}${ogCardPath(e.id)}?v=${cardVersion(e)}`,
-    url: `${origin}/career/${e.id}`,
+    url: `${origin}/career/${e.id}${lang === 'ko' ? '' : `?lang=${lang}`}`,
   };
 }
 

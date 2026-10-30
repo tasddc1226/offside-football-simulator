@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import {
   ENDPOINT,
   TRANSLATED_SINCE,
+  ZH_SINCE,
   publish,
   readEntries,
 } from '../../.github/scripts/publish-release-notes.mjs';
@@ -70,6 +71,26 @@ describe('배포 후 릴리즈 게시 스크립트', () => {
       writeFileSync(
         resolve(dir, name),
         JSON.stringify({ ...entry, id: 'new-entry', en, ja: { ...ja, extra: 1 } }),
+      );
+      expect(() => readEntries(dir)).toThrow();
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+  it('T-11-588 중국어 기준일 이후 파일은 번체 중국어 문구도 있어야 한다', () => {
+    const dir = mkdtempSync(resolve(tmpdir(), 'release-notes-test-'));
+    try {
+      const en = { title: 'Chat', items: ['Latest messages show up'] };
+      const ja = { title: 'チャット', items: ['最新のメッセージが表示されます'] };
+      const name = `${ZH_SINCE}-01-new.json`;
+      writeFileSync(resolve(dir, name), JSON.stringify({ ...entry, en, ja }));
+      expect(() => readEntries(dir)).toThrow('Traditional Chinese');
+      const zh = { title: '聊天', items: ['會顯示最新的訊息'] };
+      writeFileSync(resolve(dir, name), JSON.stringify({ ...entry, en, ja, zh }));
+      expect(readEntries(dir)[0]).toMatchObject({ zh });
+      writeFileSync(
+        resolve(dir, name),
+        JSON.stringify({ ...entry, en, ja, zh: { ...zh, extra: 1 } }),
       );
       expect(() => readEntries(dir)).toThrow();
     } finally {

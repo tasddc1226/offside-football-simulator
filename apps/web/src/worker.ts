@@ -10,7 +10,7 @@ import {
 import { NEWS_ID } from './news-id.js';
 import { resolveApiBaseUrl } from './api/base-url.js';
 import { fetchHofEntry } from './hof-entry.js';
-import { careerShareMeta, injectShareMeta } from './share-meta.js';
+import { careerShareMeta, injectShareMeta, shareLang } from './share-meta.js';
 import { OG_CARD_PATH, SHARE_PATH } from './share-path.js';
 
 interface Fetcher {
@@ -50,8 +50,9 @@ const PUBLIC_PATHS = new Set([
   '/legal/privacy/',
   '/legal/privacy/index.html',
 ]);
-// T-11-452 가이드 아래 공략 글(/guide/<slug>/). 빌드가 만든 정적 파일이 있을 때만 공개 페이지로 본다.
-const GUIDE_ARTICLE = /^\/guide\/[a-z0-9-]+(\/|\/index\.html)?$/;
+// T-11-452 가이드 아래 공략 글(/guide/<slug>/)과 T-11-588 다른 언어 가이드 · FAQ(/en/guide/…, /ja/faq/ 등).
+// 빌드가 만든 정적 파일이 있을 때만 공개 페이지로 본다.
+const GUIDE_ARTICLE = /^(\/(en|ja|zh))?\/(guide\/[a-z0-9-]+|guide|faq)(\/|\/index\.html)?$/;
 // 앱 셸(오프사이드/풀타임 SPA)로 서빙해야 하는 경로. 게임 자체는 `/`에서 로드되고,
 // `/settings`는 구글 OAuth 콜백(`?google=linked|switched|error&reason=...`)이
 // 돌아오는 목적지라 앱 셸로 떨어져야 한다. `/career/<id>`(T-10-029 공유 링크)는 아래에서 미리보기 메타를 넣어 따로 내린다.
@@ -88,7 +89,7 @@ async function withShareMeta(shellP: Promise<Response>, id: string, url: URL): P
   const [shell, entry] = await Promise.all([shellP, fetchHofEntry(id, url.hostname)]);
   if (!shell.ok || !entry) return shell;
   try {
-    const meta = careerShareMeta(entry, url.origin); // 셸 본문을 읽기 전에 — 여기서 실패해도 셸은 그대로 쓸 수 있다.
+    const meta = careerShareMeta(entry, url.origin, shareLang(url.searchParams.get('lang'))); // 셸 본문을 읽기 전에 — 여기서 실패해도 셸은 그대로 쓸 수 있다.
     const html = injectShareMeta(await shell.text(), meta);
     const headers = new Headers(shell.headers);
     headers.delete('Content-Length');

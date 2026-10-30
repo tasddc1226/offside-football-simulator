@@ -1,3 +1,4 @@
+import { publicDocPath } from '@offside/app-core/links';
 // T-11-231 명예의 전당 공개 페이지. 크롤러가 자바스크립트 없이 읽도록 워커가 /legends/ 아래 HTML을 서버에서 그린다
 // (public-news.ts와 같은 셸·같은 방식). 서버 부담을 줄이려고 기존 공개 API만 읽고, 그린 HTML은 엣지 캐시에 오래 둔다
 // (worker.ts legendsCached). 검색 노출(색인)은 이름이 공개된 상위권 선수로 좁힌다 — 7만 명을 같은 틀로 모두 내면
@@ -166,7 +167,7 @@ const valueOf = (e: PublicHofEntry, sort: Sort): string => {
 };
 
 const nav = () =>
-  `<nav class="public-news-nav"><a href="/">OFFSIDE</a><a href="${legendsPath.hub}">${escape(L.hubTitle)}</a><a href="/guide/">${escape(S.footGuide)}</a><a href="/faq/">${escape(S.footFaq)}</a><a href="/news/">${escape(D.publicNews)}</a></nav>`;
+  `<nav class="public-news-nav"><a href="/">OFFSIDE</a><a href="${legendsPath.hub}">${escape(L.hubTitle)}</a><a href="${publicDocPath('/guide/')}">${escape(S.footGuide)}</a><a href="${publicDocPath('/faq/')}">${escape(S.footFaq)}</a><a href="/news/">${escape(D.publicNews)}</a></nav>`;
 
 function table(entries: PublicHofEntry[], sort: Sort, offset = 0) {
   const rows = entries
