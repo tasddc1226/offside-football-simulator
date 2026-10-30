@@ -118,7 +118,11 @@ describe('T-11-585 랜딩 이미지', () => {
       new Request('https://offside-lab.com/landing/live.webp'),
       {
         ASSETS: {
-          fetch: async () => new Response('x', { headers: { 'Content-Type': 'image/webp' } }),
+          // 운영 ASSETS는 _headers의 /* 규칙대로 noindex를 붙여 돌려준다.
+          fetch: async () =>
+            new Response('x', {
+              headers: { 'Content-Type': 'image/webp', 'X-Robots-Tag': 'noindex, nofollow' },
+            }),
         },
       },
       ctx,
