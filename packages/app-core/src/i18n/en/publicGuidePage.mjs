@@ -290,7 +290,7 @@ export default (guideCopy) => {
     ],
     [
       'Where do I buy premium scout tickets and potential boost tickets?',
-      `Buy them in the shop at the bottom of the ${guideCopy.hub} screen. Reroll tickets can be bought with club funds on both web and app, premium scout tickets can be bought with club funds once a week, and paid products (bundles of reroll tickets, premium scout tickets and potential boost tickets) are bought in the app. Items you buy go to your owner account and can be used on the web too. Use reroll tickets and premium scout tickets at the candidate step when creating a player, and potential boost tickets in Potential Boost on the Player tab.`,
+      `Buy them in the shop at the bottom of the ${guideCopy.hub} screen. Reroll tickets can be bought with club funds on both web and app, premium scout tickets can be bought with club funds once a week, and paid products (bundles of reroll tickets, premium scout tickets and potential boost tickets) are bought with store payment in the app, or with web payment on the web by signed-in owners. Items you buy go to your owner account and can be used on the web too. Use reroll tickets and premium scout tickets at the candidate step when creating a player, and potential boost tickets in Potential Boost on the Player tab.`,
     ],
     [
       'How are player types like Speedster and Stopper decided?',

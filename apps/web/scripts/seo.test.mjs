@@ -12,6 +12,7 @@ import articlesJa from '../../../packages/app-core/src/i18n/ja/publicArticles.mj
 import articlesZh from '../../../packages/app-core/src/i18n/zh/publicArticles.mjs';
 import {
   BRAND_VERSION,
+  businessSection,
   GUIDE_LOCALES,
   PUBLIC_PAGES,
   STATIC_PAGES,
@@ -311,4 +312,22 @@ test('T-11-588 언어별 페이지는 html lang · og:locale · hreflang · 구�
   const article = createStructuredData(config.origin, `/en/guide/${slug}/`);
   assert.equal(article[1].inLanguage, 'en');
   assert.equal(article[0].itemListElement[1].item, 'https://play.example.com/en/guide/');
+});
+
+test('사업자 정보는 칸이 모두 있을 때만 그리고 값은 이스케이프한다 (T-11-589)', () => {
+  const full = {
+    name: 'A&B',
+    owner: 'Hong',
+    regNo: '000-00-00000',
+    mailOrderNo: 'no-1',
+    address: 'addr',
+    phone: '010',
+  };
+  const html = businessSection(JSON.stringify(full));
+  assert.match(html, /id="business"/);
+  assert.match(html, /A&amp;B/);
+  assert.match(html, /wrkr_no=0000000000"/);
+  assert.equal(businessSection(JSON.stringify({ ...full, phone: ' ' })), '');
+  assert.equal(businessSection('not json'), '');
+  assert.equal(businessSection(undefined), '');
 });

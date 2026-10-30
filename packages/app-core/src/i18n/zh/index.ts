@@ -14,6 +14,7 @@ import { avatarRecord } from './avatarRecord';
 import { backup } from './backup';
 import { balanceKeys } from './balanceKeys';
 import { best11 } from './best11';
+import { bizInfo } from './bizInfo';
 import { board } from './board';
 import { boardLabel } from './boardLabel';
 import { cardEnhance } from './cardEnhance';
@@ -137,6 +138,7 @@ export const zh = {
   backup,
   balanceKeys,
   best11,
+  bizInfo,
   board,
   boardLabel,
   cardEnhance,

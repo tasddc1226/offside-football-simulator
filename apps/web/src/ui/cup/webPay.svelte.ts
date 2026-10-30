@@ -97,7 +97,10 @@ export async function startWebPay(productId: string, back: WebPayBack = 'owner')
   const r = await createWebPayOrder(productId);
   if (!r.ok) {
     webPay.busy = false;
-    return toast(r.error.message || L.startFail);
+    // 서버 503 문구(webPayUnavailable)는 결제 확인용이라, 결제창을 열지 못했을 때는 여는 실패로 알린다.
+    return toast(
+      r.error.code === 'SERVICE_UNAVAILABLE' ? L.startFail : r.error.message || L.startFail,
+    );
   }
   writePending({ orderId: r.data.orderId, at: Date.now(), back });
   location.assign(r.data.payUrl);
