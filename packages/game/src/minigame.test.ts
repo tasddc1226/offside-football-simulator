@@ -17,10 +17,15 @@ describe('원터치 미니게임', () => {
       }),
     );
     expect(mg.sort()).toEqual([
+      'fw-cross:1:shot',
       'fw-one-on-one:0:chip',
       'fw-one-on-one:1:dribble',
+      'gk-cross:0:save',
+      'gk-error:0:save',
       'gk-pk:0:save',
       'gk-pk:1:save',
+      'mf-freekick:0:shot',
+      'mf-tempo:1:shot',
       'penalty:0:shot',
       'pk-save:0:save',
       'pk-save:1:save',

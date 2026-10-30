@@ -981,6 +981,13 @@
       "when": 1793287775325,
       "tag": "0142_chat_report_room",
       "breakpoints": true
+    },
+    {
+      "idx": 143,
+      "version": "6",
+      "when": 1793290868068,
+      "tag": "0143_owner_title_tiers",
+      "breakpoints": true
     }
   ]
 }

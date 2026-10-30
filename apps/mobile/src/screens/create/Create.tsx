@@ -101,6 +101,7 @@ import { noteScrollY, revealFocusedInput } from '../../ui/scroll';
 import { useFormKeyboardScroll } from '../../ui/useFormKeyboardScroll';
 import { MiniRadar } from './MiniRadar';
 import { NationPicker } from './NationPicker';
+import { CreateLook } from './CreateLook';
 import { ScoutScan } from './ScoutScan';
 import { PositionGuide } from '../game/PositionGuide';
 import { ItemsHint } from '../../components/ItemsHint';
@@ -765,6 +766,8 @@ export default function Create() {
                 {bodyErr ? bodyErr : L.bodyNote({ bmi: bmiOf(body).toFixed(1), note })}
               </Txt>
             </Field>
+
+            <CreateLook />
 
             <CoachTarget id="pos">
               <Field label={L.position}>

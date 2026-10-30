@@ -37,6 +37,7 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   achRewardGot: (p) => `已獲得獎勵 ${p.items}`,
   achRewardBoost: (p) => `潛力強化券 ${p.n} 張`,
   achRewardScout: (p) => `高級球探券 ${p.n} 張`,
+  achRewardReroll: (p) => `重抽券 ${p.n} 張`,
   achRankNone: '達成一項成就即可登上排行榜',
   achRank: (p) => `第 ${p.rank} 名 · 共 ${p.ranked} 人`,
   achCatPlayer: '球員成就',

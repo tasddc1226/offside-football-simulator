@@ -33,6 +33,7 @@ export default (guideCopy) => {
     [
       'Customizing your pixel player',
       [
+        'When you create a player, you can choose skin tone, hair color and hairstyle for free. Items you leave alone use the default look set for each player, and items you pick count as bought, so you can change them again for free during the career.',
         'Tap the pixel player at the top of the career screen to customize its look with career funds. You can choose skin tone, hair color, hairstyle, facial hair, expression, headband, wristband, goggles, boots and socks. Each item is bought once, and then you can change it for free as many times as you like during that career. Prices scale with salary, and customizing has no effect on attributes or match results.',
         'When you earn the Top scorer, Champion, Senior national team debut, Big Ears, Ballon d’Or or World Championship winner titles, a golden record item opens for each title (golden boots, a champion’s headband and so on). Record items are bought one by one, and once bought you can put them on or take them off at any time.',
         'When you retire, your look is fixed as it was at that moment and can no longer be changed. Your customized look also appears in your retirement report, on the Hall of Fame podium and in the owner season-review team photo.',
@@ -105,7 +106,7 @@ export default (guideCopy) => {
         guideCopy.matchReport,
         guideCopy.teamMoments,
         guideCopy.teamDivision,
-        'The better a player fits their spot, the higher their fit, and when team synergy turns on through player type combinations, strong foot or players you raised yourself, your team gets stronger in matches. You can play up to 10 matches a day against other owners’ teams (one per opponent per day), and your team rating (RP from service season 2) rises and falls with the results. You can go for the owner ranking by collecting player, team, owner and manager achievements (player achievements run from stage 0 to 6, and team achievements also include Dream Team lineups and Offside Cup results), and you can customize your team logo and share a team intro image.',
+        'The better a player fits their spot, the higher their fit, and when team synergy turns on through player type combinations, strong foot or players you raised yourself, your team gets stronger in matches. You can play up to 10 matches a day against other owners’ teams (one per opponent per day), and your team rating (RP from service season 2) rises and falls with the results. You can go for the owner ranking by collecting player, team, owner and manager achievements (player achievements run from stage 0 to 6, and team achievements also include Dream Team lineups and Offside Cup results. From season 2, achievements for single-season feats, career shapes and match moments, plus hidden achievements, are added), and you can customize your team logo and share a team intro image.',
       ],
     ],
     [
@@ -132,8 +133,8 @@ export default (guideCopy) => {
       'Card challenges',
       [
         `In Card challenges on the ${guideCopy.hub} screen, you hand in the cards of retired players you raised yourself that meet the conditions. A card you hand in is removed from your club and does not come back, and unlike a release it gives no club funds. Your Hall of Fame and retirement records stay as they are.`,
-        'There are three challenges that change every day at 00:00 KST: Easy (2–3 players), Normal (4) and Hard (5–7). You can hand in each challenge once a day, and on a day you hand in all three you receive items such as reroll tickets and potential boost tickets. The amounts are shown on the Card challenges screen. Handing in only some of them gives no reward. Conditions are based only on values printed on the card, such as position, detailed position, peak OVR, nationality (same nationality or all different), longest-played league, season and strong foot.',
-        'You cannot hand in players you signed from the transfer market, locked players, players in a manager career or serving as manager, players listed for sale on the transfer market, or players in this season’s starting lineup. Offside Cup squads are inside the starting lineup, so they are blocked too. When you complete all of the daily challenges on 10 days, you receive the permanent title House of Tribute.',
+        'There are three challenges that change every day at 00:00 KST: Easy (1–2 players), Normal (3) and Hard (3–4). You can hand in each challenge once a day, and on a day you hand in all three you receive items such as reroll tickets and potential boost tickets. The amounts are shown on the Card challenges screen. Handing in only some of them gives no reward. Conditions are based only on values printed on the card, such as position, detailed position, peak OVR, nationality (same nationality or all different), longest-played league, season and strong foot.',
+        'You cannot hand in players you signed from the transfer market, locked players, players in a manager career or serving as manager, players listed for sale on the transfer market, or players in this season’s starting lineup. Offside Cup squads are inside the starting lineup, so they are blocked too. When you complete all of the daily challenges on 5 days, you receive the permanent title House of Tribute, and on 20 days, Hall of Tribute.',
       ],
     ],
     [
@@ -202,6 +203,7 @@ export default (guideCopy) => {
     ['What are the choices that appear during match commentary?', guideCopy.keyMoment],
     ['Can I go out on loan?', guideCopy.loan],
     ['How do ranked match RP and divisions go up and down?', guideCopy.teamDivision],
+    ['How do I earn permanent titles in the Hall of Honors?', guideCopy.ownerRecords],
     ['Can I retire only from the national team?', guideCopy.ntRetirement],
     [
       'Does it still count as long service if I transfer to another team and come back?',
@@ -331,7 +333,7 @@ export default (guideCopy) => {
     ],
     [
       'Can I change how my player looks?',
-      'Tap the pixel player on the career screen to buy customization items with career funds. Items you buy once can be changed for free during that career, and when you earn titles such as Top scorer or Ballon d’Or you can also buy golden record items. Existing retired players can also change only their look for free in the retirement report. Records, attributes and career funds stay as they are.',
+      'When you create a player, you can choose skin tone, hair color and hairstyle for free. Tap the pixel player on the career screen to buy customization items with career funds. Items you buy once can be changed for free during that career, and when you earn titles such as Top scorer or Ballon d’Or you can also buy golden record items. Existing retired players can also change only their look for free in the retirement report. Records, attributes and career funds stay as they are.',
     ],
     ['How long is a service season?', guideCopy.seasonLength],
     [

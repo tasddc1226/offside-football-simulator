@@ -40,7 +40,7 @@ export const LOAN_EVENT: EventDef = {
   get title() {
     return L.title;
   },
-  w: 3,
+  w: 4,
   cond: loanTalkReady,
   text: () => L.text,
   choices: [

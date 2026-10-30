@@ -6,29 +6,12 @@ import { pick } from '../../rng';
 import { leagueOf } from '../../player';
 import type { GameState } from '../../types';
 import { tn } from '../names';
+import { derbyText } from '../../derby';
 
 const byPos =
   <T>(m: Partial<Record<Pos | 'def', T>>) =>
   (s: GameState): T =>
     (m[s.pos] ?? m.def) as T;
-
-// realevents.ts 의 DERBY — 리그 id → 더비 이름(중국어).
-const DERBY: Record<string, string> = {
-  k2: '京仁德比',
-  k1: '東海岸德比',
-  j1: '多摩川經典戰',
-  mls: '洛杉磯德比',
-  ere: '荷蘭國家德比',
-  l1: '法國國家德比',
-  bl: '德國國家德比',
-  sa: '米蘭德比',
-  ll: '西班牙國家德比',
-  pl: '曼徹斯特德比',
-  csl: '上海德比',
-  spl: '利雅德德比',
-  bra: '弗拉-弗盧德比',
-  por: '葡萄牙國家德比',
-};
 
 // realevents.ts 의 CAMP 와 같은 조건에서 같은 개수의 후보 중 pick 한 번 — 한국어와 같은 난수를 같은 만큼 쓴다.
 const camp = (s: GameState): string =>
@@ -219,7 +202,7 @@ export const events_real: Record<string, EventText> = {
   },
   derby: {
     title: '宿敵德比',
-    text: (s) => `${DERBY[s.leagueId]}。整整一週全城沸騰。球場的空氣和平常不一樣。`,
+    text: (s) => derbyText(s, tn),
     choices: [
       {
         label: byPos<string>({

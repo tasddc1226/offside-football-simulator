@@ -37,6 +37,7 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   achRewardGot: (p) => `受け取った報酬 ${p.items}`,
   achRewardBoost: (p) => `ポテンシャル強化券${p.n}枚`,
   achRewardScout: (p) => `プレミアムスカウト券${p.n}枚`,
+  achRewardReroll: (p) => `リロール券${p.n}枚`,
   achRankNone: '実績を1つ達成するとランキングに載ります',
   achRank: (p) => `${p.rank}位 · ${p.ranked}人中`,
   achCatPlayer: '選手実績',

@@ -22,6 +22,10 @@ export const teamAch: Translation<TeamAchMsgs> = {
   perkHonor:
     'オーナーランキングで1位・トップ10・トップ100に入ると、シーズン総括に記章がずっと残ります。',
   perkNote: '実績スコアは試合結果に影響しません。',
+  bonusTitle: 'スコアボーナス',
+  bonusNext: (p) => `${p.pts}ptで${p.items}`,
+  bonusGot: (p) => `受け取ったボーナス ${p.items}`,
+  bonusNote: (p) => `実績スコア${p.every}ptごとにもらえます。上限はありません。`,
   nextGoal: '次の目標',
   worthPlus: (p) => `+${p.n}pt`,
   catsAria: '実績の分類',

@@ -1190,6 +1190,7 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
         nation: careers.nation,
         retireAge: careers.retireAge,
         retiredAt: careers.retiredAt,
+        peak: careers.peak,
         rn: retiredNumbers.careerId,
       })
       .from(careers)
@@ -1206,6 +1207,8 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
         goals: careerSeasons.goals,
         cs: careerSeasons.cs,
         mil: careerSeasons.mil,
+        age: careerSeasons.age,
+        assists: careerSeasons.assists,
       })
       .from(careerSeasons)
       .where(
@@ -1223,6 +1226,8 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
       goals: r.goals,
       cs: r.cs,
       mil: r.mil === 1,
+      age: r.age,
+      assists: r.assists,
     });
     byCareer.set(r.careerId, list);
   }
@@ -1242,6 +1247,7 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
     nation: r.nation,
     retireAge: r.retireAge ?? 0,
     retiredAt: r.retiredAt,
+    peak: r.peak ?? 0,
     seasons: byCareer.get(r.id) ?? [],
   }));
 }

@@ -151,4 +151,11 @@ export const create: Translation<CreateMsgs> = {
   groupBase: 'Default',
   groupHits: (p) => `${plural(p.n, 'result')}`,
   invalidHint: 'Check the value you entered',
+  // T-11-545 appearance
+  lookTitle: 'Appearance',
+  lookAuto: 'Default',
+  lookAutoAria: (p: { item: string }) => `${p.item}: default`,
+  lookNote:
+    'Anything you leave on default uses the look each player is born with. What you pick here can be changed for free later in the look editor.',
+  lookPreview: 'Appearance preview',
 };

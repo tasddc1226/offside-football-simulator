@@ -1954,6 +1954,15 @@ export const ownerTitleProgress = sqliteTable('owner_title_progress', {
   firsts: integer('firsts').notNull(),
   // T-11-374 카드 과제 낸 횟수.
   exchanges: integer('exchanges').notNull().default(0),
+  // T-11-556 최고 능력치 90 이상 공격수 · 그런 선수의 포지션 가짓수 · 은퇴 선수 국적 가짓수 · 마친 컵 · 컵 4강 이상 ·
+  // 은퇴 선수를 남긴 시즌 · 시즌 마감 디비전 휘장의 최고 index.
+  forwards: integer('forwards').notNull().default(0),
+  positions: integer('positions').notNull().default(0),
+  nations: integer('nations').notNull().default(0),
+  cups: integer('cups').notNull().default(0),
+  podiums: integer('podiums').notNull().default(0),
+  seasons: integer('seasons').notNull().default(0),
+  division: integer('division').notNull().default(0),
   updatedAt: text('updated_at').notNull(),
 });
 /** One editable prediction per account and cup match; settlement and grant are atomic. */

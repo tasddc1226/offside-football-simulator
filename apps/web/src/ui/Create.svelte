@@ -38,6 +38,7 @@
   import Topbar from './Topbar.svelte';
   import MiniRadar from './MiniRadar.svelte';
   import NationPicker from './NationPicker.svelte';
+  import CreateLook from './CreateLook.svelte';
   import { doneOnEnter } from './inputDone.js';
   import ScoutScan from './ScoutScan.svelte';
   import RevealFx from './RevealFx.svelte';
@@ -357,6 +358,8 @@
           {/if}
         </p>
       </div>
+
+      <CreateLook />
 
       <div class="field" data-coach="pos">
         <span class="lbl">{L.position}</span>

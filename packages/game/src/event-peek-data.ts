@@ -54,7 +54,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   rival: [
     {
       ok: ['attr+', 'cond-'],
-      fail: ['cond-'],
+      fail: ['out', 'cond-'],
     },
     {
       ok: ['trust-', 'cond+', 'morale+'],
@@ -62,7 +62,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   scout: [
     {
-      ok: ['story:europe', 'fame+'],
+      ok: ['fame+'],
       fail: ['trust-', 'morale-'],
     },
     {
@@ -106,7 +106,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   trainer: [
     {
       ok: ['pot+', 'attr+', 'money-'],
-      fail: ['money-'],
+      fail: ['out', 'money-'],
     },
     {
       ok: ['pot+', 'cond+', 'trust+'],
@@ -114,7 +114,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   charity: [
     {
-      ok: ['morale+', 'fame+', 'cond-'],
+      ok: ['fame+', 'morale+', 'cond-'],
     },
     {
       ok: ['cond+', 'trust+'],
@@ -210,7 +210,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   'rehab-1': [
     {
-      ok: ['story:rehab', 'out', 'trust+', 'morale+'],
+      ok: ['story:rehab', 'out', 'trust+'],
     },
     {
       ok: ['story:rehab'],
@@ -223,7 +223,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
       fail: ['out', 'morale-'],
     },
     {
-      ok: ['cond+', 'attr+'],
+      ok: ['cond+', 'attr+', 'trust-'],
     },
   ],
   'rehab-3': [
@@ -238,7 +238,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   'scandal-2': [
     {
       ok: ['fame-', 'trust+', 'morale+'],
-      fail: ['fame-', 'trust-', 'morale-'],
+      fail: ['trust-', 'fame-', 'morale-'],
     },
     {
       ok: ['trust+', 'morale+'],
@@ -286,7 +286,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
       ok: ['morale+', 'trust-'],
     },
     {
-      ok: ['fame+', 'morale+'],
+      ok: ['fame+', 'trust+', 'morale+'],
     },
   ],
   var: [
@@ -438,7 +438,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   'mf-press': [
     {
-      ok: ['attr+', 'cond-', 'trust+'],
+      ok: ['attr+', 'trust+', 'cond-'],
       fail: ['out', 'cond-'],
     },
     {
@@ -478,7 +478,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   'df-overlap': [
     {
       ok: ['trust+', 'cond-', 'fame+', 'morale+'],
-      fail: ['cond-', 'trust-'],
+      fail: ['trust-', 'cond-'],
     },
     {
       ok: ['trust+', 'cond+'],
@@ -490,7 +490,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
       fail: ['trust-', 'morale-'],
     },
     {
-      ok: ['trust-', 'morale+'],
+      ok: ['morale+', 'cond+', 'trust-'],
     },
   ],
   'gk-sweeper': [
@@ -532,7 +532,9 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
     },
   ],
   'dating-rumor': [
-    {},
+    {
+      ok: ['morale+'],
+    },
     {
       ok: ['fame+'],
     },
@@ -542,7 +544,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   'kid-autograph': [
     {
-      ok: ['fame+', 'morale+'],
+      ok: ['fame+'],
     },
     {
       ok: ['morale+', 'cond-'],
@@ -584,7 +586,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   'coach-farewell': [
     {
-      ok: ['morale+', 'fame+', 'trust-'],
+      ok: ['morale+', 'fame+'],
     },
     {
       ok: ['fame+', 'trust+', 'morale+'],
@@ -616,6 +618,255 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
     {
       ok: ['trust+', 'morale+'],
       fail: ['morale-'],
+    },
+  ],
+  'am-exam': [
+    {
+      ok: ['attr+', 'trust+', 'cond-'],
+      fail: ['morale-', 'trust-'],
+    },
+    {
+      ok: ['cond+', 'morale+'],
+    },
+  ],
+  'am-parents': [
+    {
+      ok: ['morale+', 'cond+'],
+      fail: ['morale-'],
+    },
+    {
+      ok: ['cond-', 'morale+'],
+    },
+  ],
+  'am-senior': [
+    {
+      ok: ['trust+', 'morale+'],
+      fail: ['trust-', 'morale-'],
+    },
+    {
+      ok: ['attr+', 'cond-'],
+    },
+  ],
+  'am-captain': [
+    {
+      ok: ['trust+', 'fame+', 'morale+'],
+      fail: ['morale-', 'cond-'],
+    },
+    {
+      ok: ['attr+'],
+    },
+  ],
+  'am-friendly': [
+    {
+      ok: ['fame+', 'morale+'],
+      fail: ['cond-', 'morale-'],
+    },
+    {
+      ok: ['attr+', 'trust+'],
+    },
+  ],
+  'mf-switch': [
+    {
+      ok: ['fame+', 'morale+'],
+      fail: ['trust-', 'morale-'],
+    },
+    {
+      ok: ['trust+'],
+    },
+  ],
+  'mf-tempo': [
+    {
+      ok: ['trust+', 'morale+'],
+      fail: ['trust-', 'morale-'],
+    },
+    {
+      ok: ['fame+', 'morale+'],
+      fail: ['trust-', 'morale-'],
+    },
+  ],
+  'fw-cross': [
+    {
+      ok: ['fame+', 'morale+'],
+      fail: ['morale-'],
+    },
+    {
+      ok: ['fame+', 'morale+'],
+      fail: ['morale-'],
+    },
+  ],
+  'fw-chase': [
+    {
+      ok: ['fame+', 'morale+', 'cond-'],
+      fail: ['cond-'],
+    },
+    {
+      ok: ['cond+'],
+    },
+  ],
+  'df-trap': [
+    {
+      ok: ['trust+', 'morale+'],
+      fail: ['trust-', 'morale-'],
+    },
+    {
+      ok: ['trust+'],
+    },
+  ],
+  'young-advice': [
+    {
+      ok: ['attr+', 'trust+', 'cond-'],
+      fail: ['cond-', 'morale-'],
+    },
+    {
+      ok: ['morale+'],
+    },
+  ],
+  'young-sns': [
+    {
+      ok: ['fame+', 'morale+'],
+      fail: ['morale-'],
+    },
+    {
+      ok: ['cond+'],
+    },
+  ],
+  'vet-recovery': [
+    {
+      ok: ['cond+', 'money-', 'morale+'],
+    },
+    {
+      ok: ['cond+', 'trust+'],
+      fail: ['trust-', 'morale-'],
+    },
+  ],
+  'vet-mentor': [
+    {
+      ok: ['trust+', 'cond-', 'morale+'],
+    },
+    {
+      ok: ['cond+'],
+    },
+  ],
+  'wc-road-1': [
+    {
+      ok: ['story:worldcup', 'fame+', 'cond-', 'morale+'],
+      fail: ['story:worldcup', 'cond-', 'morale-'],
+    },
+    {
+      ok: ['story:worldcup', 'trust+', 'cond+'],
+    },
+  ],
+  'wc-road-2': [
+    {
+      ok: ['fame+', 'morale+'],
+      fail: ['out', 'morale-'],
+    },
+    {
+      ok: ['trust-', 'cond+'],
+    },
+  ],
+  'wc-road-3': [
+    {
+      ok: ['fame+', 'morale+'],
+      fail: ['morale-', 'trust-'],
+    },
+    {
+      ok: ['trust+', 'cond+'],
+    },
+  ],
+  'nat-parade': [
+    {
+      ok: ['fame+', 'cond-', 'trust-', 'morale+'],
+    },
+    {
+      ok: ['trust+', 'fame+'],
+    },
+  ],
+  'post-tour-rest': [
+    {
+      ok: ['cond+', 'trust-', 'morale+'],
+    },
+    {
+      ok: ['trust+', 'cond-'],
+      fail: ['out', 'cond-', 'morale-'],
+    },
+  ],
+  'cont-cup-eve': [
+    {
+      ok: ['trust-', 'fame+', 'morale+', 'cond+'],
+    },
+    {
+      ok: ['trust+', 'cond-'],
+    },
+  ],
+  'oa-wildcard': [
+    {
+      ok: ['morale+', 'trust-'],
+      fail: ['morale-'],
+    },
+    {
+      ok: ['trust+', 'cond+'],
+    },
+  ],
+  'ballon-gala': [
+    {
+      ok: ['fame+', 'cond-', 'morale+'],
+    },
+    {
+      ok: ['trust+', 'cond+'],
+    },
+  ],
+  'ucl-anthem': [
+    {
+      ok: ['fame+', 'morale+'],
+      fail: ['trust-', 'morale-'],
+    },
+    {
+      ok: ['trust+'],
+    },
+  ],
+  'cont-away': [
+    {
+      ok: ['fame+', 'morale+', 'cond-'],
+      fail: ['cond-', 'morale-'],
+    },
+    {
+      ok: ['trust+'],
+    },
+  ],
+  'deadline-day': [
+    {
+      ok: ['morale+'],
+      fail: ['trust-', 'morale-'],
+    },
+    {
+      ok: ['trust+'],
+    },
+  ],
+  testimonial: [
+    {
+      ok: ['fame+', 'morale+'],
+    },
+    {
+      ok: ['money+', 'fame+'],
+    },
+  ],
+  'club-wc': [
+    {
+      ok: ['fame+', 'cond-', 'money+', 'morale+'],
+      fail: ['cond-', 'morale-'],
+    },
+    {
+      ok: ['cond+', 'trust-'],
+    },
+  ],
+  'intl-flight': [
+    {
+      ok: ['trust+', 'cond-', 'fame+'],
+      fail: ['out', 'cond-'],
+    },
+    {
+      ok: ['cond+', 'trust-'],
     },
   ],
 };

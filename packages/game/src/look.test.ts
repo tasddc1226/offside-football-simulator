@@ -1,8 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { avatarImagePlan } from './avatar-image.js';
-import { avatarSpec, lookOf, primeAvatarSpec, retiredAvatarSpec } from './avatar.js';
+import {
+  avatarSpec,
+  createAvatarSpec,
+  lookOf,
+  primeAvatarSpec,
+  retiredAvatarSpec,
+} from './avatar.js';
 import { newGame } from './engine.js';
-import { LOOK_ITEMS, lookCode, lookOwned, parseLookCode } from './look.js';
+import {
+  LOOK_ITEMS,
+  CREATE_LOOK_ITEMS,
+  CREATE_LOOK_OPTIONS,
+  createLookState,
+  createLookValue,
+  lookCode,
+  lookOwned,
+  parseLookCode,
+  type CreateLook,
+} from './look.js';
 import {
   buyLookRecord,
   lookRecordCost,
@@ -13,6 +29,7 @@ import {
   setLook,
 } from './look-shop.js';
 import { createRng, setActiveRng } from './rng.js';
+import type { GameState } from './types.js';
 
 const player = (money = 1e6, salary: number | null = 100_000) => {
   setActiveRng(createRng(7));
@@ -136,5 +153,76 @@ describe('선수 꾸미기 (T-11-191)', () => {
     buyLook(s, 'style', 2);
     s.mil.serving = true;
     expect(avatarSpec(s).hairStyle).toBe('buzz');
+  });
+});
+
+describe('선수 만들기 외형 고르기 (T-11-545)', () => {
+  const base = {
+    name: 'a',
+    number: 9,
+    pos: 'FW',
+    foot: '오른발',
+    type: 'poacher',
+    trait: 'late',
+  } as const;
+  const make = (extra: { look?: CreateLook; cid?: string }) => {
+    setActiveRng(createRng(7));
+    return newGame({ ...base, ...extra }, 7);
+  };
+
+  it('고르지 않으면 꾸미기 상태가 없고 예전과 같은 선수다', () => {
+    const plain = make({});
+    expect(plain.look).toBeUndefined();
+    const picked = make({ look: { skin: 5 } });
+    const strip = (g: GameState) => ({ ...g, cid: '', look: undefined });
+    expect(strip(picked)).toEqual(strip(plain));
+  });
+
+  it('고른 항목은 산 것으로 치고 그림에 입혀진다', () => {
+    const s = make({ look: { skin: 4, hair: 6, style: 6 } });
+    expect(s.look).toEqual({
+      owned: ['skin', 'hair', 'style'],
+      pick: { skin: 4, hair: 6, style: 6 },
+    });
+    expect(lookOwned(s, 'hair')).toBe(true);
+    expect(lookOwned(s, 'beard')).toBe(false);
+    // 산 것으로 쳐서 가게가 다시 팔지 않고, 모양은 무료로 바꾼다.
+    s.money = 1e6;
+    expect(buyLook(s, 'hair', 2)).toBe(false);
+    expect(setLook(s, 'hair', 2)).toBe(true);
+    expect(s.money).toBe(1e6);
+    const sp = avatarSpec(s);
+    expect(sp.look.skin).toBe(4);
+    expect(sp.hairStyle).toBe('afro');
+    expect(lookCode(s.look)).toBe('s4h2y6');
+  });
+
+  it('선택지는 꾸미기 항목에서 기록 아이템 값만 뺀 것이다', () => {
+    for (const k of CREATE_LOOK_ITEMS) {
+      const plain = Array.from({ length: LOOK_ITEMS[k].options }, (_, v) => v).filter(
+        (v) => !LOOK_RECORDS.some((r) => r.item === k && r.value === v),
+      );
+      expect(plain).toEqual(Array.from({ length: CREATE_LOOK_OPTIONS[k] }, (_, v) => v));
+      for (const v of plain) expect(createLookValue(k, v)).toBe(true);
+    }
+  });
+
+  it('기록 아이템 값 · 범위 밖 값은 버린다', () => {
+    const gold = LOOK_RECORDS.find((r) => r.item === 'hair')!.value;
+    expect(createLookState({ hair: gold })).toBeUndefined();
+    expect(createLookState({ skin: 99, style: -1 })).toBeUndefined();
+    expect(createLookState({ skin: 1.5, hair: 3 })).toEqual({ owned: ['hair'], pick: { hair: 3 } });
+    expect(createLookState(undefined)).toBeUndefined();
+  });
+
+  it('미리보기에 쓴 커리어 ID로 만들면 미리보기와 같은 얼굴이다', () => {
+    const cid = '0b6f3c1e-2a4d-4c8e-9f1a-7d2e5b3c4a10';
+    const s = make({ cid, look: { hair: 7 } });
+    expect(s.cid).toBe(cid);
+    const pre = createAvatarSpec(cid, { hair: 7 });
+    expect(pre.look).toEqual(avatarSpec(s).look);
+    expect(pre.look.skin).toBe(lookOf(cid).skin);
+    // 모양이 틀린 ID는 쓰지 않는다.
+    expect(make({ cid: 'nope' }).cid).toMatch(/^[0-9a-f-]{36}$/);
   });
 });

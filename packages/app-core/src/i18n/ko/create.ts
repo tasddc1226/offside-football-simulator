@@ -166,6 +166,13 @@ const ko = {
   groupHits: (p: { n: number }) => `검색 결과 ${p.n}`,
   // 입력 칸 접근성
   invalidHint: '입력값을 확인해 주세요',
+  // T-11-545 외형 고르기
+  lookTitle: '외형',
+  lookAuto: '기본',
+  lookAutoAria: (p: { item: string }) => `${p.item} 기본`,
+  lookNote:
+    '고르지 않은 항목은 선수마다 정해지는 기본 모습이에요. 고른 항목은 커리어 중 꾸미기에서 무료로 다시 바꿀 수 있어요.',
+  lookPreview: '외형 미리보기',
 };
 
 export type CreateMsgs = typeof ko;

@@ -1,8 +1,23 @@
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
-import { achievementDescs, tenureLabels } from '../i18n/en/achievements.js';
-import { DESC_JA, GROUP_JA, LABEL_JA, UNIT_JA, ageLabelJa } from '../i18n/ja/achievements.js';
-import { DESC_ZH, GROUP_ZH, LABEL_ZH, UNIT_ZH, ageLabelZh } from '../i18n/zh/achievements.js';
+import { achievementDescs, hiddenAchievement, tenureLabels } from '../i18n/en/achievements.js';
+import {
+  DESC_JA,
+  GROUP_JA,
+  HIDDEN_JA,
+  LABEL_JA,
+  UNIT_JA,
+  ageLabelJa,
+} from '../i18n/ja/achievements.js';
+import {
+  DESC_ZH,
+  GROUP_ZH,
+  HIDDEN_ZH,
+  LABEL_ZH,
+  UNIT_ZH,
+  ageLabelZh,
+} from '../i18n/zh/achievements.js';
 import type { Lang } from '../lang.js';
+import { HIDDEN_ACHIEVEMENTS } from './achievements.js';
 
 // T-11-106 업적 문구의 영어. 판정(achievements.ts)은 한국어 문구와 id를 그대로 만들고, 응답을 보낼 때 id로 문구만
 // 바꾼다 — 판정·저장·점수에 영향이 없다. 단계 업적의 단위는 숫자 바로 뒤에 붙으므로 앞에 공백을 둔다.
@@ -18,6 +33,9 @@ const GROUP: Record<string, { stage: string; title: string }> = {
   race: { stage: 'RACE', title: 'Season race' },
   owner: { stage: 'OWNER', title: 'Running the club' },
   manager: { stage: 'MANAGER', title: 'Manager career' },
+  season: { stage: 'Season', title: 'One great season' },
+  career: { stage: 'Career', title: 'Shape of a career' },
+  match: { stage: 'MATCH', title: 'Match moments' },
 };
 
 const LABEL: Record<string, string> = {
@@ -114,6 +132,29 @@ const LABEL: Record<string, string> = {
   'mgr-mastery': 'Manager with S formation mastery',
   'mgr-grade': 'S-grade manager',
   'mgr-coach': 'Fill the manager slot',
+  // T-11-541 시즌 2부터
+  's-assists-30': '30 assists in a season',
+  's-teen-20': '20 goals in a season as a teenager',
+  's-veteran-20': '20 goals in a season after 35',
+  's-double': 'League title and top scorer in the same season',
+  's-young-ballon': "Ballon d'Or at 21 or younger",
+  's-quadruple': 'Four club trophies in a season',
+  's-ballon-treble': "Ballon d'Or in a treble season",
+  'c-journeyman': 'One player in five leagues',
+  'c-df-50': 'Defender with 50 career goals',
+  'c-peak': 'Peak OVR',
+  'c-ballon-players': "Ballon d'Or winners",
+  'c-legends': 'Players with 1,000 legend points',
+  'secret-farewell': 'A title in the final season',
+  'secret-homecoming': 'Back home to retire',
+  'team-cup-qf': 'Offside Cup quarter-finalist',
+  'team-clean': 'Clean-sheet wins',
+  'team-thrash': 'Wins by 4 or more goals',
+  'team-six': 'Six goals in one match',
+  'team-winrate': '70% win rate',
+  'team-wall': 'Under 1 goal conceded per match',
+  'mgr-titles': 'League titles as manager',
+  'mgr-double': 'Manager with a title and a promotion',
 };
 
 /** 단계 업적의 단위(숫자 바로 뒤에 붙는다). */
@@ -136,9 +177,17 @@ const UNIT: Record<string, string> = {
   'owner-match-days': ' days',
   'owner-likes': ' likes',
   'mgr-count': ' managers',
+  'c-peak': '',
+  'c-ballon-players': ' players',
+  'c-legends': ' players',
+  'team-clean': ' wins',
+  'team-thrash': ' wins',
+  'mgr-titles': ' titles',
 };
 
 type Tables = {
+  /** T-11-541 숨은 업적(달성 전) 이름 · 힌트. */
+  hidden: { label: string; descs: Record<string, string> };
   group: Record<string, { stage: string; title: string }>;
   label: Record<string, string>;
   desc: Record<string, string>;
@@ -147,17 +196,34 @@ type Tables = {
 };
 const TABLES: Record<Exclude<Lang, 'ko'>, Tables> = {
   en: {
+    hidden: hiddenAchievement,
     group: GROUP,
     label: LABEL,
     desc: achievementDescs,
     unit: UNIT,
     age: (age) => `Still playing at ${age}`,
   },
-  ja: { group: GROUP_JA, label: LABEL_JA, desc: DESC_JA, unit: UNIT_JA, age: ageLabelJa },
-  zh: { group: GROUP_ZH, label: LABEL_ZH, desc: DESC_ZH, unit: UNIT_ZH, age: ageLabelZh },
+  ja: {
+    hidden: HIDDEN_JA,
+    group: GROUP_JA,
+    label: LABEL_JA,
+    desc: DESC_JA,
+    unit: UNIT_JA,
+    age: ageLabelJa,
+  },
+  zh: {
+    hidden: HIDDEN_ZH,
+    group: GROUP_ZH,
+    label: LABEL_ZH,
+    desc: DESC_ZH,
+    unit: UNIT_ZH,
+    age: ageLabelZh,
+  },
 };
 
 function item(i: ClubAchievement, T: Tables): ClubAchievement {
+  if (HIDDEN_ACHIEVEMENTS.has(i.id) && !i.done)
+    return { ...i, label: T.hidden.label, desc: T.hidden.descs[i.id] ?? i.desc };
   // '○○세까지 현역'은 시즌마다 나이가 달라 한국어 문구의 숫자를 그대로 쓴다.
   const label =
     i.id === 'age-40' ? T.age(/\d+/.exec(i.label)?.[0] ?? '') : (T.label[i.id] ?? i.label);

@@ -4,6 +4,7 @@ import { ovr, spreadAttr } from './attributes.js';
 import { clamp, gauss, rnd } from './rng.js';
 import type { GameState } from './types.js';
 import { labelOf } from './player.js';
+import { BAL } from './balance.js';
 import { gStatsText as L } from './i18n/ko/gStats.js';
 
 export const gradeOf = (p: number) =>
@@ -50,19 +51,21 @@ export function potAchText(ach: number): string {
   if (ach >= 92) return L.potAch2;
   return L.potAch3;
 }
-const BLOOM_DRIFT = 1.2,
-  BLOOM_AGE = 25;
+/** 숨은 잠재력(bloom)은 BAL.bloomAge까지 해마다 N(0, BAL.bloomDrift)로 흔들리고, 21세 · 24세 재평가가 그 일부
+ * (BAL.rescoutShare1 · 2)를 스카우트 평가로 옮긴다. T-11-544 깎일 때는 BAL.rescoutDownScale만큼만, 한 번에
+ * BAL.rescoutDropCap까지만 깎고 덜 깎은 몫은 없던 일로 한다(숨은 잠재력에 남기지 않는다). */
 export function bloomTick(s: GameState): string | null {
   if (s.bloom == null) s.bloom = 0;
-  if (s.age <= BLOOM_AGE) s.bloom = Math.round((s.bloom + gauss() * BLOOM_DRIFT) * 10) / 10;
+  if (s.age <= BAL.bloomAge) s.bloom = Math.round((s.bloom + gauss() * BAL.bloomDrift) * 10) / 10;
   const n = s.flags.rescout ?? 0;
   if (!(n === 0 && s.age >= 21) && !(n === 1 && s.age >= 24)) return null;
   // 화면과 같은 흐린 평가(potLabel)로 알린다 — 한 점 등급을 로그로 흘리지 않는다(T-10-073).
   const before = potLabel(s);
   s.flags.rescout = n + 1;
-  const k = Math.round(s.bloom * (n === 0 ? 0.5 : 0.8));
+  const raw = Math.round(s.bloom * (n === 0 ? BAL.rescoutShare1 : BAL.rescoutShare2));
+  const k = raw >= 0 ? raw : Math.max(-BAL.rescoutDropCap, Math.round(raw * BAL.rescoutDownScale));
   s.pot += k;
-  s.bloom = Math.round((s.bloom - k) * 10) / 10;
+  s.bloom = Math.round((s.bloom - raw) * 10) / 10;
   const after = potLabel(s);
   if (after === before) return null;
   const note = k > 0 ? L.rescoutLate : k < 0 ? L.rescoutEarly : L.rescoutNarrow;

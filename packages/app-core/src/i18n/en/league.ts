@@ -9,7 +9,7 @@ export const league: Translation<LeagueMsgs> = {
   open: 'View league',
   loadFail: "We couldn't load the league.",
   pitch:
-    'Eight teams in a league play each other home and away over 14 rounds. Your finish decides your tier next season.',
+    'Eight teams in a league play home and away, one round every day until the day before the season ends. Your finish at season end decides your tier next season.',
   phaseSoon: 'Opening soon',
   phaseOpen: 'Entries open',
   phaseClosed: 'Awaiting draw',
@@ -24,13 +24,13 @@ export const league: Translation<LeagueMsgs> = {
   scheduleEntry: 'Entries',
   scheduleSeason: (p) => `Season ${p.season} opens`,
   scheduleDraw: 'Draw and fixtures',
-  scheduleRounds: 'Rounds 1–14',
+  scheduleRounds: (p) => `Rounds 1–${p.n}`,
   date: (p) => `${MONTHS[p.month - 1]} ${p.day}`,
   range: (p) => `${p.from} – ${p.to}`,
   daily: (p) => `${p.from} – ${p.to}, daily at ${p.time}`,
   rulesTitle: 'Rules',
   ruleEntry:
-    'You can enter from 7 days before the season opens. At the draw, teams with fewer than 8 of your retired players in that season’s starting XI are left out.',
+    'You can enter until 5 days after a new season opens. At the draw, teams with fewer than 8 of your retired players in that season’s starting XI are left out.',
   ruleTiers:
     'Tier 1 has one league, tier 2 has two, and each tier below doubles. In the first season, tiers fill from the top by team OVR at the entry deadline. Some leagues have 7 teams depending on entries, and in those one team rests each round.',
   rulePoints:

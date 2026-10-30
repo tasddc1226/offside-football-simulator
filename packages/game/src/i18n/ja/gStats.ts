@@ -24,8 +24,12 @@ export const gStats: Translation<GStatsMsgs> = {
   twistUp: (p) => `思わぬ収穫 · ${p.label} +${p.d}`,
   costMoraleLabel: '士気',
   costMoraleWhy: '挑戦しなかった心残り',
+  costMoraleWhy2: 'SNSに付いた「消極的」というコメント',
+  costMoraleWhy3: '寝る前に何度も浮かんだあの場面',
   costTrustLabel: '監督の信頼',
   costTrustWhy: '監督の生ぬるい評価',
+  costTrustWhy2: 'コーチ陣の会議で出た「決め手がない」という言葉',
   costFameLabel: '名声',
   costFameWhy: '「無難だった」という評価',
+  costFameWhy2: '記事一本出ないまま過ぎた一週間',
 };

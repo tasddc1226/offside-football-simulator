@@ -6,7 +6,8 @@ export const league: Translation<LeagueMsgs> = {
   seasonTitle: (p) => `賽季 ${p.season} OFFSIDE 聯賽`,
   open: '查看聯賽',
   loadFail: '無法載入聯賽資訊。',
-  pitch: '每個聯賽 8 支球隊，主客場各交手一次，共 14 輪。依排名決定下個賽季的級別升降。',
+  pitch:
+    '每個聯賽 8 支球隊，到賽季結束前一天為止每天進行一輪主客場對戰。依賽季結束時的排名決定下個賽季的級別升降。',
   phaseSoon: '即將開放報名',
   phaseOpen: '報名中',
   phaseClosed: '等待分組',
@@ -21,13 +22,13 @@ export const league: Translation<LeagueMsgs> = {
   scheduleEntry: '報名',
   scheduleSeason: (p) => `賽季 ${p.season} 開幕`,
   scheduleDraw: '分組・對戰公布',
-  scheduleRounds: '第1～14輪',
+  scheduleRounds: (p) => `第1～${p.n}輪`,
   date: (p) => `${p.month}月${p.day}日`,
   range: (p) => `${p.from} ～ ${p.to}`,
   daily: (p) => `${p.from} ～ ${p.to}，每天${p.time}`,
   rulesTitle: '規則',
   ruleEntry:
-    '賽季開幕前 7 天起可報名。分組時，若該賽季球隊的先發陣容中自己的退役球員不足 8 名，將被排除在聯賽外。',
+    '新賽季開幕後 5 天內可報名。分組時，若該賽季球隊的先發陣容中自己的退役球員不足 8 名，將被排除在聯賽外。',
   ruleTiers:
     '第 1 級有 1 個聯賽、第 2 級有 2 個，越下面的級別聯賽數量加倍。第一個賽季依報名截止時的球隊 OVR，從上面的級別依序填入。視參加隊數，也可能出現 7 支球隊的聯賽，此時每輪會有 1 支球隊輪空。',
   rulePoints:
