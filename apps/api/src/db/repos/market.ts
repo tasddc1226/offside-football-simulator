@@ -56,6 +56,7 @@ const cardCols = {
   season: cards.serviceSeason,
   mainLeague: careers.mainLeague,
   mainClub: careers.mainClub,
+  enhance: cards.enhance,
 };
 const listingCols = {
   id: marketListings.id,
@@ -92,6 +93,8 @@ const toListing = (r: ListingRow): MarketListing => ({
     season: r.season as number,
     league: (r.mainLeague as string | null) || null,
     club: (r.mainClub as string | null) || null,
+    // T-11-373 강화한 카드만 단계를 싣는다.
+    ...(r.enhance ? { enhance: r.enhance as number } : {}),
   },
 });
 
@@ -222,6 +225,7 @@ export async function cardForListing(db: Db, careerId: string) {
       ownerId: cards.ownerId,
       season: cards.serviceSeason,
       cardValue: cards.cardValue,
+      enhance: cards.enhance,
       locked: cards.locked,
       manager: cards.manager,
       hidden: sql<number>`coalesce(${careers.hidden}, 0)`,
@@ -403,15 +407,23 @@ export async function myTrades(db: Db, profileId: string): Promise<MarketTrade[]
  */
 export async function insertListing(
   db: Db,
-  l: { id: string; careerId: string; sellerId: string; price: number; now: string },
+  l: {
+    id: string;
+    careerId: string;
+    sellerId: string;
+    price: number;
+    enhance: number;
+    now: string;
+  },
 ): Promise<boolean> {
+  // T-11-373 가격 범위를 잰 강화 단계 그대로일 때만 넣는다(그 사이 강화했으면 범위가 바뀐다).
   const res = await db.$client
     .prepare(
       `INSERT OR IGNORE INTO market_listings (id, career_id, seller_id, season, price, status, created_at)
        SELECT ?, career_id, owner_id, service_season, ?, 'open', ? FROM cards
-       WHERE career_id = ? AND owner_id = ? AND locked = 0 AND manager = 0`,
+       WHERE career_id = ? AND owner_id = ? AND locked = 0 AND manager = 0 AND enhance = ?`,
     )
-    .bind(l.id, l.price, l.now, l.careerId, l.sellerId)
+    .bind(l.id, l.price, l.now, l.careerId, l.sellerId, l.enhance)
     .run();
   return res.meta.changes === 1;
 }

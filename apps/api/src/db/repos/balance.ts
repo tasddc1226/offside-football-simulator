@@ -46,6 +46,9 @@ export const pastSalaryBudgetFrom = (row: Row | undefined, teamSeason: number) =
   const b = resolveBalance(row && toVersion(row).values);
   return seasonSalaryBudget(b.pastSalaryBudget, b.pastSalaryBudgetStep, teamSeason);
 };
+/** T-11-373 카드 강화를 여는가(밸런스 enhanceOpen). */
+export const enhanceOpenFrom = (row: Row | undefined) =>
+  resolveBalance(row && toVersion(row).values).enhanceOpen >= 1;
 /** T-11-571 리그 체력 비율(0이면 끔). */
 export const leagueFatigueFrom = (row: Row | undefined) =>
   resolveBalance(row && toVersion(row).values).leagueFatigue;

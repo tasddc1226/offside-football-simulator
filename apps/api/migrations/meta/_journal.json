@@ -981,6 +981,13 @@
       "when": 1793287775325,
       "tag": "0142_chat_report_room",
       "breakpoints": true
+    },
+    {
+      "idx": 143,
+      "version": "6",
+      "when": 1793342648500,
+      "tag": "0143_card_enhance",
+      "breakpoints": true
     }
   ]
 }

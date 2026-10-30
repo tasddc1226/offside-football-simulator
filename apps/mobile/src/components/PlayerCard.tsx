@@ -233,8 +233,42 @@ export type PlayerCardData = {
   foot?: string | null | undefined;
   /** T-11-188 잠긴 선수 — 오른쪽 위 자물쇠. */
   locked?: boolean | undefined;
+  /** T-11-373 카드 강화 단계 — 자물쇠 아래 배지. */
+  enhance?: number | undefined;
   youth: boolean;
 };
+
+/** T-11-373 카드 강화 배지(웹 PlayerCard .card-enhance). */
+function EnhanceBadge({ level, compact }: { level: number; compact: boolean }) {
+  return (
+    <View
+      testID="card-enhance"
+      style={{
+        position: 'absolute',
+        top: compact ? 50 : 56,
+        right: compact ? 4 : 9,
+        paddingHorizontal: compact ? 4 : 6,
+        paddingVertical: 1,
+        borderRadius: 999,
+        backgroundColor: '#f6b73c',
+        borderWidth: 1,
+        borderColor: '#ffffff88',
+      }}
+    >
+      <Text
+        maxFontSizeMultiplier={1.1}
+        style={{
+          color: '#2b1700',
+          fontWeight: '800',
+          fontSize: compact ? 8 : 11,
+          includeFontPadding: false,
+        }}
+      >
+        {`+${level}`}
+      </Text>
+    </View>
+  );
+}
 
 /** T-11-188 잠긴 선수 자물쇠(웹 PlayerCard .card-lock). */
 function LockBadge({ compact }: { compact: boolean }) {
@@ -617,6 +651,7 @@ export function PlayerCard({
         <SeasonBadge season={cell.season} compact={compact} />
       ) : null}
       {cell.locked && !cell.youth ? <LockBadge compact={compact} /> : null}
+      {cell.enhance && !cell.youth ? <EnhanceBadge level={cell.enhance} compact={compact} /> : null}
       {mini ? null : (
         <View
           style={{

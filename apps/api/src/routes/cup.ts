@@ -1126,3 +1126,22 @@ export async function checkCupRelease(db: Db, profileId: string, careerIds: read
   if (careerIds.some((id) => ids.has(id)))
     throw conflictError(cupKo('cardReleaseLocked'), 'CUP_CARD_LOCKED');
 }
+
+/**
+ * T-11-373 카드 강화 검사: 컵 참가 중이면 선발에 든 선수(지난 시즌 컵 · 컵 명단 프리셋 포함)는 대회가 끝날 때까지 강화할 수 없고(추첨
+ * 뒤 OVR 구간 · 배당을 지킨다), 리그 경기 1시간 전부터 끝날 때까지는 그 시즌 팀 선발을 강화할 수 없다.
+ */
+export async function checkCupEnhance(
+  db: Db,
+  profileId: string,
+  careerId: string,
+  season: number | null,
+  now: string,
+) {
+  if ((await cupLineupIds(db, profileId)).has(careerId))
+    throw conflictError(cupKo('cardEnhance'), 'CUP_CARD_LOCKED');
+  if (season === null || !(await leagueLineupLocked(db, profileId, season, now))) return;
+  const [team] = await myTeamIn(db, profileId, season);
+  if (team && slotIdsOf(team).includes(careerId))
+    throw conflictError(cupKo('leagueEnhance'), 'LEAGUE_LINEUP_LOCKED');
+}

@@ -380,7 +380,8 @@ export async function releaseManagerCard(
       .bind(r.rate, r.careerId),
     d1.prepare(`SELECT balance FROM owner_funds WHERE profile_id = ?`).bind(r.profileId),
   ]);
-  if (results[0]!.meta.changes !== 1) return null;
+  // 카드 주인이 바뀌면 강화 트리거(enhance_cards_owner)의 변경도 함께 세지므로 1 이상으로 본다(이 문장은 기본키라 0 또는 1장).
+  if ((results[0]!.meta.changes ?? 0) < 1) return null;
   const amount = (results[2]!.results[0] as { amount: number } | undefined)?.amount ?? 0;
   const bal = results[4]!.results[0] as { balance: number } | undefined;
   return { amount, balance: bal?.balance ?? 0 };

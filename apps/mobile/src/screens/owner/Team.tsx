@@ -126,6 +126,7 @@ import {
 import { CupLockNotice, useCup } from './TeamCup';
 import { cupLineupBar } from '@offside/app-core/cupLineupBar';
 import { TeamPresets } from './TeamPresets';
+import { EnhanceSheet } from './EnhanceSheet';
 import { cupPresetOf, loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPresets';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
 import { fixSlot, slotName } from '@offside/app-core/matchReport';
@@ -182,6 +183,9 @@ export default function Team() {
   const [menu, setMenu] = useState(false);
   /** T-11-217 팀 프리셋 시트. */
   const [presetsOpen, setPresetsOpen] = useState(false);
+  // T-11-373 카드 강화 창. 강화가 열린 동안만 버튼을 보인다.
+  const [enhancing, setEnhancing] = useState<TeamPlayer | null>(null);
+  const [enhanceOpen, setEnhanceOpen] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [share, setShare] = useState<TeamShareData | null>(null);
@@ -442,6 +446,7 @@ export default function Team() {
     setPlayers(d.players);
     setMatchesLeft(d.matchesLeft);
     setPerDay(d.matchesPerDay);
+    setEnhanceOpen(!!d.enhanceOpen);
     setBudget(budgetOf(d));
     setFatigue(d.fatigue ?? null);
     if (silent) {
@@ -1148,6 +1153,7 @@ export default function Team() {
               synApplied={syn.applied}
               synCaption={synergyApplies(season) ? syn.caption : null}
               onLock={(p) => void toggleLock(p)}
+              onEnhance={editable && enhanceOpen ? setEnhancing : undefined}
               focusSlot={focusSlot}
               onFocused={() => setFocusSlot(null)}
               season={season}
@@ -1362,6 +1368,20 @@ export default function Team() {
           {needLogin ? null : <TabBar label={L.navLabel} items={navItems} sub="team" />}
         </View>
       </BarBelow.Provider>
+      {enhancing ? (
+        <EnhanceSheet
+          player={enhancing}
+          name={nameOf(enhancing)}
+          close={() => setEnhancing(null)}
+          onResult={(id, r) =>
+            setPlayers((prev) =>
+              prev.map((x) =>
+                x.careerId === id ? { ...x, enhance: r.card.level || undefined } : x,
+              ),
+            )
+          }
+        />
+      ) : null}
       {presetsOpen ? (
         <TeamPresets
           close={() => setPresetsOpen(false)}

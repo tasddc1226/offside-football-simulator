@@ -15,6 +15,7 @@ import {
   type PeakProfile,
   type PosGroup,
 } from './positions.js';
+import { enhancedPeak, enhanceOvr } from './card-enhance.js';
 import type { TeamSynergy } from './team-synergy.js';
 
 export * from './team-synergy.js';
@@ -138,14 +139,18 @@ export const PAST_SALARY_TABLE: readonly { readonly min: number; readonly salary
 /** 카드 최고 OVR의 급여(지난 시즌 선수일 때만 센다). */
 export const salaryOf = (peak: number): number =>
   PAST_SALARY_TABLE.find((t) => peak >= t.min)?.salary ?? 1;
-/** 그 팀 시즌에서 이 카드가 받는 급여 — 이번 시즌 선수는 0. */
+/** 그 팀 시즌에서 이 카드가 받는 급여 — 이번 시즌 선수는 0. 강화 OVR을 더한 값으로 잰다(T-11-373). */
 export const seasonSalaryOf = (
-  card: { peak: number; season?: number | null | undefined },
+  card: { peak: number; season?: number | null | undefined; enhance?: number | null | undefined },
   teamSeason: number,
-) => (isWildcardSeason(card.season, teamSeason) ? salaryOf(card.peak) : 0);
+) => (isWildcardSeason(card.season, teamSeason) ? salaryOf(enhancedPeak(card)) : 0);
 /** 선발 카드들의 지난 시즌 급여 합. */
 export const pastSalarySum = (
-  cards: readonly ({ peak: number; season?: number | null | undefined } | null | undefined)[],
+  cards: readonly (
+    | { peak: number; season?: number | null | undefined; enhance?: number | null | undefined }
+    | null
+    | undefined
+  )[],
   teamSeason: number,
 ) => cards.reduce((sum, c) => sum + (c ? seasonSalaryOf(c, teamSeason) : 0), 0);
 /** 예산을 넘는 선발을 저장할 때 서버 오류 문구(영 · 일은 api errorText.ts). */
@@ -380,6 +385,8 @@ export type SlotPlayer = {
   roles?: PeakProfile['roles'] | null;
   /** 유형 id(T-11-237 타겟맨 스트라이커 자리 보정). 구버전 응답에는 없다. */
   type?: string | null | undefined;
+  /** T-11-373 카드 강화 단계(0~5). 자리 실력에 강화 OVR을 더한다. 구버전 응답에는 없다. */
+  enhance?: number | null | undefined;
 };
 
 /**
@@ -393,7 +400,11 @@ export const SLOT_OVER_PEAK = 2;
  * 그 자리에서의 실력. 최고 시점 능력치가 있으면 그 자리 역할의 실력(최고 OVR + SLOT_OVER_PEAK까지) — 발 빠른 센터백은
  * 풀백 자리에서도 잘 뛰고, 슈팅형 스트라이커는 윙어 자리에서 떨어진다. 없으면 최고 OVR × 적합도(반올림).
  */
-export const slotRating = (slot: DetailPos, p: SlotPlayer): number => {
+export const slotRating = (slot: DetailPos, p: SlotPlayer): number =>
+  baseSlotRating(slot, p) + enhanceOvr(p.enhance);
+
+/** 강화 OVR을 빼고 본 자리 실력. */
+function baseSlotRating(slot: DetailPos, p: SlotPlayer): number {
   if (!p.roles) return Math.round(p.peak * fit(slot, p.pos, p.dpos));
   const role = p.roles[slot] ?? p.roles[BASE_DETAIL[slot]];
   // T-11-237 타겟맨 유형은 최고 OVR을 스트라이커·타겟맨 역할 중 높은 쪽으로 잰다(T-11-229). 자리별 실력의 ST는 스트라이커
@@ -407,11 +418,16 @@ export const slotRating = (slot: DetailPos, p: SlotPlayer): number => {
         ? Math.max(role, p.roles.W)
         : role;
   return Math.min(own, p.peak + SLOT_OVER_PEAK);
-};
+}
 
-/** 그 자리 적합도(보여 주기) — 자리별 실력이 있으면 최고 OVR 대비 비율(소수 둘째 자리, 주 포지션보다 맞으면 1을 넘는다), 없으면 적합도 규칙. */
+/**
+ * 그 자리 적합도(보여 주기) — 자리별 실력이 있으면 최고 OVR 대비 비율(소수 둘째 자리, 주 포지션보다 맞으면 1을 넘는다), 없으면 적합도 규칙.
+ * rating은 slotRating 값(강화 OVR 포함)을 받고, 적합도는 강화 OVR을 빼고 잰다.
+ */
 export const slotFit = (slot: DetailPos, p: SlotPlayer, rating = slotRating(slot, p)): number =>
-  p.roles && p.peak > 0 ? Math.round((rating / p.peak) * 100) / 100 : fit(slot, p.pos, p.dpos);
+  p.roles && p.peak > 0
+    ? Math.round(((rating - enhanceOvr(p.enhance)) / p.peak) * 100) / 100
+    : fit(slot, p.pos, p.dpos);
 
 /** 팀의 세 줄. */
 export const LINES = ['atk', 'mid', 'def'] as const;

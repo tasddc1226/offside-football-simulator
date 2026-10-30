@@ -93,6 +93,7 @@ import {
   activeBalanceQuery,
   balanceVersionOf,
   pastSalaryBudgetFrom,
+  enhanceOpenFrom,
   leagueFatigueFrom,
   pastSalaryBudgetOf,
 } from '../db/repos/balance.js';
@@ -433,6 +434,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         matchesLeft: Math.max(0, TEAM_MATCHES_PER_DAY - Number(played?.n ?? 0)),
         matchesPerDay: TEAM_MATCHES_PER_DAY,
         pastSalaryBudget: pastSalaryBudgetFrom(balance, season),
+        // T-11-373 강화 버튼을 보일지(이미 읽은 활성 밸런스 한 줄).
+        enhanceOpen: enhanceOpenFrom(balance),
         founder: founder.length > 0,
         member: member.length > 0,
         // 컵 성적은 최근 대회부터 온다 — 첫 우승이 가장 최근 우승.

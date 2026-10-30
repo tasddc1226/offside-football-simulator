@@ -222,6 +222,8 @@ type LineupRow = {
   /** T-11-180 키·몸무게(옛 커리어는 NULL). */
   height?: number | null;
   weight?: number | null;
+  /** T-11-373 카드 강화 단계. */
+  enhance?: number | null;
 };
 export const toLineupCareer = (
   r: LineupRow,
@@ -242,6 +244,7 @@ export const toLineupCareer = (
   mainClub: r.mainClub || null,
   raised: !!r.raised,
   season: r.serviceSeason ?? 0,
+  enhance: r.enhance ?? 0,
 });
 
 /**
@@ -275,6 +278,8 @@ export function teamPlayerCard(
     ...(career.mainClub ? { mainClub: career.mainClub } : {}),
     season: career.season,
     ...bodyOf(r),
+    // T-11-373 강화한 카드만 단계를 싣는다(카드 +N 표시 · 자리 실력).
+    ...(career.enhance ? { enhance: career.enhance } : {}),
   };
 }
 
@@ -337,6 +342,7 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       legendScore: cards.legendScore,
       cardValue: cards.cardValue,
       locked: cards.locked,
+      enhance: cards.enhance,
       raised: sql<number>`${careers.profileId} = ${profileId}`,
       listingId: marketListings.id,
       listPrice: marketListings.price,
@@ -434,6 +440,7 @@ export async function careersByIds(db: Db, ids: string[]) {
       id: cards.careerId,
       ownerId: cards.ownerId,
       manager: cards.manager,
+      enhance: cards.enhance,
       pos: cards.pos,
       nation: cards.nation,
       dpos: cards.dpos,
