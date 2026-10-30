@@ -15,7 +15,8 @@ export const scout: Translation<ScoutMsgs> = {
   premiumNote: 'Premium scout candidates. Potential is shown for all three.',
   premiumHelp:
     'Starting potential grade ranges. Training and boosts can change them. These are premium scout candidates, so the odds differ from a normal scout. See the table above.',
-  what: "One of the 3 candidates is guaranteed potential A or higher, and each candidate's chance of S is twice that of a regular scout. Their potential is revealed right away.",
+  what: (p: { mult: number }) =>
+    `One of the 3 candidates is guaranteed potential A or higher, and each candidate's chance of S is ${p.mult}x that of a regular scout. Their potential is revealed right away.`,
   pack: (p) => `${p.n} premium scout ticket${p.n === 1 ? '' : 's'}`,
   got: (p) => `Premium scout tickets received. You now have ${p.n}.`,
   shopSub: 'Use them when picking a new player',

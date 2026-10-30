@@ -39,6 +39,7 @@ import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as CA } from '@offside/app-core/i18n/ko/cupApp';
 import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
 import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
+import { scoutWhatText } from '@offside/app-core/scoutOdds';
 import {
   REROLL_MILEAGE,
   rerollMileageLeft,
@@ -1174,7 +1175,7 @@ export default function Create() {
                   {rerolling ? SL.busy : SL.btn({ n: scouts })}
                 </Btn>
                 <Txt v="sm" tone="muted">
-                  {SL.what}
+                  {scoutWhatText()}
                 </Txt>
                 <ScoutPityGauge pity={pity} />
                 <ScoutOdds />
