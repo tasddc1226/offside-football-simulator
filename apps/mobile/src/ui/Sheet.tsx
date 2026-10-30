@@ -10,6 +10,7 @@ import { buzz, dismissSheet } from '../game/host';
 import { useColors } from '../theme/useColors';
 import { SheetBody } from '../sheets/SheetBody';
 import { CoachLayer, Coachmark } from '../components/Coachmark';
+import { countTouch } from '../platform/playSignals';
 import { Btn } from './Btn';
 import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
@@ -44,7 +45,8 @@ export function Sheet() {
       onShow={Keyboard.dismiss}
       onRequestClose={close}
     >
-      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+      {/* 모달은 앱 루트 뷰 밖에 그려져 자동 플레이 탐지 터치를 여기서 따로 센다(T-11-590). */}
+      <View style={{ flex: 1, justifyContent: 'flex-end' }} onTouchStart={countTouch}>
         <Pressable
           accessibilityLabel={shellMoreText.close}
           onPress={close}

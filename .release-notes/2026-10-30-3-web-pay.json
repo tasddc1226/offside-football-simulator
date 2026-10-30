@@ -1,0 +1,38 @@
+{
+  "id": "t-11-591-web-pay",
+  "title": "웹에서도 바로 결제할 수 있어요",
+  "items": [
+    "로그인한 구단주는 웹 상점에서 리롤권 · 잠재력 강화권 · 프리미엄 스카우트권 · 선수 이름 변경권 묶음을 바로 살 수 있어요.",
+    "시즌 패스도 시즌 2 개막부터 웹에서 살 수 있어요.",
+    "클럽 멤버십은 웹에서 자동 결제 없는 30일 이용권으로 살 수 있어요.",
+    "카드 · 카카오페이 · 페이팔 등 나라별 결제 수단을 쓸 수 있어요. 광고 제거는 지금처럼 앱에서만 살 수 있어요."
+  ],
+  "en": {
+    "title": "Buy directly on the web",
+    "items": [
+      "Signed-in owners can now buy reroll, potential boost, premium scout and player rename ticket bundles in the web shop.",
+      "From the season 2 opening, you can also buy the season pass on the web.",
+      "Club membership is available on the web as a 30-day pass that does not renew automatically.",
+      "Pay by card, PayPal or local payment methods. Remove Ads is still sold in the app only."
+    ]
+  },
+  "ja": {
+    "title": "ウェブでもそのまま決済できます",
+    "items": [
+      "ログインしたオーナーは、ウェブのショップでリロール券・ポテンシャル強化券・プレミアムスカウト券・選手名変更券のセットを直接買えます。",
+      "シーズン2の開幕から、シーズンパスもウェブで買えます。",
+      "クラブメンバーシップは、ウェブでは自動決済なしの30日利用券として買えます。",
+      "カードやPayPal、各国の決済手段が使えます。広告削除は今までどおりアプリでだけ買えます。"
+    ]
+  },
+  "zh": {
+    "title": "網頁也能直接付款",
+    "items": [
+      "已登入的球隊老闆可在網頁商店直接購買重抽券・潛力強化券・高級球探券・球員改名券組合。",
+      "從賽季 2 開幕起，賽季通行證也能在網頁購買。",
+      "俱樂部會員在網頁上以不自動續費的 30 天使用券販售。",
+      "可使用信用卡、PayPal 及各地付款方式。移除廣告仍只在 App 販售。"
+    ]
+  },
+  "availability": "web"
+}

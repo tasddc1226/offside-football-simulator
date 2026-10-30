@@ -27,6 +27,8 @@ export const membership: Translation<MembershipMsgs> = {
   restoreBusy: '確認中…',
   restoreNone: '沒有可恢復的會員。',
   adOwned: '如果已經購買移除廣告，會員到期後依然有效。',
+  webBuy: (p: { price: string; days: number }) => `在網頁購買 ${p.days} 天使用券 · ${p.price} 韓元`,
+  webOnce: '在網頁購買的使用券不會自動續費。期間還沒結束時再次購買，會從結束日接著延長。',
   notOnSale: '目前暫停受理會員加入。',
   webJoin: '請在 App 中加入。在 App 加入的會員福利，網頁版也能享有。',
   login: '只有登入的球隊老闆才能使用俱樂部會員。',

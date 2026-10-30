@@ -6,7 +6,7 @@ export const firstGuide: Translation<FirstGuideMsgs> = {
   shopGo: '前往商店',
   itemsTitle: '球探券、強化券在這裡',
   itemsBody:
-    '重抽券、高級球探券、潛力強化券都在「我的俱樂部」畫面的商店裡。用俱樂部資金購買的商品可在網頁和 App 購買，付費商品則在 App 購買。',
+    '重抽券、高級球探券、潛力強化券都在「我的俱樂部」畫面的商店裡。用俱樂部資金購買的商品與付費商品都在這個商店購買。',
   itemsCloseAria: '關閉商品位置說明',
   saveTitleWeb: '紀錄只會儲存在這個瀏覽器',
   saveTitleApp: '紀錄只會儲存在這台裝置',

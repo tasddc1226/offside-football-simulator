@@ -164,14 +164,14 @@ export default (guideCopy) => {
     [
       'Season pass',
       [
-        'From season 2, signed-in owners can buy a season pass in the app (₩9,900, one season, no auto-renewal). You get the stage 1 reward as soon as you buy, and stages open up to stage 14 based on how many players retire after playing to age 35 or older that season. Up to 20 retirements a day are counted. Even if you buy partway through the season, counting starts from the beginning of that season. You can see your progress in the Season pass on the My Club screen even if you have not bought the pass.',
+        'From season 2, signed-in owners can buy a season pass in the app or on the web (₩9,900, one season, no auto-renewal). You get the stage 1 reward as soon as you buy, and stages open up to stage 14 based on how many players retire after playing to age 35 or older that season. Up to 20 retirements a day are counted. Even if you buy partway through the season, counting starts from the beginning of that season. You can see your progress in the Season pass on the My Club screen even if you have not bought the pass.',
         'Each stage gives reroll tickets, potential boost tickets and premium scout tickets. The base stages go up to 25 retirements, with bonus stages at 30, 40 and 50. Opening all 14 stages gives 59 reroll tickets, 65 potential boost tickets, 14 premium scout tickets and 2 player rename tickets. Tapping Claim collects the rewards for all the stages that are open at once, and you can claim on the web too. Buying one more in the same season becomes the next season’s pass. If you refund the payment, the pass closes and the items you received are taken back as far as you still have them.',
       ],
     ],
     [
       'Club membership',
       [
-        'Club membership is a ₩4,900 monthly subscription you join in the app and it renews automatically every month. While you are subscribed, you get double check-in rewards, 1 extra potential boost ticket each time you check in, no app ads (rewarded ads give their reward right away without an ad), and a supporter badge next to your name on your club and in your friends list. With the same owner account, the check-in benefits and badge apply on the web too, and web ads are turned off.',
+        'Club membership is a ₩4,900 monthly subscription you join in the app and it renews automatically every month. While you are subscribed, you get double check-in rewards, 1 extra potential boost ticket each time you check in, no app ads (rewarded ads give their reward right away without an ad), and a supporter badge next to your name on your club and in your friends list. With the same owner account, the check-in benefits and badge apply on the web too, and web ads are turned off. On the web you can buy a 30-day pass (₩4,900) that does not renew; buy again while it is active and 30 more days start when the current ones end.',
         'You cancel in the subscription management of the App Store or Google Play. After you cancel, the benefits continue until the period you already paid for ends. On another device, tap Restore purchase on the membership screen with the same store account to bring it back. Remove Ads you already bought stays even after the membership ends. Owners who bought Remove Ads before the membership launched (before November 1, 2026) get a one-time thank-you gift of 5 potential boost tickets and 5 reroll tickets in the Home gift slot.',
       ],
     ],
@@ -284,15 +284,15 @@ export default (guideCopy) => {
     ],
     [
       'What is the season pass?',
-      'It is a one-season reward pass you buy in the app from season 2 (₩9,900, no auto-renewal). You get the stage 1 reward as soon as you buy, and stages open up to stage 14 based on the number of players who retire after playing to age 35 or older that season (up to 20 a day), and each stage gives reroll tickets, potential boost tickets and premium scout tickets. Even if you buy partway through the season, counting starts from the beginning of that season, and open rewards can be claimed on the web too.',
+      'It is a one-season reward pass you buy in the app or on the web from season 2 (₩9,900, no auto-renewal). You get the stage 1 reward as soon as you buy, and stages open up to stage 14 based on the number of players who retire after playing to age 35 or older that season (up to 20 a day), and each stage gives reroll tickets, potential boost tickets and premium scout tickets. Even if you buy partway through the season, counting starts from the beginning of that season, and open rewards can be claimed on the web too.',
     ],
     [
       'What are the club membership benefits?',
-      'It is a ₩4,900 monthly auto-renewing subscription you join in the app. While you are subscribed, check-in rewards are doubled, you get 1 extra potential boost ticket each time you check in, ads are removed, and a supporter badge appears next to your name. You cancel in your store subscription management, and after you cancel the benefits continue until the period you paid for ends.',
+      'It is a ₩4,900 monthly auto-renewing subscription you join in the app. While you are subscribed, check-in rewards are doubled, you get 1 extra potential boost ticket each time you check in, ads are removed, and a supporter badge appears next to your name. You cancel in your store subscription management, and after you cancel the benefits continue until the period you paid for ends. On the web you can buy a 30-day pass that does not renew.',
     ],
     [
       'Where do I buy premium scout tickets and potential boost tickets?',
-      `Buy them in the shop at the bottom of the ${guideCopy.hub} screen. Reroll tickets can be bought with club funds on both web and app, premium scout tickets can be bought with club funds once a week, and paid products (bundles of reroll tickets, premium scout tickets and potential boost tickets) are bought in the app. Items you buy go to your owner account and can be used on the web too. Use reroll tickets and premium scout tickets at the candidate step when creating a player, and potential boost tickets in Potential Boost on the Player tab.`,
+      `Buy them in the shop at the bottom of the ${guideCopy.hub} screen. Reroll tickets can be bought with club funds on both web and app, premium scout tickets can be bought with club funds once a week, and paid products (bundles of reroll tickets, premium scout tickets and potential boost tickets) are bought with store payment in the app, or with web payment on the web by signed-in owners. Items you buy go to your owner account and can be used on the web too. Use reroll tickets and premium scout tickets at the candidate step when creating a player, and potential boost tickets in Potential Boost on the Player tab.`,
     ],
     [
       'How are player types like Speedster and Stopper decided?',

@@ -22,9 +22,18 @@ const POLL_TRIES = 6;
 /** 하루가 지난 미확인 주문은 결제하지 않은 것으로 보고 잊는다. */
 const PENDING_TTL_MS = 24 * 3600_000;
 
-export const webPay = $state<{ config: WebPayConfigResponse | null; busy: boolean }>({
+export const webPay = $state<{
+  config: WebPayConfigResponse | null;
+  busy: boolean;
+  /** T-11-591 결제가 확인된 횟수. 시즌 패스 · 멤버십 창이 바뀌면 상태를 다시 읽는다. */
+  paid: number;
+  /** 결제창에서 돌아온 뒤 구단주 화면이 다시 열 창(시즌 패스 · 멤버십). */
+  reopen: 'pass' | 'member' | null;
+}>({
   config: null,
   busy: false,
+  paid: 0,
+  reopen: null,
 });
 
 let loading: Promise<void> | null = null;
@@ -40,8 +49,11 @@ export function loadWebPay() {
   return loading;
 }
 
-/** 결제창에서 돌아갈 화면. game은 진행 중인 선수(선수 탭 강화 · 이름 옆 변경권), 아니면 상점 화면(T-11-567, 저장값이라 이름은 owner 그대로). */
-export type WebPayBack = 'game' | 'owner';
+/**
+ * 결제창에서 돌아갈 화면. game은 진행 중인 선수(선수 탭 강화 · 이름 옆 변경권), pass · member는 구단주 화면의 시즌 패스 · 멤버십
+ * 창(T-11-591), 아니면 상점 화면(T-11-567, 저장값이라 이름은 owner 그대로).
+ */
+export type WebPayBack = 'game' | 'owner' | 'pass' | 'member';
 type Pending = { orderId: string; at: number; back?: WebPayBack };
 function readPending(): Pending | null {
   try {
@@ -66,7 +78,7 @@ function writePending(p: Pending | null) {
 }
 
 /** 주문 상태를 한 번 묻는다. 끝났으면(지급 · 환불 · 없는 주문) 기기에서 지우고 true. */
-async function settle(orderId: string): Promise<boolean> {
+async function settle(orderId: string, back?: WebPayBack): Promise<boolean> {
   const r = await fetchWebPayOrder(orderId);
   if (!r.ok) {
     if (r.error.retryable) return false;
@@ -77,7 +89,8 @@ async function settle(orderId: string): Promise<boolean> {
   writePending(null);
   if (r.data.status === 'PAID') {
     clearApiCache();
-    toast(L.done);
+    webPay.paid += 1;
+    toast(back === 'pass' ? L.donePass : back === 'member' ? L.doneMember : L.done);
   } else toast(L.canceled);
   return true;
 }
@@ -86,7 +99,7 @@ async function checkPending() {
   const p = readPending();
   if (!p) return;
   if (Date.now() - p.at > PENDING_TTL_MS) return writePending(null);
-  await settle(p.orderId);
+  await settle(p.orderId, p.back);
 }
 
 /** 상품을 고르면 주문을 만들고 엑솔라 결제창으로 간다. */
@@ -97,7 +110,10 @@ export async function startWebPay(productId: string, back: WebPayBack = 'owner')
   const r = await createWebPayOrder(productId);
   if (!r.ok) {
     webPay.busy = false;
-    return toast(r.error.message || L.startFail);
+    // 서버 503 문구(webPayUnavailable)는 결제 확인용이라, 결제창을 열지 못했을 때는 여는 실패로 알린다.
+    return toast(
+      r.error.code === 'SERVICE_UNAVAILABLE' ? L.startFail : r.error.message || L.startFail,
+    );
   }
   writePending({ orderId: r.data.orderId, at: Date.now(), back });
   location.assign(r.data.payUrl);
@@ -109,13 +125,16 @@ export async function handleWebPayReturn() {
   // 주소만 정리하고 화면 기록(history.svelte.ts)의 상태는 남긴다 — 지우면 다음 탭 이동이 홈으로 튄다(T-11-567).
   window.history.replaceState(window.history.state, '', '/');
   const p = readPending();
-  if (p?.orderId === orderId && p.back === 'game' && appState.G && !appState.G.retired)
-    goContinue();
-  else go('shop');
+  const back = p?.orderId === orderId ? p.back : undefined;
+  if (back === 'game' && appState.G && !appState.G.retired) goContinue();
+  else if (back === 'pass' || back === 'member') {
+    webPay.reopen = back;
+    go('owner');
+  } else go('shop');
   if (!ORDER_ID.test(orderId)) return;
   toast(L.confirming);
   for (let i = 0; i < POLL_TRIES; i += 1) {
-    if (await settle(orderId)) return;
+    if (await settle(orderId, back)) return;
     await new Promise((resolve) => setTimeout(resolve, POLL_MS));
   }
   toast(L.pending);

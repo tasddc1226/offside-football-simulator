@@ -6,7 +6,7 @@ export const firstGuide: Translation<FirstGuideMsgs> = {
   shopGo: 'Go to shop',
   itemsTitle: 'Scout and boost tickets are here',
   itemsBody:
-    'Rerolls, premium scout tickets and boost tickets are in the shop on the My club screen. Items bought with club funds are sold on web and app; paid items are sold in the app.',
+    'Rerolls, premium scout tickets and boost tickets are in the shop on the My club screen. Both club-funds items and paid items are sold in this shop.',
   itemsCloseAria: 'Close shop location tip',
   saveTitleWeb: 'Your progress is saved only in this browser',
   saveTitleApp: 'Your progress is saved only on this device',

@@ -22,6 +22,7 @@
     serial: '번호만 바꾼 연속 커리어',
     nonstop: '쉬지 않는 업로드',
     aiName: 'AI·봇 이름',
+    sameSpot: '같은 좌표만 누름',
   };
   const HOURS = [1, 6, 24] as const;
 
