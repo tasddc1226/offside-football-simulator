@@ -111,3 +111,19 @@ describe('T-11-584 랜딩 /get', () => {
     expect(res.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
   });
 });
+
+describe('T-11-585 랜딩 이미지', () => {
+  it('/landing/ 파일은 noindex를 붙이지 않는다', async () => {
+    const res = await worker.fetch(
+      new Request('https://offside-lab.com/landing/live.webp'),
+      {
+        ASSETS: {
+          fetch: async () => new Response('x', { headers: { 'Content-Type': 'image/webp' } }),
+        },
+      },
+      ctx,
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get('X-Robots-Tag')).toBeNull();
+  });
+});
