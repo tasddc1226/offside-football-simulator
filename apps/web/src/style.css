@@ -7591,12 +7591,18 @@ button.what {
   min-height: 44px;
   max-height: 112px;
   margin: 0;
-  padding: 10px 12px;
+  /* 테두리 1px씩을 빼고 한 줄(24px) + 위아래 9px가 44px 안에 꼭 맞아야 넘쳐서 스크롤되지 않는다. */
+  padding: 9px 12px;
   line-height: 1.5;
   border-radius: var(--radius-lg);
   resize: none;
   overflow-y: auto;
+  /* 다섯 줄을 넘겨 안에서 스크롤할 때도 막대는 그리지 않는다. */
+  scrollbar-width: none;
   scroll-margin-block: 12px;
+}
+.chat-form textarea::-webkit-scrollbar {
+  display: none;
 }
 .chat-send {
   width: 44px;

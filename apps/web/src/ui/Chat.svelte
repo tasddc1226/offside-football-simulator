@@ -56,6 +56,7 @@
   /** 입력창을 펼치고 바로 초점을 준다. 펼침을 먼저 그려야 같은 탭 안에서 iOS 키보드가 뜬다. */
   function openComposer() {
     flushSync(() => (fieldTyping = true));
+    if (input) fitInput(input);
     input?.focus();
   }
   // 언어 방 메뉴: 고르거나 바깥을 누르거나 Esc면 닫는다.
@@ -152,9 +153,12 @@
   });
 
   function fitInput(el: HTMLTextAreaElement) {
+    // 접혀 있으면(폰 필드 보기) 잴 수 없으니 펼칠 때 다시 잰다.
+    if (!el.offsetParent) return;
     const follow = nearBottom();
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 112)}px`;
+    // scrollHeight에는 테두리가 빠져 있어 그만큼 더해야 한 줄일 때 넘치지 않는다(넘치면 스크롤 막대가 생긴다).
+    el.style.height = `${Math.min(el.scrollHeight + el.offsetHeight - el.clientHeight, 112)}px`;
     if (follow) list?.scrollTo({ top: list.scrollHeight });
   }
   $effect(() => {
