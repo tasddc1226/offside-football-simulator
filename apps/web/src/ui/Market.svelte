@@ -40,6 +40,7 @@
     MARKET_POS_FILTERS,
     marketDetailFilters,
     marketFiltered,
+    marketSeasonChoices,
     marketFindChips,
     marketSubReset,
     cardFrom,
@@ -129,6 +130,8 @@
   let page = $state(0);
   let hasMore = $state(false);
   let season = $state<number | null>(null);
+  // T-11-596 카드 시즌 필터에 고를 시즌(목록 응답의 지금 시즌까지).
+  const seasonChoices = $derived(marketSeasonChoices(season));
   let listStatus = $state<'loading' | 'ok' | 'error'>('loading');
   // '방금 이적' — 첫 페이지 응답에 함께 온 최근 거래. 화면 안에서 한 줄씩 넘기기만 하고 서버는 다시 부르지 않는다.
   let recent = $state<MarketSale[]>([]);
@@ -489,6 +492,7 @@
         {/if}
         <div class="mk-sort">
           <span class="muted fs-sm">{season === null ? '' : L.listCount({ n: items.length, more: hasMore })}</span>
+          {#if seasonChoices.length > 1}<SeasonSelect compact label={L.seasonGroup} all={L.seasonAll} value={filter.cardSeason ?? 'all'} seasons={seasonChoices} onpick={(v) => pickFilter({ cardSeason: v === 'all' ? undefined : v })} data-market-card-season />{/if}
           <label class="fs-sm">{L.sortLabel}
             <select bind:value={sort} data-market-sort>
               {#each Object.entries(MARKET_SORT_LABEL) as [k, label] (k)}<option value={k}>{label}</option>{/each}
