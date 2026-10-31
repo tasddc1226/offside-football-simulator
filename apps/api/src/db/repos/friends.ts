@@ -182,6 +182,14 @@ export function teamsOfOwners(db: Db, profileIds: readonly string[], seasons: re
     );
 }
 
+/** T-11-601 여러 구단주의 팀 id(시즌 내림차순) — 친구마다 가장 최근 팀으로 구단주 프로필을 연다. batch에 넣는다. */
+export const teamIdsOfOwners = (db: Db, profileIds: readonly string[]) =>
+  db
+    .select({ profileId: ownerTeams.profileId, id: ownerTeams.id })
+    .from(ownerTeams)
+    .where(inArray(ownerTeams.profileId, [...profileIds]))
+    .orderBy(desc(ownerTeams.season));
+
 /** 여러 구단주의 가장 최근 감독 이름(닉네임이 없는 친구의 표시 이름). */
 export async function latestManagersOf(db: Db, profileIds: readonly string[]) {
   if (profileIds.length === 0) return new Map<string, string>();

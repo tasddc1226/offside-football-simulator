@@ -45,6 +45,7 @@ export const friend: Translation<FriendMsgs> = {
   codeCopied: '已複製好友碼',
   codeCopyFail: '無法複製好友碼',
   acceptAria: (p) => `接受${p.name}的邀請`,
+  profileAria: (p) => `查看${p.name}的球隊老闆資料`,
   rejectAria: (p) => `拒絕${p.name}的邀請`,
   playAria: (p) => `與${p.name}進行友誼賽`,
   removeAria: (p) => `解除與${p.name}的好友關係`,
