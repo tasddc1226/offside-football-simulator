@@ -105,6 +105,8 @@ export const MarketListQuerySchema = z.strictObject({
     .string()
     .refine((id) => isDefaultClubId(id) && !isAmateurClubId(id))
     .optional(),
+  /** T-11-596 카드가 나온 시즌(0 프리시즌). 없으면 모든 시즌. */
+  cardSeason: z.coerce.number().int().min(0).max(99).optional(),
   sort: z.enum(MARKET_SORTS).default('new'),
   page: z.coerce.number().int().min(0).max(10).default(0),
 });
