@@ -1,0 +1,30 @@
+{
+  "id": "fairness-disclosure-live-odds-20261031",
+  "title": "확률과 공정성 안내를 보완했어요",
+  "items": [
+    "일반 강화와 확정 강화의 차이, 감속 모션에서의 판정 방식을 안내해요.",
+    "밸런스 설정을 늦게 받아도 확률표가 최신 값으로 바뀌어요."
+  ],
+  "en": {
+    "title": "Clearer odds and fairness information",
+    "items": [
+      "The guide explains regular and guaranteed boosts, and how choices are decided with reduced motion.",
+      "The odds table updates even when balance settings arrive late."
+    ]
+  },
+  "ja": {
+    "title": "確率と公正さの案内を補いました",
+    "items": [
+      "通常の強化と確定強化の違い、動きを減らす設定での判定方法を案内します。",
+      "バランス設定の受信が遅れても、確率表が最新の値に更新されます。"
+    ]
+  },
+  "zh": {
+    "title": "補充機率與公平性說明",
+    "items": [
+      "說明一般強化與保證強化的差異，以及減少動態效果時的判定方式。",
+      "即使較晚收到平衡設定，機率表也會更新為最新數值。"
+    ]
+  },
+  "availability": "web-app"
+}

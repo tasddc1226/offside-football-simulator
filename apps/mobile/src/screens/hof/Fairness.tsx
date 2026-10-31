@@ -1,8 +1,13 @@
 // T-11-141 확률 도감의 '확률과 공정성'(웹 ui/Fairness.svelte). 내용은 app-core fairnessView, 이력은 펼칠 때만 불러온다.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { fairnessView, loadHistoryRows, type HistoryRow } from '@offside/app-core/fairness';
+import {
+  fairnessView,
+  subscribeFairness,
+  loadHistoryRows,
+  type HistoryRow,
+} from '@offside/app-core/fairness';
 import { kstParts } from '@offside/app-core/boardText';
 import { fairnessText as L } from '@offside/app-core/i18n/ko/fairness';
 import { openBoard } from '../../game/nav';
@@ -158,7 +163,8 @@ function History() {
 
 /** 펼쳤을 때만 그린다. */
 function FairnessBody() {
-  const V = useMemo(fairnessView, []);
+  const [V, setView] = useState(fairnessView);
+  useEffect(() => subscribeFairness(setView), []);
   return (
     <>
       <Txt tone="muted" style={line}>

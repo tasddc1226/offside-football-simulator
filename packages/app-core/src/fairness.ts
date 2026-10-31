@@ -11,7 +11,7 @@ import {
   type BalanceKey,
   type BalanceKnob,
 } from '@offside/contracts/balance';
-import { latestBalance } from '@offside/game/balance';
+import { latestBalance, subscribeLatestBalance } from '@offside/game/balance';
 import { BOOST, BOOST_PITY_PCT } from '@offside/game/boost';
 import { fmtValue } from './format.js';
 import { gradeOf } from '@offside/game/stats';
@@ -85,13 +85,19 @@ export function fairnessView(): FairnessView {
       `${L.potNote} ${L.version({ v })}`,
     ],
     boost: BOOST.p.map((p, i) => [L.boostLv({ lv: i + 1 }), `${Math.round(p * 100)}%`] as const),
-    boostNote: L.boostNote({ pity: `${BOOST_PITY_PCT}%p` }),
+    boostNote: `${L.boostNote({ pity: `${BOOST_PITY_PCT}%p` })} ${L.boostSureNote}`,
     hidden: [
       [L.hiddenPotTerm, L.hiddenPot],
       [L.hiddenBloomTerm, L.hiddenBloom],
       [L.hiddenStoryTerm, L.hiddenStory],
     ],
   };
+}
+
+/** 현재 표를 바로 전달하고, 늦게 받은 밸런스도 반영한다. 요청을 새로 보내지 않는다. */
+export function subscribeFairness(listener: (view: FairnessView) => void): () => void {
+  listener(fairnessView());
+  return subscribeLatestBalance(() => listener(fairnessView()));
 }
 
 // ───────── T-11-141 공개 밸런스 이력 (T-11-333 코드 배포 패치 포함) ─────────
