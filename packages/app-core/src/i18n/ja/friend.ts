@@ -45,6 +45,7 @@ export const friend: Translation<FriendMsgs> = {
   codeCopied: 'コードをコピーしました',
   codeCopyFail: 'コードをコピーできませんでした',
   acceptAria: (p) => `${p.name}の申請を承認`,
+  profileAria: (p) => `${p.name}のオーナープロフィールを見る`,
   rejectAria: (p) => `${p.name}の申請を拒否`,
   playAria: (p) => `${p.name}さんと親善試合`,
   removeAria: (p) => `${p.name}さんとのフレンドを解除`,

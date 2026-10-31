@@ -99,7 +99,7 @@ import type { TabIconName } from '../../ui/TabIcon';
 import { Field, SelectField, TextField } from '../settings/parts';
 import { LoginButtons } from './LoginButtons';
 import { TeamAchievements } from './TeamAchievements';
-import { TeamFriends, OppSwitch, useFriends, type OppTab } from './TeamFriends';
+import { TeamFriends, OppSwitch, oppTabMemory, useFriends, type OppTab } from './TeamFriends';
 import { TeamHistory } from './TeamHistory';
 import { TeamStats } from './TeamStats';
 import { TeamLive } from './TeamLive';
@@ -198,7 +198,13 @@ export default function Team() {
 
   /** T-11-098 '경기' 탭의 두 칸(랭크 경기 · 친구). 친구 칸은 처음 열 때만 불러온다. */
   const destination = useSnapshot(notificationDestination);
-  const [oppTab, setOppTab] = useState<OppTab>(destination.friends ? 'friends' : 'ranked');
+  const [oppTab, setOppTabState] = useState<OppTab>(
+    destination.friends ? 'friends' : oppTabMemory.tab,
+  );
+  const setOppTab = (t: OppTab) => {
+    oppTabMemory.tab = t;
+    setOppTabState(t);
+  };
   const friends = useFriends();
   useEffect(() => {
     if (status !== 'ready' || needLogin) return;

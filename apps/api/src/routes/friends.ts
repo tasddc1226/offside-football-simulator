@@ -45,6 +45,7 @@ import {
   receivedCountOf,
   recordFriendlyStatements,
   requestStatements,
+  teamIdsOfOwners,
   teamsOfOwners,
   unfriendStatements,
   type FriendRow,
@@ -120,8 +121,8 @@ const nameOf = (
 ) => nickname ?? managers?.get(profileId) ?? OWNER_NAME[lang];
 
 /**
- * 친구 줄들에 지금 시즌 팀 · 프리시즌 팀(개막 뒤 친선전용, T-11-113) · 창단 멤버 여부와 표시 이름(닉네임 → 최근 감독 이름 →
- * '구단주')을 붙인다. profileId → 사람. 쿼리 2~4번.
+ * 친구 줄들에 지금 시즌 팀 · 프리시즌 팀(개막 뒤 친선전용, T-11-113) · 창단 멤버 여부 · 프로필을 여는 최근 팀(T-11-601)과
+ * 표시 이름(닉네임 → 최근 감독 이름 → '구단주')을 붙인다. profileId → 사람. 쿼리 2~5번.
  */
 async function peopleOf(
   db: Db,
@@ -133,13 +134,14 @@ async function peopleOf(
   // 개막 뒤(휴식기 포함)엔 프리시즌 팀도 함께 읽는다(친선전용 편성으로).
   const legacy = season !== 0;
   const seasons = [...(season === null ? [] : [season]), ...(legacy ? [0] : [])];
-  const [[teams, founders, members], managers] = await Promise.all([
+  const [[teams, founders, members, teamIds], managers] = await Promise.all([
     ids.length === 0
-      ? [[], [], []]
+      ? [[], [], [], []]
       : db.batch([
           teamsOfOwners(db, ids, seasons),
           foundersOf(db, ids),
           membersOf(db, ids, nowIso()),
+          teamIdsOfOwners(db, ids),
         ]),
     latestManagersOf(
       db,
@@ -152,6 +154,8 @@ async function peopleOf(
   );
   const founder = new Set(founders.map((f) => f.profileId));
   const member = new Set(members.map((m) => m.profileId));
+  const latest = new Map<string, string>();
+  for (const t of teamIds) if (!latest.has(t.profileId)) latest.set(t.profileId, t.id);
   return new Map(
     inputs.map((p) => {
       const t = teamOf.get(p.profileId);
@@ -166,6 +170,7 @@ async function peopleOf(
           ...(legacy ? { preseasonTeam: lt ? teamSummary(lt) : null } : {}),
           founder: founder.has(p.profileId),
           member: member.has(p.profileId),
+          profileTeamId: latest.get(p.profileId) ?? null,
         },
       ];
     }),
