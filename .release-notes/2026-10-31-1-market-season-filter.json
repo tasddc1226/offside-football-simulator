@@ -1,0 +1,24 @@
+{
+  "id": "t-11-596-market-season-filter",
+  "title": "이적시장 시즌 필터",
+  "items": [
+    "이적시장 선수 사기 목록을 카드가 나온 시즌(프리시즌 · 시즌 1 · 시즌 2)으로 골라 볼 수 있어요"
+  ],
+  "en": {
+    "title": "Transfer market season filter",
+    "items": [
+      "You can now filter the transfer market by the season a card comes from (Preseason, Season 1, Season 2)."
+    ]
+  },
+  "ja": {
+    "title": "移籍市場のシーズン絞り込み",
+    "items": [
+      "移籍市場の選手一覧を、カードのシーズン(プレシーズン・シーズン1・シーズン2)で絞り込めます。"
+    ]
+  },
+  "zh": {
+    "title": "轉會市場賽季篩選",
+    "items": ["轉會市場的球員列表可以依卡片所屬賽季(季前賽、賽季 1、賽季 2)篩選。"]
+  },
+  "availability": "web-app"
+}

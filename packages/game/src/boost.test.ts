@@ -257,6 +257,32 @@ describe('T-11-593 잠재력 강화 대성공', () => {
     expect(s.log[0]!.text).toContain('대성공');
   });
 
+  it('설정 10% · 성공 35%면 3.5% 경계로 판정하고 난수를 한 번만 쓴다', () => {
+    try {
+      for (const [roll, great] of [
+        [0.03499, true],
+        [0.03501, false],
+      ] as const) {
+        const s = player({ salary: 10000, money: 50000 });
+        s.boost = { lv: 1, fails: 0, log: [] };
+        applyBalance({ boostGreat: 0.1 });
+        let draws = 0;
+        setActiveRng({
+          ...createRng(1),
+          next: () => {
+            draws++;
+            return roll;
+          },
+        } as ReturnType<typeof createRng>);
+        expect(boostGreatChance(s)).toBeCloseTo(3.5, 10);
+        expect(tryBoost(s)).toMatchObject({ ok: true, great, lv: great ? 3 : 2, greatChance: 3.5 });
+        expect(draws).toBe(1);
+      }
+    } finally {
+      applyBalance();
+    }
+  });
+
   it('T-11-593 대성공 비율이 0이면 예전과 같고, +4 도전에는 대성공이 없다', () => {
     const s = player({ salary: 10000, money: 50000 });
     try {

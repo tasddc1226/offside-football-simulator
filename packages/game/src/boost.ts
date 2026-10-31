@@ -56,11 +56,11 @@ export function boostChance(s: GameState): number {
   return Math.round(Math.min(1, BOOST.p[b.lv]! + BOOST.pity * b.fails) * 100);
 }
 
-/** T-11-593 다음 시도의 대성공(두 단계) 확률(%, 정수). 두 단계를 올리면 최고 단계를 넘거나 비율이 0이면 0. */
+/** T-11-593 다음 시도의 대성공(두 단계) 확률(%, 소수 허용). 두 단계를 올리면 최고 단계를 넘거나 비율이 0이면 0. */
 export function boostGreatChance(s: GameState): number {
   const b = boostState(s);
   if (b.lv + 2 > BOOST_MAX) return 0;
-  return Math.round(boostChance(s) * BAL.boostGreat);
+  return boostChance(s) * BAL.boostGreat;
 }
 
 export type BoostStatus =

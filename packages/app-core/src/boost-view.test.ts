@@ -33,7 +33,7 @@ describe('T-11-083 잠재력 강화 카드', () => {
     const out = doBoost(s)!;
     expect(out).toMatchObject({ ok: true, great: true, up: 2, lv: 2, greatChance: 10 });
     expect(out.title).toBe('대성공 · +2단계');
-    expect(boostView(s).history[0]).toContain('대성공');
+    expect(boostView(s).history[0]).toBe('2026 · +2단계 50% · 7,000만원 · 대성공');
   });
 
   it('시도할 수 없으면 버튼 없이 이유만 보여 준다', () => {

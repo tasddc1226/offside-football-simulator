@@ -5,7 +5,7 @@ import { CARD_TIERS } from './card-tier.js';
 import { CareerPosSchema } from './careers.js';
 import { OWNER_TIERS } from './owner-tier.js';
 import { IsoUtcSchema } from './primitives.js';
-import { TeamPlayerSchema, TeamSeasonSchema } from './teams.js';
+import { CardSpecialSchema, TeamPlayerSchema, TeamSeasonSchema } from './teams.js';
 
 /** 휘장 종류. 순위 휘장은 band(1위 · 상위 10 · …)로, 보유 휘장은 value(개수)로 단계를 나눈다. */
 export const HONOR_KINDS = [
@@ -70,6 +70,8 @@ export type SeasonRecapStats = z.infer<typeof SeasonRecapStatsSchema>;
 
 /** 결산 단체사진 · 카드 흐름에 싣는 선수 수(레전드 점수 순). */
 export const RECAP_SQUAD_MAX = 30;
+/** T-11-372 시즌 특별 카드 줄 상한(베스트 11 + 개인상 3). */
+export const SEASON_BEST_MAX = 14;
 
 /** 그 시즌에 키워 마감 전에 은퇴한 선수(카드 + 도트 유니폼용 마지막 구단). */
 export const RecapSquadMemberSchema = z.strictObject({
@@ -137,6 +139,16 @@ export const SeasonRecapSchema = z.strictObject({
   stats: SeasonRecapStatsSchema.nullable(),
   /** 키운 선수들(레전드 점수 순, RECAP_SQUAD_MAX명까지). 구버전 응답에는 없다. */
   squad: z.array(RecapSquadMemberSchema).max(RECAP_SQUAD_MAX).optional(),
+  /**
+   * T-11-372 그 시즌 특별 카드(베스트 11 · 개인상, 모든 구단주). 표식이 없는 시즌(프리시즌)이나 배포 전 결산이면 빈 배열 · 없음.
+   * 같은 카드가 여러 표식을 받으면 표식마다 한 줄이다.
+   */
+  seasonBest: z
+    .array(
+      z.strictObject({ special: CardSpecialSchema, card: TeamPlayerSchema, mine: z.boolean() }),
+    )
+    .max(SEASON_BEST_MAX)
+    .optional(),
 });
 export type SeasonRecap = z.infer<typeof SeasonRecapSchema>;
 

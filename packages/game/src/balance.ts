@@ -17,6 +17,15 @@ export const BAL: BalanceValues = resolveBalance();
 /** T-11-457 시즌 2에 연 리그(contracts LEAGUE_BASE added)는 newLeagues가 켜져야 제의 · 대륙 대회 상대로 나온다. */
 export const leagueOpen = (l: { added?: true }): boolean => !l.added || BAL.newLeagues >= 1;
 let latest: CareerBalance | null = null;
+const latestListeners = new Set<() => void>();
+
+/** 최신 설정 수신을 구독한다. 커리어에 적용된 BAL과 저장 값은 바꾸지 않는다. */
+export function subscribeLatestBalance(listener: () => void): () => void {
+  latestListeners.add(listener);
+  return () => {
+    latestListeners.delete(listener);
+  };
+}
 
 /** 값을 바꿔 끼운다(모자란 키는 기본값). 같은 객체를 유지해 import한 모듈이 새 값을 본다. */
 export function applyBalance(values: BalanceOverrides = {}): void {
@@ -26,6 +35,7 @@ export function applyBalance(values: BalanceOverrides = {}): void {
 /** 서버에서 받은 최신 설정. 다음 시즌 시작(또는 새 커리어)부터 쓰인다. */
 export function setLatestBalance(cfg: { version: number; values: unknown } | null): void {
   latest = cfg ? { v: cfg.version, values: sanitizeBalance(cfg.values) } : null;
+  for (const listener of latestListeners) listener();
 }
 
 /** 지금 새 커리어에 적용되는 값(서버 최신, 못 받았으면 기본값)과 그 버전 — 확률 도감의 공정성 표가 읽는다. */

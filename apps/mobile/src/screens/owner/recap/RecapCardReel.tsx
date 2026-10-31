@@ -38,6 +38,7 @@ const ReelCard = memo(function ReelCard({ m }: { m: RecapSquadMember }) {
           rating: card.peak,
           number: card.number,
           legendScore: card.legendScore,
+          specials: card.specials,
           attrs: card.attrs,
           attrsEstimated: card.attrsEstimated,
           height: card.height,

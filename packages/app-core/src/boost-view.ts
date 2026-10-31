@@ -61,7 +61,7 @@ export interface BoostView {
 export const boostNote = (): string => {
   const note = L.note({ age: BOOST.maxAge, pct: BOOST_PITY_PCT });
   // T-11-593 대성공 비율은 운영 도구에서 바뀌므로 이 커리어에 적용된 값으로 적는다(0이면 문장을 뺀다).
-  const great = Math.round(BAL.boostGreat * 100);
+  const great = BAL.boostGreat * 100;
   return great > 0 ? `${note} ${L.noteGreat({ pct: great, lv: BOOST_MAX })}` : note;
 };
 
@@ -159,7 +159,7 @@ export function boostView(
                 : L2.won({ v: fmtMoney(x.c) });
         // T-11-157 추가 시도는 표시를 붙인다(T-11-513 확정 강화는 시즌의 한 번과 따로라 붙이지 않는다).
         const pay = x.x && !x.sure ? L.extraCost({ cost }) : cost;
-        const p = { y: x.y, lv: x.lv + 1, pct: x.p, cost: pay };
+        const p = { y: x.y, lv: x.lv + (x.g ? 2 : 1), pct: x.p, cost: pay };
         return x.g ? L.historyGreat(p) : x.ok ? L.historyOk(p) : L.historyFail(p);
       }),
   };
