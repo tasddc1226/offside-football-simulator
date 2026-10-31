@@ -41,12 +41,14 @@ export const fetchMarket = (
     nation?: string | undefined;
     league?: string | undefined;
     club?: string | undefined;
+    cardSeason?: number | undefined;
   },
   page: number,
 ) => {
-  const q = (['pos', 'dpos', 'type', 'nation', 'league', 'club'] as const)
-    .map((k) => (f[k] ? `&${k}=${encodeURIComponent(f[k])}` : ''))
-    .join('');
+  const q =
+    (['pos', 'dpos', 'type', 'nation', 'league', 'club'] as const)
+      .map((k) => (f[k] ? `&${k}=${encodeURIComponent(f[k])}` : ''))
+      .join('') + (f.cardSeason === undefined ? '' : `&cardSeason=${f.cardSeason}`);
   return cachedGet<MarketListResponse>(
     `/v1/market?sort=${sort}${q}${page ? `&page=${page}` : ''}`,
     30_000,

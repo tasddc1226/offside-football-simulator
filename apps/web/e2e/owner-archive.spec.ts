@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { API, ok, fail } from './helpers.js';
 import { archiveFixture, recapFixture } from './fixtures/owner-archive.js';
 
-test('hall unifies seasons: lazy details, cache, retry, selection and mobile navigation', async ({
+test('hall automatically opens closed seasons: cache, retry, selection and mobile navigation', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 780 });
@@ -58,15 +58,13 @@ test('hall unifies seasons: lazy details, cache, retry, selection and mobile nav
   await page.locator('[data-archive-season="0"]').click();
   await expect(page.locator('[data-archive-cover]')).toContainText('1,480');
   await expect(page.locator('[data-room-list] [data-cup-honor]')).toHaveCount(0);
-  expect(details).toBe(0);
-  await page.locator('[data-act="archive-details"]').click();
+  await expect(page.locator('[data-act="archive-details"]')).toHaveCount(0);
   await expect(page.locator('[data-act="archive-retry"]')).toBeVisible();
   await page.locator('[data-act="archive-retry"]').click();
   await expect(page.locator('[data-recap-rank="ach"]')).toBeVisible();
   await expect(page.locator('[data-act="recap-share"]')).toHaveCount(1);
   await page.locator('[data-archive-season="1"]').click();
   await page.locator('[data-archive-season="0"]').click();
-  await page.locator('[data-act="archive-details"]').click();
   await expect(page.locator('[data-recap]')).toBeVisible();
   expect(details).toBe(2);
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -116,7 +114,6 @@ for (const lang of ['en', 'ja'] as const) {
     await page.locator('[data-act="open-owner-hall"]').click();
     await page.locator('[data-room-zone="0"]').click();
     await page.locator('[data-archive-season="0"]').click();
-    await page.locator('[data-act="archive-details"]').click();
     const ranks = page.locator('.rank-list');
     await expect(ranks).toBeVisible();
     for (const width of [320, 375, 768]) {

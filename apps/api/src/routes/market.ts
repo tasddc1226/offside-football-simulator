@@ -110,6 +110,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
       nation: c.req.query('nation') || undefined,
       league: c.req.query('league') || undefined,
       club: c.req.query('club') || undefined,
+      cardSeason: c.req.query('cardSeason') || undefined,
       sort: c.req.query('sort') || undefined,
       page: c.req.query('page') || undefined,
     });

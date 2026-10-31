@@ -270,6 +270,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'first_touch_id',
     'last_touch_id',
   ],
+  card_specials: ['career_id', 'season', 'kind', 'rank', 'rule_version', 'created_at'],
   cards: [
     'career_id',
     'owner_id',

@@ -161,6 +161,7 @@ describe('T-11-128 시즌 결산', () => {
       'ach',
       'ranks',
       'honors',
+      'specials',
       'division',
     ]);
     expect(await closeStateOf(ctx.db, 0)).toMatchObject({

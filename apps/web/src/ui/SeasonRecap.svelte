@@ -233,6 +233,24 @@
       </section>
     {/if}
 
+    {#if recap.seasonBest && recap.seasonBest.length > 0}
+      {@const mineN = new Set(recap.seasonBest.filter((x) => x.mine).map((x) => x.card.careerId)).size}
+      <!-- T-11-372 시즌 특별 카드(모든 구단주) — 개인상 셋 다음에 베스트 11. -->
+      <section class="card recap-sec" data-recap-section="specials" aria-label={L.secSpecials}>
+        <h2>{L.secSpecials}</h2>
+        <p class="muted fs-sm sec-lead">{L.specialsLead}</p>
+        {#if mineN > 0}<p class="specials-mine-count" data-recap-specials-mine={mineN}>{L.specialsMineCount({ n: mineN })}</p>{/if}
+        <ul class="specials-grid">
+          {#each recap.seasonBest as x (`${x.special.kind}:${x.card.careerId}`)}
+            <li class:mine={x.mine} data-recap-special={x.special.kind} data-recap-special-career={x.card.careerId}>
+              <PlayerCard player={{ ...x.card, specials: [x.special] }} name={playerName(x.card.publicName, x.card.pos, null)} rating={x.card.peak} role={detailPosOf(x.card)} season={x.card.season} compact />
+              {#if x.mine}<span class="specials-mine">{L.specialsMine}</span>{/if}
+            </li>
+          {/each}
+        </ul>
+      </section>
+    {/if}
+
     {#if bars.length > 0}
       <section class="card recap-sec" data-recap-section="cards" aria-label={L.secCards}>
         <h2>{L.secCards}</h2>
@@ -355,6 +373,12 @@
 </div>
 
 <style>
+  /* T-11-372 시즌 특별 카드 묶음. */
+  .specials-grid { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 12px 8px; }
+  .specials-grid li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .specials-grid li.mine { outline: 2px solid var(--accent, #2fb3a3); outline-offset: 3px; border-radius: 6px; }
+  .specials-mine { font-size: 0.7rem; font-weight: 700; color: var(--accent, #2fb3a3); }
+  .specials-mine-count { margin: 6px 0 0; font-weight: 700; }
   .embedded {display:flex;flex-direction:column;gap:14px;}
   .embedded :global(*) {animation:none !important;}
   /* 시즌 카드 — 테마와 상관없이 어두운 바탕(공유 이미지와 같은 첫인상). 등급 색 빛이 가운데서 번진다. */
