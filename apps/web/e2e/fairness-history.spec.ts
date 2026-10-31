@@ -80,6 +80,8 @@ test('늦게 받은 밸런스를 열린 확률표에 반영하고 재진입해�
   const fairness = page.locator('#fairness');
   await expect(fairness.locator('[data-fair-pot] tbody tr').first()).toContainText('0.8%');
   release();
+  await expect(fairness).toHaveJSProperty('open', true);
+  await expect(fairness.locator('[data-fair-pot] tbody tr').first()).toBeVisible();
   await expect(fairness.locator('[data-fair-pot] tbody tr').first()).toContainText('1.9%');
   await expect(fairness).toContainText('시즌 중 5.6%');
   await expect(fairness).toContainText('밸런스 버전 2');
