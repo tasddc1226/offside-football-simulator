@@ -230,6 +230,7 @@ export const BALANCE_SPEC = {
     max: 90,
     step: 1,
   },
+  agKoreaBonus: { def: 6, min: 0, max: 15, step: 1 },
   koreaU23: {
     def: 69,
     min: 55,

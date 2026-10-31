@@ -269,11 +269,12 @@ function simIntl(
   comp: string,
   stage = '',
   youth = false,
+  teamBonus = 0,
 ): IntlResult {
   const side = natSide(s);
   const P = scoreRate(s),
     o = ovr(s),
-    teamStr = youth ? side.u23 : side.str;
+    teamStr = (youth ? side.u23 : side.str) + teamBonus;
   let mins = 0;
   if (role === 'starter') mins = chance(0.82) ? 90 : ri(60, 85);
   else if (role === 'sub') mins = chance(0.6) ? ri(10, 35) : 0;
@@ -581,7 +582,15 @@ function runTournament(s: GameState, key: string) {
   const { role, why } = squadRole(s, T, key);
   const matches: IntlResult[] = [];
   const play = (opp: [string, number], stage: string) => {
-    const m = simIntl(s, opp, role, T.label(y), stage, T.youth);
+    const m = simIntl(
+      s,
+      opp,
+      role,
+      T.label(y),
+      stage,
+      T.youth,
+      key === 'ag' && isKorean(s) ? BAL.agKoreaBonus : 0,
+    );
     matches.push(m);
     return m;
   };
@@ -695,4 +704,36 @@ export function natSeasonEnd(s: GameState) {
     addStat(s, 'fame', 6);
   }
   return { tours: out, trophies };
+}
+
+/** Tournament calendar, with qualification kept separate from squad selection. */
+export function nationalCalendar(s: GameState) {
+  const side = natSide(s),
+    cont = CONT_CUP[side.conf];
+  const defs = tournaments(side);
+  const rows: {
+    year: number;
+    key: string;
+    name: string;
+    age: number;
+    youth: boolean;
+    qualified: boolean | undefined;
+  }[] = [];
+  for (let year = s.year; year < s.year + 4; year++) {
+    const keys: string[] = [];
+    if (year % 4 === 2) keys.push('wc');
+    if (year % 4 === 2 && side.conf === 'AFC') keys.push('ag');
+    if (cont.year(year)) keys.push(cont.key);
+    if (year % 4 === 0) keys.push('olympic');
+    for (const key of keys)
+      rows.push({
+        year,
+        key,
+        name: defs[key]!.label(year),
+        age: s.age + year - s.year,
+        youth: defs[key]!.youth,
+        qualified: key === 'wc' || key === 'olympic' ? s.nat.qual[year] : undefined,
+      });
+  }
+  return rows;
 }

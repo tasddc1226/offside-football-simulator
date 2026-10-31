@@ -1,3 +1,4 @@
+import { CareerOverview } from './CareerOverview';
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { coachFeedback } from '@offside/app-core/career-feedback';
 // 시즌 탭(웹 tabs/SeasonTab.svelte, T-11-025): 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자) → 시즌 현황(진행 막대·
@@ -700,6 +701,7 @@ export function SeasonTab({ s }: { s: GameState }) {
         </Spotlight>
       ) : null}
 
+      <CareerOverview s={s} />
       <Spotlight reg={reg('status')} on={spot === 'status'}>
         <Card gap={14}>
           <View>

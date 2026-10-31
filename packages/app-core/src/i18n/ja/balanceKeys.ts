@@ -2,6 +2,7 @@ import type { Translation } from '../core';
 import type { BalanceKeysMsgs } from '../ko/balanceKeys';
 
 export const balanceKeys: Translation<BalanceKeysMsgs> = {
+  agKoreaBonus: 'アジア大会の韓国戦力補正',
   eventRatePreseason: 'プレシーズンのイベント確率',
   eventRateSeason: '前半戦・後半戦のイベント確率',
   eventTwist: '選択後のどんでん返し確率',

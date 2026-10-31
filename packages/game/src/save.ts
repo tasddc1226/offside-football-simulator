@@ -33,6 +33,8 @@ export function migrateSave(G: GameState): { newCid: boolean } {
     setActiveRng(createRng(seed));
     G.rng = { seed };
   }
+  // scoringVersion is intentionally absent in legacy seasons. Do not invent a
+  // mid-season leaderboard or recalculate old awards; newSeason opts in next year.
   natInit(G);
   // T-11-062: 기간이 없던 기존 특례는 복무 일수/편입일을 추정하거나 의무를 다시 부과하지 않는다.
   // 군필·진행 중 상무·메달·입대 취소 등 기존 상태를 그대로 보존한다.

@@ -19,6 +19,7 @@ import { board } from './board';
 import { boardLabel } from './boardLabel';
 import { careerGuide } from './careerGuide';
 import { careerMoment } from './careerMoment';
+import { careerOverview } from './careerOverview';
 import { chat } from './chat';
 import { chatReject } from './chatReject';
 import { club } from './club';
@@ -142,6 +143,7 @@ export const zh = {
   boardLabel,
   careerGuide,
   careerMoment,
+  careerOverview,
   chat,
   chatReject,
   club,

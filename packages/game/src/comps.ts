@@ -18,6 +18,7 @@ import { confPoty, federationPoty } from './nation.js';
 import { gCompsText as M } from './i18n/ko/gComps.js';
 import { tn } from './i18n/names.js';
 import { leagueOpen } from './balance.js';
+import { scoringTable, scoringRank } from './scoring-table.js';
 import type { MomentHooks } from './moments.js';
 
 export const CUPS: Record<string, string[]> = {
@@ -577,8 +578,12 @@ export function seasonAwards(
     back = s.pos === 'DF' || s.pos === 'GK';
   const topG = m * TOP_G + gauss() * 3,
     topA = m * TOP_A + gauss() * 2;
-  if (S.goals >= Math.max(topG, 6)) awards.push(L.amateur ? '득점왕' : TOP_SCORER[L.id]!);
-  if (S.assists >= Math.max(topA, 5)) awards.push(L.amateur ? '도움왕' : `${L.name} 도움왕`);
+  const scoring = scoringTable(s);
+  const mine = scoring?.find((r) => r.me);
+  const first = (key: 'goals' | 'assists', legacy: number) =>
+    scoring && mine ? mine[key] > 0 && scoringRank(scoring, mine, key) === 1 : S[key] >= legacy;
+  if (first('goals', Math.max(topG, 6))) awards.push(L.amateur ? '득점왕' : TOP_SCORER[L.id]!);
+  if (first('assists', Math.max(topA, 5))) awards.push(L.amateur ? '도움왕' : `${L.name} 도움왕`);
   if (enough && avg >= 7.55 && (rank <= 3 || S.goals >= topG) && chance(0.5))
     awards.push(L.amateur ? '대회 MVP' : POTY[L.id]!);
   if (enough && avg >= (back ? 7.2 : 7.3) && chance(0.75))
