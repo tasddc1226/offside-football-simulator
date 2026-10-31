@@ -1,7 +1,6 @@
 <script lang="ts">
   // 기록실(하단 메뉴) — 명예의 전당 전체 보기(100명씩 페이지)와 영구결번(T-10-076), 라이브 랭킹(팀 랭킹, T-10-092)을
   // 탭으로 오간다. T-11-028 구단주 랭킹(구단주 시즌 업적 점수)을 더했다. T-11-463 시즌 BEST 11.
-  import AdSlot from '../ads/AdSlot.svelte';
   import HallOfFame from './HallOfFame.svelte';
   import RetiredWall from './RetiredWall.svelte';
   import AchievementRanking from './team/AchievementRanking.svelte';
@@ -50,12 +49,10 @@
       <Best11 />
     {:else if appState.hof.tab === 'teams'}
       <TeamRanking />
-      <AdSlot place="records-bottom" />
     {:else if appState.hof.tab === 'ach'}
       <AchievementRanking />
     {:else}
       <HallOfFame full />
-      <AdSlot place="records-bottom" />
     {/if}
   </div>
 </div>
