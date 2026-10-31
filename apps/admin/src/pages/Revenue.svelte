@@ -15,24 +15,25 @@
   const rev = loader<AdminRevenue>(() => `/v1/admin/revenue?days=${days}`, () => tick);
   const kpi = loader<KpiReport>(() => `/v1/admin/kpi?days=${days}`, () => tick);
   const rev30 = loader<AdminRevenue>(() => '/v1/admin/revenue?days=30', () => tick);
-  const avg = (krw: number, n: number) => (n ? `객단가 ${fmt(krw / n, 'krw')}` : '');
+  const avg = (krw: number, n: number) => (n ? `결제 건당 ${fmt(krw / n, 'krw')}` : '');
   const MEMBER_EMPTY = '멤버십 흐름은 다음 일일 수집(04:00)부터 보여요.';
 </script>
 
 <div class="page">
+  <p class="note">한국 정가 기준 추정 · 테스트 제외. 아이템·시즌 패스는 구매 기록, 멤버십(가입·갱신)·광고 제거는 스토어 알림 기준이며 알림 기록 전 판매는 빠져요. 구매자 수는 아이템·패스만 포함해요. 알림 환불은 접수일 가격으로 차감해요. 정확한 결제·환불액은 스토어 보고서에서 확인해 주세요.</p>
   <Load r={rev.r} height={128}>
     {#snippet children(r)}
       <div class="stats">
-        <Stat label={`${days}일 아이템 + 광고 제거`} value={r.total.krw + r.removeAds.krw} unit="krw" trend={r.daily.map((x) => x.krw + (x.adKrw ?? 0))} />
-        <Stat label="아이템 매출" value={r.total.krw} unit="krw" sub={`${fmt(r.total.count)}건 · ${avg(r.total.krw, r.total.buyers)}`} />
-        <Stat label="구매자" value={r.total.buyers} sub={`첫 구매 ${fmt(r.total.firstBuyers)}명`} />
+        <Stat label={`${days}일 전체 상품`} value={r.total.krw + r.removeAds.krw} unit="krw" trend={r.daily.map((x) => x.krw + (x.adKrw ?? 0))} />
+        <Stat label="아이템·패스·멤버십" value={r.total.krw} unit="krw" sub={`${fmt(r.total.count)}건 · ${avg(r.total.krw, r.total.count)}`} />
+        <Stat label="구매자 (아이템·패스)" value={r.total.buyers} sub={`첫 구매 ${fmt(r.total.firstBuyers)}명`} />
         <Stat label="광고 제거 (환불 반영)" value={r.removeAds.krw} unit="krw" sub={`${fmt(r.removeAds.count)}건 · 환불 ${fmt(r.removeAds.refunds)}`} />
-        <Stat label="환불 (아이템)" value={r.total.refundKrw} unit="krw" sub={`${fmt(r.total.refunds)}건`} />
+        <Stat label="환불 (광고 제거 제외)" value={r.total.refundKrw} unit="krw" sub={`${fmt(r.total.refunds)}건`} />
         <Stat
           label="누적 매출"
           value={r.allTime.krw + (r.removeAds.allTime?.krw ?? 0)}
           unit="krw"
-          sub={`아이템 구매자 ${fmt(r.allTime.buyers)}명 · 광고 제거 ${fmt(r.removeAds.allTime?.count ?? null)}건`}
+          sub={`아이템·패스 구매자 ${fmt(r.allTime.buyers)}명 · 광고 제거 ${fmt(r.removeAds.allTime?.count ?? null)}건`}
         />
       </div>
     {/snippet}
@@ -52,12 +53,12 @@
     <Load r={rev.r} height={260}>
       {#snippet children(r)}
         <StackedBars
-          title="일별 매출 (아이템 · 광고 제거)"
+          title="일별 매출 (전체 상품)"
           unit="krw"
           days={r.daily.map((x) => x.day)}
           series={nonEmpty([
-            { key: 'iap', label: '아이템', values: r.daily.map((x) => x.krw) },
-            { key: 'ads', label: '광고 제거 (환불 전)', values: r.daily.map((x) => x.adKrw ?? 0) },
+            { key: 'iap', label: '아이템·패스·멤버십', values: r.daily.map((x) => x.krw) },
+            { key: 'ads', label: '광고 제거 (환불 반영)', values: r.daily.map((x) => x.adKrw ?? 0) },
           ])}
           empty="기간 안 매출이 없어요."
         />
@@ -68,15 +69,9 @@
         <section class="panel">
           <header><h2>스토어별</h2><span class="hint">건수</span></header>
           <HBars
-            items={[
-              ...r.stores.map((s) => ({ key: `iap-${s.store}`, label: `아이템 · ${dimLabel(s.store)}`, value: s.count, note: fmt(s.krw, 'krw') })),
-              ...(r.removeAds.stores ?? []).map((s) => ({
-                key: `ads-${s.store}`,
-                label: `광고 제거 · ${dimLabel(s.store)}`,
-                value: s.count,
-                note: s.refunds ? `환불 ${s.refunds}` : undefined,
-              })),
-            ].sort((a, b) => b.value - a.value)}
+            items={r.stores.map((s) => ({
+              key: s.store, label: dimLabel(s.store), value: s.count, note: fmt(s.krw, 'krw'),
+            })).sort((a, b) => b.value - a.value)}
           />
         </section>
       {/snippet}
