@@ -18,11 +18,11 @@ import {
   CARD_SILVER_PEAK,
 } from '@offside/contracts/card-tier';
 import {
-  BEST11_SLOTS,
   CARD_SPECIAL_FIRST_SEASON,
   CARD_SPECIAL_RULE,
   type CardSpecialKind,
 } from '@offside/contracts/card-special';
+import { BEST11_SLOTS } from '@offside/contracts/best11-rules';
 import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
 import {
   openTeamSeasons,
@@ -32,7 +32,13 @@ import {
 import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { setMeta } from '../db/repos/firsts.js';
-import { appMeta, ownerAchievements, ownerSeasonRecords, profiles } from '../db/schema.js';
+import {
+  appMeta,
+  best11Seasons,
+  ownerAchievements,
+  ownerSeasonRecords,
+  profiles,
+} from '../db/schema.js';
 import { achievementScore } from './achievements.js';
 import { computeOwnerAchievements } from './ownerAchievements.js';
 import { logErrorText } from '../logError.js';
@@ -338,17 +344,19 @@ async function closeHonors(db: Db, season: number, now: string) {
   ]);
 }
 
-/**
- * T-11-372 그 시즌 특별 카드 표식. 후보는 그 시즌 명예의 전당과 같은 기준(마감 전 은퇴 · 숨김 아님 · 은퇴 나이)에 로그인한 구단주의
- * 선수다. 베스트 11은 포지션 묶음별 레전드 점수 순, 득점왕 · 도움왕은 통산 득점 · 도움 순(같으면 레전드 점수), MVP는 레전드 점수 1위.
- * 같으면 먼저 은퇴한 선수 · id 순(명예의 전당 정렬). 묶음마다 인덱스 순서로 LIMIT 몇 건만 읽는다. insert or ignore라 다시 돌려도 같다.
- */
+/** T-11-372: use the finalized Records Best XI verbatim; select individual awards separately. */
 export const specialMetaKey = (season: number) => `season-specials:${season}`;
 
 async function closeSpecials(db: Db, season: number, cutoff: string, now: string) {
-  if (season < CARD_SPECIAL_FIRST_SEASON) return;
+  if (season < CARD_SPECIAL_FIRST_SEASON) return true;
+  const [best] = await db
+    .select({ finalAt: best11Seasons.finalAt })
+    .from(best11Seasons)
+    .where(eq(best11Seasons.season, season));
+  // Best XI has its own finalization job. Never freeze provisional or missing slots.
+  if (!best?.finalAt) return false;
   const key = specialMetaKey(season);
-  // All seven selections and the completion marker commit together. The marker also
+  // All selections and the completion marker commit together. The marker also
   // freezes an empty selection and prevents retries/concurrent cron runs adding winners.
   const pick = (
     kind: CardSpecialKind,
@@ -380,13 +388,25 @@ async function closeSpecials(db: Db, season: number, cutoff: string, now: string
     pick('mvp', '1 = 1', 'c.legend_score', byScore, 1),
     pick('top_scorer', 'c.goals > 0', 'c.goals', byStat, 1),
     pick('top_assist', 'c.assists > 0', 'c.assists', byStat, 1),
-    ...Object.entries(BEST11_SLOTS).map(([pos, n]) =>
-      pick('best11', `c.pos = '${pos}'`, 'c.legend_score', byScore, n),
-    ),
+    db.$client
+      .prepare(
+        `
+      INSERT OR IGNORE INTO card_specials (career_id, season, kind, rank, rule_version, created_at)
+      SELECT b.career_id, b.season, 'best11',
+        CASE b.slot ${BEST11_SLOTS.map((slot, i) => `WHEN '${slot}' THEN ${i + 1}`).join(' ')} END,
+        ?2, ?3
+      FROM best11_slots b
+      WHERE b.season = ?1 AND b.slot IN (${BEST11_SLOTS.map((slot) => `'${slot}'`).join(',')})
+        AND EXISTS (SELECT 1 FROM best11_seasons WHERE season = ?1 AND final_at IS NOT NULL)
+        AND NOT EXISTS (SELECT 1 FROM app_meta WHERE key = ?4)
+    `,
+      )
+      .bind(season, CARD_SPECIAL_RULE, now, key),
     db.$client
       .prepare('INSERT OR IGNORE INTO app_meta (key, value) VALUES (?, ?)')
       .bind(key, JSON.stringify({ ruleVersion: CARD_SPECIAL_RULE, cutoff, completedAt: now })),
   ]);
+  return true;
 }
 
 /**
@@ -453,7 +473,8 @@ export async function runSeasonClose(db: Db, now: string, statsChunk = STATS_CHU
     if (state.step === 'done') {
       if (season >= CARD_SPECIAL_FIRST_SEASON && !specialDone.has(specialMetaKey(season))) {
         // Supplement an already closed season without replaying ranks, honors or rewards.
-        await closeSpecials(db, season, state.cutoff, now);
+        if (!(await closeSpecials(db, season, state.cutoff, now)))
+          return { season, step: 'specials' as const, next: 'specials' as const };
         return { season, step: 'specials' as const, next: 'done' as const };
       }
       continue;
@@ -478,7 +499,8 @@ export async function runSeasonClose(db: Db, now: string, statsChunk = STATS_CHU
       await grantPioneerTitles(db, now);
       state.step = 'specials';
     } else if (state.step === 'specials') {
-      await closeSpecials(db, season, cutoff, now);
+      if (!(await closeSpecials(db, season, cutoff, now)))
+        return { season, step: 'specials' as const, next: 'specials' as const };
       state.step = 'division';
     } else {
       await closeDivisions(db, season, cutoff, now);

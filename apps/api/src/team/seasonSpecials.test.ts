@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setMeta } from '../db/repos/firsts.js';
 import { forgetSeasonSchedule, saveSeasonSchedule } from '../seasonSchedule.js';
 import { careersByIds, teamPlayerCard } from '../db/repos/ownerTeams.js';
-import { careers } from '../db/schema.js';
+import { BEST11_SLOTS } from '@offside/contracts/best11-rules';
+import { best11Seasons, best11Slots, careers } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueCookie, issueGoogleCookie } from '../test/http.js';
 import { closeMetaKey, closeStateOf, runSeasonClose, specialMetaKey } from './seasonClose.js';
@@ -26,6 +27,7 @@ describe('T-11-372 시즌 특별 카드', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-10-07T00:00:00.000Z'));
     saved = seasonSchedule();
+    await ctx.db.insert(best11Seasons).values({ season: 1, finalAt: AFTER, updatedAt: AFTER });
     // 요청마다 app_meta의 일정을 다시 입히므로(seasonSchedule.ts) 저장해 둔다.
     await saveSeasonSchedule(ctx.env.DB, [
       { id: 1, startsAt: saved[0]!.startsAt, endsAt: END, retireAt: 45 },
@@ -122,6 +124,23 @@ describe('T-11-372 시즌 특별 카드', () => {
     const young = await addCareer(a.profileId, { score: 2500, retireAge: 25 });
     const pre = await addCareer(a.profileId, { score: 2000, season: 0 });
 
+    // Frozen Records lineup intentionally includes a lower LS player (fw4), not fw3.
+    await ctx.db.insert(best11Slots).values(
+      [
+        ['GK', gk],
+        ['LB', df],
+        ['CM', mf],
+        ['LW', fw1],
+        ['ST', fw2],
+        ['RW', fw4],
+      ].map(([slot, careerId]) => ({
+        season: 1,
+        slot: slot!,
+        careerId: careerId!,
+        score: 1,
+        since: BEFORE,
+      })),
+    );
     const steps = await closeAll();
     expect(steps.filter((s) => s.startsWith('1:'))).toEqual([
       '1:records',
@@ -140,20 +159,11 @@ describe('T-11-372 시즌 특별 카드', () => {
     expect(of('mvp')).toEqual([fw1]);
     expect(of('top_scorer')).toEqual([fw2]);
     expect(of('top_assist')).toEqual([mf]);
-    expect(new Set(of('best11'))).toEqual(new Set([fw1, fw2, fw3, gk, mf, df]));
-    // 포지션 안의 순위: FW는 900 → 800(먼저 은퇴) → 800.
-    const fwRanks = rows.filter(
-      (r) => r.kind === 'best11' && [fw1, fw2, fw3].includes(r.career_id),
-    );
-    expect(fwRanks.map((r) => [r.career_id, r.rank])).toEqual(
-      expect.arrayContaining([
-        [fw1, 1],
-        [fw2, 2],
-        [fw3, 3],
-      ]),
-    );
+    expect(new Set(of('best11'))).toEqual(new Set([fw1, fw2, fw4, gk, mf, df]));
+    // The special rank follows the fixed pitch slot order, not LS order.
+    expect(rows.find((r) => r.kind === 'best11' && r.career_id === fw4)?.rank).toBe(11);
     expect(rows.every((r) => r.rule_version === 1)).toBe(true);
-    for (const out of [fw4, gk2, anonId, hidden, late, young, pre])
+    for (const out of [fw3, gk2, anonId, hidden, late, young, pre])
       expect(rows.some((r) => r.career_id === out)).toBe(false);
 
     // 다시 돌려도(배포 전에 끝난 결산을 나중에 돌려도) 같은 결과.
@@ -166,9 +176,9 @@ describe('T-11-372 시즌 특별 카드', () => {
     const [lite] = await careersByIds(ctx.db, [fw1]);
     expect(teamPlayerCard(lite!).specials).toEqual([
       { season: 1, kind: 'mvp', rank: 1 },
-      { season: 1, kind: 'best11', rank: 1 },
+      { season: 1, kind: 'best11', rank: 9 },
     ]);
-    const [plain] = await careersByIds(ctx.db, [fw4]);
+    const [plain] = await careersByIds(ctx.db, [fw3]);
     expect(teamPlayerCard(plain!)).not.toHaveProperty('specials');
 
     // 결산 화면: 그 시즌 특별 카드 전체(내 카드 표시)와 내 선수단 카드의 표식.
@@ -194,6 +204,40 @@ describe('T-11-372 시즌 특별 카드', () => {
     expect(squad.find((m) => m.card.careerId === gk)?.card.specials).toEqual([
       { season: 1, kind: 'best11', rank: 1 },
     ]);
+  });
+
+  it('기록실 확정 11명과 특별 카드 11명이 동일하고 미확정이면 아무 상도 확정하지 않는다', async () => {
+    const a = await issueGoogleCookie(ctx);
+    const state = { step: 'done', cutoff: END, closedAt: AFTER };
+    await setMeta(ctx.db, closeMetaKey(0), JSON.stringify(state));
+    await setMeta(ctx.db, closeMetaKey(1), JSON.stringify(state));
+    const ids: string[] = [];
+    for (const [i, slot] of BEST11_SLOTS.entries()) {
+      const id = await addCareer(a.profileId, { score: 100 + i });
+      ids.push(id);
+      await ctx.db
+        .insert(best11Slots)
+        .values({ season: 1, slot, careerId: id, score: 1, since: BEFORE });
+    }
+    const high = await addCareer(a.profileId, { score: 3000, goals: 500 });
+    await ctx.db.run(sql`update best11_seasons set final_at = NULL where season = 1`);
+    expect(await runSeasonClose(ctx.db, AFTER)).toEqual({
+      season: 1,
+      step: 'specials',
+      next: 'specials',
+    });
+    expect(await specials()).toEqual([]);
+    expect(
+      await ctx.db.all(sql`select value from app_meta where key = ${specialMetaKey(1)}`),
+    ).toEqual([]);
+    expect(await closeStateOf(ctx.db, 1)).toEqual(state);
+    await ctx.db.run(sql`update best11_seasons set final_at = ${AFTER} where season = 1`);
+    await runSeasonClose(ctx.db, AFTER);
+    const marks = (await specials()).filter((r) => r.kind === 'best11');
+    expect(marks.map((r) => r.career_id)).toEqual(ids);
+    expect(marks.map((r) => r.rank)).toEqual(BEST11_SLOTS.map((_, i) => i + 1));
+    expect(marks.some((r) => r.career_id === high)).toBe(false);
+    expect(await runSeasonClose(ctx.db, AFTER)).toBeNull();
   });
 
   it('이미 끝난 시즌에 선정만 보충하고 결산 상태와 보상을 보존하며 재실행하지 않는다', async () => {

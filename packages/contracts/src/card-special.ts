@@ -5,9 +5,6 @@
 export const CARD_SPECIAL_KINDS = ['mvp', 'top_scorer', 'top_assist', 'best11'] as const;
 export type CardSpecialKind = (typeof CARD_SPECIAL_KINDS)[number];
 
-/** 시즌 베스트 11 포지션 묶음별 인원(4-3-3). */
-export const BEST11_SLOTS = { GK: 1, DF: 4, MF: 3, FW: 3 } as const;
-
 /** 선정 규칙 버전. 기준이 바뀌면 올리고, 지난 시즌 표식은 다시 매기지 않는다. */
 export const CARD_SPECIAL_RULE = 1;
 
