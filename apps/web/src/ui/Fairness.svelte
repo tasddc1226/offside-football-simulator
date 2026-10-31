@@ -29,7 +29,7 @@
   </dl>
 {/snippet}
 
-<details class="dex-rules" id="fairness" {open}>
+<details class="dex-rules" id="fairness" bind:open>
   <summary><b>{L.title}</b></summary>
   <p class="muted fs-sm" style="margin:8px 0 0">{L.intro}</p>
   {@render terms(V.promises)}
