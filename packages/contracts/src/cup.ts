@@ -431,6 +431,7 @@ export const IAP_PRODUCTS = {
   'com.offsidelab.app.reroll_40': { item: 'reroll', qty: 40 },
   'com.offsidelab.app.boost_3': { item: 'boost', qty: 3 },
   'com.offsidelab.app.boost_10': { item: 'boost', qty: 10 },
+  'com.offsidelab.app.boost_100': { item: 'boost', qty: 100 },
   // T-11-196 프리미엄 스카우트권(후보 3명 중 1명 A 이상 보장 · S 확률 2배 · 잠재력 공개).
   'com.offsidelab.app.scout_1': { item: 'scout', qty: 1 },
   'com.offsidelab.app.scout_5': { item: 'scout', qty: 5 },

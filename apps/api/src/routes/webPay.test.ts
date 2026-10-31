@@ -93,6 +93,45 @@ describe('T-11-454 웹 결제(엑솔라)', () => {
   const items = async (cookie: string) =>
     ItemsRes.parse(await (await call('GET', '/v1/items', { cookie })).json()).data;
 
+  it('opens the 100-ticket pack only after catalog readiness and grants it once', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const productId = 'com.offsidelab.app.boost_100';
+    const calls = stubXsolla();
+    const config = async () =>
+      ConfigRes.parse(await (await call('GET', '/v1/web-pay/config', { cookie: me.cookie })).json())
+        .data;
+    expect((await config()).products?.some((p) => p.productId === productId)).toBe(false);
+    expect(
+      (
+        await call('POST', '/v1/web-pay/orders', {
+          cookie: me.cookie,
+          body: { productId },
+        })
+      ).status,
+    ).toBe(503);
+    expect(calls).toHaveLength(0);
+    ctx.env.WEB_PAY_BOOST_100_ENABLED = '1';
+    expect((await config()).products).toContainEqual({
+      productId,
+      item: 'boost',
+      qty: 100,
+      amount: 19800,
+    });
+    await order(me.cookie, productId);
+    expect(JSON.parse(String(calls[0]?.init?.body)).purchase.items[0].sku).toBe(productId);
+    const event = paid(1001, me.profileId, {
+      items: [{ sku: productId, type: 'virtual_good', quantity: 1, amount: '19800' }],
+    });
+    // Turning sales off must not strand a payment already in progress.
+    delete ctx.env.WEB_PAY_BOOST_100_ENABLED;
+    expect((await hook(ctx, event)).status).toBe(204);
+    expect((await hook(ctx, event)).status).toBe(204);
+    expect((await items(me.cookie)).boost).toBe(100);
+    expect(await ctx.db.select().from(iapPurchases)).toMatchObject([
+      { productId, item: 'boost', qty: 100 },
+    ]);
+  });
+
   it('스위치 · 키 · 테스터 목록이 맞아야 결제를 연다(로그인 구단주만)', async () => {
     const anon = await issueCookie(ctx);
     expect((await call('GET', '/v1/web-pay/config', { cookie: anon.cookie })).status).toBe(403);
