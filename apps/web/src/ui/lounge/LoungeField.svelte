@@ -117,7 +117,7 @@
   let localText = $state('');
   // 그리기 루프에서만 읽는 값이라 반응형이 아니어도 된다.
   const keys: Record<string, boolean> = {};
-  /** 폰 조이스틱: 필드를 누른 자리(ox, oy, 필드 안 px)에 생기고, 손을 떼면 사라진다. */
+  /** 폰 조이스틱: 필드를 누른 자리(ox, oy, 필드 안 px)에 생겨 손을 뗄 때까지 그 자리에 고정된다. */
   let stick = $state({ x: 0, y: 0, on: false, ox: 0, oy: 0 });
   let stickId = -1;
   const mounted = Date.now();
@@ -255,18 +255,16 @@
   function onCanvasMove(e: PointerEvent) {
     if (!stick.on || e.pointerId !== stickId) return;
     const { sx, sy } = local(e);
-    let { ox, oy } = stick;
-    let dx = sx - ox;
-    let dy = sy - oy;
+    const { ox, oy } = stick;
+    let dx = (sx - ox) / STICK_REACH;
+    let dy = (sy - oy) / STICK_REACH;
+    // 받침은 처음 누른 자리에 고정하고, 손가락이 받침 밖으로 나가면 손잡이만 가장자리에 멈춘다(그 방향으로 끝까지 기운 셈).
     const n = Math.hypot(dx, dy);
-    // 손가락이 받침 밖으로 나가면 받침이 따라온다 — 방향을 바꾸려고 멀리 되돌아오지 않아도 된다.
-    if (n > STICK_REACH) {
-      ox += (dx / n) * (n - STICK_REACH);
-      oy += (dy / n) * (n - STICK_REACH);
-      dx = sx - ox;
-      dy = sy - oy;
+    if (n > 1) {
+      dx /= n;
+      dy /= n;
     }
-    stick = { x: dx / STICK_REACH, y: dy / STICK_REACH, on: true, ox, oy };
+    stick = { x: dx, y: dy, on: true, ox, oy };
   }
   function onCanvasUp(e: PointerEvent) {
     if (e.pointerId !== stickId) return;
