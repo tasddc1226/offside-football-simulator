@@ -159,6 +159,10 @@ describe('영구결번 구단 기여 점수 (T-10-076)', () => {
     expect(rnCut('GK', 0)).toBe(RN_CUT);
     expect(rnCut('FW', 1)).toBe(RN_CUT_SEASON.FW);
     expect(rnCut('DF', 1)).toBe(RN_CUT_SEASON.DF);
+    expect(
+      ['FW', 'MF', 'DF', 'GK'].map((pos) => rnCut(pos as 'FW' | 'MF' | 'DF' | 'GK', 2)),
+    ).toEqual([1575, 1050, 914, 935]);
+    expect(rnCut('FW', 3)).toBe(1575);
     // 프리시즌 기준을 넘지만 시즌 1 공격수 기준엔 못 미치는 구단.
     const mid: RnClub = {
       clubId: 'pl-0',
@@ -172,6 +176,9 @@ describe('영구결번 구단 기여 점수 (T-10-076)', () => {
     expect(rnQualifies(mid, rnCut('FW', 0))).toBe(true);
     expect(rnCandidates([mid], rnCut('FW', 1))).toEqual([]);
     expect(rnCandidates([mid], rnCut('MF', 1))).toEqual([mid]);
+    expect(rnCandidates([mid], rnCut('MF', 2))).toEqual([]);
+    expect(rnQualifies({ ...mid, score: 1050 }, rnCut('MF', 2))).toBe(true);
+    expect(rnQualifies({ ...mid, score: 1050, seasons: 5 }, rnCut('MF', 2))).toBe(false);
   });
 
   it('게임에 없는 클럽 id는 인정하지 않고, 리그는 클럽의 리그로 정하며, 한 시즌 영예 점수엔 상한이 있다', () => {
