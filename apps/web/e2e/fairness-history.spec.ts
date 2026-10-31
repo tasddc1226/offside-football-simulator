@@ -54,3 +54,42 @@ test('밸런스 변경 이력: 버전과 코드 업데이트 패치를 적용 �
   await rows.nth(1).locator('[data-act="fair-patch-note"]').click();
   await expect(page.locator('[data-board="release"]')).toBeVisible();
 });
+
+test('늦게 받은 밸런스를 열린 확률표에 반영하고 재진입해도 요청을 늘리지 않는다', async ({
+  page,
+}) => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let calls = 0;
+  await page.route(`${API}/v1/balance`, async (route) => {
+    calls++;
+    await gate;
+    await route.fulfill(
+      ok({
+        version: 2,
+        values: { potMean: 77, premiumSMult: 3 },
+        activatedAt: '2026-10-30T15:00:36.039Z',
+      }),
+    );
+  });
+  await page.goto('/');
+  await page.locator('[data-act="dex"]').click();
+  await page.locator('#fairness > summary').click();
+  const fairness = page.locator('#fairness');
+  await expect(fairness.locator('[data-fair-pot] tbody tr').first()).toContainText('0.8%');
+  release();
+  await expect(fairness.locator('[data-fair-pot] tbody tr').first()).toContainText('1.9%');
+  await expect(fairness).toContainText('시즌 중 5.6%');
+  await expect(fairness).toContainText('밸런스 버전 2');
+  await expect(fairness).toContainText('확정 강화는 별도');
+  await expect(fairness).toContainText('감속 모션을 켜면');
+  await page.locator('#fairness > summary').click();
+  await page.locator('#fairness > summary').click();
+  await page.locator('.main-nav [data-act="home"]').click();
+  await page.locator('[data-act="dex"]').click();
+  await page.locator('#fairness > summary').click();
+  await expect(fairness).toContainText('밸런스 버전 2');
+  expect(calls).toBe(1);
+});

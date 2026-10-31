@@ -1,13 +1,15 @@
 <script lang="ts">
   // T-11-141 확률 도감의 '확률과 공정성'(앱 screens/hof/Fairness.tsx). 내용은 app-core fairnessView, 이력은 펼칠 때만 불러온다.
-  import { fairnessView, loadHistoryRows, type HistoryRow } from '@offside/app-core/fairness';
+  import { fairnessView, subscribeFairness, loadHistoryRows, type HistoryRow } from '@offside/app-core/fairness';
+  import { onMount } from 'svelte';
   import { kstParts } from '@offside/app-core/boardText';
   import { fairnessText as L } from '@offside/app-core/i18n/ko/fairness';
   import { openBoard } from './nav.js';
 
   let { open = false }: { open?: boolean } = $props();
 
-  const V = fairnessView();
+  let V = $state(fairnessView());
+  onMount(() => subscribeFairness((view) => { V = view; }));
 
   let history = $state<HistoryRow[] | 'error' | null>(null);
   function loadHistory(e: Event) {

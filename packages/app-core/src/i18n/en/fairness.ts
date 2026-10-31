@@ -7,13 +7,13 @@ export const fairness: Translation<FairnessMsgs> = {
     'Under the same conditions, every player gets the same rules and the same odds. The numbers below are calculated straight from the game code.',
   promiseSameTerm: 'Same rules',
   promiseSame:
-    'Watching ads, buying ad removal, linking an account and your language never affect odds. Ads or club funds can give extra potential boost tries in a season when you are short of funds, but the success chance stays the same. The only paid item that changes odds is the premium scout ticket, and its odds are all shown below.',
+    'Watching ads, buying ad removal, linking an account and your language never affect odds. Ads or club funds can give extra potential boost tries in a season when you are short of funds, but regular boosts keep the same success chance. A guaranteed boost raises one step without a roll, once per player. The only paid item that changes odds is the premium scout ticket, and its odds are all shown below.',
   promiseDeviceTerm: 'Decided on your device',
   promiseDevice:
     'Every roll in your career happens on this device. The server only receives records and never decides results.',
   promiseShownTerm: 'Shown odds are real odds',
   promiseShown:
-    'The percentage on a choice is its real success chance. Only timing-gauge choices are decided by where you stop the needle.',
+    'The percentage on a choice is its real success chance. Only timing-gauge choices are decided by where you stop the needle. With reduced motion enabled, timing choices also use the displayed success chance.',
   promiseVersionTerm: 'Changes are versioned',
   promiseVersion:
     'When values are tuned, every player gets the same values under a new version. Careers in progress switch over at the next season.',
@@ -31,6 +31,8 @@ export const fairness: Translation<FairnessMsgs> = {
     `Pity: after ${p.sure - 1} premium scout tickets with no S candidate, the guaranteed candidate on the ${p.sure}th is S. An S candidate along the way starts the count over. On every ${p.elite}th ticket you use, the guaranteed candidate has top potential (96). The candidate screen shows how many are left.`,
   rerollMileage: (p) =>
     `Reroll tickets don't change candidate potential odds. Every ${p.need} reroll tickets you use earn 1 premium scout ticket. Ad rerolls don't count.`,
+  boostSureNote:
+    'Guaranteed boosts with club funds are separate. Once per player, they raise one step without a roll. The age and step limits are the same as for regular boosts.',
   boostTitle: 'Potential boost odds',
   boostLv: (p) => `Step +${p.lv}`,
   boostNote: (p) =>
