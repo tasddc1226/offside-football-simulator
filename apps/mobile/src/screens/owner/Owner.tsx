@@ -378,6 +378,7 @@ export default function Owner() {
                           linked ? L.valueInfoFormula : L.valueInfoGuest,
                           ...(linked ? [L.valueInfoOwned] : []),
                           L.valueInfoPrice,
+                          L.valueInfoAge,
                           L.valueInfoFallback,
                           L.valueInfoExcluded,
                         ].join('\n\n'),

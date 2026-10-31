@@ -13,6 +13,8 @@ export const owner: Translation<OwnerMsgs> = {
   valueInfoOwned: '親手培養的球員和簽下的球員都會計入，不分賽季。',
   valueInfoPrice:
     '球員卡基準價是在創下最高 OVR 的賽季中，身價最高那個賽季的身價。身價依聯賽財力・OVR・年齡計算，因此創下最高 OVR 後即使繼續效力很久，基準價也不會下降。',
+  valueInfoAge:
+    '身價會乘上年齡倍率：24 歲以前 5 倍，25～29 歲 4 倍，30 歲起 2 倍。因此 30 歲後才創下最高 OVR 的球員，基準價可能低於生涯紀錄中的最高身價。',
   valueInfoFallback:
     '如果該賽季沒有身價，會採用身價最高的職業賽季；若連職業紀錄都沒有，則以 1 億韓元計算。',
   valueInfoExcluded: '上架價格和傳奇分數不會直接計入。',
