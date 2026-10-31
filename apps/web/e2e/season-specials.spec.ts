@@ -139,7 +139,6 @@ test('결산 화면은 그 시즌 특별 카드를 개인상 · 베스트 11 순
   await page.locator('[data-act="owner"]').click();
   await openArchive(page);
   await page.locator('[data-archive-season="1"]').click();
-  await page.locator('[data-act="archive-details"]').click();
   const sec = page.locator('[data-recap-section="specials"]');
   await expect(sec).toBeVisible();
   await expect(sec.locator('h2')).toHaveText('시즌 특별 카드');
@@ -170,7 +169,6 @@ test('표식이 없는 결산(프리시즌)에는 특별 카드 칸이 없다', 
   await page.locator('[data-act="owner"]').click();
   await openArchive(page);
   await page.locator('[data-archive-season="0"]').click();
-  await page.locator('[data-act="archive-details"]').click();
   await expect(page.locator('[data-recap-section="team"]')).toBeVisible();
   await expect(page.locator('[data-recap-section="specials"]')).toHaveCount(0);
 });

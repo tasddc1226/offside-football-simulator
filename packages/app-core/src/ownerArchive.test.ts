@@ -21,47 +21,68 @@ beforeEach(() => {
   vi.mocked(fetchOwnerArchive).mockResolvedValue({ ok: true, data });
   vi.mocked(fetchSeasonRecap).mockResolvedValue({ ok: true, data: detail });
 });
-it('loads details only when expanded and reuses them across season switches', async () => {
+it('automatically opens selected closed seasons and reuses records without collapsing', async () => {
   const a = new OwnerArchive();
   await a.load();
   expect(a.state.season).toBe(1);
-  await a.expand();
   expect(fetchSeasonRecap).not.toHaveBeenCalled();
-  a.select(0);
-  expect(fetchSeasonRecap).not.toHaveBeenCalled();
-  await a.expand();
+  await a.select(0);
+  expect(a.state.expanded).toBe(true);
   expect(markRecapSeen).toHaveBeenCalledWith(0);
-  a.select(1);
-  a.select(0);
   await a.expand();
+  expect(a.state.expanded).toBe(true);
+  await a.select(1);
+  await a.select(0);
   expect(fetchSeasonRecap).toHaveBeenCalledTimes(1);
   expect(a.state.detail).toEqual(detail);
 });
-it('does not apply or mark a late response after choosing another season', async () => {
+it('does not display or mark a late response after choosing another season, but reuses it later', async () => {
   const a = new OwnerArchive();
-  await a.load(0);
+  await a.load();
   let resolve!: (value: { ok: true; data: SeasonRecapResponse }) => void;
   vi.mocked(fetchSeasonRecap).mockReturnValue(
     new Promise((r) => {
       resolve = r;
     }),
   );
-  const pending = a.expand();
-  a.select(1);
+  const pending = a.select(0);
+  await a.select(1);
   resolve({ ok: true, data: detail });
   await pending;
   expect(a.state.season).toBe(1);
   expect(a.state.detail).toBeNull();
   expect(markRecapSeen).not.toHaveBeenCalled();
+  await a.select(0);
+  expect(fetchSeasonRecap).toHaveBeenCalledTimes(1);
+  expect(a.state.detail).toEqual(detail);
+  expect(markRecapSeen).toHaveBeenCalledWith(0);
 });
-it('retries an error, and ignores work after disposal', async () => {
+it('coalesces an unfinished detail request when returning to the same season', async () => {
   const a = new OwnerArchive();
-  await a.load(0);
+  await a.load();
+  let resolve!: (value: { ok: true; data: SeasonRecapResponse }) => void;
+  vi.mocked(fetchSeasonRecap).mockReturnValue(
+    new Promise((r) => {
+      resolve = r;
+    }),
+  );
+  const first = a.select(0);
+  await a.select(1);
+  const second = a.select(0);
+  expect(fetchSeasonRecap).toHaveBeenCalledTimes(1);
+  resolve({ ok: true, data: detail });
+  await Promise.all([first, second]);
+  expect(a.state.detail).toEqual(detail);
+  expect(a.state.detailLoading).toBe(false);
+});
+it('loads a preferred closed season immediately, retries errors and ignores work after disposal', async () => {
+  const a = new OwnerArchive();
   vi.mocked(fetchSeasonRecap).mockResolvedValueOnce({
     ok: false,
     error: { code: 'UNAVAILABLE', message: 'unavailable', retryable: true },
   });
-  await a.expand();
+  await a.load(0);
+  expect(a.state.expanded).toBe(true);
   expect(a.state.detailError).toBe(true);
   await a.expand(true);
   expect(a.state.detailError).toBe(false);
