@@ -1,0 +1,24 @@
+{
+  "id": "20261031-career-start-crash-fix",
+  "title": "커리어 시작 시 앱 종료 수정",
+  "items": [
+    "선수를 고른 뒤 시작하거나 이어서 할 때 앱이 종료되는 문제를 고쳤어요. 기존 저장으로 계속할 수 있어요."
+  ],
+  "en": {
+    "title": "Fixed a crash when starting a career",
+    "items": [
+      "Fixed the app closing when starting with a selected player or continuing a career. You can keep using your existing save."
+    ]
+  },
+  "ja": {
+    "title": "キャリア開始時のアプリ終了を修正",
+    "items": [
+      "選手を選んで開始するときや続きから遊ぶときにアプリが終了する問題を修正しました。既存のセーブで続けられます。"
+    ]
+  },
+  "zh": {
+    "title": "修正開始生涯時 App 關閉的問題",
+    "items": ["修正選擇球員開始或繼續生涯時 App 關閉的問題。可繼續使用原有存檔。"]
+  },
+  "availability": "web-app"
+}

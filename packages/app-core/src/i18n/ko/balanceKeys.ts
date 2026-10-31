@@ -2,6 +2,7 @@
 import { ns } from '../core';
 
 const ko = {
+  agKoreaBonus: '아시안게임 한국 전력 보정',
   eventRatePreseason: '프리시즌 이벤트 확률',
   eventRateSeason: '전·후반기 이벤트 확률',
   eventTwist: '선택 뒤 반전 확률',
@@ -13,6 +14,7 @@ const ko = {
   investCost: '자기 투자 비용 배율',
   boostCost: '잠재력 강화 비용 배율',
   boostExtraTotal: '커리어당 추가 강화 횟수',
+  boostGreat: '잠재력 강화 대성공 비율',
   careCost: '몸 관리 비용 배율',
   potMean: '잠재력 평균',
   potSd: '잠재력 편차',

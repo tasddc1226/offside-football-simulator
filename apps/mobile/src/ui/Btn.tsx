@@ -1,6 +1,6 @@
 // 버튼 한 벌(웹 .btn + .btn-primary · .btn-accent · .btn-sm · .btn-block). 시트 버튼의 cls 문자열도 그대로 받는다.
 import type { ReactNode } from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { View, type StyleProp, type ViewStyle, type AccessibilityState } from 'react-native';
 import { useColors, useIsDark } from '../theme/useColors';
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { alpha, mix } from '../theme/colors';
@@ -21,6 +21,7 @@ export interface BtnProps {
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
+  accessibilityState?: AccessibilityState;
   /** e2e·접근성용 식별자(웹 data-act). */
   testID?: string;
   /** 오른쪽 위 빨간 점(웹 .btn-dot) — 아직 안 본 새 소식으로 이끈다. 뜻은 accessibilityLabel에 적는다. */
@@ -47,6 +48,7 @@ export function Btn({
   style,
   dot,
   badge,
+  accessibilityState,
   ...rest
 }: BtnProps) {
   const c = useColors();
@@ -69,7 +71,7 @@ export function Btn({
     <Press
       onPress={onPress}
       disabled={disabled}
-      accessibilityState={{ disabled: !!disabled }}
+      accessibilityState={{ ...accessibilityState, disabled: !!disabled }}
       {...rest}
       style={[
         {

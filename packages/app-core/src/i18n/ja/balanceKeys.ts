@@ -2,6 +2,7 @@ import type { Translation } from '../core';
 import type { BalanceKeysMsgs } from '../ko/balanceKeys';
 
 export const balanceKeys: Translation<BalanceKeysMsgs> = {
+  agKoreaBonus: 'アジア大会の韓国戦力補正',
   eventRatePreseason: 'プレシーズンのイベント確率',
   eventRateSeason: '前半戦・後半戦のイベント確率',
   eventTwist: '選択後のどんでん返し確率',
@@ -13,6 +14,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   investCost: '自己投資の費用倍率',
   boostCost: '潜在能力強化の費用倍率',
   boostExtraTotal: 'キャリアごとの追加強化回数',
+  boostGreat: '潜在能力強化の大成功の割合',
   careCost: 'コンディション管理の費用倍率',
   potMean: 'ポテンシャルの平均',
   potSd: 'ポテンシャルのばらつき',

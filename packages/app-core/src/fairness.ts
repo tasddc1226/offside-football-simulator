@@ -84,8 +84,20 @@ export function fairnessView(): FairnessView {
       L.rerollMileage({ need: REROLL_MILEAGE }),
       `${L.potNote} ${L.version({ v })}`,
     ],
-    boost: BOOST.p.map((p, i) => [L.boostLv({ lv: i + 1 }), `${Math.round(p * 100)}%`] as const),
-    boostNote: `${L.boostNote({ pity: `${BOOST_PITY_PCT}%p` })} ${L.boostSureNote}`,
+    // T-11-593 대성공(두 단계)은 성공 확률 × boostGreat. 두 단계가 최고 단계를 넘는 마지막 단계엔 없다(boost.ts boostGreatChance).
+    boost: BOOST.p.map((p, i) => {
+      const great = i + 2 <= BOOST.p.length ? p * 100 * values.boostGreat : 0;
+      return [
+        L.boostLv({ lv: i + 1 }),
+        great > 0
+          ? L.boostGreatPct({ pct: Math.round(p * 100), great })
+          : `${Math.round(p * 100)}%`,
+      ] as const;
+    }),
+    boostNote:
+      values.boostGreat > 0
+        ? `${L.boostNote({ pity: `${BOOST_PITY_PCT}%p` })} ${L.boostSureNote} ${L.boostGreatNote({ pct: values.boostGreat * 100 })}`
+        : `${L.boostNote({ pity: `${BOOST_PITY_PCT}%p` })} ${L.boostSureNote}`,
     hidden: [
       [L.hiddenPotTerm, L.hiddenPot],
       [L.hiddenBloomTerm, L.hiddenBloom],

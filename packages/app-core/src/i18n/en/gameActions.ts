@@ -3,6 +3,7 @@ import type { GameActionsMsgs } from '../ko/gameActions';
 import { ordinal, plural } from './_util';
 
 export const gameActions: Translation<GameActionsMsgs> = {
+  eventLater: 'Close for now',
   natDetail: (p) =>
     `${p.mins} min${p.g ? `, ${plural(p.g, 'goal')}` : ''}${p.a ? `, ${plural(p.a, 'assist')}` : ''} · rating ${p.rating}`,
   natBench: 'Bench',

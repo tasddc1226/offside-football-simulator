@@ -4,14 +4,13 @@ import {
   REMOVE_ADS_PRODUCT,
   type AdminRevenue,
 } from '@offside/contracts';
+import { SEASON_PASS_PRODUCT_ID, SEASON_PASS_PRICE_KRW } from '@offside/contracts/season-pass';
+import { MEMBERSHIP_PRODUCT_ID, MEMBERSHIP_PRICE_KRW } from '@offside/contracts/membership';
 import type { Db } from '../client.js';
 
-// T-11-263 운영 도구 매출. 소모성은 iap_purchases(테스트 결제 뺀), 광고 제거(비소모성)는 서버 구매 기록이 없어 스토어 알림
-// (billing_alerts)으로 센다. 금액은 상품별 한국 정가(IAP_PRICE_KRW) 기준 추정이다(스토어 환산·수수료 전). 광고 제거는
-// 판매 시각의 정가로 센다(T-11-574 가격 인상 전 판매는 3,300원).
-// T-11-484 광고 제거는 분석 동의한 구매만 서버 원장(iap_ad_free_purchases)에 남아 스토어 판매의 1%도 안 된다. 그래서
-// 알림을 기간 · 날짜 · 스토어 · 전체 기간으로 나눠 따로 보인다(소모성 합과 섞지 않는다).
-
+// 정가 추정 매출. 아이템 · 패스는 구매 원장, 멤버십(가입 · 갱신 · 환불)과 광고 제거는
+// 중복 방지된 스토어 알림을 사용한다. 알림에는 구매자가 없으며 기록 시작 전 판매는 복원하지 않는다.
+// total/allTime/daily.krw는 광고 제거 제외(이전 앱의 합산 계약 유지), 상세 목록은 모든 상품이다.
 const RECENT_LIMIT = 30;
 const DAY_MS = 86_400_000;
 const KST_MS = 9 * 3_600_000;
@@ -35,116 +34,119 @@ export function kstWindow(now: Date, days: number) {
 }
 
 type Sum = { count: number; krw: number };
-const num = (v: unknown) => Number(v ?? 0);
-
-type AdSum = { count: number; refunds: number; krw: number };
-
-/** 광고 제거 알림(스토어 · 종류 · 기간 안 KST 날짜별 건수, 기간 밖은 날짜 '')을 기간 · 전체 · 스토어 · 날짜로 모은다. */
-function adSums(rows: Record<string, unknown>[]) {
-  const window: AdSum = { count: 0, refunds: 0, krw: 0 };
-  const allTime: AdSum = { count: 0, refunds: 0, krw: 0 };
-  const stores = new Map<string, AdSum>();
-  const byDay = new Map<string, { count: number; krw: number }>();
-  for (const row of rows) {
-    const key = row.kind === 'refund' ? 'refunds' : 'count';
-    const n = num(row.n);
-    // 환불은 그 판매의 정가만큼 뺀다.
-    const krw = (key === 'refunds' ? -1 : 1) * num(row.krw);
-    const day = row.day as string;
-    allTime[key] += n;
-    allTime.krw += krw;
-    if (!day) continue;
-    window[key] += n;
-    window.krw += krw;
-    const store = row.store as string;
-    const s = stores.get(store) ?? { count: 0, refunds: 0, krw: 0 };
-    s[key] += n;
-    s.krw += krw;
-    stores.set(store, s);
-    if (key === 'count') {
-      const d = byDay.get(day) ?? { count: 0, krw: 0 };
-      byDay.set(day, { count: d.count + n, krw: d.krw + krw });
-    }
-  }
-  return { window, allTime, stores, byDay };
-}
+// 같은 구매의 원장과 알림을 함께 세지 않는다. 멤버십 상태 행은 갱신 때 덮어쓰므로 매출 원장으로 쓰지 않는다.
+const PURCHASES = `WITH purchases AS (
+  SELECT store, product_id, profile_id, created_at, refunded_at,
+    CASE WHEN refunded_at IS NULL THEN 1 ELSE 0 END count,
+    CASE WHEN refunded_at IS NULL THEN ${PRICE_SQL} ELSE 0 END krw,
+    ${PRICE_SQL} refund_krw
+  FROM iap_purchases WHERE test = 0
+  UNION ALL
+  SELECT store, '${SEASON_PASS_PRODUCT_ID}', profile_id, created_at, refunded_at,
+    CASE WHEN refunded_at IS NULL THEN 1 ELSE 0 END,
+    CASE WHEN refunded_at IS NULL THEN ${SEASON_PASS_PRICE_KRW} ELSE 0 END,
+    ${SEASON_PASS_PRICE_KRW}
+  FROM season_passes WHERE test = 0
+  UNION ALL
+  SELECT store, product_id, NULL, created_at,
+    CASE WHEN kind = 'refund' THEN created_at END,
+    CASE WHEN kind = 'refund' THEN 0 ELSE 1 END,
+    CASE WHEN kind = 'refund' THEN -${MEMBERSHIP_PRICE_KRW} ELSE ${MEMBERSHIP_PRICE_KRW} END,
+    ${MEMBERSHIP_PRICE_KRW}
+  FROM billing_alerts WHERE test = 0 AND product_id = '${MEMBERSHIP_PRODUCT_ID}'
+    AND kind IN ('purchase', 'renewal', 'refund')
+), ads AS (
+  SELECT store, product_id, NULL profile_id, created_at,
+    CASE WHEN kind = 'refund' THEN created_at END refunded_at,
+    CASE WHEN kind = 'refund' THEN 0 ELSE 1 END count,
+    CASE WHEN kind = 'refund' THEN -1 ELSE 1 END * ${REMOVE_ADS_PRICE_SQL} krw,
+    ${REMOVE_ADS_PRICE_SQL} refund_krw
+  FROM billing_alerts WHERE test = 0 AND product_id = '${REMOVE_ADS_PRODUCT}'
+    AND kind IN ('purchase', 'refund')
+), all_products AS (SELECT * FROM purchases UNION ALL SELECT * FROM ads)`;
 
 export async function revenueReport(db: Db, now: Date, days: number): Promise<AdminRevenue> {
   const d1 = db.$client;
   const { start, days: dayList } = kstWindow(now, days);
-  const live = `test = 0 AND refunded_at IS NULL`;
+  const query = (sql: string, ...bindings: (string | number)[]) =>
+    d1.prepare(`${PURCHASES} ${sql}`).bind(...bindings);
   const [total, first, refunds, allTime, daily, products, stores, ads, adsSince, recent] =
     await d1.batch<Record<string, unknown>>([
-      d1
-        .prepare(
-          `SELECT count(*) count, coalesce(sum(${PRICE_SQL}), 0) krw, count(DISTINCT profile_id) buyers
-           FROM iap_purchases WHERE ${live} AND created_at >= ?`,
-        )
-        .bind(start),
-      d1
-        .prepare(
-          `SELECT count(*) n FROM (SELECT min(created_at) f FROM iap_purchases WHERE test = 0 GROUP BY profile_id)
-          WHERE f >= ?`,
-        )
-        .bind(start),
-      d1
-        .prepare(
-          `SELECT count(*) count, coalesce(sum(${PRICE_SQL}), 0) krw FROM iap_purchases
-          WHERE test = 0 AND refunded_at >= ?`,
-        )
-        .bind(start),
-      d1.prepare(
-        `SELECT count(*) count, coalesce(sum(${PRICE_SQL}), 0) krw, count(DISTINCT profile_id) buyers
-         FROM iap_purchases WHERE ${live}`,
+      query(
+        `SELECT sum(count) count, sum(krw) krw,
+        count(DISTINCT CASE WHEN count > 0 THEN profile_id END) buyers
+        FROM purchases WHERE created_at >= ?`,
+        start,
       ),
-      d1
-        .prepare(
-          `SELECT ${KST_DAY} day, count(*) count, sum(${PRICE_SQL}) krw FROM iap_purchases
-          WHERE ${live} AND created_at >= ? GROUP BY 1`,
-        )
-        .bind(start),
-      d1
-        .prepare(
-          `SELECT product_id productId, coalesce(sum(refunded_at IS NULL), 0) count,
-                coalesce(sum(CASE WHEN refunded_at IS NULL THEN ${PRICE_SQL} END), 0) krw,
-                coalesce(sum(refunded_at IS NOT NULL), 0) refunded
-           FROM iap_purchases WHERE test = 0 AND created_at >= ? GROUP BY 1 ORDER BY krw DESC`,
-        )
-        .bind(start),
-      d1
-        .prepare(
-          `SELECT store, count(*) count, sum(${PRICE_SQL}) krw FROM iap_purchases
-          WHERE ${live} AND created_at >= ? GROUP BY 1 ORDER BY krw DESC`,
-        )
-        .bind(start),
-      d1
-        .prepare(
-          `SELECT store, kind, CASE WHEN created_at >= ?2 THEN ${KST_DAY} ELSE '' END day, count(*) n,
-           sum(${REMOVE_ADS_PRICE_SQL}) krw
-           FROM billing_alerts WHERE test = 0 AND product_id = ?1 AND kind IN ('purchase', 'refund')
-          GROUP BY 1, 2, 3`,
-        )
-        .bind(REMOVE_ADS_PRODUCT, start),
-      d1.prepare(`SELECT min(created_at) since FROM billing_alerts WHERE test = 0`),
-      d1
-        .prepare(
-          `SELECT i.store, i.product_id productId, i.profile_id profileId, p.nickname, i.created_at createdAt,
-                i.refunded_at refundedAt
-           FROM iap_purchases i LEFT JOIN profiles p ON p.id = i.profile_id
-          WHERE i.test = 0 ORDER BY i.created_at DESC LIMIT ?`,
-        )
-        .bind(RECENT_LIMIT),
+      query(
+        `SELECT count(*) n FROM (SELECT min(created_at) f FROM purchases
+        WHERE profile_id IS NOT NULL GROUP BY profile_id) WHERE f >= ?`,
+        start,
+      ),
+      query(
+        `SELECT count(*) count, sum(refund_krw) krw FROM purchases WHERE refunded_at >= ?`,
+        start,
+      ),
+      query(`SELECT sum(count) count, sum(krw) krw,
+        count(DISTINCT CASE WHEN count > 0 THEN profile_id END) buyers FROM purchases`),
+      query(
+        `SELECT ${KST_DAY} day, sum(count) count, sum(krw) krw
+        FROM purchases WHERE created_at >= ? GROUP BY 1`,
+        start,
+      ),
+      query(
+        `SELECT product_id productId, sum(count) count, sum(krw) krw,
+        sum(refunded_at IS NOT NULL) refunded FROM all_products
+        WHERE created_at >= ? GROUP BY 1 ORDER BY krw DESC`,
+        start,
+      ),
+      query(
+        `SELECT store, sum(count) count, sum(krw) krw FROM all_products
+        WHERE created_at >= ? GROUP BY 1 ORDER BY krw DESC`,
+        start,
+      ),
+      query(
+        `SELECT store, CASE WHEN created_at >= ? THEN ${KST_DAY} ELSE '' END day,
+        sum(count) count, sum(refunded_at IS NOT NULL) refunds, sum(krw) krw
+        FROM ads GROUP BY 1, 2`,
+        start,
+      ),
+      query(`SELECT min(created_at) since FROM ads`),
+      query(
+        `SELECT i.store, i.product_id productId, coalesce(i.profile_id, '') profileId,
+        p.nickname,
+        i.created_at createdAt, i.refunded_at refundedAt
+        FROM all_products i LEFT JOIN profiles p ON p.id = i.profile_id
+        ORDER BY i.created_at DESC LIMIT ?`,
+        RECENT_LIMIT,
+      ),
     ]);
-  const t = total!.results[0]!;
-  const r = refunds!.results[0]!;
-  const a = allTime!.results[0]!;
-  const byDay = new Map(daily!.results.map((d) => [d.day as string, d]));
+  const num = (v: unknown) => Number(v ?? 0);
   const sum = (row: Record<string, unknown> | undefined): Sum => ({
     count: num(row?.count),
     krw: num(row?.krw),
   });
-  const ad = adSums(ads!.results);
-  const adKrw = (s: AdSum) => Math.max(0, s.krw);
+  const t = total!.results[0]!;
+  const a = allTime!.results[0]!;
+  const byDay = new Map(daily!.results.map((d) => [d.day as string, d]));
+  const ad = { count: 0, refunds: 0, krw: 0 };
+  const adAll = { ...ad };
+  const adStores = new Map<string, typeof ad>();
+  const adDays = new Map<string, Sum>();
+  for (const row of ads!.results) {
+    for (const key of ['count', 'refunds', 'krw'] as const) adAll[key] += num(row[key]);
+    if (!row.day) continue;
+    const store = row.store as string;
+    const s = adStores.get(store) ?? { count: 0, refunds: 0, krw: 0 };
+    for (const key of ['count', 'refunds', 'krw'] as const) {
+      ad[key] += num(row[key]);
+      s[key] += num(row[key]);
+    }
+    adStores.set(store, s);
+    const day = row.day as string;
+    const d = adDays.get(day) ?? { count: 0, krw: 0 };
+    adDays.set(day, { count: d.count + num(row.count), krw: d.krw + num(row.krw) });
+  }
   return {
     generatedAt: now.toISOString(),
     days,
@@ -152,14 +154,16 @@ export async function revenueReport(db: Db, now: Date, days: number): Promise<Ad
       ...sum(t),
       buyers: num(t.buyers),
       firstBuyers: num(first!.results[0]?.n),
-      refunds: num(r.count),
-      refundKrw: num(r.krw),
+      refunds: num(refunds!.results[0]?.count),
+      refundKrw: num(refunds!.results[0]?.krw),
     },
     allTime: { ...sum(a), buyers: num(a.buyers) },
-    daily: dayList.map((day) => {
-      const a = ad.byDay.get(day);
-      return { day, ...sum(byDay.get(day)), adCount: a?.count ?? 0, adKrw: a?.krw ?? 0 };
-    }),
+    daily: dayList.map((day) => ({
+      day,
+      ...sum(byDay.get(day)),
+      adCount: adDays.get(day)?.count ?? 0,
+      adKrw: adDays.get(day)?.krw ?? 0,
+    })),
     products: products!.results.map((p) => ({
       productId: p.productId as string,
       ...sum(p),
@@ -167,11 +171,10 @@ export async function revenueReport(db: Db, now: Date, days: number): Promise<Ad
     })),
     stores: stores!.results.map((s) => ({ store: s.store as string, ...sum(s) })),
     removeAds: {
-      ...ad.window,
-      krw: adKrw(ad.window),
+      ...ad,
       since: (adsSince!.results[0]?.since as string | null) ?? null,
-      allTime: { ...ad.allTime, krw: adKrw(ad.allTime) },
-      stores: [...ad.stores].map(([store, s]) => ({ store, count: s.count, refunds: s.refunds })),
+      allTime: adAll,
+      stores: [...adStores].map(([store, s]) => ({ store, count: s.count, refunds: s.refunds })),
     },
     recent: recent!.results as AdminRevenue['recent'],
   };

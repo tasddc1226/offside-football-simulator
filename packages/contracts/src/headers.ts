@@ -19,3 +19,6 @@ export const CORS_EXPOSED_HEADERS = [REQUEST_ID_HEADER] as const;
 
 /** 07 "공통 규칙": 요청 본문 상한 1MB. */
 export const REQUEST_BODY_MAX_BYTES = 1_048_576;
+/** T-11-599 클럽 커스텀 동기화(PUT /v1/club-custom)만 엠블럼 이미지 합계(1.4MB)와 이름·색이 들어가게 더 받는다. */
+export const CLUB_CUSTOM_BODY_MAX_BYTES = 1_600_000;
+export const CLUB_CUSTOM_PATH = '/v1/club-custom';

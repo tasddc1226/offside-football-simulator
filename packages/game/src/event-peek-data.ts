@@ -54,7 +54,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   rival: [
     {
       ok: ['attr+', 'cond-'],
-      fail: ['out', 'cond-'],
+      fail: ['cond-'],
     },
     {
       ok: ['trust-', 'cond+', 'morale+'],
@@ -62,7 +62,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   scout: [
     {
-      ok: ['fame+'],
+      ok: ['story:europe', 'fame+'],
       fail: ['trust-', 'morale-'],
     },
     {
@@ -106,7 +106,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   trainer: [
     {
       ok: ['pot+', 'attr+', 'money-'],
-      fail: ['out', 'money-'],
+      fail: ['money-'],
     },
     {
       ok: ['pot+', 'cond+', 'trust+'],
@@ -286,7 +286,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
       ok: ['morale+', 'trust-'],
     },
     {
-      ok: ['fame+', 'trust+', 'morale+'],
+      ok: ['fame+', 'morale+'],
     },
   ],
   var: [
@@ -726,13 +726,11 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
       ok: ['fame+', 'morale+'],
       fail: ['morale-'],
     },
-    {
-      ok: ['cond+'],
-    },
+    {},
   ],
   'vet-recovery': [
     {
-      ok: ['cond+', 'money-', 'morale+'],
+      ok: ['cond+', 'money-'],
     },
     {
       ok: ['cond+', 'trust+'],
@@ -810,7 +808,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   'ballon-gala': [
     {
-      ok: ['fame+', 'cond-', 'morale+'],
+      ok: ['cond-', 'fame+', 'morale+'],
     },
     {
       ok: ['trust+', 'cond+'],

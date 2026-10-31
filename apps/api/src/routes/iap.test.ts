@@ -177,6 +177,45 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     expect((await ctx.db.select().from(iapPurchases))[0]?.test).toBe(false);
   });
 
+  it('grants the 100-ticket pack once and refunds only the remaining tickets once', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const productId = 'com.offsidelab.app.boost_100';
+    appleTx.current = appleFor(me.profileId, { productId, environment: 'Production' });
+    const body = { store: 'apple', productId, token: 'jws' };
+    for (let i = 0; i < 2; i += 1) {
+      const res = await claim(me.cookie, body);
+      expect(res.status).toBe(200);
+      expect(ItemsRes.parse(await res.json()).data.boost).toBe(100);
+    }
+    const used = await call('POST', '/v1/items/boost/use', {
+      cookie: me.cookie,
+      headers: { 'Idempotency-Key': crypto.randomUUID() },
+    });
+    expect(ItemsRes.parse(await used.json()).data.boost).toBe(99);
+    appleNote.current = {
+      notificationType: 'REFUND',
+      data: { bundleId: 'com.offsidelab.app', signedTransactionInfo: 'tx' },
+    };
+    const notify = () =>
+      createApp().request(
+        '/v1/iap/apple/notifications',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ signedPayload: 'jws' }),
+        },
+        ctx.env,
+      );
+    expect((await notify()).status).toBe(200);
+    expect((await ctx.db.select().from(ownerItems))[0]?.qty).toBe(0);
+    expect(await ctx.db.select().from(iapPurchases)).toMatchObject([
+      { productId, item: 'boost', qty: 100, revokedQty: 99 },
+    ]);
+    await ctx.env.DB.prepare("UPDATE owner_items SET qty = 3 WHERE item = 'boost'").run();
+    expect((await notify()).status).toBe(200);
+    expect((await ctx.db.select().from(ownerItems))[0]?.qty).toBe(3);
+  });
+
   it('프리미엄 스카우트권을 사서 쓰고, 없으면 409(T-11-196)', async () => {
     const me = await issueGoogleCookie(ctx);
     const SCOUT_1 = 'com.offsidelab.app.scout_1';
@@ -358,55 +397,63 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     expect(res.status).toBe(403);
   });
 
-  it('Google 구매를 Play Developer API로 확인하고 승인한다. 키가 없으면 503, 대기 중이면 409', async () => {
-    const me = await issueGoogleCookie(ctx);
-    const body = { store: 'google', productId: REROLL_5, token: 'tok-1' };
-    expect((await claim(me.cookie, body)).status).toBe(503);
+  it.each([
+    { productId: REROLL_5, reroll: 5, boost: 0 },
+    { productId: 'com.offsidelab.app.boost_100', reroll: 0, boost: 100 },
+  ])(
+    'Google verifies $productId, acknowledges it and rejects pending or mismatched purchases',
+    async ({ productId, reroll, boost }) => {
+      const me = await issueGoogleCookie(ctx);
+      const body = { store: 'google', productId, token: 'tok-1' };
+      expect((await claim(me.cookie, body)).status).toBe(503);
 
-    ctx.env.GOOGLE_PLAY_SA_JSON = await serviceAccountJson();
-    let purchase: Record<string, unknown> = {
-      purchaseState: 0,
-      acknowledgementState: 0,
-      purchaseType: 0,
-      obfuscatedExternalAccountId: accountOf(me.profileId),
-    };
-    const calls: string[] = [];
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string, init?: RequestInit) => {
-        calls.push(`${init?.method ?? 'GET'} ${url}`);
-        if (url.startsWith('https://oauth2.googleapis.com/token'))
-          return Response.json({ access_token: 'at', expires_in: 3600 });
-        if (url.endsWith(':acknowledge')) return new Response('{}');
-        return Response.json(purchase);
-      }),
-    );
-    let res = await claim(me.cookie, body);
-    expect(res.status).toBe(200);
-    expect(ItemsRes.parse(await res.json()).data).toEqual({
-      reroll: 5,
-      boost: 0,
-      scout: 0,
-      rename: 0,
-    });
-    expect(calls).toEqual([
-      'POST https://oauth2.googleapis.com/token',
-      'GET https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.offsidelab.app/purchases/products/com.offsidelab.app.reroll_5/tokens/tok-1',
-      'POST https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.offsidelab.app/purchases/products/com.offsidelab.app.reroll_5/tokens/tok-1:acknowledge',
-    ]);
-    expect((await ctx.db.select().from(iapPurchases))[0]).toMatchObject({
-      store: 'google',
-      transactionId: 'tok-1',
-      test: true,
-    });
+      ctx.env.GOOGLE_PLAY_SA_JSON = await serviceAccountJson();
+      let purchase: Record<string, unknown> = {
+        purchaseState: 0,
+        acknowledgementState: 0,
+        purchaseType: 0,
+        obfuscatedExternalAccountId: accountOf(me.profileId),
+      };
+      const calls: string[] = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string, init?: RequestInit) => {
+          calls.push(`${init?.method ?? 'GET'} ${url}`);
+          if (url.startsWith('https://oauth2.googleapis.com/token'))
+            return Response.json({ access_token: 'at', expires_in: 3600 });
+          if (url.endsWith(':acknowledge')) return new Response('{}');
+          return Response.json(purchase);
+        }),
+      );
+      let res = await claim(me.cookie, body);
+      expect(res.status).toBe(200);
+      expect(ItemsRes.parse(await res.json()).data).toEqual({
+        reroll,
+        boost,
+        scout: 0,
+        rename: 0,
+      });
+      expect(calls).toEqual([
+        'POST https://oauth2.googleapis.com/token',
+        `GET https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.offsidelab.app/purchases/products/${productId}/tokens/tok-1`,
+        `POST https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.offsidelab.app/purchases/products/${productId}/tokens/tok-1:acknowledge`,
+      ]);
+      expect((await ctx.db.select().from(iapPurchases))[0]).toMatchObject({
+        store: 'google',
+        transactionId: 'tok-1',
+        test: true,
+      });
 
-    purchase = { purchaseState: 2, obfuscatedExternalAccountId: accountOf(me.profileId) };
-    res = await claim(me.cookie, { ...body, token: 'tok-2' });
-    expect(await res.json()).toMatchObject({ error: { details: { reason: 'IAP_PENDING' } } });
-    purchase = { purchaseState: 0, obfuscatedExternalAccountId: 'someone-else' };
-    res = await claim(me.cookie, { ...body, token: 'tok-3' });
-    expect(await res.json()).toMatchObject({ error: { details: { reason: 'IAP_OTHER_ACCOUNT' } } });
-  });
+      purchase = { purchaseState: 2, obfuscatedExternalAccountId: accountOf(me.profileId) };
+      res = await claim(me.cookie, { ...body, token: 'tok-2' });
+      expect(await res.json()).toMatchObject({ error: { details: { reason: 'IAP_PENDING' } } });
+      purchase = { purchaseState: 0, obfuscatedExternalAccountId: 'someone-else' };
+      res = await claim(me.cookie, { ...body, token: 'tok-3' });
+      expect(await res.json()).toMatchObject({
+        error: { details: { reason: 'IAP_OTHER_ACCOUNT' } },
+      });
+    },
+  );
 
   it('T-11-215 Apple 환불 알림이 오면 가진 장수 안에서 한 번만 회수한다', async () => {
     const me = await issueGoogleCookie(ctx);

@@ -5,6 +5,7 @@
 //   money  : 강화 없이 나이별 보유 자금·연봉 분포(만 원)
 //   effect : 특정 나이에 잠재력 +k를 주었을 때 최고 OVR·레전드 점수 변화
 //   boost  : 가격·확률 후보(CONFIGS)별 시도·성공·지출·효과
+//   tickets: 강화권만으로 최고 단계까지 가는 시도 수(T-11-593 대성공 비율별)
 // 환경: SEED(기본 2026), INVEST=1(자기 투자 정책도 자금을 쓴다), RETIRE_AT(서비스 시즌 은퇴 나이, 기본 45)
 import {
   TYPES,
@@ -75,6 +76,8 @@ export type BoostConfig = {
   freeTotal?: number;
   /** T-11-513 확정 강화: 시즌의 강화를 마친 뒤 확률 없이 한 단계 올린다(시즌에 한 번, 커리어 전체 이 횟수까지). */
   sure?: number;
+  /** T-11-593 대성공: 성공 중 이 비율은 두 단계를 한 번에 올린다(최고 단계는 넘지 않는다, 마지막 단계 시도엔 없다). */
+  great?: number;
 };
 
 type Hook = (s: GameState, r: () => number) => void;
@@ -301,11 +304,15 @@ function boostSeason(
     b.spent += cost;
     b.tries++;
     b.ages.push(s.age);
-    if (r() < Math.min(1, c.p[b.level]! + (c.pity ?? 0) * b.fails)) {
+    const chance = Math.min(1, c.p[b.level]! + (c.pity ?? 0) * b.fails);
+    const roll = r();
+    if (roll < chance) {
+      // T-11-593 같은 판정 값으로 대성공을 가른다(게임 boost.ts와 같은 식).
+      const up = b.level + 2 <= c.p.length && roll < chance * (c.great ?? 0) ? 2 : 1;
       b.fails = 0;
-      b.level++;
+      b.level += up;
       b.ok++;
-      s.flags.potBonus = (s.flags.potBonus ?? 0) + 1;
+      s.flags.potBonus = (s.flags.potBonus ?? 0) + up;
     } else if ((b.fails++, c.down && b.level >= c.down.from && r() < c.down.p)) {
       b.level--;
       b.down++;
@@ -380,6 +387,18 @@ function modeEffect(n: number) {
 
 // 후보: 단계 5(+5), 시즌마다 1번, 30세까지. 비용 = max(최소, 연봉 × 비율).
 export const CONFIGS: BoostConfig[] = [
+  // T-11-593 지금 출시 규칙(game BOOST)과 대성공 비율 후보.
+  ...[0, 0.1, 0.2].map((great): BoostConfig => ({
+    name: `Z 출시 규칙 · 대성공 ${great * 100}%`,
+    p: [...BOOST.p],
+    min: [...BOOST.min],
+    rate: [...BOOST.rate],
+    pity: BOOST.pity,
+    maxAge: BOOST.maxAge,
+    perSeason: 1,
+    reserve: 1,
+    great,
+  })),
   {
     name: 'A 쉬움 · 연봉 10~30% · 70→30%',
     p: [0.7, 0.6, 0.5, 0.4, 0.3],
@@ -785,11 +804,38 @@ function modeCare(n: number) {
     );
 }
 
+// T-11-593 강화권만으로 +0에서 최고 단계까지 가는 시도 수(나이 · 자금 없이 규칙만). 대성공 비율별로 비교한다.
+function modeTickets(n: number) {
+  const rng = createRng(+(process.env.SEED || 2026));
+  for (const great of [0, 0.1, 0.2]) {
+    const tries: number[] = [];
+    for (let i = 0; i < n; i++) {
+      let lv = 0;
+      let fails = 0;
+      let t = 0;
+      while (lv < BOOST.p.length) {
+        t++;
+        const chance = Math.min(1, BOOST.p[lv]! + BOOST.pity * fails);
+        const roll = rng.next();
+        if (roll < chance) {
+          lv += lv + 2 <= BOOST.p.length && roll < chance * great ? 2 : 1;
+          fails = 0;
+        } else fails++;
+      }
+      tries.push(t);
+    }
+    console.log(
+      `대성공 ${great * 100}% · +4까지 시도 평균 ${mean(tries).toFixed(2)} · p50 ${q(tries, 0.5)} · p90 ${q(tries, 0.9)}`,
+    );
+  }
+}
+
 const mode = process.argv[2] || 'money';
 const N = +(process.argv[3] || 300);
 const t0 = Date.now();
 if (mode === 'money') modeMoney(N);
 else if (mode === 'effect') modeEffect(N);
 else if (mode === 'care') modeCare(N);
+else if (mode === 'tickets') modeTickets(N);
 else modeBoost(N);
 console.error(`(${((Date.now() - t0) / 1000).toFixed(0)}s)`);

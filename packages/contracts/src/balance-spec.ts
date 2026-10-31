@@ -96,6 +96,14 @@ export const BALANCE_SPEC = {
     max: 5,
     step: 1,
   },
+  /** T-11-593 잠재력 강화 성공 중 대성공(두 단계) 비율. 0이면 대성공이 없다. */
+  boostGreat: {
+    def: 0.2,
+    min: 0,
+    max: 0.5,
+    step: 0.05,
+    unit: 'pct',
+  },
   careCost: {
     def: 1,
     min: 0.25,
@@ -222,6 +230,7 @@ export const BALANCE_SPEC = {
     max: 90,
     step: 1,
   },
+  agKoreaBonus: { def: 6, min: 0, max: 15, step: 1 },
   koreaU23: {
     def: 69,
     min: 55,

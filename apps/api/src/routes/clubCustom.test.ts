@@ -92,7 +92,7 @@ describe('/v1/club-custom (T-10-010)', () => {
     }
   });
 
-  it('이미지 합계가 한도를 넘으면 VALIDATION_FAILED, 한도 안이면 저장한다(요청 본문 1MiB 안)', async () => {
+  it('이미지 합계가 한도를 넘으면 VALIDATION_FAILED, 한도 안이면 저장한다(T-11-599 이 경로는 요청 본문 1MiB를 넘어도 받는다)', async () => {
     const { cookie } = await issueCookie(ctx);
     const img = `data:image/png;base64,${'A'.repeat(CLUB_CUSTOM_IMG_MAX - 30)}`;
     const many = (n: number) =>
@@ -111,6 +111,28 @@ describe('/v1/club-custom (T-10-010)', () => {
     });
     expect(over.status).toBe(400);
     expect(ErrorEnvelopeSchema.parse(await over.json()).error.code).toBe('VALIDATION_FAILED');
+  });
+
+  it('T-11-599 새 리그까지 모든 클럽(302개)에 엠블럼 이미지를 넣어도 저장한다', async () => {
+    const { cookie } = await issueCookie(ctx);
+    // 운영 공유 에디트 파일의 64px 엠블럼 한 장은 약 4,100자다.
+    const img = `data:image/webp;base64,${'A'.repeat(4_100)}`;
+    const clubs = Object.fromEntries(
+      Array.from({ length: 302 }, (_, i) => [
+        `lg${i % 17}-${i}`,
+        { name: '새 리그 클럽', logo: { text: 'A', bg: '#000000', fg: '#ffffff', img } },
+      ]),
+    );
+    const res = await put(ctx, cookie, { clubs, updatedAt: '2026-10-31T00:00:00.000Z' });
+    expect(res.status).toBe(200);
+    expect(Object.keys(Res.parse(await res.json()).data.clubs)).toHaveLength(302);
+  });
+
+  it('다른 경로는 요청 본문 1MiB 한도를 그대로 둔다', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const res = await putJson(ctx, cookie, '/v1/profile/settings', { pad: 'A'.repeat(1_100_000) });
+    expect(res.status).toBe(400);
+    expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('VALIDATION_FAILED');
   });
 
   it('프로필 삭제 시 함께 지워진다', async () => {

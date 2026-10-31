@@ -2,6 +2,7 @@ import type { Translation } from '../core';
 import type { BalanceKeysMsgs } from '../ko/balanceKeys';
 
 export const balanceKeys: Translation<BalanceKeysMsgs> = {
+  agKoreaBonus: 'Korea Asian Games strength bonus',
   eventRatePreseason: 'Preseason event chance',
   eventRateSeason: 'Half-season event chance',
   eventTwist: 'Twist chance after a choice',
@@ -13,6 +14,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   investCost: 'Self-investment cost multiplier',
   boostCost: 'Potential boost cost multiplier',
   boostExtraTotal: 'Extra boost tries per career',
+  boostGreat: 'Potential boost great success share',
   careCost: 'Conditioning cost multiplier',
   potMean: 'Potential average',
   potSd: 'Potential spread',

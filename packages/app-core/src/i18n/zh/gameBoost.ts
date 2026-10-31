@@ -58,4 +58,11 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   sureButton: (p) => `用俱樂部資金必成強化（${p.price}・100%）`,
   sureNote:
     '支付俱樂部資金即可不經機率直接提升 1 階段。每名球員限一次，用球員資金挑戰的次數維持不變。',
+  noteGreat: (p) => `成功時有${p.pct}%為大成功，一次提升兩階。挑戰+${p.lv}階段時沒有大成功。`,
+  lineReadyGreat: (p) =>
+    `下一階段 +${p.next} · 成功機率 ${p.chance}%（大成功 ${p.great}%） · ${p.cost}`,
+  chanceGreat: (p) => `成功機率 ${p.n}% · 大成功 ${p.g}%`,
+  historyGreat: (p) => `${p.y} · +${p.lv}階段 ${p.pct}% · ${p.cost} · 大成功`,
+  resultGreatTitle: (p) => `大成功 · +${p.lv}階段`,
+  resultGreat: '一次提升兩階，成長上限大幅提高。',
 };

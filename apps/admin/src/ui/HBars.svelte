@@ -9,7 +9,7 @@
     items: { key: string; label: string; value: number; note?: string | undefined }[];
     unit?: 'n' | 'krw';
   } = $props();
-  const max = $derived(Math.max(1, ...items.map((x) => x.value)));
+  const max = $derived(Math.max(1, ...items.map((x) => Math.abs(x.value))));
 </script>
 
 {#if !items.length}
@@ -22,7 +22,7 @@
           <span class="name">{x.label}</span>
           <span class="num">{fmt(x.value, unit)}{#if x.note}<small> {x.note}</small>{/if}</span>
         </div>
-        <div class="track"><div class="bar" style:width={`${(x.value / max) * 100}%`}></div></div>
+        <div class="track"><div class="bar" style:width={`${(Math.abs(x.value) / max) * 100}%`}></div></div>
       </li>
     {/each}
   </ul>

@@ -227,6 +227,7 @@ export function newSeason(s: GameState): Season {
     l: 0,
     rivals,
     opp: opps.map((c) => c.id),
+    scoringVersion: 1,
     honors: [],
   };
 }

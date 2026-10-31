@@ -354,6 +354,7 @@ export function simBlock(s: GameState, mo?: MomentHooks): BlockResult {
         res = resOf(x, odds, moment.pct - moment.base);
         if (!(moment.ok = res !== 'L')) cs = false;
       }
+      if (res === 'D' && g + a > 0) cs = false;
       if (cs) {
         r.cs++;
         S.cs++;

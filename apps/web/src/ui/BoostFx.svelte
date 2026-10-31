@@ -14,8 +14,8 @@
   let done = $state(false);
   let p = $state(0);
   let closeBtn = $state<HTMLButtonElement>();
-  // 강화 중에는 결과 전 단계, 결과에서는 결과 단계를 켠다.
-  const lit = $derived(done || !out.ok ? out.lv : out.lv - 1);
+  // 강화 중에는 결과 전 단계, 결과에서는 결과 단계를 켠다. T-11-593 대성공이면 두 칸이 함께 켜진다.
+  const lit = $derived(done ? out.lv : out.lv - out.up);
 
   onMount(() => {
     const t0 = performance.now();
@@ -27,7 +27,7 @@
       if (x < 1) raf = requestAnimationFrame(tick);
       else {
         done = true;
-        buzz(out.ok ? 40 : 15);
+        buzz(out.great ? 60 : out.ok ? 40 : 15);
         queueMicrotask(() => closeBtn?.focus());
       }
     };
@@ -42,18 +42,18 @@
 
 <svelte:window {onkeydown} />
 
-<div class="boost-fx" class:ok={done && out.ok} class:fail={done && !out.ok} data-boost-fx={done ? (out.ok ? 'ok' : 'fail') : 'rolling'} role="dialog" aria-modal="true" aria-label={L.title} transition:fade={{ duration: dur(180) }}>
+<div class="boost-fx" class:ok={done && out.ok} class:great={done && out.great} class:fail={done && !out.ok} data-boost-fx={done ? (out.great ? 'great' : out.ok ? 'ok' : 'fail') : 'rolling'} role="dialog" aria-modal="true" aria-label={L.title} transition:fade={{ duration: dur(180) }}>
   <div class="bf-card" aria-live="polite">
     <div class="eyebrow">Potential</div>
     <div class="bf-steps" aria-hidden="true">
       {#each { length: out.max } as _, i (i)}
-        <i class:on={i < lit} class:new={done && out.ok && i === out.lv - 1}></i>
+        <i class:on={i < lit} class:new={done && i >= out.lv - out.up && i < out.lv}></i>
       {/each}
     </div>
     {#if !done}
       <h2>{L.rolling}</h2>
       <div class="bf-gauge" aria-hidden="true"><span style={`width:${p * 100}%`}></span></div>
-      <p class="muted fs-sm">{L.chance({ n: out.chance })}</p>
+      <p class="muted fs-sm">{out.greatChance ? L.chanceGreat({ n: out.chance, g: out.greatChance }) : L.chance({ n: out.chance })}</p>
     {:else}
       <h2 class="bf-title">{out.title}</h2>
       <p class="fs-sm">{out.text}</p>
