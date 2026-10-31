@@ -14,9 +14,12 @@
   import type { Consent } from '@offside/app-core/analytics-model';
   import { settingsText as L } from '@offside/app-core/i18n/ko/settings';
   import PopSheet from './PopSheet.svelte';
+  import { consentByDefault } from '../consent-region.js';
   import { toast } from './helpers.js';
   const { settings = false }: { settings?: boolean } = $props();
   const acqOn = acquisitionEnabled();
+  // T-11-597 유럽 · 영국 · 스위스 밖은 묻지 않고 켠 채로 시작한다(환경설정 카드에서 끌 수 있다).
+  const byDefault = consentByDefault();
   let available = $state(false);
   let choice = $state<Consent>('unknown');
   // T-11-195 메타 픽셀이 켜진 빌드면 광고 측정도 같은 항목에서 묻는다. GA4만 골랐던 이용자에게는 한 번 더 묻는다.
@@ -51,7 +54,7 @@
     return onConsent(read);
   });
   const needA = $derived(choice === 'unknown' || (meta && adChoice === 'unknown'));
-  const needQ = $derived(acqOn && choice === 'granted' && acq !== null && (acq === 'unknown' || failed));
+  const needQ = $derived(!byDefault && acqOn && choice === 'granted' && acq !== null && (acq === 'unknown' || failed));
   const ask = $derived(available && !settings && !done && (needA || needQ));
   const card = $derived(settings && (available || (acqOn && pending)));
 
@@ -132,6 +135,7 @@
     </button>
     <button class="btn btn-accent" data-analytics="accept" disabled={busy || pending} onclick={() => apply(true, true)}>{L.consentAll}</button>
   </div>
+  {#if settings && byDefault}<p class="muted" data-analytics="default-note">{L.consentDefaultNote}</p>{/if}
   {#if settings}<p class="muted">{L.consentRevokeNote}</p>{/if}
 {/snippet}
 

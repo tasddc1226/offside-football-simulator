@@ -131,3 +131,23 @@ describe('T-11-585 랜딩 이미지', () => {
     expect(res.headers.get('X-Robots-Tag')).toBeNull();
   });
 });
+
+describe('T-11-597 동의 지역 쿠키', () => {
+  const at = (path: string, country?: string) => {
+    const req = new Request(`https://offside-lab.com${path}`);
+    if (country) Object.defineProperty(req, 'cf', { value: { country } });
+    return worker.fetch(req, { ASSETS: assets }, ctx);
+  };
+  it('HTML 응답에 접속 나라로 정한 지역을 붙인다', async () => {
+    expect((await at('/', 'KR')).headers.get('Set-Cookie')).toMatch(
+      /^offside_consent_region=notice;/,
+    );
+    expect((await at('/', 'DE')).headers.get('Set-Cookie')).toMatch(/^offside_consent_region=ask;/);
+    expect((await at('/settings')).headers.get('Set-Cookie')).toMatch(
+      /^offside_consent_region=ask;/,
+    );
+  });
+  it('정적 파일에는 붙이지 않는다', async () => {
+    expect((await at('/assets/index-abc.js', 'KR')).headers.get('Set-Cookie')).toBeNull();
+  });
+});

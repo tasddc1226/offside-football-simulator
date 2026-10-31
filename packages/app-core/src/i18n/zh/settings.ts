@@ -67,6 +67,7 @@ export const settings: Translation<SettingsMsgs> = {
   consentDenied: '不同意',
   consentUnset: '尚未選擇',
   consentAgree: '同意分析',
+  consentDefaultNote: '在你所在的地區一開始就是開啟的。不想使用時，取消勾選並儲存即可。',
   consentRevokeNote:
     '撤回後將停止之後的收集，並刪除這個瀏覽器的分析用 Cookie 與紀錄。已傳送的資訊不會自動刪除。',
   reviewTitle: '商店評論',

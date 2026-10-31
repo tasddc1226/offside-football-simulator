@@ -70,6 +70,8 @@ export const settings: Translation<SettingsMsgs> = {
   consentDenied: '同意しない',
   consentUnset: '未選択',
   consentAgree: '分析に同意',
+  consentDefaultNote:
+    'お住まいの地域では最初からオンになっています。オフにするにはチェックを外して保存してください。',
   consentRevokeNote:
     '撤回すると以降の収集は止まり、このブラウザの分析用Cookie・記録を削除します。すでに送信された情報は自動では削除されません。',
   reviewTitle: 'ストアレビュー',

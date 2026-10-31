@@ -6,7 +6,6 @@
   // Team slots can expand later without duplicating the owner profile, finances or honors.
   import Topbar from './Topbar.svelte';
   import OwnerAvatar from './OwnerAvatar.svelte';
-  import AdSlot from '../ads/AdSlot.svelte';
   import { fetchOwnerSummary } from '@offside/app-core/api/ownerSummary';
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
   import { fetchMarketFunds, type MarketFundsResponse } from '@offside/app-core/api/market';
@@ -35,7 +34,6 @@
   import { passEntryOpen } from '@offside/contracts/season-pass';
   import { membershipText as MB } from '@offside/app-core/i18n/ko/membership';
   import { MEMBERSHIP_LIVE } from '@offside/contracts/membership';
-  import { syncMember } from '../ads/ads';
   import type { Component } from 'svelte';
   import { type OwnerTierTag } from '@offside/contracts';
   import { shapeOf, usesRankLadder } from '@offside/contracts/owner-team';
@@ -89,10 +87,7 @@
   $effect(() => {
     if (!linked) return;
     void fetchOwnerTeam().then((r) => {
-      if (r.ok) {
-        card = ownerTeamCard(r.data);
-        syncMember(card.member);
-      }
+      if (r.ok) card = ownerTeamCard(r.data);
       else cardFailed = true;
     });
   });
@@ -175,7 +170,6 @@
         {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}<span class="owner-funds-go" aria-hidden="true">›</span></dt><dd>{funds}</dd><button class="tap-cover" data-act="funds-history" aria-label={F.openAria} onclick={() => go('funds')}></button></div>{/if}
       </dl>
     </section>
-    <AdSlot place="owner-summary" />
   {/if}
 
   <!-- T-11-338 진행 중인 감독 커리어가 있으면 맨 위에서 이어 한다. -->
