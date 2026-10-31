@@ -1,4 +1,9 @@
-import { CONTENT_TYPE_HEADER, REQUEST_BODY_MAX_BYTES } from '@offside/contracts';
+import {
+  CLUB_CUSTOM_BODY_MAX_BYTES,
+  CLUB_CUSTOM_PATH,
+  CONTENT_TYPE_HEADER,
+  REQUEST_BODY_MAX_BYTES,
+} from '@offside/contracts';
 import { createMiddleware } from 'hono/factory';
 import { AppError } from '../errors.js';
 import type { AppEnv } from '../env.js';
@@ -15,7 +20,7 @@ function bodyTooLarge(): never {
 }
 
 /** Count bytes before decoding; never buffer an unbounded request while checking its size. */
-async function readBoundedBody(request: Request): Promise<string> {
+async function readBoundedBody(request: Request, max: number): Promise<string> {
   const reader = request.body?.getReader();
   if (!reader) return '';
   const decoder = new TextDecoder();
@@ -26,7 +31,7 @@ async function readBoundedBody(request: Request): Promise<string> {
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > REQUEST_BODY_MAX_BYTES) {
+      if (size > max) {
         // Cleanup must not delay rejection if a producer never settles cancellation.
         void reader.cancel().catch(() => {});
         bodyTooLarge();
@@ -56,12 +61,14 @@ export const bodyGuard = createMiddleware<AppEnv>(async (c, next) => {
       });
     }
 
+    const max =
+      c.req.path === CLUB_CUSTOM_PATH ? CLUB_CUSTOM_BODY_MAX_BYTES : REQUEST_BODY_MAX_BYTES;
     const contentLength = c.req.header('Content-Length');
-    if (contentLength && Number(contentLength) > REQUEST_BODY_MAX_BYTES) {
+    if (contentLength && Number(contentLength) > max) {
       bodyTooLarge();
     }
 
-    const rawBody = await readBoundedBody(c.req.raw);
+    const rawBody = await readBoundedBody(c.req.raw, max);
     c.set('rawBody', rawBody);
   }
   await next();
