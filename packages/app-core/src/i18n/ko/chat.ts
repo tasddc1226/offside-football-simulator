@@ -62,8 +62,10 @@ const ko = {
   viewField: '필드',
   viewChat: '채팅',
   fieldLabel:
-    '라운지 필드. 화살표나 WASD로 움직이고 스페이스로 공을 차요. V로 시점, Q · E로 회전, + · -로 확대해요.',
+    '라운지 필드. 화살표나 WASD로 움직이고 스페이스로 공을 차고, F로 태클, R로 개인기를 해요. V로 시점, Q · E로 회전, + · -로 확대해요.',
   kick: '공 차기',
+  tackle: '태클',
+  trick: '개인기',
   emotes: '이모트',
   emote_wave: '손 흔들기',
   emote_thumbs: '최고',
@@ -73,7 +75,7 @@ const ko = {
   emote_heart: '하트',
   chatInput: '채팅 입력창',
   spectating: '구경 중이에요. 로그인하면 필드에 들어가요.',
-  goal: '골!',
+  goal: 'GOAL!',
   camera: '시점 바꾸기',
   camera_quarter: '쿼터뷰',
   camera_broadcast: '중계 화면',
@@ -85,6 +87,9 @@ const ko = {
   rotateRight: '오른쪽으로 돌리기',
   zoomIn: '확대',
   zoomOut: '축소',
+  scoreTitle: '오늘의 득점',
+  scoreEmpty: '아직 골이 없어요',
+  scoreN: (p: { n: number }) => `${p.n}골`,
 };
 
 export type ChatMsgs = typeof ko;

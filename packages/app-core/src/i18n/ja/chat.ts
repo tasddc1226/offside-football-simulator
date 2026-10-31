@@ -64,8 +64,10 @@ export const chat: Translation<ChatMsgs> = {
   viewField: 'フィールド',
   viewChat: 'チャット',
   fieldLabel:
-    'ラウンジフィールド。矢印キーかWASDで動き、スペースでボールを蹴ります。Vで視点、Q・Eで回転、+・-で拡大縮小します。',
+    'ラウンジフィールド。矢印キーかWASDで動き、スペースでボールを蹴り、Fでタックル、Rでテクニックを出します。Vで視点、Q・Eで回転、+・-で拡大縮小します。',
   kick: 'キック',
+  tackle: 'タックル',
+  trick: 'テクニック',
   emotes: 'エモート',
   emote_wave: '手を振る',
   emote_thumbs: 'いいね',
@@ -75,7 +77,7 @@ export const chat: Translation<ChatMsgs> = {
   emote_heart: 'ハート',
   chatInput: 'チャット入力欄',
   spectating: '観戦中です。ログインするとフィールドに入れます。',
-  goal: 'ゴール！',
+  goal: 'GOAL!',
   camera: '視点を変える',
   camera_quarter: 'クォータービュー',
   camera_broadcast: '中継画面',
@@ -87,4 +89,7 @@ export const chat: Translation<ChatMsgs> = {
   rotateRight: '右に回す',
   zoomIn: '拡大',
   zoomOut: '縮小',
+  scoreTitle: '今日の得点',
+  scoreEmpty: 'まだゴールはありません',
+  scoreN: (p: { n: number }) => `${p.n}点`,
 };

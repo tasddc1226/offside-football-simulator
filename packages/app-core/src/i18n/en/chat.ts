@@ -64,8 +64,10 @@ export const chat: Translation<ChatMsgs> = {
   viewField: 'Field',
   viewChat: 'Chat',
   fieldLabel:
-    'Lounge field. Move with the arrow keys or WASD and kick with Space. Press V to change view, Q or E to rotate, and + or - to zoom.',
+    'Lounge field. Move with the arrow keys or WASD and kick with Space. Press F to tackle and R for a skill move. Press V to change view, Q or E to rotate, and + or - to zoom.',
   kick: 'Kick',
+  tackle: 'Tackle',
+  trick: 'Skill move',
   emotes: 'Emotes',
   emote_wave: 'Wave',
   emote_thumbs: 'Thumbs up',
@@ -75,7 +77,7 @@ export const chat: Translation<ChatMsgs> = {
   emote_heart: 'Heart',
   chatInput: 'Chat input',
   spectating: "You're watching. Log in to step onto the field.",
-  goal: 'Goal!',
+  goal: 'GOAL!',
   camera: 'Change view',
   camera_quarter: 'Quarter view',
   camera_broadcast: 'Broadcast',
@@ -87,4 +89,7 @@ export const chat: Translation<ChatMsgs> = {
   rotateRight: 'Rotate right',
   zoomIn: 'Zoom in',
   zoomOut: 'Zoom out',
+  scoreTitle: "Today's goals",
+  scoreEmpty: 'No goals yet',
+  scoreN: (p: { n: number }) => `${p.n}`,
 };

@@ -47,7 +47,29 @@ export interface Actor {
   idleUntil: number;
   /** 1인칭으로 볼 때는 뒤로 걸어도 바라보는 쪽을 바꾸지 않는다. */
   lockFace: boolean;
+  /** 태클 · 개인기 동작. (dx, dy)는 시작할 때 바라본 쪽, side는 도는 · 빠지는 쪽(±1), ball은 공을 데리고 하는지. */
+  move: {
+    kind: MoveKind;
+    start: number;
+    until: number;
+    dx: number;
+    dy: number;
+    side: 1 | -1;
+    ball: boolean;
+  } | null;
+  /** 다음 동작을 할 수 있는 시각. */
+  readyAt: number;
+  /** 태클에 걸려 넘어져 있는 동안은 움직이지 못한다. */
+  fallUntil: number;
+  /** 개인기를 돌아가며 고르는 순번. */
+  trickN: number;
 }
+
+export type MoveKind = 'tackle' | TrickKind;
+export const TRICKS = ['flick', 'spin', 'stepover'] as const;
+export type TrickKind = (typeof TRICKS)[number];
+const MOVE_MS: Record<MoveKind, number> = { tackle: 520, flick: 520, spin: 620, stepover: 460 };
+const FALL_MS = 1100;
 
 export interface Ball {
   x: number;
@@ -62,7 +84,8 @@ export interface World {
   actors: Map<string, Actor>;
   ball: Ball;
   /** 골이 들어가면 축하를 보여 주고 공을 가운데로 돌린다. */
-  goal: { side: 0 | 1; until: number } | null;
+  /** by · byId는 마지막으로 공을 만진 선수 이름 · 아이디(없으면 null). */
+  goal: { side: 0 | 1; until: number; by: string | null; byId: string | null } | null;
   /** 마지막으로 공을 건드린 아바타. */
   touch: string | null;
 }
@@ -202,6 +225,10 @@ export function addActor(world: World, id: string, name: string, at = spawnPoint
     emote: null,
     idleUntil: 0,
     lockFace: false,
+    move: null,
+    readyAt: 0,
+    fallUntil: 0,
+    trickN: 0,
   };
   world.actors.set(id, a);
   return a;
@@ -246,6 +273,145 @@ export function kick(world: World, a: Actor): boolean {
   return true;
 }
 
+/** 동작 진행도(0~1). 동작 중이 아니면 0. */
+export function moveT(a: Actor, now: number) {
+  const m = a.move;
+  return m ? clamp((now - m.start) / (m.until - m.start), 0, 1) : 0;
+}
+const canAct = (a: Actor, now: number) => !a.move && now >= a.readyAt && now >= a.fallUntil;
+function facing(a: Actor): [number, number] {
+  const n = Math.hypot(a.fx, a.fy) || 1;
+  return [a.fx / n, a.fy / n];
+}
+const ballNear = (world: World, a: Actor) =>
+  world.ball.z < 0.8 && Math.hypot(world.ball.x - a.x, world.ball.y - a.y) < KICK_REACH;
+
+/** 바라보는 쪽으로 미끄러지며 태클한다. 공은 쳐 내고, 닿은 선수는 넘어진다. 시작했으면 true. */
+export function tackle(world: World, a: Actor, now: number): boolean {
+  if (!canAct(a, now) || world.goal) return false;
+  const [dx, dy] = facing(a);
+  a.target = null;
+  a.move = {
+    kind: 'tackle',
+    start: now,
+    until: now + MOVE_MS.tackle,
+    dx,
+    dy,
+    side: 1,
+    ball: false,
+  };
+  a.readyAt = a.move.until + 450;
+  return true;
+}
+
+/** 개인기: 레인보우 플릭 → 마르세유 턴 → 헛다리 순서로 돌아간다. 공이 가까우면 공을 데리고 한다. */
+export function trick(world: World, a: Actor, now: number): TrickKind | null {
+  if (!canAct(a, now)) return null;
+  const kind = TRICKS[a.trickN++ % TRICKS.length]!;
+  const [dx, dy] = facing(a);
+  const ball = ballNear(world, a) && !world.goal;
+  a.target = null;
+  a.move = {
+    kind,
+    start: now,
+    until: now + MOVE_MS[kind],
+    dx,
+    dy,
+    side: Math.random() < 0.5 ? 1 : -1,
+    ball,
+  };
+  a.readyAt = a.move.until + 250;
+  if (ball && kind === 'flick') {
+    // 뒤꿈치로 공을 떠 올려 머리 위로 넘긴다: 내 바로 뒤에서 떠서 앞쪽에 떨어진다.
+    const b = world.ball;
+    b.x = a.x - dx * 0.25;
+    b.y = a.y - dy * 0.25;
+    b.z = 0.3;
+    b.vx = dx * 4.6;
+    b.vy = dy * 4.6;
+    b.vz = 7.4;
+    world.touch = a.id;
+  }
+  return kind;
+}
+
+/** 헛다리 뒤 빠져나가는 쪽(바라보는 쪽에서 side 쪽으로 비스듬히). */
+function burstDir(m: NonNullable<Actor['move']>): [number, number] {
+  const x = m.dx - m.dy * m.side * 1.1;
+  const y = m.dy + m.dx * m.side * 1.1;
+  const n = Math.hypot(x, y) || 1;
+  return [x / n, y / n];
+}
+
+function stepMove(world: World, a: Actor, now: number) {
+  const m = a.move!;
+  const b = world.ball;
+  if (now >= m.until) {
+    a.move = null;
+    if (m.kind === 'tackle') a.vx = a.vy = 0;
+    if (m.ball && m.kind === 'spin') {
+      b.vx = m.dx * 5.5;
+      b.vy = m.dy * 5.5;
+    }
+    if (m.ball && m.kind === 'stepover') {
+      const [ux, uy] = burstDir(m);
+      b.vx = ux * 7;
+      b.vy = uy * 7;
+    }
+    return;
+  }
+  const t = moveT(a, now);
+  const glue = (ux: number, uy: number, r = 0.55) => {
+    b.x = a.x + ux * r;
+    b.y = a.y + uy * r;
+    b.z = 0;
+    b.vx = a.vx;
+    b.vy = a.vy;
+    b.vz = 0;
+    world.touch = a.id;
+  };
+  if (m.kind === 'tackle') {
+    const speed = 9 * (1 - t * 0.75);
+    a.vx = m.dx * speed;
+    a.vy = m.dy * speed;
+    // 뻗은 발 앞에 공이 있으면 쳐 낸다.
+    const fx = a.x + m.dx * 0.6;
+    const fy = a.y + m.dy * 0.6;
+    if (b.z < 0.7 && Math.hypot(b.x - fx, b.y - fy) < 0.85) {
+      b.vx = m.dx * 9 + b.vx * 0.2;
+      b.vy = m.dy * 9 + b.vy * 0.2;
+      b.vz = 1.8;
+      world.touch = a.id;
+    }
+    for (const o of world.actors.values()) {
+      if (o === a || now < o.fallUntil || Math.hypot(o.x - fx, o.y - fy) > 0.8) continue;
+      o.fallUntil = now + FALL_MS;
+      o.move = null;
+      o.target = null;
+      o.vx = o.vy = 0;
+    }
+  } else if (m.kind === 'spin') {
+    // 마르세유 턴: 공을 발밑에 붙인 채 한 바퀴 돌며 앞으로 나아간다.
+    a.vx = m.dx * 3;
+    a.vy = m.dy * 3;
+    if (m.ball) {
+      const ang = m.side * t * Math.PI * 2;
+      const c = Math.cos(ang);
+      const s = Math.sin(ang);
+      glue(m.dx * c - m.dy * s, m.dx * s + m.dy * c, 0.5);
+    }
+  } else if (m.kind === 'stepover') {
+    // 헛다리: 제자리에서 두 번 속이고 비스듬히 치고 나간다.
+    if (t < 0.55) a.vx = a.vy = 0;
+    else {
+      const [ux, uy] = burstDir(m);
+      a.vx = ux * 6.5;
+      a.vy = uy * 6.5;
+    }
+    if (m.ball) glue(...(t < 0.55 ? ([m.dx, m.dy] as [number, number]) : burstDir(m)));
+  }
+}
+
 /** 남의 아바타 — 진짜 위치를 받기 전까지는 근처를 천천히 거닌다. */
 function wander(a: Actor, now: number) {
   if (a.target || now < a.idleUntil) return;
@@ -267,7 +433,17 @@ export function stepWorld(
   mine: string | null,
 ): 0 | 1 | null {
   for (const a of world.actors.values()) {
-    if (a.id !== mine) wander(a, now);
+    if (now < a.fallUntil) {
+      a.vx = a.vy = 0;
+      a.target = null;
+      a.step = 0;
+      continue;
+    }
+    if (a.move) {
+      stepMove(world, a, now);
+      if (a.move && a.move.kind !== 'flick') a.target = null;
+    }
+    if (a.id !== mine && !a.move) wander(a, now);
     if (a.target) {
       const dx = a.target.x - a.x;
       const dy = a.target.y - a.y;
@@ -285,12 +461,12 @@ export function stepWorld(
     if (moving) {
       a.x = clamp(a.x + a.vx * dt, minX, maxX);
       a.y = clamp(a.y + a.vy * dt, minY, maxY);
-      if (!a.lockFace) {
+      if (!a.lockFace && (!a.move || a.move.kind === 'flick' || a.move.kind === 'stepover')) {
         a.fx = a.vx;
         a.fy = a.vy;
       }
-      a.step += dt * 10;
-      dribble(world, a);
+      a.step = a.move?.kind === 'tackle' ? 0 : a.step + dt * 10;
+      if (!a.move || a.move.kind === 'flick') dribble(world, a);
     } else a.step = 0;
   }
   return stepBall(world, dt, now);
@@ -325,6 +501,7 @@ function stepBall(world: World, dt: number, now: number): 0 | 1 | null {
     } else {
       world.goal = null;
       world.ball = centerBall();
+      world.touch = null;
     }
   }
   const px = b.x;
@@ -365,7 +542,8 @@ function stepBall(world: World, dt: number, now: number): 0 | 1 | null {
 }
 
 function scored(world: World, side: 0 | 1, now: number): 0 | 1 {
-  world.goal = { side, until: now + 2200 };
+  const scorer = world.touch ? world.actors.get(world.touch) : undefined;
+  world.goal = { side, until: now + 2200, by: scorer?.name ?? null, byId: scorer?.id ?? null };
   return side;
 }
 

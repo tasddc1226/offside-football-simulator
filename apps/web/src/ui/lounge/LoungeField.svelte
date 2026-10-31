@@ -3,6 +3,7 @@
   // 말풍선으로 뜬다. 웹은 WASD · 화살표 · 클릭으로, 폰은 가운데 아래 조이스틱으로만 움직인다. 아직 서버에 위치를 보내지
   // 않는 시제품이라 남의 선수는 근처를 거닐고, 공 · 이모트는 내 화면에서만 보인다.
   import { onMount, untrack } from 'svelte';
+  import { fade } from 'svelte/transition';
   import { ADMIN_NICKNAME } from '@offside/contracts/board-limits';
   import type { ChatMessage } from '@offside/app-core/api/chat';
   import { chatText as L } from '@offside/app-core/i18n/ko/chat';
@@ -23,6 +24,8 @@
     say,
     steer,
     stepWorld,
+    tackle,
+    trick,
     toWorld,
     walkTo,
     type View,
@@ -31,6 +34,7 @@
   import EmoteIcon from './EmoteIcon.svelte';
   import { EMOTES, type EmoteKey } from './emotes.js';
   import { broadcastFocus } from './stadium.js';
+  import { addGoal, loadGoals, msToKstMidnight, type GoalRow } from './goals.js';
 
   const {
     messages,
@@ -138,15 +142,14 @@
     const keep = new Set([...authors, ...(meId ? [meId] : [])]);
     for (const id of world.actors.keys()) if (!keep.has(id) && !id.startsWith('bot-')) world.actors.delete(id);
     for (const m of messages) {
-      if (!keep.has(m.author)) {
-        seen[m.id] = true;
-        continue;
-      }
-      const a = addActor(world, m.author, nameOf(m));
-      if (seen[m.id]) continue;
+      const fresh = !seen[m.id];
       seen[m.id] = true;
       // 들어오기 전 줄은 1분 30초 안에 말한 것만 띄운다.
-      if (m.at > mounted - 90_000 || m.at > now - 90_000) say(a, m.body, now);
+      const recentLine = m.at > mounted - 90_000 || m.at > now - 90_000;
+      if (fresh && recentLine) untrack(() => pushLog(m));
+      if (!keep.has(m.author)) continue;
+      const a = addActor(world, m.author, nameOf(m));
+      if (fresh && recentLine) say(a, m.body, now);
     }
   });
 
@@ -185,6 +188,14 @@
     const a = meId ? world.actors.get(meId) : undefined;
     if (a) kick(world, a);
   }
+  function doTackle() {
+    const a = meId ? world.actors.get(meId) : undefined;
+    if (a) tackle(world, a, Date.now());
+  }
+  function doTrick() {
+    const a = meId ? world.actors.get(meId) : undefined;
+    if (a) trick(world, a, Date.now());
+  }
   function doEmote(e: EmoteKey) {
     const a = meId ? world.actors.get(meId) : undefined;
     if (a) emote(a, e, Date.now());
@@ -199,6 +210,8 @@
       doKick();
       return;
     }
+    if (e.code === 'KeyF') return doTackle();
+    if (e.code === 'KeyR') return doTrick();
     if (e.code === 'KeyV') return setCamera(cameraIndex + (e.shiftKey ? -1 : 1), e.shiftKey ? -1 : 1);
     if (e.code === 'KeyQ') return void rotateBy(-1);
     if (e.code === 'KeyE') return void rotateBy(1);
@@ -283,7 +296,41 @@
     (document.activeElement as HTMLElement | null)?.blur();
   }
 
-  const recent = $derived(messages.slice(-3));
+  // 오른쪽 위 오늘의 득점: 봇은 빼고 구단주만 센다. 한국 시각 자정에 비운다.
+  const SCORE_MAX = 5;
+  let goals = $state<GoalRow[]>(loadGoals());
+  function countGoal() {
+    const g = world.goal;
+    if (!g?.byId || g.byId.startsWith('bot-')) return;
+    goals = addGoal(goals, g.byId, g.by ?? '');
+  }
+  $effect(() => {
+    let t: ReturnType<typeof setTimeout>;
+    const arm = () => {
+      t = setTimeout(() => {
+        goals = loadGoals();
+        arm();
+      }, msToKstMidnight() + 1000);
+    };
+    arm();
+    return () => clearTimeout(t);
+  });
+
+  // 왼쪽 위 최근 대화: 들어온 순서대로 쌓이고, 줄마다 LOG_MS가 지나면 사라진다(최대 LOG_MAX줄).
+  const LOG_MS = 8000;
+  const LOG_MAX = 3;
+  let recent = $state<{ id: string; name: string; body: string }[]>([]);
+  const logTimers: Record<string, ReturnType<typeof setTimeout>> = {};
+  function pushLog(m: ChatMessage) {
+    recent = [...recent, { id: m.id, name: nameOf(m), body: m.body }].slice(-LOG_MAX);
+    logTimers[m.id] = setTimeout(() => {
+      delete logTimers[m.id];
+      recent = recent.filter((r) => r.id !== m.id);
+    }, LOG_MS);
+  }
+  $effect(() => () => {
+    for (const t of Object.values(logTimers)) clearTimeout(t);
+  });
 
   onMount(() => {
     coarse = window.matchMedia('(pointer: coarse)').matches;
@@ -339,7 +386,7 @@
         const b = bots[Math.floor(Math.random() * bots.length)];
         if (b) emote(b, EMOTES[Math.floor(Math.random() * EMOTES.length)]!, now);
       }
-      stepWorld(world, dt, now, meId);
+      if (stepWorld(world, dt, now, meId) !== null) countGoal();
       const focus = a ?? world.ball;
       // 화면 가운데를 나보다 조금 먼 쪽에 둬서 관중석이 더 보이게 한다.
       const lead = 4 * (1 - view.tilt);
@@ -379,13 +426,29 @@
     onpointercancel={onCanvasUp}
   ></canvas>
 
-  {#if recent.length}
-    <ol class="field-log" aria-hidden="true">
-      {#each recent as m (m.id)}
-        <li><b>{nameOf(m)}</b> {m.body}</li>
-      {/each}
-    </ol>
-  {/if}
+  <!-- 마지막 줄이 흐려지며 사라질 때까지 목록을 두고, 비면 CSS(:empty)로 숨긴다. -->
+  <ol class="field-log" aria-hidden="true">
+    {#each recent as m (m.id)}
+      <li out:fade={{ duration: 400 }}><b>{m.name}</b> {m.body}</li>
+    {/each}
+  </ol>
+
+  <section class="field-score" aria-label={L.scoreTitle}>
+    <h3>{L.scoreTitle}</h3>
+    {#if goals.length}
+      <ol>
+        {#each goals.slice(0, SCORE_MAX) as g, i (g.id)}
+          <li class:mine={g.id === meId}>
+            <span class="rank">{i + 1}</span>
+            <span class="name">{g.name}</span>
+            <b>{L.scoreN({ n: g.n })}</b>
+          </li>
+        {/each}
+      </ol>
+    {:else}
+      <p>{L.scoreEmpty}</p>
+    {/if}
+  </section>
 
   {#if !me && !dev}
     <p class="field-note fs-xs">{L.spectating}</p>
@@ -412,7 +475,11 @@
         </div>
       {/if}
       <button type="button" class="field-btn" aria-label={L.emotes} aria-expanded={emoteOpen} data-act="field-emote" onclick={() => (emoteOpen = !emoteOpen)}><EmoteIcon name="smile" size={28} /></button>
-      <button type="button" class="field-btn" aria-label={L.kick} data-act="field-kick" onclick={doKick}><EmoteIcon name="ball" size={28} /></button>
+      <div class="field-play">
+        <button type="button" class="field-btn" aria-label={L.trick} data-act="field-trick" title={coarse ? undefined : `${L.trick} (R)`} onclick={doTrick}><EmoteIcon name="trick" size={28} /></button>
+        <button type="button" class="field-btn" aria-label={L.tackle} data-act="field-tackle" title={coarse ? undefined : `${L.tackle} (F)`} onclick={doTackle}><EmoteIcon name="tackle" size={28} /></button>
+        <button type="button" class="field-btn" aria-label={L.kick} data-act="field-kick" title={coarse ? undefined : `${L.kick} (Space)`} onclick={doKick}><EmoteIcon name="ball" size={28} /></button>
+      </div>
       {#if coarse}
         <button type="button" class="field-btn" aria-label={L.chatInput} aria-pressed={chatOpen} data-act="field-chat" onclick={onchat}>
           <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" /></svg>
@@ -462,7 +529,7 @@
     position: absolute;
     left: 8px;
     top: 58px;
-    max-width: min(320px, 70%);
+    max-width: min(320px, calc(100% - 156px));
     margin: 0;
     padding: 6px 10px;
     list-style: none;
@@ -472,6 +539,62 @@
     font-size: 12px;
     line-height: 1.5;
     pointer-events: none;
+  }
+  /* 오늘의 득점: 시점 막대 아래 오른쪽. 왼쪽 최근 대화와 겹치지 않게 폭을 고정한다. */
+  .field-score {
+    position: absolute;
+    right: 8px;
+    top: 58px;
+    width: 132px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    background: rgba(10, 14, 20, 0.66);
+    backdrop-filter: blur(3px);
+    color: #fff;
+    font-size: 11px;
+    line-height: 1.5;
+    pointer-events: none;
+  }
+  .field-score h3 {
+    margin: 0 0 2px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #fde047;
+  }
+  .field-score ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .field-score li {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+  }
+  .field-score li.mine {
+    color: #fde047;
+  }
+  .field-score .rank {
+    width: 10px;
+    opacity: 0.7;
+    font-variant-numeric: tabular-nums;
+  }
+  .field-score .name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .field-score b {
+    font-variant-numeric: tabular-nums;
+  }
+  .field-score p {
+    margin: 0;
+    opacity: 0.75;
+  }
+  .field-log:empty {
+    display: none;
   }
   .field-log li {
     overflow: hidden;
@@ -532,6 +655,11 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
+    gap: 8px;
+  }
+  /* 개인기 · 태클 · 슛은 한 줄로 둔다(오른손 엄지가 닿는 자리). */
+  .field-play {
+    display: flex;
     gap: 8px;
   }
   .field-btn {

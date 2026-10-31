@@ -62,8 +62,10 @@ export const chat: Translation<ChatMsgs> = {
   viewField: '球場',
   viewChat: '聊天',
   fieldLabel:
-    '交誼廳球場。用方向鍵或 WASD 移動，按空白鍵踢球。按 V 切換視角，Q、E 旋轉，+、- 縮放。',
+    '交誼廳球場。用方向鍵或 WASD 移動，按空白鍵踢球，F 鏟球，R 花式動作。按 V 切換視角，Q、E 旋轉，+、- 縮放。',
   kick: '踢球',
+  tackle: '鏟球',
+  trick: '花式動作',
   emotes: '表情',
   emote_wave: '揮手',
   emote_thumbs: '讚',
@@ -73,7 +75,7 @@ export const chat: Translation<ChatMsgs> = {
   emote_heart: '愛心',
   chatInput: '聊天輸入框',
   spectating: '正在觀看。登入後就能進入球場。',
-  goal: '進球！',
+  goal: 'GOAL!',
   camera: '切換視角',
   camera_quarter: '斜角視角',
   camera_broadcast: '轉播畫面',
@@ -85,4 +87,7 @@ export const chat: Translation<ChatMsgs> = {
   rotateRight: '向右旋轉',
   zoomIn: '放大',
   zoomOut: '縮小',
+  scoreTitle: '今日進球',
+  scoreEmpty: '還沒有進球',
+  scoreN: (p: { n: number }) => `${p.n}球`,
 };

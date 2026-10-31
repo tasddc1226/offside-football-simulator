@@ -4,8 +4,8 @@
 
 export const EMOTES = ['wave', 'thumbs', 'laugh', 'fire', 'ball', 'heart'] as const;
 export type EmoteKey = (typeof EMOTES)[number];
-/** 이모트 버튼 · 공 차기 버튼에만 쓰는 아이콘. */
-export type IconKey = EmoteKey | 'smile';
+/** 이모트 버튼 · 공 차기 · 태클 · 개인기 버튼에만 쓰는 아이콘. */
+export type IconKey = EmoteKey | 'smile' | 'tackle' | 'trick';
 
 const INK = '#1d1d22';
 const SKIN = '#f6c28b';
@@ -172,6 +172,32 @@ const DRAW: Record<IconKey, (ctx: Ctx) => void> = {
       'M6.4 9.4a2.2 2.2 0 0 1 2.4-2.2c.5 0 .6.6.1.8-.9.4-1.4 1-1.6 1.8-.2.6-.9.4-.9-.4z',
       'rgba(255,255,255,0.75)',
     );
+  },
+  tackle(ctx) {
+    // 미끄러져 들어가는 축구화와 속도선 · 튀는 잔디.
+    line(ctx, 'M1.5 9.5h5M2.5 13h4.5M1.5 16.5h3', 1.6, '#ffffff');
+    const boot = new Path2D('M8 9.5h4.2l1.6 2.6h4.4c2.2 0 3.6 1.4 3.6 3.2v1.2H8z');
+    solid(ctx, boot, '#ffffff');
+    const sole = new Path2D();
+    sole.roundRect(7.4, 16.5, 15, 2.6, 1.3);
+    solid(ctx, sole, '#9ca3af');
+    fill(ctx, 'M9 13.4h3.6l1.6-1.3h2.4l-2.6 2.6H9z', RED);
+    for (const [x, y] of [
+      [6.2, 20.4],
+      [9.6, 21.2],
+      [13.2, 20.6],
+    ])
+      fill(ctx, `M${x} ${y}m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0`, '#7bd88f');
+  },
+  trick(ctx) {
+    // 머리 위로 넘기는 공(레인보우 플릭)과 점선 궤적 · 화살표.
+    ctx.setLineDash([2, 2.2]);
+    line(ctx, 'M3.5 20.5C4 9 20 9 20.5 18.5', 1.7, '#ffffff');
+    ctx.setLineDash([]);
+    line(ctx, 'M18 16.4l2.5 2.3 2-2.8', 1.7, '#ffffff');
+    const b = circle(12, 8.5, 5);
+    solid(ctx, b, '#ffffff');
+    fill(ctx, 'M12 6.2l2.1 1.5-.8 2.5h-2.6l-.8-2.5z', INK);
   },
   smile(ctx) {
     face(ctx);

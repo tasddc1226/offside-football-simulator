@@ -1,4 +1,4 @@
-// T-11-600 라운지 필드 경기장 — 빨간 계단식 관중석 · 좌석 글자 · 캔틸레버 지붕 · 조명 · LED 광고판 · 벤치.
+// T-11-600 라운지 필드 경기장 — 빨간 계단식 관중석 · 좌석 글자 · 캔틸레버 지붕 · 조명 · LED 광고판.
 // 카메라에서 먼 쪽(화면 위)은 높은 관중석, 카메라 쪽(화면 아래)은 선수가 가려지지 않게 낮은 몇 줄만 둔다.
 // 카메라를 돌리면 어느 변이 먼 쪽인지가 바뀌므로 그릴 때마다 정한다.
 import {
@@ -425,79 +425,7 @@ function nearStand(
   quad(ctx, v, f, band(span, back, back + 0.2, top), CONCRETE_DARK);
 }
 
-/** 벤치(먼 쪽 하프라인 양옆): 뒷벽 · 빨간 좌석 · 투명 지붕. */
-function dugout(ctx: CanvasRenderingContext2D, v: View, x0: number, x1: number) {
-  const f = SIDES[0]!.frame;
-  // 먼 긴 변(y=0 쪽) 좌표계의 d는 경기장 반대쪽이라, 걸어 다니는 여백 안쪽은 음수 d다.
-  const back = -0.25;
-  const front = -1.5;
-  const H = 1.3;
-  quad(
-    ctx,
-    v,
-    f,
-    [
-      [x0, back, 0],
-      [x1, back, 0],
-      [x1, back, H],
-      [x0, back, H],
-    ],
-    '#1f2937',
-  );
-  quad(
-    ctx,
-    v,
-    f,
-    [
-      [x0, back - 0.1, 0.45],
-      [x1, back - 0.1, 0.45],
-      [x1, back - 0.55, 0.45],
-      [x0, back - 0.55, 0.45],
-    ],
-    SEAT,
-  );
-  quad(
-    ctx,
-    v,
-    f,
-    [
-      [x0, back - 0.55, 0],
-      [x1, back - 0.55, 0],
-      [x1, back - 0.55, 0.45],
-      [x0, back - 0.55, 0.45],
-    ],
-    SEAT_DARK,
-  );
-  for (const x of [x0, x1])
-    quad(
-      ctx,
-      v,
-      f,
-      [
-        [x, back, 0],
-        [x, front, 0],
-        [x, front, H * 0.8],
-        [x, back, H],
-      ],
-      'rgba(200,225,255,0.25)',
-      'rgba(255,255,255,0.5)',
-    );
-  quad(
-    ctx,
-    v,
-    f,
-    [
-      [x0, back, H],
-      [x1, back, H],
-      [x1, front, H * 0.8],
-      [x0, front, H * 0.8],
-    ],
-    'rgba(200,225,255,0.32)',
-    'rgba(255,255,255,0.6)',
-  );
-}
-
-/** 관중석 네 변과 벤치를 먼 것부터 그린다. 경기장 잔디 다음, 선수보다 먼저 부른다. */
+/** 관중석 네 변을 먼 것부터 그린다. 경기장 잔디 다음, 선수보다 먼저 부른다. */
 export function drawStands(ctx: CanvasRenderingContext2D, v: View, now: number, cheer: boolean) {
   // 카메라 쪽 방향(월드) — 깊이 축의 기울기.
   const tx = Math.sin(v.rot);
@@ -537,16 +465,6 @@ export function drawStands(ctx: CanvasRenderingContext2D, v: View, now: number, 
           : nearStand(ctx, v, f, span, now, cheer, side.seed),
     };
   });
-  items.push(
-    {
-      d: depthOf(v, PITCH_L / 2 - 4.5, -APRON + 1),
-      draw: () => dugout(ctx, v, PITCH_L / 2 - 6.5, PITCH_L / 2 - 2.5),
-    },
-    {
-      d: depthOf(v, PITCH_L / 2 + 4.5, -APRON + 1),
-      draw: () => dugout(ctx, v, PITCH_L / 2 + 2.5, PITCH_L / 2 + 6.5),
-    },
-  );
   items.sort((a, b) => a.d - b.d);
   for (const it of items) it.draw();
 }

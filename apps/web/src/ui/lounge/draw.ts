@@ -8,6 +8,7 @@ import {
   PITCH_L,
   PITCH_W,
   depthOf,
+  moveT,
   rotate,
   toScreen,
   tracePath,
@@ -184,7 +185,113 @@ function rrect(
   ctx.roundRect(x, y, w, h, r);
 }
 
-/** 꼬마 선수 한 명. 발밑이 (sx, sy)이고 s는 몸 크기(px). */
+const INK = '#1d1d22';
+type Part = [Path2D, string];
+
+/** 겹친 도형을 한 덩어리로: 테두리를 먼저 모두 긋고 그 위를 채운다(이모트와 같은 방식). */
+function layer(ctx: CanvasRenderingContext2D, parts: Part[], lw: number) {
+  ctx.lineWidth = lw * 2;
+  ctx.strokeStyle = INK;
+  for (const [p] of parts) ctx.stroke(p);
+  for (const [p, c] of parts) {
+    ctx.fillStyle = c;
+    ctx.fill(p);
+  }
+}
+function rr(x: number, y: number, w: number, h: number, r: number) {
+  const p = new Path2D();
+  p.roundRect(x, y, w, h, r);
+  return p;
+}
+function disc(x: number, y: number, rx: number, ry = rx) {
+  const p = new Path2D();
+  p.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  return p;
+}
+/** 밝은 색이면 참(등번호를 어둡게 쓸지 고른다). */
+function light(hex: string) {
+  const n = parseInt(hex.slice(1), 16);
+  return ((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114 > 160;
+}
+/** 아이디마다 정해지는 작은 수(머리 모양 · 등번호). */
+function idHash(id: string) {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+/** 머리카락. 앞모습은 바라보는 쪽(+x)으로 앞머리가 내려오고, 뒷모습은 뒤통수를 덮는다. */
+function hair(style: number, hy: number, hr: number, back: boolean): Path2D {
+  const p = new Path2D();
+  if (back) {
+    // 뒤통수는 목 바로 위까지 덮는다.
+    p.ellipse(0, hy - hr * 0.04, hr * 1.05, hr * 1.0, 0, Math.PI * 0.8, Math.PI * 2.2);
+    p.closePath();
+    if (style === 1)
+      for (let i = 0; i < 5; i++) {
+        const t = Math.PI * (1.1 + i * 0.2);
+        p.moveTo(Math.cos(t - 0.12) * hr, hy + Math.sin(t - 0.12) * hr);
+        p.lineTo(Math.cos(t) * hr * 1.3, hy + Math.sin(t) * hr * 1.3);
+        p.lineTo(Math.cos(t + 0.12) * hr, hy + Math.sin(t + 0.12) * hr);
+        p.closePath();
+      }
+    if (style === 2)
+      for (let i = 0; i < 7; i++) {
+        const t = Math.PI * (0.85 + (i / 6) * 1.3);
+        p.addPath(disc(Math.cos(t) * hr * 0.86, hy + Math.sin(t) * hr * 0.86, hr * 0.34));
+      }
+    if (style === 3) p.addPath(disc(0, hy - hr * 1.02, hr * 0.32));
+    if (style === 4) p.addPath(rr(-hr * 0.5, hy + hr * 0.2, hr, hr * 0.85, hr * 0.4));
+    return p;
+  }
+  switch (style) {
+    case 0: // 짧은 머리 + 옆으로 넘긴 앞머리.
+      p.moveTo(-hr * 1.04, hy + hr * 0.25);
+      p.ellipse(0, hy - hr * 0.08, hr * 1.04, hr * 0.98, 0, Math.PI * 0.94, Math.PI * 1.98);
+      p.quadraticCurveTo(hr * 0.7, hy - hr * 0.2, hr * 0.15, hy - hr * 0.42);
+      p.quadraticCurveTo(-hr * 0.35, hy - hr * 0.3, -hr * 0.55, hy + hr * 0.1);
+      p.closePath();
+      break;
+    case 1: // 삐죽 머리.
+      p.moveTo(-hr * 1.02, hy + hr * 0.2);
+      // 끝이 뒤(-x)로 살짝 눕는 뾰족 다발.
+      for (let i = 0; i <= 10; i++) {
+        const tip = i % 2 === 1;
+        const t = Math.PI * (1.0 + (i / 10) * 0.98 - (tip ? 0.05 : 0));
+        const r = tip ? hr * 1.3 : hr * 1.02;
+        p.lineTo(Math.cos(t) * r, hy - hr * 0.08 + Math.sin(t) * r);
+      }
+      p.lineTo(hr * 0.2, hy - hr * 0.42);
+      p.lineTo(-hr * 0.5, hy + hr * 0.05);
+      p.closePath();
+      break;
+    case 2: // 곱슬머리: 동그라미 여러 개.
+      for (let i = 0; i < 7; i++) {
+        const t = Math.PI * (0.95 + (i / 6) * 1.1);
+        p.addPath(
+          disc(Math.cos(t) * hr * 0.86, hy - hr * 0.1 + Math.sin(t) * hr * 0.86, hr * 0.36),
+        );
+      }
+      p.addPath(disc(0, hy - hr * 0.5, hr * 0.7, hr * 0.45));
+      break;
+    case 3: // 묶은 머리(정수리 똥머리).
+      p.addPath(disc(-hr * 0.15, hy - hr * 1.05, hr * 0.32));
+      p.moveTo(-hr * 1.04, hy + hr * 0.3);
+      p.ellipse(0, hy - hr * 0.08, hr * 1.04, hr * 0.98, 0, Math.PI * 0.94, Math.PI * 1.96);
+      p.quadraticCurveTo(hr * 0.4, hy - hr * 0.5, -hr * 0.45, hy + hr * 0.15);
+      p.closePath();
+      break;
+    default: // 긴 머리(뒤로 내려온다).
+      p.moveTo(-hr * 1.06, hy + hr * 0.95);
+      p.ellipse(0, hy - hr * 0.08, hr * 1.06, hr * 1.0, 0, Math.PI * 0.9, Math.PI * 1.98);
+      p.quadraticCurveTo(hr * 0.6, hy - hr * 0.3, -hr * 0.1, hy - hr * 0.38);
+      p.quadraticCurveTo(-hr * 0.5, hy + hr * 0.1, -hr * 0.55, hy + hr * 0.95);
+      p.closePath();
+  }
+  return p;
+}
+
+/** 꼬마 선수 한 명. 발밑이 (sx, sy)이고 s는 몸 크기(px). 머리 꼭대기는 발밑에서 약 2s 위다. */
 function player(
   ctx: CanvasRenderingContext2D,
   v: View,
@@ -193,102 +300,224 @@ function player(
   sy: number,
   s: number,
   mine: boolean,
+  now: number,
 ) {
+  const m = a.move;
+  const t = moveT(a, now);
+  const fallen = now < a.fallUntil;
+  // 넘어진 정도(0~1): 빠르게 쓰러졌다가 끝날 즈음 일어난다.
+  const fallLeft = (a.fallUntil - now) / 1100;
+  const down = fallen ? Math.min(1, (1 - fallLeft) * 6) * Math.min(1, fallLeft * 4) : 0;
+  // 마르세유 턴은 바라보는 쪽을 한 바퀴 돌린다.
+  let fx = a.fx;
+  let fy = a.fy;
+  if (m?.kind === 'spin') {
+    const ang = m.side * t * Math.PI * 2;
+    fx = m.dx * Math.cos(ang) - m.dy * Math.sin(ang);
+    fy = m.dx * Math.sin(ang) + m.dy * Math.cos(ang);
+  }
   // 화면에서 바라보는 쪽: 왼쪽이면 좌우를 뒤집고, 위쪽(먼 쪽)이면 뒷모습.
   // 1인칭이면 카메라 오른쪽 · 앞 방향에 견준다(앞을 보고 있으면 뒷모습).
   const cy = Math.cos(v.eye.yaw);
   const sy0 = Math.sin(v.eye.yaw);
-  const face = v.fp
-    ? { u: -a.fx * sy0 + a.fy * cy, d: -(a.fx * cy + a.fy * sy0) }
-    : rotate(v, a.fx, a.fy);
+  const face = v.fp ? { u: -fx * sy0 + fy * cy, d: -(fx * cy + fy * sy0) } : rotate(v, fx, fy);
   const flip = face.u < 0 ? -1 : 1;
-  const backView = face.d < -0.15 * Math.hypot(face.u, face.d);
-  const swing = Math.sin(a.step) * 0.09 * s;
-  const bob = a.step ? Math.abs(Math.cos(a.step)) * 0.04 * s : 0;
+  const back = face.d < -0.15 * Math.hypot(face.u, face.d);
+  let swing = Math.sin(a.step) * 0.09 * s;
+  let bob = a.step ? Math.abs(Math.cos(a.step)) * 0.05 * s : 0;
+  if (m?.kind === 'stepover' && t < 0.55) swing = Math.sin((t / 0.55) * Math.PI * 4) * 0.2 * s;
+  if (m?.kind === 'flick') {
+    bob += Math.sin(t * Math.PI) * 0.4 * s;
+    swing = -0.16 * s * Math.sin(t * Math.PI);
+  }
+  if (m?.kind === 'tackle') swing = 0.2 * s;
+  const lw = Math.min(1.6, Math.max(0.7, s * 0.035));
+  const k = a.kit;
+  const h = idHash(a.id);
 
   ctx.save();
   ctx.translate(sx, sy);
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
   if (mine) {
     ctx.beginPath();
-    ctx.ellipse(0, 0, 0.52 * s, 0.24 * s, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, 0.55 * s, 0.25 * s, 0, 0, Math.PI * 2);
     ctx.strokeStyle = '#fde047';
     ctx.lineWidth = Math.max(2, s * 0.06);
     ctx.stroke();
   }
   ctx.beginPath();
-  ctx.ellipse(0, 0, 0.4 * s, 0.17 * s, 0, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.ellipse(0, 0, 0.38 * s, 0.15 * s, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.fill();
   ctx.scale(flip, 1);
+  if (m?.kind === 'tackle') {
+    // 미끄러지며 뒤로 눕고, 뒤쪽에 잔디가 튄다.
+    const lean = Math.min(1, t * 4) * (1 - Math.max(0, t - 0.8) * 3);
+    for (let i = 0; i < 4; i++) {
+      const q = (t * 3 + i * 0.27) % 1;
+      ctx.fillStyle = `rgba(214, 236, 200, ${0.55 * (1 - q)})`;
+      ctx.beginPath();
+      ctx.arc(-(0.3 + q * 0.7) * s, -q * 0.35 * s, (0.06 + q * 0.08) * s, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.translate(0.15 * s * lean, 0);
+    ctx.rotate(-1.15 * lean);
+  } else if (fallen) {
+    // 태클에 걸려 뒤로 넘어졌다가 일어난다.
+    ctx.rotate(-1.4 * down);
+  }
   ctx.translate(0, -bob);
 
-  const k = a.kit;
-  // 다리(양말 · 축구화).
+  // 다리: 무릎 · 양말(윗단 줄) · 축구화.
+  const legs: Part[] = [];
+  const legTop: Part[] = [];
   for (const [lx, sw] of [
     [-0.11, swing],
     [0.11, -swing],
   ] as const) {
-    ctx.fillStyle = k.skin;
-    ctx.fillRect(lx * s - 0.06 * s + sw, -0.5 * s, 0.12 * s, 0.14 * s);
-    ctx.fillStyle = k.socks;
-    ctx.fillRect(lx * s - 0.065 * s + sw, -0.37 * s, 0.13 * s, 0.3 * s);
-    ctx.fillStyle = '#1f2937';
-    rrect(ctx, lx * s - 0.07 * s + sw, -0.09 * s, 0.17 * s, 0.09 * s, 0.03 * s);
-    ctx.fill();
+    const x = lx * s + sw;
+    legs.push([rr(x - 0.065 * s, -0.52 * s, 0.13 * s, 0.2 * s, 0.05 * s), k.skin]);
+    legs.push([rr(x - 0.07 * s, -0.36 * s, 0.14 * s, 0.3 * s, 0.04 * s), k.socks]);
+    legs.push([rr(x - 0.08 * s, -0.1 * s, 0.22 * s, 0.11 * s, 0.05 * s), '#20232b']);
+    legTop.push([rr(x - 0.07 * s, -0.33 * s, 0.14 * s, 0.035 * s, 0), shade(k.socks, 0.72)]);
+    legTop.push([
+      rr(x - 0.04 * s, -0.085 * s, 0.13 * s, 0.025 * s, 0.01 * s),
+      'rgba(255,255,255,0.35)',
+    ]);
   }
-  // 반바지.
-  ctx.fillStyle = k.shorts;
-  rrect(ctx, -0.25 * s, -0.68 * s, 0.5 * s, 0.22 * s, 0.05 * s);
-  ctx.fill();
-  // 팔(소매 + 손).
+  layer(ctx, legs, lw);
+  for (const [p, c] of legTop) {
+    ctx.fillStyle = c;
+    ctx.fill(p);
+  }
+
+  // 몸: 팔 · 반바지 · 상의를 한 덩어리로.
+  const torso = new Path2D();
+  torso.moveTo(-0.3 * s, -1.08 * s);
+  torso.quadraticCurveTo(-0.3 * s, -1.18 * s, -0.18 * s, -1.18 * s);
+  torso.lineTo(0.18 * s, -1.18 * s);
+  torso.quadraticCurveTo(0.3 * s, -1.18 * s, 0.3 * s, -1.08 * s);
+  torso.lineTo(0.25 * s, -0.66 * s);
+  torso.lineTo(-0.25 * s, -0.66 * s);
+  torso.closePath();
+  const body: Part[] = [];
   for (const [ax, sw] of [
     [-0.33, -swing],
     [0.33, swing],
   ] as const) {
-    ctx.fillStyle = k.sleeve;
-    rrect(ctx, ax * s - 0.07 * s, -1.12 * s + sw * 0.5, 0.14 * s, 0.22 * s, 0.05 * s);
-    ctx.fill();
-    ctx.fillStyle = k.skin;
+    const y = sw * 0.5;
+    body.push([disc(ax * s, -0.82 * s + y, 0.065 * s), k.skin]);
+    body.push([rr(ax * s - 0.075 * s, -1.14 * s + y, 0.15 * s, 0.26 * s, 0.06 * s), k.sleeve]);
+  }
+  body.push([rr(-0.26 * s, -0.72 * s, 0.52 * s, 0.24 * s, 0.06 * s), k.shorts]);
+  body.push([torso, k.body]);
+  layer(ctx, body, lw);
+  // 상의 그늘(뒤쪽 절반) · 깃 · 등번호.
+  ctx.save();
+  ctx.clip(torso);
+  ctx.fillStyle = 'rgba(0,0,0,0.14)';
+  ctx.fillRect(-0.32 * s, -1.2 * s, 0.2 * s, 0.6 * s);
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.fillRect(0.12 * s, -1.2 * s, 0.07 * s, 0.6 * s);
+  ctx.restore();
+  const trim = k.sleeve === k.body ? shade(k.body, 0.7) : k.sleeve;
+  if (back) {
+    if (s >= 14) {
+      ctx.font = `900 ${Math.round(0.3 * s)}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // 좌우를 뒤집어 그린 몸이라 숫자만 다시 뒤집어 바로 읽히게 한다.
+      ctx.save();
+      ctx.scale(flip, 1);
+      ctx.fillStyle = light(k.body) ? INK : '#ffffff';
+      ctx.globalAlpha = 0.9;
+      ctx.fillText(String((h % 23) + 1), 0, -0.9 * s);
+      ctx.restore();
+    }
+  } else {
+    ctx.fillStyle = trim;
     ctx.beginPath();
-    ctx.arc(ax * s, -0.84 * s + sw * 0.5, 0.06 * s, 0, Math.PI * 2);
+    ctx.moveTo(-0.02 * s, -1.18 * s);
+    ctx.lineTo(0.08 * s, -1.06 * s);
+    ctx.lineTo(0.18 * s, -1.18 * s);
+    ctx.closePath();
+    ctx.fill();
+    // 가슴 엠블럼.
+    ctx.fillStyle = trim;
+    ctx.beginPath();
+    ctx.arc(0.16 * s, -0.96 * s, 0.035 * s, 0, Math.PI * 2);
     ctx.fill();
   }
-  // 상의.
-  ctx.fillStyle = k.body;
-  rrect(ctx, -0.28 * s, -1.16 * s, 0.56 * s, 0.52 * s, 0.1 * s);
-  ctx.fill();
-  ctx.fillStyle = shade(k.body, 0.82);
-  ctx.fillRect(-0.28 * s, -0.72 * s, 0.56 * s, 0.06 * s);
-  // 머리.
+
+  // 머리: 귀 · 얼굴 · 머리카락.
   const hy = -1.56 * s;
   const hr = 0.4 * s;
-  ctx.fillStyle = k.skin;
-  ctx.beginPath();
-  ctx.arc(0, hy, hr, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = k.hair;
-  ctx.beginPath();
-  if (backView) ctx.arc(0, hy, hr * 1.02, Math.PI * 0.85, Math.PI * 2.15);
-  else ctx.arc(0, hy - hr * 0.12, hr * 1.02, Math.PI * 1.05, Math.PI * 1.95);
-  ctx.fill();
-  if (backView) {
-    ctx.beginPath();
-    ctx.arc(0, hy, hr, 0, Math.PI);
-    ctx.fill();
-  } else {
-    // 얼굴: 바라보는 쪽으로 살짝 치우친 눈.
-    ctx.fillStyle = '#111827';
-    for (const ex of [-0.12, 0.16]) {
+  const style = (h >>> 5) % 5;
+  const head: Part[] = [];
+  if (!back) head.push([disc(-hr * 0.78, hy + hr * 0.12, hr * 0.2, hr * 0.24), k.skin]);
+  head.push([disc(0, hy, hr * 1.02, hr * 0.96), k.skin]);
+  head.push([hair(style, hy, hr, back), k.hair]);
+  layer(ctx, head, lw);
+  if (!back) {
+    // 눈(하이라이트) · 눈썹 · 볼 · 입. 바라보는 쪽으로 살짝 치우친다.
+    for (const ex of [0.1, 0.48]) {
+      ctx.fillStyle = INK;
       ctx.beginPath();
-      ctx.ellipse(ex * s + 0.05 * s, hy + 0.04 * s, 0.035 * s, 0.055 * s, 0, 0, Math.PI * 2);
+      ctx.ellipse(ex * hr, hy + hr * 0.12, hr * 0.1, hr * 0.15, 0, 0, Math.PI * 2);
       ctx.fill();
+      if (s >= 12) {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(ex * hr + hr * 0.035, hy + hr * 0.06, hr * 0.04, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    if (s >= 12) {
+      ctx.strokeStyle = shade(k.hair, 0.9);
+      ctx.lineWidth = Math.max(0.8, hr * 0.07);
+      ctx.beginPath();
+      ctx.moveTo(0.0 * hr, hy - hr * 0.12);
+      ctx.lineTo(0.2 * hr, hy - hr * 0.15);
+      ctx.moveTo(0.38 * hr, hy - hr * 0.15);
+      ctx.lineTo(0.58 * hr, hy - hr * 0.12);
+      ctx.stroke();
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = Math.max(0.7, hr * 0.06);
+      ctx.beginPath();
+      ctx.arc(0.32 * hr, hy + hr * 0.36, hr * 0.12, Math.PI * 0.15, Math.PI * 0.85);
+      ctx.stroke();
     }
     ctx.fillStyle = 'rgba(244,114,114,0.45)';
     ctx.beginPath();
-    ctx.arc(0.26 * s, hy + 0.14 * s, 0.05 * s, 0, Math.PI * 2);
+    ctx.ellipse(0.7 * hr, hy + hr * 0.38, hr * 0.13, hr * 0.08, 0, 0, Math.PI * 2);
+    ctx.ellipse(-0.12 * hr, hy + hr * 0.38, hr * 0.13, hr * 0.08, 0, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.restore();
+  if (fallen && s >= 10) {
+    // 넘어진 머리 위로 별이 돈다.
+    const hx = sx - flip * Math.sin(1.4 * down) * 1.56 * s;
+    const hy0 = sy - Math.cos(1.4 * down) * 1.56 * s - 0.55 * s;
+    ctx.fillStyle = '#fde047';
+    for (let i = 0; i < 3; i++) {
+      const ang = now / 260 + (i * Math.PI * 2) / 3;
+      const x = hx + Math.cos(ang) * 0.35 * s;
+      const y = hy0 + Math.sin(ang) * 0.12 * s;
+      star(ctx, x, y, 0.09 * s);
+    }
+  }
+}
+
+function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const t = -Math.PI / 2 + (i * Math.PI) / 5;
+    const q = i % 2 ? r * 0.45 : r;
+    ctx.lineTo(x + Math.cos(t) * q, y + Math.sin(t) * q);
+  }
+  ctx.closePath();
+  ctx.fill();
 }
 
 function label(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, mine: boolean) {
@@ -400,7 +629,7 @@ export function drawWorld(
       d: depthOf(v, a.x, a.y),
       draw: () => {
         const p = toScreen(v, a.x, a.y);
-        if (p.ok) player(ctx, v, a, p.sx, p.sy, p.s * 1.25, a.id === mine);
+        if (p.ok) player(ctx, v, a, p.sx, p.sy, p.s * 1.25, a.id === mine, now);
       },
     });
   }
@@ -435,14 +664,35 @@ export function drawWorld(
     ctx.save();
     ctx.translate(v.w / 2, v.h * 0.32);
     ctx.scale(scale, scale);
-    ctx.font = '900 44px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.lineWidth = 8;
+    ctx.lineJoin = 'round';
+    // 넣은 사람(구단주명) 위에, GOAL 아래에. 관중석 글자 위에서도 읽히게 어두운 띠를 깐다.
+    const by = world.goal.by;
+    ctx.font = '900 52px system-ui, sans-serif';
+    let bw = ctx.measureText(goalText).width;
+    if (by) {
+      ctx.font = '800 20px system-ui, sans-serif';
+      bw = Math.max(bw, ctx.measureText(by).width);
+    }
+    const top = by ? -56 : -30;
+    ctx.fillStyle = 'rgba(10,14,20,0.62)';
+    ctx.beginPath();
+    ctx.roundRect(-bw / 2 - 22, top, bw + 44, 34 - top, 14);
+    ctx.fill();
     ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-    ctx.strokeText(goalText, 0, 0);
+    if (by) {
+      ctx.font = '800 20px system-ui, sans-serif';
+      ctx.lineWidth = 6;
+      ctx.strokeText(by, 0, -36);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(by, 0, -36);
+    }
+    ctx.font = '900 52px system-ui, sans-serif';
+    ctx.lineWidth = 9;
+    ctx.strokeText(goalText, 0, 4);
     ctx.fillStyle = '#fde047';
-    ctx.fillText(goalText, 0, 0);
+    ctx.fillText(goalText, 0, 4);
     ctx.restore();
   }
 }
