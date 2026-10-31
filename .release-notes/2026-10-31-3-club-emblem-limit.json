@@ -1,0 +1,20 @@
+{
+  "id": "t-11-599-club-emblem-limit",
+  "title": "새 리그 구단 엠블럼 저장",
+  "items": ["새 리그 구단에도 엠블럼 이미지를 저장할 수 있게 공간을 늘렸어요"],
+  "en": {
+    "title": "Emblems for new league clubs",
+    "items": [
+      "There is now more room to save emblem images, including for clubs in the new leagues."
+    ]
+  },
+  "ja": {
+    "title": "新リーグのクラブエンブレム保存",
+    "items": ["新リーグのクラブにもエンブレム画像を保存できるよう、保存容量を増やしました。"]
+  },
+  "zh": {
+    "title": "新聯賽球隊隊徽儲存",
+    "items": ["擴大了隊徽圖片的儲存空間，新聯賽的球隊也能儲存隊徽。"]
+  },
+  "availability": "web-app"
+}
