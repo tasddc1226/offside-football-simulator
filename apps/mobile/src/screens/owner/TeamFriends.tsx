@@ -22,6 +22,7 @@ import {
   canPreseasonFriendly,
   friendCodeLabel,
   friendInviteText,
+  friendProfileTeam,
   friendRequestText,
   friendRequestToast,
   h2hText,
@@ -32,7 +33,9 @@ import { friendText as L } from '@offside/app-core/i18n/ko/friend';
 import { teamHomeText as LH } from '@offside/app-core/i18n/ko/teamHome';
 import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import { useSnapshot } from 'valtio';
+import { hofStart } from '@offside/app-core/state';
 import { appState } from '../../store';
+import { go } from '../../game/nav';
 import { checkPushOffer, pushOffer } from '../../platform/pushOffer';
 import { pushState } from '../../platform/push';
 import { acceptPushAsk, laterPushAsk, trackPushAskView } from '../../platform/pushAsk';
@@ -42,12 +45,14 @@ import { toast } from '../../game/host';
 import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
-import { Btn, Card, Pill, Txt } from '../../ui';
+import { Btn, Card, Pill, Press, Txt } from '../../ui';
 import { TextField } from '../settings/parts';
 import { MatchRow } from './TeamHistory';
 import { Seg, SegBtn } from './TeamParts';
 
 export type OppTab = 'ranked' | 'friends';
+/** T-11-601 마지막으로 고른 칸 — 친구 프로필에 다녀오면(팀 화면이 새로 그려져도) 친구 칸으로 돌아온다. */
+export const oppTabMemory: { tab: OppTab } = { tab: 'ranked' };
 
 /** '경기' 탭 맨 위 두 칸 고르기. */
 export function OppSwitch({
@@ -286,7 +291,31 @@ function Row({ children }: { children: ReactNode }) {
   );
 }
 
-function Who({ f, h2h = false }: { f: FriendPerson; h2h?: boolean }) {
+/** T-11-601 친구 줄 — 누르면 기록실의 그 친구 구단주 프로필을 연다(뒤로 가면 이 친구 칸). 팀을 만든 적 없으면 누를 수 없다. */
+function FriendWho({ f }: { f: FriendPerson }) {
+  const teamId = friendProfileTeam(f);
+  if (!teamId)
+    return (
+      <View testID={`friend-${f.code}`}>
+        <Who f={f} h2h />
+      </View>
+    );
+  return (
+    <Press
+      scale={0.985}
+      testID={`friend-${f.code}`}
+      accessibilityLabel={L.profileAria({ name: f.name })}
+      onPress={() => {
+        appState.hof = { ...hofStart(), tab: 'teams', team: teamId, owner: true };
+        go('hof');
+      }}
+    >
+      <Who f={f} h2h more />
+    </Press>
+  );
+}
+
+function Who({ f, h2h = false, more = false }: { f: FriendPerson; h2h?: boolean; more?: boolean }) {
   const record = h2h ? h2hText(f.h2h) : null;
   const preseasonLine = h2h ? preseasonTeamLine(f) : null;
   return (
@@ -317,6 +346,11 @@ function Who({ f, h2h = false }: { f: FriendPerson; h2h?: boolean }) {
           </Txt>
         ) : null}
       </View>
+      {more ? (
+        <Txt tone="muted" importantForAccessibility="no">
+          ›
+        </Txt>
+      ) : null}
     </View>
   );
 }
@@ -510,9 +544,7 @@ export function TeamFriends({
             {data.friends.length ? (
               data.friends.map((f) => (
                 <Row key={f.code}>
-                  <View testID={`friend-${f.code}`}>
-                    <Who f={f} h2h />
-                  </View>
+                  <FriendWho f={f} />
                   <View style={buttons}>
                     <Btn
                       sm

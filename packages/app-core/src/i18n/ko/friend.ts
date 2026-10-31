@@ -53,6 +53,7 @@ const ko = {
   codeCopyFail: '코드를 복사하지 못했어요',
   // 앱 접근성 이름
   acceptAria: (p: { name: string }) => `${p.name} 신청 수락`,
+  profileAria: (p: { name: string }) => `${p.name} 구단주 프로필 보기`,
   rejectAria: (p: { name: string }) => `${p.name} 신청 거절`,
   playAria: (p: { name: string }) => `${p.name} 님과 친선전`,
   removeAria: (p: { name: string }) => `${p.name} 님과 친구 끊기`,

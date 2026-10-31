@@ -1527,6 +1527,55 @@ test('친구 — 코드로 신청하고 받은 신청을 수락하고 친선전�
   await expect(panel.locator('[data-friendly-match="fmt_1"]')).toContainText('친선전 · 친구 감독');
 });
 
+test('T-11-601 친구 줄을 누르면 그 구단주 프로필을 열고, 뒤로 가면 친구 칸으로 돌아온다', async ({
+  page,
+}) => {
+  await stubOwner(page, true);
+  await page.route(ownerTeamUrl, (route) => route.fulfill(ownerTeam()));
+  await page.route(`${API}/v1/owner-team/opponents`, (route) => route.fulfill(ok({ items: [] })));
+  await page.route(`${API}/v1/friends`, (route) =>
+    route.fulfill(
+      ok(
+        friendsBody({
+          friends: [
+            // 이번 시즌 팀이 없어도 지난 시즌 팀으로 프로필을 연다.
+            person('FRND2345', '친구 감독', { profileTeamId: 'team_s1' }),
+            person('NOTM2345', '새 구단주', { profileTeamId: null }),
+          ],
+        }),
+      ),
+    ),
+  );
+  const opened: string[] = [];
+  await page.route(`${API}/v1/owners/by-team/*`, (route) => {
+    opened.push(new URL(route.request().url()).pathname);
+    return route.fulfill({ status: 404, body: '{}' });
+  });
+
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await page.locator('[data-team-tab="opponents"]').click();
+  await page.locator('[data-match-mode="friends"]').click();
+  const panel = page.locator('[data-friends]');
+  // 팀을 만든 적 없는 친구는 누를 수 없다.
+  await expect(panel.locator('[data-friend="NOTM2345"]')).toContainText('새 구단주');
+  await expect(panel.locator('[data-friend="NOTM2345"] [data-act="friend-profile"]')).toHaveCount(
+    0,
+  );
+  await expectNoA11yViolations(page);
+
+  await panel
+    .locator('[data-friend="FRND2345"]')
+    .getByRole('button', { name: '친구 감독 구단주 프로필 보기' })
+    .click();
+  await expect.poll(() => opened).toEqual(['/v1/owners/by-team/team_s1']);
+  await expect(panel).toHaveCount(0);
+
+  await page.goBack();
+  await expect(panel.locator('[data-friend="FRND2345"]')).toBeVisible();
+});
+
 test('친구 초대 링크로 들어오면 친구 화면에서 그 구단주에게 신청한다', async ({ page }) => {
   await stubOwner(page, true);
   await page.route(ownerTeamUrl, (route) => route.fulfill(ownerTeam()));
