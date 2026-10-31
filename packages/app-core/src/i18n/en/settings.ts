@@ -69,6 +69,7 @@ export const settings: Translation<SettingsMsgs> = {
   consentDenied: 'Declined',
   consentUnset: 'Not chosen yet',
   consentAgree: 'Agree to analytics',
+  consentDefaultNote: 'In your region these start on. Uncheck them and save to turn them off.',
   consentRevokeNote:
     "If you withdraw, collection stops and this browser's analytics cookies and records are cleared. Data already sent is not deleted automatically.",
   reviewTitle: 'Store review',

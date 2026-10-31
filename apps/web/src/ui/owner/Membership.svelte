@@ -1,6 +1,6 @@
 <script lang="ts">
   // T-11-512 클럽 멤버십(내 구단 화면 '클럽 멤버십' 칸으로 연다). 열 때 한 번 상태(1분 메모)를 받는다. 혜택과 지금 상태를
-  // 보이고, 받은 혜택 끝은 이 브라우저에 남겨 그때까지 웹 광고를 끈다. T-11-591부터 웹 결제가 열린 구단주는 자동 갱신 없는
+  // 보인다. T-11-591부터 웹 결제가 열린 구단주는 자동 갱신 없는
   // 기간권을 웹에서 산다(엑솔라). 앱 구독 중이면 사지 않게 버튼을 숨긴다.
   import PopSheet from '../PopSheet.svelte';
   import Skeleton from '../Skeleton.svelte';
@@ -9,7 +9,6 @@
   import { needsOwnerLogin } from '@offside/app-core/market';
   import { memberPerks, memberStatusText } from '@offside/app-core/membership-view';
   import { membershipText as L } from '@offside/app-core/i18n/ko/membership';
-  import { rememberMember } from '../../ads/ads';
   import { hasSessionHint } from '@offside/app-core/api/client';
   import { loadWebPay, startWebPay, webPay } from '../cup/webPay.svelte.js';
 
@@ -26,7 +25,6 @@
       return;
     }
     m = r.data;
-    rememberMember(r.data.active ? r.data.until : null);
   }
   void load();
   if (hasSessionHint()) void loadWebPay();

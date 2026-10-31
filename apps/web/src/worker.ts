@@ -1,4 +1,5 @@
 import { withCampaignBanner } from './app-banner.js';
+import { consentRegion, consentRegionCookie } from './consent-region.js';
 import { storeRedirect } from './store-redirect.js';
 import { serveNews, newsSitemap } from './public-news.js';
 import {
@@ -113,6 +114,15 @@ function withPreconnect(response: Response, url: URL): Response {
   return result;
 }
 
+// T-11-597 HTML 응답에 접속 나라로 정한 동의 지역 쿠키를 붙인다(화면이 동의 창을 띄울지 정한다).
+function withConsentRegion(response: Response, request: Request): Response {
+  if (!response.headers.get('Content-Type')?.startsWith('text/html')) return response;
+  const country = (request as { cf?: { country?: unknown } }).cf?.country;
+  const result = new Response(response.body, response);
+  result.headers.append('Set-Cookie', consentRegionCookie(consentRegion(country)));
+  return result;
+}
+
 function withCacheControl(response: Response, value: string): Response {
   const result = withRobots(response, 'noindex, nofollow');
   result.headers.set('Cache-Control', value);
@@ -123,9 +133,16 @@ export default {
   async fetch(request: Request, env: Env, ctx: Ctx): Promise<Response> {
     const url = new URL(request.url);
     if (OG_CARD_PATH.test(url.pathname)) return careerCard(request, env, ctx);
-    return withPreconnect(
-      await withCampaignBanner(await route(request, env, url, ctx), url, env.APPLE_PROVIDER_TOKEN),
-      url,
+    return withConsentRegion(
+      withPreconnect(
+        await withCampaignBanner(
+          await route(request, env, url, ctx),
+          url,
+          env.APPLE_PROVIDER_TOKEN,
+        ),
+        url,
+      ),
+      request,
     );
   },
 };
