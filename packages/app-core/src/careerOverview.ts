@@ -32,7 +32,8 @@ export function careerCalendar(s: GameState) {
 export function careerScoring(s: GameState, key: 'goals' | 'assists') {
   const rows = scoringTable(s);
   if (!rows) return null;
-  const sorted = rows.toSorted(
+  // Store app Hermes does not provide Array.prototype.toSorted.
+  const sorted = [...rows].sort(
     (a, b) => b[key] - a[key] || Number(b.me) - Number(a.me) || a.id.localeCompare(b.id),
   );
   const shown = sorted.slice(0, 5);
