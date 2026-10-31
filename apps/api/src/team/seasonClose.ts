@@ -364,7 +364,8 @@ async function closeSpecials(db: Db, season: number, cutoff: string, now: string
       SELECT id, ?1, ?2, row_number() OVER (ORDER BY ${order}), ?3, ?4
       FROM (
         SELECT c.id AS id, c.legend_score AS ls, c.retired_at AS ra, ${value} AS v
-        FROM careers c JOIN profiles p ON p.id = c.profile_id
+        FROM careers c ${value === 'c.legend_score' ? 'INDEXED BY careers_hof_season_score_order_idx' : ''}
+        JOIN profiles p ON p.id = c.profile_id
         WHERE c.status = 'retired' AND c.hidden = 0 AND c.service_season = ?1
           AND c.legend_score IS NOT NULL AND c.retire_age >= ?5 AND c.retired_at <= ?6
           AND ${LINKED_SQL} AND ${where}
