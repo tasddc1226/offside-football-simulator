@@ -8,6 +8,7 @@ import {
 } from '@offside/app-core/api/client';
 import { CONSENT_KEY } from '@offside/app-core/analytics-model';
 import { entryCampaign as landing } from './entry-campaign.js';
+import { consentByDefault } from '../consent-region.js';
 import {
   clearOAuthCampaign,
   oauthMeasurementAllowed,
@@ -168,8 +169,21 @@ export async function acquisitionStatus(): Promise<'granted' | 'denied' | 'unkno
       granted = false;
       return 'unknown';
     }
-    const state = (await response.json()) as { profileId: string; granted: boolean };
+    const state = (await response.json()) as {
+      profileId: string;
+      granted: boolean;
+      revision: string | null;
+    };
     if (generation !== epoch || !analyticsAllowed()) return 'denied';
+    // T-11-597 알린 뒤 기본으로 켜는 지역에서 이 프로필이 한 번도 고른 적이 없으면(서버 기록 없음) 켠다.
+    // 철회한 프로필은 서버에 철회 표식(revision)이 남아 있어 다시 켜지 않는다.
+    if (
+      !state.granted &&
+      state.revision === null &&
+      consentByDefault() &&
+      localStorage.getItem(CHOICE_KEY) === null
+    )
+      return (await setAcquisitionConsent('granted')) ? 'granted' : 'unknown';
     checkContinuation(state.profileId);
     if (profileId && profileId !== state.profileId) sessionStorage.removeItem(SESSION_KEY);
     profileId = state.profileId;
