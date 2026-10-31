@@ -9,6 +9,7 @@ import {
   type ChatRejectCode,
 } from '@offside/app-core/api/chat';
 import { createChatUnread } from '@offside/app-core/chatUnread';
+import type { FieldClientEvent, FieldServerEvent } from '@offside/contracts/lounge-field';
 
 export const chatState = $state<{ view: ChatView; unread: number; room: ChatRoomKey }>({
   view: EMPTY_CHAT,
@@ -19,6 +20,8 @@ let tracker: ReturnType<typeof createChatUnread> | null = null;
 let session: ChatSession | null = null;
 const listeners = new Set<(view: ChatView) => void>();
 const rejectListeners = new Set<(code: ChatRejectCode, restore: string | null) => void>();
+/** T-11-600 라운지 필드 이벤트를 받는 쪽(필드 화면이 열려 있을 때만). */
+const fieldListeners = new Set<(e: FieldServerEvent) => void>();
 
 function unreadTracker() {
   if (!tracker) {
@@ -39,7 +42,11 @@ export function markChatRead() {
   chatState.unread = 0;
 }
 
+/** T-11-600 필드 화면이 열려 있는지(방을 옮기거나 다시 붙어 새 세션이 생겨도 다시 연다). */
+let fieldWanted = false;
+
 export function chatSession() {
+  const fresh = !session;
   if (!session) {
     // T-11-583 새로 붙을 때마다 방을 다시 고른다(화면 언어를 바꿨으면 그 언어 방).
     const room = currentChatRoom();
@@ -57,7 +64,11 @@ export function chatSession() {
       for (const listener of rejectListeners) listener(code, restore);
     },
     chatState.room,
+    (e) => {
+      for (const listener of fieldListeners) listener(e);
+    },
   );
+  if (fresh && fieldWanted) session.field({ t: 'field', on: true });
   return session;
 }
 
@@ -118,4 +129,16 @@ export function listenChat(
     listeners.delete(change);
     rejectListeners.delete(reject);
   };
+}
+
+/** T-11-600 라운지 필드 이벤트를 받는다. 돌려준 함수로 그만 받는다. */
+export function listenField(h: (e: FieldServerEvent) => void) {
+  fieldListeners.add(h);
+  return () => void fieldListeners.delete(h);
+}
+
+/** T-11-600 라운지 필드 이벤트를 보낸다. 소켓이 열려 있지 않으면 false. */
+export function sendField(e: FieldClientEvent) {
+  if (e.t === 'field') fieldWanted = e.on;
+  return session?.field(e) ?? false;
 }

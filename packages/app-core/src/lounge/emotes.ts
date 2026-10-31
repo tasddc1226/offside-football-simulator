@@ -1,6 +1,7 @@
 // T-11-600 라운지 필드 이모트 — 기기마다 모양이 다른 시스템 이모지 대신 직접 그린 그림을 쓴다.
 // 그림은 24×24 칸 기준이고, 필드 캔버스와 버튼 아이콘(EmoteIcon)이 같은 함수로 그린다.
 // 굵은 테두리는 "테두리를 두 배 굵기로 먼저 긋고 그 위를 채우기" 순서로 그려 겹친 도형 안쪽 선이 보이지 않게 한다.
+import { path, type Ctx2D, type Path } from './canvas.js';
 
 export const EMOTES = ['wave', 'thumbs', 'laugh', 'fire', 'ball', 'heart'] as const;
 export type EmoteKey = (typeof EMOTES)[number];
@@ -12,10 +13,10 @@ const SKIN = '#f6c28b';
 const YELLOW = '#ffd23f';
 const RED = '#c8102e';
 
-type Ctx = CanvasRenderingContext2D;
+type Ctx = Ctx2D;
 
 /** 바깥 테두리만 남기고 채운다. */
-function solid(ctx: Ctx, path: Path2D, fill: string) {
+function solid(ctx: Ctx, path: Path, fill: string) {
   ctx.lineWidth = 3.2;
   ctx.strokeStyle = INK;
   ctx.stroke(path);
@@ -25,14 +26,14 @@ function solid(ctx: Ctx, path: Path2D, fill: string) {
 function line(ctx: Ctx, d: string, width = 1.6, color = INK) {
   ctx.lineWidth = width;
   ctx.strokeStyle = color;
-  ctx.stroke(new Path2D(d));
+  ctx.stroke(path(d));
 }
 function fill(ctx: Ctx, d: string, color: string) {
   ctx.fillStyle = color;
-  ctx.fill(new Path2D(d));
+  ctx.fill(path(d));
 }
 function circle(cx: number, cy: number, r: number) {
-  const p = new Path2D();
+  const p = path();
   p.arc(cx, cy, r, 0, Math.PI * 2);
   return p;
 }
@@ -58,13 +59,13 @@ const DRAW: Record<IconKey, (ctx: Ctx) => void> = {
     ctx.translate(13, 13);
     ctx.rotate(-0.28);
     ctx.translate(-13, -13);
-    const hand = new Path2D();
+    const hand = path();
     hand.roundRect(7.6, 3.6, 3, 10, 1.5);
     hand.roundRect(10.6, 2.4, 3, 11, 1.5);
     hand.roundRect(13.6, 3, 3, 10.5, 1.5);
     hand.roundRect(16.6, 5, 2.8, 9, 1.4);
     hand.roundRect(7.4, 10, 12, 11, 4.2);
-    const thumb = new Path2D();
+    const thumb = path();
     thumb.roundRect(3.6, 12.2, 7, 3, 1.5);
     solid(ctx, thumb, SKIN);
     solid(ctx, hand, SKIN);
@@ -72,10 +73,10 @@ const DRAW: Record<IconKey, (ctx: Ctx) => void> = {
     ctx.restore();
   },
   thumbs(ctx) {
-    const hand = new Path2D();
+    const hand = path();
     hand.roundRect(9.6, 2.6, 3.8, 10, 1.9);
     hand.roundRect(8, 10, 10.4, 10, 2.6);
-    const cuff = new Path2D();
+    const cuff = path();
     cuff.roundRect(3.4, 10.4, 5, 10.2, 1.2);
     solid(ctx, cuff, RED);
     solid(ctx, hand, SKIN);
@@ -86,7 +87,7 @@ const DRAW: Record<IconKey, (ctx: Ctx) => void> = {
     face(ctx);
     // 질끈 감은 눈 · 활짝 벌린 입 · 양옆 눈물.
     line(ctx, 'M6.8 9.6l2.4 1.2-2.4 1.2M17.2 9.6l-2.4 1.2 2.4 1.2', 1.5);
-    const mouth = new Path2D('M6.6 13.4h10.8a5.4 5.4 0 0 1-10.8 0z');
+    const mouth = path('M6.6 13.4h10.8a5.4 5.4 0 0 1-10.8 0z');
     solid(ctx, mouth, '#7a1f2b');
     ctx.save();
     ctx.clip(mouth);
@@ -96,7 +97,7 @@ const DRAW: Record<IconKey, (ctx: Ctx) => void> = {
     ctx.fillRect(6.6, 13.4, 10.8, 1.4);
     ctx.restore();
     for (const s of [-1, 1]) {
-      const tear = new Path2D(
+      const tear = path(
         `M${12 + s * 8.6} 10.2c${s * 1.6} 1.7 ${s * 2.4} 3 ${s * 2.4} 4.1a2.4 2.4 0 0 1-4.8 0c0-1.1.8-2.4 2.4-4.1z`,
       );
       ctx.lineWidth = 1.2;
@@ -109,7 +110,7 @@ const DRAW: Record<IconKey, (ctx: Ctx) => void> = {
   fire(ctx) {
     solid(
       ctx,
-      new Path2D(
+      path(
         'M12 1.8c1.2 3.6 6.4 5.8 6.4 12a6.4 6.4 0 0 1-12.8 0c0-2.8 1.3-4.6 2.9-5.9.2 1.9 1.1 3 2.2 3.6-.7-3.8.2-6.8 1.3-9.7z',
       ),
       '#ff5a1f',
@@ -131,7 +132,7 @@ const DRAW: Record<IconKey, (ctx: Ctx) => void> = {
     ctx.save();
     ctx.clip(ball);
     const pent = (cx: number, cy: number, r: number, rot: number) => {
-      const p = new Path2D();
+      const p = path();
       for (let i = 0; i < 5; i++) {
         const t = rot + (i * Math.PI * 2) / 5;
         if (i) p.lineTo(cx + Math.cos(t) * r, cy + Math.sin(t) * r);
@@ -162,7 +163,7 @@ const DRAW: Record<IconKey, (ctx: Ctx) => void> = {
   heart(ctx) {
     solid(
       ctx,
-      new Path2D(
+      path(
         'M12 20.6S3.4 15.2 3.4 9.2A4.7 4.7 0 0 1 12 6.6a4.7 4.7 0 0 1 8.6 2.6c0 6-8.6 11.4-8.6 11.4z',
       ),
       '#ff3b5c',
@@ -176,9 +177,9 @@ const DRAW: Record<IconKey, (ctx: Ctx) => void> = {
   tackle(ctx) {
     // 미끄러져 들어가는 축구화와 속도선 · 튀는 잔디.
     line(ctx, 'M1.5 9.5h5M2.5 13h4.5M1.5 16.5h3', 1.6, '#ffffff');
-    const boot = new Path2D('M8 9.5h4.2l1.6 2.6h4.4c2.2 0 3.6 1.4 3.6 3.2v1.2H8z');
+    const boot = path('M8 9.5h4.2l1.6 2.6h4.4c2.2 0 3.6 1.4 3.6 3.2v1.2H8z');
     solid(ctx, boot, '#ffffff');
-    const sole = new Path2D();
+    const sole = path();
     sole.roundRect(7.4, 16.5, 15, 2.6, 1.3);
     solid(ctx, sole, '#9ca3af');
     fill(ctx, 'M9 13.4h3.6l1.6-1.3h2.4l-2.6 2.6H9z', RED);

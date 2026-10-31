@@ -1,4 +1,5 @@
 // T-11-600 라운지 필드 그리기 — 캔버스 2D로 경기장 · 꼬마 선수 · 공 · 말풍선을 그린다. 그림 파일 없이 도형으로만 그린다.
+import { path, type Ctx2D, type Path } from './canvas.js';
 import { drawEmote } from './emotes.js';
 import { drawSky, drawStands } from './stadium.js';
 import {
@@ -34,7 +35,7 @@ const rect = (x0: number, y0: number, x1: number, y1: number): [number, number][
 /** 선 굵기(미터)를 화면 px로 — 1인칭이면 가까운 쪽 기준으로 어림한다. */
 const lineW = (v: View, m: number) => Math.max(1.5, (v.fp ? 40 : v.k) * m);
 
-function pitch(ctx: CanvasRenderingContext2D, v: View) {
+function pitch(ctx: Ctx2D, v: View) {
   drawSky(ctx, v);
   if (tracePath(ctx, v, flat(rect(-APRON, -APRON, PITCH_L + APRON, PITCH_W + APRON)))) {
     ctx.fillStyle = APRON_GRASS;
@@ -95,7 +96,7 @@ function pitch(ctx: CanvasRenderingContext2D, v: View) {
   dot(ctx, v, PITCH_L / 2, mid);
 }
 
-function dot(ctx: CanvasRenderingContext2D, v: View, x: number, y: number) {
+function dot(ctx: Ctx2D, v: View, x: number, y: number) {
   const r = 0.18;
   if (
     !tracePath(ctx, v, [
@@ -111,7 +112,7 @@ function dot(ctx: CanvasRenderingContext2D, v: View, x: number, y: number) {
 }
 
 /** 골대 — 골라인의 두 기둥 · 가로대와 뒤쪽 그물. */
-function goal(ctx: CanvasRenderingContext2D, v: View, x0: number) {
+function goal(ctx: Ctx2D, v: View, x0: number) {
   const back = x0 === 0 ? -1.2 : PITCH_L + 1.2;
   const y0 = PITCH_W / 2 - GOAL_W / 2;
   const y1 = PITCH_W / 2 + GOAL_W / 2;
@@ -173,23 +174,16 @@ function shade(hex: string, f: number) {
   return `rgb(${ch(16)},${ch(8)},${ch(0)})`;
 }
 
-function rrect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
+function rrect(ctx: Ctx2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, r);
 }
 
 const INK = '#1d1d22';
-type Part = [Path2D, string];
+type Part = [Path, string];
 
 /** 겹친 도형을 한 덩어리로: 테두리를 먼저 모두 긋고 그 위를 채운다(이모트와 같은 방식). */
-function layer(ctx: CanvasRenderingContext2D, parts: Part[], lw: number) {
+function layer(ctx: Ctx2D, parts: Part[], lw: number) {
   ctx.lineWidth = lw * 2;
   ctx.strokeStyle = INK;
   for (const [p] of parts) ctx.stroke(p);
@@ -199,12 +193,12 @@ function layer(ctx: CanvasRenderingContext2D, parts: Part[], lw: number) {
   }
 }
 function rr(x: number, y: number, w: number, h: number, r: number) {
-  const p = new Path2D();
+  const p = path();
   p.roundRect(x, y, w, h, r);
   return p;
 }
 function disc(x: number, y: number, rx: number, ry = rx) {
-  const p = new Path2D();
+  const p = path();
   p.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
   return p;
 }
@@ -221,8 +215,8 @@ function idHash(id: string) {
 }
 
 /** 머리카락. 앞모습은 바라보는 쪽(+x)으로 앞머리가 내려오고, 뒷모습은 뒤통수를 덮는다. */
-function hair(style: number, hy: number, hr: number, back: boolean): Path2D {
-  const p = new Path2D();
+function hair(style: number, hy: number, hr: number, back: boolean): Path {
+  const p = path();
   if (back) {
     // 뒤통수는 목 바로 위까지 덮는다.
     p.ellipse(0, hy - hr * 0.04, hr * 1.05, hr * 1.0, 0, Math.PI * 0.8, Math.PI * 2.2);
@@ -293,7 +287,7 @@ function hair(style: number, hy: number, hr: number, back: boolean): Path2D {
 
 /** 꼬마 선수 한 명. 발밑이 (sx, sy)이고 s는 몸 크기(px). 머리 꼭대기는 발밑에서 약 2s 위다. */
 function player(
-  ctx: CanvasRenderingContext2D,
+  ctx: Ctx2D,
   v: View,
   a: Actor,
   sx: number,
@@ -393,7 +387,7 @@ function player(
   }
 
   // 몸: 팔 · 반바지 · 상의를 한 덩어리로.
-  const torso = new Path2D();
+  const torso = path();
   torso.moveTo(-0.3 * s, -1.08 * s);
   torso.quadraticCurveTo(-0.3 * s, -1.18 * s, -0.18 * s, -1.18 * s);
   torso.lineTo(0.18 * s, -1.18 * s);
@@ -509,7 +503,7 @@ function player(
   }
 }
 
-function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
+function star(ctx: Ctx2D, x: number, y: number, r: number) {
   ctx.beginPath();
   for (let i = 0; i < 10; i++) {
     const t = -Math.PI / 2 + (i * Math.PI) / 5;
@@ -520,7 +514,7 @@ function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
   ctx.fill();
 }
 
-function label(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, mine: boolean) {
+function label(ctx: Ctx2D, text: string, x: number, y: number, mine: boolean) {
   ctx.font = `600 11px system-ui, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
@@ -532,7 +526,7 @@ function label(ctx: CanvasRenderingContext2D, text: string, x: number, y: number
 }
 
 /** 말풍선 글을 최대 폭에 맞춰 줄로 나눈다(한글은 글자 단위, 3줄 넘으면 말줄임). */
-function wrap(ctx: CanvasRenderingContext2D, text: string, max: number): string[] {
+function wrap(ctx: Ctx2D, text: string, max: number): string[] {
   const lines: string[] = [];
   let cur = '';
   for (const ch of text) {
@@ -547,7 +541,7 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, max: number): string[
   return lines;
 }
 
-function bubble(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, alpha: number) {
+function bubble(ctx: Ctx2D, text: string, x: number, y: number, alpha: number) {
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.font = '13px system-ui, sans-serif';
@@ -576,7 +570,7 @@ function bubble(ctx: CanvasRenderingContext2D, text: string, x: number, y: numbe
   return h + 8;
 }
 
-function ball(ctx: CanvasRenderingContext2D, v: View, b: Ball) {
+function ball(ctx: Ctx2D, v: View, b: Ball) {
   const g = toScreen(v, b.x, b.y);
   if (!g.ok) return;
   const r = Math.max(v.fp ? 2 : 4, g.s * 0.3);
@@ -606,7 +600,7 @@ function ball(ctx: CanvasRenderingContext2D, v: View, b: Ball) {
 }
 
 export function drawWorld(
-  ctx: CanvasRenderingContext2D,
+  ctx: Ctx2D,
   v: View,
   world: World,
   now: number,
@@ -614,8 +608,22 @@ export function drawWorld(
   goalText: string,
 ) {
   pitch(ctx, v);
-  const cheer = !!world.goal;
-  drawStands(ctx, v, now, cheer);
+  drawStands(ctx, v, now, !!world.goal);
+  drawScene(ctx, v, world, now, mine, goalText);
+}
+
+/** 하늘 · 광장 · 잔디 · 선(움직이지 않는 바닥). */
+export const drawPitch = (ctx: Ctx2D, v: View) => pitch(ctx, v);
+
+/** 골대 · 공 · 선수 · 이름표 · 말풍선 · 골 연출(경기장 · 관중석 위에 매 프레임 그리는 것). */
+export function drawScene(
+  ctx: Ctx2D,
+  v: View,
+  world: World,
+  now: number,
+  mine: string | null,
+  goalText: string,
+) {
   // 1인칭이면 내 선수는 그리지 않는다(카메라가 그 눈에 있다).
   const shown = [...world.actors.values()].filter((a) => !(v.fp && a.id === mine));
   type Item = { d: number; draw: () => void };

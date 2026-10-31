@@ -1,12 +1,16 @@
 <script lang="ts">
-  // T-11-600 라운지 필드 — 같은 채팅방을 쿼터뷰 축구장으로 본다. 채팅에 말한 사람이 꼬마 선수로 서 있고 새 줄은 머리 위
-  // 말풍선으로 뜬다. 웹은 WASD · 화살표 · 클릭으로, 폰은 가운데 아래 조이스틱으로만 움직인다. 아직 서버에 위치를 보내지
-  // 않는 시제품이라 남의 선수는 근처를 거닐고, 공 · 이모트는 내 화면에서만 보인다.
+  // T-11-600 라운지 필드 — 같은 채팅방을 쿼터뷰 축구장으로 본다. 필드를 연 사람이 꼬마 선수로 서고, 채팅은 머리 위
+  // 말풍선으로 뜬다. 웹은 WASD · 화살표 · 클릭으로, 폰은 누른 자리 조이스틱으로 움직인다. 위치 · 동작 · 공은 채팅방
+  // 소켓으로 주고받고(app-core/lounge/sync), 골은 방이 하루 단위로 센다. 월드 계산 · 그리기는 앱과 같은 코드다.
   import { onMount, untrack } from 'svelte';
   import { fade } from 'svelte/transition';
   import { ADMIN_NICKNAME } from '@offside/contracts/board-limits';
   import type { ChatMessage } from '@offside/app-core/api/chat';
   import { chatText as L } from '@offside/app-core/i18n/ko/chat';
+  import './canvas.js';
+  import { asCtx } from './canvas.js';
+  import { listenField, sendField } from '../chat-state.svelte.js';
+  import { FieldSync, msToKstMidnight, type FieldScore } from '@offside/app-core/lounge/sync';
   import {
     PITCH_L,
     PITCH_W,
@@ -23,18 +27,17 @@
     pickActor,
     say,
     steer,
-    stepWorld,
+    stepFrame,
     tackle,
     trick,
     toWorld,
     walkTo,
     type View,
-  } from './field.js';
-  import { drawWorld } from './draw.js';
+  } from '@offside/app-core/lounge/field';
+  import { drawWorld } from '@offside/app-core/lounge/draw';
   import EmoteIcon from './EmoteIcon.svelte';
-  import { EMOTES, type EmoteKey } from './emotes.js';
-  import { broadcastFocus } from './stadium.js';
-  import { addGoal, loadGoals, msToKstMidnight, type GoalRow } from './goals.js';
+  import { EMOTES, type EmoteKey } from '@offside/app-core/lounge/emotes';
+  import { broadcastFocus } from '@offside/app-core/lounge/stadium';
 
   const {
     messages,
@@ -54,8 +57,6 @@
     onchat: () => void;
   } = $props();
 
-  /** 채널 하나에 그리는 최대 인원(나 포함). */
-  const CAP = 30;
   const dev = import.meta.env.DEV;
   /** 개발 중에는 로그인 없이도 내 선수를 세운다. */
   const meId = $derived(me?.author ?? (dev ? 'dev-me' : null));
@@ -131,46 +132,60 @@
 
   const nameOf = (m: ChatMessage) => (m.admin ? ADMIN_NICKNAME : m.nickname);
 
-  // 채팅 줄에서 선수를 세운다: 최근에 말한 사람부터 정원까지. 새 줄은 말풍선으로 띄운다.
+  // 새 채팅 줄은 왼쪽 위 최근 대화에 쌓고, 말한 사람이 필드에 있으면 머리 위 말풍선으로도 띄운다.
   $effect(() => {
     const now = Date.now();
-    const authors: string[] = [];
-    for (let i = messages.length - 1; i >= 0 && authors.length < CAP - 1; i--) {
-      const m = messages[i]!;
-      if (m.author !== meId && !authors.includes(m.author)) authors.push(m.author);
-    }
-    const keep = new Set([...authors, ...(meId ? [meId] : [])]);
-    for (const id of world.actors.keys()) if (!keep.has(id) && !id.startsWith('bot-')) world.actors.delete(id);
     for (const m of messages) {
-      const fresh = !seen[m.id];
+      if (seen[m.id]) continue;
       seen[m.id] = true;
       // 들어오기 전 줄은 1분 30초 안에 말한 것만 띄운다.
-      const recentLine = m.at > mounted - 90_000 || m.at > now - 90_000;
-      if (fresh && recentLine) untrack(() => pushLog(m));
-      if (!keep.has(m.author)) continue;
-      const a = addActor(world, m.author, nameOf(m));
-      if (fresh && recentLine) say(a, m.body, now);
+      if (!(m.at > mounted - 90_000 || m.at > now - 90_000)) continue;
+      untrack(() => pushLog(m));
+      const a = world.actors.get(m.author);
+      if (a) say(a, m.body, now);
     }
+  });
+
+  // 서버 동기화: 로그인해 쓸 수 있을 때만 내 것을 보낸다(아니면 남의 것만 받는다).
+  let score = $state<FieldScore>({ rows: [], day: '' });
+  const sync = new FieldSync(world, sendField, () => (me ? me.author : null), (s) => (score = s));
+  onMount(() => {
+    const off = listenField((e) => sync.handle(e, Date.now()));
+    sync.open();
+    return () => {
+      off();
+      sync.close();
+    };
   });
 
   // 내 선수는 작성자 키가 바뀔 때만 새로 세운다(채팅 상태가 바뀔 때마다 me 객체가 새로 와도 자리 · 말풍선을 지킨다).
   const meName = $derived(me?.nickname || 'ME');
+  /** 다시 붙느라 내 선수를 새로 세울 때 서 있던 자리. */
+  let spot: { x: number; y: number } | null = null;
   $effect(() => {
     const id = meId;
     if (!id) return;
-    const a = addActor(world, id, untrack(() => meName), { x: PITCH_L / 2 - 2, y: PITCH_W - 3 });
+    const a = addActor(world, id, untrack(() => meName), spot ?? { x: PITCH_L / 2 - 2, y: PITCH_W - 3 });
     view.cx = a.x;
     view.cy = a.y;
-    return () => void world.actors.delete(id);
+    return () => {
+      spot = { x: a.x, y: a.y };
+      world.actors.delete(id);
+    };
   });
   $effect(() => {
     const a = meId ? world.actors.get(meId) : undefined;
     if (a) a.name = meName;
   });
 
-  // 개발 중 사람이 적으면 시험용 선수를 세운다.
-  if (dev)
+  // 개발 중 로그인 없이 볼 때는 시험용 선수를 세운다(로그인하면 진짜 사람만 보인다).
+  $effect(() => {
+    if (!dev || me) return;
     for (let i = 1; i <= 6; i++) addActor(world, `bot-${i}`, `Bot ${i}`);
+    return () => {
+      for (let i = 1; i <= 6; i++) world.actors.delete(`bot-${i}`);
+    };
+  });
 
   function input() {
     if (stick.on) return { x: stick.x, y: stick.y };
@@ -186,19 +201,23 @@
 
   function doKick() {
     const a = meId ? world.actors.get(meId) : undefined;
-    if (a) kick(world, a);
+    if (a && kick(world, a)) sync.kicked(Date.now());
   }
   function doTackle() {
     const a = meId ? world.actors.get(meId) : undefined;
-    if (a) tackle(world, a, Date.now());
+    if (a && tackle(world, a, Date.now())) sync.act('tackle');
   }
   function doTrick() {
     const a = meId ? world.actors.get(meId) : undefined;
-    if (a) trick(world, a, Date.now());
+    const kind = a ? trick(world, a, Date.now()) : null;
+    if (a && kind) sync.act(kind, a.move?.side);
   }
   function doEmote(e: EmoteKey) {
     const a = meId ? world.actors.get(meId) : undefined;
-    if (a) emote(a, e, Date.now());
+    if (a) {
+      emote(a, e, Date.now());
+      sync.act('emote', undefined, e);
+    }
     emoteOpen = false;
   }
 
@@ -253,7 +272,7 @@
     if (!a) return;
     const p = toWorld(view, sx, sy);
     // 공을 누르면 공 쪽으로 가서 찬다는 뜻 — 가까우면 바로 찬다.
-    if (Math.hypot(p.x - world.ball.x, p.y - world.ball.y) < 0.8 && kick(world, a)) return;
+    if (Math.hypot(p.x - world.ball.x, p.y - world.ball.y) < 0.8 && kick(world, a)) return void sync.kicked(Date.now());
     if (view.fp) {
       // 1인칭에서 누른 곳으로 걸으면 그쪽을 바라본다.
       const n = Math.hypot(p.x - a.x, p.y - a.y) || 1;
@@ -296,19 +315,17 @@
     (document.activeElement as HTMLElement | null)?.blur();
   }
 
-  // 오른쪽 위 오늘의 득점: 봇은 빼고 구단주만 센다. 한국 시각 자정에 비운다.
-  const SCORE_MAX = 5;
-  let goals = $state<GoalRow[]>(loadGoals());
+  // 오른쪽 위 오늘의 득점(방이 센 값). 한국 시각 자정이 지나면 비운다(다음 골 · 다시 열 때 새 날짜로 온다).
   function countGoal() {
     const g = world.goal;
-    if (!g?.byId || g.byId.startsWith('bot-')) return;
-    goals = addGoal(goals, g.byId, g.by ?? '');
+    // 내 화면이 정한 내 골만 서버에 알린다(봇 골은 세지 않는다).
+    if (me && g?.byId === me.author) sync.goal(g.side);
   }
   $effect(() => {
     let t: ReturnType<typeof setTimeout>;
     const arm = () => {
       t = setTimeout(() => {
-        goals = loadGoals();
+        score = { rows: [], day: '' };
         arm();
       }, msToKstMidnight() + 1000);
     };
@@ -360,7 +377,7 @@
     let botTick = 0;
     const frame = (t: number) => {
       raf = requestAnimationFrame(frame);
-      const dt = Math.min(0.05, (t - last) / 1000);
+      const dt = Math.min(0.25, (t - last) / 1000);
       last = t;
       const now = Date.now();
       const a = meId ? world.actors.get(meId) : undefined;
@@ -386,7 +403,8 @@
         const b = bots[Math.floor(Math.random() * bots.length)];
         if (b) emote(b, EMOTES[Math.floor(Math.random() * EMOTES.length)]!, now);
       }
-      if (stepWorld(world, dt, now, meId) !== null) countGoal();
+      if (stepFrame(world, dt, now, meId) !== null) countGoal();
+      sync.tick(now);
       const focus = a ?? world.ball;
       // 화면 가운데를 나보다 조금 먼 쪽에 둬서 관중석이 더 보이게 한다.
       const lead = 4 * (1 - view.tilt);
@@ -403,7 +421,7 @@
       zoom += (goal.zoom - zoom) * ease;
       view.k = baseK * zoom;
       view.fov = 1.25 ** zoomStep;
-      drawWorld(ctx, view, world, now, meId, L.goal);
+      drawWorld(asCtx(ctx), view, world, now, meId, L.goal);
     };
     raf = requestAnimationFrame(frame);
     return () => {
@@ -435,13 +453,13 @@
 
   <section class="field-score" aria-label={L.scoreTitle}>
     <h3>{L.scoreTitle}</h3>
-    {#if goals.length}
+    {#if score.rows.length}
       <ol>
-        {#each goals.slice(0, SCORE_MAX) as g, i (g.id)}
-          <li class:mine={g.id === meId}>
+        {#each score.rows as g, i (g.a)}
+          <li class:mine={g.a === meId}>
             <span class="rank">{i + 1}</span>
-            <span class="name">{g.name}</span>
-            <b>{L.scoreN({ n: g.n })}</b>
+            <span class="name">{g.n}</span>
+            <b>{L.scoreN({ n: g.goals })}</b>
           </li>
         {/each}
       </ol>

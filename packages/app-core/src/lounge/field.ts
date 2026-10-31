@@ -1,6 +1,7 @@
 // T-11-600 라운지 필드 — 쿼터뷰 축구장에서 아바타가 걷고 공을 찬다. 화면 없이 도는 순수 계산만 둔다(그리기는 draw.ts).
 // 좌표는 미터 단위 월드 좌표다. x는 골대에서 골대 방향, y는 터치라인에서 터치라인 방향, z는 높이.
 
+import type { Ctx2D } from './canvas.js';
 import type { EmoteKey } from './emotes.js';
 
 /** 경기장 크기(실제보다 작게 — 30명이 모여도 서로 보이게). */
@@ -63,6 +64,8 @@ export interface Actor {
   fallUntil: number;
   /** 개인기를 돌아가며 고르는 순번. */
   trickN: number;
+  /** T-11-600 서버에서 받은 남의 위치 · 바라보는 쪽. 있으면 거닐지 않고 이 자리로 부드럽게 따라간다. */
+  net: { x: number; y: number; fx: number; fy: number } | null;
 }
 
 export type MoveKind = 'tackle' | TrickKind;
@@ -88,6 +91,13 @@ export interface World {
   goal: { side: 0 | 1; until: number; by: string | null; byId: string | null } | null;
   /** 마지막으로 공을 건드린 아바타. */
   touch: string | null;
+  /**
+   * T-11-600 이 화면이 골을 정하는지(마지막 터치가 나 · 봇 · 아무도 아님). 남이 건드린 공이 들어가면 그 사람
+   * 화면이 정한 골을 서버에서 받을 때까지 골망에 둔다. 기본은 모두 이 화면이 정한다.
+   */
+  localGoal: (touch: string | null) => boolean;
+  /** 남이 건드린 공이 골망에 들어간 시각(서버 골이 안 오면 잠시 뒤 가운데로 돌린다). */
+  netAt: number;
 }
 
 const KITS: Kit[] = [
@@ -190,7 +200,14 @@ const maxY = PITCH_W + APRON;
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 export function createWorld(): World {
-  return { actors: new Map(), ball: centerBall(), goal: null, touch: null };
+  return {
+    actors: new Map(),
+    ball: centerBall(),
+    goal: null,
+    touch: null,
+    localGoal: () => true,
+    netAt: 0,
+  };
 }
 
 const centerBall = (): Ball => ({ x: PITCH_L / 2, y: PITCH_W / 2, z: 0, vx: 0, vy: 0, vz: 0 });
@@ -229,6 +246,7 @@ export function addActor(world: World, id: string, name: string, at = spawnPoint
     readyAt: 0,
     fallUntil: 0,
     trickN: 0,
+    net: null,
   };
   world.actors.set(id, a);
   return a;
@@ -287,8 +305,9 @@ const ballNear = (world: World, a: Actor) =>
   world.ball.z < 0.8 && Math.hypot(world.ball.x - a.x, world.ball.y - a.y) < KICK_REACH;
 
 /** 바라보는 쪽으로 미끄러지며 태클한다. 공은 쳐 내고, 닿은 선수는 넘어진다. 시작했으면 true. */
-export function tackle(world: World, a: Actor, now: number): boolean {
-  if (!canAct(a, now) || world.goal) return false;
+export function tackle(world: World, a: Actor, now: number, remote = false): boolean {
+  // remote: 남이 한 태클을 받아 그대로 보여 준다(쿨다운 · 골 축하 중이어도).
+  if (!remote && (!canAct(a, now) || world.goal)) return false;
   const [dx, dy] = facing(a);
   a.target = null;
   a.move = {
@@ -305,9 +324,15 @@ export function tackle(world: World, a: Actor, now: number): boolean {
 }
 
 /** 개인기: 레인보우 플릭 → 마르세유 턴 → 헛다리 순서로 돌아간다. 공이 가까우면 공을 데리고 한다. */
-export function trick(world: World, a: Actor, now: number): TrickKind | null {
-  if (!canAct(a, now)) return null;
-  const kind = TRICKS[a.trickN++ % TRICKS.length]!;
+export function trick(
+  world: World,
+  a: Actor,
+  now: number,
+  remote?: { kind: TrickKind; side: 1 | -1 },
+): TrickKind | null {
+  // remote: 남이 한 개인기를 받아 같은 동작 · 같은 쪽으로 보여 준다.
+  if (!remote && !canAct(a, now)) return null;
+  const kind = remote?.kind ?? TRICKS[a.trickN++ % TRICKS.length]!;
   const [dx, dy] = facing(a);
   const ball = ballNear(world, a) && !world.goal;
   a.target = null;
@@ -317,7 +342,7 @@ export function trick(world: World, a: Actor, now: number): TrickKind | null {
     until: now + MOVE_MS[kind],
     dx,
     dy,
-    side: Math.random() < 0.5 ? 1 : -1,
+    side: remote?.side ?? (Math.random() < 0.5 ? 1 : -1),
     ball,
   };
   a.readyAt = a.move.until + 250;
@@ -443,7 +468,8 @@ export function stepWorld(
       stepMove(world, a, now);
       if (a.move && a.move.kind !== 'flick') a.target = null;
     }
-    if (a.id !== mine && !a.move) wander(a, now);
+    if (a.net && !a.move) chase(a);
+    else if (a.id !== mine && !a.move && !a.net) wander(a, now);
     if (a.target) {
       const dx = a.target.x - a.x;
       const dy = a.target.y - a.y;
@@ -470,6 +496,49 @@ export function stepWorld(
     } else a.step = 0;
   }
   return stepBall(world, dt, now);
+}
+
+/**
+ * 한 프레임만큼 월드를 돌린다. 프레임이 느린 기기에서도 걷기 · 공 속도가 같도록 0.05초씩 나눠 돌린다
+ * (멈췄다 돌아온 탭처럼 너무 긴 간격은 0.25초까지만). 골이 나면 그 골대를 돌려준다.
+ */
+export function stepFrame(
+  world: World,
+  dt: number,
+  now: number,
+  mine: string | null,
+): 0 | 1 | null {
+  const total = Math.min(0.25, Math.max(0, dt));
+  const n = Math.max(1, Math.ceil(total / 0.05));
+  let goal: 0 | 1 | null = null;
+  for (let i = 0; i < n; i++) {
+    const g = stepWorld(world, total / n, now, mine);
+    if (g !== null) goal = g;
+  }
+  return goal;
+}
+
+/** T-11-600 서버에서 받은 남의 자리로 따라간다: 멀면 순간 이동, 가까우면 0.15초 안에 닿을 속도로 걷는다. */
+function chase(a: Actor) {
+  const n = a.net!;
+  const dx = n.x - a.x;
+  const dy = n.y - a.y;
+  const d = Math.hypot(dx, dy);
+  a.target = null;
+  if (d > 4) {
+    a.x = n.x;
+    a.y = n.y;
+    a.vx = a.vy = 0;
+  } else if (d < 0.04) {
+    a.vx = a.vy = 0;
+  } else {
+    const speed = Math.min(WALK * 1.6, d / 0.15);
+    a.vx = (dx / d) * speed;
+    a.vy = (dy / d) * speed;
+    return;
+  }
+  a.fx = n.fx;
+  a.fy = n.fy;
 }
 
 /** 걷다가 공에 닿으면 앞으로 툭 민다. */
@@ -522,8 +591,19 @@ function stepBall(world: World, dt: number, now: number): 0 | 1 | null {
   // 골: 골대 사이로 골라인을 넘었다.
   const mouth = Math.abs(b.y - PITCH_W / 2) < GOAL_W / 2;
   if (!world.goal && mouth && b.z < GOAL_H) {
-    if (px >= 0 && b.x < 0) return scored(world, 0, now);
-    if (px <= PITCH_L && b.x > PITCH_L) return scored(world, 1, now);
+    const side = px >= 0 && b.x < 0 ? 0 : px <= PITCH_L && b.x > PITCH_L ? 1 : null;
+    if (side !== null) {
+      if (world.localGoal(world.touch)) return scored(world, side, now);
+      // 남이 건드린 공: 그 사람 화면의 골을 기다린다.
+      world.netAt = now;
+    }
+  }
+  // 서버 골이 3초 안에 안 오면 공을 가운데로 돌린다.
+  if (world.netAt && !world.goal && now - world.netAt > 3000) {
+    world.netAt = 0;
+    world.ball = centerBall();
+    world.touch = null;
+    return null;
   }
   // 골망 안이면 골망에서 멈추고, 밖이면 걸어 다니는 구역 가장자리에서 튕긴다.
   const inNet = mouth && (b.x < 0 || b.x > PITCH_L);
@@ -545,6 +625,16 @@ function scored(world: World, side: 0 | 1, now: number): 0 | 1 {
   const scorer = world.touch ? world.actors.get(world.touch) : undefined;
   world.goal = { side, until: now + 2200, by: scorer?.name ?? null, byId: scorer?.id ?? null };
   return side;
+}
+
+/** T-11-600 서버가 알린 남의 골을 보여 준다(이미 같은 골을 보여 주는 중이면 그대로). */
+export function remoteGoal(world: World, side: 0 | 1, id: string, name: string, now: number) {
+  if (world.goal && world.goal.byId === id) return;
+  world.netAt = 0;
+  world.touch = id;
+  world.goal = { side, until: now + 2200, by: name, byId: id };
+  // 골망 안에 공을 둔다(내 화면에서 아직 안 들어갔어도).
+  world.ball = { x: side ? PITCH_L + 0.8 : -0.8, y: PITCH_W / 2, z: 0, vx: 0, vy: 0, vz: 0 };
 }
 
 /** 카메라. k는 월드 1미터가 화면에서 차지하는 반폭(px), rot은 경기장을 도는 각(라디안, π/4가 기본 쿼터뷰),
@@ -620,12 +710,7 @@ export function toScreen(v: View, x: number, y: number, z = 0) {
 type P3 = readonly [number, number, number];
 
 /** 월드 점들로 경로를 만든다. 1인칭이면 카메라 앞쪽만 남게 잘라낸다. 그릴 게 없으면 false. */
-export function tracePath(
-  ctx: CanvasRenderingContext2D,
-  v: View,
-  pts: readonly P3[],
-  close = true,
-): boolean {
+export function tracePath(ctx: Ctx2D, v: View, pts: readonly P3[], close = true): boolean {
   ctx.beginPath();
   if (!v.fp) {
     pts.forEach(([x, y, z], i) => {

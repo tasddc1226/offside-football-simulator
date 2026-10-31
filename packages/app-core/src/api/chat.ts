@@ -24,6 +24,7 @@ import {
   type ChatRejectCode,
   type ChatServerEvent,
 } from '@offside/contracts/chat';
+import type { FieldClientEvent, FieldServerEvent } from '@offside/contracts/lounge-field';
 import { LIVE_PING, LIVE_PING_SEC } from '@offside/contracts/polling';
 import { storage } from '@offside/game/storage';
 import { kstParts } from '../boardText.js';
@@ -271,6 +272,9 @@ interface Sock {
 }
 const g = globalThis as { WebSocket?: new (url: string) => Sock };
 
+/** T-11-600 필드 이벤트 이름(채팅 상태로 넣지 않고 onField로 넘긴다). */
+const FIELD_EVENTS = new Set(['field', 'pos', 'act', 'ball', 'goal', 'leave']);
+
 const RETRY_MIN_MS = 2_000;
 const RETRY_MAX_MS = 60_000;
 
@@ -285,6 +289,11 @@ export type ChatSession = {
   unblock(author: string): void;
   /** 내가 신고한 줄을 화면에서 뺀다(다시 붙어도 빠진다). */
   drop(id: string): void;
+  /**
+   * T-11-600 라운지 필드 이벤트를 보낸다. 소켓이 열려 있지 않으면 false. 필드를 연 상태({t:'field',on:true})는
+   * 기억했다가 다시 붙으면 새 소켓에 다시 연다.
+   */
+  field(e: FieldClientEvent): boolean;
   close(): void;
 };
 
@@ -297,6 +306,8 @@ export function openChat(
   onChange: (v: ChatView) => void,
   onReject: (code: ChatRejectCode, restore: string | null) => void = () => {},
   room: ChatRoomKey = currentChatRoom(),
+  /** T-11-600 필드 이벤트(채팅 상태와 따로 받아 화면을 매번 다시 그리지 않는다). */
+  onField: (e: FieldServerEvent) => void = () => {},
 ): ChatSession {
   let view = EMPTY_CHAT;
   /** 보냈지만 아직 방에서 돌아오지 않은 줄. */
@@ -311,6 +322,7 @@ export function openChat(
   let retry: ReturnType<typeof setTimeout> | undefined;
   let wait = RETRY_MIN_MS;
   let stopped = false;
+  let fieldOn = false;
   const set = (next: ChatView) => {
     view = next;
     onChange(view);
@@ -341,8 +353,11 @@ export function openChat(
       } catch {
         return;
       }
+      if (FIELD_EVENTS.has(e.t)) return onField(e as FieldServerEvent);
       if (e.t === 'msg' && e.m.author === view.me?.author) pending = '';
       set(applyChat(view, e, skip));
+      // 다시 붙었으면 필드를 다시 연다(새 소켓은 필드를 모른다).
+      if (e.t === 'hello' && fieldOn) sock.send(JSON.stringify({ t: 'field', on: true }));
       if (e.t === 'err') {
         onReject(e.code, pending && e.code !== 'muted' && e.code !== 'readonly' ? pending : null);
         pending = '';
@@ -389,6 +404,12 @@ export function openChat(
     drop(id) {
       dropped.add(id);
       refilter();
+    },
+    field(e) {
+      if (e.t === 'field') fieldOn = e.on;
+      if (!ws || view.status !== 'open') return false;
+      ws.send(JSON.stringify(e satisfies ChatClientEvent));
+      return true;
     },
     close() {
       stopped = true;

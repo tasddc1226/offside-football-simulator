@@ -1,6 +1,7 @@
 // T-11-600 라운지 필드 경기장 — 빨간 계단식 관중석 · 좌석 글자 · 캔틸레버 지붕 · 조명 · LED 광고판.
 // 카메라에서 먼 쪽(화면 위)은 높은 관중석, 카메라 쪽(화면 아래)은 선수가 가려지지 않게 낮은 몇 줄만 둔다.
 // 카메라를 돌리면 어느 변이 먼 쪽인지가 바뀌므로 그릴 때마다 정한다.
+import type { Ctx2D } from './canvas.js';
 import {
   APRON,
   PITCH_L,
@@ -126,7 +127,7 @@ function wall(s: Span, d: number, z0: number, z1: number): [number, number, numb
 }
 
 function quad(
-  ctx: CanvasRenderingContext2D,
+  ctx: Ctx2D,
   v: View,
   f: Frame,
   pts: [number, number, number][],
@@ -158,7 +159,7 @@ const GLYPH_PX = 100;
  * up(d, z 방향 1미터)이 글자의 위쪽이다. 1인칭 원근에서도 맞게 글자마다 그 자리의 기울기로 따로 그린다.
  */
 function planeString(
-  ctx: CanvasRenderingContext2D,
+  ctx: Ctx2D,
   v: View,
   f: Frame,
   at: [number, number, number],
@@ -211,7 +212,7 @@ const SKINS = ['#f1c7a5', '#e0ac85', '#c68b62', '#8d5a3b'];
 
 /** 좌석 한 줄의 관중(머리 + 상의). cheer면 들썩인다. */
 function crowdRow(
-  ctx: CanvasRenderingContext2D,
+  ctx: Ctx2D,
   v: View,
   f: Frame,
   u0: number,
@@ -223,19 +224,49 @@ function crowdRow(
   cheer: boolean,
   seed: string,
 ) {
-  for (let u = u0 + 0.3; u < u1 - 0.2; u += 0.55) {
-    const hv = hash(`${seed}:${row}:${Math.round(u * 10)}`);
-    if (hv % 100 < 28) continue;
+  const seats = crowdSeats(seed, row, u0, u1);
+  // 한 줄을 한 번에 칠한다(사람마다 칠하면 앱 그리기가 느려진다). 옷 다음 얼굴.
+  const rects: number[] = [];
+  const colors: string[] = [];
+  const heads: number[] = [];
+  const headColors: string[] = [];
+  for (let i = 0; i < seats.length; i += 2) {
+    const u = seats[i]!;
+    const hv = seats[i + 1]!;
     const jump = cheer ? Math.abs(Math.sin(now / 110 + (hv % 17))) * 0.35 : 0;
     const p = toScreen(v, ...f(u, d, z + jump));
     if (!p.ok) continue;
     const w = Math.max(1.5, p.s * 0.26);
     const h = Math.max(1.5, p.s * 0.3);
-    ctx.fillStyle = CROWD_SHIRTS[hv % CROWD_SHIRTS.length]!;
-    ctx.fillRect(p.sx - w / 2, p.sy - h, w, h);
-    ctx.fillStyle = SKINS[(hv >>> 4) % SKINS.length]!;
-    ctx.fillRect(p.sx - w * 0.35, p.sy - h - w * 0.75, w * 0.7, w * 0.7);
+    rects.push(p.sx - w / 2, p.sy - h, w, h);
+    colors.push(CROWD_SHIRTS[hv % CROWD_SHIRTS.length]!);
+    heads.push(p.sx - w * 0.35, p.sy - h - w * 0.75, w * 0.7, w * 0.7);
+    headColors.push(SKINS[(hv >>> 4) % SKINS.length]!);
   }
+  rects.push(...heads);
+  colors.push(...headColors);
+  if (ctx.fillRects) return ctx.fillRects(rects, colors);
+  for (let i = 0; i < colors.length; i++) {
+    ctx.fillStyle = colors[i]!;
+    ctx.fillRect(rects[i * 4]!, rects[i * 4 + 1]!, rects[i * 4 + 2]!, rects[i * 4 + 3]!);
+  }
+}
+
+/** 관중 자리(u, 해시) 목록 — 매 프레임 같은 값이라 한 번만 계산한다(빈자리는 뺀다). */
+const seatCache = new Map<string, number[]>();
+function crowdSeats(seed: string, row: number, u0: number, u1: number) {
+  const key = `${seed}:${row}:${u0}:${u1}`;
+  let seats = seatCache.get(key);
+  if (!seats) {
+    seats = [];
+    for (let u = u0 + 0.3; u < u1 - 0.2; u += 0.55) {
+      const hv = hash(`${seed}:${row}:${Math.round(u * 10)}`);
+      if (hv % 100 >= 28) seats.push(u, hv);
+    }
+    if (seatCache.size > 512) seatCache.clear();
+    seatCache.set(key, seats);
+  }
+  return seats;
 }
 
 const LED = [
@@ -251,14 +282,7 @@ const LED_GAP = 2.5;
 let ledWidths: number[] | null = null;
 
 /** 경기장 쪽을 보는 LED 광고판. 같은 순서의 문구가 끊김 없이 일정한 속도로 흐르고, 판 밖은 잘라 낸다. */
-function ledBoard(
-  ctx: CanvasRenderingContext2D,
-  v: View,
-  f: Frame,
-  u0: number,
-  u1: number,
-  now: number,
-) {
+function ledBoard(ctx: Ctx2D, v: View, f: Frame, u0: number, u1: number, now: number) {
   const face: [number, number, number][] = [
     [u0, 0, 0],
     [u1, 0, 0],
@@ -319,7 +343,7 @@ function ledBoard(
 
 /** 먼 쪽 높은 관중석: 계단 좌석 · 관중 · 앞벽 · 광고판, 끝의 옆면, 지붕과 조명. */
 function farStand(
-  ctx: CanvasRenderingContext2D,
+  ctx: Ctx2D,
   v: View,
   f: Frame,
   span: Span,
@@ -329,7 +353,10 @@ function farStand(
   lettering: string | null,
   /** 화면 쪽을 보는 끝(옆면을 그릴 쪽). */
   endAt: 'u0' | 'u1',
+  part: StandLayer,
 ) {
+  // 광고판만: 움직이는 글자라 매 프레임 그린다(앱은 나머지를 녹화해 둔다).
+  if (part === 'led') return ledBoard(ctx, v, f, span.a, span.b, now);
   const { rows, rd, rh, base, gap, roofZ, roofFrom } = FAR;
   const depth = gap + rows * rd;
   for (let i = rows - 1; i >= 0; i--) {
@@ -361,7 +388,7 @@ function farStand(
   quad(ctx, v, f, wall(span, gap, 0, base), CONCRETE);
   quad(ctx, v, f, band(span, 0, gap, 0), CONCRETE_DARK);
   // 광고판은 경기장 변 길이만큼만(모서리 관중석 앞으로 삐져나오지 않게).
-  ledBoard(ctx, v, f, span.a, span.b, now);
+  if (part === 'all') ledBoard(ctx, v, f, span.a, span.b, now);
   // 화면 쪽을 보는 끝 옆면(계단 모양). 이웃과 맞물린 끝은 옆면이 없다.
   const end = endAt === 'u0' ? span.e0 : span.e1;
   if (end !== 'miter') {
@@ -400,7 +427,7 @@ function farStand(
 
 /** 가까운 쪽 낮은 관중석: 광고판 뒷면 · 낮은 좌석 몇 줄 · 바깥 벽. */
 function nearStand(
-  ctx: CanvasRenderingContext2D,
+  ctx: Ctx2D,
   v: View,
   f: Frame,
   span: Span,
@@ -426,7 +453,19 @@ function nearStand(
 }
 
 /** 관중석 네 변을 먼 것부터 그린다. 경기장 잔디 다음, 선수보다 먼저 부른다. */
-export function drawStands(ctx: CanvasRenderingContext2D, v: View, now: number, cheer: boolean) {
+/**
+ * 관중석을 어디까지 그릴지. all: 전부(웹). 앱은 카메라가 평행 이동만 할 때 그림을 다시 쓰려고 나눠 그린다:
+ * far(높은 관중석, 광고판 빼고) → led(높은 관중석 광고판) → near(낮은 관중석).
+ */
+export type StandLayer = 'all' | 'far' | 'led' | 'near';
+
+export function drawStands(
+  ctx: Ctx2D,
+  v: View,
+  now: number,
+  cheer: boolean,
+  layer: StandLayer = 'all',
+) {
   // 카메라 쪽 방향(월드) — 깊이 축의 기울기.
   const tx = Math.sin(v.rot);
   const ty = Math.cos(v.rot);
@@ -459,10 +498,12 @@ export function drawStands(ctx: CanvasRenderingContext2D, v: View, now: number, 
     const endAt = along[0] * tx + along[1] * ty > 0 ? 'u1' : 'u0';
     return {
       d: depthOf(v, side.mid[0], side.mid[1]),
-      draw: () =>
-        tall[i]
-          ? farStand(ctx, v, f, span, now, cheer, side.seed, side.lettering, endAt)
-          : nearStand(ctx, v, f, span, now, cheer, side.seed),
+      draw: () => {
+        if (tall[i] && layer !== 'near')
+          farStand(ctx, v, f, span, now, cheer, side.seed, side.lettering, endAt, layer);
+        else if (!tall[i] && (layer === 'all' || layer === 'near'))
+          nearStand(ctx, v, f, span, now, cheer, side.seed);
+      },
     };
   });
   items.sort((a, b) => a.d - b.d);
@@ -470,7 +511,7 @@ export function drawStands(ctx: CanvasRenderingContext2D, v: View, now: number, 
 }
 
 /** 저녁 경기 하늘과 경기장을 둘러싼 광장. */
-export function drawSky(ctx: CanvasRenderingContext2D, v: View) {
+export function drawSky(ctx: Ctx2D, v: View) {
   const g = ctx.createLinearGradient(0, 0, 0, v.h);
   g.addColorStop(0, '#0b1530');
   g.addColorStop(1, '#1b2a4a');
