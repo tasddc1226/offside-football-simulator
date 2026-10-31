@@ -35,7 +35,7 @@
     resetClubCustom([id]);
   }
 
-  // 업로드 이미지는 64×64로 가운데를 잘라 줄인다 — localStorage 용량(약 5MB)에 200개 클럽이 다 들어가게.
+  // 업로드 이미지는 64×64로 가운데를 잘라 줄인다 — localStorage 용량(약 5MB)에 모든 클럽(302개)이 다 들어가게.
   async function upload(club: { id: string; name: string }, e: Event) {
     const input = e.currentTarget as HTMLInputElement;
     const file = input.files?.[0];

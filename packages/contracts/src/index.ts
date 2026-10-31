@@ -55,6 +55,8 @@ export {
   CORS_ALLOWED_HEADERS,
   CORS_EXPOSED_HEADERS,
   REQUEST_BODY_MAX_BYTES,
+  CLUB_CUSTOM_BODY_MAX_BYTES,
+  CLUB_CUSTOM_PATH,
 } from './headers.js';
 
 export { HealthDataSchema } from './health.js';
