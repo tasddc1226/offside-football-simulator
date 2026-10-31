@@ -9,6 +9,7 @@
     "@offside/game": "workspace:*",
     "@react-native-firebase/analytics": "^26.4.0",
     "@react-native-firebase/app": "^26.4.0",
+    "@shopify/react-native-skia": "2.6.2",
     "expo": "~57.0.26",
     "expo-apple-authentication": "~57.0.2",
     "expo-application": "~57.0.3",

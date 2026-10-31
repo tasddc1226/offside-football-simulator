@@ -87,3 +87,8 @@ export async function settleBlock(page: Page, timeout = 30_000): Promise<void> {
     await expect(ok).toHaveText('확인', { timeout: 1_000 });
   }).toPass({ timeout });
 }
+
+/** T-11-600 라운지는 처음에 필드로 열린다. 채팅 목록을 보는 테스트는 채팅 보기를 고른 상태로 시작한다. */
+export async function useChatListView(page: Page): Promise<void> {
+  await page.addInitScript(() => localStorage.setItem('ft_chat_view', 'chat'));
+}

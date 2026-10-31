@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
-import { API, ok } from './helpers.js';
+import { API, ok, useChatListView } from './helpers.js';
+
+test.beforeEach(({ page }) => useChatListView(page));
 
 // T-11-344 채팅 사용자 창 — 프로필 사진·이름·⋯을 누르면 아래에서 올라오는 창으로 뜨고, 프로필 보기로 구단주 프로필을 연다.
 test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });

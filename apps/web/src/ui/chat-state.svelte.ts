@@ -9,6 +9,8 @@ import {
   type ChatRejectCode,
 } from '@offside/app-core/api/chat';
 import { createChatUnread } from '@offside/app-core/chatUnread';
+import type { ChatServerEvent } from '@offside/contracts/chat';
+import type { FieldClientEvent } from '@offside/contracts/lounge-field';
 
 export const chatState = $state<{ view: ChatView; unread: number; room: ChatRoomKey }>({
   view: EMPTY_CHAT,
@@ -19,6 +21,8 @@ let tracker: ReturnType<typeof createChatUnread> | null = null;
 let session: ChatSession | null = null;
 const listeners = new Set<(view: ChatView) => void>();
 const rejectListeners = new Set<(code: ChatRejectCode, restore: string | null) => void>();
+/** T-11-600 라운지 필드 화면이 열려 있을 때 받은 이벤트를 먼저 본다(필드 이벤트면 true). */
+let fieldHook: ((e: ChatServerEvent) => boolean) | null = null;
 
 function unreadTracker() {
   if (!tracker) {
@@ -57,6 +61,7 @@ export function chatSession() {
       for (const listener of rejectListeners) listener(code, restore);
     },
     chatState.room,
+    (e) => fieldHook?.(e) ?? false,
   );
   return session;
 }
@@ -119,3 +124,11 @@ export function listenChat(
     rejectListeners.delete(reject);
   };
 }
+
+/** T-11-600 라운지 필드 화면이 받은 이벤트를 먼저 보게 한다(닫을 때 null). */
+export function hookField(h: ((e: ChatServerEvent) => boolean) | null) {
+  fieldHook = h;
+}
+
+/** T-11-600 라운지 필드 이벤트를 보낸다. 소켓이 열려 있지 않으면 false. */
+export const sendField = (e: FieldClientEvent) => session?.field(e) ?? false;

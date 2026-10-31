@@ -11,6 +11,19 @@ import {
   type ChatServerEvent,
 } from '@offside/contracts/chat';
 import { LIVE_PING, LIVE_PONG } from '@offside/contracts/polling';
+import {
+  FIELD_GOAL_GAP_MS,
+  FIELD_GOAL_TOUCH_MS,
+  FIELD_SCORE_KEEP_DAYS,
+  FIELD_SCORE_ROWS,
+  FIELD_SERVER_MIN_MS,
+  fieldDay,
+  parseFieldEvent,
+  type FieldBall,
+  type FieldGoalRow,
+  type FieldPeer,
+  type FieldServerEvent,
+} from '@offside/contracts/lounge-field';
 import type { Bindings } from '../env.js';
 import { MAX_SOCKETS } from '../live/hub.js';
 import { checkSend } from './rules.js';
@@ -39,7 +52,17 @@ export type ChatWriter = {
   title?: string | null;
   avatarId?: string | null;
 };
-type Attachment = { w: ChatWriter | null; sent: number[] };
+/**
+ * f: 필드 보기를 열었다(T-11-600). p: 필드에서 마지막으로 받은 내 위치. b: 마지막으로 공을 건드린 시각.
+ * 잠들었다 깨도 남도록 attachment에 둔다.
+ */
+type Attachment = {
+  w: ChatWriter | null;
+  sent: number[];
+  f?: boolean;
+  p?: Omit<FieldPeer, 'a' | 'n'>;
+  b?: number;
+};
 /** 신고·차단할 때 API가 읽는 메시지 한 줄(작성자 프로필 포함). */
 type StoredMessage = ChatMessage & { profileId: string };
 
@@ -130,7 +153,19 @@ export class ChatRoom extends DurableObject<Bindings> {
     this.sql.exec(
       `CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, expires INTEGER NOT NULL, writer TEXT NOT NULL)`,
     );
+    // T-11-600 라운지 필드 오늘의 득점(KST 날짜 · 작성자마다 한 줄). first_at은 같은 골 수일 때 먼저 넣은 사람이 위.
+    this.sql.exec(
+      `CREATE TABLE IF NOT EXISTS field_goals (day TEXT NOT NULL, author TEXT NOT NULL, nickname TEXT NOT NULL,
+        goals INTEGER NOT NULL, first_at INTEGER NOT NULL, PRIMARY KEY (day, author))`,
+    );
   }
+
+  /** 소켓마다 마지막으로 받은 위치 · 공 시각(잠들면 비지만 그때는 이미 조용하다). */
+  private readonly fieldSeen = new WeakMap<WebSocket, number>();
+  /** 마지막으로 골을 인정한 시각. */
+  private lastGoalAt = 0;
+  /** T-11-600 마지막으로 받은 공 상태(새로 필드를 연 사람에게 준다). 방이 잠들면 잊고 가운데에서 다시 시작한다. */
+  private fieldBall: ({ a: string } & FieldBall) | null = null;
 
   /** 입장권을 만든다. 한 번 쓰면 사라지고, CHAT_TICKET_MS 안에 써야 한다. */
   async updateAvatar(profileId: string, avatarId: string | null): Promise<void> {
@@ -206,7 +241,7 @@ export class ChatRoom extends DurableObject<Bindings> {
           );
         return;
       }
-      if (event.t !== 'send') return;
+      if (event.t !== 'send') return this.fieldMessage(ws, event);
       body = event.body;
       replyTo = event.replyTo;
     } catch {
@@ -341,6 +376,124 @@ export class ChatRoom extends DurableObject<Bindings> {
     ws.close(code === 1005 || code === 1006 ? 1000 : code);
     const rest = this.ctx.getWebSockets().filter((s) => s !== ws);
     sendAll(rest, { t: 'online', n: rest.length });
+    const att = ws.deserializeAttachment() as Attachment | null;
+    if (att?.f && att.w) this.fieldSend({ t: 'leave', a: att.w.author }, ws);
+  }
+
+  /**
+   * T-11-600 라운지 필드 이벤트. 위치 · 동작 · 공은 저장하지 않고 필드를 연 다른 소켓에 넘긴다. 쓰려면 입장권이
+   * 있어야 하고(읽기 전용은 보기만), 위치 · 공은 소켓마다 FIELD_SERVER_MIN_MS보다 잦으면 버린다.
+   */
+  private fieldMessage(ws: WebSocket, raw: Record<string, unknown>) {
+    const e = parseFieldEvent(raw);
+    if (!e) return;
+    const att = ws.deserializeAttachment() as Attachment;
+    const now = Date.now();
+    if (e.t === 'field') {
+      if (!!att.f === e.on) return;
+      ws.serializeAttachment({ ...att, f: e.on } satisfies Attachment);
+      if (e.on) {
+        const day = fieldDay(now);
+        send(
+          ws,
+          JSON.stringify({
+            t: 'field',
+            peers: this.fieldPeers(ws),
+            score: this.fieldScore(day),
+            day,
+            ...(this.fieldBall ? { ball: this.fieldBall } : {}),
+          } satisfies FieldServerEvent),
+        );
+      } else if (att.w) this.fieldSend({ t: 'leave', a: att.w.author }, ws);
+      return;
+    }
+    const w = att.w;
+    if (!w || !att.f) return;
+    if (e.t === 'pos' || e.t === 'ball') {
+      if (now - (this.fieldSeen.get(ws) ?? 0) < FIELD_SERVER_MIN_MS) return;
+      this.fieldSeen.set(ws, now);
+    }
+    switch (e.t) {
+      case 'pos': {
+        const p = { x: e.x, y: e.y, fx: e.fx, fy: e.fy };
+        ws.serializeAttachment({ ...att, p } satisfies Attachment);
+        this.fieldSend({ t: 'pos', a: w.author, n: w.nickname, ...p }, ws);
+        return;
+      }
+      case 'act':
+        if (e.k === 'kick' || e.k === 'tackle' || e.k === 'flick')
+          ws.serializeAttachment({ ...att, b: now } satisfies Attachment);
+        this.fieldSend({ ...e, a: w.author }, ws);
+        return;
+      case 'ball': {
+        ws.serializeAttachment({ ...att, b: now } satisfies Attachment);
+        this.fieldBall = { a: w.author, x: e.x, y: e.y, z: e.z, vx: e.vx, vy: e.vy, vz: e.vz };
+        this.fieldSend({ ...e, a: w.author }, ws);
+        return;
+      }
+      case 'goal': {
+        // 이 소켓이 최근에 공을 건드렸고, 바로 앞 골의 축하가 끝났을 때만 센다.
+        if (!att.b || now - att.b > FIELD_GOAL_TOUCH_MS) return;
+        if (now - this.lastGoalAt < FIELD_GOAL_GAP_MS) return;
+        this.lastGoalAt = now;
+        this.fieldBall = null;
+        const day = fieldDay(now);
+        this.sql.exec(
+          `INSERT INTO field_goals (day, author, nickname, goals, first_at) VALUES (?, ?, ?, 1, ?)
+           ON CONFLICT (day, author) DO UPDATE SET goals = goals + 1, nickname = excluded.nickname`,
+          day,
+          w.author,
+          w.nickname,
+          now,
+        );
+        const old = fieldDay(now - FIELD_SCORE_KEEP_DAYS * 86_400_000);
+        this.sql.exec('DELETE FROM field_goals WHERE day < ?', old);
+        this.fieldSend({
+          t: 'goal',
+          a: w.author,
+          n: w.nickname,
+          side: e.side,
+          score: this.fieldScore(day),
+          day,
+        });
+        return;
+      }
+    }
+  }
+
+  /** 필드를 연 소켓들(skip 빼고)에 보낸다. */
+  private fieldSend(event: FieldServerEvent, skip?: WebSocket) {
+    const message = JSON.stringify(event);
+    for (const s of this.ctx.getWebSockets()) {
+      if (s === skip) continue;
+      const att = s.deserializeAttachment() as Attachment | null;
+      if (att?.f) send(s, message);
+    }
+  }
+
+  /** 필드에 있는 다른 사람들(위치를 한 번이라도 보낸 사람, 같은 사람의 여러 소켓은 하나로). */
+  private fieldPeers(self: WebSocket): FieldPeer[] {
+    const me = (self.deserializeAttachment() as Attachment | null)?.w?.author;
+    const peers = new Map<string, FieldPeer>();
+    for (const s of this.ctx.getWebSockets()) {
+      if (s === self) continue;
+      const att = s.deserializeAttachment() as Attachment | null;
+      if (!att?.f || !att.w || !att.p || att.w.author === me) continue;
+      peers.set(att.w.author, { a: att.w.author, n: att.w.nickname, ...att.p });
+    }
+    return [...peers.values()];
+  }
+
+  /** 그날 득점 상위 줄. */
+  private fieldScore(day: string): FieldGoalRow[] {
+    return this.sql
+      .exec<Row>(
+        'SELECT author, nickname, goals FROM field_goals WHERE day = ? ORDER BY goals DESC, first_at LIMIT ?',
+        day,
+        FIELD_SCORE_ROWS,
+      )
+      .toArray()
+      .map((r) => ({ a: String(r.author), n: String(r.nickname), goals: Number(r.goals) }));
   }
 
   /** 가려지지 않은 메시지 한 줄(신고·차단 대상 확인). */

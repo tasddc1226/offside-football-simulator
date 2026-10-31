@@ -63,6 +63,8 @@ export type Bindings = {
   WEB_APP_URL: string;
   /** 로컬 전용. `'1'`이면 ENVIRONMENT === 'local'과 함께 가짜 OIDC를 쓴다. */
   GOOGLE_FAKE?: string;
+  /** T-11-600 로컬 가짜 구글 로그인의 계정(sub). 비우면 기본 가짜 계정. */
+  GOOGLE_FAKE_SUB?: string;
   /** T-11-003 로컬 전용. `'1'`이면 ENVIRONMENT === 'local'과 함께 'fake:<sub>' Apple 신원 토큰을 받는다. */
   APPLE_FAKE?: string;
   /** T-11-003 Apple 신원 토큰의 aud(앱 번들 id). 없으면 com.offsidelab.app. */

@@ -101,12 +101,12 @@ function fakeEmailForSub(sub: string): string {
  * 해석한다. api 테스트는 `/callback`에 임의의 `fake:<sub>` 코드를 직접 보내 여러 sub 시나리오를
  * 검사한다.
  */
-export function createFakeGoogleOidc(redirectUri: string): GoogleOidc {
+export function createFakeGoogleOidc(redirectUri: string, sub = FAKE_DEFAULT_SUB): GoogleOidc {
   return {
     createAuthorizationUrl(state, _codeVerifier) {
       // 포트를 바꿔 띄운 로컬 API(워크트리별 .dev.vars)도 자기 콜백으로 돌아오게 설정값을 따른다.
       const url = new URL(redirectUri);
-      url.searchParams.set('code', `${FAKE_CODE_PREFIX}${FAKE_DEFAULT_SUB}`);
+      url.searchParams.set('code', `${FAKE_CODE_PREFIX}${sub}`);
       url.searchParams.set('state', state);
       return url;
     },
@@ -139,9 +139,12 @@ export function selectGoogleOidc(
     | 'GOOGLE_CLIENT_ID'
     | 'GOOGLE_CLIENT_SECRET'
     | 'GOOGLE_REDIRECT_URI'
+    | 'GOOGLE_FAKE_SUB'
   >,
 ): GoogleOidc | null {
-  if (isLocalFakeMode(env)) return createFakeGoogleOidc(env.GOOGLE_REDIRECT_URI);
+  // GOOGLE_FAKE_SUB: 로컬에서 두 기기를 다른 가짜 계정으로 로그인해 볼 때 바꿔 띄운다(T-11-600 웹 · 앱 동시 확인).
+  if (isLocalFakeMode(env))
+    return createFakeGoogleOidc(env.GOOGLE_REDIRECT_URI, env.GOOGLE_FAKE_SUB || undefined);
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return null;
   return createArcticGoogleOidc(env);
 }
