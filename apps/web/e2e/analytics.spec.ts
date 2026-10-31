@@ -319,3 +319,26 @@ for (const [source, campaign, content] of [
     expect(JSON.stringify(await commands(page))).not.toContain('PRIVATE');
   });
 }
+// T-11-597 유럽 · 영국 · 스위스 밖(지역 쿠키 notice)은 방침 시행일부터 묻지 않고 켜고, 이미 거절한 브라우저는 그대로 둔다.
+test('notice region starts on without the sheet and keeps an earlier denial', async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await prepare(page);
+  await page.clock.setSystemTime(new Date('2026-11-08T00:00:00Z'));
+  await context.addCookies([
+    { name: 'offside_consent_region', value: 'notice', url: baseURL ?? 'http://localhost' },
+  ]);
+  await page.goto('/');
+  await expect(page.locator('main')).toBeVisible();
+  await expect(page.locator('[data-analytics="consent"]')).toHaveCount(0);
+  expect(await page.evaluate((key) => localStorage.getItem(key), consentKey)).toBe('granted');
+  await expect.poll(async () => (await commands(page)).some((c) => c[0] === 'config')).toBe(true);
+
+  await page.evaluate((key) => localStorage.setItem(key, 'denied'), consentKey);
+  await page.reload();
+  await expect(page.locator('main')).toBeVisible();
+  expect(await page.evaluate((key) => localStorage.getItem(key), consentKey)).toBe('denied');
+  expect(await commands(page)).toEqual([]);
+});

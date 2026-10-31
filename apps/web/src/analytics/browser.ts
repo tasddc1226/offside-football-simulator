@@ -7,7 +7,15 @@ import {
 import type { OperationResult } from '@offside/app-core/measurement';
 import type { AppStoreOs } from '@offside/app-core/appPromo';
 import type { AppStorePlace } from './index.js';
-import { loadPixel, setAdConsent, trackMeta } from './meta.js';
+import {
+  AD_CONSENT_KEY,
+  getAdConsent,
+  loadPixel,
+  metaEnabled,
+  setAdConsent,
+  trackMeta,
+} from './meta.js';
+import { consentByDefault } from '../consent-region.js';
 import {
   campaignQuery,
   CONSENT_KEY,
@@ -239,6 +247,23 @@ export function setConsent(value: 'granted' | 'denied') {
   }
   for (const fn of listeners) fn();
 }
+// T-11-597 알린 뒤 기본으로 켜는 지역(유럽 · 영국 · 스위스 밖)에서 아직 고르지 않았으면 이용 분석 · 광고 측정을 켠 것으로 둔다.
+// 한 번이라도 고른 값(거절 포함)은 그대로 두고, 환경설정에서 언제든 끌 수 있다.
+function applyDefaultConsent() {
+  if (!consentByDefault()) return;
+  try {
+    if (parseConsent(localStorage.getItem(CONSENT_KEY)) === 'unknown')
+      localStorage.setItem(CONSENT_KEY, 'granted');
+    if (
+      metaEnabled() &&
+      localStorage.getItem(CONSENT_KEY) === 'granted' &&
+      getAdConsent() === 'unknown'
+    )
+      localStorage.setItem(AD_CONSENT_KEY, 'granted');
+  } catch {
+    /* 저장이 막히면 묻지도 켜지도 않는다. */
+  }
+}
 export function initializeAnalytics(initialScreen: string, restoredCareerId: string | null = null) {
   if (initialized || !enabled()) return;
   initialized = true;
@@ -246,6 +271,7 @@ export function initializeAnalytics(initialScreen: string, restoredCareerId: str
   screen = initialScreen;
   campaign = campaignQuery(location.href);
   referrer = safeReferrer(document.referrer);
+  applyDefaultConsent();
   consent = readConsent();
   loadPixel();
   for (const fn of listeners) fn();

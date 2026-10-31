@@ -54,11 +54,6 @@ jobs:
       VITE_GA4_HOSTNAME: ${{ vars.VITE_GA4_HOSTNAME }}
       # T-11-195 Meta pixel for web ad measurement. Loads only after consent on the GA4 production host; empty disables it.
       VITE_META_PIXEL_ID: ${{ vars.VITE_META_PIXEL_ID }}
-      # T-11-061 web ads. Empty until the AdSense site is approved and ad units exist; no slots render without them.
-      VITE_ADSENSE_CLIENT: ${{ vars.VITE_ADSENSE_CLIENT }}
-      VITE_ADSENSE_HOSTNAME: ${{ vars.VITE_ADSENSE_HOSTNAME }}
-      VITE_ADSENSE_SLOTS: ${{ vars.VITE_ADSENSE_SLOTS }}
-      VITE_ADFIT_UNITS: ${{ vars.VITE_ADFIT_UNITS }}
       # T-11-589 통신판매업 사업자 정보(JSON: name · owner · regNo · mailOrderNo · address · phone). 공개 저장소라 코드에 두지 않는다. 비면 푸터 · 약관에 안 보인다.
       BUSINESS_INFO: ${{ vars.BUSINESS_INFO }}
     steps:
