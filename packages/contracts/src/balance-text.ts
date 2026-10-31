@@ -184,6 +184,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: 'A대표팀 전력',
     desc: '월드 챔피언십·아시안컵·A매치에서 한국 대표팀 전력',
   },
+  agKoreaBonus: {
+    group: 'national',
+    label: '아시안게임 한국 전력 보정', // i18n-ignore admin-only copy
+    desc: '아시안게임에서만 한국 U-23 전력에 더한다. 올림픽과 다른 국적에는 적용하지 않는다', // i18n-ignore admin-only copy
+  },
   koreaU23: {
     group: 'national',
     label: 'U-23 대표팀 전력',

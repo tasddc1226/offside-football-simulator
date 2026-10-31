@@ -95,6 +95,31 @@ describe('웹·앱 공용 조기 연장 진행', () => {
     expect(canDismissSheet(h.sheet.state, h.s.pending)).toBe(false);
   });
 
+  it('이벤트를 잠시 닫고 다시 열거나 저장 복원해도 이벤트·RNG·다음 진행 대기가 유지된다', async () => {
+    const h = harness();
+    h.s.pending = { type: 'event', id: 'wc-road-1', then: 'seasonEnd' };
+    h.actions.nextPending();
+    const saved = JSON.stringify(h.s);
+    const rng = getActiveRng().getState();
+    expect(canDismissSheet(h.sheet.state, h.s.pending)).toBe(true);
+    expect(h.sheet.state.buttons).toHaveLength(1);
+    h.sheet.state.buttons[0]!.fn();
+    expect(h.sheet.state.open).toBe(false);
+    expect(JSON.stringify(h.s)).toBe(saved);
+    await h.actions.advance();
+    expect(h.sheet.state.open).toBe(false);
+    h.actions.nextPending();
+    expect(h.sheet.state.view?.kind).toBe('event');
+    expect(JSON.stringify(h.s)).toBe(saved);
+    expect(getActiveRng().getState()).toEqual(rng);
+    const restored = harness(loadSave(JSON.parse(saved))!.G);
+    restored.actions.nextPending();
+    expect(restored.s.pending).toEqual(h.s.pending);
+    expect(restored.sheet.state.view).toEqual(h.sheet.state.view);
+    restored.sheet.state.busy = true;
+    expect(canDismissSheet(restored.sheet.state, restored.s.pending)).toBe(false);
+  });
+
   it('시장·계약서 반복 열기와 저장복원은 제안·RNG를 보존하고 사인은 한 번만 처리한다', () => {
     const h = harness();
     h.actions.nextPending();

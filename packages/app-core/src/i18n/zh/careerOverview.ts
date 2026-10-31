@@ -1,0 +1,26 @@
+import type { Translation } from '../core';
+import type { CareerOverviewMsgs } from '../ko/careerOverview';
+export const careerOverview: Translation<CareerOverviewMsgs> = {
+  calendarTitle: '賽事日程',
+  calendarHint: '國家隊賽事在賽季結算時進行。參賽取決於資格賽、年齡、入選與球會放行。',
+  currentYear: '目前年份',
+  endYear: '已結束的賽季',
+  yearLabel: (p) => `${p.year}年`,
+  calendarAge: '歲',
+  wildcard: '需要超齡球員入選',
+  youth: '需要入選U-23代表隊',
+  senior: '需要入選國家隊',
+  qualified: '確定晉級會內賽',
+  eliminated: '未能晉級',
+  qualification: '等待資格賽結果',
+  scoringTitle: '聯賽球員紀錄',
+  scoringHint: '僅計算聯賽。並列第一名共同獲得金靴或助攻王。',
+  scoringLegacy: '本季保留原有獎項規則，下季開始顯示紀錄排名。',
+  goalRank: '進球',
+  assistRank: '助攻',
+  mine: '我的球員',
+  rivalForward: '前鋒',
+  rivalCreator: '中場',
+  rankLabel: (p) => `${p.rank}名`,
+  seasonOver: '賽季結束',
+};

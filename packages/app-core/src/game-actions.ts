@@ -454,7 +454,7 @@ export function createGameActions(host: GameHost) {
 
   /**
    * T-11-438 이 이벤트에 '안전' · '원터치' 선택지가 있으면 그 뜻을 한 줄씩. 전엔 hover · 접근성 라벨(칩이 없을 때만 화면)에만 있어
-   * 터치에서는 볼 수 없었고, 이벤트 시트는 닫을 수 없어 도감도 열 수 없었다.
+   * 터치에서는 볼 수 없었고, 선택지 아래에서도 뜻을 바로 확인할 수 있다.
    */
   function eventLegend(ev: EventDef): { term: string; text: string }[] {
     const out: { term: string; text: string }[] = [];
@@ -468,21 +468,24 @@ export function createGameActions(host: GameHost) {
   function showEvent(id: string) {
     const s = appState.G!;
     const ev = eventById(id)!;
-    sheet.showSheet({
-      kind: 'event',
-      eyebrow: `Event · ${s.year} ${PHASES[Math.max(0, s.phase - 1)]}`,
-      title: ev.title,
-      text: ev.text(s),
-      story: ev.story
-        ? {
-            name: tn(STORIES[ev.story]!.name),
-            stage: ev.stage ?? 0,
-            total: STORIES[ev.story]!.total,
-          }
-        : null,
-      choices: ev.choices.map((c, i) => choiceView(s, ev, c, i)),
-      legend: eventLegend(ev),
-    });
+    sheet.showSheet(
+      {
+        kind: 'event',
+        eyebrow: `Event · ${s.year} ${PHASES[Math.max(0, s.phase - 1)]}`,
+        title: ev.title,
+        text: ev.text(s),
+        story: ev.story
+          ? {
+              name: tn(STORIES[ev.story]!.name),
+              stage: ev.stage ?? 0,
+              total: STORIES[ev.story]!.total,
+            }
+          : null,
+        choices: ev.choices.map((c, i) => choiceView(s, ev, c, i)),
+        legend: eventLegend(ev),
+      },
+      [{ label: L.eventLater, fn: backToSeason }],
+    );
   }
 
   async function chooseEvent(i: number) {

@@ -26,6 +26,7 @@ export default (guideCopy) => {
       [
         'A season runs through pre-season, first half and second half. In each phase you pick a training direction (attribute training, rest and recovery, personal coach, media activity). Match results are then calculated at once, and appearances, goals, assists, ratings and league position are recorded.',
         guideCopy.investment,
+        'The Season tab shows the current year and national tournaments over the next four years. Before choosing an event option, you can close it temporarily, check other information and return to the same event. Seasons started after this update use the same league records for goal and assist rankings and season-end awards; existing seasons adopt this next season. Korea receives a dedicated Asian Games strength bonus that does not apply to the Olympics.',
         guideCopy.ratingParts,
         guideCopy.keyMoment,
       ],

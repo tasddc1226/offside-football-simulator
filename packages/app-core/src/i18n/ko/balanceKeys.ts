@@ -2,6 +2,7 @@
 import { ns } from '../core';
 
 const ko = {
+  agKoreaBonus: '아시안게임 한국 전력 보정',
   eventRatePreseason: '프리시즌 이벤트 확률',
   eventRateSeason: '전·후반기 이벤트 확률',
   eventTwist: '선택 뒤 반전 확률',

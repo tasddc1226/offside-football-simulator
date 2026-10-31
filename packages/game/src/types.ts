@@ -60,6 +60,8 @@ export interface SeasonComp {
 }
 
 export interface Season {
+  /** Fixed league scoring rules from this season onward. Absent in legacy saves. */
+  scoringVersion?: 1;
   /** 결산 때 고정한 순위표. 이전 저장에는 없으며 이미 끝난 시즌의 승점을 추정해 채우지 않는다. */
   finalTable?: TableRow[];
   apps: number;
