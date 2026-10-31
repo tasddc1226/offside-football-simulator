@@ -15,6 +15,7 @@ export const IAP_PRICE_KRW: Record<IapProductId | typeof REMOVE_ADS_PRODUCT, num
   'com.offsidelab.app.reroll_40': 5500,
   'com.offsidelab.app.boost_3': 1100,
   'com.offsidelab.app.boost_10': 2200,
+  'com.offsidelab.app.boost_100': 19800,
   'com.offsidelab.app.scout_1': 1100,
   'com.offsidelab.app.scout_5': 4400,
   'com.offsidelab.app.rename_5': 1100,
