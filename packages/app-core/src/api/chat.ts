@@ -54,6 +54,23 @@ export function setChatRoom(room: ChatRoomKey) {
     /* 기억하지 못해도 이번 화면에서는 고른 방으로 붙는다. */
   }
 }
+export type LoungeView = 'field' | 'chat';
+const VIEW_KEY = 'ft_chat_view';
+/** T-11-600 라운지를 필드로 볼지 채팅으로 볼지. 처음에는 필드이고, 마지막으로 고른 보기를 이 기기에 기억한다. */
+export function currentLoungeView(): LoungeView {
+  try {
+    return storage().getItem(VIEW_KEY) === 'chat' ? 'chat' : 'field';
+  } catch {
+    return 'field';
+  }
+}
+export function setLoungeView(view: LoungeView) {
+  try {
+    storage().setItem(VIEW_KEY, view);
+  } catch {
+    /* 기억하지 못해도 이번 화면에서는 고른 보기로 둔다. */
+  }
+}
 const inRoom = (room: ChatRoomKey) => `room=${room}`;
 
 export const chatTicket = (room: ChatRoomKey = currentChatRoom()) =>

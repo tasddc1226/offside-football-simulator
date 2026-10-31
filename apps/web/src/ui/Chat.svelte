@@ -42,9 +42,12 @@
   import { CHAT_ROOMS } from '@offside/contracts/chat';
   import { LOCALE_NAMES } from '@offside/contracts/i18n';
 
-  // T-11-600 라운지 필드(시제품) — 개발 서버나 VITE_LOUNGE_FIELD=1 빌드에서만 보인다. 같은 방을 축구장으로 본다.
-  const FIELD = import.meta.env.DEV || import.meta.env.VITE_LOUNGE_FIELD === '1';
-  let mode = $state<'chat' | 'field'>(FIELD ? 'field' : 'chat');
+  // T-11-600 라운지 필드: 같은 방을 축구장으로 본다. 마지막으로 고른 보기(처음에는 필드)로 연다.
+  let mode = $state<api.LoungeView>(api.currentLoungeView());
+  function pickView(v: api.LoungeView) {
+    mode = v;
+    api.setLoungeView(v);
+  }
   /** 필드에서 선수를 누르면 그 사람의 가장 최근 줄로 사람 창을 연다. */
   function pickAuthor(author: string) {
     const m = view.messages.findLast((x) => x.author === author);
@@ -304,18 +307,16 @@
         </div>
       </details>
     </header>
-    {#if FIELD}
-      <div class="chat-view" role="group" aria-label={L.viewLabel}>
-        <button aria-pressed={mode === 'field'} data-chat-view="field" onclick={() => (mode = 'field')}>
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M12 5v14" stroke="currentColor" stroke-width="1.8" /><circle cx="12" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="1.8" /></svg>
-          {L.viewField}
-        </button>
-        <button aria-pressed={mode === 'chat'} data-chat-view="chat" onclick={() => (mode = 'chat')}>
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H10l-4.5 3.5V17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /></svg>
-          {L.viewChat}
-        </button>
-      </div>
-    {/if}
+    <div class="chat-view" role="group" aria-label={L.viewLabel}>
+      <button aria-pressed={mode === 'field'} data-chat-view="field" onclick={() => pickView('field')}>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M12 5v14" stroke="currentColor" stroke-width="1.8" /><circle cx="12" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="1.8" /></svg>
+        {L.viewField}
+      </button>
+      <button aria-pressed={mode === 'chat'} data-chat-view="chat" onclick={() => pickView('chat')}>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H10l-4.5 3.5V17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /></svg>
+        {L.viewChat}
+      </button>
+    </div>
 
     {#if mode === 'field'}
       {#await import('./lounge/LoungeField.svelte') then F}

@@ -6,9 +6,11 @@ import {
   applyChat,
   chatSocketUrl,
   currentChatRoom,
+  currentLoungeView,
   EMPTY_CHAT,
   openChat,
   setChatRoom,
+  setLoungeView,
   type ChatView,
 } from './chat.js';
 
@@ -127,6 +129,16 @@ describe('T-11-015 채팅 상태', () => {
     store.set('ft_chat_room', 'xx');
     expect(currentChatRoom()).toBe('en');
     setLocale('ko');
+  });
+
+  it('T-11-600 라운지는 처음에 필드로 보고, 고른 보기를 기억한다', () => {
+    const store = new Map<string, string>();
+    setStorage({ getItem: (k) => store.get(k) ?? null, setItem: (k, v) => void store.set(k, v) });
+    expect(currentLoungeView()).toBe('field');
+    setLoungeView('chat');
+    expect(currentLoungeView()).toBe('chat');
+    setLoungeView('field');
+    expect(currentLoungeView()).toBe('field');
   });
 });
 

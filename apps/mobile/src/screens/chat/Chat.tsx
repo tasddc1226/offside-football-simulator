@@ -68,10 +68,10 @@ import { useTranslations } from '../../ui/Translate';
 import { TextBox, confirmAsync } from '../board/parts';
 import { Skeleton } from '../../ui/Skeleton';
 import type { FieldServerEvent } from '@offside/contracts/lounge-field';
-import { LoungeField } from './lounge/LoungeField';
+import { LoungeField } from './lounge';
 
-/** T-11-600 라운지 필드(시제품) — 개발 빌드나 EXPO_PUBLIC_LOUNGE_FIELD=1 빌드에서만 보인다. */
-const FIELD = __DEV__ || process.env.EXPO_PUBLIC_LOUNGE_FIELD === '1';
+/** T-11-600 라운지 필드. Skia가 없는 옛 스토어 빌드(1.1.5 · 1.1.4 OTA)에서는 채팅만 보인다. */
+const FIELD = LoungeField !== null;
 
 const small = { fontSize: rem(FONT.caption) } as const;
 /** T-11-573 말풍선 위 인용 한 줄 · 입력칸 위 답장 중 표시(색은 화면에서 넣는다). */
@@ -204,7 +204,13 @@ export default function Chat() {
   const session = useRef<ChatSession | null>(null);
   const list = useRef<ScrollView>(null);
   /** T-11-600 필드 보기 · 폰 입력창 접기. */
-  const [mode, setMode] = useState<'chat' | 'field'>('chat');
+  const [mode, setModeState] = useState<api.LoungeView>(() =>
+    FIELD ? api.currentLoungeView() : 'chat',
+  );
+  const setMode = (v: api.LoungeView) => {
+    setModeState(v);
+    api.setLoungeView(v);
+  };
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const [composerOpen, setComposerOpen] = useState(true);
@@ -614,7 +620,7 @@ export default function Chat() {
             )}
           </View>
         ) : null}
-        {mode === 'field' ? (
+        {mode === 'field' && LoungeField ? (
           <LoungeField
             messages={view.messages}
             me={
