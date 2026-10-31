@@ -36,6 +36,7 @@
     messages,
     me,
     onpick,
+    chatOpen,
     onchat,
   }: {
     messages: ChatMessage[];
@@ -43,8 +44,9 @@
     me: { author: string; nickname: string } | null;
     /** 남의 선수를 눌렀다. */
     onpick: (author: string) => void;
-    /** 폰에서 채팅 보기로 넘어간다. */
-    /** 폰에서 쓰기 버튼을 누르면 입력창을 연다. */
+    /** 폰에서 아래 채팅 입력창이 펼쳐져 있는지. */
+    chatOpen: boolean;
+    /** 폰에서 입력창을 접거나 편다. */
     onchat: () => void;
   } = $props();
 
@@ -412,7 +414,7 @@
       <button type="button" class="field-btn" aria-label={L.emotes} aria-expanded={emoteOpen} data-act="field-emote" onclick={() => (emoteOpen = !emoteOpen)}><EmoteIcon name="smile" size={28} /></button>
       <button type="button" class="field-btn" aria-label={L.kick} data-act="field-kick" onclick={doKick}><EmoteIcon name="ball" size={28} /></button>
       {#if coarse}
-        <button type="button" class="field-btn" aria-label={L.writeMessage} data-act="field-chat" onclick={onchat}>
+        <button type="button" class="field-btn" aria-label={L.chatInput} aria-pressed={chatOpen} data-act="field-chat" onclick={onchat}>
           <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" /></svg>
         </button>
       {/if}
@@ -543,6 +545,11 @@
     color: #fff;
     font-size: 22px;
     cursor: pointer;
+  }
+  /* 입력창이 펼쳐져 있으면 켜진 버튼처럼 밝게. */
+  .field-btn[aria-pressed='true'] {
+    background: rgba(255, 255, 255, 0.9);
+    color: #111;
   }
   .field-emotes {
     display: flex;

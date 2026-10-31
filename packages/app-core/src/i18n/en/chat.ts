@@ -73,7 +73,7 @@ export const chat: Translation<ChatMsgs> = {
   emote_fire: 'On fire',
   emote_ball: 'Football',
   emote_heart: 'Heart',
-  writeMessage: 'Write a message',
+  chatInput: 'Chat input',
   spectating: "You're watching. Log in to step onto the field.",
   goal: 'Goal!',
   camera: 'Change view',

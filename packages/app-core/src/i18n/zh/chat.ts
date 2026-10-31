@@ -71,7 +71,7 @@ export const chat: Translation<ChatMsgs> = {
   emote_fire: '火熱',
   emote_ball: '足球',
   emote_heart: '愛心',
-  writeMessage: '寫訊息',
+  chatInput: '聊天輸入框',
   spectating: '正在觀看。登入後就能進入球場。',
   goal: '進球！',
   camera: '切換視角',

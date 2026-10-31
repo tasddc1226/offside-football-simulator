@@ -50,14 +50,11 @@
     const m = view.messages.findLast((x) => x.author === author);
     if (m && canAct(m)) selected = m.id;
   }
-  // 폰의 필드 보기는 입력창을 접어 두고, 필드의 쓰기 버튼을 누르면 그 자리에서 펼친다.
-  // 보낸 뒤에도 이어 쓸 수 있게 펼친 채 두고, 빈 입력창에서 빠져나가면(필드를 누르는 등) 접는다.
-  let fieldTyping = $state(false);
-  /** 입력창을 펼치고 바로 초점을 준다. 펼침을 먼저 그려야 같은 탭 안에서 iOS 키보드가 뜬다. */
-  function openComposer() {
-    flushSync(() => (fieldTyping = true));
-    if (input) fitInput(input);
-    input?.focus();
+  // 폰의 필드 보기에서도 입력창은 늘 띄워 두고, 필드 오른쪽 아래 버튼으로만 접고 편다(필드를 넓게 보고 싶을 때).
+  let composerOpen = $state(true);
+  function toggleComposer() {
+    composerOpen = !composerOpen;
+    if (!composerOpen) input?.blur();
   }
   // 언어 방 메뉴: 고르거나 바깥을 누르거나 Esc면 닫는다.
   let langMenu = $state<HTMLDetailsElement>();
@@ -164,6 +161,7 @@
   $effect(() => {
     const el = input;
     void text;
+    void composerOpen;
     if (el) void tick().then(() => fitInput(el));
   });
   function focusInput() {
@@ -183,8 +181,9 @@
   }
   function startReply(m: ChatMessage) {
     replyTo = m;
-    if (mode === 'field') openComposer();
-    else input?.focus();
+    // 접혀 있으면 먼저 펼친다. 펼침을 먼저 그려야 같은 탭 안에서 iOS 키보드가 뜬다.
+    if (!composerOpen) flushSync(() => (composerOpen = true));
+    input?.focus();
   }
   const quoteName = (r: { admin: boolean; nickname: string }) => (r.admin ? ADMIN_NICKNAME : r.nickname);
   /** T-11-573 인용을 누르면 원문으로 올라가 잠깐 표시한다. 불러오지 않은 옛 줄이면 알리기만 한다. */
@@ -251,7 +250,7 @@
 
 <div class="wrap chat-wrap" bind:this={wrap}>
   <section class="card chat-card" class:field-mode={mode === 'field'}
-    class:field-typing={fieldTyping} data-chat>
+    class:composer-off={!composerOpen} data-chat>
     <header class="chat-head">
       <button class="icon-btn chat-back" data-act="home" aria-label={L.back} onclick={() => goBack(goHome)}>
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="m14 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
@@ -324,7 +323,8 @@
           messages={view.messages}
           me={view.write && view.me?.author ? { author: view.me.author, nickname: view.me.nickname ?? '' } : null}
           onpick={pickAuthor}
-          onchat={openComposer}
+          chatOpen={composerOpen}
+          onchat={toggleComposer}
         />
       {/await}
     {:else}
@@ -394,9 +394,6 @@
             bind:this={input}
             data-chat-input
             onfocus={focusInput}
-            onblur={() => {
-              if (!text.trim() && !replyTo) fieldTyping = false;
-            }}
             onkeydown={(e) => {
               if (e.key === 'Escape' && replyTo) {
                 e.preventDefault();
@@ -478,9 +475,9 @@
 {/if}
 
 <style>
-  /* T-11-600 폰에서 필드를 볼 때는 입력창을 접어 두고, 필드의 쓰기 버튼을 누르면 펼친다. */
+  /* T-11-600 폰의 필드 보기에서 입력창 접기(필드 오른쪽 아래 버튼). */
   @media (pointer: coarse) {
-    .field-mode:not(.field-typing) .chat-composer {
+    .field-mode.composer-off .chat-composer {
       display: none;
     }
   }

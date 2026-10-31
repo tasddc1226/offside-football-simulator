@@ -71,7 +71,7 @@ const ko = {
   emote_fire: '불타오름',
   emote_ball: '축구공',
   emote_heart: '하트',
-  writeMessage: '메시지 쓰기',
+  chatInput: '채팅 입력창',
   spectating: '구경 중이에요. 로그인하면 필드에 들어가요.',
   goal: '골!',
   camera: '시점 바꾸기',
