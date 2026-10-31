@@ -49,7 +49,8 @@ export const DIVISION_REWARD_FILLED = CUP_PLAN_DEFAULTS.minFilled;
 const ACH_CHUNK = 40;
 const STATS_CHUNK = 200;
 
-export type CloseStep = 'records' | 'stats' | 'ach' | 'ranks' | 'honors' | 'specials' | 'division' | 'done';
+export type CloseStep =
+  'records' | 'stats' | 'ach' | 'ranks' | 'honors' | 'specials' | 'division' | 'done';
 export type CloseState = {
   step: CloseStep;
   cutoff: string;
@@ -342,31 +343,48 @@ async function closeHonors(db: Db, season: number, now: string) {
  * 선수다. 베스트 11은 포지션 묶음별 레전드 점수 순, 득점왕 · 도움왕은 통산 득점 · 도움 순(같으면 레전드 점수), MVP는 레전드 점수 1위.
  * 같으면 먼저 은퇴한 선수 · id 순(명예의 전당 정렬). 묶음마다 인덱스 순서로 LIMIT 몇 건만 읽는다. insert or ignore라 다시 돌려도 같다.
  */
+export const specialMetaKey = (season: number) => `season-specials:${season}`;
+
 async function closeSpecials(db: Db, season: number, cutoff: string, now: string) {
   if (season < CARD_SPECIAL_FIRST_SEASON) return;
-  // service_season을 coalesce 없이 비교해야 시즌 · 레전드 점수 인덱스(careers_hof_season_score_order_idx)를 탄다.
-  const eligible = sql`
-    c.status = 'retired' and c.hidden = 0 and c.service_season = ${season} and c.legend_score is not null
-    and c.retire_age >= ${HOF_MIN_RETIRE_AGE} and c.retired_at <= ${cutoff}`;
-  const byScore = sql.raw('ls desc, ra, id');
-  const byStat = sql.raw('v desc, ls desc, ra, id');
-  const pick = (kind: CardSpecialKind, where: SQL, value: SQL, order: SQL, limit: number) => sql`
-    insert or ignore into card_specials (career_id, season, kind, rank, rule_version, created_at)
-    select id, ${season}, ${kind}, row_number() over (order by ${order}), ${CARD_SPECIAL_RULE}, ${now}
-    from (
-      select c.id as id, c.legend_score as ls, c.retired_at as ra, ${value} as v
-      from careers c join profiles p on p.id = c.profile_id
-      where ${eligible} and ${LINKED} and ${where}
-      order by ${order} limit ${limit}
-    )`;
-  const score = sql`c.legend_score`;
-  await runEach(db, [
-    pick('mvp', sql`1 = 1`, score, byScore, 1),
-    pick('top_scorer', sql`c.goals > 0`, sql`c.goals`, byStat, 1),
-    pick('top_assist', sql`c.assists > 0`, sql`c.assists`, byStat, 1),
+  const key = specialMetaKey(season);
+  // All seven selections and the completion marker commit together. The marker also
+  // freezes an empty selection and prevents retries/concurrent cron runs adding winners.
+  const pick = (
+    kind: CardSpecialKind,
+    where: string,
+    value: string,
+    order: string,
+    limit: number,
+  ) =>
+    db.$client
+      .prepare(
+        `
+      INSERT OR IGNORE INTO card_specials (career_id, season, kind, rank, rule_version, created_at)
+      SELECT id, ?1, ?2, row_number() OVER (ORDER BY ${order}), ?3, ?4
+      FROM (
+        SELECT c.id AS id, c.legend_score AS ls, c.retired_at AS ra, ${value} AS v
+        FROM careers c JOIN profiles p ON p.id = c.profile_id
+        WHERE c.status = 'retired' AND c.hidden = 0 AND c.service_season = ?1
+          AND c.legend_score IS NOT NULL AND c.retire_age >= ?5 AND c.retired_at <= ?6
+          AND ${LINKED_SQL} AND ${where}
+          AND NOT EXISTS (SELECT 1 FROM app_meta WHERE key = ?7)
+        ORDER BY ${order} LIMIT ?8
+      )`,
+      )
+      .bind(season, kind, CARD_SPECIAL_RULE, now, HOF_MIN_RETIRE_AGE, cutoff, key, limit);
+  const byScore = 'ls DESC, ra, id';
+  const byStat = 'v DESC, ls DESC, ra, id';
+  await db.$client.batch([
+    pick('mvp', '1 = 1', 'c.legend_score', byScore, 1),
+    pick('top_scorer', 'c.goals > 0', 'c.goals', byStat, 1),
+    pick('top_assist', 'c.assists > 0', 'c.assists', byStat, 1),
     ...Object.entries(BEST11_SLOTS).map(([pos, n]) =>
-      pick('best11', sql`c.pos = ${pos}`, score, byScore, n),
+      pick('best11', `c.pos = '${pos}'`, 'c.legend_score', byScore, n),
     ),
+    db.$client
+      .prepare('INSERT OR IGNORE INTO app_meta (key, value) VALUES (?, ?)')
+      .bind(key, JSON.stringify({ ruleVersion: CARD_SPECIAL_RULE, cutoff, completedAt: now })),
   ]);
 }
 
@@ -419,13 +437,26 @@ export async function runSeasonClose(db: Db, now: string, statsChunk = STATS_CHU
   const metas = await db
     .select({ key: appMeta.key, value: appMeta.value })
     .from(appMeta)
-    .where(inArray(appMeta.key, closed.map(closeMetaKey)));
+    .where(
+      inArray(
+        appMeta.key,
+        closed.flatMap((s) => [closeMetaKey(s), specialMetaKey(s)]),
+      ),
+    );
   const states = new Map(metas.map((m) => [m.key, parseState(m.value)]));
+  const specialDone = new Set(metas.map((m) => m.key));
   for (const season of closed) {
     const cutoff = teamSeasonEndsAt(season);
     if (!cutoff) continue;
     const state = states.get(closeMetaKey(season)) ?? { step: 'records' as const, cutoff };
-    if (state.step === 'done') continue;
+    if (state.step === 'done') {
+      if (season >= CARD_SPECIAL_FIRST_SEASON && !specialDone.has(specialMetaKey(season))) {
+        // Supplement an already closed season without replaying ranks, honors or rewards.
+        await closeSpecials(db, season, state.cutoff, now);
+        return { season, step: 'specials' as const, next: 'done' as const };
+      }
+      continue;
+    }
     const before = state.step;
     if (state.step === 'records') {
       await closeRecords(db, season, cutoff, now);

@@ -154,7 +154,16 @@ describe('T-11-128 시즌 결산', () => {
     expect(pending.data.status).toBe('pending');
 
     // T-11-375 디비전 단계는 보상 시작 시즌(기본 2) 전이라 휘장 · 리롤권 없이 지나간다.
-    expect(await closeAll()).toEqual(['records', 'stats', 'stats', 'ach', 'ranks', 'honors', 'specials', 'division']);
+    expect(await closeAll()).toEqual([
+      'records',
+      'stats',
+      'stats',
+      'ach',
+      'ranks',
+      'honors',
+      'specials',
+      'division',
+    ]);
     expect(await closeStateOf(ctx.db, 0)).toMatchObject({
       step: 'done',
       cutoff: CUTOFF,

@@ -8,7 +8,7 @@ import { careersByIds, teamPlayerCard } from '../db/repos/ownerTeams.js';
 import { careers } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueCookie, issueGoogleCookie } from '../test/http.js';
-import { closeMetaKey, closeStateOf, runSeasonClose } from './seasonClose.js';
+import { closeMetaKey, closeStateOf, runSeasonClose, specialMetaKey } from './seasonClose.js';
 
 const RecapRes = successEnvelope(SeasonRecapResponseSchema);
 /** 시즌 1 마감(테스트 일정). */
@@ -196,6 +196,62 @@ describe('T-11-372 시즌 특별 카드', () => {
     ]);
   });
 
+  it('이미 끝난 시즌에 선정만 보충하고 결산 상태와 보상을 보존하며 재실행하지 않는다', async () => {
+    const a = await issueGoogleCookie(ctx);
+    const winner = await addCareer(a.profileId, { score: 900, goals: 50 });
+    const state = {
+      step: 'done',
+      cutoff: END,
+      closedAt: AFTER,
+      ranked: { team: 1, ach: 1, hof: 1 },
+    };
+    await setMeta(ctx.db, closeMetaKey(1), JSON.stringify(state));
+    // There must be no records/ranking/reward work on the supplemental path.
+    const itemsBefore = await ctx.db.all(sql`select * from owner_items`);
+    const honorsBefore = await ctx.db.all(sql`select * from owner_honors`);
+    expect(await runSeasonClose(ctx.db, AFTER)).toMatchObject({ season: 0 });
+    await closeAll();
+    expect(await closeStateOf(ctx.db, 1)).toEqual(state);
+    const rows = await specials();
+    expect(rows.find((r) => r.kind === 'mvp')?.career_id).toBe(winner);
+    expect(await ctx.db.all(sql`select * from owner_items`)).toEqual(itemsBefore);
+    expect(await ctx.db.all(sql`select * from owner_honors where season = 1`)).toEqual(
+      honorsBefore,
+    );
+    // A new eligible row must not change a finalized selection, even on an explicit retry.
+    await addCareer(a.profileId, { score: 2000, goals: 500 });
+    await setMeta(ctx.db, closeMetaKey(1), JSON.stringify({ ...state, step: 'specials' }));
+    await closeAll();
+    expect(await specials()).toEqual(rows);
+    expect(await runSeasonClose(ctx.db, AFTER)).toBeNull();
+  });
+
+  it('선정 중 실패하면 표식과 완료 표시를 모두 되돌리고 다음 실행에서 다시 선정한다', async () => {
+    const a = await issueGoogleCookie(ctx);
+    await addCareer(a.profileId, { score: 900, goals: 50 });
+    await setMeta(ctx.db, closeMetaKey(0), JSON.stringify({ step: 'done', cutoff: END }));
+    const state = { step: 'done', cutoff: END, closedAt: AFTER };
+    await setMeta(ctx.db, closeMetaKey(1), JSON.stringify(state));
+    await ctx.db.run(
+      sql.raw(`CREATE TRIGGER fail_special BEFORE INSERT ON card_specials
+      WHEN NEW.kind = 'top_scorer' BEGIN SELECT RAISE(ABORT, 'test failure'); END`),
+    );
+    await expect(runSeasonClose(ctx.db, AFTER)).rejects.toThrow();
+    expect(await specials()).toEqual([]);
+    expect(
+      await ctx.db.all(sql`select value from app_meta where key = ${specialMetaKey(1)}`),
+    ).toEqual([]);
+    expect(await closeStateOf(ctx.db, 1)).toEqual(state);
+    await ctx.db.run(sql.raw('DROP TRIGGER fail_special'));
+    expect(await runSeasonClose(ctx.db, AFTER)).toEqual({
+      season: 1,
+      step: 'specials',
+      next: 'done',
+    });
+    expect((await specials()).length).toBeGreaterThan(0);
+    expect(await runSeasonClose(ctx.db, AFTER)).toBeNull();
+  });
+
   it('후보가 없거나 프리시즌이면 표식을 매기지 않고 결산은 끝난다', async () => {
     const a = await issueGoogleCookie(ctx);
     await addCareer(a.profileId, { score: 900, season: 0 });
@@ -209,5 +265,9 @@ describe('T-11-372 시즌 특별 카드', () => {
       ).json(),
     );
     expect(recap.data.recap?.seasonBest).toEqual([]);
+    // Empty seasons are finalized too; late-arriving records must not create winners.
+    await addCareer(a.profileId, { score: 2000 });
+    expect(await runSeasonClose(ctx.db, AFTER)).toBeNull();
+    expect(await specials()).toEqual([]);
   });
 });
