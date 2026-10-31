@@ -14,6 +14,7 @@ App Store Connect · Play Console에 같은 ID로 소모성(Consumable · 일회
 | `com.offsidelab.app.reroll_40` | 리롤권 40장             | ₩5,500    |
 | `com.offsidelab.app.boost_3`   | 잠재력 강화권 3장       | ₩1,100    |
 | `com.offsidelab.app.boost_10`  | 잠재력 강화권 10장      | ₩2,200    |
+| `com.offsidelab.app.boost_100` | 잠재력 강화권 100장 | ₩19,800 |
 | `com.offsidelab.app.scout_1`   | 프리미엄 스카우트권 1장 | ₩1,100    |
 | `com.offsidelab.app.scout_5`   | 프리미엄 스카우트권 5장 | ₩4,400    |
 

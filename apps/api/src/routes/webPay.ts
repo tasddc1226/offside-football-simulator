@@ -52,6 +52,8 @@ import { enforceLimit, NO_STORE, notFoundError, nowIso, ok, readBody } from './s
 const passOnSale = (env: Bindings, now: string) =>
   env.SEASON_PASS_ENABLED === '1' && passSaleOpen(now);
 const memberOnSale = (env: Bindings) => env.MEMBERSHIP_ENABLED === '1';
+const itemOnSale = (env: Bindings, productId: string) =>
+  productId !== 'com.offsidelab.app.boost_100' || env.WEB_PAY_BOOST_100_ENABLED === '1';
 const WEB_SKUS: ReadonlySet<string> = new Set(WEB_PAY_PRODUCT_IDS);
 
 const unavailable = () =>
@@ -104,7 +106,7 @@ export function registerWebPayRoutes(app: Hono<AppEnv>) {
       enabled
         ? {
             enabled,
-            products: WEB_PAY_PRODUCTS,
+            products: WEB_PAY_PRODUCTS.filter((p) => itemOnSale(c.env, p.productId)),
             ...(passOnSale(c.env, now) ? { pass: WEB_PAY_PASS } : {}),
             ...(memberOnSale(c.env) ? { membership: WEB_PAY_MEMBERSHIP } : {}),
           }
@@ -121,6 +123,7 @@ export function registerWebPayRoutes(app: Hono<AppEnv>) {
     const db = getDb(c);
     const now = nowIso();
     if (
+      !itemOnSale(c.env, productId) ||
       (productId === SEASON_PASS_PRODUCT_ID && !passOnSale(c.env, now)) ||
       (productId === MEMBERSHIP_PRODUCT_ID && !memberOnSale(c.env))
     )
