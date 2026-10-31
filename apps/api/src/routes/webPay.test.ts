@@ -130,6 +130,18 @@ describe('T-11-454 웹 결제(엑솔라)', () => {
     expect(await ctx.db.select().from(iapPurchases)).toMatchObject([
       { productId, item: 'boost', qty: 100 },
     ]);
+    await call('POST', '/v1/items/boost/use', {
+      cookie: me.cookie,
+      headers: { 'Idempotency-Key': crypto.randomUUID() },
+    });
+    expect((await items(me.cookie)).boost).toBe(99);
+    const refund = { ...event, notification_type: 'order_canceled' };
+    expect((await hook(ctx, refund)).status).toBe(204);
+    expect((await hook(ctx, refund)).status).toBe(204);
+    expect((await items(me.cookie)).boost).toBe(0);
+    expect(await ctx.db.select().from(iapPurchases)).toMatchObject([
+      { productId, qty: 100, revokedQty: 99 },
+    ]);
   });
 
   it('스위치 · 키 · 테스터 목록이 맞아야 결제를 연다(로그인 구단주만)', async () => {
