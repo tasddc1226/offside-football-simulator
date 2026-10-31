@@ -22,6 +22,10 @@ export const msToKstMidnight = (now = Date.now()) => DAY_MS - ((now + KST_MS) % 
 
 export type FieldScore = { rows: FieldGoalRow[]; day: string };
 
+const FIELD_EVENTS = new Set<string>(['field', 'pos', 'act', 'ball', 'goal', 'leave']);
+/** 채팅 소켓으로 받은 이벤트 중 라운지 필드 이벤트인지(채팅 상태로 넣지 않는다). */
+export const isFieldEvent = (e: { t: string }): e is FieldServerEvent => FIELD_EVENTS.has(e.t);
+
 export class FieldSync {
   private lastPos = 0;
   private sentPos = { x: Number.NaN, y: Number.NaN, fx: 0, fy: 0 };
@@ -41,7 +45,7 @@ export class FieldSync {
     world.localGoal = (t) => !t || t === me() || t.startsWith('bot-');
   }
 
-  /** 필드 보기를 열고 닫는다(다시 붙으면 채팅 세션이 다시 연다). */
+  /** 필드 보기를 열고 닫는다. 채팅이 다시 열리면(다시 붙기 · 방 옮기기) 새 소켓에 다시 연다. */
   open() {
     this.sentPos.x = Number.NaN;
     this.send({ t: 'field', on: true });

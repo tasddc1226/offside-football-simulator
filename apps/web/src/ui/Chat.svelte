@@ -8,6 +8,7 @@
   import { ADMIN_NICKNAME, COMMENT_REPORT_REASONS, type CommentReportReason } from '@offside/contracts/board-limits';
   import { CHAT_BODY_MAX, CHAT_MUTE_DAYS } from '@offside/contracts/chat';
   import * as api from '@offside/app-core/api/chat';
+  import { currentLoungeView, setLoungeView, type LoungeView } from '@offside/app-core/lounge/view';
   import { unblock as unblockApi } from '@offside/app-core/api/boards';
   import type { ChatBlockResponse } from '@offside/contracts';
   import {
@@ -43,10 +44,10 @@
   import { LOCALE_NAMES } from '@offside/contracts/i18n';
 
   // T-11-600 라운지 필드: 같은 방을 축구장으로 본다. 마지막으로 고른 보기(처음에는 필드)로 연다.
-  let mode = $state<api.LoungeView>(api.currentLoungeView());
-  function pickView(v: api.LoungeView) {
+  let mode = $state<LoungeView>(currentLoungeView());
+  function pickView(v: LoungeView) {
     mode = v;
-    api.setLoungeView(v);
+    setLoungeView(v);
   }
   /** 필드에서 선수를 누르면 그 사람의 가장 최근 줄로 사람 창을 연다. */
   function pickAuthor(author: string) {
@@ -322,6 +323,7 @@
       {#await import('./lounge/LoungeField.svelte') then F}
         <F.default
           messages={view.messages}
+          live={view.status === 'open'}
           me={view.write && view.me?.author ? { author: view.me.author, nickname: view.me.nickname ?? '' } : null}
           onpick={pickAuthor}
           chatOpen={composerOpen}

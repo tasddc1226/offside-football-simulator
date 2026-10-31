@@ -30,6 +30,7 @@ import {
 import { LOCALE_NAMES } from '@offside/contracts/i18n';
 import { lastClosedSeason } from '@offside/contracts/service-seasons';
 import * as api from '@offside/app-core/api/chat';
+import { currentLoungeView, setLoungeView, type LoungeView } from '@offside/app-core/lounge/view';
 import { unblock as unblockApi } from '@offside/app-core/api/boards';
 import type { ChatBlockResponse } from '@offside/contracts';
 import {
@@ -68,6 +69,7 @@ import { useTranslations } from '../../ui/Translate';
 import { TextBox, confirmAsync } from '../board/parts';
 import { Skeleton } from '../../ui/Skeleton';
 import type { FieldServerEvent } from '@offside/contracts/lounge-field';
+import { isFieldEvent } from '@offside/app-core/lounge/sync';
 import { LoungeField } from './lounge';
 
 /** T-11-600 라운지 필드. Skia가 없는 옛 스토어 빌드(1.1.5 · 1.1.4 OTA)에서는 채팅만 보인다. */
@@ -204,15 +206,11 @@ export default function Chat() {
   const session = useRef<ChatSession | null>(null);
   const list = useRef<ScrollView>(null);
   /** T-11-600 필드 보기 · 폰 입력창 접기. */
-  const [mode, setModeState] = useState<api.LoungeView>(() =>
-    FIELD ? api.currentLoungeView() : 'chat',
-  );
-  const setMode = (v: api.LoungeView) => {
+  const [mode, setModeState] = useState<LoungeView>(() => (FIELD ? currentLoungeView() : 'chat'));
+  const setMode = (v: LoungeView) => {
     setModeState(v);
-    api.setLoungeView(v);
+    setLoungeView(v);
   };
-  const modeRef = useRef(mode);
-  modeRef.current = mode;
   const [composerOpen, setComposerOpen] = useState(true);
   /** T-11-600 머리줄 언어 방 메뉴. */
   const [langOpen, setLangOpen] = useState(false);
@@ -255,11 +253,11 @@ export default function Chat() {
       },
       to,
       (e) => {
+        if (!isFieldEvent(e)) return false;
         for (const h of fieldListeners) h(e);
+        return true;
       },
     );
-    // 방을 옮겨 새 소켓이 생겨도 필드 보기를 이어 간다.
-    if (modeRef.current === 'field') session.current.field({ t: 'field', on: true });
   };
   /** T-11-583 다른 언어 방으로 옮긴다 — 지금 소켓을 닫고 그 방에 새로 붙는다. */
   const pickRoom = (to: ChatRoomKey) => {
@@ -623,6 +621,7 @@ export default function Chat() {
         {mode === 'field' && LoungeField ? (
           <LoungeField
             messages={view.messages}
+            live={view.status === 'open'}
             me={
               view.write && view.me?.author
                 ? { author: view.me.author, nickname: view.me.nickname ?? '' }

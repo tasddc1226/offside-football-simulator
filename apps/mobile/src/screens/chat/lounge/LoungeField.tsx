@@ -90,6 +90,8 @@ function RoundBtn(props: {
 
 export function LoungeField(props: {
   messages: ChatMessage[];
+  /** 채팅 소켓이 열려 있는지. */
+  live: boolean;
   /** 필드에 들어갈 내 정보. 로그인 · 닉네임 전이면 null(구경만). */
   me: { author: string; nickname: string } | null;
   send: (e: FieldClientEvent) => boolean;
@@ -129,12 +131,15 @@ export function LoungeField(props: {
   );
   useEffect(() => {
     const off = props.listen((e) => sync.handle(e, Date.now()));
-    sync.open();
     return () => {
       off();
       sync.close();
     };
   }, [sync]);
+  // 채팅 소켓이 열릴 때마다(다시 붙기 · 방 옮기기) 새 소켓에 필드를 다시 연다.
+  useEffect(() => {
+    if (props.live) sync.open();
+  }, [props.live, sync]);
 
   // 내 선수는 작성자 키가 바뀔 때만 새로 세운다(다시 붙어 새로 세울 때는 서 있던 자리에).
   const spot = useRef<{ x: number; y: number } | null>(null);

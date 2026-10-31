@@ -9,8 +9,8 @@
   import { chatText as L } from '@offside/app-core/i18n/ko/chat';
   import './canvas.js';
   import { asCtx } from './canvas.js';
-  import { listenField, sendField } from '../chat-state.svelte.js';
-  import { FieldSync, msToKstMidnight, type FieldScore } from '@offside/app-core/lounge/sync';
+  import { hookField, sendField } from '../chat-state.svelte.js';
+  import { FieldSync, isFieldEvent, msToKstMidnight, type FieldScore } from '@offside/app-core/lounge/sync';
   import {
     PITCH_L,
     PITCH_W,
@@ -41,12 +41,15 @@
 
   const {
     messages,
+    live,
     me,
     onpick,
     chatOpen,
     onchat,
   }: {
     messages: ChatMessage[];
+    /** 채팅 소켓이 열려 있는지. 다시 열릴 때마다(다시 붙기 · 방 옮기기) 새 소켓에 필드를 다시 연다. */
+    live: boolean;
     /** 필드에 들어갈 내 정보. 로그인 전이면 null(구경만). */
     me: { author: string; nickname: string } | null;
     /** 남의 선수를 눌렀다. */
@@ -150,12 +153,14 @@
   let score = $state<FieldScore>({ rows: [], day: '' });
   const sync = new FieldSync(world, sendField, () => (me ? me.author : null), (s) => (score = s));
   onMount(() => {
-    const off = listenField((e) => sync.handle(e, Date.now()));
-    sync.open();
+    hookField((e) => isFieldEvent(e) && (sync.handle(e, Date.now()), true));
     return () => {
-      off();
+      hookField(null);
       sync.close();
     };
+  });
+  $effect(() => {
+    if (live) untrack(() => sync.open());
   });
 
   // 내 선수는 작성자 키가 바뀔 때만 새로 세운다(채팅 상태가 바뀔 때마다 me 객체가 새로 와도 자리 · 말풍선을 지킨다).
