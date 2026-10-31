@@ -2,32 +2,28 @@
   "id": "t-11-599-career-planning-records",
   "title": "시즌 계획과 경기 기록 개선",
   "items": [
-    "현재 연도와 대표팀 대회 일정, 리그 득점·도움 순위를 확인할 수 있어요. 기존 진행 시즌의 기록 순위는 다음 시즌부터 적용돼요.",
-    "이벤트를 선택하기 전에 잠시 닫고 선수 상태와 일정을 확인할 수 있어요.",
-    "개인 골·도움과 경기 스코어가 어긋나던 문제를 고쳤어요. 한국의 아시안게임 전력을 높였어요."
+    "연도·대표팀 일정·리그 득점/도움 순위를 확인하고 이벤트를 잠시 닫을 수 있어요. 기존 시즌의 순위는 다음 시즌부터 적용돼요.",
+    "골·도움과 스코어 불일치를 고치고 한국의 아시안게임 전력을 높였어요."
   ],
   "en": {
     "title": "Season planning and match records",
     "items": [
-      "Check the current year, national tournament calendar and league goal and assist rankings. Existing seasons adopt rankings next season.",
-      "Close an event before choosing to check your player and schedule, then return to the same event.",
-      "Fixed mismatches between goal and assist records and match scores. Korea is stronger at the Asian Games."
+      "Check the year, national calendar and league scoring rankings, and close events before choosing. Existing seasons get rankings next season.",
+      "Fixed goal/assist score mismatches and strengthened Korea at the Asian Games."
     ]
   },
   "ja": {
     "title": "シーズン計画と試合記録の改善",
     "items": [
-      "現在の年、代表大会の日程、リーグの得点・アシスト順位を確認できます。進行中のシーズンは来季から順位が表示されます。",
-      "イベントの選択前にいったん閉じて、選手の状態や日程を確認できます。",
-      "得点・アシストとスコアの不一致を修正しました。韓国のアジア大会戦力を引き上げました。"
+      "年・代表日程・リーグ得点とアシスト順位を確認でき、イベントも一時的に閉じられます。進行中のシーズンは来季から順位が表示されます。",
+      "得点・アシストとスコアの不一致を修正し、韓国のアジア大会戦力を引き上げました。"
     ]
   },
   "zh": {
     "title": "賽季規劃與比賽紀錄改善",
     "items": [
-      "可查看目前年份、國家隊賽事日程與聯賽進球、助攻排名。進行中的賽季從下季開始顯示排名。",
-      "事件選擇前可暫時關閉，確認球員狀態與日程後再回來。",
-      "修正進球、助攻紀錄與比分不一致的問題，並提高韓國的亞運戰力。"
+      "可查看年份、國家隊日程、聯賽進球與助攻排名，並暫時關閉事件。進行中的賽季從下季開始顯示排名。",
+      "修正進球、助攻與比分不一致的問題，並提高韓國的亞運戰力。"
     ]
   },
   "availability": "web-app",
