@@ -55,7 +55,8 @@ export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void
   }, [gauge, pop, shake, motionOK, out.ok]);
 
   // 강화 중에는 결과 전 단계, 결과에서는 결과 단계를 켠다.
-  const lit = done || !out.ok ? out.lv : out.lv - 1;
+  // T-11-593 대성공이면 두 칸이 함께 켜진다.
+  const lit = done ? out.lv : out.lv - out.up;
   return (
     <Modal
       visible
@@ -75,7 +76,15 @@ export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void
         }}
       >
         <Animated.View
-          testID={done ? (out.ok ? 'boost-fx-ok' : 'boost-fx-fail') : 'boost-fx-rolling'}
+          testID={
+            done
+              ? out.great
+                ? 'boost-fx-great'
+                : out.ok
+                  ? 'boost-fx-ok'
+                  : 'boost-fx-fail'
+              : 'boost-fx-rolling'
+          }
           accessibilityViewIsModal
           accessibilityLiveRegion="polite"
           style={{
@@ -95,7 +104,7 @@ export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void
           <View style={{ flexDirection: 'row', gap: 10 }} accessible={false}>
             {Array.from({ length: out.max }, (_, i) => {
               const on = i < lit;
-              const fresh = done && out.ok && i === out.lv - 1;
+              const fresh = done && i >= out.lv - out.up && i < out.lv;
               return (
                 <Animated.View
                   key={i}
@@ -135,7 +144,9 @@ export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void
                 />
               </View>
               <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
-                {L.chance({ n: out.chance })}
+                {out.greatChance
+                  ? L.chanceGreat({ n: out.chance, g: out.greatChance })
+                  : L.chance({ n: out.chance })}
               </Txt>
             </>
           ) : (

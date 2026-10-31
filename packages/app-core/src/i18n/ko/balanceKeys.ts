@@ -13,6 +13,7 @@ const ko = {
   investCost: '자기 투자 비용 배율',
   boostCost: '잠재력 강화 비용 배율',
   boostExtraTotal: '커리어당 추가 강화 횟수',
+  boostGreat: '잠재력 강화 대성공 비율',
   careCost: '몸 관리 비용 배율',
   potMean: '잠재력 평균',
   potSd: '잠재력 편차',

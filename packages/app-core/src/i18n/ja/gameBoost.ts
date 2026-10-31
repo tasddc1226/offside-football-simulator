@@ -65,4 +65,12 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   sureButton: (p) => `クラブ資金で確定強化（${p.price}・100%）`,
   sureNote:
     'クラブ資金を払うと確率なしで1段階上がります。選手ごとに1回受けられ、選手資金での挑戦はそのまま残ります。',
+  noteGreat: (p) =>
+    `成功のうち${p.pct}%は大成功で、一気に2段階上がります。+${p.lv}段階への挑戦には大成功がありません。`,
+  lineReadyGreat: (p) =>
+    `次の段階 +${p.next} · 成功確率 ${p.chance}%（大成功 ${p.great}%） · ${p.cost}`,
+  chanceGreat: (p) => `成功確率 ${p.n}% · 大成功 ${p.g}%`,
+  historyGreat: (p) => `${p.y} · +${p.lv}段階 ${p.pct}% · ${p.cost} · 大成功`,
+  resultGreatTitle: (p) => `大成功 · +${p.lv}段階`,
+  resultGreat: '一気に2段階上がりました。成長の上限が大きく上がりました。',
 };

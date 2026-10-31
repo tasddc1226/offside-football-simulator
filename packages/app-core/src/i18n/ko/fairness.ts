@@ -61,6 +61,10 @@ const ko = {
     p.v
       ? `지금 새 커리어에는 밸런스 버전 ${p.v}${iGa(String(p.v))} 적용돼요.`
       : '지금 새 커리어에는 기본 밸런스(버전 0)가 적용돼요.',
+  // T-11-593 잠재력 강화 대성공.
+  boostGreatPct: (p: { pct: number; great: number }) => `${p.pct}% (대성공 ${p.great}%)`,
+  boostGreatNote: (p: { pct: number }) =>
+    `성공 중 ${p.pct}%는 대성공으로 두 단계를 한 번에 올라요. 마지막 단계에 도전할 땐 대성공이 없어요.`,
 };
 
 export type FairnessMsgs = typeof ko;

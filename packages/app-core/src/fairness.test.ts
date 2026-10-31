@@ -80,9 +80,27 @@ describe('fairness', () => {
       'C 48.2%',
       'D 18.0%',
     ]);
-    expect(v.boost.map(([, p]) => p)).toEqual(['50%', '35%', '25%', '15%']);
+    expect(v.boost.map(([, p]) => p)).toEqual([
+      '50% (대성공 10%)',
+      '35% (대성공 7%)',
+      '25% (대성공 5%)',
+      '15%',
+    ]);
     expect(oddsPct(0.0004)).toBe('<0.1%');
     expect(oddsPct(0.026)).toBe('2.6%');
+  });
+
+  it('대성공 소수 확률과 확정 강화 예외를 최신 표에도 공개한다', () => {
+    setLatestBalance({ version: 3, values: { boostGreat: 0.1 } });
+    const view = fairnessView();
+    expect(view.boost.map(([, p]) => p)).toEqual([
+      '50% (대성공 5%)',
+      '35% (대성공 3.5%)',
+      '25% (대성공 2.5%)',
+      '15%',
+    ]);
+    expect(view.boostNote).toContain('확정 강화는 별도');
+    expect(view.boostNote).toContain('10%');
   });
 
   it('이력은 바로 앞 버전(맨 처음은 기본값)과 달라진 항목만 보여 준다', () => {

@@ -22,9 +22,18 @@ describe('T-11-083 잠재력 강화 카드', () => {
   it('시도할 수 있으면 버튼에 비용과 확률을 적는다', () => {
     const v = boostView(player());
     expect(v).toMatchObject({ status: 'ready', lv: 0, max: 4 });
-    expect(v.line).toBe('다음 단계 +1 · 성공 확률 50% · 7,000만원');
+    expect(v.line).toBe('다음 단계 +1 · 성공 확률 50%(대성공 10%) · 7,000만원');
     expect(v.button).toBe('7,000만원 내고 강화하기 (50%)');
     expect(v.confirm).toContain('실패하면 돌려받지 못해요');
+  });
+
+  it('T-11-593 대성공이면 두 단계를 올리고 결과 · 기록에 대성공으로 남긴다', () => {
+    const s = player();
+    setActiveRng({ ...createRng(1), next: () => 0 } as ReturnType<typeof createRng>);
+    const out = doBoost(s)!;
+    expect(out).toMatchObject({ ok: true, great: true, up: 2, lv: 2, greatChance: 10 });
+    expect(out.title).toBe('대성공 · +2단계');
+    expect(boostView(s).history[0]).toBe('2026 · +2단계 50% · 7,000만원 · 대성공');
   });
 
   it('시도할 수 없으면 버튼 없이 이유만 보여 준다', () => {

@@ -84,6 +84,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '커리어당 추가 강화 횟수',
     desc: '자금이 모자란 시즌의 강화 추가 시도 횟수(커리어 전체). 0이면 없다',
   },
+  boostGreat: {
+    group: 'growth',
+    label: '잠재력 강화 대성공 비율',
+    desc: '강화 성공 중 두 단계를 한 번에 올리는 비율(대성공 확률 = 성공 확률 × 이 값). 마지막 단계 시도엔 없다. 0이면 끈다',
+  },
   careCost: {
     group: 'growth',
     label: '몸 관리 비용 배율',

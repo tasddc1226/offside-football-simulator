@@ -13,6 +13,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   investCost: '自己投資の費用倍率',
   boostCost: '潜在能力強化の費用倍率',
   boostExtraTotal: 'キャリアごとの追加強化回数',
+  boostGreat: '潜在能力強化の大成功の割合',
   careCost: 'コンディション管理の費用倍率',
   potMean: 'ポテンシャルの平均',
   potSd: 'ポテンシャルのばらつき',
