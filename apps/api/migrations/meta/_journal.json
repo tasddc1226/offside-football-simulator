@@ -988,6 +988,13 @@
       "when": 1793290868068,
       "tag": "0143_owner_title_tiers",
       "breakpoints": true
+    },
+    {
+      "idx": 144,
+      "version": "6",
+      "when": 1793376140812,
+      "tag": "0144_card_specials",
+      "breakpoints": true
     }
   ]
 }

@@ -23,6 +23,8 @@ import {
 import { intlLocale } from '@offside/app-core/i18n/core';
 import { tn } from '@offside/game/i18n/names';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
+import { SPECIAL_COLORS, specialRibbon, type SpecialRibbon } from '@offside/app-core/cardSpecial';
+import type { CardSpecialMark } from '@offside/contracts/card-special';
 
 /** Only overflowing names move; reduced motion keeps the full name accessible. */
 function CardName({
@@ -233,6 +235,8 @@ export type PlayerCardData = {
   foot?: string | null | undefined;
   /** T-11-188 잠긴 선수 — 오른쪽 위 자물쇠. */
   locked?: boolean | undefined;
+  /** T-11-372 시즌 특별 카드 표식 — 테두리 색 · 띠. 없으면 빈 칸. */
+  specials?: readonly CardSpecialMark[] | undefined;
   youth: boolean;
 };
 
@@ -313,6 +317,43 @@ function SeasonBadge({ season, compact }: { season: number; compact: boolean }) 
   );
 }
 
+/** T-11-372 시즌 특별 카드 띠(웹 PlayerCard .card-special) — 작은 카드는 아래쪽에 겹치고, 큰 카드는 맨 아래 줄. */
+function SpecialBadge({ ribbon, compact }: { ribbon: SpecialRibbon; compact: boolean }) {
+  const color = SPECIAL_COLORS[ribbon.kind];
+  return (
+    <View
+      testID="card-special"
+      accessibilityLabel={ribbon.aria}
+      pointerEvents="none"
+      style={
+        compact
+          ? { position: 'absolute', bottom: 3, left: 0, right: 0, alignItems: 'center' }
+          : { width: '100%', alignItems: 'center', marginTop: 4 }
+      }
+    >
+      <Text
+        numberOfLines={1}
+        maxFontSizeMultiplier={1.1}
+        style={{
+          maxWidth: '92%',
+          overflow: 'hidden',
+          paddingHorizontal: compact ? 4 : 8,
+          borderRadius: 3,
+          backgroundColor: color.bg,
+          color: color.ink,
+          fontSize: compact ? 7 : 10,
+          lineHeight: compact ? 10 : 15,
+          fontWeight: '800',
+          letterSpacing: 0.3,
+          includeFontPadding: false,
+        }}
+      >
+        {ribbon.text}
+      </Text>
+    </View>
+  );
+}
+
 const CARD_STATS = {
   field: ['pac', 'sho', 'dri', 'pas', 'def', 'phy'],
   GK: ['def', 'phy', 'pas', 'pac', 'sho', 'dri'],
@@ -373,6 +414,8 @@ export const CARD_HEIGHT = 242;
 export const CARD_STYLE_ROW = 19;
 /** 키 · 몸무게 · 주발 줄 높이. 이 줄이 있으면 위 칸(그림 · LS)과 카드를 그만큼 늘린다(LS 아래로 겹치지 않게). */
 export const CARD_BODY_ROW = 12;
+/** T-11-372 큰 카드의 시즌 특별 카드 띠 줄 높이(표식이 있을 때만). */
+export const CARD_SPECIAL_ROW = 20;
 
 export function PlayerCard({
   cell,
@@ -406,11 +449,17 @@ export function PlayerCard({
   // 플레이스타일(웹 PlayerCard .card-type). 자리가 좁은 compact 카드에는 넣지 않는다.
   const style = !compact && cell.pos ? typeName(cell.pos, cell.type) : null;
   const body = compact ? null : cardBody(cell);
+  const ribbon = cell.youth ? null : specialRibbon(cell.specials);
+  const special = ribbon ? SPECIAL_COLORS[ribbon.kind] : null;
   const height = compact
     ? mini
       ? 68
       : 88
-    : CARD_HEIGHT + (deployed ? 31 : 0) + (style ? CARD_STYLE_ROW : 0) + (body ? CARD_BODY_ROW : 0);
+    : CARD_HEIGHT +
+      (deployed ? 31 : 0) +
+      (style ? CARD_STYLE_ROW : 0) +
+      (body ? CARD_BODY_ROW : 0) +
+      (ribbon ? CARD_SPECIAL_ROW : 0);
   const shield = 'M2 14H17L25 5L50 1L75 5L83 14H98L97 149L88 161L50 173L12 161L3 149Z';
   return (
     <View
@@ -440,7 +489,12 @@ export function PlayerCard({
             <Stop offset="1" stopColor={tone.shade} />
           </LinearGradient>
         </Defs>
-        <Path d={shield} fill={`url(#${uid}face)`} stroke={tone.line} strokeWidth="1.5" />
+        <Path
+          d={shield}
+          fill={`url(#${uid}face)`}
+          stroke={special ? special.bg : tone.line}
+          strokeWidth={special ? 3 : 1.5}
+        />
         <Path
           d="M7 21H20L28 12L50 8L72 12L80 21H93M8 147L16 157L50 166L84 157L92 147"
           fill="none"
@@ -682,6 +736,7 @@ export function PlayerCard({
         </View>
       ) : null}
       {!compact ? <CardAttributes cell={cell} color={tone.ink} /> : null}
+      {ribbon ? <SpecialBadge ribbon={ribbon} compact={compact} /> : null}
     </View>
   );
 }
