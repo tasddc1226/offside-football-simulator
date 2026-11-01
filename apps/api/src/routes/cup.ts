@@ -109,7 +109,8 @@ import { lineupsOf, toMatch } from '../team/match.js';
 import { cupTeamsOf, matchOddsOf, mineOdds, oddsOfLineups, parseOdds } from '../team/cupOdds.js';
 import { filledCount } from '../team/sim.js';
 import { cupAtkKOf } from '../db/repos/balance.js';
-import { kstTodayStart, requireOwner } from './ownerTeam.js';
+import { kstTodayStart } from './ownerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import { kstWeekStart } from '../time.js';
 import {
   conflictError,

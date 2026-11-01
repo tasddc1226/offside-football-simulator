@@ -1,3 +1,7 @@
+import type { OwnerTeam } from '@offside/contracts';
+import { layoutOf, logoOf, presetsOf } from '../db/repos/ownerTeams.js';
+import { usesRankLadder, type FormationId } from '@offside/contracts/owner-team';
+import { lineupOvr } from './sim.js';
 // T-10-092 팀 응답을 만드는 공통 부분(내 팀 화면 · 공개 팀 프로필).
 import type { TeamLines, TeamRecord, TeamSlot, TeamSeasonOption } from '@offside/contracts';
 import { openTeamSeasons, teamSeasonName } from '@offside/contracts/service-seasons';
@@ -47,3 +51,34 @@ export function linesOf(lineup: readonly LineupSlot[], season: number): TeamLine
 /** 고를 수 있는 팀 시즌 목록(프리시즌 + 개막한 시즌). */
 export const seasonOptions = (now: string, lang: Lang = 'ko'): TeamSeasonOption[] =>
   openTeamSeasons(now).map((id) => ({ id, name: teamSeasonName(id, lang) }));
+
+export function toOwnerTeam(
+  row: OwnerTeamRow,
+  lineup: LineupSlot[],
+  players: ReadonlyMap<string, { nation?: string | null }>,
+  lang: Lang,
+  coach: OwnerTeam['coach'] = null,
+): OwnerTeam {
+  return {
+    id: row.id,
+    season: row.season,
+    name: row.name,
+    manager: row.manager,
+    formation: row.formation as FormationId,
+    slots: slotsOf(lineup, players, lang),
+    layout: layoutOf(row),
+    logo: logoOf(row),
+    ovr: lineupOvr(lineup),
+    lines: linesOf(lineup, row.season),
+    rating: row.rating,
+    // T-11-510 디비전은 RP 사다리 시즌(2부터)에만 있다.
+    ...(usesRankLadder(row.season) ? { division: row.division } : {}),
+    record: recordOf(row),
+    likes: row.likes,
+    views: row.views,
+    presets: presetsOf(row),
+    coach,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}

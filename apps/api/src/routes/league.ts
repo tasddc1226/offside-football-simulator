@@ -47,7 +47,7 @@ import { currentLeague } from '../team/leagueSchedule.js';
 import { lineupsOf, toMatch } from '../team/match.js';
 import { reqLang } from '../lang.js';
 import { filledCount } from '../team/sim.js';
-import { requireOwner } from './ownerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import { conflictError, NO_STORE, notFoundError, nowIso, ok } from './shared.js';
 
 // T-11-418 오프사이드 리그: 일정 · 접수(사전 신청 포함 · 취소 · 준비 상태). T-11-418b 배치 결과 · 순위표 · 경기 상세.

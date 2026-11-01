@@ -412,40 +412,46 @@ async function closeSpecials(db: Db, season: number, cutoff: string, now: string
 /**
  * T-11-375 시즌 마감 디비전 보상. 자격: 로그인 수단이 있는 구단주, 마감 전에 만든 팀, 선발 은퇴 선수 8명 이상, 그 시즌 랭크
  * 경기(건 경기 + 받은 경기) teamDivMinMatches판 이상, 디비전 프로 II 이상. 휘장(owner_honors 기본 키가 시즌 · 종류라 한 번만)을
- * 넣고 같은 batch에서 이번에 넣은 휘장에만 리롤권을 더한다 — 다시 돌아도 휘장이 이미 있어 두 번 주지 않는다.
+ * 아직 휘장이 없는 구단주에게 리롤권을 더하고 같은 batch에서 휘장을 넣는다 — 같은 시각으로 재시도해도 두 번 주지 않는다.
  */
 export async function closeDivisions(db: Db, season: number, cutoff: string, now: string) {
   const b = resolveBalance((await getActiveBalance(db))?.values);
   if (season < b.teamDivRewardFrom) return 0;
   const rerolls = [3, 4, 5, 6, 7].map((d) => divisionRerolls(d, b));
   const d1 = db.$client;
-  const [honors] = await d1.batch([
-    d1
-      .prepare(
-        `INSERT OR IGNORE INTO owner_honors (profile_id, season, kind, band, rank, value, granted_at)
-         SELECT t.profile_id, t.season, 'division', NULL, NULL, t.division, ?1
-         FROM owner_teams t JOIN profiles p ON p.id = t.profile_id
-         WHERE t.season = ?2 AND t.division >= ?3 AND t.filled >= ?4
-           AND t.wins + t.draws + t.losses >= ?5 AND t.created_at < ?6 AND ${LINKED_SQL}`,
-      )
-      .bind(
-        now,
-        season,
-        TEAM_DIVISION_REWARD_MIN,
-        DIVISION_REWARD_FILLED,
-        b.teamDivMinMatches,
-        cutoff,
-      ),
+  // Pay only teams without a division honor, then insert the honors in the SAME
+  // transaction. No timestamp is used as a receipt: replaying the same `now`
+  // after a lost batch response/checkpoint must not pay the previous winners again.
+  const eligible = `FROM owner_teams t JOIN profiles p ON p.id = t.profile_id
+    WHERE t.season = ?2 AND t.division >= ?3 AND t.filled >= ?4
+      AND t.wins + t.draws + t.losses >= ?5 AND t.created_at < ?6 AND ${LINKED_SQL}`;
+  const reward =
+    'CASE t.division WHEN 3 THEN ?7 WHEN 4 THEN ?8 WHEN 5 THEN ?9 WHEN 6 THEN ?10 ELSE ?11 END';
+  const bindings = [
+    now,
+    season,
+    TEAM_DIVISION_REWARD_MIN,
+    DIVISION_REWARD_FILLED,
+    b.teamDivMinMatches,
+    cutoff,
+  ];
+  const [, honors] = await d1.batch([
     d1
       .prepare(
         `INSERT INTO owner_items (profile_id, item, qty, updated_at)
-         SELECT profile_id, 'reroll', q, ?1 FROM (
-           SELECT h.profile_id, CASE h.value WHEN 3 THEN ?2 WHEN 4 THEN ?3 WHEN 5 THEN ?4 WHEN 6 THEN ?5 ELSE ?6 END AS q
-           FROM owner_honors h WHERE h.season = ?7 AND h.kind = 'division' AND h.granted_at = ?1
-         ) WHERE q > 0
-         ON CONFLICT (profile_id, item) DO UPDATE SET qty = qty + excluded.qty, updated_at = excluded.updated_at`,
+      SELECT t.profile_id, 'reroll', ${reward}, ?1 ${eligible}
+        AND NOT EXISTS (SELECT 1 FROM owner_honors h
+          WHERE h.profile_id = t.profile_id AND h.season = t.season AND h.kind = 'division')
+        AND (${reward}) > 0
+      ON CONFLICT (profile_id, item) DO UPDATE SET qty = qty + excluded.qty, updated_at = excluded.updated_at`,
       )
-      .bind(now, ...rerolls, season),
+      .bind(...bindings, ...rerolls),
+    d1
+      .prepare(
+        `INSERT OR IGNORE INTO owner_honors (profile_id, season, kind, band, rank, value, granted_at)
+      SELECT t.profile_id, t.season, 'division', NULL, NULL, t.division, ?1 ${eligible}`,
+      )
+      .bind(...bindings),
   ]);
   return honors?.meta.changes ?? 0;
 }

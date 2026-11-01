@@ -14,7 +14,7 @@ import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
 import { NO_STORE, conflictError, notFoundError, nowIso, ok, readBody } from './shared.js';
 import { checkCupManager } from './cup.js';
-import { requireOwner } from './ownerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import {
   abandonManagerCareer,
   cardForManager,

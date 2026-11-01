@@ -38,7 +38,7 @@ import {
 } from '@offside/contracts/service-seasons';
 import { closeMetaKey } from '../team/seasonClose.js';
 import { honorsOf } from './seasonRecap.js';
-import { requireOwner } from './ownerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import { NO_STORE, conflictError, nowIso, ok, readBody, teamNotFound } from './shared.js';
 
 export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
